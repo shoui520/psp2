@@ -49,7 +49,7 @@ SceUsbd:
         - SceUsbdForDriver_235C094A: 0x235C094A
         - SceUsbdForDriver_2E05660F: 0x2E05660F
         - sceUsbdHostStop: 0x3C3396BB
-        - SceUsbdForDriver_3EBF5FFE: 0x3EBF5FFE
+        - sceUsbdSuspend: 0x3EBF5FFE
         - SceUsbdForDriver_470D5289: 0x470D5289
         - sceUsbdHostStart: 0x5E301E18
         - sceUsbdRegisterCompositeLdd: 0x6E53D7F4

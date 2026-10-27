@@ -98,25 +98,25 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateMutex
 	sceKernelRegisterKPLS
 	SceProcessmgrForDriver_8CB01675
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	SceProcessmgrForDriver_D141C076
 	sceSblACMgrIsSystemProgram
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	SceKernelSuspendForDriver_E0489831
+	sceKernelPowerTick
 	sceKernelRegisterProcEventHandler
 	SceSysconForDriver_030D447F
 	SceSysconForDriver_142D5E82
 	SceSysconForDriver_1546A141
-	SceSysconForDriver_40FF3898
+	sceSysconCtrlDeviceReset
 	SceSysconForDriver_55DF1C9B
 	SceSysconForDriver_9B6B8BB9
 	SceSysconForDriver_9DA2A5AB
 	SceSysconForDriver_C2224E82
 	SceSysconForDriver_C4A61241
 	SceSysconForDriver_CBD6D8BC
-	SceSysconForDriver_F492E69E
+	sceSysconGetTouchpanelDeviceInfo
 	SceSysconForDriver_FF86F4C5
 	SceSysrootForKernel_EC3124A3
 )

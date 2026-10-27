@@ -62,7 +62,7 @@ static inline int writeRegister(unsigned char reg, unsigned char value)
 
 	buffer[0] = reg;
 	buffer[1] = value;
-	return SceI2cForDriver_CA94A759(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, buffer, sizeof(buffer));
+	return sceI2cMasterTransmit(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, buffer, sizeof(buffer));
 }
 
 /* name unknown: the PLL settings revision 4 needs for each spread */
@@ -135,7 +135,7 @@ int SceClockgenForDriver_0BA41732(void)
 	if (clockgen.singleRead) {
 		for (i = 0; i < CLOCKGEN_REGISTERS; i++) {
 			command = CLOCKGEN_REG(i);
-			ret = SceI2cForDriver_0A40B7BF(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, &command, 1,
+			ret = sceI2cMasterTransmitReceive(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, &command, 1,
 						       CLOCKGEN_I2C_ADDR, response, 1);
 			if (ret < 0)
 				return ret;
@@ -144,7 +144,7 @@ int SceClockgenForDriver_0BA41732(void)
 		}
 	} else {
 		command = 0;
-		ret = SceI2cForDriver_0A40B7BF(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, &command, 1,
+		ret = sceI2cMasterTransmitReceive(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, &command, 1,
 					       CLOCKGEN_I2C_ADDR, response, sizeof(response));
 		if (ret < 0)
 			return ret;
@@ -263,14 +263,14 @@ int SceClockgenForDriver_F0A0242D(void)
 }
 
 /* sceClockgenWlanBtClkEnableForDriver */
-int SceClockgenForDriver_7B28A724(void)
+int sceClockgenWlanBtClkEnable(void)
 {
 	if (clockgen.registers[0] != CLOCKGEN_REV2_VENDOR_F)
 		return 0;
 	return changeBit(CLOCKGEN_WLANBT_CLK, 1);
 }
 
-int SceClockgenForDriver_B6F0A532(void)
+int sceClockgenWlanBtClkDisable(void)
 {
 	if (clockgen.registers[0] != CLOCKGEN_REV2_VENDOR_F)
 		return 0;

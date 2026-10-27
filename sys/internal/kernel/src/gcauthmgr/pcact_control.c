@@ -112,7 +112,7 @@ challenge:
 			&gcAuthPcactActivationInput,
 			(const unsigned char *)&gcAuthActivationRtcSeconds,
 			output, &gcAuthActivationRandom.pcact);
-		result = SceRtcForDriver_9C8AF264(&gcAuthActivationRetryDeadline,
+		result = sceRtcTickAddSeconds(&gcAuthActivationRetryDeadline,
 			&gcAuthActivationCurrentTick, 30);
 		goto finish;
 	default:
@@ -226,7 +226,7 @@ int GcAuthPsmactBeginActivation(const GcAuthPsmactBeginActivationRequest *reques
 	} else if (((1U << (unsigned char)(mode - 1)) & 6) == 0) {
 		goto invalid;
 	}
-	if (mode == 3 && SceRtcForDriver_9C8AF264(&gcAuthActivationRetryDeadline,
+	if (mode == 3 && sceRtcTickAddSeconds(&gcAuthActivationRetryDeadline,
 		&tick, 300) < 0)
 		goto clockError;
 	goto finishPsm;
@@ -260,7 +260,7 @@ int GcAuthPsmactDecryptActivation(const GcAuthPsmactDerivedKeys *keys)
 			return (int)0x808a0807;
 	} while (cursor != activation->header.reserved +
 		 sizeof(activation->header.reserved));
-	if (SceKernelUtilsForDriver_83EFA1CC(keys->stageTwoKey, 32, activation,
+	if (sceHmacSha256Digest(keys->stageTwoKey, 32, activation,
 		offsetof(GcAuthPsmactEncryptedActivation, mac), mac) != 0)
 		return (int)0x808a0808;
 	difference = 0;

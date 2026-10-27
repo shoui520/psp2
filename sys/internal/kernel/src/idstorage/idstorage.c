@@ -154,7 +154,7 @@ static void clearCache(void)
 		storage.cache[i].state = 0;
 }
 
-int SceIdStorageForDriver_B9069BAD(void)
+int sceIdStorageIsDirty(void)
 {
 	int i;
 
@@ -166,7 +166,7 @@ int SceIdStorageForDriver_B9069BAD(void)
 	return 0;
 }
 
-FLUSH_STORAGE SceIdStorageForDriver_3AD32523(void)
+FLUSH_STORAGE sceIdStorageFlush(void)
 {
 	int ret;
 
@@ -175,7 +175,7 @@ FLUSH_STORAGE SceIdStorageForDriver_3AD32523(void)
 	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	if (SceIdStorageForDriver_B9069BAD()) {
+	if (sceIdStorageIsDirty()) {
 		ret = commitStorage();
 		if (ret < 0) {
 			sceKernelUnlockMutex(storage.mutex, 1);
@@ -191,7 +191,7 @@ FLUSH_STORAGE SceIdStorageForDriver_3AD32523(void)
 static int storageSysEvent(int resume, int event, void *args, void *opt)
 {
 	if (!resume && event == SYSEVENT_SUSPEND_PREPARE(0))
-		SceIdStorageForDriver_3AD32523();
+		sceIdStorageFlush();
 	return 0;
 }
 
@@ -279,7 +279,7 @@ int module_start(SceSize args, void *argp)
 	return ret < 0 ? ret : 0;
 }
 
-int SceIdStorageForDriver_60B647A5(int flush)
+int sceIdStorageRestart(int flush)
 {
 	SceProductMode mode = 0;
 	int ret = sceSblPmMgrGetProductMode(&mode);
@@ -289,7 +289,7 @@ int SceIdStorageForDriver_60B647A5(int flush)
 	if (!mode)
 		return ID_INVALID_ARGUMENT;
 	if (flush)
-		SceIdStorageForDriver_3AD32523();
+		sceIdStorageFlush();
 	sceKernelDeleteMutex(storage.mutex);
 	sceKernelFreeMemBlock(storage.memblock);
 	if (storage.index)
@@ -300,17 +300,17 @@ int SceIdStorageForDriver_60B647A5(int flush)
 	return ret < 0 ? ret : 0;
 }
 
-int SceIdStorageForDriver_EB830733(void)
+int sceIdStorageGetLeafSize(void)
 {
 	return LEAF_SIZE;
 }
 
-int SceIdStorageForDriver_FEFA40C2(void)
+int sceIdStorageIsFormatted(void)
 {
 	return storage.formatted;
 }
 
-int SceIdStorageForDriver_2D633688(void)
+int sceIdStorageIsReadOnly(void)
 {
 	return storage.readOnly;
 }
@@ -346,7 +346,7 @@ static inline __attribute__((always_inline)) int cacheSlot(uint32_t leaf, int *s
 			return i;
 		}
 	}
-	ret = SceIdStorageForDriver_3AD32523();
+	ret = sceIdStorageFlush();
 	if (ret < 0) {
 		*slot = -1;
 		return ret;
@@ -444,12 +444,12 @@ unlock:
 	return ret;
 }
 
-int SceIdStorageForDriver_EB00C509(SceSize leaf, void *buffer)
+int sceIdStorageReadLeaf(SceSize leaf, void *buffer)
 {
 	return readLeaf(leaf, buffer, 1);
 }
 
-int SceIdStorageForDriver_1FA4D135(SceSize leaf, const void *buffer)
+int sceIdStorageWriteLeaf(SceSize leaf, const void *buffer)
 {
 	SceProductMode mode = 0;
 	int ret = sceSblPmMgrGetProductMode(&mode);
@@ -480,7 +480,7 @@ int sceIdStorageLookup(SceUInt32 leaf, SceUInt32 offset, void *buffer, SceUInt32
 	return ret < 0 ? ret : 0;
 }
 
-int SceIdStorageForDriver_683AAC10(uint32_t leaf, uint32_t offset, const void *buffer, uint32_t size)
+int sceIdStorageUpdate(uint32_t leaf, uint32_t offset, const void *buffer, uint32_t size)
 {
 	uint8_t data[LEAF_SIZE];
 	SceProductMode mode = 0;
@@ -514,7 +514,7 @@ int SceIdStorageForDriver_683AAC10(uint32_t leaf, uint32_t offset, const void *b
 	return ret < 0 ? ret : 0;
 }
 
-int SceIdStorageForDriver_958089DB(void)
+int sceIdStorageFormat(void)
 {
 	SceProductMode mode = 0;
 	int ret = sceSblPmMgrGetProductMode(&mode);
@@ -545,7 +545,7 @@ int SceIdStorageForDriver_958089DB(void)
 	return ret;
 }
 
-int SceIdStorageForDriver_F4BCB3EE(void)
+int sceIdStorageUnformat(void)
 {
 	uint8_t data[LEAF_SIZE];
 	SceProductMode mode = 0;
@@ -569,7 +569,7 @@ int SceIdStorageForDriver_F4BCB3EE(void)
 	return 0;
 }
 
-int SceIdStorageForDriver_37833CB8(void)
+int sceIdStorageGetFreeLeaves(void)
 {
 	SceKernelIntrStatus intr;
 	int ret, i;
@@ -579,7 +579,7 @@ int SceIdStorageForDriver_37833CB8(void)
 	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = 0;
 	for (i = 0; i < indexLeaves; i++)
 		if (storage.index[i] == INDEX_FREE)
@@ -611,7 +611,7 @@ static int blockFree(int block)
 	return count;
 }
 
-int SceIdStorageForDriver_08A471A6(uint32_t leaf)
+int sceIdStorageCreateLeaf(uint32_t leaf)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;
@@ -634,7 +634,7 @@ int SceIdStorageForDriver_08A471A6(uint32_t leaf)
 	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (findLeaf(leaf) >= 0) {
 		ret = ID_ALREADY_EXISTS;
 		goto done;
@@ -675,7 +675,7 @@ done:
 	return ret;
 }
 
-int SceIdStorageForDriver_99ACCB71(const uint16_t *leaves, int count)
+int sceIdStorageCreateAtomicLeaves(const uint16_t *leaves, int count)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;
@@ -698,7 +698,7 @@ int SceIdStorageForDriver_99ACCB71(const uint16_t *leaves, int count)
 	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	for (i = 0; i < count; i++) {
 		if (leaves[i] >= 0xfff0) {
 			ret = ID_INVALID_LEAF;
@@ -731,7 +731,7 @@ done:
 	return ret;
 }
 
-int SceIdStorageForDriver_2C97AB36(uint32_t leaf)
+int sceIdStorageDeleteLeaf(uint32_t leaf)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;
@@ -754,7 +754,7 @@ int SceIdStorageForDriver_2C97AB36(uint32_t leaf)
 	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	slot = findLeaf(leaf);
 	if (slot < 0) {
 		ret = ID_NOT_FOUND;

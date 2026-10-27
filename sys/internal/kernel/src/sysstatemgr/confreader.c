@@ -49,7 +49,7 @@ static void ConfReaderClose(ConfReader *reader)
 	if (reader->confModule == -1)
 		ConfReaderUtilsFreeConfBuf(reader);
 	else
-		SceModulemgrForDriver_03B30B7E(reader->confModule, 0, NULL, 0, NULL, &status);
+		sceKernelStopUnloadModule(reader->confModule, 0, NULL, 0, NULL, &status);
 	for (i = 0; i < 4; i++)
 		if (reader->rpath[i])
 			SceSysmemForKernel_4233C16D(reader->rpath[i]);
@@ -236,9 +236,9 @@ static int ConfReaderCmdLoad(ConfReader *reader, int argc, char **argv, unsigned
 	if (!path)
 		return CONF_ERROR(13);
 	remote = ConfReaderGetRemotePath(&reader->remotePath, path);
-	if ((!remote || (ret = SceModulemgrForDriver_189BFBBB(remote, len, args, 0, NULL, &status)) < 0) &&
-	    (ret = SceModulemgrForDriver_189BFBBB(path, len, args, 0x800, NULL, &status)) < 0)
-		ret = SceModulemgrForDriver_189BFBBB(path, len, args, 0, NULL, &status);
+	if ((!remote || (ret = sceKernelLoadStartModule(remote, len, args, 0, NULL, &status)) < 0) &&
+	    (ret = sceKernelLoadStartModule(path, len, args, 0x800, NULL, &status)) < 0)
+		ret = sceKernelLoadStartModule(path, len, args, 0, NULL, &status);
 	if (ret >= 0) {
 		SCE_DBG_PRINTF(0, 1032, "\n");
 		ret = ConfReaderUtilsRememberLoaded(reader, ret, path);
@@ -292,7 +292,7 @@ static int ConfReaderCmdStop(ConfReader *reader, int argc, char **argv, unsigned
 	path = ConfReaderRelToAbsPath(reader, argv[0]);
 	if (!path || (uid = ConfReaderUtilsFindLoaded(reader, path)) < 0)
 		return CONF_ERROR(2);
-	return SceModulemgrForDriver_100DAEB9(uid, len, args, 0, NULL, &status);
+	return sceKernelStopModule(uid, len, args, 0, NULL, &status);
 }
 
 static int ConfReaderCmdUnload(ConfReader *reader, int argc, char **argv, unsigned len, char *args)
@@ -306,7 +306,7 @@ static int ConfReaderCmdUnload(ConfReader *reader, int argc, char **argv, unsign
 	path = ConfReaderRelToAbsPath(reader, argv[0]);
 	if (!path || (uid = ConfReaderUtilsFindLoaded(reader, path)) < 0)
 		return CONF_ERROR(2);
-	ret = SceModulemgrForDriver_03B30B7E(uid, len, args, 0, NULL, &status);
+	ret = sceKernelStopUnloadModule(uid, len, args, 0, NULL, &status);
 	return ret < 0 ? ret : ConfReaderUtilsForgetLoaded(reader, uid);
 }
 
@@ -345,8 +345,8 @@ static int ConfReaderCmdToolLoad(ConfReader *reader, int argc, char **argv, unsi
 	if (!path)
 		return CONF_ERROR(13);
 	remote = ConfReaderGetRemotePath(&reader->remotePath, path);
-	if (!remote || (ret = SceModulemgrForDriver_189BFBBB(remote, len, args, 0x20, NULL, &status)) < 0)
-		ret = SceModulemgrForDriver_189BFBBB(path, len, args, 0x20, NULL, &status);
+	if (!remote || (ret = sceKernelLoadStartModule(remote, len, args, 0x20, NULL, &status)) < 0)
+		ret = sceKernelLoadStartModule(path, len, args, 0x20, NULL, &status);
 	if (ret >= 0) {
 		SCE_DBG_PRINTF(0, 1072, "\n");
 		ret = ConfReaderUtilsRememberLoaded(reader, ret, path);
@@ -382,7 +382,7 @@ created:
 	}
 	SCE_DBG_PRINTF(0, 1293, "OK (pid=0x%08x)\n", pid);
 	SCE_DBG_PRINTF(0, 1296, "Starting a process (pid=0x%08x)\n", pid);
-	SceProcessmgrForKernel_5137B783(pid, 0, 0, NULL);
+	sceKernelStartProcess(pid, 0, 0, NULL);
 	ConfReaderUtilsRememberLoaded(reader, pid, path);
 	return 0;
 }
@@ -409,7 +409,7 @@ static int ConfReaderCmdSpawnWait(ConfReader *reader, int argc, char **argv, uns
 	}
 	SCE_DBG_PRINTF(0, 1500, "OK (pid=0x%08x)\n", pid);
 	SCE_DBG_PRINTF(0, 1503, "Starting a process (pid=0x%08x)\n", pid);
-	SceProcessmgrForKernel_5137B783(pid, 0, 0, NULL);
+	sceKernelStartProcess(pid, 0, 0, NULL);
 	ret = sceKernelWaitProcessEnd(pid, NULL, NULL);
 	SCE_DBG_PRINTF(0, 1507, "Waiting for a process termination (pid=0x%08x) : ", pid);
 	if (ret < 0)

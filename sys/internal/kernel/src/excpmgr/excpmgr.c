@@ -389,11 +389,11 @@ unsigned int PatchUserInstruction(SceExcpmgrContext *context)
 		instruction = instruction >> 16 | instruction << 16;
 		if ((instruction & 0x0ff00fff) != 0x0c400f0b)
 			return 0;
-		res = SceSysmemForKernel_2995558D(pid, (void *)pc, &thumbNop, 4);
+		res = sceKernelCopyToUserProcTextDomain(pid, (void *)pc, &thumbNop, 4);
 	} else {
 		if ((instruction & 0x0ff00fff) != 0x0c400f0b)
 			return 0;
-		res = SceSysmemForKernel_2995558D(pid, (void *)pc, &armNop, 4);
+		res = sceKernelCopyToUserProcTextDomain(pid, (void *)pc, &armNop, 4);
 	}
 	if (res < 0)
 		for (;;)
@@ -409,12 +409,12 @@ int SceExcpmgrForKernel_B615A7DA(void)
 	return g_excpData.nestCount[SceCpuId()];
 }
 
-SceExcpmgrData *SceExcpmgrForKernel_96C2869C(void)
+SceExcpmgrData *sceKernelGetExcpCB(void)
 {
 	return &g_excpData;
 }
 
-void *SceExcpmgrForKernel_5420ED8F(int cpu)
+void *sceKernelGetExcpStackBottom(int cpu)
 {
 	void *const *stackTop = g_excpData.stackTop;
 
@@ -453,7 +453,7 @@ int Init(SceSize args, void *argp)
 	sceKernelDcacheCleanRangeForL1WBWA((void *)cacheLineDown(start),
 		cacheLineDown(start + size + 31) - cacheLineDown(start));
 	writeDacr(dacr);
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	SceCpuForKernel_C32687D0(&g_vmStart, &g_vmEnd);
 
 	g_excpHandlers.defaultHandler = NULL;

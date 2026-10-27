@@ -98,7 +98,7 @@ int dsp0VideocodecInitializeMemory(void *memory)
 	buffers.optionalBufferAddress = 0;
 	buffers.bufferSize = 256;
 	buffers.optionalBufferSize = 0;
-	ret = SceCodecEngineWrapperForDriver_391BD4FD(99,
+	ret = sceVeneziaRpcCallGenericThunk(99,
 			(const unsigned int *)&buffers, dsp0VideocodecPackCommand,
 			dsp0VideocodecFinishCommand);
 	if (ret & 0x10000000)
@@ -119,7 +119,7 @@ int dsp0VideocodecQueryMemory(void *command)
 	buffers.optionalBufferAddress = 0;
 	buffers.bufferSize = 256;
 	buffers.optionalBufferSize = 0;
-	ret = SceCodecEngineWrapperForDriver_391BD4FD(96,
+	ret = sceVeneziaRpcCallGenericThunk(96,
 			(const unsigned int *)&buffers, dsp0VideocodecPackCommand,
 			dsp0VideocodecFinishCommand);
 	if (ret & 0x10000000)
@@ -141,7 +141,7 @@ int dsp0VideocodecCreateDecoder(void *command)
 	buffers.optionalBufferAddress = sceCodecEngineDsp0GetThreadExecGroup(0);
 	buffers.bufferSize = 256;
 	buffers.optionalBufferSize = 0;
-	ret = SceCodecEngineWrapperForDriver_391BD4FD(97,
+	ret = sceVeneziaRpcCallGenericThunk(97,
 			(const unsigned int *)&buffers, dsp0VideocodecPackCommand,
 			dsp0VideocodecFinishCommand);
 	if (ret & 0x10000000)
@@ -162,7 +162,7 @@ int dsp0VideocodecDeleteDecoder(void *command)
 	buffers.optionalBufferAddress = 0;
 	buffers.bufferSize = 256;
 	buffers.optionalBufferSize = 0;
-	ret = SceCodecEngineWrapperForDriver_391BD4FD(98,
+	ret = sceVeneziaRpcCallGenericThunk(98,
 			(const unsigned int *)&buffers, dsp0VideocodecPackCommand,
 			dsp0VideocodecFinishCommand);
 	if (ret & 0x10000000)
@@ -366,7 +366,7 @@ int initializeDsp0Videocodec(void)
 		void *storage = NULL;
 
 		dsp0VideocodecLocalStorageId = ret;
-		ret = SceProcessmgrForDriver_AF80F39C(0, ret, &storage, 1);
+		ret = sceKernelGetRemoteKPLS(0, ret, &storage, 1);
 		if (ret >= 0) {
 			Dsp0VideocodecGlobal *global;
 			struct ThreadmgrFastMutex *mutex;
@@ -406,7 +406,7 @@ int initializeDsp0Videocodec(void)
 int _sceDsp0VideocodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 {
 	void *storage = NULL;
-	int ret = SceProcessmgrForDriver_AF80F39C(pid,
+	int ret = sceKernelGetRemoteKPLS(pid,
 					 dsp0VideocodecLocalStorageId, &storage, 1);
 
 	if (ret >= 0) {
@@ -444,7 +444,7 @@ int _sceDsp0VideocodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 int _sceDsp0VideocodecProcessExitEntry(SceUID pid, SceUInt32 type)
 {
 	void *storage = NULL;
-	int ret = SceProcessmgrForDriver_AF80F39C(pid,
+	int ret = sceKernelGetRemoteKPLS(pid,
 					 dsp0VideocodecLocalStorageId, &storage, 0);
 
 	if (ret >= 0) {
@@ -476,7 +476,7 @@ int dsp0VideocodecIsProcessActive(SceUID pid)
 	int status;
 
 	if (pid != 0) {
-		if (SceProcessmgrForDriver_AF80F39C(pid,
+		if (sceKernelGetRemoteKPLS(pid,
 				dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 			storage = NULL;
 	} else {
@@ -502,7 +502,7 @@ int dsp0VideocodecIsProcessSuspended(SceUID pid)
 	int suspended = 1;
 
 	if (pid != 0) {
-		if (SceProcessmgrForDriver_AF80F39C(pid,
+		if (sceKernelGetRemoteKPLS(pid,
 				dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 			storage = NULL;
 	} else {
@@ -519,7 +519,7 @@ int dsp0VideocodecIsProcessSuspended(SceUID pid)
 	if (status != 0) {
 		storage = NULL;
 		if (pid != 0) {
-			if (SceProcessmgrForDriver_AF80F39C(pid,
+			if (sceKernelGetRemoteKPLS(pid,
 					dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 				storage = NULL;
 		} else {
@@ -546,7 +546,7 @@ int dsp0VideocodecProcessResume(SceUID pid)
 	int status;
 
 	if (pid != 0) {
-		if (SceProcessmgrForDriver_AF80F39C(pid,
+		if (sceKernelGetRemoteKPLS(pid,
 				dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 			storage = NULL;
 	} else {
@@ -563,7 +563,7 @@ int dsp0VideocodecProcessResume(SceUID pid)
 	if (status == 3) {
 		storage = NULL;
 		if (pid != 0) {
-			if (SceProcessmgrForDriver_AF80F39C(pid,
+			if (sceKernelGetRemoteKPLS(pid,
 					dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 				storage = NULL;
 		} else {
@@ -622,7 +622,7 @@ int dsp0VideocodecTermLibraryForProcess(unsigned int codecType, SceUID pid)
 	int ret;
 
 	if (pid != 0) {
-		if (SceProcessmgrForDriver_AF80F39C(pid,
+		if (sceKernelGetRemoteKPLS(pid,
 				dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 			storage = NULL;
 	} else {

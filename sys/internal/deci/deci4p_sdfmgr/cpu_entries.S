@@ -284,7 +284,7 @@
 	and	r3, r3, #0xf
 	mov	r6, r3
 	push	{r0, r1, r2, r3, ip, lr}
-	bl	SceIntrmgrForDriver_182EE3E3
+	bl	sceKernelIsIntrContext
 	mov	r7, r0
 	pop	{r0, r1, r2, r3, ip, lr}
 	push	{r0, r1, r2, r3, ip, lr}

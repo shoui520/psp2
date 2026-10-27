@@ -39,7 +39,7 @@ static __attribute__((noinline)) int NameHeapControlInit(NameHeapControl *contro
 	for (bucket = buckets; bucket != buckets + NAME_HEAP_BUCKETS; bucket++)
 		*bucket = NULL;
 	control->seed = NAME_HEAP_HASH_SEED;
-	control->entryHeap = SceSysmemForKernel_3717C322(sizeof(NameEntry));
+	control->entryHeap = sceKernelGetKernelFixedHeap(sizeof(NameEntry));
 	SCE_DBG_ASSERT_CHECK(control->entryHeap != NULL, 394);
 	for (i = 0; i < NAME_HEAP_LOCKS; i++)
 		control->locks[i] = 0;
@@ -370,7 +370,7 @@ int NameHeapFind(const char *name, SceUInt32 flags, NameEntry **out)
 }
 
 /* sceKernelNameHeapInsert: *out is the kept copy of name */
-int SceSysmemForKernel_B628B46B(const char *name, unsigned int flags, char **out)
+int sceKernelNameHeapInsert(const char *name, unsigned int flags, char **out)
 {
 	NameEntry *entry;
 	int ret;
@@ -396,7 +396,7 @@ int SceSysmemForKernel_40965FD1(const char *name, SceUInt32 flags, char **out)
 }
 
 /* sceKernelNameHeapDelete */
-int SceSysmemForKernel_634D0D0C(const char *name, unsigned int flags)
+int sceKernelNameHeapDelete(const char *name, unsigned int flags)
 {
 	if (name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -424,7 +424,7 @@ static inline void NameHeapControlGetCount(const NameHeapControl *control, SceUI
 	*peak = control->count >> 16;
 }
 
-int SceSysmemForKernel_01194C2E(void *pInfo)
+int sceKernelNameHeapGetInfo(void *pInfo)
 {
 	SceKernelNameHeapInfo *info = pInfo;
 	int ret;

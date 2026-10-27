@@ -11,13 +11,13 @@ SceUdcd:
       version: 1
       nid: 0xA84BDE8A
       functions:
-        - sceUdcdWaitState: 0x59EFFAF1
-        - sceUdcdGetDeviceInfo: 0x701C87CF
+        - sceUdcdWaitStateForUser: 0x59EFFAF1
+        - sceUdcdGetDeviceInfoForUser: 0x701C87CF
         - sceUdcdGetDrvState: 0x99B3DA5D
         - sceUdcdRegisterCallback: 0xA7070093
         - sceUdcdUnregisterCallback: 0xC3FBA889
         - SceUdcd_F1A3690B: 0xF1A3690B
-        - sceUdcdGetDeviceState: 0xFCD31220
+        - sceUdcdGetDeviceStateForUser: 0xFCD31220
         - SceUdcd_FCD876FB: 0xFCD876FB
     SceUdcdForDriver:
       syscall: false
@@ -25,31 +25,31 @@ SceUdcd:
       nid: 0xBC05A8FB
       functions:
         - SceUdcdForDriver_03781649: 0x03781649
-        - SceUdcdForDriver_0DECE532: 0x0DECE532
+        - sceUdcdUnregister: 0x0DECE532
         - SceUdcdForDriver_0F3595AE: 0x0F3595AE
-        - SceUdcdForDriver_1494293B: 0x1494293B
+        - sceUdcdStop: 0x1494293B
         - SceUdcdForDriver_150FD3BB: 0x150FD3BB
-        - SceUdcdForDriver_175E6179: 0x175E6179
+        - sceUdcdReqRecvInternal: 0x175E6179
         - SceUdcdForDriver_1A5A3851: 0x1A5A3851
         - SceUdcdForDriver_1C684884: 0x1C684884
-        - SceUdcdForDriver_1ED0E89E: 0x1ED0E89E
+        - sceUdcdReqSend: 0x1ED0E89E
         - SceUdcdForDriver_28BFEC45: 0x28BFEC45
-        - SceUdcdForDriver_2A234CAF: 0x2A234CAF
+        - sceUdcdEnd: 0x2A234CAF
         - SceUdcdForDriver_2D91F8C3: 0x2D91F8C3
-        - SceUdcdForDriver_2E3E622A: 0x2E3E622A
+        - sceUdcdReqSendInternal: 0x2E3E622A
         - SceUdcdForDriver_34079250: 0x34079250
         - SceUdcdForDriver_360E95B9: 0x360E95B9
         - SceUdcdForDriver_38787672: 0x38787672
         - SceUdcdForDriver_409DD196: 0x409DD196
         - SceUdcdForDriver_45EB0177: 0x45EB0177
-        - SceUdcdForDriver_4E55244D: 0x4E55244D
+        - sceUdcdRegister: 0x4E55244D
         - sceUdcdActivate: 0x4FDEA423
         - SceUdcdForDriver_512F77BC: 0x512F77BC
         - SceUdcdForDriver_64675918: 0x64675918
         - SceUdcdForDriver_6CCD152E: 0x6CCD152E
         - SceUdcdForDriver_78BF2A28: 0x78BF2A28
         - SceUdcdForDriver_7AD0C8D1: 0x7AD0C8D1
-        - SceUdcdForDriver_8AE87657: 0x8AE87657
+        - sceUdcdDeactivate: 0x8AE87657
         - SceUdcdForDriver_90F8BCAE: 0x90F8BCAE
         - SceUdcdForDriver_9119247B: 0x9119247B
         - SceUdcdForDriver_9B44DF29: 0x9B44DF29
@@ -61,13 +61,13 @@ SceUdcd:
         - SceUdcdForDriver_B1454F11: 0xB1454F11
         - SceUdcdForDriver_B1C2EA5A: 0xB1C2EA5A
         - SceUdcdForDriver_C0CA5DDB: 0xC0CA5DDB
-        - SceUdcdForDriver_C60A74B2: 0xC60A74B2
+        - sceUdcdReqRecv: 0xC60A74B2
         - SceUdcdForDriver_D01CFD22: 0xD01CFD22
-        - SceUdcdForDriver_D03017C0: 0xD03017C0
+        - sceUdcdWaitState: 0xD03017C0
         - SceUdcdForDriver_DB7EF7AB: 0xDB7EF7AB
-        - SceUdcdForDriver_E054B5E4: 0xE054B5E4
+        - sceUdcdGetDeviceState: 0xE054B5E4
         - SceUdcdForDriver_E4F32EDA: 0xE4F32EDA
-        - SceUdcdForDriver_E9E75C49: 0xE9E75C49
+        - sceUdcdInit: 0xE9E75C49
         - SceUdcdForDriver_EBB1E86B: 0xEBB1E86B
-        - SceUdcdForDriver_FBEA3703: 0xFBEA3703
+        - sceUdcdGetDeviceInfo: 0xFBEA3703
         - SceUdcdForDriver_FDC10F93: 0xFDC10F93

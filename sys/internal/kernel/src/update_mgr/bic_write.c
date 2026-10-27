@@ -19,7 +19,7 @@ int BicUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 	(void)version;
 	if (!updateUseBatteryService)
 		return (int)0x800f0202;
-	result = SceSysconForDriver_2CEF078E();
+	result = sceSysconBatteryStartBLMode();
 	if (result != (int)0x80250222 && result)
 		return (int)0x800f0205;
 	if (totalSize) {
@@ -106,7 +106,7 @@ int BicUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 			}
 			if (command.type == 1) {
 				memset(compareData, 0, sizeof(compareData));
-				if (SceSysconForDriver_448DAFF1(cmdNo, command.compareAddress,
+				if (sceSysconBatteryReadBLCommand(cmdNo, command.compareAddress,
 						command.compareOffset, compareData, command.size) ||
 				    memcmp(compareData, command.data, command.size))
 					return (int)0x800f0205;
@@ -118,12 +118,12 @@ int BicUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 				rest = command.size;
 				for (cmdOff = 0; rest; cmdOff += unit_size) {
 					unit_size = rest >= 16 ? 16 : rest;
-					if (SceSysconForDriver_E4F29744(cmdNo, cmdOff,
+					if (sceSysconBatterySetBLCommand(cmdNo, cmdOff,
 							&command.data[cmdOff], unit_size))
 						return (int)0x800f0205;
 					rest -= unit_size;
 				}
-				if (SceSysconForDriver_74B2AB55(cmdNo))
+				if (sceSysconBatteryExecBLCommand(cmdNo))
 					return (int)0x800f0205;
 				cmdNo++;
 			}
@@ -144,10 +144,10 @@ int BicUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 	status->written_rates = 100;
 	status->seq_no++;
 	UpdateUtilUpdateNodeStatus(nodeType, status);
-	if (SceSysconForDriver_E4AE7852())
+	if (sceSysconBatteryStopBLMode())
 		return (int)0x800f0205;
 	BicUtilWaitCookieStatus();
-	if (SceSysconForDriver_87DA378D())
+	if (sceSysconBatterySWReset())
 		return (int)0x800f0205;
 	BicUtilWaitCookieStatus();
 	return 0;

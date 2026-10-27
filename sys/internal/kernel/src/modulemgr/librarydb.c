@@ -143,7 +143,7 @@ static LIBDB_DEBUG_NOINLINE MODULEMGR_COLD SceUID GetLibGUIDByLibUID(SceUID pid,
 {
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 149);
 	if (pid != SCE_KERNEL_PROCESS_ID && LibraryDBUsesPUID(pid) == 1)
-		return SceSysmemForDriver_45D22597(pid, uid);
+		return scePUIDtoGUID(pid, uid);
 	return uid;
 }
 
@@ -264,7 +264,7 @@ LibraryDB *LibraryDBInitializeAddr2ModuleTable(SceUID pid)
 			if (tbl->exidxKernelBlock < 0)
 				goto fail;
 			sceKernelGetMemBlockBase(tbl->exidxKernelBlock, (void **)&tbl->exidx);
-			if (SceSysmemForDriver_58D21746(tbl->exidxBlock) < 0)
+			if (sceKernelMapMemBlock(tbl->exidxBlock) < 0)
 				goto fail;
 		}
 	}
@@ -552,7 +552,7 @@ SceUInt32 LibraryDBRegisterLib(SceUID pid, LibEntCB *ent)
 	obj->libEntCB = ent;
 	obj->modid = ent->cb->modid;
 	if (usePuid) {
-		uid = SceSysmemForDriver_BF209859(pid, uid);
+		uid = scePUIDOpenByGUID(pid, uid);
 		if (uid < 0) {
 			sceGUIDClose(ent->guid);
 			ent->guid = 0;
@@ -1415,7 +1415,7 @@ int SceModulemgrForDriver_1D9E0F7E(SceUInt32 addr, SceKernelModuleInfo *info)
 	return LibraryDBGetModuleInfoById(SCE_KERNEL_PROCESS_ID, modid, info);
 }
 
-int SceModulemgrForKernel_DAA90093(SceUID pid, SceUID modid, SceKernelModuleInfo *info)
+int sceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info)
 {
 	if (pid == 0)
 		pid = sceKernelGetProcessId();

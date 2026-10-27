@@ -419,7 +419,7 @@ int SceDsiForDriver_F2921E29(unsigned head, unsigned output)
 	return 0;
 }
 
-int SceDsiForDriver_78E6E3CF(unsigned head, unsigned lanes, unsigned pixelSize)
+int sceDsiSetDisplayMode(unsigned head, unsigned lanes, unsigned pixelSize)
 {
 	if (head > 1)
 		return DSI_ERROR_HEAD;
@@ -750,7 +750,7 @@ static inline __attribute__((always_inline)) unsigned DsiInterlacedProgram(
 	return p - program;
 }
 
-int SceDsiForDriver_5BE5AA9B(unsigned head)
+int sceDsiStartMaster(unsigned head)
 {
 	DsiContext *ctx;
 	volatile SceDsiRegisters *regs;
@@ -818,7 +818,7 @@ int SceDsiForDriver_5BE5AA9B(unsigned head)
 	return 0;
 }
 
-int SceDsiForDriver_114D1413(unsigned head)
+int sceDsiStopMaster(unsigned head)
 {
 	DsiContext *ctx;
 	volatile SceDsiRegisters *regs;
@@ -854,7 +854,7 @@ int SceDsiForDriver_114D1413(unsigned head)
 
 static const uint32_t s_dsiStartModes[4] = {2, 2, 3, 4};
 
-int SceDsiForDriver_C2E85919(unsigned head, unsigned start)
+int sceDsiStartDisplay(unsigned head, unsigned start)
 {
 	DsiContext *ctx;
 	volatile SceDsiRegisters *regs;
@@ -976,7 +976,7 @@ int SceDsiForDriver_C2E85919(unsigned head, unsigned start)
 	return 0;
 }
 
-int SceDsiForDriver_7640F607(unsigned head)
+int sceDsiStopDisplay(unsigned head)
 {
 	DsiContext *ctx;
 	volatile SceDsiRegisters *regs;
@@ -1025,10 +1025,10 @@ static int DsiSysEvent(int resume, int eventId, void *args, void *opt)
 	(void)args;
 	(void)opt;
 	if (resume == 0 && eventId == 0x4004) {
-		SceDsiForDriver_7640F607(0);
-		SceDsiForDriver_7640F607(1);
-		SceDsiForDriver_114D1413(0);
-		SceDsiForDriver_114D1413(1);
+		sceDsiStopDisplay(0);
+		sceDsiStopDisplay(1);
+		sceDsiStopMaster(0);
+		sceDsiStopMaster(1);
 	}
 	return 0;
 }

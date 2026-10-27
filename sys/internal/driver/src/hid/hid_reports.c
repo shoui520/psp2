@@ -280,7 +280,7 @@ release:
 			hidNotifyKeyboardEnumeration();
 		else if (type == 3)
 			hidNotifyConsumerEnumeration();
-		SceKernelSuspendForDriver_E0489831(0);
+		sceKernelPowerTick(0);
 	}
 }
 
@@ -553,7 +553,7 @@ consumer:
 		else if (collection->type == 2)
 			hidNotifyKeyboardEnumeration();
 	}
-	SceKernelSuspendForDriver_E0489831(0);
+	sceKernelPowerTick(0);
 attached:
 	collection->device = device;
 	return result;
@@ -861,7 +861,7 @@ void hidProcessReport(HidCollection *collection, unsigned int reportId,
 		hidNotifyConsumerRead();
 		break;
 	}
-	SceKernelSuspendForDriver_E0489831(0);
+	sceKernelPowerTick(0);
 }
 
 #undef READ_BITS

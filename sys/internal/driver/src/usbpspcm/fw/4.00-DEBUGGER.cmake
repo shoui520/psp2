@@ -66,7 +66,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUser
 	sceKernelGetMemBlockBase
 	sceKernelCopyFromUser
@@ -100,19 +100,19 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetEventFlag
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_FD00C72A
-	SceUdcdForDriver_0DECE532
-	SceUdcdForDriver_1494293B
-	SceUdcdForDriver_1ED0E89E
-	SceUdcdForDriver_4E55244D
+	sceUdcdUnregister
+	sceUdcdStop
+	sceUdcdReqSend
+	sceUdcdRegister
 	sceUdcdActivate
 	SceUdcdForDriver_78BF2A28
-	SceUdcdForDriver_8AE87657
+	sceUdcdDeactivate
 	SceUdcdForDriver_9F53D64D
 	sceUdcdStart
 	SceUdcdForDriver_AA5FD90E
 	SceUdcdForDriver_C0CA5DDB
-	SceUdcdForDriver_C60A74B2
-	SceUdcdForDriver_FBEA3703
+	sceUdcdReqRecv
+	sceUdcdGetDeviceInfo
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

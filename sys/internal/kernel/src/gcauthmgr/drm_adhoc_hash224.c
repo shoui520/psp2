@@ -17,7 +17,7 @@ int GcAuthAdhocHash224Spans(const unsigned char *first,
 		input->payload[index] = first[index];
 	for (index = 0; index != secondSize; ++index)
 		input->payload[firstSize + index] = second[index];
-	if (SceKernelUtilsForDriver_9EA9D4DC(input->payload, size,
+	if (sceSha224Digest(input->payload, size,
 			gcAuthAdhocHashScratch.digest224) != 0)
 		return (int)0x808a0103;
 	return 0;

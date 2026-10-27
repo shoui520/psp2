@@ -220,7 +220,7 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDReferObject
 	sceGUIDReleaseObject
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyFromUserProc
 	sceKernelCopyToUserProc
@@ -238,19 +238,19 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelStrncpyFromUser
 	SceSysmemForDriver_E655852F
 	sceKernelStrncpyToUserProc
-	SceCpuForKernel_803C84BF
-	SceCpuForDriver_1E850481
-	SceCpuForDriver_3627F4E0
-	SceCpuForDriver_4B527009
-	SceCpuForDriver_4E459A03
-	SceCpuForDriver_59F74E94
-	SceCpuForDriver_5AC9D394
-	SceCpuForDriver_5F6A8743
-	SceCpuForDriver_6F63F56D
+	sceKernelL1IcacheInvalidateEntireAllCore
+	sceKernelAtomicAddAndGet8
+	sceKernelAtomicCompareAndSet8
+	sceKernelAtomicCompareAndSet64
+	sceKernelAtomicAddAndGet64
+	sceKernelAtomicAddAndGet16
+	sceKernelSpinlockLowTrylock
+	sceKernelAtomicAddAndGet32
+	sceKernelAtomicCompareAndSet16
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelSpinlockLowLock
-	SceCpuForDriver_CDA96E81
+	sceKernelAtomicCompareAndSet32
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	sceKernelCpuResumeIntr
@@ -278,13 +278,13 @@ set(MODULE_IMPORT_FUNCS
 	memcmp
 	SceSysrootForDriver_39F1FD07
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
-	SceExcpmgrForKernel_5420ED8F
+	sceKernelUnregisterProcEventHandler
+	sceKernelGetExcpStackBottom
 	SceExcpmgrForKernel_B615A7DA
 	SceIntrmgrForKernel_01911612
 	SceIntrmgrForKernel_6F5B8AF2
 	sceKernelQueryIntrHandlerInfo
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	sceKernelRegisterIntrHookHandler
 	sceKernelReleaseIntrHookHandler
 	SceSystimerForDriver_0450933B
@@ -299,7 +299,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetDTraceThreadCBEnable
 	SceThreadmgrForKernel_19440C83
 	SceThreadmgrForKernel_565BD2DA
-	SceThreadmgrForKernel_6C1F092F
+	sceKernelGetThreadContextInfo
 	SceThreadmgrForKernel_DF59DF99
 	sceKernelSetThreadAccessLevel
 	sceKernelDeleteMutex
@@ -325,9 +325,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteEventFlag
 	sceKernelRegisterCallbackToEventForDriver
 	sceKernelStartTimer
-	SceThreadmgrForDriver_8A35F714
+	sceKernelWaitEventFlagCB
 	sceKernelCreateTimer
-	SceThreadmgrForDriver_91A8F38B
+	sceKernelDeleteTimer
 	sceKernelSetTimerEvent
 	sceKernelGetProcessId
 	sceKernelSignalCond
@@ -344,12 +344,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemTimeWide
 	sceKernelDebugSuspendThread
 	sceKernelCreateMutex
-	SceProcessmgrForKernel_014F5113
+	sceKernelLibcGettimeofday
 	sceKernelProcessDebugResume
 	sceKernelProcessDebugSuspend
 	SceProcessmgrForKernel_98AE4BC8
 	sceKernelGetProcessParentId
-	SceProcessmgrForKernel_B0E076D6
+	sceKernelLibcTime
 	SceProcessmgrForKernel_EFFF2975
 	sceKernelGetProcessInfo
 	sceKernelGetProcessStatus
@@ -378,7 +378,7 @@ set(MODULE_IMPORT_FUNCS
 	SceBacktraceForDriver_888E99B8
 	sceKernelRegisterSysEventHandler
 	SceNidsymtblForDriver_138A9106
-	SceDeci4pDbgpForDriver_0509AC51
+	sceDbgpSetDTraceBreakpointHandler
 	SceDeci4pDbgpForDriver_7251789E
 	sceDfMgrClose
 	sceDfMgrOpen

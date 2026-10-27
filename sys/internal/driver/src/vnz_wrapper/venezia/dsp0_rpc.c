@@ -398,7 +398,7 @@ int _sceVeneziaRpcClockDown(void)
 	return 0;
 }
 
-int SceCodecEngineWrapperForDriver_391BD4FD(unsigned int command,
+int sceVeneziaRpcCallGenericThunk(unsigned int command,
 		const unsigned int *input, VeneziaRpcPack pack, VeneziaRpcUnpack unpack)
 {
 	return _callGenericThunk(command, input, pack, unpack, 0x1010000);

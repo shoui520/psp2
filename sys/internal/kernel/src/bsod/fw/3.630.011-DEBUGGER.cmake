@@ -68,7 +68,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelCheckDipsw
 	sceKernelCpuId
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelSpinlockLowLock
 	sceKernelCpuResumeIntr
 	memset
@@ -76,7 +76,7 @@ set(MODULE_IMPORT_FUNCS
 	snprintf
 	__stack_chk_fail
 	SceSysrootForDriver_CAE820B2
-	SceSysrootForKernel_3E455842
+	sceKernelSysrootGetSysroot
 	SceSysrootForKernel_84783B71
 	sceKernelSysrootGetSharedMemory
 	sceKernelSysrootBacktrace

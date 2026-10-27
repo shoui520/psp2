@@ -205,42 +205,42 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDReleaseObject
 	SceSysmemForDriver_2D711589
 	SceSysmemForDriver_2ECF7944
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceGUIDSetName
-	SceSysmemForDriver_58D21746
+	sceKernelMapMemBlock
 	sceKernelCopyFromUserProc
 	sceKernelCopyToUser
 	sceKernelStrncpyFromUserProc
-	SceSysmemForDriver_84A4AF5E
+	scePUIDClose
 	sceKernelGetMemBlockBase
 	SceSysmemForDriver_B429D419
 	sceKernelCopyFromUser
-	SceSysmemForDriver_BF209859
+	scePUIDOpenByGUID
 	sceKernelAllocMemBlockForKernel
-	SceSysmemForDriver_DFE2C8CB
+	sceKernelRemapMemBlock
 	SceSysmemForDriver_E655852F
 	SceSysmemForKernel_4233C16D
 	SceSysmemForKernel_499A9FFF
 	SceSysmemForKernel_5EF1DAAF
-	SceSysmemForKernel_634D0D0C
+	sceKernelNameHeapDelete
 	SceSysmemForKernel_85571907
-	SceSysmemForKernel_B628B46B
+	sceKernelNameHeapInsert
 	sceGUIDKernelCreateWithOpt
 	SceSysmemForKernel_FCB5745A
 	sceKernelDcacheCleanRange
-	SceCpuForDriver_5AC9D394
+	sceKernelSpinlockLowTrylock
 	sceKernelCpuId
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelDcacheCleanRangeForL1WBWA
 	sceKernelSpinlockLowLock
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	sceKernelCpuResumeIntr
 	SceCpuForKernel_14E0B0C4
-	SceCpuForKernel_803C84BF
-	SceKernelUtilsForDriver_3D74CCDF
-	SceKernelUtilsForDriver_5B9BCD75
+	sceKernelL1IcacheInvalidateEntireAllCore
+	sceDeflateDecompressPartial
+	sceZlibGetInfo
 	SceKernelUtilsForDriver_875B2A1C
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B5B74
@@ -274,7 +274,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetThreadExitStatus
 	sceKernelGetProcessId
 	sceKernelDeleteThread
-	SceThreadmgrForDriver_B645C7EF
+	sceKernelRegisterKTLS
 	sceKernelCreateThread
 	sceKernelCreateRemoteThread
 	sceKernelSetEventFlag
@@ -283,10 +283,10 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateMutex
 	sceKernelCheckDipsw
 	sceSblAuthMgrClose
-	SceSblAuthMgrForKernel_89CCDA2C
+	sceSblAuthMgrSetupAuthSegment
 	sceSblAuthMgrOpen
 	SceSblAuthMgrForKernel_ABAB8466
-	SceSblAuthMgrForKernel_BC422443
+	sceSblAuthMgrAuthSegment
 	sceSblAuthMgrAuthHeader
 	SceSblACMgrForKernel_sceSblACMgrIsGameProgram
 	SceSblACMgrForKernel_3F99279F
@@ -296,7 +296,7 @@ set(MODULE_IMPORT_FUNCS
 	SceQafMgrForDriver_382C71E8
 	SceQafMgrForDriver_B9770A13
 	SceSysrootForKernel_20D2A0DF
-	SceSysrootForKernel_256B2394
+	SceSysrootForKernel_sceKernelSysrootDbgpSuspendProcessAndWaitResume
 	sceKernelSysrootGetModulePrivate
 	SceSysrootForKernel_38751FB7
 	SceSysrootForKernel_55392965
@@ -335,9 +335,9 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_D141C076
 	SceDebugForKernel_38F1A352
 	SceDebugForKernel_91E7D24F
-	SceExcpmgrForKernel_5420ED8F
+	sceKernelGetExcpStackBottom
 	SceExcpmgrForKernel_B615A7DA
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	SceIntrmgrForDriver_C568F145
 )
 set(MODULE_IMPORT_VARS

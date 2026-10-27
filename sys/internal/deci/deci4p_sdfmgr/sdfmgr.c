@@ -235,7 +235,7 @@ int sdfMgrResume(int value, void *args)
 /* Inferred name: Sysroot registers this native CPU0 power-status callback. */
 void sdfMgrReportPowerState(int state)
 {
-	unsigned intr = SceCpuForDriver_821FC0EE();
+	unsigned intr = sceKernelCpuSuspendIntr();
 
 	if (!sceKernelCpuId()) {
 		if (!state) {
@@ -428,7 +428,7 @@ int sdfMgrWaitForControl(void)
 
 int sdfMgrUpdateCpuFlags(uint32_t mask, int enabled)
 {
-	unsigned state = SceCpuForDriver_821FC0EE();
+	unsigned state = sceKernelCpuSuspendIntr();
 	SdfMgrCpuState *cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 
 	if (enabled)
@@ -449,7 +449,7 @@ int sdfMgrSetTransport(void *unused, SdfMgrTransport *transport)
 int sdfMgrSetProtocolStatus(SdfMgrProtocolState *protocol, uint32_t mask,
 			    int enabled)
 {
-	unsigned state = SceCpuForDriver_821FC0EE();
+	unsigned state = sceKernelCpuSuspendIntr();
 
 	if (enabled)
 		protocol->flags |= mask;
@@ -537,7 +537,7 @@ int SceDeci4pSDfMgrForKernel_B050A0D5(SdfMgrHook hook, unsigned index)
 
 int SceDeci4pSDfMgrForKernel_B22B42FB(SdfMgrHook hook)
 {
-	unsigned state = SceCpuForDriver_821FC0EE();
+	unsigned state = sceKernelCpuSuspendIntr();
 	SdfMgrCpuState *cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	unsigned i;
 
@@ -554,7 +554,7 @@ int SceDeci4pSDfMgrForKernel_B22B42FB(SdfMgrHook hook)
 
 int SceDeci4pSDfMgrForKernel_E53400AE(SdfMgrHook hook)
 {
-	unsigned state = SceCpuForDriver_821FC0EE();
+	unsigned state = sceKernelCpuSuspendIntr();
 	SdfMgrCpuState *cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	unsigned i;
 
@@ -571,7 +571,7 @@ int SceDeci4pSDfMgrForKernel_E53400AE(SdfMgrHook hook)
 
 int SceDeci4pSDfMgrForKernel_3A25594F(SdfMgrControl control)
 {
-	unsigned state = SceCpuForDriver_821FC0EE();
+	unsigned state = sceKernelCpuSuspendIntr();
 	SdfMgrCpuState *cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	unsigned index = 0;
 
@@ -589,7 +589,7 @@ int SceDeci4pSDfMgrForKernel_3A25594F(SdfMgrControl control)
 
 int SceDeci4pSDfMgrForKernel_59C077B3(SdfMgrControl control)
 {
-	unsigned state = SceCpuForDriver_821FC0EE();
+	unsigned state = sceKernelCpuSuspendIntr();
 	SdfMgrCpuState *cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	unsigned index;
 
@@ -633,7 +633,7 @@ static const struct {
 		SceDeci4pSDfMgrForKernel_501CE61D(15, \
 			SDFMGR_DEBUG_INFO(_line, _hash, 0xaaf0498e, \
 					 "sceSDfMgrModuleBoot"), _format, _result); \
-		if (SceDebugForDriver_374B7868() > 0) \
+		if (sceKernelGetAssertLevel() > 0) \
 			SceDebugForDriver_FD753E7A(1, 0, \
 				SDFMGR_DEBUG_INFO(_assertLine, _assertHash, 0xaaf0498e, \
 						 "sceSDfMgrModuleBoot"), caller); \
@@ -775,11 +775,11 @@ int sdfMgrPrefetchAbortHandler(SceExcpmgrContext *context,
 	uint32_t fault;
 	int result = 2;
 
-	SceThreadmgrForKernel_6C1F092F(&thread);
+	sceKernelGetThreadContextInfo(&thread);
 	cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	fault = readIfsr();
 	sdfMgrFormatCpsr(status, cpsr);
-	s_sdfMgrState.exceptionDepth = (uint32_t *)SceExcpmgrForKernel_96C2869C();
+	s_sdfMgrState.exceptionDepth = (uint32_t *)sceKernelGetExcpCB();
 	if (((fault & 15) | ((fault >> 10) & 1) << 4) != 2 &&
 	    thread.processId == SCE_KERNEL_PROCESS_ID)
 		dumpModuleInfo(address);
@@ -801,11 +801,11 @@ int sdfMgrDataAbortHandler(SceExcpmgrContext *context,
 	uint32_t fault;
 	int result = 2;
 
-	SceThreadmgrForKernel_6C1F092F(&thread);
+	sceKernelGetThreadContextInfo(&thread);
 	cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	fault = readDfsr();
 	sdfMgrFormatCpsr(status, cpsr);
-	s_sdfMgrState.exceptionDepth = (uint32_t *)SceExcpmgrForKernel_96C2869C();
+	s_sdfMgrState.exceptionDepth = (uint32_t *)sceKernelGetExcpCB();
 	if (((fault & 15) | ((fault >> 10) & 1) << 4) != 2 &&
 	    thread.processId == SCE_KERNEL_PROCESS_ID)
 		dumpModuleInfo(address);
@@ -826,7 +826,7 @@ int sdfMgrUndefinedHandler(SceExcpmgrContext *context,
 	SdfMgrExceptionHook hook;
 	int result = 2;
 
-	SceThreadmgrForKernel_6C1F092F(&thread);
+	sceKernelGetThreadContextInfo(&thread);
 	sdfMgrFormatCpsr(status, cpsr);
 	cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	if (thread.processId == SCE_KERNEL_PROCESS_ID)
@@ -1232,7 +1232,7 @@ __attribute__((noinline)) int sdfMgrQueuePacket(SdfMgrPacketQueue *queue,
 
 	if (size > 0x100 && !direct)
 		return (int)0x80090001;
-	state = SceCpuForDriver_821FC0EE();
+	state = sceKernelCpuSuspendIntr();
 	count = queue->count;
 	if (count > 15) {
 		result = (int)0x8009000b;
@@ -1268,7 +1268,7 @@ __attribute__((noinline)) SdfMgrProtocolState *_getPdCB(unsigned index)
 	SceDeci4pSDfMgrForKernel_501CE61D(15,
 		SDFMGR_DEBUG_INFO(1630, 0xbf05bcf0, 0x89e87bb7, "_getPdCB"),
 		"invalid argument (id: %d)\n", index);
-	if (SceDebugForDriver_374B7868() > 0)
+	if (sceKernelGetAssertLevel() > 0)
 		SceDebugForDriver_FD753E7A(1, 0,
 			SDFMGR_DEBUG_INFO(1631, 0xea012585, 0x89e87bb7, "_getPdCB"),
 			caller);
@@ -1351,7 +1351,7 @@ int sceSDfMgrExOpen(SceSDfMgrHandler handler, const SceSDfMgrProtocol *registrat
 int sceSDfMgrOpen(SceSDfMgrHandler handler,
 				  const SceSDfMgrProtocol *registration, void *context)
 {
-	unsigned state = SceCpuForDriver_821FC0EE();
+	unsigned state = sceKernelCpuSuspendIntr();
 	int result = sceSDfMgrExOpen(handler, registration, context);
 
 	sceKernelCpuResumeIntr(state);
@@ -1382,9 +1382,9 @@ int sceSDfMgrExClose(int handle)
 	return (int)0x80090002;
 }
 
-int SceDeci4pSDfMgrForKernel_86CFC8C6(int handle)
+int sceSDfMgrClose(int handle)
 {
-	unsigned state = SceCpuForDriver_821FC0EE();
+	unsigned state = sceKernelCpuSuspendIntr();
 	int result = sceSDfMgrExClose(handle);
 
 	sceKernelCpuResumeIntr(state);
@@ -1491,7 +1491,7 @@ int sceSDfMgrSendSpace(int handle)
 
 int _threadSignal(int handle)
 {
-	unsigned state = SceCpuForDriver_821FC0EE();
+	unsigned state = sceKernelCpuSuspendIntr();
 	int result = sceSDfMgrExReqSend(handle);
 	SdfMgrTransport *transport;
 

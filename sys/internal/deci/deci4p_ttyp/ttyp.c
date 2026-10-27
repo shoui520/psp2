@@ -25,7 +25,7 @@
 #endif
 
 /* weak: the timestamp source may be absent */
-#pragma weak ScePamgrForDriver_FE9BFD27
+#pragma weak sceKernelPaGetTimebaseValue
 
 static SceUID s_mutex;			/* queues, rings and resources */
 static SceUID s_sema;			/* free resources */
@@ -712,13 +712,13 @@ TTYP_INLINE void consput(TtypChannel *ch, const signed char *buf, SceSize size, 
 			}
 		} else {
 			r->hdr.port = TTYP_PORT_PROCESS;
-			SceThreadmgrForKernel_6C1F092F(&info);
+			sceKernelGetThreadContextInfo(&info);
 			r->hdr.pid = info.processId;
 			r->hdr.tid = SceThreadmgrForDriver_F311808F(info.threadId);
 		}
 		time = 0;
-		if (ScePamgrForDriver_FE9BFD27 != NULL)
-			time = ScePamgrForDriver_FE9BFD27();
+		if (sceKernelPaGetTimebaseValue != NULL)
+			time = sceKernelPaGetTimebaseValue();
 		n = left > TTYP_DATA_MAX - 1 ? TTYP_DATA_MAX : left;
 		r->hdr.time[0] = time;
 		r->hdr.time[1] = time >> 32;

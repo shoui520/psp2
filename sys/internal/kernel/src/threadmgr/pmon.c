@@ -99,12 +99,12 @@ int pmonCpuSetEventSelf(SceUID threadId, uint32_t counter, uint32_t eventType)
 	struct ThreadCB *thread;
 	int inIntr, intr, ret;
 
-	inIntr = SceIntrmgrForDriver_182EE3E3();
+	inIntr = sceKernelIsIntrContext();
 	if (counter >= PMON_EVENT_COUNTERS)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (inIntr && threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	thread = PmonCpuThread();
 	if (threadId == 0 || thread->threadId == threadId) {
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
@@ -156,11 +156,11 @@ int pmonThreadChangeEnableCounter(SceUID threadId, uint32_t mask, int enable)
 		enabled = PmonReadEnableSet();
 		if (!enable) {
 			thread->pRegisterContext->pmcntenset = enabled & ~mask;
-			if (!SceIntrmgrForDriver_182EE3E3())
+			if (!sceKernelIsIntrContext())
 				PmonWriteEnableClear(mask);
 		} else {
 			thread->pRegisterContext->pmcntenset = enabled | mask;
-			if (!SceIntrmgrForDriver_182EE3E3())
+			if (!sceKernelIsIntrContext())
 				PmonWriteEnableSet(mask);
 		}
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -183,27 +183,27 @@ int pmonThreadChangeEnableCounter(SceUID threadId, uint32_t mask, int enable)
 	return 0;
 }
 
-/* SceThreadmgrForKernel_7F831213: enables a thread's counters */
-int SceThreadmgrForKernel_7F831213(SceUID threadId, uint32_t mask)
+/* sceKernelPMonThreadSetEnableCounter: enables a thread's counters */
+int sceKernelPMonThreadSetEnableCounter(SceUID threadId, uint32_t mask)
 {
 	int intr, ret;
 
-	if (SceIntrmgrForDriver_182EE3E3() && threadId == 0)
+	if (sceKernelIsIntrContext() && threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = pmonThreadChangeEnableCounter(threadId, mask, 1);
 	sceKernelCpuResumeIntr(intr);
 	return ret;
 }
 
-/* SceThreadmgrForKernel_1D2A6815: disables a thread's counters */
-int SceThreadmgrForKernel_1D2A6815(SceUID threadId, uint32_t mask)
+/* sceKernelPMonThreadClearEnableCounter: disables a thread's counters */
+int sceKernelPMonThreadClearEnableCounter(SceUID threadId, uint32_t mask)
 {
 	int intr, ret;
 
-	if (SceIntrmgrForDriver_182EE3E3() && threadId == 0)
+	if (sceKernelIsIntrContext() && threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = pmonThreadChangeEnableCounter(threadId, mask, 0);
 	sceKernelCpuResumeIntr(intr);
 	return ret;
@@ -262,8 +262,8 @@ done:
 	sceKernelSpinlockLowUnlock(request->done);
 }
 
-/* SceThreadmgrForKernel_7B3368F1: sets a counter (31: the cycle counter) of a thread */
-int SceThreadmgrForKernel_7B3368F1(SceUID threadId, uint32_t counter, uint32_t value)
+/* sceKernelPMonThreadSetCounter: sets a counter (31: the cycle counter) of a thread */
+int sceKernelPMonThreadSetCounter(SceUID threadId, uint32_t counter, uint32_t value)
 {
 	struct ThreadCB *thread;
 	struct SceUIDThreadObject *object;
@@ -279,11 +279,11 @@ int SceThreadmgrForKernel_7B3368F1(SceUID threadId, uint32_t counter, uint32_t v
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		goto restore;
 	}
-	if (SceIntrmgrForDriver_182EE3E3() && threadId == 0) {
+	if (sceKernelIsIntrContext() && threadId == 0) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto resume;
@@ -293,11 +293,11 @@ int SceThreadmgrForKernel_7B3368F1(SceUID threadId, uint32_t counter, uint32_t v
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		if (counter == PMON_CYCLE_COUNTER) {
 			thread->pRegisterContext->pmccntr = value;
-			if (!SceIntrmgrForDriver_182EE3E3())
+			if (!sceKernelIsIntrContext())
 				PmonWriteCycleCount(value);
 		} else {
 			thread->pRegisterContext->pmevent[counter].count = value;
-			if (!SceIntrmgrForDriver_182EE3E3()) {
+			if (!sceKernelIsIntrContext()) {
 				PmonWriteSelect(counter);
 				PmonWriteEventCount(value);
 			}
@@ -401,7 +401,7 @@ int SceThreadmgrForKernel_170F69D6(SceUID threadId, uint32_t counter, uint32_t *
 	uint32_t saved;
 	int inIntr, intr, ret;
 
-	inIntr = SceIntrmgrForDriver_182EE3E3();
+	inIntr = sceKernelIsIntrContext();
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (!PmonCounterValid(counter)) {
@@ -416,7 +416,7 @@ int SceThreadmgrForKernel_170F69D6(SceUID threadId, uint32_t counter, uint32_t *
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto resume;

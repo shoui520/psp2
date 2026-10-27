@@ -212,7 +212,7 @@ _Noreturn void appmgrAbortHandlerLockPanic(void)
 	} \
 } while (0)
 #define ABORT_ASSERT_MAIN_UNOWNED(_line, _func) do { \
-	if (SceDebugForDriver_374B7868() > 0) { \
+	if (sceKernelGetAssertLevel() > 0) { \
 		SceUID owner = g_appmgrMainMutexOwner; \
 		SceUID tid = sceKernelGetThreadId(); \
 		SCE_DBG_ASSERT_LEVEL_FUNC(1, owner != tid, _line, _func); \
@@ -226,7 +226,7 @@ _Noreturn void appmgrAbortHandlerLockPanic(void)
 	if (owner != sceKernelGetThreadId()) { \
 		int slot; \
 		for (slot = 0; slot != 20; ++slot) { \
-			int level = SceDebugForDriver_374B7868(); \
+			int level = sceKernelGetAssertLevel(); \
 			if (level > 0) { \
 				SceUID slotOwner = g_appmgrAppStates[slot].mutexOwner; \
 				SceUID tid = sceKernelGetThreadId(); \
@@ -793,7 +793,7 @@ static inline void handleAbortedApp(struct AppState *app)
 				g_coredumpFrameBuf.height = 272;
 				_SetDisplayOwner(1, sceKernelGetProcessId());
 				_SetDisplayOwner(0, sceKernelGetProcessId());
-				if (SceDisplayForDriver_289D82FE(&g_coredumpFrameBuf, 1) == 0 &&
+				if (sceDisplaySetFrameBuf(&g_coredumpFrameBuf, 1) == 0 &&
 				    g_coredumpFrameBuf.width >= 264 && g_coredumpFrameBuf.height >= 32)
 					drawGpuCrashScreen();
 			}

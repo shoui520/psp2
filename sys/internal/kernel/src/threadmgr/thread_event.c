@@ -59,7 +59,7 @@ static int uidThreadEvent_Destructor(void *object)
 	int intr;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1017);
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	pid = event->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
@@ -86,7 +86,7 @@ static int getThreadEventInfo(SceUID uid, ThreadmgrThreadEventInfo *info)
 	int intr, ret;
 
 	*info = (ThreadmgrThreadEventInfo){ .size = sizeof(*info) };
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(uid, s_threadmgrRuntime.manager->threadEventClass,
 					 (SceObjectBase **)&event) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_EVENT_ID;
@@ -236,12 +236,12 @@ int threadEventProcessExit(SceProcessObject *process)
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	}
 	for (i = 0; i < (int)got; i++) {
-		guid = SceSysmemForDriver_45D22597(process->pid, vector[i]);
+		guid = scePUIDtoGUID(process->pid, vector[i]);
 		if (guid < 0) {
 			SCE_DBG_ASSERT_FAIL(316);
 			continue;
 		}
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 		if (sceGUIDReferObjectWithClass(guid,
 				s_threadmgrRuntime.manager->threadEventClass,
 				(SceObjectBase **)&event) < 0) {
@@ -259,7 +259,7 @@ int threadEventProcessExit(SceProcessObject *process)
 					&s_threadmgrRuntime.manager->threadEventLock);
 				if (sceGUIDReleaseObject(guid) < 0)
 					SCE_PANIC(354);
-				ret = SceSysmemForDriver_84A4AF5E(process->pid, vector[i]);
+				ret = scePUIDClose(process->pid, vector[i]);
 				if (ret < 0) {
 					SCE_DBG_PRINTF(0xb, 360, "()->scePUIDClose(0x%08X, puid=0x%08X)="
 						"0x%08X\n", process->pid, vector[i], ret);
@@ -398,7 +398,7 @@ checked:
 	opt.attr = 0;
 	opt.ownerPid = 0;
 	opt.cls = NULL;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->threadEventClass,
 		name, &opt, (SceObjectBase **)&event);
 	ret = uid;
@@ -470,7 +470,7 @@ int sceKernelUnregisterThreadEventHandler(SceUID uid)
 			"threadEventId=0x%08x[%s]\n", uid, SceSysmemForDriver_E655852F(uid));
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(uid, s_threadmgrRuntime.manager->threadEventClass,
 					 (SceObjectBase **)&event) < 0) {
 		SCE_DBG_ASSERT_FAIL(630);
@@ -629,7 +629,7 @@ int SceThreadmgrForDriver_C4456EC9(SceUID pid, int level, ThreadmgrThreadEventIn
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
-		if (getThreadEventInfo(SceSysmemForDriver_45D22597(pid, vector[i]), &info) != 0)
+		if (getThreadEventInfo(scePUIDtoGUID(pid, vector[i]), &info) != 0)
 			continue;
 		info.uid = vector[i];
 		targetId = info.target;

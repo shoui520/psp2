@@ -97,7 +97,7 @@ set(MODULE_IMPORT_NIDS
 	0x60A35F64:F:0xCBD6D8BC
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUserProc
 	sceKernelCopyToUser
 	sceKernelCopyFromUser
@@ -114,7 +114,7 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	memcmp
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	sceKernelDisableSubIntr
 	sceKernelReleaseSubIntrHandler
 	sceKernelEnableSubIntr
@@ -147,15 +147,15 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_14345161
 	SceSblAIMgrForDriver_71608CA3
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
+	sceKernelUnregisterProcEventHandler
 	SceKernelUtilsForDriver_C2A61770
 	SceKernelUtilsForDriver_F12B6451
 	SceSdifForDriver_0C66E36F
 	SceSdifForDriver_3428884D
-	SceSdifForDriver_3C4CDC8B
+	sceSdioWrite
 	SceSdifForDriver_6A8235FC
-	SceSdifForDriver_733BC373
-	SceSdifForDriver_D0F78D9B
+	sceSdioSetBlockLen
+	sceSdioRead
 	SceSdifForDriver_E80293EF
 	SceNetPsForDriver_1ABF937D
 	SceNetKernelGateway

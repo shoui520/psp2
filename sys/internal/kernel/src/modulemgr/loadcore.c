@@ -734,6 +734,6 @@ int sceKernelLinkWeakLibraryByLibname(SceUID pid, const char *libname)
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1101, "linkLostClientLibrary : failed (res:0x%08x)\n",
 				     ret);
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	return ret;
 }

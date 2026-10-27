@@ -57,7 +57,7 @@ SceUInt64 sceFiosKernelPlatformDateTimeToTime(const SceDateTime *time)
 {
 	SceUInt64 t = 0;
 
-	if (SceRtcForDriver_497B5DC9(time, &t) != 0)
+	if (sceRtcGetTime64_t(time, &t) != 0)
 		return 0;
 	return t * 1000000000;
 }

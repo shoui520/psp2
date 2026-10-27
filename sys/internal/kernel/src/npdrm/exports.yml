@@ -17,7 +17,7 @@ SceNpDrm:
         - SceNpDrmForDriver_39A7A666: 0x39A7A666
         - SceNpDrmForDriver_3BFD2850: 0x3BFD2850
         - SceNpDrmForDriver_4E321BDE: 0x4E321BDE
-        - SceNpDrmForDriver_5D73448C: 0x5D73448C
+        - sceNpDrmGetFixedRifName: 0x5D73448C
         - SceNpDrmForDriver_6D9223E1: 0x6D9223E1
         - SceNpDrmForDriver_723322B5: 0x723322B5
         - SceNpDrmForDriver_742EBAF4: 0x742EBAF4
@@ -31,8 +31,8 @@ SceNpDrm:
         - SceNpDrmForDriver_C070FE89: 0xC070FE89
         - SceNpDrmForDriver_D91C3BCE: 0xD91C3BCE
         - SceNpDrmForDriver_DACB71F4: 0xDACB71F4
-        - SceNpDrmForDriver_DB406EAE: 0xDB406EAE
-        - SceNpDrmForDriver_DF62F3B8: 0xDF62F3B8
+        - sceNpDrmGetRifInfo: 0xDB406EAE
+        - sceNpDrmGetRifName: 0xDF62F3B8
         - SceNpDrmForDriver_EF387FC4: 0xEF387FC4
         - SceNpDrmForDriver_FC84CA1A: 0xFC84CA1A
         - SceNpDrmForDriver_FE7B17B6: 0xFE7B17B6

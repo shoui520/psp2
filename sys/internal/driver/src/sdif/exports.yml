@@ -22,13 +22,13 @@ SceSdif:
         - SceSdifForDriver_1847B18C: 0x1847B18C
         - SceSdifForDriver_22C82E79: 0x22C82E79
         - SceSdifForDriver_235AD556: 0x235AD556
-        - SceSdifForDriver_23A4EF01: 0x23A4EF01
+        - sddev_get_sd_cid: 0x23A4EF01
         - sceSdifDisableSlowCardMode: 0x29A71E7F
         - SceSdifForDriver_3428884D: 0x3428884D
         - SceSdifForDriver_35BA9DF8: 0x35BA9DF8
         - SceSdifForDriver_36A2B01B: 0x36A2B01B
         - SceSdifForDriver_3B6AB29E: 0x3B6AB29E
-        - SceSdifForDriver_3C4CDC8B: 0x3C4CDC8B
+        - sceSdioWrite: 0x3C4CDC8B
         - SceSdifForDriver_3DF7E207: 0x3DF7E207
         - SceSdifForDriver_475D8E45: 0x475D8E45
         - SceSdifForDriver_53518827: 0x53518827
@@ -41,14 +41,14 @@ SceSdif:
         - SceSdifForDriver_6A8235FC: 0x6A8235FC
         - SceSdifForDriver_6CC8E28D: 0x6CC8E28D
         - sceMmcReadSector: 0x6F8D529B
-        - SceSdifForDriver_733BC373: 0x733BC373
+        - sceSdioSetBlockLen: 0x733BC373
         - SceSdifForDriver_763F1075: 0x763F1075
         - SceSdifForDriver_76D2B87B: 0x76D2B87B
         - SceSdifForDriver_849E3216: 0x849E3216
         - SceSdifForDriver_855C95E1: 0x855C95E1
         - sendWriteProtectStatus: 0x995748EA
         - SceSdifForDriver_AABAA0F0: 0xAABAA0F0
-        - SceSdifForDriver_AB0222F2: 0xAB0222F2
+        - sceSdifGoStandbyState: 0xAB0222F2
         - SceSdifForDriver_AF702FE7: 0xAF702FE7
         - SceSdifForDriver_B05EFF68: 0xB05EFF68
         - sceMmcSendGeneralCmdData: 0xB0996641
@@ -58,13 +58,13 @@ SceSdif:
         - SceSdifForDriver_B9EA5B1E: 0xB9EA5B1E
         - sceSdioChangeBusSpeed: 0xBC45C83D
         - SceSdifForDriver_C1271539: 0xC1271539
-        - SceSdifForDriver_D0F78D9B: 0xD0F78D9B
+        - sceSdioRead: 0xD0F78D9B
         - SceSdifForDriver_D3C1E2B6: 0xD3C1E2B6
         - SceSdifForDriver_DC8F52F8: 0xDC8F52F8
         - SceSdifForDriver_DECE963B: 0xDECE963B
         - sceSdWriteSectorInternal: 0xE0781171
         - SceSdifForDriver_E091BA2E: 0xE091BA2E
-        - SceSdifForDriver_E5E5F42E: 0xE5E5F42E
+        - deinit: 0xE5E5F42E
         - SceSdifForDriver_E80293EF: 0xE80293EF
         - SceSdifForDriver_F1A24EDD: 0xF1A24EDD
         - sceSdifEnableSlowCardMode: 0xF37CF8E5

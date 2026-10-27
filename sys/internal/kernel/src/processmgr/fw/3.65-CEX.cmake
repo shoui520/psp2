@@ -232,7 +232,7 @@ set(MODULE_IMPORT_FUNCS
 	SceExcpmgrForKernel_E7487AFD
 	SceIntrmgrForKernel_7E3D4560
 	SceIntrmgrForKernel_ABEB5A69
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	sceKernelGenerateSoftIntr
 	sceKernelRegisterIntrHandler
 	sceKernelGetLibraryDBFlags
@@ -241,7 +241,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelStartPreloadingModules
 	sceKernelLoadProcessImage
 	sceKernelLoadPreloadingModules
-	SceModulemgrForKernel_E71530D7
+	sceKernelUnloadProcessModules
 	sceIoOpen
 	sceIoClose
 	sceKernelCpuScanThreadForProcessmgr
@@ -304,7 +304,7 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDGetObject
 	sceGUIDReleaseObject
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceGUIDSetName
 	sceGUIDKernelCreate
 	sceUIDClassInitClass
@@ -313,7 +313,7 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDReferObjectWithClassLevel
 	sceKernelAllocHeapMemory
 	SceSysmemForDriver_80BD6FEB
-	SceSysmemForDriver_84A4AF5E
+	scePUIDClose
 	SceSysmemForDriver_85336A1C
 	sceKernelShrinkHeap
 	sceKernelCreateHeap
@@ -321,7 +321,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetMemBlockBase
 	SceSysmemForDriver_B415B5A8
 	sceKernelCopyFromUser
-	SceSysmemForDriver_BF209859
+	scePUIDOpenByGUID
 	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
 	SceSysmemForDriver_E655852F
@@ -334,27 +334,27 @@ set(MODULE_IMPORT_FUNCS
 	sceUIDEntryHeapCloseAllPUID
 	sceKernelDeleteObjectHeap
 	sceKernelAddressSpaceFreeAllMemBlock
-	SceSysmemForKernel_368F1C36
+	sceGUIDtoClass
 	sceKernelGrowPhyMemPartByPbase
 	SceSysmemForKernel_3753C584
 	sceKernelDeletePhyMemPart
 	SceSysmemForKernel_4233C16D
-	SceSysmemForKernel_4A2E421D
+	sceKernelDeleteAddressSpace
 	sceKernelSysmemModuleStartAfterProcessmgr
 	SceSysmemForKernel_4E923101
 	sceGUIDGetUIDVectorByClass
-	SceSysmemForKernel_5B434019
+	sceKernelGrowPhyMemPart
 	CreatePhyMemPartByPbase
-	SceSysmemForKernel_5E772E19
+	sceKernelAddressSpaceSetProcess
 	SceSysmemForKernel_5EDDEEB5
 	SceSysmemForKernel_62800A6B
 	sceKernelObjectHeapStart
 	SceSysmemForKernel_6D563733
 	sceKernelGetPhyMemPartInfoForDebugger
 	SceSysmemForKernel_791D6205
-	SceSysmemForKernel_7DF07D60
+	sceKernelAddressSpaceSetPhyMemPart
 	SceSysmemForKernel_85571907
-	SceSysmemForKernel_89BEF058
+	sceUIDCreateEntryHeap
 	sceKernelCreateAddressSpace
 	sceKernelResetPhyMemPart
 	sceKernelCreateObjectHeap
@@ -364,7 +364,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_CAB15F74
 	sceKernelAddressSpaceSetName
 	SceSysmemForKernel_E8CC2166
-	SceSysmemForKernel_F6D09BD9
+	sceUIDDeleteEntryHeap
 	sceKernelAddressSpaceGetTimerVbase
 	SceSysmemForKernel_FA6C098C
 	sceGUIDKernelCreateWithOpt
@@ -391,11 +391,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootSetModulePrivate
 	sceKernelSysrootSetStatus
 	SceSysrootForKernel_D29BCA77
-	SceCpuForDriver_5F6A8743
+	sceKernelAtomicAddAndGet32
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelSpinlockLowLock
-	SceCpuForDriver_CDA96E81
+	sceKernelAtomicCompareAndSet32
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	sceKernelCpuResumeIntr
@@ -418,7 +418,7 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_254525F8
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	SceKernelSuspendForDriver_E0489831
+	sceKernelPowerTick
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

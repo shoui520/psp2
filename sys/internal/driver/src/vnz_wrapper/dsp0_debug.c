@@ -3278,7 +3278,7 @@ int registerVeneziaVipCallback(unsigned int processor, SceUID uid, uint32_t even
 	if (processor != 1 || (eventMask & 0xffffc4f9))
 		return -2141060863;
 	lockVeneziaVipProcess(g_veneziaVipState.processLock);
-	ret = SceSysmemForDriver_45D22597(0, uid);
+	ret = scePUIDtoGUID(0, uid);
 	if (ret >= 0) {
 		kind = sceKernelGetThreadmgrUIDClass(ret);
 		if (kind < 0) {
@@ -3326,7 +3326,7 @@ int unregisterVeneziaVipCallback(unsigned int processor, SceUID uid)
 		return -2141060863;
 	lockVeneziaVipProcess(g_veneziaVipState.processLock);
 	if (uid) {
-		uid = SceSysmemForDriver_45D22597(0, uid);
+		uid = scePUIDtoGUID(0, uid);
 		if (uid < 0) {
 			ret = uid;
 			goto unlock;
@@ -7873,7 +7873,7 @@ int registerVeneziaVipCaptureCallback(unsigned int processor, SceUID uid,
 		ret = -2141060863;
 		goto unlockProcess;
 	}
-	ret = SceSysmemForDriver_45D22597(0, uid);
+	ret = scePUIDtoGUID(0, uid);
 	if (ret < 0)
 		goto unlockProcess;
 	kind = sceKernelGetThreadmgrUIDClass(ret);
@@ -7935,7 +7935,7 @@ int unregisterVeneziaVipCaptureCallback(unsigned int processor, SceUID uid)
 		goto unlock;
 	}
 	if (uid) {
-		uid = SceSysmemForDriver_45D22597(0, uid);
+		uid = scePUIDtoGUID(0, uid);
 		if (uid < 0) {
 			ret = uid;
 			goto unlock;

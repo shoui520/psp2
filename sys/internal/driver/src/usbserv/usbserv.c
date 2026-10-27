@@ -30,7 +30,7 @@ static inline __attribute__((always_inline)) void lock(void)
 	int ret = sceKernelLockMutex(s_serv.mutex, 1, NULL);
 	(void)ret;
 #if FW_DEBUG
-	if (ret < 0 && SceDebugForDriver_374B7868() > 0)
+	if (ret < 0 && sceKernelGetAssertLevel() > 0)
 		SceDebugForDriver_821A2D59(1, 0, SCE_DBGINFO_FUNC(1548, "lock"),
 			__builtin_return_address(0), "ret=%08x\n", ret);
 #endif
@@ -40,7 +40,7 @@ static inline __attribute__((always_inline)) void unlock(void)
 	int ret = sceKernelUnlockMutex(s_serv.mutex, 1);
 	(void)ret;
 #if FW_DEBUG
-	if (ret < 0 && SceDebugForDriver_374B7868() > 0)
+	if (ret < 0 && sceKernelGetAssertLevel() > 0)
 		SceDebugForDriver_821A2D59(1, 0, SCE_DBGINFO_FUNC(1557, "unlock"),
 			__builtin_return_address(0), "ret=%08x\n", ret);
 #endif
@@ -113,12 +113,12 @@ static int usb1_mac_select(unsigned mode, unsigned action)
 		if (!usbEnabled(1, 1))
 			return SERV_ERROR(FATAL);
 		s_serv.mode[1] = 1;
-		ret = SceUdcdForDriver_E9E75C49(1);
+		ret = sceUdcdInit(1);
 		if (ret < 0)
 			DEBUG(6, 401, "usb1_mac_select", "# ERROR # sceUdcdInit() ret=%08x\n", ret);
 		return ret;
 	}
-	ret = SceUdcdForDriver_2A234CAF(1);
+	ret = sceUdcdEnd(1);
 	if (ret < 0 && ret != (int)0x80243002)
 		DEBUG(6, 411, "usb1_mac_select", "# ERROR # sceUdcdEnd() ret=%08x\n", ret);
 	ScePwmForDriver_13161CCC(1, 0x200, 0, 0);
@@ -135,7 +135,7 @@ static int port2Host(void)
 		return s_serv.ether != 0;
 	unsigned hardware = SceSysconForDriver_CBD6D8BC() & 0xff0000;
 	if (hardware <= 0x600000) {
-		SceSysconForDriver_1503D6A0(&info);
+		sceSysconGetMultiCnInfo(&info);
 		return !(info & 0xfb00);
 	}
 	if (hardware >= 0x800000) {
@@ -149,14 +149,14 @@ static int usb2_mac_select(unsigned mode, unsigned action)
 	int ret;
 	if (!mode) {
 		if (s_serv.mode[2] == 1) {
-			ret = SceUdcdForDriver_2A234CAF(2);
+			ret = sceUdcdEnd(2);
 			if (ret < 0)
 				DEBUG(6, 489, "usb2_mac_select", "# ERROR # sceUdcdEnd() ret=%08x\n", ret);
 		}
 		configurePort(2, 0);
 		if (!usbEnabled(2, 0))
 			return SERV_ERROR(FATAL);
-		SceGpioForDriver_D454A584(1, 3);
+		sceGpioPortSet(1, 3);
 		s_serv.mode[2] = 0;
 		if ((SceSysconForDriver_CBD6D8BC() & 0xfd0000) == 0x800000)
 			ScePervasiveForDriver_29E65AE1(2, 0, 0);
@@ -168,7 +168,7 @@ static int usb2_mac_select(unsigned mode, unsigned action)
 		unsigned hardware = SceSysconForDriver_CBD6D8BC() & 0xff0000;
 		int host = 0;
 		if (hardware <= 0x600000) {
-			SceSysconForDriver_1503D6A0(&info);
+			sceSysconGetMultiCnInfo(&info);
 			host = !(info & 0xfb00);
 		} else if (hardware >= 0x800000) {
 			SceSysconForDriver_D6F6D472(&info);
@@ -187,16 +187,16 @@ static int usb2_mac_select(unsigned mode, unsigned action)
 	configurePort(2, 1);
 	if (!usbEnabled(2, 1))
 		return SERV_ERROR(FATAL);
-	SceGpioForDriver_F6310435(1, 3);
+	sceGpioPortClear(1, 3);
 	s_serv.mode[2] = 1;
 	if ((SceSysconForDriver_CBD6D8BC() & 0xfd0000) == 0x800000)
 		ScePervasiveForDriver_29E65AE1(2, 0x80c47064, 0x18);
-	ret = SceUdcdForDriver_E9E75C49(2);
+	ret = sceUdcdInit(2);
 	if (ret < 0)
 		DEBUG(6, 478, "usb2_mac_select", "# ERROR # sceUdcdInit() ret=%08x\n", ret);
 	return ret;
 }
-int SceUsbServForDriver_7AD36284(SceUInt port, SceBool mode)
+int sceUsbServMacSelect(SceUInt port, SceBool mode)
 {
 	if ((unsigned)mode > 1 || port > 2)
 		return SERV_ERROR(INVALID_PARAM);
@@ -215,7 +215,7 @@ static inline __attribute__((always_inline)) int accessoryActivate(void)
 	lock();
 	if (s_serv.accessory && !used()) {
 		usb0_mac_select(0, 1);
-		SceSysconForDriver_8D1D97E8(1);
+		sceSysconCtrlAccPower(1);
 	}
 	int ret = 0;
 	if (!sceKernelIsUserModeThread()) {
@@ -239,11 +239,11 @@ static inline __attribute__((always_inline)) int accessoryActivate(void)
 	unlock();
 	return ret;
 }
-int SceUsbServForDriver_AA6D4409(void)
+int sceUsbServAccessoryActivate(void)
 {
 	return accessoryActivate();
 }
-int SceUsbServForDriver_853CB8E4(void)
+int sceUsbServAccessoryDeactivate(void)
 {
 	lock();
 	int ret = 0;
@@ -263,13 +263,13 @@ int SceUsbServForDriver_853CB8E4(void)
 	}
 	if (!used()) {
 		usb0_mac_select(1, 1);
-		SceSysconForDriver_8D1D97E8(0);
+		sceSysconCtrlAccPower(0);
 	}
 out:
 	unlock();
 	return ret;
 }
-int sceUsbServAccessoryActivate(void)
+int sceUsbServAccessoryActivateForUser(void)
 {
 	unsigned domain = sceSyscallEnter();
 	lock();
@@ -278,11 +278,11 @@ int sceUsbServAccessoryActivate(void)
 	sceSyscallLeave(domain);
 	return ret;
 }
-int sceUsbServAccessoryDeactivate(void)
+int sceUsbServAccessoryDeactivateForUser(void)
 {
 	unsigned domain = sceSyscallEnter();
 	lock();
-	int ret = SceUsbServForDriver_853CB8E4();
+	int ret = sceUsbServAccessoryDeactivate();
 	unlock();
 	sceSyscallLeave(domain);
 	return ret;
@@ -371,7 +371,7 @@ static SceUInt32 tickTimer(void *arg)
 {
 	s_timer = -1;
 	if (s_serv.attached > 0) {
-		SceKernelSuspendForDriver_E0489831(1);
+		sceKernelPowerTick(1);
 		s_timer = SceThreadmgrForDriver_C58DF384("SceUsbservTickTimer", 5000000, tickTimer, NULL);
 	}
 	return 0;
@@ -458,20 +458,20 @@ static int _sceUsbServSysEventHandler(int phase, int event, void *arg, void *opt
 			SceUdcdForDriver_D01CFD22();
 			for (unsigned i = 0; i < 3; i++) {
 				if (!s_serv.mode[i])
-					SceUsbdForDriver_3EBF5FFE(i);
+					sceUsbdSuspend(i);
 				ScePervasiveForDriver_4F64DEF6(i);
 				s_serv.mode[i] = 1;
 			}
 			s_serv.hostActive = 0;
-			SceSysconForDriver_8D1D97E8(0);
+			sceSysconCtrlAccPower(0);
 			unsigned info;
 			unsigned hardware = SceSysconForDriver_CBD6D8BC();
-			SceSysconForDriver_1503D6A0(&info);
+			sceSysconGetMultiCnInfo(&info);
 			if ((info & 0xff00) != 0x200 && (hardware & 0xff0000) <= 0x600000)
 				SceSysconForDriver_B1F88B11(0);
 			if (SceSblAIMgrForDriver_C6E83F34() && s_serv.etherSuspend)
 				SceSysconForDriver_3274A925(0);
-			SceGpioForDriver_F6310435(1, 3);
+			sceGpioPortClear(1, 3);
 		}
 	} else if (phase == 1) {
 		if (event == SYSEVENT_RESUME_START) {
@@ -494,7 +494,7 @@ static int cleanupProcess(int process)
 				s_serv.owner[i].count--;
 			}
 	if (!used())
-		SceSysconForDriver_8D1D97E8(0);
+		sceSysconCtrlAccPower(0);
 	return 0;
 }
 static int processExit(SceUID pid, ProcEventParam *param, void *common)
@@ -518,7 +518,7 @@ static void devKitPower(unsigned enable)
 {
 	unsigned info;
 	unsigned hardware = SceSysconForDriver_CBD6D8BC();
-	SceSysconForDriver_1503D6A0(&info);
+	sceSysconGetMultiCnInfo(&info);
 	if ((info & 0xff00) != 0x200 && (hardware & 0xff0000) <= 0x600000)
 		SceSysconForDriver_B1F88B11(enable);
 }
@@ -528,7 +528,7 @@ static int UsbServThread(unsigned arglen, void *arg)
 		s_serv.owner[i].count = 0;
 		s_serv.owner[i].process = -1;
 	}
-	SceSysconForDriver_8D1D97E8(0);
+	sceSysconCtrlAccPower(0);
 	if (SceSblAIMgrForDriver_C6E83F34()) {
 		SceSysconForDriver_3274A925(1);
 		s_serv.ether = 1;
@@ -539,7 +539,7 @@ static int UsbServThread(unsigned arglen, void *arg)
 	if (SceSblAIMgrForDriver_71608CA3()) {
 		s_serv.accessory = 1;
 		if (used())
-			SceSysconForDriver_8D1D97E8(1);
+			sceSysconCtrlAccPower(1);
 	}
 	if (SceSysconForDriver_CBD6D8BC() & 2)
 		usb1_mac_select(0, 1);
@@ -573,14 +573,14 @@ static int UsbServThread(unsigned arglen, void *arg)
 		if (flags & 0x18) {
 			s_serv.accessory = !!(flags & 8);
 			if (!s_serv.accessory)
-				SceSysconForDriver_8D1D97E8(0);
+				sceSysconCtrlAccPower(0);
 			else if (used())
-				SceSysconForDriver_8D1D97E8(1);
+				sceSysconCtrlAccPower(1);
 		}
 		if (!(flags & 0x20))
 			continue;
 		SceGpioForDriver_372022A4(1, 3, 0);
-		SceGpioForDriver_F6310435(1, 3);
+		sceGpioPortClear(1, 3);
 		SceUdcdForDriver_1A5A3851();
 		if (SceSblAIMgrForDriver_C6E83F34()) {
 			lock();
@@ -594,10 +594,10 @@ static int UsbServThread(unsigned arglen, void *arg)
 		if (SceSblAIMgrForDriver_71608CA3()) {
 			s_serv.accessory = 1;
 			if (used())
-				SceSysconForDriver_8D1D97E8(1);
+				sceSysconCtrlAccPower(1);
 		}
 		if (s_serv.accessory && used())
-			SceSysconForDriver_8D1D97E8(1);
+			sceSysconCtrlAccPower(1);
 		else
 			usb0_mac_select(1, 1);
 		if (SceModulemgrForDriver_BBE1771C("SceBbmc") >= 0) {
@@ -633,7 +633,7 @@ int _sceUsbServInit(unsigned arglen, const void *argp)
 		.notify = NULL,
 	};
 	SceGpioForDriver_372022A4(1, 3, 0);
-	SceGpioForDriver_F6310435(1, 3);
+	sceGpioPortClear(1, 3);
 	for (unsigned i = 0; i < 3; i++) {
 		ScePervasiveForDriver_4F64DEF6(i);
 		s_serv.mode[i] = 1;

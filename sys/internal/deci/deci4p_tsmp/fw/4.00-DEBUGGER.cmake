@@ -94,7 +94,7 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	SceDebugForDriver_02B04343
-	SceDebugForDriver_374B7868
+	sceKernelGetAssertLevel
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
 	sceKernelWaitEventFlag
@@ -110,10 +110,10 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetEventFlag
 	sceKernelUnlockFastMutex
 	sceKernelScheduleWorkTask
-	SceSblPostSsMgrForDriver_0298382B
-	SceSblPostSsMgrForDriver_4FF2682F
+	sceSblLicMgrActivateDevkit
+	sceSblLicMgrGetExpireDate
 	sceKernelCheckDipsw
-	SceRtcForDriver_497B5DC9
+	sceRtcGetTime64_t
 	sceRtcGetCurrentClockLocalTime
 	SceRegMgrForDebugger_46AC0CCB
 	SceRegMgrForDebugger_53970232

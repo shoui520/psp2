@@ -43,7 +43,7 @@ int module_start(unsigned arglen, void *argp)
 				    COMPAT_SRAM_SIZE, &options);
 	if (uid < 0) {
 #if FW_DEBUG
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0, &s_initAssert,
 					     __builtin_return_address(0));
 #endif
@@ -60,7 +60,7 @@ int module_start(unsigned arglen, void *argp)
 	s_bsodDisplay.current.scaleY = 0x10000;
 	_sceKernelBsodSysconInit();
 	_sceKernelBsodIftuInit(SceSblAIMgrForDriver_71608CA3() != 0);
-	state = SceCpuForDriver_821FC0EE();
+	state = sceKernelCpuSuspendIntr();
 	sceKernelRegisterExceptionHandler(3, 2, &bsodPrefetchEntry);
 	sceKernelRegisterExceptionHandler(4, 2, &bsodDataEntry);
 	sceKernelRegisterExceptionHandler(1, 2, &bsodUndefinedEntry);
@@ -80,7 +80,7 @@ uint32_t s_bsodButtons;
 
 static void bsodReboot(unsigned dump)
 {
-	void *sysroot = SceSysrootForKernel_3E455842();
+	void *sysroot = sceKernelSysrootGetSysroot();
 
 	sceCrashDumpMonitorCall(dump, readTtbr0(), readVbar(), (uintptr_t)sysroot);
 }

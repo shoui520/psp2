@@ -92,7 +92,7 @@ __attribute__((noinline)) _Noreturn void appmgrSystemMutexPanic(void)
 #define SYSTEM_CHECK_APP_OWNERS(_line, _func) do { \
 	int slot; \
 	for (slot = 0; slot != 20; ++slot) { \
-		int level = SceDebugForDriver_374B7868(); \
+		int level = sceKernelGetAssertLevel(); \
 		if (level > 0) { \
 			SceUID slotOwner = g_appmgrAppStates[slot].mutexOwner; \
 			SceUID tid = sceKernelGetThreadId(); \
@@ -102,7 +102,7 @@ __attribute__((noinline)) _Noreturn void appmgrSystemMutexPanic(void)
 } while (0)
 /* the caller holds neither the main lock nor, unless it holds core2, another application's */
 #define SYSTEM_APP_LOCK_CHECK(_line, _func) do { \
-	if (SceDebugForDriver_374B7868() > 0) { \
+	if (sceKernelGetAssertLevel() > 0) { \
 		SceUID owner = g_appmgrMainMutexOwner; \
 		SceUID tid = sceKernelGetThreadId(); \
 		SCE_DBG_ASSERT_LEVEL_FUNC(1, owner != tid, _line, _func); \
@@ -111,7 +111,7 @@ __attribute__((noinline)) _Noreturn void appmgrSystemMutexPanic(void)
 		SYSTEM_CHECK_APP_OWNERS(_line, _func); \
 } while (0)
 #define SYSTEM_APP_UNLOCK_CHECK(_line, _func) do { \
-	if (SceDebugForDriver_374B7868() > 0) { \
+	if (sceKernelGetAssertLevel() > 0) { \
 		SceUID owner = g_appmgrMainMutexOwner; \
 		SceUID tid = sceKernelGetThreadId(); \
 		SCE_DBG_ASSERT_LEVEL_FUNC(1, owner != tid, _line, _func); \

@@ -333,13 +333,13 @@ int waitWorkQueue(SceUID workQueueId, SceUInt32 *timeout, int callbacks)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 744, "*** error: illegal context. workQueueId=0x%08x[%s]\n",
 				      workQueueId, SceSysmemForDriver_E655852F(workQueueId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 		SCE_DBG_ASSERT_PRINTF(0, 752, "*** error: irq suspended. workQueueId=0x%08x[%s]\n",
 				      workQueueId, SceSysmemForDriver_E655852F(workQueueId));
@@ -387,16 +387,16 @@ int waitWorkQueue(SceUID workQueueId, SceUInt32 *timeout, int callbacks)
 		if (!callbacks) {
 			ret = waitWaitableObject(workQueueId, (uintptr_t)&queue->next,
 						 WAIT_TYPE_WORK_QUEUE, &wakeup, timeout, NULL, &locked);
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+			sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			if (!locked)
 				goto resume;
 			break;
 		}
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		ret = waitWaitableObject(workQueueId, (uintptr_t)&queue->next, WAIT_TYPE_WORK_QUEUE,
 					 &wakeup, timeout, NULL, &locked);
-		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto callbacks;
@@ -432,13 +432,13 @@ int waitWorkTask(SceUID workTaskId, SceUInt32 *timeout, int callbacks)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 901, "*** error: illegal context. workTaskId=0x%08x[%s]\n",
 				      workTaskId, SceSysmemForDriver_E655852F(workTaskId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 		SCE_DBG_ASSERT_PRINTF(0, 909, "*** error: irq suspended. workTaskId=0x%08x[%s]\n",
 				      workTaskId, SceSysmemForDriver_E655852F(workTaskId));
@@ -474,7 +474,7 @@ int waitWorkTask(SceUID workTaskId, SceUInt32 *timeout, int callbacks)
 				goto release;
 			sceKernelSpinlockLowLock(&task->lock);
 		}
-		while (SceCpuForDriver_5AC9D394(&task->cb.queue->lock) < 0) {
+		while (sceKernelSpinlockLowTrylock(&task->cb.queue->lock) < 0) {
 			sceKernelSpinlockLowUnlock(&task->lock);
 			spinDelay();
 			sceKernelSpinlockLowLock(&task->lock);
@@ -496,16 +496,16 @@ int waitWorkTask(SceUID workTaskId, SceUInt32 *timeout, int callbacks)
 		if (!callbacks) {
 			ret = waitWaitableObject(workTaskId, (uintptr_t)&task->next, WAIT_TYPE_WORK_TASK,
 						 &wakeup, timeout, NULL, &locked);
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+			sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			if (!locked)
 				goto resume;
 			break;
 		}
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		ret = waitWaitableObject(workTaskId, (uintptr_t)&task->next, WAIT_TYPE_WORK_TASK,
 					 &wakeup, timeout, NULL, &locked);
-		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto callbacks;
@@ -549,7 +549,7 @@ int getWorkQueueInfo(SceUID workQueueId, ThreadmgrWorkQueueInfo *info)
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(workQueueId, WORK_QUEUE_CLASS(),
 					 &pObject) < 0) {
 		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID :
@@ -578,7 +578,7 @@ int getWorkQueueInfoFull(SceUID workQueueId, ThreadmgrWorkQueueInfoFull *info)
 	SceObjectBase *pObject;
 	int intr, ret;
 
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(workQueueId, WORK_QUEUE_CLASS(),
 					 &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID;
@@ -618,7 +618,7 @@ int getWorkTaskInfo(SceUID workTaskId, ThreadmgrWorkTaskInfo *info)
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(workTaskId, WORK_TASK_CLASS(),
 					 &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID;
@@ -653,7 +653,7 @@ void __attribute__((noreturn)) returnFromWorkTask(int result)
 	struct ThreadCB *thread;
 	struct ThreadRegisterContext *regs;
 
-	SceCpuForDriver_821FC0EE();
+	sceKernelCpuSuspendIntr();
 	thread = currentThreadContext();
 	thread->waitResult = result;
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 188);
@@ -738,7 +738,7 @@ void callWorkTaskEntry(ThreadmgrWorkTaskCB *task, void *arg)
 			request = TRAP_REQUEST_DEBUG_SUSPEND;
 		if (request != 0) {
 			sceKernelTrapThreadAfterSyscall(0, 0, request);
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_RESUMED_WAIT);
+			sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_RESUMED_WAIT);
 		}
 		frame = thread->userFrame;
 		stack = frame->sp;
@@ -819,7 +819,7 @@ int workQueueThread(SceSize argSize, void *argp)
 				sceKernelSpinlockLowUnlock(&queue->lock);
 				callWorkTaskEntry(cb, cb->arg);
 				sceKernelSpinlockLowLock(&task->lock);
-				while (SceCpuForDriver_5AC9D394(&queue->lock) < 0) {
+				while (sceKernelSpinlockLowTrylock(&queue->lock) < 0) {
 					sceKernelSpinlockLowUnlock(&task->lock);
 					spinDelay();
 					sceKernelSpinlockLowLock(&task->lock);
@@ -911,7 +911,7 @@ int createGlobalWorkQueue(void)
 		}
 		threads[i] = thread;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	pQueue = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*queue));
 	if (pQueue == NULL)
 		SCE_PANIC(285);
@@ -1024,7 +1024,7 @@ SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
 			objectAttr = attr | THREAD_ATTR_UNLIMITED;
 		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	uid = sceGUIDKernelCreateWithOpt(WORK_QUEUE_CLASS(), name, &opt,
 					  (SceObjectBase **)&queue);
 	queue->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
@@ -1110,7 +1110,7 @@ SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, int (*ent
 	} else {
 		creatorPid = SCE_KERNEL_PROCESS_ID;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDKernelCreateWithOpt(WORK_TASK_CLASS(), name, &opt,
 					  (SceObjectBase **)&task);
 	if (ret < 0) {
@@ -1332,13 +1332,13 @@ int SceThreadmgrForDriver_8C8A76EF(SceUID pid, int level, ThreadmgrWorkQueueInfo
 		for (i = 0; i < total; i++) {
 			if (size < 0x48) {
 				info.size = size;
-				ret = getWorkQueueInfo(SceSysmemForDriver_45D22597(pid, vector[i]), &info);
+				ret = getWorkQueueInfo(scePUIDtoGUID(pid, vector[i]), &info);
 				if (ret == 0)
 					need += (info.threadCount + 0x12) * 4;
 				out = NULL;
 			} else {
 				out->size = size;
-				ret = getWorkQueueInfoFull(SceSysmemForDriver_45D22597(pid, vector[i]), out);
+				ret = getWorkQueueInfoFull(scePUIDtoGUID(pid, vector[i]), out);
 			}
 			if (ret == 0) {
 				found++;
@@ -1378,7 +1378,7 @@ int SceThreadmgrForDriver_0B604A3C(SceUID workTaskId, ThreadmgrWorkTaskInfoShort
 		goto restore;
 	}
 	local = (ThreadmgrWorkTaskInfoShort){ .size = sizeof(local) };
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(workTaskId, WORK_TASK_CLASS(),
 					 &pObject) < 0) {
 		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID :
@@ -1507,7 +1507,7 @@ int SceThreadmgrForDriver_B4CED111(SceUID pid, int level, ThreadmgrWorkTaskInfo 
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
-		if (getWorkTaskInfo(SceSysmemForDriver_45D22597(pid, vector[i]), &info) != 0)
+		if (getWorkTaskInfo(scePUIDtoGUID(pid, vector[i]), &info) != 0)
 			continue;
 		info.workTaskId = vector[i];
 		if (PUIDGetPUIDVectorByGUID(pid, info.workQueueId, level, &puid, 4, &found) < 0 ||

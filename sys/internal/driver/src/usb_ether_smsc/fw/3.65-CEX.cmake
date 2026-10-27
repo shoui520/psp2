@@ -70,8 +70,8 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
-	SceCpuForDriver_5F6A8743
-	SceCpuForDriver_A4884C4E
+	sceKernelAtomicAddAndGet32
+	sceKernelAtomicSubAndGet32
 	SceDebugForDriver_391B74B7
 	memset
 	memcpy
@@ -81,7 +81,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_C6E83F34
 	SceSblAIMgrForDriver_D78B04A2
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
+	sceKernelUnregisterProcEventHandler
 	sceKernelWaitEventFlag
 	sceKernelExitThread
 	sceKernelStartThread
@@ -107,10 +107,10 @@ set(MODULE_IMPORT_FUNCS
 	SceNetPsForDriver_1ABF937D
 	ScePowerForDriver_B24263F0
 	SceSysconForDriver_3274A925
-	SceSysconForDriver_40FF3898
+	sceSysconCtrlDeviceReset
 	SceSysconForDriver_9ADD60D2
 	SceSysconForDriver_CBD6D8BC
-	SceUsbServForDriver_7AD36284
+	sceUsbServMacSelect
 	sceIdStorageLookup
 )
 set(MODULE_IMPORT_VARS

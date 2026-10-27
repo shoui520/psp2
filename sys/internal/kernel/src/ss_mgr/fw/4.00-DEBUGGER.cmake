@@ -103,9 +103,9 @@ set(MODULE_IMPORT_NIDS
 	0xE1AC6D7C:F:0xEB00C509
 )
 set(MODULE_IMPORT_FUNCS
-	SceKernelUtilsForDriver_29A28957
-	SceSysmemForDriver_0B4ED16A
-	SceSysmemForDriver_22CBE925
+	sceHmacSha1Digest
+	sceKernelAllocUncacheHeapMemoryWithOption
+	sceKernelUnlockRangeWithMode
 	sceKernelFreeHeapMemory
 	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyToUser
@@ -115,10 +115,10 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
 	sceKernelVARangeToPAVector
-	SceSysmemForDriver_FB817A59
+	sceKernelFreeUncacheHeapMemory
 	sceKernelIsUncacheAddressInTmpFsGame
 	sceKernelAssert
-	SceDebugForDriver_374B7868
+	sceKernelGetAssertLevel
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
 	memset
@@ -165,16 +165,16 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	sceSblPmMgrGetProductMode
-	SceSysconForDriver_10C9657A
+	sceSysconNvsWriteData
 	SceSysconForDriver_63683B9B
-	SceSysconForDriver_81A6060D
-	SceSysconForDriver_ACAFA2B8
+	sceSysconNvsSetRunMode
+	sceSysconNvsReadData
 	SceSysconForDriver_D2F456DC
 	SceSysconForDriver_EBDF88B9
 	SceSysconForDriver_EBE3262C
 	SceSysconForDriver_FF86F4C5
 	SceRtcForDriver_401C0954
-	SceIdStorageForDriver_EB00C509
+	sceIdStorageReadLeaf
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

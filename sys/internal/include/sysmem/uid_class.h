@@ -66,24 +66,24 @@ typedef struct SceKernelUIDEntryInfo {
 	SceUID pid;				/* 0x20 */
 } SceKernelUIDEntryInfo;
 
-int SceSysmemForKernel_3BF0DE65(SceUInt32 level, SceUInt32 state, SceKernelUIDEntryInfo *infos,
+int sceGUIDGetEntryInfoAll(SceUInt32 level, SceUInt32 state, SceKernelUIDEntryInfo *infos,
 				SceSize size, SceSize *ret_num);
 int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level, SceUID *vector, SceSize size, SceSize *ret_num);
 int SceSysmemForKernel_02DAD732(void);
 int scePUIDGetUIDVectorByClass(SceUID pid, SceClass *cls, SceUInt32 level, SceUID *vector, SceSize num, SceSize *ret_num);
 int SceSysmemForKernel_16A54BFE(void);
 SceUID SceSysmemForKernel_188C8742(SceUID pid, SceUID puid);
-SceClass *SceSysmemForKernel_368F1C36(SceUID uid);
-SceUID SceSysmemForKernel_40870E74(const char *name, SceSize size, SceSize extraLow);
-SceUInt32 SceSysmemForKernel_4E6D8BC3(void);	/* sceKernelCheckOpenVMDomain: positive while the process holds the VM domain */
-int SceSysmemForKernel_5E772E19(SceUID guid, SceUID pid);
+SceClass *sceGUIDtoClass(SceUID uid);
+SceUID sceKernelAllocPartitionStackMemBlock(const char *name, SceSize size, SceSize extraLow);
+SceUInt32 sceKernelCheckOpenVMDomain(void);	/* sceKernelCheckOpenVMDomain: positive while the process holds the VM domain */
+int sceKernelAddressSpaceSetProcess(SceUID guid, SceUID pid);
 int SceSysmemForKernel_7F7D5C4A(SceClass *cls, SceClass *base);
-SceUID SceSysmemForKernel_89BEF058(SceUID pid, SceUID heapGuid);
-int SceSysmemForKernel_9C23DFF7(SceUID pid, SceUID puid, SceClass *cls, SceObjectBase **out);
+SceUID sceUIDCreateEntryHeap(SceUID pid, SceUID heapGuid);
+int scePUIDReferObjectWithClass(SceUID pid, SceUID puid, SceClass *cls, SceObjectBase **out);
 int SceSysmemForKernel_B591E49F(unsigned int type, SceSize size);
 SceSize SceSysmemForKernel_BC36755F(void);
 SceUID SceSysmemForKernel_BDE00106(const char *name);
-int SceSysmemForKernel_F6D09BD9(SceUID guid);
+int sceUIDDeleteEntryHeap(SceUID guid);
 void *SceSysmemForKernel_FA6C098C(SceUID uid);
 int UIDEntryReleaseObject(SceUID pid, SceUID puid);
 int sceKernelAddressSpaceSetName(SceUID guid, const char *name);

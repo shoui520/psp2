@@ -38,9 +38,9 @@ int SpkgInfoUtilGetSNVSValue(int purpose, int valueType, int bank,
 			return result;
 		}
 	} else {
-		result = SceSysconForDriver_ACAFA2B8(32 * sectorIndex, encrypted.words, 16);
+		result = sceSysconNvsReadData(32 * sectorIndex, encrypted.words, 16);
 		if (!result)
-			result = SceSysconForDriver_ACAFA2B8(32 * sectorIndex + 16, encrypted.words + 4, 16);
+			result = sceSysconNvsReadData(32 * sectorIndex + 16, encrypted.words + 4, 16);
 		if (result) {
 			updateLastResult = 0x06020001;
 			return result;

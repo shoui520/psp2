@@ -1757,7 +1757,7 @@ void dbgpFreeWorkBuf(DbgpProcCB *proc)
 void dbgpFlushCache(void *address)
 {
 	SceCpuForKernel_74B7F445(address);
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 }
 
 /* The loader protocol uses the same host error values. */

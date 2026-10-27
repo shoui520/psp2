@@ -45,7 +45,7 @@ int MotionUtilWriteFirmware(uint64_t hardwareInfo, const void *buffer,
 		return (int)0x800f020c;
 	updateMotionEvent.eventFlagId = eventFlag;
 	updateMotionEvent.result = 0;
-	result = SceMotionDevForDriver_FD1C528D();
+	result = sceMotionDevUpdateInit();
 	if (result) {
 		result = (int)0x800f0205;
 		goto out;
@@ -116,7 +116,7 @@ out:
 	if (eventFlag)
 		sceKernelDeleteEventFlag(eventFlag);
 	if (!result) {
-		if (SceMotionDevForDriver_A75976EE())
+		if (sceMotionDevUpdateRestart())
 			return (int)0x800f0205;
 		return 0;
 	}

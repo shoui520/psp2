@@ -127,7 +127,7 @@ static inline __attribute__((always_inline)) void powerTickProcess(void)
 {
 	struct PowerProcessState *state;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return;
 	state = SceProcessmgrForDriver_EE694840(s_processStorageKey);
 	if (!state || state->tickRecorded)
@@ -179,7 +179,7 @@ int powerTickProcessForPid(SceUID pid, uint32_t mask)
 
 	if (mask && !(mask & 1))
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)
 		return result;
@@ -315,7 +315,7 @@ int ScePowerForDriver_FB5C3C75(SceUID pid, uint32_t unused,
 	(void)unused;
 	if (pid == SCE_KERNEL_ALL_PROCESS_ID)
 		return ScePowerForDriver_6BC26FC7(0, interval);
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)
 		return result;
@@ -334,7 +334,7 @@ int scePowerSetIdleTimerCount(uint64_t interval)
 	int result;
 
 	context = sceSyscallEnter();
-	result = SceProcessmgrForDriver_AF80F39C(0,
+	result = sceKernelGetRemoteKPLS(0,
 			s_processStorageKey, (void **)&state, 0);
 	if (result >= 0) {
 		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
@@ -355,7 +355,7 @@ int ScePowerForDriver_C715F4F0(SceUID pid)
 
 	if (pid == SCE_KERNEL_ALL_PROCESS_ID)
 		return powerIsIdleTimer(0);
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result >= 0)
 		result = state->idleState != 0;

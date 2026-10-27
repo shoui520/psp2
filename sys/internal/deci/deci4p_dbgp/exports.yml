@@ -11,8 +11,8 @@ SceDeci4pDbgp:
       version: 1
       nid: 0xFBD04C34
       functions:
-        - SceDeci4pDbgpForDriver_01D7C7BF: 0x01D7C7BF
-        - SceDeci4pDbgpForDriver_0509AC51: 0x0509AC51
+        - sceDbgpGetDTraceBreakpointHandler: 0x01D7C7BF
+        - sceDbgpSetDTraceBreakpointHandler: 0x0509AC51
         - SceDeci4pDbgpForDriver_7251789E: 0x7251789E
         - SceDeci4pDbgpForDriver_9CD5EE8C: 0x9CD5EE8C
     SceDeci4pDbgp:

@@ -220,7 +220,7 @@ int SceFios2KernelForDriver_3B329E86(SceFiosKernelDH **outDH, const char *path, 
 		goto out;
 	}
 	*outDH = NULL;
-	ret = SceProcessmgrForDriver_AF80F39C(SceThreadmgrForDriver_FA54D49A(), g_fiosPlsKey,
+	ret = sceKernelGetRemoteKPLS(SceThreadmgrForDriver_FA54D49A(), g_fiosPlsKey,
 							 (void **)&storage, 1);
 	if (ret != 0)
 		goto out;
@@ -229,7 +229,7 @@ int SceFios2KernelForDriver_3B329E86(SceFiosKernelDH **outDH, const char *path, 
 		goto out;
 	}
 	for (i = 0; i < FIOS_DH_MAX; i++) {
-		if (SceCpuForDriver_CDA96E81((SceInt32 *)&storage->dh[i], 0, -1) != 0)
+		if (sceKernelAtomicCompareAndSet32((SceInt32 *)&storage->dh[i], 0, -1) != 0)
 			continue;
 		/* the first pass measures, the second builds */
 		size = sceFiosKernelDHOpenInternal(SceThreadmgrForDriver_FA54D49A(), outDH, path,
@@ -282,7 +282,7 @@ static inline int fiosDHForget(SceFiosKernelDH *dh)	/* name unknown */
 	SceFiosKernelProcessStorage *storage = NULL;
 	int i;
 
-	if (SceProcessmgrForDriver_AF80F39C(SceThreadmgrForDriver_FA54D49A(), g_fiosPlsKey,
+	if (sceKernelGetRemoteKPLS(SceThreadmgrForDriver_FA54D49A(), g_fiosPlsKey,
 						       (void **)&storage, 1) == 0) {
 		if (storage == NULL)
 			return 0;

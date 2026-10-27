@@ -47,7 +47,7 @@ SceSize SceDeci4pSDfMgrForKernel_68903C1D(const SceDeci4pHeader *hdr);			/* get 
 void SceDeci4pSDfMgrForKernel_FFC95B63(SceDeci4pHeader *hdr, SceSize size);		/* set size */
 int SceDeci4pSDfMgrForKernel_501CE61D(SceUInt32 level, const SceKernelDebugInfo *info,
 				       const char *fmt, ...);				/* printf */
-int SceDeci4pSDfMgrForKernel_86CFC8C6(int handle);					/* close */
+int sceSDfMgrClose(int handle);					/* close */
 int SceDeci4pSDfMgrForKernel_B22B42FB(void (*hook)(void));				/* RegisterBreakHook */
 int SceDeci4pSDfMgrForKernel_E53400AE(void (*hook)(void));				/* UnregisterBreakHook */
 void SceDeci4pSDfMgrForKernel_98AEC60E(void);						/* poll */

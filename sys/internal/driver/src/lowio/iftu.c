@@ -27,7 +27,7 @@ enum IftuState {
 
 #define IFTU_PENDING_FILTER	0x40000000
 
-/* What a display plane scans out to (SceIftuForDriver_E6EE2C6B). */
+/* What a display plane scans out to (sceIftuSetOutputFormat). */
 typedef struct IftuOutput {
 	uint32_t width;
 	uint32_t height;
@@ -298,7 +298,7 @@ int SceIftuForDriver_D64F4C6B(unsigned int index, SceIftuCscParams *param)
 	return 0;
 }
 
-int SceIftuForDriver_E6EE2C6B(int index, unsigned int width,
+int sceIftuSetOutputFormat(int index, unsigned int width,
 	unsigned int height, unsigned int pixelFormat, unsigned int planeEnable)
 {
 	IftuPlane *plane;
@@ -364,7 +364,7 @@ static inline __attribute__((always_inline)) int IftuValidSourceFormat(uint32_t 
 	return 0;
 }
 
-int SceIftuForDriver_7CE0C4DA(unsigned int index, SceIftuPlaneState *state,
+int sceIftuSetInputFrameBuffer(unsigned int index, SceIftuPlaneState *state,
 	int bilinear, int sync)
 {
 	IftuPlane *plane;
@@ -467,7 +467,7 @@ int SceIftuForDriver_357EAE24(unsigned int index, unsigned int alpha)
 	return 0;
 }
 
-int SceIftuForDriver_AF19FD85(unsigned int index, int setting)
+int sceIftuSetMergeSetting(unsigned int index, int setting)
 {
 	IftuPlane *plane;
 	volatile SceIftucRegisters *control;
@@ -492,7 +492,7 @@ int SceIftuForDriver_AF19FD85(unsigned int index, int setting)
 	return 0;
 }
 
-int SceIftuForDriver_0D7C02F7(unsigned int index)
+int sceIftuEnable(unsigned int index)
 {
 	IftuPlane *plane;
 	volatile SceIftuRegisters *regs;
@@ -571,7 +571,7 @@ int SceIftuForDriver_0D7C02F7(unsigned int index)
 	return 0;
 }
 
-int SceIftuForDriver_C11F30B3(unsigned int index)
+int sceIftuDisable(unsigned int index)
 {
 	IftuPlane *plane;
 	uint32_t intr;
@@ -586,7 +586,7 @@ int SceIftuForDriver_C11F30B3(unsigned int index)
 	return 0;
 }
 
-int SceIftuForDriver_67E37EFC(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
+int sceIftuConvert(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 	SceIftuConvParams *params)
 {
 	IftuPlane *converter = &s_iftuPlanes[IFTU_CONVERTER];

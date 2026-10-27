@@ -49,10 +49,10 @@ int SpkgInfoUtilSetSNVSValue(int purpose, int valueType, int bank,
 		updateLastResult = 0x06010005;
 		return (int)0x800f0205;
 	} else {
-		result = SceSysconForDriver_ACAFA2B8(32 * sectorIndex, encrypted.words, 16);
+		result = sceSysconNvsReadData(32 * sectorIndex, encrypted.words, 16);
 		if (result)
 			goto nvsReadFailed;
-		result = SceSysconForDriver_ACAFA2B8(32 * sectorIndex + 16, encrypted.words + 4, 16);
+		result = sceSysconNvsReadData(32 * sectorIndex + 16, encrypted.words + 4, 16);
 		if (result)
 			goto nvsReadFailed;
 		result = SpkgInfoUtilSNVSDecryptSectors(sectorIndex, &encrypted, &sector,
@@ -68,16 +68,16 @@ int SpkgInfoUtilSetSNVSValue(int purpose, int valueType, int bank,
 			updateLastResult = 0x06020003;
 			return result;
 		}
-		result = SceSysconForDriver_10C9657A(32 * sectorIndex, encrypted.words, 16);
+		result = sceSysconNvsWriteData(32 * sectorIndex, encrypted.words, 16);
 		if (!result)
-			result = SceSysconForDriver_10C9657A(32 * sectorIndex + 16, encrypted.words + 4, 16);
+			result = sceSysconNvsWriteData(32 * sectorIndex + 16, encrypted.words + 4, 16);
 		if (result) {
 			updateLastResult = 0x06020002;
 			return result;
 		}
-		result = SceSysconForDriver_ACAFA2B8(32 * sectorIndex, sector.words, 16);
+		result = sceSysconNvsReadData(32 * sectorIndex, sector.words, 16);
 		if (!result)
-			result = SceSysconForDriver_ACAFA2B8(32 * sectorIndex + 16, sector.words + 4, 16);
+			result = sceSysconNvsReadData(32 * sectorIndex + 16, sector.words + 4, 16);
 		if (result)
 			goto nvsReadFailed;
 		if (!timingsafe_memcmp(&encrypted, &sector, 32))

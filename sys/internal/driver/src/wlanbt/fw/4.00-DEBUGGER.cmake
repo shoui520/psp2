@@ -115,10 +115,10 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
-	SceSysmemForDriver_DFE2C8CB
+	sceKernelRemapMemBlock
 	SceDebugForDriver_02B04343
 	sceKernelAssert
 	SceDebugForDriver_391B74B7
@@ -159,33 +159,33 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_3B638885
 	SceSblAIMgrForDriver_71608CA3
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
+	sceKernelUnregisterProcEventHandler
 	sceSblFwLoaderLoad
 	sceSblFwLoaderSetPath
 	sceSblFwLoaderClose
-	SceKernelUtilsForDriver_29A28957
+	sceHmacSha1Digest
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler
 	sceKernelApiDeclareTypeUInt32
 	SceSdifForDriver_0C66E36F
 	SceSdifForDriver_3428884D
-	SceSdifForDriver_3C4CDC8B
+	sceSdioWrite
 	SceSdifForDriver_5D65E66B
 	SceSdifForDriver_6A8235FC
-	SceSdifForDriver_733BC373
+	sceSdioSetBlockLen
 	SceSdifForDriver_855C95E1
 	SceSdifForDriver_AABAA0F0
-	SceSdifForDriver_AB0222F2
+	sceSdifGoStandbyState
 	sceSdioChangeBusSpeed
-	SceSdifForDriver_D0F78D9B
+	sceSdioRead
 	SceSdifForDriver_DECE963B
 	SceSdifForDriver_E80293EF
 	SceNetPsForDriver_1ABF937D
 	ScePowerForDriver_B24263F0
-	ScePowerForDriver_F535D928
+	scePowerSetWakeupCondition
 	sceRegMgrGetKeyInt
 	sceRegMgrSetKeyInt
-	SceSysconForDriver_40FF3898
+	sceSysconCtrlDeviceReset
 	SceSysconForDriver_9ADD60D2
 	SceSysconForDriver_A2E85DB9
 	SceSysconForDriver_C0F215B7
@@ -193,8 +193,8 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_CF5B2F2F
 	sceUsbServEtherEnable
 	sceUsbServEtherDisable
-	SceClockgenForDriver_7B28A724
-	SceClockgenForDriver_B6F0A532
+	sceClockgenWlanBtClkEnable
+	sceClockgenWlanBtClkDisable
 	sceIdStorageLookup
 )
 set(MODULE_IMPORT_VARS

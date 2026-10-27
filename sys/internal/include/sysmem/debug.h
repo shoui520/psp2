@@ -67,8 +67,7 @@ typedef struct DebugExceptionDumpHeader {
 /* vitasdk: ksceKernelPrintfLevelWithInfo */
 int SceDebugForDriver_D9703808(SceUInt32 level, SceUInt32 flags,
 				  const SceKernelDebugInfo *info, const char *fmt, ...);
-/* vitasdk: ksceKernelGetAssertLevel */
-int SceDebugForDriver_374B7868(void) __attribute__((pure));	/* Sony's: consecutive checks share one call */
+int sceKernelGetAssertLevel(void) __attribute__((pure));	/* Sony's: consecutive checks share one call */
 /* vitasdk: ksceKernelAssertLevel */
 void SceDebugForDriver_FD753E7A(SceUInt32 level, SceBool cond,
 			   const SceKernelDebugInfo *info, const void *lr);
@@ -203,7 +202,7 @@ int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDeb
 
 /* level 1 assertion, checked only while assertions are enabled */
 #define SCE_DBG_ASSERT_CHECK(_cond, _line) do {				\
-	if (SceDebugForDriver_374B7868() > 0)				\
+	if (sceKernelGetAssertLevel() > 0)				\
 		SceDebugForDriver_FD753E7A(1, (_cond), SCE_DBGINFO(_line),	\
 				      __builtin_return_address(0));	\
 } while (0)
@@ -212,20 +211,20 @@ int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDeb
 
 /* the same, reporting a return address the caller passed down */
 #define SCE_DBG_ASSERT_CHECK_LR(_cond, _line, _lr) do {			\
-	if (SceDebugForDriver_374B7868() > 0)				\
+	if (sceKernelGetAssertLevel() > 0)				\
 		SceDebugForDriver_FD753E7A(1, (_cond), SCE_DBGINFO(_line), (_lr));	\
 } while (0)
 
 /* level _level assertion, checked only while assertions of that level are enabled */
 #define SCE_DBG_ASSERT_LEVEL_CHECK(_level, _cond, _line) do {		\
-	if (SceDebugForDriver_374B7868() >= (_level))			\
+	if (sceKernelGetAssertLevel() >= (_level))			\
 		SceDebugForDriver_FD753E7A((_level), (_cond), SCE_DBGINFO(_line),	\
 				      __builtin_return_address(0));	\
 } while (0)
 
 /* level 1 assertion with a message, checked only while assertions are enabled */
 #define SCE_DBG_ASSERT_PRINTF(_cond, _line, _fmt, ...) do {		\
-	if (SceDebugForDriver_374B7868() > 0)				\
+	if (sceKernelGetAssertLevel() > 0)				\
 		SceDebugForDriver_821A2D59(1, (_cond), SCE_DBGINFO(_line),	\
 					    __builtin_return_address(0), _fmt,	\
 					    ##__VA_ARGS__);			\
@@ -246,7 +245,7 @@ int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDeb
 	SceDebugForDriver_D9703808((_level), (_flags), SCE_DBGINFO_FUNC(_line, _func),	\
 				      _fmt, ##__VA_ARGS__)
 #define SCE_DBG_ASSERT_PRINTF_FUNC(_cond, _line, _func, _fmt, ...) do {	\
-	if (SceDebugForDriver_374B7868() > 0)				\
+	if (sceKernelGetAssertLevel() > 0)				\
 		SceDebugForDriver_821A2D59(1, (_cond), SCE_DBGINFO_FUNC(_line, _func),	\
 					    __builtin_return_address(0), _fmt,	\
 					    ##__VA_ARGS__);			\
@@ -258,7 +257,7 @@ int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDeb
 	SceDebugForDriver_FD753E7A((_level), (_cond), SCE_DBGINFO_FUNC(_line, _func),	\
 			      __builtin_return_address(0))
 #define SCE_DBG_ASSERT_CHECK_FUNC(_cond, _line, _func) do {		\
-	if (SceDebugForDriver_374B7868() > 0)				\
+	if (sceKernelGetAssertLevel() > 0)				\
 		SceDebugForDriver_FD753E7A(1, (_cond), SCE_DBGINFO_FUNC(_line, _func),	\
 				      __builtin_return_address(0));	\
 } while (0)
@@ -295,8 +294,7 @@ int SceDebugForDriver_62466B0A(char *buf, SceSize size);	/* vitasdk: ksceKernelG
 /* vitasdk: ksceEventLogGetInfo */
 SceSSize SceDebugForDriver_CC5365D3(void *buffer, SceSize size, SceUInt32 *count);
 int SceDebugForKernel_2AABAEDA(int character);	/* vitasdk: ksceKernelDebugPutchar */
-/* vitasdk: ksceKernelPrintfLevel */
-int SceDebugForDriver_1A3F2AA4(int level, const char *format, ...);
+int sceKernelPrintfLevel(int level, const char *format, ...);
 /* vitasdk: ksceKernelVprintf */
 int SceDebugForDriver_411C0733(const char *format, va_list arguments);
 
@@ -321,5 +319,5 @@ void SceDebugForKernel_CCABDD98(const SceKernelDebugInfo *info, const SceExcpmgr
 void SceDebugForTZS_563B623D(const SceKernelDebugInfo *info, const void *lr);
 void SceDebugForTZS_618F89E6(SceUInt32 level, SceBool condition, const SceKernelDebugInfo *info, const void *caller);
 int SceDebugForTZS_D26EB4BB(SceUInt32 level, SceUInt32 flags, const SceKernelDebugInfo *info, const char *format, ...);
-int SceDebugForTZS_F851BA4F(void);
+int sceKernelGetAssertLevel(void);
 int k_sceEventLogPut(SceUInt16 type, SceUInt16 subtype, SceUInt32 arg, const void *data, SceSize size);

@@ -26,7 +26,7 @@ typedef struct SceKernelSegmentInfo {
 	SceUInt reserved;
 } SceKernelSegmentInfo;
 
-/* a module's information (SceModulemgrForKernel_DAA90093, the sceKernelGetModuleInfo syscall) */
+/* a module's information (sceKernelGetModuleInfo, the sceKernelGetModuleInfo syscall) */
 typedef struct SceKernelModuleInfo {
 	SceSize size;			/* 0x1b8 */
 	SceUID modid;
@@ -53,10 +53,6 @@ typedef struct SceKernelModuleInfo {
 _Static_assert(sizeof(SceKernelSegmentInfo) == 0x18, "SceKernelSegmentInfo size");
 _Static_assert(sizeof(SceKernelModuleInfo) == 0x1b8, "SceKernelModuleInfo size");
 #endif
-
-/* SceModulemgr: the user syscalls */
-SceUID sceKernelGetModuleIdByAddr(const void *addr);
-int sceKernelGetModuleInfo(SceUID modid, SceKernelModuleInfo *uinfo);
 
 #ifdef __cplusplus
 }

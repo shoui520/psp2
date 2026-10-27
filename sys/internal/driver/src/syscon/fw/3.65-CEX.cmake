@@ -78,7 +78,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_3AE319DA
 	SceSysrootForDriver_46E72428
 	SceSysrootForDriver_930B1342
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	sceKernelDisableSubIntr
 	sceKernelReleaseSubIntrHandler
 	sceKernelEnableSubIntr
@@ -105,8 +105,8 @@ set(MODULE_IMPORT_FUNCS
 	SceGpioForDriver_35AAD77A
 	SceGpioForDriver_372022A4
 	SceGpioForDriver_BBEA1DDC
-	SceGpioForDriver_D454A584
-	SceGpioForDriver_F6310435
+	sceGpioPortSet
+	sceGpioPortClear
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

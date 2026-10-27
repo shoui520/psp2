@@ -333,7 +333,7 @@ static void receiveHeader(void)
 {
 	sceKernelDcacheInvalidateRange(s.header.data, PCM_ROUND_CACHE(s.header.size));
 	s.header.returnCode = 1;
-	SceUdcdForDriver_C60A74B2(&s.header);
+	sceUdcdReqRecv(&s.header);
 }
 
 static void releaseBuffer(struct Buffer *buffer)
@@ -349,7 +349,7 @@ static void releaseBuffer(struct Buffer *buffer)
 			s.receive.returnCode = 1;
 			s.receive.unused = buffer;
 			sceKernelDcacheInvalidateRange(buffer->data, PCM_ROUND_CACHE(s.receive.size));
-			SceUdcdForDriver_C60A74B2(&s.receive);
+			sceUdcdReqRecv(&s.receive);
 			return;
 		}
 	}
@@ -431,7 +431,7 @@ static int disconnectChannel(struct Channel *channel, int command)
 		releaseChannel(channel);
 		unlock(state);
 	}
-	SceUdcdForDriver_1ED0E89E(&channel->command);
+	sceUdcdReqSend(&channel->command);
 	timeout = PCM_WAIT_TIMEOUT;
 	ret = sceKernelWaitEventFlag(channel->event,
 				      PCM_EVENT_COMMAND_DONE | PCM_EVENT_DISCONNECTED |
@@ -730,7 +730,7 @@ failBlock:
 static int attachCommunication(int speed, void *context)
 {
 	SceUdcdDeviceInfo info;
-	SceUdcdForDriver_FBEA3703(&info);
+	sceUdcdGetDeviceInfo(&info);
 	if (!(s.flags & PCM_FLAG_ATTACHED)) {
 		s.packetSize = speed == 2 ? 512 : 64;
 		s.flags |= PCM_FLAG_ATTACHED;
@@ -882,7 +882,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 			s.control.size = s.titleLength;
 			memcpy(s.control.data, s.title, s.titleLength);
 			sceKernelDcacheCleanRange(s.control.data, PCM_ROUND_CACHE(s.control.size));
-			SceUdcdForDriver_1ED0E89E(&s.control);
+			sceUdcdReqSend(&s.control);
 			return 0;
 		case PCM_REQUEST_ACCEPT:
 			s.controlBuffer[0] = 0;
@@ -904,7 +904,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 			return -1;
 		}
 		sceKernelDcacheCleanRange(s.control.data, PCM_CACHE_LINE);
-		SceUdcdForDriver_1ED0E89E(&s.control);
+		sceUdcdReqSend(&s.control);
 		return 0;
 	}
 	switch (request->bRequest) {
@@ -912,7 +912,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 		if (request->wLength) {
 			s.control.size = request->wLength < 64 ? request->wLength : 64;
 			sceKernelDcacheInvalidateRange(s.control.data, 64);
-			SceUdcdForDriver_C60A74B2(&s.control);
+			sceUdcdReqRecv(&s.control);
 			return 0;
 		}
 		if (s.hostPort >= 0) {
@@ -954,7 +954,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 	case PCM_REQUEST_SET_VERSION:
 		s.control.size = request->wLength < 64 ? request->wLength : 64;
 		sceKernelDcacheInvalidateRange(s.control.data, 64);
-		SceUdcdForDriver_C60A74B2(&s.control);
+		sceUdcdReqRecv(&s.control);
 		return 0;
 	default:
 		return -1;
@@ -994,7 +994,7 @@ static void processHeader(unsigned int unit, unsigned int flags)
 		s.receive.returnCode = 1;
 		s.receive.size = length;
 		sceKernelDcacheInvalidateRange(buffer->data, PCM_ROUND_CACHE(length));
-		SceUdcdForDriver_C60A74B2(&s.receive);
+		sceUdcdReqRecv(&s.receive);
 		return;
 	}
 	if (flags & PCM_HEADER_RESET) {
@@ -1004,7 +1004,7 @@ static void processHeader(unsigned int unit, unsigned int flags)
 		sceKernelSetEventFlag(channel->event, PCM_EVENT_RESET | PCM_EVENT_RESET_RECEIVED);
 		sceKernelClearEventFlag(channel->event, ~PCM_EVENT_RESET);
 		if (channel->reset != PCM_RESET_SENT)
-			SceUdcdForDriver_1ED0E89E(&channel->resetRequest.request);
+			sceUdcdReqSend(&channel->resetRequest.request);
 		channel->reset = PCM_RESET_RECEIVED;
 		channel->remaining = 0;
 		channel->write = NULL;
@@ -1197,14 +1197,14 @@ int module_start(SceSize size, void *args)
 	s.driver.interface = &s.interface;
 	s.interface.expectNumber = -1;
 	s.lock = 0;
-	if (initNotifications() >= 0 && SceUdcdForDriver_4E55244D(&s.driver) >= 0)
+	if (initNotifications() >= 0 && sceUdcdRegister(&s.driver) >= 0)
 		return 0;
 	return 2;
 }
 
 int module_stop(SceSize size, void *args)
 {
-	SceUdcdForDriver_0DECE532(&s.driver);
+	sceUdcdUnregister(&s.driver);
 	sceKernelDeleteThread(s.thread);
 	sceKernelDeleteSema(s.notificationSema);
 	sceKernelDeleteEventFlag(s.event);
@@ -1247,7 +1247,7 @@ static int connectChannel(const unsigned *args)
 	channel->commandBuffer->command = PCM_COMMAND_CONNECT;
 	channel->commandBuffer->argument = ((port & 255) << 8) | (channel->unit & 255);
 	sceKernelDcacheCleanInvalidateRange(channel->commandBuffer, PCM_CACHE_LINE);
-	SceUdcdForDriver_1ED0E89E(&channel->command);
+	sceUdcdReqSend(&channel->command);
 	if (args[2]) {
 		timeout = *(unsigned *)(uintptr_t)args[2];
 		wait = &timeout;
@@ -1343,7 +1343,7 @@ static int devctl(unsigned command, const unsigned *input, unsigned inputSize, u
 		pid = sceKernelGetProcessId();
 		if (pid < 0)
 			break;
-		ret = SceSysmemForDriver_45D22597(pid, *input);
+		ret = scePUIDtoGUID(pid, *input);
 		if (ret >= 0)
 			return setCallback(command, ret);
 		break;
@@ -1481,7 +1481,7 @@ static int ioctlReset(unsigned unit)
 		sceKernelSetEventFlag(channel->event, PCM_EVENT_RESET);
 		unlock(state);
 		channel->resetRequest.request.returnCode = 1;
-		SceUdcdForDriver_1ED0E89E(&channel->resetRequest.request);
+		sceUdcdReqSend(&channel->resetRequest.request);
 	} else {
 		unlock(state);
 	}
@@ -1629,7 +1629,7 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 	channel->dataRequest.returnCode = 1;
 	sceKernelDcacheCleanInvalidateRange(header, PCM_CACHE_LINE);
 	channel->headerRequest.request.returnCode = 1;
-	SceUdcdForDriver_1ED0E89E(&channel->headerRequest.request);
+	sceUdcdReqSend(&channel->headerRequest.request);
 	for (;;) {
 		ret = sceKernelWaitEventFlag(channel->event,
 					      PCM_EVENT_SENT | PCM_EVENT_DISCONNECTED |
@@ -1642,7 +1642,7 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 			goto failedEvent;
 		sceKernelClearEventFlag(channel->event, ~PCM_EVENT_SENT);
 		sceKernelClearEventFlag(channel->event, ~PCM_EVENT_SEND_FAILED);
-		SceUdcdForDriver_1ED0E89E(&channel->dataRequest);
+		sceUdcdReqSend(&channel->dataRequest);
 		ret = sceKernelWaitEventFlag(channel->event,
 					      PCM_EVENT_SENT | PCM_EVENT_DISCONNECTED |
 					      PCM_EVENT_CLOSED | PCM_EVENT_RESET |
@@ -1684,7 +1684,7 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 		sceKernelClearEventFlag(channel->event, ~PCM_EVENT_SENT);
 		channel->dataRequest.returnCode = 1;
 		channel->headerRequest.request.returnCode = 1;
-		SceUdcdForDriver_1ED0E89E(&channel->headerRequest.request);
+		sceUdcdReqSend(&channel->headerRequest.request);
 	}
 failedEvent:
 	if (bits & PCM_EVENT_DISCONNECTED)
@@ -1980,13 +1980,13 @@ int sceUsbPspcmStartDevice(void)
 		goto done;
 	ret = SceUdcdForDriver_C0CA5DDB("USBPSPCommunicationDriver");
 	if (ret != 2) {
-		ret = SceUdcdForDriver_8AE87657();
+		ret = sceUdcdDeactivate();
 		if (ret < 0 && ret != SCE_UDCD_ERROR_INVALID_ARGUMENT)
 			goto done;
-		ret = SceUdcdForDriver_1494293B("USB_MTP_Driver", 0, NULL);
+		ret = sceUdcdStop("USB_MTP_Driver", 0, NULL);
 		if (ret < 0 && ret != SCE_UDCD_ERROR_INVALID_ARGUMENT)
 			goto done;
-		ret = SceUdcdForDriver_1494293B("USBDeviceControllerDriver", 0, NULL);
+		ret = sceUdcdStop("USBDeviceControllerDriver", 0, NULL);
 		if (ret < 0 && ret != SCE_UDCD_ERROR_INVALID_ARGUMENT)
 			goto done;
 	}
@@ -2000,9 +2000,9 @@ int sceUsbPspcmStartDevice(void)
 			ret = 0;
 			goto done;
 		}
-		SceUdcdForDriver_1494293B("USBPSPCommunicationDriver", 0, NULL);
+		sceUdcdStop("USBPSPCommunicationDriver", 0, NULL);
 	}
-	SceUdcdForDriver_1494293B("USBDeviceControllerDriver", 0, NULL);
+	sceUdcdStop("USBDeviceControllerDriver", 0, NULL);
 done:
 	sceSyscallLeave(syscall);
 	return ret;
@@ -2016,19 +2016,19 @@ int sceUsbPspcmStopDevice(void)
 		goto done;
 	ret = SceUdcdForDriver_C0CA5DDB("USBPSPCommunicationDriver");
 	if (ret == 2) {
-		ret = SceUdcdForDriver_8AE87657();
+		ret = sceUdcdDeactivate();
 		if (ret < 0 && ret != SCE_UDCD_ERROR_INVALID_ARGUMENT)
 			goto done;
 		time = SceThreadmgrForDriver_47F6DE49();
 		do {
 			sceKernelDelayThread(1000);
-			ret = SceUdcdForDriver_1494293B("USBPSPCommunicationDriver", 0, NULL);
+			ret = sceUdcdStop("USBPSPCommunicationDriver", 0, NULL);
 			if (ret >= 0)
 				break;
 		} while ((unsigned)(SceThreadmgrForDriver_47F6DE49() - time) < 5000000);
 		if (ret < 0 && ret != SCE_UDCD_ERROR_INVALID_ARGUMENT)
 			goto done;
-		ret = SceUdcdForDriver_1494293B("USBDeviceControllerDriver", 0, NULL);
+		ret = sceUdcdStop("USBDeviceControllerDriver", 0, NULL);
 		if (ret < 0 && ret != SCE_UDCD_ERROR_INVALID_ARGUMENT)
 			goto done;
 	}

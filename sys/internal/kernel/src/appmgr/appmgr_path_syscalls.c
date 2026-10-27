@@ -13,7 +13,7 @@ int appmgrForceUmountSyscall(int mountId)
 
 int appmgrUmountSyscall(const char *driveId)
 {
-	return SceAppMgrForDriver_A714BB35(driveId);
+	return sceAppMgrUmount(driveId);
 }
 
 int appmgrUmountByPidSyscall(SceUID pid, const char *driveId)

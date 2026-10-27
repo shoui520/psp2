@@ -209,7 +209,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetLibraryClientList
 	sceKernelGetLibraryExportInfoForDebugger
 	sceKernelGetLibraryInfoForDebugger
-	SceModulemgrForKernel_DAA90093
+	sceKernelGetModuleInfo
 	sceIoGetPUIDFdListForDebugger
 	SceIofilemgrForDriver_A1EF2648
 	SceThreadmgrForDriver_04C6764B
@@ -230,19 +230,19 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateEventFlag
 	SceThreadmgrForDriver_477F7C8A
 	SceThreadmgrForDriver_47F26712
-	SceThreadmgrForDriver_49A0B679
+	sceKernelSetVfpRegisterForDebugger
 	sceKernelClearEventFlag
 	SceThreadmgrForDriver_5022689D
 	SceThreadmgrForDriver_555CA6BB
 	sceKernelGetThreadId
-	SceThreadmgrForDriver_5CDE387A
-	SceThreadmgrForDriver_64E89DE9
+	sceKernelGetVfpRegisterForDebugger
+	sceKernelSetCpuRegisterForDebugger
 	sceKernelGetRWLockInfoAllProc
 	SceThreadmgrForDriver_6C2E3A49
 	lockFastMutex
 	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	SceThreadmgrForDriver_A0B1AB21
+	sceKernelIsThreadDebugSuspended
 	sceKernelDeleteThread
 	sceKernelInitializeFastMutex
 	sceKernelGetWaitingThreadList
@@ -264,21 +264,21 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDebugSuspendThread
 	SceThreadmgrForDriver_FD87586C
 	SceThreadmgrForDriver_FF8DA217
-	SceThreadmgrForKernel_6C1F092F
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelGetThreadContextInfo
+	sceKernelIsIntrContext
 	sceKernelRegisterExceptionHandler
 	sceKernelInitialHandlerDebugDabtCfunc
 	sceKernelInitialHandlerDebugUndefCfunc
 	sceKernelInitialHandlerDebugPabtCfunc
 	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyFromUserProc
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
-	SceSysmemForDriver_9F6E45E3
-	SceSysmemForDriver_A73CFFEF
+	sceKernelIsAccessibleRangeProc
+	sceKernelGetMemBlockInfo
 	sceKernelGetMemBlockBase
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
@@ -294,7 +294,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootCoredumpCancel
 	sceKernelSysrootCoredumpTrigger
 	SceCpuForKernel_74B7F445
-	SceCpuForKernel_803C84BF
+	sceKernelL1IcacheInvalidateEntireAllCore
 	sceKernelCheckDipsw
 	SceSblACMgrForDriver_4CBD6156
 	sceSblACMgrIsSystemProgram

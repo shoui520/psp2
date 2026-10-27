@@ -163,7 +163,7 @@ static int I2cStopError(uint32_t status)
 	return I2cError(status, 0);
 }
 
-int SceI2cForDriver_CA94A759(unsigned bus, unsigned address,
+int sceI2cMasterTransmit(unsigned bus, unsigned address,
 	const uint8_t *buffer, unsigned size)
 {
 	I2cContext *ctx;
@@ -263,7 +263,7 @@ int SceI2cForDriver_D1D0A9A4(unsigned bus, unsigned address,
 	return ret;
 }
 
-int SceI2cForDriver_0A40B7BF(unsigned bus, unsigned writeAddress,
+int sceI2cMasterTransmitReceive(unsigned bus, unsigned writeAddress,
 	const uint8_t *writeBuffer, unsigned writeSize, unsigned readAddress,
 	uint8_t *readBuffer, unsigned readSize)
 {

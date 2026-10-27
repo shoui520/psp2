@@ -119,7 +119,7 @@ static inline int releaseEventWaiter(SceUIDEventObject *event, ThreadmgrEventWai
 		(struct ThreadmgrWaitableClass *)s_threadmgrRuntime.manager->eventClass;
 	int (*release)(SceClass *, void *, void *) = (int (*)(SceClass *, void *, void *))cls->release;
 
-	return release(SceSysmemForKernel_368F1C36(node->eventId), event, thread);
+	return release(sceGUIDtoClass(node->eventId), event, thread);
 }
 
 /*

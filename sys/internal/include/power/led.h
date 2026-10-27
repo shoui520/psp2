@@ -1,4 +1,4 @@
-/* SceLed (ScePower): the LEDs SceLedForDriver_EA24BE03 sets */
+/* SceLed (ScePower): the LEDs sceLedSetMode sets */
 #pragma once
 
 #include <stddef.h>
@@ -9,14 +9,14 @@
 #define SCE_LED_ERROR_INVALID_LED	0x803f0140
 #define SCE_LED_ERROR_INVALID_MODE	0x803f0141
 
-/* SceLedForDriver_EA24BE03's modes */
+/* sceLedSetMode's modes */
 #define SCE_LED_MODE_OFF	0
 #define SCE_LED_MODE_ON		1	/* Syscon pattern index */
 #define SCE_LED_MODE_BLINK	2
 #define SCE_LED_MODE_SCRIPT	3	/* option is a byte script */
 #define SCE_LED_MODE_LEVEL	4	/* Syscon level, LED 2 only */
 
-/* SceLedForDriver_EA24BE03's option for every mode but SCE_LED_MODE_SCRIPT. */
+/* sceLedSetMode's option for every mode but SCE_LED_MODE_SCRIPT. */
 typedef struct LedModeParam {
 	SceSize size;
 	union {
@@ -41,5 +41,4 @@ _Static_assert(offsetof(LedModeParam, blink.repeatCount) == 12, "LED repeat coun
 _Static_assert(offsetof(LedModeParam, blink.endState) == 16, "LED final state");
 
 
-/* vitasdk: ksceLedSetMode */
-int SceLedForDriver_EA24BE03(uint32_t led, uint32_t mode, const void *option);
+int sceLedSetMode(uint32_t led, uint32_t mode, const void *option);

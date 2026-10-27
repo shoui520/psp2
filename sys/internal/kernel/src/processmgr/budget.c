@@ -53,13 +53,13 @@ static int SetKernelGamePhyMemPart(SceUID addressSpace)
 {
 	int ret;
 
-	ret = SceSysmemForKernel_7DF07D60(addressSpace, 8, g_phyContPart);
+	ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 8, g_phyContPart);
 	if (ret < 0)
 		SCE_DBG_ASSERT_FAIL(737);
-	ret = SceSysmemForKernel_7DF07D60(addressSpace, 9, g_sharedPart);
+	ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 9, g_sharedPart);
 	if (ret < 0)
 		SCE_DBG_ASSERT_FAIL(745);
-	ret = SceSysmemForKernel_7DF07D60(addressSpace, 10, g_gameCDialogPart);
+	ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 10, g_gameCDialogPart);
 	if (ret < 0)
 		SCE_DBG_ASSERT_FAIL(753);
 	return ret;
@@ -127,7 +127,7 @@ SceUID BudgetGetKernelBudgetId(void)
 }
 
 /* name unknown: delete a mini application budget */
-int SceProcessmgrForKernel_459A223B(SceUID budgetId)
+int sceKernelDeleteBudget(SceUID budgetId)
 {
 	ProcessBudget *budget;
 	int ret, isDefault;
@@ -135,14 +135,14 @@ int SceProcessmgrForKernel_459A223B(SceUID budgetId)
 	ret = SceThreadmgrForDriver_332E127C();
 	if (ret != 0x40 && ret != 0x80)
 		return SCE_ERROR_ERRNO_ENOSYS;
-	if (SceIntrmgrForDriver_182EE3E3() != 0)
+	if (sceKernelIsIntrContext() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	isDefault = budgetId == BUDGET_ID_CURRENT || budgetId == BUDGET_ID_GAME
 		 || budgetId == BUDGET_ID_SHELL;
 	if (isDefault || budgetId == g_kernelBudgetId || budgetId == g_gameBudgetId
 	    || budgetId == g_shellBudgetId)
 		return SCE_KERNEL_ERROR_INVALID_BUDGET_ID;
-	if (SceSysmemForKernel_368F1C36(budgetId) != &g_budgetClass)
+	if (sceGUIDtoClass(budgetId) != &g_budgetClass)
 		return SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
 	budget = SceSysmemForKernel_FA6C098C(budgetId);
 	if (budget == NULL)
@@ -459,7 +459,7 @@ int BudgetIDtoBudgetObj(SceUID budgetId, ProcessBudget **budget)
 			return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		}
 	}
-	if (SceSysmemForKernel_368F1C36(budgetId) == &g_budgetClass) {
+	if (sceGUIDtoClass(budgetId) == &g_budgetClass) {
 		*budget = SceSysmemForKernel_FA6C098C(budgetId);
 		if (*budget != NULL)
 			return 0;
@@ -608,14 +608,14 @@ delete_cdram:
 }
 
 /* name unknown: create a mini application budget */
-SceUID SceProcessmgrForKernel_DC18FCEF(const char *name, SceUInt32 type, const ProcessBudgetOpt *opt)
+SceUID sceKernelCreateBudget(const char *name, SceUInt32 type, const ProcessBudgetOpt *opt)
 {
 	int ret;
 
 	ret = SceThreadmgrForDriver_332E127C();
 	if (ret != 0x40 && ret != 0x80)
 		return SCE_ERROR_ERRNO_ENOSYS;
-	if (SceIntrmgrForDriver_182EE3E3() != 0)
+	if (sceKernelIsIntrContext() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (opt == NULL || name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -630,76 +630,76 @@ int SetBudget(SceUInt32 type, SceUID addressSpace, ProcessBudget *budget)
 	void *partition;
 	int ret;
 
-	ret = SceSysmemForKernel_7DF07D60(addressSpace, 6, g_kernelPart);
+	ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 6, g_kernelPart);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(863);
 		return ret;
 	}
 	partition = (void *)SceSysmemForKernel_0B1B4ACA();
 	if (partition != NULL) {
-		ret = SceSysmemForKernel_7DF07D60(addressSpace, 15, partition);
+		ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 15, partition);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(872);
 			return ret;
 		}
 	}
-	SceSysmemForKernel_7DF07D60(addressSpace, 5, g_gamePart);
+	sceKernelAddressSpaceSetPhyMemPart(addressSpace, 5, g_gamePart);
 	switch (type) {
 	case PROCESS_TYPE_MINI_APP:
-		ret = SceSysmemForKernel_7DF07D60(addressSpace, 11, budget->mainPartition);
+		ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 11, budget->mainPartition);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(929);
 			return ret;
 		}
-		ret = SceSysmemForKernel_7DF07D60(addressSpace, 10, budget->cdialogPartition);
+		ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 10, budget->cdialogPartition);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(937);
 			return ret;
 		}
-		ret = SceSysmemForKernel_7DF07D60(addressSpace, 8, budget->phyContPartition);
+		ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 8, budget->phyContPartition);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(945);
 			return ret;
 		}
-		ret = SceSysmemForKernel_7DF07D60(addressSpace, 12, g_shellCdramPart);
+		ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 12, g_shellCdramPart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(955);
 			return ret;
 		}
-		if (SceSysmemForKernel_7DF07D60(addressSpace, 9, g_sharedPart) < 0)
+		if (sceKernelAddressSpaceSetPhyMemPart(addressSpace, 9, g_sharedPart) < 0)
 			SCE_DBG_ASSERT_FAIL(965);
 		return 0;
 	case PROCESS_TYPE_GAME:
-		ret = SceSysmemForKernel_7DF07D60(addressSpace, 11, g_gamePart);
+		ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 11, g_gamePart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(898);
 			return ret;
 		}
-		ret = SceSysmemForKernel_7DF07D60(addressSpace, 10, g_gameCDialogPart);
+		ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 10, g_gameCDialogPart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(906);
 			return ret;
 		}
 		if (SetKernelGamePhyMemPart(addressSpace) < 0)
 			SCE_DBG_ASSERT_FAIL(912);
-		ret = SceSysmemForKernel_7DF07D60(addressSpace, 12, g_gameCdramPart);
+		ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 12, g_gameCdramPart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(919);
 			return ret;
 		}
 		return 0;
 	case PROCESS_TYPE_SHELL:
-		ret = SceSysmemForKernel_7DF07D60(addressSpace, 11, g_shellPart);
+		ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 11, g_shellPart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(974);
 			return ret;
 		}
-		ret = SceSysmemForKernel_7DF07D60(addressSpace, 12, g_shellCdramPart);
+		ret = sceKernelAddressSpaceSetPhyMemPart(addressSpace, 12, g_shellCdramPart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(983);
 			return ret;
 		}
-		if (SceSysmemForKernel_7DF07D60(addressSpace, 9, g_sharedPart) < 0)
+		if (sceKernelAddressSpaceSetPhyMemPart(addressSpace, 9, g_sharedPart) < 0)
 			SCE_DBG_ASSERT_FAIL(992);
 		return 0;
 	case PROCESS_TYPE_KERNEL:
@@ -727,15 +727,15 @@ static inline __attribute__((always_inline)) int initializeBudget(void)
 
 static inline __attribute__((always_inline)) void SetKernelPhyMemPart(void)
 {
-	if (SceSysmemForKernel_7DF07D60(SCE_KERNEL_ADDRESS_SPACE_ID, 5, g_gamePart) < 0)
+	if (sceKernelAddressSpaceSetPhyMemPart(SCE_KERNEL_ADDRESS_SPACE_ID, 5, g_gamePart) < 0)
 		SCE_DBG_ASSERT_FAIL(768);
 	if (SetKernelGamePhyMemPart(SCE_KERNEL_ADDRESS_SPACE_ID) < 0)
 		SCE_DBG_ASSERT_FAIL(775);
-	if (SceSysmemForKernel_7DF07D60(SCE_KERNEL_ADDRESS_SPACE_ID, 12, g_gameCdramPart) < 0)
+	if (sceKernelAddressSpaceSetPhyMemPart(SCE_KERNEL_ADDRESS_SPACE_ID, 12, g_gameCdramPart) < 0)
 		SCE_DBG_ASSERT_FAIL(782);
-	if (SceSysmemForKernel_7DF07D60(SCE_KERNEL_ADDRESS_SPACE_ID, 13, g_gameCdramPart) < 0)
+	if (sceKernelAddressSpaceSetPhyMemPart(SCE_KERNEL_ADDRESS_SPACE_ID, 13, g_gameCdramPart) < 0)
 		SCE_DBG_ASSERT_FAIL(789);
-	if (SceSysmemForKernel_7DF07D60(SCE_KERNEL_ADDRESS_SPACE_ID, 14, g_shellCdramPart) < 0)
+	if (sceKernelAddressSpaceSetPhyMemPart(SCE_KERNEL_ADDRESS_SPACE_ID, 14, g_shellCdramPart) < 0)
 		SCE_DBG_ASSERT_FAIL(796);
 }
 
@@ -966,7 +966,7 @@ int sceKernelGrowBudget(SceUID budgetId, int index, SceSize size)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 1479, "pPhyMemPart %p\n", partition);
-	ret = SceSysmemForKernel_5B434019(partition, size);
+	ret = sceKernelGrowPhyMemPart(partition, size);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1483, "grow partition failed. 0x%08x\n", ret);
 		sceKernelUnlockMutex(budget->mutex, 1);

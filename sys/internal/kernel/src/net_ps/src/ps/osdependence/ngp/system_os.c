@@ -169,7 +169,7 @@ int sceNetPsGetCurrentTick(SceUInt64 *tick)
 	SceRtcTick current;
 	int result;
 
-	result = SceRtcForDriver_DEC408D4(&current);
+	result = sceRtcGetCurrentTick(&current);
 	*tick = current.tick;
 	return result;
 }
@@ -377,7 +377,7 @@ int sce_psnet_bnet_sync_wait(SceNetPsSync *sync,
 		if (events)
 			break;
 		if (flags & 1)
-			result = SceThreadmgrForDriver_8A35F714(sync->eventFlag, 1, 5,
+			result = sceKernelWaitEventFlagCB(sync->eventFlag, 1, 5,
 						 NULL, timeout);
 		else
 			result = sceKernelWaitEventFlag(sync->eventFlag, 1, 5,
@@ -428,7 +428,7 @@ int sce_psnet_bnet_sync_signal(SceNetPsSync *sync, unsigned int mask)
 int sceNetPsBindCallback(SceNetPsDriverCallback *callback, SceUID callbackId,
 			const char *name)
 {
-	callback->globalCallbackId = SceSysmemForDriver_45D22597(0, callbackId);
+	callback->globalCallbackId = scePUIDtoGUID(0, callbackId);
 	callback->name = name;
 	return 0;
 }
@@ -445,7 +445,7 @@ int sceNetPsNotifyCallback(SceNetPsDriverCallback *callback,
 
 SceUID bnet_puid_to_guid(SceUID puid)
 {
-	return SceSysmemForDriver_45D22597(0, puid);
+	return scePUIDtoGUID(0, puid);
 }
 
 unsigned int sceNetPsSyscallEnter(void)
@@ -523,7 +523,7 @@ int sceNetPsInitializePlatform(int (*initialize)(SceUID, void *, int,
 	return 0;
 
 unregisterProcess:
-	SceProcEventForDriver_3DED57CC(processId);
+	sceKernelUnregisterProcEventHandler(processId);
 unregisterThread:
 	sceKernelUnregisterThreadEventHandler(threadId);
 unregisterSystem:

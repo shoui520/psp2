@@ -279,7 +279,7 @@ int KrmDriverUnlock(void)
 void sceKrmDriverSetPID(SceUID pid)
 {
 #if FW_DEBUG
-	if (SceDebugForDriver_374B7868() > 0) {
+	if (sceKernelGetAssertLevel() > 0) {
 		int valid = 1;
 
 		if (__builtin_expect(g_krmDriverPid != -1, 0))
@@ -658,7 +658,7 @@ int KrmDriverGetRandomBytes(unsigned char *dst, unsigned int size)
 
 	while (size) {
 		count = size < sizeof(block) ? size : sizeof(block);
-		ret = SceSblSsMgrForDriver_AC57F4F0(block);
+		ret = sceSblRngGenuineRandomNumber(block);
 		if (ret < 0)
 			break;
 		memcpy(dst, block, count);
@@ -673,9 +673,9 @@ int KrmDriverSha256(void *digest, const void *src, SceSize size)
 {
 	SceSha256Context ctx;
 
-	SceKernelUtilsForDriver_D909FA2C(&ctx);
-	SceKernelUtilsForDriver_236A9097(&ctx, src, size);
-	SceKernelUtilsForDriver_4899CD4B(&ctx, digest);
+	sceSha256BlockInit(&ctx);
+	sceSha256BlockUpdate(&ctx, src, size);
+	sceSha256BlockResult(&ctx, digest);
 	return 0;
 }
 
@@ -733,7 +733,7 @@ int KrmDriverDecryptPortable(const void *iv, const void *src, void *dst)
 	__builtin_memcpy(input.msg, src, sizeof(input.msg));
 	output.msg_size = sizeof(output.msg);
 	__builtin_memset(output.msg, 0, sizeof(output.msg));
-	ret = SceSblSsMgrForDriver_934DB6B5(11, &localIv, &input, &output);
+	ret = sceSblSsDecryptWithPortability(11, &localIv, &input, &output);
 	if (ret == 0)
 		__builtin_memcpy(dst, output.msg, sizeof(output.msg));
 	__builtin_memset(&localIv, 0, sizeof(localIv));
@@ -748,7 +748,7 @@ int KrmDriverGetNetworkTick(uint64_t *tick)
 
 	if (!tick)
 		return (int)0x80a00000;
-	if (SceRtcForDriver_F1517B38(&localTick) < 0)
+	if (sceRtcGetCurrentNetworkTick(&localTick) < 0)
 		return (int)0x80a00009;
 	*tick = localTick.tick;
 	return 0;

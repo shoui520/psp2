@@ -68,7 +68,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	memset
 	__stack_chk_fail
-	SceSysmemForDriver_22CBE925
+	sceKernelUnlockRangeWithMode
 	sceKernelFreeHeapMemory
 	sceKernelAllocHeapMemory
 	sceKernelVAtoPA
@@ -79,15 +79,15 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteHeap
 	SceSysmemForDriver_E655852F
 	sceKernelVARangeToPAVector
-	SceSysmemForKernel_3717C322
+	sceKernelGetKernelFixedHeap
 	SceSysmemForKernel_93344755
 	SceSysmemForKernel_ABA5313C
-	SceSysmemForKernel_B628B46B
+	sceKernelNameHeapInsert
 	sceKernelCheckDipsw
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
 	sceKernelDisableIntr
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	sceKernelRegisterIntrHandler
 	sceKernelEnableIntr
 	sceKernelReleaseIntrHandler
@@ -98,7 +98,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelPollEventFlag
 	sceKernelSetEventFlag
 	sceKernelAssert
-	SceDebugForDriver_374B7868
+	sceKernelGetAssertLevel
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
@@ -106,7 +106,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCpuId
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	sceKernelSpinlockLowLock
-	SceCpuForDriver_CDA96E81
+	sceKernelAtomicCompareAndSet32
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	SceKernelSuspendForDriver_105C5752

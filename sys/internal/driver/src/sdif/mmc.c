@@ -1198,7 +1198,7 @@ int SceSdifForDriver_36A2B01B(unsigned int index)
 	return sdifIsCardInserted(context) > 0;
 }
 
-int SceSdifForDriver_23A4EF01(SdifMmcContext *part, void *cid)
+int sddev_get_sd_cid(SdifMmcContext *part, void *cid)
 {
 	if (!part || !cid)
 		return 0x8032000e;

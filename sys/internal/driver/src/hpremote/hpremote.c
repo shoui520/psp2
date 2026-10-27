@@ -67,7 +67,7 @@ static int pollInputs(void *arg, void *ctx, unsigned char priority) /* name unkn
 		remote.multiInput = multi;
 		remote.changed = 1;
 	}
-	SceSysconForDriver_1503D6A0(&info);
+	sceSysconGetMultiCnInfo(&info);
 	remote.multiType = (info & 0xff00) == 0x300;
 	if (remote.changed) {
 		remote.changed = 0;
@@ -329,7 +329,7 @@ int module_start(SceSize args, void *argp)
 	remote.rawMultiInput = remote.multiInput;
 	remote.multiHistory = remote.multiInput ? ~0u : 0;
 	if (remote.multiInput) {
-		SceSysconForDriver_1503D6A0(&info);
+		sceSysconGetMultiCnInfo(&info);
 		remote.multiType = (info & 0xff00) == 0x300;
 	}
 	SceSysconForDriver_63352A39(inputChanged, NULL);
@@ -348,7 +348,7 @@ int module_start(SceSize args, void *argp)
 
 int SceHpremoteForDriver_D22913DB(void (*handler)(int, int, int, int, int, void *), void *arg)
 {
-	int intr = SceCpuForDriver_821FC0EE();
+	int intr = sceKernelCpuSuspendIntr();
 
 	remote.handler = handler;
 	remote.handlerArg = arg;
@@ -358,7 +358,7 @@ int SceHpremoteForDriver_D22913DB(void (*handler)(int, int, int, int, int, void 
 
 int SceHpremoteForDriver_C7154136(int callback)
 {
-	int intr = SceCpuForDriver_821FC0EE(), ret = -1, i;
+	int intr = sceKernelCpuSuspendIntr(), ret = -1, i;
 
 	for (i = 0; i < 16; i++) {
 		if (remote.callbacks[i] < 0) {
@@ -373,7 +373,7 @@ int SceHpremoteForDriver_C7154136(int callback)
 
 int SceHpremoteForDriver_68D64A0F(int callback)
 {
-	int intr = SceCpuForDriver_821FC0EE(), ret = -1, i;
+	int intr = sceKernelCpuSuspendIntr(), ret = -1, i;
 
 	for (i = 0; i < 16; i++) {
 		if (remote.callbacks[i] == callback) {

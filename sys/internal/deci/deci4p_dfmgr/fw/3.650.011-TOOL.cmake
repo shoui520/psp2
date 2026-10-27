@@ -108,7 +108,7 @@ set(MODULE_IMPORT_FUNCS
 	receiveData
 	sceDbgSdioOpen
 	sceDbgSdioWrite
-	SceDbgUsbForDriver_08CF16D1
+	sceDbgUsbClose
 	sceDbgUsbWrite
 	_sceDbgUsbPullData
 	sceDbgUsbOpen

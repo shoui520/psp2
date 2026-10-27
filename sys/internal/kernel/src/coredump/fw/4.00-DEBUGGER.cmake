@@ -246,7 +246,7 @@ set(MODULE_IMPORT_FUNCS
 	scePUIDGetAttr
 	SceSysmemForKernel_AD19285A
 	SceSysmemForKernel_BC36755F
-	SceSysmemForKernel_C3EF4055
+	sceKernelGetAddressSpaceInfo
 	PUIDGetPUIDVectorByGUID
 	sceKernelGetModuleInfoForDebugger
 	sceKernelGetLibraryList
@@ -257,7 +257,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetLibraryClientList
 	sceKernelGetLibraryExportInfoForDebugger
 	sceKernelGetLibraryInfoForDebugger
-	SceModulemgrForKernel_DAA90093
+	sceKernelGetModuleInfo
 	memset
 	strncmp
 	memcpy
@@ -278,15 +278,15 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDGetObject
 	sceGUIDReleaseObject
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceGUIDKernelCreate
 	sceKernelCopyFromUserProc
 	sceUIDClassInitClass
 	sceKernelAllocHeapMemory
 	SceSysmemForDriver_85336A1C
 	sceKernelCreateHeap
-	SceSysmemForDriver_9F6E45E3
-	SceSysmemForDriver_A73CFFEF
+	sceKernelIsAccessibleRangeProc
+	sceKernelGetMemBlockInfo
 	sceKernelGetMemBlockBase
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
@@ -296,7 +296,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_E20F6FC8
 	sceKernelGetProcessInfo
 	sceKernelRegisterCoredumpHandler
-	SceProcessmgrForDriver_33B3D026
+	sceKernelUnregisterCoredumpHandler
 	sceKernelGetProcessStatus
 	SceProcessmgrForDriver_8CB01675
 	SceProcessmgrForDriver_A1CF74FA
@@ -320,7 +320,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoRead
 	sceIoClose
 	sceSblRngPseudoRandomNumber
-	SceSblSsMgrForDriver_934DB6B5
+	sceSblSsDecryptWithPortability
 	sceSblAimgrGetOpenPsId
 	SceSblSsMgrForKernel_83D254FF
 	SceSblSsMgrForKernel_E2DD0378
@@ -344,10 +344,10 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_0EB0ABF0
 	sceKernelGetLwMutexInfoById
 	sceKernelLockMutex
-	SceThreadmgrForDriver_19F3E92A
+	sceKernelGetTimerInfo
 	sceKernelExitDeleteThread
 	sceKernelUnlockMutex
-	SceThreadmgrForDriver_207E0E18
+	sceKernelGetMsgPipeInfo
 	sceKernelStartThread
 	sceKernelGetMutexInfoAllProc
 	sceKernelGetRWLockInfo
@@ -356,8 +356,8 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_477F7C8A
 	SceThreadmgrForDriver_5022689D
 	sceKernelGetThreadId
-	SceThreadmgrForDriver_5CDE387A
-	SceThreadmgrForDriver_612277C9
+	sceKernelGetVfpRegisterForDebugger
+	sceKernelGetEventFlagInfo
 	sceKernelSignalCondTo
 	sceKernelChangeThreadPriority2
 	sceKernelGetRWLockInfoAllProc
@@ -366,7 +366,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSignalCondAll
 	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	SceThreadmgrForDriver_A0B1AB21
+	sceKernelIsThreadDebugSuspended
 	sceKernelSignalCond
 	sceKernelDeleteThread
 	sceKernelDeleteCond
@@ -374,20 +374,20 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_C2AFFBD0
 	SceThreadmgrForDriver_C327CA7C
 	sceKernelCreateThread
-	SceThreadmgrForDriver_C99DCF0D
+	sceKernelGetSemaInfo
 	SceThreadmgrForDriver_CA704239
 	SceThreadmgrForDriver_CBA7FAAA
 	sceKernelWaitCond
 	SceThreadmgrForDriver_D1FBDFA6
 	sceKernelSetEventFlag
 	sceKernelCreateCond
-	SceThreadmgrForDriver_DD8D9429
+	sceKernelGetThreadInfoForDebugger
 	SceThreadmgrForDriver_E0C7BCBB
 	SceThreadmgrForDriver_E9E50096
 	sceKernelGetThreadIdList
 	SceThreadmgrForDriver_F311808F
 	sceKernelCreateMutex
-	SceThreadmgrForDriver_FDC044AC
+	sceKernelGetCallbackInfo
 	SceThreadmgrForDriver_FF8DA217
 	sceSblACMgrIsKernelProgram
 	SceSblACMgrForDriver_4CBD6156
@@ -403,17 +403,17 @@ set(MODULE_IMPORT_FUNCS
 	deflateInit2Padded_
 	deflateEnd
 	deflate
-	SceRtcForDriver_42A0DFCB
-	SceRtcForDriver_497B5DC9
-	SceRtcForDriver_DEC408D4
+	sceRtcSetTick
+	sceRtcGetTime64_t
+	sceRtcGetCurrentTick
 	sceRegMgrGetKeyInt
 	sceRegMgrGetKeyStr
-	SceKernelUtilsForDriver_236A9097
-	SceKernelUtilsForDriver_4899CD4B
-	SceKernelUtilsForDriver_A773A6A8
+	sceSha256BlockUpdate
+	sceSha256BlockResult
+	sceSha256Digest
 	SceKernelUtilsForDriver_C2A61770
 	SceKernelUtilsForDriver_D8678061
-	SceKernelUtilsForDriver_D909FA2C
+	sceSha256BlockInit
 	SceKernelUtilsForDriver_F12B6451
 	SceSysrootForDriver_400B9793
 	SceSysrootForDriver_591BB490
@@ -432,7 +432,7 @@ set(MODULE_IMPORT_FUNCS
 	sceUlobjMgrGetIdForFiber
 	SceUlobjMgrForDriver_FFC8C811
 	SceDisplayForDriver_3BC165EF
-	SceDisplayForDriver_C8E554C5
+	sceDisplayGetPrimaryHead
 	SceSdifForDriver_6A71987F
 	SceMsifForDriver_D0307849
 	sceKernelGetGPI

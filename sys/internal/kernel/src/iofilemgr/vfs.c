@@ -367,7 +367,7 @@ int enter_ncache(SceVfsVnode *dvp, SceVfsVnode *vp, const VfsPathElem *elem, int
 		buf = vfs_path_buff_alloc();
 		if (buf == NULL)
 			return SCE_ERROR_ERRNO_ENOMEM;
-		ret = SceIofilemgrForDriver_F7DAC0F5(dvp->core.mnt, elem->name, &path2, &path3, buf,
+		ret = sceVfsOpDecodePathElem(dvp->core.mnt, elem->name, &path2, &path3, buf,
 					      VFS_PATH_BUFF_SIZE, &len);
 		if (ret < 0) {
 			if (ret != SCE_ERROR_ERRNO_EUNSUP) {
@@ -488,7 +488,7 @@ int vfs_lookup(SceVfsVnode *dvp, const VfsPathElem *elem, const char *path, SceU
 	buf = vfs_path_buff_alloc();
 	if (buf == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
-	ret = SceIofilemgrForDriver_F7DAC0F5(dvp->core.mnt, elem->name, &path2, &path3, buf,
+	ret = sceVfsOpDecodePathElem(dvp->core.mnt, elem->name, &path2, &path3, buf,
 				      VFS_PATH_BUFF_SIZE, &len);
 	if (ret < 0) {
 		if (ret != SCE_ERROR_ERRNO_EUNSUP) {
@@ -674,7 +674,7 @@ int restore_ncache(SceVfsVnode *dvp, SceVfsVnode *vp, const VfsPathElem *elem, S
 	buf = vfs_path_buff_alloc();
 	if (buf == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
-	ret = SceIofilemgrForDriver_F7DAC0F5(dvp->core.mnt, elem->name, &path2, &path3, buf,
+	ret = sceVfsOpDecodePathElem(dvp->core.mnt, elem->name, &path2, &path3, buf,
 				      VFS_PATH_BUFF_SIZE, &len);
 	if (ret < 0) {
 		if (ret != SCE_ERROR_ERRNO_EUNSUP) {
@@ -901,7 +901,7 @@ int replace_flat_path(const char *path, char *flat, VfsPathElem *elem, int *num,
 		pid = SceThreadmgrForDriver_FA54D49A();
 		if ((pid & ~0x10) != SCE_KERNEL_PROCESS_ID &&
 		    pid != SCE_KERNEL_DUMMY_PROCESS_GAME_ID) {
-			ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey,
+			ret = sceKernelGetRemoteKPLS(pid, g_iofilemgrKplsKey,
 									 (void **)&kpls, 1);
 			if (ret < 0)
 				goto free;
@@ -3959,12 +3959,12 @@ void vfs_clear_sync_pending(void)
 
 void vfs_increment_io_count(void)
 {
-	SceCpuForDriver_341B6E81(&g_vfsIoCount, 1);
+	sceKernelAtomicGetAndAdd32(&g_vfsIoCount, 1);
 }
 
 void vfs_decrement_io_count(void)
 {
-	SceCpuForDriver_341B6E81(&g_vfsIoCount, -1);
+	sceKernelAtomicGetAndAdd32(&g_vfsIoCount, -1);
 }
 
 /* name unknown: marks the devices of every mounted external mount as gone */

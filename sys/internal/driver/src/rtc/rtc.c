@@ -166,16 +166,16 @@ int sceRtcSynchronize(void)
 	}
 	rtcBase = (SceUInt64)count * RTC_COUNT_UNIT;
 	now = sceKernelGetSystemTimeWide();
-	SceRtcForDriver_CE51C2A1(&tick, &last, rtcBase);
-	SceRtcForDriver_CE51C2A1(&tick, &tick, -now);
+	sceRtcTickAddTicks(&tick, &last, rtcBase);
+	sceRtcTickAddTicks(&tick, &tick, -now);
 	for (i = 0; i < RTC_AUX_CLOCKS; i++) {
 		aux[i] = g_rtc.aux[i].sysOffset;
 		if (g_rtc.aux[i].flags) {
-			SceRtcForDriver_CE51C2A1(&aux[i], &g_rtc.aux[i].rtcOffset, rtcBase);
-			SceRtcForDriver_CE51C2A1(&aux[i], &aux[i], -now);
+			sceRtcTickAddTicks(&aux[i], &g_rtc.aux[i].rtcOffset, rtcBase);
+			sceRtcTickAddTicks(&aux[i], &aux[i], -now);
 		}
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	g_rtc.rtcBase = rtcBase;
 	g_rtc.systemTimeBase = now;
 	g_rtc.tickOffset = tick;
@@ -211,8 +211,8 @@ static int rtcSysEventHandler(int resume, int eventid, void *args, void *opt)
 			g_rtc.alarmState = 1;
 		} else if (eventid == SYSEVENT_SUSPEND_COMMIT) {
 			save = ((RtcSuspendArgs *)args)->save;
-			SceRtcForDriver_DEC408D4(&save->tick);
-			SceRtcForDriver_C838275A(&save->alarmTick, NULL);
+			sceRtcGetCurrentTick(&save->tick);
+			sceRtcGetAlarmTick(&save->alarmTick, NULL);
 		}
 	} else if (resume == 1) {
 		if (eventid == SYSEVENT_RESUME_DEVICE(10)) {
@@ -241,7 +241,7 @@ int SceRtcForDriver_ACFE5A9F(unsigned int dateFormat, unsigned int timeFormat, i
 		return SCE_RTC_ERROR_INVALID_VALUE;
 	if (daylightSaving > 1440)
 		return SCE_RTC_ERROR_INVALID_VALUE;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	g_rtc.dateFormat = dateFormat;
 	g_rtc.timeFormat = timeFormat;
 	g_rtc.daylightSaving = daylightSaving;
@@ -264,7 +264,7 @@ int _sceRtcSetCurrentAuxTick(int index, const SceRtcTick *tick, int cmd)
 	now = sceKernelGetSystemTimeWide();
 	rtcBase = g_rtc.rtcBase;
 	systemTimeBase = g_rtc.systemTimeBase;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (tick == NULL) {
 		aux->flags = 0;
 		aux->rtcOffset.tick = 0;
@@ -298,7 +298,7 @@ int SceRtcForDriver_7D431C87(const SceRtcTick *tick)
 					SYSCON_SCRATCH_PAD(auxTick[RTC_AUX_SECURE]));
 }
 
-int SceRtcForDriver_162E486E(const SceRtcTick *tick)
+int sceRtcSetCurrentNetworkTick(const SceRtcTick *tick)
 {
 	if (tick != NULL && tick->tick <= RTC_TICK_2014_END)
 		return SCE_RTC_ERROR_INVALID_VALUE;
@@ -324,7 +324,7 @@ int sceRtcSetAlarmTick(const SceRtcTick *tick, int arg)
 	if (tick == NULL || tick->tick == 0 || g_rtc.lastSetTick.tick == 0) {
 		alarm = -1;
 	} else {
-		SceRtcForDriver_DEC408D4(&now);
+		sceRtcGetCurrentTick(&now);
 		if (tick->tick < now.tick) {
 			if (rtcContext() & 0x10000) {
 				rtcLeave(context);
@@ -351,7 +351,7 @@ int sceRtcSetAlarmTick(const SceRtcTick *tick, int arg)
 		rtcLeave(context);
 		return ret;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	g_rtc.alarmArg = arg;
 	if (tick == NULL)
 		g_rtc.alarmTick.tick = 0;
@@ -381,7 +381,7 @@ int sceRtcSetCurrentTick(const SceRtcTick *tick)
 	context = rtcEnter();
 	SceKernelSuspendForDriver_4DF40893(0);
 	g_rtc.alarmState = 1;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	now = sceKernelGetSystemTimeWide();
 	g_rtc.tickOffset.tick = tick->tick - now;
 	delta = now + (g_rtc.rtcBase - g_rtc.systemTimeBase);
@@ -439,7 +439,7 @@ int sceRtcSetCurrentTick(const SceRtcTick *tick)
 		SCE_DBG_ASSERT_CHECK(0, 932);
 		goto fail;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (g_rtc.alarmState != 1) {
 		if (sceKernelNotifyCallback(g_rtc.alarmCallback, SceRtcForDriver_CD295F0C()) < 0)
 			g_rtc.alarmCallback = -1;
@@ -496,8 +496,8 @@ int sceRtcSynchronizeCold(void)
 			g_rtc.aux[i].flags = 0;
 		if (dipsw == 0)
 			return 0;
-		SceRtcForDriver_DE9F4515(&time, dipsw);
-		SceRtcForDriver_F139E359(&time, &tick);
+		sceRtcSetTime_t(&time, dipsw);
+		sceRtcGetTick(&time, &tick);
 		if (SceSysconForDriver_D7BEFF8B(&count) < 0)
 			SCE_DBG_ASSERT_CHECK(0, 521);
 		else
@@ -513,8 +513,8 @@ int sceRtcSynchronizeCold(void)
 	}
 	rtcBase = (SceUInt64)count * RTC_COUNT_UNIT;
 	now = sceKernelGetSystemTimeWide();
-	SceRtcForDriver_CE51C2A1(&offset, &tick, rtcBase);
-	SceRtcForDriver_CE51C2A1(&offset, &offset, -now);
+	sceRtcTickAddTicks(&offset, &tick, rtcBase);
+	sceRtcTickAddTicks(&offset, &offset, -now);
 	ret = SceSysconForDriver_299B1CE7(SYSCON_SCRATCH_PAD(auxTick[0]), g_rtc.auxPacked[0], 20);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_CHECK(0, 557);
@@ -532,8 +532,8 @@ int sceRtcSynchronizeCold(void)
 		aux[i].flags = g_rtc.aux[i].flags;
 		if (raw != 0) {
 			aux[i].rtcOffset.tick = raw << 19;
-			SceRtcForDriver_CE51C2A1(&aux[i].sysOffset, &aux[i].rtcOffset, rtcBase);
-			SceRtcForDriver_CE51C2A1(&aux[i].sysOffset, &aux[i].sysOffset, -now);
+			sceRtcTickAddTicks(&aux[i].sysOffset, &aux[i].rtcOffset, rtcBase);
+			sceRtcTickAddTicks(&aux[i].sysOffset, &aux[i].sysOffset, -now);
 			__sync_synchronize();
 			aux[i].flags |= RTC_AUX_VALID;
 			if (i < 4 && aux[i].sysOffset.tick <= RTC_TICK_2014_END)
@@ -566,11 +566,11 @@ int sceRtcSynchronizeCold(void)
 	if (alarmRaw == 0xffffffff) {
 		alarm.tick = 0;
 	} else {
-		SceRtcForDriver_9C8AF264(&alarm, &tick, alarmRaw >> 1);
+		sceRtcTickAddSeconds(&alarm, &tick, alarmRaw >> 1);
 		if (alarmRaw & 1)
-			SceRtcForDriver_CE51C2A1(&alarm, &alarm, RTC_COUNT_UNIT);
+			sceRtcTickAddTicks(&alarm, &alarm, RTC_COUNT_UNIT);
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	g_rtc.rtcBase = rtcBase;
 	g_rtc.tickOffset = offset;
 	g_rtc.systemTimeBase = now;
@@ -586,7 +586,7 @@ int sceRtcSynchronizeCold(void)
 	return 0;
 }
 
-int SceRtcForDriver_C838275A(SceRtcTick *tick, int *arg)
+int sceRtcGetAlarmTick(SceRtcTick *tick, int *arg)
 {
 	if (tick == NULL)
 		return SCE_RTC_ERROR_INVALID_POINTER;
@@ -607,7 +607,7 @@ int SceRtcForDriver_CD295F0C(void)
 	context = rtcEnter();
 	ret = SceSysconForDriver_86BAAF7D();
 	if (ret == 1) {
-		SceRtcForDriver_DEC408D4(&now);
+		sceRtcGetCurrentTick(&now);
 		ret = now.tick >= g_rtc.alarmTick.tick;
 	}
 	rtcLeave(context);
@@ -621,7 +621,7 @@ int SceRtcForDriver_5220870D(SceUID cb)
 	int ret;
 
 	context = rtcEnter();
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (g_rtc.alarmCallback >= 0) {
 		ret = SCE_RTC_ERROR_ALREADY_REGISTERD;
 	} else {
@@ -652,7 +652,7 @@ int SceRtcForDriver_9546C68B(SceUID cb)
 	return ret;
 }
 
-int SceRtcForDriver_DEC408D4(SceRtcTick *tick)
+int sceRtcGetCurrentTick(SceRtcTick *tick)
 {
 	unsigned int context;
 	int ret;
@@ -704,7 +704,7 @@ int SceRtcForDriver_401C0954(SceRtcTick *tick)
 	return rtcGetAuxTick(RTC_AUX_SECURE, tick);
 }
 
-int SceRtcForDriver_F1517B38(SceRtcTick *tick)
+int sceRtcGetCurrentNetworkTick(SceRtcTick *tick)
 {
 	if (SceSblACMgrForDriver_426A4E8C(0) && SceRtcForDriver_C141632A(tick) == 0)
 		return 0;
@@ -790,7 +790,7 @@ int SceRtcForDriver_CF84DFC0(SceUID cb)
 		rtcLeave(context);
 		return SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID;	/* SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID */
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (g_rtc.aux[RTC_AUX_SECURE].callback >= 0) {
 		ret = SCE_RTC_ERROR_ALREADY_REGISTERD;
 	} else {
@@ -814,7 +814,7 @@ int SceRtcForDriver_EDDC2325(SceUID cb)
 	return SCE_RTC_ERROR_NOT_FOUND;
 }
 
-int SceRtcForDriver_A930CD1A(SceDateTime *time, int timezone)
+int sceRtcGetCurrentClock(SceDateTime *time, int timezone)
 {
 	unsigned int context;
 	SceRtcTick tick;
@@ -823,9 +823,9 @@ int SceRtcForDriver_A930CD1A(SceDateTime *time, int timezone)
 	if (time == NULL)
 		return SCE_RTC_ERROR_INVALID_POINTER;
 	context = rtcEnter();
-	ret = SceRtcForDriver_DEC408D4(&tick);
-	SceRtcForDriver_0F9E02EF(&tick, &tick, timezone);
-	SceRtcForDriver_42A0DFCB(time, &tick);
+	ret = sceRtcGetCurrentTick(&tick);
+	sceRtcTickAddMinutes(&tick, &tick, timezone);
+	sceRtcSetTick(time, &tick);
 	rtcLeave(context);
 	return ret;
 }
@@ -836,12 +836,12 @@ int sceRtcGetCurrentClockLocalTime(SceDateTime *time)
 	int ret;
 
 	context = rtcEnter();
-	ret = SceRtcForDriver_A930CD1A(time, g_rtc.daylightSaving + g_rtc.timezone);
+	ret = sceRtcGetCurrentClock(time, g_rtc.daylightSaving + g_rtc.timezone);
 	rtcLeave(context);
 	return ret;
 }
 
-SceUInt64 SceRtcForDriver_0A86FB04(void)
+SceUInt64 sceRtcGetAccumulativeTime(void)
 {
 	SceUInt64 rtcBase = g_rtc.rtcBase;
 	SceUInt32 carry = g_rtc.rtcCarry;
@@ -850,7 +850,7 @@ SceUInt64 SceRtcForDriver_0A86FB04(void)
 	       (SceUInt64)carry * RTC_COUNT_UNIT;
 }
 
-int SceRtcForDriver_3D614A9A(SceRtcTick *tick)
+int sceRtcGetLastReincarnatedTick(SceRtcTick *tick)
 {
 	unsigned int context;
 	int ret;
@@ -870,7 +870,7 @@ int SceRtcForDriver_3D614A9A(SceRtcTick *tick)
 	return ret;
 }
 
-int SceRtcForDriver_8A987573(SceRtcTick *tick)
+int sceRtcGetLastAdjustedTick(SceRtcTick *tick)
 {
 	if (tick == NULL)
 		return SCE_RTC_ERROR_INVALID_POINTER;
@@ -882,24 +882,24 @@ int SceRtcForDriver_8A987573(SceRtcTick *tick)
 	return 0;
 }
 
-int SceRtcForDriver_C6E03DD4(const SceRtcTick *utc, SceRtcTick *local)
+int sceRtcConvertUtcToLocalTime(const SceRtcTick *utc, SceRtcTick *local)
 {
 	unsigned int context;
 	int ret;
 
 	context = rtcEnter();
-	ret = SceRtcForDriver_0F9E02EF(local, utc, g_rtc.timezone + g_rtc.daylightSaving);
+	ret = sceRtcTickAddMinutes(local, utc, g_rtc.timezone + g_rtc.daylightSaving);
 	rtcLeave(context);
 	return ret;
 }
 
-int SceRtcForDriver_AD2F3544(const SceRtcTick *local, SceRtcTick *utc)
+int sceRtcConvertLocalTimeToUtc(const SceRtcTick *local, SceRtcTick *utc)
 {
 	unsigned int context;
 	int ret;
 
 	context = rtcEnter();
-	ret = SceRtcForDriver_0F9E02EF(utc, local, -(g_rtc.timezone + g_rtc.daylightSaving));
+	ret = sceRtcTickAddMinutes(utc, local, -(g_rtc.timezone + g_rtc.daylightSaving));
 	rtcLeave(context);
 	return ret;
 }

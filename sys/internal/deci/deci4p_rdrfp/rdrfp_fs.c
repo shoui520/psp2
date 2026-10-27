@@ -119,7 +119,7 @@ static int rdrfpMountCallback(SceUID notifyId, SceInt32 notifyCount, SceInt32 no
 	(void)notifyCount;
 	(void)notifyArg;
 
-	ret = SceThreadmgrForDriver_C529EA32(rdrfpMountEvents[dev], 3, &events, NULL, NULL);
+	ret = sceKernelWaitEvent(rdrfpMountEvents[dev], 3, &events, NULL, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 341, "WaitEvent failed (0x%08x)\n", ret);
 		return ret;

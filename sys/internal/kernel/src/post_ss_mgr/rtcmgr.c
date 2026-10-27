@@ -73,7 +73,7 @@ int rtcMgrSetCpActivationKey(void)	/* name unknown */
 	SceActivationKey key;
 	int ret;
 
-	ret = SceSblPostSsMgrForDriver_F7F1015B(&key);
+	ret = sceSblLicMgrGetActivationKey(&key);
 	if (ret == 0)
 		ret = _sceSblRtcMgrSetCpRtc(0, 0, &key);
 	return ret;
@@ -84,7 +84,7 @@ int rtcMgrSetCpRtcPhysicalAndKey(SceUInt32 time)	/* name unknown */
 	SceActivationKey key;
 	int ret;
 
-	ret = SceSblPostSsMgrForDriver_F7F1015B(&key);
+	ret = sceSblLicMgrGetActivationKey(&key);
 	if (ret == 0)
 		ret = _sceSblRtcMgrSetCpRtc(time, 1, &key);
 	return ret;
@@ -100,12 +100,12 @@ int SceSblPostSsMgrForDriver_942010A0(SceUInt32 *time)
 	return rtcMgrGetCpRtc(time, 1);
 }
 
-int SceSblPostSsMgrForDriver_DC68EE5C(void)
+int sceSblRtcMgrSetCpRtcLogical(void)
 {
 	return SCE_SBL_ERROR_RTC_UNSUPPORTED;
 }
 
-int SceSblPostSsMgrForDriver_DE5150FE(SceUInt32 *time)
+int sceSblRtcMgrGetCpRtcLogical(SceUInt32 *time)
 {
 	return rtcMgrGetCpRtc(time, 0);
 }

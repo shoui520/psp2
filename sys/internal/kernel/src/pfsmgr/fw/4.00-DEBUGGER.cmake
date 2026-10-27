@@ -150,12 +150,12 @@ set(MODULE_IMPORT_NIDS
 	0x3691DA45:F:0xCC119171
 )
 set(MODULE_IMPORT_FUNCS
-	SceKernelUtilsForDriver_29A28957
+	sceHmacSha1Digest
 	SceKernelUtilsForDriver_302947B6
-	SceKernelUtilsForDriver_4C9A5730
-	SceKernelUtilsForDriver_87DC7F2F
-	SceKernelUtilsForDriver_92AEDFBC
-	SceKernelUtilsForDriver_A773A6A8
+	sceMt19937Init
+	sceSha1Digest
+	sceMt19937UInt
+	sceSha256Digest
 	SceKernelUtilsForDriver_EDA97D6D
 	sceVopDopen
 	sceVopFchstat
@@ -209,15 +209,15 @@ set(MODULE_IMPORT_FUNCS
 	sceVopRemove
 	vfsPwrite
 	sceVopWhiteout
-	SceIofilemgrForDriver_F7DAC0F5
+	sceVfsOpDecodePathElem
 	vfsMountForPFS
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelDcacheCleanRange
 	sceKernelDcacheCleanInvalidateRange
-	SceCpuForDriver_5F6A8743
-	SceCpuForDriver_A4884C4E
+	sceKernelAtomicAddAndGet32
+	sceKernelAtomicSubAndGet32
 	SceDebugForDriver_391B5B74
 	memset
 	strncmp
@@ -246,25 +246,25 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_47F6DE49
 	sceKernelGetThreadId
 	sceKernelSignalCondTo
-	SceThreadmgrForDriver_8C3C1F78
+	sceKernelUnregisterKTLS
 	sceKernelSignalCond
 	sceKernelDeleteCond
-	SceThreadmgrForDriver_B645C7EF
+	sceKernelRegisterKTLS
 	sceKernelCreateThread
 	sceKernelWaitCond
 	sceKernelCreateCond
 	SceThreadmgrForDriver_FA54D49A
 	sceKernelCreateMutex
-	SceSblSsMgrForDriver_0F7D28AF
-	SceSblSsMgrForDriver_121FA69F
+	sceSblDmac5AesEcbEncNP
+	sceSblDmac5AesCbcDec
 	SceSblSsMgrForDriver_1901CB5E
 	SceSblSsMgrForDriver_1B14658D
-	SceSblSsMgrForDriver_6704D985
-	SceSblSsMgrForDriver_711C057A
-	SceSblSsMgrForDriver_7C978BE7
+	sceSblDmac5Sha1HmacTransform
+	sceSblDmac5AesCbcEncNP
+	sceSblDmac5AesEcbDec
 	SceSblSsMgrForDriver_83B058F5
-	SceSblSsMgrForDriver_C517770D
-	SceSblSsMgrForDriver_E6E1AD15
+	sceSblDmac5AesEcbEnc
+	sceSblDmac5AesCbcEnc
 	SceSblSsMgrForDriver_EB3AF9B5
 	SceSblACMgrForDriver_3B356B98
 	SceSblACMgrForDriver_6210D745

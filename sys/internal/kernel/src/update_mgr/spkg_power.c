@@ -11,7 +11,7 @@
 
 extern int updateSysconShutdownWorkaround;
 extern int updateSysconFirmwareUpdateStarted;
-#pragma weak SceLedForDriver_EA24BE03
+#pragma weak sceLedSetMode
 
 int SpkgUtilPowerControl(int operation, int flags)
 {
@@ -34,7 +34,7 @@ int SpkgUtilPowerControl(int operation, int flags)
 		if (!updateUseSysconPowerControl)
 			break;
 		if (updateSysconFirmwareUpdateStarted && !updateSysconShutdownWorkaround)
-			ScePowerForDriver_8921A7A0(1);
+			scePowerRequestShutdown(1);
 		else
 			scePowerRequestColdReset();
 		break;
@@ -52,7 +52,7 @@ int SpkgUtilPowerControl(int operation, int flags)
 		if (!updateUseSysconPowerControl)
 			break;
 		if (updateSysconFirmwareUpdateStarted && !updateSysconShutdownWorkaround)
-			ScePowerForDriver_8921A7A0(0);
+			scePowerRequestShutdown(0);
 		else
 			scePowerRequestStandby();
 		break;
@@ -71,22 +71,22 @@ int SpkgUtilPowerControl(int operation, int flags)
 			result = SceKernelSuspendForDriver_2BB92967(0);
 		break;
 	case 4:
-		ledControl = SceLedForDriver_EA24BE03;
+		ledControl = sceLedSetMode;
 		if (ledControl) {
 			result = ledControl(2, SCE_LED_MODE_ON, NULL);
 		} else {
-			SceSysconForDriver_04EC7579(64, 1);
-			SceGpioForDriver_D454A584(0, 7);
+			sceSysconCtrlLED(64, 1);
+			sceGpioPortSet(0, 7);
 			result = 0;
 		}
 		break;
 	case 5:
-		ledControl = SceLedForDriver_EA24BE03;
+		ledControl = sceLedSetMode;
 		if (ledControl) {
 			result = ledControl(2, SCE_LED_MODE_OFF, NULL);
 		} else {
-			SceSysconForDriver_04EC7579(64, 0);
-			SceGpioForDriver_F6310435(0, 7);
+			sceSysconCtrlLED(64, 0);
+			sceGpioPortClear(0, 7);
 			result = 0;
 		}
 		break;
@@ -94,7 +94,7 @@ int SpkgUtilPowerControl(int operation, int flags)
 		result = SceGpioForDriver_372022A4(0, 7, 0);
 		break;
 	case 7:
-		result = SceKernelSuspendForDriver_E0489831(flags);
+		result = sceKernelPowerTick(flags);
 		break;
 	case 8:
 		result = 0;

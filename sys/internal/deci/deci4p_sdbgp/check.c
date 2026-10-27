@@ -186,7 +186,7 @@ int isIllegalSetRegisterIndex(void)
 
 int isIllegalAddress(SceUID pid, uintptr_t address, SceSize size, uint32_t mode)
 {
-	if (SceSysmemForDriver_9F6E45E3(pid, mode, (const void *)address, size) < 0)
+	if (sceKernelIsAccessibleRangeProc(pid, mode, (const void *)address, size) < 0)
 		return SDBGP_RESULT_ILLEGAL_ADDRESS;
 	return 0;
 }
@@ -318,7 +318,7 @@ int isIllegalProcessStatus(SceUID pid)
 
 int isThreadNotSuspended(SceUID tid)
 {
-	int status = SceThreadmgrForDriver_A0B1AB21(tid);
+	int status = sceKernelIsThreadDebugSuspended(tid);
 
 	if (status & 3)
 		return 0;
@@ -329,7 +329,7 @@ int isThreadNotSuspended(SceUID tid)
 
 int isThreadIsSuspendedAlready(SceUID tid)
 {
-	int status = SceThreadmgrForDriver_A0B1AB21(tid);
+	int status = sceKernelIsThreadDebugSuspended(tid);
 
 	if (status < 0)
 		return status;
@@ -393,7 +393,7 @@ int checkSdbgpTargetAddrStopCausePabt(uint32_t ifar, SceUID pid, SceUID tid,
 		return SDBGP_STOP_USER_DEBUG_EVENT;
 	thumb = cpsr & PSR_THUMB;
 	if (addressSpace == 1 || addressSpace == 16) {
-		if (SceSysmemForDriver_9F6E45E3(pid, 1, (const void *)pc, 4) < 0)
+		if (sceKernelIsAccessibleRangeProc(pid, 1, (const void *)pc, 4) < 0)
 			return SDBGP_STOP_PABT;
 		if (!thumb) {
 			SceDeci4pSDfMgrForKernel_5996E2DB(code, (const void *)pc, 4);

@@ -66,10 +66,8 @@ struct SceSblSpfsoCtx;
 int sceSblAuthMgrOpen(int *handle);
 int sceSblAuthMgrClose(int handle);
 int sceSblAuthMgrAuthHeader(int handle, const void *header, SceSize size, SelfAuthRequest *auth);
-/* vitasdk: ksceSblAuthMgrSetupAuthSegment */
-int SceSblAuthMgrForKernel_89CCDA2C(int handle, SceUInt32 segment);
-/* vitasdk: ksceSblAuthMgrLoadBlock */
-int SceSblAuthMgrForKernel_BC422443(int handle, void *buffer, SceSize size, SceUInt32 reservedLow,
+int sceSblAuthMgrSetupAuthSegment(int handle, SceUInt32 segment);
+int sceSblAuthMgrAuthSegment(int handle, void *buffer, SceSize size, SceUInt32 reservedLow,
 				     int reservedHigh);
 int sceSblAuthMgrGetEKc(void *buffer, SceSize size, SceUInt32 type);
 int sceSblAuthMgrSetDmac5Key(const void *key, SceSize size, int slot, int keyId);

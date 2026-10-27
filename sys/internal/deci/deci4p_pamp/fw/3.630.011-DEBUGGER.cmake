@@ -120,33 +120,33 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSignalSema
 	sceKernelSetEventFlag
 	sceKernelUnlockFastMutex
-	ScePamgrForDriver_0B7F6F53
-	ScePamgrForDriver_0BCD4966
-	ScePamgrForDriver_16A24732
-	ScePamgrForDriver_17C81A92
+	sceKernelPaRemoveCounterTraceByKey
+	sceKernelPaSetBookmarkChannelEnableByKey
+	sceKernelPaInsertBookmark
+	sceKernelPaAddCounterTraceByKey
 	ScePamgrForDriver_1A7733E0
-	ScePamgrForDriver_3ACF4316
+	sceKernelPaGetTraceBufferStatus
 	ScePamgrForDriver_3C12A0CD
 	sceKernelPaRegister
-	ScePamgrForDriver_49A43754
+	sceKernelPaAddGpuTraceByKey
 	sceKernelPaUnregister
-	ScePamgrForDriver_5D3D46E4
+	sceKernelPaAddArmTraceByKey
 	ScePamgrForDriver_6005FDAA
 	ScePamgrForDriver_7F3814A4
 	ScePamgrForDriver_80CA3B39
 	ScePamgrForDriver_81764B21
 	ScePamgrForDriver_95F4079E
-	ScePamgrForDriver_9935D8EF
+	sceKernelPaRemoveGpuTraceByKey
 	ScePamgrForDriver_A1E448E7
 	ScePamgrForDriver_A708D62A
-	ScePamgrForDriver_B9EE1620
+	sceKernelPaRemoveArmTraceByKey
 	ScePamgrForDriver_D9EFF812
-	ScePamgrForDriver_DB62FEFE
+	sceKernelPaRemoveBusTraceByKey
 	ScePamgrForDriver_E8FF4812
-	ScePamgrForDriver_EB70556B
-	ScePamgrForDriver_F2D5105A
+	sceKernelPaGetTimebaseFrequency
+	sceKernelPaSetupTraceBufferByKey
 	ScePamgrForDriver_FB04BBEF
-	ScePamgrForDriver_FB46C3CD
+	sceKernelPaGetWritePointer
 	SceSysrootForDriver_39F1FD07
 	sceKernelCheckDipsw
 	sceDfMgrOpen
@@ -155,11 +155,11 @@ set(MODULE_IMPORT_FUNCS
 	sceDfMgrReqSend
 	sceDfMgrSend
 	SceDeci4pDfMgrForDebugger_CACAB5F9
-	SceSysmemForKernel_C3EF4055
+	sceKernelGetAddressSpaceInfo
 	SceProcessmgrForKernel_9BC44974
 	SceProcessmgrForKernel_EFFF2975
-	SceProcessmgrForDriver_61B9B6FA
-	SceProcessmgrForDriver_B1C3EFCA
+	sceKernelSetInitialPMCR
+	sceKernelSetInitialPMUSERENR
 	deflateInit_
 	deflateEnd
 	deflate

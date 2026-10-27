@@ -249,7 +249,7 @@ static inline void SendSerialState(void)
 		.wLength = sizeof(s_serial.notificationBuffer->data),
 	};
 	s_serial.notificationBuffer->data = s_serial.serialState;
-	SceUdcdForDriver_2E3E622A(&s_serial.notification.request, s_config.bus);
+	sceUdcdReqSendInternal(&s_serial.notification.request, s_config.bus);
 }
 
 static void completeControl(SceUdcdDeviceRequest *req)
@@ -293,12 +293,12 @@ static int DevReqHdlr(int recipient, int index, SceUdcdEP0DeviceRequest *req, vo
 	switch (req->bRequest) {
 	case CDC_SET_LINE_CODING:
 		s_serial.control.request.size = 64;
-		SceUdcdForDriver_175E6179(&s_serial.control.request, s_config.bus);
+		sceUdcdReqRecvInternal(&s_serial.control.request, s_config.bus);
 		return 0;
 	case CDC_GET_LINE_CODING:
 		*(CdcLineCoding *)s_serial.control.request.data = s_serial.outgoingLineCoding;
 		s_serial.control.request.size = req->wLength < 64 ? req->wLength : 64;
-		SceUdcdForDriver_2E3E622A(&s_serial.control.request, s_config.bus);
+		sceUdcdReqSendInternal(&s_serial.control.request, s_config.bus);
 		return 0;
 	case CDC_SET_CONTROL_LINE_STATE:
 		if (req->wValue & CDC_LINE_STATE_DTR) {
@@ -333,7 +333,7 @@ static void BulkINDone(SceUdcdDeviceRequest *req)
 		} else {
 			req->size = transmitSize();
 			memcpy(req->data, s_serial.txRing + s_serial.txRead, req->size);
-			if (SceUdcdForDriver_2E3E622A(req, s_config.bus) >= 0)
+			if (sceUdcdReqSendInternal(req, s_config.bus) >= 0)
 				s_serial.txActive = 1;
 		}
 	}
@@ -363,7 +363,7 @@ static void BulkOUTDone(SceUdcdDeviceRequest *req)
 		sceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_RX_READY);
 	}
 	if (s_serial.attached && s_serial.openCount && (unsigned int)req->size <= rxFree() &&
-	    SceUdcdForDriver_175E6179(req, s_config.bus) >= 0)
+	    sceUdcdReqRecvInternal(req, s_config.bus) >= 0)
 		s_serial.rxActive = 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_serial.lock, state);
 }
@@ -564,7 +564,7 @@ static inline int StartTransfer(void)
 	SendSerialState();
 	s_serial.txWrite = s_serial.txRead = 0;
 	s_serial.rxWrite = s_serial.rxRead = 0;
-	ret = SceUdcdForDriver_175E6179(&s_serial.receive.request, s_config.bus);
+	ret = sceUdcdReqRecvInternal(&s_serial.receive.request, s_config.bus);
 	if (ret >= 0)
 		s_serial.rxActive = 1;
 	return ret;
@@ -748,7 +748,7 @@ int SceUsbDevSerial_57FBB08C(void *buffer, unsigned int size)
 				  SERIAL_EVENT_CANCEL | SERIAL_EVENT_RX_READY;
 			if (requireCarrier)
 				pattern |= SERIAL_EVENT_DTR_OFF;
-			ret = SceThreadmgrForDriver_8A35F714(s_serial.event, pattern,
+			ret = sceKernelWaitEventFlagCB(s_serial.event, pattern,
 							SCE_KERNEL_EVF_WAITMODE_OR,
 							&bits, timeoutp);
 			if (ret < 0)
@@ -788,7 +788,7 @@ int SceUsbDevSerial_57FBB08C(void *buffer, unsigned int size)
 		goto unlock;
 	s_serial.rxRead = (s_serial.rxRead + size) & (RX_SIZE - 1);
 	if (!s_serial.rxActive && (unsigned int)s_serial.receive.request.size <= rxFree() &&
-	    SceUdcdForDriver_175E6179(&s_serial.receive.request, s_config.bus) >= 0)
+	    sceUdcdReqRecvInternal(&s_serial.receive.request, s_config.bus) >= 0)
 		s_serial.rxActive = 1;
 	ret = size;
 
@@ -833,7 +833,7 @@ int SceUsbDevSerial_4437FF2D(const void *buffer, unsigned int size)
 				  SERIAL_EVENT_NOTIFY_IDLE;
 			if (requireCarrier)
 				pattern |= SERIAL_EVENT_DTR_OFF;
-			ret = SceThreadmgrForDriver_8A35F714(s_serial.event, pattern,
+			ret = sceKernelWaitEventFlagCB(s_serial.event, pattern,
 							SCE_KERNEL_EVF_WAITMODE_OR,
 							&bits, NULL);
 			if (ret < 0)
@@ -874,7 +874,7 @@ int SceUsbDevSerial_4437FF2D(const void *buffer, unsigned int size)
 		s_serial.transmit.request.size = transmitSize();
 		memcpy(s_serial.transmit.request.data, s_serial.txRing + s_serial.txRead,
 		       s_serial.transmit.request.size);
-		if (SceUdcdForDriver_2E3E622A(&s_serial.transmit.request, s_config.bus) >= 0)
+		if (sceUdcdReqSendInternal(&s_serial.transmit.request, s_config.bus) >= 0)
 			s_serial.txActive = 1;
 	}
 	ret = size;

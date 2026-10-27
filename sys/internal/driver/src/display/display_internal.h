@@ -45,7 +45,7 @@ typedef struct DisplayPlane {
 typedef struct DisplayHead {
 	SceKernelSpinlock lock;		/* 0x00 */
 	int dsiEnabled;			/* 0x04: DSI and IFTU output running */
-	int enabled;			/* 0x08: SceDisplayForDriver_496032D6 */
+	int enabled;			/* 0x08: sceDisplayEnableHead */
 	SceUInt32 vcount;		/* 0x0c: vblanks counted */
 	SceUID vblankEvent;		/* 0x10: SceUIDVblankEventClass object of the head */
 	void *vblankEventObject;	/* 0x14 */

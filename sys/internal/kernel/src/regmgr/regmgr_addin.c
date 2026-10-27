@@ -19,7 +19,7 @@ int regMgrAddinUserName(RegMgrValue *value)
 	static const char userName[] = "user";
 	SceUInt32 time;
 
-	time = SceProcessmgrForDriver_02179E12();
+	time = sceKernelGetProcessTimeLowCore();
 	snprintf(value->data, value->size, "%s%03d", userName, time % 1000);
 	value->size = strnlen(value->data, REGMGR_ADDIN_SIZE) + 1;
 	return 0;

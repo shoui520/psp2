@@ -457,7 +457,7 @@ int SceCoredumpForDriver_EF20949F(const CoredumpThreadSnapshot *snapshot)
 		snapshot->info.threadId;
 	oalFormatThreadInfo(&coredumpCache.threads[coredumpCache.numThreads].info,
 			    snapshot);
-	guid = SceSysmemForDriver_45D22597(snapshot->info.processId,
+	guid = scePUIDtoGUID(snapshot->info.processId,
 		coredumpCache.threads[coredumpCache.numThreads].info.waitId);
 	waitId = coredumpCache.threads[coredumpCache.numThreads].info.waitId;
 	if (waitId != 0) {

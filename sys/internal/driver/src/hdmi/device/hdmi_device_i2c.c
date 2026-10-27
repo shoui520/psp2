@@ -21,7 +21,7 @@ int sceHdmiDeviceI2cRead(int bus, SceUInt8 slave, SceUInt8 reg, void *data, SceS
 	int ret;
 
 	if (size <= HDMI_I2C_CHUNK) {
-		ret = SceI2cForDriver_0A40B7BF(bus, slave, &reg, 1, slave, data, size);
+		ret = sceI2cMasterTransmitReceive(bus, slave, &reg, 1, slave, data, size);
 		if (ret >= 0)
 			return ret;
 	} else {
@@ -31,7 +31,7 @@ int sceHdmiDeviceI2cRead(int bus, SceUInt8 slave, SceUInt8 reg, void *data, SceS
 			chunk = HDMI_I2C_CHUNK;
 			do {
 				address = reg + offset;
-				ret = SceI2cForDriver_0A40B7BF(bus, slave, &address, 1, slave,
+				ret = sceI2cMasterTransmitReceive(bus, slave, &address, 1, slave,
 							       (SceUInt8 *)data + offset, chunk);
 				if (ret != 0) {
 					HDMI_ERR_PRINTF("[hdmiERR ] sceHdmiDeviceI2cRead() Error!!:0x%08X\n",
@@ -64,7 +64,7 @@ int sceHdmiDeviceI2cWrite(int bus, SceUInt8 slave, SceUInt8 reg, const void *dat
 		buffer[0] = reg;
 		if (size != 0)
 			memcpy(&buffer[1], data, size);
-		ret = SceI2cForDriver_CA94A759(bus, slave, buffer, size + 1);
+		ret = sceI2cMasterTransmit(bus, slave, buffer, size + 1);
 		if (ret >= 0)
 			return ret;
 	} else {
@@ -76,7 +76,7 @@ int sceHdmiDeviceI2cWrite(int bus, SceUInt8 slave, SceUInt8 reg, const void *dat
 				buffer[0] = offset + reg;
 				if (chunk > 1)
 					memcpy(&buffer[1], (const SceUInt8 *)data + offset, chunk - 1);
-				ret = SceI2cForDriver_CA94A759(bus, slave, buffer, chunk);
+				ret = sceI2cMasterTransmit(bus, slave, buffer, chunk);
 				if (ret != 0) {
 					HDMI_ERR_PRINTF("[hdmiERR ] sceHdmiDeviceI2cWrite() Error!!:0x%08X\n",
 							ret);

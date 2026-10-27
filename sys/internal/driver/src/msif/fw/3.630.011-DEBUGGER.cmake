@@ -135,7 +135,7 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	sceKernelUnregisterSysEventHandler
-	SceKernelUtilsForDriver_9EA9D4DC
+	sceSha224Digest
 	SceKernelUtilsForDriver_D8678061
 	SceKernelUtilsForDriver_F12B6451
 	SceSblAIMgrForDriver_C6E83F34
@@ -145,7 +145,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_F10AB792
 	SceSblSsMgrForDriver_37DD5CBF
 	sceSblDmac5Rnd
-	SceSblSsMgrForDriver_934DB6B5
+	sceSblSsDecryptWithPortability
 	ScePervasiveForDriver_2A9778CD
 	ScePervasiveForDriver_551EEE82
 	ScePervasiveForDriver_64ABE589

@@ -46,7 +46,7 @@ int TouchUtilWriteConfig(uint64_t hardwareInfo, const void *buffer,
 		status->seq_no++;
 		UpdateUtilUpdateNodeStatus(nodeType, status);
 	}
-	result = SceTouchForDriver_DDCF5145();
+	result = sceTouchUpdateInit();
 	if (result)
 		goto enterFailure;
 	operations = &touchPanelOperations[port];
@@ -177,12 +177,12 @@ retryText:
 				failure = 0x0a002013;
 				goto commandFailure;
 			}
-			result = SceTouchForDriver_4E6C4558(panels);
+			result = sceTouchUpdateRestart(panels);
 			if (result) {
 				failure = 0x0a00200b;
 				goto commandFailure;
 			}
-			result = SceSysconForDriver_F492E69E(sysconInfo);
+			result = sceSysconGetTouchpanelDeviceInfo(sysconInfo);
 			if (result) {
 				failure = 0x0a00200c;
 				goto deviceFailure;

@@ -43,7 +43,7 @@ int TouchUtilWriteFirmware(uint64_t hardwareInfo, const void *buffer,
 		status->seq_no++;
 		UpdateUtilUpdateNodeStatus(nodeType, status);
 	}
-	if (SceTouchForDriver_DDCF5145()) {
+	if (sceTouchUpdateInit()) {
 		updateLastResult = (port << 16) | 0x0a001003;
 		return (int)0x800f0229;
 	}
@@ -139,19 +139,19 @@ int TouchUtilWriteFirmware(uint64_t hardwareInfo, const void *buffer,
 			status->seq_no++;
 			UpdateUtilUpdateNodeStatus(nodeType, status);
 		}
-		result = SceTouchForDriver_4E6C4558(panels);
+		result = sceTouchUpdateRestart(panels);
 		if (result) {
 			failure = 0x0a00100b;
 			goto commandFailure;
 		}
-		result = SceSysconForDriver_F492E69E(sysconInfo);
+		result = sceSysconGetTouchpanelDeviceInfo(sysconInfo);
 		if (result) {
 			failure = 0x0a00100c;
 			goto deviceFailure;
 		}
 		__builtin_memcpy(updateSysconTouchDeviceInfo, sysconInfo, sizeof(sysconInfo));
 		memset(deviceInfo, 0, sizeof(deviceInfo));
-		result = SceTouchForDriver_FD2E0278(port, &deviceInfo[port]);
+		result = sceTouchGetDeviceInfo(port, &deviceInfo[port]);
 		if (!result)
 			updateTouchDeviceInfo[port] = deviceInfo[port];
 		goto leaveUpdate;
@@ -227,19 +227,19 @@ int TouchUtilWriteFirmware(uint64_t hardwareInfo, const void *buffer,
 		remaining -= recordSize;
 		offset += recordSize;
 	}
-	result = SceTouchForDriver_4E6C4558(panels);
+	result = sceTouchUpdateRestart(panels);
 	if (result) {
 		failure = 0x0a00100b;
 		goto commandFailure;
 	}
-	result = SceSysconForDriver_F492E69E(sysconInfo);
+	result = sceSysconGetTouchpanelDeviceInfo(sysconInfo);
 	if (result) {
 		failure = 0x0a00100c;
 		goto deviceFailure;
 	}
 	__builtin_memcpy(updateSysconTouchDeviceInfo, sysconInfo, sizeof(sysconInfo));
 	memset(work.deviceInfo, 0, sizeof(work.deviceInfo));
-	result = SceTouchForDriver_FD2E0278(port, &work.deviceInfo[port]);
+	result = sceTouchGetDeviceInfo(port, &work.deviceInfo[port]);
 	if (!result)
 		updateTouchDeviceInfo[port] = work.deviceInfo[port];
 	goto leaveUpdate;

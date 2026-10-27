@@ -207,7 +207,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteThread
 	sceKernelDeleteCond
 	sceKernelInitializeFastMutex
-	SceThreadmgrForDriver_B645C7EF
+	sceKernelRegisterKTLS
 	sceKernelSetEventWithNotifyCallback
 	SceThreadmgrForDriver_C58DF384
 	sceKernelCreateThread
@@ -227,7 +227,7 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDClose
 	sceGUIDReleaseObject
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceGUIDKernelCreate
 	sceKernelCopyFromUserProc
 	sceUIDClassInitClass
@@ -235,18 +235,18 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
 	SceSysmemForDriver_7D4F8B5F
-	SceSysmemForDriver_84A4AF5E
+	scePUIDClose
 	SceSysmemForDriver_85336A1C
 	sceKernelCreateHeap
 	sceKernelGetMemBlockBase
 	sceKernelCopyFromUser
-	SceSysmemForDriver_BF209859
+	scePUIDOpenByGUID
 	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
 	sceKernelStrncpyFromUser
 	scePUIDGetUIDVectorByClass
-	SceSysmemForKernel_368F1C36
-	SceSysmemForKernel_4E6D8BC3
+	sceGUIDtoClass
+	sceKernelCheckOpenVMDomain
 	sceGUIDGetUIDVectorByClass
 	SceSysmemForKernel_7F7D5C4A
 	sceGUIDOpenByGUID
@@ -254,11 +254,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelObjectHeapSetResourceLimit
 	SceSysmemForKernel_FA6C098C
 	sceGUIDKernelCreateWithOpt
-	SceCpuForDriver_341B6E81
-	SceCpuForDriver_5F6A8743
+	sceKernelAtomicGetAndAdd32
+	sceKernelAtomicAddAndGet32
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_A4884C4E
-	SceCpuForDriver_CDA96E81
+	sceKernelAtomicSubAndGet32
+	sceKernelAtomicCompareAndSet32
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B5B74
@@ -279,7 +279,7 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	sceKernelRegisterKPLS
 	sceKernelAllocRemoteCDialogHeap
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	sceKernelGetProcessResourceLimit
 	sceKernelFreeRemoteCDialogHeap
 	SceSblACMgrForKernel_sceSblACMgrIsGameProgram

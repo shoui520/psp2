@@ -493,7 +493,7 @@ int MemBlockVirPageListMapRaw(MemBlockObject *block, const SceKernelAllocMemBloc
 					    as->context->mmu.contextId == VplCurrentAsid()) {
 						CacheInvalidateRangeWithPA((const void *)va, pa, size);
 					} else {
-						intr = SceCpuForDriver_821FC0EE();
+						intr = sceKernelCpuSuspendIntr();
 						MMUContextSave(&saved);
 						AddressSpaceSwitchContext(((Partition *)block->partition)->addressSpace);
 						CacheInvalidateRangeWithPA((const void *)va, pa, size);

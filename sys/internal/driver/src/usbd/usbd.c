@@ -1337,7 +1337,7 @@ int _sceUsbdInit(void)
 		}
 		bus->rootHub = rootHub;
 		rootHub->depth = 0;
-		bus->enumerationBuffer = SceSysmemForDriver_7750CEA7(USBD_DESCRIPTOR_BUFFER_SIZE);
+		bus->enumerationBuffer = sceKernelAllocUncacheHeapMemory(USBD_DESCRIPTOR_BUFFER_SIZE);
 		if (bus->enumerationBuffer == NULL)
 			goto no_memory;
 	}
@@ -1449,7 +1449,7 @@ int _sceUsbdInit(void)
 		return 0;
 
 	s_initialized = 0;
-	if (SceProcEventForDriver_3DED57CC(s_procEventHandlerId) < 0)
+	if (sceKernelUnregisterProcEventHandler(s_procEventHandlerId) < 0)
 		SCE_DBG_ASSERT(0, 2104);
 term_ohci2:
 	if (ohciTerm(s_bus[2]) < 0)
@@ -1537,7 +1537,7 @@ int sceUsbdHostStop(int busIndex)
 	return result < 0 ? result : 0;
 }
 
-int SceUsbdForDriver_3EBF5FFE(int busIndex)
+int sceUsbdSuspend(int busIndex)
 {
 	UsbdBus *bus = s_bus[busIndex];
 	int result;
@@ -3197,7 +3197,7 @@ int sceUsbdRegisterCallback(SceUID cbid, int flag)
 	result = pid = sceKernelGetProcessId();
 	if (result < 0)
 		goto out;
-	result = guid = SceSysmemForDriver_45D22597(pid, cbid);
+	result = guid = scePUIDtoGUID(pid, cbid);
 	if (result < 0)
 		goto out;
 	result = sceKernelGetThreadmgrUIDClass(guid);
@@ -3247,7 +3247,7 @@ int sceUsbdUnregisterCallback(SceUID cbid)
 	result = pid = sceKernelGetProcessId();
 	if (result < 0)
 		goto out;
-	result = SceSysmemForDriver_45D22597(pid, cbid);
+	result = scePUIDtoGUID(pid, cbid);
 	if (result < 0)
 		goto out;
 	result = lockFastMutex(&s_mutex);

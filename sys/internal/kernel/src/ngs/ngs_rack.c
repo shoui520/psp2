@@ -927,7 +927,7 @@ int ngsBuildRack(SceNgsHSynSystem handle, void *callerBuffer,
 		command[0] = ngsPlatformState.sharedPhysicalAddress;
 		command[1] = systemModule->codecResourceId;
 		ngsLockCodec(system->context);
-		codecHandle = SceCodecEngineWrapperForDriver_391BD4FD(327,
+		codecHandle = sceVeneziaRpcCallGenericThunk(327,
 			command, NULL, NULL);
 		ngsUnlockCodec(system->context);
 		if (codecHandle == 0) {
@@ -1007,7 +1007,7 @@ int ngsBuildRack(SceNgsHSynSystem handle, void *callerBuffer,
 	command[2] = SceCodecEngineWrapperForDriver_C7C150AE(rack->dsp);
 	command[3] = rack->dspSize;
 	ngsLockCodec(system->context);
-	result = SceCodecEngineWrapperForDriver_391BD4FD(323, command, NULL, NULL);
+	result = sceVeneziaRpcCallGenericThunk(323, command, NULL, NULL);
 	if (result != 0) {
 		if (system->compiledSdkVersion < 0x1800000 &&
 		    result == SCE_NGS_ERROR_INTERNAL_ALLOC)
@@ -1025,7 +1025,7 @@ int ngsBuildRack(SceNgsHSynSystem handle, void *callerBuffer,
 			command[0] = SceCodecEngineWrapperForDriver_C7C150AE(
 				dsp->moduleMemory + layout->contextOffset);
 			command[1] = layout->contextSize;
-			result = SceCodecEngineWrapperForDriver_391BD4FD(325,
+			result = sceVeneziaRpcCallGenericThunk(325,
 				command, NULL, NULL);
 			if (result != 0)
 				goto unload;
@@ -1080,7 +1080,7 @@ unload:
 	command[1] = 0;
 	command[2] = SceCodecEngineWrapperForDriver_C7C150AE(rack->dsp);
 	command[3] = rack->dspSize;
-	SceCodecEngineWrapperForDriver_391BD4FD(324, command, NULL, NULL);
+	sceVeneziaRpcCallGenericThunk(324, command, NULL, NULL);
 	system->racks[rack->index] = NULL;
 	rack->signature = 0;
 unlockCodec:
@@ -1266,7 +1266,7 @@ inline int ngsFlushInputMixer(NgsSynRack *rack, unsigned int voiceIndex,
 	command[0] = SceCodecEngineWrapperForDriver_C7C150AE(context);
 	command[1] = size;
 	ngsCleanDcacheRange(context, size);
-	return SceCodecEngineWrapperForDriver_391BD4FD(326, command, NULL, NULL);
+	return sceVeneziaRpcCallGenericThunk(326, command, NULL, NULL);
 }
 
 void ngsRemoveRack(NgsSynSystem *system, unsigned int index, NgsSynRack *rack)
@@ -1313,7 +1313,7 @@ void ngsRemoveRack(NgsSynSystem *system, unsigned int index, NgsSynRack *rack)
 	command[1] = 0;
 	command[2] = SceCodecEngineWrapperForDriver_C7C150AE(rack->dsp);
 	command[3] = rack->dspSize;
-	SceCodecEngineWrapperForDriver_391BD4FD(324, command, NULL, NULL);
+	sceVeneziaRpcCallGenericThunk(324, command, NULL, NULL);
 	ngsUnlockCodec(system->context);
 	rack->signature = 0;
 	ngsFreeProcessMemory(ngsGetSystemHandle(system), rack->coherentMemory,

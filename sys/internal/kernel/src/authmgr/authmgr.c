@@ -319,7 +319,7 @@ static __attribute__((noinline)) int authMgrSendPacketCore(AuthMgrPacketHeader *
 			}
 		}
 	}
-	releaseRet = SceSblSmSchedProxyForKernel_85EDA5FC(s_req_id, AUTHMGR_MAILBOX_COMMAND);
+	releaseRet = sceSblSmSchedProxyReleaseIntrHandler(s_req_id, AUTHMGR_MAILBOX_COMMAND);
 	if (releaseRet != 0) {
 		ret = releaseRet;
 		SCE_DBG_PRINTF(0xb, 1599, "ERROR: ReleaseHandler ret = 0x%08x\n", releaseRet);
@@ -388,7 +388,7 @@ static __attribute__((noinline)) int authMgrInvokeSM(void)
 			if (ret != 0) {
 				SCE_DBG_PRINTF(0xb, 933, "ERROR: Invoke SM ret = 0x%08x\n", ret);
 			} else {
-				ret = SceSblSmSchedProxyForKernel_85EDA5FC(s_req_id, AUTHMGR_MAILBOX_INVOKE);
+				ret = sceSblSmSchedProxyReleaseIntrHandler(s_req_id, AUTHMGR_MAILBOX_INVOKE);
 				if (ret == 0)
 					return 0;
 				SCE_DBG_PRINTF(0xb, 942, "ERROR: authMgrReleaseHandler err = 0x%08x\n", ret);
@@ -450,7 +450,7 @@ static __attribute__((noinline)) int sceSblAuthMgrStart(void)
 	opt.align = 0x40;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	area = SceSysmemForDriver_0B4ED16A(sizeof(*area), &opt);
+	area = sceKernelAllocUncacheHeapMemoryWithOption(sizeof(*area), &opt);
 	if (area == NULL)
 		return SCE_SBL_ERROR_AM_ENOMEM;
 	s_self_packet = &area->self;
@@ -621,8 +621,7 @@ int sceSblAuthMgrAuthHeader(int handle, const void *header, SceSize size, SelfAu
 	return 0;
 }
 
-/* vitasdk: ksceSblAuthMgrSetupAuthSegment */
-int SceSblAuthMgrForKernel_89CCDA2C(int handle, SceUInt32 segment)
+int sceSblAuthMgrSetupAuthSegment(int handle, SceUInt32 segment)
 {
 	AuthMgrSegmentPacket *packet;
 	int ret;
@@ -638,8 +637,7 @@ int SceSblAuthMgrForKernel_89CCDA2C(int handle, SceUInt32 segment)
 	return packet->result;
 }
 
-/* vitasdk: ksceSblAuthMgrLoadBlock */
-int SceSblAuthMgrForKernel_BC422443(int handle, void *buffer, SceSize size, SceUInt32 reservedLow,
+int sceSblAuthMgrAuthSegment(int handle, void *buffer, SceSize size, SceUInt32 reservedLow,
 				     int reservedHigh)
 {
 	AuthMgrBufferPacket *packet;
@@ -763,7 +761,7 @@ static inline int authMgrSetupPARange(const void *addr, SceSize size, SceKernelP
 		return 0;
 	va.addr = (uintptr_t)addr;
 	va.size = size;
-	return SceSysmemForDriver_AE36C775(&va, range);
+	return sceKernelVARangeToPARange(&va, range);
 }
 
 int sceSblAuthMgrDecBindData(void *input, SceSize inputSize, void *output, SceSize outputSize,

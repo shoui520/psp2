@@ -69,17 +69,17 @@ int SceDebugLedForDriver_098473B0(SceUInt32 clear, SceUInt32 set)
 	do {
 		old = s_gpoMask;
 		mask = (~clear & old) | set;
-		SceCpuForDriver_CDA96E81(&s_gpoMask, old, mask);
+		sceKernelAtomicCompareAndSet32(&s_gpoMask, old, mask);
 	} while (mask != s_gpoMask);
 	return 0;
 }
 
-SceUInt32 SceDebugLedForDriver_3BB289F7(void)
+SceUInt32 sceKernelGetGPO(void)
 {
 	return s_gpo;
 }
 
-void SceDebugLedForDriver_51C5325A(SceUInt32 gpi)
+void sceKernelSetGPI(SceUInt32 gpi)
 {
 	s_gpi = gpi;
 }

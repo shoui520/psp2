@@ -106,7 +106,7 @@ int module_start(SceSize arglen, const void *argp)
 	result = sceKernelRegisterSysEventHandler("SceGpu",
 			(SceKernelSysEventHandler)sceGpuSysEventHandler, NULL);
 	if (result < 0) {
-		SceProcEventForDriver_3DED57CC(processHandler);
+		sceKernelUnregisterProcEventHandler(processHandler);
 		goto failure;
 	}
 	if (CheckRegisterDumpRegisterLists() < 0 || InitWaitModObjList() < 0 ||

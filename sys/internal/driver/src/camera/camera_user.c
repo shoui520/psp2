@@ -10,7 +10,7 @@
 int SceCameraForDriver_D56A12BD(int devnum, int attribute, int value);
 int SceCameraForDriver_B312CE90(int devnum, int attribute, int value);
 
-int sceCameraOpen(int devnum, SceCameraInfo *pInfo)
+int sceCameraOpenForUser(int devnum, SceCameraInfo *pInfo)
 {
 	SceCameraInfo *info;
 	SceSize size;
@@ -28,16 +28,16 @@ int sceCameraOpen(int devnum, SceCameraInfo *pInfo)
 	result = sceKernelCopyFromUser(info, pInfo, size);
 	if (result < 0)
 		return result;
-	driverResult = SceCameraForDriver_E487870A(devnum, info);
+	driverResult = sceCameraOpen(devnum, info);
 	result = sceKernelCopyToUser(pInfo, info, size);
 	return result < 0 ? result : driverResult;
 }
 
-int sceCameraClose(int devnum)
+int sceCameraCloseForUser(int devnum)
 {
 	if ((devnum & ~1u) != 0)
 		return SCE_CAMERA_ERROR_PARAM;
-	return SceCameraForDriver_0E9B4B9E(devnum);
+	return sceCameraClose(devnum);
 }
 
 int sceCameraStart(int devnum)
@@ -54,7 +54,7 @@ int sceCameraStop(int devnum)
 	return SceCameraForDriver_8C3354E5(devnum);
 }
 
-int sceCameraRead(int devnum, SceCameraRead *pRead)
+int sceCameraReadForUser(int devnum, SceCameraRead *pRead)
 {
 	SceCameraRead *read;
 	SceSize size;
@@ -73,16 +73,16 @@ int sceCameraRead(int devnum, SceCameraRead *pRead)
 	result = sceKernelCopyFromUser(read, pRead, size);
 	if (result < 0)
 		return result;
-	driverResult = SceCameraForDriver_2D12FDF3(devnum, read);
+	driverResult = sceCameraRead(devnum, read);
 	result = sceKernelCopyToUser(pRead, read, size);
 	return result < 0 ? result : driverResult;
 }
 
-int sceCameraIsActive(int devnum)
+int sceCameraIsActiveForUser(int devnum)
 {
 	if ((devnum & ~1u) != 0)
 		return SCE_CAMERA_ERROR_PARAM;
-	return SceCameraForDriver_22E70D83(devnum);
+	return sceCameraIsActive(devnum);
 }
 
 int sceCameraGetDeviceLocation(int devnum, SceFVector3 *pLocation)

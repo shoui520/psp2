@@ -209,7 +209,7 @@ uint32_t releaseAllFastMutex(struct ThreadCB *thread)
 	for (;;) {
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		for (mutex = head->next; mutex != head; mutex = head->next) {
-			if (SceCpuForDriver_5AC9D394(&mutex->queue->lock) < 0)
+			if (sceKernelSpinlockLowTrylock(&mutex->queue->lock) < 0)
 				break;
 			SCE_DBG_ASSERT_CHECK(mutex->lock != 0, 691);
 			sceKernelSpinlockLowUnlock(&mutex->lock);
@@ -276,7 +276,7 @@ int sceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex, const char *n
 		goto restore;
 	}
 	if (!(attr & FAST_MUTEX_ATTR_CEILING)) {
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 		thread = currentThreadContext();
 		ceiling = PRIORITY_NONE;
 	} else {
@@ -284,7 +284,7 @@ int sceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex, const char *n
 			ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 			goto restore;
 		}
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 		thread = currentThreadContext();
 		ceiling = option->ceilingPriority;
 		if (ceiling == 0)
@@ -339,13 +339,13 @@ int sceKernelFinalizeFastMutex(struct ThreadmgrFastMutex *mutex)
 		ret = SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED;
 		goto restore;
 	}
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 910, "sceKernelFinalizeFastMutex", "*** error: illegal context. pFastMutex=%p[%s]\n",
 				      mutex, SceSysmemForDriver_E655852F(mutex->uid));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	sceKernelSpinlockLowLock(&mutex->queue->lock);
 	if (mutex->owner == NULL) {
 		sceKernelSpinlockLowUnlock(&mutex->queue->lock);
@@ -382,7 +382,7 @@ restore:
 	if (ret >= 0)									\
 		SCE_DBG_ASSERT_LEVEL_FUNC(0, thread == mutex->owner && mutex->lock != 0,	\
 				     assertLine, "lockFastMutex");			\
-	SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);	\
+	sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);	\
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));				\
 	if (locked) {									\
 		sceKernelSpinlockLowUnlock(&mutex->queue->lock);			\
@@ -406,13 +406,13 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 		ret = SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED;
 		goto restore;
 	}
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 210, "lockFastMutex", "*** error: illegal context. pFastMutex=%p[%s]\n",
 				      mutex, SceSysmemForDriver_E655852F(mutex->uid));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 218, "lockFastMutex", "*** error: irq suspended. pFastMutex=%p[%s]\n",
 				      mutex, SceSysmemForDriver_E655852F(mutex->uid));
@@ -439,7 +439,7 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 	}
 	queueLock = &mutex->queue->lock;
 	sceKernelSpinlockLowLock(queueLock);
-	if (SceCpuForDriver_5AC9D394(&mutex->lock) >= 0) {
+	if (sceKernelSpinlockLowTrylock(&mutex->lock) >= 0) {
 		if (mutex->owner == NULL)
 			goto take;
 		sceKernelSpinlockLowUnlock(&mutex->lock);
@@ -457,7 +457,7 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 	for (;;) {
 		intr = sceKernelSpinlockLowTrylockCpuSuspendIntr(&mutex->lock);
 		if (intr < 0) {
-			intr = SceCpuForDriver_821FC0EE();
+			intr = sceKernelCpuSuspendIntr();
 			haveLock = 0;
 			if (thread->fastMutexHandoff == 0)
 				goto again;
@@ -473,7 +473,7 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, thread->waitType != SCE_KERNEL_WAITTYPE_FAST_MUTEX_SPIN, 391, "lockFastMutex");
 			SCE_DBG_ASSERT_CHECK_FUNC(mutex->lock != 0, 393, "lockFastMutex");
 			thread->fastMutexHandoff = 0;
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
+			sceKernelAtomicClearMask32((SceInt32 *)&thread->flags,
 						    THREAD_FLAG_WAKE_PENDING);
 			sceKernelCpuResumeIntr(intr);
 			ret = 0;
@@ -485,7 +485,7 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, thread->waitResult != 0, 407, "lockFastMutex");
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, thread->waitType != SCE_KERNEL_WAITTYPE_FAST_MUTEX_SPIN, 408, "lockFastMutex");
 			thread->fastMutexHandoff = 0;
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
+			sceKernelAtomicClearMask32((SceInt32 *)&thread->flags,
 						    THREAD_FLAG_WAKE_PENDING);
 			ret = thread->waitResult;
 			if (haveLock)
@@ -493,7 +493,7 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 			goto resume;
 		}
 		SCE_DBG_ASSERT_LEVEL_FUNC(0, 1, 424, "lockFastMutex");
-		if (SceCpuForDriver_5AC9D394(queueLock) >= 0)
+		if (sceKernelSpinlockLowTrylock(queueLock) >= 0)
 			break;
 		sceKernelSpinlockLowUnlock(&mutex->lock);
 again:
@@ -501,7 +501,7 @@ again:
 	}
 	SCE_DBG_ASSERT_LEVEL_FUNC(0, mutex->owner != thread, 443, "lockFastMutex");
 	SCE_DBG_ASSERT_CHECK_FUNC(thread->fastMutexHandoff == 0, 444, "lockFastMutex");
-	SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+	sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 	SCE_DBG_ASSERT_PRINTF_FUNC(mutex->spinWaitCount != 0, 453, "lockFastMutex", " k(%d): spinWaitCount = 0, "
 		"threadId=0x%08X(flags=0x%08X), waitId=0x%08X, pCurrentOwnerId=0x%08X\n",
 		sceKernelCpuId(), thread->threadId, thread->flags, mutex->uid,
@@ -540,13 +540,13 @@ int sceKernelTryLockFastMutex(struct ThreadmgrFastMutex *mutex)
 		ret = SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED;
 		goto restore;
 	}
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1006, "sceKernelTryLockFastMutex", "*** error: illegal context. pFastMutex=%p[%s]\n",
 				      mutex, SceSysmemForDriver_E655852F(mutex->uid));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	thread = currentThreadContext();
 	if (mutex->owner == thread) {
 		if (mutex->queue->attributes & FAST_MUTEX_ATTR_RECURSIVE) {
@@ -562,7 +562,7 @@ int sceKernelTryLockFastMutex(struct ThreadmgrFastMutex *mutex)
 		}
 	} else {
 		sceKernelSpinlockLowLock(&mutex->queue->lock);
-		if (SceCpuForDriver_5AC9D394(&mutex->lock) < 0) {
+		if (sceKernelSpinlockLowTrylock(&mutex->lock) < 0) {
 			ret = SCE_KERNEL_ERROR_FAST_MUTEX_FAILED_TO_OWN;
 		} else if (mutex->owner == NULL) {
 			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
@@ -623,13 +623,13 @@ int sceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
 		ret = SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED;
 		goto restore;
 	}
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1092, "sceKernelUnlockFastMutex", "*** error: illegal context. pFastMutex=%p[%s]\n",
 				      mutex, SceSysmemForDriver_E655852F(mutex->uid));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	sceKernelSpinlockLowLock(&mutex->queue->lock);
 	owner = mutex->owner;
 	if (owner != currentThreadContext()) {
@@ -688,7 +688,7 @@ int sceKernelGetFastMutexInfo(struct ThreadmgrFastMutex *mutex, ThreadmgrFastMut
 		name = SceSysmemForDriver_E655852F(mutex->uid);
 		if (name != NULL)
 			strncpy(local.name, name, sizeof(local.name) - 1);
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 		sceKernelSpinlockLowLock(&mutex->queue->lock);
 		local.uid = mutex->uid;
 		local.lockCount = mutex->lockCount;

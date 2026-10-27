@@ -425,7 +425,7 @@ int _sceAudiodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 	void *caller = __builtin_return_address(0);
 #endif
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid,
+	ret = sceKernelGetRemoteKPLS(pid,
 			audiodecResident.processStorage, (void **)&process, 1);
 	if (ret < 0)
 		return ret;
@@ -530,7 +530,7 @@ int _sceAudiodecProcessExitEntry(SceUID pid, SceUInt32 type)
 	void *caller = __builtin_return_address(0);
 #endif
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid,
+	ret = sceKernelGetRemoteKPLS(pid,
 			audiodecResident.processStorage, (void **)&process, 0);
 	result = ret & (ret >> 31);
 #if FW_DEBUG
@@ -1632,7 +1632,7 @@ int sceAudiodecDeleteDecoderForUser(SceAudiodecCtrl *userCtrl)
 		goto unlock;
 	for (;;) {
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		lockResult = sceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
@@ -1715,7 +1715,7 @@ int sceAudiodecDeleteDecoderResidentForUser(SceAudiodecCtrl *userCtrl)
 		goto unlock;
 	for (;;) {
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		lockResult = sceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
@@ -1833,7 +1833,7 @@ int sceAudiodecDeleteDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 		goto unlock;
 	for (;;) {
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		lockResult = sceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
@@ -1949,7 +1949,7 @@ int sceAudiodecDecodeForUser(SceAudiodecCtrl *userCtrl)
 		goto unlockBuffers;
 	for (;;) {
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		lockResult = sceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
@@ -1965,11 +1965,11 @@ int sceAudiodecDecodeForUser(SceAudiodecCtrl *userCtrl)
 unlockBuffers:
 	index = audiodecGetHandleIndex(ctrl.handle);
 	if (manager->pWork[index].inputEsSize) {
-		SceSysmemForDriver_22CBE925(16, ctrl.pEs, manager->pWork[index].inputEsSize);
+		sceKernelUnlockRangeWithMode(16, ctrl.pEs, manager->pWork[index].inputEsSize);
 		manager->pWork[index].inputEsSize = 0;
 	}
 	if (manager->pWork[index].outputPcmSize) {
-		SceSysmemForDriver_22CBE925(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
+		sceKernelUnlockRangeWithMode(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
 		manager->pWork[index].outputPcmSize = 0;
 	}
 	if (ret >= 0)
@@ -2077,7 +2077,7 @@ int sceAudiodecDecodeNFramesForUser(SceAudiodecCtrl *userCtrl, SceUInt32 nFrames
 		goto unlockBuffers;
 	for (;;) {
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		lockResult = sceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
@@ -2093,11 +2093,11 @@ int sceAudiodecDecodeNFramesForUser(SceAudiodecCtrl *userCtrl, SceUInt32 nFrames
 unlockBuffers:
 	index = audiodecGetHandleIndex(ctrl.handle);
 	if (manager->pWork[index].inputEsSize) {
-		SceSysmemForDriver_22CBE925(16, ctrl.pEs, manager->pWork[index].inputEsSize);
+		sceKernelUnlockRangeWithMode(16, ctrl.pEs, manager->pWork[index].inputEsSize);
 		manager->pWork[index].inputEsSize = 0;
 	}
 	if (manager->pWork[index].outputPcmSize) {
-		SceSysmemForDriver_22CBE925(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
+		sceKernelUnlockRangeWithMode(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
 		manager->pWork[index].outputPcmSize = 0;
 	}
 	if (ret >= 0)
@@ -2202,7 +2202,7 @@ int sceAudiodecPartlyDecodeForUser(SceAudiodecCtrl *userCtrl,
 		goto unlockBuffers;
 	for (;;) {
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		lockResult = sceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
@@ -2218,11 +2218,11 @@ int sceAudiodecPartlyDecodeForUser(SceAudiodecCtrl *userCtrl,
 unlockBuffers:
 	index = audiodecGetHandleIndex(ctrl.handle);
 	if (manager->pWork[index].inputEsSize) {
-		SceSysmemForDriver_22CBE925(16, ctrl.pEs, manager->pWork[index].inputEsSize);
+		sceKernelUnlockRangeWithMode(16, ctrl.pEs, manager->pWork[index].inputEsSize);
 		manager->pWork[index].inputEsSize = 0;
 	}
 	if (manager->pWork[index].outputPcmSize) {
-		SceSysmemForDriver_22CBE925(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
+		sceKernelUnlockRangeWithMode(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
 		manager->pWork[index].outputPcmSize = 0;
 	}
 	if (ret >= 0)
@@ -2384,7 +2384,7 @@ int sceAudiodecDecodeNStreamsForUser(SceAudiodecCtrl *const *userCtrls,
 	while (locked < nStreams) {
 		index = audiodecGetHandleIndex(ctrls[locked].handle);
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&managers[locked]->pDecoders[index].lockGuard);
-		lockResult = SceCpuForDriver_5AC9D394(&managers[locked]->pDecoders[index].decodeLock);
+		lockResult = sceKernelSpinlockLowTrylock(&managers[locked]->pDecoders[index].decodeLock);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&managers[locked]->pDecoders[index].lockGuard, intr);
 		if (lockResult >= 0) {
 			locked++;
@@ -2411,11 +2411,11 @@ unlockBuffers:
 	for (i = 0; i < nStreams; i++) {
 		index = audiodecGetHandleIndex(ctrls[i].handle);
 		if (managers[i]->pWork[index].inputEsSize) {
-			SceSysmemForDriver_22CBE925(16, ctrls[i].pEs, managers[i]->pWork[index].inputEsSize);
+			sceKernelUnlockRangeWithMode(16, ctrls[i].pEs, managers[i]->pWork[index].inputEsSize);
 			managers[i]->pWork[index].inputEsSize = 0;
 		}
 		if (managers[i]->pWork[index].outputPcmSize) {
-			SceSysmemForDriver_22CBE925(48, ctrls[i].pPcm, managers[i]->pWork[index].outputPcmSize);
+			sceKernelUnlockRangeWithMode(48, ctrls[i].pPcm, managers[i]->pWork[index].outputPcmSize);
 			managers[i]->pWork[index].outputPcmSize = 0;
 		}
 	}
@@ -2553,7 +2553,7 @@ invalidCelp:
 	}
 	for (;;) {
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		lockResult = sceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;

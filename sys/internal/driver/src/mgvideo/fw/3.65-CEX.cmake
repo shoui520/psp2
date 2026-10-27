@@ -137,19 +137,19 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetEventFlag
 	SceThreadmgrForDriver_E54FD746
 	sceKernelCreateMutex
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelCpuResumeIntr
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	sceKernelAllocOwnProcessHeap
 	SceProcessmgrForDriver_FC2A424E
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
-	SceRtcForDriver_32E50C36
+	sceKernelUnregisterProcEventHandler
+	sceRtcTickAddHours
 	SceRtcForDriver_401C0954
-	SceRtcForDriver_42A0DFCB
-	SceRtcForDriver_DEC408D4
-	SceRtcForDriver_F139E359
+	sceRtcSetTick
+	sceRtcGetCurrentTick
+	sceRtcGetTick
 	memset
 	memcpy
 	memmove

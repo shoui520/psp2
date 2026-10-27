@@ -203,8 +203,8 @@ extern void *cameraSramFrameBufferBase[2][3];
 /* camera.c */
 /* name unknown; same user wrapper family as SceCameraDummy */
 int cameraSetAlternateFrameBuffers(unsigned int mode);
-int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo);
-int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *read);
+int sceCameraOpen(int devnum, SceCameraInfo *pInfo);
+int sceCameraRead(int devnum, SceCameraRead *read);
 int SceCameraForDriver_EE3D4B1C(int devnum, SceFVector3 *pLocation);
 
 /* camera_config.c */

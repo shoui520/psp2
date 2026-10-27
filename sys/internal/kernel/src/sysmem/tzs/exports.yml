@@ -14,21 +14,21 @@ SceSysmem:
         - sceKernelAllocPartitionMemBlock: 0x0028E26C
         - SceSysmemForTZS_038EAEEE: 0x038EAEEE
         - sceKernelVAtoPA: 0x1DEADF6C
-        - SceSysmemForDriver_7750CEA7: 0x29DE887D
-        - SceSysmemForDriver_FB817A59: 0x2F18E288
-        - SceSysmemForKernel_73C38695: 0x31273DC7
+        - sceKernelAllocUncacheHeapMemory: 0x29DE887D
+        - sceKernelFreeUncacheHeapMemory: 0x2F18E288
+        - sceKernelAddressSpaceUnmap: 0x31273DC7
         - sceKernelAllocMemBlockForKernel: 0x402EB970
-        - SceSysmemForKernel_B628B46B: 0x42AD34AB
+        - sceKernelNameHeapInsert: 0x42AD34AB
         - sceKernelFreeHeapMemory: 0x42FB5B12
         - sceKernelAllocHeapMemory: 0x473871D8
         - sceKernelCreateHeap: 0x56A16D84
         - sceKernelDeleteHeap: 0x624454BC
         - sceKernelFreeMemBlock: 0x658EACE3
-        - SceSysmemForDriver_0B4ED16A: 0x6A3FBAF0
+        - sceKernelAllocUncacheHeapMemoryWithOption: 0x6A3FBAF0
         - sceKernelVARangeToPAVector: 0x9D43E416
         - sceKernelGetMemBlockBase: 0xE1DEDFF4
         - sceKernelAllocHeapMemoryWithOption: 0xEA712806
-        - SceSysmemForKernel_634D0D0C: 0xF459D09D
+        - sceKernelNameHeapDelete: 0xF459D09D
     SceDipswForTZS:
       syscall: false
       version: 1
@@ -51,9 +51,9 @@ SceSysmem:
         - sceKernelAssert: 0x2F9B8AA8
         - SceDebugForDriver_391B5B74: 0x563B623D
         - SceDebugForDriver_FD753E7A: 0x618F89E6
-        - SceDebugForDriver_1A3F2AA4: 0xC70CBB58
+        - sceKernelPrintfLevel: 0xC70CBB58
         - SceDebugForDriver_D9703808: 0xD26EB4BB
-        - SceDebugForDriver_374B7868: 0xF851BA4F
+        - sceKernelGetAssertLevel: 0xF851BA4F
     SceSysclibForTZS:
       syscall: false
       version: 1
@@ -97,14 +97,14 @@ SceSysmem:
         - SceSysrootForTZS_32546BDB: 0x32546BDB
         - sceKernelSysrootSetSharedMemory: 0x45EEB2E0
         - SceSysrootForKernel_AB3CC7D0: 0x7DA87A7F
-        - SceSysrootForKernel_2F97041A: 0x8E871C6D
+        - sceKernelSysrootGetErnieWakeupFactor: 0x8E871C6D
         - SceSysrootForKernel_118657C6: 0xA8B7DAF9
         - sceKernelSysrootGetModulePrivate: 0xC9DD8EB3
         - SceSysrootForKernel_84783B71: 0xCC36643A
         - sceKernelSysrootGetVbaseMonitorVector: 0xD4E6D8E8
         - sceKernelSysrootCorelockLock: 0xD653194A
         - SceSysrootForDriver_4D98B15B: 0xD6FBF445
-        - SceSysrootForKernel_403B509E: 0xDB3DAB76
+        - sceKernelSysrootGetKermitRevision: 0xDB3DAB76
         - sceKernelSysrootSetModulePrivate: 0xEA572BD9
     SceCpuForTZS:
       syscall: false
@@ -121,11 +121,11 @@ SceSysmem:
         - sceKernelDcacheCleanRangeForL1WBWA: 0x596784E9
         - sceKernelSpinlockLowLock: 0x71FD9AB5
         - SceCpuForKernel_0E04BD2E: 0x7548CBCF
-        - SceCpuForDriver_BC248C30: 0x75D87321
+        - sceKernelAtomicOrAndGet32: 0x75D87321
         - sceKernelDcacheCleanInvalidateRange: 0x7A5373EB
         - sceKernelDcacheCleanInvalidateAll: 0x7CCE9480
         - CpuL2CleanInvalidateAll: 0x9E4C0D0D
-        - SceCpuForKernel_803C84BF: 0xA5965CBF
+        - sceKernelL1IcacheInvalidateEntireAllCore: 0xA5965CBF
         - sceKernelSpinlockLowTrylockCpuSuspendIntr: 0xACF209F3
         - SceCpuForKernel_2E637B1D: 0xB421FAFD
         - sceKernelSpinlockLowUnlockCpuResumeIntr: 0xB8F00FBE
@@ -134,4 +134,4 @@ SceSysmem:
         - sceKernelDcacheInvalidateRange: 0xCDD46655
         - SceCpuForKernel_49180814: 0xD4E7413D
         - sceKernelSpinlockLowLockCpuSuspendIntr: 0xD67A4356
-        - SceCpuForDriver_3627F4E0: 0xEFD6F289
+        - sceKernelAtomicCompareAndSet8: 0xEFD6F289

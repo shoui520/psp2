@@ -1272,7 +1272,7 @@ int openVideoRecordStream(int handle, unsigned int index, int blockNumber,
 			   offsetof(MagicGateBundledEkb2Record, header);
 	inputBuffer.size -= offsetof(MagicGateBundledEkb2Record, header);
 	processId = sceKernelGetProcessId();
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (!recordStreams[0].active) {
 		owner = 0;
 	} else if (!recordStreams[1].active) {
@@ -1412,7 +1412,7 @@ int openVideoCipherChannel(int handle, const MgVideoBoxHeader *input, int size)
 		result = (int)0x8050c033;
 		goto error;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (!stream->channels[0].key)
 		channelIndex = 0;
 	else if (!stream->channels[1].key)

@@ -423,12 +423,12 @@ static int initializeUsb(struct SceUsbEtherSmscContext *a)
 		return SMSC_ERROR_NOT_READY;
 	if (SceSblAIMgrForDriver_71608CA3()) {
 		SceSysconForDriver_3274A925(1);
-		SceSysconForDriver_40FF3898(0x20, 1);
+		sceSysconCtrlDeviceReset(0x20, 1);
 	}
 	hardware = SceSysconForDriver_CBD6D8BC();
 	if ((hardware & 0xff0000) != 0x100000)
 		return SceUsbdForDriver_1EC94F18(&s_driver);
-	ret = SceUsbServForDriver_7AD36284(2, 0);
+	ret = sceUsbServMacSelect(2, 0);
 	if (ret < 0 && ret != (int)0x80248001)
 		return ret;
 	s_probed = 0;
@@ -441,7 +441,7 @@ static int initializeUsb(struct SceUsbEtherSmscContext *a)
 		sceKernelDelayThread(10000);
 	}
 	SceUsbdForDriver_216F108D(&s_driver);
-	ret = SceUsbServForDriver_7AD36284(2, 1);
+	ret = sceUsbServMacSelect(2, 1);
 	return ret < 0 ? ret : SMSC_ERROR_NO_DEVICE;
 }
 
@@ -632,7 +632,7 @@ static int setMulticast(struct NetDriver *driver, const unsigned char *addresses
 
 	if (!a->active)
 		return SMSC_ERROR_NOT_READY;
-	SceCpuForDriver_5F6A8743(&a->references, 1);
+	sceKernelAtomicAddAndGet32(&a->references, 1);
 	lockFastMutex(&a->mutex);
 	if (!addresses) {
 		if (length) {
@@ -674,7 +674,7 @@ static int setMulticast(struct NetDriver *driver, const unsigned char *addresses
 	}
 out:
 	sceKernelUnlockFastMutex(&a->mutex);
-	SceCpuForDriver_A4884C4E(&a->references, 1);
+	sceKernelAtomicSubAndGet32(&a->references, 1);
 	return ret;
 }
 static int kickTx(struct NetDriver *driver, int argument)
@@ -685,10 +685,10 @@ static int kickTx(struct NetDriver *driver, int argument)
 
 	if (!a->active)
 		return SMSC_ERROR_NOT_READY;
-	SceCpuForDriver_5F6A8743(&a->references, 1);
+	sceKernelAtomicAddAndGet32(&a->references, 1);
 	if (__atomic_fetch_add(&a->pendingTx, 1, __ATOMIC_SEQ_CST) == 0)
 		sceKernelSetEventFlag(a->workerEvent, WORKER_TX);
-	SceCpuForDriver_A4884C4E(&a->references, 1);
+	sceKernelAtomicSubAndGet32(&a->references, 1);
 	return 0;
 }
 static int interfaceStart(struct NetDriver *driver, void *memoryBase)
@@ -698,8 +698,8 @@ static int interfaceStart(struct NetDriver *driver, void *memoryBase)
 	(void)memoryBase;
 	if (!a->active)
 		return SMSC_ERROR_NOT_READY;
-	SceCpuForDriver_5F6A8743(&a->references, 1);
-	SceCpuForDriver_A4884C4E(&a->references, 1);
+	sceKernelAtomicAddAndGet32(&a->references, 1);
+	sceKernelAtomicSubAndGet32(&a->references, 1);
 	return 0;
 }
 static int interfaceStop(struct NetDriver *driver, void *memoryBase, int memorySize)
@@ -748,7 +748,7 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 	} else {
 		if (!a->active)
 			return SMSC_ERROR_NOT_READY;
-		SceCpuForDriver_5F6A8743(&a->references, 1);
+		sceKernelAtomicAddAndGet32(&a->references, 1);
 		switch (command) {
 		case NET_DRIVER_CTL_SET_LINK:
 			ret = setLink(a, *value);
@@ -772,7 +772,7 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 		}
 	}
 	/* Sony also decrements this on the paths which never incremented it. */
-	SceCpuForDriver_A4884C4E(&a->references, 1);
+	sceKernelAtomicSubAndGet32(&a->references, 1);
 	return ret;
 }
 static int processEvent(int event, int type, ProcEventCreateParam *param, int context)
@@ -1274,7 +1274,7 @@ static int workerEntry(SceSize arglen, void *argp)
 	ret = sceKernelRegisterProcEventHandler("SceNetDrvEther", &a->proc, a);
 	if (ret < 0) {
 		if (a->procId > 0) {
-			SceProcEventForDriver_3DED57CC(a->procId);
+			sceKernelUnregisterProcEventHandler(a->procId);
 			a->procId = 0;
 		}
 		SceDebugForDriver_391B74B7("UsbEtherSmsc workerEntry Exit. ret=0x%08x\n", ret);

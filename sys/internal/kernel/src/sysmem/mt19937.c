@@ -2,10 +2,10 @@
  * SceKernelUtils: the Mersenne Twister MT19937. Sony's generator advances one
  * state word per call ("on the fly"): it returns the tempered word it is about
  * to replace, so the first 624 outputs after seeding are the seed table's and
- * SceKernelUtilsForDriver_4C9A5730 discards them.
+ * sceMt19937Init discards them.
  *
  * The kernel's own generator (GlobalInit/GlobalUninit) is shared under a
- * spinlock. The step itself, SceKernelUtilsForDriver_92AEDFBC, is Sony's
+ * spinlock. The step itself, sceMt19937UInt, is Sony's
  * assembly (mt19937_next.S).
  */
 
@@ -26,7 +26,7 @@ static SceMt19937Context s_mt19937;
 static volatile SceKernelSpinlock s_mt19937Lock;
 
 /* the seed table, then the first 624 outputs (the table itself) dropped */
-int SceKernelUtilsForDriver_4C9A5730(SceMt19937Context *context, SceUInt32 seed)
+int sceMt19937Init(SceMt19937Context *context, SceUInt32 seed)
 {
 	unsigned int i;
 
@@ -36,13 +36,13 @@ int SceKernelUtilsForDriver_4C9A5730(SceMt19937Context *context, SceUInt32 seed)
 			(context->state[i - 1] ^ (context->state[i - 1] >> 30)) + i;
 	context->count = 0;
 	for (i = MT_N; i != 0; i--)
-		SceKernelUtilsForDriver_92AEDFBC(context);
+		sceMt19937UInt(context);
 	return 0;
 }
 
 int SceKernelUtilsForDriver_D428CC2A(SceUInt32 seed)
 {
-	SceKernelUtilsForDriver_4C9A5730(&s_mt19937, seed);
+	sceMt19937Init(&s_mt19937, seed);
 	return 0;
 }
 
@@ -57,7 +57,7 @@ int SceKernelUtilsForDriver_875B2A1C(SceUInt32 *buffer, SceSize size)
 	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mt19937Lock);
 	count = size >> 2;
 	for (i = 0; i != count; i++)
-		*buffer++ = SceKernelUtilsForDriver_92AEDFBC(&s_mt19937);
+		*buffer++ = sceMt19937UInt(&s_mt19937);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mt19937Lock, flags);
 	return 0;
 }

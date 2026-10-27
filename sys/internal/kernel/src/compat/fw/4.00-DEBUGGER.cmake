@@ -130,11 +130,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceGUIDReferObject
 	sceGUIDReleaseObject
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUser
 	sceKernelVAtoPA
 	sceKernelGetMemBlockBase
-	SceSysmemForDriver_AE36C775
+	sceKernelVARangeToPARange
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
 	sceKernelUnmapMemBlock
@@ -148,7 +148,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSignalSema
 	SceThreadmgrForDriver_E54FD746
 	sceKernelCreateMutex
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelDcacheInvalidateRangeForL1WBWA
 	sceKernelDcacheCleanRangeForL1WBWA
 	sceKernelDcacheCleanInvalidateRangeForL1WBWA
@@ -185,33 +185,33 @@ set(MODULE_IMPORT_FUNCS
 	sceIoOpen
 	sceIoRead
 	sceIoClose
-	SceProcessmgrForDriver_82D94BE9
+	sceKernelGetProcessTimeWideCore
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
+	sceKernelUnregisterProcEventHandler
 	sceDeci2pTermForCompat
 	SceDeci2pForDriver_F6427E0F
 	sceIdStorageLookup
-	SceDisplayForDriver_289D82FE
+	sceDisplaySetFrameBuf
 	SceDisplayForDriver_332C5410
 	SceDisplayForDriver_8D79D187
 	SceDisplayForDriver_8D9A1CCE
-	SceDisplayForDriver_B3C6D647
-	SceDisplayForDriver_C8E554C5
+	sceDisplayGetResolutionInfoInternal
+	sceDisplayGetPrimaryHead
 	SceHpremoteForDriver_7E69EDA4
 	scePowerGetBatteryLifePercent
 	scePowerIsSuspendRequired
 	scePowerGetBatteryLifeTime
-	ScePowerForDriver_FFC84E69
+	scePowerSetCompatClockFrequency
 	SceNpDrmForDriver_D91C3BCE
 	SceNpDrmForDriver_DACB71F4
-	SceNpDrmForDriver_DB406EAE
+	sceNpDrmGetRifInfo
 	SceGrabForDriver_072B8D93
 	SceGrabForDriver_379130B2
 	SceGrabForDriver_E9C25A28
 	SceGrabForDriver_F13C63DD
-	SceRtcForDriver_0CB72FAF
+	sceRtcTickAddDays
 	SceRtcForDriver_401C0954
-	SceRtcForDriver_DEC408D4
+	sceRtcGetCurrentTick
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

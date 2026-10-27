@@ -19,10 +19,10 @@ SceExcpmgr:
         - sceKernelRegisterDefaultExceptionHandler: 0x416C0E20
         - SceExcpmgrForKernel_4337DD78: 0x4337DD78
         - SceExcpmgrForKernel_44CE04B8: 0x44CE04B8
-        - SceExcpmgrForKernel_5420ED8F: 0x5420ED8F
+        - sceKernelGetExcpStackBottom: 0x5420ED8F
         - SceExcpmgrForKernel_58F7212B: 0x58F7212B
         - sceKernelInitialHandlerDebugDabtCfunc: 0x64A057C7
-        - SceExcpmgrForKernel_96C2869C: 0x96C2869C
+        - sceKernelGetExcpCB: 0x96C2869C
         - SceExcpmgrForKernel_9EE59C6E: 0x9EE59C6E
         - SceExcpmgrForKernel_B615A7DA: 0xB615A7DA
         - sceKernelInitialHandlerDebugUndefCfunc: 0xB7B10796

@@ -91,7 +91,7 @@ static inline SceSysrootSharedMemory *sysrootSharedMemory(void)
 }
 
 /* Name unknown: returns the hardware model classification. */
-uint32_t SceSysrootForKernel_403B509E(void);
+uint32_t sceKernelSysrootGetKermitRevision(void);
 /* Name unknown: installs a size0x10 timebase provider, or clears it. */
 struct PamgrTimebaseProvider;
 void SceSysrootForDriver_C94C76FA(const struct PamgrTimebaseProvider *provider);
@@ -225,8 +225,7 @@ int sceKernelIsColdBoot(void);
 /* vitasdk: ksceKernelSysrootCheckModelCapability */
 unsigned int SceSysrootForDriver_8AA268D6(unsigned int capability);
 void *sceKernelSysrootGetModulePrivate(unsigned int index);
-/* vitasdk: ksceKernelSysrootGetPUIDEntryHeap */
-int SceSysrootForKernel_88DE85EF(SceUID processId, void **entryHeap);
+int sceKernelSysrootGetUIDEntryHeap(SceUID processId, void **entryHeap);
 uint32_t sceKernelSysrootGetStatus(void);
 int sceKernelSysrootGetThreadAccessLevel(void);
 /* vitasdk: ksceSysrootGetSelfAuthInfo */
@@ -246,7 +245,7 @@ void SceSysrootForDriver_1434D90E(uint32_t notifier);
 void SceSysrootForDriver_1FFD2AFA(SysrootSetSwInfoInt callback);
 int SceSysrootForDriver_20D2A0DF(SceUID pid, SceUID modid, uint64_t time);
 void SceSysrootForDriver_246AAAB3(SysrootLedSetMode callback);
-int SceSysrootForDriver_256B2394(SceUID pid, SceUID modid, SceUInt32 stopReason, SceUInt64 time);
+int sceKernelSysrootDbgpSuspendProcessAndWaitResume(SceUID pid, SceUID modid, SceUInt32 stopReason, SceUInt64 time);
 void SceSysrootForDriver_2816A813(void);
 void SceSysrootForDriver_2C9E7797(void);
 void SceSysrootForDriver_2D6B2A79(SysrootSendSystemError callback);
@@ -335,18 +334,17 @@ void SceSysrootForKernel_0DF574A9(void);
 int SceSysrootForKernel_14D81797(struct SysrootProfiler *profiler);
 int SceSysrootForKernel_1D8DB3A5(uint64_t *time);
 void SceSysrootForKernel_21F5790B(void (*callback)(void));
-/* vitasdk: ksceKernelSysrootDbgpSuspendProcessAndWaitResume */
-int SceSysrootForKernel_256B2394(SceUID pid, SceUID modid, SceUInt32 stopReason, SceUInt64 time);
+int SceSysrootForKernel_sceKernelSysrootDbgpSuspendProcessAndWaitResume(SceUID pid, SceUID modid, SceUInt32 stopReason, SceUInt64 time);
 int SceSysrootForKernel_26458702(const SysrootThreadmgrOps *ops);
 void SceSysrootForKernel_27D30DB2(SysrootNetHook callback);
 void SceSysrootForKernel_2D6B2A79(SysrootSendSystemError callback);
 void *SceSysrootForKernel_2F75C1DC(SceSize size, void *opt);
-uint32_t SceSysrootForKernel_2F97041A(void);	/* vitasdk: ksceSysrootGetWakeupFactor */
+uint32_t sceKernelSysrootGetErnieWakeupFactor(void);
 uint32_t SceSysrootForKernel_340575CB(void);
 void sceKernelSysrootSetSysroot(SceUID uid);
 /* vitasdk: ksceKernelSysrootRegisterDbgpHandler */
 int SceSysrootForKernel_3999F917(const SysrootDbgpOps *ops);
-struct SysrootState *SceSysrootForKernel_3E455842(void);	/* vitasdk: ksceSysrootGetSysroot */
+struct SysrootState *sceKernelSysrootGetSysroot(void);
 int SceSysrootForKernel_3F76D531(SceUID pid);
 int SceSysrootForKernel_40F28DC6(void *interface);
 void SceSysrootForKernel_42FC9FFF(void);

@@ -918,11 +918,11 @@ int sceUsbstorVStorStop(void)
 		if (SceUdcdForDriver_C0CA5DDB("USBStor_Driver") != 2) {
 			result = VSTOR_ERROR_INACTIVE;
 		} else {
-			result = SceUdcdForDriver_8AE87657();
+			result = sceUdcdDeactivate();
 			if (result >= 0) {
-				result = SceUdcdForDriver_1494293B("USBStor_Driver", 0, NULL);
+				result = sceUdcdStop("USBStor_Driver", 0, NULL);
 				if (result >= 0) {
-					result = SceUdcdForDriver_1494293B("USBDeviceControllerDriver", 0, NULL);
+					result = sceUdcdStop("USBDeviceControllerDriver", 0, NULL);
 					if (result >= 0)
 						result = 0;
 				}

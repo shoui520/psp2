@@ -35,7 +35,7 @@ int aimgrInit(void)
 	return mutex >> 31;
 }
 
-int SceSblSsMgrForDriver_E0DC2587(ScePsCode *pscode)
+int sceSblAimgrGetPscode(ScePsCode *pscode)
 {
 	if (!pscode)
 		return SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;

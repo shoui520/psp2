@@ -102,8 +102,8 @@ set(MODULE_IMPORT_FUNCS
 	vfsLockVnode
 	vfsMount
 	vfsGetNewVnode
-	ScePamgrForDriver_FE9BFD27
-	SceThreadmgrForKernel_6C1F092F
+	sceKernelPaGetTimebaseValue
+	sceKernelGetThreadContextInfo
 	sceKernelRegisterProcEventHandler
 	sceSblPmMgrGetProductMode
 	sceKernelCheckDipsw

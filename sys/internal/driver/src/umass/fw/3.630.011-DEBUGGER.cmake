@@ -78,18 +78,18 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootIsSafeMode
 	sceKernelGenerateSoftIntr
 	sceKernelCallSubIntrHandler
-	SceCpuForDriver_2A40BB93
+	sceKernelAtomicGetAndOr32
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	sceKernelSpinlockLowLockCpuSuspendIntr
-	SceCpuForDriver_E36F3A46
+	sceKernelAtomicGetAndClear32
 	SceUsbdForDriver_1CDBFF9F
 	SceUsbdForDriver_1EC94F18
 	SceUsbdForDriver_235C094A
 	SceUsbdForDriver_2E05660F
 	SceUsbdForDriver_BC3EF82B
 	SceUsbdForDriver_F304DC5C
-	SceUsbServForDriver_853CB8E4
-	SceUsbServForDriver_AA6D4409
+	sceUsbServAccessoryDeactivate
+	sceUsbServAccessoryActivate
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

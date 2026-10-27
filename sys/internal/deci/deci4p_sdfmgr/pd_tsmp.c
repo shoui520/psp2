@@ -128,7 +128,7 @@ void _tsmpSend(int event, void *arg, void *context)
 #endif
 	remaining = SceDeci4pSDfMgrForKernel_68903C1D(&packet.message.hdr);
 #if FW_DEBUG
-	if (SceDebugForDriver_374B7868() > 0)
+	if (sceKernelGetAssertLevel() > 0)
 		SceDebugForDriver_FD753E7A(1, remaining < 0x11000,
 			TSMP_DEBUG_INFO(211, 0x4c2050cc, 0x68bd4e89, "_discardPacket"),
 			caller);
@@ -201,7 +201,7 @@ int tsmpInit(SdfMgrProtocolState *protocol)
 error:
 	SceDeci4pSDfMgrForKernel_501CE61D(15, errorInfo,
 		"SetProtocolStatus failed (0x%08x)\n", result);
-	if (SceDebugForDriver_374B7868() > 0)
+	if (sceKernelGetAssertLevel() > 0)
 		SceDebugForDriver_FD753E7A(1, 0, assertInfo, caller);
 	return result;
 #endif

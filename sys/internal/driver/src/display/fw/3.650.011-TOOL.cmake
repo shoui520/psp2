@@ -189,23 +189,23 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceGUIDReferObject
 	sceGUIDReleaseObject
-	SceSysmemForDriver_22CBE925
-	SceSysmemForDriver_45D22597
+	sceKernelUnlockRangeWithMode
+	scePUIDtoGUID
 	sceGUIDKernelCreate
 	sceKernelProcModeVAtoPA
 	sceKernelCopyToUser
 	sceKernelVAtoPA
 	sceKernelGetMemBlockBase
-	SceSysmemForDriver_AE36C775
+	sceKernelVARangeToPARange
 	sceKernelLockRangeWithMode
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
 	sceKernelDcacheInvalidateRange
-	SceCpuForDriver_0EE04C03
-	SceCpuForDriver_10EB35EB
+	sceKernelAtomicGetAndSet32
+	sceKernelAtomicGetAndAnd32
 	sceKernelDcacheCleanInvalidateRange
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelCpuResumeIntr
 	memset
@@ -243,19 +243,19 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteSimpleEvent
 	sceKernelUnregisterCallbackFromEvent
 	sceKernelCreateSimpleEvent
-	SceThreadmgrForDriver_360C655C
+	sceKernelWaitEventCB
 	SceThreadmgrForDriver_3A72C6D8
 	sceKernelDelayThread
 	lockFastMutex
 	sceKernelPulseEventWithNotifyCallback
 	sceKernelRegisterCallbackToEventForDriver
-	SceThreadmgrForDriver_8C3C1F78
+	sceKernelUnregisterKTLS
 	sceKernelIsUserModeThread
 	sceKernelGetProcessId
 	sceKernelInitializeFastMutex
-	SceThreadmgrForDriver_B645C7EF
+	sceKernelRegisterKTLS
 	sceKernelNotifyCallback
-	SceThreadmgrForDriver_C529EA32
+	sceKernelWaitEvent
 	sceKernelCheckWaitableStatus
 	sceKernelUnlockFastMutex
 	sceKernelUIDInheritedEventClassInit
@@ -267,7 +267,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDmaOpFree
 	sceKernelDmaOpAssign
 	sceKernelRegisterKPLS
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_E1A67C86
 	SceProcessmgrForDriver_EE694840
@@ -278,37 +278,37 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_FD00C72A
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_C6E83F34
-	SceKernelUtilsForDriver_367EE3DF
-	ScePervasiveForDriver_25AE181E
+	sceGzipDecompress
+	scePervasiveIftuDsiClkGateDisable
 	ScePervasiveForDriver_91C80C41
-	ScePervasiveForDriver_BC42C72F
-	ScePervasiveForDriver_E3FC1C8D
-	ScePervasiveForDriver_FFB43AC2
-	SceDsiForDriver_114D1413
+	scePervasiveIftuDsiClkGateEnable
+	scePervasiveIftuDsiResetEnable
+	scePervasiveIftuDsiResetDisable
+	sceDsiStopMaster
 	SceDsiForDriver_4DF9E924
-	SceDsiForDriver_5BE5AA9B
+	sceDsiStartMaster
 	SceDsiForDriver_6F8029A1
-	SceDsiForDriver_7640F607
-	SceDsiForDriver_78E6E3CF
+	sceDsiStopDisplay
+	sceDsiSetDisplayMode
 	SceDsiForDriver_97BFEA76
 	SceDsiForDriver_B3A70C05
-	SceDsiForDriver_C2E85919
+	sceDsiStartDisplay
 	SceDsiForDriver_F2921E29
-	SceIftuForDriver_0D7C02F7
+	sceIftuEnable
 	SceIftuForDriver_0FCBF457
 	SceIftuForDriver_357EAE24
-	SceIftuForDriver_67E37EFC
-	SceIftuForDriver_7CE0C4DA
-	SceIftuForDriver_AF19FD85
-	SceIftuForDriver_C11F30B3
+	sceIftuConvert
+	sceIftuSetInputFrameBuffer
+	sceIftuSetMergeSetting
+	sceIftuDisable
 	SceIftuForDriver_D64F4C6B
-	SceIftuForDriver_E6EE2C6B
+	sceIftuSetOutputFormat
 	SceGpioForDriver_372022A4
-	SceGpioForDriver_F6310435
+	sceGpioPortClear
 	ScePwmForDriver_13161CCC
 	ScePwmForDriver_22C17D24
 	ScePwmForDriver_514773B1
-	SceI2cForDriver_CA94A759
+	sceI2cMasterTransmit
 	SceOledForDriver_0CC6BCB4
 	SceOledForDriver_4C7836C7
 	SceOledForDriver_9F4ABDDC

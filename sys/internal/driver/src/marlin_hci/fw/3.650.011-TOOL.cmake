@@ -60,22 +60,22 @@ set(MODULE_IMPORT_NIDS
 	0x9AD8E213:F:0xF5AE24AC
 )
 set(MODULE_IMPORT_FUNCS
-	SceKernelUtilsForDriver_236A9097
-	SceKernelUtilsForDriver_29A28957
-	SceKernelUtilsForDriver_478A6F3C
-	SceKernelUtilsForDriver_4899CD4B
-	SceKernelUtilsForDriver_48F24106
-	SceKernelUtilsForDriver_4C9A5730
-	SceKernelUtilsForDriver_83EFA1CC
-	SceKernelUtilsForDriver_87DC7F2F
-	SceKernelUtilsForDriver_92AEDFBC
-	SceKernelUtilsForDriver_A773A6A8
+	sceSha256BlockUpdate
+	sceHmacSha1Digest
+	sceSha1BlockUpdate
+	sceSha256BlockResult
+	sceSha1BlockResult
+	sceMt19937Init
+	sceHmacSha256Digest
+	sceSha1Digest
+	sceMt19937UInt
+	sceSha256Digest
 	SceKernelUtilsForDriver_C2A61770
 	SceKernelUtilsForDriver_D8678061
-	SceKernelUtilsForDriver_D909FA2C
-	SceKernelUtilsForDriver_E4390FFA
+	sceSha256BlockInit
+	sceSha1BlockInit
 	SceKernelUtilsForDriver_F12B6451
-	SceRtcForDriver_DEC408D4
+	sceRtcGetCurrentTick
 	sceKernelDeleteMutex
 	sceKernelLockMutex
 	sceKernelUnlockMutex

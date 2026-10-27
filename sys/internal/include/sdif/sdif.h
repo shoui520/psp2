@@ -242,11 +242,11 @@ int SceSdifForDriver_AABAA0F0(unsigned int index, SdifSdioContext **part);
 SdifSdioFunction *SceSdifForDriver_0C66E36F(SdifSdioContext *sdio,
 					const SdifSdioFunctionIdentifier *identifier);
 int sceSdioChangeBusSpeed(SdifSdioContext *sdio, unsigned int mode);
-int SceSdifForDriver_733BC373(SdifSdioFunction *function, unsigned int size);
+int sceSdioSetBlockLen(SdifSdioFunction *function, unsigned int size);
 int SceSdifForDriver_3428884D(SdifSdioFunction *function);
-int SceSdifForDriver_D0F78D9B(SdifSdioFunction *function, uint32_t address,
+int sceSdioRead(SdifSdioFunction *function, uint32_t address,
 			    uint32_t size, uint8_t *buffer, uint32_t flags);
-int SceSdifForDriver_3C4CDC8B(SdifSdioFunction *function, uint32_t address,
+int sceSdioWrite(SdifSdioFunction *function, uint32_t address,
 			    uint32_t size, uint8_t *buffer, uint32_t flags);
 int SceSdifForDriver_855C95E1(SdifSdioFunction *function,
 			    SdifIoTransfer *transfer, uint32_t *index);
@@ -261,7 +261,7 @@ int SceSdifForDriver_1847B18C(SdifSdioFunction *function);
 /* vitasdk: ksceSdifInitializeMmcDevice */
 int SceSdifForDriver_22C82E79(unsigned int index, SdifMmcContext **part);
 int SceSdifForDriver_235AD556(void);
-int SceSdifForDriver_23A4EF01(SdifMmcContext *part, void *cid);	/* vitasdk: ksceSdifGetCID */
+int sddev_get_sd_cid(SdifMmcContext *part, void *cid);
 int SceSdifForDriver_35BA9DF8(unsigned int index, SceUID callback);
 int SceSdifForDriver_36A2B01B(unsigned int index);	/* vitasdk: ksceSdifGetCardInsertState1 */
 int SceSdifForDriver_3B6AB29E(SdifSdioFunction *function, SdifIoTransfer *transfer, uint32_t *index);
@@ -277,7 +277,7 @@ SdifSdioContext *SceSdifForDriver_6A8235FC(unsigned int index);
 int SceSdifForDriver_6CC8E28D(unsigned int index);
 int SceSdifForDriver_763F1075(SdifSdioContext *sdio);
 int SceSdifForDriver_849E3216(SdifSdioFunction *function, uint32_t index, uint32_t reserved, SdifIoResult *result);
-int SceSdifForDriver_AB0222F2(SdifSdioContext *sdio);
+int sceSdifGoStandbyState(SdifSdioContext *sdio);
 int SceSdifForDriver_AF702FE7(SdifContextPart *sd, uint32_t blockLength);
 int SceSdifForDriver_B05EFF68(SdifSdioFunction *function, uint32_t index);
 int SceSdifForDriver_B32776C7(SdifMmcContext *part, uint32_t blockLength);
@@ -290,7 +290,7 @@ int SceSdifForDriver_D3C1E2B6(SdifSdioFunction *function, uint32_t offset, uint3
 SdifContextGlobal *SceSdifForDriver_DC8F52F8(unsigned int index);
 int SceSdifForDriver_DECE963B(SdifSdioContext *sdio, uint32_t offset, uint32_t size, uint8_t *buffer);
 int SceSdifForDriver_E091BA2E(SdifContextPart *sd, uint32_t sector, uint32_t count, int *writeProtected);
-int SceSdifForDriver_E5E5F42E(void);
+int deinit(void);
 int SceSdifForDriver_E80293EF(SdifSdioFunction *function);
 int SceSdifForDriver_F1A24EDD(SdifSdioFunction *function);
 int SceSdifForDriver_FD9E5CFA(unsigned int index);	/* vitasdk: ksceSdifGetCardInsertState2 */

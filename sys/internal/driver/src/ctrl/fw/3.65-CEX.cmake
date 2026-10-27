@@ -78,7 +78,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
@@ -90,12 +90,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_8AA268D6
 	SceSysrootForDriver_B0E1FC67
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	sceKernelDisableSubIntr
 	sceKernelReleaseSubIntrHandler
 	sceKernelEnableSubIntr
 	sceKernelRegisterSubIntrHandler
-	SceThreadmgrForDriver_0892D8DF
+	sceKernelGetCallbackCount
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelLockMutex
@@ -113,7 +113,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateMutex
 	sceKernelRegisterKPLS
 	SceProcessmgrForDriver_8CB01675
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	SceProcessmgrForDriver_D141C076
 	sceSblACMgrIsKernelProgram
 	sceSblACMgrIsGameProgram
@@ -122,12 +122,12 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_991FDC15
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler
-	SceKernelSuspendForDriver_E0489831
+	sceKernelPowerTick
 	sceKernelRegisterProcEventHandler
 	SceSysconForDriver_901D6CD4
 	SceSysconForDriver_C2224E82
 	SceSysconForDriver_FF86F4C5
-	SceDisplayForDriver_984C27E7
+	sceDisplayWaitVblankStart
 	SceHdmiForDriver_05174BC2
 	sceKernelGetProcessSelfAuthInfo
 )

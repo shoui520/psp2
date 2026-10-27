@@ -76,13 +76,13 @@ SceUInt32 udcdCookieAlarm(void *argp)
 		cookie = SceGpioForDriver_129DF5AC(0, 0xc);
 	controller->cookieTimer = -1;
 	if (ScePowerForDriver_394DE492() != 0)
-		SceKernelSuspendForDriver_E0489831(0);
+		sceKernelPowerTick(0);
 	if (cookie == 0) {
 		state->activationState = SCE_UDCD_STATUS_IS_CHARGING;
 		udcdUpdateStateEvent(2);
 		if (controller->board == 1)
-			SceGpioForDriver_F6310435(0, 0x18);
-		SceGpioForDriver_F6310435(1, 3);
+			sceGpioPortClear(0, 0x18);
+		sceGpioPortClear(1, 3);
 		ScePervasiveForDriver_4F64DEF6(2);
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
@@ -261,13 +261,13 @@ void udcdControllerDisconnect(int bus, SceKernelIntrStatus *status)
 		if ((int)controller->cookieTimer > 0)
 			sceKernelCancelAlarm(controller->cookieTimer);
 		if (controller->board == 1)
-			SceGpioForDriver_F6310435(0, 0x18);
+			sceGpioPortClear(0, 0x18);
 		ScePowerForDriver_E4E3C316(0);
-		SceGpioForDriver_F6310435(1, 3);
+		sceGpioPortClear(1, 3);
 	}
 	ScePervasiveForDriver_4F64DEF6(bus);
 	if (ScePowerForDriver_394DE492() != 0)
-		SceKernelSuspendForDriver_E0489831(0);
+		sceKernelPowerTick(0);
 }
 
 /* Original name unknown. Suspend: the controller's interrupts off, its clock gated. */
@@ -347,7 +347,7 @@ int udcdStopController(int bus, SceKernelIntrStatus *status)
 		ScePowerForDriver_E4E3C316(0);
 		if (state->controllerResumed != 1)
 			goto release;
-		SceGpioForDriver_F6310435(1, 3);
+		sceGpioPortClear(1, 3);
 	}
 	if (state->controllerResumed == 1)
 		ScePervasiveForDriver_4F64DEF6(bus);
@@ -569,7 +569,7 @@ int udcdDetectCookie(int wake)
 			registers->interruptMask = 0xfffffffe;
 			registers->interruptEnable = 1;
 			registers->eventEnable = 0x380000;
-			SceGpioForDriver_D454A584(1, 3);
+			sceGpioPortSet(1, 3);
 			controller->registers->interrupt = controller->config | 0x10;
 			udcdUpdateUsbCharging(2);
 			state->connectionState = SCE_UDCD_STATUS_CONNECTION_NEW;
@@ -586,7 +586,7 @@ int udcdDetectCookie(int wake)
 			controller->cookieTimer = SceThreadmgrForDriver_C58DF384("SceUdcdAlarmCookieDetect", 500000,
 									  udcdCookieAlarm, NULL);
 			if (controller->board == 1)
-				SceGpioForDriver_D454A584(0, 0x18);
+				sceGpioPortSet(0, 0x18);
 			ScePowerForDriver_E4E3C316(2);
 			sceKernelEnableIntr(0x9b);
 			sceKernelEnableIntr(0x9c);
@@ -648,7 +648,7 @@ void udcdVbusConnected(int bus, SceKernelIntrStatus *status)
 			sceKernelEnableIntr(intr + 1);
 		}
 		if (ScePowerForDriver_394DE492() != 0)
-			SceKernelSuspendForDriver_E0489831(0);
+			sceKernelPowerTick(0);
 	} else if (state->cableState == SCE_UDCD_STATUS_CABLE_DISCONNECTED && SceGpioForDriver_129DF5AC(0, 5) == 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
 		udcdDetectCookie(0);
@@ -1115,7 +1115,7 @@ int udcdStartController(int bus, SceKernelIntrStatus *status)
 				SceGpioForDriver_BBEA1DDC(0, 5, 1);
 				if (controller->board == 1) {
 					SceGpioForDriver_372022A4(0, 0x18, 0);
-					SceGpioForDriver_F6310435(0, 0x18);
+					sceGpioPortClear(0, 0x18);
 				}
 			}
 			phy = udcdState.registers;
@@ -1336,7 +1336,7 @@ setup:
 	if (events & 0x10000) {
 		/* bus reset */
 		if (controller->board == 1)
-			SceGpioForDriver_D454A584(0, 0x18);
+			sceGpioPortSet(0, 0x18);
 		controller->registers->events = 0x10000;
 		if (state->connectionState == SCE_UDCD_STATUS_CONNECTION_ESTABLISHED) {
 			udcdDetachDrivers(&status, bus);
@@ -1356,7 +1356,7 @@ setup:
 		controller->registers->events = 0x20000;
 		if (state->cableState == SCE_UDCD_STATUS_CABLE_CONNECTED) {
 			if (controller->board == 1)
-				SceGpioForDriver_F6310435(0, 0x18);
+				sceGpioPortClear(0, 0x18);
 			if (state->usbVersion == (unsigned int)-1) {
 				registers = controller->registers;
 				state->activationState = SCE_UDCD_STATUS_ACTIVATED;

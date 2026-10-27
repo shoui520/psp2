@@ -26,7 +26,7 @@ SceCodecEngineWrapper:
         - SceCodecEngineWrapperForDriver_2B7CC150: 0x2B7CC150
         - SceCodecEngineWrapperForDriver_2DD83BB0: 0x2DD83BB0
         - SceCodecEngineWrapperForDriver_30F6AFD4: 0x30F6AFD4
-        - SceCodecEngineWrapperForDriver_391BD4FD: 0x391BD4FD
+        - sceVeneziaRpcCallGenericThunk: 0x391BD4FD
         - SceCodecEngineWrapperForDriver_3A79A935: 0x3A79A935
         - SceCodecEngineWrapperForDriver_3C5E9CC3: 0x3C5E9CC3
         - sceCodecEngineDsp0ConvertVirtualToPhysical: 0x47AED6FF

@@ -163,7 +163,7 @@ DmaTag *AllocateDmaTagData(void)
 	DmaTag *tag;
 
 	while ((tag = s_dmacMgr.freeTag) != NULL) {
-		if (SceCpuForDriver_CDA96E81((SceInt32 *)&s_dmacMgr.freeTag, (SceInt32)tag,
+		if (sceKernelAtomicCompareAndSet32((SceInt32 *)&s_dmacMgr.freeTag, (SceInt32)tag,
 						    (SceInt32)tag->next) == (SceInt32)tag)
 			return tag;
 	}
@@ -223,7 +223,7 @@ int ReleaseDmaTagChain(DmaTag *first, DmaTag *last)
 				do {
 					head = s_dmacMgr.freeTag;
 					tag->next = head;
-					result = SceCpuForDriver_CDA96E81((SceInt32 *)&s_dmacMgr.freeTag,
+					result = sceKernelAtomicCompareAndSet32((SceInt32 *)&s_dmacMgr.freeTag,
 									  (SceInt32)head, (SceInt32)run);
 				} while ((SceInt32)head != result);
 			}
@@ -924,7 +924,7 @@ SceKernelDmaOpId sceKernelDmaOpAlloc(const char *name)
 	DmaOp *op;
 	SceUID evfId;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (name == NULL) {
 		name = "SceDmacDefault";
@@ -957,7 +957,7 @@ int sceKernelDmaOpFree(SceKernelDmaOpId opid)
 	SceKernelIntrStatus intr;
 	int retry, result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	op = getDmaOp(opid);
 	if (op->magic != DMA_OP_MAGIC) {
@@ -1416,7 +1416,7 @@ int sceKernelDmacMemcpy(void *dst, const void *src, SceSize size)
 	DmaOp op;
 	SceUID evfId;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (size == 0)
 		return 0;
@@ -1501,7 +1501,7 @@ int sceKernelDmacMemset(void *dst, int c, SceSize size)
 	SceKernelDmacId dmacId;
 	SceUID evfId;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (size == 0)
 		return 0;
@@ -1660,7 +1660,7 @@ int sceKernelDmaOpQuit(SceKernelDmaOpId opid)
 			/* the interrupt handler finishes the cancel */
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 			for (retry = 5; ; ) {
-				if (!SceIntrmgrForDriver_182EE3E3() && intr != 0)
+				if (!sceKernelIsIntrContext() && intr != 0)
 					sceKernelDelayThread(10);
 				intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 				if (!(op->status & DMA_OP_CANCELING))
@@ -1829,7 +1829,7 @@ int StartDmacmgr(SceSize args, void *argp)
 	}
 	s_dmacMgr.rangeHeapId = res;
 	InitializeTagCache();
-	s_dmacMgr.objectHeap = SceSysmemForKernel_3717C322(0x40);
+	s_dmacMgr.objectHeap = sceKernelGetKernelFixedHeap(0x40);
 	SCE_DBG_ASSERT_CHECK_FUNC(s_dmacMgr.objectHeap != NULL, 2148, "StartDmacmgr");
 
 	s_dmacMgr.dmac01.lock = 0;
@@ -1926,8 +1926,8 @@ int StartDmacmgr(SceSize args, void *argp)
 	reg4->gate[2].intrMask = 0;
 	reg4->gate[3].intrMask = 0;
 out:
-	SceSysmemForKernel_B628B46B("SceDmacMemset", 0, &name);
-	SceSysmemForKernel_B628B46B("SceDmacMemcpy", 0, &name);
+	sceKernelNameHeapInsert("SceDmacMemset", 0, &name);
+	sceKernelNameHeapInsert("SceDmacMemcpy", 0, &name);
 	return 0;
 }
 
@@ -1941,7 +1941,7 @@ int sceDmacMemset(void *dst, int c, SceSize size)
 	res = sceKernelLockRangeWithMode(SCE_KERNEL_MEMORY_REF_PERM_KERN_W, dst, size);
 	if (res >= 0) {
 		res = sceKernelDmacMemset(dst, c, size);
-		SceSysmemForDriver_22CBE925(SCE_KERNEL_MEMORY_REF_PERM_KERN_W, dst, size);
+		sceKernelUnlockRangeWithMode(SCE_KERNEL_MEMORY_REF_PERM_KERN_W, dst, size);
 	}
 	writeTpidruro(context);
 	return res;
@@ -1959,9 +1959,9 @@ int sceDmacMemcpy(void *dst, const void *src, SceSize size)
 		res = sceKernelLockRangeWithMode(SCE_KERNEL_MEMORY_REF_PERM_KERN_W, dst, size);
 		if (res >= 0) {
 			res = sceKernelDmacMemcpy(dst, src, size);
-			SceSysmemForDriver_22CBE925(SCE_KERNEL_MEMORY_REF_PERM_KERN_W, dst, size);
+			sceKernelUnlockRangeWithMode(SCE_KERNEL_MEMORY_REF_PERM_KERN_W, dst, size);
 		}
-		SceSysmemForDriver_22CBE925(SCE_KERNEL_MEMORY_REF_PERM_KERN_R, (void *)src, size);
+		sceKernelUnlockRangeWithMode(SCE_KERNEL_MEMORY_REF_PERM_KERN_R, (void *)src, size);
 	}
 	writeTpidruro(context);
 	return res;

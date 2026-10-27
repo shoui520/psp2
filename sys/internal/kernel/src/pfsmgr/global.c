@@ -36,10 +36,10 @@ void pfsGlobalTerm(void)
 
 void pfsRandomInit(SceUInt32 seed)
 {
-	SceKernelUtilsForDriver_4C9A5730(&g_pfsRandom, seed);
+	sceMt19937Init(&g_pfsRandom, seed);
 }
 
 SceUInt32 pfsRandom(void)
 {
-	return SceKernelUtilsForDriver_92AEDFBC(&g_pfsRandom);
+	return sceMt19937UInt(&g_pfsRandom);
 }

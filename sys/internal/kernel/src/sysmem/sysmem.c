@@ -285,7 +285,7 @@ int sceKernelIsAccessibleRange(SceUInt32 mode, const void *addr, SceSize size)
 	return MMUCheckAccessibleRange(mode, (uintptr_t)addr, size);
 }
 
-int SceSysmemForDriver_9F6E45E3(SceUID pid, SceUInt32 mode, const void *addr, SceSize size)
+int sceKernelIsAccessibleRangeProc(SceUID pid, SceUInt32 mode, const void *addr, SceSize size)
 {
 	AddressSpaceObject *as;
 	int ret;
@@ -417,7 +417,7 @@ int SceSysmemForDriver_B3575090(const SceKernelVARange *range, SceKernelPARange 
 	return VARangeToPARangeByHW(range, out);
 }
 
-int SceSysmemForDriver_AE36C775(const SceKernelVARange *range, SceKernelPARange *out)
+int sceKernelVARangeToPARange(const SceKernelVARange *range, SceKernelPARange *out)
 {
 	if (range == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -525,7 +525,7 @@ int sceKernelGetFreeMemorySize(SceKernelFreeMemorySizeInfo *userInfo)
 }
 
 /* sceKernelCheckOpenVMDomain: 2 while the process holds domain 2 as manager */
-SceUInt32 SceSysmemForKernel_4E6D8BC3(void)
+SceUInt32 sceKernelCheckOpenVMDomain(void)
 {
 	ThreadCB *thread = getCurrentThreadCB();
 
@@ -553,13 +553,13 @@ int sceKernelOpenVMDomainForUser(void)
 	storage = SysrootGetProcessLocalStorageAddr(g_uidManager->processStorageKey);
 	if (storage == NULL)
 		return SCE_ERROR_ERRNO_ENOSYS;
-	if (SceCpuForDriver_CDA96E81((SceInt32 *)&storage->managerThread, 0, 1) != 0) {
+	if (sceKernelAtomicCompareAndSet32((SceInt32 *)&storage->managerThread, 0, 1) != 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 1631, "sceKernelOpenVMDomainForUser",
 				    "nManagerThread is not 0\n");
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 1632, "sceKernelOpenVMDomainForUser");
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	thread = getCurrentThreadCB();
 	if (thread == NULL)
 		goto fail;
@@ -588,12 +588,12 @@ int sceKernelCloseVMDomainForUser(void)
 	storage = SysrootGetProcessLocalStorageAddr(g_uidManager->processStorageKey);
 	if (storage == NULL)
 		return SCE_ERROR_ERRNO_ENOSYS;
-	if (SceCpuForDriver_CDA96E81((SceInt32 *)&storage->managerThread, 1, 0) != 1) {
+	if (sceKernelAtomicCompareAndSet32((SceInt32 *)&storage->managerThread, 1, 0) != 1) {
 		SCE_DBG_PRINTF_FUNC(0xb, 1671, "sceKernelCloseVMDomainForUser",
 				    "nManagerThread is not 1\n");
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	thread = getCurrentThreadCB();
 	if (thread == NULL)
 		goto fail;
@@ -810,7 +810,7 @@ int sceKernelCopyFromUser(void *dst, const void *src, SceSize size)
 #define USER_COPY_IN_PROCESS(_pid, _ret, _call) do {			\
 	MMUContext saved;						\
 	void *as;							\
-	int flags = SceCpuForDriver_821FC0EE();				\
+	int flags = sceKernelCpuSuspendIntr();				\
 									\
 	MMUContextSave(&saved);						\
 	_ret = SysrootPIDtoAddressSpaceCB((_pid), &as);			\
@@ -898,7 +898,7 @@ int SceSysmemForKernel_5EF1DAAF(void *dst, const void *src, SceSize size)
 	return UserCopyToText(dst, src, size, USER_COPY_DACR_TEXT);
 }
 
-int SceSysmemForKernel_2995558D(SceUID pid, void *dst, const void *src, SceSize size)
+int sceKernelCopyToUserProcTextDomain(SceUID pid, void *dst, const void *src, SceSize size)
 {
 	int ret;
 
@@ -916,7 +916,7 @@ int sceKernelCopyToUserProcTextDomainForDBGP(SceUID pid, void *dst, const void *
 	SCE_DBG_ASSERT(pid != SCE_KERNEL_PROCESS_ID, 439);
 	if (size != 0)
 		UserCopyTouchKernel(src, size);
-	flags = SceCpuForDriver_821FC0EE();
+	flags = sceKernelCpuSuspendIntr();
 	MMUContextSave(&saved);
 	ret = SysrootPIDtoAddressSpaceCB(pid, &as);
 	if (ret >= 0) {

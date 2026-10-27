@@ -10,7 +10,7 @@
 #define SceDebugForDriver_391B5B74	SceDebugForTZS_563B623D
 #define SceDebugForDriver_FD753E7A	SceDebugForTZS_618F89E6
 #define SceDebugForDriver_D9703808	SceDebugForTZS_D26EB4BB
-#define SceDebugForDriver_374B7868	SceDebugForTZS_F851BA4F
+#define sceKernelGetAssertLevel	sceKernelGetAssertLevel
 
 #include <fw.h>
 #include <sysmem/debug.h>

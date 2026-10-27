@@ -108,7 +108,7 @@ int _scePowerRemoveProcessCallback(SceUID pid)
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 		result = sceKernelFreeRemoteProcessHeap(pid, record);
 #if FW_DEBUG
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_821A2D59(1, result == 0,
 				SCE_DBGINFO_FUNC(282, "_scePowerRemoveProcessCallback"), caller,
 				"sceKernelFreeRemoteProcessHeap(0x%08X, %p) error: 0x%08X\n",
@@ -352,7 +352,7 @@ fail:
 int scePowerRegisterCallbackForUser(SceUID callback)
 {
 	uint32_t context = sceSyscallEnter();
-	SceUID global = SceSysmemForDriver_45D22597(0, callback);
+	SceUID global = scePUIDtoGUID(0, callback);
 	int result = (int)0xc00280a1;
 
 	if (global >= 0)
@@ -390,7 +390,7 @@ inline __attribute__((always_inline)) int scePowerUnregisterCallback(SceUID call
 int scePowerUnregisterCallbackForUser(SceUID callback)
 {
 	uint32_t context = sceSyscallEnter();
-	SceUID global = SceSysmemForDriver_45D22597(0, callback);
+	SceUID global = scePUIDtoGUID(0, callback);
 	int result = (int)0xc00280a1;
 
 	if (global >= 0)
@@ -429,7 +429,7 @@ static void _scePowerNotifyCallbackProc(SceUID pid, uint32_t clearMask,
 		}
 		callback = record->callback;
 		if (callback >= 0) {
-			count = SceThreadmgrForDriver_0892D8DF(callback);
+			count = sceKernelGetCallbackCount(callback);
 			if (count >= 0) {
 				pending = count ? record->pendingEvents & ~clearMask : 0;
 				pending |= events;
@@ -451,7 +451,7 @@ static void _scePowerNotifyCallbackProc(SceUID pid, uint32_t clearMask,
 			s_powerCallbackControl.head = next;
 		result = sceKernelFreeRemoteProcessHeap(record->pid, record);
 #if FW_DEBUG
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_821A2D59(1, result == 0,
 				SCE_DBGINFO_FUNC(993, "_scePowerNotifyCallbackProc"), caller,
 				"sceKernelFreeRemoteProcessHeap(0x%08X, %p) error: 0x%08X\n",
@@ -546,7 +546,7 @@ int powerHasBusyCallback(uint32_t mask, SceUID *callback)
 	     record = record->next) {
 		if (record->callback >= 0 &&
 		    (record->lastNotification & mask) && record->notified &&
-		    SceThreadmgrForDriver_0892D8DF(record->callback) > 0) {
+		    sceKernelGetCallbackCount(record->callback) > 0) {
 			if (callback)
 				*callback = record->callback;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(

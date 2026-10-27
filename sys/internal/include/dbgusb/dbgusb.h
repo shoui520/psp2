@@ -7,6 +7,6 @@
 #include <scetypes.h>
 
 int sceDbgUsbOpen(SceUID event);
-int SceDbgUsbForDriver_08CF16D1(void);
+int sceDbgUsbClose(void);
 int _sceDbgUsbPullData(void *data, unsigned int size);
 int sceDbgUsbWrite(const void *data, unsigned int size);

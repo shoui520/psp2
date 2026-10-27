@@ -245,7 +245,7 @@ const void *selfDecrypterRefill(SceDeflatePartialInputParam *param, unsigned int
 	slot = &g_self.slot[(int)g_self.stream.cookie];
 	size = slot->size;
 	if (slot->state < 2) {
-		ret = SceSblAuthMgrForKernel_BC422443(g_self.reader->authContext, slot->buf, size, 0, 0);
+		ret = sceSblAuthMgrAuthSegment(g_self.reader->authContext, slot->buf, size, 0, 0);
 		if (ret < 0)
 			return NULL;
 		slot->state = 2;
@@ -283,7 +283,7 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 					goto complete;
 				reader->authenticated = 1;
 			}
-			ret = SceSblAuthMgrForKernel_89CCDA2C(reader->authContext, index);
+			ret = sceSblAuthMgrSetupAuthSegment(reader->authContext, index);
 			if (ret >= 0)
 				g_self.compression = ret;
 		} else {
@@ -291,7 +291,7 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 			if (ret < 0)
 				goto complete;
 			if (slot->state < 2) {
-				ret = SceSblAuthMgrForKernel_BC422443(g_self.reader->authContext, slot->buf, size, 0, 0);
+				ret = sceSblAuthMgrAuthSegment(g_self.reader->authContext, slot->buf, size, 0, 0);
 				slot->state = 2;
 				if (ret < 0)
 					goto complete;
@@ -307,11 +307,11 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 				}
 			} else {
 				SCE_DBG_ASSERT_LEVEL(0, g_self.compression == 2, 179);
-				inflateResult = SceKernelUtilsForDriver_5B9BCD75(slot->buf, NULL, NULL, NULL, &input);
+				inflateResult = sceZlibGetInfo(slot->buf, NULL, NULL, NULL, &input);
 				if (inflateResult >= 0) {
 					g_self.stream.pBufEnd = (SceUInt8 *)slot->buf + size;
 					g_self.stream.cookie = NULL;
-					inflateResult = SceKernelUtilsForDriver_3D74CCDF(g_self.destination,
+					inflateResult = sceDeflateDecompressPartial(g_self.destination,
 							g_self.outputLeft, input, NULL, &g_self.stream);
 				}
 				status = (int)g_self.stream.cookie + (inflateResult < 0 ? 2 : 0);
@@ -425,7 +425,7 @@ int SelfDecrypterLoadSegment(SelfParser *reader, int index, void *dst, LoadelfTi
 #endif
 			g_self.slot[next].state = 1;
 			if (g_self.slot[previous].state == 2) {
-				ret = SceSblAuthMgrForKernel_BC422443(g_self.reader->authContext,
+				ret = sceSblAuthMgrAuthSegment(g_self.reader->authContext,
 						g_self.slot[next].buf, chunk, 0, 0);
 				if (ret < 0)
 					goto drain;

@@ -244,7 +244,7 @@ retry:
 				SCE_DBG_ASSERT_PRINTF(thread->magic == THREAD_CB_MAGIC, 389,
 					"*** fatal error: pNewRunningThreadCB=%p, priority=%d\n",
 					thread, priority);
-				if (SceCpuForDriver_5AC9D394(THREAD_LOCK(thread)) < 0) {
+				if (sceKernelSpinlockLowTrylock(THREAD_LOCK(thread)) < 0) {
 					/* held elsewhere: start over shortly */
 					sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
 					for (delay = LOCKED_RETRY_DELAY; delay != 0; delay--)
@@ -584,7 +584,7 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 			if (status == OVERFLOW_SUSPEND_PROCESS) {
 				thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 				process = thread->process;
-				if (!SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested,
+				if (!sceKernelAtomicCompareAndSet32((SceInt32 *)&process->abortRequested,
 								     0, 1)) {
 					thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 					process->abortCode = DEBUG_KIND_STACK_OVERFLOW;
@@ -743,7 +743,7 @@ void switchThread(uint32_t reason)
 	uint32_t mode;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 104);
-	SCE_DBG_ASSERT_LEVEL(0, !SceIntrmgrForDriver_182EE3E3(), 107);
+	SCE_DBG_ASSERT_LEVEL(0, !sceKernelIsIntrContext(), 107);
 	cpu = currentCpuState();
 	thread = currentThreadContext();
 	if (reason & (SWITCH_REASON_PREEMPT | SWITCH_REASON_WAIT))
@@ -893,7 +893,7 @@ overflowed:
 			if (status == OVERFLOW_SUSPEND_PROCESS) {
 				thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 				process = thread->process;
-				if (!SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested,
+				if (!sceKernelAtomicCompareAndSet32((SceInt32 *)&process->abortRequested,
 								     0, 1)) {
 					thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 					process->abortCode = DEBUG_KIND_STACK_OVERFLOW;
@@ -1011,7 +1011,7 @@ void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context)
 				     thread->currentCpuId == (int)sceKernelCpuId(), 823);
 		SCE_DBG_ASSERT_CHECK(thread->spinMutex->magic == FAST_MUTEX_MAGIC, 829);
 		mutex = thread->spinMutex;
-		if (SceCpuForDriver_5AC9D394(&mutex->queue->lock) >= 0)
+		if (sceKernelSpinlockLowTrylock(&mutex->queue->lock) >= 0)
 			break;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		for (delay = SPIN_RETRY_DELAY; delay != 0; delay--)
@@ -1052,8 +1052,8 @@ void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context)
 		((struct ThreadmgrWaitNode *)thread->prev)->next = (struct ThreadmgrWaitNode *)thread;
 	} else {
 		/* a stop or exit request: no wait */
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
-		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAIT_CLEAR);
+		sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
+		sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAIT_CLEAR);
 		request = thread->flags & THREAD_FLAG_REQUEST_MASK;
 		if (request == THREAD_FLAG_REQUEST_EXIT_DELETE || request == THREAD_FLAG_REQUEST_EXIT)
 			thread->waitResult = SCE_KERNEL_ERROR_THREAD_STOPPED;

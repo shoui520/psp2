@@ -153,8 +153,8 @@ static inline void _cafHmacInit(SceCoredumpCafContextObject *context, const SceU
 		innerKey[i] ^= 0x36;
 		context->outerKey[i] ^= 0x5c;
 	}
-	SceKernelUtilsForDriver_D909FA2C(&context->sha);
-	SceKernelUtilsForDriver_236A9097(&context->sha, innerKey, CAF_HMAC_BLOCK_SIZE);
+	sceSha256BlockInit(&context->sha);
+	sceSha256BlockUpdate(&context->sha, innerKey, CAF_HMAC_BLOCK_SIZE);
 	context->hashStarted = 1;
 }
 
@@ -165,11 +165,11 @@ static inline int _cafHmacFinal(SceCoredumpCafContextObject *context, void *dige
 
 	if (context->hashStarted == 0)
 		return SCE_ERROR_ERRNO_EINVAL;
-	SceKernelUtilsForDriver_4899CD4B(&context->sha, innerDigest);
-	SceKernelUtilsForDriver_D909FA2C(&context->sha);
-	SceKernelUtilsForDriver_236A9097(&context->sha, context->outerKey, CAF_HMAC_BLOCK_SIZE);
-	SceKernelUtilsForDriver_236A9097(&context->sha, innerDigest, CAF_DIGEST_SIZE);
-	SceKernelUtilsForDriver_4899CD4B(&context->sha, digest);
+	sceSha256BlockResult(&context->sha, innerDigest);
+	sceSha256BlockInit(&context->sha);
+	sceSha256BlockUpdate(&context->sha, context->outerKey, CAF_HMAC_BLOCK_SIZE);
+	sceSha256BlockUpdate(&context->sha, innerDigest, CAF_DIGEST_SIZE);
+	sceSha256BlockResult(&context->sha, digest);
 	memset(&context->sha, 0, CAF_STATE_SIZE);
 	return 0;
 }
@@ -206,7 +206,7 @@ int SceCoredumpForDriver_AE2C2793(SceUID context, const void *data, SceSize size
 		return result;
 	if (object->hashStarted == 0)
 		return SCE_ERROR_ERRNO_EINVAL;
-	return SceKernelUtilsForDriver_236A9097(&object->sha, data, size);
+	return sceSha256BlockUpdate(&object->sha, data, size);
 }
 
 int SceCoredumpForDriver_65AA4991(SceUID context, void *digest, SceSize size)
@@ -299,7 +299,7 @@ int SceCoredumpForDriver_FB7AEBFE(SceUID context, const void *source, void *dest
 
 	if (object->cipherMode != CAF_CIPHER_ENCRYPT
 	    && object->cipherMode != CAF_CIPHER_DECRYPT) {
-		if (SceKernelUtilsForDriver_236A9097(&object->sha, source, size) != 0)
+		if (sceSha256BlockUpdate(&object->sha, source, size) != 0)
 			return SCE_ERROR_ERRNO_EINVAL;
 		return 0;
 	}
@@ -310,7 +310,7 @@ int SceCoredumpForDriver_FB7AEBFE(SceUID context, const void *source, void *dest
 
 	if (object->cipherMode == CAF_CIPHER_DECRYPT) {
 		/* the ciphertext is authenticated */
-		if (SceKernelUtilsForDriver_236A9097(&object->sha, source, size) != 0)
+		if (sceSha256BlockUpdate(&object->sha, source, size) != 0)
 			return SCE_ERROR_ERRNO_EINVAL;
 		for (n = 0; n < blocks; n++) {
 			SceKernelUtilsForDriver_D8678061(&object->aes, src, block);
@@ -339,7 +339,7 @@ int SceCoredumpForDriver_FB7AEBFE(SceUID context, const void *source, void *dest
 		}
 	}
 	/* the ciphertext is authenticated */
-	if (SceKernelUtilsForDriver_236A9097(&object->sha, destination, size) != 0)
+	if (sceSha256BlockUpdate(&object->sha, destination, size) != 0)
 		return SCE_ERROR_ERRNO_EINVAL;
 	return 0;
 }

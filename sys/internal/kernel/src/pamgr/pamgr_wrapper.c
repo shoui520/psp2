@@ -8,7 +8,7 @@
 #include <sysmem/procevent.h>
 #include <pamgr/pamgr.h>
 
-int ScePamgrForDriver_5D3D46E4(uint32_t registration,
+int sceKernelPaAddArmTraceByKey(uint32_t registration,
 			    const struct PamgrArmTraceConfig *config)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
@@ -89,7 +89,7 @@ int sceKernelPaInitPamgrWrapper(void)
 }
 int clearCounterTrace(void);
 
-int ScePamgrForDriver_49A43754(uint32_t registration,
+int sceKernelPaAddGpuTraceByKey(uint32_t registration,
 			     const struct PamgrGpuTraceConfig *config)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
@@ -97,7 +97,7 @@ int ScePamgrForDriver_49A43754(uint32_t registration,
 	return configureGpuTrace(config);
 }
 
-int ScePamgrForDriver_9935D8EF(uint32_t registration)
+int sceKernelPaRemoveGpuTraceByKey(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
@@ -112,14 +112,14 @@ int __attribute__((noinline)) configureRegisteredGpuTraceForUser(uint32_t regist
 	return configureGpuTraceForUser(config);
 }
 
-int sceKernelPaRemoveGpuTraceByKey(uint32_t registration)
+int sceKernelPaRemoveGpuTraceByKeyForUser(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
 	return clearGpuTraceForUser();
 }
 
-int ScePamgrForDriver_17C81A92(uint32_t registration,
+int sceKernelPaAddCounterTraceByKey(uint32_t registration,
 			     const struct PamgrCounterTraceConfig *config)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
@@ -127,14 +127,14 @@ int ScePamgrForDriver_17C81A92(uint32_t registration,
 	return configureCounterTrace(config);
 }
 
-int ScePamgrForDriver_0B7F6F53(uint32_t registration)
+int sceKernelPaRemoveCounterTraceByKey(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
 	return clearCounterTrace();
 }
 
-int ScePamgrForDriver_F2D5105A(uint32_t registration,
+int sceKernelPaSetupTraceBufferByKey(uint32_t registration,
 			     const struct PamgrPrimaryTraceConfig *config)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
@@ -184,7 +184,7 @@ int ScePamgrForDriver_E8FF4812(uint32_t registration,
 	return configureTraceBuffer1(config);
 }
 
-int ScePamgrForDriver_0BCD4966(uint32_t registration, unsigned int mask,
+int sceKernelPaSetBookmarkChannelEnableByKey(uint32_t registration, unsigned int mask,
 			     uint32_t selection)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
@@ -199,7 +199,7 @@ int ScePamgrForDriver_95F4079E(uint32_t registration, uint32_t pointer)
 	return setTraceBuffer1WritePointer(pointer);
 }
 
-int ScePamgrForDriver_B9EE1620(uint32_t registration)
+int sceKernelPaRemoveArmTraceByKey(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
@@ -221,14 +221,14 @@ int ScePamgrForDriver_81764B21(uint32_t registration)
 	return clearTracePackedFilter();
 }
 
-int ScePamgrForDriver_DEC5313E(uint32_t registration, const uint32_t *filter)
+int sceKernelPaAddBusTraceByKey(uint32_t registration, const uint32_t *filter)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
 	return setTraceWordFilter(filter);
 }
 
-int ScePamgrForDriver_DB62FEFE(uint32_t registration)
+int sceKernelPaRemoveBusTraceByKey(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
@@ -276,7 +276,7 @@ int sceKernelPaRegister(void)
 	}
 	result = SCE_KERNEL_ERROR_PA_NOT_AVAILABLE;
 	if (pamgrState.registrationId == 0) {
-		result = (uint32_t)ScePamgrForDriver_FE9BFD27() & 0x7fffffff;
+		result = (uint32_t)sceKernelPaGetTimebaseValue() & 0x7fffffff;
 		pamgrState.registrationId = result;
 		pamgrState.registrationProcess = sceKernelGetProcessId();
 		pamgrState.registrationShared = 0;
@@ -327,7 +327,7 @@ int sceKernelPaRegisterShared(uint64_t key)
 	}
 	result = SCE_KERNEL_ERROR_PA_NOT_AVAILABLE;
 	if (pamgrState.registrationId == 0) {
-		result = (uint32_t)ScePamgrForDriver_FE9BFD27() & 0x7fffffff;
+		result = (uint32_t)sceKernelPaGetTimebaseValue() & 0x7fffffff;
 		pamgrState.registrationId = result;
 		pamgrState.registrationProcess = sceKernelGetProcessId();
 		pamgrState.registrationShared = 1;
@@ -343,7 +343,7 @@ int sceKernelPaRegisterShared(uint64_t key)
 }
 
 /* ForUser suffixes distinguish the separate user-library ABI entries. */
-int sceKernelPaGetSharedKey(uint64_t key)
+int sceKernelPaGetSharedKeyForUser(uint64_t key)
 {
 	if (pamgrState.registrationShared != 1)
 		return SCE_KERNEL_ERROR_PA_KEY_IS_NOT_SHARED;
@@ -352,7 +352,7 @@ int sceKernelPaGetSharedKey(uint64_t key)
 	return pamgrState.registrationId;
 }
 
-int ScePamgrForDriver_0D04B52A(uint64_t key)
+int sceKernelPaGetSharedKey(uint64_t key)
 {
 	if (pamgrState.registrationShared != 1)
 		return SCE_KERNEL_ERROR_PA_KEY_IS_NOT_SHARED;
@@ -376,7 +376,7 @@ int sceKernelPaRegisterSharedForUser(uint64_t key)
 	return sceKernelPaRegisterShared(key);
 }
 
-int ScePamgrForDriver_50FD85C8(uint32_t registration)
+int sceKernelPaStartByKey(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
@@ -390,7 +390,7 @@ int ScePamgrForDriver_A708D62A(uint32_t registration)
 	return startSecondaryTrace();
 }
 
-int ScePamgrForDriver_88462719(uint32_t registration)
+int sceKernelPaStopByKey(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
@@ -452,7 +452,7 @@ int __attribute__((noinline)) configureRegisteredCounterTraceForUser(uint32_t re
 	return sceKernelPaAddCounterTraceForUser(config);
 }
 
-int sceKernelPaRemoveCounterTraceByKey(uint32_t registration)
+int sceKernelPaRemoveCounterTraceByKeyForUser(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
@@ -467,7 +467,7 @@ int __attribute__((noinline)) configureRegisteredArmTraceForUser(uint32_t regist
 	return configureArmTraceForUser(config);
 }
 
-int sceKernelPaRemoveArmTraceByKey(uint32_t registration)
+int sceKernelPaRemoveArmTraceByKeyForUser(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
@@ -482,28 +482,28 @@ int __attribute__((noinline)) configureRegisteredBusTraceForUser(
 	return setTraceWordFilterForUser(filter);
 }
 
-int sceKernelPaRemoveBusTraceByKey(uint32_t registration)
+int sceKernelPaRemoveBusTraceByKeyForUser(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
 	return clearTraceWordFilterForUser();
 }
 
-int sceKernelPaStartByKey(uint32_t registration)
+int sceKernelPaStartByKeyForUser(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
 	return startPrimaryTraceForUser();
 }
 
-int sceKernelPaStopByKey(uint32_t registration)
+int sceKernelPaStopByKeyForUser(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
 	return stopPrimaryTraceForUser();
 }
 
-int sceKernelPaSetBookmarkChannelEnableByKey(uint32_t registration,
+int sceKernelPaSetBookmarkChannelEnableByKeyForUser(uint32_t registration,
 					 unsigned int mask, uint32_t selection)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)

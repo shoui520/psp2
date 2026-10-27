@@ -67,10 +67,10 @@ set(MODULE_IMPORT_NIDS
 	0x96D306FA:F:0xB0996641
 )
 set(MODULE_IMPORT_FUNCS
-	SceKernelUtilsForDriver_83EFA1CC
-	SceKernelUtilsForDriver_87DC7F2F
-	SceKernelUtilsForDriver_9EA9D4DC
-	SceKernelUtilsForDriver_A773A6A8
+	sceHmacSha256Digest
+	sceSha1Digest
+	sceSha224Digest
+	sceSha256Digest
 	SceKernelUtilsForDriver_C2A61770
 	SceKernelUtilsForDriver_D8678061
 	SceKernelUtilsForDriver_F12B6451
@@ -93,7 +93,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblSmCommForKernel_039C73B1
 	sceSblSmCommStopSm
 	sceSblSmCommCallFunc
-	SceSblSsMgrForDriver_AC57F4F0
+	sceSblRngGenuineRandomNumber
 	sceSblAimgrGetConsoleId
 	SceNpDrmForDriver_742EBAF4
 	SceNpDrmForDriver_8B85A509
@@ -102,9 +102,9 @@ set(MODULE_IMPORT_FUNCS
 	ScePsmDrmForDriver_B09003A7
 	ScePsmDrmForDriver_CB73E9D3
 	SceRtcForDriver_401C0954
-	SceRtcForDriver_42A0DFCB
+	sceRtcSetTick
 	SceRtcForDriver_7D431C87
-	SceRtcForDriver_9C8AF264
+	sceRtcTickAddSeconds
 	sceIdStorageLookup
 	SceSdifForDriver_134E06C4
 	SceSdifForDriver_22C82E79

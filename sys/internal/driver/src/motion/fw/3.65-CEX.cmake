@@ -118,17 +118,17 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_E4B145AE
 	ScePervasiveForDriver_FDD445C3
 	SceSysconForDriver_063425AE
-	SceSysconForDriver_40FF3898
+	sceSysconCtrlDeviceReset
 	SceSysconForDriver_55DF1C9B
 	SceSysconForDriver_76506A57
 	SceSysconForDriver_CBD6D8BC
 	SceSysconForDriver_FF86F4C5
 	SceGpioForDriver_129DF5AC
 	SceGpioForDriver_372022A4
-	SceGpioForDriver_D454A584
-	SceGpioForDriver_F6310435
-	SceI2cForDriver_0A40B7BF
-	SceI2cForDriver_CA94A759
+	sceGpioPortSet
+	sceGpioPortClear
+	sceI2cMasterTransmitReceive
+	sceI2cMasterTransmit
 	SceClockgenForDriver_66AC5580
 )
 set(MODULE_IMPORT_VARS

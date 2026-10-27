@@ -43,4 +43,4 @@ int SceUsbMtpForDriver_76D707B1(SceUInt32 timeout);
 int SceUsbMtpForDriver_6F7DF4B8(void);
 int SceUsbMtpForDriver_E64513A9(int phase);
 int sceUsbMtpStart(void);
-int SceUsbMtpForDriver_08CD359F(void);
+int sceUsbMtpStop(void);

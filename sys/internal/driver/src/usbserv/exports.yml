@@ -13,9 +13,9 @@ SceUsbServ:
       functions:
         - sceUsbServEtherEnable: 0x30AE5F66
         - SceUsbServForDriver_6D738018: 0x6D738018
-        - SceUsbServForDriver_7AD36284: 0x7AD36284
-        - SceUsbServForDriver_853CB8E4: 0x853CB8E4
-        - SceUsbServForDriver_AA6D4409: 0xAA6D4409
+        - sceUsbServMacSelect: 0x7AD36284
+        - sceUsbServAccessoryDeactivate: 0x853CB8E4
+        - sceUsbServAccessoryActivate: 0xAA6D4409
         - sceUsbServEtherDisable: 0xD787B191
         - SceUsbServForDriver_F0553A69: 0xF0553A69
     SceUsbServ:
@@ -23,5 +23,5 @@ SceUsbServ:
       version: 1
       nid: 0xDA3C0EF0
       functions:
-        - sceUsbServAccessoryDeactivate: 0x154246A9
-        - sceUsbServAccessoryActivate: 0xB33AA2EB
+        - sceUsbServAccessoryDeactivateForUser: 0x154246A9
+        - sceUsbServAccessoryActivateForUser: 0xB33AA2EB

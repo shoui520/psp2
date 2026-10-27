@@ -184,7 +184,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelUserMap
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
@@ -195,9 +195,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteHeap
 	sceKernelDcacheInvalidateRange
 	sceKernelDcacheCleanRange
-	SceCpuForDriver_5F6A8743
+	sceKernelAtomicAddAndGet32
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_A4884C4E
+	sceKernelAtomicSubAndGet32
 	sceKernelSpinlockLowLock
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
@@ -265,7 +265,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSblPmMgrGetProductMode
 	SceSblPostSsMgrForDriver_128FB35A
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
+	sceKernelUnregisterProcEventHandler
 	ScePervasiveForDriver_18DD8043
 	ScePervasiveForDriver_34537B12
 	ScePervasiveForDriver_4B99558F
@@ -273,10 +273,10 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_8BAB45F8
 	ScePervasiveForDriver_A7CE7DCC
 	ScePervasiveForDriver_EFD084D8
-	SceIdStorageForDriver_EB00C509
+	sceIdStorageReadLeaf
 	SceGpioForDriver_372022A4
-	SceGpioForDriver_D454A584
-	SceGpioForDriver_F6310435
+	sceGpioPortSet
+	sceGpioPortClear
 	SceSysconForDriver_03C50DC3
 	SceSysconForDriver_4E88B4D9
 	SceSysconForDriver_50CAE242
@@ -291,10 +291,10 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_D7F5A797
 	SceSysconForDriver_DD16ABD9
 	SceSysconForDriver_FF86F4C5
-	ScePowerForDriver_02DB1035
+	scePowerRequestResume
 	ScePowerForDriver_5210A6FE
 	ScePowerForDriver_B24263F0
-	ScePowerForDriver_F535D928
+	scePowerSetWakeupCondition
 	SceUsbdForDriver_0E73D253
 	SceUsbdForDriver_1CDBFF9F
 	SceUsbdForDriver_235C094A
@@ -306,15 +306,15 @@ set(MODULE_IMPORT_FUNCS
 	SceUsbdForDriver_C3BECF5F
 	SceUsbdForDriver_F304DC5C
 	SceUdcdForDriver_150FD3BB
-	SceUdcdForDriver_175E6179
-	SceUdcdForDriver_2E3E622A
+	sceUdcdReqRecvInternal
+	sceUdcdReqSendInternal
 	sceUdcdActivate
 	SceUdcdForDriver_64675918
 	SceUdcdForDriver_6CCD152E
 	SceUdcdForDriver_90F8BCAE
 	SceUdcdForDriver_9119247B
 	SceUdcdForDriver_FDC10F93
-	SceUsbServForDriver_7AD36284
+	sceUsbServMacSelect
 	SceNetPsForDriver_1ABF937D
 	SceNetPsForDriver_F5788FF8
 	SceGpsForDriver_54DBA451

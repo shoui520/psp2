@@ -44,7 +44,7 @@ int BtCompleteControllerSleep(BtStack *stack)
 	unsigned int timer, mode;
 	int configuration, result;
 
-	result = SceSdifForDriver_3C4CDC8B(gBtTransport.function, 2, 1,
+	result = sceSdioWrite(gBtTransport.function, 2, 1,
 					 &interruptEnable, 1);
 	if (result < 0)
 		return result;
@@ -90,7 +90,7 @@ int BtPowerOffTransport(void)
 		gBtTransport.transmitActive = 0;
 		return BtCompleteControllerSleep(stack);
 	}
-	result = SceSdifForDriver_3C4CDC8B(gBtTransport.function, 2, 1,
+	result = sceSdioWrite(gBtTransport.function, 2, 1,
 					 &interruptEnable, 1);
 	if (result < 0)
 		return result;

@@ -223,7 +223,7 @@ int busErrorIntrHandler(int code, void *arg)
 				;
 	}
 	if (dump) {
-		sysroot = SceSysrootForKernel_3E455842();
+		sysroot = sceKernelSysrootGetSysroot();
 		__asm__ volatile("mrc p15, 0, %0, c2, c0, 0" : "=r"(ttbr0));
 		__asm__ volatile("mrc p15, 0, %0, c12, c0, 0" : "=r"(vbar));
 		busErrorSmc122(2, ttbr0, vbar, sysroot);
@@ -266,7 +266,7 @@ int busErrorIntrHandler(int code, void *arg)
 				;
 	}
 	if (dump) {
-		sysroot = SceSysrootForKernel_3E455842();
+		sysroot = sceKernelSysrootGetSysroot();
 		__asm__ volatile("mrc p15, 0, %0, c2, c0, 0" : "=r"(ttbr0));
 		__asm__ volatile("mrc p15, 0, %0, c12, c0, 0" : "=r"(vbar));
 		busErrorSmc122(2, ttbr0, vbar, sysroot);

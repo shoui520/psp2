@@ -536,14 +536,14 @@ int LoadelfMapImage(LoadelfContext *ctx)
 		if (cb->pid == SCE_KERNEL_PROCESS_ID) {
 			if ((seg->perms & SEGMENT_PERM_MASK) != SEGMENT_PERM_TEXT)
 				continue;
-			ret = SceSysmemForDriver_DFE2C8CB(seg->memblk, memtype);
+			ret = sceKernelRemapMemBlock(seg->memblk, memtype);
 		} else {
 			if (segx->tmpBlock > 0) {
 				sceKernelFreeMemBlock(segx->tmpBlock);
 				segx->tmpBlock = 0;
 				segx->kaddr = NULL;
 			}
-			ret = SceSysmemForDriver_58D21746(seg->memblk);
+			ret = sceKernelMapMemBlock(seg->memblk);
 		}
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 955,

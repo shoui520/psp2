@@ -69,7 +69,7 @@ RdrfpRequest *rdrfpDequeue(RdrfpQueue *queue, int wait)
 	if (wait == 1) {
 		while (queue->count == 0) {
 			sceKernelUnlockMutex(queue->mutex, 1);
-			ret = SceThreadmgrForDriver_8A35F714(queue->evf, 1,
+			ret = sceKernelWaitEventFlagCB(queue->evf, 1,
 							SCE_KERNEL_EVF_WAITMODE_OR |
 							SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 							NULL, NULL);

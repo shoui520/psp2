@@ -34,7 +34,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 	int referencedUid, mappingUid, ret;
 
 	kernel = *group == 1;
-	referencedUid = kernel ? uid : SceSysmemForDriver_45D22597(0, uid);
+	referencedUid = kernel ? uid : scePUIDtoGUID(0, uid);
 	if (referencedUid <= 0) {
 		SCE_DBG_PRINTF(0, 75, "%s: Failed to get GUID for MemBlock %08x\n",
 			       __func__, uid);
@@ -136,7 +136,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 
 releaseMapping:
 	if (restoreMapping)
-		SceSysmemForDriver_58D21746(referencedUid);
+		sceKernelMapMemBlock(referencedUid);
 	if (!kernel)
 		sceKernelFreeMemBlock(mappingUid);
 	return 0;
@@ -227,9 +227,9 @@ int sceGpuMemBlockDelBlock(GpuMemBlockHeap *heap, int uid, int *referencedOut)
 		if (referencedOut)
 			*referencedOut = block->referencedUid;
 		if (block->restoreMapping) {
-			referenced = SceSysmemForDriver_45D22597(0, block->inputUid);
+			referenced = scePUIDtoGUID(0, block->inputUid);
 			if (referenced == block->referencedUid)
-				SceSysmemForDriver_58D21746(referenced);
+				sceKernelMapMemBlock(referenced);
 		}
 		FreeProcessGpuMemory((void *)block);
 		return 0;

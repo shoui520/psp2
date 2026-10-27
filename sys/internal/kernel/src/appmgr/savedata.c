@@ -175,7 +175,7 @@ int appmgrUpdateSaveDataOnSuspend(SceUID pid, AppmgrProcessContent *content)
 		return result;
 	if ((content->contentFlags & 0x31) == 0)
 		goto done;
-	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	result = sceKernelGetRemoteKPLS(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
 	if (result < 0)
 		goto unlock;
 	if (info == NULL) {
@@ -228,7 +228,7 @@ int sceAppMgrSaveDataNotifyBackupFinished(const char *saveDataTitleId)
 			continue;
 		if (strncmp(app->process.content.saveDataTitleIds[0], saveDataTitleId, 16) != 0)
 			continue;
-		result = SceProcessmgrForDriver_AF80F39C(app->process.processId,
+		result = sceKernelGetRemoteKPLS(app->process.processId,
 							 g_appmgrAppInfoCacheKey, (void **)&info, 0);
 		if (result < 0)
 			break;
@@ -1082,7 +1082,7 @@ int appmgrAccumulateSaveDataWriteSize(SceUInt32 writtenKiB)
 	float elapsed;
 	int result;
 
-	result = SceProcessmgrForDriver_AF80F39C(sceKernelGetProcessId(),
+	result = sceKernelGetRemoteKPLS(sceKernelGetProcessId(),
 		g_appmgrAppInfoCacheKey, &storage, 0);
 	if (result < 0)
 		return result;
@@ -1094,7 +1094,7 @@ int appmgrAccumulateSaveDataWriteSize(SceUInt32 writtenKiB)
 	info->totalWrittenKiB += writtenKiB;
 	if (sinceNotice < 1024)
 		return 0;
-	seconds = SceProcessmgrForDriver_82D94BE9() / 1000000;
+	seconds = sceKernelGetProcessTimeWideCore() / 1000000;
 	if (seconds) {
 		elapsed = seconds;
 		threshold = 20480 * (seconds / 3600 + 1);
@@ -1216,7 +1216,7 @@ static __attribute__((noinline)) int appmgrIsAutoUploadApp(const char *titleId)
 	SceUID fd;
 	int result;
 
-	result = SceAppMgrForDriver_0813AFCA(2, path, sizeof(path));
+	result = sceAppMgrGetUserDirPath(2, path, sizeof(path));
 	if (result < 0)
 		return result;
 	APPMGR_STRCAT(path, "/savedata_plus/auto_upload/up_app_list.dat", sizeof(path));
@@ -1265,7 +1265,7 @@ static __attribute__((noinline)) int appmgrAddAutoUploadSaveData(const char *sav
 	SceUID fd;
 	int result;
 
-	result = SceAppMgrForDriver_0813AFCA(2, path, sizeof(path));
+	result = sceAppMgrGetUserDirPath(2, path, sizeof(path));
 	if (result < 0)
 		return result;
 	APPMGR_STRCAT(path, "/savedata_plus/auto_upload/up_savedata_list.dat", sizeof(path));
@@ -1353,7 +1353,7 @@ static __attribute__((noinline)) int appmgrUpdateSaveDataBackupList(const char *
 		return 0;
 	if ((unsigned int)(mode - 1) > 1)
 		return 0x80800001;
-	result = SceAppMgrForDriver_0813AFCA(2, base, sizeof(base));
+	result = sceAppMgrGetUserDirPath(2, base, sizeof(base));
 	if (result < 0)
 		return result;
 	if ((unsigned int)snprintf(path, sizeof(path), "%s/savedata_backup", base) >= sizeof(path))
@@ -1427,7 +1427,7 @@ static __attribute__((noinline)) int appmgrRemoveSaveDataBackupListItem(const ch
 	memset(list, 0, sizeof(list));
 	if (saveDataTitleId == NULL)
 		return 0x80800001;
-	result = SceAppMgrForDriver_0813AFCA(2, base, sizeof(base));
+	result = sceAppMgrGetUserDirPath(2, base, sizeof(base));
 	if (result < 0)
 		return result;
 	if ((unsigned int)snprintf(path, sizeof(path), "%s/savedata_backup/list.dat", base) >=
@@ -1486,7 +1486,7 @@ static __attribute__((noinline)) int appmgrGetSaveDataBackupList(void *list)
 
 	if (list == NULL)
 		return 0x80800001;
-	result = SceAppMgrForDriver_0813AFCA(2, base, sizeof(base));
+	result = sceAppMgrGetUserDirPath(2, base, sizeof(base));
 	if (result < 0)
 		return result;
 	if ((unsigned int)snprintf(path, sizeof(path), "%s/savedata_backup/list.dat", base) >=
@@ -2403,7 +2403,7 @@ int SceAppMgrForDriver_43A35729(const SceAppMgrPhotoMountParam *param)
 		result = (int)0x80800001;
 		goto leaveSyscall;
 	}
-	result = SceAppMgrForDriver_B1D3C287(100, &mountPoint);
+	result = sceAppMgrAppDataMount(100, &mountPoint);
 	if (result == (int)0x80010013)
 		result = (int)0x80801005;
 	else if (result == (int)0x80800003)
@@ -2423,7 +2423,7 @@ int SceAppMgrForDriver_DCADB9FE(const SceAppMgrPhotoUmountParam *param)
 		result = (int)0x80800001;
 		goto leaveSyscall;
 	}
-	result = SceAppMgrForDriver_A714BB35("photo0:");
+	result = sceAppMgrUmount("photo0:");
 	if (result == (int)0x80800002)
 		result = (int)0x808010C1;
 leaveSyscall:
@@ -2522,7 +2522,7 @@ int appmgrSetupSafeMemoryForProcess(SceUID pid, int safeMemoryMode)
 	SceSize size;
 	int result;
 
-	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	result = sceKernelGetRemoteKPLS(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
 	if (result < 0)
 		return result;
 	if (info == NULL)
@@ -2531,7 +2531,7 @@ int appmgrSetupSafeMemoryForProcess(SceUID pid, int safeMemoryMode)
 	info->safeMemoryInitialized = 0;
 
 	if (safeMemoryMode & 2) {
-		result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrSafeMemoryKey, &memory, 1);
+		result = sceKernelGetRemoteKPLS(pid, g_appmgrSafeMemoryKey, &memory, 1);
 		if (result < 0)
 			return result;
 		size = 0x10000;
@@ -2597,7 +2597,7 @@ int sceAppMgrInitSafeMemoryById(const char *id)
 	result = sceKernelLockMutex(g_appmgrSafeMemoryMutex, 1, NULL);
 	if (result < 0)
 		goto leave;
-	result = SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	result = sceKernelGetRemoteKPLS(0, g_appmgrAppInfoCacheKey, (void **)&info, 0);
 	if (result < 0)
 		goto unlock;
 	if (info == NULL) {
@@ -2673,7 +2673,7 @@ int appmgrSaveSafeMemoryForProcess(SceUID pid)
 	SceSize size;
 	int fd, written, result;
 
-	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	result = sceKernelGetRemoteKPLS(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
 	if (result < 0)
 		return result;
 	if (info == NULL)
@@ -2704,7 +2704,7 @@ int appmgrSaveSafeMemoryForProcess(SceUID pid)
 			return 0x80800014;
 		if (info != NULL) {
 			info->saveDataFlags |= 2;
-			if (SceRtcForDriver_A930CD1A(&stat.st_mtime, 0) >= 0 &&
+			if (sceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
 			    appmgrResolvePath("savedata0:", pid, root, sizeof(root)) >= 0)
 				sceIoChstat(root, &stat, 0x20);
 		}
@@ -2728,7 +2728,7 @@ int appmgrPrepareSafeMemoryForProcess(SceUID pid)
 	const char *fileName;
 	int result;
 
-	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	result = sceKernelGetRemoteKPLS(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
 	if (result < 0)
 		return result;
 	if (info == NULL)
@@ -2855,7 +2855,7 @@ int appmgrInitAppInfoCache(SceUID pid)
 
 	if (!sceSblACMgrIsGameProgram(pid))
 		addContentCapacity = SceSblACMgrForDriver_6C5AB07F(pid) != 0;
-	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, &storage, 1);
+	result = sceKernelGetRemoteKPLS(pid, g_appmgrAppInfoCacheKey, &storage, 1);
 	if (result < 0)
 		return result;
 	if (storage == NULL)

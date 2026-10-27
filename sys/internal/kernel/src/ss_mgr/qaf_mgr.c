@@ -273,7 +273,7 @@ int sceSblQafMgrIsAllowNonQAPup(void)
 	return allow;
 }
 
-int sceSblQafMgrIsAllowForceUpdate(void)
+int sceSblQafMgrIsAllowForceUpdateForUser(void)
 {
 	SceUInt32 frame = sceSyscallEnter();
 	int allow = qafFlag(QAF_ALLOW_FORCE_UPDATE);
@@ -434,7 +434,7 @@ __attribute__((noinline)) int nvs_read_data(uint32_t offset, void *buffer,
 	uint32_t done;
 	int chunk, ret;
 
-	ret = SceSysconForDriver_81A6060D(0);
+	ret = sceSysconNvsSetRunMode(0);
 	if (ret)
 		return SSMGR_ERROR_NVS;
 	done = 0;
@@ -443,7 +443,7 @@ __attribute__((noinline)) int nvs_read_data(uint32_t offset, void *buffer,
 			chunk = size;
 		else
 			chunk = 8;
-		ret = SceSysconForDriver_ACAFA2B8(offset + done,
+		ret = sceSysconNvsReadData(offset + done,
 			(uint8_t *)buffer + done, chunk);
 		if (ret)
 			break;
@@ -459,7 +459,7 @@ __attribute__((noinline)) int nvs_write_data(uint32_t offset,
 	uint32_t done;
 	int chunk, ret;
 
-	ret = SceSysconForDriver_81A6060D(0);
+	ret = sceSysconNvsSetRunMode(0);
 	if (ret)
 		return SSMGR_ERROR_NVS;
 	done = 0;
@@ -468,7 +468,7 @@ __attribute__((noinline)) int nvs_write_data(uint32_t offset,
 			chunk = size;
 		else
 			chunk = 8;
-		ret = SceSysconForDriver_10C9657A(offset + done,
+		ret = sceSysconNvsWriteData(offset + done,
 			(const uint8_t *)buffer + done, chunk);
 		if (ret)
 			break;

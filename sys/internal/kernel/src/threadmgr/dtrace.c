@@ -148,7 +148,7 @@ int SceThreadmgrForKernel_0788C9BC(unsigned int cpuId, void (*fn)(void *), void 
 
 	if (cpuId >= 4)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	} else {
@@ -158,7 +158,7 @@ int SceThreadmgrForKernel_0788C9BC(unsigned int cpuId, void (*fn)(void *), void 
 		} else {
 			sceKernelCpuResumeIntr(intr);
 			issueDTraceAsyncXCallIntrRequest(cpuId, fn, arg, size);
-			intr = SceCpuForDriver_821FC0EE();
+			intr = sceKernelCpuSuspendIntr();
 		}
 	}
 	sceKernelCpuResumeIntr(intr);
@@ -173,7 +173,7 @@ int SceThreadmgrForKernel_DF59DF99(unsigned int cpuId, void (*fn)(void *), void 
 
 	if (cpuId >= 4)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	} else if (sceKernelCpuId() == cpuId) {
@@ -186,7 +186,7 @@ int SceThreadmgrForKernel_DF59DF99(unsigned int cpuId, void (*fn)(void *), void 
 		ret = 0;
 		sceKernelCpuResumeIntr(intr);
 		sceKernelSpinlockLowLock(&done);	/* until the target CPU unlocks it */
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 	}
 	sceKernelCpuResumeIntr(intr);
 	return ret;

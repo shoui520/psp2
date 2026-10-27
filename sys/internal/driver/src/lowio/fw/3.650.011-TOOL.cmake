@@ -64,7 +64,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelCpuResumeIntr
 	sceKernelCheckDipsw

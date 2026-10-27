@@ -79,7 +79,7 @@ static int pampReadTrace(PampContext *ctx, void *dst, int unit,
 	PampBuffer *buffer = &ctx->trace[unit];
 	SceUInt32 wrapped = ctx->flags & (unit ? 0x10 : 8);
 	SceUInt32 cursor = unit ? ScePamgrForDriver_80CA3B39() :
-		ScePamgrForDriver_FB46C3CD();
+		sceKernelPaGetWritePointer();
 	SceUInt32 physical = buffer->physical;
 	SceUInt32 available, position, first;
 
@@ -269,7 +269,7 @@ static int pampConfigure(PampContext *ctx)
 		if (data[4])
 			return PAMP_STATUS_INVALID_ARGUMENT;
 		config.words[5] = data[5];
-		ret = ScePamgrForDriver_17C81A92(ctx->key, &config.counter);
+		ret = sceKernelPaAddCounterTraceByKey(ctx->key, &config.counter);
 	} else if (type == 0) {
 		if (ctx->request.length < 0x14)
 			return PAMP_STATUS_SHORT_REQUEST;
@@ -279,20 +279,20 @@ static int pampConfigure(PampContext *ctx)
 		if (uid < 0)
 			return PAMP_STATUS_INVALID_PROCESS;
 		process.size = sizeof(process);
-		if (SceSysmemForKernel_C3EF4055(uid, &process))
+		if (sceKernelGetAddressSpaceInfo(uid, &process))
 			return PAMP_STATUS_INVALID_PROCESS;
 		memset(&config.arm, 0, sizeof(config.arm));
 		config.words[2] = data[2];
 		config.words[0] = data[0];
 		config.words[1] = data[1] | ((SceUInt32)process.asid << 24);
-		ret = ScePamgrForDriver_5D3D46E4(ctx->key, &config.arm);
+		ret = sceKernelPaAddArmTraceByKey(ctx->key, &config.arm);
 	} else if (type == 2) {
 		if (ctx->request.length < 0x4c)
 			return PAMP_STATUS_SHORT_REQUEST;
 		memset(&config.gpu, 0, sizeof(config.gpu));
 		for (unsigned i = 0; i < 18; i++)
 			config.words[i] = data[i];
-		ret = ScePamgrForDriver_49A43754(ctx->key, &config.gpu);
+		ret = sceKernelPaAddGpuTraceByKey(ctx->key, &config.gpu);
 	} else {
 		return PAMP_STATUS_INVALID_ARGUMENT;
 	}
@@ -355,7 +355,7 @@ static int pampOpen(PampContext *ctx)
 	for (int i = 0; i < count; i++) {
 		if (SceSysrootForDriver_39F1FD07(pids[i]) != 1)
 			continue;
-		ret = SceProcessmgrForDriver_61B9B6FA(pids[i], 0x11);
+		ret = sceKernelSetInitialPMCR(pids[i], 0x11);
 		if (ret) {
 			PAMP_OPEN_PRINTF(1280,
 				"[Error] sceKernelSetInitialPMCR (ret = 0x%08x)\n", ret);
@@ -367,7 +367,7 @@ static int pampOpen(PampContext *ctx)
 				"[Error] sceKernelPMonSetControlRegister (ret = 0x%08x)\n", ret);
 			return PAMP_STATUS_NOT_AVAILABLE;
 		}
-		ret = SceProcessmgrForDriver_B1C3EFCA(pids[i], 1);
+		ret = sceKernelSetInitialPMUSERENR(pids[i], 1);
 		if (ret) {
 			PAMP_OPEN_PRINTF(1292,
 				"[Error] sceKernelSetInitialPMUSERENR (ret = 0x%08x)\n", ret);
@@ -419,7 +419,7 @@ static int pampOpen(PampContext *ctx)
 	ctx->paConfig.base = ctx->trace[0].physical;
 	ctx->paConfig.size = 0;
 	ctx->paConfig.limit = 0;
-	ScePamgrForDriver_F2D5105A(ctx->key, &ctx->paConfig);
+	sceKernelPaSetupTraceBufferByKey(ctx->key, &ctx->paConfig);
 	ctx->pmuConfig.size = 0;
 	ctx->pmuConfig.eventMask0 = 0;
 	ctx->pmuConfig.base = ctx->trace[1].physical;
@@ -427,11 +427,11 @@ static int pampOpen(PampContext *ctx)
 	ScePamgrForDriver_E8FF4812(ctx->key, &ctx->pmuConfig);
 	ScePamgrForDriver_D9EFF812(ctx->key, ctx->trace[0].physical);
 	ScePamgrForDriver_95F4079E(ctx->key, ctx->trace[1].physical);
-	ScePamgrForDriver_0B7F6F53(ctx->key);
-	ScePamgrForDriver_B9EE1620(ctx->key);
+	sceKernelPaRemoveCounterTraceByKey(ctx->key);
+	sceKernelPaRemoveArmTraceByKey(ctx->key);
 	ScePamgrForDriver_81764B21(ctx->key);
-	ScePamgrForDriver_DB62FEFE(ctx->key);
-	ScePamgrForDriver_9935D8EF(ctx->key);
+	sceKernelPaRemoveBusTraceByKey(ctx->key);
+	sceKernelPaRemoveGpuTraceByKey(ctx->key);
 	ctx->streaming = 0;
 	ctx->finalPacket = 0;
 	return ScePamgrForDriver_3C12A0CD(ctx->key, pampPaCallback, ctx) ? PAMP_STATUS_WRONG_STATE : 0;
@@ -506,7 +506,7 @@ static int pampAllocateTrace(PampContext *ctx)
 		ctx->paConfig.base = ctx->trace[0].physical;
 		ctx->paConfig.size = ctx->trace[0].size;
 		ctx->paConfig.limit = 0;
-		ret = ScePamgrForDriver_F2D5105A(ctx->key, &ctx->paConfig);
+		ret = sceKernelPaSetupTraceBufferByKey(ctx->key, &ctx->paConfig);
 		if (ret)
 			return pampProtocolError(ret);
 	}
@@ -556,7 +556,7 @@ static int pampStop(PampContext *ctx)
 			if (!ret) {
 				SceUInt32 flags = ctx->flags;
 
-				ctx->flags = flags | ScePamgrForDriver_3ACF4316();
+				ctx->flags = flags | sceKernelPaGetTraceBufferStatus();
 			}
 			return pampProtocolError(ret);
 		}
@@ -576,11 +576,11 @@ static int pampTraceStatus(PampContext *ctx, PampPacket *packet)
 	for (int i = 0; i < 12; i++)
 		packet->data[i] = 0;
 	flags = ctx->flags;
-	ctx->flags = flags | ScePamgrForDriver_3ACF4316();
+	ctx->flags = flags | sceKernelPaGetTraceBufferStatus();
 	if (ctx->trace[0].allocated) {
 		if (!ctx->trace[0].circular && (ctx->flags & 8))
 			data[0] |= 1;
-		cursor = ScePamgrForDriver_FB46C3CD();
+		cursor = sceKernelPaGetWritePointer();
 		ctx->trace[0].available = ctx->flags & 8 ? ctx->trace[0].size :
 			cursor - ctx->trace[0].physical;
 		data[1] = ctx->trace[0].available;
@@ -667,9 +667,9 @@ static int pampSetPmu(PampContext *ctx)
 		return PAMP_STATUS_INVALID_ARGUMENT;
 	if (ctx->request.length < 0x14)
 		return PAMP_STATUS_SHORT_REQUEST;
-	ret = ScePamgrForDriver_0BCD4966(ctx->key, 0, ctx->request.status & 0xffff);
+	ret = sceKernelPaSetBookmarkChannelEnableByKey(ctx->key, 0, ctx->request.status & 0xffff);
 	if (!ret)
-		ret = ScePamgrForDriver_0BCD4966(ctx->key, 1, data[0] & 0xffff);
+		ret = sceKernelPaSetBookmarkChannelEnableByKey(ctx->key, 1, data[0] & 0xffff);
 	if (ret)
 		return pampProtocolError(ret);
 	ctx->pmuConfig.eventMask0 = ctx->request.status >> 16;
@@ -679,7 +679,7 @@ static int pampSetPmu(PampContext *ctx)
 		return pampProtocolError(ret);
 	ctx->paConfig.control = data[1] & 1 ? ctx->paConfig.control & ~4u : ctx->paConfig.control | 4;
 	ctx->paConfig.control = data[1] & 2 ? ctx->paConfig.control & ~8u : ctx->paConfig.control | 8;
-	ret = ScePamgrForDriver_F2D5105A(ctx->key, &ctx->paConfig);
+	ret = sceKernelPaSetupTraceBufferByKey(ctx->key, &ctx->paConfig);
 	if (ret)
 		return pampProtocolError(ret);
 	ctx->sampleConfig.bank0Control = data[2];
@@ -791,11 +791,11 @@ static int scePerfArmPmonOpen(int event, void *arg, void *opaque)
 				else if (ctx->request.length < 4)
 					status = PAMP_STATUS_SHORT_REQUEST;
 				else if (ctx->request.status == 1)
-					status = pampProtocolError(ScePamgrForDriver_0B7F6F53(ctx->key));
+					status = pampProtocolError(sceKernelPaRemoveCounterTraceByKey(ctx->key));
 				else if (ctx->request.status == 0)
-					status = pampProtocolError(ScePamgrForDriver_B9EE1620(ctx->key));
+					status = pampProtocolError(sceKernelPaRemoveArmTraceByKey(ctx->key));
 				else if (ctx->request.status == 2)
-					status = pampProtocolError(ScePamgrForDriver_9935D8EF(ctx->key));
+					status = pampProtocolError(sceKernelPaRemoveGpuTraceByKey(ctx->key));
 				else
 					status = PAMP_STATUS_INVALID_ARGUMENT;
 				break;
@@ -847,13 +847,13 @@ static int scePerfArmPmonOpen(int event, void *arg, void *opaque)
 				else if (ctx->request.length < 12)
 					status = PAMP_STATUS_SHORT_REQUEST;
 				else
-					status = pampProtocolError(ScePamgrForDriver_16A24732(
+					status = pampProtocolError(sceKernelPaInsertBookmark(
 						ctx->request.status, data[0], data[1]));
 				break;
 			case PAMP_CMD_GET_PA_VERSION:
 				for (int i = 0; i < 4; i++)
 					packet->data[i] = 0;
-				packet->words[0] = ScePamgrForDriver_EB70556B();
+				packet->words[0] = sceKernelPaGetTimebaseFrequency();
 				packet->length = 4;
 				status = PAMP_STATUS_OK;
 				break;
@@ -1009,7 +1009,7 @@ static int pampMainThread(SceSize arglen, void *argp)
 			if (ctx->state == PAMP_STATE_TRACING && !pampNotify(ctx, PAMP_NOTIFY_STOPPED, 3) &&
 			    !ScePamgrForDriver_1A7733E0(ctx->key)) {
 				flags = ctx->flags;
-				ctx->flags = flags | ScePamgrForDriver_3ACF4316();
+				ctx->flags = flags | sceKernelPaGetTraceBufferStatus();
 			}
 			if ((ret = sceKernelUnlockFastMutex(&ctx->commandLock)) < 0)
 				break;

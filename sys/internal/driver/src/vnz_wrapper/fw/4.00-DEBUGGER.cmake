@@ -130,7 +130,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelIsUncacheAddressInTmpFsGame
 	sceKernelDcacheCleanInvalidateRange
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceCpuForDriver_E813EBB2
 	sceKernelCpuResumeIntr
@@ -162,7 +162,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelScheduleWorkTask
 	sceKernelRegisterSysEventHandler
 	sceKernelRegisterKPLS
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterProcEventHandler
 	sceKernelDmaOpSetupChain
@@ -178,11 +178,11 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDReleaseObject
 	sceKernelMemBlockType2Memtype
 	SceSysmemForDriver_24A99FFF
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceGUIDKernelCreate
 	sceUIDClassInitClass
 	sceKernelCopyToUser
-	SceSysmemForDriver_84A4AF5E
+	scePUIDClose
 	SceSysmemForDriver_85336A1C
 	sceKernelGetPhyMemInfo
 	sceKernelFindMemBlockByAddr
@@ -190,7 +190,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelIsAccessibleRange
 	sceKernelGetMemBlockBase
 	sceKernelCopyFromUser
-	SceSysmemForDriver_BF209859
+	scePUIDOpenByGUID
 	sceKernelAllocMemBlockForKernel
 	sceKernelVARangeToPAVector
 	sceKernelUnmapMemBlock

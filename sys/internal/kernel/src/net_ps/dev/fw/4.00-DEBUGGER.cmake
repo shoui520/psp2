@@ -101,12 +101,12 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUser
-	SceSysmemForDriver_84A4AF5E
+	scePUIDClose
 	sceKernelGetMemBlockBase
 	sceKernelCopyFromUser
-	SceSysmemForDriver_BF209859
+	scePUIDOpenByGUID
 	sceKernelAllocMemBlockForKernel
 	sceKernelStrncpyFromUser
 	SceDebugForDriver_391B5B74
@@ -137,7 +137,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetThreadId
 	sceKernelChangeThreadCpuAffinityMask
 	sceKernelDeleteEventFlag
-	SceThreadmgrForDriver_8A35F714
+	sceKernelWaitEventFlagCB
 	sceKernelGetProcessId
 	sceKernelDeleteThread
 	sceKernelNotifyCallback
@@ -147,13 +147,13 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_FD6150D5
 	SceProcessmgrForDriver_D141C076
 	sceKernelIsGameBudget
-	SceKernelUtilsForDriver_478A6F3C
-	SceKernelUtilsForDriver_48F24106
-	SceKernelUtilsForDriver_4C9A5730
-	SceKernelUtilsForDriver_92AEDFBC
+	sceSha1BlockUpdate
+	sceSha1BlockResult
+	sceMt19937Init
+	sceMt19937UInt
 	SceKernelUtilsForDriver_C2A61770
 	SceKernelUtilsForDriver_D8678061
-	SceKernelUtilsForDriver_E4390FFA
+	sceSha1BlockInit
 	SceKernelUtilsForDriver_F12B6451
 	sceSblACMgrIsKernelProgram
 	sceSblACMgrIsSystemProgram
@@ -162,7 +162,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_F4B98F66
 	sceSblRngPseudoRandomNumber
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
+	sceKernelUnregisterProcEventHandler
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler
 	SceSysrootForDriver_27D30DB2
@@ -175,7 +175,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_D7207203
 	SceSysrootForDriver_ECADF8C3
 	sceRegMgrGetKeyInt
-	SceRtcForDriver_DEC408D4
+	sceRtcGetCurrentTick
 )
 set(MODULE_IMPORT_VARS
 )

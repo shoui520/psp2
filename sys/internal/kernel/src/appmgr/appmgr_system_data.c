@@ -122,7 +122,7 @@ int sceAppMgrGetSystemDataFile(SceUInt32 location, void *buffer, SceSize size)
 			break;
 		}
 		memset(path, 0, sizeof(path));
-		result = SceAppMgrForDriver_0813AFCA(1, path, 32);
+		result = sceAppMgrGetUserDirPath(1, path, 32);
 		if (result != 0)
 			break;
 		APPMGR_STRCAT(path, "/np/myprofile.dat", sizeof(path));

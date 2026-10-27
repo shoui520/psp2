@@ -212,7 +212,7 @@ int regMgrSetKey(int handle, const char *category, const char *name, const void 
 		if (g_regMgrCallback[cb].cbid == -1)
 			continue;
 		if (g_regMgrCallback[cb].mode != REGMGR_CALLBACK_NOTIFY) {
-			if (SceThreadmgrForDriver_0892D8DF(g_regMgrCallback[cb].cbid) < 0)
+			if (sceKernelGetCallbackCount(g_regMgrCallback[cb].cbid) < 0)
 				memset(&g_regMgrCallback[cb], 0xff, sizeof(g_regMgrCallback[cb]));
 			continue;
 		}
@@ -2167,7 +2167,7 @@ int regMgrComApiEpilogue(int lock)
 	int error;
 
 	if (g_regMgrDrvErrCallback != -1) {
-		if (SceThreadmgrForDriver_0892D8DF(g_regMgrDrvErrCallback) < 0) {
+		if (sceKernelGetCallbackCount(g_regMgrDrvErrCallback) < 0) {
 			g_regMgrDrvErrCallback = -1;
 		} else {
 			error = regMgrGetLastError();
@@ -2400,7 +2400,7 @@ settings:
 	if (g_regMgrConfig & 2) {
 		if (g_regMgrVolatileMode != 1 &&
 		    regMgrGetKeyInt("/DEVENV/TOOL", "gpi_switch", &value) == 0)
-			SceDebugLedForDriver_51C5325A(value);
+			sceKernelSetGPI(value);
 		if ((g_regMgrConfig & 1) && g_regMgrRegion == REGMGR_REGION_TOOL)
 			g_regMgrRegion = 2;
 		if (g_regMgrIsDolce == 1)
@@ -2490,7 +2490,7 @@ int regMgrMakePsIdToken(SceUInt8 *token)
 	ret = sceSblAimgrGetOpenPsId(&psid);
 	if (ret != 0)
 		return ret;
-	time = SceProcessmgrForDriver_02179E12();
+	time = sceKernelGetProcessTimeLowCore();
 	for (i = 0; i < 32; i++) {
 		if (i == 8)
 			token[i] = time & 3;

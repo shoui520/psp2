@@ -55,7 +55,7 @@ int ngsProcessInitialize(SceUID pid)
 	NgsProcessStorage *storage = NULL;
 	int result;
 
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 		ngsPlatformState.processStorageKey, (void **)&storage, 1);
 	if (result >= 0) {
 		memset(storage, 0, sizeof(*storage));
@@ -80,7 +80,7 @@ int ngsProcessRelease(SceUID pid)
 	int index;
 	int result;
 
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 		ngsPlatformState.processStorageKey, (void **)&storage, 0);
 	if (result < 0)
 		return result;
@@ -108,13 +108,13 @@ int ngsProcessRelease(SceUID pid)
 			}
 			command[2] = SceCodecEngineWrapperForDriver_C7C150AE(rack->dsp);
 			command[3] = rack->dspSize;
-			SceCodecEngineWrapperForDriver_391BD4FD(324, command, NULL, NULL);
+			sceVeneziaRpcCallGenericThunk(324, command, NULL, NULL);
 		}
 	}
 	if (storage->systemId != -1) {
 		command[0] = ngsPlatformState.sharedPhysicalAddress;
 		command[1] = storage->systemId;
-		result = SceCodecEngineWrapperForDriver_391BD4FD(322, command,
+		result = sceVeneziaRpcCallGenericThunk(322, command,
 			NULL, NULL);
 		if (result != 0)
 			return result;
@@ -178,7 +178,7 @@ int ngsProcessSuspend(SceUID pid)
 	int retries;
 	int state;
 
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 		ngsPlatformState.processStorageKey, (void **)&storage, 0);
 	if (result >= 0) {
 		if (storage->runState != 0) {
@@ -213,7 +213,7 @@ int ngsProcessResume(SceUID pid)
 	NgsProcessStorage *storage = NULL;
 	int result;
 
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 		ngsPlatformState.processStorageKey, (void **)&storage, 0);
 	if (result < 0)
 		return result;
@@ -261,7 +261,7 @@ int ngsGetProcessStorage(NgsProcessStorage **storage)
 		if (storage == NULL)
 			return SCE_NGS_ERROR;
 		*storage = NULL;
-		result = SceProcessmgrForDriver_AF80F39C(pid,
+		result = sceKernelGetRemoteKPLS(pid,
 			ngsPlatformState.processStorageKey, (void **)storage, 0);
 		return (result >> 31) & SCE_NGS_ERROR;
 	}
@@ -305,7 +305,7 @@ int ngsCreateSystem(NgsSynSystem *system)
 		index = 7;
 	else {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(pid,
+		if (sceKernelGetRemoteKPLS(pid,
 			ngsPlatformState.processStorageKey, (void **)&storage, 0) < 0)
 			return SCE_NGS_ERROR;
 		goto foundStorage;
@@ -355,7 +355,7 @@ foundStorage:
 	command.sharedPhysicalAddress = ngsPlatformState.sharedPhysicalAddress;
 	command.sampleRate = system->SampleRate;
 	ngsLockCodec(context);
-	result = SceCodecEngineWrapperForDriver_391BD4FD(320, (const unsigned int *)&command, NULL, NULL);
+	result = sceVeneziaRpcCallGenericThunk(320, (const unsigned int *)&command, NULL, NULL);
 	ngsUnlockCodec(system->context);
 	if (result < 0) {
 		if (system->compiledSdkVersion < 0x1800000 &&
@@ -386,7 +386,7 @@ foundStorage:
 				ngsPlatformState.sharedPhysicalAddress;
 			command.rackVoiceCounts = system->systemId;
 			ngsLockCodec(system->context);
-			SceCodecEngineWrapperForDriver_391BD4FD(322, (const unsigned int *)&command, NULL, NULL);
+			sceVeneziaRpcCallGenericThunk(322, (const unsigned int *)&command, NULL, NULL);
 			ngsUnlockCodec(system->context);
 			sceKernelFinalizeFastMutex(
 				(SceKernelFastMutex *)&system->context->systemMutex);
@@ -450,7 +450,7 @@ int ngsReleaseSystem(NgsSynSystem *system)
 		index = 7;
 	else {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(pid,
+		if (sceKernelGetRemoteKPLS(pid,
 			ngsPlatformState.processStorageKey, (void **)&storage, 0) < 0)
 			return SCE_NGS_ERROR;
 		goto foundStorage;
@@ -460,7 +460,7 @@ foundStorage:
 	command.sharedPhysicalAddress = ngsPlatformState.sharedPhysicalAddress;
 	command.systemId = system->systemId;
 	ngsLockCodec(system->context);
-	result = SceCodecEngineWrapperForDriver_391BD4FD(322, (const unsigned int *)&command, NULL, NULL);
+	result = sceVeneziaRpcCallGenericThunk(322, (const unsigned int *)&command, NULL, NULL);
 	ngsUnlockCodec(system->context);
 	if (result != 0)
 		return result;
@@ -540,7 +540,7 @@ int ngsAllocateProcessMemory(unsigned int handle, SceSize coherentSize,
 		index = 7;
 	else {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(pid,
+		if (sceKernelGetRemoteKPLS(pid,
 			ngsPlatformState.processStorageKey, (void **)&storage, 0) < 0)
 			return SCE_NGS_ERROR;
 		goto foundStorage;
@@ -646,7 +646,7 @@ void ngsFreeProcessMemory(unsigned int handle, void *coherentMemory,
 		index = 7;
 	else {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(pid,
+		if (sceKernelGetRemoteKPLS(pid,
 			ngsPlatformState.processStorageKey, (void **)&storage, 0) < 0)
 			return;
 		goto foundStorage;

@@ -31,7 +31,7 @@ int armPmonResetAllCounters(SceUID thread)
 	int result;
 
 	for (counter = 0; counter < ARM_PMON_COUNTERS; counter++) {
-		result = SceThreadmgrForKernel_7B3368F1(thread, counter, 0);
+		result = sceKernelPMonThreadSetCounter(thread, counter, 0);
 		if (result != 0) {
 			SCE_DBG_PRINTF(0, 51,
 				"[Error] sceKernelPMonThreadSetCounter (ret = 0x%08x)\n",
@@ -39,7 +39,7 @@ int armPmonResetAllCounters(SceUID thread)
 			return result;
 		}
 	}
-	result = SceThreadmgrForKernel_7B3368F1(thread, ARM_PMON_CYCLE_COUNTER, 0);
+	result = sceKernelPMonThreadSetCounter(thread, ARM_PMON_CYCLE_COUNTER, 0);
 	if (result != 0)
 		SCE_DBG_PRINTF(0, 59,
 			"[Error] sceKernelPMonThreadSetCounter (ret = 0x%08x)\n",
@@ -99,21 +99,21 @@ int armPmonExecAllThread(unsigned int operation, unsigned int counter,
 					result);
 			break;
 		case ARM_PMON_OP_START:
-			result = SceThreadmgrForKernel_7F831213(threads[i], ARM_PMON_ENABLE_ALL);
+			result = sceKernelPMonThreadSetEnableCounter(threads[i], ARM_PMON_ENABLE_ALL);
 			if (result != 0)
 				SCE_DBG_PRINTF(0, 132,
 					"[Error] sceKernelPMonThreadSetEnableCounter (ret = 0x%08x)\n",
 					result);
 			break;
 		case ARM_PMON_OP_STOP:
-			result = SceThreadmgrForKernel_1D2A6815(threads[i], ARM_PMON_ENABLE_ALL);
+			result = sceKernelPMonThreadClearEnableCounter(threads[i], ARM_PMON_ENABLE_ALL);
 			if (result != 0)
 				SCE_DBG_PRINTF(0, 143,
 					"[Error] sceKernelPMonThreadClearEnableCounter (ret = 0x%08x)\n",
 					result);
 			break;
 		case ARM_PMON_OP_SET_COUNTER:
-			result = SceThreadmgrForKernel_7B3368F1(threads[i], counter, value);
+			result = sceKernelPMonThreadSetCounter(threads[i], counter, value);
 			if (result != 0)
 				SCE_DBG_PRINTF(0, 154,
 					"[Error] sceKernelPMonThreadSetCounter (ret = 0x%08x)\n",
@@ -159,7 +159,7 @@ int sceKernelPerfArmPmonSelectEvent(SceUID thread, unsigned int counter,
 
 	if (counter >= ARM_PMON_COUNTERS)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (SceSysrootForKernel_403B509E() <= 0x1f &&
+	if (sceKernelSysrootGetKermitRevision() <= 0x1f &&
 	    (uint8_t)(event + 0x60) <= 5)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (thread == SCE_UID_THREAD_ID_PROCESS_ALL || thread == -1) {
@@ -186,7 +186,7 @@ int sceKernelPerfArmPmonStart(SceUID thread)
 			SCE_DBG_PRINTF(0, 340,
 				"[Error] armPmonExecAllThread (ret = 0x%08x)\n", result);
 	} else {
-		result = SceThreadmgrForKernel_7F831213(thread, ARM_PMON_ENABLE_ALL);
+		result = sceKernelPMonThreadSetEnableCounter(thread, ARM_PMON_ENABLE_ALL);
 		if (result != 0)
 			SCE_DBG_PRINTF(0, 346,
 				"[Error] sceKernelPMonThreadSetEnableCounter (ret = 0x%08x)\n",
@@ -205,7 +205,7 @@ int sceKernelPerfArmPmonStop(SceUID thread)
 			SCE_DBG_PRINTF(0, 368,
 				"[Error] armPmonExecAllThread (ret = 0x%08x)\n", result);
 	} else {
-		result = SceThreadmgrForKernel_1D2A6815(thread, ARM_PMON_ENABLE_ALL);
+		result = sceKernelPMonThreadClearEnableCounter(thread, ARM_PMON_ENABLE_ALL);
 		if (result != 0)
 			SCE_DBG_PRINTF(0, 374,
 				"[Error] sceKernelPMonThreadClearEnableCounter (ret = 0x%08x)\n",
@@ -227,7 +227,7 @@ int sceKernelPerfArmPmonSetCounterValue(SceUID thread, unsigned int counter,
 			SCE_DBG_PRINTF(0, 416,
 				"[Error] armPmonExecAllThread (ret = 0x%08x)\n", result);
 	} else {
-		result = SceThreadmgrForKernel_7B3368F1(thread, counter, value);
+		result = sceKernelPMonThreadSetCounter(thread, counter, value);
 		if (result != 0)
 			SCE_DBG_PRINTF(0, 422,
 				"[Error] sceKernelPMonThreadSetCounter (ret = 0x%08x)\n", result);
@@ -239,7 +239,7 @@ int sceKernelPerfArmPmonOpen(void)
 {
 	int result;
 
-	result = SceProcessmgrForDriver_61B9B6FA(0, ARM_PMON_PMCR);
+	result = sceKernelSetInitialPMCR(0, ARM_PMON_PMCR);
 	if (result != 0) {
 		SCE_DBG_PRINTF(0, 180,
 			"[Error] sceKernelSetInitialPMCR (ret = 0x%08x)\n", result);
@@ -252,7 +252,7 @@ int sceKernelPerfArmPmonOpen(void)
 			result);
 		return result;
 	}
-	result = SceProcessmgrForDriver_B1C3EFCA(0, 1);
+	result = sceKernelSetInitialPMUSERENR(0, 1);
 	if (result != 0) {
 		SCE_DBG_PRINTF(0, 192,
 			"[Error] sceKernelSetInitialPMUSERENR (ret = 0x%08x)\n",
@@ -271,7 +271,7 @@ int sceKernelPerfArmPmonClose(void)
 {
 	int result;
 
-	result = SceProcessmgrForDriver_61B9B6FA(0, 0);
+	result = sceKernelSetInitialPMCR(0, 0);
 	if (result != 0) {
 		SCE_DBG_PRINTF(0, 221,
 			"[Error] sceKernelSetInitialPMCR (ret = 0x%08x)\n", result);
@@ -284,7 +284,7 @@ int sceKernelPerfArmPmonClose(void)
 			result);
 		return result;
 	}
-	result = SceProcessmgrForDriver_B1C3EFCA(0, 0);
+	result = sceKernelSetInitialPMUSERENR(0, 0);
 	if (result != 0) {
 		SCE_DBG_PRINTF(0, 233,
 			"[Error] sceKernelSetInitialPMUSERENR (ret = 0x%08x)\n",
@@ -303,7 +303,7 @@ int sceKernelPerfArmPmonClose(void)
 static inline __attribute__((always_inline)) int translatePmonThread(SceUID *thread)
 {
 	if (*thread != 0 && *thread != SCE_UID_THREAD_ID_PROCESS_ALL && *thread != -1) {
-		*thread = SceSysmemForDriver_45D22597(0, *thread);
+		*thread = scePUIDtoGUID(0, *thread);
 		if (*thread < 0)
 			return *thread | 0x40000000;
 	}

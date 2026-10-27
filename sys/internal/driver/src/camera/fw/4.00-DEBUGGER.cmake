@@ -98,12 +98,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelFreeMemBlock
-	SceSysmemForDriver_22CBE925
+	sceKernelUnlockRangeWithMode
 	sceKernelCopyToUser
 	sceKernelVAtoPA
 	sceKernelGetMemBlockBase
 	sceKernelUnlockRangeProc
-	SceSysmemForDriver_AE36C775
+	sceKernelVARangeToPARange
 	sceKernelLockRangeWithMode
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
@@ -112,7 +112,7 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_idiv
 	memcpy
 	__stack_chk_fail
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	sceKernelReleaseSubIntrHandler
 	sceKernelEnableSubIntr
 	sceKernelRegisterSubIntrHandler
@@ -128,7 +128,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelClearEventFlag
 	sceKernelDeleteEventFlag
 	sceKernelPollEventFlag
-	SceThreadmgrForDriver_8A35F714
+	sceKernelWaitEventFlagCB
 	sceKernelIsUserModeThread
 	sceKernelGetProcessId
 	sceKernelCreateThread
@@ -137,16 +137,16 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateMutex
 	sceKernelRegisterKPLS
 	SceProcessmgrForDriver_8CB01675
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	SceProcessmgrForDriver_D141C076
 	sceKernelRegisterSysEventHandler
 	sceKernelRegisterProcEventHandler
-	SceI2cForDriver_0A40B7BF
-	SceI2cForDriver_CA94A759
+	sceI2cMasterTransmitReceive
+	sceI2cMasterTransmit
 	SceGpioForDriver_372022A4
-	SceGpioForDriver_D454A584
-	SceGpioForDriver_F6310435
-	SceIftuForDriver_67E37EFC
+	sceGpioPortSet
+	sceGpioPortClear
+	sceIftuConvert
 	SceSysconForDriver_CBD6D8BC
 	SceCsiForDriver_10545393
 	SceCsiForDriver_2AFEA1B0
@@ -157,7 +157,7 @@ set(MODULE_IMPORT_FUNCS
 	SceClockgenForDriver_06663ECA
 	SceClockgenForDriver_82F39378
 	scePowerRegisterCallback
-	ScePowerForDriver_C743E392
+	scePowerSetCameraBusClockFrequency
 	ScePowerForDriver_FE35B73D
 	sceIdStorageLookup
 )

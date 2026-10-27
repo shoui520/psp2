@@ -11,33 +11,33 @@ SceTouch:
       version: 1
       nid: 0x3E4F4A81
       functions:
-        - sceTouchEnableIdleTimerCancelSetting: 0x012EAE3A
-        - sceTouchPeekRegion: 0x04440622
-        - sceTouchSetRegionAttr: 0x08DD4C7C
-        - sceTouchGetPanelInfo: 0x10A2CA25
+        - sceTouchEnableIdleTimerCancelSettingForUser: 0x012EAE3A
+        - sceTouchPeekRegionForUser: 0x04440622
+        - sceTouchSetRegionAttrForUser: 0x08DD4C7C
+        - sceTouchGetPanelInfoForUser: 0x10A2CA25
         - sceTouchSetSamplingStateExt: 0x13CDFC43
-        - sceTouchRead: 0x169A1D58
-        - sceTouchSetSamplingState: 0x1B9C5D14
-        - sceTouchGetSamplingState: 0x26531526
+        - sceTouchReadForUser: 0x169A1D58
+        - sceTouchSetSamplingStateForUser: 0x1B9C5D14
+        - sceTouchGetSamplingStateForUser: 0x26531526
         - sceTouchPeekRegionExt: 0x2CF6D7E2
         - sceTouchClearRegion: 0x2D94EAEA
         - sceTouchRead2: 0x39401BEA
         - sceTouchPeek2: 0x3AD3D0A1
-        - sceTouchDisableTouchForce: 0x41194411
+        - sceTouchDisableTouchForceForUser: 0x41194411
         - sceTouchSetProcessPrivilege: 0x609EA489
-        - sceTouchSetRegion: 0x6134DFBE
-        - sceTouchReadRegion: 0x93B5635B
+        - sceTouchSetRegionForUser: 0x6134DFBE
+        - sceTouchReadRegionForUser: 0x93B5635B
         - sceTouchReadRegionExt: 0x9F0ACAF9
         - sceTouchEnableTouchForceExt: 0xA3FE877B
-        - sceTouchGetProcessInfo: 0xAB364C23
-        - sceTouchEnableTouchForce: 0xB18370C2
-        - sceTouchActivateRegion: 0xBD59D652
-        - sceTouchGetDeviceInfo: 0xD7889B91
+        - sceTouchGetProcessInfoForUser: 0xAB364C23
+        - sceTouchEnableTouchForceForUser: 0xB18370C2
+        - sceTouchActivateRegionForUser: 0xBD59D652
+        - sceTouchGetDeviceInfoForUser: 0xD7889B91
         - sceTouchGetSamplingStateExt: 0xDC8671EA
         - sceTouchGetPixelDensity2: 0xE0C1DB92
         - sceTouchDisableTouchForceExt: 0xED25DFDC
         - sceTouchGetPixelDensity: 0xF0704CF3
-        - sceTouchPeek: 0xFF082DF0
+        - sceTouchPeekForUser: 0xFF082DF0
     SceTouchForDriver:
       syscall: false
       version: 1
@@ -45,30 +45,30 @@ SceTouch:
       functions:
         - SceTouchForDriver_03C3AC7C: 0x03C3AC7C
         - SceTouchForDriver_062A11A2: 0x062A11A2
-        - SceTouchForDriver_10A998DE: 0x10A998DE
-        - SceTouchForDriver_1247257A: 0x1247257A
-        - SceTouchForDriver_174D0333: 0x174D0333
+        - sceTouchSetRegionAttr: 0x10A998DE
+        - sceTouchSetSamplingState: 0x1247257A
+        - sceTouchGetSamplingState: 0x174D0333
         - SceTouchForDriver_328E38B0: 0x328E38B0
         - SceTouchForDriver_384F6C68: 0x384F6C68
         - SceTouchForDriver_3F3FBF69: 0x3F3FBF69
         - SceTouchForDriver_423F26D3: 0x423F26D3
-        - SceTouchForDriver_4DF3A37C: 0x4DF3A37C
-        - SceTouchForDriver_4E6C4558: 0x4E6C4558
+        - sceTouchGetProcessInfo: 0x4DF3A37C
+        - sceTouchUpdateRestart: 0x4E6C4558
         - sceTouchSetCtrlpCallback: 0x628D9324
         - SceTouchForDriver_63DCF2FE: 0x63DCF2FE
-        - SceTouchForDriver_70C8AACE: 0x70C8AACE
-        - SceTouchForDriver_7985B164: 0x7985B164
+        - sceTouchRead: 0x70C8AACE
+        - sceTouchSetRegion: 0x7985B164
         - SceTouchForDriver_845E2115: 0x845E2115
-        - SceTouchForDriver_937DB4C0: 0x937DB4C0
-        - SceTouchForDriver_9A91F624: 0x9A91F624
-        - SceTouchForDriver_9B3F7207: 0x9B3F7207
+        - sceTouchGetPanelInfo: 0x937DB4C0
+        - sceTouchReadRegion: 0x9A91F624
+        - sceTouchPeekRegion: 0x9B3F7207
         - SceTouchForDriver_9C8CCB66: 0x9C8CCB66
         - SceTouchForDriver_A32529B8: 0xA32529B8
-        - SceTouchForDriver_BAD1960B: 0xBAD1960B
-        - SceTouchForDriver_C7F0DAA0: 0xC7F0DAA0
-        - SceTouchForDriver_CDE79889: 0xCDE79889
-        - SceTouchForDriver_DDCF5145: 0xDDCF5145
+        - sceTouchPeek: 0xBAD1960B
+        - sceTouchActivateRegion: 0xC7F0DAA0
+        - sceTouchDisableTouchForce: 0xCDE79889
+        - sceTouchUpdateInit: 0xDDCF5145
         - SceTouchForDriver_E1C5D95F: 0xE1C5D95F
-        - SceTouchForDriver_E41B4BF8: 0xE41B4BF8
-        - SceTouchForDriver_EBF4C86A: 0xEBF4C86A
-        - SceTouchForDriver_FD2E0278: 0xFD2E0278
+        - sceTouchEnableTouchForce: 0xE41B4BF8
+        - sceTouchEnableIdleTimerCancelSetting: 0xEBF4C86A
+        - sceTouchGetDeviceInfo: 0xFD2E0278

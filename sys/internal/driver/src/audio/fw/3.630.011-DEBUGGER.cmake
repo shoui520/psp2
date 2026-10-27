@@ -106,7 +106,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocMemBlockForKernel
 	sceKernelIsUncacheAddressInTmpFsGame
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelSpinlockLowLock
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
@@ -129,9 +129,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetProcessId
 	sceKernelCreateThread
 	sceKernelSetEventFlag
-	SceProcessmgrForDriver_02179E12
+	sceKernelGetProcessTimeLowCore
 	sceKernelRegisterKPLS
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterSysEventHandler

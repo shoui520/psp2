@@ -29,7 +29,7 @@ void SceThreadmgrForDriver_032E8F73(SceKernelSpinlock *lock)
 
 int SceThreadmgrForDriver_0A4AD37A(SceKernelSpinlock *lock)
 {
-	return SceCpuForDriver_5AC9D394(lock);
+	return sceKernelSpinlockLowTrylock(lock);
 }
 
 void SceThreadmgrForDriver_C03799E2(SceKernelSpinlock *lock)

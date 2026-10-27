@@ -294,7 +294,7 @@ int audioCaptureDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 			state->currentCaptureFrames = 0;
 			state->previousCaptureFrames = 0;
 		}
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 		if (sceKernelDmaOpSync(opId, 1, 0, 0) <= 0) {
 			state->captureState = 0;
 			if (state == &audioDmaStates[2]) {
@@ -310,7 +310,7 @@ int audioCaptureDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 			goto notify;
 		}
 	} else {
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 	}
 	if (state == &audioDmaStates[2]) {
 		state->captureState = 1;
@@ -442,11 +442,11 @@ int audioAuxiliaryDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 			state->currentCaptureFrames = 0;
 			state->previousCaptureFrames = 0;
 		}
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 		if (sceKernelDmaOpSync(opId, 1, 0, 0) <= 0)
 			goto stop;
 	} else {
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 	}
 	if (audioDmaStates[1].sourceMode == audioDmaStates[0].sourceMode ||
 	    (audioDmaStates[0].sourceMode != 2 &&

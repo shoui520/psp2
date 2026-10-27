@@ -13,10 +13,10 @@
  * Inflate a raw deflate stream (src) into dst_size bytes at dst; *next, when
  * given, receives the end of the input. Returns the output size or an error.
  */
-	.global	SceKernelUtilsForDriver_8AF1FAD4
-	.type	SceKernelUtilsForDriver_8AF1FAD4, %function
+	.global	sceDeflateDecompress
+	.type	sceDeflateDecompress, %function
 	.thumb_func
-SceKernelUtilsForDriver_8AF1FAD4:
+sceDeflateDecompress:
 	push.w	{r0, r3, r4, r5, r6, r7, r8, r9, sl, fp, lr}
 	subw	sp, sp, #0x4ec
 	lsls	r6, r2, #31
@@ -378,9 +378,9 @@ SceKernelUtilsForDriver_8AF1FAD4:
 .Linflate40:
 	addw	sp, sp, #0x4f4
 	pop.w	{r4, r5, r6, r7, r8, r9, sl, fp, pc}
-	.size	SceKernelUtilsForDriver_8AF1FAD4, . - SceKernelUtilsForDriver_8AF1FAD4
+	.size	sceDeflateDecompress, . - sceDeflateDecompress
 
-/* SceKernelUtilsForDriver_3D74CCDF without a valid cbInfo: SCE_DEFLATE_ERROR_INVALID_CBINFO */
+/* sceDeflateDecompressPartial without a valid cbInfo: SCE_DEFLATE_ERROR_INVALID_CBINFO */
 	.type	DeflatePartialInvalidCbInfo, %function
 	.thumb_func
 DeflatePartialInvalidCbInfo:
@@ -392,10 +392,10 @@ DeflatePartialInvalidCbInfo:
  * The same with the input supplied piecewise: DeflateRefill calls the
  * callback of cbInfo for more input when the current piece is used up.
  */
-	.global	SceKernelUtilsForDriver_3D74CCDF
-	.type	SceKernelUtilsForDriver_3D74CCDF, %function
+	.global	sceDeflateDecompressPartial
+	.type	sceDeflateDecompressPartial, %function
 	.thumb_func
-SceKernelUtilsForDriver_3D74CCDF:
+sceDeflateDecompressPartial:
 	push.w	{r0, r3, r4, r5, r6, r7, r8, r9, sl, fp, lr}
 	subw	sp, sp, #0x4ec
 	adds	r5, r0, r1
@@ -921,7 +921,7 @@ SceKernelUtilsForDriver_3D74CCDF:
 .Lpartial76:
 	subs	r6, #1
 	b.n	.Lpartial60
-	.size	SceKernelUtilsForDriver_3D74CCDF, . - SceKernelUtilsForDriver_3D74CCDF
+	.size	sceDeflateDecompressPartial, . - sceDeflateDecompressPartial
 
 /* DeflateRefill: the next input piece, from the callback in fp. */
 	.type	DeflateRefill, %function

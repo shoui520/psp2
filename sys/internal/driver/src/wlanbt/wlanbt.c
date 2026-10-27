@@ -25,13 +25,13 @@ int wlanBtPrepareWakeWait(void)
 	uint8_t interruptEnable;
 	int result;
 
-	ScePowerForDriver_F535D928(4, 1);
+	scePowerSetWakeupCondition(4, 1);
 	SceSdifForDriver_DECE963B(SceSdifForDriver_6A8235FC(2), 4, 1,
 				 &gWlanBtConfig.interruptEnable);
 	interruptEnable = gWlanBtConfig.interruptEnable & ~1;
 	SceSdifForDriver_5D65E66B(SceSdifForDriver_6A8235FC(2), 4, 1,
 				 &interruptEnable);
-	result = SceSdifForDriver_AB0222F2(SceSdifForDriver_6A8235FC(2));
+	result = sceSdifGoStandbyState(SceSdifForDriver_6A8235FC(2));
 	gWlanBtConfig.configuration &= ~0x100u;
 	return result;
 }
@@ -102,15 +102,15 @@ void wlanBtPowerOnDevice(void)
 
 	if (SceSysconForDriver_C0F215B7() != 1 ||
 	    (result = SceSysconForDriver_A2E85DB9(0)) >= 0) {
-		result = SceClockgenForDriver_7B28A724();
+		result = sceClockgenWlanBtClkEnable();
 		if (result >= 0) {
 			sceKernelDelayThread(5000);
 			result = SceSysconForDriver_A2E85DB9(1);
 			if (result >= 0) {
-				result = SceSysconForDriver_40FF3898(16, 0);
+				result = sceSysconCtrlDeviceReset(16, 0);
 				if (result >= 0) {
 					sceKernelDelayThread(10000);
-					result = SceSysconForDriver_40FF3898(16, 1);
+					result = sceSysconCtrlDeviceReset(16, 1);
 					if (result >= 0)
 						sceKernelDelayThread(10000);
 				}
@@ -124,9 +124,9 @@ void wlanBtPowerDownDevice(void)
 {
 	int result;
 
-	SceSysconForDriver_40FF3898(16, 0);
+	sceSysconCtrlDeviceReset(16, 0);
 	SceSysconForDriver_A2E85DB9(0);
-	result = SceClockgenForDriver_B6F0A532();
+	result = sceClockgenWlanBtClkDisable();
 	sceKernelDelayThread(500000);
 	SCE_DBG_ASSERT(result >= 0, 372);
 }
@@ -140,7 +140,7 @@ void wlanBtCompleteWakeWait(void)
 	if (gWlanBtConfig.wlanState != 4 ||
 	    gWlanBtConfig.bluetoothState != 4)
 		return;
-	ScePowerForDriver_F535D928(4, 0);
+	scePowerSetWakeupCondition(4, 0);
 	gWlanBtConfig.wakeSources = 0;
 	if (!(gWlanBtConfig.configuration & 0xc0))
 		return;
@@ -177,9 +177,9 @@ void wlanBtCompleteWakeWait(void)
 	} else {
 		int result;
 
-		SceSysconForDriver_40FF3898(16, 0);
+		sceSysconCtrlDeviceReset(16, 0);
 		SceSysconForDriver_A2E85DB9(0);
-		result = SceClockgenForDriver_B6F0A532();
+		result = sceClockgenWlanBtClkDisable();
 		sceKernelDelayThread(500000);
 		SCE_DBG_ASSERT_FUNC(result >= 0, 372, "wlanBtPowerDownDevice");
 		gWlanBtConfig.configuration = 0;
@@ -368,7 +368,7 @@ int sceWlanBtSetConfiguration(int request)
 restartRobin:
 	wlanBtStopRobin();
 	if (wlanBtStartRobin() < 0) {
-		ScePowerForDriver_F535D928(4, 0);
+		scePowerSetWakeupCondition(4, 0);
 		gWlanBtConfig.wlanState = 4;
 		gWlanBtConfig.bluetoothState = 4;
 		gWlanBtConfig.configuration = 0;
@@ -381,14 +381,14 @@ goWakeWaitState:
 		SCE_PRINTF_WITH_INFO_FUNC(0, 260, "_goWakeWaitState",
 			"[SceWlanBt]: Force device off (0x%02x)\n",
 			gWlanBtConfig.forceOffFlags);
-		ScePowerForDriver_F535D928(4, 0);
+		scePowerSetWakeupCondition(4, 0);
 		wlanBtStopRobin();
 		gWlanBtConfig.configuration = 0;
 		gWlanBtConfig.forceOffFlags = 0;
 	} else if (gWlanBtConfig.configuration & 0xc0)
 		wlanBtPrepareWakeWait();
 	else {
-		ScePowerForDriver_F535D928(4, 0);
+		scePowerSetWakeupCondition(4, 0);
 		wlanBtStopRobin();
 		gWlanBtConfig.configuration = 0;
 	}
@@ -398,7 +398,7 @@ done:
 	return result;
 }
 
-int SceWlanBtForDriver_C5AA6F43(SceWlanBtMonitorCallback *monitor)
+int sceWlanBtAttachMonitor(SceWlanBtMonitorCallback *monitor)
 {
 	gWlanBtConfig.monitor = monitor;
 	return 0;

@@ -15,7 +15,7 @@ int bbmcInitializeGpio(void)
 	ret = SceGpioForDriver_372022A4(0, 30, 0);
 	if (ret < 0)
 		return ret;
-	SceGpioForDriver_F6310435(0, 30);
+	sceGpioPortClear(0, 30);
 	return 0;
 }
 
@@ -38,7 +38,7 @@ int bbmcResetGpio(void)
 
 	if (ret < 0)
 		return ret;
-	SceGpioForDriver_F6310435(0, 30);
+	sceGpioPortClear(0, 30);
 	return 0;
 }
 
@@ -47,7 +47,7 @@ int bbmcAcquireGpio(int *previous)
 {
 	sceKernelSpinlockLowLock(&g_bbmcGpioLock);
 	if (g_bbmcGpioUsers == 0)
-		SceGpioForDriver_D454A584(0, 30);
+		sceGpioPortSet(0, 30);
 	if (previous != NULL)
 		*previous = g_bbmcGpioUsers;
 	g_bbmcGpioUsers++;
@@ -67,7 +67,7 @@ int bbmcReleaseGpio(int *previous)
 	if (count != 0) {
 		g_bbmcGpioUsers = count - 1;
 		if (count == 1)
-			SceGpioForDriver_F6310435(0, 30);
+			sceGpioPortClear(0, 30);
 	}
 	sceKernelSpinlockLowUnlock(&g_bbmcGpioLock);
 	return 0;

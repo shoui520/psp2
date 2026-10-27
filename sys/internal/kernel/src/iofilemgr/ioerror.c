@@ -99,7 +99,7 @@ SceUID sceIoCreateErrorEvent(int mntId, SceUInt32 pattern, IoErrorEventInfo *use
 	return SCE_ERROR_ERRNO_EINVAL;
 }
 
-int SceIofilemgrForDriver_40B933C7(SceUID uid)
+int sceIoClearErrorEvent(SceUID uid)
 {
 	IoErrorEvent *event;
 	int ret;
@@ -112,14 +112,14 @@ int SceIofilemgrForDriver_40B933C7(SceUID uid)
 	return ret;
 }
 
-int SceIofilemgrForDriver_C6158F8D(SceUID uid)
+int sceIoDeleteErrorEvent(SceUID uid)
 {
 	SceUID handle;
 
 	handle = sceGUIDOpenByGUID(uid);
 	if (handle < 0)
 		return handle;
-	if (!SceSysmemForKernel_7F7D5C4A(SceSysmemForKernel_368F1C36(handle),
+	if (!SceSysmemForKernel_7F7D5C4A(sceGUIDtoClass(handle),
 					 &g_ioErrorEventClass.base))
 		return SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
 	sceGUIDClose(handle);
@@ -209,16 +209,16 @@ int ioerror_process_finalize(SceUID pid)
 		if ((int)num <= 0)
 			break;
 		for (i = 0; i < (int)num; i++) {
-			guid = SceSysmemForDriver_45D22597(pid, puids[i]);
+			guid = scePUIDtoGUID(pid, puids[i]);
 			if (guid < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xf, 322,
 						     "PUIDtoGUID failed err= %d 0x%x puid=0x%x\n",
 						     guid, guid, puids[i]);
 				continue;
 			}
-			ret = SceIofilemgrForDriver_C6158F8D(guid);
+			ret = sceIoDeleteErrorEvent(guid);
 			if (ret == 0) {
-				SceSysmemForDriver_84A4AF5E(pid, puids[i]);
+				scePUIDClose(pid, puids[i]);
 			} else {
 				SCE_DBG_PRINTF_LEVEL(1, 0xf, 331,
 						     "sceIoDeleteErrorEvent failed %d 0x%x uid=0x%x %d\n",

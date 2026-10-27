@@ -512,7 +512,7 @@ int module_start(SceSize argumentSize, const void *arguments)
 	control->countedBytes.values[2] = 72;
 	control->sysconPowerInverted = 1;
 	control->powerAvailable = 1;
-	if (SceIdStorageForDriver_EB00C509(0x113, &modemConfiguration) < 0 ||
+	if (sceIdStorageReadLeaf(0x113, &modemConfiguration) < 0 ||
 	    modemConfiguration.configurationMode - 1 > 11)
 		control->configurationMode = 1;
 	else
@@ -539,7 +539,7 @@ int module_start(SceSize argumentSize, const void *arguments)
 	if (result < 0)
 		goto unregisterSystemEvent;
 	control->processEventHandler = result;
-	if (ScePowerForDriver_F535D928(256, 1) < 0)
+	if (scePowerSetWakeupCondition(256, 1) < 0)
 		goto unregisterProcessEvent;
 	if (SceSysconForDriver_4E88B4D9(bbmcSysconNotification, control) < 0)
 		goto disablePower;
@@ -549,9 +549,9 @@ int module_start(SceSize argumentSize, const void *arguments)
 		return 0;
 	SceSysconForDriver_4E88B4D9(NULL, NULL);
 disablePower:
-	ScePowerForDriver_F535D928(256, 0);
+	scePowerSetWakeupCondition(256, 0);
 unregisterProcessEvent:
-	SceProcEventForDriver_3DED57CC(control->processEventHandler);
+	sceKernelUnregisterProcEventHandler(control->processEventHandler);
 unregisterSystemEvent:
 	sceKernelUnregisterSysEventHandler(control->eventFlag);
 deleteThread:

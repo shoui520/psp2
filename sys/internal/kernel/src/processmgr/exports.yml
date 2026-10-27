@@ -11,21 +11,21 @@ SceProcessmgr:
       version: 2
       nid: 0x2DD91812
       functions:
-        - sceKernelLibcTime: 0x0039BE45
+        - sceKernelLibcTimeForUser: 0x0039BE45
         - sceKernelGetProcessTitleId: 0x03A48771
         - sceKernelGetProcessName: 0x10C52C95
         - sceKernelIsCDialogAvailable: 0x143BC4D6
-        - sceKernelPowerTick: 0x2252890C
+        - sceKernelPowerTickForUser: 0x2252890C
         - sceKernelGetProcessParam: 0x2BE3E066
         - sceKernelGetExtraTty: 0x2D635A00
         - _sceKernelGetTimer5RegForUser: 0x2F73D72F
         - sceKernelProcessPowerUnlockForUser: 0x466C0CBD
-        - sceKernelLibcGettimeofday: 0x4B879059
+        - sceKernelLibcGettimeofdayForUser: 0x4B879059
         - _sceKernelRegisterLibkernelAddressesForUser: 0x56C2E8FF
         - sceKernelRegisterProcessTerminationCallback: 0x5EC77870
         - sceKernelPowerLock: 0x7AA73378
         - sceKernelLibcMktime: 0x890BDC39
-        - sceKernelGetProcessTimeWideCore: 0x89DA0967
+        - sceKernelGetProcessTimeWideCoreForUser: 0x89DA0967
         - sceKernelLibcLocaltime_r: 0x94F041ED
         - sceKernelUnregisterProcessTerminationCallback: 0x973A4527
         - sceKernelLibcClock: 0x9E45DA09
@@ -34,13 +34,13 @@ SceProcessmgr:
         - sceKernelGetStdin: 0xC1727F59
         - sceKernelGetCurrentProcess: 0xCD248267
         - sceKernelIsGameBudget: 0xCE0F02F0
-        - sceKernelGetProcessTimeCore: 0xD37A8437
+        - sceKernelGetProcessTimeCoreForUser: 0xD37A8437
         - sceKernelCDialogSessionClose: 0xDB4CC1D0
         - sceKernelGetStdout: 0xE5AA625C
-        - sceKernelGetRemoteProcessTime: 0xE6E9FCA3
+        - sceKernelGetRemoteProcessTimeForUser: 0xE6E9FCA3
         - sceKernelCallAbortHandlerForUser: 0xEB6E50BB
         - sceKernelCDialogSetLeaseLimit: 0xEC8DDAAD
-        - sceKernelGetProcessTimeLowCore: 0xF5D0D4C6
+        - sceKernelGetProcessTimeLowCoreForUser: 0xF5D0D4C6
         - sceKernelGetStderr: 0xFA5E3ADA
     SceProcessmgrForDriver:
       syscall: false
@@ -48,7 +48,7 @@ SceProcessmgr:
       nid: 0x746EC971
       functions:
         - sceKernelAllocRemoteProcessHeap: 0x00B1CA0F
-        - SceProcessmgrForDriver_02179E12: 0x02179E12
+        - sceKernelGetProcessTimeLowCore: 0x02179E12
         - sceKernelGetProcessInfo: 0x0AFF3EAE
         - sceKernelIsProcessSuspending: 0x0CC5B30C
         - SceProcessmgrForDriver_11BEFBBE: 0x11BEFBBE
@@ -58,38 +58,38 @@ SceProcessmgr:
         - sceKernelSetSyscallTraceFlag: 0x24FA97A5
         - SceProcessmgrForDriver_2CEB1C7A: 0x2CEB1C7A
         - sceKernelIsCDialogAvailable: 0x2F6020B7
-        - SceProcessmgrForDriver_33B3D026: 0x33B3D026
+        - sceKernelUnregisterCoredumpHandler: 0x33B3D026
         - sceKernelRegisterKPLS: 0x3801D7D6
         - SceProcessmgrForDriver_3B33FFBA: 0x3B33FFBA
         - SceProcessmgrForDriver_4140D633: 0x4140D633
         - sceKernelGetBudgetInfo: 0x46221964
         - sceKernelAllocOwnProcessHeap: 0x5468892A
-        - SceProcessmgrForDriver_54D469E2: 0x54D469E2
+        - sceKernelGetSyscallTraceFlag: 0x54D469E2
         - SceProcessmgrForDriver_594319C7: 0x594319C7
         - SceProcessmgrForDriver_5BDA978F: 0x5BDA978F
         - SceProcessmgrForDriver_5E882B60: 0x5E882B60
-        - SceProcessmgrForDriver_61B9B6FA: 0x61B9B6FA
+        - sceKernelSetInitialPMCR: 0x61B9B6FA
         - sceKernelSetPMUSERENR: 0x6599E5D9
         - sceKernelGetProcessStatus: 0x65B120B8
-        - SceProcessmgrForDriver_82D94BE9: 0x82D94BE9
+        - sceKernelGetProcessTimeWideCore: 0x82D94BE9
         - SceProcessmgrForDriver_879153D9: 0x879153D9
         - sceKernelAllocRemoteCDialogHeap: 0x8A85FA28
         - SceProcessmgrForDriver_8CB01675: 0x8CB01675
         - sceKernelFreeRemoteProcessHeap: 0x9C28EA9A
         - SceProcessmgrForDriver_A1CF74FA: 0xA1CF74FA
-        - SceProcessmgrForDriver_AF80F39C: 0xAF80F39C
-        - SceProcessmgrForDriver_B1C3EFCA: 0xB1C3EFCA
+        - sceKernelGetRemoteKPLS: 0xAF80F39C
+        - sceKernelSetInitialPMUSERENR: 0xB1C3EFCA
         - sceKernelCallCoredumpHandler: 0xB559410A
         - sceKernelGetProcessResourceLimit: 0xB80DBD53
         - SceProcessmgrForDriver_BA0A06A4: 0xBA0A06A4
-        - SceProcessmgrForDriver_C074EB31: 0xC074EB31
+        - sceKernelGetRemoteProcessTime: 0xC074EB31
         - SceProcessmgrForDriver_C5CF15ED: 0xC5CF15ED
         - SceProcessmgrForDriver_C715591F: 0xC715591F
         - SceProcessmgrForDriver_D141C076: 0xD141C076
         - sceKernelFreeRemoteCDialogHeap: 0xDD0A58D1
         - SceProcessmgrForDriver_E1A67C86: 0xE1A67C86
         - SceProcessmgrForDriver_E8005AFC: 0xE8005AFC
-        - SceProcessmgrForDriver_EC283166: 0xEC283166
+        - sceKernelGetProcessTimeCore: 0xEC283166
         - SceProcessmgrForDriver_EE694840: 0xEE694840
         - sceKernelIsGameBudget: 0xF7A8BB25
         - SceProcessmgrForDriver_FC2A424E: 0xFC2A424E
@@ -99,7 +99,7 @@ SceProcessmgr:
       nid: 0xEB1F8EF7
       functions:
         - sceKernelProcessAssocApp: 0x00DBA872
-        - SceProcessmgrForKernel_014F5113: 0x014F5113
+        - sceKernelLibcGettimeofday: 0x014F5113
         - sceKernelStartProcessExt: 0x026F3E87
         - sceKernelGetPHBP: 0x060DA466
         - sceKernelWaitProcessEnd: 0x0B9BE51B
@@ -107,7 +107,7 @@ SceProcessmgr:
         - SceProcessmgrForKernel_1197DB8A: 0x1197DB8A
         - sceKernelSuspendProcess: 0x1400A1F8
         - sceKernelKillProcessForDebugger: 0x148E23E3
-        - SceProcessmgrForKernel_1E5B38E5: 0x1E5B38E5
+        - sceKernelSpawnProcess: 0x1E5B38E5
         - SceProcessmgrForKernel_23EF9D8E: 0x23EF9D8E
         - sceKernelFreeRemoteToolHeap: 0x2755CEDD
         - sceKernelGetProcessSelfAuthInfo: 0x324F2B20
@@ -115,9 +115,9 @@ SceProcessmgr:
         - sceKernelGetProcessLibdb: 0x3AF6B088
         - SceProcessmgrForKernel_3EBC93BB: 0x3EBC93BB
         - sceKernelSuspendProcessForDebugger: 0x4232517A
-        - SceProcessmgrForKernel_459A223B: 0x459A223B
+        - sceKernelDeleteBudget: 0x459A223B
         - sceKernelGrowBudget: 0x48DD3348
-        - SceProcessmgrForKernel_5137B783: 0x5137B783
+        - sceKernelStartProcess: 0x5137B783
         - sceKernelAllocRemoteToolHeap: 0x51AF6FE6
         - sceKernelResetGameBudget: 0x56657302
         - sceKernelSetPHBP: 0x597E6D2C
@@ -139,7 +139,7 @@ SceProcessmgr:
         - SceProcessmgrForKernel_9FA66773: 0x9FA66773
         - sceKernelDisablePHWP: 0xA2EE1B7F
         - sceKernelGetProcessParentId: 0xA5E55217
-        - SceProcessmgrForKernel_B0E076D6: 0xB0E076D6
+        - sceKernelLibcTime: 0xB0E076D6
         - sceKernelSetPHWP: 0xB2421F93
         - sceKernelGetProcessType: 0xB631C93B
         - SceProcessmgrForKernel_BC110987: 0xBC110987
@@ -148,7 +148,7 @@ SceProcessmgr:
         - SceProcessmgrForKernel_D231AE5B: 0xD231AE5B
         - SceProcessmgrForKernel_D5DF895D: 0xD5DF895D
         - sceKernelUIDtoProcess: 0xD991C85E
-        - SceProcessmgrForKernel_DC18FCEF: 0xDC18FCEF
+        - sceKernelCreateBudget: 0xDC18FCEF
         - SceProcessmgrForKernel_DDE282CF: 0xDDE282CF
         - SceProcessmgrForKernel_E025F5A9: 0xE025F5A9
         - sceKernelGetProcessApp: 0xE5097B4F

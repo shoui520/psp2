@@ -99,7 +99,7 @@ int _sceDisplayOledSetEnable(int on) /* Sony's name (0.990 messages) */
 	SceKernelIntrStatus intr;
 	int old;
 
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	old = oled.wantOn;
 	oled.wantOn = on;
 	sceKernelCpuResumeIntr(intr);

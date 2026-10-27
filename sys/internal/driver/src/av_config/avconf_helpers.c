@@ -121,7 +121,7 @@ int avConfigSetSuspendInterval(unsigned int interval)
 		suspendTime = (SceUInt64)(interval + 15) * 1000000;
 		dimmingTime = 60000000;
 	}
-	SceKernelSuspendForDriver_E0489831(0);
+	sceKernelPowerTick(0);
 	ScePowerForDriver_6BC26FC7(0, suspendTime);
 	if (SceSblAIMgrForDriver_71608CA3() == 0)
 		ScePowerForDriver_6BC26FC7(1, dimmingTime);

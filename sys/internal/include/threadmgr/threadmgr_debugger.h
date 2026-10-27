@@ -77,8 +77,7 @@ int SceThreadmgrForKernel_B011EA69(uint32_t flags, ThreadmgrThreadInfoForDebugge
 int SceThreadmgrForKernel_6351A13A(SceUID pid, uint32_t flags,
 				   ThreadmgrThreadInfoForDebugger *infos, SceSize size,
 				   SceSize *count);
-/* vitasdk: ksceKernelGetThreadInfoForDebugger */
-int SceThreadmgrForDriver_DD8D9429(SceUID threadId, uint32_t flags,
+int sceKernelGetThreadInfoForDebugger(SceUID threadId, uint32_t flags,
 				   ThreadmgrThreadInfoForDebugger *info);
 
 /* Entries returned by sceKernelGetWaitingThreadList. */

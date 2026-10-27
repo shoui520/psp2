@@ -67,7 +67,7 @@ int ModulemgrUnregisterLibraries(SceModuleCB *cb, SceUInt32 flags)
 	if ((cb->flags & (MODULE_FLAG_SHARED_COPY | MODULE_FLAG_SHARED_ORIGINAL)) != 0)
 		flags |= 0x30;
 	ret = LoadcoreUnregisterModuleLibraries(cb, flags);
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	return ret;
 }
 
@@ -281,7 +281,7 @@ int ModulemgrLoadModule(SceModuleObject *obj, const char *path, SceUID fd, SceSe
 	}
 
 	if (cb->pid != SCE_KERNEL_PROCESS_ID) {
-		puid = SceSysmemForDriver_BF209859(pid, cb->modid);
+		puid = scePUIDOpenByGUID(pid, cb->modid);
 		if (puid < 0) {
 			ret = 0;	/* Sony reports success here */
 			goto fail;
@@ -523,7 +523,7 @@ int ModulemgrStartModule(SceModuleCB *cb, SceSize args, void *argp, SceUInt32 fl
 				break;
 			}
 			ret = LoadcoreRegisterModuleLibraries(cb);
-			SceCpuForKernel_803C84BF();
+			sceKernelL1IcacheInvalidateEntireAllCore();
 			if (ret < 0) {
 				ModulemgrReleaseClients(cb, 0);
 				break;
@@ -862,7 +862,7 @@ loaded:
 			sceGUIDReleaseObject(pid);
 		return ret;
 	}
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	t1 = SceThreadmgrForDriver_47F6DE49();
 	SCE_DBG_PRINTF_LEVEL(1, 0, 2219,
 		"Loading %s (guid=0x%08x, fingerprint=0x%08x): OK.   %d usec (form 0x%03x)\n",
@@ -899,7 +899,7 @@ notify:
 report:
 	if ((dbgFlags & 1) != 0) {
 		state = SceThreadmgrForDriver_3A72C6D8(g_threadStateSlot);
-		intr = SceSysrootForKernel_256B2394(pid, modid, 0x20006, time);
+		intr = SceSysrootForKernel_sceKernelSysrootDbgpSuspendProcessAndWaitResume(pid, modid, 0x20006, time);
 		if (intr < 0) {
 			if (intr == 0x8002802d) {
 				state->modid = modid;
@@ -989,7 +989,7 @@ static inline int ModulemgrUnloadModule(SceUID pid, SceModuleObject *obj, SceUID
 	ModulemgrUnlockLibDB();
 	puid = cb->puid;
 	if (puid > 0) {
-		SceSysmemForDriver_84A4AF5E(pid, puid);
+		scePUIDClose(pid, puid);
 		cb->puid = 0;
 	}
 	if (cb->pid != SCE_KERNEL_PROCESS_ID && (flags & 0x40000000) == 0 &&
@@ -1038,7 +1038,7 @@ int unloadModuleCommon(SceUID pid, SceUID modid, SceUInt32 flags,
 	sceGUIDReleaseObject(modid);
 	if (pid != SCE_KERNEL_PROCESS_ID)
 		sceGUIDReleaseObject(pid);
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	return ret;
 }
 
@@ -1074,7 +1074,7 @@ static inline void sendDbgpStartupFailed(SceUID pid, SceUID modid, int result)
 		return;
 	state = SceThreadmgrForDriver_3A72C6D8(g_threadStateSlot);
 	time = sceKernelGetSystemTimeWide();
-	ret = SceSysrootForKernel_256B2394(pid, modid, 0x20005, time);
+	ret = SceSysrootForKernel_sceKernelSysrootDbgpSuspendProcessAndWaitResume(pid, modid, 0x20005, time);
 	if (ret < 0) {
 		if (ret == 0x8002802d) {
 			state->modid = modid;
@@ -1104,7 +1104,7 @@ static inline void sendDbgpStartupFailedForRetryedSyscall(SceUID pid, ModulemgrT
 	if ((dbgFlags & 1) == 0 || pid != sceKernelGetProcessId())
 		return;
 	state = SceThreadmgrForDriver_3A72C6D8(g_threadStateSlot);
-	ret = SceSysrootForKernel_256B2394(pid, modid, 0x20005, time);
+	ret = SceSysrootForKernel_sceKernelSysrootDbgpSuspendProcessAndWaitResume(pid, modid, 0x20005, time);
 	if (ret < 0) {
 		if (ret == 0x8002802d) {
 			state->modid = modid;
@@ -1198,7 +1198,7 @@ int sceKernelStartModule(SceUID modid, SceSize args, void *argp, SceUInt32 flags
 	return startModuleCommon(SCE_KERNEL_PROCESS_ID, modid, args, argp, 0, opt, status);
 }
 
-int SceModulemgrForKernel_3FE47DDF(SceUID pid, SceUID modid, SceSize args, void *argp,
+int sceKernelStartRemoteModule(SceUID pid, SceUID modid, SceSize args, void *argp,
 				SceUInt32 flags, const SceKernelStartModuleOpt *opt, int *status)
 {
 	if (pid == 0)
@@ -1390,7 +1390,7 @@ int StopUnloadModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, S
 
 	memset(&info, 0, sizeof(info));
 	info.size = sizeof(info);
-	if (SceModulemgrForKernel_DAA90093(pid, modid, &info) != 0)
+	if (sceKernelGetModuleInfo(pid, modid, &info) != 0)
 		name = "invalid";
 #endif
 
@@ -1432,7 +1432,7 @@ SceUID loadStartModuleCommon(SceUID pid, const char *path, SceSize args, void *a
 	return ret;
 }
 
-SceUID SceModulemgrForDriver_189BFBBB(const char *path, SceSize args, void *argp, SceUInt32 flags,
+SceUID sceKernelLoadStartModule(const char *path, SceSize args, void *argp, SceUInt32 flags,
 				 const SceKernelLoadModuleOpt *opt, int *status)
 {
 	if ((flags & 0xfff8260f) != 0)
@@ -1493,7 +1493,7 @@ SceUID SceModulemgrForDriver_E2ADEF8D(SceUID pid, const char *path, SceSize args
 					   status);
 }
 
-int SceModulemgrForDriver_03B30B7E(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+int sceKernelStopUnloadModule(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 			       const SceKernelUnloadModuleOpt *opt, int *status)
 {
 	if ((flags & 0xbfffffff) != 0)
@@ -1538,7 +1538,7 @@ int ModulemgrUnloadMySelfWork(void *arg)
 	return ret;
 }
 
-int SceModulemgrForDriver_100DAEB9(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+int sceKernelStopModule(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 			 const SceKernelStopModuleOpt *opt, int *status)
 {
 	if (flags != 0)
@@ -1574,7 +1574,7 @@ int sceKernelRegisterLibrary(const void *libent)
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 2995, "failed (res:0x%08x)\n", ret);
 	sceGUIDReleaseObject(modid);
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	return ret;
 }
 
@@ -1597,7 +1597,7 @@ int sceKernelUnregisterLibrary(const void *libent)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3032, "LoadcoreReleaseLibrary : failed (res:0x%08x)\n",
 				     ret);
 	sceGUIDReleaseObject(modid);
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	return ret;
 }
 
@@ -1634,7 +1634,7 @@ MODULEMGR_COLD int sceKernelGetMetaDataForDebugger(SceUID pid, SceUID modid, voi
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 3235);
 	if (pid == SCE_KERNEL_PROCESS_ID || ModulemgrReferProcessObject(pid) < 0)
 		return SCE_KERNEL_ERROR_MODULEMGR_NO_PROCESS;
-	guid = SceSysmemForDriver_45D22597(pid, modid);
+	guid = scePUIDtoGUID(pid, modid);
 	if (guid < 0) {
 		sceGUIDReleaseObject(pid);
 		return guid;
@@ -1912,7 +1912,7 @@ int ModulemgrModuleStart(SceSize args, void *argp)
 	sceKernelSetProcessLibdb(SCE_KERNEL_PROCESS_ID, &g_private->kernelDB);
 	SceSysrootForKernel_B171CC2D(&g_sysrootCallbacks);
 
-	slot = SceThreadmgrForDriver_B645C7EF(sizeof(ModulemgrThreadState), 0, 0);
+	slot = sceKernelRegisterKTLS(sizeof(ModulemgrThreadState), 0, 0);
 	SCE_DBG_ASSERT(slot >= 0, 3679);
 	g_threadStateSlot = slot;
 
@@ -1930,7 +1930,7 @@ int ModulemgrModuleStart(SceSize args, void *argp)
 	return 0;
 }
 
-int SceModulemgrForKernel_E71530D7(SceUID pid)
+int sceKernelUnloadProcessModules(SceUID pid)
 {
 	LibraryDB *db;
 	SceUID modid;
@@ -2088,7 +2088,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 		if (ret < 0)
 			goto unload;
 	} else if ((cb->flags & MODULE_FLAG_SELF_FIXED) != 0) {
-		SceModulemgrForKernel_E71530D7(pid);
+		sceKernelUnloadProcessModules(pid);
 		return SCE_KERNEL_ERROR_MODULEMGR_NOT_MAIN_MODULE;
 	}
 
@@ -2108,7 +2108,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 	return cb->modid;
 
 unload:
-	SceModulemgrForKernel_E71530D7(pid);
+	sceKernelUnloadProcessModules(pid);
 	return ret;
 }
 
@@ -2132,7 +2132,7 @@ int sceKernelUnlinkNormalSyscall(SceUID pid)
 			if (ret < 0)
 				return ret;
 		}
-		SceCpuForKernel_803C84BF();
+		sceKernelL1IcacheInvalidateEntireAllCore();
 	}
 	ModulemgrUnlockLibDB();
 	sceGUIDReleaseObject(pid);

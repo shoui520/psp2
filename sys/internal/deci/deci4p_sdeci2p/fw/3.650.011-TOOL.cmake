@@ -69,7 +69,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelCpuId
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelDcacheInvalidateRangeForL1WBWA
 	sceKernelDcacheCleanRangeForL1WBWA
 	sceKernelCpuResumeIntr
@@ -91,7 +91,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDeci4pSDfMgrForKernel_3A25594F
 	SceDeci4pSDfMgrForKernel_59C077B3
 	SceDeci4pSDfMgrForKernel_68903C1D
-	SceDeci4pSDfMgrForKernel_86CFC8C6
+	sceSDfMgrClose
 	SceDeci4pSDfMgrForKernel_8A3B06F2
 	SceDeci4pSDfMgrForKernel_98AEC60E
 	sceSDfMgrContinueSystem

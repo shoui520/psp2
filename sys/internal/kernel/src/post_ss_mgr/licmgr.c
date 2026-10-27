@@ -100,7 +100,7 @@ SceUInt32 g_licMgrEndDate;		/* name unknown */
 int g_licMgrCodeFileExact;		/* name unknown: the last code has no newline */
 static SceSblSmCommId g_actSmId;	/* name unknown */
 
-int SceSblPostSsMgrForDriver_15F37282(void)
+int sceSblLicMgrGetLicenseStatus(void)
 {
 	return g_licMgrLicenseStatus;
 }
@@ -351,7 +351,7 @@ int licMgrActivate(const char *path)	/* name unknown */
 }
 
 /* the end of the activation in seconds from now, or (fromNvs == 0) as loaded */
-int SceSblPostSsMgrForDriver_4FF2682F(SceUInt32 *date, int fromNvs)
+int sceSblLicMgrGetExpireDate(SceUInt32 *date, int fromNvs)
 {
 	SceActNvsData nvs;
 	SceUInt32 now = 0, end;
@@ -404,7 +404,7 @@ int sceSblLicMgrInit(void)
 	int ret;
 
 	ret = licMgrLoad();
-	SceSysrootForKernel_71DB83A2(SceSblPostSsMgrForDriver_15F37282);
+	SceSysrootForKernel_71DB83A2(sceSblLicMgrGetLicenseStatus);
 	return ret;
 }
 
@@ -445,7 +445,7 @@ int licMgrFindCodeFile(const char *dir, char *path, SceSize size)	/* name unknow
 	return 0;
 }
 
-int SceSblPostSsMgrForDriver_0298382B(const char *path)
+int sceSblLicMgrActivateDevkit(const char *path)
 {
 	if (SceSblAIMgrForDriver_274663A0()) {
 		if (SceSblAIMgrForDriver_37A79140() && !SceSblAIMgrForDriver_F4B98F66())
@@ -473,14 +473,14 @@ int licMgrActivateFromFs(void)
 	memset(path, 0, sizeof(path));
 	ret = licMgrFindCodeFile(ACT_FS_DIR, path, sizeof(path));
 	if (ret == 0) {
-		ret = SceSblPostSsMgrForDriver_0298382B(path);
+		ret = sceSblLicMgrActivateDevkit(path);
 		if (ret == SCE_SBL_ERROR_LIC_NOT_FOUND)
 			ret = SCE_SBL_ERROR_LIC_OTHER_CONSOLE;
 	}
 	return ret;
 }
 
-int SceSblPostSsMgrForDriver_F7F1015B(SceActivationKey *key)
+int sceSblLicMgrGetActivationKey(SceActivationKey *key)
 {
 	SceUInt8 sum[4];
 	int ret, i, j;
@@ -525,14 +525,14 @@ int sceSblLicMgrGetActivationKeyForUser(SceActivationKey *key)
 	if (key == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
 	state = sceSyscallEnter();
-	ret = SceSblPostSsMgrForDriver_F7F1015B(&value);
+	ret = sceSblLicMgrGetActivationKey(&value);
 	if (ret == 0)
 		ret = sceKernelCopyToUser(key, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }
 
-int sceSblLicMgrGetLicenseStatus(void)
+int sceSblLicMgrGetLicenseStatusForUser(void)
 {
 	SceUInt32 state;
 	int status;
@@ -569,7 +569,7 @@ int sceSblLicMgrGetUsageTimeLimit(SceUInt32 *limit)
 		}
 		now = 0x4e9fb874;	/* 2011-11-01 */
 	}
-	ret = SceSblPostSsMgrForDriver_4FF2682F(&left, 0);
+	ret = sceSblLicMgrGetExpireDate(&left, 0);
 	left = now < left ? left - now : 0;
 	if (ret == SCE_SBL_ERROR_LIC_NO_DATA) {
 		if (licMgrHasQaFlags()) {
@@ -600,7 +600,7 @@ int sceSblLicMgrGetExpireDateForUser(SceUInt32 *date, int fromNvs)
 		sceSyscallLeave(state);
 		return SCE_SBL_ERROR_LIC_NOT_ACTIVATED;
 	}
-	ret = SceSblPostSsMgrForDriver_4FF2682F(&value, fromNvs);
+	ret = sceSblLicMgrGetExpireDate(&value, fromNvs);
 	if (ret == 0)
 		ret = sceKernelCopyToUser(date, &value, sizeof(value));
 	sceSyscallLeave(state);
@@ -625,7 +625,7 @@ int sceSblLicMgrActivateDevkitForUser(const char *path)
 			sceSyscallLeave(state);
 			return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
 		}
-		ret = SceSblPostSsMgrForDriver_0298382B(kpath);
+		ret = sceSblLicMgrActivateDevkit(kpath);
 	}
 	sceSyscallLeave(state);
 	return ret;

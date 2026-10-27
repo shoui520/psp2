@@ -5,5 +5,5 @@
 
 int sceSblLicMgrActivateFromFs(void);
 int sceSblLicMgrClearActivationData(void);
-int sceSblLicMgrGetLicenseStatus(void);
+int sceSblLicMgrGetLicenseStatusForUser(void);
 int sceSblLicMgrGetUsageTimeLimit(SceUInt32 *limit);

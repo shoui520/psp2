@@ -50,7 +50,7 @@ int _sceKernelBsodIftuInit(int dolce)
 					    map->size, &options);
 		if (uid < 0) {
 #if FW_DEBUG
-			if (SceDebugForDriver_374B7868() > 0)
+			if (sceKernelGetAssertLevel() > 0)
 				SceDebugForDriver_FD753E7A(1, 0, &s_iftuAssert,
 						     __builtin_return_address(0));
 #endif

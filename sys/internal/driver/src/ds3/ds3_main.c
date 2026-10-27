@@ -1935,7 +1935,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 	ds3InitializeBdRemocon();
 	for (;;) {
 		timeout = 500000;
-		result = SceThreadmgrForDriver_8A35F714(ds3State.workEvent, 55, 1, &events, &timeout);
+		result = sceKernelWaitEventFlagCB(ds3State.workEvent, 55, 1, &events, &timeout);
 		if (result < 0)
 			goto checkTimeouts;
 		result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
@@ -2464,7 +2464,7 @@ rejectConnection:
 					device->port = -1;
 				else {
 					ds3SignalPortChange();
-					SceKernelSuspendForDriver_E0489831(0);
+					sceKernelPowerTick(0);
 				}
 			}
 			address = event->mac0 | ((uint64_t)event->mac1 << 32);

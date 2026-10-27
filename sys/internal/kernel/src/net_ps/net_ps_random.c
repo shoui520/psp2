@@ -17,24 +17,24 @@ static struct {
 
 void sceNetPsSeedRandom(void)
 {
-	SceKernelUtilsForDriver_4C9A5730(&gNetPsRandom.emulation,
+	sceMt19937Init(&gNetPsRandom.emulation,
 					 sceNetPsGetRandom());
-	SceKernelUtilsForDriver_4C9A5730(&gNetPsRandom.stack,
+	sceMt19937Init(&gNetPsRandom.stack,
 					 sceNetPsGetRandom());
 }
 
 int sceNetPsSeedEmulationRandom(unsigned int seed)
 {
-	return SceKernelUtilsForDriver_4C9A5730(&gNetPsRandom.emulation, seed);
+	return sceMt19937Init(&gNetPsRandom.emulation, seed);
 }
 
 unsigned int sceNetPsEmulationRandom(void)
 {
-	return SceKernelUtilsForDriver_92AEDFBC(&gNetPsRandom.emulation);
+	return sceMt19937UInt(&gNetPsRandom.emulation);
 }
 
 /* NetBSD's arc4random (libkern.h) */
 SceUInt32 arc4random(void)
 {
-	return SceKernelUtilsForDriver_92AEDFBC(&gNetPsRandom.stack);
+	return sceMt19937UInt(&gNetPsRandom.stack);
 }

@@ -57,7 +57,7 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDGetName
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
-	SceSysmemForKernel_2995558D
+	sceKernelCopyToUserProcTextDomain
 	SceSysrootForKernel_06182D59
 	SceSysrootForKernel_0A12227B
 	SceSysrootForKernel_118657C6
@@ -74,7 +74,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowLock
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
-	SceCpuForKernel_803C84BF
+	sceKernelL1IcacheInvalidateEntireAllCore
 	SceCpuForKernel_C32687D0
 	SceDebugForDriver_02B04343
 	SceDebugForKernel_CCABDD98

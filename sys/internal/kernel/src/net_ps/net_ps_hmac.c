@@ -19,9 +19,9 @@ int sceNetPsHmacSha1Init(SceHmacSha1Context *pContext,
 	unsigned int i;
 
 	if (keylen > SCE_SHA1_BLOCK_SIZE) {
-		SceKernelUtilsForDriver_E4390FFA(&temporary);
-		SceKernelUtilsForDriver_478A6F3C(&temporary, secretkey, keylen);
-		SceKernelUtilsForDriver_48F24106(&temporary, digest);
+		sceSha1BlockInit(&temporary);
+		sceSha1BlockUpdate(&temporary, secretkey, keylen);
+		sceSha1BlockResult(&temporary, digest);
 		secretkey = digest;
 		keylen = sizeof(digest);
 	}
@@ -33,15 +33,15 @@ int sceNetPsHmacSha1Init(SceHmacSha1Context *pContext,
 		innerPad[i] ^= 0x36;
 		pContext->keybuf[i] ^= 0x5c;
 	}
-	SceKernelUtilsForDriver_E4390FFA(&pContext->sha1);
-	SceKernelUtilsForDriver_478A6F3C(&pContext->sha1, innerPad, SCE_SHA1_BLOCK_SIZE);
+	sceSha1BlockInit(&pContext->sha1);
+	sceSha1BlockUpdate(&pContext->sha1, innerPad, SCE_SHA1_BLOCK_SIZE);
 	return 0;
 }
 
 int sceNetPsHmacSha1Update(SceHmacSha1Context *pContext,
 			 const void *plain, unsigned int len)
 {
-	SceKernelUtilsForDriver_478A6F3C(&pContext->sha1, plain, len);
+	sceSha1BlockUpdate(&pContext->sha1, plain, len);
 	return 0;
 }
 
@@ -50,11 +50,11 @@ int sceNetPsHmacSha1Result(unsigned char *digest,
 {
 	unsigned char innerDigest[SCE_SHA1_DIGEST_SIZE];
 
-	SceKernelUtilsForDriver_48F24106(&pContext->sha1, innerDigest);
-	SceKernelUtilsForDriver_E4390FFA(&pContext->sha1);
-	SceKernelUtilsForDriver_478A6F3C(&pContext->sha1, pContext->keybuf,
+	sceSha1BlockResult(&pContext->sha1, innerDigest);
+	sceSha1BlockInit(&pContext->sha1);
+	sceSha1BlockUpdate(&pContext->sha1, pContext->keybuf,
 			   SCE_SHA1_BLOCK_SIZE);
-	SceKernelUtilsForDriver_478A6F3C(&pContext->sha1, innerDigest, sizeof(innerDigest));
-	SceKernelUtilsForDriver_48F24106(&pContext->sha1, digest);
+	sceSha1BlockUpdate(&pContext->sha1, innerDigest, sizeof(innerDigest));
+	sceSha1BlockResult(&pContext->sha1, digest);
 	return 0;
 }

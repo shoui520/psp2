@@ -257,7 +257,7 @@ int AllocSimpleMemBlock(const char *name, SceUInt32 smbType, void *phyMemPart, S
 		break;
 	}
 	SCE_DBG_ASSERT_PRINTF(size != 0, 515, "sceKernelGetAssertLevel=%d, smbType=0x%08x\n",
-			      SceDebugForDriver_374B7868(), smbType);
+			      sceKernelGetAssertLevel(), smbType);
 	if (phyMemPart == NULL)
 		phyMemPart = SceSysmemForKernel_0164D817();
 	if ((flags & ~0x33) || pBlock == NULL)

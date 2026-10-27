@@ -78,9 +78,9 @@ set(MODULE_IMPORT_FUNCS
 	SceModulemgrForKernel_1728612F
 	sceKernelSignalSema
 	sceKernelSetEventFlag
-	SceThreadmgrForKernel_6C1F092F
+	sceKernelGetThreadContextInfo
 	sceKernelDisableIntr
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	sceKernelGenerateSoftIntr
 	sceKernelRegisterIntrHandler
 	sceKernelEnableIntr
@@ -90,7 +90,7 @@ set(MODULE_IMPORT_FUNCS
 	SceIntrmgrForKernel_807B2004
 	sceKernelClearIntrPendingStatusForDebugger
 	sceKernelRegisterExceptionHandler
-	SceExcpmgrForKernel_96C2869C
+	sceKernelGetExcpCB
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
@@ -104,7 +104,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_CD4B84F7
 	sceKernelCpuId
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelCpuResumeIntr
 	SceDebugForKernel_78027203
@@ -117,8 +117,8 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	SceKernelUtilsForDriver_302947B6
 	SceKernelUtilsForDriver_EDA97D6D
-	SceSDbgSdioForKernel_2EC24C58
-	SceSDbgSdioForKernel_7876806C
+	sceSDbgSdioRead
+	sceSDbgSdioWrite
 	SceKernelSuspendForDriver_105C5752
 	SceKernelSuspendForDriver_CE7A2207
 	SceQafMgrForDriver_382C71E8

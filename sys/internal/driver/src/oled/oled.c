@@ -178,7 +178,7 @@ static int readPanelId(void) /* name unknown */
 	unsigned i;
 	int port = SceGpioForDriver_129DF5AC(0, 0);
 	if (!port) {
-		SceGpioForDriver_D454A584(0, 0);
+		sceGpioPortSet(0, 0);
 		sceKernelDelayThread(20000);
 	}
 	spiBegin();
@@ -193,7 +193,7 @@ static int readPanelId(void) /* name unknown */
 		oled.panelRevision = id[2] | (id[3] << 8);
 	}
 	if (!port)
-		SceGpioForDriver_F6310435(0, 0);
+		sceGpioPortClear(0, 0);
 	if (id[4] == 0xff && !oled.panelId) {
 		oled.ready = 1;
 		return 0;
@@ -262,12 +262,12 @@ static int queueSequence(const unsigned char *p) /* name unknown */
 
 int SceOledForDriver_26F9EEA8(void)
 {
-	SceGpioForDriver_F6310435(0, 0);
+	sceGpioPortClear(0, 0);
 	return 0;
 }
 int SceOledForDriver_6B1E0B52(void)
 {
-	SceGpioForDriver_D454A584(0, 0);
+	sceGpioPortSet(0, 0);
 	return 0;
 }
 int SceOledForDriver_9F4ABDDC(void)
@@ -494,7 +494,7 @@ static int sysEvent(int resume, int event, void *arg, void *opt) /* name unknown
 		} else if (event == SYSEVENT_SUSPEND_DEVICE(3)) {
 			ScePervasiveForDriver_A85BF98A(2);
 			ScePervasiveForDriver_7B16F900(2);
-			SceGpioForDriver_F6310435(0, 0);
+			sceGpioPortClear(0, 0);
 		}
 	} else if (resume == 1 && event == SYSEVENT_RESUME_DEVICE(3)) {
 		setupSpi(oled.spi);

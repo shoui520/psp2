@@ -129,7 +129,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_B0E1FC67
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUser
 	sceKernelCopyFromUser
 	sceKernelSpinlockLowUnlockCpuResumeIntr
@@ -137,11 +137,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	SceKernelSuspendForDriver_E0489831
+	sceKernelPowerTick
 	memset
 	memcpy
 	__stack_chk_fail
-	SceDebugForDriver_374B7868
+	sceKernelGetAssertLevel
 	SceDebugForDriver_FD753E7A
 	sceKernelWaitEventFlag
 	sceKernelCreateCallback
@@ -173,12 +173,12 @@ set(MODULE_IMPORT_FUNCS
 	SceHpremoteForDriver_2229EF51
 	SceHpremoteForDriver_71B5FB67
 	SceHpremoteForDriver_D22913DB
-	SceDisplayForDriver_43347565
-	SceDisplayForDriver_496032D6
+	sceDisplayDisableHead
+	sceDisplayEnableHead
 	SceDisplayForDriver_8D79D187
 	SceDisplayForDriver_9E3C6DC6
 	SceDisplayForDriver_AF5EE5BE
-	SceDisplayForDriver_B3C6D647
+	sceDisplayGetResolutionInfoInternal
 	SceDisplayForDriver_EB390A76
 	SceBtForDriver_120AC1F7
 	SceBtForDriver_47F19727

@@ -521,7 +521,7 @@ static __attribute__((noinline)) void LeakCheckUIDList(void)
 		entries = s_uidListB;
 		max = s_uidListBMax;
 	}
-	result = SceSysmemForKernel_3BF0DE65(7, 3, entries, max * sizeof(*entries), &num);
+	result = sceGUIDGetEntryInfoAll(7, 3, entries, max * sizeof(*entries), &num);
 	if (result < 0)
 		return;
 	if (s_uidListGeneration == 0) {
@@ -1416,7 +1416,7 @@ int sceSdbgpGetSystemResourceSnapshot(SceUInt32 level, SdbgpSystemResourceSnapsh
 		as = &snap->addressSpace[i];
 		SceDeci4pSDfMgrForKernel_8A3B06F2(as, 0, sizeof(*as));
 		as->size = sizeof(*as);
-		if (SceSysmemForKernel_C3EF4055(proc->addressSpace, as) < 0)
+		if (sceKernelGetAddressSpaceInfo(proc->addressSpace, as) < 0)
 			continue;
 		for (k = 0; k < (int)as->phyMemPartCount; k++) {
 			if (as->phyMemPart[k] == NULL)
@@ -1429,7 +1429,7 @@ int sceSdbgpGetSystemResourceSnapshot(SceUInt32 level, SdbgpSystemResourceSnapsh
 							   result);
 		}
 		if (proc->pid == SDBGP_KERNEL_PROCESS_ID) {
-			heap = SceSysmemForKernel_857408DA();
+			heap = sceKernelGetObjectHeap();
 			snap->objectHeap[i][0].size = sizeof(ObjectHeapInfo);
 			SceSysmemForKernel_DBEACE2C(heap, &snap->objectHeap[i][0]);
 			LeakCheckGetFixedHeapInfo(snap, i, 0, &snap->objectHeap[i][0]);
@@ -1453,12 +1453,12 @@ int sceSdbgpGetSystemResourceSnapshot(SceUInt32 level, SdbgpSystemResourceSnapsh
 		else
 			entryHeap = proc->entryHeap;
 		snap->uidEntryHeap[i].size = sizeof(snap->uidEntryHeap[i]);
-		result = SceSysmemForKernel_CCD47B97(entryHeap, &snap->uidEntryHeap[i]);
+		result = sceKernelUIDEntryHeapGetInfo(entryHeap, &snap->uidEntryHeap[i]);
 		if (result < 0) {
 			SceDebugForDriver_391B74B7("sceKernelUIDEntryHeapGetInfo failed 0x%08x\n", result);
 		} else if (proc->pid == SDBGP_KERNEL_PROCESS_ID) {
 			snap->nameHeap.size = sizeof(snap->nameHeap);
-			result = SceSysmemForKernel_01194C2E(&snap->nameHeap);
+			result = sceKernelNameHeapGetInfo(&snap->nameHeap);
 			if (result < 0)
 				SceDebugForDriver_391B74B7("sceKernelNameHeapGetInfo failed 0x%08x\n", result);
 		}
@@ -1539,34 +1539,34 @@ int sceSdbgpGetSystemResourceSnapshot(SceUInt32 level, SdbgpSystemResourceSnapsh
 		snap->heap[i].size = sizeof(snap->heap[i]);
 		snap->heap[i].maxBlocks = LEAKCHECK_HEAP_BLOCK_MAX;
 	}
-	result = SceSysmemForKernel_1380E144(7, snap->heap, sizeof(snap->heap), &count);
+	result = sceKernelGetHeapInfoAll(7, snap->heap, sizeof(snap->heap), &count);
 	if (result < 0)
 		SCE_DBG_ASSERT_FAIL(2732);
 	snap->heapCount = count;
 	SCE_DBG_PRINTF_LEVEL(2, 11, 2735, "heap num %d\n", count);
 
 	snap->kernelFixedHeap[0].size = sizeof(snap->kernelFixedHeap[0]);
-	result = sceKernelGetFixedHeapInfoByPointer(SceSysmemForKernel_3717C322(32),
+	result = sceKernelGetFixedHeapInfoByPointer(sceKernelGetKernelFixedHeap(32),
 						    &snap->kernelFixedHeap[0]);
 	if (result < 0)
 		SCE_DBG_ASSERT_FAIL(2742);
 	snap->kernelFixedHeap[1].size = sizeof(snap->kernelFixedHeap[1]);
-	result = sceKernelGetFixedHeapInfoByPointer(SceSysmemForKernel_3717C322(64),
+	result = sceKernelGetFixedHeapInfoByPointer(sceKernelGetKernelFixedHeap(64),
 						    &snap->kernelFixedHeap[1]);
 	if (result < 0)
 		SCE_DBG_ASSERT_FAIL(2750);
 	snap->kernelFixedHeap[2].size = sizeof(snap->kernelFixedHeap[2]);
-	result = sceKernelGetFixedHeapInfoByPointer(SceSysmemForKernel_3717C322(128),
+	result = sceKernelGetFixedHeapInfoByPointer(sceKernelGetKernelFixedHeap(128),
 						    &snap->kernelFixedHeap[2]);
 	if (result < 0)
 		SCE_DBG_ASSERT_FAIL(2757);
 	snap->kernelFixedHeap[3].size = sizeof(snap->kernelFixedHeap[3]);
-	result = sceKernelGetFixedHeapInfoByPointer(SceSysmemForKernel_3717C322(256),
+	result = sceKernelGetFixedHeapInfoByPointer(sceKernelGetKernelFixedHeap(256),
 						    &snap->kernelFixedHeap[3]);
 	if (result < 0)
 		SCE_DBG_ASSERT_FAIL(2764);
 	snap->kernelFixedHeap[4].size = sizeof(snap->kernelFixedHeap[4]);
-	result = sceKernelGetFixedHeapInfoByPointer(SceSysmemForKernel_3717C322(512),
+	result = sceKernelGetFixedHeapInfoByPointer(sceKernelGetKernelFixedHeap(512),
 						    &snap->kernelFixedHeap[4]);
 	if (result < 0)
 		SCE_DBG_ASSERT_FAIL(2771);
@@ -1716,7 +1716,7 @@ int _leakcheckUID(LeakCheckUIDRecord *out, uint32_t *generation, SceSize *count,
 		entries = leakCheck->base.entries;
 		leakCheck->base.mode = LEAKCHECK_MODE_UID;
 	}
-	result = SceSysmemForKernel_3BF0DE65(7, 3, entries, max * sizeof(*entries), &num);
+	result = sceGUIDGetEntryInfoAll(7, 3, entries, max * sizeof(*entries), &num);
 	if (result < 0) {
 		SceDeci4pSDfMgrForKernel_501CE61D(0, SCE_DBGINFO(3084),
 						  "sceGUIDGetEntryInfoAll failed 0x%08x\n", result);

@@ -342,7 +342,7 @@ nextCommand:
 }
 
 #if !SDIF_NSKBL
-int SceSdifForDriver_E5E5F42E(void)
+int deinit(void)
 {
 	SdifContextGlobal *context;
 	SdifPortState *port;

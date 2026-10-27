@@ -52,7 +52,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelCpuResumeIntr
 	memset
 	memcpy
@@ -71,15 +71,15 @@ set(MODULE_IMPORT_FUNCS
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_D0E11C89
 	sceIdStorageLookup
-	SceUdcdForDriver_0DECE532
-	SceUdcdForDriver_1ED0E89E
+	sceUdcdUnregister
+	sceUdcdReqSend
 	SceUdcdForDriver_34079250
 	SceUdcdForDriver_38787672
-	SceUdcdForDriver_4E55244D
+	sceUdcdRegister
 	SceUdcdForDriver_78BF2A28
 	SceUdcdForDriver_9F53D64D
-	SceUdcdForDriver_C60A74B2
-	SceUdcdForDriver_FBEA3703
+	sceUdcdReqRecv
+	sceUdcdGetDeviceInfo
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

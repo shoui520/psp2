@@ -11,10 +11,10 @@ SceCamera:
       version: 1
       nid: 0xBCBC1F4A
       functions:
-        - SceCameraForDriver_0E9B4B9E: 0x0E9B4B9E
+        - sceCameraClose: 0x0E9B4B9E
         - SceCameraForDriver_22D51107: 0x22D51107
-        - SceCameraForDriver_22E70D83: 0x22E70D83
-        - SceCameraForDriver_2D12FDF3: 0x2D12FDF3
+        - sceCameraIsActive: 0x22E70D83
+        - sceCameraRead: 0x2D12FDF3
         - SceCameraForDriver_3590BB9B: 0x3590BB9B
         - SceCameraForDriver_36C164BE: 0x36C164BE
         - SceCameraForDriver_45EB69C9: 0x45EB69C9
@@ -30,7 +30,7 @@ SceCamera:
         - SceCameraForDriver_D259707C: 0xD259707C
         - SceCameraForDriver_D56A12BD: 0xD56A12BD
         - SceCameraForDriver_DFBBA264: 0xDFBBA264
-        - SceCameraForDriver_E487870A: 0xE487870A
+        - sceCameraOpen: 0xE487870A
         - SceCameraForDriver_E81EADE1: 0xE81EADE1
         - SceCameraForDriver_EB1CC2CA: 0xEB1CC2CA
         - SceCameraForDriver_EE3D4B1C: 0xEE3D4B1C
@@ -45,7 +45,7 @@ SceCamera:
         - sceCameraGetAutoControlHold: 0x06A21BBB
         - sceCameraGetZoom: 0x06D3816C
         - sceCameraSetContrast: 0x06FB2900
-        - sceCameraIsActive: 0x103A75B8
+        - sceCameraIsActiveForUser: 0x103A75B8
         - sceCameraSetReverse: 0x1175F477
         - sceCameraGetNightmode: 0x12B6FF26
         - sceCameraStop: 0x1DD9C9CE
@@ -63,7 +63,7 @@ SceCamera:
         - sceCameraGetSaturation: 0x624F7653
         - sceCameraSetEV: 0x62AFF0B8
         - sceCameraSetImageQuality: 0x75C4300B
-        - sceCameraRead: 0x79B5C2DE
+        - sceCameraReadForUser: 0x79B5C2DE
         - sceCameraGetEffect: 0x7E8EF3B2
         - sceCameraGetBrightness: 0x85D5951D
         - sceCameraGetEV: 0x8B5E6147
@@ -72,11 +72,11 @@ SceCamera:
         - sceCameraSetBrightness: 0x98D71588
         - SceCamera_99B5FB62: 0x99B5FB62
         - sceCameraGetAntiFlicker: 0x9FDACB99
-        - sceCameraOpen: 0xA462F801
+        - sceCameraOpenForUser: 0xA462F801
         - sceCameraStart: 0xA8FEAE35
         - sceCameraGetSharpness: 0xAA72C3DC
         - sceCameraSetBacklight: 0xAE071044
-        - sceCameraClose: 0xCD6E1CFC
+        - sceCameraCloseForUser: 0xCD6E1CFC
         - sceCameraSetSharpness: 0xD1A5BB0B
         - sceCameraGetWhiteBalance: 0xDBFFA1DA
         - sceCameraGetImageQuality: 0xE2AC7BCE

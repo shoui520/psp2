@@ -11,7 +11,7 @@ SceSDbgSdio:
       version: 1
       nid: 0xE6F87547
       functions:
-        - SceSDbgSdioForKernel_2EC24C58: 0x2EC24C58
-        - SceSDbgSdioForKernel_356C6621: 0x356C6621
-        - SceSDbgSdioForKernel_7876806C: 0x7876806C
+        - sceSDbgSdioRead: 0x2EC24C58
+        - sceSDbgSdioFini: 0x356C6621
+        - sceSDbgSdioWrite: 0x7876806C
         - sceSDbgSdioInit: 0x99863185

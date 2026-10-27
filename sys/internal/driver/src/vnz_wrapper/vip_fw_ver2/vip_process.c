@@ -47,7 +47,7 @@ int _sceHwd0ProcessCreateEntry(SceUID pid, SceUInt32 type)
 	char name[32];
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaVipProcessStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_veneziaVipProcessStorageKey,
 		(void **)&storage, 1);
 	if (ret >= 0) {
 #if FW_DEBUG
@@ -71,7 +71,7 @@ int releaseVeneziaVipProcessStorage(SceUID pid, SceUInt32 type)
 	VeneziaVipProcessStorage *storage = NULL;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaVipProcessStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_veneziaVipProcessStorageKey,
 		(void **)&storage, 0);
 	if (ret >= 0) {
 		ret = 0;
@@ -89,7 +89,7 @@ VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid)
 	VeneziaVipProcessStorage *storage = NULL;
 
 	if (pid) {
-		if (SceProcessmgrForDriver_AF80F39C(pid, g_veneziaVipProcessStorageKey,
+		if (sceKernelGetRemoteKPLS(pid, g_veneziaVipProcessStorageKey,
 			(void **)&storage, 0) < 0)
 			storage = NULL;
 	} else {
@@ -130,7 +130,7 @@ int _sceHwd0StartProcessSuspend(SceUID pid)
 	VeneziaVipProcessStorage *process;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaVipProcessStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_veneziaVipProcessStorageKey,
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG
@@ -162,7 +162,7 @@ int _sceHwd0ProcessResume(SceUID pid)
 	VeneziaVipProcessStorage *process;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaVipProcessStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_veneziaVipProcessStorageKey,
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG

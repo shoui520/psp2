@@ -616,7 +616,7 @@ SceBool vfsIsLockedFd(SceVfsFile *file)
 		return ret;
 	}
 	if ((info.currentOwnerId & 0x40000000) != 0)
-		info.currentOwnerId = SceSysmemForDriver_45D22597(0, info.currentOwnerId);
+		info.currentOwnerId = scePUIDtoGUID(0, info.currentOwnerId);
 	owner = info.currentOwnerId;
 	if (sceKernelGetThreadId() != owner) {
 		SCE_DBG_PRINTF(0xf, 1005, "sceKernelGetMutexInfo(0x%08x): 0x%08x\n",
@@ -935,7 +935,7 @@ __attribute__((noinline)) int vfsFreeVnode(SceVfsVnode *vp)
 	vfsUnlockMnt(vp->core.mnt);
 	fini_vnode(vp);
 	ret = bufferPoolFree(&g_vnodePool, vp);
-	SceCpuForDriver_A4884C4E(&g_total_vnode_num, 1);
+	sceKernelAtomicSubAndGet32(&g_total_vnode_num, 1);
 	return ret;
 }
 
@@ -1137,7 +1137,7 @@ void vfs_initialize_file(SceVfsVnode *vp, SceVfsFile *file)
 /* name unknown: drops a file's opened-entry count and closes its UID */
 int vfs_close_file(SceVfsVnode *vp, SceUID fd)
 {
-	SceCpuForDriver_A4884C4E((volatile SceInt32 *)&vp->core.mnt->openedEntryNum, 1);
+	sceKernelAtomicSubAndGet32((volatile SceInt32 *)&vp->core.mnt->openedEntryNum, 1);
 	return sceGUIDClose(fd);
 }
 
@@ -1437,7 +1437,7 @@ int vfs_process_finalize(SceUID pid)
 		if (ret < 0 || (int)num < 1)
 			return ret;
 		for (i = 0; i < (int)num; i++) {
-			guid = SceSysmemForDriver_45D22597(pid, puid[i]);
+			guid = scePUIDtoGUID(pid, puid[i]);
 			if (guid < 0) {
 				SCE_DBG_PRINTF(0xf, 2224, "PUIDtoGUID failed err= %d 0x%x puid=0x%x\n",
 					       guid, guid, puid[i]);
@@ -1456,7 +1456,7 @@ int vfs_process_finalize(SceUID pid)
 				ret = vfs_process_close(guid, file);
 			}
 			if (ret == 0)
-				SceSysmemForDriver_84A4AF5E(pid, puid[i]);
+				scePUIDClose(pid, puid[i]);
 			vfs_release_file(guid);
 		}
 	} while (num == 0x40);
@@ -1919,7 +1919,7 @@ int vfs_process_suspend(SceUID pid, int num)
 		num = got;
 	}
 	for (i = 0; i < (int)got; i++) {
-		guid = SceSysmemForDriver_45D22597(pid, puid[i]);
+		guid = scePUIDtoGUID(pid, puid[i]);
 		if (guid < 0) {
 			SCE_DBG_PRINTF(0xf, 2807, "PUIDtoGUID failed err= %d 0x%x puid=0x%x\n", guid,
 				       guid, puid[i]);
@@ -2061,7 +2061,7 @@ SceUID vfs_allocate_file(SceVfsVnode *vp, SceVfsFile **file, const char *name)
 		return uid;
 	}
 	*file = &obj->file;
-	SceCpuForDriver_5F6A8743((volatile SceInt32 *)&mnt->openedEntryNum, 1);
+	sceKernelAtomicAddAndGet32((volatile SceInt32 *)&mnt->openedEntryNum, 1);
 	return uid;
 }
 
@@ -2118,7 +2118,7 @@ int vfsGetNewVnode(SceVfsMount *mnt, SceVopTable *ops, int unused, SceVfsVnode *
 	do {
 		while (next = cur = g_total_vnode_num, g_available_vnode_num > cur) {
 			next++;
-			if (SceCpuForDriver_CDA96E81(&g_total_vnode_num, cur, next) != cur)
+			if (sceKernelAtomicCompareAndSet32(&g_total_vnode_num, cur, next) != cur)
 				continue;
 			vp = bufferPoolAlloc(&g_vnodePool);
 			if (vp == NULL) {

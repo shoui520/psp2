@@ -325,16 +325,16 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDReleaseObject
 	sceKernelUserMap
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
-	SceSysmemForDriver_84A4AF5E
+	scePUIDClose
 	sceKernelCreateHeap
 	sceKernelIsAccessibleRange
 	sceKernelGetMemBlockBase
 	sceKernelCopyFromUser
-	SceSysmemForDriver_BF209859
+	scePUIDOpenByGUID
 	sceKernelAllocMemBlockForKernel
 	scePUIDOpenByGUIDWithFlags
 	sceKernelDeleteHeap
@@ -420,14 +420,14 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_E54FD746
 	SceThreadmgrForDriver_E9A99C50
 	sceKernelGetSystemTimeWide
-	SceThreadmgrForDriver_F55E4D86
+	sceKernelWaitSemaCB
 	sceKernelCreateMutex
 	sceIoRemove
 	sceIoIoctl
 	sceIoDevctl
 	sceIoDclose
 	sceIoRmdir
-	SceIofilemgrForDriver_20574100
+	sceIoUmount
 	sceIoDread
 	sceIoWrite
 	sceIoPread
@@ -442,7 +442,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoChstat
 	sceIoMkdir
 	SceIofilemgrForDriver_CFAECF18
-	SceIofilemgrForDriver_D070BC48
+	sceIoMount
 	sceIoRename
 	sceIoSync
 	sceIoChstatByFd
@@ -454,13 +454,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetBudgetInfo
 	SceProcessmgrForDriver_5E882B60
 	sceKernelGetProcessStatus
-	SceProcessmgrForDriver_82D94BE9
+	sceKernelGetProcessTimeWideCore
 	sceKernelFreeRemoteProcessHeap
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	SceProcessmgrForDriver_C715591F
 	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
+	sceKernelUnregisterProcEventHandler
 	sceSblRngPseudoRandomNumber
 	sceSblAimgrGetOpenPsId
 	sceSblSsGetNvsData
@@ -511,14 +511,14 @@ set(MODULE_IMPORT_FUNCS
 	SceSblGcAuthMgrMsSaveBBForDriver_805C860B
 	SceSblGcAuthMgrMsSaveBBForDriver_8E6626A0
 	SceSblGcAuthMgrMsSaveBBForDriver_F66D5F76
-	SceKernelUtilsForDriver_83EFA1CC
-	SceKernelUtilsForDriver_A773A6A8
+	sceHmacSha256Digest
+	sceSha256Digest
 	sceKernelStartProcessExt
 	sceKernelWaitProcessEventCompletion
 	sceKernelSuspendProcess
 	sceKernelGetProcessSelfAuthInfo
 	SceProcessmgrForKernel_344DDE0B
-	SceProcessmgrForKernel_459A223B
+	sceKernelDeleteBudget
 	sceKernelGrowBudget
 	sceKernelResetGameBudget
 	sceKernelSpawnProcessExt
@@ -526,20 +526,20 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForKernel_8321B827
 	sceKernelProcessDebugSuspend
 	SceProcessmgrForKernel_D5DF895D
-	SceProcessmgrForKernel_DC18FCEF
+	sceKernelCreateBudget
 	sceKernelResumeProcess
 	sceKernelKillProcess
-	ScePfsMgrForKernel_00C8AF80
+	scePfsAcidDirUnmount
 	ScePfsMgrForKernel_27FB7618
-	ScePfsMgrForKernel_2D67D8CA
-	ScePfsMgrForKernel_4A4A8243
-	ScePfsMgrForKernel_680BC384
+	scePfsDisapprove
+	scePfsAcidDirMount
+	scePfsUnmount
 	ScePfsMgrForKernel_7E4B76E6
 	ScePfsMgrForKernel_806D2EA1
-	ScePfsMgrForKernel_8CDA249A
-	ScePfsMgrForKernel_A772209C
-	ScePfsMgrForKernel_B0CC0A1A
-	ScePfsMgrForKernel_D8D0FEE5
+	scePfsAcidDirApprove
+	scePfsMount
+	scePfsAcidDirSet
+	scePfsApprove
 	SceSysconForDriver_CBD6D8BC
 	ScePowerForDriver_0856FD0A
 	scePowerRequestStandby
@@ -548,13 +548,13 @@ set(MODULE_IMPORT_FUNCS
 	sceAudioOutSetAdoptMode
 	SceAudioForDriver_E87902DF
 	SceAudioForDriver_F07D34C2
-	SceDisplayForDriver_289D82FE
+	sceDisplaySetFrameBuf
 	SceDisplayForDriver_3BC165EF
 	SceDisplayForDriver_6B198052
 	SceDisplayForDriver_707EEE2E
 	SceDisplayForDriver_B54962A1
 	SceDisplayForDriver_BC76296A
-	SceDisplayForDriver_C8E554C5
+	sceDisplayGetPrimaryHead
 	SceDisplayForDriver_D4C812E5
 	SceTouchForDriver_3F3FBF69
 	SceCameraForDriver_E81EADE1
@@ -575,16 +575,16 @@ set(MODULE_IMPORT_FUNCS
 	SceFios2KernelForDriver_23247EFB
 	SceRtcForDriver_401C0954
 	sceRtcGetCurrentClockLocalTime
-	SceRtcForDriver_A930CD1A
-	SceRtcForDriver_D32AC698
+	sceRtcGetCurrentClock
+	sceRtcFormatRFC3339
 	SceCtrlForDriver_5B708A15
 	SceCtrlForDriver_B26C2231
 	SceMotionDevForDriver_22CD6DCA
 	SceNpDrmForDriver_3BFD2850
-	SceNpDrmForDriver_5D73448C
+	sceNpDrmGetFixedRifName
 	SceNpDrmForDriver_723322B5
-	SceNpDrmForDriver_DB406EAE
-	SceNpDrmForDriver_DF62F3B8
+	sceNpDrmGetRifInfo
+	sceNpDrmGetRifName
 	SceHidForDriver_0B7D27CF
 	SceAudioInForDriver_197CAA1B
 	SceAudioInForDriver_3EC79053

@@ -121,7 +121,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
 	sceKernelCopyFromUser
@@ -178,14 +178,14 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForKernel_EFFF2975
 	sceKernelKillProcess
 	SceModulemgrForKernel_37512E29
-	SceModulemgrForKernel_3FE47DDF
+	sceKernelStartRemoteModule
 	SceModulemgrForKernel_4E85022D
 	sceKernelGetProgramIdentificationInfo
 	sceKernelGetModuleIdByPid
 	sceKernelStopRemoteModule
 	SceModulemgrForKernel_FCA9FDB1
 	sceKernelStartModule
-	SceModulemgrForDriver_100DAEB9
+	sceKernelStopModule
 	sceKernelUnloadModule
 	sceKernelLoadModule
 	SceModulemgrForDriver_BBE1771C

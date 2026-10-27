@@ -79,7 +79,7 @@ void *_GetVideocodecGlobal(SceUID pid)
 	void *storage = 0;
 
 	if (pid != 0) {
-		if (SceProcessmgrForDriver_AF80F39C(pid,
+		if (sceKernelGetRemoteKPLS(pid,
 				videocodecResident.processLocalStorageId,
 				&storage, 0) < 0)
 			storage = 0;

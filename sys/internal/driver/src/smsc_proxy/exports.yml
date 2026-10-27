@@ -19,11 +19,11 @@ SceSblSmschedProxy:
         - SceSblSmSchedProxyForKernel_3CE17233: 0x3CE17233
         - SceSblSmSchedProxyForKernel_723B382F: 0x723B382F
         - SceSblSmSchedProxyForKernel_7894B6F0: 0x7894B6F0
-        - SceSblSmSchedProxyForKernel_85EDA5FC: 0x85EDA5FC
+        - sceSblSmSchedProxyReleaseIntrHandler: 0x85EDA5FC
         - sceSblSmSchedProxyRegisterIntrHandler: 0x8B84AC2A
         - sceSblSmSchedProxyReadCry2Arm: 0x973A4A7D
         - SceSblSmSchedProxyForKernel_984EC9D1: 0x984EC9D1
         - SceSblSmSchedProxyForKernel_A488D604: 0xA488D604
-        - SceSblSmSchedProxyForKernel_DE4EAC3C: 0xDE4EAC3C
+        - sceSblSmSchedProxyKill: 0xDE4EAC3C
         - sceSblSmSchedProxyWait: 0xF35EFC1A
         - SceSblSmSchedProxyForKernel_F70C04EC: 0xF70C04EC

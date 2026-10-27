@@ -48,12 +48,12 @@ int SceCameraForDriver_F7A0C99F(void)
 	return 0;
 }
 
-int SceCameraForDriver_E487870A(int dev, void *param)		/* open */
+int sceCameraOpen(int dev, SceCameraInfo *info)	/* open */
 {
 	return SCE_CAMERA_ERROR_NOT_MOUNTED;
 }
 
-int SceCameraForDriver_0E9B4B9E(int dev)				/* close */
+int sceCameraClose(int dev)				/* close */
 {
 	return SCE_CAMERA_ERROR_NOT_MOUNTED;
 }
@@ -68,7 +68,7 @@ int SceCameraForDriver_8C3354E5(int dev)				/* stop */
 	return SCE_CAMERA_ERROR_NOT_MOUNTED;
 }
 
-int SceCameraForDriver_2D12FDF3(int dev, void *param)		/* read */
+int sceCameraRead(int dev, SceCameraRead *read)	/* read */
 {
 	return SCE_CAMERA_ERROR_NOT_MOUNTED;
 }
@@ -123,7 +123,7 @@ int SceCameraForDriver_DFBBA264(void)
 	return SCE_CAMERA_ERROR_NOT_MOUNTED;
 }
 
-int SceCameraForDriver_22E70D83(int dev)				/* is active */
+int sceCameraIsActive(int dev)				/* is active */
 {
 	return SCE_CAMERA_ERROR_NOT_MOUNTED;
 }
@@ -185,22 +185,22 @@ int SceCameraForDriver_3590BB9B(void)
 	__ret = sceKernelCopyFromUser(__buf, (uparam), __buf[0]);		\
 	if (__ret < 0)								\
 		return __ret;							\
-	__res = driver((dev), __buf);						\
+	__res = driver((dev), (void *)__buf);				\
 	__ret = sceKernelCopyToUser((uparam), __buf, __buf[0]);		\
 	__ret < 0 ? __ret : __res;						\
 })
 
-int sceCameraOpen(int dev, SceCameraInfo *info)
+int sceCameraOpenForUser(int dev, SceCameraInfo *info)
 {
 	return CAMERA_PARAM_CALL(dev, info, CAMERA_OPEN_PARAM_MIN, CAMERA_OPEN_PARAM_MAX,
-				 SceCameraForDriver_E487870A);
+				 sceCameraOpen);
 }
 
-int sceCameraClose(int dev)
+int sceCameraCloseForUser(int dev)
 {
 	if (!CAMERA_DEVICE_VALID(dev))
 		return SCE_CAMERA_ERROR_PARAM;
-	return SceCameraForDriver_0E9B4B9E(dev);
+	return sceCameraClose(dev);
 }
 
 int sceCameraStart(int dev)
@@ -217,17 +217,17 @@ int sceCameraStop(int dev)
 	return SceCameraForDriver_8C3354E5(dev);
 }
 
-int sceCameraRead(int dev, SceCameraRead *read)
+int sceCameraReadForUser(int dev, SceCameraRead *read)
 {
 	return CAMERA_PARAM_CALL(dev, read, CAMERA_READ_PARAM_MIN, CAMERA_READ_PARAM_MAX,
-				 SceCameraForDriver_2D12FDF3);
+				 sceCameraRead);
 }
 
-int sceCameraIsActive(int dev)
+int sceCameraIsActiveForUser(int dev)
 {
 	if (!CAMERA_DEVICE_VALID(dev))
 		return SCE_CAMERA_ERROR_PARAM;
-	return SceCameraForDriver_22E70D83(dev);
+	return sceCameraIsActive(dev);
 }
 
 int sceCameraGetDeviceLocation(int dev, SceFVector3 *location)

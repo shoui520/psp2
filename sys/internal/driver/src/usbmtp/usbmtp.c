@@ -303,7 +303,7 @@ static int attach(int usbVersion, void *userData)
 	unsigned int intr;
 	int ret;
 
-	SceUdcdForDriver_FBEA3703(&info);
+	sceUdcdGetDeviceInfo(&info);
 	if (usbVersion == 2) {
 		s_mtp.speed = 2;
 		s_mtp.packetSize = 512;
@@ -508,7 +508,7 @@ static int sendBulk(void *buffer, unsigned int size)
 	req->isControlRequest = 0;
 	start = (uintptr_t)buffer & ~(MTP_CACHE_LINE - 1);
 	sceKernelDcacheCleanRange((void *)start, (uintptr_t)MTP_ALIGN((uint8_t *)buffer + size) - start);
-	ret = SceUdcdForDriver_1ED0E89E(req);
+	ret = sceUdcdReqSend(req);
 	if (ret < 0)
 		return ret;
 	ret = WaitTransfer(req, &s_mtp.endpoints[1], MTP_EVENT_SENT, MTP_EVENT_SEND_FAILED, 0);
@@ -544,7 +544,7 @@ static int receiveBulk(void *buffer, unsigned int size)
 		return MTP_ERROR_CANCELLED;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-	ret = SceUdcdForDriver_C60A74B2(req);
+	ret = sceUdcdReqRecv(req);
 	if (ret < 0)
 		return ret;
 	ret = WaitTransfer(req, &s_mtp.endpoints[2], MTP_EVENT_RECEIVED, MTP_EVENT_RECV_FAILED, 0);
@@ -571,7 +571,7 @@ static int processRequest(int recipient, int arg, SceUdcdEP0DeviceRequest *req, 
 		*(MtpOsStringDescriptor *)s_mtp.controlBuffer = s_mtp.osString;
 		control->size = length < sizeof(s_mtp.osString) ? length : sizeof(s_mtp.osString);
 		sceKernelDcacheCleanRange(control->data, 128);
-		return SceUdcdForDriver_1ED0E89E(control);
+		return sceUdcdReqSend(control);
 	case 0x40:	/* vendor: the extended compatible ID */
 		if (req->bRequest != 1 || req->wIndex != 4)
 			break;
@@ -579,7 +579,7 @@ static int processRequest(int recipient, int arg, SceUdcdEP0DeviceRequest *req, 
 		*(MtpCompatibleIdDescriptor *)s_mtp.controlBuffer = s_mtp.compatibleId;
 		control->size = length < sizeof(s_mtp.compatibleId) ? length : sizeof(s_mtp.compatibleId);
 		sceKernelDcacheCleanRange(control->data, 128);
-		return SceUdcdForDriver_1ED0E89E(control);
+		return sceUdcdReqSend(control);
 	case 0x20:	/* class */
 		if (recipient != 1)
 			break;
@@ -590,7 +590,7 @@ static int processRequest(int recipient, int arg, SceUdcdEP0DeviceRequest *req, 
 			s_mtp.cancel.request.size = length;
 			sceKernelDcacheInvalidateRange(s_mtp.cancel.request.data,
 							(length + MTP_CACHE_LINE - 1) & ~(MTP_CACHE_LINE - 1));
-			return SceUdcdForDriver_C60A74B2(&s_mtp.cancel.request);
+			return sceUdcdReqRecv(&s_mtp.cancel.request);
 		case MTP_REQUEST_DEVICE_RESET:
 			SceUdcdForDriver_38787672(&s_mtp.endpoints[1]);
 			SceUdcdForDriver_38787672(&s_mtp.endpoints[2]);
@@ -638,7 +638,7 @@ cancelled:
 			memcpy(s_mtp.controlBuffer, &status, status.wLength);
 			control->size = status.wLength < length ? status.wLength : length;
 			sceKernelDcacheCleanRange(control->data, 128);
-			return SceUdcdForDriver_1ED0E89E(control);
+			return sceUdcdReqSend(control);
 		}
 		break;
 	}
@@ -770,7 +770,7 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 				goto error;
 			}
 			req->size = 0;
-			ret = SceUdcdForDriver_1ED0E89E(req);
+			ret = sceUdcdReqSend(req);
 			if (ret < 0)
 				goto error;
 			ret = WaitTransfer(req, &s_mtp.endpoints[1], MTP_EVENT_SENT,
@@ -1158,7 +1158,7 @@ int SceUsbMtpForDriver_5FA86BA4(void *event)
 	req->data = out;
 	req->size = n;
 	sceKernelDcacheCleanRange(out, (n + 63) & ~63U);
-	int ret = SceUdcdForDriver_1ED0E89E(req);
+	int ret = sceUdcdReqSend(req);
 	if (ret < 0)
 		return ret;
 	ret = WaitTransfer(req, &s_mtp.endpoints[3], MTP_EVENT_NOTIFIED, MTP_EVENT_NOTIFY_FAILED, 1);
@@ -1275,20 +1275,20 @@ int sceUsbMtpStart(void)
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 2324, "[%s%-28s] Err(%4d) sceUdcdActivate() failed (0x%x)\n",
 			"usbmtp:", __func__, 2324, ret);
-		SceUdcdForDriver_1494293B(driver, 0, 0);
+		sceUdcdStop(driver, 0, 0);
 		return MTP_ERROR_UNAVAILABLE;
 	}
 	return 0;
 }
 
-int SceUsbMtpForDriver_08CD359F(void)
+int sceUsbMtpStop(void)
 {
 	if (!s_mtp.ready)
 		return MTP_ERROR_UNAVAILABLE;
-	SceUdcdForDriver_8AE87657();
-	if (SceUdcdForDriver_1494293B("USB_MTP_Driver", 0, 0) < 0)
+	sceUdcdDeactivate();
+	if (sceUdcdStop("USB_MTP_Driver", 0, 0) < 0)
 		return MTP_ERROR_PROTOCOL;
-	SceUdcdForDriver_1494293B("USBDeviceControllerDriver", 0, 0);
+	sceUdcdStop("USBDeviceControllerDriver", 0, 0);
 	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_SEND_FAILED);
 	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_RECV_FAILED);
 	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_NOTIFY_FAILED);
@@ -1356,7 +1356,7 @@ int _sceUsbMtpModuleStart(unsigned arglen, const char *argp)
 		}
 	}
 	s_mtp.lock = 0;
-	if (SceUdcdForDriver_4E55244D(&s_mtp.driver) < 0) {
+	if (sceUdcdRegister(&s_mtp.driver) < 0) {
 		SCE_DBG_PRINTF(0, 2594, "[%s%-28s] Err(%4d) cannot register protocol driver\n",
 			"usbmtp:", __func__, 2594);
 		sceKernelDeleteEventFlag(s_mtp.event);

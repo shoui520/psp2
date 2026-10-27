@@ -701,7 +701,7 @@ typedef struct IoErrorEvent {
 	int mntId;
 	SceUID pid;				/* the creator, whose memory userInfo is */
 	SceUInt32 pattern;			/* the event bits it waits for */
-	int isSet;				/* set until SceIofilemgrForDriver_40B933C7 */
+	int isSet;				/* set until sceIoClearErrorEvent */
 	IoErrorEventInfo *userInfo;		/* where the error is written */
 	SceUInt32 reserved;			/* not yet traced */
 } IoErrorEvent;

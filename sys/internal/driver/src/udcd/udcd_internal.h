@@ -83,7 +83,7 @@ _Static_assert(sizeof(struct udcdConfigurationAllocation) == 0x28,
 	       "configuration allocation header");
 
 /*
- * SceUdcdForDriver_FBEA3703's record. The SDK reserves 64 bytes; the driver
+ * sceUdcdGetDeviceInfo's record. The SDK reserves 64 bytes; the driver
  * fills only this pair.
  */
 struct udcdDeviceInformation {
@@ -103,7 +103,7 @@ struct udcdBusState {
 	unsigned int activationState;		/* SCE_UDCD_STATUS_DEACTIVATED... */
 	unsigned int cableState;		/* SCE_UDCD_STATUS_CABLE_* */
 	unsigned int connectionState;		/* SCE_UDCD_STATUS_CONNECTION_* */
-	unsigned int waitError;				/* returned by SceUdcdForDriver_D03017C0 */
+	unsigned int waitError;				/* returned by sceUdcdWaitState */
 	unsigned int reserved;
 	unsigned int interfaceCount;
 	unsigned int endpointCount;		/* endpoint 0 included */

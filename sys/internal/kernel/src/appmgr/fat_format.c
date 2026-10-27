@@ -507,7 +507,7 @@ static inline unsigned int _request_type(AppmgrFatFormatContext *context,
 		return context->type;
 	if (index == 2)
 		return context->alternate.type;
-	SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n", __func__, index);
+	sceKernelPrintfLevel(1, "%s: unsupported index(%d)\n", __func__, index);
 	return 0;
 }
 
@@ -518,7 +518,7 @@ static inline unsigned int _cluster_size(AppmgrFatFormatContext *context,
 		return context->arguments->clusterSize;
 	if (index == 2)
 		return context->alternate.clusterSize;
-	SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n", __func__, index);
+	sceKernelPrintfLevel(1, "%s: unsupported index(%d)\n", __func__, index);
 	return 0;
 }
 
@@ -622,7 +622,7 @@ uint32_t _fat32_cluster_count(uint64_t volumeSize, uint32_t clusterSize,
 	return count;
 invalid:
 #if FW_DEBUG
-	SceDebugForDriver_1A3F2AA4(1, message, __func__, volumeSize, reservedAlignment,
+	sceKernelPrintfLevel(1, message, __func__, volumeSize, reservedAlignment,
 		fatAlignment, clusterSize, limit);
 #endif
 	return 0;
@@ -680,7 +680,7 @@ uint16_t _fat16_cluster_count(uint64_t volumeSize, uint32_t clusterSize,
 	return count;
 invalid:
 #if FW_DEBUG
-	SceDebugForDriver_1A3F2AA4(1, message, __func__, volumeSize, reservedAlignment,
+	sceKernelPrintfLevel(1, message, __func__, volumeSize, reservedAlignment,
 		fatAlignment, clusterSize, limit);
 #endif
 	return 0;
@@ -704,7 +704,7 @@ uint16_t _fat12_cluster_count(uint64_t volumeSize, uint32_t clusterSize,
 		2 * (uint64_t)fatAlignment + reservedSize;
 	if (volumeSize >= limit) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1,
+		sceKernelPrintfLevel(1,
 			"%s: volume_size(%llu) is too large for FAT12, reserved_alignment[%#x], fat_alignment[%#x], cluster_size[%#x], too_large_size(%llu)\n",
 			__func__, volumeSize, reservedAlignment, fatAlignment,
 			clusterSize, limit);
@@ -715,7 +715,7 @@ uint16_t _fat12_cluster_count(uint64_t volumeSize, uint32_t clusterSize,
 	limit = reservedSize + fatCopiesSize;
 	if (volumeSize < limit) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1,
+		sceKernelPrintfLevel(1,
 			"%s: volume_size(%llu) is too small for FAT12, reserved_alignment[%#x], fat_alignment[%#x], cluster_size[%#x], minimum_size(%llu)\n",
 			__func__, volumeSize, reservedAlignment, fatAlignment,
 			clusterSize, limit);
@@ -788,7 +788,7 @@ int device_fd_write(AppmgrFatFormatContext *context, const void *buffer,
 
 	seekResult = sceIoLseek(context->file, byteOffset, SCE_SEEK_SET);
 	if (seekResult < 0) {
-		SceDebugForDriver_1A3F2AA4(1,
+		sceKernelPrintfLevel(1,
 			"%s: sceIoLseek for setup failed[%#llx]\n",
 			__func__, seekResult);
 		result = seekResult;
@@ -799,7 +799,7 @@ int device_fd_write(AppmgrFatFormatContext *context, const void *buffer,
 	}
 	result = sceIoWrite(context->file, buffer, size);
 	if (result < 0) {
-		SceDebugForDriver_1A3F2AA4(1, "%s: sceIoWrite failed[%#x]\n",
+		sceKernelPrintfLevel(1, "%s: sceIoWrite failed[%#x]\n",
 			__func__, result);
 		error = result;
 		goto write_error;
@@ -816,13 +816,13 @@ notify:
 	return result;
 write_error:
 	/* Sony inlines error_notification here, preserving the write error. */
-	SceDebugForDriver_1A3F2AA4(1, "%s: sceIoWrite failed[%#x]\n",
+	sceKernelPrintfLevel(1, "%s: sceIoWrite failed[%#x]\n",
 		"error_notification", error);
 	notification = context->notification;
 	if (notification) {
 		notificationResult = notification(context->arguments);
 		if (notificationResult < 0)
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: return sceIoWrite error[%#x] instead of return value of notification[%#x]\n",
 				"error_notification", error, notificationResult);
 	}
@@ -984,7 +984,7 @@ int _prepare_FAT32_area(AppmgrFatFormatContext *context)
 		entryOffset = 8;
 		if (cluster < context->bitmapCluster1) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: bad cluster[%#x] exists before bitmap1[%#x]\n",
 				__func__, cluster, context->bitmapCluster1);
 #endif
@@ -1007,7 +1007,7 @@ int _prepare_FAT32_area(AppmgrFatFormatContext *context)
 		}
 		if (cluster < context->bitmapCluster2) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: bad cluster[%#x] exists before bitmap2[%#x]\n",
 				__func__, cluster, context->bitmapCluster2);
 #endif
@@ -1030,7 +1030,7 @@ int _prepare_FAT32_area(AppmgrFatFormatContext *context)
 		}
 		if (cluster < context->upcaseCluster) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: bad cluster[%#x] exists before upcase_table[%#x]\n",
 				__func__, cluster, context->upcaseCluster);
 #endif
@@ -1065,7 +1065,7 @@ int _prepare_FAT32_area(AppmgrFatFormatContext *context)
 			fatSize - entryOffset);
 #if FW_DEBUG
 		if (context->firstUnusedCluster != cluster)
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: cluster[%#x] != expected[%#x]\n", __func__,
 				cluster, context->firstUnusedCluster);
 #endif
@@ -1086,7 +1086,7 @@ static inline uint32_t _exfat_cluster_count(uint64_t volumeSize,
 
 	if (volumeSize < 0x100000) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1,
+		sceKernelPrintfLevel(1,
 			"%s: volume_size(%llu) is too small for exFAT, reserved_alignment[%#x], fat_alignment[%#x], minimum_size(%llu)\n",
 			__func__, volumeSize, reservedAlignment, fatAlignment,
 			(uint64_t)0x100000);
@@ -1122,7 +1122,7 @@ static inline uint32_t _default_reserved(uint32_t type)
 	case 4:
 		return 24;
 	default:
-		SceDebugForDriver_1A3F2AA4(1, "%s: unsupported type(%d)\n",
+		sceKernelPrintfLevel(1, "%s: unsupported type(%d)\n",
 			__func__, type);
 		return 0;
 	}
@@ -1151,12 +1151,12 @@ int appmgrConfigureFatFormat(AppmgrFatFormatContext *context, int index,
 		volumeSize = context->arguments->volumeSize;
 	} else {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n",
+		sceKernelPrintfLevel(1, "%s: unsupported index(%d)\n",
 			"_start_lba", index);
 #endif
 		startLba = UINT64_MAX;
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n",
+		sceKernelPrintfLevel(1, "%s: unsupported index(%d)\n",
 			"_volume_size", index);
 #endif
 		volumeSize = 0;
@@ -1164,21 +1164,21 @@ int appmgrConfigureFatFormat(AppmgrFatFormatContext *context, int index,
 	alignment = context->writeAlignment;
 	if (sectorSize == 0 || sectorSize > 4096 || (sectorSize & 511) != 0) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: invalid sector_size(%u)\n",
+		sceKernelPrintfLevel(1, "%s: invalid sector_size(%u)\n",
 			"_check_format_type", sectorSize);
 #endif
 		return (int)0x80010016;
 	}
 	if (clusterSize == 0) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: invalid cluster_size(%u)\n",
+		sceKernelPrintfLevel(1, "%s: invalid cluster_size(%u)\n",
 			"_check_format_type", clusterSize);
 #endif
 		return (int)0x80010016;
 	}
 	if (clusterSize % sectorSize != 0) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1,
+		sceKernelPrintfLevel(1,
 			"%s: cluster_size(%u) isn't aligned for sector_size(%u)\n",
 			"_check_format_type", clusterSize, sectorSize);
 #endif
@@ -1187,7 +1187,7 @@ int appmgrConfigureFatFormat(AppmgrFatFormatContext *context, int index,
 	if (clusterSize > (requestedType <= 4 ?
 		fatMaxClusterSizes[requestedType] : 0)) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: cluster_size(%u) is too large\n",
+		sceKernelPrintfLevel(1, "%s: cluster_size(%u) is too large\n",
 			"_check_format_type", clusterSize);
 #endif
 		return (int)0x80010016;
@@ -1390,11 +1390,11 @@ int appmgrConfigureFatFormat(AppmgrFatFormatContext *context, int index,
 		}
 	} else {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n",
+		sceKernelPrintfLevel(1, "%s: unsupported index(%d)\n",
 			"_set_request_type", index);
-		SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n",
+		sceKernelPrintfLevel(1, "%s: unsupported index(%d)\n",
 			"_set_cluster_size", index);
-		SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n",
+		sceKernelPrintfLevel(1, "%s: unsupported index(%d)\n",
 			"_change_cluster_count", index);
 #endif
 	}
@@ -1517,7 +1517,7 @@ int initialize_FAT32(AppmgrFatFormatContext *context)
 			if (cluster == context->bitmapCluster1) {
 #if FW_DEBUG
 				if (remainingLength != 0)
-					SceDebugForDriver_1A3F2AA4(1,
+					sceKernelPrintfLevel(1,
 						"%s: unexpected file_size(%llu)\n",
 						__func__, remainingLength);
 #endif
@@ -1557,7 +1557,7 @@ int initialize_FAT32(AppmgrFatFormatContext *context)
 					if (cluster < target && cluster - windowStart < entryCount) {
 #if FW_DEBUG
 						if (remainingLength != 0)
-							SceDebugForDriver_1A3F2AA4(1,
+							sceKernelPrintfLevel(1,
 								"%s: unexpected file_size(%llu)\n",
 								__func__, remainingLength);
 						target = context->bitmapCluster2;
@@ -1577,7 +1577,7 @@ int initialize_FAT32(AppmgrFatFormatContext *context)
 				if (cluster == context->bitmapCluster2) {
 #if FW_DEBUG
 					if (remainingLength != 0)
-						SceDebugForDriver_1A3F2AA4(1,
+						sceKernelPrintfLevel(1,
 							"%s: unexpected file_size(%llu)\n",
 							__func__, remainingLength);
 #endif
@@ -1615,7 +1615,7 @@ int initialize_FAT32(AppmgrFatFormatContext *context)
 					if (cluster < target && cluster - windowStart < entryCount) {
 #if FW_DEBUG
 						if (remainingLength != 0)
-							SceDebugForDriver_1A3F2AA4(1,
+							sceKernelPrintfLevel(1,
 								"%s: unexpected file_size(%llu)\n",
 								__func__, remainingLength);
 						target = context->upcaseCluster;
@@ -1905,14 +1905,14 @@ static inline int _check_buffer_alignment(AppmgrFatFormatArguments *arguments,
 		return (int)0x80010016;
 #if FW_DEBUG
 	if ((uintptr_t)buffer % sectorSize != 0)
-		SceDebugForDriver_1A3F2AA4(1,
+		sceKernelPrintfLevel(1,
 			"%s: unaligned buffer[%p] takes long time for device access\n",
 			__func__, buffer);
 #endif
 	bufferSize = arguments->bufferSize;
 	if (sectorSize > bufferSize) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1,
+		sceKernelPrintfLevel(1,
 			"%s: buffer_size(%u) < sector_size(%u)\n",
 			__func__, bufferSize, sectorSize);
 #endif
@@ -1921,7 +1921,7 @@ static inline int _check_buffer_alignment(AppmgrFatFormatArguments *arguments,
 	remainder = bufferSize % sectorSize;
 	if (remainder != 0) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1,
+		sceKernelPrintfLevel(1,
 			"%s: reduce (%u) from buffer_size(%u) for sector alignment\n",
 			__func__, remainder, bufferSize);
 		arguments->bufferSize -= remainder;
@@ -1941,7 +1941,7 @@ static inline void _set_start_lba(AppmgrFatFormatContext *context, int index,
 		context->alternate.startLba = startLba;
 #if FW_DEBUG
 	else
-		SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n", __func__, index);
+		sceKernelPrintfLevel(1, "%s: unsupported index(%d)\n", __func__, index);
 #endif
 }
 
@@ -1954,7 +1954,7 @@ static inline void _set_volume_size(AppmgrFatFormatContext *context, int index,
 		context->alternate.sectorCount = volumeSize / context->bytesPerSector;
 #if FW_DEBUG
 	else
-		SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n", __func__, index);
+		sceKernelPrintfLevel(1, "%s: unsupported index(%d)\n", __func__, index);
 #endif
 }
 
@@ -1973,7 +1973,7 @@ static inline int _prepare_partition_table(AppmgrFatFormatContext *context)
 	case 3: systemId = 11; break;
 	case 4: systemId = 7; break;
 	default:
-		SceDebugForDriver_1A3F2AA4(1, "%s: unsupported request_type(%d)\n",
+		sceKernelPrintfLevel(1, "%s: unsupported request_type(%d)\n",
 			__func__, type);
 		return (int)0x80010016;
 	}
@@ -1999,7 +1999,7 @@ static inline int _prepare_partition_table(AppmgrFatFormatContext *context)
 					partitionSize * context->bytesPerSector);
 #if FW_DEBUG
 				if (clusterSize != _cluster_size(context, task))
-					SceDebugForDriver_1A3F2AA4(1,
+					sceKernelPrintfLevel(1,
 						"%s: change cluster_size in arguments[%#x] -> [%#x] in partition_conf.h, partition_index(%d), format_task(%d)\n",
 						__func__, _cluster_size(context, task),
 						clusterSize, index, task);
@@ -2037,7 +2037,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 
 #if FW_DEBUG
 	if (arguments->phase != 0)
-		SceDebugForDriver_1A3F2AA4(1, "%s: initialize phase(%d)\n",
+		sceKernelPrintfLevel(1, "%s: initialize phase(%d)\n",
 			__func__, arguments->phase);
 #endif
 	arguments->phase = 1;
@@ -2049,7 +2049,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 	context->writeAlignment = arguments->clusterSize;
 	if (arguments->writtenDataSize != 0) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: initialize written_data_size[%#x]\n",
+		sceKernelPrintfLevel(1, "%s: initialize written_data_size[%#x]\n",
 			__func__, arguments->writtenDataSize);
 #endif
 		arguments->writtenDataSize = 0;
@@ -2058,7 +2058,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 	if (file < 0) {
 		result = file;
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: sceIoOpen for (%s) failed[%#x]\n",
+		sceKernelPrintfLevel(1, "%s: sceIoOpen for (%s) failed[%#x]\n",
 			__func__, arguments->deviceName, result);
 #endif
 		goto failed;
@@ -2071,7 +2071,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 	if (result == 0) {
 #if FW_DEBUG
 		if (context->bytesPerSector * (uint64_t)info.sectorCount != deviceSize)
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: volumeSize[%#llx] != sectorCount[%#x] * sector_size[%#x]\n",
 				__func__, deviceSize, info.sectorCount, context->bytesPerSector);
 #endif
@@ -2080,7 +2080,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 		device = arguments->deviceName;
 		if (device != NULL && appmgrFatPathHasPrefix(device, "sdstor0:int-")) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: set hidden_sectors[%#x] and use write_alignment[%#x] instead of blockSize[%#x], device_name(%s)\n",
 				__func__, info.startSector, context->writeAlignment,
 				info.eraseBlockCount, device);
@@ -2088,14 +2088,14 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 		} else {
 			context->writeAlignment = info.eraseBlockCount;
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: set hidden_sectors[%#x] and write_alignment[%#x], device_name(%s)\n",
 				__func__, info.startSector, info.eraseBlockCount, device);
 #endif
 		}
 	} else {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1,
+		sceKernelPrintfLevel(1,
 			"%s: _fs_util_get_device_info for (%s) failed[%#x]\n",
 			__func__, arguments->deviceName, result);
 #endif
@@ -2105,7 +2105,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 	if (volumeSize % sectorSize != 0) {
 		result = (int)0x80010016;
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1,
+		sceKernelPrintfLevel(1,
 			"%s: request volume_size[%#llx] isn't aligned with sector_size[%#x]\n",
 			__func__, volumeSize, sectorSize);
 #endif
@@ -2114,7 +2114,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 	if (deviceSize < volumeSize) {
 		result = (int)0x8001001c;
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: request volume_size[%#llx] > device_size[%#llx]\n",
+		sceKernelPrintfLevel(1, "%s: request volume_size[%#llx] > device_size[%#llx]\n",
 			__func__, volumeSize, deviceSize);
 #endif
 		goto close_failed;
@@ -2152,7 +2152,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 		if (arguments->initialImageSize != 0 && arguments->initialImageSize != 512) {
 			result = (int)0x80010016;
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1, "%s: invalid initial_image_size[%#x]\n",
+			sceKernelPrintfLevel(1, "%s: invalid initial_image_size[%#x]\n",
 				__func__, arguments->initialImageSize);
 #endif
 			goto close_failed;
@@ -2166,7 +2166,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 		result = _prepare_partition_table(context);
 		if (arguments->volumeSize == 0) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: whole device size[%#llx], set partition size[%#llx]\n",
 				__func__, deviceSize,
 				context->sectorCount * context->bytesPerSector);
@@ -2176,7 +2176,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 	} else {
 		if (arguments->initialImageSize != 0) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1, "%s: invalidate initial_image_size[%#x]\n",
+			sceKernelPrintfLevel(1, "%s: invalidate initial_image_size[%#x]\n",
 				__func__, arguments->initialImageSize);
 			volumeSize = arguments->volumeSize;
 #endif
@@ -2185,7 +2185,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 		if (volumeSize == 0) {
 			volumeSize = deviceSize;
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1, "%s: use whole device, size[%#llx]\n",
+			sceKernelPrintfLevel(1, "%s: use whole device, size[%#llx]\n",
 				__func__, deviceSize);
 #endif
 			arguments->volumeSize = deviceSize;
@@ -2207,10 +2207,10 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 	if (arguments->type != context->type) {
 #if FW_DEBUG
 		if (arguments->type != 0)
-			SceDebugForDriver_1A3F2AA4(1, "%s: format_type(%d) != arguments->type(%d)\n",
+			sceKernelPrintfLevel(1, "%s: format_type(%d) != arguments->type(%d)\n",
 				__func__, context->type, arguments->type);
 		else
-			SceDebugForDriver_1A3F2AA4(1, "%s: set format_type(%d)\n",
+			sceKernelPrintfLevel(1, "%s: set format_type(%d)\n",
 				__func__, context->type);
 #endif
 		arguments->type = context->type;
@@ -2222,7 +2222,7 @@ close_failed:
 		context->file = -1;
 #if FW_DEBUG
 	else
-		SceDebugForDriver_1A3F2AA4(1, "%s: sceIoClose failed[%#x]\n", __func__, closeResult);
+		sceKernelPrintfLevel(1, "%s: sceIoClose failed[%#x]\n", __func__, closeResult);
 #endif
 failed:
 	arguments->phase = 7;
@@ -2470,7 +2470,7 @@ static inline int _prepare_exfat_root_directory(AppmgrFatFormatContext *context)
 	if (arguments->bufferSize < dataOffset +
 	    appmgrGetFatInitialAllocationSize(context, 1)) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1,
+		sceKernelPrintfLevel(1,
 			"%s: buffer_size(%d) is too small, please use larger buffer\n",
 			__func__, arguments->bufferSize);
 #endif
@@ -2537,7 +2537,7 @@ static inline int _prepare_PBR(AppmgrFatFormatContext *context)
 		return 0;
 	}
 #if FW_DEBUG
-	SceDebugForDriver_1A3F2AA4(1, "%s: unsupported type(%d)\n", __func__, type);
+	sceKernelPrintfLevel(1, "%s: unsupported type(%d)\n", __func__, type);
 #endif
 	return (int)0x80010086;
 }
@@ -2728,7 +2728,7 @@ static inline int initialize_FAT(AppmgrFatFormatContext *context)
 			context->reservedSectors), SCE_SEEK_SET);
 	if (seekResult < 0) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: sceIoLseek failed[%#llx]\n",
+		sceKernelPrintfLevel(1, "%s: sceIoLseek failed[%#llx]\n",
 			__func__, seekResult);
 #endif
 		return seekResult;
@@ -2789,7 +2789,7 @@ static inline int clear_root_entries(AppmgrFatFormatContext *context)
 			context->bytesPerSector, 1);
 	if (result < 0) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: zero_fill failed[%#x]\n", __func__,
+		sceKernelPrintfLevel(1, "%s: zero_fill failed[%#x]\n", __func__,
 			result);
 #endif
 	}
@@ -2824,7 +2824,7 @@ static inline int write_info_sector(AppmgrFatFormatContext *context)
 		appmgrFatDeviceOffset(context, infoOffset));
 	if (result < 0) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: default_write failed[%#x]\n",
+		sceKernelPrintfLevel(1, "%s: default_write failed[%#x]\n",
 			__func__, result);
 #endif
 		return result;
@@ -2863,7 +2863,7 @@ static inline int _write_exfat_root_directory(AppmgrFatFormatContext *context)
 	cluster = context->bitmapCluster1;
 	if (!cluster) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: unexpected bitmap_cluster_1\n",
+		sceKernelPrintfLevel(1, "%s: unexpected bitmap_cluster_1\n",
 			__func__);
 #endif
 		return (int)0x80010030;
@@ -2877,7 +2877,7 @@ static inline int _write_exfat_root_directory(AppmgrFatFormatContext *context)
 		bitmapOffset, 1);
 	if (result < 0) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: zero_fill failed[%#x]\n",
+		sceKernelPrintfLevel(1, "%s: zero_fill failed[%#x]\n",
 			"_initialize_allocation_bitmap", result);
 #endif
 		result = appmgrFatNotifyWrite(context, result);
@@ -2891,7 +2891,7 @@ static inline int _write_exfat_root_directory(AppmgrFatFormatContext *context)
 		goto update;
 	if (bufferSize - bufferOffset < headerSize) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: buffer_size(%d) < data_size(%d)\n",
+		sceKernelPrintfLevel(1, "%s: buffer_size(%d) < data_size(%d)\n",
 			"_initialize_allocation_bitmap", bufferSize - bufferOffset,
 			headerSize);
 #endif
@@ -2904,7 +2904,7 @@ static inline int _write_exfat_root_directory(AppmgrFatFormatContext *context)
 		appmgrFatDeviceOffset(context, bitmapOffset));
 	if (result < 0) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: default_write failed[%#x]\n",
+		sceKernelPrintfLevel(1, "%s: default_write failed[%#x]\n",
 			"_initialize_allocation_bitmap", result);
 #endif
 		goto update;
@@ -2930,7 +2930,7 @@ static inline int _write_exfat_root_directory(AppmgrFatFormatContext *context)
 			appmgrFatDeviceOffset(context, offset));
 		if (result < 0) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1, "%s: default_write failed[%#x]\n",
+			sceKernelPrintfLevel(1, "%s: default_write failed[%#x]\n",
 				"_write_clusters", result);
 #endif
 			goto update;
@@ -2972,7 +2972,7 @@ static inline int _write_exfat_root_directory(AppmgrFatFormatContext *context)
 update:
 	if (initialUnused != context->firstUnusedCluster) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: initial_unused(%d), unused_cluster(%d)\n",
+		sceKernelPrintfLevel(1, "%s: initial_unused(%d), unused_cluster(%d)\n",
 			__func__, initialUnused, context->firstUnusedCluster);
 #endif
 		sectorSize = context->bytesPerSector;
@@ -2988,7 +2988,7 @@ update:
 			appmgrFatDeviceOffset(context, offset));
 		if (result < 0) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1, "%s: default_write failed[%#x]\n",
+			sceKernelPrintfLevel(1, "%s: default_write failed[%#x]\n",
 				"_update_cluster_data", result);
 #endif
 		} else if (!result && context->bitmapCluster2) {
@@ -2999,7 +2999,7 @@ update:
 				appmgrFatDeviceOffset(context, offset));
 #if FW_DEBUG
 			if (result < 0)
-				SceDebugForDriver_1A3F2AA4(1,
+				sceKernelPrintfLevel(1,
 					"%s: default_write failed[%#x]\n",
 					"_update_cluster_data", result);
 #endif
@@ -3092,7 +3092,7 @@ static inline int _write_after_PBR(AppmgrFatFormatContext *context)
 			size - sectorSize,
 			appmgrFatDeviceOffset(context, (int64_t)(int32_t)sectorSize));
 #if FW_DEBUG
-	SceDebugForDriver_1A3F2AA4(1,
+	sceKernelPrintfLevel(1,
 		"%s: buffer_size[%#x] < initial_image_size[%#x]\n",
 		__func__, arguments->bufferSize, size);
 #endif
@@ -3150,7 +3150,7 @@ static inline int _format_partition(AppmgrFatFormatContext *context)
 		else {
 			result = (int)0x80010016;
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: _calculate_image_size failed[%#x]\n",
 				__func__, result);
 #endif
@@ -3163,9 +3163,9 @@ static inline int _format_partition(AppmgrFatFormatContext *context)
 			context->reservedSectors * context->bytesPerSector, 0, 1);
 		if (result < 0) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1, "%s: zero_fill failed[%#x]\n",
+			sceKernelPrintfLevel(1, "%s: zero_fill failed[%#x]\n",
 				"_invalidate_reserved_area", result);
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: _invalidate_reserved_area failed[%#x]\n",
 				__func__, result);
 #endif
@@ -3179,7 +3179,7 @@ static inline int _format_partition(AppmgrFatFormatContext *context)
 		result = _prepare_image(context);
 		if (result < 0) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1, "%s: _prepare_image failed[%#x]\n",
+			sceKernelPrintfLevel(1, "%s: _prepare_image failed[%#x]\n",
 				__func__, result);
 #endif
 			arguments->phase = 7;
@@ -3192,7 +3192,7 @@ static inline int _format_partition(AppmgrFatFormatContext *context)
 		result = _write_after_PBR(context);
 		if (result < 0) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1, "%s: _write_image failed[%#x]\n",
+			sceKernelPrintfLevel(1, "%s: _write_image failed[%#x]\n",
 				__func__, result);
 #endif
 			arguments->phase = 7;
@@ -3217,7 +3217,7 @@ finished:
 		if (result >= 0)
 			return 0;
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: _update_PBR failed[%#x]\n",
+		sceKernelPrintfLevel(1, "%s: _update_PBR failed[%#x]\n",
 			__func__, result);
 #endif
 	}
@@ -3231,7 +3231,7 @@ static inline uint64_t _volume_size(AppmgrFatFormatContext *context, int index)
 	if (index == 2)
 		return context->alternate.sectorCount * context->bytesPerSector;
 #if FW_DEBUG
-	SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n", __func__, index);
+	sceKernelPrintfLevel(1, "%s: unsupported index(%d)\n", __func__, index);
 #endif
 	return 0;
 }
@@ -3243,7 +3243,7 @@ static inline unsigned int _fat_offset(AppmgrFatFormatContext *context, int inde
 	if (index == 2)
 		return context->alternate.reservedSectors * context->bytesPerSector;
 #if FW_DEBUG
-	SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n", __func__, index);
+	sceKernelPrintfLevel(1, "%s: unsupported index(%d)\n", __func__, index);
 #endif
 	return 0;
 }
@@ -3266,7 +3266,7 @@ int FatFormat(AppmgrFatFormatArguments *arguments)
 		goto format_partition;
 	if (arguments->initialImageSize == 512) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: only create partition table\n", __func__);
+		sceKernelPrintfLevel(1, "%s: only create partition table\n", __func__);
 #endif
 	} else {
 		format = 1;
@@ -3297,14 +3297,14 @@ int FatFormat(AppmgrFatFormatArguments *arguments)
 #if FW_DEBUG
 					volumeSize = arguments->volumeSize;
 					if (partitionSize != volumeSize / context.bytesPerSector)
-						SceDebugForDriver_1A3F2AA4(1,
+						sceKernelPrintfLevel(1,
 							"%s: change partition size[%#llx] -> [%#llx]\n",
 							__func__, volumeSize, _volume_size(&context, task));
 #endif
 					arguments->volumeSize = _volume_size(&context, task);
 #if FW_DEBUG
 					if (clusterSize != _cluster_size(&context, task))
-						SceDebugForDriver_1A3F2AA4(1,
+						sceKernelPrintfLevel(1,
 							"%s: change cluster_size in arguments[%#x] -> [%#x] in partition_conf.h, partition_index(%d), format_task(%d)\n",
 							__func__, _cluster_size(&context, task),
 							clusterSize, index, task);
@@ -3332,7 +3332,7 @@ int FatFormat(AppmgrFatFormatArguments *arguments)
 	arguments->phase = 1;
 	if (!calculate) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: initial_image_size is already set\n", __func__);
+		sceKernelPrintfLevel(1, "%s: initial_image_size is already set\n", __func__);
 #endif
 		arguments->phase = 2;
 		goto format_partition;
@@ -3341,7 +3341,7 @@ int FatFormat(AppmgrFatFormatArguments *arguments)
 		(context.reservedSectors + context.fatSectors * context.fatCount);
 	if (!imageSize) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: _add_initial_image_size(%d) failed[%#x]\n",
+		sceKernelPrintfLevel(1, "%s: _add_initial_image_size(%d) failed[%#x]\n",
 			__func__, 1, (int)0x80010016);
 #endif
 		result = (int)0x80010016;
@@ -3355,7 +3355,7 @@ int FatFormat(AppmgrFatFormatArguments *arguments)
 				context.alternate.fatSectors * context.alternate.fatCount);
 		if (!imageSize) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: _add_initial_image_size(%d) failed[%#x]\n",
 				__func__, 2, (int)0x80010016);
 #endif
@@ -3372,9 +3372,9 @@ int FatFormat(AppmgrFatFormatArguments *arguments)
 
 		if (fillResult < 0) {
 #if FW_DEBUG
-			SceDebugForDriver_1A3F2AA4(1, "%s: zero_fill failed[%#x]\n",
+			sceKernelPrintfLevel(1, "%s: zero_fill failed[%#x]\n",
 				"_invalidate_reserved_area", fillResult);
-			SceDebugForDriver_1A3F2AA4(1,
+			sceKernelPrintfLevel(1,
 				"%s: _invalidate_reserved_area failed[%#x], index(%d)\n",
 				__func__, fillResult, task);
 #endif
@@ -3389,14 +3389,14 @@ format_partition:
 	if (result == 0 && context.alternate.startLba != 0) {
 		result = (int)0x80010030;
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: index(%d) isn't supported yet\n",
+		sceKernelPrintfLevel(1, "%s: index(%d) isn't supported yet\n",
 			"_format_partition_n", 2);
 #endif
 	}
 	goto cleanup;
 partition_failed:
 #if FW_DEBUG
-	SceDebugForDriver_1A3F2AA4(1, "%s: create_partition_table failed[%#x]\n",
+	sceKernelPrintfLevel(1, "%s: create_partition_table failed[%#x]\n",
 		__func__, partitionResult);
 #endif
 	result = partitionResult;
@@ -3407,7 +3407,7 @@ cleanup:
 	partitionResult = sceIoClose(context.file);
 	if (partitionResult < 0) {
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(1, "%s: sceIoClose failed[%#x]\n",
+		sceKernelPrintfLevel(1, "%s: sceIoClose failed[%#x]\n",
 			"cleanup", partitionResult);
 #endif
 		context.arguments->phase = 7;

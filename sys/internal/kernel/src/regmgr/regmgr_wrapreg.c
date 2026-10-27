@@ -339,7 +339,7 @@ int regMgrWrapRegSetKey(int handle, const char *category, const char *name, cons
 			}
 			if (key->gpi) {
 				key++;
-				SceDebugLedForDriver_51C5325A(*(const int *)buf);
+				sceKernelSetGPI(*(const int *)buf);
 				continue;
 			}
 			err = sceSblSsSetNvsData(key->areaNo, buf, areaSize);

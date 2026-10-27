@@ -103,7 +103,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDcacheInvalidateRange
 	sceKernelDcacheCleanRange
 	sceKernelDcacheCleanInvalidateRange
-	SceCpuForDriver_5AC9D394
+	sceKernelSpinlockLowTrylock
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
@@ -114,13 +114,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelInitializeFastMutex
 	sceKernelUnlockFastMutex
 	sceKernelRegisterKPLS
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_EE694840
 	sceKernelIsGameBudget
 	sceKernelRegisterProcEventHandler
 	sceKernelFreeMemBlock
-	SceSysmemForDriver_22CBE925
+	sceKernelUnlockRangeWithMode
 	sceKernelCopyToUser
 	sceKernelVAtoPA
 	sceKernelIsAccessibleRange
@@ -136,7 +136,7 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uldivmod
 	__aeabi_uidiv
 	__stack_chk_fail
-	SceIftuForDriver_67E37EFC
+	sceIftuConvert
 	sceCodecEngineDsp0AllocCommunicationMemories
 	sceCodecEngineDsp0ConvertPhysicalToVirtual
 	_unlockProcessSuspendCore
@@ -149,7 +149,7 @@ set(MODULE_IMPORT_FUNCS
 	SceCodecEngineWrapperForDriver_26FAF6EC
 	SceCodecEngineWrapperForDriver_2B74706E
 	SceCodecEngineWrapperForDriver_30F6AFD4
-	SceCodecEngineWrapperForDriver_391BD4FD
+	sceVeneziaRpcCallGenericThunk
 	SceCodecEngineWrapperForDriver_3A79A935
 	SceCodecEngineWrapperForDriver_3C5E9CC3
 	sceCodecEngineDsp0ConvertVirtualToPhysical

@@ -96,8 +96,8 @@ set(MODULE_IMPORT_FUNCS
 	SceGpioForDriver_129DF5AC
 	SceGpioForDriver_372022A4
 	SceGpioForDriver_BBEA1DDC
-	SceGpioForDriver_D454A584
-	SceGpioForDriver_F6310435
+	sceGpioPortSet
+	sceGpioPortClear
 	SceSysconForDriver_59DC5938
 	SceSysconForDriver_CBD6D8BC
 	ScePowerForDriver_394DE492
@@ -106,13 +106,13 @@ set(MODULE_IMPORT_FUNCS
 	ScePowerForDriver_90285886
 	ScePowerForDriver_ACC857A4
 	ScePowerForDriver_E4E3C316
-	ScePowerForDriver_F535D928
+	scePowerSetWakeupCondition
 	ScePervasiveForDriver_13CC07C9
 	ScePervasiveForDriver_4F64DEF6
 	ScePervasiveForDriver_A2EFD7AF
 	ScePervasiveForDriver_BB67EF58
 	sceKernelFreeMemBlock
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUser
 	sceKernelVAtoPA
 	sceKernelGetMemBlockBase
@@ -130,7 +130,7 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	sceKernelDisableIntr
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	sceKernelDisableSubIntr
 	sceKernelRegisterIntrHandler
 	sceKernelEnableIntr
@@ -162,7 +162,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_D0E11C89
 	SceSblAIMgrForDriver_71608CA3
-	SceKernelSuspendForDriver_E0489831
+	sceKernelPowerTick
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

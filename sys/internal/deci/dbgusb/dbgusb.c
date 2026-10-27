@@ -191,7 +191,7 @@ static int __attribute__((noreturn)) _sceDbgUsbReadQueueWorker(SceSize size, voi
 			buffer->request.transmitted = 0;
 			buffer->request.returnCode = 1;
 			buffer->request.next = NULL;
-			ret = SceUdcdForDriver_175E6179(&buffer->request, 1);
+			ret = sceUdcdReqRecvInternal(&buffer->request, 1);
 			if (ret >= 0)
 				continue;
 		}
@@ -206,7 +206,7 @@ static void ReadComplete(SceUdcdDeviceRequest *req) /* name unknown */
 	unsigned int bits = 0;
 
 	info.size = sizeof(info);
-	if (SceThreadmgrForDriver_612277C9(s_status, &info) >= 0)
+	if (sceKernelGetEventFlagInfo(s_status, &info) >= 0)
 		bits = info.currentPattern;
 	if (req->returnCode == 0 && (unsigned int)req->transmitted > 3 &&
 	    ((unsigned char *)req->data)[3] == 0x40) {
@@ -226,7 +226,7 @@ int sceDbgUsbOpen(SceUID event)
 	SceKernelEventFlagInfo info;
 
 	info.size = sizeof(info);
-	if (SceThreadmgrForDriver_612277C9(s_status, &info) >= 0 &&
+	if (sceKernelGetEventFlagInfo(s_status, &info) >= 0 &&
 	    (info.currentPattern & 1))
 		return ERR_REGISTERED;
 	s_notify = event;
@@ -234,12 +234,12 @@ int sceDbgUsbOpen(SceUID event)
 	return 0;
 }
 
-int SceDbgUsbForDriver_08CF16D1(void)
+int sceDbgUsbClose(void)
 {
 	SceKernelEventFlagInfo info;
 
 	info.size = sizeof(info);
-	if (SceThreadmgrForDriver_612277C9(s_status, &info) < 0 ||
+	if (sceKernelGetEventFlagInfo(s_status, &info) < 0 ||
 	    !(info.currentPattern & 1))
 		return ERR_UNREGISTERED;
 	sceKernelClearEventFlag(s_status, ~1u);
@@ -256,7 +256,7 @@ int _sceDbgUsbPullData(void *data, unsigned int size)
 
 	sceKernelLockMutex(s_readMutex, 1, NULL);
 	info.size = sizeof(info);
-	if (SceThreadmgrForDriver_612277C9(s_status, &info) < 0 ||
+	if (sceKernelGetEventFlagInfo(s_status, &info) < 0 ||
 	    !(info.currentPattern & 1)) {
 		ret = ERR_UNREGISTERED;
 		goto out;
@@ -307,7 +307,7 @@ int sceDbgUsbWrite(const void *data, unsigned int size)
 	sceKernelLockMutex(s_writeMutex, 1, NULL);
 	info.size = sizeof(info);
 	ret = ERR_UNREGISTERED;
-	if (SceThreadmgrForDriver_612277C9(s_status, &info) < 0 ||
+	if (sceKernelGetEventFlagInfo(s_status, &info) < 0 ||
 	    !(info.currentPattern & 1))
 		goto out;
 	ret = ERR_DETACHED;
@@ -328,7 +328,7 @@ int sceDbgUsbWrite(const void *data, unsigned int size)
 	s_write.request.next = NULL;
 	sceKernelClearEventFlag(s_status, ~0x1000u);
 	sceKernelSetEventFlag(s_status, 0x100);
-	ret = SceUdcdForDriver_2E3E622A(&s_write.request, 1);
+	ret = sceUdcdReqSendInternal(&s_write.request, 1);
 	if (ret >= 0) {
 		ret = sceKernelWaitEventFlag(s_status, 0x1000, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
 					      NULL);
@@ -455,7 +455,7 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 		goto readThreadFail;
 	}
 	sceKernelStartThread(s_readThread, 0, NULL);
-	if (SceUsbServForDriver_7AD36284(1, 1) < 0)
+	if (sceUsbServMacSelect(1, 1) < 0)
 		return 2;
 	if (SceUdcdForDriver_64675918(&s_driver, 1) < 0)
 		return 2;

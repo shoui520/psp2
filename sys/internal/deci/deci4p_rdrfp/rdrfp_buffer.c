@@ -97,7 +97,7 @@ int rdrfpReserveBuffer(int type, int wait)
 			goto out;
 		}
 		sceKernelUnlockMutex(table->mutex, 1);
-		ret = SceThreadmgrForDriver_8A35F714(table->evf, 1,
+		ret = sceKernelWaitEventFlagCB(table->evf, 1,
 						SCE_KERNEL_EVF_WAITMODE_OR |
 						SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 						NULL, NULL);

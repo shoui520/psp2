@@ -65,7 +65,7 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	SceDeci4pSDfMgrForKernel_35238B8A
-	SceDeci4pSDfMgrForKernel_86CFC8C6
+	sceSDfMgrClose
 	sceSDfMgrOpen
 	_threadSignal
 	sceSDfMgrExSend

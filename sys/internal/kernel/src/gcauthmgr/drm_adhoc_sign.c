@@ -88,7 +88,7 @@ int GcAuthAdhocHashSpans(GcAuthAdhocHashMessage *message,
 	cursor += secondSize;
 	for (index = 0; index != thirdSize; ++index)
 		cursor[index] = third[index];
-	if (SceKernelUtilsForDriver_87DC7F2F(message->payload, size, message) != 0)
+	if (sceSha1Digest(message->payload, size, message) != 0)
 		return (int)0x808a0103;
 	return 0;
 }

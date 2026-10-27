@@ -298,10 +298,10 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	look_ctype_table
 	memcmp
-	SceKernelUtilsForDriver_236A9097
-	SceKernelUtilsForDriver_4899CD4B
-	SceKernelUtilsForDriver_A773A6A8
-	SceKernelUtilsForDriver_D909FA2C
+	sceSha256BlockUpdate
+	sceSha256BlockResult
+	sceSha256Digest
+	sceSha256BlockInit
 	SceSysrootForDriver_17DD213C
 	SceSysrootForDriver_217B2871
 	SceSysrootForDriver_3276086B
@@ -329,7 +329,7 @@ set(MODULE_IMPORT_FUNCS
 	lockFastMutex
 	sceKernelDeleteEventFlag
 	SceThreadmgrForDriver_84EB1EA4
-	SceThreadmgrForDriver_8A35F714
+	sceKernelWaitEventFlagCB
 	sceKernelGetProcessId
 	sceKernelDeleteThread
 	sceKernelInitializeFastMutex
@@ -343,22 +343,22 @@ set(MODULE_IMPORT_FUNCS
 	SceZlibForDriver_inflateInitNocheck_
 	inflate
 	SceSysconForDriver_0396BA09
-	SceSysconForDriver_04EC7579
+	sceSysconCtrlLED
 	SceSysconForDriver_060E55C1
 	SceSysconForDriver_10327C64
-	SceSysconForDriver_10C9657A
+	sceSysconNvsWriteData
 	SceSysconForDriver_16A466E7
 	SceSysconForDriver_1C5D466C
 	SceSysconForDriver_23558805
 	SceSysconForDriver_25144105
 	SceSysconForDriver_2A61ACE1
 	SceSysconForDriver_2BCE7F5A
-	SceSysconForDriver_2CEF078E
+	sceSysconBatteryStartBLMode
 	SceSysconForDriver_31B8F7BE
 	SceSysconForDriver_356B9696
 	SceSysconForDriver_3B06F619
 	SceSysconForDriver_41942B50
-	SceSysconForDriver_448DAFF1
+	sceSysconBatteryReadBLCommand
 	SceSysconForDriver_48ED8981
 	SceSysconForDriver_4D03754A
 	SceSysconForDriver_4DFA12FB
@@ -368,16 +368,16 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_63683B9B
 	SceSysconForDriver_6450D6BE
 	SceSysconForDriver_68366D29
-	SceSysconForDriver_68E0031E
-	SceSysconForDriver_69AD76E4
+	sceSysconGetBatteryVersion
+	sceSysconUpdaterExecProgramming
 	SceSysconForDriver_6D408E30
 	SceSysconForDriver_734544E4
-	SceSysconForDriver_74B2AB55
+	sceSysconBatteryExecBLCommand
 	SceSysconForDriver_7EC67149
-	SceSysconForDriver_81A6060D
+	sceSysconNvsSetRunMode
 	SceSysconForDriver_830A9347
 	SceSysconForDriver_856DFC0E
-	SceSysconForDriver_87DA378D
+	sceSysconBatterySWReset
 	SceSysconForDriver_8874EF45
 	SceSysconForDriver_8B0B4A97
 	SceSysconForDriver_8EBA8A26
@@ -386,60 +386,60 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_998ECD6D
 	SceSysconForDriver_9A28BEEF
 	SceSysconForDriver_9A4304F2
-	SceSysconForDriver_9B00BC7F
+	sceSysconUpdaterSetSegment
 	SceSysconForDriver_9B6B8BB9
 	SceSysconForDriver_9C840439
-	SceSysconForDriver_ACAFA2B8
+	sceSysconNvsReadData
 	SceSysconForDriver_AE127A96
 	SceSysconForDriver_B3960346
-	SceSysconForDriver_B487C2FB
+	sceSysconUpdaterSetRunMode
 	SceSysconForDriver_B63AF451
 	SceSysconForDriver_B9835A63
 	SceSysconForDriver_BC1D93D7
 	SceSysconForDriver_C2955814
 	SceSysconForDriver_C4A61241
-	SceSysconForDriver_C7747A63
+	sceSysconUpdaterExecFinalize
 	SceSysconForDriver_CA203A5F
-	SceSysconForDriver_CBA836FF
+	sceSysconUpdaterCheckSignature
 	SceSysconForDriver_CBD6D8BC
 	SceSysconForDriver_CD6A6BC7
 	SceSysconForDriver_CE48E8EB
 	SceSysconForDriver_CEE2B8F7
-	SceSysconForDriver_D27C3D80
+	sceSysconUpdaterCalcChecksum
 	SceSysconForDriver_D2F456DC
 	SceSysconForDriver_D632D197
 	SceSysconForDriver_D9B11C0A
 	SceSysconForDriver_DFB024C4
 	SceSysconForDriver_E38045F5
-	SceSysconForDriver_E4AE7852
-	SceSysconForDriver_E4F29744
+	sceSysconBatteryStopBLMode
+	sceSysconBatterySetBLCommand
 	SceSysconForDriver_EBDF88B9
 	SceSysconForDriver_EBE3262C
 	SceSysconForDriver_F162D3D6
-	SceSysconForDriver_F492E69E
+	sceSysconGetTouchpanelDeviceInfo
 	SceSysconForDriver_FB37D7AD
 	SceSysconForDriver_FF86F4C5
 	scePowerRequestColdReset
 	scePowerRequestStandby
-	ScePowerForDriver_8921A7A0
+	scePowerRequestShutdown
 	SceGpioForDriver_372022A4
-	SceGpioForDriver_D454A584
-	SceGpioForDriver_F6310435
-	SceLedForDriver_EA24BE03
-	SceMotionDevForDriver_09918DAE
-	SceMotionDevForDriver_10AAC8EA
-	SceMotionDevForDriver_3E4BCBC0
-	SceMotionDevForDriver_A75976EE
-	SceMotionDevForDriver_FD1C528D
+	sceGpioPortSet
+	sceGpioPortClear
+	sceLedSetMode
+	sceMotionDevUpdateSendCommand
+	sceMotionDevIsReady
+	sceMotionDevGetDeviceInfo
+	sceMotionDevUpdateRestart
+	sceMotionDevUpdateInit
 	SceTouchForDriver_423F26D3
-	SceTouchForDriver_4E6C4558
+	sceTouchUpdateRestart
 	SceTouchForDriver_63DCF2FE
-	SceTouchForDriver_DDCF5145
-	SceTouchForDriver_FD2E0278
+	sceTouchUpdateInit
+	sceTouchGetDeviceInfo
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	SceKernelSuspendForDriver_E0489831
+	sceKernelPowerTick
 	sceKernelRegisterProcEventHandler
 	SceDeci4pCpupForDriver_02CDA82C
 	SceDeci4pCpupForDriver_2BAD7B39
@@ -465,11 +465,11 @@ set(MODULE_IMPORT_FUNCS
 	sceBbmcDLUpdaterGetPkgIdForDriver
 	sceBbmcGetDriverInfoForDriver
 	SceQafMgrForDriver_3CB55F98
-	SceQafMgrForDriver_8C423C18
+	sceSblQafMgrIsAllowForceUpdate
 	SceSblSsMgrForKernel_sceSblPmMgrGetProductMode
 	SceSblSsMgrForDriver_C38D0CEA
 	sceSblSsInfraAllocatePARangeVector
-	SceSblSsMgrForDriver_E0DC2587
+	sceSblAimgrGetPscode
 	SceSblPostSsMgrForDriver_7ACCAA50
 	SceSblPostSsMgrForDriver_9D1D8EE5
 	SceSblPostSsMgrForDriver_9D2E2D39

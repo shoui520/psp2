@@ -265,11 +265,11 @@ set(MODULE_IMPORT_NIDS
 	0xDCE180F8:F:0xED87F191
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUser
-	SceSysmemForDriver_84A4AF5E
+	scePUIDClose
 	sceKernelCopyFromUser
-	SceSysmemForDriver_BF209859
+	scePUIDOpenByGUID
 	sceKernelStrncpyFromUser
 	SceSysrootForDriver_47724459
 	SceSysrootForDriver_67AAB627
@@ -291,15 +291,15 @@ set(MODULE_IMPORT_FUNCS
 	sceIoDreadForVshbridge
 	SceIofilemgrForDriver_16336A0D
 	sceIoChstatForVshbridge
-	SceIofilemgrForDriver_20574100
+	sceIoUmount
 	sceIoCreateMountEvent
 	sceIoCreateErrorEvent
-	SceIofilemgrForDriver_40B933C7
+	sceIoClearErrorEvent
 	sceIoDeleteMountEvent
 	SceIofilemgrForDriver_ABE65071
-	SceIofilemgrForDriver_C6158F8D
+	sceIoDeleteErrorEvent
 	SceIofilemgrForDriver_CE397158
-	SceIofilemgrForDriver_D070BC48
+	sceIoMount
 	sceIoGetstatForVshbridge
 	SceModulemgrForDriver_BBE1771C
 	SceProcessmgrForDriver_D141C076
@@ -311,10 +311,10 @@ set(MODULE_IMPORT_FUNCS
 	sceSblAimgrGetVisibleId
 	sceSblSsEncryptWithPortability
 	sceSblSsSetNvsData
-	SceSblSsMgrForDriver_934DB6B5
+	sceSblSsDecryptWithPortability
 	sceSblAimgrGetPscode2
 	SceSblSsMgrForDriver_B8B298FD
-	SceSblSsMgrForDriver_E0DC2587
+	sceSblAimgrGetPscode
 	sceSblAimgrGetConsoleId
 	sceSblSsGetNvsData
 	SceSblPostSsMgrForDriver_2646DE64
@@ -347,22 +347,22 @@ set(MODULE_IMPORT_FUNCS
 	sceSblPmMgrGetProductMode
 	sceSblGcAuthMgrMlnpsnlAuth2ForDriver
 	sceSblGcAuthMgrMlnpsnlAuth1ForDriver
-	SceIdStorageForDriver_08A471A6
-	SceIdStorageForDriver_1FA4D135
-	SceIdStorageForDriver_2C97AB36
-	SceIdStorageForDriver_2D633688
-	SceIdStorageForDriver_37833CB8
-	SceIdStorageForDriver_3AD32523
-	SceIdStorageForDriver_60B647A5
-	SceIdStorageForDriver_683AAC10
+	sceIdStorageCreateLeaf
+	sceIdStorageWriteLeaf
+	sceIdStorageDeleteLeaf
+	sceIdStorageIsReadOnly
+	sceIdStorageGetFreeLeaves
+	sceIdStorageFlush
+	sceIdStorageRestart
+	sceIdStorageUpdate
 	sceIdStorageLookup
-	SceIdStorageForDriver_958089DB
-	SceIdStorageForDriver_99ACCB71
-	SceIdStorageForDriver_B9069BAD
-	SceIdStorageForDriver_EB00C509
-	SceIdStorageForDriver_EB830733
-	SceIdStorageForDriver_F4BCB3EE
-	SceIdStorageForDriver_FEFA40C2
+	sceIdStorageFormat
+	sceIdStorageCreateAtomicLeaves
+	sceIdStorageIsDirty
+	sceIdStorageReadLeaf
+	sceIdStorageGetLeafSize
+	sceIdStorageUnformat
+	sceIdStorageIsFormatted
 	SceSysconForDriver_34574496
 	SceSysconForDriver_3843D657
 	SceSysconForDriver_3B354824
@@ -387,7 +387,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_CC6F90A8
 	SceSysconForDriver_EF810687
 	SceSysconForDriver_FCC3E8EE
-	SceRtcForDriver_162E486E
+	sceRtcSetCurrentNetworkTick
 	SceRtcForDriver_401C0954
 	SceRtcForDriver_5220870D
 	sceRtcSetCurrentTick
@@ -397,7 +397,7 @@ set(MODULE_IMPORT_FUNCS
 	SceRtcForDriver_AAB6053F
 	SceRtcForDriver_ACFE5A9F
 	SceRtcForDriver_BD53731C
-	SceRtcForDriver_C838275A
+	sceRtcGetAlarmTick
 	SceRtcForDriver_CD295F0C
 	SceRtcForDriver_CF84DFC0
 	sceRtcSetAlarmTick
@@ -420,12 +420,12 @@ set(MODULE_IMPORT_FUNCS
 	SceCtrlForDriver_ED8F0129
 	SceCtrlForDriver_FA88D837
 	SceMotionDevForDriver_11A17A96
-	SceLedForDriver_EA24BE03
+	sceLedSetMode
 	scePowerRequestColdReset
 	ScePowerForDriver_08951418
 	ScePowerForDriver_0C6973B8
 	ScePowerForDriver_675A84ED
-	ScePowerForDriver_8921A7A0
+	scePowerRequestShutdown
 	ScePowerForDriver_9F26222A
 	ScePowerForDriver_C1853BA7
 	ScePowerForDriver_CF8F0529

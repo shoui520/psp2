@@ -424,7 +424,7 @@ int PhyMemLowStaticFree(uintptr_t pa, SceSize size)
 }
 
 /* physical memory of a type */
-int SceSysmemForKernel_EA98CCE1(SceUInt32 type, SceSize size, SceSize alignment, uintptr_t *pa)
+int sceKernelPhyMemLowAlloc(SceUInt32 type, SceSize size, SceSize alignment, uintptr_t *pa)
 {
 	if (type == PHYMEM_LOW_TYPE_SUB) {
 		return PhyMemLowAlloc(s_phyMemLowSub, size, alignment,
@@ -444,7 +444,7 @@ int SceSysmemForKernel_EA98CCE1(SceUInt32 type, SceSize size, SceSize alignment,
 	}
 }
 
-int SceSysmemForKernel_844DF3DA(SceUInt32 type, uintptr_t pa, SceSize size)
+int sceKernelPhyMemLowFree(SceUInt32 type, uintptr_t pa, SceSize size)
 {
 	if (type == PHYMEM_LOW_TYPE_SUB)
 		return PhyMemLowFree(s_phyMemLowSub, pa, size);
@@ -456,7 +456,7 @@ int SceSysmemForKernel_844DF3DA(SceUInt32 type, uintptr_t pa, SceSize size)
 }
 
 /* the sub allocator's memory is mapped 1:1 at +1 GiB */
-int SceSysmemForKernel_2CFD8C9A(SceUInt32 type, uintptr_t pa, uintptr_t *va)
+int sceKernelPhyMemLowPA2VA(SceUInt32 type, uintptr_t pa, uintptr_t *va)
 {
 	if (type != PHYMEM_LOW_TYPE_SUB)
 		return SCE_KERNEL_ERROR_UNKNOWN_PHYMEMLOW_TYPE;

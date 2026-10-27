@@ -44,7 +44,7 @@ int hidBluetoothThread(SceSize args, void *argp)
 	if (result < 0)
 		goto registerError;
 	for (;;)
-		SceThreadmgrForDriver_8A35F714(eventFlag, 1, 5, &pattern, NULL);
+		sceKernelWaitEventFlagCB(eventFlag, 1, 5, &pattern, NULL);
 
 registerError:
 	SceDebugForDriver_391B74B7("HID: sceBtRegisterCallback() failed! => 0x%x", result);

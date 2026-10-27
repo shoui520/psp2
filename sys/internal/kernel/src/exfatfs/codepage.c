@@ -406,7 +406,7 @@ int sceFatfsCpInitTable(void)
 
 	g_codepageMemBlock = 0;
 	g_codepageBuffer = NULL;
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	g_codepage = 13;
 	sceKernelCpuResumeIntr(intrState);
 	memBlock = sceKernelAllocMemBlockForKernel("SceFatfsCPTable", 0x1020d006, 0xc000, NULL);
@@ -436,7 +436,7 @@ int utf16ToCodepage(unsigned char *destination, int capacity,
 	int codepage;
 	int count;
 
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	codepage = g_codepage;
 	sceKernelCpuResumeIntr(intrState);
 	switch (codepage) {
@@ -479,7 +479,7 @@ int utf16ToCodepage(unsigned char *destination, int capacity,
 		return 0;
 	output = destination;
 	for (;;) {
-		intrState = SceCpuForDriver_821FC0EE();
+		intrState = sceKernelCpuSuspendIntr();
 		codepage = g_codepage;
 		sceKernelCpuResumeIntr(intrState);
 		convert(codepage, (unsigned char)unicode, unicode >> 8,
@@ -520,7 +520,7 @@ int codepageToUtf16(SceUInt16 *destination, int capacity,
 	int intrState;
 	int count;
 
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	codepage = g_codepage;
 	sceKernelCpuResumeIntr(intrState);
 	switch (codepage) {
@@ -563,7 +563,7 @@ int codepageToUtf16(SceUInt16 *destination, int capacity,
 	end = destination + capacity;
 	output = destination + 1;
 	for (;;) {
-		intrState = SceCpuForDriver_821FC0EE();
+		intrState = sceKernelCpuSuspendIntr();
 		codepage = g_codepage;
 		sceKernelCpuResumeIntr(intrState);
 		switch (codepage) {
@@ -622,7 +622,7 @@ doubleByte:
 		firstByte = *source;
 		source += 2;
 convertCharacter:
-		intrState = SceCpuForDriver_821FC0EE();
+		intrState = sceKernelCpuSuspendIntr();
 		codepage = g_codepage;
 		++count;
 		sceKernelCpuResumeIntr(intrState);
@@ -645,7 +645,7 @@ int isCodepageDoubleByte(const unsigned char *source)
 	int codepage;
 	int result;
 
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	codepage = g_codepage;
 	sceKernelCpuResumeIntr(intrState);
 	switch (codepage) {
@@ -704,7 +704,7 @@ int isUnicodeDoubleByte(unsigned int unicode)
 	int intrState;
 	int codepage;
 
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	codepage = g_codepage;
 	sceKernelCpuResumeIntr(intrState);
 	switch (codepage) {

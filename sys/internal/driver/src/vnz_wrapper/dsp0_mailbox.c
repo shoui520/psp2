@@ -28,7 +28,7 @@ int veneziaMailboxIntrHandler(int intrCode, void *userCtx)
 	int intr;
 
 	receive = registers->receive;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	pending = receive[channel];
 	receive[channel] = pending;
 	__asm__ volatile("dmb sy" ::: "memory");

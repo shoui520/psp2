@@ -276,7 +276,7 @@ static void VcpCaptureFrame(const VcpRequest *req)
 	else if ((pid = req->pid) <= 0)
 		pid = -1;
 
-	if (SceDisplayForDriver_B80CA224(head) < 0)
+	if (sceDisplayWaitVblankStartInternal(head) < 0)
 		goto no_frame;
 	info->size = sizeof(*info);
 	ret = SceDisplayForDriver_3BC165EF(pid, head, index, info);

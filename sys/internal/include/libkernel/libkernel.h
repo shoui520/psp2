@@ -89,6 +89,9 @@ void *sceKernelGetTLSAddr(SceUInt32 index);
 
 /* the module holding address */
 int sceKernelGetModuleInfoByAddr(const void *address, SceKernelModuleInfo *info);
+/* SceModulemgr: the user syscalls */
+SceUID sceKernelGetModuleIdByAddr(const void *addr);
+int sceKernelGetModuleInfo(SceUID modid, SceKernelModuleInfo *uinfo);
 SceUID sceKernelOpenModule(const char *path, SceSize size, void *argument, SceUInt flags,
 			   const SceKernelLoadModuleOpt *option, int *status);
 int sceKernelCloseModule(SceUID id, SceSize size, void *argument, SceUInt flags,

@@ -87,10 +87,8 @@ int SceSblSsMgrForDriver_01BE0374(const void *src, void *dst, int size, unsigned
 int sceSblAimgrGetVisibleId(void *visibleId);
 /* vitasdk: ksceSblDmac5DesCbcEncWithKeyslot */
 int SceSblSsMgrForDriver_05B38698(const void *src, void *dst, int size, unsigned int key, int keyBits, void *iv, int coherent);
-/* vitasdk: ksceSblDmac5AesEcbEncNP */
-int SceSblSsMgrForDriver_0F7D28AF(const void *src, void *dst, int size, const void *key, int keyBits, int keyId, int coherent);
-/* vitasdk: ksceSblDmac5AesCbcDec */
-int SceSblSsMgrForDriver_121FA69F(const void *src, void *dst, int size, const void *key, int keyBits, void *iv, int coherent);
+int sceSblDmac5AesEcbEncNP(const void *src, void *dst, int size, const void *key, int keyBits, int keyId, int coherent);
+int sceSblDmac5AesCbcDec(const void *src, void *dst, int size, const void *key, int keyBits, void *iv, int coherent);
 /* vitasdk: ksceSblDmac5AesCbcDecNP */
 int SceSblSsMgrForDriver_1901CB5E(const void *src, void *dst, int size, const void *key, int keyBits, void *iv, int keyId, int coherent);
 /* vitasdk: ksceSblDmac5AesEcbDecNP */
@@ -100,14 +98,11 @@ int SceSblSsMgrForDriver_1B14658D(const void *src, void *dst, int size, const vo
 int sceSblSsEncryptWithPortability(SceUInt32 key_type, void *iv, ScePortabilityData *src, ScePortabilityData *dst);
 /* vitasdk: ksceSblDmac5DesEcbEncWithKeyslot */
 int SceSblSsMgrForDriver_37DD5CBF(const void *src, void *dst, int size, unsigned int key, int keyBits, int coherent);
-/* vitasdk: ksceSblDmac5Sha1HmacTransform */
-int SceSblSsMgrForDriver_6704D985(const void *src, void *dst, int size, const void *key, void *iv, int coherent, uint32_t flags);
-/* vitasdk: ksceSblDmac5AesCbcEncNP */
-int SceSblSsMgrForDriver_711C057A(const void *src, void *dst, int size, const void *key, int keyBits, void *iv, int keyId, int coherent);
+int sceSblDmac5Sha1HmacTransform(const void *src, void *dst, int size, const void *key, void *iv, int coherent, uint32_t flags);
+int sceSblDmac5AesCbcEncNP(const void *src, void *dst, int size, const void *key, int keyBits, void *iv, int keyId, int coherent);
 /* vitasdk: ksceSblDmac5Sha256Hmac */
 int SceSblSsMgrForDriver_79F38554(const void *src, void *dst, int size, const void *key, void *iv, int coherent, uint32_t flags);
-/* vitasdk: ksceSblDmac5AesEcbDec */
-int SceSblSsMgrForDriver_7C978BE7(const void *src, void *dst, int size, const void *key, int keyBits, int coherent);
+int sceSblDmac5AesEcbDec(const void *src, void *dst, int size, const void *key, int keyBits, int coherent);
 /* vitasdk: ksceSblDmac5AesCtrDec */
 int SceSblSsMgrForDriver_7D46768C(const void *src, void *dst, int size, const void *key, int keyBits, void *iv, int coherent);
 /* vitasdk: ksceSblDmac5AesCtrEnc */
@@ -122,21 +117,18 @@ int SceSblSsMgrForDriver_8EAFB18A(const void *src, void *dst, int size, unsigned
 int SceSblSsMgrForDriver_926BCCF0(const void *src, void *dst, int size, unsigned int key, int keyBits, void *iv, int coherent);
 /* vitasdk: ksceSblDmac5Sha1HmacNP */
 int SceSblSsMgrForDriver_92E37656(const void *src, void *dst, SceSize size, const void *key, void *iv, int keyId, int coherent, uint32_t flags);
-/* vitasdk: ksceSblSsDecryptWithPortability */
-int SceSblSsMgrForDriver_934DB6B5(SceUInt32 key_type, void *iv, ScePortabilityData *src, ScePortabilityData *dst);
+int sceSblSsDecryptWithPortability(SceUInt32 key_type, void *iv, ScePortabilityData *src, ScePortabilityData *dst);
 int sceSblAimgrGetPscode2(ScePsCode *pscode);
 int sceSblAimgrGetOpenPsId(SceKernelOpenPsId *openPsId);
-int SceSblSsMgrForDriver_AC57F4F0(void *result);	/* vitasdk: ksceSblRngGenuineRandomNumber */
+int sceSblRngGenuineRandomNumber(void *result);
 /* vitasdk: ksceSblSsCreatePassPhrase */
 int SceSblSsMgrForDriver_B8B298FD(const uint32_t *parameters, void *passPhrase);
 int SceSblSsMgrForDriver_C38D0CEA(SceUID heap, SceKernelPAVector *vector);
-/* vitasdk: ksceSblDmac5AesEcbEnc */
-int SceSblSsMgrForDriver_C517770D(const void *src, void *dst, int size, const void *key, int keyBits, int coherent);
+int sceSblDmac5AesEcbEnc(const void *src, void *dst, int size, const void *key, int keyBits, int coherent);
 /* vitasdk: ksceSblSsMemset */
 void *SceSblSsMgrForDriver_CD98CC92(void *dst, int c, SceSize size);
-int SceSblSsMgrForDriver_E0DC2587(ScePsCode *pscode);	/* vitasdk: ksceSblAimgrGetPscode */
-/* vitasdk: ksceSblDmac5AesCbcEnc */
-int SceSblSsMgrForDriver_E6E1AD15(const void *src, void *dst, int size, const void *key, int keyBits, void *iv, int coherent);
+int sceSblAimgrGetPscode(ScePsCode *pscode);
+int sceSblDmac5AesCbcEnc(const void *src, void *dst, int size, const void *key, int keyBits, void *iv, int coherent);
 /* vitasdk: ksceSblDmac5AesCmacWithKeyslot */
 int SceSblSsMgrForDriver_EA6ACB6D(const void *src, void *dst, int size, unsigned int key, unsigned int keyBits, void *iv, int coherent, uint32_t flags);
 /* vitasdk: ksceSblDmac5Sha1 */
@@ -164,7 +156,7 @@ int sceSblQafMgrGetQafName(char *name, SceSize size);
 int sceSblQafMgrGetQafTokenForUser(void);
 int sceSblQafMgrGetQafToken2(void *token);
 int sceSblQafMgrIsAllowAllDebugMenuDisplay(void);
-int sceSblQafMgrIsAllowForceUpdate(void);
+int sceSblQafMgrIsAllowForceUpdateForUser(void);
 int sceSblQafMgrIsAllowLimitedDebugMenuDisplay(void);
 int sceSblQafMgrIsAllowMinimumDebugMenuDisplay(void);
 int sceSblQafMgrIsAllowNonQAPup(void);

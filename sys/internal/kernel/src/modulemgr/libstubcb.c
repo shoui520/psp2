@@ -158,7 +158,7 @@ int LibStubCBInit(LoadelfContext *ctx)
 			n = *p;
 			LibStubNormalize(dst, p);
 			name = dst->libname + bias;
-			if (SceSysmemForKernel_B628B46B(name, memchr(name, 0, 0x1f) == NULL ? 0x10000 : 0,
+			if (sceKernelNameHeapInsert(name, memchr(name, 0, 0x1f) == NULL ? 0x10000 : 0,
 						       &interned) < 0) {
 				dst->libname = NULL;
 				return SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
@@ -238,7 +238,7 @@ void LibStubFree(SceModuleCB *cb)
 	if (imp != NULL && pid != SCE_KERNEL_PROCESS_ID) {
 		for (i = 0; i < count; i++, imp++) {
 			if (imp->libname != NULL)
-				SceSysmemForKernel_634D0D0C(imp->libname, 0x1000000);
+				sceKernelNameHeapDelete(imp->libname, 0x1000000);
 		}
 	}
 	stub = cb->libStubCB;

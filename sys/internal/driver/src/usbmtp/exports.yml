@@ -11,7 +11,7 @@ SceUsbMtp:
       version: 1
       nid: 0xF0122DB1
       functions:
-        - SceUsbMtpForDriver_08CD359F: 0x08CD359F
+        - sceUsbMtpStop: 0x08CD359F
         - SceUsbMtpForDriver_151947D2: 0x151947D2
         - sceUsbMtpSendData: 0x25D92570
         - SceUsbMtpForDriver_4463009B: 0x4463009B

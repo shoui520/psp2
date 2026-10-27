@@ -1137,7 +1137,7 @@ int audiodecQueryLibraryContext(AudiodecCommand *command)
 		return SCE_AUDIODEC_ERROR_INVALID_TYPE;
 	}
 	input[0] = (unsigned int)command;
-	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
+	return sceVeneziaRpcCallGenericThunk(operation, input,
 						     audiodecPackCommand, audiodecFinishCommand);
 }
 
@@ -1169,7 +1169,7 @@ int audiodecCreateCommand(AudiodecCommand *command)
 	}
 	input[0] = (unsigned int)command;
 	input[1] = sceCodecEngineDsp0GetThreadExecGroup(0);
-	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
+	return sceVeneziaRpcCallGenericThunk(operation, input,
 						     audiodecPackCommand, audiodecFinishCommand);
 }
 
@@ -1200,7 +1200,7 @@ int audiodecDeleteCommand(AudiodecCommand *command)
 		return SCE_AUDIODEC_ERROR_INVALID_TYPE;
 	}
 	input[0] = (unsigned int)command;
-	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
+	return sceVeneziaRpcCallGenericThunk(operation, input,
 						     audiodecPackCommand, audiodecFinishCommand);
 }
 
@@ -1244,7 +1244,7 @@ int audiodecDecodeCommand(AudiodecCommand *command, SceUInt32 nFrames,
 		input[1] = nFrames;
 	}
 	input[3] = 1;
-	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
+	return sceVeneziaRpcCallGenericThunk(operation, input,
 						     audiodecPackDecodeCommand,
 						     audiodecFinishDecodeCommand);
 }
@@ -1278,7 +1278,7 @@ int audiodecDecodeNStreamsCommand(AudiodecCommand *commands, SceUInt32 nStreams)
 	input[0] = (unsigned int)commands;
 	input[1] = nStreams;
 	input[3] = nStreams;
-	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
+	return sceVeneziaRpcCallGenericThunk(operation, input,
 						     audiodecPackDecodeCommand,
 						     audiodecFinishDecodeCommand);
 }
@@ -1310,7 +1310,7 @@ int audiodecClearContextCommand(AudiodecCommand *command)
 		return SCE_AUDIODEC_ERROR_INVALID_TYPE;
 	}
 	input[0] = (unsigned int)command;
-	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
+	return sceVeneziaRpcCallGenericThunk(operation, input,
 						     audiodecPackCommand, audiodecFinishCommand);
 }
 

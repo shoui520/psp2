@@ -68,7 +68,7 @@ int BbmcUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 		nodeStatus->seq_no = sequence + 1;
 		UpdateUtilUpdateNodeStatus(updateBbmcContext.nodeType, nodeStatus);
 	}
-	if (SceThreadmgrForDriver_8A35F714(updateBbmcContext.resultEventFlagId,
+	if (sceKernelWaitEventFlagCB(updateBbmcContext.resultEventFlagId,
 		3, 5, &pattern, NULL)) {
 		result = (int)0x800f0216;
 		goto out;

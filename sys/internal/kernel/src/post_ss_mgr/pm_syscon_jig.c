@@ -57,17 +57,17 @@ int pmJigOpen(void)	/* name unknown */
 	int ret;
 
 	if ((SceUInt32)SceSysconForDriver_FF86F4C5() <= 0x90003) {
-		if (SceSysconForDriver_8AAB6308(0) != 0)
+		if (sceSysconSetMultiCnPort(0) != 0)
 			return SCE_SBL_ERROR_PM_JIG;
-		ret = SceSysconForDriver_8D1D97E8(0);
+		ret = sceSysconCtrlAccPower(0);
 	} else {
-		ret = SceSysconForDriver_DECCB2B4(0);
+		ret = sceSysconCtrlHostOutputViaDongle(0);
 	}
 	if (ret != 0)
 		return SCE_SBL_ERROR_PM_JIG;
-	if (SceSysconForDriver_44A173F5() != 0)
+	if (sceSysconJigOpenPort() != 0)
 		return SCE_SBL_ERROR_PM_JIG;
-	if (SceSysconForDriver_D24BF916(0, 0) != 0)
+	if (sceSysconJigSetConfig(0, 0) != 0)
 		return SCE_SBL_ERROR_PM_JIG;
 	return 0;
 }
@@ -131,12 +131,12 @@ int pmJigRead(SceUInt8 *data, SceSize size)	/* name unknown */
 /* close the jig port and give the multi connector back */
 int pmJigClose(void)	/* name unknown */
 {
-	if (SceSysconForDriver_483FAE05() != 0)
+	if (sceSysconJigClosePort() != 0)
 		return SCE_SBL_ERROR_PM_JIG;
 	if ((SceUInt32)SceSysconForDriver_FF86F4C5() <= 0x90003) {
-		if (SceSysconForDriver_8AAB6308(0x10000) != 0 || SceSysconForDriver_8D1D97E8(1) != 0)
+		if (sceSysconSetMultiCnPort(0x10000) != 0 || sceSysconCtrlAccPower(1) != 0)
 			return SCE_SBL_ERROR_PM_JIG;
-	} else if (SceSysconForDriver_DECCB2B4(1) != 0) {
+	} else if (sceSysconCtrlHostOutputViaDongle(1) != 0) {
 		return SCE_SBL_ERROR_PM_JIG;
 	}
 	if (SceSysconForDriver_CBD6D8BC() & 8)

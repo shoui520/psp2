@@ -123,6 +123,6 @@ int motionGetDs3CalibData(int port, SceMotionDevDs3CalibData *data);
 /* heap.c */
 
 /* motion_dummy.c */
-int SceMotionDevForDriver_3B23DF55(SceUInt32 blockId, uint8_t *header);
-int SceMotionDevForDriver_F0251700(SceUInt32 blockId, void *data, SceUInt32 count);
-int SceMotionDevForDriver_5B53AC26(void);
+int sceMotionDevGetCalibrationHeader(SceUInt32 blockId, uint8_t *header);
+int sceMotionDevGetCalibrationData(SceUInt32 blockId, void *data, SceUInt32 count);
+int sceMotionDevGetEvaInfo(void);

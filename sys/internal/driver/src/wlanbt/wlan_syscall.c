@@ -29,7 +29,7 @@ int sceWlanRegisterCallback(SceUID callbackId)
 	SceUInt32 state;
 
 	if (result >= 0) {
-		result = SceSysmemForDriver_45D22597(result, callbackId);
+		result = scePUIDtoGUID(result, callbackId);
 		if (result >= 0) {
 			state = sceSyscallEnter();
 			result = wlanRegisterCallback(result);

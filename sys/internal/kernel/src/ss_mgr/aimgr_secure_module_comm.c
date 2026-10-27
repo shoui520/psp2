@@ -87,7 +87,7 @@ int aimgrReadPscode2(ScePsCode *pscode)
 	int ret, callRet;
 
 	if (pscode) {
-		if (SceIdStorageForDriver_EB00C509(68, leaf.words)) {
+		if (sceIdStorageReadLeaf(68, leaf.words)) {
 			ret = SCE_SBL_ERROR_AIMGR_IDSTORAGE;
 		} else {
 			ret = invoke_aimgr_secure_module();
@@ -165,7 +165,7 @@ int aimgrCreatePassPhrase(const uint32_t *parameters, void *passPhrase)
 	request.mode = parameters[0];
 	__builtin_memcpy(request.parameters, parameters + 2,
 			 sizeof(request.parameters));
-	if (SceIdStorageForDriver_EB00C509(68, request.passPhrase))
+	if (sceIdStorageReadLeaf(68, request.passPhrase))
 		return SCE_SBL_ERROR_AIMGR_IDSTORAGE;
 	getCurrentSecureTick = SceRtcForDriver_401C0954;
 	if (!getCurrentSecureTick)

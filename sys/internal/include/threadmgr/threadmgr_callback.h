@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, SceKernelCallbackInfo *info);
+int sceKernelGetCallbackInfo(SceUID callbackId, SceKernelCallbackInfo *info);
 
 #ifdef __cplusplus
 }

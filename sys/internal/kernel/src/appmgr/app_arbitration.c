@@ -365,7 +365,7 @@ int _sceAppMgrDeleteAppInternal(struct AppState *app)
 	DELETE_APP_MAIN_UNLOCK(2374, "_sceAppMgrDeleteAppInternal");
 	if (budgetId > 0) {
 		permission = sceKernelSetThreadAccessLevel(0x80);
-		result = SceProcessmgrForKernel_459A223B(budgetId);
+		result = sceKernelDeleteBudget(budgetId);
 		DELETE_APP_PANIC_CHECK(result, 2382, "_sceAppMgrDeleteAppInternal");
 		sceKernelSetThreadAccessLevel(permission);
 	}
@@ -1920,12 +1920,12 @@ int appmgrLaunchAppByName2(const SceChar8 *name, const char *param,
 			creatorAppId = -1;
 		evictionThresholdClass = option->evictionThresholdClass;
 		if (launchCallbackId > 0)
-			launchCallbackId = SceSysmemForDriver_45D22597(sceKernelGetProcessId(),
+			launchCallbackId = scePUIDtoGUID(sceKernelGetProcessId(),
 				launchCallbackId);
 		else
 			launchCallbackId = -1;
 		if (paramCallbackId > 0)
-			paramCallbackId = SceSysmemForDriver_45D22597(sceKernelGetProcessId(),
+			paramCallbackId = scePUIDtoGUID(sceKernelGetProcessId(),
 				paramCallbackId);
 		else
 			paramCallbackId = -1;
@@ -1974,12 +1974,12 @@ int appmgrLaunchVideoStreamingApp(const void *extraParam, SceSize extraParamSize
 			creatorAppId = -1;
 		evictionThresholdClass = option->evictionThresholdClass;
 		if (launchCallbackId > 0)
-			launchCallbackId = SceSysmemForDriver_45D22597(sceKernelGetProcessId(),
+			launchCallbackId = scePUIDtoGUID(sceKernelGetProcessId(),
 				launchCallbackId);
 		else
 			launchCallbackId = -1;
 		if (paramCallbackId > 0)
-			paramCallbackId = SceSysmemForDriver_45D22597(sceKernelGetProcessId(),
+			paramCallbackId = scePUIDtoGUID(sceKernelGetProcessId(),
 				paramCallbackId);
 		else
 			paramCallbackId = -1;
@@ -2027,12 +2027,12 @@ int appmgrLaunchAppByName2ForShell(const SceChar8 *name, const char *param,
 			creatorAppId = -1;
 		evictionThresholdClass = option->evictionThresholdClass;
 		if (launchCallbackId > 0)
-			launchCallbackId = SceSysmemForDriver_45D22597(sceKernelGetProcessId(),
+			launchCallbackId = scePUIDtoGUID(sceKernelGetProcessId(),
 				launchCallbackId);
 		else
 			launchCallbackId = -1;
 		if (paramCallbackId > 0)
-			paramCallbackId = SceSysmemForDriver_45D22597(sceKernelGetProcessId(),
+			paramCallbackId = scePUIDtoGUID(sceKernelGetProcessId(),
 				paramCallbackId);
 		else
 			paramCallbackId = -1;
@@ -2109,7 +2109,7 @@ int sceAppMgrLaunchAppByNameForDebugger(const char *name, const char *param)
 	}
 	appId = sceAppMgrLaunchAppByNameInternal(0x20000, (const SceChar8 *)name, param,
 		callbackId, -1, -1, 0, NULL, 0, 0);
-	result = SceThreadmgrForDriver_F55E4D86(semaphore, 1, NULL);
+	result = sceKernelWaitSemaCB(semaphore, 1, NULL);
 	DELETE_APP_CHECK(result, 0, 2160, "sceAppMgrLaunchAppByNameForDebugger");
 	result = sceKernelDeleteSema(semaphore);
 	DELETE_APP_CHECK(result, 0, 2163, "sceAppMgrLaunchAppByNameForDebugger");
@@ -2171,12 +2171,12 @@ int appmgrLaunchAppByUri2(const char *uri, const AppmgrLaunchAppByNameOption *op
 		evictionThresholdClass = option->evictionThresholdClass;
 		launchMode |= 0x100000;
 		if (launchCallbackId > 0)
-			launchCallbackId = SceSysmemForDriver_45D22597(sceKernelGetProcessId(),
+			launchCallbackId = scePUIDtoGUID(sceKernelGetProcessId(),
 				launchCallbackId);
 		else
 			launchCallbackId = -1;
 		if (paramCallbackId > 0)
-			paramCallbackId = SceSysmemForDriver_45D22597(sceKernelGetProcessId(),
+			paramCallbackId = scePUIDtoGUID(sceKernelGetProcessId(),
 				paramCallbackId);
 		else
 			paramCallbackId = -1;

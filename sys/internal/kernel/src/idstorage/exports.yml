@@ -11,20 +11,20 @@ SceIdStorage:
       version: 1
       nid: 0xE1AC6D7C
       functions:
-        - SceIdStorageForDriver_08A471A6: 0x08A471A6
-        - SceIdStorageForDriver_1FA4D135: 0x1FA4D135
-        - SceIdStorageForDriver_2C97AB36: 0x2C97AB36
-        - SceIdStorageForDriver_2D633688: 0x2D633688
+        - sceIdStorageCreateLeaf: 0x08A471A6
+        - sceIdStorageWriteLeaf: 0x1FA4D135
+        - sceIdStorageDeleteLeaf: 0x2C97AB36
+        - sceIdStorageIsReadOnly: 0x2D633688
         - SceIdStorageForDriver_31E08AFB: 0x31E08AFB
-        - SceIdStorageForDriver_37833CB8: 0x37833CB8
-        - SceIdStorageForDriver_3AD32523: 0x3AD32523
-        - SceIdStorageForDriver_60B647A5: 0x60B647A5
-        - SceIdStorageForDriver_683AAC10: 0x683AAC10
+        - sceIdStorageGetFreeLeaves: 0x37833CB8
+        - sceIdStorageFlush: 0x3AD32523
+        - sceIdStorageRestart: 0x60B647A5
+        - sceIdStorageUpdate: 0x683AAC10
         - sceIdStorageLookup: 0x6FE062D1
-        - SceIdStorageForDriver_958089DB: 0x958089DB
-        - SceIdStorageForDriver_99ACCB71: 0x99ACCB71
-        - SceIdStorageForDriver_B9069BAD: 0xB9069BAD
-        - SceIdStorageForDriver_EB00C509: 0xEB00C509
-        - SceIdStorageForDriver_EB830733: 0xEB830733
-        - SceIdStorageForDriver_F4BCB3EE: 0xF4BCB3EE
-        - SceIdStorageForDriver_FEFA40C2: 0xFEFA40C2
+        - sceIdStorageFormat: 0x958089DB
+        - sceIdStorageCreateAtomicLeaves: 0x99ACCB71
+        - sceIdStorageIsDirty: 0xB9069BAD
+        - sceIdStorageReadLeaf: 0xEB00C509
+        - sceIdStorageGetLeafSize: 0xEB830733
+        - sceIdStorageUnformat: 0xF4BCB3EE
+        - sceIdStorageIsFormatted: 0xFEFA40C2

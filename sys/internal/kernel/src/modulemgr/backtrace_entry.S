@@ -38,5 +38,5 @@
 	.size	\name, . - \name
 	.endm
 
-	BACKTRACE_ENTRY SceBacktraceForDriver_166B9C8C, _sceKernelBacktraceCore
+	BACKTRACE_ENTRY sceKernelBacktrace, _sceKernelBacktraceCore
 	BACKTRACE_ENTRY SceBacktraceForDriver_888E99B8, _sceKernelBacktraceForKernelCore, 1

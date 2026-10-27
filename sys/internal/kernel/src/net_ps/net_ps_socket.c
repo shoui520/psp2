@@ -108,7 +108,7 @@ int sceNetPsGatewaySend(struct SceNetKernelGateway *interface, const void *data,
 	address.sin_family = 2;
 	address.sin_len = sizeof(address);
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
-	return SceNetPsForDriver_AB746734(socket, data, length, 0,
+	return sceNetSendto(socket, data, length, 0,
 			     (const SceNetSockaddr *)&address, sizeof(address));
 failed:
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
@@ -142,18 +142,18 @@ int SceNetKernelGateway(struct SceNetKernelGateway *interface)
 
 	if (!interface || !interface->receive || !interface->notify)
 		return 0x80418101;
-	socket = SceNetPsForDriver_EB95B024("SceNetKernelGateway", 2, 3, 0);
+	socket = sceNetSocket("SceNetKernelGateway", 2, 3, 0);
 	if (socket < 0)
 		return 0x80418105;
 	value = 1;
-	if (SceNetPsForDriver_4BF5FAB4(socket, 0, 2, &value, sizeof(value)) < 0)
+	if (sceNetSetsockopt(socket, 0, 2, &value, sizeof(value)) < 0)
 		goto socketFailed;
 	value = 1;
-	if (SceNetPsForDriver_4BF5FAB4(socket, 0xffff, 0x1002,
+	if (sceNetSetsockopt(socket, 0xffff, 0x1002,
 			      &value, sizeof(value)) < 0)
 		goto socketFailed;
 	value = 1;
-	if (SceNetPsForDriver_4BF5FAB4(socket, 0, 25, &value, sizeof(value)) < 0)
+	if (sceNetSetsockopt(socket, 0, 25, &value, sizeof(value)) < 0)
 		goto socketFailed;
 	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
 	sce_psnet_bnet_mutex_lock(&gNetPsDevRecvMutex, NULL);

@@ -116,7 +116,7 @@ void setCpuRegisterForDebuggerRaw(struct ThreadCB *thread,
 					      (frame->cpsr & CPSR_KEEP_MASK);
 			if ((mask & (1u << DEBUG_REG_FPSCR)) && thread->pVfpRegisterContext != 0)
 				frame->fpscr = regs->fpscr;
-			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags,
+			sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags,
 						   THREAD_FLAG_FRAME_CHANGED);
 			return;
 		}
@@ -152,7 +152,7 @@ int getThreadInfoForDebugger(SceUID threadId, SceUInt32 level, uint32_t flags,
 	int intr, ret, nest, i;
 
 	*info = (ThreadmgrThreadInfoForDebugger){ .size = sizeof(*info) };
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClassLevel(threadId, THREAD_CLASS(), level,
 					      &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -495,7 +495,7 @@ static inline void convertWaitObjectsCond(ThreadmgrThreadInfoForDebugger *info)
 	}
 }
 
-/* the information in the IDs its process uses (SceThreadmgrForDriver_DD8D9429) */
+/* the information in the IDs its process uses (sceKernelGetThreadInfoForDebugger) */
 int getThreadInfoForDebuggerForUser(SceUID threadId, SceUInt32 level, uint32_t flags,
 				    ThreadmgrThreadInfoForDebugger *info)
 {
@@ -641,7 +641,7 @@ int getThreadInfoListProcForDebugger(SceUID pid, uint32_t flags, SceUInt32 level
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
-		if (getThreadInfoForDebugger(SceSysmemForDriver_45D22597(pid, vector[i]), level, flags,
+		if (getThreadInfoForDebugger(scePUIDtoGUID(pid, vector[i]), level, flags,
 					     &info) != 0)
 			continue;
 		info.threadId = vector[i];
@@ -757,7 +757,7 @@ int _sceKernelSetCpuRegisterForDebugger(SceUID threadId, const ThreadmgrDebugReg
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (__builtin_expect(isSelfOrNone(threadId), 1))
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	result = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
 	if (result < 0) {
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -815,7 +815,7 @@ int _sceKernelGetCpuRegisterForDebugger(SceUID threadId, ThreadmgrDebugRegisters
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (__builtin_expect(isSelfOrNone(threadId), 1))
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	result = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
 	if (result < 0) {
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -874,7 +874,7 @@ int _sceKernelSetVfpRegisterForDebugger(SceUID threadId, const uint32_t *vfp, ui
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (__builtin_expect(isSelfOrNone(threadId), 1))
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	result = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
 	if (result < 0) {
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -938,7 +938,7 @@ int _sceKernelGetVfpRegisterForDebugger(SceUID threadId, uint32_t *vfp, int mode
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (__builtin_expect(isSelfOrNone(threadId), 1))
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	result = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
 	if (result < 0) {
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -1036,7 +1036,7 @@ int getThreadNameListProc(SceUID pid, SceUInt32 level, ThreadmgrThreadName *name
 			if (object->context.processId == pid) {
 				vector[found++] = vector[i];
 			} else {
-				intr = SceCpuForDriver_821FC0EE();
+				intr = sceKernelCpuSuspendIntr();
 				ret = sceGUIDReleaseObject(vector[i]);
 				sceKernelCpuResumeIntr(intr);
 				SCE_DBG_ASSERT_CHECK(ret >= 0, 2710);
@@ -1051,7 +1051,7 @@ int getThreadNameListProc(SceUID pid, SceUInt32 level, ThreadmgrThreadName *name
 				strncpy(entry.name, name, sizeof(entry.name));
 				names[got++] = entry;
 			}
-			intr = SceCpuForDriver_821FC0EE();
+			intr = sceKernelCpuSuspendIntr();
 			sceGUIDReleaseObject(vector[i]);
 			sceKernelCpuResumeIntr(intr);
 		}
@@ -1171,7 +1171,7 @@ int sceKernelDebugSuspendThread(SceUID threadId, uint32_t reason)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (isSelfOrNone(threadId))
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 		result = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto resume;
@@ -1267,7 +1267,7 @@ int sceKernelDebugResumeThread(SceUID threadId, uint32_t reason)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (isSelfOrNone(threadId))
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
@@ -1321,7 +1321,7 @@ int SceThreadmgrForDriver_04C6764B(SceUID threadId, uint32_t reason)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (currentThreadContext() == NULL && threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
@@ -1341,7 +1341,7 @@ int SceThreadmgrForDriver_04C6764B(SceUID threadId, uint32_t reason)
 }
 
 /* the thread's debug suspend reasons */
-int SceThreadmgrForDriver_A0B1AB21(SceUID threadId)
+int sceKernelIsThreadDebugSuspended(SceUID threadId)
 {
 	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
@@ -1349,7 +1349,7 @@ int SceThreadmgrForDriver_A0B1AB21(SceUID threadId)
 
 	if (currentThreadContext() == NULL && threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
@@ -1372,7 +1372,7 @@ int SceThreadmgrForDriver_D26BFF26(SceUID threadId)
 
 	if (isSelfOrNone(threadId))
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -1443,7 +1443,7 @@ int SceThreadmgrForKernel_5075AE5E(SceUID threadId, const ThreadmgrDebugRegister
 }
 
 /* the driver entry always writes what the thread returns to */
-int SceThreadmgrForDriver_64E89DE9(SceUID threadId, const ThreadmgrDebugRegisters *regs,
+int sceKernelSetCpuRegisterForDebugger(SceUID threadId, const ThreadmgrDebugRegisters *regs,
 				   uint32_t mask)
 {
 	return _sceKernelSetCpuRegisterForDebugger(threadId, regs, mask, 1);
@@ -1563,7 +1563,7 @@ int SceThreadmgrForKernel_AC726660(SceUID threadId, const uint32_t *vfp, uint32_
 	return _sceKernelSetVfpRegisterForDebugger(threadId, vfp, mask, 0);
 }
 
-int SceThreadmgrForDriver_49A0B679(SceUID threadId, const uint32_t *vfp, uint32_t mask)
+int sceKernelSetVfpRegisterForDebugger(SceUID threadId, const uint32_t *vfp, uint32_t mask)
 {
 	return _sceKernelSetVfpRegisterForDebugger(threadId, vfp, mask, 1);
 }
@@ -1622,20 +1622,20 @@ int SceThreadmgrForKernel_444CE648(SceUID threadId, uint32_t *vfp)
 	return _sceKernelGetVfpRegisterForDebugger(threadId, vfp, 0);
 }
 
-int SceThreadmgrForDriver_5CDE387A(SceUID threadId, uint32_t *vfp)
+int sceKernelGetVfpRegisterForDebugger(SceUID threadId, uint32_t *vfp)
 {
 	return _sceKernelGetVfpRegisterForDebugger(threadId, vfp, 1);
 }
 
 /* the process and thread this CPU runs (from an exception handler) */
-int SceThreadmgrForKernel_6C1F092F(ThreadCBInfo *info)
+int sceKernelGetThreadContextInfo(ThreadCBInfo *info)
 {
 	struct ThreadMgrCpuCB *cpu;
 	int intr;
 
 	if (info == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	cpu = currentCpuState();
 	info->processId = cpu->runningProcessId;
 	info->threadId = cpu->runningThreadId;
@@ -1661,7 +1661,7 @@ int SceThreadmgrForKernel_BFF892B4(SceUID threadId, uint32_t flags,
 	return getThreadInfoForDebuggerForUser(threadId, 5, flags, info);
 }
 
-int SceThreadmgrForDriver_DD8D9429(SceUID threadId, uint32_t flags,
+int sceKernelGetThreadInfoForDebugger(SceUID threadId, uint32_t flags,
 				       ThreadmgrThreadInfoForDebugger *info)
 {
 	return getThreadInfoForDebuggerForUser(threadId, 3, flags, info);
@@ -1712,7 +1712,7 @@ SceUID SceThreadmgrForDriver_F311808F(SceUID threadId)
 	int intr;
 	SceUID ret;
 
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
@@ -1740,7 +1740,7 @@ int sceKernelGetWaitingThreadList(SceUID waitId, ThreadmgrWaitingThread *list, S
 
 	if (size >= sizeof(*list) && list == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithSubclass(waitId,
 			s_threadmgrRuntime.manager->waitableClass,
 			&pObject) < 0) {
@@ -1791,7 +1791,7 @@ int sceKernelSetTHBP(SceUID threadId, int selector, uint32_t value0, uint32_t va
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (selector != THBP_SELECTOR)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
@@ -1823,7 +1823,7 @@ int sceKernelGetTHBP(SceUID threadId, int selector, uint32_t *value0, uint32_t *
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (value0 == NULL || value1 == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
@@ -1877,7 +1877,7 @@ int SceThreadmgrForDriver_1378F6EF(unsigned int index, uint32_t value)
 {
 	if (index >= 3)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (SceCpuForDriver_CDA96E81(
+	if (sceKernelAtomicCompareAndSet32(
 		    (SceInt32 *)&s_threadmgrRuntime.manager->paHooks[index], 0, value) != 0)
 		return SCE_KERNEL_ERROR_ALREADY_REGISTERED;
 	return 0;

@@ -9,7 +9,7 @@ static SceUInt32 rtcLibcClock(void)
 {
 	SceRtcTick tick;
 
-	SceRtcForDriver_DEC408D4(&tick);
+	sceRtcGetCurrentTick(&tick);
 	return tick.tick;
 }
 
@@ -93,7 +93,7 @@ hours:
 			} else {
 				tm->mon = mon - 1;
 			}
-			mday = tm->mday + SceRtcForDriver_C2DC38D9(year, mon);
+			mday = tm->mday + sceRtcGetDaysInMonth(year, mon);
 			tm->mday = mday;
 			if (mday > 0)
 				break;
@@ -101,15 +101,15 @@ hours:
 			year = tm->year;
 		}
 	} else {
-		while (SceRtcForDriver_C2DC38D9(year, mon + 1) < tm->mday) {
+		while (sceRtcGetDaysInMonth(year, mon + 1) < tm->mday) {
 			for (;;) {
-				mday = tm->mday - SceRtcForDriver_C2DC38D9(tm->year, tm->mon + 1);
+				mday = tm->mday - sceRtcGetDaysInMonth(tm->year, tm->mon + 1);
 				mon = tm->mon;
 				tm->mday = mday;
 				if ((int)mon > 10)
 					break;
 				tm->mon = mon + 1;
-				if (mday <= SceRtcForDriver_C2DC38D9(tm->year, mon + 2))
+				if (mday <= sceRtcGetDaysInMonth(tm->year, mon + 2))
 					goto found;
 			}
 			tm->mon = 0;
@@ -124,20 +124,20 @@ found:
 	time.year = tm->year;
 	time.month = tm->mon + 1;
 	time.day = tm->mday;
-	SceRtcForDriver_F139E359(&time, &tick);
-	SceRtcForDriver_42A0DFCB(&time, &tick);
+	sceRtcGetTick(&time, &tick);
+	sceRtcSetTick(&time, &tick);
 	tm->mon = time.month - 1;
 	tm->year = time.year;
 	tm->hour = time.hour;
 	tm->sec = time.second;
 	tm->min = time.minute;
 	tm->mday = time.day;
-	tm->wday = SceRtcForDriver_0F800878(time.year, time.month, time.day);
-	tm->yday = SceRtcForDriver_9097EF0D(time.year, time.month, time.day);
+	tm->wday = sceRtcGetDayOfWeek(time.year, time.month, time.day);
+	tm->yday = sceRtcGetDayOfYear(time.year, time.month, time.day);
 	offset = g_rtc.daylightSaving + g_rtc.timezone;
 	tm->isdst = g_rtc.daylightSaving != 0;
 	offset = -offset;
-	SceRtcForDriver_0F9E02EF(&tick, &tick, offset);
+	sceRtcTickAddMinutes(&tick, &tick, offset);
 	*t = __aeabi_ldivmod((SceInt64)tick.tick - RTC_TICK_UNIX_EPOCH, 1000000);
 	if (tz != NULL) {
 		tz->minuteswest = offset;
@@ -154,8 +154,8 @@ static inline void rtcFillTm(ProcessTm *tm, const SceDateTime *time)
 	tm->sec = time->second;
 	tm->min = time->minute;
 	tm->mday = time->day;
-	tm->wday = SceRtcForDriver_0F800878(time->year, time->month, time->day);
-	tm->yday = SceRtcForDriver_9097EF0D(time->year, time->month, time->day);
+	tm->wday = sceRtcGetDayOfWeek(time->year, time->month, time->day);
+	tm->yday = sceRtcGetDayOfYear(time->year, time->month, time->day);
 	tm->isdst = g_rtc.daylightSaving != 0;
 }
 
@@ -166,13 +166,13 @@ static int rtcLibcLocaltime(const SceKernelTime *t, ProcessTm *tm)
 	SceRtcTick tick;
 
 	if (t == NULL) {
-		SceRtcForDriver_DEC408D4(&tick);
+		sceRtcGetCurrentTick(&tick);
 	} else {
-		SceRtcForDriver_DE9F4515(&time, *t);
-		SceRtcForDriver_F139E359(&time, &tick);
+		sceRtcSetTime_t(&time, *t);
+		sceRtcGetTick(&time, &tick);
 	}
-	SceRtcForDriver_0F9E02EF(&tick, &tick, offset);
-	SceRtcForDriver_42A0DFCB(&time, &tick);
+	sceRtcTickAddMinutes(&tick, &tick, offset);
+	sceRtcSetTick(&time, &tick);
 	if (tm != NULL)
 		rtcFillTm(tm, &time);
 	return 0;
@@ -184,9 +184,9 @@ static int rtcLibcGettimeofday(ProcessTimeval *tv, ProcessTimezone *tz)
 	SceRtcTick tick;
 	unsigned int sec;
 
-	SceRtcForDriver_DEC408D4(&tick);
-	SceRtcForDriver_42A0DFCB(&time, &tick);
-	SceRtcForDriver_FFD7A04F(&time, &sec);
+	sceRtcGetCurrentTick(&tick);
+	sceRtcSetTick(&time, &tick);
+	sceRtcGetTime_t(&time, &sec);
 	if (tv != NULL) {
 		tv->sec = sec;
 		tv->usec = time.microsecond;
@@ -204,9 +204,9 @@ static SceKernelTime rtcLibcTime(SceKernelTime *t)
 	SceRtcTick tick;
 	unsigned int sec;
 
-	SceRtcForDriver_DEC408D4(&tick);
-	SceRtcForDriver_42A0DFCB(&time, &tick);
-	SceRtcForDriver_FFD7A04F(&time, &sec);
+	sceRtcGetCurrentTick(&tick);
+	sceRtcSetTick(&time, &tick);
+	sceRtcGetTime_t(&time, &sec);
 	if (t != NULL)
 		*t = sec;
 	return sec;
@@ -218,13 +218,13 @@ static int rtcLibcGmtime(const SceKernelTime *t, ProcessTm *tm)
 	SceRtcTick tick;
 
 	if (t == NULL) {
-		SceRtcForDriver_DEC408D4(&tick);
+		sceRtcGetCurrentTick(&tick);
 	} else {
-		SceRtcForDriver_DE9F4515(&time, *t);
-		SceRtcForDriver_F139E359(&time, &tick);
+		sceRtcSetTime_t(&time, *t);
+		sceRtcGetTick(&time, &tick);
 	}
-	SceRtcForDriver_0F9E02EF(&tick, &tick, 0);
-	SceRtcForDriver_42A0DFCB(&time, &tick);
+	sceRtcTickAddMinutes(&tick, &tick, 0);
+	sceRtcSetTick(&time, &tick);
 	if (tm != NULL)
 		rtcFillTm(tm, &time);
 	return 0;
@@ -238,7 +238,7 @@ static const ProcessmgrLibcOps s_rtcLibcTime = {
 	.gmtime_r = rtcLibcGmtime,
 	.localtime_r = rtcLibcLocaltime,
 	.mktime = rtcLibcMktime,
-	.getCurrentTick = SceRtcForDriver_DEC408D4,
+	.getCurrentTick = sceRtcGetCurrentTick,
 	.getCurrentSecureTick = SceRtcForDriver_401C0954,
 };
 

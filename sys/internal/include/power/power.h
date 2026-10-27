@@ -30,7 +30,7 @@ int ScePowerForDriver_0856FD0A(PowerProcessIdleCallback callback, void *argument
 int ScePowerForDriver_0C6973B8(const volatile struct PowerBatteryFakeStatus *status);
 
 int scePowerRegisterCallback(SceUID callbackId);
-int ScePowerForDriver_C743E392(int mhz);	/* vitasdk: kscePowerSetCameraBusClockFrequency */
+int scePowerSetCameraBusClockFrequency(int mhz);
 /* vitasdk: kscePowerSetIdleTimer */
 int ScePowerForDriver_6BC26FC7(uint32_t timerId, uint64_t interval);
 uint32_t ScePowerForDriver_9F26222A(void);	/* vitasdk: kscePowerGetWakeupFactor */
@@ -45,7 +45,7 @@ int ScePowerForDriver_06AF03DB(SceUID pid);
 int ScePowerForDriver_711C68DF(void (*before)(uint32_t, uint32_t, int, void *), void *beforeArgument,
 			      void (*after)(uint32_t, uint32_t, int, void *), void *afterArgument);
 int ScePowerForDriver_8C0D2051(uint32_t *out);
-int ScePowerForDriver_F535D928(uint32_t mask, int enabled);
+int scePowerSetWakeupCondition(uint32_t mask, int enabled);
 int ScePowerForDriver_90285886(void);	/* vitasdk: kscePowerBatteryDisableUsbCharging */
 uint32_t ScePowerForDriver_733F973B(void);	/* vitasdk: kscePowerBatteryEnableUsbCharging */
 int ScePowerForDriver_E4E3C316(uint32_t status);	/* vitasdk: kscePowerBatterySetUsbStatus */
@@ -54,10 +54,9 @@ int scePowerGetGpuClockFrequencyInternal(uint32_t *first, uint32_t *second);
 int ScePowerForDriver_642E0AF2(SceUID pid);	/* vitasdk: kscePowerGetGpuClockFrequencyProc */
 uint32_t ScePowerForDriver_64641E6A(void);	/* vitasdk: kscePowerGetVeneziaClockFrequency */
 int ScePowerForDriver_08951418(void);	/* vitasdk: kscePowerRequestHibernate */
-int ScePowerForDriver_8921A7A0(uint32_t argument);	/* vitasdk: kscePowerRequestShutdown */
-int ScePowerForDriver_FFC84E69(int frequency);	/* vitasdk: kscePowerSetCompatClockFrequency */
-/* vitasdk: kscePowerSetGpuClockFrequencyInternal */
-int ScePowerForDriver_264C24FC(int first, int second);
+int scePowerRequestShutdown(uint32_t argument);
+int scePowerSetCompatClockFrequency(int frequency);
+int scePowerSetGpuClockFrequencyInternal(int first, int second);
 /* vitasdk: kscePowerSetGpuClockFrequencyProc */
 int ScePowerForDriver_B104EFE2(SceUID pid, int frequency);
 int ScePowerForDriver_C1853BA7(uint32_t mode);	/* vitasdk: kscePowerSetPowerSwMode */
@@ -78,7 +77,7 @@ int scePowerSetBusClockFrequency(int frequency);
 int scePowerSetGpuXbarClockFrequency(int frequency);
 
 uint32_t ScePowerForDriver_0074EF9B(void);	/* vitasdk: kscePowerGetResumeCount */
-int ScePowerForDriver_02DB1035(void);	/* vitasdk: kscePowerRequestResume */
+int scePowerRequestResume(void);
 int ScePowerForDriver_0D56C601(void);
 int ScePowerForDriver_0D80B917(SceUID pid);
 int ScePowerForDriver_0E333BEC(int frequency);	/* vitasdk: kscePowerSetSysClockFrequency */
@@ -103,7 +102,7 @@ int ScePowerForDriver_627A89C6(void);
 int ScePowerForDriver_62C5406C(SceUID pid);	/* vitasdk: kscePowerGetGpuXbarClockFrequencyProc */
 int ScePowerForDriver_660D5AB4(uint32_t timerId);
 int ScePowerForDriver_661D670D(SceUID pid, uint32_t enabled);
-uint32_t ScePowerForDriver_668F01D4(void);	/* vitasdk: kscePowerGetCameraBusClockFrequency */
+uint32_t scePowerGetCameraBusClockFrequency(void);
 int ScePowerForDriver_6D2CA84B(void);	/* vitasdk: kscePowerWlanActivate */
 int ScePowerForDriver_77027B6B(uint32_t limit);	/* vitasdk: kscePowerSetDisplayMaxBrightness */
 /* vitasdk: kscePowerSetArmClockFrequencyProc */
@@ -116,7 +115,7 @@ int ScePowerForDriver_A902CDDF(int frequency);	/* vitasdk: kscePowerSetDmac5Cloc
 int ScePowerForDriver_C62B6164(void (*callback)(uint32_t, void *), uint32_t threshold, void *argument);
 uint32_t ScePowerForDriver_C63DACD5(void);	/* vitasdk: kscePowerGetSysClockFrequency */
 int ScePowerForDriver_C715F4F0(SceUID pid);
-uint32_t ScePowerForDriver_CBCC11CC(void);	/* vitasdk: kscePowerGetCompatClockFrequency */
+uint32_t scePowerGetCompatClockFrequency(void);
 int ScePowerForDriver_D516D446(uint32_t *state);
 int ScePowerForDriver_DD3D4DAC(void);	/* vitasdk: kscePowerBatteryPermitCharging */
 /* vitasdk: kscePowerGetIdleTimer */

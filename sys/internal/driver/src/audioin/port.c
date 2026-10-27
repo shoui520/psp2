@@ -289,11 +289,11 @@ int SceAudioInForDriver_E4042F6F(int pid, int unusedArgument1,
 	if (g_audioInPorts[index].pid == pid) { \
 		g_audioInDeviceStateEnabled = 0; \
 		g_audioInPorts[index].flags &= ~0x80u; \
-		SceCpuForDriver_DF899E4B(&g_audioInAecFlags, ~0x1000u); \
+		sceKernelAtomicAndAndGet32(&g_audioInAecFlags, ~0x1000u); \
 		if (g_audioInPorts[index].flags & 0x10000) \
 			g_audioInDeviceStateEnabled = 1; \
 		if (g_audioInPorts[index].flags & 0x20000) \
-			SceCpuForDriver_BC248C30(&g_audioInAecFlags, 0x1000); \
+			sceKernelAtomicOrAndGet32(&g_audioInAecFlags, 0x1000); \
 	} \
 } while (0)
 	ACTIVATE_OWNER_PORT(0);
@@ -322,7 +322,7 @@ int SceAudioInForDriver_E4042F6F(int pid, int unusedArgument1,
 		MUTE_OWNER_PORT(3);
 #undef MUTE_OWNER_PORT
 	}
-	SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 256);
+	sceKernelAtomicOrAndGet32(&g_audioInRequestFlags, 256);
 	sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	return 0;
 }
@@ -333,9 +333,9 @@ int sceAudioInSetMute(int select)
 
 	writeTpidruro(userState << 16);
 	if (select == 1) {
-		select = SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 1);
+		select = sceKernelAtomicOrAndGet32(&g_audioInRequestFlags, 1);
 	} else if (select == 2) {
-		select = SceCpuForDriver_DF899E4B(&g_audioInRequestFlags, ~1u);
+		select = sceKernelAtomicAndAndGet32(&g_audioInRequestFlags, ~1u);
 		writeTpidruro(userState);
 		return select;
 	}
@@ -430,7 +430,7 @@ int sceAudioInSelectInput(int input)
 		result = 0;
 	} else {
 		g_audioInRequestedInput = input;
-		SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 512);
+		sceKernelAtomicOrAndGet32(&g_audioInRequestFlags, 512);
 		event = g_audioInAppliedInput == 16 ? 264 : 256;
 		result = sceKernelSetEventFlag(g_audioInRequestEventFlag, event);
 	}

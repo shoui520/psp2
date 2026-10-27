@@ -133,7 +133,7 @@ typedef struct SmschedRequest {
 	uintptr_t mailboxPA;
 	SceInt32 proxyId;			/* the Non-secure kernel's id, -1 none */
 	SceUInt32 notifyMask;
-	SceUInt8 waitFlag;
+	SceInt8 waitFlag;
 	SceUInt8 padding[3];
 	SceKernelSpinlock lock;			/* inside s_lock */
 	SmschedInvokeArg invokeArg;

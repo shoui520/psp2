@@ -150,7 +150,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_302947B6
 	SceKernelUtilsForDriver_72408E29
-	SceKernelUtilsForDriver_83EFA1CC
+	sceHmacSha256Digest
 	SceKernelUtilsForDriver_E39CD272
 	SceKernelUtilsForDriver_EDA97D6D
 	sceIoRemove
@@ -230,25 +230,25 @@ set(MODULE_IMPORT_FUNCS
 	nvs_read_data
 	nvs_write_data
 	sceSblRngPseudoRandomNumber
-	SceSblSsMgrForDriver_934DB6B5
+	sceSblSsDecryptWithPortability
 	sceSblAimgrGetOpenPsId
 	SceSblSsMgrForDriver_CD98CC92
 	SceSysconForDriver_0D0B6D25
 	SceSysconForDriver_29CF4335
 	SceSysconForDriver_3C80B529
-	SceSysconForDriver_44A173F5
-	SceSysconForDriver_483FAE05
+	sceSysconJigOpenPort
+	sceSysconJigClosePort
 	SceSysconForDriver_4BC63A40
 	SceSysconForDriver_63683B9B
 	SceSysconForDriver_7BFBA09E
 	sceSysconSetPowerMode
-	SceSysconForDriver_8AAB6308
-	SceSysconForDriver_8D1D97E8
+	sceSysconSetMultiCnPort
+	sceSysconCtrlAccPower
 	SceSysconForDriver_933D813F
 	SceSysconForDriver_CBD6D8BC
-	SceSysconForDriver_D24BF916
+	sceSysconJigSetConfig
 	SceSysconForDriver_D2F456DC
-	SceSysconForDriver_DECCB2B4
+	sceSysconCtrlHostOutputViaDongle
 	SceSysconForDriver_EBDF88B9
 	SceSysconForDriver_EBE3262C
 	SceSysconForDriver_FF86F4C5

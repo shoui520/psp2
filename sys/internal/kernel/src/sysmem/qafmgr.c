@@ -43,7 +43,7 @@ int SceQafMgrForDriver_3CB55F98(void)
 	return QafMgrFlag(0xf, 0);
 }
 
-int SceQafMgrForDriver_8C423C18(void)
+int sceSblQafMgrIsAllowForceUpdate(void)
 {
 	return QafMgrFlag(0xf, 1);
 }

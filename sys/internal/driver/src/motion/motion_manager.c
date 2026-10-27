@@ -1464,7 +1464,7 @@ int module_start(SceSize arglen, const void *argp)
 	return 0;
 }
 
-int SceMotionDevForDriver_10AAC8EA(void)
+int sceMotionDevIsReady(void)
 {
 	if ((unsigned int)motion.state - 1 <= 1)
 		return 1;
@@ -1473,7 +1473,7 @@ int SceMotionDevForDriver_10AAC8EA(void)
 	return (int)0x80360006;
 }
 
-int SceMotionDevForDriver_3E4BCBC0(SceMotionDevDeviceInfo *info)
+int sceMotionDevGetDeviceInfo(SceMotionDevDeviceInfo *info)
 {
 	int intr;
 
@@ -1495,7 +1495,7 @@ int SceMotionDevForDriver_3E4BCBC0(SceMotionDevDeviceInfo *info)
 	return 0;
 }
 
-int SceMotionDevForDriver_3B23DF55(unsigned int block, SceMotionDevCalibrationHeader *header)
+int sceMotionDevGetCalibrationHeader(unsigned int block, SceMotionDevCalibrationHeader *header)
 {
 	int intr;
 
@@ -1517,7 +1517,7 @@ int SceMotionDevForDriver_3B23DF55(unsigned int block, SceMotionDevCalibrationHe
 	return (int)0x80360004;
 }
 
-int SceMotionDevForDriver_F0251700(unsigned int block, SceMotionDevCalibrationData *data,
+int sceMotionDevGetCalibrationData(unsigned int block, SceMotionDevCalibrationData *data,
 	unsigned int count)
 {
 	unsigned int i, available;
@@ -1545,7 +1545,7 @@ int SceMotionDevForDriver_F0251700(unsigned int block, SceMotionDevCalibrationDa
 	return (int)0x80360004;
 }
 
-int SceMotionDevForDriver_3A3407B5(SceMotionDevData *data, int count, unsigned int *info)
+int sceMotionDevRead(SceMotionDevData *data, int count, unsigned int *info)
 {
 	SceUID pid = sceKernelGetProcessId();
 
@@ -1564,7 +1564,7 @@ int motionReadForMagnCalib(SceMotionDevData *data, int count)
 	return motionReadSamples(data, count, NULL, 0x10005, 1);
 }
 
-int SceMotionDevForDriver_DBAF611A(unsigned int mode)
+int sceMotionDevSetSamplingMode(unsigned int mode)
 {
 	int intr;
 
@@ -1586,7 +1586,7 @@ int SceMotionDevForDriver_DBAF611A(unsigned int mode)
 	return motionControlDevice((uint8_t)mode, motionClearBusy, NULL);
 }
 
-int SceMotionDevForDriver_C02C85AB(void)
+int sceMotionDevSamplingStart(void)
 {
 	MotionDeviceReader *process;
 	SceUID pid;
@@ -1671,7 +1671,7 @@ int SceMotionDevForDriver_C02C85AB(void)
 	return 0;
 }
 
-int SceMotionDevForDriver_FD0B0785(void)
+int sceMotionDevSamplingStop(void)
 {
 	SceUID pid = sceKernelGetProcessId();
 	int intr, i;
@@ -2026,7 +2026,7 @@ int SceMotionDevForDriver_0808D77D(unsigned int overrideSampling)
 	return 0;
 }
 
-int SceMotionDevForDriver_FD1C528D(void)
+int sceMotionDevUpdateInit(void)
 {
 	SceUInt timeout;
 	int result, intr, state;
@@ -2070,7 +2070,7 @@ int SceMotionDevForDriver_D7DA3DA7(void)
 	return 0;
 }
 
-int SceMotionDevForDriver_A75976EE(void)
+int sceMotionDevUpdateRestart(void)
 {
 	SceUInt timeout = 5000000;
 	int result;
@@ -2105,7 +2105,7 @@ int SceMotionDevForDriver_A75976EE(void)
 	return result;
 }
 
-int SceMotionDevForDriver_09918DAE(
+int sceMotionDevUpdateSendCommand(
 	void (*completion)(int, const MotionSensorResponse *, MotionSensorResponse *, void *),
 	const MotionSensorResponse *request, MotionSensorResponse *response, void *arg)
 {
@@ -2201,7 +2201,7 @@ int SceMotionDevForDriver_031AF7A1(void)
 	return (int)0x80360003;
 }
 
-int SceMotionDevForDriver_5B53AC26(void *statistics)
+int sceMotionDevGetEvaInfo(void *statistics)
 {
 	int intr, result;
 

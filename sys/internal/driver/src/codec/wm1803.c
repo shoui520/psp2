@@ -44,7 +44,7 @@ int wm1803ReadRegister(unsigned int reg)
 
 	command[0] = reg >> 8;
 	command[1] = reg;
-	ret = SceI2cForDriver_0A40B7BF(0, 0x34, command, 2, 0x34, value, 2);
+	ret = sceI2cMasterTransmitReceive(0, 0x34, command, 2, 0x34, value, 2);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 292, "Error: wm1803ReadRegister(R%02d) 0x%08x\n", reg, ret);
 		return ret;
@@ -90,7 +90,7 @@ int wm1803WriteRegister(int reg, unsigned int value)
 	if (reg == 0x57)
 		s_codec.busy--;
 	for (retry = 0; retry < 3; retry++) {
-		ret = SceI2cForDriver_CA94A759(0, 0x34, buffer, 4);
+		ret = sceI2cMasterTransmit(0, 0x34, buffer, 4);
 		if (ret >= 0 || retry == 2)
 			break;
 		sceKernelDelayThread(1000);
@@ -239,7 +239,7 @@ static int initializeCodec(int first)
 				}
 				data += chunk;
 			}
-			ret = SceI2cForDriver_CA94A759(0, 0x34, buffer, (chunk + 1) * 2);
+			ret = sceI2cMasterTransmit(0, 0x34, buffer, (chunk + 1) * 2);
 			if (ret < 0)
 				return ret;
 			count -= chunk;

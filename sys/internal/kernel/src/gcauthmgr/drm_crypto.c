@@ -229,7 +229,7 @@ int GcAuthGenerateRandom20(unsigned char *data)
 	unsigned int *output;
 	int result;
 
-	result = SceSblSsMgrForDriver_AC57F4F0(random);
+	result = sceSblRngGenuineRandomNumber(random);
 	if (result != 0)
 		return (int)0x808a0005;
 	output = (unsigned int *)data;

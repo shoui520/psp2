@@ -212,7 +212,7 @@ static void sysconStartPacket(SceSysconPacket *packet)
 	if (handlers)
 		handlers->start(packet);
 	tx = packet->status & SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX ? packet->externalTx : packet->tx;
-	SceGpioForDriver_F6310435(0, 3);
+	sceGpioPortClear(0, 3);
 	while (spi->receiveCount)
 		(void)spi->receive;
 	(void)spi->transmitCount;
@@ -230,7 +230,7 @@ static void sysconStartPacket(SceSysconPacket *packet)
 	spi->enable = 1;
 	(void)spi->enable;
 	dsb();
-	SceGpioForDriver_D454A584(0, 3);
+	sceGpioPortSet(0, 3);
 	packet->status |= SYSCON_PACKET_STARTED | SYSCON_PACKET_TRANSFERRING;
 	if (s_sysconControl.logger)
 		s_sysconControl.logger(0, 0x22,
@@ -393,7 +393,7 @@ int sceSysconCmdSync(SceSysconPacket *packet, int noWait)
 			result = sceKernelCheckWaitableStatus();
 			if (result < 0) {
 #if FW_DEBUG
-				if (SceDebugForDriver_374B7868() > 0)
+				if (sceKernelGetAssertLevel() > 0)
 					SceDebugForDriver_FD753E7A(1, 0,
 						SCE_DBGINFO_FUNC(2454, "sceSysconCmdSync"),
 						__builtin_return_address(0));
@@ -415,14 +415,14 @@ int sceSysconCmdSync(SceSysconPacket *packet, int noWait)
 					&s_sysconControl.callbackLock, state);
 				result = sceKernelWaitSema(semaphore, 1, NULL);
 #if FW_DEBUG
-				if (SceDebugForDriver_374B7868() > 0)
+				if (sceKernelGetAssertLevel() > 0)
 					SceDebugForDriver_FD753E7A(1, result >= 0,
 						SCE_DBGINFO_FUNC(2493, "sceSysconCmdSync"),
 						__builtin_return_address(0));
 #endif
 				result = sceKernelDeleteSema(semaphore);
 #if FW_DEBUG
-				if (SceDebugForDriver_374B7868() > 0)
+				if (sceKernelGetAssertLevel() > 0)
 					SceDebugForDriver_FD753E7A(1, result >= 0,
 						SCE_DBGINFO_FUNC(2495, "sceSysconCmdSync"),
 						__builtin_return_address(0));
@@ -473,14 +473,14 @@ static int sysconSubmitSynchronousPacket(SceSysconPacket *packet,
 		result = sceKernelCheckWaitableStatus();
 		if (result < 0) {
 #if FW_DEBUG
-			if (SceDebugForDriver_374B7868() > 0)
+			if (sceKernelGetAssertLevel() > 0)
 				SceDebugForDriver_FD753E7A(1, 0,
 					SCE_DBGINFO_FUNC(2153, "sceSysconCmdExec"),
 					caller);
 #endif
 			return result;
 		}
-	} else if (SceIntrmgrForDriver_182EE3E3()) {
+	} else if (sceKernelIsIntrContext()) {
 		return SCE_SYSCON_ERROR_NOT_INTR_ALLOWED;
 	}
 	result = sysconPreparePacket(packet, flags, NULL, NULL);
@@ -856,7 +856,7 @@ static __attribute__((noinline)) int sysconInitialize(void)
 	s_sysconControl.command885State = 7;
 	s_sysconControl.affirmativeRertyMode = 1;
 	s_sysconControl.command884State = 3;
-	SceGpioForDriver_F6310435(0, 3);
+	sceGpioPortClear(0, 3);
 	s_sysconControl.lastTransferTime = SceThreadmgrForDriver_47F6DE49();
 	SceGpioForDriver_372022A4(0, 3, 0);
 	SceGpioForDriver_372022A4(0, 4, 1);
@@ -1108,7 +1108,7 @@ static void sysconDecodeCommandCompletions(SceSysconPacket *packet,
 
 #if FW_DEBUG
 #define SYSCON_EXECUTION_WARNING(line) do { \
-	if (SceDebugForDriver_374B7868() > 0) \
+	if (sceKernelGetAssertLevel() > 0) \
 		SceDebugForDriver_821A2D59(1, 0, \
 			SCE_DBGINFO_FUNC(line, "_sceSysconGpioIntr"), caller, \
 			"[SceSyscon]: unexpected cmd execution info 0x%02X\n", \
@@ -1153,7 +1153,7 @@ static void sysconDecodeCommandCompletions(SceSysconPacket *packet,
 		pending = s_sysconControl.queueHeads[queue];
 		if (!pending) {
 #if FW_DEBUG
-			if (SceDebugForDriver_374B7868() > 0)
+			if (sceKernelGetAssertLevel() > 0)
 				SceDebugForDriver_821A2D59(1, 0,
 					SCE_DBGINFO_FUNC(1803, "_sceSysconGpioIntr"),
 					caller,
@@ -1171,7 +1171,7 @@ static void sysconDecodeCommandCompletions(SceSysconPacket *packet,
 		} else {
 			pending->status |= SYSCON_PACKET_WRONG_COMPLETION;
 #if FW_DEBUG
-			if (SceDebugForDriver_374B7868() > 0)
+			if (sceKernelGetAssertLevel() > 0)
 				SceDebugForDriver_821A2D59(1, 0,
 					SCE_DBGINFO_FUNC(1817, "_sceSysconGpioIntr"),
 					caller,
@@ -1244,7 +1244,7 @@ static int _sceSysconGpioIntr(void *subintrArg, void *registerArg, unsigned char
 	s_sysconControl.interruptActive = 1;
 	s_sysconControl.currentPacket = NULL;
 	if (!(packet->status & SCE_SYSCON_PACKET_FLAG_KEEP_SELECT))
-		SceGpioForDriver_F6310435(0, 3);
+		sceGpioPortClear(0, 3);
 	s_sysconControl.lastTransferTime = SceThreadmgrForDriver_47F6DE49();
 	SceGpioForDriver_35AAD77A(0, 4);
 	sceKernelSpinlockLowUnlock(&s_sysconControl.callbackLock);
@@ -1281,7 +1281,7 @@ static int _sceSysconGpioIntr(void *subintrArg, void *registerArg, unsigned char
 		*(uint32_t *)packet->rx = *(uint32_t *)response;
 	spi->enable = 0;
 	dsb();
-	SceGpioForDriver_F6310435(0, 3);
+	sceGpioPortClear(0, 3);
 	sysconLogPacket(1, packet, response);
 	if (s_sysconControl.debugHandlers)
 		s_sysconControl.debugHandlers->end(packet);
@@ -1372,7 +1372,7 @@ select:
 		result = sceKernelSignalSema(semaphore, 1);
 		(void)result;
 #if FW_DEBUG
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, result >= 0,
 				SCE_DBGINFO_FUNC(2101, "_sceSysconGpioIntr"), caller);
 #endif
@@ -1471,7 +1471,7 @@ int SceSysconForDriver_063425AE(uint32_t value)
 	return sysconWriteWord(value, SYSCON_CMD_CTRL_MOTION_SENSOR_POWER, 2);
 }
 
-int SceSysconForDriver_8D1D97E8(uint32_t value)
+int sceSysconCtrlAccPower(uint32_t value)
 {
 	return sysconWriteWord(value, SYSCON_CMD_CTRL_ACC_POWER, 2);
 }
@@ -1737,12 +1737,12 @@ int SceSysconForDriver_7F198FA2(uint8_t rail, uint32_t code)
 	return result < 0 ? result : 0;
 }
 
-int SceSysconForDriver_40FF3898(uint32_t device, uint32_t mode)
+int sceSysconCtrlDeviceReset(uint32_t device, uint32_t mode)
 {
 	return sysconWriteWord(mode | device << 8, SYSCON_CMD_CTRL_DEVICE_RESET, 3);
 }
 
-int SceSysconForDriver_04EC7579(uint32_t led, int enabled)
+int sceSysconCtrlLED(uint32_t led, int enabled)
 {
 	return sysconWriteWord(led | (enabled ? 0x80 : 0), SYSCON_CMD_CTRL_LED, 2);
 }
@@ -1879,7 +1879,7 @@ int SceSysconForDriver_058941D7(uint32_t value)
 	return sysconWriteWord(value, SYSCON_CMD_OUTPUT_CLOCK, 2);
 }
 
-int SceSysconForDriver_DECCB2B4(uint32_t value)
+int sceSysconCtrlHostOutputViaDongle(uint32_t value)
 {
 	return sysconWriteWord(value, SYSCON_CMD_CTRL_HOST_OUTPUT_VIA_DONGLE, 2);
 }
@@ -1909,7 +1909,7 @@ int SceSysconForDriver_91EF4EC3(uint32_t *value)
 	return sysconReadWord(value, 0xb7);
 }
 
-int SceSysconForDriver_94AB13CC(uint32_t value)
+int sceSysconErnieShutdown(uint32_t value)
 {
 	return sysconWriteWord(value, SYSCON_CMD_ERNIE_SHUTDOWN, 2);
 }
@@ -2011,7 +2011,7 @@ int SceSysconForDriver_10327C64(void)
 	return sysconWriteWord(1, 0x3c2, 2);
 }
 
-int SceSysconForDriver_8AAB6308(uint32_t port)
+int sceSysconSetMultiCnPort(uint32_t port)
 {
 	return sysconWriteWord(port, SYSCON_CMD_SET_MULTI_CN_PORT, 3);
 }
@@ -2633,7 +2633,7 @@ int SceSysconForDriver_487D97F3(uint32_t offset, void *data, uint32_t size)
 	return packet.reply.data[2];
 }
 
-int SceSysconForDriver_F492E69E(uint16_t *information)
+int sceSysconGetTouchpanelDeviceInfo(uint16_t *information)
 {
 	SceSysconPacket packet;
 	int result;
@@ -2820,7 +2820,7 @@ int SceSysconForDriver_769F9AC4(void)
 	return state < 0 ? 0 : state;
 }
 
-int SceSysconForDriver_1503D6A0(uint32_t *information)
+int sceSysconGetMultiCnInfo(uint32_t *information)
 {
 	uint32_t value = s_sysconControl.multiCnInfo;
 	uint32_t revision;
@@ -3561,7 +3561,7 @@ int SceSysconForDriver_7BAFE083(uint32_t value)
 	return sysconWriteWord(value, 0xa82, 2);
 }
 
-int SceSysconForDriver_81A6060D(uint32_t value)
+int sceSysconNvsSetRunMode(uint32_t value)
 {
 	return sysconWriteWord(value, SYSCON_CMD_NVS_SET_RUN_MODE, 2);
 }
@@ -3598,7 +3598,7 @@ int SceSysconForDriver_9ADC9936(uint32_t *first, uint32_t *second,
 	return 0;
 }
 
-int SceSysconForDriver_68E0031E(uint32_t *first, uint32_t *second, uint32_t *third)
+int sceSysconGetBatteryVersion(uint32_t *first, uint32_t *second, uint32_t *third)
 {
 	SceSysconPacket packet;
 	int result;
@@ -3690,7 +3690,7 @@ int SceSysconForDriver_A5AB19B1(uint32_t index, uint16_t *value)
 	return 0;
 }
 
-int SceSysconForDriver_87DA378D(void)
+int sceSysconBatterySWReset(void)
 {
 	SceSysconPacket packet;
 	int result;
@@ -3705,7 +3705,7 @@ int SceSysconForDriver_87DA378D(void)
 	return result < 0 ? result : 0;
 }
 
-int SceSysconForDriver_2CEF078E(void)
+int sceSysconBatteryStartBLMode(void)
 {
 	SceSysconPacket packet;
 	int result;
@@ -3720,7 +3720,7 @@ int SceSysconForDriver_2CEF078E(void)
 	return result < 0 ? result : 0;
 }
 
-int SceSysconForDriver_E4AE7852(void)
+int sceSysconBatteryStopBLMode(void)
 {
 	SceSysconPacket packet;
 	int result;
@@ -3735,7 +3735,7 @@ int SceSysconForDriver_E4AE7852(void)
 	return result < 0 ? result : 0;
 }
 
-int SceSysconForDriver_E4F29744(uint32_t offset, uint32_t mode, const void *data, uint32_t size)
+int sceSysconBatterySetBLCommand(uint32_t offset, uint32_t mode, const void *data, uint32_t size)
 {
 	SceSysconPacket packet;
 	int result;
@@ -3756,7 +3756,7 @@ int SceSysconForDriver_E4F29744(uint32_t offset, uint32_t mode, const void *data
 	return result < 0 ? result : 0;
 }
 
-int SceSysconForDriver_74B2AB55(uint32_t offset)
+int sceSysconBatteryExecBLCommand(uint32_t offset)
 {
 	SceSysconPacket packet;
 	int result;
@@ -3772,7 +3772,7 @@ int SceSysconForDriver_74B2AB55(uint32_t offset)
 	return result < 0 ? result : 0;
 }
 
-int SceSysconForDriver_448DAFF1(uint32_t offset, uint32_t first, uint32_t second,
+int sceSysconBatteryReadBLCommand(uint32_t offset, uint32_t first, uint32_t second,
 			     void *data, uint32_t size)
 {
 	SceSysconPacket packet;
@@ -3854,7 +3854,7 @@ int SceSysconForDriver_26E36625(uint32_t offset, uint32_t size, const void *data
 	return result < 0 ? result : 0;
 }
 
-int SceSysconForDriver_ACAFA2B8(uint32_t offset, void *data, uint32_t size)
+int sceSysconNvsReadData(uint32_t offset, void *data, uint32_t size)
 {
 	SceSysconPacket packet;
 	int result;
@@ -3876,7 +3876,7 @@ int SceSysconForDriver_ACAFA2B8(uint32_t offset, void *data, uint32_t size)
 	return 0;
 }
 
-int SceSysconForDriver_10C9657A(uint32_t offset, const void *data, uint32_t size)
+int sceSysconNvsWriteData(uint32_t offset, const void *data, uint32_t size)
 {
 	SceSysconPacket packet;
 	int result;
@@ -3896,7 +3896,7 @@ int SceSysconForDriver_10C9657A(uint32_t offset, const void *data, uint32_t size
 	return result < 0 ? result : 0;
 }
 
-int SceSysconForDriver_44A173F5(void)
+int sceSysconJigOpenPort(void)
 {
 	SceSysconPacket packet;
 	int result;
@@ -3918,7 +3918,7 @@ int SceSysconForDriver_44A173F5(void)
 	return result;
 }
 
-int SceSysconForDriver_483FAE05(void)
+int sceSysconJigClosePort(void)
 {
 	SceSysconPacket packet;
 	int result;
@@ -3940,7 +3940,7 @@ int SceSysconForDriver_483FAE05(void)
 	return result;
 }
 
-int SceSysconForDriver_D24BF916(uint32_t first, uint32_t second)
+int sceSysconJigSetConfig(uint32_t first, uint32_t second)
 {
 	SceSysconPacket packet;
 	int result;
@@ -4112,7 +4112,7 @@ int SceSysconForDriver_D2F456DC(uint8_t *information)
 	return result;
 }
 
-int SceSysconForDriver_9B00BC7F(uint32_t segment)
+int sceSysconUpdaterSetSegment(uint32_t segment)
 {
 	SceSysconPacket packet;
 	int result;
@@ -4243,7 +4243,7 @@ int SceSysconForDriver_F9584DC9(uint32_t mode, uint32_t offset, const void *data
 	return result < 0 ? result : 0;
 }
 
-int SceSysconForDriver_69AD76E4(uint32_t value)
+int sceSysconUpdaterExecProgramming(uint32_t value)
 {
 	SceSysconPacket packet;
 	int result;
@@ -4259,7 +4259,7 @@ int SceSysconForDriver_69AD76E4(uint32_t value)
 	return result;
 }
 
-int SceSysconForDriver_B487C2FB(uint32_t mode)
+int sceSysconUpdaterSetRunMode(uint32_t mode)
 {
 	SceSysconPacket packet;
 	int result;
@@ -4276,7 +4276,7 @@ int SceSysconForDriver_B487C2FB(uint32_t mode)
 	return result;
 }
 
-int SceSysconForDriver_C7747A63(const uint32_t *information, uint32_t size)
+int sceSysconUpdaterExecFinalize(const uint32_t *information, uint32_t size)
 {
 	SceSysconPacket packet;
 	int result;
@@ -4294,7 +4294,7 @@ int SceSysconForDriver_C7747A63(const uint32_t *information, uint32_t size)
 	return result;
 }
 
-int SceSysconForDriver_CBA836FF(const uint32_t *information, uint32_t size)
+int sceSysconUpdaterCheckSignature(const uint32_t *information, uint32_t size)
 {
 	SceSysconPacket packet;
 	int result;
@@ -4313,7 +4313,7 @@ int SceSysconForDriver_CBA836FF(const uint32_t *information, uint32_t size)
 	return result;
 }
 
-int SceSysconForDriver_D27C3D80(const uint8_t *data, uint32_t size, uint32_t *checksum)
+int sceSysconUpdaterCalcChecksum(const uint8_t *data, uint32_t size, uint32_t *checksum)
 {
 	uint32_t sum = 0;
 	uint32_t index;

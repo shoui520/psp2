@@ -120,7 +120,7 @@ int sceUdcdRegisterCallback(SceUID callback, unsigned int mask)
 		sceSyscallLeave(t);
 		return UDCD_ERROR_NO_THREAD;
 	}
-	result = udcdRegisterCallback(SceSysmemForDriver_45D22597(process, callback), process, mask);
+	result = udcdRegisterCallback(scePUIDtoGUID(process, callback), process, mask);
 	sceSyscallLeave(t);
 	return result;
 }
@@ -146,7 +146,7 @@ int sceUdcdUnregisterCallback(SceUID callback)
 	return result;
 }
 
-int sceUdcdWaitState(const SceUdcdWaitParam *parameter, unsigned int timeout)
+int sceUdcdWaitStateForUser(const SceUdcdWaitParam *parameter, unsigned int timeout)
 {
 	SceUInt32 t = sceSyscallEnter();
 	SceUdcdWaitParam kparameter;
@@ -174,7 +174,7 @@ int sceUdcdWaitState(const SceUdcdWaitParam *parameter, unsigned int timeout)
 			goto invalid;
 		kparameter.driverName = name;
 	}
-	result = SceUdcdForDriver_D03017C0(&kparameter, timeout);
+	result = sceUdcdWaitState(&kparameter, timeout);
 out:
 	sceSyscallLeave(t);
 	return result;
@@ -197,7 +197,7 @@ int SceUdcd_F1A3690B(void)
 	return result;
 }
 
-int sceUdcdGetDeviceState(UdcdUserDeviceState *state)
+int sceUdcdGetDeviceStateForUser(UdcdUserDeviceState *state)
 {
 	SceUInt32 t = sceSyscallEnter();
 	UdcdUserDeviceState kstate;
@@ -212,7 +212,7 @@ int sceUdcdGetDeviceState(UdcdUserDeviceState *state)
 	if (state == NULL) {
 		result = UDCD_ERROR_INVALID_ARGUMENT;
 	} else {
-		value = SceUdcdForDriver_E054B5E4();
+		value = sceUdcdGetDeviceState();
 		kstate.controller = value & 0x3000;
 		kstate.activation = value & 0x700;
 		kstate.cable = value & 0x30;
@@ -226,7 +226,7 @@ int sceUdcdGetDeviceState(UdcdUserDeviceState *state)
 	return result;
 }
 
-int sceUdcdGetDeviceInfo(SceUdcdDeviceInfo *info)
+int sceUdcdGetDeviceInfoForUser(SceUdcdDeviceInfo *info)
 {
 	SceUInt32 t = sceSyscallEnter();
 	SceUdcdDeviceInfo kinfo;
@@ -239,7 +239,7 @@ int sceUdcdGetDeviceInfo(SceUdcdDeviceInfo *info)
 	if (info == NULL) {
 		result = UDCD_ERROR_INVALID_ARGUMENT;
 	} else {
-		result = SceUdcdForDriver_FBEA3703(&kinfo);
+		result = sceUdcdGetDeviceInfo(&kinfo);
 		if (result >= 0) {
 			result = sceKernelCopyToUser(info, &kinfo, sizeof(kinfo));
 			if (result > 0)

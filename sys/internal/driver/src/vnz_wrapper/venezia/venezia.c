@@ -18,7 +18,7 @@ int _sceVeneziaProcessCreateEntry(void)
 		goto out;
 	storage = NULL;
 	g_veneziaState.processStorageKey = ret;
-	ret = SceProcessmgrForDriver_AF80F39C(0, ret, (void **)&storage, 1);
+	ret = sceKernelGetRemoteKPLS(0, ret, (void **)&storage, 1);
 	if (ret < 0)
 		goto out;
 #if FW_DEBUG
@@ -70,7 +70,7 @@ int _sceVeneziaProcessCreateEntryInternal2(SceUID pid, SceUInt32 type)
 	VeneziaProcessStorage *storage = NULL;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaState.processStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_veneziaState.processStorageKey,
 						      (void **)&storage, 1);
 	if (ret < 0)
 		return ret;
@@ -96,7 +96,7 @@ int _sceVeneziaProcessExitEntry(SceUID pid, SceUInt32 type)
 	VeneziaProcessStorage *storage = NULL;
 	int ret, err;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaState.processStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_veneziaState.processStorageKey,
 						      (void **)&storage, 0);
 	if (ret >= 0)
 		ret = 0;
@@ -183,7 +183,7 @@ int _sceVeneziaStartProcessSuspend(SceUID pid)
 	VeneziaProcessStorage *storage = NULL;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaState.processStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_veneziaState.processStorageKey,
 						      (void **)&storage, 0);
 	if (ret < 0)
 		return ret;
@@ -204,7 +204,7 @@ int _sceVeneziaProcessSuspendPhase0(SceUID pid)
 	VeneziaProcessStorage *storage = NULL;
 	int ret, intr;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaState.processStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_veneziaState.processStorageKey,
 						      (void **)&storage, 0);
 	if (ret < 0)
 		return ret;
@@ -225,7 +225,7 @@ int sceCodecEngineDsp0IsProcessSuspended(SceUID pid)
 	unsigned int count;
 	int ret, intr;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaState.processStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_veneziaState.processStorageKey,
 						      (void **)&storage, 0);
 	if (ret < 0)
 		return 0;
@@ -247,7 +247,7 @@ int _sceVeneziaProcessResume(SceUID pid)
 	VeneziaProcessStorage *storage = NULL;
 	int ret, intr;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaState.processStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_veneziaState.processStorageKey,
 						      (void **)&storage, 0);
 	if (ret < 0)
 		return ret;
@@ -270,7 +270,7 @@ int _sceVeneziaStartSystemSuspend(void)
 	VeneziaProcessStorage *storage = NULL;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(0, g_veneziaState.processStorageKey,
+	ret = sceKernelGetRemoteKPLS(0, g_veneziaState.processStorageKey,
 						      (void **)&storage, 0);
 	if (ret < 0)
 		goto out;
@@ -295,7 +295,7 @@ int _sceVeneziaIsSystemSuspended(void)
 	unsigned int count;
 	int ret, intr, suspended;
 
-	ret = SceProcessmgrForDriver_AF80F39C(0, g_veneziaState.processStorageKey,
+	ret = sceKernelGetRemoteKPLS(0, g_veneziaState.processStorageKey,
 						      (void **)&storage, 0);
 	if (ret < 0)
 		return 0;
@@ -325,7 +325,7 @@ int _sceVeneziaSystemResumePhase0(void)
 	VeneziaProcessStorage *storage = NULL;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(0, g_veneziaState.processStorageKey,
+	ret = sceKernelGetRemoteKPLS(0, g_veneziaState.processStorageKey,
 						      (void **)&storage, 0);
 	if (ret < 0)
 		goto out;
@@ -359,7 +359,7 @@ void _sceVeneziaPrintBlockingCalls(SceUID pid)
 	unsigned int count;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaState.processStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_veneziaState.processStorageKey,
 						      (void **)&storage, 0);
 	if (ret < 0)
 		return;

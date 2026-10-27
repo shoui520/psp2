@@ -81,7 +81,7 @@ int _swbkptRemoveKernel(SdbgpState *state, int index)
 	sceKernelDcacheCleanRangeForL1WBWA((void *)(start & ~0x1f),
 		((start + size + 31) & ~0x1f) - (start & ~0x1f));
 	writeDacr(dacr);
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	swbkptClear(index);
 	return 0;
 }
@@ -96,7 +96,7 @@ int _swbkptRemoveUser(SdbgpState *state, int index)
 		(void *)bkpt->address, bkpt->opcode, (bkpt->thumb & 1) ? 2 : 4);
 	if (result < 0)
 		return result;
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	swbkptClear(index);
 	return 0;
 }
@@ -200,7 +200,7 @@ int swbkptSetKernel(const SdbgpSwbkptSetRequest *request, SdbgpSwbkptSetReply *r
 		sdbgpDecodeOpcode(0, code, &opcode);
 	}
 	reply->opcode = opcode;
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	return 0;
 }
 
@@ -259,7 +259,7 @@ int swbkptSetUser(const SdbgpSwbkptSetRequest *request, SdbgpSwbkptSetReply *rep
 		sdbgpDecodeOpcode(0, code, &opcode);
 	}
 	reply->opcode = opcode;
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	return 0;
 }
 

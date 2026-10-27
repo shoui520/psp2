@@ -96,11 +96,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelReleaseIntrHandler
 	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyToUserProc
 	sceKernelCopyToUser
-	SceSysmemForDriver_7750CEA7
+	sceKernelAllocUncacheHeapMemory
 	sceKernelVAtoPA
 	sceKernelCreateHeap
 	sceKernelGetMemBlockBase
@@ -121,7 +121,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
+	sceKernelUnregisterProcEventHandler
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

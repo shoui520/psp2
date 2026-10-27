@@ -65,7 +65,7 @@ static int uidCond_Destructor(void *object)
 	int intr;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1531);
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(mutexId, s_threadmgrRuntime.manager->mutexClass,
 					 (SceObjectBase **)&mutex) < 0) {
 		wakeMutex = 0;
@@ -74,7 +74,7 @@ static int uidCond_Destructor(void *object)
 		queue = (struct ThreadmgrWaitQueue *)&mutex->next;
 		mutexLock = &mutex->lock;
 		sceKernelSpinlockLowLock(mutexLock);
-		while (SceCpuForDriver_5AC9D394(&cond->lock) < 0) {
+		while (sceKernelSpinlockLowTrylock(&cond->lock) < 0) {
 			sceKernelSpinlockLowUnlock(mutexLock);
 			for (delay = 10; delay != 0; --delay)
 				;
@@ -144,7 +144,7 @@ int waitCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 		SCE_DBG_ASSERT_PRINTF(0, 579, "*** error: irq suspended. condId=0x%08x[%s]\n",
 				      condId, SceSysmemForDriver_E655852F(condId));
@@ -176,7 +176,7 @@ int waitCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 	keepMutex = 0;
 	if (SceThreadmgrForDriver_20C228E4()) {
 		status = thread->flags;
-		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
+		sceKernelAtomicClearMask32((SceInt32 *)&thread->flags,
 			THREAD_FLAG_COND_KEEP_MUTEX | THREAD_FLAG_COND_RELOCK);
 		if (status & THREAD_FLAG_COND_RELOCK) {
 			sceKernelSpinlockLowUnlock(&cond->lock);
@@ -211,10 +211,10 @@ int waitCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 		thread->waitCondId = condId;
 		thread->waitMutexId = cond->mutexId;
 		if (callbacks)
-			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+			sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		ret = waitWaitableObject(condId, (uintptr_t)&cond->next, SCE_KERNEL_WAITTYPE_COND_SIGNAL, &wakeup,
 					 timeout, NULL, &locked);
-		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (ret != 0 && ret != SCE_KERNEL_ERROR_WAIT_TIMEOUT) {
 			if (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK)
@@ -241,7 +241,7 @@ int waitCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 					pending = SCE_KERNEL_ERROR_WAIT_DELETE_MUTEX;
 				else if (pending == SCE_KERNEL_ERROR_WAIT_CANCEL)
 					pending = SCE_KERNEL_ERROR_WAIT_CANCEL_MUTEX;
-				SceCpuForDriver_821FC0EE();
+				sceKernelCpuSuspendIntr();
 				sceGUIDReleaseObject(condId);
 				ret = pending;
 				goto resume;
@@ -282,7 +282,7 @@ int getCondInfo(SceUID condId, SceKernelCondInfo *info)
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(condId, s_threadmgrRuntime.manager->condClass,
 					   &pObject);
 	if (ret < 0) {
@@ -352,8 +352,8 @@ int condProcessExit(SceProcessObject *process)
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	}
 	for (i = 0; i < (int)got; i++) {
-		intr = SceCpuForDriver_821FC0EE();
-		ret = SceSysmemForDriver_84A4AF5E(process->pid, vector[i]);
+		intr = sceKernelCpuSuspendIntr();
+		ret = scePUIDClose(process->pid, vector[i]);
 		sceKernelCpuResumeIntr(intr);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 164, "()->scePUIDClose(0x%08X, puid=0x%08X)=0x%08X\n",
@@ -482,7 +482,7 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 			process->condPeak = process->condCount;
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	} else {
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 	}
 	thread = currentThreadContext();
 	uid = sceGUIDReferObjectWithClass(mutexId, s_threadmgrRuntime.manager->mutexClass,
@@ -564,8 +564,8 @@ int sceKernelDeleteCond(SceUID condId)
 		ThreadmgrSetUserRoWord(saved);
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
-	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForKernel_368F1C36(condId) == s_threadmgrRuntime.manager->condClass)
+	intr = sceKernelCpuSuspendIntr();
+	if (sceGUIDtoClass(condId) == s_threadmgrRuntime.manager->condClass)
 		ret = sceGUIDClose(condId);
 	else
 		ret = SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
@@ -619,7 +619,7 @@ int sceKernelSignalCond(SceUID condId)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(condId, s_threadmgrRuntime.manager->condClass,
 					   &pObject);
 	if (ret < 0) {
@@ -637,7 +637,7 @@ int sceKernelSignalCond(SceUID condId)
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (CondSignalDeferred(thread, cond)) {
 		/* as Sony's: returns the lookup's result */
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
+		sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		goto unlock;
 	}
@@ -684,7 +684,7 @@ int sceKernelSignalCondAll(SceUID condId)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(condId, s_threadmgrRuntime.manager->condClass,
 					   &pObject);
 	if (ret < 0) {
@@ -702,7 +702,7 @@ int sceKernelSignalCondAll(SceUID condId)
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (CondSignalDeferred(thread, cond)) {
 		/* as Sony's: returns the lookup's result */
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
+		sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		goto unlock;
 	}
@@ -785,7 +785,7 @@ int sceKernelSignalCondTo(SceUID condId, SceUID threadId)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(condId, s_threadmgrRuntime.manager->condClass,
 					   &pObject);
 	if (ret < 0) {
@@ -802,7 +802,7 @@ int sceKernelSignalCondTo(SceUID condId, SceUID threadId)
 	sceKernelSpinlockLowLock(&cond->lock);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (CondSignalDeferred(thread, cond)) {
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
+		sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		goto unlock;
 	}
@@ -984,7 +984,7 @@ int SceThreadmgrForDriver_CA704239(SceUID pid, int level, SceKernelCondInfo *inf
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
-		if (getCondInfo(SceSysmemForDriver_45D22597(pid, vector[i]), &info) != 0)
+		if (getCondInfo(scePUIDtoGUID(pid, vector[i]), &info) != 0)
 			continue;
 		info.condId = vector[i];
 		mutexId = info.mutexId;

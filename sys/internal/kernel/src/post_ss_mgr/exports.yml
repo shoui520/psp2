@@ -11,11 +11,11 @@ SceSblPostSsMgr:
       version: 1
       nid: 0x2254E1B2
       functions:
-        - SceSblPostSsMgrForDriver_0298382B: 0x0298382B
+        - sceSblLicMgrActivateDevkit: 0x0298382B
         - SceSblPostSsMgrForDriver_07BAD056: 0x07BAD056
         - sceSblSsGenerateSealedKey: 0x08525D8D
         - SceSblPostSsMgrForDriver_128FB35A: 0x128FB35A
-        - SceSblPostSsMgrForDriver_15F37282: 0x15F37282
+        - sceSblLicMgrGetLicenseStatus: 0x15F37282
         - SceSblPostSsMgrForDriver_1923D80D: 0x1923D80D
         - sceSblPmMgrAuthEtoI: 0x19B63D65
         - SceSblPostSsMgrForDriver_1FF699DD: 0x1FF699DD
@@ -29,7 +29,7 @@ SceSblPostSsMgr:
         - SceSblPostSsMgrForDriver_4100B9E9: 0x4100B9E9
         - SceSblPostSsMgrForDriver_42474C8B: 0x42474C8B
         - sceSblPmMgrGetProductModeFromNVS: 0x4663C195
-        - SceSblPostSsMgrForDriver_4FF2682F: 0x4FF2682F
+        - sceSblLicMgrGetExpireDate: 0x4FF2682F
         - SceSblPostSsMgrForDriver_686B9461: 0x686B9461
         - SceSblPostSsMgrForDriver_739C981E: 0x739C981E
         - SceSblPostSsMgrForDriver_7ACCAA50: 0x7ACCAA50
@@ -40,7 +40,7 @@ SceSblPostSsMgr:
         - SceSblPostSsMgrForDriver_9FD835B0: 0x9FD835B0
         - SceSblPostSsMgrForDriver_ABDD68CD: 0xABDD68CD
         - SceSblPostSsMgrForDriver_AD3B0078: 0xAD3B0078
-        - SceSblPostSsMgrForDriver_ADF92824: 0xADF92824
+        - sceSblPmMgrSetProductMode: 0xADF92824
         - SceSblPostSsMgrForDriver_BDF18922: 0xBDF18922
         - SceSblPostSsMgrForDriver_C2E58CE3: 0xC2E58CE3
         - SceSblPostSsMgrForDriver_C6684F7E: 0xC6684F7E
@@ -49,10 +49,10 @@ SceSblPostSsMgr:
         - SceSblPostSsMgrForDriver_CB5436BD: 0xCB5436BD
         - SceSblPostSsMgrForDriver_CC5AA5A5: 0xCC5AA5A5
         - SceSblPostSsMgrForDriver_D8A2D465: 0xD8A2D465
-        - SceSblPostSsMgrForDriver_DC68EE5C: 0xDC68EE5C
+        - sceSblRtcMgrSetCpRtcLogical: 0xDC68EE5C
         - SceSblPostSsMgrForDriver_DDA6FA6D: 0xDDA6FA6D
-        - SceSblPostSsMgrForDriver_DE5150FE: 0xDE5150FE
-        - SceSblPostSsMgrForDriver_F7F1015B: 0xF7F1015B
+        - sceSblRtcMgrGetCpRtcLogical: 0xDE5150FE
+        - sceSblLicMgrGetActivationKey: 0xF7F1015B
         - SceSblPostSsMgrForDriver_F86F1452: 0xF86F1452
         - SceSblPostSsMgrForDriver_FE92A318: 0xFE92A318
     SceZlibForDriver:
@@ -153,7 +153,7 @@ SceSblPostSsMgr:
       nid: 0x62083C72
       functions:
         - sceSblLicMgrGetIssueNoForUser: 0x0E0691A1
-        - sceSblLicMgrGetLicenseStatus: 0x0EA6A30C
+        - sceSblLicMgrGetLicenseStatusForUser: 0x0EA6A30C
         - sceSblLicMgrGetActivationKeyForUser: 0x2A437187
         - sceSblLicMgrActivateFromFs: 0x6E56EA0A
         - sceSblLicMgrGetUsageTimeLimit: 0x774EBBA2

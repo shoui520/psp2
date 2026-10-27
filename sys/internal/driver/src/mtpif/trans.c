@@ -54,16 +54,16 @@ static int processNoop(void)
 static int processEvent(SceUID pid, int event)
 {
 	if (s_mtp.owner == pid && event == 0x200)
-		SceUsbMtpForDriver_08CD359F();
+		sceUsbMtpStop();
 	return 0;
 }
 
 static int processExit(SceUID pid)
 {
 	if (s_mtp.owner == pid) {
-		SceUsbMtpForDriver_08CD359F();
+		sceUsbMtpStop();
 		s_mtp.owner = -1;
-		SceUsbMtpForDriver_08CD359F();
+		sceUsbMtpStop();
 	}
 	return 0;
 }
@@ -117,7 +117,7 @@ int _sceMtpIfModuleStart(SceSize arglen, const char *argp)
 	s_mtp.usb.cancel = SceUsbMtpForDriver_151947D2;
 	s_mtp.usb.waitConnect = SceUsbMtpForDriver_76D707B1;
 	s_mtp.usb.start = sceUsbMtpStart;
-	s_mtp.usb.stop = SceUsbMtpForDriver_08CD359F;
+	s_mtp.usb.stop = sceUsbMtpStop;
 	s_mtp.usb.isConnected = SceUsbMtpForDriver_6F7DF4B8;
 	s_mtp.usb.changePhase = SceUsbMtpForDriver_E64513A9;
 	s_mtp.ops = &s_mtp.usb;
@@ -287,7 +287,7 @@ int SceMtpIfForDriver_E6453F21(const void *port)
 	if (port != &s_port)
 		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->stop ?
-		s_mtp.ops->stop() : SceUsbMtpForDriver_08CD359F();
+		s_mtp.ops->stop() : sceUsbMtpStop();
 }
 
 int SceMtpIfForDriver_CB685AC0(int port)
@@ -297,7 +297,7 @@ int SceMtpIfForDriver_CB685AC0(int port)
 
 int SceMtpIfForDriver_FDF8C3C0(int port)
 {
-	return port == 1 ? SceUsbMtpForDriver_08CD359F() : MTP_ERROR_INVALID;
+	return port == 1 ? sceUsbMtpStop() : MTP_ERROR_INVALID;
 }
 
 /* Enter/leave the kernel syscall domain (TPIDRPRW). */

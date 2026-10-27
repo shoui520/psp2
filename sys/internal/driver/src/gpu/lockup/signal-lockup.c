@@ -122,7 +122,7 @@ int WaitSignalCounterKernel(unsigned *counter, unsigned timeout)
 	return WaitSignalCounter(counter, timeout, 0);
 }
 
-int SceGpuEs4ForDriver_40E292D7(void)
+int sceGpuSignalWaitLockup(void)
 {
 	unsigned context, timeout = 100000;
 	int ret;

@@ -278,7 +278,7 @@ PVRSRV_ERROR OSScheduleMISR(IMG_VOID *pvSysData)
 PVRSRV_ERROR OSLockResource(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID)
 {
 	/* SCE native compare-and-set replaces pristine OS_TAS. */
-	if (SceCpuForDriver_CDA96E81((volatile SceInt32 *)&psResource->ui32Lock,
+	if (sceKernelAtomicCompareAndSet32((volatile SceInt32 *)&psResource->ui32Lock,
 			0, 1) != 0)
 		return PVRSRV_ERROR_UNABLE_TO_LOCK_RESOURCE;
 	psResource->ui32ID = ui32ID;

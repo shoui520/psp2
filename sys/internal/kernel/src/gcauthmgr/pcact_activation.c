@@ -76,7 +76,7 @@ int GcAuthPcactGetAuthenticatedAesKey(const GcAuthPcactKeyRequest *request)
 	input = (const unsigned char *)activation;
 	for (index = 0; index != 64; index++)
 		gcAuthPcactScratch.hashInput.serializedChallenge[index] = input[index];
-	difference = SceKernelUtilsForDriver_87DC7F2F(gcAuthPcactScratch.hashInput.header.framing.salt,
+	difference = sceSha1Digest(gcAuthPcactScratch.hashInput.header.framing.salt,
 			80, &gcAuthPcactScratch);
 	if (difference != 0) {
 		result = (int)0x808a0205;
@@ -260,7 +260,7 @@ int GcAuthPcactCreateChallenge(const GcAuthPcactChallengeRequest *request)
 	input = (const unsigned char *)&gcAuthPcactChallengeWorkspace.encrypted;
 	for (index = 0; index != 112; index++)
 		gcAuthPcactScratch.hashInput.serializedChallenge[index] = input[index];
-	result = SceKernelUtilsForDriver_87DC7F2F(gcAuthPcactScratch.hashInput.header.framing.salt,
+	result = sceSha1Digest(gcAuthPcactScratch.hashInput.header.framing.salt,
 			128, &gcAuthPcactScratch);
 	if (result != 0) {
 		result = (int)0x808a0205;
@@ -488,7 +488,7 @@ int GcAuthPcactApplyRtcActivation(const GcAuthPcactRtcActivationRequest *request
 	}
 	key.modulus = gcAuthPcactRtcRsaModulus;
 	key.exponent = gcAuthPcactRtcRsaExponent;
-	if (SceKernelUtilsForDriver_A773A6A8(activation, 48, &gcAuthPcactScratch) != 0) {
+	if (sceSha256Digest(activation, 48, &gcAuthPcactScratch) != 0) {
 		result = (int)0x808a0604;
 		goto finish;
 	}
@@ -550,7 +550,7 @@ int GcAuthPcactApplyRtcActivation(const GcAuthPcactRtcActivationRequest *request
 		result = (int)0x808a0603;
 	} else {
 		SceRtcForDriver_401C0954(&currentTick);
-		SceRtcForDriver_42A0DFCB(&dateTime, &currentTick);
+		sceRtcSetTick(&dateTime, &currentTick);
 	}
 finish:
 	cursor = (unsigned char *)&gcAuthPcactScratch;

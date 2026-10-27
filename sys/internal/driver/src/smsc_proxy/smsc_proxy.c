@@ -636,7 +636,7 @@ int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status)
 	return ret;
 }
 
-int SceSblSmSchedProxyForKernel_DE4EAC3C(SceUID id)
+int sceSblSmSchedProxyKill(SceUID id)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	volatile Session *s;
@@ -759,7 +759,7 @@ int sceSblSmSchedProxyRegisterIntrHandler(SceUID id, int channel,
 	return ret;
 }
 
-int SceSblSmSchedProxyForKernel_85EDA5FC(SceUID id, int channel)
+int sceSblSmSchedProxyReleaseIntrHandler(SceUID id, int channel)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	volatile Session *s;

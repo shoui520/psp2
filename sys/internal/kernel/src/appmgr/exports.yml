@@ -11,7 +11,7 @@ SceAppMgr:
       version: 1
       nid: 0xDCE180F8
       functions:
-        - SceAppMgrForDriver_0813AFCA: 0x0813AFCA
+        - sceAppMgrGetUserDirPath: 0x0813AFCA
         - SceAppMgrForDriver_088670A6: 0x088670A6
         - SceAppMgrForDriver_0B1BEEE0: 0x0B1BEEE0
         - SceAppMgrForDriver_0B94BB90: 0x0B94BB90
@@ -32,7 +32,7 @@ SceAppMgr:
         - sceAppMgrGetShellPidForDriver: 0x2FEACA9F
         - SceAppMgrForDriver_30947DF4: 0x30947DF4
         - sceAppMgrSpawnProcessForDriver: 0x324DD34E
-        - SceAppMgrForDriver_3A0A9B82: 0x3A0A9B82
+        - sceAppMgrWorkDirMount: 0x3A0A9B82
         - sceAppMgrLiveAreaOperationByNameForLoadp: 0x3B4F305B
         - SceAppMgrForDriver_43A35729: 0x43A35729
         - sceAppMgrAcInstGetAcdirParam: 0x474AABDF
@@ -40,7 +40,7 @@ SceAppMgr:
         - sceAppMgrLaunchAppForTest2: 0x504023C8
         - SceAppMgrForDriver_55D48190: 0x55D48190
         - SceAppMgrForDriver_5B1BE482: 0x5B1BE482
-        - SceAppMgrForDriver_5E311F71: 0x5E311F71
+        - sceAppMgrAppDataMountById: 0x5E311F71
         - SceAppMgrForDriver_61B13981: 0x61B13981
         - SceAppMgrForDriver_62E98C42: 0x62E98C42
         - sceAppMgrSaveDataNotifyBackupFinished: 0x6989B258
@@ -51,12 +51,12 @@ SceAppMgr:
         - SceAppMgrForDriver_99AA37C1: 0x99AA37C1
         - SceAppMgrForDriver_9ADB00FA: 0x9ADB00FA
         - SceAppMgrForDriver_9B3F7D66: 0x9B3F7D66
-        - SceAppMgrForDriver_A714BB35: 0xA714BB35
+        - sceAppMgrUmount: 0xA714BB35
         - sceAppMgrIsExclusiveProcessRunning: 0xA888C2DC
         - SceAppMgrForDriver_A9AA3A68: 0xA9AA3A68
         - sceAppMgrGetSystemDataFile: 0xAEC49533
         - sceAppMgrLaunchAppForDebugger: 0xB0A37065
-        - SceAppMgrForDriver_B1D3C287: 0xB1D3C287
+        - sceAppMgrAppDataMount: 0xB1D3C287
         - sceAppMgrCloudDataDstCreateMount: 0xB3816B42
         - SceAppMgrForDriver_B53FB98E: 0xB53FB98E
         - SceAppMgrForDriver_B544F2A0: 0xB544F2A0

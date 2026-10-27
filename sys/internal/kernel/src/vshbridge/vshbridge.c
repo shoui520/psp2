@@ -42,7 +42,7 @@
 		sceSyscallLeave(_t);					\
 		return SCE_ERROR_ERRNO_ENOSYS;				\
 	}								\
-	uid = SceSysmemForDriver_45D22597(0, (_puid));				\
+	uid = scePUIDtoGUID(0, (_puid));				\
 	if (uid < 0) {							\
 		sceSyscallLeave(_t);					\
 		return uid | 0x40000000;				\
@@ -92,9 +92,9 @@ SceUInt32 vshKernelShutdownSystemForUser(const SceKernelShutdownParam *param)
 		}
 		SCE_PRINTF_WITH_INFO(0, 344, "Shutting the system down...\n");
 		if (param->size == 8 && param->mode == 1)
-			ret = ScePowerForDriver_8921A7A0(1);
+			ret = scePowerRequestShutdown(1);
 		else if (param->size == 8 && param->mode == 2)
-			ret = ScePowerForDriver_8921A7A0(0);
+			ret = scePowerRequestShutdown(0);
 		else
 			ret = scePowerRequestColdReset();
 	} else {
@@ -211,7 +211,7 @@ SceUInt32 vshRtcGetCurrentSecureTick(SceRtcTick *tick)
 
 SceUInt32 vshRtcSetCurrentNetworkTick(const SceRtcTick *tick)
 {
-	VSH_BRIDGE(SceRtcForDriver_162E486E(tick));
+	VSH_BRIDGE(sceRtcSetCurrentNetworkTick(tick));
 }
 
 SceUInt32 vshRtcSetCurrentDebugNetworkTick(const SceRtcTick *tick)
@@ -226,7 +226,7 @@ SceUInt32 vshRtcSetAlarmTick(const SceRtcTick *tick, int unk)
 
 SceUInt32 vshRtcGetAlarmTick(SceRtcTick *tick, int *unk)
 {
-	VSH_BRIDGE(SceRtcForDriver_C838275A(tick, unk));
+	VSH_BRIDGE(sceRtcGetAlarmTick(tick, unk));
 }
 
 SceUInt32 vshRtcIsAlarmed(void)
@@ -384,7 +384,7 @@ SceUInt32 vshLedSetMode(int led, int mode, const void *conf)
 			mode = SCE_LED_MODE_OFF;
 		}
 	}
-	ret = SceLedForDriver_EA24BE03(led, mode, conf);
+	ret = sceLedSetMode(led, mode, conf);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -721,32 +721,32 @@ SceUInt32 vshSysconGetBatteryCalibData(uint32_t *a, uint32_t *b, uint32_t *c, ui
 
 SceUInt32 vshIdStorageGetLeafSize(void)
 {
-	VSH_BRIDGE(SceIdStorageForDriver_EB830733());
+	VSH_BRIDGE(sceIdStorageGetLeafSize());
 }
 
 SceUInt32 vshIdStorageIsFormatted(void)
 {
-	VSH_BRIDGE(SceIdStorageForDriver_FEFA40C2());
+	VSH_BRIDGE(sceIdStorageIsFormatted());
 }
 
 SceUInt32 vshIdStorageIsReadOnly(void)
 {
-	VSH_BRIDGE(SceIdStorageForDriver_2D633688());
+	VSH_BRIDGE(sceIdStorageIsReadOnly());
 }
 
 SceUInt32 vshIdStorageIsDirty(void)
 {
-	VSH_BRIDGE(SceIdStorageForDriver_B9069BAD());
+	VSH_BRIDGE(sceIdStorageIsDirty());
 }
 
 SceUInt32 vshIdStorageFormat(void)
 {
-	VSH_BRIDGE(SceIdStorageForDriver_958089DB());
+	VSH_BRIDGE(sceIdStorageFormat());
 }
 
 SceUInt32 vshIdStorageUnformat(void)
 {
-	VSH_BRIDGE(SceIdStorageForDriver_F4BCB3EE());
+	VSH_BRIDGE(sceIdStorageUnformat());
 }
 
 SceUInt32 vshIdStorageReadLeaf(SceSize leaf, void *buf)
@@ -758,7 +758,7 @@ SceUInt32 vshIdStorageReadLeaf(SceSize leaf, void *buf)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
-		ret = SceIdStorageForDriver_EB00C509(leaf, data);
+		ret = sceIdStorageReadLeaf(leaf, data);
 		if (ret == 0)
 			ret = sceKernelCopyToUser(buf, data, sizeof(data));
 	}
@@ -777,7 +777,7 @@ SceUInt32 vshIdStorageWriteLeaf(SceSize leaf, const void *buf)
 	} else {
 		ret = sceKernelCopyFromUser(data, buf, sizeof(data));
 		if (ret >= 0)
-			ret = SceIdStorageForDriver_1FA4D135(leaf, data);
+			ret = sceIdStorageWriteLeaf(leaf, data);
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -785,7 +785,7 @@ SceUInt32 vshIdStorageWriteLeaf(SceSize leaf, const void *buf)
 
 SceUInt32 vshIdStorageCreateLeaf(SceSize leaf)
 {
-	VSH_BRIDGE(SceIdStorageForDriver_08A471A6(leaf));
+	VSH_BRIDGE(sceIdStorageCreateLeaf(leaf));
 }
 
 /* up to 32 leaves */
@@ -800,7 +800,7 @@ SceUInt32 vshIdStorageCreateAtomicLeaves(const SceUInt16 *leaves, int num)
 	} else if ((SceUInt32)(num - 1) < 0x20) {
 		ret = sceKernelCopyFromUser(buf, leaves, num * 2);
 		if (ret >= 0)
-			ret = SceIdStorageForDriver_99ACCB71(buf, num);
+			ret = sceIdStorageCreateAtomicLeaves(buf, num);
 	} else {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 	}
@@ -810,12 +810,12 @@ SceUInt32 vshIdStorageCreateAtomicLeaves(const SceUInt16 *leaves, int num)
 
 SceUInt32 vshIdStorageDeleteLeaf(SceSize leaf)
 {
-	VSH_BRIDGE(SceIdStorageForDriver_2C97AB36(leaf));
+	VSH_BRIDGE(sceIdStorageDeleteLeaf(leaf));
 }
 
 SceUInt32 vshIdStorageGetFreeLeaves(void)
 {
-	VSH_BRIDGE(SceIdStorageForDriver_37833CB8());
+	VSH_BRIDGE(sceIdStorageGetFreeLeaves());
 }
 
 SceUInt32 vshIdStorageLookup(SceSize key, SceSize offset, void *buf, SceSize len)
@@ -848,7 +848,7 @@ SceUInt32 vshIdStorageUpdate(SceSize key, SceSize offset, const void *buf, SceSi
 	} else if ((len <= 0x200 ? offset : len) < 0x200) {
 		ret = sceKernelCopyFromUser(data, buf, len);
 		if (ret >= 0)
-			ret = SceIdStorageForDriver_683AAC10(key, offset, data, len);
+			ret = sceIdStorageUpdate(key, offset, data, len);
 	} else {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 	}
@@ -858,12 +858,12 @@ SceUInt32 vshIdStorageUpdate(SceSize key, SceSize offset, const void *buf, SceSi
 
 SceUInt32 vshIdStorageFlush(void)
 {
-	VSH_BRIDGE(SceIdStorageForDriver_3AD32523());
+	VSH_BRIDGE(sceIdStorageFlush());
 }
 
 SceUInt32 vshIdStorageRestart(int unk)
 {
-	VSH_BRIDGE(SceIdStorageForDriver_60B647A5(unk));
+	VSH_BRIDGE(sceIdStorageRestart(unk));
 }
 
 /* ===== sbl ===== */
@@ -915,7 +915,7 @@ SceUInt32 vshSblAimgrGetConsoleId(void *id)
 
 SceUInt32 vshSblAimgrGetPscode(void *code)
 {
-	VSH_BRIDGE(SceSblSsMgrForDriver_E0DC2587(code));
+	VSH_BRIDGE(sceSblAimgrGetPscode(code));
 }
 
 SceUInt32 vshSblAimgrGetPscode2(void *code)
@@ -1008,7 +1008,7 @@ SceUInt32 vshSblSsDecryptWithPortability(SceUInt32 mode, void *iv, ScePortabilit
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
 	out->msg_size = in->msg_size;
-	ret = SceSblSsMgrForDriver_934DB6B5(mode, iv, in, out);
+	ret = sceSblSsDecryptWithPortability(mode, iv, in, out);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -1181,13 +1181,13 @@ int module_start(SceSize args, void *argp)
 SceUInt32 vshIoMount(int id, const char *path, int permission, void *data,
 		     SceUInt32 reservedLow, SceUInt32 reservedHigh)
 {
-	VSH_BRIDGE(SceIofilemgrForDriver_D070BC48(id, path, permission, data, reservedLow,
+	VSH_BRIDGE(sceIoMount(id, path, permission, data, reservedLow,
 						  reservedHigh));
 }
 
 SceUInt32 vshIoUmount(int id, int force, SceUInt32 reservedLow, SceUInt32 reservedHigh)
 {
-	VSH_BRIDGE(SceIofilemgrForDriver_20574100(id, force, reservedLow, reservedHigh));
+	VSH_BRIDGE(sceIoUmount(id, force, reservedLow, reservedHigh));
 }
 
 /* a kernel event, handed to the caller as a PUID */
@@ -1205,7 +1205,7 @@ SceUInt32 vshIoCreateMountEvent(SceUInt32 mountPoint, SceUInt32 events)
 		sceSyscallLeave(t);
 		return uid;
 	}
-	puid = SceSysmemForDriver_BF209859(0, uid);
+	puid = scePUIDOpenByGUID(0, uid);
 	if (puid < 0)
 		sceIoDeleteMountEvent(uid);
 	sceSyscallLeave(t);
@@ -1236,16 +1236,16 @@ SceUInt32 vshIoCreateErrorEvent(int mntId, SceUInt32 pattern, IoErrorEventInfo *
 		sceSyscallLeave(t);
 		return uid;
 	}
-	puid = SceSysmemForDriver_BF209859(0, uid);
+	puid = scePUIDOpenByGUID(0, uid);
 	if (puid < 0)
-		SceIofilemgrForDriver_C6158F8D(uid);
+		sceIoDeleteErrorEvent(uid);
 	sceSyscallLeave(t);
 	return puid;
 }
 
 SceUInt32 vshIoClearErrorEvent(SceUID event)
 {
-	VSH_BRIDGE_UID(event, SceIofilemgrForDriver_40B933C7(uid));
+	VSH_BRIDGE_UID(event, sceIoClearErrorEvent(uid));
 }
 
 SceUInt32 vshIoDeleteErrorEvent(SceUID event)
@@ -1258,17 +1258,17 @@ SceUInt32 vshIoDeleteErrorEvent(SceUID event)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	uid = SceSysmemForDriver_45D22597(0, event);
+	uid = scePUIDtoGUID(0, event);
 	if (uid < 0) {
 		sceSyscallLeave(t);
 		return uid | 0x40000000;
 	}
-	ret = SceIofilemgrForDriver_C6158F8D(uid);
+	ret = sceIoDeleteErrorEvent(uid);
 	if (ret != 0) {
 		sceSyscallLeave(t);
 		return ret;
 	}
-	SceSysmemForDriver_84A4AF5E(0, event);
+	scePUIDClose(0, event);
 	sceSyscallLeave(t);
 	return 0;
 }
@@ -1651,7 +1651,7 @@ SceUInt32 vshCoredumpCafContextCreate(void)
 			sceSyscallLeave(t);
 			return uid;
 		}
-		puid = SceSysmemForDriver_BF209859(0, uid);
+		puid = scePUIDOpenByGUID(0, uid);
 		if (puid < 0)
 			sceCoredumpCafContextDestroy(uid);
 	}

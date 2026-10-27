@@ -54,7 +54,7 @@ int BtTransportThread(SceSize argumentSize, void *argument)
 			goto exit;
 		if (waitResult)
 			goto exit;
-		if (SceSdifForDriver_D0F78D9B(transport->function,
+		if (sceSdioRead(transport->function,
 			3, 1, interruptStatus, 1) < 0)
 			goto exit;
 		if (interruptStatus[0] & 2) {
@@ -77,7 +77,7 @@ int BtTransportThread(SceSize argumentSize, void *argument)
 		}
 		if (!(interruptStatus[0] & 1))
 			goto enableInterrupt;
-		if (SceSdifForDriver_D0F78D9B(transport->function, 98, 1, units, 1) < 0)
+		if (sceSdioRead(transport->function, 98, 1, units, 1) < 0)
 			goto enableInterrupt;
 		receivedLength = units[0] << transport->receiveUnitShift;
 		if ((unsigned int)(receivedLength - 1) >= 2048)
@@ -85,7 +85,7 @@ int BtTransportThread(SceSize argumentSize, void *argument)
 		transferLength = receivedLength;
 		if (receivedLength > 128)
 			transferLength = (receivedLength + 127) & ~127;
-		if (SceSdifForDriver_D0F78D9B(transport->function, transport->ioPort,
+		if (sceSdioRead(transport->function, transport->ioPort,
 			transferLength, gBtReceivePacket.bytes, 2) < 0 || receivedLength <= 3)
 			goto enableInterrupt;
 		packetLength = BtReadLe24(gBtReceivePacket.packet.length);

@@ -74,7 +74,7 @@ set(MODULE_IMPORT_FUNCS
 	vfsMount
 	vfsGetNewVnode
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
+	sceKernelUnregisterProcEventHandler
 	SceUartForKernel_4E97D3AD
 	sceKernelCheckDipsw
 	SceSysrootForDriver_AA770EF7

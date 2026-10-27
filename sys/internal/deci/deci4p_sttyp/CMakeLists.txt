@@ -2,5 +2,5 @@
 psp2_module(os0_kd_deci4p_sttyp KIND kernel COMPILER gcc48 SOURCES
 	sttyp.c
 IMPORTS
-	SceDeci4pSDfMgrForKernel_86CFC8C6
+	sceSDfMgrClose
 )

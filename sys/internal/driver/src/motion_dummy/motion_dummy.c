@@ -501,12 +501,12 @@ int module_start(SceSize argc, const void *args)
 	return SCE_KERNEL_START_SUCCESS;
 }
 
-int SceMotionDevForDriver_10AAC8EA(void)
+int sceMotionDevIsReady(void)
 {
 	return 1;
 }
 
-int SceMotionDevForDriver_3E4BCBC0(SceMotionDevDeviceInfo *info)
+int sceMotionDevGetDeviceInfo(SceMotionDevDeviceInfo *info)
 {
 	int intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 
@@ -515,7 +515,7 @@ int SceMotionDevForDriver_3E4BCBC0(SceMotionDevDeviceInfo *info)
 	return 0;
 }
 
-int SceMotionDevForDriver_3B23DF55(SceUInt32 blockId, uint8_t *header)
+int sceMotionDevGetCalibrationHeader(SceUInt32 blockId, uint8_t *header)
 {
 	int intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	int i;
@@ -526,7 +526,7 @@ int SceMotionDevForDriver_3B23DF55(SceUInt32 blockId, uint8_t *header)
 	return 0;
 }
 
-int SceMotionDevForDriver_F0251700(SceUInt32 blockId, void *data, SceUInt32 count)
+int sceMotionDevGetCalibrationData(SceUInt32 blockId, void *data, SceUInt32 count)
 {
 	int intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 
@@ -535,7 +535,7 @@ int SceMotionDevForDriver_F0251700(SceUInt32 blockId, void *data, SceUInt32 coun
 	return 0;
 }
 
-int SceMotionDevForDriver_3A3407B5(SceMotionDevData *data, int count, SceUInt32 *info)
+int sceMotionDevRead(SceMotionDevData *data, int count, SceUInt32 *info)
 {
 	int intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 
@@ -545,7 +545,7 @@ int SceMotionDevForDriver_3A3407B5(SceMotionDevData *data, int count, SceUInt32 
 	return count;
 }
 
-int SceMotionDevForDriver_DBAF611A(SceUInt32 mode)
+int sceMotionDevSetSamplingMode(SceUInt32 mode)
 {
 	return 0;
 }
@@ -570,7 +570,7 @@ int motionRead(SceMotionDevData *data, int count, SceUInt32 *info)
 	return 0;
 }
 
-int SceMotionDevForDriver_C02C85AB(void)
+int sceMotionDevSamplingStart(void)
 {
 	return 0;
 }
@@ -590,7 +590,7 @@ int motionReadForMagnCalib(SceMotionDevData *data, int count)
 	return count;
 }
 
-int SceMotionDevForDriver_FD0B0785(void)
+int sceMotionDevSamplingStop(void)
 {
 	return 0;
 }
@@ -796,7 +796,7 @@ int SceMotionDevForDriver_0808D77D(void)
 	return 0;
 }
 
-int SceMotionDevForDriver_FD1C528D(void)
+int sceMotionDevUpdateInit(void)
 {
 	return 0;
 }
@@ -806,12 +806,12 @@ int SceMotionDevForDriver_D7DA3DA7(void)
 	return 0;
 }
 
-int SceMotionDevForDriver_A75976EE(void)
+int sceMotionDevUpdateRestart(void)
 {
 	return 0;
 }
 
-int SceMotionDevForDriver_09918DAE(void)
+int sceMotionDevUpdateSendCommand(void)
 {
 	return 0;
 }
@@ -836,7 +836,7 @@ int SceMotionDevForDriver_031AF7A1(void)
 	return 0;
 }
 
-int SceMotionDevForDriver_5B53AC26(void)
+int sceMotionDevGetEvaInfo(void)
 {
 	return 0;
 }

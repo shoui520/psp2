@@ -42,7 +42,7 @@ int cameraTranslateFrameBuffer(int devnum, CameraProcess *process, int cache)
 	case 5:
 		range.addr = (SceUInt32)process->frameBuffer.pvIBase;
 		range.size = process->config.sizeIBase;
-		result = SceSysmemForDriver_AE36C775(&range, &physical);
+		result = sceKernelVARangeToPARange(&range, &physical);
 		if (result >= 0) {
 			if (cache)
 				goto cachePhysical;
@@ -52,20 +52,20 @@ int cameraTranslateFrameBuffer(int devnum, CameraProcess *process, int cache)
 	case 3:
 		range.addr = (SceUInt32)process->frameBuffer.pvUBase;
 		range.size = process->config.sizeUBase;
-		result = SceSysmemForDriver_AE36C775(&range, &physical);
+		result = sceKernelVARangeToPARange(&range, &physical);
 		if (result < 0)
 			goto failed;
 		if (cache) {
 			device->cachedFrameBuffer.paddrUBase = physical.addr;
 			range.addr = (SceUInt32)process->frameBuffer.pvVBase;
 			range.size = process->config.sizeVBase;
-			result = SceSysmemForDriver_AE36C775(&range, &physical);
+			result = sceKernelVARangeToPARange(&range, &physical);
 			if (result < 0)
 				goto restore;
 			device->cachedFrameBuffer.paddrVBase = physical.addr;
 			range.addr = (SceUInt32)process->frameBuffer.pvIBase;
 			range.size = process->config.sizeIBase;
-			result = SceSysmemForDriver_AE36C775(&range, &physical);
+			result = sceKernelVARangeToPARange(&range, &physical);
 			if (result < 0)
 				goto restore;
 			goto cachePhysical;
@@ -73,13 +73,13 @@ int cameraTranslateFrameBuffer(int devnum, CameraProcess *process, int cache)
 		process->frameBuffer.paddrUBase = physical.addr;
 		range.addr = (SceUInt32)process->frameBuffer.pvVBase;
 		range.size = process->config.sizeVBase;
-		result = SceSysmemForDriver_AE36C775(&range, &physical);
+		result = sceKernelVARangeToPARange(&range, &physical);
 		if (result < 0)
 			return result;
 		process->frameBuffer.paddrVBase = physical.addr;
 		range.addr = (SceUInt32)process->frameBuffer.pvIBase;
 		range.size = process->config.sizeIBase;
-		result = SceSysmemForDriver_AE36C775(&range, &physical);
+		result = sceKernelVARangeToPARange(&range, &physical);
 		if (result < 0)
 			return result;
 setPhysical:
@@ -121,7 +121,7 @@ SceUID cameraGetCallerProcessId(void)
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return 0;
 	result = sceKernelIsUserModeThread();
 	if (result != 0)
@@ -136,7 +136,7 @@ CameraProcess *cameraGetProcess(int devnum, SceUID processId)
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey, &storage, 0) >= 0 &&
 		    storage != NULL) {
 			process = (CameraProcess *)storage + devnum;
@@ -182,7 +182,7 @@ int cameraInitializeProcess(SceUID processId)
 	void *storage = NULL;
 	CameraProcess *process;
 
-	if (SceProcessmgrForDriver_AF80F39C(processId,
+	if (sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, &storage, 1) >= 0 &&
 	    storage != NULL) {
 		process = storage;
@@ -291,7 +291,7 @@ CameraProcess *cameraGetProcessStorage(SceUID processId, int create)
 	void *storage = NULL;
 	int result;
 
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, &storage, create);
 	return result < 0 ? NULL : storage;
 }
@@ -307,7 +307,7 @@ int sceCameraConfigOpen(int devnum, SceCameraInfo *pInfo)
 	unsigned int timeout;
 	int result;
 
-	if (!SceIntrmgrForDriver_182EE3E3()) {
+	if (!sceKernelIsIntrContext()) {
 		processId = sceKernelIsUserModeThread();
 		if (processId != 0)
 			processId = sceKernelGetProcessId();
@@ -317,13 +317,13 @@ int sceCameraConfigOpen(int devnum, SceCameraInfo *pInfo)
 		return (int)0x802e0000;
 	if (processId < 0)
 		return processId;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, &storage, 0);
 	if (result >= 0 && storage != NULL &&
 	    ((CameraProcess *)storage)[devnum].processId == processId)
 		return (int)0x802e0003;
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, &storage, 0);
 	if (result < 0 || storage == NULL)
 		return (int)0x802e00ff;
@@ -413,7 +413,7 @@ int sceCameraConfigStartPid(int devnum, SceUID processId, int force)
 		return processId;
 	if (device->activeProcessId == -1)
 		device->activeProcessId = processId;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, (void **)&storage, 0);
 	if (result < 0 || storage == NULL)
 		return (int)0x802e0004;
@@ -432,7 +432,7 @@ int sceCameraConfigStartPid(int devnum, SceUID processId, int force)
 			}
 			if (result == 0) {
 				storage = NULL;
-				result = SceProcessmgrForDriver_AF80F39C(processId,
+				result = sceKernelGetRemoteKPLS(processId,
 					cameraDriver->processLocalStorageKey, (void **)&storage, 0);
 				if (result < 0 || storage == NULL ||
 				    storage[devnum].processId != processId) {
@@ -568,7 +568,7 @@ int sceCameraConfigStartPid(int devnum, SceUID processId, int force)
 	}
 	if (pendingStart && result == 0) {
 		storage = NULL;
-		result = SceProcessmgrForDriver_AF80F39C(processId,
+		result = sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey, (void **)&storage, 0);
 		if (result < 0 || storage == NULL || storage[devnum].processId != processId) {
 			result = (int)0x802e0004;
@@ -589,14 +589,14 @@ int sceCameraConfigStartPid(int devnum, SceUID processId, int force)
 			return result;
 pending:
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, (void **)&storage, 0) >= 0 &&
 		    storage != NULL && storage[devnum].processId == processId)
 			storage[devnum].activeStatus = 2;
 		return (int)0x802e000e;
 	}
 	storage = NULL;
-	if (SceProcessmgrForDriver_AF80F39C(processId,
+	if (sceKernelGetRemoteKPLS(processId,
 		cameraDriver->processLocalStorageKey, (void **)&storage, 0) < 0 ||
 	    storage == NULL || storage[devnum].processId != processId)
 		return (int)0x802e0004;
@@ -616,7 +616,7 @@ int sceCameraConfigStopPid(int devnum, SceUID processId)
 
 	if (processId < 0)
 		return processId;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			driver->processLocalStorageKey, (void **)&storage, 0);
 	if (result < 0 || storage == NULL || storage[devnum].processId != processId)
 		return (int)0x802e0004;
@@ -655,7 +655,7 @@ int sceCameraConfigStopPid(int devnum, SceUID processId)
 		device->pendingProcessId = 0;
 		if (active && enabled) {
 			storage = NULL;
-			if (SceProcessmgrForDriver_AF80F39C(processId,
+			if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey, (void **)&storage, 0) >= 0 &&
 			    storage != NULL && storage[devnum].processId == processId)
 				storage[devnum].activeStatus = 0;
@@ -663,7 +663,7 @@ int sceCameraConfigStopPid(int devnum, SceUID processId)
 		}
 	}
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, (void **)&storage, 0);
 	if (result < 0 || storage == NULL || storage[devnum].processId != processId)
 		return (int)0x802e0004;
@@ -673,7 +673,7 @@ int sceCameraConfigStopPid(int devnum, SceUID processId)
 	process->state = 1;
 	process->started = 0;
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, (void **)&storage, 0);
 	if (result >= 0 && storage != NULL) {
 		if (storage[devnum].processId != processId)
@@ -693,7 +693,7 @@ int cameraHasOpenProcess(int devnum)
 		processId = cameraProcessRegistry.processId[index++];
 		if ((unsigned int)processId + 1 != 0 && processId >= 0) {
 			storage = NULL;
-			if (SceProcessmgrForDriver_AF80F39C(processId,
+			if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey, (void **)&storage, 0) >= 0 &&
 			    storage != NULL && storage[devnum].processId == processId)
 				return 1;
@@ -713,7 +713,7 @@ int cameraHasStartedProcess(int devnum, int activeOnly)
 			processId = cameraProcessRegistry.processId[index++];
 			if (processId != -1 && processId >= 0) {
 				storage = NULL;
-				if (SceProcessmgrForDriver_AF80F39C(processId,
+				if (sceKernelGetRemoteKPLS(processId,
 					cameraDriver->processLocalStorageKey, (void **)&storage, 0) >= 0 &&
 				    storage != NULL && storage[devnum].processId == processId &&
 				    storage[devnum].started && storage[devnum].activeStatus != 2)
@@ -725,7 +725,7 @@ int cameraHasStartedProcess(int devnum, int activeOnly)
 			processId = cameraProcessRegistry.processId[index++];
 			if (processId != -1 && processId >= 0) {
 				storage = NULL;
-				if (SceProcessmgrForDriver_AF80F39C(processId,
+				if (sceKernelGetRemoteKPLS(processId,
 					cameraDriver->processLocalStorageKey, (void **)&storage, 0) >= 0 &&
 				    storage != NULL && storage[devnum].processId == processId &&
 				    storage[devnum].started)
@@ -745,7 +745,7 @@ int sceCameraConfigSetStartedPid(int devnum, SceUID processId, int started)
 	if (processId < 0)
 		return processId;
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, (void **)&storage, 0);
 	if (result < 0 || storage == NULL || processId != storage[devnum].processId)
 		return (int)0x802e0004;
@@ -776,7 +776,7 @@ int sceCameraConfigSetActiveStatusPid(int devnum, SceUID processId, int status)
 	if (processId < 0)
 		return processId;
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, (void **)&storage, 0);
 	if (result >= 0 && storage != NULL) {
 		process = &storage[devnum];
@@ -802,7 +802,7 @@ int sceCameraConfigClosePid(int devnum, SceUID processId)
 	if (processId < 0)
 		return processId;
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			driver->processLocalStorageKey, (void **)&storage, 0);
 	if (result < 0 || storage == NULL)
 		return (int)0x802e0004;
@@ -863,7 +863,7 @@ int sceCameraConfigRead(int devnum, SceCameraRead *pRead)
 	SceUID processId;
 	int result, isUserThread, wBuffer;
 
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		driver = cameraDriver;
 		processId = 0;
 		device = &driver->device[devnum];
@@ -881,7 +881,7 @@ int sceCameraConfigRead(int devnum, SceCameraRead *pRead)
 		}
 	}
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			driver->processLocalStorageKey, (void **)&storage, 0);
 	if (result < 0 || storage == NULL)
 		return (int)0x802e0004;
@@ -933,7 +933,7 @@ int sceCameraConfigAttribute(int devnum, int checkFormat)
 	SceUID processId;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		driver = cameraDriver;
 		processId = 0;
 		device = &driver->device[devnum];
@@ -951,7 +951,7 @@ int sceCameraConfigAttribute(int devnum, int checkFormat)
 		}
 	}
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			driver->processLocalStorageKey, (void **)&storage, 0);
 	if (result < 0 || storage == NULL)
 		return (int)0x802e0004;
@@ -974,7 +974,7 @@ int cameraCheckActiveProcess(SceUID processId, int devnum, int currentProcess)
 	CameraProcess *process;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		result = 0;
 	} else {
 		result = sceKernelIsUserModeThread();
@@ -988,7 +988,7 @@ int cameraCheckActiveProcess(SceUID processId, int devnum, int currentProcess)
 	if (processId < 0)
 		return processId;
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			driver->processLocalStorageKey, (void **)&storage, 0);
 	if (result >= 0 && storage != NULL &&
 	    processId == storage[devnum].processId) {
@@ -1009,7 +1009,7 @@ int sceCameraConfigGetAttribute(int devnum, int attribute, int *pValue)
 	SceUID processId;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3() ||
+	if (sceKernelIsIntrContext() ||
 	    !sceKernelIsUserModeThread()) {
 		processId = 0;
 	} else {
@@ -1018,7 +1018,7 @@ int sceCameraConfigGetAttribute(int devnum, int attribute, int *pValue)
 			return processId;
 	}
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, (void **)&storage, 0);
 	if (result < 0 || storage == NULL)
 		return (int)0x802e0004;
@@ -1091,7 +1091,7 @@ int sceCameraConfigSetAttribute(int devnum, int attribute, int value, int flags,
 	SceUID processId;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		processId = 0;
 		device = &cameraDriver->device[devnum];
 	} else {
@@ -1104,7 +1104,7 @@ int sceCameraConfigSetAttribute(int devnum, int attribute, int value, int flags,
 		device = &cameraDriver->device[devnum];
 	}
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, (void **)&storage, 0);
 	if (result < 0 || storage == NULL)
 		return (int)0x802e0004;
@@ -1230,7 +1230,7 @@ int cameraGetProcessDeviceStatus(SceUID processId)
 		device = &cameraDriver->device[devnum];
 		if (processId >= 0) {
 			storage = NULL;
-			if (SceProcessmgrForDriver_AF80F39C(processId,
+			if (sceKernelGetRemoteKPLS(processId,
 					cameraDriver->processLocalStorageKey,
 					(void **)&storage, 0) >= 0 && storage != NULL) {
 				process = &storage[devnum];
@@ -1251,7 +1251,7 @@ int cameraGetProcessDeviceStatus(SceUID processId)
 			status = flags | 4;
 			if (activeProcessId >= 0) {
 				storage = NULL;
-				if (SceProcessmgrForDriver_AF80F39C(activeProcessId,
+				if (sceKernelGetRemoteKPLS(activeProcessId,
 						cameraDriver->processLocalStorageKey,
 						(void **)&storage, 0) >= 0 &&
 				    storage != NULL &&
@@ -1274,7 +1274,7 @@ int cameraSetProcessState(SceUID processId, int devnum, int state)
 	if (processId < 0)
 		return processId;
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, (void **)&storage, 0);
 	if (result < 0 || storage == NULL)
 		return (int)0x802e0004;
@@ -1295,7 +1295,7 @@ int cameraHasOtherProcess(int devnum, SceUID processId)
 		registeredProcessId = cameraProcessRegistry.processId[index++];
 		if (registeredProcessId != -1 && registeredProcessId >= 0) {
 			storage = NULL;
-			if (SceProcessmgrForDriver_AF80F39C(registeredProcessId,
+			if (sceKernelGetRemoteKPLS(registeredProcessId,
 					cameraDriver->processLocalStorageKey,
 					(void **)&storage, 0) >= 0 &&
 			    storage != NULL &&
@@ -1316,7 +1316,7 @@ int cameraIsProcessActive(int devnum, SceUID processId)
 	if (processId < 0)
 		return 0;
 	storage = NULL;
-	result = SceProcessmgrForDriver_AF80F39C(processId,
+	result = sceKernelGetRemoteKPLS(processId,
 			driver->processLocalStorageKey, (void **)&storage, 0);
 	if (result < 0 || storage == NULL ||
 	    processId != storage[devnum].processId)
@@ -1334,7 +1334,7 @@ int cameraIsProcessStarted(int devnum, SceUID processId)
 	if (processId < 0)
 		goto failed;
 	storage = NULL;
-	if (SceProcessmgrForDriver_AF80F39C(processId,
+	if (sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, (void **)&storage, 0) < 0 ||
 	    storage == NULL || processId != storage[devnum].processId)
 		goto failed;
@@ -1350,7 +1350,7 @@ int cameraSetProcessSuspendState(int devnum, SceUID processId, int state)
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];
@@ -1370,7 +1370,7 @@ int cameraGetProcessSuspendState(int devnum, SceUID processId, int *state)
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];
@@ -1390,7 +1390,7 @@ int cameraSetProcessRequestedSuspendState(int devnum, SceUID processId, int stat
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];
@@ -1410,7 +1410,7 @@ int cameraGetProcessRequestedSuspendState(int devnum, SceUID processId, int *sta
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];
@@ -1430,7 +1430,7 @@ int cameraAdvanceProcessFrame(int devnum, SceUID processId)
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];
@@ -1450,7 +1450,7 @@ int sceCameraConfigSetProcPrevFrame(int devnum, SceUID processId, SceUInt64 fram
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];
@@ -1472,7 +1472,7 @@ int cameraRestoreProcessSensorRegisters(int devnum)
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];
@@ -1497,7 +1497,7 @@ SceUInt64 sceCameraConfigGetProcFrame(int devnum, SceUID processId)
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];
@@ -1517,7 +1517,7 @@ SceUInt64 sceCameraConfigGetProcPrevFrame(int devnum, SceUID processId)
 	if (processId < 0)
 		goto fail;
 	storage = NULL;
-	if (SceProcessmgrForDriver_AF80F39C(processId,
+	if (sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey,
 			(void **)&storage, 0) < 0 || storage == NULL)
 		goto fail;
@@ -1541,7 +1541,7 @@ SceUInt64 sceCameraConfigGetProcTimestamp(int devnum, SceUID processId)
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				driver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];
@@ -1567,7 +1567,7 @@ int cameraSetProcessAlternateFrameBuffers(int devnum, SceUID processId, int alte
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];
@@ -1587,7 +1587,7 @@ int cameraGetProcessAlternateFrameBuffers(int devnum, SceUID processId, int *alt
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];
@@ -1607,7 +1607,7 @@ int cameraSetProcessRangesLocked(int devnum, SceUID processId, int locked)
 
 	if (processId >= 0) {
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(processId,
+		if (sceKernelGetRemoteKPLS(processId,
 				cameraDriver->processLocalStorageKey,
 				(void **)&storage, 0) >= 0 && storage != NULL) {
 			process = &storage[devnum];

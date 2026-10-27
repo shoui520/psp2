@@ -225,7 +225,7 @@ int SceUsbdForDriver_7934BB4A(const SceUsbdCompositeDriver *driver);
 int SceUsbdForDriver_05073925(SceUID deviceId, int *frame, int *mask);
 /* vitasdk: ksceUsbdOpenPipe */
 SceUID SceUsbdForDriver_1CDBFF9F(int deviceId, SceUsbdEndpointDescriptor *endpoint);
-int SceUsbdForDriver_3EBF5FFE(int busIndex);	/* vitasdk: ksceUsbdSuspend */
+int sceUsbdSuspend(int busIndex);
 int SceUsbdForDriver_7938DAC7(SceUID pipeId);	/* vitasdk: ksceUsbd_7938DAC7 */
 /* vitasdk: ksceUsbdScanStaticDescriptor */
 void *SceUsbdForDriver_BC3EF82B(SceUID deviceId, void *start, SceUsbdDescriptorType type);

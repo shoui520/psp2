@@ -821,7 +821,7 @@ PVRSRV_ERROR PVRSRVRegisterMemBlockKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 
 	if (!blockGroupId)
 		return PVRSRV_ERROR_INVALID_PARAMS;
-	guid = SceSysmemForDriver_45D22597(sceKernelGetProcessId(), memBlockUid);
+	guid = scePUIDtoGUID(sceKernelGetProcessId(), memBlockUid);
 	if (guid < 0) {
 		SCE_DBG_PRINTF(0, 1020, "%s: Failed to get GUID for MemBlock %08x\n",
 				__func__, memBlockUid);

@@ -34,7 +34,7 @@ static inline int waitSemaForDebuggerShellEventCount(void)
 #if FW_DEBUG
 	sceAppMgrDump();
 	dumpBgmState();
-	if (SceDebugForDriver_374B7868() > 0)
+	if (sceKernelGetAssertLevel() > 0)
 		SceDebugForDriver_FD753E7A(1, 0, &debuggerShellEventCountWaitPanicInfo,
 				     __builtin_return_address(0));
 #else
@@ -62,7 +62,7 @@ static inline void signalSemaForDebuggerShellEventCount(void)
 #if FW_DEBUG
 	sceAppMgrDump();
 	dumpBgmState();
-	if (SceDebugForDriver_374B7868() > 0)
+	if (sceKernelGetAssertLevel() > 0)
 		SceDebugForDriver_FD753E7A(1, 0, &debuggerShellEventCountPanicInfo,
 				     __builtin_return_address(0));
 #else

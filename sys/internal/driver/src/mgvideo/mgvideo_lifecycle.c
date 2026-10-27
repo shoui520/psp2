@@ -237,8 +237,8 @@ destroy:
 	contextHeaps[owner] = -1;
 unreference:
 	if (videoReferences > 0 && --videoReferences == 0) {
-		SceProcEventForDriver_3DED57CC(processEventHandler);
-		intr = SceCpuForDriver_821FC0EE();
+		sceKernelUnregisterProcEventHandler(processEventHandler);
+		intr = sceKernelCpuSuspendIntr();
 		index = 0;
 		do {
 			if (recordStreams[index].active) {
@@ -323,8 +323,8 @@ reload:
 	references--;
 	videoReferences = references;
 	if (references == 0) {
-		SceProcEventForDriver_3DED57CC(processEventHandler);
-		intr = SceCpuForDriver_821FC0EE();
+		sceKernelUnregisterProcEventHandler(processEventHandler);
+		intr = sceKernelCpuSuspendIntr();
 		index = 0;
 		do {
 			while (!recordStreams[index].active) {
@@ -436,7 +436,7 @@ int initializeVideoKeyring(int handle)
 			return result;
 		context->state = 1;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	index = 0;
 	do {
 		if (recordStreams[index].active) {

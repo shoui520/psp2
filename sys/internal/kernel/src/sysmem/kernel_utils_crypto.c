@@ -23,7 +23,7 @@ typedef uint32_t __attribute__((may_alias)) UnalignedWord;
 uint32_t SceKernelUtilsForDriver_60ED6EA9(uint32_t word);
 uint32_t SceKernelUtilsForDriver_C76A7685(uint32_t column);
 
-int SceKernelUtilsForDriver_E4390FFA(SceSha1Context *ctx)
+int sceSha1BlockInit(SceSha1Context *ctx)
 {
 	if (ctx == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
@@ -38,7 +38,7 @@ int SceKernelUtilsForDriver_E4390FFA(SceSha1Context *ctx)
 	return 0;
 }
 
-int SceKernelUtilsForDriver_478A6F3C(SceSha1Context *ctx, const void *plain, SceSize len)
+int sceSha1BlockUpdate(SceSha1Context *ctx, const void *plain, SceSize len)
 {
 	const uint8_t *input;
 	uint32_t block[16];
@@ -92,7 +92,7 @@ int SceKernelUtilsForDriver_478A6F3C(SceSha1Context *ctx, const void *plain, Sce
 	return 0;
 }
 
-int SceKernelUtilsForDriver_48F24106(SceSha1Context *ctx, void *result)
+int sceSha1BlockResult(SceSha1Context *ctx, void *result)
 {
 	uint32_t state[5];
 	uint32_t block[16];
@@ -178,17 +178,17 @@ int SceKernelUtilsForDriver_48F24106(SceSha1Context *ctx, void *result)
 	return 0;
 }
 
-int SceKernelUtilsForDriver_87DC7F2F(const void *plain, SceSize len, void *digest)
+int sceSha1Digest(const void *plain, SceSize len, void *digest)
 {
 	SceSha1Context context;
 
-	SceKernelUtilsForDriver_E4390FFA(&context);
-	SceKernelUtilsForDriver_478A6F3C(&context, plain, len);
-	SceKernelUtilsForDriver_48F24106(&context, digest);
+	sceSha1BlockInit(&context);
+	sceSha1BlockUpdate(&context, plain, len);
+	sceSha1BlockResult(&context, digest);
 	return 0;
 }
 
-int SceKernelUtilsForDriver_C762EA6D(SceSha224Context *context)
+int sceSha224BlockInit(SceSha224Context *context)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 
@@ -201,7 +201,7 @@ int SceKernelUtilsForDriver_C762EA6D(SceSha224Context *context)
 	return 0;
 }
 
-int SceKernelUtilsForDriver_7556E611(SceSha224Context *context, const void *plain, SceSize len)
+int sceSha224BlockUpdate(SceSha224Context *context, const void *plain, SceSize len)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 	const unsigned char *input = plain;
@@ -238,7 +238,7 @@ remainder:
 	return 0;
 }
 
-int SceKernelUtilsForDriver_FBF2A442(SceSha224Context *context, void *result)
+int sceSha224BlockResult(SceSha224Context *context, void *result)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 	union {
@@ -295,19 +295,19 @@ int SceKernelUtilsForDriver_FBF2A442(SceSha224Context *context, void *result)
 	return 0;
 }
 
-int SceKernelUtilsForDriver_9EA9D4DC(const void *plain, SceSize len, void *digest)
+int sceSha224Digest(const void *plain, SceSize len, void *digest)
 {
 	SceSha224Context context;
 	int res;
 
-	SceKernelUtilsForDriver_C762EA6D(&context);
-	res = SceKernelUtilsForDriver_7556E611(&context, plain, len);
+	sceSha224BlockInit(&context);
+	res = sceSha224BlockUpdate(&context, plain, len);
 	if (res >= 0)
-		res = SceKernelUtilsForDriver_FBF2A442(&context, digest);
+		res = sceSha224BlockResult(&context, digest);
 	return res;
 }
 
-int SceKernelUtilsForDriver_D909FA2C(SceSha256Context *context)
+int sceSha256BlockInit(SceSha256Context *context)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 
@@ -320,7 +320,7 @@ int SceKernelUtilsForDriver_D909FA2C(SceSha256Context *context)
 	return 0;
 }
 
-int SceKernelUtilsForDriver_236A9097(SceSha256Context *context, const void *plain, SceSize len)
+int sceSha256BlockUpdate(SceSha256Context *context, const void *plain, SceSize len)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 	const unsigned char *input = plain;
@@ -357,7 +357,7 @@ remainder:
 	return 0;
 }
 
-int SceKernelUtilsForDriver_4899CD4B(SceSha256Context *context, void *result)
+int sceSha256BlockResult(SceSha256Context *context, void *result)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 	union {
@@ -415,15 +415,15 @@ int SceKernelUtilsForDriver_4899CD4B(SceSha256Context *context, void *result)
 	return 0;
 }
 
-int SceKernelUtilsForDriver_A773A6A8(const void *plain, SceSize len, void *digest)
+int sceSha256Digest(const void *plain, SceSize len, void *digest)
 {
 	SceSha256Context context;
 	int res;
 
-	SceKernelUtilsForDriver_D909FA2C(&context);
-	res = SceKernelUtilsForDriver_236A9097(&context, plain, len);
+	sceSha256BlockInit(&context);
+	res = sceSha256BlockUpdate(&context, plain, len);
 	if (res >= 0)
-		res = SceKernelUtilsForDriver_4899CD4B(&context, digest);
+		res = sceSha256BlockResult(&context, digest);
 	return res;
 }
 
@@ -591,19 +591,19 @@ int HmacDigest(const void *key, SceSize keyLen, const void *plain, SceSize len,
 	return 0;
 }
 
-int SceKernelUtilsForDriver_29A28957(const void *key, SceSize key_len, const void *plain, SceSize len,
+int sceHmacSha1Digest(const void *key, SceSize key_len, const void *plain, SceSize len,
 		       void *digest)
 {
 	return HmacDigest(key, key_len, plain, len, digest, &hmacSha1Algorithm);
 }
 
-int SceKernelUtilsForDriver_7F2A7B99(const void *key, SceSize key_len, const void *plain, SceSize len,
+int sceHmacSha224Digest(const void *key, SceSize key_len, const void *plain, SceSize len,
 			 void *digest)
 {
 	return HmacDigest(key, key_len, plain, len, digest, &hmacSha224Algorithm);
 }
 
-int SceKernelUtilsForDriver_83EFA1CC(const void *key, SceSize key_len, const void *plain, SceSize len,
+int sceHmacSha256Digest(const void *key, SceSize key_len, const void *plain, SceSize len,
 			 void *digest)
 {
 	return HmacDigest(key, key_len, plain, len, digest, &hmacSha256Algorithm);

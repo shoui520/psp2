@@ -139,7 +139,7 @@ int pfsNodeLookup(ScePfsNode *node)
 	SceVfsPath path;
 	int ret;
 
-	ret = SceIofilemgrForDriver_F7DAC0F5(node->vp->core.mnt, node->name, &path2, &path3, name,
+	ret = sceVfsOpDecodePathElem(node->vp->core.mnt, node->name, &path2, &path3, name,
 				      sizeof(name), &decodeLen);
 	if (ret != 0)
 		return ret;

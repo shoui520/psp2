@@ -50,8 +50,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
-	SceCpuForDriver_5AC9D394
-	SceCpuForDriver_821FC0EE
+	sceKernelSpinlockLowTrylock
+	sceKernelCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	sceKernelCpuResumeIntr
 	memset
@@ -70,9 +70,9 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_E4B145AE
 	SceGpioForDriver_129DF5AC
 	SceGpioForDriver_372022A4
-	SceGpioForDriver_D454A584
-	SceGpioForDriver_F6310435
-	SceI2cForDriver_CA94A759
+	sceGpioPortSet
+	sceGpioPortClear
+	sceI2cMasterTransmit
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

@@ -47,7 +47,7 @@ void issueIntrRequest(unsigned int cpuId, struct IntrRequest *request)
 	do {
 		oldHead = cpu->intrRequestHead;
 		request->next = oldHead;
-	} while (SceCpuForDriver_CDA96E81(
+	} while (sceKernelAtomicCompareAndSet32(
 		 (SceInt32 *)&cpu->intrRequestHead, (intptr_t)oldHead,
 		 (intptr_t)request) != (intptr_t)oldHead);
 	if (!oldHead && sceKernelGenerateSoftIntr(2, 0, 1u << cpuId) < 0) {
@@ -76,7 +76,7 @@ struct IntrRequest *allocIntrRequest(uint32_t kind)
 			request->fromPool = 0;
 			break;
 		}
-		if (SceCpuForDriver_CDA96E81(
+		if (sceKernelAtomicCompareAndSet32(
 		    (SceInt32 *)&manager->freeIntrRequests, (intptr_t)request,
 		    (intptr_t)request->next) == (intptr_t)request)
 			break;
@@ -102,7 +102,7 @@ void addIntrRequest(unsigned int cpuId, uint32_t mask)
 	hook = s_threadmgrRuntime.schedTraceHook;
 	if (__builtin_expect(hook != NULL, 0))
 		hook(61 - __builtin_clz(mask), 1, cpuId);
-	if (SceCpuForDriver_2A40BB93((SceInt32 *)&cpu->intrRequestMask,
+	if (sceKernelAtomicGetAndOr32((SceInt32 *)&cpu->intrRequestMask,
 				    mask) == 0 &&
 	    sceKernelGenerateSoftIntr(2, 0, 1u << cpuId) < 0) {
 		SCE_DBG_PRINTF(0xb, 453,
@@ -115,7 +115,7 @@ void SceThreadmgrForKernel_8D53CA9B(unsigned int cpuId)
 {
 	SceKernelIntrStatus intrState;
 
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	addIntrRequest(cpuId, INTR_MASK_SIMPLE);
 	sceKernelCpuResumeIntr(intrState);
 }
@@ -184,7 +184,7 @@ void issueSimpleIntrRequestToOtherCpuAndWait(void)
 	int intr;
 
 	SCE_DBG_ASSERT_CHECK(IntrEnabled(), 526);
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	cpu = 0;
 	self = sceKernelCpuId();
 	ack = 1 << self;
@@ -329,7 +329,7 @@ static inline void salvageExecutableStagnantThread(void)
 
 	cpuId = sceKernelCpuId();
 	cpu = currentCpuState();
-	SCE_DBG_ASSERT_LEVEL(0, SceIntrmgrForDriver_182EE3E3() != 0, 63);
+	SCE_DBG_ASSERT_LEVEL(0, sceKernelIsIntrContext() != 0, 63);
 	SCE_DBG_ASSERT_CHECK(IntrDisabled(), 66);
 	first = NULL;
 	for (;;) {
@@ -345,7 +345,7 @@ static inline void salvageExecutableStagnantThread(void)
 				return;
 			}
 			SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 78);
-			if (SceCpuForDriver_5AC9D394(THREAD_LOCK(thread)) < 0)
+			if (sceKernelSpinlockLowTrylock(THREAD_LOCK(thread)) < 0)
 				break;
 			process = thread->process;
 			((ListNode *)thread->next)->prev =
@@ -410,8 +410,8 @@ int intrRequestSGIHandler(int code, void *arg)
 	uint32_t mask, message[4];
 	int intr;
 
-	intr = SceCpuForDriver_821FC0EE();
-	mask = SceCpuForDriver_0EE04C03((SceInt32 *)&cpu->intrRequestMask, 0);
+	intr = sceKernelCpuSuspendIntr();
+	mask = sceKernelAtomicGetAndSet32((SceInt32 *)&cpu->intrRequestMask, 0);
 	if (mask != 0) {
 		if (mask & INTR_MASK_SCHEDULING) {
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, cpu == currentCpuState(), 155,
@@ -439,10 +439,10 @@ int intrRequestSGIHandler(int code, void *arg)
 					(s_threadmgrRuntime.schedTraceHook)(0x19, 0);
 				return -1;
 			}
-		} while ((struct IntrRequest *)SceCpuForDriver_CDA96E81(
+		} while ((struct IntrRequest *)sceKernelAtomicCompareAndSet32(
 				 (SceInt32 *)&cpu->intrRequestHead, (SceInt32)request,
 				 (SceInt32)request->next) != request);
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 		switch (request->kind) {
 		case INTR_REQUEST_CHANGE_THREAD_CPU_AFFINITY:
 			changeThreadCpuAffinityMask(request->payload[0], request->payload[1], NULL);
@@ -465,7 +465,7 @@ int intrRequestSGIHandler(int code, void *arg)
 			break;
 		case INTR_REQUEST_ACKNOWLEDGE:
 			/* issueSimpleIntrRequestToOtherCpuAndWait: answer */
-			SceCpuForDriver_BC248C30((SceInt32 *)request->payload[0],
+			sceKernelAtomicOrAndGet32((SceInt32 *)request->payload[0],
 						   1u << sceKernelCpuId());
 			break;
 		default:
@@ -580,7 +580,7 @@ int intrRequestSGIHandler(int code, void *arg)
 			do {
 				head = s_threadmgrRuntime.manager->freeIntrRequests;
 				request->next = head;
-			} while ((struct IntrRequest *)SceCpuForDriver_CDA96E81(
+			} while ((struct IntrRequest *)sceKernelAtomicCompareAndSet32(
 					 (SceInt32 *)&s_threadmgrRuntime.manager->freeIntrRequests,
 					 (SceInt32)head, (SceInt32)request) != head);
 			mask = 1;

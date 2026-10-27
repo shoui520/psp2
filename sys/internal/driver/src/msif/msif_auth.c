@@ -63,10 +63,10 @@ int get_ecdsa_param(struct MsifEcdsaPoint *publicKey, struct MsifEcdsaCurve *cur
 	if (gMsifParametersInitialized)
 		goto publish;
 	portability = (ScePortabilityData){ .msg_size = 32 };
-	if (SceSblSsMgrForDriver_934DB6B5(4, (void *)gMsifParameterIv,
+	if (sceSblSsDecryptWithPortability(4, (void *)gMsifParameterIv,
 		(ScePortabilityData *)&gMsifParameterPrimary, &portability) ||
 		(memcmp(portability.msg, gMsifParameterIv, 16) &&
-		 SceSblSsMgrForDriver_934DB6B5(4, (void *)gMsifParameterIv,
+		 sceSblSsDecryptWithPortability(4, (void *)gMsifParameterIv,
 			(ScePortabilityData *)&gMsifParameterFallback, &portability))) {
 		__builtin_memset(&portability, 0, sizeof(portability));
 		return -204;
@@ -280,7 +280,7 @@ int msif_check_mid(struct MsproalHandle *handle, const uint8_t *mediaId)
 			get_ecdsa_param(&publicKey, &curve) ||
 			(signature.r = handle->certificate.r,
 			 signature.s = handle->certificate.s,
-			 SceKernelUtilsForDriver_9EA9D4DC(mediaId, 16, digest)) ||
+			 sceSha224Digest(mediaId, 16, digest)) ||
 			(result = MsifEcdsaVerify224(&signature, digest, &publicKey,
 				&curve)))
 			result = -204;

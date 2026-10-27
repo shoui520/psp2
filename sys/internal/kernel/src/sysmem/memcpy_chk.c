@@ -18,25 +18,25 @@ void *memcpy(void *destination, const void *source, size_t size)
 		SceDebugForDriver_D9703808(2, 0, SCE_DBGINFO(40),
 			"*** warning: memcpy(%p,%p,0) size zero(lr=%p)\n",
 			destination, source, caller);
-		if (SceDebugForDriver_374B7868() > 1)
+		if (sceKernelGetAssertLevel() > 1)
 			SceDebugForDriver_FD753E7A(2, 0, SCE_DBGINFO(41), caller);
 	} else if ((int32_t)size < 0) {
 		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(43),
 			"*** warning: memcpy(%p,%p,0x%08x) size negative(lr=%p)\n",
 			destination, source, size, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0, SCE_DBGINFO(44), caller);
 	} else if (destination == source) {
 		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(46),
 			"*** error: memcpy(%p,%p,0x%08x) src == dst(lr=%p)\n",
 			destination, source, size, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0, SCE_DBGINFO(47), caller);
 	} else if ((src >= dst && size > src - dst) || (dst >= src && size > dst - src)) {
 		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(50),
 			"*** error: memcpy(%p,%p,0x%08x) src/dst overlap(lr=%p)\n",
 			destination, source, size, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0, SCE_DBGINFO(51), caller);
 	}
 	return CopyMemoryForward(destination, source, size);

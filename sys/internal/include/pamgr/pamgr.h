@@ -51,32 +51,32 @@ _Static_assert(sizeof(struct PamgrTraceBufferConfig) == 0xc, "PamgrTraceBufferCo
 
 /* pamgr.c */
 int ScePamgrForDriver_6005FDAA(unsigned int mask, uint32_t *selection);
-int ScePamgrForDriver_16A24732(unsigned int bank, unsigned int index, uint32_t value);
+int sceKernelPaInsertBookmark(unsigned int bank, unsigned int index, uint32_t value);
 uint32_t ScePamgrForDriver_80CA3B39(void);
 int ScePamgrForDriver_7F3814A4(uint32_t *values);
-uint32_t ScePamgrForDriver_019BD60F(unsigned int buffer);
-uint64_t ScePamgrForDriver_FE9BFD27(void);	/* a 64-bit timestamp */
-unsigned int ScePamgrForDriver_EB70556B(void);
-unsigned int ScePamgrForDriver_FB46C3CD(void);
-unsigned int ScePamgrForDriver_3ACF4316(void);	/* state; bit 0: tracing */
+uint32_t sceKernelPaGetTraceBufferSize(unsigned int buffer);
+uint64_t sceKernelPaGetTimebaseValue(void);	/* a 64-bit timestamp */
+unsigned int sceKernelPaGetTimebaseFrequency(void);
+unsigned int sceKernelPaGetWritePointer(void);
+unsigned int sceKernelPaGetTraceBufferStatus(void);	/* state; bit 0: tracing */
 
 /* pamgr_wrapper.c */
-int ScePamgrForDriver_5D3D46E4(uint32_t registration, const struct PamgrArmTraceConfig *config);
-int ScePamgrForDriver_49A43754(uint32_t registration, const struct PamgrGpuTraceConfig *config);
-int ScePamgrForDriver_9935D8EF(uint32_t registration);
-int ScePamgrForDriver_17C81A92(uint32_t registration,
+int sceKernelPaAddArmTraceByKey(uint32_t registration, const struct PamgrArmTraceConfig *config);
+int sceKernelPaAddGpuTraceByKey(uint32_t registration, const struct PamgrGpuTraceConfig *config);
+int sceKernelPaRemoveGpuTraceByKey(uint32_t registration);
+int sceKernelPaAddCounterTraceByKey(uint32_t registration,
 		const struct PamgrCounterTraceConfig *config);
-int ScePamgrForDriver_0B7F6F53(uint32_t registration);
-int ScePamgrForDriver_F2D5105A(uint32_t registration,
+int sceKernelPaRemoveCounterTraceByKey(uint32_t registration);
+int sceKernelPaSetupTraceBufferByKey(uint32_t registration,
 		const struct PamgrPrimaryTraceConfig *config);
 int ScePamgrForDriver_A1E448E7(uint32_t registration, const struct PamgrSampleConfig *config);
 int ScePamgrForDriver_E8FF4812(uint32_t registration,
 		const struct PamgrTraceBufferConfig *config);
-int ScePamgrForDriver_0BCD4966(uint32_t registration, unsigned int mask, uint32_t selection);
+int sceKernelPaSetBookmarkChannelEnableByKey(uint32_t registration, unsigned int mask, uint32_t selection);
 int ScePamgrForDriver_95F4079E(uint32_t registration, uint32_t pointer);
-int ScePamgrForDriver_B9EE1620(uint32_t registration);
+int sceKernelPaRemoveArmTraceByKey(uint32_t registration);
 int ScePamgrForDriver_81764B21(uint32_t registration);
-int ScePamgrForDriver_DB62FEFE(uint32_t registration);
+int sceKernelPaRemoveBusTraceByKey(uint32_t registration);
 int ScePamgrForDriver_D9EFF812(uint32_t registration, uint32_t pointer);
 int ScePamgrForDriver_3C12A0CD(uint32_t registration, PamgrTraceInterruptCallback callback,
 		void *arg);
@@ -84,7 +84,7 @@ int ScePamgrForDriver_FB04BBEF(uint32_t registration);
 int sceKernelPaRegister(void);
 int sceKernelPaUnregister(uint32_t registration);
 /* the shared registration of the 64-bit owner id key, < 0: none */
-int ScePamgrForDriver_0D04B52A(uint64_t key);
+int sceKernelPaGetSharedKey(uint64_t key);
 int ScePamgrForDriver_A708D62A(uint32_t registration);
-int ScePamgrForDriver_88462719(uint32_t registration);	/* stops its trace, 0: done */
+int sceKernelPaStopByKey(uint32_t registration);	/* stops its trace, 0: done */
 int ScePamgrForDriver_1A7733E0(uint32_t registration);

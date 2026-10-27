@@ -326,13 +326,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCpuId
 	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelDcacheCleanRangeForL1WBWA
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceCpuForDriver_EC53D007
 	sceKernelCpuResumeIntr
-	SceCpuForKernel_803C84BF
+	sceKernelL1IcacheInvalidateEntireAllCore
 	SceCpuForKernel_B331AB16
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B74B7
@@ -348,7 +348,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDeci4pSDfMgrForKernel_59C077B3
 	SceDeci4pSDfMgrForKernel_682D0EFB
 	SceDeci4pSDfMgrForKernel_6BF5553C
-	SceDeci4pSDfMgrForKernel_86CFC8C6
+	sceSDfMgrClose
 	SceDeci4pSDfMgrForKernel_8A3B06F2
 	SceDeci4pSDfMgrForKernel_98AEC60E
 	sceSDfMgrContinueSystem
@@ -369,11 +369,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetPHBP
 	sceKernelWaitProcessEnd
 	sceKernelKillProcessForDebugger
-	SceProcessmgrForKernel_1E5B38E5
+	sceKernelSpawnProcess
 	SceProcessmgrForKernel_23EF9D8E
 	sceKernelSuspendProcessForDebugger
-	SceProcessmgrForKernel_459A223B
-	SceProcessmgrForKernel_5137B783
+	sceKernelDeleteBudget
+	sceKernelStartProcess
 	sceKernelSetPHBP
 	sceKernelCreateProcess
 	sceKernelProcessDebugResume
@@ -384,7 +384,7 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForKernel_98AE4BC8
 	sceKernelSetPHWP
 	sceKernelGetBudgetInfoForDebugger
-	SceProcessmgrForKernel_DC18FCEF
+	sceKernelCreateBudget
 	SceProcessmgrForKernel_EFFF2975
 	sceKernelChangeProcessCpuAffinity
 	SceProcessmgrForKernel_FC80A606
@@ -405,7 +405,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetLibraryInfoForDebugger
 	sceKernelStopRemoteModule
 	sceKernelGetStubNidTableForDebugger
-	SceModulemgrForKernel_DAA90093
+	sceKernelGetModuleInfo
 	sceKernelGetStubList
 	sceIoGetPUIDFdListForDebugger
 	sceIoWrite
@@ -422,8 +422,8 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_09346D1A
 	SceThreadmgrForDriver_0B604A3C
 	sceKernelGetLwMutexInfoById
-	SceThreadmgrForDriver_19F3E92A
-	SceThreadmgrForDriver_207E0E18
+	sceKernelGetTimerInfo
+	sceKernelGetMsgPipeInfo
 	sceKernelStartThread
 	SceThreadmgrForDriver_2828F884
 	sceKernelGetRWLockInfo
@@ -435,7 +435,7 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_5870C73A
 	sceKernelGetThreadId
 	SceThreadmgrForDriver_5D8F88B1
-	SceThreadmgrForDriver_612277C9
+	sceKernelGetEventFlagInfo
 	sceKernelChangeThreadPriority2
 	SceThreadmgrForDriver_6657429E
 	SceThreadmgrForDriver_67022B18
@@ -447,7 +447,7 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_920EA1CA
 	SceThreadmgrForDriver_995F32E1
 	sceKernelGetProcessId
-	SceThreadmgrForDriver_A0B1AB21
+	sceKernelIsThreadDebugSuspended
 	sceKernelDeleteThread
 	SceThreadmgrForDriver_AF302193
 	sceKernelGetWaitingThreadList
@@ -456,7 +456,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateThread
 	SceThreadmgrForDriver_C6741986
 	SceThreadmgrForDriver_C7F5FFE0
-	SceThreadmgrForDriver_C99DCF0D
+	sceKernelGetSemaInfo
 	SceThreadmgrForDriver_CBA7FAAA
 	SceThreadmgrForDriver_D1FBDFA6
 	SceThreadmgrForDriver_E2B57231
@@ -466,11 +466,11 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_F311808F
 	sceKernelGetSystemTimeWide
 	sceKernelDebugSuspendThread
-	SceThreadmgrForDriver_FDC044AC
+	sceKernelGetCallbackInfo
 	SceThreadmgrForKernel_10853CCD
 	SceThreadmgrForKernel_19440C83
 	SceThreadmgrForKernel_6351A13A
-	SceThreadmgrForKernel_6C1F092F
+	sceKernelGetThreadContextInfo
 	SceThreadmgrForKernel_8C07C8EC
 	SceThreadmgrForKernel_ABBE9BA5
 	SceThreadmgrForKernel_B011EA69
@@ -478,14 +478,14 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForKernel_C976719E
 	SceThreadmgrForKernel_E2DACBC2
 	SceThreadmgrForKernel_F55FDEFB
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	SceIntrmgrForKernel_01911612
 	SceIntrmgrForKernel_04DBA732
 	SceIntrmgrForKernel_8D6E1289
 	sceKernelQueryIntrHandlerInfo
 	SceExcpmgrForKernel_1FBF5654
 	SceExcpmgrForKernel_44CE04B8
-	SceExcpmgrForKernel_5420ED8F
+	sceKernelGetExcpStackBottom
 	SceExcpmgrForKernel_58F7212B
 	sceKernelInitialHandlerDebugDabtCfunc
 	SceExcpmgrForKernel_9EE59C6E
@@ -496,38 +496,38 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDClose
 	sceGUIDGetObject
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyFromUserProc
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
-	SceSysmemForDriver_84A4AF5E
+	scePUIDClose
 	sceKernelVAtoPA
 	sceKernelCreateHeap
 	sceKernelIsAccessibleRange
-	SceSysmemForDriver_9F6E45E3
-	SceSysmemForDriver_A73CFFEF
+	sceKernelIsAccessibleRangeProc
+	sceKernelGetMemBlockInfo
 	sceGUIDGetName
 	sceKernelGetMemBlockBase
 	sceKernelCopyFromUser
-	SceSysmemForDriver_BF209859
+	scePUIDOpenByGUID
 	sceKernelAllocMemBlockForKernel
 	sceKernelStrncpyFromUser
 	SceSysmemForDriver_E655852F
-	SceSysmemForKernel_01194C2E
-	SceSysmemForKernel_021053DD
+	sceKernelNameHeapGetInfo
+	sceKernelGetPhyMemPartAll
 	sceKernelGetPhyMemPartInfoByID
 	scePUIDGetUIDVectorByClass
 	SceSysmemForKernel_0B5A3E93
 	SceSysmemForKernel_100B4029
-	SceSysmemForKernel_1380E144
+	sceKernelGetHeapInfoAll
 	sceKernelGetHeapInfo
 	SceSysmemForKernel_17F12DCE
 	SceSysmemForKernel_1F84FE44
 	SceSysmemForKernel_2C7B8D65
-	SceSysmemForKernel_2E5CC243
+	sceKernelGetKernelAddressSpace
 	SceSysmemForKernel_31FA81B5
-	SceSysmemForKernel_3717C322
-	SceSysmemForKernel_3BF0DE65
+	sceKernelGetKernelFixedHeap
+	sceGUIDGetEntryInfoAll
 	PUIDGetEntryInfoAll
 	SceSysmemForKernel_4233C16D
 	SceSysmemForKernel_42834422
@@ -546,7 +546,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetHeapInfoByPtr
 	SceSysmemForKernel_811C452B
 	SceSysmemForKernel_85571907
-	SceSysmemForKernel_857408DA
+	sceKernelGetObjectHeap
 	SceSysmemForKernel_86681B64
 	sceKernelGetFixedHeapInfo
 	sceKernelShowPhyMemPart
@@ -556,9 +556,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_AD19285A
 	sceGUIDGetPID
 	SceSysmemForKernel_BD625136
-	SceSysmemForKernel_C3EF4055
+	sceKernelGetAddressSpaceInfo
 	SceSysmemForKernel_C3F9607E
-	SceSysmemForKernel_CCD47B97
+	sceKernelUIDEntryHeapGetInfo
 	PUIDGetPUIDVectorByGUID
 	sceKernelFixedHeapSetHook
 	SceSysmemForKernel_DBEACE2C
@@ -568,7 +568,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_14D81797
 	SceSysrootForKernel_21F5790B
 	SceSysrootForKernel_2A03DFA1
-	SceSysrootForKernel_3E455842
+	sceKernelSysrootGetSysroot
 	SceSysrootForKernel_40F28DC6
 	SceSysrootForKernel_4F57A13F
 	SceSysrootForKernel_6D111FA7

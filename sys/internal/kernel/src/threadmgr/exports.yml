@@ -22,7 +22,7 @@ SceKernelThreadMgr:
         - SceThreadmgrForKernel_16D1961A: 0x16D1961A
         - SceThreadmgrForKernel_170F69D6: 0x170F69D6
         - SceThreadmgrForKernel_19440C83: 0x19440C83
-        - SceThreadmgrForKernel_1D2A6815: 0x1D2A6815
+        - sceKernelPMonThreadClearEnableCounter: 0x1D2A6815
         - sceKernelCreateMutex: 0x1E4FF787
         - sceKernelThreadMgrProcessDeleteBeforePUIDClose: 0x205506FC
         - sceKernelSignalSema: 0x21B25367
@@ -40,11 +40,11 @@ SceKernelThreadMgr:
         - SceThreadmgrForKernel_60798313: 0x60798313
         - SceThreadmgrForKernel_614BF2BE: 0x614BF2BE
         - SceThreadmgrForKernel_6351A13A: 0x6351A13A
-        - SceThreadmgrForKernel_6C1F092F: 0x6C1F092F
+        - sceKernelGetThreadContextInfo: 0x6C1F092F
         - SceThreadmgrForKernel_6DC1BE7A: 0x6DC1BE7A
         - SceThreadmgrForKernel_7425185E: 0x7425185E
-        - SceThreadmgrForKernel_7B3368F1: 0x7B3368F1
-        - SceThreadmgrForKernel_7F831213: 0x7F831213
+        - sceKernelPMonThreadSetCounter: 0x7B3368F1
+        - sceKernelPMonThreadSetEnableCounter: 0x7F831213
         - SceThreadmgrForKernel_800ACB9D: 0x800ACB9D
         - SceThreadmgrForKernel_89C17825: 0x89C17825
         - SceThreadmgrForKernel_8C07C8EC: 0x8C07C8EC
@@ -89,7 +89,7 @@ SceKernelThreadMgr:
         - SceThreadmgrForDriver_0486F239: 0x0486F239
         - SceThreadmgrForDriver_04C6764B: 0x04C6764B
         - sceKernelGetLwMutexInfoAllProc: 0x069D8A20
-        - SceThreadmgrForDriver_0892D8DF: 0x0892D8DF
+        - sceKernelGetCallbackCount: 0x0892D8DF
         - SceThreadmgrForDriver_09346D1A: 0x09346D1A
         - sceKernelGetThreadmgrUIDClass: 0x0A20775A
         - SceThreadmgrForDriver_0A4AD37A: 0x0A4AD37A
@@ -110,12 +110,12 @@ SceKernelThreadMgr:
         - SceThreadmgrForDriver_154F2C2A: 0x154F2C2A
         - sceKernelDeleteSema: 0x16A35E58
         - sceKernelLockMutex: 0x16AC80C5
-        - SceThreadmgrForDriver_19F3E92A: 0x19F3E92A
+        - sceKernelGetTimerInfo: 0x19F3E92A
         - sceKernelPMonSetControlRegister: 0x1AAFA818
         - sceKernelCreateCallback: 0x1C41614C
         - sceKernelExitDeleteThread: 0x1D17DECF
         - sceKernelUnlockMutex: 0x1E82E5D0
-        - SceThreadmgrForDriver_207E0E18: 0x207E0E18
+        - sceKernelGetMsgPipeInfo: 0x207E0E18
         - SceThreadmgrForDriver_20C228E4: 0x20C228E4
         - sceKernelStartThread: 0x21F5419B
         - sceKernelGetMutexInfoAllProc: 0x2322A2F3
@@ -136,7 +136,7 @@ SceKernelThreadMgr:
         - SceThreadmgrForDriver_332E127C: 0x332E127C
         - SceThreadmgrForDriver_33E85E9E: 0x33E85E9E
         - sceKernelCreateSimpleEvent: 0x357A8177
-        - SceThreadmgrForDriver_360C655C: 0x360C655C
+        - sceKernelWaitEventCB: 0x360C655C
         - sceKernelGetTimerEventRemainingTime: 0x3634FFE6
         - SceThreadmgrForDriver_36F8E58A: 0x36F8E58A
         - sceKernelGetRWLockInfo: 0x374C3267
@@ -158,7 +158,7 @@ SceKernelThreadMgr:
         - SceThreadmgrForDriver_47F26712: 0x47F26712
         - SceThreadmgrForDriver_47F6DE49: 0x47F6DE49
         - SceThreadmgrForDriver_48C06CD6: 0x48C06CD6
-        - SceThreadmgrForDriver_49A0B679: 0x49A0B679
+        - sceKernelSetVfpRegisterForDebugger: 0x49A0B679
         - SceThreadmgrForDriver_4A038803: 0x4A038803
         - sceKernelDelayThread: 0x4B675D05
         - sceKernelTrySendMsgPipeVector: 0x4CF1BE58
@@ -174,17 +174,17 @@ SceKernelThreadMgr:
         - SceThreadmgrForDriver_56C18B11: 0x56C18B11
         - SceThreadmgrForDriver_5870C73A: 0x5870C73A
         - sceKernelGetThreadId: 0x59D06540
-        - SceThreadmgrForDriver_5CDE387A: 0x5CDE387A
+        - sceKernelGetVfpRegisterForDebugger: 0x5CDE387A
         - SceThreadmgrForDriver_5D8F88B1: 0x5D8F88B1
-        - SceThreadmgrForDriver_612277C9: 0x612277C9
+        - sceKernelGetEventFlagInfo: 0x612277C9
         - sceKernelSignalCondTo: 0x61533DA9
         - sceKernelChangeThreadPriority2: 0x63DAB420
-        - SceThreadmgrForDriver_64E89DE9: 0x64E89DE9
+        - sceKernelSetCpuRegisterForDebugger: 0x64E89DE9
         - sceKernelGetRWLockInfoAllProc: 0x6624E612
         - SceThreadmgrForDriver_6657429E: 0x6657429E
         - SceThreadmgrForDriver_66EEA46A: 0x66EEA46A
         - SceThreadmgrForDriver_67022B18: 0x67022B18
-        - SceThreadmgrForDriver_67DD3BAD: 0x67DD3BAD
+        - sceKernelSendMsgPipeVector: 0x67DD3BAD
         - sceKernelGetMutexInfo: 0x69B78A12
         - SceThreadmgrForDriver_6C2E3A49: 0x6C2E3A49
         - sceKernelChangeThreadCpuAffinityMask: 0x6D0733A8
@@ -202,27 +202,27 @@ SceKernelThreadMgr:
         - sceKernelPollEventFlag: 0x76C6555B
         - sceKernelCreateWorkQueue: 0x771522C6
         - sceKernelCancelRWLock: 0x7A4EF925
-        - SceThreadmgrForDriver_7B278A0B: 0x7B278A0B
+        - sceKernelGetThreadStackFreeSize: 0x7B278A0B
         - SceThreadmgrForDriver_7D12344A: 0x7D12344A
         - SceThreadmgrForDriver_7E280B69: 0x7E280B69
         - sceKernelRegisterCallbackToEventForDriver: 0x832A7E0C
         - sceKernelGetThreadCpuAffinityMask: 0x83DC703D
         - sceKernelStartTimer: 0x84C4CE4D
         - SceThreadmgrForDriver_84EB1EA4: 0x84EB1EA4
-        - SceThreadmgrForDriver_85195A16: 0x85195A16
+        - sceKernelSetTimerTimeWide: 0x85195A16
         - SceThreadmgrForDriver_85F4DC8C: 0x85F4DC8C
         - SceThreadmgrForDriver_86DAE59B: 0x86DAE59B
         - sceKernelCancelSema: 0x8760C8ED
         - SceThreadmgrForDriver_88206D29: 0x88206D29
         - SceThreadmgrForDriver_89CA5698: 0x89CA5698
-        - SceThreadmgrForDriver_8A35F714: 0x8A35F714
-        - SceThreadmgrForDriver_8C3C1F78: 0x8C3C1F78
+        - sceKernelWaitEventFlagCB: 0x8A35F714
+        - sceKernelUnregisterKTLS: 0x8C3C1F78
         - SceThreadmgrForDriver_8C48E53B: 0x8C48E53B
         - SceThreadmgrForDriver_8C8A76EF: 0x8C8A76EF
         - sceKernelUnregisterCallbackFromEventAll: 0x8DADBD16
         - sceKernelCreateTimer: 0x90656C98
         - sceKernelIsUserModeThread: 0x91382762
-        - SceThreadmgrForDriver_91A8F38B: 0x91A8F38B
+        - sceKernelDeleteTimer: 0x91A8F38B
         - SceThreadmgrForDriver_920EA1CA: 0x920EA1CA
         - sceKernelSetTimerEvent: 0x92A3DCDD
         - sceKernelUnlockWriteRWLock: 0x94A73797
@@ -232,11 +232,11 @@ SceKernelThreadMgr:
         - sceKernelCancelMsgPipe: 0x9D6A2311
         - sceKernelGetProcessId: 0x9DCB4B7A
         - sceKernelSetEvent: 0x9EA3A45C
-        - SceThreadmgrForDriver_9EF4F62C: 0x9EF4F62C
-        - SceThreadmgrForDriver_A0B1AB21: 0xA0B1AB21
+        - sceKernelWaitThreadEndCB: 0x9EF4F62C
+        - sceKernelIsThreadDebugSuspended: 0xA0B1AB21
         - sceKernelExtendKernelStackWide: 0xA2C801A5
         - SceThreadmgrForDriver_A64B00F6: 0xA64B00F6
-        - SceThreadmgrForDriver_A6D11DD3: 0xA6D11DD3
+        - sceKernelGetTimerBaseWide: 0xA6D11DD3
         - SceThreadmgrForDriver_A90B1E01: 0xA90B1E01
         - sceKernelTryLockWriteRWLock: 0xA96F2E5A
         - SceThreadmgrForDriver_AB977C72: 0xAB977C72
@@ -250,27 +250,27 @@ SceKernelThreadMgr:
         - SceThreadmgrForDriver_B4A05763: 0xB4A05763
         - SceThreadmgrForDriver_B4CED111: 0xB4CED111
         - sceKernelGetWaitingThreadList: 0xB5C782A3
-        - SceThreadmgrForDriver_B645C7EF: 0xB645C7EF
+        - sceKernelRegisterKTLS: 0xB645C7EF
         - SceThreadmgrForDriver_B6DA4669: 0xB6DA4669
         - sceKernelCancelEvent: 0xB6FA8305
         - sceKernelSetEventWithNotifyCallback: 0xB7DF3EDF
         - SceThreadmgrForDriver_B92709C4: 0xB92709C4
         - sceKernelCreateMsgPipe: 0xBF631145
         - SceThreadmgrForDriver_C03799E2: 0xC03799E2
-        - SceThreadmgrForDriver_C040EC1C: 0xC040EC1C
-        - SceThreadmgrForDriver_C1286004: 0xC1286004
+        - sceKernelCancelCallback: 0xC040EC1C
+        - sceKernelGetTimerTimeWide: 0xC1286004
         - SceThreadmgrForDriver_C2AFFBD0: 0xC2AFFBD0
         - SceThreadmgrForDriver_C2DA6286: 0xC2DA6286
         - SceThreadmgrForDriver_C327CA7C: 0xC327CA7C
         - sceKernelNotifyCallback: 0xC3E00919
         - SceThreadmgrForDriver_C4456EC9: 0xC4456EC9
-        - SceThreadmgrForDriver_C529EA32: 0xC529EA32
+        - sceKernelWaitEvent: 0xC529EA32
         - SceThreadmgrForDriver_C58DF384: 0xC58DF384
         - sceKernelCreateThread: 0xC6674E7D
         - SceThreadmgrForDriver_C6741986: 0xC6741986
         - SceThreadmgrForDriver_C7F5FFE0: 0xC7F5FFE0
         - sceKernelCreateRemoteThread: 0xC8E57BB4
-        - SceThreadmgrForDriver_C99DCF0D: 0xC99DCF0D
+        - sceKernelGetSemaInfo: 0xC99DCF0D
         - SceThreadmgrForDriver_CA704239: 0xCA704239
         - sceKernelGetTimerTime: 0xCB795E13
         - SceThreadmgrForDriver_CBA7FAAA: 0xCBA7FAAA
@@ -291,12 +291,12 @@ SceKernelThreadMgr:
         - sceKernelSetTimerTime: 0xD978D16F
         - sceKernelCheckWaitableStatus: 0xD9BD74EB
         - sceKernelChangeThreadPriority: 0xDA1544D1
-        - SceThreadmgrForDriver_DA1F256B: 0xDA1F256B
-        - SceThreadmgrForDriver_DA5C9AC6: 0xDA5C9AC6
+        - sceKernelReceiveMsgPipeVector: 0xDA1F256B
+        - sceKernelReceiveMsgPipeVectorCB: 0xDA5C9AC6
         - sceKernelUnlockFastMutex: 0xDB395782
         - sceKernelCreateCond: 0xDB6CD34A
         - sceKernelUIDInheritedEventClassInit: 0xDBB77032
-        - SceThreadmgrForDriver_DD8D9429: 0xDD8D9429
+        - sceKernelGetThreadInfoForDebugger: 0xDD8D9429
         - sceKernelUnlockReadRWLock: 0xDE1B9EEE
         - SceThreadmgrForDriver_E0C7BCBB: 0xE0C7BCBB
         - SceThreadmgrForDriver_E2B57231: 0xE2B57231
@@ -318,7 +318,7 @@ SceKernelThreadMgr:
         - sceKernelChangeThreadVfpException: 0xF4C81683
         - sceKernelGetSystemTimeWide: 0xF4EE4FA9
         - SceThreadmgrForDriver_F5074173: 0xF5074173
-        - SceThreadmgrForDriver_F55E4D86: 0xF55E4D86
+        - sceKernelWaitSemaCB: 0xF55E4D86
         - SceThreadmgrForDriver_F8A6013B: 0xF8A6013B
         - SceThreadmgrForDriver_F96FE0D5: 0xF96FE0D5
         - SceThreadmgrForDriver_FA54D49A: 0xFA54D49A
@@ -327,7 +327,7 @@ SceKernelThreadMgr:
         - sceKernelTryLockReadRWLock: 0xFC2B5A50
         - SceThreadmgrForDriver_FD6150D5: 0xFD6150D5
         - SceThreadmgrForDriver_FD87586C: 0xFD87586C
-        - SceThreadmgrForDriver_FDC044AC: 0xFDC044AC
+        - sceKernelGetCallbackInfo: 0xFDC044AC
         - SceThreadmgrForDriver_FF8DA217: 0xFF8DA217
     SceThreadmgr:
       syscall: true
@@ -337,7 +337,7 @@ SceKernelThreadMgr:
         - sceKernelChangeActiveCpuMask: 0x001173F8
         - sceKernelGetThreadCurrentPriority: 0x01414F0B
         - _sceKernelWaitThreadEndCB: 0x0373C5E3
-        - sceKernelGetCallbackCount: 0x038644D5
+        - sceKernelGetCallbackCountForUser: 0x038644D5
         - _sceKernelTryReceiveMsgPipeVector: 0x03CFCF00
         - sceKernelCloseMutex: 0x03E23AF6
         - _sceKernelGetSemaInfo: 0x0402C633
@@ -380,7 +380,7 @@ SceKernelThreadMgr:
         - _sceKernelCreateMsgPipeWithLR: 0x2AAC8BFD
         - _sceKernelUnlockLwMutexSyscall: 0x2ABC41DF
         - sceKernelUnregisterThreadEventHandlerForUser: 0x2C8ED6F0
-        - sceKernelCancelCallback: 0x30741EF2
+        - sceKernelCancelCallbackForUser: 0x30741EF2
         - sceKernelSetEventForUser: 0x324218CD
         - sceKernelDelayThreadCB200: 0x34938242
         - _sceKernelGetThreadContextForVM: 0x377094D5
@@ -400,7 +400,7 @@ SceKernelThreadMgr:
         - _sceKernelReceiveMsgPipeVectorCB: 0x4DBF648E
         - _sceKernelWaitEvent: 0x4E0EA70D
         - sceKernelOpenSimpleEventForUser: 0x4E1E4DF8
-        - sceKernelGetThreadStackFreeSize: 0x4F8A3DA0
+        - sceKernelGetThreadStackFreeSizeForUser: 0x4F8A3DA0
         - _sceKernelWaitSignal: 0x50407BF4
         - sceKernelOpenMutex: 0x52E17182
         - sceKernelDeleteEventFlagForUser: 0x5840162C

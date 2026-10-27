@@ -22,7 +22,7 @@ SceSblGcAuthMgr:
         - SceSblGcAuthMgrDrmBBForDriver_4CEA150C: 0x4CEA150C
         - SceSblGcAuthMgrDrmBBForDriver_4FE89ADB: 0x4FE89ADB
         - SceSblGcAuthMgrDrmBBForDriver_500F5157: 0x500F5157
-        - SceSblGcAuthMgrDrmBBForDriver_535B87BC: 0x535B87BC
+        - error: 0x535B87BC
         - SceSblGcAuthMgrDrmBBForDriver_6E6D2B89: 0x6E6D2B89
         - SceSblGcAuthMgrDrmBBForDriver_6EF3C9DB: 0x6EF3C9DB
         - SceSblGcAuthMgrDrmBBForDriver_7F98E4E2: 0x7F98E4E2

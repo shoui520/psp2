@@ -59,7 +59,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
@@ -96,7 +96,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSblPmMgrGetProductMode
 	SceSblPostSsMgrForDriver_128FB35A
 	SceRtcForDriver_A7236656
-	SceRtcForDriver_F139E359
+	sceRtcGetTick
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

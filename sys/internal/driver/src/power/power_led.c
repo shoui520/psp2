@@ -40,9 +40,9 @@ static void powerLedSetOutput(unsigned int led, int on)
 	if (gpio == 0)
 		return;
 	if (s_powerLeds[led].polarity == on)
-		SceGpioForDriver_F6310435((gpio & 0x20) != 0, gpio & 0x1f);
+		sceGpioPortClear((gpio & 0x20) != 0, gpio & 0x1f);
 	else
-		SceGpioForDriver_D454A584((gpio & 0x20) != 0, gpio & 0x1f);
+		sceGpioPortSet((gpio & 0x20) != 0, gpio & 0x1f);
 }
 
 static inline void powerLedWriteSysconPattern(const uint8_t *pattern, uint32_t level)
@@ -55,7 +55,7 @@ static inline void powerLedWriteSysconPattern(const uint8_t *pattern, uint32_t l
 	SceSysconForDriver_6F586D1A(0x40, level);
 }
 
-inline int SceLedForDriver_EA24BE03(uint32_t led, uint32_t mode, const void *option)
+inline int sceLedSetMode(uint32_t led, uint32_t mode, const void *option)
 {
 	const LedModeParam *param = option;
 	struct PowerLedState *state;
@@ -130,10 +130,10 @@ inline int SceLedForDriver_EA24BE03(uint32_t led, uint32_t mode, const void *opt
 		level = state->sysconLevel;
 		powerLedWriteSysconPattern(s_powerLedSysconPattern, level);
 	} else if (mode == SCE_LED_MODE_OFF) {
-		SceSysconForDriver_04EC7579(0x40, 0);
+		sceSysconCtrlLED(0x40, 0);
 		return ScePowerForDriver_38415146(1);
 	} else {
-		SceSysconForDriver_04EC7579(0x40, 1);
+		sceSysconCtrlLED(0x40, 1);
 	}
 	return ScePowerForDriver_38415146(0);
 }
@@ -146,7 +146,7 @@ static int powerLedInitWorker(void *arg)
 	SceSysconForDriver_55DF1C9B();
 	capable = (SceSysconForDriver_CBD6D8BC() & 0xff0000) < 0x800000;
 	if (capable)
-		SceSysconForDriver_04EC7579(0x40, 1);
+		sceSysconCtrlLED(0x40, 1);
 	s_powerLedBootEnabled = capable;
 	s_powerLedHardwareEnabled = capable;
 	if (SceSysrootForDriver_55392965() || SceSysrootForDriver_89D19090() ||
@@ -155,8 +155,8 @@ static int powerLedInitWorker(void *arg)
 	if (capable)
 		SceSysconForDriver_9CA6EB70(0);
 	if (s_powerLedBootEnabled)
-		SceLedForDriver_EA24BE03(2, SCE_LED_MODE_ON, &param);
-	SceSysrootForDriver_246AAAB3(SceLedForDriver_EA24BE03);
+		sceLedSetMode(2, SCE_LED_MODE_ON, &param);
+	SceSysrootForDriver_246AAAB3(sceLedSetMode);
 	return 1;
 }
 
@@ -350,7 +350,7 @@ static int powerLedSysEventHandler(int resume, int eventid, void *args, void *op
 					powerLedSetOutput(2, 0);
 					if (sleepMode == POWER_SLEEP_SUSPEND || sleepMode == POWER_SLEEP_POWER_OFF) {
 						if (s_powerLedBootEnabled)
-							SceSysconForDriver_04EC7579(0x40, 0);
+							sceSysconCtrlLED(0x40, 0);
 						if (s_powerLedHardwareEnabled)
 							SceSysconForDriver_9CA6EB70(1);
 					}
@@ -372,7 +372,7 @@ static int powerLedSysEventHandler(int resume, int eventid, void *args, void *op
 
 			if (s_powerLedHardwareEnabled)
 				SceSysconForDriver_9CA6EB70(0);
-			SceLedForDriver_EA24BE03(2, SCE_LED_MODE_ON, &param);
+			sceLedSetMode(2, SCE_LED_MODE_ON, &param);
 		} else if (s_powerLedSavedLevel != 0) {
 			power->sysconLevel = s_powerLedSavedLevel;
 			power->mode = SCE_LED_MODE_LEVEL;
@@ -386,7 +386,7 @@ static int powerLedSysEventHandler(int resume, int eventid, void *args, void *op
 							   s_powerLedSavedLevel);
 			powerLedSetOutput(2, 1);
 		} else {
-			SceLedForDriver_EA24BE03(2, SCE_LED_MODE_OFF, NULL);
+			sceLedSetMode(2, SCE_LED_MODE_OFF, NULL);
 			if (s_powerLedHardwareEnabled)
 				SceSysconForDriver_9CA6EB70(1);
 		}

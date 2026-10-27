@@ -408,7 +408,7 @@ static inline SceUInt32 controllerType(SceUInt32 port)
 static inline void getPortInfo(void)
 {
 	__builtin_memset(&state.portInfo, 0, sizeof(state.portInfo));
-	SceCtrlForDriver_F11D0D30(&state.portInfo);
+	sceCtrlGetControllerPortInfo(&state.portInfo);
 }
 
 /* the highest port with a controller */
@@ -617,7 +617,7 @@ static int stopPlayback(void)
 	for (int port = 0; port < CTRLP_PORT_NUM; port++) {
 #define CLEAR_RAPID_FIRE(index) \
 		if (state.rapidFire[port] & (1u << (index))) \
-			SceCtrlForDriver_ED138A26(port, (index))
+			sceCtrlClearRapidFire(port, (index))
 		CLEAR_RAPID_FIRE(0);
 		CLEAR_RAPID_FIRE(1);
 		CLEAR_RAPID_FIRE(2);
@@ -935,7 +935,7 @@ static inline int setRapidFire(const CtrlpSetRapidFire *set, SceUInt32 length)
 
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	rule = set->rule;
-	if (SceCtrlForDriver_A248CDAE(state.version ? set->portType.port : 0, set->index, &rule) < 0) {
+	if (sceCtrlSetRapidFire(state.version ? set->portType.port : 0, set->index, &rule) < 0) {
 		result = CTRLP_RESULT_INVALID;
 	} else {
 		state.rapidFire[set->port] |= 1 << set->index;
@@ -957,7 +957,7 @@ static inline int clearRapidFire(const CtrlpClearRapidFire *clear, SceUInt32 len
 		return CTRLP_RESULT_INVALID;
 
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
-	if (SceCtrlForDriver_ED138A26(state.version ? clear->portType.port : 0, clear->index) < 0) {
+	if (sceCtrlClearRapidFire(state.version ? clear->portType.port : 0, clear->index) < 0) {
 		result = CTRLP_RESULT_INVALID;
 	} else {
 		state.rapidFire[clear->port] &= ~(1 << clear->index);
@@ -1041,7 +1041,7 @@ static inline int getControllerPortInfo(CtrlpPortInfoResult *out)
 	SceCtrlPortInfo info;
 
 	out->count = CTRLP_PORT_NUM;
-	if (SceCtrlForDriver_F11D0D30(&info) != 0)
+	if (sceCtrlGetControllerPortInfo(&info) != 0)
 		return CTRLP_RESULT_FAILED;
 	for (int port = 0; port < CTRLP_PORT_NUM; port++) {
 		CtrlpPortType *entry = &out->port[port];
@@ -1484,8 +1484,8 @@ int module_start(SceSize args, void *argp)
 	state.sendSize = sizeof(sendBuffer);
 	state.sendBuffer = (CtrlpPacket *)sendBuffer;
 	state.recordThreshold = 32;
-	SceTouchForDriver_937DB4C0(SCE_TOUCH_PORT_FRONT, &state.panelInfo[SCE_TOUCH_PORT_FRONT]);
-	SceTouchForDriver_937DB4C0(SCE_TOUCH_PORT_BACK, &state.panelInfo[SCE_TOUCH_PORT_BACK]);
+	sceTouchGetPanelInfo(SCE_TOUCH_PORT_FRONT, &state.panelInfo[SCE_TOUCH_PORT_FRONT]);
+	sceTouchGetPanelInfo(SCE_TOUCH_PORT_BACK, &state.panelInfo[SCE_TOUCH_PORT_BACK]);
 	state.buttonMask = 0x31ffff;
 	state.dolce = SceSblAIMgrForDriver_71608CA3() != 0;
 

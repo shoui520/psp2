@@ -44,7 +44,7 @@ int SceGpioForDriver_129DF5AC(unsigned bank, unsigned port)
 	return value >> port & 1;
 }
 
-int SceGpioForDriver_D454A584(unsigned bank, unsigned port)
+int sceGpioPortSet(unsigned bank, unsigned port)
 {
 	if (bank >= 2)
 		return GPIO_ERROR_BANK;
@@ -56,7 +56,7 @@ int SceGpioForDriver_D454A584(unsigned bank, unsigned port)
 	return 0;
 }
 
-int SceGpioForDriver_F6310435(unsigned bank, unsigned port)
+int sceGpioPortClear(unsigned bank, unsigned port)
 {
 	if (bank >= 2)
 		return GPIO_ERROR_BANK;
@@ -364,7 +364,7 @@ static int GpioIntrHandler(int intrCode, void *arg)
 	uint32_t pending;
 	int state, gate;
 
-	state = SceCpuForDriver_821FC0EE();
+	state = sceKernelCpuSuspendIntr();
 	if (intrCode > 0xf7) {
 		if (intrCode <= 0xfc) {
 			gate = intrCode - 0xf8;

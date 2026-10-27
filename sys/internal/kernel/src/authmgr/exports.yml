@@ -14,10 +14,10 @@ SceSblAuthMgr:
         - sceSblAuthMgrClose: 0x026ACBAD
         - sceSblAuthMgrSetDmac5Key: 0x122ACDEA
         - SceSblAuthMgrForKernel_2A83A012: 0x2A83A012
-        - SceSblAuthMgrForKernel_89CCDA2C: 0x89CCDA2C
+        - sceSblAuthMgrSetupAuthSegment: 0x89CCDA2C
         - sceSblAuthMgrOpen: 0xA9CD2A09
         - SceSblAuthMgrForKernel_ABAB8466: 0xABAB8466
-        - SceSblAuthMgrForKernel_BC422443: 0xBC422443
+        - sceSblAuthMgrAuthSegment: 0xBC422443
         - sceSblAuthMgrClearDmac5Key: 0xF2BB723E
         - sceSblAuthMgrAuthHeader: 0xF3411881
     SceSblAuthMgrForDriver:

@@ -10,11 +10,11 @@
 #define SCE_USBSERV_ERROR_FATAL			0x802480FF
 
 int SceUsbServForDriver_6D738018(void);	/* vitasdk: ksceUsbServDisableEtherSuspend */
-int SceUsbServForDriver_7AD36284(SceUInt port, SceBool mode);	/* vitasdk: ksceUsbServMacSelect */
-int SceUsbServForDriver_853CB8E4(void);	/* vitasdk: ksceUsbServAccessoryDeactivate */
-int SceUsbServForDriver_AA6D4409(void);	/* vitasdk: ksceUsbServAccessoryActivate */
-SceBool SceUsbServForDriver_F0553A69(SceUInt port);	/* vitasdk: ksceUsbServMacGet */
-int sceUsbServAccessoryActivate(void);
+int sceUsbServMacSelect(SceUInt port, SceBool mode);
 int sceUsbServAccessoryDeactivate(void);
+int sceUsbServAccessoryActivate(void);
+SceBool SceUsbServForDriver_F0553A69(SceUInt port);	/* vitasdk: ksceUsbServMacGet */
+int sceUsbServAccessoryActivateForUser(void);
+int sceUsbServAccessoryDeactivateForUser(void);
 int sceUsbServEtherDisable(void);
 int sceUsbServEtherEnable(void);

@@ -201,7 +201,7 @@ int sceSDbgSdioModuleStart(SceSize args, void *argp)
 	return SCE_KERNEL_START_SUCCESS;
 }
 
-int SceSDbgSdioForKernel_356C6621(void)
+int sceSDbgSdioFini(void)
 {
 	sceKernelFreeMemBlock(s_sdbgSdio.memblock);
 	return 0;
@@ -271,7 +271,7 @@ static SceSize ReceiveMessage(SDbgSdioChannel *ch, SceUInt8 *dst, SceSize size)
 }
 
 /* name unknown: read from a channel */
-int SceSDbgSdioForKernel_2EC24C58(SceUInt32 channel, void *buf, SceSize size)
+int sceSDbgSdioRead(SceUInt32 channel, void *buf, SceSize size)
 {
 	SDbgSdioChannel *ch;
 	SceUInt8 *dst = buf;
@@ -298,7 +298,7 @@ int SceSDbgSdioForKernel_2EC24C58(SceUInt32 channel, void *buf, SceSize size)
 }
 
 /* name unknown: write to a channel */
-int SceSDbgSdioForKernel_7876806C(SceUInt32 channel, const void *buf, SceSize size)
+int sceSDbgSdioWrite(SceUInt32 channel, const void *buf, SceSize size)
 {
 	const SceUInt8 *src = buf;
 	SDbgSdioChannel *ch;

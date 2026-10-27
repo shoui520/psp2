@@ -149,14 +149,14 @@ int threadmgrVfpExceptionIntrHandler(int code, void *arg)
 			s_threadmgrRuntime.vfpExceptionHook(2, 0);
 		return -1;
 	}
-	if (SceIntrmgrForDriver_182EE3E3() > 1) {
+	if (sceKernelIsIntrContext() > 1) {
 		SCE_PRINTF_WITH_INFO(0, 151,
 			"fatal error: VFP/NEON exception occurred in interrupt handler.\n\n");
 		if (s_threadmgrRuntime.vfpExceptionHook != NULL)
 			s_threadmgrRuntime.vfpExceptionHook(3, 0);
 		return -1;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	cpuId = sceKernelCpuId();
 	cpu = currentCpuState();
 	threadId = cpu->runningThreadId;
@@ -239,7 +239,7 @@ decided:
 			SCE_PANIC(254);
 		break;
 	case VFP_EXCEPTION_SUSPEND_PROCESS:
-		if (SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested, 0, 1) != 0)
+		if (sceKernelAtomicCompareAndSet32((SceInt32 *)&process->abortRequested, 0, 1) != 0)
 			break;
 		ret = SceSysrootForKernel_1247A825(pid, PROCESS_DEBUG_SUSPEND_EXCEPTION);
 		if (ret < 0) {

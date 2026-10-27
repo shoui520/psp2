@@ -20,7 +20,7 @@ SceSyscon:
         - SceSysconForDriver_0396BA09: 0x0396BA09
         - SceSysconForDriver_03C50DC3: 0x03C50DC3
         - SceSysconForDriver_03F11220: 0x03F11220
-        - SceSysconForDriver_04EC7579: 0x04EC7579
+        - sceSysconCtrlLED: 0x04EC7579
         - SceSysconForDriver_058941D7: 0x058941D7
         - SceSysconForDriver_060E55C1: 0x060E55C1
         - SceSysconForDriver_063425AE: 0x063425AE
@@ -30,13 +30,13 @@ SceSyscon:
         - SceSysconForDriver_0D300158: 0x0D300158
         - SceSysconForDriver_0D58E297: 0x0D58E297
         - SceSysconForDriver_10327C64: 0x10327C64
-        - SceSysconForDriver_10C9657A: 0x10C9657A
+        - sceSysconNvsWriteData: 0x10C9657A
         - SceSysconForDriver_129EA022: 0x129EA022
         - SceSysconForDriver_142D5E82: 0x142D5E82
         - SceSysconForDriver_145F59A4: 0x145F59A4
         - SceSysconForDriver_14730196: 0x14730196
         - SceSysconForDriver_14B99945: 0x14B99945
-        - SceSysconForDriver_1503D6A0: 0x1503D6A0
+        - sceSysconGetMultiCnInfo: 0x1503D6A0
         - SceSysconForDriver_154676F1: 0x154676F1
         - SceSysconForDriver_1546A141: 0x1546A141
         - SceSysconForDriver_16A466E7: 0x16A466E7
@@ -63,7 +63,7 @@ SceSyscon:
         - SceSysconForDriver_2A4B0437: 0x2A4B0437
         - SceSysconForDriver_2A61ACE1: 0x2A61ACE1
         - SceSysconForDriver_2BCE7F5A: 0x2BCE7F5A
-        - SceSysconForDriver_2CEF078E: 0x2CEF078E
+        - sceSysconBatteryStartBLMode: 0x2CEF078E
         - SceSysconForDriver_2D471528: 0x2D471528
         - SceSysconForDriver_2E4A2198: 0x2E4A2198
         - SceSysconForDriver_2E4BA4B8: 0x2E4BA4B8
@@ -94,17 +94,17 @@ SceSyscon:
         - SceSysconForDriver_3E09A1F4: 0x3E09A1F4
         - SceSysconForDriver_3F0DB7C0: 0x3F0DB7C0
         - SceSysconForDriver_3FDD29D6: 0x3FDD29D6
-        - SceSysconForDriver_40FF3898: 0x40FF3898
+        - sceSysconCtrlDeviceReset: 0x40FF3898
         - SceSysconForDriver_41942B50: 0x41942B50
         - SceSysconForDriver_423D0C58: 0x423D0C58
         - SceSysconForDriver_4278E614: 0x4278E614
         - SceSysconForDriver_4295D497: 0x4295D497
         - SceSysconForDriver_42E599AC: 0x42E599AC
-        - SceSysconForDriver_448DAFF1: 0x448DAFF1
-        - SceSysconForDriver_44A173F5: 0x44A173F5
+        - sceSysconBatteryReadBLCommand: 0x448DAFF1
+        - sceSysconJigOpenPort: 0x44A173F5
         - SceSysconForDriver_451C1662: 0x451C1662
         - SceSysconForDriver_474A9EA7: 0x474A9EA7
-        - SceSysconForDriver_483FAE05: 0x483FAE05
+        - sceSysconJigClosePort: 0x483FAE05
         - SceSysconForDriver_487D97F3: 0x487D97F3
         - SceSysconForDriver_48ED8981: 0x48ED8981
         - SceSysconForDriver_490C5548: 0x490C5548
@@ -138,8 +138,8 @@ SceSyscon:
         - SceSysconForDriver_6450D6BE: 0x6450D6BE
         - SceSysconForDriver_67A4CB9F: 0x67A4CB9F
         - SceSysconForDriver_68366D29: 0x68366D29
-        - SceSysconForDriver_68E0031E: 0x68E0031E
-        - SceSysconForDriver_69AD76E4: 0x69AD76E4
+        - sceSysconGetBatteryVersion: 0x68E0031E
+        - sceSysconUpdaterExecProgramming: 0x69AD76E4
         - SceSysconForDriver_6A093056: 0x6A093056
         - SceSysconForDriver_6D408E30: 0x6D408E30
         - SceSysconForDriver_6D65B70F: 0x6D65B70F
@@ -150,7 +150,7 @@ SceSyscon:
         - SceSysconForDriver_727F985A: 0x727F985A
         - SceSysconForDriver_730E4725: 0x730E4725
         - SceSysconForDriver_734544E4: 0x734544E4
-        - SceSysconForDriver_74B2AB55: 0x74B2AB55
+        - sceSysconBatteryExecBLCommand: 0x74B2AB55
         - SceSysconForDriver_76272CB9: 0x76272CB9
         - SceSysconForDriver_76506A57: 0x76506A57
         - SceSysconForDriver_7682FE69: 0x7682FE69
@@ -168,21 +168,21 @@ SceSyscon:
         - SceSysconForDriver_7EC67149: 0x7EC67149
         - SceSysconForDriver_7F198FA2: 0x7F198FA2
         - SceSysconForDriver_80D6E061: 0x80D6E061
-        - SceSysconForDriver_81A6060D: 0x81A6060D
+        - sceSysconNvsSetRunMode: 0x81A6060D
         - SceSysconForDriver_830A9347: 0x830A9347
         - SceSysconForDriver_8351526D: 0x8351526D
         - SceSysconForDriver_856DFC0E: 0x856DFC0E
         - SceSysconForDriver_85E5DEBF: 0x85E5DEBF
         - SceSysconForDriver_86BAAF7D: 0x86BAAF7D
-        - SceSysconForDriver_87DA378D: 0x87DA378D
+        - sceSysconBatterySWReset: 0x87DA378D
         - SceSysconForDriver_87FF8041: 0x87FF8041
         - SceSysconForDriver_8874EF45: 0x8874EF45
         - SceSysconForDriver_89C5CFD6: 0x89C5CFD6
         - sceSysconSetPowerMode: 0x8A95D35C
         - SceSysconForDriver_8A97E690: 0x8A97E690
-        - SceSysconForDriver_8AAB6308: 0x8AAB6308
+        - sceSysconSetMultiCnPort: 0x8AAB6308
         - SceSysconForDriver_8B0B4A97: 0x8B0B4A97
-        - SceSysconForDriver_8D1D97E8: 0x8D1D97E8
+        - sceSysconCtrlAccPower: 0x8D1D97E8
         - SceSysconForDriver_8D7724C0: 0x8D7724C0
         - SceSysconForDriver_8EBA8A26: 0x8EBA8A26
         - SceSysconForDriver_901D6CD4: 0x901D6CD4
@@ -195,7 +195,7 @@ SceSyscon:
         - SceSysconForDriver_93FE51F5: 0x93FE51F5
         - SceSysconForDriver_94418CB4: 0x94418CB4
         - SceSysconForDriver_94678881: 0x94678881
-        - SceSysconForDriver_94AB13CC: 0x94AB13CC
+        - sceSysconErnieShutdown: 0x94AB13CC
         - SceSysconForDriver_956D07CB: 0x956D07CB
         - SceSysconForDriver_95975DD1: 0x95975DD1
         - SceSysconForDriver_95C16911: 0x95C16911
@@ -210,7 +210,7 @@ SceSyscon:
         - SceSysconForDriver_9ADC9936: 0x9ADC9936
         - SceSysconForDriver_9ADD60D2: 0x9ADD60D2
         - sceSysconCmdExec: 0x9ADDCA4A
-        - SceSysconForDriver_9B00BC7F: 0x9B00BC7F
+        - sceSysconUpdaterSetSegment: 0x9B00BC7F
         - SceSysconForDriver_9B6A6F64: 0x9B6A6F64
         - SceSysconForDriver_9B6B8BB9: 0x9B6B8BB9
         - SceSysconForDriver_9B779DB0: 0x9B779DB0
@@ -231,14 +231,14 @@ SceSyscon:
         - SceSysconForDriver_A57B5433: 0xA57B5433
         - SceSysconForDriver_A5AB19B1: 0xA5AB19B1
         - SceSysconForDriver_A6F05153: 0xA6F05153
-        - SceSysconForDriver_ACAFA2B8: 0xACAFA2B8
+        - sceSysconNvsReadData: 0xACAFA2B8
         - SceSysconForDriver_ACC7F71E: 0xACC7F71E
         - SceSysconForDriver_ACEE1C70: 0xACEE1C70
         - SceSysconForDriver_AD0A8275: 0xAD0A8275
         - SceSysconForDriver_AE127A96: 0xAE127A96
         - SceSysconForDriver_B1F88B11: 0xB1F88B11
         - SceSysconForDriver_B3960346: 0xB3960346
-        - SceSysconForDriver_B487C2FB: 0xB487C2FB
+        - sceSysconUpdaterSetRunMode: 0xB487C2FB
         - SceSysconForDriver_B63AF451: 0xB63AF451
         - SceSysconForDriver_B7BCC638: 0xB7BCC638
         - SceSysconForDriver_B7E294AF: 0xB7E294AF
@@ -266,11 +266,11 @@ SceSyscon:
         - SceSysconForDriver_C51B4E6F: 0xC51B4E6F
         - SceSysconForDriver_C562AF3A: 0xC562AF3A
         - SceSysconForDriver_C6A2C9EF: 0xC6A2C9EF
-        - SceSysconForDriver_C7747A63: 0xC7747A63
+        - sceSysconUpdaterExecFinalize: 0xC7747A63
         - SceSysconForDriver_C9DB5BFF: 0xC9DB5BFF
         - SceSysconForDriver_CA203A5F: 0xCA203A5F
         - SceSysconForDriver_CB41B531: 0xCB41B531
-        - SceSysconForDriver_CBA836FF: 0xCBA836FF
+        - sceSysconUpdaterCheckSignature: 0xCBA836FF
         - SceSysconForDriver_CBD6D8BC: 0xCBD6D8BC
         - SceSysconForDriver_CC6F90A8: 0xCC6F90A8
         - SceSysconForDriver_CCA56A16: 0xCCA56A16
@@ -283,8 +283,8 @@ SceSyscon:
         - SceSysconForDriver_CF5B2F2F: 0xCF5B2F2F
         - SceSysconForDriver_CFCEE733: 0xCFCEE733
         - SceSysconForDriver_D01E64FC: 0xD01E64FC
-        - SceSysconForDriver_D24BF916: 0xD24BF916
-        - SceSysconForDriver_D27C3D80: 0xD27C3D80
+        - sceSysconJigSetConfig: 0xD24BF916
+        - sceSysconUpdaterCalcChecksum: 0xD27C3D80
         - SceSysconForDriver_D2ADABCA: 0xD2ADABCA
         - SceSysconForDriver_D2F456DC: 0xD2F456DC
         - SceSysconForDriver_D632D197: 0xD632D197
@@ -294,14 +294,14 @@ SceSyscon:
         - SceSysconForDriver_D9B11C0A: 0xD9B11C0A
         - SceSysconForDriver_DD16ABD9: 0xDD16ABD9
         - SceSysconForDriver_DE613081: 0xDE613081
-        - SceSysconForDriver_DECCB2B4: 0xDECCB2B4
+        - sceSysconCtrlHostOutputViaDongle: 0xDECCB2B4
         - SceSysconForDriver_DFB024C4: 0xDFB024C4
         - SceSysconForDriver_E0D52DF0: 0xE0D52DF0
         - SceSysconForDriver_E1885F68: 0xE1885F68
         - SceSysconForDriver_E26488B9: 0xE26488B9
         - SceSysconForDriver_E38045F5: 0xE38045F5
-        - SceSysconForDriver_E4AE7852: 0xE4AE7852
-        - SceSysconForDriver_E4F29744: 0xE4F29744
+        - sceSysconBatteryStopBLMode: 0xE4AE7852
+        - sceSysconBatterySetBLCommand: 0xE4F29744
         - SceSysconForDriver_E7893732: 0xE7893732
         - SceSysconForDriver_E7F5D3DC: 0xE7F5D3DC
         - SceSysconForDriver_EBDF88B9: 0xEBDF88B9
@@ -310,7 +310,7 @@ SceSyscon:
         - SceSysconForDriver_F162D3D6: 0xF162D3D6
         - SceSysconForDriver_F245CD6F: 0xF245CD6F
         - SceSysconForDriver_F39300D3: 0xF39300D3
-        - SceSysconForDriver_F492E69E: 0xF492E69E
+        - sceSysconGetTouchpanelDeviceInfo: 0xF492E69E
         - SceSysconForDriver_F648BE61: 0xF648BE61
         - SceSysconForDriver_F6D4DDC4: 0xF6D4DDC4
         - SceSysconForDriver_F87679EE: 0xF87679EE

@@ -66,6 +66,6 @@ void SceKernelSuspendForDriver_C00826AC(void *hook);
 /* vitasdk: ksceKernelSysEventDispatch */
 int SceKernelSuspendForDriver_D4622EA8(int id, int event, void *eventArgs, SceUID *failed);
 void SceKernelSuspendForDriver_D6124071(void *hook);
-int SceKernelSuspendForDriver_E0489831(int type);	/* vitasdk: ksceKernelPowerTick */
+int sceKernelPowerTick(int type);
 int SceKernelSuspendForDriver_E677B343(SceUInt32 timerId, SceUInt32 tickFlags, SceUInt64 interval, PowerIdleCallback callback, void *argument);
 void SceKernelSuspendForDriver_F2B07167(void *hook);

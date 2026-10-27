@@ -82,11 +82,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateMutex
 	sceKernelRegisterKPLS
 	SceProcessmgrForDriver_8CB01675
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	SceProcessmgrForDriver_D141C076
 	sceSblACMgrIsSystemProgram
 	sceKernelRegisterSysEventHandler
-	SceKernelSuspendForDriver_E0489831
+	sceKernelPowerTick
 	sceKernelRegisterProcEventHandler
 )
 set(MODULE_IMPORT_VARS

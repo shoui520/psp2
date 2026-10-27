@@ -73,8 +73,8 @@ unreference:
 				continue;
 			if (--videoReferences != 0)
 				continue;
-			SceProcEventForDriver_3DED57CC(processEventHandler);
-			intr = SceCpuForDriver_821FC0EE();
+			sceKernelUnregisterProcEventHandler(processEventHandler);
+			intr = sceKernelCpuSuspendIntr();
 			for (index = 0; index <= 1; index++) {
 				if (recordStreams[index].active == 0)
 					continue;

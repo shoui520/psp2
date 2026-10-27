@@ -499,7 +499,7 @@ int SceSdifForDriver_F1A24EDD(SdifSdioFunction *function)
 	return !!((uint8_t)status & (1 << function->number));
 }
 
-int SceSdifForDriver_D0F78D9B(SdifSdioFunction *function, uint32_t address,
+int sceSdioRead(SdifSdioFunction *function, uint32_t address,
 			    uint32_t size, uint8_t *buffer, uint32_t flags)
 {
 	uint8_t *end;
@@ -565,7 +565,7 @@ int SceSdifForDriver_D0F78D9B(SdifSdioFunction *function, uint32_t address,
 		address, buffer, size, flags & 1);
 }
 
-int SceSdifForDriver_3C4CDC8B(SdifSdioFunction *function, uint32_t address,
+int sceSdioWrite(SdifSdioFunction *function, uint32_t address,
 			    uint32_t size, uint8_t *buffer, uint32_t flags)
 {
 	uint8_t *end, *cursor;
@@ -1165,7 +1165,7 @@ SdifSdioContext *SceSdifForDriver_6A8235FC(unsigned int index)
 	return NULL;
 }
 
-int SceSdifForDriver_AB0222F2(SdifSdioContext *sdio)
+int sceSdifGoStandbyState(SdifSdioContext *sdio)
 {
 	return sdifDeselectCard(sdio->contextGlobal);
 }
@@ -1639,7 +1639,7 @@ SdifSdioContext *SceSdifForDriver_53962379(unsigned int index)
 	return sdio;
 }
 
-int SceSdifForDriver_733BC373(SdifSdioFunction *function, unsigned int size)
+int sceSdioSetBlockLen(SdifSdioFunction *function, unsigned int size)
 {
 	SdifSdioContext *sdio;
 	SdifContextGlobal *context;

@@ -339,7 +339,7 @@ int NpDrmPackageVerifyMainHeader(unsigned char *data, unsigned int size,
 	if (offset + 384 <= size) {
 		unsigned char *signature = data + offset;
 
-		SceKernelUtilsForDriver_A773A6A8(data, offset, digest);
+		sceSha256Digest(data, offset, digest);
 		memset(exponent, 0, sizeof(exponent));
 		key.modulus = (unsigned int *)gNpDrmPackageRsaModuli[NPDRM_RSA_VITA];
 		key.exponent = exponent;
@@ -392,7 +392,7 @@ int NpDrmPackageVerifyLiveAreaHeader(unsigned char *data,
 	if (size >= offset + 384) {
 		unsigned char *signature = data + offset;
 
-		SceKernelUtilsForDriver_A773A6A8(data, offset, digest);
+		sceSha256Digest(data, offset, digest);
 		result = NpDrmPackageVerifyRsaSignature(signature, digest,
 			(unsigned int *)gNpDrmPackageRsaModuli[NPDRM_RSA_LIVE_AREA]);
 	}
@@ -472,7 +472,7 @@ int NpDrmPackageVerifyAlternateHeader(unsigned char *data,
 	if (size >= offset + 384) {
 		unsigned char *signature = data + offset;
 
-		SceKernelUtilsForDriver_A773A6A8(data, offset, digest);
+		sceSha256Digest(data, offset, digest);
 		result = NpDrmPackageVerifyRsaSignature(signature, digest,
 			(unsigned int *)gNpDrmPackageRsaModuli[NPDRM_RSA_ALTERNATE]);
 	}
@@ -501,7 +501,7 @@ int NpDrmPackageCryptDebugData(struct NpDrmPackageContext *context,
 		unsigned int length = size < 16 ? size : 16;
 		unsigned int i;
 
-		SceKernelUtilsForDriver_87DC7F2F((unsigned char *)&seed + skip,
+		sceSha1Digest((unsigned char *)&seed + skip,
 			sizeof(seed) - skip, digest);
 		seed.blockCounter = __builtin_bswap64(
 			__builtin_bswap64(seed.blockCounter) + 1);
@@ -540,7 +540,7 @@ int NpDrmPackageVerifyDebugSignature(const unsigned char *signature,
 	for (i = 0; i < sizeof(output); i++)
 		output[i] = 0;
 	skip = seed.hashSuffix[23] & 0x10;
-	SceKernelUtilsForDriver_87DC7F2F((unsigned char *)&seed + skip,
+	sceSha1Digest((unsigned char *)&seed + skip,
 		sizeof(seed) - skip, hash);
 	seed.blockCounter = __builtin_bswap64(
 		__builtin_bswap64(seed.blockCounter) + 1);
@@ -562,7 +562,7 @@ int NpDrmPackageVerifyDebugHeader(unsigned char *data,
 		((offset & 0xff00ff00) >> 8);
 	offset = (offset >> 16) | (offset << 16);
 	if (size >= offset + 384) {
-		SceKernelUtilsForDriver_87DC7F2F(data, offset, digest);
+		sceSha1Digest(data, offset, digest);
 		result = NpDrmPackageVerifyDebugSignature(data + offset, digest);
 	}
 	return result;
@@ -692,7 +692,7 @@ int NpDrmPackageProcessHeader(unsigned char *data, unsigned int size,
 			((keyId & 0x08000000) != 0) != ((keyId & 7) == 4))
 			return 0x80871003;
 	}
-	SceKernelUtilsForDriver_87DC7F2F(data, hmacOffset, hash);
+	sceSha1Digest(data, hmacOffset, hash);
 	if (!operations->verifySignature(data + hmacOffset, hash))
 		return 0x80871004;
 	if ((keyId & 7) - 1 > 3)
@@ -707,7 +707,7 @@ int NpDrmPackageProcessHeader(unsigned char *data, unsigned int size,
 		offset = NPDRM_BE32(extended->metadataHmacOffset);
 		if (offset + dataSize > 0x8000)
 			return 0x80871003;
-		SceKernelUtilsForDriver_87DC7F2F(data + metadataOffset, metadataSize - 64, hash);
+		sceSha1Digest(data + metadataOffset, metadataSize - 64, hash);
 		if (!operations->verifySignature(data + offset, hash))
 			return 0x80871004;
 	}
@@ -798,7 +798,7 @@ unsigned int NpDrmPackageTransformData(unsigned char *data, unsigned int size,
 		memset(license.ecdsa_signature, 0, sizeof(license.ecdsa_signature));
 		memset(license.key2, 0, 32);
 		memset(license.open_psid, 0, 60);
-		SceKernelUtilsForDriver_A773A6A8(&license, 256, hash);
+		sceSha256Digest(&license, 256, hash);
 		privateKey.primeP = (unsigned int *)material->primeP;
 		privateKey.primeQ = (unsigned int *)material->primeQ;
 		privateKey.exponentP = (unsigned int *)material->exponentP;
@@ -817,7 +817,7 @@ unsigned int NpDrmPackageTransformData(unsigned char *data, unsigned int size,
 	if (flags & 0x20000) {
 		if (size < sizeof(license))
 			return 0x80871014;
-		SceKernelUtilsForDriver_A773A6A8(data, 256, hash);
+		sceSha256Digest(data, 256, hash);
 		memset(exponent, 0, sizeof(exponent));
 		exponent[0] = 65537;
 		publicKey.modulus = (unsigned int *)gNpDrmPackageRsaModuli[NPDRM_RSA_LIVE_AREA];
@@ -1150,7 +1150,7 @@ __attribute__((noinline)) int NpDrmCheckActData(int *actType, int *versionFlag,
 __attribute__((noinline)) int NpDrmGetRifName(char *name, uint64_t aid)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = SceNpDrmForDriver_DF62F3B8(name, aid);
+	int ret = sceNpDrmGetRifName(name, aid);
 
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1159,7 +1159,7 @@ __attribute__((noinline)) int NpDrmGetRifName(char *name, uint64_t aid)
 __attribute__((noinline)) int NpDrmGetFixedRifName(char *name, uint64_t aid)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = SceNpDrmForDriver_5D73448C(name, aid);
+	int ret = sceNpDrmGetFixedRifName(name, aid);
 
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1182,7 +1182,7 @@ __attribute__((noinline)) int NpDrmGetRifInfo(const SceNpDrmLicense *license,
 	uint64_t *flags2)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = SceNpDrmForDriver_DB406EAE(license, license_size, check_sign, content_id,
+	int ret = sceNpDrmGetRifInfo(license, license_size, check_sign, content_id,
 		account_id, license_version, license_flags, flags, sku_flags,
 		lic_start_time, lic_exp_time, flags2);
 
@@ -1623,7 +1623,7 @@ __attribute__((noinline)) int NpDrmPackageCheckForUser(const void *buffer,
 		ret = 0x80010016;
 		goto out;
 	}
-	ret = SceSysmemForDriver_9F6E45E3(0, 0x10, buffer, size);
+	ret = sceKernelIsAccessibleRangeProc(0, 0x10, buffer, size);
 	if (ret < 0)
 		goto out;
 	mapId = sceKernelUserMap("SceNpDrmPackageChk", 1, buffer, size,
@@ -1676,7 +1676,7 @@ __attribute__((noinline)) int NpDrmPackageDecryptForUser(void *buffer,
 		ret = 0x80010016;
 		goto out;
 	}
-	ret = SceSysmemForDriver_9F6E45E3(0, 0x30, buffer, size);
+	ret = sceKernelIsAccessibleRangeProc(0, 0x30, buffer, size);
 	if (ret < 0)
 		goto out;
 	mapId = sceKernelUserMap("SceNpDrmPackageDec", 3, buffer, size,
@@ -1726,7 +1726,7 @@ __attribute__((noinline)) int NpDrmPackageTransformForUser(void *buffer,
 		ret = 0x80010016;
 		goto out;
 	}
-	ret = SceSysmemForDriver_9F6E45E3(0, 0x10, buffer, size);
+	ret = sceKernelIsAccessibleRangeProc(0, 0x10, buffer, size);
 	if (ret < 0)
 		goto out;
 	mapId = sceKernelUserMap("SceNpDrmPackageTrans", 1, buffer, size,

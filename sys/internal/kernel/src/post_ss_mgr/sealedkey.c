@@ -6,7 +6,7 @@
 #include "post_ss_mgr_internal.h"
 
 /* PLACEHOLDER: cryptographic routine, deferred: decrypts the sealed
- * key encryption key and secret with SceSblSsMgrForDriver_934DB6B5 */
+ * key encryption key and secret with sceSblSsDecryptWithPortability */
 POST_SS_DEFERRED int getSealedKeySecret(void *encKey, void *secret)
 {
 	SceSblSsMgrForDriver_CD98CC92(encKey, 0, 0x10);

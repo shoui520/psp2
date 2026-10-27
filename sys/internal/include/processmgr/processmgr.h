@@ -80,8 +80,8 @@ typedef struct ProcessmgrLibcOps {
 } ProcessmgrLibcOps;
 
 /* names from SceSysmodule's error messages */
-int SceProcessmgrForDriver_61B9B6FA(SceUID pid, SceUInt32 value);	/* sceKernelSetInitialPMCR */
-int SceProcessmgrForDriver_B1C3EFCA(SceUID pid, SceUInt32 value);	/* sceKernelSetInitialPMUSERENR */
+int sceKernelSetInitialPMCR(SceUID pid, SceUInt32 value);	/* sceKernelSetInitialPMCR */
+int sceKernelSetInitialPMUSERENR(SceUID pid, SceUInt32 value);	/* sceKernelSetInitialPMUSERENR */
 
 /* name unknown: the process's SDK version (SceSysmodule: >= 0x1800000 selects another library) */
 int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *sdkVersion);
@@ -92,7 +92,7 @@ int SceProcessmgrForDriver_8CB01675(SceUID pid, SceUInt64 *time, SceUInt64 srcTi
 int sceKernelSuspendProcess(SceUID pid, SceUInt32 flags, SceUInt32 *timeout);
 
 int sceKernelRegisterCoredumpHandler(void *handler, SceSize stackSize, void *arg);
-int SceProcessmgrForDriver_33B3D026(void);
+int sceKernelUnregisterCoredumpHandler(void);
 SceUID sceKernelCallCoredumpHandler(SceUID pid);
 
 /* names unknown (os0:kd/deci4p_pamp.skprx) */
@@ -131,7 +131,7 @@ typedef struct SceKernelProcessOpt {
 _Static_assert(sizeof(SceKernelProcessOpt) == 0x40, "SceKernelProcessOpt size");
 
 int SceProcessmgrForDriver_2CEB1C7A(SceUID pid, SceUInt32 *buf, SceSize size);	/* random bytes */
-int SceProcessmgrForDriver_54D469E2(SceUInt32 *flag);
+int sceKernelGetSyscallTraceFlag(SceUInt32 *flag);
 int SceProcessmgrForDriver_5E882B60(void (*callback)(SceUID pid, int exitStatus));
 int SceProcessmgrForDriver_879153D9(SceUID pid, SceUInt32 kind);
 int SceProcessmgrForDriver_A1CF74FA(SceUID pid);
@@ -143,10 +143,8 @@ int SceProcessmgrForKernel_8321B827(SceUInt32 *timeout);
 int SceProcessmgrForKernel_BC110987(SceUID pid, SceUInt32 event);
 int SceProcessmgrForKernel_D5DF895D(void);
 int SceProcessmgrForKernel_F160B4D8(SceUID pid, int kind);	/* release the slot */
-/* vitasdk: ksceKernelGetProcessTimeLowCore */
-SceUInt32 SceProcessmgrForDriver_02179E12(void);
-/* vitasdk: ksceKernelGetProcessTimeWideCore */
-SceUInt64 SceProcessmgrForDriver_82D94BE9(void);
+SceUInt32 sceKernelGetProcessTimeLowCore(void);
+SceUInt64 sceKernelGetProcessTimeWideCore(void);
 void *sceKernelAllocRemoteProcessHeap(SceUID pid, SceSize size, void *opt);
 void *sceKernelAllocRemoteToolHeap(SceUID pid, SceSize size);
 int sceKernelGetProcessType(SceUID pid);
@@ -170,33 +168,29 @@ int SceProcessmgrForDriver_4140D633(const ProcessmgrLibcOps *ops);
 void *sceKernelAllocOwnProcessHeap(SceSize size, void *opt);
 int SceProcessmgrForDriver_594319C7(SceUID pid);
 int SceProcessmgrForDriver_5BDA978F(SceUID pid, SceUInt64 *time);
-/* vitasdk: ksceKernelGetProcessLocalStorageAddrForPid */
-int SceProcessmgrForDriver_AF80F39C(SceUID pid, SceUInt32 key, void **addr, int create);
-/* vitasdk: ksceKernelGetRemoteProcessTime */
-int SceProcessmgrForDriver_C074EB31(SceUID pid, SceUInt64 *time);
+int sceKernelGetRemoteKPLS(SceUID pid, SceUInt32 key, void **addr, int create);
+int sceKernelGetRemoteProcessTime(SceUID pid, SceUInt64 *time);
 int SceProcessmgrForDriver_C5CF15ED(SceUInt32 key, ProcessLocalStorageInfo *info);
 int SceProcessmgrForDriver_E8005AFC(int level, void *buf, SceSize size, SceSize *count);
-int SceProcessmgrForDriver_EC283166(SceUInt64 *time);	/* vitasdk: ksceKernelGetProcessTimeCore */
+int sceKernelGetProcessTimeCore(SceUInt64 *time);
 /* vitasdk: ksceKernelGetProcessLocalStorageAddr */
 void *SceProcessmgrForDriver_EE694840(SceUInt32 key);
-/* vitasdk: ksceKernelLibcGettimeofday */
-int SceProcessmgrForKernel_014F5113(ProcessTimeval *tv, ProcessTimezone *tz);
+int sceKernelLibcGettimeofday(ProcessTimeval *tv, ProcessTimezone *tz);
 int SceProcessmgrForKernel_1197DB8A(SceUInt32 index, SceUInt32 value, SceUInt32 control);
-SceUID SceProcessmgrForKernel_1E5B38E5(const char *name, SceUInt32 type, const char *path,
+SceUID sceKernelSpawnProcess(const char *name, SceUInt32 type, const char *path,
 				       SceSize args, void *argp, const SceKernelProcessOpt *opt);
 void SceProcessmgrForKernel_344DDE0B(SceUID pid, SceUID prevPid);
 int SceProcessmgrForKernel_3EBC93BB(struct SceRtcTick *tick);
-int SceProcessmgrForKernel_459A223B(SceUID budgetId);
-int SceProcessmgrForKernel_5137B783(SceUID pid, int waitDebugger, SceSize args, void *argp);
+int sceKernelDeleteBudget(SceUID budgetId);
+int sceKernelStartProcess(SceUID pid, int waitDebugger, SceSize args, void *argp);
 int SceProcessmgrForKernel_6DEC45C3(SceUInt32 index, SceUInt32 *value, SceUInt32 *control);
 int SceProcessmgrForKernel_8B4086AF(SceUID pid, int kind);	/* reserve a module slot */
 void *SceProcessmgrForKernel_923AF3CC(int kind);
 SceClass *SceProcessmgrForKernel_98AE4BC8(void);	/* vitasdk: ksceKernelGetUIDProcessClass */
 int SceProcessmgrForKernel_9FA66773(SceUInt32 index, SceUInt32 *value, SceUInt32 *control);
-/* vitasdk: ksceKernelLibcTime */
-SceKernelTime SceProcessmgrForKernel_B0E076D6(SceKernelTime *t);
+SceKernelTime sceKernelLibcTime(SceKernelTime *t);
 int SceProcessmgrForKernel_D231AE5B(struct SceRtcTick *tick);
-SceUID SceProcessmgrForKernel_DC18FCEF(const char *name, SceUInt32 type,
+SceUID sceKernelCreateBudget(const char *name, SceUInt32 type,
 				       const ProcessBudgetOpt *opt);
 int SceProcessmgrForKernel_DDE282CF(SceUInt32 index, SceUInt32 value, SceUInt32 control);
 int SceProcessmgrForKernel_E025F5A9(SceUID pid, int index, SceUInt32 *value, SceUInt32 *control);
@@ -247,22 +241,22 @@ SceUID sceKernelGetCurrentProcess(void);
 SceUID sceKernelGetExtraTty(void);
 int sceKernelGetProcessName(char *name, SceSize size);
 void *sceKernelGetProcessParam(void);
-int sceKernelGetProcessTimeCore(SceUInt64 *time);
-SceUInt32 sceKernelGetProcessTimeLowCore(void);
-SceUInt64 sceKernelGetProcessTimeWideCore(void);
+int sceKernelGetProcessTimeCoreForUser(SceUInt64 *time);
+SceUInt32 sceKernelGetProcessTimeLowCoreForUser(void);
+SceUInt64 sceKernelGetProcessTimeWideCoreForUser(void);
 int sceKernelGetProcessTitleId(char *titleId, SceSize size);
-int sceKernelGetRemoteProcessTime(SceUID pid, SceUInt64 *time);
+int sceKernelGetRemoteProcessTimeForUser(SceUID pid, SceUInt64 *time);
 SceUID sceKernelGetStderr(void);
 SceUID sceKernelGetStdin(void);
 SceUID sceKernelGetStdout(void);
 SceUInt32 sceKernelLibcClock(void);
-int sceKernelLibcGettimeofday(ProcessTimeval *utv, ProcessTimezone *utz);
+int sceKernelLibcGettimeofdayForUser(ProcessTimeval *utv, ProcessTimezone *utz);
 int sceKernelLibcGmtime_r(const SceKernelTime *ut, ProcessTm *utm);
 int sceKernelLibcLocaltime_r(const SceKernelTime *ut, ProcessTm *utm);
 int sceKernelLibcMktime(ProcessTm *utm, SceKernelTime *ut, SceUInt64 *uwide);
-SceKernelTime sceKernelLibcTime(SceKernelTime *ut);
+SceKernelTime sceKernelLibcTimeForUser(SceKernelTime *ut);
 int sceKernelPowerLock(int type);
-int sceKernelPowerTick(int type);
+int sceKernelPowerTickForUser(int type);
 int sceKernelProcessPowerUnlockForUser(int type);
 int sceKernelRegisterProcessTerminationCallback(SceUID pid, SceUID cb);
 int sceKernelUnregisterProcessTerminationCallback(SceUID pid, SceUID cb);

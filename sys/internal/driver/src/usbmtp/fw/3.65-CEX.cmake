@@ -73,20 +73,20 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteEventFlag
 	sceKernelSetEventFlag
 	sceKernelScheduleWorkTask
-	SceUdcdForDriver_0DECE532
-	SceUdcdForDriver_1494293B
-	SceUdcdForDriver_1ED0E89E
+	sceUdcdUnregister
+	sceUdcdStop
+	sceUdcdReqSend
 	SceUdcdForDriver_28BFEC45
 	SceUdcdForDriver_34079250
 	SceUdcdForDriver_38787672
-	SceUdcdForDriver_4E55244D
+	sceUdcdRegister
 	sceUdcdActivate
 	SceUdcdForDriver_78BF2A28
-	SceUdcdForDriver_8AE87657
+	sceUdcdDeactivate
 	SceUdcdForDriver_9F53D64D
 	sceUdcdStart
-	SceUdcdForDriver_C60A74B2
-	SceUdcdForDriver_FBEA3703
+	sceUdcdReqRecv
+	sceUdcdGetDeviceInfo
 	sceIdStorageLookup
 )
 set(MODULE_IMPORT_VARS

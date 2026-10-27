@@ -84,13 +84,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateThread
 	sceKernelSetEventFlag
 	sceKernelUnlockFastMutex
-	SceProcessmgrForDriver_02179E12
+	sceKernelGetProcessTimeLowCore
 	SceProcessmgrForDriver_D141C076
 	sceKernelRegisterSysEventHandler
 	sceKernelRegisterProcEventHandler
-	SceCpuForDriver_2A40BB93
-	SceCpuForDriver_BC248C30
-	SceCpuForDriver_DF899E4B
+	sceKernelAtomicGetAndOr32
+	sceKernelAtomicOrAndGet32
+	sceKernelAtomicAndAndGet32
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_C6E83F34
 	SceAudioForDriver_75915003
@@ -101,7 +101,7 @@ set(MODULE_IMPORT_FUNCS
 	sceCodecEngineDsp0ConvertPhysicalToVirtual
 	_unlockProcessSuspendCore
 	sceCodecEngineDsp0FreeCommunicationMemories
-	SceCodecEngineWrapperForDriver_391BD4FD
+	sceVeneziaRpcCallGenericThunk
 	SceCodecEngineWrapperForDriver_3A79A935
 	sceCodecEngineDsp0ConvertVirtualToPhysical
 	sceCodecEngineDsp0GetThreadExecGroup

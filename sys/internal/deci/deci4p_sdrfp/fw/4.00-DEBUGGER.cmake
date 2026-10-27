@@ -57,7 +57,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlock
 	SceDebugForDriver_02B04343
 	sceKernelAssert
-	SceDebugForDriver_374B7868
+	sceKernelGetAssertLevel
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
@@ -75,7 +75,7 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	SceDeci4pSDfMgrForKernel_35238B8A
 	SceDeci4pSDfMgrForKernel_501CE61D
-	SceDeci4pSDfMgrForKernel_86CFC8C6
+	sceSDfMgrClose
 	sceSDfMgrOpen
 	_threadSignal
 	sceSDfMgrExSend

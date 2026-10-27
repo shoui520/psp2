@@ -568,7 +568,7 @@ int sceKernelMMUL1Init(uint32_t *l1)
 		SCE_DBG_PRINTF(0xb, 591, "l1base=%p\n", l1);
 		SCE_PANIC(592);
 	}
-	flags = SceCpuForDriver_821FC0EE();
+	flags = sceKernelCpuSuspendIntr();
 	end = l1 + 0x1000;
 	do
 		MMUWritePTE(l1++, MMU_L1_FAULT);
@@ -712,7 +712,7 @@ int sceKernelMMUL2Init(uint32_t *l2)
 
 	if ((uintptr_t)l2 & 0x3ff)
 		SCE_PANIC(1041);
-	flags = SceCpuForDriver_821FC0EE();
+	flags = sceKernelCpuSuspendIntr();
 	end = l2 + 0x100;
 	do
 		MMUWritePTE(l2++, 0);

@@ -135,7 +135,7 @@ static __attribute__((noinline)) int appmgrGetAppInfoCacheString(int pid, int pa
 	result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
 	if (result < 0)
 		return result;
-	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, &storage, 0);
+	result = sceKernelGetRemoteKPLS(pid, g_appmgrAppInfoCacheKey, &storage, 0);
 	if (result < 0)
 		goto unlock;
 	if (storage == NULL) {
@@ -191,7 +191,7 @@ int SceAppMgrForDriver_EF0C9533(const AppmgrAppMountParam *param)
 		sceSyscallLeave(syscallState);
 		return result;
 	}
-	result = ScePfsMgrForKernel_A772209C(param->path, "app", 0, klicensee, 0);
+	result = scePfsMount(param->path, "app", 0, klicensee, 0);
 	if (result != 0) {
 		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
 		sceSyscallLeave(syscallState);
@@ -201,7 +201,7 @@ int SceAppMgrForDriver_EF0C9533(const AppmgrAppMountParam *param)
 	opt.align = 32;
 	mount = sceKernelAllocHeapMemoryWithOption(g_appmgrCoreHeap, sizeof(*mount), &opt);
 	if (mount == NULL) {
-		ScePfsMgrForKernel_680BC384("app");
+		scePfsUnmount("app");
 		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
 		sceSyscallLeave(syscallState);
 		return 0x80801006;
@@ -238,7 +238,7 @@ int SceAppMgrForDriver_1DE3B7C4(const AppmgrAppUmountParam *param)
 		return result;
 	}
 	result = appmgrFindAppMount(param->mountPoint, g_appmgrAppMounts);
-	if (result != 0 || (result = ScePfsMgrForKernel_680BC384("app")) != 0) {
+	if (result != 0 || (result = scePfsUnmount("app")) != 0) {
 		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
 		sceSyscallLeave(syscallState);
 		return result;
@@ -494,7 +494,7 @@ int sceAppMgrAppParamSetString(int param, const char *string)
 	result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
 	if (result < 0)
 		goto out;
-	result = SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey, &storage, 0);
+	result = sceKernelGetRemoteKPLS(0, g_appmgrAppInfoCacheKey, &storage, 0);
 	if (result < 0)
 		goto unlock;
 	if (storage == NULL) {
@@ -565,7 +565,7 @@ int appmgrSetRequiredSaveDataSize(SceUInt32 requiredKiB)
 	void *storage = NULL;
 	int result;
 
-	result = SceProcessmgrForDriver_AF80F39C(0,
+	result = sceKernelGetRemoteKPLS(0,
 			g_appmgrAppInfoCacheKey, &storage, 0);
 	if (result < 0)
 		return result;
@@ -618,7 +618,7 @@ int sceAppMgrSaveDataGetCachedRequiredSizeKiB(void)
 	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto out;
-	result = SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey, &storage, 0);
+	result = sceKernelGetRemoteKPLS(0, g_appmgrAppInfoCacheKey, &storage, 0);
 	if (result >= 0) {
 		if (storage != NULL) {
 			info = storage;
@@ -714,7 +714,7 @@ int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path,
 	result = sceIoGetstat(filePath, &stat);
 	if (result == 0)
 		goto freePath;
-	result = SceProcessmgrForDriver_AF80F39C(
+	result = sceKernelGetRemoteKPLS(
 		pid, g_appmgrSafeMemoryKey, &buffer, 1);
 	if (result < 0)
 		goto freePath;
@@ -960,11 +960,11 @@ int SceAppMgrForDriver_E6F389B8(void *parameters)
 	if (result != 0)
 		goto restorePermission;
 	storage = NULL;
-	if (SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey,
+	if (sceKernelGetRemoteKPLS(0, g_appmgrAppInfoCacheKey,
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
-		if (SceRtcForDriver_A930CD1A(&stat.st_mtime, 0) >= 0 &&
+		if (sceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
 		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
 			sceIoChstat(path, &stat, 32);
 	}
@@ -1023,11 +1023,11 @@ int SceAppMgrForDriver_B544F2A0(SceAppMgrSaveDataSlotDelete *parameters)
 	if (result != 0)
 		goto restorePermission;
 	storage = NULL;
-	if (SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey,
+	if (sceKernelGetRemoteKPLS(0, g_appmgrAppInfoCacheKey,
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
-		if (SceRtcForDriver_A930CD1A(&stat.st_mtime, 0) >= 0 &&
+		if (sceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
 		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
 			sceIoChstat(path, &stat, 32);
 	}
@@ -1087,11 +1087,11 @@ int SceAppMgrForDriver_7E247E47(void *parameters)
 	if (result != 0)
 		goto restorePermission;
 	storage = NULL;
-	if (SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey,
+	if (sceKernelGetRemoteKPLS(0, g_appmgrAppInfoCacheKey,
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
-		if (SceRtcForDriver_A930CD1A(&stat.st_mtime, 0) >= 0 &&
+		if (sceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
 		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
 			sceIoChstat(path, &stat, 32);
 	}
@@ -1228,11 +1228,11 @@ int SceAppMgrForDriver_9ADB00FA(void *parameters)
 	if (result != 0)
 		goto restorePermission;
 	storage = NULL;
-	if (SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey,
+	if (sceKernelGetRemoteKPLS(0, g_appmgrAppInfoCacheKey,
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
-		if (SceRtcForDriver_A930CD1A(&stat.st_mtime, 0) >= 0 &&
+		if (sceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
 		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
 			sceIoChstat(path, &stat, 32);
 	}
@@ -1633,7 +1633,7 @@ checkQuota:
 	if (quotaExceeded) {
 		operation->requiredSizeKiB = (totalRequiredBytes - quotaBytes) >> 10;
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(0,
+		if (sceKernelGetRemoteKPLS(0,
 			g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 			info = storage;
 			info->neededSaveDataKiB = operation->requiredSizeKiB;
@@ -1646,7 +1646,7 @@ checkQuota:
 	if (missingFilesystemKiB && !allFilesEmpty) {
 		operation->requiredSizeKiB = missingFilesystemKiB;
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(0,
+		if (sceKernelGetRemoteKPLS(0,
 			g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 			info = storage;
 			info->neededSaveDataKiB = missingFilesystemKiB;
@@ -1700,11 +1700,11 @@ checkQuota:
 				goto freeDirectories;
 		}
 		storage = NULL;
-		if (SceProcessmgrForDriver_AF80F39C(0,
+		if (sceKernelGetRemoteKPLS(0,
 			g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 			info = storage;
 			info->saveDataFlags |= 2;
-			if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
+			if (sceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
 			    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
 				sceIoChstat(mountPath, &clockStat, 32);
 		}
@@ -1763,11 +1763,11 @@ checkQuota:
 					goto firstWriteError;
 				if (!changed) {
 					storage = NULL;
-					if (SceProcessmgrForDriver_AF80F39C(0,
+					if (sceKernelGetRemoteKPLS(0,
 						g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 						info = storage;
 						info->saveDataFlags |= 2;
-						if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
+						if (sceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
 						    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
 							sceIoChstat(mountPath, &clockStat, 32);
 					}
@@ -1834,11 +1834,11 @@ checkQuota:
 			sceIoClose(fd);
 			if (!changed) {
 				storage = NULL;
-				if (SceProcessmgrForDriver_AF80F39C(0,
+				if (sceKernelGetRemoteKPLS(0,
 					g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 					info = storage;
 					info->saveDataFlags |= 2;
-					if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
+					if (sceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
 					    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
 						sceIoChstat(mountPath, &clockStat, 32);
 				}
@@ -1915,11 +1915,11 @@ checkQuota:
 					}
 					if (!changed) {
 						storage = NULL;
-						if (SceProcessmgrForDriver_AF80F39C(0,
+						if (sceKernelGetRemoteKPLS(0,
 							g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 							info = storage;
 							info->saveDataFlags |= 2;
-							if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
+							if (sceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
 							    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
 								sceIoChstat(mountPath, &clockStat, 32);
 						}
@@ -2103,11 +2103,11 @@ int appmgrSaveDataDataRemove(SceAppMgrSaveDataDataDelete *operation, int normalA
 			if (result != 0)
 				goto restorePermission;
 			storage = NULL;
-			if (SceProcessmgrForDriver_AF80F39C(0,
+			if (sceKernelGetRemoteKPLS(0,
 				g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 				info = storage;
 				info->saveDataFlags |= 2;
-				if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
+				if (sceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
 				    appmgrResolvePath(mountPoint, 0, filePath, 64) >= 0)
 					sceIoChstat(filePath, &clockStat, 32);
 			}
@@ -2141,11 +2141,11 @@ int appmgrSaveDataDataRemove(SceAppMgrSaveDataDataDelete *operation, int normalA
 			goto restorePermission;
 		if (!changed) {
 			storage = NULL;
-			if (SceProcessmgrForDriver_AF80F39C(0,
+			if (sceKernelGetRemoteKPLS(0,
 				g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 				info = storage;
 				info->saveDataFlags |= 2;
-				if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
+				if (sceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
 				    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
 					sceIoChstat(mountPath, &clockStat, 32);
 			}
@@ -2293,14 +2293,14 @@ int SceAppMgrForDriver_E73C9516(const SceAppMgrSaveDataMountParam *param)
 	if (strncmp(mountPoint, "savedata0", 10) == 0 ||
 	    strncmp(mountPoint, "savedata0:", 11) == 0)
 		strncpy(path, "host0:savedata", sizeof(path) - 1);
-	result = ScePfsMgrForKernel_A772209C(path, "savedata", 0, klicensee, 0);
+	result = scePfsMount(path, "savedata", 0, klicensee, 0);
 	if (result != 0)
 		goto unlock;
 	option.size = sizeof(option);
 	option.align = 32;
 	mount = sceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, sizeof(*mount), &option);
 	if (!mount) {
-		ScePfsMgrForKernel_680BC384("savedata");
+		scePfsUnmount("savedata");
 		result = (int)0x80801006;
 		goto unlock;
 	}
@@ -2342,7 +2342,7 @@ int SceAppMgrForDriver_2B080268(const SceAppMgrSaveDataUmountParam *param)
 	result = appmgrFindSaveDataMount(mountPoint, g_appmgrSaveDataMountList);
 	if (result != 0)
 		goto unlock;
-	result = ScePfsMgrForKernel_680BC384("savedata");
+	result = scePfsUnmount("savedata");
 	if (result != 0)
 		goto unlock;
 	mount = g_appmgrSaveDataMountList;

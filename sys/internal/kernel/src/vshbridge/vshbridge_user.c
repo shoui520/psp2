@@ -455,7 +455,7 @@ int _vshIdStorageCreateAtomicLeaves(const SceUInt16 *leaves, int num)
 	return vshIdStorageCreateAtomicLeaves(leaves, num);
 }
 
-/* SceIofilemgrForDriver_D070BC48's data and its 64-bit reserved word, in two halves */
+/* sceIoMount's data and its 64-bit reserved word, in two halves */
 typedef struct VshIoMountArgs {
 	void *data;
 	SceUInt32 reservedLow;

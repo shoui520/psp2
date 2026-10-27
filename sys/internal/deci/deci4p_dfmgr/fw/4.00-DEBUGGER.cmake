@@ -93,7 +93,7 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	SceDebugForDriver_02B04343
 	sceKernelAssert
-	SceDebugForDriver_374B7868
+	sceKernelGetAssertLevel
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
 	sceKernelDisableIntr
@@ -122,7 +122,7 @@ set(MODULE_IMPORT_FUNCS
 	receiveData
 	sceDbgSdioOpen
 	sceDbgSdioWrite
-	SceDbgUsbForDriver_08CF16D1
+	sceDbgUsbClose
 	sceDbgUsbWrite
 	_sceDbgUsbPullData
 	sceDbgUsbOpen

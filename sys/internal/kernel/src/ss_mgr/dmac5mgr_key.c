@@ -278,7 +278,7 @@ int __attribute__((noinline, noclone)) sceSblDmac5EncDecNP(
 	return ret;
 }
 
-int SceSblSsMgrForDriver_711C057A(const void *src, void *dst, int size,
+int sceSblDmac5AesCbcEncNP(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int keyId, int coherent)
 {
 	return sceSblDmac5EncDecNP(src, dst, size, key, keyBits, iv,
@@ -292,7 +292,7 @@ int SceSblSsMgrForDriver_1901CB5E(const void *src, void *dst, int size,
 		keyId, coherent, 10);
 }
 
-int SceSblSsMgrForDriver_0F7D28AF(const void *src, void *dst, int size,
+int sceSblDmac5AesEcbEncNP(const void *src, void *dst, int size,
 	const void *key, int keyBits, int keyId, int coherent)
 {
 	return sceSblDmac5EncDecNP(src, dst, size, key, keyBits, NULL,

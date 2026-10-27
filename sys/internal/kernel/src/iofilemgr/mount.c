@@ -980,7 +980,7 @@ int mnt_start(void)
 	return ret;
 }
 
-int SceIofilemgrForDriver_D070BC48(int id, const char *path, unsigned int flags, void *data,
+int sceIoMount(int id, const char *path, unsigned int flags, void *data,
 				   SceUInt32 reservedLow, int reservedHigh)
 {
 	MountRequest request;
@@ -1012,7 +1012,7 @@ int SceIofilemgrForDriver_D070BC48(int id, const char *path, unsigned int flags,
 	return request.result;
 }
 
-int SceIofilemgrForDriver_20574100(int id, int flags, SceUInt32 reservedLow, int reservedHigh)
+int sceIoUmount(int id, int flags, SceUInt32 reservedLow, int reservedHigh)
 {
 	MountRequest request;
 	int ret;
@@ -1122,7 +1122,7 @@ int sceIoDeleteMountEvent(SceUID uid)
 	handle = sceGUIDOpenByGUID(uid);
 	if (handle < 0)
 		return handle;
-	if (!SceSysmemForKernel_7F7D5C4A(SceSysmemForKernel_368F1C36(handle),
+	if (!SceSysmemForKernel_7F7D5C4A(sceGUIDtoClass(handle),
 					 &g_mountEventClass.base))
 		return 0x80028002;
 	event = SceSysmemForKernel_FA6C098C(uid);
@@ -1180,7 +1180,7 @@ int mount_event_process_finalize(SceUID pid)
 		if ((int)num <= 0)
 			break;
 		for (i = 0; i < (int)num; i++) {
-			guid = SceSysmemForDriver_45D22597(pid, puids[i]);
+			guid = scePUIDtoGUID(pid, puids[i]);
 			if (guid < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xf, 1752,
 					"PUIDtoGUID failed err= %d 0x%x puid=0x%x\n",
@@ -1189,7 +1189,7 @@ int mount_event_process_finalize(SceUID pid)
 			}
 			ret = sceIoDeleteMountEvent(guid);
 			if (ret == 0) {
-				SceSysmemForDriver_84A4AF5E(pid, puids[i]);
+				scePUIDClose(pid, puids[i]);
 			} else {
 				SCE_DBG_PRINTF_LEVEL(1, 0xf, 1761,
 					"sceIoDeleteMountEvent failed %d 0x%x uid=0x%x %d\n",

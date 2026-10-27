@@ -190,7 +190,7 @@ int usbTerm(DfMgrLinkCB *link)
 	ret = sceKernelDeleteThread(s_usbSendThread);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 196, "0x%08X\n", ret);
-	ret = SceDbgUsbForDriver_08CF16D1();
+	ret = sceDbgUsbClose();
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 203, "0x%08X\n", ret);
 	ret = sceKernelDeleteEventFlag(s_usbRecvEvf);

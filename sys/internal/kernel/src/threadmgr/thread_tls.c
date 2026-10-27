@@ -23,8 +23,8 @@ static inline int driverSlot(uint32_t slot)
 	return slot - TLS_SLOT_FIRST < TLS_SLOT_COUNT - TLS_SLOT_FIRST;
 }
 
-/* SceThreadmgrForDriver_B645C7EF: a free slot for memory of size per thread */
-int SceThreadmgrForDriver_B645C7EF(uint32_t size, void (*destructor)(void *, uintptr_t),
+/* sceKernelRegisterKTLS: a free slot for memory of size per thread */
+int sceKernelRegisterKTLS(uint32_t size, void (*destructor)(void *, uintptr_t),
 				   uintptr_t argument)
 {
 	struct ThreadmgrTlsSlot *descriptor;
@@ -47,8 +47,8 @@ int SceThreadmgrForDriver_B645C7EF(uint32_t size, void (*destructor)(void *, uin
 	return SCE_KERNEL_ERROR_KERNEL_TLS_FULL;
 }
 
-/* SceThreadmgrForDriver_8C3C1F78: a slot no thread uses any more goes back */
-int SceThreadmgrForDriver_8C3C1F78(uint32_t slot)
+/* sceKernelUnregisterKTLS: a slot no thread uses any more goes back */
+int sceKernelUnregisterKTLS(uint32_t slot)
 {
 	struct ThreadmgrTlsSlot *descriptor;
 	SceKernelIntrStatus intr;
@@ -83,7 +83,7 @@ void *SceThreadmgrForDriver_89CA5698(uint32_t slot, SceUID threadId, int create)
 	void *memory = NULL;
 	void **field;
 
-	if (SceIntrmgrForDriver_182EE3E3() || !driverSlot(slot))
+	if (sceKernelIsIntrContext() || !driverSlot(slot))
 		return NULL;
 	if (threadId == 0) {
 		memory = currentThreadContext()->tlsSlotMemory.slot[slot];
@@ -91,7 +91,7 @@ void *SceThreadmgrForDriver_89CA5698(uint32_t slot, SceUID threadId, int create)
 			return memory;
 		threadId = sceKernelGetThreadId();
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(threadId,
 	    s_threadmgrRuntime.manager->threadClass, &pObject) >= 0) {
 		object = (struct SceUIDThreadObject *)pObject;

@@ -125,7 +125,7 @@ SceFiosKernelOverlayTable sceFiosKernelOverlayGetTable(SceUID pid)
 	int i;
 
 	if (pid != -1) {
-		if (SceProcessmgrForDriver_AF80F39C(pid, g_fiosPlsKey,
+		if (sceKernelGetRemoteKPLS(pid, g_fiosPlsKey,
 							       (void **)&storage, 1) != 0) {
 			table.max = 0;
 			table.count = &table.max;

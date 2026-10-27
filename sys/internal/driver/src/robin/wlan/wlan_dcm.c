@@ -346,7 +346,7 @@ void robinWlanReceiveMessages(SceWlanBtRobinWlanDcm *dcm)
 readBatch:
 		if (flush) {
 			if (dcm->aggregateSize <= 0x4000) {
-				result = SceSdifForDriver_D0F78D9B(dcm->sdioFunction,
+				result = sceSdioRead(dcm->sdioFunction,
 					dcm->aggregateStartPort + (dcm->ioPort | 0x1000 |
 					(uint16_t)(dcm->aggregatePortBitmap << 4)),
 					dcm->aggregateSize, dcm->aggregateBuffer, 2);
@@ -377,7 +377,7 @@ readBatch:
 			if (size <= 0x4000) {
 				WlanSdioMessageHeader *message;
 
-				result = SceSdifForDriver_D0F78D9B(dcm->sdioFunction,
+				result = sceSdioRead(dcm->sdioFunction,
 					dcm->ioPort + port, size, dcm->aggregateBuffer, 2);
 				if (result >= 0) {
 					message = (void *)dcm->aggregateBuffer;
@@ -465,7 +465,7 @@ int robinWlanTransmitPackets(SceWlanBtRobinWlanDcm *dcm)
 		SceWlanBtRobinWlanTxTransfer *slot = &dcm->txTransfers[index];
 
 		if (index == count - 1) {
-			result = SceSdifForDriver_3C4CDC8B(dcm->sdioFunction, slot->address,
+			result = sceSdioWrite(dcm->sdioFunction, slot->address,
 				(slot->size + 255) & ~255U, slot->buffer, 2);
 		} else {
 			SdifIoTransfer transfer;
@@ -729,34 +729,34 @@ int robinWlanStartDcm(SceWlanBtRobinWlanDcm *dcm)
 	result = SceSdifForDriver_3428884D(dcm->sdioFunction);
 	if (result < 0)
 		return result;
-	result = SceSdifForDriver_D0F78D9B(dcm->sdioFunction, 0x78, 1, buffer, 1);
+	result = sceSdioRead(dcm->sdioFunction, 0x78, 1, buffer, 1);
 	if (result < 0)
 		return result;
 	lowPort = buffer[0];
-	result = SceSdifForDriver_D0F78D9B(dcm->sdioFunction, 0x79, 1, buffer, 1);
+	result = sceSdioRead(dcm->sdioFunction, 0x79, 1, buffer, 1);
 	if (result < 0)
 		return result;
 	middlePort = buffer[0];
-	result = SceSdifForDriver_D0F78D9B(dcm->sdioFunction, 0x7a, 1, buffer, 1);
+	result = sceSdioRead(dcm->sdioFunction, 0x7a, 1, buffer, 1);
 	if (result < 0)
 		return result;
 	dcm->ioPort = buffer[0] << 16 | middlePort << 8 | lowPort;
-	result = SceSdifForDriver_D0F78D9B(dcm->sdioFunction, 1, 1, buffer, 1);
+	result = sceSdioRead(dcm->sdioFunction, 1, 1, buffer, 1);
 	if (result < 0)
 		return result;
 	buffer[0] |= 0x3f;
-	result = SceSdifForDriver_3C4CDC8B(dcm->sdioFunction, 1, 1, buffer, 1);
+	result = sceSdioWrite(dcm->sdioFunction, 1, 1, buffer, 1);
 	if (result < 0)
 		return result;
-	result = SceSdifForDriver_D0F78D9B(dcm->sdioFunction, 0x6c, 1, buffer, 1);
+	result = sceSdioRead(dcm->sdioFunction, 0x6c, 1, buffer, 1);
 	if (result < 0)
 		return result;
 	buffer[0] |= 0x10;
-	result = SceSdifForDriver_3C4CDC8B(dcm->sdioFunction, 0x6c, 1, buffer, 1);
+	result = sceSdioWrite(dcm->sdioFunction, 0x6c, 1, buffer, 1);
 	if (result < 0)
 		return result;
 	interruptMask[0] = 0xff;
-	result = SceSdifForDriver_3C4CDC8B(dcm->sdioFunction, 2, 1, interruptMask, 1);
+	result = sceSdioWrite(dcm->sdioFunction, 2, 1, interruptMask, 1);
 	if (result < 0)
 		return result;
 	dcm->subInterrupt = dcm->sdioFunction->number + 1;
@@ -767,7 +767,7 @@ int robinWlanStartDcm(SceWlanBtRobinWlanDcm *dcm)
 	result = sceKernelEnableSubIntr(222, dcm->subInterrupt);
 	if (result < 0)
 		return result;
-	result = SceSdifForDriver_D0F78D9B(dcm->sdioFunction, 0, sizeof(dcm->status),
+	result = sceSdioRead(dcm->sdioFunction, 0, sizeof(dcm->status),
 					 (uint8_t *)&dcm->status, 0);
 	if (result < 0)
 		return result;
@@ -785,7 +785,7 @@ int robinWlanShutdownDcm(SceWlanBtRobinWlanDcm *dcm, int keepFunction)
 	uint8_t interruptMask = 0;
 	int result;
 
-	result = SceSdifForDriver_3C4CDC8B(dcm->sdioFunction, 2, 1, &interruptMask, 1);
+	result = sceSdioWrite(dcm->sdioFunction, 2, 1, &interruptMask, 1);
 	if (result >= 0) {
 		result = sceKernelDisableSubIntr(222, dcm->subInterrupt);
 		if (result >= 0) {
@@ -1082,7 +1082,7 @@ int robinWlanTransmitCommand(SceWlanBtRobinWlanContext *context)
 	port = dcm->ioPort;
 	size = message->header.messageSize;
 	command->timestamp = timestamp;
-	return SceSdifForDriver_3C4CDC8B(function, port, size, (uint8_t *)message, 2);
+	return sceSdioWrite(function, port, size, (uint8_t *)message, 2);
 }
 
 int robinWlanRequestTransmit(SceWlanBtRobinWlanDcm *dcm)
@@ -1096,7 +1096,7 @@ int robinWlanDcmInterruptRequest(SceWlanBtRobinWlanDcm *dcm)
 	unsigned int bitmap;
 	int result;
 
-	result = SceSdifForDriver_D0F78D9B(dcm->sdioFunction, 0, 40,
+	result = sceSdioRead(dcm->sdioFunction, 0, 40,
 					 dcm->aggregateBuffer, 2);
 	if (result < 0)
 		return result;
@@ -1132,5 +1132,5 @@ int robinWlanRequestCardWake(SceWlanBtRobinWlanDcm *dcm)
 {
 	uint8_t configuration = 2;
 
-	return SceSdifForDriver_3C4CDC8B(dcm->sdioFunction, 0, 1, &configuration, 1);
+	return sceSdioWrite(dcm->sdioFunction, 0, 1, &configuration, 1);
 }

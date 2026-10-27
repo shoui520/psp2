@@ -102,7 +102,7 @@ int queryAudioInAecWorkspace(AudioInAecRpcContext *context)
 	unsigned int arguments[5];
 
 	arguments[0] = (uintptr_t)context;
-	return SceCodecEngineWrapperForDriver_391BD4FD(416, arguments,
+	return sceVeneziaRpcCallGenericThunk(416, arguments,
 			packAudioInAecContext, unpackAudioInAecContext);
 }
 
@@ -112,7 +112,7 @@ int initializeAudioInAecContextRpc(AudioInAecRpcContext *context)
 
 	arguments[0] = (uintptr_t)context;
 	arguments[1] = sceCodecEngineDsp0GetThreadExecGroup(0);
-	return SceCodecEngineWrapperForDriver_391BD4FD(417, arguments,
+	return sceVeneziaRpcCallGenericThunk(417, arguments,
 			packAudioInAecContext, unpackAudioInAecContext);
 }
 
@@ -124,7 +124,7 @@ int processAudioInAecContextRpc(AudioInAecRpcContext *context, int gain,
 	arguments[2] = flags;
 	arguments[0] = (uintptr_t)context;
 	arguments[1] = gain;
-	return SceCodecEngineWrapperForDriver_391BD4FD(420, arguments,
+	return sceVeneziaRpcCallGenericThunk(420, arguments,
 			packAudioInAecSamples, unpackAudioInAecSamples);
 }
 
@@ -134,6 +134,6 @@ int configureAudioInAecContextRpc(AudioInAecRpcContext *context, const void *con
 
 	arguments[0] = (uintptr_t)context;
 	arguments[1] = (uintptr_t)control;
-	return SceCodecEngineWrapperForDriver_391BD4FD(421, arguments,
+	return sceVeneziaRpcCallGenericThunk(421, arguments,
 			packAudioInAecControl, unpackAudioInAecControl);
 }

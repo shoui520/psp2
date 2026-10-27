@@ -27,7 +27,7 @@ SceKernelModulemgr:
         - sceKernelUnlinkNormalSyscall: 0x353821B2
         - SceModulemgrForKernel_37512E29: 0x37512E29
         - sceKernelGetLostLibraryInfo: 0x388D4DE0
-        - SceModulemgrForKernel_3FE47DDF: 0x3FE47DDF
+        - sceKernelStartRemoteModule: 0x3FE47DDF
         - SceModulemgrForKernel_4E85022D: 0x4E85022D
         - sceKernelGetLibEntCBListForSyslibtrace: 0x534519CD
         - SceModulemgrForKernel_5564A860: 0x5564A860
@@ -53,10 +53,10 @@ SceKernelModulemgr:
         - sceKernelStopRemoteModule: 0xBDBD391D
         - sceKernelGetStubNidTableForDebugger: 0xCE201AFC
         - sceKernelRegisterModulesAfterBoot: 0xD0AF9DB7
-        - SceModulemgrForKernel_DAA90093: 0xDAA90093
+        - sceKernelGetModuleInfo: 0xDAA90093
         - sceKernelLoadPreloadingModules: 0xE3C1AAA1
         - sceKernelGetStubList: 0xE48CDE07
-        - SceModulemgrForKernel_E71530D7: 0xE71530D7
+        - sceKernelUnloadProcessModules: 0xE71530D7
         - SceModulemgrForKernel_F1DE6949: 0xF1DE6949
         - SceModulemgrForKernel_FCA9FDB1: 0xFCA9FDB1
     SceModulemgrForDriver:
@@ -65,11 +65,11 @@ SceKernelModulemgr:
       nid: 0xD4A60A52
       functions:
         - SceModulemgrForDriver_02D3D0C1: 0x02D3D0C1
-        - SceModulemgrForDriver_03B30B7E: 0x03B30B7E
+        - sceKernelStopUnloadModule: 0x03B30B7E
         - sceKernelStartModule: 0x0675B682
         - sceKernelUnregisterLibrary: 0x0975B104
-        - SceModulemgrForDriver_100DAEB9: 0x100DAEB9
-        - SceModulemgrForDriver_189BFBBB: 0x189BFBBB
+        - sceKernelStopModule: 0x100DAEB9
+        - sceKernelLoadStartModule: 0x189BFBBB
         - SceModulemgrForDriver_1D9E0F7E: 0x1D9E0F7E
         - SceModulemgrForDriver_49A3EDC7: 0x49A3EDC7
         - sceKernelGetSystemSwVersion: 0x5182E212
@@ -86,7 +86,7 @@ SceKernelModulemgr:
       functions:
         - _sceKernelStopModule: 0x086867A8
         - sceKernelGetModuleListForUser: 0x2EF2581F
-        - sceKernelGetModuleInfo: 0x36585DAF
+        - sceKernelGetModuleInfoForUser: 0x36585DAF
         - sceKernelGetAllowedSdkVersionOnSystem: 0x4397FC4E
         - _sceKernelGetSystemSwVersion: 0x5182E212
         - _sceKernelLoadStartModule: 0x60647592
@@ -105,7 +105,7 @@ SceKernelModulemgr:
       version: 1
       nid: 0x77CB3DD6
       functions:
-        - SceBacktraceForDriver_166B9C8C: 0x166B9C8C
+        - sceKernelBacktrace: 0x166B9C8C
         - SceBacktraceForDriver_7C878F90: 0x7C878F90
         - SceBacktraceForDriver_888E99B8: 0x888E99B8
     SceBacktrace:

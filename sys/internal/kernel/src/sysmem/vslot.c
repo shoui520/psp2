@@ -62,7 +62,7 @@ SYSMEM_DEBUG_LOCAL int VSlotFIFOPush(SceUInt32 type, MemBlockObject *slot, int i
 	} else {
 		MemBlockObject *tail;
 #if FW_DEBUG
-		int assertLevel = SceDebugForDriver_374B7868();
+		int assertLevel = sceKernelGetAssertLevel();
 
 		tail = fifo->tail;
 		if (assertLevel > 0) {
@@ -285,7 +285,7 @@ static inline void CreateVSlot(SceUInt32 type)
 	MemBlockObject *slot = NULL;
 	int ret;
 
-	ret = PartitionAllocVSlot(AddressSpaceGetPartitionByIndex(SceSysmemForKernel_2E5CC243(), 6),
+	ret = PartitionAllocVSlot(AddressSpaceGetPartitionByIndex(sceKernelGetKernelAddressSpace(), 6),
 				  0x6060d006, 0x4000, &slot);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 379, "PartitionAllocVSlot failed 0x%08x\n", ret);

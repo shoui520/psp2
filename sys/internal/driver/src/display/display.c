@@ -282,7 +282,7 @@ set:
 	if (h->iftuPlane[plane] == -1) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 	} else {
-		ret = SceIftuForDriver_7CE0C4DA(h->iftuPlane[plane], &state,
+		ret = sceIftuSetInputFrameBuffer(h->iftuPlane[plane], &state,
 						  (flags >> 20) & 1, sync);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 		if (ret < 0)
@@ -297,7 +297,7 @@ static int _sceDisplayModuleProcessCreate(SceUID pid, ProcEventCreateParam *para
 	SceUID event;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 1);
+	ret = sceKernelGetRemoteKPLS(pid, plsKey, (void **)&pls, 1);
 	if (ret < 0)
 		return ret;
 	memset(pls, 0, sizeof(*pls));
@@ -411,7 +411,7 @@ static int _sceDisplayStartDsiIftu(SceUInt32 head) /* Sony's name (0.990 message
 	if (heads[head].dsiEnabled)
 		return 0;
 	if (bus == 1) {
-		ret = SceDsiForDriver_78E6E3CF(1, 3, heads[head].pixelSize);
+		ret = sceDsiSetDisplayMode(1, 3, heads[head].pixelSize);
 		if (ret < 0)
 			return ret;
 		ret = SceDsiForDriver_97BFEA76(1, heads[head].vic);
@@ -423,13 +423,13 @@ static int _sceDisplayStartDsiIftu(SceUInt32 head) /* Sony's name (0.990 message
 	ret = ScePervasiveForDriver_91C80C41(bus, SceDsiForDriver_4DF9E924(bus));
 	if (ret < 0)
 		return ret;
-	ret = ScePervasiveForDriver_BC42C72F(bus, 0xf);
+	ret = scePervasiveIftuDsiClkGateEnable(bus, 0xf);
 	if (ret < 0)
 		return ret;
-	ret = ScePervasiveForDriver_FFB43AC2(bus, 7);
+	ret = scePervasiveIftuDsiResetDisable(bus, 7);
 	if (ret < 0)
 		return ret;
-	ret = SceDsiForDriver_5BE5AA9B(bus);
+	ret = sceDsiStartMaster(bus);
 	if (ret < 0)
 		return ret;
 
@@ -437,15 +437,15 @@ static int _sceDisplayStartDsiIftu(SceUInt32 head) /* Sony's name (0.990 message
 	for (i = 0; i < DISPLAY_PLANE_COUNT; i++) {
 		int plane = h->iftuPlane[i];
 
-		ret = SceIftuForDriver_E6EE2C6B(plane, h->width, h->height, h->outputFormat, h->interlaced);
+		ret = sceIftuSetOutputFormat(plane, h->width, h->height, h->outputFormat, h->interlaced);
 		if (ret < 0)
 			return ret;
 		setPlaneCsc(h, plane);
 	}
-	ret = SceIftuForDriver_0D7C02F7(h->iftuPlane[0]);
+	ret = sceIftuEnable(h->iftuPlane[0]);
 	if (ret < 0)
 		return ret;
-	ret = SceIftuForDriver_0D7C02F7(h->iftuPlane[1]);
+	ret = sceIftuEnable(h->iftuPlane[1]);
 	if (ret < 0)
 		return ret;
 
@@ -461,13 +461,13 @@ static int _sceDisplayStartDsiIftu(SceUInt32 head) /* Sony's name (0.990 message
 		if (startupHead == 1) {
 			if (heads[1].dsiBus != 1)
 				goto wait;
-			ret = SceDsiForDriver_C2E85919(1, 2);
+			ret = sceDsiStartDisplay(1, 2);
 		} else if (startupHead == 2) {
-			ret = SceDsiForDriver_C2E85919(bus, 3);
+			ret = sceDsiStartDisplay(bus, 3);
 		} else {
 wait:
-			SceDisplayForDriver_984C27E7();
-			ret = SceDsiForDriver_C2E85919(1, 0);
+			sceDisplayWaitVblankStart();
+			ret = sceDsiStartDisplay(1, 0);
 		}
 	} else {
 		if (!hdmiPresent)
@@ -475,16 +475,16 @@ wait:
 start:
 		if (startupHead == 0) {
 			if (heads[0].dsiBus == 0) {
-				ret = SceDsiForDriver_C2E85919(bus, 1);
+				ret = sceDsiStartDisplay(bus, 1);
 			} else {
 waitStart:
-				SceDisplayForDriver_984C27E7();
-				ret = SceDsiForDriver_C2E85919(bus, 0);
+				sceDisplayWaitVblankStart();
+				ret = sceDsiStartDisplay(bus, 0);
 			}
 		} else {
 			if (startupHead != 2)
 				goto waitStart;
-			ret = SceDsiForDriver_C2E85919(bus, 3);
+			ret = sceDsiStartDisplay(bus, 3);
 		}
 	}
 	if (ret < 0)
@@ -520,7 +520,7 @@ static inline __attribute__((always_inline)) int clearPlane(SceUInt32 head, SceU
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 	} else {
 		memset(&state, 0, sizeof(state));
-		SceIftuForDriver_7CE0C4DA(iftu, &state, -1, 1);
+		sceIftuSetInputFrameBuffer(iftu, &state, -1, 1);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 	}
 	return 0;
@@ -533,7 +533,7 @@ static inline __attribute__((always_inline)) void releaseProcess(SceUID pid) /* 
 	SceUInt32 head, plane;
 	SceUID event;
 
-	SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 1);
+	sceKernelGetRemoteKPLS(pid, plsKey, (void **)&pls, 1);
 	for (head = 0; head < 2; head++) {
 		for (plane = 0; plane < DISPLAY_PLANE_COUNT; plane++) {
 			if (heads[head].plane[plane].owner == pid) {
@@ -547,7 +547,7 @@ static inline __attribute__((always_inline)) void releaseProcess(SceUID pid) /* 
 		devOwnerPid = -1;
 	}
 	if (pls != NULL && pls->frameEvent > 0) {
-		event = SceCpuForDriver_0EE04C03(&pls->frameEvent, 0);
+		event = sceKernelAtomicGetAndSet32(&pls->frameEvent, 0);
 		if (event > 0)
 			sceKernelDeleteSimpleEvent(event);
 	}
@@ -583,20 +583,20 @@ static int disableHead(SceUInt32 head) /* name unknown */
 			if (ret < 0)
 				return ret;
 			while (oledBusy())
-				SceDisplayForDriver_B80CA224(head);
+				sceDisplayWaitVblankStartInternal(head);
 		}
 		if (lcdPresent) {
 			ret = lcdSetPower(0);
 			if (ret < 0)
 				return ret;
 			while (lcdBusy())
-				SceDisplayForDriver_B80CA224(head);
+				sceDisplayWaitVblankStartInternal(head);
 		}
 	}
-	ret = SceIftuForDriver_C11F30B3(h->iftuPlane[0]);
+	ret = sceIftuDisable(h->iftuPlane[0]);
 	if (ret < 0)
 		return ret;
-	ret = SceIftuForDriver_C11F30B3(h->iftuPlane[1]);
+	ret = sceIftuDisable(h->iftuPlane[1]);
 	if (ret < 0)
 		return ret;
 	if (startupHead != head) {
@@ -604,12 +604,12 @@ static int disableHead(SceUInt32 head) /* name unknown */
 		if (h->dsiEnabled) {
 			for (plane = 0; plane < DISPLAY_PLANE_COUNT; plane++)
 				clearPlane(head, plane);
-			ret = SceDsiForDriver_7640F607(bus);
+			ret = sceDsiStopDisplay(bus);
 			if (ret >= 0) {
 				sceKernelDelayThread(42000);
-				ret = SceDsiForDriver_114D1413(bus);
-				if (ret >= 0 && (ret = ScePervasiveForDriver_25AE181E(bus, 0xf)) >= 0
-				    && (ret = ScePervasiveForDriver_E3FC1C8D(bus, 7)) >= 0) {
+				ret = sceDsiStopMaster(bus);
+				if (ret >= 0 && (ret = scePervasiveIftuDsiClkGateDisable(bus, 0xf)) >= 0
+				    && (ret = scePervasiveIftuDsiResetEnable(bus, 7)) >= 0) {
 					ScePervasiveForDriver_91C80C41(bus, 0);
 					h->dsiEnabled = 0;
 				}
@@ -732,7 +732,7 @@ static int initWork(void *arg) /* name unknown */
 		if (lockFastMutex(&mutex) >= 0) {
 			SceKernelIntrStatus intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heads[1].lock);
 
-			if (SceIftuForDriver_AF19FD85(3, 4) >= 0) {
+			if (sceIftuSetMergeSetting(3, 4) >= 0) {
 				heads[1].mergeSetting = 4;
 				SceIftuForDriver_357EAE24(2, 0);
 				SceIftuForDriver_357EAE24(3, 0xff);
@@ -824,7 +824,7 @@ static int sysEventHandler(int resume, int eventid, void *args, void *opt) /* na
 				if (heads[head].enabled) {
 					heads[head].enabled = 0;
 					if (head != 1)
-						SceDisplayForDriver_496032D6(head);
+						sceDisplayEnableHead(head);
 				}
 			}
 			break;
@@ -927,7 +927,7 @@ int module_start(SceSize args, void *argp)
 }
 
 /* Exported to SceDisplayForDriver and as syscall 0x7178FADA. */
-int SceDisplayForDriver_C8E554C5(void)
+int sceDisplayGetPrimaryHead(void)
 {
 	return primaryHead;
 }
@@ -1078,7 +1078,7 @@ int SceDisplayForDriver_D2CED235(SceUInt32 head, SceUInt32 *vic, SceUInt32 *mode
 	return 0;
 }
 
-int SceDisplayForDriver_B3C6D647(SceUInt32 head, SceDisplayResolutionInfo *info)
+int sceDisplayGetResolutionInfoInternal(SceUInt32 head, SceDisplayResolutionInfo *info)
 {
 	DisplayHead *h;
 	SceKernelIntrStatus intr;
@@ -1103,7 +1103,7 @@ int SceDisplayForDriver_B3C6D647(SceUInt32 head, SceDisplayResolutionInfo *info)
 	return 0;
 }
 
-int SceDisplayForDriver_496032D6(SceUInt32 head)
+int sceDisplayEnableHead(SceUInt32 head)
 {
 	int ret;
 
@@ -1118,7 +1118,7 @@ int SceDisplayForDriver_496032D6(SceUInt32 head)
 	return ret;
 }
 
-int SceDisplayForDriver_43347565(SceUInt32 head)
+int sceDisplayDisableHead(SceUInt32 head)
 {
 	int ret;
 
@@ -1159,7 +1159,7 @@ static inline __attribute__((always_inline)) int framebufPaddr(SceUIntPtr base, 
 	}
 	va.addr = base;
 	va.size = size;
-	ret = SceSysmemForDriver_AE36C775(&va, &pa);
+	ret = sceKernelVARangeToPARange(&va, &pa);
 	if (ret < 0)
 		return ret;
 	*paddr = pa.addr;
@@ -1257,7 +1257,7 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 		flags = shift == 1 ? 2 : 0;
 	setIftuFrameBufAddr(&state, pitch, width, height, x, y, cropWidth, cropHeight, paddr, flags);
 	if (heads[head].plane[0].owner == sceKernelGetProcessId() && convDst == NULL) {
-		ret = SceIftuForDriver_7CE0C4DA(heads[head].iftuPlane[0], &state, (resolution >> 20) & 1, 1);
+		ret = sceIftuSetInputFrameBuffer(heads[head].iftuPlane[0], &state, (resolution >> 20) & 1, 1);
 		if (ret < 0)
 			goto unlock;
 		vcount = heads[head].vcount;
@@ -1312,9 +1312,9 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 		dst.paddr0 = dstPaddr;
 		memset(&conv, 0, sizeof(conv));
 		conv.filterMode = (resolution >> 20) & 1;
-		ret = SceIftuForDriver_67E37EFC(&dst, &state, &conv);
+		ret = sceIftuConvert(&dst, &state, &conv);
 		sceKernelDcacheInvalidateRange(convDst->base, size);
-		SceSysmemForDriver_22CBE925(0x30, convDst->base, size);
+		sceKernelUnlockRangeWithMode(0x30, convDst->base, size);
 		sceKernelUnlockFastMutex(&mutex);
 		if (ret < 0) {
 			sceSyscallLeave(t);
@@ -1337,7 +1337,7 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 	return 0;
 
 unlockRange:
-	SceSysmemForDriver_22CBE925(0x30, convDst->base, size);
+	sceKernelUnlockRangeWithMode(0x30, convDst->base, size);
 unlock:
 	sceKernelUnlockFastMutex(&mutex);
 	sceSyscallLeave(t);
@@ -1359,7 +1359,7 @@ static inline __attribute__((always_inline)) int blankPlane(DisplayHead *h, SceU
 		return 0;
 	}
 	memset(&state, 0, sizeof(state));
-	ret = SceIftuForDriver_7CE0C4DA(iftu, &state, -1, 1);
+	ret = sceIftuSetInputFrameBuffer(iftu, &state, -1, 1);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 	return ret;
 }
@@ -1392,7 +1392,7 @@ int SceDisplayForDriver_B54962A1(int head, int plane, SceUID pid)
 		return 0;
 	}
 	if (owner != pid
-	    && (ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0)) >= 0) {
+	    && (ret = sceKernelGetRemoteKPLS(pid, plsKey, (void **)&pls, 0)) >= 0) {
 		h->plane[plane].owner = pid;
 		rec = &pls->frameBuf[head][plane];
 		if (rec->paddr == 0) {
@@ -1410,7 +1410,7 @@ int SceDisplayForDriver_B54962A1(int head, int plane, SceUID pid)
 					    rec->frameBuf.height, rec->cropX, rec->cropY,
 					    rec->cropWidth + 1, rec->cropHeight + 1, rec->paddr,
 					    rec->iftuPixelformat == 0x10 ? 4 : 6);
-			SceIftuForDriver_7CE0C4DA(h->iftuPlane[plane], &state, (rec->flags >> 20) & 1, 1);
+			sceIftuSetInputFrameBuffer(h->iftuPlane[plane], &state, (rec->flags >> 20) & 1, 1);
 		}
 	}
 	sceKernelUnlockFastMutex(&mutex);
@@ -1467,7 +1467,7 @@ int SceDisplayForDriver_6B198052(SceUInt32 head, SceUInt32 setting, SceUInt32 al
 	h = &heads[head];
 	plane = head * 2 + 1;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&h->lock);
-	ret = SceIftuForDriver_AF19FD85(plane, setting);
+	ret = sceIftuSetMergeSetting(plane, setting);
 	if (ret < 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 		sceKernelUnlockFastMutex(&mutex);
@@ -1593,7 +1593,7 @@ int SceDisplayForDriver_EE5EB52D(SceUInt32 head, SceUInt32 plane, const SceDispl
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 	if (h->plane[plane].owner != -1) {
-		if (SceProcessmgrForDriver_AF80F39C(h->plane[plane].owner, plsKey,
+		if (sceKernelGetRemoteKPLS(h->plane[plane].owner, plsKey,
 							       (void **)&pls, 0) < 0)
 			pls = NULL;
 		else if (pls != NULL) {
@@ -1633,7 +1633,7 @@ int SceDisplayForDriver_40ACFE51(SceUInt32 head, SceUInt32 plane, SceDisplayView
 		sceKernelUnlockFastMutex(&mutex);
 		return 0;
 	}
-	ret = SceProcessmgrForDriver_AF80F39C(h->plane[plane].owner, plsKey, (void **)&pls, 0);
+	ret = sceKernelGetRemoteKPLS(h->plane[plane].owner, plsKey, (void **)&pls, 0);
 	if (ret < 0) {
 		sceKernelUnlockFastMutex(&mutex);
 		return ret;
@@ -1767,7 +1767,7 @@ static inline __attribute__((always_inline)) int highResolutionAllowed(void) /* 
 }
 
 __attribute__((noinline))
-int SceDisplayForDriver_16466675(int head, int plane, const SceDisplayFrameBuf *pParam,
+int sceDisplaySetFrameBufInternal(int head, int plane, const SceDisplayFrameBuf *pParam,
 				   int sync)
 {
 	DisplayHead *h;
@@ -2001,7 +2001,7 @@ unlock:
 	return ret;
 }
 
-int SceDisplayForDriver_19F94C63(int head, int plane, SceDisplayFrameBuf *pParam, int sync)
+int sceDisplayGetFrameBufInternal(int head, int plane, SceDisplayFrameBuf *pParam, int sync)
 {
 	DisplayProcessLocal *pls;
 	SceSize size;
@@ -2041,7 +2041,7 @@ static inline __attribute__((always_inline)) SceUInt32 sceSyscallResume(void) /*
 	return t;
 }
 
-int SceDisplayForDriver_289D82FE(const SceDisplayFrameBuf *pParam, int sync)
+int sceDisplaySetFrameBuf(const SceDisplayFrameBuf *pParam, int sync)
 {
 	SceUInt32 t, u;
 	int ret;
@@ -2053,7 +2053,7 @@ int SceDisplayForDriver_289D82FE(const SceDisplayFrameBuf *pParam, int sync)
 		return ret;
 	}
 	u = sceSyscallResume();
-	ret = SceDisplayForDriver_16466675(0, 0, pParam, sync);
+	ret = sceDisplaySetFrameBufInternal(0, 0, pParam, sync);
 	sceSyscallLeave(u);
 	if (ret < 0) {
 		sceKernelUnlockFastMutex(&mutex);
@@ -2061,7 +2061,7 @@ int SceDisplayForDriver_289D82FE(const SceDisplayFrameBuf *pParam, int sync)
 		return ret;
 	}
 	u = sceSyscallResume();
-	ret = SceDisplayForDriver_16466675(1, 0, pParam, sync);
+	ret = sceDisplaySetFrameBufInternal(1, 0, pParam, sync);
 	sceSyscallLeave(u);
 	if (ret < 0) {
 		sceKernelUnlockFastMutex(&mutex);
@@ -2073,7 +2073,7 @@ int SceDisplayForDriver_289D82FE(const SceDisplayFrameBuf *pParam, int sync)
 	return 0;
 }
 
-int SceDisplayForDriver_EEDA2E54(SceDisplayFrameBuf *pParam, int sync)
+int sceDisplayGetFrameBuf(SceDisplayFrameBuf *pParam, int sync)
 {
 	SceUInt32 head = primaryHead;
 	DisplayProcessLocal *pls;
@@ -2126,7 +2126,7 @@ int SceDisplayForDriver_3BC165EF(SceUID pid, int head, int plane,
 		pid = heads[head].plane[plane].owner;
 	else if (pid == 0)
 		pid = sceKernelGetProcessId();
-	ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0);
+	ret = sceKernelGetRemoteKPLS(pid, plsKey, (void **)&pls, 0);
 	if (ret < 0) {
 		sceKernelUnlockFastMutex(&mutex);
 		return ret;
@@ -2157,9 +2157,9 @@ static inline __attribute__((always_inline)) int waitProcessFrame(DisplayProcess
 	SceUInt32 timeout = 64000;
 	int ret;
 
-	ret = SceThreadmgrForDriver_C529EA32(pls->frameEvent, heads[head].eventBits, NULL, NULL, &timeout);
+	ret = sceKernelWaitEvent(pls->frameEvent, heads[head].eventBits, NULL, NULL, &timeout);
 	if (ret == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
-		return SceDisplayForDriver_B80CA224(head);
+		return sceDisplayWaitVblankStartInternal(head);
 	return ret;
 }
 
@@ -2235,7 +2235,7 @@ static inline __attribute__((always_inline)) int captureFrameBufIftu(SceUID pid,
 	ret = sceGUIDReferObject(pid, NULL);
 	if (ret < 0)
 		goto unlockRange;
-	ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0);
+	ret = sceKernelGetRemoteKPLS(pid, plsKey, (void **)&pls, 0);
 	if (ret < 0)
 		goto release;
 	if (pls == NULL || pls->frameEvent <= 0) {
@@ -2290,18 +2290,18 @@ static inline __attribute__((always_inline)) int captureFrameBufIftu(SceUID pid,
 	}
 	src.sampleX = 0;
 	src.sampleY = 0;
-	ret = SceIftuForDriver_67E37EFC(&dst, &src, NULL);
+	ret = sceIftuConvert(&dst, &src, NULL);
 	if (ret < 0)
 		goto release;
 	sceGUIDReleaseObject(pid);
 	sceKernelDcacheInvalidateRange(fb->base, size);
-	SceSysmemForDriver_22CBE925(mode, fb->base, size);
+	sceKernelUnlockRangeWithMode(mode, fb->base, size);
 	return 0;
 
 release:
 	sceGUIDReleaseObject(pid);
 unlockRange:
-	SceSysmemForDriver_22CBE925(mode, fb->base, size);
+	sceKernelUnlockRangeWithMode(mode, fb->base, size);
 	return ret;
 }
 
@@ -2370,7 +2370,7 @@ static inline __attribute__((always_inline)) int captureFrameBufDmac(SceUID pid,
 	ret = sceGUIDReferObject(pid, NULL);
 	if (ret < 0)
 		goto free;
-	ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0);
+	ret = sceKernelGetRemoteKPLS(pid, plsKey, (void **)&pls, 0);
 	if (ret < 0)
 		goto release;
 	if (pls == NULL || pls->frameEvent <= 0) {
@@ -2378,9 +2378,9 @@ static inline __attribute__((always_inline)) int captureFrameBufDmac(SceUID pid,
 		goto release;
 	}
 	timeout = 64000;
-	ret = SceThreadmgrForDriver_C529EA32(pls->frameEvent, heads[head].eventBits, NULL, NULL, &timeout);
+	ret = sceKernelWaitEvent(pls->frameEvent, heads[head].eventBits, NULL, NULL, &timeout);
 	if (ret == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
-		ret = SceDisplayForDriver_B80CA224(head);
+		ret = sceDisplayWaitVblankStartInternal(head);
 	if (ret < 0)
 		goto release;
 	ret = lockFastMutex(&mutex);
@@ -2438,19 +2438,19 @@ static inline __attribute__((always_inline)) int captureFrameBufDmac(SceUID pid,
 	    && (ret = sceKernelDmaOpSync(op, SCE_KERNEL_DMA_OP_SYNC_WAIT, NULL, NULL)) >= 0)
 		sceKernelDcacheInvalidateRange(fb->base, size);
 	sceGUIDReleaseObject(pid);
-	SceSysmemForDriver_22CBE925(mode, fb->base, size);
+	sceKernelUnlockRangeWithMode(mode, fb->base, size);
 	sceKernelDmaOpFree(op);
 	return ret;
 
 release:
 	sceGUIDReleaseObject(pid);
 free:
-	SceSysmemForDriver_22CBE925(mode, fb->base, size);
+	sceKernelUnlockRangeWithMode(mode, fb->base, size);
 	sceKernelDmaOpFree(op);
 	return ret;
 
 unlockRange:
-	SceSysmemForDriver_22CBE925(mode, fb->base, size);
+	sceKernelUnlockRangeWithMode(mode, fb->base, size);
 	return ret;
 }
 

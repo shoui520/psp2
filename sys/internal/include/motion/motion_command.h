@@ -126,7 +126,7 @@ _Static_assert(sizeof(MotionSensorDescriptor) == 6,
 _Static_assert(sizeof(MotionSensorIdentity) == 28, "sensor identity payload size");
 _Static_assert(sizeof(MotionSensorDeviceInfo) == 36, "sensor device-info payload size");
 
-int SceMotionDevForDriver_09918DAE(
+int sceMotionDevUpdateSendCommand(
 	void (*completion)(int, const MotionSensorResponse *,
 		MotionSensorResponse *, void *),
 	const MotionSensorResponse *request, MotionSensorResponse *response,

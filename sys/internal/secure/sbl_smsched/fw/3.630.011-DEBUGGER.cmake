@@ -54,7 +54,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlock
 	sceKernelDcacheInvalidateRange
 	sceKernelSpinlockLowLockCpuSuspendIntr
-	atomicCompareAndSet8
+	sceKernelAtomicCompareAndSet8
 	sceKernelSysrootGetSharedMemory
 	sceKernelSysrootGetKblParam
 	sceKernelSysrootSetModulePrivate

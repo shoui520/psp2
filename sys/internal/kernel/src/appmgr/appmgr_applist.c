@@ -681,7 +681,7 @@ void appmgrMaskAppStateFlags(struct AppState *app, unsigned int mask)
 		result, result, 0, 0); \
 } while (0)
 #define APP_LIST_ASSERT_UNLOCKED(line) do { \
-	if (SceDebugForDriver_374B7868() > 0) { \
+	if (sceKernelGetAssertLevel() > 0) { \
 		SceUID owner = g_appmgrMainMutexOwner; \
 		SCE_DBG_ASSERT_LEVEL(1, owner != sceKernelGetThreadId(), line); \
 	} \
@@ -691,7 +691,7 @@ void appmgrMaskAppStateFlags(struct AppState *app, unsigned int mask)
 	if (owner != sceKernelGetThreadId()) { \
 		struct AppState *slot; \
 		for (slot = g_appmgrAppStates; slot != g_appmgrAppStates + 20; ++slot) { \
-			int level = SceDebugForDriver_374B7868(); \
+			int level = sceKernelGetAssertLevel(); \
 			if (level > 0) { \
 				SceUID slotOwner = slot->mutexOwner; \
 				SCE_DBG_ASSERT_LEVEL(1, slotOwner != sceKernelGetThreadId(), line); \
@@ -755,7 +755,7 @@ int _appListReserveAndLockApp(struct AppState **output)
 #if FW_DEBUG
 			sceAppMgrDump();
 			dumpBgmState();
-			if (SceDebugForDriver_374B7868() <= 0)
+			if (sceKernelGetAssertLevel() <= 0)
 				goto checkSlotOrder;
 			SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 596,
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -799,7 +799,7 @@ checkSlotOrder:
 #if FW_DEBUG
 			sceAppMgrDump();
 			dumpBgmState();
-			if (SceDebugForDriver_374B7868() <= 0)
+			if (sceKernelGetAssertLevel() <= 0)
 				goto unlockSlot;
 			SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 606,
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -871,7 +871,7 @@ int _appListFindAndLockAppByAppId(int appId, struct AppState **output)
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();
-		if (SceDebugForDriver_374B7868() <= 0)
+		if (sceKernelGetAssertLevel() <= 0)
 			goto checkSlotOrder;
 		SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 640,
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -907,7 +907,7 @@ checkSlotOrder:
 #if FW_DEBUG
 			sceAppMgrDump();
 			dumpBgmState();
-			if (SceDebugForDriver_374B7868() <= 0)
+			if (sceKernelGetAssertLevel() <= 0)
 				goto unlockSlot;
 			SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 652,
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -970,7 +970,7 @@ int _appListFindAndLockAppByName(const char *name, struct AppState **output)
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();
-		if (SceDebugForDriver_374B7868() <= 0)
+		if (sceKernelGetAssertLevel() <= 0)
 			goto checkSlotOrder;
 		SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 677,
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -1011,7 +1011,7 @@ checkSlotOrder:
 #if FW_DEBUG
 			sceAppMgrDump();
 			dumpBgmState();
-			if (SceDebugForDriver_374B7868() <= 0)
+			if (sceKernelGetAssertLevel() <= 0)
 				goto unlockSlot;
 			SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 692,
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -1099,7 +1099,7 @@ int _appListFindAndLockAppByName2(const char *name, struct AppState **output,
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();
-		if (SceDebugForDriver_374B7868() <= 0)
+		if (sceKernelGetAssertLevel() <= 0)
 			goto checkSlotOrder;
 		SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 719,
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -1135,7 +1135,7 @@ checkSlotOrder:
 #if FW_DEBUG
 			sceAppMgrDump();
 			dumpBgmState();
-			if (SceDebugForDriver_374B7868() <= 0)
+			if (sceKernelGetAssertLevel() <= 0)
 				goto unlockSlot;
 			SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 734,
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -1221,7 +1221,7 @@ int _appListFindAndLockActiveApp(struct AppState **output)
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();
-		if (SceDebugForDriver_374B7868() <= 0)
+		if (sceKernelGetAssertLevel() <= 0)
 			goto checkSlotOrder;
 		SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 764,
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -1257,7 +1257,7 @@ checkSlotOrder:
 #if FW_DEBUG
 			sceAppMgrDump();
 			dumpBgmState();
-			if (SceDebugForDriver_374B7868() <= 0)
+			if (sceKernelGetAssertLevel() <= 0)
 				goto unlockSlot;
 			SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 776,
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -1319,7 +1319,7 @@ int _appListFindAndLockAppByProcessId(SceUID pid, struct AppState **output)
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();
-		if (SceDebugForDriver_374B7868() <= 0)
+		if (sceKernelGetAssertLevel() <= 0)
 			goto checkSlotOrder;
 		SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 801,
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -1356,7 +1356,7 @@ checkSlotOrder:
 #if FW_DEBUG
 			sceAppMgrDump();
 			dumpBgmState();
-			if (SceDebugForDriver_374B7868() <= 0)
+			if (sceKernelGetAssertLevel() <= 0)
 				goto unlockSlot;
 			SCE_DBG_ASSERT_PRINTF_LEVEL(1, 0, 813,
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",

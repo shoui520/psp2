@@ -158,7 +158,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceKernelSuspendForDriver_2BB92967
-	SceKernelSuspendForDriver_E0489831
+	sceKernelPowerTick
 	SceSysrootForDriver_67AAB627
 	memset
 	strncmp
@@ -209,10 +209,10 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_E0711D42
 	ScePervasiveForDriver_F861FEE4
 	SceGpioForDriver_372022A4
-	SceGpioForDriver_D454A584
+	sceGpioPortSet
 	SceClockgenForDriver_5130682D
 	SceClockgenForDriver_82F39378
-	SceClockgenForDriver_B6F0A532
+	sceClockgenWlanBtClkDisable
 	SceClockgenForDriver_F0A0242D
 	sceIdStorageLookup
 	SceSysconForDriver_3FDD29D6
@@ -223,31 +223,31 @@ set(MODULE_IMPORT_FUNCS
 	SceOledForDriver_F9624C47
 	SceLcdForDriver_581D3A87
 	SceLcdForDriver_8C965153
-	SceDisplayForDriver_16466675
-	SceDisplayForDriver_43347565
-	SceDisplayForDriver_46F186C3
-	SceDisplayForDriver_984C27E7
+	sceDisplaySetFrameBufInternal
+	sceDisplayDisableHead
+	sceDisplayWaitVblankStartCB
+	sceDisplayWaitVblankStart
 	SceDisplayForDriver_AF5EE5BE
-	SceCtrlForDriver_9B96A1AA
+	sceCtrlReadBufferPositive
 	SceCtrlForDriver_FF9D4DD4
 	SceMotionDevForDriver_031AF7A1
-	SceMotionDevForDriver_10AAC8EA
+	sceMotionDevIsReady
 	SceHpremoteForDriver_7735C403
-	SceLedForDriver_EA24BE03
+	sceLedSetMode
 	scePowerRequestColdReset
 	scePowerIsBatteryExist
 	ScePowerForDriver_0CD21B1F
 	scePowerGetBatteryLifePercent
-	ScePowerForDriver_264C24FC
+	scePowerSetGpuClockFrequencyInternal
 	scePowerRequestStandby
 	scePowerSetArmClockFrequency
 	scePowerSetGpuXbarClockFrequency
 	scePowerSetBusClockFrequency
-	ScePowerForDriver_C743E392
+	scePowerSetCameraBusClockFrequency
 	scePowerCancelRequest
 	ScePowerForDriver_E4E3C316
 	SceUdcdForDriver_2D91F8C3
-	SceUdcdForDriver_E054B5E4
+	sceUdcdGetDeviceState
 	SceMtpIfForDriver_05408B5B
 	SceMtpIfForDriver_117F7519
 	SceMtpIfForDriver_16D7DBCC

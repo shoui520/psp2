@@ -36,7 +36,7 @@ void SceCpuForKernel_FE2B77A3(SceCorelockContext *context)
 		next = 0;
 	AtomicFullBarrier();
 	context->turn = next;
-	previous = SceCpuForDriver_3EE9B5B8(&context->coresLeft, 1);
+	previous = sceKernelAtomicGetAndSub16(&context->coresLeft, 1);
 	sceKernelSpinlockLowUnlock(&context->lock);
 	dsb();
 	sev();

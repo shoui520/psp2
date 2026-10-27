@@ -39,7 +39,7 @@ int configureGpuTrace(const volatile struct PamgrGpuTraceConfig *config)
 	pfm = pamgrState.pfmRegisters;
 	memcpy(&pamgrState.gpuTraceConfig, (const void *)config, sizeof(*config));
 	pfm->traceEventControl |= PFM_EVENT_GPU_TRACE;
-	mode = SceSysrootForKernel_403B509E();
+	mode = sceKernelSysrootGetKermitRevision();
 	control = config->control;
 	interval1 = config->interval1;
 	control &= mode <= 0x20 ? 7 : 15;
@@ -117,7 +117,7 @@ int configureCounterTrace(const volatile struct PamgrCounterTraceConfig *config)
 	interval = config->interval;
 	if (interval <= 31)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	mode = SceSysrootForKernel_403B509E();
+	mode = sceKernelSysrootGetKermitRevision();
 	selection = config->selection;
 	if (mode == 0x20 && !(selection & 0x1fff))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -457,7 +457,7 @@ volatile uint32_t *ScePamgrForDriver_328C006F(unsigned int bank, unsigned int in
 	return NULL;
 }
 
-int __attribute__((noinline)) ScePamgrForDriver_16A24732(
+int __attribute__((noinline)) sceKernelPaInsertBookmark(
 			unsigned int bank, unsigned int index, uint32_t value)
 {
 
@@ -546,7 +546,7 @@ int clearTraceWordFilter(void)
 
 static inline __attribute__((always_inline)) int shouldWriteSyscallTrace(uint32_t flags[4])
 {
-	if (SceProcessmgrForDriver_54D469E2(&flags[SceCpuId()]) != 0)
+	if (sceKernelGetSyscallTraceFlag(&flags[SceCpuId()]) != 0)
 		return 0;
 	if (flags[SceCpuId()] & 2)
 		return (flags[SceCpuId()] & 1) != 0;
@@ -564,7 +564,7 @@ void sceKernelPaSetSyscallLeave(ThreadSyscallFrame *frame, uint32_t *results)
 	uint32_t flags[4];
 
 #if FW_DEBUG
-	if (SceDebugForDriver_374B7868() > 0) {
+	if (sceKernelGetAssertLevel() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, (readCpsr() & PSR_I_BIT) != 0, 1662);
 	}
 #endif
@@ -581,7 +581,7 @@ void sceKernelPaSetSyscallEnter(ThreadSyscallFrame *frame)
 	uint32_t flags[4], nid;
 
 #if FW_DEBUG
-	if (SceDebugForDriver_374B7868() > 0) {
+	if (sceKernelGetAssertLevel() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, (readCpsr() & PSR_I_BIT) != 0, 1617);
 	}
 #endif
@@ -685,19 +685,19 @@ int getGpuSampledDataForUser(uint32_t *values)
 	return 0;
 }
 
-unsigned int sceKernelPaGetWritePointer(void)
+unsigned int sceKernelPaGetWritePointerForUser(void)
 {
 	sceKernelApiDeclareTypeUInt32();
 	return pamgrState.traceBufferVirtual - pamgrState.traceBufferPhysical +
 	       pamgrState.pfmRegisters->traceWritePointer;
 }
 
-int sceKernelPaInsertBookmark(unsigned int bank, unsigned int index, uint32_t value)
+int sceKernelPaInsertBookmarkForUser(unsigned int bank, unsigned int index, uint32_t value)
 {
-	return ScePamgrForDriver_16A24732(bank, index, value);
+	return sceKernelPaInsertBookmark(bank, index, value);
 }
 
-uint32_t ScePamgrForDriver_019BD60F(unsigned int buffer)
+uint32_t sceKernelPaGetTraceBufferSize(unsigned int buffer)
 {
 	uint32_t status = pamgrState.pfmRegisters->traceStatus;
 
@@ -718,9 +718,9 @@ uint32_t ScePamgrForDriver_019BD60F(unsigned int buffer)
 	return 0;
 }
 
-uint32_t sceKernelPaGetTraceBufferSize(unsigned int buffer)
+uint32_t sceKernelPaGetTraceBufferSizeForUser(unsigned int buffer)
 {
-	return ScePamgrForDriver_019BD60F(buffer);
+	return sceKernelPaGetTraceBufferSize(buffer);
 }
 
 /* Request the trace control state and wait for acknowledgement. */
@@ -793,17 +793,17 @@ static inline __attribute__((always_inline)) uint64_t readPfmTimebase(void)
 	return (uint64_t)high << 32 | low;
 }
 
-uint64_t ScePamgrForDriver_FE9BFD27(void)
+uint64_t sceKernelPaGetTimebaseValue(void)
 {
 	return readPfmTimebase();
 }
 
-unsigned int ScePamgrForDriver_EB70556B(void)
+unsigned int sceKernelPaGetTimebaseFrequency(void)
 {
 	return 333;
 }
 
-unsigned int ScePamgrForDriver_FB46C3CD(void)
+unsigned int sceKernelPaGetWritePointer(void)
 {
 	return pamgrState.pfmRegisters->traceWritePointer;
 }
@@ -841,7 +841,7 @@ int stopSecondaryTrace(void)
 	return stopTrace(1);
 }
 
-unsigned int ScePamgrForDriver_3ACF4316(void)
+unsigned int sceKernelPaGetTraceBufferStatus(void)
 {
 	return pamgrState.pfmRegisters->traceStatus;
 }
@@ -914,7 +914,7 @@ int stopPrimaryTraceForUser(void)
 	return stopTrace(0);
 }
 
-unsigned int sceKernelPaGetTraceBufferStatus(void)
+unsigned int sceKernelPaGetTraceBufferStatusForUser(void)
 {
 	sceKernelApiDeclareTypeUInt32();
 	return pamgrState.pfmRegisters->traceStatus;
@@ -926,13 +926,13 @@ int setTraceRecordMaskForUser(unsigned int mask, uint32_t selection)
 	return setTraceRecordMask(mask, selection);
 }
 
-uint64_t sceKernelPaGetTimebaseValue(void)
+uint64_t sceKernelPaGetTimebaseValueForUser(void)
 {
 	sceKernelApiDeclareTypeUInt64();
 	return readPfmTimebase();
 }
 
-unsigned int sceKernelPaGetTimebaseFrequency(void)
+unsigned int sceKernelPaGetTimebaseFrequencyForUser(void)
 {
 	sceKernelApiDeclareTypeUInt32();
 	return 333;
@@ -1067,7 +1067,7 @@ int stopTrace(unsigned int channel)
 		    !(pfm->traceStatus & 1))
 			return 0;
 		/* The original only checks elapsed time on hardware mode 0x20. */
-		if (SceSysrootForKernel_403B509E() == 0x20) {
+		if (sceKernelSysrootGetKermitRevision() == 0x20) {
 			now = pfm->timebaseLow;
 			if (now >= start)
 				elapsed = now - start;
@@ -1312,8 +1312,8 @@ int suspendTraceHardware(int value, void *args)
 int initializeTraceHardware(void)
 {
 	static const struct PamgrTimebaseProvider provider = {
-		sizeof(provider), ScePamgrForDriver_EB70556B,
-		ScePamgrForDriver_FE9BFD27, ScePamgrForDriver_328C006F
+		sizeof(provider), sceKernelPaGetTimebaseFrequency,
+		sceKernelPaGetTimebaseValue, ScePamgrForDriver_328C006F
 	};
 	SceKernelAllocMemBlockKernelOpt opt;
 	const char *name;

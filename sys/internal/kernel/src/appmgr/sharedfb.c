@@ -455,7 +455,7 @@ int sceSharedFbClose(SceUID fbId)
 	int result, portIndex;
 
 	processId = sceKernelGetProcessId();
-	memBlock = SceSysmemForDriver_45D22597(processId, fbId);
+	memBlock = scePUIDtoGUID(processId, fbId);
 	result = memBlock;
 	if (memBlock < 0)
 		goto done;
@@ -484,7 +484,7 @@ int sceSharedFbClose(SceUID fbId)
 		sceKernelSetEventFlag(port->endEvent, 1u << index);
 	*process = (struct SharedFbProcess){ .pid = -1, .shareMemBlock = -1 };
 	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
-	result = SceSysmemForDriver_84A4AF5E(processId, fbId);
+	result = scePUIDClose(processId, fbId);
 	if (result >= 0)
 		result = 0;
 	goto done;
@@ -510,7 +510,7 @@ int sceSharedFbBegin(SceUID fbId, SharedFbInfo *info)
 	int result, portIndex, assigned;
 
 	processId = sceKernelGetProcessId();
-	memBlock = SceSysmemForDriver_45D22597(processId, fbId);
+	memBlock = scePUIDtoGUID(processId, fbId);
 	result = memBlock;
 	if (memBlock < 0)
 		goto done;
@@ -618,7 +618,7 @@ int sceSharedFbEnd(SceUID fbId)
 	int result, portIndex;
 
 	processId = sceKernelGetProcessId();
-	memBlock = SceSysmemForDriver_45D22597(processId, fbId);
+	memBlock = scePUIDtoGUID(processId, fbId);
 	result = memBlock;
 	if (memBlock < 0)
 		goto done;
@@ -745,7 +745,7 @@ SceUID sceSharedFbCreate(int index, const SceSharedFbCreate *param)
 	port->memBlock = memBlock;
 	port->info.base = base;
 	port->info.size = create.AllocMemSize;
-	result = SceSysmemForDriver_BF209859(processId, memBlock);
+	result = scePUIDOpenByGUID(processId, memBlock);
 	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
 	if (result >= 0)
 		goto done;
@@ -766,7 +766,7 @@ int sceSharedFbDelete(SceUID fbId)
 	int result, portIndex;
 
 	processId = sceKernelGetProcessId();
-	memBlock = SceSysmemForDriver_45D22597(processId, fbId);
+	memBlock = scePUIDtoGUID(processId, fbId);
 	result = memBlock;
 	if (memBlock < 0)
 		goto done;
@@ -815,7 +815,7 @@ int sceSharedFbDelete(SceUID fbId)
 	result = sceKernelFreeMemBlock(memBlock);
 	if (result < 0)
 		goto done;
-	result = SceSysmemForDriver_84A4AF5E(ownerPid, fbId);
+	result = scePUIDClose(ownerPid, fbId);
 	if (result >= 0)
 		result = 0;
 	goto done;
@@ -847,7 +847,7 @@ int sceSharedFbUpdateProcessBegin(SceUID fbId, const void *info,
 		result = (int)0x80200007;
 		goto done;
 	}
-	memBlock = SceSysmemForDriver_45D22597(sceKernelGetProcessId(), fbId);
+	memBlock = scePUIDtoGUID(sceKernelGetProcessId(), fbId);
 	result = memBlock;
 	if (memBlock < 0)
 		goto done;
@@ -1058,7 +1058,7 @@ int sceSharedFbGetInfo(SceUID fbId, SharedFbInfo *info)
 	int result, portIndex;
 
 	processId = sceKernelGetProcessId();
-	memBlock = SceSysmemForDriver_45D22597(processId, fbId);
+	memBlock = scePUIDtoGUID(processId, fbId);
 	result = memBlock;
 	if (memBlock < 0)
 		goto done;

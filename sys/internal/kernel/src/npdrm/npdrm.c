@@ -669,7 +669,7 @@ int SceNpDrmForDriver_17573133(char *name,
 	return 0;
 }
 
-int SceNpDrmForDriver_DF62F3B8(char *name, SceUInt64 accountId)
+int sceNpDrmGetRifName(char *name, SceUInt64 accountId)
 {
 	if (!accountId) {
 		NpDrmGetAccountId(&accountId);
@@ -681,7 +681,7 @@ int SceNpDrmForDriver_DF62F3B8(char *name, SceUInt64 accountId)
 	return NpDrmFormatRifName(name, 48, accountId, 0);
 }
 
-int SceNpDrmForDriver_5D73448C(char *name, SceUInt64 accountId)
+int sceNpDrmGetFixedRifName(char *name, SceUInt64 accountId)
 {
 	return NpDrmFormatRifName(name, 48, accountId, 1);
 }
@@ -1069,7 +1069,7 @@ int SceNpDrmForDriver_723322B5(const SceNpDrmLicense *license, void *klicense,
 	return NpDrmGetRifKey(license, klicense, flags, skuFlags, startTime, expirationTime, 1);
 }
 
-int SceNpDrmForDriver_DB406EAE(const SceNpDrmLicense *license, unsigned int licenseSize,
+int sceNpDrmGetRifInfo(const SceNpDrmLicense *license, unsigned int licenseSize,
 	int checkSign, char *contentId, SceUInt64 *accountId, int *licenseVersion,
 	int *drmType, int *flags, unsigned int *skuFlags, SceUInt64 *startTime,
 	SceUInt64 *expirationTime, SceUInt64 *flags2)

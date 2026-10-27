@@ -20,7 +20,7 @@ typedef struct SceAppMgrRdrfpPasscode {
 int sceAppMgrRdrfpMount(unsigned int type, const char *path, const SceAppMgrRdrfpPasscode *passcode,
 				SceAppMgrRdrfpMountPoint *mountPoint);	/* sceAppMgrRdrfpMount */
 int sceAppMgrRdrfpUmount(const SceAppMgrRdrfpMountPoint *mountPoint);	/* sceAppMgrRdrfpUmount */
-int SceAppMgrForDriver_0813AFCA(int id, char *path, SceSize size);	/* a mount's path */
+int sceAppMgrGetUserDirPath(int id, char *path, SceSize size);	/* a mount's path */
 
 int SceAppMgrForDriver_5B1BE482(const void *status);	/* vitasdk: ksceAppMgrBgdlSetQueueStatus */
 int SceAppMgrForDriver_0B1BEEE0(const char *path);	/* vitasdk: ksceAppMgrCheckPfsMounted */

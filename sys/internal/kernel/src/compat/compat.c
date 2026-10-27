@@ -219,10 +219,10 @@ int compatLcdcIntrHandler(int intrcode, void *context)
 	int head;
 	int hcount;
 
-	head = SceDisplayForDriver_C8E554C5();
+	head = sceDisplayGetPrimaryHead();
 	if (head == 1) {
 		info.size = sizeof(info);
-		if (SceDisplayForDriver_B3C6D647(head, &info) < 0) {
+		if (sceDisplayGetResolutionInfoInternal(head, &info) < 0) {
 #if FW_DEBUG
 			info.vic = 0xffff;
 #endif
@@ -375,11 +375,11 @@ int compatEnterRunningState(void)
 	if (!SceThreadmgrForDriver_E54FD746(0x4000, compatCheckRif, NULL) &&
 		!SceSblAIMgrForDriver_F4B98F66())
 		return (int)0x8001000d;
-	if (SceDisplayForDriver_C8E554C5() == 1) {
+	if (sceDisplayGetPrimaryHead() == 1) {
 		SceDisplayResolutionInfo info;
 
 		info.size = sizeof(info);
-		while (SceDisplayForDriver_B3C6D647(1, &info) < 0)
+		while (sceDisplayGetResolutionInfoInternal(1, &info) < 0)
 			sceKernelDelayThread(1000);
 	}
 	result = SceGrabForDriver_379130B2();
@@ -397,7 +397,7 @@ int compatEnterRunningState(void)
 		if (result < 0)
 			return result;
 		va.size = 0x88000;
-		result = SceSysmemForDriver_AE36C775(&va, &pa);
+		result = sceKernelVARangeToPARange(&va, &pa);
 		if (result < 0)
 			return result;
 		regs = gCompatLcdDma;
@@ -487,7 +487,7 @@ int compatProcessKillHandler(SceUID pid, ProcEventParam *param,
 		gCompatPreviousState = gCompatState;
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
-		ScePowerForDriver_FFC84E69(0);
+		scePowerSetCompatClockFrequency(0);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		gCompatMainDdr = NULL;
@@ -540,7 +540,7 @@ int compatProcessExitHandler(SceUID pid, ProcEventParam *param,
 		gCompatPreviousState = gCompatState;
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
-		ScePowerForDriver_FFC84E69(0);
+		scePowerSetCompatClockFrequency(0);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		gCompatMainDdr = NULL;
@@ -647,7 +647,7 @@ int module_start(SceSize arglen, const void *argp)
 	if (gCompatMutex < 0 ||
 		(gCompatExitMutex = sceKernelCreateMutex("SceCompatExitCheck",
 			0, 0, NULL)) < 0) {
-		SceProcEventForDriver_3DED57CC(procHandler);
+		sceKernelUnregisterProcEventHandler(procHandler);
 		goto cleanup;
 	}
 	result = sceKernelCreateSema("SceCompatVirtualHandler", 0xa000,
@@ -802,7 +802,7 @@ int compatInitEx(int mode)
 #endif
 	if (status < 0)
 		return status;
-	result = ScePowerForDriver_FFC84E69(333);
+	result = scePowerSetCompatClockFrequency(333);
 	if (result < 0)
 		return result;
 	gCompatMode = mode;
@@ -812,12 +812,12 @@ int compatInitEx(int mode)
 		if (result >= 0)
 			return 0;
 		SceGrabForDriver_F13C63DD();
-		ScePowerForDriver_FFC84E69(0);
+		scePowerSetCompatClockFrequency(0);
 		SCE_DBG_PRINTF_FUNC(0, 931, "sceCompatInitEx",
 			"sceCompatSecLoadSCBootCode failed (0x%08x)\n", result);
 		return result;
 	}
-	ScePowerForDriver_FFC84E69(0);
+	scePowerSetCompatClockFrequency(0);
 	return result;
 }
 
@@ -876,7 +876,7 @@ int compatCheckPocketStationRif(void)
 		goto out;
 	}
 	sceIoClose(fd);
-	result = SceNpDrmForDriver_DB406EAE((const SceNpDrmLicense *)license,
+	result = sceNpDrmGetRifInfo((const SceNpDrmLicense *)license,
 		sizeof(license), 0, contentId,
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) >= 0 &&
 		strncmp(contentId, gCompatPocketStationContentId,
@@ -910,7 +910,7 @@ int compatStart(void)
 		gCompatPreviousState = gCompatState;
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
-		ScePowerForDriver_FFC84E69(0);
+		scePowerSetCompatClockFrequency(0);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		return result;
@@ -939,7 +939,7 @@ int compatStop(void)
 	gCompatPreviousState = gCompatState;
 	gCompatRequestsEnabled = 0;
 	gCompatState = 1;
-	ScePowerForDriver_FFC84E69(0);
+	scePowerSetCompatClockFrequency(0);
 	sceKernelUnlockMutex(gCompatMutex, 1);
 	memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 	return result;
@@ -975,7 +975,7 @@ int compatWaitAndGetRequest(int mode, int id)
 		result = (int)0x80028005;
 		goto out;
 	}
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	queue = &gCompatRequestQueues[mode];
 	readIndex = queue->readIndex;
 	count = queue->count;
@@ -1028,14 +1028,14 @@ int compatWaitSpecialRequest(int mode)
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
-		start = SceProcessmgrForDriver_82D94BE9();
+		start = sceKernelGetProcessTimeWideCore();
 		while (state != 1) {
 			sceKernelDelayThread(100);
 			sceKernelDcacheInvalidateRangeForL1WBWA(
 				(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 			requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 			state = *requestState;
-			if (SceProcessmgrForDriver_82D94BE9() - start > 5000000)
+			if (sceKernelGetProcessTimeWideCore() - start > 5000000)
 				goto timedOut;
 			if (!gCompatProcessId)
 				goto terminated;
@@ -1064,14 +1064,14 @@ int compatWaitSpecialRequest(int mode)
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
-		start = SceProcessmgrForDriver_82D94BE9();
+		start = sceKernelGetProcessTimeWideCore();
 		while (state != 3) {
 			sceKernelDelayThread(100);
 			sceKernelDcacheInvalidateRangeForL1WBWA(
 				(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 			requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 			state = *requestState;
-			if (SceProcessmgrForDriver_82D94BE9() - start > 5000000)
+			if (sceKernelGetProcessTimeWideCore() - start > 5000000)
 				goto timedOut;
 			if (!gCompatProcessId)
 				goto terminated;
@@ -1095,7 +1095,7 @@ int compatWaitSpecialRequest(int mode)
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
-	start = SceProcessmgrForDriver_82D94BE9();
+	start = sceKernelGetProcessTimeWideCore();
 	while (state != 1) {
 		sceKernelDelayThread(100);
 		result = sceKernelLockMutex(gCompatExitMutex, 1, NULL);
@@ -1114,7 +1114,7 @@ int compatWaitSpecialRequest(int mode)
 		result = sceKernelUnlockMutex(gCompatExitMutex, 1);
 		if (result < 0)
 			goto out;
-		if (SceProcessmgrForDriver_82D94BE9() - start > 30000000)
+		if (sceKernelGetProcessTimeWideCore() - start > 30000000)
 			goto timedOut;
 		if (!gCompatProcessId)
 			goto terminated;
@@ -1361,8 +1361,8 @@ int compatInterrupt(int intrCode)
 		goto out;
 	}
 	pending = &gCompatSharedSram->runtime.interrupts[intrCode].pending;
-	start = SceProcessmgrForDriver_82D94BE9();
-	while (SceProcessmgrForDriver_82D94BE9() - start <= 1000000) {
+	start = sceKernelGetProcessTimeWideCore();
+	while (sceKernelGetProcessTimeWideCore() - start <= 1000000) {
 		status = *pending;
 		if (!status)
 			break;
@@ -1411,29 +1411,29 @@ int compatProcessStopHandler(SceUID pid, int event,
 		}
 		lcdDma = gCompatLcdDma;
 		lcdDma->stopControl = 0x1000000;
-		start = SceProcessmgrForDriver_82D94BE9();
+		start = sceKernelGetProcessTimeWideCore();
 		while (!(lcdDma->stopControl & 0x1000000)) {
-			if (SceProcessmgrForDriver_82D94BE9() - start > 5000000 ||
+			if (sceKernelGetProcessTimeWideCore() - start > 5000000 ||
 				!gCompatProcessId)
 				goto hardwareFailed;
 		}
 		lcdDma->stopCommand = 1;
-		start = SceProcessmgrForDriver_82D94BE9();
+		start = sceKernelGetProcessTimeWideCore();
 		while (lcdDma->activeStatus) {
 			sceKernelDelayThread(100);
-			if (SceProcessmgrForDriver_82D94BE9() - start > 5000000 ||
+			if (sceKernelGetProcessTimeWideCore() - start > 5000000 ||
 				!gCompatProcessId)
 				goto hardwareFailed;
 		}
 		lcdDma->stopControl = 0x11100000;
-		start = SceProcessmgrForDriver_82D94BE9();
+		start = sceKernelGetProcessTimeWideCore();
 		while (lcdDma->stopControl) {
 			sceKernelDelayThread(100);
-			if (SceProcessmgrForDriver_82D94BE9() - start > 5000000 ||
+			if (sceKernelGetProcessTimeWideCore() - start > 5000000 ||
 				!gCompatProcessId)
 				goto hardwareFailed;
 		}
-		result = SceDisplayForDriver_289D82FE(NULL, 1);
+		result = sceDisplaySetFrameBuf(NULL, 1);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		if (result != 0)
 			goto color;
@@ -1444,7 +1444,7 @@ int compatProcessStopHandler(SceUID pid, int event,
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
-	start = SceProcessmgrForDriver_82D94BE9();
+	start = sceKernelGetProcessTimeWideCore();
 	while (state != 1) {
 		sceKernelDelayThread(100);
 		if (sceKernelLockMutex(gCompatExitMutex, 1, NULL) < 0)
@@ -1457,7 +1457,7 @@ int compatProcessStopHandler(SceUID pid, int event,
 		state = *requestState;
 		if (sceKernelUnlockMutex(gCompatExitMutex, 1) < 0)
 			goto color;
-		if (SceProcessmgrForDriver_82D94BE9() - start > 30000000 ||
+		if (sceKernelGetProcessTimeWideCore() - start > 30000000 ||
 			!gCompatProcessId)
 			goto color;
 	}
@@ -1498,7 +1498,7 @@ int compatProcessStopHandler(SceUID pid, int event,
 		gCompatPreviousState = gCompatState;
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
-		ScePowerForDriver_FFC84E69(0);
+		scePowerSetCompatClockFrequency(0);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 	}
@@ -1531,7 +1531,7 @@ int compatSetDisplayConfig(int resolution, int colorSpaceMode)
 	param.frameBuf.pitch = 512;
 	param.frameBuf.width = 480;
 	param.frameBuf.height = 272;
-	result = SceDisplayForDriver_289D82FE(&param.frameBuf, 1);
+	result = sceDisplaySetFrameBuf(&param.frameBuf, 1);
 	if (result < 0)
 		return result;
 	return SceDisplayForDriver_8D79D187(0, colorSpaceMode);
@@ -1544,7 +1544,7 @@ int sceCompatGetPrimaryHead(void)
 
 	syscall = sceSyscallEnter();
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
-		result = SceDisplayForDriver_C8E554C5();
+		result = sceDisplayGetPrimaryHead();
 		sceSyscallLeave(syscall);
 		return result;
 	}
@@ -1564,7 +1564,7 @@ int compatFrameBufferInit(SceUID frameBuffer)
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		return (int)0x80010078;
 	}
-	guid = SceSysmemForDriver_45D22597(0, frameBuffer);
+	guid = scePUIDtoGUID(0, frameBuffer);
 	if (guid < 0) {
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		return guid;
@@ -1845,7 +1845,7 @@ int compatSuspendResume(int mode)
 #else
 	mapMainDDR();
 #endif
-	if ((result = ScePowerForDriver_FFC84E69(333)) != 0 ||
+	if ((result = scePowerSetCompatClockFrequency(333)) != 0 ||
 		(result = SceGrabForDriver_072B8D93(gCompatMode)) != 0 ||
 		(result = compatSecureInitialize(cookie)) != 0 ||
 		(result = compatEnterRunningState()) != 0) {
@@ -1865,7 +1865,7 @@ cleanup:
 		gCompatPreviousState = gCompatState;
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
-		ScePowerForDriver_FFC84E69(0);
+		scePowerSetCompatClockFrequency(0);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		goto out;
@@ -1875,14 +1875,14 @@ cleanup:
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
-	start = SceProcessmgrForDriver_82D94BE9();
+	start = sceKernelGetProcessTimeWideCore();
 	while (state != 1) {
 		sceKernelDelayThread(100);
 		sceKernelDcacheInvalidateRangeForL1WBWA(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
-		if (SceProcessmgrForDriver_82D94BE9() - start > 5000000)
+		if (sceKernelGetProcessTimeWideCore() - start > 5000000)
 			goto timedOut;
 		if (!gCompatProcessId)
 			goto terminated;
@@ -1911,14 +1911,14 @@ cleanup:
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
-	start = SceProcessmgrForDriver_82D94BE9();
+	start = sceKernelGetProcessTimeWideCore();
 	while (state != 3) {
 		sceKernelDelayThread(100);
 		sceKernelDcacheInvalidateRangeForL1WBWA(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
-		if (SceProcessmgrForDriver_82D94BE9() - start > 5000000)
+		if (sceKernelGetProcessTimeWideCore() - start > 5000000)
 			goto timedOut;
 		if (!gCompatProcessId)
 			goto terminated;
@@ -1964,10 +1964,10 @@ int compatLCDCSync(void)
 	int head;
 	int hcount;
 
-	head = SceDisplayForDriver_C8E554C5();
+	head = sceDisplayGetPrimaryHead();
 	if (head == 1) {
 		info.size = sizeof(info);
-		if (SceDisplayForDriver_B3C6D647(head, &info) < 0) {
+		if (sceDisplayGetResolutionInfoInternal(head, &info) < 0) {
 #if FW_DEBUG
 			info.vic = 0xffff;
 #endif
@@ -2006,12 +2006,12 @@ unsupported:
 int compatSetSuspendSema(SceUID suspendSema, SceUID resumeSema)
 {
 	if (suspendSema) {
-		suspendSema = SceSysmemForDriver_45D22597(0, suspendSema);
+		suspendSema = scePUIDtoGUID(0, suspendSema);
 		if (suspendSema < 0)
 			return suspendSema;
 	}
 	if (resumeSema) {
-		resumeSema = SceSysmemForDriver_45D22597(0, resumeSema);
+		resumeSema = scePUIDtoGUID(0, resumeSema);
 		if (resumeSema < 0)
 			return resumeSema;
 	}
@@ -2027,7 +2027,7 @@ int compatGetUpdateState(void)
 
 	if (gCompatRtcDeadline.tick == 0)
 		goto expired;
-	result = SceRtcForDriver_DEC408D4(&current);
+	result = sceRtcGetCurrentTick(&current);
 	if (result != 0) {
 		result = 0;
 		goto out;
@@ -2045,9 +2045,9 @@ int compatSetUpdateState(int state)
 	SceRtcTick current;
 	int result;
 
-	result = SceRtcForDriver_DEC408D4(&current);
+	result = sceRtcGetCurrentTick(&current);
 	if (result == 0)
-		result = SceRtcForDriver_0CB72FAF(&gCompatRtcDeadline, &current, 1);
+		result = sceRtcTickAddDays(&gCompatRtcDeadline, &current, 1);
 	return result;
 }
 
@@ -2086,7 +2086,7 @@ int compatAvailableColorSpaceSetting(void)
 
 	syscall = sceSyscallEnter();
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
-		head = SceDisplayForDriver_C8E554C5();
+		head = sceDisplayGetPrimaryHead();
 		sceSyscallLeave(syscall);
 		result = 0;
 		if (head >= 0 &&

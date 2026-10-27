@@ -136,5 +136,8 @@ typedef struct HeapHooks {
 
 int sceKernelGetFixedHeapInfo(SceUID uid, SceKernelFixedHeapInfo *info);
 int SceSysmemForKernel_DBEACE2C(struct ObjectHeap *heap, ObjectHeapInfo *info);
+/* processmgr.c has a static function of this name (Sony's records): declared here, not in
+   sysmem.h, so processmgr does not see it */
+struct ObjectHeap *sceKernelGetObjectHeap(void);
 int SceSysmemForKernel_42834422(const HeapHooks *hooks);
-int SceSysmemForKernel_1380E144(SceUInt32 level, HeapInfo *infos, SceSize size, SceSize *count);
+int sceKernelGetHeapInfoAll(SceUInt32 level, HeapInfo *infos, SceSize size, SceSize *count);

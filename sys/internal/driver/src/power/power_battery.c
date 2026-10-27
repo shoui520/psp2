@@ -277,7 +277,7 @@ int powerSuspendBatteryControl(void)
 	SceKernelIntrStatus intrState;
 	uint32_t events = 0x40000000;
 
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	if (s_powerBatteryBase.chargingAlarm > 0) {
 		events |= 0x200;
 		sceKernelCancelAlarm(s_powerBatteryBase.chargingAlarm);
@@ -295,7 +295,7 @@ int powerSuspendBatteryControl(void)
 static inline __attribute__((always_inline)) void notifyBatteryWorker(void)
 {
 	uint32_t context = sceSyscallEnter();
-	SceKernelIntrStatus intrState = SceCpuForDriver_821FC0EE();
+	SceKernelIntrStatus intrState = sceKernelCpuSuspendIntr();
 
 	sceKernelSetEventFlag(s_powerBatteryBase.eventFlag, 0x10000000);
 	sceKernelClearEventFlag(s_powerBatteryBase.eventFlag, ~0x10000000U);
@@ -313,7 +313,7 @@ int ScePowerForDriver_166922EC(void)
 {
 	SceKernelIntrStatus intrState;
 
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	if (!s_powerBatteryBase.chargingInhibitCount) {
 		if (s_powerBatteryBase.chargingAlarm > 0) {
 			sceKernelCancelAlarm(s_powerBatteryBase.chargingAlarm);
@@ -332,7 +332,7 @@ int ScePowerForDriver_DD3D4DAC(void)
 {
 	SceKernelIntrStatus intrState;
 
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	if ((int32_t)s_powerBatteryBase.chargingInhibitCount > 0) {
 		s_powerBatteryBase.chargingInhibitCount--;
 		if (!s_powerBatteryBase.chargingInhibitCount) {
@@ -355,7 +355,7 @@ int ScePowerForDriver_E4E3C316(uint32_t status)
 
 	if (s_powerBatteryBase.workerPaused)
 		return 0;
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	state->usbStatus = status;
 	if (state->usbStatusPending) {
 		result = -1;
@@ -423,7 +423,7 @@ int ScePowerForDriver_ACC857A4(void)
 	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(
 				(SceKernelSpinlock *)&s_powerBatteryBase.chargingLock);
 	if (s_powerBatteryBase.usbChargingEnabled) {
-		previous = SceCpuForDriver_CDA96E81(
+		previous = sceKernelAtomicCompareAndSet32(
 				(SceInt32 *)&state->usbStopPending, 0, 1);
 		if (!previous) {
 			state->usbStopPacket.tx[2] = 1;
@@ -676,7 +676,7 @@ int powerResumeBatteryControl(const struct PowerResumeInformation *information)
 	SceKernelIntrStatus intrState;
 	uint32_t events;
 
-	intrState = SceCpuForDriver_821FC0EE();
+	intrState = sceKernelCpuSuspendIntr();
 	s_powerBatteryBase.hardwareStatus = information->powerInfo;
 	s_powerBatteryBase.state.fakeStatusSize = 0;
 	s_powerBatteryBase.state.fakeRemainCapacity = 0;

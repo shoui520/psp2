@@ -72,18 +72,18 @@ int recoverFileGroups(void)
 				summary->creationTick = 0;
 				summary->modificationTick = 0;
 				if (found) {
-					if (SceRtcForDriver_F139E359(&stat.st_ctime, &tick) >= 0 &&
+					if (sceRtcGetTick(&stat.st_ctime, &tick) >= 0 &&
 					    tick.tick && tick.tick < summary->creationTick)
 						summary->creationTick = tick.tick;
-					if (SceRtcForDriver_F139E359(&stat.st_mtime, &tick) >= 0 &&
+					if (sceRtcGetTick(&stat.st_mtime, &tick) >= 0 &&
 					    tick.tick && summary->modificationTick < tick.tick)
 						summary->modificationTick = tick.tick;
 				} else {
 					summary->identity = magicGateFileService.record.identity;
-					if (SceRtcForDriver_F139E359(&stat.st_ctime,
+					if (sceRtcGetTick(&stat.st_ctime,
 								    (SceRtcTick *)&summary->creationTick) < 0)
 						summary->creationTick = 0;
-					if (SceRtcForDriver_F139E359(&stat.st_mtime,
+					if (sceRtcGetTick(&stat.st_mtime,
 								    (SceRtcTick *)&summary->modificationTick) < 0)
 						summary->modificationTick = 0;
 					found = 1;
@@ -331,7 +331,7 @@ int writeFileRecord(MagicGateFileRequest *request)
 		goto ioErrorClose;
 	if (result == sizeof(magicGateFileService.record)) {
 		if (sceIoGetstatByFd(fd, &stat) >= 0 &&
-		    SceRtcForDriver_F139E359(&stat.st_mtime, &tick) >= 0)
+		    sceRtcGetTick(&stat.st_mtime, &tick) >= 0)
 			magicGateFileService.groups[group].modificationTick = tick.tick;
 		result = 0;
 		if (!sceKernelIsUserModeThread())

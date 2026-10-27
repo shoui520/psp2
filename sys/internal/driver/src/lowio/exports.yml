@@ -28,8 +28,8 @@ SceLowio:
         - ScePervasiveForDriver_17109C28: 0x17109C28
         - ScePervasiveForDriver_18DD8043: 0x18DD8043
         - ScePervasiveForDriver_243D0E78: 0x243D0E78
-        - ScePervasiveForDriver_25AE181E: 0x25AE181E
-        - ScePervasiveForDriver_26B51075: 0x26B51075
+        - scePervasiveIftuDsiClkGateDisable: 0x25AE181E
+        - scePervasiveCecClockOutEnable: 0x26B51075
         - ScePervasiveForDriver_270BE98A: 0x270BE98A
         - ScePervasiveForDriver_28731EC5: 0x28731EC5
         - ScePervasiveForDriver_29E65AE1: 0x29E65AE1
@@ -65,7 +65,7 @@ SceLowio:
         - ScePervasiveForDriver_4F64DEF6: 0x4F64DEF6
         - ScePervasiveForDriver_51981FEE: 0x51981FEE
         - ScePervasiveForDriver_551EEE82: 0x551EEE82
-        - ScePervasiveForDriver_589D0291: 0x589D0291
+        - scePervasiveCameraBusClockSelect: 0x589D0291
         - ScePervasiveForDriver_59B7CA34: 0x59B7CA34
         - ScePervasiveForDriver_5AFE0AF0: 0x5AFE0AF0
         - ScePervasiveForDriver_5B4EF352: 0x5B4EF352
@@ -127,14 +127,14 @@ SceLowio:
         - ScePervasiveForDriver_B8AF1249: 0xB8AF1249
         - ScePervasiveForDriver_B9904983: 0xB9904983
         - ScePervasiveForDriver_BB67EF58: 0xBB67EF58
-        - ScePervasiveForDriver_BC42C72F: 0xBC42C72F
+        - scePervasiveIftuDsiClkGateEnable: 0xBC42C72F
         - ScePervasiveForDriver_BD868E6E: 0xBD868E6E
         - ScePervasiveForDriver_C0C842FE: 0xC0C842FE
         - ScePervasiveForDriver_C0F7CC39: 0xC0F7CC39
         - ScePervasiveForDriver_C37CFDFC: 0xC37CFDFC
         - ScePervasiveForDriver_CA0ACFC5: 0xCA0ACFC5
         - ScePervasiveForDriver_CB0F15CD: 0xCB0F15CD
-        - ScePervasiveForDriver_D185D235: 0xD185D235
+        - scePervasiveCecClockOutDisable: 0xD185D235
         - ScePervasiveForDriver_D326E15F: 0xD326E15F
         - ScePervasiveForDriver_D34E74C5: 0xD34E74C5
         - ScePervasiveForDriver_D3B59C33: 0xD3B59C33
@@ -143,7 +143,7 @@ SceLowio:
         - ScePervasiveForDriver_E0711D42: 0xE0711D42
         - ScePervasiveForDriver_E2D8F6C3: 0xE2D8F6C3
         - ScePervasiveForDriver_E3A735B9: 0xE3A735B9
-        - ScePervasiveForDriver_E3FC1C8D: 0xE3FC1C8D
+        - scePervasiveIftuDsiResetEnable: 0xE3FC1C8D
         - ScePervasiveForDriver_E40BED0F: 0xE40BED0F
         - ScePervasiveForDriver_E4B145AE: 0xE4B145AE
         - ScePervasiveForDriver_E6728E30: 0xE6728E30
@@ -166,7 +166,7 @@ SceLowio:
         - ScePervasiveForDriver_FBE5AA2F: 0xFBE5AA2F
         - ScePervasiveForDriver_FDD445C3: 0xFDD445C3
         - ScePervasiveForDriver_FF4B3CA6: 0xFF4B3CA6
-        - ScePervasiveForDriver_FFB43AC2: 0xFFB43AC2
+        - scePervasiveIftuDsiResetDisable: 0xFFB43AC2
     SceGpioForDriver:
       syscall: false
       version: 1
@@ -179,9 +179,9 @@ SceLowio:
         - SceGpioForDriver_A1B5A462: 0xA1B5A462
         - SceGpioForDriver_BBEA1DDC: 0xBBEA1DDC
         - SceGpioForDriver_C4CB78E2: 0xC4CB78E2
-        - SceGpioForDriver_D454A584: 0xD454A584
+        - sceGpioPortSet: 0xD454A584
         - SceGpioForDriver_E97A3B31: 0xE97A3B31
-        - SceGpioForDriver_F6310435: 0xF6310435
+        - sceGpioPortClear: 0xF6310435
     ScePwmForDriver:
       syscall: false
       version: 1
@@ -197,12 +197,12 @@ SceLowio:
       version: 1
       nid: 0xE14BEF6E
       functions:
-        - SceI2cForDriver_0A40B7BF: 0x0A40B7BF
+        - sceI2cMasterTransmitReceive: 0x0A40B7BF
         - SceI2cForDriver_30CF9469: 0x30CF9469
         - SceI2cForDriver_76D277AB: 0x76D277AB
         - SceI2cForDriver_9CF8F3D6: 0x9CF8F3D6
         - SceI2cForDriver_A2C7CE62: 0xA2C7CE62
-        - SceI2cForDriver_CA94A759: 0xCA94A759
+        - sceI2cMasterTransmit: 0xCA94A759
         - SceI2cForDriver_D1D0A9A4: 0xD1D0A9A4
         - SceI2cForDriver_E449AC6E: 0xE449AC6E
     SceGrabForDriver:
@@ -231,35 +231,35 @@ SceLowio:
       version: 1
       nid: 0xEC897883
       functions:
-        - SceDsiForDriver_114D1413: 0x114D1413
+        - sceDsiStopMaster: 0x114D1413
         - SceDsiForDriver_3FB0DF1F: 0x3FB0DF1F
         - SceDsiForDriver_4DF9E924: 0x4DF9E924
-        - SceDsiForDriver_5BE5AA9B: 0x5BE5AA9B
+        - sceDsiStartMaster: 0x5BE5AA9B
         - SceDsiForDriver_6F8029A1: 0x6F8029A1
-        - SceDsiForDriver_7640F607: 0x7640F607
-        - SceDsiForDriver_78E6E3CF: 0x78E6E3CF
+        - sceDsiStopDisplay: 0x7640F607
+        - sceDsiSetDisplayMode: 0x78E6E3CF
         - SceDsiForDriver_8610B795: 0x8610B795
         - SceDsiForDriver_89C00D2F: 0x89C00D2F
         - SceDsiForDriver_97BFEA76: 0x97BFEA76
         - SceDsiForDriver_98120684: 0x98120684
         - SceDsiForDriver_B3A70C05: 0xB3A70C05
         - SceDsiForDriver_BA6BC89F: 0xBA6BC89F
-        - SceDsiForDriver_C2E85919: 0xC2E85919
+        - sceDsiStartDisplay: 0xC2E85919
         - SceDsiForDriver_F2921E29: 0xF2921E29
     SceIftuForDriver:
       syscall: false
       version: 1
       nid: 0xCAFCFE50
       functions:
-        - SceIftuForDriver_0D7C02F7: 0x0D7C02F7
+        - sceIftuEnable: 0x0D7C02F7
         - SceIftuForDriver_0FCBF457: 0x0FCBF457
         - SceIftuForDriver_357EAE24: 0x357EAE24
-        - SceIftuForDriver_67E37EFC: 0x67E37EFC
-        - SceIftuForDriver_7CE0C4DA: 0x7CE0C4DA
-        - SceIftuForDriver_AF19FD85: 0xAF19FD85
-        - SceIftuForDriver_C11F30B3: 0xC11F30B3
+        - sceIftuConvert: 0x67E37EFC
+        - sceIftuSetInputFrameBuffer: 0x7CE0C4DA
+        - sceIftuSetMergeSetting: 0xAF19FD85
+        - sceIftuDisable: 0xC11F30B3
         - SceIftuForDriver_D64F4C6B: 0xD64F4C6B
-        - SceIftuForDriver_E6EE2C6B: 0xE6EE2C6B
+        - sceIftuSetOutputFormat: 0xE6EE2C6B
     SceCsiForDriver:
       syscall: false
       version: 1

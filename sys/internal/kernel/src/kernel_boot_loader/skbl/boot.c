@@ -332,7 +332,7 @@ static inline void SetHardwareDependent(SceKernelBootParam *param)
 		break;
 	}
 	if (param->kblParam->boot_flags[0] != 0xff || IsSafeModeBoot())
-		SceDipswForDriver_F1F3E9FE(DIPSW_PLATFORM_DOLCE);
+		sceKernelClearDipsw(DIPSW_PLATFORM_DOLCE);
 	if (sceKernelCheckDipsw(DIPSW_PLATFORM_DOLCE)) {
 		param->hardwareDependent[0] = 0x20101;
 		param->hardwareDependent[1] = 0x252;
@@ -348,11 +348,11 @@ static inline void SetHardwareDependent(SceKernelBootParam *param)
 			param->hardwareDependent[1] &= ~0x1000;
 		else
 			param->hardwareDependent[1] |= 0x1000;
-		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
+		sceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
 	} else if ((param->hardwareDependent[0] >> 16) == 2) {
-		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
+		sceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
 	} else {
-		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tmodel: VITA\n");
+		sceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: VITA\n");
 	}
 }
 
@@ -362,7 +362,7 @@ static inline void SetHardwareDependent(SceKernelBootParam *param)
 static inline void EnableLpddr2Sub(void)
 {
 	if ((int)s_bootParam.current->socRevision < 0) {
-		SceDebugForDriver_1A3F2AA4(QA_LEVEL(0, 2), "Disabled LPDDR2SUB\n");
+		sceKernelPrintfLevel(QA_LEVEL(0, 2), "Disabled LPDDR2SUB\n");
 		return;
 	}
 	PERVASIVE_BASECLK->dramSubClock = 1;
@@ -447,77 +447,77 @@ static inline uint32_t BootCpu0Init(void *lr)
 	}
 	DipswSetState(&s_kblParam.dipsw);
 	if (s_kblParam.boot_flags[1] == 0xff) {
-		SceDipswForDriver_F1F3E9FE(DIPSW_UART0_CONSOLE);
-		SceDipswForDriver_F1F3E9FE(DIPSW_USER_UART);
+		sceKernelClearDipsw(DIPSW_UART0_CONSOLE);
+		sceKernelClearDipsw(DIPSW_USER_UART);
 	} else {
-		SceDipswForDriver_82E45FBF(DIPSW_UART0_CONSOLE);
-		SceDipswForDriver_82E45FBF(DIPSW_USER_UART);
+		sceKernelSetDipsw(DIPSW_UART0_CONSOLE);
+		sceKernelSetDipsw(DIPSW_USER_UART);
 	}
 	if (!(s_kblParam.boot_flags[4] & 1))
-		SceDipswForDriver_82E45FBF(DIPSW_SHELL_CRON);
+		sceKernelSetDipsw(DIPSW_SHELL_CRON);
 
 	if ((s_kblParam.pscode.product_code & 0xfeff) == 1 &&
 	    !sceKernelCheckDipsw(DIPSW_DISABLE_RECONFIGURATION)) {
 		if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE)) {
-			SceDipswForDriver_82E45FBF(DIPSW_DMAC6);
-			SceDipswForDriver_82E45FBF(DIPSW_SYSTEM_DECI);
-			SceDipswForDriver_82E45FBF(DIPSW_DECI);
-			SceDipswForDriver_82E45FBF(DIPSW_UART1_CONSOLE);
-			SceDipswForDriver_82E45FBF(DIPSW_SYSTEM_TTY);
-			SceDipswForDriver_82E45FBF(DIPSW_TTY_STDIO);
-			SceDipswForDriver_82E45FBF(DIPSW_STOP_ON_ASSERT);
-			SceDipswForDriver_82E45FBF(DIPSW_ASSERT_LEVEL_1);
-			SceDipswForDriver_82E45FBF(DIPSW_DEBUG_LEVEL_1);
-			SceDipswForDriver_82E45FBF(DIPSW_CRITICAL_ERROR);
-			SceDipswForDriver_82E45FBF(DIPSW_HARDWARE_BREAKPOINT);
-			SceDipswForDriver_82E45FBF(DIPSW_USER_PA_MAPPING);
+			sceKernelSetDipsw(DIPSW_DMAC6);
+			sceKernelSetDipsw(DIPSW_SYSTEM_DECI);
+			sceKernelSetDipsw(DIPSW_DECI);
+			sceKernelSetDipsw(DIPSW_UART1_CONSOLE);
+			sceKernelSetDipsw(DIPSW_SYSTEM_TTY);
+			sceKernelSetDipsw(DIPSW_TTY_STDIO);
+			sceKernelSetDipsw(DIPSW_STOP_ON_ASSERT);
+			sceKernelSetDipsw(DIPSW_ASSERT_LEVEL_1);
+			sceKernelSetDipsw(DIPSW_DEBUG_LEVEL_1);
+			sceKernelSetDipsw(DIPSW_CRITICAL_ERROR);
+			sceKernelSetDipsw(DIPSW_HARDWARE_BREAKPOINT);
+			sceKernelSetDipsw(DIPSW_USER_PA_MAPPING);
 			revision = param->socRevision;
 			if (revision & 0x1ff00) {
 				if ((revision & 0x30000000) == 0x20000000)
-					SceDipswForDriver_82E45FBF(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
+					sceKernelSetDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
 				else
-					SceDipswForDriver_F1F3E9FE(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
+					sceKernelClearDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
 			} else if ((int)revision >= 0) {
-				SceDipswForDriver_82E45FBF(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
+				sceKernelSetDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
 			} else {
-				SceDipswForDriver_F1F3E9FE(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
+				sceKernelClearDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
 			}
 			revision = param->socRevision;
 			if ((revision & 0x1ff00) == 0x100 && (int)revision < 0 &&
 			    (revision & 0x30000000) == 0x20000000)
-				SceDipswForDriver_82E45FBF(DIPSW_USER_PA_MAPPING_ADDRESS);
+				sceKernelSetDipsw(DIPSW_USER_PA_MAPPING_ADDRESS);
 			else
-				SceDipswForDriver_F1F3E9FE(DIPSW_USER_PA_MAPPING_ADDRESS);
+				sceKernelClearDipsw(DIPSW_USER_PA_MAPPING_ADDRESS);
 			if (param->kblParam->boot_type_indicator_2 & 0x40)
-				SceDipswForDriver_F1F3E9FE(DIPSW_STOP_ON_ASSERT);
+				sceKernelClearDipsw(DIPSW_STOP_ON_ASSERT);
 		} else {
-			SceDipswForDriver_F1F3E9FE(DIPSW_DMAC6);
-			SceDipswForDriver_F1F3E9FE(DIPSW_SYSTEM_DECI);
-			SceDipswForDriver_F1F3E9FE(DIPSW_DECI);
-			SceDipswForDriver_F1F3E9FE(DIPSW_SYSTEM_TTY);
-			SceDipswForDriver_F1F3E9FE(DIPSW_TTY_STDIO);
-			SceDipswForDriver_F1F3E9FE(DIPSW_STOP_ON_ASSERT);
-			SceDipswForDriver_F1F3E9FE(DIPSW_ASSERT_LEVEL_1);
-			SceDipswForDriver_F1F3E9FE(DIPSW_ASSERT_LEVEL_2);
-			SceDipswForDriver_F1F3E9FE(DIPSW_DEBUG_LEVEL_1);
-			SceDipswForDriver_F1F3E9FE(DIPSW_DEBUG_LEVEL_2);
-			SceDipswForDriver_F1F3E9FE(DIPSW_CRITICAL_ERROR);
-			SceDipswForDriver_F1F3E9FE(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
-			SceDipswForDriver_F1F3E9FE(DIPSW_HARDWARE_BREAKPOINT);
-			SceDipswForDriver_F1F3E9FE(DIPSW_USER_PA_MAPPING);
-			SceDipswForDriver_F1F3E9FE(DIPSW_MEMORY_SIZE);
-			SceDipswForDriver_F1F3E9FE(DIPSW_USER_PA_MAPPING_ADDRESS);
+			sceKernelClearDipsw(DIPSW_DMAC6);
+			sceKernelClearDipsw(DIPSW_SYSTEM_DECI);
+			sceKernelClearDipsw(DIPSW_DECI);
+			sceKernelClearDipsw(DIPSW_SYSTEM_TTY);
+			sceKernelClearDipsw(DIPSW_TTY_STDIO);
+			sceKernelClearDipsw(DIPSW_STOP_ON_ASSERT);
+			sceKernelClearDipsw(DIPSW_ASSERT_LEVEL_1);
+			sceKernelClearDipsw(DIPSW_ASSERT_LEVEL_2);
+			sceKernelClearDipsw(DIPSW_DEBUG_LEVEL_1);
+			sceKernelClearDipsw(DIPSW_DEBUG_LEVEL_2);
+			sceKernelClearDipsw(DIPSW_CRITICAL_ERROR);
+			sceKernelClearDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
+			sceKernelClearDipsw(DIPSW_HARDWARE_BREAKPOINT);
+			sceKernelClearDipsw(DIPSW_USER_PA_MAPPING);
+			sceKernelClearDipsw(DIPSW_MEMORY_SIZE);
+			sceKernelClearDipsw(DIPSW_USER_PA_MAPPING_ADDRESS);
 			if (sceKernelCheckDipsw(DIPSW_RELEASE_CHECK_MODE)) {
-				SceDipswForDriver_82E45FBF(DIPSW_UART1_CONSOLE);
-				SceDipswForDriver_82E45FBF(DIPSW_USER_UART);
+				sceKernelSetDipsw(DIPSW_UART1_CONSOLE);
+				sceKernelSetDipsw(DIPSW_USER_UART);
 			} else {
-				SceDipswForDriver_F1F3E9FE(DIPSW_UART1_CONSOLE);
-				SceDipswForDriver_F1F3E9FE(DIPSW_USER_UART);
+				sceKernelClearDipsw(DIPSW_UART1_CONSOLE);
+				sceKernelClearDipsw(DIPSW_USER_UART);
 			}
 		}
-		SceDipswForDriver_82E45FBF(DIPSW_CONSOLE_LOGGING);
+		sceKernelSetDipsw(DIPSW_CONSOLE_LOGGING);
 		if (sceKernelCheckDipsw(DIPSW_UART0_CONSOLE))
-			SceDipswForDriver_F1F3E9FE(DIPSW_SYSTEM_TTY);
+			sceKernelClearDipsw(DIPSW_SYSTEM_TTY);
 	}
 
 	InitializeAssertLevel();
@@ -580,7 +580,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	case 0x114:
 	case 0x115:
 		if (s_bootParam.current->socCacheStatus & 2)
-			SceDebugForDriver_1A3F2AA4(QA_LEVEL(0, 2), "\tL2 Cache is defective\n");
+			sceKernelPrintfLevel(QA_LEVEL(0, 2), "\tL2 Cache is defective\n");
 		break;
 	default:
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1968, "\tUnknown chip revision [rev=%x]\n",
@@ -589,7 +589,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	}
 
 	aslr = s_kblParam.dipsw.aslr_seed;
-	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tASLR: 0x%08x\n", aslr);
+	sceKernelPrintfLevel(QA_LEVEL(1, 2), "\tASLR: 0x%08x\n", aslr);
 	SCE_PRINTF_WITH_INFO(0, 1993, "session ID : %02X%02X%02X%02X%02X%02X%02X%02X"
 			     "%02X%02X%02X%02X%02X%02X%02X%02X\n",
 			     s_kblParam.session_id[0], s_kblParam.session_id[1],
@@ -605,14 +605,14 @@ static inline uint32_t BootCpu0Init(void *lr)
 	s_bootParam.current->memory[0].pbase = 0x40000000;
 	s_bootParam.current->memory[0].psize = 0x200000;
 	for (n = 0; n < s_bootParam.current->numMemory; n++)
-		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tmemory[%d] base: 0x%08x-0x%08x [0x%08x]\n",
+		sceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmemory[%d] base: 0x%08x-0x%08x [0x%08x]\n",
 				      n, s_bootParam.current->memory[n].pbase,
 				      s_bootParam.current->memory[n].pbase +
 				      s_bootParam.current->memory[n].psize - 1,
 				      s_bootParam.current->memory[n].psize);
-	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\twakeupFactor: 0x%08x\n",
+	sceKernelPrintfLevel(QA_LEVEL(1, 2), "\twakeupFactor: 0x%08x\n",
 			      s_kblParam.wakeup_factor);
-	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\thardwareInfo: 0x%08x\n",
+	sceKernelPrintfLevel(QA_LEVEL(1, 2), "\thardwareInfo: 0x%08x\n",
 			      s_kblParam.hardware_info);
 
 	SetHardwareDependent(param);
@@ -1010,7 +1010,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 		SceDebugForKernel_22546577((uintptr_t)SerialDebugPutchar, 0);
 	}
 	SCE_PRINTF_WITH_INFO(0, 1868, "===================================================\n");
-	SceDebugForDriver_1A3F2AA4(QA_LEVEL(0, 2),
+	sceKernelPrintfLevel(QA_LEVEL(0, 2),
 			      "Starting PSP2 Kernel Boot Loader (Non-secure) [0x%08x]: %d\n",
 			      FW_VERSION, KblGetBuildNumber());
 	SCE_DBG_PRINTF_LEVEL(1, 0, 1897, "\n");
@@ -1026,34 +1026,34 @@ static inline uint32_t BootCpu0Init(void *lr)
 		SCE_DBG_ASSERT_CHECK_LR(0, 1932, lr);
 
 	/* the CP's boot switches */
-	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tBOOTSW\n");
+	sceKernelPrintfLevel(QA_LEVEL(1, 2), "\tBOOTSW\n");
 	for (i = 0; i < 8; i++) {
-		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\t\t%d: 0x%08x", i, s_kblParam.dipswWords[i]);
+		sceKernelPrintfLevel(QA_LEVEL(1, 2), "\t\t%d: 0x%08x", i, s_kblParam.dipswWords[i]);
 		switch (i) {
 		case 1:
-			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": CP bid & version\n");
+			sceKernelPrintfLevel(QA_LEVEL(1, 2), ": CP bid & version\n");
 			break;
 		case 2:
-			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": CP time\n");
+			sceKernelPrintfLevel(QA_LEVEL(1, 2), ": CP time\n");
 			break;
 		case 3:
-			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": ASLR\n");
+			sceKernelPrintfLevel(QA_LEVEL(1, 2), ": ASLR\n");
 			aslr = s_kblParam.dipswWords[i];
 			break;
 		case 4:
-			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": SDK(SCE)\n");
+			sceKernelPrintfLevel(QA_LEVEL(1, 2), ": SDK(SCE)\n");
 			break;
 		case 5:
-			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": SHELL\n");
+			sceKernelPrintfLevel(QA_LEVEL(1, 2), ": SHELL\n");
 			break;
 		case 6:
-			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": debug control\n");
+			sceKernelPrintfLevel(QA_LEVEL(1, 2), ": debug control\n");
 			break;
 		case 7:
-			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": system control\n");
+			sceKernelPrintfLevel(QA_LEVEL(1, 2), ": system control\n");
 			break;
 		default:
-			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": CP time\n");
+			sceKernelPrintfLevel(QA_LEVEL(1, 2), ": CP time\n");
 			break;
 		}
 	}
@@ -1071,14 +1071,14 @@ static inline uint32_t BootCpu0Init(void *lr)
 	current->memory[2].pbase = 0x80000000;
 	current->memory[2].psize = 0x40000000;
 	for (n = 0; n < s_bootParam.current->numMemory; n++)
-		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tmemory[%d] base: 0x%08x-0x%08x [0x%08x]\n",
+		sceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmemory[%d] base: 0x%08x-0x%08x [0x%08x]\n",
 				      n, s_bootParam.current->memory[n].pbase,
 				      s_bootParam.current->memory[n].pbase +
 				      s_bootParam.current->memory[n].psize - 1,
 				      s_bootParam.current->memory[n].psize);
-	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\twakeupFactor: 0x%08x\n",
+	sceKernelPrintfLevel(QA_LEVEL(1, 2), "\twakeupFactor: 0x%08x\n",
 			      s_kblParam.wakeup_factor);
-	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\thardwareInfo: 0x%08x\n",
+	sceKernelPrintfLevel(QA_LEVEL(1, 2), "\thardwareInfo: 0x%08x\n",
 			      s_kblParam.hardware_info);
 	SetHardwareDependent(param);
 

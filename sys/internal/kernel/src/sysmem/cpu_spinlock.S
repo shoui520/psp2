@@ -123,8 +123,8 @@
 	endfunc	sceKernelSpinlockLowLock
 
 #if !SYSMEM_NSKBL
-/* int SceCpuForDriver_5AC9D394(lock): 0, or -1 when the lock is taken */
-	func	SceCpuForDriver_5AC9D394
+/* int sceKernelSpinlockLowTrylock(lock): 0, or -1 when the lock is taken */
+	func	sceKernelSpinlockLowTrylock
 0:	ldrex	r1, [r0]
 	cbnz	r1, 1f
 	strex	r1, lr, [r0]
@@ -135,7 +135,7 @@
 	bx	lr
 1:	movs.w	r0, #-1
 	bx	lr
-	endfunc	SceCpuForDriver_5AC9D394
+	endfunc	sceKernelSpinlockLowTrylock
 #endif
 
 /* void CpuSpinlockUnlock(lock) */
@@ -218,10 +218,10 @@
 
 #if !SYSMEM_NSKBL
 /*
- * void SceCpuForDriver_3F42B434(lock). As in Sony's code, a successful
+ * void sceKernelRWSpinlockLowWriteLock(lock). As in Sony's code, a successful
  * strex loops back (and then waits on its own lock) and a failed one returns.
  */
-	func	SceCpuForDriver_3F42B434
+	func	sceKernelRWSpinlockLowWriteLock
 	movs.w	r2, #RW_WRITER
 1:	ldrex	r1, [r0]
 	cbnz	r1, 2f
@@ -231,7 +231,7 @@
 	bx	lr
 2:	wfe
 3:	b	1b
-	endfunc	SceCpuForDriver_3F42B434
+	endfunc	sceKernelRWSpinlockLowWriteLock
 
 /* int SceCpuForDriver_4F7790B4(lock): 0, or -1 when held */
 	func	SceCpuForDriver_4F7790B4
@@ -309,8 +309,8 @@
 	endfunc	CpuRWSpinlockWriteUnlockIrq, sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
 
 #if !SYSMEM_NSKBL
-/* void SceCpuForDriver_CAC9AE80(lock): waits while a writer holds it */
-	func	SceCpuForDriver_CAC9AE80
+/* void sceKernelRWSpinlockLowReadLock(lock): waits while a writer holds it */
+	func	sceKernelRWSpinlockLowReadLock
 0:	ldrex	r1, [r0]
 	adds	r1, #1
 	bmi	1f
@@ -320,7 +320,7 @@
 	b.w	0b
 2:	dmb	sy
 	bx	lr
-	endfunc	SceCpuForDriver_CAC9AE80
+	endfunc	sceKernelRWSpinlockLowReadLock
 
 /*
  * int SceCpuForDriver_093925BD(lock): 0, or -1 when a writer holds it.

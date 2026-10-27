@@ -48,7 +48,7 @@ struct ThreadMgrCpuCB {
 	} readyQueue[0x100];			/* 0x80: per priority (0x80-0xfb are shared) */
 };
 
-/* a kernel TLS slot (SceThreadmgrForDriver_B645C7EF) */
+/* a kernel TLS slot (sceKernelRegisterKTLS) */
 struct ThreadmgrTlsSlot {
 	uint32_t active;
 	uint32_t liveCount;			/* threads with memory for it */

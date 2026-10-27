@@ -79,7 +79,7 @@ int ngsRunDspBatch(NgsSynSystem *system, NgsDspBatchEntry *entries,
 	command[2] = system->dspHeapUsed;
 	command[3] = system->systemId;
 	ngsLockCodec(system->context);
-	result = SceCodecEngineWrapperForDriver_391BD4FD(321, command, NULL,
+	result = sceVeneziaRpcCallGenericThunk(321, command, NULL,
 							 NULL);
 	ngsUnlockCodec(system->context);
 	return result;
@@ -94,7 +94,7 @@ inline uintptr_t ngsGetPhysicalAddress(const void *address)
 		return 0;
 	virtualRange.addr = (uintptr_t)address;
 	virtualRange.size = 4;
-	if (SceSysmemForDriver_AE36C775(&virtualRange, &physicalRange) != 0)
+	if (sceKernelVARangeToPARange(&virtualRange, &physicalRange) != 0)
 		return 0;
 	return physicalRange.addr;
 }

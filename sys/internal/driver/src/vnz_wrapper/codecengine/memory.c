@@ -48,7 +48,7 @@ int _closeUnmapMemBlockCore(SceUID pid, CodecEngineUnmapMemBlockEntry *entry)
 			memory->userMemBlock = -1;
 		}
 		if (entry->puid >= 0) {
-			error = SceSysmemForDriver_84A4AF5E(pid, entry->puid);
+			error = scePUIDClose(pid, entry->puid);
 			entry->puid = -1;
 			if (error < 0)
 				ret = error;
@@ -203,7 +203,7 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 	ret = kernelMemBlock;
 	if (kernelMemBlock < 0)
 		goto close;
-	puid = SceSysmemForDriver_BF209859(0, guid);
+	puid = scePUIDOpenByGUID(0, guid);
 	ret = puid;
 	if (puid >= 0) {
 		info.ex.size = sizeof(info);
@@ -235,7 +235,7 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 			}
 		}
 		if (puid != -1)
-			SceSysmemForDriver_84A4AF5E(0, puid);
+			scePUIDClose(0, puid);
 	}
 	sceKernelFreeMemBlock(kernelMemBlock);
 close:
@@ -270,7 +270,7 @@ int _closeUnmapMemBlock(SceUID puid)
 	if (ret < 0)
 		goto unlockProcess;
 	memory = NULL;
-	guid = SceSysmemForDriver_45D22597(0, puid);
+	guid = scePUIDtoGUID(0, puid);
 	if (guid <= 0) {
 		ret = guid | 0x40000000;
 		if (guid < 0)
@@ -302,7 +302,7 @@ int _closeUnmapMemBlock(SceUID puid)
 			goto unlock;
 		}
 	}
-	guid = SceSysmemForDriver_45D22597(0, puid);
+	guid = scePUIDtoGUID(0, puid);
 	if (guid <= 0) {
 		ret = guid | 0x40000000;
 		goto unlock;
@@ -356,7 +356,7 @@ void *sceCodecEngineAllocMemoryFromUnmapMemBlockForUser(SceUID puid,
 		goto unlockProcess;
 	}
 	memory = NULL;
-	guid = SceSysmemForDriver_45D22597(0, puid);
+	guid = scePUIDtoGUID(0, puid);
 	if (guid <= 0) {
 		result = 0;
 		goto unlock;
@@ -421,7 +421,7 @@ int sceCodecEngineFreeMemoryFromUnmapMemBlockForUser(SceUID puid, void *address)
 	if (ret < 0)
 		goto unlockProcess;
 	memory = NULL;
-	guid = SceSysmemForDriver_45D22597(0, puid);
+	guid = scePUIDtoGUID(0, puid);
 	if (guid <= 0) {
 		ret = guid | 0x40000000;
 		goto unlock;
@@ -884,7 +884,7 @@ int _closeUnmapMemBlockAll(SceUID pid)
 			continue;
 		puid = entries[index].puid;
 		memory = NULL;
-		guid = SceSysmemForDriver_45D22597(pid, puid);
+		guid = scePUIDtoGUID(pid, puid);
 		if (guid <= 0) {
 			if (guid < 0)
 				ret = guid | 0x40000000;

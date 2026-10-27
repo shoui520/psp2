@@ -498,14 +498,14 @@ int ScePervasiveForDriver_D3B59C33(int port)
 	return ResetDisableDevice(&csi[port]);
 }
 
-int ScePervasiveForDriver_E3FC1C8D(int port, unsigned int mask)
+int scePervasiveIftuDsiResetEnable(int port, unsigned int mask)
 {
 	volatile uint32_t *dsi = RESET_REGS->dsi;
 
 	return ResetEnableMask(&dsi[port], mask);
 }
 
-int ScePervasiveForDriver_FFB43AC2(int port, unsigned int mask)
+int scePervasiveIftuDsiResetDisable(int port, unsigned int mask)
 {
 	volatile uint32_t *dsi = RESET_REGS->dsi;
 
@@ -1009,14 +1009,14 @@ int ScePervasiveForDriver_4B223AF5(int port)
 	return GateDisableDevice(&csi[port]);
 }
 
-int ScePervasiveForDriver_BC42C72F(int port, unsigned int mask)
+int scePervasiveIftuDsiClkGateEnable(int port, unsigned int mask)
 {
 	volatile uint32_t *dsi = GATE_REGS->dsi;
 
 	return GateSet(&dsi[port], mask, 1);
 }
 
-int ScePervasiveForDriver_25AE181E(int port, unsigned int mask)
+int scePervasiveIftuDsiClkGateDisable(int port, unsigned int mask)
 {
 	volatile uint32_t *dsi = GATE_REGS->dsi;
 

@@ -14,7 +14,7 @@ void BtPollTransport(void *argument)
 		return;
 	}
 	BtQueueTimer(&transport->wakeupTimer, BtPollTransport, transport, 1000000);
-	if (SceSdifForDriver_D0F78D9B(transport->function, 98, 1, units, 1) < 0)
+	if (sceSdioRead(transport->function, 98, 1, units, 1) < 0)
 		return;
 	receivedLength = units[0] << transport->receiveUnitShift;
 	if ((unsigned int)(receivedLength - 1) >= 2048)
@@ -22,7 +22,7 @@ void BtPollTransport(void *argument)
 	transferLength = receivedLength;
 	if (receivedLength > 128)
 		transferLength = (receivedLength + 127) & ~127;
-	if (SceSdifForDriver_D0F78D9B(transport->function, transport->ioPort,
+	if (sceSdioRead(transport->function, transport->ioPort,
 		transferLength, gBtReceivePacket.bytes, 2) < 0 || receivedLength <= 3)
 		return;
 	packetLength = BtReadLe24(gBtReceivePacket.packet.length);

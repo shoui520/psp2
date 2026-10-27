@@ -192,7 +192,7 @@ int rdrfpRegisterWritebufTimer(void)
 	ret = sceKernelSetTimerEvent(rdrfpWritebufTimer, 0, &interval.quad, 1);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 223, "SetTimerEvent failed (0x%08X)\n", ret);
-		SceThreadmgrForDriver_91A8F38B(rdrfpWritebufTimer);
+		sceKernelDeleteTimer(rdrfpWritebufTimer);
 		goto delete_callback;
 	}
 	ret = sceKernelRegisterCallbackToEventForDriver(rdrfpWritebufTimer,
@@ -211,7 +211,7 @@ delete_callback:
 void rdrfpUnregisterWritebufTimer(void)
 {
 	sceKernelStopTimer(rdrfpWritebufTimer);
-	SceThreadmgrForDriver_91A8F38B(rdrfpWritebufTimer);
+	sceKernelDeleteTimer(rdrfpWritebufTimer);
 	/* Sony deletes the timer's UID as the callback */
 	sceKernelDeleteCallback(rdrfpWritebufTimer);
 }

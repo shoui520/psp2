@@ -148,7 +148,7 @@ struct SysrootState {
 	int (*utMgrGetTrilithiumBuffer)(void *buffer);
 	SysrootUtMgrHasFlag utMgrHasNpTestFlag;
 	int (*getSystemSwVersion)(void);
-	SysrootLedSetMode ledSetMode;		/* 0x39c: power's SceLedForDriver_EA24BE03 */
+	SysrootLedSetMode ledSetMode;		/* 0x39c: power's sceLedSetMode */
 	const struct SysrootSelfImage *selfImages;
 	int (*getNidName)(uint32_t nid, const char **name);
 	SysrootSysStateEvent sysStateEvent;	/* 0x3a8: deci4p_(s)dfmgr's, sysstatemgr reports boot */
@@ -503,7 +503,7 @@ int sceKernelRegisterInitCallback(SysrootInitCallback callback, uint32_t phase,
 	}
 	status = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 #if FW_DEBUG
-	if (SceDebugForDriver_374B7868() > 0) {
+	if (sceKernelGetAssertLevel() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, 0, 2719);
 		state = s_sysrootState;
 	}
@@ -793,7 +793,7 @@ int SceSysrootForKernel_4F0A4066(SceUID processId, SceSelfAuthInfo *info)
 	return 0;
 }
 
-int SceSysrootForKernel_88DE85EF(SceUID processId, void **entryHeap)
+int sceKernelSysrootGetUIDEntryHeap(SceUID processId, void **entryHeap)
 {
 	struct SysrootState *state = s_sysrootState;
 	const SysrootProcessmgrOps *ops = state->processmgrOps;
@@ -1100,7 +1100,7 @@ int SceSysrootForDriver_39F9C968(SceUInt32 status, SceUInt32 value)
 
 #endif
 
-struct SysrootState *SceSysrootForKernel_3E455842(void)
+struct SysrootState *sceKernelSysrootGetSysroot(void)
 {
 	return s_sysrootState;
 }
@@ -1267,7 +1267,7 @@ uint32_t SceSysrootForKernel_340575CB(void)
 	return s_sysrootState->registeredPid;
 }
 
-uint32_t SceSysrootForKernel_403B509E(void)
+uint32_t sceKernelSysrootGetKermitRevision(void)
 {
 	return s_sysrootState->kermitRevision;
 }
@@ -1600,7 +1600,7 @@ _Static_assert(offsetof(SceKblParam, hardware_info) == 0xd4,
 	       "KBL hardware_info offset");
 
 #if !SYSMEM_NSKBL
-uint32_t SceSysrootForKernel_2F97041A(void)
+uint32_t sceKernelSysrootGetErnieWakeupFactor(void)
 {
 	const SceKblParam *kbl = s_sysrootState->kblParam;
 
@@ -1800,7 +1800,7 @@ volatile uint32_t *SceSysrootForDriver_6655F48C(unsigned int bank, unsigned int 
 #if !SYSMEM_NSKBL
 void sceKernelSysrootEnableAutoClockDown(void)
 {
-	uint32_t previous = SceCpuForDriver_341B6E81(
+	uint32_t previous = sceKernelAtomicGetAndAdd32(
 		(volatile SceInt32 *)&SceSysrootForDriver_4B8C305A.disableCountAndFlags,
 		(uint32_t)-0x10);
 
@@ -1809,7 +1809,7 @@ void sceKernelSysrootEnableAutoClockDown(void)
 
 void sceKernelSysrootDisableAutoClockDown(void)
 {
-	uint32_t previous = SceCpuForDriver_341B6E81(
+	uint32_t previous = sceKernelAtomicGetAndAdd32(
 		(volatile SceInt32 *)&SceSysrootForDriver_4B8C305A.disableCountAndFlags, 0x10);
 
 	SCE_DBG_ASSERT_CHECK(previous < 0xf0000000U, 1011);
@@ -2104,7 +2104,7 @@ void SceSysrootForKernel_0DF574A9(void)
 		callback();
 }
 
-int SceSysrootForKernel_256B2394(SceUID pid,
+int sceKernelSysrootDbgpSuspendProcessAndWaitResume(SceUID pid,
 	SceUID modid, SceUInt32 stopReason, SceUInt64 time)
 {
 	const SysrootDbgpOps *ops = s_sysrootState->dbgpOps;

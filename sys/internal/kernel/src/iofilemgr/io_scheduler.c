@@ -47,7 +47,7 @@ int sceIoSetProcessDefaultPriorityInternal(SceInt32 priority, int fromKernel)
 	    isSystemIoProcess(pid)) {
 		defaultPriority = &g_ioDefaultPriority;
 	} else {
-		ret = SceProcessmgrForDriver_AF80F39C(SceThreadmgrForDriver_FA54D49A(),
+		ret = sceKernelGetRemoteKPLS(SceThreadmgrForDriver_FA54D49A(),
 								 g_iofilemgrKplsKey, (void **)&kpls,
 								 1);
 		if (ret < 0)
@@ -114,7 +114,7 @@ SceInt32 sceIoGetProcessDefaultPriorityInternal(int fromKernel)
 	    SceThreadmgrForDriver_FA54D49A() == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID) {
 		priority = g_ioDefaultPriority;
 	} else {
-		priority = SceProcessmgrForDriver_AF80F39C(SceThreadmgrForDriver_FA54D49A(),
+		priority = sceKernelGetRemoteKPLS(SceThreadmgrForDriver_FA54D49A(),
 								      g_iofilemgrKplsKey,
 								      (void **)&kpls, 1);
 		if (priority < 0) {
@@ -195,7 +195,7 @@ invalid:
 	return SCE_ERROR_ERRNO_EINVAL;
 }
 
-int SceIofilemgrForDriver_3F0FF9D5(SceInt32 priority)
+int sceIoSetThreadDefaultPriorityForSystem(SceInt32 priority)
 {
 	return sceIoSetThreadDefaultPriorityInternal(priority, 1);
 }
@@ -215,7 +215,7 @@ SceInt32 sceIoGetThreadDefaultPriorityInternal(int fromKernel)
 		if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid) == 1 || isSystemIoProcess(pid)) {
 			priority = g_ioDefaultPriority;
 		} else {
-			priority = SceProcessmgrForDriver_AF80F39C(
+			priority = sceKernelGetRemoteKPLS(
 				SceThreadmgrForDriver_FA54D49A(), g_iofilemgrKplsKey, (void **)&kpls, 1);
 			if (priority < 0) {
 				sceSyscallLeave(syscall);
@@ -244,7 +244,7 @@ SceInt32 sceIoGetThreadDefaultPriorityInternal(int fromKernel)
 	return priority;
 }
 
-SceInt32 SceIofilemgrForDriver_6D0FEDB6(void)
+SceInt32 sceIoGetThreadDefaultPriorityForSystem(void)
 {
 	return sceIoGetThreadDefaultPriorityInternal(1);
 }
@@ -298,7 +298,7 @@ out:
 	return ret;
 }
 
-int SceIofilemgrForDriver_CCE94599(SceUID fd, SceInt32 priority)
+int sceIoSetPriorityForSystem(SceUID fd, SceInt32 priority)
 {
 	return sceIoSetPriorityInternal(fd, priority, 1);
 }
@@ -334,7 +334,7 @@ SceInt32 sceIoGetPriorityInternal(SceUID fd, int fromKernel)
 	return ret;
 }
 
-SceInt32 SceIofilemgrForDriver_9FCDCE62(SceUID fd)
+SceInt32 sceIoGetPriorityForSystem(SceUID fd)
 {
 	return sceIoGetPriorityInternal(fd, 1);
 }
@@ -379,7 +379,7 @@ SceInt32 getThreadIoPriority(void)
 	    SceThreadmgrForDriver_FA54D49A() == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
 		return g_ioDefaultPriority;
 
-	ret = SceProcessmgrForDriver_AF80F39C(SceThreadmgrForDriver_FA54D49A(),
+	ret = sceKernelGetRemoteKPLS(SceThreadmgrForDriver_FA54D49A(),
 							 g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;

@@ -51,7 +51,7 @@ int sceKernelDisableIntr(unsigned int intrCode);
 int sceKernelEnableSubIntr(int intrCode, int subCode);
 int sceKernelDisableSubIntr(int intrCode, int subCode);
 int sceKernelSetIntrTargetCpu(unsigned int intrCode, unsigned int target);
-int SceIntrmgrForDriver_182EE3E3(void);	/* vitasdk: ksceKernelIsIntrAllowedInCurrentContext */
+int sceKernelIsIntrContext(void);
 int sceKernelRegisterSubIntrHandler(unsigned int intrCode, unsigned int subCode, const char *name,
 				    void *handler, void *arg);
 int sceKernelReleaseSubIntrHandler(int intrCode, int subCode);

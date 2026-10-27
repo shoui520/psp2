@@ -232,7 +232,7 @@ static inline int BtStartDisconnect(uint64_t deviceAddress)
 	unsigned int flags;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;

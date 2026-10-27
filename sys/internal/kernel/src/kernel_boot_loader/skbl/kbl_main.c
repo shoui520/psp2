@@ -159,7 +159,7 @@ static void KblMainContinue(SceKernelBootParam *param)
 		(void)*(volatile uint32_t *)SPAD_WINDOW;
 		dsb();
 		SceCpuForKernel_4BBA5C82();
-		SceCpuForKernel_803C84BF();
+		sceKernelL1IcacheInvalidateEntireAllCore();
 		CpuL2CleanInvalidateAll();
 	}
 	SceCpuForKernel_FE2B77A3(param->corelock);
@@ -208,7 +208,7 @@ static void KblMainContinue(SceKernelBootParam *param)
 			sceKernelMMUUnmapSectionWithFlags(KBL_L1(param), SPAD_UNMAP_ASID, SPAD_WINDOW,
 							  suspendInfo & 7);
 			SceCpuForKernel_49180814();
-			SceCpuForKernel_803C84BF();
+			sceKernelL1IcacheInvalidateEntireAllCore();
 			CpuL2CleanInvalidateAll();
 		}
 		KBL_PRINTF(" Jump to Non-secure power.kprx resume!!!\n");
@@ -225,7 +225,7 @@ static void KblMainContinue(SceKernelBootParam *param)
 				 sceArlzDecode((void *)NSKBL_ADDRESS, NSKBL_SIZE,
 					       (const void *)NSKBL_ARCHIVE, 0), 0);
 		SceCpuForKernel_49180814();
-		SceCpuForKernel_803C84BF();
+		sceKernelL1IcacheInvalidateEntireAllCore();
 		CpuL2CleanInvalidateAll();
 	}
 	KBL_PRINTF(" Jump to Non-secure KBL!!!\n");
@@ -255,16 +255,16 @@ int sceKblMain(SceKernelBootParam *param)
 		sceKernelSysrootSetBootStatus(bootSaveArea.state);
 		sceKernelSysrootCorelockUnlock();
 #if FW_DEBUG
-		SceDebugForDriver_1A3F2AA4(IsAllowKernelDebug() ? 1 : 2,
+		sceKernelPrintfLevel(IsAllowKernelDebug() ? 1 : 2,
 				      "Starting PSP2 Kernel [0x%08x]: %d\n", FW_VERSION,
 				      KblMainGetBuildNumber());
 		if (sceKernelIsColdBoot())
-			SceDebugForDriver_1A3F2AA4(IsAllowKernelDebug() ? 1 : 2,
+			sceKernelPrintfLevel(IsAllowKernelDebug() ? 1 : 2,
 					      "Time taken to load KBL: %d us\n",
 					      param->kblParam->kbl_load_time);
 #endif
 		if (SceSysrootForKernel_sceKernelSysrootIsSafeMode())
-			SceDebugForDriver_1A3F2AA4(IsAllowKernelDebug() ? 0 : 2,
+			sceKernelPrintfLevel(IsAllowKernelDebug() ? 0 : 2,
 					      "\tSafe Mode : [ YES ]\n");
 	} else {
 		SceCpuForKernel_FE2B77A3(param->corelock);
@@ -283,7 +283,7 @@ int sceKblMain(SceKernelBootParam *param)
 	SceCpuForKernel_2FF54320(param->corelock, 0);
 	cpu = &param->cpu[core];
 	cpu->stackSize = KBL_STACK_SIZE;
-	cpu->stackBlockId = SceSysmemForKernel_40870E74(SysmemAllocName(s_bootStackNames[core]),
+	cpu->stackBlockId = sceKernelAllocPartitionStackMemBlock(SysmemAllocName(s_bootStackNames[core]),
 							KBL_STACK_SIZE, KBL_STACK_ALIGN);
 	sceKernelGetMemBlockVBase(cpu->stackBlockId, &stack);
 	cpu->stackBottom = (char *)stack + cpu->stackSize;

@@ -72,7 +72,7 @@ int SceDebugForKernel_0EDA5174(uint32_t value)
 	return 0;
 }
 
-int SceDebugForDriver_374B7868(void)
+int sceKernelGetAssertLevel(void)
 {
 	return s_assertLevel;
 }

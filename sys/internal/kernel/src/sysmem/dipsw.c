@@ -50,14 +50,14 @@ int sceKernelCheckDipsw(unsigned int bit)
 
 #if !SYSMEM_NSKBL
 __attribute__((noinline))
-void SceDipswForDriver_82E45FBF(unsigned int bit)
+void sceKernelSetDipsw(unsigned int bit)
 {
 	s_dipsw->words[bit >> 5] |= UINT32_C(1) << (bit & 31);
 }
 #endif
 
 __attribute__((noinline))
-void SceDipswForDriver_F1F3E9FE(unsigned int bit)
+void sceKernelClearDipsw(unsigned int bit)
 {
 	s_dipsw->words[bit >> 5] &= ~(UINT32_C(1) << (bit & 31));
 }
@@ -85,7 +85,7 @@ int sceKernelCheckDipswForUser(unsigned int bit)
 	return sceKernelCheckDipsw(bit);
 }
 
-int sceKernelSetDipsw(unsigned int bit)
+int sceKernelSetDipswForUser(unsigned int bit)
 {
 	int result;
 
@@ -96,11 +96,11 @@ int sceKernelSetDipsw(unsigned int bit)
 		if (result < 0)
 			return result;
 	}
-	SceDipswForDriver_82E45FBF(bit);
+	sceKernelSetDipsw(bit);
 	return 0;
 }
 
-int sceKernelClearDipsw(unsigned int bit)
+int sceKernelClearDipswForUser(unsigned int bit)
 {
 	int result;
 
@@ -111,7 +111,7 @@ int sceKernelClearDipsw(unsigned int bit)
 		if (result < 0)
 			return result;
 	}
-	SceDipswForDriver_F1F3E9FE(bit);
+	sceKernelClearDipsw(bit);
 	return 0;
 }
 #endif

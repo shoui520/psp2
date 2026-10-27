@@ -79,7 +79,7 @@ int ds3PortManagerThread(SceSize args, void *argp)
 		}
 		ds3UsbPollBattery();
 		if (ds3IsUsbCharging())
-			SceKernelSuspendForDriver_E0489831(1);
+			sceKernelPowerTick(1);
 	}
 }
 

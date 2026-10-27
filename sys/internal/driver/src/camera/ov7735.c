@@ -1781,7 +1781,7 @@ int cameraWriteSensorByte(int devnum, SceUInt16 address, const SceUInt8 *value)
 			buffer[1] = address;
 			buffer[2] = data;
 			buffer[0] = address >> 8;
-			result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, 3);
+			result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, 3);
 		}
 	}
 	return result;
@@ -1797,7 +1797,7 @@ int cameraReadSensorByte(int devnum, SceUInt16 address, SceUInt8 *value)
 		if (result) {
 			buffer[0] = address >> 8;
 			buffer[1] = address;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, value, 1);
 		}
 	}
@@ -1831,7 +1831,7 @@ int cameraWriteSensorRegisters(int devnum, const CameraSensorRegister *registers
 			if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 				buffer[1] = address;
 				buffer[0] = address >> 8;
-				result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+				result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 					0x74, &readValue, 1);
 				if (result < 0)
 					return result;
@@ -1862,7 +1862,7 @@ int cameraWriteSensorRegisters(int devnum, const CameraSensorRegister *registers
 				length = (SceUInt8)length;
 				if (length)
 					memcpy(buffer + 2, values, length);
-				length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+				length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 			} else {
 				length = 0;
 			}
@@ -1899,7 +1899,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x35;
 			buffer[1] = 0xa;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].gain[0].value = readValue;
@@ -1912,7 +1912,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x35;
 			buffer[1] = 0xb;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].gain[1].value = readValue;
@@ -1925,7 +1925,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x35;
 			buffer[1] = 0x3;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].exposureControl.value = readValue;
@@ -1957,7 +1957,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x50;
 			buffer[1] = 0x1;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].whiteBalanceControl[0].value = readValue;
@@ -1970,7 +1970,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x51;
 			buffer[1] = 0x80;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].whiteBalanceControl[1].value = readValue;
@@ -1983,7 +1983,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x51;
 			buffer[1] = 0x95;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].whiteBalance[0].value = readValue;
@@ -1996,7 +1996,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x51;
 			buffer[1] = 0x96;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].whiteBalance[1].value = readValue;
@@ -2009,7 +2009,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x51;
 			buffer[1] = 0x97;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].whiteBalance[2].value = readValue;
@@ -2022,7 +2022,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x51;
 			buffer[1] = 0x98;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].whiteBalance[3].value = readValue;
@@ -2035,7 +2035,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x51;
 			buffer[1] = 0x99;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].whiteBalance[4].value = readValue;
@@ -2048,7 +2048,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x51;
 			buffer[1] = 0x9a;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].whiteBalance[5].value = readValue;
@@ -2061,7 +2061,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x58;
 			buffer[1] = 0x6;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].whiteBalanceTail[0].value = readValue;
@@ -2074,7 +2074,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x58;
 			buffer[1] = 0x7;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].whiteBalanceTail[1].value = readValue;
@@ -2087,7 +2087,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 		if (result) {
 			buffer[0] = 0x58;
 			buffer[1] = 0x8;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, &readValue, 1);
 			if (result >= 0)
 				cameraSavedSensorState[devnum].whiteBalanceTail[2].value = readValue;
@@ -2106,7 +2106,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 	if (result) {
 		buffer[0] = 0x35;
 		buffer[1] = 0x0;
-		result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+		result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 		0x74, &readValue, 1);
 		if (result >= 0)
 		cameraSavedSensorState[devnum].exposure[0].value = readValue;
@@ -2119,7 +2119,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 	if (result) {
 		buffer[0] = 0x35;
 		buffer[1] = 0x1;
-		result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+		result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 		0x74, &readValue, 1);
 		if (result >= 0)
 		cameraSavedSensorState[devnum].exposure[1].value = readValue;
@@ -2132,7 +2132,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 	if (result) {
 		buffer[0] = 0x35;
 		buffer[1] = 0x2;
-		result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+		result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 		0x74, &readValue, 1);
 		if (result >= 0)
 		cameraSavedSensorState[devnum].exposure[2].value = readValue;
@@ -2145,7 +2145,7 @@ int cameraSaveSensorAttribute(int devnum, int group, int readHardware,
 	if (result) {
 		buffer[0] = 0x35;
 		buffer[1] = 0x3;
-		result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+		result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 		0x74, &readValue, 1);
 		if (result >= 0)
 		cameraSavedSensorState[devnum].exposureControl.value = readValue;
@@ -2259,7 +2259,7 @@ int cameraSetAntiflickerOV7735(int devnum, int mode)
 				if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 					buffer[1] = address;
 					buffer[0] = address >> 8;
-					result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+					result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 						0x74, &readValue, 1);
 					if (result < 0)
 						return result;
@@ -2293,7 +2293,7 @@ int cameraSetAntiflickerOV7735(int devnum, int mode)
 					length = (SceUInt8)length;
 					if (length)
 						memcpy(buffer + 2, values, length);
-					result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+					result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 				}
 			}
 			memset(values, 0, sizeof(values));
@@ -2327,7 +2327,7 @@ int cameraSetAntiflickerOV7735(int devnum, int mode)
 				if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 					buffer[1] = address;
 					buffer[0] = address >> 8;
-					result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+					result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 						0x74, &restoreValue, 1);
 					if (result < 0)
 						goto finishAntiflicker;
@@ -2361,7 +2361,7 @@ int cameraSetAntiflickerOV7735(int devnum, int mode)
 					length = (SceUInt8)length;
 					if (length)
 						memcpy(buffer + 2, values, length);
-					result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+					result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 				}
 			}
 			memset(values, 0, sizeof(values));
@@ -2391,7 +2391,7 @@ int cameraWriteRegisterOV7735(int devnum, SceUInt16 address, SceUInt8 value)
 			buffer[1] = address;
 			buffer[0] = address >> 8;
 			buffer[2] = value;
-			result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, 3);
+			result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, 3);
 		}
 	}
 	return result;
@@ -2407,7 +2407,7 @@ int cameraReadRegisterOV7735(int devnum, SceUInt16 address, SceUInt8 *value)
 		if (result) {
 			buffer[0] = address >> 8;
 			buffer[1] = address;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 				0x74, value, 1);
 		}
 	}
@@ -2431,14 +2431,14 @@ int cameraProbeOV7735(int devnum)
 	cameraSensorInfo[devnum].probeResult = 0;
 	if (!cameraDriver->i2cEnabled || !cameraDriver->clockEnabled ||
 		(buffer[0] = 0x30, buffer[1] = 0x0a,
-		(result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+		(result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 			0x74, chipId, 2)) >= 0)) {
 		cameraSensorInfo[devnum].chipId = chipId[1] | chipId[0] << 8;
 		if (chipId[0] == 0x77 && chipId[1] == 0x35) {
 			result = cameraDriver->i2cEnabled;
 			if (!result || !(result = cameraDriver->clockEnabled) ||
 				(buffer[0] = 0x30, buffer[1] = 0x2a,
-				(result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+				(result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 					0x74, revision, 1)) >= 0))
 				cameraSensorInfo[devnum].revision = revision[0];
 		} else {
@@ -2497,7 +2497,7 @@ int cameraInitializeOV7735(int devnum)
 					if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 						buffer[1] = address;
 						buffer[0] = address >> 8;
-						result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+						result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 							0x74, &resetRead[0], 1);
 						if (result < 0)
 							return result;
@@ -2528,7 +2528,7 @@ int cameraInitializeOV7735(int devnum)
 						length = (SceUInt8)length;
 						if (length)
 							memcpy(buffer + 2, values, length);
-						length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+						length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 					} else {
 						length = 0;
 					}
@@ -2568,7 +2568,7 @@ int cameraInitializeOV7735(int devnum)
 					if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 						buffer[1] = address;
 						buffer[0] = address >> 8;
-						result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+						result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 							0x74, &commonRead[0], 1);
 						if (result < 0)
 							return result;
@@ -2599,7 +2599,7 @@ int cameraInitializeOV7735(int devnum)
 						length = (SceUInt8)length;
 						if (length)
 							memcpy(buffer + 2, values, length);
-						length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+						length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 					} else {
 						length = 0;
 					}
@@ -2638,7 +2638,7 @@ int cameraInitializeOV7735(int devnum)
 					if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 						buffer[1] = address;
 						buffer[0] = address >> 8;
-						result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+						result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 							0x74, &tuningRead[0], 1);
 						if (result < 0)
 							return result;
@@ -2669,7 +2669,7 @@ int cameraInitializeOV7735(int devnum)
 						length = (SceUInt8)length;
 						if (length)
 							memcpy(buffer + 2, values, length);
-						length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+						length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 					} else {
 						length = 0;
 					}
@@ -2709,7 +2709,7 @@ int cameraInitializeOV7735(int devnum)
 						if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 							buffer[1] = address;
 							buffer[0] = address >> 8;
-							result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+							result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, &timingRead[0], 1);
 							if (result < 0)
 								return result;
@@ -2740,7 +2740,7 @@ int cameraInitializeOV7735(int devnum)
 							length = (SceUInt8)length;
 							if (length)
 								memcpy(buffer + 2, values, length);
-							length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+							length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 						} else {
 							length = 0;
 						}
@@ -2778,7 +2778,7 @@ int cameraInitializeOV7735(int devnum)
 						if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 							buffer[1] = address;
 							buffer[0] = address >> 8;
-							result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+							result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, &timingRead[0], 1);
 							if (result < 0)
 								return result;
@@ -2809,7 +2809,7 @@ int cameraInitializeOV7735(int devnum)
 							length = (SceUInt8)length;
 							if (length)
 								memcpy(buffer + 2, values, length);
-							length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+							length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 						} else {
 							length = 0;
 						}
@@ -2843,7 +2843,7 @@ int cameraResetOV7735(int devnum)
 			buffer[1] = 3;
 			buffer[0] = 1;
 			buffer[2] = 1;
-			result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, 3);
+			result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, 3);
 		}
 	}
 	sceKernelDelayThread(5000);
@@ -2879,7 +2879,7 @@ int cameraSetFormatOV7735(int devnum, int format)
 						if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 							buffer[1] = address;
 							buffer[0] = address >> 8;
-							result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+							result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, &readValue[0], 1);
 							if (result < 0)
 								return result;
@@ -2910,7 +2910,7 @@ int cameraSetFormatOV7735(int devnum, int format)
 							length = (SceUInt8)length;
 							if (length)
 								memcpy(buffer + 2, values, length);
-							length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+							length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 						} else {
 							length = 0;
 						}
@@ -2948,7 +2948,7 @@ int cameraSetFormatOV7735(int devnum, int format)
 						if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 							buffer[1] = address;
 							buffer[0] = address >> 8;
-							result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+							result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, &readValue[0], 1);
 							if (result < 0)
 								return result;
@@ -2979,7 +2979,7 @@ int cameraSetFormatOV7735(int devnum, int format)
 							length = (SceUInt8)length;
 							if (length)
 								memcpy(buffer + 2, values, length);
-							length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+							length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 						} else {
 							length = 0;
 						}
@@ -3033,7 +3033,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &exposureRead[0], 1);
 								if (result < 0)
 									return result;
@@ -3067,7 +3067,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -3102,7 +3102,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &exposureRead[0], 1);
 								if (result < 0)
 									return result;
@@ -3136,7 +3136,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -3171,7 +3171,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &exposureRead[0], 1);
 								if (result < 0)
 									return result;
@@ -3205,7 +3205,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -3240,7 +3240,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &exposureRead[0], 1);
 								if (result < 0)
 									return result;
@@ -3274,7 +3274,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -3309,7 +3309,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &exposureRead[0], 1);
 								if (result < 0)
 									return result;
@@ -3343,7 +3343,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -3378,7 +3378,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &exposureRead[0], 1);
 								if (result < 0)
 									return result;
@@ -3412,7 +3412,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -3447,7 +3447,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &exposureRead[0], 1);
 								if (result < 0)
 									return result;
@@ -3481,7 +3481,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -3516,7 +3516,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &exposureRead[0], 1);
 								if (result < 0)
 									return result;
@@ -3550,7 +3550,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -3585,7 +3585,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &exposureRead[0], 1);
 								if (result < 0)
 									return result;
@@ -3619,7 +3619,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -3654,7 +3654,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &exposureRead[0], 1);
 								if (result < 0)
 									return result;
@@ -3688,7 +3688,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -3726,7 +3726,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &exposureRead[0], 1);
 								if (result < 0)
 									return result;
@@ -3760,7 +3760,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -3878,7 +3878,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 					if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 						buffer[1] = address;
 						buffer[0] = address >> 8;
-						result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+						result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 							0x74, &timingRead[0], 1);
 						if (result < 0)
 							return result;
@@ -3912,7 +3912,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							length = (SceUInt8)length;
 							if (length)
 								memcpy(buffer + 2, values, length);
-							result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+							result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 						}
 					}
 				}
@@ -3958,7 +3958,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 					if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 						buffer[1] = address;
 						buffer[0] = address >> 8;
-						result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+						result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 							0x74, &antiflickerRead[0], 1);
 						if (result < 0)
 							goto unlockDevice;
@@ -3992,7 +3992,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							length = (SceUInt8)length;
 							if (length)
 								memcpy(buffer + 2, values, length);
-							result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+							result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 						}
 					}
 				}
@@ -4030,7 +4030,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 					if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 						buffer[1] = address;
 						buffer[0] = address >> 8;
-						result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+						result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 							0x74, &exposureRead[0], 1);
 						if (result < 0)
 							goto unlockDevice;
@@ -4064,7 +4064,7 @@ int cameraSetFramerateOV7735(int devnum, int framerate, int resolution)
 							length = (SceUInt8)length;
 							if (length)
 								memcpy(buffer + 2, values, length);
-							result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+							result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 						}
 					}
 				}
@@ -4111,7 +4111,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 						if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 							buffer[1] = address;
 							buffer[0] = address >> 8;
-							result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+							result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, &readValue[0], 1);
 							if (result < 0)
 								return result;
@@ -4142,7 +4142,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 							length = (SceUInt8)length;
 							if (length)
 								memcpy(buffer + 2, values, length);
-							length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+							length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 						} else {
 							length = 0;
 						}
@@ -4182,7 +4182,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &readValue[0], 1);
 								if (result < 0)
 									return result;
@@ -4213,7 +4213,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 								length = (SceUInt8)length;
 								if (length)
 									memcpy(buffer + 2, values, length);
-								length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+								length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 							} else {
 								length = 0;
 							}
@@ -4251,7 +4251,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &readValue[0], 1);
 								if (result < 0)
 									return result;
@@ -4282,7 +4282,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 								length = (SceUInt8)length;
 								if (length)
 									memcpy(buffer + 2, values, length);
-								length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+								length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 							} else {
 								length = 0;
 							}
@@ -4323,7 +4323,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &readValue[0], 1);
 								if (result < 0)
 									return result;
@@ -4354,7 +4354,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 								length = (SceUInt8)length;
 								if (length)
 									memcpy(buffer + 2, values, length);
-								length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+								length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 							} else {
 								length = 0;
 							}
@@ -4392,7 +4392,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &readValue[0], 1);
 								if (result < 0)
 									return result;
@@ -4423,7 +4423,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 								length = (SceUInt8)length;
 								if (length)
 									memcpy(buffer + 2, values, length);
-								length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+								length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 							} else {
 								length = 0;
 							}
@@ -4463,7 +4463,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 						if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 							buffer[1] = address;
 							buffer[0] = address >> 8;
-							result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+							result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, &readValue[0], 1);
 							if (result < 0)
 								return result;
@@ -4494,7 +4494,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 							length = (SceUInt8)length;
 							if (length)
 								memcpy(buffer + 2, values, length);
-							length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+							length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 						} else {
 							length = 0;
 						}
@@ -4534,7 +4534,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &readValue[0], 1);
 								if (result < 0)
 									return result;
@@ -4565,7 +4565,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 								length = (SceUInt8)length;
 								if (length)
 									memcpy(buffer + 2, values, length);
-								length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+								length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 							} else {
 								length = 0;
 							}
@@ -4603,7 +4603,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &readValue[0], 1);
 								if (result < 0)
 									return result;
@@ -4634,7 +4634,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 								length = (SceUInt8)length;
 								if (length)
 									memcpy(buffer + 2, values, length);
-								length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+								length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 							} else {
 								length = 0;
 							}
@@ -4674,7 +4674,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 						if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 							buffer[1] = address;
 							buffer[0] = address >> 8;
-							result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+							result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, &readValue[0], 1);
 							if (result < 0)
 								return result;
@@ -4705,7 +4705,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 							length = (SceUInt8)length;
 							if (length)
 								memcpy(buffer + 2, values, length);
-							length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+							length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 						} else {
 							length = 0;
 						}
@@ -4744,7 +4744,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 						if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 							buffer[1] = address;
 							buffer[0] = address >> 8;
-							result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+							result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, &readValue[0], 1);
 							if (result < 0)
 								return result;
@@ -4775,7 +4775,7 @@ int cameraSetResolutionOV7735(int devnum, int resolution, int framerate)
 							length = (SceUInt8)length;
 							if (length)
 								memcpy(buffer + 2, values, length);
-							length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+							length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 						} else {
 							length = 0;
 						}
@@ -4826,7 +4826,7 @@ int cameraSetRangeOV7735(int devnum, int range)
 						if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 							buffer[1] = address;
 							buffer[0] = address >> 8;
-							result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+							result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, &readValue[0], 1);
 							if (result < 0)
 								return result;
@@ -4860,7 +4860,7 @@ int cameraSetRangeOV7735(int devnum, int range)
 								length = (SceUInt8)length;
 								if (length)
 									memcpy(buffer + 2, values, length);
-								result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+								result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 							}
 						}
 					}
@@ -4894,7 +4894,7 @@ int cameraSetRangeOV7735(int devnum, int range)
 						if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 							buffer[1] = address;
 							buffer[0] = address >> 8;
-							result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+							result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, &readValue[0], 1);
 							if (result < 0)
 								return result;
@@ -4928,7 +4928,7 @@ int cameraSetRangeOV7735(int devnum, int range)
 								length = (SceUInt8)length;
 								if (length)
 									memcpy(buffer + 2, values, length);
-								result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+								result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 							}
 						}
 					}
@@ -4976,7 +4976,7 @@ int cameraSetPowerStateOV7735(int devnum, int enabled)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &readValue[0], 1);
 								if (result < 0)
 									goto unlockDevice;
@@ -5007,7 +5007,7 @@ int cameraSetPowerStateOV7735(int devnum, int enabled)
 								length = (SceUInt8)length;
 								if (length)
 									memcpy(buffer + 2, values, length);
-								length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+								length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 							} else {
 								length = 0;
 							}
@@ -5029,9 +5029,9 @@ int cameraSetPowerStateOV7735(int devnum, int enabled)
 				goto unlockDevice;
 		}
 		cameraDriver->i2cEnabled = 0;
-		result = SceGpioForDriver_D454A584(0, port);
+		result = sceGpioPortSet(0, port);
 	} else if (enabled == 1) {
-		result = SceGpioForDriver_F6310435(0, port);
+		result = sceGpioPortClear(0, port);
 		sceKernelDelayThread(2000);
 		cameraDriver->i2cEnabled = 1;
 		if (result >= 0 && cameraHasStartedProcess(devnum, 0)) {
@@ -5054,7 +5054,7 @@ int cameraSetPowerStateOV7735(int devnum, int enabled)
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[1] = address;
 								buffer[0] = address >> 8;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &readValue[0], 1);
 								if (result < 0)
 									goto unlockDevice;
@@ -5085,7 +5085,7 @@ int cameraSetPowerStateOV7735(int devnum, int enabled)
 								length = (SceUInt8)length;
 								if (length)
 									memcpy(buffer + 2, values, length);
-								length = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+								length = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 							} else {
 								length = 0;
 							}
@@ -5133,14 +5133,14 @@ int cameraGetAttributeOV7735(int devnum, int attribute, int *value, int flags,
 
 				buffer[0] = 0x55;
 				buffer[1] = 0x87;
-				result = SceI2cForDriver_0A40B7BF(bus, 0x74, buffer, 2,
+				result = sceI2cMasterTransmitReceive(bus, 0x74, buffer, 2,
 								0x74, brightness, 1);
 				if (result < 0)
 					return result;
 				if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 					buffer[0] = 0x55;
 					buffer[1] = 0x88;
-					result = SceI2cForDriver_0A40B7BF(bus, 0x74, buffer, 2,
+					result = sceI2cMasterTransmitReceive(bus, 0x74, buffer, 2,
 									0x74, sign, 1);
 					if (result < 0)
 						return result;
@@ -5163,7 +5163,7 @@ int cameraGetAttributeOV7735(int devnum, int attribute, int *value, int flags,
 			if (result) {
 				buffer[0] = 0x55;
 				buffer[1] = 0x86;
-				result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+				result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, brightness, 1);
 				if (result < 0)
 					return result;
@@ -5301,7 +5301,7 @@ int sceCameraGetExposureTimeOV7735(int devnum, int framerate, unsigned int *expo
 	if (result) {
 		buffer[0] = 0x35;
 		buffer[1] = 0;
-		result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+		result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 						0x74, registers, 3);
 		if (result < 0)
 			return result;
@@ -5372,7 +5372,7 @@ int cameraHasColorChangeOV7735(int devnum)
 		if (detected) {
 			buffer[1] = 0x0c;
 			buffer[0] = 0x3c;
-			result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+			result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 							0x74, readValue, 1);
 			if (result < 0)
 				return result;
@@ -5547,7 +5547,7 @@ int cameraSetAttributeOV7735(int devnum, int attribute, int value, int flags,
 							if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 								buffer[0] = address >> 8;
 								buffer[1] = address;
-								result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+								result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 									0x74, &nightValue[0], 1);
 								if (result < 0)
 									return result;
@@ -5581,7 +5581,7 @@ int cameraSetAttributeOV7735(int devnum, int attribute, int value, int flags,
 									length = (SceUInt8)length;
 									if (length)
 										memcpy(buffer + 2, values, length);
-									result = SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+									result = sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 								}
 							}
 						}
@@ -5757,7 +5757,7 @@ storeExposureCeiling:
 						if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 							buffer[0] = address >> 8;
 							buffer[1] = address;
-							if (SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+							if (sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 								0x74, &restoreValue[0], 1) < 0)
 								goto restoreExposure;
 							mask = restore[-1].mask;
@@ -5786,7 +5786,7 @@ storeExposureCeiling:
 						length = (SceUInt8)length;
 						if (length)
 							memcpy(buffer + 2, values, length);
-						SceI2cForDriver_CA94A759(devnum == 0, 0x74, buffer, length + 2);
+						sceI2cMasterTransmit(devnum == 0, 0x74, buffer, length + 2);
 					}
 					memset(values, 0, sizeof(values));
 					if (index == 4)
@@ -6099,7 +6099,7 @@ int cameraRecoverOV7735(int devnum)
 		goto inspectExposure;
 	buffer[0] = 0x35;
 	buffer[1] = 0;
-	result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+	result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 		0x74, &sensorValues[0], 1);
 	if (result < 0)
 		goto out;
@@ -6107,7 +6107,7 @@ int cameraRecoverOV7735(int devnum)
 		goto inactive;
 	buffer[0] = 0x35;
 	buffer[1] = 1;
-	result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+	result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 		0x74, &sensorValues[1], 1);
 	if (result < 0)
 		goto out;
@@ -6115,7 +6115,7 @@ int cameraRecoverOV7735(int devnum)
 		goto inactive;
 	buffer[0] = 0x35;
 	buffer[1] = 2;
-	result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+	result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 		0x74, &sensorValues[2], 1);
 	if (result < 0)
 		goto out;
@@ -6123,7 +6123,7 @@ int cameraRecoverOV7735(int devnum)
 		goto inactive;
 	buffer[0] = 0x35;
 	buffer[1] = 0xa;
-	result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+	result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 		0x74, &sensorValues[3], 1);
 	if (result < 0)
 		goto out;
@@ -6131,7 +6131,7 @@ int cameraRecoverOV7735(int devnum)
 		goto inactive;
 	buffer[0] = 0x35;
 	buffer[1] = 0xb;
-	result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+	result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 		0x74, &sensorValues[4], 1);
 	if (result < 0)
 		goto out;
@@ -6139,7 +6139,7 @@ int cameraRecoverOV7735(int devnum)
 		goto inactive;
 	buffer[0] = 0x56;
 	buffer[1] = 0x93;
-	result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74, buffer, 2,
+	result = sceI2cMasterTransmitReceive(devnum == 0, 0x74, buffer, 2,
 		0x74, &sensorValues[5], 1);
 	if (result < 0)
 		goto out;
@@ -6171,7 +6171,7 @@ inspectExposure:
 				if (cameraDriver->i2cEnabled && cameraDriver->clockEnabled) {
 					buffer[0] = address >> 8;
 					buffer[1] = address;
-					result = SceI2cForDriver_0A40B7BF(devnum == 0, 0x74,
+					result = sceI2cMasterTransmitReceive(devnum == 0, 0x74,
 						buffer, 2, 0x74, registerValue, 1);
 					if (result < 0)
 						goto out;
@@ -6206,7 +6206,7 @@ inspectExposure:
 					size = (unsigned char)size;
 					if (size)
 						memcpy(buffer + 2, data, size);
-					result = SceI2cForDriver_CA94A759(devnum == 0, 0x74,
+					result = sceI2cMasterTransmit(devnum == 0, 0x74,
 						buffer, size + 2);
 				}
 			}

@@ -76,14 +76,14 @@ _Static_assert(sizeof(SceDipsw) == 0x20, "SceDipsw size");
 #define DIPSW_HOST0_ACCESS			0xfc
 #define DIPSW_CONSOLE_LOGGING			0xfd
 
-void SceDipswForDriver_82E45FBF(unsigned int bit);	/* vitasdk: ksceKernelSetDipsw */
+void sceKernelSetDipsw(unsigned int bit);
 int sceKernelCheckDipsw(unsigned int bit);
 /* vitasdk: ksceKernelGetDipswInfo */
 SceUInt32 SceDipswForDriver_B2AD48BE(unsigned int index);
-void SceDipswForDriver_F1F3E9FE(unsigned int bit);	/* vitasdk: ksceKernelClearDipsw */
+void sceKernelClearDipsw(unsigned int bit);
 int sceKernelCheckDipswForUser(unsigned int bit);
-int sceKernelClearDipsw(unsigned int bit);
-int sceKernelSetDipsw(unsigned int bit);
+int sceKernelClearDipswForUser(unsigned int bit);
+int sceKernelSetDipswForUser(unsigned int bit);
 
 #ifdef __cplusplus
 }

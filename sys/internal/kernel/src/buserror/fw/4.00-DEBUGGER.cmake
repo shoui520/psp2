@@ -37,7 +37,7 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_CE7A2207
 	sceKernelRegisterIntrHandler
 	sceKernelEnableIntr
-	SceSysrootForKernel_3E455842
+	sceKernelSysrootGetSysroot
 	SceSysrootForKernel_82FC6405
 	SceSysrootForKernel_B27B7530
 	sceKernelSysrootGetSharedMemory
@@ -45,7 +45,7 @@ set(MODULE_IMPORT_FUNCS
 	memcpy
 	snprintf
 	sceKernelCpuId
-	SceDebugForDriver_374B7868
+	sceKernelGetAssertLevel
 	SceDebugForDriver_62466B0A
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A

@@ -687,7 +687,7 @@ int deleteAllRequest(int onlyProxied)
 		while (&request->link != &s_runQueue[i] && request != NULL) {
 			if (onlyProxied && request->proxyId == -1)
 				continue;
-			if (atomicCompareAndSet8(&request->waitFlag, 0, 1) == 0) {
+			if (sceKernelAtomicCompareAndSet8(&request->waitFlag, 0, 1) == 0) {
 				SmschedLinkRemove(&request->link);
 				deleteRequest(request->id);
 			} else {
@@ -723,7 +723,7 @@ int deleteAllRequest(int onlyProxied)
 				ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 				goto out;
 			}
-			ret = atomicCompareAndSet8(&running->waitFlag, 0, 1);
+			ret = sceKernelAtomicCompareAndSet8(&running->waitFlag, 0, 1);
 			if (ret == 0) {
 				SmschedLinkRemove(&running->link);
 				deleteRequest(running->id);
@@ -740,7 +740,7 @@ int deleteAllRequest(int onlyProxied)
 				ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 				goto out;
 			}
-			ret = atomicCompareAndSet8(&running->waitFlag, 0, 1);
+			ret = sceKernelAtomicCompareAndSet8(&running->waitFlag, 0, 1);
 			if (ret == 0) {
 				SmschedLinkRemove(&running->link);
 				deleteRequest(running->id);
@@ -759,7 +759,7 @@ int deleteAllRequest(int onlyProxied)
 	while (&request->link != &s_doneList && request != NULL) {
 		if (onlyProxied && request->proxyId == -1)
 			continue;
-		if (atomicCompareAndSet8(&request->waitFlag, 0, 1) == 0) {
+		if (sceKernelAtomicCompareAndSet8(&request->waitFlag, 0, 1) == 0) {
 			SmschedLinkRemove(&request->link);
 			deleteRequest(request->id);
 		} else {
@@ -1667,7 +1667,7 @@ int sceSblSmSchedWait(SceUInt32 id, SmschedIntrStatus *status)
 	request = SmschedGetRequest(id);
 	if (request == NULL)
 		return SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
-	if (atomicCompareAndSet8(&request->waitFlag, 0, 1) != 0)
+	if (sceKernelAtomicCompareAndSet8(&request->waitFlag, 0, 1) != 0)
 		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	state = request->status.state;

@@ -89,8 +89,7 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 			     const SelfAuthRequest *param, SceUID *id);
 int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result);	/* a SmschedIntrStatus */
 int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status);	/* a SmschedIntrStatus */
-/* vitasdk: ksceSblSmSchedProxyChangeF00DStatus */
-int SceSblSmSchedProxyForKernel_DE4EAC3C(SceUID id);
+int sceSblSmSchedProxyKill(SceUID id);
 /* vitasdk: ksceSblSmSchedCallFunc */
 int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, SceUInt32 value);
 /* vitasdk: ksceSblSmSchedProxyGetCommandF00DRegister */
@@ -99,8 +98,7 @@ int sceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, SceUInt32 value);
 int sceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, SceUInt32 *value);
 int sceSblSmSchedProxyRegisterIntrHandler(SceUID id, int channel,
 					      SceSblSmSchedCry2ArmHandler handler, void *arg);
-/* vitasdk: ksceSblSmSchedProxyDisableCry2ArmInterrupt */
-int SceSblSmSchedProxyForKernel_85EDA5FC(SceUID id, int channel);
+int sceSblSmSchedProxyReleaseIntrHandler(SceUID id, int channel);
 /* vitasdk: ksceSblSmSchedProxyExecuteF00DCommand */
 int SceSblSmSchedProxyForKernel_7894B6F0(SceUInt32 a, SceUInt32 b, SceUInt32 c, SceUInt32 d);
 

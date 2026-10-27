@@ -25,7 +25,7 @@ int SceCpuForKernel_15A48AB4(void)
 }
 #endif
 
-int SceCpuForKernel_803C84BF(void)
+int sceKernelL1IcacheInvalidateEntireAllCore(void)
 {
 	writeIcialluis(0);
 	dsb();

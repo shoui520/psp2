@@ -263,13 +263,13 @@ int cameraUnlockFrameBufferRanges(int devnum, CameraProcess *process,
 			if (explicitProcess)
 				result = sceKernelUnlockRangeProc(processId, pvIBase, sizeIBase);
 			else
-				result = SceSysmemForDriver_22CBE925(0x30, pvIBase, sizeIBase);
+				result = sceKernelUnlockRangeWithMode(0x30, pvIBase, sizeIBase);
 		}
 		if (pvUBase != NULL && sizeUBase != 0) {
 			if (explicitProcess)
 				result = sceKernelUnlockRangeProc(processId, pvUBase, sizeUBase);
 			else
-				result = SceSysmemForDriver_22CBE925(0x30, pvUBase, sizeUBase);
+				result = sceKernelUnlockRangeWithMode(0x30, pvUBase, sizeUBase);
 		}
 		if (pvVBase != NULL && sizeVBase != 0) {
 			pvIBase = pvVBase;
@@ -287,7 +287,7 @@ int cameraUnlockFrameBufferRanges(int devnum, CameraProcess *process,
 		if (explicitProcess)
 			result = sceKernelUnlockRangeProc(processId, pvIBase, sizeIBase);
 		else
-			result = SceSysmemForDriver_22CBE925(0x30, pvIBase, sizeIBase);
+			result = sceKernelUnlockRangeWithMode(0x30, pvIBase, sizeIBase);
 		if (result != 0)
 			return result;
 		break;
@@ -511,13 +511,13 @@ locked:
 	return result;
 unlockIU:
 	if (pvIBase != NULL && sizeIBase != 0)
-		SceSysmemForDriver_22CBE925(0x30, pvIBase, sizeIBase);
+		sceKernelUnlockRangeWithMode(0x30, pvIBase, sizeIBase);
 	if (pvUBase != NULL && sizeUBase != 0)
-		SceSysmemForDriver_22CBE925(0x30, pvUBase, sizeUBase);
+		sceKernelUnlockRangeWithMode(0x30, pvUBase, sizeUBase);
 	return result;
 unlockI:
 	if (pvIBase != NULL && sizeIBase != 0)
-		SceSysmemForDriver_22CBE925(0x30, pvIBase, sizeIBase);
+		sceKernelUnlockRangeWithMode(0x30, pvIBase, sizeIBase);
 	return result;
 }
 
@@ -536,7 +536,7 @@ int cameraSetBusClockFrequency(int frequency)
 		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		return result;
 	}
-	result = ScePowerForDriver_C743E392(frequency);
+	result = scePowerSetCameraBusClockFrequency(frequency);
 	driver = cameraDriver;
 	if (result >= 0)
 		driver->busClockFast = frequency == 166;
@@ -586,7 +586,7 @@ int cameraWaitForDeviceReads(void)
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&driver->spinlock, intrStatus);
 		timeout = 8000;
 		sceKernelClearEventFlag(cameraDriver->eventFlagId, ~0x60000U);
-		SceThreadmgrForDriver_8A35F714(cameraDriver->eventFlagId, 0x60000, 5, NULL, &timeout);
+		sceKernelWaitEventFlagCB(cameraDriver->eventFlagId, 0x60000, 5, NULL, &timeout);
 	}
 	driver->device[0].busy = 1;
 	driver->device[1].busy = 1;
@@ -921,7 +921,7 @@ int cameraResumeDevice(int devnum)
 		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		return result;
 	}
-	result = ScePowerForDriver_C743E392(166);
+	result = scePowerSetCameraBusClockFrequency(166);
 	if (result < 0) {
 		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
@@ -935,9 +935,9 @@ int cameraResumeDevice(int devnum)
 		return result;
 	if (!cameraDriver->gpioPowerEnabled) {
 		SceGpioForDriver_372022A4(0, 9, 0);
-		SceGpioForDriver_F6310435(0, 9);
+		sceGpioPortClear(0, 9);
 		sceKernelDelayThread(1000);
-		SceGpioForDriver_D454A584(0, 9);
+		sceGpioPortSet(0, 9);
 		cameraDriver->gpioPowerEnabled = 1;
 	}
 	result = SceGpioForDriver_372022A4(0, devnum ? 11 : 10, 0);
@@ -1156,7 +1156,7 @@ int cameraStopProcess(int devnum, SceUID processId)
 		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		return result;
 	}
-	result = ScePowerForDriver_C743E392(0);
+	result = scePowerSetCameraBusClockFrequency(0);
 	if (result < 0) {
 		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
@@ -1395,9 +1395,9 @@ int cameraDriverThread(SceSize args, void *argp)
 	for (devnum = 0; devnum != 2; devnum++) {
 		if (!cameraDriver->gpioPowerEnabled) {
 			SceGpioForDriver_372022A4(0, 9, 0);
-			SceGpioForDriver_F6310435(0, 9);
+			sceGpioPortClear(0, 9);
 			sceKernelDelayThread(1000);
-			SceGpioForDriver_D454A584(0, 9);
+			sceGpioPortSet(0, 9);
 			cameraDriver->gpioPowerEnabled = 1;
 		}
 		if (SceGpioForDriver_372022A4(0, devnum ? 11 : 10, 0) >= 0) {
@@ -1510,7 +1510,7 @@ registerCallback:
 	scePowerRegisterCallback(result);
 	ScePowerForDriver_FE35B73D(cameraRequestActiveState, NULL);
 	for (;;) {
-		SceThreadmgrForDriver_8A35F714(cameraDriver->eventFlagId, 0x11ffff, 5, &events, NULL);
+		sceKernelWaitEventFlagCB(cameraDriver->eventFlagId, 0x11ffff, 5, &events, NULL);
 		if (events & 0x100000)
 			return sceKernelExitThread(0);
 		if (!(events & 0x1fffc)) {
@@ -1562,7 +1562,7 @@ registerCallback:
 								work.timeout = 0xffffffff;
 								if (sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0)
 									goto suspendProcessUnlockFront;
-								if (ScePowerForDriver_C743E392(0) < 0)
+								if (scePowerSetCameraBusClockFrequency(0) < 0)
 									goto suspendProcessUnlockBoth;
 								cameraDriver->busClockFast = 0;
 								sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
@@ -1665,9 +1665,9 @@ suspendProcessDone:
 						}
 					}
 					SceGpioForDriver_372022A4(0, devnum ? 11 : 10, 0);
-					SceGpioForDriver_F6310435(0, devnum ? 11 : 10);
+					sceGpioPortClear(0, devnum ? 11 : 10);
 					if (devnum == 1 && cameraDriver->gpioPowerEnabled) {
-						SceGpioForDriver_F6310435(0, 9);
+						sceGpioPortClear(0, 9);
 						cameraDriver->gpioPowerEnabled = 0;
 					}
 					intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
@@ -1681,7 +1681,7 @@ suspendProcessDone:
 				work.timeout = 0xffffffff;
 				if (sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0)
 					goto suspendDevicesUnlockFront;
-				if (ScePowerForDriver_C743E392(0) < 0)
+				if (scePowerSetCameraBusClockFrequency(0) < 0)
 					goto suspendDevicesUnlockBoth;
 				cameraDriver->busClockFast = 0;
 				sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
@@ -1719,14 +1719,14 @@ suspendDevicesDone:
 					device = &driver->device[devnum];
 					if (!driver->gpioPowerEnabled) {
 						SceGpioForDriver_372022A4(0, 9, 0);
-						SceGpioForDriver_F6310435(0, 9);
+						sceGpioPortClear(0, 9);
 						sceKernelDelayThread(1000);
-						SceGpioForDriver_D454A584(0, 9);
+						sceGpioPortSet(0, 9);
 						cameraDriver->gpioPowerEnabled = 1;
 					}
 					SceGpioForDriver_372022A4(0, devnum ? 11 : 10, 0);
 					SceGpioForDriver_372022A4(0, devnum ? 11 : 10, 0);
-					SceGpioForDriver_D454A584(0, devnum ? 11 : 10);
+					sceGpioPortSet(0, devnum ? 11 : 10);
 					driver = cameraDriver;
 					if (driver->activeEnabled && driver->powerEnabled && cameraResumeDevice(devnum) < 0)
 						continue;
@@ -2023,7 +2023,7 @@ int SceCameraForDriver_F7A0C99F(void)
 	return cameraTerminate();
 }
 
-int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo)
+int sceCameraOpen(int devnum, SceCameraInfo *pInfo)
 {
 	SceUInt32 context;
 	SceUInt32 timeout;
@@ -2182,7 +2182,7 @@ out:
 	return result;
 }
 
-int SceCameraForDriver_0E9B4B9E(int devnum)
+int sceCameraClose(int devnum)
 {
 	SceUInt32 context;
 	SceUInt32 timeout;
@@ -2330,7 +2330,7 @@ int SceCameraForDriver_5338BE86(int devnum)
 			sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 			goto cleanup;
 		}
-		result = ScePowerForDriver_C743E392(166);
+		result = scePowerSetCameraBusClockFrequency(166);
 		if (result < 0) {
 			sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 			sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
@@ -2345,9 +2345,9 @@ int SceCameraForDriver_5338BE86(int devnum)
 		goto cleanup;
 	if (cameraDriver->gpioPowerEnabled == 0) {
 		SceGpioForDriver_372022A4(0, 9, 0);
-		SceGpioForDriver_F6310435(0, 9);
+		sceGpioPortClear(0, 9);
 		sceKernelDelayThread(1000);
-		SceGpioForDriver_D454A584(0, 9);
+		sceGpioPortSet(0, 9);
 		cameraDriver->gpioPowerEnabled = 1;
 	}
 	result = SceGpioForDriver_372022A4(0, devnum != 0 ? 11 : 10, 0);
@@ -2442,7 +2442,7 @@ int SceCameraForDriver_8C3354E5(int devnum)
 	return result;
 }
 
-int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *read)
+int sceCameraRead(int devnum, SceCameraRead *read)
 {
 	SceUInt32 context, timeout, events, raw8Format;
 	SceUInt32 exposureTimeAndGap[2];
@@ -2710,7 +2710,7 @@ transferFrame:
 		conversion.backgroundColor[2] = 0;
 		conversion.alpha = 255;
 		conversion.fieldMode = 0;
-		result = SceIftuForDriver_67E37EFC(&destination, &source, &conversion);
+		result = sceIftuConvert(&destination, &source, &conversion);
 		if (yuv420) {
 			if (device->cachedFrameBuffer.pvIBase && imageSize &&
 			    sceKernelGetMemBlockMemtypeByAddr(device->cachedFrameBuffer.pvIBase) != 0x8000)
@@ -2991,9 +2991,9 @@ int SceCameraForDriver_6443EEDB(int devnum)
 	}
 	if (!cameraDriver->gpioPowerEnabled) {
 		SceGpioForDriver_372022A4(0, 9, 0);
-		SceGpioForDriver_F6310435(0, 9);
+		sceGpioPortClear(0, 9);
 		sceKernelDelayThread(1000);
-		SceGpioForDriver_D454A584(0, 9);
+		sceGpioPortSet(0, 9);
 		cameraDriver->gpioPowerEnabled = 1;
 	}
 	result = SceGpioForDriver_372022A4(0, devnum ? 11 : 10, 0);
@@ -3064,7 +3064,7 @@ int SceCameraForDriver_DFBBA264(int devnum, int *framerate)
 	return 0;
 }
 
-int SceCameraForDriver_22E70D83(int devnum)
+int sceCameraIsActive(int devnum)
 {
 	SceUInt32 context;
 	int intrStatus, result;

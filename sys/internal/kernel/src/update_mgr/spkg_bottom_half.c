@@ -238,7 +238,7 @@ releasePacket:
 		if (result != (int)0x800f0202 && result)
 			goto error;
 		currentVersion = version;
-		if (!SceQafMgrForDriver_8C423C18()) {
+		if (!sceSblQafMgrIsAllowForceUpdate()) {
 			switch (args->packageType) {
 			case 1: case 9:
 				if ((args->flags & 8) && version > (uint32_t)info.updateVersion &&
@@ -448,7 +448,7 @@ releasePacket:
 		if (sbls->magic != SCE_SLB2_MAGIC)
 			goto invalidFormat;
 		last = &sbls->entryList[sbls->entryNum - 1];
-		result = SceKernelUtilsForDriver_A773A6A8(sbls, (last->fileStartSector << 9) +
+		result = sceSha256Digest(sbls, (last->fileStartSector << 9) +
 				((last->fileSizeInByte + 511) >> 9 << 9), digest);
 		if (result)
 			goto error;

@@ -171,7 +171,7 @@ void SceIntrmgrForKernel_04DBA732(void *enter, void *leave)
 	g_intrLeaveSubIntr = leave;
 }
 
-int SceIntrmgrForDriver_182EE3E3(void)
+int sceKernelIsIntrContext(void)
 {
 	if (getCurrentThreadCB())
 		return 0;
@@ -277,7 +277,7 @@ BadTarget:
 		goto Return;
 	}
 	if (name)
-		SceSysmemForKernel_B628B46B(name, 0, &info->name);
+		sceKernelNameHeapInsert(name, 0, &info->name);
 	else
 		info->name = NULL;
 	info->handler = handler;
@@ -351,7 +351,7 @@ int sceKernelReleaseIntrHandler(unsigned int code)
 		info->callbacks = NULL;
 		info->subCount = 0;
 	}
-	SceSysmemForKernel_634D0D0C(info->name, 0);
+	sceKernelNameHeapDelete(info->name, 0);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	if (g_intrReleased)
 		g_intrReleased(intrCode);
@@ -668,7 +668,7 @@ int sceKernelRegisterSubIntrHandler(unsigned int intrCode, unsigned int subCode,
 		}
 	}
 	if (name)
-		SceSysmemForKernel_B628B46B(name, 0, &sub->name);
+		sceKernelNameHeapInsert(name, 0, &sub->name);
 	else
 		sub->name = NULL;
 	sub->handler = handler;
@@ -744,7 +744,7 @@ int sceKernelReleaseSubIntrHandler(int intrCode, int subCode)
 			return result;
 		}
 	}
-	SceSysmemForKernel_634D0D0C(sub->name, 0);
+	sceKernelNameHeapDelete(sub->name, 0);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }

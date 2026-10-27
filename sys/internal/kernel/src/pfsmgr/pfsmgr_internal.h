@@ -31,7 +31,7 @@
 #define PFS_PATH_MAX			0x3f
 #define PFS_APPROVED_MAX		16
 
-/* mode indices (ScePfsMgrForKernel_2D48AEA2), grouped by pseudo drive */
+/* mode indices (scePfsMount2), grouped by pseudo drive */
 #define PFS_MODE_GDSD_MASK	0x26ec	/* 2, 3, 5, 6, 7, 9, 10, 13 */
 #define PFS_MODE_AC_MASK	0x1110	/* 4, 8, 12 */
 #define PFS_MODE_REDIRECT_MASK	0xf00001	/* 0, 20 to 23 */

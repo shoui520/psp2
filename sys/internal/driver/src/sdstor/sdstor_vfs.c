@@ -598,7 +598,7 @@ eraseAccess:
 		}
 		callback = erase->callback;
 		if (callback != -1) {
-			callback = SceSysmemForDriver_45D22597(0, callback);
+			callback = scePUIDtoGUID(0, callback);
 			if (erase->callback != -1 && callback < 0)
 				return callback;
 		}
@@ -809,7 +809,7 @@ int sdstor_vfs_initialize(void)
 		}
 		return result;
 	}
-	result = SceIofilemgrForDriver_D070BC48(1, NULL, 0, NULL, 0, 0);
+	result = sceIoMount(1, NULL, 0, NULL, 0, 0);
 	if (result) {
 		error = sceKernelDeleteHeap(sdstorVfsHeapId);
 		SCE_DBG_PRINTF_LEVEL(1, 15, 136, "0x%08x\n", result);

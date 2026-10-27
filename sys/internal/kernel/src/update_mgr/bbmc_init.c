@@ -26,7 +26,7 @@ int BbmcUtilInitialize(void)
 	result = sceKernelStartThread(result, 0, NULL);
 	if (result < 0)
 		return result;
-	result = SceThreadmgrForDriver_8A35F714(updateBbmcContext.resultEventFlagId,
+	result = sceKernelWaitEventFlagCB(updateBbmcContext.resultEventFlagId,
 		3, 5, &pattern, NULL);
 	if (!result) {
 		if (pattern & 2)
@@ -71,7 +71,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 	sceKernelSetEventFlag(updateBbmcContext.eventFlagId, 2);
 	for (;;) {
 		pattern = 0;
-		result = SceThreadmgrForDriver_8A35F714(updateBbmcContext.eventFlagId,
+		result = sceKernelWaitEventFlagCB(updateBbmcContext.eventFlagId,
 			0xffffff, 1, &pattern, NULL);
 		if (result < 0)
 			goto exit;

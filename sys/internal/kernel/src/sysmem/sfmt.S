@@ -13,10 +13,10 @@
 
 	.balign	2
 /* genrand_int32: the next word, regenerating the state when it is used up. */
-	.global	SceKernelUtilsForDriver_BBE4701A
-	.type	SceKernelUtilsForDriver_BBE4701A, %function
+	.global	sceSfmt19937GenRand32
+	.type	sceSfmt19937GenRand32, %function
 	.thumb_func
-SceKernelUtilsForDriver_BBE4701A:
+sceSfmt19937GenRand32:
 	ldr	r2, [r0, #0]
 	mov.w	ip, #1
 	cmp.w	r2, #624
@@ -25,13 +25,13 @@ SceKernelUtilsForDriver_BBE4701A:
 	str	r2, [r0, #0]
 	ldr.w	r0, [r0, r2, lsl #2]
 	bx	lr
-	.size	SceKernelUtilsForDriver_BBE4701A, . - SceKernelUtilsForDriver_BBE4701A
+	.size	sceSfmt19937GenRand32, . - sceSfmt19937GenRand32
 
 /* genrand_int64: the next two words (an odd index skips one). */
-	.global	SceKernelUtilsForDriver_45DEAAD6
-	.type	SceKernelUtilsForDriver_45DEAAD6, %function
+	.global	sceSfmt19937GenRand64
+	.type	sceSfmt19937GenRand64, %function
 	.thumb_func
-SceKernelUtilsForDriver_45DEAAD6:
+sceSfmt19937GenRand64:
 	ldr	r2, [r0, #0]
 	mov.w	ip, #2
 	cmp.w	r2, #624
@@ -46,7 +46,7 @@ SceKernelUtilsForDriver_45DEAAD6:
 	ldreq	r1, [r2, #8]
 	movne	r1, #0
 	bx	lr
-	.size	SceKernelUtilsForDriver_45DEAAD6, . - SceKernelUtilsForDriver_45DEAAD6
+	.size	sceSfmt19937GenRand64, . - sceSfmt19937GenRand64
 
 /* gen_rand_all, reached from both with ip = 1 or 2: refill the state, take the first words. */
 	.type	gen_rand_all, %function
@@ -109,20 +109,20 @@ gen_rand_all:
 	.size	gen_rand_all, . - gen_rand_all
 
 /* fill_array32: a multiple of four words, halved into fill_array64. */
-	.global	SceKernelUtilsForDriver_2B30548B
-	.type	SceKernelUtilsForDriver_2B30548B, %function
+	.global	sceSfmt19937FillArray32
+	.type	sceSfmt19937FillArray32, %function
 	.thumb_func
-SceKernelUtilsForDriver_2B30548B:
+sceSfmt19937FillArray32:
 	tst.w	r2, #3
 	bne.w	.LarrayBadSize
 	mov.w	r2, r2, lsr #1
-	.size	SceKernelUtilsForDriver_2B30548B, . - SceKernelUtilsForDriver_2B30548B
+	.size	sceSfmt19937FillArray32, . - sceSfmt19937FillArray32
 
 /* fill_array64: an even count of at least 312 words, in a fresh state. */
-	.global	SceKernelUtilsForDriver_49B41540
-	.type	SceKernelUtilsForDriver_49B41540, %function
+	.global	sceSfmt19937FillArray64
+	.type	sceSfmt19937FillArray64, %function
 	.thumb_func
-SceKernelUtilsForDriver_49B41540:
+sceSfmt19937FillArray64:
 	tst.w	r2, #1
 	bne.w	.LarrayBadSize
 	mov.w	r2, r2, lsr #1
@@ -132,7 +132,7 @@ SceKernelUtilsForDriver_49B41540:
 	cmp	r2, #156
 	blt.w	.LarrayBadSize
 	b.n	gen_rand_array
-	.size	SceKernelUtilsForDriver_49B41540, . - SceKernelUtilsForDriver_49B41540
+	.size	sceSfmt19937FillArray64, . - sceSfmt19937FillArray64
 
 /* gen_rand_array: the recursion straight into the caller's array. */
 	.type	gen_rand_array, %function
@@ -307,10 +307,10 @@ period_certification:
 	.size	period_certification, . - period_certification
 
 /* init_gen_rand: seed with one word. */
-	.global	SceKernelUtilsForDriver_AB48C3CA
-	.type	SceKernelUtilsForDriver_AB48C3CA, %function
+	.global	sceSfmt19937InitGenRand
+	.type	sceSfmt19937InitGenRand, %function
 	.thumb_func
-SceKernelUtilsForDriver_AB48C3CA:
+sceSfmt19937InitGenRand:
 	push	{r4, lr}
 	mov.w	r2, #624
 	str	r2, [r0, #0]
@@ -331,13 +331,13 @@ SceKernelUtilsForDriver_AB48C3CA:
 	bl	period_certification
 	mov.w	r0, #0
 	pop	{r4, pc}
-	.size	SceKernelUtilsForDriver_AB48C3CA, . - SceKernelUtilsForDriver_AB48C3CA
+	.size	sceSfmt19937InitGenRand, . - sceSfmt19937InitGenRand
 
 /* init_by_array: seed with an array of words. */
-	.global	SceKernelUtilsForDriver_33AE1203
-	.type	SceKernelUtilsForDriver_33AE1203, %function
+	.global	sceSfmt19937InitByArray
+	.type	sceSfmt19937InitByArray, %function
 	.thumb_func
-SceKernelUtilsForDriver_33AE1203:
+sceSfmt19937InitByArray:
 	push.w	{r4, r5, r6, r7, r8, r9, sl, fp, lr}
 	mov.w	r3, #624
 	str	r3, [r0, #0]
@@ -462,7 +462,7 @@ SceKernelUtilsForDriver_33AE1203:
 	bl	period_certification
 	mov.w	r0, #0
 	pop.w	{r4, r5, r6, r7, r8, r9, sl, fp, pc}
-	.size	SceKernelUtilsForDriver_33AE1203, . - SceKernelUtilsForDriver_33AE1203
+	.size	sceSfmt19937InitByArray, . - sceSfmt19937InitByArray
 
 	.section .rodata
 	.balign	4

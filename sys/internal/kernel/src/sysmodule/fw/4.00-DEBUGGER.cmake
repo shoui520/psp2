@@ -77,10 +77,10 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetProcessId
 	sceKernelCreateMutex
 	sceKernelRegisterKPLS
-	SceProcessmgrForDriver_61B9B6FA
+	sceKernelSetInitialPMCR
 	sceKernelSetPMUSERENR
-	SceProcessmgrForDriver_AF80F39C
-	SceProcessmgrForDriver_B1C3EFCA
+	sceKernelGetRemoteKPLS
+	sceKernelSetInitialPMUSERENR
 	SceProcessmgrForDriver_D141C076
 	SceSblACMgrForDriver_6C5AB07F
 	sceSblACMgrIsSystemProgram

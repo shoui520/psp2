@@ -58,7 +58,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlock
 	sceKernelDcacheInvalidateRange
 	sceKernelSpinlockLowLockCpuSuspendIntr
-	atomicCompareAndSet8
+	sceKernelAtomicCompareAndSet8
 	sceKernelSysrootGetSharedMemory
 	sceKernelSysrootGetKblParam
 	sceKernelSysrootSetModulePrivate
@@ -67,7 +67,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForTZS_563B623D
 	SceDebugForTZS_618F89E6
 	SceDebugForTZS_D26EB4BB
-	SceDebugForTZS_F851BA4F
+	sceKernelGetAssertLevel
 	sceKernelVAtoPA
 	sceKernelFreeUncacheHeapMemory
 	sceKernelFreeHeapMemory

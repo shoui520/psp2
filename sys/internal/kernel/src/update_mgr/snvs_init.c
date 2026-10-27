@@ -40,10 +40,10 @@ int SpkgInfoUtilInitForUpdater(uint32_t *status, uint32_t *flags)
 			if (result)
 				return result;
 			for (tries = 3; tries; tries--) {
-				if (!SceSysconForDriver_10C9657A(firstOffset, encrypted.words, 16) &&
-				    !SceSysconForDriver_10C9657A(secondOffset, &encrypted.words[4], 16) &&
-				    !SceSysconForDriver_ACAFA2B8(firstOffset, input.words, 16) &&
-				    !SceSysconForDriver_ACAFA2B8(secondOffset, &input.words[4], 16) &&
+				if (!sceSysconNvsWriteData(firstOffset, encrypted.words, 16) &&
+				    !sceSysconNvsWriteData(secondOffset, &encrypted.words[4], 16) &&
+				    !sceSysconNvsReadData(firstOffset, input.words, 16) &&
+				    !sceSysconNvsReadData(secondOffset, &input.words[4], 16) &&
 				    !timingsafe_memcmp(&encrypted, &input, sizeof(encrypted)) &&
 				    !SpkgInfoUtilSNVSDecryptSectors(sectorIndex, &input,
 						&decrypted, 1, -1) &&
@@ -98,8 +98,8 @@ int SpkgInfoUtilInitForUpdater(uint32_t *status, uint32_t *flags)
 		tries = 3;
 		smId = -1;
 		do {
-			if (!SceSysconForDriver_ACAFA2B8(0, stored.sector.words, 16) &&
-			    !SceSysconForDriver_ACAFA2B8(16, &stored.sector.words[4], 16))
+			if (!sceSysconNvsReadData(0, stored.sector.words, 16) &&
+			    !sceSysconNvsReadData(16, &stored.sector.words[4], 16))
 				break;
 		} while (--tries);
 		request.nvs.sector = stored.sector;
@@ -116,13 +116,13 @@ int SpkgInfoUtilInitForUpdater(uint32_t *status, uint32_t *flags)
 		stored.sector = request.nvs.sector;
 		tries = 3;
 		do {
-			result = SceSysconForDriver_10C9657A(0, stored.sector.words, 16);
+			result = sceSysconNvsWriteData(0, stored.sector.words, 16);
 			if (!result) {
-				result = SceSysconForDriver_10C9657A(16, &stored.sector.words[4], 16);
+				result = sceSysconNvsWriteData(16, &stored.sector.words[4], 16);
 				if (!result) {
-					result = SceSysconForDriver_ACAFA2B8(0, verified.sector.words, 16);
+					result = sceSysconNvsReadData(0, verified.sector.words, 16);
 					if (!result) {
-						result = SceSysconForDriver_ACAFA2B8(16,
+						result = sceSysconNvsReadData(16,
 								&verified.sector.words[4], 16);
 						if (!result) {
 							if (!timingsafe_memcmp(&stored.sector,

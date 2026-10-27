@@ -822,7 +822,7 @@ TSMP_INLINE int tsmpUpdateActivation(const TsmpHeader *pkt, SceSize size)
 		goto bad_size;
 	}
 
-	if (body[0] >= 2 && (ret = SceSblPostSsMgrForDriver_0298382B((const char *)&body[1])) < 0) {
+	if (body[0] >= 2 && (ret = sceSblLicMgrActivateDevkit((const char *)&body[1])) < 0) {
 		if (ret == (int)0x800f1302)
 			result = TSMP_RESULT_ACT_EXPIRED;
 		else if (ret == (int)0x800f1324 || ret == (int)0x800f1327)
@@ -834,7 +834,7 @@ TSMP_INLINE int tsmpUpdateActivation(const TsmpHeader *pkt, SceSize size)
 		else
 			result = TSMP_RESULT_FAILED;
 	} else {
-		ret = SceSblPostSsMgrForDriver_4FF2682F(&expire, 1);
+		ret = sceSblLicMgrGetExpireDate(&expire, 1);
 		result = TSMP_RESULT_OK;
 		if (ret < 0) {
 			expire = 0;
@@ -1103,7 +1103,7 @@ TSMP_INLINE int tsmpSyncCurrentTick(void)
 		tsmpFreeSendBuf();
 		return ret;
 	}
-	ret = SceRtcForDriver_497B5DC9(&time, &unixTime);
+	ret = sceRtcGetTime64_t(&time, &unixTime);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 3083, "0x%08X\n", ret);
 		tsmpFreeSendBuf();

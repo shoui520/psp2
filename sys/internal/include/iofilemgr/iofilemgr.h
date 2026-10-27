@@ -312,68 +312,50 @@ typedef struct IofilemgrChstatByFdParam {
 
 /* SceIofilemgrForDriver */
 int SceIofilemgrForDriver_03F6A684(SceUID pid, SceInt32 depth);
-/* vitasdk: ksceIoSyncByFdAsync */
-int SceIofilemgrForDriver_041209CF(SceUID fd, int flag, IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoGetstatByFdAsync */
-int SceIofilemgrForDriver_0FEE1238(SceUID fd, SceIoStat *stat, IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoCloseAsync */
-int SceIofilemgrForDriver_11C57CC6(SceUID fd, IoAsyncParam *asyncParam);
+int sceIoSyncByFdAsync(SceUID fd, int flag, IoAsyncParam *asyncParam);
+int sceIoGetstatByFdAsync(SceUID fd, SceIoStat *stat, IoAsyncParam *asyncParam);
+int sceIoCloseAsync(SceUID fd, IoAsyncParam *asyncParam);
 /* the request the calling thread runs for the I/O scheduler, or NULL (name unknown) */
 IoRequest *SceIofilemgrForDriver_12F8D58E(void);
 /* nonzero when a thread of this I/O weight is to give way (name unknown) */
 int SceIofilemgrForDriver_15C17487(SceInt32 weight);
 int SceIofilemgrForDriver_16336A0D(SceUID fd, int op);	/* vitasdk: ksceIoFlock */
-/* vitasdk: ksceIoPwriteAsync */
-SceUID SceIofilemgrForDriver_202CDDE3(SceUID fd, const void *data, SceSize size, SceOff offset,
+SceUID sceIoPwriteAsync(SceUID fd, const void *data, SceSize size, SceOff offset,
 				      IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoUmount */
-int SceIofilemgrForDriver_20574100(int id, int flags, SceUInt32 reservedLow, int reservedHigh);
-/* vitasdk: ksceIoMkdirAsync */
-SceUID SceIofilemgrForDriver_27003443(const char *dir, SceMode mode, IoAsyncParam *asyncParam);
+int sceIoUmount(int id, int flags, SceUInt32 reservedLow, int reservedHigh);
+SceUID sceIoMkdirAsync(const char *dir, SceMode mode, IoAsyncParam *asyncParam);
 int SceIofilemgrForDriver_2EFDFA12(SceUID fd, const char *path);
 int SceIofilemgrForDriver_338DCD68(SceUID fd, int *error);	/* vitasdk: ksceIoSyncByFd */
 /* called when buffers for I/O of this weight run out (name unknown) */
 int SceIofilemgrForDriver_3675ECB9(SceUInt32 weight);
 int SceIofilemgrForDriver_3A79FAC9(SceUID fd);
-/* vitasdk: ksceIoSetThreadDefaultPriorityForSystem */
-int SceIofilemgrForDriver_3F0FF9D5(SceInt32 priority);
-int SceIofilemgrForDriver_40B933C7(SceUID uid);	/* vitasdk: ksceIoClearErrorEvent */
+int sceIoSetThreadDefaultPriorityForSystem(SceInt32 priority);
+int sceIoClearErrorEvent(SceUID uid);
 int sceIoSyncByFd(SceUID fd, int flag);
 /* vitasdk: ksceIoGetRemoteKPLSData */
 int SceIofilemgrForDriver_44EDCE57(SceUID pid, void *dst);
-/* vitasdk: ksceIoOpenAsync */
-SceUID SceIofilemgrForDriver_451001DE(const char *file, int flags, SceMode mode,
+SceUID sceIoOpenAsync(const char *file, int flags, SceMode mode,
 				      IoAsyncParam *asyncParam);
 int sceIoGetstatByFd(SceUID fd, SceIoStat *stat);
-/* vitasdk: ksceIoSyncAsync */
-SceUID SceIofilemgrForDriver_4F9EA8B0(const char *device, unsigned int flag,
+SceUID sceIoSyncAsync(const char *device, unsigned int flag,
 				      IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoLseekAsync */
-SceUID SceIofilemgrForDriver_541BAABD(SceUID fd, SceOff offset, int whence,
+SceUID sceIoLseekAsync(SceUID fd, SceOff offset, int whence,
 				      IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoDreadAsync */
-int SceIofilemgrForDriver_5982B0E3(SceUID fd, SceIoDirent *dir, IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoPreadAsync */
-SceUID SceIofilemgrForDriver_64A46A2C(SceUID fd, void *data, SceSize size, SceOff offset,
+int sceIoDreadAsync(SceUID fd, SceIoDirent *dir, IoAsyncParam *asyncParam);
+SceUID sceIoPreadAsync(SceUID fd, void *data, SceSize size, SceOff offset,
 				      IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoReadAsync */
-SceUID SceIofilemgrForDriver_69047C81(SceUID fd, void *data, SceSize size,
+SceUID sceIoReadAsync(SceUID fd, void *data, SceSize size,
 				      IoAsyncParam *asyncParam);
 int SceIofilemgrForDriver_6BEEDDB4(SceUID fd, int handle);
-/* vitasdk: ksceIoGetThreadDefaultPriorityForSystem */
-SceInt32 SceIofilemgrForDriver_6D0FEDB6(void);
-/* vitasdk: ksceIoDopenAsync */
-SceUID SceIofilemgrForDriver_72F06BDE(const char *dirname, IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoChstatAsync */
-SceUID SceIofilemgrForDriver_7EC442BF(const char *file, SceIoStat *stat, unsigned int bits,
+SceInt32 sceIoGetThreadDefaultPriorityForSystem(void);
+SceUID sceIoDopenAsync(const char *dirname, IoAsyncParam *asyncParam);
+SceUID sceIoChstatAsync(const char *file, SceIoStat *stat, unsigned int bits,
 				      IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoGetstatAsync */
-SceUID SceIofilemgrForDriver_94A5304A(const char *file, SceIoStat *stat, IoAsyncParam *asyncParam);
+SceUID sceIoGetstatAsync(const char *file, SceIoStat *stat, IoAsyncParam *asyncParam);
 /* vitasdk: ksceIoGetMediaType */
 int SceIofilemgrForDriver_9C220246(SceUID pid, const char *path, int unused, SceUInt32 *type);
-SceInt32 SceIofilemgrForDriver_9FCDCE62(SceUID fd);
-/* vitasdk: ksceIoWriteAsync */
-SceUID SceIofilemgrForDriver_A1BD13D0(SceUID fd, const void *data, SceSize size,
+SceInt32 sceIoGetPriorityForSystem(SceUID fd);
+SceUID sceIoWriteAsync(SceUID fd, const void *data, SceSize size,
 				      IoAsyncParam *asyncParam);
 /* vitasdk: ksceIoGetFileInfo */
 int SceIofilemgrForDriver_A1EF2648(SceUID fd, SceUID pid, SceIofileInfo *info);
@@ -382,8 +364,7 @@ int SceIofilemgrForDriver_A39A9CA7(const char *dev, int flags, SceUInt32 reserve
 int SceIofilemgrForDriver_A9302946(const char *dev, unsigned int cmd, const void *indata,
 				   SceSize inlen, void *outdata, SceSize outlen,
 				   IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoRenameAsync */
-SceUID SceIofilemgrForDriver_AACBC47A(const char *oldname, const char *newname,
+SceUID sceIoRenameAsync(const char *oldname, const char *newname,
 				      IoAsyncParam *asyncParam);
 /* vitasdk: ksceIoSetProcessDefaultPriorityForSystem */
 int SceIofilemgrForDriver_ABE65071(SceInt32 priority);
@@ -392,29 +373,24 @@ int SceIofilemgrForDriver_B499287E(IoAsyncParam *params, int num, int *numComple
 /* vitasdk: ksceIoIoctlAsync */
 int SceIofilemgrForDriver_B761E91B(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen,
 				   void *outdata, SceSize outlen, IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoDcloseAsync */
-int SceIofilemgrForDriver_C08F199F(SceUID fd, IoAsyncParam *asyncParam);
+int sceIoDcloseAsync(SceUID fd, IoAsyncParam *asyncParam);
 /* vitasdk: ksceIoOpenForPid */
 SceUID SceIofilemgrForDriver_C3D34965(SceUID pid, const char *path, int flags, SceMode mode);
-int SceIofilemgrForDriver_C6158F8D(SceUID uid);	/* vitasdk: ksceIoDeleteErrorEvent */
+int sceIoDeleteErrorEvent(SceUID uid);
 /* called when they are given back (name unknown) */
 int SceIofilemgrForDriver_C722DF35(SceUInt32 weight);
-int SceIofilemgrForDriver_CCE94599(SceUID fd, SceInt32 priority);
+int sceIoSetPriorityForSystem(SceUID fd, SceInt32 priority);
 /* vitasdk: ksceIoGetProcessDefaultPriorityForSystem */
 SceInt32 SceIofilemgrForDriver_CE397158(void);
 /* vitasdk: ksceIoSetPathMappingFunction */
 int SceIofilemgrForDriver_CFAECF18(IoPathMappingFunction func);
-/* vitasdk: ksceIoMount */
-int SceIofilemgrForDriver_D070BC48(int id, const char *path, unsigned int flags, void *data,
+int sceIoMount(int id, const char *path, unsigned int flags, void *data,
 				   SceUInt32 reservedLow, int reservedHigh);
 int sceIoChstatByFd(SceUID fd, SceIoStat *stat, int bits);
-/* vitasdk: ksceIoChstatByFdAsync */
-int SceIofilemgrForDriver_EC974400(SceUID fd, SceIoStat *stat, int bits, IoAsyncParam *asyncParam);
+int sceIoChstatByFdAsync(SceUID fd, SceIoStat *stat, int bits, IoAsyncParam *asyncParam);
 void SceIofilemgrForDriver_F4F8C59A(void *arg);
-/* vitasdk: ksceIoRmdirAsync */
-SceUID SceIofilemgrForDriver_F5B0B36C(const char *dirname, IoAsyncParam *asyncParam);
-/* vitasdk: ksceIoRemoveAsync */
-SceUID SceIofilemgrForDriver_F9D6507D(const char *file, IoAsyncParam *asyncParam);
+SceUID sceIoRmdirAsync(const char *dirname, IoAsyncParam *asyncParam);
+SceUID sceIoRemoveAsync(const char *file, IoAsyncParam *asyncParam);
 int sceIoCancel(SceUID uid);
 int sceIoChstat(const char *file, SceIoStat *stat, int bits);
 int sceIoChstatForVshbridge(const char *file, SceIoStat *stat, int bits);

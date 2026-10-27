@@ -101,8 +101,8 @@ int motionCreateHeap(void);
 int motionInitializeManager(void *arg);
 
 /* motion_manager.c */
-int SceMotionDevForDriver_3B23DF55(unsigned int block, SceMotionDevCalibrationHeader *header);
-int SceMotionDevForDriver_F0251700(unsigned int block, SceMotionDevCalibrationData *data,
+int sceMotionDevGetCalibrationHeader(unsigned int block, SceMotionDevCalibrationHeader *header);
+int sceMotionDevGetCalibrationData(unsigned int block, SceMotionDevCalibrationData *data,
 	unsigned int count);
 int motionRead(SceMotionDevData *data, int count, unsigned int *info);
 int motionReadForMagnCalib(SceMotionDevData *data, int count);
@@ -119,4 +119,4 @@ int motionGetGyroBias(SceMotionDevGyroBiasData *bias);
 int motionGetDeviceLocation(SceMotionDevDeviceLocation *location);
 uint32_t motionGetMeasMode(uint8_t *mode);
 int motionGetControllerType(int port, uint8_t *type);
-int SceMotionDevForDriver_5B53AC26(void *statistics);
+int sceMotionDevGetEvaInfo(void *statistics);

@@ -55,7 +55,7 @@ corrections() {
 	#   pointer stepped before its load becomes a pre-increment (iofilemgr vfs_is_full_path:
 	#   ldrsb r3, [r0, #1]!);
 	# * an add with carry into one of its low operands prints as the 16-bit adcs when the
-	#   flags are dead (thumb2_reorg, r201411): rtc SceRtcForDriver_A82AC5B3 adds a 64-bit
+	#   flags are dead (thumb2_reorg, r201411): rtc sceRtcTickAddMicroseconds adds a 64-bit
 	#   tick with adds r2, r2, r4; adcs r3, r5;
 	# * one DImode and/ior/xor insn each, with the core and the NEON alternatives (r197965,
 	#   r199527, r199792, r199814, PR 56315; this release has NEON-only insns that disfavour
@@ -101,7 +101,7 @@ PYEOF
 	# define_split Linaro 4.8 backported from trunk; this release has only the conditional
 	# rsbs/it/movlo form. Sony's code has the clz form for a comparison with 0 (sysmem
 	# UIDEntryIsUnused) and keeps this release's sub/negs/adc form for a comparison with
-	# another value (sysmem SceKernelUtilsForDriver_D8FAEFD4).
+	# another value (sysmem sceGzipIsValid).
 	python3 - $A/arm.md <<'PYEOF'
 import sys
 p = sys.argv[1]
@@ -210,7 +210,7 @@ PYEOF
 	# 64-bit arithmetic stays in core registers: the NEON alternatives of the DImode
 	# patterns are off, the core ones on (trunk r196876 with its default, no
 	# -mneon-for-64bits; this release turns the NEON ones on for every tune but Cortex-A8).
-	# Sony's code adds 64-bit ticks with adds/adcs (rtc SceRtcForDriver_A82AC5B3: ldrd, adds,
+	# Sony's code adds 64-bit ticks with adds/adcs (rtc sceRtcTickAddMicroseconds: ldrd, adds,
 	# adcs, strd), not vadd.i64.
 	python3 - $A/arm.md <<'PYEOF'
 import sys

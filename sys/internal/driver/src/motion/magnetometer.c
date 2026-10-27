@@ -27,12 +27,12 @@ int motionMagnInitialize(void)
 	motionMagn.device.status = 1;
 	SceGpioForDriver_372022A4(0, MAGN_RESET_PORT, 0);
 	for (;;) {
-		SceGpioForDriver_F6310435(0, MAGN_RESET_PORT);
+		sceGpioPortClear(0, MAGN_RESET_PORT);
 		sceKernelDelayThread(5);
-		SceGpioForDriver_D454A584(0, MAGN_RESET_PORT);
+		sceGpioPortSet(0, MAGN_RESET_PORT);
 		sceKernelDelayThread(100);
 		identityRegister = 0;
-		result = SceI2cForDriver_0A40B7BF(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
+		result = sceI2cMasterTransmitReceive(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 			&identityRegister, 1, MAGN_I2C_ADDRESS,
 			(uint8_t *)&motionMagn.device.deviceId, 2);
 		if (result < 0) {
@@ -51,20 +51,20 @@ int motionMagnInitialize(void)
 		}
 		command[0] = 0x31;
 		command[1] = 0x1f;
-		result = SceI2cForDriver_CA94A759(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
+		result = sceI2cMasterTransmit(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 			command, 2);
 		sceKernelDelayThread(100);
 		if (result < 0)
 			goto configuration_error;
 		adjustmentRegister[0] = 0x60;
-		result = SceI2cForDriver_0A40B7BF(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
+		result = sceI2cMasterTransmitReceive(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 			adjustmentRegister, 1, MAGN_I2C_ADDRESS,
 			motionMagn.device.sensitivity, 3);
 		if (result < 0)
 			goto configuration_error;
 		command[0] = 0x31;
 		command[1] = 0;
-		result = SceI2cForDriver_CA94A759(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
+		result = sceI2cMasterTransmit(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 			command, 2);
 		sceKernelDelayThread(100);
 		if (result >= 0)
@@ -78,17 +78,17 @@ int motionMagnInitialize(void)
 	__builtin_memset(sample, 0, sizeof(sample));
 	command[0] = 0x31;
 	command[1] = 0;
-	SceI2cForDriver_CA94A759(MAGN_I2C_BUS, MAGN_I2C_ADDRESS, command, 2);
+	sceI2cMasterTransmit(MAGN_I2C_BUS, MAGN_I2C_ADDRESS, command, 2);
 	sceKernelDelayThread(100);
 	command[0] = 0x31;
 	command[1] = 0x10;
-	SceI2cForDriver_CA94A759(MAGN_I2C_BUS, MAGN_I2C_ADDRESS, command, 2);
+	sceI2cMasterTransmit(MAGN_I2C_BUS, MAGN_I2C_ADDRESS, command, 2);
 	sceKernelDelayThread(100);
 	sceKernelDelayThread(8000);
 	attempts = 6;
 	do {
 		statusRegister[0] = 0x10;
-		result = SceI2cForDriver_0A40B7BF(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
+		result = sceI2cMasterTransmitReceive(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 			statusRegister, 1, MAGN_I2C_ADDRESS, sample, 1);
 		if (result < 0)
 			goto read_error;
@@ -98,7 +98,7 @@ int motionMagnInitialize(void)
 		}
 	} while (!(sample[0] & 1));
 	command[0] = 0x11;
-	result = SceI2cForDriver_0A40B7BF(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
+	result = sceI2cMasterTransmitReceive(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 		command, 1, MAGN_I2C_ADDRESS, sample, 8);
 	if (result < 0)
 		goto read_error;
@@ -148,16 +148,16 @@ int motionMagnCancelMeasurement(void)
 int motionMagnStop(void)
 {
 	motionMagn.measuring = 0;
-	SceGpioForDriver_F6310435(0, MAGN_RESET_PORT);
+	sceGpioPortClear(0, MAGN_RESET_PORT);
 	return 0;
 }
 
 int motionMagnReset(void)
 {
 	SceGpioForDriver_372022A4(0, MAGN_RESET_PORT, 0);
-	SceGpioForDriver_F6310435(0, MAGN_RESET_PORT);
+	sceGpioPortClear(0, MAGN_RESET_PORT);
 	sceKernelDelayThread(5);
-	SceGpioForDriver_D454A584(0, MAGN_RESET_PORT);
+	sceGpioPortSet(0, MAGN_RESET_PORT);
 	sceKernelDelayThread(100);
 	return 0;
 }
@@ -169,16 +169,16 @@ int motionMagnStartMeasurement(void)
 
 	command[0] = 0x31;
 	command[1] = 1;
-	result = SceI2cForDriver_CA94A759(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
+	result = sceI2cMasterTransmit(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 		command, 2);
 	sceKernelDelayThread(100);
 	if (result >= 0) {
 		motionMagn.measuring = 1;
 		return result;
 	}
-	SceGpioForDriver_F6310435(0, MAGN_RESET_PORT);
+	sceGpioPortClear(0, MAGN_RESET_PORT);
 	sceKernelDelayThread(5);
-	SceGpioForDriver_D454A584(0, MAGN_RESET_PORT);
+	sceGpioPortSet(0, MAGN_RESET_PORT);
 	sceKernelDelayThread(100);
 	return result;
 }
@@ -201,7 +201,7 @@ int motionMagnReadSample(SceMotionDevData *data)
 	attempts = 6;
 	do {
 		statusRegister[0] = 0x10;
-		result = SceI2cForDriver_0A40B7BF(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
+		result = sceI2cMasterTransmitReceive(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 			statusRegister, 1, MAGN_I2C_ADDRESS, sample, 1);
 		if (result < 0) {
 			motionMagn.statistics.readErrors++;
@@ -213,7 +213,7 @@ int motionMagnReadSample(SceMotionDevData *data)
 		}
 	} while (!(sample[0] & 1));
 	dataRegister[0] = 0x11;
-	result = SceI2cForDriver_0A40B7BF(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
+	result = sceI2cMasterTransmitReceive(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 		dataRegister, 1, MAGN_I2C_ADDRESS, sample, 8);
 	if (result < 0) {
 		motionMagn.statistics.readErrors++;
@@ -243,9 +243,9 @@ int motionMagnReadSample(SceMotionDevData *data)
 status_error:
 	result = (int)0x80360107U;
 reset:
-	SceGpioForDriver_F6310435(0, MAGN_RESET_PORT);
+	sceGpioPortClear(0, MAGN_RESET_PORT);
 	sceKernelDelayThread(5);
-	SceGpioForDriver_D454A584(0, MAGN_RESET_PORT);
+	sceGpioPortSet(0, MAGN_RESET_PORT);
 	sceKernelDelayThread(100);
 	return result;
 }

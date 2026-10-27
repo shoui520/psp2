@@ -18,7 +18,7 @@ int SceQafMgrForDriver_41E04800(void);
 int SceQafMgrForDriver_4BC1883F(void);
 int SceQafMgrForDriver_52B4E164(void);
 int SceQafMgrForDriver_694D1096(void);
-int SceQafMgrForDriver_8C423C18(void);
+int sceSblQafMgrIsAllowForceUpdate(void);
 int SceQafMgrForDriver_AE033133(void);
 int SceQafMgrForDriver_F8BFEE48(void);	/* vitasdk: ksceSblQafMgrIsAllowControlIduAutoUpdate */
 int SceQafMgrForDriver_883E9465(void);	/* vitasdk: ksceSblQafMgrIsAllowDecryptedBootConfigLoad */

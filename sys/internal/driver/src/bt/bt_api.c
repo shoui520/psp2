@@ -29,7 +29,7 @@ int SceBtForDriver_E9936446(uint64_t deviceAddress)
 	BtConnection *connection;
 	int result;
 
-	if (!SceIntrmgrForDriver_182EE3E3()) {
+	if (!sceKernelIsIntrContext()) {
 		result = BtLockTransport();
 		if (result < 0)
 			return result;
@@ -46,7 +46,7 @@ int SceBtForDriver_E9936446(uint64_t deviceAddress)
 	} else {
 		result = 2;
 	}
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return result;
 	return BtUnlockTransport(result);
 }
@@ -61,7 +61,7 @@ static inline int BtSetConfiguration(int configuration)
 	unsigned int mode;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	result = BtLockTransport();
 	if (result < 0)
@@ -121,7 +121,7 @@ static inline int BtGetConfiguration(void)
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	result = BtLockTransport();
 	if (result < 0)
@@ -150,7 +150,7 @@ int sceBtGetConfiguration(void)
 
 int SceBtForDriver_AD31A43E(void)
 {
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	return gBtStack.lastError;
 }
@@ -173,7 +173,7 @@ int SceBtForDriver_E6F659E0(uint64_t deviceAddress)
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	result = BtLockTransport();
 	if (result < 0)
@@ -190,7 +190,7 @@ int sceBtDeleteRegisteredInfo(uint64_t deviceAddress)
 	SceUInt32 saved = sceSyscallEnter();
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		result = (int)0x802f1901;
 		goto out;
 	}
@@ -213,7 +213,7 @@ int sceBtGetConnectingInfo(uint64_t deviceAddress)
 	BtConnection *connection;
 	int result;
 
-	if (!SceIntrmgrForDriver_182EE3E3()) {
+	if (!sceKernelIsIntrContext()) {
 		result = BtLockTransport();
 		if (result < 0)
 			goto out;
@@ -230,7 +230,7 @@ int sceBtGetConnectingInfo(uint64_t deviceAddress)
 	} else {
 		result = 2;
 	}
-	if (!SceIntrmgrForDriver_182EE3E3())
+	if (!sceKernelIsIntrContext())
 		result = BtUnlockTransport(result);
 out:
 	sceSyscallLeave(saved);
@@ -241,7 +241,7 @@ static inline int BtStartInquiry(void)
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -278,7 +278,7 @@ static inline int BtStopInquiry(void)
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -325,7 +325,7 @@ int SceBtForDriver_633F784C(uint64_t deviceAddress, char *buffer)
 	const char *name;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	result = BtLockTransport();
 	if (result)
@@ -344,7 +344,7 @@ int sceBtGetDeviceName(uint64_t deviceAddress, char *buffer)
 	const char *name;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		result = (int)0x802f1901;
 		goto out;
 	}
@@ -366,7 +366,7 @@ int SceBtForDriver_780A5557(uint64_t deviceAddress, void *buffer)
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	result = BtLockTransport();
 	if (result)
@@ -379,7 +379,7 @@ int sceBtGetDeviceId(uint64_t deviceAddress, void *buffer)
 	SceUInt32 saved = sceSyscallEnter();
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		result = (int)0x802f1901;
 		goto out;
 	}
@@ -399,7 +399,7 @@ static inline int BtReplyPinCode(unsigned int mac0, unsigned int mac1,
 	uint64_t deviceAddress = (uint64_t)mac1 << 32 | mac0;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -441,7 +441,7 @@ static inline int BtReplyUserConfirmation(unsigned int mac0, unsigned int mac1,
 	uint64_t deviceAddress = (uint64_t)mac1 << 32 | mac0;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -480,7 +480,7 @@ static inline int BtSetInquiryScan(int enabled)
 	unsigned int scanEnable;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -521,7 +521,7 @@ static inline int BtStartConnect(uint64_t deviceAddress)
 	unsigned int flags;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -591,7 +591,7 @@ static inline int BtRegisterCallback(SceUID callback, uint64_t eventMask,
 	SceUID threadId;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	threadId = sceKernelGetThreadId();
 	result = BtLockTransport();
@@ -640,7 +640,7 @@ int sceBtRegisterCallback(SceUID callback, uint64_t eventMask)
 
 	if (processId < 0)
 		return processId;
-	kernelCallback = SceSysmemForDriver_45D22597(processId, callback);
+	kernelCallback = scePUIDtoGUID(processId, callback);
 	if (kernelCallback < 0)
 		return kernelCallback;
 	saved = sceSyscallEnter();
@@ -655,7 +655,7 @@ static inline int BtUnregisterCallback(void)
 	SceUID threadId;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	threadId = sceKernelGetThreadId();
 	result = BtLockTransport();
@@ -698,7 +698,7 @@ static inline int BtReadEvent(SceBtEvent *events, int maxCount, int userMode)
 	SceUID threadId;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	threadId = sceKernelGetThreadId();
 	result = BtLockTransport();
@@ -842,7 +842,7 @@ static inline int BtAvrcpSendButton(uint64_t deviceAddress, int button)
 	BtConnection *connection;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -876,7 +876,7 @@ static inline int BtAvrcpSendVolume(uint64_t deviceAddress, int volume)
 	BtConnection *connection;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -910,7 +910,7 @@ static inline int BtAvrcpReadVolume(uint64_t deviceAddress)
 	BtConnection *connection;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -944,7 +944,7 @@ int SceBtForDriver_06CB4ABA(uint64_t deviceAddress, void *buffer,
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	result = BtLockTransport();
 	if (result)
@@ -957,7 +957,7 @@ int SceBtForDriver_F9DCEC77(uint32_t mac0, uint32_t mac1, SceBtHidRequest *reque
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -994,7 +994,7 @@ int SceBtForDriver_10D68FAE(const void *peerAddress, const void *deviceClass,
 	BtUnpack(previousHostAddress, 6, gBtDeviceAddressHciFormat, &previousHost);
 	if (vendorId == 0x54c && product == 0x9cc)
 		product = 0x5c4;
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	while (!gBtStack.deviceAddress || !gBtStack.deviceRegistryState) {
 		if (retries == 30)
@@ -1113,7 +1113,7 @@ static inline int BtStartAudioApi(uint64_t deviceAddress, int profile)
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1141,7 +1141,7 @@ static inline int BtStopAudioApi(uint64_t deviceAddress, int profile)
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1170,7 +1170,7 @@ static inline int BtSendAudioApi(uint64_t deviceAddress, void *buffer,
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1200,7 +1200,7 @@ static inline int BtRecvAudioApi(uint64_t deviceAddress, void *buffer,
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1230,7 +1230,7 @@ static inline int BtAudioFrequencyApi(uint64_t deviceAddress)
 	BtConnection *connection;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1281,7 +1281,7 @@ static inline int BtPushImageApi(uint64_t deviceAddress, const void *path,
 	BtConnection *connection;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1320,7 +1320,7 @@ static inline int BtReceiveImageApi(const void *path, unsigned int length,
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1384,7 +1384,7 @@ static inline int BtSendSerialApi(uint64_t deviceAddress, const void *data,
 	BtConnection *connection;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1424,7 +1424,7 @@ static inline int BtReceiveSerialApi(uint64_t deviceAddress, void *data,
 	BtConnection *connection;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1491,7 +1491,7 @@ static inline int BtGetLinkInfoApi(uint64_t deviceAddress, void *buffer,
 	uint64_t now;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1548,7 +1548,7 @@ static inline int BtSendEchoApi(uint64_t deviceAddress, const void *data,
 	BtConnection *connection;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1593,7 +1593,7 @@ static inline int BtSetEchoBufferApi(uint64_t deviceAddress, uint8_t *buffer,
 	BtConnection *connection;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1632,7 +1632,7 @@ static inline int BtSetTestInquiryApi(const void *resultBuffer, int userMode)
 {
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	if ((gBtStack.mode & 0x38) != 8)
 		return (int)0x802f1503;
@@ -1730,7 +1730,7 @@ int sceBtHidVuRegisterCallback(SceUID callback, int vendorId, int productId)
 
 	if (processId < 0)
 		return processId;
-	kernelCallback = SceSysmemForDriver_45D22597(processId, callback);
+	kernelCallback = scePUIDtoGUID(processId, callback);
 	if (kernelCallback < 0)
 		return kernelCallback;
 	saved = sceSyscallEnter();
@@ -1903,7 +1903,7 @@ static inline int BtGetTestStatusApi(int selector, void *buffer, int size,
 	BtConnection *connection;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	result = BtLockTransport();
 	if (result)
@@ -2010,7 +2010,7 @@ static inline int BtSetTestStatusApi(int selector, void *buffer, int size,
 	uint8_t vendorSetting;
 	int result;
 
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return (int)0x802f1901;
 	result = BtLockTransport();
 	if (result)

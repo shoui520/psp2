@@ -1577,7 +1577,7 @@ static inline void sendModuleReply(SceUInt8 cmd, SceUID pid, SceUID modid, int *
 /* the module's GUID in the process */
 static inline SceUID moduleUid(SceUID target, SceUID modid, int kernel, SceUInt32 *result)
 {
-	SceUID uid = kernel ? modid : SceSysmemForDriver_45D22597(target, modid);
+	SceUID uid = kernel ? modid : scePUIDtoGUID(target, modid);
 
 	if (uid == (SceUID)SCE_KERNEL_ERROR_INVALID_PID)
 		*result = pdLoadpKernelErrToLoadpErr(SCE_KERNEL_ERROR_INVALID_PID);
@@ -1616,7 +1616,7 @@ static inline __attribute__((always_inline)) void loadpStartModuleCmd(void)
 		else
 			ret = sceKernelStartModule(uid, size, (void *)args, 0, NULL, &status);
 	} else {
-		ret = SceModulemgrForKernel_3FE47DDF(target, uid, size, (void *)args, 0, NULL, &status);
+		ret = sceKernelStartRemoteModule(target, uid, size, (void *)args, 0, NULL, &status);
 	}
 	if (ret < 0) {
 		result = pdLoadpKernelErrToLoadpErr(ret);
@@ -1667,7 +1667,7 @@ static inline __attribute__((always_inline)) void loadpStopModuleCmd(void)
 	} else if (!SceQafMgrForDriver_382C71E8()) {
 		ret = SCE_ERROR_ERRNO_ENOENT;
 	} else {
-		ret = SceModulemgrForDriver_100DAEB9(uid, size, (void *)args, 0, NULL, &status);
+		ret = sceKernelStopModule(uid, size, (void *)args, 0, NULL, &status);
 	}
 	if (ret < 0) {
 		result = pdLoadpKernelErrToLoadpErr(ret);

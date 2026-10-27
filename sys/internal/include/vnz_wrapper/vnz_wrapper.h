@@ -36,7 +36,7 @@ void *SceCodecEngineWrapperForDriver_0F235F44(uintptr_t physical, SceSize size);
 uintptr_t SceCodecEngineWrapperForDriver_26FAF6EC(void *memory, SceSize size);
 
 /* venezia/dsp0_rpc.c */
-int SceCodecEngineWrapperForDriver_391BD4FD(unsigned int command, const unsigned int *input,
+int sceVeneziaRpcCallGenericThunk(unsigned int command, const unsigned int *input,
 		VeneziaRpcPack pack, VeneziaRpcUnpack unpack);
 int SceCodecEngineWrapperForDriver_0D3BB164(unsigned int command, unsigned int argument0,
 		unsigned int argument1, unsigned int argument2, unsigned int argument3);

@@ -34,8 +34,8 @@ int IofilemgrModuleProcResume(SceUID pid, int phase, ProcEventParam *param, void
 	switch (phase) {
 	case SCE_PROC_EVENT_PHASE_RESUME:
 		if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) == 1)
-			SceCpuForDriver_5F6A8743(&g_gameProgramCount, 1);
-		ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey,
+			sceKernelAtomicAddAndGet32(&g_gameProgramCount, 1);
+		ret = sceKernelGetRemoteKPLS(pid, g_iofilemgrKplsKey,
 								 (void **)&kpls, 1);
 		if (ret < 0)
 			return ret;
@@ -57,8 +57,8 @@ int IofilemgrModuleProcSuspend(SceUID pid, int phase, ProcEventParam *param, voi
 	switch (phase) {
 	case SCE_PROC_EVENT_PHASE_SUSPEND:
 		if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) == 1)
-			SceCpuForDriver_A4884C4E(&g_gameProgramCount, 1);
-		ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey,
+			sceKernelAtomicSubAndGet32(&g_gameProgramCount, 1);
+		ret = sceKernelGetRemoteKPLS(pid, g_iofilemgrKplsKey,
 								 (void **)&kpls, 1);
 		if (ret < 0)
 			return ret;
@@ -82,7 +82,7 @@ static inline __attribute__((always_inline)) int iofilemgrProcessFinalize(SceUID
 	SceUID oldPid;
 	int ret, i;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = sceKernelGetRemoteKPLS(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
 	oldPid = SceThreadmgrForDriver_0486F239(pid);
@@ -135,7 +135,7 @@ int IofilemgrModuleProcCreate(SceUID pid, ProcEventCreateParam *param, void *com
 		}
 		key = ret;
 	}
-	ret = SceProcessmgrForDriver_AF80F39C(pid, key, (void **)&kpls, 1);
+	ret = sceKernelGetRemoteKPLS(pid, key, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
 	memset(kpls, 0, sizeof(*kpls));
@@ -145,7 +145,7 @@ int IofilemgrModuleProcCreate(SceUID pid, ProcEventCreateParam *param, void *com
 	kpls->depth = 0x10;
 	for (i = 0; i < IOFILEMGR_PROCESS_MAX; i++) {
 		if (g_iofilemgrPid[i] == -1 &&
-		    SceCpuForDriver_CDA96E81(&g_iofilemgrPid[i], -1, pid) == -1)
+		    sceKernelAtomicCompareAndSet32(&g_iofilemgrPid[i], -1, pid) == -1)
 			break;
 	}
 	if (i != IOFILEMGR_PROCESS_MAX)
@@ -157,7 +157,7 @@ int IofilemgrModuleProcCreate(SceUID pid, ProcEventCreateParam *param, void *com
 	} else {
 		kpls->priority = 8;
 		if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) == 1)
-			SceCpuForDriver_5F6A8743(&g_gameProgramCount, 1);
+			sceKernelAtomicAddAndGet32(&g_gameProgramCount, 1);
 	}
 	limit.size = sizeof(limit);
 	limit.limit0 = 0;
@@ -1003,7 +1003,7 @@ int sceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_s
 int SceIofilemgrForDriver_A1EF2648(SceUID fd, SceUID pid, SceIofileInfo *info)
 {
 	if (pid != SCE_KERNEL_PROCESS_ID)
-		fd = SceSysmemForDriver_45D22597(pid, fd);
+		fd = scePUIDtoGUID(pid, fd);
 	return vfsGetFdInfoForDebugger(fd, info);
 }
 
@@ -1022,7 +1022,7 @@ static inline int init_iofm(void)
 		return g_ioVfsHeapUid;
 	}
 	if (g_iofilemgrTlsKey == -1) {
-		g_iofilemgrTlsKey = SceThreadmgrForDriver_B645C7EF(0x14, 0, 0);
+		g_iofilemgrTlsKey = sceKernelRegisterKTLS(0x14, 0, 0);
 		if (g_iofilemgrTlsKey < 0)
 			return g_iofilemgrTlsKey;
 	}
@@ -1327,7 +1327,7 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 	    pid == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
 		return 0;
 	SCE_DBG_ASSERT(g_iofilemgrKplsKey != -1, 2237);
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = sceKernelGetRemoteKPLS(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
 	for (;;) {
@@ -1345,7 +1345,7 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 			SCE_DBG_PRINTF(0xf, 2279, "This thread is Common Dialog.\n");
 			SCE_DBG_PRINTF(0xf, 2280, "process id = 0x%08x\n", pid);
 			for (i = 0; i < (int)num; i++) {
-				fd = SceSysmemForDriver_45D22597(pid, fdlist[i]);
+				fd = scePUIDtoGUID(pid, fdlist[i]);
 				if (fd < 0) {
 					SCE_DBG_PRINTF(0xf, 2287,
 						       "PUIDtoGUID failed err= %d 0x%x puid=0x%x\n", fd,
@@ -1381,10 +1381,10 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 			return SCE_ERROR_ERRNO_EMFILE;
 			}
 			new++;
-			if (SceCpuForDriver_CDA96E81(&kpls->dialogFdCount, old, new) != old)
+			if (sceKernelAtomicCompareAndSet32(&kpls->dialogFdCount, old, new) != old)
 				continue;
 			if (kpls->dialogFdPeak < new)
-				SceCpuForDriver_5F6A8743(&kpls->dialogFdPeak, 1);
+				sceKernelAtomicAddAndGet32(&kpls->dialogFdPeak, 1);
 		} else {
 			old = new = kpls->fdCount;
 			if (kpls->fdMax <= old) {
@@ -1399,7 +1399,7 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 			SCE_DBG_PRINTF(0xf, 2351, "This thread is not Common Dialog.\n");
 			SCE_DBG_PRINTF(0xf, 2352, "process id = 0x%08x\n", pid);
 			for (i = 0; i < (int)num; i++) {
-				fd = SceSysmemForDriver_45D22597(pid, fdlist[i]);
+				fd = scePUIDtoGUID(pid, fdlist[i]);
 				if (fd < 0) {
 					SCE_DBG_PRINTF(0xf, 2359,
 						       "PUIDtoGUID failed err= %d 0x%x puid=0x%x\n", fd,
@@ -1435,10 +1435,10 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 			return SCE_ERROR_ERRNO_EMFILE;
 			}
 			new++;
-			if (SceCpuForDriver_CDA96E81(&kpls->fdCount, old, new) != old)
+			if (sceKernelAtomicCompareAndSet32(&kpls->fdCount, old, new) != old)
 				continue;
 			if (kpls->fdPeak < new)
-				SceCpuForDriver_5F6A8743(&kpls->fdPeak, 1);
+				sceKernelAtomicAddAndGet32(&kpls->fdPeak, 1);
 		}
 		return 0;
 	}
@@ -1452,16 +1452,16 @@ void decrement_user_fd_count(SceUID pid, SceUID thid, int keepPeak)
 	if (pid == SCE_KERNEL_DUMMY_PROCESS_GAME_ID || pid == SCE_KERNEL_PROCESS_ID ||
 	    pid == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
 		return;
-	if (SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1) < 0)
+	if (sceKernelGetRemoteKPLS(pid, g_iofilemgrKplsKey, (void **)&kpls, 1) < 0)
 		return;
 	if (SceThreadmgrForDriver_1096042E(thid)) {
-		SceCpuForDriver_A4884C4E(&kpls->dialogFdCount, 1);
+		sceKernelAtomicSubAndGet32(&kpls->dialogFdCount, 1);
 		if (!keepPeak)
-			SceCpuForDriver_A4884C4E(&kpls->dialogFdPeak, 1);
+			sceKernelAtomicSubAndGet32(&kpls->dialogFdPeak, 1);
 	} else {
-		SceCpuForDriver_A4884C4E(&kpls->fdCount, 1);
+		sceKernelAtomicSubAndGet32(&kpls->fdCount, 1);
 		if (!keepPeak)
-			SceCpuForDriver_A4884C4E(&kpls->fdPeak, 1);
+			sceKernelAtomicSubAndGet32(&kpls->fdPeak, 1);
 	}
 }
 
@@ -1474,7 +1474,7 @@ int check_limit_user_fd_count(SceUID pid, SceUID thid)
 	    pid == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
 		return 0;
 	SCE_DBG_ASSERT(g_iofilemgrKplsKey != -1, 2449);
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = sceKernelGetRemoteKPLS(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
 	if (SceThreadmgrForDriver_1096042E(thid)) {
@@ -1519,7 +1519,7 @@ int SceIofilemgrForDriver_AC0E9AAA(SceUID pid, SceInt32 fdMax)
 	IofilemgrKpls *kpls;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = sceKernelGetRemoteKPLS(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret >= 0) {
 		kpls->fdMax = fdMax;
 		ret = 0;
@@ -1532,7 +1532,7 @@ int SceIofilemgrForDriver_03F6A684(SceUID pid, SceInt32 depth)
 	IofilemgrKpls *kpls;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = sceKernelGetRemoteKPLS(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret >= 0) {
 		kpls->depth = depth;
 		ret = 0;
@@ -1559,7 +1559,7 @@ int SceIofilemgrForDriver_44EDCE57(SceUID pid, void *dst)
 	if (pid == SCE_KERNEL_DUMMY_PROCESS_GAME_ID || pid == SCE_KERNEL_PROCESS_ID ||
 	    pid == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
 		return SCE_ERROR_ERRNO_ENOENT;
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = sceKernelGetRemoteKPLS(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
 	data->fdCount = kpls->fdCount;

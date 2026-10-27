@@ -14,8 +14,8 @@ _Static_assert(__builtin_offsetof(SceCameraRead, sizeIBase) == 0x30 &&
 	       __builtin_offsetof(SceCameraRead, pvIBase) == 0x3c,
 	       "SceCameraRead layout");
 
-int SceCameraForDriver_0E9B4B9E(int devnum);
-int SceCameraForDriver_22E70D83(int devnum);
+int sceCameraClose(int devnum);
+int sceCameraIsActive(int devnum);
 int SceCameraForDriver_45EB69C9(void);
 int SceCameraForDriver_5338BE86(int devnum);
 int SceCameraForDriver_8C3354E5(int devnum);

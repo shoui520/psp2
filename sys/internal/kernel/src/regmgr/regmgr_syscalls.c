@@ -634,7 +634,7 @@ static inline __attribute__((always_inline)) int regMgrSysCallback(SceUID cbid, 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
 		if (sceSblACMgrIsSystemProgram(0) == 1) {
-			ret = SceSysmemForDriver_45D22597(0, cbid);
+			ret = scePUIDtoGUID(0, cbid);
 			if (ret >= 0) {
 				regMgrSetStatus(REGMGR_STATUS_SYSCALL);
 				ret = func(ret);
@@ -661,7 +661,7 @@ int sceRegMgrAddRegistryCallbackForUser(SceUID cbid, const char *path)
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
 		if (sceSblACMgrIsSystemProgram(0) == 1) {
-			ret = guid = SceSysmemForDriver_45D22597(0, cbid);
+			ret = guid = scePUIDtoGUID(0, cbid);
 			if (guid >= 0) {
 				if (path == NULL) {
 					ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;

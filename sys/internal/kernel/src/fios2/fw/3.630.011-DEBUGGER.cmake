@@ -70,11 +70,11 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
+	sceKernelUnregisterProcEventHandler
 	sceKernelCopyToUser
 	sceKernelCopyFromUser
 	sceKernelStrncpyFromUser
-	SceCpuForDriver_CDA96E81
+	sceKernelAtomicCompareAndSet32
 	SceDebugForDriver_02B04343
 	memset
 	strlcat
@@ -93,11 +93,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetThreadId
 	sceKernelSignalCondAll
 	SceThreadmgrForDriver_89CA5698
-	SceThreadmgrForDriver_8C3C1F78
+	sceKernelUnregisterKTLS
 	sceKernelExtendKernelStackWide
 	sceKernelSignalCond
 	sceKernelDeleteCond
-	SceThreadmgrForDriver_B645C7EF
+	sceKernelRegisterKTLS
 	sceKernelWaitCond
 	sceKernelCreateCond
 	SceThreadmgrForDriver_FA54D49A
@@ -105,7 +105,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterKPLS
 	sceKernelAllocOwnProcessHeap
 	sceKernelFreeRemoteProcessHeap
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_FC2A424E
 	sceIoDclose
@@ -117,7 +117,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoChstatByFd
 	sceSblACMgrIsKernelProgram
 	sceSblACMgrIsSystemProgram
-	SceRtcForDriver_497B5DC9
+	sceRtcGetTime64_t
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

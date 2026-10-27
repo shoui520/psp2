@@ -361,14 +361,14 @@ int dmac5HashCrypt(Dmac5Context *context, const void *src, void *dst,
 	return ret;
 }
 
-int SceSblSsMgrForDriver_E6E1AD15(const void *src, void *dst, int size,
+int sceSblDmac5AesCbcEnc(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int coherent)
 {
 	return sceSblDmac5EncDec(src, dst, size, key, keyBits,
 		iv, coherent, 9);
 }
 
-int SceSblSsMgrForDriver_121FA69F(const void *src, void *dst, int size,
+int sceSblDmac5AesCbcDec(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int coherent)
 {
 	return sceSblDmac5EncDec(src, dst, size, key, keyBits,
@@ -389,14 +389,14 @@ int SceSblSsMgrForDriver_7D46768C(const void *src, void *dst, int size,
 		iv, coherent, 34);
 }
 
-int SceSblSsMgrForDriver_C517770D(const void *src, void *dst, int size,
+int sceSblDmac5AesEcbEnc(const void *src, void *dst, int size,
 	const void *key, int keyBits, int coherent)
 {
 	return sceSblDmac5EncDec(src, dst, size, key, keyBits,
 		NULL, coherent, 1);
 }
 
-int SceSblSsMgrForDriver_7C978BE7(const void *src, void *dst, int size,
+int sceSblDmac5AesEcbDec(const void *src, void *dst, int size,
 	const void *key, int keyBits, int coherent)
 {
 	return sceSblDmac5EncDec(src, dst, size, key, keyBits,
@@ -494,7 +494,7 @@ initError:
 	return ret;
 }
 
-int SceSblSsMgrForDriver_6704D985(const void *src, void *dst, int size,
+int sceSblDmac5Sha1HmacTransform(const void *src, void *dst, int size,
 	const void *key, void *iv, int coherent, uint32_t flags)
 {
 	return sceSblDmac5HmacTransform(src, dst, size, key, 256,
@@ -763,7 +763,7 @@ int dmac5LockUserBuffers(const void *src, SceSize srcSize, void *dst,
 	if (ret >= 0) {
 		if (dstSize != 0 &&
 			(ret = sceKernelLockRangeWithMode(32, dst, dstSize)) < 0) {
-			SceSysmemForDriver_22CBE925(16, (void *)src, srcSize);
+			sceKernelUnlockRangeWithMode(16, (void *)src, srcSize);
 			return ret;
 		}
 		ret = 0;
@@ -774,10 +774,10 @@ int dmac5LockUserBuffers(const void *src, SceSize srcSize, void *dst,
 int dmac5UnlockUserBuffers(const void *src, SceSize srcSize, void *dst,
 	SceSize dstSize)
 {
-	int ret = SceSysmemForDriver_22CBE925(16, (void *)src, srcSize);
+	int ret = sceKernelUnlockRangeWithMode(16, (void *)src, srcSize);
 
 	if (dstSize != 0)
-		return SceSysmemForDriver_22CBE925(32, dst, dstSize);
+		return sceKernelUnlockRangeWithMode(32, dst, dstSize);
 	return ret;
 }
 

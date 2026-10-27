@@ -124,7 +124,7 @@ int SceAvcodecForDriver_468949D7(SceJpegEncoderContext context, const void *pYCb
 			command[1] = (unsigned int)state;
 			command[2] = physicalInput;
 			command[3] = inputSize;
-			ret = SceCodecEngineWrapperForDriver_391BD4FD(453, command,
+			ret = sceVeneziaRpcCallGenericThunk(453, command,
 					jpegEncoderPackCommand, jpegEncoderFinishCommand);
 			control->pJpeg = pJpeg;
 			control->pJpegEnd = pJpegEnd;
@@ -132,10 +132,10 @@ int SceAvcodecForDriver_468949D7(SceJpegEncoderContext context, const void *pYCb
 			if ((control->option & 1) != 0 && ret >= 0)
 				sceKernelDcacheInvalidateRange((void *)alignedOutput,
 					((unsigned int)pJpeg + 255 - alignedOutput + ret) & ~255U);
-			SceSysmemForDriver_22CBE925(32, (void *)alignedOutput,
+			sceKernelUnlockRangeWithMode(32, (void *)alignedOutput,
 				((unsigned int)pJpeg + 255 - alignedOutput + outputSize) & ~255U);
 		}
-		SceSysmemForDriver_22CBE925(16, (void *)((unsigned int)pYCbCr & ~255U),
+		sceKernelUnlockRangeWithMode(16, (void *)((unsigned int)pYCbCr & ~255U),
 			((unsigned int)pYCbCr + 255 - ((unsigned int)pYCbCr & ~255U) + inputSize) & ~255U);
 	}
 	_unlockProcessSuspendCore();
@@ -235,11 +235,11 @@ int SceAvcodecForDriver_B77B5BFC(SceJpegEncoderContext context, void *pYCbCr,
 	destination.paddr0 = outputPhysical;
 	destination.paddr1 = lumaSize + outputPhysical;
 	destination.paddr2 = chromaSize + lumaSize + outputPhysical;
-	ret = SceIftuForDriver_67E37EFC(&destination, &source, &conversion);
-	SceSysmemForDriver_22CBE925(32, (void *)((unsigned int)pYCbCr & ~255U),
+	ret = sceIftuConvert(&destination, &source, &conversion);
+	sceKernelUnlockRangeWithMode(32, (void *)((unsigned int)pYCbCr & ~255U),
 		((unsigned int)pYCbCr + 255 - ((unsigned int)pYCbCr & ~255U) + outputSize) & ~255U);
 unlockInput:
-	SceSysmemForDriver_22CBE925(16, (void *)((unsigned int)pRGBA & ~255U),
+	sceKernelUnlockRangeWithMode(16, (void *)((unsigned int)pRGBA & ~255U),
 		(inputSize + (unsigned int)pRGBA + 255 - ((unsigned int)pRGBA & ~255U)) & ~255U);
 finish:
 	sceSyscallLeave(syscallState);

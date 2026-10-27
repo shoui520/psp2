@@ -71,7 +71,7 @@ static inline int pfsDbTreeDecodeKey(ScePfsDbTree *tree, ScePfsDbEntryName *id,
 		return SCE_PFS_ERROR_DB_INVALID_ARG;
 	id->parentIndex = rkey->id.parentIndex;
 	*(ScePfsDbKeyName *)id->name = *(const ScePfsDbKeyName *)rkey->id.name;
-	ret = SceIofilemgrForDriver_F7DAC0F5(tree->mnt, rkey->id.name, &path2, &path3, id->name,
+	ret = sceVfsOpDecodePathElem(tree->mnt, rkey->id.name, &path2, &path3, id->name,
 				      sizeof(id->name), &len);
 	if (ret != 0)
 		return ret;

@@ -98,7 +98,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblMgKeyMgrForDriver_1263FB04
 	SceSblMgKeyMgrForDriver_DF3B808D
 	sceMsifGetMediaId
-	SceRtcForDriver_F139E359
+	sceRtcGetTick
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

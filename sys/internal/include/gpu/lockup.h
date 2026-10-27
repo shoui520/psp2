@@ -12,7 +12,7 @@ typedef unsigned (*GpuLockupBeginCallback)(void);
 typedef void (*GpuLockupEndCallback)(unsigned token);
 
 /* signal-lockup.c */
-int SceGpuEs4ForDriver_40E292D7(void);	/* vitasdk: ksceGpuSignalWaitLockup */
+int sceGpuSignalWaitLockup(void);
 /* vitasdk: ksceGpuGetRegisterDump */
 int SceGpuEs4ForDriver_14ECCFCD(void *destination, unsigned size);
 void SceGpuEs4ForDriver_26B03DCE(GpuLockupBeginCallback begin, GpuLockupEndCallback end);

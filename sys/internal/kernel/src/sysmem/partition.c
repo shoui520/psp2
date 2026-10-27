@@ -411,7 +411,7 @@ int AllocMemBlockCommandCheckParameter(SceKernelAllocMemBlockCommand *command)
 	if (command->typeInfo->attr & 0x100)
 		command->opt.attr |= SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
 #if FW_DEBUG
-	if (SceDebugForDriver_374B7868() >= 2) {
+	if (sceKernelGetAssertLevel() >= 2) {
 		AllocMemBlockCommandCheck2(command);
 		SceDebugForDriver_FD753E7A(2, 1, SCE_DBGINFO(579), __builtin_return_address(0));
 	}
@@ -836,7 +836,7 @@ static inline void MemBlockUnlinkFreeRaw(MemBlockObject *block)
 static inline void TinyPartitionDecFreeSizeR1(TinyPartition *tiny, SceSize size)
 {
 	SCE_DBG_ASSERT_CHECK_FUNC(size <= tiny->freeSize, 2827, "TinyPartitionDecFreeSizeR1");
-	SceCpuForDriver_A4884C4E((SceInt32 *)&tiny->freeSize, size);
+	sceKernelAtomicSubAndGet32((SceInt32 *)&tiny->freeSize, size);
 }
 
 /* the MiB slots of a new block: it is the first block of a table, or owns the section */
@@ -1065,7 +1065,7 @@ found:
 		MemBlockSetFreeNextRaw(prevFree, block);
 		MemBlockSetFreePrevRaw(block, prevFree);
 	}
-	SceCpuForDriver_5F6A8743((SceInt32 *)&tiny->freeSize, size);
+	sceKernelAtomicAddAndGet32((SceInt32 *)&tiny->freeSize, size);
 	ret = 0;
 	SceCpuForKernel_0E04BD2E((uint32_t *)&tiny->blockCount);
 out:
@@ -2431,7 +2431,7 @@ int DeletePartition(Partition *partition)
 
 	if (partition->attr & PARTITION_ATTR_KEEP)
 		return 0;
-	while ((ret = SceCpuForDriver_CDA96E81(&partition->refCount, 0, -1)) != 0)
+	while ((ret = sceKernelAtomicCompareAndSet32(&partition->refCount, 0, -1)) != 0)
 		SCE_DBG_PRINTF(3, 6240, "PartitionInvalidate failed 0x%08x, 0x%08x\n", ret,
 			       partition->refCount);
 	intr = SceCpuForDriver_4C38CE4D(&partition->l2CacheLock);
@@ -2957,7 +2957,7 @@ full:
 		cur->next = cur;
 		cur->prev = cur;
 		FreeMemBlockObject(heap, cur);
-		SceCpuForDriver_5F6A8743((SceInt32 *)&tiny->freeSize, size);
+		sceKernelAtomicAddAndGet32((SceInt32 *)&tiny->freeSize, size);
 		SceCpuForKernel_0E04BD2E((uint32_t *)&tiny->blockCount);
 		cur = next;
 	} while (cur != head);
@@ -3126,7 +3126,7 @@ SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vba
 		return SCE_KERNEL_ERROR_PARTITION_ERROR;
 	uid = param->uid;
 	if (uid == -1) {
-		uid = SceSysmemForKernel_6DB44A42(s_partitionClass, name, partition);
+		uid = sceGUIDRegister(s_partitionClass, name, partition);
 	} else {
 		ret = sceGUIDSet(uid, s_partitionClass, NULL, (SceObjectBase *)partition);
 		if (ret < 0)
@@ -3140,7 +3140,7 @@ SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vba
 
 #if !SYSMEM_NSKBL
 /* name unknown: a kernel block with extraLow bytes below it */
-SceUID SceSysmemForKernel_40870E74(const char *name, SceSize size, SceSize extraLow)
+SceUID sceKernelAllocPartitionStackMemBlock(const char *name, SceSize size, SceSize extraLow)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	Partition *partition = g_uidManager->kernelPartition;
@@ -3231,7 +3231,7 @@ int SceSysmemForKernel_320E907F(void)
 }
 
 /* name unknown: a partition's state by its GUID */
-int SceSysmemForKernel_FB101B86(SceUID uid, PartitionInfo *info)
+int sceKernelPartitionGetInfo(SceUID uid, PartitionInfo *info)
 {
 	Partition *partition = SceSysmemForKernel_FA6C098C(uid);
 

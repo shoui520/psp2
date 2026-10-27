@@ -22,7 +22,7 @@ const uint8_t rngSeedHmacKey[20] = {
 	0xd6, 0x0b, 0x3b, 0xaa, 0xa2, 0x97, 0x8a, 0x23, 0xcb, 0xa2
 };
 
-int SceSblSsMgrForDriver_AC57F4F0(void *result)
+int sceSblRngGenuineRandomNumber(void *result)
 {
 	return sceSblDmac5Rnd(result, 64, 1);
 }
@@ -73,10 +73,10 @@ int sceSblRngInit(void)
 			       "rng.c", 141, "sceSblRngInit", ret);
 		sceKernelDeleteMutex(rngMutex);
 	} else {
-		SceKernelUtilsForDriver_29A28957(rngKeyHmacKey, sizeof(rngKeyHmacKey), random,
+		sceHmacSha1Digest(rngKeyHmacKey, sizeof(rngKeyHmacKey), random,
 				   sizeof(random), rngKey);
 		random[0] = SceThreadmgrForDriver_47F6DE49();
-		SceKernelUtilsForDriver_29A28957(rngSeedHmacKey, sizeof(rngSeedHmacKey), random,
+		sceHmacSha1Digest(rngSeedHmacKey, sizeof(rngSeedHmacKey), random,
 				   sizeof(random), rngSeed);
 	}
 	return ret;

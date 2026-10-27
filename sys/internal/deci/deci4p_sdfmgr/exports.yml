@@ -27,7 +27,7 @@ SceDeci4pSDfMgr:
         - SceDeci4pSDfMgrForKernel_68903C1D: 0x68903C1D
         - SceDeci4pSDfMgrForKernel_6BF5553C: 0x6BF5553C
         - SceDeci4pSDfMgrForKernel_81E7C5BD: 0x81E7C5BD
-        - SceDeci4pSDfMgrForKernel_86CFC8C6: 0x86CFC8C6
+        - sceSDfMgrClose: 0x86CFC8C6
         - SceDeci4pSDfMgrForKernel_8A3B06F2: 0x8A3B06F2
         - sceSDfMgrExClose: 0x90E8D453
         - SceDeci4pSDfMgrForKernel_98AEC60E: 0x98AEC60E

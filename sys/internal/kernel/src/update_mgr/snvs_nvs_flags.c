@@ -13,8 +13,8 @@ int SpkgInfoUtilGetNVSFlagStatus(uint32_t *status, uint32_t *flags)
 	int result;
 
 	do {
-		if (!SceSysconForDriver_ACAFA2B8(0, sector.words, 16) &&
-		    !SceSysconForDriver_ACAFA2B8(16, &sector.words[4], 16))
+		if (!sceSysconNvsReadData(0, sector.words, 16) &&
+		    !sceSysconNvsReadData(16, &sector.words[4], 16))
 			break;
 	} while (--tries);
 	request.sector = sector;

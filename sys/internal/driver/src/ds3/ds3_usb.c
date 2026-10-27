@@ -1277,7 +1277,7 @@ void ds3UsbInputComplete(int result, int transferred, void *argument)
 			device->psSuppressionCount = 6;
 			ds3AssignPort(controller->deviceAddress, &controller->port, 1);
 			ds3SignalPortChange();
-			SceKernelSuspendForDriver_E0489831(0);
+			sceKernelPowerTick(0);
 			goto ds3Battery;
 		}
 		if (result == -100) {
@@ -1335,7 +1335,7 @@ ds3Battery:
 				device->psSuppressionCount = 6;
 				ds3AssignPort(controller->deviceAddress, &controller->port, 2);
 				ds3SignalPortChange();
-				SceKernelSuspendForDriver_E0489831(0);
+				sceKernelPowerTick(0);
 			} else {
 				ds3UsbSetDs4Control(controller, 1);
 			}
@@ -1429,7 +1429,7 @@ int ds3UsbRegister(void)
 	ds3Usb.devices[2].deviceId = DS3_USB_DEVICE_UNUSED;
 	ds3Usb.devices[3].deviceId = DS3_USB_DEVICE_UNUSED;
 	ds3Usb.inputLock = 0;
-	result = SceUsbServForDriver_AA6D4409();
+	result = sceUsbServAccessoryActivate();
 	if (result < 0)
 		return result;
 	return SceUsbdForDriver_1EC94F18(&ds3UsbDriver);

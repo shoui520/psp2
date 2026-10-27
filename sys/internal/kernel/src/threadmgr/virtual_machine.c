@@ -48,7 +48,7 @@ int uidException_ReleaseMethod(void *cls, void *object, struct ThreadCB *thread)
 		SCE_DBG_ASSERT_CHECK(exception->owner == thread->threadId, 1454);
 		if (--exception->waiters == 0) {
 			exception->owner = -1;
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
+			sceKernelAtomicClearMask32((SceInt32 *)&thread->flags,
 						    THREAD_FLAG_EXCEPTION_WAITER);
 		}
 	}
@@ -149,7 +149,7 @@ int suspendThreadForVM(SceUID threadId, int *result, SceKernelSpinlock *done)
 	uint32_t state, request, oldState, wake;
 	int intr, cpuId, count, ret;
 
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	cpuId = sceKernelCpuId();
 	cpu = currentCpuState();
 	ret = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
@@ -183,7 +183,7 @@ int suspendThreadForVM(SceUID threadId, int *result, SceKernelSpinlock *done)
 		}
 		if (!(state & THREAD_STATE_OFF_CPU)) {
 			if (state & SCE_KERNEL_THREAD_STATUS_WAITING) {
-				SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags,
+				sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags,
 							   THREAD_FLAG_REQUEST_VM_SUSPEND);
 				ret = ++thread->vmSuspendCount;
 			} else if (state & SCE_KERNEL_THREAD_STATUS_DORMANT) {
@@ -278,7 +278,7 @@ wakeWaiters:
 		switchThread((intr >> 7) & 1);
 	goto resume;
 later:
-	SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_REQUEST_VM_SUSPEND);
+	sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_REQUEST_VM_SUSPEND);
 unlock:
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 release:
@@ -306,7 +306,7 @@ int resumeThreadForVM(SceUID threadId)
 	}
 	if (threadId == 0 || currentThreadContext()->threadId == threadId)
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
@@ -335,7 +335,7 @@ int resumeThreadForVM(SceUID threadId)
 					entry = thread->exceptionEntry;
 					entry->next->prev = entry->prev;
 					entry->prev->next = entry->next;
-					SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
+					sceKernelAtomicClearMask32((SceInt32 *)&thread->flags,
 								    THREAD_FLAG_EXCEPTION);
 				}
 				sceKernelSpinlockLowUnlock(
@@ -353,7 +353,7 @@ int resumeThreadForVM(SceUID threadId)
 				goto resume;
 			}
 			SCE_DBG_ASSERT_CHECK(!(state & SCE_KERNEL_THREAD_STATUS_SUSPENDED), 783);
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_REQUEST_VM_SUSPEND);
+			sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_REQUEST_VM_SUSPEND);
 		}
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -382,7 +382,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 161, "*** error: illegal context\n");
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -397,7 +397,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 		ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 		SCE_DBG_ASSERT_PRINTF(0, 183, "*** error: irq suspended. processId=0x%08x[%s]\n",
 				      thread->processId, SceSysmemForDriver_E655852F(thread->processId));
@@ -421,7 +421,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 	sceKernelSpinlockLowLock(&exception->lock);
 	if (exception->owner == -1) {
 		exception->owner = thread->threadId;
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_EXCEPTION_WAITER);
+		sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_EXCEPTION_WAITER);
 	} else if (exception->owner != thread->threadId) {
 		ret = SCE_KERNEL_ERROR_EXCEPTION_MULTI;
 		goto unlock;
@@ -447,7 +447,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 			SCE_DBG_ASSERT_CHECK((entry->thread->flags >> 9) & 1, 258);
 			entry->next->prev = entry->prev;
 			entry->prev->next = entry->next;
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&entry->thread->flags,
+			sceKernelAtomicClearMask32((SceInt32 *)&entry->thread->flags,
 						    THREAD_FLAG_EXCEPTION);
 			if (info != NULL) {
 				info->kind = entry->kind;
@@ -459,7 +459,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(entry->thread));
 			if (--exception->waiters == 0) {
 				exception->owner = -1;
-				SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
+				sceKernelAtomicClearMask32((SceInt32 *)&thread->flags,
 							    THREAD_FLAG_EXCEPTION_WAITER);
 				ret = 0;
 			}
@@ -472,15 +472,15 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 			ret = waitWaitableObject(thread->process->exceptionId,
 						 (uintptr_t)&exception->next, WAIT_TYPE_EXCEPTION,
 						 &wakeup, timeout, NULL, &locked);
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+			sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			break;
 		}
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		ret = waitWaitableObject(thread->process->exceptionId,
 					 (uintptr_t)&exception->next, WAIT_TYPE_EXCEPTION, &wakeup,
 					 timeout, NULL, &locked);
-		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked || ret != (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK)
 			break;
@@ -560,7 +560,7 @@ int deleteException(SceProcessObject *process)
 
 	if (process->exceptionId == -1)
 		return 0;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDClose(process->exceptionId);
 	sceKernelCpuResumeIntr(intr);
 	SCE_DBG_ASSERT_CHECK(ret >= 0, 419);
@@ -626,7 +626,7 @@ int sceKernelSetThreadContextForVM(SceUID threadId, const ThreadmgrVmCpuContext 
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if ((cpu != NULL && cpu->size != sizeof(*cpu)) || (vfp != NULL && vfp->size != sizeof(*vfp)))
 		return SCE_KERNEL_ERROR_ILLEGAL_SIZE;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
@@ -666,7 +666,7 @@ int sceKernelSetThreadContextForVM(SceUID threadId, const ThreadmgrVmCpuContext 
 			frame->lr = cpu->lr;
 			frame->pc = cpu->pc;
 			frame->tpidrurw = cpu->tpidrurw;
-			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags,
+			sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags,
 						   THREAD_FLAG_FRAME_CHANGED);
 		}
 		ret = sceKernelCopyToUser((void *)(thread->tls - USER_TLS_VM_WORD0), &cpu->tlsWord[0],
@@ -717,7 +717,7 @@ int sceKernelGetThreadContextForVM(SceUID threadId, ThreadmgrVmCpuContext *cpu,
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 	if ((cpu != NULL && cpu->size != sizeof(*cpu)) || (vfp != NULL && vfp->size != sizeof(*vfp)))
 		return SCE_KERNEL_ERROR_ILLEGAL_SIZE;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
@@ -786,7 +786,7 @@ resume:
 /* the user syscalls (and their cores) take the caller's PUIDs */
 int sceKernelSuspendThreadForVMForUser(SceUID threadId)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, threadId);
+	SceUID guid = scePUIDtoGUID(0, threadId);
 
 	if (guid < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
@@ -795,7 +795,7 @@ int sceKernelSuspendThreadForVMForUser(SceUID threadId)
 
 int sceKernelResumeThreadForVM(SceUID threadId)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, threadId);
+	SceUID guid = scePUIDtoGUID(0, threadId);
 	uint32_t saved;
 	int ret;
 
@@ -812,7 +812,7 @@ int sceKernelResumeThreadForVM(SceUID threadId)
 int setThreadContextForVMForUser(SceUID threadId, const ThreadmgrVmCpuContext *cpu,
 				    const ThreadmgrVmVfpContext *vfp)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, threadId);
+	SceUID guid = scePUIDtoGUID(0, threadId);
 
 	if (guid < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
@@ -823,7 +823,7 @@ int setThreadContextForVMForUser(SceUID threadId, const ThreadmgrVmCpuContext *c
 int getThreadContextForVMForUser(SceUID threadId, ThreadmgrVmCpuContext *cpu,
 				    ThreadmgrVmVfpContext *vfp)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, threadId);
+	SceUID guid = scePUIDtoGUID(0, threadId);
 
 	if (guid < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;

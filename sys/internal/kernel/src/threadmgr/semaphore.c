@@ -51,9 +51,9 @@ int uidSemaphore_RevalidateMethod(void *cls, void *object)
 	int wake = 0;
 
 #if FW_DEBUG
-	if (SceDebugForDriver_374B7868() > 0) {
+	if (sceKernelGetAssertLevel() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, ThreadmgrIntrDisabled(), 1418);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SCE_DBG_ASSERT_LEVEL(1, sema->lock != 0, 1421);
 	}
 #endif
@@ -123,7 +123,7 @@ static int uidSemaphore_Destructor(void *object)
 	return 0;
 }
 
-/* a semaphore's information (SceThreadmgrForDriver_C99DCF0D's core) */
+/* a semaphore's information (sceKernelGetSemaInfo's core) */
 int getSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
 {
 	SceUIDSemaphoreObject *sema;
@@ -131,7 +131,7 @@ int getSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
 	int intr, ret;
 
 	*info = (SceKernelSemaInfo){ .size = sizeof(*info) };
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(semaId,
 		s_threadmgrRuntime.manager->semaphoreClass, &pObject);
 	if (ret < 0) {
@@ -183,9 +183,9 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 #if FW_DEBUG
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_821A2D59(1, 0, SCE_DBGINFO(149), __builtin_return_address(0),
 				"*** error: illegal context. semaId=0x%08x[%s]\n", semaId,
 				SceSysmemForDriver_E655852F(semaId));
@@ -197,10 +197,10 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 #if FW_DEBUG
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_821A2D59(1, 0, SCE_DBGINFO(162), __builtin_return_address(0),
 				"*** error: irq suspended. semaId=0x%08x[%s]\n", semaId,
 				SceSysmemForDriver_E655852F(semaId));
@@ -220,7 +220,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 	if (ret < 0) {
 		if (!(ThreadmgrUserRoWord() & USERRO_IN_SYSCALL)) {
 #if FW_DEBUG
-			if (SceDebugForDriver_374B7868() > 0)
+			if (sceKernelGetAssertLevel() > 0)
 				SceDebugForDriver_821A2D59(1, 0, SCE_DBGINFO(188),
 					__builtin_return_address(0),
 					"*** error: unknown semaphore id. semaId=0x%08x\n", semaId);
@@ -258,16 +258,16 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 		if (!callbacks) {
 			ret = waitWaitableObject(semaId, (uintptr_t)queue, SCE_KERNEL_WAITTYPE_SEMAPHORE, &wakeup,
 						 timeout, NULL, &locked);
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+			sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(&thread->lock);
 			if (!locked)
 				goto resume;
 			break;
 		}
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		ret = waitWaitableObject(semaId, (uintptr_t)queue, SCE_KERNEL_WAITTYPE_SEMAPHORE, &wakeup, timeout,
 					 NULL, &locked);
-		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(&thread->lock);
 		if (!locked)
 			goto callbacks;
@@ -324,8 +324,8 @@ int semaphoreProcessExit(SceProcessObject *process)
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	}
 	for (i = 0; i < (int)got; i++) {
-		intr = SceCpuForDriver_821FC0EE();
-		ret = SceSysmemForDriver_84A4AF5E(process->pid, vector[i]);
+		intr = sceKernelCpuSuspendIntr();
+		ret = scePUIDClose(process->pid, vector[i]);
 		sceKernelCpuResumeIntr(intr);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 362, "()->scePUIDClose(0x%08X, puid=0x%08X)=0x%08X\n",
@@ -369,7 +369,7 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 		}
 	}
 	if (!ThreadmgrInSyscall()) {
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 	} else {
 		process = thread->process;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
@@ -507,14 +507,14 @@ int sceKernelDeleteSema(SceUID semaId)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (SceIntrmgrForDriver_182EE3E3()) {
+	if (sceKernelIsIntrContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 661, "sceKernelDeleteSema", "*** error: illegal context. semaId=0x%08x[%s]\n",
 				      semaId, SceSysmemForDriver_E655852F(semaId));
 		ThreadmgrSetUserRoWord(saved);
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
-	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForKernel_368F1C36(semaId) ==
+	intr = sceKernelCpuSuspendIntr();
+	if (sceGUIDtoClass(semaId) ==
 	    s_threadmgrRuntime.manager->semaphoreClass)
 		ret = sceGUIDClose(semaId);
 	else
@@ -531,7 +531,7 @@ int sceKernelWaitSema(SceUID semaId, int needCount, SceUInt32 *timeout)
 }
 
 /* ksceKernelWaitSemaCB */
-int SceThreadmgrForDriver_F55E4D86(SceUID semaId, int needCount, SceUInt32 *timeout)
+int sceKernelWaitSemaCB(SceUID semaId, int needCount, SceUInt32 *timeout)
 {
 	return waitSema(semaId, needCount, timeout, 1);
 }
@@ -549,7 +549,7 @@ int sceKernelPollSema(SceUID semaId, int needCount)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(semaId,
 		s_threadmgrRuntime.manager->semaphoreClass, &pObject);
 	if (ret < 0) {
@@ -614,7 +614,7 @@ int sceKernelSignalSema(SceUID semaId, int signalCount)
 			goto restore;
 		}
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(semaId,
 		s_threadmgrRuntime.manager->semaphoreClass, &pObject);
 	if (ret < 0) {
@@ -698,7 +698,7 @@ int sceKernelCancelSema(SceUID semaId, int setCount, int *numWaitThreads)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(semaId,
 		s_threadmgrRuntime.manager->semaphoreClass, &pObject);
 	if (ret < 0) {
@@ -736,7 +736,7 @@ resume:
 	return ret;
 }
 
-int SceThreadmgrForDriver_C99DCF0D(SceUID semaId, SceKernelSemaInfo *info)
+int sceKernelGetSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
 {
 	SceKernelSemaInfo local;
 	uint32_t saved;
@@ -856,7 +856,7 @@ int SceThreadmgrForDriver_477F7C8A(SceUID pid, int level, SceKernelSemaInfo *inf
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
-		if (getSemaInfo(SceSysmemForDriver_45D22597(pid, vector[i]), &info) != 0)
+		if (getSemaInfo(scePUIDtoGUID(pid, vector[i]), &info) != 0)
 			continue;
 		puid = vector[i];
 		info.semaId = puid;

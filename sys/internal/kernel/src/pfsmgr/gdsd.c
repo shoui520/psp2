@@ -95,7 +95,7 @@ int pfsGdsdDecodePathElem(ScePfsPmi *pmi, SceVfsMount *mnt, const char *path, co
 	ret = pfsAccessBegin(pmi, PFS_OP_DECODE_PATH_ELEM, 0, &perm);
 	if (ret != 0)
 		return ret;
-	ret = SceIofilemgrForDriver_F7DAC0F5(lower, path, path2, path3, buf, bufLen, decodeLen);
+	ret = sceVfsOpDecodePathElem(lower, path, path2, path3, buf, bufLen, decodeLen);
 	pfsAccessEnd(perm);
 	return ret;
 }

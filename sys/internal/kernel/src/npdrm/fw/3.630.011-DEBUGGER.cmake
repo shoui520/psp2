@@ -130,20 +130,20 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_E384DD93
 	SceSysrootForDriver_E8EBF179
 	SceSysrootForDriver_F0C91CD3
-	SceKernelUtilsForDriver_236A9097
+	sceSha256BlockUpdate
 	SceKernelUtilsForDriver_302947B6
-	SceKernelUtilsForDriver_4899CD4B
+	sceSha256BlockResult
 	SceKernelUtilsForDriver_72408E29
-	SceKernelUtilsForDriver_7556E611
-	SceKernelUtilsForDriver_83EFA1CC
-	SceKernelUtilsForDriver_87DC7F2F
-	SceKernelUtilsForDriver_9EA9D4DC
-	SceKernelUtilsForDriver_A773A6A8
-	SceKernelUtilsForDriver_C762EA6D
-	SceKernelUtilsForDriver_D909FA2C
+	sceSha224BlockUpdate
+	sceHmacSha256Digest
+	sceSha1Digest
+	sceSha224Digest
+	sceSha256Digest
+	sceSha224BlockInit
+	sceSha256BlockInit
 	SceKernelUtilsForDriver_E39CD272
 	SceKernelUtilsForDriver_EDA97D6D
-	SceKernelUtilsForDriver_FBF2A442
+	sceSha224BlockResult
 	SceQafMgrForDriver_AE033133
 	SceQafMgrForDriver_DEC6DF4E
 	SceSblAIMgrForDriver_274663A0
@@ -154,7 +154,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUserUnmap
 	sceKernelUserMap
 	sceKernelCopyToUser
-	SceSysmemForDriver_9F6E45E3
+	sceKernelIsAccessibleRangeProc
 	sceKernelCopyFromUser
 	SceSblGcAuthMgrDrmBBForDriver_050DC6DF
 	SceSblGcAuthMgrDrmBBForDriver_22FD5D23

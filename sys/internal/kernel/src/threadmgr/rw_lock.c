@@ -217,7 +217,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (intr & 0x80) {
 		SCE_DBG_ASSERT_PRINTF(0, 253, "*** error: irq suspended. rwLockId=0x%08x[%s]\n",
 				      rwLockId, SceSysmemForDriver_E655852F(rwLockId));
@@ -305,12 +305,12 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 			rwLock->core.writeWaiters++;
 		}
 		if (callbacks)
-			SceCpuForDriver_BC248C30(flags, THREAD_FLAG_WAKE_PENDING);
+			sceKernelAtomicOrAndGet32(flags, THREAD_FLAG_WAKE_PENDING);
 		SCE_DBG_ASSERT_CHECK(rwLock->waiting + 1 ==
 			(uint32_t)(rwLock->core.readWaiters + rwLock->core.writeWaiters), 387);
 		ret = waitWaitableObject(rwLockId, queue, SCE_KERNEL_WAITTYPE_RW_LOCK,
 					 &wakeup, timeout, NULL, &locked);
-		SceCpuForDriver_4AE1BCC0(flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelAtomicClearMask32(flags, THREAD_FLAG_WAKE_PENDING);
 		SCE_DBG_ASSERT_PRINTF(rwLock->waiting ==
 			(uint32_t)(rwLock->core.readWaiters + rwLock->core.writeWaiters), 399,
 			"ret=%08x cpu[%d] A :%d W :%d R :%d %p\n", ret, sceKernelCpuId(),
@@ -357,7 +357,7 @@ static int getRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info)
 	int intr, ret;
 
 	*info = (SceKernelRWLockInfo){ .size = sizeof(*info) };
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
@@ -426,7 +426,7 @@ uint32_t releaseAllRWLock(struct ThreadCB *thread)
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		for (link = head->next; link != head; link = head->next) {
 			rwLock = RW_LOCK_FROM_OWNER_LINK(link);
-			if (SceCpuForDriver_5AC9D394(&rwLock->lock) < 0)
+			if (sceKernelSpinlockLowTrylock(&rwLock->lock) < 0)
 				break;
 			ListLinkRemove(link);
 			rwLock->core.writer = NULL;
@@ -470,8 +470,8 @@ int rwLockProcessExit(SceProcessObject *process)
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	}
 	for (i = 0; i < (int)got; i++) {
-		intr = SceCpuForDriver_821FC0EE();
-		ret = SceSysmemForDriver_84A4AF5E(process->pid, vector[i]);
+		intr = sceKernelCpuSuspendIntr();
+		ret = scePUIDClose(process->pid, vector[i]);
 		sceKernelCpuResumeIntr(intr);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 609, "()->scePUIDClose(0x%08X, puid=0x%08X)=0x%08X\n",
@@ -575,7 +575,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 			process->rwLockPeak = process->rwLockCount;
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	} else {
-		intr = SceCpuForDriver_821FC0EE();
+		intr = sceKernelCpuSuspendIntr();
 	}
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->rwLockClass, name,
 		&opt, &pObject);
@@ -624,8 +624,8 @@ int sceKernelDeleteRWLock(SceUID rwLockId)
 		ThreadmgrSetUserRoWord(saved);
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
-	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForKernel_368F1C36(rwLockId) ==
+	intr = sceKernelCpuSuspendIntr();
+	if (sceGUIDtoClass(rwLockId) ==
 	    s_threadmgrRuntime.manager->rwLockClass)
 		ret = sceGUIDClose(rwLockId);
 	else
@@ -656,7 +656,7 @@ int sceKernelTryLockReadRWLock(SceUID rwLockId)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
@@ -706,7 +706,7 @@ int sceKernelUnlockReadRWLock(SceUID rwLockId)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
@@ -794,7 +794,7 @@ int sceKernelTryLockWriteRWLock(SceUID rwLockId)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
@@ -863,7 +863,7 @@ int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
@@ -973,7 +973,7 @@ int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWrit
 			type);
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
@@ -1157,7 +1157,7 @@ int sceKernelGetRWLockInfoAllProc(SceUID pid, int level, SceKernelRWLockInfo *in
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
-		if (getRWLockInfo(SceSysmemForDriver_45D22597(pid, vector[i]), &info) != 0)
+		if (getRWLockInfo(scePUIDtoGUID(pid, vector[i]), &info) != 0)
 			continue;
 		info.rwLockId = vector[i];
 		if (info.writeOwnerId != 0) {

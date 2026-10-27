@@ -11,6 +11,6 @@
 int sceSDbgSdioInit(void);
 
 /* names unknown (NID) */
-int SceSDbgSdioForKernel_2EC24C58(SceUInt32 channel, void *buf, SceSize size);	/* read */
-int SceSDbgSdioForKernel_7876806C(SceUInt32 channel, const void *buf, SceSize size); /* write */
-int SceSDbgSdioForKernel_356C6621(void);					/* free memblock */
+int sceSDbgSdioRead(SceUInt32 channel, void *buf, SceSize size);	/* read */
+int sceSDbgSdioWrite(SceUInt32 channel, const void *buf, SceSize size); /* write */
+int sceSDbgSdioFini(void);					/* free memblock */

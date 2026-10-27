@@ -39,7 +39,7 @@ int GcAuthAdhocAnswerChallenge160(const GcAuthAdhocAnswerChallenge160Request *re
 	result = GcAuthAdhocDecryptPacket(packet, 160);
 	if (result != 0)
 		goto finish;
-	result = SceKernelUtilsForDriver_87DC7F2F(&challenge->signedCertificate.certificate, 56,
+	result = sceSha1Digest(&challenge->signedCertificate.certificate, 56,
 		gcAuthAdhocHashScratch.digest160);
 	if (result != 0)
 		goto finish;

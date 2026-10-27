@@ -13,7 +13,7 @@ int SpkgInfoUtilGetHardwareIndex(int *index)
 
 	if (!index)
 		return (int)0x800f0216;
-	result = SceSblSsMgrForDriver_E0DC2587(&pscode);
+	result = sceSblAimgrGetPscode(&pscode);
 	if (result)
 		return result;
 	if (SceSblAIMgrForDriver_6D5A3FC9()) {

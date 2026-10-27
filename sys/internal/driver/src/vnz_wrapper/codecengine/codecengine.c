@@ -41,7 +41,7 @@ int _sceCodecEngineProcessCreateEntry(SceUID pid, SceUInt32 type)
 	CodecEngineProcessStorage *storage = NULL;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_codecEngineProcessStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_codecEngineProcessStorageKey,
 		(void **)&storage, 1);
 	if (ret >= 0) {
 #if FW_DEBUG
@@ -66,7 +66,7 @@ int _sceCodecEngineProcessExitEntry(SceUID pid, SceUInt32 type)
 	CodecEngineProcessStorage *storage = NULL;
 	int storageResult, ret, finalResult;
 
-	storageResult = SceProcessmgrForDriver_AF80F39C(pid,
+	storageResult = sceKernelGetRemoteKPLS(pid,
 		g_codecEngineProcessStorageKey, (void **)&storage, 0);
 #if FW_DEBUG
 	sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(139, "_sceCodecEngineProcessExitEntry"), __builtin_return_address(0));
@@ -148,7 +148,7 @@ int _sceCodecEngineProcessSuspendPhase0(SceUID pid)
 	CodecEngineProcessStorage *storage = NULL;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_codecEngineProcessStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_codecEngineProcessStorageKey,
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG
@@ -164,7 +164,7 @@ int _sceCodecEngineProcessResume(SceUID pid)
 	CodecEngineProcessStorage *storage = NULL;
 	int ret;
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid, g_codecEngineProcessStorageKey,
+	ret = sceKernelGetRemoteKPLS(pid, g_codecEngineProcessStorageKey,
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG
@@ -179,7 +179,7 @@ struct ThreadmgrFastMutex * _sceCodecEngineGetMutex(SceUID pid)
 {
 	CodecEngineProcessStorage *storage = NULL;
 
-	if (SceProcessmgrForDriver_AF80F39C(pid, g_codecEngineProcessStorageKey,
+	if (sceKernelGetRemoteKPLS(pid, g_codecEngineProcessStorageKey,
 		(void **)&storage, 0) < 0)
 		return NULL;
 #if FW_DEBUG
@@ -193,7 +193,7 @@ CodecEngineUnmapMemBlockEntry * _sceCodecEngineGetUnmapMemBlockEntry(SceUID pid,
 	CodecEngineProcessStorage *storage = NULL;
 	unsigned int index = 0;
 
-	if (SceProcessmgrForDriver_AF80F39C(pid, g_codecEngineProcessStorageKey,
+	if (sceKernelGetRemoteKPLS(pid, g_codecEngineProcessStorageKey,
 		(void **)&storage, 0) < 0)
 		return NULL;
 #if FW_DEBUG
@@ -218,7 +218,7 @@ unsigned int * _sceCodecEngineGetProcessor(SceUID pid)
 {
 	CodecEngineProcessStorage *storage = NULL;
 
-	if (SceProcessmgrForDriver_AF80F39C(pid, g_codecEngineProcessStorageKey,
+	if (sceKernelGetRemoteKPLS(pid, g_codecEngineProcessStorageKey,
 		(void **)&storage, 0) < 0)
 		return NULL;
 #if FW_DEBUG

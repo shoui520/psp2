@@ -272,7 +272,7 @@ static int rdrfpUpdateVDTreeOfSavedata(int which)
 	int ret;
 
 	if (which == 0) {
-		SceAppMgrForDriver_0813AFCA(2, mount, sizeof(mount));
+		sceAppMgrGetUserDirPath(2, mount, sizeof(mount));
 		snprintf(dir, sizeof(dir), "%s/%s", mount, "savedata");
 	} else {
 		__builtin_strcpy(dir, "grw0:savedata");
@@ -832,7 +832,7 @@ int rdrfpDread(SceUInt32 fd, SceIoDirent *dirent)
 	if (f->entry) {
 		ret = rdrfpVDEntryDread(f->entry, f->readIndex, dirent);
 		if (ret > 0)
-			SceCpuForDriver_5F6A8743(&f->readIndex, 1);
+			sceKernelAtomicAddAndGet32(&f->readIndex, 1);
 		goto out;
 	}
 	for (;;) {
@@ -1148,7 +1148,7 @@ savedata:
 	if (gameCard) {
 		snprintf(path, RDRFP_PATH_BUF, "%s/%s", "grw0:savedata", titleId);
 	} else {
-		SceAppMgrForDriver_0813AFCA(2, mount, sizeof(mount));
+		sceAppMgrGetUserDirPath(2, mount, sizeof(mount));
 		snprintf(path, RDRFP_PATH_BUF, "%s/savedata/%s", mount, titleId);
 	}
 	passcode = *passcodeArg;

@@ -96,8 +96,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateHeap
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
-	SceCpuForDriver_341B6E81
-	SceCpuForDriver_5F6A8743
+	sceKernelAtomicGetAndAdd32
+	sceKernelAtomicAddAndGet32
 	memset
 	strncmp
 	memcpy
@@ -122,12 +122,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteEventFlag
 	sceKernelRegisterCallbackToEventForDriver
 	sceKernelStartTimer
-	SceThreadmgrForDriver_8A35F714
+	sceKernelWaitEventFlagCB
 	sceKernelCreateTimer
-	SceThreadmgrForDriver_91A8F38B
+	sceKernelDeleteTimer
 	sceKernelSetTimerEvent
 	sceKernelDeleteThread
-	SceThreadmgrForDriver_C529EA32
+	sceKernelWaitEvent
 	sceKernelCreateThread
 	sceKernelSetEventFlag
 	sceKernelCreateMutex
@@ -157,7 +157,7 @@ set(MODULE_IMPORT_FUNCS
 	sceDfMgrReqSend
 	sceDfMgrSend
 	SceDeci4pDfMgrForDebugger_CACAB5F9
-	SceAppMgrForDriver_0813AFCA
+	sceAppMgrGetUserDirPath
 	sceAppMgrRdrfpMount
 	sceAppMgrRdrfpUmount
 )

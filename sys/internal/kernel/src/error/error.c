@@ -424,7 +424,7 @@ static __attribute__((noinline, noclone)) int ErrorHistoryPost(ErrorTable *table
 	e->rec.swVersionExtra = fw.versionExtra;
 	if (s_defaultFormatSet & 1)
 		e->rec.format = s_defaultFormat;
-	SceRtcForDriver_DEC408D4((SceRtcTick *)&e->tick);
+	sceRtcGetCurrentTick((SceRtcTick *)&e->tick);
 	ErrorFormatCode(table, e->code, e->rec.code);
 
 	if (s_history.seq == 0)

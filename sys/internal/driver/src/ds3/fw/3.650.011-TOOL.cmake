@@ -104,7 +104,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDelayThread
 	sceKernelClearEventFlag
 	lockFastMutex
-	SceThreadmgrForDriver_8A35F714
+	sceKernelWaitEventFlagCB
 	sceKernelGetProcessId
 	sceKernelInitializeFastMutex
 	SceThreadmgrForDriver_C58DF384
@@ -113,7 +113,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
 	sceKernelRegisterSysEventHandler
-	SceKernelSuspendForDriver_E0489831
+	sceKernelPowerTick
 	sceKernelRegisterProcEventHandler
 	SceBtForDriver_10D68FAE
 	SceBtForDriver_120AC1F7
@@ -128,7 +128,7 @@ set(MODULE_IMPORT_FUNCS
 	SceUsbdForDriver_A0BF85B8
 	SceUsbdForDriver_BC3EF82B
 	SceUsbdForDriver_F304DC5C
-	SceUsbServForDriver_AA6D4409
+	sceUsbServAccessoryActivate
 	_sceCtrlBdRemoconSendMergedNotify2
 	SceCtrlForDriver_18823EEA
 	SceCtrlForDriver_6E183B9B
@@ -139,8 +139,8 @@ set(MODULE_IMPORT_FUNCS
 	sceRegMgrGetKeyInt
 	sceRegMgrSystemParamGetInt
 	SceSysconForDriver_CBD6D8BC
-	SceDisplayForDriver_8B5DA27B
-	SceDisplayForDriver_984C27E7
+	sceDisplayGetVcountInternal
+	sceDisplayWaitVblankStart
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

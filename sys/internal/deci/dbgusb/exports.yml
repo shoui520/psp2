@@ -11,7 +11,7 @@ SceDbgUsb:
       version: 1
       nid: 0x7001B5EF
       functions:
-        - SceDbgUsbForDriver_08CF16D1: 0x08CF16D1
+        - sceDbgUsbClose: 0x08CF16D1
         - sceDbgUsbWrite: 0x40C65DB2
         - _sceDbgUsbPullData: 0x83B67515
         - sceDbgUsbOpen: 0xA6BFCC0A

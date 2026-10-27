@@ -70,7 +70,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAssert
 	SceDebugForTZS_618F89E6
 	SceDebugForTZS_D26EB4BB
-	SceDebugForTZS_F851BA4F
+	sceKernelGetAssertLevel
 	sceKernelCheckDipsw
 	memset
 	__stack_chk_fail

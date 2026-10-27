@@ -89,14 +89,14 @@ set(MODULE_IMPORT_FUNCS
 	sceIoOpen
 	sceIoClose
 	sceRtcGetCurrentClockLocalTime
-	ScePamgrForDriver_019BD60F
+	sceKernelPaGetTraceBufferSize
 	ScePamgrForDriver_02ACD81C
-	ScePamgrForDriver_0D04B52A
-	ScePamgrForDriver_3ACF4316
+	sceKernelPaGetSharedKey
+	sceKernelPaGetTraceBufferStatus
 	sceKernelPaUnregister
 	ScePamgrForDriver_606C98CD
-	ScePamgrForDriver_88462719
-	ScePamgrForDriver_FB46C3CD
+	sceKernelPaStopByKey
+	sceKernelPaGetWritePointer
 	sceRegMgrGetKeyStr
 )
 set(MODULE_IMPORT_VARS

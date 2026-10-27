@@ -96,7 +96,7 @@ static int lowPower(struct RtlAdapter *a)
 	int ret;
 
 	SceGpioForDriver_372022A4(1, 2, 0);
-	SceGpioForDriver_D454A584(1, 2);
+	sceGpioPortSet(1, 2);
 	lockFastMutex(&a->mutex);
 	ret = rtlWriteUsb16(a, 0xe436, 4000);
 	if (ret < 0)
@@ -220,7 +220,7 @@ static int initializeHardware(struct RtlAdapter *a)
 
 	if (SceSblAIMgrForDriver_C6E83F34() && !SceSysrootForDriver_8AA268D6(0xc)) {
 		SceGpioForDriver_372022A4(1, 2, 0);
-		SceGpioForDriver_F6310435(1, 2);
+		sceGpioPortClear(1, 2);
 	}
 	for (unsigned int reg = 0xfc28; reg <= 0xfc34; reg += 4) {
 		ret = rtlWritePla(a, reg, 0xff, 4, &value);
@@ -617,7 +617,7 @@ int rtlWorker(SceSize length, void *arg)
 	ret = sceKernelRegisterProcEventHandler("SceNetDrvEther", &a->proc, a);
 	if (ret < 0) {
 		if (a->procId > 0) {
-			SceProcEventForDriver_3DED57CC(a->procId);
+			sceKernelUnregisterProcEventHandler(a->procId);
 			a->procId = 0;
 		}
 		SceDebugForDriver_391B74B7("UsbEtherRtl workerEntry Exit. ret=0x%08x\n", ret);

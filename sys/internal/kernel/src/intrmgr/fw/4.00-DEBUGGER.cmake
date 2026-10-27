@@ -63,9 +63,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_E655852F
-	SceSysmemForKernel_634D0D0C
+	sceKernelNameHeapDelete
 	sceKernelAllocPartitionMemBlock
-	SceSysmemForKernel_B628B46B
+	sceKernelNameHeapInsert
 	SceSysrootForKernel_118657C6
 	sceKernelSysrootSetModulePrivate
 	sceKernelSysrootCorelockLock
@@ -80,7 +80,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	sceKernelAssert
-	SceDebugForDriver_374B7868
+	sceKernelGetAssertLevel
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808

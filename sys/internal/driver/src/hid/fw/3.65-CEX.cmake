@@ -69,7 +69,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateEventFlag
 	lockFastMutex
 	sceKernelDeleteEventFlag
-	SceThreadmgrForDriver_8A35F714
+	sceKernelWaitEventFlagCB
 	sceKernelGetProcessId
 	sceKernelInitializeFastMutex
 	sceKernelNotifyCallback
@@ -77,13 +77,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
 	sceKernelRegisterProcEventHandler
 	sceKernelRegisterSysEventHandler
-	SceKernelSuspendForDriver_E0489831
+	sceKernelPowerTick
 	SceSysrootForDriver_34281746
 	sceSblACMgrIsKernelProgram
 	SceSblACMgrForDriver_2E992B02

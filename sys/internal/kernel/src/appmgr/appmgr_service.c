@@ -976,7 +976,7 @@ int sceAppMgrCaptureFrameBufIFTUByAppId(int appId, SceDisplayFrameBuf *frameBuf)
 	pid = app->process.processId;
 	plane = captureFrameBufPlane(app);
 	SERVICE_MAIN_UNLOCK(571);
-	result = SceDisplayForDriver_D4C812E5(pid, SceDisplayForDriver_C8E554C5(), plane, frameBuf);
+	result = SceDisplayForDriver_D4C812E5(pid, sceDisplayGetPrimaryHead(), plane, frameBuf);
 	if (result >= 0) {
 		_appListUnlockApp(app);
 		sceSyscallLeave(syscall);
@@ -994,7 +994,7 @@ static inline int checkProcFrameBuf(SceUID pid, int plane)
 	int result;
 
 	info.size = sizeof(info);
-	result = SceDisplayForDriver_3BC165EF(pid, SceDisplayForDriver_C8E554C5(), plane, &info);
+	result = SceDisplayForDriver_3BC165EF(pid, sceDisplayGetPrimaryHead(), plane, &info);
 	if (result != 0)
 		return result;
 	if (info.size < sizeof(info))
@@ -1030,7 +1030,7 @@ int sceAppMgrCaptureFrameBufDMACByAppId(int appId, SceDisplayFrameBuf *frameBuf)
 	SERVICE_MAIN_UNLOCK(645);
 	result = checkProcFrameBuf(pid, plane);
 	if (result == 0) {
-		result = SceDisplayForDriver_707EEE2E(pid, SceDisplayForDriver_C8E554C5(), plane,
+		result = SceDisplayForDriver_707EEE2E(pid, sceDisplayGetPrimaryHead(), plane,
 			frameBuf);
 		if (result < 0) {
 			_appListUnlockApp(app);

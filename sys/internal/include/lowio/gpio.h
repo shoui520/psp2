@@ -16,6 +16,6 @@ int SceGpioForDriver_A1B5A462(unsigned bank, unsigned port);	/* vitasdk: ksceGpi
 /* vitasdk: ksceGpioSetIntrMode */
 int SceGpioForDriver_BBEA1DDC(unsigned bank, unsigned port, unsigned mode);
 int SceGpioForDriver_C4CB78E2(unsigned bank, unsigned port);	/* vitasdk: ksceGpioGetPortMode */
-int SceGpioForDriver_D454A584(unsigned bank, unsigned port);	/* vitasdk: ksceGpioPortSet */
+int sceGpioPortSet(unsigned bank, unsigned port);
 int SceGpioForDriver_E97A3B31(unsigned bank, unsigned port);	/* vitasdk: ksceGpioGetIntrMode */
-int SceGpioForDriver_F6310435(unsigned bank, unsigned port);	/* vitasdk: ksceGpioPortClear */
+int sceGpioPortClear(unsigned bank, unsigned port);

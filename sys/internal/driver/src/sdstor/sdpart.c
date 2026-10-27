@@ -935,7 +935,7 @@ unsigned int sdpart_grab_mc(unsigned int port)
 	if (port != 0 && port != 3 &&
 	    (port != 1 || SceSysrootForDriver_F804F761() != 0)) {
 		port = (signed char)port;
-		if (SceCpuForDriver_3627F4E0((SceInt8 *)&sdpartMcPort,
+		if (sceKernelAtomicCompareAndSet8((SceInt8 *)&sdpartMcPort,
 						 5, port) == 5)
 			return port;
 	}
@@ -963,7 +963,7 @@ int sdpart_release_mc(unsigned int port)
 	if (port == 0 || port == 3 ||
 	    (port == 1 && SceSysrootForDriver_F804F761() == 0))
 		return 0;
-	return SceCpuForDriver_3627F4E0((SceInt8 *)&sdpartMcPort,
+	return sceKernelAtomicCompareAndSet8((SceInt8 *)&sdpartMcPort,
 					    (signed char)port, 5);
 }
 
@@ -1004,7 +1004,7 @@ int sdpart_grab_xmc(unsigned int port)
 	if (port != 0 && port != 3 &&
 	    (port != 1 || SceSysrootForDriver_F804F761() != 0)) {
 		port = (signed char)port;
-		if (SceCpuForDriver_3627F4E0((SceInt8 *)&sdpartXmcPort,
+		if (sceKernelAtomicCompareAndSet8((SceInt8 *)&sdpartXmcPort,
 						 5, port) == 5)
 			return port;
 	}
@@ -1034,7 +1034,7 @@ int sdpart_release_xmc(unsigned int port)
 	if (port == 0 || port == 3 ||
 	    (port == 1 && SceSysrootForDriver_F804F761() == 0))
 		return 0;
-	return SceCpuForDriver_3627F4E0((SceInt8 *)&sdpartXmcPort,
+	return sceKernelAtomicCompareAndSet8((SceInt8 *)&sdpartXmcPort,
 					    (signed char)port, 5);
 }
 

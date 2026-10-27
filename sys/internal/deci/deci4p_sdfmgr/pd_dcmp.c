@@ -204,7 +204,7 @@ void _discardPacket(SdfMgrDcmpCpuState *cpu, SceDeci4pHeader *header)
 	void *buffer = header + 1;
 
 #if FW_DEBUG
-	if (SceDebugForDriver_374B7868() > 0)
+	if (sceKernelGetAssertLevel() > 0)
 		SceDebugForDriver_FD753E7A(1, remaining < 0x11000,
 			DCMP_DEBUG_INFO(686, 0x236c9862, 0x68bd4e89, "_discardPacket"),
 			caller);
@@ -243,7 +243,7 @@ void _dcmpRecv(int event, void *arg, void *context)
 			SceDeci4pHeader *out;
 			SceSize size;
 			uint32_t direct;
-			unsigned state = SceCpuForDriver_821FC0EE();
+			unsigned state = sceKernelCpuSuspendIntr();
 			int read;
 
 			if (queue->count <= 0) {
@@ -280,7 +280,7 @@ void _dcmpRecv(int event, void *arg, void *context)
 					"no route (0x%04x)\n", out->dst);
 #endif
 			}
-			state = SceCpuForDriver_821FC0EE();
+			state = sceKernelCpuSuspendIntr();
 			read = queue->read;
 			queue->sizes[read] = 0;
 			read = (int)((uint32_t)read + 1);
@@ -514,7 +514,7 @@ int dcmpInit(SdfMgrProtocolState *protocol)
 #if FW_DEBUG
 error:
 	SceDeci4pSDfMgrForKernel_501CE61D(15, errorInfo, failure, result);
-	if (SceDebugForDriver_374B7868() > 0)
+	if (sceKernelGetAssertLevel() > 0)
 		SceDebugForDriver_FD753E7A(1, 0, assertInfo, caller);
 	return result;
 #endif

@@ -88,7 +88,7 @@ int _sceKernelStartModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt
 	int ret;
 
 	state = ModulemgrSyscallEnter();
-	ret = SceSysmemForDriver_45D22597(0, modid);
+	ret = scePUIDtoGUID(0, modid);
 	if (ret < 0) {
 		ret |= SYSCALL_ERROR_PUID;
 	} else if (flags != 0) {
@@ -110,7 +110,7 @@ int _sceKernelStopModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt3
 	int ret;
 
 	state = ModulemgrSyscallEnter();
-	ret = SceSysmemForDriver_45D22597(0, modid);
+	ret = scePUIDtoGUID(0, modid);
 	if (ret < 0) {
 		ret |= SYSCALL_ERROR_PUID;
 	} else if (flags != 0) {
@@ -132,7 +132,7 @@ int _sceKernelUnloadModuleForUser(SceUID modid, SceUInt32 flags,
 	int ret;
 
 	state = ModulemgrSyscallEnter();
-	ret = SceSysmemForDriver_45D22597(0, modid);
+	ret = scePUIDtoGUID(0, modid);
 	if (ret < 0)
 		ret |= SYSCALL_ERROR_PUID;
 	else if (flags != 0)
@@ -183,7 +183,7 @@ int _sceKernelStopUnloadModuleForUser(SceUID modid, SceSize args, void *argp,
 	SceUID uid;
 
 	state = ModulemgrSyscallEnter();
-	uid = SceSysmemForDriver_45D22597(0, modid);
+	uid = scePUIDtoGUID(0, modid);
 	if (uid < 0) {
 		ret = uid | SYSCALL_ERROR_PUID;
 	} else if (flags != 0) {
@@ -244,7 +244,7 @@ int _sceKernelCloseModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt
 	int ret;
 
 	state = ModulemgrSyscallEnter();
-	ret = SceSysmemForDriver_45D22597(0, modid);
+	ret = scePUIDtoGUID(0, modid);
 	if (ret < 0)
 		ret |= SYSCALL_ERROR_PUID;
 	else if (flags != 0)
@@ -294,14 +294,14 @@ int sceKernelGetModuleListForUser(SceUInt32 flags, SceUID *ulist, SceSize *unum)
 	return ret;
 }
 
-int sceKernelGetModuleInfo(SceUID modid, SceKernelModuleInfo *uinfo)
+int sceKernelGetModuleInfoForUser(SceUID modid, SceKernelModuleInfo *uinfo)
 {
 	SceKernelModuleInfo info;
 	SceUInt32 state;
 	int ret;
 
 	state = ModulemgrSyscallEnter();
-	ret = SceSysmemForDriver_45D22597(0, modid);
+	ret = scePUIDtoGUID(0, modid);
 	if (ret < 0) {
 		ret |= SYSCALL_ERROR_PUID;
 	} else {
@@ -368,7 +368,7 @@ int sceKernelGetLibraryInfoByNID(SceUID modid, SceNID libnid, SceKernelLibraryIn
 
 	state = ModulemgrSyscallEnter();
 	pid = sceKernelGetProcessId();
-	ret = SceSysmemForDriver_45D22597(pid, modid);
+	ret = scePUIDtoGUID(pid, modid);
 	if (ret < 0) {
 		ret |= SYSCALL_ERROR_PUID;
 	} else {

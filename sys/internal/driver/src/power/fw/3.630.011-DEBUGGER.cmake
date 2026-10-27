@@ -202,21 +202,21 @@ set(MODULE_IMPORT_NIDS
 	0x58A1A1C5:F:0x3126A070
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelVAtoPA
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_E655852F
-	SceCpuForDriver_10EB35EB
-	SceCpuForDriver_2A40BB93
+	sceKernelAtomicGetAndAnd32
+	sceKernelAtomicGetAndOr32
 	sceKernelCpuId
-	SceCpuForDriver_5F6A8743
+	sceKernelAtomicAddAndGet32
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_BC248C30
-	SceCpuForDriver_CDA96E81
+	sceKernelCpuSuspendIntr
+	sceKernelAtomicOrAndGet32
+	sceKernelAtomicCompareAndSet32
 	sceKernelSpinlockLowLockCpuSuspendIntr
-	SceCpuForDriver_DF899E4B
+	sceKernelAtomicAndAndGet32
 	sceKernelCpuResumeIntr
 	SceDebugForDriver_391B74B7
 	sceKernelCheckDipsw
@@ -238,14 +238,14 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uldivmod
 	__aeabi_uidiv
 	__stack_chk_fail
-	SceIntrmgrForDriver_182EE3E3
+	sceKernelIsIntrContext
 	sceKernelDisableSubIntr
 	sceKernelGenerateSoftIntr
 	sceKernelRegisterIntrHandler
 	sceKernelReleaseSubIntrHandler
 	sceKernelEnableSubIntr
 	sceKernelRegisterSubIntrHandler
-	SceThreadmgrForDriver_0892D8DF
+	sceKernelGetCallbackCount
 	sceKernelGetThreadmgrUIDClass
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
@@ -273,7 +273,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocOwnProcessHeap
 	SceProcessmgrForDriver_879153D9
 	sceKernelFreeRemoteProcessHeap
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	SceProcessmgrForDriver_EE694840
 	SceProcessmgrForDriver_FC2A424E
 	sceKernelRegisterSysEventHandler
@@ -291,7 +291,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_15237AF8
 	ScePervasiveForDriver_2EEBE9AE
 	ScePervasiveForDriver_47708C03
-	ScePervasiveForDriver_589D0291
+	scePervasiveCameraBusClockSelect
 	ScePervasiveForDriver_6AF0196F
 	ScePervasiveForDriver_714EEFB7
 	ScePervasiveForDriver_725B4F59
@@ -304,12 +304,12 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_CA0ACFC5
 	ScePervasiveForDriver_E9D95643
 	SceGpioForDriver_372022A4
-	SceGpioForDriver_D454A584
-	SceGpioForDriver_F6310435
+	sceGpioPortSet
+	sceGpioPortClear
 	SceGrabForDriver_B22EE8BC
 	SceSysconForDriver_03C50DC3
 	SceSysconForDriver_03F11220
-	SceSysconForDriver_04EC7579
+	sceSysconCtrlLED
 	SceSysconForDriver_0826BA07
 	SceSysconForDriver_0D0B6D25
 	SceSysconForDriver_129EA022
@@ -358,15 +358,15 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_F93CF833
 	SceSysconForDriver_FF86F4C5
 	SceDisplayForDriver_8D9A1CCE
-	SceDisplayForDriver_984C27E7
+	sceDisplayWaitVblankStart
 	SceDisplayForDriver_9E3C6DC6
-	SceDisplayForDriver_C8E554C5
+	sceDisplayGetPrimaryHead
 	SceCtrlForDriver_03777131
 	SceCtrlForDriver_12C13A72
 	SceCtrlForDriver_4CCB2153
 	SceCtrlForDriver_69E45836
 	SceCtrlForDriver_C8CE3E43
-	SceCtrlForDriver_EA1D3A34
+	sceCtrlPeekBufferPositive
 	SceCtrlForDriver_FA88D837
 	SceCtrlForDriver_FF9D4DD4
 	SceTouchForDriver_328E38B0

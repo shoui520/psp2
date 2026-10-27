@@ -13,54 +13,54 @@ SceDisplay:
       functions:
         - SceDisplayForDriver_086DEFB6: 0x086DEFB6
         - SceDisplayForDriver_12A77662: 0x12A77662
-        - SceDisplayForDriver_16466675: 0x16466675
+        - sceDisplaySetFrameBufInternal: 0x16466675
         - SceDisplayForDriver_19140ACD: 0x19140ACD
-        - SceDisplayForDriver_19F94C63: 0x19F94C63
-        - SceDisplayForDriver_1C0C9C4A: 0x1C0C9C4A
-        - SceDisplayForDriver_289D82FE: 0x289D82FE
+        - sceDisplayGetFrameBufInternal: 0x19F94C63
+        - sceDisplayWaitSetFrameBuf: 0x1C0C9C4A
+        - sceDisplaySetFrameBuf: 0x289D82FE
         - SceDisplayForDriver_32287576: 0x32287576
         - SceDisplayForDriver_332C5410: 0x332C5410
         - SceDisplayForDriver_35466D63: 0x35466D63
         - SceDisplayForDriver_3BC165EF: 0x3BC165EF
         - SceDisplayForDriver_3D95D478: 0x3D95D478
         - SceDisplayForDriver_40ACFE51: 0x40ACFE51
-        - SceDisplayForDriver_40F1469C: 0x40F1469C
-        - SceDisplayForDriver_43347565: 0x43347565
-        - SceDisplayForDriver_46F186C3: 0x46F186C3
-        - SceDisplayForDriver_496032D6: 0x496032D6
+        - sceDisplayWaitVblankStartMulti: 0x40F1469C
+        - sceDisplayDisableHead: 0x43347565
+        - sceDisplayWaitVblankStartCB: 0x46F186C3
+        - sceDisplayEnableHead: 0x496032D6
         - SceDisplayForDriver_4AE2A2B1: 0x4AE2A2B1
-        - SceDisplayForDriver_4B27191F: 0x4B27191F
+        - sceDisplayUnregisterVblankStartCallback: 0x4B27191F
         - SceDisplayForDriver_5AFE6CD3: 0x5AFE6CD3
         - SceDisplayForDriver_61421AAF: 0x61421AAF
         - SceDisplayForDriver_6B198052: 0x6B198052
         - SceDisplayForDriver_6DC8F0F5: 0x6DC8F0F5
         - SceDisplayForDriver_6E22990E: 0x6E22990E
         - SceDisplayForDriver_707EEE2E: 0x707EEE2E
-        - SceDisplayForDriver_77ED8B3A: 0x77ED8B3A
+        - sceDisplayWaitVblankStartMultiCB: 0x77ED8B3A
         - SceDisplayForDriver_7911958E: 0x7911958E
-        - SceDisplayForDriver_7FB0BD28: 0x7FB0BD28
-        - SceDisplayForDriver_863EACBE: 0x863EACBE
-        - SceDisplayForDriver_8B5DA27B: 0x8B5DA27B
+        - sceDisplayRegisterVblankStartCallback: 0x7FB0BD28
+        - sceDisplayWaitSetFrameBufMultiCB: 0x863EACBE
+        - sceDisplayGetVcountInternal: 0x8B5DA27B
         - SceDisplayForDriver_8D79D187: 0x8D79D187
         - SceDisplayForDriver_8D9A1CCE: 0x8D9A1CCE
         - SceDisplayForDriver_8F3C0E19: 0x8F3C0E19
-        - SceDisplayForDriver_984C27E7: 0x984C27E7
-        - SceDisplayForDriver_9D7F203C: 0x9D7F203C
+        - sceDisplayWaitVblankStart: 0x984C27E7
+        - sceDisplayWaitSetFrameBufCB: 0x9D7F203C
         - SceDisplayForDriver_9E3C6DC6: 0x9E3C6DC6
         - SceDisplayForDriver_AF5EE5BE: 0xAF5EE5BE
         - SceDisplayForDriver_B027433E: 0xB027433E
         - SceDisplayForDriver_B0CED8BC: 0xB0CED8BC
-        - SceDisplayForDriver_B3C6D647: 0xB3C6D647
+        - sceDisplayGetResolutionInfoInternal: 0xB3C6D647
         - SceDisplayForDriver_B54962A1: 0xB54962A1
-        - SceDisplayForDriver_B80CA224: 0xB80CA224
+        - sceDisplayWaitVblankStartInternal: 0xB80CA224
         - SceDisplayForDriver_BC76296A: 0xBC76296A
-        - SceDisplayForDriver_C8E554C5: 0xC8E554C5
+        - sceDisplayGetPrimaryHead: 0xC8E554C5
         - SceDisplayForDriver_D2CED235: 0xD2CED235
         - SceDisplayForDriver_D4C812E5: 0xD4C812E5
-        - SceDisplayForDriver_E6D27E0A: 0xE6D27E0A
+        - sceDisplayWaitSetFrameBufMulti: 0xE6D27E0A
         - SceDisplayForDriver_EB390A76: 0xEB390A76
         - SceDisplayForDriver_EE5EB52D: 0xEE5EB52D
-        - SceDisplayForDriver_EEDA2E54: 0xEEDA2E54
+        - sceDisplayGetFrameBuf: 0xEEDA2E54
         - SceDisplayForDriver_F116D0B4: 0xF116D0B4
         - SceDisplayForDriver_F83C95B1: 0xF83C95B1
         - SceDisplayForDriver_FA7CE579: 0xFA7CE579
@@ -69,24 +69,24 @@ SceDisplay:
       version: 1
       nid: 0x5ED8F994
       functions:
-        - sceDisplayWaitVblankStartMultiCB: 0x05F27764
+        - sceDisplayWaitVblankStartMultiCBForUser: 0x05F27764
         - _sceDisplayGetMaximumFrameBufResolution: 0x2EBFC7CB
-        - sceDisplayWaitSetFrameBufMultiCB: 0x3E796EF5
+        - sceDisplayWaitSetFrameBufMultiCBForUser: 0x3E796EF5
         - _sceDisplaySetFrameBufForCompat: 0x45BCB941
-        - sceDisplayWaitVblankStart: 0x5795E898
-        - sceDisplayRegisterVblankStartCallback: 0x6BDF4C4D
-        - SceDisplayForDriver_C8E554C5: 0x7178FADA
-        - sceDisplayWaitVblankStartCB: 0x78B41B92
+        - sceDisplayWaitVblankStartForUser: 0x5795E898
+        - sceDisplayRegisterVblankStartCallbackForUser: 0x6BDF4C4D
+        - sceDisplayGetPrimaryHead: 0x7178FADA
+        - sceDisplayWaitVblankStartCBForUser: 0x78B41B92
         - _sceDisplaySetFrameBufInternal: 0x7A8CB78E
-        - sceDisplayWaitSetFrameBufMulti: 0x7D9864A8
-        - sceDisplayWaitSetFrameBufCB: 0x814C90AF
+        - sceDisplayWaitSetFrameBufMultiForUser: 0x7D9864A8
+        - sceDisplayWaitSetFrameBufCBForUser: 0x814C90AF
         - _sceDisplayGetFrameBufInternal: 0x86A8E436
-        - sceDisplayWaitSetFrameBuf: 0x9423560C
-        - sceDisplayGetVcountInternal: 0x9686859E
-        - sceDisplayUnregisterVblankStartCallback: 0x98436A80
+        - sceDisplayWaitSetFrameBufForUser: 0x9423560C
+        - sceDisplayGetVcountInternalForUser: 0x9686859E
+        - sceDisplayUnregisterVblankStartCallbackForUser: 0x98436A80
         - sceDisplayGetRefreshRate: 0xA08CA60D
         - _sceDisplayGetFrameBuf: 0xA753B0CA
         - sceDisplayGetVcount: 0xB6FDE0BA
-        - sceDisplayWaitVblankStartMulti: 0xDD0A13B8
+        - sceDisplayWaitVblankStartMultiForUser: 0xDD0A13B8
         - _sceDisplaySetFrameBuf: 0xF51523CB
         - _sceDisplayGetResolutionInfoInternal: 0xFEFEB240

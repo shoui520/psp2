@@ -106,7 +106,7 @@ int sceAppMgrLaunchAppByNameForDebugger(const char *name, const char *param);
 int SceAppMgrForDriver_99AA37C1(const char *name);
 struct SceAppMgrAppStatus;
 int SceAppMgrForDriver_DC13160A(SceUID pid, struct SceAppMgrAppStatus *status);
-int SceAppMgrForDriver_A714BB35(const char *driveId);
+int sceAppMgrUmount(const char *driveId);
 int sceAppMgrDestroyAppForTest(SceUID pid);
 int sceAppMgrLiveAreaOperationByNameForLoadp(int operation, const char *appName);
 int sceAppMgrLiveAreaOperationForLoadp(int operation);
@@ -121,10 +121,8 @@ struct ScePfsRndDriveId;
 /* vitasdk: ksceAppMgrGameDataMount */
 int SceAppMgrForDriver_CE356B2D(const char *appPath, const char *patchPath,
 				const char *rifPath, struct ScePfsRndDriveId *mountPoint);
-/* vitasdk: ksceAppMgrAppDataMount */
-int SceAppMgrForDriver_B1D3C287(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
-/* vitasdk: ksceAppMgrWorkDirMount */
-int SceAppMgrForDriver_3A0A9B82(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
+int sceAppMgrAppDataMount(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
+int sceAppMgrWorkDirMount(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
 
 /* photo0: to mount for the caller */
 typedef struct SceAppMgrPhotoMountParam {
@@ -147,8 +145,7 @@ int SceAppMgrForDriver_E977A833(unsigned int mountId, SceUID pid,
 				struct ScePfsRndDriveId *mountPoint);
 /* vitasdk: ksceAppMgrMmsMount */
 int SceAppMgrForDriver_13D54107(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
-/* vitasdk: ksceAppMgrAppDataMountById */
-int SceAppMgrForDriver_5E311F71(unsigned int mountId, const char *id,
+int sceAppMgrAppDataMountById(unsigned int mountId, const char *id,
 				struct ScePfsRndDriveId *mountPoint);
 int SceAppMgrForDriver_EC9D5A35(void *status);	/* vitasdk: ksceAppMgrSaveDataSlotGetStatus */
 int sceAppMgrGetSystemDataFile(SceUInt32 location, void *buffer, SceSize size);

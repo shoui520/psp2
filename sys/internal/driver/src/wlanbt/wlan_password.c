@@ -15,7 +15,7 @@
 #define SHA1_DIGEST_SIZE 20
 #define strlen(password) strnlen(password, 64)
 #define HMAC_SHA1(key, keySize, input, inputSize, output, outputSize) \
-	SceKernelUtilsForDriver_29A28957(key, keySize, input, inputSize, output)
+	sceHmacSha1Digest(key, keySize, input, inputSize, output)
 #include "cmm_wpa_sce.c"
 #undef HMAC_SHA1
 #undef strlen

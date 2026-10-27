@@ -59,7 +59,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelCopyToUser
 	sceKernelCopyFromUser
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelCpuResumeIntr
 	sceKernelCheckDipsw
 	memset

@@ -57,9 +57,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateHeap
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
-	SceSysmemForKernel_634D0D0C
+	sceKernelNameHeapDelete
 	sceKernelAllocPartitionMemBlock
-	SceSysmemForKernel_B628B46B
+	sceKernelNameHeapInsert
 	SceSysrootForKernel_118657C6
 	sceKernelSysrootSetModulePrivate
 	sceKernelSysrootCorelockLock

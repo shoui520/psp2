@@ -43,14 +43,14 @@
  * Where Sony's code reads the memory again after the call, the check goes through this name
  * for the same function.
  */
-int SceDebugForDriver_374B7868_Impure(void) __asm__("SceDebugForDriver_374B7868");
+int sceKernelGetAssertLevelImpure(void) __asm__("sceKernelGetAssertLevel");
 #define SCE_DBG_ASSERT_CHECK_FUNC_RELOAD(_cond, _line, _func) do {		\
-	if (SceDebugForDriver_374B7868_Impure() > 0)				\
+	if (sceKernelGetAssertLevelImpure() > 0)				\
 		SceDebugForDriver_FD753E7A(1, (_cond), SCE_DBGINFO_FUNC(_line, _func),	\
 				      __builtin_return_address(0));		\
 } while (0)
 #define SCE_DBG_ASSERT_CHECK_RELOAD(_cond, _line) do {				\
-	if (SceDebugForDriver_374B7868_Impure() > 0)				\
+	if (sceKernelGetAssertLevelImpure() > 0)				\
 		SceDebugForDriver_FD753E7A(1, (_cond), SCE_DBGINFO(_line),	\
 				      __builtin_return_address(0));		\
 } while (0)

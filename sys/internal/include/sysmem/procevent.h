@@ -59,7 +59,7 @@ _Static_assert(sizeof(ProcEventCreateParam) == 0x14, "ProcEventCreateParam size"
 _Static_assert(sizeof(SceKernelProcEventHandler) == 0x1c, "SceKernelProcEventHandler size");
 #endif
 
-int SceProcEventForDriver_3DED57CC(SceUID uid);	/* vitasdk: ksceKernelUnregisterProcEventHandler */
+int sceKernelUnregisterProcEventHandler(SceUID uid);
 int sceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *info, SceUID *failed, SceUID stop);
 SceUID sceKernelRegisterProcEventHandler(const char *name, const SceKernelProcEventHandler *handler, void *common);
 

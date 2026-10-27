@@ -68,7 +68,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B74B7
 	sceKernelDcacheCleanRange
-	SceCpuForDriver_CDA96E81
+	sceKernelAtomicCompareAndSet32
 	sceKernelDeleteMutex
 	sceKernelFinalizeFastMutex
 	sceKernelLockMutex
@@ -83,13 +83,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateMutex
 	sceKernelFreeMemBlock
 	SceSysmemForDriver_24A99FFF
-	SceSysmemForDriver_59A4402F
+	sceKernelLockRange
 	sceKernelCopyToUser
 	sceKernelUnlockRange
 	sceKernelFindMemBlockByAddr
 	sceKernelIsAccessibleRange
 	sceKernelGetMemBlockBase
-	SceSysmemForDriver_AE36C775
+	sceKernelVARangeToPARange
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
 	sceKernelVARangeToPAVector
@@ -104,11 +104,11 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	sceKernelRegisterKPLS
-	SceProcessmgrForDriver_AF80F39C
+	sceKernelGetRemoteKPLS
 	sceKernelRegisterProcEventHandler
 	_unlockProcessSuspendCore
 	SceCodecEngineWrapperForDriver_2DD83BB0
-	SceCodecEngineWrapperForDriver_391BD4FD
+	sceVeneziaRpcCallGenericThunk
 	SceCodecEngineWrapperForDriver_3C5E9CC3
 	SceCodecEngineWrapperForDriver_C7C150AE
 	SceCodecEngineWrapperForDriver_CB8703D8

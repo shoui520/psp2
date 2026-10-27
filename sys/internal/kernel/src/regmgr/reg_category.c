@@ -136,7 +136,7 @@ int __attribute__((noinline)) regComputeBlockCheck(RegDataBlock *block, SceSize 
 	block->check[1] = 0;
 	block->check[2] = 0;
 	block->check[3] = 0;
-	ret = SceKernelUtilsForDriver_87DC7F2F(block, size, digest);
+	ret = sceSha1Digest(block, size, digest);
 	if (ret >= 0) {
 		ret = 0;
 		for (i = 0; i < 4; i++) {

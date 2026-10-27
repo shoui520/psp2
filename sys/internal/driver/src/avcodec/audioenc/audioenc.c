@@ -111,7 +111,7 @@ int _sceAudioencProcessCreateEntry(SceUID pid, SceUInt32 type)
 	const void *caller = __builtin_return_address(0);
 #endif
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid,
+	ret = sceKernelGetRemoteKPLS(pid,
 			audioencResident.processStorage, (void **)&process, 1);
 	if (ret < 0)
 		return ret;
@@ -167,7 +167,7 @@ int _sceAudioencProcessExitEntry(SceUID pid, SceUInt32 type)
 	const void *caller = __builtin_return_address(0);
 #endif
 
-	ret = SceProcessmgrForDriver_AF80F39C(pid,
+	ret = sceKernelGetRemoteKPLS(pid,
 			audioencResident.processStorage, (void **)&process, 0);
 	status = ret < 0 ? ret : 0;
 #if FW_DEBUG
@@ -1591,12 +1591,12 @@ int sceAudioencEncodeForUser(SceAudioencCtrl *userCtrl)
 releaseRanges:
 	index = audioencGetHandleIndex(ctrl.handle);
 	if (manager->pWork[index].inputPcmSize) {
-		SceSysmemForDriver_22CBE925(0x10, ctrl.pInputPcm,
+		sceKernelUnlockRangeWithMode(0x10, ctrl.pInputPcm,
 					     manager->pWork[index].inputPcmSize);
 		manager->pWork[index].inputPcmSize = 0;
 	}
 	if (manager->pWork[index].outputEsSize) {
-		SceSysmemForDriver_22CBE925(0x30, ctrl.pOutputEs,
+		sceKernelUnlockRangeWithMode(0x30, ctrl.pOutputEs,
 					     manager->pWork[index].outputEsSize);
 		manager->pWork[index].outputEsSize = 0;
 	}
@@ -1807,12 +1807,12 @@ int sceAudioencEncodeNFramesForUser(SceAudioencCtrl *userCtrl, SceUInt32 nFrames
 releaseRanges:
 	index = audioencGetHandleIndex(ctrl.handle);
 	if (manager->pWork[index].inputPcmSize) {
-		SceSysmemForDriver_22CBE925(0x10, ctrl.pInputPcm,
+		sceKernelUnlockRangeWithMode(0x10, ctrl.pInputPcm,
 					     manager->pWork[index].inputPcmSize);
 		manager->pWork[index].inputPcmSize = 0;
 	}
 	if (manager->pWork[index].outputEsSize) {
-		SceSysmemForDriver_22CBE925(0x30, ctrl.pOutputEs,
+		sceKernelUnlockRangeWithMode(0x30, ctrl.pOutputEs,
 					     manager->pWork[index].outputEsSize);
 		manager->pWork[index].outputEsSize = 0;
 	}

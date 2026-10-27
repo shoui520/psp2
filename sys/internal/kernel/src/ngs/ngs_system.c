@@ -86,7 +86,7 @@ static inline int ngsLockPlayerBuffer(NgsSynSystem *system, const void *buffer,
 	if (info.ex.details.size < (uintptr_t)buffer + size -
 	    info.ex.details.vbase)
 		return SCE_NGS_ERROR_INVALID_BUFFER;
-	result = SceSysmemForDriver_59A4402F((void *)info.ex.details.vbase,
+	result = sceKernelLockRange((void *)info.ex.details.vbase,
 					     info.ex.details.size);
 	if (result != 0)
 		return result;

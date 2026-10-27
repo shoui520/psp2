@@ -817,7 +817,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 		return PVRSRV_OK;
 	case SGX_MISC_INFO_REQUEST_TIMERS:
 		psMiscInfo->uData.sTimers.ui32GPUTimer = OSReadHWReg(psDevInfo->pvRegsBaseKM, 0x144);
-		psMiscInfo->uData.sTimers.ui64CPUTimer = SceProcessmgrForDriver_82D94BE9();
+		psMiscInfo->uData.sTimers.ui64CPUTimer = sceKernelGetProcessTimeWideCore();
 		return PVRSRV_OK;
 	case SGX_MISC_INFO_REQUEST_DISPLAY_CONTROL:
 		if (!SceSblAIMgrForDriver_274663A0() || !SceSblACMgrForDriver_E87D1777())

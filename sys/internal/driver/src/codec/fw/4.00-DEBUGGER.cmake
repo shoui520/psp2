@@ -46,8 +46,8 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_C6E83F34
 	ScePervasiveForDriver_925D9D24
-	SceI2cForDriver_0A40B7BF
-	SceI2cForDriver_CA94A759
+	sceI2cMasterTransmitReceive
+	sceI2cMasterTransmit
 	SceClockgenForDriver_5130682D
 	SceSysconForDriver_965C68C3
 	SceSysconForDriver_CBD6D8BC

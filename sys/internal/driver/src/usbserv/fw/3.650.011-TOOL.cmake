@@ -106,7 +106,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterProcEventHandler
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler
-	SceKernelSuspendForDriver_E0489831
+	sceKernelPowerTick
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_C6E83F34
 	ScePwmForDriver_13161CCC
@@ -123,29 +123,29 @@ set(MODULE_IMPORT_FUNCS
 	sceUsbdResume
 	SceUsbdForDriver_2E05660F
 	sceUsbdHostStop
-	SceUsbdForDriver_3EBF5FFE
+	sceUsbdSuspend
 	sceUsbdHostStart
 	SceUsbdForDriver_BC3EF82B
 	sceUsbdSuspendPhase2
 	SceUdcdForDriver_1A5A3851
 	SceUdcdForDriver_1C684884
-	SceUdcdForDriver_2A234CAF
+	sceUdcdEnd
 	SceUdcdForDriver_9E7F7EFE
 	SceUdcdForDriver_D01CFD22
-	SceUdcdForDriver_E9E75C49
-	SceSysconForDriver_1503D6A0
+	sceUdcdInit
+	sceSysconGetMultiCnInfo
 	SceSysconForDriver_3274A925
 	SceSysconForDriver_4A42712F
 	SceSysconForDriver_67A4CB9F
-	SceSysconForDriver_8D1D97E8
+	sceSysconCtrlAccPower
 	SceSysconForDriver_A26586B2
 	SceSysconForDriver_B1F88B11
 	SceSysconForDriver_B9EA2FA8
 	SceSysconForDriver_CBD6D8BC
 	SceSysconForDriver_D6F6D472
 	SceGpioForDriver_372022A4
-	SceGpioForDriver_D454A584
-	SceGpioForDriver_F6310435
+	sceGpioPortSet
+	sceGpioPortClear
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

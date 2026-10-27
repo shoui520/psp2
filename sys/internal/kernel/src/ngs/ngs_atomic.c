@@ -10,7 +10,7 @@
 
 int ngsAtomicSet(int *value, int replacement, int expected)
 {
-	return SceCpuForDriver_CDA96E81(value, expected, replacement);
+	return sceKernelAtomicCompareAndSet32(value, expected, replacement);
 }
 
 int ngsLockSystemMutex(NgsPlatformContext *context)
@@ -38,7 +38,7 @@ int ngsLockVoice(NgsPlatformContext *context)
 	int result;
 
 	for (;;) {
-		result = SceCpuForDriver_CDA96E81(&context->voiceLock, 0, 1);
+		result = sceKernelAtomicCompareAndSet32(&context->voiceLock, 0, 1);
 		if (result == 0)
 			return result;
 		if (--retries == 0)
@@ -50,7 +50,7 @@ int ngsLockVoice(NgsPlatformContext *context)
 
 int ngsUnlockVoice(NgsPlatformContext *context)
 {
-	if (SceCpuForDriver_CDA96E81(&context->voiceLock, 1, 0) == 1)
+	if (sceKernelAtomicCompareAndSet32(&context->voiceLock, 1, 0) == 1)
 		return 0;
 	return (int)0x804a0001;
 }
@@ -61,7 +61,7 @@ int ngsLockUpdate(NgsPlatformContext *context)
 	int result;
 
 	for (;;) {
-		result = SceCpuForDriver_CDA96E81(&context->updateLock, 0, 1);
+		result = sceKernelAtomicCompareAndSet32(&context->updateLock, 0, 1);
 		if (result == 0)
 			return result;
 		if (--retries == 0)
@@ -73,7 +73,7 @@ int ngsLockUpdate(NgsPlatformContext *context)
 
 int ngsUnlockUpdate(NgsPlatformContext *context)
 {
-	if (SceCpuForDriver_CDA96E81(&context->updateLock, 1, 0) == 1)
+	if (sceKernelAtomicCompareAndSet32(&context->updateLock, 1, 0) == 1)
 		return 0;
 	return (int)0x804a0001;
 }
@@ -84,7 +84,7 @@ int ngsLockSystem(NgsPlatformContext *context)
 	int result;
 
 	for (;;) {
-		result = SceCpuForDriver_CDA96E81(&context->systemLock, 0, 1);
+		result = sceKernelAtomicCompareAndSet32(&context->systemLock, 0, 1);
 		if (result == 0)
 			return result;
 		if (--retries == 0)
@@ -96,14 +96,14 @@ int ngsLockSystem(NgsPlatformContext *context)
 
 int ngsUnlockSystem(NgsPlatformContext *context)
 {
-	if (SceCpuForDriver_CDA96E81(&context->systemLock, 1, 0) == 1)
+	if (sceKernelAtomicCompareAndSet32(&context->systemLock, 1, 0) == 1)
 		return 0;
 	return (int)0x804a0001;
 }
 
 int ngsTryLockSystem(NgsPlatformContext *context)
 {
-	if (SceCpuForDriver_CDA96E81(&context->systemLock, 0, 1) != 0)
+	if (sceKernelAtomicCompareAndSet32(&context->systemLock, 0, 1) != 0)
 		return (int)0x804a0001;
 	return 0;
 }
@@ -114,7 +114,7 @@ int ngsLockParams(NgsPlatformContext *context)
 	int result;
 
 	for (;;) {
-		result = SceCpuForDriver_CDA96E81(&context->paramsLock, 0, 1);
+		result = sceKernelAtomicCompareAndSet32(&context->paramsLock, 0, 1);
 		if (result == 0)
 			return result;
 		if (--retries == 0)
@@ -126,7 +126,7 @@ int ngsLockParams(NgsPlatformContext *context)
 
 int ngsUnlockParams(NgsPlatformContext *context)
 {
-	if (SceCpuForDriver_CDA96E81(&context->paramsLock, 1, 0) == 1)
+	if (sceKernelAtomicCompareAndSet32(&context->paramsLock, 1, 0) == 1)
 		return 0;
 	return (int)0x804a0001;
 }
@@ -156,7 +156,7 @@ int ngsLockProcess(NgsProcessStorage *storage)
 	int result;
 
 	for (;;) {
-		result = SceCpuForDriver_CDA96E81(&storage->processLock, 0, 1);
+		result = sceKernelAtomicCompareAndSet32(&storage->processLock, 0, 1);
 		if (result == 0)
 			return result;
 		sceKernelDelayThread(10);
@@ -165,7 +165,7 @@ int ngsLockProcess(NgsProcessStorage *storage)
 
 int ngsUnlockProcess(NgsProcessStorage *storage)
 {
-	if (SceCpuForDriver_CDA96E81(&storage->processLock, 1, 0) == 1)
+	if (sceKernelAtomicCompareAndSet32(&storage->processLock, 1, 0) == 1)
 		return 0;
 	return (int)0x804a0001;
 }
@@ -175,7 +175,7 @@ int ngsLockTransfer(NgsPlatformContext *context)
 	int result;
 
 	for (;;) {
-		result = SceCpuForDriver_CDA96E81(&context->transferLock, 0, 1);
+		result = sceKernelAtomicCompareAndSet32(&context->transferLock, 0, 1);
 		if (result == 0)
 			return result;
 		sceKernelDelayThread(10);
@@ -184,7 +184,7 @@ int ngsLockTransfer(NgsPlatformContext *context)
 
 int ngsUnlockTransfer(NgsPlatformContext *context)
 {
-	if (SceCpuForDriver_CDA96E81(&context->transferLock, 1, 0) == 1)
+	if (sceKernelAtomicCompareAndSet32(&context->transferLock, 1, 0) == 1)
 		return 0;
 	return (int)0x804a0001;
 }

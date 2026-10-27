@@ -60,11 +60,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelClearEventFlag
 	sceKernelDeleteEventFlag
 	sceKernelPollEventFlag
-	SceThreadmgrForDriver_8A35F714
+	sceKernelWaitEventFlagCB
 	sceKernelSetEventFlag
 	SceUdcdForDriver_150FD3BB
-	SceUdcdForDriver_175E6179
-	SceUdcdForDriver_2E3E622A
+	sceUdcdReqRecvInternal
+	sceUdcdReqSendInternal
 	SceUdcdForDriver_38787672
 	SceUdcdForDriver_409DD196
 	SceUdcdForDriver_64675918

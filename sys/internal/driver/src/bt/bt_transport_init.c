@@ -30,7 +30,7 @@ int BtSetupSdioTransport(void)
 	if ((mode & 0x400) != 0) {
 		gBtTransport.stack->mode = mode & ~0x600U;
 		wakeup[0] = 2;
-		result = SceSdifForDriver_3C4CDC8B(gBtTransport.function,
+		result = sceSdioWrite(gBtTransport.function,
 			0, 1, wakeup, 1);
 		BtQueueTimer(&gBtTransport.wakeupTimer, BtPollTransport,
 			&gBtTransport, 1000000);
@@ -53,7 +53,7 @@ int BtSetupSdioTransport(void)
 		goto release_interrupt;
 	}
 	gBtTransport.interruptEnabled = 1;
-	result = SceSdifForDriver_D0F78D9B(gBtTransport.function,
+	result = sceSdioRead(gBtTransport.function,
 		0x60, 2, registerData, 1);
 	if (result < 0)
 		goto disable_interrupt;
@@ -61,39 +61,39 @@ int BtSetupSdioTransport(void)
 		result = 0x802f1501;
 		goto disable_interrupt;
 	}
-	result = SceSdifForDriver_D0F78D9B(gBtTransport.function,
+	result = sceSdioRead(gBtTransport.function,
 		0x78, 3, registerData, 1);
 	if (result < 0)
 		goto disable_interrupt;
 	gBtTransport.ioPort = BtReadLe24(registerData);
-	result = SceSdifForDriver_D0F78D9B(gBtTransport.function,
+	result = sceSdioRead(gBtTransport.function,
 		0x63, 1, &gBtTransport.receiveUnitShift, 1);
 	if (result < 0)
 		goto disable_interrupt;
-	result = SceSdifForDriver_D0F78D9B(gBtTransport.function,
+	result = sceSdioRead(gBtTransport.function,
 		0x5c, 1, registerData, 1);
 	if (result < 0)
 		goto disable_interrupt;
 	gBtTransport.cardRevision = registerData[0];
-	result = SceSdifForDriver_D0F78D9B(gBtTransport.function,
+	result = sceSdioRead(gBtTransport.function,
 		0x6c, 1, registerData, 1);
 	if (result < 0)
 		goto disable_interrupt;
 	registerData[0] |= 0x10;
-	result = SceSdifForDriver_3C4CDC8B(gBtTransport.function,
+	result = sceSdioWrite(gBtTransport.function,
 		0x6c, 1, registerData, 1);
 	if (result < 0)
 		goto disable_interrupt;
 	registerData[0] = 3;
-	result = SceSdifForDriver_3C4CDC8B(gBtTransport.function,
+	result = sceSdioWrite(gBtTransport.function,
 		1, 1, registerData, 1);
 	if (result < 0)
 		goto disable_interrupt;
-	result = SceSdifForDriver_3C4CDC8B(gBtTransport.function,
+	result = sceSdioWrite(gBtTransport.function,
 		2, 1, registerData, 1);
 	if (result < 0)
 		goto disable_interrupt;
-	result = SceSdifForDriver_733BC373(gBtTransport.function, 128);
+	result = sceSdioSetBlockLen(gBtTransport.function, 128);
 	if (result < 0)
 		goto disable_interrupt;
 	return 0;

@@ -21,9 +21,9 @@ int MarlinRandomCreate(SceMt19937Context **context)
 		result = 2;
 		goto out;
 	}
-	SceRtcForDriver_DEC408D4(&tick);
+	sceRtcGetCurrentTick(&tick);
 	seed = (unsigned int)tick.tick;
-	SceKernelUtilsForDriver_4C9A5730(memory, seed);
+	sceMt19937Init(memory, seed);
 	*context = memory;
 out:
 	if (*context == 0)
@@ -57,7 +57,7 @@ int MarlinRandomRead(SceMt19937Context *context, int size, void *data)
 		result = 3;
 	} else {
 		while (size != 0) {
-			value = SceKernelUtilsForDriver_92AEDFBC(random);
+			value = sceMt19937UInt(random);
 			cursor[0] = value;
 			size--;
 			if (size == 0)

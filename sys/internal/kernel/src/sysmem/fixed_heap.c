@@ -68,7 +68,7 @@ static inline int CpuCacheFree(FixedHeap *heap, void *object)
 	FixedHeapCpuCache *cache;
 	int state;
 
-	state = SceCpuForDriver_821FC0EE();
+	state = sceKernelCpuSuspendIntr();
 	cache = &heap->caches[SceCpuId()];
 #if FW_DEBUG
 	if (cache->count != 0) {
@@ -99,7 +99,7 @@ static inline int CpuCacheFree(FixedHeap *heap, void *object)
 		}
 		cache->count++;
 		sceKernelCpuResumeIntr(state);
-		SceCpuForDriver_59F74E94(&heap->freeCount, 1);
+		sceKernelAtomicAddAndGet16(&heap->freeCount, 1);
 		return 1;
 	} else {
 		sceKernelCpuResumeIntr(state);
@@ -151,7 +151,7 @@ static inline void FixedHeapPushFree(FixedHeap *heap, void *object)
 		heap->freeTail = object;
 	}
 	heap->fifoCount++;
-	SceCpuForDriver_59F74E94(&heap->freeCount, 1);
+	sceKernelAtomicAddAndGet16(&heap->freeCount, 1);
 }
 
 /* take the oldest object off the free list; the heap is write locked */
@@ -177,7 +177,7 @@ static inline void FixedHeapCountAlloc(FixedHeap *heap)
 {
 	SceUInt16 used;
 
-	SceCpuForDriver_9A693F5B(&heap->freeCount);
+	sceKernelAtomicDecIfPositive16(&heap->freeCount);
 	used = heap->totalCount - heap->freeCount;
 	if (used > heap->peakCount)
 		heap->peakCount = used;
@@ -294,7 +294,7 @@ __attribute__((noinline)) int FixedHeapAllocObjectWithOpt(FixedHeap *heap, SceUI
 	if (heap->attr & FIXED_HEAP_ATTR_CPU_CACHE) {
 		FixedHeapCpuCache *cache;
 
-		state = SceCpuForDriver_821FC0EE();
+		state = sceKernelCpuSuspendIntr();
 		cache = &heap->caches[SceCpuId()];
 		if (cache->count != 0) {
 			entry = cache->head;
@@ -1286,7 +1286,7 @@ SCE_DBGINFO_DEFINE(static, fixedHeapStartRecord, 2911, "FixedHeapStart");
 #endif
 
 /* sceKernelGetKernelFixedHeap */
-FixedHeap *SceSysmemForKernel_3717C322(SceSize size)
+FixedHeap *sceKernelGetKernelFixedHeap(SceSize size)
 {
 	switch (size) {
 	case 0x20:

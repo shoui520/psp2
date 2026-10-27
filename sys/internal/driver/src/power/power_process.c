@@ -43,7 +43,7 @@ static int setProcessWirelessFlags(SceUID pid, uint32_t mask, uint32_t enabled)
 
 	if (enabled > 1)
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)
 		return result;
@@ -90,7 +90,7 @@ void powerRecomputeClockFrequencies(void)
 	scePowerSetBusClockFrequency(bus);
 	scePowerSetArmClockFrequency(arm);
 	scePowerSetGpuXbarClockFrequency(xbar);
-	ScePowerForDriver_264C24FC(gpu, gpu);
+	scePowerSetGpuClockFrequencyInternal(gpu, gpu);
 	unlimited = powerGpuLimitOverride() || gpu < 166 || !(flags & 3);
 	ScePowerForDriver_77027B6B(unlimited ? 0x10000 : 0xc4ec);
 	powerNotifyWirelessLimit(unlimited);
@@ -122,7 +122,7 @@ int powerInitializeKernelProcessState(void)
 	override = sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) &&
 		   sceKernelCheckDipsw(DIPSW_GPU_OVERCLOCK);
 	powerInitializeProcessClockFlags(override);
-	result = SceProcessmgrForDriver_AF80F39C(SCE_KERNEL_PROCESS_ID,
+	result = sceKernelGetRemoteKPLS(SCE_KERNEL_PROCESS_ID,
 			s_processStorageKey, (void **)&state, 1);
 	if (result < 0)
 		return 0;
@@ -156,7 +156,7 @@ void powerCreateProcessState(SceUID pid)
 	SceKernelIntrStatus intrState;
 	int game;
 
-	if (SceProcessmgrForDriver_AF80F39C(pid,
+	if (sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 1) < 0)
 		return;
 	state->pid = pid;
@@ -178,7 +178,7 @@ void powerCreateProcessState(SceUID pid)
 	if (pid == SCE_KERNEL_PROCESS_ID)
 		return;
 	if (powerBeginKernelClockReduction() &&
-	    SceProcessmgrForDriver_AF80F39C(SCE_KERNEL_PROCESS_ID,
+	    sceKernelGetRemoteKPLS(SCE_KERNEL_PROCESS_ID,
 			s_processStorageKey, (void **)&state, 0) >= 0) {
 		state->clockFrequency[POWER_PROCESS_CLOCK_BUS] = 55;
 		if (SceDisplayForDriver_8D9A1CCE(1, NULL))
@@ -194,7 +194,7 @@ static inline __attribute__((always_inline)) void powerUnlinkProcessState(SceUID
 	struct PowerProcessState *state, *process;
 	SceKernelIntrStatus intrState;
 
-	if (SceProcessmgrForDriver_AF80F39C(pid,
+	if (sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 0) < 0)
 		return;
 	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
@@ -225,7 +225,7 @@ void powerProcessSuspendEvent(SceUID pid, uint32_t event)
 {
 	struct PowerProcessState *state;
 
-	if (event != 0x800 || SceProcessmgrForDriver_AF80F39C(pid,
+	if (event != 0x800 || sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 0) < 0)
 		return;
 	state->clockExcluded = 1;
@@ -238,7 +238,7 @@ void powerProcessResumeEvent(SceUID pid, uint32_t event)
 {
 	struct PowerProcessState *state;
 
-	if (event != 0x10000 || SceProcessmgrForDriver_AF80F39C(pid,
+	if (event != 0x10000 || sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 0) < 0)
 		return;
 	state->clockExcluded = 0;
@@ -263,7 +263,7 @@ static inline __attribute__((always_inline)) int setProcessClockFrequency(SceUID
 		result = SCE_POWER_ERROR_INVALID_VALUE;
 		goto out;
 	}
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)
 		goto out;
@@ -311,7 +311,7 @@ int getProcessClockFrequency(SceUID pid, enum PowerProcessClock clock, int sysca
 
 	if (syscall)
 		context = sceSyscallEnter();
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result >= 0)
 		result = state->clockFrequency[clock];
@@ -384,7 +384,7 @@ static inline __attribute__((always_inline)) int setProcessGpuFrequency(SceUID p
 
 	if (frequency < 1 || frequency > 222)
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)
 		return result;
@@ -395,7 +395,7 @@ static inline __attribute__((always_inline)) int setProcessGpuFrequency(SceUID p
 		if (!process->clockExcluded && process->clockFrequency[POWER_PROCESS_CLOCK_GPU] > maximum)
 			maximum = process->clockFrequency[POWER_PROCESS_CLOCK_GPU];
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
-	result = ScePowerForDriver_264C24FC(maximum, maximum);
+	result = scePowerSetGpuClockFrequencyInternal(maximum, maximum);
 	updateGpuWirelessLimits();
 	powerUnlockClockControl();
 	return result;
@@ -478,7 +478,7 @@ int getProcessWirelessState(SceUID pid, unsigned int view, int syscall)
 
 	if (syscall)
 		context = sceSyscallEnter();
-	result = SceProcessmgrForDriver_AF80F39C(pid,
+	result = sceKernelGetRemoteKPLS(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result >= 0) {
 		flags = state->wirelessFlags;

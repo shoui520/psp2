@@ -95,7 +95,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_821FC0EE
+	sceKernelCpuSuspendIntr
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelCpuResumeIntr
 	memset
@@ -119,7 +119,7 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_FA54D49A
 	sceVopCleanup
 	sceIoDevctl
-	SceIofilemgrForDriver_20574100
+	sceIoUmount
 	vfsFreeVnode
 	sceVopClose
 	sceVopRead
@@ -136,14 +136,14 @@ set(MODULE_IMPORT_FUNCS
 	sceVopLseek
 	vfsAllocateFile
 	vfsFreeFile
-	SceIofilemgrForDriver_D070BC48
+	sceIoMount
 	vfsGetNewVnode
 	sceIoSetErrorEvent
 	sceIoRead
 	sceIoClose
-	SceRtcForDriver_09AF419B
+	sceRtcGetDosTime
 	sceRtcGetCurrentClockLocalTime
-	SceRtcForDriver_A930CD1A
+	sceRtcGetCurrentClock
 	sceSblACMgrGetFSAttributeByThreadAccessLevel
 	SceSblACMgrForDriver_3B356B98
 	sceSblACMgrSetFSAttributeByAttributeWithMountPoint

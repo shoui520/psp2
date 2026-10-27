@@ -190,7 +190,7 @@ int sceSblSsGetNvsData(uint32_t area, void *buffer, SceSize size)
 	SceKernelSuspendForDriver_4DF40893(0);
 	while (remaining) {
 		length = remaining < SS_NVS_CHUNK ? remaining : SS_NVS_CHUNK;
-		ret = SceSysconForDriver_ACAFA2B8(offset, chunk, length);
+		ret = sceSysconNvsReadData(offset, chunk, length);
 		if (ret) {
 			SceKernelSuspendForDriver_2BB92967(0);
 			return ret;
@@ -230,7 +230,7 @@ int sceSblSsSetNvsData(uint32_t area, const void *buffer, SceSize size)
 	while (remaining) {
 		length = remaining < SS_NVS_CHUNK ? remaining : SS_NVS_CHUNK;
 		ssMemcpyChk(chunk, buffer, length);
-		ret = SceSysconForDriver_10C9657A(offset, chunk, length);
+		ret = sceSysconNvsWriteData(offset, chunk, length);
 		if (ret) {
 			SceKernelSuspendForDriver_2BB92967(0);
 			return ret;
@@ -271,8 +271,8 @@ copy:
 	return ret;
 }
 
-SS_MGR_CORE(SceSblSsMgrForDriver_934DB6B5)
-int SceSblSsMgrForDriver_934DB6B5(SceUInt32 key_type, void *iv,
+SS_MGR_CORE(sceSblSsDecryptWithPortability)
+int sceSblSsDecryptWithPortability(SceUInt32 key_type, void *iv,
 				  ScePortabilityData *src, ScePortabilityData *dst)
 {
 	SceSblSmCommId id;

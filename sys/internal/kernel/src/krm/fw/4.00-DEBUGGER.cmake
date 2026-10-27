@@ -62,24 +62,24 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterProcEventHandler
 	SceSblACMgrForDriver_AE1AF154
 	SceKernelUtilsForDriver_1DF3792A
-	SceKernelUtilsForDriver_236A9097
+	sceSha256BlockUpdate
 	SceKernelUtilsForDriver_302947B6
-	SceKernelUtilsForDriver_4899CD4B
+	sceSha256BlockResult
 	SceKernelUtilsForDriver_72408E29
-	SceKernelUtilsForDriver_D909FA2C
+	sceSha256BlockInit
 	SceKernelUtilsForDriver_E39CD272
 	SceKernelUtilsForDriver_EDA97D6D
 	lockFastMutex
 	sceKernelGetProcessId
 	sceKernelInitializeFastMutex
 	sceKernelUnlockFastMutex
-	SceSblSsMgrForDriver_934DB6B5
+	sceSblSsDecryptWithPortability
 	sceSblAimgrGetOpenPsId
-	SceSblSsMgrForDriver_AC57F4F0
-	SceDebugForDriver_374B7868
+	sceSblRngGenuineRandomNumber
+	sceKernelGetAssertLevel
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
-	SceRtcForDriver_F1517B38
+	sceRtcGetCurrentNetworkTick
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

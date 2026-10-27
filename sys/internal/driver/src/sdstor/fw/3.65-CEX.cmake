@@ -111,12 +111,12 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
 	sceKernelDeleteHeap
-	SceCpuForDriver_3627F4E0
-	SceCpuForDriver_BDF6F8E4
+	sceKernelAtomicCompareAndSet8
+	sceKernelAtomicGetAndOr8
 	memset
 	strncmp
 	strncpy
@@ -143,13 +143,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateThread
 	sceKernelSetEventFlag
 	sceKernelUnlockFastMutex
-	SceIofilemgrForDriver_20574100
+	sceIoUmount
 	sceIoSetMountEvent
 	vfsNotifyDeviceStatus
 	sceVfsAddVfs
 	vfsRmdev
 	vfsLockVnode
-	SceIofilemgrForDriver_D070BC48
+	sceIoMount
 	vfsGetNewVnode
 	sceSblRngPseudoRandomNumber
 	SceSblACMgrForDriver_BE5667C5
@@ -169,7 +169,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_F99BC858
 	sceMmcWriteSectorInternal
 	SceSdifForDriver_22C82E79
-	SceSdifForDriver_23A4EF01
+	sddev_get_sd_cid
 	SceSdifForDriver_35BA9DF8
 	SceSdifForDriver_36A2B01B
 	SceSdifForDriver_6CC8E28D

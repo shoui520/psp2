@@ -20,7 +20,7 @@ typedef struct SceKernelBudgetInfo {
 
 _Static_assert(sizeof(SceKernelBudgetInfo) == 0x88, "SceKernelBudgetInfo size");
 
-/* the options of a mini application budget (SceProcessmgrForKernel_DC18FCEF) */
+/* the options of a mini application budget (sceKernelCreateBudget) */
 typedef struct ProcessBudgetOpt {
 	SceSize size;				/* 0x18 */
 	SceUInt32 flags;			/* 1: the CDRAM of another budget */

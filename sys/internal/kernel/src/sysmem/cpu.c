@@ -165,7 +165,7 @@ SceKernelIntrStatus sceKernelSpinlockLowLockCpuSuspendIntr(volatile SceKernelSpi
 	return previous;
 }
 
-int SceCpuForDriver_821FC0EE(void)
+int sceKernelCpuSuspendIntr(void)
 {
 	int previous = CpuSuspendIntrLow();
 
@@ -189,7 +189,7 @@ int sceKernelCpuResumeIntr(int flags)
 			SCE_DBGINFO_FUNC(165, "sceKernelCpuResumeIntr"),
 			"***\n*** warning: sceKernelCpuResumeIntr() called. But IRQ has been enabled.(lr=%p)\n***\n",
 			caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(166, "sceKernelCpuResumeIntr"), caller);
 	} else if (!(flags & PSR_I_BIT)) {
@@ -214,7 +214,7 @@ int sceKernelCpuResumeIntr(int flags)
 	return CpuResumeIntrLow(flags);
 }
 #else
-extern __typeof__(CpuSuspendIntrLow) SceCpuForDriver_821FC0EE
+extern __typeof__(CpuSuspendIntrLow) sceKernelCpuSuspendIntr
 	__attribute__((alias("CpuSuspendIntrLow")));
 extern __typeof__(CpuResumeIntrLow) sceKernelCpuResumeIntr
 	__attribute__((alias("CpuResumeIntrLow")));
@@ -258,7 +258,7 @@ void sceKernelSpinlockLowUnlock(volatile SceKernelSpinlock *lock)
 			SCE_DBGINFO_FUNC(232, "sceKernelSpinlockLowUnlock"),
 			"***\n*** warning: sceKernelSpinlockLowUnlock() called. But spinlock has not been locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(233, "sceKernelSpinlockLowUnlock"), caller);
 	}
@@ -306,7 +306,7 @@ void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceKernelSpinlock *lock, S
 			SCE_DBGINFO_FUNC(252, "sceKernelSpinlockLowUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelSpinlockLowUnlockCpuResumeIntr() called. But spinlock has not been locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(253, "sceKernelSpinlockLowUnlockCpuResumeIntr"),
 				caller);
@@ -317,7 +317,7 @@ void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceKernelSpinlock *lock, S
 			SCE_DBGINFO_FUNC(259, "sceKernelSpinlockLowUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelSpinlockLowUnlockCpuResumeIntr() called. But IRQ has been enabled.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(260, "sceKernelSpinlockLowUnlockCpuResumeIntr"),
 				caller);
@@ -351,7 +351,7 @@ void sceKernelRWSpinlockLowReadUnlock(volatile SceKernelRWSpinlock *lock)
 			SCE_DBGINFO_FUNC(330, "sceKernelRWSpinlockLowReadUnlock"),
 			"***\n*** warning: sceKernelRWSpinlockLowReadUnlock() called. But spinlock has not been read locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(331, "sceKernelRWSpinlockLowReadUnlock"), caller);
 	}
@@ -368,7 +368,7 @@ void sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(volatile SceKernelRWSpinlock 
 			SCE_DBGINFO_FUNC(349, "sceKernelRWSpinlockLowReadUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelRWSpinlockLowReadUnlockCpuResumeIntr() called. But spinlock has not been read locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(350, "sceKernelRWSpinlockLowReadUnlockCpuResumeIntr"),
 				caller);
@@ -379,7 +379,7 @@ void sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(volatile SceKernelRWSpinlock 
 			SCE_DBGINFO_FUNC(356, "sceKernelRWSpinlockLowReadUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelRWSpinlockLowReadUnlockCpuResumeIntr() called. But IRQ has been enabled.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(357, "sceKernelRWSpinlockLowReadUnlockCpuResumeIntr"),
 				caller);
@@ -414,7 +414,7 @@ void sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile SceKernelRWSpinlock
 			SCE_DBGINFO_FUNC(445, "sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr() called. But spinlock has not been write locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(446, "sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr"),
 				caller);
@@ -425,7 +425,7 @@ void sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile SceKernelRWSpinlock
 			SCE_DBGINFO_FUNC(452, "sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr() called. But IRQ has been enabled.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(453, "sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr"),
 				caller);
@@ -459,7 +459,7 @@ void sceKernelRWSpinlockLowWriteUnlock(volatile SceKernelRWSpinlock *lock)
 			SCE_DBGINFO_FUNC(426, "sceKernelRWSpinlockLowWriteUnlock"),
 			"***\n*** warning: sceKernelRWSpinlockLowWriteUnlock() called. But spinlock has not been write locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (SceDebugForDriver_374B7868() > 0)
+		if (sceKernelGetAssertLevel() > 0)
 			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(427, "sceKernelRWSpinlockLowWriteUnlock"), caller);
 	}

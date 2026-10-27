@@ -14,7 +14,7 @@ SceWlanBt:
         - sceWlanBtGetConfiguration: 0x0FC89113
         - sceWlanBtSetConfiguration: 0x4C96C3B7
         - sceWlanBtDetachMonitor: 0xA7FDE9DC
-        - SceWlanBtForDriver_C5AA6F43: 0xC5AA6F43
+        - sceWlanBtAttachMonitor: 0xC5AA6F43
     SceWlan:
       syscall: true
       version: 1

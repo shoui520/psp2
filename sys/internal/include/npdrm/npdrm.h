@@ -90,8 +90,7 @@ struct NpDrmGetRifInfoArgs;
 
 int SceNpDrmForDriver_077926F5(void);	/* vitasdk: ksceNpDrmUpdateActData */
 int SceNpDrmForDriver_3BFD2850(int value);	/* vitasdk: ksceNpDrmPackageSetGameExist */
-/* vitasdk: ksceNpDrmGetFixedRifName */
-int SceNpDrmForDriver_5D73448C(char *name, SceUInt64 accountId);
+int sceNpDrmGetFixedRifName(char *name, SceUInt64 accountId);
 /* vitasdk: ksceNpDrmWriteActData */
 int SceNpDrmForDriver_742EBAF4(const struct NpDrmActivationCache *activation, const void *key);
 /* vitasdk: ksceNpDrmEbootSigVerify */
@@ -103,8 +102,7 @@ int SceNpDrmForDriver_8B85A509(SceUInt64 *accountId);	/* vitasdk: ksceNpDrmRemov
 /* vitasdk: ksceNpDrmEbootSigConvert */
 int SceNpDrmForDriver_A29B75F9(const char *ebootPath, const void *signature, void *newSignature);
 int SceNpDrmForDriver_A91C7443(void);	/* vitasdk: ksceNpDrmUpdateDebugSettings */
-/* vitasdk: ksceNpDrmGetRifName */
-int SceNpDrmForDriver_DF62F3B8(char *name, SceUInt64 accountId);
+int sceNpDrmGetRifName(char *name, SceUInt64 accountId);
 /* vitasdk: ksceNpDrmPspEbootSigGen */
 int SceNpDrmForDriver_EF387FC4(const char *ebootPath, const void *sha256, void *signature);
 int _sceNpDrmGetFixedRifName(char *rif_name, uint64_t aid);
@@ -123,8 +121,7 @@ int SceNpDrmForDriver_C070FE89(SceNpDrmLicense *license, unsigned int provisiona
 int SceNpDrmForDriver_D91C3BCE(SceNpDrmActivationData *activation);
 /* vitasdk: ksceNpDrmGetRifPspKey */
 int SceNpDrmForDriver_DACB71F4(const SceNpDrmLicense *license, void *klicense, int *flags, SceUInt64 *startTime, SceUInt64 *expirationTime);
-/* vitasdk: ksceNpDrmGetRifInfo */
-int SceNpDrmForDriver_DB406EAE(const SceNpDrmLicense *license, unsigned int licenseSize, int checkSign, char *contentId, SceUInt64 *accountId, int *licenseVersion, int *drmType, int *flags, unsigned int *skuFlags, SceUInt64 *startTime, SceUInt64 *expirationTime, SceUInt64 *flags2);
+int sceNpDrmGetRifInfo(const SceNpDrmLicense *license, unsigned int licenseSize, int checkSign, char *contentId, SceUInt64 *accountId, int *licenseVersion, int *drmType, int *flags, unsigned int *skuFlags, SceUInt64 *startTime, SceUInt64 *expirationTime, SceUInt64 *flags2);
 /* vitasdk: ksceNpDrmVerifyRifFull */
 int SceNpDrmForDriver_FF63672D(SceNpDrmLicense *license);
 int _sceNpDrmGetRifInfo(const SceNpDrmLicense *license, unsigned int license_size, int check_sign, const struct NpDrmGetRifInfoArgs *userArgs);

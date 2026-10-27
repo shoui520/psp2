@@ -106,7 +106,7 @@ uint32_t powerSwitchDisplay(uint32_t enabled, uint32_t reason)
 	}
 	s_powerDisplayState.displayEnabled = enabled;
 	for (head = 0; head < 3; head++) {
-		if (head == 1 && SceDisplayForDriver_C8E554C5() != 1)
+		if (head == 1 && sceDisplayGetPrimaryHead() != 1)
 			continue;
 		brightness = enabled ? powerGetDisplayHeadBrightness(head) : 0;
 		s_powerDisplayState.brightness[head] = brightness;
@@ -150,13 +150,13 @@ void powerDisplayIdleExpired(uint32_t timerId, uint32_t elapsed,
 	if (!elapsed)
 		return;
 	for (head = 0; head < 3; head++) {
-		if (head == 1 && SceDisplayForDriver_C8E554C5() != 1)
+		if (head == 1 && sceDisplayGetPrimaryHead() != 1)
 			continue;
 		if (!s_powerDisplayState.brightness[head])
 			continue;
 		s_powerDisplayState.brightness[head] = 0;
 		SceDisplayForDriver_9E3C6DC6(head, 0);
-		if (SceDisplayForDriver_C8E554C5() == head)
+		if (sceDisplayGetPrimaryHead() == head)
 			primaryAffected = 1;
 	}
 	if (!primaryAffected)
@@ -179,7 +179,7 @@ void powerDisplayIdleDimOrReset(uint32_t timerId, uint32_t elapsed,
 	(void)elapsedHigh;
 	if (elapsed) {
 		for (head = 0; head < 3; head++) {
-			if (head == 1 && SceDisplayForDriver_C8E554C5() != 1)
+			if (head == 1 && sceDisplayGetPrimaryHead() != 1)
 				continue;
 			if (s_powerDisplayState.brightness[head]) {
 				s_powerDisplayState.brightness[head] = 1;
@@ -196,11 +196,11 @@ void powerDisplayIdleDimOrReset(uint32_t timerId, uint32_t elapsed,
 		powerSwitchDisplay(1, 1);
 	}
 	for (head = 0; head < 3; head++) {
-		if (head == 1 && SceDisplayForDriver_C8E554C5() != 1)
+		if (head == 1 && sceDisplayGetPrimaryHead() != 1)
 			continue;
 		brightness = powerGetDisplayHeadBrightness(head);
 		if (!s_powerDisplayState.brightness[head] &&
-		    SceDisplayForDriver_C8E554C5() == head)
+		    sceDisplayGetPrimaryHead() == head)
 			primaryRestored = 1;
 		s_powerDisplayState.brightness[head] = brightness;
 		SceDisplayForDriver_9E3C6DC6(head, brightness);
@@ -227,7 +227,7 @@ int ScePowerForDriver_43D5CE1D(uint32_t brightness)
 	s_powerDisplayState.requestedBrightness = brightness;
 	for (head = 0; head < 3; head++) {
 		if (head == 1) {
-			if (SceDisplayForDriver_C8E554C5() != 1)
+			if (sceDisplayGetPrimaryHead() != 1)
 				continue;
 			limit = brightness;
 		} else {

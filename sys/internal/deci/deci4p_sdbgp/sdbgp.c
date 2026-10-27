@@ -700,23 +700,23 @@ int sdbgpReadMemory(SceUID pid, const void *addr, SceSize size, void *out)
 	if (size != 2 && size != 4)
 		return SDBGP_ERROR_INVALID_ARGUMENT;
 	if (size == 4) {
-		if (SceSysmemForDriver_9F6E45E3(SDBGP_KERNEL_PROCESS_ID, 1, addr, 4) >= 0) {
+		if (sceKernelIsAccessibleRangeProc(SDBGP_KERNEL_PROCESS_ID, 1, addr, 4) >= 0) {
 			SceDeci4pSDfMgrForKernel_5996E2DB(out, addr, size);
 			return 0;
 		}
-	} else if (SceSysmemForDriver_9F6E45E3(SDBGP_KERNEL_PROCESS_ID, 1, addr, 2) >= 0) {
+	} else if (sceKernelIsAccessibleRangeProc(SDBGP_KERNEL_PROCESS_ID, 1, addr, 2) >= 0) {
 		SceDeci4pSDfMgrForKernel_5996E2DB(out, addr, 2);
 		return 0;
 	}
 	if (pid == SDBGP_KERNEL_PROCESS_ID)
 		return SDBGP_ERROR_ILLEGAL_ADDRESS;
 	if (size == 4) {
-		result = SceSysmemForDriver_9F6E45E3(pid, 1, addr, 4);
+		result = sceKernelIsAccessibleRangeProc(pid, 1, addr, 4);
 		if (result < 0)
 			return result;
 		size = 4;
 	} else {
-		result = SceSysmemForDriver_9F6E45E3(pid, 1, addr, 2);
+		result = sceKernelIsAccessibleRangeProc(pid, 1, addr, 2);
 		if (result < 0)
 			return result;
 		size = 2;
@@ -734,7 +734,7 @@ int sdbgpWriteMemory(SceUID pid, void *addr, SceSize size, const void *in)
 
 	if (size != 2 && size != 4)
 		return SDBGP_ERROR_INVALID_ARGUMENT;
-	if (SceSysmemForDriver_9F6E45E3(SDBGP_KERNEL_PROCESS_ID, 1, addr,
+	if (sceKernelIsAccessibleRangeProc(SDBGP_KERNEL_PROCESS_ID, 1, addr,
 					size == 4 ? 4 : 2) >= 0) {
 		count = size == 4 ? 4 : 2;
 		dacr = readDacr();
@@ -743,18 +743,18 @@ int sdbgpWriteMemory(SceUID pid, void *addr, SceSize size, const void *in)
 		sceKernelDcacheCleanRangeForL1WBWA((void *)((uintptr_t)addr & ~0x1f),
 			(((uintptr_t)addr + count + 31) & ~0x1f) - ((uintptr_t)addr & ~0x1f));
 		writeDacr(dacr);
-		SceCpuForKernel_803C84BF();
+		sceKernelL1IcacheInvalidateEntireAllCore();
 		return 0;
 	}
 	if (pid == SDBGP_KERNEL_PROCESS_ID)
 		return SDBGP_ERROR_ILLEGAL_ADDRESS;
 	if (size == 4) {
-		result = SceSysmemForDriver_9F6E45E3(pid, 1, addr, 4);
+		result = sceKernelIsAccessibleRangeProc(pid, 1, addr, 4);
 		if (result < 0)
 			return result;
 		count = 4;
 	} else {
-		result = SceSysmemForDriver_9F6E45E3(pid, 1, addr, 2);
+		result = sceKernelIsAccessibleRangeProc(pid, 1, addr, 2);
 		if (result < 0)
 			return result;
 		count = 2;
@@ -762,6 +762,6 @@ int sdbgpWriteMemory(SceUID pid, void *addr, SceSize size, const void *in)
 	result = sceKernelCopyToUserProcTextDomainForDBGP(pid, addr, in, count);
 	if (result < 0)
 		return result;
-	SceCpuForKernel_803C84BF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	return 0;
 }

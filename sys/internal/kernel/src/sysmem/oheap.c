@@ -99,7 +99,7 @@ static int ObjectHeapAddKernelSizeClass(ObjectHeap *heap, SceSize size)
 		SceSysmemForKernel_4233C16D(fixedHeap);
 		return ret;
 	}
-	uid = SceSysmemForKernel_6DB44A42(&FixedHeapGetClass()->heapClass.cls, fixedHeap->name, fixedHeap);
+	uid = sceGUIDRegister(&FixedHeapGetClass()->heapClass.cls, fixedHeap->name, fixedHeap);
 	ObjectHeapSetSizeClass(heap, size, fixedHeap, uid);
 	return 0;
 }
@@ -251,7 +251,7 @@ int ObjectHeapFreeLimit(ObjectHeap *heap, unsigned int type, void *object)
 
 #if !SYSMEM_NSKBL
 /* sceKernelGetObjectHeap (wiki name) */
-ObjectHeap *SceSysmemForKernel_857408DA(void)
+ObjectHeap *sceKernelGetObjectHeap(void)
 {
 	return s_kernelObjectHeap;
 }
@@ -300,7 +300,7 @@ int sceKernelCreateObjectHeap(SceUID pid, int kernel, SceKernelHeapHook *hook, O
 			if (ret < 0)
 				SCE_DBG_PRINTF(0xb, 432, "FixedHeapCreateForProcess failed 0x%08x\n",
 					       ret);
-			uid = SceSysmemForKernel_6DB44A42(&FixedHeapGetClass()->heapClass.cls, fixedHeap->name,
+			uid = sceGUIDRegister(&FixedHeapGetClass()->heapClass.cls, fixedHeap->name,
 							  fixedHeap);
 		}
 		ObjectHeapSetSizeClass(heap, def->size, fixedHeap, uid);
@@ -334,7 +334,7 @@ int sceKernelObjectHeapStart(ObjectHeap *heap, SceUID pid, SceUID heapUid)
 			fixedHeap->heap = processHeap;
 			FixedHeapInitForProcess(fixedHeap, pid, 0, 0, def->size,
 						heap->partition, 0x1000, 0x10);
-			uid = SceSysmemForKernel_6DB44A42(&FixedHeapGetClass()->heapClass.cls, fixedHeap->name,
+			uid = sceGUIDRegister(&FixedHeapGetClass()->heapClass.cls, fixedHeap->name,
 							  fixedHeap);
 			ObjectHeapSetSizeClass(heap, def->size, fixedHeap, uid);
 		} else {
@@ -439,7 +439,7 @@ void *sceKernelObjectHeapAlloc(ObjectHeap *heap, SceSize size)
 }
 
 /* sceKernelObjectHeapFree (wiki name) */
-int SceSysmemForKernel_17D3D4BD(ObjectHeap *heap, SceSize size, void *object)
+int sceKernelObjectHeapFree(ObjectHeap *heap, SceSize size, void *object)
 {
 	return UIDHeapCallFree(ObjectHeapGetHeap(heap, size), object);
 }

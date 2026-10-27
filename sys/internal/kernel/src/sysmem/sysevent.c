@@ -120,7 +120,7 @@ int SceKernelSuspendForDriver_D4622EA8(int id, int event, void *eventArgs, SceUI
 	SysEventObject *object;
 	int state, ret = 0;
 
-	state = SceCpuForDriver_821FC0EE();
+	state = sceKernelCpuSuspendIntr();
 	for (object = SYS_EVENT_OBJECT(s_sysEventList[0]);
 	     &object->link != (SysEventLink *)s_sysEventList;
 	     object = SYS_EVENT_OBJECT(object->link.next)) {
@@ -128,7 +128,7 @@ int SceKernelSuspendForDriver_D4622EA8(int id, int event, void *eventArgs, SceUI
 		if (g_sysEventPreHook != NULL)
 			g_sysEventPreHook(id, event, object->link.args, object->link.handler);
 		ret = object->link.handler(id, event, eventArgs, object->link.args);
-		state = SceCpuForDriver_821FC0EE();
+		state = sceKernelCpuSuspendIntr();
 		if (g_sysEventPostHook != NULL)
 			g_sysEventPostHook(id, event, ret,
 					   ret >= 0 ? 0 : failed != NULL ? object->link.uid : 0);

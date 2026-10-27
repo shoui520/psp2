@@ -16,7 +16,7 @@ static inline void writeReg(SceUInt32 addr, SceUInt8 reg, SceUInt8 value)
 
 	buf[0] = reg;
 	buf[1] = value;
-	SceI2cForDriver_CA94A759(1, addr, buf, 2);
+	sceI2cMasterTransmit(1, addr, buf, 2);
 }
 
 /* Program the transmitter's timing generator for a video identification code. */

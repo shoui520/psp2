@@ -21,7 +21,7 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 	int (*useCpup)(unsigned int *, unsigned int *, unsigned int *);
 	int result;
 
-	if (updateUseSysconNvsService && SceSysconForDriver_81A6060D(0) == 0) {
+	if (updateUseSysconNvsService && sceSysconNvsSetRunMode(0) == 0) {
 		if (updateUseSysconSnvs)
 			result = SpkgInfoUtilGetSNVSFlagStatus(&status, &flags, 1, -1);
 		else
@@ -56,8 +56,8 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 	}
 	if (!SceSblAIMgrForDriver_C6E83F34() && updateMotionPollCount > 0) {
 		do {
-			if (SceMotionDevForDriver_10AAC8EA()) {
-				if (SceMotionDevForDriver_3E4BCBC0(&updateMotionDeviceInfo) == 0 &&
+			if (sceMotionDevIsReady()) {
+				if (sceMotionDevGetDeviceInfo(&updateMotionDeviceInfo) == 0 &&
 				    updateUseMotionService) {
 					updateMotionFirmwareVersion = updateMotionDeviceInfo.firmwareVersion;
 					updateMotionConnected = 1;
@@ -73,7 +73,7 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 	firmware = 0;
 	information.dataFlashVersion = 0;
 	if (!SceSblAIMgrForDriver_C6E83F34()) {
-		if (SceSysconForDriver_68E0031E(&hardware, &firmware,
+		if (sceSysconGetBatteryVersion(&hardware, &firmware,
 					      &information.dataFlashVersion) != 0) {
 			updateUseBatteryService = 0;
 		} else {
@@ -93,7 +93,7 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 			if (--updateTouchPollCount <= 0)
 				goto finish;
 		}
-		if (SceSysconForDriver_F492E69E(information.touchDeviceInfo) != 0) {
+		if (sceSysconGetTouchpanelDeviceInfo(information.touchDeviceInfo) != 0) {
 			updateUseTouchService = 0;
 		} else {
 			__builtin_memcpy(updateSysconTouchDeviceInfo,
@@ -108,8 +108,8 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 			}
 		}
 		__builtin_memset(updateTouchDeviceInfo, 0, sizeof(updateTouchDeviceInfo));
-		SceTouchForDriver_FD2E0278(0, &touchInfo[0]);
-		SceTouchForDriver_FD2E0278(1, &touchInfo[1]);
+		sceTouchGetDeviceInfo(0, &touchInfo[0]);
+		sceTouchGetDeviceInfo(1, &touchInfo[1]);
 		__builtin_memcpy(updateTouchDeviceInfo, touchInfo,
 				 sizeof(updateTouchDeviceInfo));
 	}

@@ -83,7 +83,7 @@ int sceKernelGetMemBlockVBase(SceUID uid, void **base)
 }
 
 #if !SYSMEM_NSKBL
-int SceSysmemForKernel_D44FE44B(SceUID uid, unsigned int *type)
+int sceKernelGetMemBlockType(SceUID uid, unsigned int *type)
 {
 	GUIDApplyArgs args;
 
@@ -773,7 +773,7 @@ int MemBlockSetBaseInfo(SceUID uid, void *info)
 	status = baseBlock->flags;
 #if FW_DEBUG
 	if ((status & MEMBLOCK_OPT_MASK) != MEMBLOCK_OPT_BASE_BLOCK &&
-	    SceDebugForDriver_374B7868() > 0) {
+	    sceKernelGetAssertLevel() > 0) {
 		SceDebugForDriver_FD753E7A(1, 0, SCE_DBGINFO_FUNC(1120, "MemBlockSetBaseInfoRaw"),
 				      __builtin_return_address(0));
 		status = baseBlock->flags;

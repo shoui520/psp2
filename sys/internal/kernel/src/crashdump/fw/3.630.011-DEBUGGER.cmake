@@ -73,8 +73,8 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_714EEFB7
 	SceSysconForDriver_CF5B2F2F
 	sceRtcGetCurrentClockLocalTime
-	SceDisplayForDriver_19F94C63
-	SceDisplayForDriver_C8E554C5
+	sceDisplayGetFrameBufInternal
+	sceDisplayGetPrimaryHead
 	SceCoredumpForDriver_10863B61
 	SceCoredumpForDriver_12392973
 	SceCoredumpForDriver_13EF8516

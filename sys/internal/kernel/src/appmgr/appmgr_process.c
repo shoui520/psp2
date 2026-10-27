@@ -155,7 +155,7 @@ void vcStateChangedPanic(void)
 		int assertLevel; \
 		sceAppMgrDump(); \
 		dumpBgmState(); \
-		assertLevel = SceDebugForDriver_374B7868(); \
+		assertLevel = sceKernelGetAssertLevel(); \
 		if (assertLevel > 0) \
 			return SceDebugForDriver_821A2D59(1, 0, \
 				SCE_DBGINFO_FUNC(_line, "vcStateChanged"), \
@@ -621,7 +621,7 @@ int videocodecUsageChangedCallback2(SceUID pid, unsigned int usage)
 		int assertLevel;
 		sceAppMgrDump();
 		dumpBgmState();
-		assertLevel = SceDebugForDriver_374B7868();
+		assertLevel = sceKernelGetAssertLevel();
 		if (assertLevel > 0)
 			return SceDebugForDriver_821A2D59(1, 0,
 				SCE_DBGINFO_FUNC(1478, "videocodecUsageChangedCallback2"),
@@ -887,7 +887,7 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, void *common)
 		return 0;
 #if FW_DEBUG
 	for (index = 0; index != 20; ++index) {
-		if (SceDebugForDriver_374B7868() > 0) {
+		if (sceKernelGetAssertLevel() > 0) {
 			owner = g_appmgrAppStates[index].mutexOwner;
 			SCE_DBG_ASSERT_CHECK_FUNC(owner != sceKernelGetThreadId(),
 				161, "_sceAppMgrProcExitHandler");
@@ -2189,7 +2189,7 @@ SceUID appmgrProcessCreateMini(AppmgrProcessState *process, const char *path,
 	SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1965, "appmgrProcessCreateMini",
 		"[SceAppMgr] Creating app %s, Limit FD=%d, DIR=%d\n",
 		process->appName, maxFD, maxDIR);
-	budgetId = SceProcessmgrForKernel_DC18FCEF(process->appName,
+	budgetId = sceKernelCreateBudget(process->appName,
 			(createFlags & 0x7dffffff) | 0x2000000, &budgetOpt);
 	if (budgetId < 0) {
 		appmgrCleanupProcessMount(&process->mounts, &cleanup);
@@ -2228,7 +2228,7 @@ SceUID appmgrProcessCreateMini(AppmgrProcessState *process, const char *path,
 				     &processOpt);
 	if (pid < 0) {
 		appmgrCleanupProcessMount(&process->mounts, &cleanup);
-		result = SceProcessmgrForKernel_459A223B(budgetId);
+		result = sceKernelDeleteBudget(budgetId);
 		PROCESS_CREATE_PANIC(result, 2050, "appmgrProcessCreateMini",
 				     deleteMiniBudgetPanicInfo);
 		return pid;

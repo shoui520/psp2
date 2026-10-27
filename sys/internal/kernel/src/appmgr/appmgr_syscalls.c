@@ -29,12 +29,12 @@ int appmgrGameDataMountSyscall(const char *appPath, const char *patchPath,
 
 int appmgrAppDataMountSyscall(unsigned int mountId, ScePfsRndDriveId *mountPoint)
 {
-	return SceAppMgrForDriver_B1D3C287(mountId, mountPoint);
+	return sceAppMgrAppDataMount(mountId, mountPoint);
 }
 
 int appmgrWorkDirMountSyscall(unsigned int mountId, ScePfsRndDriveId *mountPoint)
 {
-	return SceAppMgrForDriver_3A0A9B82(mountId, mountPoint);
+	return sceAppMgrWorkDirMount(mountId, mountPoint);
 }
 
 int appmgrPspSaveDataRootMountSyscall(ScePfsRndDriveId *mountPoint)
@@ -67,7 +67,7 @@ int appmgrMmsMountSyscall(unsigned int mountId, ScePfsRndDriveId *mountPoint)
 int appmgrAppDataMountByIdSyscall(unsigned int mountId, const char *id,
 				  ScePfsRndDriveId *mountPoint)
 {
-	return SceAppMgrForDriver_5E311F71(mountId, id, mountPoint);
+	return sceAppMgrAppDataMountById(mountId, id, mountPoint);
 }
 
 int appmgrInstallDirMountSyscall(unsigned int mountId, const char *id, const void *keystone,

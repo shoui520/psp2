@@ -14,7 +14,7 @@ int pfsThreadMappingInit(void)
 
 	if (g_pfsThreadMappingKey != -1)
 		return 0;
-	key = SceThreadmgrForDriver_B645C7EF(sizeof(ScePfsBlockRequest *), 0, 0);
+	key = sceKernelRegisterKTLS(sizeof(ScePfsBlockRequest *), 0, 0);
 	if (key < 0)
 		return key;
 	g_pfsThreadMappingKey = key;
@@ -24,7 +24,7 @@ int pfsThreadMappingInit(void)
 int pfsThreadMappingTerm(void)
 {
 	if (g_pfsThreadMappingKey != -1)
-		return SceThreadmgrForDriver_8C3C1F78(g_pfsThreadMappingKey);
+		return sceKernelUnregisterKTLS(g_pfsThreadMappingKey);
 	return 0;
 }
 

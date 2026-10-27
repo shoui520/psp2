@@ -375,7 +375,7 @@ static int UserpCloseProcess(SceUID pid)
 			sceGUIDReleaseObject(s_channel[i]);
 			continue;
 		}
-		SceSysmemForDriver_84A4AF5E(pid, st->puid);
+		scePUIDClose(pid, st->puid);
 		ret = sceKernelLockMutex(st->writeMutex, 1, NULL);
 		if (ret < 0) {
 			sceGUIDReleaseObject(s_channel[i]);
@@ -455,7 +455,7 @@ int module_start(SceSize args, void *argp)
 delete:
 	sceKernelDeleteMutex(s_mutex);
 unregister:
-	SceProcEventForDriver_3DED57CC(s_procEvent);
+	sceKernelUnregisterProcEventHandler(s_procEvent);
 	return 1;
 }
 
@@ -561,7 +561,7 @@ SceUID sceKernelDeci4pOpen(const char *name, SceUInt32 protocol, SceSize ringSiz
 	}
 	st->handle = ret;
 	st->pid = sceKernelGetProcessId();
-	uid = SceSysmemForDriver_BF209859(0, guid);
+	uid = scePUIDOpenByGUID(0, guid);
 	st->status = 0;
 	st->puid = uid;
 	st->writePos = 0;
@@ -596,10 +596,10 @@ int sceKernelDeci4pClose(SceUID puid)
 	int i, ret;
 
 	SYSCALL_ENTER(tid);
-	guid = SceSysmemForDriver_45D22597(0, puid);
+	guid = scePUIDtoGUID(0, puid);
 	if (guid < 0)
 		goto bad;
-	SceSysmemForDriver_84A4AF5E(0, puid);
+	scePUIDClose(0, puid);
 	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
 		SYSCALL_LEAVE(tid);
@@ -640,12 +640,12 @@ int sceKernelDeci4pRegisterCallback(SceUID puid, SceUID cbPuid)
 	int intr;
 
 	SYSCALL_ENTER(tid);
-	cb = SceSysmemForDriver_45D22597(0, cbPuid);
+	cb = scePUIDtoGUID(0, cbPuid);
 	if (cb < 0) {
 		SYSCALL_LEAVE(tid);
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_CBID;
 	}
-	guid = SceSysmemForDriver_45D22597(0, puid);
+	guid = scePUIDtoGUID(0, puid);
 	if (guid < 0 || sceGUIDReferObjectWithClass(guid, s_class, (SceObjectBase **)&obj) < 0) {
 		SYSCALL_LEAVE(tid);
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
@@ -699,7 +699,7 @@ int sceKernelDeci4pRead(SceUID puid, void *buf, SceSize size, int flags)
 	if (flags != 0)
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_RESERVED;
 	SYSCALL_ENTER(tid);
-	guid = SceSysmemForDriver_45D22597(0, puid);
+	guid = scePUIDtoGUID(0, puid);
 	if (guid < 0 || sceGUIDReferObjectWithClass(guid, s_class, (SceObjectBase **)&obj) < 0) {
 		SYSCALL_LEAVE(tid);
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
@@ -836,7 +836,7 @@ int sceKernelDeci4pWrite(SceUID puid, const void *buf, SceSize size, int flags)
 	if (flags != 0)
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_RESERVED;
 	SYSCALL_ENTER(tid);
-	guid = SceSysmemForDriver_45D22597(0, puid);
+	guid = scePUIDtoGUID(0, puid);
 	if (guid < 0 || sceGUIDReferObjectWithClass(guid, s_class, (SceObjectBase **)&obj) < 0) {
 		SYSCALL_LEAVE(tid);
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
@@ -943,7 +943,7 @@ int sceKernelDeci4pCreateHostProcess(const void *uparam, void *uout, SceUID cbPu
 	int ret, c;
 
 	SYSCALL_ENTER(tid);
-	cb = SceSysmemForDriver_45D22597(0, cbPuid);
+	cb = scePUIDtoGUID(0, cbPuid);
 	if (cb < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_CBID;
 	} else if (ustatus == NULL || sceKernelIsAccessibleRange(0x20, ustatus, 0x20) < 0) {

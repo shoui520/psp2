@@ -368,7 +368,7 @@ int cecDevEnable(void)
 		return -1;
 	while (sceHdmiDeviceI2cRead(1, CEC_SLAVE_CEC, 0, data, 3) != 0)
 		sceKernelDelayThread(100000);
-	ret = ScePervasiveForDriver_26B51075();
+	ret = scePervasiveCecClockOutEnable();
 	if (ret < 0)
 		return ret;
 	ret = _setRegValue(CEC_REG_POWER_DOWN, 0);
@@ -455,7 +455,7 @@ int cecDevDisable(void)
 	hdmiDeviceDisableIntr(HDMI_INTR_MASK_CEC);
 	_setRegValue(CEC_REG_MAIN_POWER_DOWN, 1);
 	_setRegValue(CEC_REG_POWER_DOWN, 1);
-	return ScePervasiveForDriver_D185D235();
+	return scePervasiveCecClockOutDisable();
 }
 
 int cecDevSuspend(void)

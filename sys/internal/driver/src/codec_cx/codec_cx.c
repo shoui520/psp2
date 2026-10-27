@@ -33,7 +33,7 @@ static int writeScript(const short *script)
 			if (script[0] != script[-2] + 1)
 				break;
 		} while (count != 16);
-		ret = SceI2cForDriver_CA94A759(0, 0x66, buffer, count + 2);
+		ret = sceI2cMasterTransmit(0, 0x66, buffer, count + 2);
 	} while (ret >= 0 && script[0] != -1);
 	return ret;
 }
@@ -45,7 +45,7 @@ int SceCodecForDriver_23BF8884(unsigned int reg, unsigned int value)
 	buffer[0] = reg >> 8;
 	buffer[1] = reg;
 	buffer[2] = value;
-	return SceI2cForDriver_CA94A759(0, 0x66, buffer, 3);
+	return sceI2cMasterTransmit(0, 0x66, buffer, 3);
 }
 
 int SceCodecForDriver_4FA36937(unsigned int reg)
@@ -55,7 +55,7 @@ int SceCodecForDriver_4FA36937(unsigned int reg)
 
 	command[0] = reg >> 8;
 	command[1] = reg;
-	ret = SceI2cForDriver_0A40B7BF(0, 0x66, command, 2, 0x66, &value, 1);
+	ret = sceI2cMasterTransmitReceive(0, 0x66, command, 2, 0x66, &value, 1);
 	return ret < 0 ? ret : value;
 }
 

@@ -17,7 +17,7 @@ int MarlinHmacDigest(unsigned int algorithm, const MarlinBuffer *key,
 			result = 2;
 			goto out;
 		}
-		SceKernelUtilsForDriver_29A28957(key->data, key->size, data->data,
+		sceHmacSha1Digest(key->data, key->size, data->data,
 				  data->size, buffer->data);
 		break;
 	case 2:
@@ -27,7 +27,7 @@ int MarlinHmacDigest(unsigned int algorithm, const MarlinBuffer *key,
 			result = 2;
 			goto out;
 		}
-		SceKernelUtilsForDriver_83EFA1CC(key->data, key->size, data->data,
+		sceHmacSha256Digest(key->data, key->size, data->data,
 				    data->size, buffer->data);
 		break;
 	default:

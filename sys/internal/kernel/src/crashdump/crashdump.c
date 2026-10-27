@@ -425,7 +425,7 @@ static inline void crashdumpMarkScreen(void)
 	SceUInt32 x, y, *px;
 
 	fb.size = sizeof(fb);
-	if (SceDisplayForDriver_19F94C63(SceDisplayForDriver_C8E554C5(), 0, &fb, 1) < 0)
+	if (sceDisplayGetFrameBufInternal(sceDisplayGetPrimaryHead(), 0, &fb, 1) < 0)
 		return;
 	for (y = 0; y < fb.height; y++) {
 		px = (SceUInt32 *)fb.base + y * fb.pitch;

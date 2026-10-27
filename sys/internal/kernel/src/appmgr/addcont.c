@@ -129,7 +129,7 @@ int SceAppMgrForDriver_EA75D157(const SceAppMgrDrmOpenParam *param)
 	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
 	if (result < 0)
 		goto out;
-	result = SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	result = sceKernelGetRemoteKPLS(0, g_appmgrAppInfoCacheKey, (void **)&info, 0);
 	if (result < 0)
 		goto unlock;
 	if (info == NULL) {
@@ -193,7 +193,7 @@ int SceAppMgrForDriver_088670A6(const SceAppMgrDrmOpenParam *param)
 	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
 	if (result < 0)
 		goto out;
-	result = SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	result = sceKernelGetRemoteKPLS(0, g_appmgrAppInfoCacheKey, (void **)&info, 0);
 	if (result < 0)
 		goto unlock;
 	if (info == NULL) {
@@ -253,7 +253,7 @@ int sceAppMgrContentInstallPeriodStart(void)
 		goto unlock;
 	}
 	for (i = 2; i >= 0; i--) {
-		result = SceAppMgrForDriver_A714BB35(drives[i]);
+		result = sceAppMgrUmount(drives[i]);
 		if (result < 0) {
 			if (result != (int)0x80800002 && result != (int)0x80010013) {
 				if (result == (int)0x80010010)
@@ -423,7 +423,7 @@ int appmgrRemoveAddcontMountEntries(struct AppState *app, const char *driveId)
 			return result;
 		memset(&list, 0, sizeof(list));
 	}
-	result = SceProcessmgrForDriver_AF80F39C(app->process.processId, g_appmgrAppInfoCacheKey,
+	result = sceKernelGetRemoteKPLS(app->process.processId, g_appmgrAppInfoCacheKey,
 						 (void **)&info, 0);
 	if (result < 0)
 		return result;
@@ -483,7 +483,7 @@ int SceAppMgrForDriver_B53FB98E(const char *path, int kind)
 		result = 0x80800001;
 		goto unlock;
 	}
-	result = SceProcessmgrForDriver_AF80F39C(sceKernelGetProcessId(), g_appmgrAppInfoCacheKey,
+	result = sceKernelGetRemoteKPLS(sceKernelGetProcessId(), g_appmgrAppInfoCacheKey,
 						 (void **)&info, 0);
 	if (result < 0)
 		goto unlock;
@@ -511,7 +511,7 @@ int appmgrRemoveTemporaryPhoto(SceUID pid)
 	result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
 	if (result < 0)
 		return result;
-	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	result = sceKernelGetRemoteKPLS(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
 	if (result < 0)
 		goto unlock;
 	if (info == NULL) {

@@ -25,7 +25,7 @@ RdrfpFd *rdrfpCreateFd(RdrfpVDEntry *entry, SceUID uid)
 
 	if (f) {
 		memset(f, 0, sizeof(*f));
-		f->fd = SceCpuForDriver_341B6E81(&rdrfpFdCounter, 1);
+		f->fd = sceKernelAtomicGetAndAdd32(&rdrfpFdCounter, 1);
 		f->uid = uid;
 		f->entry = entry;
 		rdrfpAddToList(&rdrfpFdList, f);

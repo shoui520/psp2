@@ -158,7 +158,7 @@ SceSysTimerId sceKernelSysTimerAlloc(int type)
 	unsigned int i, count;
 	int state;
 
-	if (SceIntrmgrForDriver_182EE3E3() != 0)
+	if (sceKernelIsIntrContext() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	switch (type) {
@@ -197,7 +197,7 @@ int SceSystimerForDriver_8358611F(SceSysTimerId id)
 	TimerInfo *info;
 	int state;
 
-	if (SceIntrmgrForDriver_182EE3E3() != 0)
+	if (sceKernelIsIntrContext() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
@@ -238,7 +238,7 @@ int SceSystimerForDriver_0450933B(SceSysTimerId id, SceUInt32 source, SceUInt32 
 	SceUInt32 sel;
 	int state;
 
-	if (SceIntrmgrForDriver_182EE3E3() != 0)
+	if (sceKernelIsIntrContext() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (source == 2 || source == 14 || source == 15 || source > 21)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -272,7 +272,7 @@ int SceSystimerForDriver_A73351C1(SceSysTimerId id, SceUInt64 interval)
 	TimerInfo *info;
 	int state;
 
-	if (SceIntrmgrForDriver_182EE3E3() != 0)
+	if (sceKernelIsIntrContext() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
@@ -302,7 +302,7 @@ int SceSystimerForDriver_CCCD1EE3(SceSysTimerId id, SceSysTimerCallback handler,
 	TimerInfo *info;
 	int state;
 
-	if (SceIntrmgrForDriver_182EE3E3() != 0)
+	if (sceKernelIsIntrContext() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	/* a CPU mask in bits 0-3, or in bits 16-19 */
@@ -399,7 +399,7 @@ int SceSystimerForDriver_7DEBA6A5(SceSysTimerId id)
 	TimerInfo *info;
 	int state;
 
-	if (SceIntrmgrForDriver_182EE3E3() != 0)
+	if (sceKernelIsIntrContext() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
@@ -448,7 +448,7 @@ int SceSystimerForDriver_1B14DFD6(SceSysTimerId id, SceUInt64 count)
 	TimerInfo *info;
 	int state;
 
-	if (SceIntrmgrForDriver_182EE3E3() != 0)
+	if (sceKernelIsIntrContext() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
@@ -546,7 +546,7 @@ int SceSystimerForDriver_904DF737(SceSysTimerId id, SceUInt32 a, SceUInt32 b)
 	TimerInfo *info;
 	int state;
 
-	if (SceIntrmgrForDriver_182EE3E3() != 0)
+	if (sceKernelIsIntrContext() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (a >= 14)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -577,7 +577,7 @@ int SceSystimerForDriver_C34D7940(SceSysTimerId id, SceUInt32 a)
 	TimerInfo *info;
 	int state;
 
-	if (SceIntrmgrForDriver_182EE3E3() != 0)
+	if (sceKernelIsIntrContext() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (a >= 14)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;

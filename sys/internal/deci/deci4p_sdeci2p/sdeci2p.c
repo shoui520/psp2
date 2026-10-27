@@ -98,7 +98,7 @@ static void sdeci2pSetChannelFlags(SceUInt32 *flags, SceUInt32 bits, int set)
 {
 	SceKernelIntrStatus intr;
 
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (!set)
 		*flags &= ~bits;
 	else
@@ -111,7 +111,7 @@ static void sdeci2pSetFlags(SceUInt32 *flags, SceUInt32 bits, int set)
 {
 	SceKernelIntrStatus intr;
 
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (!set)
 		*flags &= ~bits;
 	else
@@ -128,7 +128,7 @@ static int notifyForwardStart(Sdeci2pContext *ctx, SceUInt32 n)
 		SDECI2P_PRINTF(0xf, 1572, "not initialized!\n");
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	sdeci2pSetFlags(&ctx->flags, SDECI2P_FORWARDING, 1);
 	ctl = ctx->ctl;
 	ctl[11] = n;
@@ -152,7 +152,7 @@ static int notifyAcquireEnd(Sdeci2pContext *ctx)
 		SDECI2P_PRINTF(0xf, 1614, "not initialized!\n");
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	ctx->mailbox->enableInterrupt[14] = 0xffffffff;
 	dsb();
 	(void)ctx->mailbox->raiseInterrupt[14];
@@ -243,7 +243,7 @@ static inline int eventReadDoneWhenRunning(Sdeci2pContext *ctx)
 		if (ctx->cur > 1)
 			ctx->cur = 0;
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (ctx->flags & SDECI2P_FORWARDING) {
 		sdeci2pSetFlags(&ctx->flags, SDECI2P_FWD_PENDING, 1);
 		sceKernelCpuResumeIntr(intr);
@@ -750,7 +750,7 @@ unhook_fwd:
 	if (ret < 0)
 		SDECI2P_PRINTF(0xf, 572, "UnregisterBreakHook() failed (0x%08X)\n", ret);
 close:
-	SceDeci4pSDfMgrForKernel_86CFC8C6(ctx->handle);
+	sceSDfMgrClose(ctx->handle);
 	sceKernelExitThread(ret);
 	return ret;
 }

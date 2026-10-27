@@ -94,7 +94,7 @@ int lcdSetPower(int on) /* name unknown */
 	SceKernelIntrStatus intr;
 	int old;
 
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	old = lcd.wantOn;
 	lcd.wantOn = on;
 	sceKernelCpuResumeIntr(intr);

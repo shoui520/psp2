@@ -23,7 +23,7 @@ static inline __attribute__((always_inline)) void AddressSpaceRefer(AddressSpace
 
 static inline __attribute__((always_inline)) void AddressSpaceRelease(AddressSpaceObject *as)
 {
-	int count = SceCpuForDriver_2A71B03C(&as->refCount);
+	int count = sceKernelAtomicDecIfPositive32(&as->refCount);
 
 	SCE_DBG_ASSERT_CHECK_FUNC(count > 0, 936, "AddressSpaceRelease");
 }
@@ -143,7 +143,7 @@ void DeleteAddressSpace(AddressSpaceObject *as)
 	SceUID uid;
 	int i, j, ret;
 
-	while ((ret = SceCpuForDriver_CDA96E81(&as->refCount, 0, -1)) != 0)
+	while ((ret = sceKernelAtomicCompareAndSet32(&as->refCount, 0, -1)) != 0)
 		SCE_DBG_PRINTF(3, 2057, "AddressSpaceInvalidate failed 0x%08x, 0x%08x\n", ret,
 			       as->refCount);
 	as->lock = 1;
@@ -460,7 +460,7 @@ int AddressSpaceAllocMemBlockByCommand(AddressSpaceObject *unused,
 				ret = MemBlockGetMirrorBlock(&command->opt, &mirror);
 				if (ret < 0) {
 					/* given as a PUID of the caller */
-					guid = SceSysmemForDriver_45D22597(0, command->opt.mirror_blockid);
+					guid = scePUIDtoGUID(0, command->opt.mirror_blockid);
 					if (guid < 0 || guid == (SceUID)command->opt.mirror_blockid)
 						goto out;
 					command->opt.mirror_blockid = guid;
@@ -499,7 +499,7 @@ int AddressSpaceMemset(AddressSpaceObject *as, void *dst, int c, SceSize size)
 	int intr;
 
 	AddressSpaceRefer(as);
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	MMUContextSave(&saved);
 	MMUContextRestore(&as->context->mmu);
 	writeDacr(DACR_ALL_CLIENT);
@@ -1066,7 +1066,7 @@ SceUID sceKernelCreateAddressSpace(SceUID pid, const char *name, SceUInt32 type,
 		ret = -1;
 		goto fail;
 	}
-	uid = SceSysmemForKernel_6DB44A42(s_addressSpaceGlobals->cls, name, as);
+	uid = sceGUIDRegister(s_addressSpaceGlobals->cls, name, as);
 	if (uid >= 0) {
 		as->pid = pid;
 		return uid;
@@ -1159,7 +1159,7 @@ out:
 	return ret;
 }
 
-int SceSysmemForKernel_4A2E421D(SceUID guid)
+int sceKernelDeleteAddressSpace(SceUID guid)
 {
 	AddressSpaceObject *as;
 	int ret;
@@ -1175,7 +1175,7 @@ int SceSysmemForKernel_4A2E421D(SceUID guid)
 }
 
 /* name unknown: the address space's owning process */
-int SceSysmemForKernel_5E772E19(SceUID guid, SceUID pid)
+int sceKernelAddressSpaceSetProcess(SceUID guid, SceUID pid)
 {
 	AddressSpaceObject *as;
 	int ret;
@@ -1237,7 +1237,7 @@ int sceKernelAddressSpaceSetName(SceUID guid, const char *name)
 	return 0;
 }
 
-int SceSysmemForKernel_7DF07D60(SceUID guid, SceUInt32 index, void *pPhyMemPart)
+int sceKernelAddressSpaceSetPhyMemPart(SceUID guid, SceUInt32 index, void *pPhyMemPart)
 {
 	AddressSpaceObject *as;
 	void *object;
@@ -1271,7 +1271,7 @@ int SceSysmemForKernel_A7C91D62(SceUID guid, AddressSpaceContext **context)
 }
 
 /* name unknown: into the address space of a GUID */
-int SceSysmemForKernel_20D01AFA(SceUID guid)
+int sceKernelAddressSpaceChangeMMUContext(SceUID guid)
 {
 	AddressSpaceObject *as;
 	int ret;
@@ -1283,7 +1283,7 @@ int SceSysmemForKernel_20D01AFA(SceUID guid)
 }
 
 /* whole sections of the address space unmapped */
-int SceSysmemForKernel_73C38695(SceUID uid, int asid, int domain, void *addr, SceSize size)
+int sceKernelAddressSpaceUnmap(SceUID uid, int asid, int domain, void *addr, SceSize size)
 {
 	AddressSpaceObject *as;
 	MMUContext saved;
@@ -1344,7 +1344,7 @@ out:
 	return ret;
 }
 
-int SceSysmemForKernel_1BAF8C0B(void *pAS, SceUInt32 mode, void *pVA, void **pPA)
+int sceKernelAddressSpaceVAtoPA(void *pAS, SceUInt32 mode, void *pVA, void **pPA)
 {
 	AddressSpaceObject *as;
 	int ret;
@@ -1358,7 +1358,7 @@ int SceSysmemForKernel_1BAF8C0B(void *pAS, SceUInt32 mode, void *pVA, void **pPA
 }
 
 /* name unknown: the physical ranges behind a range of the address space of a GUID */
-int SceSysmemForKernel_A541E0CF(SceUID guid, const SceKernelPARange *range,
+int sceKernelAddressSpaceVARangeToPAVector(SceUID guid, const SceKernelPARange *range,
 				SceKernelPAVector *vector)
 {
 	AddressSpaceObject *as;
@@ -1385,7 +1385,7 @@ int sceKernelAddressSpaceGetTimerVbase(SceUID guid, uintptr_t *base)
 	return 0;
 }
 
-int SceSysmemForKernel_C3EF4055(SceUID guid, AddressSpaceInfo *info)
+int sceKernelGetAddressSpaceInfo(SceUID guid, AddressSpaceInfo *info)
 {
 	AddressSpaceObject *as;
 	SceUInt32 i, n;
@@ -1436,7 +1436,7 @@ int SceSysmemForKernel_47C55DCC(SceUInt32 index, void **part)
 }
 
 /* sceKernelGetKernelAddressSpace */
-AddressSpaceObject *SceSysmemForKernel_2E5CC243(void)
+AddressSpaceObject *sceKernelGetKernelAddressSpace(void)
 {
 	return s_kernelAddressSpace;
 }

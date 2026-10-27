@@ -203,7 +203,7 @@ int SceUdcdForDriver_7AD0C8D1(SceUdcdWaitParam *parameter, unsigned int timeout,
 	}
 }
 
-int SceUdcdForDriver_D03017C0(SceUdcdWaitParam *parameter, unsigned int timeout)
+int sceUdcdWaitState(SceUdcdWaitParam *parameter, unsigned int timeout)
 {
 	return SceUdcdForDriver_7AD0C8D1(parameter, timeout, 2);
 }
@@ -224,7 +224,7 @@ SceUInt32 udcdAlarmTick(void *argp)
 	ScePowerForDriver_8C0D2051(&powerStatus);
 	if (state->connectionState == SCE_UDCD_STATUS_CONNECTION_ESTABLISHED && state->busPowered == 1 && state->chargingEnabled == 1 &&
 	    (powerStatus & 0xf00) != 0x200) {
-		SceKernelSuspendForDriver_E0489831(1);
+		sceKernelPowerTick(1);
 		state->alarmTickTimer = SceThreadmgrForDriver_C58DF384("SceUdcdAlarmTickTimer",
 			5000000, udcdAlarmTick, argp);
 	}
@@ -286,7 +286,7 @@ int SceUdcdForDriver_DB7EF7AB(int bus)
 	return 0;
 }
 
-int SceUdcdForDriver_E054B5E4(void)
+int sceUdcdGetDeviceState(void)
 {
 	struct udcdBusState *state = &udcdState.buses[2];
 
@@ -327,7 +327,7 @@ void SceUdcdForDriver_B1454F11(const unsigned int *value)
 		udcdState.buses[2].driverSetting = *value;
 }
 
-int SceUdcdForDriver_FBEA3703(SceUdcdDeviceInfo *information)
+int sceUdcdGetDeviceInfo(SceUdcdDeviceInfo *information)
 {
 	if (!udcdIsDriverBus(2))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -387,7 +387,7 @@ static inline __attribute__((always_inline)) void udcdApplyUsbCharging(int bus)
 		ScePowerForDriver_733F973B();
 	else
 		ScePowerForDriver_90285886();
-	ScePowerForDriver_F535D928(0x8000, enabled);
+	scePowerSetWakeupCondition(0x8000, enabled);
 }
 
 void udcdUpdateUsbCharging(int bus)
@@ -472,7 +472,7 @@ int SceUdcdForDriver_FDC10F93(int bus)
 	return enabled ? udcdDeactivateBus(bus) : SCE_UDCD_ERROR_DRIVER_IN_PROGRESS;
 }
 
-int SceUdcdForDriver_8AE87657(void)
+int sceUdcdDeactivate(void)
 {
 	struct udcdBusState *state = &udcdState.buses[2];
 	SceKernelIntrStatus status;
@@ -1357,7 +1357,7 @@ int udcdValidateDriverDescriptors(const SceUdcdDriver *driver)
 	return 0;
 }
 
-int SceUdcdForDriver_E9E75C49(int bus)
+int sceUdcdInit(int bus)
 {
 	int (*operation)(int bus) = udcdState.operations[bus].resume;
 	int result;
@@ -1368,7 +1368,7 @@ int SceUdcdForDriver_E9E75C49(int bus)
 	return result < 0 ? result : 0;
 }
 
-int SceUdcdForDriver_2A234CAF(int bus)
+int sceUdcdEnd(int bus)
 {
 	int (*operation)(int bus) = udcdState.operations[bus].suspend;
 	int result;
@@ -1775,24 +1775,24 @@ int SceUdcdForDriver_03781649(SceUdcdDeviceRequest *request, int bus)
 	return result;
 }
 
-int SceUdcdForDriver_1ED0E89E(SceUdcdDeviceRequest *request)
+int sceUdcdReqSend(SceUdcdDeviceRequest *request)
 {
 	return udcdSubmitDriverRequest(request, 2, 0);
 }
 
-int SceUdcdForDriver_2E3E622A(SceUdcdDeviceRequest *request, int bus)
+int sceUdcdReqSendInternal(SceUdcdDeviceRequest *request, int bus)
 {
 	if (bus != 1 && bus != 2)
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
 	return udcdSubmitDriverRequest(request, bus, 0);
 }
 
-int SceUdcdForDriver_C60A74B2(SceUdcdDeviceRequest *request)
+int sceUdcdReqRecv(SceUdcdDeviceRequest *request)
 {
 	return udcdSubmitDriverRequest(request, 2, 1);
 }
 
-int SceUdcdForDriver_175E6179(SceUdcdDeviceRequest *request, int bus)
+int sceUdcdReqRecvInternal(SceUdcdDeviceRequest *request, int bus)
 {
 	if (bus != 1 && bus != 2)
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -2107,7 +2107,7 @@ static inline __attribute__((always_inline)) int udcdStartDriverImpl(
 
 	if (!name || strnlen(name, 64) == 64)
 		return SCE_UDCD_ERROR_USBDRIVER_INVALID_NAME;
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	driverState = state->controllerDriverState;
 	if (driverState == UDCD_CONTROLLER_DRIVER_ABSENT)
@@ -2201,7 +2201,7 @@ static inline __attribute__((always_inline)) int udcdStopDriverImpl(
 
 	if (!name || strnlen(name, 64) == 64)
 		return SCE_UDCD_ERROR_USBDRIVER_INVALID_NAME;
-	if (SceIntrmgrForDriver_182EE3E3())
+	if (sceKernelIsIntrContext())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	driverState = state->controllerDriverState;
 	if (driverState == UDCD_CONTROLLER_DRIVER_ABSENT)
@@ -2264,7 +2264,7 @@ int udcdStopDriver(const char *name, unsigned int args, void *argp, int bus)
 	return udcdStopDriverImpl(name, args, argp, bus);
 }
 
-int SceUdcdForDriver_1494293B(const char *name, int args, void *argp)
+int sceUdcdStop(const char *name, int args, void *argp)
 {
 	if (!udcdIsDriverBus(2))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -2485,7 +2485,7 @@ int SceUdcdForDriver_64675918(SceUdcdDriver *driver, int bus)
 	return 0;
 }
 
-int SceUdcdForDriver_4E55244D(SceUdcdDriver *driver)
+int sceUdcdRegister(SceUdcdDriver *driver)
 {
 	return SceUdcdForDriver_64675918(driver, 2);
 }
@@ -2520,7 +2520,7 @@ int SceUdcdForDriver_6CCD152E(SceUdcdDriver *driver, int bus)
 	return UDCD_ERROR_DRIVER_NOT_REGISTERED;
 }
 
-int SceUdcdForDriver_0DECE532(SceUdcdDriver *driver)
+int sceUdcdUnregister(SceUdcdDriver *driver)
 {
 	return SceUdcdForDriver_6CCD152E(driver, 2);
 }

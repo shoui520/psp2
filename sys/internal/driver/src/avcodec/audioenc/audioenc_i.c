@@ -689,7 +689,7 @@ int audioencQueryLibraryContext(AudioencCommand *command)
 		return SCE_AUDIOENC_ERROR_INVALID_TYPE;
 	}
 	input[0] = (unsigned int)command;
-	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
+	return sceVeneziaRpcCallGenericThunk(operation, input,
 				 audiodecPackRpcMemory, (VeneziaRpcUnpack)audiodecFinishRpcMemory);
 }
 
@@ -711,7 +711,7 @@ int audioencCreateCommand(AudioencCommand *command)
 	}
 	input[0] = (unsigned int)command;
 	input[1] = sceCodecEngineDsp0GetThreadExecGroup(0);
-	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
+	return sceVeneziaRpcCallGenericThunk(operation, input,
 				 audiodecPackRpcMemory, (VeneziaRpcUnpack)audiodecFinishRpcMemory);
 }
 
@@ -732,7 +732,7 @@ int audioencDeleteCommand(AudioencCommand *command)
 		return SCE_AUDIOENC_ERROR_INVALID_TYPE;
 	}
 	input[0] = (unsigned int)command;
-	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
+	return sceVeneziaRpcCallGenericThunk(operation, input,
 				 audiodecPackRpcMemory, (VeneziaRpcUnpack)audiodecFinishRpcMemory);
 }
 
@@ -754,7 +754,7 @@ int audioencEncodeCommand(AudioencCommand *command, int nFrames)
 	}
 	input[0] = (unsigned int)command;
 	input[1] = nFrames;
-	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
+	return sceVeneziaRpcCallGenericThunk(operation, input,
 						     audioencPackEncodeCommand, audioencFinishEncodeCommand);
 }
 
@@ -775,7 +775,7 @@ int audioencClearContextCommand(AudioencCommand *command)
 		return SCE_AUDIOENC_ERROR_INVALID_TYPE;
 	}
 	input[0] = (unsigned int)command;
-	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
+	return sceVeneziaRpcCallGenericThunk(operation, input,
 				 audiodecPackRpcMemory, (VeneziaRpcUnpack)audiodecFinishRpcMemory);
 }
 
@@ -786,7 +786,7 @@ int audioencGetOptInfoCommand(AudioencCommand *command)
 
 	if (codecType == SCE_AUDIOENC_TYPE_CELP) {
 		input[0] = (unsigned int)command;
-		return SceCodecEngineWrapperForDriver_391BD4FD(269, input,
+		return sceVeneziaRpcCallGenericThunk(269, input,
 				 audiodecPackRpcMemory, (VeneziaRpcUnpack)audiodecFinishRpcMemory);
 	}
 	return codecType == AUDIOENC_TYPE_SILK ?

@@ -171,11 +171,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelMemBlockType2Memtype
 	SceSysmemForDriver_24A99FFF
-	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_58D21746
+	scePUIDtoGUID
+	sceKernelMapMemBlock
 	SceSysmemForDriver_6A0792A3
 	sceKernelCopyToUser
-	SceSysmemForDriver_84A4AF5E
+	scePUIDClose
 	sceKernelFindProcMemBlockByAddr
 	sceKernelFindMemBlockByAddr
 	sceKernelVAtoPA
@@ -183,7 +183,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelIsAccessibleRange
 	sceKernelGetMemBlockBase
 	sceKernelCopyFromUser
-	SceSysmemForDriver_BF209859
+	scePUIDOpenByGUID
 	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_CB0F3A33
 	SceSysmemForDriver_E655852F
@@ -198,7 +198,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetProcessInfo
 	sceKernelRegisterKPLS
 	sceKernelGetBudgetInfo
-	SceProcessmgrForDriver_82D94BE9
+	sceKernelGetProcessTimeWideCore
 	sceKernelFreeRemoteProcessHeap
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_EE694840
@@ -207,7 +207,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B74B7
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	sceKernelSpinlockLowLock
-	SceCpuForDriver_CDA96E81
+	sceKernelAtomicCompareAndSet32
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	SceCpuForDriver_E813EBB2
@@ -233,7 +233,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePowerForDriver_C63DACD5
 	sceRtcGetCurrentClockLocalTime
 	sceKernelRegisterProcEventHandler
-	SceProcEventForDriver_3DED57CC
+	sceKernelUnregisterProcEventHandler
 	sceKernelRegisterSysEventHandler
 	SceSblAIMgrForDriver_274663A0
 	SceDisplayForDriver_086DEFB6

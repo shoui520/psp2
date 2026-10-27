@@ -191,7 +191,7 @@ static int SttypKprintf(int unk, const char *fmt, va_list ap)
 	signed char c;
 	char sign;
 
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (fmt == NULL) {
 		count = 0;
 		goto out;

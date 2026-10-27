@@ -63,9 +63,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDcacheInvalidateRange
 	sceKernelDcacheCleanRange
 	SceDebugForDriver_391B5B74
-	SceSysmemForDriver_0B4ED16A
+	sceKernelAllocUncacheHeapMemoryWithOption
 	sceKernelVAtoPA
-	SceSysmemForDriver_AE36C775
+	sceKernelVARangeToPARange
 	sceKernelVARangeToPAVector
 	SceSysrootForKernel_377895EB
 	sceKernelSysrootGetKblParam
@@ -88,7 +88,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSblSmSchedProxyInvoke
 	sceSblSmSchedProxyGetStatus
 	SceSblSmSchedProxyForKernel_723B382F
-	SceSblSmSchedProxyForKernel_85EDA5FC
+	sceSblSmSchedProxyReleaseIntrHandler
 	sceSblSmSchedProxyRegisterIntrHandler
 	sceSblSmSchedProxyReadCry2Arm
 	sceSblSmSchedProxyWait

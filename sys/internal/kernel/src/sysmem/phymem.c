@@ -129,7 +129,7 @@ int SceSysmemForKernel_93D0A183(const PhyMemPartLogCallback *callbacks)
 }
 
 /* sceKernelGetPhyPageReset */
-void *SceSysmemForKernel_8FD11E02(void)
+void *sceKernelGetPhyPageReset(void)
 {
 	return g_uidManager->phyPageReset;
 }
@@ -173,7 +173,7 @@ void SceSysmemForKernel_DCEF10B2(PhyMemPart *part)
 }
 
 /* sceKernelGetPhyMemPartAll */
-int SceSysmemForKernel_021053DD(SceUInt32 visibility, SceUID *vector, SceSize vectorSize,
+int sceKernelGetPhyMemPartAll(SceUInt32 visibility, SceUID *vector, SceSize vectorSize,
 				SceUInt32 *count)
 {
 	if (count == NULL)
@@ -286,7 +286,7 @@ static inline SceInt32 PhyMemPartRefer(PhyMemPart *part)
 
 static inline SceInt32 PhyMemPartRelease(PhyMemPart *part)
 {
-	SceInt32 count = SceCpuForDriver_2A71B03C((SceInt32 *)&part->refCount);
+	SceInt32 count = sceKernelAtomicDecIfPositive32((SceInt32 *)&part->refCount);
 
 	SCE_DBG_ASSERT_CHECK_FUNC(count > 0, 1499, "PhyMemPartRelease");
 	return count;
@@ -473,8 +473,8 @@ static inline void PhyMemPartResetFreeSize(PhyMemPart *part, SceSize psize,
 	part->freeSize = psize;
 	part->freeSizeMin = psize;
 	for (; segment != NULL; segment = segment->next) {
-		SceCpuForDriver_5F6A8743(&part->freeSize, segment->psize);
-		SceCpuForDriver_5F6A8743(&part->freeSizeMin, segment->psize);
+		sceKernelAtomicAddAndGet32(&part->freeSize, segment->psize);
+		sceKernelAtomicAddAndGet32(&part->freeSizeMin, segment->psize);
 	}
 }
 
@@ -502,8 +502,8 @@ int PhyMemPartInitCdramRaw(PhyMemPart *part, uintptr_t pbase, SceSize psize)
 	part->useCount = 1;
 	if (segment != NULL) {
 		do {
-			SceCpuForDriver_5F6A8743(&part->freeSize, segment->psize);
-			SceCpuForDriver_5F6A8743(&part->freeSizeMin, segment->psize);
+			sceKernelAtomicAddAndGet32(&part->freeSize, segment->psize);
+			sceKernelAtomicAddAndGet32(&part->freeSizeMin, segment->psize);
 			segment = segment->next;
 		} while (segment != NULL);
 		flags = part->flags | PHYMEM_PART_ACTIVE;
@@ -647,13 +647,13 @@ int PhyMemPartGetFreeSizeRaw(PhyMemPart *part, SceSize *freeSize)
 /* the free size less size, lowering the low-water mark with it */
 static inline void PhyMemPartSubFreeSize(PhyMemPart *part, SceSize size)
 {
-	SceInt32 freeSize = SceCpuForDriver_A4884C4E(&part->freeSize, size), low;
+	SceInt32 freeSize = sceKernelAtomicSubAndGet32(&part->freeSize, size), low;
 
 	do {
 		low = part->freeSizeMin;
 		if (low <= freeSize)
 			break;
-	} while (SceCpuForDriver_CDA96E81(&part->freeSizeMin, low, freeSize) != low);
+	} while (sceKernelAtomicCompareAndSet32(&part->freeSizeMin, low, freeSize) != low);
 }
 
 #if FW_DEBUG
@@ -688,7 +688,7 @@ int PhyMemPartCdramFreeCore(PhyMemPart *part, uintptr_t pa, SceSize size)
 	if (part->flags & PHYMEM_PART_ACTIVE) {
 		ret = PhyMemLowFree(part->segments->phyMemLow, pa, size);
 		if (ret >= 0) {
-			SceCpuForDriver_5F6A8743(&part->freeSize, size);
+			sceKernelAtomicAddAndGet32(&part->freeSize, size);
 #if FW_DEBUG
 			PhyMemPartCheckAndFixFreeSizeRaw(part, "Add", size);
 #endif
@@ -1324,7 +1324,7 @@ static inline PhyPage *PhyMemPartCpuCacheAllocRaw(PhyMemPart *part)
 	PhyPage *page;
 	int intr, i;
 
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (part->cpuCache != NULL) {
 		cache = &part->cpuCache[SceCpuId()];
 		if (cache != NULL && cache->count != 0) {
@@ -1535,7 +1535,7 @@ static inline int PhyMemPartCpuCacheFreeRaw(PhyMemPart *part, PhyPage *page)
 	PhyMemPartCpuCache *cache;
 	int intr, i;
 
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	if (part->cpuCache != NULL) {
 		cache = &part->cpuCache[SceCpuId()];
 		if (cache != NULL && cache->count < cache->max) {
@@ -1783,7 +1783,7 @@ int PhyMemPartFreePhyPage(PhyMemPart *part, PhyPage *page)
 		ret = SCE_KERNEL_ERROR_ERROR;
 		goto unlock;
 	}
-	SceCpuForDriver_5F6A8743(&part->freeSize, size);
+	sceKernelAtomicAddAndGet32(&part->freeSize, size);
 #if FW_DEBUG
 	PhyMemPartCheckAndFixFreeSizeRaw(part, "Add", size);
 #endif
@@ -1956,14 +1956,14 @@ int CreatePhyMemPartByPbase(const char *name, SceUInt32 type, uintptr_t pbase, S
 	}
 	opt.size = sizeof(opt);
 	opt.align = 0x20;
-	part = SceSysmemForKernel_CF3C3F7A(sizeof(*part), &opt);
+	part = sceKernelAllocWithOpt(sizeof(*part), &opt);
 	if (part == NULL)
 		return SCE_KERNEL_ERROR_ERROR;
 	part->type = type;
 	part->refCount = 0;
 	strncpy(part->name, name, sizeof(part->name) - 1);
 	part->name[sizeof(part->name) - 1] = '\0';
-	part->cpuCache = SceSysmemForKernel_CF3C3F7A(sizeof(*part->cpuCache) * PHYMEM_CPU_COUNT,
+	part->cpuCache = sceKernelAllocWithOpt(sizeof(*part->cpuCache) * PHYMEM_CPU_COUNT,
 						     &opt);
 	part->segments = PhyMemSegmentCreate();
 	part->segments->next = NULL;
@@ -2004,7 +2004,7 @@ int CreatePhyMemPartByPbase(const char *name, SceUInt32 type, uintptr_t pbase, S
 			}
 			if (segment != part->segments) {
 				prev->next = segment;
-				SceCpuForDriver_5F6A8743(&part->freeSize, segment->psize);
+				sceKernelAtomicAddAndGet32(&part->freeSize, segment->psize);
 			}
 			psize -= chunkSize;
 			SCE_DBG_PRINTF(0xb, 3458, "prest=0x%08x\n", psize);
@@ -2036,7 +2036,7 @@ created:
 	PhyMemPartRelease(part);
 	*out = part;
 	part->base.sce_class = s_phyMemPartClass;
-	part->uid = SceSysmemForKernel_6DB44A42(s_phyMemPartClass, part->name, part);
+	part->uid = sceGUIDRegister(s_phyMemPartClass, part->name, part);
 #if FW_DEBUG
 	if (s_phyMemPartHook != NULL)
 		s_phyMemPartHook->create(*out, __builtin_return_address(0));
@@ -2113,10 +2113,10 @@ int sceKernelDeletePhyMemPart(PhyMemPart *part)
 	if (s_phyMemPartHook != NULL)
 		s_phyMemPartHook->delete(part, __builtin_return_address(0));
 #endif
-	if (SceCpuForDriver_A4884C4E(&part->useCount, 1) > 0)
+	if (sceKernelAtomicSubAndGet32(&part->useCount, 1) > 0)
 		return 0;
 	/* no reference may be left */
-	while ((ret = SceCpuForDriver_CDA96E81((SceInt32 *)&part->refCount, 0, -1)) != 0)
+	while ((ret = sceKernelAtomicCompareAndSet32((SceInt32 *)&part->refCount, 0, -1)) != 0)
 		SCE_DBG_PRINTF(3, 4845, "PhyMemPartInvalidate failed 0x%08x, 0x%08x\n", ret,
 			       part->refCount);
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
@@ -2163,7 +2163,7 @@ int sceKernelResetPhyMemPart(PhyMemPart *part)
 	SCE_DBG_PRINTF_LEVEL(2, 0xb, 4909, "(%p [%s])\n", part, PhyMemPartGetName(part));
 	if (part == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (SceCpuForDriver_A4884C4E(&part->useCount, 1) > 0)
+	if (sceKernelAtomicSubAndGet32(&part->useCount, 1) > 0)
 		return 0;
 	while (part->refCount != 0)
 		SCE_DBG_PRINTF(3, 4929, "PhyMemPartGetARCount failed 0x%08x\n", part->refCount);
@@ -2233,7 +2233,7 @@ int sceKernelGrowPhyMemPartByPbase(PhyMemPart *part, uintptr_t pbase, SceSize ps
 			ret = PhyMemPartAddFreePhyPage1MRaw(part,
 							    PhyMemSegmentGetFreePhyPage1M(segment));
 			if (ret >= 0) {
-				SceCpuForDriver_5F6A8743(&part->freeSize, psize);
+				sceKernelAtomicAddAndGet32(&part->freeSize, psize);
 #if FW_DEBUG
 				PhyMemPartCheckAndFixFreeSizeRaw(part, "Add", psize);
 #endif
@@ -2263,13 +2263,13 @@ out:
 }
 
 /* name unknown: grow anywhere */
-int SceSysmemForKernel_5B434019(PhyMemPart *part, SceSize psize)
+int sceKernelGrowPhyMemPart(PhyMemPart *part, SceSize psize)
 {
 	return sceKernelGrowPhyMemPartByPbase(part, 0, psize);
 }
 
 /* name unknown: a page or block (flags 0x10) */
-int SceSysmemForKernel_B488C82E(PhyMemPart *part, SceSize size, PhyPage **page)
+int sceKernelAllocPhyPage(PhyMemPart *part, SceSize size, PhyPage **page)
 {
 	if (part == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -2280,7 +2280,7 @@ int SceSysmemForKernel_B488C82E(PhyMemPart *part, SceSize size, PhyPage **page)
 }
 
 /* name unknown */
-int SceSysmemForKernel_193A9D2F(PhyMemPart *part, PhyPage *page)
+int sceKernelFreePhyPage(PhyMemPart *part, PhyPage *page)
 {
 	if (page == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -2293,7 +2293,7 @@ SceInt32 SceSysmemForKernel_6D563733(PhyMemPart *part)
 	SceInt32 count;
 
 	PhyMemPartRefer(part);
-	count = SceCpuForDriver_5F6A8743(&part->useCount, 1);
+	count = sceKernelAtomicAddAndGet32(&part->useCount, 1);
 	PhyMemPartRelease(part);
 	return count;
 }

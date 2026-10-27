@@ -44,11 +44,11 @@ static int kickTx(struct NetDriver *driver, int argument)
 
 	if (!a->active)
 		return RTL_ERROR(4);
-	SceCpuForDriver_5F6A8743(&a->references, 1);
+	sceKernelAtomicAddAndGet32(&a->references, 1);
 	old = __atomic_fetch_add(&a->pendingTx, 1, __ATOMIC_SEQ_CST);
 	if (!old)
 		sceKernelSetEventFlag(a->workerEvent, 8);
-	SceCpuForDriver_A4884C4E(&a->references, 1);
+	sceKernelAtomicSubAndGet32(&a->references, 1);
 	return 0;
 }
 
@@ -60,8 +60,8 @@ static int start(struct NetDriver *driver, void *memoryBase)
 	(void)memoryBase;
 	if (!a->active)
 		return RTL_ERROR(4);
-	SceCpuForDriver_5F6A8743(&a->references, 1);
-	SceCpuForDriver_A4884C4E(&a->references, 1);
+	sceKernelAtomicAddAndGet32(&a->references, 1);
+	sceKernelAtomicSubAndGet32(&a->references, 1);
 	return 0;
 }
 
@@ -74,8 +74,8 @@ static int stop(struct NetDriver *driver, void *memoryBase, int memorySize)
 	(void)memorySize;
 	if (!a->active)
 		return RTL_ERROR(4);
-	SceCpuForDriver_5F6A8743(&a->references, 1);
-	SceCpuForDriver_A4884C4E(&a->references, 1);
+	sceKernelAtomicAddAndGet32(&a->references, 1);
+	sceKernelAtomicSubAndGet32(&a->references, 1);
 	return 0;
 }
 
@@ -164,7 +164,7 @@ static int multicast(struct NetDriver *driver, const unsigned char *addresses,
 
 	if (!a->active)
 		return RTL_ERROR(4);
-	SceCpuForDriver_5F6A8743(&a->references, 1);
+	sceKernelAtomicAddAndGet32(&a->references, 1);
 	lockFastMutex(&a->mutex);
 	if ((!addresses && length) || (addresses && length % 6)) {
 		ret = RTL_ERROR(1);
@@ -197,7 +197,7 @@ static int multicast(struct NetDriver *driver, const unsigned char *addresses,
 		ret = rtlWriteRegister(a, 0xcd04, 0x10f, 4, __builtin_bswap32(hash[0]));
 out:
 	sceKernelUnlockFastMutex(&a->mutex);
-	SceCpuForDriver_A4884C4E(&a->references, 1);
+	sceKernelAtomicSubAndGet32(&a->references, 1);
 	return ret;
 }
 
@@ -340,7 +340,7 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 	}
 	if (!a->active)
 		return RTL_ERROR(4);
-	SceCpuForDriver_5F6A8743(&a->references, 1);
+	sceKernelAtomicAddAndGet32(&a->references, 1);
 	switch (command) {
 	case NET_DRIVER_CTL_SET_LINK:
 		lockFastMutex(&a->mutex);
@@ -371,7 +371,7 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 	}
 out:
 	/* The original also decrements for GET_LINK and an invalid length. */
-	SceCpuForDriver_A4884C4E(&a->references, 1);
+	sceKernelAtomicSubAndGet32(&a->references, 1);
 	return ret;
 }
 

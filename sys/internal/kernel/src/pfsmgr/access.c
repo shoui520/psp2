@@ -225,14 +225,14 @@ int pfsAccessBegin(ScePfsPmi *pmi, int op, SceUInt32 arg, int *oldPermission)
 
 grant:
 	*oldPermission = sceKernelSetThreadAccessLevel(PFS_PERMISSION);
-	SceCpuForDriver_5F6A8743(&g_pfsBusy, 1);
+	sceKernelAtomicAddAndGet32(&g_pfsBusy, 1);
 	return 0;
 }
 
 void pfsAccessEnd(int oldPermission)
 {
 	sceKernelSetThreadAccessLevel(oldPermission);
-	SceCpuForDriver_A4884C4E(&g_pfsBusy, 1);
+	sceKernelAtomicSubAndGet32(&g_pfsBusy, 1);
 }
 
 const ScePfsModeInfo *pfsModeInfo(SceUInt32 mode)

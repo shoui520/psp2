@@ -134,7 +134,7 @@ int sceBbmcUsbExtIfStart(int mode)
 		if (ret < 0)
 			goto fail;
 	}
-	ret = SceUsbServForDriver_7AD36284(2, 1);
+	ret = sceUsbServMacSelect(2, 1);
 	failed = (unsigned int)ret >> 31;
 	if (ret == (int)0x80248001)
 		failed = 0;

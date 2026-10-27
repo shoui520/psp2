@@ -37,14 +37,11 @@ int sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *info);
 int SceModulemgrForDriver_02D3D0C1(SceUID pid, SceUID modid, SceSize args, void *argp,
 				   SceUInt32 flags, const SceKernelUnloadModuleOpt *opt,
 				   int *status);
-/* vitasdk: ksceKernelStopUnloadModule */
-int SceModulemgrForDriver_03B30B7E(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+int sceKernelStopUnloadModule(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 				   const SceKernelUnloadModuleOpt *opt, int *status);
-/* vitasdk: ksceKernelStopModule */
-int SceModulemgrForDriver_100DAEB9(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+int sceKernelStopModule(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 				   const SceKernelStopModuleOpt *opt, int *status);
-/* vitasdk: ksceKernelLoadStartModule */
-SceUID SceModulemgrForDriver_189BFBBB(const char *path, SceSize args, void *argp, SceUInt32 flags,
+SceUID sceKernelLoadStartModule(const char *path, SceSize args, void *argp, SceUInt32 flags,
 				      const SceKernelLoadModuleOpt *opt, int *status);
 /* vitasdk: ksceKernelGetModuleInfoByAddr */
 int SceModulemgrForDriver_1D9E0F7E(SceUInt32 addr, SceKernelModuleInfo *info);
@@ -71,7 +68,7 @@ int SceModulemgrForKernel_2F82EEBC(void);	/* vitasdk: ksceKernelModuleUnloadMySe
 int SceModulemgrForKernel_337A3908(SceUID modid, SceUInt32 *fingerprint);
 /* vitasdk: ksceKernelGetModuleCB */
 int SceModulemgrForKernel_37512E29(SceUID modid, SceModuleCB **cb);
-int SceModulemgrForKernel_3FE47DDF(SceUID pid, SceUID modid, SceSize args, void *argp,
+int sceKernelStartRemoteModule(SceUID pid, SceUID modid, SceSize args, void *argp,
 				   SceUInt32 flags, const SceKernelStartModuleOpt *opt,
 				   int *status);	/* vitasdk: ksceKernelStartModuleForPid */
 /* vitasdk: ksceKernelLoadModuleForPid */
@@ -86,9 +83,8 @@ int SceModulemgrForKernel_79E761B5(SceUID modid, char *path, SceSize size);
 /* vitasdk: ksceKernelGetModuleEntryPoint */
 SceModuleEntry SceModulemgrForKernel_7B302C5D(SceUID modid);
 int SceModulemgrForKernel_ACBC97C9(void (*callback)(SceModuleCB *cb));
-/* vitasdk: ksceKernelGetModuleInfo */
-int SceModulemgrForKernel_DAA90093(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
-int SceModulemgrForKernel_E71530D7(SceUID pid);	/* vitasdk: ksceKernelUnloadProcessModules */
+int sceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
+int sceKernelUnloadProcessModules(SceUID pid);
 /* vitasdk: ksceKernelGetModuleIsSharedByAddr */
 int SceModulemgrForKernel_F1DE6949(SceUID pid, SceUInt32 addr);
 /* vitasdk: ksceKernelUnloadModuleForPid */
@@ -132,6 +128,7 @@ SceUID _sceKernelLoadModule(const char *path, SceUInt32 flags, const SceKernelLo
 int _sceKernelUnloadModule(SceUID modid, SceUInt32 flags, const SceKernelUnloadModuleOpt *uopt);
 SceUInt32 sceKernelGetAllowedSdkVersionOnSystem(void);
 SceUID sceKernelGetModuleIdByAddrForUser(const void *addr);
+int sceKernelGetModuleInfoForUser(SceUID modid, SceKernelModuleInfo *uinfo);
 int sceKernelInhibitLoadingModule(SceUInt32 flags);
 int sceKernelIsCalledFromSysModule(const void *addr);
 

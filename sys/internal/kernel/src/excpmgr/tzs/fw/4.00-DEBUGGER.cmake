@@ -53,7 +53,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForTZS_0D799DAE
 	SceDebugForTZS_618F89E6
 	SceDebugForTZS_D26EB4BB
-	SceDebugForTZS_F851BA4F
+	sceKernelGetAssertLevel
 	memcpy
 	__stack_chk_fail
 )

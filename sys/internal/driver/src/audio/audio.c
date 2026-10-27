@@ -116,7 +116,7 @@ int audioCleanupProcess(SceUID pid, ProcEventParam *param, void *common)
 	AudioMainPort *port;
 	int count;
 
-	if (SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
+	if (sceKernelGetRemoteKPLS(pid, audioStorageKey,
 						   (void **)&storage, 1) >= 0) {
 		AudioProcessLocalStorage *process = storage;
 
@@ -277,7 +277,7 @@ int audioInitializeProcess(SceUID pid, ProcEventCreateParam *param, void *common
 	AudioProcessLocalStorage *storage;
 	char titleId[32];
 
-	if (SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
+	if (sceKernelGetRemoteKPLS(pid, audioStorageKey,
 						   (void **)&storage, 1) >= 0) {
 		memset(storage, 0, sizeof(*storage));
 		storage->direct[0].eventMask = 64;
@@ -319,7 +319,7 @@ int audioProcessEventHandler(SceUID pid, int event, ProcEventParam *param,
 	int channel;
 	unsigned int remaining;
 
-	if (SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
+	if (sceKernelGetRemoteKPLS(pid, audioStorageKey,
 						   (void **)&storage, 1) < 0)
 		return 0;
 	switch (event) {
@@ -469,7 +469,7 @@ int SceAudioForDriver_3440C1CA(SceUID pid, int type, int adopt,
 	result = sceGUIDReferObject(pid, NULL);
 	if (result < 0)
 		goto unlock;
-	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
+	result = sceKernelGetRemoteKPLS(pid, audioStorageKey,
 							(void **)&storage, 1);
 	if (result < 0)
 		goto release;
@@ -567,7 +567,7 @@ int sceAudioOutSetAdopt_forUser(int type, int adopt, int duration, int wait)
 	result = sceGUIDReferObject(pid, NULL);
 	if (result < 0)
 		goto unlock;
-	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
+	result = sceKernelGetRemoteKPLS(pid, audioStorageKey,
 							(void **)&storage, 1);
 	if (result < 0)
 		goto release;
@@ -796,7 +796,7 @@ selectedMain:
 	direct->volume[1] = 0x8000;
 	direct->volume[0] = 0x8000;
 	direct->len = len;
-	direct->deadline = SceProcessmgrForDriver_02179E12();
+	direct->deadline = sceKernelGetProcessTimeLowCore();
 	direct->compress = compress;
 	adopted = audioAdoptedPorts[direct->channel];
 	if (adopted == NULL) {
@@ -1183,7 +1183,7 @@ int _audioSetptrMain(int port, const void *buf)
 					freq, 0);
 			} else {
 				result = audioDispatchDmaBuffer(0, channel + 1, 0);
-				direct->deadline = SceProcessmgrForDriver_02179E12();
+				direct->deadline = sceKernelGetProcessTimeLowCore();
 			}
 			goto out;
 		}
@@ -1250,7 +1250,7 @@ int _audioSetptrMain(int port, const void *buf)
 				audioOutputPhysicalAddress[channel][audioOutputBufferIndex[channel]],
 				channel + 1, samples);
 			{
-				uint32_t time = SceProcessmgrForDriver_02179E12();
+				uint32_t time = sceKernelGetProcessTimeLowCore();
 
 				direct->deadline = time + (1000000U * samples) / freq;
 			}
@@ -1680,7 +1680,7 @@ int SceAudioForDriver_629261CD(SceUID pid, int mask, unsigned int volume,
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		return result;
-	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
+	result = sceKernelGetRemoteKPLS(pid, audioStorageKey,
 							 (void **)&storage, 1);
 	if (result >= 0) {
 		if ((mask & 2) != 0) {
@@ -1717,7 +1717,7 @@ int SceAudioForDriver_B05D5B28(SceUID pid, int type)
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		return result;
-	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
+	result = sceKernelGetRemoteKPLS(pid, audioStorageKey,
 							 (void **)&storage, 1);
 	if (result >= 0) {
 		if (type == 1)
@@ -1757,7 +1757,7 @@ int sceAudioOutSetPortVolume_forUser(int mask, unsigned int volume, int duration
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
+	result = sceKernelGetRemoteKPLS(pid, audioStorageKey,
 							 (void **)&storage, 1);
 	if (result >= 0) {
 		if ((mask & 2) != 0) {
@@ -1798,7 +1798,7 @@ int sceAudioOutGetPortVolume_forUser(int type)
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
+	result = sceKernelGetRemoteKPLS(pid, audioStorageKey,
 							 (void **)&storage, 1);
 	if (result >= 0) {
 		if (type == 1)

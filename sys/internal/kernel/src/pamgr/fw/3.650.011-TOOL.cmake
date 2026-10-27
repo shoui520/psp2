@@ -86,9 +86,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCpuId
 	SceCpuForKernel_FD54A91D
 	SceThreadmgrForKernel_170F69D6
-	SceThreadmgrForKernel_1D2A6815
-	SceThreadmgrForKernel_7B3368F1
-	SceThreadmgrForKernel_7F831213
+	sceKernelPMonThreadClearEnableCounter
+	sceKernelPMonThreadSetCounter
+	sceKernelPMonThreadSetEnableCounter
 	SceThreadmgrForKernel_9605DF7D
 	SceThreadmgrForKernel_A3975A5A
 	SceThreadmgrForKernel_F885ECCA
@@ -108,7 +108,7 @@ set(MODULE_IMPORT_FUNCS
 	memcpy
 	__stack_chk_fail
 	sceKernelFreeMemBlock
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUser
 	sceKernelVAtoPA
 	SceSysmemForDriver_A7C0D1FC
@@ -117,7 +117,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocMemBlockForKernel
 	SceSysmemForKernel_4233C16D
 	SceSysmemForKernel_85571907
-	SceSysrootForKernel_403B509E
+	sceKernelSysrootGetKermitRevision
 	sceKernelApiDeclareTypeUInt64
 	sceKernelApiDeclareTypeUInt32
 	SceSysrootForDriver_C94C76FA
@@ -125,9 +125,9 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_CE7A2207
 	sceKernelRegisterProcEventHandler
 	sceKernelSetSyscallTraceFlag
-	SceProcessmgrForDriver_54D469E2
-	SceProcessmgrForDriver_61B9B6FA
-	SceProcessmgrForDriver_B1C3EFCA
+	sceKernelGetSyscallTraceFlag
+	sceKernelSetInitialPMCR
+	sceKernelSetInitialPMUSERENR
 	SceSblACMgrForKernel_49509A83
 	SceQafMgrForDriver_382C71E8
 	sceKernelDisableIntr

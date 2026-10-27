@@ -390,7 +390,7 @@ int GetCommRate(struct NetDriver *driver, unsigned int command,
 	SceUInt32 startBusy, packetRequest;
 	int result;
 
-	SceCpuForDriver_5F6A8743((SceInt32 *)&interface->activeCalls, 1);
+	sceKernelAtomicAddAndGet32((SceInt32 *)&interface->activeCalls, 1);
 	if (command == 0x40800002) {
 		result = (int)0x8041810c;
 	} else if (command <= 0x40800002) {
@@ -475,7 +475,7 @@ int GetCommRate(struct NetDriver *driver, unsigned int command,
 			bbmcLeaveCS(&manager->mutex);
 		}
 	}
-	SceCpuForDriver_A4884C4E((SceInt32 *)&interface->activeCalls, 1);
+	sceKernelAtomicSubAndGet32((SceInt32 *)&interface->activeCalls, 1);
 	return result;
 }
 

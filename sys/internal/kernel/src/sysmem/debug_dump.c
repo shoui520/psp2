@@ -56,7 +56,7 @@ extern volatile SceKernelSpinlock s_debugPrintLock;
 /* a failed assertion or a panic, as Assert/Panic hand it to DebugFaultDump */
 typedef struct DebugFault {
 	int kind;
-	int interrupts;			/* SceCpuForDriver_821FC0EE's result */
+	int interrupts;			/* sceKernelCpuSuspendIntr's result */
 	const SceKernelDebugInfo *info;
 	const void *caller;		/* where Assert/Panic itself was called */
 	const void *lr;			/* the return address the caller passed */
@@ -409,7 +409,7 @@ void DebugFaultDump(void *argument)
 		s_crashDumpHandler(DEBUG_DUMP_FAULT, size, report);
 	SceSysrootForDriver_CC7A0E63(DEBUG_DUMP_FAULT, size, report);
 	if (s_crashDumpEnabled) {
-		void *sysroot = SceSysrootForKernel_3E455842();
+		void *sysroot = sceKernelSysrootGetSysroot();
 		SceUInt32 ttbr0, vbar;
 
 		ttbr0 = readTtbr0();
@@ -445,7 +445,7 @@ void sceKernelAssert(SceBool cond, const SceKernelDebugInfo *info, const void *l
 
 	if (cond)
 		return;
-	fault.interrupts = SceCpuForDriver_821FC0EE();
+	fault.interrupts = sceKernelCpuSuspendIntr();
 	fault.kind = DEBUG_FAULT_ASSERT;
 	fault.info = info;
 	fault.caller = __builtin_return_address(0);
@@ -463,7 +463,7 @@ int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDeb
 
 	va_start(fault.arguments, fmt);
 	if (!cond && (int)level <= (int)s_assertLevel) {
-		fault.interrupts = SceCpuForDriver_821FC0EE();
+		fault.interrupts = sceKernelCpuSuspendIntr();
 		fault.kind = DEBUG_FAULT_ASSERT;
 		fault.info = info;
 		fault.caller = __builtin_return_address(0);
@@ -478,7 +478,7 @@ void SceDebugForDriver_391B5B74(const SceKernelDebugInfo *info, const void *lr)
 {
 	DebugFault fault;
 
-	fault.interrupts = SceCpuForDriver_821FC0EE();
+	fault.interrupts = sceKernelCpuSuspendIntr();
 	fault.kind = DEBUG_FAULT_PANIC;
 	fault.info = info;
 	fault.caller = __builtin_return_address(0);
@@ -494,7 +494,7 @@ void SceDebugForDriver_00CCE39C(const SceKernelDebugInfo *info, const void *lr, 
 	DebugFault fault;
 
 	va_start(fault.arguments, fmt);
-	fault.interrupts = SceCpuForDriver_821FC0EE();
+	fault.interrupts = sceKernelCpuSuspendIntr();
 	fault.kind = DEBUG_FAULT_PANIC;
 	fault.info = info;
 	fault.caller = __builtin_return_address(0);
@@ -621,7 +621,7 @@ void SceDebugForKernel_CCABDD98(const SceKernelDebugInfo *info,
 	SceSize size;
 	int cpu;
 
-	SceCpuForDriver_821FC0EE();
+	sceKernelCpuSuspendIntr();
 	cpu = sceKernelCpuId();
 	if (context->thread != NULL)
 		pid = context->thread->processId;
@@ -645,7 +645,7 @@ void SceDebugForKernel_CCABDD98(const SceKernelDebugInfo *info,
 		s_crashDumpHandler(DEBUG_DUMP_EXCEPTION, size, report);
 	SceSysrootForDriver_CC7A0E63(DEBUG_DUMP_EXCEPTION, size, report);
 	if (s_crashDumpEnabled) {
-		void *sysroot = SceSysrootForKernel_3E455842();
+		void *sysroot = sceKernelSysrootGetSysroot();
 		SceUInt32 ttbr0, vbar;
 
 		ttbr0 = readTtbr0();
@@ -747,7 +747,7 @@ int SceDebugForDriver_912CF2BA(SceUID pid, SceUID tid, SceUInt16 type, SceUInt16
 		return SCE_ERROR_ERRNO_EINVAL;
 	if (size > EVENT_LOG_DATA_MAX)
 		return SCE_ERROR_ERRNO_EDOM;
-	flags = SceCpuForDriver_821FC0EE();
+	flags = sceKernelCpuSuspendIntr();
 	cpu = DebugCpuId();
 	index = s_eventLogNext[cpu];
 	entrySize = (size + offsetof(EventLogEntry, data) + 3) & ~3;
@@ -790,7 +790,7 @@ SceSSize SceDebugForDriver_CC5365D3(void *buffer, SceSize size, SceUInt32 *count
 
 	if (buffer == NULL)
 		return SCE_ERROR_ERRNO_EINVAL;
-	flags = SceCpuForDriver_821FC0EE();
+	flags = sceKernelCpuSuspendIntr();
 	for (entry = s_eventLog; entry != &s_eventLog[EVENT_LOG_ENTRIES]; entry++) {
 		entrySize = entry->size;
 		if (entrySize - offsetof(EventLogEntry, data) <= EVENT_LOG_DATA_MAX &&

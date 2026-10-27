@@ -114,8 +114,7 @@ int SceSysconForDriver_C2224E82(SceSysconPacket *packet, uint32_t flags,
 			   void *argp);	/* vitasdk: ksceSysconCmdExecAsync */
 int SceSysconForDriver_FF86F4C5(void);	/* vitasdk: ksceSysconGetBaryonVersion */
 int SceSysconForDriver_CBD6D8BC(void);	/* vitasdk: ksceSysconGetHardwareInfo */
-/* vitasdk: ksceSysconCtrlDeviceReset */
-int SceSysconForDriver_40FF3898(uint32_t device, uint32_t mode);
+int sceSysconCtrlDeviceReset(uint32_t device, uint32_t mode);
 int SceSysconForDriver_063425AE(uint32_t value);
 int SceSysconForDriver_76506A57(uint32_t mode, uint32_t offset,
 				 void *data, uint32_t size);
@@ -221,33 +220,29 @@ int SceSysconForDriver_EBE3262C(void);
 int SceSysconForDriver_F162D3D6(uint32_t *value);
 int SceSysconForDriver_F99BC858(uint32_t *value);
 int SceSysconForDriver_FB37D7AD(uint32_t *value);
-/* vitasdk: ksceSysconBatteryExecBLCommand */
-int SceSysconForDriver_74B2AB55(uint32_t offset);
-/* vitasdk: ksceSysconBatteryReadBLCommand */
-int SceSysconForDriver_448DAFF1(uint32_t offset, uint32_t first, uint32_t second, void *data, uint32_t size);
-int SceSysconForDriver_87DA378D(void);	/* vitasdk: ksceSysconBatterySWReset */
-/* vitasdk: ksceSysconBatterySetBLCommand */
-int SceSysconForDriver_E4F29744(uint32_t offset, uint32_t mode, const void *data, uint32_t size);
-int SceSysconForDriver_2CEF078E(void);	/* vitasdk: ksceSysconBatteryStartBLMode */
-int SceSysconForDriver_E4AE7852(void);	/* vitasdk: ksceSysconBatteryStopBLMode */
+int sceSysconBatteryExecBLCommand(uint32_t offset);
+int sceSysconBatteryReadBLCommand(uint32_t offset, uint32_t first, uint32_t second, void *data, uint32_t size);
+int sceSysconBatterySWReset(void);
+int sceSysconBatterySetBLCommand(uint32_t offset, uint32_t mode, const void *data, uint32_t size);
+int sceSysconBatteryStartBLMode(void);
+int sceSysconBatteryStopBLMode(void);
 int SceSysconForDriver_A4968B8C(void);	/* vitasdk: ksceSysconBeginConfigstorageTransaction */
 int SceSysconForDriver_3843D657(uint32_t value);	/* vitasdk: ksceSysconClearTemperatureLog */
 int sceSysconCmdSync(SceSysconPacket *packet, int noWait);
 int SceSysconForDriver_7B9B3617(void);	/* vitasdk: ksceSysconCommitConfigstorageTransaction */
-int SceSysconForDriver_8D1D97E8(uint32_t value);	/* vitasdk: ksceSysconCtrlAccPower */
+int sceSysconCtrlAccPower(uint32_t value);
 int SceSysconForDriver_B1F88B11(uint32_t value);	/* vitasdk: ksceSysconCtrlDevKitUsbPower */
 int SceSysconForDriver_727F985A(uint32_t mode);	/* vitasdk: ksceSysconCtrlDolceLED */
 int SceSysconForDriver_3274A925(uint32_t value);	/* vitasdk: ksceSysconCtrlDolceUsbPower */
 int SceSysconForDriver_62155962(uint32_t value);	/* vitasdk: ksceSysconCtrlHdmiCecPower */
-int SceSysconForDriver_04EC7579(uint32_t led, int enabled);	/* vitasdk: ksceSysconCtrlLED */
+int sceSysconCtrlLED(uint32_t led, int enabled);
 /* vitasdk: ksceSysconCtrlManualChargeMode */
 int SceSysconForDriver_C6A2C9EF(uint32_t value);
 int SceSysconForDriver_4946538A(uint32_t value);	/* vitasdk: ksceSysconEnableHibernateIO */
 int SceSysconForDriver_FCC3E8EE(void);	/* vitasdk: ksceSysconEndConfigstorageTransaction */
 /* vitasdk: ksceSysconGetBatteryCalibData */
 int SceSysconForDriver_9ADC9936(uint32_t *first, uint32_t *second, uint32_t *third, uint32_t *fourth);
-/* vitasdk: ksceSysconGetBatteryVersion */
-int SceSysconForDriver_68E0031E(uint32_t *first, uint32_t *second, uint32_t *third);
+int sceSysconGetBatteryVersion(uint32_t *first, uint32_t *second, uint32_t *third);
 /* vitasdk: ksceSysconGetHardwareInfo2 */
 int SceSysconForDriver_965C68C3(uint32_t *information);	/* one 16-byte hardware-information buffer */
 int SceSysconForDriver_701535FC(uint32_t *information);	/* vitasdk: ksceSysconGetLogInfo */
@@ -255,10 +250,9 @@ int SceSysconForDriver_4FEC564C(uint32_t *value);	/* vitasdk: ksceSysconGetManua
 /* vitasdk: ksceSysconGetManufacturesStatus */
 int SceSysconForDriver_3E09A1F4(uint32_t *value);
 int SceSysconForDriver_D6F6D472(uint32_t *information);	/* vitasdk: ksceSysconGetMicroUsbInfo */
-int SceSysconForDriver_1503D6A0(uint32_t *information);	/* vitasdk: ksceSysconGetMultiCnInfo */
+int sceSysconGetMultiCnInfo(uint32_t *information);
 int SceSysconForDriver_3B354824(uint32_t *information);	/* vitasdk: ksceSysconGetTemperatureLog */
-/* vitasdk: ksceSysconGetTouchpanelDeviceInfo */
-int SceSysconForDriver_F492E69E(uint16_t *information);
+int sceSysconGetTouchpanelDeviceInfo(uint16_t *information);
 int SceSysconForDriver_EF810687(uint32_t *value);	/* vitasdk: ksceSysconGetUsbDetStatus */
 int SceSysconForDriver_34574496(void);	/* vitasdk: ksceSysconIduModeClear */
 int SceSysconForDriver_956D07CB(void);	/* vitasdk: ksceSysconIduModeSet */
@@ -272,23 +266,18 @@ int SceSysconForDriver_89C5CFD6(uint32_t offset, const void *data, uint32_t size
 int SceSysconForDriver_487D97F3(uint32_t offset, void *data, uint32_t size);
 int SceSysconForDriver_4E55CF5E(void);	/* vitasdk: ksceSysconLogStart */
 int SceSysconForDriver_9C0B1E61(void);	/* vitasdk: ksceSysconLogStartWaiting */
-/* vitasdk: ksceSysconNvsReadData */
-int SceSysconForDriver_ACAFA2B8(uint32_t offset, void *data, uint32_t size);
-int SceSysconForDriver_81A6060D(uint32_t value);	/* vitasdk: ksceSysconNvsSetRunMode */
-/* vitasdk: ksceSysconNvsWriteData */
-int SceSysconForDriver_10C9657A(uint32_t offset, const void *data, uint32_t size);
+int sceSysconNvsReadData(uint32_t offset, void *data, uint32_t size);
+int sceSysconNvsSetRunMode(uint32_t value);
+int sceSysconNvsWriteData(uint32_t offset, const void *data, uint32_t size);
 /* vitasdk: ksceSysconSendCommand */
 int SceSysconForDriver_E26488B9(uint32_t offset, const void *data, uint32_t size);
 int SceSysconForDriver_8D7724C0(void);	/* vitasdk: ksceSysconShowModeClear */
 int SceSysconForDriver_6D65B70F(void);	/* vitasdk: ksceSysconShowModeSet */
-/* vitasdk: ksceSysconUpdaterCalcChecksum */
-int SceSysconForDriver_D27C3D80(const uint8_t *data, uint32_t size, uint32_t *checksum);
-/* vitasdk: ksceSysconUpdaterExecFinalize */
-int SceSysconForDriver_C7747A63(const uint32_t *information, uint32_t size);
-/* vitasdk: ksceSysconUpdaterExecProgramming */
-int SceSysconForDriver_69AD76E4(uint32_t value);
-int SceSysconForDriver_B487C2FB(uint32_t mode);	/* vitasdk: ksceSysconUpdaterSetRunMode */
-int SceSysconForDriver_9B00BC7F(uint32_t segment);	/* vitasdk: ksceSysconUpdaterSetSegment */
+int sceSysconUpdaterCalcChecksum(const uint8_t *data, uint32_t size, uint32_t *checksum);
+int sceSysconUpdaterExecFinalize(const uint32_t *information, uint32_t size);
+int sceSysconUpdaterExecProgramming(uint32_t value);
+int sceSysconUpdaterSetRunMode(uint32_t mode);
+int sceSysconUpdaterSetSegment(uint32_t segment);
 /* vitasdk: ksceSysconVerifyConfigstorageScript */
 int SceSysconForDriver_CC6F90A8(uint32_t offset, const void *data, uint32_t size);
 
@@ -374,7 +363,7 @@ int SceSysconForDriver_93075DD1(uint32_t *value);
 int SceSysconForDriver_933D813F(uint32_t mode, uint32_t offset, uint32_t size);
 int SceSysconForDriver_93FE51F5(uint32_t *value);
 int SceSysconForDriver_94678881(SceSysconCallback callback, void *argument);
-int SceSysconForDriver_94AB13CC(uint32_t value);
+int sceSysconErnieShutdown(uint32_t value);
 int SceSysconForDriver_95975DD1(uint32_t index, uint16_t *value);
 int SceSysconForDriver_95C16911(uint32_t offset, const void *data, uint32_t size);
 int SceSysconForDriver_9A4F4B7C(void);
@@ -408,7 +397,7 @@ int SceSysconForDriver_C50568E9(void);
 int SceSysconForDriver_C51B4E6F(uint32_t *information);
 int SceSysconForDriver_C562AF3A(uint32_t *capacity);
 int SceSysconForDriver_CB41B531(uint32_t first, uint32_t second, uint32_t third, uint32_t fourth);
-int SceSysconForDriver_CBA836FF(const uint32_t *information, uint32_t size);
+int sceSysconUpdaterCheckSignature(const uint32_t *information, uint32_t size);
 int SceSysconForDriver_CCA56A16(uint32_t first, uint32_t second);
 int SceSysconForDriver_CCC71C28(uint32_t index, uint32_t value);
 int SceSysconForDriver_CD73079D(uint32_t *value);
@@ -431,16 +420,14 @@ int SceSysconForDriver_F93CF833(uint32_t *value);
 int SceSysconForDriver_F9584DC9(uint32_t mode, uint32_t offset, const void *data, uint32_t size);
 int SceSysconForDriver_FD65FFCB(uint32_t index, uint32_t mode);
 int SceSysconForDriver_FDB3AE9D(uint32_t *information);
-/* vitasdk: ksceSysconCtrlHostOutputViaDongle */
-int SceSysconForDriver_DECCB2B4(uint32_t value);
+int sceSysconCtrlHostOutputViaDongle(uint32_t value);
 int sceSysconCtrlRMRPower(uint32_t enabled);
 int sceSysconCtrlSdPower(uint32_t enabled);
 uint64_t SceSysconForDriver_4D588A0A(void);	/* vitasdk: ksceSysconGetBaryonTimestamp */
 int SceSysconForDriver_145F59A4(uint32_t *information);	/* vitasdk: ksceSysconGetControlsInfo */
-int SceSysconForDriver_483FAE05(void);	/* vitasdk: ksceSysconJigClosePort */
-int SceSysconForDriver_44A173F5(void);	/* vitasdk: ksceSysconJigOpenPort */
-/* vitasdk: ksceSysconJigSetConfig */
-int SceSysconForDriver_D24BF916(uint32_t first, uint32_t second);
+int sceSysconJigClosePort(void);
+int sceSysconJigOpenPort(void);
+int sceSysconJigSetConfig(uint32_t first, uint32_t second);
 /* vitasdk: ksceSysconReadCommand */
 int SceSysconForDriver_299B1CE7(uint32_t offset, void *data, uint32_t size);
 /* vitasdk: ksceSysconSetAlarmCallback */
@@ -449,7 +436,7 @@ int SceSysconForDriver_32418370(SceSysconCallback callback, void *argument);
 int SceSysconForDriver_F245CD6F(const SceSysconDebugHandlers *handlers);
 /* vitasdk: ksceSysconSetLowBatteryCallback */
 int SceSysconForDriver_3F0DB7C0(SceSysconCallback callback, void *argument);
-int SceSysconForDriver_8AAB6308(uint32_t port);	/* vitasdk: ksceSysconSetMultiCnPort */
+int sceSysconSetMultiCnPort(uint32_t port);
 int sceSysconSetPowerMode(uint32_t mode, uint32_t argument);
 /* vitasdk: ksceSysconSetThermalAlertCallback */
 int SceSysconForDriver_773B8126(SceSysconCallback callback, void *argument);

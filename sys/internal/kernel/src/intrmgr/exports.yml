@@ -39,7 +39,7 @@ SceKernelIntrMgr:
       nid: 0x9DF04041
       functions:
         - sceKernelDisableIntr: 0x180435EC
-        - SceIntrmgrForDriver_182EE3E3: 0x182EE3E3
+        - sceKernelIsIntrContext: 0x182EE3E3
         - sceKernelDisableSubIntr: 0x259C6D9E
         - sceKernelGenerateSoftIntr: 0x29F62500
         - sceKernelGetIntrTargetCpu: 0x353CFAAE

@@ -228,7 +228,7 @@ int GcAuthPsmactCreateChallenge(const GcAuthPsmactChallengeRequest *request)
 	output->header.trailerTag = 3;
 	output->header.format = 48;
 	output->header.packetBlocks = 4;
-	if (SceKernelUtilsForDriver_A773A6A8(output, 768, gcAuthPcactScratch.sha256) != 0) {
+	if (sceSha256Digest(output, 768, gcAuthPcactScratch.sha256) != 0) {
 		result = (int)0x808a080d;
 		goto finish;
 	}
@@ -339,7 +339,7 @@ int GcAuthPsmactVerifyActivation(const GcAuthPsmactVerifyRequest *request)
 	gcAuthPcactScratch.derivation.label[1] = 'S';
 	gcAuthPcactScratch.derivation.label[2] = 'M';
 	gcAuthPcactScratch.derivation.label[3] = '0';
-	if (SceKernelUtilsForDriver_83EFA1CC(gcAuthPsmHmacKey, 32,
+	if (sceHmacSha256Digest(gcAuthPsmHmacKey, 32,
 			&gcAuthPcactScratch.derivation, 37, masterKey) != 0)
 		goto hmacFailure;
 	for (index = 0; index != 16; index++)
@@ -351,7 +351,7 @@ int GcAuthPsmactVerifyActivation(const GcAuthPsmactVerifyRequest *request)
 	gcAuthPcactScratch.derivation.label[1] = 'S';
 	gcAuthPcactScratch.derivation.label[2] = 'M';
 	gcAuthPcactScratch.derivation.label[3] = '1';
-	if (SceKernelUtilsForDriver_83EFA1CC(masterKey, 32, &gcAuthPcactScratch.derivation,
+	if (sceHmacSha256Digest(masterKey, 32, &gcAuthPcactScratch.derivation,
 			37, output->stageOneKey) != 0)
 		goto hmacFailure;
 	for (index = 0; index != 16; index++)
@@ -363,7 +363,7 @@ int GcAuthPsmactVerifyActivation(const GcAuthPsmactVerifyRequest *request)
 	gcAuthPcactScratch.derivation.label[1] = 'S';
 	gcAuthPcactScratch.derivation.label[2] = 'M';
 	gcAuthPcactScratch.derivation.label[3] = '2';
-	if (SceKernelUtilsForDriver_83EFA1CC(masterKey, 32, &gcAuthPcactScratch.derivation,
+	if (sceHmacSha256Digest(masterKey, 32, &gcAuthPcactScratch.derivation,
 			37, output->stageTwoKey) != 0)
 		goto hmacFailure;
 	for (index = 0; index != 16; index++)
@@ -375,9 +375,9 @@ int GcAuthPsmactVerifyActivation(const GcAuthPsmactVerifyRequest *request)
 	gcAuthPcactScratch.derivation.label[1] = 'S';
 	gcAuthPcactScratch.derivation.label[2] = 'M';
 	gcAuthPcactScratch.derivation.label[3] = '3';
-	if (SceKernelUtilsForDriver_83EFA1CC(masterKey, 32, &gcAuthPcactScratch.derivation,
+	if (sceHmacSha256Digest(masterKey, 32, &gcAuthPcactScratch.derivation,
 			37, authenticationKey) != 0 ||
-	    SceKernelUtilsForDriver_83EFA1CC(authenticationKey, 32, activation, 480, masterKey) != 0)
+	    sceHmacSha256Digest(authenticationKey, 32, activation, 480, masterKey) != 0)
 		goto hmacFailure;
 	for (index = 0; index != 32; index++)
 		result |= masterKey[index] ^ activation->mac[index];

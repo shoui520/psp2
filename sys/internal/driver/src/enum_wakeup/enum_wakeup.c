@@ -138,7 +138,7 @@ void ewInitDisplay(void)
 	fb.pixelformat = 0;
 	fb.width = EW_SCREEN_WIDTH;
 	fb.height = EW_SCREEN_HEIGHT;
-	SceDisplayForDriver_16466675(0, 0, &fb, 1);
+	sceDisplaySetFrameBufInternal(0, 0, &fb, 1);
 	ewConsoleInit();
 
 	ewg.ew.iconBlock = sceKernelAllocMemBlockForKernel("TextureBuffer", EW_MEMTYPE_FB, 0x17f000, NULL);
@@ -196,7 +196,7 @@ static inline __attribute__((always_inline)) SceUInt32 ewReadButtons(void)
 	SceUInt32 pressed = 0;
 	int i, n;
 
-	n = SceCtrlForDriver_9B96A1AA(0, ewg.ctrl, 8);
+	n = sceCtrlReadBufferPositive(0, ewg.ctrl, 8);
 	ewg.buttons.pressed = 0;
 	ewg.buttons.released = 0;
 	for (i = 0; i < n; i++) {
@@ -226,7 +226,7 @@ int ewMainThread(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	SceLedForDriver_EA24BE03(2, SCE_LED_MODE_OFF, NULL);
+	sceLedSetMode(2, SCE_LED_MODE_OFF, NULL);
 	sceRegMgrGetKeyInt("/CONFIG/USB", "usb_charge_enable", &chargeEnable);
 	SceUdcdForDriver_2D91F8C3(chargeEnable);
 	ScePowerForDriver_0CD21B1F(0);
@@ -255,14 +255,14 @@ display_only:
 		mtpInit();
 		mtpStart(1, ewFillDeviceStrings);
 		if (ewg.ew.mode == EW_MODE_MTP) {
-			SceDisplayForDriver_43347565(0);
-			SceDisplayForDriver_43347565(1);
+			sceDisplayDisableHead(0);
+			sceDisplayDisableHead(1);
 			goto clocks;
 		}
 	}
 	ewInitDisplay();
-	SceDisplayForDriver_43347565(1);
-	if (SceDisplayForDriver_984C27E7() < 0)
+	sceDisplayDisableHead(1);
+	if (sceDisplayWaitVblankStart() < 0)
 		sceKernelExitThread(0);
 
 clocks:
@@ -271,7 +271,7 @@ clocks:
 		__builtin_memcpy(ewg.ew.clocks, ewClocks, sizeof(ewg.ew.clocks));
 		scePowerSetArmClockFrequency(ewg.ew.clocks[0]);
 		scePowerSetBusClockFrequency(ewg.ew.clocks[1]);
-		ScePowerForDriver_264C24FC(ewg.ew.clocks[2], ewg.ew.clocks[2]);
+		scePowerSetGpuClockFrequencyInternal(ewg.ew.clocks[2], ewg.ew.clocks[2]);
 		scePowerSetGpuXbarClockFrequency(ewg.ew.clocks[3]);
 		ScePervasiveForDriver_4F64DEF6(0);
 		if (SceModulemgrForDriver_BBE1771C("SceDbgUsb") < 0)
@@ -280,13 +280,13 @@ clocks:
 		SceSysconForDriver_3FDD29D6(1, 0);
 		SceHpremoteForDriver_7735C403();
 		SceClockgenForDriver_F0A0242D();
-		SceClockgenForDriver_B6F0A532();
+		sceClockgenWlanBtClkDisable();
 		SceClockgenForDriver_82F39378();
-		ScePowerForDriver_C743E392(0);
+		scePowerSetCameraBusClockFrequency(0);
 		SceGpioForDriver_372022A4(0, 10, 0);
-		SceGpioForDriver_D454A584(0, 10);
+		sceGpioPortSet(0, 10);
 		SceGpioForDriver_372022A4(0, 11, 0);
-		SceGpioForDriver_D454A584(0, 11);
+		sceGpioPortSet(0, 11);
 		for (i = 0; i < 3; i++) {
 			ScePervasiveForDriver_821AE6C7(i);
 			ScePervasiveForDriver_F861FEE4(i);
@@ -316,9 +316,9 @@ clocks:
 		if (ewg.ew.mode == EW_MODE_MTP) {
 			sceKernelDelayThread(1000000);
 		} else {
-			SceKernelSuspendForDriver_E0489831(0);
+			sceKernelPowerTick(0);
 			ewg.ew.setBrightness(ewg.ew.brightness);
-			if (SceDisplayForDriver_46F186C3() < 0)
+			if (sceDisplayWaitVblankStartCB() < 0)
 				sceKernelExitThread(0);
 			count++;
 			fb = ewg.ew.fb[count & 1];
@@ -352,7 +352,7 @@ clocks:
 			frame.pixelformat = 0;
 			frame.width = EW_SCREEN_WIDTH;
 			frame.height = EW_SCREEN_HEIGHT;
-			SceDisplayForDriver_16466675(0, 0, &frame, 1);
+			sceDisplaySetFrameBufInternal(0, 0, &frame, 1);
 			if (ewg.ew.mode == EW_MODE_DISPLAY)
 				continue;
 		}
@@ -365,7 +365,7 @@ clocks:
 					   the d-pad sets the brightness */
 					if (pressed & EW_BUTTON_SELECT) {
 						led ^= 1;
-						SceLedForDriver_EA24BE03(2, led, NULL);
+						sceLedSetMode(2, led, NULL);
 						if (ewg.ew.mode == EW_MODE_MTP)
 							goto motion;
 						if (ewg.ew.displayOn() || !ewg.ew.blank)
@@ -391,7 +391,7 @@ clocks:
 				if (ewg.ew.mode != EW_MODE_DISPLAY) {
 motion:
 					if (ewg.ew.motionFlags != 1 && !(ewg.ew.motionFlags & 1)
-					    && SceMotionDevForDriver_10AAC8EA()) {
+					    && sceMotionDevIsReady()) {
 						SceMotionDevForDriver_031AF7A1();
 						ewg.ew.motionFlags |= 1;
 					}
@@ -400,7 +400,7 @@ motion:
 
 			/* charging state */
 			SceSysconForDriver_A2FE9BF9((uint32_t *)&charger);
-			if ((SceUdcdForDriver_E054B5E4() & 2) && (charger & 0xf00) != 0x200) {
+			if ((sceUdcdGetDeviceState() & 2) && (charger & 0xf00) != 0x200) {
 				if (!ewg.ew.connected) {
 					if (ewg.ew.timer > 0) {
 						sceKernelCancelAlarm(ewg.ew.timer);

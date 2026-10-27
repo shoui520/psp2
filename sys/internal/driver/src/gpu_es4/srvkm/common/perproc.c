@@ -63,7 +63,7 @@ PVRSRV_ERROR PVRSRVPerProcessDataDisconnect(IMG_UINT32 ui32PID)
 		if (psPerProc->ui32RefCount == 0) {
 			sceGpuWaitModObjRemoveAll(psPerProc->waitEventFlag);
 			if (psPerProc->processHandle > 0)
-				SceSysmemForDriver_84A4AF5E(psPerProc->ui32PID, psPerProc->processHandle);
+				scePUIDClose(psPerProc->ui32PID, psPerProc->processHandle);
 			if (psPerProc->waitEventFlag > 0)
 				sceKernelDeleteEventFlag(psPerProc->waitEventFlag);
 			PVRSRVResManDisconnect(psPerProc->hResManContext, IMG_FALSE);

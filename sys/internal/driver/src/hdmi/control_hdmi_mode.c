@@ -68,7 +68,7 @@ static int _sceHdmiSysEventHandler(int resume, int eventid, void *args, void *op
 #endif
 		return ret;
 	}
-	SceGpioForDriver_F6310435(0, 15);
+	sceGpioPortClear(0, 15);
 	ret = SceI2cForDriver_76D277AB(0);
 	if (ret < 0) {
 #if FW_SINCE(0x04000000)
@@ -104,9 +104,9 @@ static int initWork(void *arg)
 		}
 		if (SceGpioForDriver_372022A4(0, 15, 0) >= 0) {
 			if ((SceSysconForDriver_CBD6D8BC() & 0xffff00) < 0x102400)
-				SceGpioForDriver_D454A584(0, 15);
+				sceGpioPortSet(0, 15);
 			else
-				SceGpioForDriver_F6310435(0, 15);
+				sceGpioPortClear(0, 15);
 			if (_sceHdmiDeviceModuleStart() >= 0 && SceI2cForDriver_76D277AB(1) >= 0 &&
 			    sceHdmiDeviceGetChipId(chipId, &length) >= 0) {
 				hdmiResetVicTiming();

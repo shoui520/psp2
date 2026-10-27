@@ -126,7 +126,7 @@ SceUID sceKernelRegisterProcEventHandler(const char *name,
 	return uid;
 }
 
-int SceProcEventForDriver_3DED57CC(SceUID uid)
+int sceKernelUnregisterProcEventHandler(SceUID uid)
 {
 	return sceGUIDClose(uid);
 }

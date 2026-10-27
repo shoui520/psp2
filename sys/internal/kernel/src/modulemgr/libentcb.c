@@ -113,7 +113,7 @@ int LibEntCBInit(LoadelfContext *ctx)
 			if (dst->libname == NULL)
 				continue;
 			name = dst->libname + bias;
-			if (SceSysmemForKernel_B628B46B(name, memchr(name, 0, 0x1f) == NULL ? 0x10000 : 0,
+			if (sceKernelNameHeapInsert(name, memchr(name, 0, 0x1f) == NULL ? 0x10000 : 0,
 						       &interned) < 0) {
 				dst->libname = NULL;
 				return SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
@@ -155,7 +155,7 @@ void LibEntFreeNames(SceModuleCB *cb)
 			i = 0;
 			do {
 				if (ent->libname != NULL)
-					SceSysmemForKernel_634D0D0C(ent->libname, 0x1000000);
+					sceKernelNameHeapDelete(ent->libname, 0x1000000);
 				i++;
 				ent++;
 			} while (i < count);
@@ -188,7 +188,7 @@ int LibEntGetIndex(SceModuleCB *cb, SceUInt32 addr)
 void LibEntCBClear(LibEntCB *ent)
 {
 	if (ent->puid > 0) {
-		SceSysmemForDriver_84A4AF5E(ent->cb->pid, ent->puid);
+		scePUIDClose(ent->cb->pid, ent->puid);
 		ent->puid = 0;
 	}
 	if (ent->guid > 0) {

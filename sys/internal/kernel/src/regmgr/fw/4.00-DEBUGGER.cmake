@@ -91,7 +91,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelSetThreadAccessLevel
-	SceThreadmgrForDriver_0892D8DF
+	sceKernelGetCallbackCount
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelLockMutex
@@ -106,7 +106,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_55392965
 	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_B0E1FC67
-	SceProcessmgrForDriver_02179E12
+	sceKernelGetProcessTimeLowCore
 	sceIoRemove
 	sceIoWrite
 	sceIoLseek
@@ -117,7 +117,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoRead
 	sceIoClose
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_45D22597
+	scePUIDtoGUID
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
@@ -141,10 +141,10 @@ set(MODULE_IMPORT_FUNCS
 	memcmp
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	SceKernelUtilsForDriver_478A6F3C
-	SceKernelUtilsForDriver_48F24106
-	SceKernelUtilsForDriver_87DC7F2F
-	SceKernelUtilsForDriver_E4390FFA
+	sceSha1BlockUpdate
+	sceSha1BlockResult
+	sceSha1Digest
+	sceSha1BlockInit
 	SceQafMgrForDriver_0E588747
 	sceSblACMgrIsSystemProgram
 	sceSblACMgrGetPaid
@@ -154,7 +154,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSblSsSetNvsData
 	sceSblAimgrGetOpenPsId
 	sceSblSsGetNvsData
-	SceDebugLedForDriver_51C5325A
+	sceKernelSetGPI
 	SceDebugForDriver_D9703808
 )
 set(MODULE_IMPORT_VARS

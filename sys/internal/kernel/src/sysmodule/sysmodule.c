@@ -229,7 +229,7 @@ static int sysmoduleFind(SysmoduleProc **proc, SceUInt16 **state, const Sysmodul
 allowed:
 	if (s_storage < 0)
 		return s_storage;
-	ret = SceProcessmgrForDriver_AF80F39C(0, s_storage, (void **)proc, 0);
+	ret = sceKernelGetRemoteKPLS(0, s_storage, (void **)proc, 0);
 	if (ret < 0)
 		return ret;
 	if (*proc == NULL)
@@ -289,7 +289,7 @@ static inline void sceKernelPerfArmPmonOpen(void)
 {
 	int ret;
 
-	ret = SceProcessmgrForDriver_61B9B6FA(0, 0x11);
+	ret = sceKernelSetInitialPMCR(0, 0x11);
 	if (ret != 0) {
 		PMON_PRINTF(1348, "[Error] sceKernelSetInitialPMCR (ret = 0x%08x)\n", ret);
 		return;
@@ -299,7 +299,7 @@ static inline void sceKernelPerfArmPmonOpen(void)
 		PMON_PRINTF(1354, "[Error] sceKernelPMonSetControlRegister (ret = 0x%08x)\n", ret);
 		return;
 	}
-	ret = SceProcessmgrForDriver_B1C3EFCA(0, 1);
+	ret = sceKernelSetInitialPMUSERENR(0, 1);
 	if (ret != 0) {
 		PMON_PRINTF(1360, "[Error] sceKernelSetInitialPMUSERENR (ret = 0x%08x)\n", ret);
 		return;
@@ -318,7 +318,7 @@ static inline void sceKernelPerfArmPmonClose(void)
 {
 	int ret;
 
-	ret = SceProcessmgrForDriver_61B9B6FA(0, 0);
+	ret = sceKernelSetInitialPMCR(0, 0);
 	if (ret != 0) {
 		PMON_PRINTF(1395, "[Error] sceKernelSetInitialPMCR (ret = 0x%08x)\n", ret);
 		return;
@@ -328,7 +328,7 @@ static inline void sceKernelPerfArmPmonClose(void)
 		PMON_PRINTF(1401, "[Error] sceKernelPMonSetControlRegister (ret = 0x%08x)\n", ret);
 		return;
 	}
-	ret = SceProcessmgrForDriver_B1C3EFCA(0, 0);
+	ret = sceKernelSetInitialPMUSERENR(0, 0);
 	if (ret != 0) {
 		PMON_PRINTF(1407, "[Error] sceKernelSetInitialPMUSERENR (ret = 0x%08x)\n", ret);
 		return;
@@ -616,7 +616,7 @@ allowed:
 	ret = s_storage;
 	if (s_storage < 0)
 		goto out;
-	ret = SceProcessmgrForDriver_AF80F39C(0, s_storage, (void **)&proc, 0);
+	ret = sceKernelGetRemoteKPLS(0, s_storage, (void **)&proc, 0);
 	if (ret < 0)
 		goto out;
 	if (proc == NULL) {
@@ -649,7 +649,7 @@ static inline void sysmoduleProcEnd(SceUID pid)
 	SysmoduleProc *proc = NULL;
 
 	if (s_storage >= 0 &&
-	    SceProcessmgrForDriver_AF80F39C(pid, s_storage, (void **)&proc, 0) >= 0 &&
+	    sceKernelGetRemoteKPLS(pid, s_storage, (void **)&proc, 0) >= 0 &&
 	    proc != NULL && proc->mutex >= 0) {
 		sceKernelDeleteMutex(proc->mutex);
 		proc->mutex = -1;
@@ -669,7 +669,7 @@ static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, void *comm
 	SysmoduleProc *proc = NULL;
 
 	if (s_storage >= 0 &&
-	    SceProcessmgrForDriver_AF80F39C(pid, s_storage, (void **)&proc, 1) >= 0 &&
+	    sceKernelGetRemoteKPLS(pid, s_storage, (void **)&proc, 1) >= 0 &&
 	    proc != NULL) {
 		proc->mutex = sceKernelCreateMutex("SceSysmodule", 0x8000, 0, NULL);
 		proc->waiter = -1;

@@ -21,7 +21,7 @@ SceGpuEs4:
         - PVRSRVFinaliseSystem: 0x399BC738
         - PVRSRVGetInitServerState: 0x3AF6FE80
         - PVRSRVPerProcessData: 0x3DAB1F7F
-        - SceGpuEs4ForDriver_40E292D7: 0x40E292D7
+        - sceGpuSignalWaitLockup: 0x40E292D7
         - DevInitSGXPart2KM: 0x49AD869F
         - OSMemSet: 0x50494916
         - _PVRSRVAllocDeviceMemKM: 0x623E50D0
@@ -53,4 +53,4 @@ SceGpuEs4:
         - PVRSRVRelease: 0x85C328DF
         - sceGpuRegisterSalvage: 0x8E0D9D40
         - PVRSRV_BridgeDispatchKM: 0xCA19ABCD
-        - SceGpuEs4ForDriver_40E292D7: 0xE0DECA6E
+        - sceGpuSignalWaitLockup: 0xE0DECA6E

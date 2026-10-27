@@ -96,14 +96,14 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelWaitProcessEnd
-	SceProcessmgrForKernel_5137B783
+	sceKernelStartProcess
 	sceKernelCreateProcess
 	sceKernelDelayThread
 	sceKernelGetSystemTimeWide
-	SceModulemgrForDriver_03B30B7E
+	sceKernelStopUnloadModule
 	sceKernelStartModule
-	SceModulemgrForDriver_100DAEB9
-	SceModulemgrForDriver_189BFBBB
+	sceKernelStopModule
+	sceKernelLoadStartModule
 	sceKernelUnloadModule
 	sceKernelLoadModule
 	sceKernelMountBootimageFS
@@ -125,11 +125,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_16A54BFE
 	SceSysmemForKernel_4233C16D
 	sceKernelAllocPartitionMemBlock
-	SceSysmemForKernel_73C38695
+	sceKernelAddressSpaceUnmap
 	SceSysmemForKernel_85571907
 	sceKernelGetPhyMemPartInfoCore
 	SceDebugForDriver_02B04343
-	SceDebugForDriver_374B7868
+	sceKernelGetAssertLevel
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A

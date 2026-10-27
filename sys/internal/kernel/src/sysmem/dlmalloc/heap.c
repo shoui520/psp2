@@ -148,7 +148,7 @@ static int HeapObjectCreate(SceObjectBase *object)
 /* name unknown: sceKernelCreateHeap's funcUID, a new GUID for the heap */
 static SceUID HeapCreateGUID(KernelHeap *heap, const char *name)
 {
-	return SceSysmemForKernel_6DB44A42(s_heapClass, name, heap);
+	return sceGUIDRegister(s_heapClass, name, heap);
 }
 
 /* name unknown: a block of the heap given back; returns its size */
@@ -916,7 +916,7 @@ void *SceSysmemForKernel_85571907(SceSize size)
 
 #if !SYSMEM_NSKBL
 /* sceKernelAllocWithOpt */
-void *SceSysmemForKernel_CF3C3F7A(SceSize size, SceAllocOpt *opt)
+void *sceKernelAllocWithOpt(SceSize size, SceAllocOpt *opt)
 {
 	void *ptr = HeapAllocHeapMemoryWithOption(s_kernelHeap, size, opt);
 
@@ -1033,7 +1033,7 @@ void *sceKernelDlMmap(KernelHeap *heap, SceSize size)
 	}
 	code = heap->code;
 	if (heap->pid == -1) {
-		as = SceSysmemForKernel_2E5CC243();
+		as = sceKernelGetKernelAddressSpace();
 	} else {
 		ret = SysrootPIDtoAddressSpaceCB(heap->pid, (void **)&as);
 		if (ret < 0) {
@@ -1293,7 +1293,7 @@ int SceSysmemForKernel_BF70207B(SceUID uid, SceUInt32 level, SceUInt32 max,
 }
 
 /* name unknown: the info of every heap visible at level, as many as fit in size bytes */
-int SceSysmemForKernel_1380E144(SceUInt32 level, HeapInfo *infos, SceSize size, SceSize *count)
+int sceKernelGetHeapInfoAll(SceUInt32 level, HeapInfo *infos, SceSize size, SceSize *count)
 {
 	SceUID *uids;
 	SceSize n = 0;
@@ -1328,7 +1328,7 @@ int SceSysmemForKernel_1380E144(SceUInt32 level, HeapInfo *infos, SceSize size, 
 	return max;
 }
 
-void *SceSysmemForDriver_7750CEA7(SceSize size)
+void *sceKernelAllocUncacheHeapMemory(SceSize size)
 {
 	void *ptr = sceKernelAllocHeapMemoryWithOptionCore(s_uncacheHeap, size, NULL);
 
@@ -1342,7 +1342,7 @@ void *SceSysmemForDriver_7750CEA7(SceSize size)
 
 #endif
 
-void *SceSysmemForDriver_0B4ED16A(SceSize size, SceAllocOpt *opt)
+void *sceKernelAllocUncacheHeapMemoryWithOption(SceSize size, SceAllocOpt *opt)
 {
 	void *ptr = sceKernelAllocHeapMemoryWithOptionCore(s_uncacheHeap, size, opt);
 
@@ -1356,7 +1356,7 @@ void *SceSysmemForDriver_0B4ED16A(SceSize size, SceAllocOpt *opt)
 
 #if !SYSMEM_NSKBL
 
-int SceSysmemForDriver_FB817A59(void *ptr)
+int sceKernelFreeUncacheHeapMemory(void *ptr)
 {
 	return sceKernelFreeHeapMemory(s_uncacheHeap, ptr);
 }

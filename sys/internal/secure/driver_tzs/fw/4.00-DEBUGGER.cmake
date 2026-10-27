@@ -52,7 +52,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	SceCpuForTZS_4FED4BCE
-	SceCpuForTZS_75D87321
+	sceKernelAtomicOrAndGet32
 	sceKernelDcacheCleanInvalidateRange
 	sceKernelDcacheCleanInvalidateAll
 	sceKernelSpinlockLowUnlockCpuResumeIntr

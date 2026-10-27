@@ -202,7 +202,7 @@ static int _sceUsbMassDetach(int deviceId)
 	dev->capacityValid = dev->lun = 0;
 	attached = NULL;
 	sceKernelSetEventFlag(dev->eventFlag, 2);
-	SceCpuForDriver_2A40BB93(&pending, 2);
+	sceKernelAtomicGetAndOr32(&pending, 2);
 	sceKernelGenerateSoftIntr(15, 2, 0);
 	return 0;
 }
@@ -622,7 +622,7 @@ connected:
 			desc = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
 			SceDebugForDriver_391B74B7("[Umass]%08x:USB mass storage (%04x:%04x) attached\n",
 				SceThreadmgrForDriver_47F6DE49(), desc->idVendor, desc->idProduct);
-			SceCpuForDriver_2A40BB93(&pending, 1);
+			sceKernelAtomicGetAndOr32(&pending, 1);
 			sceKernelGenerateSoftIntr(15, 2, 0);
 			return 0;
 		}
@@ -760,7 +760,7 @@ int SceUsbMassForDriver_3C821E99(int intr, unsigned int subintr)
 
 	if (intr != 15)
 		return (int)SCE_ERROR_ERRNO_EINVAL;
-	SceCpuForDriver_2A40BB93(&enabled, bit < 32 ? 1U << bit : 0);
+	sceKernelAtomicGetAndOr32(&enabled, bit < 32 ? 1U << bit : 0);
 	return 0;
 }
 
@@ -770,7 +770,7 @@ int SceUsbMassForDriver_7833D935(int intr, unsigned int subintr)
 
 	if (intr != 15)
 		return (int)SCE_ERROR_ERRNO_EINVAL;
-	SceCpuForDriver_E36F3A46(&enabled, bit < 32 ? 1U << bit : 0);
+	sceKernelAtomicGetAndClear32(&enabled, bit < 32 ? 1U << bit : 0);
 	return 0;
 }
 
@@ -781,9 +781,9 @@ int SceUsbMassForDriver_F2BAB182(int intr)
 	if (intr != 15)
 		return (int)SCE_ERROR_ERRNO_EINVAL;
 	state = sceKernelSpinlockLowLockCpuSuspendIntr(&intrLock);
-	if ((enabled & 1) && (SceCpuForDriver_E36F3A46(&pending, 1) & 1))
+	if ((enabled & 1) && (sceKernelAtomicGetAndClear32(&pending, 1) & 1))
 		sceKernelCallSubIntrHandler(15, 0, NULL);
-	if ((enabled & 2) && (SceCpuForDriver_E36F3A46(&pending, 2) & 2))
+	if ((enabled & 2) && (sceKernelAtomicGetAndClear32(&pending, 2) & 2))
 		sceKernelCallSubIntrHandler(15, 1, NULL);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&intrLock, state);
 	return -1;
@@ -819,15 +819,15 @@ int module_start(SceSize args, void *argp)
 					 (SceKernelAllocMemBlockKernelOpt *)options);
 	if (memblock >= 0) {
 		ret = sceKernelGetMemBlockBase(memblock, (void **)&ioBuffer);
-		if (ret >= 0 && SceUsbServForDriver_AA6D4409() >= 0) {
+		if (ret >= 0 && sceUsbServAccessoryActivate() >= 0) {
 			ret = SceUsbdForDriver_1EC94F18(&driver);
 			if (ret >= 0) {
 				intrLock = 0;
-				SceCpuForDriver_2A40BB93(&enabled, 1);
-				SceCpuForDriver_2A40BB93(&enabled, 2);
+				sceKernelAtomicGetAndOr32(&enabled, 1);
+				sceKernelAtomicGetAndOr32(&enabled, 2);
 				return 0;
 			}
-			SceUsbServForDriver_853CB8E4();
+			sceUsbServAccessoryDeactivate();
 		}
 		sceKernelFreeMemBlock(memblock);
 	}

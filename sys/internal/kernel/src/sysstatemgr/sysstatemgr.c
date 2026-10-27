@@ -14,9 +14,9 @@ int SysStateMgrModuleStart(SceSize arglen, const void *argp)
 
 	SceSysrootForDriver_93CD44CD(5);
 	sceKernelFinalizeKbl();
-	SceSysmemForKernel_73C38695(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf7, 0xc, (void *)0x51000000, 0x1000000);
-	SceSysmemForKernel_73C38695(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf0, 0xc, (void *)0xe0000000, 0x8000000);
-	SceSysmemForKernel_73C38695(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf0, 0xc, (void *)0x1a000000, 0x100000);
+	sceKernelAddressSpaceUnmap(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf7, 0xc, (void *)0x51000000, 0x1000000);
+	sceKernelAddressSpaceUnmap(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf0, 0xc, (void *)0xe0000000, 0x8000000);
+	sceKernelAddressSpaceUnmap(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf0, 0xc, (void *)0x1a000000, 0x100000);
 	SceSysmemForKernel_16A54BFE();
 	time = (int)sceKernelGetSystemTimeWide();
 	SCE_PRINTF_WITH_INFO(0, 129, "\nPSP2 Kernel Time : %d [msec]\n\n", time / 1000);

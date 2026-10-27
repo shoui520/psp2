@@ -25,7 +25,7 @@ SECTIONS
 		*(.ssMgrCore.sceSblSsGetNvsData)
 		*(.ssMgrCore.sceSblSsSetNvsData)
 		*(.ssMgrCore.sceSblSsEncryptWithPortability)
-		*(.ssMgrCore.SceSblSsMgrForDriver_934DB6B5)
+		*(.ssMgrCore.sceSblSsDecryptWithPortability)
 		*(.ssMgrCore.SceSblSsMgrForDriver_CD98CC92)
 		*(.ssMgrQaf.SceSblSsMgrForKernel_83D254FF)
 		*(.ssMgrQaf.SceSblSsMgrForKernel_E2DD0378)

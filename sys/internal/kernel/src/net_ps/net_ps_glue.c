@@ -2555,7 +2555,7 @@ void pool_setlowat(struct pool *pool, int count)
 	pool->pr_minitems = count;
 }
 
-int SceNetPsForDriver_880A5423(int socket, SceNetSockaddr *address,
+int sceNetAccept(int socket, SceNetSockaddr *address,
 		  unsigned int *addressLength)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 5))
@@ -2563,7 +2563,7 @@ int SceNetPsForDriver_880A5423(int socket, SceNetSockaddr *address,
 	return sceNetPsAccept(socket, address, addressLength, 1);
 }
 
-int SceNetPsForDriver_84AB650F(int socket, const SceNetSockaddr *address,
+int sceNetBind(int socket, const SceNetSockaddr *address,
 		unsigned int addressLength)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 5))
@@ -2571,7 +2571,7 @@ int SceNetPsForDriver_84AB650F(int socket, const SceNetSockaddr *address,
 	return sceNetPsBind(socket, address, addressLength, 1);
 }
 
-int SceNetPsForDriver_13491DA1(int socket, const SceNetSockaddr *address,
+int sceNetConnect(int socket, const SceNetSockaddr *address,
 		   unsigned int addressLength)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 5))
@@ -2579,7 +2579,7 @@ int SceNetPsForDriver_13491DA1(int socket, const SceNetSockaddr *address,
 	return sceNetPsConnect(socket, address, addressLength, 1);
 }
 
-int SceNetPsForDriver_B949AFD5(int socket, SceNetSockaddr *address,
+int sceNetGetpeername(int socket, SceNetSockaddr *address,
 		       unsigned int *addressLength)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 5))
@@ -2587,7 +2587,7 @@ int SceNetPsForDriver_B949AFD5(int socket, SceNetSockaddr *address,
 	return sceNetPsGetpeername(socket, address, addressLength, 1);
 }
 
-int SceNetPsForDriver_8F1BB0E7(int socket, SceNetSockaddr *address,
+int sceNetGetsockname(int socket, SceNetSockaddr *address,
 		       unsigned int *addressLength)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 5))
@@ -2595,7 +2595,7 @@ int SceNetPsForDriver_8F1BB0E7(int socket, SceNetSockaddr *address,
 	return sceNetPsGetsockname(socket, address, addressLength, 1);
 }
 
-int SceNetPsForDriver_92EE24A6(int socket, int level, int option, void *value,
+int sceNetGetsockopt(int socket, int level, int option, void *value,
 		     unsigned int *length)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 5))
@@ -2603,14 +2603,14 @@ int SceNetPsForDriver_92EE24A6(int socket, int level, int option, void *value,
 	return sceNetPsGetsockopt(socket, level, option, value, length, 1);
 }
 
-int SceNetPsForDriver_080C7992(int socket, int backlog)
+int sceNetListen(int socket, int backlog)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 5))
 		return -55;
 	return sceNetPsListen(socket, backlog, 1);
 }
 
-int SceNetPsForDriver_49B1669C(int socket, void *buffer, unsigned int length, int flags,
+int sceNetRecvfrom(int socket, void *buffer, unsigned int length, int flags,
 		    SceNetSockaddr *from, unsigned int *fromLength)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 7))
@@ -2618,7 +2618,7 @@ int SceNetPsForDriver_49B1669C(int socket, void *buffer, unsigned int length, in
 	return sceNetPsRecvfrom(socket, buffer, length, flags, from, fromLength, 1);
 }
 
-int SceNetPsForDriver_AB746734(int socket, const void *buffer, unsigned int length, int flags,
+int sceNetSendto(int socket, const void *buffer, unsigned int length, int flags,
 		  const SceNetSockaddr *to, unsigned int toLength)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 7))
@@ -2626,7 +2626,7 @@ int SceNetPsForDriver_AB746734(int socket, const void *buffer, unsigned int leng
 	return sceNetPsSendto(socket, buffer, length, flags, to, toLength, 1);
 }
 
-int SceNetPsForDriver_4BF5FAB4(int socket, int level, int option, const void *value,
+int sceNetSetsockopt(int socket, int level, int option, const void *value,
 		     unsigned int length)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 5))
@@ -2634,14 +2634,14 @@ int SceNetPsForDriver_4BF5FAB4(int socket, int level, int option, const void *va
 	return sceNetPsSetsockopt(socket, level, option, value, length, 1);
 }
 
-int SceNetPsForDriver_EEB19FB6(int socket, int how)
+int sceNetShutdown(int socket, int how)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 5))
 		return -55;
 	return sceNetPsShutdown(socket, how, 1);
 }
 
-int SceNetPsForDriver_EB95B024(const char *name, int domain, int type, int protocol)
+int sceNetSocket(const char *name, int domain, int type, int protocol)
 {
 	if (!sceNetPsCheckMemoryAvailability(2048, 5))
 		return -55;

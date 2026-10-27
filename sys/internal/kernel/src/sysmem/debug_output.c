@@ -51,7 +51,7 @@ void DebugAppendCharacter(int character)
 		next = index + 1;
 		if (next == sizeof(s_debugTty.ring))
 			next = 0;
-	} while (SceCpuForDriver_CDA96E81((volatile SceInt32 *)&s_debugTty.index,
+	} while (sceKernelAtomicCompareAndSet32((volatile SceInt32 *)&s_debugTty.index,
 					  index, next) != index);
 	s_debugTty.ring[index] = character;
 }
@@ -98,7 +98,7 @@ int DebugLevelEnabled(int level)
 {
 	if ((int32_t)s_debugPrintLevel < level)
 		return 0;
-	if (!SceSysrootForKernel_3E455842() || !sceKernelSysrootGetKblParam())
+	if (!sceKernelSysrootGetSysroot() || !sceKernelSysrootGetKblParam())
 		return 1;
 	return SceQafMgrForDriver_382C71E8() != 0;
 }
@@ -140,7 +140,7 @@ int SceDebugForDriver_411C0733(const char *format, va_list arguments)
 	return result;
 }
 
-int SceDebugForDriver_1A3F2AA4(int level, const char *format, ...)
+int sceKernelPrintfLevel(int level, const char *format, ...)
 {
 	va_list arguments;
 	uint32_t flags;

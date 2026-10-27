@@ -298,7 +298,7 @@ unhook:
 	if (ret < 0)
 		SCTTYP_PRINTF(330, "UnregisterBreakHook() failed (0x%08X)\n", ret);
 close:
-	SceDeci4pSDfMgrForKernel_86CFC8C6(s_port.handle);
+	sceSDfMgrClose(s_port.handle);
 	sceKernelExitThread(ret);
 	return ret;
 }

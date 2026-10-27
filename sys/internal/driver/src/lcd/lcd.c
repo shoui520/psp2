@@ -161,7 +161,7 @@ int SceLcdForDriver_5127FB5E(unsigned char command, const unsigned char *data,
 		return LCD_NOT_READY;
 	if (lcd.ready == 2)
 		return LCD_NO_PANEL;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	spiBegin();
 	spiBits(reverseByte(command) << 1, 9);
 	for (i = 0; i != length; i++)
@@ -178,7 +178,7 @@ int SceLcdForDriver_223C8375(unsigned command, unsigned char *data, unsigned len
 		return LCD_NOT_READY;
 	if (lcd.ready == 2)
 		return LCD_NO_PANEL;
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	spiBegin();
 	if (command >= 0xb0)
 		spiBits(0x15e, 9);
@@ -204,11 +204,11 @@ static int initWork(void *arg) /* name unknown */
 	unsigned intr, i;
 	int port = SceGpioForDriver_129DF5AC(0, 0);
 	if (!port) {
-		SceGpioForDriver_D454A584(0, 0);
-		SceGpioForDriver_D454A584(1, 7);
+		sceGpioPortSet(0, 0);
+		sceGpioPortSet(1, 7);
 		sceKernelDelayThread(20000);
 	}
-	intr = SceCpuForDriver_821FC0EE();
+	intr = sceKernelCpuSuspendIntr();
 	spiBegin();
 	spiBits(0x10a, 9);
 	for (i = 0; i < 6; i++)
@@ -222,8 +222,8 @@ static int initWork(void *arg) /* name unknown */
 		lcd.panelRevision = id[2] | (id[3] << 8);
 	}
 	if (!port) {
-		SceGpioForDriver_F6310435(0, 0);
-		SceGpioForDriver_F6310435(1, 7);
+		sceGpioPortClear(0, 0);
+		sceGpioPortClear(1, 7);
 	}
 	if (id[4] == 0xff && !lcd.panelId) {
 		lcd.ready = 1;
@@ -237,14 +237,14 @@ static int initWork(void *arg) /* name unknown */
 
 int SceLcdForDriver_949D45E4(void)
 {
-	SceGpioForDriver_F6310435(0, 0);
-	SceGpioForDriver_F6310435(1, 7);
+	sceGpioPortClear(0, 0);
+	sceGpioPortClear(1, 7);
 	return 0;
 }
 int SceLcdForDriver_C0A2A6EA(void)
 {
-	SceGpioForDriver_D454A584(0, 0);
-	SceGpioForDriver_D454A584(1, 7);
+	sceGpioPortSet(0, 0);
+	sceGpioPortSet(1, 7);
 	return 0;
 }
 int SceLcdForDriver_6A08623C(void)
@@ -394,34 +394,34 @@ static int backlightWork(void *arg) /* name unknown */
 	unsigned char data[2];
 	int current, target;
 	do {
-		if (SceCpuForDriver_5AC9D394(&backlightLock) < 0)
+		if (sceKernelSpinlockLowTrylock(&backlightLock) < 0)
 			break;
 		current = backlightCurrent;
 		target = backlightTarget;
 		if (!target) {
 			data[0] = 5;
 			data[1] = 0;
-			SceI2cForDriver_CA94A759(1, 200, data, 2);
+			sceI2cMasterTransmit(1, 200, data, 2);
 			if (current > 0) {
 				data[0] = 14;
-				SceI2cForDriver_CA94A759(1, 200, data, 2);
+				sceI2cMasterTransmit(1, 200, data, 2);
 			}
 		} else {
 			if (!current) {
 				data[0] = 14;
 				data[1] = 1;
-				SceI2cForDriver_CA94A759(1, 200, data, 2);
+				sceI2cMasterTransmit(1, 200, data, 2);
 			}
 			while (target - current > 64) {
 				current += 64;
 				data[0] = 5;
 				data[1] = current;
-				SceI2cForDriver_CA94A759(1, 200, data, 2);
+				sceI2cMasterTransmit(1, 200, data, 2);
 				waitTime(16000);
 			}
 			data[0] = 5;
 			data[1] = target;
-			SceI2cForDriver_CA94A759(1, 200, data, 2);
+			sceI2cMasterTransmit(1, 200, data, 2);
 		}
 		backlightCurrent = target;
 		sceKernelSpinlockLowUnlock(&backlightLock);
@@ -440,7 +440,7 @@ static int resetBacklightWork(void *arg) /* name unknown */
 	while (p[0] != 0xff) {
 		data[0] = p[0];
 		data[1] = p[1];
-		if (SceI2cForDriver_CA94A759(1, 200, data, 2) < 0)
+		if (sceI2cMasterTransmit(1, 200, data, 2) < 0)
 			break;
 		p += 2;
 	}
@@ -600,8 +600,8 @@ static int sysEvent(int resume, int event, void *arg, void *opt) /* name unknown
 			ScePervasiveForDriver_A85BF98A(2);
 			ScePervasiveForDriver_7B16F900(2);
 			/* SceLcdForDriver_949D45E4, inlined in Sony's build */
-			SceGpioForDriver_F6310435(0, 0);
-			SceGpioForDriver_F6310435(1, 7);
+			sceGpioPortClear(0, 0);
+			sceGpioPortClear(1, 7);
 		}
 	} else if (resume == 1 && event == SYSEVENT_RESUME_DEVICE(3)) {
 		setupSpi(lcd.spi);

@@ -10,7 +10,7 @@ int MotionUtilSendCommand(void)
 
 	for (;;) {
 		resultPattern = 0;
-		if (SceMotionDevForDriver_09918DAE(MotionUtilCommandComplete,
+		if (sceMotionDevUpdateSendCommand(MotionUtilCommandComplete,
 			    &updateMotionRequest, &updateMotionResponse,
 			    &updateMotionEvent) == 0) {
 			result = sceKernelWaitEventFlag(updateMotionEvent.eventFlagId,

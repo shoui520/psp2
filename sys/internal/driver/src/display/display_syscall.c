@@ -25,7 +25,7 @@
 static __attribute__((noinline)) int syscallSetFrameBufInternal(SceUInt32 head, SceUInt32 plane,
 		const SceDisplayFrameBuf *pParam, SceUInt32 sync) /* name unknown */
 {
-	int ret = SceDisplayForDriver_16466675(head, plane, pParam, sync);
+	int ret = sceDisplaySetFrameBufInternal(head, plane, pParam, sync);
 
 	if (ret < 0)
 		ret |= 0x40000000;
@@ -35,7 +35,7 @@ static __attribute__((noinline)) int syscallSetFrameBufInternal(SceUInt32 head, 
 static __attribute__((noinline)) int syscallGetFrameBufInternal(SceUInt32 head, SceUInt32 plane,
 		SceDisplayFrameBuf *pParam, SceUInt32 sync) /* name unknown */
 {
-	int ret = SceDisplayForDriver_19F94C63(head, plane, pParam, sync);
+	int ret = sceDisplayGetFrameBufInternal(head, plane, pParam, sync);
 
 	if (ret < 0)
 		ret |= 0x40000000;
@@ -45,7 +45,7 @@ static __attribute__((noinline)) int syscallGetFrameBufInternal(SceUInt32 head, 
 static __attribute__((noinline)) int syscallSetFrameBuf(const SceDisplayFrameBuf *pParam,
 							SceUInt32 sync) /* name unknown */
 {
-	int ret = SceDisplayForDriver_289D82FE(pParam, sync);
+	int ret = sceDisplaySetFrameBuf(pParam, sync);
 
 	if (ret < 0)
 		ret |= 0x40000000;
@@ -55,7 +55,7 @@ static __attribute__((noinline)) int syscallSetFrameBuf(const SceDisplayFrameBuf
 static __attribute__((noinline)) int syscallGetFrameBuf(SceDisplayFrameBuf *pParam,
 							SceUInt32 sync) /* name unknown */
 {
-	int ret = SceDisplayForDriver_EEDA2E54(pParam, sync);
+	int ret = sceDisplayGetFrameBuf(pParam, sync);
 
 	if (ret < 0)
 		ret |= 0x40000000;
@@ -65,7 +65,7 @@ static __attribute__((noinline)) int syscallGetFrameBuf(SceDisplayFrameBuf *pPar
 static __attribute__((noinline)) int syscallGetResolutionInfoInternal(SceUInt32 head,
 		SceDisplayResolutionInfo *info) /* name unknown */
 {
-	int ret = SceDisplayForDriver_B3C6D647(head, info);
+	int ret = sceDisplayGetResolutionInfoInternal(head, info);
 
 	if (ret < 0)
 		ret |= 0x40000000;

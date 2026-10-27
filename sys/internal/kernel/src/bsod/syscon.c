@@ -44,7 +44,7 @@ int _sceKernelBsodSysconInit(void)
 
 error:
 #if FW_DEBUG
-	if (SceDebugForDriver_374B7868() > 0)
+	if (sceKernelGetAssertLevel() > 0)
 		SceDebugForDriver_FD753E7A(1, 0, &s_sysconAssert, __builtin_return_address(0));
 #endif
 	return uid;

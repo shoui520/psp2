@@ -11,10 +11,10 @@
 	.text
 
 	.balign	16
-	.global	SceKernelUtilsForDriver_92AEDFBC
-	.type	SceKernelUtilsForDriver_92AEDFBC, %function
+	.global	sceMt19937UInt
+	.type	sceMt19937UInt, %function
 	.thumb_func
-SceKernelUtilsForDriver_92AEDFBC:
+sceMt19937UInt:
 	ldmia	r0!, {r2}
 	subw	r1, r2, #623
 	adds	r3, r2, #1
@@ -47,4 +47,4 @@ SceKernelUtilsForDriver_92AEDFBC:
 	eors	r1, r2
 	eor.w	r0, r1, r1, lsr #18
 	bx	lr
-	.size	SceKernelUtilsForDriver_92AEDFBC, . - SceKernelUtilsForDriver_92AEDFBC
+	.size	sceMt19937UInt, . - sceMt19937UInt

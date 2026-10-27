@@ -68,8 +68,8 @@ int closeMsgPipeForUser(SceUID uid, uint32_t pattern)
 	SceUID guid;
 	int intr, ret, wake;
 
-	intr = SceCpuForDriver_821FC0EE();
-	guid = SceSysmemForDriver_45D22597(0, uid);
+	intr = sceKernelCpuSuspendIntr();
+	guid = scePUIDtoGUID(0, uid);
 	if (guid < 0 || sceGUIDReferObjectWithClass(guid,
 		s_threadmgrRuntime.manager->msgPipeClass, &pObject) < 0) {
 		ret = USER_ERROR_UNKNOWN_MSG_PIPE_ID;
@@ -91,7 +91,7 @@ int closeMsgPipeForUser(SceUID uid, uint32_t pattern)
 			goto release;
 		}
 	}
-	if (SceSysmemForDriver_84A4AF5E(0, uid) < 0)
+	if (scePUIDClose(0, uid) < 0)
 		goto invalid;
 	thread = currentThreadContext();
 	ret = 0;
@@ -123,8 +123,8 @@ int closeSimpleEventForUser(SceUID uid, uint32_t pattern)
 	SceUID guid;
 	int intr, ret, wake;
 
-	intr = SceCpuForDriver_821FC0EE();
-	guid = SceSysmemForDriver_45D22597(0, uid);
+	intr = sceKernelCpuSuspendIntr();
+	guid = scePUIDtoGUID(0, uid);
 	if (guid < 0 || sceGUIDReferObjectWithClass(guid,
 		s_threadmgrRuntime.manager->simpleEventClass,
 		&pObject) < 0) {
@@ -147,7 +147,7 @@ int closeSimpleEventForUser(SceUID uid, uint32_t pattern)
 			goto release;
 		}
 	}
-	if (SceSysmemForDriver_84A4AF5E(0, uid) < 0)
+	if (scePUIDClose(0, uid) < 0)
 		goto invalid;
 	thread = currentThreadContext();
 	ret = 0;
@@ -176,7 +176,7 @@ int closeSemaForUser(SceUID uid, int delete)
 	SceClass *cls;
 	uint32_t attributes, version;
 
-	if (SceSysmemForDriver_E9728A12(0, uid, &cls) < 0 ||
+	if (scePUIDGetClass(0, uid, &cls) < 0 ||
 	    cls != s_threadmgrRuntime.manager->semaphoreClass ||
 	    scePUIDGetAttr(0, uid, &attributes) < 0)
 		return USER_ERROR_UNKNOWN_SEMA_ID;
@@ -197,7 +197,7 @@ int closeSemaForUser(SceUID uid, int delete)
 		uid, delete);
 	return USER_ERROR_UNKNOWN_SEMA_ID;
 close:
-	return SceSysmemForDriver_84A4AF5E(0, uid);
+	return scePUIDClose(0, uid);
 }
 
 /* deletes or closes a user's mutex */
@@ -206,7 +206,7 @@ int closeMutexForUser(SceUID uid, int delete)
 	SceClass *cls;
 	uint32_t attributes, version;
 
-	if (SceSysmemForDriver_E9728A12(0, uid, &cls) < 0 ||
+	if (scePUIDGetClass(0, uid, &cls) < 0 ||
 	    cls != s_threadmgrRuntime.manager->mutexClass ||
 	    scePUIDGetAttr(0, uid, &attributes) < 0)
 		return USER_ERROR_UNKNOWN_MUTEX_ID;
@@ -227,7 +227,7 @@ int closeMutexForUser(SceUID uid, int delete)
 		uid, delete);
 	return USER_ERROR_UNKNOWN_MUTEX_ID;
 close:
-	return SceSysmemForDriver_84A4AF5E(0, uid);
+	return scePUIDClose(0, uid);
 }
 
 /* deletes or closes a user's rw lock */
@@ -236,7 +236,7 @@ int closeRWLockForUser(SceUID uid, int delete)
 	SceClass *cls;
 	uint32_t attributes, version;
 
-	if (SceSysmemForDriver_E9728A12(0, uid, &cls) < 0 ||
+	if (scePUIDGetClass(0, uid, &cls) < 0 ||
 	    cls != s_threadmgrRuntime.manager->rwLockClass ||
 	    scePUIDGetAttr(0, uid, &attributes) < 0)
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
@@ -257,7 +257,7 @@ int closeRWLockForUser(SceUID uid, int delete)
 		uid, delete);
 	return USER_ERROR_UNKNOWN_RW_LOCK_ID;
 close:
-	return SceSysmemForDriver_84A4AF5E(0, uid);
+	return scePUIDClose(0, uid);
 }
 
 /* sceKernelDeleteThreadForUser (user) */
@@ -267,7 +267,7 @@ int sceKernelDeleteThreadForUser(SceUID threadId)
 
 	if (threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	guid = SceSysmemForDriver_45D22597(0, threadId);
+	guid = scePUIDtoGUID(0, threadId);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_THREAD_ID;
 	return sceKernelDeleteThread(guid);
@@ -280,23 +280,23 @@ int sceKernelStartThreadForUser(SceUID threadId, SceSize argSize, const void *ar
 
 	if (threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	guid = SceSysmemForDriver_45D22597(0, threadId);
+	guid = scePUIDtoGUID(0, threadId);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_THREAD_ID;
 	return sceKernelStartThread(guid, argSize, arg);
 }
 
-/* sceKernelGetThreadStackFreeSize (user): 0 is the calling thread */
-int sceKernelGetThreadStackFreeSize(SceUID threadId)
+/* sceKernelGetThreadStackFreeSizeForUser (user): 0 is the calling thread */
+int sceKernelGetThreadStackFreeSizeForUser(SceUID threadId)
 {
 	SceUID guid = 0;
 
 	if (threadId != 0) {
-		guid = SceSysmemForDriver_45D22597(0, threadId);
+		guid = scePUIDtoGUID(0, threadId);
 		if (guid < 0)
 			return USER_ERROR_UNKNOWN_THREAD_ID;
 	}
-	return SceThreadmgrForDriver_7B278A0B(guid);
+	return sceKernelGetThreadStackFreeSize(guid);
 }
 
 /* the core of _sceKernelGetThreadInfo: 0 is the calling thread */
@@ -305,7 +305,7 @@ int sceKernelGetThreadInfoForUser(SceUID threadId, void *info)
 	SceUID guid = 0;
 
 	if (threadId != 0) {
-		guid = SceSysmemForDriver_45D22597(0, threadId);
+		guid = scePUIDtoGUID(0, threadId);
 		if (guid < 0)
 			return USER_ERROR_UNKNOWN_THREAD_ID;
 	}
@@ -327,7 +327,7 @@ int __attribute__((noinline)) sceKernelGetSystemInfoForUser(void *info)
 /* sceKernelGetThreadmgrUIDClassForUser (user) */
 int sceKernelGetThreadmgrUIDClassForUser(SceUID uid)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
+	SceUID guid = scePUIDtoGUID(0, uid);
 
 	if (guid < 0)
 		return guid | SYSCALL_ERROR_BIT;
@@ -371,7 +371,7 @@ SceUID sceKernelCreateCallbackForUser(const char *userName, SceUInt32 attr, uint
 /* sceKernelDeleteCallbackForUser (user) */
 int sceKernelDeleteCallbackForUser(SceUID callbackId)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, callbackId);
+	SceUID guid = scePUIDtoGUID(0, callbackId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_CALLBACK_ID;
@@ -381,7 +381,7 @@ int sceKernelDeleteCallbackForUser(SceUID callbackId)
 /* sceKernelNotifyCallbackForUser (user) */
 int sceKernelNotifyCallbackForUser(SceUID callbackId, int arg)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, callbackId);
+	SceUID guid = scePUIDtoGUID(0, callbackId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_CALLBACK_ID;
@@ -391,12 +391,12 @@ int sceKernelNotifyCallbackForUser(SceUID callbackId, int arg)
 /* the core of _sceKernelGetCallbackInfo: the user sees its own PUID */
 int sceKernelGetCallbackInfoForUser(SceUID callbackId, SceKernelCallbackInfo *info)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, callbackId);
+	SceUID guid = scePUIDtoGUID(0, callbackId);
 	int ret;
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_CALLBACK_ID;
-	ret = SceThreadmgrForDriver_FDC044AC(guid, info);
+	ret = sceKernelGetCallbackInfo(guid, info);
 	if (ret >= 0)
 		info->callbackId = callbackId;
 	return ret;
@@ -407,10 +407,10 @@ int sceKernelRegisterCallbackToEvent(SceUID eventId, SceUID callbackId)
 {
 	SceUID event, callback;
 
-	event = SceSysmemForDriver_45D22597(0, eventId);
+	event = scePUIDtoGUID(0, eventId);
 	if (event < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
-	callback = SceSysmemForDriver_45D22597(0, callbackId);
+	callback = scePUIDtoGUID(0, callbackId);
 	if (callback < 0)
 		return USER_ERROR_UNKNOWN_CALLBACK_ID;
 	return sceKernelRegisterCallbackToEventForDriver(event, callback, eventId);
@@ -421,10 +421,10 @@ int sceKernelUnregisterCallbackFromEventForUser(SceUID eventId, SceUID callbackI
 {
 	SceUID event, callback;
 
-	event = SceSysmemForDriver_45D22597(0, eventId);
+	event = scePUIDtoGUID(0, eventId);
 	if (event < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
-	callback = SceSysmemForDriver_45D22597(0, callbackId);
+	callback = scePUIDtoGUID(0, callbackId);
 	if (callback < 0)
 		return USER_ERROR_UNKNOWN_CALLBACK_ID;
 	return sceKernelUnregisterCallbackFromEvent(event, callback);
@@ -433,7 +433,7 @@ int sceKernelUnregisterCallbackFromEventForUser(SceUID eventId, SceUID callbackI
 /* sceKernelUnregisterCallbackFromEventAllForUser (user) */
 int sceKernelUnregisterCallbackFromEventAllForUser(SceUID eventId)
 {
-	SceUID event = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID event = scePUIDtoGUID(0, eventId);
 
 	if (event < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
@@ -457,7 +457,7 @@ SceUID sceKernelRegisterThreadEventHandlerForUser(const char *userName, SceUID t
 		pid = 0;
 	} else {
 		if (target != 0) {
-			target = SceSysmemForDriver_45D22597(0, target);
+			target = scePUIDtoGUID(0, target);
 			if (target < 0)
 				return USER_ERROR_UNKNOWN_THREAD_ID;
 		}
@@ -465,21 +465,21 @@ SceUID sceKernelRegisterThreadEventHandlerForUser(const char *userName, SceUID t
 	}
 	uid = registerThreadEventHandler(name, target, pid, mask, handler, arg, 1);
 	if (uid >= 0)
-		uid = SceSysmemForDriver_BF209859(currentThreadContext()->processId, uid);
+		uid = scePUIDOpenByGUID(currentThreadContext()->processId, uid);
 	return uid;
 }
 
 /* sceKernelUnregisterThreadEventHandler (user): its PUID closes too */
 int sceKernelUnregisterThreadEventHandlerForUser(SceUID uid)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
+	SceUID guid = scePUIDtoGUID(0, uid);
 	int ret;
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_THREAD_EVENT_ID;
 	ret = sceKernelUnregisterThreadEventHandler(guid);
 	if (ret >= 0) {
-		ret = SceSysmemForDriver_84A4AF5E(0, uid);
+		ret = scePUIDClose(0, uid);
 		SCE_DBG_ASSERT_CHECK(ret >= 0, 698);
 	}
 	return ret;
@@ -488,7 +488,7 @@ int sceKernelUnregisterThreadEventHandlerForUser(SceUID uid)
 /* the core of _sceKernelGetThreadEventInfo */
 int sceKernelGetThreadEventInfoForUser(SceUID uid, void *info)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
+	SceUID guid = scePUIDtoGUID(0, uid);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_THREAD_EVENT_ID;
@@ -499,28 +499,28 @@ int sceKernelGetThreadEventInfoForUser(SceUID uid, void *info)
 int sceKernelWaitEventForUser(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 			      uint64_t *outUserData, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID guid = scePUIDtoGUID(0, eventId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
-	return SceThreadmgrForDriver_C529EA32(guid, pattern, outPattern, outUserData, timeout);
+	return sceKernelWaitEvent(guid, pattern, outPattern, outUserData, timeout);
 }
 
 int sceKernelWaitEventCBForUser(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 				uint64_t *outUserData, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID guid = scePUIDtoGUID(0, eventId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
-	return SceThreadmgrForDriver_360C655C(guid, pattern, outPattern, outUserData, timeout);
+	return sceKernelWaitEventCB(guid, pattern, outPattern, outUserData, timeout);
 }
 
 /* the core of _sceKernelPollEvent */
 int sceKernelPollEventForUser(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 			      uint64_t *outUserData)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID guid = scePUIDtoGUID(0, eventId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
@@ -530,7 +530,7 @@ int sceKernelPollEventForUser(SceUID eventId, uint32_t pattern, uint32_t *outPat
 /* the core of _sceKernelCancelEvent */
 int sceKernelCancelEventForUser(SceUID eventId, int *numWaitThreads)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID guid = scePUIDtoGUID(0, eventId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
@@ -559,7 +559,7 @@ static inline __attribute__((always_inline)) SceUID openUIDByName(
 	uid = SceSysmemForKernel_BDE00106(name);
 	if (uid < 0)
 		goto end;
-	actualClass = SceSysmemForKernel_368F1C36(uid);
+	actualClass = sceGUIDtoClass(uid);
 	switch (kind) {
 	case USER_OBJECT_SEMAPHORE:
 		cls = s_threadmgrRuntime.manager->semaphoreClass;
@@ -663,7 +663,7 @@ int sceKernelWaitMultipleEventsForUser(const SceKernelWaitEvent *userEvents, Sce
 		}
 		for (i = 0; i < count; i++) {
 			ids[i].puid = events[i].eventId;
-			guid = SceSysmemForDriver_45D22597(pid, events[i].eventId);
+			guid = scePUIDtoGUID(pid, events[i].eventId);
 			if (guid < 0) {
 				events[i].eventId = SCE_KERNEL_ERROR_UNKNOWN_EVENT_ID;
 				ids[i].guid = SCE_KERNEL_ERROR_UNKNOWN_EVENT_ID;
@@ -811,7 +811,7 @@ int sceKernelWaitMultipleEventsCBForUser(const SceKernelWaitEvent *userEvents, S
 		}
 		for (i = 0; i < count; i++) {
 			ids[i].puid = events[i].eventId;
-			guid = SceSysmemForDriver_45D22597(pid, events[i].eventId);
+			guid = scePUIDtoGUID(pid, events[i].eventId);
 			if (guid < 0) {
 				events[i].eventId = SCE_KERNEL_ERROR_UNKNOWN_EVENT_ID;
 				ids[i].guid = SCE_KERNEL_ERROR_UNKNOWN_EVENT_ID;
@@ -917,7 +917,7 @@ out:
 /* sceKernelPulseEventForUser (user) */
 int sceKernelPulseEventForUser(SceUID eventId, uint32_t pattern, uint64_t userData)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID guid = scePUIDtoGUID(0, eventId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
@@ -930,7 +930,7 @@ int sceKernelPulseEventForUser(SceUID eventId, uint32_t pattern, uint64_t userDa
 int sceKernelPulseEventWithNotifyCallbackForUser(SceUID eventId, uint32_t pattern,
 						 uint64_t userData, uint32_t arg)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID guid = scePUIDtoGUID(0, eventId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
@@ -943,7 +943,7 @@ int sceKernelPulseEventWithNotifyCallbackForUser(SceUID eventId, uint32_t patter
 int sceKernelCancelEventWithSetPatternForUser(SceUID eventId, uint32_t setPattern,
 					      uint64_t userData, int *numWaitThreads)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID guid = scePUIDtoGUID(0, eventId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
@@ -955,7 +955,7 @@ int sceKernelCancelEventWithSetPatternForUser(SceUID eventId, uint32_t setPatter
 /* the core of _sceKernelGetEventPattern */
 int sceKernelGetEventPatternForUser(SceUID eventId, uint32_t *pattern)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID guid = scePUIDtoGUID(0, eventId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
@@ -969,7 +969,7 @@ int sceKernelGetEventInfoForUser(SceUID eventId, SceKernelEventInfo *info)
 	SceUID guid;
 	int ret;
 
-	guid = SceSysmemForDriver_45D22597(0, eventId);
+	guid = scePUIDtoGUID(0, eventId);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
 	ret = SceThreadmgrForDriver_CBA7FAAA(guid, info);
@@ -986,7 +986,7 @@ int sceKernelGetEventInfoForUser(SceUID eventId, SceKernelEventInfo *info)
 int sceKernelWaitEventFlagForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
 				  uint32_t *outPattern, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, evfId);
+	SceUID guid = scePUIDtoGUID(0, evfId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_FLAG_ID;
@@ -996,11 +996,11 @@ int sceKernelWaitEventFlagForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
 int sceKernelWaitEventFlagCBForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
 				    uint32_t *outPattern, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, evfId);
+	SceUID guid = scePUIDtoGUID(0, evfId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_FLAG_ID;
-	return SceThreadmgrForDriver_8A35F714(guid, pattern, mode, outPattern, timeout);
+	return sceKernelWaitEventFlagCB(guid, pattern, mode, outPattern, timeout);
 }
 
 /* sceKernelOpenSema (user) */
@@ -1024,7 +1024,7 @@ int sceKernelCloseSema(SceUID semaId)
 /* the cores of _sceKernelWaitSema and _sceKernelWaitSemaCB */
 int sceKernelWaitSemaForUser(SceUID semaId, int needCount, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, semaId);
+	SceUID guid = scePUIDtoGUID(0, semaId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_SEMA_ID;
@@ -1033,17 +1033,17 @@ int sceKernelWaitSemaForUser(SceUID semaId, int needCount, SceUInt32 *timeout)
 
 int sceKernelWaitSemaCBForUser(SceUID semaId, int needCount, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, semaId);
+	SceUID guid = scePUIDtoGUID(0, semaId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_SEMA_ID;
-	return SceThreadmgrForDriver_F55E4D86(guid, needCount, timeout);
+	return sceKernelWaitSemaCB(guid, needCount, timeout);
 }
 
 /* the core of _sceKernelCancelSema */
 int sceKernelCancelSemaForUser(SceUID semaId, int setCount, int *numWaitThreads)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, semaId);
+	SceUID guid = scePUIDtoGUID(0, semaId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_SEMA_ID;
@@ -1057,10 +1057,10 @@ int sceKernelGetSemaInfoForUser(SceUID semaId, SceKernelSemaInfo *info)
 	SceUID guid;
 	int ret;
 
-	guid = SceSysmemForDriver_45D22597(0, semaId);
+	guid = scePUIDtoGUID(0, semaId);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_SEMA_ID;
-	ret = SceThreadmgrForDriver_C99DCF0D(guid, info);
+	ret = sceKernelGetSemaInfo(guid, info);
 	if (ret >= 0) {
 		info->semaId = semaId;
 		ret = scePUIDGetAttr(0, semaId, &attributes);
@@ -1073,7 +1073,7 @@ int sceKernelGetSemaInfoForUser(SceUID semaId, SceKernelSemaInfo *info)
 /* sceKernelPollSemaForUser (user) */
 int sceKernelPollSemaForUser(SceUID semaId, int needCount)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, semaId);
+	SceUID guid = scePUIDtoGUID(0, semaId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_SEMA_ID;
@@ -1083,7 +1083,7 @@ int sceKernelPollSemaForUser(SceUID semaId, int needCount)
 /* sceKernelSignalSemaForUser (user) */
 int sceKernelSignalSemaForUser(SceUID semaId, int signalCount)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, semaId);
+	SceUID guid = scePUIDtoGUID(0, semaId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_SEMA_ID;
@@ -1138,7 +1138,7 @@ SceUID sceKernelCreateCondForUser(const char *userName, SceUInt32 attr, SceUID m
 			ret);
 		return ret | SYSCALL_ERROR_BIT;
 	}
-	mutex = SceSysmemForDriver_45D22597(0, mutexId);
+	mutex = scePUIDtoGUID(0, mutexId);
 	if (mutex < 0)
 		return USER_ERROR_UNKNOWN_MUTEX_ID;
 	return sceKernelCreateCond(name, attr, mutex, option);
@@ -1149,9 +1149,9 @@ int sceKernelDeleteCondForUser(SceUID condId)
 {
 	SceClass *cls;
 
-	if (SceSysmemForDriver_E9728A12(0, condId, &cls) >= 0 &&
+	if (scePUIDGetClass(0, condId, &cls) >= 0 &&
 	    cls == s_threadmgrRuntime.manager->condClass)
-		return SceSysmemForDriver_84A4AF5E(0, condId);
+		return scePUIDClose(0, condId);
 	return USER_ERROR_UNKNOWN_COND_ID;
 }
 
@@ -1170,7 +1170,7 @@ int sceKernelCloseCond(SceUID condId)
 /* the cores of _sceKernelWaitCond and _sceKernelWaitCondCB */
 int sceKernelWaitCondForUser(SceUID condId, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, condId);
+	SceUID guid = scePUIDtoGUID(0, condId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_COND_ID;
@@ -1179,7 +1179,7 @@ int sceKernelWaitCondForUser(SceUID condId, SceUInt32 *timeout)
 
 int sceKernelWaitCondCBForUser(SceUID condId, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, condId);
+	SceUID guid = scePUIDtoGUID(0, condId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_COND_ID;
@@ -1189,7 +1189,7 @@ int sceKernelWaitCondCBForUser(SceUID condId, SceUInt32 *timeout)
 /* the core of _sceKernelGetCondInfo */
 int sceKernelGetCondInfoForUser(SceUID condId, SceKernelCondInfo *info)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, condId);
+	SceUID guid = scePUIDtoGUID(0, condId);
 	int ret;
 
 	if (guid < 0)
@@ -1203,7 +1203,7 @@ int sceKernelGetCondInfoForUser(SceUID condId, SceKernelCondInfo *info)
 /* sceKernelSignalCondForUser (user) */
 int sceKernelSignalCondForUser(SceUID condId)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, condId);
+	SceUID guid = scePUIDtoGUID(0, condId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_COND_ID;
@@ -1213,7 +1213,7 @@ int sceKernelSignalCondForUser(SceUID condId)
 /* sceKernelSignalCondAllForUser (user) */
 int sceKernelSignalCondAllForUser(SceUID condId)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, condId);
+	SceUID guid = scePUIDtoGUID(0, condId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_COND_ID;
@@ -1227,10 +1227,10 @@ int sceKernelSignalCondToForUser(SceUID condId, SceUID threadId)
 
 	if (threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	cond = SceSysmemForDriver_45D22597(0, condId);
+	cond = scePUIDtoGUID(0, condId);
 	if (cond < 0)
 		return USER_ERROR_UNKNOWN_COND_ID;
-	thread = SceSysmemForDriver_45D22597(0, threadId);
+	thread = scePUIDtoGUID(0, threadId);
 	if (thread < 0)
 		return USER_ERROR_UNKNOWN_THREAD_ID;
 	return sceKernelSignalCondTo(cond, thread);
@@ -1264,17 +1264,17 @@ SceUID sceKernelGetMsgPipeCreatorId(const char *userName)
 int sceKernelSendMsgPipeVectorForUser(SceUID msgPipeId, const void *vector, int count,
 				      uint32_t mode, SceSize *result, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, msgPipeId);
+	SceUID guid = scePUIDtoGUID(0, msgPipeId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MSG_PIPE_ID;
-	return SceThreadmgrForDriver_67DD3BAD(guid, vector, count, mode, result, timeout);
+	return sceKernelSendMsgPipeVector(guid, vector, count, mode, result, timeout);
 }
 
 int sceKernelSendMsgPipeVectorCBForUser(SceUID msgPipeId, const void *vector, int count,
 					uint32_t mode, SceSize *result, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, msgPipeId);
+	SceUID guid = scePUIDtoGUID(0, msgPipeId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MSG_PIPE_ID;
@@ -1284,7 +1284,7 @@ int sceKernelSendMsgPipeVectorCBForUser(SceUID msgPipeId, const void *vector, in
 int sceKernelTrySendMsgPipeVectorForUser(SceUID msgPipeId, const void *vector, int count,
 					 uint32_t mode, SceSize *result)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, msgPipeId);
+	SceUID guid = scePUIDtoGUID(0, msgPipeId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MSG_PIPE_ID;
@@ -1294,27 +1294,27 @@ int sceKernelTrySendMsgPipeVectorForUser(SceUID msgPipeId, const void *vector, i
 int sceKernelReceiveMsgPipeVectorForUser(SceUID msgPipeId, const void *vector, int count,
 					 uint32_t mode, SceSize *result, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, msgPipeId);
+	SceUID guid = scePUIDtoGUID(0, msgPipeId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MSG_PIPE_ID;
-	return SceThreadmgrForDriver_DA1F256B(guid, vector, count, mode, result, timeout);
+	return sceKernelReceiveMsgPipeVector(guid, vector, count, mode, result, timeout);
 }
 
 int sceKernelReceiveMsgPipeVectorCBForUser(SceUID msgPipeId, const void *vector, int count,
 					   uint32_t mode, SceSize *result, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, msgPipeId);
+	SceUID guid = scePUIDtoGUID(0, msgPipeId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MSG_PIPE_ID;
-	return SceThreadmgrForDriver_DA5C9AC6(guid, vector, count, mode, result, timeout);
+	return sceKernelReceiveMsgPipeVectorCB(guid, vector, count, mode, result, timeout);
 }
 
 int sceKernelTryReceiveMsgPipeVectorForUser(SceUID msgPipeId, const void *vector, int count,
 					    uint32_t mode, SceSize *result)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, msgPipeId);
+	SceUID guid = scePUIDtoGUID(0, msgPipeId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MSG_PIPE_ID;
@@ -1325,7 +1325,7 @@ int sceKernelTryReceiveMsgPipeVectorForUser(SceUID msgPipeId, const void *vector
 int sceKernelCancelMsgPipeForUser(SceUID msgPipeId, int *numSendWaitThreads,
 				  int *numReceiveWaitThreads)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, msgPipeId);
+	SceUID guid = scePUIDtoGUID(0, msgPipeId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MSG_PIPE_ID;
@@ -1339,10 +1339,10 @@ int sceKernelGetMsgPipeInfoForUser(SceUID msgPipeId, SceKernelMsgPipeInfo *info)
 	SceUID guid;
 	int ret;
 
-	guid = SceSysmemForDriver_45D22597(0, msgPipeId);
+	guid = scePUIDtoGUID(0, msgPipeId);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MSG_PIPE_ID;
-	ret = SceThreadmgrForDriver_207E0E18(guid, info);
+	ret = sceKernelGetMsgPipeInfo(guid, info);
 	if (ret >= 0) {
 		info->msgPipeId = msgPipeId;
 		ret = scePUIDGetAttr(0, msgPipeId, &attributes);
@@ -1355,7 +1355,7 @@ int sceKernelGetMsgPipeInfoForUser(SceUID msgPipeId, SceKernelMsgPipeInfo *info)
 /* the core of _sceKernelGetLwMutexInfoById */
 int sceKernelGetLwMutexInfoByIdForUser(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, lwMutexId);
+	SceUID guid = scePUIDtoGUID(0, lwMutexId);
 	int ret;
 
 	if (guid < 0)
@@ -1406,12 +1406,12 @@ int sceKernelDeleteLwCondForUser(ThreadmgrLwCondWork *work)
 		goto restore;
 	}
 	uid = work->uid;
-	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_E9728A12(0, uid, &cls) < 0 ||
+	intr = sceKernelCpuSuspendIntr();
+	if (scePUIDGetClass(0, uid, &cls) < 0 ||
 	    cls != s_threadmgrRuntime.manager->lwCondClass) {
 		ret = USER_ERROR_UNKNOWN_LW_COND_ID;
 	} else {
-		ret = SceSysmemForDriver_84A4AF5E(0, uid);
+		ret = scePUIDClose(0, uid);
 		if (ret >= 0) {
 			work->uid = -1;
 			work->lwMutexId = -1;
@@ -1430,7 +1430,7 @@ int sceKernelWaitLwCondForUser(const ThreadmgrLwCondWork *work, SceUInt32 *timeo
 
 	if (work == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	guid = SceSysmemForDriver_45D22597(0, work->uid);
+	guid = scePUIDtoGUID(0, work->uid);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_LW_COND_ID;
 	return __sceKernelWaitLwCond(guid, timeout, 0);
@@ -1442,7 +1442,7 @@ int sceKernelWaitLwCondCBForUser(const ThreadmgrLwCondWork *work, SceUInt32 *tim
 
 	if (work == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	guid = SceSysmemForDriver_45D22597(0, work->uid);
+	guid = scePUIDtoGUID(0, work->uid);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_LW_COND_ID;
 	return __sceKernelWaitLwCond(guid, timeout, 1);
@@ -1455,7 +1455,7 @@ int sceKernelSignalLwCondForUser(const ThreadmgrLwCondWork *work)
 
 	if (work == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	guid = SceSysmemForDriver_45D22597(0, work->uid);
+	guid = scePUIDtoGUID(0, work->uid);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_LW_COND_ID;
 	return __sceKernelSignalLwCond(guid);
@@ -1467,7 +1467,7 @@ int sceKernelSignalLwCondAllForUser(const ThreadmgrLwCondWork *work)
 
 	if (work == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	guid = SceSysmemForDriver_45D22597(0, work->uid);
+	guid = scePUIDtoGUID(0, work->uid);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_LW_COND_ID;
 	return __sceKernelSignalLwCondAll(guid);
@@ -1481,10 +1481,10 @@ int sceKernelSignalLwCondToForUser(const ThreadmgrLwCondWork *work, SceUID threa
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	guid = SceSysmemForDriver_45D22597(0, work->uid);
+	guid = scePUIDtoGUID(0, work->uid);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_LW_COND_ID;
-	thread = SceSysmemForDriver_45D22597(0, threadId);
+	thread = scePUIDtoGUID(0, threadId);
 	if (thread < 0)
 		return USER_ERROR_UNKNOWN_THREAD_ID;
 	return __sceKernelSignalLwCondTo(guid, thread);
@@ -1499,7 +1499,7 @@ int sceKernelGetLwCondInfoForUser(const ThreadmgrLwCondWork *work,
 
 	if (work == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	guid = SceSysmemForDriver_45D22597(0, work->uid);
+	guid = scePUIDtoGUID(0, work->uid);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_LW_COND_ID;
 	ret = sceKernelGetLwCondInfo(guid, info);
@@ -1510,7 +1510,7 @@ int sceKernelGetLwCondInfoForUser(const ThreadmgrLwCondWork *work,
 
 int sceKernelGetLwCondInfoByIdForUser(SceUID condId, void *info)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, condId);
+	SceUID guid = scePUIDtoGUID(0, condId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_LW_COND_ID;
@@ -1576,7 +1576,7 @@ int sceKernelCloseRWLock(SceUID rwLockId)
 /* the cores of _sceKernelLockReadRWLock and _sceKernelLockReadRWLockCB */
 int sceKernelLockReadRWLockForUser(SceUID rwLockId, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, rwLockId);
+	SceUID guid = scePUIDtoGUID(0, rwLockId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
@@ -1585,7 +1585,7 @@ int sceKernelLockReadRWLockForUser(SceUID rwLockId, SceUInt32 *timeout)
 
 int sceKernelLockReadRWLockCBForUser(SceUID rwLockId, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, rwLockId);
+	SceUID guid = scePUIDtoGUID(0, rwLockId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
@@ -1595,7 +1595,7 @@ int sceKernelLockReadRWLockCBForUser(SceUID rwLockId, SceUInt32 *timeout)
 /* sceKernelTryLockReadRWLockForUser (user) */
 int sceKernelTryLockReadRWLockForUser(SceUID rwLockId)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, rwLockId);
+	SceUID guid = scePUIDtoGUID(0, rwLockId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
@@ -1605,7 +1605,7 @@ int sceKernelTryLockReadRWLockForUser(SceUID rwLockId)
 /* sceKernelUnlockReadRWLockForUser (user) */
 int sceKernelUnlockReadRWLockForUser(SceUID rwLockId)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, rwLockId);
+	SceUID guid = scePUIDtoGUID(0, rwLockId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
@@ -1615,7 +1615,7 @@ int sceKernelUnlockReadRWLockForUser(SceUID rwLockId)
 /* the cores of _sceKernelLockWriteRWLock and _sceKernelLockWriteRWLockCB */
 int sceKernelLockWriteRWLockForUser(SceUID rwLockId, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, rwLockId);
+	SceUID guid = scePUIDtoGUID(0, rwLockId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
@@ -1624,7 +1624,7 @@ int sceKernelLockWriteRWLockForUser(SceUID rwLockId, SceUInt32 *timeout)
 
 int sceKernelLockWriteRWLockCBForUser(SceUID rwLockId, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, rwLockId);
+	SceUID guid = scePUIDtoGUID(0, rwLockId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
@@ -1634,7 +1634,7 @@ int sceKernelLockWriteRWLockCBForUser(SceUID rwLockId, SceUInt32 *timeout)
 /* sceKernelTryLockWriteRWLockForUser (user) */
 int sceKernelTryLockWriteRWLockForUser(SceUID rwLockId)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, rwLockId);
+	SceUID guid = scePUIDtoGUID(0, rwLockId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
@@ -1644,7 +1644,7 @@ int sceKernelTryLockWriteRWLockForUser(SceUID rwLockId)
 /* sceKernelUnlockWriteRWLockForUser (user) */
 int sceKernelUnlockWriteRWLockForUser(SceUID rwLockId)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, rwLockId);
+	SceUID guid = scePUIDtoGUID(0, rwLockId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
@@ -1655,7 +1655,7 @@ int sceKernelUnlockWriteRWLockForUser(SceUID rwLockId)
 int sceKernelCancelRWLockForUser(SceUID rwLockId, int *numReadWaitThreads,
 				 int *numWriteWaitThreads, SceUInt32 type)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, rwLockId);
+	SceUID guid = scePUIDtoGUID(0, rwLockId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
@@ -1669,7 +1669,7 @@ int sceKernelGetRWLockInfoForUser(SceUID rwLockId, SceKernelRWLockInfo *info)
 	SceUID guid;
 	int ret;
 
-	guid = SceSysmemForDriver_45D22597(0, rwLockId);
+	guid = scePUIDtoGUID(0, rwLockId);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
 	ret = sceKernelGetRWLockInfo(guid, info);
@@ -1700,7 +1700,7 @@ int sceKernelPMonThreadGetCounterForUser(SceUID threadId, uint32_t counter, uint
 	SceUID guid = 0;
 
 	if (threadId != 0) {
-		guid = SceSysmemForDriver_45D22597(0, threadId);
+		guid = scePUIDtoGUID(0, threadId);
 		if (guid < 0)
 			return USER_ERROR_UNKNOWN_THREAD_ID;
 	}
@@ -1714,7 +1714,7 @@ void *sceKernelGetThreadTLSAddrForUser(SceUID threadId, unsigned int index)
 
 	SCE_DBG_ASSERT_CHECK_FUNC(threadId != 0, 4246, "sceKernelGetThreadTLSAddrForUser");
 	sceKernelApiDeclareTypeUInt32();
-	guid = SceSysmemForDriver_45D22597(0, threadId);
+	guid = scePUIDtoGUID(0, threadId);
 	if (guid < 0)
 		return NULL;
 	return SceThreadmgrForDriver_66EEA46A(guid, index);
@@ -1771,7 +1771,7 @@ int _sceKernelWaitThreadEnd(SceUID threadId, int *userStatus, SceUInt32 *userTim
 	statusPtr = userStatus;
 	if (userStatus != NULL)
 		statusPtr = &status;
-	guid = SceSysmemForDriver_45D22597(0, threadId);
+	guid = scePUIDtoGUID(0, threadId);
 	if (guid < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto end;
@@ -1814,12 +1814,12 @@ int _sceKernelWaitThreadEndCB(SceUID threadId, int *userStatus, SceUInt32 *userT
 	statusPtr = userStatus;
 	if (userStatus != NULL)
 		statusPtr = &status;
-	guid = SceSysmemForDriver_45D22597(0, threadId);
+	guid = scePUIDtoGUID(0, threadId);
 	if (guid < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto end;
 	}
-	ret = SceThreadmgrForDriver_9EF4F62C(guid, statusPtr, timeoutPtr);
+	ret = sceKernelWaitThreadEndCB(guid, statusPtr, timeoutPtr);
 	if (ret >= 0) {
 		if (userStatus != NULL)
 			err = sceKernelCopyToUser(userStatus, statusPtr, sizeof(status));
@@ -1843,7 +1843,7 @@ int _sceKernelGetThreadExitStatus(SceUID threadId, int *userStatus)
 		statusPtr = &status;
 	guid = 0;
 	if (threadId != 0) {
-		guid = SceSysmemForDriver_45D22597(0, threadId);
+		guid = scePUIDtoGUID(0, threadId);
 		if (guid < 0) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 			goto end;
@@ -1954,7 +1954,7 @@ SceUID sceKernelCreateSimpleEventForUser(const char *userName, SceUInt32 attr,
 /* sceKernelLockMutexForUser (user) */
 int sceKernelLockMutexForUser(SceUID mutexId, int count, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, mutexId);
+	SceUID guid = scePUIDtoGUID(0, mutexId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MUTEX_ID;
@@ -1964,7 +1964,7 @@ int sceKernelLockMutexForUser(SceUID mutexId, int count, SceUInt32 *timeout)
 /* sceKernelLockMutexCB (user) */
 int sceKernelLockMutexCB(SceUID mutexId, int count, SceUInt32 *timeout)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, mutexId);
+	SceUID guid = scePUIDtoGUID(0, mutexId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MUTEX_ID;
@@ -1974,7 +1974,7 @@ int sceKernelLockMutexCB(SceUID mutexId, int count, SceUInt32 *timeout)
 /* sceKernelCancelMutexForUser (user) */
 int sceKernelCancelMutexForUser(SceUID mutexId, int newCount, int *numWaitThreads)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, mutexId);
+	SceUID guid = scePUIDtoGUID(0, mutexId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MUTEX_ID;
@@ -1988,7 +1988,7 @@ int sceKernelGetMutexInfoForUser(SceUID mutexId, SceKernelMutexInfo *info)
 	SceUID guid;
 	int ret;
 
-	guid = SceSysmemForDriver_45D22597(0, mutexId);
+	guid = scePUIDtoGUID(0, mutexId);
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MUTEX_ID;
 	ret = sceKernelGetMutexInfo(guid, info);
@@ -2004,7 +2004,7 @@ int sceKernelGetMutexInfoForUser(SceUID mutexId, SceKernelMutexInfo *info)
 /* sceKernelTryLockMutexForUser (user) */
 int sceKernelTryLockMutexForUser(SceUID mutexId, int count)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, mutexId);
+	SceUID guid = scePUIDtoGUID(0, mutexId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MUTEX_ID;
@@ -2014,7 +2014,7 @@ int sceKernelTryLockMutexForUser(SceUID mutexId, int count)
 /* sceKernelUnlockMutexForUser (user) */
 int sceKernelUnlockMutexForUser(SceUID mutexId, int count)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, mutexId);
+	SceUID guid = scePUIDtoGUID(0, mutexId);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_MUTEX_ID;
@@ -3654,7 +3654,7 @@ int sceKernelChangeThreadCpuAffinityMaskForUser(SceUID uid, uint32_t mask)
 	int result = 0;
 
 	if (uid != 0)
-		result = SceSysmemForDriver_45D22597(0, uid);
+		result = scePUIDtoGUID(0, uid);
 	if (result < 0)
 		return USER_ERROR_UNKNOWN_THREAD_ID;
 	result = sceKernelChangeThreadCpuAffinityMask(result, mask);
@@ -3667,7 +3667,7 @@ int SceThreadmgr_sceKernelGetThreadCpuAffinityMask(SceUID uid)
 	int result;
 
 	if (uid != 0) {
-		result = SceSysmemForDriver_45D22597(0, uid);
+		result = scePUIDtoGUID(0, uid);
 		if (result < 0)
 			return USER_ERROR_UNKNOWN_THREAD_ID;
 		uid = result;
@@ -3682,7 +3682,7 @@ int sceKernelChangeThreadPriority2ForUser(SceUID uid, uint32_t priority)
 	int result = 0;
 
 	if (uid != 0)
-		result = SceSysmemForDriver_45D22597(0, uid);
+		result = scePUIDtoGUID(0, uid);
 	if (result < 0)
 		return USER_ERROR_UNKNOWN_THREAD_ID;
 	result = sceKernelChangeThreadPriority2(result, priority);
@@ -3701,7 +3701,7 @@ int sceKernelChangeThreadPriorityForUser(SceUID uid, uint32_t priority)
 int sceKernelSetEventForUser(SceUID eventId, uint32_t pattern, uint32_t userDataLow,
 			     uint32_t userDataHigh)
 {
-	SceUID event = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID event = scePUIDtoGUID(0, eventId);
 
 	if (event < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
@@ -3712,7 +3712,7 @@ int sceKernelSetEventForUser(SceUID eventId, uint32_t pattern, uint32_t userData
 
 int sceKernelClearEventForUser(SceUID eventId, uint32_t keep)
 {
-	SceUID event = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID event = scePUIDtoGUID(0, eventId);
 
 	if (event < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
@@ -3725,7 +3725,7 @@ int sceKernelSetEventWithNotifyCallbackForUser(SceUID eventId, uint32_t pattern,
 					       uint32_t userDataLow, uint32_t userDataHigh,
 					       uint32_t arg)
 {
-	SceUID event = SceSysmemForDriver_45D22597(0, eventId);
+	SceUID event = scePUIDtoGUID(0, eventId);
 
 	if (event < 0)
 		return USER_ERROR_UNKNOWN_EVENT_ID;
@@ -3738,7 +3738,7 @@ int sceKernelSetEventWithNotifyCallbackForUser(SceUID eventId, uint32_t pattern,
 int sceKernelPollEventFlagForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
 				  uint32_t *outPattern)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, evfId);
+	SceUID guid = scePUIDtoGUID(0, evfId);
 
 	return guid < 0 ? (int)USER_ERROR_UNKNOWN_EVENT_FLAG_ID :
 			  sceKernelPollEventFlag(guid, pattern, mode, outPattern);
@@ -3746,7 +3746,7 @@ int sceKernelPollEventFlagForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
 
 int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWaitThreads)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, evfId);
+	SceUID guid = scePUIDtoGUID(0, evfId);
 
 	return guid < 0 ? (int)USER_ERROR_UNKNOWN_EVENT_FLAG_ID :
 			  sceKernelCancelEventFlag(guid, pattern, numWaitThreads);
@@ -3755,11 +3755,11 @@ int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWait
 int sceKernelGetEventFlagInfoForUser(SceUID evfId, SceKernelEventFlagInfo *info)
 {
 	uint32_t attributes;
-	int ret = SceSysmemForDriver_45D22597(0, evfId);
+	int ret = scePUIDtoGUID(0, evfId);
 
 	if (ret < 0)
 		return USER_ERROR_UNKNOWN_EVENT_FLAG_ID;
-	ret = SceThreadmgrForDriver_612277C9(ret, info);
+	ret = sceKernelGetEventFlagInfo(ret, info);
 	if (ret >= 0) {
 		info->evfId = evfId;
 		ret = scePUIDGetAttr(0, evfId, &attributes);
@@ -3771,7 +3771,7 @@ int sceKernelGetEventFlagInfoForUser(SceUID evfId, SceKernelEventFlagInfo *info)
 
 int sceKernelClearEventFlagForUser(SceUID evfId, uint32_t pattern)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, evfId);
+	SceUID guid = scePUIDtoGUID(0, evfId);
 
 	return guid < 0 ? (int)USER_ERROR_UNKNOWN_EVENT_FLAG_ID :
 			  sceKernelClearEventFlag(guid, pattern);
@@ -3815,7 +3815,7 @@ int closeEventFlagForUser(SceUID uid, int delete)
 	SceClass *cls;
 	uint32_t attributes, version;
 
-	if (SceSysmemForDriver_E9728A12(0, uid, &cls) < 0 ||
+	if (scePUIDGetClass(0, uid, &cls) < 0 ||
 	    cls != s_threadmgrRuntime.manager->eventFlagClass ||
 	    scePUIDGetAttr(0, uid, &attributes) < 0)
 		return USER_ERROR_UNKNOWN_EVENT_FLAG_ID;
@@ -3835,7 +3835,7 @@ int closeEventFlagForUser(SceUID uid, int delete)
 		       "delete/close mismatch\n", uid, delete);
 	return USER_ERROR_UNKNOWN_EVENT_FLAG_ID;
 close:
-	return SceSysmemForDriver_84A4AF5E(0, uid);
+	return scePUIDClose(0, uid);
 }
 
 /* sceKernelDeleteEventFlagForUser (user) */
@@ -3863,7 +3863,7 @@ int sceKernelOpenEventFlag(const char *userName)
 	result = SceSysmemForKernel_BDE00106(name);
 	if (result < 0)
 		goto end;
-	if (SceSysmemForKernel_368F1C36(result) !=
+	if (sceGUIDtoClass(result) !=
 	    s_threadmgrRuntime.manager->eventFlagClass) {
 		result = SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
 		goto end;
@@ -3880,7 +3880,7 @@ end:
 /* sceKernelSetEventFlagForUser (user) */
 int sceKernelSetEventFlagForUser(SceUID uid, uint32_t pattern)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
+	SceUID guid = scePUIDtoGUID(0, uid);
 
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_EVENT_FLAG_ID;
@@ -3892,7 +3892,7 @@ extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attr
 /* name unknown */
 int cancelTimerForUser(SceUID uid, uint32_t *count)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
+	SceUID guid = scePUIDtoGUID(0, uid);
 
 	return guid < 0 ? (int)0xc0028241u : sceKernelCancelTimer(guid, count);
 }
@@ -3906,7 +3906,7 @@ int createTimerForUser(const char *name, uint32_t attributes,
 	if (result >= 0) {
 		result = sceKernelCreateTimer(copied, attributes, options);
 		if (result >= 0)
-			result = SceSysmemForDriver_BF209859(currentThreadContext()->processId, result);
+			result = scePUIDOpenByGUID(currentThreadContext()->processId, result);
 	}
 	return result;
 }
@@ -3914,7 +3914,7 @@ int createTimerForUser(const char *name, uint32_t attributes,
 /* name unknown */
 int setTimerEventForUser(SceUID uid, uint32_t type, SceUInt64 *interval, uint32_t repeat)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
+	SceUID guid = scePUIDtoGUID(0, uid);
 
 	return guid < 0 ? (int)0xc0028241u : sceKernelSetTimerEvent(guid, type, interval, repeat);
 }
@@ -3922,7 +3922,7 @@ int setTimerEventForUser(SceUID uid, uint32_t type, SceUInt64 *interval, uint32_
 /* name unknown */
 int getTimerEventRemainingTimeForUser(SceUID uid, uint64_t *output)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
+	SceUID guid = scePUIDtoGUID(0, uid);
 
 	return guid < 0 ? (int)0xc0028241u : sceKernelGetTimerEventRemainingTime(guid, output);
 }
@@ -3930,13 +3930,13 @@ int getTimerEventRemainingTimeForUser(SceUID uid, uint64_t *output)
 /* name unknown */
 int getTimerInfoForUser(SceUID uid, SceKernelTimerInfo *output)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
+	SceUID guid = scePUIDtoGUID(0, uid);
 	uint32_t attributes;
 	int result;
 
 	if (guid < 0)
 		return 0xc0028241u;
-	result = SceThreadmgrForDriver_19F3E92A(guid, output);
+	result = sceKernelGetTimerInfo(guid, output);
 	if (result >= 0) {
 		output->timerId = uid;
 		result = scePUIDGetAttr(0, uid, &attributes);
@@ -3964,7 +3964,7 @@ int sceKernelOpenTimerForUser(const char *userName)
 	if (result >= 0) {
 		uint32_t low = thread->processId;
 		uint32_t high = thread->userThreadId | ((int32_t)low >> 31);
-		SceUID guid = SceSysmemForDriver_45D22597(0, result);
+		SceUID guid = scePUIDtoGUID(0, result);
 		int wake = sceKernelSetEventWithNotifyCallback(guid, 0x100, (uint64_t)high << 32 | low, 0x100);
 		SCE_DBG_ASSERT_CHECK_FUNC(wake >= 0, 3328, "sceKernelOpenTimerForUser");
 	}
@@ -3973,7 +3973,7 @@ int sceKernelOpenTimerForUser(const char *userName)
 
 int sceKernelCloseTimerForUser(SceUID uid)
 {
-	SceKernelIntrStatus intrState = SceCpuForDriver_821FC0EE();
+	SceKernelIntrStatus intrState = sceKernelCpuSuspendIntr();
 	SceUIDTimerObject *object;
 	SceObjectBase *pObject;
 	struct ThreadCB *thread;
@@ -3983,7 +3983,7 @@ int sceKernelCloseTimerForUser(SceUID uid)
 	uint32_t wake = 0;
 	int result = 0xc0028241u;
 
-	guid = SceSysmemForDriver_45D22597(0, uid);
+	guid = scePUIDtoGUID(0, uid);
 	if (guid < 0 || sceGUIDReferObjectWithClass(guid,
 		s_threadmgrRuntime.manager->timerClass, &pObject) < 0)
 		goto resume;
@@ -3998,7 +3998,7 @@ int sceKernelCloseTimerForUser(SceUID uid)
 			goto release;
 		}
 	}
-	if (SceSysmemForDriver_84A4AF5E(0, uid) < 0)
+	if (scePUIDClose(0, uid) < 0)
 		goto release;
 	thread = currentThreadContext();
 	uint32_t high = thread->userThreadId;
@@ -4023,7 +4023,7 @@ resume:
 /* name unknown */
 int getTimerBaseForUser(SceUID uid, uint64_t *value)
 {
-	int guid = SceSysmemForDriver_45D22597(0, uid);
+	int guid = scePUIDtoGUID(0, uid);
 
 	if (guid < 0)
 		return 0xc0028241u;
@@ -4033,7 +4033,7 @@ int getTimerBaseForUser(SceUID uid, uint64_t *value)
 /* name unknown */
 int getTimerTimeForUser(SceUID uid, uint64_t *value)
 {
-	int guid = SceSysmemForDriver_45D22597(0, uid);
+	int guid = scePUIDtoGUID(0, uid);
 
 	if (guid < 0)
 		return 0xc0028241u;
@@ -4045,9 +4045,9 @@ uint64_t sceKernelGetTimerBaseWideForUser(SceUID uid)
 	int guid;
 
 	sceKernelApiDeclareTypeUInt64();
-	guid = SceSysmemForDriver_45D22597(0, uid);
+	guid = scePUIDtoGUID(0, uid);
 	if (guid >= 0)
-		return SceThreadmgrForDriver_A6D11DD3(guid);
+		return sceKernelGetTimerBaseWide(guid);
 	SCE_DBG_PRINTF_FUNC(0, 3481, "sceKernelGetTimerBaseWideForUser",
 		"*** error: sceKernelGetTimerBaseWideForUser(0x%08X), scePUIDtoGUID()=0x%08X\n", uid, guid);
 	return UINT64_MAX;
@@ -4058,9 +4058,9 @@ uint64_t sceKernelGetTimerTimeWideForUser(SceUID uid)
 	int guid;
 
 	sceKernelApiDeclareTypeUInt64();
-	guid = SceSysmemForDriver_45D22597(0, uid);
+	guid = scePUIDtoGUID(0, uid);
 	if (guid >= 0)
-		return SceThreadmgrForDriver_C1286004(guid);
+		return sceKernelGetTimerTimeWide(guid);
 	SCE_DBG_PRINTF_FUNC(0, 3522, "sceKernelGetTimerTimeWideForUser",
 		"*** error: sceKernelGetTimerTimeWideForUser(0x%08X), scePUIDtoGUID()=0x%08X\n", uid, guid);
 	return UINT64_MAX;
@@ -4068,14 +4068,14 @@ uint64_t sceKernelGetTimerTimeWideForUser(SceUID uid)
 
 int sceKernelStartTimerForUser(SceUID uid)
 {
-	int guid = SceSysmemForDriver_45D22597(0, uid);
+	int guid = scePUIDtoGUID(0, uid);
 
 	return guid < 0 ? 0xc0028241u : sceKernelStartTimer(guid);
 }
 
 int sceKernelStopTimerForUser(SceUID uid)
 {
-	int guid = SceSysmemForDriver_45D22597(0, uid);
+	int guid = scePUIDtoGUID(0, uid);
 
 	return guid < 0 ? 0xc0028241u : sceKernelStopTimer(guid);
 }
@@ -4090,7 +4090,7 @@ int setTimerTimeForUser(SceUID uid, uint64_t *userValue)
 	result = sceKernelCopyFromUser(&value, userValue, sizeof(value));
 	if (result < 0)
 		return result;
-	guid = SceSysmemForDriver_45D22597(0, uid);
+	guid = scePUIDtoGUID(0, uid);
 	if (guid < 0)
 		return 0xc0028241u;
 	result = sceKernelSetTimerTime(guid, &value);
@@ -4104,9 +4104,9 @@ uint64_t sceKernelSetTimerTimeWideForUser(SceUID uid, uint64_t value)
 	int guid;
 
 	sceKernelApiDeclareTypeUInt64();
-	guid = SceSysmemForDriver_45D22597(0, uid);
+	guid = scePUIDtoGUID(0, uid);
 	if (guid >= 0)
-		return SceThreadmgrForDriver_85195A16(guid, value);
+		return sceKernelSetTimerTimeWide(guid, value);
 	SCE_DBG_PRINTF_FUNC(0, 3587, "sceKernelSetTimerTimeWideForUser",
 		"*** error: sceKernelSetTimerTimeWideForUser(0x%08X), scePUIDtoGUID()=0x%08X\n", uid, guid);
 	return UINT64_MAX;
@@ -4130,7 +4130,7 @@ int sceKernelSendSignal(SceUID threadId)
 
 	if (threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
-	guid = SceSysmemForDriver_45D22597(0, threadId);
+	guid = scePUIDtoGUID(0, threadId);
 	if (guid < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 	return sendSignal(guid);
@@ -4138,20 +4138,20 @@ int sceKernelSendSignal(SceUID threadId)
 
 /* Callback user syscalls: PUID to GUID, then the kernel export. */
 
-int sceKernelGetCallbackCount(SceUID uid)
+int sceKernelGetCallbackCountForUser(SceUID uid)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
+	SceUID guid = scePUIDtoGUID(0, uid);
 
 	if (guid < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID | 0x40000000;
-	return SceThreadmgrForDriver_0892D8DF(guid);
+	return sceKernelGetCallbackCount(guid);
 }
 
-int sceKernelCancelCallback(SceUID uid)
+int sceKernelCancelCallbackForUser(SceUID uid)
 {
-	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
+	SceUID guid = scePUIDtoGUID(0, uid);
 
 	if (guid < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID | 0x40000000;
-	return SceThreadmgrForDriver_C040EC1C(guid);
+	return sceKernelCancelCallback(guid);
 }

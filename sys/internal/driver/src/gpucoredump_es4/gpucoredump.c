@@ -92,9 +92,9 @@ static unsigned gpuCoreDumpStopTrace(void)
 {
 	int key, stopped;
 
-	key = ScePamgrForDriver_0D04B52A(0x7a2077777a207888ULL);
+	key = sceKernelPaGetSharedKey(0x7a2077777a207888ULL);
 	s_traceKey = key;
-	if (key < 0 || !(ScePamgrForDriver_3ACF4316() & 1) || ScePamgrForDriver_88462719(key) != 0) {
+	if (key < 0 || !(sceKernelPaGetTraceBufferStatus() & 1) || sceKernelPaStopByKey(key) != 0) {
 		stopped = 0;
 	} else {
 		SceDebugForDriver_391B74B7("%s: An active PMON trace has been stopped.\n",
@@ -315,8 +315,8 @@ void gpuCoreDumpCapture(PVRSRV_SGXDEV_INFO *devInfo, int dumpTrace)
 	pmon.version = 0x10003;
 	pmon.traceBuffers = 1;
 	pmon.base = 0xc0000000;
-	pmon.state = ScePamgrForDriver_3ACF4316();
-	pmon.position = ScePamgrForDriver_FB46C3CD();
+	pmon.state = sceKernelPaGetTraceBufferStatus();
+	pmon.position = sceKernelPaGetWritePointer();
 	ret = ScePamgrForDriver_606C98CD(&trace);
 	if (ret != 0)
 		goto failed;
@@ -359,7 +359,7 @@ void gpuCoreDumpCapture(PVRSRV_SGXDEV_INFO *devInfo, int dumpTrace)
 	if (sceIoWrite(fd, &clock, sizeof(clock)) != sizeof(clock))
 		goto error;
 
-	used = ScePamgrForDriver_019BD60F(0);
+	used = sceKernelPaGetTraceBufferSize(0);
 	gpuCoreDumpLogPrintf(&log, "%s: Writing trace buffer... 0x%08x bytes\n",
 			     gpuCoreDumpModuleInfo.module_name, used);
 	gpuCoreDumpLogPrintf(&log, "%s: ", gpuCoreDumpModuleInfo.module_name);

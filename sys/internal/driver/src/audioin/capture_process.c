@@ -61,7 +61,7 @@ int audioInProcessStartHandler(SceUID pid, int unusedEventType,
 	RESTART_PROCESS_PORT(2);
 	RESTART_PROCESS_PORT(3);
 #undef RESTART_PROCESS_PORT
-	SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 256);
+	sceKernelAtomicOrAndGet32(&g_audioInRequestFlags, 256);
 	sceKernelSetEventFlag(g_audioInRequestEventFlag, 256);
 	return 0;
 }
@@ -80,7 +80,7 @@ int audioInAecThread(SceSize unusedSize, void *unusedArgument)
 		unsigned int requestFlags;
 
 		sceKernelWaitEventFlag(g_audioInAecEventFlag, 1, 5, NULL, NULL);
-		SceCpuForDriver_BC248C30(&g_audioInAecFlags, 1);
+		sceKernelAtomicOrAndGet32(&g_audioInAecFlags, 1);
 		if (g_audioInAecEnabled != 0 && g_audioInCaptureDevice != 1) {
 #define REQUIRE_AEC(index) do { \
 	if ((g_audioInPorts[index].flags & 2) && \
@@ -128,10 +128,10 @@ int audioInAecThread(SceSize unusedSize, void *unusedArgument)
 					g_audioInAecSamples[0], g_audioInAecSamples[1], gain, mode);
 			if (g_audioInAecFlags & 0x2000) {
 				memset(g_audioInAecSamples[0], 0, 1024);
-				SceCpuForDriver_DF899E4B(&g_audioInAecFlags, ~0x2000u);
+				sceKernelAtomicAndAndGet32(&g_audioInAecFlags, ~0x2000u);
 			}
 		}
 complete:
-		SceCpuForDriver_DF899E4B(&g_audioInAecFlags, ~1u);
+		sceKernelAtomicAndAndGet32(&g_audioInAecFlags, ~1u);
 	}
 }

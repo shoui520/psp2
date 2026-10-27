@@ -46,7 +46,7 @@ int robinInitializeSdio(void)
 	result = sceSdioChangeBusSpeed(gRobin.sdioContext, 2);
 	if (result < 0)
 		return result;
-	result = SceSdifForDriver_733BC373(gRobin.wlanFunction, 256);
+	result = sceSdioSetBlockLen(gRobin.wlanFunction, 256);
 	if (result < 0)
 		return result;
 	result = SceSdifForDriver_3428884D(gRobin.bluetoothFunction);
@@ -55,7 +55,7 @@ int robinInitializeSdio(void)
 	result = SceSdifForDriver_3428884D(gRobin.wlanFunction);
 	if (result < 0)
 		return result;
-	result = SceSdifForDriver_D0F78D9B(gRobin.wlanFunction, 92, 1,
+	result = sceSdioRead(gRobin.wlanFunction, 92, 1,
 					 &gRobin.revision, 1);
 	if (result < 0)
 		return result;
@@ -63,17 +63,17 @@ int robinInitializeSdio(void)
 		gRobin.sdioContext->masterInterruptEnabled = 1;
 	else
 		gRobin.sdioContext->masterInterruptEnabled = 0;
-	result = SceSdifForDriver_D0F78D9B(gRobin.wlanFunction, 120, 1,
+	result = sceSdioRead(gRobin.wlanFunction, 120, 1,
 					 (uint8_t *)&value, 1);
 	if (result < 0)
 		return result;
 	low = ((uint8_t *)&value)[0];
-	result = SceSdifForDriver_D0F78D9B(gRobin.wlanFunction, 121, 1,
+	result = sceSdioRead(gRobin.wlanFunction, 121, 1,
 					 (uint8_t *)&value, 1);
 	if (result < 0)
 		return result;
 	middle = ((uint8_t *)&value)[0] << 8;
-	result = SceSdifForDriver_D0F78D9B(gRobin.wlanFunction, 122, 1,
+	result = sceSdioRead(gRobin.wlanFunction, 122, 1,
 					 (uint8_t *)&value, 1);
 	if (result >= 0)
 		gRobin.fifoAddress = low | middle | (((uint8_t *)&value)[0] << 16);
@@ -87,7 +87,7 @@ int robinResetWlanForResume(void)
 	int result = 0;
 
 	request[0] = 1;
-	if (SceSdifForDriver_3C4CDC8B(gRobin.wlanFunction, 2, 1, request, 1) < 0)
+	if (sceSdioWrite(gRobin.wlanFunction, 2, 1, request, 1) < 0)
 		return 0;
 	gBootstrapMessage.header.messageType = 1;
 	gBootstrapMessage.command.sequence.encoded = 1;
@@ -95,12 +95,12 @@ int robinResetWlanForResume(void)
 	gBootstrapMessage.command.commandSize = 8;
 	gBootstrapMessage.header.messageSize = 256;
 	gBootstrapMessage.command.result = 0;
-	if (SceSdifForDriver_3C4CDC8B(gRobin.wlanFunction, gRobin.fifoAddress,
+	if (sceSdioWrite(gRobin.wlanFunction, gRobin.fifoAddress,
 				     sizeof(gBootstrapMessage),
 				     (uint8_t *)&gBootstrapMessage, 2) < 0)
 		return 0;
 	retries = 100;
-	while (SceSdifForDriver_D0F78D9B(gRobin.wlanFunction, 0,
+	while (sceSdioRead(gRobin.wlanFunction, 0,
 				     sizeof(gBootstrapStatus),
 				     (uint8_t *)&gBootstrapStatus, 2) >= 0) {
 		if (gBootstrapStatus.interruptStatus & 1) {
@@ -108,7 +108,7 @@ int robinResetWlanForResume(void)
 				break;
 			if (gBootstrapStatus.readLengths[0][0] |
 			    (gBootstrapStatus.readLengths[0][1] << 8)) {
-				if (SceSdifForDriver_D0F78D9B(gRobin.wlanFunction,
+				if (sceSdioRead(gRobin.wlanFunction,
 						     gRobin.fifoAddress,
 						     sizeof(gBootstrapMessage),
 						     (uint8_t *)&gBootstrapMessage, 2) < 0)
@@ -132,7 +132,7 @@ int robinDeauthenticateForResume(void)
 	int result = 0;
 
 	request[0] = 1;
-	if (SceSdifForDriver_3C4CDC8B(gRobin.wlanFunction, 2, 1, request, 1) < 0)
+	if (sceSdioWrite(gRobin.wlanFunction, 2, 1, request, 1) < 0)
 		return 0;
 	gBootstrapMessage.header.messageType = 1;
 	gBootstrapMessage.command.sequence.encoded = 1;
@@ -142,12 +142,12 @@ int robinDeauthenticateForResume(void)
 	gBootstrapMessage.command.result = 0;
 	robinWlanGetBssid(gBootstrapMessage.payload.deauthentication.bssid);
 	gBootstrapMessage.payload.deauthentication.reason = 3;
-	if (SceSdifForDriver_3C4CDC8B(gRobin.wlanFunction, gRobin.fifoAddress,
+	if (sceSdioWrite(gRobin.wlanFunction, gRobin.fifoAddress,
 				     sizeof(gBootstrapMessage),
 				     (uint8_t *)&gBootstrapMessage, 2) < 0)
 		return 0;
 	retries = 100;
-	while (SceSdifForDriver_D0F78D9B(gRobin.wlanFunction, 0,
+	while (sceSdioRead(gRobin.wlanFunction, 0,
 				     sizeof(gBootstrapStatus),
 				     (uint8_t *)&gBootstrapStatus, 2) >= 0) {
 		if (gBootstrapStatus.interruptStatus & 1) {
@@ -158,7 +158,7 @@ int robinDeauthenticateForResume(void)
 				break;
 			if (gBootstrapStatus.readLengths[0][0] |
 			    (gBootstrapStatus.readLengths[0][1] << 8)) {
-				if (SceSdifForDriver_D0F78D9B(gRobin.wlanFunction,
+				if (sceSdioRead(gRobin.wlanFunction,
 						     gRobin.fifoAddress,
 						     sizeof(gBootstrapMessage),
 						     (uint8_t *)&gBootstrapMessage, 2) < 0)
@@ -187,7 +187,7 @@ int robinTransferFirmware(const void *buffer, unsigned int size)
 		function = gRobin.wlanFunction;
 		retries = 100;
 		for (;;) {
-			result = SceSdifForDriver_D0F78D9B(function, 48, 1,
+			result = sceSdioRead(function, 48, 1,
 						 status, 1);
 			if (result < 0)
 				return 0x80418004;
@@ -201,7 +201,7 @@ int robinTransferFirmware(const void *buffer, unsigned int size)
 			return 0;
 		retries = 100;
 		for (;;) {
-			result = SceSdifForDriver_D0F78D9B(gRobin.wlanFunction,
+			result = sceSdioRead(gRobin.wlanFunction,
 						 64, 2, requestSize, 1);
 			if (result < 0)
 				return result;
@@ -226,7 +226,7 @@ nextChunk:
 				chunk = available;
 			transferSize = (chunk + 255) & ~255u;
 		}
-		result = SceSdifForDriver_3C4CDC8B(gRobin.wlanFunction,
+		result = sceSdioWrite(gRobin.wlanFunction,
 						gRobin.fifoAddress, transferSize,
 						(uint8_t *)buffer + written, 2);
 		if (result < 0)
@@ -282,7 +282,7 @@ int wlanBtStartRobin(void)
 		result = robinInitializeSdio();
 		if (result < 0)
 			goto releaseFunctions;
-		if (SceSdifForDriver_D0F78D9B(gRobin.wlanFunction, 96, 2,
+		if (sceSdioRead(gRobin.wlanFunction, 96, 2,
 					     status, 1) >= 0 &&
 		    (int16_t)(status[0] | (status[1] << 8)) == -292) {
 			result = 0;
@@ -315,7 +315,7 @@ int wlanBtStartRobin(void)
 			if (result < 0)
 				goto releaseFunctions;
 			gRobin.firmwareLoaded = 1;
-			result = SceSysmemForDriver_DFE2C8CB(gRobin.firmwareMemBlock,
+			result = sceKernelRemapMemBlock(gRobin.firmwareMemBlock,
 							SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_R);
 			if (result < 0)
 				goto releaseFunctions;
@@ -325,7 +325,7 @@ int wlanBtStartRobin(void)
 			goto releaseFunctions;
 		function = gRobin.wlanFunction;
 		retries = 100;
-		while (SceSdifForDriver_D0F78D9B(function, 96, 2, status, 1) < 0 ||
+		while (sceSdioRead(function, 96, 2, status, 1) < 0 ||
 		       (int16_t)(status[0] | (status[1] << 8)) != -292) {
 			sceKernelDelayThread(10000);
 			if (!--retries)
@@ -333,7 +333,7 @@ int wlanBtStartRobin(void)
 		}
 		function = gRobin.bluetoothFunction;
 		retries = 100;
-		while (SceSdifForDriver_D0F78D9B(function, 96, 2, status, 1) < 0 ||
+		while (sceSdioRead(function, 96, 2, status, 1) < 0 ||
 		       (int16_t)(status[0] | (status[1] << 8)) != -292) {
 			sceKernelDelayThread(10000);
 			if (!--retries)
@@ -390,7 +390,7 @@ int wlanBtResumeRobin(unsigned int *wakeSources)
 	result = robinInitializeSdio();
 	if (result < 0)
 		goto checkWakeSources;
-	if (SceSdifForDriver_D0F78D9B(gRobin.wlanFunction, 96, 2, status, 1) >= 0 &&
+	if (sceSdioRead(gRobin.wlanFunction, 96, 2, status, 1) >= 0 &&
 	    (int16_t)(status[0] | (status[1] << 8)) == -292) {
 		result = 0;
 		goto checkWakeSources;
@@ -422,7 +422,7 @@ int wlanBtResumeRobin(unsigned int *wakeSources)
 		if (result < 0)
 			goto checkWakeSources;
 		gRobin.firmwareLoaded = 1;
-		result = SceSysmemForDriver_DFE2C8CB(gRobin.firmwareMemBlock,
+		result = sceKernelRemapMemBlock(gRobin.firmwareMemBlock,
 						SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_R);
 		if (result < 0)
 			goto checkWakeSources;
@@ -432,7 +432,7 @@ int wlanBtResumeRobin(unsigned int *wakeSources)
 		goto checkWakeSources;
 	function = gRobin.wlanFunction;
 	retries = 100;
-	while (SceSdifForDriver_D0F78D9B(function, 96, 2, status, 1) < 0 ||
+	while (sceSdioRead(function, 96, 2, status, 1) < 0 ||
 	       (int16_t)(status[0] | (status[1] << 8)) != -292) {
 		sceKernelDelayThread(10000);
 		if (!--retries)
@@ -440,7 +440,7 @@ int wlanBtResumeRobin(unsigned int *wakeSources)
 	}
 	function = gRobin.bluetoothFunction;
 	retries = 100;
-	while (SceSdifForDriver_D0F78D9B(function, 96, 2, status, 1) < 0 ||
+	while (sceSdioRead(function, 96, 2, status, 1) < 0 ||
 	       (int16_t)(status[0] | (status[1] << 8)) != -292) {
 		sceKernelDelayThread(10000);
 		if (!--retries)
@@ -454,10 +454,10 @@ checkWakeSources:
 	if (wakeSources) {
 		if (*wakeSources == 3) {
 			*wakeSources = 0;
-			if (SceSdifForDriver_D0F78D9B(gRobin.wlanFunction, 106, 1,
+			if (sceSdioRead(gRobin.wlanFunction, 106, 1,
 						     &wakeStatus, 1) >= 0 && wakeStatus == 1)
 				*wakeSources |= 1;
-			if (SceSdifForDriver_D0F78D9B(gRobin.bluetoothFunction, 106, 1,
+			if (sceSdioRead(gRobin.bluetoothFunction, 106, 1,
 						     &wakeStatus, 1) >= 0 && wakeStatus == 1)
 				*wakeSources |= 2;
 		}

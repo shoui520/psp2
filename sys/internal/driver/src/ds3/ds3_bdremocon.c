@@ -49,7 +49,7 @@ int ds3BdRemoconThread(SceSize args, void *argp)
 	if (event < 0)
 		return event;
 	for (;;)
-		SceThreadmgrForDriver_8A35F714(event, 1, 5, &outBits, NULL);
+		sceKernelWaitEventFlagCB(event, 1, 5, &outBits, NULL);
 }
 
 int ds3BdRemoconSysEvent(int resume, int eventId, void *args, void *opt)
@@ -99,7 +99,7 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 					ds3BdRemocon.deviceAddress = address;
 					SceCtrlForDriver_AA36F578(1);
 				}
-				SceKernelSuspendForDriver_E0489831(0);
+				sceKernelPowerTick(0);
 				ds3BdRemocon.state = 0;
 				ds3BdRemocon.connected = 0;
 				ds3BdRemocon.buttons = 0;
@@ -162,12 +162,12 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 				if (ds3BdRemocon.buttons != buttons ||
 				    ds3BdRemocon.state != state ||
 				    ds3BdRemocon.connected != connected) {
-					if (SceDisplayForDriver_8B5DA27B(1) == ds3BdRemocon.lastVcount) {
-						SceDisplayForDriver_984C27E7();
-						SceDisplayForDriver_984C27E7();
+					if (sceDisplayGetVcountInternal(1) == ds3BdRemocon.lastVcount) {
+						sceDisplayWaitVblankStart();
+						sceDisplayWaitVblankStart();
 					}
 					_sceCtrlBdRemoconSendMergedNotify2(buttons, state, connected);
-					ds3BdRemocon.lastVcount = SceDisplayForDriver_8B5DA27B(1);
+					ds3BdRemocon.lastVcount = sceDisplayGetVcountInternal(1);
 				}
 				ds3BdRemocon.state = state;
 				ds3BdRemocon.connected = connected;

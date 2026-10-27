@@ -85,7 +85,7 @@ set(MODULE_IMPORT_FUNCS
 	SceUartForKernel_4C02AA05
 	SceUartForKernel_4E97D3AD
 	SceDebugForDriver_02B04343
-	SceDebugForDriver_374B7868
+	sceKernelGetAssertLevel
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A

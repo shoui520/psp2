@@ -103,7 +103,7 @@ uint32_t ScePervasiveForDriver_09C35980(void)
 	return Smc114(1, 0);
 }
 
-uint32_t ScePervasiveForDriver_589D0291(unsigned value)
+uint32_t scePervasiveCameraBusClockSelect(unsigned value)
 {
 	if (value - 1 >= 5)
 		return PERVASIVE_ERROR;
@@ -175,12 +175,12 @@ uint32_t ScePervasiveForDriver_9E81E057(void)
 	return previous != 0;
 }
 
-uint32_t ScePervasiveForDriver_26B51075(void)
+uint32_t scePervasiveCecClockOutEnable(void)
 {
 	return WriteClock(&BASECLK_REGS->cecClockOut, 1);
 }
 
-uint32_t ScePervasiveForDriver_D185D235(void)
+uint32_t scePervasiveCecClockOutDisable(void)
 {
 	return WriteClock(&BASECLK_REGS->cecClockOut, 0);
 }

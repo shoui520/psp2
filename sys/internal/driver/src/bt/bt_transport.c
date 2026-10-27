@@ -31,7 +31,7 @@ int BtPumpTransmit(BtTransport *transport)
 		if (transport->asleep) {
 			if (!transport->wakeupPending) {
 				wakeup[0] = 2;
-				awakened = SceSdifForDriver_3C4CDC8B(transport->function,
+				awakened = sceSdioWrite(transport->function,
 					0, 1, wakeup, 1);
 				BtQueueTimer(&transport->wakeupTimer, BtPollTransport,
 					transport, 1000000);
@@ -49,7 +49,7 @@ int BtPumpTransmit(BtTransport *transport)
 			length = head->length + 4;
 			if (length > 128)
 				length = (head->length + 131) & ~127;
-			result = SceSdifForDriver_3C4CDC8B(transport->function,
+			result = sceSdioWrite(transport->function,
 				transport->ioPort, length, gBtTransmitPacket.bytes, 2);
 		}
 	}
@@ -136,7 +136,7 @@ int BtQueueTransmit(unsigned int packetType, const uint8_t *data, int length,
 		if (gBtTransport.wakeupPending)
 			return 0;
 		wakeup[0] = 2;
-		result = SceSdifForDriver_3C4CDC8B(gBtTransport.function,
+		result = sceSdioWrite(gBtTransport.function,
 			0, 1, wakeup, 1);
 		BtQueueTimer(&gBtTransport.wakeupTimer, BtPollTransport,
 			&gBtTransport, 1000000);
@@ -152,7 +152,7 @@ int BtQueueTransmit(unsigned int packetType, const uint8_t *data, int length,
 	transferLength = head->length + 4;
 	if (transferLength > 128)
 		transferLength = (head->length + 131) & ~127;
-	return SceSdifForDriver_3C4CDC8B(gBtTransport.function,
+	return sceSdioWrite(gBtTransport.function,
 		gBtTransport.ioPort, transferLength, gBtTransmitPacket.bytes, 2);
 }
 

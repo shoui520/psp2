@@ -84,7 +84,7 @@ int checkInvalidThread(SceUID pid, SceUID thid)
 	SceUID guid;
 
 	info.size = sizeof(info);
-	guid = SceSysmemForDriver_45D22597(pid, thid);
+	guid = scePUIDtoGUID(pid, thid);
 	if (SceThreadmgrForDriver_555CA6BB(guid, 0, &info) != 0)
 		return 0x20012;
 	if (info.processId == 0x10005)
@@ -98,8 +98,8 @@ int checkInvalidModule(SceUID pid, SceUID modid)
 	SceUID guid;
 
 	info.size = sizeof(info);
-	guid = SceSysmemForDriver_45D22597(pid, modid);
-	if (guid < 0 || SceModulemgrForKernel_DAA90093(pid, guid, &info) < 0)
+	guid = scePUIDtoGUID(pid, modid);
+	if (guid < 0 || sceKernelGetModuleInfo(pid, guid, &info) < 0)
 		return 0x20013;
 	return 0;
 }
@@ -111,7 +111,7 @@ int checkInvalidOptionalThread(SceUID pid, SceUID thid)
 
 	if (thid == -1)
 		return 0;
-	guid = SceSysmemForDriver_45D22597(pid, thid);
+	guid = scePUIDtoGUID(pid, thid);
 	info.size = sizeof(info);
 	if (SceThreadmgrForDriver_555CA6BB(guid, 0, &info) < 0)
 		return 0x20012;
@@ -182,7 +182,7 @@ int checkInvalidMemoryRange(SceUID pid, const void *address, SceSize size,
 	SceUInt32 start = (uintptr_t)address;
 	int protected;
 
-	if (SceSysmemForDriver_9F6E45E3(pid, mode, address, size) < 0)
+	if (sceKernelIsAccessibleRangeProc(pid, mode, address, size) < 0)
 		return 0x20030;
 	protected = start <= 0x80000fff;
 	if (start < 0x80000000)
@@ -368,8 +368,8 @@ int checkIllegalThreadStatusResumeThread(SceUID pid, SceUID thid)
 	SceUID guid;
 	int status;
 
-	guid = SceSysmemForDriver_45D22597(pid, thid);
-	status = SceThreadmgrForDriver_A0B1AB21(guid);
+	guid = scePUIDtoGUID(pid, thid);
+	status = sceKernelIsThreadDebugSuspended(guid);
 	if ((status & 1) != 0)
 		return 0;
 	SCE_PRINTF_WITH_INFO(15, 804, "0x%08x:0x%08x\n", thid, status);
@@ -385,8 +385,8 @@ int checkIllegalThreadStatusResumeProcess(SceUID pid, SceUID thid,
 	SceUID guid;
 	int status, result;
 
-	guid = SceSysmemForDriver_45D22597(pid, thid);
-	status = SceThreadmgrForDriver_A0B1AB21(guid);
+	guid = scePUIDtoGUID(pid, thid);
+	status = sceKernelIsThreadDebugSuspended(guid);
 	if (status < 0) {
 		SCE_PRINTF_WITH_INFO(15, 823, "0x%08x\n", status);
 		return status;
@@ -430,8 +430,8 @@ int checkThreadIsSuspendedAlready(SceUID pid, SceUID thid)
 	SceUID guid;
 	int status;
 
-	guid = SceSysmemForDriver_45D22597(pid, thid);
-	status = SceThreadmgrForDriver_A0B1AB21(guid);
+	guid = scePUIDtoGUID(pid, thid);
+	status = sceKernelIsThreadDebugSuspended(guid);
 	if (status < 0) {
 		SCE_PRINTF_WITH_INFO(15, 913, "0x%08x\n", status);
 		return status;

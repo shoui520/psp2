@@ -119,7 +119,7 @@ int sceSblPmMgrSetProductModeCommon(int mode, int useSm)
 	return stop != 0 ? stop : ret;
 }
 
-int SceSblPostSsMgrForDriver_ADF92824(int on)
+int sceSblPmMgrSetProductMode(int on)
 {
 	int mode;
 
@@ -193,7 +193,7 @@ int sceSblPmMgrInit(void)
 	if (wakeup == 0x20 || wakeup == 0xb) {
 		hold = kbl->hold_ctrl;
 		if (pmMgrIsProductModeKeyHeld(wakeup, (const SceUInt8 *)&hold) &&
-		    SceSblPostSsMgrForDriver_ADF92824(1) == 0) {
+		    sceSblPmMgrSetProductMode(1) == 0) {
 			SCE_PRINTF_WITH_INFO(0, 582, "SET A68A.\n");
 			ret = sceSysconSetPowerMode(0, 0);
 			if (ret != 0)
@@ -214,7 +214,7 @@ int sceSblPmMgrSetProductModeOffForUser(void)
 		sceSyscallLeave(state);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	ret = SceSblPostSsMgrForDriver_ADF92824(0);
+	ret = sceSblPmMgrSetProductMode(0);
 	if (ret == 0)
 		ret = SceSblPostSsMgrForDriver_FE92A318(0);
 	sceSyscallLeave(state);

@@ -2282,7 +2282,7 @@ int sceVfsOpSync(SceVfsMount *mnt, int flags)
 	return ret;
 }
 
-int SceIofilemgrForDriver_F7DAC0F5(SceVfsMount *mnt, const char *path, const char **path2,
+int sceVfsOpDecodePathElem(SceVfsMount *mnt, const char *path, const char **path2,
 			    const char **path3, char *buf, SceSize buf_len, SceSize *decode_len)
 {
 	const SceVfsOpTable *ops = vfs_mnt_ops(mnt);

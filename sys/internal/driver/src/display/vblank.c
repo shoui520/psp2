@@ -133,14 +133,14 @@ static __attribute__((noinline)) int waitVblank(SceUInt32 head, SceUInt32 count,
 	bits = (1 << head) | 8;
 	if (!(flags & 1)) {
 		do {
-			ret = SceThreadmgrForDriver_C529EA32(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
+			ret = sceKernelWaitEvent(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
 			if (ret < 0)
 				goto error;
 			vcount = heads[head].vcount;
 		} while (((vcount - start) & 0xffff) < count);
 	} else {
 		do {
-			ret = SceThreadmgrForDriver_360C655C(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
+			ret = sceKernelWaitEventCB(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
 			if (ret < 0)
 				goto error;
 			vcount = heads[head].vcount;
@@ -273,7 +273,7 @@ int vblankInit(void) /* name unknown */
 	sgiState[1].enabled = 0;
 	heads[0].eventBits = 1;
 	heads[1].eventBits = 2;
-	ret = SceThreadmgrForDriver_B645C7EF(sizeof(DisplayVblankWait), 0, 0);
+	ret = sceKernelRegisterKTLS(sizeof(DisplayVblankWait), 0, 0);
 	if (ret < 0)
 		return ret;
 	vblankWaitKey = ret;
@@ -327,7 +327,7 @@ int vblankResume(void) /* name unknown */
 	return 0;
 }
 
-int SceDisplayForDriver_8B5DA27B(int head)
+int sceDisplayGetVcountInternal(int head)
 {
 	DisplayProcessLocal *pls;
 	SceUInt32 vcount;
@@ -362,7 +362,7 @@ int sceDisplayGetVcount(void)
 	return ret;
 }
 
-int sceDisplayGetVcountInternal(SceUInt32 head)
+int sceDisplayGetVcountInternalForUser(SceUInt32 head)
 {
 	DisplayProcessLocal *pls;
 	SceUInt32 vcount;
@@ -383,7 +383,7 @@ int sceDisplayGetVcountInternal(SceUInt32 head)
 	return ret;
 }
 
-int SceDisplayForDriver_B80CA224(int head)
+int sceDisplayWaitVblankStartInternal(int head)
 {
 	return waitVblank(head, 1, 0);
 }
@@ -403,16 +403,6 @@ int SceDisplayForDriver_61421AAF(int head, unsigned int vcount)
 	return waitVblank(head, vcount, 1);
 }
 
-int SceDisplayForDriver_984C27E7(void)
-{
-	return waitVblank(primaryHead, 1, 0);
-}
-
-int SceDisplayForDriver_46F186C3(void)
-{
-	return waitVblank(primaryHead, 1, 1);
-}
-
 int sceDisplayWaitVblankStart(void)
 {
 	return waitVblank(primaryHead, 1, 0);
@@ -423,22 +413,32 @@ int sceDisplayWaitVblankStartCB(void)
 	return waitVblank(primaryHead, 1, 1);
 }
 
-int SceDisplayForDriver_40F1469C(unsigned int vcount)
+int sceDisplayWaitVblankStartForUser(void)
+{
+	return waitVblank(primaryHead, 1, 0);
+}
+
+int sceDisplayWaitVblankStartCBForUser(void)
+{
+	return waitVblank(primaryHead, 1, 1);
+}
+
+int sceDisplayWaitVblankStartMulti(unsigned int vcount)
 {
 	return waitVblank(primaryHead, vcount, 0);
 }
 
-int SceDisplayForDriver_77ED8B3A(unsigned int vcount)
+int sceDisplayWaitVblankStartMultiCB(unsigned int vcount)
 {
 	return waitVblank(primaryHead, vcount, 1);
 }
 
-int sceDisplayWaitVblankStartMulti(SceUInt32 vcount)
+int sceDisplayWaitVblankStartMultiForUser(SceUInt32 vcount)
 {
 	return waitVblank(primaryHead, vcount, 0);
 }
 
-int sceDisplayWaitVblankStartMultiCB(SceUInt32 vcount)
+int sceDisplayWaitVblankStartMultiCBForUser(SceUInt32 vcount)
 {
 	return waitVblank(primaryHead, vcount, 1);
 }
@@ -463,16 +463,6 @@ int SceDisplayForDriver_6DC8F0F5(SceUInt32 head, SceUInt32 plane, SceUInt32 vcou
 	return waitVblank(head, vcount, (plane & 1) << 2 | 3);
 }
 
-int SceDisplayForDriver_1C0C9C4A(void)
-{
-	return waitVblank(primaryHead, 1, 2);
-}
-
-int SceDisplayForDriver_9D7F203C(void)
-{
-	return waitVblank(primaryHead, 1, 3);
-}
-
 int sceDisplayWaitSetFrameBuf(void)
 {
 	return waitVblank(primaryHead, 1, 2);
@@ -483,22 +473,32 @@ int sceDisplayWaitSetFrameBufCB(void)
 	return waitVblank(primaryHead, 1, 3);
 }
 
-int SceDisplayForDriver_E6D27E0A(unsigned int vcount)
+int sceDisplayWaitSetFrameBufForUser(void)
+{
+	return waitVblank(primaryHead, 1, 2);
+}
+
+int sceDisplayWaitSetFrameBufCBForUser(void)
+{
+	return waitVblank(primaryHead, 1, 3);
+}
+
+int sceDisplayWaitSetFrameBufMulti(unsigned int vcount)
 {
 	return waitVblank(primaryHead, vcount, 2);
 }
 
-int SceDisplayForDriver_863EACBE(unsigned int vcount)
+int sceDisplayWaitSetFrameBufMultiCB(unsigned int vcount)
 {
 	return waitVblank(primaryHead, vcount, 3);
 }
 
-int sceDisplayWaitSetFrameBufMulti(SceUInt32 vcount)
+int sceDisplayWaitSetFrameBufMultiForUser(SceUInt32 vcount)
 {
 	return waitVblank(primaryHead, vcount, 2);
 }
 
-int sceDisplayWaitSetFrameBufMultiCB(SceUInt32 vcount)
+int sceDisplayWaitSetFrameBufMultiCBForUser(SceUInt32 vcount)
 {
 	return waitVblank(primaryHead, vcount, 3);
 }
@@ -510,7 +510,7 @@ int SceDisplayForDriver_4AE2A2B1(int head, SceUID uid)
 	return sceKernelRegisterCallbackToEventForDriver(heads[head].vblankEvent, uid, heads[head].vblankEvent);
 }
 
-int SceDisplayForDriver_7FB0BD28(SceUID uid)
+int sceDisplayRegisterVblankStartCallback(SceUID uid)
 {
 	SceUInt32 head = primaryHead;
 
@@ -519,13 +519,13 @@ int SceDisplayForDriver_7FB0BD28(SceUID uid)
 	return sceKernelRegisterCallbackToEventForDriver(heads[head].vblankEvent, uid, heads[head].vblankEvent);
 }
 
-int sceDisplayRegisterVblankStartCallback(SceUID uid)
+int sceDisplayRegisterVblankStartCallbackForUser(SceUID uid)
 {
 	SceUInt32 t;
 	int ret;
 
 	t = sceSyscallEnter();
-	uid = SceSysmemForDriver_45D22597(0, uid);
+	uid = scePUIDtoGUID(0, uid);
 	if (uid < 0) {
 		sceSyscallLeave(t);
 		return 0xc00280a1;
@@ -542,7 +542,7 @@ int SceDisplayForDriver_B027433E(int head, SceUID uid)
 	return sceKernelUnregisterCallbackFromEvent(heads[head].vblankEvent, uid);
 }
 
-int SceDisplayForDriver_4B27191F(SceUID uid)
+int sceDisplayUnregisterVblankStartCallback(SceUID uid)
 {
 	SceUInt32 head = primaryHead;
 
@@ -551,14 +551,14 @@ int SceDisplayForDriver_4B27191F(SceUID uid)
 	return sceKernelUnregisterCallbackFromEvent(heads[head].vblankEvent, uid);
 }
 
-int sceDisplayUnregisterVblankStartCallback(SceUID uid)
+int sceDisplayUnregisterVblankStartCallbackForUser(SceUID uid)
 {
 	SceUInt32 head;
 	SceUInt32 t;
 	int ret;
 
 	t = sceSyscallEnter();
-	uid = SceSysmemForDriver_45D22597(0, uid);
+	uid = scePUIDtoGUID(0, uid);
 	if (uid < 0) {
 		sceSyscallLeave(t);
 		return 0xc00280a1;

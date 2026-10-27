@@ -64,11 +64,11 @@ set(MODULE_IMPORT_FUNCS
 	SceCtrlForDriver_06577FE8
 	SceCtrlForDriver_1E750326
 	sceCtrlSetCtrlpCallback
-	SceCtrlForDriver_A248CDAE
-	SceCtrlForDriver_ED138A26
-	SceCtrlForDriver_F11D0D30
+	sceCtrlSetRapidFire
+	sceCtrlClearRapidFire
+	sceCtrlGetControllerPortInfo
 	sceTouchSetCtrlpCallback
-	SceTouchForDriver_937DB4C0
+	sceTouchGetPanelInfo
 	SceBtForDriver_10D68FAE
 	SceBtForDriver_E6F659E0
 )
