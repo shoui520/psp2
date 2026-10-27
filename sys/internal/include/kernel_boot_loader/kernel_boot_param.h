@@ -13,6 +13,9 @@
 
 struct SceKblParam;
 struct SceCorelockContext;
+struct PhyMemPart;
+struct PhyPage;
+struct FixedHeap;
 
 #define SCE_KERNEL_BOOT_PARAM_MAGIC	0x7f407c30
 #define SCE_KERNEL_BOOT_MEMORY_MAX	4
@@ -80,10 +83,21 @@ typedef struct SceKernelBootParam {
 	struct SceCorelockContext *corelock;	/* 0x200 */
 	SceKernelBootCpu cpu[SCE_KERNEL_BOOT_CPU_MAX];	/* 0x204 */
 	void *pSysroot;				/* 0x284 */
-	uint32_t reserved2;
-	void *pL2PageTable000;
+	SceUIntPtr l2PageTable000VBase;		/* 0x288: the first address pL2PageTable000 maps */
+	uint32_t *pL2PageTable000;		/* 0x28c: SceKernelL2PageTable000 */
 	SceUIntPtr resetVector;			/* 0x290: VBAR, exceptionEntry.vbase + 0x100 */
-	uint32_t reserved3[26];			/* SceSysmem's boot objects */
+	/* SceSysmem's boot objects */
+	struct PhyMemPart *phyPartKernel;	/* 0x294: the kernel fixed heaps' pages come from it */
+	uint32_t reserved3[10];
+	struct PhyPage *fixedHeap32BPage;	/* 0x2c0: the pages backing the fixed heap mappings */
+	struct PhyPage *fixedHeap48BPage;
+	struct PhyPage *fixedHeap64BPage;
+	struct PhyPage *fixedHeapForL2ObjectPage;
+	struct FixedHeap *fixedHeap32BObject;	/* 0x2d0: the fixed heaps made on them */
+	struct FixedHeap *fixedHeap48BObject;
+	struct FixedHeap *fixedHeap64BObject;
+	struct FixedHeap *fixedHeapForL2ObjectObject;
+	uint32_t reserved4[7];
 	uintptr_t debugPutchar;			/* 0x2fc: the boot loader's putchar */
 	uintptr_t debugPrintf;			/* 0x300: the boot loader's printf */
 	uintptr_t debugPutcharHandler;		/* the putchar handler registered with it */
@@ -103,6 +117,8 @@ _Static_assert(offsetof(SceKernelBootParam, corelock) == 0x200, "boot param core
 _Static_assert(offsetof(SceKernelBootParam, cpu[1]) == 0x224, "boot param CPU");
 _Static_assert(offsetof(SceKernelBootParam, pSysroot) == 0x284, "boot param sysroot pointer");
 _Static_assert(offsetof(SceKernelBootParam, resetVector) == 0x290, "boot param reset vector");
+_Static_assert(offsetof(SceKernelBootParam, fixedHeap32BPage) == 0x2c0, "boot param fixed heap pages");
+_Static_assert(offsetof(SceKernelBootParam, fixedHeap32BObject) == 0x2d0, "boot param fixed heaps");
 _Static_assert(offsetof(SceKernelBootParam, debugPutchar) == 0x2fc, "boot param putchar");
 _Static_assert(offsetof(SceKernelBootParam, debugPrintLevel) == 0x308, "boot param print level");
 _Static_assert(sizeof(SceKernelBootParam) == 0x310, "boot param size");

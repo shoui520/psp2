@@ -2632,6 +2632,8 @@ int GUIDGetClass(SceUID guid, SceClass **cls)
 	return ret;
 }
 
+#endif
+
 /* sceUIDtoObject */
 void *SceSysmemForKernel_FA6C098C(SceUID uid)
 {
@@ -2641,6 +2643,8 @@ void *SceSysmemForKernel_FA6C098C(SceUID uid)
 		object = NULL;
 	return object;
 }
+
+#if !SYSMEM_NSKBL
 
 /* sceUIDtoClass */
 SceClass *SceSysmemForKernel_368F1C36(SceUID uid)

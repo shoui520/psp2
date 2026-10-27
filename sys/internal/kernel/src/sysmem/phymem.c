@@ -10,7 +10,6 @@
 
 /* the globals are not static: the unconverted part of the file sets them */
 
-#define PHYMEM_PAGE_SHIFT		12
 #define PHYMEM_PAGES_PER_1M		0x100
 #define PHYMEM_BUDDY_ORDERS		9	/* 4 KiB .. 1 MiB */
 

@@ -8,6 +8,13 @@
 #include "sysmem_internal.h"
 #include <sysmem/uid_guid.h>
 #include <sysmem/compiler.h>
+#if SYSMEM_NSKBL
+#include <sysmem/sysclib.h>
+#include <sysmem/sysroot.h>
+#include <kernel_boot_loader/kernel_boot_param.h>
+#include "memblock_obj_module.h"
+#include "mmu.h"
+#endif
 
 /* name unknown */
 /* name unknown: AllocSimpleMemBlock found no free physical memory */
@@ -866,6 +873,81 @@ int FixedHeapSetPage(FixedHeap *heap, void *page)
 	return 0;
 }
 
+#if SYSMEM_NSKBL
+/*
+ * One of the fixed heaps on the pages the boot loader mapped for them: the
+ * page from the kernel's physical memory, mapped at the boot loader's address.
+ */
+static int CreateInitialFixedHeap(FixedHeap *heap, char *name, SceUInt32 attr,
+				  const uintptr_t *l2VBase, uint32_t *const *l2,
+				  PhyMemPart *phyMemPart, uintptr_t va, SceSize pageSize,
+				  SceSize itemSize, void **pages, void **blocks, PhyPage **page)
+{
+	PhyPage *phyPage = NULL;
+	int ret;
+
+	ret = PhyMemPartAllocPhyPage(phyMemPart, pageSize, 0x10, &phyPage);
+	if (ret < 0)
+		return ret;
+	if (pageSize == 0x1000) {
+		ret = sceKernelMMUMapSmallPage(*l2, MEMBLOCK_CODE_KERNEL_ROOT_RW | MEMBLOCK_CODE_GLOBAL,
+					       va, va - *l2VBase,
+					       phyPage->info << PHYMEM_PAGE_SHIFT);
+		if (ret < 0) {
+			SCE_DBG_ASSERT_FAIL(2586);
+			return ret;
+		}
+	} else if (pageSize == 0x10000) {
+		ret = sceKernelMMUMapLargePages(*l2, MEMBLOCK_CODE_KERNEL_ROOT_RW | MEMBLOCK_CODE_GLOBAL,
+						va, va - *l2VBase, 0x10000,
+						phyPage->info << PHYMEM_PAGE_SHIFT);
+		if (ret < 0) {
+			SCE_DBG_ASSERT_FAIL(2602);
+			return ret;
+		}
+	} else {
+		SCE_DBG_ASSERT_FAIL(2606);
+	}
+	*page = phyPage;
+	heap->uidHeap.cls = s_fixedHeapClass;
+	FixedHeapInit(heap, name, attr, itemSize, pageSize, (void *)va, NULL, 0x80, pages, blocks);
+	return 0;
+}
+
+/* a kernel fixed heap on a memblock of its own in a partition */
+int FixedHeapBootInitialize(FixedHeap *heap, const char *name, SceUInt32 attr, SceUID partitionId,
+			    SceSize itemSize, SceSize pageSize, SceUInt16 maxPages, void **pages,
+			    void **blocks)
+{
+	struct Partition *partition;
+	MemBlockObject *block;
+	void *phyMemPart;
+	char *heapName;
+	int ret;
+
+	partition = SceSysmemForKernel_FA6C098C(partitionId);
+	ret = PartitionGetPhyMemPart(partition, MEMBLOCK_CODE_KERNEL_ROOT_RW, &phyMemPart);
+	if (ret < 0)
+		return ret;
+	ret = PartitionAllocMemBlockWithPhyMemPartExt(partition, phyMemPart, name,
+						      MEMBLOCK_CODE_KERNEL_ROOT_RW, pageSize, NULL,
+						      &block);
+	if (ret < 0)
+		return ret;
+	heapName = sceKernelSysrootAlloc(0x20);
+	strncpy(heapName, name, 0x20);
+	MemBlockSetNameRaw(block, heapName);
+	heap->uidHeap.cls = s_fixedHeapClass;
+	ret = FixedHeapInit(heap, heapName, attr, itemSize, pageSize, (void *)block->vbase,
+			    partition, maxPages, pages, blocks);
+	if (ret < 0) {
+		SCE_DBG_ASSERT_FAIL(2310);
+		return ret;
+	}
+	return 0;
+}
+#endif
+
 #if !SYSMEM_NSKBL
 
 /*
@@ -1046,7 +1128,150 @@ int FixedHeapSetUID(struct UIDManager *manager)
 }
 #endif
 
-#if FW_DEBUG
+#if SYSMEM_NSKBL
+/*
+ * The fixed heap class and the kernel fixed heaps on the pages the boot loader
+ * mapped, made by core 0. A failure returns with the corelock still held.
+ */
+int FixedHeapStart(SceKernelBootParam *param, UIDManager *manager)
+{
+	FixedHeapClass *cls;
+	PhyPage *page;
+	void **pages, **blocks;
+	char *name;
+	int ret = 0;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		cls = sceKernelSysrootAlloc(sizeof(FixedHeapClass));
+		s_fixedHeapClass = cls;
+		manager->fixedHeapClass = cls;
+		ret = FixedHeapInitClass(cls, "SceUIDFixedHeapClass", sizeof(FixedHeap),
+					 SceSysmemForKernel_7C878E94());
+		if (ret < 0) {
+			SCE_DBG_ASSERT(0, 2852);
+			return ret;
+		}
+
+		param->fixedHeap32BObject = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		pages = sceKernelSysrootAlloc(0x200);
+		blocks = sceKernelSysrootAlloc(0x200);
+		name = sceKernelSysrootAlloc(0x20);
+		strncpy(name, "SceKernelFixedHeap32B", 0x20);
+		ret = CreateInitialFixedHeap(param->fixedHeap32BObject, name, FIXED_HEAP_ATTR_CPU_CACHE,
+					     &param->l2PageTable000VBase, &param->pL2PageTable000,
+					     param->phyPartKernel, param->fixedHeap32B.vbase,
+					     param->fixedHeap32B.psize, 32, pages, blocks, &page);
+		if (ret < 0) {
+			SCE_DBG_ASSERT_FAIL(2882);
+			return ret;
+		}
+		param->fixedHeap32BPage = page;
+
+		param->fixedHeap48BObject = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		pages = sceKernelSysrootAlloc(0x200);
+		blocks = sceKernelSysrootAlloc(0x200);
+		name = sceKernelSysrootAlloc(0x20);
+		strncpy(name, "SceKernelFixedHeap48B", 0x20);
+		ret = CreateInitialFixedHeap(param->fixedHeap48BObject, name, FIXED_HEAP_ATTR_CPU_CACHE,
+					     &param->l2PageTable000VBase, &param->pL2PageTable000,
+					     param->phyPartKernel, param->fixedHeap48B.vbase,
+					     param->fixedHeap48B.psize, 48, pages, blocks, &page);
+		if (ret < 0) {
+			SCE_DBG_ASSERT_FAIL(2911);
+			return ret;
+		}
+		param->fixedHeap48BPage = page;
+
+		param->fixedHeap64BObject = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		pages = sceKernelSysrootAlloc(0x200);
+		blocks = sceKernelSysrootAlloc(0x200);
+		name = sceKernelSysrootAlloc(0x20);
+		strncpy(name, "SceKernelFixedHeap64B", 0x20);
+		ret = CreateInitialFixedHeap(param->fixedHeap64BObject, name, FIXED_HEAP_ATTR_CPU_CACHE,
+					     &param->l2PageTable000VBase, &param->pL2PageTable000,
+					     param->phyPartKernel, param->fixedHeap64B.vbase,
+					     param->fixedHeap64B.psize, 64, pages, blocks, &page);
+		if (ret < 0) {
+			SCE_DBG_ASSERT_FAIL(2939);
+			return ret;
+		}
+		param->fixedHeap64BPage = page;
+
+		param->fixedHeapForL2ObjectObject = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		pages = sceKernelSysrootAlloc(0x200);
+		blocks = sceKernelSysrootAlloc(0x200);
+		name = sceKernelSysrootAlloc(0x20);
+		strncpy(name, "SceKernelFixedHeapL2Object", 0x20);
+		ret = CreateInitialFixedHeap(param->fixedHeapForL2ObjectObject, name, 0,
+					     &param->l2PageTable000VBase, &param->pL2PageTable000,
+					     param->phyPartKernel, param->fixedHeapForL2Object.vbase,
+					     param->fixedHeapForL2Object.psize, 64, pages, blocks, &page);
+		if (ret < 0) {
+			SCE_DBG_ASSERT_FAIL(2967);
+			return ret;
+		}
+		param->fixedHeapForL2ObjectPage = page;
+
+		manager->fixedHeap32B = param->fixedHeap32BObject;
+		manager->fixedHeap48B = param->fixedHeap48BObject;
+		manager->fixedHeap64B = param->fixedHeap64BObject;
+		manager->fixedHeapL2Object = param->fixedHeapForL2ObjectObject;
+	}
+	sceKernelSysrootCorelockUnlock();
+	return ret;
+}
+
+/*
+ * name unknown: the boot fixed heaps take the kernel partition, and the 16B,
+ * 128B, 256B and 512B fixed heaps are made in it
+ */
+int FixedHeapStartPhase2(void)
+{
+	UIDManager *manager;
+	void **pages, **blocks;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		manager = g_uidManager;
+		manager->guidEntryHeap->optPartition = manager->kernelPartition;
+		manager->fixedHeap32B->optPartition = manager->kernelPartition;
+		manager->fixedHeap48B->optPartition = manager->kernelPartition;
+		manager->fixedHeap64B->optPartition = manager->kernelPartition;
+		manager->fixedHeapL2Object->optPartition = manager->kernelPartition;
+
+		manager->fixedHeap16B = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		pages = sceKernelSysrootAlloc(0x100);
+		blocks = sceKernelSysrootAlloc(0x100);
+		FixedHeapBootInitialize(g_uidManager->fixedHeap16B, "SceKernelFixedHeap16B",
+					FIXED_HEAP_ATTR_CPU_CACHE, SCE_KERNEL_PARTITION_ROOT_ID, 16,
+					0x1000, 0x40, pages, blocks);
+
+		manager = g_uidManager;
+		manager->fixedHeap128B = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		pages = sceKernelSysrootAlloc(0x100);
+		blocks = sceKernelSysrootAlloc(0x100);
+		FixedHeapBootInitialize(g_uidManager->fixedHeap128B, "SceKernelFixedHeap128B", 0,
+					SCE_KERNEL_PARTITION_ROOT_ID, 128, 0x10000, 0x40, pages, blocks);
+
+		manager = g_uidManager;
+		manager->fixedHeap256B = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		pages = sceKernelSysrootAlloc(0x100);
+		blocks = sceKernelSysrootAlloc(0x100);
+		FixedHeapBootInitialize(g_uidManager->fixedHeap256B, "SceKernelFixedHeap256B", 0,
+					SCE_KERNEL_PARTITION_ROOT_ID, 256, 0x10000, 0x40, pages, blocks);
+
+		manager = g_uidManager;
+		manager->fixedHeap512B = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		pages = sceKernelSysrootAlloc(0x100);
+		blocks = sceKernelSysrootAlloc(0x100);
+		FixedHeapBootInitialize(g_uidManager->fixedHeap512B, "SceKernelFixedHeap512B", 0,
+					SCE_KERNEL_PARTITION_ROOT_ID, 512, 0x10000, 0x40, pages, blocks);
+	}
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
+#elif FW_DEBUG
 /* FixedHeapStart: this firmware's link keeps only its record (no code reaches it) */
 SCE_DBGINFO_DEFINE(static, fixedHeapStartRecord, 2911, "FixedHeapStart");
 #endif

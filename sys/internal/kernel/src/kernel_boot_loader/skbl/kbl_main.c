@@ -244,8 +244,8 @@ int sceKblMain(SceKernelBootParam *param)
 	core = sceKernelCpuId();
 	SceCpuForKernel_2FF54320(param->corelock, 0);
 	if (core == 0) {
-		param->reserved2 = 0;
-		param->pL2PageTable000 = (void *)param->l2PageTable000.vbase;
+		param->l2PageTable000VBase = 0;
+		param->pL2PageTable000 = (uint32_t *)param->l2PageTable000.vbase;
 		param->pSysroot = (void *)param->sysroot.vbase;
 		SceCpuForKernel_FE2B77A3(param->corelock);
 		SetupCore0(param);

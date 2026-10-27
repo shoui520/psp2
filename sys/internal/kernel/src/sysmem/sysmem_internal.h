@@ -321,6 +321,12 @@ int FixedHeapInitForProcess(FixedHeap *heap, SceUID pid, const char *name, SceUI
 FixedHeapClass *FixedHeapGetClass(void);
 #if SYSMEM_NSKBL
 int FixedHeapInitClass(FixedHeapClass *cls, const char *name, SceSize itemsize, SceClass *parent);
+struct SceKernelBootParam;
+int FixedHeapBootInitialize(FixedHeap *heap, const char *name, SceUInt32 attr, SceUID partitionId,
+			    SceSize itemSize, SceSize pageSize, SceUInt16 maxPages, void **pages,
+			    void **blocks);
+int FixedHeapStart(struct SceKernelBootParam *param, struct UIDManager *manager);
+int FixedHeapStartPhase2(void);
 #else
 int FixedHeapInitClass(FixedHeapClass *cls, const char *name);
 #endif
@@ -890,6 +896,9 @@ SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vba
 int MemBlockFreeFromPartition(MemBlockObject *block);
 int PartitionModuleStart(const UIDManager *manager);
 int CreateTinyPartitionRaw(void);
+
+/* a page index (PhyPage.info's low bits) to its physical address */
+#define PHYMEM_PAGE_SHIFT		12
 
 /*
  * A physical page descriptor. The table holds one 32-bit word per page
