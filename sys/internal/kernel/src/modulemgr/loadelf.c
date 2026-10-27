@@ -4,6 +4,7 @@
 
 #include "modulemgr_internal.h"
 
+#if !MODULEMGR_NSKBL
 /* name unknown: random extra pages in front of / behind a segment (ASLR) */
 SceUInt32 LoadelfSetRandomOffset(SceKernelAllocMemBlockKernelOpt *opt, SceUInt32 mask)
 {
@@ -21,6 +22,7 @@ SceUInt32 LoadelfSetRandomOffset(SceKernelAllocMemBlockKernelOpt *opt, SceUInt32
 		opt->attr |= 0x8;
 	return high + low;
 }
+#endif
 
 /*
  * 4.00 takes the segment; the release build takes its two fields (the segment
@@ -38,6 +40,9 @@ SceUInt32 LoadelfSetRandomOffset(SceKernelAllocMemBlockKernelOpt *opt, SceUInt32
 #define SEGMENT_MEMBLK		(*memblk)
 #endif
 
+#if MODULEMGR_NSKBL
+static	/* NSKBL inlines it into LoadelfFreeSegments */
+#endif
 void LoadelfFreeMem(SceModuleCB *cb, SEGMENT_PARAMS, LoadelfSegment *segx)
 {
 	if (SEGMENT_MEMBLK <= 0)
@@ -48,7 +53,7 @@ void LoadelfFreeMem(SceModuleCB *cb, SEGMENT_PARAMS, LoadelfSegment *segx)
 		cb, cb->modid, cb->name, cb->path, cb->path != NULL ? cb->path : "(null)",
 		seg, segx);
 
-	if (cb->pid == SCE_KERNEL_PROCESS_ID) {
+	if (ModuleCBGetPid(cb) == SCE_KERNEL_PROCESS_ID) {
 		sceKernelFreeMemBlock(SEGMENT_MEMBLK);
 		SEGMENT_MEMBLK = 0;
 		SEGMENT_VADDR = NULL;
@@ -82,12 +87,15 @@ void LoadelfFreeSegments(SceModuleCB *cb, LoadelfContext *ctx)
 	for (i = 0; i < 3; i++)
 		LoadelfFreeMem(cb, SEGMENT_ARGS(&cb->segment[i]), segx != NULL ? &segx[i] : NULL);
 
+#if !MODULEMGR_NSKBL	/* NSKBL keeps no metadata */
 	if (cb->metadata != NULL && (cb->flags & MODULE_FLAG_SHARED_MASK) == 0)
 		ModulemgrFree(cb->pid, cb->metadata);
 	cb->metadata = NULL;
 	cb->metadataSize = 0;
+#endif
 }
 
+#if !MODULEMGR_NSKBL
 /* copy a segment of the original of a shared module */
 static int LoadelfCopySharedSegment(LoadelfContext *ctx, int index)
 {
@@ -116,7 +124,11 @@ static int LoadelfCopySharedSegment(LoadelfContext *ctx, int index)
 	memcpy(ctx->seg[index].kaddr, (char *)base + ((SceUInt32)orig->vaddr & 0xfff), seg->filesz);
 	return sceKernelFreeMemBlock(tmp);
 }
+#endif
 
+#if MODULEMGR_NSKBL
+static	/* NSKBL inlines it into LoadelfParsePhdrs */
+#endif
 int LoadelfLoadSegment(LoadelfContext *ctx, SelfParser *reader, int index, LoadelfTiming *timing)
 {
 	SceModuleCB *cb = ctx->cb;
@@ -138,19 +150,27 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfParser *reader, int index, Loade
 	{
 		SceUInt8 perms = seg->perms;
 		SceUInt16 flags = cb->flags;
-		SceUID pid = cb->pid;
+		SceUID pid = ModuleCBGetPid(cb);
 		int text = (perms & SEGMENT_PERM_MASK) == SEGMENT_PERM_TEXT;
-		SceUInt32 type, base, allocSize;
+		SceUInt32 type;
+#if !MODULEMGR_NSKBL
+		SceUInt32 base, allocSize;
+#endif
 		SceKernelAllocMemBlockKernelOpt opt;
 
 		memset(&opt, 0, sizeof(opt));
 		opt.attr = 0xb0400000;
+#if MODULEMGR_NSKBL
+		if (text)
+			opt.attr = 0xa0400000;
+#else
 		if (text) {
 			opt.attr = 0xa0400000;
 			base = 0xa0000000;
 		} else {
 			base = 0xb0000000;
 		}
+#endif
 		opt.size = sizeof(opt);
 		type = flags & MODULE_FLAG_TYPE_MASK;
 
@@ -159,7 +179,9 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfParser *reader, int index, Loade
 			if (type == 2)
 				memtype = 0x10f0d006;
 			ret = sceKernelAllocMemBlockForKernel("SceModuleMgrSegment", memtype, total, &opt);
-		} else {
+		}
+#if !MODULEMGR_NSKBL
+		else {
 			opt.attr = base | 0x480080;
 			allocSize = total;
 			opt.pid = pid;
@@ -208,6 +230,7 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfParser *reader, int index, Loade
 			}
 			ret = sceKernelAllocMemBlockForKernel("SceModuleMgrUserTextData", memtype, allocSize, &opt);
 		}
+#endif
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 336, "memory allocation error (ret:0x%08x, size:%d)\n",
 					     ret, total);
@@ -219,6 +242,7 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfParser *reader, int index, Loade
 		ctx->seg[index].kaddr = seg->vaddr;
 		seg->vaddr = (char *)seg->vaddr + pageOff;
 
+#if !MODULEMGR_NSKBL
 		if (cb->pid != SCE_KERNEL_PROCESS_ID) {
 			if ((seg->perms & SEGMENT_PERM_WRITE) == 0 &&
 			    (cb->flags & MODULE_FLAG_SHARED_COPY) != 0) {
@@ -237,6 +261,7 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfParser *reader, int index, Loade
 			ctx->seg[index].tmpBlock = ret;
 			sceKernelGetMemBlockBase(ret, &ctx->seg[index].kaddr);
 		}
+#endif
 	}
 
 	fill = (seg->perms & SEGMENT_PERM_MASK) == SEGMENT_PERM_TEXT ? 0xb6 : 0;
@@ -247,9 +272,13 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfParser *reader, int index, Loade
 		memset((char *)ctx->seg[index].kaddr + seg->filesz, fill,
 		       total - pageOff - seg->filesz);
 
+#if MODULEMGR_NSKBL
+	return SelfDecrypterLoadSegment(reader, index, ctx->seg[index].kaddr, timing);
+#else
 	if ((cb->flags & MODULE_FLAG_SHARED_MASK) == 0)
 		return SelfDecrypterLoadSegment(reader, index, ctx->seg[index].kaddr, timing);
 	return LoadelfCopySharedSegment(ctx, index);
+#endif
 }
 
 SceUInt32 Loadelf_GetAddrBias(LoadelfContext *ctx, const void *addr)
@@ -269,6 +298,7 @@ SceUInt32 Loadelf_GetAddrBias(LoadelfContext *ctx, const void *addr)
 #endif
 }
 
+#if !MODULEMGR_NSKBL
 static int LoadelfLoadSharedImage(LoadelfContext *ctx)
 {
 	SceModuleCB *cb = ctx->cb;
@@ -310,26 +340,37 @@ static int LoadelfAllocRelaTmp(SceModuleCB *cb, SceSize size)
 	}
 	return sceKernelAllocMemBlockForKernel("SceModuleMgrRelaTmp", memtype, PAGE_ROUND(size), &opt);
 }
+#else
+/* name unknown: NSKBL relocates from one static buffer */
+static SceUInt8 s_relaTmp[0x20000] __attribute__((aligned(64)));
+#endif
 
 SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags)
 {
 	SceModuleCB *cb = ctx->cb;
-	LoadelfTiming timing, *t;
+	LoadelfTiming *t;
 	SelfParser reader;
 	Elf32_Phdr *ph;
-	SceUInt32 rnd, state, align;
+	SceUInt32 state, align;
 	SceUInt16 phnum;
-	SceUID pid, uid;
-	void *buf;
 	int i, loaded, relaCount, ret;
+#if !MODULEMGR_NSKBL
+	LoadelfTiming timing;
+	SceUID pid;
+	SceUInt32 rnd;
+	SceUID uid;
+	void *buf;
 #if FW_DEBUG
 	int t0;
 #endif
+#endif
 
+#if !MODULEMGR_NSKBL
 	if ((cb->flags & MODULE_FLAG_SHARED_MASK) != 0)
 		return LoadelfLoadSharedImage(ctx);
+#endif
 
-	ret = SelfParserOpen(&reader, cb->pid, fd, auth);
+	ret = SelfParserOpen(&reader, ModuleCBGetPid(cb), fd, auth);
 	if (ret < 0)
 		return ret;
 
@@ -340,6 +381,7 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 		cb->flags |= MODULE_FLAG_SELF_FIXED;
 	ctx->entry = SelfParserGetEntry(&reader);
 
+#if !MODULEMGR_NSKBL
 	if ((cb->flags & MODULE_FLAG_PROCESS_IMAGE) != 0 &&
 	    (cb->flags & MODULE_FLAG_SELF_FIXED) != 0 &&
 	    (((SceUInt32 *)reader.ehdr)[9] & 0x1000) == 0)
@@ -350,9 +392,13 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 		ret = SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 		goto close;
 	}
+#endif
 
 	phnum = SelfParserGetPhnum(&reader);
 	cb = ctx->cb;
+#if MODULEMGR_NSKBL
+	t = NULL;	/* NSKBL times nothing */
+#else
 	pid = cb->pid;
 #if FW_DEBUG
 	if (g_loadTiming == NULL) {
@@ -379,6 +425,7 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 		t = &timing;
 		timing.loadedSize = 0;
 	}
+#endif
 
 	if (phnum == 0)
 		goto bad;
@@ -404,6 +451,10 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 			    ((cb->flags & MODULE_FLAG_SELF_FIXED) != 0 && align > 0x1000))
 				goto bad;
 			if (seg->memsz != 0 || seg->extraPages != 0) {
+#if MODULEMGR_NSKBL
+				if ((cb->flags & MODULE_FLAG_SELF_FIXED) == 0)
+					seg->vaddr = (void *)ph->p_vaddr;
+#else
 				if ((cb->flags & MODULE_FLAG_SELF_FIXED) != 0) {
 					if (LibraryDBIsAslr(pid)) {
 						if (cb->pid == SCE_KERNEL_PROCESS_ID)
@@ -415,6 +466,7 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 				} else {
 					seg->vaddr = (void *)ph->p_vaddr;
 				}
+#endif
 				ret = LoadelfLoadSegment(ctx, &reader, i, t);
 				loaded = i + 1;
 				if (ret < 0)
@@ -424,6 +476,29 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 		} else {
 			if (ph->p_filesz != 0 && ph->p_align != 0x10)
 				goto bad;
+#if MODULEMGR_NSKBL
+			if (ph->p_type == PT_SCE_COMMENT || ph->p_type == PT_SCE_VERSION) {
+				/* NSKBL keeps no metadata */
+			} else if (ph->p_type == PT_SCE_RELA) {
+				if ((cb->flags & MODULE_FLAG_SELF_FIXED) == 0 || state - 1 > 1 ||
+				    relaCount > 2)
+					goto bad;
+				if (ph->p_filesz != 0) {
+					if (ph->p_filesz > sizeof(s_relaTmp)) {
+						ret = SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
+						goto fail;
+					}
+					ret = SelfDecrypterLoadSegment(&reader, i, s_relaTmp, NULL);
+					if (ret < 0)
+						goto fail;
+					ret = RelocatorRelSegment(ctx, (SceUInt32 *)s_relaTmp, ph->p_filesz);
+					if (ret < 0)
+						goto fail;
+					relaCount++;
+				}
+				state = 2;
+			}
+#else
 			if (ph->p_type == PT_SCE_COMMENT) {
 				if (state - 1 > 2)
 					goto bad;
@@ -487,20 +562,24 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 					goto fail;
 				}
 				state = 2;
-			} else {
+			}
+#endif
+			else {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 274, "found unknown segment (p_type:0x%08X)\n",
 						     ph->p_type);
 				ret = SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 				goto fail;
 			}
 		}
+#if !MODULEMGR_NSKBL
 next:
+#endif
 		cb->nSegments = loaded;
 	}
 
 	if (loaded != 0) {
 		ret = 0;
-#if FW_DEBUG
+#if FW_DEBUG && !MODULEMGR_NSKBL
 		if (g_loadTiming != NULL)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 286,
 				"%s: load: %d usec (file read: %d usec), relocation: %d usec  use_form: 0x%03x\n",
@@ -517,12 +596,14 @@ close:
 	return ret;
 }
 
+#if !MODULEMGR_NSKBL
 /* name unknown */
 int LoadelfFreeImage(SceModuleCB *cb)
 {
 	LoadelfFreeSegments(cb, NULL);
 	return 0;
 }
+#endif
 
 int LoadelfMapImage(LoadelfContext *ctx)
 {
@@ -536,11 +617,14 @@ int LoadelfMapImage(LoadelfContext *ctx)
 	segx = ctx->seg;
 	for (i = 0; i < cb->nSegments; i++, segx++) {
 		seg = &cb->segment[i];
-		if ((seg->perms & SEGMENT_PERM_MASK) == SEGMENT_PERM_TEXT &&
-		    (cb->flags & MODULE_FLAG_SHARED_COPY) == 0)
+		if ((seg->perms & SEGMENT_PERM_MASK) == SEGMENT_PERM_TEXT
+#if !MODULEMGR_NSKBL
+		    && (cb->flags & MODULE_FLAG_SHARED_COPY) == 0
+#endif
+		    )
 			sceKernelDcacheCleanRange((void *)PAGE_TRUNC((SceUInt32)segx->kaddr),
 				PAGE_ROUND(seg->memsz + ((SceUInt32)seg->vaddr & 0xfff)));
-		if (cb->pid == SCE_KERNEL_PROCESS_ID) {
+		if (ModuleCBGetPid(cb) == SCE_KERNEL_PROCESS_ID) {
 			if ((seg->perms & SEGMENT_PERM_MASK) != SEGMENT_PERM_TEXT)
 				continue;
 			ret = sceKernelRemapMemBlock(seg->memblk, memtype);
@@ -562,6 +646,7 @@ int LoadelfMapImage(LoadelfContext *ctx)
 	return 0;
 }
 
+#if !MODULEMGR_NSKBL
 int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, SceSize size,
 				      int flags, SceSize *out)
 {
@@ -635,3 +720,4 @@ MODULEMGR_COLD int sceKernelGetProgramIdentificationInfo(const char *path, SceUI
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1141, "getProgramIdentificationInfo failed. 0x%08x\n", ret);
 	return ret;
 }
+#endif
