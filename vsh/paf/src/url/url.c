@@ -128,6 +128,43 @@ Url *UrlConstructStringBase(Url *self, const PafString *url)
 	return UrlConstructString(self, url);
 }
 
+Url *UrlConstructWString(Url *self, const PafWString *url)
+{
+	CommonString value;
+	PafString str;
+
+	self->vtable = &urlClass.methods;
+	CommonStringConstruct(&self->m_urlstring);
+	CommonStringConstructWString(&value, url);
+	CommonStringGetString(&str, &value);
+	UrlInitialize(self, &str, 1);
+	PafStringDestroy(&str);
+	CommonStringDestroy(&value);
+	return self;
+}
+
+Url *UrlConstructWStringBase(Url *self, const PafWString *url)
+{
+	return UrlConstructWString(self, url);
+}
+
+Url *UrlConstructCopy(Url *self, const Url *url)
+{
+	PafString str;
+
+	self->vtable = &urlClass.methods;
+	CommonStringConstruct(&self->m_urlstring);
+	UrlGetUrlString(&str, url);
+	UrlInitialize(self, &str, 1);
+	PafStringDestroy(&str);
+	return self;
+}
+
+Url *UrlConstructCopyBase(Url *self, const Url *url)
+{
+	return UrlConstructCopy(self, url);
+}
+
 void UrlGetUrlString(PafString *result, const Url *self)
 {
 	CommonString value;
@@ -136,6 +173,17 @@ void UrlGetUrlString(PafString *result, const Url *self)
 	PafStringCopy(&value.m_string, &self->m_urlstring.m_string);
 	PafWStringCopy(&value.m_wstring, &self->m_urlstring.m_wstring);
 	CommonStringGetString(result, &value);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetUrlWString(PafWString *result, const Url *self)
+{
+	CommonString value;
+
+	CommonStringConstruct(&value);
+	PafStringCopy(&value.m_string, &self->m_urlstring.m_string);
+	PafWStringCopy(&value.m_wstring, &self->m_urlstring.m_wstring);
+	CommonStringGetWString(result, &value);
 	CommonStringDestroy(&value);
 }
 
@@ -175,6 +223,29 @@ Url *UrlDestroyBase(Url *self)
 Url *UrlAssignString(Url *self, const PafString *url)
 {
 	UrlInitialize(self, url, 0);
+	return self;
+}
+
+Url *UrlAssignWString(Url *self, const PafWString *url)
+{
+	CommonString value;
+	PafString str;
+
+	CommonStringConstructWString(&value, url);
+	CommonStringGetString(&str, &value);
+	UrlInitialize(self, &str, 0);
+	PafStringDestroy(&str);
+	CommonStringDestroy(&value);
+	return self;
+}
+
+Url *UrlAssign(Url *self, const Url *url)
+{
+	PafString str;
+
+	UrlGetUrlString(&str, url);
+	UrlInitialize(self, &str, 0);
+	PafStringDestroy(&str);
 	return self;
 }
 

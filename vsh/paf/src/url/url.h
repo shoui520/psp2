@@ -41,6 +41,13 @@ typedef char UrlClassSizeCheck[sizeof(UrlClass) == 16 ? 1 : -1];
 #define UrlDelete ScePafMisc_D19653CB
 #define UrlDestroyBase ScePafMisc_445AB346
 #define UrlAssignString ScePafMisc_00CF14FB
+#define UrlConstructWString ScePafMisc_6FAAC9C5
+#define UrlConstructWStringBase ScePafMisc_5A5BB7D4
+#define UrlConstructCopy ScePafMisc_56625D15
+#define UrlConstructCopyBase ScePafMisc_FEB5AE77
+#define UrlAssignWString ScePafMisc_34716241
+#define UrlAssign ScePafMisc_8F7AEE8C
+#define UrlGetUrlWString ScePafMisc_52C507C3
 
 extern const UrlClass urlClass;
 int UrlParseUrl(Url *self);
@@ -58,6 +65,13 @@ Url *UrlDestroy(Url *self);
 void UrlDelete(Url *self);
 Url *UrlDestroyBase(Url *self);
 Url *UrlAssignString(Url *self, const PafString *url);
+Url *UrlConstructWString(Url *self, const PafWString *url);
+Url *UrlConstructWStringBase(Url *self, const PafWString *url);
+Url *UrlConstructCopy(Url *self, const Url *url);
+Url *UrlConstructCopyBase(Url *self, const Url *url);
+Url *UrlAssignWString(Url *self, const PafWString *url);
+Url *UrlAssign(Url *self, const Url *url);
+void UrlGetUrlWString(PafWString *result, const Url *self);
 
 #define UrlIsValid ScePafMisc_0E846E5C
 #define UrlGetSchemeString ScePafMisc_4D885C6E
