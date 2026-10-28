@@ -135,7 +135,7 @@ typedef struct TsmpNotificationQueue {
 /* SceRegMgrForDebugger transfer of a large file (setting UI file, event log) */
 typedef struct TsmpRegFileRequest {
 	SceSize size;				/* sizeof(TsmpRegFileRequest) */
-	SceUInt32 flags;
+	int (*callback)(void);			/* tsmpReturnSuccess */
 	void *buf;
 	SceSize bufSize;
 	SceSize total;

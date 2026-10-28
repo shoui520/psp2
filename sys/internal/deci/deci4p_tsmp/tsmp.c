@@ -35,8 +35,8 @@
 
 static TsmpState tsmp;
 
-/* Name and caller unknown; this retained original function returns success. */
-static int __attribute__((used)) tsmpReturnSuccess(void)
+/* name unknown: the callback of the registry file requests; it reports success */
+static int tsmpReturnSuccess(void)
 {
 	return 0;
 }
@@ -1283,7 +1283,7 @@ TSMP_INLINE int tsmpSyncSettingXml(void)
 		goto free;
 	}
 	tsmp.fileRequest.size = sizeof(tsmp.fileRequest);
-	tsmp.fileRequest.flags = 0x81000001;
+	tsmp.fileRequest.callback = tsmpReturnSuccess;
 	tsmp.fileRequest.buf = tsmp.fileBase;
 	tsmp.fileRequest.bufSize = tsmp.fileSize;
 	tsmp.fileSent = 0;
@@ -1333,7 +1333,7 @@ TSMP_INLINE int tsmpSyncEventLogXml(void)
 	header = tsmp.fileBase;
 	tsmp.fileRequest.buf = header + 1;
 	tsmp.fileRequest.size = sizeof(tsmp.fileRequest);
-	tsmp.fileRequest.flags = 0x81000001;
+	tsmp.fileRequest.callback = tsmpReturnSuccess;
 	tsmp.fileSent = 0;
 	tsmp.fileRequest.bufSize = size;
 	ret = SceRegMgrForDebugger_46AC0CCB(0x10, &tsmp.fileRequest);
