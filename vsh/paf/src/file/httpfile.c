@@ -8,6 +8,8 @@
 extern int sce_paf_strcasecmp(const char *left, const char *right);
 extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
 extern int sce_paf_look_ctype_table(int ch);
+extern int sce_paf_strcmp(const char *left, const char *right);
+extern int32_t SceHttp_43A7CC70(int32_t id, uint32_t flags);
 
 static unsigned char httpFileHttpReaderSeekBuffer[1024];
 
@@ -19,6 +21,22 @@ void HttpFileReaderConnectionSharedPtrRelease(const HttpFileReaderConnectionShar
 		self->m_ref_counter->m_deleter(self->m_ptr);
 		if (sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_weak_counter) == 1)
 			ScePafStdc_1B77082E(self->m_ref_counter);
+	}
+}
+
+static inline __attribute__((always_inline))
+void HttpFileReaderConnectionSharedPtrAssign(HttpFileReaderConnectionSharedPtr *self,
+					   const HttpFileReaderConnectionSharedPtr *src)
+{
+	HttpFileReaderConnection *ptr = src->m_ptr;
+	HttpFileReaderConnectionRefCounter *counter = src->m_ref_counter;
+
+	if (ptr != self->m_ptr) {
+		HttpFileReaderConnectionSharedPtrRelease(self);
+		self->m_ptr = ptr;
+		self->m_ref_counter = counter;
+		if (ptr)
+			sceAtomicIncrement32AcqRel(&counter->m_counter);
 	}
 }
 
@@ -64,6 +82,140 @@ void HttpFileReaderConnectionDelete(HttpFileReaderConnection *self)
 		HttpFileReaderConnectionDestroy(self);
 		ScePafStdc_1B77082E(self);
 	}
+}
+
+int32_t HttpFileReaderConnectionCreateHandles(const HttpFileReaderConnectionParam *param,
+					    int32_t *template_id, int32_t *connection_id)
+{
+	int32_t id;
+	int32_t result;
+	uint32_t enabled;
+	uint32_t disabled;
+
+	id = sceHttpCreateTemplate(param->user_agent.ptr, param->http_version,
+				   param->auto_proxy);
+	if (id <= 0)
+		return id;
+	*template_id = id;
+	if (param->template_option) {
+		result = SceHttp_43A7CC70(id, param->template_option);
+		if (result < 0)
+			return result;
+		id = *template_id;
+	}
+	if (param->response_header_max_size) {
+		result = sceHttpSetResponseHeaderMaxSize(id,
+						      param->response_header_max_size);
+		if (result < 0)
+			return result;
+		id = *template_id;
+	}
+	id = sceHttpCreateConnection(id, param->host.ptr, param->scheme.ptr,
+				     param->port, param->enable_keepalive);
+	if (id <= 0) {
+		if (*template_id > 0)
+			sceHttpDeleteTemplate(*template_id);
+		*template_id = 0;
+		return id;
+	}
+	*connection_id = id;
+	enabled = param->https_flag & HTTPS_FLAG_MASK;
+	disabled = ~param->https_flag & HTTPS_FLAG_MASK;
+	result = sceHttpsEnableOption2(id, enabled);
+	if (result < 0)
+		return result;
+	result = sceHttpsDisableOption2(*connection_id, disabled);
+	if (result < 0)
+		return result;
+	return 0;
+}
+
+int32_t HttpFileReaderContextGetConnection(const HttpFileReaderContextSharedPtr *self,
+					 const HttpFileReaderConnectionParam *param,
+					 HttpFileReaderConnectionSharedPtr *result)
+{
+	HttpFileReaderConnectionSharedPtr connection;
+	int32_t template_id = 0;
+	int32_t connection_id = 0;
+	int32_t error;
+
+	if (self->m_ptr && param->enable_keepalive) {
+		Mutex *mutex = &self->m_ptr->m_mutex;
+		HttpFileReaderConnectionListNode *root;
+		HttpFileReaderConnectionListNode *node;
+
+		MutexLock(mutex);
+		root = self->m_ptr->m_connections.root_node;
+		node = root ? root->next : NULL;
+		while (node != root) {
+			HttpFileReaderConnection *ptr = node->val.m_ptr;
+			const HttpFileReaderConnectionParam *cached;
+
+			if (ptr) {
+				cached = &ptr->param;
+				if (cached->port == param->port &&
+				    *cached->host.ptr == *param->host.ptr &&
+				    !sce_paf_strcmp(cached->host.ptr, param->host.ptr) &&
+				    *cached->scheme.ptr == *param->scheme.ptr &&
+				    !sce_paf_strcmp(cached->scheme.ptr, param->scheme.ptr) &&
+				    *cached->user_agent.ptr == *param->user_agent.ptr &&
+				    !sce_paf_strcmp(cached->user_agent.ptr, param->user_agent.ptr) &&
+				    cached->http_version == param->http_version &&
+				    cached->auto_proxy == param->auto_proxy &&
+				    cached->https_flag == param->https_flag &&
+				    cached->template_option == param->template_option &&
+				    cached->response_header_max_size == param->response_header_max_size) {
+					HttpFileReaderConnectionListNode *next;
+
+					HttpFileReaderConnectionSharedPtrAssign(result, &node->val);
+					HttpFileReaderConnectionListErase(&next,
+							&self->m_ptr->m_connections, &node);
+					MutexUnlock(mutex);
+					return 0;
+				}
+			}
+			if (node)
+				node = node->next;
+			root = self->m_ptr->m_connections.root_node;
+		}
+		MutexUnlock(mutex);
+	}
+	error = HttpFileReaderConnectionCreateHandles(param, &template_id,
+						      &connection_id);
+	if (error)
+		return error;
+	connection.m_ptr = ScePafStdc_FC5CD359(sizeof(*connection.m_ptr));
+	if (connection.m_ptr)
+		HttpFileReaderConnectionConstruct(connection.m_ptr, param);
+	connection.m_ref_counter = NULL;
+	if (connection.m_ptr) {
+		HttpFileReaderConnectionRefCounter *counter;
+
+		counter = ScePafStdc_FC5CD359(sizeof(*counter));
+		if (counter) {
+			counter->m_ptr = connection.m_ptr;
+			counter->m_counter = 1;
+			counter->m_weak_counter = 1;
+			counter->m_deleter = HttpFileReaderConnectionDelete;
+			connection.m_ref_counter = counter;
+		} else {
+			connection.m_ptr = NULL;
+		}
+	}
+	HttpFileReaderConnectionSharedPtrAssign(result, &connection);
+	HttpFileReaderConnectionSharedPtrRelease(&connection);
+	if (result->m_ptr) {
+		result->m_ptr->m_template_id = template_id;
+		result->m_ptr->m_connection_id = connection_id;
+		return 0;
+	}
+	if (connection_id > 0)
+		sceHttpDeleteConnection(connection_id);
+	if (template_id > 0) {
+		connection_id = 0;
+		sceHttpDeleteTemplate(template_id);
+	}
+	return SCE_PAF_ERROR_FILE_NO_MEMORY;
 }
 
 uintptr_t HttpFileReaderConnectionListPushBack(PafList *self,

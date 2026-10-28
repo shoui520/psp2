@@ -249,6 +249,8 @@ HttpFileReaderConnection *HttpFileReaderConnectionConstruct(HttpFileReaderConnec
 							 const HttpFileReaderConnectionParam *param);
 HttpFileReaderConnection *HttpFileReaderConnectionDestroy(HttpFileReaderConnection *self);
 void HttpFileReaderConnectionDelete(HttpFileReaderConnection *self);
+int32_t HttpFileReaderConnectionCreateHandles(const HttpFileReaderConnectionParam *param,
+					    int32_t *template_id, int32_t *connection_id);
 uintptr_t HttpFileReaderConnectionListPushBack(PafList *self,
 					    const HttpFileReaderConnectionSharedPtr *value);
 int32_t HttpFileReaderConnectionListPopFront(PafList *self);
@@ -261,6 +263,9 @@ HttpFileReaderContext *HttpFileReaderContextConstruct(HttpFileReaderContext *sel
 void HttpFileReaderContextDelete(HttpFileReaderContext *self);
 int32_t HttpFileReaderContextReturnConnection(const HttpFileReaderContextSharedPtr *self,
 					    HttpFileReaderConnectionSharedPtr *connection);
+int32_t HttpFileReaderContextGetConnection(const HttpFileReaderContextSharedPtr *self,
+					 const HttpFileReaderConnectionParam *param,
+					 HttpFileReaderConnectionSharedPtr *result);
 
 #define HttpFileReaderContextCreate ScePafMisc_84A50E1F
 HttpFileReaderContextRefCounter *HttpFileReaderContextCreate(HttpFileReaderContextSharedPtr *result,
