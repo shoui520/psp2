@@ -10,6 +10,8 @@ extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
 extern int sce_paf_look_ctype_table(int ch);
 extern int sce_paf_strcmp(const char *left, const char *right);
 extern int sce_paf_snprintf(char *dst, size_t max, const char *format, ...);
+extern int sce_paf_memcmp(const void *left, const void *right, size_t len);
+extern void *ScePafStdc_75ECC54E(void *dst, int value, size_t len);
 extern int32_t SceHttp_43A7CC70(int32_t id, uint32_t flags);
 extern int32_t SceHttp_F30073EC(int32_t id, uint32_t flags);
 
@@ -2185,6 +2187,67 @@ int32_t HttpFileHttpReaderClose(HttpFileHttpReader *self)
 	return 0;
 }
 
+const HttpFileRangeReaderClass httpFileRangeReaderClass = {
+	0, NULL, { {
+		(HttpFileReader *(*)(HttpFileReader *))HttpFileRangeReaderDestroy,
+		(void (*)(HttpFileReader *))HttpFileRangeReaderDelete,
+		(int32_t (*)(HttpFileReader *))HttpFileRangeReaderOpen,
+		(int32_t (*)(HttpFileReader *))HttpFileRangeReaderClose,
+		(int32_t (*)(HttpFileReader *, void *, size_t))HttpFileRangeReaderRead,
+		(int64_t (*)(HttpFileReader *, int64_t, int32_t))HttpFileRangeReaderSeek,
+		(int32_t (*)(HttpFileReader *))HttpFileRangeReaderAbort,
+		(int64_t (*)(HttpFileReader *))HttpFileRangeReaderGetFileSize,
+		(HttpFileResponse *(*)(HttpFileReader *))HttpFileRangeReaderGetResponse,
+		(PafMap *(*)(HttpFileReader *))HttpFileRangeReaderGetResponseHeaders
+	}, HttpFileRangeReaderFormatRange }
+};
+
+HttpFileRangeReader *HttpFileRangeReaderConstruct(HttpFileRangeReader *self,
+					       const HttpFileReaderConfigSharedPtr *config)
+{
+	HttpFileReaderConfigSharedPtr temporary = *config;
+
+	if (temporary.m_ptr)
+		sceAtomicIncrement32AcqRel(&temporary.m_ref_counter->m_counter);
+	self->base.m_config = temporary;
+	self->base.vtable = &httpFileReaderClass.methods;
+	if (temporary.m_ptr)
+		sceAtomicIncrement32AcqRel(&temporary.m_ref_counter->m_counter);
+	HttpFileHeaderMapInitialize(&self->base.m_response_headers);
+	HttpFileResponseConstruct(&self->base.m_response);
+	self->base.m_result[0] = 0;
+	self->base.m_result[1] = 0;
+	self->base.m_result[2] = 0;
+	HttpFileReaderConfigSharedPtrRelease(&temporary);
+	self->base.vtable = &httpFileRangeReaderClass.methods.base;
+	self->m_range_enabled = 1;
+	self->m_reader = NULL;
+	self->m_position = 0;
+	self->m_range_begin = -1;
+	self->m_range_end = -1;
+	self->m_content_length = SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
+	return self;
+}
+
+HttpFileRangeReader *HttpFileRangeReaderDestroy(HttpFileRangeReader *self)
+{
+	HttpFileReader *reader = self->m_reader;
+
+	if (reader) {
+		self->base.vtable = &httpFileRangeReaderClass.methods.base;
+		reader->vtable->Delete(reader);
+	}
+	self->m_reader = NULL;
+	HttpFileReaderDestroyMembers(&self->base);
+	return self;
+}
+
+void HttpFileRangeReaderDelete(HttpFileRangeReader *self)
+{
+	HttpFileRangeReaderDestroy(self);
+	ScePafStdc_1B77082E(self);
+}
+
 int32_t HttpFileRangeReaderOpen(HttpFileRangeReader *self)
 {
 	HttpFileReaderConfigSharedPtr config = { NULL, NULL };
@@ -2318,6 +2381,246 @@ int32_t HttpFileRangeReaderClose(HttpFileRangeReader *self)
 	self->m_range_begin = -1;
 	self->m_range_end = -1;
 	self->m_content_length = SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
+	return result;
+}
+
+static inline __attribute__((always_inline))
+int32_t HttpFileRangeReaderParseContentRange(HttpFileRangeReader *self,
+					   const char *header)
+{
+	int32_t len;
+	int32_t pos = 0;
+	size_t prefix_len;
+	uint64_t end = 0;
+
+	if (!header)
+		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+	len = (int32_t)sce_paf_strlen(header);
+	self->m_range_end = -1;
+	self->m_range_begin = -1;
+	while (pos < len && (sce_paf_look_ctype_table((signed char)header[pos]) & 8))
+		pos++;
+	prefix_len = sce_paf_strlen("bytes ");
+	if ((int32_t)((uint32_t)pos + prefix_len) > len ||
+	    sce_paf_memcmp(header + pos, "bytes ", prefix_len))
+		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+	pos = (int32_t)((uint32_t)pos + prefix_len);
+	self->m_range_begin = 0;
+	while (pos < len) {
+		uint64_t begin;
+
+		if ((signed char)header[pos] == '-') {
+			pos++;
+			break;
+		}
+		if (!(sce_paf_look_ctype_table((signed char)header[pos]) & 4))
+			return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+		begin = (uint64_t)self->m_range_begin * 10;
+		self->m_range_begin = begin;
+		pos++;
+		self->m_range_begin = begin + (int64_t)((signed char)header[pos - 1] - '0');
+	}
+	self->m_range_end = 0;
+	while (pos < len) {
+		uint64_t value;
+
+		if ((signed char)header[pos] == '/') {
+			self->m_range_end = end + 1;
+			return 0;
+		}
+		if (!(sce_paf_look_ctype_table((signed char)header[pos]) & 4))
+			return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+		value = (uint64_t)self->m_range_end * 10;
+		self->m_range_end = value;
+		pos++;
+		end = value + (int64_t)((signed char)header[pos - 1] - '0');
+		self->m_range_end = end;
+	}
+	return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+}
+
+int32_t HttpFileRangeReaderRead(HttpFileRangeReader *self, void *buf, size_t nbyte)
+{
+	HttpFileReader *reader;
+	HttpFileHttpReader *http_reader;
+	HttpFileReaderConfigSharedPtr src;
+	HttpFileReaderConfigSharedPtr config;
+	char range[64];
+	int64_t position;
+	int64_t end;
+	int32_t result;
+	uint16_t code;
+	size_t count;
+
+	if (!nbyte)
+		return 0;
+	position = self->m_position;
+	if (position == self->m_content_length)
+		return 0;
+	if (!self->m_range_enabled)
+		goto ordinary;
+	reader = self->m_reader;
+	if (reader && self->m_range_begin <= position && position < self->m_range_end) {
+		int32_t available = (uint64_t)self->m_range_end - (uint64_t)position;
+		int32_t remaining = (int32_t)nbyte;
+		uint32_t total = 0;
+		char *dst = buf;
+
+		if (available < remaining)
+			remaining = available;
+		if ((uint32_t)remaining > nbyte)
+			return SCE_PAF_ERROR_FILE_INVALID_OFFSET;
+		while (remaining > 0) {
+			result = reader->vtable->Read(reader, dst, (uint32_t)remaining);
+			reader = self->m_reader;
+			self->base.m_result[0] = reader->m_result[0];
+			self->base.m_result[1] = reader->m_result[1];
+			self->base.m_result[2] = reader->m_result[2];
+			if (result < 0)
+				return result;
+			if (!result)
+				return (int32_t)total;
+			self->m_position = (uint64_t)self->m_position + (uint64_t)(int64_t)result;
+			dst += result;
+			total += (uint32_t)result;
+			remaining = (uint32_t)remaining - (uint32_t)result;
+		}
+		return (int32_t)total;
+	}
+	if (reader) {
+		reader->vtable->Close(reader);
+		reader = self->m_reader;
+		if (reader)
+			reader->vtable->Delete(reader);
+		self->m_reader = NULL;
+	}
+	src = self->base.m_config;
+	if (src.m_ptr)
+		sceAtomicIncrement32AcqRel(&src.m_ref_counter->m_counter);
+	HttpFileReaderConfigClone(&config, &src);
+	HttpFileReaderConfigSharedPtrRelease(&src);
+	range[0] = 0;
+	ScePafStdc_75ECC54E(range + 1, 0, sizeof(range) - 1);
+	if (((const HttpFileRangeReaderVTable *)self->base.vtable)->FormatRange(
+		self, range, sizeof(range), nbyte))
+		HttpFileHeaderMapSet(&config.m_ptr->header, "Range", range, 1);
+	http_reader = ScePafStdc_FC5CD359(sizeof(*http_reader));
+	if (http_reader) {
+		src = config;
+		if (src.m_ptr)
+			sceAtomicIncrement32AcqRel(&src.m_ref_counter->m_counter);
+		http_reader = HttpFileHttpReaderConstruct(http_reader, &src);
+		self->m_reader = &http_reader->base;
+		HttpFileReaderConfigSharedPtrRelease(&src);
+	} else {
+		self->m_reader = NULL;
+	}
+	reader = self->m_reader;
+	if (!reader) {
+		result = SCE_PAF_ERROR_FILE_NO_MEMORY;
+		goto out;
+	}
+	result = reader->vtable->Open(reader);
+	self->base.m_result[0] = self->m_reader->m_result[0];
+	reader = self->m_reader;
+	self->base.m_result[1] = reader->m_result[1];
+	self->base.m_result[2] = reader->m_result[2];
+	if (result)
+		goto out_error;
+	code = reader->vtable->GetResponse(reader)->code;
+	if (code == 206) {
+		const char *header;
+		PafMap *headers;
+		int64_t begin;
+		int64_t available;
+
+		reader = self->m_reader;
+		headers = reader->vtable->GetResponseHeaders(reader);
+		header = HttpFileHeaderMapGet(headers, "Content-Range", 0);
+		result = HttpFileRangeReaderParseContentRange(self, header);
+		if (result) {
+			result = HTTPFILE_ERROR_INVALID_CONTENT_RANGE;
+			goto out_error;
+		}
+		position = self->m_position;
+		begin = self->m_range_begin;
+		if (begin > position || position >= self->m_range_end) {
+			result = SCE_PAF_ERROR_FILE_INVALID_OFFSET;
+			goto out_error;
+		}
+		end = self->m_range_end;
+		if (begin < position) {
+			int64_t seek_result;
+
+			seek_result = self->base.vtable->Seek(&self->base,
+				(uint64_t)position - (uint64_t)begin, SCE_SEEK_CUR);
+			position = self->m_position;
+			end = self->m_range_end;
+			/* The parser's result is retained when this seek fails. */
+			if (seek_result < 0)
+				goto out_error;
+		}
+		available = (uint64_t)end - (uint64_t)position;
+		count = nbyte;
+		if ((int64_t)(uint64_t)nbyte > available)
+			count = (uint32_t)available;
+		if (count > nbyte) {
+			result = SCE_PAF_ERROR_FILE_INVALID_OFFSET;
+			goto out;
+		}
+		reader = self->m_reader;
+		result = reader->vtable->Read(reader, buf, count);
+		reader = self->m_reader;
+		self->base.m_result[0] = reader->m_result[0];
+		self->base.m_result[1] = reader->m_result[1];
+		self->base.m_result[2] = reader->m_result[2];
+		if (result < 0)
+			goto out_error;
+		self->m_position = (uint64_t)self->m_position + (uint64_t)(int64_t)result;
+		goto out;
+	}
+	if (code == 200) {
+		int64_t seek_result;
+
+		position = self->m_position;
+		self->m_range_enabled = 0;
+		self->m_position = 0;
+		seek_result = self->base.vtable->Seek(&self->base, position, SCE_SEEK_SET);
+		if (seek_result < 0) {
+			result = (int32_t)seek_result;
+			goto out_error;
+		}
+		HttpFileReaderConfigSharedPtrRelease(&config);
+		goto ordinary;
+	}
+	if (code == 416) {
+		result = 0;
+		goto out;
+	}
+	result = SCE_PAF_ERROR_FILE_INVALID_OFFSET;
+out_error:
+	HttpFileReaderConfigSharedPtrRelease(&config);
+	reader = self->m_reader;
+	if (reader) {
+		reader->vtable->Close(reader);
+		reader = self->m_reader;
+		if (reader)
+			reader->vtable->Delete(reader);
+		self->m_reader = NULL;
+	}
+	return result;
+out:
+	HttpFileReaderConfigSharedPtrRelease(&config);
+	return result;
+ordinary:
+	reader = self->m_reader;
+	if (!reader)
+		return SCE_PAF_ERROR_FILE_NO_MEMORY;
+	result = reader->vtable->Read(reader, buf, nbyte);
+	reader = self->m_reader;
+	self->base.m_result[0] = reader->m_result[0];
+	self->base.m_result[1] = reader->m_result[1];
+	self->base.m_result[2] = reader->m_result[2];
 	return result;
 }
 

@@ -339,8 +339,34 @@ typedef char HttpFileRangeReaderReaderOffsetCheck[offsetof(HttpFileRangeReader, 
 typedef char HttpFileRangeReaderPositionOffsetCheck[offsetof(HttpFileRangeReader, m_position) == 64 ? 1 : -1];
 typedef char HttpFileRangeReaderContentLengthOffsetCheck[offsetof(HttpFileRangeReader, m_content_length) == 88 ? 1 : -1];
 
+typedef struct HttpFileRangeReaderVTable {
+	HttpFileReaderVTable base;
+	int32_t (*FormatRange)(HttpFileRangeReader *self, char *dst,
+			       size_t max, size_t nbyte);
+} HttpFileRangeReaderVTable;
+
+typedef struct HttpFileRangeReaderClass {
+	int offset_to_top;
+	const void *type_info;
+	HttpFileRangeReaderVTable methods;
+} HttpFileRangeReaderClass;
+
+typedef char HttpFileRangeReaderVTableSizeCheck[sizeof(HttpFileRangeReaderVTable) == 44 ? 1 : -1];
+typedef char HttpFileRangeReaderClassSizeCheck[sizeof(HttpFileRangeReaderClass) == 52 ? 1 : -1];
+
+enum {
+	HTTPFILE_ERROR_INVALID_CONTENT_RANGE = -2135994283 /* 0x80AF5055 */
+};
+
+extern const HttpFileRangeReaderClass httpFileRangeReaderClass;
+
+HttpFileRangeReader *HttpFileRangeReaderConstruct(HttpFileRangeReader *self,
+					       const HttpFileReaderConfigSharedPtr *config);
+HttpFileRangeReader *HttpFileRangeReaderDestroy(HttpFileRangeReader *self);
+void HttpFileRangeReaderDelete(HttpFileRangeReader *self);
 int32_t HttpFileRangeReaderOpen(HttpFileRangeReader *self);
 int32_t HttpFileRangeReaderClose(HttpFileRangeReader *self);
+int32_t HttpFileRangeReaderRead(HttpFileRangeReader *self, void *buf, size_t nbyte);
 int64_t HttpFileRangeReaderSeek(HttpFileRangeReader *self, int64_t offset,
 				int32_t whence);
 int32_t HttpFileRangeReaderAbort(HttpFileRangeReader *self);
