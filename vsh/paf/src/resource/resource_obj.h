@@ -168,6 +168,9 @@ int32_t ResourceObjLoadResourceDescription(ResourceObj *self, const char *name);
 ResourceObj *ResourceObjDestroy(ResourceObj *self);
 ResourceObj *ResourceObjDestroyBase(ResourceObj *self);
 ResourceIDMap *ResourceIDMapClear(ResourceIDMap *self);
+ResourceIDMapNode *ResourceIDMapRebalance(ResourceIDMap *self, ResourceIDMapNode *node);
+ResourceIDMapNode *ResourceIDMapInsert(ResourceIDMap *self, const ResourceIDEntry *value,
+				   unsigned char *inserted);
 char *ResourceObjGetFileName(const ResourceObj *self);
 int32_t ResourceObjGetLoadStatus(const ResourceObj *self);
 uint32_t ResourceObjGetCreateType(const ResourceObj *self);

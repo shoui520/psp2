@@ -4,11 +4,15 @@
 #include "../file/bufferedfile.h"
 #include "../paf_types.h"
 #include "../std/stdlib.h"
+#include "../std/new.h"
 #include "../versatileparam/idparam.h"
 #include <sce_atomic.h>
 #include <kernel/iofilemgr.h>
 
 extern int sce_paf_strcmp(const char *left, const char *right);
+extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
+extern char *sce_paf_strncpy(char *dst, const char *src, size_t len);
+extern unsigned long sce_paf_strtoul(const char *str, char **end, int base);
 extern size_t sce_paf_strlen(const char *str);
 extern void ScePafStdc_5C468294(void *ptr);
 
@@ -655,6 +659,317 @@ ResourceObj *ResourceObjConstructFromBufferBase(ResourceObj *self, const void *a
 					      size_t size, const ResourceObjOption *option)
 {
 	return ResourceObjConstructFromBuffer(self, addr, size, option);
+}
+
+static inline __attribute__((always_inline))
+void ResourceIDMapLrotate(ResourceIDMapNode *head,
+			     ResourceIDMapNode *node)
+{
+	ResourceIDMapNode *right = node->_Right;
+
+	node->_Right = right->_Left;
+	if (!right->_Left->_Isnil)
+		right->_Left->_Parent = node;
+	right->_Parent = node->_Parent;
+	if (node->_Parent->_Isnil)
+		head->_Parent = right;
+	else if (node == node->_Parent->_Left)
+		node->_Parent->_Left = right;
+	else
+		node->_Parent->_Right = right;
+	right->_Left = node;
+	node->_Parent = right;
+}
+
+static inline __attribute__((always_inline))
+void ResourceIDMapRrotate(ResourceIDMapNode *head,
+			     ResourceIDMapNode *node)
+{
+	ResourceIDMapNode *left = node->_Left;
+
+	node->_Left = left->_Right;
+	if (!left->_Right->_Isnil)
+		left->_Right->_Parent = node;
+	left->_Parent = node->_Parent;
+	if (node->_Parent->_Isnil)
+		head->_Parent = left;
+	else if (node == node->_Parent->_Right)
+		node->_Parent->_Right = left;
+	else
+		node->_Parent->_Left = left;
+	left->_Right = node;
+	node->_Parent = left;
+}
+
+ResourceIDMapNode *ResourceIDMapRebalance(ResourceIDMap *self,
+					ResourceIDMapNode *node)
+{
+	ResourceIDMapNode *head = self->_Myhead;
+
+	if (!head)
+		return (ResourceIDMapNode *)self;
+	node->_Color = 1;
+	while (node != head->_Parent && node->_Parent->_Color) {
+		ResourceIDMapNode *parent = node->_Parent;
+		ResourceIDMapNode *grandparent = parent->_Parent;
+		ResourceIDMapNode *uncle;
+
+		if (parent == grandparent->_Left) {
+			uncle = grandparent->_Right;
+			if (uncle->_Color) {
+				parent->_Color = 0;
+				uncle->_Color = 0;
+				node->_Parent->_Parent->_Color = 1;
+				node = node->_Parent->_Parent;
+			} else {
+				if (node == parent->_Right) {
+					node = node->_Parent;
+					ResourceIDMapLrotate(head, node);
+				}
+				node->_Parent->_Color = 0;
+				node->_Parent->_Parent->_Color = 1;
+				ResourceIDMapRrotate(head, node->_Parent->_Parent);
+			}
+		} else {
+			uncle = grandparent->_Left;
+			if (uncle->_Color) {
+				parent->_Color = 0;
+				uncle->_Color = 0;
+				node->_Parent->_Parent->_Color = 1;
+				node = node->_Parent->_Parent;
+			} else {
+				if (node == parent->_Left) {
+					node = node->_Parent;
+					ResourceIDMapRrotate(head, node);
+				}
+				node->_Parent->_Color = 0;
+				node->_Parent->_Parent->_Color = 1;
+				ResourceIDMapLrotate(head, node->_Parent->_Parent);
+			}
+		}
+	}
+	head->_Parent->_Color = 0;
+	return head->_Parent;
+}
+
+ResourceIDMapNode *ResourceIDMapInsert(ResourceIDMap *self, const ResourceIDEntry *value,
+				   unsigned char *inserted)
+{
+	ResourceIDMapNode *parent = self->_Myhead;
+	ResourceIDMapNode *node, *entry;
+	int side = 0;
+
+	if (!parent)
+		return NULL;
+	node = parent->_Parent;
+	if (inserted)
+		*inserted = 0;
+	if (!node->_Isnil) {
+		uint32_t key = value->first;
+
+		do {
+			parent = node;
+			if (key >= node->_Myval.first) {
+				if (node->_Myval.first >= key)
+					return node;
+				node = node->_Right;
+				side = 1;
+			} else {
+				node = node->_Left;
+				side = -1;
+			}
+		} while (!node->_Isnil);
+	}
+	node = ScePafStdc_FC5CD359(sizeof(*node));
+	if (!node) {
+		ScePafStdc_D608246A();
+		return self->_Myhead;
+	}
+	entry = PafPlacementNew(sizeof(*entry), node);
+	if (entry) {
+		ResourceIDMapNode *head = self->_Myhead;
+
+		entry->_Parent = parent;
+		entry->_Left = head;
+		entry->_Right = head;
+		entry->_Myval.first = value->first;
+		PafStringInitialize(&entry->_Myval.second);
+		PafStringCopy(&entry->_Myval.second, &value->second);
+		entry->_Isnil = 0;
+		entry->_Color = 1;
+	}
+	if (side < 0) {
+		parent->_Left = node;
+		if (parent == self->_Myhead->_Left)
+			self->_Myhead->_Left = node;
+	} else if (side > 0) {
+		parent->_Right = node;
+		if (parent == self->_Myhead->_Right)
+			self->_Myhead->_Right = node;
+	} else {
+		ResourceIDMapNode *head = self->_Myhead;
+
+		head->_Parent = node;
+		head->_Left = node;
+		head->_Right = node;
+	}
+	++self->_Mysize;
+	ResourceIDMapRebalance(self, node);
+	if (inserted)
+		*inserted = 1;
+	return node;
+}
+
+static inline __attribute__((always_inline))
+void ResourceObjFreeDescriptionBuffer(ResourceObj *self, void *addr)
+{
+	if (self->rscallocator)
+		scePafFreeWithContext(self->rscallocator, addr);
+	else
+		sce_paf_free(addr);
+}
+
+int32_t ResourceObjLoadResourceDescription(ResourceObj *self, const char *name)
+{
+	PafString filename, stem, path, device;
+	FileSharedPtr opened;
+	int32_t error, ret = 0;
+	int required;
+	uint32_t length;
+	char *data;
+
+	PafStringInitialize(&filename);
+	PafStringAssign(&filename, name, name ? sce_paf_strlen(name) : 0);
+	PafStringSubstring(&stem, &filename, 0, filename.count - 3);
+	PafStringAppendBytes(&stem, "rcd", sce_paf_strlen("rcd"));
+	PafStringInitialize(&path);
+	PafStringCopy(&path, &stem);
+	PafStringDestroy(&stem);
+	PafStringSubstring(&device, &path, 0, 6);
+	required = !sce_paf_strncmp(device.ptr, "host0:", 6);
+	PafStringDestroy(&device);
+	LocalFileOpen(&opened, path.ptr, SCE_O_RDONLY, 0, &error);
+	if (opened.m_ptr) {
+		BufferSharedPtr buffer = { NULL, NULL };
+		BufferSharedPtr allocated, base_buffer, buffer_arg;
+		FileSharedPtr base_file, file_arg, buffered;
+		void *addr;
+
+		if (self->rscallocator)
+			addr = scePafMallocAlignWithContext(self->rscallocator, 64, 4096);
+		else
+			addr = sce_paf_memalign(64, 4096);
+		if (addr) {
+			HeapAllocBufferCreate(&allocated, addr, 4096, self->rscallocator);
+			if (allocated.m_ptr)
+				BufferSharedPtrCopy(&buffer, &allocated);
+			BufferSharedPtrRelease(&allocated);
+		}
+		FileSharedPtrCopy(&base_file, &opened);
+		BufferSharedPtrCopy(&base_buffer, &buffer);
+		FileSharedPtrCopy(&file_arg, &base_file);
+		BufferSharedPtrCopy(&buffer_arg, &base_buffer);
+		BufferedFileOpen(&buffered, &file_arg, &error, &buffer_arg);
+		BufferSharedPtrRelease(&buffer_arg);
+		FileSharedPtrRelease(&file_arg);
+		FileSharedPtrAssign(&opened, &buffered);
+		FileSharedPtrRelease(&buffered);
+		BufferSharedPtrRelease(&base_buffer);
+		FileSharedPtrRelease(&base_file);
+		BufferSharedPtrRelease(&buffer);
+	}
+	if (!opened.m_ptr) {
+		ret = required ? SCE_PAF_ERROR_RESOURCE_CANT_OPEN : 0;
+		goto strings;
+	}
+	/* The RCD reader tests only the low, signed word of the file size. */
+	length = (uint32_t)opened.m_ptr->vtable->GetFileSize(opened.m_ptr);
+	if (length & 0x80000000)
+		goto file;
+	if (self->rscallocator)
+		data = scePafMallocAlignWithContext(self->rscallocator, 64, length);
+	else
+		data = sce_paf_memalign(64, length);
+	if (!data) {
+		ret = required ? SCE_PAF_ERROR_RESOURCE_NO_MEMORY : 0;
+		goto file;
+	}
+	error = opened.m_ptr->vtable->Read(opened.m_ptr, data, length);
+	if ((uint32_t)error != length) {
+		ResourceObjFreeDescriptionBuffer(self, data);
+		ret = SCE_PAF_ERROR_RESOURCE_CANT_OPEN;
+		goto file;
+	}
+	if (length) {
+		uint32_t consumed = 0;
+		char *cursor = data;
+		ResourceIDMap *map = &self->id_map;
+
+		do {
+			char *next = cursor + 1;
+
+			if (*cursor == 'k') {
+				char hash[12], text[512];
+				char *out = text;
+				const char *src;
+				uint32_t id;
+				PafString empty;
+				ResourceIDEntry value;
+				ResourceIDMapNode *node;
+
+				sce_paf_strncpy(hash, cursor + 4, 8);
+				hash[8] = 0;
+				src = cursor + 16;
+				id = sce_paf_strtoul(hash, NULL, 16);
+				next = cursor + 17;
+				consumed += 17;
+				if (*src != '\n') {
+					do {
+						char *dest = out++;
+						const char *from = src;
+						int ch;
+
+						src = next;
+						sce_paf_strncpy(dest, from, 1);
+						ch = *next++;
+						++consumed;
+						if (ch == '\n')
+							break;
+					} while (1);
+				}
+				/* Sony expects CRLF and removes the byte before LF. */
+				*(out - 1) = 0;
+				PafStringInitialize(&empty);
+				value.first = id;
+				PafStringInitialize(&value.second);
+				PafStringCopy(&value.second, &empty);
+				node = ResourceIDMapInsert(map, &value, NULL);
+				PafStringDestroy(&value.second);
+				PafStringDestroy(&empty);
+				PafStringAssign(&node->_Myval.second, text, sce_paf_strlen(text));
+			} else {
+				++consumed;
+				if (*cursor != '\n') {
+					do {
+						int ch = *next++;
+
+						++consumed;
+						if (ch == '\n')
+							break;
+					} while (1);
+				}
+			}
+			cursor = next;
+		} while (consumed < length);
+	}
+	ResourceObjFreeDescriptionBuffer(self, data);
+	opened.m_ptr->vtable->Close(opened.m_ptr);
+file:
+	FileSharedPtrRelease(&opened);
+strings:
+	PafStringDestroy(&path);
+	PafStringDestroy(&filename);
+	return ret;
 }
 
 ResourceIDMap *ResourceIDMapClear(ResourceIDMap *self)
