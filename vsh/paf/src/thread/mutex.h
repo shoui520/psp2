@@ -19,6 +19,24 @@ typedef struct RWLock {
 	int32_t m_counter;
 } RWLock;
 
+#define RWLockConstruct ScePafThread_02C1347F
+#define RWLockConstructBase ScePafThread_1ECE442B
+#define RWLockDestroy ScePafThread_221624F8
+#define RWLockDestroyBase ScePafThread_6FBDD800
+#define RWLockLockShared ScePafThread_AFB836B3
+#define RWLockUnlockShared ScePafThread_38D35DEF
+#define RWLockLockExclusive ScePafThread_39B3F3CA
+#define RWLockUnlockExclusive ScePafThread_AEE8496E
+
+RWLock *RWLockConstruct(RWLock *self, const char *name, int32_t option);
+RWLock *RWLockConstructBase(RWLock *self, const char *name, int32_t option);
+RWLock *RWLockDestroy(RWLock *self);
+RWLock *RWLockDestroyBase(RWLock *self);
+void RWLockLockShared(RWLock *self);
+void RWLockUnlockShared(RWLock *self);
+void RWLockLockExclusive(RWLock *self);
+void RWLockUnlockExclusive(RWLock *self);
+
 /* Existing ScePafThread exports, kept under their current link names. */
 RMutex *ScePafThread_C4BD9753(RMutex *mutex, const char *name, int option);
 void ScePafThread_F9FFA0BE(RMutex *mutex); /* RMutex::Lock */
