@@ -58,7 +58,7 @@ int MsifEcdsaVerify224(const struct MsifEcdsaSignature *signature,
 	return MsifEcdsaVerifyCore(signature, digest, publicKey, curve, 7, 28);
 }
 
-int MsifIntegerInverse(uint32_t *destination, const uint32_t *value,
+__attribute__((noinline)) int MsifIntegerInverse(uint32_t *destination, const uint32_t *value,
 	const uint32_t *modulus, int words)
 {
 	uint32_t u[64], v[64];
@@ -191,7 +191,7 @@ int MsifIntegerInverse(uint32_t *destination, const uint32_t *value,
 	return 1;
 }
 
-void MsifIntegerMultiply(uint32_t *destination, const uint32_t *left,
+__attribute__((noinline)) void MsifIntegerMultiply(uint32_t *destination, const uint32_t *left,
 	int leftWords, const uint32_t *right, int rightWords)
 {
 	uint32_t partial[65];
@@ -803,7 +803,7 @@ uint32_t MsifIntegerAdd(uint32_t *destination, const uint32_t *left,
 	return carry;
 }
 
-void MsifMontgomeryMultiply(uint32_t *destination, const uint32_t *left,
+__attribute__((noinline)) void MsifMontgomeryMultiply(uint32_t *destination, const uint32_t *left,
 	const uint32_t *right, const uint32_t *prime, int words,
 	uint32_t montgomeryInverse)
 {
@@ -836,7 +836,7 @@ void MsifMontgomeryMultiply(uint32_t *destination, const uint32_t *left,
 		destination[index] = accumulator[index];
 }
 
-void MsifMontgomeryReduce(uint32_t *destination, const uint32_t *source,
+__attribute__((noinline)) void MsifMontgomeryReduce(uint32_t *destination, const uint32_t *source,
 	int sourceWords, const uint32_t *prime, int words,
 	uint32_t montgomeryInverse)
 {
