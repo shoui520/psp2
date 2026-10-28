@@ -4,6 +4,21 @@
 
 typedef struct Timer Timer;
 
+enum TimerState {
+	STATE_STANDBY = 0,
+	STATE_ACTIVE = 1,
+	STATE_FINISHED = 2,
+	STATE_HOLD = 3,
+	STATE_DISABLED = 4
+};
+
+enum TimerRepeat {
+	REPEAT_NONE = 0,
+	REPEAT_LOOP = 1,
+	REPEAT_ROUND = 4,
+	REPEAT_RBACK = 12
+};
+
 typedef struct TimerVTable {
 	void (*Destroy)(Timer *self);
 	void (*Delete)(Timer *self);
@@ -54,6 +69,23 @@ typedef struct ListenerParam {
 } ListenerParam;
 
 extern TimerListenerList *s_default_list;
+
+#define TimerTickUnit ScePafMisc_C437D34C
+#define TimerTickInv ScePafMisc_DD506F1E
+#define TimerTickInterval ScePafMisc_EB7A8105
+extern float TimerTickUnit;
+extern float TimerTickInv;
+extern float TimerTickInterval;
+
+#define TimerInitTickUnit ScePafMisc_25B066A8
+#define TimerSetCurrTickInterval ScePafMisc_8D59045A
+#define TimerDoTick ScePafMisc_50253C80
+#define TimerDoFunc ScePafMisc_6C15F987
+void TimerInitTickUnit(float tick_unit);
+void TimerSetCurrTickInterval(float tick_interval);
+float TimerDoTick(Timer *self);
+float TimerDoFunc(const Timer *self, float rate, int func, float pre,
+		 float *param);
 
 void ScePafMisc_06BD5A37(Timer *self, float total, int func, int repeat,
 		      int repeatCount, const float *param); /* Timer::InitTimer */
