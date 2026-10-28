@@ -465,7 +465,6 @@ static inline int _smReadEdid(HdmiDevice *device)
 static inline int _smWaitPowerOn(HdmiDevice *device)
 {
 	SceUInt32 events;
-	int plg;
 
 	if (hdmiDeviceStatusIsStopRequested(device) == 1)
 		return HDMI_SM_STATE_STOPPED;
@@ -473,12 +472,16 @@ static inline int _smWaitPowerOn(HdmiDevice *device)
 		return _smDisconnect(device);
 	_smPowerOn(device);
 	_smClearPlugEvents();
-	plg = hdmiDeviceStatusGetPlgStat(device);
-	if (plg != 1) {
-		if (plg == 0)
-			return _smDisconnect(device);
-		if (plg != 2)
-			SCE_DBG_ASSERT_FAIL(540);
+	switch (hdmiDeviceStatusGetPlgStat(device)) {
+	case 0:
+		return _smDisconnect(device);
+	case 1:
+		break;
+	case 2:
+		return HDMI_SM_STATE_WAIT_RESOLUTION;
+	default:
+		SCE_DBG_ASSERT_FAIL(540);
+		break;
 	}
 	hdmiDeviceSmWaitEvent(&events, HDMI_SM_EVENT_STOP | HDMI_SM_EVENT_POWER_ON |
 			      HDMI_SM_EVENT_UNPLUG);
@@ -747,8 +750,9 @@ static inline int _smRunningNoHdcp(HdmiDevice *device)
 
 	do {
 		hdmiDeviceSmWaitEvent(&events, HDMI_SM_EVENT_PACKET | HDMI_SM_EVENT_REAUTH2 |
-				      HDMI_SM_EVENT_STOP | HDMI_SM_EVENT_VIDEO |
-				      HDMI_SM_EVENT_PLUG | HDMI_SM_EVENT_UNPLUG);
+				      HDMI_SM_EVENT_NONE | HDMI_SM_EVENT_STOP |
+				      HDMI_SM_EVENT_VIDEO | HDMI_SM_EVENT_PLUG |
+				      HDMI_SM_EVENT_UNPLUG);
 		if (events & HDMI_SM_EVENT_PACKET)
 			hdmiDeviceSmSetPacketCtrl(device);
 		if (events & HDMI_SM_EVENT_STOP)
