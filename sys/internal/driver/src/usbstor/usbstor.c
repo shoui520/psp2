@@ -945,12 +945,12 @@ events:
 		resetBindings();
 		s.status &= ~STATUS_BAD_CBW;
 		state = 1;
-		goto receive;
+		goto receiveNext;
 	}
 	if (bits & EVF_CSW_SENT) {
 		s.status &= ~STATUS_IN_STALLED;
 		state = 1;
-		goto receive;
+		goto receiveNext;
 	}
 	if (!(bits & EVF_CBW_RECEIVED))
 		goto next;
@@ -965,7 +965,7 @@ events:
 		SceUdcdForDriver_34079250(&s.endpoints[1]);
 		s.status |= STATUS_BAD_CBW;
 		state = 1;
-		goto receive;
+		goto receiveNext;
 	}
 	remaining = s.cbw->dCBWDataTransferLength;
 	unit = s.cbw->bCBWLUN & USBMS_CBW_LUN_MASK;
@@ -1138,9 +1138,11 @@ abortCommand:
 	state = 0;
 	goto waitNormal;
 receive:
-	if (s.cbwRequest.request.returnCode < REQUEST_QUEUED)
+	if (s.cbwRequest.request.returnCode < REQUEST_QUEUED) {
+		/* after a reset, a CSW or a bad CBW Sony queues the next CBW without this check */
+receiveNext:
 		s.cbwRequest.request.returnCode = state;
-	else {
+	} else {
 		timeout = USBSTOR_TRANSFER_TIMEOUT;
 		result = SceUdcdForDriver_38787672(&s.endpoints[2]);
 		if (result != (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS ||
