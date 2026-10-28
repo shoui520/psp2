@@ -58,6 +58,8 @@ int sce_paf_swprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format, ...
 #define sce_paf_vswprintf ScePafStdc_FA5C2193
 int sce_paf_vswprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format,
 		     va_list args);
+PafString *PafStringConstruct(PafString *self, const void *allocator);
+PafString *PafStringDestruct(PafString *self);
 PafWString *PafWStringConstruct(PafWString *self, const void *allocator);
 PafWString *PafWStringDestruct(PafWString *self);
 

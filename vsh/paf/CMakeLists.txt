@@ -35,6 +35,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/job_call_queue.c
 	src/common/job_slots.c
 	src/common/path.c
+	src/common/property_list.c
+	src/common/shared_ptr.c
 	src/common/view.c
 	src/plugin.c
 	src/cxml/cxml.c

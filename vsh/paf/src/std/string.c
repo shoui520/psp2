@@ -75,6 +75,18 @@ size_t sce_paf_wcslen(const uint16_t *str)
 	return length;
 }
 
+PafString *PafStringConstruct(PafString *self, const void *allocator)
+{
+	PafStringInitialize(self);
+	return self;
+}
+
+PafString *PafStringDestruct(PafString *self)
+{
+	PafStringDestroy(self);
+	return self;
+}
+
 PafWString *PafWStringConstruct(PafWString *self, const void *allocator)
 {
 	PafWStringInitialize(self);
