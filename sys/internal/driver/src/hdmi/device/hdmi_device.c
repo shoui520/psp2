@@ -220,6 +220,7 @@ static int intrThread(SceSize args, void *argp)
 	SceUInt32 bits;
 	HdmiIntrRegs regs;
 	SceUInt32 raised;
+	SceUInt8 status2;
 	int i, ret;
 
 	HDMI_ITRS_PRINTF("[hdmiITRS]  *** Interrupt Task Wake Up ***\n");
@@ -229,10 +230,8 @@ static int intrThread(SceSize args, void *argp)
 						HDMI_INTR_EVENT_INTR | HDMI_INTR_EVENT_EXIT,
 						SCE_KERNEL_EVF_WAITMODE_OR, &bits, NULL);
 			sceKernelClearEventFlag(intrWork.eventFlag, ~bits);
-			if (bits & HDMI_INTR_EVENT_EXIT) {
-				sceKernelExitThread(0);
-				return 0;
-			}
+			if (bits & HDMI_INTR_EVENT_EXIT)
+				return sceKernelExitThread(0);
 			if (bits & HDMI_INTR_EVENT_INTR)
 				break;
 		}
@@ -243,16 +242,16 @@ static int intrThread(SceSize args, void *argp)
 			HDMI_PRINTF(HDMI_DBG_INTR, "[hdmiINTR] ",
 				    "*** Int Reg Read Error(0x%08x). ***\n", ret);
 		} else {
+			status2 = regs.reg[HDMI_INTR_ENABLE2] & regs.reg[HDMI_INTR_STATUS2];
+			regs.reg[HDMI_INTR_STATUS2] = status2 & ~0x40;
 			regs.reg[HDMI_INTR_STATUS1] &= regs.reg[HDMI_INTR_ENABLE1];
-			regs.reg[HDMI_INTR_STATUS2] =
-				(regs.reg[HDMI_INTR_STATUS2] & regs.reg[HDMI_INTR_ENABLE2]) & ~0x40;
 			ret = HdmiDeviceAD80244ClearIntrStatus(&regs);
 			if (ret != 0) {
 				HDMI_ERR_PRINTF("[hdmiERR ]  Ch *** Int Reg Write Error(0x%08x). ***\n",
 						ret);
 			} else {
-				raised = (regs.reg[HDMI_INTR_ENABLE2] & regs.reg[HDMI_INTR_STATUS2]) << 16 |
-					 regs.reg[HDMI_INTR_STATUS1] << 8 | regs.reg[HDMI_INTR_CEC];
+				raised = status2 << 16 | regs.reg[HDMI_INTR_STATUS1] << 8 |
+					 regs.reg[HDMI_INTR_CEC];
 				for (i = 0; i < 6; i++) {
 					if (!(raised & intrHandlers[i].mask))
 						continue;
@@ -264,17 +263,18 @@ static int intrThread(SceSize args, void *argp)
 			}
 		}
 		unlock();
-	} while (sceKernelEnableSubIntr(HDMI_INTR_CODE, HDMI_INTR_SUBCODE) >= 0);
-	return 0;
+		ret = sceKernelEnableSubIntr(HDMI_INTR_CODE, HDMI_INTR_SUBCODE);
+	} while (ret >= 0);
+	return ret;
 }
 
-int hdmiDeviceSetHdcpMode(SceUInt8 mode)
+__attribute__((noinline)) int hdmiDeviceSetHdcpMode(SceUInt8 mode)
 {
 	hdcpMode = mode;
 	return 0;
 }
 
-int hdmiDeviceSetEdidMode(SceUInt8 mode)
+__attribute__((noinline)) int hdmiDeviceSetEdidMode(SceUInt8 mode)
 {
 	edidMode = mode;
 	return 0;
@@ -387,10 +387,16 @@ error:
 
 int _sceHdmiDeviceSuspend(void)
 {
+	int ret;
+
 	pDevice.request = 0;
-	if (hdmiDeviceDdcAbort() >= 0 && _sceHdmiDeviceSmStopService(&pDevice, 0) >= 0)
-		return cecDevSuspend();
-	return 0;
+	ret = hdmiDeviceDdcAbort();
+	if (ret < 0)
+		return ret;
+	ret = _sceHdmiDeviceSmStopService(&pDevice, 0);
+	if (ret < 0)
+		return ret;
+	return cecDevSuspend();
 }
 
 int _sceHdmiDeviceSuspendDone(void)
@@ -411,7 +417,7 @@ int _sceHdmiDeviceResume(void)
 		SCE_DBG_ASSERT_FAIL(534);
 		return ret;
 	}
-	ret = HdmiDeviceHwReset(&pDevice);
+	ret = HdmiDeviceAD80244Reset(&pDevice);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(541);
 		return ret;
@@ -733,114 +739,114 @@ int sceHdmiDeviceCheckStatus(void)
 }
 
 /* HdmiDeviceHw*: the transmitter's operations (Sony's prefix) */
-int HdmiDeviceHwReset(HdmiDevice *device)
+__attribute__((noinline)) int HdmiDeviceHwReset(HdmiDevice *device)
 {
 	return HdmiDeviceAD80244Reset(device);
 }
 
-int HdmiDeviceHwGetChipId(HdmiDevice *device, SceUInt8 *id, SceUInt8 *length)
+__attribute__((noinline)) int HdmiDeviceHwGetChipId(HdmiDevice *device, SceUInt8 *id, SceUInt8 *length)
 {
 	return HdmiDeviceAD80244GetChipId(device, id, length);
 }
 
-int HdmiDeviceHwGetPlgStat(HdmiDevice *device)
+__attribute__((noinline)) int HdmiDeviceHwGetPlgStat(HdmiDevice *device)
 {
 	return sceHdmiDeviceAD80244GetPlgStat(device);
 }
 
-int HdmiDeviceHwGetPllStat(HdmiDevice *device)
+__attribute__((noinline)) int HdmiDeviceHwGetPllStat(HdmiDevice *device)
 {
 	return sceHdmiDeviceAD80244GetPllStat(device);
 }
 
 /* Sony's name. */
-int HdmiDeviceHwSetFrameDirect(HdmiDevice *device, SceUInt32 frame, const SceUInt8 *data,
+__attribute__((noinline)) int HdmiDeviceHwSetFrameDirect(HdmiDevice *device, SceUInt32 frame, const SceUInt8 *data,
 			       SceUInt32 size)
 {
 	return HdmiDeviceAD80244SetFrameDirect(device, frame, data, size);
 }
 
 /* Sony's name. */
-int HdmiDeviceHwSetFrame(HdmiDevice *device, SceUInt32 frames)
+__attribute__((noinline)) int HdmiDeviceHwSetFrame(HdmiDevice *device, SceUInt32 frames)
 {
 	return HdmiDeviceAD80244SetFrame(device, frames);
 }
 
-int HdmiDeviceHwSetPacketCtrl(HdmiDevice *device, SceUInt32 frames)
+__attribute__((noinline)) int HdmiDeviceHwSetPacketCtrl(HdmiDevice *device, SceUInt32 frames)
 {
 	return HdmiDeviceAD80244SetPacketCtrl(device, frames);
 }
 
-int HdmiDeviceHwSetAvMute(HdmiDevice *device, int mute)
+__attribute__((noinline)) int HdmiDeviceHwSetAvMute(HdmiDevice *device, int mute)
 {
 	return HdmiDeviceAD80244SetAvMute(device, mute);
 }
 
-int HdmiDeviceHwSetVideoMute(HdmiDevice *device, int mute)
+__attribute__((noinline)) int HdmiDeviceHwSetVideoMute(HdmiDevice *device, int mute)
 {
 	return HdmiDeviceAD80244SetVideoMute(device, mute);
 }
 
-int HdmiDeviceHwSetAudioMute(HdmiDevice *device, int mute)
+__attribute__((noinline)) int HdmiDeviceHwSetAudioMute(HdmiDevice *device, int mute)
 {
 	return HdmiDeviceAD80244SetAudioMute(device, mute);
 }
 
-int HdmiDeviceHwSetHDMIMode(HdmiDevice *device, int hdmi)
+__attribute__((noinline)) int HdmiDeviceHwSetHDMIMode(HdmiDevice *device, int hdmi)
 {
 	return HdmiDeviceAD80244SetHDMIMode(device, hdmi);
 }
 
-int HdmiDeviceHwCheckRepeater(HdmiDevice *device)
+__attribute__((noinline)) int HdmiDeviceHwCheckRepeater(HdmiDevice *device)
 {
 	return HdmiDeviceAD80244CheckRepeater(device);
 }
 
-int HdmiDeviceHwAuthStart(HdmiDevice *device)
+__attribute__((noinline)) int HdmiDeviceHwAuthStart(HdmiDevice *device)
 {
 	return HdmiDeviceAD80244AuthCtrl(device, 1);
 }
 
-int HdmiDeviceHwAuthStop(HdmiDevice *device)
+__attribute__((noinline)) int HdmiDeviceHwAuthStop(HdmiDevice *device)
 {
 	return HdmiDeviceAD80244AuthCtrl(device, 0);
 }
 
 /* Sony's name. */
-int HdmiDeviceHwSetCypher(HdmiDevice *device, int on)
+__attribute__((noinline)) int HdmiDeviceHwSetCypher(HdmiDevice *device, int on)
 {
 	return HdmiDeviceAD80244SetCypher(device, on);
 }
 
-int HdmiDeviceHwReadAksv(HdmiDevice *device, SceUInt8 *aksv)
+__attribute__((noinline)) int HdmiDeviceHwReadAksv(HdmiDevice *device, SceUInt8 *aksv)
 {
 	return HdmiDeviceAD80244ReadAksv(device, aksv);
 }
 
-int HdmiDeviceHwReadBksv(HdmiDevice *device, SceUInt8 *bksv)
+__attribute__((noinline)) int HdmiDeviceHwReadBksv(HdmiDevice *device, SceUInt8 *bksv)
 {
 	return HdmiDeviceAD80244ReadBksv(device, bksv);
 }
 
 /* Sony's name. */
-int HdmiDeviceHwReadBcaps(HdmiDevice *device, SceUInt8 *bcaps)
+__attribute__((noinline)) int HdmiDeviceHwReadBcaps(HdmiDevice *device, SceUInt8 *bcaps)
 {
 	return HdmiDeviceAD80244ReadBcaps(device, bcaps);
 }
 
 /* Sony's name. */
-int HdmiDeviceHwReadBstatus(HdmiDevice *device, SceUInt8 *bstatus)
+__attribute__((noinline)) int HdmiDeviceHwReadBstatus(HdmiDevice *device, SceUInt8 *bstatus)
 {
 	return HdmiDeviceAD80244ReadBstatus(device, bstatus);
 }
 
-int HdmiDeviceHwReadBksvCount(HdmiDevice *device, SceUInt8 *count)
+__attribute__((noinline)) int HdmiDeviceHwReadBksvCount(HdmiDevice *device, SceUInt8 *count)
 {
 	return HdmiDeviceAD80244ReadBksvCount(device, count);
 }
 
 /* Sony's name. */
-int HdmiDeviceHwReadKSVListFromFIFO(HdmiDevice *device, SceUInt8 size, void *buffer)
+__attribute__((noinline)) int HdmiDeviceHwReadKSVListFromFIFO(HdmiDevice *device, SceUInt8 size, void *buffer)
 {
 	HdmiDdcRequest request;
 
@@ -852,12 +858,12 @@ int HdmiDeviceHwReadKSVListFromFIFO(HdmiDevice *device, SceUInt8 size, void *buf
 	return sceHdmiDeviceDdcRead(device, &request, 500000, 1);
 }
 
-int HdmiDeviceHwSetTMDSPower(HdmiDevice *device, int on)
+__attribute__((noinline)) int HdmiDeviceHwSetTMDSPower(HdmiDevice *device, int on)
 {
 	return HdmiDeviceAD80244SetTMDSPower(device, on);
 }
 
-int HdmiDeviceHwSetVideoConfig(HdmiDevice *device, const HdmiDeviceVideoConfig *config)
+__attribute__((noinline)) int HdmiDeviceHwSetVideoConfig(HdmiDevice *device, const HdmiDeviceVideoConfig *config)
 {
 	HdmiVideoTiming timing;
 	int vic = config->vic;
@@ -912,18 +918,18 @@ int HdmiDeviceHwSetVideoConfig(HdmiDevice *device, const HdmiDeviceVideoConfig *
 	return HdmiDeviceAD80244SetVideoConfig(device, config, &timing);
 }
 
-int HdmiDeviceHwSetAudioConfig(HdmiDevice *device, const HdmiDeviceAudioConfig *config)
+__attribute__((noinline)) int HdmiDeviceHwSetAudioConfig(HdmiDevice *device, const HdmiDeviceAudioConfig *config)
 {
 	return HdmiDeviceAD80244SetAudioConfig(device, config);
 }
 
-int HdmiDeviceHwPowerOn(HdmiDevice *device)
+__attribute__((noinline)) int HdmiDeviceHwPowerOn(HdmiDevice *device)
 {
 	return HdmiDeviceAD80244PowerOn(device);
 }
 
 /* Stops the authentication and has the transmitter read the EDID again. */
-int HdmiDeviceHwRestartEdid(HdmiDevice *device)
+__attribute__((noinline)) int HdmiDeviceHwRestartEdid(HdmiDevice *device)
 {
 	int ret;
 
@@ -935,7 +941,7 @@ int HdmiDeviceHwRestartEdid(HdmiDevice *device)
 	return ret;
 }
 
-int HdmiDeviceHwSetEdidSegment(HdmiDevice *device, SceUInt32 segment)
+__attribute__((noinline)) int HdmiDeviceHwSetEdidSegment(HdmiDevice *device, SceUInt32 segment)
 {
 	return HdmiDeviceAD80244SetEdidSegment(device, segment);
 }
