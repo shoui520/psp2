@@ -42,6 +42,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/cache/cache_manager_impl.c
 	src/inputdevice/inputdevice.c
 	src/inputdevice/inputlistener.c
+	src/inputdevice/gesturelistener.c
 	src/common/view.c
 	src/plugin.c
 	src/cxml/cxml.c
