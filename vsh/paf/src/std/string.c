@@ -184,3 +184,74 @@ PafString *PafStringCopy(PafString *self, const PafString *src)
 	self->count = 0;
 	return self;
 }
+
+PafString *PafStringAssignChar(PafString *self, char value)
+{
+	if (self->ptr != &PafStringEmpty)
+		ScePafStdc_1B77082E(self->ptr);
+	if (value) {
+		char *dest = ScePafStdc_FC5CD359(2);
+
+		if (dest) {
+			self->ptr = dest;
+			self->count = 1;
+			*dest = value;
+			self->ptr[1] = 0;
+			return self;
+		}
+		ScePafStdc_D608246A();
+	}
+	self->ptr = &PafStringEmpty;
+	self->count = 0;
+	return self;
+}
+
+PafString *PafStringSubstring(PafString *result, const PafString *src,
+			      size_t pos, size_t len)
+{
+	size_t count = src->count;
+	const char *text;
+
+	if (pos > count) {
+		ScePafStdc_D608246A();
+		count = src->count;
+	}
+	if (pos >= count) {
+		PafStringInitialize(result);
+		return NULL;
+	}
+	if (len == (size_t)-1 || pos + len > count)
+		len = count - pos;
+	text = src->ptr + pos;
+	PafStringInitialize(result);
+	return PafStringAssign(result, text, len);
+}
+
+size_t PafStringRfind(const PafString *self, const char *str,
+		      size_t pos, size_t len)
+{
+	extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
+	size_t count = self->count;
+	const char *begin, *current;
+
+	if (!len)
+		return pos < count ? pos : count;
+	if (len > count)
+		return (size_t)-1;
+	begin = self->ptr;
+	if (pos >= count - len)
+		pos = count - len;
+	current = begin + pos;
+	for (;;) {
+		if (*str == *current) {
+			int comparison = sce_paf_strncmp(current, str, len);
+
+			begin = self->ptr;
+			if (!comparison)
+				return current - begin;
+		}
+		if (current == begin)
+			return (size_t)-1;
+		--current;
+	}
+}

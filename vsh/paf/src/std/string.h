@@ -30,6 +30,11 @@ PafString *PafStringErase(PafString *self, size_t pos, size_t len);
 PafString *PafStringAppend(PafString *self, size_t len, char value);
 PafString *PafStringAssign(PafString *self, const char *src, size_t len);
 PafString *PafStringCopy(PafString *self, const PafString *src);
+PafString *PafStringAssignChar(PafString *self, char value);
+PafString *PafStringSubstring(PafString *result, const PafString *src,
+			      size_t pos, size_t len);
+size_t PafStringRfind(const PafString *self, const char *str,
+		      size_t pos, size_t len);
 
 extern void *ScePafStdc_FC5CD359(size_t size);
 extern void ScePafStdc_1B77082E(void *ptr);
