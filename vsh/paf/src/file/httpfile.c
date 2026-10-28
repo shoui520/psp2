@@ -786,6 +786,54 @@ void HttpFileOpenChar(FileSharedPtr *result, const char *path, int32_t *error,
 	UrlDestroy(&url);
 }
 
+int32_t HttpFileGetstat(HttpFile *self, FileStat *stat)
+{
+	int32_t ret;
+	int64_t size;
+	PafString value;
+
+	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	if (!stat) {
+		ret = SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+		goto unlock;
+	}
+	if (!self->m_is_opened || !self->m_http_reader) {
+		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
+		goto unlock;
+	}
+	if (self->m_io_thread) {
+		ret = SCE_PAF_ERROR_FILE_BUSY;
+		goto unlock;
+	}
+	size = self->base.vtable->GetFileSize(&self->base);
+	if (size < 0) {
+		ret = (int32_t)size;
+		goto unlock;
+	}
+	stat->st_size = size;
+	PafStringInitialize(&value);
+	ret = HttpFileGetResponseHeader(self, "Last-Modified", &value);
+	if (!ret) {
+		if (value.count) {
+			DateTime date;
+
+			HttpFileParseDate(&date, value.ptr);
+			stat->st_ctime = date;
+			stat->st_atime = date;
+			stat->st_mtime = date;
+			stat->st_attr = 0;
+			stat->st_mode = 0;
+			DateTimeDestroy(&date);
+		} else {
+			ret = SCE_PAF_ERROR_FILE_UNKNOWN_DATE;
+		}
+	}
+	PafStringDestroy(&value);
+unlock:
+	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	return ret;
+}
+
 int32_t HttpFileGetstatUrl(const char *path, HttpFileStat *stat)
 {
 	HttpFile *self;

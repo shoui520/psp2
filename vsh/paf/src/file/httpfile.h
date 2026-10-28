@@ -5,6 +5,7 @@
 #include "../thread/mutex.h"
 #include "../thread/thread.h"
 #include "../url/url.h"
+#include "../rtc/rtc.h"
 
 typedef struct HttpFileReader HttpFileReader;
 typedef struct HttpFileReaderParam HttpFileReaderParam;
@@ -260,6 +261,9 @@ int32_t HttpFileWaitAsync(HttpFile *self, int64_t *result);
 int32_t HttpFilePollAsync(HttpFile *self, int64_t *result);
 int32_t HttpFileGetstat(HttpFile *self, FileStat *stat);
 int32_t HttpFileGetstatUrl(const char *path, HttpFileStat *stat);
+const char *HttpFileParseDateMonth(const char *text, int32_t *month);
+int32_t HttpFileParseDateTick(RtcTick *tick, const char *text);
+void HttpFileParseDate(DateTime *result, const char *text);
 HttpFile *HttpFileDestroy(HttpFile *self);
 HttpFile *HttpFileDestroyBase(HttpFile *self);
 void HttpFileDelete(HttpFile *self);
