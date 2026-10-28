@@ -1,6 +1,4 @@
-#include <stddef.h>
-
-#define PafPlacementNew _ZnwjPv
+#include "new.h"
 
 void *PafPlacementNew(size_t size, void *where)
 {

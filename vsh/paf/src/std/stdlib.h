@@ -4,6 +4,9 @@
 #include <stddef.h>
 
 #define sce_paf_realloc ScePafStdc_0ADEA3AD
+#define GetGlobalHeapAllocator ScePafStdc_261CAF72
+
+void *GetGlobalHeapAllocator(void);
 
 void *sce_paf_realloc(void *ptr, size_t size);
 void *sce_paf_malloc(size_t size);

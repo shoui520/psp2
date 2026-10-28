@@ -74,11 +74,33 @@ int32_t LocalFileSetPriority(LocalFile *self, int32_t priority);
 
 #define LocalFileOpen ScePafMisc_B9FB9BD6
 #define LocalFileConstruct ScePafMisc_DFE98F6E
+#define LocalFileConstructBase ScePafMisc_20ACD611
+#define LocalFileConstructWithAllocator ScePafMisc_BEDFC256
+#define LocalFileConstructBaseWithAllocator ScePafMisc_D2DB93D0
+#define LocalFileCreateImpl ScePafMisc_D67EA1A0
+#define LocalFileDeleteImpl ScePafMisc_C7783F3F
+#define LocalFileDestroy ScePafMisc_932FCF17
+#define LocalFileDelete ScePafMisc_F42CA10F
+#define LocalFileDestroyBase ScePafMisc_71A0A754
+#define LocalFileOpenUrl ScePafMisc_3B1FA385
+
+#define localFileClass ScePafMisc_9B00D854
+extern const FileClass localFileClass;
 
 LocalFile *LocalFileConstruct(LocalFile *self);
+LocalFile *LocalFileConstructBase(LocalFile *self);
+LocalFile *LocalFileConstructWithAllocator(LocalFile *self, HeapAllocator *allocator);
+LocalFile *LocalFileConstructBaseWithAllocator(LocalFile *self, HeapAllocator *allocator);
+void LocalFileCreateImpl(LocalFile *self);
+void LocalFileDeleteImpl(LocalFile *self);
+LocalFile *LocalFileDestroy(LocalFile *self);
+void LocalFileDelete(LocalFile *self);
+LocalFile *LocalFileDestroyBase(LocalFile *self);
 void LocalFileDefaultDelete(File *file);
 
 void LocalFileOpen(FileSharedPtr *result, const char *path, uint32_t flag,
 		   uint32_t mode, int32_t *error);
+void LocalFileOpenUrl(FileSharedPtr *result, const char *path, uint32_t flag,
+		      uint32_t mode, int32_t *error, unsigned char *ignored);
 
 #endif
