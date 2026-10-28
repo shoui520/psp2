@@ -109,6 +109,87 @@ float sce_paf_cosf(float x)
 	return number.value;
 }
 
+float AtanApprox(float x)
+{
+	float square, polynomial, offset, product, numerator;
+
+	if (x <= 0.20000000298023224f) {
+		square = x * x;
+		polynomial = square * -0.14000000059604645f;
+		polynomial += 0.20000000298023224f;
+		polynomial *= square;
+		polynomial += -0.3333333134651184f;
+		polynomial *= square;
+		polynomial += 1.0f;
+		return x * polynomial;
+	}
+	if (x < 0.6499999761581421f) {
+		product = x * 0.4142135679721832f;
+		numerator = x - 0.4142135679721832f;
+		x = numerator / (product + 1.0f);
+		offset = 0.39269909262657166f;
+	} else {
+		numerator = x - 1.0f;
+		x = numerator / (x + 1.0f);
+		offset = 0.7853981852531433f;
+	}
+	square = x * x;
+	polynomial = square * -0.14000000059604645f;
+	polynomial += 0.20000000298023224f;
+	polynomial *= square;
+	polynomial += -0.3333333134651184f;
+	polynomial *= square;
+	polynomial += 1.0f;
+	return offset + x * polynomial;
+}
+
+float sce_paf_atanf(float x)
+{
+	union {
+		float value;
+		uint32_t bits;
+	} number;
+	uint32_t sign;
+	float result;
+
+	number.value = x;
+	sign = number.bits & 0x80000000U;
+	number.bits &= 0x7fffffffU;
+	if (number.bits > 0x3fd30000U)
+		result = 1.5707963705062866f - AtanApprox(1.0f / number.value);
+	else
+		result = AtanApprox(number.value);
+	number.value = result;
+	number.bits = sign | (number.bits & 0x7fffffffU);
+	return number.value;
+}
+
+float sce_paf_asinf(float x)
+{
+	union {
+		float value;
+		uint32_t bits;
+	} input, root, result;
+	uint32_t rootBits;
+
+	input.value = x;
+	root.value = __builtin_sqrtf(1.0f - x * x);
+	rootBits = root.bits;
+	input.bits &= 0x7fffffffU;
+	root.bits &= 0x7fffffffU;
+	if (root.bits > input.bits)
+		result.value = AtanApprox(input.value / root.value);
+	else
+		result.value = 1.5707963705062866f -
+			       AtanApprox(root.value / input.value);
+	if ((int32_t)rootBits < 0)
+		result.value = 3.1415927410125732f - result.value;
+	input.value = x;
+	result.bits = (input.bits & 0x80000000U) |
+		      (result.bits & 0x7fffffffU);
+	return result.value;
+}
+
 float sce_paf_expf(float x)
 {
 	union {
