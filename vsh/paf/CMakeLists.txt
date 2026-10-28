@@ -13,6 +13,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/httpfile_openarg.c
 	src/file/error.c
 	src/datetime/datetime.c
+	src/rtc/rtc.c
 	src/thread/rwlock.c
 	src/thread/thread.c
 	src/common/call_list.c
