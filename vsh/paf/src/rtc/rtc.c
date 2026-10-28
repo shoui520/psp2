@@ -508,3 +508,94 @@ int32_t RtcTickAddMinutes(RtcTick *dst, const RtcTick *src, int64_t minutes)
 	*dst = *src + (uint64_t)minutes * 60000000;
 	return 0;
 }
+
+int32_t RtcTickAddMicroseconds(RtcTick *dst, const RtcTick *src, int64_t microseconds)
+{
+	*dst = *src + (uint64_t)microseconds;
+	return 0;
+}
+
+int32_t RtcTickAddSeconds(RtcTick *dst, const RtcTick *src, int64_t seconds)
+{
+	*dst = *src + (uint64_t)seconds * 1000000;
+	return 0;
+}
+
+int32_t RtcTickAddHours(RtcTick *dst, const RtcTick *src, int32_t hours)
+{
+	*dst = *src + (uint64_t)hours * 3600000000ULL;
+	return 0;
+}
+
+int32_t RtcTickAddDays(RtcTick *dst, const RtcTick *src, int32_t days)
+{
+	*dst = *src + (uint64_t)days * 86400000000ULL;
+	return 0;
+}
+
+int32_t RtcTickAddWeeks(RtcTick *dst, const RtcTick *src, int32_t weeks)
+{
+	*dst = *src + (uint64_t)weeks * 604800000000ULL;
+	return 0;
+}
+
+static inline __attribute__((always_inline))
+void RtcClampDayAndGetTick(RtcDateTime *date, RtcTick *dst)
+{
+	SceDateTime time;
+	SceRtcTick value;
+	int32_t days = sceRtcGetDaysInMonth(date->year, date->month);
+
+	if (date->day > days)
+		date->day = days;
+	time.year = date->year;
+	time.month = date->month;
+	time.day = date->day;
+	time.hour = date->hour;
+	time.minute = date->minute;
+	time.second = date->second;
+	time.microsecond = date->microsecond;
+	sceRtcGetTick(&time, &value);
+	if (dst)
+		*dst = value.tick;
+}
+
+int32_t RtcTickAddMonths(RtcTick *dst, const RtcTick *src, int32_t months)
+{
+	RtcDateTime date;
+	int32_t total;
+
+	RtcConvertTickToDateTime(src, &date, NULL);
+	/* The original wraps this intermediate before signed division. */
+	total = (int32_t)((uint32_t)months + date.month + 12u * date.year - 1u);
+	date.year = total / 12;
+	date.month = total % 12 + 1;
+	RtcClampDayAndGetTick(&date, dst);
+	return 0;
+}
+
+int32_t RtcTickAddYears(RtcTick *dst, const RtcTick *src, int32_t years)
+{
+	RtcDateTime date;
+
+	RtcConvertTickToDateTime(src, &date, NULL);
+	date.year = (uint32_t)date.year + (uint32_t)years;
+	RtcClampDayAndGetTick(&date, dst);
+	return 0;
+}
+
+int32_t RtcIsLeapYearTick(const RtcTick *tick)
+{
+	RtcDateTime date;
+
+	RtcConvertTickToDateTime(tick, &date, NULL);
+	return sceRtcIsLeapYear(date.year);
+}
+
+int32_t RtcGetDaysInMonthTick(const RtcTick *tick)
+{
+	RtcDateTime date;
+
+	RtcConvertTickToDateTime(tick, &date, NULL);
+	return sceRtcGetDaysInMonth(date.year, date.month);
+}

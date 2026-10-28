@@ -53,6 +53,25 @@ typedef char RtcDateTimeExSizeCheck[sizeof(RtcDateTimeEx) == 8 ? 1 : -1];
 #define RtcParseRFC3339LocalTime ScePafMisc_DAAC3337
 #define RtcParseSQLiteDateTime ScePafMisc_0853896D
 #define RtcParseSQLiteDateTimeWithFormat ScePafMisc_EEF3EE60
+#define RtcTickAddMicroseconds ScePafMisc_7B2F323F
+#define RtcTickAddSeconds ScePafMisc_0CC437ED
+#define RtcTickAddHours ScePafMisc_42FDB562
+#define RtcTickAddDays ScePafMisc_83C64EAE
+#define RtcTickAddWeeks ScePafMisc_4384402A
+#define RtcTickAddMonths ScePafMisc_6561E714
+#define RtcTickAddYears ScePafMisc_9263D1D0
+#define RtcIsLeapYearTick ScePafMisc_A7167EBD
+#define RtcGetDaysInMonthTick ScePafMisc_2B9F804B
+
+int32_t RtcTickAddMicroseconds(RtcTick *dst, const RtcTick *src, int64_t microseconds);
+int32_t RtcTickAddSeconds(RtcTick *dst, const RtcTick *src, int64_t seconds);
+int32_t RtcTickAddHours(RtcTick *dst, const RtcTick *src, int32_t hours);
+int32_t RtcTickAddDays(RtcTick *dst, const RtcTick *src, int32_t days);
+int32_t RtcTickAddWeeks(RtcTick *dst, const RtcTick *src, int32_t weeks);
+int32_t RtcTickAddMonths(RtcTick *dst, const RtcTick *src, int32_t months);
+int32_t RtcTickAddYears(RtcTick *dst, const RtcTick *src, int32_t years);
+int32_t RtcIsLeapYearTick(const RtcTick *tick);
+int32_t RtcGetDaysInMonthTick(const RtcTick *tick);
 
 int32_t RtcFormatSQLiteDateTime(char *dt, size_t size, const RtcTick *tick, char separator);
 int32_t RtcParseRFC3339(RtcTick *tick, const char *dt);
