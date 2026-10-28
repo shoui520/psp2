@@ -74,7 +74,7 @@ static SceUID s_mutex;
 
 /* -- per-process ring buffers ------------------------------------------- */
 
-static Tty2Buffer *tty2bufferFindByPidRaw(SceUID pid)
+static inline __attribute__((always_inline)) Tty2Buffer *tty2bufferFindByPidRaw(SceUID pid)
 {
 	SceUInt32 i;
 
@@ -87,7 +87,7 @@ static Tty2Buffer *tty2bufferFindByPidRaw(SceUID pid)
 
 static int controlGetLogRaw(SceUID pid, void *buf, int size);
 
-static void tty2bufferStart(Tty2Buffer *p)
+static inline __attribute__((always_inline)) void tty2bufferStart(Tty2Buffer *p)
 {
 	SceKernelIntrStatus intr;
 	int ret;
@@ -115,7 +115,7 @@ static void tty2bufferStart(Tty2Buffer *p)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&p->lock, intr);
 }
 
-static void tty2bufferPutcharRaw(Tty2Buffer *p, signed char c)
+static inline __attribute__((always_inline)) void tty2bufferPutcharRaw(Tty2Buffer *p, signed char c)
 {
 	TTY2_TRACE(0xb, 219, "(%p, [%c])\n", p, c);
 	if (p->cur >= p->end) {
@@ -127,7 +127,7 @@ static void tty2bufferPutcharRaw(Tty2Buffer *p, signed char c)
 	p->cur++;
 }
 
-static void tty2bufferWrite(Tty2Buffer *p, const signed char *buf, SceSize n)
+static inline __attribute__((always_inline)) void tty2bufferWrite(Tty2Buffer *p, const signed char *buf, SceSize n)
 {
 	SceKernelIntrStatus intr;
 	SceSize i;
@@ -148,7 +148,7 @@ static void tty2bufferWrite(Tty2Buffer *p, const signed char *buf, SceSize n)
 
 /* -- process events ----------------------------------------------------- */
 
-static int controlOpen(SceUID pid)
+static inline __attribute__((always_inline)) int controlOpen(SceUID pid)
 {
 	SceKernelIntrStatus wintr, intr;
 	Tty2Buffer *p;
@@ -170,7 +170,7 @@ static int controlOpen(SceUID pid)
 	return 0;
 }
 
-static int controlClose(SceUID pid)
+static inline __attribute__((always_inline)) int controlClose(SceUID pid)
 {
 	SceKernelIntrStatus wintr, intr;
 	Tty2Buffer *p;
@@ -248,7 +248,7 @@ static int controlGetLogRaw(SceUID pid, void *buf, int size)
 	return n;
 }
 
-static int controlWrite(const signed char *buf, SceSize n)
+static inline __attribute__((always_inline)) int controlWrite(const signed char *buf, SceSize n)
 {
 	SceKernelIntrStatus intr;
 	Tty2Buffer *p;
@@ -265,7 +265,7 @@ static int controlWrite(const signed char *buf, SceSize n)
 	return 0;
 }
 
-static int startControl(void)
+static inline __attribute__((always_inline)) int startControl(void)
 {
 	SceKernelIntrStatus intr;
 	SceUInt32 i;
@@ -521,7 +521,7 @@ static SceVfsUmountParam s_umountParam = {
 	.assignName = "/tty",
 };
 
-static int tty2uartFsInit(void)
+static inline __attribute__((always_inline)) int tty2uartFsInit(void)
 {
 	int ret;
 
