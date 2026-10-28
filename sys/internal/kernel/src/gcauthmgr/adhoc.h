@@ -1,6 +1,7 @@
 #ifndef GCAUTH_ADHOC_H
 #define GCAUTH_ADHOC_H
 
+#include <scetypes.h>
 #include <stddef.h>
 #include <stdint.h>
 #include "pcact.h"
@@ -389,6 +390,15 @@ typedef union GcAuthAdhocFinalPacket {
 	} decoded;
 } GcAuthAdhocFinalPacket;
 
+/* The size block of the GetKeys syscalls: the seed buffer and each buffer's size. */
+typedef struct GcAuthAdhocKeysParam {
+	unsigned char *seed;
+	SceSize randomSize;
+	SceSize contextRandomSize;
+	SceSize seedSize;
+	SceSize reserved[2];
+} GcAuthAdhocKeysParam;
+
 typedef struct GcAuthAdhocFinishContext160Request {
 	GcAuthAdhocContext160 *context;
 	const GcAuthAdhocFinalPacket *packet;
@@ -681,8 +691,54 @@ int GcAuthAdhocEncryptPacket(const unsigned char *first, unsigned int firstSize,
 		const unsigned char *fifth, unsigned int fifthSize,
 		const unsigned char *sixth, unsigned int sixthSize);
 
+/* drm_adhoc_api.c */
+int GcAuthAdhocCreateContext224ForUser(GcAuthAdhocContext224 *context,
+		unsigned char *packet);
+int GcAuthAdhocAnswerChallenge224ForUser(GcAuthAdhocContext224 *context,
+		const unsigned char *packet, unsigned char *output);
+int GcAuthAdhocAuthenticateResponse224ForUser(GcAuthAdhocContext224 *context,
+		const unsigned char *packet, unsigned char *output);
+int GcAuthAdhocVerifyResponse224ForUser(GcAuthAdhocContext224 *context,
+		const unsigned char *packet, unsigned char *output);
+int GcAuthAdhocFinishContext224ForUser(GcAuthAdhocContext224 *context,
+		const GcAuthAdhocFinalPacket *packet);
+int GcAuthAdhocGetSeeds224ForUser(const GcAuthAdhocContext224 *context,
+		unsigned char *random, unsigned char *contextRandom, unsigned char *seed);
+int GcAuthAdhocVerifyFixed160ForUser(const unsigned char *digest,
+		const GcAuthAdhocSignature160 *signature);
+int GcAuthAdhocInitializeState160ForUser(void);
+int GcAuthAdhocClearState160ForUser(void);
+int GcAuthAdhocCreateContext160ForUser(GcAuthAdhocContext160 *context,
+		unsigned char *packet);
+int GcAuthAdhocAnswerChallenge160ForUser(GcAuthAdhocContext160 *context,
+		const unsigned char *packet, unsigned char *output);
+int GcAuthAdhocAuthenticateResponse160ForUser(GcAuthAdhocContext160 *context,
+		const unsigned char *packet, unsigned char *output);
+int GcAuthAdhocVerifyResponse160ForUser(GcAuthAdhocContext160 *context,
+		const unsigned char *packet, unsigned char *output);
+int GcAuthAdhocFinishContext160ForUser(GcAuthAdhocContext160 *context,
+		const GcAuthAdhocFinalPacket *packet);
+int GcAuthAdhocGetSeeds160ForUser(const GcAuthAdhocContext160 *context,
+		unsigned char *random, unsigned char *contextRandom, unsigned char *seed);
+int GcAuthAdhocUniCastEncrypt160ForUser(GcAuthAdhocContext160 *context,
+		unsigned char *data, unsigned int size, GcAuthAdhocAuthTag *tag, int encrypt);
+int GcAuthAdhocUniCastDecrypt160ForUser(GcAuthAdhocContext160 *context,
+		unsigned char *data, unsigned int size, const GcAuthAdhocAuthTag *tag,
+		int decrypt, int checkCounter);
+int GcAuthAdhocBroadCastEncrypt160ForUser(unsigned char *data, unsigned int size,
+		GcAuthAdhocAuthTag *tag, int encrypt);
+int GcAuthAdhocBroadCastDecrypt160ForUser(GcAuthAdhocContext160 *context,
+		unsigned char *data, unsigned int size, const GcAuthAdhocAuthTag *tag,
+		int decrypt, int checkCounter);
+
+/* drm_adhoc_clear_api.c */
+int GcAuthAdhocClearStateForUser(void);
+
 /* drm_adhoc_state.c */
 int GcAuthAdhocInitializeState(void);
+
+/* drm_adhoc_state_api.c */
+int GcAuthAdhocInitializeStateForUser(void);
 
 /* drm_adhoc_verify160.c */
 int GcAuthAdhocVerify160(const GcAuthAdhocPublicKey160 *publicKey,

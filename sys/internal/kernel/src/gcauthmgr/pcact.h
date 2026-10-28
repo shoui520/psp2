@@ -488,6 +488,8 @@ int GcAuthPsmactCreateChallengeWithStack(unsigned char mode,
 		GcAuthPsmactRandomRecord *random);
 int GcAuthPsmactVerifyActivationWithStack(const GcAuthPsmactActivation *activation,
 		const GcAuthPsmactRandomRecord *random, GcAuthPsmactDerivedKeys *output);
+int GcAuthPcactCreateRtcChallengeWithStack(SceSblGcAuthMgrSclkData1 *output);
+int GcAuthPcactApplyRtcActivationWithStack(const SceSblGcAuthMgrSclkData2 *activation);
 
 /* pcact_control.c */
 int GcAuthPcactBeginActivation(const GcAuthPcactBeginActivationRequest *request);
@@ -497,3 +499,7 @@ int GcAuthPsmactDecryptActivation(const GcAuthPsmactDerivedKeys *keys);
 
 /* pcact_finish.c */
 int GcAuthResetState(void);
+int GcAuthPcactBeginActivationWithStack(unsigned int mode,
+		const unsigned int *entropy, GcAuthPcactEncryptedChallenge *output);
+int GcAuthPcactApplyActivationWithStack(const GcAuthPcactActivationBundle *activation,
+		unsigned int size);

@@ -92,6 +92,7 @@ typedef struct GcAuthGetCartSecretRequest {
 } GcAuthGetCartSecretRequest;
 
 int GcAuthGetCartSecret(const GcAuthGetCartSecretRequest *request);
+int GcAuthGetCartSecretForUser(GcAuthCartSecretData *secret);
 
 /* a 16-byte DrmBB key, word aligned */
 typedef union GcAuthDrmKey {
