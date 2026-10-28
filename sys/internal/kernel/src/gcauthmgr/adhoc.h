@@ -541,6 +541,47 @@ void GcAuthAdhocBuildExtendedMessage(unsigned char *output,
 		const unsigned char *third, unsigned int thirdSize,
 		const unsigned char *fourth, unsigned int fourthSize);
 
+/* drm_adhoc_response224.c */
+int GcAuthAdhocVerifyResponse224(const GcAuthAdhocVerifyResponse224Request *request);
+
+/* drm_adhoc_finish224.c */
+int GcAuthAdhocFinishContext224(const GcAuthAdhocFinishContext224Request *request);
+
+/* drm_adhoc_seeds.c */
+int GcAuthAdhocGetSeeds224(const GcAuthAdhocGetSeeds224Request *request);
+
+/* drm_adhoc_verify_request160.c */
+int GcAuthAdhocVerifyFixed160(const GcAuthAdhocVerifyPair160 *request);
+
+/* drm_adhoc_sign.c */
+int GcAuthAdhocSign160(const GcAuthAdhocSign160Request *request);
+int GcAuthAdhocSign224(const GcAuthAdhocSign224Request *request);
+
+/* drm_adhoc_verify_request160.c, drm_adhoc_verify_request224.c */
+int GcAuthAdhocVerifyRequest160(const GcAuthAdhocSign160Request *request);
+int GcAuthAdhocVerifyRequest224(const GcAuthAdhocSign224Request *request);
+
+/* the 160-bit exchange (drm_adhoc_*160.c, drm_adhoc_seeds.c) */
+int GcAuthAdhocCreateContext160(const GcAuthAdhocCreateContext160Request *request);
+int GcAuthAdhocAnswerChallenge160(const GcAuthAdhocAnswerChallenge160Request *request);
+int GcAuthAdhocAuthenticateResponse160(const GcAuthAdhocAuthenticateResponse160Request *request);
+int GcAuthAdhocVerifyResponse160(const GcAuthAdhocVerifyResponse160Request *request);
+int GcAuthAdhocFinishContext160(const GcAuthAdhocFinishContext160Request *request);
+int GcAuthAdhocGetSeeds160(const GcAuthAdhocGetSeeds160Request *request);
+
+typedef struct GcAuthAdhocUniCastEncrypt160Request {
+	GcAuthAdhocContext160 *context;
+	unsigned char *data;
+	unsigned int size;
+	GcAuthAdhocAuthTag *tag;
+	int encrypt;
+} GcAuthAdhocUniCastEncrypt160Request;
+
+/* drm_adhoc_unicast160.c */
+int GcAuthAdhocUniCastEncrypt160(GcAuthAdhocContext160 *context,
+		unsigned char *data, unsigned int size, GcAuthAdhocAuthTag *tag, int encrypt);
+int GcAuthAdhocUniCastEncrypt160Stack(const GcAuthAdhocUniCastEncrypt160Request *request);
+
 /* drm_adhoc_authenticate224.c */
 int GcAuthAdhocAuthenticateResponse224(const GcAuthAdhocAuthenticateResponse224Request *request);
 

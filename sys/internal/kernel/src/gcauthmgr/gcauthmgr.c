@@ -6,19 +6,14 @@
 
 #include <skeleton.h>
 
-STUB(SceSblGcAuthMgrDrmBBForDriver_050DC6DF)
 STUB(SceSblGcAuthMgrDrmBBForDriver_22FD5D23)
-STUB(SceSblGcAuthMgrDrmBBForDriver_30A0B441)
-STUB(SceSblGcAuthMgrDrmBBForDriver_4B506BE7)
 STUB(SceSblGcAuthMgrDrmBBForDriver_4C5DE1AA)
-STUB(SceSblGcAuthMgrDrmBBForDriver_4CEA150C)
 STUB(SceSblGcAuthMgrDrmBBForDriver_4FE89ADB)
 STUB(error)
 STUB(SceSblGcAuthMgrDrmBBForDriver_812B2B5C)
 STUB(SceSblGcAuthMgrDrmBBForDriver_BB451E83)
 STUB(SceSblGcAuthMgrDrmBBForDriver_BB70DDC0)
 STUB(SceSblGcAuthMgrGcAuthForDriver_68781760)
-STUB(SceSblGcAuthMgrPkgForDriver_E459A9A8)
 STUB(SceSblGcAuthMgrMsSaveBBForDriver_3C185A67)
 STUB(SceSblGcAuthMgrMsSaveBBForDriver_4A249828)
 STUB(SceSblGcAuthMgrMsSaveBBForDriver_79A9BE44)
