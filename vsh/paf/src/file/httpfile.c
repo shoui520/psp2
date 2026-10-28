@@ -704,6 +704,59 @@ int32_t HttpFileDeleteReader(HttpFile *self)
 	return 0;
 }
 
+void HttpFileOpenUrl(FileSharedPtr *result, Url *url, int32_t *error, uint32_t flag)
+{
+	HttpFile *self;
+
+	if (!url) {
+		/* The native null-URL path requires an error output. */
+		*error = SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+		result->m_ptr = NULL;
+		result->m_ref_counter = NULL;
+		return;
+	}
+	self = ScePafStdc_FC5CD359(sizeof(*self));
+	if (self) {
+		HttpFileOpenArg arg;
+		int32_t ret;
+
+		HttpFileConstruct(self);
+		HttpFileOpenArgConstruct(&arg);
+		HttpFileOpenArgParseUrl(&arg, url);
+		arg.open_flag = flag;
+		ret = self->base.vtable->Open(&self->base, (const FileOpenArg *)&arg);
+		if (error)
+			*error = ret;
+		if (self->base.vtable->IsOpened(&self->base)) {
+			FileRefCounter *counter;
+
+			result->m_ptr = &self->base;
+			counter = ScePafStdc_FC5CD359(sizeof(*counter));
+			if (counter) {
+				result->m_ref_counter = counter;
+				counter->m_ptr = &self->base;
+				result->m_ref_counter->m_counter = 1;
+				result->m_ref_counter->m_weak_counter = 1;
+				result->m_ref_counter->m_deleter = HttpFileDefaultDelete;
+			} else {
+				/* Native allocation failure leaves the opened file alive. */
+				result->m_ptr = NULL;
+				result->m_ref_counter = NULL;
+			}
+		} else {
+			self->base.vtable->Delete(&self->base);
+			result->m_ptr = NULL;
+			result->m_ref_counter = NULL;
+		}
+		HttpFileOpenArgDestroyMembers(&arg);
+		return;
+	}
+	if (error)
+		*error = SCE_PAF_ERROR_FILE_NO_MEMORY;
+	result->m_ptr = NULL;
+	result->m_ref_counter = NULL;
+}
+
 HttpFile *HttpFileConstruct(HttpFile *self)
 {
 	self->base.vtable = &httpFileClass.methods;
