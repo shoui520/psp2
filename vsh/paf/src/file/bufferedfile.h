@@ -8,5 +8,6 @@
 
 void BufferedFileOpen(FileSharedPtr *result, FileSharedPtr *file,
 		      int32_t *error, BufferSharedPtr *buffer);
+void BufferedFileCreateDefaultBuffer(BufferSharedPtr *result);
 
 #endif
