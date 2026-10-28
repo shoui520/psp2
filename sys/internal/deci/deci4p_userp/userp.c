@@ -670,7 +670,11 @@ static inline __attribute__((always_inline)) void UserpPeekHeader(UserpState *st
 
 	if (st->ringSize < pos + 0x10) {
 		n = st->ringSize - pos;
+#if FW_DEBUG
+		__memcpy_chk(hdr, ring + pos, n, 0x10);
+#else
 		memcpy(hdr, ring + pos, n);
+#endif
 		memcpy((SceUInt8 *)hdr + n, ring, 0x10 - n);
 	} else {
 		const SceUInt32 *packet = (const SceUInt32 *)(ring + pos);
