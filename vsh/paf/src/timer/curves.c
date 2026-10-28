@@ -10,6 +10,46 @@ float TimerDoFuncLinear(float rate)
 	return rate;
 }
 
+float TimerDoFuncBackIn(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return (rate * rate) * (rate * 2.70158f - 1.70158f);
+}
+
+float TimerDoFuncBackInOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return TimerDoFuncBackIn(rate * 2.0f) * 0.5f;
+	return (1.0f - TimerDoFuncBackIn(2.0f - rate * 2.0f)) * 0.5f + 0.5f;
+}
+
+float TimerDoFuncCirqIn(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - __builtin_sqrtf(1.0f - rate * rate);
+}
+
+float TimerDoFuncCirqInOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return TimerDoFuncCirqIn(rate * 2.0f) * 0.5f;
+	return (1.0f - TimerDoFuncCirqIn(2.0f - rate * 2.0f)) * 0.5f + 0.5f;
+}
+
 float TimerDoFuncQuintIn(float rate)
 {
 	if (rate >= 1.0f)
@@ -97,6 +137,24 @@ float TimerDoFuncQuadInOut(float rate)
 	if (rate < 0.5f)
 		return TimerDoFuncQuadIn(rate * 2.0f) * 0.5f;
 	return (1.0f - TimerDoFuncQuadIn(2.0f - rate * 2.0f)) * 0.5f + 0.5f;
+}
+
+float TimerDoFuncBackOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFuncBackIn(1.0f - rate);
+}
+
+float TimerDoFuncCirqOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFuncCirqIn(1.0f - rate);
 }
 
 float TimerDoFuncQuintOut(float rate)
