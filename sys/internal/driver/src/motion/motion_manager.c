@@ -1092,11 +1092,11 @@ void motionInitializeComplete(int result, void *arg)
 			value.integer = record->parameters[0];
 			reference = value.real;
 			if (record->attributes[0] == 1) {
-				point = reference >= 0 ? &motion.gyroCalibration.positive[channel] :
-					&motion.gyroCalibration.negative[channel];
+				point = reference < 0 ? &motion.gyroCalibration.negative[channel] :
+					&motion.gyroCalibration.positive[channel];
 			} else if (record->attributes[0] == 0) {
-				point = reference >= 0 ? &motion.accCalibration.positive[channel] :
-					&motion.accCalibration.negative[channel];
+				point = reference < 0 ? &motion.accCalibration.negative[channel] :
+					&motion.accCalibration.positive[channel];
 			} else {
 				continue;
 			}
