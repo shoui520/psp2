@@ -6,15 +6,15 @@
 
 typedef struct GcAuthCartSecretData {
 	unsigned char bytes[32];
-} GcAuthCartSecretData;
+} __attribute__((may_alias)) GcAuthCartSecretData;
 
 typedef struct GcAuthSessionKeyData {
 	unsigned char bytes[48];
-} GcAuthSessionKeyData;
+} __attribute__((may_alias)) GcAuthSessionKeyData;
 
 typedef struct GcAuthChallengeData {
 	unsigned char bytes[16];
-} GcAuthChallengeData;
+} __attribute__((may_alias)) GcAuthChallengeData;
 
 /* the card's two status bytes */
 typedef struct GcAuthStatusBytes {

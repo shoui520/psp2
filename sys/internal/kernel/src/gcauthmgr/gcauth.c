@@ -14,7 +14,7 @@ int GcAuthInitializeGcAuth(void)
 
 typedef struct GcAuthVerifyResponseData {
 	unsigned char bytes[35];
-} GcAuthVerifyResponseData;
+} __attribute__((may_alias)) GcAuthVerifyResponseData;
 
 typedef struct GcAuthVerifyInput {
 	GcAuthCartSecretData cartSecret;
