@@ -338,9 +338,8 @@ void robinWlanReceiveMessages(SceWlanBtRobinWlanDcm *dcm)
 				++count;
 			}
 			flush = !(bitmap & ~1U);
-			if (count == 8 ||
-			    (dcm->nextReadPort < start ? dcm->nextReadPort + 16 - start :
-			     dcm->nextReadPort - start) > 7)
+			if (count == 8 || (dcm->nextReadPort < start &&
+					   dcm->nextReadPort + 16 - start > 7))
 				flush = 1;
 		}
 readBatch:

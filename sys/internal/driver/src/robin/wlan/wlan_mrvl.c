@@ -951,8 +951,8 @@ int robinWlanRequestStartAdhoc(SceWlanBtRobinWlanContext *context,
 		ht->header.type[1] = 0;
 		ht->header.size[0] = 26;
 		ht->header.size[1] = 0;
-		ht->capabilities[0] = 0;
-		ht->capabilities[1] = 32;
+		ht->capabilities[0] = 32;
+		ht->capabilities[1] = 0;
 		ht->ampduParameters = 3;
 		memcpy(ht->supportedMcs, gWlanSupportedMcs, sizeof(ht->supportedMcs));
 		ht->extendedCapabilities[0] = 0;
