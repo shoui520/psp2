@@ -10,6 +10,75 @@ typedef struct HttpFileReaderParam HttpFileReaderParam;
 typedef struct HttpFileReaderContext HttpFileReaderContext;
 typedef struct HttpFileReaderContextRefCounter HttpFileReaderContextRefCounter;
 
+typedef enum HttpFileOptionType {
+	OptionType_ResolveTimeOut = 1,
+	OptionType_ConnectTimeOut = 2,
+	OptionType_SendTimeOut = 4,
+	OptionType_RecvTimeOut = 8
+} HttpFileOptionType;
+
+typedef enum HttpFileHttpsFlag {
+	HTTPS_FLAG_SERVER_VERIFY = 1,
+	HTTPS_FLAG_CLIENT_VERIFY = 2,
+	HTTPS_FLAG_CN_CHECK = 4,
+	HTTPS_FLAG_NOT_AFTER_CHECK = 8,
+	HTTPS_FLAG_NOT_BEFORE_CHECK = 16,
+	HTTPS_FLAG_KNOWN_CA_CHECK = 32,
+	HTTPS_FLAG_DEFAULT = 63,
+	HTTPS_FLAG_MASK = 63
+} HttpFileHttpsFlag;
+
+typedef struct HttpFileTimeout {
+	int32_t resolve_timeout;
+	int32_t connect_timeout;
+	int32_t send_timeout;
+	int32_t recv_timeout;
+} HttpFileTimeout;
+
+typedef struct HttpFileOpenArg {
+	uint32_t file_type;
+	PafString scheme;
+	PafString host;
+	uint16_t port;
+	PafString method;
+	PafString uri;
+	PafString version;
+	PafString user_agent;
+	PafString referer;
+	PafString user;
+	PafString passwd;
+	PafStringVector header;
+	const void *msg_body;
+	size_t msg_body_len;
+	uint32_t https_flag;
+	uint32_t open_flag;
+	int32_t accept_encoding_gzip;
+	HttpFileTimeout timeout;
+	uint32_t template_option;
+	size_t response_header_max_size;
+	uint16_t *response_code;
+} HttpFileOpenArg;
+
+typedef char HttpFileOpenArgSizeCheck[sizeof(HttpFileOpenArg) == 180 ? 1 : -1];
+typedef char HttpFileOpenArgHeaderOffsetCheck[offsetof(HttpFileOpenArg, header) == 116 ? 1 : -1];
+typedef char HttpFileOpenArgTimeoutOffsetCheck[offsetof(HttpFileOpenArg, timeout) == 152 ? 1 : -1];
+typedef char HttpFileOpenArgResponseOffsetCheck[offsetof(HttpFileOpenArg, response_code) == 176 ? 1 : -1];
+
+#define HttpFileOpenArgConstruct ScePafMisc_37A4ADA9
+#define HttpFileOpenArgConstructBase ScePafMisc_F8213E1C
+#define HttpFileOpenArgSetOption ScePafMisc_ED1839C2
+#define HttpFileSetDefaultTimeout ScePafMisc_30A8AD46
+#define HttpFileOpenArgAddRequestHeader ScePafMisc_99A8215F
+
+extern HttpFileTimeout httpFileDefaultTimeout;
+HttpFileOpenArg *HttpFileOpenArgConstruct(HttpFileOpenArg *self);
+HttpFileOpenArg *HttpFileOpenArgConstructBase(HttpFileOpenArg *self);
+int32_t HttpFileOpenArgSetOption(HttpFileOpenArg *self, int32_t value,
+				HttpFileOptionType type);
+int32_t HttpFileSetDefaultTimeout(int32_t value, HttpFileOptionType type);
+int32_t HttpFileOpenArgAddRequestHeader(HttpFileOpenArg *self, const char *name,
+				       const char *value);
+
 typedef struct HttpFileReaderContextSharedPtr {
 	HttpFileReaderContext *m_ptr;
 	HttpFileReaderContextRefCounter *m_ref_counter;
@@ -37,7 +106,7 @@ typedef char HttpFileContextOffsetCheck[offsetof(HttpFile, m_reader_context) == 
 #define HttpFileGetFileType ScePafMisc_065AF035
 #define HttpFileGetCapability ScePafMisc_F4C6ED9D
 #define HttpFileGetFileSize ScePafMisc_B06C6A6B
-#define HttpFileOpenArg ScePafMisc_D2221E7B
+#define HttpFileOpenWithArg ScePafMisc_D2221E7B
 #define HttpFileOpenAsync ScePafMisc_878D108C
 #define HttpFileClose ScePafMisc_0286E577
 #define HttpFileCloseAsync ScePafMisc_CE4DFAD1
@@ -68,7 +137,7 @@ HttpFile *HttpFileConstructBase(HttpFile *self);
 int32_t HttpFileGetFileType(const HttpFile *self);
 int32_t HttpFileGetCapability(const HttpFile *self);
 int64_t HttpFileGetFileSize(HttpFile *self);
-int32_t HttpFileOpenArg(HttpFile *self, const FileOpenArg *param);
+int32_t HttpFileOpenWithArg(HttpFile *self, const FileOpenArg *param);
 int32_t HttpFileOpenAsync(HttpFile *self, const FileOpenArg *param);
 int32_t HttpFileClose(HttpFile *self);
 int32_t HttpFileCloseAsync(HttpFile *self);

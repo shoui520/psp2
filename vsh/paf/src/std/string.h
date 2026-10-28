@@ -17,6 +17,17 @@ typedef struct PafWString {
 	unsigned char alloc;
 } PafWString;
 
+typedef struct PafStringVector {
+	PafString *_data;
+	size_t _size;
+	size_t _capacity;
+	unsigned char _allocator;
+} PafStringVector;
+
+typedef char PafStringVectorSizeCheck[sizeof(PafStringVector) == 16 ? 1 : -1];
+
+int PafStringVectorReallocate(PafStringVector *self, size_t capacity);
+
 typedef char PafStringSizeCheck[sizeof(PafString) == 12 ? 1 : -1];
 typedef char PafWStringSizeCheck[sizeof(PafWString) == 12 ? 1 : -1];
 
@@ -24,6 +35,7 @@ extern char PafStringEmpty;
 extern uint16_t PafWStringEmpty;
 
 void *sce_paf_memset(void *dst, int ch, size_t len);
+size_t sce_paf_strlen(const char *str);
 
 PafWString *PafWStringErase(PafWString *self, size_t pos, size_t len);
 PafWString *PafWStringAppend(PafWString *self, size_t len, uint16_t value);

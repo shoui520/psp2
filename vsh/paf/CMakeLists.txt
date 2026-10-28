@@ -10,6 +10,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/localfile.c
 	src/file/localfile_platform.c
 	src/file/httpfile.c
+	src/file/httpfile_openarg.c
 	src/file/error.c
 	src/datetime/datetime.c
 	src/thread/rwlock.c
@@ -36,5 +37,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/hash/sha1.c
 	src/std/new.c
 	src/std/string.c
+	src/std/string_vector.c
 	libpaf.c
 )

@@ -1,14 +1,13 @@
 #include "httpfile.h"
 #include "httpfile_reader.h"
 #include "../paf_types.h"
-#include <string.h>
 
 const FileClass httpFileClass = {
 	0, NULL, {
 		(int32_t (*)(const File *))HttpFileGetFileType,
 		(int32_t (*)(const File *))HttpFileGetCapability,
 		(int64_t (*)(const File *))HttpFileGetFileSize,
-		(int32_t (*)(File *, const FileOpenArg *))HttpFileOpenArg,
+		(int32_t (*)(File *, const FileOpenArg *))HttpFileOpenWithArg,
 		(int32_t (*)(File *, const FileOpenArg *))HttpFileOpenAsync,
 		(int32_t (*)(File *))HttpFileClose,
 		(int32_t (*)(File *))HttpFileCloseAsync,
