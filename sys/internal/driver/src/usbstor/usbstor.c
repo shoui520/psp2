@@ -752,7 +752,7 @@ int SceUsbstor_5B3DF8DF(void)
 	return result;
 }
 
-static int initializeDescriptors(void)
+static __attribute__((noinline)) int initializeDescriptors(void)
 {
 	static const struct DescriptorSet template = {
 		.device = {
