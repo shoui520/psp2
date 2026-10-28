@@ -736,6 +736,12 @@ cleanupPorts:
 	return result;
 }
 #else
+#if FW_DEBUG
+#define SDIF_VA_ERROR_INFO(_line, _func)	SCE_DBGINFO_FUNC(_line, _func)
+#else	/* the release boot loader keeps no records for its VA-to-PA errors */
+#define SDIF_VA_ERROR_INFO(_line, _func)	NULL
+#endif
+
 /*
  * The boot loader's bring-up: the host registers are used at their physical addresses, and
  * a port needs only its descriptor buffer (no mutex, event flag or interrupt handler).
@@ -784,13 +790,13 @@ int sceSdifInit(void)
 			address = command->leadingBuffer;
 			result = sceKernelVAtoPA(address, &leadingPhysicalAddress);
 			if (result < 0) {
-				debugInfo = SCE_DBGINFO_FUNC(3710, "_sceSdifInitDmaAlignmentBuffer");
+				debugInfo = SDIF_VA_ERROR_INFO(3710, "_sceSdifInitDmaAlignmentBuffer");
 				goto addressError;
 			}
 			address = command->trailingBuffer;
 			result = sceKernelVAtoPA(address, &trailingPhysicalAddress);
 			if (result < 0) {
-				debugInfo = SCE_DBGINFO_FUNC(3717, "_sceSdifInitDmaAlignmentBuffer");
+				debugInfo = SDIF_VA_ERROR_INFO(3717, "_sceSdifInitDmaAlignmentBuffer");
 				goto addressError;
 			}
 			command->leadingPhysicalAddress = leadingPhysicalAddress;
@@ -798,7 +804,7 @@ int sceSdifInit(void)
 			address = command->defaultDescriptors;
 			result = sceKernelVAtoPA(address, &command->defaultDescriptorPhysicalAddress);
 			if (result < 0) {
-				debugInfo = SCE_DBGINFO_FUNC(3690, "_sceSdifInitCmd");
+				debugInfo = SDIF_VA_ERROR_INFO(3690, "_sceSdifInitCmd");
 				goto addressError;
 			}
 			++commandIndex;
