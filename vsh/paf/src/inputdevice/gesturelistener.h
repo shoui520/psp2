@@ -24,9 +24,18 @@ typedef char GestureUserDataNodeSizeCheck[
 PafMap *GestureUserDataMapConstruct(PafMap *self, const void *allocator);
 PafMap *GestureUserDataMapClear(PafMap *self);
 PafMap *GestureUserDataMapDestroy(PafMap *self);
+GestureUserDataNode *GestureUserDataMapRebalance(PafMap *self,
+					       GestureUserDataNode *node);
+GestureUserDataNode *GestureUserDataMapInsert(PafMap *self,
+					    const GestureUserDataEntry *value,
+					    unsigned char *inserted);
 void GestureUserDataInitialize(void);
 
+#define GestureListenerAddUserDataList ScePafMisc_09EF204D
+#define GestureListenerIncrUserDataList ScePafMisc_E3359BF6
 #define GestureListenerIsValidUserData ScePafMisc_83D0B118
+void GestureListenerAddUserDataList(void *data);
+void GestureListenerIncrUserDataList(void *data);
 unsigned char GestureListenerIsValidUserData(void *data);
 
 #endif
