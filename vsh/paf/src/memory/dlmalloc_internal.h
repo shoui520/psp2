@@ -13,11 +13,16 @@
 #define CHUNK_OVERHEAD (2 * sizeof(size_t))
 #define PINUSE_BIT 1U
 #define CINUSE_BIT 2U
+#define FLAG4_BIT 4U
 #define INUSE_BITS (PINUSE_BIT | CINUSE_BIT)
 #define FENCEPOST_HEAD (INUSE_BITS | sizeof(size_t))
 #define USE_NONCONTIGUOUS_BIT 4U
 #define EXTERN_BIT 8U
 #define MAX_RELEASE_CHECK_RATE SIZE_MAX
+#define FOOTER_MAGIC 0xDEADBEEFU
+#define MIN_CHUNK_SIZE sizeof(struct malloc_chunk)
+#define MIN_REQUEST (MIN_CHUNK_SIZE - CHUNK_OVERHEAD - 1)
+#define MAX_REQUEST ((size_t)(-MIN_CHUNK_SIZE) << 2)
 
 struct malloc_chunk {
 	size_t prev_foot;
@@ -73,6 +78,7 @@ struct malloc_params {
 
 #define pad_request(req) (((req) + CHUNK_OVERHEAD + CHUNK_ALIGN_MASK) & \
 			 ~CHUNK_ALIGN_MASK)
+#define request2size(req) ((req) < MIN_REQUEST ? MIN_CHUNK_SIZE : pad_request(req))
 #define align_offset(mem) ((-(uintptr_t)(mem)) & CHUNK_ALIGN_MASK)
 #define chunk2mem(p) ((void *)((char *)(p) + 2 * sizeof(size_t)))
 #define mem2chunk(mem) ((mchunkptr)((char *)(mem) - 2 * sizeof(size_t)))
@@ -94,5 +100,6 @@ _Static_assert(pad_request(sizeof(struct malloc_state)) == 496,
 _Static_assert(TOP_FOOT_SIZE == 56, "malloc_state top foot");
 
 mstate init_user_mstate(char *tbase, size_t tsize, size_t alignment);
+void *internal_realloc(mstate m, void *oldmem, size_t bytes, unsigned int tag);
 
 #endif

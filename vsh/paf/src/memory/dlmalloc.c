@@ -107,6 +107,101 @@ size_t destroy_mspace(mspace heap)
 	return 0;
 }
 
+static inline void mark_inuse_foot(mchunkptr p, size_t size, unsigned int tag,
+				  size_t padding)
+{
+	mchunkptr next = chunk_plus_offset(p, size);
+
+	next->prev_foot = tag ^ FOOTER_MAGIC;
+	if (padding) {
+		sce_paf_memset((char *)next - (MALLOC_ALIGNMENT - padding),
+			       0xAF, CHUNK_ALIGN_MASK - padding);
+		((unsigned char *)next)[-1] = ~(CHUNK_ALIGN_MASK - padding);
+		p->head |= FLAG4_BIT;
+	}
+}
+
+void *internal_realloc(mstate m, void *oldmem, size_t bytes, unsigned int tag)
+{
+	mchunkptr oldp, next, newp = NULL;
+	void *extra = NULL;
+	size_t head, oldsize, nb;
+
+	if (bytes >= MAX_REQUEST)
+		return NULL;
+	oldp = mem2chunk(oldmem);
+	head = oldp->head;
+	oldsize = head & ~(size_t)7;
+	next = chunk_plus_offset(oldp, oldsize);
+	if ((uintptr_t)oldp < (uintptr_t)m->least_addr ||
+	    (head & INUSE_BITS) == PINUSE_BIT ||
+	    (uintptr_t)oldp >= (uintptr_t)next || !(next->head & PINUSE_BIT))
+		return NULL;
+	nb = request2size(bytes);
+	if (!(head & INUSE_BITS)) {
+		if ((nb >> 3) >= NSMALLBINS && oldsize >= nb + sizeof(size_t) &&
+		    oldsize - nb <= 2 * mparams.granularity)
+			newp = oldp;
+	} else if (oldsize >= nb) {
+		size_t rsize = oldsize - nb;
+
+		newp = oldp;
+		if (rsize >= MIN_CHUNK_SIZE) {
+			mchunkptr remainder = chunk_plus_offset(oldp, nb);
+			mchunkptr end = chunk_plus_offset(remainder, rsize);
+
+			oldp->head = (oldp->head & PINUSE_BIT) | nb | CINUSE_BIT;
+			remainder->head |= PINUSE_BIT;
+			mark_inuse_foot(oldp, nb, tag,
+					(bytes + CHUNK_OVERHEAD) & CHUNK_ALIGN_MASK);
+			remainder->head = rsize | INUSE_BITS;
+			end->head |= PINUSE_BIT;
+			mark_inuse_foot(remainder, rsize, tag, rsize & CHUNK_ALIGN_MASK);
+			extra = chunk2mem(remainder);
+		}
+	} else if (next == m->top) {
+		size_t newsize = oldsize + m->topsize;
+
+		if (newsize > nb) {
+			size_t newtopsize = newsize - nb;
+			mchunkptr newtop = chunk_plus_offset(oldp, nb);
+
+			oldp->head = (head & PINUSE_BIT) | nb | CINUSE_BIT;
+			newtop->head |= PINUSE_BIT;
+			mark_inuse_foot(oldp, nb, tag,
+					(bytes + CHUNK_OVERHEAD) & CHUNK_ALIGN_MASK);
+			newtop->head = newtopsize | PINUSE_BIT;
+			m->top = newtop;
+			m->topsize = newtopsize;
+			newp = oldp;
+		}
+	}
+	if (newp) {
+		if (extra)
+			mspace_free(m, extra, tag);
+		return chunk2mem(newp);
+	} else {
+		void *newmem = mspace_malloc(m, bytes, tag);
+
+		if (newmem) {
+			size_t count = bytes;
+
+			if (count > oldsize - CHUNK_OVERHEAD)
+				count = oldsize - CHUNK_OVERHEAD;
+			sce_paf_memcpy(newmem, oldmem, count);
+			mspace_free(m, oldmem, tag);
+		}
+		return newmem;
+	}
+}
+
+void *mspace_realloc(mspace heap, void *mem, size_t bytes, unsigned int tag)
+{
+	if (!mem)
+		return mspace_malloc(heap, bytes, tag);
+	return internal_realloc(heap, mem, bytes, tag);
+}
+
 struct mallinfo mspace_mallinfo(mspace heap)
 {
 	mstate m = heap;

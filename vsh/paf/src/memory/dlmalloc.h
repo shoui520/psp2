@@ -22,5 +22,8 @@ mspace create_mspace_with_base(void *base, size_t capacity, int locked,
 			       size_t alignment);
 size_t destroy_mspace(mspace heap);
 struct mallinfo mspace_mallinfo(mspace heap);
+void *mspace_malloc(mspace heap, size_t bytes, unsigned int tag);
+void mspace_free(mspace heap, void *mem, unsigned int tag);
+void *mspace_realloc(mspace heap, void *mem, size_t bytes, unsigned int tag);
 
 #endif
