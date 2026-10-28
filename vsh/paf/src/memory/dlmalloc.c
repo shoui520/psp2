@@ -476,6 +476,101 @@ postaction:
 	}
 }
 
+void *tmalloc_large_large(mstate m, size_t nb, size_t bytes, unsigned int tag)
+{
+	size_t dvs = m->dvsize;
+	tchunkptr v = NULL;
+	tchunkptr sentinel, t;
+	mchunkptr p, r, next;
+	size_t size, rsize;
+	size_t padding = (bytes + CHUNK_OVERHEAD) & CHUNK_ALIGN_MASK;
+
+	if (dvs == nb || !(m->treemap & idx2bit(NTREEBINS - 1)))
+		return NULL;
+	sentinel = (tchunkptr)&m->treebins[NTREEBINS - 1];
+	t = m->treebins[NTREEBINS - 1];
+	if (t) {
+		while (t->child[1])
+			t = t->child[1];
+	}
+	/* Visit chunks in descending address order until one fits. */
+	while (t != sentinel) {
+		if (chunksize(t) >= nb) {
+			v = t;
+			break;
+		}
+		if (t->child[0]) {
+			t = t->child[0];
+			while (t->child[1])
+				t = t->child[1];
+		} else {
+			tchunkptr parent = t->parent;
+
+			while (parent != sentinel) {
+				if (parent->child[1] == t)
+					break;
+				t = parent;
+				parent = t->parent;
+			}
+			t = parent;
+		}
+	}
+	if (dvs > nb && (uintptr_t)m->dv > (uintptr_t)v) {
+		p = m->dv;
+		rsize = dvs - nb;
+		if (rsize >= MIN_CHUNK_SIZE) {
+			m->dvsize = rsize;
+			p->head = rsize | PINUSE_BIT;
+			r = chunk_plus_offset(p, rsize);
+			r->prev_foot = rsize;
+			r->head = nb | INUSE_BITS;
+			next = chunk_plus_offset(r, nb);
+			next->head |= PINUSE_BIT;
+			mark_inuse_foot(r, nb, tag, padding);
+			return chunk2mem(r);
+		}
+		m->dvsize = 0;
+		p->head = dvs | INUSE_BITS;
+		next = chunk_plus_offset(p, dvs);
+		size = next->head;
+		m->dv = NULL;
+		next->head = size | PINUSE_BIT;
+		mark_inuse_foot(p, dvs, tag, padding);
+		return chunk2mem(p);
+	}
+	if (!v)
+		return NULL;
+	if (!ok_address(m, v))
+		goto erroraction;
+	size = chunksize(v);
+	rsize = size - nb;
+	unlink_large_chunk(m, v);
+	p = (mchunkptr)v;
+	if (rsize < MIN_CHUNK_SIZE) {
+		p->head = size | INUSE_BITS;
+		next = chunk_plus_offset(p, size);
+		next->head |= PINUSE_BIT;
+		mark_inuse_foot(p, size, tag, padding);
+		return chunk2mem(p);
+	}
+	r = chunk_plus_offset(p, rsize);
+	if ((uintptr_t)p >= (uintptr_t)r)
+		goto erroraction;
+	p->head = rsize | INUSE_BITS;
+	r->head |= PINUSE_BIT;
+	mark_inuse_foot(p, rsize, tag, rsize & CHUNK_ALIGN_MASK);
+	r->head = nb | INUSE_BITS;
+	next = chunk_plus_offset(r, nb);
+	next->head |= PINUSE_BIT;
+	mark_inuse_foot(r, nb, tag, padding);
+	mspace_free(m, chunk2mem(p), tag);
+	return chunk2mem(r);
+
+erroraction:
+	ScePafStdc_D608246A();
+	return NULL;
+}
+
 void *mspace_malloc(mspace heap, size_t bytes, unsigned int tag)
 {
 	mstate m = heap;
