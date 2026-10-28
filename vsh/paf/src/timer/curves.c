@@ -72,6 +72,40 @@ float TimerDoFuncLinear(float rate)
 	return rate;
 }
 
+float TimerDoFuncCustomParabolicIn(float rate, const float *param)
+{
+	float threshold, value, difference;
+	volatile float result;
+	union {
+		float value;
+		uint32_t bits;
+	} coefficient;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	threshold = param[0];
+	value = param[1];
+	if (rate < threshold) {
+		difference = (1.0f / threshold) * rate - 1.0f;
+		result = value * difference;
+		result *= difference;
+		return value - result;
+	}
+	difference = threshold - 1.0f;
+	rate -= threshold;
+	result = 1.0f - value;
+	difference *= difference;
+	coefficient.value = result / difference;
+	result = coefficient.value * rate;
+	result *= rate;
+	/* Preserve the coefficient's payload when both factors are NaNs. */
+	if ((coefficient.bits & 0x7fffffffU) > 0x7f800000U)
+		result = coefficient.value;
+	return result + value;
+}
+
 float TimerDoFuncCustomExpoIn(float rate, const float *param)
 {
 	if (rate >= 1.0f)

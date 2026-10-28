@@ -87,6 +87,9 @@ float TimerDoTick(Timer *self);
 float TimerDoFunc(const Timer *self, float rate, int func, float pre,
 		 float *param);
 
+#define TimerDoFuncCustomParabolicIn ScePafMisc_CBB88FB0
+float TimerDoFuncCustomParabolicIn(float rate, const float *param);
+
 #define TimerDoFuncLinear ScePafMisc_E872D707
 #define TimerDoFuncCustomExpoIn ScePafMisc_E5CC9FFD
 #define TimerDoFuncCustomExpoOutIn ScePafMisc_DE7DCA6C
