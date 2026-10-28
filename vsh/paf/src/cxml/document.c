@@ -1,7 +1,191 @@
 #include "cxml.h"
 #include "../paf_types.h"
+#include <kernel/iofilemgr.h>
 
 extern void *sce_paf_memcpy(void *dst, const void *src, size_t size);
+
+int32_t CxmlDocumentCreateFromFile(CxmlDocument *self, const FileSharedPtr *fp,
+				  unsigned char copy_filetable)
+{
+	File *file;
+	int32_t ret;
+
+	CxmlDocumentClear(self);
+	self->access_mode = copy_filetable ? AccessMode_ReadWrite : AccessMode_ReadOnly_File;
+	file = fp->m_ptr;
+	ret = file->vtable->Read(file, &self->header, sizeof(self->header));
+	if (ret != sizeof(self->header))
+		return SCE_PAF_ERROR_CXML_CANT_READ;
+	if (self->header.version != 0x110 && self->header.version != 0x100)
+		return SCE_PAF_ERROR_CXML_VERSION;
+	if ((uint32_t)self->header.intarraytable_size & 3)
+		return SCE_PAF_ERROR_CXML_FORMAT;
+	if ((uint32_t)self->header.floatarraytable_size & 3)
+		return SCE_PAF_ERROR_CXML_FORMAT;
+	if (!self->allocator)
+		return SCE_PAF_ERROR_CXML_NO_ALLOCATOR;
+
+	if (self->header.tree_size) {
+		void *addr;
+
+		self->allocator(AllocationType_Alloc_Tree, self->allocator_userdata,
+				NULL, self->header.tree_size, &addr, &self->tree_capacity);
+		if (!addr)
+			return SCE_PAF_ERROR_CXML_CANT_ALLOC;
+		self->tree = addr;
+		file = fp->m_ptr;
+		ret = (int32_t)file->vtable->Seek(file, self->header.tree_offset, SCE_SEEK_SET);
+		if (ret < 0)
+			return SCE_PAF_ERROR_CXML_CANT_SEEK;
+		file = fp->m_ptr;
+		ret = file->vtable->Read(file, self->tree, self->header.tree_size);
+		if (ret != self->header.tree_size)
+			return SCE_PAF_ERROR_CXML_CANT_READ;
+	}
+	if (self->header.idtable_size) {
+		void *addr;
+
+		self->allocator(AllocationType_Alloc_IDTable, self->allocator_userdata,
+				NULL, self->header.idtable_size, &addr, &self->idtable_capacity);
+		if (!addr)
+			return SCE_PAF_ERROR_CXML_CANT_ALLOC;
+		self->idtable = addr;
+		file = fp->m_ptr;
+		ret = (int32_t)file->vtable->Seek(file, self->header.idtable_offset, SCE_SEEK_SET);
+		if (ret < 0)
+			return SCE_PAF_ERROR_CXML_CANT_SEEK;
+		file = fp->m_ptr;
+		ret = file->vtable->Read(file, self->idtable, self->header.idtable_size);
+		if (ret != self->header.idtable_size)
+			return SCE_PAF_ERROR_CXML_CANT_READ;
+	}
+	if (self->header.idhashtable_size) {
+		void *addr;
+
+		self->allocator(AllocationType_Alloc_IDHashTable, self->allocator_userdata,
+				NULL, self->header.idhashtable_size, &addr, &self->idhashtable_capacity);
+		if (!addr)
+			return SCE_PAF_ERROR_CXML_CANT_ALLOC;
+		self->idhashtable = addr;
+		file = fp->m_ptr;
+		ret = (int32_t)file->vtable->Seek(file, self->header.idhashtable_offset, SCE_SEEK_SET);
+		if (ret < 0)
+			return SCE_PAF_ERROR_CXML_CANT_SEEK;
+		file = fp->m_ptr;
+		ret = file->vtable->Read(file, self->idhashtable, self->header.idhashtable_size);
+		if (ret != self->header.idhashtable_size)
+			return SCE_PAF_ERROR_CXML_CANT_READ;
+	}
+	if (self->header.stringtable_size) {
+		void *addr;
+
+		self->allocator(AllocationType_Alloc_StringTable, self->allocator_userdata,
+				NULL, self->header.stringtable_size, &addr, &self->stringtable_capacity);
+		if (!addr)
+			return SCE_PAF_ERROR_CXML_CANT_ALLOC;
+		self->stringtable = addr;
+		file = fp->m_ptr;
+		ret = (int32_t)file->vtable->Seek(file, self->header.stringtable_offset, SCE_SEEK_SET);
+		if (ret < 0)
+			return SCE_PAF_ERROR_CXML_CANT_SEEK;
+		file = fp->m_ptr;
+		ret = file->vtable->Read(file, self->stringtable, self->header.stringtable_size);
+		if (ret != self->header.stringtable_size)
+			return SCE_PAF_ERROR_CXML_CANT_READ;
+		if (self->stringtable[(uint32_t)self->header.stringtable_size - 1])
+			return SCE_PAF_ERROR_CXML_FORMAT;
+	}
+	if (self->header.wstringtable_size) {
+		void *addr;
+
+		self->allocator(AllocationType_Alloc_WStringTable, self->allocator_userdata,
+				NULL, self->header.wstringtable_size, &addr, &self->wstringtable_capacity);
+		if (!addr)
+			return SCE_PAF_ERROR_CXML_CANT_ALLOC;
+		self->wstringtable = addr;
+		file = fp->m_ptr;
+		ret = (int32_t)file->vtable->Seek(file, self->header.wstringtable_offset, SCE_SEEK_SET);
+		if (ret < 0)
+			return SCE_PAF_ERROR_CXML_CANT_SEEK;
+		file = fp->m_ptr;
+		ret = file->vtable->Read(file, self->wstringtable, self->header.wstringtable_size);
+		if (ret != self->header.wstringtable_size)
+			return SCE_PAF_ERROR_CXML_CANT_READ;
+		if (((const uint16_t *)self->wstringtable)
+		    [((uint32_t)self->header.wstringtable_size >> 1) - 1])
+			return SCE_PAF_ERROR_CXML_FORMAT;
+	}
+	if (self->header.hashtable_size) {
+		void *addr;
+
+		self->allocator(AllocationType_Alloc_HashTable, self->allocator_userdata,
+				NULL, self->header.hashtable_size, &addr, &self->hashtable_capacity);
+		if (!addr)
+			return SCE_PAF_ERROR_CXML_CANT_ALLOC;
+		self->hashtable = addr;
+		file = fp->m_ptr;
+		ret = (int32_t)file->vtable->Seek(file, self->header.hashtable_offset, SCE_SEEK_SET);
+		if (ret < 0)
+			return SCE_PAF_ERROR_CXML_CANT_SEEK;
+		file = fp->m_ptr;
+		ret = file->vtable->Read(file, self->hashtable, self->header.hashtable_size);
+		if (ret != self->header.hashtable_size)
+			return SCE_PAF_ERROR_CXML_CANT_READ;
+	}
+	if (self->header.intarraytable_size) {
+		void *addr;
+
+		self->allocator(AllocationType_Alloc_IntArrayTable, self->allocator_userdata,
+				NULL, self->header.intarraytable_size, &addr, &self->intarraytable_capacity);
+		if (!addr)
+			return SCE_PAF_ERROR_CXML_CANT_ALLOC;
+		self->intarraytable = addr;
+		file = fp->m_ptr;
+		ret = (int32_t)file->vtable->Seek(file, self->header.intarraytable_offset, SCE_SEEK_SET);
+		if (ret < 0)
+			return SCE_PAF_ERROR_CXML_CANT_SEEK;
+		file = fp->m_ptr;
+		ret = file->vtable->Read(file, self->intarraytable, self->header.intarraytable_size);
+		if (ret != self->header.intarraytable_size)
+			return SCE_PAF_ERROR_CXML_CANT_READ;
+	}
+	if (self->header.floatarraytable_size) {
+		void *addr;
+
+		self->allocator(AllocationType_Alloc_FloatArrayTable, self->allocator_userdata,
+				NULL, self->header.floatarraytable_size, &addr, &self->floatarraytable_capacity);
+		if (!addr)
+			return SCE_PAF_ERROR_CXML_CANT_ALLOC;
+		self->floatarraytable = addr;
+		file = fp->m_ptr;
+		ret = (int32_t)file->vtable->Seek(file, self->header.floatarraytable_offset, SCE_SEEK_SET);
+		if (ret < 0)
+			return SCE_PAF_ERROR_CXML_CANT_SEEK;
+		file = fp->m_ptr;
+		ret = file->vtable->Read(file, self->floatarraytable, self->header.floatarraytable_size);
+		if (ret != self->header.floatarraytable_size)
+			return SCE_PAF_ERROR_CXML_CANT_READ;
+	}
+	if (copy_filetable && self->header.filetable_size) {
+		void *addr;
+
+		self->allocator(AllocationType_Alloc_FileTable, self->allocator_userdata,
+				NULL, self->header.filetable_size, &addr, &self->filetable_capacity);
+		if (!addr)
+			return SCE_PAF_ERROR_CXML_CANT_ALLOC;
+		self->filetable = addr;
+		file = fp->m_ptr;
+		/* The firmware also uses the float table offset for this read. */
+		ret = (int32_t)file->vtable->Seek(file, self->header.floatarraytable_offset, SCE_SEEK_SET);
+		if (ret < 0)
+			return SCE_PAF_ERROR_CXML_CANT_SEEK;
+		file = fp->m_ptr;
+		ret = file->vtable->Read(file, self->filetable, self->header.filetable_size);
+		if (ret != self->header.filetable_size)
+			return SCE_PAF_ERROR_CXML_CANT_READ;
+	}
+	return SCE_PAF_OK;
+}
 
 int32_t CxmlDocumentCreateFromBuffer(CxmlDocument *self, const void *buf,
 				    size_t bufsize, unsigned char copy)
