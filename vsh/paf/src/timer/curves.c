@@ -414,6 +414,73 @@ float TimerDoFuncSlower(float rate)
 	return __builtin_sqrtf(rate);
 }
 
+float TimerCbrt(float input)
+{
+	if (input < 0.0f)
+		return -sce_paf_powf(-input, 0.3333333432674408f);
+	return sce_paf_powf(input, 0.3333333432674408f);
+}
+
+float TimerDoFuncBezier3d(float rate, const float *param)
+{
+	float x1, x2, y1, y2, cubic, quadratic;
+	float threeX1, threeX2, threeY1, threeY2;
+	float b, c, d, p, cubeB, bc, twiceCubeB;
+	float halfQ, halfQSquared, pCubed, thirdB, root;
+	float firstRoot, secondRoot, t, cubeT, squareT;
+	volatile float result;
+	union {
+		float value;
+		uint32_t bits;
+	} negativeHalfQ;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	x1 = param[0];
+	x2 = param[2];
+	threeX1 = x1 * 3.0f;
+	threeX2 = x2 * 3.0f;
+	quadratic = x1 * -6.0f + x2 * 3.0f;
+	cubic = (threeX1 - threeX2) + 1.0f;
+	b = quadratic / cubic;
+	d = -rate / cubic;
+	c = threeX1 / cubic;
+	p = (c - (b * b) / 3.0f) / 3.0f;
+	cubeB = sce_paf_powf(b, 3.0f);
+	bc = b * c;
+	twiceCubeB = cubeB * 2.0f;
+	bc /= 3.0f;
+	twiceCubeB /= 27.0f;
+	d += twiceCubeB;
+	d -= bc;
+	halfQ = d * 0.5f;
+	halfQSquared = sce_paf_powf(halfQ, 2.0f);
+	pCubed = sce_paf_powf(p, 3.0f);
+	thirdB = b / 3.0f;
+	root = __builtin_sqrtf(halfQSquared + pCubed);
+	firstRoot = TimerCbrt(root - halfQ);
+	/* Negate the product, including its NaN sign. */
+	negativeHalfQ.value = d * 0.5f;
+	negativeHalfQ.bits ^= 0x80000000U;
+	secondRoot = TimerCbrt(negativeHalfQ.value - root);
+	y1 = param[1];
+	y2 = param[3];
+	t = (firstRoot + secondRoot) - thirdB;
+	cubeT = sce_paf_powf(t, 3.0f);
+	threeY1 = y1 * 3.0f;
+	threeY2 = y2 * 3.0f;
+	cubic = (threeY1 - threeY2) + 1.0f;
+	squareT = sce_paf_powf(t, 2.0f);
+	quadratic = y1 * -6.0f + y2 * 3.0f;
+	/* Keep the polynomial's rounded accumulation order. */
+	result = quadratic * squareT;
+	result += cubic * cubeT;
+	result += threeY1 * t;
+	return result;
+}
+
 float TimerDoFuncAngular(float rate)
 {
 	if (rate >= 1.0f)

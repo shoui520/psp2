@@ -111,6 +111,11 @@ float TimerDoFuncElasticIn(float rate);
 float TimerDoFuncElasticInOut(float rate);
 float TimerDoFuncElasticOut(float rate);
 
+#define TimerCbrt ScePafMisc_51E31BC8
+#define TimerDoFuncBezier3d ScePafMisc_18968E8A
+float TimerCbrt(float input);
+float TimerDoFuncBezier3d(float rate, const float *param);
+
 #define TimerDoFuncBounceIn ScePafMisc_AE6719F6
 #define TimerDoFuncBounceInOut ScePafMisc_2DA1C059
 #define TimerDoFuncBounceOut ScePafMisc_27705AD9
