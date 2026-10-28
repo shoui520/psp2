@@ -3,6 +3,7 @@
 
 #include "file.h"
 #include "localfile_impl.h"
+#include "localfile_types.h"
 #include "../thread/mutex.h"
 #include "../memory/heap_allocator.h"
 
@@ -102,5 +103,25 @@ void LocalFileOpen(FileSharedPtr *result, const char *path, uint32_t flag,
 		   uint32_t mode, int32_t *error);
 void LocalFileOpenUrl(FileSharedPtr *result, const char *path, uint32_t flag,
 		      uint32_t mode, int32_t *error, unsigned char *ignored);
+
+#define LocalFileGetstatPath ScePafMisc_93900EA9
+#define LocalFileGetFileSizePath ScePafMisc_1F37F8DA
+#define LocalFileRemoveFile ScePafMisc_C8CA2008
+#define LocalFileRenameFile ScePafMisc_1702CD72
+#define LocalFileChstat ScePafMisc_BB870784
+#define LocalFileExists ScePafMisc_EBEC6951
+#define LocalFileIsFile ScePafMisc_2EAB756A
+#define LocalFileIsDirectory ScePafMisc_8C97C54C
+#define LocalFileSetDefaultPriority ScePafMisc_B1E2960A
+
+int32_t LocalFileGetstatPath(const char *path, LocalFileStat *stat);
+int64_t LocalFileGetFileSizePath(const char *path);
+int32_t LocalFileRemoveFile(const char *path);
+int32_t LocalFileRenameFile(const char *oldname, const char *newname);
+int32_t LocalFileChstat(const char *path, const LocalFileStat *stat, uint32_t cbit);
+unsigned char LocalFileExists(const char *path);
+unsigned char LocalFileIsFile(const char *path);
+unsigned char LocalFileIsDirectory(const char *path);
+int32_t LocalFileSetDefaultPriority(int32_t priority);
 
 #endif

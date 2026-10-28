@@ -460,3 +460,156 @@ unsigned char LocalFilePsp2ImplIsOpened(LocalFilePsp2Impl *self)
 {
 	return self->m_is_opened;
 }
+
+int32_t LocalFilePsp2ImplGetstat(LocalFilePsp2Impl *self, FileStat *stat)
+{
+	SceIoStat native;
+	int32_t ret;
+
+	if (!stat)
+		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+	ret = sceIoGetstatByFd(self->m_fd, &native);
+	if (!ret) {
+		stat->st_mode = (uint16_t)native.st_mode;
+		stat->st_attr = native.st_attr;
+		stat->st_size = native.st_size;
+		stat->st_ctime.m_year = native.st_ctime.year;
+		stat->st_ctime.m_month = native.st_ctime.month;
+		stat->st_ctime.m_day = native.st_ctime.day;
+		stat->st_ctime.m_hour = native.st_ctime.hour;
+		stat->st_ctime.m_minute = native.st_ctime.minute;
+		stat->st_ctime.m_second = native.st_ctime.second;
+		stat->st_ctime.m_microsecond = native.st_ctime.microsecond;
+		stat->st_atime.m_year = native.st_atime.year;
+		stat->st_atime.m_month = native.st_atime.month;
+		stat->st_atime.m_day = native.st_atime.day;
+		stat->st_atime.m_hour = native.st_atime.hour;
+		stat->st_atime.m_minute = native.st_atime.minute;
+		stat->st_atime.m_second = native.st_atime.second;
+		stat->st_atime.m_microsecond = native.st_atime.microsecond;
+		stat->st_mtime.m_year = native.st_mtime.year;
+		stat->st_mtime.m_month = native.st_mtime.month;
+		stat->st_mtime.m_day = native.st_mtime.day;
+		stat->st_mtime.m_hour = native.st_mtime.hour;
+		stat->st_mtime.m_minute = native.st_mtime.minute;
+		stat->st_mtime.m_second = native.st_mtime.second;
+		stat->st_mtime.m_microsecond = native.st_mtime.microsecond;
+	}
+	if (ret < 0)
+		return ToPafError(ret);
+	return ret;
+}
+
+int64_t LocalFilePsp2ImplGetFileSizePath(const char *path)
+{
+	SceIoStat stat;
+	int32_t ret = sceIoGetstat(path, &stat);
+
+	if (ret < 0)
+		return ToPafError(ret);
+	return stat.st_size;
+}
+
+int32_t LocalFilePsp2ImplRemoveFile(const char *path)
+{
+	int32_t ret = sceIoRemove(path);
+
+	if (ret < 0)
+		return ToPafError(ret);
+	return ret;
+}
+
+int32_t LocalFilePsp2ImplRenameFile(const char *oldname, const char *newname)
+{
+	int32_t ret = sceIoRename(oldname, newname);
+
+	if (ret < 0)
+		return ToPafError(ret);
+	return ret;
+}
+
+int32_t LocalFilePsp2ImplGetstatPath(const char *path, LocalFileStat *stat)
+{
+	SceIoStat native;
+	int32_t ret;
+
+	if (!path || !stat)
+		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+	ret = sceIoGetstat(path, &native);
+	if (!ret) {
+		stat->st_mode = (uint16_t)native.st_mode;
+		stat->st_attr = native.st_attr;
+		stat->st_size = native.st_size;
+		stat->st_ctime.m_year = native.st_ctime.year;
+		stat->st_ctime.m_month = native.st_ctime.month;
+		stat->st_ctime.m_day = native.st_ctime.day;
+		stat->st_ctime.m_hour = native.st_ctime.hour;
+		stat->st_ctime.m_minute = native.st_ctime.minute;
+		stat->st_ctime.m_second = native.st_ctime.second;
+		stat->st_ctime.m_microsecond = native.st_ctime.microsecond;
+		stat->st_atime.m_year = native.st_atime.year;
+		stat->st_atime.m_month = native.st_atime.month;
+		stat->st_atime.m_day = native.st_atime.day;
+		stat->st_atime.m_hour = native.st_atime.hour;
+		stat->st_atime.m_minute = native.st_atime.minute;
+		stat->st_atime.m_second = native.st_atime.second;
+		stat->st_atime.m_microsecond = native.st_atime.microsecond;
+		stat->st_mtime.m_year = native.st_mtime.year;
+		stat->st_mtime.m_month = native.st_mtime.month;
+		stat->st_mtime.m_day = native.st_mtime.day;
+		stat->st_mtime.m_hour = native.st_mtime.hour;
+		stat->st_mtime.m_minute = native.st_mtime.minute;
+		stat->st_mtime.m_second = native.st_mtime.second;
+		stat->st_mtime.m_microsecond = native.st_mtime.microsecond;
+	}
+	if (ret < 0)
+		return ToPafError(ret);
+	return ret;
+}
+
+int32_t LocalFilePsp2ImplChstat(const char *path, const LocalFileStat *stat, uint32_t cbit)
+{
+	SceIoStat native;
+	int32_t ret;
+
+	if (!path || !stat)
+		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+	sce_paf_memset(&native, 0, sizeof(native));
+	native.st_mode = stat->st_mode;
+	native.st_attr = stat->st_attr;
+	native.st_size = stat->st_size;
+	native.st_ctime.year = stat->st_ctime.m_year;
+	native.st_ctime.month = stat->st_ctime.m_month;
+	native.st_ctime.day = stat->st_ctime.m_day;
+	native.st_ctime.hour = stat->st_ctime.m_hour;
+	native.st_ctime.minute = stat->st_ctime.m_minute;
+	native.st_ctime.second = stat->st_ctime.m_second;
+	native.st_ctime.microsecond = stat->st_ctime.m_microsecond;
+	native.st_atime.year = stat->st_atime.m_year;
+	native.st_atime.month = stat->st_atime.m_month;
+	native.st_atime.day = stat->st_atime.m_day;
+	native.st_atime.hour = stat->st_atime.m_hour;
+	native.st_atime.minute = stat->st_atime.m_minute;
+	native.st_atime.second = stat->st_atime.m_second;
+	native.st_atime.microsecond = stat->st_atime.m_microsecond;
+	native.st_mtime.year = stat->st_mtime.m_year;
+	native.st_mtime.month = stat->st_mtime.m_month;
+	native.st_mtime.day = stat->st_mtime.m_day;
+	native.st_mtime.hour = stat->st_mtime.m_hour;
+	native.st_mtime.minute = stat->st_mtime.m_minute;
+	native.st_mtime.second = stat->st_mtime.m_second;
+	native.st_mtime.microsecond = stat->st_mtime.m_microsecond;
+	ret = sceIoChstat(path, &native, cbit);
+	if (ret < 0)
+		return ToPafError(ret);
+	return ret;
+}
+
+int32_t LocalFilePsp2ImplSetDefaultPriority(int32_t priority)
+{
+	int32_t ret = sceIoSetThreadDefaultPriorityForSystem(priority);
+
+	if (ret < 0)
+		return ToPafError(ret);
+	return ret;
+}

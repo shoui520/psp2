@@ -5,10 +5,21 @@
 #include <stdint.h>
 #include <sce_atomic.h>
 #include "../std/string.h"
+#include "../datetime/datetime.h"
 
 typedef struct File File;
 typedef struct FileOpenArg FileOpenArg;
-typedef struct FileStat FileStat;
+typedef struct FileStat {
+	uint16_t st_mode;
+	uint32_t st_attr;
+	int64_t st_size;
+	DateTime st_ctime;
+	DateTime st_atime;
+	DateTime st_mtime;
+} FileStat;
+
+typedef char FileStatSizeCheck[sizeof(FileStat) == 88 ? 1 : -1];
+typedef char FileStatTimeOffsetCheck[offsetof(FileStat, st_ctime) == 16 ? 1 : -1];
 
 typedef enum FileType {
 	Type_None = 0,

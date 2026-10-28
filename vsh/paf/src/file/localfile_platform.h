@@ -3,6 +3,7 @@
 
 #include "../compiler.h"
 #include "localfile_impl.h"
+#include "localfile_types.h"
 #include <iofilemgr/iofilemgr.h>
 
 typedef struct LocalFilePsp2Impl {
@@ -85,5 +86,19 @@ int32_t LocalFilePsp2ImplAbort(LocalFilePsp2Impl *self);
 int64_t LocalFilePsp2ImplGetFileSize(LocalFilePsp2Impl *self);
 int32_t LocalFilePsp2ImplGetstat(LocalFilePsp2Impl *self, FileStat *stat);
 int32_t LocalFilePsp2ImplSetPriority(LocalFilePsp2Impl *self, int32_t priority);
+
+#define LocalFilePsp2ImplGetFileSizePath ScePafMisc_AC689344
+#define LocalFilePsp2ImplRemoveFile ScePafMisc_B18C734D
+#define LocalFilePsp2ImplRenameFile ScePafMisc_05C19D34
+#define LocalFilePsp2ImplGetstatPath ScePafMisc_2E402A5C
+#define LocalFilePsp2ImplChstat ScePafMisc_B26CBAFE
+#define LocalFilePsp2ImplSetDefaultPriority ScePafMisc_A283AD47
+
+int64_t LocalFilePsp2ImplGetFileSizePath(const char *path);
+int32_t LocalFilePsp2ImplRemoveFile(const char *path);
+int32_t LocalFilePsp2ImplRenameFile(const char *oldname, const char *newname);
+int32_t LocalFilePsp2ImplGetstatPath(const char *path, LocalFileStat *stat);
+int32_t LocalFilePsp2ImplChstat(const char *path, const LocalFileStat *stat, uint32_t cbit);
+int32_t LocalFilePsp2ImplSetDefaultPriority(int32_t priority);
 
 #endif

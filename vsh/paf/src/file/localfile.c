@@ -467,3 +467,64 @@ void LocalFileOpenUrl(FileSharedPtr *result, const char *path, uint32_t flag,
 		LocalFileOpen(result, path, flag, mode, error);
 	}
 }
+
+int32_t LocalFileGetstatPath(const char *path, LocalFileStat *stat)
+{
+	return LocalFilePsp2ImplGetstatPath(path, stat);
+}
+
+int64_t LocalFileGetFileSizePath(const char *path)
+{
+	return LocalFilePsp2ImplGetFileSizePath(path);
+}
+
+int32_t LocalFileRemoveFile(const char *path)
+{
+	return LocalFilePsp2ImplRemoveFile(path);
+}
+
+int32_t LocalFileRenameFile(const char *oldname, const char *newname)
+{
+	return LocalFilePsp2ImplRenameFile(oldname, newname);
+}
+
+int32_t LocalFileChstat(const char *path, const LocalFileStat *stat, uint32_t cbit)
+{
+	return LocalFilePsp2ImplChstat(path, stat, cbit);
+}
+
+static unsigned char FileHasMode(const char *path, uint16_t mode)
+{
+	FileStat stat;
+	unsigned char found = 0;
+
+	DateTimeConstruct(&stat.st_ctime, 0, 0, 0, 0, 0, 0, 0);
+	DateTimeConstruct(&stat.st_atime, 0, 0, 0, 0, 0, 0, 0);
+	DateTimeConstruct(&stat.st_mtime, 0, 0, 0, 0, 0, 0, 0);
+	if (!LocalFilePsp2ImplGetstatPath(path, &stat))
+		found = (stat.st_mode & mode) != 0;
+	DateTimeDestroy(&stat.st_mtime);
+	DateTimeDestroy(&stat.st_atime);
+	DateTimeDestroy(&stat.st_ctime);
+	return found;
+}
+
+unsigned char LocalFileExists(const char *path)
+{
+	return FileHasMode(path, SCE_STM_FREG | SCE_STM_FDIR);
+}
+
+unsigned char LocalFileIsFile(const char *path)
+{
+	return FileHasMode(path, SCE_STM_FREG);
+}
+
+unsigned char LocalFileIsDirectory(const char *path)
+{
+	return FileHasMode(path, SCE_STM_FDIR);
+}
+
+int32_t LocalFileSetDefaultPriority(int32_t priority)
+{
+	return LocalFilePsp2ImplSetDefaultPriority(priority);
+}
