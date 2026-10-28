@@ -85,6 +85,33 @@ float TimerDoFuncExpoIn(float rate)
 	return result;
 }
 
+float TimerDoFuncElasticIn(float rate)
+{
+	float amplitude, phase;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f || rate == 0.0f)
+		return 0.0f;
+	if (rate == 1.0f)
+		return 1.0f;
+	amplitude = TimerDoFuncExpoIn(rate);
+	phase = sce_paf_asinf(rate);
+	phase += (rate - 1.0f) * 20.943950653076172f;
+	return amplitude * sce_paf_sinf(phase);
+}
+
+float TimerDoFuncElasticInOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return TimerDoFuncElasticIn(rate * 2.0f) * 0.5f;
+	return (1.0f - TimerDoFuncElasticIn(2.0f - rate * 2.0f)) * 0.5f + 0.5f;
+}
+
 float TimerDoFuncBackIn(float rate)
 {
 	if (rate >= 1.0f)
@@ -243,6 +270,15 @@ float TimerDoFuncQuadInOut(float rate)
 	if (rate < 0.5f)
 		return TimerDoFuncQuadIn(rate * 2.0f) * 0.5f;
 	return (1.0f - TimerDoFuncQuadIn(2.0f - rate * 2.0f)) * 0.5f + 0.5f;
+}
+
+float TimerDoFuncElasticOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFuncElasticIn(1.0f - rate);
 }
 
 float TimerDoFuncBackOut(float rate)
