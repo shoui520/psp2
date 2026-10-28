@@ -229,6 +229,31 @@ float TimerDoFuncCustomElasticIn(float rate, const float *param)
 	return TimerPolynomialTerm(amplitude, sine);
 }
 
+float TimerDoFuncCustomElasticOutIn(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return (1.0f - TimerDoFuncCustomElasticIn(1.0f - rate * 2.0f,
+						       param)) * 0.5f;
+	return TimerDoFuncCustomElasticIn(rate * 2.0f + -1.0f, param) *
+		0.5f + 0.5f;
+}
+
+float TimerDoFuncCustomElasticInOut(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return TimerDoFuncCustomElasticIn(rate * 2.0f, param) * 0.5f;
+	return (1.0f - TimerDoFuncCustomElasticIn(2.0f - rate * 2.0f,
+						 param)) * 0.5f + 0.5f;
+}
+
 float TimerDoFuncCustomElasticOut(float rate, const float *param)
 {
 	if (rate >= 1.0f)
