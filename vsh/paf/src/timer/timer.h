@@ -88,6 +88,15 @@ float TimerDoFunc(const Timer *self, float rate, int func, float pre,
 		 float *param);
 
 #define TimerDoFuncLinear ScePafMisc_E872D707
+#define TimerDoFuncCustomExpoIn ScePafMisc_E5CC9FFD
+#define TimerDoFuncCustomExpoOutIn ScePafMisc_DE7DCA6C
+#define TimerDoFuncCustomExpoInOut ScePafMisc_45BF143C
+#define TimerDoFuncCustomExpoOut ScePafMisc_2D6089DC
+float TimerDoFuncCustomExpoIn(float rate, const float *param);
+float TimerDoFuncCustomExpoOutIn(float rate, const float *param);
+float TimerDoFuncCustomExpoInOut(float rate, const float *param);
+float TimerDoFuncCustomExpoOut(float rate, const float *param);
+
 #define TimerDoFuncQuintIn ScePafMisc_3DB2BC0D
 #define TimerDoFuncQuartIn ScePafMisc_F4849FCC
 #define TimerDoFuncCubicIn ScePafMisc_C65A563E

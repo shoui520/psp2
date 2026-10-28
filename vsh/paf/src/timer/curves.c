@@ -11,6 +11,48 @@ float TimerDoFuncLinear(float rate)
 	return rate;
 }
 
+float TimerDoFuncCustomExpoIn(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - sce_paf_powf(param[0] * (1.0f - rate), rate * param[1]);
+}
+
+float TimerDoFuncCustomExpoOutIn(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return (1.0f - TimerDoFuncCustomExpoIn(1.0f - rate * 2.0f,
+						    param)) * 0.5f;
+	return TimerDoFuncCustomExpoIn(rate * 2.0f + -1.0f, param) * 0.5f + 0.5f;
+}
+
+float TimerDoFuncCustomExpoInOut(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return TimerDoFuncCustomExpoIn(rate * 2.0f, param) * 0.5f;
+	return (1.0f - TimerDoFuncCustomExpoIn(2.0f - rate * 2.0f, param)) *
+	       0.5f + 0.5f;
+}
+
+float TimerDoFuncCustomExpoOut(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFuncCustomExpoIn(1.0f - rate, param);
+}
+
 float TimerDoFuncBackIn(float rate)
 {
 	if (rate >= 1.0f)
