@@ -1,4 +1,5 @@
 #include "view.h"
+#include "../plugin.h"
 
 extern void ScePafStdc_1B77082E(void *ptr);
 
@@ -21,6 +22,45 @@ static const struct {
 } viewClass = {
 	0, NULL, { ViewDestroy, ViewDelete }
 };
+
+static const char viewCallerName[] = "__main__";
+
+View *ViewConstruct(View *self, const PafString *pluginName,
+		    const PafString *resourcePath, ViewController *controller)
+{
+	extern size_t sce_paf_strlen(const char *text);
+	PluginInitParam param;
+
+	self->vtable = &viewClass.methods;
+	self->m_controller = controller;
+	PluginInitParamConstruct(&param);
+	PafStringCopy(&param.name, pluginName);
+	PafStringCopy(&param.resource_file, resourcePath);
+	PafStringAssign(&param.caller_name, viewCallerName,
+			sce_paf_strlen(viewCallerName));
+	param.init_func = ViewPluginOnInit;
+	param.start_func = ViewPluginOnStart;
+	param.param = controller;
+	param.stop_func = ViewPluginOnStop;
+	param.exit_func = ViewPluginOnExit;
+	PluginLoadAsync(&param, NULL, 0);
+	PafStringDestroy(&param.module_file);
+	PluginArgumentMapClear(&param.arguments);
+	if (param.arguments._Myhead)
+		ScePafStdc_1B77082E(param.arguments._Myhead);
+	param.arguments._Myhead = (PluginArgumentMapNode *)-1;
+	param.arguments._Mysize = (size_t)-1;
+	PafStringDestroy(&param.resource_file);
+	PafStringDestroy(&param.caller_name);
+	PafStringDestroy(&param.name);
+	return self;
+}
+
+View *ViewConstructBase(View *self, const PafString *pluginName,
+			const PafString *resourcePath, ViewController *controller)
+{
+	return ViewConstruct(self, pluginName, resourcePath, controller);
+}
 
 View *ViewDestroy(View *self)
 {
