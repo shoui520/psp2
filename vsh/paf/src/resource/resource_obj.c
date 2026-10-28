@@ -827,6 +827,168 @@ void ResourceObjGetFileBuffer(FileSharedPtr *result, const ResourceObj *self,
 	PafStringDestroy(&idparam.m_id);
 }
 
+void ResourceObjGetFileElement(FileSharedPtr *result, const ResourceObj *self,
+		const CxmlElement *elm, size_t *size, const char **type,
+		HeapAllocator *file_allocator, HeapAllocator *decomp_allocator)
+{
+	CxmlFile src = { NULL, -1, 0 };
+	const char *compress;
+	uint32_t len, compress_len;
+	int32_t original_size, error, mem_error, mapped_error;
+	unsigned char compressed = 0, load_failed;
+	BufferSharedPtr allocated, buffer = { NULL, NULL }, arg;
+	FileSharedPtr opened, fp, file;
+	void *addr, *data;
+
+	if (CxmlUtilGetFile(elm, "src", &src))
+		goto failed;
+	error = 0;
+	if (CxmlUtilGetString(elm, "type", type, &len))
+		goto failed;
+	original_size = src.size;
+	*size = src.size;
+	error = 0;
+	error = CxmlUtilGetString(elm, "compress", &compress, &compress_len);
+	if (!error && !sce_paf_strncmp(compress, "on", 2) && compress_len == 2) {
+		CxmlUtilGetInt(elm, "origsize", &original_size);
+		compressed = 1;
+	}
+	if (self->create_type) {
+		const void *mapped = CxmlFileGetAddr(&src);
+
+		MemFileOpen(&file, mapped, src.size, &mapped_error);
+		FileSharedPtrCopy(result, &file);
+		FileSharedPtrRelease(&file);
+		return;
+	}
+	if (file_allocator)
+		HeapAllocBufferAllocate(&allocated, original_size, file_allocator);
+	else
+		MallocBufferAllocate(&allocated, original_size);
+	if (allocated.m_ptr)
+		BufferSharedPtrCopy(&buffer, &allocated);
+	BufferSharedPtrRelease(&allocated);
+	if (!buffer.m_ptr)
+		goto failed;
+	if (self->rscfp.m_ptr->vtable->IsOpened(self->rscfp.m_ptr)) {
+		if (compressed) {
+			data = ResourceObjAllocFileBuffer(self, decomp_allocator, *size);
+			if (!data)
+				goto buffer_failed;
+			FileSharedPtrCopy(&fp, &self->rscfp);
+			error = CxmlFileLoad(&src, &fp, data, *size);
+			FileSharedPtrRelease(&fp);
+			load_failed = error != 0;
+			if (!load_failed) {
+				addr = buffer.m_ptr->vtable->GetAddr(buffer.m_ptr);
+				load_failed = Decompress(addr, original_size, data, *size,
+						 DecompressType_Zlib) < 0;
+			}
+			ResourceObjFreeFileBuffer(self, decomp_allocator, data);
+			if (load_failed)
+				goto buffer_failed;
+			*size = original_size;
+		} else {
+			FileSharedPtrCopy(&fp, &self->rscfp);
+			addr = buffer.m_ptr->vtable->GetAddr(buffer.m_ptr);
+			error = CxmlFileLoad(&src, &fp, addr, *size);
+			FileSharedPtrRelease(&fp);
+			if (error)
+				goto buffer_failed;
+		}
+		goto make_file;
+	}
+	LocalFileOpen(&opened, self->filename.ptr, SCE_O_RDONLY, 0, &error);
+	if (!opened.m_ptr)
+		goto buffer_failed;
+	if (compressed) {
+		data = ResourceObjAllocFileBuffer(self, decomp_allocator, *size);
+		if (!data)
+			goto close_failed;
+		FileSharedPtrCopy(&fp, &opened);
+		error = CxmlFileLoad(&src, &fp, data, *size);
+		FileSharedPtrRelease(&fp);
+		load_failed = error != 0;
+		if (!load_failed) {
+			addr = buffer.m_ptr->vtable->GetAddr(buffer.m_ptr);
+			load_failed = Decompress(addr, original_size, data, *size,
+					 DecompressType_Zlib) < 0;
+		}
+		ResourceObjFreeFileBuffer(self, decomp_allocator, data);
+		if (load_failed) {
+			/* This error path closes the stored file in the original. */
+			self->rscfp.m_ptr->vtable->Close(self->rscfp.m_ptr);
+			goto opened_failed;
+		}
+		*size = original_size;
+	} else {
+		FileSharedPtrCopy(&fp, &opened);
+		addr = buffer.m_ptr->vtable->GetAddr(buffer.m_ptr);
+		error = CxmlFileLoad(&src, &fp, addr, *size);
+		FileSharedPtrRelease(&fp);
+		if (error)
+			goto close_failed;
+	}
+	opened.m_ptr->vtable->Close(opened.m_ptr);
+	FileSharedPtrRelease(&opened);
+make_file:
+	BufferSharedPtrCopy(&arg, &buffer);
+	MemFileOpenWritableBuffer(&file, &arg, &mem_error);
+	BufferSharedPtrRelease(&arg);
+	FileSharedPtrCopy(result, &file);
+	FileSharedPtrRelease(&file);
+	BufferSharedPtrRelease(&buffer);
+	return;
+close_failed:
+	opened.m_ptr->vtable->Close(opened.m_ptr);
+opened_failed:
+	result->m_ptr = NULL;
+	result->m_ref_counter = NULL;
+	FileSharedPtrRelease(&opened);
+	BufferSharedPtrRelease(&buffer);
+	return;
+buffer_failed:
+	result->m_ptr = NULL;
+	result->m_ref_counter = NULL;
+	BufferSharedPtrRelease(&buffer);
+	return;
+failed:
+	result->m_ptr = NULL;
+	result->m_ref_counter = NULL;
+}
+
+void ResourceObjGetFileHash(FileSharedPtr *result, const ResourceObj *self,
+		uint32_t idhash, size_t *size, const char **type,
+		HeapAllocator *file_allocator, HeapAllocator *decomp_allocator)
+{
+	CxmlElement table, elm;
+
+	ResourceObjGetTableElement(&table, self, TableType_File);
+	if (table.doc && table.offset >= 0) {
+		CxmlUtilFindChildElementByIDHash(&elm, &table, "file", "id", idhash);
+		if (elm.doc && elm.offset >= 0) {
+			table = elm;
+			ResourceObjGetFileElement(result, self, &table, size, type,
+						 file_allocator, decomp_allocator);
+			return;
+		}
+	}
+	result->m_ptr = NULL;
+	result->m_ref_counter = NULL;
+}
+
+void ResourceObjGetFile(FileSharedPtr *result, const ResourceObj *self,
+		const char *id, size_t *size, const char **type,
+		HeapAllocator *file_allocator, HeapAllocator *decomp_allocator)
+{
+	IDParam idparam;
+
+	IDParamConstructFromString(&idparam, id);
+	ResourceObjGetFileHash(result, self, idparam.m_idhash, size, type,
+			       file_allocator, decomp_allocator);
+	PafStringDestroy(&idparam.m_id);
+}
+
 static inline __attribute__((always_inline))
 void ResourceIDMapLrotate(ResourceIDMapNode *head,
 			     ResourceIDMapNode *node)

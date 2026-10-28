@@ -158,6 +158,9 @@ typedef char ResourceObjOptionSizeCheck[sizeof(ResourceObjOption) == 12 ? 1 : -1
 #define ResourceObjGetFileBufferElement ScePafResource_9265619A
 #define ResourceObjGetFileBufferHash ScePafResource_DB5B79E2
 #define ResourceObjGetFileBuffer ScePafResource_255017C9
+#define ResourceObjGetFileElement ScePafResource_10E92A4E
+#define ResourceObjGetFileHash ScePafResource_23195E5E
+#define ResourceObjGetFile ScePafResource_DAE529C6
 
 ResourceObj *ResourceObjConstructFromBuffer(ResourceObj *self, const void *addr,
 					  size_t size, const ResourceObjOption *option);
@@ -238,6 +241,15 @@ int32_t ResourceObjGetSoundFromBufferHash(const ResourceObj *self, uint32_t idha
 int32_t ResourceObjGetSoundFromBuffer(const ResourceObj *self, const char *id,
 		void **addr1, size_t *size1, void **addr2, size_t *size2,
 		int32_t *samplerate, uint32_t *type);
+void ResourceObjGetFileElement(FileSharedPtr *result, const ResourceObj *self,
+		const CxmlElement *elm, size_t *size, const char **type,
+		HeapAllocator *file_allocator, HeapAllocator *decomp_allocator);
+void ResourceObjGetFileHash(FileSharedPtr *result, const ResourceObj *self,
+		uint32_t idhash, size_t *size, const char **type,
+		HeapAllocator *file_allocator, HeapAllocator *decomp_allocator);
+void ResourceObjGetFile(FileSharedPtr *result, const ResourceObj *self,
+		const char *id, size_t *size, const char **type,
+		HeapAllocator *file_allocator, HeapAllocator *decomp_allocator);
 void ResourceObjGetFileBufferElement(FileSharedPtr *result, const ResourceObj *self,
 		const CxmlElement *elm, void *addr, size_t *size, const char **type,
 		HeapAllocator *decomp_allocator);
