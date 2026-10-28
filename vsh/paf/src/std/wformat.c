@@ -3,16 +3,6 @@
 #include "string.h"
 #include "ctype.h"
 
-enum PafFormatFlags {
-	PAF_FORMAT_LONG = 1,
-	PAF_FORMAT_LONG_LONG = 2,
-	PAF_FORMAT_SHORT = 4,
-	PAF_FORMAT_ALTERNATE = 8,
-	PAF_FORMAT_LEFT = 16,
-	PAF_FORMAT_ZERO = 32,
-	PAF_FORMAT_HEX_PREFIX = 64
-};
-
 int PafWideFormatBody(PafWideFormatOutput output, void *context,
 		      const uint16_t *format, va_list args, uint16_t *buffer)
 {

@@ -4,6 +4,21 @@
 #include "stdlib.h"
 #include <libkernel/libkernel.h>
 
+void *sce_paf_memchr(const void *ptr, int ch, size_t count)
+{
+	const uint8_t *cursor = ptr;
+	uint8_t value = ch;
+	int32_t remaining = count;
+
+	while (remaining > 0) {
+		if (*cursor == value)
+			return (void *)cursor;
+		remaining--;
+		cursor++;
+	}
+	return NULL;
+}
+
 uint16_t *sce_paf_wmemchr(const uint16_t *ptr, uint16_t ch, size_t count)
 {
 	int32_t remaining = count;
