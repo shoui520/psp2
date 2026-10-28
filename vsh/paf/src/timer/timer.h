@@ -132,6 +132,17 @@ float TimerDoFuncCirqInOut(float rate);
 float TimerDoFuncBackOut(float rate);
 float TimerDoFuncCirqOut(float rate);
 
+#define TimerDoFuncSineIn ScePafMisc_48B923C3
+#define TimerDoFuncSineInOut ScePafMisc_04DEE7F8
+#define TimerDoFuncSineOut ScePafMisc_2607CDE2
+#define TimerDoFuncSwing ScePafMisc_CAF6AD0B
+#define TimerDoFuncAngular ScePafMisc_466AF8BF
+float TimerDoFuncSineIn(float rate);
+float TimerDoFuncSineInOut(float rate);
+float TimerDoFuncSineOut(float rate);
+float TimerDoFuncSwing(float rate);
+float TimerDoFuncAngular(float rate);
+
 void ScePafMisc_06BD5A37(Timer *self, float total, int func, int repeat,
 		      int repeatCount, const float *param); /* Timer::InitTimer */
 void ScePafMisc_70E604B9(Timer *self); /* Timer::~Timer */

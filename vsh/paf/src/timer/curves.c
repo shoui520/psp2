@@ -1,4 +1,5 @@
 #include "timer.h"
+#include "../std/math.h"
 #include <intrinsics.h>
 
 float TimerDoFuncLinear(float rate)
@@ -119,6 +120,26 @@ float TimerDoFuncFaster(float rate)
 	return rate * rate;
 }
 
+float TimerDoFuncSineIn(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - sce_paf_cosf((rate * 3.1415927410125732f) * 0.5f);
+}
+
+float TimerDoFuncSineInOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return TimerDoFuncSineIn(rate * 2.0f) * 0.5f;
+	return (1.0f - TimerDoFuncSineIn(2.0f - rate * 2.0f)) * 0.5f + 0.5f;
+}
+
 float TimerDoFuncQuadIn(float rate)
 {
 	if (rate >= 1.0f)
@@ -193,6 +214,24 @@ float TimerDoFuncQuadOut(float rate)
 	return 1.0f - TimerDoFuncQuadIn(1.0f - rate);
 }
 
+float TimerDoFuncSineOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFuncSineIn(1.0f - rate);
+}
+
+float TimerDoFuncSwing(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return sce_paf_cosf(rate * 3.1415927410125732f) * -0.5f + 0.5f;
+}
+
 float TimerDoFuncSlower(float rate)
 {
 	if (rate >= 1.0f)
@@ -200,4 +239,14 @@ float TimerDoFuncSlower(float rate)
 	if (rate <= 0.0f)
 		return 0.0f;
 	return __builtin_sqrtf(rate);
+}
+
+float TimerDoFuncAngular(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return (sce_paf_sinf((rate - 0.5f) * 3.1415927410125732f) +
+		1.0f) * 0.5f;
 }
