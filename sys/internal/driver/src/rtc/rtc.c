@@ -62,7 +62,7 @@ static void rtcSysconAlarmHandler(int value, void *argp)
 }
 
 /* name unknown: (re)arms the alarm of an aux clock */
-static int rtcSetAuxAlarm(unsigned int index, const SceRtcTick *tick)
+static inline int rtcSetAuxAlarm(unsigned int index, const SceRtcTick *tick)
 {
 	RtcAuxClock *aux;
 	SceUInt64 now, delay;
@@ -596,7 +596,7 @@ int sceRtcGetAlarmTick(SceRtcTick *tick, int *arg)
 	return 0;
 }
 
-int SceRtcForDriver_CD295F0C(void)
+inline int SceRtcForDriver_CD295F0C(void)
 {
 	unsigned int context;
 	SceRtcTick now;
@@ -652,7 +652,7 @@ int SceRtcForDriver_9546C68B(SceUID cb)
 	return ret;
 }
 
-int sceRtcGetCurrentTick(SceRtcTick *tick)
+inline int sceRtcGetCurrentTick(SceRtcTick *tick)
 {
 	unsigned int context;
 	int ret;
@@ -766,7 +766,7 @@ int SceRtcForDriver_BD53731C(SceRtcTick *tick)
 	return 0;
 }
 
-int SceRtcForDriver_E39F2ABE(void)
+inline int SceRtcForDriver_E39F2ABE(void)
 {
 	SceRtcTick now;
 	int ret;
@@ -814,7 +814,7 @@ int SceRtcForDriver_EDDC2325(SceUID cb)
 	return SCE_RTC_ERROR_NOT_FOUND;
 }
 
-int sceRtcGetCurrentClock(SceDateTime *time, int timezone)
+inline int sceRtcGetCurrentClock(SceDateTime *time, int timezone)
 {
 	unsigned int context;
 	SceRtcTick tick;

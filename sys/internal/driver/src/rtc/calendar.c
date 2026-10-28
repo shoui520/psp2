@@ -31,4 +31,6 @@
 #define sceRtcTickAddYears		sceRtcTickAddYears
 #define sceRtcCompareTick		sceRtcCompareTick
 
+/* the kernel build inlines these helpers into their callers */
+#define RTC_CALENDAR_INLINE inline
 #include <rtc/rtc_calendar.h>

@@ -21,7 +21,7 @@ static inline char rtcDigit(unsigned int value)
 	return value % 10 + '0';
 }
 
-int sceRtcFormatRFC2822(char *buf, const SceRtcTick *tick, int offset)
+inline int sceRtcFormatRFC2822(char *buf, const SceRtcTick *tick, int offset)
 {
 	SceRtcTick local;
 	SceDateTime time;
@@ -92,7 +92,7 @@ int sceRtcFormatRFC2822LocalTime(char *buf, const SceRtcTick *tick)
 	return sceRtcFormatRFC2822(buf, tick, g_rtc.timezone + g_rtc.daylightSaving);
 }
 
-int sceRtcFormatRFC3339(char *buf, const SceRtcTick *tick, int offset)
+inline int sceRtcFormatRFC3339(char *buf, const SceRtcTick *tick, int offset)
 {
 	SceRtcTick local;
 	SceDateTime time;

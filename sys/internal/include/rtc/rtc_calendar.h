@@ -8,12 +8,18 @@
  * of a module. The functions carry the user library's names; a module whose
  * exports are named otherwise maps them with #define before including (the
  * kernel exports them by NID). The includer declares __aeabi_uldivmod().
+ * RTC_CALENDAR_INLINE marks the helpers the kernel build inlines into their
+ * callers; it is empty unless the includer defines it.
  */
 
 #pragma once
 
 #include <rtc.h>
 #include <rtc/rtc_tick.h>
+
+#ifndef RTC_CALENDAR_INLINE
+#define RTC_CALENDAR_INLINE
+#endif
 
 static const unsigned char s_rtcMonthDays[2][12] = {
 	{ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
@@ -37,7 +43,7 @@ int sceRtcIsLeapYear(int year)
 	return rtcIsLeap(year);
 }
 
-int sceRtcGetDaysInMonth(int year, int month)
+RTC_CALENDAR_INLINE int sceRtcGetDaysInMonth(int year, int month)
 {
 	if (year <= 0)
 		return SCE_RTC_ERROR_INVALID_YEAR;
@@ -78,7 +84,7 @@ int sceRtcGetDayOfYear(int year, int month, int day)
 	return day - 1 + days;
 }
 
-int sceRtcCheckValid(const SceDateTime *time)
+RTC_CALENDAR_INLINE int sceRtcCheckValid(const SceDateTime *time)
 {
 	int days;
 
