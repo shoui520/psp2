@@ -100,6 +100,111 @@ typedef struct CxmlElement {
 	int32_t offset;
 } CxmlElement;
 
+typedef enum AttributeType {
+	AttributeType_None = 0,
+	AttributeType_Int = 1,
+	AttributeType_Float = 2,
+	AttributeType_String = 3,
+	AttributeType_WString = 4,
+	AttributeType_Hash = 5,
+	AttributeType_IntArray = 6,
+	AttributeType_FloatArray = 7,
+	AttributeType_File = 8,
+	AttributeType_ID = 9,
+	AttributeType_IDRef = 10,
+	AttributeType_IDHash = 11,
+	AttributeType_IDHashRef = 12
+} AttributeType;
+
+typedef struct AttributeBin {
+	int32_t name;
+	int32_t type;
+	union {
+		int32_t i;
+		float f;
+		struct { int32_t offset, len; } s;
+		struct { int32_t offset, len; } ws;
+		struct { int32_t offset, num; } ia;
+		struct { int32_t offset, num; } fa;
+		struct { int32_t offset, size; } file;
+		int32_t id;
+		int32_t idref;
+		int32_t hash;
+		int32_t idhash;
+	};
+} AttributeBin;
+
+typedef struct CxmlAttribute {
+	CxmlDocument *doc;
+	int32_t element_offset;
+	int32_t offset;
+} CxmlAttribute;
+
+typedef struct CxmlFile {
+	CxmlDocument *doc;
+	int32_t offset;
+	int32_t size;
+} CxmlFile;
+
+typedef struct IDBin {
+	int32_t entity_offset;
+	char id[0];
+} IDBin;
+
+typedef struct IDHashBin {
+	int32_t entity_offset;
+	uint32_t idhash;
+} IDHashBin;
+
+typedef char AttributeBinSizeCheck[sizeof(AttributeBin) == 16 ? 1 : -1];
+typedef char CxmlAttributeSizeCheck[sizeof(CxmlAttribute) == 12 ? 1 : -1];
+typedef char CxmlFileSizeCheck[sizeof(CxmlFile) == 12 ? 1 : -1];
+typedef char IDHashBinSizeCheck[sizeof(IDHashBin) == 8 ? 1 : -1];
+
+#define CxmlElementGetAttributeByIndex ScePafResource_46123EF6
+#define CxmlElementGetAttributeByName scePafResourceGetAttribute
+#define CxmlAttributeGetName ScePafResource_1412AC17
+#define CxmlAttributeGetType ScePafResource_E32AD3C0
+#define CxmlAttributeGetInt scePafResourceGetInteger
+#define CxmlAttributeGetFloat scePafResourceGetFloat
+#define CxmlAttributeGetString scePafResourceGetString
+#define CxmlAttributeGetWString scePafResourceGetChar
+#define CxmlAttributeGetHash scePafResourceGetStyleId
+#define CxmlAttributeGetIntArray scePafResourceGetIntegerArray
+#define CxmlAttributeGetFloatArray scePafResourceGetFloatArray
+#define CxmlAttributeGetFile scePafResourceGetData
+#define CxmlAttributeGetID scePafResourceGetIdStrLpb
+#define CxmlAttributeGetIDRef scePafResourceGetIdStr
+#define CxmlAttributeGetIDHash scePafResourceGetIdIntLpb
+#define CxmlAttributeGetIDHashRef scePafResourceGetIdInt
+#define CxmlFileGetAddr ScePafResource_1CBB0615
+
+int32_t CxmlElementGetAttributeByIndex(const CxmlElement *self, int32_t index,
+				      CxmlAttribute *attr);
+int32_t CxmlElementGetAttributeByName(const CxmlElement *self, const char *name,
+				     CxmlAttribute *attr);
+const char *CxmlAttributeGetName(const CxmlAttribute *self);
+AttributeType CxmlAttributeGetType(const CxmlAttribute *self);
+int32_t CxmlAttributeGetInt(const CxmlAttribute *self, int32_t *value);
+int32_t CxmlAttributeGetFloat(const CxmlAttribute *self, float *value);
+int32_t CxmlAttributeGetString(const CxmlAttribute *self,
+			      const char **value, uint32_t *len);
+int32_t CxmlAttributeGetWString(const CxmlAttribute *self,
+			       const uint16_t **value, uint32_t *len);
+int32_t CxmlAttributeGetHash(const CxmlAttribute *self, uint32_t *value);
+int32_t CxmlAttributeGetIntArray(const CxmlAttribute *self,
+				const int32_t **addr, uint32_t *num);
+int32_t CxmlAttributeGetFloatArray(const CxmlAttribute *self,
+				  const float **addr, uint32_t *num);
+int32_t CxmlAttributeGetFile(const CxmlAttribute *self, CxmlFile *file);
+int32_t CxmlAttributeGetID(const CxmlAttribute *self, const char **value);
+int32_t CxmlAttributeGetIDRef(const CxmlAttribute *self,
+			     const char **value, CxmlElement *entity);
+int32_t CxmlAttributeGetIDHash(const CxmlAttribute *self, uint32_t *value);
+int32_t CxmlAttributeGetIDHashRef(const CxmlAttribute *self,
+				 uint32_t *value, CxmlElement *entity);
+const void *CxmlFileGetAddr(const CxmlFile *self);
+
 typedef char CxmlElementSizeCheck[sizeof(CxmlElement) == 8 ? 1 : -1];
 typedef char CxmlHeaderSizeCheck[sizeof(CxmlHeader) == 80 ? 1 : -1];
 typedef char CxmlDocumentSizeCheck[sizeof(CxmlDocument) == 164 ? 1 : -1];

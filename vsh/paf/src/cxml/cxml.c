@@ -1,4 +1,5 @@
 #include "cxml.h"
+#include "private.h"
 #include "../paf_types.h"
 #include "../memory/heap_allocator.h"
 #include "../std/stdlib.h"
@@ -168,22 +169,6 @@ CxmlDocument *CxmlDocumentDestroyBase(CxmlDocument *self)
 {
 	CxmlDocumentClear(self);
 	return self;
-}
-
-static inline int CxmlDocumentIsValidElement(const CxmlDocument *self,
-					    int32_t offset)
-{
-	const ElementBin *element;
-	uint32_t size;
-
-	if (offset < 0)
-		return 0;
-	size = (uint32_t)self->header.tree_size;
-	if ((uint32_t)offset + sizeof(ElementBin) > size)
-		return 0;
-	element = (const ElementBin *)(self->tree + offset);
-	return (uint32_t)offset + ((uint32_t)element->attr_num << 4) +
-		sizeof(ElementBin) <= size;
 }
 
 void CxmlElementGetParent(CxmlElement *result, const CxmlElement *self)
