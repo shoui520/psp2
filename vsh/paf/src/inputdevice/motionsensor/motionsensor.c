@@ -2,9 +2,36 @@
 #include "../inputdevice.h"
 #include "../../std/stdc++/atexit.h"
 
+static MotionSensorDeviceHandler motionDeviceHandler;
 static MotionSensorData motionDataPre;
 static MotionSensorData motionData;
+static uint32_t motionLockCount;
 static InputTimerList motionTimers;
+
+void MotionSensorUnlock(void)
+{
+	if ((int32_t)motionLockCount > 0)
+		--motionLockCount;
+}
+
+MotionSensorDeviceHandler MotionSensorSetDeviceHandler(
+	MotionSensorDeviceHandler new_handler)
+{
+	MotionSensorDeviceHandler old_handler = motionDeviceHandler;
+
+	motionDeviceHandler = new_handler;
+	return old_handler;
+}
+
+void MotionSensorLock(void)
+{
+	++motionLockCount;
+}
+
+bool MotionSensorIsLocked(void)
+{
+	return (int32_t)motionLockCount > 0;
+}
 
 MotionSensorData *MotionSensorDataConstruct(MotionSensorData *self)
 {

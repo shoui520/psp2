@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct MotionSensorData {
 	uint32_t timestamp;
@@ -14,6 +15,8 @@ typedef struct MotionSensorData {
 	unsigned char dataInfo;
 } MotionSensorData;
 
+typedef void (*MotionSensorDeviceHandler)(MotionSensorData *data);
+
 typedef char MotionSensorDataSizeCheck[
 	sizeof(MotionSensorData) == 144 ? 1 : -1];
 typedef char MotionSensorDataQuaternionOffsetCheck[
@@ -23,5 +26,15 @@ typedef char MotionSensorDataInfoOffsetCheck[
 
 MotionSensorData *MotionSensorDataConstruct(MotionSensorData *self);
 void MotionSensorInitialize(void);
+
+#define MotionSensorUnlock ScePafMisc_219CFEED
+#define MotionSensorSetDeviceHandler ScePafMisc_BEA9803E
+#define MotionSensorLock ScePafMisc_DEAA750C
+#define MotionSensorIsLocked ScePafMisc_D350BADF
+void MotionSensorUnlock(void);
+MotionSensorDeviceHandler MotionSensorSetDeviceHandler(
+	MotionSensorDeviceHandler new_handler);
+void MotionSensorLock(void);
+bool MotionSensorIsLocked(void);
 
 #endif
