@@ -1,6 +1,7 @@
 #include "resource_obj.h"
 #include "../cxml/util.h"
 #include "../paf_types.h"
+#include "../versatileparam/idparam.h"
 
 char *ResourceObjGetFileName(const ResourceObj *self)
 {
@@ -142,4 +143,55 @@ int32_t ResourceObjGetStringHash(const ResourceObj *self, uint32_t idhash,
 		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
 	root = elm;
 	return CxmlUtilGetWString(&root, "src", src, length);
+}
+
+int32_t ResourceObjGetPage(const ResourceObj *self, const char *id, CxmlElement *elm)
+{
+	IDParam idparam;
+	int32_t ret;
+
+	IDParamConstructFromString(&idparam, id);
+	ret = ResourceObjGetPageHash(self, idparam.m_idhash, elm);
+	PafStringDestroy(&idparam.m_id);
+	return ret;
+}
+
+int32_t ResourceObjGetStyle(const ResourceObj *self, const char *id, CxmlElement *elm)
+{
+	IDParam idparam;
+	int32_t ret;
+
+	IDParamConstructFromString(&idparam, id);
+	ret = ResourceObjGetStyleHash(self, idparam.m_idhash, elm);
+	PafStringDestroy(&idparam.m_id);
+	return ret;
+}
+
+int32_t ResourceObjGetString(const ResourceObj *self, const char *id,
+			     const uint16_t **src, uint32_t *length)
+{
+	IDParam idparam;
+	int32_t ret;
+
+	IDParamConstructFromString(&idparam, id);
+	ret = ResourceObjGetStringHash(self, idparam.m_idhash, src, length);
+	PafStringDestroy(&idparam.m_id);
+	return ret;
+}
+
+unsigned char ResourceObjIsRegisteredID(ResourceObj *self, const char *str, uint32_t mode)
+{
+	IDParam idparam;
+	unsigned char ret;
+
+	if (!self->document)
+		return 0;
+	if (!mode)
+		return CxmlDocumentIsRegisteredID(self->document, str);
+	if (mode != 1)
+		return 0;
+	IDParamConstructFromString(&idparam, str);
+	ret = CxmlDocumentIsRegisteredIDHash(self->document, idparam.m_idhash);
+	PafStringDestroy(&idparam.m_id);
+	return ret;
 }
