@@ -22,6 +22,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/string_util.c
 	src/url/uri.c
 	src/url/url.c
+	src/url/url_components.c
 	src/common/resource_hooks.c
 	src/common/frame_count.c
 	src/common/halt_assert.c

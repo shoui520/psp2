@@ -45,6 +45,9 @@ typedef char UrlClassSizeCheck[sizeof(UrlClass) == 16 ? 1 : -1];
 extern const UrlClass urlClass;
 int UrlParseUrl(Url *self);
 int UrlInitialize(Url *self, const PafString *url, unsigned char initialize_pool);
+void UrlGetComponent(PafString *result, const Url *self, int32_t part);
+void UrlGetSuffix(PafString *result, const Url *self, const CommonString *value,
+		  int8_t part);
 Url *UrlConstruct(Url *self);
 Url *UrlConstructBase(Url *self);
 Url *UrlConstructString(Url *self, const PafString *url);
