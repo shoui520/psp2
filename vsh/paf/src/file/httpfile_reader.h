@@ -84,6 +84,22 @@ int32_t HttpFileDeleteReader(HttpFile *self);
 int32_t HttpFileCreateReader(HttpFile *self, const HttpFileOpenArg *arg);
 int32_t HttpFileResponseCodeToError(uint16_t code);
 
+typedef int32_t (*HttpFileIoFunction)(HttpFileReader *self);
+
+/* ARM member-function pointers encode the virtual flag in the this adjustment. */
+typedef union HttpFileIoMethod {
+	HttpFileIoFunction function;
+	uintptr_t vtable_offset;
+} HttpFileIoMethod;
+
+typedef struct HttpFileIoCall {
+	HttpFileReader *m_object;
+	HttpFileIoMethod m_method;
+	int32_t m_adjustment;
+} HttpFileIoCall;
+
+typedef char HttpFileIoCallSizeCheck[sizeof(HttpFileIoCall) == 12 ? 1 : -1];
+
 /* The I/O thread owns the separately allocated member-call object. */
 typedef struct HttpFileIoThread {
 	Thread base;
@@ -95,6 +111,14 @@ typedef struct HttpFileIoThread {
 typedef char HttpFileIoThreadSizeCheck[sizeof(HttpFileIoThread) == 32 ? 1 : -1];
 typedef char HttpFileIoThreadResultOffsetCheck[offsetof(HttpFileIoThread, m_result) == 16 ? 1 : -1];
 typedef char HttpFileIoThreadCallOffsetCheck[offsetof(HttpFileIoThread, m_call) == 24 ? 1 : -1];
+
+extern const ThreadClass httpFileIoThreadBaseClass;
+extern const ThreadClass httpFileIoThreadClass;
+Thread *HttpFileIoThreadDestroyBase(Thread *self);
+void HttpFileIoThreadDeleteBase(Thread *self);
+Thread *HttpFileIoThreadDestroy(Thread *self);
+void HttpFileIoThreadDelete(Thread *self);
+void HttpFileIoThreadEntryFunction(Thread *self);
 
 #define HttpFileCompleteAsync ScePafMisc_C098F659
 int32_t HttpFileCompleteAsync(HttpFile *self, int64_t *result);

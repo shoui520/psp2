@@ -27,6 +27,7 @@ typedef struct ThreadOpt {
 } ThreadOpt;
 
 enum {
+	ThreadPriority_Normal = 0x10000100,
 	ThreadAffinity_AllCores = 0x000f0000,
 	SCE_PAF_ERROR_THREAD_THREAD_ALREADY_STARTED = -2136013054 /* 0x80AF0702 */
 };

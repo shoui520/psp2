@@ -860,6 +860,180 @@ int32_t HttpFileOpenWithArg(HttpFile *self, const FileOpenArg *param)
 	return result;
 }
 
+const ThreadClass httpFileIoThreadBaseClass = {
+	0, NULL,
+	{
+		HttpFileIoThreadDestroyBase,
+		HttpFileIoThreadDeleteBase,
+		(void (*)(Thread *))__cxa_pure_virtual
+	}
+};
+
+const ThreadClass httpFileIoThreadClass = {
+	0, NULL,
+	{
+		HttpFileIoThreadDestroy,
+		HttpFileIoThreadDelete,
+		HttpFileIoThreadEntryFunction
+	}
+};
+
+Thread *HttpFileIoThreadDestroyBase(Thread *self)
+{
+	self->vtable = &httpFileIoThreadBaseClass.methods;
+	ThreadDestroyBase(self);
+	return self;
+}
+
+void HttpFileIoThreadDeleteBase(Thread *self)
+{
+	self->vtable = &httpFileIoThreadBaseClass.methods;
+	ThreadDestroyBase(self);
+	ScePafStdc_1B77082E(self);
+}
+
+Thread *HttpFileIoThreadDestroy(Thread *thread)
+{
+	HttpFileIoThread *self = (HttpFileIoThread *)thread;
+	void *call = self->m_call;
+
+	thread->vtable = &httpFileIoThreadClass.methods;
+	ScePafStdc_1B77082E(call);
+	thread->vtable = &httpFileIoThreadBaseClass.methods;
+	ThreadDestroyBase(thread);
+	return thread;
+}
+
+void HttpFileIoThreadDelete(Thread *thread)
+{
+	HttpFileIoThread *self = (HttpFileIoThread *)thread;
+	void *call = self->m_call;
+
+	thread->vtable = &httpFileIoThreadClass.methods;
+	ScePafStdc_1B77082E(call);
+	thread->vtable = &httpFileIoThreadBaseClass.methods;
+	ThreadDestroyBase(thread);
+	ScePafStdc_1B77082E(thread);
+}
+
+void HttpFileIoThreadEntryFunction(Thread *thread)
+{
+	HttpFileIoThread *self = (HttpFileIoThread *)thread;
+	const HttpFileIoCall *call = self->m_call;
+	int32_t adjustment = call->m_adjustment;
+	HttpFileReader *object = (HttpFileReader *)
+		((unsigned char *)call->m_object + (adjustment >> 1));
+	HttpFileIoFunction function = call->m_method.function;
+
+	if (adjustment & 1)
+		function = *(const HttpFileIoFunction *)
+			((const unsigned char *)object->vtable + call->m_method.vtable_offset);
+	self->m_result = function(object);
+}
+
+static inline __attribute__((always_inline))
+HttpFileIoThread *HttpFileIoThreadCreate(HttpFileReader *reader, int32_t operation,
+				       uintptr_t method)
+{
+	HttpFileIoThread *self = ScePafStdc_FC5CD359(sizeof(*self));
+
+	if (self) {
+		HttpFileIoCall *call = ScePafStdc_FC5CD359(sizeof(*call));
+
+		if (call) {
+			call->m_object = reader;
+			call->m_method.vtable_offset = method;
+			call->m_adjustment = 1;
+		}
+		ThreadConstruct(&self->base, ThreadPriority_Normal, 0x4000,
+				"ScePafFileIoThread", NULL);
+		self->m_operation = operation;
+		self->m_call = call;
+		self->m_result = 0;
+		self->base.vtable = &httpFileIoThreadClass.methods;
+	}
+	return self;
+}
+
+int32_t HttpFileOpenAsync(HttpFile *self, const FileOpenArg *param)
+{
+	const HttpFileOpenArg *arg = (const HttpFileOpenArg *)param;
+	int32_t result;
+
+	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	if (!arg || self->base.vtable->GetFileType(&self->base) != arg->file_type) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+	}
+	if (self->m_io_thread) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return SCE_PAF_ERROR_FILE_BUSY;
+	}
+	if (self->m_is_opened) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return SCE_PAF_ERROR_FILE_ALREADY_OPENED;
+	}
+	RWLockLockExclusive(&self->m_lock_rwlock);
+	result = HttpFileCreateReader(self, arg);
+	if (!result) {
+		self->m_io_thread = (Thread *)HttpFileIoThreadCreate(self->m_http_reader,
+					0, offsetof(HttpFileReaderVTable, Open));
+		RWLockUnlockExclusive(&self->m_lock_rwlock);
+		if (!self->m_io_thread) {
+			RWLockLockExclusive(&self->m_lock_rwlock);
+			HttpFileDeleteReader(self);
+			RWLockUnlockExclusive(&self->m_lock_rwlock);
+			ScePafThread_95F9C45F(&self->m_lock_mutex);
+			return SCE_PAF_ERROR_FILE_NO_MEMORY;
+		}
+		result = ThreadStart(self->m_io_thread);
+		if (result) {
+			RWLockLockExclusive(&self->m_lock_rwlock);
+			if (self->m_io_thread)
+				self->m_io_thread->vtable->Delete(self->m_io_thread);
+			self->m_io_thread = NULL;
+			HttpFileDeleteReader(self);
+			RWLockUnlockExclusive(&self->m_lock_rwlock);
+		}
+	}
+	/* The original keeps the exclusive lock when CreateReader fails. */
+	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	return result;
+}
+
+int32_t HttpFileCloseAsync(HttpFile *self)
+{
+	int32_t result;
+
+	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	if (self->m_io_thread) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return SCE_PAF_ERROR_FILE_BUSY;
+	}
+	if (!self->m_is_opened) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return SCE_PAF_ERROR_FILE_NOT_OPENED;
+	}
+	RWLockLockExclusive(&self->m_lock_rwlock);
+	self->m_io_thread = (Thread *)HttpFileIoThreadCreate(self->m_http_reader,
+					1, offsetof(HttpFileReaderVTable, Close));
+	RWLockUnlockExclusive(&self->m_lock_rwlock);
+	if (!self->m_io_thread) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return SCE_PAF_ERROR_FILE_NO_MEMORY;
+	}
+	result = ThreadStart(self->m_io_thread);
+	if (result) {
+		RWLockLockExclusive(&self->m_lock_rwlock);
+		if (self->m_io_thread)
+			self->m_io_thread->vtable->Delete(self->m_io_thread);
+		self->m_io_thread = NULL;
+		RWLockUnlockExclusive(&self->m_lock_rwlock);
+	}
+	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	return result;
+}
+
 int32_t HttpFileCompleteAsync(HttpFile *self, int64_t *result)
 {
 	HttpFileIoThread *thread = (HttpFileIoThread *)self->m_io_thread;
