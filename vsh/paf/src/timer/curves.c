@@ -183,15 +183,15 @@ float TimerDoFuncCustomExpoOut(float rate, const float *param)
 	return 1.0f - TimerDoFuncCustomExpoIn(1.0f - rate, param);
 }
 
-static float TimerPolynomialTerm(float coefficient, float power)
+static float TimerPolynomialTerm(float coefficient, float factor)
 {
 	union {
 		float value;
 		uint32_t bits;
 	} number;
-	volatile float result = coefficient * power;
+	volatile float result = coefficient * factor;
 
-	/* The power's NaN is quiet because a previous multiply produced it. */
+	/* Prior arithmetic has already quieted any NaN in the factor. */
 	number.value = coefficient;
 	if ((number.bits & 0x7fffffffU) > 0x7f800000U &&
 	    !(__builtin_fpscr() & SCE_ARM_FPSCR_DN)) {
@@ -199,6 +199,43 @@ static float TimerPolynomialTerm(float coefficient, float power)
 		return number.value;
 	}
 	return result;
+}
+
+float TimerDoFuncCustomElasticIn(float rate, const float *param)
+{
+	float frequency, quadratic, quartic, sixth;
+	float square, fourth, sine;
+	volatile float phase, amplitude;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	square = rate * rate;
+	frequency = param[0];
+	quadratic = param[1];
+	quartic = param[2];
+	sixth = param[3];
+	fourth = square * square;
+	phase = sce_paf_asinf(rate);
+	frequency *= 3.1415927410125732f;
+	phase += TimerPolynomialTerm(frequency, rate - 1.0f);
+	sine = sce_paf_sinf(phase);
+	quartic = TimerPolynomialTerm(quartic, fourth);
+	sixth = TimerPolynomialTerm(sixth, fourth);
+	amplitude = quartic;
+	amplitude += TimerPolynomialTerm(quadratic, square);
+	amplitude += TimerPolynomialTerm(sixth, square);
+	return TimerPolynomialTerm(amplitude, sine);
+}
+
+float TimerDoFuncCustomElasticOut(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFuncCustomElasticIn(1.0f - rate, param);
 }
 
 float TimerDoFunc49_52(float rate, const float *param)
