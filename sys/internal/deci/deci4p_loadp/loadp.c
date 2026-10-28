@@ -946,7 +946,7 @@ static int pdLoadpHandler(int event, void *arg, void *ctxp)
 			}
 			if (value == 1) {
 				lockFlags(LOADP_FLAG_ENABLED, 0);
-				return 1;
+				return 0;
 			}
 		} else if (status->kind == 1) {
 			value = status->enabled;
