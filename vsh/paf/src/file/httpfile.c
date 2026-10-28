@@ -729,3 +729,321 @@ HttpFileResponse *HttpFileResponseDestroyBase(HttpFileResponse *self)
 	PafStringDestroy(&self->phrase);
 	return self;
 }
+
+static inline __attribute__((always_inline))
+void HttpFileHeaderMapLrotate(HttpFileHeaderMapNode *head,
+			     HttpFileHeaderMapNode *node)
+{
+	HttpFileHeaderMapNode *right = node->_Right;
+
+	node->_Right = right->_Left;
+	if (!right->_Left->_Isnil)
+		right->_Left->_Parent = node;
+	right->_Parent = node->_Parent;
+	if (node->_Parent->_Isnil)
+		head->_Parent = right;
+	else if (node == node->_Parent->_Left)
+		node->_Parent->_Left = right;
+	else
+		node->_Parent->_Right = right;
+	right->_Left = node;
+	node->_Parent = right;
+}
+
+static inline __attribute__((always_inline))
+void HttpFileHeaderMapRrotate(HttpFileHeaderMapNode *head,
+			     HttpFileHeaderMapNode *node)
+{
+	HttpFileHeaderMapNode *left = node->_Left;
+
+	node->_Left = left->_Right;
+	if (!left->_Right->_Isnil)
+		left->_Right->_Parent = node;
+	left->_Parent = node->_Parent;
+	if (node->_Parent->_Isnil)
+		head->_Parent = left;
+	else if (node == node->_Parent->_Right)
+		node->_Parent->_Right = left;
+	else
+		node->_Parent->_Left = left;
+	left->_Right = node;
+	node->_Parent = left;
+}
+
+HttpFileHeaderMapNode *HttpFileHeaderMapRebalance(PafMap *self,
+					       HttpFileHeaderMapNode *node)
+{
+	HttpFileHeaderMapNode *head = self->_Myhead;
+
+	if (!head)
+		return (HttpFileHeaderMapNode *)self;
+	node->_Color = 1;
+	while (node != head->_Parent && node->_Parent->_Color) {
+		HttpFileHeaderMapNode *parent = node->_Parent;
+		HttpFileHeaderMapNode *grandparent = parent->_Parent;
+		HttpFileHeaderMapNode *uncle;
+
+		if (parent == grandparent->_Left) {
+			uncle = grandparent->_Right;
+			if (uncle->_Color) {
+				parent->_Color = 0;
+				uncle->_Color = 0;
+				node->_Parent->_Parent->_Color = 1;
+				node = node->_Parent->_Parent;
+			} else {
+				if (node == parent->_Right) {
+					node = node->_Parent;
+					HttpFileHeaderMapLrotate(head, node);
+				}
+				node->_Parent->_Color = 0;
+				node->_Parent->_Parent->_Color = 1;
+				HttpFileHeaderMapRrotate(head, node->_Parent->_Parent);
+			}
+		} else {
+			uncle = grandparent->_Left;
+			if (uncle->_Color) {
+				parent->_Color = 0;
+				uncle->_Color = 0;
+				node->_Parent->_Parent->_Color = 1;
+				node = node->_Parent->_Parent;
+			} else {
+				if (node == parent->_Left) {
+					node = node->_Parent;
+					HttpFileHeaderMapRrotate(head, node);
+				}
+				node->_Parent->_Color = 0;
+				node->_Parent->_Parent->_Color = 1;
+				HttpFileHeaderMapLrotate(head, node->_Parent->_Parent);
+			}
+		}
+	}
+	head->_Parent->_Color = 0;
+	return head->_Parent;
+}
+
+HttpFileHeaderMapNode *HttpFileHeaderMapInsert(PafMap *self,
+					    const HttpFileHeaderEntry *value,
+					    unsigned char *inserted)
+{
+	HttpFileHeaderMapNode *parent = self->_Myhead;
+	HttpFileHeaderMapNode *node;
+	HttpFileHeaderMapNode *entry;
+	int side = 0;
+
+	if (!parent)
+		return NULL;
+	node = parent->_Parent;
+	if (inserted)
+		*inserted = 0;
+	while (!node->_Isnil) {
+		parent = node;
+		if (sce_paf_strcasecmp(value->first.ptr, node->_Myval.first.ptr) <= 0) {
+			if (sce_paf_strcasecmp(node->_Myval.first.ptr, value->first.ptr) <= 0)
+				return node;
+			node = node->_Right;
+			side = 1;
+		} else {
+			node = node->_Left;
+			side = -1;
+		}
+	}
+	node = ScePafStdc_FC5CD359(sizeof(*node));
+	if (!node) {
+		ScePafStdc_D608246A();
+		return self->_Myhead;
+	}
+	entry = PafPlacementNew(sizeof(*entry), node);
+	if (entry) {
+		HttpFileHeaderMapNode *head = self->_Myhead;
+
+		entry->_Parent = parent;
+		entry->_Left = head;
+		entry->_Right = head;
+		PafStringInitialize(&entry->_Myval.first);
+		PafStringCopy(&entry->_Myval.first, &value->first);
+		PafStringVectorConstructCopy(&entry->_Myval.second, &value->second);
+		entry->_Isnil = 0;
+		entry->_Color = 1;
+	}
+	if (side < 0) {
+		parent->_Left = node;
+		if (parent == ((HttpFileHeaderMapNode *)self->_Myhead)->_Left)
+			((HttpFileHeaderMapNode *)self->_Myhead)->_Left = node;
+	} else if (side > 0) {
+		parent->_Right = node;
+		if (parent == ((HttpFileHeaderMapNode *)self->_Myhead)->_Right)
+			((HttpFileHeaderMapNode *)self->_Myhead)->_Right = node;
+	} else {
+		HttpFileHeaderMapNode *head = self->_Myhead;
+
+		head->_Parent = node;
+		head->_Left = node;
+		head->_Right = node;
+	}
+	++self->_Mysize;
+	HttpFileHeaderMapRebalance(self, node);
+	if (inserted)
+		*inserted = 1;
+	return node;
+}
+
+static inline __attribute__((always_inline))
+void HttpFileHeaderValuesDestroy(PafStringVector *self)
+{
+	if (self->_data) {
+		size_t count = self->_size;
+
+		while (count) {
+			--count;
+			PafStringDestroy(&self->_data[count]);
+		}
+		ScePafStdc_1B77082E(self->_data);
+	}
+	self->_data = (PafString *)-1;
+	self->_size = (size_t)-1;
+	self->_capacity = (size_t)-1;
+}
+
+PafStringVector *HttpFileHeaderMapSubscript(PafMap *self, const PafString *key)
+{
+	PafStringVector empty;
+	HttpFileHeaderEntry value;
+	HttpFileHeaderMapNode *node;
+
+	empty._data = NULL;
+	empty._size = 0;
+	empty._capacity = 0;
+	PafStringInitialize(&value.first);
+	PafStringCopy(&value.first, key);
+	PafStringVectorConstructCopy(&value.second, &empty);
+	node = HttpFileHeaderMapInsert(self, &value, NULL);
+	HttpFileHeaderValuesDestroy(&value.second);
+	PafStringDestroy(&value.first);
+	HttpFileHeaderValuesDestroy(&empty);
+	return &node->_Myval.second;
+}
+
+static inline __attribute__((always_inline))
+HttpFileHeaderMapNode *HttpFileHeaderMapFind(const PafMap *self, const PafString *key)
+{
+	HttpFileHeaderMapNode *node = self->_Myhead;
+
+	if (node) {
+		node = node->_Parent;
+		while (!node->_Isnil) {
+			if (sce_paf_strcasecmp(key->ptr, node->_Myval.first.ptr) <= 0) {
+				if (sce_paf_strcasecmp(node->_Myval.first.ptr, key->ptr) <= 0)
+					break;
+				node = node->_Right;
+			} else {
+				node = node->_Left;
+			}
+		}
+	}
+	return node;
+}
+
+static inline __attribute__((always_inline))
+void HttpFileHeaderValuesPushBack(PafStringVector *self, const PafString *value)
+{
+	if ((int32_t)(self->_size + 1) <= (int32_t)self->_capacity ||
+	    PafStringVectorReallocate(self, self->_capacity + 10)) {
+		PafString *entry = PafPlacementNew(sizeof(*entry),
+						 &self->_data[self->_size]);
+
+		if (entry) {
+			PafStringInitialize(entry);
+			PafStringCopy(entry, value);
+		}
+		++self->_size;
+	}
+}
+
+void HttpFileHeaderMapSet(PafMap *self, const char *name, const char *value,
+			 unsigned char replace)
+{
+	PafString key;
+	HttpFileHeaderMapNode *node;
+	PafStringVector *values;
+	PafString text;
+
+	PafStringInitialize(&key);
+	PafStringAssign(&key, name, name ? sce_paf_strlen(name) : 0);
+	node = HttpFileHeaderMapFind(self, &key);
+	PafStringDestroy(&key);
+	if (node == self->_Myhead) {
+		PafString new_key;
+
+		PafStringInitialize(&new_key);
+		PafStringAssign(&new_key, name, name ? sce_paf_strlen(name) : 0);
+		values = HttpFileHeaderMapSubscript(self, &new_key);
+		PafStringInitialize(&text);
+		PafStringAssign(&text, value, value ? sce_paf_strlen(value) : 0);
+		HttpFileHeaderValuesPushBack(values, &text);
+		PafStringDestroy(&text);
+		PafStringDestroy(&new_key);
+		return;
+	}
+	values = &node->_Myval.second;
+	if (replace && values->_data) {
+		size_t i;
+
+		for (i = 0; i < values->_size; ++i)
+			PafStringDestroy(&values->_data[i]);
+		ScePafStdc_1B77082E(values->_data);
+		values->_data = NULL;
+		values->_size = 0;
+		values->_capacity = 0;
+	}
+	PafStringInitialize(&text);
+	PafStringAssign(&text, value, value ? sce_paf_strlen(value) : 0);
+	HttpFileHeaderValuesPushBack(values, &text);
+	PafStringDestroy(&text);
+}
+
+PafMap *ScePafMisc_F39DF886(PafMap *self)
+{
+	return HttpFileHeaderMapClear(self);
+}
+
+int32_t HttpFileHeaderMapParseLine(PafMap *self, const char *line, size_t len)
+{
+	PafString key;
+	PafString value;
+	HttpFileHeaderMapNode *node;
+	PafStringVector *values;
+	size_t pos = 0;
+	int32_t result = 0;
+
+	if (!line || len < 2)
+		return 0;
+	PafStringInitialize(&key);
+	PafStringInitialize(&value);
+	while (pos < len) {
+		if (line[pos] == ':') {
+			PafStringAssign(&key, line, pos);
+			++pos;
+			break;
+		}
+		if (!(sce_paf_look_ctype_table((signed char)line[pos]) & 0x1f) ||
+		    (sce_paf_look_ctype_table((signed char)line[pos]) & 8))
+			goto out;
+		++pos;
+	}
+	if (!key.count)
+		goto out;
+	while (pos < len && (sce_paf_look_ctype_table((signed char)line[pos]) & 8))
+		++pos;
+	PafStringAssign(&value, line + pos, len - pos);
+	node = HttpFileHeaderMapFind(self, &key);
+	if (node == self->_Myhead)
+		values = HttpFileHeaderMapSubscript(self, &key);
+	else
+		values = &node->_Myval.second;
+	HttpFileHeaderValuesPushBack(values, &value);
+	result = 1;
+out:
+	PafStringDestroy(&value);
+	PafStringDestroy(&key);
+	return result;
+}

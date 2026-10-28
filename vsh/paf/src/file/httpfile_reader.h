@@ -46,6 +46,20 @@ typedef char HttpFileReaderParamContextOffsetCheck[offsetof(HttpFileReaderParam,
 
 PafMap *HttpFileHeaderMapClear(PafMap *self);
 PafMap *HttpFileHeaderMapCopy(PafMap *self, const PafMap *src);
+HttpFileHeaderMapNode *HttpFileHeaderMapRebalance(PafMap *self,
+					       HttpFileHeaderMapNode *node);
+HttpFileHeaderMapNode *HttpFileHeaderMapInsert(PafMap *self,
+					    const HttpFileHeaderEntry *value,
+					    unsigned char *inserted);
+PafStringVector *HttpFileHeaderMapSubscript(PafMap *self, const PafString *key);
+
+#define HttpFileHeaderMapSet ScePafMisc_1156F852
+#define HttpFileHeaderMapParseLine ScePafMisc_DB5A6E15
+
+void HttpFileHeaderMapSet(PafMap *self, const char *name, const char *value,
+			 unsigned char replace);
+PafMap *ScePafMisc_F39DF886(PafMap *self);
+int32_t HttpFileHeaderMapParseLine(PafMap *self, const char *line, size_t len);
 HttpFileHeaderMapNode *HttpFileHeaderMapCopyNodes(PafMap *self,
 					      HttpFileHeaderMapNode *parent,
 					      const HttpFileHeaderMapNode *src);
