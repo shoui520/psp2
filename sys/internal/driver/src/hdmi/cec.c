@@ -287,21 +287,32 @@ _txOpecode(SceUInt8 dest, SceUInt8 opcode, const SceUInt8 *operand, SceUInt32 le
 	frame[0] = (address[0] << 4) | dest;
 	frame[1] = opcode;
 	if (length != 0 && operand != NULL)
-		memcpy(&frame[2], operand, length != 0 ? length : 1);
+		__builtin_memcpy(&frame[2], operand, length != 0 ? length : 1);
 	ret = cecDevTx(frame, length + 2);
 	if (ret < 0)
 		return ret;
+#if FW_SINCE(0x04000000)
 	if (ret == 1 || ret == 2)
 		return -1;
-#if FW_SINCE(0x04000000)
 	if (txProbeHook != NULL)
 		txProbeHook(&txProbe, address[0], dest, opcode, frame[2], frame[3], frame[4],
 			    frame[5], frame[6], frame[7], frame[8]);
-#endif
 	return 0;
+#else
+	if (ret == 1)
+		return -1;
+	return ret == 2 ? -1 : 0;
+#endif
 }
 
-static inline int cecSendReportPhysicalAddress(const CecParam *param)
+/* Before 4.00 the senders inline _txOpecode, and Sony's direct callers inline them whole. */
+#if FW_SINCE(0x04000000)
+#define CEC_SEND static inline
+#else
+#define CEC_SEND static inline __attribute__((always_inline))
+#endif
+
+CEC_SEND int cecSendReportPhysicalAddress(const CecParam *param)
 {
 	SceUInt8 operand[3];
 
@@ -311,7 +322,7 @@ static inline int cecSendReportPhysicalAddress(const CecParam *param)
 	return _txOpecode(CEC_ADDR_BROADCAST, CEC_REPORT_PHYSICAL_ADDRESS, operand, 3);
 }
 
-static inline int cecSendFeatureAbort(const CecParam *param)
+CEC_SEND int cecSendFeatureAbort(const CecParam *param)
 {
 	SceUInt8 operand[2];
 
@@ -320,7 +331,7 @@ static inline int cecSendFeatureAbort(const CecParam *param)
 	return _txOpecode(param->data[0], CEC_FEATURE_ABORT, operand, 2);
 }
 
-static inline int cecSendReportPowerStatus(const CecParam *param)
+CEC_SEND int cecSendReportPowerStatus(const CecParam *param)
 {
 	SceUInt8 operand[1];
 
@@ -328,12 +339,12 @@ static inline int cecSendReportPowerStatus(const CecParam *param)
 	return _txOpecode(param->data[0], CEC_REPORT_POWER_STATUS, operand, 1);
 }
 
-static inline int cecSendGiveDevicePowerStatus(const CecParam *param)
+CEC_SEND int cecSendGiveDevicePowerStatus(const CecParam *param)
 {
 	return _txOpecode(param->data[0], 0x8f, NULL, 0);
 }
 
-static inline int cecSendMenuStatus(const CecParam *param)
+CEC_SEND int cecSendMenuStatus(const CecParam *param)
 {
 	SceUInt8 operand[1];
 
@@ -341,14 +352,14 @@ static inline int cecSendMenuStatus(const CecParam *param)
 	return _txOpecode(param->data[0], CEC_MENU_STATUS, operand, 1);
 }
 
-static inline int cecSendSetOsdName(const CecParam *param)
+CEC_SEND int cecSendSetOsdName(const CecParam *param)
 {
 	SceUInt8 name[5] = "PS TV";
 
 	return _txOpecode(param->data[0], CEC_SET_OSD_NAME, name, sizeof(name));
 }
 
-static inline int cecSendCecVersion(const CecParam *param)
+CEC_SEND int cecSendCecVersion(const CecParam *param)
 {
 	SceUInt8 operand[1];
 
@@ -356,7 +367,7 @@ static inline int cecSendCecVersion(const CecParam *param)
 	return _txOpecode(param->data[0], CEC_CEC_VERSION, operand, 1);
 }
 
-static inline int cecSendInactiveSource(const CecParam *param)
+CEC_SEND int cecSendInactiveSource(const CecParam *param)
 {
 	SceUInt8 physical[2];
 	int ret;
@@ -369,12 +380,12 @@ static inline int cecSendInactiveSource(const CecParam *param)
 	return _txOpecode(param->data[0], CEC_INACTIVE_SOURCE, physical, 2);
 }
 
-static inline int cecSendTextViewOn(const CecParam *param)
+CEC_SEND int cecSendTextViewOn(const CecParam *param)
 {
 	return _txOpecode(param->data[0], CEC_TEXT_VIEW_ON, NULL, 0);
 }
 
-static inline int cecSendActiveSource(const CecParam *param)
+CEC_SEND int cecSendActiveSource(const CecParam *param)
 {
 	SceUInt8 physical[2];
 	int ret;
