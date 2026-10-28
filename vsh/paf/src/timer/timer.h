@@ -111,6 +111,11 @@ float TimerDoFuncElasticIn(float rate);
 float TimerDoFuncElasticInOut(float rate);
 float TimerDoFuncElasticOut(float rate);
 
+#define TimerDoFuncExponent ScePafMisc_CF30F373
+float TimerDoFuncExponentCurve(float rate);
+float TimerDoFuncExponent(float rate, float total, float initval,
+			 const float *param);
+
 #define TimerCbrt ScePafMisc_51E31BC8
 #define TimerDoFuncBezier3d ScePafMisc_18968E8A
 float TimerCbrt(float input);

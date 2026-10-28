@@ -2,6 +2,18 @@
 #include "../std/math.h"
 #include <intrinsics.h>
 
+static const float TimerExponentTable[33] = {
+	0.0f, 0.002188f, 0.004704f, 0.007592f,
+	0.010902f, 0.014686f, 0.019007f, 0.023935f,
+	0.029550f, 0.035943f, 0.043218f, 0.051492f,
+	0.060902f, 0.071598f, 0.083757f, 0.097577f,
+	0.113284f, 0.131136f, 0.151427f, 0.174489f,
+	0.200705f, 0.230507f, 0.264389f, 0.302913f,
+	0.346719f, 0.396536f, 0.453193f, 0.517637f,
+	0.590942f, 0.674336f, 0.769213f, 0.877165f,
+	1.0f
+};
+
 static const float TimerExpoTable[33] = {
 	0.0f, 0.000243f, 0.000539f, 0.000908f,
 	0.001367f, 0.001938f, 0.002646f, 0.003524f,
@@ -378,6 +390,33 @@ float TimerDoFuncQuadOut(float rate)
 	return 1.0f - TimerDoFuncQuadIn(1.0f - rate);
 }
 
+float TimerDoFuncExponentCurve(float rate)
+{
+	float next, current, fraction, result;
+	int integral, index;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	rate = 1.0f - rate;
+	if (rate >= 1.0f)
+		result = 1.0f;
+	else if (rate <= 0.0f || rate == 0.0f)
+		result = 0.0f;
+	else {
+		rate *= 32.0f;
+		integral = FloatToInt(rate);
+		index = FloatToInt(rate);
+		next = TimerExponentTable[index + 1];
+		fraction = rate - (float)integral;
+		current = TimerExponentTable[index];
+		result = next * fraction;
+		result += current * (1.0f - fraction);
+	}
+	return 1.0f - result;
+}
+
 float TimerDoFuncExpoOut(float rate)
 {
 	if (rate >= 1.0f)
@@ -479,6 +518,15 @@ float TimerDoFuncBezier3d(float rate, const float *param)
 	result += cubic * cubeT;
 	result += threeY1 * t;
 	return result;
+}
+
+float TimerDoFuncExponent(float rate, float total, float initval,
+			 const float *param)
+{
+	(void)total;
+	(void)initval;
+	(void)param;
+	return TimerDoFuncExponentCurve(rate);
 }
 
 float TimerDoFuncAngular(float rate)
