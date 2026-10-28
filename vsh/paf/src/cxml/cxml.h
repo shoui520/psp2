@@ -118,11 +118,21 @@ typedef char ElementBinSizeCheck[sizeof(ElementBin) == 28 ? 1 : -1];
 #define CxmlElementGetName ScePafResource_8A71B732
 #define CxmlElementGetNumChild ScePafResource_262EE6C0
 #define CxmlElementNumAttribute ScePafResource_59755449
+#define CxmlDocumentClear ScePafResource_1461674C
+#define CxmlDocumentGetDocumentElement ScePafResource_93A5860F
+#define CxmlDocumentGetHeaderMagic ScePafResource_D2022BA2
+#define CxmlDocumentDestroy ScePafResource_2387124F
+#define CxmlDocumentDestroyBase ScePafResource_71407B32
 
 CxmlHeader *CxmlHeaderConstruct(CxmlHeader *self);
 CxmlHeader *CxmlHeaderConstructBase(CxmlHeader *self);
 CxmlDocument *CxmlDocumentConstruct(CxmlDocument *self);
 CxmlDocument *CxmlDocumentConstructBase(CxmlDocument *self);
+int32_t CxmlDocumentClear(CxmlDocument *self);
+void CxmlDocumentGetDocumentElement(CxmlElement *result, CxmlDocument *self);
+void CxmlDocumentGetHeaderMagic(const CxmlDocument *self, char buf[4]);
+CxmlDocument *CxmlDocumentDestroy(CxmlDocument *self);
+CxmlDocument *CxmlDocumentDestroyBase(CxmlDocument *self);
 void CxmlDefaultAllocator(AllocationType type, void *userdata, void *old_addr,
 			 size_t required_size, void **addr, size_t *size);
 void CxmlElementGetParent(CxmlElement *result, const CxmlElement *self);

@@ -1,6 +1,9 @@
 #ifndef PAF_TYPES_H
 #define PAF_TYPES_H
 
+#define SCE_PAF_OK 0
+#define SCE_PAF_ERROR_CXML_NO_ALLOCATOR (-2136013555) /* 0x80AF050D */
+
 typedef enum Locale {
 	Locale_Default = -1,
 	Locale_JP = 0,

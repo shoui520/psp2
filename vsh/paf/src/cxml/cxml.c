@@ -1,4 +1,7 @@
 #include "cxml.h"
+#include "../paf_types.h"
+#include "../memory/heap_allocator.h"
+#include "../std/stdlib.h"
 
 static const char cxmlMagic[] = "CXML";
 
@@ -40,6 +43,89 @@ CxmlHeader *CxmlHeaderConstructBase(CxmlHeader *self)
 	return self;
 }
 
+int32_t CxmlDocumentClear(CxmlDocument *self)
+{
+	CxmlHeader header;
+
+	CxmlHeaderInitialize(&header);
+	self->header = header;
+	if (self->access_mode != AccessMode_ReadOnly_Memory) {
+		if (!self->allocator)
+			return SCE_PAF_ERROR_CXML_NO_ALLOCATOR;
+		if (self->tree)
+			self->allocator(AllocationType_Free_Tree, self->allocator_userdata,
+					self->tree, 0, NULL, NULL);
+		self->tree = NULL;
+		self->tree_capacity = 0;
+		if (self->idtable)
+			self->allocator(AllocationType_Free_IDTable, self->allocator_userdata,
+					self->idtable, 0, NULL, NULL);
+		self->idtable = NULL;
+		self->idtable_capacity = 0;
+		if (self->idhashtable)
+			self->allocator(AllocationType_Free_IDHashTable, self->allocator_userdata,
+					self->idhashtable, 0, NULL, NULL);
+		self->idhashtable = NULL;
+		self->idhashtable_capacity = 0;
+		if (self->stringtable)
+			self->allocator(AllocationType_Free_StringTable, self->allocator_userdata,
+					self->stringtable, 0, NULL, NULL);
+		self->stringtable = NULL;
+		self->stringtable_capacity = 0;
+		if (self->wstringtable)
+			self->allocator(AllocationType_Free_WStringTable, self->allocator_userdata,
+					self->wstringtable, 0, NULL, NULL);
+		self->wstringtable = NULL;
+		self->wstringtable_capacity = 0;
+		if (self->hashtable)
+			self->allocator(AllocationType_Free_HashTable, self->allocator_userdata,
+					self->hashtable, 0, NULL, NULL);
+		self->hashtable = NULL;
+		self->hashtable_capacity = 0;
+		if (self->intarraytable)
+			self->allocator(AllocationType_Free_IntArrayTable, self->allocator_userdata,
+					self->intarraytable, 0, NULL, NULL);
+		self->intarraytable = NULL;
+		self->intarraytable_capacity = 0;
+		if (self->floatarraytable)
+			self->allocator(AllocationType_Free_FloatArrayTable, self->allocator_userdata,
+					self->floatarraytable, 0, NULL, NULL);
+		self->floatarraytable = NULL;
+		self->floatarraytable_capacity = 0;
+		if (self->filetable)
+			self->allocator(AllocationType_Free_FileTable, self->allocator_userdata,
+					self->filetable, 0, NULL, NULL);
+		self->filetable = NULL;
+		self->filetable_capacity = 0;
+	}
+	self->access_mode = AccessMode_ReadWrite;
+	return SCE_PAF_OK;
+}
+
+void CxmlDocumentGetDocumentElement(CxmlElement *result, CxmlDocument *self)
+{
+	uint32_t size = (uint32_t)self->header.tree_size;
+
+	if (size >= sizeof(ElementBin)) {
+		const ElementBin *element = (const ElementBin *)self->tree;
+
+		if (((uint32_t)element->attr_num << 4) + sizeof(ElementBin) <= size) {
+			result->doc = self;
+			result->offset = 0;
+			return;
+		}
+	}
+	result->doc = NULL;
+	result->offset = -1;
+}
+
+void CxmlDocumentGetHeaderMagic(const CxmlDocument *self, char buf[4])
+{
+	extern void *sce_paf_memcpy(void *dst, const void *src, size_t size);
+
+	sce_paf_memcpy(buf, self->header.magic, sizeof(self->header.magic));
+}
+
 CxmlDocument *CxmlDocumentConstruct(CxmlDocument *self)
 {
 	self->access_mode = AccessMode_ReadWrite;
@@ -70,6 +156,18 @@ CxmlDocument *CxmlDocumentConstruct(CxmlDocument *self)
 CxmlDocument *CxmlDocumentConstructBase(CxmlDocument *self)
 {
 	return CxmlDocumentConstruct(self);
+}
+
+CxmlDocument *CxmlDocumentDestroy(CxmlDocument *self)
+{
+	CxmlDocumentClear(self);
+	return self;
+}
+
+CxmlDocument *CxmlDocumentDestroyBase(CxmlDocument *self)
+{
+	CxmlDocumentClear(self);
+	return self;
 }
 
 static inline int CxmlDocumentIsValidElement(const CxmlDocument *self,
@@ -215,4 +313,44 @@ int32_t CxmlElementNumAttribute(const CxmlElement *self)
 		return element->attr_num;
 	}
 	return 0;
+}
+
+void CxmlDefaultAllocator(AllocationType type, void *userdata, void *old_addr,
+			 size_t required_size, void **addr, size_t *size)
+{
+	HeapAllocator *allocator = userdata;
+
+	switch (type) {
+	case AllocationType_Alloc_Tree:
+	case AllocationType_Alloc_IDTable:
+	case AllocationType_Alloc_IDHashTable:
+	case AllocationType_Alloc_StringTable:
+	case AllocationType_Alloc_WStringTable:
+	case AllocationType_Alloc_HashTable:
+	case AllocationType_Alloc_IntArrayTable:
+	case AllocationType_Alloc_FloatArrayTable:
+	case AllocationType_Alloc_FileTable:
+		if (allocator)
+			*addr = scePafReallocWithContext(allocator, old_addr, required_size);
+		else
+			*addr = sce_paf_realloc(old_addr, required_size);
+		*size = required_size;
+		break;
+	case AllocationType_Free_Tree:
+	case AllocationType_Free_IDTable:
+	case AllocationType_Free_IDHashTable:
+	case AllocationType_Free_StringTable:
+	case AllocationType_Free_WStringTable:
+	case AllocationType_Free_HashTable:
+	case AllocationType_Free_IntArrayTable:
+	case AllocationType_Free_FloatArrayTable:
+	case AllocationType_Free_FileTable:
+		if (allocator)
+			scePafFreeWithContext(allocator, old_addr);
+		else
+			sce_paf_free(old_addr);
+		break;
+	default:
+		break;
+	}
 }
