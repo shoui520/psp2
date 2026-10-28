@@ -11,6 +11,17 @@ typedef struct HttpFileReaderParam HttpFileReaderParam;
 typedef struct HttpFileReaderContext HttpFileReaderContext;
 typedef struct HttpFileReaderContextRefCounter HttpFileReaderContextRefCounter;
 
+typedef struct HttpFileStat {
+	int32_t st_mode;
+	uint32_t st_attr;
+	int64_t st_size;
+	DateTime st_ctime;
+	DateTime st_atime;
+	DateTime st_mtime;
+} HttpFileStat;
+
+typedef char HttpFileStatSizeCheck[sizeof(HttpFileStat) == 88 ? 1 : -1];
+
 typedef enum HttpFileOptionType {
 	OptionType_ResolveTimeOut = 1,
 	OptionType_ConnectTimeOut = 2,
@@ -210,6 +221,7 @@ typedef char HttpFileContextOffsetCheck[offsetof(HttpFile, m_reader_context) == 
 #define HttpFileWaitAsync ScePafMisc_7B2F4627
 #define HttpFilePollAsync ScePafMisc_D5543A0D
 #define HttpFileGetstat ScePafMisc_A004D31D
+#define HttpFileGetstatUrl ScePafMisc_5155B290
 #define HttpFileDestroy ScePafMisc_967C0019
 #define HttpFileDelete ScePafMisc_13E9B54C
 #define HttpFileDestroyBase ScePafMisc_E93C0EBB
@@ -247,6 +259,7 @@ int32_t HttpFileFlushAsync(HttpFile *self);
 int32_t HttpFileWaitAsync(HttpFile *self, int64_t *result);
 int32_t HttpFilePollAsync(HttpFile *self, int64_t *result);
 int32_t HttpFileGetstat(HttpFile *self, FileStat *stat);
+int32_t HttpFileGetstatUrl(const char *path, HttpFileStat *stat);
 HttpFile *HttpFileDestroy(HttpFile *self);
 HttpFile *HttpFileDestroyBase(HttpFile *self);
 void HttpFileDelete(HttpFile *self);

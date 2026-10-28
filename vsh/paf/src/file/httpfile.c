@@ -786,6 +786,52 @@ void HttpFileOpenChar(FileSharedPtr *result, const char *path, int32_t *error,
 	UrlDestroy(&url);
 }
 
+int32_t HttpFileGetstatUrl(const char *path, HttpFileStat *stat)
+{
+	HttpFile *self;
+	FileSharedPtr owner;
+	FileRefCounter *counter;
+	HttpFileOpenArg arg;
+	PafString value;
+	Url url;
+	int32_t ret;
+
+	if (!stat)
+		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+	self = ScePafStdc_FC5CD359(sizeof(*self));
+	if (!self)
+		return SCE_PAF_ERROR_FILE_NO_MEMORY;
+	HttpFileConstruct(self);
+	owner.m_ptr = &self->base;
+	counter = ScePafStdc_FC5CD359(sizeof(*counter));
+	owner.m_ref_counter = counter;
+	if (counter) {
+		counter->m_ptr = &self->base;
+		counter->m_counter = 1;
+		counter->m_weak_counter = 1;
+		counter->m_deleter = HttpFileDefaultDelete;
+	} else {
+		/* The native control-block failure leaves the file alive. */
+		owner.m_ptr = NULL;
+	}
+	HttpFileOpenArgConstruct(&arg);
+	PafStringInitialize(&value);
+	PafStringAssign(&value, path, path ? sce_paf_strlen(path) : 0);
+	UrlConstructString(&url, &value);
+	PafStringDestroy(&value);
+	HttpFileOpenArgParseUrl(&arg, &url);
+	UrlDestroy(&url);
+	PafStringAssign(&arg.method, "HEAD", sce_paf_strlen("HEAD"));
+	ret = self->base.vtable->Open(&self->base, (const FileOpenArg *)&arg);
+	if (!ret) {
+		ret = self->base.vtable->Getstat(&self->base, (FileStat *)stat);
+		self->base.vtable->Close(&self->base);
+	}
+	HttpFileOpenArgDestroyMembers(&arg);
+	FileSharedPtrRelease(&owner);
+	return ret;
+}
+
 HttpFile *HttpFileConstruct(HttpFile *self)
 {
 	self->base.vtable = &httpFileClass.methods;
