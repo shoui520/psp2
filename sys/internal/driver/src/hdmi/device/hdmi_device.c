@@ -761,7 +761,7 @@ __attribute__((noinline)) int HdmiDeviceHwGetPllStat(HdmiDevice *device)
 
 /* Sony's name. */
 __attribute__((noinline)) int HdmiDeviceHwSetFrameDirect(HdmiDevice *device, SceUInt32 frame, const SceUInt8 *data,
-			       SceUInt32 size)
+			       SceUInt8 size)
 {
 	return HdmiDeviceAD80244SetFrameDirect(device, frame, data, size);
 }

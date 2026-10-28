@@ -36,7 +36,7 @@ int hdmiDeviceSmStopPackets(HdmiDevice *device)
 
 /* Load the packet or InfoFrame of type 'type'. */
 int hdmiDeviceSmSetPacketData(HdmiDevice *device, SceUInt32 type, const void *packet,
-			      SceUInt8 size)
+			      SceSize size)
 {
 	SceUInt32 frame;
 

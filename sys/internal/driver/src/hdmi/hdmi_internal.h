@@ -361,7 +361,7 @@ int HdmiDeviceHwGetChipId(HdmiDevice *device, SceUInt8 *id, SceUInt8 *length);
 int HdmiDeviceHwGetPlgStat(HdmiDevice *device);
 int HdmiDeviceHwGetPllStat(HdmiDevice *device);
 int HdmiDeviceHwSetFrameDirect(HdmiDevice *device, SceUInt32 frame, const SceUInt8 *data,
-			       SceUInt32 size);
+			       SceUInt8 size);
 int HdmiDeviceHwSetFrame(HdmiDevice *device, SceUInt32 frames);
 int HdmiDeviceHwSetPacketCtrl(HdmiDevice *device, SceUInt32 frames);
 int HdmiDeviceHwSetAvMute(HdmiDevice *device, int mute);
@@ -448,7 +448,7 @@ int hdmiDeviceEdidGetPhysicalAddress(HdmiDevice *device, SceUInt8 *address);
 /* device/hdmi_device_packet.c */
 int hdmiDeviceSmStopPackets(HdmiDevice *device);
 int hdmiDeviceSmSetPacketData(HdmiDevice *device, SceUInt32 type, const void *packet,
-			      SceUInt8 size);
+			      SceSize size);
 int hdmiDeviceSmSetPacketCtrl(HdmiDevice *device);
 
 /* device/hdmi_device_sm.c */
