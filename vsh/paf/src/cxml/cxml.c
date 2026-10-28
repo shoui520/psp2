@@ -1,4 +1,5 @@
 #include "cxml.h"
+#include "../std/string.h"
 #include "private.h"
 #include "../paf_types.h"
 #include "../memory/heap_allocator.h"
@@ -8,8 +9,6 @@ static const char cxmlMagic[] = "CXML";
 
 static inline void CxmlHeaderInitialize(CxmlHeader *self)
 {
-	extern void *sce_paf_memcpy(void *dst, const void *src, size_t size);
-
 	self->version = 0x110;
 	self->tree_offset = 0;
 	self->tree_size = 0;
@@ -122,8 +121,6 @@ void CxmlDocumentGetDocumentElement(CxmlElement *result, CxmlDocument *self)
 
 void CxmlDocumentGetHeaderMagic(const CxmlDocument *self, char buf[4])
 {
-	extern void *sce_paf_memcpy(void *dst, const void *src, size_t size);
-
 	sce_paf_memcpy(buf, self->header.magic, sizeof(self->header.magic));
 }
 

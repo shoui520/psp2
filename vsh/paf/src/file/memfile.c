@@ -1,7 +1,6 @@
 #include "memfile.h"
 #include "../paf_types.h"
-
-extern void *sce_paf_memcpy(void *dst, const void *src, size_t size);
+#include "../std/string.h"
 
 const FileClass memFileClass = {
 	0, NULL, {

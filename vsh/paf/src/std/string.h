@@ -39,6 +39,7 @@ extern uint16_t PafWStringEmpty;
 
 void *sce_paf_memset(void *dst, int ch, size_t len);
 void *sce_paf_memchr(const void *ptr, int ch, size_t count);
+void *sce_paf_memcpy(void *dst, const void *src, size_t count);
 /* Native memcpy forwarding export. */
 void *ScePafStdc_5883A6E3(void *dst, const void *src, size_t count);
 size_t sce_paf_strlen(const char *str);
@@ -68,7 +69,6 @@ size_t PafStringRfind(const PafString *self, const char *str,
 extern void *ScePafStdc_FC5CD359(size_t size);
 extern void ScePafStdc_1B77082E(void *ptr);
 extern int ScePafStdc_D608246A(void);
-extern void *sce_paf_memcpy(void *dst, const void *src, size_t len);
 
 static inline __attribute__((always_inline)) void PafStringInitialize(PafString *self)
 {

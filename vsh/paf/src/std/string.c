@@ -4,6 +4,11 @@
 #include "stdlib.h"
 #include <libkernel/libkernel.h>
 
+void *ScePafStdc_5883A6E3(void *dst, const void *src, size_t count)
+{
+	return sce_paf_memcpy(dst, src, count);
+}
+
 void *sce_paf_memchr(const void *ptr, int ch, size_t count)
 {
 	const uint8_t *cursor = ptr;
@@ -65,7 +70,6 @@ size_t sce_paf_strlen(const char *str)
 extern void *ScePafStdc_FC5CD359(size_t size);
 extern void ScePafStdc_1B77082E(void *ptr);
 extern int ScePafStdc_D608246A(void);
-extern void *sce_paf_memcpy(void *dst, const void *src, size_t len);
 
 char PafStringEmpty;
 uint16_t PafWStringEmpty;

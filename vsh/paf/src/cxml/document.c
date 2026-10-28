@@ -1,8 +1,7 @@
 #include "cxml.h"
 #include "../paf_types.h"
+#include "../std/string.h"
 #include <kernel/iofilemgr.h>
-
-extern void *sce_paf_memcpy(void *dst, const void *src, size_t size);
 
 int32_t CxmlDocumentCreateFromFile(CxmlDocument *self, const FileSharedPtr *fp,
 				  unsigned char copy_filetable)
