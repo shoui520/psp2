@@ -3,8 +3,8 @@
 
 #include "file.h"
 #include "../thread/mutex.h"
+#include "../thread/thread.h"
 
-typedef struct Thread Thread;
 typedef struct HttpFileReader HttpFileReader;
 typedef struct HttpFileReaderParam HttpFileReaderParam;
 typedef struct HttpFileReaderContext HttpFileReaderContext;
@@ -84,6 +84,27 @@ typedef struct HttpFileReaderContextSharedPtr {
 	HttpFileReaderContextRefCounter *m_ref_counter;
 } HttpFileReaderContextSharedPtr;
 
+struct HttpFileReaderContextRefCounter {
+	HttpFileReaderContext *m_ptr;
+	int32_t m_counter;
+	int32_t m_weak_counter;
+	void (*m_deleter)(HttpFileReaderContext *ptr);
+};
+
+typedef char HttpFileReaderContextRefCounterSizeCheck[
+	sizeof(HttpFileReaderContextRefCounter) == 16 ? 1 : -1];
+
+static inline __attribute__((always_inline))
+void HttpFileReaderContextSharedPtrRelease(const HttpFileReaderContextSharedPtr *self)
+{
+	if (self->m_ptr &&
+	    sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_counter) == 1) {
+		self->m_ref_counter->m_deleter(self->m_ptr);
+		if (sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_weak_counter) == 1)
+			ScePafStdc_1B77082E(self->m_ref_counter);
+	}
+}
+
 typedef struct HttpFile {
 	File base;
 	unsigned char m_is_opened;
@@ -126,6 +147,7 @@ typedef char HttpFileContextOffsetCheck[offsetof(HttpFile, m_reader_context) == 
 #define HttpFileGetstat ScePafMisc_A004D31D
 #define HttpFileDestroy ScePafMisc_967C0019
 #define HttpFileDelete ScePafMisc_13E9B54C
+#define HttpFileDestroyBase ScePafMisc_E93C0EBB
 #define HttpFileGetResponseCode ScePafMisc_8E656E2D
 #define HttpFileGetResponsePhrase ScePafMisc_45ADBF5A
 #define HttpFileGetResponseVersion ScePafMisc_6AE2E808
@@ -156,6 +178,7 @@ int32_t HttpFileWaitAsync(HttpFile *self, int64_t *result);
 int32_t HttpFilePollAsync(HttpFile *self, int64_t *result);
 int32_t HttpFileGetstat(HttpFile *self, FileStat *stat);
 HttpFile *HttpFileDestroy(HttpFile *self);
+HttpFile *HttpFileDestroyBase(HttpFile *self);
 void HttpFileDelete(HttpFile *self);
 int32_t HttpFileGetResponseCode(HttpFile *self, uint16_t *code);
 int32_t HttpFileGetResponsePhrase(HttpFile *self, PafString *phrase);

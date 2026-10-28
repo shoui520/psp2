@@ -3,6 +3,49 @@
 
 #include "httpfile.h"
 #include "../std/map.h"
+#include "../buffer/buffer.h"
+
+typedef struct HttpFileHeaderEntry {
+	PafString first;
+	PafStringVector second;
+} HttpFileHeaderEntry;
+
+typedef struct HttpFileHeaderMapNode {
+	struct HttpFileHeaderMapNode *_Parent;
+	struct HttpFileHeaderMapNode *_Left;
+	struct HttpFileHeaderMapNode *_Right;
+	HttpFileHeaderEntry _Myval;
+	unsigned char _Color;
+	unsigned char _Isnil;
+} HttpFileHeaderMapNode;
+
+struct HttpFileReaderParam {
+	PafString scheme;
+	PafString host;
+	uint16_t port;
+	PafString method;
+	PafString version;
+	PafString uri;
+	PafString user;
+	PafString passwd;
+	PafMap header;
+	BufferSharedPtr msg_body;
+	uint32_t open_flag;
+	uint32_t https_flag;
+	HttpFileTimeout timeout;
+	int32_t accept_encoding_gzip;
+	HttpFileReaderContextSharedPtr context;
+	uint32_t template_option;
+	size_t response_header_max_size;
+};
+
+typedef char HttpFileHeaderMapNodeSizeCheck[sizeof(HttpFileHeaderMapNode) == 44 ? 1 : -1];
+typedef char HttpFileReaderParamSizeCheck[sizeof(HttpFileReaderParam) == 152 ? 1 : -1];
+typedef char HttpFileReaderParamBodyOffsetCheck[offsetof(HttpFileReaderParam, msg_body) == 100 ? 1 : -1];
+typedef char HttpFileReaderParamContextOffsetCheck[offsetof(HttpFileReaderParam, context) == 136 ? 1 : -1];
+
+PafMap *HttpFileHeaderMapClear(PafMap *self);
+int32_t HttpFileDeleteReader(HttpFile *self);
 
 typedef struct HttpFileReaderConfig HttpFileReaderConfig;
 typedef struct HttpFileReaderConfigRefCounter HttpFileReaderConfigRefCounter;

@@ -31,6 +31,83 @@ const FileClass httpFileClass = {
 	}
 };
 
+PafMap *HttpFileHeaderMapClear(PafMap *self)
+{
+	HttpFileHeaderMapNode *head = self->_Myhead;
+	HttpFileHeaderMapNode *node;
+
+	if (!head)
+		return self;
+	node = head->_Left;
+	while (!node->_Isnil) {
+		if (!node->_Left->_Isnil) {
+			node = node->_Left;
+		} else if (!node->_Right->_Isnil) {
+			node = node->_Right;
+		} else {
+			HttpFileHeaderMapNode *parent = node->_Parent;
+			PafStringVector *values = &node->_Myval.second;
+
+			if (!parent->_Isnil) {
+				if (parent->_Left == node)
+					parent->_Left = head;
+				else
+					parent->_Right = head;
+			}
+			if (values->_data) {
+				size_t count = values->_size;
+
+				while (count) {
+					PafStringDestroy(&values->_data[count - 1]);
+					--count;
+				}
+				ScePafStdc_1B77082E(values->_data);
+			}
+			values->_data = (PafString *)-1;
+			values->_size = (size_t)-1;
+			values->_capacity = (size_t)-1;
+			PafStringDestroy(&node->_Myval.first);
+			ScePafStdc_1B77082E(node);
+			head = self->_Myhead;
+			node = parent;
+		}
+	}
+	head->_Parent = head;
+	head->_Left = head;
+	head->_Right = head;
+	self->_Mysize = 0;
+	return NULL;
+}
+
+int32_t HttpFileDeleteReader(HttpFile *self)
+{
+	HttpFileReaderParam *param;
+
+	if (self->m_http_reader)
+		self->m_http_reader->vtable->Delete(self->m_http_reader);
+	param = self->m_reader_param;
+	self->m_http_reader = NULL;
+	if (param) {
+		HttpFileReaderContextSharedPtrRelease(&param->context);
+		BufferSharedPtrRelease(&param->msg_body);
+		HttpFileHeaderMapClear(&param->header);
+		if (param->header._Myhead)
+			ScePafStdc_1B77082E(param->header._Myhead);
+		param->header._Myhead = (void *)-1;
+		param->header._Mysize = (size_t)-1;
+		PafStringDestroy(&param->passwd);
+		PafStringDestroy(&param->user);
+		PafStringDestroy(&param->uri);
+		PafStringDestroy(&param->version);
+		PafStringDestroy(&param->method);
+		PafStringDestroy(&param->host);
+		PafStringDestroy(&param->scheme);
+		ScePafStdc_1B77082E(param);
+	}
+	self->m_reader_param = NULL;
+	return 0;
+}
+
 HttpFile *HttpFileConstruct(HttpFile *self)
 {
 	self->base.vtable = &httpFileClass.methods;
@@ -294,4 +371,55 @@ int32_t HttpFileGetResponseHeader(HttpFile *self, const char *name,
 	}
 	ScePafThread_95F9C45F(&self->m_lock_mutex);
 	return ret;
+}
+
+int32_t HttpFileClose(HttpFile *self)
+{
+	int32_t ret;
+
+	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	if (self->m_io_thread) {
+		ret = SCE_PAF_ERROR_FILE_BUSY;
+	} else if (self->m_is_opened) {
+		RWLockLockExclusive(&self->m_lock_rwlock);
+		ret = self->m_http_reader->vtable->Close(self->m_http_reader);
+		HttpFileDeleteReader(self);
+		self->m_is_opened = 0;
+		RWLockUnlockExclusive(&self->m_lock_rwlock);
+	} else {
+		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
+	}
+	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	return ret;
+}
+
+HttpFile *HttpFileDestroy(HttpFile *self)
+{
+	self->base.vtable = &httpFileClass.methods;
+	if (self->m_io_thread) {
+		ThreadCancel(self->m_io_thread);
+		ThreadJoin(self->m_io_thread);
+		if (self->m_io_thread)
+			self->m_io_thread->vtable->Delete(self->m_io_thread);
+	}
+	self->m_io_thread = NULL;
+	if (self->m_http_reader)
+		self->m_http_reader->vtable->Close(self->m_http_reader);
+	HttpFileDeleteReader(self);
+	HttpFileReaderContextSharedPtrRelease(&self->m_reader_context);
+	ScePafThread_8CCECAC9(&self->m_lock_mutex);
+	RWLockDestroy(&self->m_lock_rwlock);
+	self->base.vtable = &fileClass.methods;
+	return self;
+}
+
+void HttpFileDelete(HttpFile *self)
+{
+	HttpFileDestroy(self);
+	ScePafStdc_1B77082E(self);
+}
+
+HttpFile *HttpFileDestroyBase(HttpFile *self)
+{
+	return HttpFileDestroy(self);
 }
