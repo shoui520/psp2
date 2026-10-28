@@ -8,6 +8,29 @@ typedef struct JobItem JobItem;
 typedef struct JobQueue JobQueue;
 typedef struct JobItemOption JobItemOption;
 
+typedef struct JobQueueNode {
+	struct JobQueueNode *prev;
+	struct JobQueueNode *next;
+	JobQueue *val;
+} JobQueueNode;
+
+typedef struct JobQueueList {
+	JobQueueNode *root_node;
+	int32_t count;
+	unsigned char alloc_value;
+	unsigned char alloc_node;
+} JobQueueList;
+
+typedef char JobQueueNodeSizeCheck[sizeof(JobQueueNode) == 12 ? 1 : -1];
+typedef char JobQueueListSizeCheck[sizeof(JobQueueList) == 12 ? 1 : -1];
+
+#define JobQueueQueueList ScePafThread_5B60F892
+extern JobQueueList JobQueueQueueList;
+
+JobQueueList *JobQueueListConstruct(JobQueueList *self, const void *allocator);
+JobQueueList *JobQueueListDestroy(JobQueueList *self);
+void JobInitialize(void);
+
 typedef struct JobItemVTable {
 	JobItem *(*Destroy)(JobItem *self);
 	void (*Delete)(JobItem *self);
