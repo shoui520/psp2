@@ -8,7 +8,7 @@
 #include "buffer.h"
 #include "marlin_hci.h"
 
-int MarlinHciCheckAccess(void)
+__attribute__((noinline)) int MarlinHciCheckAccess(void)
 {
 	return SceSblACMgrForDriver_F5AE24AC(0) != 0 ? 0 : SCE_ERROR_ERRNO_ENOSYS;
 }

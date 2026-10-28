@@ -43,6 +43,7 @@ typedef struct MarlinKeySignRequest {
 	unsigned int dataSize;
 	const void *data;
 	unsigned int outputHandle;
+	unsigned int reserved;
 } MarlinKeySignRequest;
 
 typedef struct MarlinKeyDecryptRequest {
