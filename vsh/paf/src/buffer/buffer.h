@@ -45,9 +45,24 @@ typedef char BufferRefCounterSizeCheck[sizeof(BufferRefCounter) == 16 ? 1 : -1];
 typedef char BufferSharedPtrSizeCheck[sizeof(BufferSharedPtr) == 8 ? 1 : -1];
 
 #define HeapAllocBufferCreate ScePafMisc_22F87132
+#define HeapAllocBufferAllocate ScePafMisc_E9C6A564
+#define HeapAllocBufferDestroy ScePafMisc_75CB07DC
+#define HeapAllocBufferDelete ScePafMisc_5A9ACD28
+#define HeapAllocBufferDestroyBase ScePafMisc_44C18EAD
 
+void *BufferGetAddr(Buffer *self);
+const void *BufferGetConstAddr(const Buffer *self);
+size_t BufferGetSize(const Buffer *self);
+Buffer *BufferDestroy(Buffer *self);
+void BufferDelete(Buffer *self);
+void BufferDefaultDelete(Buffer *ptr);
 void HeapAllocBufferCreate(BufferSharedPtr *result, void *addr, size_t size,
 			   HeapAllocator *allocator);
+void HeapAllocBufferAllocate(BufferSharedPtr *result, size_t size,
+			     HeapAllocator *allocator);
+Buffer *HeapAllocBufferDestroy(Buffer *base);
+Buffer *HeapAllocBufferDestroyBase(Buffer *base);
+void HeapAllocBufferDelete(Buffer *base);
 
 static inline __attribute__((always_inline))
 void BufferSharedPtrCopy(BufferSharedPtr *self, const BufferSharedPtr *src)
