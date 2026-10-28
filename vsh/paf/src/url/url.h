@@ -95,4 +95,34 @@ void UrlGetQueryString(PafString *result, const Url *self);
 void UrlGetAnchorString(PafString *result, const Url *self);
 void UrlGetParamaterString(PafString *result, const Url *self);
 
+#define UrlGetBaseUrlString ScePafMisc_5598485B
+#define UrlGetBaseUrlWString ScePafMisc_B0A064AE
+#define UrlGetHostWString ScePafMisc_7DEBD39D
+#define UrlGetParamaterWString ScePafMisc_635A26CE
+#define UrlGetAnchorWString ScePafMisc_1A33F18C
+#define UrlGetPasswordWString ScePafMisc_7FE63098
+#define UrlGetPathWString ScePafMisc_CC331BFF
+#define UrlGetQueryWString ScePafMisc_F94D3CD2
+#define UrlGetRelativePathString ScePafMisc_2D4F45CA
+#define UrlGetRelativePathWString ScePafMisc_DED512ED
+#define UrlGetUserWString ScePafMisc_4352F231
+#define UrlCopyString ScePafMisc_14C9C3D8
+#define UrlCopyWString ScePafMisc_2E04CDAE
+#define UrlGetSchemeWString ScePafMisc_7E3F524A
+
+void UrlGetBaseUrlString(PafString *result, const Url *self);
+void UrlGetBaseUrlWString(PafWString *result, const Url *self);
+void UrlGetHostWString(PafWString *result, const Url *self);
+void UrlGetParamaterWString(PafWString *result, const Url *self);
+void UrlGetAnchorWString(PafWString *result, const Url *self);
+void UrlGetPasswordWString(PafWString *result, const Url *self);
+void UrlGetPathWString(PafWString *result, const Url *self);
+void UrlGetQueryWString(PafWString *result, const Url *self);
+void UrlGetRelativePathString(PafString *result, const Url *self);
+void UrlGetRelativePathWString(PafWString *result, const Url *self);
+void UrlGetUserWString(PafWString *result, const Url *self);
+void UrlCopyString(PafString *result, const Url *self);
+void UrlCopyWString(PafWString *result, const Url *self);
+void UrlGetSchemeWString(PafWString *result, const Url *self);
+
 #endif

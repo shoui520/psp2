@@ -269,6 +269,153 @@ void UrlGetUserString(PafString *result, const Url *self)
 	CommonStringDestroy(&value);
 }
 
+void UrlGetBaseUrlString(PafString *result, const Url *self)
+{
+	CommonString value;
+	PafString text, original;
+
+	CommonStringConstruct(&value);
+	CommonStringGetString(&text, &self->m_urlstring);
+	UrlStringConstruct(&original, text.ptr);
+	PafStringDestroy(&text);
+	UrlLoadComponent(&value, self, UrlPartBase);
+	CommonStringGetString(result, &value);
+	PafStringDestroy(&original);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetBaseUrlWString(PafWString *result, const Url *self)
+{
+	PafString str;
+	CommonString value;
+
+	UrlGetBaseUrlString(&str, self);
+	CommonStringConstructString(&value, &str);
+	PafStringDestroy(&str);
+	CommonStringGetWString(result, &value);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetHostWString(PafWString *result, const Url *self)
+{
+	PafString str;
+	CommonString value;
+
+	UrlGetHostString(&str, self);
+	CommonStringConstructString(&value, &str);
+	PafStringDestroy(&str);
+	CommonStringGetWString(result, &value);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetParamaterWString(PafWString *result, const Url *self)
+{
+	PafString str;
+	CommonString value;
+
+	UrlGetParamaterString(&str, self);
+	CommonStringConstructString(&value, &str);
+	PafStringDestroy(&str);
+	CommonStringGetWString(result, &value);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetAnchorWString(PafWString *result, const Url *self)
+{
+	PafString str;
+	CommonString value;
+
+	UrlGetAnchorString(&str, self);
+	CommonStringConstructString(&value, &str);
+	PafStringDestroy(&str);
+	CommonStringGetWString(result, &value);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetPasswordWString(PafWString *result, const Url *self)
+{
+	PafString str;
+	CommonString value;
+
+	UrlGetPasswordString(&str, self);
+	CommonStringConstructString(&value, &str);
+	PafStringDestroy(&str);
+	CommonStringGetWString(result, &value);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetPathWString(PafWString *result, const Url *self)
+{
+	PafString str;
+	CommonString value;
+
+	UrlGetPathString(&str, self);
+	CommonStringConstructString(&value, &str);
+	PafStringDestroy(&str);
+	CommonStringGetWString(result, &value);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetQueryWString(PafWString *result, const Url *self)
+{
+	PafString str;
+	CommonString value;
+
+	UrlGetQueryString(&str, self);
+	CommonStringConstructString(&value, &str);
+	PafStringDestroy(&str);
+	CommonStringGetWString(result, &value);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetRelativePathString(PafString *result, const Url *self)
+{
+	PafString str;
+	CommonString value;
+
+	UrlGetPathString(&str, self);
+	CommonStringConstructString(&value, &str);
+	PafStringDestroy(&str);
+	CommonStringGetString(result, &value);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetRelativePathWString(PafWString *result, const Url *self)
+{
+	PafString str;
+	CommonString value;
+
+	UrlGetPathString(&str, self);
+	CommonStringConstructString(&value, &str);
+	PafStringDestroy(&str);
+	CommonStringGetWString(result, &value);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetUserWString(PafWString *result, const Url *self)
+{
+	PafString str;
+	CommonString value;
+
+	UrlGetUserString(&str, self);
+	CommonStringConstructString(&value, &str);
+	PafStringDestroy(&str);
+	CommonStringGetWString(result, &value);
+	CommonStringDestroy(&value);
+}
+
+void UrlGetSchemeWString(PafWString *result, const Url *self)
+{
+	PafString str;
+	CommonString value;
+
+	UrlGetSchemeString(&str, self);
+	CommonStringConstructString(&value, &str);
+	PafStringDestroy(&str);
+	CommonStringGetWString(result, &value);
+	CommonStringDestroy(&value);
+}
+
 void UrlGetSchemeString(PafString *result, const Url *self)
 {
 	CommonString value;

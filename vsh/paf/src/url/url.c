@@ -187,6 +187,16 @@ void UrlGetUrlWString(PafWString *result, const Url *self)
 	CommonStringDestroy(&value);
 }
 
+void UrlCopyString(PafString *result, const Url *self)
+{
+	UrlGetUrlString(result, self);
+}
+
+void UrlCopyWString(PafWString *result, const Url *self)
+{
+	UrlGetUrlWString(result, self);
+}
+
 int UrlReleasePool(Url *self)
 {
 	if (self->m_pool) {
