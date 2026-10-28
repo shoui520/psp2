@@ -303,7 +303,7 @@ ScePaf:
         - ScePafMisc_170E50BE: 0x170E50BE
         - ScePafMisc_17260154: 0x17260154
         - ScePafMisc_17407539: 0x17407539
-        - ScePafMisc_1755AA58: 0x1755AA58
+        - _ZN3paf5sound6Output9PlaySoundEPKcjifb: 0x1755AA58
         - ScePafMisc_17B87641: 0x17B87641
         - ScePafMisc_1805D207: 0x1805D207
         - ScePafMisc_183DD5C3: 0x183DD5C3
@@ -384,7 +384,7 @@ ScePaf:
         - ScePafMisc_29E8BCA7: 0x29E8BCA7
         - ScePafMisc_2A230DDC: 0x2A230DDC
         - ScePafMisc_2AC7BCC1: 0x2AC7BCC1
-        - ScePafMisc_2AD3D189: 0x2AD3D189
+        - _ZN3paf5sound6OutputD1Ev: 0x2AD3D189
         - ScePafMisc_2B325CC6: 0x2B325CC6
         - ScePafMisc_2B9F804B: 0x2B9F804B
         - ScePafMisc_2BE3A49D: 0x2BE3A49D
@@ -392,7 +392,7 @@ ScePaf:
         - ScePafMisc_2C89D449: 0x2C89D449
         - ScePafMisc_2CA79755: 0x2CA79755
         - ScePafMisc_2CF401D9: 0x2CF401D9
-        - ScePafMisc_2CFC62B6: 0x2CFC62B6
+        - _ZN3paf5sound6OutputD2Ev: 0x2CFC62B6
         - ScePafMisc_2D4F45CA: 0x2D4F45CA
         - ScePafMisc_2D5AD1EF: 0x2D5AD1EF
         - ScePafMisc_2D6089DC: 0x2D6089DC
@@ -432,7 +432,7 @@ ScePaf:
         - ScePafMisc_3636127A: 0x3636127A
         - ScePafMisc_364D2AE7: 0x364D2AE7
         - ScePafMisc_36CF059C: 0x36CF059C
-        - ScePafMisc_36F86DCD: 0x36F86DCD
+        - _ZN3paf5sound6Output9PlaySoundEPKcjS3_jifb: 0x36F86DCD
         - ScePafMisc_376DFF8C: 0x376DFF8C
         - ScePafMisc_3778BD50: 0x3778BD50
         - ScePafMisc_37897945: 0x37897945
@@ -661,12 +661,12 @@ ScePaf:
         - ScePafMisc_6E5A46EC: 0x6E5A46EC
         - ScePafMisc_6EC994D7: 0x6EC994D7
         - ScePafMisc_6F11BD71: 0x6F11BD71
-        - ScePafMisc_6F5CACFB: 0x6F5CACFB
+        - _ZN3paf5sound6Output6UpdateEv: 0x6F5CACFB
         - ScePafMisc_6FAAC9C5: 0x6FAAC9C5
         - ScePafMisc_70031E0C: 0x70031E0C
         - ScePafMisc_70E604B9: 0x70E604B9
         - ScePafMisc_71148CB2: 0x71148CB2
-        - ScePafMisc_714A7962: 0x714A7962
+        - _ZN3paf5sound6Output4InitEi: 0x714A7962
         - ScePafMisc_716D378A: 0x716D378A
         - ScePafMisc_717BE37A: 0x717BE37A
         - ScePafMisc_718411BE: 0x718411BE
@@ -691,7 +691,7 @@ ScePaf:
         - ScePafMisc_75AFD25C: 0x75AFD25C
         - ScePafMisc_75CB07DC: 0x75CB07DC
         - ScePafMisc_7616DF6C: 0x7616DF6C
-        - ScePafMisc_7698EC42: 0x7698EC42
+        - _ZN3paf5sound6Output9StopSoundEPKc: 0x7698EC42
         - ScePafMisc_76CC0B17: 0x76CC0B17
         - ScePafMisc_77039A6F: 0x77039A6F
         - ScePafMisc_7709D1B2: 0x7709D1B2
@@ -711,7 +711,7 @@ ScePaf:
         - ScePafMisc_79F13D72: 0x79F13D72
         - ScePafMisc_7A05075E: 0x7A05075E
         - ScePafMisc_7A4AAFF2: 0x7A4AAFF2
-        - ScePafMisc_7ACADFBB: 0x7ACADFBB
+        - _ZN3paf5sound6Output16WaitSoundStoppedEv: 0x7ACADFBB
         - ScePafMisc_7B15112F: 0x7B15112F
         - ScePafMisc_7B2F323F: 0x7B2F323F
         - ScePafMisc_7B2F4627: 0x7B2F4627
@@ -746,8 +746,8 @@ ScePaf:
         - ScePafMisc_802D12CD: 0x802D12CD
         - ScePafMisc_807CCDB4: 0x807CCDB4
         - ScePafMisc_807E22C4: 0x807E22C4
-        - ScePafMisc_80D8B47B: 0x80D8B47B
-        - ScePafMisc_8138ACF1: 0x8138ACF1
+        - _ZN3paf5sound6Output12StopSoundAllEv: 0x80D8B47B
+        - _ZN3paf5sound6Output12PlayADPCM2chEPKcjS3_jifb: 0x8138ACF1
         - ScePafMisc_8161A692: 0x8161A692
         - ScePafMisc_8193E3E1: 0x8193E3E1
         - ScePafMisc_82171187: 0x82171187
@@ -842,7 +842,7 @@ ScePaf:
         - ScePafMisc_98BF4D32: 0x98BF4D32
         - ScePafMisc_995435F4: 0x995435F4
         - ScePafMisc_996A8C03: 0x996A8C03
-        - ScePafMisc_996C1507: 0x996C1507
+        - _ZN3paf5sound6Output12PlayADPCM1chEPKcjifb: 0x996C1507
         - ScePafMisc_999CDF39: 0x999CDF39
         - ScePafMisc_99A8215F: 0x99A8215F
         - ScePafMisc_99AAA9F7: 0x99AAA9F7
@@ -1016,7 +1016,7 @@ ScePaf:
         - ScePafMisc_C0B69287: 0xC0B69287
         - ScePafMisc_C11453F8: 0xC11453F8
         - ScePafMisc_C11CB5E4: 0xC11CB5E4
-        - ScePafMisc_C14C88EF: 0xC14C88EF
+        - _ZN3paf5sound6OutputC2Ei: 0xC14C88EF
         - ScePafMisc_C160806C: 0xC160806C
         - ScePafMisc_C1A97796: 0xC1A97796
         - ScePafMisc_C1DE0AC2: 0xC1DE0AC2
@@ -1080,7 +1080,7 @@ ScePaf:
         - ScePafMisc_D19653CB: 0xD19653CB
         - ScePafMisc_D1A490F2: 0xD1A490F2
         - ScePafMisc_D1E648EF: 0xD1E648EF
-        - ScePafMisc_D21E94FC: 0xD21E94FC
+        - _ZN3paf5sound6OutputC1Ei: 0xD21E94FC
         - ScePafMisc_D2221E7B: 0xD2221E7B
         - ScePafMisc_D27C91C0: 0xD27C91C0
         - ScePafMisc_D29258BB: 0xD29258BB
@@ -1186,7 +1186,7 @@ ScePaf:
         - ScePafMisc_E81FC483: 0xE81FC483
         - ScePafMisc_E872D707: 0xE872D707
         - ScePafMisc_E89DF174: 0xE89DF174
-        - ScePafMisc_E8E4B916: 0xE8E4B916
+        - _ZN3paf5sound6Output11EnableSoundEb: 0xE8E4B916
         - ScePafMisc_E8F1AAF8: 0xE8F1AAF8
         - ScePafMisc_E904B4E0: 0xE904B4E0
         - ScePafMisc_E93C0EBB: 0xE93C0EBB
