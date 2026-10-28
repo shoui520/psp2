@@ -53,6 +53,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/std/stdlib.c
 	src/std/string.c
 	src/std/memory.c
+	src/std/tty.c
 	src/std/printf.c
 	src/std/format.c
 	src/std/format_abi.S
