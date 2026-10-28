@@ -29,5 +29,46 @@ PafWString *PafWStringAssign(PafWString *self, const uint16_t *src, size_t len);
 PafString *PafStringErase(PafString *self, size_t pos, size_t len);
 PafString *PafStringAppend(PafString *self, size_t len, char value);
 PafString *PafStringAssign(PafString *self, const char *src, size_t len);
+PafString *PafStringCopy(PafString *self, const PafString *src);
+
+extern void *ScePafStdc_FC5CD359(size_t size);
+extern void ScePafStdc_1B77082E(void *ptr);
+extern int ScePafStdc_D608246A(void);
+extern void *sce_paf_memcpy(void *dst, const void *src, size_t len);
+
+static inline __attribute__((always_inline)) void PafStringInitialize(PafString *self)
+{
+	self->ptr = &PafStringEmpty;
+	self->count = 0;
+}
+
+static inline __attribute__((always_inline)) void PafStringDestroy(PafString *self)
+{
+	if (self->ptr != &PafStringEmpty)
+		ScePafStdc_1B77082E(self->ptr);
+	self->ptr = (char *)-1;
+	self->count = (size_t)-1;
+}
+
+/* The byte-span append overload is inlined at the queue-name call sites. */
+static inline __attribute__((always_inline))
+void PafStringAppendBytes(PafString *self, const char *src, size_t len)
+{
+	char *dest = ScePafStdc_FC5CD359(self->count + len + 1);
+
+	if (dest) {
+		size_t total = self->count + len;
+
+		sce_paf_memcpy(dest, self->ptr, self->count);
+		sce_paf_memcpy(dest + self->count, src, len);
+		dest[self->count + len] = 0;
+		if (self->ptr != &PafStringEmpty)
+			ScePafStdc_1B77082E(self->ptr);
+		self->ptr = dest;
+		self->count = total;
+	} else {
+		ScePafStdc_D608246A();
+	}
+}
 
 #endif

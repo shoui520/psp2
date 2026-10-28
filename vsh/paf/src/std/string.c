@@ -162,3 +162,25 @@ PafString *PafStringAssign(PafString *self, const char *src, size_t len)
 	self->count = 0;
 	return self;
 }
+
+PafString *PafStringCopy(PafString *self, const PafString *src)
+{
+	if (self == src)
+		return self;
+	if (self->ptr != &PafStringEmpty)
+		ScePafStdc_1B77082E(self->ptr);
+	if (src->count) {
+		char *dest = ScePafStdc_FC5CD359(src->count + 1);
+
+		if (dest) {
+			self->ptr = dest;
+			self->count = src->count;
+			sce_paf_memcpy(dest, src->ptr, src->count + 1);
+			return self;
+		}
+		ScePafStdc_D608246A();
+	}
+	self->ptr = &PafStringEmpty;
+	self->count = 0;
+	return self;
+}
