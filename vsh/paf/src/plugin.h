@@ -3,6 +3,8 @@
 
 #include "paf_types.h"
 #include "std/string.h"
+#include "std/map.h"
+#include "std/list.h"
 
 typedef struct Plugin Plugin;
 typedef struct HeapAllocator HeapAllocator;
@@ -94,6 +96,97 @@ typedef struct PluginInitParam {
 	int32_t graphics_flag;
 } PluginInitParam;
 
+typedef struct Module Module;
+typedef struct Widget Widget;
+typedef struct Scene Scene;
+typedef struct CxmlElement CxmlElement;
+typedef struct ResourceObj ResourceObj;
+typedef struct VersatileParamManager VersatileParamManager;
+typedef struct InitEventFunctionEntry InitEventFunctionEntry;
+typedef struct EventFunctionEntry EventFunctionEntry;
+typedef struct LayoutFunctionEntry LayoutFunctionEntry;
+
+typedef struct DrawOrderElement {
+	Scene *page;
+	int32_t view_priority;
+	int32_t page_priority;
+} DrawOrderElement;
+
+typedef struct DrawOrderVector {
+	DrawOrderElement *_data;
+	size_t _size;
+	size_t _capacity;
+	unsigned char _allocator;
+} DrawOrderVector;
+
+typedef struct PluginNotifyNode {
+	struct PluginNotifyNode *prev;
+	struct PluginNotifyNode *next;
+	void (*val)(int32_t status, void *userdata);
+} PluginNotifyNode;
+
+struct Plugin {
+	unsigned char initialized;
+	PafString name;
+	PafString caller_name;
+	void (*set_param_func)(PluginInitParam2 *param);
+	void (*init_func)(Plugin *plugin);
+	void (*start_func)(Plugin *plugin);
+	void (*stop_func)(Plugin *plugin);
+	void (*exit_func)(Plugin *plugin);
+	Module *module;
+	InitEventFunctionEntry *init_event_handler_table;
+	EventFunctionEntry *event_handler_table;
+	PafMap event_handler_name_table;
+	LayoutFunctionEntry *layout_handler_table;
+	PafMap layout_handler_name_table;
+	PafMap interface_table;
+	PafMap widget_table;
+	PafMap create_page_table;
+	PafMap surface_table;
+	PafMap add_texture_table;
+	PafMap template_table;
+	DrawOrderVector draw_order;
+	ResourceObj *rscobj;
+	VersatileParamManager *style_param_manager;
+	VersatileParamManager *obj_param_manager;
+	VersatileParamManager *sound_param_manager;
+	HeapAllocator *private_heap;
+	unsigned char private_heap_created;
+	HeapAllocator *decode_heap;
+	unsigned char decode_heap_created;
+	void *surface_pool_addr;
+	SurfacePool *surface_pool;
+	PluginArgumentMap arguments;
+	int32_t option;
+	PafList notify_callback_list;
+	PafList unload_callback_list;
+	void *param;
+	CxmlElement *last_active_page_node;
+	int32_t draw_priority;
+	Locale locale;
+	unsigned char texture_table_loaded;
+	int32_t tex_load_filter;
+	void (*monitoring_callback_pageopen)(Plugin *plugin, CxmlElement *node);
+	void (*monitoring_callback_pageactivate)(Plugin *plugin, CxmlElement *node);
+	void (*monitoring_callback_pageclose)(Plugin *plugin, CxmlElement *node);
+	uint8_t *resource_data;
+	uint32_t resource_data_size;
+	uint32_t page_debug_focus_enabled;
+	int32_t page_debug_mode;
+	EnvironmentParam *env_param;
+	unsigned char env_param_created;
+	unsigned char graphics_flag;
+	unsigned char unloading;
+};
+
+typedef char DrawOrderElementSizeCheck[sizeof(DrawOrderElement) == 12 ? 1 : -1];
+typedef char DrawOrderVectorSizeCheck[sizeof(DrawOrderVector) == 16 ? 1 : -1];
+typedef char PluginSizeCheck[sizeof(Plugin) == 316 ? 1 : -1];
+typedef char PluginResourceOffsetCheck[offsetof(Plugin, rscobj) == 176 ? 1 : -1];
+typedef char PluginParamOffsetCheck[offsetof(Plugin, param) == 256 ? 1 : -1];
+typedef char PluginEnvironmentOffsetCheck[offsetof(Plugin, env_param) == 308 ? 1 : -1];
+
 typedef char PluginArgumentSizeCheck[sizeof(PluginArgument) == 20 ? 1 : -1];
 typedef char PluginArgumentMapNodeSizeCheck[sizeof(PluginArgumentMapNode) == 48 ? 1 : -1];
 typedef char PluginArgumentMapSizeCheck[sizeof(PluginArgumentMap) == 12 ? 1 : -1];
@@ -108,6 +201,9 @@ typedef char PluginInitParamSizeCheck[sizeof(PluginInitParam) == 148 ? 1 : -1];
 #define PluginInitParamConstruct ScePafToplevel_400F84CE
 #define PluginInitParamConstructBase ScePafToplevel_58C1A580
 #define PluginLoadAsync ScePafToplevel_F702E40A
+#define PluginStop ScePafToplevel_2645FC81
+#define PluginGetArg ScePafToplevel_20D1E49B
+#define PluginNotify ScePafToplevel_CC31A095
 
 PluginInitParam2 *PluginInitParam2Construct(PluginInitParam2 *self);
 int32_t PluginArgumentToInt(const PluginArgument *self);
@@ -119,5 +215,11 @@ PluginInitParam *PluginInitParamConstructBase(PluginInitParam *self);
 PluginArgumentMap *PluginArgumentMapClear(PluginArgumentMap *self);
 void PluginLoadAsync(const PluginInitParam *param,
 		     void (*finish_callback)(Plugin *plugin), int32_t option);
+void PluginStop(Plugin *self);
+void PluginGetArg(PluginArgument *result, const Plugin *self,
+		  const char *key, unsigned char *exist);
+void PluginNotify(const Plugin *self, int32_t status);
+void PluginArgumentMapFind(PluginArgumentMapNode **result,
+			   const PluginArgumentMap *self, const PafString *key);
 
 #endif

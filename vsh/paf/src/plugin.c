@@ -51,6 +51,59 @@ PluginInitParam2 *PluginInitParam2ConstructBase(PluginInitParam2 *self)
 	return self;
 }
 
+void PluginStop(Plugin *self)
+{
+	if (self->stop_func)
+		self->stop_func(self);
+}
+
+void PluginGetArg(PluginArgument *result, const Plugin *self,
+		  const char *key, unsigned char *exist)
+{
+	extern size_t sce_paf_strlen(const char *text);
+	PluginArgumentMapNode *found;
+	PafString name;
+	size_t len = 0;
+
+	PafStringInitialize(&name);
+	if (key)
+		len = sce_paf_strlen(key);
+	PafStringAssign(&name, key, len);
+	PluginArgumentMapFind(&found, &self->arguments, &name);
+	PafStringDestroy(&name);
+	if (found == self->arguments._Myhead) {
+		if (exist)
+			*exist = 0;
+		result->type = ArgumentType_Int;
+		result->i = 0;
+		PafStringInitialize(&result->str);
+	} else {
+		const PluginArgument *argument = &found->_Myval.second;
+
+		if (exist)
+			*exist = 1;
+		result->type = argument->type;
+		result->i = argument->i;
+		PafStringInitialize(&result->str);
+		PafStringCopy(&result->str, &argument->str);
+	}
+}
+
+void PluginNotify(const Plugin *self, int32_t status)
+{
+	PluginNotifyNode *head = self->notify_callback_list.root_node;
+	PluginNotifyNode *node = head ? head->next : NULL;
+
+	while (node != head) {
+		if (node->val) {
+			node->val(status, self->param);
+			head = self->notify_callback_list.root_node;
+		}
+		if (node)
+			node = node->next;
+	}
+}
+
 PluginInitParam *PluginInitParamConstruct(PluginInitParam *self)
 {
 	PluginArgumentMapNode *head;
@@ -143,4 +196,32 @@ PluginArgumentMap *PluginArgumentMapClear(PluginArgumentMap *self)
 	head->_Right = head;
 	self->_Mysize = 0;
 	return NULL;
+}
+
+void PluginArgumentMapFind(PluginArgumentMapNode **result,
+			   const PluginArgumentMap *self, const PafString *key)
+{
+	extern int sce_paf_strcmp(const char *left, const char *right);
+	PluginArgumentMapNode *node = NULL;
+
+	if (self->_Myhead) {
+		node = self->_Myhead->_Parent;
+		while (!node->_Isnil) {
+			const char *left = key->ptr;
+			const char *right = node->_Myval.first.ptr;
+
+			if ((unsigned char)*left < (unsigned char)*right ||
+			    sce_paf_strcmp(left, right) < 0) {
+				node = node->_Left;
+			} else {
+				left = node->_Myval.first.ptr;
+				right = key->ptr;
+				if ((unsigned char)*left >= (unsigned char)*right &&
+				    sce_paf_strcmp(left, right) >= 0)
+					break;
+				node = node->_Right;
+			}
+		}
+	}
+	*result = node;
 }

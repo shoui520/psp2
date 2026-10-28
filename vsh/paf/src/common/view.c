@@ -96,6 +96,36 @@ void ViewControllerPluginOnExit(ViewController *self, Plugin *plugin)
 {
 }
 
+void ViewPluginOnInit(Plugin *plugin)
+{
+	if (plugin) {
+		ViewController *controller = plugin->param;
+
+		if (controller)
+			controller->vtable->PluginOnInit(controller, plugin);
+	}
+}
+
+void ViewPluginOnStop(Plugin *plugin)
+{
+	if (plugin) {
+		ViewController *controller = plugin->param;
+
+		if (controller)
+			controller->vtable->PluginOnStop(controller, plugin);
+	}
+}
+
+void ViewPluginOnExit(Plugin *plugin)
+{
+	if (plugin) {
+		ViewController *controller = plugin->param;
+
+		if (controller)
+			controller->vtable->PluginOnExit(controller, plugin);
+	}
+}
+
 ViewController *ViewControllerDestroy(ViewController *self)
 {
 	self->vtable = &viewControllerClass.methods;
