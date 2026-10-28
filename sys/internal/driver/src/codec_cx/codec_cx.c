@@ -38,7 +38,8 @@ static int writeScript(const short *script)
 	return ret;
 }
 
-int SceCodecForDriver_23BF8884(unsigned int reg, unsigned int value)
+/* name unknown: write one 8-bit register */
+static __attribute__((noinline)) int writeRegister(int reg, unsigned int value)
 {
 	unsigned char buffer[3];
 
@@ -46,6 +47,25 @@ int SceCodecForDriver_23BF8884(unsigned int reg, unsigned int value)
 	buffer[1] = reg;
 	buffer[2] = value;
 	return sceI2cMasterTransmit(0, 0x66, buffer, 3);
+}
+
+/* name unknown: apply the volume table for the currently cached route. */
+static int setVolume(int volume)
+{
+	int value = 0x8b - s_volume[volume + ((s_codec.flags & 4) ? 0 : 31)];
+	int ret;
+
+	if (value < 0)
+		value = 0;
+	ret = writeRegister(0x12, value);
+	if (ret >= 0)
+		s_codec.level = (value - 0x7f) >> 1;
+	return ret;
+}
+
+int SceCodecForDriver_23BF8884(unsigned int reg, unsigned int value)
+{
+	return writeRegister(reg, value);
 }
 
 int SceCodecForDriver_4FA36937(unsigned int reg)
@@ -57,20 +77,6 @@ int SceCodecForDriver_4FA36937(unsigned int reg)
 	command[1] = reg;
 	ret = sceI2cMasterTransmitReceive(0, 0x66, command, 2, 0x66, &value, 1);
 	return ret < 0 ? ret : value;
-}
-
-/* name unknown: apply the volume table for the currently cached route. */
-static int setVolume(int volume)
-{
-	int value = 0x8b - s_volume[volume + ((s_codec.flags & 4) ? 0 : 31)];
-	int ret;
-
-	if (value < 0)
-		value = 0;
-	ret = SceCodecForDriver_23BF8884(0x12, value);
-	if (ret >= 0)
-		s_codec.level = (value - 0x7f) >> 1;
-	return ret;
 }
 
 /* name unknown: initialize once, then wait for the codec-ready bit. */
@@ -133,7 +139,7 @@ static int setRouting(int route, int output, int active, int power)
 			return ret;
 		alternate = 1;
 	}
-	ret = SceCodecForDriver_23BF8884(0x36, (flags & 0x10) ? 0x13 : 6);
+	ret = writeRegister(0x36, (flags & 0x10) ? 0x13 : 6);
 	if (ret < 0)
 		return ret;
 	if (!alternate) {
