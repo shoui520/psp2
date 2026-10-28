@@ -1,9 +1,16 @@
 #include "resource_obj.h"
 #include "../cxml/util.h"
 #include "../paf_types.h"
+#include "../std/stdlib.h"
 #include "../versatileparam/idparam.h"
+#include <sce_atomic.h>
 
 extern int sce_paf_strcmp(const char *left, const char *right);
+extern size_t sce_paf_strlen(const char *str);
+extern void ScePafStdc_5C468294(void *ptr);
+
+static const char s_default_string[] = "";
+static const char s_buffer_filename[] = "";
 
 char *ResourceObjGetFileName(const ResourceObj *self)
 {
@@ -584,4 +591,164 @@ int32_t ResourceObjGetSoundFromBufferElement(const ResourceObj *self, const Cxml
 		return ret;
 	return ResourceObjGetSoundFromBufferHash(self, value, addr1, size1,
 			addr2, size2, samplerate, type);
+}
+
+ResourceObj *ResourceObjConstructFromBuffer(ResourceObj *self, const void *addr,
+					  size_t size, const ResourceObjOption *option)
+{
+	ResourceIDMapNode *head;
+	CxmlDocument *document;
+	int32_t ret;
+
+	self->rscfp.m_ptr = NULL;
+	self->rscfp.m_ref_counter = NULL;
+	PafStringInitialize(&self->filename);
+	self->document = NULL;
+	self->string_document = NULL;
+	self->rscallocator = option->allocator;
+	self->string_buffer = NULL;
+	self->texture_buffer = NULL;
+	self->model_buffer = NULL;
+	self->sound_buffer = NULL;
+	self->textures = NULL;
+	self->models = NULL;
+	self->sounds = NULL;
+	self->num_textures = 0;
+	self->num_models = 0;
+	self->num_sounds = 0;
+	self->load_status = 0;
+	self->create_type = 1;
+	self->id_map._Mysize = 0;
+	head = ScePafStdc_FC5CD359(sizeof(*head));
+	if (!head)
+		ScePafStdc_D608246A();
+	self->id_map._Myhead = head;
+	if (head) {
+		head->_Parent = head;
+		head->_Left = head;
+		head->_Right = head;
+		head->_Color = 0;
+		self->id_map._Myhead->_Isnil = 1;
+	}
+	PafStringInitialize(&self->default_string);
+	PafStringAssign(&self->default_string, s_default_string,
+			sce_paf_strlen(s_default_string));
+	self->resolution = 0;
+	PafStringAssign(&self->filename, s_buffer_filename,
+			sce_paf_strlen(s_buffer_filename));
+	document = ScePafStdc_FC5CD359(sizeof(*document));
+	if (document)
+		document = CxmlDocumentConstruct(document);
+	self->document = document;
+	document->allocator = option->cxml_allocator_func;
+	document->allocator_userdata = self->rscallocator;
+	ret = CxmlDocumentCreateFromBuffer(document, addr, size, 0);
+	if (ret)
+		self->load_status = ret;
+	return self;
+}
+
+ResourceObj *ResourceObjConstructFromBufferBase(ResourceObj *self, const void *addr,
+					      size_t size, const ResourceObjOption *option)
+{
+	return ResourceObjConstructFromBuffer(self, addr, size, option);
+}
+
+ResourceIDMap *ResourceIDMapClear(ResourceIDMap *self)
+{
+	ResourceIDMapNode *head = self->_Myhead;
+	ResourceIDMapNode *node, *parent;
+
+	if (!head)
+		return self;
+	node = head->_Left;
+	while (!node->_Isnil) {
+		if (!node->_Left->_Isnil) {
+			node = node->_Left;
+		} else if (!node->_Right->_Isnil) {
+			node = node->_Right;
+		} else {
+			parent = node->_Parent;
+			if (!parent->_Isnil) {
+				if (parent->_Left == node)
+					parent->_Left = head;
+				else
+					parent->_Right = head;
+			}
+			PafStringDestroy(&node->_Myval.second);
+			ScePafStdc_1B77082E(node);
+			head = self->_Myhead;
+			node = parent;
+		}
+	}
+	head->_Parent = head;
+	head->_Left = head;
+	head->_Right = head;
+	self->_Mysize = 0;
+	return NULL;
+}
+
+ResourceObj *ResourceObjDestroy(ResourceObj *self)
+{
+	CxmlDocument *document;
+
+	if (self->create_type == 1) {
+		if (self->textures) {
+			ScePafStdc_5C468294(self->textures);
+			self->textures = NULL;
+			self->num_textures = 0;
+		}
+		if (self->models) {
+			ScePafStdc_5C468294(self->models);
+			self->models = NULL;
+			self->num_models = 0;
+		}
+		if (self->sounds) {
+			ScePafStdc_5C468294(self->sounds);
+			self->sounds = NULL;
+			self->num_sounds = 0;
+		}
+	}
+	if (self->string_document) {
+		ScePafStdc_1B77082E(CxmlDocumentDestroy(self->string_document));
+		self->string_document = NULL;
+		if (self->create_type == 0 && self->string_buffer) {
+			if (self->rscallocator)
+				scePafFreeWithContext(self->rscallocator, self->string_buffer);
+			else
+				sce_paf_free(self->string_buffer);
+		}
+		self->string_buffer = NULL;
+	}
+	document = self->document;
+	if (document) {
+		if (self->create_type == 0) {
+			CxmlDocumentClear(document);
+			document = self->document;
+		}
+		if (document)
+			ScePafStdc_1B77082E(CxmlDocumentDestroy(document));
+		self->document = NULL;
+	}
+	if (self->rscfp.m_ptr)
+		self->rscfp.m_ptr->vtable->Close(self->rscfp.m_ptr);
+	PafStringDestroy(&self->default_string);
+	ResourceIDMapClear(&self->id_map);
+	if (self->id_map._Myhead)
+		ScePafStdc_1B77082E(self->id_map._Myhead);
+	self->id_map._Myhead = (ResourceIDMapNode *)-1;
+	self->id_map._Mysize = (size_t)-1;
+	PafStringDestroy(&self->filename);
+	if (self->rscfp.m_ptr &&
+	    sceAtomicDecrement32AcqRel(&self->rscfp.m_ref_counter->m_counter) == 1) {
+		self->rscfp.m_ref_counter->m_deleter(self->rscfp.m_ptr);
+		if (sceAtomicDecrement32AcqRel(&self->rscfp.m_ref_counter->m_weak_counter) == 1)
+			ScePafStdc_1B77082E(self->rscfp.m_ref_counter);
+	}
+	return self;
+}
+
+ResourceObj *ResourceObjDestroyBase(ResourceObj *self)
+{
+	return ResourceObjDestroy(self);
 }

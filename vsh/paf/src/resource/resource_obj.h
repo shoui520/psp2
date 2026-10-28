@@ -101,12 +101,23 @@ typedef struct ResourceObj {
 	uint32_t resolution;
 } ResourceObj;
 
+typedef struct ResourceObjOption {
+	uint32_t load_type;
+	HeapAllocator *allocator;
+	CxmlAllocator cxml_allocator_func;
+} ResourceObjOption;
+
 typedef char ResourceIDMapNodeSizeCheck[sizeof(ResourceIDMapNode) == 32 ? 1 : -1];
 typedef char ResourceIDMapSizeCheck[sizeof(ResourceIDMap) == 12 ? 1 : -1];
 typedef char ResourceObjSizeCheck[sizeof(ResourceObj) == 108 ? 1 : -1];
 typedef char ResourceBufferEntrySizeCheck[sizeof(ResourceBufferEntry) == 16 ? 1 : -1];
 typedef char ResourceSoundEntrySizeCheck[sizeof(ResourceSoundEntry) == 28 ? 1 : -1];
+typedef char ResourceObjOptionSizeCheck[sizeof(ResourceObjOption) == 12 ? 1 : -1];
 
+#define ResourceObjConstructFromBuffer ScePafResource_9E3EE281
+#define ResourceObjConstructFromBufferBase ScePafResource_E629FBF7
+#define ResourceObjDestroy ScePafResource_F194FC6D
+#define ResourceObjDestroyBase ScePafResource_E617D3AE
 #define ResourceObjGetFileName ScePafResource_FA00F835
 #define ResourceObjGetLoadStatus ScePafResource_04FC462E
 #define ResourceObjGetCreateType ScePafResource_E3349545
@@ -143,6 +154,13 @@ typedef char ResourceSoundEntrySizeCheck[sizeof(ResourceSoundEntry) == 28 ? 1 : 
 #define ResourceObjGetSoundFromBuffer ScePafResource_DD1FF94F
 #define ResourceObjGetSoundFromBufferElement ScePafResource_65C0FDF9
 
+ResourceObj *ResourceObjConstructFromBuffer(ResourceObj *self, const void *addr,
+					  size_t size, const ResourceObjOption *option);
+ResourceObj *ResourceObjConstructFromBufferBase(ResourceObj *self, const void *addr,
+					      size_t size, const ResourceObjOption *option);
+ResourceObj *ResourceObjDestroy(ResourceObj *self);
+ResourceObj *ResourceObjDestroyBase(ResourceObj *self);
+ResourceIDMap *ResourceIDMapClear(ResourceIDMap *self);
 char *ResourceObjGetFileName(const ResourceObj *self);
 int32_t ResourceObjGetLoadStatus(const ResourceObj *self);
 uint32_t ResourceObjGetCreateType(const ResourceObj *self);
