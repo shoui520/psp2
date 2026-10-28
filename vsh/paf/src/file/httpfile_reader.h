@@ -345,6 +345,8 @@ int64_t HttpFileRangeReaderSeek(HttpFileRangeReader *self, int64_t offset,
 				int32_t whence);
 int32_t HttpFileRangeReaderAbort(HttpFileRangeReader *self);
 int64_t HttpFileRangeReaderGetFileSize(HttpFileRangeReader *self);
+HttpFileResponse *HttpFileRangeReaderGetResponse(HttpFileRangeReader *self);
+PafMap *HttpFileRangeReaderGetResponseHeaders(HttpFileRangeReader *self);
 int32_t HttpFileRangeReaderFormatRange(HttpFileRangeReader *self, char *dst,
 				     size_t max, size_t nbyte);
 

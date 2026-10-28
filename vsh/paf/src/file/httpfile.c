@@ -2393,6 +2393,24 @@ int64_t HttpFileRangeReaderGetFileSize(HttpFileRangeReader *self)
 	return -1;
 }
 
+HttpFileResponse *HttpFileRangeReaderGetResponse(HttpFileRangeReader *self)
+{
+	HttpFileReader *reader = self->m_reader;
+
+	if (reader)
+		return reader->vtable->GetResponse(reader);
+	return &self->base.m_response;
+}
+
+PafMap *HttpFileRangeReaderGetResponseHeaders(HttpFileRangeReader *self)
+{
+	HttpFileReader *reader = self->m_reader;
+
+	if (reader)
+		return reader->vtable->GetResponseHeaders(reader);
+	return &self->base.m_response_headers;
+}
+
 int32_t HttpFileRangeReaderFormatRange(HttpFileRangeReader *self, char *dst,
 				     size_t max, size_t nbyte)
 {
