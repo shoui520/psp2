@@ -573,9 +573,9 @@ int MarlinKernelDisableKey(unsigned int keyHandle, unsigned int unused,
 {
 	unsigned int type = 0;
 	unsigned int size = 0;
+	unsigned int handle = 0;
 	void *object = 0;
 	MarlinBuffer *buffer = 0;
-	unsigned int handle = 0;
 	int result = 3;
 	int disableResult;
 
