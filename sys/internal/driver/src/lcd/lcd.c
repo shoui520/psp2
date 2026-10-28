@@ -53,7 +53,7 @@ static unsigned backlightReady, displayEnabled, brightness;
 static int backlightCurrent, backlightTarget;
 static unsigned panelMode, colorMode, hardwareInfo, hardwareSpecial;
 
-static unsigned reverseByte(unsigned value) /* name unknown */
+static inline unsigned reverseByte(unsigned value) /* name unknown */
 {
 	value = ((value & 0x55) << 1) | ((value >> 1) & 0x55);
 	value = ((value & 0x33) << 2) | ((value >> 2) & 0x33);
@@ -67,7 +67,7 @@ static void waitTime(unsigned usec) /* name unknown */
 		;
 }
 
-static void spiBegin(void) /* name unknown */
+static inline void spiBegin(void) /* name unknown */
 {
 	if (!lcd.spiDepth) {
 		ScePervasiveForDriver_DFD96BFC(2);
@@ -78,7 +78,7 @@ static void spiBegin(void) /* name unknown */
 	lcd.spiDepth++;
 }
 
-static void spiBits(unsigned word, unsigned bits) /* name unknown */
+static inline void spiBits(unsigned word, unsigned bits) /* name unknown */
 {
 	lcd.txValue |= word << lcd.txBits;
 	lcd.txBits += bits;
@@ -91,7 +91,7 @@ static void spiBits(unsigned word, unsigned bits) /* name unknown */
 	}
 }
 
-static void spiPad(void) /* name unknown */
+static inline void spiPad(void) /* name unknown */
 {
 	while (lcd.txBits)
 		spiBits(0, 9);
@@ -123,7 +123,7 @@ static void spiEnd(void) /* name unknown */
 	ScePervasiveForDriver_A85BF98A(2);
 }
 
-static void spiRead(unsigned char *data, unsigned length, unsigned skip) /* name unknown */
+static inline void spiRead(unsigned char *data, unsigned length, unsigned skip) /* name unknown */
 {
 	/* The original stores every whole byte, even past the requested length. */
 	unsigned value = 0, bits = 0, count = 0;
@@ -275,7 +275,7 @@ int SceLcdForDriver_8C965153(void)
 	int ret = SceLcdForDriver_223C8375(10, value, 1);
 	return ret < 0 ? ret : ((value[0] >> 2) & 1);
 }
-int SceLcdForDriver_59CCDC97(void)
+inline int SceLcdForDriver_59CCDC97(void)
 {
 	const unsigned char *p = sequence;
 	if (!p)
@@ -300,7 +300,7 @@ int SceLcdForDriver_59CCDC97(void)
 	sequence = 0;
 	return 0;
 }
-int SceLcdForDriver_4735059C(unsigned poll)
+__attribute__((noinline)) int SceLcdForDriver_4735059C(unsigned poll)
 {
 	if (poll)
 		return sequence != 0 || backlightCurrent != backlightTarget;
@@ -349,7 +349,7 @@ static __attribute__((noinline)) int readHardwareInfo(void) /* name unknown */
 	return 0;
 }
 
-static unsigned char *copyScript(unsigned char *out, const unsigned char **in,
+static inline unsigned char *copyScript(unsigned char *out, const unsigned char **in,
 				 unsigned stop) /* name unknown */
 {
 	const unsigned char *p = *in;
@@ -368,7 +368,7 @@ static unsigned char *copyScript(unsigned char *out, const unsigned char **in,
 	*in = p;
 	return out;
 }
-static void buildScript(void) /* name unknown */
+static __attribute__((noinline)) void buildScript(void) /* name unknown */
 {
 	const unsigned char *init, *p;
 	unsigned char *out;
@@ -382,7 +382,7 @@ static void buildScript(void) /* name unknown */
 	out = copyScript(out, &init, 0xff);
 	*out = 0xff;
 }
-static int queueSequence(const unsigned char *p) /* name unknown */
+static inline int queueSequence(const unsigned char *p) /* name unknown */
 {
 	int ret = SceLcdForDriver_4B6B53C0(p);
 	if (!ret && synchronous)
@@ -458,7 +458,7 @@ static int enqueueBrightness(void) /* name unknown */
 				      backlightWork, 0);
 	return ret < 0 ? ret : 0;
 }
-int SceLcdForDriver_5F4124AB(void)
+inline int SceLcdForDriver_5F4124AB(void)
 {
 	int ret;
 	if (displayEnabled)
@@ -477,7 +477,7 @@ int SceLcdForDriver_1A0A7519(void)
 	ret = queueSequence(displayOff);
 	if (ret)
 		return ret;
-	displayEnabled = brightness = backlightTarget = 0;
+	backlightTarget = brightness = displayEnabled = 0;
 	return enqueueBrightness();
 }
 int SceLcdForDriver_9F1DB5CD(void)
@@ -499,7 +499,7 @@ int SceLcdForDriver_581D3A87(unsigned value)
 		}
 		target = 0;
 	} else {
-		target = value == 1 ? 25 : brightnessTable[((value - 2) * 16) / 65534];
+		target = value == 1 ? 25 : brightnessTable[(int)((value - 2) * 16) / 65534];
 		if (!displayEnabled) {
 			ret = SceLcdForDriver_5F4124AB();
 			if (ret)
@@ -566,7 +566,7 @@ int SceLcdForDriver_3E7C2CCA(void)
 		waitTime(120000);
 	else
 		sceKernelDelayThread(120000);
-	backlightCurrent = backlightReady = displayEnabled = brightness = backlightTarget = 0;
+	backlightCurrent = backlightReady = backlightTarget = brightness = displayEnabled = 0;
 	ret = SceLcdForDriver_4B6B53C0(resetPanel);
 	if (ret)
 		return ret;
