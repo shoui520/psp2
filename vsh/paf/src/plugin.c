@@ -57,6 +57,62 @@ void PluginStop(Plugin *self)
 		self->stop_func(self);
 }
 
+PluginPageOpenParam *PluginPageOpenParamConstruct(PluginPageOpenParam *self)
+{
+	self->fade = 0;
+	self->draw_layer = 0;
+	self->draw_mask = 0;
+	self->overwrite_draw_priority = -1;
+	self->option = PageOption_None;
+	self->event_handler_table = NULL;
+	self->fade_time_ms = 200.0f;
+	self->transition_type = TransitionType_None;
+	self->timer = NULL;
+	self->env_param = NULL;
+	self->graphics_flag = 128;
+	return self;
+}
+
+void PluginStart(Plugin *self)
+{
+	if (self->rscobj && (self->option & Option_AutoOpen)) {
+		CxmlElement table, page;
+
+		ResourceObjGetTableElement(&table, self->rscobj, TableType_Page);
+		if (table.doc && table.offset >= 0) {
+			CxmlElementGetFirstChild(&page, &table);
+			if (page.doc && page.offset >= 0) {
+				PluginPageOpenParam param;
+
+				PluginPageOpenParamConstruct(&param);
+				PluginPageOpen(self, &page, &param);
+				if (self->option & Option_AutoActivate)
+					PluginPageActivate(self, &page);
+				if (param.timer)
+					param.timer->vtable->Delete(param.timer);
+			}
+		}
+	}
+	if (self->start_func)
+		self->start_func(self);
+}
+
+PluginPageOpenParam *PluginPageOpenParamConstructBase(PluginPageOpenParam *self)
+{
+	self->fade = 0;
+	self->draw_layer = 0;
+	self->draw_mask = 0;
+	self->overwrite_draw_priority = -1;
+	self->option = PageOption_None;
+	self->event_handler_table = NULL;
+	self->fade_time_ms = 200.0f;
+	self->transition_type = TransitionType_None;
+	self->timer = NULL;
+	self->env_param = NULL;
+	self->graphics_flag = 128;
+	return self;
+}
+
 void PluginGetArg(PluginArgument *result, const Plugin *self,
 		  const char *key, unsigned char *exist)
 {

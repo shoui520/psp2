@@ -5,12 +5,45 @@
 #include "std/string.h"
 #include "std/map.h"
 #include "std/list.h"
+#include "timer/timer.h"
+#include "resource/resource_obj.h"
 
 typedef struct Plugin Plugin;
 typedef struct HeapAllocator HeapAllocator;
 typedef struct SurfacePool SurfacePool;
 typedef struct EnvironmentParam EnvironmentParam;
 typedef struct PluginInitParam2 PluginInitParam2;
+
+typedef enum TransitionType {
+	TransitionType_None = 0,
+	TransitionType_SlideFromTop = 1,
+	TransitionType_SlideFromBottom = 2,
+	TransitionType_SlideFromLeft = 3,
+	TransitionType_SlideFromRight = 4
+} TransitionType;
+
+typedef enum PageOption {
+	PageOption_None = 0,
+	PageOption_Create = 1
+} PageOption;
+
+typedef struct InitEventFunctionEntry2 InitEventFunctionEntry2;
+
+typedef struct PluginPageOpenParam {
+	int32_t draw_layer;
+	int32_t draw_mask;
+	int32_t overwrite_draw_priority;
+	int32_t option;
+	InitEventFunctionEntry2 *event_handler_table;
+	unsigned char fade;
+	float fade_time_ms;
+	TransitionType transition_type;
+	Timer *timer;
+	EnvironmentParam *env_param;
+	int32_t graphics_flag;
+} PluginPageOpenParam;
+
+typedef char PluginPageOpenParamSizeCheck[sizeof(PluginPageOpenParam) == 44 ? 1 : -1];
 
 typedef enum PluginOption {
 	Option_None = 0,
@@ -99,8 +132,6 @@ typedef struct PluginInitParam {
 typedef struct Module Module;
 typedef struct Widget Widget;
 typedef struct Scene Scene;
-typedef struct CxmlElement CxmlElement;
-typedef struct ResourceObj ResourceObj;
 typedef struct VersatileParamManager VersatileParamManager;
 typedef struct InitEventFunctionEntry InitEventFunctionEntry;
 typedef struct EventFunctionEntry EventFunctionEntry;
@@ -202,6 +233,11 @@ typedef char PluginInitParamSizeCheck[sizeof(PluginInitParam) == 148 ? 1 : -1];
 #define PluginInitParamConstructBase ScePafToplevel_58C1A580
 #define PluginLoadAsync ScePafToplevel_F702E40A
 #define PluginStop ScePafToplevel_2645FC81
+#define PluginStart ScePafToplevel_3451A886
+#define PluginPageOpenParamConstruct ScePafToplevel_34FE1331
+#define PluginPageOpenParamConstructBase ScePafToplevel_814052CF
+#define PluginPageOpen ScePafToplevel_4B5FE871
+#define PluginPageActivate ScePafToplevel_856092B5
 #define PluginGetArg ScePafToplevel_20D1E49B
 #define PluginNotify ScePafToplevel_CC31A095
 
@@ -216,6 +252,12 @@ PluginArgumentMap *PluginArgumentMapClear(PluginArgumentMap *self);
 void PluginLoadAsync(const PluginInitParam *param,
 		     void (*finish_callback)(Plugin *plugin), int32_t option);
 void PluginStop(Plugin *self);
+void PluginStart(Plugin *self);
+PluginPageOpenParam *PluginPageOpenParamConstruct(PluginPageOpenParam *self);
+PluginPageOpenParam *PluginPageOpenParamConstructBase(PluginPageOpenParam *self);
+Scene *PluginPageOpen(Plugin *self, const CxmlElement *node,
+		    const PluginPageOpenParam *param);
+void PluginPageActivate(Plugin *self, const CxmlElement *node);
 void PluginGetArg(PluginArgument *result, const Plugin *self,
 		  const char *key, unsigned char *exist);
 void PluginNotify(const Plugin *self, int32_t status);
