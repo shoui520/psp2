@@ -539,7 +539,7 @@ int cecDevTx(const SceUInt8 *frame, SceUInt32 length)
 	ret = sceKernelWaitEventFlag(cecDev.eventFlag, CEC_DEV_EVENT_TX_READY |
 				      CEC_DEV_EVENT_TX_RETRY_TIMEOUT | CEC_DEV_EVENT_TX_ARBITRATION,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
-				      SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL, &events, &timeout);
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &events, &timeout);
 	if (ret < 0)
 		return ret;
 	if (events & CEC_DEV_EVENT_TX_ARBITRATION)
