@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "../file/file.h"
 
 typedef enum AccessMode {
 	AccessMode_ReadWrite = 0,
@@ -178,6 +179,7 @@ typedef char IDHashBinSizeCheck[sizeof(IDHashBin) == 8 ? 1 : -1];
 #define CxmlAttributeGetIDHash scePafResourceGetIdIntLpb
 #define CxmlAttributeGetIDHashRef scePafResourceGetIdInt
 #define CxmlFileGetAddr ScePafResource_1CBB0615
+#define CxmlFileLoad ScePafResource_5B2EB699
 
 int32_t CxmlElementGetAttributeByIndex(const CxmlElement *self, int32_t index,
 				      CxmlAttribute *attr);
@@ -204,6 +206,8 @@ int32_t CxmlAttributeGetIDHash(const CxmlAttribute *self, uint32_t *value);
 int32_t CxmlAttributeGetIDHashRef(const CxmlAttribute *self,
 				 uint32_t *value, CxmlElement *entity);
 const void *CxmlFileGetAddr(const CxmlFile *self);
+int32_t CxmlFileLoad(const CxmlFile *self, const FileSharedPtr *fp,
+		      void *buf, size_t bufsize);
 
 typedef char CxmlElementSizeCheck[sizeof(CxmlElement) == 8 ? 1 : -1];
 typedef char CxmlHeaderSizeCheck[sizeof(CxmlHeader) == 80 ? 1 : -1];
