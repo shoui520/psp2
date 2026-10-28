@@ -106,6 +106,40 @@ float TimerDoFuncCustomParabolicIn(float rate, const float *param)
 	return result + value;
 }
 
+float TimerDoFuncCustomParabolicOutIn(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return (1.0f - TimerDoFuncCustomParabolicIn(1.0f - rate * 2.0f,
+							param)) * 0.5f;
+	return TimerDoFuncCustomParabolicIn(rate * 2.0f + -1.0f, param) *
+		0.5f + 0.5f;
+}
+
+float TimerDoFuncCustomParabolicInOut(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return TimerDoFuncCustomParabolicIn(rate * 2.0f, param) * 0.5f;
+	return (1.0f - TimerDoFuncCustomParabolicIn(2.0f - rate * 2.0f,
+						 param)) * 0.5f + 0.5f;
+}
+
+float TimerDoFuncCustomParabolicOut(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFuncCustomParabolicIn(1.0f - rate, param);
+}
+
 float TimerDoFuncCustomExpoIn(float rate, const float *param)
 {
 	if (rate >= 1.0f)
