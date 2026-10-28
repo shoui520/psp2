@@ -123,7 +123,7 @@ static SceUdcdDriver s_driver = {
 	.stop = DriverStartStop,
 };
 
-static void QueuePut(DbgUsbQueue *queue, DbgUsbBuffer *buffer) /* name unknown */
+static inline __attribute__((always_inline)) void QueuePut(DbgUsbQueue *queue, DbgUsbBuffer *buffer) /* name unknown */
 {
 	int state = sceKernelSpinlockLowLockCpuSuspendIntr(&queue->lock);
 
@@ -135,7 +135,7 @@ static void QueuePut(DbgUsbQueue *queue, DbgUsbBuffer *buffer) /* name unknown *
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&queue->lock, state);
 }
 
-static DbgUsbBuffer *QueueGet(DbgUsbQueue *queue) /* name unknown */
+static inline __attribute__((always_inline)) DbgUsbBuffer *QueueGet(DbgUsbQueue *queue) /* name unknown */
 {
 	int state = sceKernelSpinlockLowLockCpuSuspendIntr(&queue->lock);
 	DbgUsbBuffer *buffer = queue->next;
