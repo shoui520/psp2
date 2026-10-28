@@ -46,6 +46,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/inputdevice/motionsensor/motionsensor.c
 	src/timer/timer.c
 	src/timer/curves.c
+	src/std/math.c
 	src/common/view.c
 	src/plugin.c
 	src/cxml/cxml.c
