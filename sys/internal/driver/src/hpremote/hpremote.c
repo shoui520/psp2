@@ -25,17 +25,17 @@ struct HpremoteState {
 
 static struct HpremoteState remote;
 
-static void inputChanged(int value, void *argp) /* name unknown */
+static int inputChanged(int value, void *argp) /* name unknown */
 {
-	remote.rawInput = value;
+	return remote.rawInput = value;
 }
 
-static void multiInputChanged(int value, void *argp) /* name unknown */
+static int multiInputChanged(int value, void *argp) /* name unknown */
 {
-	remote.rawMultiInput = value;
+	return remote.rawMultiInput = value;
 }
 
-static void codecInputChanged(int value) /* name unknown */
+static inline __attribute__((always_inline)) void codecInputChanged(int value) /* name unknown */
 {
 	remote.codecInput = value;
 	sceKernelClearEventFlag(remote.event, value ? ~0x40u : ~4u);
@@ -184,9 +184,10 @@ static int remoteThread(SceSize args, void *argp) /* name unknown */
 				}
 			} else {
 				remote.state = 8;
-				mask = 0;
 				if (remote.hardwareFlags & 4)
 					timeout = 50000;
+				else
+					mask = 0;
 			}
 			break;
 		case 7:
@@ -281,47 +282,55 @@ static int remoteThread(SceSize args, void *argp) /* name unknown */
 
 static int sysEvent(int resume, int event, void *args, void *opt) /* name unknown */
 {
+	unsigned char input, multi;
+
 	if (resume != 1 || event != SYSEVENT_RESUME_DEVICE(12))
 		return 0;
 	sceKernelSetEventFlag(remote.event, 8);
 	codecInputChanged(0);
-	remote.input = SceSysconForDriver_142D5E82();
-	remote.rawInput = remote.input;
-	remote.inputHistory = remote.input ? ~0u : 0;
-	sceKernelClearEventFlag(remote.event, remote.input ? ~2u : ~1u);
-	sceKernelSetEventFlag(remote.event, remote.input ? 1 : 2);
-	remote.rawMultiInput = SceSysconForDriver_ACC7F71E();
-	remote.multiInput = !remote.rawMultiInput;
-	remote.multiHistory = remote.multiInput ? ~0u : 0;
-	remote.status[0] = remote.input == 1;
-	remote.status[1] = remote.status[2] = remote.input == 1 ? -1 : 0;
+	input = SceSysconForDriver_142D5E82();
+	remote.input = input;
+	remote.rawInput = input;
+	remote.inputHistory = input ? ~0u : 0;
+	sceKernelClearEventFlag(remote.event, input ? ~2u : ~1u);
+	sceKernelSetEventFlag(remote.event, input ? 1 : 2);
+	multi = SceSysconForDriver_ACC7F71E();
+	remote.rawMultiInput = multi;
+	remote.multiInput = !multi;
+	remote.multiHistory = !multi ? ~0u : 0;
+	remote.status[0] = input == 1;
+	remote.status[1] = remote.status[2] = input == 1 ? -1 : 0;
 	remote.changed = 1;
 	return 0;
 }
 
-int module_start(SceSize args, void *argp)
+static __attribute__((noinline)) int initialize(void) /* name unknown */
 {
-	uint32_t info;
+	uint32_t info, version;
+	unsigned char input;
 	int uid;
 
 	memset(&remote, 0, sizeof(remote));
 	memset(remote.callbacks, -1, sizeof(remote.callbacks));
 	uid = sceKernelCreateEventFlag("SceHprm", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (uid < 0)
-		return 0;
+		return uid;
 	remote.event = uid;
-	remote.input = SceSysconForDriver_142D5E82();
-	remote.rawInput = remote.input;
-	remote.inputHistory = remote.input ? ~0u : 0;
-	sceKernelSetEventFlag(remote.event, remote.input == 1 ? 1 : 2);
-	remote.status[0] = remote.input == 1;
-	remote.status[1] = remote.status[2] = remote.input == 1 ? -1 : 0;
+	input = SceSysconForDriver_142D5E82();
+	remote.input = input;
+	remote.rawInput = input;
+	remote.inputHistory = input ? ~0u : 0;
+	sceKernelSetEventFlag(remote.event, input == 1 ? 1 : 2);
+	remote.status[0] = input == 1;
+	remote.status[1] = remote.status[2] = input == 1 ? -1 : 0;
 	remote.changed = 1;
-	info = SceSysconForDriver_CBD6D8BC();
-	if ((info & 0xff0000) < 0x800000) {
+	version = SceSysconForDriver_CBD6D8BC();
+	if ((version & 0xff0000) < 0x800000) {
 		remote.hardwareFlags = 3;
-	} else if ((SceSysconForDriver_CBD6D8BC() & 0xff0000) >= 0x820000) {
-		remote.hardwareFlags = 5;
+	} else {
+		remote.hardwareFlags = 0;
+		if ((SceSysconForDriver_CBD6D8BC() & 0xff0000) >= 0x820000)
+			remote.hardwareFlags = 5;
 	}
 	remote.codecInput = SceSysconForDriver_C3504ADE();
 	sceKernelSetEventFlag(remote.event, remote.codecInput == 1 ? 4 : 0x40);
@@ -337,12 +346,18 @@ int module_start(SceSize args, void *argp)
 	SceSysconForDriver_35E1689F(multiInputChanged, NULL);
 	uid = sceKernelCreateThread("SceHpRemote", remoteThread, 0x40, 0x1000, 0, 0x80000, NULL);
 	if (uid < 0)
-		return 0;
+		return uid;
 	remote.thread = uid;
 	sceKernelStartThread(uid, 0, NULL);
 	sceKernelRegisterSubIntrHandler(8, 24, "SceHprmVblank", pollInputs, NULL);
 	sceKernelEnableSubIntr(8, 24);
 	sceKernelRegisterSysEventHandler("SceHprm", sysEvent, NULL);
+	return 0;
+}
+
+int module_start(SceSize args, void *argp)
+{
+	initialize();
 	return 0;
 }
 
@@ -358,32 +373,34 @@ int SceHpremoteForDriver_D22913DB(void (*handler)(int, int, int, int, int, void 
 
 int SceHpremoteForDriver_C7154136(int callback)
 {
-	int intr = sceKernelCpuSuspendIntr(), ret = -1, i;
+	int intr = sceKernelCpuSuspendIntr(), i;
 
-	for (i = 0; i < 16; i++) {
-		if (remote.callbacks[i] < 0) {
-			remote.callbacks[i] = callback;
-			ret = 0;
+	for (i = 0; i < 16; i++)
+		if (remote.callbacks[i] < 0)
 			break;
-		}
+	if (i == 16) {
+		sceKernelCpuResumeIntr(intr);
+		return -1;
 	}
+	remote.callbacks[i] = callback;
 	sceKernelCpuResumeIntr(intr);
-	return ret;
+	return 0;
 }
 
 int SceHpremoteForDriver_68D64A0F(int callback)
 {
-	int intr = sceKernelCpuSuspendIntr(), ret = -1, i;
+	int intr = sceKernelCpuSuspendIntr(), i;
 
-	for (i = 0; i < 16; i++) {
-		if (remote.callbacks[i] == callback) {
-			remote.callbacks[i] = -1;
-			ret = 0;
+	for (i = 0; i < 16; i++)
+		if (remote.callbacks[i] == callback)
 			break;
-		}
+	if (i == 16) {
+		sceKernelCpuResumeIntr(intr);
+		return -1;
 	}
+	remote.callbacks[i] = -1;
 	sceKernelCpuResumeIntr(intr);
-	return ret;
+	return 0;
 }
 
 int SceHpremoteForDriver_71B5FB67(void)
