@@ -46,6 +46,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/versatileparam/idparam.c
 	src/hash/sha1.c
 	src/std/new.c
+	src/std/stdc++/atexit.c
+	src/std/stdc++/paf_crt_mgr.c
 	src/std/ctype.c
 	src/std/stdlib.c
 	src/std/string.c

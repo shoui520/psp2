@@ -1,5 +1,6 @@
 /* ScePaf module startup and C++ runtime finalization. */
 #include "module.h"
+#include "std/stdc++/atexit.h"
 #include <stddef.h>
 
 SceUInt32 global_heap_size;
@@ -14,9 +15,6 @@ extern void (*__start__Zpreinit_array[])(void);
 extern void (*__stop__Zpreinit_array[])(void);
 extern void (*__start__Zinit_array[])(void);
 extern void (*__stop__Zinit_array[])(void);
-
-/* __cxa_finalize in ScePafStdc. */
-extern void ScePafStdc_F36BABE3(void *dso);
 
 int module_start(SceSize argSize, const void *argp)
 {

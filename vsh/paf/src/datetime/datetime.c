@@ -1,5 +1,6 @@
 #include "../compiler.h"
 #include "datetime.h"
+#include "../std/stdc++/atexit.h"
 #include <rtc/rtc.h>
 
 static PafWString date_format;
@@ -15,7 +16,6 @@ static const uint16_t *const abbreviated_day_names[] = {
 	L"Sun", L"Mon", L"Tue", L"Wed", L"Thu", L"Fri", L"Sat"
 };
 
-extern int ScePafStdc_C95732BB(void *object, void (*destroy)(void *), void *dso);
 extern void *__dso_handle;
 
 void DateTimeSetDateFormat(const uint16_t *format)

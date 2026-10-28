@@ -39,6 +39,8 @@ extern uint16_t PafWStringEmpty;
 
 void *sce_paf_memset(void *dst, int ch, size_t len);
 void *sce_paf_memchr(const void *ptr, int ch, size_t count);
+/* Native memcpy forwarding export. */
+void *ScePafStdc_5883A6E3(void *dst, const void *src, size_t count);
 size_t sce_paf_strlen(const char *str);
 size_t sce_paf_wcslen(const uint16_t *str);
 uint16_t *sce_paf_wmemchr(const uint16_t *ptr, uint16_t ch, size_t count);
