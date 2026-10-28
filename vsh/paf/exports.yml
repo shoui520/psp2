@@ -1343,7 +1343,7 @@ ScePaf:
         - ScePafCommon_06C015C6: 0x06C015C6
         - ScePafCommon_09B0ACB5: 0x09B0ACB5
         - ScePafCommon_0DC3E4F3: 0x0DC3E4F3
-        - ScePafCommon_150AA6CE: 0x150AA6CE
+        - _ZN3paf6common8CallListC2Ev: 0x150AA6CE
         - ScePafCommon_168104A7: 0x168104A7
         - ScePafCommon_17280204: 0x17280204
         - ScePafCommon_19056E57: 0x19056E57
@@ -1370,18 +1370,18 @@ ScePaf:
         - ScePafCommon_38964597: 0x38964597
         - ScePafCommon_3BCCE98B: 0x3BCCE98B
         - ScePafCommon_3CFEB1EB: 0x3CFEB1EB
-        - ScePafCommon_3EF56DF3: 0x3EF56DF3
+        - _ZN3paf6common8CallList6UpdateEPNS_6thread5MutexE: 0x3EF56DF3
         - ScePafCommon_4107391F: 0x4107391F
         - ScePafCommon_435EE162: 0x435EE162
         - ScePafCommon_448D4996: 0x448D4996
         - ScePafCommon_4516DE75: 0x4516DE75
-        - ScePafCommon_4803C256: 0x4803C256
+        - _ZN3paf6common8CallListC1Ev: 0x4803C256
         - ScePafCommon_4A6AF5C3: 0x4A6AF5C3
-        - ScePafCommon_4A8115D5: 0x4A8115D5
+        - _ZN3paf6common18MainThreadCallList10UnregisterEPFvPvES2_: 0x4A8115D5
         - ScePafCommon_4B2EEC60: 0x4B2EEC60
         - ScePafCommon_5010445E: 0x5010445E
         - ScePafCommon_50675CDC: 0x50675CDC
-        - ScePafCommon_50C5EB72: 0x50C5EB72
+        - _ZN3paf6common8CallList6GetNumEv: 0x50C5EB72
         - ScePafCommon_50C5FA24: 0x50C5FA24
         - ScePafCommon_5221EB33: 0x5221EB33
         - ScePafCommon_5383A280: 0x5383A280
@@ -1401,7 +1401,7 @@ ScePaf:
         - ScePafCommon_6597DD75: 0x6597DD75
         - ScePafCommon_6607DB18: 0x6607DB18
         - ScePafCommon_66DF2953: 0x66DF2953
-        - ScePafCommon_6735B503: 0x6735B503
+        - _ZN3paf6common18MainThreadCallList8RegisterEPFvPvES2_: 0x6735B503
         - ScePafCommon_683BC8E8: 0x683BC8E8
         - ScePafCommon_6A687A77: 0x6A687A77
         - ScePafCommon_6CD38929: 0x6CD38929
@@ -1479,8 +1479,8 @@ ScePaf:
         - ScePafCommon_CE934628: 0xCE934628
         - ScePafCommon_CF5AC562: 0xCF5AC562
         - ScePafCommon_D0D82903: 0xD0D82903
-        - ScePafCommon_D15A8AE1: 0xD15A8AE1
-        - ScePafCommon_D2B4EFCC: 0xD2B4EFCC
+        - _ZN3paf6common8CallList10UnregisterEPFvPvES2_: 0xD15A8AE1
+        - _ZN3paf6common8CallList8RegisterEPFvPvES2_: 0xD2B4EFCC
         - ScePafCommon_D4CE120A: 0xD4CE120A
         - ScePafCommon_D56E8FFC: 0xD56E8FFC
         - ScePafCommon_D9F31F44: 0xD9F31F44
