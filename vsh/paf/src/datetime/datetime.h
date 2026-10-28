@@ -41,6 +41,10 @@ typedef char DateTimeResultOffsetCheck[offsetof(DateTime, m_parse_result) == 22 
 #define DateTimeSetTimeFormat ScePafMisc_22CA1B27
 #define DateTimeGetTimeFormat ScePafMisc_6227AE12
 #define DateTimeSetDateTimeFormat ScePafMisc_1F723D5D
+#define DateTimeWcsftime ScePafMisc_F8D1975F
+
+size_t DateTimeWcsftime(DateTime *self, uint16_t *buf, int32_t maxLen,
+		      uint16_t *format, int32_t flags);
 
 void DateTimeSetDateFormat(const uint16_t *format);
 PafWString *DateTimeGetDateFormat(void);

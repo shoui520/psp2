@@ -39,6 +39,7 @@ extern uint16_t PafWStringEmpty;
 void *sce_paf_memset(void *dst, int ch, size_t len);
 size_t sce_paf_strlen(const char *str);
 size_t sce_paf_wcslen(const uint16_t *str);
+int sce_paf_swprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format, ...);
 PafWString *PafWStringConstruct(PafWString *self, const void *allocator);
 PafWString *PafWStringDestruct(PafWString *self);
 

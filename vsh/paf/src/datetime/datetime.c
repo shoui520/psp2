@@ -6,6 +6,15 @@ static PafWString date_format;
 static PafWString time_format;
 static PafWString datetime_format;
 
+static const uint16_t *const day_names[] = {
+	L"Sunday", L"Monday", L"Tuesday", L"Wednesday",
+	L"Thursday", L"Friday", L"Saturday"
+};
+
+static const uint16_t *const abbreviated_day_names[] = {
+	L"Sun", L"Mon", L"Tue", L"Wed", L"Thu", L"Fri", L"Sat"
+};
+
 extern int ScePafStdc_C95732BB(void *object, void (*destroy)(void *), void *dso);
 extern void *__dso_handle;
 
@@ -57,6 +66,155 @@ int32_t DateTimeDayOfWeek(uint16_t year, uint16_t month, uint16_t day)
 	}
 	return (year + year / 4 - year / 100 + year / 400 +
 		(13 * month + 8) / 5 + day) % 7;
+}
+
+size_t DateTimeWcsftime(DateTime *self, uint16_t *buf, int32_t maxLen,
+		      uint16_t *format, int32_t flags)
+{
+	uint16_t year = self->m_year, month = self->m_month, day = self->m_day;
+	uint16_t hour = self->m_hour, minute = self->m_minute, second = self->m_second;
+	uint8_t adjust = flags;
+	size_t count = 0, capacity = (uint32_t)maxLen;
+	int escaped = 0, hour12, shortYear;
+	uint16_t ch;
+
+	if (adjust) {
+		RtcDateTime time = {
+			.year = year, .month = month, .day = day,
+			.hour = hour, .minute = minute, .second = second,
+			.microsecond = self->m_microsecond
+		};
+		RtcTick tick, adjusted;
+
+		RtcConvertDateTimeToTick(&time, &tick);
+		RtcTickAddMinutes(&adjusted, &tick, self->m_tz_offset);
+		RtcConvertTickToDateTime(&adjusted, &time, NULL);
+		year = time.year;
+		month = time.month;
+		day = time.day;
+		hour = time.hour;
+		minute = time.minute;
+		second = time.second;
+	}
+	hour12 = (hour + 11) % 12 + 1;
+	shortYear = year % 100;
+	ch = *format;
+	while (ch && count + 1 < capacity) {
+		if (escaped) {
+			switch (ch) {
+			case '%':
+				buf[count++] = '%';
+				break;
+			case 'a':
+				count += sce_paf_swprintf(buf + count, capacity - count,
+							  L"%s", abbreviated_day_names[
+								  DateTimeDayOfWeek(year, month, day)]);
+				break;
+			case 'A':
+				count += sce_paf_swprintf(buf + count, capacity - count,
+							  L"%s", day_names[
+								  DateTimeDayOfWeek(year, month, day)]);
+				break;
+			case 'c':
+				count += DateTimeWcsftime(self, buf + count, capacity - count,
+							 datetime_format.ptr, adjust);
+				break;
+			case 'd':
+				if (self->m_parse_failed == 1)
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"--");
+				else
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"%d", day);
+				break;
+			case 'H':
+				if (self->m_parse_failed == 1)
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"--");
+				else
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"%d", hour);
+				break;
+			case 'I':
+				if (self->m_parse_failed == 1)
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"--");
+				else
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"%d", hour12);
+				break;
+			case 'm':
+				if (self->m_parse_failed == 1)
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"--");
+				else
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"%d", month);
+				break;
+			case 'M':
+				if (self->m_parse_failed == 1)
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"--");
+				else
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"%02d", minute);
+				break;
+			case 'p':
+				if (self->m_parse_failed == 1)
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"--");
+				else
+					count += sce_paf_swprintf(buf + count, capacity - count,
+								  L"%ls", hour < 12 ? L"AM" : L"PM");
+				break;
+			case 'S':
+				if (self->m_parse_failed == 1)
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"--");
+				else
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"%02d", second);
+				break;
+			case 'x':
+				count += DateTimeWcsftime(self, buf + count, capacity - count,
+							 date_format.ptr, adjust);
+				break;
+			case 'X':
+				count += DateTimeWcsftime(self, buf + count, capacity - count,
+							 time_format.ptr, adjust);
+				break;
+			case 'y':
+				if (self->m_parse_failed == 1)
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"--");
+				else
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"%02d", shortYear);
+				break;
+			case 'Y':
+				if (self->m_parse_failed == 1)
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"----");
+				else
+					count += sce_paf_swprintf(buf + count,
+								  capacity - count, L"%d", year);
+				break;
+			default:
+				break;
+			}
+			escaped = 0;
+		} else if (ch == '%') {
+			escaped = 1;
+		} else {
+			buf[count++] = ch;
+		}
+		ch = *++format;
+	}
+	if (capacity <= count)
+		buf[count - 1] = 0;
+	else
+		buf[count] = 0;
+	return count;
 }
 
 DateTime *DateTimeConstruct(DateTime *self, uint16_t year, uint16_t month,
