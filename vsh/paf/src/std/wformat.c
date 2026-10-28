@@ -13,11 +13,10 @@ enum PafFormatFlags {
 	PAF_FORMAT_HEX_PREFIX = 64
 };
 
-int ScePafStdc_AFB23563(PafWideFormatOutput output, void *context,
-		      const uint16_t *format, va_list args)
+int PafWideFormatBody(PafWideFormatOutput output, void *context,
+		      const uint16_t *format, va_list args, uint16_t *buffer)
 {
-	/* Unused words in the native conversion area remain untouched. */
-	uint16_t buffer[31];
+	/* The ABI entry supplies the native, untouched conversion area. */
 	uint16_t *const end = buffer + 31;
 	const uint16_t *digits = L"0123456789abcdef";
 	uint64_t wideValue = 0;

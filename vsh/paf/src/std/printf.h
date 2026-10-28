@@ -8,5 +8,7 @@ typedef void *(*PafWideFormatOutput)(void *context, int32_t ch);
 
 int ScePafStdc_AFB23563(PafWideFormatOutput output, void *context,
 		      const uint16_t *format, va_list args);
+int PafWideFormatBody(PafWideFormatOutput output, void *context,
+		      const uint16_t *format, va_list args, uint16_t *buffer);
 
 #endif

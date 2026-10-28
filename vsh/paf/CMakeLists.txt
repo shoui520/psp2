@@ -51,6 +51,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/std/string.c
 	src/std/wprintf.c
 	src/std/wformat.c
+	src/std/wformat_abi.S
 	src/std/string_vector.c
 	../../sys/sdk/target/src/deflt/zlibhdr.c
 	../../sys/sdk/target/src/deflt/deflate.c
