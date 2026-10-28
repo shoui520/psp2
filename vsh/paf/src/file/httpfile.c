@@ -757,6 +757,35 @@ void HttpFileOpenUrl(FileSharedPtr *result, Url *url, int32_t *error, uint32_t f
 	result->m_ref_counter = NULL;
 }
 
+void HttpFileOpen(FileSharedPtr *result, const char *path, uint32_t flag,
+		  uint32_t mode, int32_t *error)
+{
+	PafString value;
+	Url url;
+
+	(void)mode;
+	PafStringInitialize(&value);
+	PafStringAssign(&value, path, path ? sce_paf_strlen(path) : 0);
+	UrlConstructString(&url, &value);
+	PafStringDestroy(&value);
+	HttpFileOpenUrl(result, &url, error, flag);
+	UrlDestroy(&url);
+}
+
+void HttpFileOpenChar(FileSharedPtr *result, const char *path, int32_t *error,
+		      uint32_t flag)
+{
+	PafString value;
+	Url url;
+
+	PafStringInitialize(&value);
+	PafStringAssign(&value, path, path ? sce_paf_strlen(path) : 0);
+	UrlConstructString(&url, &value);
+	PafStringDestroy(&value);
+	HttpFileOpenUrl(result, &url, error, flag);
+	UrlDestroy(&url);
+}
+
 HttpFile *HttpFileConstruct(HttpFile *self)
 {
 	self->base.vtable = &httpFileClass.methods;

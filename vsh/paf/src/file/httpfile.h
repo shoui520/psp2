@@ -80,6 +80,7 @@ typedef char HttpFileOpenArgResponseOffsetCheck[offsetof(HttpFileOpenArg, respon
 #define HttpFileSetDefaultTimeout ScePafMisc_30A8AD46
 #define HttpFileOpenArgAddRequestHeader ScePafMisc_99A8215F
 #define HttpFileOpenArgParseUrl ScePafMisc_D6D82FF9
+#define HttpFileOpenArgParseUrlChar ScePafMisc_DE80BFD9
 
 extern HttpFileTimeout httpFileDefaultTimeout;
 HttpFileOpenArg *HttpFileOpenArgConstruct(HttpFileOpenArg *self);
@@ -90,6 +91,7 @@ int32_t HttpFileSetDefaultTimeout(int32_t value, HttpFileOptionType type);
 int32_t HttpFileOpenArgAddRequestHeader(HttpFileOpenArg *self, const char *name,
 				       const char *value);
 int32_t HttpFileOpenArgParseUrl(HttpFileOpenArg *self, Url *url);
+int32_t HttpFileOpenArgParseUrlChar(HttpFileOpenArg *self, const char *url);
 
 static inline __attribute__((always_inline))
 void HttpFileOpenArgDestroyMembers(HttpFileOpenArg *self)
@@ -185,6 +187,8 @@ typedef char HttpFileContextOffsetCheck[offsetof(HttpFile, m_reader_context) == 
 #define HttpFileConstruct ScePafMisc_541FFC11
 #define HttpFileConstructBase ScePafMisc_444C9C53
 #define HttpFileOpenUrl ScePafMisc_BBB786F9
+#define HttpFileOpen ScePafMisc_70031E0C
+#define HttpFileOpenChar ScePafMisc_A9958563
 #define HttpFileGetFileType ScePafMisc_065AF035
 #define HttpFileGetCapability ScePafMisc_F4C6ED9D
 #define HttpFileGetFileSize ScePafMisc_B06C6A6B
@@ -218,6 +222,10 @@ typedef char HttpFileContextOffsetCheck[offsetof(HttpFile, m_reader_context) == 
 HttpFile *HttpFileConstruct(HttpFile *self);
 HttpFile *HttpFileConstructBase(HttpFile *self);
 void HttpFileOpenUrl(FileSharedPtr *result, Url *url, int32_t *error, uint32_t flag);
+void HttpFileOpen(FileSharedPtr *result, const char *path, uint32_t flag,
+		  uint32_t mode, int32_t *error);
+void HttpFileOpenChar(FileSharedPtr *result, const char *url, int32_t *error,
+		      uint32_t flag);
 int32_t HttpFileGetFileType(const HttpFile *self);
 int32_t HttpFileGetCapability(const HttpFile *self);
 int64_t HttpFileGetFileSize(HttpFile *self);

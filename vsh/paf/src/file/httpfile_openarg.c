@@ -144,3 +144,18 @@ int32_t HttpFileOpenArgSetOption(HttpFileOpenArg *self, int32_t value,
 		self->timeout.recv_timeout = value;
 	return SCE_PAF_OK;
 }
+
+int32_t HttpFileOpenArgParseUrlChar(HttpFileOpenArg *self, const char *path)
+{
+	PafString value;
+	Url url;
+	int32_t ret;
+
+	PafStringInitialize(&value);
+	PafStringAssign(&value, path, path ? sce_paf_strlen(path) : 0);
+	UrlConstructString(&url, &value);
+	PafStringDestroy(&value);
+	ret = HttpFileOpenArgParseUrl(self, &url);
+	UrlDestroy(&url);
+	return ret;
+}
