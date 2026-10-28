@@ -165,8 +165,8 @@ match:
 	}
 
 	{
-		int treeBase = lengthClass < 0 ? -1 : lengthClass + 56;
-		u32 treeLimit = lengthClass < 0 ? 64 : 256;
+		int treeBase = length <= 2 ? lengthClass : lengthClass + 56;
+		u32 treeLimit = length <= 2 ? 64 : 256;
 		u32 node = 8;
 		int selector;
 
