@@ -42,6 +42,7 @@ size_t sce_paf_strlen(const char *str);
 PafWString *PafWStringErase(PafWString *self, size_t pos, size_t len);
 PafWString *PafWStringAppend(PafWString *self, size_t len, uint16_t value);
 PafWString *PafWStringAssign(PafWString *self, const uint16_t *src, size_t len);
+PafWString *PafWStringCopy(PafWString *self, const PafWString *src);
 PafString *PafStringErase(PafString *self, size_t pos, size_t len);
 PafString *PafStringAppend(PafString *self, size_t len, char value);
 PafString *PafStringAssign(PafString *self, const char *src, size_t len);

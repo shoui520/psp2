@@ -255,3 +255,27 @@ size_t PafStringRfind(const PafString *self, const char *str,
 		--current;
 	}
 }
+
+PafWString *PafWStringCopy(PafWString *self, const PafWString *src)
+{
+	if (src != self) {
+		if (self->ptr != &PafWStringEmpty)
+			ScePafStdc_1B77082E(self->ptr);
+		if (src->count) {
+			uint16_t *dest = ScePafStdc_FC5CD359(2 * (src->count + 1));
+
+			if (dest) {
+				size_t count = src->count;
+
+				self->ptr = dest;
+				self->count = count;
+				sce_paf_memcpy(dest, src->ptr, 2 * count + 2);
+				return self;
+			}
+			ScePafStdc_D608246A();
+		}
+		self->ptr = &PafWStringEmpty;
+		self->count = 0;
+	}
+	return self;
+}
