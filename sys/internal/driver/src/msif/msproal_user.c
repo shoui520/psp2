@@ -50,19 +50,22 @@ int MsproalUserSetBusClock(int busMode)
 void MsproalUserCompleteTransfer(struct MsproalHandle *handle)
 {
 	struct MsifControllerRegisters *controller = MSPROAL_CONTROLLER(handle);
+	SceUID eventFlag;
 	uint32_t bits;
 	int result;
 
 	if (controller->sequencer.control & 4) {
+		bits = 0x20000000;
+		eventFlag = gMsifContext.eventFlag;
 		controller->sequencer.control |= 8;
-		handle->interruptFlags |= 0x20000000;
-		result = sceKernelSetEventFlag(gMsifContext.eventFlag, 0x20000000);
+		handle->interruptFlags |= bits;
 	} else {
+		eventFlag = gMsifContext.eventFlag;
 		bits = handle->registers->interruptStatus;
 		handle->registers->interruptStatus = bits;
 		handle->interruptFlags |= bits;
-		result = sceKernelSetEventFlag(gMsifContext.eventFlag, bits);
 	}
+	result = sceKernelSetEventFlag(eventFlag, bits);
 	SCE_DBG_ASSERT_FUNC(result == 0, 1171, "msproal_user_set_flg");
 }
 

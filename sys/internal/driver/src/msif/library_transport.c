@@ -92,9 +92,9 @@ int MsproalSetHostBusMode(struct MsproalHandle *handle, int busMode)
 	uint32_t control = registers->transferControl;
 
 	if (busMode == 1)
-		control = (control & ~0x40) | 0x80;
+		control = (control & 0xff3f) | 0x80;
 	else if (busMode == 5)
-		control = (control & ~0x80) | 0x40;
+		control = (control & 0xff3f) | 0x40;
 	else
 		control &= 0xff3f;
 	registers->transferControl = control;

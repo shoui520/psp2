@@ -294,11 +294,15 @@ int msif_check_capacity(int capacityExponent)
 	int result = MsproalGetMediaInformation(&information);
 
 	if (!result) {
-		uint64_t capacity = 1ULL << capacityExponent;
+		/* VSHL takes its signed shift count from the low byte of the lane. */
+		uint64x1_t capacity = vshl_u64(vdup_n_u64(1),
+			vreinterpret_s64_s32(vdup_n_s32(capacityExponent)));
 
-		if ((capacity >> 9) < information.totalSectors)
+		if (vget_lane_u64(vshr_n_u64(capacity, 9), 0) <
+			information.totalSectors)
 			return -205;
-		if (information.totalSectors < (capacity >> 10))
+		if (information.totalSectors <
+			vget_lane_u64(vshr_n_u64(capacity, 10), 0))
 			return -205;
 		return 0;
 	}

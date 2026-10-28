@@ -1203,7 +1203,7 @@ int sceMsifFormat(int mode)
 
 	if (result < 0)
 		return result;
-	if (mode != 0 && mode != 1) {
+	if ((unsigned int)mode > 1) {
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 		return 0x803d0001;
 	}

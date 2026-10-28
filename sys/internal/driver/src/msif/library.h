@@ -155,7 +155,10 @@ struct MsproalHandle {
 	};
 	struct MsproalAttributeDirectory attributeDirectory;
 	struct MsproalSystemInformation systemInformation;
-	struct MsifRegisterWindow *registers;
+	union {
+		struct MsifRegisterWindow *registers;
+		uint32_t registerBase;
+	};
 	uint32_t partitionStart;
 	uint32_t mediaType;
 	uint32_t mountFlags;
