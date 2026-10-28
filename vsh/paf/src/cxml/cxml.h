@@ -229,12 +229,16 @@ typedef char ElementBinSizeCheck[sizeof(ElementBin) == 28 ? 1 : -1];
 #define CxmlDocumentDestroy ScePafResource_2387124F
 #define CxmlDocumentDestroyBase ScePafResource_71407B32
 #define CxmlDocumentCreateFromBuffer ScePafResource_FFC4FA5F
+#define CxmlDocumentIsRegisteredID ScePafResource_189FB821
+#define CxmlDocumentIsRegisteredIDHash ScePafResource_C69F3D1D
 
 CxmlHeader *CxmlHeaderConstruct(CxmlHeader *self);
 CxmlHeader *CxmlHeaderConstructBase(CxmlHeader *self);
 CxmlDocument *CxmlDocumentConstruct(CxmlDocument *self);
 CxmlDocument *CxmlDocumentConstructBase(CxmlDocument *self);
 int32_t CxmlDocumentClear(CxmlDocument *self);
+unsigned char CxmlDocumentIsRegisteredID(CxmlDocument *self, const char *id);
+unsigned char CxmlDocumentIsRegisteredIDHash(CxmlDocument *self, uint32_t idhash);
 int32_t CxmlDocumentCreateFromBuffer(CxmlDocument *self, const void *buf,
 				    size_t bufsize, unsigned char copy);
 void CxmlDocumentGetDocumentElement(CxmlElement *result, CxmlDocument *self);

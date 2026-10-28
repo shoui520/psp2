@@ -212,3 +212,42 @@ int32_t CxmlDocumentCreateFromBuffer(CxmlDocument *self, const void *buf,
 	}
 	return SCE_PAF_OK;
 }
+
+unsigned char CxmlDocumentIsRegisteredID(CxmlDocument *self, const char *id)
+{
+	extern int sce_paf_strcmp(const char *left, const char *right);
+	extern size_t sce_paf_strlen(const char *text);
+	uint32_t offset = 0;
+
+	if (!self->header.idtable_size)
+		return 0;
+	do {
+		const IDBin *bin = (const IDBin *)(self->idtable + offset);
+		const char *idptr = bin->id;
+
+		if (*idptr == *id && !sce_paf_strcmp(idptr, id))
+			return 1;
+		offset += sce_paf_strlen(idptr) + sizeof(IDBin) + 1;
+	} while (offset < (uint32_t)self->header.idtable_size);
+	return 0;
+}
+
+unsigned char CxmlDocumentIsRegisteredIDHash(CxmlDocument *self, uint32_t idhash)
+{
+	uint32_t size, offset = 0;
+	const IDHashBin *bin;
+
+	if (!idhash)
+		return 1;
+	size = (uint32_t)self->header.idhashtable_size;
+	if (!size)
+		return 0;
+	bin = (const IDHashBin *)self->idhashtable;
+	do {
+		if (bin->idhash == idhash)
+			return 1;
+		offset += sizeof(*bin);
+		bin++;
+	} while (offset < size);
+	return 0;
+}
