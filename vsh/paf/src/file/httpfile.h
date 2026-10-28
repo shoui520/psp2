@@ -57,6 +57,10 @@ typedef char HttpFileContextOffsetCheck[offsetof(HttpFile, m_reader_context) == 
 #define HttpFileGetstat ScePafMisc_A004D31D
 #define HttpFileDestroy ScePafMisc_967C0019
 #define HttpFileDelete ScePafMisc_13E9B54C
+#define HttpFileGetResponseCode ScePafMisc_8E656E2D
+#define HttpFileGetResponsePhrase ScePafMisc_45ADBF5A
+#define HttpFileGetResponseVersion ScePafMisc_6AE2E808
+#define HttpFileGetResponseHeader ScePafMisc_B8282602
 #define httpFileClass ScePafMisc_C65A180F
 
 HttpFile *HttpFileConstruct(HttpFile *self);
@@ -84,6 +88,12 @@ int32_t HttpFilePollAsync(HttpFile *self, int64_t *result);
 int32_t HttpFileGetstat(HttpFile *self, FileStat *stat);
 HttpFile *HttpFileDestroy(HttpFile *self);
 void HttpFileDelete(HttpFile *self);
+int32_t HttpFileGetResponseCode(HttpFile *self, uint16_t *code);
+int32_t HttpFileGetResponsePhrase(HttpFile *self, PafString *phrase);
+int32_t HttpFileGetResponseVersion(HttpFile *self, unsigned char *major,
+				 unsigned char *minor);
+int32_t HttpFileGetResponseHeader(HttpFile *self, const char *name,
+				PafString *value);
 void HttpFileDefaultDelete(File *file);
 
 extern const FileClass httpFileClass;
