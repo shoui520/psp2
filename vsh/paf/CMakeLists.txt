@@ -9,6 +9,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/bufferedfile.c
 	src/file/localfile.c
 	src/file/localfile_platform.c
+	src/file/memfile.c
 	src/file/httpfile.c
 	src/file/httpfile_date.c
 	src/file/httpfile_openarg.c
