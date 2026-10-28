@@ -552,17 +552,3 @@ int asn1ParseSequence(const uint8_t *buf, uint32_t bufSize,
 	*inOutCount = count;
 	return 0;
 }
-
-/* 0x80c88a (name ours) */
-int timingsafeBcmp(const void *b1, const void *b2, size_t len)
-{
-	const uint8_t *p1 = (const uint8_t *)b1;
-	const uint8_t *p2 = (const uint8_t *)b2;
-	const uint8_t *end = p1 + len;
-	uint32_t diff = 0u;
-
-	while (p1 != end)
-		diff |= (uint32_t)(*p1++ ^ *p2++);
-
-	return (diff != 0u) ? 1 : 0;
-}

@@ -68,28 +68,3 @@ int bigmacStartMemcpy(void *dst, const void *src, uint32_t size,
 	regs->trigger = 1u;
 	return 0;
 }
-
-/* 0x80c08e (name ours) */
-int timingsafeBcmp(const void *b1, const void *b2, size_t len)
-{
-	const uint8_t *p1 = (const uint8_t *)b1;
-	const uint8_t *p2 = (const uint8_t *)b2;
-	uint32_t diff = 0u;
-	size_t i;
-
-	for (i = 0u; i < len; i++)
-		diff |= (uint32_t)(p1[i] ^ p2[i]);
-	return (int)diff;
-}
-
-/* 0x80c0a8 (name ours) */
-void *byteMemset(void *dst, int val, size_t len)
-{
-	uint8_t *p = (uint8_t *)dst;
-	uint8_t b = (uint8_t)val;
-	size_t i;
-
-	for (i = 0u; i < len; i++)
-		p[i] = b;
-	return dst;
-}

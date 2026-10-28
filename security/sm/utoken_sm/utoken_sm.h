@@ -25,13 +25,6 @@
 #define UTOKEN_SIGNATURE_OFFSET			0x700u
 #define UTOKEN_SIGNATURE_SIZE			0x100u
 
-typedef struct BignumPublicKey {
-	const uint32_t *modulus;		/* 0x00 */
-	uint32_t modulusWords;			/* 0x04 */
-	const uint32_t *exponent;		/* 0x08 */
-	uint32_t exponentWords;			/* 0x0c */
-} BignumPublicKey;
-
 typedef struct SceUtokenRsaPublicKey {
 	uint8_t modulus[256];			/* 0x000..0x0ff */
 	uint32_t modulusSize;			/* 0x100 */

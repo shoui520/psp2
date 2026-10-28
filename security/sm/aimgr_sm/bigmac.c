@@ -14,7 +14,7 @@ static const uint32_t s_bigmacAesKeySizes[4] = {
 
 /* 0x80bd06 (name ours) */
 int bigmacAes128CbcEncryptSync(void *dst, const void *src, uint32_t size,
-		const void *key, const void *iv)
+		const void *key, void *iv)
 {
 	uint32_t bmCtrl[2];
 	int ret;
@@ -28,7 +28,7 @@ int bigmacAes128CbcEncryptSync(void *dst, const void *src, uint32_t size,
 
 /* 0x80bd4e (name ours) */
 int bigmacAes128CbcDecryptSync(void *dst, const void *src, uint32_t size,
-		const void *key, const void *iv)
+		const void *key, void *iv)
 {
 	uint32_t bmCtrl[2];
 	int ret;
@@ -186,17 +186,4 @@ int bigmacStartMemcpy(void *dst, const void *src, uint32_t size,
 	smMemBarrier();
 	regs->trigger = 1u;
 	return 0;
-}
-
-/* 0x80c16e (name ours) */
-int timingsafeBcmp(const void *b1, const void *b2, size_t len)
-{
-	const uint8_t *p1 = (const uint8_t *)b1;
-	const uint8_t *p2 = (const uint8_t *)b2;
-	uint32_t diff = 0u;
-	size_t i;
-
-	for (i = 0u; i < len; i++)
-		diff |= (uint32_t)(p1[i] ^ p2[i]);
-	return (int)diff;
 }

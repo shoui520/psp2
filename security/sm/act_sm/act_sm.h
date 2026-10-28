@@ -25,13 +25,6 @@
 #define ACT_RECORD_SIZE				32u
 #define ACT_MAX_DURATION_SEC			0x02ad8c00u
 
-typedef struct BignumPublicKey {
-	const uint32_t *modulus;		/* 0x00 */
-	uint32_t modulusWords;			/* 0x04 */
-	const uint32_t *exponent;		/* 0x08 */
-	uint32_t exponentWords;			/* 0x0c */
-} BignumPublicKey;
-
 typedef struct SceActRsaPublicKey {
 	uint8_t modulus[256];			/* 0x000..0x0ff */
 	uint32_t modulusSize;			/* 0x100 */

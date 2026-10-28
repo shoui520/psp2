@@ -54,10 +54,6 @@ int aimgrDecryptAndVerifyCertBlock(const uint8_t *block256, uint32_t size,
 int16_t aimgrExtractSubCodeBe(uint32_t rawWord2);
 int aimgrFillRandomBytes(uint8_t *dst, uint32_t size);
 
-int bigmacAes128CbcEncryptSync(void *dst, const void *src, uint32_t size,
-		const void *key, const void *iv);
-int bigmacAes128CbcDecryptSync(void *dst, const void *src, uint32_t size,
-		const void *key, const void *iv);
 int bigmacHmacSha256Sync(void *outMac, const void *src, uint32_t size,
 		const void *key, uint32_t keyLen);
 int bigmacStartHmacSha256(void *outMac, const void *src, uint32_t size,
