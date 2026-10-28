@@ -460,3 +460,563 @@ int _sceSblGcAuthMgrGetMediaIdType01(GcAuthCartSecretData *secret,
 		return copy;
 	return result;
 }
+
+int _sceSblGcAuthMgrAdhocBB160Init(void)
+{
+	return GcAuthAdhocInitializeState160ForUser();
+}
+
+int _sceSblGcAuthMgrAdhocBB160Shutdown(void)
+{
+	return GcAuthAdhocClearState160ForUser();
+}
+
+int _sceSblGcAuthMgrAdhocBB160Auth1(GcAuthAdhocContext160 *context,
+		unsigned char *packet, const SceSize *sizes)
+{
+	GcAuthAdhocContext160 *contextCopy;
+	unsigned char *packetCopy;
+	SceSize size[2];
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(size, sizes, sizeof(size));
+	if (result < 0)
+		return result;
+	contextCopy = context;
+	if (context != NULL) {
+		contextCopy = __builtin_alloca(sizeof(*contextCopy));
+		memset(contextCopy, 0, sizeof(*contextCopy));
+	}
+	if (packet != NULL) {
+		if (size[0] > 0xa0)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		packetCopy = __builtin_alloca(0xa0);
+		memset(packetCopy, 0, 0xa0);
+	} else {
+		packetCopy = NULL;
+	}
+	result = GcAuthAdhocCreateContext160ForUser(contextCopy, packetCopy);
+	if (context != NULL) {
+		copy = sceKernelCopyToUser(context, contextCopy, sizeof(*contextCopy));
+		if (copy < 0)
+			return copy;
+	}
+	if (packet != NULL) {
+		copy = sceKernelCopyToUser(packet, packetCopy, size[0]);
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}
+
+int _sceSblGcAuthMgrAdhocBB160Auth2(GcAuthAdhocContext160 *context,
+		const unsigned char *packet, unsigned char *output, const SceSize *sizes)
+{
+	GcAuthAdhocContext160 *contextCopy;
+	unsigned char *packetCopy;
+	unsigned char *outputCopy;
+	SceSize size[4];
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(size, sizes, sizeof(size));
+	if (result < 0)
+		return result;
+	contextCopy = context;
+	if (context != NULL) {
+		contextCopy = __builtin_alloca(sizeof(*contextCopy));
+		memset(contextCopy, 0, sizeof(*contextCopy));
+	}
+	if (packet != NULL) {
+		if (size[0] > 0xa0)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		packetCopy = __builtin_alloca(0xa0);
+		result = sceKernelCopyFromUser(packetCopy, packet, size[0]);
+		if (result < 0)
+			return result;
+		packet = packetCopy;
+	}
+	if (output != NULL) {
+		if (size[1] > 0x110)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		outputCopy = __builtin_alloca(0x110);
+		memset(outputCopy, 0, 0x110);
+	} else {
+		outputCopy = NULL;
+	}
+	result = GcAuthAdhocAnswerChallenge160ForUser(contextCopy, packet, outputCopy);
+	if (context != NULL) {
+		copy = sceKernelCopyToUser(context, contextCopy, sizeof(*contextCopy));
+		if (copy < 0)
+			return copy;
+	}
+	if (output != NULL) {
+		copy = sceKernelCopyToUser(output, outputCopy, size[1]);
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}
+
+int _sceSblGcAuthMgrAdhocBB160Auth3(GcAuthAdhocContext160 *context,
+		const unsigned char *packet, unsigned char *output, const SceSize *sizes)
+{
+	GcAuthAdhocContext160 *contextCopy;
+	unsigned char *packetCopy;
+	unsigned char *outputCopy;
+	SceSize size[4];
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(size, sizes, sizeof(size));
+	if (result < 0)
+		return result;
+	if (context != NULL) {
+		contextCopy = __builtin_alloca(sizeof(*contextCopy));
+		memset(contextCopy, 0, sizeof(*contextCopy));
+		result = sceKernelCopyFromUser(contextCopy, context, sizeof(*contextCopy));
+		if (result < 0)
+			return result;
+	} else {
+		contextCopy = NULL;
+	}
+	if (packet != NULL) {
+		if (size[0] > 0x110)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		packetCopy = __builtin_alloca(0x110);
+		result = sceKernelCopyFromUser(packetCopy, packet, size[0]);
+		if (result < 0)
+			return result;
+		packet = packetCopy;
+	}
+	if (output != NULL) {
+		if (size[1] > 0x100)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		outputCopy = __builtin_alloca(0x100);
+		memset(outputCopy, 0, 0x100);
+	} else {
+		outputCopy = NULL;
+	}
+	result = GcAuthAdhocAuthenticateResponse160ForUser(contextCopy, packet,
+		outputCopy);
+	if (context != NULL) {
+		copy = sceKernelCopyToUser(context, contextCopy, sizeof(*contextCopy));
+		if (copy < 0)
+			return copy;
+	}
+	if (output != NULL) {
+		copy = sceKernelCopyToUser(output, outputCopy, size[1]);
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}
+
+int _sceSblGcAuthMgrAdhocBB160Auth4(GcAuthAdhocContext160 *context,
+		const unsigned char *packet, unsigned char *output, const SceSize *sizes)
+{
+	GcAuthAdhocContext160 *contextCopy;
+	unsigned char *packetCopy;
+	unsigned char *outputCopy;
+	SceSize size[4];
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(size, sizes, sizeof(size));
+	if (result < 0)
+		return result;
+	if (context != NULL) {
+		contextCopy = __builtin_alloca(sizeof(*contextCopy));
+		memset(contextCopy, 0, sizeof(*contextCopy));
+		result = sceKernelCopyFromUser(contextCopy, context, sizeof(*contextCopy));
+		if (result < 0)
+			return result;
+	} else {
+		contextCopy = NULL;
+	}
+	if (packet != NULL) {
+		if (size[0] > 0x100)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		packetCopy = __builtin_alloca(0x100);
+		result = sceKernelCopyFromUser(packetCopy, packet, size[0]);
+		if (result < 0)
+			return result;
+		packet = packetCopy;
+	}
+	if (output != NULL) {
+		if (size[1] > 0x60)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		outputCopy = __builtin_alloca(0x60);
+		memset(outputCopy, 0, 0x60);
+	} else {
+		outputCopy = NULL;
+	}
+	result = GcAuthAdhocVerifyResponse160ForUser(contextCopy, packet, outputCopy);
+	if (context != NULL) {
+		copy = sceKernelCopyToUser(context, contextCopy, sizeof(*contextCopy));
+		if (copy < 0)
+			return copy;
+	}
+	if (output != NULL) {
+		copy = sceKernelCopyToUser(output, outputCopy, size[1]);
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}
+
+int _sceSblGcAuthMgrAdhocBB160Auth5(GcAuthAdhocContext160 *context,
+		const GcAuthAdhocFinalPacket *packet, const SceSize *sizes)
+{
+	GcAuthAdhocContext160 *contextCopy;
+	GcAuthAdhocFinalPacket *packetCopy;
+	SceSize size[2];
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(size, sizes, sizeof(size));
+	if (result < 0)
+		return result;
+	if (context != NULL) {
+		contextCopy = __builtin_alloca(sizeof(*contextCopy));
+		memset(contextCopy, 0, sizeof(*contextCopy));
+		result = sceKernelCopyFromUser(contextCopy, context, sizeof(*contextCopy));
+		if (result < 0)
+			return result;
+	} else {
+		contextCopy = NULL;
+	}
+	if (packet != NULL) {
+		if (size[0] > 0x60)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		packetCopy = __builtin_alloca(0x60);
+		result = sceKernelCopyFromUser(packetCopy, packet, size[0]);
+		if (result < 0)
+			return result;
+		packet = packetCopy;
+	}
+	result = GcAuthAdhocFinishContext160ForUser(contextCopy, packet);
+	if (context != NULL) {
+		copy = sceKernelCopyToUser(context, contextCopy, sizeof(*contextCopy));
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}
+
+int _sceSblGcAuthMgrAdhocBB160GetKeys(const GcAuthAdhocContext160 *context,
+		unsigned char *random, unsigned char *contextRandom,
+		const GcAuthAdhocKeysParam *param)
+{
+	GcAuthAdhocKeysParam paramCopy;
+	GcAuthAdhocContext160 *contextCopy;
+	unsigned char *randomCopy;
+	unsigned char *contextRandomCopy;
+	unsigned char *seedCopy;
+	unsigned char *seed;
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(&paramCopy, param, sizeof(paramCopy));
+	if (result < 0)
+		return result;
+	seed = paramCopy.seed;
+	if (context != NULL) {
+		contextCopy = __builtin_alloca(sizeof(*contextCopy));
+		result = sceKernelCopyFromUser(contextCopy, context, sizeof(*contextCopy));
+		if (result < 0)
+			return result;
+		context = contextCopy;
+	}
+	randomCopy = random;
+	if (random != NULL) {
+		if (paramCopy.randomSize > 16)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		randomCopy = __builtin_alloca(16);
+		__builtin_memset(randomCopy, 0, 16);
+	}
+	if (contextRandom != NULL) {
+		if (paramCopy.contextRandomSize > 16)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		contextRandomCopy = __builtin_alloca(16);
+		__builtin_memset(contextRandomCopy, 0, 16);
+	} else {
+		contextRandomCopy = NULL;
+	}
+	if (seed != NULL) {
+		if (paramCopy.seedSize > 16)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		seedCopy = __builtin_alloca(16);
+		__builtin_memset(seedCopy, 0, 16);
+	} else {
+		seedCopy = NULL;
+	}
+	result = GcAuthAdhocGetSeeds160ForUser(context, randomCopy,
+		contextRandomCopy, seedCopy);
+	if (random != NULL) {
+		copy = sceKernelCopyToUser(random, randomCopy, paramCopy.randomSize);
+		if (copy < 0)
+			return copy;
+	}
+	if (contextRandom != NULL) {
+		copy = sceKernelCopyToUser(contextRandom, contextRandomCopy,
+			paramCopy.contextRandomSize);
+		if (copy < 0)
+			return copy;
+	}
+	if (seed != NULL) {
+		copy = sceKernelCopyToUser(seed, seedCopy, paramCopy.seedSize);
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}
+
+int _sceSblGcAuthMgrAdhocBB160UniCastEncrypt(GcAuthAdhocContext160 *context,
+		unsigned char *data, unsigned int size,
+		const GcAuthAdhocEncryptParam *param)
+{
+	GcAuthAdhocEncryptParam paramCopy;
+	GcAuthAdhocContext160 *contextCopy;
+	unsigned char *dataCopy;
+	GcAuthAdhocAuthTag *tagCopy;
+	GcAuthAdhocAuthTag *tag;
+	int encrypt;
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(&paramCopy, param, sizeof(paramCopy));
+	if (result < 0)
+		return result;
+	tag = paramCopy.tag;
+	encrypt = paramCopy.encrypt;
+	if (context != NULL) {
+		contextCopy = __builtin_alloca(sizeof(*contextCopy));
+		memset(contextCopy, 0, sizeof(*contextCopy));
+		result = sceKernelCopyFromUser(contextCopy, context, sizeof(*contextCopy));
+		if (result < 0)
+			return result;
+	} else {
+		contextCopy = NULL;
+	}
+	dataCopy = data;
+	if (data != NULL) {
+		SceSize dataSize = paramCopy.dataSize;
+
+		if (dataSize > 0x910)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		dataCopy = __builtin_alloca(0x910);
+		memset(dataCopy, 0, 0x910);
+		result = sceKernelCopyFromUser(dataCopy, data, dataSize);
+		if (result < 0)
+			return result;
+	}
+	if (tag != NULL) {
+		if (paramCopy.tagSize > 0x20)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		tagCopy = __builtin_alloca(0x20);
+		__builtin_memset(tagCopy, 0, 0x20);
+	} else {
+		tagCopy = NULL;
+	}
+	result = GcAuthAdhocUniCastEncrypt160ForUser(contextCopy, dataCopy, size,
+		tagCopy, encrypt);
+	if (context != NULL) {
+		copy = sceKernelCopyToUser(context, contextCopy, sizeof(*contextCopy));
+		if (copy < 0)
+			return copy;
+	}
+	if (data != NULL) {
+		copy = sceKernelCopyToUser(data, dataCopy, paramCopy.dataSize);
+		if (copy < 0)
+			return copy;
+	}
+	if (tag != NULL) {
+		copy = sceKernelCopyToUser(tag, tagCopy, paramCopy.tagSize);
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}
+
+int _sceSblGcAuthMgrAdhocBB160UniCastDecrypt(GcAuthAdhocContext160 *context,
+		unsigned char *data, unsigned int size,
+		const GcAuthAdhocDecryptParam *param)
+{
+	GcAuthAdhocDecryptParam paramCopy;
+	GcAuthAdhocContext160 *contextCopy;
+	unsigned char *dataCopy;
+	GcAuthAdhocAuthTag *tagCopy;
+	const GcAuthAdhocAuthTag *tag;
+	int decrypt;
+	int checkCounter;
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(&paramCopy, param, sizeof(paramCopy));
+	if (result < 0)
+		return result;
+	tag = paramCopy.tag;
+	decrypt = paramCopy.decrypt;
+	checkCounter = paramCopy.checkCounter;
+	if (context != NULL) {
+		contextCopy = __builtin_alloca(sizeof(*contextCopy));
+		memset(contextCopy, 0, sizeof(*contextCopy));
+		result = sceKernelCopyFromUser(contextCopy, context, sizeof(*contextCopy));
+		if (result < 0)
+			return result;
+	} else {
+		contextCopy = NULL;
+	}
+	dataCopy = data;
+	if (data != NULL) {
+		SceSize dataSize = paramCopy.dataSize;
+
+		if (dataSize > 0x910)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		dataCopy = __builtin_alloca(0x910);
+		memset(dataCopy, 0, 0x910);
+		result = sceKernelCopyFromUser(dataCopy, data, dataSize);
+		if (result < 0)
+			return result;
+	}
+	if (tag != NULL) {
+		if (paramCopy.tagSize > 0x20)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		tagCopy = __builtin_alloca(0x20);
+		result = sceKernelCopyFromUser(tagCopy, tag, paramCopy.tagSize);
+		if (result < 0)
+			return result;
+		tag = tagCopy;
+	}
+	result = GcAuthAdhocUniCastDecrypt160ForUser(contextCopy, dataCopy, size,
+		tag, decrypt, checkCounter);
+	if (context != NULL) {
+		copy = sceKernelCopyToUser(context, contextCopy, sizeof(*contextCopy));
+		if (copy < 0)
+			return copy;
+	}
+	if (data != NULL) {
+		copy = sceKernelCopyToUser(data, dataCopy, paramCopy.dataSize);
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}
+
+int _sceSblGcAuthMgrAdhocBB160BroadCastEncrypt(unsigned char *data,
+		unsigned int size, GcAuthAdhocAuthTag *tag,
+		const GcAuthAdhocBroadCastEncryptParam *param)
+{
+	GcAuthAdhocBroadCastEncryptParam paramCopy;
+	unsigned char *dataCopy;
+	GcAuthAdhocAuthTag *tagCopy;
+	int encrypt;
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(&paramCopy, param, sizeof(paramCopy));
+	if (result < 0)
+		return result;
+	encrypt = paramCopy.encrypt;
+	if (data != NULL) {
+		SceSize dataSize = paramCopy.dataSize;
+
+		if (dataSize > 0x910)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		dataCopy = __builtin_alloca(0x910);
+		memset(dataCopy, 0, 0x910);
+		result = sceKernelCopyFromUser(dataCopy, data, dataSize);
+		if (result < 0)
+			return result;
+	} else {
+		dataCopy = NULL;
+	}
+	if (tag != NULL) {
+		if (paramCopy.tagSize > 0x20)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		tagCopy = __builtin_alloca(0x20);
+		__builtin_memset(tagCopy, 0, 0x20);
+	} else {
+		tagCopy = NULL;
+	}
+	result = GcAuthAdhocBroadCastEncrypt160ForUser(dataCopy, size, tagCopy,
+		encrypt);
+	if (data != NULL) {
+		copy = sceKernelCopyToUser(data, dataCopy, paramCopy.dataSize);
+		if (copy < 0)
+			return copy;
+	}
+	if (tag != NULL) {
+		copy = sceKernelCopyToUser(tag, tagCopy, paramCopy.tagSize);
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}
+
+int _sceSblGcAuthMgrAdhocBB160BroadCastDecrypt(GcAuthAdhocContext160 *context,
+		unsigned char *data, unsigned int size,
+		const GcAuthAdhocDecryptParam *param)
+{
+	GcAuthAdhocDecryptParam paramCopy;
+	GcAuthAdhocContext160 *contextCopy;
+	unsigned char *dataCopy;
+	GcAuthAdhocAuthTag *tagCopy;
+	const GcAuthAdhocAuthTag *tag;
+	int decrypt;
+	int checkCounter;
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(&paramCopy, param, sizeof(paramCopy));
+	if (result < 0)
+		return result;
+	tag = paramCopy.tag;
+	decrypt = paramCopy.decrypt;
+	checkCounter = paramCopy.checkCounter;
+	if (context != NULL) {
+		contextCopy = __builtin_alloca(sizeof(*contextCopy));
+		memset(contextCopy, 0, sizeof(*contextCopy));
+		result = sceKernelCopyFromUser(contextCopy, context, sizeof(*contextCopy));
+		if (result < 0)
+			return result;
+	} else {
+		contextCopy = NULL;
+	}
+	dataCopy = data;
+	if (data != NULL) {
+		SceSize dataSize = paramCopy.dataSize;
+
+		if (dataSize > 0x910)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		dataCopy = __builtin_alloca(0x910);
+		memset(dataCopy, 0, 0x910);
+		result = sceKernelCopyFromUser(dataCopy, data, dataSize);
+		if (result < 0)
+			return result;
+	}
+	if (tag != NULL) {
+		if (paramCopy.tagSize > 0x20)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		tagCopy = __builtin_alloca(0x20);
+		result = sceKernelCopyFromUser(tagCopy, tag, paramCopy.tagSize);
+		if (result < 0)
+			return result;
+		tag = tagCopy;
+	}
+	result = GcAuthAdhocBroadCastDecrypt160ForUser(contextCopy, dataCopy, size,
+		tag, decrypt, checkCounter);
+	if (context != NULL) {
+		copy = sceKernelCopyToUser(context, contextCopy, sizeof(*contextCopy));
+		if (copy < 0)
+			return copy;
+	}
+	if (data != NULL) {
+		copy = sceKernelCopyToUser(data, dataCopy, paramCopy.dataSize);
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}

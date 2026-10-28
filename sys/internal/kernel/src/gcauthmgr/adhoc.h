@@ -399,6 +399,31 @@ typedef struct GcAuthAdhocKeysParam {
 	SceSize reserved[2];
 } GcAuthAdhocKeysParam;
 
+/* The parameter blocks of the encrypt and decrypt syscalls. */
+typedef struct GcAuthAdhocEncryptParam {
+	GcAuthAdhocAuthTag *tag;
+	int encrypt;
+	SceSize dataSize;
+	SceSize tagSize;
+	SceSize reserved[2];
+} GcAuthAdhocEncryptParam;
+
+typedef struct GcAuthAdhocDecryptParam {
+	const GcAuthAdhocAuthTag *tag;
+	int decrypt;
+	int checkCounter;
+	SceSize dataSize;
+	SceSize tagSize;
+	SceSize reserved;
+} GcAuthAdhocDecryptParam;
+
+typedef struct GcAuthAdhocBroadCastEncryptParam {
+	int encrypt;
+	SceSize dataSize;
+	SceSize tagSize;
+	SceSize reserved;
+} GcAuthAdhocBroadCastEncryptParam;
+
 typedef struct GcAuthAdhocFinishContext160Request {
 	GcAuthAdhocContext160 *context;
 	const GcAuthAdhocFinalPacket *packet;
