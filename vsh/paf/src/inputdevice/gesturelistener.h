@@ -29,13 +29,23 @@ GestureUserDataNode *GestureUserDataMapRebalance(PafMap *self,
 GestureUserDataNode *GestureUserDataMapInsert(PafMap *self,
 					    const GestureUserDataEntry *value,
 					    unsigned char *inserted);
+uintptr_t GestureUserDataMapEraseRebalance(PafMap *self,
+					 GestureUserDataNode *node,
+					 GestureUserDataNode *parent);
+uintptr_t GestureUserDataMapEraseNode(PafMap *self, GestureUserDataNode *node);
+uintptr_t GestureUserDataMapErase(PafMap *self,
+				GestureUserDataNode *const *where);
 void GestureUserDataInitialize(void);
 
 #define GestureListenerAddUserDataList ScePafMisc_09EF204D
 #define GestureListenerIncrUserDataList ScePafMisc_E3359BF6
+#define GestureListenerDelUserDataList ScePafMisc_6DF7286C
+#define GestureListenerDecrUserDataList ScePafMisc_AFD6C1D8
 #define GestureListenerIsValidUserData ScePafMisc_83D0B118
 void GestureListenerAddUserDataList(void *data);
 void GestureListenerIncrUserDataList(void *data);
+void GestureListenerDelUserDataList(void *data);
+void GestureListenerDecrUserDataList(void *data);
 unsigned char GestureListenerIsValidUserData(void *data);
 
 #endif
