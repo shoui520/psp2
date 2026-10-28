@@ -50,6 +50,7 @@ psp2_module(os0_kd_gcauthmgr KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	drm_adhoc_clear_api.c
 	drm_adhoc_api.c
 	drm_adhoc_unicast160.c
+	drm_adhoc_broadcast160.c
 	drm_adhoc_keys.c
 	gcauthmgr.c
 )

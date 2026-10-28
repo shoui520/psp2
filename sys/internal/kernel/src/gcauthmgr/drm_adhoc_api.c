@@ -314,3 +314,63 @@ int GcAuthAdhocUniCastEncrypt160ForUser(GcAuthAdhocContext160 *context,
 	sceSyscallLeave(state);
 	return result;
 }
+
+int GcAuthAdhocUniCastDecrypt160ForUser(GcAuthAdhocContext160 *context,
+		unsigned char *data, unsigned int size, const GcAuthAdhocAuthTag *tag,
+		int decrypt, int checkCounter)
+{
+	GcAuthAdhocUniCastDecrypt160Request request;
+	unsigned int state;
+	int result;
+
+	state = sceSyscallEnter();
+	request.context = context;
+	request.data = data;
+	request.size = size;
+	request.tag = tag;
+	request.decrypt = decrypt;
+	request.checkCounter = checkCounter;
+	result = SceThreadmgrForDriver_E54FD746(8192,
+		(int (*)(void *))GcAuthAdhocUniCastDecrypt160Stack, &request);
+	sceSyscallLeave(state);
+	return result;
+}
+
+int GcAuthAdhocBroadCastEncrypt160ForUser(unsigned char *data, unsigned int size,
+		GcAuthAdhocAuthTag *tag, int encrypt)
+{
+	GcAuthAdhocBroadCastEncrypt160Request request;
+	unsigned int state;
+	int result;
+
+	state = sceSyscallEnter();
+	request.data = data;
+	request.size = size;
+	request.tag = tag;
+	request.encrypt = encrypt;
+	result = SceThreadmgrForDriver_E54FD746(8192,
+		(int (*)(void *))GcAuthAdhocBroadCastEncrypt160Stack, &request);
+	sceSyscallLeave(state);
+	return result;
+}
+
+int GcAuthAdhocBroadCastDecrypt160ForUser(GcAuthAdhocContext160 *context,
+		unsigned char *data, unsigned int size, const GcAuthAdhocAuthTag *tag,
+		int decrypt, int checkCounter)
+{
+	GcAuthAdhocUniCastDecrypt160Request request;
+	unsigned int state;
+	int result;
+
+	state = sceSyscallEnter();
+	request.context = context;
+	request.data = data;
+	request.size = size;
+	request.tag = tag;
+	request.decrypt = decrypt;
+	request.checkCounter = checkCounter;
+	result = SceThreadmgrForDriver_E54FD746(8192,
+		(int (*)(void *))GcAuthAdhocBroadCastDecrypt160Stack, &request);
+	sceSyscallLeave(state);
+	return result;
+}
