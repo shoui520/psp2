@@ -22,6 +22,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/cxml/attribute.c
 	src/cxml/util.c
 	src/cxml/file.c
+	src/resource/resource_obj.c
 	src/std/new.c
 	src/std/string.c
 	libpaf.c

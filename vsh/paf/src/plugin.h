@@ -9,7 +9,6 @@
 #include "resource/resource_obj.h"
 
 typedef struct Plugin Plugin;
-typedef struct HeapAllocator HeapAllocator;
 typedef struct SurfacePool SurfacePool;
 typedef struct EnvironmentParam EnvironmentParam;
 typedef struct PluginInitParam2 PluginInitParam2;
