@@ -81,7 +81,7 @@ static inline void dcmpQueueCommit(DcmpCB *dcmp, SceSize size, int errPending,
 }
 
 /* read and drop the rest of a packet */
-static inline void _discardPacket(DcmpCB *dcmp, DcmpHeader *msg)
+static __attribute__((noinline, noclone)) void _discardPacket(DcmpCB *dcmp, DcmpHeader *msg)
 {
 	SceSize size, n;
 	int ret;
@@ -135,7 +135,7 @@ static inline int _dcmpEcho(DcmpCB *dcmp)
 	return 0;
 }
 
-static inline int _dcmpLinkStart(DcmpCB *dcmp)
+static inline __attribute__((always_inline)) int _dcmpLinkStart(DcmpCB *dcmp)
 {
 	SceUInt32 *protocol = (SceUInt32 *)(dcmp->recvBuf + 1);
 	int ret;
@@ -149,7 +149,7 @@ static inline int _dcmpLinkStart(DcmpCB *dcmp)
 	return 0;
 }
 
-static inline int _dcmpLinkStop(DcmpCB *dcmp)
+static inline __attribute__((always_inline)) int _dcmpLinkStop(DcmpCB *dcmp)
 {
 	SceUInt32 *protocol = (SceUInt32 *)(dcmp->recvBuf + 1);
 	int ret;
