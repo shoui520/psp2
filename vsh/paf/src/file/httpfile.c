@@ -748,6 +748,118 @@ int32_t HttpFileGetCapability(const HttpFile *self)
 	return 0x7bf7;
 }
 
+int32_t HttpFileResponseCodeToError(uint16_t code)
+{
+	if (code >= 200 && code <= 299)
+		return 0;
+	switch (code) {
+	case 100:
+	case 101:
+	case 102:
+		return HTTPFILE_ERROR_STATUS_100 + code - 100;
+	case 300:
+	case 301:
+	case 302:
+	case 303:
+	case 304:
+	case 305:
+	case 307:
+		return HTTPFILE_ERROR_STATUS_300 + code - 300;
+	case 400:
+	case 401:
+	case 402:
+	case 403:
+	case 404:
+	case 405:
+	case 406:
+	case 407:
+	case 408:
+	case 409:
+		return HTTPFILE_ERROR_STATUS_400 + code - 400;
+	case 410:
+	case 411:
+	case 412:
+	case 413:
+	case 414:
+	case 415:
+	case 416:
+	case 417:
+		return HTTPFILE_ERROR_STATUS_410 + code - 410;
+	case 422:
+	case 423:
+	case 424:
+	case 426:
+		return HTTPFILE_ERROR_STATUS_420 + code - 420;
+	case 500:
+	case 501:
+	case 502:
+	case 503:
+	case 504:
+	case 505:
+	case 507:
+		return HTTPFILE_ERROR_STATUS_500 + code - 500;
+	default:
+		return HTTPFILE_ERROR_UNKNOWN_RESPONSE;
+	}
+}
+
+int32_t HttpFileOpenWithArg(HttpFile *self, const FileOpenArg *param)
+{
+	const HttpFileOpenArg *arg = (const HttpFileOpenArg *)param;
+	HttpFileReader *reader;
+	int32_t result;
+
+	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	if (!arg || self->base.vtable->GetFileType(&self->base) != arg->file_type) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+	}
+	if (self->m_io_thread) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return SCE_PAF_ERROR_FILE_BUSY;
+	}
+	if (self->m_is_opened) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return SCE_PAF_ERROR_FILE_ALREADY_OPENED;
+	}
+	if (arg->response_code)
+		*arg->response_code = 0;
+	RWLockLockExclusive(&self->m_lock_rwlock);
+	result = HttpFileCreateReader(self, arg);
+	RWLockUnlockExclusive(&self->m_lock_rwlock);
+	if (result) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return result;
+	}
+	RWLockLockShared(&self->m_lock_rwlock);
+	result = self->m_http_reader->vtable->Open(self->m_http_reader);
+	reader = self->m_http_reader;
+	if (reader) {
+		int32_t error = reader->m_result[1];
+
+		self->m_reader_result[0] = reader->m_result[0];
+		self->m_reader_result[1] = error;
+		self->m_reader_result[2] = reader->m_result[2];
+	}
+	RWLockUnlockShared(&self->m_lock_rwlock);
+	if (arg->response_code) {
+		reader = self->m_http_reader;
+		*arg->response_code = reader->vtable->GetResponse(reader)->code;
+	}
+	if (!result && !(arg->open_flag & HTTPFILE_OPEN_SKIP_STATUS_CHECK)) {
+		reader = self->m_http_reader;
+		result = HttpFileResponseCodeToError(reader->vtable->GetResponse(reader)->code);
+	}
+	RWLockLockExclusive(&self->m_lock_rwlock);
+	if (result)
+		HttpFileDeleteReader(self);
+	else
+		self->m_is_opened = 1;
+	RWLockUnlockExclusive(&self->m_lock_rwlock);
+	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	return result;
+}
+
 unsigned char HttpFileIsOpened(HttpFile *self)
 {
 	unsigned char opened;

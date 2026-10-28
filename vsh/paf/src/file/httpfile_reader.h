@@ -82,6 +82,7 @@ HttpFileHeaderMapNode *HttpFileHeaderMapCopyNodes(PafMap *self,
 					      const HttpFileHeaderMapNode *src);
 int32_t HttpFileDeleteReader(HttpFile *self);
 int32_t HttpFileCreateReader(HttpFile *self, const HttpFileOpenArg *arg);
+int32_t HttpFileResponseCodeToError(uint16_t code);
 
 typedef struct HttpFileReaderConfig HttpFileReaderConfig;
 typedef struct HttpFileReaderConfigRefCounter HttpFileReaderConfigRefCounter;
@@ -299,7 +300,18 @@ typedef struct HttpFileRequestHeaderParam {
 typedef char HttpFileRequestHeaderParamSizeCheck[sizeof(HttpFileRequestHeaderParam) == 8 ? 1 : -1];
 
 enum {
+	HTTPFILE_OPEN_SKIP_STATUS_CHECK = 0x00800000,
 	HTTPFILE_OPEN_HTTP_OPTION4 = 0x10000000
+};
+
+enum {
+	HTTPFILE_ERROR_UNKNOWN_RESPONSE = -2135994284, /* 0x80AF5054 */
+	HTTPFILE_ERROR_STATUS_100 = -2135994224, /* 0x80AF5090 */
+	HTTPFILE_ERROR_STATUS_300 = -2135994208, /* 0x80AF50A0 */
+	HTTPFILE_ERROR_STATUS_400 = -2135994192, /* 0x80AF50B0 */
+	HTTPFILE_ERROR_STATUS_410 = -2135994176, /* 0x80AF50C0 */
+	HTTPFILE_ERROR_STATUS_420 = -2135994160, /* 0x80AF50D0 */
+	HTTPFILE_ERROR_STATUS_500 = -2135994144 /* 0x80AF50E0 */
 };
 
 extern const HttpFileReaderClass httpFileHttpReaderClass;
