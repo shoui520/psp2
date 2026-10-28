@@ -40,6 +40,13 @@ typedef struct ResourceIDMap {
 	unsigned char _compare;
 } ResourceIDMap;
 
+typedef struct ResourceBufferEntry {
+	uint32_t idhash;
+	void *addr;
+	size_t size;
+	uint32_t type;
+} ResourceBufferEntry;
+
 typedef struct ResourceObj {
 	FileSharedPtr rscfp;
 	PafString filename;
@@ -50,8 +57,8 @@ typedef struct ResourceObj {
 	void *texture_buffer;
 	void *model_buffer;
 	void *sound_buffer;
-	void *textures;
-	void *models;
+	ResourceBufferEntry *textures;
+	ResourceBufferEntry *models;
 	void *sounds;
 	uint32_t num_textures;
 	uint32_t num_models;
@@ -66,6 +73,7 @@ typedef struct ResourceObj {
 typedef char ResourceIDMapNodeSizeCheck[sizeof(ResourceIDMapNode) == 32 ? 1 : -1];
 typedef char ResourceIDMapSizeCheck[sizeof(ResourceIDMap) == 12 ? 1 : -1];
 typedef char ResourceObjSizeCheck[sizeof(ResourceObj) == 108 ? 1 : -1];
+typedef char ResourceBufferEntrySizeCheck[sizeof(ResourceBufferEntry) == 16 ? 1 : -1];
 
 #define ResourceObjGetFileName ScePafResource_FA00F835
 #define ResourceObjGetLoadStatus ScePafResource_04FC462E
@@ -84,6 +92,12 @@ typedef char ResourceObjSizeCheck[sizeof(ResourceObj) == 108 ? 1 : -1];
 #define ResourceObjIsRegisteredID ScePafResource_9228A0D1
 #define ResourceObjGetStringIDRef ScePafResource_7E078F77
 #define ResourceObjGetStringIDHashRef ScePafResource_77233826
+#define ResourceObjGetTextureFromBufferHash ScePafResource_A667DEF2
+#define ResourceObjGetTextureFromBuffer ScePafResource_BDA4F782
+#define ResourceObjGetTextureFromBufferElement ScePafResource_862D4A5F
+#define ResourceObjGetModelFromBufferHash ScePafResource_25D47C62
+#define ResourceObjGetModelFromBuffer ScePafResource_B80E2E4D
+#define ResourceObjGetModelFromBufferElement ScePafResource_5A179BBE
 
 char *ResourceObjGetFileName(const ResourceObj *self);
 int32_t ResourceObjGetLoadStatus(const ResourceObj *self);
@@ -108,5 +122,17 @@ int32_t ResourceObjGetStringIDRef(const ResourceObj *self, const CxmlElement *el
 				const char *attrname, const char **str, CxmlElement *entity);
 int32_t ResourceObjGetStringIDHashRef(const ResourceObj *self, const CxmlElement *elm,
 				    const char *attrname, uint32_t *value, CxmlElement *entity);
+int32_t ResourceObjGetTextureFromBufferHash(const ResourceObj *self, uint32_t idhash,
+					  void **addr, size_t *size, uint32_t *type);
+int32_t ResourceObjGetTextureFromBuffer(const ResourceObj *self, const char *id,
+				      void **addr, size_t *size, uint32_t *type);
+int32_t ResourceObjGetTextureFromBufferElement(const ResourceObj *self, const CxmlElement *elm,
+					     void **addr, size_t *size, uint32_t *type);
+int32_t ResourceObjGetModelFromBufferHash(const ResourceObj *self, uint32_t idhash,
+					void **addr, size_t *size, uint32_t *type);
+int32_t ResourceObjGetModelFromBuffer(const ResourceObj *self, const char *id,
+				    void **addr, size_t *size, uint32_t *type);
+int32_t ResourceObjGetModelFromBufferElement(const ResourceObj *self, const CxmlElement *elm,
+					   void **addr, size_t *size, uint32_t *type);
 
 #endif

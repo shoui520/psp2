@@ -235,3 +235,97 @@ int32_t ResourceObjGetStringIDHashRef(const ResourceObj *self, const CxmlElement
 		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
 	return SCE_PAF_OK;
 }
+
+int32_t ResourceObjGetTextureFromBufferHash(const ResourceObj *self, uint32_t idhash,
+					  void **addr, size_t *size, uint32_t *type)
+{
+	CxmlElement table;
+	ResourceBufferEntry *entry;
+	uint32_t count, index;
+
+	if (!self->textures)
+		return SCE_PAF_ERROR_RESOURCE_BUFFER_NOT_FOUND;
+	ResourceObjGetTableElement(&table, self, TableType_Texture);
+	count = CxmlElementGetNumChild(&table);
+	entry = self->textures;
+	for (index = 0; index < count; index++, entry++) {
+		if (entry->idhash != idhash)
+			continue;
+		*addr = self->textures[index].addr;
+		entry = &self->textures[index];
+		*size = entry->size;
+		*type = entry->type;
+		return SCE_PAF_OK;
+	}
+	return SCE_PAF_ERROR_RESOURCE_BUFFER_NOT_FOUND;
+}
+
+int32_t ResourceObjGetTextureFromBuffer(const ResourceObj *self, const char *id,
+				      void **addr, size_t *size, uint32_t *type)
+{
+	IDParam idparam;
+	int32_t ret;
+
+	IDParamConstructFromString(&idparam, id);
+	ret = ResourceObjGetTextureFromBufferHash(self, idparam.m_idhash, addr, size, type);
+	PafStringDestroy(&idparam.m_id);
+	return ret;
+}
+
+int32_t ResourceObjGetTextureFromBufferElement(const ResourceObj *self, const CxmlElement *elm,
+					     void **addr, size_t *size, uint32_t *type)
+{
+	uint32_t value;
+	int32_t ret = CxmlUtilGetIDHash(elm, "id", &value);
+
+	if (ret)
+		return ret;
+	return ResourceObjGetTextureFromBufferHash(self, value, addr, size, type);
+}
+
+int32_t ResourceObjGetModelFromBufferHash(const ResourceObj *self, uint32_t idhash,
+					void **addr, size_t *size, uint32_t *type)
+{
+	CxmlElement table;
+	ResourceBufferEntry *entry;
+	uint32_t count, index;
+
+	if (!self->models)
+		return SCE_PAF_ERROR_RESOURCE_BUFFER_NOT_FOUND;
+	ResourceObjGetTableElement(&table, self, TableType_Model);
+	count = CxmlElementGetNumChild(&table);
+	entry = self->models;
+	for (index = 0; index < count; index++, entry++) {
+		if (entry->idhash != idhash)
+			continue;
+		*addr = self->models[index].addr;
+		entry = &self->models[index];
+		*size = entry->size;
+		*type = entry->type;
+		return SCE_PAF_OK;
+	}
+	return SCE_PAF_ERROR_RESOURCE_BUFFER_NOT_FOUND;
+}
+
+int32_t ResourceObjGetModelFromBuffer(const ResourceObj *self, const char *id,
+				    void **addr, size_t *size, uint32_t *type)
+{
+	IDParam idparam;
+	int32_t ret;
+
+	IDParamConstructFromString(&idparam, id);
+	ret = ResourceObjGetModelFromBufferHash(self, idparam.m_idhash, addr, size, type);
+	PafStringDestroy(&idparam.m_id);
+	return ret;
+}
+
+int32_t ResourceObjGetModelFromBufferElement(const ResourceObj *self, const CxmlElement *elm,
+					   void **addr, size_t *size, uint32_t *type)
+{
+	uint32_t value;
+	int32_t ret = CxmlUtilGetIDHash(elm, "id", &value);
+
+	if (ret)
+		return ret;
+	return ResourceObjGetModelFromBufferHash(self, value, addr, size, type);
+}
