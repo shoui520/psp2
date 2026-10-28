@@ -29,3 +29,19 @@ _Static_assert(offsetof(GcAuthDrmBbCipherContext, counter) == 4,
 	       "DRM BB cipher counter offset");
 _Static_assert(offsetof(GcAuthDrmBbCipherContext, seed) == 8,
 	       "DRM BB cipher seed offset");
+
+/* drm_cipher.c */
+int SceSblGcAuthMgrDrmBBForDriver_48D7784E(GcAuthDrmBbMacContext *context,
+		unsigned int mode);
+int SceSblGcAuthMgrDrmBBForDriver_500F5157(GcAuthDrmBbMacContext *context,
+		const unsigned char *data, size_t size);
+int SceSblGcAuthMgrDrmBBForDriver_6EF3C9DB(GcAuthDrmBbMacContext *context,
+		unsigned char *mac, const unsigned char *key);
+int SceSblGcAuthMgrDrmBBForDriver_3C25F9FA(GcAuthDrmBbMacContext *context,
+		const unsigned char *mac, const unsigned char *key);
+int SceSblGcAuthMgrDrmBBForDriver_7F98E4E2(GcAuthDrmBbCipherContext *context,
+		int mode, int generationMode, unsigned char *seed,
+		const unsigned char *key, unsigned int counter);
+int SceSblGcAuthMgrDrmBBForDriver_C0F37F18(GcAuthDrmBbCipherContext *context,
+		unsigned char *data, size_t size);
+int SceSblGcAuthMgrDrmBBForDriver_6E6D2B89(GcAuthDrmBbCipherContext *context);
