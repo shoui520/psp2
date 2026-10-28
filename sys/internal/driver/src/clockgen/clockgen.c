@@ -66,7 +66,7 @@ static inline int writeRegister(unsigned char reg, unsigned char value)
 }
 
 /* name unknown: the PLL settings revision 4 needs for each spread */
-static void writePll(void)
+static inline __attribute__((always_inline)) void writePll(void)
 {
 	unsigned char a, b, c;
 
