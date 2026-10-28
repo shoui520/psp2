@@ -733,7 +733,7 @@ int SceUsbstorForDriver_ADB2AAF2(const char *product, const char *revision, unsi
 }
 
 /* name unknown: nonzero while a function is busy */
-unsigned SceUsbstorForDriver_77B7E69E(void)
+__attribute__((noinline)) unsigned SceUsbstorForDriver_77B7E69E(void)
 {
 	unsigned busy = 0;
 	for (int i = 0; i < s.count; i++)
