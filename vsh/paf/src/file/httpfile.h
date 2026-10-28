@@ -17,6 +17,15 @@ typedef enum HttpFileOptionType {
 	OptionType_RecvTimeOut = 8
 } HttpFileOptionType;
 
+typedef enum HttpFileOpenFlag {
+	ENABLE_RANGE_GET = 0x1000000,
+	ENABLE_HALF_RANGE_GET = 0x2000000,
+	DISABLE_HTTPS_CHECK = 0x4000000,
+	IGNORE_PROXY_SETTING = 0x8000000,
+	SUPPRESS_WIFI_ACCESS = 0x20000000,
+	SUPPRESS_3G_ACCESS = 0x40000000
+} HttpFileOpenFlag;
+
 typedef enum HttpFileHttpsFlag {
 	HTTPS_FLAG_SERVER_VERIFY = 1,
 	HTTPS_FLAG_CLIENT_VERIFY = 2,

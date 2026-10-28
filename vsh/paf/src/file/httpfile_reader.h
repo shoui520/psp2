@@ -45,6 +45,10 @@ typedef char HttpFileReaderParamBodyOffsetCheck[offsetof(HttpFileReaderParam, ms
 typedef char HttpFileReaderParamContextOffsetCheck[offsetof(HttpFileReaderParam, context) == 136 ? 1 : -1];
 
 PafMap *HttpFileHeaderMapClear(PafMap *self);
+PafMap *HttpFileHeaderMapCopy(PafMap *self, const PafMap *src);
+HttpFileHeaderMapNode *HttpFileHeaderMapCopyNodes(PafMap *self,
+					      HttpFileHeaderMapNode *parent,
+					      const HttpFileHeaderMapNode *src);
 int32_t HttpFileDeleteReader(HttpFile *self);
 
 typedef struct HttpFileReaderConfig HttpFileReaderConfig;
@@ -54,6 +58,46 @@ typedef struct HttpFileReaderConfigSharedPtr {
 	HttpFileReaderConfig *m_ptr;
 	HttpFileReaderConfigRefCounter *m_ref_counter;
 } HttpFileReaderConfigSharedPtr;
+
+struct HttpFileReaderConfig {
+	const char *scheme;
+	const char *host;
+	uint16_t port;
+	const char *method;
+	const char *version;
+	const char *uri;
+	const char *user;
+	const char *passwd;
+	PafMap header;
+	BufferSharedPtr msg_body;
+	uint32_t open_flag;
+	uint32_t https_flag;
+	HttpFileTimeout timeout;
+	int32_t accept_encoding_gzip;
+	HttpFileReaderContextSharedPtr context;
+	uint32_t template_option;
+	size_t response_header_max_size;
+};
+
+struct HttpFileReaderConfigRefCounter {
+	HttpFileReaderConfig *m_ptr;
+	int32_t m_counter;
+	int32_t m_weak_counter;
+	void (*m_deleter)(HttpFileReaderConfig *ptr);
+};
+
+typedef char HttpFileReaderConfigSizeCheck[sizeof(HttpFileReaderConfig) == 96 ? 1 : -1];
+typedef char HttpFileReaderConfigBodyOffsetCheck[offsetof(HttpFileReaderConfig, msg_body) == 44 ? 1 : -1];
+typedef char HttpFileReaderConfigContextOffsetCheck[offsetof(HttpFileReaderConfig, context) == 80 ? 1 : -1];
+typedef char HttpFileReaderConfigRefCounterSizeCheck[sizeof(HttpFileReaderConfigRefCounter) == 16 ? 1 : -1];
+
+HttpFileReaderConfig *HttpFileReaderConfigConstruct(HttpFileReaderConfig *self,
+						  const HttpFileReaderParam *param);
+HttpFileReaderConfigRefCounter *HttpFileReaderConfigCreate(HttpFileReaderConfigSharedPtr *result,
+							 const HttpFileReaderParam *param);
+void HttpFileReaderConfigDelete(HttpFileReaderConfig *self);
+int32_t HttpFileReaderConfigIsHttpsCheckEnabled(const HttpFileReaderConfig *self);
+int32_t HttpFileReaderConfigIsProxyIgnored(const HttpFileReaderConfig *self);
 
 typedef struct HttpFileResponse {
 	uint16_t code;

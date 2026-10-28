@@ -27,6 +27,8 @@ typedef struct PafStringVector {
 typedef char PafStringVectorSizeCheck[sizeof(PafStringVector) == 16 ? 1 : -1];
 
 int PafStringVectorReallocate(PafStringVector *self, size_t capacity);
+PafStringVector *PafStringVectorConstructCopy(PafStringVector *self,
+					   const PafStringVector *src);
 
 typedef char PafStringSizeCheck[sizeof(PafString) == 12 ? 1 : -1];
 typedef char PafWStringSizeCheck[sizeof(PafWString) == 12 ? 1 : -1];

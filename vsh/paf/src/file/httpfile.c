@@ -1,6 +1,7 @@
 #include "httpfile.h"
 #include "httpfile_reader.h"
 #include "../paf_types.h"
+#include "../std/new.h"
 
 const FileClass httpFileClass = {
 	0, NULL, {
@@ -422,4 +423,154 @@ void HttpFileDelete(HttpFile *self)
 HttpFile *HttpFileDestroyBase(HttpFile *self)
 {
 	return HttpFileDestroy(self);
+}
+
+HttpFileHeaderMapNode *HttpFileHeaderMapCopyNodes(PafMap *self,
+					       HttpFileHeaderMapNode *parent,
+					       const HttpFileHeaderMapNode *src)
+{
+	HttpFileHeaderMapNode *node = ScePafStdc_FC5CD359(sizeof(*node));
+	HttpFileHeaderMapNode *entry;
+
+	if (!node) {
+		ScePafStdc_D608246A();
+		return self->_Myhead;
+	}
+	entry = PafPlacementNew(sizeof(*entry), node);
+	if (entry) {
+		HttpFileHeaderMapNode *head = self->_Myhead;
+		unsigned char color = src->_Color;
+
+		entry->_Parent = parent;
+		entry->_Left = head;
+		entry->_Right = head;
+		PafStringInitialize(&entry->_Myval.first);
+		PafStringCopy(&entry->_Myval.first, &src->_Myval.first);
+		PafStringVectorConstructCopy(&entry->_Myval.second, &src->_Myval.second);
+		entry->_Color = color;
+		entry->_Isnil = 0;
+	}
+	if (!src->_Left->_Isnil)
+		node->_Left = HttpFileHeaderMapCopyNodes(self, node, src->_Left);
+	if (!src->_Right->_Isnil)
+		node->_Right = HttpFileHeaderMapCopyNodes(self, node, src->_Right);
+	return node;
+}
+
+PafMap *HttpFileHeaderMapCopy(PafMap *self, const PafMap *src)
+{
+	HttpFileHeaderMapNode *head;
+	HttpFileHeaderMapNode *source;
+
+	self->_Mysize = 0;
+	head = ScePafStdc_FC5CD359(sizeof(*head));
+	if (!head)
+		ScePafStdc_D608246A();
+	self->_Myhead = head;
+	if (head) {
+		head->_Parent = head;
+		head->_Left = head;
+		head->_Right = head;
+		head->_Color = 0;
+		head->_Isnil = 1;
+		source = src->_Myhead;
+		if (source && !source->_Parent->_Isnil) {
+			HttpFileHeaderMapNode *root = HttpFileHeaderMapCopyNodes(self,
+								       head, source->_Parent);
+
+			head = self->_Myhead;
+			if (root != head) {
+				HttpFileHeaderMapNode *node = root;
+
+				head->_Parent = root;
+				while (!node->_Left->_Isnil)
+					node = node->_Left;
+				head->_Left = node;
+				node = root;
+				while (!node->_Right->_Isnil)
+					node = node->_Right;
+				head->_Right = node;
+				self->_Mysize = src->_Mysize;
+			}
+		}
+	}
+	return self;
+}
+
+HttpFileReaderConfig *HttpFileReaderConfigConstruct(HttpFileReaderConfig *self,
+						  const HttpFileReaderParam *param)
+{
+	self->scheme = param->scheme.ptr;
+	self->host = param->host.ptr;
+	self->method = param->method.ptr;
+	self->version = param->version.ptr;
+	self->port = param->port;
+	self->uri = param->uri.ptr;
+	self->user = param->user.ptr;
+	self->passwd = param->passwd.ptr;
+	HttpFileHeaderMapCopy(&self->header, &param->header);
+	BufferSharedPtrCopy(&self->msg_body, &param->msg_body);
+	self->open_flag = param->open_flag;
+	self->https_flag = param->https_flag;
+	self->timeout.resolve_timeout = param->timeout.resolve_timeout;
+	self->timeout.connect_timeout = param->timeout.connect_timeout;
+	self->timeout.send_timeout = param->timeout.send_timeout;
+	self->timeout.recv_timeout = param->timeout.recv_timeout;
+	self->accept_encoding_gzip = param->accept_encoding_gzip;
+	self->context.m_ptr = param->context.m_ptr;
+	self->context.m_ref_counter = param->context.m_ref_counter;
+	if (self->context.m_ptr)
+		sceAtomicIncrement32AcqRel(&self->context.m_ref_counter->m_counter);
+	self->template_option = param->template_option;
+	self->response_header_max_size = param->response_header_max_size;
+	return self;
+}
+
+HttpFileReaderConfigRefCounter *HttpFileReaderConfigCreate(HttpFileReaderConfigSharedPtr *result,
+							 const HttpFileReaderParam *param)
+{
+	HttpFileReaderConfig *self = ScePafStdc_FC5CD359(sizeof(*self));
+
+	if (self)
+		self = HttpFileReaderConfigConstruct(self, param);
+	result->m_ptr = self;
+	if (self) {
+		HttpFileReaderConfigRefCounter *counter = ScePafStdc_FC5CD359(sizeof(*counter));
+
+		if (counter) {
+			result->m_ref_counter = counter;
+			counter->m_ptr = self;
+			result->m_ref_counter->m_counter = 1;
+			result->m_ref_counter->m_weak_counter = 1;
+			result->m_ref_counter->m_deleter = HttpFileReaderConfigDelete;
+			return result->m_ref_counter;
+		}
+		result->m_ptr = NULL;
+	}
+	result->m_ref_counter = NULL;
+	return NULL;
+}
+
+void HttpFileReaderConfigDelete(HttpFileReaderConfig *self)
+{
+	if (self) {
+		HttpFileReaderContextSharedPtrRelease(&self->context);
+		BufferSharedPtrRelease(&self->msg_body);
+		HttpFileHeaderMapClear(&self->header);
+		if (self->header._Myhead)
+			ScePafStdc_1B77082E(self->header._Myhead);
+		self->header._Myhead = (void *)-1;
+		self->header._Mysize = (size_t)-1;
+		ScePafStdc_1B77082E(self);
+	}
+}
+
+int32_t HttpFileReaderConfigIsHttpsCheckEnabled(const HttpFileReaderConfig *self)
+{
+	return !(self->open_flag & DISABLE_HTTPS_CHECK);
+}
+
+int32_t HttpFileReaderConfigIsProxyIgnored(const HttpFileReaderConfig *self)
+{
+	return (self->open_flag & IGNORE_PROXY_SETTING) != 0;
 }
