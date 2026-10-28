@@ -552,19 +552,19 @@ int SceUsbstorForDriver_D3C7EE70(const void *buffer, unsigned size, unsigned tim
 /* name unknown: receive data from the host (a data-out command) */
 int SceUsbstorForDriver_F1A690DC(void *buffer, unsigned size, unsigned timeout)
 {
-	unsigned bits, previous, requested;
+	unsigned bits;
+	unsigned previous = s.transferred;
+	unsigned requested = s.cbw->dCBWDataTransferLength;
 	int result;
 
 	if (!buffer)
 		return STOR_ERROR_ARGUMENT;
 	if (!size)
 		return 0;
-	previous = s.transferred;
-	s.transferred += size;
 	s.direction = DIRECTION_OUT;
+	s.transferred = previous + size;
 	if (s.cbw->bmCBWFlags & USBMS_CBW_DATA_IN)
 		return STOR_ERROR_DIRECTION;
-	requested = s.cbw->dCBWDataTransferLength;
 	if (previous >= requested)
 		return 0;
 	s.receive.request.size = size < requested - previous ? size : requested - previous;
