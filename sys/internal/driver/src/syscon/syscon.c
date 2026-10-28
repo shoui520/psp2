@@ -22,14 +22,16 @@
 
 #include "syscon_private.h"
 
-/* Sony's debug build is fortified */
+/* Sony's debug build is fortified; the others expand fixed-size copies inline */
 #if FW_DEBUG
 #include <sysmem/fortify.h>
+#else
+#define memcpy(dst, src, n)	__builtin_memcpy(dst, src, n)
 #endif
 
 struct SysconControl s_sysconControl;
 
-static int sysconSetCallback(SceSysconCallback callback, void *argument,
+static __attribute__((noinline)) int sysconSetCallback(SceSysconCallback callback, void *argument,
 			     unsigned int slot)
 {
 	uint32_t state;
@@ -199,12 +201,12 @@ int SceSysconForDriver_67A4CB9F(SceSysconCallback callback, void *argument)
 
 static int _sceSysconGpioIntr(void *subintrArg, void *registerArg, unsigned char intrPriority);
 
-static void sysconStartPacket(SceSysconPacket *packet)
+static __attribute__((noinline)) void sysconStartPacket(SceSysconPacket *packet)
 {
 	volatile SceSpiRegisters *spi = s_sysconControl.spiRegisters;
 	const SceSysconDebugHandlers *handlers;
 	const uint8_t *tx;
-	uint32_t offset, length;
+	int offset, length;
 	uint8_t checksum;
 
 	packet->time = SceThreadmgrForDriver_47F6DE49();
@@ -245,29 +247,24 @@ static void sysconStartPacket(SceSysconPacket *packet)
 			packet->request.data[25], packet->request.data[26], packet->request.data[27], packet->request.data[28]);
 }
 
-static void sysconWaitTransferDelay(uint32_t delay)
+static inline __attribute__((always_inline)) void sysconWaitTransferDelay(uint32_t delay)
 {
 	while ((uint32_t)(SceThreadmgrForDriver_47F6DE49() -
 			  s_sysconControl.lastTransferTime) <= delay)
 		;
 }
 
-static int sysconPreparePacket(SceSysconPacket *packet, uint32_t flags,
+static inline __attribute__((always_inline)) int sysconPreparePacket(SceSysconPacket *packet, uint32_t flags,
 			      int (*callback)(SceSysconPacket *, void *),
 			      void *argument)
 {
 	uint8_t *tx;
-	uint32_t length, index;
-	uint8_t checksum = 0;
+	int length, index;
+	int checksum = 0;
 
 	if (s_sysconControl.stopping)
 		return SCE_SYSCON_ERROR_NOEXEC;
-	if (!(flags & SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX)) {
-		tx = packet->tx;
-		packet->externalTx = NULL;
-		if (tx[2] < 1 || tx[2] > 0x1d)
-			return SCE_SYSCON_ERROR_TX_SIZE_TOO_LONG;
-	} else {
+	if (flags & SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX) {
 		tx = packet->externalTx;
 		if (!tx)
 			return SCE_SYSCON_ERROR_INVALID_ARGUMENT;
@@ -276,15 +273,20 @@ static int sysconPreparePacket(SceSysconPacket *packet, uint32_t flags,
 		packet->request.length = tx[2];
 		if ((uint8_t)(tx[2] - 1) > 0xfc)
 			return SCE_SYSCON_ERROR_TX_SIZE_TOO_LONG;
-	}
-	if (!(flags & SCE_SYSCON_PACKET_FLAG_EXTERNAL_RX)) {
-		packet->externalRx = NULL;
-		packet->externalRxSize = 0;
 	} else {
+		tx = packet->tx;
+		packet->externalTx = NULL;
+		if (tx[2] < 1 || tx[2] > 0x1d)
+			return SCE_SYSCON_ERROR_TX_SIZE_TOO_LONG;
+	}
+	if (flags & SCE_SYSCON_PACKET_FLAG_EXTERNAL_RX) {
 		if (!packet->externalRx)
 			return SCE_SYSCON_ERROR_INVALID_ARGUMENT;
 		if (packet->externalRxSize < 0x21)
 			return SCE_SYSCON_ERROR_INVALID_SIZE;
+	} else {
+		packet->externalRx = NULL;
+		packet->externalRxSize = 0;
 	}
 	if (!(flags & SCE_SYSCON_PACKET_FLAG_CHECKSUMMED)) {
 		length = tx[2];
@@ -292,9 +294,9 @@ static int sysconPreparePacket(SceSysconPacket *packet, uint32_t flags,
 			checksum += tx[index];
 		tx[length + 2] = ~checksum;
 		if (length < 0x1d)
-			memset(tx + length + 3, 0xff, 0x1d - length);
+			memset(tx + length + 3, -1, 0x1d - length);
 	}
-	memset(packet->rx, 0xff, sizeof(packet->rx));
+	memset(packet->rx, -1, sizeof(packet->rx));
 	packet->callback = callback;
 	packet->argp = argument;
 	packet->status = (flags & 0xffff) | SYSCON_PACKET_QUEUED;
@@ -311,7 +313,7 @@ static int sysconPreparePacket(SceSysconPacket *packet, uint32_t flags,
 	return 0;
 }
 
-static void sysconQueuePacket(SceSysconPacket *packet, uint32_t flags)
+static inline __attribute__((always_inline)) void sysconQueuePacket(SceSysconPacket *packet, uint32_t flags)
 {
 	SceSysconPacket *head, *selected;
 	uint32_t slot = packet->queue;
@@ -338,7 +340,7 @@ static void sysconQueuePacket(SceSysconPacket *packet, uint32_t flags)
 	if (s_sysconControl.currentPacket || s_sysconControl.interruptActive)
 		return;
 	if (s_sysconControl.polling) {
-		delay = slot == 17 ? 4 : s_sysconControl.commandPacketDelay;
+		delay = packet->queue == 17 ? 4 : s_sysconControl.commandPacketDelay;
 		sysconWaitTransferDelay(delay);
 		s_sysconControl.currentPacket = packet;
 		sysconStartPacket(packet);
@@ -463,7 +465,7 @@ int sceSysconCmdSync(SceSysconPacket *packet, int noWait)
 	return packet->reply.result | SCE_SYSCON_ERROR_REPLY;
 }
 
-static int sysconSubmitSynchronousPacket(SceSysconPacket *packet,
+static inline __attribute__((always_inline)) int sysconSubmitSynchronousPacket(SceSysconPacket *packet,
 					 uint32_t flags, const void *caller)
 {
 	uint32_t state;
@@ -505,28 +507,44 @@ int sceSysconCmdExec(SceSysconPacket *packet, uint32_t flags)
 
 int SceSysconForDriver_C9DB5BFF(SceSysconPacket *packet)
 {
-	SceSysconPacket *current, *previous = NULL;
-	uint32_t state, slot = packet->queue;
-	int result = 0;
+	SceSysconPacket *current, *previous;
+	uint32_t state, slot;
+	int result;
 
 	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_sysconControl.callbackLock);
-	current = s_sysconControl.queueHeads[slot];
-	while (current && current != packet) {
-		previous = current;
-		current = current->next;
-	}
-	if (!current) {
+	slot = packet->queue;
+	previous = s_sysconControl.queueHeads[slot];
+	if (!previous) {
 		result = SCE_SYSCON_ERROR_INVALID_POINTER;
-	} else if (current->status & SYSCON_PACKET_IN_FLIGHT) {
-		result = SCE_SYSCON_ERROR_INVALID_STATUS;
-	} else {
-		if (previous)
-			previous->next = current->next;
-		else
-			s_sysconControl.queueHeads[slot] = current->next;
-		if (!current->next)
-			s_sysconControl.queueTails[slot] = previous;
+		goto unlock;
 	}
+	if (previous == packet) {
+		current = previous;
+		previous = NULL;
+	} else {
+		for (;;) {
+			current = previous->next;
+			if (!current) {
+				result = SCE_SYSCON_ERROR_INVALID_POINTER;
+				goto unlock;
+			}
+			if (current == packet)
+				break;
+			previous = current;
+		}
+	}
+	if (current->status & SYSCON_PACKET_IN_FLIGHT) {
+		result = SCE_SYSCON_ERROR_INVALID_STATUS;
+		goto unlock;
+	}
+	if (previous)
+		previous->next = current->next;
+	else
+		s_sysconControl.queueHeads[slot] = current->next;
+	result = 0;
+	if (!current->next)
+		s_sysconControl.queueTails[slot] = previous;
+unlock:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock, state);
 	return result;
 }
@@ -598,7 +616,7 @@ static const struct SysconNotificationDescriptor s_sysconNotifications[25] = {
 	{ 3, 0x20, 0, 29, &s_sysconControl.notificationState[SYSCON_STATE_LOW_BATTERY_INHIBIT_UPDATE_DOWNLOAD] },
 };
 
-static void sysconDecodeNotifications(uint32_t bits)
+static inline __attribute__((always_inline)) void sysconDecodeNotifications(void)
 {
 	const struct SysconNotificationDescriptor *descriptor;
 	unsigned int index;
@@ -607,13 +625,14 @@ static void sysconDecodeNotifications(uint32_t bits)
 	for (index = 0; index < 25; index++) {
 		descriptor = &s_sysconNotifications[index];
 		value = descriptor->invert;
-		if (((bits >> (descriptor->byte * 8)) & descriptor->mask) != 0)
+		if (((s_sysconControl.notificationBits >> (descriptor->byte * 8)) &
+		     descriptor->mask) != 0)
 			value ^= 1;
 		*descriptor->state = value;
 	}
 }
 
-static int sysconReadWord(uint32_t *value, uint32_t command)
+static __attribute__((noinline)) int sysconReadWord(uint32_t *value, uint32_t command)
 {
 	SceSysconPacket packet;
 	uint32_t resultValue = 0;
@@ -638,7 +657,7 @@ static int sysconReadWord(uint32_t *value, uint32_t command)
 	return 0;
 }
 
-static int sysconWriteWord(uint32_t value, uint32_t command, uint8_t length)
+static __attribute__((noinline)) int sysconWriteWord(uint32_t value, uint32_t command, uint8_t length)
 {
 	SceSysconPacket packet;
 	int result;
@@ -657,7 +676,17 @@ static int sysconWriteWord(uint32_t value, uint32_t command, uint8_t length)
 	return sceSysconCmdSync(&packet, 0);
 }
 
-static int sysconReadTimestamp(uint8_t *text)
+static __attribute__((noinline)) int sysconReadSleepFactor(uint32_t *value)
+{
+	return sysconReadWord(value, SYSCON_CMD_GET_SLEEP_FACTOR);
+}
+
+static __attribute__((noinline, noclone)) int sysconReadErnieVersion(uint32_t *value)
+{
+	return sysconReadWord(value, SYSCON_CMD_GET_ERNIE_VERSION);
+}
+
+static __attribute__((noinline, noclone)) int sysconReadTimestamp(uint8_t *text)
 {
 	SceSysconPacket packet;
 	int result;
@@ -674,43 +703,44 @@ static int sysconReadTimestamp(uint8_t *text)
 	return 0;
 }
 
-static int sysconReadMultiCnInfo(uint32_t *value)
+static __attribute__((noinline)) int sysconWriteCommand80(uint32_t value)
 {
-	uint32_t information;
-	uint8_t revision;
+	return sysconWriteWord(value, 0x80, 3);
+}
+
+static __attribute__((noinline)) int sysconReadCommand130(uint32_t *value)
+{
+	return sysconReadWord(value, 0x130);
+}
+
+static __attribute__((noinline)) int sysconReadMultiCnInfo(uint32_t *value)
+{
+	SysconMultiCnInfo information;
 	int result;
 
-	if ((s_sysconControl.hardwareInfo & 0xff0000) >= 0x400000)
+	if (((uint32_t)SceSysconForDriver_CBD6D8BC() & 0xff0000) >= 0x400000)
 		return sysconReadWord(value, SYSCON_CMD_GET_MULTI_CN_INFO);
-	result = sysconReadWord(&information, SYSCON_CMD_GET_MULTI_CN_INFO);
+	result = sysconReadWord(&information.value, SYSCON_CMD_GET_MULTI_CN_INFO);
 	if (result < 0)
 		return result;
-	switch ((information >> 8) & 0xff) {
-	case 0x65:
-		revision = 4;
-		break;
-	case 0x55:
-		revision = 5;
-		break;
-	case 0x51:
-		revision = 2;
-		break;
-	case 0x60:
-		revision = 0;
-		break;
-	default:
-		revision = 0xff;
-		break;
-	}
-	information = (information & ~0xff00U) | (uint32_t)revision << 8;
+	if (information.byte[1] == 0x65)
+		information.byte[1] = 4;
+	else if (information.byte[1] == 0x55)
+		information.byte[1] = 5;
+	else if (information.byte[1] == 0x51)
+		information.byte[1] = 2;
+	else if (information.byte[1] == 0x60)
+		information.byte[1] = 0;
+	else
+		information.byte[1] = 0xff;
 	if (value)
-		*value = information;
+		*value = information.value;
 	return result;
 }
 
 static int sysconSysEvent(int resume, int eventid, void *args, void *opt)
 {
-	volatile SceSpiRegisters *spi = s_sysconControl.spiRegisters;
+	volatile SceSpiRegisters *spi;
 	SceSysconPacket *packet;
 	const uint32_t *resumeInfo;
 	unsigned int slot;
@@ -744,6 +774,7 @@ static int sysconSysEvent(int resume, int eventid, void *args, void *opt)
 	} else if (resume == 1) {
 		if (eventid == SYSEVENT_RESUME_DEVICE(6)) {
 			resumeInfo = ((const uint32_t *const *)args)[1];
+			spi = s_sysconControl.spiRegisters;
 			ScePervasiveForDriver_DFD96BFC(0);
 			ScePervasiveForDriver_E4B145AE(0);
 			spi->mode = 0;
@@ -754,7 +785,7 @@ static int sysconSysEvent(int resume, int eventid, void *args, void *opt)
 			sceKernelEnableSubIntr(0xf8, 4);
 			s_sysconControl.lastTransferTime = SceThreadmgrForDriver_47F6DE49();
 			s_sysconControl.notificationBits = resumeInfo[3];
-			sysconDecodeNotifications(s_sysconControl.notificationBits);
+			sysconDecodeNotifications();
 			s_sysconControl.notificationState[SYSCON_STATE_POWER_BIT14] =
 				((resumeInfo[5] ^ 0x4000) >> 14) & 1;
 			s_sysconControl.notificationState[SYSCON_STATE_POWER_BIT12] =
@@ -775,47 +806,41 @@ static int sysconSysEvent(int resume, int eventid, void *args, void *opt)
 	return 0;
 }
 
-static int sysconReadWord(uint32_t *value, uint32_t command);
-static int sysconWriteWord(uint32_t value, uint32_t command, uint8_t length);
-static int sysconReadTimestamp(uint8_t *text);
-static int sysconReadMultiCnInfo(uint32_t *value);
-
 static int sysconStartupWorker(void *argument)
 {
-	uint32_t value = 0;
+	uint32_t value;
 	uint64_t timestamp = 0;
-	unsigned int index;
 
-	while (sysconReadWord(&s_sysconControl.baryonVersion, SYSCON_CMD_GET_ERNIE_VERSION) < 0)
+	while (sysconReadErnieVersion(&s_sysconControl.baryonVersion) < 0)
 		;
 	while (sysconReadTimestamp(s_sysconControl.baryonTimestampText) < 0)
 		;
-	for (index = 0; index < 15 && s_sysconControl.baryonTimestampText[index];
-	     index++)
+	for (value = 0; value < 15 && s_sysconControl.baryonTimestampText[value];
+	     value++)
 		timestamp = timestamp * 10 +
-			    (int64_t)((int)(int8_t)s_sysconControl.baryonTimestampText[index] - '0');
+			    (int64_t)((int)(int8_t)s_sysconControl.baryonTimestampText[value] - '0');
 	s_sysconControl.baryonTimestamp = timestamp;
 	if (s_sysconControl.baryonVersion >= 0x1000004) {
-		while (sysconWriteWord(0x12, 0x80, 3) < 0)
+		while (sysconWriteCommand80(0x12) < 0 && sysconWriteCommand80(0x12) < 0)
 			;
 	} else if (s_sysconControl.baryonVersion > 0x70501) {
-		while (sysconWriteWord(2, 0x80, 3) < 0)
+		while (sysconWriteCommand80(2) < 0 && sysconWriteCommand80(2) < 0)
 			;
 	}
 	if (!(s_sysconControl.statusFlags & SYSCON_STATUS_DOWNLOADER_MODE)) {
 		while (sysconReadMultiCnInfo(&value) < 0)
 			;
 		if (s_sysconControl.hardwareInfo & 8) {
-			while (sysconReadWord(&value, 0x130) < 0)
+			while (sysconReadCommand130(&value) < 0)
 				;
 		}
 	}
 	s_sysconControl.notificationState[SYSCON_STATE_MULTI_CN] = -1;
 	s_sysconControl.notificationState[SYSCON_STATE_N0_BIT6] = -1;
-	while (sysconReadWord(&value, SYSCON_CMD_GET_SLEEP_FACTOR) < 0)
+	while (sysconReadSleepFactor(&value) < 0)
 		;
 	s_sysconControl.notificationBits = value;
-	sysconDecodeNotifications(value);
+	sysconDecodeNotifications();
 	s_sysconControl.pendingMultiCnInfo = 1;
 	s_sysconControl.initialized = 1;
 	s_sysconControl.notificationState[SYSCON_STATE_MULTI_CN] = -1;
@@ -902,13 +927,13 @@ static uint16_t sysconPacketCommand(const SceSysconPacket *packet)
 	return packet->request.command[0] | (uint16_t)packet->request.command[1] << 8;
 }
 
-static uint32_t sysconResponseWord(const uint8_t *response)
+static inline __attribute__((always_inline)) uint32_t sysconResponseWord(const uint8_t *response)
 {
 	return response[4] | (uint32_t)response[5] << 8 |
 	       (uint32_t)response[6] << 16 | (uint32_t)response[7] << 24;
 }
 
-static void sysconDispatchNotification(unsigned int slot, int value)
+static inline __attribute__((always_inline)) void sysconDispatchNotification(unsigned int slot, int value)
 {
 	SceSysconCallback callback = s_sysconControl.callbacks[slot].callback;
 
@@ -969,30 +994,34 @@ static void sysconDecodePacketNotifications(const uint8_t *response)
 	}
 }
 
+static inline __attribute__((always_inline)) uint32_t sysconUpdateNotification(unsigned int state, int value)
+{
+	int previous = s_sysconControl.notificationState[state];
+
+	s_sysconControl.notificationState[state] = value;
+	return previous != value || previous == -1;
+}
+
 static void sysconDecodePowerNotifications(const uint8_t *response)
 {
-	uint32_t changed = 0;
-	int previous, value;
-	unsigned int index;
-	int values[4] = {
-		((response[5] >> 6) & 1) ^ 1,
-		((response[5] >> 4) & 1) ^ 1,
-		(response[7] >> 3) & 1,
-		((response[7] >> 1) & 1) ^ 1,
-	};
+	uint32_t changed;
 
-	for (index = 0; index < 4; index++) {
-		previous = s_sysconControl.notificationState[SYSCON_STATE_POWER_BIT14 + index];
-		value = values[index];
-		s_sysconControl.notificationState[SYSCON_STATE_POWER_BIT14 + index] = value;
-		if (previous != value || previous == -1)
-			changed |= 1U << index;
-	}
-	for (index = 0; index < 4; index++) {
-		if (changed & (1U << index))
-			sysconDispatchNotification(SYSCON_CALLBACK_POWER + index,
-				 s_sysconControl.notificationState[SYSCON_STATE_POWER_BIT14 + index]);
-	}
+	changed = sysconUpdateNotification(SYSCON_STATE_POWER_BIT14, !(response[5] & 0x40));
+	changed |= sysconUpdateNotification(SYSCON_STATE_POWER_BIT12, !(response[5] & 0x10)) << 1;
+	changed |= sysconUpdateNotification(SYSCON_STATE_HEADPHONE, !!(response[7] & 0x08)) << 2;
+	changed |= sysconUpdateNotification(SYSCON_STATE_MOTION_DEV, !(response[7] & 0x02)) << 3;
+	if (changed & 1)
+		sysconDispatchNotification(SYSCON_CALLBACK_POWER + 0,
+			s_sysconControl.notificationState[SYSCON_STATE_POWER_BIT14]);
+	if (changed & 2)
+		sysconDispatchNotification(SYSCON_CALLBACK_POWER + 1,
+			s_sysconControl.notificationState[SYSCON_STATE_POWER_BIT12]);
+	if (changed & 4)
+		sysconDispatchNotification(SYSCON_CALLBACK_POWER + 2,
+			s_sysconControl.notificationState[SYSCON_STATE_HEADPHONE]);
+	if (changed & 8)
+		sysconDispatchNotification(SYSCON_CALLBACK_POWER + 3,
+			s_sysconControl.notificationState[SYSCON_STATE_MOTION_DEV]);
 }
 
 static void sysconDecodePacketResponse(SceSysconPacket *packet,
@@ -1068,33 +1097,28 @@ receive:
 	}
 }
 
-static void sysconLogPacket(unsigned int event, SceSysconPacket *packet,
+static inline __attribute__((always_inline)) void sysconLogPacket(unsigned int event, SceSysconPacket *packet,
 			    const uint8_t *bytes)
 {
-	int value[32];
-	unsigned int index;
-
 	if (!s_sysconControl.logger)
 		return;
-	for (index = 0; index < 32; index++)
-		value[index] = event == 1 ? bytes[index] : (int8_t)bytes[index];
 	if (event == 3) {
-		s_sysconControl.logger(3, 0x21, (int16_t)sysconPacketCommand(packet),
-			value[0], value[1], value[2], value[3], value[4], value[5],
-			value[6], value[7], value[8], value[9], value[10], value[11],
-			value[12], value[13], value[14], value[15], value[16], value[17],
-			value[18], value[19], value[20], value[21], value[22], value[23],
-			value[24], value[25], value[26], value[27], value[28], value[29],
-			value[30], value[31]);
+		s_sysconControl.logger(3, 0x21, sysconPacketCommand(packet),
+			bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5],
+			bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11],
+			bytes[12], bytes[13], bytes[14], bytes[15], bytes[16], bytes[17],
+			bytes[18], bytes[19], bytes[20], bytes[21], bytes[22], bytes[23],
+			bytes[24], bytes[25], bytes[26], bytes[27], bytes[28], bytes[29],
+			bytes[30], bytes[31]);
 	} else {
 		s_sysconControl.logger(event, 0x22,
-			(int16_t)sysconPacketCommand(packet), packet->status,
-			value[0], value[1], value[2], value[3], value[4], value[5],
-			value[6], value[7], value[8], value[9], value[10], value[11],
-			value[12], value[13], value[14], value[15], value[16], value[17],
-			value[18], value[19], value[20], value[21], value[22], value[23],
-			value[24], value[25], value[26], value[27], value[28], value[29],
-			value[30], value[31]);
+			sysconPacketCommand(packet), packet->status,
+			bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5],
+			bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11],
+			bytes[12], bytes[13], bytes[14], bytes[15], bytes[16], bytes[17],
+			bytes[18], bytes[19], bytes[20], bytes[21], bytes[22], bytes[23],
+			bytes[24], bytes[25], bytes[26], bytes[27], bytes[28], bytes[29],
+			bytes[30], bytes[31]);
 	}
 }
 
@@ -1185,7 +1209,7 @@ static void sysconDecodeCommandCompletions(SceSysconPacket *packet,
 #endif
 }
 
-static void sysconPrependInternalPacket(SceSysconPacket *packet)
+static inline __attribute__((always_inline)) void sysconPrependInternalPacket(SceSysconPacket *packet)
 {
 	if (!s_sysconControl.queueHeads[17])
 		s_sysconControl.queueTails[17] = packet;
@@ -1234,7 +1258,7 @@ static int _sceSysconGpioIntr(void *subintrArg, void *registerArg, unsigned char
 	volatile SceSpiRegisters *spi;
 	uint8_t *response;
 	uint32_t state, capacity, first = 0, word, checksum = 0;
-	uint32_t requestStatus = 0, requestCompletions = 0;
+	uint32_t requestStatus = 0, requestCompletions = 0, now, delay;
 	unsigned int offset;
 	int semaphore = -1, callbackResult = 2, result;
 	const void *caller = __builtin_return_address(0);
@@ -1245,7 +1269,8 @@ static int _sceSysconGpioIntr(void *subintrArg, void *registerArg, unsigned char
 	s_sysconControl.currentPacket = NULL;
 	if (!(packet->status & SCE_SYSCON_PACKET_FLAG_KEEP_SELECT))
 		sceGpioPortClear(0, 3);
-	s_sysconControl.lastTransferTime = SceThreadmgrForDriver_47F6DE49();
+	now = SceThreadmgrForDriver_47F6DE49();
+	s_sysconControl.lastTransferTime = now;
 	SceGpioForDriver_35AAD77A(0, 4);
 	sceKernelSpinlockLowUnlock(&s_sysconControl.callbackLock);
 	spi = s_sysconControl.spiRegisters;
@@ -1325,7 +1350,7 @@ invalid:
 	sysconLogPacket(3, packet, packet->rx);
 	callbackResult = packet->callback(packet, packet->argp);
 	if (s_sysconControl.logger)
-		s_sysconControl.logger(4, 2, (int16_t)sysconPacketCommand(packet),
+		s_sysconControl.logger(4, 2, sysconPacketCommand(packet),
 				      callbackResult);
 	sceKernelSpinlockLowLock(&s_sysconControl.callbackLock);
 	if (callbackResult == 1) {
@@ -1363,8 +1388,9 @@ queueInternal:
 select:
 	next = sysconSelectNextPacket();
 	if (next) {
-		sysconWaitTransferDelay(s_sysconControl.polling ?
-					s_sysconControl.commandPacketDelay : 4);
+		delay = s_sysconControl.polling ? s_sysconControl.commandPacketDelay : 4;
+		while ((uint32_t)(SceThreadmgrForDriver_47F6DE49() - now) <= delay)
+			;
 		s_sysconControl.currentPacket = next;
 		sysconStartPacket(next);
 	}
@@ -1774,22 +1800,234 @@ int SceSysconForDriver_9CA6EB70(uint32_t enabled)
 	return sysconWriteWord(enabled, SYSCON_CMD_SET_CHARGE_LED_CTRL, 2);
 }
 
+/*
+ * The battery commands of a syscon older than 0x70504 (their 0x08xx forms).
+ * Each export below runs its 0x09xx form itself on a newer syscon.
+ */
+static __attribute__((noinline)) int sysconGetBatteryVersionOld(uint32_t *first,
+	uint32_t *second, uint32_t *third)
+{
+	SceSysconPacket packet;
+	int result;
+
+	packet.request.command[0] = 0x82;
+	packet.request.command[1] = 0x8;
+	packet.request.length = 1;
+	result = sceSysconCmdExec(&packet, 0x0);
+	if (result < 0)
+		return result;
+	if (first)
+		*first = packet.reply.data[0] | (uint16_t)packet.reply.data[1] << 8;
+	if (second)
+		*second = packet.reply.data[2] | (uint16_t)packet.reply.data[3] << 8;
+	if (third)
+		*third = packet.reply.data[4] | (uint16_t)packet.reply.data[5] << 8;
+	return 0;
+}
+
+static __attribute__((noinline)) int sysconGetBatteryRemainCapacityOld(uint32_t *capacity)
+{
+	*capacity = 0;
+	return sysconReadWord(capacity, 0x802);
+}
+
+static __attribute__((noinline)) int sysconGetBatteryVoltOld(uint32_t *voltage)
+{
+	*voltage = 0;
+	return sysconReadWord(voltage, 0x803);
+}
+
+static __attribute__((noinline)) int sysconGetBatteryTempOld(uint32_t *temperature)
+{
+	*temperature = 0;
+	return sysconReadWord(temperature, 0x8a0);
+}
+
+static __attribute__((noinline)) int sysconGetBatteryFullCapOld(uint32_t *value)
+{
+	*value = 0;
+	return sysconReadWord(value, 0x8a1);
+}
+
+static __attribute__((noinline)) int sysconGetBatteryElecOld(int32_t *current)
+{
+	uint32_t value;
+	int result;
+
+	result = sysconReadWord(&value, 0x8a2);
+	if (result >= 0) {
+		*current = (int16_t)value;
+		return 0;
+	}
+	return result;
+}
+
+static __attribute__((noinline)) int sysconGetBatteryLifeTimeOld(uint32_t *time)
+{
+	*time = 0;
+	return sysconReadWord(time, 0x8a3);
+}
+
+static __attribute__((noinline)) int sysconGetBatterySOHOld(uint32_t *health)
+{
+	*health = 0;
+	return sysconReadWord(health, SYSCON_CMD_GET_BATTERY_SOH_OLD);
+}
+
+static __attribute__((noinline)) int sysconReadBatteryRegOld(uint32_t index, uint16_t *value)
+{
+	SceSysconPacket packet;
+	int result;
+
+	if (index >= 0x10000)
+		return SCE_SYSCON_ERROR_INVALID_SIZE;
+	packet.request.data[0] = index;
+	packet.request.data[1] = index >> 8;
+	packet.request.command[0] = 0xa8;
+	packet.request.command[1] = 0x8;
+	packet.request.length = 3;
+	result = sceSysconCmdExec(&packet, 0x0);
+	if (result < 0)
+		return result;
+	*value = packet.reply.data[0] | (uint16_t)packet.reply.data[1] << 8;
+	return 0;
+}
+
+static __attribute__((noinline)) int sysconWriteBatteryRegOld(uint32_t index, uint32_t value)
+{
+	SceSysconPacket packet;
+	int result;
+
+	if (index >= 0x10000)
+		return SCE_SYSCON_ERROR_INVALID_SIZE;
+	packet.request.data[0] = index;
+	packet.request.data[1] = index >> 8;
+	packet.request.data[2] = value >> 8;
+	packet.request.data[3] = value;
+	packet.request.command[0] = 0xa9;
+	packet.request.command[1] = 0x8;
+	packet.request.length = 5;
+	result = sceSysconCmdExec(&packet, 0x0);
+	return result < 0 ? result : 0;
+}
+
+static __attribute__((noinline)) int sysconBatteryControlCommandOld(uint32_t index, uint16_t *value)
+{
+	SceSysconPacket packet;
+	int result;
+
+	if (index >= 0x10000)
+		return SCE_SYSCON_ERROR_INVALID_SIZE;
+	packet.request.data[0] = index;
+	packet.request.data[1] = index >> 8;
+	packet.request.command[0] = 0xaa;
+	packet.request.command[1] = 0x8;
+	packet.request.length = 3;
+	result = sceSysconCmdExec(&packet, 0x0);
+	if (result < 0)
+		return result;
+	*value = packet.reply.data[0] | (uint16_t)packet.reply.data[1] << 8;
+	return 0;
+}
+
+static __attribute__((noinline)) int sysconBatteryStartBLModeOld(void)
+{
+	SceSysconPacket packet;
+	int result;
+
+	packet.request.data[0] = 0;
+	packet.request.length = 1;
+	packet.request.command[0] = 0xb0;
+	packet.request.command[1] = 0x8;
+	result = sceSysconCmdExec(&packet, 0x0);
+	return result < 0 ? result : 0;
+}
+
+static __attribute__((noinline)) int sysconBatteryStopBLModeOld(void)
+{
+	SceSysconPacket packet;
+	int result;
+
+	packet.request.data[0] = 0;
+	packet.request.length = 1;
+	packet.request.command[0] = 0xb1;
+	packet.request.command[1] = 0x8;
+	result = sceSysconCmdExec(&packet, 0x0);
+	return result < 0 ? result : 0;
+}
+
+static __attribute__((noinline)) int sysconBatterySetBLCommandOld(uint32_t offset,
+	uint32_t mode, const void *data, uint32_t size)
+{
+	SceSysconPacket packet;
+	int result;
+
+	if (size - 1 >= 16)
+		return SCE_SYSCON_ERROR_INVALID_SIZE;
+	packet.request.data[0] = offset;
+	packet.request.data[1] = offset >> 8;
+	packet.request.length = size + 5;
+	packet.request.command[0] = 0xb2;
+	packet.request.data[3] = mode;
+	packet.request.data[2] = size;
+	packet.request.command[1] = 0x8;
+	memcpy(&packet.request.data[4], data, size);
+	result = sceSysconCmdExec(&packet, 0x0);
+	return result < 0 ? result : 0;
+}
+
+static __attribute__((noinline)) int sysconBatteryExecBLCommandOld(uint32_t offset)
+{
+	SceSysconPacket packet;
+	int result;
+
+	packet.request.data[0] = offset;
+	packet.request.data[1] = offset >> 8;
+	packet.request.data[2] = 0;
+	packet.request.command[0] = 0xb3;
+	packet.request.command[1] = 0x8;
+	packet.request.length = 3;
+	result = sceSysconCmdExec(&packet, 0x0);
+	return result < 0 ? result : 0;
+}
+
+static __attribute__((noinline)) int sysconBatteryReadBLCommandOld(uint32_t offset,
+	uint32_t first, uint32_t second, void *data, uint32_t size)
+{
+	SceSysconPacket packet;
+	int result;
+
+	if (size - 1 >= 16)
+		return SCE_SYSCON_ERROR_INVALID_SIZE;
+	packet.request.data[0] = offset;
+	packet.request.data[1] = offset >> 8;
+	packet.request.data[2] = size;
+	packet.request.data[3] = first;
+	packet.request.data[4] = second;
+	packet.request.command[0] = 0xb4;
+	packet.request.command[1] = 0x8;
+	packet.request.length = 6;
+	result = sceSysconCmdExec(&packet, 0x0);
+	if (result < 0)
+		return result;
+	memcpy(data, &packet.reply.data[2], size);
+	return 0;
+}
+
 int SceSysconForDriver_C562AF3A(uint32_t *capacity)
 {
-	uint32_t version = (uint32_t)SceSysconForDriver_FF86F4C5();
-
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconGetBatteryRemainCapacityOld(capacity);
 	*capacity = 0;
-	return sysconReadWord(capacity,
-			      version > 0x70503 ? 0x900 : 0x802);
+	return sysconReadWord(capacity, 0x900);
 }
 
 int SceSysconForDriver_03F11220(uint32_t *voltage)
 {
-	uint32_t version = (uint32_t)SceSysconForDriver_FF86F4C5();
-
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconGetBatteryVoltOld(voltage);
 	*voltage = 0;
-	return sysconReadWord(voltage,
-			      version > 0x70503 ? 0x901 : 0x803);
+	return sysconReadWord(voltage, 0x901);
 }
 
 int SceSysconForDriver_26F9D729(uint32_t *maximum, uint32_t *level)
@@ -1809,20 +2047,18 @@ int SceSysconForDriver_26F9D729(uint32_t *maximum, uint32_t *level)
 
 int SceSysconForDriver_9070F139(uint32_t *temperature)
 {
-	uint32_t version = (uint32_t)SceSysconForDriver_FF86F4C5();
-
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconGetBatteryTempOld(temperature);
 	*temperature = 0;
-	return sysconReadWord(temperature,
-			      version > 0x70503 ? 0x981 : 0x8a0);
+	return sysconReadWord(temperature, 0x981);
 }
 
 int SceSysconForDriver_00A65FC1(uint32_t *value)
 {
-	uint32_t version = (uint32_t)SceSysconForDriver_FF86F4C5();
-
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconGetBatteryFullCapOld(value);
 	*value = 0;
-	return sysconReadWord(value,
-			      version > 0x70503 ? 0x982 : 0x8a1);
+	return sysconReadWord(value, 0x982);
 }
 
 int SceSysconForDriver_0826BA07(int32_t *current)
@@ -1830,8 +2066,9 @@ int SceSysconForDriver_0826BA07(int32_t *current)
 	uint32_t value;
 	int result;
 
-	result = sysconReadWord(&value,
-			       (uint32_t)SceSysconForDriver_FF86F4C5() > 0x70503 ? 0x983 : 0x8a2);
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconGetBatteryElecOld(current);
+	result = sysconReadWord(&value, 0x983);
 	if (result >= 0) {
 		*current = (int16_t)value;
 		return 0;
@@ -1841,11 +2078,10 @@ int SceSysconForDriver_0826BA07(int32_t *current)
 
 int SceSysconForDriver_B841C141(uint32_t *time)
 {
-	uint32_t version = (uint32_t)SceSysconForDriver_FF86F4C5();
-
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconGetBatteryLifeTimeOld(time);
 	*time = 0;
-	return sysconReadWord(time,
-			      version > 0x70503 ? 0x984 : 0x8a3);
+	return sysconReadWord(time, 0x984);
 }
 
 int SceSysconForDriver_91D3B7A3(uint32_t *health, uint32_t *status)
@@ -1856,8 +2092,7 @@ int SceSysconForDriver_91D3B7A3(uint32_t *health, uint32_t *status)
 	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504) {
 		if (status)
 			*status = 0;
-		*health = 0;
-		return sysconReadWord(health, SYSCON_CMD_GET_BATTERY_SOH_OLD);
+		return sysconGetBatterySOHOld(health);
 	}
 	result = sysconReadWord(&value, SYSCON_CMD_GET_BATTERY_SOH);
 	if (result >= 0) {
@@ -1896,12 +2131,12 @@ int SceSysconForDriver_F6D4DDC4(uint32_t *value)
 
 int SceSysconForDriver_00AE3AEB(uint32_t value)
 {
-	return sysconWriteWord(value, 0xb5, 2);
+	return sysconWriteWord((uint8_t)value, 0xb5, 2);
 }
 
 int SceSysconForDriver_0D300158(uint32_t value)
 {
-	return sysconWriteWord(value, 0xb6, 2);
+	return sysconWriteWord((uint8_t)value, 0xb6, 2);
 }
 
 int SceSysconForDriver_91EF4EC3(uint32_t *value)
@@ -1953,12 +2188,12 @@ int SceSysconForDriver_2E6D97CD(uint32_t *value)
 
 int SceSysconForDriver_B8F4F4E3(uint32_t value)
 {
-	return sysconWriteWord(value, 0x3af, 2);
+	return sysconWriteWord((uint8_t)value, 0x3af, 2);
 }
 
 int SceSysconForDriver_240A604E(uint32_t value)
 {
-	return sysconWriteWord(value, 0x3bf, 2);
+	return sysconWriteWord((uint8_t)value, 0x3bf, 2);
 }
 
 int SceSysconForDriver_2659535C(void)
@@ -2304,12 +2539,12 @@ int SceSysconForDriver_23558805(void)
 
 int SceSysconForDriver_357CC9D9(uint32_t first, uint32_t second)
 {
-	return sysconWriteWord((uint8_t)first | second << 8, 0x3ab, 3);
+	return sysconWriteWord((uint8_t)first | (uint16_t)(second << 8), 0x3ab, 3);
 }
 
 int SceSysconForDriver_CCA56A16(uint32_t first, uint32_t second)
 {
-	return sysconWriteWord((uint8_t)first | second << 8, 0x3bb, 3);
+	return sysconWriteWord((uint8_t)first | (uint16_t)(second << 8), 0x3bb, 3);
 }
 
 int SceSysconForDriver_B3960346(uint8_t *value)
@@ -2777,12 +3012,22 @@ int SceSysconForDriver_1546A141(int first, int second)
 	packet.request.command[0] = 0x87;
 	packet.request.command[1] = 0x3;
 	packet.request.length = 9;
-	packet.request.data[0] = first >= 0;
-	packet.request.data[1] = first < 0 ? 0 : first;
+	if (first < 0) {
+		packet.request.data[0] = 0;
+		packet.request.data[1] = 0;
+	} else {
+		packet.request.data[0] = 1;
+		packet.request.data[1] = first;
+	}
 	packet.request.data[2] = 0;
 	packet.request.data[3] = 0;
-	packet.request.data[4] = second >= 0;
-	packet.request.data[5] = second < 0 ? 0 : second;
+	if (second < 0) {
+		packet.request.data[4] = 0;
+		packet.request.data[5] = 0;
+	} else {
+		packet.request.data[4] = 1;
+		packet.request.data[5] = second;
+	}
 	packet.request.data[6] = 0;
 	packet.request.data[7] = 0;
 	result = sceSysconCmdExec(&packet, 0);
@@ -2822,33 +3067,25 @@ int SceSysconForDriver_769F9AC4(void)
 
 int sceSysconGetMultiCnInfo(uint32_t *information)
 {
-	uint32_t value = s_sysconControl.multiCnInfo;
-	uint32_t revision;
+	SysconMultiCnInfo value;
 
+	value.value = s_sysconControl.multiCnInfo;
 	if (((uint32_t)SceSysconForDriver_CBD6D8BC() & 0xff0000) < 0x400000) {
-		switch ((value >> 8) & 0xff) {
-		case 0x65:
-			revision = 4;
-			break;
-		case 0x55:
-			revision = 5;
-			break;
-		case 0x51:
-			revision = 2;
-			break;
-		case 0x60:
-			revision = 0;
-			break;
-		default:
-			revision = 0xff;
-			break;
-		}
-		value = (value & ~0xff00U) | revision << 8;
+		if (value.byte[1] == 0x65)
+			value.byte[1] = 4;
+		else if (value.byte[1] == 0x55)
+			value.byte[1] = 5;
+		else if (value.byte[1] == 0x51)
+			value.byte[1] = 2;
+		else if (value.byte[1] == 0x60)
+			value.byte[1] = 0;
+		else
+			value.byte[1] = 0xff;
 	}
 	if (information) {
 		if (SceSblAIMgrForDriver_C6E83F34())
-			value &= ~0xff00U;
-		*information = value;
+			value.byte[1] = 0;
+		*information = value.value;
 	}
 	return 0;
 }
@@ -2885,7 +3122,6 @@ int SceSysconForDriver_4DFA12FB(uint32_t first, uint32_t second, const void *dat
 	transmit[0] = packet.request.command[0];
 	transmit[1] = packet.request.command[1];
 	transmit[2] = packet.request.length;
-	transmit[3] = packet.request.data[0];
 	transmit[4] = packet.request.data[1];
 	transmit[5] = packet.request.data[2];
 	transmit[6] = packet.request.data[3];
@@ -3028,7 +3264,6 @@ int SceSysconForDriver_94418CB4(uint32_t first, uint32_t second, uint32_t size,
 	transmit[0] = packet.request.command[0];
 	transmit[1] = packet.request.command[1];
 	transmit[2] = packet.request.length;
-	transmit[3] = packet.request.data[0];
 	transmit[4] = packet.request.data[1];
 	transmit[5] = packet.request.data[2];
 	transmit[6] = packet.request.data[3];
@@ -3223,6 +3458,7 @@ int SceSysconForDriver_D632D197(uint32_t *value)
 
 int SceSysconForDriver_9A4304F2(uint8_t *information)
 {
+	SysconTouchFirmwareUpdateInfo *info = (SysconTouchFirmwareUpdateInfo *)information;
 	SceSysconPacket packet;
 	int result;
 
@@ -3233,21 +3469,21 @@ int SceSysconForDriver_9A4304F2(uint8_t *information)
 	result = sceSysconCmdExec(&packet, 0);
 	if (result < 0)
 		return result;
-	if (information) {
-		information[0] = packet.reply.data[0];
-		information[1] = packet.reply.data[1];
-		information[2] = packet.reply.data[3];
-		information[3] = packet.reply.data[4];
-		information[4] = packet.reply.data[5];
-		information[5] = packet.reply.data[6];
-		information[6] = packet.reply.data[7];
-		information[7] = packet.reply.data[8];
+	if (info) {
+		info->status[0] = packet.reply.data[0];
+		info->status[1] = packet.reply.data[1];
+		info->version = packet.reply.data[3] | packet.reply.data[4] << 8;
+		info->data[0] = packet.reply.data[5];
+		info->data[1] = packet.reply.data[6];
+		info->data[2] = packet.reply.data[7];
+		info->data[3] = packet.reply.data[8];
 	}
 	return 0;
 }
 
 int SceSysconForDriver_C2955814(uint8_t *information)
 {
+	SysconTouchFirmwareUpdateInfo *info = (SysconTouchFirmwareUpdateInfo *)information;
 	SceSysconPacket packet;
 	int result;
 
@@ -3258,15 +3494,14 @@ int SceSysconForDriver_C2955814(uint8_t *information)
 	result = sceSysconCmdExec(&packet, 0);
 	if (result < 0)
 		return result;
-	if (information) {
-		information[0] = packet.reply.data[0];
-		information[1] = packet.reply.data[1];
-		information[2] = packet.reply.data[3];
-		information[3] = packet.reply.data[4];
-		information[4] = packet.reply.data[5];
-		information[5] = packet.reply.data[6];
-		information[6] = packet.reply.data[7];
-		information[7] = packet.reply.data[8];
+	if (info) {
+		info->status[0] = packet.reply.data[0];
+		info->status[1] = packet.reply.data[1];
+		info->version = packet.reply.data[3] | packet.reply.data[4] << 8;
+		info->data[0] = packet.reply.data[5];
+		info->data[1] = packet.reply.data[6];
+		info->data[2] = packet.reply.data[7];
+		info->data[3] = packet.reply.data[8];
 	}
 	return 0;
 }
@@ -3603,13 +3838,11 @@ int sceSysconGetBatteryVersion(uint32_t *first, uint32_t *second, uint32_t *thir
 	SceSysconPacket packet;
 	int result;
 
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconGetBatteryVersionOld(first, second, third);
 	packet.request.command[0] = 0x80;
 	packet.request.command[1] = 0x9;
 	packet.request.length = 1;
-	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504) {
-		packet.request.command[0] = 0x82;
-		packet.request.command[1] = 8;
-	}
 	result = sceSysconCmdExec(&packet, 0x0);
 	if (result < 0)
 		return result;
@@ -3627,17 +3860,15 @@ int SceSysconForDriver_C2FB5565(uint32_t index, uint16_t *value)
 	SceSysconPacket packet;
 	int result;
 
-	packet.request.command[0] = 0x86;
-	packet.request.command[1] = 0x9;
-	packet.request.length = 3;
-	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504) {
-		packet.request.command[0] = 0xa8;
-		packet.request.command[1] = 8;
-	}
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconReadBatteryRegOld(index, value);
 	if (index >= 0x10000)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	packet.request.data[0] = index;
 	packet.request.data[1] = index >> 8;
+	packet.request.command[0] = 0x86;
+	packet.request.command[1] = 0x9;
+	packet.request.length = 3;
 	result = sceSysconCmdExec(&packet, 0x0);
 	if (result < 0)
 		return result;
@@ -3650,19 +3881,17 @@ int SceSysconForDriver_9B779DB0(uint32_t index, uint32_t value)
 	SceSysconPacket packet;
 	int result;
 
-	packet.request.command[0] = 0x87;
-	packet.request.command[1] = 0x9;
-	packet.request.length = 5;
-	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504) {
-		packet.request.command[0] = 0xa9;
-		packet.request.command[1] = 8;
-	}
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconWriteBatteryRegOld(index, value);
 	if (index >= 0x10000)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	packet.request.data[0] = index;
 	packet.request.data[1] = index >> 8;
 	packet.request.data[2] = value >> 8;
 	packet.request.data[3] = value;
+	packet.request.command[0] = 0x87;
+	packet.request.command[1] = 0x9;
+	packet.request.length = 5;
 	result = sceSysconCmdExec(&packet, 0x0);
 	return result < 0 ? result : 0;
 }
@@ -3672,17 +3901,15 @@ int SceSysconForDriver_A5AB19B1(uint32_t index, uint16_t *value)
 	SceSysconPacket packet;
 	int result;
 
-	packet.request.command[0] = 0x88;
-	packet.request.command[1] = 0x9;
-	packet.request.length = 3;
-	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504) {
-		packet.request.command[0] = 0xaa;
-		packet.request.command[1] = 8;
-	}
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconBatteryControlCommandOld(index, value);
 	if (index >= 0x10000)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	packet.request.data[0] = index;
 	packet.request.data[1] = index >> 8;
+	packet.request.command[0] = 0x88;
+	packet.request.command[1] = 0x9;
+	packet.request.length = 3;
 	result = sceSysconCmdExec(&packet, 0x0);
 	if (result < 0)
 		return result;
@@ -3710,12 +3937,11 @@ int sceSysconBatteryStartBLMode(void)
 	SceSysconPacket packet;
 	int result;
 
-	sysconPacketSetCommand(&packet, SYSCON_CMD_BATTERY_START_BL_MODE);
-	packet.request.length = 1;
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconBatteryStartBLModeOld();
 	packet.request.data[0] = 0;
-	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504) {
-		packet.request.command[1] = 8;
-	}
+	packet.request.length = 1;
+	sysconPacketSetCommand(&packet, SYSCON_CMD_BATTERY_START_BL_MODE);
 	result = sceSysconCmdExec(&packet, 0x0);
 	return result < 0 ? result : 0;
 }
@@ -3725,12 +3951,11 @@ int sceSysconBatteryStopBLMode(void)
 	SceSysconPacket packet;
 	int result;
 
-	sysconPacketSetCommand(&packet, SYSCON_CMD_BATTERY_STOP_BL_MODE);
-	packet.request.length = 1;
+	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
+		return sysconBatteryStopBLModeOld();
 	packet.request.data[0] = 0;
-	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504) {
-		packet.request.command[1] = 8;
-	}
+	packet.request.length = 1;
+	sysconPacketSetCommand(&packet, SYSCON_CMD_BATTERY_STOP_BL_MODE);
 	result = sceSysconCmdExec(&packet, 0x0);
 	return result < 0 ? result : 0;
 }
@@ -3740,17 +3965,16 @@ int sceSysconBatterySetBLCommand(uint32_t offset, uint32_t mode, const void *dat
 	SceSysconPacket packet;
 	int result;
 
-	sysconPacketSetCommand(&packet, SYSCON_CMD_BATTERY_SET_BL_COMMAND);
-	packet.request.length = 1;
 	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
-		packet.request.command[1] = 8;
+		return sysconBatterySetBLCommandOld(offset, mode, data, size);
 	if (size - 1 >= 16)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
-	packet.request.length = size + 5;
 	packet.request.data[0] = offset;
 	packet.request.data[1] = offset >> 8;
-	packet.request.data[2] = size;
+	packet.request.length = size + 5;
 	packet.request.data[3] = mode;
+	packet.request.data[2] = size;
+	sysconPacketSetCommand(&packet, SYSCON_CMD_BATTERY_SET_BL_COMMAND);
 	memcpy(&packet.request.data[4], data, size);
 	result = sceSysconCmdExec(&packet, 0x0);
 	return result < 0 ? result : 0;
@@ -3761,13 +3985,13 @@ int sceSysconBatteryExecBLCommand(uint32_t offset)
 	SceSysconPacket packet;
 	int result;
 
-	sysconPacketSetCommand(&packet, SYSCON_CMD_BATTERY_EXEC_BL_COMMAND);
-	packet.request.length = 3;
 	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
-		packet.request.command[1] = 8;
+		return sysconBatteryExecBLCommandOld(offset);
 	packet.request.data[0] = offset;
 	packet.request.data[1] = offset >> 8;
 	packet.request.data[2] = 0;
+	sysconPacketSetCommand(&packet, SYSCON_CMD_BATTERY_EXEC_BL_COMMAND);
+	packet.request.length = 3;
 	result = sceSysconCmdExec(&packet, 0x0);
 	return result < 0 ? result : 0;
 }
@@ -3778,10 +4002,8 @@ int sceSysconBatteryReadBLCommand(uint32_t offset, uint32_t first, uint32_t seco
 	SceSysconPacket packet;
 	int result;
 
-	sysconPacketSetCommand(&packet, SYSCON_CMD_BATTERY_READ_BL_COMMAND);
-	packet.request.length = 6;
 	if ((uint32_t)SceSysconForDriver_FF86F4C5() < 0x70504)
-		packet.request.command[1] = 8;
+		return sysconBatteryReadBLCommandOld(offset, first, second, data, size);
 	if (size - 1 >= 16)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	packet.request.data[0] = offset;
@@ -3789,6 +4011,8 @@ int sceSysconBatteryReadBLCommand(uint32_t offset, uint32_t first, uint32_t seco
 	packet.request.data[2] = size;
 	packet.request.data[3] = first;
 	packet.request.data[4] = second;
+	sysconPacketSetCommand(&packet, SYSCON_CMD_BATTERY_READ_BL_COMMAND);
+	packet.request.length = 6;
 	result = sceSysconCmdExec(&packet, 0x0);
 	if (result < 0)
 		return result;
@@ -3807,12 +4031,7 @@ int SceSysconForDriver_C51B4E6F(uint32_t *information)
 	result = sceSysconCmdExec(&packet, 0x0);
 	if (result < 0)
 		return result;
-	information[0] = packet.reply.word[0];
-	information[1] = packet.reply.word[1];
-	information[2] = packet.reply.word[2];
-	information[3] = packet.reply.word[3];
-	information[4] = packet.reply.word[4];
-	information[5] = packet.reply.word[5];
+	memcpy(information, packet.reply.word, 6 * sizeof(uint32_t));
 	return 0;
 }
 
@@ -3969,9 +4188,6 @@ int SceSysconForDriver_3C80B529(uint32_t offset, uint32_t size, void *data)
 	int result;
 	uint32_t chunk;
 
-	packet.request.command[0] = 0x83;
-	packet.request.command[1] = 0x20;
-	packet.request.length = 3;
 	if (!data)
 		return SCE_SYSCON_ERROR_INVALID_ARGUMENT;
 	if (offset >= 64 || !size)
@@ -3985,6 +4201,9 @@ int SceSysconForDriver_3C80B529(uint32_t offset, uint32_t size, void *data)
 	}
 	do {
 		chunk = size > 24 ? 24 : size;
+		packet.request.command[0] = 0x83;
+		packet.request.command[1] = 0x20;
+		packet.request.length = 3;
 		packet.request.data[0] = offset;
 		packet.request.data[1] = chunk;
 		result = sceSysconCmdExec(&packet, 0);
@@ -4033,9 +4252,6 @@ int SceSysconForDriver_7BFBA09E(uint32_t mode, uint32_t offset, uint32_t size, c
 	int result;
 	uint32_t chunk;
 
-	packet.request.command[0] = 0x85;
-	packet.request.command[1] = 0x20;
-	packet.request.length = 1;
 	if (!data)
 		return SCE_SYSCON_ERROR_INVALID_ARGUMENT;
 	if (offset >= 64 || !size || (int32_t)(offset + size) >= 64)
@@ -4072,9 +4288,6 @@ int SceSysconForDriver_933D813F(uint32_t mode, uint32_t offset, uint32_t size)
 	SceSysconPacket packet;
 	int result;
 
-	packet.request.command[0] = 0x85;
-	packet.request.command[1] = 0x20;
-	packet.request.length = 4;
 	if (offset >= 64 || !size || (int32_t)(offset + size) >= 64)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	result = sceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
@@ -4084,6 +4297,9 @@ int SceSysconForDriver_933D813F(uint32_t mode, uint32_t offset, uint32_t size)
 		sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	}
+	packet.request.command[0] = 0x85;
+	packet.request.command[1] = 0x20;
+	packet.request.length = 4;
 	packet.request.data[0] = mode;
 	packet.request.data[1] = offset;
 	packet.request.data[2] = size;
@@ -4152,18 +4368,21 @@ int SceSysconForDriver_734544E4(const void *data, uint32_t offset, uint32_t size
 
 	if (!data)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
+	memset(transmit, 0, sizeof(transmit));
+	packet.status = SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX;
+	packet.externalTx = transmit;
 	packet.request.command[0] = 0x81;
 	packet.request.command[1] = 0x11;
-	packet.request.length = 1;
-	memset(transmit, 0, sizeof(transmit));
-	packet.externalTx = transmit;
+	packet.request.length = size + 4;
+	packet.request.data[0] = offset;
+	packet.request.data[1] = offset >> 8;
+	packet.request.data[2] = size;
 	transmit[0] = packet.request.command[0];
 	transmit[1] = packet.request.command[1];
 	transmit[2] = packet.request.length;
-	transmit[2] = size + 4;
-	transmit[3] = offset;
-	transmit[4] = offset >> 8;
-	transmit[5] = size;
+	transmit[3] = packet.request.data[0];
+	transmit[4] = packet.request.data[1];
+	transmit[5] = packet.request.data[2];
 	memcpy(transmit + 6, data, size);
 	result = sceSysconCmdExec(&packet, SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX);
 	return result;
@@ -4177,13 +4396,11 @@ int SceSysconForDriver_89C5CFD6(uint32_t offset, const void *data, uint32_t size
 
 	if (size - 1 >= 64)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
-	sysconPacketSetCommand(&packet, SYSCON_CMD_LOAD_CONFIGSTORAGE_SCRIPT);
-	packet.request.length = 1;
 	memset(transmit, 0, sizeof(transmit));
+	packet.status = SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX;
 	packet.externalTx = transmit;
-	transmit[0] = packet.request.command[0];
-	transmit[1] = packet.request.command[1];
-	transmit[2] = packet.request.length;
+	transmit[0] = SYSCON_CMD_LOAD_CONFIGSTORAGE_SCRIPT & 0xff;
+	transmit[1] = SYSCON_CMD_LOAD_CONFIGSTORAGE_SCRIPT >> 8;
 	transmit[2] = size + 4;
 	transmit[3] = offset;
 	transmit[4] = offset >> 8;
@@ -4201,13 +4418,11 @@ int SceSysconForDriver_CC6F90A8(uint32_t offset, const void *data, uint32_t size
 
 	if (size - 1 >= 64)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
-	sysconPacketSetCommand(&packet, SYSCON_CMD_VERIFY_CONFIGSTORAGE_SCRIPT);
-	packet.request.length = 1;
 	memset(transmit, 0, sizeof(transmit));
+	packet.status = SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX;
 	packet.externalTx = transmit;
-	transmit[0] = packet.request.command[0];
-	transmit[1] = packet.request.command[1];
-	transmit[2] = packet.request.length;
+	transmit[0] = SYSCON_CMD_VERIFY_CONFIGSTORAGE_SCRIPT & 0xff;
+	transmit[1] = SYSCON_CMD_VERIFY_CONFIGSTORAGE_SCRIPT >> 8;
 	transmit[2] = size + 4;
 	transmit[3] = offset;
 	transmit[4] = offset >> 8;
@@ -4225,14 +4440,11 @@ int SceSysconForDriver_F9584DC9(uint32_t mode, uint32_t offset, const void *data
 
 	if (size - 1 >= 64)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
-	packet.request.command[0] = 0x91;
-	packet.request.command[1] = 0x13;
-	packet.request.length = 1;
 	memset(transmit, 0, sizeof(transmit));
+	packet.status = SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX;
 	packet.externalTx = transmit;
-	transmit[0] = packet.request.command[0];
-	transmit[1] = packet.request.command[1];
-	transmit[2] = packet.request.length;
+	transmit[0] = 0x91;
+	transmit[1] = 0x13;
 	transmit[2] = size + 5;
 	transmit[3] = mode;
 	transmit[4] = offset;
@@ -4447,7 +4659,7 @@ int SceSysconForDriver_7DE84CE3(uint32_t index)
 	return sysconWriteWord(index, 0x1394, 2);
 }
 
-static int sysconApplyConfigstorageMode(const uint8_t *script)
+static inline __attribute__((always_inline)) int sysconApplyConfigstorageMode(const uint8_t *script)
 {
 	int result;
 
@@ -4549,9 +4761,9 @@ int SceSysconForDriver_4D03754A(const void *request, uint32_t requestSize,
 	memset(receive, 0, sizeof(receive));
 	packet.externalRx = receive;
 	packet.externalRxSize = 46;
+	packet.status = SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX | SCE_SYSCON_PACKET_FLAG_EXTERNAL_RX;
 	packet.externalTx = transmit;
 	transmit[0] = packet.request.command[0];
-	transmit[1] = packet.request.command[1];
 	transmit[2] = packet.request.length;
 	memcpy(transmit + 3, request, 40);
 	result = sceSysconCmdExec(&packet, 0xc00);
@@ -4578,9 +4790,9 @@ int SceSysconForDriver_EBDF88B9(const void *request, uint32_t requestSize,
 	memset(receive, 0, sizeof(receive));
 	packet.externalRx = receive;
 	packet.externalRxSize = 54;
+	packet.status = SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX | SCE_SYSCON_PACKET_FLAG_EXTERNAL_RX;
 	packet.externalTx = transmit;
 	transmit[0] = packet.request.command[0];
-	transmit[1] = packet.request.command[1];
 	transmit[2] = packet.request.length;
 	memcpy(transmit + 3, request, 16);
 	result = sceSysconCmdExec(&packet, 0xc00);
@@ -4603,9 +4815,9 @@ int SceSysconForDriver_63683B9B(const void *request, uint32_t requestSize,
 	sysconPacketSetCommand(&packet, SYSCON_CMD_SNVS_WRITE_DATA);
 	packet.request.length = 49;
 	memset(transmit, 0, sizeof(transmit));
+	packet.status = SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX;
 	packet.externalTx = transmit;
 	transmit[0] = packet.request.command[0];
-	transmit[1] = packet.request.command[1];
 	transmit[2] = packet.request.length;
 	memcpy(transmit + 3, request, 48);
 	result = sceSysconCmdExec(&packet, SCE_SYSCON_PACKET_FLAG_EXTERNAL_TX);

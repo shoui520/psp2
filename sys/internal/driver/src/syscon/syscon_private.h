@@ -26,6 +26,20 @@
 #define SYSCON_PACKET_IN_FLIGHT		(SYSCON_PACKET_STARTED | SYSCON_PACKET_COMPLETION | \
 					 SYSCON_PACKET_TRANSFERRING)
 
+/* the multi connector information word; byte 1 is the device type, which
+ * baryons before 0x40 report as a raw ID */
+typedef union SysconMultiCnInfo {
+	uint32_t value;
+	uint8_t byte[4];
+} SysconMultiCnInfo;
+
+/* the touch panel firmware update information (command 0x3c5) */
+typedef struct SysconTouchFirmwareUpdateInfo {
+	uint8_t status[2];
+	uint16_t version;
+	uint8_t data[4];
+} SysconTouchFirmwareUpdateInfo;
+
 /* commands, named after the export that sends each */
 #define SYSCON_CMD_NOP				0x0000
 #define SYSCON_CMD_GET_ERNIE_VERSION		0x0001
