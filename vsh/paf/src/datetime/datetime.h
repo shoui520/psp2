@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "../rtc/rtc.h"
 
 typedef struct DateTime {
 	uint16_t m_year;
@@ -24,6 +25,23 @@ typedef char DateTimeResultOffsetCheck[offsetof(DateTime, m_parse_result) == 22 
 #define DateTimeConstructBase ScePafMisc_AF79665E
 #define DateTimeDestroy ScePafMisc_2DBDFC13
 #define DateTimeDestroyBase ScePafMisc_897EA53D
+#define DateTimeUTC ScePafMisc_59979922
+#define DateTimeNow scePafGetCurrentClockLocalTime
+#define DateTimeNetworkUTC ScePafMisc_DE76F76B
+#define DateTimeConvertRtcTickToDateTime ScePafMisc_6EC994D7
+#define DateTimeConvertDateTimeToRtcTick ScePafMisc_08943D3E
+#define DateTimeDayOfWeek ScePafMisc_8A79BF51
+#define DateTimeAdd ScePafMisc_B5184CAF
+#define DateTimeLess ScePafMisc_17B87641
+
+void DateTimeUTC(DateTime *result);
+void DateTimeNow(DateTime *result);
+void DateTimeNetworkUTC(DateTime *result);
+void DateTimeConvertRtcTickToDateTime(DateTime *result, RtcTick *tick);
+RtcTick DateTimeConvertDateTimeToRtcTick(DateTime *dt);
+int32_t DateTimeDayOfWeek(uint16_t year, uint16_t month, uint16_t day);
+void DateTimeAdd(DateTime *result, const DateTime *self, const DateTime *r);
+int32_t DateTimeLess(const DateTime *self, const DateTime *r);
 
 DateTime *DateTimeConstruct(DateTime *self, uint16_t year, uint16_t month,
 			    uint16_t day, uint16_t hour, uint16_t minute,
