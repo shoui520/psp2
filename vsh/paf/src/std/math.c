@@ -151,3 +151,83 @@ float sce_paf_expf(float x)
 	result *= result;
 	return result * number.value;
 }
+
+static const float logCoefficients[] = {
+	2.000000476837158f,
+	0.6664773225784302f,
+	0.41397473216056824f
+};
+
+static inline int FloatToInt(float value)
+{
+	union {
+		float value;
+		uint32_t bits;
+	} number;
+
+	number.value = value;
+	/* Both conversions saturate identically for these invalid inputs. */
+	if ((number.bits & 0x7fffffffU) >= 0x4f000000U &&
+	    number.bits != 0xcf000000U)
+		return __builtin_vcvt_n_s32_f32(value, 1);
+	return (int)value;
+}
+
+float sce_paf_powf(float base, float exponent)
+{
+	union {
+		float value;
+		uint32_t bits;
+	} number;
+	int integerExponent = FloatToInt(exponent);
+	int truncatedExponent = FloatToInt(exponent);
+	float result, reduced, square, polynomial, logarithm;
+	uint32_t mantissa, correction;
+	int numerator, denominator;
+
+	if (exponent < 0.0f) {
+		if (base < 0.0f && exponent - (float)truncatedExponent > 0.0f)
+			return 0.0f;
+		return 1.0f / sce_paf_powf(base, -exponent);
+	}
+	if (exponent == 0.0f)
+		return 1.0f;
+	if (__builtin_fabsf(exponent - (float)truncatedExponent) <=
+	    9.999999974752427e-7f) {
+		result = 1.0f;
+		while (integerExponent > 0) {
+			integerExponent--;
+			result *= base;
+		}
+		return result;
+	}
+	if (base == 0.0f)
+		return 0.0f;
+	number.value = base;
+	if ((int32_t)number.bits > 0) {
+		mantissa = number.bits & 0x7fffffU;
+		numerator = (int)mantissa - 0x800000;
+		denominator = (int)mantissa;
+		if (mantissa <= 0x3504f3U) {
+			numerator = (int)mantissa;
+			denominator = (int)mantissa - 0x800000;
+			number.bits -= 0x800000U;
+		}
+		denominator += 0x1800000;
+		reduced = (float)numerator / (float)denominator;
+		correction = (uint32_t)((int32_t)number.bits >> 23) *
+			     11629080U - 1465264080U;
+		square = reduced * reduced;
+		polynomial = logCoefficients[1] + logCoefficients[2] * square;
+		polynomial = logCoefficients[0] + polynomial * square;
+		logarithm = reduced * polynomial;
+		logarithm += (float)(int32_t)correction * 5.960464477539063e-8f;
+	} else {
+		if ((number.bits & 0x7fffffffU) == 0)
+			number.bits = 0xff800000U;
+		else
+			number.bits = 0xffc00000U;
+		logarithm = number.value;
+	}
+	return sce_paf_expf(exponent * logarithm);
+}
