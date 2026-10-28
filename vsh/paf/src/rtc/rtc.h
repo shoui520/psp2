@@ -6,6 +6,17 @@
 
 typedef uint64_t RtcTick;
 
+typedef enum SQLiteDateTimeFormatType {
+	INVALID = 0,
+	YEAR_ONLY = 1,
+	YEAR_MONTH = 2,
+	DATE = 3,
+	DATE_HOUR = 4,
+	DATE_HOUR_MINUTE = 5,
+	DATE_HOUR_MINUTE_SECOND = 6,
+	DATE_HOUR_MINUTE_SECOND_MILLISECOND = 7
+} SQLiteDateTimeFormatType;
+
 typedef struct RtcDateTime {
 	uint16_t year;
 	uint16_t month;
@@ -37,6 +48,20 @@ typedef char RtcDateTimeExSizeCheck[sizeof(RtcDateTimeEx) == 8 ? 1 : -1];
 #define RtcConvertLocalTimeToUtc ScePafMisc_F9AE799D
 #define RtcFormatRFC3339 ScePafMisc_0CC85E44
 #define RtcFormatRFC3339LocalTime ScePafMisc_B94B29AC
+#define RtcFormatSQLiteDateTime ScePafMisc_581735E6
+#define RtcParseRFC3339 ScePafMisc_E4516D60
+#define RtcParseRFC3339LocalTime ScePafMisc_DAAC3337
+#define RtcParseSQLiteDateTime ScePafMisc_0853896D
+#define RtcParseSQLiteDateTimeWithFormat ScePafMisc_EEF3EE60
+
+int32_t RtcFormatSQLiteDateTime(char *dt, size_t size, const RtcTick *tick, char separator);
+int32_t RtcParseRFC3339(RtcTick *tick, const char *dt);
+int32_t RtcParseRFC3339LocalTime(RtcTick *tick, const char *dt);
+int32_t RtcParseSQLiteDateTimeCore(RtcDateTime *dst, const char *dt,
+				 SQLiteDateTimeFormatType *ftype);
+int32_t RtcParseSQLiteDateTime(RtcTick *tick, const char *dt);
+int32_t RtcParseSQLiteDateTimeWithFormat(RtcTick *tick, SQLiteDateTimeFormatType *ftype,
+				       const char *dt);
 
 int32_t RtcGetDaysInMonth(uint16_t year, uint16_t month);
 int32_t RtcIsLeapYear(uint16_t year);
