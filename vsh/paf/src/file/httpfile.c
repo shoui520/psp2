@@ -1243,3 +1243,149 @@ int32_t HttpFileHeaderMapRemove(PafMap *self, const char *name)
 	HttpFileHeaderMapErase(self, &node);
 	return 1;
 }
+
+const HttpFileReaderClass httpFileReaderClass = {
+	0, NULL, {
+		HttpFileReaderDestroy, HttpFileReaderDelete,
+		(int32_t (*)(HttpFileReader *))__cxa_pure_virtual,
+		(int32_t (*)(HttpFileReader *))__cxa_pure_virtual,
+		(int32_t (*)(HttpFileReader *, void *, size_t))__cxa_pure_virtual,
+		(int64_t (*)(HttpFileReader *, int64_t, int32_t))__cxa_pure_virtual,
+		(int32_t (*)(HttpFileReader *))__cxa_pure_virtual,
+		(int64_t (*)(HttpFileReader *))__cxa_pure_virtual,
+		HttpFileReaderGetResponse, HttpFileReaderGetResponseHeaders
+	}
+};
+
+static inline __attribute__((always_inline))
+void HttpFileReaderConfigSharedPtrRelease(const HttpFileReaderConfigSharedPtr *self)
+{
+	if (self->m_ptr &&
+	    sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_counter) == 1) {
+		self->m_ref_counter->m_deleter(self->m_ptr);
+		if (sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_weak_counter) == 1)
+			ScePafStdc_1B77082E(self->m_ref_counter);
+	}
+}
+
+static inline __attribute__((always_inline))
+HttpFileReader *HttpFileReaderDestroyMembers(HttpFileReader *self)
+{
+	self->vtable = &httpFileReaderClass.methods;
+	HttpFileResponseDestroy(&self->m_response);
+	HttpFileHeaderMapClear(&self->m_response_headers);
+	if (self->m_response_headers._Myhead)
+		ScePafStdc_1B77082E(self->m_response_headers._Myhead);
+	self->m_response_headers._Myhead = (void *)-1;
+	self->m_response_headers._Mysize = (size_t)-1;
+	HttpFileReaderConfigSharedPtrRelease(&self->m_config);
+	return self;
+}
+
+HttpFileReader *HttpFileReaderDestroy(HttpFileReader *self)
+{
+	return HttpFileReaderDestroyMembers(self);
+}
+
+void HttpFileReaderDelete(HttpFileReader *self)
+{
+	HttpFileReaderDestroyMembers(self);
+	ScePafStdc_1B77082E(self);
+}
+
+HttpFileResponse *HttpFileReaderGetResponse(HttpFileReader *self)
+{
+	return &self->m_response;
+}
+
+PafMap *HttpFileReaderGetResponseHeaders(HttpFileReader *self)
+{
+	return &self->m_response_headers;
+}
+
+static inline __attribute__((always_inline))
+void HttpFileHeaderMapInitialize(PafMap *self)
+{
+	HttpFileHeaderMapNode *head;
+
+	self->_Mysize = 0;
+	head = ScePafStdc_FC5CD359(sizeof(*head));
+	if (!head)
+		ScePafStdc_D608246A();
+	self->_Myhead = head;
+	if (head) {
+		head->_Parent = head;
+		head->_Left = head;
+		head->_Right = head;
+		head->_Color = 0;
+		((HttpFileHeaderMapNode *)self->_Myhead)->_Isnil = 1;
+	}
+}
+
+void HttpFileReaderConfigClone(HttpFileReaderConfigSharedPtr *result,
+			       const HttpFileReaderConfigSharedPtr *src)
+{
+	HttpFileReaderConfig *self = ScePafStdc_FC5CD359(sizeof(*self));
+
+	if (self) {
+		const HttpFileReaderConfig *config;
+		PafMap header;
+		void *head;
+		size_t size;
+
+		HttpFileHeaderMapInitialize(&self->header);
+		self->msg_body.m_ptr = NULL;
+		self->msg_body.m_ref_counter = NULL;
+		self->context.m_ptr = NULL;
+		self->context.m_ref_counter = NULL;
+		config = src->m_ptr;
+		self->scheme = config->scheme;
+		self->host = config->host;
+		self->method = config->method;
+		self->version = config->version;
+		self->port = config->port;
+		self->uri = config->uri;
+		self->user = config->user;
+		self->passwd = config->passwd;
+		HttpFileHeaderMapCopy(&header, &config->header);
+		head = header._Myhead;
+		header._Myhead = self->header._Myhead;
+		self->header._Myhead = head;
+		size = header._Mysize;
+		header._Mysize = self->header._Mysize;
+		self->header._Mysize = size;
+		HttpFileHeaderMapClear(&header);
+		if (header._Myhead)
+			ScePafStdc_1B77082E(header._Myhead);
+		header._Myhead = (void *)-1;
+		header._Mysize = (size_t)-1;
+		BufferSharedPtrAssign(&self->msg_body, &config->msg_body);
+		self->open_flag = config->open_flag;
+		self->https_flag = config->https_flag;
+		self->timeout.resolve_timeout = config->timeout.resolve_timeout;
+		self->timeout.connect_timeout = config->timeout.connect_timeout;
+		self->timeout.send_timeout = config->timeout.send_timeout;
+		self->timeout.recv_timeout = config->timeout.recv_timeout;
+		self->accept_encoding_gzip = config->accept_encoding_gzip;
+		HttpFileReaderContextSharedPtrAssign(&self->context, &config->context);
+		self->template_option = config->template_option;
+		self->response_header_max_size = config->response_header_max_size;
+	}
+	result->m_ptr = self;
+	if (self) {
+		HttpFileReaderConfigRefCounter *counter = ScePafStdc_FC5CD359(sizeof(*counter));
+
+		if (counter) {
+			result->m_ref_counter = counter;
+			counter->m_ptr = self;
+			result->m_ref_counter->m_counter = 1;
+			result->m_ref_counter->m_weak_counter = 1;
+			result->m_ref_counter->m_deleter = HttpFileReaderConfigDelete;
+		} else {
+			result->m_ptr = NULL;
+			result->m_ref_counter = NULL;
+		}
+	} else {
+		result->m_ref_counter = NULL;
+	}
+}

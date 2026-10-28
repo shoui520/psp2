@@ -114,6 +114,22 @@ void HttpFileReaderContextSharedPtrRelease(const HttpFileReaderContextSharedPtr 
 	}
 }
 
+static inline __attribute__((always_inline))
+void HttpFileReaderContextSharedPtrAssign(HttpFileReaderContextSharedPtr *self,
+					const HttpFileReaderContextSharedPtr *src)
+{
+	HttpFileReaderContext *ptr = src->m_ptr;
+	HttpFileReaderContextRefCounter *counter = src->m_ref_counter;
+
+	if (ptr != self->m_ptr) {
+		HttpFileReaderContextSharedPtrRelease(self);
+		self->m_ptr = ptr;
+		self->m_ref_counter = counter;
+		if (ptr)
+			sceAtomicIncrement32AcqRel(&counter->m_counter);
+	}
+}
+
 typedef struct HttpFile {
 	File base;
 	unsigned char m_is_opened;

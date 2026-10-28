@@ -117,6 +117,8 @@ HttpFileReaderConfig *HttpFileReaderConfigConstruct(HttpFileReaderConfig *self,
 HttpFileReaderConfigRefCounter *HttpFileReaderConfigCreate(HttpFileReaderConfigSharedPtr *result,
 							 const HttpFileReaderParam *param);
 void HttpFileReaderConfigDelete(HttpFileReaderConfig *self);
+void HttpFileReaderConfigClone(HttpFileReaderConfigSharedPtr *result,
+			       const HttpFileReaderConfigSharedPtr *src);
 int32_t HttpFileReaderConfigIsHttpsCheckEnabled(const HttpFileReaderConfig *self);
 int32_t HttpFileReaderConfigIsProxyIgnored(const HttpFileReaderConfig *self);
 
@@ -160,6 +162,19 @@ typedef struct HttpFileReaderVTable {
 	PafMap *(*GetResponseHeaders)(HttpFileReader *self);
 } HttpFileReaderVTable;
 
+typedef struct HttpFileReaderClass {
+	int offset_to_top;
+	const void *type_info;
+	HttpFileReaderVTable methods;
+} HttpFileReaderClass;
+
+extern const HttpFileReaderClass httpFileReaderClass;
+
+HttpFileReader *HttpFileReaderDestroy(HttpFileReader *self);
+void HttpFileReaderDelete(HttpFileReader *self);
+HttpFileResponse *HttpFileReaderGetResponse(HttpFileReader *self);
+PafMap *HttpFileReaderGetResponseHeaders(HttpFileReader *self);
+
 struct HttpFileReader {
 	const HttpFileReaderVTable *vtable;
 	HttpFileReaderConfigSharedPtr m_config;
@@ -173,6 +188,7 @@ typedef char HttpFileResponseValidOffsetCheck[offsetof(HttpFileResponse, valid) 
 typedef char HttpFileReaderSizeCheck[sizeof(HttpFileReader) == 56 ? 1 : -1];
 typedef char HttpFileReaderResultOffsetCheck[offsetof(HttpFileReader, m_result) == 44 ? 1 : -1];
 typedef char HttpFileReaderVTableSizeCheck[sizeof(HttpFileReaderVTable) == 40 ? 1 : -1];
+typedef char HttpFileReaderClassSizeCheck[sizeof(HttpFileReaderClass) == 48 ? 1 : -1];
 
 const char *HttpFileHeaderMapGet(const PafMap *headers, const char *name,
 			       int32_t index);
