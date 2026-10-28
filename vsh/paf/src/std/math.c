@@ -108,3 +108,46 @@ float sce_paf_cosf(float x)
 			      (number.bits & 0x7fffffffU);
 	return number.value;
 }
+
+float sce_paf_expf(float x)
+{
+	union {
+		float value;
+		uint32_t bits;
+	} number;
+	float fraction, numerator, quadratic, denominator, result;
+	int exponent;
+
+	number.value = x;
+	number.bits &= 0x7fffffffU;
+	if (number.bits >= 0x42b00f34U) {
+		if (x != x)
+			return x;
+		if (x < 0.0f)
+			return 0.0f;
+		number.bits = 0x7f800000U;
+		return number.value;
+	}
+	fraction = number.value * 1.4426950216293335f;
+	exponent = (int)fraction;
+	fraction -= (float)(int)fraction;
+	if (fraction > 0.5f) {
+		exponent++;
+		fraction -= 1.0f;
+	}
+	if (x < 0.0f) {
+		fraction = -fraction;
+		exponent = -exponent;
+	}
+	numerator = fraction * 0.6931471824645996f;
+	quadratic = fraction * 0.030016301199793816f;
+	numerator += 6.0f;
+	denominator = fraction * 0.3465735912322998f;
+	numerator += quadratic * fraction;
+	denominator = 6.0f - denominator;
+	number.bits = (uint32_t)(exponent + 127) << 23;
+	result = numerator / denominator;
+	result *= result;
+	result *= result;
+	return result * number.value;
+}
