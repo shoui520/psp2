@@ -124,5 +124,7 @@ void *tmalloc_large_large(mstate m, size_t nb, size_t bytes, unsigned int tag);
 void *tmalloc_small(mstate m, size_t nb, size_t bytes, unsigned int tag);
 void *tmalloc_large(mstate m, size_t nb, size_t bytes, unsigned int tag);
 void *internal_realloc(mstate m, void *oldmem, size_t bytes, unsigned int tag);
+void *internal_memalign(mstate m, size_t alignment, size_t bytes,
+			unsigned int tag);
 
 #endif

@@ -132,6 +132,14 @@ static inline void mark_inuse_foot(mchunkptr p, size_t size, unsigned int tag,
 	}
 }
 
+static inline void set_inuse(mchunkptr p, size_t size, unsigned int tag,
+			    size_t padding)
+{
+	p->head = (p->head & PINUSE_BIT) | size | CINUSE_BIT;
+	chunk_plus_offset(p, size)->head |= PINUSE_BIT;
+	mark_inuse_foot(p, size, tag, padding);
+}
+
 static inline void insert_small_chunk(mstate m, mchunkptr p, size_t size)
 {
 	unsigned int index = small_index(size);
@@ -1099,6 +1107,120 @@ void *mspace_realloc(mspace heap, void *mem, size_t bytes, unsigned int tag)
 	if (!mem)
 		return mspace_malloc(heap, bytes, tag);
 	return internal_realloc(heap, mem, bytes, tag);
+}
+
+void *internal_memalign(mstate m, size_t alignment, size_t bytes,
+			unsigned int tag)
+{
+	size_t nb, req, head;
+	char *mem;
+	void *leader = NULL;
+	void *trailer = NULL;
+	void *result;
+	mchunkptr p;
+	int misaligned;
+
+	if (alignment <= MALLOC_ALIGNMENT)
+		return mspace_malloc(m, bytes, tag);
+	if (alignment & (alignment - 1)) {
+		size_t a = MALLOC_ALIGNMENT << 1;
+
+		while (a < alignment)
+			a <<= 1;
+		alignment = a;
+	}
+	if (bytes >= MAX_REQUEST - alignment)
+		return NULL;
+	nb = request2size(bytes);
+	req = nb + alignment + MIN_CHUNK_SIZE - CHUNK_OVERHEAD;
+	mem = mspace_malloc(m, req, tag);
+	if (!mem)
+		return NULL;
+	p = mem2chunk(mem);
+	misaligned = (uintptr_t)mem % alignment != 0;
+	head = p->head;
+	if (misaligned) {
+		uintptr_t aligned = ((uintptr_t)mem + alignment - 1) & -alignment;
+		mchunkptr newp = mem2chunk(aligned);
+		size_t leadsize, newsize;
+
+		if ((uintptr_t)newp - (uintptr_t)p < MIN_CHUNK_SIZE)
+			newp = chunk_plus_offset(newp, alignment);
+		leadsize = (uintptr_t)newp - (uintptr_t)p;
+		newsize = (head & ~(size_t)7) - leadsize;
+		if (!(head & INUSE_BITS)) {
+			size_t offset = p->prev_foot + leadsize;
+
+			newp->head = newsize;
+			newp->prev_foot = offset;
+		} else {
+			set_inuse(newp, newsize, tag,
+				  (bytes + CHUNK_OVERHEAD) & CHUNK_ALIGN_MASK);
+			set_inuse(p, leadsize, tag, leadsize & CHUNK_ALIGN_MASK);
+			leader = chunk2mem(p);
+		}
+		p = newp;
+		head = p->head;
+	}
+	result = chunk2mem(p);
+	if (head & INUSE_BITS) {
+		size_t size = head & ~(size_t)7;
+
+		/* The policy keeps larger aligned chunks intact. */
+		if (size < m->alignment && size > nb + MIN_CHUNK_SIZE) {
+			size_t remainder_size = size - nb;
+			mchunkptr remainder = chunk_plus_offset(p, nb);
+
+			set_inuse(p, nb, tag,
+				  (bytes + CHUNK_OVERHEAD) & CHUNK_ALIGN_MASK);
+			set_inuse(remainder, remainder_size, tag,
+				  remainder_size & CHUNK_ALIGN_MASK);
+			trailer = chunk2mem(remainder);
+		}
+	}
+	if (leader) {
+		size_t size;
+
+		mspace_free(m, leader, tag);
+		size = m->dvsize;
+		/* This path also bins a DV exactly at the policy threshold. */
+		if (size >= m->alignment) {
+			if (small_index(size) < NSMALLBINS) {
+				unsigned int i = small_index(size);
+				mchunkptr b = smallbin_at(m, i);
+				mchunkptr f = b;
+
+				if (!(m->smallmap & idx2bit(i)))
+					m->smallmap |= idx2bit(i);
+				else if (ok_address(m, b->fd))
+					f = b->fd;
+				else
+					ScePafStdc_D608246A();
+				b->fd = m->dv;
+				f->bk = m->dv;
+				m->dv->fd = f;
+				m->dv->bk = b;
+			} else {
+				insert_large_chunk(m, (tchunkptr)m->dv, size);
+			}
+			m->dv = NULL;
+			m->dvsize = 0;
+		}
+	}
+	if (trailer)
+		mspace_free(m, trailer, tag);
+	return result;
+}
+
+void *mspace_memalign(mspace heap, size_t alignment, size_t bytes,
+			unsigned int tag)
+{
+	mstate m = heap;
+	size_t magic = m->magic;
+
+	if (magic != mparams.magic)
+		return NULL;
+	return internal_memalign(m, alignment, bytes, tag);
 }
 
 struct mallinfo mspace_mallinfo(mspace heap)
