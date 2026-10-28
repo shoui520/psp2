@@ -88,6 +88,134 @@ DateTime *DateTimeDestroy(DateTime *self)
 	return self;
 }
 
+void DateTimeParseRFC3339(DateTime *result, const char *pszDateTime)
+{
+	RtcTick tick;
+	RtcDateTime dst;
+	uint16_t year, month, day, hour, minute, second;
+	uint32_t microsecond, parseResult;
+	int32_t timezone = 0;
+	int ret = RtcParseRFC3339(&tick, pszDateTime);
+
+	if (ret) {
+		result->m_parse_failed = 1;
+		result->m_year = 2011;
+		result->m_month = 1;
+		result->m_day = 1;
+		result->m_hour = 0;
+		result->m_minute = 0;
+		result->m_second = 0;
+		result->m_microsecond = 0;
+		result->m_tz_offset = 0;
+		result->m_parse_result = ret;
+		return;
+	}
+	RtcConvertTickToDateTime(&tick, &dst, NULL);
+	year = dst.year;
+	month = dst.month;
+	day = dst.day;
+	hour = dst.hour;
+	minute = dst.minute;
+	second = dst.second;
+	microsecond = dst.microsecond;
+	parseResult = month;
+	if (pszDateTime) {
+		uint64_t state = DateTimeStringLengthState(pszDateTime);
+		int32_t length = (uint32_t)state;
+		const char *zone, *end;
+		int sign, hours, minutes, h0, h1, m0, m1;
+
+		/* The original stores scratch state as well as decoded offsets. */
+		parseResult = state >> 32;
+		if (length < 19)
+			goto finish;
+		parseResult = length - 19;
+		if (length == 19)
+			goto finish;
+		end = pszDateTime + length;
+		zone = pszDateTime + 19;
+		if ((int8_t)*zone == '.') {
+			zone++;
+			if (zone == end)
+				goto finish;
+			for (;;) {
+				parseResult = (int32_t)(int8_t)*zone;
+				if ((int32_t)parseResult < '0' || (int32_t)parseResult > '9')
+					break;
+				if (++zone == end)
+					goto finish;
+			}
+		}
+		sign = (int8_t)*zone;
+		parseResult = (uintptr_t)(zone + 1);
+		if (sign == 'Z' || sign == 'z') {
+			parseResult = 0;
+			timezone = 0;
+			goto finish;
+		}
+		if ((sign != '+' && sign != '-') || end - (zone + 1) < 5)
+			goto finish;
+		h0 = (int8_t)zone[1];
+		h1 = (int8_t)zone[2];
+		m0 = (int8_t)zone[4];
+		m1 = (int8_t)zone[5];
+		hours = h0 >= '0' && h0 <= '9' && h1 >= '0' && h1 <= '9' ?
+			10 * h0 + h1 - 528 : -1;
+		minutes = m0 >= '0' && m0 <= '9' && m1 >= '0' && m1 <= '9' ?
+			10 * m0 + m1 - 528 : -1;
+		parseResult = minutes;
+		if (hours < 0 || (int8_t)zone[3] != ':' || minutes < 0)
+			goto finish;
+		timezone = 60 * hours + minutes;
+		if (sign == '-')
+			timezone = -timezone;
+		parseResult = timezone;
+	}
+finish:
+	result->m_year = year;
+	result->m_month = month;
+	result->m_day = day;
+	result->m_hour = hour;
+	result->m_minute = minute;
+	result->m_second = second;
+	result->m_microsecond = microsecond;
+	result->m_tz_offset = timezone;
+	result->m_parse_failed = 0;
+	result->m_parse_result = parseResult;
+}
+
+/* The entry adapter supplies the caller's unchanged r5 as the third argument. */
+void DateTimeParseSQLiteDateTimeBody(DateTime *result, const char *pszDateTime,
+				   uint32_t incomingParseResult)
+{
+	RtcTick tick;
+	RtcDateTime dst;
+
+	if (RtcParseSQLiteDateTime(&tick, pszDateTime)) {
+		result->m_hour = 0;
+		result->m_parse_failed = 1;
+		result->m_year = 2011;
+		result->m_month = 1;
+		result->m_day = 1;
+		result->m_minute = 0;
+		result->m_second = 0;
+		result->m_microsecond = 0;
+		result->m_tz_offset = 0;
+	} else {
+		RtcConvertTickToDateTime(&tick, &dst, NULL);
+		result->m_year = dst.year;
+		result->m_month = dst.month;
+		result->m_day = dst.day;
+		result->m_hour = dst.hour;
+		result->m_minute = dst.minute;
+		result->m_second = dst.second;
+		result->m_microsecond = dst.microsecond;
+		result->m_tz_offset = 0;
+		result->m_parse_failed = 0;
+	}
+	result->m_parse_result = incomingParseResult;
+}
+
 void DateTimeAdd(DateTime *result, const DateTime *self, const DateTime *r)
 {
 	SceDateTime time = {

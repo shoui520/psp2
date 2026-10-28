@@ -1,5 +1,15 @@
 /* String storage is reallocated for erase and append; there is no capacity field. */
+#include "../compiler.h"
 #include "string.h"
+#include "stdlib.h"
+#include <libkernel/libkernel.h>
+
+size_t sce_paf_strlen(const char *str)
+{
+	if (!str)
+		ScePafStdc_D41FD265();
+	return sceClibStrnlen(str, (size_t)-1);
+}
 
 extern void *ScePafStdc_FC5CD359(size_t size);
 extern void ScePafStdc_1B77082E(void *ptr);

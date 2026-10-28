@@ -33,6 +33,14 @@ typedef char DateTimeResultOffsetCheck[offsetof(DateTime, m_parse_result) == 22 
 #define DateTimeDayOfWeek ScePafMisc_8A79BF51
 #define DateTimeAdd ScePafMisc_B5184CAF
 #define DateTimeLess ScePafMisc_17B87641
+#define DateTimeParseRFC3339 ScePafMisc_209DB708
+#define DateTimeParseSQLiteDateTime ScePafMisc_900114B8
+
+void DateTimeParseRFC3339(DateTime *result, const char *pszDateTime);
+void DateTimeParseSQLiteDateTime(DateTime *result, const char *pszDateTime);
+void DateTimeParseSQLiteDateTimeBody(DateTime *result, const char *pszDateTime,
+				   uint32_t incomingParseResult);
+uint64_t DateTimeStringLengthState(const char *text);
 
 void DateTimeUTC(DateTime *result);
 void DateTimeNow(DateTime *result);
