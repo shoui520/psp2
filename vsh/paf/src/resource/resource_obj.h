@@ -31,6 +31,15 @@ typedef enum TextureType {
 	TextureType_Gxt = 7
 } TextureType;
 
+typedef enum SoundType {
+	SoundType_Unknown = -1,
+	SoundType_WAV = 0,
+	SoundType_VAG = 1,
+	SoundType_MP3 = 2,
+	SoundType_AT3 = 3,
+	SoundType_AAC = 4
+} SoundType;
+
 typedef struct ResourceIDEntry {
 	uint32_t first;
 	PafString second;
@@ -59,6 +68,16 @@ typedef struct ResourceBufferEntry {
 	uint32_t type;
 } ResourceBufferEntry;
 
+typedef struct ResourceSoundEntry {
+	uint32_t idhash;
+	void *addr1;
+	void *addr2;
+	size_t size1;
+	size_t size2;
+	int32_t samplerate;
+	uint32_t type;
+} ResourceSoundEntry;
+
 typedef struct ResourceObj {
 	FileSharedPtr rscfp;
 	PafString filename;
@@ -71,7 +90,7 @@ typedef struct ResourceObj {
 	void *sound_buffer;
 	ResourceBufferEntry *textures;
 	ResourceBufferEntry *models;
-	void *sounds;
+	ResourceSoundEntry *sounds;
 	uint32_t num_textures;
 	uint32_t num_models;
 	uint32_t num_sounds;
@@ -86,6 +105,7 @@ typedef char ResourceIDMapNodeSizeCheck[sizeof(ResourceIDMapNode) == 32 ? 1 : -1
 typedef char ResourceIDMapSizeCheck[sizeof(ResourceIDMap) == 12 ? 1 : -1];
 typedef char ResourceObjSizeCheck[sizeof(ResourceObj) == 108 ? 1 : -1];
 typedef char ResourceBufferEntrySizeCheck[sizeof(ResourceBufferEntry) == 16 ? 1 : -1];
+typedef char ResourceSoundEntrySizeCheck[sizeof(ResourceSoundEntry) == 28 ? 1 : -1];
 
 #define ResourceObjGetFileName ScePafResource_FA00F835
 #define ResourceObjGetLoadStatus ScePafResource_04FC462E
@@ -116,6 +136,12 @@ typedef char ResourceBufferEntrySizeCheck[sizeof(ResourceBufferEntry) == 16 ? 1 
 #define ResourceObjGetModelFromFileElement ScePafResource_C88E6968
 #define ResourceObjGetModelFromFileHash ScePafResource_C3185EF6
 #define ResourceObjGetModelFromFile ScePafResource_ACD33BFC
+#define ResourceObjGetSoundFromFileElement ScePafResource_B4714AEA
+#define ResourceObjGetSoundFromFileHash ScePafResource_08129BF8
+#define ResourceObjGetSoundFromFile ScePafResource_BEAEA02A
+#define ResourceObjGetSoundFromBufferHash ScePafResource_ADDC0711
+#define ResourceObjGetSoundFromBuffer ScePafResource_DD1FF94F
+#define ResourceObjGetSoundFromBufferElement ScePafResource_65C0FDF9
 
 char *ResourceObjGetFileName(const ResourceObj *self);
 int32_t ResourceObjGetLoadStatus(const ResourceObj *self);
@@ -165,5 +191,24 @@ int32_t ResourceObjGetModelFromFileHash(const ResourceObj *self, uint32_t idhash
 				      CxmlFile *src, size_t *size, uint32_t *type);
 int32_t ResourceObjGetModelFromFile(const ResourceObj *self, const char *id,
 				  CxmlFile *src, size_t *size, uint32_t *type);
+uint32_t ResourceObjGetSoundType(const ResourceObj *self, const char *type);
+int32_t ResourceObjGetSoundFromFileElement(const ResourceObj *self, const CxmlElement *elm,
+		CxmlFile *left_or_mono, size_t *left_or_mono_size, CxmlFile *right,
+		size_t *right_size, int32_t *samplerate, uint32_t *format);
+int32_t ResourceObjGetSoundFromFileHash(const ResourceObj *self, uint32_t hash,
+		CxmlFile *left_or_mono, size_t *left_or_mono_size, CxmlFile *right,
+		size_t *right_size, int32_t *samplerate, uint32_t *format);
+int32_t ResourceObjGetSoundFromFile(const ResourceObj *self, const char *id,
+		CxmlFile *left_or_mono, size_t *left_or_mono_size, CxmlFile *right,
+		size_t *right_size, int32_t *samplerate, uint32_t *format);
+int32_t ResourceObjGetSoundFromBufferHash(const ResourceObj *self, uint32_t idhash,
+		void **addr1, size_t *size1, void **addr2, size_t *size2,
+		int32_t *samplerate, uint32_t *type);
+int32_t ResourceObjGetSoundFromBuffer(const ResourceObj *self, const char *id,
+		void **addr1, size_t *size1, void **addr2, size_t *size2,
+		int32_t *samplerate, uint32_t *type);
+int32_t ResourceObjGetSoundFromBufferElement(const ResourceObj *self, const CxmlElement *elm,
+		void **addr1, size_t *size1, void **addr2, size_t *size2,
+		int32_t *samplerate, uint32_t *type);
 
 #endif

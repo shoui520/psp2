@@ -438,3 +438,150 @@ int32_t ResourceObjGetModelFromFile(const ResourceObj *self, const char *id,
 	PafStringDestroy(&idparam.m_id);
 	return ret;
 }
+
+uint32_t ResourceObjGetSoundType(const ResourceObj *self, const char *type)
+{
+	if (!sce_paf_strcmp(type, "sound/vag"))
+		return SoundType_VAG;
+	if (!sce_paf_strcmp(type, "sound/wav"))
+		return SoundType_WAV;
+	if (!sce_paf_strcmp(type, "sound/mp3"))
+		return SoundType_MP3;
+	if (!sce_paf_strcmp(type, "sound/at3"))
+		return SoundType_AT3;
+	if (!sce_paf_strcmp(type, "sound/aac"))
+		return SoundType_AAC;
+	return (uint32_t)SoundType_Unknown;
+}
+
+int32_t ResourceObjGetSoundFromFileElement(const ResourceObj *self, const CxmlElement *elm,
+		CxmlFile *left_or_mono, size_t *left_or_mono_size, CxmlFile *right,
+		size_t *right_size, int32_t *samplerate, uint32_t *format)
+{
+	int32_t value, ret;
+	const char *type;
+	uint32_t len;
+
+	ret = CxmlUtilGetFile(elm, "src", left_or_mono);
+	if (ret) {
+		int32_t left_ret, right_ret;
+
+		left_ret = CxmlUtilGetFile(elm, "left", left_or_mono);
+		right_ret = CxmlUtilGetFile(elm, "right", right);
+		if (left_ret | right_ret)
+			return ret;
+		*left_or_mono_size = left_or_mono->size;
+		*right_size = right->size;
+	} else {
+		*left_or_mono_size = left_or_mono->size;
+		*right_size = 0;
+	}
+	ret = CxmlUtilGetInt(elm, "rate", &value);
+	if (ret)
+		return ret;
+	*samplerate = value;
+	ret = CxmlUtilGetString(elm, "type", &type, &len);
+	if (ret)
+		return ret;
+	*format = ResourceObjGetSoundType(self, type);
+	return SCE_PAF_OK;
+}
+
+int32_t ResourceObjGetSoundFromFileHash(const ResourceObj *self, uint32_t hash,
+		CxmlFile *left_or_mono, size_t *left_or_mono_size, CxmlFile *right,
+		size_t *right_size, int32_t *samplerate, uint32_t *format)
+{
+	CxmlElement table, elm;
+
+	ResourceObjGetTableElement(&table, self, TableType_Sound);
+	if (!table.doc || table.offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	CxmlUtilFindChildElementByIDHash(&elm, &table, "sounddata", "id", hash);
+	if (!elm.doc || elm.offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	table = elm;
+	return ResourceObjGetSoundFromFileElement(self, &table, left_or_mono,
+			left_or_mono_size, right, right_size, samplerate, format);
+}
+
+int32_t ResourceObjGetSoundFromFile(const ResourceObj *self, const char *id,
+		CxmlFile *left_or_mono, size_t *left_or_mono_size, CxmlFile *right,
+		size_t *right_size, int32_t *samplerate, uint32_t *format)
+{
+	IDParam idparam;
+	int32_t ret;
+
+	IDParamConstructFromString(&idparam, id);
+	ret = ResourceObjGetSoundFromFileHash(self, idparam.m_idhash, left_or_mono,
+			left_or_mono_size, right, right_size, samplerate, format);
+	PafStringDestroy(&idparam.m_id);
+	return ret;
+}
+
+int32_t ResourceObjGetSoundFromBufferHash(const ResourceObj *self, uint32_t idhash,
+		void **addr1, size_t *size1, void **addr2, size_t *size2,
+		int32_t *samplerate, uint32_t *type)
+{
+	CxmlElement table;
+	ResourceSoundEntry *entry;
+	uint32_t count, index;
+
+	if (!self->sounds) {
+		*size1 = 0;
+		*addr1 = NULL;
+		*size2 = 0;
+		*addr2 = NULL;
+		*samplerate = 0;
+		*type = 0;
+		return SCE_PAF_ERROR_RESOURCE_BUFFER_NOT_FOUND;
+	}
+	ResourceObjGetTableElement(&table, self, TableType_Sound);
+	count = CxmlElementGetNumChild(&table);
+	entry = self->sounds;
+	for (index = 0; index < count; index++, entry++) {
+		if (entry->idhash != idhash)
+			continue;
+		*addr1 = self->sounds[index].addr1;
+		*addr2 = self->sounds[index].addr2;
+		entry = &self->sounds[index];
+		*size1 = entry->size1;
+		*size2 = entry->size2;
+		*samplerate = entry->samplerate;
+		*type = entry->type;
+		return SCE_PAF_OK;
+	}
+	*addr1 = NULL;
+	*size1 = 0;
+	*size2 = 0;
+	*addr2 = NULL;
+	*samplerate = 0;
+	*type = 0;
+	return SCE_PAF_ERROR_RESOURCE_BUFFER_NOT_FOUND;
+}
+
+int32_t ResourceObjGetSoundFromBuffer(const ResourceObj *self, const char *id,
+		void **addr1, size_t *size1, void **addr2, size_t *size2,
+		int32_t *samplerate, uint32_t *type)
+{
+	IDParam idparam;
+	int32_t ret;
+
+	IDParamConstructFromString(&idparam, id);
+	ret = ResourceObjGetSoundFromBufferHash(self, idparam.m_idhash, addr1, size1,
+			addr2, size2, samplerate, type);
+	PafStringDestroy(&idparam.m_id);
+	return ret;
+}
+
+int32_t ResourceObjGetSoundFromBufferElement(const ResourceObj *self, const CxmlElement *elm,
+		void **addr1, size_t *size1, void **addr2, size_t *size2,
+		int32_t *samplerate, uint32_t *type)
+{
+	uint32_t value;
+	int32_t ret = CxmlUtilGetIDHash(elm, "id", &value);
+
+	if (ret)
+		return ret;
+	return ResourceObjGetSoundFromBufferHash(self, value, addr1, size1,
+			addr2, size2, samplerate, type);
+}
