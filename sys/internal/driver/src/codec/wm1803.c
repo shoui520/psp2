@@ -37,7 +37,7 @@ static struct {
 } s_codec;
 static const signed char *s_curves[3];
 
-int wm1803ReadRegister(unsigned int reg)
+int wm1803ReadRegister(int reg)
 {
 	unsigned char command[2], value[2];
 	int ret;
@@ -574,7 +574,7 @@ struct CodecOps {
 	int (*setMode)(int);
 	int (*getStatus)(void);
 	int (*setOutputs)(unsigned int);
-	int (*read)(unsigned int);
+	int (*read)(int);
 	int (*setVolume)(unsigned int);
 	int (*setEnabled)(int);
 	int (*write)(int, unsigned int);
