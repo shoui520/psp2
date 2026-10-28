@@ -52,14 +52,21 @@ HttpFileHeaderMapNode *HttpFileHeaderMapInsert(PafMap *self,
 					    const HttpFileHeaderEntry *value,
 					    unsigned char *inserted);
 PafStringVector *HttpFileHeaderMapSubscript(PafMap *self, const PafString *key);
+uintptr_t HttpFileHeaderMapEraseRebalance(PafMap *self,
+					HttpFileHeaderMapNode *node,
+					HttpFileHeaderMapNode *parent);
+uintptr_t HttpFileHeaderMapEraseNode(PafMap *self, HttpFileHeaderMapNode *node);
+uintptr_t HttpFileHeaderMapErase(PafMap *self, HttpFileHeaderMapNode *const *where);
 
 #define HttpFileHeaderMapSet ScePafMisc_1156F852
 #define HttpFileHeaderMapParseLine ScePafMisc_DB5A6E15
+#define HttpFileHeaderMapRemove ScePafMisc_E21E796D
 
 void HttpFileHeaderMapSet(PafMap *self, const char *name, const char *value,
 			 unsigned char replace);
 PafMap *ScePafMisc_F39DF886(PafMap *self);
 int32_t HttpFileHeaderMapParseLine(PafMap *self, const char *line, size_t len);
+int32_t HttpFileHeaderMapRemove(PafMap *self, const char *name);
 HttpFileHeaderMapNode *HttpFileHeaderMapCopyNodes(PafMap *self,
 					      HttpFileHeaderMapNode *parent,
 					      const HttpFileHeaderMapNode *src);
