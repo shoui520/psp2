@@ -4,6 +4,7 @@
 #include "file.h"
 #include "../thread/mutex.h"
 #include "../thread/thread.h"
+#include "../url/url.h"
 
 typedef struct HttpFileReader HttpFileReader;
 typedef struct HttpFileReaderParam HttpFileReaderParam;
@@ -78,6 +79,7 @@ typedef char HttpFileOpenArgResponseOffsetCheck[offsetof(HttpFileOpenArg, respon
 #define HttpFileOpenArgSetOption ScePafMisc_ED1839C2
 #define HttpFileSetDefaultTimeout ScePafMisc_30A8AD46
 #define HttpFileOpenArgAddRequestHeader ScePafMisc_99A8215F
+#define HttpFileOpenArgParseUrl ScePafMisc_D6D82FF9
 
 extern HttpFileTimeout httpFileDefaultTimeout;
 HttpFileOpenArg *HttpFileOpenArgConstruct(HttpFileOpenArg *self);
@@ -87,6 +89,7 @@ int32_t HttpFileOpenArgSetOption(HttpFileOpenArg *self, int32_t value,
 int32_t HttpFileSetDefaultTimeout(int32_t value, HttpFileOptionType type);
 int32_t HttpFileOpenArgAddRequestHeader(HttpFileOpenArg *self, const char *name,
 				       const char *value);
+int32_t HttpFileOpenArgParseUrl(HttpFileOpenArg *self, Url *url);
 
 typedef struct HttpFileReaderContextSharedPtr {
 	HttpFileReaderContext *m_ptr;

@@ -95,6 +95,40 @@ int32_t HttpFileOpenArgAddRequestHeader(HttpFileOpenArg *self, const char *name,
 	return SCE_PAF_OK;
 }
 
+int32_t HttpFileOpenArgParseUrl(HttpFileOpenArg *self, Url *url)
+{
+	PafString value;
+
+	if (!url || !UrlIsValid(url))
+		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+	UrlGetSchemeString(&value, url);
+	PafStringCopy(&self->scheme, &value);
+	PafStringDestroy(&value);
+	UrlGetHostString(&value, url);
+	PafStringCopy(&self->host, &value);
+	PafStringDestroy(&value);
+	self->port = (uint16_t)UrlGetPort(url);
+	UrlGetUserString(&value, url);
+	PafStringCopy(&self->user, &value);
+	PafStringDestroy(&value);
+	UrlGetPasswordString(&value, url);
+	PafStringCopy(&self->passwd, &value);
+	PafStringDestroy(&value);
+	UrlGetPathString(&value, url);
+	PafStringCopy(&self->uri, &value);
+	PafStringDestroy(&value);
+	UrlGetQueryString(&value, url);
+	PafStringAppendBytes(&self->uri, value.ptr, value.count);
+	PafStringDestroy(&value);
+	UrlGetAnchorString(&value, url);
+	PafStringAppendBytes(&self->uri, value.ptr, value.count);
+	PafStringDestroy(&value);
+	UrlGetParamaterString(&value, url);
+	PafStringAppendBytes(&self->uri, value.ptr, value.count);
+	PafStringDestroy(&value);
+	return 0;
+}
+
 int32_t HttpFileOpenArgSetOption(HttpFileOpenArg *self, int32_t value,
 				HttpFileOptionType type)
 {
