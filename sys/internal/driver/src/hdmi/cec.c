@@ -250,7 +250,7 @@ static int _setRecvUnrecognizedOpcode(const CecMessage *msg)
 }
 
 /* Sony's name. */
-static inline int _isAlreadyRecvUnrecognizedOpcode(SceUInt8 dest, SceUInt8 opcode)
+static inline __attribute__((always_inline)) int _isAlreadyRecvUnrecognizedOpcode(SceUInt8 dest, SceUInt8 opcode)
 {
 	if (dest >= CEC_ADDR_COUNT)
 		SCE_PANIC_FUNC(2469, "_isAlreadyRecvUnrecognizedOpcode");
@@ -261,8 +261,13 @@ static inline int _isAlreadyRecvUnrecognizedOpcode(SceUInt8 dest, SceUInt8 opcod
 static const SceDtraceProbe txProbe;
 #endif
 
-/* Sends one message. Sony's name. */
-int _txOpecode(SceUInt8 dest, SceUInt8 opcode, const SceUInt8 *operand, SceUInt32 length)
+/* Sends one message. Sony's name. Inlined into every sender before 4.00's probe. */
+#if FW_SINCE(0x04000000)
+int
+#else
+static inline __attribute__((always_inline)) int
+#endif
+_txOpecode(SceUInt8 dest, SceUInt8 opcode, const SceUInt8 *operand, SceUInt32 length)
 {
 	SceUInt8 address[8];
 	SceUInt8 frame[CEC_FRAME_SIZE] = { 0 };
