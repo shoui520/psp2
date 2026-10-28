@@ -35,10 +35,13 @@ static const LedModeParam sddevWriteEndLed = {
 
 static SceSdstorSddev sddevTables[5];
 
-/* weak imports: SceUsbMass may not be loaded */
-#pragma weak _sceUsbMassGetDevInfo
-#pragma weak _sceUsbMassReadSector
-#pragma weak _sceUsbMassWriteSector
+/*
+ * Whether each SceUsbMass import is linked: words Sony's link leaves 0 in
+ * .data, so the USB mass storage paths always fail with 0x80010013.
+ */
+int sddevUsbMassGetDevInfoLinked __attribute__((section(".data"))) = 0;
+int sddevUsbMassReadSectorLinked __attribute__((section(".data"))) = 0;
+int sddevUsbMassWriteSectorLinked __attribute__((section(".data"))) = 0;
 
 int sddev_power_off(SceSdstorSddev *device)
 {
@@ -332,7 +335,7 @@ initializeSd:
 	if (device->mediaType == 3) {
 		SceUsbMassDevInfo usbInfo;
 
-		if (!_sceUsbMassGetDevInfo) {
+		if (!sddevUsbMassGetDevInfoLinked) {
 			result = 0x80010013;
 			goto failed;
 		}
@@ -614,7 +617,7 @@ int sddev_read(SceSdstorSddev *device, void *buffer, uint32_t sector,
 		SceSysrootForDriver_9BF782CA(3, 2, &sddevReadEndLed);
 		break;
 	case 3:
-		if (_sceUsbMassReadSector)
+		if (sddevUsbMassReadSectorLinked)
 			result = _sceUsbMassReadSector(sector, buffer, count);
 		else
 			result = 0x80010013;
@@ -685,7 +688,7 @@ int sddev_write(SceSdstorSddev *device, const void *buffer, uint32_t sector,
 		SceSysrootForDriver_9BF782CA(3, 2, &sddevWriteEndLed);
 		break;
 	case 3:
-		if (_sceUsbMassWriteSector)
+		if (sddevUsbMassWriteSectorLinked)
 			result = _sceUsbMassWriteSector(sector, (void *)buffer, count);
 		else
 			result = 0x80010013;

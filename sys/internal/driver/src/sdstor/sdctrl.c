@@ -99,9 +99,9 @@ static const uint8_t sdintrHeaderPorts[5] = {0, 1, 2, 3, 4};
 #endif
 static const uint32_t sdintrStateRequests[3] = {0x110, 0x103, 0x1001};
 
-/* weak imports: SceUsbMass may not be loaded */
-#pragma weak SceUsbMassForDriver_3C821E99
-#pragma weak SceUsbMassForDriver_7833D935
+/* Whether each SceUsbMass import is linked: 0, as in sddev.c */
+int sdintrUsbMassEnableSubIntrLinked __attribute__((section(".data"))) = 0;
+int sdintrUsbMassDisableSubIntrLinked __attribute__((section(".data"))) = 0;
 
 int sdintrEnableUsbMassSubIntr(int intrCode, int subintrCode);
 int sdintrDisableUsbMassSubIntr(int intrCode, int subintrCode);
@@ -115,14 +115,14 @@ static const SceKernelIntrCallbacks usbMassIntrCallbacks = {
 
 int sdintrEnableUsbMassSubIntr(int intrCode, int subintrCode)
 {
-	if (SceUsbMassForDriver_3C821E99)
+	if (sdintrUsbMassEnableSubIntrLinked)
 		return SceUsbMassForDriver_3C821E99(intrCode, subintrCode);
 	return 0;
 }
 
 int sdintrDisableUsbMassSubIntr(int intrCode, int subintrCode)
 {
-	if (SceUsbMassForDriver_7833D935)
+	if (sdintrUsbMassDisableSubIntrLinked)
 		return SceUsbMassForDriver_7833D935(intrCode, subintrCode);
 	return 0;
 }
