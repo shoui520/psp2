@@ -50,8 +50,11 @@ typedef char BufferedFileVTableSizeCheck[sizeof(BufferedFileVTable) == 112 ? 1 :
 #define BufferedFileIsOpened ScePafMisc_A5DE4664
 #define BufferedFileIsEof ScePafMisc_772634EA
 #define BufferedFileAbort ScePafMisc_364D2AE7
+#define BufferedFileRead ScePafMisc_04D2DDC1
 #define BufferedFileReadAsync ScePafMisc_72D393AD
+#define BufferedFileWrite ScePafMisc_A79D9852
 #define BufferedFileWriteAsync ScePafMisc_899AD604
+#define BufferedFileSeek ScePafMisc_326FDFA7
 #define BufferedFileSeekAsync ScePafMisc_C09E34B0
 #define BufferedFileFlush ScePafMisc_4338FEC7
 #define BufferedFileFlushAsync ScePafMisc_AD99F77E
@@ -76,8 +79,11 @@ int32_t BufferedFileCloseAsync(BufferedFile *self);
 unsigned char BufferedFileIsOpened(const BufferedFile *self);
 unsigned char BufferedFileIsEof(BufferedFile *self);
 int32_t BufferedFileAbort(BufferedFile *self);
+int32_t BufferedFileRead(BufferedFile *self, void *buf, size_t nbyte);
 int32_t BufferedFileReadAsync(BufferedFile *self, void *buf, size_t nbyte);
+int32_t BufferedFileWrite(BufferedFile *self, const void *buf, size_t nbyte);
 int32_t BufferedFileWriteAsync(BufferedFile *self, const void *buf, size_t nbyte);
+int64_t BufferedFileSeek(BufferedFile *self, int64_t offset, int32_t whence);
 int32_t BufferedFileSeekAsync(BufferedFile *self, int64_t offset, int32_t whence);
 int32_t BufferedFileFlush(BufferedFile *self);
 int32_t BufferedFileFlushAsync(BufferedFile *self);

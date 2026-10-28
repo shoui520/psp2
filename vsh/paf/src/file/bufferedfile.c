@@ -195,14 +195,252 @@ int32_t BufferedFileAbort(BufferedFile *self)
 	return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
 }
 
+int32_t BufferedFileRead(BufferedFile *self, void *buf, size_t nbyte)
+{
+	FileSharedPtr file;
+	BufferedFileState *state;
+	void *src;
+	size_t available;
+	size_t copied = 0;
+	size_t received;
+	int64_t offset;
+	int64_t remaining;
+	int64_t position;
+	int32_t result;
+
+	ScePafThread_F9FFA0BE(&self->lock_mutex);
+	if (!buf) {
+		result = SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+		goto out;
+	}
+	if (!self->m_file.m_ptr) {
+		result = SCE_PAF_ERROR_FILE_PROTECTED;
+		goto out;
+	}
+	if (!self->m_file.m_ptr->vtable->IsOpened(self->m_file.m_ptr)) {
+		result = SCE_PAF_ERROR_FILE_NOT_OPENED;
+		goto out;
+	}
+	state = self->m_state;
+	offset = state->m_position - state->m_buffer_start;
+	remaining = state->m_count - offset;
+	if (remaining < 0) {
+		result = SCE_PAF_ERROR_FILE_INVALID_OFFSET;
+		goto out;
+	}
+	src = (unsigned char *)state->m_addr + (uint32_t)offset;
+	available = remaining;
+	if (nbyte <= (uint32_t)remaining) {
+		sce_paf_memcpy(buf, src, nbyte);
+		state->m_position += nbyte;
+		result = nbyte;
+		goto out;
+	}
+	FileSharedPtrCopy(&file, &self->m_file);
+	result = BufferedFileFlushDirty(&file, state);
+	FileSharedPtrRelease(&file);
+	if (result)
+		goto out;
+	if (available) {
+		sce_paf_memcpy(buf, src, available);
+		state->m_position += available;
+		copied = available;
+		buf = (unsigned char *)buf + available;
+		nbyte -= available;
+	}
+	if (nbyte > state->m_capacity) {
+		result = self->m_file.m_ptr->vtable->Read(self->m_file.m_ptr,
+						       buf, nbyte);
+		if (result >= 0) {
+			position = state->m_file_position + result;
+			state->m_count = 0;
+			state->m_file_position = position;
+			state->m_position = position;
+			state->m_buffer_start = position;
+			result = (uint32_t)result + copied;
+		}
+		goto out;
+	}
+	result = self->m_file.m_ptr->vtable->Read(self->m_file.m_ptr,
+					       state->m_addr, state->m_capacity);
+	if (result < 0)
+		goto out;
+	received = nbyte;
+	if ((uint32_t)result < nbyte)
+		received = result;
+	position = state->m_file_position;
+	src = state->m_addr;
+	state->m_buffer_start = position;
+	state->m_count = result;
+	state->m_file_position = position + result;
+	state->m_position = position + received;
+	sce_paf_memcpy(buf, src, received);
+	result = copied + received;
+out:
+	ScePafThread_95F9C45F(&self->lock_mutex);
+	return result;
+}
+
 int32_t BufferedFileReadAsync(BufferedFile *self, void *buf, size_t nbyte)
 {
 	return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
 }
 
+int32_t BufferedFileWrite(BufferedFile *self, const void *buf, size_t nbyte)
+{
+	FileSharedPtr file;
+	BufferedFileState *state;
+	int64_t offset;
+	int64_t remaining;
+	int64_t position;
+	int64_t size;
+	int32_t result;
+
+	ScePafThread_F9FFA0BE(&self->lock_mutex);
+	if (!buf) {
+		result = SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+		goto out;
+	}
+	if (!self->m_file.m_ptr) {
+		result = SCE_PAF_ERROR_FILE_PROTECTED;
+		goto out;
+	}
+	if (!self->m_file.m_ptr->vtable->IsOpened(self->m_file.m_ptr)) {
+		result = SCE_PAF_ERROR_FILE_NOT_OPENED;
+		goto out;
+	}
+	state = self->m_state;
+	offset = state->m_position - state->m_buffer_start;
+	remaining = state->m_capacity - offset;
+	if (remaining < 0) {
+		result = SCE_PAF_ERROR_FILE_INVALID_OFFSET;
+		goto out;
+	}
+	if (nbyte <= (uint32_t)remaining) {
+		sce_paf_memcpy((unsigned char *)state->m_addr + (uint32_t)offset,
+			       buf, nbyte);
+		position = state->m_position + nbyte;
+		offset = state->m_buffer_start;
+		state->m_position = position;
+		size = state->m_file_size;
+		if (position > offset + state->m_count)
+			state->m_count = position - offset;
+		state->m_dirty = 1;
+		if (size < position)
+			size = position;
+		state->m_file_size = size;
+		result = nbyte;
+		goto out;
+	}
+	FileSharedPtrCopy(&file, &self->m_file);
+	result = BufferedFileFlushDirty(&file, state);
+	FileSharedPtrRelease(&file);
+	if (result)
+		goto out;
+	if (state->m_position != state->m_file_position) {
+		position = self->m_file.m_ptr->vtable->Seek(self->m_file.m_ptr,
+							state->m_position, SCE_SEEK_SET);
+		if (position < 0) {
+			result = position;
+			goto out;
+		}
+		state->m_file_position = position;
+	}
+	if (nbyte > state->m_capacity) {
+		result = self->m_file.m_ptr->vtable->Write(self->m_file.m_ptr,
+							buf, nbyte);
+		if (result >= 0) {
+			size = state->m_file_size;
+			position = state->m_file_position + result;
+			state->m_file_position = position;
+			state->m_position = position;
+			if (size < position)
+				size = position;
+			state->m_file_size = size;
+			state->m_dirty = 0;
+			state->m_count = 0;
+			state->m_buffer_start = position;
+		}
+		goto out;
+	}
+	sce_paf_memcpy(state->m_addr, buf, nbyte);
+	position = state->m_file_position;
+	state->m_buffer_start = position;
+	state->m_count = nbyte;
+	size = state->m_file_size;
+	state->m_dirty = 1;
+	state->m_position = position + nbyte;
+	if (size < position + nbyte)
+		size = position + nbyte;
+	state->m_file_size = size;
+	result = nbyte;
+out:
+	ScePafThread_95F9C45F(&self->lock_mutex);
+	return result;
+}
+
 int32_t BufferedFileWriteAsync(BufferedFile *self, const void *buf, size_t nbyte)
 {
 	return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+}
+
+int64_t BufferedFileSeek(BufferedFile *self, int64_t offset, int32_t whence)
+{
+	FileSharedPtr file;
+	BufferedFileState *state;
+	int64_t position = 0;
+	int64_t size;
+	int64_t result;
+	int32_t error;
+
+	ScePafThread_F9FFA0BE(&self->lock_mutex);
+	if (!self->m_file.m_ptr) {
+		result = SCE_PAF_ERROR_FILE_PROTECTED;
+		goto out;
+	}
+	if (!self->m_file.m_ptr->vtable->IsOpened(self->m_file.m_ptr)) {
+		result = SCE_PAF_ERROR_FILE_NOT_OPENED;
+		goto out;
+	}
+	state = self->m_state;
+	if (whence != SCE_SEEK_END) {
+		position = offset;
+		if (whence == SCE_SEEK_CUR)
+			position += state->m_position;
+		if (position < 0) {
+			result = SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+			goto out;
+		}
+		if (position >= state->m_buffer_start &&
+		    position <= state->m_buffer_start + state->m_count) {
+			state->m_position = position;
+			result = position;
+			goto out;
+		}
+	}
+	FileSharedPtrCopy(&file, &self->m_file);
+	error = BufferedFileFlushDirty(&file, state);
+	FileSharedPtrRelease(&file);
+	if (error) {
+		result = error;
+		goto out;
+	}
+	if (whence == SCE_SEEK_CUR)
+		offset = position - state->m_file_position;
+	result = self->m_file.m_ptr->vtable->Seek(self->m_file.m_ptr, offset, whence);
+	if (result >= 0) {
+		size = state->m_file_size;
+		state->m_count = 0;
+		state->m_file_position = result;
+		state->m_position = result;
+		state->m_buffer_start = result;
+		if (size < result)
+			size = result;
+		state->m_file_size = size;
+	}
+out:
+	ScePafThread_95F9C45F(&self->lock_mutex);
+	return result;
 }
 
 int32_t BufferedFileSeekAsync(BufferedFile *self, int64_t offset, int32_t whence)
