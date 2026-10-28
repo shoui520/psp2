@@ -87,6 +87,21 @@ float TimerDoTick(Timer *self);
 float TimerDoFunc(const Timer *self, float rate, int func, float pre,
 		 float *param);
 
+#define TimerDoFuncLinear ScePafMisc_E872D707
+#define TimerDoFuncQuintIn ScePafMisc_3DB2BC0D
+#define TimerDoFuncQuartIn ScePafMisc_F4849FCC
+#define TimerDoFuncCubicIn ScePafMisc_C65A563E
+#define TimerDoFuncFaster ScePafMisc_BF0D952A
+#define TimerDoFuncQuadIn ScePafMisc_C5D538A2
+#define TimerDoFuncSlower ScePafMisc_963A768B
+float TimerDoFuncLinear(float rate);
+float TimerDoFuncQuintIn(float rate);
+float TimerDoFuncQuartIn(float rate);
+float TimerDoFuncCubicIn(float rate);
+float TimerDoFuncFaster(float rate);
+float TimerDoFuncQuadIn(float rate);
+float TimerDoFuncSlower(float rate);
+
 void ScePafMisc_06BD5A37(Timer *self, float total, int func, int repeat,
 		      int repeatCount, const float *param); /* Timer::InitTimer */
 void ScePafMisc_70E604B9(Timer *self); /* Timer::~Timer */
