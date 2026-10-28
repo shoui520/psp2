@@ -117,6 +117,10 @@ float TimerDoFuncExponentCurve(float rate);
 float TimerDoFuncExpoOut27(float rate);
 float TimerDoFuncExpoOut28(float rate);
 float TimerDoFuncExpoOut30(float rate);
+float TimerDoFuncExpoInOut41(float rate);
+float TimerDoFuncExpoInOut42(float rate);
+float TimerDoFuncExpoInOut43(float rate);
+float TimerDoFuncExpoInOut44(float rate);
 float TimerDoFuncExponent(float rate, float total, float initval,
 			 const float *param);
 

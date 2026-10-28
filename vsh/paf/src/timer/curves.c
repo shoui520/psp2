@@ -304,6 +304,58 @@ float TimerDoFuncFaster(float rate)
 	return rate * rate;
 }
 
+static float TimerDoFuncExpoInOutTable(float rate, const float *table)
+{
+	float next, current, fraction, result;
+	int integral, index, secondHalf;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	secondHalf = !(rate < 0.5f);
+	rate *= 2.0f;
+	if (secondHalf)
+		rate = 2.0f - rate;
+	if (rate >= 1.0f)
+		result = 1.0f;
+	else if (rate <= 0.0f || rate == 0.0f)
+		result = 0.0f;
+	else {
+		rate *= 32.0f;
+		integral = FloatToInt(rate);
+		index = FloatToInt(rate);
+		next = table[index + 1];
+		fraction = rate - (float)integral;
+		current = table[index];
+		result = next * fraction;
+		result += current * (1.0f - fraction);
+	}
+	if (secondHalf)
+		return (1.0f - result) * 0.5f + 0.5f;
+	return result * 0.5f;
+}
+
+float TimerDoFuncExpoInOut44(float rate)
+{
+	return TimerDoFuncExpoInOutTable(rate, TimerExpoTable16);
+}
+
+float TimerDoFuncExpoInOut43(float rate)
+{
+	return TimerDoFuncExpoInOutTable(rate, TimerExponentTable);
+}
+
+float TimerDoFuncExpoInOut42(float rate)
+{
+	return TimerDoFuncExpoInOutTable(rate, TimerExpoTable14);
+}
+
+float TimerDoFuncExpoInOut41(float rate)
+{
+	return TimerDoFuncExpoInOutTable(rate, TimerExpoTable13);
+}
+
 float TimerDoFuncExpoInOut(float rate)
 {
 	if (rate >= 1.0f)
