@@ -195,3 +195,43 @@ unsigned char ResourceObjIsRegisteredID(ResourceObj *self, const char *str, uint
 	PafStringDestroy(&idparam.m_id);
 	return ret;
 }
+
+int32_t ResourceObjGetStringIDRef(const ResourceObj *self, const CxmlElement *elm,
+				const char *attrname, const char **str, CxmlElement *entity)
+{
+	CxmlElement root, child;
+	int32_t ret;
+
+	ret = CxmlUtilGetIDRef(elm, attrname, str, entity);
+	if (ret)
+		return ret;
+	if (!self->string_document)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	CxmlDocumentGetDocumentElement(&root, self->string_document);
+	/* The firmware passes the first signed byte as the entire ID hash. */
+	CxmlUtilFindChildElementByIDHash(&child, &root, "string", "id",
+				      (uint32_t)(int32_t)(int8_t)**str);
+	*entity = child;
+	if (!child.doc || child.offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	return SCE_PAF_OK;
+}
+
+int32_t ResourceObjGetStringIDHashRef(const ResourceObj *self, const CxmlElement *elm,
+				    const char *attrname, uint32_t *value, CxmlElement *entity)
+{
+	CxmlElement root, child;
+	int32_t ret;
+
+	ret = CxmlUtilGetIDHashRef(elm, attrname, value, entity);
+	if (ret)
+		return ret;
+	if (!self->string_document)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	CxmlDocumentGetDocumentElement(&root, self->string_document);
+	CxmlUtilFindChildElementByIDHash(&child, &root, "string", "id", *value);
+	*entity = child;
+	if (!child.doc || child.offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	return SCE_PAF_OK;
+}
