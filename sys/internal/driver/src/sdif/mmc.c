@@ -750,7 +750,11 @@ int sendWriteProtectStatus(SdifMmcContext *part, unsigned int sector,
 	}
 	sdifFreeCommandLocked(context, command);
 	sdifUnlockPort(context);
-	*writeProtected = (((const uint8_t *)&status)[3] & 1) != 0;
+	if (((const uint8_t *)&status)[3] & 1) {
+		*writeProtected = 1;
+		return 0;
+	}
+	*writeProtected = 0;
 	return 0;
 }
 #endif
