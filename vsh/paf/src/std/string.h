@@ -42,6 +42,12 @@ extern uint16_t PafWStringEmpty;
 void *sce_paf_memset(void *dst, int ch, size_t len);
 void *sce_paf_memchr(const void *ptr, int ch, size_t count);
 void *sce_paf_memcpy(void *dst, const void *src, size_t count);
+void *sce_paf_memmove(void *dst, const void *src, size_t count);
+/* The native bcopy export takes source first. */
+void *sce_paf_bcopy(const void *src, void *dst, size_t count);
+void *sce_paf_bzero(void *dst, size_t count);
+/* Sony: memset forwarding export. */
+void *ScePafStdc_75ECC54E(void *dst, int ch, size_t count);
 /* Native memcpy forwarding export. */
 void *ScePafStdc_5883A6E3(void *dst, const void *src, size_t count);
 size_t sce_paf_strlen(const char *str);

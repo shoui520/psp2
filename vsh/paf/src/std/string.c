@@ -9,6 +9,11 @@ void *ScePafStdc_5883A6E3(void *dst, const void *src, size_t count)
 	return sce_paf_memcpy(dst, src, count);
 }
 
+void *ScePafStdc_75ECC54E(void *dst, int ch, size_t count)
+{
+	return sce_paf_memset(dst, ch, count);
+}
+
 void *sce_paf_memchr(const void *ptr, int ch, size_t count)
 {
 	const uint8_t *cursor = ptr;
