@@ -3,6 +3,10 @@
 #include "../paf_types.h"
 #include "../std/new.h"
 
+extern int sce_paf_strcasecmp(const char *left, const char *right);
+extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
+extern int sce_paf_look_ctype_table(int ch);
+
 const FileClass httpFileClass = {
 	0, NULL, {
 		(int32_t (*)(const File *))HttpFileGetFileType,
@@ -573,4 +577,155 @@ int32_t HttpFileReaderConfigIsHttpsCheckEnabled(const HttpFileReaderConfig *self
 int32_t HttpFileReaderConfigIsProxyIgnored(const HttpFileReaderConfig *self)
 {
 	return (self->open_flag & IGNORE_PROXY_SETTING) != 0;
+}
+
+const char *HttpFileHeaderMapGet(const PafMap *headers, const char *name,
+			       int32_t index)
+{
+	PafString key;
+	HttpFileHeaderMapNode *node = NULL;
+
+	PafStringInitialize(&key);
+	PafStringAssign(&key, name, name ? sce_paf_strlen(name) : 0);
+	if (headers->_Myhead) {
+		node = ((HttpFileHeaderMapNode *)headers->_Myhead)->_Parent;
+		while (!node->_Isnil) {
+			if (sce_paf_strcasecmp(key.ptr, node->_Myval.first.ptr) <= 0) {
+				if (sce_paf_strcasecmp(node->_Myval.first.ptr, key.ptr) <= 0)
+					break;
+				node = node->_Right;
+			} else {
+				node = node->_Left;
+			}
+		}
+	}
+	PafStringDestroy(&key);
+	if (node == headers->_Myhead || index >= (int32_t)node->_Myval.second._size)
+		return NULL;
+	return node->_Myval.second._data[index].ptr;
+}
+
+HttpFileResponse *HttpFileResponseConstruct(HttpFileResponse *self)
+{
+	self->valid = 0;
+	self->minor = 0;
+	self->major = 0;
+	self->code = 0;
+	PafStringInitialize(&self->phrase);
+	return self;
+}
+
+HttpFileResponse *HttpFileResponseConstructBase(HttpFileResponse *self)
+{
+	self->valid = 0;
+	self->minor = 0;
+	self->major = 0;
+	self->code = 0;
+	PafStringInitialize(&self->phrase);
+	return self;
+}
+
+int32_t HttpFileResponseParse(HttpFileResponse *self, const char *line, size_t len)
+{
+	size_t pos;
+	size_t remaining;
+	size_t count;
+	size_t phrase_len;
+	const char *status;
+	const char *phrase;
+
+	self->valid = 0;
+	PafStringAssign(&self->phrase, NULL, 0);
+	self->major = 0;
+	self->minor = 0;
+	if (len < 9)
+		return 0;
+	if (sce_paf_strncmp(line, "HTTP/", sce_paf_strlen("HTTP/")))
+		return 0;
+	pos = sce_paf_strlen("HTTP/");
+	if (!(sce_paf_look_ctype_table((signed char)line[pos]) & 4))
+		return 0;
+	while (sce_paf_look_ctype_table((signed char)line[pos]) & 4) {
+		self->major = self->major * 10 + (signed char)line[pos] - '0';
+		++pos;
+	}
+	if (line[pos] != '.')
+		return 0;
+	++pos;
+	if (!(sce_paf_look_ctype_table((signed char)line[pos]) & 4))
+		return 0;
+	while (sce_paf_look_ctype_table((signed char)line[pos]) & 4) {
+		self->minor = self->minor * 10 + (signed char)line[pos] - '0';
+		++pos;
+	}
+	if (line[pos] != ' ')
+		return 0;
+	++pos;
+	if ((int32_t)pos < 0)
+		return 0;
+	status = line + pos;
+	remaining = len - pos;
+	if (remaining < sce_paf_strlen("200 "))
+		return 0;
+	if (!(sce_paf_look_ctype_table((signed char)status[0]) & 4) ||
+	    !(sce_paf_look_ctype_table((signed char)status[1]) & 4) ||
+	    !(sce_paf_look_ctype_table((signed char)status[2]) & 4))
+		return 0;
+	self->code = (signed char)status[0] * 100 + (signed char)status[1] * 10 +
+		     (signed char)status[2] - '0' * 111;
+	pos = sce_paf_strlen("200");
+	if ((int32_t)pos < 0)
+		return 0;
+	phrase = status + pos;
+	remaining -= pos;
+	count = 0;
+	while (phrase[count] != '\n') {
+		++count;
+		if (count > remaining)
+			return 0;
+	}
+	phrase_len = count;
+	if (count && phrase[count - 1] == '\r')
+		--phrase_len;
+	if ((int32_t)(count + 1) < 0)
+		return 0;
+	PafStringAssign(&self->phrase, phrase, phrase_len);
+	self->valid = 1;
+	return 1;
+}
+
+HttpFileResponse *HttpFileResponseConstructFromLine(HttpFileResponse *self,
+						const char *line, size_t len)
+{
+	self->valid = 0;
+	self->minor = 0;
+	self->major = 0;
+	self->code = 0;
+	PafStringInitialize(&self->phrase);
+	self->valid = HttpFileResponseParse(self, line, len);
+	return self;
+}
+
+HttpFileResponse *HttpFileResponseConstructBaseFromLine(HttpFileResponse *self,
+						    const char *line, size_t len)
+{
+	self->valid = 0;
+	self->minor = 0;
+	self->major = 0;
+	self->code = 0;
+	PafStringInitialize(&self->phrase);
+	self->valid = HttpFileResponseParse(self, line, len);
+	return self;
+}
+
+HttpFileResponse *HttpFileResponseDestroy(HttpFileResponse *self)
+{
+	PafStringDestroy(&self->phrase);
+	return self;
+}
+
+HttpFileResponse *HttpFileResponseDestroyBase(HttpFileResponse *self)
+{
+	PafStringDestroy(&self->phrase);
+	return self;
 }

@@ -107,6 +107,25 @@ typedef struct HttpFileResponse {
 	unsigned char valid;
 } HttpFileResponse;
 
+#define HttpFileResponseConstruct ScePafMisc_6C99DC26
+#define HttpFileResponseConstructBase ScePafMisc_8D31D15D
+#define HttpFileResponseParse ScePafMisc_EA63635D
+#define HttpFileResponseConstructFromLine ScePafMisc_7A05075E
+#define HttpFileResponseConstructBaseFromLine ScePafMisc_78D68A6B
+#define HttpFileResponseDestroy ScePafMisc_75985405
+#define HttpFileResponseDestroyBase ScePafMisc_D7CB06F9
+#define HttpFileHeaderMapGet ScePafMisc_82171187
+
+HttpFileResponse *HttpFileResponseConstruct(HttpFileResponse *self);
+HttpFileResponse *HttpFileResponseConstructBase(HttpFileResponse *self);
+int32_t HttpFileResponseParse(HttpFileResponse *self, const char *line, size_t len);
+HttpFileResponse *HttpFileResponseConstructFromLine(HttpFileResponse *self,
+						const char *line, size_t len);
+HttpFileResponse *HttpFileResponseConstructBaseFromLine(HttpFileResponse *self,
+						    const char *line, size_t len);
+HttpFileResponse *HttpFileResponseDestroy(HttpFileResponse *self);
+HttpFileResponse *HttpFileResponseDestroyBase(HttpFileResponse *self);
+
 typedef struct HttpFileReaderVTable {
 	HttpFileReader *(*Destroy)(HttpFileReader *self);
 	void (*Delete)(HttpFileReader *self);
@@ -134,7 +153,7 @@ typedef char HttpFileReaderSizeCheck[sizeof(HttpFileReader) == 56 ? 1 : -1];
 typedef char HttpFileReaderResultOffsetCheck[offsetof(HttpFileReader, m_result) == 44 ? 1 : -1];
 typedef char HttpFileReaderVTableSizeCheck[sizeof(HttpFileReaderVTable) == 40 ? 1 : -1];
 
-const char *ScePafMisc_82171187(const PafMap *headers, const char *name,
-			      int32_t index);
+const char *HttpFileHeaderMapGet(const PafMap *headers, const char *name,
+			       int32_t index);
 
 #endif
