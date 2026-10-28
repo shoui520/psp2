@@ -5,8 +5,121 @@ extern int32_t sceRtcGetTick(const SceDateTime *time, SceRtcTick *tick);
 extern int32_t sceRtcSetTick(SceDateTime *time, const SceRtcTick *tick);
 extern int32_t sceRtcGetDayOfWeek(int32_t year, int32_t month, int32_t day);
 extern int32_t sceRtcIsLeapYear(int32_t year);
+extern int32_t sceRtcGetDaysInMonth(int32_t year, int32_t month);
+extern int32_t sceRtcGetCurrentTick(SceRtcTick *tick);
+extern int32_t sceRtcGetCurrentNetworkTick(SceRtcTick *tick);
+extern int32_t sceRtcConvertUtcToLocalTime(const SceRtcTick *utc, SceRtcTick *local_time);
+extern int32_t sceRtcConvertLocalTimeToUtc(const SceRtcTick *local_time, SceRtcTick *utc);
+extern int32_t sceRtcFormatRFC3339(char *dt, const SceRtcTick *utc, int32_t timezone_minutes);
+extern int32_t sceRtcFormatRFC3339LocalTime(char *dt, const SceRtcTick *utc);
 extern int32_t sceRegMgrUtilityGetInt(uint32_t id, int32_t *value);
 extern void *sce_paf_memset(void *dst, int ch, size_t len);
+
+int32_t RtcGetDaysInMonth(uint16_t year, uint16_t month)
+{
+	return sceRtcGetDaysInMonth(year, month);
+}
+
+int32_t RtcIsLeapYear(uint16_t year)
+{
+	return sceRtcIsLeapYear(year);
+}
+
+int32_t RtcGetCurrentTick(RtcTick *tick)
+{
+	SceRtcTick value;
+	int32_t ret = sceRtcGetCurrentTick(&value);
+
+	if (tick)
+		*tick = value.tick;
+	return ret;
+}
+
+int32_t RtcConvertUtcToLocalTime(const RtcTick *utc, RtcTick *local_time)
+{
+	SceRtcTick src, dst;
+	int32_t ret;
+
+	src.tick = *utc;
+	ret = sceRtcConvertUtcToLocalTime(&src, &dst);
+	if (local_time)
+		*local_time = dst.tick;
+	return ret;
+}
+
+int32_t RtcGetCurrentLocalTick(RtcTick *tick)
+{
+	SceRtcTick value, utc, local_time;
+	int32_t ret = sceRtcGetCurrentTick(&value);
+
+	if (!ret) {
+		utc.tick = value.tick;
+		ret = sceRtcConvertUtcToLocalTime(&utc, &local_time);
+		if (tick)
+			*tick = local_time.tick;
+	}
+	return ret;
+}
+
+int32_t RtcGetCurrentNetworkTick(RtcTick *tick)
+{
+	SceRtcTick value;
+	int32_t ret = sceRtcGetCurrentNetworkTick(&value);
+
+	if (tick && !ret)
+		*tick = value.tick;
+	return ret;
+}
+
+int32_t RtcConvertLocalTimeToUtc(const RtcTick *local_time, RtcTick *utc)
+{
+	SceRtcTick src, dst;
+	int32_t ret;
+
+	src.tick = *local_time;
+	ret = sceRtcConvertLocalTimeToUtc(&src, &dst);
+	if (utc)
+		*utc = dst.tick;
+	return ret;
+}
+
+int32_t RtcFormatRFC3339(char *dt, const RtcTick *tick, int32_t timezone_minutes)
+{
+	SceRtcTick utc, current;
+	RtcTick value;
+	int32_t ret;
+
+	if (tick) {
+		value = *tick;
+	} else {
+		ret = sceRtcGetCurrentTick(&current);
+		if (ret)
+			return ret;
+		value = current.tick;
+	}
+	utc.tick = value;
+	return sceRtcFormatRFC3339(dt, &utc, timezone_minutes);
+}
+
+int32_t RtcFormatRFC3339LocalTime(char *dt, const RtcTick *tick)
+{
+	SceRtcTick value, current, utc, local_time;
+	int32_t ret;
+
+	if (tick) {
+		value.tick = *tick;
+	} else {
+		ret = sceRtcGetCurrentTick(&current);
+		if (ret)
+			return ret;
+		utc.tick = current.tick;
+		ret = sceRtcConvertUtcToLocalTime(&utc, &local_time);
+		if (ret)
+			return ret;
+		value.tick = local_time.tick;
+	}
+	return sceRtcFormatRFC3339LocalTime(dt, &value);
+}
 
 int32_t RtcConvertDateTimeToTick(const RtcDateTime *src, RtcTick *tick)
 {

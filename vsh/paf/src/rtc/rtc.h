@@ -28,6 +28,25 @@ typedef char RtcDateTimeExSizeCheck[sizeof(RtcDateTimeEx) == 8 ? 1 : -1];
 #define RtcConvertDateTimeToTick ScePafMisc_1B012451
 #define RtcConvertTickToDateTime ScePafMisc_EA2AFB9D
 #define RtcTickAddMinutes ScePafMisc_7C9BA0C5
+#define RtcGetDaysInMonth ScePafMisc_3D21E902
+#define RtcIsLeapYear ScePafMisc_A6178A4C
+#define RtcGetCurrentTick ScePafMisc_656E8C26
+#define RtcConvertUtcToLocalTime ScePafMisc_909913D9
+#define RtcGetCurrentLocalTick ScePafMisc_64927F55
+#define RtcGetCurrentNetworkTick ScePafMisc_6DB38377
+#define RtcConvertLocalTimeToUtc ScePafMisc_F9AE799D
+#define RtcFormatRFC3339 ScePafMisc_0CC85E44
+#define RtcFormatRFC3339LocalTime ScePafMisc_B94B29AC
+
+int32_t RtcGetDaysInMonth(uint16_t year, uint16_t month);
+int32_t RtcIsLeapYear(uint16_t year);
+int32_t RtcGetCurrentTick(RtcTick *tick);
+int32_t RtcConvertUtcToLocalTime(const RtcTick *utc, RtcTick *local_time);
+int32_t RtcGetCurrentLocalTick(RtcTick *tick);
+int32_t RtcGetCurrentNetworkTick(RtcTick *tick);
+int32_t RtcConvertLocalTimeToUtc(const RtcTick *local_time, RtcTick *utc);
+int32_t RtcFormatRFC3339(char *dt, const RtcTick *tick, int32_t timezone_minutes);
+int32_t RtcFormatRFC3339LocalTime(char *dt, const RtcTick *tick);
 
 int32_t RtcConvertDateTimeToTick(const RtcDateTime *src, RtcTick *tick);
 int32_t RtcConvertTickToDateTime(const RtcTick *tick, RtcDateTime *dst,
