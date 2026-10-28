@@ -3,6 +3,7 @@
 #define PAF_THREAD_MUTEX_H
 
 #include "../compiler.h"
+#include <stdint.h>
 #include <kernel/threadmgr.h>
 
 typedef struct Mutex {
@@ -12,6 +13,11 @@ typedef struct Mutex {
 typedef struct RMutex {
 	SceKernelLwMutexWork m_mutex;
 } RMutex;
+
+typedef struct RWLock {
+	SceUID m_evf;
+	int32_t m_counter;
+} RWLock;
 
 /* Existing ScePafThread exports, kept under their current link names. */
 RMutex *ScePafThread_C4BD9753(RMutex *mutex, const char *name, int option);

@@ -1,4 +1,6 @@
 #include "bufferedfile.h"
+#include "localfile.h"
+#include "httpfile.h"
 #include "../std/stdlib.h"
 #include "../paf_types.h"
 #include <kernel/iofilemgr.h>
@@ -553,6 +555,101 @@ void BufferedFileCreateDefaultBuffer(BufferSharedPtr *result)
 		BufferSharedPtrAssign(result, &buffer);
 		BufferSharedPtrRelease(&buffer);
 	}
+}
+
+int32_t BufferedFileOpenBuffer(BufferedFile *self, const FileOpenArg *param,
+			       BufferSharedPtr *buffer)
+{
+	const BufferedFileOpenParam *arg = (const BufferedFileOpenParam *)param;
+	const FileHolderVTable *vtable;
+	BufferedFileState *state;
+	FileSharedPtr file;
+	FileSharedPtr converted;
+	FileSharedPtr copy;
+	FileSharedPtr previous;
+	BufferSharedPtr default_buffer;
+	FileRefCounter *counter;
+	LocalFile *local;
+	HttpFile *http;
+	File *ptr;
+	void (*deleter)(File *file);
+	int32_t result;
+
+	ScePafThread_F9FFA0BE(&self->lock_mutex);
+	if (self->base.base.vtable->IsOpened(&self->base.base)) {
+		result = SCE_PAF_ERROR_FILE_ALREADY_OPENED;
+		goto out;
+	}
+	if (!param) {
+		result = SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+		goto out;
+	}
+	if ((int32_t)arg->fileType == 1 && !(arg->flag & SCE_O_APPEND)) {
+		local = ScePafStdc_FC5CD359(sizeof(*local));
+		ptr = local ? (File *)LocalFileConstruct(local) : NULL;
+		deleter = LocalFileDefaultDelete;
+	} else if ((int32_t)arg->fileType == 3) {
+		http = ScePafStdc_FC5CD359(sizeof(*http));
+		ptr = http ? (File *)HttpFileConstruct(http) : NULL;
+		deleter = HttpFileDefaultDelete;
+	} else {
+		result = SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+		goto out;
+	}
+	file.m_ptr = ptr;
+	file.m_ref_counter = NULL;
+	if (ptr) {
+		counter = ScePafStdc_FC5CD359(sizeof(*counter));
+		if (!counter) {
+			/* As in the original, the constructed file remains allocated. */
+			result = SCE_PAF_ERROR_FILE_NO_MEMORY;
+			goto out;
+		}
+		counter->m_ptr = ptr;
+		counter->m_counter = 1;
+		counter->m_weak_counter = 1;
+		counter->m_deleter = deleter;
+		file.m_ref_counter = counter;
+	}
+	FileSharedPtrCopy(&converted, &file);
+	FileSharedPtrRelease(&file);
+	if (!converted.m_ptr) {
+		result = SCE_PAF_ERROR_FILE_NO_MEMORY;
+		goto out;
+	}
+	if (!buffer->m_ptr) {
+		BufferedFileCreateDefaultBuffer(&default_buffer);
+		BufferSharedPtrAssign(buffer, &default_buffer);
+		BufferSharedPtrRelease(&default_buffer);
+	}
+	if (!buffer->m_ptr) {
+		result = SCE_PAF_ERROR_FILE_NO_MEMORY;
+		goto release;
+	}
+	result = converted.m_ptr->vtable->Open(converted.m_ptr, param);
+	if (result)
+		goto release;
+	BufferSharedPtrAssign(&self->m_buffer, buffer);
+	state = self->m_state;
+	state->m_addr = buffer->m_ptr->vtable->GetAddr(buffer->m_ptr);
+	state->m_capacity = buffer->m_ptr->vtable->GetSize(buffer->m_ptr);
+	state->m_count = 0;
+	state->m_buffer_start = 0;
+	state->m_position = 0;
+	state->m_file_position = 0;
+	state->m_file_size = 0;
+	state->m_dirty = 0;
+	FileSharedPtrCopy(&copy, &converted);
+	vtable = (const FileHolderVTable *)self->base.base.vtable;
+	vtable->SetFile(&previous, &self->base, &copy);
+	FileSharedPtrRelease(&previous);
+	FileSharedPtrRelease(&copy);
+	result = 0;
+release:
+	FileSharedPtrRelease(&converted);
+out:
+	ScePafThread_95F9C45F(&self->lock_mutex);
+	return result;
 }
 
 static inline __attribute__((always_inline))

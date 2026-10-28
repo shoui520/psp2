@@ -1,4 +1,6 @@
 #include "file.h"
+#include "localfile.h"
+#include "httpfile.h"
 #include "../paf_types.h"
 
 extern void ScePafStdc_2730262C(void); /* __cxa_pure_virtual */
@@ -83,6 +85,12 @@ void FileHolderGetFile(FileSharedPtr *result, const FileHolder *self)
 	FileSharedPtrCopy(result, &self->m_file);
 }
 
+void HttpFileDefaultDelete(File *file)
+{
+	if (file)
+		file->vtable->Delete(file);
+}
+
 int32_t FileGetstat(File *self, FileStat *stat)
 {
 	return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
@@ -106,6 +114,12 @@ void FileDelete(File *self)
 }
 
 void FileDefaultDelete(File *file)
+{
+	if (file)
+		file->vtable->Delete(file);
+}
+
+void LocalFileDefaultDelete(File *file)
 {
 	if (file)
 		file->vtable->Delete(file);

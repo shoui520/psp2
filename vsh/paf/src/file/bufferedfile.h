@@ -16,6 +16,13 @@ typedef struct BufferedFileState {
 	unsigned char m_dirty;
 } BufferedFileState;
 
+typedef struct BufferedFileOpenParam {
+	uint32_t fileType;
+	const char *filename;
+	uint32_t flag;
+	uint32_t mode;
+} BufferedFileOpenParam;
+
 typedef struct BufferedFile {
 	FileHolder base;
 	RMutex lock_mutex;
@@ -39,6 +46,7 @@ typedef struct BufferedFileClass {
 extern const BufferedFileClass bufferedFileClass;
 
 typedef char BufferedFileStateSizeCheck[sizeof(BufferedFileState) == 56 ? 1 : -1];
+typedef char BufferedFileOpenParamSizeCheck[sizeof(BufferedFileOpenParam) == 16 ? 1 : -1];
 typedef char BufferedFileSizeCheck[sizeof(BufferedFile) == 64 ? 1 : -1];
 typedef char BufferedFileMutexOffsetCheck[offsetof(BufferedFile, lock_mutex) == 16 ? 1 : -1];
 typedef char BufferedFileBufferOffsetCheck[offsetof(BufferedFile, m_buffer) == 48 ? 1 : -1];
