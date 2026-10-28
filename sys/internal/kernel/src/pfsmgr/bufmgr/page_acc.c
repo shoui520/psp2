@@ -55,5 +55,5 @@ int page_acc_lock(ScePfsPageAcc *acc, SceOff offset)
 		if (ret != 0)
 			return ret;
 	}
-	return pfsLruGet(acc->lru, &acc->entry, acc->lf, 0, acc->base, acc->offset);
+	return _getblk(acc->lru, &acc->entry, acc->lf, 0, acc->base, acc->offset);
 }

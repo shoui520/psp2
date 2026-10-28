@@ -97,7 +97,7 @@ typedef struct ScePfsLowerFile {		/* name unknown */
 	SceVfsVnode *vp;
 	SceVfsFile *file;
 	SceUID fd;
-	SceUInt32 cookie;			/* name unknown: set by pfsLowerOpen */
+	SceUInt32 cookie;			/* name unknown: set by file_access_open */
 } ScePfsLowerFile;
 
 /* hands out the pages of a file kept in an ScePfsLru (name unknown) */
@@ -143,6 +143,11 @@ typedef struct ScePfsUnicv {
 typedef struct ScePfsHash {
 	SceUInt32 words[PFS_HASH_SIZE / 4];
 } ScePfsHash;
+
+/* a 16-byte AES key (name unknown) */
+typedef struct ScePfsKey {
+	SceUInt32 words[4];
+} ScePfsKey;
 
 /* PFS mount info: one per mounted pseudo drive (in "ScePfsPmiBufferList") */
 typedef struct ScePfsPmi {
@@ -229,7 +234,7 @@ typedef struct ScePfsNode {			/* name unknown */
 	const char *name;
 } ScePfsNode;
 
-/* operations checked by pfsAccessBegin */
+/* operations checked by _is_owner */
 enum {
 	PFS_OP_MOUNT		= 0,
 	PFS_OP_UMOUNT		= 1,
@@ -544,8 +549,8 @@ typedef struct ScePfsCrypt {			/* name unknown */
 	int (*resize)(struct ScePfsCrypt *ctx, SceUInt32 count);
 	SceSize (*blockSize)(struct ScePfsCrypt *ctx);
 	int (*getHash)(struct ScePfsCrypt *ctx, void *hash);
-	void (*hashBlock)(struct ScePfsCrypt *ctx, ScePfsHash *icv, SceUInt32 index,
-			  const void *data, SceSize len);
+	int (*hashBlock)(struct ScePfsCrypt *ctx, ScePfsHash *icv, SceUInt32 index,
+			 const void *data, SceSize len);
 	SceOff (*icvSize)(struct ScePfsCrypt *ctx, SceOff size);
 	ScePfsLowerFile *lf;
 	ScePfsLru *lru;
@@ -574,8 +579,8 @@ typedef struct ScePfsFileKey {
 	SceUInt32 type;				/* ScePfsModeInfo.type */
 	SceOff size;
 	SceSize blockSize;
-	SceUInt8 dataKey[0x10];
-	SceUInt8 tweakKey[0x10];
+	ScePfsKey dataKey;
+	ScePfsKey tweakKey;
 	ScePfsHash icvKey;
 } ScePfsFileKey;
 
@@ -616,6 +621,8 @@ typedef struct ScePfsCryptJob {
 	SceUID thread;
 	SceUInt32 waiting;			/* the thread waits on the done list */
 } ScePfsCryptJob;
+
+#define SCE_PFS_ERROR_NOT_PERMITTED	0x80142010	/* name unknown */
 
 /* PFS ioctls 0x4420 and 0x4421: map file blocks (names unknown) */
 typedef struct ScePfsMapArg {
@@ -674,7 +681,7 @@ int pfsPmiInit(void);
 void pfsPmiTerm(void);
 
 /* buffer lists */
-int pfsBufferListInit(ScePfsBufferList *list, const char *name, SceSize elementSize,
+int buffer_list_init(ScePfsBufferList *list, const char *name, SceSize elementSize,
 		      SceSize alignment, SceUInt32 count);
 void pfsBufferListTerm(ScePfsBufferList *list);
 void *pfsBufferListAlloc(ScePfsBufferList *list);
@@ -699,7 +706,7 @@ int pfsAttrToMode(SceUInt16 attr, SceUInt32 *mode);
 SceUInt32 pfsAdjustAttr(ScePfsPmi *pmi, SceUInt32 attr);
 SceUInt32 pfsCreateAttr(ScePfsPmi *pmi, SceUInt32 mode);
 SceUInt32 pfsLowerMode(SceUInt32 mode);
-int pfsAccessBegin(ScePfsPmi *pmi, int op, SceUInt32 arg, int *oldPermission);
+int _is_owner(ScePfsPmi *pmi, int op, SceUInt32 arg, int *oldPermission);
 void pfsAccessEnd(int oldPermission);
 const ScePfsModeInfo *pfsModeInfo(SceUInt32 mode);
 SceUInt16 pfsModeFsType(SceUInt32 mode);
@@ -713,20 +720,20 @@ void pfsVnodeDiskSize(ScePfsPmi *pmi, SceVfsVnode *vp, SceUInt64 *diskSize);
 int pfsPmiDiskSize(ScePfsPmi *pmi, SceUInt64 *diskSize);
 int pfsNodeInactive(ScePfsNode *node);
 int pfsNodeRelease(ScePfsNode *node);
-int pfsNodeLookup(ScePfsNode *node);
-int pfsNodeCreate(ScePfsNode *node, int mode);
-int pfsLowerOpen(ScePfsLowerFile *lf, ScePfsNode *node, SceUInt32 cookie, int flags);
-int pfsLowerClose(ScePfsLowerFile *lf);
-int pfsLowerCloseForce(ScePfsLowerFile *lf);
+int file_access_lookup(ScePfsNode *node);
+int file_access_create(ScePfsNode *node, int mode);
+int file_access_open(ScePfsLowerFile *lf, ScePfsNode *node, SceUInt32 cookie, int flags);
+int file_access_close(ScePfsLowerFile *lf);
+int file_access_close_force(ScePfsLowerFile *lf);
 #if FW_VERSION >= 0x04000000
 int pfsLowerCloseLocked(ScePfsLowerFile *lf);
 #endif
-int pfsLowerCleanup(ScePfsLowerFile *lf, SceUInt32 a2, SceUInt32 a3);
+int file_access_cleanup(ScePfsLowerFile *lf, SceUInt32 a2, SceUInt32 a3);
 int pfsLowerPread(ScePfsLowerFile *lf, void *buf, SceSize nbyte, SceOff offset, SceSize *read);
 int pfsLowerPwrite(ScePfsLowerFile *lf, const void *buf, SceSize nbyte, SceOff offset,
 		   SceSize *written);
-int pfsLowerGetSize(ScePfsLowerFile *lf, SceUInt64 *size);
-int pfsLowerSetSize(ScePfsLowerFile *lf, SceUInt64 size);
+int file_access_length(ScePfsLowerFile *lf, SceUInt64 *size);
+int file_access_truncate(ScePfsLowerFile *lf, SceUInt64 size);
 
 /* write size zero bytes at the start of the file (name unknown) */
 static inline int pfsLowerZero(ScePfsLowerFile *lf, SceSize size)
@@ -745,11 +752,11 @@ static inline int pfsLowerZero(ScePfsLowerFile *lf, SceSize size)
 	}
 	return 0;
 }
-int pfsNodeRemove(ScePfsNode *dir, ScePfsNode *node);
-int pfsNodeMkdir(ScePfsNode *node, int mode);
-int pfsNodeRmdir(ScePfsNode *dir, ScePfsNode *node);
-int pfsNodeRename(ScePfsNode *oldDir, ScePfsNode *oldNode, ScePfsNode *newNode);
-int pfsLowerSync(ScePfsLowerFile *lf);
+int file_access_remove(ScePfsNode *dir, ScePfsNode *node);
+int file_access_mkdir(ScePfsNode *node, int mode);
+int file_access_rmdir(ScePfsNode *dir, ScePfsNode *node);
+int file_access_rename(ScePfsNode *oldDir, ScePfsNode *oldNode, ScePfsNode *newNode);
+int file_access_fsync(ScePfsLowerFile *lf);
 SceUInt32 pfsLowerCookie(ScePfsLowerFile *lf);
 
 /* lru.c */
@@ -757,7 +764,7 @@ void pfsLruInitTable(ScePfsLru *lru, SceUInt32 bucketCount, SceSize pageSize,
 		     SceUInt32 entryCount, ScePfsLruEntry **buckets, void *pool);
 void pfsLruTermTable(ScePfsLru *lru, ScePfsLruEntry ***buckets, void **pool);
 int pfsLruRelease(ScePfsLru *lru, ScePfsLruEntry *e);
-int pfsLruGet(ScePfsLru *lru, ScePfsLruEntry **out, ScePfsLowerFile *lf, SceUInt32 unused,
+int _getblk(ScePfsLru *lru, ScePfsLruEntry **out, ScePfsLowerFile *lf, SceUInt32 unused,
 	      SceOff base, SceOff offset);
 int pfsLruFlush(ScePfsLru *lru, ScePfsLowerFile *lf, int invalidate);
 
@@ -881,49 +888,36 @@ typedef struct ScePfsDbNodePage {
 #define SCE_PFS_ERROR_DB_NAME_TOO_LONG	0x8014021d	/* name unknown */
 #define SCE_PFS_ERROR_PAGE_UNUSED	0x80140c09	/* name unknown */
 
-/* sector_crypt.c */
-int pfsSectorCryptXtsEncrypt(void *dst, const void *src, const void *key, const void *tweakKey,
-			     SceUInt32 keySize, SceUInt32 tweakKeySize, SceUInt32 sectorLow,
-			     SceUInt32 sectorHigh, SceUInt32 sectorSize, SceSize size,
-			     SceUInt16 flags);
-int pfsSectorCryptXtsDecrypt(void *dst, const void *src, const void *key, const void *tweakKey,
-			     SceUInt32 keySize, SceUInt32 tweakKeySize, SceUInt32 sectorLow,
-			     SceUInt32 sectorHigh, SceUInt32 sectorSize, SceSize size,
-			     SceUInt16 flags);
-int pfsSectorCryptXtsSwEncrypt(void *dst, const void *src, SceUInt32 keySize,
-			       SceUInt32 tweakKeySize, SceUInt32 sectorLow, SceUInt32 sectorHigh,
-			       const void *key, const void *tweakKey, SceUInt16 flags);
-int pfsSectorCryptXtsSwDecrypt(void *dst, const void *src, SceUInt32 keySize,
-			       SceUInt32 tweakKeySize, SceUInt32 sectorLow, SceUInt32 sectorHigh,
-			       const void *key, const void *tweakKey, SceUInt16 flags);
-void pfsSectorTweakEncrypt(SceUInt32 *dst, const SceUInt32 *src, const SceUInt32 *tweak,
-			   SceSize size);
-void pfsSectorTweakDecrypt(SceUInt32 *dst, const SceUInt32 *src, const SceUInt32 *tweak,
-			   SceSize size);
-int pfsSectorCryptCbcEncrypt(void *dst, const void *src, const void *key, const void *iv,
-			     SceUInt32 keySize, SceSize size, SceUInt32 flags);
-int pfsSectorCryptCbcDecrypt(void *dst, const void *src, const void *key, const void *iv,
-			     SceUInt32 keySize, SceSize size, SceUInt32 flags);
-int pfsSectorCryptCbcSwEncrypt(void *dst, const void *src, const void *key, const void *iv,
-			       SceUInt32 keySize, SceSize size, SceUInt32 flags);
-int pfsSectorCryptCbcSwDecrypt(void *dst, const void *src, const void *key, const void *iv,
-			       SceUInt32 keySize, SceSize size, SceUInt32 flags);
-int pfsSectorCryptEcbEncrypt(void *dst, const void *src, SceSize size, const void *key,
-			     SceUInt32 keySize);
-int pfsSectorCryptEcbDecrypt(void *dst, const void *src, SceSize size, const void *key,
-			     SceUInt32 keySize);
-int pfsSectorCryptEcbSlotEncrypt(void *dst, const void *src, SceSize size, const void *key,
-				 SceUInt32 keySize, SceUInt16 slot);
-int pfsSectorCryptEcbSlotDecrypt(void *dst, const void *src, SceSize size, const void *key,
-				 SceUInt32 keySize, SceUInt16 slot);
-int pfsSectorCryptCtrEncrypt(void *dst, const void *src, SceSize size, const void *key,
-			     SceUInt32 keySize);
-int pfsSectorCryptCtrDecrypt(void *dst, const void *src, SceSize size, const void *key,
-			     SceUInt32 keySize);
-int pfsSectorCryptCtrSlotEncrypt(void *dst, const void *src, SceSize size, const void *key,
-				 SceUInt32 keySize, SceUInt16 slot);
-int pfsSectorCryptCtrSlotDecrypt(void *dst, const void *src, SceSize size, const void *key,
-				 SceUInt32 keySize, SceUInt16 slot);
+/* crypt/xts.c, crypt/xts_dmac5.c and crypt/cbc_dmac5.c */
+#define PFS_ERROR_SECTOR_SIZE	0x80140609	/* name unknown: a size or a sector that is not a block */
+#define PFS_ERROR_SECTOR_ALIGN	0x8014060e	/* name unknown: a buffer that is not word aligned */
+
+int XTS_EncryptSector_dmac5(const void *tweak, const void *key, const void *tweakKey,
+			    SceUInt32 keyBits, SceSize size, const void *src, void *dst);
+int XTS_DecryptSector_dmac5(const void *tweak, const void *key, const void *tweakKey,
+			    SceUInt32 keyBits, SceSize size, const void *src, void *dst);
+int XTS_Encrypt_ext(const void *key, const void *tweakKey, SceUInt32 keyBits, SceUInt64 sector,
+		    SceSize size, SceUInt32 sectorSize, const void *src, void *dst, SceUInt16 flags);
+int XTS_Decrypt_ext(const void *key, const void *tweakKey, SceUInt32 keyBits, SceUInt64 sector,
+		    SceSize size, SceUInt32 sectorSize, const void *src, void *dst, SceUInt16 flags);
+int CBC_Encrypt(const void *key, const void *iv, SceSize size, const void *src, void *dst);
+int CBC_Decrypt(const void *key, const void *iv, SceSize size, const void *src, void *dst);
+int CBC_Encrypt_ext(const void *key, const void *tweakKey, SceUInt64 sector, SceSize size,
+		    SceSize sectorSize, const void *src, void *dst, SceUInt16 flags, SceUInt16 slot);
+int CBC_Decrypt_ext(const void *key, const void *tweakKey, SceUInt64 sector, SceSize size,
+		    SceSize sectorSize, const void *src, void *dst, SceUInt16 flags, SceUInt16 slot);
+int CBC_EncryptNP(const void *key, const void *iv, SceSize size, const void *src, void *dst,
+		  SceUInt16 slot);
+int CBC_DecryptNP(const void *key, const void *iv, SceSize size, const void *src, void *dst,
+		  SceUInt16 slot);
+int pfsSectorCryptCtrEncrypt(const void *key, const void *iv, SceSize size, const void *src,
+			     void *dst);
+int pfsSectorCryptCtrDecrypt(const void *key, const void *iv, SceSize size, const void *src,
+			     void *dst);
+int pfsSectorCryptCtrSlotEncrypt(const void *key, const void *iv, SceSize size, const void *src,
+				 void *dst, SceUInt16 slot);
+int pfsSectorCryptCtrSlotDecrypt(const void *key, const void *iv, SceSize size, const void *src,
+				 void *dst, SceUInt16 slot);
 
 void pfsDbNodePageInit(ScePfsDbNodePage *page, ScePfsPageAllocator *pages);
 int pfsDbNodePageAlloc(ScePfsDbNodePage *page);
@@ -939,12 +933,12 @@ int pfsDbTreeCheckHashes(ScePfsDbTree *tree, const ScePfsHash *key, ScePfsDbNode
 int pfsDbNodeCreate(const SceUInt32 *order, ScePfsDbNodePage *page, SceUInt32 internal);
 int pfsDbTreeInsertIntoParent(ScePfsDbTree *tree, const ScePfsHash *key, ScePfsDbNodePage *left,
 			      ScePfsDbRecordKey *rkey, ScePfsDbNodePage *right);
-int pfsDbNodeFind(ScePfsDbTree *tree, ScePfsDbNodePage *page, ScePfsDbRecordKey *rkey,
+int _srch_key(ScePfsDbTree *tree, ScePfsDbNodePage *page, ScePfsDbRecordKey *rkey,
 		  SceUInt32 *slot, int *found);
 int pfsDbTreeRemoveEntry(ScePfsDbTree *tree, ScePfsDbNodePage *page, ScePfsDbRecordKey *rkey,
 			 int inner);
 int pfsDbTreeDeleteEntry(ScePfsDbTree *tree, const ScePfsHash *key, ScePfsDbNodePage *page);
-int pfsDbTreeFindLeaf(ScePfsDbTree *tree, ScePfsDbRecordKey *rkey, ScePfsDbNodePage *page);
+int _find_leaf(ScePfsDbTree *tree, ScePfsDbRecordKey *rkey, ScePfsDbNodePage *page);
 int pfsDbTreeHeight(ScePfsDbTree *tree, SceUInt32 *height);
 int pfsDbTreeClear(ScePfsDbTree *tree);
 int pfsDbTreeFind(ScePfsDbTree *tree, const ScePfsHash *key, ScePfsDbRecordKey *rkey,
@@ -970,7 +964,7 @@ int pfsDbTableWriteHeader(ScePfsDbTable *table);
 int pfsDbTableWriteDirty(ScePfsDbTable *table);
 void pfsDbTableInit(ScePfsDbTable *table, ScePfsLru *lru);
 void pfsDbTableTerm(ScePfsDbTable *table);
-int pfsDbTableOpen(ScePfsDbTable *table, ScePfsLowerFile *lf, const ScePfsHash *key);
+int fsdb_restart(ScePfsDbTable *table, ScePfsLowerFile *lf, const ScePfsHash *key);
 int pfsDbTableCreate(ScePfsDbTable *table, ScePfsLowerFile *lf, const ScePfsHash *key,
 		     SceUInt16 fsType, SceUInt16 a6, SceUInt32 type, SceUInt32 keyParam);
 int pfsDbTableFlush(ScePfsDbTable *table);
@@ -1003,18 +997,19 @@ int pfsDbUpdate(ScePfsPmi *pmi, ScePfsDbKey *key, const void *hash, SceUInt16 *a
 		SceUInt64 *size, SceUInt64 *unused, SceInt64 usageDelta);
 int pfsDbRemove(ScePfsPmi *pmi, ScePfsDbKey *key);
 int pfsDbCheck(ScePfsPmi *pmi);
-int pfsDbDump(ScePfsPmi *pmi, void *buf, SceSize len);
+int filesdb_fix_storage_use(ScePfsPmi *pmi, void *buf, SceSize len);
 
 /* the integrity layer (names unknown) */
-void pfsHashCopy(void *dst, const void *src);
-int pfsSha1(ScePfsHash *digest, const void *data, SceSize len);
-int pfsHmacSha1(ScePfsHash *digest, const ScePfsHash *key, const void *data, SceSize len);
-int pfsHmacSha1Dma(ScePfsHash *digest, const ScePfsHash *key, const void *data, SceSize len);
-int pfsHashEqual(const void *a, const void *b);
+void icv_copy(void *dst, const void *src);
+void icv_clear(ScePfsHash *hash);
+int icv_set_sha1(ScePfsHash *digest, const void *data, SceSize len);
+int icv_set_hmac_sw(ScePfsHash *digest, const ScePfsHash *key, const void *data, SceSize len);
+int icv_set_hmac(ScePfsHash *digest, const ScePfsHash *key, const void *data, SceSize len);
+int icv_equal(const void *a, const void *b);
 int pfsCryptInit(ScePfsCrypt *ctx, ScePfsPmi *pmi, ScePfsLowerFile *icv, SceUInt32 index,
 		 SceUInt16 attr, SceUInt64 size, const void *hash);
 void pfsCryptClear(ScePfsCrypt *ctx);
-int pfsUnicvOpen(ScePfsPmi *pmi, ScePfsNode *node, int create);
+int mount_flat_icvdb(ScePfsPmi *pmi, ScePfsNode *node, int create);
 int pfsUnicvClose(ScePfsPmi *pmi);
 int pfsIndexAlloc(ScePfsPmi *pmi, SceUInt32 *index);
 int pfsIndexFree(ScePfsPmi *pmi, SceUInt32 index);
@@ -1069,7 +1064,7 @@ int pfsPageAllocatorFree(ScePfsPageAllocator *pages, SceOff offset, SceUInt32 co
 /* unicv entries (0x12168) */
 int pfsUnicvEntryWriteRecord(ScePfsUnicvEntry *entry);
 int pfsUnicvEntryGetPage(ScePfsUnicvEntry *entry, SceUInt32 index, ScePfsHashPage **page);
-int pfsUnicvEntryCreate(ScePfsUnicvEntry *entry, ScePfsPageAllocator *pages, SceUInt32 version);
+int _init_top(ScePfsUnicvEntry *entry, ScePfsPageAllocator *pages, SceUInt32 version);
 int pfsUnicvEntryOpen(ScePfsUnicvEntry *entry, ScePfsPageAllocator *pages, SceOff offset,
 		      SceUInt32 version);
 int pfsUnicvEntryFlush(ScePfsUnicvEntry *entry);
@@ -1102,13 +1097,13 @@ static inline int pfsModeHasFileKeys(SceUInt16 mode)	/* name unknown: modes 2, 3
 	return bit < 0x20 && ((1 << bit) & 0xc0000b03);
 }
 
-int pfsBlockWrite(ScePfsBlockRequest *req, ScePfsLowerFile *lf, ScePfsCrypt *ctx);
-int pfsBlockReadEdges(ScePfsBlockRequest *req, ScePfsLowerFile *lf, ScePfsCrypt *ctx);
+int _pwrite_ftruncate_step2(ScePfsBlockRequest *req, ScePfsLowerFile *lf, ScePfsCrypt *ctx);
+int _pwrite_ftruncate_step1(ScePfsBlockRequest *req, ScePfsLowerFile *lf, ScePfsCrypt *ctx);
 int pfsFileWriteChunk(ScePfsLowerFile *lf, SceUInt32 index, SceOff size, SceUInt16 attr,
 		      ScePfsPmi *pmi, ScePfsCrypt *ctx, const void *buf, SceSize nbyte,
 		      SceOff offset, SceSize *written);
-int pfsBlockRead(ScePfsBlockRequest *req, ScePfsLowerFile *lf, ScePfsCrypt *ctx);
-int pfsBlockCopyOut(ScePfsBlockRequest *req, void *buf, SceSize nbyte, SceOff offset,
+int secure_drive_pread_step1(ScePfsBlockRequest *req, ScePfsLowerFile *lf, ScePfsCrypt *ctx);
+int secure_drive_pread_step2(ScePfsBlockRequest *req, void *buf, SceSize nbyte, SceOff offset,
 		    SceSize *read);
 void pfsFileKeyInit(ScePfsFileKey *key, SceUInt32 index, SceOff size, SceUInt16 attr,
 		    SceUInt32 type, ScePfsCrypt *ctx, ScePfsPmi *pmi);
@@ -1123,36 +1118,36 @@ int pfsBlockRequestAlloc(ScePfsBlockRequest *req);
 int pfsBlockRequestFree(ScePfsBlockRequest *req);
 
 /* crypt engine (0xbca0) */
-int pfsCryptEngineInit(void);
-void pfsCryptEngineTerm(void);
-int pfsCryptEngineSubmit(ScePfsCryptJob *job);
-int pfsCryptEngineCancel(ScePfsCryptJob *job);
-int pfsCryptEngineWait(ScePfsCryptJob *job);
+int scePfsCryptEngineInit(void);
+void scePfsCryptEngineFini(void);
+int scePfsCryptEngineEnqueueRequest(ScePfsCryptJob *job);
+int scePfsCryptEngineDequeueRequest(ScePfsCryptJob *job);
+int scePfsCryptEngineWaitforRequest(ScePfsCryptJob *job);
 void pfsCryptEngineProcess(ScePfsCryptJob *job);
 
 /* crypt buffers (0x11614) */
 int pfsCryptBufferInit(void);
-void pfsCryptBufferTerm(void);
+void scePfsBufAllocatorTerm(void);
 #define PFS_CRYPT_BUF_EXACT	0	/* name unknown: fail when count are not free */
 #define PFS_CRYPT_BUF_WAIT	1	/* name unknown: wait until they are */
 #define PFS_CRYPT_BUF_PARTIAL	2	/* name unknown: take as many as are free */
 
-int pfsCryptBufferAlloc(SceInt32 weight, SceInt32 priority, SceUInt32 count, void **plain,
+int scePfsBufAllocatorAllocateBuffer(SceInt32 weight, SceInt32 priority, SceUInt32 count, void **plain,
 			void **disk, ScePfsHash **icvs, int mode);
 int pfsCryptBufferFree(SceInt32 weight, SceInt32 priority, SceUInt32 count, void *plain,
 		       void *disk, ScePfsHash *icvs);
 SceUInt32 pfsCryptBufferMaxBlocks(SceInt32 weight, SceInt32 priority);
 
-/* file keys (crypto.c): deferred */
-void pfsDeriveFileKeys(void *dataKey, void *tweakKey, const char *klicensee, SceUInt32 keyParam,
+/* file keys (crypto.c) */
+void pfs_get_keys(void *dataKey, void *tweakKey, const char *klicensee, SceUInt32 keyParam,
 		       SceUInt16 flags, SceUInt32 index, SceUInt16 a6);
-void pfsDeriveFileKeysSeeded(void *dataKey, void *tweakKey, const char *klicensee,
-			     SceUInt16 flags, SceUInt16 a6, const ScePfsHash *seed, SceSize seedSize);
-void pfsDeriveSimpleKeys(void *dataKey, void *tweakKey, const char *klicensee,
+void pfs_get_keys_hmac(void *dataKey, void *tweakKey, const char *klicensee,
+			     SceUInt16 flags, SceUInt16 a6, const void *seed, SceSize seedSize);
+void pfs_get_secret_np(ScePfsHash *key, const void *klicensee, SceUInt32 keyParam,
+			 SceUInt32 index, SceUInt16 slot);
+void pfs_get_keys_sha1(void *dataKey, void *tweakKey, const char *klicensee,
 			 SceUInt32 keyParam, SceUInt32 index);
 
-/* hashes (0xdf28) */
-void pfsHashZero(ScePfsHash *hash);
 int pfsIcvTreeCreate(ScePfsCrypt *ctx, ScePfsLru *lru, ScePfsLowerFile *lf, SceSize blockSize,
 		     const void *key, SceUInt32 version);
 int pfsIcvTreeOpen(ScePfsCrypt *ctx, ScePfsLru *lru, ScePfsLowerFile *lf, const void *key,
@@ -1161,7 +1156,7 @@ int pfsIcvFlatCreate(ScePfsCrypt *ctx, ScePfsLowerFile *lf, SceSize blockSize, c
 		     SceUInt32 version);
 int pfsIcvFlatOpen(ScePfsCrypt *ctx, ScePfsLowerFile *lf, const void *key, SceUInt64 size,
 		   SceUInt32 version);
-int pfsPathResolve(ScePfsPmi *pmi, ScePfsVd *vd, const char *path);
+int _update_aciddir_vnodedata(ScePfsPmi *pmi, ScePfsVd *vd, const char *path);
 /* the vfs operations */
 #define SCE_PFS_ERROR_PASS_THROUGH	0x80142301	/* name unknown: returned as it is */
 
@@ -1205,10 +1200,10 @@ typedef struct ScePfsAcidDirs {
 int pfsAcidFindLocked(ScePfsPmi **acid, ScePfsPmi *pmi, SceVfsVnode *vp);
 int pfsAcidFind(ScePfsPmi **acid, ScePfsPmi *pmi, SceVfsVnode *vp);
 int pfsAcidDirSet(ScePfsPmi *pmi, SceVfsVnode *vp);
-int pfsAcidDirMount(ScePfsPmi *pmi, SceVfsVnode *vp, const void *klicensee, SceSize len);
-int pfsAcidGetDirs(ScePfsPmi *pmi, ScePfsAcidDirs *dirs);
+int _alloc_aciddir_pmi(ScePfsPmi *pmi, SceVfsVnode *vp, const void *klicensee, SceSize len);
+int ac_get_aciddir_list(ScePfsPmi *pmi, ScePfsAcidDirs *dirs);
 int pfsAcidDirSeal(ScePfsPmi *pmi, SceVfsVnode *vp);
-int pfsAcidDirUmount(ScePfsPmi *pmi, SceVfsVnode *vp);
+int _umount_aciddir_pmi(ScePfsPmi *pmi, SceVfsVnode *vp);
 
 /* redirect layer (0xeae8+): a pmi without files.db of its own */
 int pfsRedirectVnodeCreate(SceVfsVnode **vpp, SceVfsVnode *dvp, SceVfsVnode *lowerVp,
@@ -1216,49 +1211,49 @@ int pfsRedirectVnodeCreate(SceVfsVnode **vpp, SceVfsVnode *dvp, SceVfsVnode *low
 int pfsRedirectSetRoot(ScePfsPmi *pmi, SceVfsMount *mnt, int unk, SceVfsVnode *vp);
 int pfsRedirectDevctl(ScePfsPmi *pmi, SceVfsMount *mnt, const char *dev, unsigned int cmd,
 		      const void *arg, SceSize argLen, void *buf, SceSize bufLen);
-int pfsRedirectLookup(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path,
+int redirect_lookup(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path,
 		      int flags);
-int pfsRedirectOpen(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceVfsPath *path,
+int redirect_open(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceVfsPath *path,
 		    int flags);
-int pfsRedirectCreate(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path,
+int redirect_create(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path,
 		      int flags, int mode);
-int pfsRedirectClose(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file);
-int pfsRedirectRead(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, void *buf, SceSize nbyte);
-int pfsRedirectWrite(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, const void *buf,
+int redirect_close(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file);
+int redirect_read(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, void *buf, SceSize nbyte);
+int redirect_write(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, const void *buf,
 		     SceSize nbyte);
 int pfsRedirectPread(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, void *buf, SceSize nbyte,
 		     SceOff offset);
 int pfsRedirectPwrite(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, const void *buf,
 		      SceSize nbyte, SceOff offset);
-SceOff pfsRedirectLseek(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceOff offset,
+SceOff redirect_lseek(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceOff offset,
 			int whence);
 int pfsRedirectIoctl(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int cmd, const void *in,
 		     SceSize inLen, void *out, SceSize outLen);
 int pfsRedirectInactive(SceVfsVnode *vp);
-int pfsRedirectRemove(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path,
+int redirect_remove(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path,
 		      int flags);
-int pfsRedirectMkdir(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path,
+int redirect_mkdir(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path,
 		     int mode);
-int pfsRedirectRmdir(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path);
-int pfsRedirectDopen(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file);
+int redirect_rmdir(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path);
+int redirect_dopen(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file);
 int pfsRedirectDread(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoDirent *dir);
-int pfsRedirectDclose(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file);
+int redirect_dclose(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file);
 int pfsRedirectGetstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat);
-int pfsRedirectChstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit);
+int redirect_chstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit);
 int pfsRedirectFgetstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat);
-int pfsRedirectFchstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat,
+int redirect_fchstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat,
 		       int bit);
-int pfsRedirectRename(ScePfsPmi *pmi, SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *oldPath,
+int redirect_rename(ScePfsPmi *pmi, SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *oldPath,
 		      SceVfsVnode *ndvp, SceVfsVnode **nvpp, SceVfsPath *newPath);
-int pfsRedirectVnodeSync(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int flags);
-int pfsRedirectWhiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *oldPath,
+int redirect_fsync(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int flags);
+int redirect_whiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *oldPath,
 			SceVfsPath *newPath, SceUInt32 a4, SceUInt32 a5);
-int pfsRedirectCleanup(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2,
+int redirect_cleanup(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2,
 		       SceUInt32 a3);
 
 /* crypto.c: deferred */
-void pfsDeriveKey(ScePfsHash *key, const void *klicensee, SceUInt32 keyParam, SceUInt32 flags,
-		  SceUInt32 index, SceUInt32 keyParam2);
+void pfs_get_secret(ScePfsHash *key, const void *klicensee, SceUInt32 keyParam, SceUInt32 flags,
+		  SceUInt32 index, SceUInt16 a6);
 
 /* the file system proper (names unknown) */
 int pfsCoreFind(ScePfsPmi *pmi, ScePfsNode *node, SceUInt32 *index, SceUInt16 *attr,
@@ -1272,35 +1267,35 @@ int pfsCoreMap(ScePfsPmi *pmi, SceVfsVnode *vp, ScePfsFi *fi, int cmd, ScePfsMap
 	       ScePfsBlockRequest *map);
 int pfsCoreReadData(ScePfsFi *fi, ScePfsPmi *pmi, void *buf, SceSize nbyte, SceOff offset,
 		    SceSize *read);
-int pfsCoreUpdateSize(ScePfsPmi *pmi, SceVfsVnode *vp);
+int _update_pdir_size(ScePfsPmi *pmi, SceVfsVnode *vp);
 int pfsCoreRemoveEntry(ScePfsPmi *pmi, SceVfsVnode *dvp, ScePfsNode *node, SceUInt32 index,
 		       SceUInt16 attr);
 int pfsCoreMount(ScePfsPmi *pmi, ScePfsNode *root);
 int pfsCoreUmount(ScePfsPmi *pmi, int flags);
 int pfsCoreSync(ScePfsPmi *pmi, int flags);
-int pfsCoreLookup(ScePfsPmi *pmi, ScePfsNode *node, SceUInt32 flags);
+int _repair_db(ScePfsPmi *pmi, ScePfsNode *node, SceUInt32 flags);
 int pfsCoreCreate(ScePfsPmi *pmi, ScePfsNode *node, int mode, SceUInt32 icvMode);
 int pfsCoreOpen(ScePfsFi *fi, ScePfsPmi *pmi, ScePfsNode *node, int flags);
 int pfsCoreClose(ScePfsFi *fi, ScePfsPmi *pmi);
-int pfsCoreWrite(ScePfsFi *fi, ScePfsPmi *pmi, const void *buf, SceSize nbyte, SceOff offset,
+int pfs_impl_pwrite(ScePfsFi *fi, ScePfsPmi *pmi, const void *buf, SceSize nbyte, SceOff offset,
 		 SceSize *written);
 int pfsCoreLseek(ScePfsFi *fi, ScePfsPmi *pmi, SceOff offset, int whence, SceOff *position);
 int pfsCoreRemove(ScePfsPmi *pmi, ScePfsNode *dir, ScePfsNode *node);
 int pfsCoreMkdir(ScePfsPmi *pmi, ScePfsNode *node, int mode);
 int pfsCoreRmdir(ScePfsPmi *pmi, ScePfsNode *dir, ScePfsNode *node);
-int pfsCoreRename(ScePfsPmi *pmi, ScePfsNode *oldDir, ScePfsNode *oldNode, ScePfsNode *newNode);
+int pfs_impl_rename(ScePfsPmi *pmi, ScePfsNode *oldDir, ScePfsNode *oldNode, ScePfsNode *newNode);
 int pfsCoreGetAttr(ScePfsPmi *pmi, ScePfsNode *node, SceUInt16 *attr, SceUInt64 *size);
 int pfsCoreReadInternal(ScePfsFi *fi, ScePfsPmi *pmi, void *buf, SceSize nbyte, SceOff offset,
 			SceSize *read);
 int pfsCoreTruncate(ScePfsFi *fi, ScePfsPmi *pmi, SceOff size);
 int pfsCoreSetAttr(ScePfsPmi *pmi, ScePfsNode *node, SceUInt32 attr);
 int pfsCoreVnodeSync(ScePfsFi *fi, ScePfsPmi *pmi, int flags);
-int pfsCoreDopen(ScePfsFi *fi, ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path);
+int pfs_impl_dopen(ScePfsFi *fi, ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path);
 int pfsCoreDread(ScePfsFi *fi, ScePfsPmi *pmi, SceIoDirent *dir, int a3);
 int pfsCoreDclose(ScePfsFi *fi, ScePfsPmi *pmi);
 int pfsCoreDevctl(ScePfsPmi *pmi, const char *dev, int cmd, const void *arg,
 		  SceSize argLen, void *buf, SceSize bufLen);
-int pfsCoreWhiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *oldPath,
+int pfs_impl_whiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *oldPath,
 		    SceVfsPath *newPath, SceUInt32 a4, SceUInt32 a5);
 int pfsCoreIoctl(ScePfsPmi *pmi, SceVfsVnode *vp, ScePfsFi *fi, int cmd, const void *in,
 		 SceSize inLen, void *out, SceSize outLen);
@@ -1317,7 +1312,7 @@ int pfsGdsdMount(ScePfsPmi *pmi, SceVfsMount *mnt, SceVfsPath *devFilePath);
 int pfsGdsdUmount(ScePfsPmi *pmi, SceVfsMount *mnt, int flags);
 int pfsGdsdSync(ScePfsPmi *pmi, SceVfsMount *mnt, int flags);
 int pfsGdsdSetRoot(ScePfsPmi *pmi, SceVfsMount *mnt, int unk, SceVfsVnode *vp);
-int pfsGdsdDecodePathElem(ScePfsPmi *pmi, SceVfsMount *mnt, const char *path, const char **path2,
+int pfs_decode_path_elem(ScePfsPmi *pmi, SceVfsMount *mnt, const char *path, const char **path2,
 			  const char **path3, char *buf, SceSize bufLen, SceSize *decodeLen);
 int pfsGdsdLookup(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path,
 		  SceUInt32 flags);
@@ -1335,7 +1330,7 @@ int pfsGdsdPwrite(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, const void 
 SceOff pfsGdsdLseek(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceOff offset, int whence);
 int pfsGdsdIoctl(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int cmd, const void *in,
 		 SceSize inLen, void *out, SceSize outLen);
-int pfsGdsdInactive(SceVfsVnode *vp);
+int pfs_inactive(SceVfsVnode *vp);
 int pfsGdsdRemove(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path,
 		  SceUInt32 flags);
 int pfsGdsdMkdir(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int mode);
@@ -1344,9 +1339,9 @@ int pfsGdsdDopen(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *
 int pfsGdsdDread(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoDirent *dir);
 int pfsGdsdDclose(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file);
 int pfsGdsdGetstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat);
-int pfsGdsdChstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit);
+int pfs_chstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit);
 int pfsGdsdFgetstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat);
-int pfsGdsdFchstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat,
+int pfs_fchstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat,
 		   SceUInt32 bit);
 int pfsGdsdRename(ScePfsPmi *pmi, SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *oldPath,
 		  SceVfsVnode *ndvp, SceVfsVnode **nvpp, SceVfsPath *newPath);

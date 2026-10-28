@@ -205,7 +205,7 @@ int pfsPmiIsApproved(ScePfsPmi *pmi, SceUInt64 authId)
 
 int pfsPmiInit(void)
 {
-	return pfsBufferListInit(&g_pfsPmiBufferList, "ScePfsPmiBufferList", sizeof(ScePfsPmi), 4,
+	return buffer_list_init(&g_pfsPmiBufferList, "ScePfsPmiBufferList", sizeof(ScePfsPmi), 4,
 				 PFS_PMI_COUNT);
 }
 
