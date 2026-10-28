@@ -17,7 +17,7 @@ int GcAuthProcessStopHandler(SceUID pid, int eventType,
 	return gcAuthProcessStopBlocked != 0 ? -1 : 0;
 }
 
-int module_start(SceSize arglen, const void *argp)
+int sceSblGcAuthMgrStart(SceSize arglen, const void *argp)
 {
 	SceKernelProcEventHandler handler;
 
