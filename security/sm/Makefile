@@ -5,10 +5,6 @@
 #
 #   tools/mepbuild.sh security/sm FW=<FW> O=<build directory> [MODULES=<names>]
 #   -> $(O)/<FW>/<module>/<module>.elf
-#
-# Skeletons: each module's sm_main is a stub. The firmwares differ only in data (16 to
-# 80 bytes near the end of each image; update_service_sm also in 4.00's code), which
-# goes into per-firmware data when the modules are written.
 
 GCC ?= mep-elf-
 BINUTILS ?= mep-elf-
