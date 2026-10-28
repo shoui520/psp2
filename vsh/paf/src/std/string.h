@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include "new.h"
 
 char *sce_paf_strncpy(char *destination, const char *source, size_t num);
 
@@ -74,8 +75,6 @@ PafString *PafStringSubstring(PafString *result, const PafString *src,
 size_t PafStringRfind(const PafString *self, const char *str,
 		      size_t pos, size_t len);
 
-extern void *ScePafStdc_FC5CD359(size_t size);
-extern void ScePafStdc_1B77082E(void *ptr);
 extern int ScePafStdc_D608246A(void);
 
 static inline __attribute__((always_inline)) void PafStringInitialize(PafString *self)

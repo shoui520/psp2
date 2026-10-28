@@ -4,6 +4,28 @@
 #include "stdlib.h"
 #include <libkernel/libkernel.h>
 
+char *sce_paf_strncpy(char *destination, const char *source, size_t num)
+{
+	char *result = destination;
+	int32_t count = num;
+	int32_t i = 0;
+
+	if (!destination || !source)
+		return NULL;
+	while (i < count) {
+		char value = *source++;
+
+		*destination++ = value;
+		if (!value) {
+			while (++i < count)
+				*destination++ = '\0';
+			break;
+		}
+		i++;
+	}
+	return result;
+}
+
 void *ScePafStdc_5883A6E3(void *dst, const void *src, size_t count)
 {
 	return sce_paf_memcpy(dst, src, count);
