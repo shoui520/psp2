@@ -8,6 +8,10 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/main_thread_call_list.c
 	src/common/main_thread_call.c
 	src/common/char_encoding.c
+	src/common/resource_hooks.c
+	src/common/frame_count.c
+	src/common/halt_assert.c
+	src/common/sequence.c
 	src/std/string.c
 	libpaf.c
 )
