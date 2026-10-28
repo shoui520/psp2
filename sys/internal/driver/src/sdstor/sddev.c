@@ -1,4 +1,5 @@
 /* SceSdstor device management (Sony source: sddev.c). */
+#include <fw.h>
 #include <sysmem/sysroot.h>
 #include "sdstor_internal.h"
 #include <sysmem/debug.h>
@@ -36,6 +37,16 @@ static const LedModeParam sddevWriteEndLed = {
 static SceSdstorSddev sddevTables[5];
 
 /*
+ * The 3.6x builds declare the power helpers inline, so sddev_init, sddev_insert
+ * and sddev_resume carry their bodies; the 4.00 build calls them.
+ */
+#if FW_SINCE(0x04000000)
+#define SDDEV_POWER_INLINE
+#else
+#define SDDEV_POWER_INLINE inline
+#endif
+
+/*
  * Whether each SceUsbMass import is linked: words Sony's link leaves 0 in
  * .data, so the USB mass storage paths always fail with 0x80010013.
  */
@@ -43,7 +54,7 @@ int sddevUsbMassGetDevInfoLinked __attribute__((section(".data"))) = 0;
 int sddevUsbMassReadSectorLinked __attribute__((section(".data"))) = 0;
 int sddevUsbMassWriteSectorLinked __attribute__((section(".data"))) = 0;
 
-int sddev_power_off(SceSdstorSddev *device)
+SDDEV_POWER_INLINE int sddev_power_off(SceSdstorSddev *device)
 {
 	unsigned int hport;
 	int result = 0;
@@ -156,7 +167,7 @@ int sddev_get_port(SceSdstorSddev *device)
 	return -1;
 }
 
-int sddev_power_on(SceSdstorSddev *device)
+SDDEV_POWER_INLINE int sddev_power_on(SceSdstorSddev *device)
 {
 	unsigned int hport, count;
 	int result, powerResult, unlockResult;
