@@ -660,7 +660,7 @@ TSMP_INLINE int tsmpGetSettingRes(const TsmpHeader *pkt, SceSize size)
 	case 0xff:
 		/* delete the key */
 		set.type = 0;
-		ret = SceRegMgrForDebugger_46AC0CCB(4, &set);
+		ret = SceRegMgrForDebugger_46AC0CCB(4, (void *)set.name);
 		goto done;
 	default:
 		result = TSMP_RESULT_REG_ERROR;
@@ -822,6 +822,7 @@ TSMP_INLINE int tsmpUpdateActivation(const TsmpHeader *pkt, SceSize size)
 		goto bad_size;
 	}
 
+	expire = 0;
 	if (body[0] >= 2 && (ret = sceSblLicMgrActivateDevkit((const char *)&body[1])) < 0) {
 		if (ret == (int)0x800f1302)
 			result = TSMP_RESULT_ACT_EXPIRED;
@@ -837,7 +838,6 @@ TSMP_INLINE int tsmpUpdateActivation(const TsmpHeader *pkt, SceSize size)
 		ret = sceSblLicMgrGetExpireDate(&expire, 1);
 		result = TSMP_RESULT_OK;
 		if (ret < 0) {
-			expire = 0;
 			if (ret == (int)0x800f1302)
 				result = TSMP_RESULT_ACT_EXPIRED;
 			else if (ret == (int)0x800f1324 || ret == (int)0x800f1327)
