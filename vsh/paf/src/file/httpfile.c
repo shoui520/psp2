@@ -860,6 +860,74 @@ int32_t HttpFileOpenWithArg(HttpFile *self, const FileOpenArg *param)
 	return result;
 }
 
+int32_t HttpFileCompleteAsync(HttpFile *self, int64_t *result)
+{
+	HttpFileIoThread *thread = (HttpFileIoThread *)self->m_io_thread;
+	int64_t value = thread->m_result;
+	int32_t operation = thread->m_operation;
+	HttpFileReader *reader;
+
+	RWLockLockExclusive(&self->m_lock_rwlock);
+	if (self->m_io_thread)
+		self->m_io_thread->vtable->Delete(self->m_io_thread);
+	reader = self->m_http_reader;
+	self->m_io_thread = NULL;
+	if (reader) {
+		int32_t error = reader->m_result[1];
+
+		self->m_reader_result[0] = reader->m_result[0];
+		self->m_reader_result[1] = error;
+		self->m_reader_result[2] = reader->m_result[2];
+	}
+	if (!operation) {
+		if (!value && reader)
+			value = HttpFileResponseCodeToError(reader->vtable->GetResponse(reader)->code);
+		if (value) {
+			self->m_is_opened = 0;
+			HttpFileDeleteReader(self);
+		} else {
+			self->m_is_opened = 1;
+		}
+	}
+	RWLockUnlockExclusive(&self->m_lock_rwlock);
+	if (result)
+		*result = value;
+	return 0;
+}
+
+int32_t HttpFileWaitAsync(HttpFile *self, int64_t *result)
+{
+	int32_t ret;
+
+	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	if (!self->m_io_thread) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return SCE_PAF_ERROR_FILE_NOT_BUSY;
+	}
+	ThreadJoin(self->m_io_thread);
+	ret = HttpFileCompleteAsync(self, result);
+	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	return ret;
+}
+
+int32_t HttpFilePollAsync(HttpFile *self, int64_t *result)
+{
+	int32_t ret;
+
+	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	if (!self->m_io_thread) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return SCE_PAF_ERROR_FILE_NOT_BUSY;
+	}
+	if (ThreadIsAlive(self->m_io_thread)) {
+		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		return 1;
+	}
+	ret = HttpFileCompleteAsync(self, result);
+	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	return ret;
+}
+
 unsigned char HttpFileIsOpened(HttpFile *self)
 {
 	unsigned char opened;

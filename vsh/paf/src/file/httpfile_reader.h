@@ -84,6 +84,21 @@ int32_t HttpFileDeleteReader(HttpFile *self);
 int32_t HttpFileCreateReader(HttpFile *self, const HttpFileOpenArg *arg);
 int32_t HttpFileResponseCodeToError(uint16_t code);
 
+/* The I/O thread owns the separately allocated member-call object. */
+typedef struct HttpFileIoThread {
+	Thread base;
+	int32_t m_operation;
+	int64_t m_result;
+	void *m_call;
+} HttpFileIoThread;
+
+typedef char HttpFileIoThreadSizeCheck[sizeof(HttpFileIoThread) == 32 ? 1 : -1];
+typedef char HttpFileIoThreadResultOffsetCheck[offsetof(HttpFileIoThread, m_result) == 16 ? 1 : -1];
+typedef char HttpFileIoThreadCallOffsetCheck[offsetof(HttpFileIoThread, m_call) == 24 ? 1 : -1];
+
+#define HttpFileCompleteAsync ScePafMisc_C098F659
+int32_t HttpFileCompleteAsync(HttpFile *self, int64_t *result);
+
 typedef struct HttpFileReaderConfig HttpFileReaderConfig;
 typedef struct HttpFileReaderConfigRefCounter HttpFileReaderConfigRefCounter;
 
