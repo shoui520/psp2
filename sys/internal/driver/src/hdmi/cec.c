@@ -384,22 +384,6 @@ static inline int cecSendActiveSource(const CecParam *param)
 
 static const CecOpcode opcodes[];
 
-/* The opcode table's entries this file sends itself. */
-#define OP_ACTIVE_SOURCE		0
-#define OP_TEXT_VIEW_ON			2
-#define OP_INACTIVE_SOURCE		3
-#define OP_REPORT_PHYSICAL_ADDRESS	26
-#define OP_CEC_VERSION			22
-#define OP_SET_OSD_NAME			45
-#define OP_MENU_STATUS			48
-#define OP_REPORT_POWER_STATUS		52
-#define OP_FEATURE_ABORT		53
-
-static inline int _send(int op, const CecParam *param)
-{
-	return opcodes[op].send(param);
-}
-
 /* <Give Device Power Status> received. */
 static int cecRecvGiveDevicePowerStatus(const CecMessage *msg)
 {
@@ -408,7 +392,7 @@ static int cecRecvGiveDevicePowerStatus(const CecMessage *msg)
 
 	param.data[0] = msg->initiator;
 	param.data[1] = CEC_POWER_ON;
-	ret = _send(OP_REPORT_POWER_STATUS, &param);
+	ret = cecSendReportPowerStatus(&param);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -422,7 +406,7 @@ static int cecRecvMenuRequest(const CecMessage *msg)
 
 	param.data[0] = msg->initiator;
 	param.data[1] = CEC_MENU_ACTIVATED;
-	ret = _send(OP_MENU_STATUS, &param);
+	ret = cecSendMenuStatus(&param);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -435,7 +419,7 @@ static int cecRecvGetCecVersion(const CecMessage *msg)
 
 	param.data[0] = msg->initiator;
 	param.data[1] = CEC_VERSION_1_4;
-	_send(OP_CEC_VERSION, &param);
+	cecSendCecVersion(&param);
 	return 0;
 }
 
@@ -446,7 +430,7 @@ static int cecRecvGiveOsdName(const CecMessage *msg)
 	int ret;
 
 	param.data[0] = msg->initiator;
-	ret = _send(OP_SET_OSD_NAME, &param);
+	ret = cecSendSetOsdName(&param);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -462,7 +446,7 @@ static int cecRecvAbort(const CecMessage *msg)
 	param.data[0] = msg->initiator;
 	param.data[1] = 0xff;
 	param.data[2] = CEC_ABORT_UNRECOGNIZED_OPCODE;
-	return _send(OP_FEATURE_ABORT, &param);
+	return cecSendFeatureAbort(&param);
 }
 
 /* No key for CEC_PASS_THROUGH_USEC: the key is released. */
@@ -515,7 +499,7 @@ static int cecRecvGivePhysicalAddress(const CecMessage *msg)
 	param.data[0] = physical[0];
 	param.data[1] = physical[1];
 	param.data[2] = CEC_DEVICE_TYPE_PLAYBACK;
-	ret = _send(OP_REPORT_PHYSICAL_ADDRESS, &param);
+	ret = cecSendReportPhysicalAddress(&param);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -563,7 +547,7 @@ static int cecRecvRequestActiveSource(const CecMessage *msg)
 
 	if (!(work.status & CEC_STATUS_ACTIVE_SOURCE))
 		return 0;
-	return _send(OP_ACTIVE_SOURCE, &param);
+	return cecSendActiveSource(&param);
 }
 
 /* <Active Source> received: another device took over. */
@@ -716,14 +700,14 @@ static int cecRecvSetStreamPath(const CecMessage *msg)
 		_clearStatus(CEC_STATUS_ACTIVE_SOURCE);
 		return 0;
 	}
-	ret = _send(OP_ACTIVE_SOURCE, &param);
+	ret = cecSendActiveSource(&param);
 	if (ret < 0)
 		return ret;
 	_setStatus(CEC_STATUS_ACTIVE_SOURCE);
 	param = (CecParam){ { 0 } };
 	param.data[0] = msg->initiator;
 	param.data[1] = CEC_MENU_ACTIVATED;
-	return _send(OP_MENU_STATUS, &param);
+	return cecSendMenuStatus(&param);
 }
 
 #if FW_SINCE(0x04000000)
@@ -767,7 +751,7 @@ static int _execRecvAction(SceUInt8 id)
 		param.data[0] = initiator;
 		param.data[1] = opcode;
 		param.data[2] = CEC_ABORT_UNRECOGNIZED_OPCODE;
-		return _send(OP_FEATURE_ABORT, &param);
+		return cecSendFeatureAbort(&param);
 	}
 	if (length < entry->minLength)
 		return 0;
@@ -799,7 +783,7 @@ static int _execRecvAction(SceUInt8 id)
 		param.data[0] = initiator;
 		param.data[1] = opcode;
 		param.data[2] = CEC_ABORT_UNRECOGNIZED_OPCODE;
-		return _send(OP_FEATURE_ABORT, &param);
+		return cecSendFeatureAbort(&param);
 	}
 	return handlers[opcode]->receive(&msg);
 }
@@ -855,7 +839,7 @@ static inline void _allocLogicalAddr(const SceUInt8 *physical)
 		param.data[0] = physical[0];
 		param.data[1] = physical[1];
 		param.data[2] = CEC_DEVICE_TYPE_PLAYBACK;
-		if (_send(OP_REPORT_PHYSICAL_ADDRESS, &param) < 0)
+		if (cecSendReportPhysicalAddress(&param) < 0)
 			return;
 		if (work.addressCallback != NULL)
 			work.addressCallback(2);
@@ -918,13 +902,13 @@ static int _mainThread(SceSize args, void *argp)
 			if (work.status & CEC_STATUS_ALLOCATED) {
 				param = (CecParam){ { 0 } };
 				param.data[0] = CEC_ADDR_TV;
-				if (_send(OP_TEXT_VIEW_ON, &param) >= 0 &&
-				    _send(OP_ACTIVE_SOURCE, &param) >= 0) {
+				if (cecSendTextViewOn(&param) >= 0 &&
+				    cecSendActiveSource(&param) >= 0) {
 					_setStatus(CEC_STATUS_ACTIVE_SOURCE);
 					param = (CecParam){ { 0 } };
 					param.data[0] = CEC_ADDR_TV;
 					param.data[1] = CEC_MENU_ACTIVATED;
-					_send(OP_MENU_STATUS, &param);
+					cecSendMenuStatus(&param);
 				}
 			}
 			sceKernelClearEventFlag(work.eventFlag, ~CEC_EVENT_ONE_TOUCH_PLAY);
@@ -934,10 +918,10 @@ static int _mainThread(SceSize args, void *argp)
 			if (work.status & CEC_STATUS_ENABLED) {
 				param.data[0] = CEC_ADDR_TV;
 				param.data[1] = CEC_MENU_DEACTIVATED;
-				_send(OP_MENU_STATUS, &param);
+				cecSendMenuStatus(&param);
 				if (work.status & CEC_STATUS_ACTIVE_SOURCE) {
 					param.data[0] = CEC_ADDR_TV;
-					_send(OP_INACTIVE_SOURCE, &param);
+					cecSendInactiveSource(&param);
 					_clearStatus(CEC_STATUS_ACTIVE_SOURCE);
 				}
 				cecDevDisable();
