@@ -571,6 +571,90 @@ erroraction:
 	return NULL;
 }
 
+void *tmalloc_small(mstate m, size_t nb, size_t bytes, unsigned int tag)
+{
+	unsigned int leastbit = m->treemap & -m->treemap;
+	unsigned int index = leastbit ? 31 - __builtin_clz(leastbit) : 32;
+	tchunkptr v = m->treebins[index];
+	tchunkptr t = v;
+	size_t rsize = chunksize(t) - nb;
+	size_t padding = (bytes + CHUNK_OVERHEAD) & CHUNK_ALIGN_MASK;
+	mchunkptr p, r;
+	size_t size;
+
+	if (index < m->alignment_index) {
+		while ((t = t->child[0] ? t->child[0] : t->child[1]) != NULL) {
+			size_t trem = chunksize(t) - nb;
+
+			if (trem < rsize) {
+				rsize = trem;
+				v = t;
+			}
+		}
+	} else {
+		t = m->treebins[NTREEBINS - 1];
+		if (!t)
+			return NULL;
+		v = t;
+		while ((t = t->child[0] ? t->child[0] : t->child[1]) != NULL) {
+			if ((uintptr_t)t < (uintptr_t)v)
+				v = t;
+		}
+		rsize = chunksize(v) - nb;
+	}
+	if (!ok_address(m, v))
+		goto erroraction;
+	p = (mchunkptr)v;
+	r = chunk_plus_offset(p, nb);
+	if ((uintptr_t)p >= (uintptr_t)r)
+		goto erroraction;
+	unlink_large_chunk(m, v);
+	if (rsize < MIN_CHUNK_SIZE) {
+		size = nb + rsize;
+		p->head = size | INUSE_BITS;
+		chunk_plus_offset(p, size)->head |= PINUSE_BIT;
+		mark_inuse_foot(p, size, tag, padding);
+	} else {
+		p->head = nb | INUSE_BITS;
+		mark_inuse_foot(p, nb, tag, padding);
+		r->head = rsize | PINUSE_BIT;
+		chunk_plus_offset(r, rsize)->prev_foot = rsize;
+		if (m->dvsize)
+			insert_small_chunk(m, m->dv, m->dvsize);
+		m->dvsize = rsize;
+		m->dv = r;
+	}
+	/* The tree-allocation path bins a DV at the threshold as well. */
+	size = m->dvsize;
+	if (size >= m->alignment) {
+		if (small_index(size) < NSMALLBINS) {
+			unsigned int i = small_index(size);
+			mchunkptr b = smallbin_at(m, i);
+			mchunkptr f = b;
+
+			if (!(m->smallmap & idx2bit(i)))
+				m->smallmap |= idx2bit(i);
+			else if (ok_address(m, b->fd))
+				f = b->fd;
+			else
+				ScePafStdc_D608246A();
+			b->fd = m->dv;
+			f->bk = m->dv;
+			m->dv->fd = f;
+			m->dv->bk = b;
+		} else {
+			insert_large_chunk(m, (tchunkptr)m->dv, size);
+		}
+		m->dv = NULL;
+		m->dvsize = 0;
+	}
+	return chunk2mem(p);
+
+erroraction:
+	ScePafStdc_D608246A();
+	return NULL;
+}
+
 void *mspace_malloc(mspace heap, size_t bytes, unsigned int tag)
 {
 	mstate m = heap;
