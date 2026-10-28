@@ -815,10 +815,8 @@ static int smThread(SceSize args, void *argp)
 			state = HDMI_SM_STATE_UNPLUGGED;
 			break;
 		}
-		if (state == HDMI_SM_STATE_EXIT) {
-			sceKernelExitThread(0);
-			return 0;
-		}
+		if (state == HDMI_SM_STATE_EXIT)
+			return sceKernelExitThread(0);
 		if (state == HDMI_SM_STATE_KEEP)
 			continue;
 		timeout = 0xffffffff;
