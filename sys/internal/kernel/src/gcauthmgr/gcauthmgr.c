@@ -6,10 +6,6 @@
 
 #include <skeleton.h>
 
-STUB(SceSblGcAuthMgrDrmBBForDriver_4C5DE1AA)
-STUB(SceSblGcAuthMgrDrmBBForDriver_4FE89ADB)
-STUB(error)
-STUB(SceSblGcAuthMgrDrmBBForDriver_812B2B5C)
 STUB(SceSblGcAuthMgrMsSaveBBForDriver_3C185A67)
 STUB(SceSblGcAuthMgrMsSaveBBForDriver_4A249828)
 STUB(SceSblGcAuthMgrMsSaveBBForDriver_79A9BE44)

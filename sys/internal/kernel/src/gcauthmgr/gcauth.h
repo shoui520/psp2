@@ -87,4 +87,69 @@ typedef struct GcAuthCartAuthenticationRequest {
 } GcAuthCartAuthenticationRequest;
 
 int GcAuthCartAuthentication(const GcAuthCartAuthenticationRequest *request);
+typedef struct GcAuthGetCartSecretRequest {
+	GcAuthCartSecretData *secret;
+} GcAuthGetCartSecretRequest;
+
+int GcAuthGetCartSecret(const GcAuthGetCartSecretRequest *request);
+
+/* a 16-byte DrmBB key, word aligned */
+typedef union GcAuthDrmKey {
+	unsigned char bytes[16];
+	unsigned int words[4];
+} GcAuthDrmKey;
+
+/* a PSP license as DrmBB reads it */
+typedef struct GcAuthDrmLicense {
+	unsigned char header[8];
+	unsigned int type;
+	unsigned char reserved[2];
+	unsigned char version;
+	unsigned char flags;
+	unsigned char body[48];
+	unsigned char keyMask[16];
+	unsigned char data[48];
+	unsigned char mac[16];
+} GcAuthDrmLicense;
+
+_Static_assert(offsetof(GcAuthDrmLicense, mac) == 128, "license MAC offset");
+
+typedef struct GcAuthDrmLicenseKeyRequest {
+	const GcAuthDrmLicense *license;
+	const GcAuthDrmKey *key;
+	const unsigned char *secret;
+	GcAuthDrmKey *output;
+} GcAuthDrmLicenseKeyRequest;
+
+int GcAuthDrmGetLicenseKey(const GcAuthDrmLicenseKeyRequest *request);
+/* a PGD header: the license MACs, then the data header (encrypted) */
+typedef struct GcAuthPgdHeader {
+	unsigned int magic;
+	unsigned int keyIndex;
+	unsigned int drmType;
+	unsigned int reserved;
+	GcAuthDrmKey seed;
+	unsigned char seedTail[16];
+	GcAuthDrmKey dataSeed;
+	unsigned char dataReserved[4];
+	unsigned int dataSize;
+	unsigned int blockSize;
+	unsigned char dataTail[36];
+	unsigned char licenseMac[16];
+	unsigned char headerMac[16];
+} GcAuthPgdHeader;
+
+_Static_assert(sizeof(GcAuthPgdHeader) == 0x90, "PGD header size");
+_Static_assert(offsetof(GcAuthPgdHeader, dataSize) == 0x44, "PGD data size");
+_Static_assert(offsetof(GcAuthPgdHeader, licenseMac) == 0x70, "PGD license MAC");
+
+typedef struct GcAuthPgdDecryptRequest {
+	const GcAuthDrmKey *key;
+	const unsigned char *pgd;
+	unsigned int pgdSize;
+	unsigned char *output;
+	unsigned int outputSize;
+} GcAuthPgdDecryptRequest;
+
+int GcAuthPgdDecryptData(const GcAuthPgdDecryptRequest *request);
 int GcAuthFinishCartAuthentication(SdifMmcContext *context, unsigned int keyId);

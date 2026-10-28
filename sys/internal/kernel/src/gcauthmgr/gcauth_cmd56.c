@@ -43,10 +43,6 @@ void GcAuthBuildCmd56Request(const GcAuthCmd56Payload *payload, unsigned int siz
 	memcpy(request->payload, payload, size);
 }
 
-typedef struct GcAuthGetCartSecretRequest {
-	GcAuthCartSecretData *secret;
-} GcAuthGetCartSecretRequest;
-
 int GcAuthGetCartSecret(const GcAuthGetCartSecretRequest *request)
 {
 	int result;
