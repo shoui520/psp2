@@ -133,8 +133,7 @@ static int dev_drfp_vop_lookup(SceVopLookupArgs *argp)
 		vp->core.fid[0] = (SceUInt32)vp;
 		vp->core.fid[1] = 0;
 	} else {
-		vp->core.fid[0] = stat.fid;
-		vp->core.fid[1] = stat.fid >> 32;
+		*(SceUInt64 *)vp->core.fid = stat.fid;
 	}
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
 	vp->core.nodeData = NULL;
@@ -165,8 +164,7 @@ static int dev_drfp_vop_open(SceVopOpenArgs *argp)
 		vp->core.fid[0] = (SceUInt32)vp;
 		vp->core.fid[1] = 0;
 	} else {
-		vp->core.fid[0] = stat.fid;
-		vp->core.fid[1] = stat.fid >> 32;
+		*(SceUInt64 *)vp->core.fid = stat.fid;
 	}
 	vp->core.size = stat.size;
 	return 0;
@@ -209,9 +207,10 @@ static SceOff dev_drfp_vop_lseek(SceVopLseekArgs *argp)
 	SceVfsFile *file = argp->file;
 	SceOff offset = argp->offset;
 	int whence = argp->whence;
+	SceUInt32 fd = file->fd;
 
 	SDRFPFS_TRACE(366, "args = %p, vp = %p, file = %p\n", argp, vp, file);
-	SDRFPFS_TRACE(368, "fd = %d, offset = 0x%016llx, whence = %d\n", file->fd, offset, whence);
+	SDRFPFS_TRACE(368, "fd = %d, offset = 0x%016llx, whence = %d\n", fd, offset, whence);
 	switch (whence) {
 	case SCE_SEEK_SET:
 		break;
