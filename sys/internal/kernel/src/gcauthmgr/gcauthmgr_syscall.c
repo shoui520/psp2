@@ -5,6 +5,7 @@
 #include "pcact.h"
 #include "adhoc.h"
 #include "gcauth.h"
+#include "ms_savebb.h"
 
 int _sceSblGcAuthMgrPcactGetChallenge(unsigned int mode,
 		const unsigned int *entropy, GcAuthPcactEncryptedChallenge *output,
@@ -1018,6 +1019,202 @@ int _sceSblGcAuthMgrAdhocBB160BroadCastDecrypt(GcAuthAdhocContext160 *context,
 		if (copy < 0)
 			return copy;
 	}
+	return result;
+}
+
+int _sceSblGcAuthMgrMsSaveBBMacInit(GcAuthMsSaveBbMacContext *context, int type)
+{
+	GcAuthMsSaveBbMacContext contextCopy;
+	int result;
+	int copy;
+
+	if (context == NULL)
+		return GcAuthMsSaveBbMacInitForUser(NULL, type);
+	__builtin_memset(&contextCopy, 0, sizeof(contextCopy));
+	result = sceKernelCopyFromUser(&contextCopy, context, sizeof(contextCopy));
+	if (result < 0)
+		return result;
+	result = GcAuthMsSaveBbMacInitForUser(&contextCopy, type);
+	copy = sceKernelCopyToUser(context, &contextCopy, sizeof(contextCopy));
+	if (copy < 0)
+		return copy;
+	return result;
+}
+
+int _sceSblGcAuthMgrMsSaveBBMacUpdate(GcAuthMsSaveBbMacContext *context,
+		const unsigned char *data, SceSize size)
+{
+	GcAuthMsSaveBbMacContext contextCopy;
+	int result;
+	int copy;
+
+	if (context == NULL)
+		return GcAuthMsSaveBbMacUpdateForUser(NULL, data, size);
+	__builtin_memset(&contextCopy, 0, sizeof(contextCopy));
+	result = sceKernelCopyFromUser(&contextCopy, context, sizeof(contextCopy));
+	if (result < 0)
+		return result;
+	result = GcAuthMsSaveBbMacUpdateForUser(&contextCopy, data, size);
+	copy = sceKernelCopyToUser(context, &contextCopy, sizeof(contextCopy));
+	if (copy < 0)
+		return copy;
+	return result;
+}
+
+int _sceSblGcAuthMgrMsSaveBBMacFinal(GcAuthMsSaveBbMacContext *context,
+		unsigned char *mac, const unsigned char *key, const SceSize *sizes)
+{
+	GcAuthMsSaveBbMacContext contextCopy;
+	unsigned char macCopy[16];
+	GcAuthMsSaveBbMacContext *contextArgument;
+	unsigned char *macArgument;
+	unsigned char *keyCopy;
+	SceSize size[4];
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(size, sizes, sizeof(size));
+	if (result < 0)
+		return result;
+	if (context != NULL) {
+		__builtin_memset(&contextCopy, 0, sizeof(contextCopy));
+		contextArgument = &contextCopy;
+		result = sceKernelCopyFromUser(&contextCopy, context, sizeof(contextCopy));
+		if (result < 0)
+			return result;
+	} else {
+		contextArgument = NULL;
+	}
+	macArgument = mac;
+	if (mac != NULL) {
+		if (size[0] > sizeof(macCopy))
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		__builtin_memset(macCopy, 0, sizeof(macCopy));
+		macArgument = macCopy;
+		result = sceKernelCopyFromUser(macCopy, mac, size[0]);
+		if (result < 0)
+			return result;
+	}
+	if (key != NULL) {
+		if (size[1] > 16)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		keyCopy = __builtin_alloca(16);
+		result = sceKernelCopyFromUser(keyCopy, key, size[1]);
+		if (result < 0)
+			return result;
+		key = keyCopy;
+	}
+	result = GcAuthMsSaveBbMacFinalForUser(contextArgument, macArgument, key);
+	if (context != NULL) {
+		copy = sceKernelCopyToUser(context, contextArgument, sizeof(contextCopy));
+		if (copy < 0)
+			return copy;
+	}
+	if (mac != NULL) {
+		copy = sceKernelCopyToUser(mac, macArgument, size[0]);
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}
+
+int _sceSblGcAuthMgrMsSaveBBCipherInit(GcAuthMsSaveBbCipherContext *context,
+		int type, int mode, const GcAuthMsSaveBbCipherInitParam *param)
+{
+	GcAuthMsSaveBbCipherInitParam paramCopy;
+	GcAuthMsSaveBbCipherContext contextCopy;
+	unsigned char keyCopy[16];
+	unsigned char seedCopy[16];
+	GcAuthMsSaveBbCipherContext *contextArgument;
+	unsigned char *keyArgument;
+	const unsigned char *seed;
+	unsigned char *key;
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(&paramCopy, param, sizeof(paramCopy));
+	if (result < 0)
+		return result;
+	seed = paramCopy.seed;
+	key = paramCopy.key;
+	if (context != NULL) {
+		contextArgument = &contextCopy;
+		__builtin_memset(&contextCopy, 0, sizeof(contextCopy));
+		result = sceKernelCopyFromUser(&contextCopy, context, sizeof(contextCopy));
+		if (result < 0)
+			return result;
+	} else {
+		contextArgument = NULL;
+	}
+	keyArgument = key;
+	if (key != NULL) {
+		if (paramCopy.keySize > 16)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		keyArgument = keyCopy;
+		__builtin_memset(keyCopy, 0, sizeof(keyCopy));
+		result = sceKernelCopyFromUser(keyCopy, key, paramCopy.keySize);
+		if (result < 0)
+			return result;
+	}
+	if (seed != NULL) {
+		if (paramCopy.seedSize > 16)
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		result = sceKernelCopyFromUser(seedCopy, seed, paramCopy.seedSize);
+		if (result < 0)
+			return result;
+		seed = seedCopy;
+	}
+	result = GcAuthMsSaveBbCipherInitForUser(contextArgument, type, mode,
+		keyArgument, seed);
+	if (context != NULL) {
+		copy = sceKernelCopyToUser(context, contextArgument, sizeof(contextCopy));
+		if (copy < 0)
+			return copy;
+	}
+	if (key != NULL) {
+		copy = sceKernelCopyToUser(key, keyArgument, paramCopy.keySize);
+		if (copy < 0)
+			return copy;
+	}
+	return result;
+}
+
+int _sceSblGcAuthMgrMsSaveBBCipherUpdate(GcAuthMsSaveBbCipherContext *context,
+		unsigned char *data, SceSize size)
+{
+	GcAuthMsSaveBbCipherContext contextCopy;
+	int result;
+	int copy;
+
+	if (context == NULL)
+		return GcAuthMsSaveBbCipherUpdateForUser(NULL, data, size);
+	__builtin_memset(&contextCopy, 0, sizeof(contextCopy));
+	result = sceKernelCopyFromUser(&contextCopy, context, sizeof(contextCopy));
+	if (result < 0)
+		return result;
+	result = GcAuthMsSaveBbCipherUpdateForUser(&contextCopy, data, size);
+	copy = sceKernelCopyToUser(context, &contextCopy, sizeof(contextCopy));
+	if (copy < 0)
+		return copy;
+	return result;
+}
+
+int _sceSblGcAuthMgrMsSaveBBCipherFinal(GcAuthMsSaveBbCipherContext *context)
+{
+	GcAuthMsSaveBbCipherContext contextCopy;
+	int result;
+	int copy;
+
+	if (context == NULL)
+		return GcAuthMsSaveBbCipherFinalForUser(NULL);
+	__builtin_memset(&contextCopy, 0, sizeof(contextCopy));
+	result = sceKernelCopyFromUser(&contextCopy, context, sizeof(contextCopy));
+	if (result < 0)
+		return result;
+	result = GcAuthMsSaveBbCipherFinalForUser(&contextCopy);
+	copy = sceKernelCopyToUser(context, &contextCopy, sizeof(contextCopy));
+	if (copy < 0)
+		return copy;
 	return result;
 }
 
