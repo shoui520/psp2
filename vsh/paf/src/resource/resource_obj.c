@@ -1,9 +1,12 @@
 #include "resource_obj.h"
 #include "../cxml/util.h"
+#include "../file/localfile.h"
+#include "../file/bufferedfile.h"
 #include "../paf_types.h"
 #include "../std/stdlib.h"
 #include "../versatileparam/idparam.h"
 #include <sce_atomic.h>
+#include <kernel/iofilemgr.h>
 
 extern int sce_paf_strcmp(const char *left, const char *right);
 extern size_t sce_paf_strlen(const char *str);
@@ -751,4 +754,114 @@ ResourceObj *ResourceObjDestroy(ResourceObj *self)
 ResourceObj *ResourceObjDestroyBase(ResourceObj *self)
 {
 	return ResourceObjDestroy(self);
+}
+
+ResourceObj *ResourceObjConstructFromFile(ResourceObj *self, const char *name,
+					const ResourceObjOption *option)
+{
+	ResourceIDMapNode *head;
+	CxmlDocument *document;
+	FileSharedPtr opened, buffered, fp;
+	size_t length;
+	int32_t ret;
+
+	self->rscfp.m_ptr = NULL;
+	self->rscfp.m_ref_counter = NULL;
+	PafStringInitialize(&self->filename);
+	self->document = NULL;
+	self->string_document = NULL;
+	self->rscallocator = option->allocator;
+	self->string_buffer = NULL;
+	self->texture_buffer = NULL;
+	self->model_buffer = NULL;
+	self->sound_buffer = NULL;
+	self->textures = NULL;
+	self->models = NULL;
+	self->sounds = NULL;
+	self->num_textures = 0;
+	self->num_models = 0;
+	self->num_sounds = 0;
+	self->load_status = 0;
+	self->create_type = 0;
+	self->id_map._Mysize = 0;
+	head = ScePafStdc_FC5CD359(sizeof(*head));
+	if (!head)
+		ScePafStdc_D608246A();
+	self->id_map._Myhead = head;
+	if (head) {
+		head->_Parent = head;
+		head->_Left = head;
+		head->_Right = head;
+		head->_Color = 0;
+		self->id_map._Myhead->_Isnil = 1;
+	}
+	PafStringInitialize(&self->default_string);
+	PafStringAssign(&self->default_string, s_default_string,
+			sce_paf_strlen(s_default_string));
+	self->resolution = 0;
+	length = name ? sce_paf_strlen(name) : 0;
+	PafStringAssign(&self->filename, name, length);
+	document = ScePafStdc_FC5CD359(sizeof(*document));
+	if (document)
+		document = CxmlDocumentConstruct(document);
+	self->document = document;
+	LocalFileOpen(&opened, self->filename.ptr, SCE_O_RDONLY, 0, &ret);
+	FileSharedPtrAssign(&self->rscfp, &opened);
+	FileSharedPtrRelease(&opened);
+	if (self->rscfp.m_ptr) {
+		BufferSharedPtr buffer = { NULL, NULL };
+		BufferSharedPtr allocated, base_buffer, buffer_arg;
+		FileSharedPtr base_file, file_arg;
+		void *addr;
+
+		if (self->rscallocator)
+			addr = scePafMallocAlignWithContext(self->rscallocator, 64, 4096);
+		else
+			addr = sce_paf_memalign(64, 4096);
+		if (addr) {
+			HeapAllocBufferCreate(&allocated, addr, 4096, self->rscallocator);
+			if (allocated.m_ptr)
+				BufferSharedPtrCopy(&buffer, &allocated);
+			BufferSharedPtrRelease(&allocated);
+		}
+		FileSharedPtrCopy(&base_file, &self->rscfp);
+		BufferSharedPtrCopy(&base_buffer, &buffer);
+		FileSharedPtrCopy(&file_arg, &base_file);
+		BufferSharedPtrCopy(&buffer_arg, &base_buffer);
+		BufferedFileOpen(&buffered, &file_arg, &ret, &buffer_arg);
+		BufferSharedPtrRelease(&buffer_arg);
+		FileSharedPtrRelease(&file_arg);
+		FileSharedPtrAssign(&self->rscfp, &buffered);
+		FileSharedPtrRelease(&buffered);
+		BufferSharedPtrRelease(&base_buffer);
+		FileSharedPtrRelease(&base_file);
+		BufferSharedPtrRelease(&buffer);
+	}
+	if (self->rscfp.m_ptr) {
+		document = self->document;
+		document->allocator = option->cxml_allocator_func;
+		document->allocator_userdata = self->rscallocator;
+		FileSharedPtrCopy(&fp, &self->rscfp);
+		ret = CxmlDocumentCreateFromFile(document, &fp, 0);
+		FileSharedPtrRelease(&fp);
+		if (ret) {
+			CxmlDocumentClear(self->document);
+			self->rscfp.m_ptr->vtable->Close(self->rscfp.m_ptr);
+			self->load_status = ret;
+		}
+		if (option->load_type & 4) {
+			ret = ResourceObjLoadResourceDescription(self, self->filename.ptr);
+			if (ret)
+				self->load_status = ret;
+		}
+	} else {
+		self->load_status = SCE_PAF_ERROR_RESOURCE_CANT_OPEN;
+	}
+	return self;
+}
+
+ResourceObj *ResourceObjConstructFromFileBase(ResourceObj *self, const char *name,
+					    const ResourceObjOption *option)
+{
+	return ResourceObjConstructFromFile(self, name, option);
 }

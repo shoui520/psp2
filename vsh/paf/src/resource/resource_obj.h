@@ -115,6 +115,8 @@ typedef char ResourceSoundEntrySizeCheck[sizeof(ResourceSoundEntry) == 28 ? 1 : 
 typedef char ResourceObjOptionSizeCheck[sizeof(ResourceObjOption) == 12 ? 1 : -1];
 
 #define ResourceObjConstructFromBuffer ScePafResource_9E3EE281
+#define ResourceObjConstructFromFile ScePafResource_A70524AD
+#define ResourceObjConstructFromFileBase ScePafResource_20EA3ADB
 #define ResourceObjConstructFromBufferBase ScePafResource_E629FBF7
 #define ResourceObjDestroy ScePafResource_F194FC6D
 #define ResourceObjDestroyBase ScePafResource_E617D3AE
@@ -158,6 +160,11 @@ ResourceObj *ResourceObjConstructFromBuffer(ResourceObj *self, const void *addr,
 					  size_t size, const ResourceObjOption *option);
 ResourceObj *ResourceObjConstructFromBufferBase(ResourceObj *self, const void *addr,
 					      size_t size, const ResourceObjOption *option);
+ResourceObj *ResourceObjConstructFromFile(ResourceObj *self, const char *name,
+					const ResourceObjOption *option);
+ResourceObj *ResourceObjConstructFromFileBase(ResourceObj *self, const char *name,
+					    const ResourceObjOption *option);
+int32_t ResourceObjLoadResourceDescription(ResourceObj *self, const char *name);
 ResourceObj *ResourceObjDestroy(ResourceObj *self);
 ResourceObj *ResourceObjDestroyBase(ResourceObj *self);
 ResourceIDMap *ResourceIDMapClear(ResourceIDMap *self);

@@ -5,6 +5,7 @@
 
 typedef struct HeapAllocator HeapAllocator;
 
+void *scePafMallocAlignWithContext(HeapAllocator *allocator, size_t align, size_t size);
 void *scePafReallocWithContext(HeapAllocator *allocator, void *ptr, size_t size);
 void scePafFreeWithContext(HeapAllocator *allocator, void *ptr);
 

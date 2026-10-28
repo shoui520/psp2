@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <sce_atomic.h>
+#include "../std/string.h"
 
 typedef struct File File;
 typedef struct FileOpenArg FileOpenArg;
@@ -57,5 +59,40 @@ typedef char FileReadOffsetCheck[offsetof(FileVTable, Read) == 40 ? 1 : -1];
 typedef char FileSeekOffsetCheck[offsetof(FileVTable, Seek) == 56 ? 1 : -1];
 typedef char FileRefCounterSizeCheck[sizeof(FileRefCounter) == 16 ? 1 : -1];
 typedef char FileSharedPtrSizeCheck[sizeof(FileSharedPtr) == 8 ? 1 : -1];
+
+static inline __attribute__((always_inline))
+void FileSharedPtrCopy(FileSharedPtr *self, const FileSharedPtr *src)
+{
+	self->m_ptr = src->m_ptr;
+	self->m_ref_counter = src->m_ref_counter;
+	if (self->m_ptr)
+		sceAtomicIncrement32AcqRel(&self->m_ref_counter->m_counter);
+}
+
+static inline __attribute__((always_inline))
+void FileSharedPtrRelease(const FileSharedPtr *self)
+{
+	if (self->m_ptr &&
+	    sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_counter) == 1) {
+		self->m_ref_counter->m_deleter(self->m_ptr);
+		if (sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_weak_counter) == 1)
+			ScePafStdc_1B77082E(self->m_ref_counter);
+	}
+}
+
+static inline __attribute__((always_inline))
+void FileSharedPtrAssign(FileSharedPtr *self, const FileSharedPtr *src)
+{
+	File *ptr = src->m_ptr;
+	FileRefCounter *counter = src->m_ref_counter;
+
+	if (ptr != self->m_ptr) {
+		FileSharedPtrRelease(self);
+		self->m_ptr = ptr;
+		self->m_ref_counter = counter;
+		if (ptr)
+			sceAtomicIncrement32AcqRel(&counter->m_counter);
+	}
+}
 
 #endif
