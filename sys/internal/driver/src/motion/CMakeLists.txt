@@ -13,3 +13,6 @@ psp2_module(os0_kd_bootimage_motion KIND kernel COMPILER gcc48 SOURCES
 	heap.c
 	filter.c
 )
+# ring.c, heap.c and filter.c are the library SceMotionDevDummy links too; Sony built
+# them at -O3 there and here (the ring-reader searches are unrolled compare chains)
+set_source_files_properties(ring.c heap.c filter.c PROPERTIES COMPILE_OPTIONS -O3)

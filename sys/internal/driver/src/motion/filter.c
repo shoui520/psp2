@@ -27,11 +27,12 @@ static inline float absolute(float value)
 
 static inline float clamp(float value, float limit)
 {
-	if (value > limit)
-		return limit;
-	if (value < -limit)
-		return -limit;
-	return value;
+	if (value <= limit) {
+		limit = -limit;
+		if (value >= limit)
+			limit = value;
+	}
+	return limit;
 }
 
 static inline void clearWindows(GyroFilter *filter)
