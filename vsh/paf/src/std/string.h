@@ -4,6 +4,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 typedef struct PafString {
 	char *ptr;
@@ -40,6 +41,9 @@ void *sce_paf_memset(void *dst, int ch, size_t len);
 size_t sce_paf_strlen(const char *str);
 size_t sce_paf_wcslen(const uint16_t *str);
 int sce_paf_swprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format, ...);
+#define sce_paf_vswprintf ScePafStdc_FA5C2193
+int sce_paf_vswprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format,
+		     va_list args);
 PafWString *PafWStringConstruct(PafWString *self, const void *allocator);
 PafWString *PafWStringDestruct(PafWString *self);
 
