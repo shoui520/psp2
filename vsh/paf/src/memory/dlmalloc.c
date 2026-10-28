@@ -1223,6 +1223,16 @@ void *mspace_memalign(mspace heap, size_t alignment, size_t bytes,
 	return internal_memalign(m, alignment, bytes, tag);
 }
 
+int mspace_trim(mspace heap, size_t pad)
+{
+	mstate m = heap;
+	size_t magic = m->magic;
+
+	if (magic != mparams.magic)
+		return 0;
+	return sys_trim(m, pad);
+}
+
 struct mallinfo mspace_mallinfo(mspace heap)
 {
 	mstate m = heap;
@@ -1274,4 +1284,126 @@ struct mallinfo mspace_mallinfo(mspace heap)
 		info.keepcost = top_size;
 	}
 	return info;
+}
+
+size_t mspace_usable_size(const void *mem)
+{
+	mchunkptr p;
+	size_t head, size, padding = 0;
+
+	if (!mem)
+		return 0;
+	p = mem2chunk(mem);
+	head = p->head;
+	if ((head & INUSE_BITS) == PINUSE_BIT)
+		return 0;
+	size = head & ~(size_t)7;
+	if (head & FLAG4_BIT)
+		padding = (((unsigned char *)mem)[size - CHUNK_OVERHEAD - 1] ^
+			   0xFFU) + 1;
+	return size - padding - CHUNK_OVERHEAD;
+}
+
+unsigned int mspace_report_free_blocks(mspace heap,
+		int (*handler)(void *, size_t, int, void *), void *arg)
+{
+	mstate m = heap;
+	unsigned int count = 1;
+	unsigned int i;
+	mchunkptr p = m->top;
+
+	if (!handler(p, chunksize(p), 1, arg))
+		return count;
+	p = m->dv;
+	if (p) {
+		count++;
+		if (!handler(p, m->dvsize, 1, arg))
+			return count;
+	}
+	for (i = 0; i < NTREEBINS; i++) {
+		tchunkptr t = m->treebins[i];
+		tchunkptr sentinel = (tchunkptr)&m->treebins[i];
+
+		if (!(m->treemap & idx2bit(i)))
+			continue;
+		if (t) {
+			while (t->child[0])
+				t = t->child[0];
+		}
+		while (t != sentinel) {
+			tchunkptr q = t;
+
+			do {
+				count++;
+				if (!handler(q, chunksize(q), 1, arg))
+					return count;
+				q = q->fd;
+			} while (q != t);
+			if (t->child[1]) {
+				t = t->child[1];
+				while (t->child[0])
+					t = t->child[0];
+			} else {
+				tchunkptr parent = t->parent;
+
+				while (parent != sentinel && parent->child[0] != t) {
+					t = parent;
+					parent = t->parent;
+				}
+				t = parent;
+			}
+		}
+	}
+	for (i = 0; i < NSMALLBINS; i++) {
+		mchunkptr b = smallbin_at(m, i);
+
+		p = b->bk;
+		if (!(m->smallmap & idx2bit(i)))
+			continue;
+		while (p != b) {
+			count++;
+			if (!handler(p, chunksize(p), 1, arg))
+				return count;
+			p = p->bk;
+		}
+	}
+	return count;
+}
+
+int mspace_check_memorybounds(mspace heap, void *mem, unsigned int tag)
+{
+	mstate m = heap;
+	mchunkptr p;
+	size_t head, size;
+	unsigned char *end;
+	unsigned int padding, i;
+
+	if (!m || !mem)
+		return 0;
+	p = mem2chunk(mem);
+	head = p->head;
+	size = head & ~(size_t)7;
+	if ((chunk_plus_offset(p, size)->prev_foot ^ FOOTER_MAGIC) != tag)
+		return 1;
+	if (m->magic != mparams.magic)
+		return 1;
+	if (!(head & FLAG4_BIT))
+		return 0;
+	p->head = head & ~FLAG4_BIT;
+	end = (unsigned char *)mem + size;
+	padding = end[-CHUNK_OVERHEAD - 1] ^ 0xFFU;
+	if (padding > CHUNK_ALIGN_MASK - 1)
+		return 1;
+	for (i = 1; i <= padding; i++) {
+		if (end[-(int)(CHUNK_OVERHEAD + 1 + i)] != 0xAF)
+			return 1;
+	}
+	return 0;
+}
+
+unsigned int mspace_ptr_get_tag(const void *mem)
+{
+	mchunkptr p = mem2chunk(mem);
+
+	return chunk_plus_offset(p, chunksize(p))->prev_foot ^ FOOTER_MAGIC;
 }

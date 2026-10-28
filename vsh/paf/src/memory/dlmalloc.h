@@ -27,5 +27,11 @@ void mspace_free(mspace heap, void *mem, unsigned int tag);
 void *mspace_realloc(mspace heap, void *mem, size_t bytes, unsigned int tag);
 void *mspace_memalign(mspace heap, size_t alignment, size_t bytes,
 			unsigned int tag);
+int mspace_trim(mspace heap, size_t pad);
+size_t mspace_usable_size(const void *mem);
+unsigned int mspace_report_free_blocks(mspace heap,
+		int (*handler)(void *, size_t, int, void *), void *arg);
+int mspace_check_memorybounds(mspace heap, void *mem, unsigned int tag);
+unsigned int mspace_ptr_get_tag(const void *mem);
 
 #endif
