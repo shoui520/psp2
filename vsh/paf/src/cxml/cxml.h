@@ -123,12 +123,15 @@ typedef char ElementBinSizeCheck[sizeof(ElementBin) == 28 ? 1 : -1];
 #define CxmlDocumentGetHeaderMagic ScePafResource_D2022BA2
 #define CxmlDocumentDestroy ScePafResource_2387124F
 #define CxmlDocumentDestroyBase ScePafResource_71407B32
+#define CxmlDocumentCreateFromBuffer ScePafResource_FFC4FA5F
 
 CxmlHeader *CxmlHeaderConstruct(CxmlHeader *self);
 CxmlHeader *CxmlHeaderConstructBase(CxmlHeader *self);
 CxmlDocument *CxmlDocumentConstruct(CxmlDocument *self);
 CxmlDocument *CxmlDocumentConstructBase(CxmlDocument *self);
 int32_t CxmlDocumentClear(CxmlDocument *self);
+int32_t CxmlDocumentCreateFromBuffer(CxmlDocument *self, const void *buf,
+				    size_t bufsize, unsigned char copy);
 void CxmlDocumentGetDocumentElement(CxmlElement *result, CxmlDocument *self);
 void CxmlDocumentGetHeaderMagic(const CxmlDocument *self, char buf[4]);
 CxmlDocument *CxmlDocumentDestroy(CxmlDocument *self);
