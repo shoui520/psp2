@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+char *sce_paf_strncpy(char *destination, const char *source, size_t num);
+
 typedef struct PafString {
 	char *ptr;
 	size_t count;

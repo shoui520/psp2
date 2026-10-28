@@ -57,6 +57,22 @@ _Static_assert(offsetof(HeapAllocatorOption, memblk_type) == 12,
 
 HeapAllocator *scePafCreateHeap(HeapAllocator *self, void *membase,
 		size_t size, const char *name, const HeapAllocatorOption *option);
+HeapAllocator *ScePafMisc_F36F1C66(HeapAllocator *self, void *membase,
+		size_t size, const char *name, const HeapAllocatorOption *option);
+HeapAllocator *scePafDeleteHeap(HeapAllocator *self);
+void ScePafMisc_79F13D72(HeapAllocator *self);
+
+#define HeapAllocatorGetType ScePafMisc_9B22F2FE
+#define HeapAllocatorGetBlockType ScePafMisc_D9E9BEC8
+#define HeapAllocatorGetName ScePafMisc_68B7420B
+#define HeapAllocatorGetRange ScePafMisc_D4358B8E
+#define HeapAllocatorGetFreeSize ScePafMisc_C32ECD73
+
+uint32_t HeapAllocatorGetType(const HeapAllocator *self);
+AllocationBlockType HeapAllocatorGetBlockType(const HeapAllocator *self);
+const char *HeapAllocatorGetName(const HeapAllocator *self);
+void HeapAllocatorGetRange(const HeapAllocator *self, void **membase, size_t *size);
+size_t HeapAllocatorGetFreeSize(HeapAllocator *self);
 
 void *scePafMallocWithContext(HeapAllocator *allocator, size_t size);
 void *scePafMallocAlignWithContext(HeapAllocator *allocator, size_t align, size_t size);

@@ -1,0 +1,170 @@
+#include "heap_allocator.h"
+#include "dlmalloc.h"
+#include "../std/new.h"
+#include "../std/string.h"
+#include "../std/stdlib.h"
+#include <kernel/sysmem/memblock.h>
+#include <sysmem/memblock.h>
+
+typedef struct MemoryAllocatorClass {
+	int offset_to_top;
+	const void *type_info;
+	MemoryAllocatorMethods methods;
+} MemoryAllocatorClass;
+
+static HeapAllocator *MemoryAllocatorDestruct(HeapAllocator *self);
+static void MemoryAllocatorDelete(HeapAllocator *self);
+
+static const MemoryAllocatorClass memoryAllocatorClass = {
+	0, NULL, {
+		(uint32_t (*)(const HeapAllocator *))__cxa_pure_virtual,
+		(AllocationBlockType (*)(const HeapAllocator *))__cxa_pure_virtual,
+		(const char *(*)(const HeapAllocator *))__cxa_pure_virtual,
+		(void (*)(const HeapAllocator *, void **, size_t *))__cxa_pure_virtual,
+		(size_t (*)(HeapAllocator *))__cxa_pure_virtual,
+		MemoryAllocatorDestruct, MemoryAllocatorDelete
+	}
+};
+
+static const MemoryAllocatorClass heapAllocatorClass = {
+	0, NULL, {
+		HeapAllocatorGetType, HeapAllocatorGetBlockType,
+		HeapAllocatorGetName, HeapAllocatorGetRange,
+		HeapAllocatorGetFreeSize, scePafDeleteHeap, ScePafMisc_79F13D72
+	}
+};
+
+uint32_t HeapAllocatorGetType(const HeapAllocator *self)
+{
+	return 0;
+}
+
+AllocationBlockType HeapAllocatorGetBlockType(const HeapAllocator *self)
+{
+	return self->m_heap_memblk_type;
+}
+
+const char *HeapAllocatorGetName(const HeapAllocator *self)
+{
+	return self->m_heap_name;
+}
+
+void HeapAllocatorGetRange(const HeapAllocator *self, void **membase, size_t *size)
+{
+	void *base = self->m_heap_addr;
+	size_t length = self->m_heap_size;
+
+	*membase = base;
+	*size = length;
+}
+
+size_t HeapAllocatorGetFreeSize(HeapAllocator *self)
+{
+	struct mallinfo info;
+
+	MutexLock(&self->m_mutex);
+	info = mspace_mallinfo(self->m_heap_id);
+	MutexUnlock(&self->m_mutex);
+	return info.fordblks;
+}
+
+HeapAllocator *scePafCreateHeap(HeapAllocator *self, void *membase,
+		size_t size, const char *name, const HeapAllocatorOption *option)
+{
+	SceKernelMemBlockType type = SCE_KERNEL_MEMBLOCK_TYPE_USER_RW;
+	void *base;
+	size_t length, alignment;
+
+	self->m_heap_addr = membase;
+	self->m_heap_size = size;
+	self->vtable = &heapAllocatorClass.methods;
+	self->m_heap_disable_dbgprint = false;
+	self->m_memory_attached = false;
+	self->m_heap_disable_assert_on_alloc_failure = true;
+	MutexConstruct(&self->m_mutex, name, MutexOption_None);
+	self->m_heap_memblk_type = AllocationBlockType_User;
+	if (option && option->memblk_type != AllocationBlockType_User) {
+		self->m_heap_memblk_type = option->memblk_type;
+		if (option->memblk_type == AllocationBlockType_User_Cdlg)
+			type = SCE_KERNEL_MEMBLOCK_TYPE_USER_CDIALOG_RW;
+	}
+	if (option) {
+		if (option->disable_dbgprint)
+			self->m_heap_disable_dbgprint = true;
+		if (!option->disable_assert_on_alloc_failure)
+			self->m_heap_disable_assert_on_alloc_failure = false;
+	}
+	sce_paf_strncpy(self->m_heap_name, name, 31);
+	base = self->m_heap_addr;
+	self->m_heap_name[31] = '\0';
+	if (base) {
+		self->m_memory_attached = true;
+	} else {
+		size_t extra = 0;
+		SceUID block;
+
+		length = self->m_heap_size;
+		if (length & 4095)
+			extra = 4096 - (length & 4095);
+		block = sceKernelAllocMemBlock(self->m_heap_name, type,
+					      length + extra, NULL);
+		base = self->m_heap_addr;
+		self->m_memblk_id = block;
+		if (block >= 0) {
+			void *allocated = NULL;
+
+			sceKernelGetMemBlockBase(block, &allocated);
+			base = allocated;
+			self->m_heap_addr = allocated;
+		}
+		self->m_memory_attached = false;
+	}
+	if (!base) {
+		ScePafStdc_D41FD265();
+		ScePafStdc_D608246A();
+		base = self->m_heap_addr;
+	}
+	length = self->m_heap_size;
+	if (length & 15) {
+		length -= length & 15;
+		self->m_heap_size = length;
+	}
+	alignment = option ? option->alignment : 0;
+	self->m_heap_id = create_mspace_with_base(base, length, 0, alignment);
+	return self;
+}
+
+HeapAllocator *ScePafMisc_F36F1C66(HeapAllocator *self, void *membase,
+		size_t size, const char *name, const HeapAllocatorOption *option)
+{
+	return scePafCreateHeap(self, membase, size, name, option);
+}
+
+HeapAllocator *scePafDeleteHeap(HeapAllocator *self)
+{
+	self->vtable = &heapAllocatorClass.methods;
+	destroy_mspace(self->m_heap_id);
+	if (self->m_heap_addr && !self->m_memory_attached)
+		sceKernelFreeMemBlock(self->m_memblk_id);
+	MutexDestroy(&self->m_mutex);
+	self->vtable = &memoryAllocatorClass.methods;
+	return self;
+}
+
+void ScePafMisc_79F13D72(HeapAllocator *self)
+{
+	scePafDeleteHeap(self);
+	ScePafStdc_1B77082E(self);
+}
+
+static HeapAllocator *MemoryAllocatorDestruct(HeapAllocator *self)
+{
+	self->vtable = &memoryAllocatorClass.methods;
+	return self;
+}
+
+static void MemoryAllocatorDelete(HeapAllocator *self)
+{
+	self->vtable = &memoryAllocatorClass.methods;
+	ScePafStdc_1B77082E(self);
+}
