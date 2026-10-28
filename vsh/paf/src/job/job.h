@@ -2,6 +2,7 @@
 #define PAF_JOB_JOB_H
 
 #include "../std/string.h"
+#include <sce_atomic.h>
 
 typedef struct JobItem JobItem;
 typedef struct JobQueue JobQueue;
@@ -42,11 +43,31 @@ typedef char JobItemRefCounterSizeCheck[sizeof(JobItemRefCounter) == 16 ? 1 : -1
 #define JobItemDestroyBase ScePafThread_E639D331
 #define JobItemCancel ScePafThread_2AE6D3EB
 #define JobQueueEnqueue ScePafThread_93F7A9D6
+#define JobItemIsCanceled ScePafThread_142E7F78
 
 JobItem *JobItemConstructBase(JobItem *self, const char *name,
 			      const JobItemOption *option);
 JobItem *JobItemDestroyBase(JobItem *self);
 void JobItemCancel(JobItem *self);
 int JobQueueEnqueue(JobQueue *self, JobItemSharedPtr *item);
+int JobItemIsCanceled(JobItem *self);
+
+static inline __attribute__((always_inline))
+void JobItemSharedPtrAddRef(JobItemSharedPtr *item)
+{
+	if (item->m_ptr)
+		sceAtomicIncrement32AcqRel(&item->m_ref_counter->m_counter);
+}
+
+static inline __attribute__((always_inline))
+void JobItemSharedPtrRelease(JobItemSharedPtr *item)
+{
+	if (item->m_ptr &&
+	    sceAtomicDecrement32AcqRel(&item->m_ref_counter->m_counter) == 1) {
+		item->m_ref_counter->m_deleter(item->m_ptr);
+		if (sceAtomicDecrement32AcqRel(&item->m_ref_counter->m_weak_counter) == 1)
+			ScePafStdc_1B77082E(item->m_ref_counter);
+	}
+}
 
 #endif

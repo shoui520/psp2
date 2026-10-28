@@ -13,6 +13,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/halt_assert.c
 	src/common/sequence.c
 	src/common/job_call_queue.c
+	src/common/job_slots.c
+	src/std/new.c
 	src/std/string.c
 	libpaf.c
 )
