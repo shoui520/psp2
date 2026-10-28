@@ -1,5 +1,6 @@
 #include "resource_obj.h"
 #include "../cxml/util.h"
+#include "../paf_types.h"
 
 char *ResourceObjGetFileName(const ResourceObj *self)
 {
@@ -89,4 +90,56 @@ int32_t ResourceObjGetStringElement(const ResourceObj *self, const CxmlElement *
 				    const uint16_t **src, uint32_t *length)
 {
 	return CxmlUtilGetWString(elm, "src", src, length);
+}
+
+int32_t ResourceObjGetPageHash(const ResourceObj *self, uint32_t idhash, CxmlElement *elm)
+{
+	CxmlElement table;
+
+	ResourceObjGetTableElement(&table, self, TableType_Page);
+	*elm = table;
+	if (!elm->doc || elm->offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	CxmlUtilFindChildElementByIDHash(&table, elm, "page", "id", idhash);
+	*elm = table;
+	if (!elm->doc || elm->offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	return SCE_PAF_OK;
+}
+
+int32_t ResourceObjGetStyleHash(const ResourceObj *self, uint32_t idhash, CxmlElement *elm)
+{
+	CxmlElement table, next;
+	uint32_t count, index, value;
+
+	ResourceObjGetTableElement(&table, self, TableType_Style);
+	*elm = table;
+	if (!elm->doc || elm->offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	count = CxmlElementGetNumChild(elm);
+	CxmlElementGetFirstChild(&table, elm);
+	*elm = table;
+	for (index = 0; index < count; index++) {
+		if (!CxmlUtilGetIDHash(elm, "id", &value) && value == idhash)
+			return SCE_PAF_OK;
+		CxmlElementGetNextSibling(&next, elm);
+		*elm = next;
+	}
+	return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+}
+
+int32_t ResourceObjGetStringHash(const ResourceObj *self, uint32_t idhash,
+				 const uint16_t **src, uint32_t *length)
+{
+	CxmlElement root, elm;
+
+	if (!self->string_document)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	CxmlDocumentGetDocumentElement(&elm, self->string_document);
+	root = elm;
+	CxmlUtilFindChildElementByIDHash(&elm, &root, "string", "id", idhash);
+	if (!elm.doc || elm.offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	root = elm;
+	return CxmlUtilGetWString(&root, "src", src, length);
 }

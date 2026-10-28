@@ -75,6 +75,9 @@ typedef char ResourceObjSizeCheck[sizeof(ResourceObj) == 108 ? 1 : -1];
 #define ResourceObjGetTableElement ScePafResource_A7368FD6
 #define ResourceObjIsRegisteredIDHash ScePafResource_0F67A8FC
 #define ResourceObjGetStringElement ScePafResource_47A0AC77
+#define ResourceObjGetPageHash ScePafResource_7E56FE51
+#define ResourceObjGetStyleHash ScePafResource_C860A953
+#define ResourceObjGetStringHash ScePafResource_55EB9585
 
 char *ResourceObjGetFileName(const ResourceObj *self);
 int32_t ResourceObjGetLoadStatus(const ResourceObj *self);
@@ -86,5 +89,9 @@ void ResourceObjGetTableElement(CxmlElement *result, const ResourceObj *self,
 unsigned char ResourceObjIsRegisteredIDHash(ResourceObj *self, uint32_t value);
 int32_t ResourceObjGetStringElement(const ResourceObj *self, const CxmlElement *elm,
 				    const uint16_t **src, uint32_t *length);
+int32_t ResourceObjGetPageHash(const ResourceObj *self, uint32_t idhash, CxmlElement *elm);
+int32_t ResourceObjGetStyleHash(const ResourceObj *self, uint32_t idhash, CxmlElement *elm);
+int32_t ResourceObjGetStringHash(const ResourceObj *self, uint32_t idhash,
+				 const uint16_t **src, uint32_t *length);
 
 #endif
