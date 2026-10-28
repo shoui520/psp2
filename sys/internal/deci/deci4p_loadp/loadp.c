@@ -1002,6 +1002,7 @@ static inline int useSystemSetupper(const char *path, SceSize pathSize)
 static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, const char *path,
 								 SceSize pathSize, SceSize padded,
 								 const void *launchParam,
+								 ThreadmgrThreadInfoForDebugger **infop,
 								 SceUInt32 *result)
 {
 	LoadpSendBuf *buf;
@@ -1080,7 +1081,7 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 		}
 	}
 	if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) >= 0) {
-		sceKernelFreeHeapMemory(loadp.heap, info);
+		*infop = info;
 		return 0;
 	}
 	*result = 0;
@@ -1102,6 +1103,7 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 	const char *base = (const char *)req + sizeof(LoadpHeader);
 	SceUInt32 attr, appFlags, result;
 	SceKernelProcessOpt param;
+	ThreadmgrThreadInfoForDebugger *info;
 	const int *launchParam;
 	int argc, i, setupper, gxmDebug, debug, value, ret, priority;
 	char *path, *argBuf, *p;
@@ -1242,11 +1244,12 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 		}
 	}
 
-	if (sendSpawnReply(pid, path, pathSize, padded, launchParam, &result) == 0) {
+	if (sendSpawnReply(pid, path, pathSize, padded, launchParam, &info, &result) == 0) {
 		time = sceKernelGetSystemTimeWide();
 		loadpNotifyProcessCreate(-1, pid, time);
 		if (debug)
 			SceSysrootForDriver_F4340469(-1, pid, time);
+		sceKernelFreeHeapMemory(loadp.heap, info);
 		sceKernelFreeHeapMemory(loadp.heap, argBuf);
 		if (setupper)
 			sceKernelFreeHeapMemory(loadp.heap, path);
