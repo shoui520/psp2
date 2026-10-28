@@ -236,6 +236,246 @@ static inline void unlink_first_small_chunk(mstate m, mchunkptr b,
 	}
 }
 
+static inline void unlink_small_chunk(mstate m, mchunkptr p, size_t size)
+{
+	mchunkptr f = p->fd;
+	mchunkptr b = p->bk;
+	unsigned int index = small_index(size);
+	mchunkptr bin = smallbin_at(m, index);
+
+	if (f == b)
+		m->smallmap &= ~idx2bit(index);
+	else if ((f == bin || ok_address(m, f)) &&
+		 (b == bin || ok_address(m, b))) {
+		f->bk = b;
+		b->fd = f;
+	} else {
+		ScePafStdc_D608246A();
+	}
+}
+
+static inline void unlink_large_chunk(mstate m, tchunkptr x)
+{
+	tchunkptr xp, r;
+
+	if (x->index == NTREEBINS - 1) {
+		unlink_large_large_chunk(m, x);
+		return;
+	}
+	xp = x->parent;
+	r = x->bk;
+	if (r != x) {
+		tchunkptr f = x->fd;
+
+		if (ok_address(m, f)) {
+			f->bk = r;
+			r->fd = f;
+		} else {
+			ScePafStdc_D608246A();
+		}
+	} else {
+		tchunkptr *rp = &x->child[1];
+
+		r = *rp;
+		if (!r) {
+			rp = &x->child[0];
+			r = *rp;
+		}
+		if (r) {
+			tchunkptr *cp;
+
+			for (;;) {
+				cp = &r->child[1];
+				if (!*cp) {
+					cp = &r->child[0];
+					if (!*cp)
+						break;
+				}
+				rp = cp;
+				r = *rp;
+			}
+			if (ok_address(m, rp))
+				*rp = NULL;
+			else
+				ScePafStdc_D608246A();
+		}
+	}
+	if (xp) {
+		tchunkptr *h = &m->treebins[x->index];
+
+		if (*h == x) {
+			*h = r;
+			if (!r)
+				m->treemap &= ~idx2bit(x->index);
+		} else if (ok_address(m, xp)) {
+			if (xp->child[0] == x)
+				xp->child[0] = r;
+			else
+				xp->child[1] = r;
+		} else {
+			ScePafStdc_D608246A();
+		}
+		if (r) {
+			if (ok_address(m, r)) {
+				tchunkptr c0, c1;
+
+				r->parent = xp;
+				c0 = x->child[0];
+				if (c0) {
+					if (ok_address(m, c0)) {
+						r->child[0] = c0;
+						c0->parent = r;
+					} else {
+						ScePafStdc_D608246A();
+					}
+				}
+				c1 = x->child[1];
+				if (c1) {
+					if (ok_address(m, c1)) {
+						r->child[1] = c1;
+						c1->parent = r;
+					} else {
+						ScePafStdc_D608246A();
+					}
+				}
+			} else {
+				ScePafStdc_D608246A();
+			}
+		}
+	}
+}
+
+void mspace_free(mspace heap, void *mem, unsigned int tag)
+{
+	mstate m = heap;
+	mchunkptr p, next;
+	char *least_addr;
+	size_t head, psize, size;
+
+	(void)tag;
+	if (!mem)
+		return;
+	p = mem2chunk(mem);
+	least_addr = m->least_addr;
+	if ((uintptr_t)p < (uintptr_t)least_addr)
+		goto postaction;
+	head = p->head;
+	if ((head & INUSE_BITS) == PINUSE_BIT)
+		goto postaction;
+	psize = head & ~(size_t)7;
+	next = chunk_plus_offset(p, psize);
+	next->prev_foot = FOOTER_MAGIC;
+	head = p->head;
+	if (!(head & PINUSE_BIT)) {
+		size_t prevsize = p->prev_foot;
+
+		if (!(head & INUSE_BITS))
+			goto postaction;
+		p = chunk_plus_offset(p, -prevsize);
+		psize += prevsize;
+		if ((uintptr_t)p < (uintptr_t)least_addr)
+			goto postaction;
+		if (p != m->dv) {
+			if (small_index(prevsize) < NSMALLBINS)
+				unlink_small_chunk(m, p, prevsize);
+			else
+				unlink_large_chunk(m, (tchunkptr)p);
+		} else if ((next->head & INUSE_BITS) == INUSE_BITS) {
+			m->dvsize = psize;
+			next->head &= ~PINUSE_BIT;
+			p->head = psize | PINUSE_BIT;
+			chunk_plus_offset(p, psize)->prev_foot = psize;
+			goto postaction;
+		}
+	}
+	if ((uintptr_t)p >= (uintptr_t)next)
+		goto postaction;
+	head = next->head;
+	if (!(head & PINUSE_BIT))
+		goto postaction;
+	if (!(head & CINUSE_BIT)) {
+		if (next == m->top) {
+			size_t tsize = m->topsize + psize;
+			mchunkptr dv = m->dv;
+			size_t trim_check;
+
+			m->topsize = tsize;
+			m->top = p;
+			p->head = tsize | PINUSE_BIT;
+			trim_check = m->trim_check;
+			if (p == dv) {
+				m->dv = NULL;
+				m->dvsize = 0;
+			}
+			if (tsize > trim_check)
+				sys_trim(m, 0);
+			goto postaction;
+		}
+		if (next == m->dv) {
+			size_t dsize = m->dvsize + psize;
+
+			m->dv = p;
+			m->dvsize = dsize;
+			p->head = dsize | PINUSE_BIT;
+			chunk_plus_offset(p, dsize)->prev_foot = dsize;
+			goto postaction;
+		}
+		size = head & ~(size_t)7;
+		psize += size;
+		if (small_index(size) < NSMALLBINS)
+			unlink_small_chunk(m, next, size);
+		else
+			unlink_large_chunk(m, (tchunkptr)next);
+		{
+			mchunkptr dv = m->dv;
+
+			p->head = psize | PINUSE_BIT;
+			chunk_plus_offset(p, psize)->prev_foot = psize;
+			if (p == dv) {
+				m->dvsize = psize;
+				goto postaction;
+			}
+		}
+	} else {
+		next->head = head & ~PINUSE_BIT;
+		p->head = psize | PINUSE_BIT;
+		chunk_plus_offset(p, psize)->prev_foot = psize;
+	}
+	if (small_index(psize) < NSMALLBINS) {
+		insert_small_chunk(m, p, psize);
+	} else {
+		insert_large_chunk(m, (tchunkptr)p, psize);
+		if (--m->release_checks == 0)
+			release_unused_segments(m);
+	}
+
+postaction:
+	/* PAF does not retain a designated victim larger than this threshold. */
+	size = m->dvsize;
+	if (size > m->alignment) {
+		if (small_index(size) < NSMALLBINS) {
+			unsigned int index = small_index(size);
+			mchunkptr b = smallbin_at(m, index);
+			mchunkptr f = b;
+
+			if (!(m->smallmap & idx2bit(index)))
+				m->smallmap |= idx2bit(index);
+			else if (ok_address(m, b->fd))
+				f = b->fd;
+			else
+				ScePafStdc_D608246A();
+			b->fd = m->dv;
+			f->bk = m->dv;
+			m->dv->fd = f;
+			m->dv->bk = b;
+		} else {
+			insert_large_chunk(m, (tchunkptr)m->dv, size);
+		}
+		m->dv = NULL;
+		m->dvsize = 0;
+	}
+}
+
 void *mspace_malloc(mspace heap, size_t bytes, unsigned int tag)
 {
 	mstate m = heap;
