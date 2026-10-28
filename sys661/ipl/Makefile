@@ -6,7 +6,7 @@
 # the container remains PARTIAL until the source rebuild and packing are verified.
 # Needs the PSP toolchain ($PSPDEV/bin/psp-gcc).
 
-PSPDEV	?= $(HOME)/pspdev
+PSPDEV	?= $(if $(PSP2_TOOLCHAINS),$(PSP2_TOOLCHAINS)/pspdev-v20261001,../../toolchains/install/pspdev-v20261001)
 CROSS	:= $(PSPDEV)/bin/psp-
 CC	:= $(CROSS)gcc
 OBJCOPY	:= $(CROSS)objcopy

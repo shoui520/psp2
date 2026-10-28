@@ -570,14 +570,3 @@ int sha1Digest(const void *data, u32 len, void *outDigest)
 		store32Ua((u8 *)outDigest + i * 4, wsbw32(state[i]));
 	return 0;
 }
-
-/* 0x80010cf0 (Sony name from sys661/ipl) */
-int sceSysregSync(u32 mask)
-{
-	sync();
-	mask &= 5u;
-	HW(SYSREG_BUS_SYNC) = mask;
-	while ((HW(SYSREG_BUS_SYNC) & mask) != 0u)
-		;
-	return 0;
-}

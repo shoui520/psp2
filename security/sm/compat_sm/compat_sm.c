@@ -40,7 +40,7 @@ static const uint8_t s_compatExpectedResponse[64] = {
 	0x20u, 0x21u, 0xd5u, 0x56u, 0x0fu, 0xe6u, 0x27u, 0x02u
 };
 
-/* 0x80c1f0..0x80d1f0: 4,096-byte ePSP (Allegrex) bootROM image (built from bootrom/) */
+/* 0x80c1f0..0x80d1f0: 4,096-byte ePSP (Allegrex) bootROM image (built from sys661/bootrom) */
 static const uint8_t s_compatBootRom[] = {
 #include "bootrom.inc"
 };

@@ -126,12 +126,12 @@ used in place of the original on PSP2.
 The priority is: base kernel (`sys/internal/kernel`) -> full kernel (`sys/internal/drivers` and `os0:us` of sys/internal/usermode) -> ScePaf -> SceShell -> ?? anything else.  
 
 To summarize:
-* Kernel: substantial C reimplementation exists for nearly all `os0:kd` modules. Not complete and not exact yet. No progress so far on `os0:sm`/MeP/security modules.
+* Kernel: substantial C reimplementation exists for nearly all `os0:kd` modules. Not complete and not exact yet. 
 * ScePaf: Not started
 * SceShell: Not started
 * `wp`: Not started
-* `first_loader`: Not started
-* `ernie`: Not started
+* `ernie`: Done
+* `first_loader`: Done
 * `cp` (devkit communication processor): Not started
 
 Contributions welcome!
