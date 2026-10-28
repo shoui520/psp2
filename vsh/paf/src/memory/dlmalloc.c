@@ -655,6 +655,121 @@ erroraction:
 	return NULL;
 }
 
+void *tmalloc_large(mstate m, size_t nb, size_t bytes, unsigned int tag)
+{
+	tchunkptr v = NULL;
+	size_t rsize = -nb;
+	unsigned int bits = nb >> 8;
+	unsigned int idx;
+	int address_order = 0;
+	tchunkptr t;
+	mchunkptr p, r;
+	size_t padding = (bytes + CHUNK_OVERHEAD) & CHUNK_ALIGN_MASK;
+
+	if (!bits) {
+		idx = 0;
+	} else if (bits > 0xffff) {
+		idx = NTREEBINS - 1;
+	} else {
+		unsigned int high = 31 - __builtin_clz(bits);
+
+		idx = (high << 1) + ((nb >> (high + 7)) & 1);
+	}
+	t = m->treebins[idx];
+	if (t) {
+		size_t sizebits = nb << (idx == NTREEBINS - 1 ? 0 :
+					25 - (idx >> 1));
+		tchunkptr rst = NULL;
+
+		/* Keep the deepest untaken right subtree as the next candidate. */
+		for (;;) {
+			size_t trem = chunksize(t) - nb;
+			tchunkptr rt;
+
+			if (trem < rsize) {
+				v = t;
+				rsize = trem;
+				if (!rsize)
+					break;
+			}
+			rt = t->child[1];
+			t = t->child[sizebits >> 31];
+			if (rt && rt != t)
+				rst = rt;
+			if (!t) {
+				t = rst;
+				break;
+			}
+			sizebits <<= 1;
+		}
+	}
+	if (!t && !v) {
+		unsigned int bit = idx2bit(idx) << 1;
+		unsigned int leftbits = (bit | -bit) & m->treemap;
+
+		if (leftbits) {
+			unsigned int leastbit = leftbits & -leftbits;
+			unsigned int i = 31 - __builtin_clz(leastbit);
+
+			t = m->treebins[i];
+			address_order = i >= m->alignment_index;
+		}
+	}
+	if (!address_order) {
+		while (t) {
+			size_t trem = chunksize(t) - nb;
+
+			if (trem < rsize) {
+				rsize = trem;
+				v = t;
+			}
+			t = t->child[0] ? t->child[0] : t->child[1];
+		}
+	} else if (t) {
+		/* Higher bins at the policy threshold use the address tree. */
+		t = m->treebins[NTREEBINS - 1];
+		if (t) {
+			v = t;
+			while ((t = t->child[0] ? t->child[0] : t->child[1]) != NULL) {
+				if ((uintptr_t)t < (uintptr_t)v)
+					v = t;
+			}
+			rsize = chunksize(v) - nb;
+		}
+	}
+	/* Leave equal fits to the designated victim. */
+	if (!v || rsize >= (size_t)(m->dvsize - nb))
+		return NULL;
+	if (!ok_address(m, v))
+		goto erroraction;
+	p = (mchunkptr)v;
+	r = chunk_plus_offset(p, nb);
+	if ((uintptr_t)p >= (uintptr_t)r)
+		goto erroraction;
+	unlink_large_chunk(m, v);
+	if (rsize < MIN_CHUNK_SIZE) {
+		size_t size = nb + rsize;
+
+		p->head = size | INUSE_BITS;
+		chunk_plus_offset(p, size)->head |= PINUSE_BIT;
+		mark_inuse_foot(p, size, tag, padding);
+	} else {
+		p->head = nb | INUSE_BITS;
+		mark_inuse_foot(p, nb, tag, padding);
+		r->head = rsize | PINUSE_BIT;
+		chunk_plus_offset(r, rsize)->prev_foot = rsize;
+		if (small_index(rsize) < NSMALLBINS)
+			insert_small_chunk(m, r, rsize);
+		else
+			insert_large_chunk(m, (tchunkptr)r, rsize);
+	}
+	return chunk2mem(p);
+
+erroraction:
+	ScePafStdc_D608246A();
+	return NULL;
+}
+
 void *mspace_malloc(mspace heap, size_t bytes, unsigned int tag)
 {
 	mstate m = heap;
