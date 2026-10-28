@@ -62,7 +62,7 @@ static void rtcSysconAlarmHandler(int value, void *argp)
 }
 
 /* name unknown: (re)arms the alarm of an aux clock */
-static inline int rtcSetAuxAlarm(unsigned int index, const SceRtcTick *tick)
+static int rtcSetAuxAlarm(unsigned int index, const SceRtcTick *tick)
 {
 	RtcAuxClock *aux;
 	SceUInt64 now, delay;
