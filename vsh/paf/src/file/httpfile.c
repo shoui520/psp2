@@ -9,6 +9,7 @@ extern int sce_paf_strcasecmp(const char *left, const char *right);
 extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
 extern int sce_paf_look_ctype_table(int ch);
 extern int sce_paf_strcmp(const char *left, const char *right);
+extern int sce_paf_snprintf(char *dst, size_t max, const char *format, ...);
 extern int32_t SceHttp_43A7CC70(int32_t id, uint32_t flags);
 extern int32_t SceHttp_F30073EC(int32_t id, uint32_t flags);
 
@@ -2182,6 +2183,121 @@ int32_t HttpFileHttpReaderClose(HttpFileHttpReader *self)
 	self->m_content_length = SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
 	self->m_position = 0;
 	return 0;
+}
+
+int32_t HttpFileRangeReaderClose(HttpFileRangeReader *self)
+{
+	HttpFileReader *reader = self->m_reader;
+	int32_t result = 0;
+
+	if (reader) {
+		result = reader->vtable->Close(reader);
+		reader = self->m_reader;
+		if (reader)
+			reader->vtable->Delete(reader);
+		self->m_reader = NULL;
+	}
+	self->m_position = 0;
+	self->m_range_begin = -1;
+	self->m_range_end = -1;
+	self->m_content_length = SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
+	return result;
+}
+
+int64_t HttpFileRangeReaderSeek(HttpFileRangeReader *self, int64_t offset,
+				int32_t whence)
+{
+	HttpFileReader *reader;
+	int64_t position;
+	int32_t result;
+
+	if (!self->m_range_enabled) {
+		reader = self->m_reader;
+		if (!reader)
+			return SCE_PAF_ERROR_FILE_NO_MEMORY;
+		result = (int32_t)reader->vtable->Seek(reader, offset, whence);
+		reader = self->m_reader;
+		self->base.m_result[0] = reader->m_result[0];
+		self->base.m_result[1] = reader->m_result[1];
+		self->base.m_result[2] = reader->m_result[2];
+		return result;
+	}
+	if (whence == SCE_SEEK_SET)
+		position = offset;
+	else if (whence == SCE_SEEK_CUR)
+		position = (uint64_t)self->m_position + (uint64_t)offset;
+	else
+		return SCE_PAF_ERROR_FILE_NOT_SUPPORTED;
+	reader = self->m_reader;
+	if (reader) {
+		if (self->m_range_begin < 0 || self->m_range_end <= self->m_range_begin ||
+		    self->m_position > position || position >= self->m_range_end) {
+			reader->vtable->Close(reader);
+			reader = self->m_reader;
+			if (reader)
+				reader->vtable->Delete(reader);
+			self->m_reader = NULL;
+		} else {
+			offset = (uint64_t)position - (uint64_t)self->m_position;
+			result = (int32_t)reader->vtable->Seek(reader, offset, SCE_SEEK_CUR);
+			reader = self->m_reader;
+			self->base.m_result[0] = reader->m_result[0];
+			self->base.m_result[1] = reader->m_result[1];
+			self->base.m_result[2] = reader->m_result[2];
+			if (result >= 0)
+				self->m_position = result;
+			return position;
+		}
+	}
+	self->m_position = position;
+	self->m_range_begin = -1;
+	self->m_range_end = -1;
+	return position;
+}
+
+int32_t HttpFileRangeReaderAbort(HttpFileRangeReader *self)
+{
+	HttpFileReader *reader = self->m_reader;
+
+	if (reader)
+		return reader->vtable->Abort(reader);
+	return 0;
+}
+
+int64_t HttpFileRangeReaderGetFileSize(HttpFileRangeReader *self)
+{
+	HttpFileReader *reader;
+
+	if (self->m_range_enabled)
+		return self->m_content_length;
+	reader = self->m_reader;
+	if (reader)
+		return reader->vtable->GetFileSize(reader);
+	return -1;
+}
+
+int32_t HttpFileRangeReaderFormatRange(HttpFileRangeReader *self, char *dst,
+				     size_t max, size_t nbyte)
+{
+	HttpFileReaderConfig *config;
+	uint32_t flags = 0;
+
+	if (!dst || max < 64)
+		return 0;
+	config = self->base.m_config.m_ptr;
+	if (config)
+		flags = config->open_flag;
+	if (flags & ENABLE_RANGE_GET) {
+		int64_t position = self->m_position;
+		int64_t end = (uint64_t)position + (uint64_t)nbyte - 1;
+
+		sce_paf_snprintf(dst, max, "bytes=%lld-%lld", position, end);
+		return 1;
+	}
+	if (!(flags & ENABLE_HALF_RANGE_GET))
+		return 0;
+	sce_paf_snprintf(dst, max, "bytes=%lld-", self->m_position);
+	return 1;
 }
 
 void HttpFileReaderConfigClone(HttpFileReaderConfigSharedPtr *result,

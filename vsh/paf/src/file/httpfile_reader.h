@@ -324,6 +324,29 @@ int64_t HttpFileHttpReaderSeek(HttpFileHttpReader *self, int64_t offset,
 int32_t HttpFileHttpReaderAbort(HttpFileHttpReader *self);
 int64_t HttpFileHttpReaderGetFileSize(HttpFileHttpReader *self);
 
+typedef struct HttpFileRangeReader {
+	HttpFileReader base;
+	unsigned char m_range_enabled;
+	HttpFileReader *m_reader;
+	int64_t m_position;
+	int64_t m_range_begin;
+	int64_t m_range_end;
+	int64_t m_content_length;
+} HttpFileRangeReader;
+
+typedef char HttpFileRangeReaderSizeCheck[sizeof(HttpFileRangeReader) == 96 ? 1 : -1];
+typedef char HttpFileRangeReaderReaderOffsetCheck[offsetof(HttpFileRangeReader, m_reader) == 60 ? 1 : -1];
+typedef char HttpFileRangeReaderPositionOffsetCheck[offsetof(HttpFileRangeReader, m_position) == 64 ? 1 : -1];
+typedef char HttpFileRangeReaderContentLengthOffsetCheck[offsetof(HttpFileRangeReader, m_content_length) == 88 ? 1 : -1];
+
+int32_t HttpFileRangeReaderClose(HttpFileRangeReader *self);
+int64_t HttpFileRangeReaderSeek(HttpFileRangeReader *self, int64_t offset,
+				int32_t whence);
+int32_t HttpFileRangeReaderAbort(HttpFileRangeReader *self);
+int64_t HttpFileRangeReaderGetFileSize(HttpFileRangeReader *self);
+int32_t HttpFileRangeReaderFormatRange(HttpFileRangeReader *self, char *dst,
+				     size_t max, size_t nbyte);
+
 const char *HttpFileHeaderMapGet(const PafMap *headers, const char *name,
 			       int32_t index);
 
