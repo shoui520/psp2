@@ -1,5 +1,6 @@
 #include "timer.h"
 #include "../std/math.h"
+#include <arm/fpscr.h>
 #include <intrinsics.h>
 
 /* Table suffixes identify the corresponding Timer::Func input curves. */
@@ -180,6 +181,76 @@ float TimerDoFuncCustomExpoOut(float rate, const float *param)
 	if (rate <= 0.0f)
 		return 0.0f;
 	return 1.0f - TimerDoFuncCustomExpoIn(1.0f - rate, param);
+}
+
+static float TimerPolynomialTerm(float coefficient, float power)
+{
+	union {
+		float value;
+		uint32_t bits;
+	} number;
+	volatile float result = coefficient * power;
+
+	/* The power's NaN is quiet because a previous multiply produced it. */
+	number.value = coefficient;
+	if ((number.bits & 0x7fffffffU) > 0x7f800000U &&
+	    !(__builtin_fpscr() & SCE_ARM_FPSCR_DN)) {
+		number.bits |= 0x00400000U;
+		return number.value;
+	}
+	return result;
+}
+
+float TimerDoFunc49_52(float rate, const float *param)
+{
+	const volatile float *coefficients = param;
+	float square, fourth, sixth, eighth;
+	float quadratic, quartic;
+	volatile float result;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	square = rate * rate;
+	/* Capture the four input coefficients before evaluating the terms. */
+	quartic = coefficients[1];
+	quadratic = coefficients[0];
+	sixth = coefficients[2];
+	eighth = coefficients[3];
+	fourth = square * square;
+	quartic = TimerPolynomialTerm(quartic, fourth);
+	sixth = TimerPolynomialTerm(sixth, fourth);
+	eighth = TimerPolynomialTerm(eighth, fourth);
+	result = quartic;
+	result += TimerPolynomialTerm(quadratic, square);
+	result += TimerPolynomialTerm(sixth, square);
+	result += TimerPolynomialTerm(eighth, fourth);
+	return result;
+}
+
+float TimerDoFunc51_54(float rate, const float *param)
+{
+	float doubled;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	doubled = rate * 2.0f;
+	if (rate < 0.5f)
+		return TimerDoFunc49_52(doubled, param) * 0.5f;
+	return (1.0f - TimerDoFunc49_52(2.0f - doubled, param)) *
+		0.5f + 0.5f;
+}
+
+float TimerDoFunc50_53(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFunc49_52(1.0f - rate, param);
 }
 
 float TimerDoFuncBounceIn(float rate)

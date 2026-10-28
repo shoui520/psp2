@@ -138,6 +138,10 @@ float TimerDoFuncExponent(float rate, float total, float initval,
 float TimerCbrt(float input);
 float TimerDoFuncBezier3d(float rate, const float *param);
 
+float TimerDoFunc49_52(float rate, const float *param);
+float TimerDoFunc50_53(float rate, const float *param);
+float TimerDoFunc51_54(float rate, const float *param);
+
 #define TimerDoFuncBounceIn ScePafMisc_AE6719F6
 #define TimerDoFuncBounceInOut ScePafMisc_2DA1C059
 #define TimerDoFuncBounceOut ScePafMisc_27705AD9
