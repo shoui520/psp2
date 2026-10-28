@@ -42,7 +42,7 @@ static unsigned char brightnessSequence[0x101];
 static unsigned char colorSupported, panelType;
 static unsigned brightness, colorMode;
 
-static unsigned reverseByte(unsigned value) /* name unknown */
+static inline unsigned reverseByte(unsigned value) /* name unknown */
 {
 	value = ((value & 0x55) << 1) | ((value >> 1) & 0x55);
 	value = ((value & 0x33) << 2) | ((value >> 2) & 0x33);
@@ -56,7 +56,7 @@ static void waitTime(unsigned usec) /* name unknown */
 		;
 }
 
-static void spiBegin(void) /* name unknown */
+static inline void spiBegin(void) /* name unknown */
 {
 	if (!oled.spiDepth) {
 		ScePervasiveForDriver_DFD96BFC(2);
@@ -68,7 +68,7 @@ static void spiBegin(void) /* name unknown */
 	oled.spiDepth++;
 }
 
-static void spiWord(unsigned word) /* name unknown */
+static inline void spiWord(unsigned word) /* name unknown */
 {
 	oled.txValue |= word << oled.txBits;
 	oled.txBits += 9;
@@ -81,7 +81,7 @@ static void spiWord(unsigned word) /* name unknown */
 	}
 }
 
-static void spiPad(void) /* name unknown */
+static inline void spiPad(void) /* name unknown */
 {
 	while (oled.txBits)
 		spiWord(0);
@@ -111,7 +111,7 @@ static void spiEnd(void) /* name unknown */
 	ScePervasiveForDriver_A85BF98A(2);
 }
 
-static void spiRead(unsigned char *data, unsigned length, unsigned skip) /* name unknown */
+static inline void spiRead(unsigned char *data, unsigned length, unsigned skip) /* name unknown */
 {
 	unsigned bits = 0, value = 0, count = 0;
 	if (!length)
@@ -210,7 +210,7 @@ static int initWork(void *arg) /* name unknown */
 	return 1;
 }
 
-int SceOledForDriver_E30604CC(void)
+inline int SceOledForDriver_E30604CC(void)
 {
 	const unsigned char *p = sequence;
 	if (!p)
@@ -236,7 +236,7 @@ int SceOledForDriver_E30604CC(void)
 	return 0;
 }
 
-static void flushSequence(void) /* name unknown */
+static inline void flushSequence(void) /* name unknown */
 {
 	while (sequence) {
 		if (synchronous) {
@@ -249,7 +249,7 @@ static void flushSequence(void) /* name unknown */
 	}
 }
 
-static int queueSequence(const unsigned char *p) /* name unknown */
+static inline int queueSequence(const unsigned char *p) /* name unknown */
 {
 	if (sequence)
 		return OLED_BUSY;
@@ -463,7 +463,7 @@ int SceOledForDriver_AD6C7FB8(const unsigned char *p)
 		flushSequence();
 	return ret;
 }
-int SceOledForDriver_BF5C5624(unsigned poll)
+__attribute__((noinline)) int SceOledForDriver_BF5C5624(unsigned poll)
 {
 	if (poll)
 		return sequence != 0;
