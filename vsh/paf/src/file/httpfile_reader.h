@@ -295,6 +295,21 @@ typedef struct HttpFileRequestHeaderParam {
 	int32_t mode;
 } HttpFileRequestHeaderParam;
 
+typedef char HttpFileRequestHeaderParamSizeCheck[sizeof(HttpFileRequestHeaderParam) == 8 ? 1 : -1];
+
+enum {
+	HTTPFILE_OPEN_HTTP_OPTION4 = 0x10000000
+};
+
+extern const HttpFileReaderClass httpFileHttpReaderClass;
+
+HttpFileHttpReader *HttpFileHttpReaderConstruct(HttpFileHttpReader *self,
+					     const HttpFileReaderConfigSharedPtr *config);
+HttpFileHttpReader *HttpFileHttpReaderDestroy(HttpFileHttpReader *self);
+void HttpFileHttpReaderDelete(HttpFileHttpReader *self);
+int32_t HttpFileHttpReaderOpen(HttpFileHttpReader *self);
+int32_t HttpFileHttpReaderClose(HttpFileHttpReader *self);
+
 int32_t HttpFileHttpReaderAddHeader(const char *name, const char *value,
 				  void *userdata);
 
