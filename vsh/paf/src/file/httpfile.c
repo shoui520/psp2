@@ -11,6 +11,241 @@ extern int sce_paf_look_ctype_table(int ch);
 
 static unsigned char httpFileHttpReaderSeekBuffer[1024];
 
+static inline __attribute__((always_inline))
+void HttpFileReaderConnectionSharedPtrRelease(const HttpFileReaderConnectionSharedPtr *self)
+{
+	if (self->m_ptr &&
+	    sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_counter) == 1) {
+		self->m_ref_counter->m_deleter(self->m_ptr);
+		if (sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_weak_counter) == 1)
+			ScePafStdc_1B77082E(self->m_ref_counter);
+	}
+}
+
+HttpFileReaderConnection *HttpFileReaderConnectionDestroy(HttpFileReaderConnection *self)
+{
+	if (self->m_connection_id > 0)
+		sceHttpDeleteConnection(self->m_connection_id);
+	self->m_connection_id = 0;
+	if (self->m_template_id > 0)
+		sceHttpDeleteTemplate(self->m_template_id);
+	self->m_template_id = 0;
+	PafStringDestroy(&self->param.scheme);
+	PafStringDestroy(&self->param.host);
+	PafStringDestroy(&self->param.user_agent);
+	return self;
+}
+
+HttpFileReaderConnection *HttpFileReaderConnectionConstruct(HttpFileReaderConnection *self,
+							 const HttpFileReaderConnectionParam *param)
+{
+	PafStringInitialize(&self->param.user_agent);
+	PafStringInitialize(&self->param.host);
+	PafStringInitialize(&self->param.scheme);
+	self->param.http_version = param->http_version;
+	PafStringCopy(&self->param.user_agent, &param->user_agent);
+	PafStringCopy(&self->param.host, &param->host);
+	PafStringCopy(&self->param.scheme, &param->scheme);
+	self->param.https_flag = param->https_flag;
+	self->param.auto_proxy = param->auto_proxy;
+	self->param.port = param->port;
+	self->param.template_option = param->template_option;
+	self->param.enable_keepalive = param->enable_keepalive;
+	self->param.response_header_max_size = param->response_header_max_size;
+	self->m_template_id = 0;
+	self->m_connection_id = 0;
+	self->m_https_flag = HTTPS_FLAG_DEFAULT & ~HTTPS_FLAG_CLIENT_VERIFY;
+	return self;
+}
+
+void HttpFileReaderConnectionDelete(HttpFileReaderConnection *self)
+{
+	if (self) {
+		HttpFileReaderConnectionDestroy(self);
+		ScePafStdc_1B77082E(self);
+	}
+}
+
+uintptr_t HttpFileReaderConnectionListPushBack(PafList *self,
+					    const HttpFileReaderConnectionSharedPtr *value)
+{
+	HttpFileReaderConnectionListNode *node;
+	HttpFileReaderConnectionListNode *root = self->root_node;
+	uintptr_t result = (uintptr_t)root;
+
+	if (!root)
+		return result;
+	node = ScePafStdc_FC5CD359(sizeof(*node));
+	if (!node)
+		ScePafStdc_D608246A();
+	if (node) {
+		HttpFileReaderConnectionSharedPtr *ptr;
+
+		ptr = PafPlacementNew(sizeof(*ptr), &node->val);
+		if (ptr) {
+			HttpFileReaderConnection *connection = value->m_ptr;
+			HttpFileReaderConnectionRefCounter *counter;
+
+			ptr->m_ptr = connection;
+			counter = value->m_ref_counter;
+			ptr->m_ref_counter = counter;
+			if (connection)
+				sceAtomicIncrement32AcqRel(&counter->m_counter);
+		}
+	} else {
+		node = self->root_node;
+	}
+	root = self->root_node;
+	result = (uintptr_t)root;
+	if (node != root) {
+		node->prev = root->prev;
+		node->next = self->root_node;
+		((HttpFileReaderConnectionListNode *)self->root_node)->prev->next = node;
+		result = (uint32_t)self->count + 1;
+		((HttpFileReaderConnectionListNode *)self->root_node)->prev = node;
+		self->count = result;
+	}
+	return result;
+}
+
+int32_t HttpFileReaderConnectionListPopFront(PafList *self)
+{
+	int32_t result = self->count;
+
+	if (result && self->root_node) {
+		HttpFileReaderConnectionListNode *root = self->root_node;
+		HttpFileReaderConnectionListNode *node = root->next;
+		HttpFileReaderConnectionListNode *prev = node->prev;
+
+		node->next->prev = prev;
+		prev->next = node->next;
+		HttpFileReaderConnectionSharedPtrRelease(&node->val);
+		ScePafStdc_1B77082E(node);
+		result = (uint32_t)self->count - 1;
+		self->count = result;
+	}
+	return result;
+}
+
+int32_t HttpFileReaderConnectionListErase(HttpFileReaderConnectionListNode **result,
+					PafList *self,
+					HttpFileReaderConnectionListNode *const *where)
+{
+	HttpFileReaderConnectionListNode *node = *where;
+	HttpFileReaderConnectionListNode *next = node->next;
+	int32_t count;
+
+	next->prev = node->prev;
+	node->prev->next = node->next;
+	HttpFileReaderConnectionSharedPtrRelease(&node->val);
+	ScePafStdc_1B77082E(node);
+	count = (uint32_t)self->count - 1;
+	self->count = count;
+	*result = next;
+	return count;
+}
+
+PafList *HttpFileReaderConnectionListDestroy(PafList *self)
+{
+	HttpFileReaderConnectionListNode *root = self->root_node;
+
+	if (root) {
+		HttpFileReaderConnectionListNode *node = root->next;
+
+		while (node != root) {
+			HttpFileReaderConnectionListNode *next = node->next;
+
+			HttpFileReaderConnectionSharedPtrRelease(&node->val);
+			ScePafStdc_1B77082E(node);
+			root = self->root_node;
+			node = next;
+		}
+		ScePafStdc_1B77082E(root);
+	}
+	self->root_node = (void *)-1;
+	self->count = -1;
+	return self;
+}
+
+HttpFileReaderContext *HttpFileReaderContextConstruct(HttpFileReaderContext *self,
+						   size_t capacity)
+{
+	HttpFileReaderConnectionListNode *root;
+
+	self->m_capacity = capacity;
+	self->m_connections.count = 0;
+	root = ScePafStdc_FC5CD359(sizeof(*root));
+	if (!root)
+		ScePafStdc_D608246A();
+	self->m_connections.root_node = root;
+	if (root) {
+		root->prev = root;
+		root->next = root;
+	}
+	ScePafThread_A5D3F1B5(&self->m_mutex, "ScePafHttpConnectionPool", 0);
+	return self;
+}
+
+void HttpFileReaderContextDelete(HttpFileReaderContext *self)
+{
+	if (self) {
+		ScePafThread_AD04A33D(&self->m_mutex);
+		HttpFileReaderConnectionListDestroy(&self->m_connections);
+		ScePafStdc_1B77082E(self);
+	}
+}
+
+HttpFileReaderContextRefCounter *HttpFileReaderContextCreate(HttpFileReaderContextSharedPtr *result,
+							 size_t capacity)
+{
+	HttpFileReaderContext *context = ScePafStdc_FC5CD359(sizeof(*context));
+	HttpFileReaderContextRefCounter *counter = NULL;
+
+	if (context)
+		HttpFileReaderContextConstruct(context, capacity);
+	result->m_ptr = context;
+	if (context) {
+		counter = ScePafStdc_FC5CD359(sizeof(*counter));
+		if (counter) {
+			result->m_ref_counter = counter;
+			counter->m_ptr = context;
+			counter = result->m_ref_counter;
+			counter->m_counter = 1;
+			counter->m_weak_counter = 1;
+			counter->m_deleter = HttpFileReaderContextDelete;
+		} else {
+			result->m_ptr = NULL;
+			result->m_ref_counter = NULL;
+		}
+	} else {
+		result->m_ref_counter = NULL;
+	}
+	return counter;
+}
+
+int32_t HttpFileReaderContextReturnConnection(const HttpFileReaderContextSharedPtr *self,
+					    HttpFileReaderConnectionSharedPtr *connection)
+{
+	HttpFileReaderContext *context = self->m_ptr;
+
+	if (context && connection->m_ptr &&
+	    connection->m_ptr->param.enable_keepalive && context->m_capacity) {
+		Mutex *mutex = &context->m_mutex;
+
+		ScePafThread_4EA3A3D5(mutex);
+		while ((uint32_t)self->m_ptr->m_connections.count >=
+		       self->m_ptr->m_capacity)
+			HttpFileReaderConnectionListPopFront(&self->m_ptr->m_connections);
+		HttpFileReaderConnectionListPushBack(&self->m_ptr->m_connections,
+						    connection);
+		ScePafThread_9100D580(mutex);
+	}
+	HttpFileReaderConnectionSharedPtrRelease(connection);
+	connection->m_ptr = NULL;
+	connection->m_ref_counter = NULL;
+	return 0;
+}
+
 int32_t HttpFileHttpReaderRead(HttpFileHttpReader *self, void *buf, size_t nbyte)
 {
 	int32_t request_id;

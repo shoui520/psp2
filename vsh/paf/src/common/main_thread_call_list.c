@@ -12,8 +12,6 @@ typedef char CallListListenerSizeCheck[sizeof(CallListListener) == 80 ? 1 : -1];
 
 extern void *ScePafStdc_FC5CD359(size_t size);
 extern void ScePafStdc_1B77082E(void *ptr);
-extern Mutex *ScePafThread_A5D3F1B5(Mutex *self, const char *name, int option);
-extern void ScePafThread_AD04A33D(Mutex *self);
 extern int ScePafStdc_C95732BB(void *object, void (*destroy)(void *), void *dso);
 extern void *__dso_handle;
 

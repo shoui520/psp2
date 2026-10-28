@@ -3,6 +3,7 @@
 
 #include "httpfile.h"
 #include "../std/map.h"
+#include "../std/list.h"
 #include "../buffer/buffer.h"
 
 typedef struct HttpFileHeaderEntry {
@@ -197,6 +198,73 @@ typedef struct HttpFileReaderConnectionSharedPtr {
 	HttpFileReaderConnection *m_ptr;
 	HttpFileReaderConnectionRefCounter *m_ref_counter;
 } HttpFileReaderConnectionSharedPtr;
+
+typedef struct HttpFileReaderConnectionParam {
+	int32_t http_version;
+	PafString user_agent;
+	PafString host;
+	PafString scheme;
+	uint16_t port;
+	unsigned char auto_proxy;
+	unsigned char enable_keepalive;
+	uint32_t https_flag;
+	uint32_t template_option;
+	size_t response_header_max_size;
+} HttpFileReaderConnectionParam;
+
+struct HttpFileReaderConnection {
+	HttpFileReaderConnectionParam param;
+	int32_t m_template_id;
+	int32_t m_connection_id;
+	uint32_t m_https_flag;
+};
+
+struct HttpFileReaderConnectionRefCounter {
+	HttpFileReaderConnection *m_ptr;
+	int32_t m_counter;
+	int32_t m_weak_counter;
+	void (*m_deleter)(HttpFileReaderConnection *ptr);
+};
+
+typedef struct HttpFileReaderConnectionListNode {
+	struct HttpFileReaderConnectionListNode *prev;
+	struct HttpFileReaderConnectionListNode *next;
+	HttpFileReaderConnectionSharedPtr val;
+} HttpFileReaderConnectionListNode;
+
+struct HttpFileReaderContext {
+	size_t m_capacity;
+	PafList m_connections;
+	Mutex m_mutex;
+};
+
+typedef char HttpFileReaderConnectionParamSizeCheck[sizeof(HttpFileReaderConnectionParam) == 56 ? 1 : -1];
+typedef char HttpFileReaderConnectionSizeCheck[sizeof(HttpFileReaderConnection) == 68 ? 1 : -1];
+typedef char HttpFileReaderConnectionRefCounterSizeCheck[sizeof(HttpFileReaderConnectionRefCounter) == 16 ? 1 : -1];
+typedef char HttpFileReaderConnectionListNodeSizeCheck[sizeof(HttpFileReaderConnectionListNode) == 16 ? 1 : -1];
+typedef char HttpFileReaderContextSizeCheck[sizeof(HttpFileReaderContext) == 48 ? 1 : -1];
+typedef char HttpFileReaderContextMutexOffsetCheck[offsetof(HttpFileReaderContext, m_mutex) == 16 ? 1 : -1];
+
+HttpFileReaderConnection *HttpFileReaderConnectionConstruct(HttpFileReaderConnection *self,
+							 const HttpFileReaderConnectionParam *param);
+HttpFileReaderConnection *HttpFileReaderConnectionDestroy(HttpFileReaderConnection *self);
+void HttpFileReaderConnectionDelete(HttpFileReaderConnection *self);
+uintptr_t HttpFileReaderConnectionListPushBack(PafList *self,
+					    const HttpFileReaderConnectionSharedPtr *value);
+int32_t HttpFileReaderConnectionListPopFront(PafList *self);
+int32_t HttpFileReaderConnectionListErase(HttpFileReaderConnectionListNode **result,
+					PafList *self,
+					HttpFileReaderConnectionListNode *const *where);
+PafList *HttpFileReaderConnectionListDestroy(PafList *self);
+HttpFileReaderContext *HttpFileReaderContextConstruct(HttpFileReaderContext *self,
+						   size_t capacity);
+void HttpFileReaderContextDelete(HttpFileReaderContext *self);
+int32_t HttpFileReaderContextReturnConnection(const HttpFileReaderContextSharedPtr *self,
+					    HttpFileReaderConnectionSharedPtr *connection);
+
+#define HttpFileReaderContextCreate ScePafMisc_84A50E1F
+HttpFileReaderContextRefCounter *HttpFileReaderContextCreate(HttpFileReaderContextSharedPtr *result,
+							 size_t capacity);
 
 typedef struct HttpFileHttpReader {
 	HttpFileReader base;

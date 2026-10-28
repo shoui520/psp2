@@ -3,8 +3,6 @@
 #include <sce_atomic.h>
 
 extern size_t sce_paf_strlen(const char *str);
-extern Mutex *ScePafThread_A5D3F1B5(Mutex *self, const char *name, int option);
-extern void ScePafThread_AD04A33D(Mutex *self);
 extern void ScePafThread_651F4F81(unsigned int milliseconds);
 
 typedef struct CallQueueJobItem {

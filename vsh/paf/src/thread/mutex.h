@@ -38,6 +38,8 @@ void RWLockLockExclusive(RWLock *self);
 void RWLockUnlockExclusive(RWLock *self);
 
 /* Existing ScePafThread exports, kept under their current link names. */
+Mutex *ScePafThread_A5D3F1B5(Mutex *mutex, const char *name, int option);
+Mutex *ScePafThread_AD04A33D(Mutex *mutex); /* Mutex::~Mutex */
 RMutex *ScePafThread_C4BD9753(RMutex *mutex, const char *name, int option);
 void ScePafThread_F9FFA0BE(RMutex *mutex); /* RMutex::Lock */
 void ScePafThread_95F9C45F(RMutex *mutex); /* RMutex::Unlock */
