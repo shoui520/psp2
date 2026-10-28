@@ -13,6 +13,103 @@ extern int32_t SceHttp_43A7CC70(int32_t id, uint32_t flags);
 
 static unsigned char httpFileHttpReaderSeekBuffer[1024];
 
+int32_t HttpFileHeaderMapForEach(const PafMap *self, HttpFileHeaderCallback callback,
+			       void *userdata)
+{
+	HttpFileHeaderMapNode *head;
+	HttpFileHeaderMapNode *node;
+
+	if (!callback)
+		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+	head = self->_Myhead;
+	node = head ? head->_Left : NULL;
+	while (node != head) {
+		int32_t count = node->_Myval.second._size;
+		int32_t i;
+
+		for (i = 0; i < count; ++i) {
+			int32_t result;
+
+			result = callback(node->_Myval.first.ptr,
+					  node->_Myval.second._data[i].ptr,
+					  userdata);
+			if (result)
+				return result;
+		}
+		if (count > 0)
+			head = self->_Myhead;
+		if (node) {
+			HttpFileHeaderMapNode *next = node->_Right;
+
+			if (next->_Isnil) {
+				next = node->_Parent;
+				while (!next->_Isnil) {
+					if (next->_Left == node)
+						break;
+					node = next;
+					next = next->_Parent;
+				}
+			} else {
+				HttpFileHeaderMapNode *left = next->_Left;
+
+				while (!left->_Isnil) {
+					next = left;
+					left = left->_Left;
+				}
+			}
+			node = next;
+		}
+	}
+	return 0;
+}
+
+int32_t HttpFileHeaderMapParse(PafMap *self, const char *header, size_t len)
+{
+	size_t pos = 0;
+	size_t start = 0;
+	int32_t errors = 0;
+	unsigned char terminated = 0;
+
+	HttpFileHeaderMapClear(self);
+	if (!header)
+		return 0;
+	if (len > 1) {
+		do {
+			terminated = 0;
+			if (header[pos] == '\r' && header[pos + 1] == '\n') {
+				if (pos + 2 < len &&
+				    (header[pos + 2] == ' ' || header[pos + 2] == '\t')) {
+					pos += 3;
+				} else {
+					if (start < pos &&
+					    HttpFileHeaderMapParseLine(self, header + start,
+							       pos - start))
+						errors = (uint32_t)errors + 1;
+					pos += 2;
+					start = pos;
+					terminated = 1;
+				}
+			} else {
+				++pos;
+			}
+		} while (pos + 1 < len);
+	}
+	if (!terminated && start < len &&
+	    HttpFileHeaderMapParseLine(self, header + start, len - start))
+		errors = (uint32_t)errors + 1;
+	return errors;
+}
+
+int32_t HttpFileHttpReaderAddHeader(const char *name, const char *value,
+				  void *userdata)
+{
+	HttpFileRequestHeaderParam *param = userdata;
+
+	if (!param)
+		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+	return sceHttpAddRequestHeader(param->id, name, value, param->mode);
+}
+
 static inline __attribute__((always_inline))
 void HttpFileReaderConnectionSharedPtrRelease(const HttpFileReaderConnectionSharedPtr *self)
 {

@@ -62,6 +62,15 @@ uintptr_t HttpFileHeaderMapErase(PafMap *self, HttpFileHeaderMapNode *const *whe
 #define HttpFileHeaderMapSet ScePafMisc_1156F852
 #define HttpFileHeaderMapParseLine ScePafMisc_DB5A6E15
 #define HttpFileHeaderMapRemove ScePafMisc_E21E796D
+#define HttpFileHeaderMapForEach ScePafMisc_5D64A09C
+#define HttpFileHeaderMapParse ScePafMisc_DBF32F34
+
+typedef int32_t (*HttpFileHeaderCallback)(const char *name, const char *value,
+					void *userdata);
+
+int32_t HttpFileHeaderMapForEach(const PafMap *self, HttpFileHeaderCallback callback,
+			       void *userdata);
+int32_t HttpFileHeaderMapParse(PafMap *self, const char *header, size_t len);
 
 void HttpFileHeaderMapSet(PafMap *self, const char *name, const char *value,
 			 unsigned char replace);
@@ -280,6 +289,14 @@ typedef struct HttpFileHttpReader {
 	RWLock m_lock;
 	unsigned char m_aborted;
 } HttpFileHttpReader;
+
+typedef struct HttpFileRequestHeaderParam {
+	int32_t id;
+	int32_t mode;
+} HttpFileRequestHeaderParam;
+
+int32_t HttpFileHttpReaderAddHeader(const char *name, const char *value,
+				  void *userdata);
 
 typedef char HttpFileHttpReaderSizeCheck[sizeof(HttpFileHttpReader) == 104 ? 1 : -1];
 typedef char HttpFileHttpReaderPositionOffsetCheck[offsetof(HttpFileHttpReader, m_position) == 72 ? 1 : -1];
