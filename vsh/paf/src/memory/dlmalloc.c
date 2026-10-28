@@ -19,6 +19,286 @@ static inline int init_mparams(void)
 	return 0;
 }
 
+static inline void mark_inuse_foot(mchunkptr p, size_t size, unsigned int tag,
+				  size_t padding)
+{
+	mchunkptr next = chunk_plus_offset(p, size);
+
+	next->prev_foot = tag ^ FOOTER_MAGIC;
+	if (padding) {
+		sce_paf_memset((char *)next - (MALLOC_ALIGNMENT - padding),
+			       0xAF, CHUNK_ALIGN_MASK - padding);
+		((unsigned char *)next)[-1] = ~(CHUNK_ALIGN_MASK - padding);
+		p->head |= FLAG4_BIT;
+	}
+}
+
+static inline void insert_small_chunk(mstate m, mchunkptr p, size_t size)
+{
+	unsigned int index = small_index(size);
+	mchunkptr b = smallbin_at(m, index);
+	mchunkptr f = b;
+
+	if (!(m->smallmap & idx2bit(index)))
+		m->smallmap |= idx2bit(index);
+	else if (ok_address(m, b->fd))
+		f = b->fd;
+	else
+		ScePafStdc_D608246A();
+	b->fd = p;
+	f->bk = p;
+	p->fd = f;
+	p->bk = b;
+}
+
+static inline void insert_large_chunk(mstate m, tchunkptr x, size_t size)
+{
+	unsigned int index = NTREEBINS - 1;
+	int address_order = size >= m->alignment;
+	tchunkptr *h, t;
+	size_t k;
+
+	if (!address_order) {
+		unsigned int bits = size >> 8;
+
+		if (!bits)
+			index = 0;
+		else if (bits <= 65535) {
+			unsigned int high = 31 - __builtin_clz(bits);
+
+			index = (high << 1) | ((size >> (high + 7)) & 1);
+		}
+	}
+	h = &m->treebins[index];
+	x->index = index;
+	x->child[0] = NULL;
+	x->child[1] = NULL;
+	if (!(m->treemap & idx2bit(index))) {
+		*h = x;
+		m->treemap |= idx2bit(index);
+		x->parent = (tchunkptr)h;
+		x->fd = x;
+		x->bk = x;
+		return;
+	}
+	t = *h;
+	k = size << (index == NTREEBINS - 1 ? 0 : 25 - (index >> 1));
+	for (;;) {
+		tchunkptr *c;
+
+		if (!address_order && chunksize(t) == size) {
+			tchunkptr f = t->fd;
+
+			if (ok_address(m, t) && ok_address(m, f)) {
+				f->bk = x;
+				t->fd = x;
+				x->fd = f;
+				x->bk = t;
+				x->parent = NULL;
+			} else {
+				ScePafStdc_D608246A();
+			}
+			return;
+		}
+		if (address_order)
+			c = &t->child[(uintptr_t)x >= (uintptr_t)t];
+		else {
+			c = &t->child[k >> 31];
+			k <<= 1;
+		}
+		if (*c) {
+			t = *c;
+		} else {
+			if (ok_address(m, c)) {
+				*c = x;
+				x->parent = t;
+				x->fd = x;
+				x->bk = x;
+			} else {
+				ScePafStdc_D608246A();
+			}
+			return;
+		}
+	}
+}
+
+static inline void unlink_first_small_chunk(mstate m, mchunkptr b,
+					    mchunkptr p, unsigned int index)
+{
+	mchunkptr f = p->fd;
+
+	if (b == f)
+		m->smallmap &= ~idx2bit(index);
+	else if (ok_address(m, f)) {
+		b->fd = f;
+		f->bk = b;
+	} else {
+		ScePafStdc_D608246A();
+	}
+}
+
+void *mspace_malloc(mspace heap, size_t bytes, unsigned int tag)
+{
+	mstate m = heap;
+	size_t nb = pad_request(bytes);
+	size_t padding = (bytes + CHUNK_OVERHEAD) & CHUNK_ALIGN_MASK;
+	void *mem;
+
+	if (m->magic != mparams.magic)
+		return NULL;
+	if (bytes < MAX_REQUEST && nb < (size_t)-255 && nb >= m->alignment) {
+		size_t rounded = (nb + 255) & ~(size_t)255;
+
+		/* Large allocations descend from the far end of the top chunk. */
+		if (rounded + MIN_CHUNK_SIZE <= m->topsize) {
+			mchunkptr oldtop = m->top;
+			size_t rsize = m->topsize - MIN_CHUNK_SIZE - rounded;
+			mchunkptr top = chunk_plus_offset(oldtop,
+							 m->topsize - MIN_CHUNK_SIZE);
+			mchunkptr p = chunk_plus_offset(oldtop, rsize);
+
+			m->top = top;
+			top->head = MIN_CHUNK_SIZE | PINUSE_BIT;
+			m->topsize = MIN_CHUNK_SIZE;
+			if (rsize >= MIN_CHUNK_SIZE) {
+				oldtop->head = rsize | INUSE_BITS;
+				p->head |= PINUSE_BIT;
+				mark_inuse_foot(oldtop, rsize, tag,
+						 rsize & CHUNK_ALIGN_MASK);
+			}
+			p->head = rounded | INUSE_BITS;
+			top->head |= PINUSE_BIT;
+			mark_inuse_foot(p, rounded, tag, padding);
+			if (rsize >= MIN_CHUNK_SIZE)
+				mspace_free(m, chunk2mem(oldtop), tag);
+			return chunk2mem(p);
+		}
+		if (m->treemap &&
+		    (mem = tmalloc_large_large(m, rounded, bytes, tag)) != NULL) {
+			size_t size = m->dvsize;
+
+			if (size) {
+				if (small_index(size) < NSMALLBINS) {
+					unsigned int index = small_index(size);
+					mchunkptr b = smallbin_at(m, index);
+					mchunkptr f = b;
+
+					if (!(m->smallmap & idx2bit(index)))
+						m->smallmap |= idx2bit(index);
+					else if (ok_address(m, b->fd))
+						f = b->fd;
+					else
+						ScePafStdc_D608246A();
+					b->fd = m->dv;
+					f->bk = m->dv;
+					m->dv->fd = f;
+					m->dv->bk = b;
+				} else {
+					insert_large_chunk(m, (tchunkptr)m->dv, size);
+				}
+				m->dv = NULL;
+				m->dvsize = 0;
+			}
+			return mem;
+		}
+	}
+	if (bytes <= MAX_SMALL_REQUEST) {
+		unsigned int index;
+		unsigned int smallbits;
+
+		nb = request2size(bytes);
+		index = small_index(nb);
+		smallbits = m->smallmap >> index;
+		if (smallbits & 3) {
+			mchunkptr b, p, next;
+			size_t size;
+
+			index += ~smallbits & 1;
+			b = smallbin_at(m, index);
+			p = b->fd;
+			size = small_index2size(index);
+			unlink_first_small_chunk(m, b, p, index);
+			p->head = size | INUSE_BITS;
+			next = chunk_plus_offset(p, size);
+			next->head |= PINUSE_BIT;
+			mark_inuse_foot(p, size, tag, padding);
+			return chunk2mem(p);
+		}
+		if (nb > m->dvsize) {
+			if (smallbits) {
+				unsigned int bit = idx2bit(index) << 1;
+				unsigned int leftbits = (smallbits << index) & (bit | -bit);
+				unsigned int i = 31 - __builtin_clz(leftbits & -leftbits);
+				mchunkptr b = smallbin_at(m, i);
+				mchunkptr p = b->fd;
+				mchunkptr r = chunk_plus_offset(p, nb);
+				size_t rsize = small_index2size(i) - nb;
+
+				unlink_first_small_chunk(m, b, p, i);
+				p->head = nb | INUSE_BITS;
+				mark_inuse_foot(p, nb, tag, padding);
+				r->head = rsize | PINUSE_BIT;
+				chunk_plus_offset(r, rsize)->prev_foot = rsize;
+				if (m->dvsize)
+					insert_small_chunk(m, m->dv, m->dvsize);
+				m->dvsize = rsize;
+				m->dv = r;
+				return chunk2mem(p);
+			}
+			if (m->treemap &&
+			    (mem = tmalloc_small(m, nb, bytes, tag)) != NULL)
+				return mem;
+		}
+	} else if (bytes >= MAX_REQUEST) {
+		nb = SIZE_MAX;
+	} else if (m->treemap &&
+		   (mem = tmalloc_large(m, nb, bytes, tag)) != NULL) {
+		return mem;
+	}
+	if (nb <= m->dvsize) {
+		mchunkptr p = m->dv;
+		size_t rsize = m->dvsize - nb;
+
+		if (rsize >= MIN_CHUNK_SIZE) {
+			mchunkptr r = chunk_plus_offset(p, nb);
+
+			m->dvsize = rsize;
+			m->dv = r;
+			r->head = rsize | PINUSE_BIT;
+			chunk_plus_offset(r, rsize)->prev_foot = rsize;
+			p->head = nb | INUSE_BITS;
+			mark_inuse_foot(p, nb, tag, padding);
+		} else {
+			size_t size = m->dvsize;
+			mchunkptr next = chunk_plus_offset(p, size);
+			size_t head;
+
+			m->dvsize = 0;
+			p->head = size | INUSE_BITS;
+			head = next->head;
+			m->dv = NULL;
+			next->head = head | PINUSE_BIT;
+			mark_inuse_foot(p, size, tag, padding);
+		}
+		return chunk2mem(p);
+	}
+	if (nb < m->topsize) {
+		mchunkptr p = m->top;
+		mchunkptr r = chunk_plus_offset(p, nb);
+		size_t rsize = m->topsize - nb;
+
+		m->topsize = rsize;
+		m->top = r;
+		r->head = rsize | PINUSE_BIT;
+		p->head = nb | INUSE_BITS;
+		mark_inuse_foot(p, nb, tag, padding);
+		return chunk2mem(p);
+	}
+	if (!mparams.magic)
+		init_mparams();
+	return NULL;
+}
+
 mstate init_user_mstate(char *tbase, size_t tsize, size_t alignment)
 {
 	size_t msize = pad_request(sizeof(struct malloc_state));
@@ -105,20 +385,6 @@ size_t destroy_mspace(mspace heap)
 {
 	(void)mparams.magic;
 	return 0;
-}
-
-static inline void mark_inuse_foot(mchunkptr p, size_t size, unsigned int tag,
-				  size_t padding)
-{
-	mchunkptr next = chunk_plus_offset(p, size);
-
-	next->prev_foot = tag ^ FOOTER_MAGIC;
-	if (padding) {
-		sce_paf_memset((char *)next - (MALLOC_ALIGNMENT - padding),
-			       0xAF, CHUNK_ALIGN_MASK - padding);
-		((unsigned char *)next)[-1] = ~(CHUNK_ALIGN_MASK - padding);
-		p->head |= FLAG4_BIT;
-	}
 }
 
 void *internal_realloc(mstate m, void *oldmem, size_t bytes, unsigned int tag)

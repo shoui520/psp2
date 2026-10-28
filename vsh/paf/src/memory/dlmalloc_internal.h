@@ -23,6 +23,7 @@
 #define MIN_CHUNK_SIZE sizeof(struct malloc_chunk)
 #define MIN_REQUEST (MIN_CHUNK_SIZE - CHUNK_OVERHEAD - 1)
 #define MAX_REQUEST ((size_t)(-MIN_CHUNK_SIZE) << 2)
+#define MAX_SMALL_REQUEST 232U
 
 struct malloc_chunk {
 	size_t prev_foot;
@@ -40,7 +41,17 @@ struct malloc_segment {
 	unsigned int sflags;
 };
 
-struct malloc_tree_chunk;
+struct malloc_tree_chunk {
+	size_t prev_foot;
+	size_t head;
+	struct malloc_tree_chunk *fd;
+	struct malloc_tree_chunk *bk;
+	struct malloc_tree_chunk *child[2];
+	struct malloc_tree_chunk *parent;
+	unsigned int index;
+};
+
+typedef struct malloc_tree_chunk *tchunkptr;
 
 struct malloc_state {
 	unsigned int smallmap;
@@ -87,8 +98,14 @@ struct malloc_params {
 #define TOP_FOOT_SIZE (align_offset(chunk2mem(0)) + \
 		      pad_request(sizeof(struct malloc_segment)) + \
 		      sizeof(struct malloc_chunk))
+#define small_index(size) ((size) >> 3)
+#define small_index2size(index) ((size_t)(index) << 3)
+#define smallbin_at(m, index) ((mchunkptr)&(m)->smallbins[(index) << 1])
+#define idx2bit(index) (1U << (index))
+#define ok_address(m, p) ((uintptr_t)(p) >= (uintptr_t)(m)->least_addr)
 
 _Static_assert(sizeof(struct malloc_state) == 476, "malloc_state size");
+_Static_assert(sizeof(struct malloc_tree_chunk) == 32, "malloc_tree_chunk size");
 _Static_assert(offsetof(struct malloc_state, magic) == 36, "malloc_state magic");
 _Static_assert(offsetof(struct malloc_state, footprint) == 432,
 	       "malloc_state footprint");
@@ -100,6 +117,9 @@ _Static_assert(pad_request(sizeof(struct malloc_state)) == 496,
 _Static_assert(TOP_FOOT_SIZE == 56, "malloc_state top foot");
 
 mstate init_user_mstate(char *tbase, size_t tsize, size_t alignment);
+void *tmalloc_large_large(mstate m, size_t nb, size_t bytes, unsigned int tag);
+void *tmalloc_small(mstate m, size_t nb, size_t bytes, unsigned int tag);
+void *tmalloc_large(mstate m, size_t nb, size_t bytes, unsigned int tag);
 void *internal_realloc(mstate m, void *oldmem, size_t bytes, unsigned int tag);
 
 #endif
