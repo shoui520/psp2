@@ -174,7 +174,19 @@ void HeapAllocatorDumpHeapInfo(HeapAllocator *self, int32_t sort_policy)
 	HeapAllocatorDumpHeapStatus(self);
 }
 
-int32_t ScePafMisc_A9D10F39(HeapAllocator *self)
+void HeapAllocatorQueryInfo(HeapAllocator *self, HeapInfo *info)
+{
+	Mutex *mutex = &self->m_mutex;
+	struct mallinfo minfo;
+
+	MutexLock(mutex);
+	minfo = mspace_mallinfo(self->m_heap_id);
+	MutexUnlock(mutex);
+	info->num_of_free = minfo.ordblks;
+	info->total_free_size = minfo.fordblks;
+}
+
+int32_t HeapAllocatorCheckMemoryBoundsAll(HeapAllocator *self)
 {
 	Mutex *mutex = &self->m_mutex;
 

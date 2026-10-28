@@ -7,6 +7,13 @@
 
 typedef struct HeapAllocator HeapAllocator;
 
+typedef struct HeapInfo {
+	size_t num_of_free;
+	size_t total_free_size;
+} HeapInfo;
+
+_Static_assert(sizeof(HeapInfo) == 8, "HeapInfo size");
+
 /* paf::memory::HeapAllocator and Option, with Vita's virtual-method layout. */
 typedef enum AllocationBlockType {
 	AllocationBlockType_User = 0,
@@ -84,8 +91,10 @@ size_t HeapAllocatorGetFreeSize(HeapAllocator *self);
 #define HeapAllocatorMemalignDebug ScePafMisc_4D204547
 #define HeapAllocatorTrim ScePafMisc_039D7846
 #define HeapAllocatorUsableSize ScePafMisc_9E07A92C
-#define HeapAllocatorDumpHeapStatus ScePafMisc_344EF0B7
-#define HeapAllocatorDumpHeapInfo ScePafMisc_5C8AD3E0
+#define HeapAllocatorDumpHeapStatus ScePafMisc_5C8AD3E0
+#define HeapAllocatorDumpHeapInfo ScePafMisc_344EF0B7
+#define HeapAllocatorQueryInfo ScePafMisc_E74AC75A
+#define HeapAllocatorCheckMemoryBoundsAll ScePafMisc_A9D10F39
 
 int HeapAllocatorCheckMemoryBounds(HeapAllocator *self, void *ptr);
 void HeapAllocatorFreeDebug(HeapAllocator *self, void *ptr, const char *filename,
@@ -105,7 +114,8 @@ void HeapAllocatorTrim(HeapAllocator *self);
 size_t HeapAllocatorUsableSize(HeapAllocator *self, const void *ptr);
 void HeapAllocatorDumpHeapStatus(HeapAllocator *self);
 void HeapAllocatorDumpHeapInfo(HeapAllocator *self, int32_t sort_policy);
-int32_t ScePafMisc_A9D10F39(HeapAllocator *self);
+void HeapAllocatorQueryInfo(HeapAllocator *self, HeapInfo *info);
+int32_t HeapAllocatorCheckMemoryBoundsAll(HeapAllocator *self);
 
 void *scePafMallocWithContext(HeapAllocator *allocator, size_t size);
 void *scePafMallocAlignWithContext(HeapAllocator *allocator, size_t align, size_t size);

@@ -3,9 +3,78 @@
 #include "new.h"
 #include "stdc++/atexit.h"
 #include "../module.h"
+#include "../memory/dlmalloc.h"
 
 static HeapAllocator s_heap_storage;
 static HeapAllocator *s_heap;
+
+void *sce_paf_malloc(size_t size)
+{
+	return scePafMallocWithContext(s_heap, size);
+}
+
+void *sce_paf_memalign(size_t align, size_t size)
+{
+	return scePafMallocAlignWithContext(s_heap, align, size);
+}
+
+void *sce_paf_realloc(void *ptr, size_t size)
+{
+	HeapAllocator *heap = ptr ?
+		(HeapAllocator *)(uintptr_t)mspace_ptr_get_tag(ptr) : s_heap;
+
+	return scePafReallocWithContext(heap, ptr, size);
+}
+
+void *sce_paf_calloc(size_t nitems, size_t size)
+{
+	return HeapAllocatorCalloc(s_heap, nitems, size);
+}
+
+void sce_paf_free(void *ptr)
+{
+	if (ptr) {
+		HeapAllocator *heap = (HeapAllocator *)(uintptr_t)mspace_ptr_get_tag(ptr);
+
+		scePafFreeWithContext(heap, ptr);
+	}
+}
+
+void sce_paf_mtrim(void)
+{
+	HeapAllocatorTrim(s_heap);
+}
+
+size_t sce_paf_musable_size(const void *ptr)
+{
+	if (ptr) {
+		HeapAllocator *heap = (HeapAllocator *)(uintptr_t)mspace_ptr_get_tag(ptr);
+
+		return HeapAllocatorUsableSize(heap, ptr);
+	}
+	return 0;
+}
+
+void sce_paf_dump_heap_info(int32_t sort_policy)
+{
+	HeapAllocatorDumpHeapInfo(s_heap, sort_policy);
+}
+
+void sce_paf_dump_heap_status(void)
+{
+	HeapAllocatorDumpHeapStatus(s_heap);
+}
+
+int32_t sce_paf_report_memoryblocks(
+		int (*callback)(void *, size_t, int, void *), void *userdata)
+{
+	return HeapAllocatorReportMemoryBlocks(s_heap, callback, userdata);
+}
+
+int32_t sce_paf_check_memorybounds(void)
+{
+	return HeapAllocatorCheckMemoryBoundsAll(s_heap);
+}
 
 void *GetGlobalHeapAllocator(void)
 {
