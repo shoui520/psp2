@@ -74,6 +74,19 @@ const char *HeapAllocatorGetName(const HeapAllocator *self);
 void HeapAllocatorGetRange(const HeapAllocator *self, void **membase, size_t *size);
 size_t HeapAllocatorGetFreeSize(HeapAllocator *self);
 
+#define HeapAllocatorCheckMemoryBounds ScePafMisc_0A463284
+#define HeapAllocatorFreeDebug ScePafMisc_FE016005
+#define HeapAllocatorReallocDebug ScePafMisc_18667637
+#define HeapAllocatorReportMemoryBlocks ScePafMisc_786D314A
+
+int HeapAllocatorCheckMemoryBounds(HeapAllocator *self, void *ptr);
+void HeapAllocatorFreeDebug(HeapAllocator *self, void *ptr, const char *filename,
+			   int32_t lineno, int32_t type);
+void *HeapAllocatorReallocDebug(HeapAllocator *self, void *ptr, size_t size,
+			       const char *filename, int32_t lineno, int32_t type);
+int32_t HeapAllocatorReportMemoryBlocks(HeapAllocator *self,
+		int (*callback)(void *, size_t, int, void *), void *userdata);
+
 void *scePafMallocWithContext(HeapAllocator *allocator, size_t size);
 void *scePafMallocAlignWithContext(HeapAllocator *allocator, size_t align, size_t size);
 void *scePafReallocWithContext(HeapAllocator *allocator, void *ptr, size_t size);

@@ -68,6 +68,63 @@ size_t HeapAllocatorGetFreeSize(HeapAllocator *self)
 	return info.fordblks;
 }
 
+int HeapAllocatorCheckMemoryBounds(HeapAllocator *self, void *ptr)
+{
+	return mspace_check_memorybounds(self->m_heap_id, ptr, (unsigned int)self);
+}
+
+void scePafFreeWithContext(HeapAllocator *self, void *ptr)
+{
+	Mutex *mutex = &self->m_mutex;
+
+	MutexLock(mutex);
+	if (mspace_check_memorybounds(self->m_heap_id, ptr, (unsigned int)self))
+		ScePafStdc_D41FD265();
+	mspace_free(self->m_heap_id, ptr, (unsigned int)self);
+	MutexUnlock(mutex);
+}
+
+void HeapAllocatorFreeDebug(HeapAllocator *self, void *ptr, const char *filename,
+			   int32_t lineno, int32_t type)
+{
+	scePafFreeWithContext(self, ptr);
+}
+
+void *scePafReallocWithContext(HeapAllocator *self, void *ptr, size_t size)
+{
+	Mutex *mutex = &self->m_mutex;
+	void *result;
+
+	if (size > 0x1fffffff)
+		ScePafStdc_D608246A();
+	MutexLock(mutex);
+	if (mspace_check_memorybounds(self->m_heap_id, ptr, (unsigned int)self))
+		ScePafStdc_D41FD265();
+	result = mspace_realloc(self->m_heap_id, ptr, size, (unsigned int)self);
+	if (!result && !self->m_heap_disable_dbgprint)
+		ScePafStdc_D41FD265();
+	MutexUnlock(mutex);
+	return result;
+}
+
+void *HeapAllocatorReallocDebug(HeapAllocator *self, void *ptr, size_t size,
+			       const char *filename, int32_t lineno, int32_t type)
+{
+	return scePafReallocWithContext(self, ptr, size);
+}
+
+int32_t HeapAllocatorReportMemoryBlocks(HeapAllocator *self,
+		int (*callback)(void *, size_t, int, void *), void *userdata)
+{
+	Mutex *mutex = &self->m_mutex;
+	int32_t count;
+
+	MutexLock(mutex);
+	count = mspace_report_free_blocks(self->m_heap_id, callback, userdata);
+	MutexUnlock(mutex);
+	return count;
+}
+
 HeapAllocator *scePafCreateHeap(HeapAllocator *self, void *membase,
 		size_t size, const char *name, const HeapAllocatorOption *option)
 {
