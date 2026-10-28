@@ -2185,6 +2185,123 @@ int32_t HttpFileHttpReaderClose(HttpFileHttpReader *self)
 	return 0;
 }
 
+int32_t HttpFileRangeReaderOpen(HttpFileRangeReader *self)
+{
+	HttpFileReaderConfigSharedPtr config = { NULL, NULL };
+	HttpFileReaderConfigSharedPtr src;
+	HttpFileReaderConfigSharedPtr cloned;
+	HttpFileReaderConfigSharedPtr temporary;
+	HttpFileHttpReader *http_reader;
+	HttpFileReader *reader;
+	int32_t result;
+
+	self->m_position = 0;
+	self->m_range_begin = -1;
+	self->m_range_end = -1;
+	self->m_content_length = SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
+	if (self->m_range_enabled) {
+		HttpFileResponse *response;
+
+		src = self->base.m_config;
+		if (src.m_ptr)
+			sceAtomicIncrement32AcqRel(&src.m_ref_counter->m_counter);
+		HttpFileReaderConfigClone(&cloned, &src);
+		if (cloned.m_ptr) {
+			config = cloned;
+			sceAtomicIncrement32AcqRel(&config.m_ref_counter->m_counter);
+		}
+		HttpFileReaderConfigSharedPtrRelease(&cloned);
+		HttpFileReaderConfigSharedPtrRelease(&src);
+		HttpFileHeaderMapRemove(&config.m_ptr->header, "Range");
+		config.m_ptr->method = "HEAD";
+		http_reader = ScePafStdc_FC5CD359(sizeof(*http_reader));
+		if (http_reader) {
+			temporary = config;
+			if (temporary.m_ptr)
+				sceAtomicIncrement32AcqRel(&temporary.m_ref_counter->m_counter);
+			http_reader = HttpFileHttpReaderConstruct(http_reader, &temporary);
+			self->m_reader = &http_reader->base;
+			HttpFileReaderConfigSharedPtrRelease(&temporary);
+		} else {
+			self->m_reader = NULL;
+		}
+		reader = self->m_reader;
+		if (!reader) {
+			result = SCE_PAF_ERROR_FILE_NO_MEMORY;
+			goto out;
+		}
+		result = reader->vtable->Open(reader);
+		self->base.m_result[0] = self->m_reader->m_result[0];
+		reader = self->m_reader;
+		self->base.m_result[1] = reader->m_result[1];
+		self->base.m_result[2] = reader->m_result[2];
+		if (result) {
+			if (reader)
+				reader->vtable->Delete(reader);
+			self->m_reader = NULL;
+			goto out;
+		}
+		self->m_content_length = reader->vtable->GetFileSize(reader);
+		reader = self->m_reader;
+		response = reader->vtable->GetResponse(reader);
+		if (response->code == 200 && response->major == 1 && response->minor == 1) {
+			result = 0;
+			goto out;
+		}
+		reader = self->m_reader;
+		self->m_range_enabled = 0;
+		reader->vtable->Close(reader);
+		reader = self->m_reader;
+		if (reader)
+			reader->vtable->Delete(reader);
+		self->m_reader = NULL;
+	}
+	src = self->base.m_config;
+	if (src.m_ptr)
+		sceAtomicIncrement32AcqRel(&src.m_ref_counter->m_counter);
+	HttpFileReaderConfigClone(&cloned, &src);
+	if (cloned.m_ptr != config.m_ptr) {
+		HttpFileReaderConfigSharedPtr replacement = cloned;
+
+		HttpFileReaderConfigSharedPtrRelease(&config);
+		config = replacement;
+		if (config.m_ptr)
+			sceAtomicIncrement32AcqRel(&config.m_ref_counter->m_counter);
+	}
+	HttpFileReaderConfigSharedPtrRelease(&cloned);
+	HttpFileReaderConfigSharedPtrRelease(&src);
+	HttpFileHeaderMapRemove(&config.m_ptr->header, "Range");
+	http_reader = ScePafStdc_FC5CD359(sizeof(*http_reader));
+	if (http_reader) {
+		temporary = config;
+		if (temporary.m_ptr)
+			sceAtomicIncrement32AcqRel(&temporary.m_ref_counter->m_counter);
+		http_reader = HttpFileHttpReaderConstruct(http_reader, &temporary);
+		self->m_reader = &http_reader->base;
+		HttpFileReaderConfigSharedPtrRelease(&temporary);
+	} else {
+		self->m_reader = NULL;
+	}
+	reader = self->m_reader;
+	if (!reader) {
+		result = SCE_PAF_ERROR_FILE_NO_MEMORY;
+		goto out;
+	}
+	result = reader->vtable->Open(reader);
+	self->base.m_result[0] = self->m_reader->m_result[0];
+	reader = self->m_reader;
+	self->base.m_result[1] = reader->m_result[1];
+	self->base.m_result[2] = reader->m_result[2];
+	if (result) {
+		if (reader)
+			reader->vtable->Delete(reader);
+		self->m_reader = NULL;
+	}
+out:
+	HttpFileReaderConfigSharedPtrRelease(&config);
+	return result;
+}
+
 int32_t HttpFileRangeReaderClose(HttpFileRangeReader *self)
 {
 	HttpFileReader *reader = self->m_reader;

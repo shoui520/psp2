@@ -339,6 +339,7 @@ typedef char HttpFileRangeReaderReaderOffsetCheck[offsetof(HttpFileRangeReader, 
 typedef char HttpFileRangeReaderPositionOffsetCheck[offsetof(HttpFileRangeReader, m_position) == 64 ? 1 : -1];
 typedef char HttpFileRangeReaderContentLengthOffsetCheck[offsetof(HttpFileRangeReader, m_content_length) == 88 ? 1 : -1];
 
+int32_t HttpFileRangeReaderOpen(HttpFileRangeReader *self);
 int32_t HttpFileRangeReaderClose(HttpFileRangeReader *self);
 int64_t HttpFileRangeReaderSeek(HttpFileRangeReader *self, int64_t offset,
 				int32_t whence);
