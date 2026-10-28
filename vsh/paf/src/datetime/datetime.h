@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "../rtc/rtc.h"
+#include "../std/string.h"
 
 typedef struct DateTime {
 	uint16_t m_year;
@@ -35,6 +36,18 @@ typedef char DateTimeResultOffsetCheck[offsetof(DateTime, m_parse_result) == 22 
 #define DateTimeLess ScePafMisc_17B87641
 #define DateTimeParseRFC3339 ScePafMisc_209DB708
 #define DateTimeParseSQLiteDateTime ScePafMisc_900114B8
+#define DateTimeSetDateFormat ScePafMisc_0375FCBA
+#define DateTimeGetDateFormat ScePafMisc_D8B77FA4
+#define DateTimeSetTimeFormat ScePafMisc_22CA1B27
+#define DateTimeGetTimeFormat ScePafMisc_6227AE12
+#define DateTimeSetDateTimeFormat ScePafMisc_1F723D5D
+
+void DateTimeSetDateFormat(const uint16_t *format);
+PafWString *DateTimeGetDateFormat(void);
+void DateTimeSetTimeFormat(const uint16_t *format);
+PafWString *DateTimeGetTimeFormat(void);
+void DateTimeSetDateTimeFormat(const uint16_t *format);
+void DateTimeFormatsInitialize(void);
 
 void DateTimeParseRFC3339(DateTime *result, const char *pszDateTime);
 void DateTimeParseSQLiteDateTime(DateTime *result, const char *pszDateTime);

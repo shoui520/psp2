@@ -2,6 +2,53 @@
 #include "datetime.h"
 #include <rtc/rtc.h>
 
+static PafWString date_format;
+static PafWString time_format;
+static PafWString datetime_format;
+
+extern int ScePafStdc_C95732BB(void *object, void (*destroy)(void *), void *dso);
+extern void *__dso_handle;
+
+void DateTimeSetDateFormat(const uint16_t *format)
+{
+	PafWStringAssign(&date_format, format, format ? sce_paf_wcslen(format) : 0);
+}
+
+PafWString *DateTimeGetDateFormat(void)
+{
+	return &date_format;
+}
+
+void DateTimeSetTimeFormat(const uint16_t *format)
+{
+	PafWStringAssign(&time_format, format, format ? sce_paf_wcslen(format) : 0);
+}
+
+PafWString *DateTimeGetTimeFormat(void)
+{
+	return &time_format;
+}
+
+void DateTimeSetDateTimeFormat(const uint16_t *format)
+{
+	PafWStringAssign(&datetime_format, format, format ? sce_paf_wcslen(format) : 0);
+}
+
+void DateTimeFormatsInitialize(void)
+{
+	unsigned char allocator[3];
+
+	PafWStringConstruct(&date_format, &allocator[0]);
+	ScePafStdc_C95732BB(&date_format, (void (*)(void *))PafWStringDestruct,
+			  &__dso_handle);
+	PafWStringConstruct(&time_format, &allocator[1]);
+	ScePafStdc_C95732BB(&time_format, (void (*)(void *))PafWStringDestruct,
+			  &__dso_handle);
+	PafWStringConstruct(&datetime_format, &allocator[2]);
+	ScePafStdc_C95732BB(&datetime_format, (void (*)(void *))PafWStringDestruct,
+			  &__dso_handle);
+}
+
 int32_t DateTimeDayOfWeek(uint16_t year, uint16_t month, uint16_t day)
 {
 	if (month == 1 || month == 2) {

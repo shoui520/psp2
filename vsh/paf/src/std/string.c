@@ -4,6 +4,29 @@
 #include "stdlib.h"
 #include <libkernel/libkernel.h>
 
+size_t sce_paf_wcslen(const uint16_t *str)
+{
+	size_t length = 0;
+
+	if (str) {
+		while (*str++)
+			length++;
+	}
+	return length;
+}
+
+PafWString *PafWStringConstruct(PafWString *self, const void *allocator)
+{
+	PafWStringInitialize(self);
+	return self;
+}
+
+PafWString *PafWStringDestruct(PafWString *self)
+{
+	PafWStringDestroy(self);
+	return self;
+}
+
 size_t sce_paf_strlen(const char *str)
 {
 	if (!str)
