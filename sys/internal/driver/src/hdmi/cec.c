@@ -385,7 +385,12 @@ CEC_SEND int cecSendTextViewOn(const CecParam *param)
 	return _txOpecode(param->data[0], CEC_TEXT_VIEW_ON, NULL, 0);
 }
 
-CEC_SEND int cecSendActiveSource(const CecParam *param)
+#if FW_SINCE(0x04000000)
+CEC_SEND
+#else
+static __attribute__((noinline))
+#endif
+int cecSendActiveSource(const CecParam *param)
 {
 	SceUInt8 physical[2];
 	int ret;
