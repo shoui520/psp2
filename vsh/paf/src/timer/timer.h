@@ -113,6 +113,10 @@ float TimerDoFuncElasticOut(float rate);
 
 #define TimerDoFuncExponent ScePafMisc_CF30F373
 float TimerDoFuncExponentCurve(float rate);
+/* Suffixes identify Timer::Func variants, whose method names are unknown. */
+float TimerDoFuncExpoOut27(float rate);
+float TimerDoFuncExpoOut28(float rate);
+float TimerDoFuncExpoOut30(float rate);
 float TimerDoFuncExponent(float rate, float total, float initval,
 			 const float *param);
 
