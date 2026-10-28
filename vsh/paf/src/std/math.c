@@ -158,21 +158,6 @@ static const float logCoefficients[] = {
 	0.41397473216056824f
 };
 
-static inline int FloatToInt(float value)
-{
-	union {
-		float value;
-		uint32_t bits;
-	} number;
-
-	number.value = value;
-	/* Both conversions saturate identically for these invalid inputs. */
-	if ((number.bits & 0x7fffffffU) >= 0x4f000000U &&
-	    number.bits != 0xcf000000U)
-		return __builtin_vcvt_n_s32_f32(value, 1);
-	return (int)value;
-}
-
 float sce_paf_powf(float base, float exponent)
 {
 	union {

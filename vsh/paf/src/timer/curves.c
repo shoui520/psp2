@@ -2,6 +2,18 @@
 #include "../std/math.h"
 #include <intrinsics.h>
 
+static const float TimerExpoTable[33] = {
+	0.0f, 0.000243f, 0.000539f, 0.000908f,
+	0.001367f, 0.001938f, 0.002646f, 0.003524f,
+	0.004614f, 0.005967f, 0.007644f, 0.009724f,
+	0.012305f, 0.015506f, 0.019478f, 0.024407f,
+	0.030522f, 0.038111f, 0.047531f, 0.059222f,
+	0.073734f, 0.091749f, 0.114113f, 0.141879f,
+	0.176352f, 0.219153f, 0.272297f, 0.338284f,
+	0.420220f, 0.521963f, 0.648302f, 0.805185f,
+	1.0f
+};
+
 float TimerDoFuncLinear(float rate)
 {
 	if (rate >= 1.0f)
@@ -51,6 +63,26 @@ float TimerDoFuncCustomExpoOut(float rate, const float *param)
 	if (rate <= 0.0f)
 		return 0.0f;
 	return 1.0f - TimerDoFuncCustomExpoIn(1.0f - rate, param);
+}
+
+float TimerDoFuncExpoIn(float rate)
+{
+	float next, current, fraction, result;
+	int integral, index;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f || rate == 0.0f)
+		return 0.0f;
+	rate *= 32.0f;
+	integral = FloatToInt(rate);
+	index = FloatToInt(rate);
+	next = TimerExpoTable[index + 1];
+	fraction = rate - (float)integral;
+	current = TimerExpoTable[index];
+	result = next * fraction;
+	result += current * (1.0f - fraction);
+	return result;
 }
 
 float TimerDoFuncBackIn(float rate)
@@ -162,6 +194,17 @@ float TimerDoFuncFaster(float rate)
 	return rate * rate;
 }
 
+float TimerDoFuncExpoInOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return TimerDoFuncExpoIn(rate * 2.0f) * 0.5f;
+	return (1.0f - TimerDoFuncExpoIn(2.0f - rate * 2.0f)) * 0.5f + 0.5f;
+}
+
 float TimerDoFuncSineIn(float rate)
 {
 	if (rate >= 1.0f)
@@ -254,6 +297,15 @@ float TimerDoFuncQuadOut(float rate)
 	if (rate <= 0.0f)
 		return 0.0f;
 	return 1.0f - TimerDoFuncQuadIn(1.0f - rate);
+}
+
+float TimerDoFuncExpoOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFuncExpoIn(1.0f - rate);
 }
 
 float TimerDoFuncSineOut(float rate)
