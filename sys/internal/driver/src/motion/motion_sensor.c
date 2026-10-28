@@ -596,7 +596,7 @@ int motionReadSensorFifo(SceMotionDevData *data)
 	return result;
 }
 
-int motionGetSensorStatistics(MotionSensorStatistics *statistics)
+__attribute__((noinline)) int motionGetSensorStatistics(MotionSensorStatistics *statistics)
 {
 	if (statistics != NULL)
 		__builtin_memcpy(statistics, &motionSensorTransfer.statistics,
