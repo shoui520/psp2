@@ -134,28 +134,3 @@ int addBootProtection(SceLoadCoreBootInfo *bootInfo, u32 attr,
 	bootInfo->numProtects++;
 	return 0;
 }
-
-/* The host acknowledges each phase before either side reuses the key buffer. */
-void *transferBootKey(void)
-{
-	const u8 *source = g_iplXorKey;
-	u8 *destination = (u8 *)0xBFC00FC0;
-	const u8 *end = source + sizeof(g_iplXorKey);
-
-	do {
-		u32 block[4];
-
-		__builtin_memcpy(block, source, sizeof(block));
-		__builtin_memcpy(destination, block, sizeof(block));
-		source += sizeof(block);
-		destination += sizeof(block);
-	} while (source != end);
-	memset(g_iplXorKey, 0, sizeof(g_iplXorKey));
-	HW(0xABD78000) = 1;
-	while (HW(0xABD78000) != 2)
-		;
-	HW(0xABD78000) = 3;
-	while (HW(0xABD78000) != 0)
-		;
-	return memset((void *)0xBFC00FC0, 0, sizeof(g_iplXorKey));
-}

@@ -2,8 +2,7 @@
 #
 #   make [O=<build dir>] [FW=<firmware>]
 #
-# Builds ipl.elf and a flat ipl.bin at 0x88600000. The payload is incomplete;
-# the container remains PARTIAL until the source rebuild and packing are verified.
+# Builds ipl.elf and a flat ipl.bin at 0x88600000.
 # Needs the PSP toolchain ($PSPDEV/bin/psp-gcc).
 
 PSPDEV	?= $(if $(PSP2_TOOLCHAINS),$(PSP2_TOOLCHAINS)/pspdev-v20261001,../../toolchains/install/pspdev-v20261001)
@@ -11,23 +10,28 @@ CROSS	:= $(PSPDEV)/bin/psp-
 CC	:= $(CROSS)gcc
 OBJCOPY	:= $(CROSS)objcopy
 FW	?= 4.00-DEBUGGER
-O	?= build/$(FW)
+O	?= $(if $(MEP_OUT),$(MEP_OUT)/ipl/$(FW),build/$(FW))
 
 FW_VERSION_4.00-DEBUGGER := 0x04000000
 FW_VERSION_3.650.011-TOOL := 0x03650011
 FW_VERSION_3.630.011-DEBUGGER := 0x03630011
 FW_VERSION_3.65-CEX := 0x03650000
 
+DATA_BASE_4.00-DEBUGGER := 0x8860508c
+DATA_BASE_3.650.011-TOOL := 0x8860508c
+DATA_BASE_3.630.011-DEBUGGER := 0x88605074
+DATA_BASE_3.65-CEX := 0x8860508c
+
 CFLAGS	:= -O2 -G0 -march=allegrex -ffreestanding -fno-builtin -fno-common \
 	   -fno-pic -mno-abicalls -Wall -Wno-unused-parameter -Iinclude \
 	   -I$(PSPDEV)/psp/sdk/include \
 	   -DFW_ID=\"$(FW)\" -DFW_VERSION=$(FW_VERSION_$(FW))
-ASFLAGS	:= -G0 -march=allegrex -Iinclude
+ASFLAGS	:= -G0 -march=allegrex -Iinclude -DFW_VERSION=$(FW_VERSION_$(FW))
 SCRAMBLE_SEED_4.00-DEBUGGER := scramble_seed_debug.inc
 SCRAMBLE_SEED_3.630.011-DEBUGGER := scramble_seed_debug.inc
 SCRAMBLE_SEED_3.650.011-TOOL := scramble_seed_365.inc
 SCRAMBLE_SEED_3.65-CEX := scramble_seed_365.inc
-LDFLAGS	:= -nostdlib -Wl,-T,ipl.ld -Wl,--gc-sections -Wl,-Map,$(O)/ipl.map
+LDFLAGS	:= -nostdlib -Wl,-T,ipl.ld -Wl,--defsym,DATA_BASE=$(DATA_BASE_$(FW)) -Wl,--gc-sections -Wl,-Map,$(O)/ipl.map
 
 SRCS	:= start.S halt.c data.S cache.S memlmd.c sysreg.c kl4e.c boot.c boot_services.c boot_handoff.S boot_main.c boot_config.c loadelf_boot.c libc.c
 # PSP's loadcore, from the sys661 tree beside this one, by the path Sony's build gives it

@@ -5,6 +5,8 @@
 
 extern int boot_main(void *memBase, SceSize memSize, u32 bootArg,
 		     u32 bootMode, u32 bootFlags, u32 resumeArg, u32 model);
+extern int addBootProtection(SceLoadCoreBootInfo *bootInfo, u32 attr,
+			     u32 addr, SceSize size);
 
 /* These registers belong to the Allegrex memory controller and sysreg block. */
 #define DDR_FLUSH_PATTERN	0xBC000000
@@ -94,4 +96,22 @@ int openBootFile(SceCompatBootFile *file, int optional)
 		}
 	}
 	return result;
+}
+
+int setupBootProtection(SceLoadCoreBootInfo *bootInfo)
+{
+	SceSize size;
+
+	bootInfo->modules[bootInfo->numModules - 1].bootData = HW(0x89FF0000);
+	bootInfo->modProtId = 0;
+	size = bootStringLength((const u8 *)0x89FF0008);
+	addBootProtection(bootInfo, 2, 0x89FF0008, size + 1);
+	size = bootStringLength((const u8 *)0x89FF0048);
+	addBootProtection(bootInfo, 0x40, 0x89FF0048, size + 1);
+	bootInfo->modArgProtId = 2;
+	size = bootStringLength((const u8 *)0x89FF0088);
+	addBootProtection(bootInfo, 0x100, 0x89FF0088, size + 1);
+	addBootProtection(bootInfo, 0x400, 0x89FF14C8, HW(0x89FF14C8));
+	addBootProtection(bootInfo, 0x20, 0x89FF14CC, 0xDC);
+	return 0;
 }

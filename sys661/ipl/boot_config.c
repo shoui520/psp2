@@ -1,6 +1,7 @@
 /* Boot configuration helpers; the stripped IPL has no source-file records. */
 #include "boot_config.h"
 #include "ipl_data.h"
+#include "loadelf_boot.h"
 
 extern int openBootFile(SceCompatBootFile *file, int optional);
 extern int compareBootModuleHash(const SceLoadCoreBootModuleInfo *module,
@@ -119,5 +120,36 @@ int type2(void *image, SceSize imageSize, SceLoadCoreBootInfo *bootInfo,
 		module++;
 		bootInfo->numModules++;
 	}
+	return 0;
+}
+
+int _loadprx_by_pspbtcnf_bin(SceLoadCoreBootInfo *bootInfo, char *configPath,
+			     u32 bootFlags, u32 bootArg)
+{
+	SceCompatBootFile file;
+	int newSize;
+
+	file.name = g_strPspbtcnf;
+	if (openBootModuleFile(&file, 0, bootFlags, bootArg,
+			       bootInfo->self) < 0)
+		return -1;
+	if (file.size == 0)
+		return -1;
+	if ((bootInfo->bootArg0 & 0x40000000) != 0) {
+		bootInfo->bootMode =
+			(bootInfo->bootArg0 & 0x20000000) != 0 ? 2 : 1;
+	} else {
+		bootInfo->bootMode = HW(0x89FF0004);
+	}
+	newSize = getBootModuleLength(file.buffer, file.size, 1);
+	if (newSize < 0)
+		Panic(g_strLoadprxByPspbtcnf, 702);
+	file.size = (SceSize)newSize;
+	if (((PspBootConfigHeader *)file.buffer)->signature != 0x0F803001)
+		Panic(g_strLoadprxByPspbtcnf, 726);
+	if (type2(file.buffer, file.size, bootInfo, configPath,
+		  file.buffer, bootFlags, bootArg) < 0)
+		Panic(g_strLoadprxByPspbtcnf, 731);
+	memset(file.buffer, 0, file.size);
 	return 0;
 }

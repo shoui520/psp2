@@ -96,6 +96,65 @@ typedef struct SceLoadCoreExecFileInfo {
 } SceLoadCoreExecFileInfo;
 
 /* kernel services the boot loader calls through the kernel's own tables */
-typedef struct SceLoadCoreBootServices SceLoadCoreBootServices;
+typedef struct SceLoadCoreBootServices {
+	u32	numExportLibs;				/* 0x00 */
+	void	*memBase;				/* 0x04 */
+	SceSize	memClearSize;				/* 0x08 */
+	u32	unknown0C;				/* 0x0C */
+	u32	unknown10;				/* 0x10 */
+	s32	model;					/* 0x14 */
+	u32	configMode;				/* 0x18 */
+	u32	reserved1C[3];				/* 0x1C */
+	void	*loadCoreAddr;				/* 0x28 */
+	u32	reserved2C;				/* 0x2C */
+	u32	syscallTableSeed;			/* 0x30 */
+	SceUID	(*allocPartitionMemory)(int mpid, const char *name,
+					int type, SceSize size, u32 addr); /* 0x34 */
+	void	*(*getBlockHeadAddr)(SceUID blockId);	/* 0x38 */
+	union {
+		int	(*resizeMemoryBlock)(SceUID blockId, s32 leftShift,
+					     s32 rightShift); /* 0x3C (loadcore) */
+		u32	bootArg0;			/* 0x3C (sysmem) */
+	};
+	union {
+		void	*importsInfo;			/* 0x40 (loadcore) */
+		u32	bootArg1;			/* 0x40 (sysmem) */
+	};
+	union {
+		SceSize	importsSize;			/* 0x44 (loadcore) */
+		u32	bootMode;			/* 0x44 (sysmem) */
+	};
+	union {
+		void	*stackTop;			/* 0x48 (loadcore) */
+		s32	numProtects;			/* 0x48 (sysmem) */
+	};
+	union {
+		SceLoadCoreExecFileInfo *sysmemExecInfo; /* 0x4C (loadcore) */
+		SceLoadCoreProtectInfo *protects;	/* 0x4C (sysmem) */
+	};
+	union {
+		SceLoadCoreExecFileInfo *loadcoreExecInfo; /* 0x50 (loadcore) */
+		void	(*handoffCallback)(void);	/* 0x50 (sysmem) */
+	};
+	union {
+		int	(*compareSubType)(u32 tag);	/* 0x54 (loadcore) */
+		SceSize	initialMaxAllocSize;		/* 0x54 (sysmem) */
+	};
+	union {
+		int	(*compareLatestSubType)(u32 tag); /* 0x58 (loadcore) */
+		struct SceLoadCoreBootServices *loadcoreServices; /* 0x58 (sysmem) */
+	};
+	int	(*setMaskFunc)(u32 operation, const u8 *hash); /* 0x5C */
+	SceSize	memSize;				/* 0x60 */
+	union {
+		int	(*getLengthFunc)(u8 *file, SceSize size,
+					 SceSize *newSize); /* 0x64 (loadcore) */
+		u32	resumeArg;			/* 0x64 (sysmem) */
+	};
+	int	(*prepareGetLengthFunc)(u8 *buffer, SceSize size); /* 0x68 */
+	u32	reserved6C[5];				/* 0x6C */
+} SceLoadCoreBootServices;
+
+_Static_assert(sizeof(SceLoadCoreBootServices) == 128, "boot services size");
 
 #endif

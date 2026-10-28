@@ -1,16 +1,128 @@
 /* IPL boot initialization; the original identifies this function as boot_main. */
 #include "ipl.h"
 #include "ipl_data.h"
+#include "loadelf_boot.h"
 #include "memlmd.h"
 
 extern int loadprx(SceLoadCoreBootInfo *bootInfo, u32 bootFlags, u32 bootArg);
-extern int activateKernelModules(SceLoadCoreBootInfo *bootInfo);
 
 #define SYSREG_MEMORY_CONFIG	0xBC100040
 #define BOOT_INFO_ADDRESS	0x89F80000
 #define BOOT_SCRAMBLE_SEED	0xBFC00200
 
 _Static_assert(sizeof(SceLoadCoreBootInfo) == 128, "boot information size");
+
+int kactivate(SceLoadCoreBootInfo *bootInfo, int index,
+	      SceLoadCoreBootServices *services)
+{
+	SceLoadCoreExecFileInfo *execInfo = &g_execInfo[index];
+	SceLoadCoreBootModuleInfo *module = &bootInfo->modules[index];
+	u8 *file = module->modBuf;
+	void *bootArgs[2];
+
+	memset(execInfo, 0, sizeof(*execInfo));
+	execInfo->topAddr = (u8 *)module->reserved;
+	execInfo->apiType = 0;
+	execInfo->modeAttribute = 0;
+	execInfo->isSignChecked = 1;
+	if (loadBootExecutable(file, execInfo, index, services) < 0)
+		Panic(g_strKactivate, 293);
+	memset(module->modBuf, 0, module->modSize);
+	if (index == 1) {
+		SceSize importsSize = execInfo->importsSize;
+
+		services->importsInfo = execInfo->importsInfo;
+		services->importsSize = importsSize;
+		services->getLengthFunc = sceUtilsGetLoadModuleABLengthByPolling;
+		services->prepareGetLengthFunc = memlmdPrepareGetLength;
+		services->setMaskFunc = memlmdInitializeScrambleKey;
+		services->loadcoreExecInfo = &g_execInfo[1];
+		services->compareSubType = memlmdCompareSubType;
+		services->compareLatestSubType = memlmdCompareLatestSubType;
+		services->sysmemExecInfo = &g_execInfo[0];
+	}
+	sceKernelIcacheInvalidateAll();
+	sceKernelDcacheWritebackAll();
+	bootInfo->loadedModules = 2;
+	if (index != 0) {
+		if (index != 1)
+			Panic(g_strKactivate, 376);
+		bootArgs[0] = bootInfo;
+		bootArgs[1] = services;
+		callWithBootStack((int (*)(u32, void *))execInfo->entryAddr,
+				  8, bootArgs, services->stackTop);
+	} else {
+		((int (*)(u32, SceLoadCoreBootServices *))execInfo->entryAddr)(
+			4, services);
+	}
+	return 0;
+}
+
+int activateKernelModules(SceLoadCoreBootInfo *bootInfo)
+{
+	SceLoadCoreBootServices sysmemServices;
+	SceLoadCoreBootServices loadcoreServices;
+	SceLoadCoreBootModuleInfo *modules;
+	SceSize clearSize = g_memClearSize;
+	int intrFlags;
+
+	if (clearSize == 0)
+		clearSize = 0x88600000 - (u32)bootInfo->memBase;
+	memset(bootInfo->memBase, 0, clearSize);
+	memset(&sysmemServices, 0, sizeof(sysmemServices));
+	memset(&loadcoreServices, 0, sizeof(loadcoreServices));
+	bootInfo->buildVersion = g_buildVersion;
+	modules = bootInfo->modules;
+	sysmemServices.memSize = bootInfo->memSize;
+	sysmemServices.model = bootInfo->model;
+	sysmemServices.memClearSize = g_memClearSize;
+	sysmemServices.bootMode = g_bootArgs[2];
+	sysmemServices.numProtects = bootInfo->numProtects;
+	sysmemServices.configMode = bootInfo->bootMode;
+	sysmemServices.unknown0C = 3;
+	sysmemServices.bootArg0 = bootInfo->bootArg0 | g_bootArgs[0];
+	sysmemServices.bootArg1 = bootInfo->bootArg1 | g_bootArgs[1];
+	sysmemServices.unknown10 = 6;
+	sysmemServices.protects = bootInfo->protects;
+	sysmemServices.initialMaxAllocSize = modules[1].modSize;
+	sysmemServices.memBase = bootInfo->memBase;
+	sysmemServices.handoffCallback = bootHandoffCallback;
+	modules[0].reserved = (s32)bootInfo->memBase;
+	sysmemServices.loadcoreServices = &loadcoreServices;
+	sysmemServices.resumeArg = g_bootArgs[3];
+	intrFlags = sceKernelCpuSuspendIntr();
+	kactivate(bootInfo, 0, &sysmemServices);
+	modules[1].reserved = (s32)loadcoreServices.loadCoreAddr;
+	loadcoreServices.syscallTableSeed = g_bootArgs[3];
+	kactivate(bootInfo, 1, &loadcoreServices);
+	sceKernelCpuResumeIntr(intrFlags);
+	return 0;
+}
+
+/* The host acknowledges each phase before either side reuses the key buffer. */
+void *transferBootKey(void)
+{
+	const u8 *source = g_iplXorKey;
+	u8 *destination = (u8 *)0xBFC00FC0;
+	const u8 *end = source + sizeof(g_iplXorKey);
+
+	do {
+		u32 block[4];
+
+		__builtin_memcpy(block, source, sizeof(block));
+		__builtin_memcpy(destination, block, sizeof(block));
+		source += sizeof(block);
+		destination += sizeof(block);
+	} while (source != end);
+	memset(g_iplXorKey, 0, sizeof(g_iplXorKey));
+	HW(0xABD78000) = 1;
+	while (HW(0xABD78000) != 2)
+		;
+	HW(0xABD78000) = 3;
+	while (HW(0xABD78000) != 0)
+		;
+	return memset((void *)0xBFC00FC0, 0, sizeof(g_iplXorKey));
+}
 
 int boot_main(void *memBase, SceSize memSize, u32 bootArg, u32 bootMode,
 	      u32 bootFlags, u32 resumeArg, u32 model)

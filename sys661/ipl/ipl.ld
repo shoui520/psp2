@@ -15,9 +15,9 @@ SECTIONS
 		haltStubEnd = .;
 		*(.text .text.*)
 		*(.rodata .rodata.*)		/* compiler data: jump tables, literals */
-		ASSERT(. <= 0x8860508c, "IPL code overruns the pinned data at 0x8860508c");
+		ASSERT(. <= DATA_BASE, "IPL code overruns the pinned data");
 	}
-	.data 0x8860508c : {
+	.data DATA_BASE : {
 		KEEP(*(.data.pinned))
 		*(.data .data.* .sdata .sdata.*)
 	}

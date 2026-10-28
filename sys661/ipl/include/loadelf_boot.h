@@ -37,6 +37,8 @@ int checkBootModuleHeader(SceLoadCoreExecFileInfo *execInfo);
 int decryptBootModule(SceLoadCoreExecFileInfo *execInfo, SceSize *newSize);
 SceSize getBootModuleSegmentSpan(const SceLoadCoreExecFileInfo *execInfo,
 			       int enabled);
+int allocateBootModuleMemory(SceLoadCoreExecFileInfo *execInfo, SceSize size,
+			     int enabled, const SceLoadCoreBootServices *services);
 int isBootModuleKl4eCompressed(const SceLoadCoreExecFileInfo *execInfo);
 int decompressBootModule(SceLoadCoreExecFileInfo *execInfo);
 int checkBootElfSegments(const Elf32_Ehdr *elf,
@@ -60,6 +62,10 @@ void clearBootWords(u32 *destination, u32 count);
 void clearBootMemory(u8 *destination, SceSize size);
 void copyBootSegments(const SceLoadCoreExecFileInfo *execInfo,
 		      const SceLoadCoreBootSegments *segments);
+int resizeBootModuleMemory(SceLoadCoreExecFileInfo *execInfo, int enabled,
+			   const SceLoadCoreBootServices *services);
+int loadBootExecutable(u8 *file, SceLoadCoreExecFileInfo *execInfo, int mode,
+		       const SceLoadCoreBootServices *services);
 
 int _loadprx_by_pspbtcnf_bin(SceLoadCoreBootInfo *bootInfo, char *configPath,
 			   u32 bootFlags, u32 bootArg);

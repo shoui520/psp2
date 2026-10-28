@@ -239,6 +239,38 @@ SceSize getBootModuleSegmentSpan(const SceLoadCoreExecFileInfo *execInfo,
 	return maximum - minimum;
 }
 
+int allocateBootModuleMemory(SceLoadCoreExecFileInfo *execInfo, SceSize size,
+			     int enabled,
+			     const SceLoadCoreBootServices *services)
+{
+	SceSize allocSize;
+	SceUID blockId;
+
+	if (enabled == 0) {
+		g_maxAllocSize = services->initialMaxAllocSize;
+		return 0;
+	}
+	if (services->allocPartitionMemory == NULL ||
+	    services->getBlockHeadAddr == NULL ||
+	    services->resizeMemoryBlock == NULL)
+		return -1;
+	allocSize = g_maxAllocSize;
+	if (allocSize < size) {
+		g_maxAllocSize = size;
+		allocSize = size;
+	}
+	if (allocSize == 0)
+		return -1;
+	blockId = services->allocPartitionMemory(1, g_strLoaderCore, 0,
+						 allocSize, 0);
+	if (blockId < 0)
+		return blockId;
+	execInfo->decompressionMemId = blockId;
+	execInfo->maxAllocSize = g_maxAllocSize;
+	execInfo->topAddr = services->getBlockHeadAddr(blockId);
+	return 0;
+}
+
 int isBootModuleKl4eCompressed(const SceLoadCoreExecFileInfo *execInfo)
 {
 	if ((execInfo->isDecrypted & 1) == 0)
@@ -908,4 +940,59 @@ void copyBootSegments(const SceLoadCoreExecFileInfo *execInfo,
 			(u32 *)segments->destination[i], segments->fileSize[i]);
 	if (bssSize != 0)
 		clearBootMemory(bss, bssSize);
+}
+
+int resizeBootModuleMemory(SceLoadCoreExecFileInfo *execInfo, int enabled,
+			   const SceLoadCoreBootServices *services)
+{
+	s32 delta;
+	int result;
+
+	if (enabled == 0 || execInfo->isCompressed == 0)
+		return 0;
+	delta = (s32)(execInfo->largestSegSize - execInfo->maxAllocSize);
+	if (delta > 0)
+		delta = (delta + 255) & ~255;
+	result = services->resizeMemoryBlock(execInfo->decompressionMemId,
+					     0, delta);
+	if (result < 0)
+		return result;
+	execInfo->maxAllocSize = execInfo->largestSegSize;
+	return 0;
+}
+
+int loadBootExecutable(u8 *file, SceLoadCoreExecFileInfo *execInfo, int mode,
+		       const SceLoadCoreBootServices *services)
+{
+	SceLoadCoreBootSegments segments;
+	SceSize newSize;
+	SceSize span;
+	int result;
+
+	if (file == NULL || execInfo == NULL || services == NULL ||
+	    mode < 0 || mode >= 2)
+		return (int)0x800200D2;
+	execInfo->fileBase = file;
+	result = checkBootModuleHeader(execInfo);
+	if (result < 0)
+		return result;
+	span = getBootModuleSegmentSpan(execInfo, mode);
+	result = decryptBootModule(execInfo, &newSize);
+	if (result < 0)
+		return result;
+	result = allocateBootModuleMemory(execInfo, span, mode, services);
+	if (result < 0)
+		return result;
+	result = decompressBootModule(execInfo);
+	if (result < 0)
+		return result;
+	result = checkBootElfModule(execInfo);
+	if (result < 0)
+		return result;
+	result = prepareBootSegments(execInfo, &segments);
+	if (result < 0)
+		return result;
+	copyBootSegments(execInfo, &segments);
+	result = resizeBootModuleMemory(execInfo, mode, services);
+	return result < 0 ? result : 0;
 }
