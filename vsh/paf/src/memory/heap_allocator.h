@@ -78,6 +78,14 @@ size_t HeapAllocatorGetFreeSize(HeapAllocator *self);
 #define HeapAllocatorFreeDebug ScePafMisc_FE016005
 #define HeapAllocatorReallocDebug ScePafMisc_18667637
 #define HeapAllocatorReportMemoryBlocks ScePafMisc_786D314A
+#define HeapAllocatorMallocDebug ScePafMisc_F474D8A9
+#define HeapAllocatorCalloc ScePafMisc_E7AFBC2B
+#define HeapAllocatorCallocDebug ScePafMisc_D3D1F615
+#define HeapAllocatorMemalignDebug ScePafMisc_4D204547
+#define HeapAllocatorTrim ScePafMisc_039D7846
+#define HeapAllocatorUsableSize ScePafMisc_9E07A92C
+#define HeapAllocatorDumpHeapStatus ScePafMisc_344EF0B7
+#define HeapAllocatorDumpHeapInfo ScePafMisc_5C8AD3E0
 
 int HeapAllocatorCheckMemoryBounds(HeapAllocator *self, void *ptr);
 void HeapAllocatorFreeDebug(HeapAllocator *self, void *ptr, const char *filename,
@@ -86,6 +94,18 @@ void *HeapAllocatorReallocDebug(HeapAllocator *self, void *ptr, size_t size,
 			       const char *filename, int32_t lineno, int32_t type);
 int32_t HeapAllocatorReportMemoryBlocks(HeapAllocator *self,
 		int (*callback)(void *, size_t, int, void *), void *userdata);
+void *HeapAllocatorMallocDebug(HeapAllocator *self, size_t size,
+		const char *filename, int32_t lineno, int32_t type);
+void *HeapAllocatorCalloc(HeapAllocator *self, size_t nitems, size_t size);
+void *HeapAllocatorCallocDebug(HeapAllocator *self, size_t nitems, size_t size,
+		const char *filename, int32_t lineno, int32_t type);
+void *HeapAllocatorMemalignDebug(HeapAllocator *self, size_t alignment, size_t size,
+		const char *filename, int32_t lineno, int32_t type);
+void HeapAllocatorTrim(HeapAllocator *self);
+size_t HeapAllocatorUsableSize(HeapAllocator *self, const void *ptr);
+void HeapAllocatorDumpHeapStatus(HeapAllocator *self);
+void HeapAllocatorDumpHeapInfo(HeapAllocator *self, int32_t sort_policy);
+int32_t ScePafMisc_A9D10F39(HeapAllocator *self);
 
 void *scePafMallocWithContext(HeapAllocator *allocator, size_t size);
 void *scePafMallocAlignWithContext(HeapAllocator *allocator, size_t align, size_t size);

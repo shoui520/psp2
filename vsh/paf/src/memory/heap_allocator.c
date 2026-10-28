@@ -73,6 +73,116 @@ int HeapAllocatorCheckMemoryBounds(HeapAllocator *self, void *ptr)
 	return mspace_check_memorybounds(self->m_heap_id, ptr, (unsigned int)self);
 }
 
+void *scePafMallocWithContext(HeapAllocator *self, size_t size)
+{
+	Mutex *mutex = &self->m_mutex;
+	void *result;
+
+	if (size > 0x1fffffff)
+		ScePafStdc_D608246A();
+	MutexLock(mutex);
+	result = mspace_malloc(self->m_heap_id, size, (unsigned int)self);
+	if (!result && !self->m_heap_disable_dbgprint)
+		ScePafStdc_D41FD265();
+	MutexUnlock(mutex);
+	return result;
+}
+
+void *HeapAllocatorMallocDebug(HeapAllocator *self, size_t size,
+		const char *filename, int32_t lineno, int32_t type)
+{
+	return scePafMallocWithContext(self, size);
+}
+
+void *HeapAllocatorCalloc(HeapAllocator *self, size_t nitems, size_t size)
+{
+	size_t fullsz = nitems * size;
+	Mutex *mutex = &self->m_mutex;
+	void *result;
+
+	if (fullsz > 0x1fffffff)
+		ScePafStdc_D608246A();
+	MutexLock(mutex);
+	result = mspace_malloc(self->m_heap_id, fullsz, (unsigned int)self);
+	if (result)
+		sce_paf_memset(result, 0, fullsz);
+	if (!result && !self->m_heap_disable_dbgprint)
+		ScePafStdc_D41FD265();
+	MutexUnlock(mutex);
+	return result;
+}
+
+void *HeapAllocatorCallocDebug(HeapAllocator *self, size_t nitems, size_t size,
+		const char *filename, int32_t lineno, int32_t type)
+{
+	return HeapAllocatorCalloc(self, nitems, size);
+}
+
+void *scePafMallocAlignWithContext(HeapAllocator *self, size_t alignment, size_t size)
+{
+	Mutex *mutex = &self->m_mutex;
+	void *result;
+
+	if (size > 0x1fffffff)
+		ScePafStdc_D608246A();
+	MutexLock(mutex);
+	result = mspace_memalign(self->m_heap_id, alignment, size, (unsigned int)self);
+	if (!result && !self->m_heap_disable_dbgprint)
+		ScePafStdc_D41FD265();
+	MutexUnlock(mutex);
+	return result;
+}
+
+void *HeapAllocatorMemalignDebug(HeapAllocator *self, size_t alignment, size_t size,
+		const char *filename, int32_t lineno, int32_t type)
+{
+	return scePafMallocAlignWithContext(self, alignment, size);
+}
+
+void HeapAllocatorTrim(HeapAllocator *self)
+{
+	Mutex *mutex = &self->m_mutex;
+
+	MutexLock(mutex);
+	mspace_trim(self->m_heap_id, 0);
+	MutexUnlock(mutex);
+}
+
+size_t HeapAllocatorUsableSize(HeapAllocator *self, const void *ptr)
+{
+	Mutex *mutex = &self->m_mutex;
+	size_t size;
+
+	MutexLock(mutex);
+	size = mspace_usable_size(ptr);
+	MutexUnlock(mutex);
+	return size;
+}
+
+void HeapAllocatorDumpHeapStatus(HeapAllocator *self)
+{
+	Mutex *mutex = &self->m_mutex;
+
+	MutexLock(mutex);
+	(void)mspace_mallinfo(self->m_heap_id);
+	MutexUnlock(mutex);
+	ScePafStdc_D41FD265();
+}
+
+void HeapAllocatorDumpHeapInfo(HeapAllocator *self, int32_t sort_policy)
+{
+	HeapAllocatorDumpHeapStatus(self);
+}
+
+int32_t ScePafMisc_A9D10F39(HeapAllocator *self)
+{
+	Mutex *mutex = &self->m_mutex;
+
+	MutexLock(mutex);
+	MutexUnlock(mutex);
+	return 0;
+}
+
 void scePafFreeWithContext(HeapAllocator *self, void *ptr)
 {
 	Mutex *mutex = &self->m_mutex;
