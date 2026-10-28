@@ -19,6 +19,28 @@ typedef struct RWLock {
 	int32_t m_counter;
 } RWLock;
 
+typedef enum MutexOption {
+	MutexOption_None = 0,
+	MutexOption_FIFO = 1,
+	MutexOption_Default = 0
+} MutexOption;
+
+#define MutexConstruct ScePafThread_A5D3F1B5
+#define MutexConstructBase ScePafThread_BC109843
+#define MutexDestroy ScePafThread_AD04A33D
+#define MutexDestroyBase ScePafThread_9BA75E36
+#define MutexLock ScePafThread_4EA3A3D5
+#define MutexUnlock ScePafThread_9100D580
+#define MutexTryLock ScePafThread_E09598ED
+
+Mutex *MutexConstruct(Mutex *self, const char *name, int32_t option);
+Mutex *MutexConstructBase(Mutex *self, const char *name, int32_t option);
+Mutex *MutexDestroy(Mutex *self);
+Mutex *MutexDestroyBase(Mutex *self);
+void MutexLock(Mutex *self);
+void MutexUnlock(Mutex *self);
+unsigned char MutexTryLock(Mutex *self);
+
 #define RWLockConstruct ScePafThread_02C1347F
 #define RWLockConstructBase ScePafThread_1ECE442B
 #define RWLockDestroy ScePafThread_221624F8
@@ -38,13 +60,9 @@ void RWLockLockExclusive(RWLock *self);
 void RWLockUnlockExclusive(RWLock *self);
 
 /* Existing ScePafThread exports, kept under their current link names. */
-Mutex *ScePafThread_A5D3F1B5(Mutex *mutex, const char *name, int option);
-Mutex *ScePafThread_AD04A33D(Mutex *mutex); /* Mutex::~Mutex */
 RMutex *ScePafThread_C4BD9753(RMutex *mutex, const char *name, int option);
 void ScePafThread_F9FFA0BE(RMutex *mutex); /* RMutex::Lock */
 void ScePafThread_95F9C45F(RMutex *mutex); /* RMutex::Unlock */
 void ScePafThread_8CCECAC9(RMutex *mutex); /* RMutex::~RMutex */
-void ScePafThread_4EA3A3D5(Mutex *mutex);  /* Mutex::Lock */
-void ScePafThread_9100D580(Mutex *mutex);  /* Mutex::Unlock */
 
 #endif
