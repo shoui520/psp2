@@ -1,8 +1,8 @@
 #include "uri.h"
 #include "../std/string.h"
+#include "../std/ctype.h"
 
 extern size_t sceClibStrnlen(const char *str, size_t max_len);
-extern int sce_paf_look_ctype_table(int ch);
 extern int sce_paf_tolower(int ch);
 extern int sce_paf_strncasecmp(const char *left, const char *right, size_t len);
 extern char *sce_paf_strchr(const char *str, int ch);

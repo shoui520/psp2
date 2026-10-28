@@ -40,6 +40,7 @@ extern uint16_t PafWStringEmpty;
 void *sce_paf_memset(void *dst, int ch, size_t len);
 size_t sce_paf_strlen(const char *str);
 size_t sce_paf_wcslen(const uint16_t *str);
+uint16_t *sce_paf_wmemchr(const uint16_t *ptr, uint16_t ch, size_t count);
 int sce_paf_swprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format, ...);
 #define sce_paf_vswprintf ScePafStdc_FA5C2193
 int sce_paf_vswprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format,

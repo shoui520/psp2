@@ -3,12 +3,12 @@
 #include "../paf_types.h"
 #include "../std/new.h"
 #include "../std/stdlib.h"
+#include "../std/ctype.h"
 #include <libhttp.h>
 #include <kernel/iofilemgr.h>
 
 extern int sce_paf_strcasecmp(const char *left, const char *right);
 extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
-extern int sce_paf_look_ctype_table(int ch);
 extern int sce_paf_strcmp(const char *left, const char *right);
 extern int sce_paf_snprintf(char *dst, size_t max, const char *format, ...);
 extern int sce_paf_memcmp(const void *left, const void *right, size_t len);

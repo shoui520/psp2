@@ -4,6 +4,19 @@
 #include "stdlib.h"
 #include <libkernel/libkernel.h>
 
+uint16_t *sce_paf_wmemchr(const uint16_t *ptr, uint16_t ch, size_t count)
+{
+	int32_t remaining = count;
+
+	while (remaining > 0) {
+		if (*ptr == ch)
+			return (uint16_t *)ptr;
+		remaining--;
+		ptr++;
+	}
+	return NULL;
+}
+
 size_t sce_paf_wcslen(const uint16_t *str)
 {
 	size_t length = 0;
