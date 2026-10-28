@@ -100,6 +100,41 @@ typedef struct HttpFileIoCall {
 
 typedef char HttpFileIoCallSizeCheck[sizeof(HttpFileIoCall) == 12 ? 1 : -1];
 
+typedef int32_t (*HttpFileReadIoFunction)(HttpFileReader *self, void *buf, size_t nbyte);
+typedef int64_t (*HttpFileSeekIoFunction)(HttpFileReader *self, int64_t offset, int32_t whence);
+
+typedef union HttpFileReadIoMethod {
+	HttpFileReadIoFunction function;
+	uintptr_t vtable_offset;
+} HttpFileReadIoMethod;
+
+typedef union HttpFileSeekIoMethod {
+	HttpFileSeekIoFunction function;
+	uintptr_t vtable_offset;
+} HttpFileSeekIoMethod;
+
+typedef struct HttpFileReadIoCall {
+	HttpFileReader *m_object;
+	HttpFileReadIoMethod m_method;
+	int32_t m_adjustment;
+	void *m_buf;
+	size_t m_nbyte;
+} HttpFileReadIoCall;
+
+typedef struct HttpFileSeekIoCall {
+	HttpFileReader *m_object;
+	HttpFileSeekIoMethod m_method;
+	int32_t m_adjustment;
+	int64_t m_offset;
+	int32_t m_whence;
+} HttpFileSeekIoCall;
+
+typedef char HttpFileReadIoCallSizeCheck[sizeof(HttpFileReadIoCall) == 20 ? 1 : -1];
+typedef char HttpFileReadIoCallBufferOffsetCheck[offsetof(HttpFileReadIoCall, m_buf) == 12 ? 1 : -1];
+typedef char HttpFileSeekIoCallSizeCheck[sizeof(HttpFileSeekIoCall) == 32 ? 1 : -1];
+typedef char HttpFileSeekIoCallOffsetOffsetCheck[offsetof(HttpFileSeekIoCall, m_offset) == 16 ? 1 : -1];
+typedef char HttpFileSeekIoCallWhenceOffsetCheck[offsetof(HttpFileSeekIoCall, m_whence) == 24 ? 1 : -1];
+
 /* The I/O thread owns the separately allocated member-call object. */
 typedef struct HttpFileIoThread {
 	Thread base;
@@ -119,6 +154,15 @@ void HttpFileIoThreadDeleteBase(Thread *self);
 Thread *HttpFileIoThreadDestroy(Thread *self);
 void HttpFileIoThreadDelete(Thread *self);
 void HttpFileIoThreadEntryFunction(Thread *self);
+
+extern const ThreadClass httpFileReadIoThreadClass;
+extern const ThreadClass httpFileSeekIoThreadClass;
+Thread *HttpFileReadIoThreadDestroy(Thread *self);
+void HttpFileReadIoThreadDelete(Thread *self);
+void HttpFileReadIoThreadEntryFunction(Thread *self);
+Thread *HttpFileSeekIoThreadDestroy(Thread *self);
+void HttpFileSeekIoThreadDelete(Thread *self);
+void HttpFileSeekIoThreadEntryFunction(Thread *self);
 
 #define HttpFileCompleteAsync ScePafMisc_C098F659
 int32_t HttpFileCompleteAsync(HttpFile *self, int64_t *result);
