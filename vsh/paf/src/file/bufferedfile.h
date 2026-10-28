@@ -17,22 +17,26 @@ typedef struct BufferedFileState {
 } BufferedFileState;
 
 typedef struct BufferedFile {
-	File base;
-	FileSharedPtr m_file;
+	FileHolder base;
 	RMutex lock_mutex;
 	BufferSharedPtr m_buffer;
 	BufferedFileState *m_state;
 } BufferedFile;
 
 typedef struct BufferedFileVTable {
-	FileVTable base;
-	void (*SetFile)(FileSharedPtr *result, BufferedFile *self,
-			FileSharedPtr *file);
-	void (*ClearFile)(FileSharedPtr *result, BufferedFile *self);
-	void (*GetFile)(FileSharedPtr *result, const BufferedFile *self);
+	FileHolderVTable base;
 	int32_t (*Open)(BufferedFile *self, const FileOpenArg *param,
 			BufferSharedPtr *buffer);
 } BufferedFileVTable;
+
+typedef struct BufferedFileClass {
+	int offset_to_top;
+	const void *type_info;
+	BufferedFileVTable methods;
+} BufferedFileClass;
+
+#define bufferedFileClass ScePafMisc_1DBE2F67
+extern const BufferedFileClass bufferedFileClass;
 
 typedef char BufferedFileStateSizeCheck[sizeof(BufferedFileState) == 56 ? 1 : -1];
 typedef char BufferedFileSizeCheck[sizeof(BufferedFile) == 64 ? 1 : -1];
@@ -40,6 +44,7 @@ typedef char BufferedFileMutexOffsetCheck[offsetof(BufferedFile, lock_mutex) == 
 typedef char BufferedFileBufferOffsetCheck[offsetof(BufferedFile, m_buffer) == 48 ? 1 : -1];
 typedef char BufferedFileStateOffsetCheck[offsetof(BufferedFile, m_state) == 56 ? 1 : -1];
 typedef char BufferedFileVTableSizeCheck[sizeof(BufferedFileVTable) == 112 ? 1 : -1];
+typedef char BufferedFileClassSizeCheck[sizeof(BufferedFileClass) == 120 ? 1 : -1];
 
 #define BufferedFileGetFileType ScePafMisc_AD71B82B
 #define BufferedFileGetCapability ScePafMisc_4CE3C136
@@ -60,12 +65,27 @@ typedef char BufferedFileVTableSizeCheck[sizeof(BufferedFileVTable) == 112 ? 1 :
 #define BufferedFileFlushAsync ScePafMisc_AD99F77E
 #define BufferedFileWaitAsync ScePafMisc_DDC527B9
 #define BufferedFilePollAsync ScePafMisc_CD57D018
+#define BufferedFileConstruct ScePafMisc_0990CC86
+#define BufferedFileConstructBase ScePafMisc_61353A41
+#define BufferedFileDestroy ScePafMisc_CC870760
+#define BufferedFileDelete ScePafMisc_BDBEE99C
+#define BufferedFileDestroyBase ScePafMisc_6A3E8E69
+#define BufferedFileSetFile ScePafMisc_9311E7BB
+#define BufferedFileOpenBuffer ScePafMisc_86A764CB
 
 #define BufferedFileOpen ScePafMisc_228686A8
 
 void BufferedFileOpen(FileSharedPtr *result, FileSharedPtr *file,
 		      int32_t *error, BufferSharedPtr *buffer);
 void BufferedFileCreateDefaultBuffer(BufferSharedPtr *result);
+BufferedFile *BufferedFileConstruct(BufferedFile *self);
+BufferedFile *BufferedFileConstructBase(BufferedFile *self);
+BufferedFile *BufferedFileDestroy(BufferedFile *self);
+void BufferedFileDelete(BufferedFile *self);
+BufferedFile *BufferedFileDestroyBase(BufferedFile *self);
+void BufferedFileSetFile(FileSharedPtr *result, FileHolder *self, FileSharedPtr *file);
+int32_t BufferedFileOpenBuffer(BufferedFile *self, const FileOpenArg *param,
+			       BufferSharedPtr *buffer);
 int64_t BufferedFileGetFileSize(const BufferedFile *self);
 int32_t BufferedFileGetFileType(const BufferedFile *self);
 int32_t BufferedFileGetCapability(const BufferedFile *self);

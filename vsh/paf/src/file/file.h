@@ -53,12 +53,56 @@ typedef struct FileSharedPtr {
 	FileRefCounter *m_ref_counter;
 } FileSharedPtr;
 
+/* The private shared-file base used by BufferedFile. */
+typedef struct FileHolder {
+	File base;
+	FileSharedPtr m_file;
+} FileHolder;
+
+typedef struct FileHolderVTable {
+	FileVTable base;
+	void (*SetFile)(FileSharedPtr *result, FileHolder *self, FileSharedPtr *file);
+	void (*ClearFile)(FileSharedPtr *result, FileHolder *self);
+	void (*GetFile)(FileSharedPtr *result, const FileHolder *self);
+} FileHolderVTable;
+
+typedef struct FileClass {
+	int offset_to_top;
+	const void *type_info;
+	FileVTable methods;
+} FileClass;
+
+typedef struct FileHolderClass {
+	int offset_to_top;
+	const void *type_info;
+	FileHolderVTable methods;
+} FileHolderClass;
+
+extern const FileClass fileClass;
+extern const FileHolderClass fileHolderClass;
+
+int32_t FileGetstat(File *self, FileStat *stat);
+int32_t FileSetPriority(File *self, int32_t priority);
+File *FileDestroy(File *self);
+void FileDelete(File *self);
+int32_t FileHolderGetstat(FileHolder *self, FileStat *stat);
+int32_t FileHolderSetPriority(FileHolder *self, int32_t priority);
+void FileHolderSetFile(FileSharedPtr *result, FileHolder *self, FileSharedPtr *file);
+void FileHolderClearFile(FileSharedPtr *result, FileHolder *self);
+void FileHolderGetFile(FileSharedPtr *result, const FileHolder *self);
+FileHolder *FileHolderDestroy(FileHolder *self);
+void FileHolderDelete(FileHolder *self);
+void FileDefaultDelete(File *file);
+
 typedef char FileSizeCheck[sizeof(File) == 4 ? 1 : -1];
 typedef char FileVTableSizeCheck[sizeof(FileVTable) == 96 ? 1 : -1];
 typedef char FileReadOffsetCheck[offsetof(FileVTable, Read) == 40 ? 1 : -1];
 typedef char FileSeekOffsetCheck[offsetof(FileVTable, Seek) == 56 ? 1 : -1];
 typedef char FileRefCounterSizeCheck[sizeof(FileRefCounter) == 16 ? 1 : -1];
 typedef char FileSharedPtrSizeCheck[sizeof(FileSharedPtr) == 8 ? 1 : -1];
+typedef char FileHolderSizeCheck[sizeof(FileHolder) == 12 ? 1 : -1];
+typedef char FileClassSizeCheck[sizeof(FileClass) == 104 ? 1 : -1];
+typedef char FileHolderClassSizeCheck[sizeof(FileHolderClass) == 116 ? 1 : -1];
 
 static inline __attribute__((always_inline))
 void FileSharedPtrCopy(FileSharedPtr *self, const FileSharedPtr *src)
