@@ -15,12 +15,6 @@
 
 #define DRFP_CST_TIMES		(SCE_CST_CT | SCE_CST_AT | SCE_CST_MT)
 
-/* the lookup's path (Iofilemgr's VfsLookupPath); the host gets the element */
-typedef struct DrfpLookupPath {
-	SceVfsPath path;
-	const char *elem;
-} DrfpLookupPath;
-
 /* SCE_DEVCTL 0x5400 (translate path) arguments */
 typedef struct DrfpTranslateArg {
 	const char *base;
@@ -371,7 +365,7 @@ static int dev_drfp_vop_lookup(SceVopLookupArgs *argp)
 	int ret;
 
 	drfpStatZero(&st);
-	ret = sceDeci4pDrfpStat(((const DrfpLookupPath *)argp->path)->elem, &st);
+	ret = sceDeci4pDrfpStat(argp->path->elem, &st);
 	if (ret != 0)
 		return ret;
 	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mntVfsInf->defaultVops,
