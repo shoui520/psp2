@@ -65,6 +65,40 @@ float TimerDoFuncCustomExpoOut(float rate, const float *param)
 	return 1.0f - TimerDoFuncCustomExpoIn(1.0f - rate, param);
 }
 
+float TimerDoFuncBounceIn(float rate)
+{
+	float difference;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	difference = 1.0f - rate;
+	if (rate > 0.636364f)
+		return (difference * -7.5625f) * difference + 1.0f;
+	if (rate > 0.272727f) {
+		difference -= 0.545454f;
+		return (difference * -7.5625f) * difference + 0.25f;
+	}
+	if (rate > 0.090909f) {
+		difference -= 0.818182f;
+		return (difference * -7.5625f) * difference + 0.0625f;
+	}
+	difference -= 0.954545f;
+	return (difference * -7.5625f) * difference + 0.015625f;
+}
+
+float TimerDoFuncBounceInOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return TimerDoFuncBounceIn(rate * 2.0f) * 0.5f;
+	return (1.0f - TimerDoFuncBounceIn(2.0f - rate * 2.0f)) * 0.5f + 0.5f;
+}
+
 float TimerDoFuncExpoIn(float rate)
 {
 	float next, current, fraction, result;
@@ -270,6 +304,15 @@ float TimerDoFuncQuadInOut(float rate)
 	if (rate < 0.5f)
 		return TimerDoFuncQuadIn(rate * 2.0f) * 0.5f;
 	return (1.0f - TimerDoFuncQuadIn(2.0f - rate * 2.0f)) * 0.5f + 0.5f;
+}
+
+float TimerDoFuncBounceOut(float rate)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFuncBounceIn(1.0f - rate);
 }
 
 float TimerDoFuncElasticOut(float rate)

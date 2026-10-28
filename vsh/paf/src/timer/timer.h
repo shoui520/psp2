@@ -111,6 +111,13 @@ float TimerDoFuncElasticIn(float rate);
 float TimerDoFuncElasticInOut(float rate);
 float TimerDoFuncElasticOut(float rate);
 
+#define TimerDoFuncBounceIn ScePafMisc_AE6719F6
+#define TimerDoFuncBounceInOut ScePafMisc_2DA1C059
+#define TimerDoFuncBounceOut ScePafMisc_27705AD9
+float TimerDoFuncBounceIn(float rate);
+float TimerDoFuncBounceInOut(float rate);
+float TimerDoFuncBounceOut(float rate);
+
 #define TimerDoFuncQuintIn ScePafMisc_3DB2BC0D
 #define TimerDoFuncQuartIn ScePafMisc_F4849FCC
 #define TimerDoFuncCubicIn ScePafMisc_C65A563E
