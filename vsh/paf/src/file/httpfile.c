@@ -2,10 +2,106 @@
 #include "httpfile_reader.h"
 #include "../paf_types.h"
 #include "../std/new.h"
+#include <libhttp.h>
+#include <kernel/iofilemgr.h>
 
 extern int sce_paf_strcasecmp(const char *left, const char *right);
 extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
 extern int sce_paf_look_ctype_table(int ch);
+
+static unsigned char httpFileHttpReaderSeekBuffer[1024];
+
+int32_t HttpFileHttpReaderRead(HttpFileHttpReader *self, void *buf, size_t nbyte)
+{
+	int32_t request_id;
+	int32_t result;
+	int32_t error;
+	uint32_t detail;
+
+	RWLockLockShared(&self->m_lock);
+	request_id = self->m_request_id;
+	RWLockUnlockShared(&self->m_lock);
+	result = sceHttpReadData(request_id, buf, nbyte);
+	if (result == SCE_HTTP_ERROR_SSL) {
+		self->base.m_result[1] = sceHttpsGetSslError(request_id, &error,
+							 &detail);
+		if (!self->base.m_result[1]) {
+			self->base.m_result[1] = error;
+			self->base.m_result[2] = detail;
+		}
+	} else {
+		self->base.m_result[1] = 0;
+		self->base.m_result[2] = 0;
+	}
+	if (result >= 0)
+		self->m_position = (uint64_t)self->m_position + result;
+	return result;
+}
+
+int64_t HttpFileHttpReaderSeek(HttpFileHttpReader *self, int64_t offset,
+			       int32_t whence)
+{
+	HttpFileReader *reader = &self->base;
+	int64_t remaining = offset;
+	int32_t result;
+
+	if (whence == SCE_SEEK_END) {
+		int64_t length = self->m_content_length;
+
+		if (length < 0)
+			return SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
+		remaining = (uint64_t)offset + length - self->m_position;
+	} else if (whence == SCE_SEEK_SET) {
+		remaining = (uint64_t)offset - self->m_position;
+	}
+	if (remaining < 0) {
+		int64_t position = (uint64_t)remaining + self->m_position;
+
+		if (position < 0)
+			return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
+		reader->vtable->Close(reader);
+		result = reader->vtable->Open(reader);
+		if (result)
+			return result;
+		return reader->vtable->Seek(reader, position, SCE_SEEK_SET);
+	}
+	while (remaining > 0) {
+		size_t size = sizeof(httpFileHttpReaderSeekBuffer);
+
+		if (remaining < size)
+			size = (size_t)remaining;
+		result = reader->vtable->Read(reader,
+					   httpFileHttpReaderSeekBuffer, size);
+		if (result < 0)
+			return result;
+		if (!result)
+			return self->m_position;
+		remaining = (uint64_t)remaining - result;
+	}
+	return self->m_position;
+}
+
+int32_t HttpFileHttpReaderAbort(HttpFileHttpReader *self)
+{
+	int32_t request_id;
+	int32_t result;
+
+	RWLockLockExclusive(&self->m_lock);
+	request_id = self->m_request_id;
+	self->m_aborted = 1;
+	result = sceHttpAbortRequest(request_id);
+	RWLockUnlockExclusive(&self->m_lock);
+	return result;
+}
+
+int64_t HttpFileHttpReaderGetFileSize(HttpFileHttpReader *self)
+{
+	int64_t length = self->m_content_length;
+
+	if (length >= 0)
+		return length;
+	return SCE_PAF_ERROR_FILE_UNKNOWN_SIZE;
+}
 
 const FileClass httpFileClass = {
 	0, NULL, {

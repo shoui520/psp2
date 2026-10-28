@@ -190,6 +190,35 @@ typedef char HttpFileReaderResultOffsetCheck[offsetof(HttpFileReader, m_result) 
 typedef char HttpFileReaderVTableSizeCheck[sizeof(HttpFileReaderVTable) == 40 ? 1 : -1];
 typedef char HttpFileReaderClassSizeCheck[sizeof(HttpFileReaderClass) == 48 ? 1 : -1];
 
+typedef struct HttpFileReaderConnection HttpFileReaderConnection;
+typedef struct HttpFileReaderConnectionRefCounter HttpFileReaderConnectionRefCounter;
+
+typedef struct HttpFileReaderConnectionSharedPtr {
+	HttpFileReaderConnection *m_ptr;
+	HttpFileReaderConnectionRefCounter *m_ref_counter;
+} HttpFileReaderConnectionSharedPtr;
+
+typedef struct HttpFileHttpReader {
+	HttpFileReader base;
+	HttpFileReaderConnectionSharedPtr m_connection;
+	int32_t m_request_id;
+	int64_t m_position;
+	int64_t m_content_length;
+	RWLock m_lock;
+	unsigned char m_aborted;
+} HttpFileHttpReader;
+
+typedef char HttpFileHttpReaderSizeCheck[sizeof(HttpFileHttpReader) == 104 ? 1 : -1];
+typedef char HttpFileHttpReaderPositionOffsetCheck[offsetof(HttpFileHttpReader, m_position) == 72 ? 1 : -1];
+typedef char HttpFileHttpReaderLockOffsetCheck[offsetof(HttpFileHttpReader, m_lock) == 88 ? 1 : -1];
+typedef char HttpFileHttpReaderAbortedOffsetCheck[offsetof(HttpFileHttpReader, m_aborted) == 96 ? 1 : -1];
+
+int32_t HttpFileHttpReaderRead(HttpFileHttpReader *self, void *buf, size_t nbyte);
+int64_t HttpFileHttpReaderSeek(HttpFileHttpReader *self, int64_t offset,
+			       int32_t whence);
+int32_t HttpFileHttpReaderAbort(HttpFileHttpReader *self);
+int64_t HttpFileHttpReaderGetFileSize(HttpFileHttpReader *self);
+
 const char *HttpFileHeaderMapGet(const PafMap *headers, const char *name,
 			       int32_t index);
 
