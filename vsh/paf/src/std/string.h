@@ -23,6 +23,8 @@ typedef char PafWStringSizeCheck[sizeof(PafWString) == 12 ? 1 : -1];
 extern char PafStringEmpty;
 extern uint16_t PafWStringEmpty;
 
+void *sce_paf_memset(void *dst, int ch, size_t len);
+
 PafWString *PafWStringErase(PafWString *self, size_t pos, size_t len);
 PafWString *PafWStringAppend(PafWString *self, size_t len, uint16_t value);
 PafWString *PafWStringAssign(PafWString *self, const uint16_t *src, size_t len);

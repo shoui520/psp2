@@ -36,7 +36,17 @@ struct LocalFileImpl {
 	const LocalFileImplVTable *vtable;
 };
 
+typedef struct LocalFileImplClass {
+	int offset_to_top;
+	const void *type_info;
+	LocalFileImplVTable methods;
+} LocalFileImplClass;
+
+LocalFileImpl *LocalFileImplDestroy(LocalFileImpl *self);
+void LocalFileImplDelete(LocalFileImpl *self);
+
 typedef char LocalFileImplSizeCheck[sizeof(LocalFileImpl) == 4 ? 1 : -1];
 typedef char LocalFileImplVTableSizeCheck[sizeof(LocalFileImplVTable) == 88 ? 1 : -1];
+typedef char LocalFileImplClassSizeCheck[sizeof(LocalFileImplClass) == 96 ? 1 : -1];
 
 #endif
