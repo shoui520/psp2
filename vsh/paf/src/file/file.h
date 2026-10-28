@@ -10,6 +10,13 @@ typedef struct File File;
 typedef struct FileOpenArg FileOpenArg;
 typedef struct FileStat FileStat;
 
+typedef enum FileType {
+	Type_None = 0,
+	Type_Local = 1,
+	Type_Mem = 2,
+	Type_Http = 3
+} FileType;
+
 typedef struct FileVTable {
 	int32_t (*GetFileType)(const File *self);
 	int32_t (*GetCapability)(const File *self);
