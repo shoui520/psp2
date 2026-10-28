@@ -329,7 +329,7 @@ int sceDbgSdioClose(SceUInt32 index)
 }
 
 /* name unknown: whether DMA of this virtual address needs no L2 coherency */
-static int isUncached(const void *ptr)
+static inline __attribute__((always_inline)) int isUncached(const void *ptr)
 {
 	SceUIntPtr addr = (SceUIntPtr)ptr;
 
@@ -338,7 +338,7 @@ static int isUncached(const void *ptr)
 	return addr - 0x20000000 < 0x20000000 || addr - 0x60000000 < 0x21000000;
 }
 
-static int executeDma(SceKernelDmaOpId op, SceKernelDmaOpTag *chain, SceUInt32 coherency,
+static inline __attribute__((always_inline)) int executeDma(SceKernelDmaOpId op, SceKernelDmaOpTag *chain, SceUInt32 coherency,
 		      SceKernelDmaOpFlag flag)
 {
 	SceKernelDmaOpChainParam param = { sizeof(param), coherency, 0 };
@@ -363,7 +363,7 @@ static int executeDma(SceKernelDmaOpId op, SceKernelDmaOpTag *chain, SceUInt32 c
 }
 
 /* name unknown: wait for a host acknowledgement; poll while suspending */
-static void waitStatus(DbgSdioChannel *c, SceUInt32 bit)
+static inline __attribute__((always_inline)) void waitStatus(DbgSdioChannel *c, SceUInt32 bit)
 {
 	while (!s_sdio.suspended) {
 		if (*c->status & bit)
