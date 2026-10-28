@@ -2,6 +2,7 @@
 #include "httpfile_reader.h"
 #include "../paf_types.h"
 #include "../std/new.h"
+#include "../std/stdlib.h"
 #include <libhttp.h>
 #include <kernel/iofilemgr.h>
 
@@ -668,14 +669,9 @@ PafMap *HttpFileHeaderMapClear(PafMap *self)
 	return NULL;
 }
 
-int32_t HttpFileDeleteReader(HttpFile *self)
+static inline __attribute__((always_inline))
+void HttpFileReaderParamDelete(HttpFileReaderParam *param)
 {
-	HttpFileReaderParam *param;
-
-	if (self->m_http_reader)
-		self->m_http_reader->vtable->Delete(self->m_http_reader);
-	param = self->m_reader_param;
-	self->m_http_reader = NULL;
 	if (param) {
 		HttpFileReaderContextSharedPtrRelease(&param->context);
 		BufferSharedPtrRelease(&param->msg_body);
@@ -693,6 +689,17 @@ int32_t HttpFileDeleteReader(HttpFile *self)
 		PafStringDestroy(&param->scheme);
 		ScePafStdc_1B77082E(param);
 	}
+}
+
+int32_t HttpFileDeleteReader(HttpFile *self)
+{
+	HttpFileReaderParam *param;
+
+	if (self->m_http_reader)
+		self->m_http_reader->vtable->Delete(self->m_http_reader);
+	param = self->m_reader_param;
+	self->m_http_reader = NULL;
+	HttpFileReaderParamDelete(param);
 	self->m_reader_param = NULL;
 	return 0;
 }
@@ -1906,6 +1913,23 @@ void HttpFileHeaderMapInitialize(PafMap *self)
 	}
 }
 
+static inline __attribute__((always_inline))
+void HttpFileReaderParamInitialize(HttpFileReaderParam *self)
+{
+	PafStringInitialize(&self->scheme);
+	PafStringInitialize(&self->host);
+	PafStringInitialize(&self->method);
+	PafStringInitialize(&self->version);
+	PafStringInitialize(&self->uri);
+	PafStringInitialize(&self->user);
+	PafStringInitialize(&self->passwd);
+	HttpFileHeaderMapInitialize(&self->header);
+	self->msg_body.m_ptr = NULL;
+	self->msg_body.m_ref_counter = NULL;
+	self->context.m_ptr = NULL;
+	self->context.m_ref_counter = NULL;
+}
+
 const HttpFileReaderClass httpFileHttpReaderClass = {
 	0, NULL, {
 		(HttpFileReader *(*)(HttpFileReader *))HttpFileHttpReaderDestroy,
@@ -2736,6 +2760,115 @@ int32_t HttpFileRangeReaderFormatRange(HttpFileRangeReader *self, char *dst,
 		return 0;
 	sce_paf_snprintf(dst, max, "bytes=%lld-", self->m_position);
 	return 1;
+}
+
+int32_t HttpFileCreateReader(HttpFile *self, const HttpFileOpenArg *arg)
+{
+	uint32_t range = arg->open_flag & (ENABLE_RANGE_GET | ENABLE_HALF_RANGE_GET);
+	HttpFileReaderParam *param = ScePafStdc_FC5CD359(sizeof(*param));
+	HttpFileReaderConfigSharedPtr config;
+	HttpFileReaderConfigSharedPtr temporary;
+	PafMap *headers;
+	const void *body;
+	int32_t count;
+	int32_t gzip;
+	uint32_t template_option;
+	size_t response_header_max_size;
+	int32_t result = 0;
+
+	if (param)
+		HttpFileReaderParamInitialize(param);
+	self->m_reader_param = param;
+	if (!param)
+		return SCE_PAF_ERROR_FILE_NO_MEMORY;
+	body = arg->msg_body;
+	if (body && arg->msg_body_len) {
+		BufferSharedPtr buffer;
+
+		if (range) {
+			void *data = sce_paf_malloc(arg->msg_body_len);
+
+			if (!data) {
+				HttpFileReaderParamDelete(self->m_reader_param);
+				self->m_reader_param = NULL;
+				return SCE_PAF_ERROR_FILE_NO_MEMORY;
+			}
+			sce_paf_memcpy(data, arg->msg_body, arg->msg_body_len);
+			param = self->m_reader_param;
+			HeapAllocBufferCreate(&buffer, data, arg->msg_body_len, NULL);
+		} else {
+			UnmanagedConstBufferCreate(&buffer, body, arg->msg_body_len);
+		}
+		BufferSharedPtrAssign(&param->msg_body, &buffer);
+		BufferSharedPtrRelease(&buffer);
+	}
+	count = (int32_t)arg->header._size;
+	headers = &self->m_reader_param->header;
+	for (int32_t i = 0; i < count; i++)
+		HttpFileHeaderMapParseLine(headers, arg->header._data[i].ptr,
+					   arg->header._data[i].count);
+	if (!HttpFileHeaderMapGet(headers, "UserAgent", 0) && arg->user_agent.count)
+		HttpFileHeaderMapSet(headers, "UserAgent", arg->user_agent.ptr, 1);
+	if (!HttpFileHeaderMapGet(headers, "Referer", 0) && arg->referer.count)
+		HttpFileHeaderMapSet(headers, "Referer", arg->referer.ptr, 1);
+	PafStringCopy(&self->m_reader_param->scheme, &arg->scheme);
+	PafStringCopy(&self->m_reader_param->host, &arg->host);
+	param = self->m_reader_param;
+	param->port = arg->port;
+	PafStringCopy(&param->method, &arg->method);
+	PafStringCopy(&self->m_reader_param->version, &arg->version);
+	PafStringCopy(&self->m_reader_param->uri, &arg->uri);
+	PafStringCopy(&self->m_reader_param->user, &arg->user);
+	PafStringCopy(&self->m_reader_param->passwd, &arg->passwd);
+	param = self->m_reader_param;
+	gzip = arg->accept_encoding_gzip;
+	param->open_flag = arg->open_flag;
+	param->https_flag = arg->https_flag;
+	param->timeout.resolve_timeout = arg->timeout.resolve_timeout;
+	param->timeout.connect_timeout = arg->timeout.connect_timeout;
+	param->timeout.send_timeout = arg->timeout.send_timeout;
+	template_option = arg->template_option;
+	param->timeout.recv_timeout = arg->timeout.recv_timeout;
+	param->accept_encoding_gzip = gzip;
+	response_header_max_size = arg->response_header_max_size;
+	param->template_option = template_option;
+	param->response_header_max_size = response_header_max_size;
+	HttpFileReaderContextSharedPtrAssign(&param->context, &self->m_reader_context);
+	HttpFileReaderConfigCreate(&config, self->m_reader_param);
+	if (range) {
+		HttpFileRangeReader *reader = ScePafStdc_FC5CD359(sizeof(*reader));
+
+		if (reader) {
+			temporary = config;
+			if (temporary.m_ptr)
+				sceAtomicIncrement32AcqRel(&temporary.m_ref_counter->m_counter);
+			reader = HttpFileRangeReaderConstruct(reader, &temporary);
+			self->m_http_reader = &reader->base;
+			HttpFileReaderConfigSharedPtrRelease(&temporary);
+		} else {
+			self->m_http_reader = NULL;
+		}
+	} else {
+		HttpFileHttpReader *reader = ScePafStdc_FC5CD359(sizeof(*reader));
+
+		if (reader) {
+			temporary = config;
+			if (temporary.m_ptr)
+				sceAtomicIncrement32AcqRel(&temporary.m_ref_counter->m_counter);
+			reader = HttpFileHttpReaderConstruct(reader, &temporary);
+			self->m_http_reader = &reader->base;
+			HttpFileReaderConfigSharedPtrRelease(&temporary);
+		} else {
+			self->m_http_reader = NULL;
+		}
+	}
+	if (!self->m_http_reader) {
+		HttpFileReaderParamDelete(self->m_reader_param);
+		self->m_reader_param = NULL;
+		result = SCE_PAF_ERROR_FILE_NO_MEMORY;
+	}
+	HttpFileReaderConfigSharedPtrRelease(&config);
+	return result;
 }
 
 void HttpFileReaderConfigClone(HttpFileReaderConfigSharedPtr *result,

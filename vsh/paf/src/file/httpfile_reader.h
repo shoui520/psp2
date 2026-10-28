@@ -81,6 +81,7 @@ HttpFileHeaderMapNode *HttpFileHeaderMapCopyNodes(PafMap *self,
 					      HttpFileHeaderMapNode *parent,
 					      const HttpFileHeaderMapNode *src);
 int32_t HttpFileDeleteReader(HttpFile *self);
+int32_t HttpFileCreateReader(HttpFile *self, const HttpFileOpenArg *arg);
 
 typedef struct HttpFileReaderConfig HttpFileReaderConfig;
 typedef struct HttpFileReaderConfigRefCounter HttpFileReaderConfigRefCounter;
