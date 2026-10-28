@@ -1020,3 +1020,52 @@ int _sceSblGcAuthMgrAdhocBB160BroadCastDecrypt(GcAuthAdhocContext160 *context,
 	}
 	return result;
 }
+
+int _sceSblGcAuthMgrPsmactCreateC1(unsigned char mode,
+		GcAuthPsmactChallenge *output, GcAuthPsmactRandomRecord *random,
+		const SceSize *sizes)
+{
+	GcAuthPsmactRandomRecord *randomCopy;
+	SceSize size[2];
+	int result;
+	int copy;
+
+	result = sceKernelCopyFromUser(size, sizes, sizeof(size));
+	if (result < 0)
+		return result;
+	if (random == NULL)
+		return GcAuthPsmactBeginActivationWithStack(mode, output, NULL);
+	if (size[0] > sizeof(*randomCopy))
+		return SCE_KERNEL_ERROR_NO_MEMORY;
+	randomCopy = __builtin_alloca(sizeof(*randomCopy));
+	memset(randomCopy, 0, sizeof(*randomCopy));
+	result = GcAuthPsmactBeginActivationWithStack(mode, output, randomCopy);
+	copy = sceKernelCopyToUser(random, randomCopy, size[0]);
+	if (copy < 0)
+		return copy;
+	return result;
+}
+
+int _sceSblGcAuthMgrPsmactVerifyR1(const GcAuthPsmactActivation *activation,
+		const GcAuthPsmactRandomRecord *random,
+		GcAuthPsmactEncryptedActivation *encryptedActivation, const SceSize *sizes)
+{
+	GcAuthPsmactRandomRecord *randomCopy;
+	SceSize size[2];
+	int result;
+
+	result = sceKernelCopyFromUser(size, sizes, sizeof(size));
+	if (result < 0)
+		return result;
+	if (random != NULL) {
+		if (size[0] > sizeof(*randomCopy))
+			return SCE_KERNEL_ERROR_NO_MEMORY;
+		randomCopy = __builtin_alloca(sizeof(*randomCopy));
+		result = sceKernelCopyFromUser(randomCopy, random, size[0]);
+		if (result < 0)
+			return result;
+		random = randomCopy;
+	}
+	return GcAuthPsmactApplyActivationWithStack(activation, random,
+		encryptedActivation);
+}

@@ -503,3 +503,8 @@ int GcAuthPcactBeginActivationWithStack(unsigned int mode,
 		const unsigned int *entropy, GcAuthPcactEncryptedChallenge *output);
 int GcAuthPcactApplyActivationWithStack(const GcAuthPcactActivationBundle *activation,
 		unsigned int size);
+int GcAuthPsmactBeginActivationWithStack(unsigned char mode,
+		GcAuthPsmactChallenge *output, GcAuthPsmactRandomRecord *random);
+int GcAuthPsmactApplyActivationWithStack(const GcAuthPsmactActivation *activation,
+		const GcAuthPsmactRandomRecord *random,
+		GcAuthPsmactEncryptedActivation *encryptedActivation);
