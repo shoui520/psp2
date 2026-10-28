@@ -3,6 +3,8 @@
 #include "../paf_types.h"
 #include "../versatileparam/idparam.h"
 
+extern int sce_paf_strcmp(const char *left, const char *right);
+
 char *ResourceObjGetFileName(const ResourceObj *self)
 {
 	return self->filename.ptr;
@@ -328,4 +330,111 @@ int32_t ResourceObjGetModelFromBufferElement(const ResourceObj *self, const Cxml
 	if (ret)
 		return ret;
 	return ResourceObjGetModelFromBufferHash(self, value, addr, size, type);
+}
+
+uint32_t ResourceObjGetTextureType(const ResourceObj *self, const char *type)
+{
+	if (!sce_paf_strcmp(type, "texture/png"))
+		return TextureType_Png;
+	if (!sce_paf_strcmp(type, "texture/jpg"))
+		return TextureType_Jpg;
+	if (!sce_paf_strcmp(type, "texture/tif"))
+		return TextureType_Tif;
+	if (!sce_paf_strcmp(type, "texture/gif"))
+		return TextureType_Gif;
+	if (!sce_paf_strcmp(type, "texture/bmp"))
+		return TextureType_Bmp;
+	if (!sce_paf_strcmp(type, "texture/gim"))
+		return TextureType_Gim;
+	if (!sce_paf_strcmp(type, "texture/dds"))
+		return TextureType_Dds;
+	if (!sce_paf_strcmp(type, "texture/gxt"))
+		return TextureType_Gxt;
+	return (uint32_t)TextureType_Unknown;
+}
+
+int32_t ResourceObjGetTextureFromFileElement(const ResourceObj *self, const CxmlElement *elm,
+					   CxmlFile *src, size_t *size, uint32_t *type)
+{
+	const char *format;
+	uint32_t len;
+	int32_t ret = CxmlUtilGetFile(elm, "src", src);
+
+	if (ret)
+		return ret;
+	*size = src->size;
+	CxmlUtilGetString(elm, "type", &format, &len);
+	*type = ResourceObjGetTextureType(self, format);
+	return SCE_PAF_OK;
+}
+
+int32_t ResourceObjGetTextureFromFileHash(const ResourceObj *self, uint32_t idhash,
+					CxmlFile *src, size_t *size, uint32_t *type)
+{
+	CxmlElement table, elm;
+
+	ResourceObjGetTableElement(&table, self, TableType_Texture);
+	if (!table.doc || table.offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	CxmlUtilFindChildElementByIDHash(&elm, &table, "texture", "id", idhash);
+	if (!elm.doc || elm.offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	table = elm;
+	return ResourceObjGetTextureFromFileElement(self, &table, src, size, type);
+}
+
+int32_t ResourceObjGetTextureFromFile(const ResourceObj *self, const char *id,
+				    CxmlFile *src, size_t *size, uint32_t *type)
+{
+	IDParam idparam;
+	int32_t ret;
+
+	IDParamConstructFromString(&idparam, id);
+	ret = ResourceObjGetTextureFromFileHash(self, idparam.m_idhash, src, size, type);
+	PafStringDestroy(&idparam.m_id);
+	return ret;
+}
+
+int32_t ResourceObjGetModelFromFileElement(const ResourceObj *self, const CxmlElement *elm,
+					 CxmlFile *src, size_t *size, uint32_t *type)
+{
+	const char *format;
+	uint32_t len;
+	int32_t ret = CxmlUtilGetFile(elm, "src", src);
+
+	if (ret)
+		return ret;
+	*size = src->size;
+	ret = CxmlUtilGetString(elm, "type", &format, &len);
+	if (ret)
+		return ret;
+	*type = sce_paf_strcmp(format, "model/gmo") ? (uint32_t)-1 : 0;
+	return SCE_PAF_OK;
+}
+
+int32_t ResourceObjGetModelFromFileHash(const ResourceObj *self, uint32_t idhash,
+				      CxmlFile *src, size_t *size, uint32_t *type)
+{
+	CxmlElement table, elm;
+
+	ResourceObjGetTableElement(&table, self, TableType_Model);
+	if (!table.doc || table.offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	CxmlUtilFindChildElementByIDHash(&elm, &table, "model", "id", idhash);
+	if (!elm.doc || elm.offset < 0)
+		return SCE_PAF_ERROR_RESOURCE_NOT_FOUND;
+	table = elm;
+	return ResourceObjGetModelFromFileElement(self, &table, src, size, type);
+}
+
+int32_t ResourceObjGetModelFromFile(const ResourceObj *self, const char *id,
+				  CxmlFile *src, size_t *size, uint32_t *type)
+{
+	IDParam idparam;
+	int32_t ret;
+
+	IDParamConstructFromString(&idparam, id);
+	ret = ResourceObjGetModelFromFileHash(self, idparam.m_idhash, src, size, type);
+	PafStringDestroy(&idparam.m_id);
+	return ret;
 }

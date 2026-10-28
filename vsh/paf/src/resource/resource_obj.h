@@ -19,6 +19,18 @@ typedef enum TableType {
 	TableType_Alias = 9
 } TableType;
 
+typedef enum TextureType {
+	TextureType_Unknown = -1,
+	TextureType_Png = 0,
+	TextureType_Jpg = 1,
+	TextureType_Tif = 2,
+	TextureType_Gif = 3,
+	TextureType_Bmp = 4,
+	TextureType_Gim = 5,
+	TextureType_Dds = 6,
+	TextureType_Gxt = 7
+} TextureType;
+
 typedef struct ResourceIDEntry {
 	uint32_t first;
 	PafString second;
@@ -98,6 +110,12 @@ typedef char ResourceBufferEntrySizeCheck[sizeof(ResourceBufferEntry) == 16 ? 1 
 #define ResourceObjGetModelFromBufferHash ScePafResource_25D47C62
 #define ResourceObjGetModelFromBuffer ScePafResource_B80E2E4D
 #define ResourceObjGetModelFromBufferElement ScePafResource_5A179BBE
+#define ResourceObjGetTextureFromFileElement ScePafResource_5E48B664
+#define ResourceObjGetTextureFromFileHash ScePafResource_3FA9B5D3
+#define ResourceObjGetTextureFromFile ScePafResource_5E1D961A
+#define ResourceObjGetModelFromFileElement ScePafResource_C88E6968
+#define ResourceObjGetModelFromFileHash ScePafResource_C3185EF6
+#define ResourceObjGetModelFromFile ScePafResource_ACD33BFC
 
 char *ResourceObjGetFileName(const ResourceObj *self);
 int32_t ResourceObjGetLoadStatus(const ResourceObj *self);
@@ -134,5 +152,18 @@ int32_t ResourceObjGetModelFromBuffer(const ResourceObj *self, const char *id,
 				    void **addr, size_t *size, uint32_t *type);
 int32_t ResourceObjGetModelFromBufferElement(const ResourceObj *self, const CxmlElement *elm,
 					   void **addr, size_t *size, uint32_t *type);
+int32_t ResourceObjGetTextureFromFileElement(const ResourceObj *self, const CxmlElement *elm,
+					   CxmlFile *src, size_t *size, uint32_t *type);
+uint32_t ResourceObjGetTextureType(const ResourceObj *self, const char *type);
+int32_t ResourceObjGetTextureFromFileHash(const ResourceObj *self, uint32_t idhash,
+					CxmlFile *src, size_t *size, uint32_t *type);
+int32_t ResourceObjGetTextureFromFile(const ResourceObj *self, const char *id,
+				    CxmlFile *src, size_t *size, uint32_t *type);
+int32_t ResourceObjGetModelFromFileElement(const ResourceObj *self, const CxmlElement *elm,
+					 CxmlFile *src, size_t *size, uint32_t *type);
+int32_t ResourceObjGetModelFromFileHash(const ResourceObj *self, uint32_t idhash,
+				      CxmlFile *src, size_t *size, uint32_t *type);
+int32_t ResourceObjGetModelFromFile(const ResourceObj *self, const char *id,
+				  CxmlFile *src, size_t *size, uint32_t *type);
 
 #endif
