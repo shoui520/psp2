@@ -14,6 +14,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/httpfile_date.c
 	src/file/httpfile_openarg.c
 	src/file/error.c
+	src/compress/decompress.c
 	src/datetime/datetime.c
 	src/rtc/rtc.c
 	src/thread/rwlock.c
@@ -44,7 +45,14 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/versatileparam/idparam.c
 	src/hash/sha1.c
 	src/std/new.c
+	src/std/stdlib.c
 	src/std/string.c
 	src/std/string_vector.c
+	../../sys/sdk/target/src/deflt/zlibhdr.c
 	libpaf.c
 )
+
+target_include_directories(vs0_sys_external_libpaf PRIVATE
+	"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt")
+set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIES
+	COMPILE_DEFINITIONS "sceZlibDecompress=ScePafLowlayer_D7DAA151")

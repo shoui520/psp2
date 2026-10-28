@@ -7,6 +7,7 @@
 #define GetGlobalHeapAllocator ScePafStdc_261CAF72
 
 void *GetGlobalHeapAllocator(void);
+int ScePafStdc_D41FD265(void);
 
 void *sce_paf_realloc(void *ptr, size_t size);
 void *sce_paf_malloc(size_t size);
