@@ -232,19 +232,19 @@ static void completeReceive(SceUdcdDeviceRequest *req);
 static void completeCbw(SceUdcdDeviceRequest *req);
 static void completeCsw(SceUdcdDeviceRequest *req);
 
-static void copyBytes(uint8_t *p, const uint8_t *q, unsigned n)
+static inline __attribute__((always_inline)) void copyBytes(uint8_t *p, const uint8_t *q, unsigned n)
 {
 	while (n--)
 		*p++ = *q++;
 }
 
-static void clearBytes(uint8_t *p, unsigned n)
+static inline __attribute__((always_inline)) void clearBytes(uint8_t *p, unsigned n)
 {
 	while (n--)
 		*p++ = 0;
 }
 
-static void notifyFunctions(int event)
+static inline __attribute__((always_inline)) void notifyFunctions(int event)
 {
 	for (int i = 0; i < s.count; i++) {
 		if (s.functions[i]->event)
@@ -252,7 +252,7 @@ static void notifyFunctions(int event)
 	}
 }
 
-static void initializeRequest(SceUdcdDeviceRequest *req, SceUdcdEndpoint *ep,
+static inline __attribute__((always_inline)) void initializeRequest(SceUdcdDeviceRequest *req, SceUdcdEndpoint *ep,
 			      void *buffer, int size, int control,
 			      void (*complete)(SceUdcdDeviceRequest *))
 {
@@ -268,7 +268,7 @@ static void initializeRequest(SceUdcdDeviceRequest *req, SceUdcdEndpoint *ep,
 	req->unused = NULL;
 }
 
-static void initializeRequests(void)
+static inline __attribute__((always_inline)) void initializeRequests(void)
 {
 	initializeRequest(&s.control.request, &s.endpoints[0], s.controlBuffer, 1, 1, completeControl);
 	initializeRequest(&s.send.request, &s.endpoints[1], s.sendBuffer, 0, 0, completeSend);
@@ -308,7 +308,6 @@ static int startStorage(int type, void *args, void *ctx)
 	if (s.maxUnit < 0) {
 		s.status = STATUS_READY;
 	} else {
-		s.status = 0;
 		for (int i = 0; i <= s.maxUnit; i++) {
 			if (!s.strings[i].product[0] || !s.strings[i].revision[0])
 				return STOR_ERROR_GENERAL;
@@ -317,9 +316,8 @@ static int startStorage(int type, void *args, void *ctx)
 			strncpy(id->vendor, "SONY", 8);
 			strncpy(id->product, s.strings[i].product, 16);
 			strncpy(id->revision, s.strings[i].revision, 4);
-			if (i == s.maxUnit)
-				s.status |= STATUS_READY;
 		}
+		s.status |= STATUS_READY;
 	}
 	if ((s.status & (STATUS_READY | STATUS_STARTED)) == STATUS_READY) {
 		s.deviceClass = USBMS_SUBCLASS_SFF8070I;
@@ -460,7 +458,7 @@ static void completeCsw(SceUdcdDeviceRequest *req)
 	}
 }
 
-static void cancelEndpoint(int ep, unsigned cancelled)
+static inline __attribute__((always_inline)) void cancelEndpoint(int ep, unsigned cancelled)
 {
 	unsigned timeout = USBSTOR_TRANSFER_TIMEOUT;
 	if (SceUdcdForDriver_38787672(&s.endpoints[ep]) != (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS ||
@@ -838,7 +836,7 @@ static int initializeDescriptors(void)
 	return 0;
 }
 
-static void resetBindings(void)
+static inline __attribute__((always_inline)) void resetBindings(void)
 {
 	for (int i = 0; i < UNITS; i++) {
 		s.bindings[i] = -1;
@@ -846,7 +844,7 @@ static void resetBindings(void)
 	}
 }
 
-static void setSense(struct UsbstorSense *sense, int key, int asc)
+static inline __attribute__((always_inline)) void setSense(struct UsbstorSense *sense, int key, int asc)
 {
 	sense->key = key;
 	sense->asc = asc;
