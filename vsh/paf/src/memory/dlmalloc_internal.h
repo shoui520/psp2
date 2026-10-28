@@ -117,6 +117,9 @@ _Static_assert(pad_request(sizeof(struct malloc_state)) == 496,
 _Static_assert(TOP_FOOT_SIZE == 56, "malloc_state top foot");
 
 mstate init_user_mstate(char *tbase, size_t tsize, size_t alignment);
+void unlink_large_large_chunk(mstate m, tchunkptr x);
+int sys_trim(mstate m, size_t pad);
+size_t release_unused_segments(mstate m);
 void *tmalloc_large_large(mstate m, size_t nb, size_t bytes, unsigned int tag);
 void *tmalloc_small(mstate m, size_t nb, size_t bytes, unsigned int tag);
 void *tmalloc_large(mstate m, size_t nb, size_t bytes, unsigned int tag);

@@ -19,6 +19,105 @@ static inline int init_mparams(void)
 	return 0;
 }
 
+void unlink_large_large_chunk(mstate m, tchunkptr x)
+{
+	tchunkptr xp = x->parent;
+	tchunkptr *h = &m->treebins[x->index];
+	tchunkptr r;
+
+	if (x->bk != x) {
+		ScePafStdc_D608246A();
+		return;
+	}
+	r = x->child[0];
+	if (r) {
+		if (x->child[1]) {
+			tchunkptr *rp = &x->child[0];
+			tchunkptr child;
+			tchunkptr c0, c1;
+
+			/* Replace the node with its predecessor in address order. */
+			while (r->child[1]) {
+				rp = &r->child[1];
+				r = *rp;
+			}
+			child = r->child[0];
+			*rp = child;
+			if (child)
+				child->parent = r->parent;
+			if (ok_address(m, r)) {
+				c0 = x->child[0];
+				c1 = x->child[1];
+				r->child[0] = c0;
+				if (c0)
+					c0->parent = r;
+				r->child[1] = c1;
+				if (c1)
+					c1->parent = r;
+			} else {
+				ScePafStdc_D608246A();
+			}
+		}
+	} else {
+		r = x->child[1];
+	}
+	if (!xp) {
+		ScePafStdc_D608246A();
+	} else if (*h == x) {
+		*h = r;
+		if (!r)
+			m->treemap &= ~idx2bit(x->index);
+	} else if (!ok_address(m, xp)) {
+		ScePafStdc_D608246A();
+	} else if (xp->child[0] == x) {
+		xp->child[0] = r;
+	} else if (xp->child[1] == x) {
+		xp->child[1] = r;
+	} else {
+		ScePafStdc_D608246A();
+	}
+	if (r) {
+		if (ok_address(m, r))
+			r->parent = xp;
+		else
+			ScePafStdc_D608246A();
+	}
+}
+
+int sys_trim(mstate m, size_t pad)
+{
+	if (!mparams.magic)
+		init_mparams();
+	if (pad < MAX_REQUEST) {
+		mchunkptr top = m->top;
+
+		if (top) {
+			size_t size = m->topsize;
+			size_t trim_check = m->trim_check;
+
+			if (size > pad + TOP_FOOT_SIZE) {
+				struct malloc_segment *sp = &m->seg;
+
+				while ((uintptr_t)top < (uintptr_t)sp->base ||
+				       (uintptr_t)top >= (uintptr_t)sp->base + sp->size) {
+					sp = sp->next;
+					if (!sp)
+						break;
+				}
+			}
+			if (size > trim_check)
+				m->trim_check = SIZE_MAX;
+		}
+	}
+	return 0;
+}
+
+size_t release_unused_segments(mstate m)
+{
+	m->release_checks = MAX_RELEASE_CHECK_RATE;
+	return 0;
+}
+
 static inline void mark_inuse_foot(mchunkptr p, size_t size, unsigned int tag,
 				  size_t padding)
 {
