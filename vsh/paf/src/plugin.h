@@ -101,12 +101,18 @@ typedef char PluginInitParam2SizeCheck[sizeof(PluginInitParam2) == 16 ? 1 : -1];
 typedef char PluginInitParamSizeCheck[sizeof(PluginInitParam) == 148 ? 1 : -1];
 
 #define PluginInitParam2Construct ScePafToplevel_EA5FFA2A
+#define PluginArgumentToInt ScePafToplevel_15B7D17E
+#define PluginArgumentToFloat ScePafToplevel_CA9CA34D
+#define PluginArgumentToString ScePafToplevel_1A287262
 #define PluginInitParam2ConstructBase ScePafToplevel_5498F7B7
 #define PluginInitParamConstruct ScePafToplevel_400F84CE
 #define PluginInitParamConstructBase ScePafToplevel_58C1A580
 #define PluginLoadAsync ScePafToplevel_F702E40A
 
 PluginInitParam2 *PluginInitParam2Construct(PluginInitParam2 *self);
+int32_t PluginArgumentToInt(const PluginArgument *self);
+float PluginArgumentToFloat(const PluginArgument *self);
+PafString *PluginArgumentToString(PafString *result, const PluginArgument *self);
 PluginInitParam2 *PluginInitParam2ConstructBase(PluginInitParam2 *self);
 PluginInitParam *PluginInitParamConstruct(PluginInitParam *self);
 PluginInitParam *PluginInitParamConstructBase(PluginInitParam *self);

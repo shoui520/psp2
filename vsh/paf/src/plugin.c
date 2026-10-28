@@ -1,5 +1,7 @@
 #include "plugin.h"
 
+static const char pluginArgumentEmpty[] = "";
+
 PluginInitParam2 *PluginInitParam2Construct(PluginInitParam2 *self)
 {
 	self->draw_priority = 150;
@@ -7,6 +9,37 @@ PluginInitParam2 *PluginInitParam2Construct(PluginInitParam2 *self)
 	self->texture_load_filter = 0;
 	self->graphics_flag = 128;
 	return self;
+}
+
+int32_t PluginArgumentToInt(const PluginArgument *self)
+{
+	if (self->type == ArgumentType_Int)
+		return self->i;
+	if (self->type == ArgumentType_Float)
+		return (int32_t)self->f;
+	return 0;
+}
+
+float PluginArgumentToFloat(const PluginArgument *self)
+{
+	if (self->type == ArgumentType_Int)
+		return (float)self->i;
+	if (self->type == ArgumentType_Float)
+		return self->f;
+	return 0.0f;
+}
+
+PafString *PluginArgumentToString(PafString *result, const PluginArgument *self)
+{
+	extern size_t sce_paf_strlen(const char *text);
+
+	if (self->type == ArgumentType_String) {
+		PafStringInitialize(result);
+		return PafStringCopy(result, &self->str);
+	}
+	PafStringInitialize(result);
+	return PafStringAssign(result, pluginArgumentEmpty,
+			       sce_paf_strlen(pluginArgumentEmpty));
 }
 
 PluginInitParam2 *PluginInitParam2ConstructBase(PluginInitParam2 *self)
