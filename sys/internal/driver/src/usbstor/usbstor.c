@@ -467,7 +467,8 @@ static inline __attribute__((always_inline)) void cancelEndpoint(int ep, unsigne
 		SceUdcdForDriver_9F53D64D(&s.endpoints[ep]);
 }
 
-static int flushSend(unsigned timeout)
+/* Sony's flushSend body; inlined into the send loop of D3C7EE70 */
+static inline __attribute__((always_inline)) int sendPacket(unsigned timeout)
 {
 	unsigned bits;
 	int result;
@@ -499,11 +500,18 @@ static int flushSend(unsigned timeout)
 	return STOR_ERROR_CANCEL;
 }
 
+static __attribute__((noinline)) int flushSend(unsigned timeout)
+{
+	return sendPacket(timeout);
+}
+
 /* name unknown: send data to the host (a data-in command) */
 int SceUsbstorForDriver_D3C7EE70(const void *buffer, unsigned size, unsigned timeout)
 {
 	unsigned limit, n, copied = 0;
 	const uint8_t *p = buffer;
+	unsigned previous = s.transferred;
+	unsigned requested = s.cbw->dCBWDataTransferLength;
 	int result;
 
 	if (!buffer)
@@ -511,11 +519,9 @@ int SceUsbstorForDriver_D3C7EE70(const void *buffer, unsigned size, unsigned tim
 	if (!size)
 		return 0;
 	s.direction = DIRECTION_IN;
-	unsigned previous = s.transferred;
-	s.transferred += size;
+	s.transferred = previous + size;
 	if (!(s.cbw->bmCBWFlags & USBMS_CBW_DATA_IN))
 		return STOR_ERROR_DIRECTION;
-	unsigned requested = s.cbw->dCBWDataTransferLength;
 	if (previous >= requested)
 		return 0;
 	limit = size < requested - previous ? size : requested - previous;
@@ -539,7 +545,7 @@ int SceUsbstorForDriver_D3C7EE70(const void *buffer, unsigned size, unsigned tim
 		s.send.request.size += n;
 		if (s.send.request.size < PACKET_SIZE)
 			return copied;
-		result = flushSend(timeout);
+		result = sendPacket(timeout);
 		if (result < 0)
 			return result;
 		if (!limit)
