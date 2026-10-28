@@ -4,6 +4,21 @@
 
 HttpFileTimeout httpFileDefaultTimeout = { -1, -1, -1, -1 };
 
+int32_t HttpFileOpenArgParseUrlWide(HttpFileOpenArg *self, const uint16_t *path)
+{
+	PafWString value;
+	Url url;
+	int32_t ret;
+
+	PafWStringInitialize(&value);
+	PafWStringAssign(&value, path, path ? sce_paf_wcslen(path) : 0);
+	UrlConstructWString(&url, &value);
+	PafWStringDestroy(&value);
+	ret = HttpFileOpenArgParseUrl(self, &url);
+	UrlDestroy(&url);
+	return ret;
+}
+
 HttpFileOpenArg *HttpFileOpenArgConstruct(HttpFileOpenArg *self)
 {
 	PafStringInitialize(&self->scheme);

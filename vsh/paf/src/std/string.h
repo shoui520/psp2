@@ -38,6 +38,7 @@ extern uint16_t PafWStringEmpty;
 
 void *sce_paf_memset(void *dst, int ch, size_t len);
 size_t sce_paf_strlen(const char *str);
+size_t sce_paf_wcslen(const uint16_t *str);
 
 PafWString *PafWStringErase(PafWString *self, size_t pos, size_t len);
 PafWString *PafWStringAppend(PafWString *self, size_t len, uint16_t value);
@@ -69,6 +70,20 @@ static inline __attribute__((always_inline)) void PafStringDestroy(PafString *se
 	if (self->ptr != &PafStringEmpty)
 		ScePafStdc_1B77082E(self->ptr);
 	self->ptr = (char *)-1;
+	self->count = (size_t)-1;
+}
+
+static inline __attribute__((always_inline)) void PafWStringInitialize(PafWString *self)
+{
+	self->ptr = &PafWStringEmpty;
+	self->count = 0;
+}
+
+static inline __attribute__((always_inline)) void PafWStringDestroy(PafWString *self)
+{
+	if (self->ptr != &PafWStringEmpty)
+		ScePafStdc_1B77082E(self->ptr);
+	self->ptr = (uint16_t *)-1;
 	self->count = (size_t)-1;
 }
 

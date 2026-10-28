@@ -786,6 +786,31 @@ void HttpFileOpenChar(FileSharedPtr *result, const char *path, int32_t *error,
 	UrlDestroy(&url);
 }
 
+void HttpFileOpenWide(FileSharedPtr *result, const uint16_t *path, int32_t *error,
+		      uint32_t flag)
+{
+	PafWString value;
+	Url url;
+
+	PafWStringInitialize(&value);
+	PafWStringAssign(&value, path, path ? sce_paf_wcslen(path) : 0);
+	UrlConstructWString(&url, &value);
+	PafWStringDestroy(&value);
+	HttpFileOpenUrl(result, &url, error, flag);
+	UrlDestroy(&url);
+}
+
+void HttpFileOpenCallback(FileSharedPtr *result, const char *path, uint32_t flag,
+			  uint32_t mode, int32_t *error, const void *userdata)
+{
+	if (!userdata || *(const unsigned char *)userdata) {
+		result->m_ptr = NULL;
+		result->m_ref_counter = NULL;
+		return;
+	}
+	HttpFileOpen(result, path, flag, mode, error);
+}
+
 int32_t HttpFileGetstat(HttpFile *self, FileStat *stat)
 {
 	int32_t ret;

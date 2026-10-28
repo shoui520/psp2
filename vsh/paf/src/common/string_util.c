@@ -1,8 +1,6 @@
 #include "string_util.h"
 #include "char_encoding.h"
 
-extern size_t sce_paf_wcslen(const uint16_t *str);
-
 static const char commonStringEmpty[] = "";
 static const uint16_t commonWStringEmpty[] = { 0 };
 
