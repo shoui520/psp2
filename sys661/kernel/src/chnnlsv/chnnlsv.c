@@ -7,6 +7,8 @@
  */
 
 #include <common_imp.h>
+#include <sysmem_sysclib.h>
+#include <sysmem_utils_kernel.h>
 #include <threadman_kernel.h>
 #include "chnnlsv.h"
 
@@ -293,6 +295,11 @@ s32 sceSdRemoveValue(SceSdCtx2 *ctx, u8 *data, u32 size)
 				ret = SCE_CHNNLSV_ERROR_ILLEGAL_SIZE;
 
 signalsema:
+			{
+				u32 clear_size = (size < 0x7F1) ? (size + 0x24) : 0x814;
+				memset(g_chnnlsv.kirk_buf1, 0, clear_size);
+				sceKernelDcacheWritebackRange(g_chnnlsv.kirk_buf1, clear_size);
+			}
 			if (sceKernelSignalSema(g_chnnlsv.sema1, 1) != 0) //0x0000078C
 				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
@@ -468,6 +475,8 @@ s32 sceSdGetLastIndex(SceSdCtx2 *ctx, u8 *hash, u8 *key)
 				ret = SCE_CHNNLSV_ERROR_ILLEGAL_SIZE;
 
 signalsema:
+			memset(g_chnnlsv.kirk_buf1, 0, 0x24);
+			sceKernelDcacheWritebackRange(g_chnnlsv.kirk_buf1, 0x24);
 			if (sceKernelSignalSema(g_chnnlsv.sema1, 1) != 0) //0x00000C80
 				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
@@ -579,8 +588,11 @@ s32 sceSdCreateList(SceSdCtx1 *ctx, int mode, int genMode, u8 *data, u8 *key)
 						}
 					}
 				}
-			}
+			} else
+				ret = SCE_ERROR_OK;
 
+			memset(g_chnnlsv.kirk_buf3, 0, 0x24);
+			sceKernelDcacheWritebackRange(g_chnnlsv.kirk_buf3, 0x24);
 			if (sceKernelSignalSema(g_chnnlsv.sema2, 1) != 0)
 				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
@@ -637,6 +649,11 @@ s32 sceSdSetMember(SceSdCtx1 *ctx, u8 *data, u32 size)
 				ret = SCE_ERROR_OK;
 
 signalsema:
+			{
+				u32 clear_size = (size < 0x801) ? (size + 0x14) : 0x814;
+				memset(g_chnnlsv.kirk_buf3, 0, clear_size);
+				sceKernelDcacheWritebackRange(g_chnnlsv.kirk_buf3, clear_size);
+			}
 			if (sceKernelSignalSema(g_chnnlsv.sema2, 1) != 0) //0x00001338
 				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
