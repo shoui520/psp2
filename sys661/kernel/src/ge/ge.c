@@ -188,6 +188,9 @@ int g_uiEdramSize; // 70C4
 // The current edram memory width
 u16 g_edramAddrTrans; // 70C8
 
+// Flag set for games that need a 4-second timeout in _sceGeQueueSuspend()
+int g_suspendTimeoutPatch; // 740C
+
 // The display list queue
 SceGeQueue g_AwQueue; // 70CC
 
@@ -1400,7 +1403,9 @@ int sceGeEdramInit()
 
     // 26C8
     // Enable additional eDram if the tachyon version is recent enough
-    if (sceSysregGetTachyonVersion() > 0x004FFFFF) {
+    if (sceSysregGetTachyonVersion() > 0x004FFFFF &&
+        sceSysregGetTachyonVersion() != 0 &&
+        (sceSysregGetTachyonVersion() & 0xFFF00000) != 0x00F00000) {
         // 271C
         g_uiEdramSize = 0x00200000;
         g_uiEdramHwSize = 0x00400000;
@@ -1468,7 +1473,9 @@ int sceGeEdramSetSize(int size)
     } else if (size == 0x400000) {
         // 28FC
         // If the size is set to 4MB, it can only work for more recent PSP models
-        if (sceSysregGetTachyonVersion() <= 0x4FFFFF)
+        if (sceSysregGetTachyonVersion() <= 0x4FFFFF ||
+            sceSysregGetTachyonVersion() == 0 ||
+            (sceSysregGetTachyonVersion() & 0xFFF00000) == 0x00F00000)
             return SCE_ERROR_INVALID_SIZE;
         g_uiEdramSize = size;
         sceGeSetReg(SCE_GE_REG_EDRAM_ENABLED_SIZE, 2);
@@ -1588,8 +1595,16 @@ int _sceGeQueueInit()
     SceGameInfo *info = sceKernelGetGameInfo();
     // Patch for Itadaki Street Portable (missing a cache flush function when enqueuing the first display list)
     g_AwQueue.cachePatch = 0;
-    if (info != NULL && strcmp((char*)info->param_product_string, "ULJM05127") == 0) {
-        g_AwQueue.cachePatch = 1;
+    if (info != NULL) {
+        if (strcmp((char*)info->param_product_string, "ULJM05127") == 0) {
+            g_AwQueue.cachePatch = 1;
+        }
+        if (strcmp((char*)info->param_product_string, "ULJS00188") == 0 ||
+            strcmp((char*)info->param_product_string, "ULUS10458") == 0 ||
+            strcmp((char*)info->param_product_string, "ULES01489") == 0 ||
+            strcmp((char*)info->param_product_string, "ULKS46233") == 0) {
+            g_suspendTimeoutPatch = 1;
+        }
     }
     return 0;
 }
@@ -1603,9 +1618,35 @@ int _sceGeQueueSuspend()
     if (g_AwQueue.active_first == NULL)
         return 0;
 
+    u64 startTime = sceKernelGetSystemTimeWide();
+
     // 2C5C
     // While the GE is still in execution: see if we catch a stall
     while ((HW_GE_EXEC & 1) != 0) {
+        if (g_suspendTimeoutPatch != 0) {
+            u64 curTime = sceKernelGetSystemTimeWide();
+            if (curTime - startTime > 4000000ULL) {
+                HW_GE_EXEC = 0;
+                pspSync();
+                int i;
+                for (i = 0; i < MAX_COUNT_DL; i++) {
+                    SceGeDisplayList *cur = &g_displayLists[i];
+                    cur->next = &g_displayLists[i + 1];
+                    cur->prev = &g_displayLists[i - 1];
+                    cur->signal = SCE_GE_DL_SIGNAL_NONE;
+                    cur->state = SCE_GE_DL_STATE_NONE;
+                    cur->isBusy = 0;
+                }
+                g_AwQueue.free_last = &g_displayLists[63];
+                g_AwQueue.curRunning = NULL;
+                g_AwQueue.active_last = NULL;
+                g_displayLists[0].prev = NULL;
+                g_displayLists[63].next = NULL;
+                g_AwQueue.free_first = g_displayLists;
+                g_AwQueue.active_first = NULL;
+                return 0;
+            }
+        }
         if (HW_GE_LISTADDR == HW_GE_STALLADDR) {
             // A stall was caught
             int oldCmd1, oldCmd2;

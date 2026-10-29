@@ -35,24 +35,24 @@ int _sceGeModuleStart();
 int _sceGeModuleRebootPhase(s32 arg0 __attribute__((unused)), void *arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)));
 int _sceGeModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)));
 int _sceGeSetBaseRadr(int arg0, int arg1, int arg2);
-int _sceGeEdramResume();
-int _sceGeEdramSuspend();
-int _sceGeQueueInit();
-int _sceGeQueueSuspend();
-int _sceGeQueueResume();
-void _sceGeFinishInterrupt(int arg0, int arg1, int arg2);
-void _sceGeListInterrupt(int arg0, int arg1, int arg2);
-int sceGeDebugBreak();
-int sceGeDebugContinue(int arg0);
-int _sceGeQueueInitCallback();
-int _sceGeQueueEnd();
-int _sceGeQueueStatus(void);
-void _sceGeErrorInterrupt(int arg0, int arg1, int arg2);
-void _sceGeListError(u32 cmd, int err);
-void _sceGeWriteBp(int *list);
-void _sceGeClearBp();
-void _sceGeListLazyFlush();
-int _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs * arg,
+int __attribute__((noinline)) _sceGeEdramResume();
+int __attribute__((noinline)) _sceGeEdramSuspend();
+int __attribute__((noinline)) _sceGeQueueInit();
+int __attribute__((noinline)) _sceGeQueueSuspend();
+int __attribute__((noinline)) _sceGeQueueResume();
+void __attribute__((noinline)) _sceGeFinishInterrupt(int arg0, int arg1, int arg2);
+void __attribute__((noinline)) _sceGeListInterrupt(int arg0, int arg1, int arg2);
+int __attribute__((noinline)) sceGeDebugBreak();
+int __attribute__((noinline)) sceGeDebugContinue(int arg0);
+int __attribute__((noinline)) _sceGeQueueInitCallback();
+int __attribute__((noinline)) _sceGeQueueEnd();
+int __attribute__((noinline)) _sceGeQueueStatus(void);
+void __attribute__((noinline)) _sceGeErrorInterrupt(int arg0, int arg1, int arg2);
+void __attribute__((noinline)) _sceGeListError(u32 cmd, int err);
+void __attribute__((noinline)) _sceGeWriteBp(int *list);
+void __attribute__((noinline)) _sceGeClearBp();
+void __attribute__((noinline)) _sceGeListLazyFlush();
+int __attribute__((noinline)) _sceGeListEnQueue(void *list, void *stall, int cbid, SceGeListArgs * arg,
                       int head);
 
 /****** Structures *********/
