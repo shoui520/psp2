@@ -183,20 +183,24 @@ static int gpuCoreDumpWriteTag(SceUID fd, SceUInt32 tag, const void *data, SceSi
 /* a core register as captured */
 int gpuCoreDumpCoreValue(int core, SceUInt32 offset, SceUInt32 *value)
 {
-	const GpuCoreDumpCoreValue *v;
+	const GpuCoreDumpCoreValue *v, *found;
 	SceUInt32 i;
 
 	v = gpuCoreDumpCoreDebugRegs.values;
-	for (i = 0; i != gpuCoreDumpCoreDebugRegs.count; i++, v++)
-		if (v->offset == offset)
+	for (i = 0; i != gpuCoreDumpCoreDebugRegs.count; i++) {
+		found = v;
+		if ((v++)->offset == offset)
 			goto found;
+	}
 	v = gpuCoreDumpCoreRegs.values;
-	for (i = 0; i != gpuCoreDumpCoreRegs.count; i++, v++)
-		if (v->offset == offset)
+	for (i = 0; i != gpuCoreDumpCoreRegs.count; i++) {
+		found = v;
+		if ((v++)->offset == offset)
 			goto found;
+	}
 	return 0;
 found:
-	*value = v->value[core];
+	*value = found->value[core];
 	return 1;
 }
 
@@ -460,20 +464,24 @@ int gpuCoreDumpIndexedValue(SceUInt32 core, SceUInt32 index, SceUInt32 *value)
 /* a master register as captured */
 int gpuCoreDumpMasterValue(SceUInt32 offset, SceUInt32 *value)
 {
-	const GpuCoreDumpMasterValue *v;
+	const GpuCoreDumpMasterValue *v, *found;
 	SceUInt32 i;
 
 	v = gpuCoreDumpMasterRegs.values;
-	for (i = 0; i != gpuCoreDumpMasterRegs.count; i++, v++)
-		if (v->offset == offset)
+	for (i = 0; i != gpuCoreDumpMasterRegs.count; i++) {
+		found = v;
+		if ((v++)->offset == offset)
 			goto found;
+	}
 	v = gpuCoreDumpMasterDebugRegs.values;
-	for (i = 0; i != gpuCoreDumpMasterDebugRegs.count; i++, v++)
-		if (v->offset == offset)
+	for (i = 0; i != gpuCoreDumpMasterDebugRegs.count; i++) {
+		found = v;
+		if ((v++)->offset == offset)
 			goto found;
+	}
 	return 0;
 found:
-	*value = v->value;
+	*value = found->value;
 	return 1;
 }
 

@@ -101,7 +101,7 @@ int gpuCoreDumpWriteSegments(SceUID fd, const GpuCoreDumpSegment *seg, int count
 {
 	GpuCoreDumpWriter w;
 	SceUInt32 hdr[2];
-	SceSize total = 0;
+	SceSize total = 0, size;
 	int i, k;
 
 	for (i = 0; i != count; i++)
@@ -117,8 +117,9 @@ int gpuCoreDumpWriteSegments(SceUID fd, const GpuCoreDumpSegment *seg, int count
 	hdr[1] = total;
 	gpuCoreDumpWrite(&w, (const SceUInt8 *)hdr, sizeof(hdr));
 	for (i = 0; i != count; i++, seg++) {
+		size = (seg->size + 7) & ~7;
 		hdr[0] = seg->type;
-		hdr[1] = (seg->size + 7) & ~7;
+		hdr[1] = size;
 		gpuCoreDumpWrite(&w, (const SceUInt8 *)hdr, sizeof(hdr));
 		if (seg->iv != NULL) {
 			w.blockLength = 0;

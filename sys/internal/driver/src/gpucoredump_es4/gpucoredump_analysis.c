@@ -70,28 +70,28 @@ static void gpuCoreDumpPrintUssePipe(GpuCoreDumpAnalysis *analysis, const char *
 	char usage[0x11];
 	int active = 0;
 	int i;
+	char c;
 
 	usage[0x10] = '\0';
-	for (i = 0; i != 0x10; i++, slots >>= 2) {
-		switch (slots & 3) {
-		case 1:
-			usage[i] = 'P';
-			analysis->coreFlags |= pixel;
+	for (i = 0; i != 0x10; i++) {
+		if ((slots & 3) == 1) {
+			c = 'P';
 			active = 1;
-			break;
-		case 0:
-			usage[i] = 'V';
+			analysis->coreFlags |= pixel;
+		} else if ((slots & 3) != 0) {
+			if ((slots & 3) == 3) {
+				c = 'S';
+				active = 1;
+			} else {
+				c = '.';
+			}
+		} else {
+			c = 'V';
 			active = 1;
 			analysis->coreFlags |= vertex;
-			break;
-		case 3:
-			usage[i] = 'S';
-			active = 1;
-			break;
-		default:
-			usage[i] = '.';
-			break;
 		}
+		slots >>= 2;
+		usage[i] = c;
 	}
 	if (active && analysis->log != NULL)
 		gpuCoreDumpLogPrintf(analysis->log, "%s: %s Data Master usage %s\n", analysis->prefix, name,
@@ -118,6 +118,15 @@ void gpuCoreDumpPrintUssePipe0(GpuCoreDumpAnalysis *analysis, const char *name, 
 	gpuCoreDumpPrintUssePipe(analysis, name, value, 0x80, 0x800);
 }
 
+/* the sub-unit with this id, or NULL */
+static inline const GpuCoreDumpSubunit *gpuCoreDumpFindSubunit(const GpuCoreDumpSubunit *sub, SceUInt32 id)
+{
+	for (; sub->name != NULL; sub++)
+		if (sub->id == id)
+			return sub;
+	return NULL;
+}
+
 /* the unit that page-faulted (a bit of requesters) and its sub-unit */
 static void gpuCoreDumpPrintRequesters(GpuCoreDumpAnalysis *analysis, const GpuCoreDumpRequester *req,
 				       SceUInt32 requesters, SceUInt32 subunit)
@@ -131,17 +140,11 @@ static void gpuCoreDumpPrintRequesters(GpuCoreDumpAnalysis *analysis, const GpuC
 		analysis->flags |= req->flags;
 		if (analysis->log != NULL)
 			gpuCoreDumpLogPrintf(analysis->log, "%s:   - Requester: %s\n", analysis->prefix, req->name);
-		sub = req->subunits;
-		if (sub == NULL)
+		if (req->subunits == NULL)
 			continue;
-		for (; sub->name != NULL; sub++) {
-			if (sub->id == subunit) {
-				if (analysis->log != NULL)
-					gpuCoreDumpLogPrintf(analysis->log, "%s:   - Sub-unit: %s\n", analysis->prefix,
-							     sub->name);
-				break;
-			}
-		}
+		sub = gpuCoreDumpFindSubunit(req->subunits, subunit);
+		if (sub != NULL && analysis->log != NULL)
+			gpuCoreDumpLogPrintf(analysis->log, "%s:   - Sub-unit: %s\n", analysis->prefix, sub->name);
 	}
 }
 
@@ -187,22 +190,23 @@ static void gpuCoreDumpPrintActive(int core, int vertex, GpuCoreDumpAnalysis *an
 	SceUInt32 value, mask, reg;
 	const char *phase, *name;
 	SceUID pid;
-	int shift, low;
+	SceUInt32 bank;
+	int shift;
 
 	if (!gpuCoreDumpCoreValue(core, 0xc74, &value))
 		return;
 	if (vertex) {
-		low = -7;
+		bank = (SceUInt8)value >> 6;
 		shift = 4;
 		mask = 0xf0;
 		phase = "Vertex";
 	} else {
-		low = -3;
+		phase = "Fragment";
+		bank = (value >> 2) & 3;
 		shift = 12;
 		mask = 0xf000;
-		phase = "Fragment";
 	}
-	reg = (value << (low + 31)) >> 30 == 3 ? 0xc7c : 0xc78;
+	reg = bank == 3 ? 0xc7c : 0xc78;
 	if (!gpuCoreDumpCoreValue(core, reg, &value))
 		return;
 	pid = gpuCoreDumpDmProcess((mask & value) >> shift, core);
