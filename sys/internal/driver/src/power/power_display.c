@@ -54,14 +54,15 @@ int powerInitializeDisplayControl(void)
 }
 
 /* The internal head uses the requested level without the external-head cap. */
-static uint32_t powerGetDisplayHeadBrightness(unsigned int head)
+static inline __attribute__((always_inline)) uint32_t powerGetDisplayHeadBrightness(unsigned int head)
 {
 	uint32_t requested = s_powerDisplayState.requestedBrightness;
 	uint32_t maximum;
 
 	if (head == 1)
 		return requested;
-	maximum = s_powerDisplayState.maxBrightness[!SceSysconForDriver_9DA2A5AB()];
+	maximum = SceSysconForDriver_9DA2A5AB() ? s_powerDisplayState.maxBrightness[0] :
+						s_powerDisplayState.maxBrightness[1];
 	return requested < maximum ? requested : maximum;
 }
 
@@ -231,8 +232,9 @@ int ScePowerForDriver_43D5CE1D(uint32_t brightness)
 				continue;
 			limit = brightness;
 		} else {
-			limit = s_powerDisplayState.maxBrightness[
-					!SceSysconForDriver_9DA2A5AB()];
+			limit = SceSysconForDriver_9DA2A5AB() ?
+				s_powerDisplayState.maxBrightness[0] :
+				s_powerDisplayState.maxBrightness[1];
 			if (limit > brightness)
 				limit = brightness;
 		}
@@ -271,8 +273,9 @@ int ScePowerForDriver_77027B6B(uint32_t limit)
 		if (!s_powerDisplayState.brightness[head])
 			continue;
 		requested = s_powerDisplayState.requestedBrightness;
-		maximum = s_powerDisplayState.maxBrightness[
-					!SceSysconForDriver_9DA2A5AB()];
+		maximum = SceSysconForDriver_9DA2A5AB() ?
+			s_powerDisplayState.maxBrightness[0] :
+			s_powerDisplayState.maxBrightness[1];
 		previous = s_powerDisplayState.brightness[head];
 		if (maximum > requested)
 			maximum = requested;
