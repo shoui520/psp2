@@ -336,7 +336,7 @@ static __always_inline void ohciFreeDescriptor(OhciDescriptorList *list, SceUInt
 	(*count)++;
 }
 
-static void ohciFreeEd(Ohci *ohci, OhciDescriptor *descriptor)
+static __attribute__((noinline)) void ohciFreeEd(Ohci *ohci, OhciDescriptor *descriptor)
 {
 	ohciFreeDescriptor(&ohci->freeEd, &ohci->freeCount.ed, descriptor);
 }
@@ -467,7 +467,7 @@ static SceUInt32 ohciConnectDone(void *arg)
 	return 0;
 }
 
-static void ohciUnwaitPipe(Ohci *ohci, UsbdPipe *pipe)
+static __attribute__((noinline, noclone)) void ohciUnwaitPipe(Ohci *ohci, UsbdPipe *pipe)
 {
 	USBD_LIST_REMOVE_LINK(ohci->waitHead, ohci->waitTail, pipe, waitNext, waitPrev);
 	pipe->waiting = 0;
