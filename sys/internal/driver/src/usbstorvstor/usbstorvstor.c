@@ -15,6 +15,7 @@
 /* Original VStor error names are absent from the SDK. */
 #define VSTOR_ERROR_ARGUMENT ((int)0x80244103)
 #define VSTOR_ERROR_MEMORY ((int)0x8024410a)
+#define VSTOR_ERROR_DEVICE_INFO ((int)0x80244110)
 #define VSTOR_ERROR_PATH ((int)0x80244112)
 #define VSTOR_ERROR_TYPE ((int)0x80244113)
 #define VSTOR_ERROR_ACTIVE ((int)0x80244114)
@@ -56,10 +57,10 @@ struct FatBootSector {
 	uint32_t hiddenSectors;
 	uint32_t totalSectors;
 	uint8_t bootCode[474];
-	uint8_t signature[2];			/* 0x55 0xaa */
+	uint16_t signature;			/* 0x55 0xaa */
 } __attribute__((packed));
 
-#define FAT_SIGNATURE		0x55aa
+#define FAT_SIGNATURE		0xaa55
 
 /* the ISO 9660 primary volume descriptor of a disc image, up to its block size */
 struct IsoVolumeDescriptor {
@@ -106,7 +107,7 @@ static int command(int unit, const uint8_t *cdb, struct UsbstorSense *sense);
 static int openImage(void);
 static int closeImage(void);
 
-static int authorized(void)
+static inline __attribute__((always_inline)) int authorized(void)
 {
 	return SceSblACMgrForDriver_D0E11C89(0) || sceSblACMgrIsSystemProgram(0);
 }
@@ -150,7 +151,7 @@ static void copyBytes(uint8_t *p, const uint8_t *q, unsigned size)
 		*p++ = *q++;
 }
 
-static int sendResponse(unsigned size)
+static inline __attribute__((always_inline)) int sendResponse(unsigned size)
 {
 	return SceUsbstorForDriver_D3C7EE70(s.response, size, USBSTOR_TRANSFER_TIMEOUT) < 0 ?
 	       USBSTOR_COMMAND_FAILED : USBSTOR_COMMAND_DONE;
@@ -181,10 +182,8 @@ static int transferThread(SceSize size, void *args)
 					       NULL) >= 0) {
 			if (bits & EVF_CLOSE)
 				break;
-			if (bits & EVF_EXIT) {
-				sceKernelExitThread(0);
-				return 0;
-			}
+			if (bits & EVF_EXIT)
+				return sceKernelExitThread(0);
 			if (bits & EVF_SEND) {
 				s.transferResult = SceUsbstorForDriver_D3C7EE70(s.transfer,
 						 s.transferSize, USBSTOR_TRANSFER_TIMEOUT);
@@ -214,7 +213,7 @@ static int closeImage(void)
 	return 0;
 }
 
-static int openImage(void)
+static int __attribute__((noinline)) openImage(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	union {
@@ -225,6 +224,7 @@ static int openImage(void)
 	void *base;
 	int result, permission;
 	int64_t length;
+	uint32_t blocks;
 
 	s.driver.busy = 0;
 	s.changed = 0;
@@ -263,43 +263,46 @@ static int openImage(void)
 		s.buffers[0] = base;
 		s.buffers[1] = (uint8_t *)base + s.blockSize * s.verifyLimit;
 	}
-	result = VSTOR_ERROR_PATH;
 	if (s.type == USBSTOR_TYPE_DISK) {
 		permission = sceKernelSetThreadAccessLevel(0x40);
 		s.fd = sceIoOpen(s.path, SCE_O_RDWR, IO_STM_RWS);
+		result = s.fd;
 		length = sceIoLseek(s.fd, 0, SCE_SEEK_SET);
-		if (length >= 0 && sceIoRead(s.fd, image.sector, sizeof(image.sector)) >= 0 &&
-		    be16(image.fat.signature) == FAT_SIGNATURE && image.fat.totalSectors &&
-		    image.fat.bytesPerSector == 512) {
-			s.blocks = image.fat.totalSectors;
-			s.blockSize = image.fat.bytesPerSector;
-			length = sceIoLseek(s.fd, 0, SCE_SEEK_END);
-			if (length >= 0)
-				result = 0;
+		if (length < 0 || sceIoRead(s.fd, image.sector, sizeof(image.sector)) < 0 ||
+		    image.fat.signature != FAT_SIGNATURE || !image.fat.totalSectors ||
+		    image.fat.bytesPerSector != 512 ||
+		    (s.blockSize = 512, s.blocks = image.fat.totalSectors,
+		     (length = sceIoLseek(s.fd, 0, SCE_SEEK_END)) < 0)) {
+			sceKernelSetThreadAccessLevel(permission);
+			result = VSTOR_ERROR_PATH;
+			goto freeData;
 		}
 		sceKernelSetThreadAccessLevel(permission);
 	} else if (s.type == USBSTOR_TYPE_CDROM) {
 		s.fd = sceIoOpen(s.path, SCE_O_RDONLY, IO_STM_RS);
+		result = s.fd;
 		length = sceIoLseek(s.fd, ISO_VD_OFFSET, SCE_SEEK_SET);
-		if (length >= 0 && sceIoRead(s.fd, image.sector, sizeof(image.iso)) >= 0 &&
-		    image.iso.type == ISO_VD_PRIMARY && strncmp(image.iso.identifier, "CD001", 5) == 0) {
-			s.blockSize = image.iso.logicalBlockSize;
-			s.blocks = 0x2e7;		/* fixed by the original */
-			if (s.blockSize == 2048) {
-				length = sceIoLseek(s.fd, 0, SCE_SEEK_END);
-				if (length >= 0)
-					result = 0;
-			}
+		if (length < 0 || sceIoRead(s.fd, image.sector, sizeof(image.iso)) < 0 ||
+		    image.iso.type != ISO_VD_PRIMARY ||
+		    strncmp(image.iso.identifier, "CD001", 5) != 0) {
+			result = VSTOR_ERROR_PATH;
+			goto freeData;
+		}
+		s.blocks = 0x2e7;		/* fixed by the original */
+		s.blockSize = image.iso.logicalBlockSize;
+		if (s.blockSize != 2048 || (length = sceIoLseek(s.fd, 0, SCE_SEEK_END)) < 0) {
+			result = VSTOR_ERROR_PATH;
+			goto freeData;
 		}
 	} else {
 		result = VSTOR_ERROR_TYPE;
+		goto freeData;
 	}
-	if (result >= 0) {
-		/* The original accepts short images when open() returned a valid fd. */
-		if (length / s.blockSize >= s.blocks || s.fd >= 0) {
-			sceKernelSetEventFlag(s.eventFlag, EVF_OPEN);
-			return 0;
-		}
+	/* The original accepts short images when open() returned a valid fd. */
+	blocks = s.blocks;
+	if (length / s.blockSize >= blocks || result >= 0) {
+		sceKernelSetEventFlag(s.eventFlag, EVF_OPEN);
+		return 0;
 	}
 freeData:
 	if (s.dataBlock >= 0) {
@@ -313,7 +316,28 @@ freeCommand:
 	return result;
 }
 
-static int waitTransfer(unsigned bit)
+static int __attribute__((noinline)) devicePage(uint8_t *p)
+{
+	p[0] = 1;
+	p[1] = p[2] = 0;
+	p[4] = p[5] = p[6] = p[7] = 0;
+	p[8] = p[9] = p[10] = p[11] = 0;
+	p[12] = p[13] = p[14] = p[15] = 0;
+	p[3] = 0x80;
+	memset(p + 16, 0x20, 16);
+	SceUsbstorForDriver_B6689597(0, 0, p + 16, 16);
+	memset(p + 32, 0x20, 16);
+	SceUsbstorForDriver_B6689597(0, 1, p + 32, 16);
+	memset(p + 48, 0x20, 8);
+	SceUsbstorForDriver_B6689597(0, 2, p + 48, 8);
+	p[56] = p[57] = p[58] = p[59] = 0;
+	p[60] = p[61] = p[62] = p[63] = 0;
+	memset(p + 64, 0x20, 48);
+	memset(p + 112, 0, 16);
+	return 128;
+}
+
+static inline __attribute__((always_inline)) int waitTransfer(unsigned bit)
 {
 	if (s.pending) {
 		if (sceKernelWaitEventFlag(s.eventFlag, bit,
@@ -326,10 +350,12 @@ static int waitTransfer(unsigned bit)
 	return s.transferResult < 0 ? -1 : 0;
 }
 
-static int transferBlocks(unsigned block, unsigned count, struct UsbstorSense *sense, int write)
+static inline __attribute__((always_inline)) int transferBlocks(unsigned block, unsigned count,
+		struct UsbstorSense *sense, int write)
 {
 	unsigned index = 0, first = 1, limit, n, bytes, mask = write ? EVF_WRITE : EVF_SEND;
 	unsigned completion = write ? EVF_WRITTEN : EVF_SENT;
+	uint8_t *buffer;
 	int result = USBSTOR_COMMAND_FAILED;
 
 	if (s.fd < 0)
@@ -343,12 +369,13 @@ static int transferBlocks(unsigned block, unsigned count, struct UsbstorSense *s
 		setSense(sense, SCSI_KEY_MEDIUM_ERROR, SCSI_ASC_NO_SEEK_COMPLETE);
 		goto done;
 	}
-	limit = write ? s.writeLimit : s.readLimit;
 	while (count) {
+		limit = write ? s.writeLimit : s.readLimit;
 		n = count < limit ? count : limit;
+		buffer = s.buffers[index];
 		bytes = n * s.blockSize;
-		result = write ? SceUsbstorForDriver_F1A690DC(s.buffers[index], bytes, USBSTOR_TRANSFER_TIMEOUT) :
-				 sceIoRead(s.fd, s.buffers[index], bytes);
+		result = write ? SceUsbstorForDriver_F1A690DC(buffer, bytes, USBSTOR_TRANSFER_TIMEOUT) :
+				 sceIoRead(s.fd, buffer, bytes);
 		if (result < 0) {
 			if (s.pending && sceKernelWaitEventFlag(s.eventFlag, completion,
 								 SCE_KERNEL_EVF_WAITMODE_OR |
@@ -362,10 +389,10 @@ static int transferBlocks(unsigned block, unsigned count, struct UsbstorSense *s
 		}
 		if (!first && (s.pipeline & mask) && waitTransfer(completion) < 0)
 			goto failed;
+		s.transfer = buffer;
+		s.transferSize = bytes;
 		s.transferResult = 0x80244101;		/* until the worker reports */
 		s.pending = 1;
-		s.transfer = s.buffers[index];
-		s.transferSize = bytes;
 		sceKernelSetEventFlag(s.eventFlag, mask);
 		if (!(s.pipeline & mask)) {
 			if (waitTransfer(completion) < 0)
@@ -389,12 +416,49 @@ done:
 	return result;
 }
 
-static int modeSense(const uint8_t *cdb, struct UsbstorSense *sense, unsigned requested, unsigned header)
+/* name unknown: READ(10)/READ(12), the image to the host */
+static int __attribute__((noinline)) readBlocks(unsigned block, unsigned count,
+		struct UsbstorSense *sense)
 {
-	uint8_t *p = s.response + header;
-	unsigned page = cdb[2] & 0x3f, control = cdb[2] >> 6, size = header;
-	static const uint8_t managerPage[] = { 0x22, 8, 'E', 'M', 'P', 'R', '-', 'M', ' ', ' ' };
-	static const uint8_t marlinPage[] = { 0x3d, 0x3e, 'M', 'A', 'R', 'L', 'I', 'N', 2 };
+	return transferBlocks(block, count, sense, 0);
+}
+
+/* name unknown: the vendor page naming the media manager */
+static inline __attribute__((always_inline)) void managerPage(uint8_t *p)
+{
+	p[0] = 0x22;
+	p[1] = 8;
+	p[2] = 'E';
+	p[3] = 'M';
+	p[4] = 'P';
+	p[5] = 'R';
+	p[6] = '-';
+	p[7] = 'M';
+	p[8] = ' ';
+	p[9] = ' ';
+}
+
+/* name unknown: the vendor page naming the Marlin DRM agent */
+static inline __attribute__((always_inline)) void marlinPage(uint8_t *p)
+{
+	memset(p, 0, 64);
+	p[0] = 0x3d;
+	p[1] = 0x3e;
+	p[2] = 'M';
+	p[3] = 'A';
+	p[4] = 'R';
+	p[5] = 'L';
+	p[6] = 'I';
+	p[7] = 'N';
+	p[8] = 2;
+	p[10] = p[11] = p[12] = p[13] = 0xff;
+}
+
+static int __attribute__((noinline)) modeSense(const uint8_t *cdb, struct UsbstorSense *sense,
+		unsigned requested, unsigned header)
+{
+	unsigned mode = cdb[2], page = mode & 0x3f, control = mode >> 6, size = header;
+	uint8_t *response = s.response, *p = response + header;
 
 	if (control == 3)
 		return setSense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_SAVING_NOT_SUPPORTED);
@@ -405,9 +469,11 @@ static int modeSense(const uint8_t *cdb, struct UsbstorSense *sense, unsigned re
 			return setSense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_INVALID_FIELD_IN_CDB);
 		switch (page) {
 		case 1:
-			clearBytes(p + 2, 10);
 			p[0] = 1;
 			p[1] = 10;
+			p[2] = p[3] = p[4] = p[5] = 0;
+			p[6] = p[7] = p[8] = p[9] = 0;
+			p[10] = p[11] = 0;
 			size += 12;
 			break;
 		case 8:
@@ -420,33 +486,31 @@ static int modeSense(const uint8_t *cdb, struct UsbstorSense *sense, unsigned re
 		case 0x22:
 			if (!s.manager)
 				return setSense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_INVALID_FIELD_IN_CDB);
-			copyBytes(p, managerPage, 10);
+			managerPage(p);
 			size += 10;
 			break;
 		case 0x3d:
 			if (s.manager != 1)
 				return setSense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_INVALID_FIELD_IN_CDB);
-			memset(p, 0, 64);
-			copyBytes(p, marlinPage, 9);
-			p[10] = p[11] = p[12] = p[13] = 0xff;
+			marlinPage(p);
 			size += 64;
 			break;
 		case 0x3f:
-			clearBytes(p + 2, 10);
 			p[0] = 1;
 			p[1] = 10;
+			p[2] = p[3] = p[4] = p[5] = 0;
+			p[6] = p[7] = p[8] = p[9] = 0;
+			p[10] = p[11] = 0;
 			memset(p + 12, 0, 20);
 			p[12] = 8;
 			p[13] = 18;
 			p[14] = 1;
 			size += 32;
 			if (s.manager) {
-				copyBytes(p + 32, managerPage, 10);
+				managerPage(p + 32);
 				size += 10;
 				if (s.manager == 1) {
-					memset(p + 42, 0, 64);
-					copyBytes(p + 42, marlinPage, 9);
-					p[52] = p[53] = p[54] = p[55] = 0xff;
+					marlinPage(p + 42);
 					size += 64;
 				}
 			}
@@ -456,17 +520,27 @@ static int modeSense(const uint8_t *cdb, struct UsbstorSense *sense, unsigned re
 		}
 	}
 	if (header == 4) {
-		s.response[0] = size - 1;
-		clearBytes(s.response + 1, 3);
+		response[0] = size - 1;
+		response[1] = response[2] = response[3] = 0;
 	} else {
-		s.response[0] = (size - 2) >> 8;
-		s.response[1] = size - 2;
-		clearBytes(s.response + 2, 6);
+		response[0] = (size - 2) >> 8;
+		response[1] = size - 2;
+		response[2] = response[3] = response[4] = 0;
+		response[5] = response[6] = response[7] = 0;
 	}
-	return sendResponse(requested < size ? requested : size);
+	return SceUsbstorForDriver_D3C7EE70(response, requested < size ? requested : size,
+					   USBSTOR_TRANSFER_TIMEOUT) < 0 ?
+	       USBSTOR_COMMAND_FAILED : USBSTOR_COMMAND_DONE;
 }
 
-static int inquiry(const uint8_t *cdb)
+/* name unknown: WRITE(10)/WRITE(12), the host to the image */
+static int __attribute__((noinline)) writeBlocks(unsigned block, unsigned count,
+		struct UsbstorSense *sense)
+{
+	return transferBlocks(block, count, sense, 1);
+}
+
+static inline __attribute__((always_inline)) int inquiry(const uint8_t *cdb)
 {
 	struct ScsiInquiryData *data = (struct ScsiInquiryData *)s.response;
 	unsigned size = cdb[4];
@@ -497,24 +571,7 @@ static int inquiry(const uint8_t *cdb)
 	return sendResponse(size < RESPONSE_INQUIRY_SIZE ? size : RESPONSE_INQUIRY_SIZE);
 }
 
-static int devicePage(uint8_t *p)
-{
-	clearBytes(p, 16);
-	p[0] = 1;
-	p[3] = 0x80;
-	memset(p + 16, 0x20, 16);
-	SceUsbstorForDriver_B6689597(0, 0, p + 16, 16);
-	memset(p + 32, 0x20, 16);
-	SceUsbstorForDriver_B6689597(0, 1, p + 32, 16);
-	memset(p + 48, 0x20, 8);
-	SceUsbstorForDriver_B6689597(0, 2, p + 48, 8);
-	clearBytes(p + 56, 8);
-	memset(p + 64, 0x20, 48);
-	memset(p + 112, 0, 16);
-	return 128;
-}
-
-static int vendorPage(const uint8_t *cdb, struct UsbstorSense *sense)
+static inline __attribute__((always_inline)) int vendorPage(const uint8_t *cdb, struct UsbstorSense *sense)
 {
 	uint8_t *p = s.response;
 	unsigned page = be16(cdb + 2), requested = be16(cdb + 8), size;
@@ -577,7 +634,7 @@ static int vendorPage(const uint8_t *cdb, struct UsbstorSense *sense)
 	return sendResponse(requested < size ? requested : size);
 }
 
-static int verifyBlocks(const uint8_t *cdb, struct UsbstorSense *sense, int write)
+static inline __attribute__((always_inline)) int verifyBlocks(const uint8_t *cdb, struct UsbstorSense *sense, int write)
 {
 	unsigned block = be32(cdb + 2), count = be16(cdb + 7), n, bytes;
 	int mismatch = 0, result = USBSTOR_COMMAND_FAILED;
@@ -614,7 +671,7 @@ static int verifyBlocks(const uint8_t *cdb, struct UsbstorSense *sense, int writ
 			setSense(sense, SCSI_KEY_MEDIUM_ERROR, SCSI_ASC_UNRECOVERED_READ_ERROR);
 			goto done;
 		}
-		if ((write || (cdb[1] & 2)) && memcmp(s.buffers[0], s.buffers[1], bytes))
+		if ((cdb[1] & 2) && memcmp(s.buffers[0], s.buffers[1], bytes))
 			mismatch = 1;
 		count -= n;
 	}
@@ -627,14 +684,14 @@ done:
 	return result;
 }
 
-static int readToc(const uint8_t *cdb)
+static inline __attribute__((always_inline)) int readToc(const uint8_t *cdb)
 {
 	uint8_t *p = s.response;
 	unsigned format = cdb[2] & 15, size;
 	static const uint8_t fullToc[70] = {
 		0, 0x44, 1, 1, 1, 0x14, 0, 0xa0, 0, 0, 0, 0, 1, 0x20, 0, 1,
 		0x14, 0, 0xa1, 0, 0, 0, 0, 1, 0, 0, 1, 0x14, 0, 0xa2, 0, 0,
-		0, 0, 0, 0x0b, 0x44, 1, 1, 0, 1, 0, 0x14, 0, 0, 0, 2, 0,
+		0, 0, 0, 0x0b, 0x44, 1, 0x14, 0, 1, 0, 0, 0, 0, 0, 2, 0,
 		1, 0x54, 0, 0xb0, 2, 0x29, 0x44, 2, 0x4f, 0x3b, 0x48, 1,
 		0x54, 0, 0xc0, 0x80, 0, 0x30, 0, 0x61, 0x18, 1,
 	};
@@ -676,7 +733,7 @@ static int readToc(const uint8_t *cdb)
 	return result;
 }
 
-static int command(int unit, const uint8_t *cdb, struct UsbstorSense *sense)
+static int __attribute__((noinline)) command(int unit, const uint8_t *cdb, struct UsbstorSense *sense)
 {
 	unsigned op = cdb[0], block = be32(cdb + 2), count = be16(cdb + 7);
 
@@ -729,11 +786,11 @@ static int command(int unit, const uint8_t *cdb, struct UsbstorSense *sense)
 		return sendResponse(8);
 	case SCSI_READ_10:
 	case SCSI_READ_12:
-		return transferBlocks(block, op == SCSI_READ_10 ? count : be32(cdb + 6), sense, 0);
+		return readBlocks(block, op == SCSI_READ_10 ? count : be32(cdb + 6), sense);
 	case SCSI_WRITE_10:
 	case SCSI_WRITE_12:
 		if (s.type == USBSTOR_TYPE_DISK)
-			return transferBlocks(block, op == SCSI_WRITE_10 ? count : be32(cdb + 6), sense, 1);
+			return writeBlocks(block, op == SCSI_WRITE_10 ? count : be32(cdb + 6), sense);
 		return USBSTOR_COMMAND_UNKNOWN;
 	case SCSI_SEEK_10:
 		if (s.fd < 0)
@@ -757,7 +814,26 @@ static int command(int unit, const uint8_t *cdb, struct UsbstorSense *sense)
 	}
 }
 
-static int startStorage(int type)
+/* name unknown: hand the product name and revision to SceUsbstor */
+static int __attribute__((noinline)) setDeviceInfo(const char *product, const char *revision)
+{
+	if (!product || !revision)
+		return VSTOR_ERROR_DEVICE_INFO;
+	SceUsbstorForDriver_ADB2AAF2(product, revision, 0);
+	return 0;
+}
+
+/* name unknown: keep the image path */
+static int __attribute__((noinline)) setImagePath(const char *path)
+{
+	if (!path)
+		return VSTOR_ERROR_PATH;
+	memset(s.path, 0, 256);
+	strncpy(s.path, path, 256);
+	return 0;
+}
+
+static int __attribute__((noinline)) startStorage(int type)
 {
 	int result;
 	unsigned product;
@@ -773,10 +849,8 @@ static int startStorage(int type)
 	unsigned prefix;
 	if (type == USBSTOR_TYPE_DISK) {
 		s.blockSize = 512;
-		/* Keep the original byte comparison: it makes no strncmp import. */
-		static const char diskPrefix[] = "ux0:/umass/";
 		for (prefix = 0; prefix < 11; prefix++) {
-			if (s.path[prefix] != diskPrefix[prefix])
+			if (s.path[prefix] != "ux0:/umass/"[prefix])
 				return VSTOR_ERROR_LOCATION;
 		}
 		product = VSTOR_PID_DISK;
@@ -802,6 +876,24 @@ static int startStorage(int type)
 	if (result < 0)
 		return result;
 	result = sceUdcdActivate(product);
+	return result < 0 ? result : 0;
+}
+
+/* name unknown: stop the USB storage function */
+static int __attribute__((noinline)) stopStorage(void)
+{
+	int result;
+
+	s.type = USBSTOR_TYPE_NONE;
+	if (SceUdcdForDriver_C0CA5DDB("USBStor_Driver") != 2)
+		return VSTOR_ERROR_INACTIVE;
+	result = sceUdcdDeactivate();
+	if (result < 0)
+		return result;
+	result = sceUdcdStop("USBStor_Driver", 0, NULL);
+	if (result < 0)
+		return result;
+	result = sceUdcdStop("USBDeviceControllerDriver", 0, NULL);
 	return result < 0 ? result : 0;
 }
 
@@ -857,17 +949,27 @@ int module_stop(SceSize size, void *args)
 int sceUsbstorVStorSetDeviceInfo(const char *product, const char *revision)
 {
 	unsigned saved = sceSyscallEnter();
-	int result = SCE_ERROR_ERRNO_ENOSYS;
-	char productCopy[17] = { 0 }, revisionCopy[5] = { 0 };
+	int result;
+	char productCopy[17] = { 0 };
 
-	if (authorized()) {
+	if (!authorized()) {
+		sceSyscallLeave(saved);
+		return SCE_ERROR_ERRNO_ENOSYS;
+	}
+	if (sceKernelStrncpyFromUser(productCopy, product, 16) < 0) {
+		sceSyscallLeave(saved);
+		return VSTOR_ERROR_ARGUMENT;
+	}
+	char revisionCopy[5] = { 0 };
+	if (sceKernelStrncpyFromUser(revisionCopy, revision, 4) < 0) {
+		sceSyscallLeave(saved);
+		return VSTOR_ERROR_ARGUMENT;
+	}
+	if (!productCopy[0] || !revisionCopy[0]) {
 		result = VSTOR_ERROR_ARGUMENT;
-		if (sceKernelStrncpyFromUser(productCopy, product, 16) >= 0 &&
-		    sceKernelStrncpyFromUser(revisionCopy, revision, 4) >= 0 &&
-		    productCopy[0] && revisionCopy[0]) {
-			SceUsbstorForDriver_ADB2AAF2(productCopy, revisionCopy, 0);
-			result = 0;
-		}
+	} else {
+		setDeviceInfo(productCopy, revisionCopy);
+		result = 0;
 	}
 	sceSyscallLeave(saved);
 	return result;
@@ -876,25 +978,30 @@ int sceUsbstorVStorSetDeviceInfo(const char *product, const char *revision)
 int sceUsbstorVStorSetImgFilePath(const char *path)
 {
 	unsigned saved = sceSyscallEnter();
-	int result = SCE_ERROR_ERRNO_ENOSYS;
+	int result;
 	char copy[257];
 
-	if (authorized()) {
-		memset(copy, 0, 257);
-		result = sceKernelStrncpyFromUser(copy, path, 256);
-		if (result < 0 || !path) {
-			result = VSTOR_ERROR_ARGUMENT;
-		} else {
-			memset(s.path, 0, 256);
+	if (!authorized()) {
+		sceSyscallLeave(saved);
+		return SCE_ERROR_ERRNO_ENOSYS;
+	}
+	memset(copy, 0, sizeof(copy));
+	result = sceKernelStrncpyFromUser(copy, path, 256);
+	if (result < 0) {
+		sceSyscallLeave(saved);
+		return VSTOR_ERROR_ARGUMENT;
+	}
+	if (!path) {
+		result = VSTOR_ERROR_ARGUMENT;
+	} else {
+		memset(s.path, 0, 256);
 #if FW_VERSION >= 0x04000000
-			__strncpy_chk(s.path, copy, result, 256);
+		__strncpy_chk(s.path, copy, result, 256);
 #else
-			strncpy(s.path, copy, result);
+		strncpy(s.path, copy, result);
 #endif
-			memset(s.path, 0, 256);
-			strncpy(s.path, copy, 256);
-			result = 0;
-		}
+		setImagePath(copy);
+		result = 0;
 	}
 	sceSyscallLeave(saved);
 	return result;
@@ -903,7 +1010,13 @@ int sceUsbstorVStorSetImgFilePath(const char *path)
 int sceUsbstorVStorStart(int type)
 {
 	unsigned saved = sceSyscallEnter();
-	int result = authorized() ? startStorage(type) : SCE_ERROR_ERRNO_ENOSYS;
+	int result;
+
+	if (!authorized()) {
+		sceSyscallLeave(saved);
+		return SCE_ERROR_ERRNO_ENOSYS;
+	}
+	result = startStorage(type);
 	sceSyscallLeave(saved);
 	return result;
 }
@@ -911,24 +1024,13 @@ int sceUsbstorVStorStart(int type)
 int sceUsbstorVStorStop(void)
 {
 	unsigned saved = sceSyscallEnter();
-	int result = SCE_ERROR_ERRNO_ENOSYS;
+	int result;
 
-	if (authorized()) {
-		s.type = USBSTOR_TYPE_NONE;
-		if (SceUdcdForDriver_C0CA5DDB("USBStor_Driver") != 2) {
-			result = VSTOR_ERROR_INACTIVE;
-		} else {
-			result = sceUdcdDeactivate();
-			if (result >= 0) {
-				result = sceUdcdStop("USBStor_Driver", 0, NULL);
-				if (result >= 0) {
-					result = sceUdcdStop("USBDeviceControllerDriver", 0, NULL);
-					if (result >= 0)
-						result = 0;
-				}
-			}
-		}
+	if (!authorized()) {
+		sceSyscallLeave(saved);
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
+	result = stopStorage();
 	sceSyscallLeave(saved);
 	return result;
 }
