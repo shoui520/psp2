@@ -685,7 +685,7 @@ int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 address, const SceUInt32 *
 #define GXM_DIRTY_VERTEX_OUTPUTS2	0x00008000
 
 /* SceGxmContext.flags */
-#define GXM_CONTEXT_FLAG_VERTEX_FENCE		0x00000200	/* sceGxmVertexFence wrote a fence */
+#define GXM_CONTEXT_FLAG_VERTEX_FENCE		0x00000200	/* a fence or a command list is in the VDM stream */
 #define GXM_CONTEXT_FLAG_DEPTH_STENCIL_USED	0x00000800
 
 /* ISP control word (front and back) */
@@ -808,6 +808,9 @@ typedef struct GxmMteState {
 	SceUInt32 texCoordOutputs;
 	SceUInt32 vertexOutputs2;
 } GxmMteState;
+
+void gxmMteStateInvalidate(GxmMteState *state);
+void gxmMteStateInit(GxmMteState *state);
 
 
 /*
@@ -1002,7 +1005,9 @@ typedef struct SceGxmContext {
 	GxmCommandBlock vertexDmaBlock;	/* 0x3c8 */
 	GxmCommandBlock vertexStreamBlock;	/* 0x3d0: the streams' descriptors */
 
-	SceUInt8 insideScene;		/* 0x3d8: between sceGxmBeginScene and sceGxmEndScene */
+	SceUInt8 insideScene;		/* 0x3d8: in a scene, or (deferred) in a command list */
+	union {
+	struct {			/* SCE_GXM_CONTEXT_TYPE_IMMEDIATE */
 	volatile SceUInt32 *slot;	/* 0x3dc: its slot table slot: the rings' read offsets */
 	GxmRingBuffer vdmRing;		/* 0x3e0 */
 	GxmRingBuffer vertexRing;	/* 0x404 */
@@ -1022,6 +1027,17 @@ typedef struct SceGxmContext {
 	SceUInt32 sampleCount;		/* 0x510: the render target's samples per pixel */
 	SceUInt32 reserved[7];		/* 0x514: PLACEHOLDER: not read by the code written yet */
 	GxmSceneParams nextScene;	/* 0x530: set between scenes */
+	};
+	struct {			/* SCE_GXM_CONTEXT_TYPE_DEFERRED */
+	GxmDeferredBuffer vdmSource;	/* 0x3dc: where each buffer's next chunk comes from */
+	GxmDeferredBuffer vertexSource;
+	GxmDeferredBuffer fragmentSource;
+	SceUInt32 *listStart;		/* 0x400: the command list's first VDM word */
+	SceUInt32 listDepthStencilUsage;	/* GXM_LIST_USES_*, from the draws' depth/stencil modes */
+	SceUInt32 listTileYMax;		/* 0x408: the lowest tile row a region clip reached */
+	SceUInt32 listSerial;		/* 0x40c: gxmCounterIncrement() at creation */
+	};
+	};
 } SceGxmContext;
 
 GXM_ASSERT_OFFSET(SceGxmContext, state, 0x1c0);
@@ -1039,6 +1055,62 @@ GXM_ASSERT_OFFSET(SceGxmContext, colorSurface, 0x4c4);
 GXM_ASSERT_OFFSET(SceGxmContext, depthStencil, 0x4f4);
 GXM_ASSERT_OFFSET(SceGxmContext, nextScene, 0x530);
 _Static_assert(sizeof(SceGxmContext) == 0x554, "SceGxmContext size");
+GXM_ASSERT_OFFSET(SceGxmContext, vdmSource, 0x3dc);
+GXM_ASSERT_OFFSET(SceGxmContext, listStart, 0x400);
+GXM_ASSERT_OFFSET(SceGxmContext, listSerial, 0x40c);
+
+/* a deferred context uses only the memory up to its own fields */
+#define GXM_DEFERRED_CONTEXT_SIZE	0x410
+
+/* the depth/stencil state a command list's draws use (listDepthStencilUsage) */
+#define GXM_LIST_USES_DEPTH_FRONT	0x00000001
+#define GXM_LIST_USES_DEPTH_BACK	0x00000002
+#define GXM_LIST_USES_STENCIL_FRONT	0x00000004
+#define GXM_LIST_USES_STENCIL_BACK	0x00000008
+#define GXM_LIST_USES_MASK		0x00000010
+#define GXM_LIST_USES_ALL		0x0000001f
+
+/* the scene's ZLS control (depthStencil.zlsControl) */
+#define GXM_ZLS_LOAD_STENCIL		0x00002000
+#define GXM_ZLS_LOAD_DEPTH		0x00004000
+#define GXM_ZLS_LOAD_MASK		0x00008000
+#define GXM_ZLS_STORE_STENCIL		0x00020000
+#define GXM_ZLS_STORE_DEPTH		0x00040000
+#define GXM_ZLS_STORE_MASK		0x00080000
+#define GXM_ZLS_LOAD_CONTROL		0x00e0f002	/* taken from the load surface */
+#define GXM_ZLS_STORE_CONTROL		0xff1f0ffd	/* and the rest from the store surface */
+
+#define SCE_GXM_MINIMUM_CONTEXT_HOST_MEM_SIZE		2048
+#define SCE_GXM_MINIMUM_DEFERRED_CONTEXT_BUFFER_SIZE	1024
+
+typedef void *(*SceGxmDeferredContextCallback)(void *userData, uint32_t minSize, uint32_t *size);
+
+typedef struct SceGxmDeferredContextParams {
+	void *hostMem;
+	uint32_t hostMemSize;
+	SceGxmDeferredContextCallback vdmCallback;
+	SceGxmDeferredContextCallback vertexCallback;
+	SceGxmDeferredContextCallback fragmentCallback;
+	void *userData;
+	void *vdmBufferMem;
+	uint32_t vdmBufferMemSize;
+	void *vertexBufferMem;
+	uint32_t vertexBufferMemSize;
+	void *fragmentBufferMem;
+	uint32_t fragmentBufferMemSize;
+} SceGxmDeferredContextParams;
+
+/* the SDK's opaque SceGxmCommandList (SCE_GXM_COMMAND_LIST_WORD_COUNT words) */
+typedef struct SceGxmCommandList {
+	SceUInt32 *start;		/* the first VDM word, linked to by sceGxmExecuteCommandList */
+	SceUInt32 *returnLink;		/* the last block: patched with the address to return to */
+	SceUInt32 depthStencilUsage;	/* GXM_LIST_USES_* */
+	SceUInt32 tileYMax;		/* the scene's valid region must reach this tile row */
+	SceUInt32 reserved[3];
+	SceUInt32 serial;		/* the deferred context's listSerial */
+} SceGxmCommandList;
+
+_Static_assert(sizeof(SceGxmCommandList) == 8 * 4, "SceGxmCommandList size");
 
 static inline SceUInt32 gxmFloatBits(float value)
 {
@@ -1056,6 +1128,9 @@ void gxmContextUpdateBackFragmentProgram(SceGxmContext *context,
 void sceGxmSetDefaultRegionClipAndViewport(SceGxmContext *context, SceUInt32 xMax, SceUInt32 yMax);
 
 /* context_flush.c */
+int gxmContextCheckCommandList(const SceGxmContext *context, const SceGxmCommandList *list);
+void gxmContextResetState(SceGxmContext *context, SceBool vertexOnly,
+			  SceBool preserveDefaultUniformBuffers);
 int gxmContextWriteVertexStreams(SceGxmContext *context);
 int gxmContextWriteState(SceGxmContext *context);
 
@@ -1225,6 +1300,7 @@ int gxmThreadStateInit(SceUInt32 *state, SceUInt8 *flag);
 #define GXM_COMPAT_SURFACE_ANY		0x00002000
 #define GXM_COMPAT_DEPTH_STRIDE_PIXELS	0x00000400	/* the depth stride need only cover the region */
 #define GXM_COMPAT_COLOR_ENABLE_DATA	0x00008000	/* a surface is enabled when it has data */
+#define GXM_COMPAT_FRAGMENT_CALLBACK_VALUE 0x00040000	/* no fragment callback: INVALID_VALUE */
 #define GXM_COMPAT_COLOR_RESTRICTED	0x00010000
 #define GXM_COMPAT_USSE_ANY_SIZE	0x00020000	/* USSE maps may exceed 8 MiB */
 #define GXM_COMPAT_UNK80000		0x00080000	/* MSAA blending: no single-instruction phase flag */

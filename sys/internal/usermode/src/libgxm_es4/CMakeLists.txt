@@ -8,6 +8,8 @@ set(GXM_SOURCES
 	blending.c
 	chunk_buffer.c
 	context.c
+	context_deferred.c
+	context_flush.c
 	context_state.c
 	device_mem.c
 	display_queue.c

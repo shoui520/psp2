@@ -558,14 +558,6 @@ int sceGxmDrawInstanced(SceGxmContext *context, SceUInt32 primType,
 }
 
 /* depth/stencil surface contents: the load bits, then the store bits */
-#define GXM_ZLS_LOAD_STENCIL		0x00002000
-#define GXM_ZLS_LOAD_DEPTH		0x00004000
-#define GXM_ZLS_LOAD_MASK		0x00008000
-#define GXM_ZLS_STORE_STENCIL		0x00020000
-#define GXM_ZLS_STORE_DEPTH		0x00040000
-#define GXM_ZLS_STORE_MASK		0x00080000
-#define GXM_ZLS_LOAD_CONTROL		0x00e0f002	/* taken from the load surface */
-#define GXM_ZLS_STORE_CONTROL		0xff1f0ffd	/* and the rest from the store surface */
 
 /* sceGxmBeginSceneEx; sceGxmBeginScene loads and stores one depth/stencil surface */
 static inline int gxmBeginScene(SceGxmContext *context, SceUInt32 flags,
