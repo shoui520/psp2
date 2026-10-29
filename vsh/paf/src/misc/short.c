@@ -332,3 +332,42 @@ void ScePafMisc_8C14E735(float *output, const float *first,
 	output[2] = width >= 0.0f ? width : 0.0f;
 	output[3] = height >= 0.0f ? height : 0.0f;
 }
+
+void ScePafMisc_B2795FE2(float *output, const float *first,
+			const float *second)
+{
+	float half_h1 = first[3] * 0.5f;
+	float half_h2 = second[3] * 0.5f;
+	float half_w1 = first[2] * 0.5f;
+	float half_w2 = second[2] * 0.5f;
+	float x1 = first[0], y1 = first[1];
+	float x2 = second[0], y2 = second[1];
+	float upper = y2 + half_h2;
+	float left = x2 - half_w2;
+	float lower = y2 - half_h2;
+	float right = x2 + half_w2;
+	float first_upper = y1 + half_h1;
+	float first_left = x1 - half_w1;
+	float first_lower = y1 - half_h1;
+	float first_right = x1 + half_w1;
+	float width, height;
+
+	if (upper > first_upper)
+		upper = first_upper;
+	if (left < first_left)
+		left = first_left;
+	if (lower < first_lower)
+		lower = first_lower;
+	if (right > first_right)
+		right = first_right;
+	if (lower > upper)
+		lower = upper;
+	if (left > right)
+		left = right;
+	width = right - left;
+	height = upper - lower;
+	output[0] = (left + right) * 0.5f;
+	output[1] = (lower + upper) * 0.5f;
+	output[2] = width >= 0.0f ? width : 0.0f;
+	output[3] = height >= 0.0f ? height : 0.0f;
+}
