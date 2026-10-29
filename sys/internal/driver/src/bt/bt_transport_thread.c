@@ -42,8 +42,7 @@ int BtTransportThread(SceSize argumentSize, void *argument)
 		transport->stack->lastError = started;
 		mode = transport->stack->mode | 0x40;
 		transport->stack->mode = mode;
-		BtNotifyEvent(21, 0, (uint8_t)mode,
-			(uint64_t)(uintptr_t)transport->stack);
+		BtNotifyEvent(21, 0, (uint8_t)mode, 0);
 		goto exit;
 	}
 	BtInitializeQueues(transport->stack);
