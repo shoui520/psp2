@@ -3,6 +3,7 @@
  * containers and data phases; this module owns the pipes and the class
  * requests on the control pipe.
  */
+#include <fw.h>
 #include "usbmtp.h"
 #include <sysmem/uid_guid.h>
 
@@ -71,8 +72,18 @@ typedef struct __attribute__((packed)) MtpCancelRequest {
 
 static struct UsbMtp {
 	SceKernelSpinlock lock;
+#if !FW_SINCE(0x04000000)
+	/* the 3.6x builds order the descriptors first and the endpoints before phase */
+	unsigned ready;			/* between Start and Stop */
+	MtpOsStringDescriptor osString;
+	uint16_t reserved1;
+	MtpContainer cancelResponse;
+	SceUdcdStringDescriptor serialString;
+	SceUdcdInterface interface;
+	MtpContainer successResponse;
+#endif
 	SceUdcdDriver driver;
-	unsigned port;
+	unsigned port __attribute__((aligned(8)));
 	unsigned product;
 	unsigned speed;			/* 2: high speed, 1: full speed */
 	unsigned packetSize;		/* of the bulk pipes */
@@ -105,6 +116,7 @@ static struct UsbMtp {
 	uint8_t controlCode;		/* bRequest of the last control request */
 	uint8_t padding[3];
 	uint8_t serialNumber[128];
+#if FW_SINCE(0x04000000)
 	SceUdcdInterface interface;
 	MtpOsStringDescriptor osString;
 	uint16_t reserved1;
@@ -116,11 +128,26 @@ static struct UsbMtp {
 	unsigned status;		/* MTP_STATUS_* */
 	SceUdcdEndpoint endpoints[4];
 	MtpContainer successResponse;
+#else
+	unsigned phase;			/* MTP_PHASE_* */
+	SceUdcdEndpoint endpoints[4];
+	unsigned status;		/* MTP_STATUS_* */
+	MtpCompatibleIdDescriptor compatibleId;
+#endif
 } s_mtp;
 
+#if FW_SINCE(0x04000000)
 _Static_assert(offsetof(struct UsbMtp, control) == 0xc4, "control request");
 _Static_assert(offsetof(struct UsbMtp, osString) == 0x294, "OS string");
 _Static_assert(offsetof(struct UsbMtp, phase) == 0x330, "phase");
+#else
+_Static_assert(offsetof(struct UsbMtp, cancelResponse) == 0x1c, "cancel response");
+_Static_assert(offsetof(struct UsbMtp, driver) == 0xa8, "driver");
+_Static_assert(offsetof(struct UsbMtp, port) == 0x100, "port");
+_Static_assert(offsetof(struct UsbMtp, control) == 0x16c, "control request");
+_Static_assert(offsetof(struct UsbMtp, phase) == 0x330, "phase");
+_Static_assert(offsetof(struct UsbMtp, compatibleId) == 0x378, "compatible ID");
+#endif
 _Static_assert(sizeof(MtpIfTransfer) == 32, "shared transfer layout");
 
 static const SceUdcdDeviceDescriptor s_deviceDescriptor = {
@@ -1305,7 +1332,8 @@ int sceUsbMtpStop(void)
 
 int _sceUsbMtpModuleStart(unsigned arglen, const char *argp)
 {
-	memset(&s_mtp.port, 0, offsetof(struct UsbMtp, interface) - offsetof(struct UsbMtp, port));
+	memset(&s_mtp.port, 0, offsetof(struct UsbMtp, serialNumber) + sizeof(s_mtp.serialNumber) -
+	       offsetof(struct UsbMtp, port));
 	s_mtp.port = 2;
 	s_mtp.product = 0x4e4;
 	s_mtp.event = sceKernelCreateEventFlag("SceUsbMtp", 0x9000, 0, 0);
