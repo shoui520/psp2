@@ -62,3 +62,58 @@ ScePafMisc_E80F175C:
 	bx lr
 	.fnend
 	.size ScePafMisc_E80F175C, . - ScePafMisc_E80F175C
+
+	.global ScePafMisc_EA6558AD
+	.type ScePafMisc_EA6558AD, %function
+	.thumb_func
+ScePafMisc_EA6558AD:
+	.fnstart
+	push {r4, lr}
+	movs r3, #0
+	adds r0, r3, #0
+	cbz r1, .LnotFoundEA
+.LsearchEA:
+	ands r4, r1, #1
+	beq .LshiftEA
+	cmp r3, r2
+	bne .LnextEA
+	b .LfoundEA
+.LnextEA:
+	adds r3, #1
+.LshiftEA:
+	lsrs r1, r1, #1
+	add.w r0, r0, #1
+	bne .LsearchEA
+.LnotFoundEA:
+	movs.w r0, #-1
+.LfoundEA:
+	pop {r4, pc}
+	.fnend
+	.size ScePafMisc_EA6558AD, . - ScePafMisc_EA6558AD
+
+	.global ScePafMisc_49034205
+	.type ScePafMisc_49034205, %function
+	.thumb_func
+ScePafMisc_49034205:
+	.fnstart
+	push {r4, lr}
+	ldr r3, [r0, #0x14]
+	cbz r3, .Lfailure490
+	movs r4, #1
+	ldr r2, [r0, #0xc]
+	lsls.w r1, r4, r1
+	ands.w r4, r2, r1
+	bne .Lrelease490
+.Lfailure490:
+	movs.w r0, #-1
+	b .Lreturn490
+.Lrelease490:
+	bics.w r1, r2, r1
+	str r1, [r0, #0xc]
+	subs r1, r3, #1
+	str r1, [r0, #0x14]
+	adds r0, r1, #0
+.Lreturn490:
+	pop {r4, pc}
+	.fnend
+	.size ScePafMisc_49034205, . - ScePafMisc_49034205

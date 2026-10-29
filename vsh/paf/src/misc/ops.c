@@ -177,3 +177,14 @@ void ScePafMisc_5C89D36F(uint32_t *dst, const void *object)
 	dst[2] = c;
 	dst[3] = d;
 }
+
+void ScePafMisc_3C2E7C36(uint8_t *object, uint32_t first, uint32_t flag,
+			uint32_t second, uint32_t third)
+{
+	int32_t old_flags = (int8_t)object[12];
+
+	*(uint32_t *)(object + 0) = first;
+	*(uint32_t *)(object + 4) = second;
+	*(uint32_t *)(object + 8) = third;
+	object[12] = (uint8_t)((old_flags & ~1) | (flag & 1));
+}
