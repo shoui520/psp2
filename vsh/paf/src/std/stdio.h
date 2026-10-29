@@ -22,9 +22,13 @@ enum PafFileStatus {
 #define sce_paf_feof ScePafStdc_7CA739D5
 #define sce_paf_ferror ScePafStdc_AC25A31C
 #define sce_paf_fileno ScePafStdc_17A23255
+#define sce_paf_clearerr ScePafStdc_6FAF02EB
+#define sce_paf_ungetc ScePafStdc_84C69938
 
 int sce_paf_feof(sce_paf_FILE *stream);
 int sce_paf_ferror(sce_paf_FILE *stream);
 int sce_paf_fileno(sce_paf_FILE *stream);
+void sce_paf_clearerr(sce_paf_FILE *stream);
+int sce_paf_ungetc(int ch, sce_paf_FILE *stream);
 
 #endif
