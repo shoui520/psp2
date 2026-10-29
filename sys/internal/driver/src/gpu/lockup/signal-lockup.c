@@ -11,6 +11,9 @@
 #include <sysmem/sysclib.h>
 #include <gpu/lockup.h>
 
+#undef __FILE_NAME__
+#define __FILE_NAME__ "../../../../driver/src/gpu/lockup/signal-lockup.c"
+
 int signalMutex = -1;
 int signalCond = -1;
 unsigned signalCounter;

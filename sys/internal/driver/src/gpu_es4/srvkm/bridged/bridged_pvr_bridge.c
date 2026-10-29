@@ -1264,10 +1264,7 @@ typedef struct PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM {
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 } PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM;
 
-static const SceKernelDebugInfo dbg_PVRSRVAllocDeviceMemBW_L816 = {
-	0x1399193b, 0xc915e7fa, 0x532a2c10,
-	"bridged/bridged_pvr_bridge.c", 816, "PVRSRVAllocDeviceMemBW"
-};
+SCE_DBGINFO_DEFINE(static, dbg_PVRSRVAllocDeviceMemBW_L816, 816, "PVRSRVAllocDeviceMemBW");
 
 /* IMG allocation bridge with the SCE memblock-backed allocator and compact ABI. */
 IMG_INT PVRSRVAllocDeviceMemBW(IMG_UINT32 ui32BridgeID,
