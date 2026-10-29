@@ -200,6 +200,105 @@ uint16_t *sce_paf_wcsncat(uint16_t *destination, const uint16_t *source,
 	}
 }
 
+int sce_paf_wcsncmp(const uint16_t *left, const uint16_t *right, size_t num)
+{
+	const volatile uint16_t *leftByte = (const volatile uint16_t *)left;
+	const volatile uint16_t *rightByte = (const volatile uint16_t *)right;
+	uint32_t remaining = num;
+
+	if (!left || !right) {
+		if (left == right)
+			return 0;
+		return left ? 1 : -1;
+	}
+	for (;;) {
+		int leftCh, rightCh;
+
+		remaining--;
+		if (remaining & 0x80000000U)
+			return 0;
+		rightCh = *rightByte++;
+		leftCh = *leftByte;
+		if (leftCh != rightCh)
+			return *leftByte - rightByte[-1];
+		if (!*leftByte++)
+			return 0;
+	}
+}
+
+int sce_paf_wcscasecmp(const uint16_t *left, const uint16_t *right)
+{
+	const volatile uint16_t *leftByte = (const volatile uint16_t *)left;
+	const volatile uint16_t *rightByte = (const volatile uint16_t *)right;
+
+	if (!left || !right) {
+		if (left == right)
+			return 0;
+		return left ? 1 : -1;
+	}
+	for (;;) {
+		int leftCh = *leftByte;
+		int rightCh;
+
+		if (leftCh < 0x80)
+			leftCh = (uint16_t)sce_paf_tolower(leftCh);
+		rightCh = *rightByte;
+		if (rightCh < 0x80)
+			rightCh = (uint16_t)sce_paf_tolower(rightCh);
+		if (leftCh != rightCh) {
+			leftCh = *leftByte;
+			if (leftCh < 0x80)
+				leftCh = (uint16_t)sce_paf_tolower(leftCh);
+			rightCh = *rightByte;
+			if (rightCh < 0x80)
+				rightCh = (uint16_t)sce_paf_tolower(rightCh);
+			return leftCh - rightCh;
+		}
+		if (!*leftByte++)
+			return 0;
+		rightByte++;
+	}
+}
+
+int sce_paf_wcsncasecmp(const uint16_t *left, const uint16_t *right,
+			 size_t num)
+{
+	const volatile uint16_t *leftByte = (const volatile uint16_t *)left;
+	const volatile uint16_t *rightByte = (const volatile uint16_t *)right;
+	uint32_t remaining = num;
+
+	if (!left || !right) {
+		if (left == right)
+			return 0;
+		return left ? 1 : -1;
+	}
+	for (;;) {
+		int leftCh, rightCh;
+
+		remaining--;
+		if (remaining & 0x80000000U)
+			return 0;
+		leftCh = *leftByte;
+		if (leftCh < 0x80)
+			leftCh = (uint16_t)sce_paf_tolower(leftCh);
+		rightCh = *rightByte;
+		if (rightCh < 0x80)
+			rightCh = (uint16_t)sce_paf_tolower(rightCh);
+		if (leftCh != rightCh) {
+			leftCh = *leftByte;
+			if (leftCh < 0x80)
+				leftCh = (uint16_t)sce_paf_tolower(leftCh);
+			rightCh = *rightByte;
+			if (rightCh < 0x80)
+				rightCh = (uint16_t)sce_paf_tolower(rightCh);
+			return leftCh - rightCh;
+		}
+		if (!*leftByte++)
+			return 0;
+		rightByte++;
+	}
+}
+
 int sce_paf_strcmp(const char *left, const char *right)
 {
 	const volatile signed char *leftByte;
