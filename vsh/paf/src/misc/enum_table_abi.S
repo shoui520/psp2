@@ -165,6 +165,47 @@ ScePafMisc_2FEF71B0:
 	.fnend
 	.size ScePafMisc_2FEF71B0, . - ScePafMisc_2FEF71B0
 
+	.global ScePafMisc_B7CA61AD
+	.type ScePafMisc_B7CA61AD, %function
+	.thumb_func
+ScePafMisc_B7CA61AD:
+	.fnstart
+	push {r4, r5, r6, lr}
+	ldr.w ip, [r1]
+	movs r4, #0
+	cmp.w ip, #0
+	blt .LnotfoundB7
+	ldr r3, [r1, #4]
+	cmp r3, #0
+	blt .LnotfoundB7
+	ldr r1, [r0, #8]
+	cmp ip, r1
+	ldr r5, [r0, #0xc]
+	bge .LnotfoundB7
+	cmp r3, r5
+	bge .LnotfoundB7
+	cmp.w ip, #0
+	blt .LwriteB7
+	cmp r3, #0
+	blt .LwriteB7
+	cmp ip, r1
+	bge .LwriteB7
+	cmp r3, r5
+	bge .LwriteB7
+	mla r4, r3, r1, ip
+	ldr r0, [r0]
+	add.w r4, r0, r4, lsl #3
+.LwriteB7:
+	movs r0, #1
+	str r2, [r4, #4]
+	b .LreturnB7
+.LnotfoundB7:
+	adds r0, r4, #0
+.LreturnB7:
+	pop {r4, r5, r6, pc}
+	.fnend
+	.size ScePafMisc_B7CA61AD, . - ScePafMisc_B7CA61AD
+
 	.macro PafEnumSizeInEights name, input_offset
 	.global \name
 	.type \name, %function
