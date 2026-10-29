@@ -31,9 +31,18 @@ int cameraProcessKillEvent(SceUID pid, ProcEventParam *param, void *common);
 int cameraProcessStopEvent(SceUID pid, int eventType, ProcEventParam *param, void *common);
 int cameraProcessStartEvent(SceUID pid, int eventType, ProcEventParam *param, void *common);
 
-CameraDriver *cameraDriver = &cameraDriverStorage;
-SceUID cameraSramMemBlockId = -1;
 SceUID cameraFrameBufferMemBlockId = -1;
+SceUID cameraSramMemBlockId = -1;
+CameraDriver *cameraDriver = &cameraDriverStorage;
+
+_Alignas(8) void *cameraAlternateFrameBufferBase[2][3] = {{0}};
+SceUInt64 cameraLastFrameTimestamp[2] = {0};
+int cameraAllowSimultaneousDevices = 0;
+_Alignas(8) int cameraMeasuredFramerate[2] = {0};
+CameraDriver cameraDriverStorage = {0};
+SceUInt64 cameraPreviousFrameTimestamp[2] = {0};
+void *cameraFrameBufferBase[2][3] = {{0}};
+void *cameraSramFrameBufferBase[2][3] = {{0}};
 
 static const SceIftuCscParams cameraRgbToYuvCsc[4] = {
 	{

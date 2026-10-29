@@ -9,16 +9,8 @@
 #include <camera.h>
 #include <camera/camera.h>
 
-void *cameraSramFrameBufferBase[2][3] = {0};
-void *cameraFrameBufferBase[2][3] = {0};
-SceUInt64 cameraPreviousFrameTimestamp[2] = {0};
-CameraDriver cameraDriverStorage = {0};
-_Alignas(8) int cameraMeasuredFramerate[2] = {0};
-int cameraAllowSimultaneousDevices = 0;
-SceUInt64 cameraLastFrameTimestamp[2] = {0};
-_Alignas(8) void *cameraAlternateFrameBufferBase[2][3] = {0};
-CameraProcessRegistry cameraProcessRegistry = {0};
 SceUInt32 cameraReservedState[2] = {0};
+CameraProcessRegistry cameraProcessRegistry = {0};
 
 int cameraTranslateFrameBuffer(int devnum, CameraProcess *process, int cache)
 {
