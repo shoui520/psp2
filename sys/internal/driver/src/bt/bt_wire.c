@@ -218,11 +218,15 @@ int BtVPack(uint8_t *destination, int remaining, const char *format,
 				checksumEnd = cursor;
 			if (checksumStart != NULL) {
 				uint8_t checksum = 0xff;
-				const uint8_t *source = checksumStart;
 
-				while ((uintptr_t)source < (uintptr_t)checksumEnd)
-					checksum = gBtRfcommFcsTable[checksum ^ *source++];
-				checksumStart = checksumEnd;
+				if ((uintptr_t)checksumStart < (uintptr_t)checksumEnd) {
+					const uint8_t *source = checksumStart;
+
+					do
+						checksum = gBtRfcommFcsTable[checksum ^ *source++];
+					while ((uintptr_t)source < (uintptr_t)checksumEnd);
+					checksumStart = checksumEnd;
+				}
 				if (--remaining >= 0)
 					*cursor++ = ~checksum;
 			}
