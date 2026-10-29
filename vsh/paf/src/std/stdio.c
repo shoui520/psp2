@@ -60,11 +60,52 @@ size_t sce_paf_fread(void *ptr, size_t size, size_t count, sce_paf_FILE *stream)
 	return (int32_t)total / (int32_t)size;
 }
 
+size_t sce_paf_fwrite(const void *ptr, size_t size, size_t count, sce_paf_FILE *stream)
+{
+	const unsigned char *src = ptr;
+	uint32_t remaining, total = 0;
+	int result;
+
+	if (!stream || !stream->type)
+		return 0;
+	if (!(stream->type & 0x4000)) {
+		stream->status |= PAF_FILE_STATUS_ERROR;
+		return 0;
+	}
+	if (stream->fd < 0 || stream->status)
+		return 0;
+	remaining = size * count;
+	if (!remaining)
+		return 0;
+	while ((int32_t)remaining > 0) {
+		result = sceIoWrite(stream->fd, src, remaining);
+		if (result < 0) {
+			stream->status |= PAF_FILE_STATUS_ERROR;
+			return 0;
+		}
+		remaining -= result;
+		total += result;
+		src += result;
+		if (stream->status)
+			break;
+	}
+	return (int32_t)total / (int32_t)size;
+}
+
 int sce_paf_fgetc(sce_paf_FILE *stream)
 {
 	unsigned char ch;
 
 	if (sce_paf_fread(&ch, 1, 1, stream) == 1)
+		return ch;
+	return -1;
+}
+
+int sce_paf_fputc(int ch, sce_paf_FILE *stream)
+{
+	unsigned char byte = ch;
+
+	if (sce_paf_fwrite(&byte, 1, 1, stream) == 1)
 		return ch;
 	return -1;
 }

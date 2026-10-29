@@ -33,7 +33,9 @@ void sce_paf_clearerr(sce_paf_FILE *stream);
 int sce_paf_ungetc(int ch, sce_paf_FILE *stream);
 int sce_paf_fclose(sce_paf_FILE *stream);
 size_t sce_paf_fread(void *ptr, size_t size, size_t count, sce_paf_FILE *stream);
+size_t sce_paf_fwrite(const void *ptr, size_t size, size_t count, sce_paf_FILE *stream);
 int sce_paf_fgetc(sce_paf_FILE *stream);
+int sce_paf_fputc(int ch, sce_paf_FILE *stream);
 int sce_paf_fseek(sce_paf_FILE *stream, long offset, int origin);
 long sce_paf_ftell(sce_paf_FILE *stream);
 
