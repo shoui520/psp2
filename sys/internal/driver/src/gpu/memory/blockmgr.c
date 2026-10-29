@@ -23,7 +23,7 @@ GpuMemBlockHeap *GetKernelMemBlockHeap(void)
 GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 				 unsigned restoreMapping)
 {
-	volatile MemBlockPhyInfo info;
+	MemBlockPhyInfo info;
 	volatile unsigned *group = groupId;
 	volatile GpuMemBlock *block;
 	GpuMemBlockRange *range;
@@ -40,9 +40,9 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 			       __func__, uid);
 		return 0;
 	}
-	memset((void *)&info, 0, sizeof(info));
+	memset(&info, 0, sizeof(info));
 	info.ex.size = sizeof(info);
-	ret = SceSysmemForDriver_24A99FFF(referencedUid, (MemBlockPhyInfo *)&info);
+	ret = SceSysmemForDriver_24A99FFF(referencedUid, &info);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 84, "Failed to get memblock info for %08x: %08x\n",
 			       referencedUid, ret);
@@ -184,6 +184,7 @@ int sceGpuMemBlockDelBlock(GpuMemBlockHeap *heap, int uid, int *referencedOut)
 	GpuMemBlockRange *next;
 	unsigned allocated;
 	int referenced;
+	int blockUid;
 
 	if (!heap)
 		return (int)0x804c0000;
@@ -218,12 +219,14 @@ int sceGpuMemBlockDelBlock(GpuMemBlockHeap *heap, int uid, int *referencedOut)
 			FreeProcessGpuMemory((void *)range);
 		}
 		block->ranges = 0;
-		if (block->mappingUid != -1) {
-			sceKernelDecRefCountMemBlock(block->mappingUid);
+		blockUid = block->mappingUid;
+		if (blockUid != -1) {
+			sceKernelDecRefCountMemBlock(blockUid);
 			sceKernelFreeMemBlock(block->mappingUid);
 		}
-		if (block->referencedUid != -1)
-			sceKernelDecRefCountMemBlock(block->referencedUid);
+		blockUid = block->referencedUid;
+		if (blockUid != -1)
+			sceKernelDecRefCountMemBlock(blockUid);
 		if (referencedOut)
 			*referencedOut = block->referencedUid;
 		if (block->restoreMapping) {

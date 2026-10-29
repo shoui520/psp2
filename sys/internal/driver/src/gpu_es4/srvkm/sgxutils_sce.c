@@ -144,8 +144,9 @@ IMG_VOID SGXTestActivePowerEvent(PVRSRV_DEVICE_NODE *psDeviceNode,
 			PVRSRV_DEV_POWER_STATE_OFF, ui32CallerID, IMG_FALSE);
 	if (eError == PVRSRV_OK) {
 		psDevInfo = psDeviceNode->pvDevice;
-		psDevInfo->psSGXHostCtl->ui32NumActivePowerEvents++;
-		if (psDevInfo->psSGXHostCtl->ui32PowerStatus & 0x10U) {
+		psSGXHostCtl = psDevInfo->psSGXHostCtl;
+		psSGXHostCtl->ui32NumActivePowerEvents++;
+		if (psSGXHostCtl->ui32PowerStatus & 0x10U) {
 			if (ui32CallerID == (IMG_UINT32)-3)
 				psDeviceNode->bReProcessDeviceCommandComplete = IMG_TRUE;
 			else
@@ -254,15 +255,15 @@ IMG_HANDLE SGXRegisterHWRenderContextKM(IMG_HANDLE hDeviceNode,
 		struct PVRSRV_KERNEL_MEM_INFO *psHWRenderContextMemInfo,
 		PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
-	SGX_HW_RENDER_CONTEXT_CLEANUP *psCleanup;
 	IMG_HANDLE hBlockAlloc;
+	SGX_HW_RENDER_CONTEXT_CLEANUP *psCleanup;
 	RESMAN_ITEM *psResItem;
 
 	if (OSAllocMem_Impl(1, sizeof(*psCleanup), (IMG_VOID **)&psCleanup,
 			&hBlockAlloc) != PVRSRV_OK)
 		return NULL;
-	psCleanup->psDeviceNode = hDeviceNode;
 	psCleanup->hBlockAlloc = hBlockAlloc;
+	psCleanup->psDeviceNode = hDeviceNode;
 	psCleanup->sHWRenderContextDevVAddr = *psHWRenderContextDevVAddr;
 	psCleanup->psHWRenderContextMemInfo = psHWRenderContextMemInfo;
 	psCleanup->bPrioritySet = IMG_FALSE;
@@ -293,15 +294,15 @@ IMG_HANDLE SGXRegisterHW2DContextKM(IMG_HANDLE hDeviceNode,
 		struct PVRSRV_KERNEL_MEM_INFO *psHW2DContextMemInfo,
 		PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
-	SGX_HW_2D_CONTEXT_CLEANUP *psCleanup;
 	IMG_HANDLE hBlockAlloc;
+	SGX_HW_2D_CONTEXT_CLEANUP *psCleanup;
 	RESMAN_ITEM *psResItem;
 
 	if (OSAllocMem_Impl(1, sizeof(*psCleanup), (IMG_VOID **)&psCleanup,
 			&hBlockAlloc) != PVRSRV_OK)
 		return NULL;
-	psCleanup->psDeviceNode = hDeviceNode;
 	psCleanup->hBlockAlloc = hBlockAlloc;
+	psCleanup->psDeviceNode = hDeviceNode;
 	psCleanup->sHW2DContextDevVAddr = *psHW2DContextDevVAddr;
 	psCleanup->psHW2DContextMemInfo = psHW2DContextMemInfo;
 	psResItem = ResManRegisterRes(psPerProc->hResManContext,
