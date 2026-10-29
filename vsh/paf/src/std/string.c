@@ -289,6 +289,69 @@ char *sce_paf_strpbrk(const char *str, const char *accept)
 	}
 }
 
+size_t sce_paf_strlcpy(char *destination, const char *source, size_t size)
+{
+	const volatile signed char *cursor = (const volatile signed char *)source;
+	const volatile signed char *begin = cursor;
+	char *dest = destination;
+
+	if (!destination || !source)
+		return 0;
+	while (size > 1) {
+		const volatile signed char *current = cursor;
+		int ch = *cursor++;
+
+		size--;
+		*(volatile char *)dest++ = ch;
+		if (!ch) {
+			/* Sony rereads the just-copied terminating byte. */
+			cursor = current;
+			goto measure;
+		}
+	}
+	if (size == 1)
+		*(volatile char *)dest = 0;
+measure:
+	while (*cursor++)
+		;
+	return (size_t)(cursor - begin - 1);
+}
+
+size_t sce_paf_strlcat(char *destination, const char *source, size_t size)
+{
+	char *dest = destination;
+	const volatile signed char *cursor = (const volatile signed char *)source;
+	const volatile signed char *begin = cursor;
+	size_t prefix;
+
+	if (!destination || !source)
+		return 0;
+	while (size) {
+		if (!*(const volatile signed char *)dest)
+			break;
+		size--;
+		dest++;
+	}
+	prefix = (size_t)(dest - destination);
+	while (size > 1) {
+		const volatile signed char *current = cursor;
+		int ch = *cursor++;
+
+		size--;
+		*(volatile char *)dest++ = ch;
+		if (!ch) {
+			cursor = current;
+			goto measure;
+		}
+	}
+	if (size == 1)
+		*(volatile char *)dest = 0;
+measure:
+	while (*cursor++)
+		;
+	return prefix + (size_t)(cursor - begin - 1);
+}
+
 char *sce_paf_strncpy(char *destination, const char *source, size_t num)
 {
 	char *result = destination;

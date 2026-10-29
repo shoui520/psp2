@@ -19,6 +19,8 @@ char *sce_paf_strncat(char *destination, const char *source, size_t num);
 size_t sce_paf_strspn(const char *str, const char *accept);
 size_t sce_paf_strcspn(const char *str, const char *reject);
 char *sce_paf_strpbrk(const char *str, const char *accept);
+size_t sce_paf_strlcpy(char *destination, const char *source, size_t size);
+size_t sce_paf_strlcat(char *destination, const char *source, size_t size);
 
 char *sce_paf_strncpy(char *destination, const char *source, size_t num);
 
