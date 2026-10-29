@@ -392,6 +392,105 @@ uint16_t *sce_paf_wcspbrk(const uint16_t *str, const uint16_t *accept)
 	}
 }
 
+/*
+ * Sony's private_strtok export is a substring search, not the stateful
+ * delimiter tokenizer suggested by its name.
+ */
+char *sce_paf_private_strtok(const char *haystack, const char *needle)
+{
+	const volatile signed char *pattern =
+		(const volatile signed char *)needle;
+	const volatile signed char *candidate =
+		(const volatile signed char *)haystack;
+
+	if (!*pattern)
+		return (char *)candidate;
+	if (!*candidate)
+		return NULL;
+	for (;;) {
+		const volatile signed char *part = pattern;
+		const volatile signed char *cursor = candidate;
+		int ch = *part;
+
+		for (;;) {
+			int current = *cursor;
+
+			if (!current)
+				return NULL;
+			if (current != ch)
+				break;
+			ch = *++part;
+			cursor++;
+			if (!ch)
+				return (char *)candidate;
+		}
+		candidate++;
+		if (!*candidate)
+			return NULL;
+	}
+}
+
+char *sce_paf_strtok_r(char *str, const char *delimiters, char **save)
+{
+	volatile signed char *cursor = (volatile signed char *)str;
+	const volatile signed char *separator =
+		(const volatile signed char *)delimiters;
+	char *token;
+	int ch;
+
+	if (!cursor) {
+		cursor = (volatile signed char *)*save;
+		if (!cursor)
+			return NULL;
+	}
+
+	/* Skip leading separators. Sony reads the input byte before the set. */
+	for (;;) {
+		const volatile signed char *member;
+		int sep;
+
+		ch = *cursor++;
+		if (!ch)
+			break;
+		member = separator;
+		for (;;) {
+			sep = *member++;
+			if (!sep || sep == ch)
+				break;
+		}
+		if (!sep)
+			break;
+	}
+	if (!ch) {
+		*save = NULL;
+		return NULL;
+	}
+
+	token = (char *)(cursor - 1);
+	/* The first token character was consumed by the separator skip loop. */
+	for (;;) {
+		const volatile signed char *member;
+		int sep;
+
+		ch = *cursor++;
+		if (!ch) {
+			*save = NULL;
+			return token;
+		}
+		member = separator;
+		for (;;) {
+			sep = *member++;
+			if (!sep || sep == ch)
+				break;
+		}
+		if (sep) {
+			cursor[-1] = 0;
+			*save = (char *)cursor;
+			return token;
+		}
+	}
+}
+
 int sce_paf_strcmp(const char *left, const char *right)
 {
 	const volatile signed char *leftByte;
