@@ -42,25 +42,16 @@ int sceGpuMmuDestroyPageTable(GpuPageTable *table)
 	return 0;
 }
 
-/* ARM register shifts use the low byte and yield zero for shifts >= 32. */
-static inline unsigned ShiftGpuPageOffset(unsigned value, unsigned shift)
-{
-	shift &= 0xff;
-	return shift < 32 ? value >> shift : 0;
-}
-
 int sceGpuMmuCheckPageTableEntries(GpuPageTable *table, unsigned offset,
 				 unsigned size, unsigned mask, unsigned expected)
 {
-	volatile GpuPageTable *pageTable = table;
-	unsigned index, end, entry, shift;
+	unsigned index, end, entry;
 
-	shift = pageTable->pageShift;
-	index = ShiftGpuPageOffset(offset, shift);
-	end = index + ShiftGpuPageOffset(size, shift);
-	SCE_DBG_ASSERT(end <= pageTable->entryCount, 358);
+	index = offset >> table->pageShift;
+	end = index + (size >> table->pageShift);
+	SCE_DBG_ASSERT(end <= table->entryCount, 358);
 	for (; index < end; index++) {
-		entry = pageTable->entries[index];
+		entry = table->entries[index];
 		if (expected & 1 & mask) {
 			if ((entry & mask) != expected)
 				return (int)0x804c0003;
@@ -204,7 +195,7 @@ int FreeGpuPageTablePool(GpuPageTablePool *pool)
 int sceGpuMmuSelectPageTableSize(unsigned address, unsigned *directoryFlags,
 		unsigned *pageShift, unsigned *entryCount, unsigned *tableSize)
 {
-	uintptr_t previous, physical;
+	uintptr_t physical, previous;
 	unsigned revision, cursor;
 	unsigned can4M, can1M, can256K, can64K;
 	int ret;
@@ -516,7 +507,7 @@ int sceGpuMmuShareRange(GpuMmuContext *destination, GpuMmuContext *source,
 		unsigned address, unsigned size)
 {
 	unsigned index, count, sourceEntry, destinationEntry;
-	unsigned directoryChanged = 0, mappingAdded = 0;
+	unsigned mappingAdded = 0, directoryChanged = 0;
 
 	if (destination->pageDirectory) {
 		index = address >> 22;
@@ -525,8 +516,13 @@ int sceGpuMmuShareRange(GpuMmuContext *destination, GpuMmuContext *source,
 		while (count) {
 			SCE_DBG_ASSERT(destination->pageTables[index] == NULL, 935);
 			sourceEntry = source->pageDirectory[index];
-			destinationEntry = destination->pageDirectory[index];
-			if (sourceEntry) {
+			if (!sourceEntry) {
+				if (destination->pageDirectory[index]) {
+					destination->pageDirectory[index] = 0;
+					directoryChanged = 1;
+				}
+			} else {
+				destinationEntry = destination->pageDirectory[index];
 				if (destinationEntry) {
 					SCE_DBG_ASSERT(destinationEntry == sourceEntry, 961);
 				} else {
@@ -534,9 +530,6 @@ int sceGpuMmuShareRange(GpuMmuContext *destination, GpuMmuContext *source,
 					destination->pageDirectory[index] = sourceEntry;
 					mappingAdded = 1;
 				}
-			} else if (destinationEntry) {
-				destination->pageDirectory[index] = 0;
-				directoryChanged = 1;
 			}
 			count--;
 			index++;
