@@ -77,3 +77,29 @@ ScePafMisc_D3E4B405:
 	pop {r4, pc}
 	.fnend
 	.size ScePafMisc_D3E4B405, . - ScePafMisc_D3E4B405
+
+	.global ScePafMisc_5BF60DE9
+	.type ScePafMisc_5BF60DE9, %function
+	.thumb_func
+ScePafMisc_5BF60DE9:
+	.fnstart
+	push {r4, lr}
+	ands r2, r1, #2
+	ldr r0, [r0, #0xc]
+	mov.w r2, #0
+	beq .LnextBit5B
+	movs r2, #1
+.LnextBit5B:
+	ands r3, r1, #4
+	beq .LlastBit5B
+	orrs r2, r2, #2
+.LlastBit5B:
+	ands r1, r1, #8
+	beq .Lcall5B
+	orrs r2, r2, #4
+.Lcall5B:
+	adds r1, r2, #0
+	blx SceHttp_F30073EC
+	pop {r4, pc}
+	.fnend
+	.size ScePafMisc_5BF60DE9, . - ScePafMisc_5BF60DE9
