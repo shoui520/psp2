@@ -70,3 +70,39 @@ void ScePafMisc_DC12F9E7(float *object, float value)
 
 	object[0] = middle + difference;
 }
+
+void ScePafMisc_5D8D81CB(float *destination, const float *rectangle)
+{
+	float x = rectangle[0], y = rectangle[1];
+	float width = rectangle[2], height = rectangle[3];
+
+	destination[0] = x - width * 0.5f;
+	destination[1] = y - height * 0.5f;
+}
+
+void ScePafMisc_63F00016(float *destination, const float *rectangle)
+{
+	float x = rectangle[0], y = rectangle[1];
+	float width = rectangle[2], height = rectangle[3];
+
+	destination[0] = x - width * 0.5f;
+	destination[1] = y + height * 0.5f;
+}
+
+void ScePafMisc_A4F47E0A(float *destination, const float *rectangle)
+{
+	float x = rectangle[0], y = rectangle[1];
+	float width = rectangle[2], height = rectangle[3];
+
+	destination[0] = x + width * 0.5f;
+	destination[1] = y - height * 0.5f;
+}
+
+void ScePafMisc_B421A294(float *destination, const float *rectangle)
+{
+	float x = rectangle[0], y = rectangle[1];
+	float width = rectangle[2], height = rectangle[3];
+
+	destination[0] = x + width * 0.5f;
+	destination[1] = y + height * 0.5f;
+}
