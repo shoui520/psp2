@@ -89,6 +89,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/bitmask_abi.S
 	src/misc/matrix_abi.S
 	src/misc/vector_abi.S
+	src/misc/rect_vector_abi.S
 	src/misc/search_abi.S
 	src/misc/state_abi.S
 	src/misc/matrix_ops_abi.S
