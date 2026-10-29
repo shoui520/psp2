@@ -150,6 +150,10 @@ float TimerDoFuncBezier3d(float rate, const float *param);
 float TimerDoFunc49_52(float rate, const float *param);
 float TimerDoFunc50_53(float rate, const float *param);
 float TimerDoFunc51_54(float rate, const float *param);
+float TimerDoFunc75(float rate, const float *param);
+float TimerDoFunc76(float rate, const float *param);
+float TimerDoFunc77(float rate, const float *param);
+float TimerDoFunc78(float rate, const float *param);
 
 #define TimerDoFuncBounceIn ScePafMisc_AE6719F6
 #define TimerDoFuncBounceInOut ScePafMisc_2DA1C059

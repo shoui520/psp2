@@ -201,6 +201,51 @@ static float TimerPolynomialTerm(float coefficient, float factor)
 	return result;
 }
 
+float TimerDoFunc75(float rate, const float *param)
+{
+	float scale, coefficient;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	scale = (param[0] * 10.0f - 1.0f) * 2.0f;
+	coefficient = scale * (0.47f - scale * 0.01f) + 2.70158f;
+	return (rate * rate) * (rate * coefficient - (coefficient - 1.0f));
+}
+
+float TimerDoFunc76(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFunc75(1.0f - rate, param);
+}
+
+float TimerDoFunc77(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return TimerDoFunc75(rate * 2.0f, param) * 0.5f;
+	return (1.0f - TimerDoFunc75(2.0f - rate * 2.0f, param)) *
+		0.5f + 0.5f;
+}
+
+float TimerDoFunc78(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return (1.0f - TimerDoFunc75(1.0f - rate * 2.0f, param)) * 0.5f;
+	return TimerDoFunc75(rate * 2.0f + -1.0f, param) * 0.5f + 0.5f;
+}
+
 float TimerDoFuncCustomElasticIn(float rate, const float *param)
 {
 	float frequency, quadratic, quartic, sixth;
