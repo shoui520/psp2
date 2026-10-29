@@ -1,6 +1,13 @@
 #include "new.h"
 #include "stdlib.h"
 
+int ScePafStdc_D608246A(void)
+{
+	ScePafStdc_D41FD265();
+	__breakpoint(0);
+	return -1;
+}
+
 void *PafNew(size_t size)
 {
 	return sce_paf_malloc(size);
