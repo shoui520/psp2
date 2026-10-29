@@ -102,7 +102,8 @@ static struct UsbMtp {
 	MtpRequest send;
 	MtpRequest recv;
 	MtpRequest notify;
-	unsigned controlCode;		/* bRequest of the last control request */
+	uint8_t controlCode;		/* bRequest of the last control request */
+	uint8_t padding[3];
 	uint8_t serialNumber[128];
 	SceUdcdInterface interface;
 	MtpOsStringDescriptor osString;
@@ -476,7 +477,7 @@ static inline int WaitTransfer(SceUdcdDeviceRequest *req, SceUdcdEndpoint *endpo
 
 	ret = sceKernelWaitEventFlag(s_mtp.event, done | failed,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
-				      SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL,
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				      &bits, bounded ? &timeout : NULL);
 	if ((bits & failed) || req->returnCode < 0)
 		return s_mtp.busFlags & MTP_BUS_ATTACHED ? MTP_ERROR_CANCELLED : MTP_ERROR_DISCONNECTED;
@@ -487,7 +488,7 @@ static inline int WaitTransfer(SceUdcdDeviceRequest *req, SceUdcdEndpoint *endpo
 	timeout = MTP_WAIT_TIMEOUT;
 	SceUdcdForDriver_9F53D64D(endpoint);
 	if (SceUdcdForDriver_38787672(endpoint) == SCE_UDCD_ERROR_DRIVER_IN_PROGRESS)
-		sceKernelWaitEventFlag(s_mtp.event, failed, SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL,
+		sceKernelWaitEventFlag(s_mtp.event, failed, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					NULL, &timeout);
 	return MTP_ERROR_TIMEOUT;
 }
@@ -752,7 +753,7 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 		if (size > s_mtp.packetSize) {
 			SCE_DBG_PRINTF(0, 1524,
 				"[%s%-28s] Err(%4d) Invalid data size(%lld bytes). Must be short than MaxPacket(%d)\n",
-				"usbmtp:", __func__, 1524);
+				"usbmtp:", __func__, 1524, size, s_mtp.packetSize);
 			goto error;
 		}
 		done += size;
@@ -892,7 +893,7 @@ int sceUsbMtpRecvData(MtpIfTransfer *transfer)
 	if (size > s_mtp.packetSize) {
 		SCE_DBG_PRINTF(0, 1802,
 			"[%s%-28s] Err(%4d) Invalid data size(%lld bytes). Must be short than MaxPacket(%d)\n",
-			"usbmtp:", __func__, 1802);
+			"usbmtp:", __func__, 1802, size, s_mtp.packetSize);
 		ret = -1;
 		goto error;
 	}
@@ -1165,7 +1166,7 @@ int SceUsbMtpForDriver_5FA86BA4(void *event)
 	if (ret < 0)
 		return ret;
 	ret = req->transmitted;
-	if (in->code != 0xc108)
+	if (ret < 0 || in->code != 0xc108)
 		return ret;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (in->transaction == s_mtp.transaction) {
