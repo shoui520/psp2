@@ -1,6 +1,7 @@
 /* Signal counters, lockup notifications and salvage registration. */
 #include <stdint.h>
 #include <threadmgr/threadmgr.h>
+#include <intrmgr/syscall.h>
 #include <sysmem/sysmem.h>
 #include "../../gpu_es4/srvkm/gpu-dump.h"
 #include "../../gpu_es4/srvkm/lockup-history.h"
@@ -25,18 +26,6 @@ unsigned gpuHalted;
 unsigned lockupRecoveryCount;
 GpuLockupBeginCallback lockupBeginCallback;
 GpuLockupEndCallback lockupEndCallback;
-
-static inline unsigned ReadThreadContext(void)
-{
-	unsigned value;
-	__asm__ volatile("mrc p15, 0, %0, c13, c0, 3" : "=r"(value));
-	return value;
-}
-
-static inline void WriteThreadContext(unsigned value)
-{
-	__asm__ volatile("mcr p15, 0, %0, c13, c0, 3" : : "r"(value));
-}
 
 /* Internal names are unknown; these names describe the recovered operations. */
 int CreateSignalWaitObjects(void)
@@ -84,8 +73,7 @@ int WaitSignalCounter(unsigned *counter, unsigned timeout, int user)
 		return (int)0x804c0007;
 	if (!counter)
 		return (int)0x804c0000;
-	context = ReadThreadContext();
-	WriteThreadContext(context << 16);
+	context = sceSyscallEnter();
 	ret = sceKernelLockMutex(signalMutex, 1, 0);
 	if (ret >= 0) {
 		if (user) {
@@ -108,7 +96,7 @@ int WaitSignalCounter(unsigned *counter, unsigned timeout, int user)
 	unlock:
 		sceKernelUnlockMutex(signalMutex, 1);
 	}
-	WriteThreadContext(context);
+	sceSyscallLeave(context);
 	return ret;
 }
 
@@ -129,14 +117,13 @@ int sceGpuSignalWaitLockup(void)
 
 	if (lockupMutex < 0 || lockupCond < 0)
 		return (int)0x804c0007;
-	context = ReadThreadContext();
-	WriteThreadContext(context << 16);
+	context = sceSyscallEnter();
 	ret = sceKernelLockMutex(lockupMutex, 1, 0);
 	if (ret >= 0) {
 		ret = sceKernelWaitCond(lockupCond, &timeout);
 		sceKernelUnlockMutex(lockupMutex, 1);
 	}
-	WriteThreadContext(context);
+	sceSyscallLeave(context);
 	return ret;
 }
 
@@ -231,8 +218,7 @@ int sceGpuRegisterSalvage(int eventUid)
 		return (int)0x804c000c;
 	if (eventUid == -1)
 		return (int)0x804c0000;
-	context = ReadThreadContext();
-	WriteThreadContext(context << 16);
+	context = sceSyscallEnter();
 	ret = LockRegisterDump();
 	if (ret == 0) {
 		if (salvageUid == -1)
@@ -241,7 +227,7 @@ int sceGpuRegisterSalvage(int eventUid)
 			ret = (int)0x804c000e;
 	}
 	UnlockRegisterDump();
-	WriteThreadContext(context);
+	sceSyscallLeave(context);
 	return ret;
 }
 
@@ -254,8 +240,7 @@ int sceGpuUnregisterSalvage(int eventUid)
 		return (int)0x804c000c;
 	if (eventUid == -1)
 		return (int)0x804c0000;
-	context = ReadThreadContext();
-	WriteThreadContext(context << 16);
+	context = sceSyscallEnter();
 	ret = LockRegisterDump();
 	if (ret == 0) {
 		if (salvageUid == eventUid)
@@ -264,7 +249,7 @@ int sceGpuUnregisterSalvage(int eventUid)
 			ret = (int)0x804c0000;
 	}
 	UnlockRegisterDump();
-	WriteThreadContext(context);
+	sceSyscallLeave(context);
 	return ret;
 }
 

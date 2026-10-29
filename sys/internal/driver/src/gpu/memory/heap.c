@@ -312,58 +312,56 @@ int FindGpuHeapSpanForAddress(GpuHeap *heap, unsigned address,
 int sceGpuHeapFreeByGpuVA(GpuHeap *heap, unsigned address,
 			GpuHeapAllocation *output)
 {
-	GpuHeapSpan *found, *previousSpan;
-	volatile GpuHeapSpan *span;
-	volatile GpuHeapRange *range, *previous;
-	volatile GpuHeapAllocation *allocation = output;
+	GpuHeapSpan *span, *previousSpan;
+	GpuHeapRange *range, *previous, *next;
 	unsigned offset, backingAddress;
 	int ret;
 
-	ret = FindGpuHeapSpanForAddress(heap, address, &found, &previousSpan);
+	ret = FindGpuHeapSpanForAddress(heap, address, &span, &previousSpan);
 	if (ret < 0)
 		return ret;
-	if (!heap || !found || !address)
+	if (!heap || !span || !address)
 		return (int)0x804c0000;
-	span = found;
 	offset = address - span->base;
-	previous = 0;
+	previous = NULL;
 	for (range = span->allocations; range; range = range->next) {
-		if (range->offset != offset) {
-			previous = range;
-			continue;
-		}
-		if (previous)
-			previous->next = range->next;
-		else
-			span->allocations = range->next;
-		FreeProcessGpuMemory((void *)range);
-		if (span->allocations) {
-			allocation->releasedBackingAddress = 0;
-			allocation->releasedSpanBase = 0;
-			allocation->releasedSpanSize = 0;
-			return 0;
-		}
-		backingAddress = span->alternateAddress;
-		if (!backingAddress)
-			backingAddress = span->primaryAddress;
-		allocation->releasedBackingAddress = backingAddress;
-		allocation->releasedSpanBase = span->base;
-		allocation->releasedSpanSize = span->size;
-		if (span->allocationType != 7) {
-			ret = sceGpuMemBlockHeapFree(span->blockHeap,
-						   span->primaryAddress, span->size);
-			if (ret < 0) {
-				SCE_DBG_PRINTF(0, 530,
-					"Failed to free with error %08x for %p %08x\n",
-					ret, (void *)span->primaryAddress, span->size);
-			}
-		}
-		if (previousSpan)
-			previousSpan->next = span->next;
-		else
-			heap->spans = span->next;
-		FreeProcessGpuMemory((void *)span);
+		if (range->offset == offset)
+			break;
+		previous = range;
+	}
+	if (!range)
+		return (int)0x804c0005;
+	next = range->next;
+	if (previous)
+		previous->next = next;
+	else
+		span->allocations = next;
+	FreeProcessGpuMemory(range);
+	if (span->allocations) {
+		output->releasedBackingAddress = 0;
+		output->releasedSpanBase = 0;
+		output->releasedSpanSize = 0;
 		return 0;
 	}
-	return (int)0x804c0005;
+	backingAddress = span->alternateAddress;
+	if (!backingAddress)
+		backingAddress = span->primaryAddress;
+	output->releasedBackingAddress = backingAddress;
+	output->releasedSpanBase = span->base;
+	output->releasedSpanSize = span->size;
+	if (span->allocationType != 7) {
+		ret = sceGpuMemBlockHeapFree(span->blockHeap, span->primaryAddress,
+					   span->size);
+		if (ret < 0) {
+			SCE_DBG_PRINTF(0, 530,
+				"Failed to free with error %08x for %p %08x\n",
+				ret, (void *)span->primaryAddress, span->size);
+		}
+	}
+	if (previousSpan)
+		previousSpan->next = span->next;
+	else
+		heap->spans = span->next;
+	FreeProcessGpuMemory(span);
+	return 0;
 }

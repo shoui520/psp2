@@ -11,6 +11,8 @@
 #include "sgxmpdefs.h"
 #include <power/power.h>
 #include <gpu/gpu-mmu.h>
+#include <gpu/memory_sce.h>
+#include <gpu/sgxmkif_sce.h>
 
 /* SCE capture selections, identical in both TOOL originals. Numeric register
  * offsets have no register identifier in the pristine candidate hardware defs.
@@ -417,6 +419,46 @@ int CheckRegisterDumpRegisterLists(void)
 		gpuDumpRegion.state.registerListsUnsorted = 1;
 	if (sceRegisterDumpCheckSortedRegisterList(perfRegisterSelectors, 109))
 		gpuDumpRegion.state.registerListsUnsorted = 1;
+	return 0;
+}
+
+int sceGpuCollectFrameNumSceneIndexInfo(SceGpuRegisterDump *dump)
+{
+	PVRSRV_DEVICE_NODE *node;
+	PVRSRV_SGXDEV_INFO *pDeviceNode;
+	PVRSRV_KERNEL_MEM_INFO *pTa3dCtlMemInfo;
+	SGXMKIF_TA3D_CTL *pTa3dCtl;
+	int result;
+
+	node = GetGpuDeviceNode();
+	pDeviceNode = node ? node->pvDevice : NULL;
+	result = sceKernelIsAccessibleRange(3, pDeviceNode, sizeof(*pDeviceNode));
+	if (result < 0) {
+		SCE_DBG_PRINTF(0, 668,
+			"sceKernelIsAccessibleRange(pDeviceNode) returned 0x%08x\n", result);
+		return (int)0x804c000c;
+	}
+	pTa3dCtlMemInfo = pDeviceNode ? pDeviceNode->psKernelSGXTA3DCtlMemInfo : NULL;
+	result = sceKernelIsAccessibleRange(3, pTa3dCtlMemInfo,
+			sizeof(*pTa3dCtlMemInfo));
+	if (result < 0) {
+		SCE_DBG_PRINTF(0, 679,
+			"sceKernelIsAccessibleRange(pTa3dCtlMemInfo) returned 0x%08x\n",
+			result);
+		return (int)0x804c000c;
+	}
+	pTa3dCtl = pTa3dCtlMemInfo ? pTa3dCtlMemInfo->pvLinAddrKM : NULL;
+	result = sceKernelIsAccessibleRange(3, pTa3dCtl, sizeof(*pTa3dCtl));
+	if (result < 0) {
+		SCE_DBG_PRINTF(0, 701,
+			"sceKernelIsAccessibleRange(pTa3dCtl) returned 0x%08x\n", result);
+		return (int)0x804c000c;
+	}
+	dump->frameNumSceneIndex[0] = pTa3dCtl->renderState[0];
+	dump->frameNumSceneIndex[1] = pTa3dCtl->renderState[1];
+	dump->frameNumSceneIndex[2] = pTa3dCtl->renderState[2];
+	dump->frameNumSceneIndex[3] = pTa3dCtl->renderState[3];
+	dump->flags |= 0x10;
 	return 0;
 }
 
