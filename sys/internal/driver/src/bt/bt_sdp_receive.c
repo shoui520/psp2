@@ -5,7 +5,8 @@
 extern const uint8_t gBtSdpBaseUuidSuffix[12];
 extern const uint8_t gBtSdpServiceRecords[696];
 
-static inline uint32_t BtSdpReadUuid(const uint8_t *data, int length)
+static inline __attribute__((always_inline)) uint32_t
+BtSdpReadUuid(const uint8_t *data, int length)
 {
 	if (length == 2)
 		return BtReadBe16(data);
