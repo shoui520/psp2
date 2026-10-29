@@ -13,6 +13,7 @@ double sce_paf_atof(const char *str);
 double sce_paf_strtod(const char *str, char **endptr);
 int sce_paf_atoi(const char *str);
 long sce_paf_atol(const char *str);
+char *ScePafStdc_7E1B96F3(const char *str, int *value);
 long long sce_paf_atoll(const char *str);
 void *sce_paf_bsearch(const void *key, const void *base, size_t count,
 		      size_t element_size,

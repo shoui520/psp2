@@ -507,6 +507,15 @@ long sce_paf_atol(const char *str)
 	return sce_paf_strtol(str, NULL, 10);
 }
 
+char *ScePafStdc_7E1B96F3(const char *str, int *value)
+{
+	char *endptr;
+	int parsed = (int)sce_paf_strtol(str, &endptr, 10);
+
+	*value = parsed;
+	return endptr;
+}
+
 long long sce_paf_atoll(const char *str)
 {
 	return sce_paf_strtoll(str, NULL, 0);
