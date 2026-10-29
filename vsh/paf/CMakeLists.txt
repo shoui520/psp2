@@ -65,7 +65,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/std/stdlib.c
 	src/std/sort.c
 	src/std/setjmp_abi.S
-	src/std/fill_abi.S
+	src/std/fill.c
 	src/std/stdio.c
 	src/std/global_heap.c
 	src/memory/heap_allocator.c
@@ -85,37 +85,33 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/nested.c
 	src/misc/ops.c
 	src/misc/short.c
-	src/misc/bounds_abi.S
-	src/misc/bitmask_abi.S
-	src/misc/matrix_abi.S
-	src/misc/quaternion_matrix_abi.S
-	src/misc/orthonormal_abi.S
-	src/misc/matrix_inverse_abi.S
-	src/misc/enum_table_abi.S
-	src/misc/vector_poly_abi.S
-	src/misc/vector_poly_alt_abi.S
-	src/misc/vector_poly_variant2_abi.S
-	src/misc/vector_poly_variant3_abi.S
-	src/misc/vector_poly_variant4_abi.S
-	src/misc/vector_poly_variant5_abi.S
-	src/misc/vector_abi.S
-	src/misc/rect_vector_abi.S
-	src/misc/rect_contains_abi.S
-	src/misc/list_abi.S
-	src/misc/dispatch_abi.S
-	src/misc/vtable_init_abi.S
-	src/misc/http_abi.S
-	src/misc/io_abi.S
-	src/misc/copy_guard_abi.S
-	src/misc/search_abi.S
+	src/misc/bounds.c
+	src/misc/bitmask.c
+	src/misc/matrix.c
+	src/misc/quaternion_matrix.c
+	src/misc/orthonormal.c
+	src/misc/matrix_inverse.c
+	src/misc/enum_table.c
+	src/misc/vector_poly.c
+	src/misc/vector.c
+	src/misc/rect_vector.c
+	src/misc/rect_contains.c
+	src/misc/list.c
+	src/misc/dispatch.c
+	src/misc/vtable_init.c
+	src/misc/http.c
+	src/misc/io.c
+	src/misc/copy_guard.c
+	src/misc/search.c
 	src/misc/state_abi.S
-	src/misc/matrix_ops_abi.S
-	src/misc/transform_abi.S
-	src/misc/containment_abi.S
+	src/misc/state.c
+	src/misc/matrix_ops.c
+	src/misc/transform.c
+	src/misc/containment.c
 	src/misc/global_vector.c
 	src/misc/global_state.c
-	src/misc/power2_abi.S
-	src/misc/viewport_abi.S
+	src/misc/power2.c
+	src/misc/viewport.c
 	../../sys/sdk/target/src/libsnc/i32ops.c
 	../../sys/sdk/target/src/libsnc/i64ops.c
 	../../sys/sdk/target/src/deflt/zlibhdr.c
