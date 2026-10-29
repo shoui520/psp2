@@ -215,6 +215,80 @@ char *sce_paf_strncat(char *destination, const char *source, size_t num)
 	}
 }
 
+size_t sce_paf_strspn(const char *str, const char *accept)
+{
+	const volatile signed char *cursor = (const volatile signed char *)str;
+	const volatile signed char *start = cursor;
+	const volatile signed char *member;
+	int ch;
+
+	for (;;) {
+		ch = *cursor;
+		if (!ch)
+			return cursor - start;
+		member = (const volatile signed char *)accept;
+		for (;;) {
+			int candidate = *member;
+
+			if (!candidate)
+				return cursor - start;
+			if (candidate == ch)
+				break;
+			member++;
+		}
+		cursor++;
+	}
+}
+
+size_t sce_paf_strcspn(const char *str, const char *reject)
+{
+	const volatile signed char *cursor = (const volatile signed char *)str;
+	const volatile signed char *start = cursor;
+	const volatile signed char *member;
+	int ch;
+
+	for (;;) {
+		ch = *cursor;
+		if (!ch)
+			return cursor - start;
+		member = (const volatile signed char *)reject;
+		for (;;) {
+			int candidate = *member;
+
+			if (!candidate)
+				break;
+			if (candidate == ch)
+				return cursor - start;
+			member++;
+		}
+		cursor++;
+	}
+}
+
+char *sce_paf_strpbrk(const char *str, const char *accept)
+{
+	const volatile signed char *cursor = (const volatile signed char *)str;
+	const volatile signed char *member;
+	int ch;
+
+	for (;;) {
+		ch = *cursor;
+		if (!ch)
+			return NULL;
+		member = (const volatile signed char *)accept;
+		for (;;) {
+			int candidate = *member;
+
+			if (!candidate)
+				break;
+			if (candidate == ch)
+				return (char *)cursor;
+			member++;
+		}
+		cursor++;
+	}
+}
+
 char *sce_paf_strncpy(char *destination, const char *source, size_t num)
 {
 	char *result = destination;
