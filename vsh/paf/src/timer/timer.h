@@ -209,6 +209,8 @@ void TimerListenerDelete(TimerListener *self);
 TimerListener *TimerListenerDestroyBase(TimerListener *self);
 void TimerListenerOnTick(TimerListener *self, void *data1, void *data2);
 void TimerListenerOnFinish(TimerListener *self, void *data1, void *data2);
+#define TimerListenerResetTimer ScePafMisc_1F758B43
+void TimerListenerResetTimer(TimerListener *self);
 
 typedef struct TimerListenerList TimerListenerList;
 

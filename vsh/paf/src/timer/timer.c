@@ -464,3 +464,25 @@ TimerListener *TimerListenerDestroyBase(TimerListener *self)
 {
 	return TimerListenerDestroy(self);
 }
+
+void TimerListenerResetTimer(TimerListener *self)
+{
+	Timer *timer = self->m_timer;
+
+	if (!timer)
+		return;
+	if (timer->m_is_3d) {
+		Timer3D *timer3d = (Timer3D *)timer;
+
+		TimerResetTimer(timer);
+		timer3d->base.m_mapped_y = timer->m_mapped_x;
+		timer3d->m_mapped_z = timer->m_mapped_x;
+	} else if (timer->m_is_2d) {
+		Timer2D *timer2d = (Timer2D *)timer;
+
+		TimerResetTimer(timer);
+		timer2d->m_mapped_y = timer->m_mapped_x;
+	} else {
+		TimerResetTimer(timer);
+	}
+}
