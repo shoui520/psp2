@@ -188,6 +188,148 @@ unsigned long sce_paf_strtoul(const char *str, char **endptr, int base)
 	return result;
 }
 
+long long sce_paf_strtoll(const char *str, char **endptr, int base)
+{
+	const volatile signed char *cursor = (const volatile signed char *)str;
+	const volatile signed char *next;
+	uint64_t result = 0;
+	int sign = 1;
+	int ch;
+
+	if (!cursor)
+		return 0;
+	ch = *cursor;
+	next = cursor + 1;
+	while (sce_paf_look_ctype_table(ch) & 8) {
+		cursor = next;
+		ch = *cursor;
+		next = cursor + 1;
+	}
+	ch = *cursor;
+	while (ch == '-' || ch == '+') {
+		if (ch == '-')
+			sign = -sign;
+		cursor = next;
+		ch = *cursor;
+		next = cursor + 1;
+	}
+	if (base < 2 || base > 36)
+		base = 0;
+	if (ch == '0') {
+		int prefix;
+
+		cursor = next;
+		prefix = *cursor;
+		next = cursor + 1;
+		if ((prefix == 'x' || prefix == 'X') &&
+		    (base == 0 || base == 16)) {
+			cursor = next;
+			next = cursor + 1;
+			base = 16;
+		} else if ((prefix == 'b' || prefix == 'B') &&
+			   (base == 0 || base == 2)) {
+			cursor = next;
+			next = cursor + 1;
+			base = 2;
+		} else if (!base) {
+			base = 8;
+		}
+	} else if (sce_paf_toupper(ch) == 'O') {
+		cursor = next;
+		next = cursor + 1;
+		base = 8;
+	} else if (!base) {
+		base = 10;
+	}
+	for (;;) {
+		uint32_t digit;
+
+		ch = *cursor;
+		next = cursor + 1;
+		if (sce_paf_look_ctype_table(ch) & 4) {
+			digit = (uint32_t)(ch - '0');
+		} else {
+			digit = 9999999;
+			if (sce_paf_look_ctype_table(ch) & 3)
+				digit = (uint32_t)(sce_paf_tolower(ch) - 'a' + 10);
+		}
+		if (digit >= (uint32_t)base)
+			break;
+		result = result * (uint64_t)(uint32_t)base + digit;
+		cursor = next;
+	}
+	if (endptr)
+		*endptr = (char *)cursor;
+	return (long long)(int64_t)(result * (uint64_t)sign);
+}
+
+unsigned long long sce_paf_strtoull(const char *str, char **endptr, int base)
+{
+	const volatile signed char *cursor = (const volatile signed char *)str;
+	const volatile signed char *next;
+	uint64_t result = 0;
+	int ch;
+
+	if (!cursor)
+		return 0;
+	ch = *cursor;
+	next = cursor + 1;
+	while (sce_paf_look_ctype_table(ch) & 8) {
+		cursor = next;
+		ch = *cursor;
+		next = cursor + 1;
+	}
+	ch = *cursor;
+	if (base < 2 || base > 36)
+		base = 0;
+	if (ch == '0') {
+		int prefix;
+
+		cursor = next;
+		prefix = *cursor;
+		next = cursor + 1;
+		if ((prefix == 'x' || prefix == 'X') &&
+		    (base == 0 || base == 16)) {
+			cursor = next;
+			next = cursor + 1;
+			base = 16;
+		} else if ((prefix == 'b' || prefix == 'B') &&
+			   (base == 0 || base == 2)) {
+			cursor = next;
+			next = cursor + 1;
+			base = 2;
+		} else if (!base) {
+			base = 8;
+		}
+	} else if (sce_paf_toupper(ch) == 'O') {
+		cursor = next;
+		next = cursor + 1;
+		base = 8;
+	} else if (!base) {
+		base = 10;
+	}
+	for (;;) {
+		uint32_t digit;
+
+		ch = *cursor;
+		next = cursor + 1;
+		if (sce_paf_look_ctype_table(ch) & 4) {
+			digit = (uint32_t)(ch - '0');
+		} else {
+			digit = 9999999;
+			if (sce_paf_look_ctype_table(ch) & 3)
+				digit = (uint32_t)(sce_paf_tolower(ch) - 'a' + 10);
+		}
+		if (digit >= (uint32_t)base)
+			break;
+		result = result * (uint64_t)(uint32_t)base + digit;
+		cursor = next;
+	}
+	if (endptr)
+		*endptr = (char *)cursor;
+	return result;
+}
+
 int sce_paf_atoi(const char *str)
 {
 	return (int)sce_paf_strtol(str, NULL, 10);

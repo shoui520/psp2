@@ -7,6 +7,8 @@
 int sce_paf_abs(int value);
 long sce_paf_strtol(const char *str, char **endptr, int base);
 unsigned long sce_paf_strtoul(const char *str, char **endptr, int base);
+long long sce_paf_strtoll(const char *str, char **endptr, int base);
+unsigned long long sce_paf_strtoull(const char *str, char **endptr, int base);
 int sce_paf_atoi(const char *str);
 long sce_paf_atol(const char *str);
 void *sce_paf_bsearch(const void *key, const void *base, size_t count,
