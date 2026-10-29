@@ -7,5 +7,3 @@
 #include <skeleton.h>
 
 
-STUB(sceGxmSetUniformDataF)
-STUB(sceGxmVertexProgramGetProgram)

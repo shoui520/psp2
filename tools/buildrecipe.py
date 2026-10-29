@@ -6,6 +6,9 @@ import re
 DEFAULT_F = ('-fstack-protector-strong', '-ffreestanding', '-fno-builtin', '-fno-short-enums',
              '-fno-optimize-sibling-calls', '-fno-delete-null-pointer-checks',
              '-fno-section-anchors', '-fno-shrink-wrap')
+# FPU options a source sets over the target's -mfpu=neon (half floats: neon-fp16, ieee)
+FPU_OPTIONS = ('-mfpu=', '-mfp16-format=')
+DEFAULT_FPU = ('-mfpu=neon',)
 
 
 def read_flags(path):
@@ -49,7 +52,8 @@ def compile_options(argv):
     return dict(defines=[x for x in argv if x.startswith('-D')],
                 includes=includes,
                 opt=opts[-1] if opts else '-O2',
-                extra=[x for x in argv if x.startswith('-f') and x not in DEFAULT_F],
+                extra=[x for x in argv if x.startswith('-f') and x not in DEFAULT_F or
+                       x.startswith(FPU_OPTIONS) and x not in DEFAULT_FPU],
                 mode=instruction_mode(argv))
 
 

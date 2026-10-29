@@ -39,9 +39,11 @@ set(GXM_SOURCES
 	sync_object.c
 	texture.c
 	transfer.c
+	uniforms.c
 	usse.c
 	usse_builder.c
 	vdm.c
+	vertex_program.c
 	vertex_unpack.c
 )
 # PARTIAL in Sony's layout: the C still calls sceClibMemcpy, which the original does not import,
@@ -54,6 +56,9 @@ psp2_module(os0_us_libgxm_es4 KIND user COMPILER gcc48 PARTIAL SOURCES
 	${GXM_SOURCES}
 )
 set_source_files_properties(${GXM_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O3;-fno-strict-aliasing")
+# sceGxmSetUniformDataF converts to half floats with VCVTB.F16.F32, which GCC emits only for
+# __fp16 on an FPU with the half-precision extension
+set_property(SOURCE uniforms.c APPEND PROPERTY COMPILE_OPTIONS "-mfpu=neon-fp16;-mfp16-format=ieee")
 
 # libgcc's division routines, statically linked first, in ARM code like the library
 include(../../../../../toolchains/libgcc/lib1funcs.cmake)
