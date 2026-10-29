@@ -145,18 +145,24 @@ PVRSRV_ERROR PVRSRVResManConnect(PVRSRV_PER_PROCESS_DATA *psPerProc,
 {
 	PVRSRV_ERROR eError;
 	RESMAN_CONTEXT *psResManContext;
+	RESMAN_CONTEXT *psNewNode;
+	RESMAN_CONTEXT **ppsHead;
 
 	eError = OSAllocMem_Impl(1, sizeof(*psResManContext),
 			(IMG_VOID **)&psResManContext, NULL);
 	if (eError != PVRSRV_OK)
 		return eError;
-	psResManContext->psPerProc = psPerProc;
-	psResManContext->psResItemList = NULL;
-	psResManContext->ppsThis = &gpsResList->psContextList;
-	psResManContext->psNext = gpsResList->psContextList;
-	gpsResList->psContextList = psResManContext;
-	if (psResManContext->psNext)
-		psResManContext->psNext->ppsThis = &psResManContext->psNext;
+	psNewNode = psResManContext;
+	psNewNode->psPerProc = psPerProc;
+	psNewNode->psResItemList = NULL;
+
+	/* List_RESMAN_CONTEXT_Insert */
+	ppsHead = &gpsResList->psContextList;
+	psNewNode->ppsThis = ppsHead;
+	psNewNode->psNext = *ppsHead;
+	*ppsHead = psNewNode;
+	if (psNewNode->psNext)
+		psNewNode->psNext->ppsThis = &psNewNode->psNext;
 	*phResManContext = psResManContext;
 	return PVRSRV_OK;
 }
@@ -231,22 +237,28 @@ RESMAN_ITEM *ResManRegisterRes(RESMAN_CONTEXT *psResManContext,
 		RESMAN_FREE_FN pfnFreeResource)
 {
 	RESMAN_ITEM *psNewResItem;
+	RESMAN_ITEM *psNewNode;
+	RESMAN_ITEM **ppsHead;
 
 	if (psResManContext == NULL)
 		return NULL;
 	if (OSAllocMem_Impl(1, sizeof(*psNewResItem),
 			(IMG_VOID **)&psNewResItem, NULL) != PVRSRV_OK)
 		return NULL;
-	psNewResItem->ui32ResType = ui32ResType;
-	psNewResItem->pvParam = pvParam;
-	psNewResItem->ui32Param = ui32Param;
-	psNewResItem->pfnFreeResource = pfnFreeResource;
-	psNewResItem->ui32Flags = 0;
-	psNewResItem->ppsThis = &psResManContext->psResItemList;
-	psNewResItem->psNext = psResManContext->psResItemList;
-	psResManContext->psResItemList = psNewResItem;
-	if (psNewResItem->psNext)
-		psNewResItem->psNext->ppsThis = &psNewResItem->psNext;
+	psNewNode = psNewResItem;
+	psNewNode->ui32ResType = ui32ResType;
+	psNewNode->pvParam = pvParam;
+	psNewNode->ui32Param = ui32Param;
+	psNewNode->pfnFreeResource = pfnFreeResource;
+	psNewNode->ui32Flags = 0;
+
+	/* List_RESMAN_ITEM_Insert */
+	ppsHead = &psResManContext->psResItemList;
+	psNewNode->ppsThis = ppsHead;
+	psNewNode->psNext = *ppsHead;
+	*ppsHead = psNewNode;
+	if (psNewNode->psNext)
+		psNewNode->psNext->ppsThis = &psNewNode->psNext;
 	return psNewResItem;
 }
 
