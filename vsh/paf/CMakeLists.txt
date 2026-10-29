@@ -63,6 +63,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/std/stdc++/paf_crt_mgr.c
 	src/std/ctype.c
 	src/std/stdlib.c
+	src/std/stdio.c
 	src/std/global_heap.c
 	src/memory/heap_allocator.c
 	src/memory/dlmalloc.c
