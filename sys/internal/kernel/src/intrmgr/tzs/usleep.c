@@ -31,7 +31,7 @@ static UsleepState s_usleep;
 static SceKernelSpinlock s_cpuWait[4];		/* held while the core sleeps */
 static volatile SceWordTimerRegisters *s_timer;
 
-#if defined(INTRMGR_SKBL) && !FW_DEBUG
+#if (defined(INTRMGR_SKBL) && !FW_DEBUG) || FW_VERSION < 0x04000000
 static int SetTargetCPU(int cpu)
 #else
 static __attribute__((noinline)) int SetTargetCPU(int cpu)
