@@ -1324,7 +1324,8 @@ int SceAvcodecForDriver_B6882013(SceJpegSplitDecodeCtrl *pCtrl)
 	command.pWriteBuffer = pCtrl->pWriteBuffer;
 	if (command.pWriteBuffer != NULL)
 		command.pWriteBuffer = (unsigned char *)
-			((unsigned int)command.pWriteBuffer - streamBase + physicalAddress);
+			((unsigned int)command.pWriteBuffer -
+			 (unsigned int)pCtrl->pStreamBuffer + physicalAddress);
 	cacheMode = mode == 2 ? 2 : 0;
 	if (pCtrl->pOutputBuffer != NULL) {
 		ret = jpegLockDecodeBuffer(&physicalAddress, pCtrl->pOutputBuffer,
