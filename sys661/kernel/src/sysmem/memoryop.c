@@ -8,14 +8,9 @@
 // 140D4
 u32 mem_extend_nest;
 
-void MemoryProtectInit(u32 size, u32 extSize)
+void MemoryProtectInit(u32 size, u32 extSize __attribute__((unused)))
 {
-    if (sceKernelGetModel() == 0 && sceKernelDipsw(10) == 0 && sceKernelDipsw(12) == 0) // A4B8
-        HW(0xBC100040) = (HW(0xBC100040) & 0xFFFFFFFC) | 0x1;
-    else {
-        // A2E8
-        HW(0xBC100040) = (HW(0xBC100040) & 0xFFFFFFFC) | 0x2;
-    }
+    HW(0xBC100040) = (HW(0xBC100040) & 0xFFFFFFFC) | 0x2;
     // A2F8
     if (size > 0x800000)
         size = 0x800000;
@@ -40,11 +35,7 @@ void MemoryProtectInit(u32 size, u32 extSize)
     while (ptr <= (s32*)0xBC00000C) // A3A4
         *(ptr++) = 0xFFFFFFFF;
     // A3B8
-    if (extSize == 0) {
-        // A4AC
-        HW(0xBC000048) = 1;
-    } else
-        HW(0xBC000048) = 0;
+    HW(0xBC000048) = 0;
     // A3C8
     s32 state = pspCop0StateGet(COP0_STATE_CPUID);
     if (state != 0) {

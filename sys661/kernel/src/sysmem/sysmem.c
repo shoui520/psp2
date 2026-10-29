@@ -556,7 +556,7 @@ s32 sceKernelGetAWeDramSaveSize(void)
 
 s32 sceKernelDevkitVersion(void)
 {
-    return 0x06060010;
+    return 0x06060110;
 }
 
 s32 sceKernelGetSystemStatus(void)

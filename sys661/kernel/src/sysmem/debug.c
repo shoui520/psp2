@@ -43,8 +43,10 @@ s32 sceKernelCallGprofFunction()
     return 0;
 }
 
-int sceKernelCheckDebugHandler()
+int sceKernelCheckDebugHandler(void *arg0, u32 arg1)
 {
+    (void)arg0;
+    (void)arg1;
     SceSysmemMemoryPartition *part = MpidToCB(3);
     return _CheckDebugHandler((void *)part->addr, part->size);
 }
