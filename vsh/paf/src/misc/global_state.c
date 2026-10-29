@@ -238,6 +238,36 @@ void *ScePafMisc_B5C459E2(uint32_t group, uint32_t cell, void **output)
 	return address;
 }
 
+int ScePafMisc_49BD531A(uint32_t group, uint32_t cell,
+			float *first, float *second)
+{
+	const int32_t *values;
+	int32_t a, b;
+	if (group >= 2 || cell >= 8)
+		return -1;
+	values = (const int32_t *)sce_paf_misc_cells_de60[group][cell];
+	a = values[2];
+	b = values[3];
+	*first = (float)a;
+	*second = (float)b;
+	return 0;
+}
+
+int ScePafMisc_4E922BF6(uint32_t group, uint32_t cell,
+			float *first, float *second)
+{
+	const int32_t *values;
+	int32_t a, b;
+	if (group >= 2 || cell >= 8)
+		return -1;
+	values = (const int32_t *)sce_paf_misc_cells_de60[group][cell];
+	a = values[6];
+	b = values[7];
+	*first = (float)a;
+	*second = (float)b;
+	return 0;
+}
+
 void *ScePafMisc_405C4F0A(uint32_t *object, uint32_t first)
 {
 	volatile uint32_t *words = (volatile uint32_t *)object;
