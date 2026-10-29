@@ -149,3 +149,73 @@ ScePafMisc_32E2C605:
 	bx lr
 	.fnend
 	.size ScePafMisc_32E2C605, . - ScePafMisc_32E2C605
+
+	.global ScePafMisc_CB4DB658
+	.type ScePafMisc_CB4DB658, %function
+	.thumb_func
+ScePafMisc_CB4DB658:
+	.fnstart
+	push {r4, r5, r6, lr}
+	cmp r1, #8
+	blo .LvalidCB4
+	movs.w r0, #-1
+	b .LreturnCB4
+.LvalidCB4:
+	rsb r1, r1, r1, lsl #2
+	add.w r3, r0, r1, lsl #2
+	ldr r3, [r3, #0xc]
+	movs r4, #0
+	adds r0, r4, #0
+	cbz r3, .LcompareCB4
+	ldr r4, [r3, #4]
+.LcompareCB4:
+	cmp r4, r3
+	beq .LreturnCB4
+.LvisitCB4:
+	movs r1, #1
+.LrepeatCB4:
+	cbz r2, .LmarkCB4
+	ldr r5, [r4, #0x10]
+	ldr r5, [r5, #0x1c]
+	cmp r5, r2
+	bne .LadvanceCB4
+.LmarkCB4:
+	strb r1, [r4, #0x18]
+.LadvanceCB4:
+	cbz r4, .LouterCompareCB4
+	ldr.w ip, [r4, #8]
+	ldrsb.w r5, [ip, #0x1d]
+	cbnz r5, .LfromParentCB4
+	ldr.w r4, [ip, #4]
+	ldrsb.w r5, [r4, #0x1d]
+	cbnz r5, .LbypassCB4
+.LchildLoopCB4:
+	mov ip, r4
+	ldr.w r4, [ip, #4]
+	ldrsb.w r5, [r4, #0x1d]
+	cmp r5, #0
+	beq .LchildLoopCB4
+.LbypassCB4:
+	b .LouterEndCB4
+.LfromParentCB4:
+	ldr.w ip, [r4]
+	ldrsb.w r5, [ip, #0x1d]
+	cbnz r5, .LouterEndCB4
+.LparentLoopCB4:
+	ldr.w r5, [ip, #4]
+	cmp r5, r4
+	beq .LouterEndCB4
+	mov r4, ip
+	ldr.w ip, [r4]
+	ldrsb.w r5, [ip, #0x1d]
+	cmp r5, #0
+	beq .LparentLoopCB4
+.LouterEndCB4:
+	mov r4, ip
+.LouterCompareCB4:
+	cmp r4, r3
+	bne .LrepeatCB4
+.LreturnCB4:
+	pop {r4, r5, r6, pc}
+	.fnend
+	.size ScePafMisc_CB4DB658, . - ScePafMisc_CB4DB658
