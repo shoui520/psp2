@@ -387,15 +387,9 @@ float sce_paf_logf(float x)
 
 float sce_paf_powf(float base, float exponent)
 {
-	union {
-		float value;
-		uint32_t bits;
-	} number;
 	int integerExponent = FloatToInt(exponent);
 	int truncatedExponent = FloatToInt(exponent);
-	float result, reduced, square, polynomial, logarithm;
-	uint32_t mantissa, correction;
-	int numerator, denominator;
+	float result;
 
 	if (exponent < 0.0f) {
 		if (base < 0.0f && exponent - (float)truncatedExponent > 0.0f)
@@ -415,31 +409,5 @@ float sce_paf_powf(float base, float exponent)
 	}
 	if (base == 0.0f)
 		return 0.0f;
-	number.value = base;
-	if ((int32_t)number.bits > 0) {
-		mantissa = number.bits & 0x7fffffU;
-		numerator = (int)mantissa - 0x800000;
-		denominator = (int)mantissa;
-		if (mantissa <= 0x3504f3U) {
-			numerator = (int)mantissa;
-			denominator = (int)mantissa - 0x800000;
-			number.bits -= 0x800000U;
-		}
-		denominator += 0x1800000;
-		reduced = (float)numerator / (float)denominator;
-		correction = (uint32_t)((int32_t)number.bits >> 23) *
-			     11629080U - 1465264080U;
-		square = reduced * reduced;
-		polynomial = logCoefficients[1] + logCoefficients[2] * square;
-		polynomial = logCoefficients[0] + polynomial * square;
-		logarithm = reduced * polynomial;
-		logarithm += (float)(int32_t)correction * 5.960464477539063e-8f;
-	} else {
-		if ((number.bits & 0x7fffffffU) == 0)
-			number.bits = 0xff800000U;
-		else
-			number.bits = 0xffc00000U;
-		logarithm = number.value;
-	}
-	return sce_paf_expf(exponent * logarithm);
+	return sce_paf_expf(exponent * sce_paf_logf(base));
 }
