@@ -103,3 +103,21 @@ ScePafMisc_B207334F:
 	bx lr
 	.fnend
 	.size ScePafMisc_B207334F, . - ScePafMisc_B207334F
+
+	.macro PafEnumSizeInEights name, input_offset
+	.global \name
+	.type \name, %function
+	.thumb_func
+\name:
+	.fnstart
+	push {r4, lr}
+	ldr r0, [r0, #\input_offset]
+	bl ScePafMisc_B207334F
+	lsrs r0, r0, #3
+	pop {r4, pc}
+	.fnend
+	.size \name, . - \name
+	.endm
+
+	PafEnumSizeInEights ScePafMisc_A48D0607, 8
+	PafEnumSizeInEights ScePafMisc_C07E8C83, 4
