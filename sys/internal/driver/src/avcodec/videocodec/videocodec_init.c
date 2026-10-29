@@ -76,7 +76,7 @@ static void videocodecFinalizeAvcDecoderMutexes(VideocodecGlobal *global,
 	}
 }
 
-static int videocodecInitAvcDecoderMutexes(VideocodecGlobal *global,
+__attribute__((noinline)) int videocodecInitAvcDecoderMutexes(VideocodecGlobal *global,
 		const VideocodecSlotCounts *counts)
 {
 	VideocodecSlotCounts initialized = {0, 0, 0};
@@ -96,14 +96,14 @@ static int videocodecInitAvcDecoderMutexes(VideocodecGlobal *global,
 	return ret;
 }
 
-static int videocodecFinalizeDsp0Mutexes(VideocodecGlobal *global,
-		const VideocodecSlotCounts *counts)
+__attribute__((noinline)) int videocodecFinalizeDsp0Mutexes(VideocodecGlobal *global,
+		const unsigned int *numOfDsp0Decoders, unsigned int numOfEncoders)
 {
 	unsigned int i;
 
-	for (i = counts->numOfEncoders; i != 0; i--)
+	for (i = numOfEncoders; i != 0; i--)
 		sceKernelFinalizeFastMutex((SceKernelFastMutex *)&global->encoders[i - 1].mutex);
-	for (i = counts->numOfDsp0Decoders; i != 0; i--)
+	for (i = *numOfDsp0Decoders; i != 0; i--)
 		sceKernelFinalizeFastMutex((SceKernelFastMutex *)&global->dsp0Decoders[i - 1].mutex);
 	return 0;
 }
@@ -316,7 +316,7 @@ static int videocodecReleaseLibrary(int isDsp0, unsigned int flags, SceUID pid,
 }
 
 /* The hardware memory of the AVC decoder library: the caller's unmap memory, or a new block. */
-static int videocodecAllocAvcdecMemory(VideocodecGlobal *global, const SceVideodecCtrl *pCtrl,
+__attribute__((noinline)) int videocodecAllocAvcdecMemory(VideocodecGlobal *global, const SceVideodecCtrl *pCtrl,
 		const SceVideodecMemInfo *pMemInfo)
 {
 	VideocodecMemory *memory = &global->avcdecMemory;
@@ -1130,7 +1130,8 @@ int videocodecInitLibraryWithUnmapMem(unsigned int codecType, const SceVideodecC
 				(SceKernelFastMutex *)&global->dsp0Decoders[i].mutex,
 				videocodecSwDecoderMutexName, 0x8002, 0);
 			if (ret < 0) {
-				videocodecFinalizeDsp0Mutexes(global, &initialized);
+				videocodecFinalizeDsp0Mutexes(global, &initialized.numOfDsp0Decoders,
+						initialized.numOfEncoders);
 				goto release;
 			}
 			initialized.numOfDsp0Decoders++;
@@ -1141,7 +1142,8 @@ int videocodecInitLibraryWithUnmapMem(unsigned int codecType, const SceVideodecC
 				(SceKernelFastMutex *)&global->encoders[i].mutex,
 				videocodecSwEncoderMutexName, 0x8002, 0);
 			if (ret < 0) {
-				videocodecFinalizeDsp0Mutexes(global, &initialized);
+				videocodecFinalizeDsp0Mutexes(global, &initialized.numOfDsp0Decoders,
+						initialized.numOfEncoders);
 				goto release;
 			}
 			initialized.numOfEncoders++;
