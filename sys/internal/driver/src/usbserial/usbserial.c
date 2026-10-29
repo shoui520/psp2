@@ -95,7 +95,7 @@ _Static_assert(sizeof(s_serial) == 0x324, "serial state");
 
 
 /* Name unknown: direct descriptor stores, without a library copy call. */
-static void copyWords(void *dst, const void *src, unsigned words)
+static inline __attribute__((always_inline)) void copyWords(void *dst, const void *src, unsigned words)
 {
 	volatile uint32_t *d = dst;
 	const uint32_t *s = src;
@@ -104,7 +104,7 @@ static void copyWords(void *dst, const void *src, unsigned words)
 }
 
 /* Names unknown: full-capacity rings distinguish empty from full explicitly. */
-static unsigned ringUsed(const SerialRing *ring)
+static inline __attribute__((always_inline)) unsigned ringUsed(const SerialRing *ring)
 {
 	if (ring->empty)
 		return 0;
@@ -112,7 +112,7 @@ static unsigned ringUsed(const SerialRing *ring)
 		ring->write + ring->size - ring->read;
 }
 
-static unsigned ringFree(const SerialRing *ring)
+static inline __attribute__((always_inline)) unsigned ringFree(const SerialRing *ring)
 {
 	if (ring->empty)
 		return ring->size;
@@ -120,12 +120,12 @@ static unsigned ringFree(const SerialRing *ring)
 		ring->read - ring->write;
 }
 
-static unsigned isConnected(void)
+static inline __attribute__((always_inline)) unsigned isConnected(void)
 {
 	return (s_serial.flags & SERIAL_CONNECTED) / SERIAL_CONNECTED;
 }
 
-static void resetRings(void)
+static inline __attribute__((always_inline)) void resetRings(void)
 {
 	s_serial.rx.write = s_serial.rx.read = 0;
 	s_serial.tx.write = s_serial.tx.read = 0;
@@ -169,6 +169,7 @@ static int initializeNumber(void *args)
 static void completeReceive(SceUdcdDeviceRequest *req)
 {
 	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
+	unsigned free;
 	if (req->returnCode < 0) {
 		sceKernelSetEventFlag(s_serial.event, EVENT_RX_CANCEL);
 		sceKernelClearEventFlag(s_serial.event, ~EVENT_RX_CANCEL);
@@ -179,8 +180,9 @@ static void completeReceive(SceUdcdDeviceRequest *req)
 		if (!n) {
 			req->returnCode = 0;
 		} else {
-			unsigned free = ringFree(&s_serial.rx);
 			unsigned tail = s_serial.rx.size - s_serial.rx.write;
+
+			free = ringFree(&s_serial.rx);
 			if (n > free)
 				n = free;
 			if (tail < n) {
@@ -197,7 +199,8 @@ static void completeReceive(SceUdcdDeviceRequest *req)
 				sceKernelSetEventFlag(s_serial.event, EVENT_RX_DATA);
 		}
 	}
-	if ((unsigned)req->size <= ringFree(&s_serial.rx) && req->returnCode == 0) {
+	free = ringFree(&s_serial.rx);
+	if ((unsigned)req->size <= free && req->returnCode == 0) {
 		sceKernelDcacheInvalidateRange(req->data, (req->size + 63) & ~63U);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_serial.lock, intr);
 		sceUdcdReqRecv(req);
@@ -214,23 +217,16 @@ static int processControl(int recipient, int index, SceUdcdEP0DeviceRequest *req
 	if (index < 0 || (req->bmRequestType & USB_CTRLTYPE_TYPE_MASK) != USB_CTRLTYPE_TYPE_CLASS)
 		return -1;
 	switch (req->bRequest) {
-	case CDC_SET_LINE_CODING:
-	case CDC_GET_LINE_CODING:
-		if (req->bRequest == CDC_GET_LINE_CODING) {
-			CdcLineCoding *coding = control->data;
+	case CDC_GET_LINE_CODING: {
+		CdcLineCoding *coding = control->data;
 
-			__builtin_memcpy(coding, &s_serial.lineCoding, LINE_CODING_SIZE);
-		}
+		__builtin_memcpy(coding, &s_serial.lineCoding, LINE_CODING_SIZE);
 		control->size = req->wLength < SERIAL_CONTROL_SIZE ? req->wLength : SERIAL_CONTROL_SIZE;
 		control->unused = (void *)(unsigned)req->bRequest;
-		if (req->bRequest == CDC_GET_LINE_CODING) {
-			sceKernelDcacheCleanRange(control->data, SERIAL_CONTROL_SIZE);
-			sceUdcdReqSend(control);
-		} else {
-			sceKernelDcacheInvalidateRange(control->data, SERIAL_CONTROL_SIZE);
-			sceUdcdReqRecv(control);
-		}
+		sceKernelDcacheCleanRange(control->data, SERIAL_CONTROL_SIZE);
+		sceUdcdReqSend(control);
 		return 0;
+	}
 	case CDC_SET_CONTROL_LINE_STATE:
 		if ((req->wValue & CDC_LINE_STATE_DTR) != isConnected()) {
 			unsigned clear, set;
@@ -259,13 +255,19 @@ static int processControl(int recipient, int index, SceUdcdEP0DeviceRequest *req
 				sceKernelNotifyCallback(s_serial.callback, isConnected());
 		}
 		return 0;
+	case CDC_SET_LINE_CODING:
+		control->size = req->wLength < SERIAL_CONTROL_SIZE ? req->wLength : SERIAL_CONTROL_SIZE;
+		control->unused = (void *)(unsigned)req->bRequest;
+		sceKernelDcacheInvalidateRange(control->data, SERIAL_CONTROL_SIZE);
+		sceUdcdReqRecv(control);
+		return 0;
 	default:
 		return -1;
 	}
 }
 
 /* Name unknown: stage at most 4096 bytes of the transmit ring. */
-static void stageTransmit(SceUdcdDeviceRequest *req)
+static inline __attribute__((always_inline)) void stageTransmit(SceUdcdDeviceRequest *req)
 {
 	unsigned used = ringUsed(&s_serial.tx), n = used;
 	unsigned tail = s_serial.tx.size - s_serial.tx.read;
@@ -309,13 +311,22 @@ static void completeTransmit(SceUdcdDeviceRequest *req)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_serial.lock, intr);
 }
 
-static void notifySerial(void)
+static inline __attribute__((always_inline)) void notifySerial(void)
 {
-	/* bmRequestType, bNotification, wValue 0, wIndex, wLength 2, the state */
+	/* bmRequestType, bNotification, wValue 0 | wIndex, wLength 2 | the state */
 	uint32_t *p = s_serial.notification.request.data;
+	union {
+		struct {
+			uint16_t wIndex, wLength;
+		};
+		uint32_t word;
+	} index;
+
+	index.wIndex = s_serial.interface.interfaceNumber;
+	index.wLength = sizeof(uint16_t);
+	p[1] = index.word;
 	p[0] = CDC_NOTIFY_SERIAL_STATE << 8 | USB_CTRLTYPE_DIR_DEVICE2HOST |
 	       USB_CTRLTYPE_TYPE_CLASS | USB_CTRLTYPE_REC_INTERFACE;
-	p[1] = (uint16_t)s_serial.interface.interfaceNumber | sizeof(uint16_t) << 16;
 	*(uint16_t *)(p + 2) = s_serial.serialState;
 	s_serial.notification.request.size = 10;
 	sceKernelDcacheCleanRange(p, 64);
@@ -582,7 +593,7 @@ int module_start(unsigned arglen, void *argp)
 }
 
 /* Names unknown: kernel-side serial API behind the syscall wrappers. */
-static int serialStatus(void)
+static inline __attribute__((always_inline)) int serialState(void)
 {
 	if (!(s_serial.flags & SERIAL_STARTED))
 		return SERIAL_NOT_STARTED;
@@ -590,7 +601,12 @@ static int serialStatus(void)
 	       0 : SERIAL_NOT_OPEN;
 }
 
-static int waitError(int ret, unsigned bits, unsigned disconnected, unsigned cancel)
+static __attribute__((noinline)) int serialStatus(void)
+{
+	return serialState();
+}
+
+static inline __attribute__((always_inline)) int waitError(int ret, unsigned bits, unsigned disconnected, unsigned cancel)
 {
 	if (ret < 0)
 		return ret == (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT ? SERIAL_TIMEOUT : ret;
@@ -603,14 +619,15 @@ static int waitError(int ret, unsigned bits, unsigned disconnected, unsigned can
 	return ret;
 }
 
-static int receiveSerial(void *buffer, unsigned size, unsigned mode, int timeout)
+/* callback: wait with callbacks, which a polling (mode 2) call cannot */
+static __attribute__((noinline, noclone)) int receiveCore(void *buffer, unsigned size, unsigned mode, int timeout, int callback)
 {
-	int ret = serialStatus();
+	int ret = serialState();
 	unsigned intr, total = 0, disconnected;
 	uint32_t bits[2], usec;
 	if (ret < 0)
 		return ret;
-	if (!buffer || mode > 2)
+	if (!buffer || mode > 2 || (callback == 1 && mode == 2))
 		return SERIAL_INVALID_ARGUMENT;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 	if (s_serial.flags & SERIAL_RECEIVING) {
@@ -625,7 +642,7 @@ static int receiveSerial(void *buffer, unsigned size, unsigned mode, int timeout
 			if (timeout >= 0)
 				usec = timeout;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_serial.lock, intr);
-			ret = sceKernelWaitEventFlag(s_serial.event, disconnected | EVENT_RX_CANCEL | EVENT_RX_DATA | EVENT_CLOSED,
+			ret = (callback ? sceKernelWaitEventFlagCB : sceKernelWaitEventFlag)(s_serial.event, disconnected | EVENT_RX_CANCEL | EVENT_RX_DATA | EVENT_CLOSED,
 				SCE_KERNEL_EVF_WAITMODE_OR, bits, timeout < 0 ? 0 : &usec);
 			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 			ret = waitError(ret, bits[0], disconnected, EVENT_RX_CANCEL);
@@ -679,14 +696,14 @@ done:
 	return ret;
 }
 
-static int sendSerial(const void *buffer, unsigned size, unsigned mode, int timeout)
+static __attribute__((noinline, noclone)) int sendCore(const void *buffer, unsigned size, unsigned mode, int timeout, int callback)
 {
-	int ret = serialStatus();
+	int ret = serialState();
 	unsigned intr, total = 0, disconnected;
 	uint32_t bits[2], usec;
 	if (ret < 0)
 		return ret;
-	if (!buffer || mode > 2)
+	if (!buffer || mode > 2 || (callback == 1 && mode == 2))
 		return SERIAL_INVALID_ARGUMENT;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 	if (s_serial.flags & SERIAL_SENDING) {
@@ -701,7 +718,7 @@ static int sendSerial(const void *buffer, unsigned size, unsigned mode, int time
 			if (timeout >= 0)
 				usec = timeout;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_serial.lock, intr);
-			ret = sceKernelWaitEventFlag(s_serial.event, disconnected | EVENT_TX_CANCEL | EVENT_TX_SPACE | EVENT_CLOSED,
+			ret = (callback ? sceKernelWaitEventFlagCB : sceKernelWaitEventFlag)(s_serial.event, disconnected | EVENT_TX_CANCEL | EVENT_TX_SPACE | EVENT_CLOSED,
 				SCE_KERNEL_EVF_WAITMODE_OR, bits, timeout < 0 ? 0 : &usec);
 			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 			ret = waitError(ret, bits[0], disconnected, EVENT_TX_CANCEL);
@@ -760,7 +777,17 @@ done:
 	return ret;
 }
 
-static int startSerial(void)
+static __attribute__((noinline)) int receiveSerial(void *buffer, unsigned size, unsigned mode, int timeout)
+{
+	return receiveCore(buffer, size, mode, timeout, 0);
+}
+
+static __attribute__((noinline)) int sendSerial(const void *buffer, unsigned size, unsigned mode, int timeout)
+{
+	return sendCore(buffer, size, mode, timeout, 0);
+}
+
+static __attribute__((noinline)) int startSerial(void)
 {
 	int ret;
 	if (!(s_serial.flags & SERIAL_NUMBER_READY))
@@ -784,7 +811,7 @@ static int startSerial(void)
 	return ret;
 }
 
-static int closeSerial(void)
+static __attribute__((noinline)) int closeSerial(void)
 {
 	if (!(s_serial.flags & SERIAL_STARTED))
 		return SERIAL_NOT_STARTED;
@@ -796,7 +823,7 @@ static int closeSerial(void)
 	return sceUdcdActivate(USB_PID_MTP);
 }
 
-static int setupSerial(unsigned mode)
+static __attribute__((noinline)) int setupSerial(unsigned mode)
 {
 	unsigned intr;
 	if (!(s_serial.flags & SERIAL_STARTED))
@@ -830,7 +857,7 @@ static int setupSerial(unsigned mode)
 	return 0;
 }
 
-static int unsetupSerial(void)
+static __attribute__((noinline)) int unsetupSerial(void)
 {
 	unsigned intr;
 	if (!(s_serial.flags & SERIAL_STARTED))
@@ -864,9 +891,9 @@ done:
 	return 0;
 }
 
-static int cancelSerial(unsigned mask)
+static __attribute__((noinline)) int cancelSerial(unsigned mask)
 {
-	int ret = serialStatus();
+	int ret = serialState();
 	if (ret < 0)
 		return ret;
 	if (!mask || (mask & ~(SERIAL_MASK_RX | SERIAL_MASK_TX | SERIAL_MASK_DRAIN)))
@@ -880,9 +907,9 @@ static int cancelSerial(unsigned mask)
 	return 0;
 }
 
-static int resetSerial(unsigned mask)
+static __attribute__((noinline)) int resetSerial(unsigned mask)
 {
-	int ret = serialStatus();
+	int ret = serialState();
 	unsigned intr;
 	if (ret < 0)
 		return ret;
@@ -910,9 +937,9 @@ static int resetSerial(unsigned mask)
 	return 0;
 }
 
-static int drainSerial(int timeout)
+static __attribute__((noinline)) int drainSerial(int timeout)
 {
-	int ret = serialStatus();
+	int ret = serialState();
 	unsigned intr, disconnected;
 	uint32_t bits[2], usec;
 	if (ret < 0)
@@ -937,7 +964,7 @@ static int drainSerial(int timeout)
 	return ret;
 }
 
-static int queryRing(const SerialRing *ring, int free)
+static inline __attribute__((always_inline)) int queryRing(const SerialRing *ring, int free)
 {
 	unsigned intr;
 	int n;
@@ -949,7 +976,27 @@ static int queryRing(const SerialRing *ring, int free)
 	return n;
 }
 
-static int queryStatus(void)
+static __attribute__((noinline)) int queryReceiveUsed(void)
+{
+	return queryRing(&s_serial.rx, 0);
+}
+
+static __attribute__((noinline)) int queryReceiveFree(void)
+{
+	return queryRing(&s_serial.rx, 1);
+}
+
+static __attribute__((noinline)) int queryTransmitUsed(void)
+{
+	return queryRing(&s_serial.tx, 0);
+}
+
+static __attribute__((noinline)) int queryTransmitFree(void)
+{
+	return queryRing(&s_serial.tx, 1);
+}
+
+static __attribute__((noinline)) int queryStatus(void)
 {
 	if (!(s_serial.flags & SERIAL_STARTED))
 		return SERIAL_NOT_STARTED;
@@ -974,10 +1021,10 @@ SERIAL_EXPORT(sceUsbSerialSetup, (unsigned mode), setupSerial(mode))
 SERIAL_EXPORT(SceUsbSerial_2C08272C, (void), unsetupSerial())
 SERIAL_EXPORT(SceUsbSerial_60D93778, (unsigned mask), cancelSerial(mask))
 SERIAL_EXPORT(SceUsbSerial_0ACC8A92, (unsigned mask), resetSerial(mask))
-SERIAL_EXPORT(sceUsbSerialGetRecvBufferSize, (void), queryRing(&s_serial.rx, 0))
-SERIAL_EXPORT(SceUsbSerial_923535FA, (void), queryRing(&s_serial.rx, 1))
-SERIAL_EXPORT(SceUsbSerial_A281DF87, (void), queryRing(&s_serial.tx, 0))
-SERIAL_EXPORT(SceUsbSerial_642F8F19, (void), queryRing(&s_serial.tx, 1))
+SERIAL_EXPORT(sceUsbSerialGetRecvBufferSize, (void), queryReceiveUsed())
+SERIAL_EXPORT(SceUsbSerial_923535FA, (void), queryReceiveFree())
+SERIAL_EXPORT(SceUsbSerial_A281DF87, (void), queryTransmitUsed())
+SERIAL_EXPORT(SceUsbSerial_642F8F19, (void), queryTransmitFree())
 SERIAL_EXPORT(sceUsbSerialStatus, (void), queryStatus())
 
 int sceUsbSerialRecv(void *buffer, unsigned size, unsigned mode, int timeout)
