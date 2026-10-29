@@ -71,6 +71,7 @@ int powerSwitchInterrupt(void *argument)
 
 	sceKernelAtomicOrAndGet32((SceInt32 *)&s_powerSwitchState.interruptCpuMask, bit);
 	dsb();
+	sev();
 	while (s_powerSwitchState.interruptState & 1)
 		wfe();
 	if (s_powerSwitchState.interruptState & 2) {
@@ -87,6 +88,7 @@ int powerSwitchInterrupt(void *argument)
 		sceKernelAtomicOrAndGet32((SceInt32 *)&s_powerSwitchState.interruptCpuMask,
 					   bit);
 		dsb();
+		sev();
 		for (;;)
 			;
 	}
@@ -166,7 +168,7 @@ inline __attribute__((always_inline)) int powerAcquireSystemSwitchLock(uint32_t 
 	return 0;
 }
 
-static inline int powerReleaseSwitchProcessLock(volatile uint32_t *count)
+static inline int powerReleaseSwitchProcessLock(uint32_t *count)
 {
 	SceKernelIntrStatus intrState;
 
@@ -239,14 +241,13 @@ int powerSwitchTransition(uint32_t mode)
 	struct PowerSuspendEvent suspend = {.size = 0x18};
 	struct PowerResumeEvent resume = {.size = 8};
 	LedModeParam led = { 0 };
-	uint32_t address = 0, zero = 0;
+	uint32_t address;
 	int displayOff;
 	uint32_t intrState, seen, started, now;
-	SceUID busy = -1, callback = -1;
+	SceUID busy, callback;
 	unsigned int request = mode & 0xf, action;
 	int powerOff;
 	int ret, i, idleLoops = 0, diagnostics = 0;
-	uint32_t sysconStatus = 0;
 
 	memset(&monitor, 0, sizeof(monitor));
 	monitor.size = sizeof(monitor);
@@ -257,6 +258,7 @@ int powerSwitchTransition(uint32_t mode)
 	resume.resumeInformation = NULL;
 	sceKernelVAtoPA(&monitor, &address);
 	SceSysconForDriver_E26488B9(SYSCON_SCRATCH_PAD(resumeContextPA), &address, 4);
+	address = 0;
 	switch (request) {
 	case POWER_REQUEST_STANDBY:
 	case POWER_REQUEST_SHUTDOWN:
@@ -268,6 +270,7 @@ int powerSwitchTransition(uint32_t mode)
 		break;
 	}
 	intrState = sceKernelCpuSuspendIntr();
+	busy = -1;
 	ret = powerDispatchSwitchEvent(0, SYSEVENT_SUSPEND_QUERY, suspend.sleepMode, &suspend,
 				       &busy);
 	if (ret < 0) {
@@ -309,7 +312,7 @@ int powerSwitchTransition(uint32_t mode)
 		powerDispatchSwitchEvent(0, i, suspend.sleepMode, &suspend,
 					 NULL);
 	sceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~0x40000U);
-	SceSysconForDriver_D7BEFF8B(&sysconStatus);
+	SceSysconForDriver_D7BEFF8B(&busy);
 	intrState = sceKernelCpuSuspendIntr();
 	powerDispatchSwitchEvent(0, SYSEVENT_SUSPEND_IDLE_ENTER, suspend.sleepMode, &suspend, NULL);
 	for (;;) {
@@ -379,6 +382,7 @@ int powerSwitchTransition(uint32_t mode)
 		}
 		s_powerSwitchState.interruptState = 0;
 		dsb();
+		sev();
 	}
 	suspend.started = sceKernelGetSystemTimeWide();
 	powerDispatchSwitchEvent(0, SYSEVENT_SUSPEND_COMMIT, suspend.sleepMode, &suspend, NULL);
@@ -390,6 +394,7 @@ int powerSwitchTransition(uint32_t mode)
 	s_powerSwitchState.interruptState = 2;
 	s_powerSwitchState.interruptCpuMask = 0;
 	dsb();
+	sev();
 	SceKernelSuspendForDriver_D4958E6F(0);
 	while (s_powerSwitchState.interruptCpuMask != 7)
 		;
@@ -475,8 +480,11 @@ int powerSwitchTransition(uint32_t mode)
 	sceKernelCpuResumeIntr(intrState);
 	s_powerSwitchState.interruptState = 0;
 	dsb();
+	sev();
 	powerDispatchSwitchEvent(1, SYSEVENT_RESUME_START, 0, &resume, NULL);
-	SceSysconForDriver_E26488B9(SYSCON_SCRATCH_PAD(resumeContextPA), &zero, 4);
+	/* clear the resume context address handed to the syscon at suspend */
+	address = 0;
+	SceSysconForDriver_E26488B9(SYSCON_SCRATCH_PAD(resumeContextPA), &address, 4);
 	if (s_powerSwitchState.powerOffDelay)
 		SceSysconForDriver_373ECF8A(s_powerSwitchState.powerOffDelay);
 	diagnostics = 0;
@@ -926,26 +934,11 @@ int ScePowerForDriver_CF8F0529(uint32_t time)
 	return 0;
 }
 
-static inline int powerReleaseSwitchProcessLockCount(volatile uint32_t *count)
-{
-	SceKernelIntrStatus intrState;
-	uint32_t locks;
-
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
-	locks = *count;
-	if ((int32_t)locks > 0) {
-		*count = 0;
-		s_powerSwitchState.processLockCount -= locks;
-	}
-	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
-		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10000);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
-	return 0;
-}
-
 int powerReleaseProcessSwitchLocks(SceUID pid)
 {
 	struct PowerProcessState *state;
+	SceKernelIntrStatus intrState;
+	uint32_t locks;
 	int result;
 
 	result = sceKernelGetRemoteKPLS(pid,
@@ -954,7 +947,16 @@ int powerReleaseProcessSwitchLocks(SceUID pid)
 		return result;
 	if (!state)
 		return 0;
-	return powerReleaseSwitchProcessLockCount(&state->powerLockCount);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	locks = state->powerLockCount;
+	if ((int32_t)locks > 0) {
+		state->powerLockCount = 0;
+		s_powerSwitchState.processLockCount -= locks;
+	}
+	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10000);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	return 0;
 }
 
 /* The two request-state words have unresolved individual meanings. */

@@ -18,7 +18,8 @@ psp2_module(os0_kd_bootimage_power KIND kernel COMPILER gcc48 SOURCES
 set_source_files_properties(power.c PROPERTIES
 	COMPILE_OPTIONS "-fipa-cp-clone")
 
-# The clock unit was built at -O3: the original inlines the bus, dmac5, camera
-# and system clock setters into powerRestoreClockRuntime.
-set_source_files_properties(power_clock.c PROPERTIES
+# The clock and idle units were built at -O3: the original inlines the bus,
+# dmac5, camera and system clock setters into powerRestoreClockRuntime, and
+# unrolls ScePowerForDriver_6BC26FC7's timer propagation loop.
+set_source_files_properties(power_clock.c power_idle.c PROPERTIES
 	COMPILE_OPTIONS "-O3")

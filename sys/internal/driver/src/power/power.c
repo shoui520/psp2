@@ -344,8 +344,9 @@ int scePowerRegisterCallback(SceUID callback)
 			s_powerCallbackControl.stateFlags & permittedMask);
 	if (result < 0)
 		goto fail;
-	record->next = s_powerCallbackControl.head;
+	current = s_powerCallbackControl.head;
 	s_powerCallbackControl.head = record;
+	record->next = current;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	return 0;
 fail:
@@ -417,7 +418,7 @@ static void _scePowerNotifyCallbackProc(SceUID pid, uint32_t clearMask,
 	struct PowerCallbackRecord *next;
 	SceKernelIntrStatus intrState;
 	SceUID callback;
-	uint32_t state, pending, notification;
+	uint32_t state, pending, notification, enabled;
 	int count, result;
 #if FW_DEBUG
 	const void *caller = __builtin_return_address(0);
@@ -439,11 +440,12 @@ static void _scePowerNotifyCallbackProc(SceUID pid, uint32_t clearMask,
 				pending = count ? record->pendingEvents & ~clearMask : 0;
 				pending |= events;
 				notification = state | pending;
+				enabled = s_powerCallbackControl.notificationMask &
+					  record->permittedMask;
 				record->pendingEvents = pending;
 				record->lastNotification = notification;
 				result = sceKernelNotifyCallback(callback,
-						notification & record->permittedMask &
-						s_powerCallbackControl.notificationMask);
+						enabled & notification);
 				if (result >= 0) {
 					previous = record;
 					continue;
@@ -545,15 +547,17 @@ int powerHasBusyCallback(uint32_t mask, SceUID *callback)
 {
 	struct PowerCallbackRecord *record;
 	uint32_t intrState;
+	SceUID uid;
 
 	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	for (record = s_powerCallbackControl.head; record;
 	     record = record->next) {
-		if (record->callback >= 0 &&
+		uid = record->callback;
+		if (uid >= 0 &&
 		    (record->lastNotification & mask) && record->notified &&
-		    sceKernelGetCallbackCount(record->callback) > 0) {
+		    sceKernelGetCallbackCount(uid) > 0) {
 			if (callback)
-				*callback = record->callback;
+				*callback = uid;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(
 				&s_powerIdleLock, intrState);
 			return 1;

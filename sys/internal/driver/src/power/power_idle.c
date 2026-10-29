@@ -58,7 +58,8 @@ static inline __attribute__((always_inline)) void powerHandleProcessIdleTimers(u
 			state->idleState = 1;
 			if (callback)
 				callback(state->pid, (uint32_t)elapsed,
-					 s_powerIdleTimers.processCallback.argument);
+					 s_powerIdleTimers.processCallback.argument,
+					 (uint32_t)(elapsed >> 32));
 		}
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
@@ -210,8 +211,7 @@ int ScePowerForDriver_EDC13FE5(uint32_t timerId, uint64_t *elapsedOut,
 
 inline __attribute__((always_inline)) int ScePowerForDriver_6BC26FC7(uint32_t timerId, uint64_t interval)
 {
-	volatile struct PowerIdleTimer *timer;
-	uint32_t mask;
+	struct PowerIdleTimer *timer;
 	uint32_t index;
 
 	if (timerId > 7)
@@ -222,9 +222,8 @@ inline __attribute__((always_inline)) int ScePowerForDriver_6BC26FC7(uint32_t ti
 		return SCE_POWER_ERROR_INVALID_VALUE;
 
 	timer->interval = interval;
-	mask = timer->propagationMask;
 	for (index = 0; index < 8; index++) {
-		if (index != timerId && (mask & (1U << index)))
+		if (index != timerId && (timer->propagationMask & (1U << index)))
 			s_powerIdleTimers.timers[index].interval = interval;
 	}
 	return 0;

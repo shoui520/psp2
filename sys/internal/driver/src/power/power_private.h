@@ -78,7 +78,7 @@ struct PowerIdleTimer {
 	void *callbackArgument;
 	uint16_t tickFlags;
 	uint8_t tickRecorded;
-	uint8_t idleState;
+	int8_t idleState;
 };
 
 struct PowerProcessIdleState {

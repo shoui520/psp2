@@ -11,7 +11,12 @@
 typedef void (*PowerWirelessCallback)(int enabled, void *argument);
 typedef void (*PowerProcessFlagsCallback)(SceUID pid, uint32_t flags, void *argument);
 /* name unknown: told when a process goes idle (elapsed ticks) or wakes (0) */
-typedef int (*PowerProcessIdleCallback)(SceUID pid, uint32_t elapsed, void *argument);
+/*
+ * Called (pid, elapsed, argument) when a process's idle state resets and
+ * (pid, elapsed low, argument, elapsed high) when it expires: Sony's calls
+ * differ in arity, so the type is unprototyped.
+ */
+typedef int (*PowerProcessIdleCallback)();
 
 /* ScePowerForDriver_0C6973B8's argument */
 struct PowerBatteryFakeStatus {

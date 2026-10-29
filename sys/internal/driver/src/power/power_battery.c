@@ -944,6 +944,7 @@ int ScePowerForDriver_0C6973B8(const volatile struct PowerBatteryFakeStatus *sta
 int ScePowerForDriver_C62B6164(void (*callback)(uint32_t, void *),
 			      uint32_t threshold, void *argument)
 {
+	s_powerBatteryBase.state.temperatureCallback = NULL;
 	dmb();
 	s_powerBatteryBase.state.temperatureArgument = argument;
 	s_powerBatteryBase.state.temperatureThreshold = threshold;
