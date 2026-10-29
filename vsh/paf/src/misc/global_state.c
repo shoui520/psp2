@@ -69,6 +69,18 @@ uint32_t ScePafMisc_0D1B028E(uint32_t value)
 	return sce_paf_misc_value_d414;
 }
 
+uint32_t ScePafMisc_57080F75(int32_t mode)
+{
+	uint32_t ticks = ++sce_paf_misc_ticks_d550;
+	sce_paf_misc_active_1090 = 1;
+	uint32_t limit = sce_paf_misc_limit_d554;
+	if (mode >= 0 && mode < 5)
+		sce_paf_misc_value_1088 = (uint32_t)mode;
+	if ((int32_t)ticks > (int32_t)limit)
+		sce_paf_misc_limit_d554 = limit + 1;
+	return sce_paf_misc_value_1088;
+}
+
 uint32_t ScePafMisc_4E93C051(void)
 {
 	return sce_paf_misc_flags_ee98;
