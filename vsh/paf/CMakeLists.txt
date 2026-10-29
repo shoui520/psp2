@@ -91,6 +91,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/quaternion_matrix_abi.S
 	src/misc/orthonormal_abi.S
 	src/misc/matrix_inverse_abi.S
+	src/misc/enum_table_abi.S
 	src/misc/vector_abi.S
 	src/misc/rect_vector_abi.S
 	src/misc/list_abi.S
