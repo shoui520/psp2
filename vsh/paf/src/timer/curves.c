@@ -1041,6 +1041,12 @@ float TimerDoFuncExponent(float rate, float total, float initval,
 	return TimerDoFuncExponentCurve(rate);
 }
 
+float TimerDoFuncExponent_i(float curr, float total, const float *param)
+{
+	(void)total;
+	return (curr + (1.0f - curr) * param[0]) * 1.0001f;
+}
+
 float TimerDoFuncAngular(float rate)
 {
 	if (rate >= 1.0f)

@@ -19,6 +19,14 @@ void TimerSetCurrTickInterval(float tick_interval)
 	TimerTickInterval = tick_interval;
 }
 
+void TimerResetTimer(Timer *self)
+{
+	self->m_curr = 0.0f;
+	self->m_mapped_x = 0.0f;
+	self->m_state = STATE_STANDBY;
+	self->m_first_tick = 0;
+}
+
 float TimerDoTick(Timer *self)
 {
 	unsigned int state = self->m_state;

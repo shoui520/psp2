@@ -163,6 +163,8 @@ extern float TimerTickInterval;
 #define TimerInitTickUnit ScePafMisc_25B066A8
 #define TimerSetCurrTickInterval ScePafMisc_8D59045A
 #define TimerDoTick ScePafMisc_50253C80
+#define TimerResetTimer ScePafMisc_B3794389
+void TimerResetTimer(Timer *self);
 #define TimerDoFunc ScePafMisc_6C15F987
 void TimerInitTickUnit(float tick_unit);
 void TimerSetCurrTickInterval(float tick_interval);
@@ -213,6 +215,8 @@ float TimerDoFuncElasticInOut(float rate);
 float TimerDoFuncElasticOut(float rate);
 
 #define TimerDoFuncExponent ScePafMisc_CF30F373
+#define TimerDoFuncExponent_i ScePafMisc_ABAC8071
+float TimerDoFuncExponent_i(float curr, float total, const float *param);
 float TimerDoFuncExponentCurve(float rate);
 /* Suffixes identify Timer::Func variants, whose method names are unknown. */
 float TimerDoFuncExpoOut27(float rate);
