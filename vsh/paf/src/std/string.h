@@ -78,6 +78,8 @@ void *sce_paf_memcpy(void *dst, const void *src, size_t count);
 void *sce_paf_wmemcpy(void *destination, const void *source, size_t count);
 uint16_t *sce_paf_wmemset(uint16_t *destination, int value, size_t count);
 int sce_paf_wmemcmp(const uint16_t *left, const uint16_t *right, size_t count);
+int sce_paf_memcmp(const void *left, const void *right, size_t count);
+int sce_paf_bcmp(const void *left, const void *right, size_t count);
 void *sce_paf_memmove(void *dst, const void *src, size_t count);
 /* The native bcopy export takes source first. */
 void *sce_paf_bcopy(const void *src, void *dst, size_t count);

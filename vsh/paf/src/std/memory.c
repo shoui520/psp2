@@ -72,3 +72,41 @@ int sce_paf_wmemcmp(const uint16_t *left, const uint16_t *right, size_t count)
 	}
 	return 0;
 }
+
+int sce_paf_memcmp(const void *left, const void *right, size_t count)
+{
+	const volatile uint8_t *lhs = (const volatile uint8_t *)left;
+	const volatile uint8_t *rhs = (const volatile uint8_t *)right;
+	int32_t remaining = (int32_t)count;
+
+	while (remaining > 0) {
+		int rightByte = *rhs;
+		int leftByte = *lhs;
+
+		if (leftByte != rightByte)
+			return leftByte < rightByte ? -1 : 1;
+		lhs++;
+		rhs++;
+		remaining--;
+	}
+	return 0;
+}
+
+int sce_paf_bcmp(const void *left, const void *right, size_t count)
+{
+	const volatile uint8_t *lhs = (const volatile uint8_t *)left;
+	const volatile uint8_t *rhs = (const volatile uint8_t *)right;
+	int32_t remaining = (int32_t)count;
+
+	while (remaining > 0) {
+		int rightByte = *rhs;
+		int leftByte = *lhs;
+
+		if (leftByte != rightByte)
+			return leftByte < rightByte ? -1 : 1;
+		lhs++;
+		rhs++;
+		remaining--;
+	}
+	return 0;
+}
