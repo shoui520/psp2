@@ -3895,3 +3895,12 @@ int UIDStartPhase2(void)
 	return 0;
 }
 #endif
+
+#if defined(SYSMEM_TZS) && FW_SINCE(0x04000000)
+/* 4.00's secure link keeps these records without the code */
+SCE_DBGINFO_DEFINE_ORPHAN(uidEntryFuncForGetInfoRecord1729, 1729, "UIDEntryFuncForGetInfo");
+SCE_DBGINFO_DEFINE_ORPHAN(uidEntryFuncForGetInfoRecord1751, 1751, "UIDEntryFuncForGetInfo");
+SCE_DBGINFO_DEFINE_ORPHAN(uidEntryIsActiveForCloseAllRecord1844, 1844, "UIDEntryIsActiveForCloseAll");
+SCE_DBGINFO_DEFINE_ORPHAN(uidEntryIsActiveForCloseAllRecord1849, 1849, "UIDEntryIsActiveForCloseAll");
+SCE_DBGINFO_DEFINE_ORPHAN(uidEntryCheckClassRawRecord2521, 2521, "UIDEntryCheckClassRaw");
+#endif

@@ -533,3 +533,8 @@ void ObjectHeapStart(UIDManager *manager)
 	sceKernelSysrootCorelockUnlock();
 }
 #endif
+
+#if defined(SYSMEM_TZS) && FW_SINCE(0x04000000)
+/* 4.00's secure link keeps this record without the code */
+SCE_DBGINFO_DEFINE_ORPHAN(objectHeapGetHeapRecord172, 172, "ObjectHeapGetHeap");
+#endif

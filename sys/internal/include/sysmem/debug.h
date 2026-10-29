@@ -114,6 +114,25 @@ typedef struct SceKernelDebugInfoSource {
 		&_name, __FILE_NAME__, (_line), (_func),			\
 	}
 
+/*
+ * A record Sony's link kept although no code of the image refers to it (its function
+ * left out): a link with --gc-sections keeps it too (cmake/prx.ld's .sce_dbginfo.orphan).
+ */
+#ifdef SCE_DBGINFO_GC
+#define SCE_DBGINFO_ORPHAN_SECTION	".sce_dbginfo.orphan"
+#else
+#define SCE_DBGINFO_ORPHAN_SECTION	SCE_DBGINFO_SECTION
+#endif
+#define SCE_DBGINFO_DEFINE_ORPHAN(_name, _line, _func)			\
+	static const SceKernelDebugInfo _name				\
+	__attribute__((section(SCE_DBGINFO_ORPHAN_SECTION), used)) = {	\
+		SCE_DBGINFO_FIELDS(_line, _func)			\
+	};								\
+	static const SceKernelDebugInfoSource _name##Source		\
+	__attribute__((section(SCE_DBGSRC_SECTION), used)) = {		\
+		&_name, __FILE_NAME__, (_line), (_func),			\
+	}
+
 /* _func: Sony's source function, including calls from an inlined helper. */
 #define SCE_DBGINFO_LOCAL(_line, _func) ({				\
 	SCE_DBGINFO_DEFINE(static, __dbginfo, _line, _func);		\

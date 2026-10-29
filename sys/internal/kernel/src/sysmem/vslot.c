@@ -330,3 +330,12 @@ int VSlotModuleStart(void)
 		CreateVSlot(VSLOT_TYPE_16K_MXUU);
 	return 0;
 }
+
+#if defined(SYSMEM_TZS) && FW_SINCE(0x04000000)
+/* 4.00's secure link keeps this record of vslot_module.h without the code */
+#pragma push_macro("__FILE_NAME__")
+#undef __FILE_NAME__
+#define __FILE_NAME__ "vslot_module.h"
+SCE_DBGINFO_DEFINE_ORPHAN(vslotSetNextRawRecord196, 196, "VSlotSetNextRaw");
+#pragma pop_macro("__FILE_NAME__")
+#endif

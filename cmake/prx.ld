@@ -44,7 +44,7 @@ SECTIONS
 		KEEP(*(.sceVStub.rodata))
 	}
 	__sce_tables_end = .;
-	.rodata : { KEEP(*(.rodata.sceSdkVersion)) *(.rodata .rodata.* .sce_dbginfo .sce_dbginfo.*) }
+	.rodata : { KEEP(*(.rodata.sceSdkVersion)) KEEP(*(.sce_dbginfo.orphan)) *(.rodata .rodata.* .sce_dbginfo .sce_dbginfo.*) }
 	.ARM.exidx : ALIGN(16) {
 		__exidx_start = .;
 		*(.ARM.exidx .ARM.exidx.*)

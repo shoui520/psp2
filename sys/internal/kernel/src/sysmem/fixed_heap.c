@@ -1360,3 +1360,8 @@ int sceKernelFixedHeapSetHook(SceUID uid, FixedHeapObjectHook *hook)
 	return 0;
 }
 #endif
+
+#if defined(SYSMEM_TZS) && FW_SINCE(0x04000000)
+/* 4.00's secure link keeps this record without the code */
+SCE_DBGINFO_DEFINE_ORPHAN(fixedHeapGetInfoRecord1761, 1761, "FixedHeapGetInfo");
+#endif

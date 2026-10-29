@@ -1496,3 +1496,9 @@ int HeaplibImplementationStartPhase2(void)
 /* CreateToolHeap: this firmware's link keeps only its record (no code reaches it) */
 SCE_DBGINFO_DEFINE(static, createToolHeapRecord, 2089, "CreateToolHeap");
 #endif
+
+#if defined(SYSMEM_TZS) && FW_SINCE(0x04000000)
+/* 4.00's secure link keeps these records without the code */
+SCE_DBGINFO_DEFINE_ORPHAN(sceKernelPrintHeapSegmentListRecord947, 947, "sceKernelPrintHeapSegmentList");
+SCE_DBGINFO_DEFINE_ORPHAN(sceKernelShrinkHeapRecord966, 966, "sceKernelShrinkHeap");
+#endif
