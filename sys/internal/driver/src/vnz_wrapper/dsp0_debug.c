@@ -3601,8 +3601,9 @@ int processVeneziaVipCapture(unsigned int processor, const VeneziaVipVideoInput 
 	VeneziaVipProcessStorage *storage;
 	VeneziaDebugProcessCapture *capture;
 	unsigned int captureProcessor, activeProcessor, consumed;
-	SceSize inputSize = 0, event;
-	SceUInt timeout = 8000;
+	SceSize inputSize = 0;
+	SceSize event __attribute__((aligned(8)));
+	SceUInt timeout __attribute__((aligned(8))) = 8000;
 	int ret, capacity, deferredError = 0;
 
 	ret = waitVeneziaVipProcessReady();
@@ -3744,8 +3745,9 @@ int submitVeneziaVipCapture(unsigned int processor, const VeneziaVipVideoInput *
 	VeneziaVipProcessStorage *storage;
 	VeneziaDebugProcessCapture *capture;
 	unsigned int captureProcessor, activeProcessor, consumed;
-	SceSize inputSize = 0, event;
-	SceUInt timeout = timeoutValue ? *timeoutValue : 8000;
+	SceSize inputSize = 0;
+	SceSize event __attribute__((aligned(8)));
+	SceUInt timeout __attribute__((aligned(8))) = timeoutValue ? *timeoutValue : 8000;
 	int ret, capacity, deferredError = 0;
 
 	snapshots.count = 0;
@@ -3922,8 +3924,9 @@ int processVeneziaVipRawCapture(unsigned int processor, const VeneziaVipRawInput
 	VeneziaVipProcessStorage *storage;
 	VeneziaDebugProcessCapture *capture;
 	unsigned int captureProcessor, activeProcessor, consumed;
-	SceSize inputSize = 0, event;
-	SceUInt timeout = 8000;
+	SceSize inputSize = 0;
+	SceSize event __attribute__((aligned(8)));
+	SceUInt timeout __attribute__((aligned(8))) = 8000;
 	int ret, capacity, deferredError = 0;
 
 	ret = waitVeneziaVipProcessReady();
@@ -4075,8 +4078,9 @@ int submitVeneziaVipRawCapture(unsigned int processor, const VeneziaVipRawInput 
 	VeneziaVipProcessStorage *storage;
 	VeneziaDebugProcessCapture *capture;
 	unsigned int captureProcessor, activeProcessor, consumed;
-	SceSize inputSize = 0, event;
-	SceUInt timeout = timeoutValue ? *timeoutValue : 8000;
+	SceSize inputSize = 0;
+	SceSize event __attribute__((aligned(8)));
+	SceUInt timeout __attribute__((aligned(8))) = timeoutValue ? *timeoutValue : 8000;
 	int ret, capacity, deferredError = 0;
 
 	snapshots.count = 0;
@@ -4522,7 +4526,8 @@ int snapshotVeneziaVipDebugger(VeneziaVipProcessStorage *storage, unsigned int f
 	unsigned int processorCount __attribute__((aligned(8)));
 	uint32_t physical __attribute__((aligned(8)));
 	uint32_t virtual __attribute__((aligned(8)));
-	SceSize size, copied = 0;
+	SceSize copied = 0;
+	SceSize size __attribute__((aligned(8)));
 	char *destination;
 	int ret;
 
@@ -4768,7 +4773,8 @@ int finalizeVeneziaVipDebugger(VeneziaVipState *state,
 int stopVeneziaVipCaptureChannel(unsigned int processor, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage)
 {
-	unsigned int captureState = 1, status = 0;
+	unsigned int captureState __attribute__((aligned(8))) = 1;
+	unsigned int status __attribute__((aligned(8))) = 0;
 	int ret;
 
 	ret = stopVeneziaDebugCapture(processor);
@@ -7619,7 +7625,8 @@ int collectVeneziaVipCaptureResults(unsigned int processor, VeneziaVipProcessSto
 	VeneziaVipCommandContext *context;
 	VeneziaVipCaptureImageHeader *image;
 	VeneziaVipCaptureSnapshot *output;
-	uint32_t flags, valid = 0;
+	uint32_t valid = 0;
+	uint32_t flags __attribute__((aligned(8)));
 	int ret;
 
 	getVeneziaVipCaptureContext(capture, &g_veneziaVipState, &context);
@@ -8307,8 +8314,10 @@ int processVeneziaVipMultiCapture(unsigned int processor, const VeneziaVipVideoI
 	VeneziaDebugProcessCapture *capture;
 	VeneziaVipCommandContext *context;
 	unsigned int index = processor - 1, captureProcessor;
-	SceSize inputSize = 0, available;
-	SceUInt timeout = 8000, event;
+	SceSize inputSize = 0;
+	SceSize available __attribute__((aligned(8)));
+	SceUInt timeout __attribute__((aligned(8))) = 8000;
+	SceUInt event __attribute__((aligned(8)));
 	int ret, capacity;
 
 	ret = waitVeneziaVipProcessReady();
@@ -8455,7 +8464,8 @@ int submitVeneziaVipMultiCapture(unsigned int processor, const VeneziaVipVideoIn
 	VeneziaDebugProcessCapture *capture;
 	VeneziaVipCommandContext *context;
 	unsigned int index = processor - 1, captureProcessor;
-	SceSize inputSize = 0, available;
+	SceSize inputSize = 0;
+	SceSize available __attribute__((aligned(8)));
 	SceUInt timeout __attribute__((aligned(8)));
 	SceUInt event __attribute__((aligned(8)));
 	int ret, capacity;
@@ -8601,8 +8611,10 @@ int processVeneziaVipMultiRawCapture(unsigned int processor, const VeneziaVipRaw
 	VeneziaDebugProcessCapture *capture;
 	VeneziaVipCommandContext *context;
 	unsigned int index = processor - 1, captureProcessor;
-	SceSize inputSize = 0, available;
-	SceUInt timeout = 8000, event;
+	SceSize inputSize = 0;
+	SceSize available __attribute__((aligned(8)));
+	SceUInt timeout __attribute__((aligned(8))) = 8000;
+	SceUInt event __attribute__((aligned(8)));
 	int ret, capacity, deferredError = 0;
 
 	ret = waitVeneziaVipProcessReady();
@@ -8757,7 +8769,8 @@ int submitVeneziaVipMultiRawCapture(unsigned int processor, const VeneziaVipRawI
 	VeneziaDebugProcessCapture *capture;
 	VeneziaVipCommandContext *context;
 	unsigned int index = processor - 1, captureProcessor;
-	SceSize inputSize = 0, available;
+	SceSize inputSize = 0;
+	SceSize available __attribute__((aligned(8)));
 	SceUInt timeout __attribute__((aligned(8)));
 	SceUInt event __attribute__((aligned(8)));
 	int ret, capacity, deferredError = 0;
@@ -8958,7 +8971,9 @@ int finishVeneziaVipMultiCapture(unsigned int processor,
 	VeneziaDebugProcessCapture *capture;
 	VeneziaVipCommandContext *context;
 	unsigned int index = processor - 1, collected = 0, before, after;
-	SceUInt timeout, event, status;
+	SceUInt timeout __attribute__((aligned(8)));
+	SceUInt event __attribute__((aligned(8)));
+	SceUInt status __attribute__((aligned(8)));
 	int ret;
 
 	ret = waitVeneziaVipProcessReady();
@@ -9475,8 +9490,9 @@ int waitVeneziaVipCaptureInterrupt(VeneziaDebugProcessCapture *capture,
 	VeneziaVipState *state, unsigned int processor, unsigned int flags,
 	uint32_t *eventsOut, unsigned int *statusOut)
 {
-	uint32_t events = 0, currentEvents;
-	unsigned int status = 0;
+	uint32_t events = 0;
+	uint32_t currentEvents __attribute__((aligned(8)));
+	unsigned int status __attribute__((aligned(8))) = 0;
 	SceUInt timeout __attribute__((aligned(8)));
 	VeneziaVipCommandContext *context;
 	unsigned int expected = flags & 2 ? 1 : 2;
@@ -9550,8 +9566,9 @@ output:
 int waitVeneziaVipPrimaryCaptureInterrupt(VeneziaDebugProcessCapture *capture,
 	VeneziaVipState *state, uint32_t *eventsOut, unsigned int *statusOut)
 {
-	uint32_t events = 0, currentEvents;
-	unsigned int status = 0;
+	uint32_t events = 0;
+	uint32_t currentEvents __attribute__((aligned(8)));
+	unsigned int status __attribute__((aligned(8))) = 0;
 	SceUInt timeout __attribute__((aligned(8)));
 	VeneziaVipCommandContext *context;
 	uint32_t count;
@@ -9624,8 +9641,9 @@ output:
 int waitVeneziaVipSecondaryCaptureInterrupt(VeneziaDebugProcessCapture *capture,
 	VeneziaVipState *state, uint32_t *eventsOut, unsigned int *statusOut)
 {
-	uint32_t events = 0, currentEvents;
-	unsigned int status = 0;
+	uint32_t events = 0;
+	uint32_t currentEvents __attribute__((aligned(8)));
+	unsigned int status __attribute__((aligned(8))) = 0;
 	SceUInt timeout __attribute__((aligned(8)));
 	VeneziaVipCommandContext *context;
 	uint32_t count;
@@ -9989,7 +10007,9 @@ int recoverVeneziaVipProcessors(VeneziaVipState *state,
 {
 	VeneziaDebugProcessCapture *capture;
 	unsigned int recovered[2] = { 0, 0 };
-	unsigned int processor, status, nextStatus;
+	unsigned int processor;
+	unsigned int status __attribute__((aligned(8)));
+	unsigned int nextStatus __attribute__((aligned(8)));
 	int index, count, ret, pollRet;
 
 	for (processor = 0; processor < 2; processor++) {
@@ -10079,7 +10099,8 @@ restart:
 int prepareVeneziaVipProcessorContext(unsigned int processor, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage)
 {
-	uint32_t event, response;
+	uint32_t event __attribute__((aligned(8)));
+	uint32_t response __attribute__((aligned(8)));
 	unsigned int channel;
 	int ret;
 
@@ -10097,18 +10118,20 @@ int prepareVeneziaVipProcessorContext(unsigned int processor, VeneziaVipState *s
 			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
 			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
-				break;
+				goto failed;
 			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 			if (ret < 0)
-				break;
+				goto failed;
 			if (event & 2)
 				goto retry;
 		}
-		if (channel == 2 || ret != -2141060856)
+		goto out;
+failed:
+		if (ret != -2141060856)
 			goto out;
 retry:
 		event = 0;
@@ -10124,7 +10147,8 @@ out:
 int configureVeneziaVipProcessorQueues(unsigned int processor, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage, uint32_t flags)
 {
-	uint32_t event, response;
+	uint32_t event __attribute__((aligned(8)));
+	uint32_t response __attribute__((aligned(8)));
 	unsigned int channel;
 	uint32_t command;
 	int ret;
@@ -10175,7 +10199,8 @@ out:
 int startVeneziaVipProcessorContext(unsigned int processor, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage)
 {
-	uint32_t event, response;
+	uint32_t event __attribute__((aligned(8)));
+	uint32_t response __attribute__((aligned(8)));
 	unsigned int channel;
 	int ret;
 
@@ -10193,18 +10218,20 @@ int startVeneziaVipProcessorContext(unsigned int processor, VeneziaVipState *sta
 			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
 			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
-				break;
+				goto failed;
 			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 			if (ret < 0)
-				break;
+				goto failed;
 			if (event & 2)
 				goto retry;
 		}
-		if (channel == 2 || ret != -2141060856)
+		goto out;
+failed:
+		if (ret != -2141060856)
 			goto out;
 retry:
 		event = 0;
@@ -10220,7 +10247,8 @@ out:
 int detachVeneziaVipCaptureContext(unsigned int processor, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage)
 {
-	uint32_t event, response;
+	uint32_t event __attribute__((aligned(8)));
+	uint32_t response __attribute__((aligned(8)));
 	unsigned int channel;
 	int ret;
 
@@ -10238,18 +10266,20 @@ int detachVeneziaVipCaptureContext(unsigned int processor, VeneziaVipState *stat
 			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
 			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
-				break;
+				goto failed;
 			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 			if (ret < 0)
-				break;
+				goto failed;
 			if (event & 2)
 				goto retry;
 		}
-		if (channel == 2 || ret != -2141060856)
+		goto out;
+failed:
+		if (ret != -2141060856)
 			goto out;
 retry:
 		event = 0;
@@ -10265,7 +10295,8 @@ out:
 int beginVeneziaVipCaptureSetup(unsigned int processor, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage)
 {
-	uint32_t event, response;
+	uint32_t event __attribute__((aligned(8)));
+	uint32_t response __attribute__((aligned(8)));
 	unsigned int channel;
 	int ret;
 
@@ -10283,18 +10314,20 @@ int beginVeneziaVipCaptureSetup(unsigned int processor, VeneziaVipState *state,
 			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
 			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
-				break;
+				goto failed;
 			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 			if (ret < 0)
-				break;
+				goto failed;
 			if (event & 2)
 				goto retry;
 		}
-		if (channel == 2 || ret != -2141060856)
+		goto out;
+failed:
+		if (ret != -2141060856)
 			goto out;
 retry:
 		event = 0;
@@ -10310,7 +10343,8 @@ out:
 int endVeneziaVipCaptureSetup(unsigned int processor, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage)
 {
-	uint32_t event, response;
+	uint32_t event __attribute__((aligned(8)));
+	uint32_t response __attribute__((aligned(8)));
 	unsigned int channel;
 	int ret;
 
@@ -10328,18 +10362,20 @@ int endVeneziaVipCaptureSetup(unsigned int processor, VeneziaVipState *state,
 			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
 			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
-				break;
+				goto failed;
 			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 			if (ret < 0)
-				break;
+				goto failed;
 			if (event & 2)
 				goto retry;
 		}
-		if (channel == 2 || ret != -2141060856)
+		goto out;
+failed:
+		if (ret != -2141060856)
 			goto out;
 retry:
 		event = 0;
@@ -10355,7 +10391,8 @@ out:
 int stopVeneziaVipProcessors(VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage)
 {
-	uint32_t event, response;
+	uint32_t event __attribute__((aligned(8)));
+	uint32_t response __attribute__((aligned(8)));
 	unsigned int channel;
 	int ret;
 
@@ -10373,18 +10410,20 @@ int stopVeneziaVipProcessors(VeneziaVipState *state,
 			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
 			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
-				break;
+				goto failed;
 			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 			if (ret < 0)
-				break;
+				goto failed;
 			if (event & 2)
 				goto retry;
 		}
-		if (channel == 2 || ret != -2141060856)
+		goto out;
+failed:
+		if (ret != -2141060856)
 			goto out;
 retry:
 		event = 0;
@@ -10400,7 +10439,8 @@ out:
 int requestVeneziaVipProcessorControl(VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage)
 {
-	uint32_t event, response;
+	uint32_t event __attribute__((aligned(8)));
+	uint32_t response __attribute__((aligned(8)));
 	unsigned int channel;
 	int ret;
 
@@ -10418,18 +10458,20 @@ int requestVeneziaVipProcessorControl(VeneziaVipState *state,
 			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
 			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
-				break;
+				goto failed;
 			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 			if (ret < 0)
-				break;
+				goto failed;
 			if (event & 2)
 				goto retry;
 		}
-		if (channel == 2 || ret != -2141060856)
+		goto out;
+failed:
+		if (ret != -2141060856)
 			goto out;
 retry:
 		event = 0;
@@ -10674,7 +10716,8 @@ int veneziaVipProcessorThread0(SceSize size, void *arg)
 	uint32_t flags, pending, cursor, queued, forwardCommand, signedRequest;
 	SceSize available __attribute__((aligned(8)));
 	uint8_t value __attribute__((aligned(8)));
-	int command = 0, captureIndex = -1, recovering, ret, inputState, inputResult;
+	int captureIndex = -1, recovering, ret, inputState, inputResult;
+	int command __attribute__((aligned(8))) = 0;
 
 	ret = sceKernelSetEventFlag(state->processorEvents[0], 0x100000);
 	if (ret < 0)
@@ -11214,7 +11257,8 @@ int veneziaVipProcessorThread1(SceSize size, void *arg)
 	uint32_t flags, pending, cursor, queued, forwardCommand, signedRequest;
 	SceSize available;
 	uint8_t value __attribute__((aligned(8)));
-	int command = 0, captureIndex = -1, recovering, ret, inputState, inputResult;
+	int captureIndex = -1, recovering, ret, inputState, inputResult;
+	int command __attribute__((aligned(8))) = 0;
 
 	ret = sceKernelSetEventFlag(state->processorEvents[1], 0x100000);
 	if (ret < 0)
