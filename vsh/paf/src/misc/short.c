@@ -279,3 +279,21 @@ void ScePafMisc_77865CCC(float *object, float value)
 	object[1] = sum * 0.5f;
 	object[3] = extent >= 0.0f ? extent : 0.0f;
 }
+
+void ScePafMisc_7427A7B9(float *object, float x, float y,
+			float width, float height)
+{
+	object[0] = x;
+	object[1] = y;
+	object[2] = width >= 0.0f ? width : 0.0f;
+	object[3] = height >= 0.0f ? height : 0.0f;
+}
+
+void ScePafMisc_8161A692(float *object, float x, float y,
+			float width, float height)
+{
+	object[0] = x;
+	object[1] = y;
+	object[2] = width >= 0.0f ? width : 0.0f;
+	object[3] = height >= 0.0f ? height : 0.0f;
+}
