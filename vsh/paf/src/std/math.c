@@ -346,6 +346,45 @@ static const float logCoefficients[] = {
 	0.41397473216056824f
 };
 
+float sce_paf_logf(float x)
+{
+	union {
+		float value;
+		uint32_t bits;
+	} number;
+	float reduced, square, polynomial, logarithm;
+	uint32_t mantissa, correction;
+	int numerator, denominator;
+
+	number.value = x;
+	if ((int32_t)number.bits > 0) {
+		mantissa = number.bits & 0x7fffffU;
+		numerator = (int)mantissa - 0x800000;
+		denominator = (int)mantissa;
+		if (mantissa <= 0x3504f3U) {
+			numerator = (int)mantissa;
+			denominator = (int)mantissa - 0x800000;
+			number.bits -= 0x800000U;
+		}
+		denominator += 0x1800000;
+		reduced = (float)numerator / (float)denominator;
+		correction = (uint32_t)((int32_t)number.bits >> 23) *
+			     11629080U - 1465264080U;
+		square = reduced * reduced;
+		polynomial = logCoefficients[1] + logCoefficients[2] * square;
+		polynomial = logCoefficients[0] + polynomial * square;
+		logarithm = reduced * polynomial;
+		logarithm += (float)(int32_t)correction * 5.960464477539063e-8f;
+	} else {
+		if ((number.bits & 0x7fffffffU) == 0)
+			number.bits = 0xff800000U;
+		else
+			number.bits = 0xffc00000U;
+		logarithm = number.value;
+	}
+	return logarithm;
+}
+
 float sce_paf_powf(float base, float exponent)
 {
 	union {
