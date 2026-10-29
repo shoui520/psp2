@@ -234,6 +234,9 @@ void TimerSetFuncX(Timer *self, int func, const float *param);
 #define TimerInitTimer ScePafMisc_06BD5A37
 void TimerInitTimer(Timer *self, float total, int func, int repeat,
 		    int rep_count, const float *param);
+#define TimerGetValueV4 ScePafMisc_A60CFE13
+/* The v4 result storage is the hidden first argument in the C++ ABI. */
+float *TimerGetValueV4(float ret[4], const Timer *self);
 #define TimerDoFunc ScePafMisc_6C15F987
 void TimerInitTickUnit(float tick_unit);
 void TimerSetCurrTickInterval(float tick_interval);

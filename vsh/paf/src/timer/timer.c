@@ -245,6 +245,27 @@ void TimerInitTimer(Timer *self, float total, int func, int repeat,
 	self->m_param_x_num = param_count;
 }
 
+float *TimerGetValueV4(float ret[4], const Timer *self)
+{
+	float x = self->m_mapped_x;
+
+	ret[0] = x;
+	ret[1] = x;
+	ret[2] = x;
+	ret[3] = x;
+	if (self->m_is_2d || self->m_is_3d) {
+		const Timer2D *_this = (const Timer2D *)self;
+
+		ret[1] = _this->m_mapped_y;
+	}
+	if (self->m_is_3d) {
+		const Timer3D *_this = (const Timer3D *)self;
+
+		ret[2] = _this->m_mapped_z;
+	}
+	return ret;
+}
+
 float TimerDoTick(Timer *self)
 {
 	unsigned int state = self->m_state;
