@@ -201,6 +201,70 @@ static float TimerPolynomialTerm(float coefficient, float factor)
 	return result;
 }
 
+float TimerDoFunc72(float rate, const float *param)
+{
+	float ratio, countValue, duration, span;
+	float size = 1.0f, start = 0.0f, direction = -1.0f;
+	float nextSize, end, divisor, phase, cosine, amplitude, base;
+	int count, convertedCount, limit, step = 1;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	ratio = param[0];
+	countValue = param[1];
+	duration = param[2];
+	count = FloatToInt(countValue);
+	convertedCount = FloatToInt(countValue);
+	limit = (int)((uint32_t)count + 1U);
+	if (ratio < 1.0f) {
+		span = duration / (1.0f - ratio);
+	} else {
+		duration = 0.0f;
+		span = 1.0f;
+	}
+	if (limit > 1) {
+		divisor = (float)convertedCount;
+		do {
+			if (duration == 0.0f) {
+				end = 1.0f - (float)step / divisor;
+				size = 1.0f - (float)(step - 1) / divisor;
+				ratio = end / size;
+			}
+			start = span * (1.0f - size);
+			nextSize = ratio * size;
+			end = span * (1.0f - nextSize);
+			if (rate >= start && rate < end)
+				break;
+			step++;
+			size = nextSize;
+			direction = -direction;
+		} while (step < limit);
+	}
+	if (duration == 0.0f) {
+		duration = 1.0f / (float)convertedCount;
+		size = 1.0f;
+		ratio = 1.0f;
+	}
+	phase = (rate - start) / (size * duration);
+	nextSize = ratio * size;
+	phase *= 3.1415927410125732f;
+	if (count != step) {
+		base = ((direction * 0.5f) * (1.0f - ratio)) * size;
+		cosine = sce_paf_cosf(phase);
+		amplitude = nextSize + size;
+		base += 1.0f;
+	} else {
+		end = size * direction + 1.0f;
+		base = end + 1.0f;
+		cosine = sce_paf_cosf(phase);
+		amplitude = __builtin_fabsf(1.0f - end);
+		base *= 0.5f;
+	}
+	return base + ((amplitude * direction) * cosine) * 0.5f;
+}
+
 float TimerDoFunc75(float rate, const float *param)
 {
 	float scale, coefficient;

@@ -150,6 +150,7 @@ float TimerDoFuncBezier3d(float rate, const float *param);
 float TimerDoFunc49_52(float rate, const float *param);
 float TimerDoFunc50_53(float rate, const float *param);
 float TimerDoFunc51_54(float rate, const float *param);
+float TimerDoFunc72(float rate, const float *param);
 float TimerDoFunc75(float rate, const float *param);
 float TimerDoFunc76(float rate, const float *param);
 float TimerDoFunc77(float rate, const float *param);
