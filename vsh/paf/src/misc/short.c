@@ -116,3 +116,50 @@ void ScePafMisc_824BCB1E(float *object, float value)
 {
 	object[3] = value >= 0.0f ? value : 0.0f;
 }
+
+void ScePafMisc_3291450C(float *object, float width, float height)
+{
+	object[2] = width >= 0.0f ? width : 0.0f;
+	object[3] = height >= 0.0f ? height : 0.0f;
+}
+
+void ScePafMisc_6070930D(float *object, float x, float unused_y,
+			 float width, float height)
+{
+	object[0] = x;
+	object[1] = 0.0f;
+	object[2] = width >= 0.0f ? width : 0.0f;
+	object[3] = height >= 0.0f ? height : 0.0f;
+}
+
+void ScePafMisc_6377FB6F(float *object, const float *source)
+{
+	object[0] = source[0];
+	object[1] = source[1];
+	object[2] = source[2] >= 0.0f ? source[2] : 0.0f;
+	object[3] = source[3] >= 0.0f ? source[3] : 0.0f;
+}
+
+void ScePafMisc_78B8B32F(float *object, const float *source)
+{
+	object[0] = source[0];
+	object[1] = source[1];
+	object[2] = source[2] >= 0.0f ? source[2] : 0.0f;
+	object[3] = source[3] >= 0.0f ? source[3] : 0.0f;
+}
+
+void ScePafMisc_C6F0C819(float *object, const float *source)
+{
+	object[0] = source[0];
+	object[1] = source[1];
+	object[2] = source[2] >= 0.0f ? source[2] : 0.0f;
+	object[3] = source[3] >= 0.0f ? source[3] : 0.0f;
+}
+
+void ScePafMisc_FDFC29F2(float *object, const float *source)
+{
+	object[0] = source[0];
+	object[1] = source[1];
+	object[2] = source[2] >= 0.0f ? source[2] : 0.0f;
+	object[3] = source[3] >= 0.0f ? source[3] : 0.0f;
+}
