@@ -17,6 +17,11 @@ long long sce_paf_atoll(const char *str);
 void *sce_paf_bsearch(const void *key, const void *base, size_t count,
 		      size_t element_size,
 		      int (*compare)(const void *element, const void *key));
+void *ScePafStdc_E8BD0273(void *base, size_t element_size,
+		int (*compare)(const void *, const void *),
+		int32_t first, int32_t last);
+void sce_paf_qsort(void *base, size_t count, size_t element_size,
+		int (*compare)(const void *, const void *));
 void sce_paf_srand(unsigned int seed);
 int sce_paf_rand(void);
 
