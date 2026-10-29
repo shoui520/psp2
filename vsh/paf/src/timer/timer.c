@@ -20,6 +20,14 @@ const TimerClass timerClass = {
 	0, NULL, { TimerDestroy, TimerDelete }
 };
 
+const TimerClass timer2DClass = {
+	0, NULL, { Timer2DDestroy, Timer2DDelete }
+};
+
+const TimerClass timer3DClass = {
+	0, NULL, { Timer3DDestroy, Timer3DDelete }
+};
+
 Timer *TimerDestroy(Timer *self)
 {
 	float *param = self->m_param_x;
@@ -327,4 +335,68 @@ float TimerDoTick(Timer *self)
 			self->m_repeat_count = 0;
 	}
 	return rate;
+}
+
+Timer *Timer2DDestroy(Timer *base)
+{
+	Timer2D *self = (Timer2D *)base;
+	float *param = self->m_param_y;
+
+	if (param) {
+		base->vtable = &timer2DClass.methods;
+		PafDeleteArray(param);
+	}
+	return TimerDestroy(base);
+}
+
+void Timer2DDelete(Timer *base)
+{
+	Timer2DDestroy(base);
+	PafDelete(base);
+}
+
+Timer *Timer2DDestroyBase(Timer *base)
+{
+	return Timer2DDestroy(base);
+}
+
+void Timer2DSetFuncY(Timer2D *self, int func, const float *param)
+{
+	int param_count;
+
+	self->m_func_y = TimerInitFuncParam(&self->base, func, param,
+					  &self->m_param_y, &param_count);
+	self->m_param_y_num = param_count;
+}
+
+Timer *Timer3DDestroy(Timer *base)
+{
+	Timer3D *self = (Timer3D *)base;
+	float *param = self->m_param_z;
+
+	if (param) {
+		base->vtable = &timer3DClass.methods;
+		PafDeleteArray(param);
+	}
+	return Timer2DDestroy(base);
+}
+
+void Timer3DDelete(Timer *base)
+{
+	Timer3DDestroy(base);
+	PafDelete(base);
+}
+
+Timer *Timer3DDestroyBase(Timer *base)
+{
+	return Timer3DDestroy(base);
+}
+
+void Timer3DSetFuncZ(Timer3D *self, int func, const float *param)
+{
+	int param_count;
+
+	self->m_func_z = TimerInitFuncParam(&self->base.base, func, param,
+					  &self->m_param_z, &param_count);
+	self->m_param_z_num = param_count;
 }

@@ -136,6 +136,48 @@ struct Timer {
 
 typedef char TimerSizeCheck[sizeof(Timer) == 28 ? 1 : -1];
 
+typedef struct Timer2D {
+	Timer base;
+	unsigned int m_func_y : 8;
+	unsigned int m_param_y_num : 4;
+	float *m_param_y;
+	float m_mapped_y;
+} Timer2D;
+
+typedef char Timer2DSizeCheck[sizeof(Timer2D) == 40 ? 1 : -1];
+
+#define timer2DClass ScePafMisc_148462FD
+extern const TimerClass timer2DClass;
+#define Timer2DDestroy ScePafMisc_F8E57331
+#define Timer2DDelete ScePafMisc_4A13DFAE
+#define Timer2DDestroyBase ScePafMisc_1EC815F8
+#define Timer2DSetFuncY ScePafMisc_9DA95A52
+Timer *Timer2DDestroy(Timer *base);
+void Timer2DDelete(Timer *base);
+Timer *Timer2DDestroyBase(Timer *base);
+void Timer2DSetFuncY(Timer2D *self, int func, const float *param);
+
+typedef struct Timer3D {
+	Timer2D base;
+	unsigned int m_func_z : 8;
+	unsigned int m_param_z_num : 4;
+	float *m_param_z;
+	float m_mapped_z;
+} Timer3D;
+
+typedef char Timer3DSizeCheck[sizeof(Timer3D) == 52 ? 1 : -1];
+
+#define timer3DClass ScePafMisc_9A199A59
+extern const TimerClass timer3DClass;
+#define Timer3DDestroy ScePafMisc_B43B1701
+#define Timer3DDelete ScePafMisc_0B1A14C2
+#define Timer3DDestroyBase ScePafMisc_DB70D425
+#define Timer3DSetFuncZ ScePafMisc_8502EEDA
+Timer *Timer3DDestroy(Timer *base);
+void Timer3DDelete(Timer *base);
+Timer *Timer3DDestroyBase(Timer *base);
+void Timer3DSetFuncZ(Timer3D *self, int func, const float *param);
+
 typedef struct TimerListener TimerListener;
 
 typedef struct TimerListenerVTable {
