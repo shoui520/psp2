@@ -294,7 +294,7 @@ vs0/sys/external/libfiber	sys/internal/usermode/src/fiber	vs0:sys/external/libfi
 vs0/sys/external/libfios2	sys/internal/usermode/src/fios2	vs0:sys/external/libfios2.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	sys/internal/usermode/src/fios2 (30 paths)
 vs0/sys/external/libg729	sys/internal/usermode/src/libg729	vs0:sys/external/libg729.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/libgameupdate	sys/internal/usermode/src/libgameupdate	vs0:sys/external/libgameupdate.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
-vs0/sys/external/libgxm_dbg_es4	sys/internal/usermode/src/libgxm_dbg_es4	vs0:sys/external/libgxm_dbg_es4.suprx	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libgxm_dbg_es4	sys/internal/usermode/src/libgxm_es4/dbg	vs0:sys/external/libgxm_dbg_es4.suprx	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug build of libgxm_es4 (SceGxmDbg: the same exports, Sony's file names in its messages)
 vs0/sys/external/libhandwriting	sys/internal/usermode/src/libhandwriting	vs0:sys/external/libhandwriting.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/libhttp	sys/internal/usermode/src/libhttp	vs0:sys/external/libhttp.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/libime	sys/internal/usermode/src/libime	vs0:sys/external/libime.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
