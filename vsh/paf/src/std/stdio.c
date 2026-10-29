@@ -69,6 +69,30 @@ int sce_paf_fgetc(sce_paf_FILE *stream)
 	return -1;
 }
 
+int sce_paf_fseek(sce_paf_FILE *stream, long offset, int origin)
+{
+	int32_t position;
+
+	if (!stream || !stream->type || stream->fd < 0)
+		return -1;
+	stream->unget_char = -1;
+	position = (int32_t)sceIoLseek(stream->fd, offset, origin);
+	if (position < 0)
+		return -1;
+	stream->seek_offset = position;
+	stream->status &= ~PAF_FILE_STATUS_EOF;
+	return 0;
+}
+
+long sce_paf_ftell(sce_paf_FILE *stream)
+{
+	if (!stream || !stream->type || stream->fd < 0)
+		return -1;
+	if (stream->unget_char == -1)
+		return stream->seek_offset;
+	return stream->seek_offset > 0 ? stream->seek_offset - 1 : 0;
+}
+
 int sce_paf_feof(sce_paf_FILE *stream)
 {
 	if (!stream || !stream->type || stream->fd < 0)
