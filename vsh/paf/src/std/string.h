@@ -38,6 +38,7 @@ size_t sce_paf_strcspn(const char *str, const char *reject);
 char *sce_paf_strpbrk(const char *str, const char *accept);
 char *sce_paf_private_strtok(const char *haystack, const char *needle);
 char *sce_paf_strtok_r(char *str, const char *delimiters, char **save);
+char *ScePafStdc_766D2A69(char *str, const char *delimiters);
 size_t sce_paf_strlcpy(char *destination, const char *source, size_t size);
 size_t sce_paf_strlcat(char *destination, const char *source, size_t size);
 

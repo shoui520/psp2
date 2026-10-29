@@ -430,6 +430,8 @@ char *sce_paf_private_strtok(const char *haystack, const char *needle)
 	}
 }
 
+/* The classic tokenizer wrapper calls this export out of line. */
+__attribute__((noinline))
 char *sce_paf_strtok_r(char *str, const char *delimiters, char **save)
 {
 	volatile signed char *cursor = (volatile signed char *)str;
@@ -489,6 +491,13 @@ char *sce_paf_strtok_r(char *str, const char *delimiters, char **save)
 			return token;
 		}
 	}
+}
+
+static char *paf_private_strtok_save;
+
+char *ScePafStdc_766D2A69(char *str, const char *delimiters)
+{
+	return sce_paf_strtok_r(str, delimiters, &paf_private_strtok_save);
 }
 
 int sce_paf_strcmp(const char *left, const char *right)
