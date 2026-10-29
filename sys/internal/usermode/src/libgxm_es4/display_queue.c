@@ -89,14 +89,14 @@ int gxmDisplayQueueCreate(SceUInt32 maxPending, SceGxmDisplayQueueCallback *call
 	queue->entries = queue->storage;
 	queue->mask = count - 1;
 	for (i = 0; i < count; i++) {
-		queue->entries[i].syncHandle = 0;
-		queue->entries[i].callbackData = (char *)&queue->entries[count] + i * callbackDataSize;
+		queue->storage[i].syncHandle = 0;
+		queue->storage[i].callbackData = (char *)&queue->storage[count] + i * callbackDataSize;
 	}
 	queue->callback = callback;
 	queue->callbackDataSize = callbackDataSize;
 
 	for (i = 0; i < count; i++) {
-		if (SceGpuEs4User_416C8813(gxmGlobals.gpuDevice, &queue->entries[i].syncHandle) != 0) {
+		if (SceGpuEs4User_416C8813(gxmGlobals.gpuDevice, &queue->storage[i].syncHandle) != 0) {
 			for (i = 0; i < count; i++) {
 				if (queue->storage[i].syncHandle != 0)
 					SceGpuEs4User_7DCCBCAF(gxmGlobals.gpuDevice,
@@ -204,7 +204,7 @@ SceUID sceGxmGetDisplayQueueThreadIdInternal(void)
 
 int gxmDisplayQueueDestroy(GxmDisplayQueue *queue)
 {
-	SceUInt32 i;
+	SceUInt32 count, i;
 
 	if (queue == NULL)
 		return SCE_GXM_ERROR_INVALID_POINTER;
@@ -213,7 +213,8 @@ int gxmDisplayQueueDestroy(GxmDisplayQueue *queue)
 	sceKernelWaitThreadEnd(queue->thread, NULL, NULL);
 	sceKernelDeleteEventFlag(queue->completeEvent);
 	sceKernelDeleteEventFlag(queue->readyEvent);
-	for (i = 0; i <= queue->mask; i++)
+	count = queue->mask + 1;
+	for (i = 0; i != count; i++)
 		SceGpuEs4User_7DCCBCAF(gxmGlobals.gpuDevice, queue->entries[i].syncHandle);
 	SceGpuEs4User_1BE5985A(queue);
 	return 0;
