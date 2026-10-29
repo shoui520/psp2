@@ -1126,7 +1126,7 @@ static int sceKermitMeBootStart(void)
 	return (res == 0) ? (int)resp : res;
 }
 
-__attribute__((noipa)) static int bootMeImage(void *data, int wait)
+int bootMeImage(void *data, int wait)
 {
 	sceSysregMeResetEnable();
 	sceSysregMeBusClockEnable();
@@ -1138,8 +1138,18 @@ __attribute__((noipa)) static int bootMeImage(void *data, int wait)
 	sceKernelDcacheWritebackInvalidateAll();
 	sceDdrFlush(4);
 	if (wait) {
-		HW(0xBFC0070Cu) = 0x01FF01FFu;
-		HW(0xBFC00714u) = 2;
+		u32 v70c = 0x01FF01FFu;
+		u32 v714 = 2;
+		__asm__ volatile(
+			".set push\n\t"
+			".set noat\n\t"
+			"lui $at, 0xbfc0\n\t"
+			"sw %0, 0x70c($at)\n\t"
+			"lui $at, 0xbfc0\n\t"
+			"sw %1, 0x714($at)\n\t"
+			".set pop"
+			: : "r"(v70c), "r"(v714) : "memory"
+		);
 	}
 	HW(0xBFC00700u) = (u32)-3;
 	sceSysregVmeResetDisable();
