@@ -430,6 +430,40 @@ char *sce_paf_private_strtok(const char *haystack, const char *needle)
 	}
 }
 
+/* The anonymous wide export implements the same substring search on 16-bit units. */
+uint16_t *ScePafStdc_3AD58D65(const uint16_t *haystack,
+			      const uint16_t *needle)
+{
+	const volatile uint16_t *pattern = (const volatile uint16_t *)needle;
+	const volatile uint16_t *candidate = (const volatile uint16_t *)haystack;
+
+	if (!*pattern)
+		return (uint16_t *)candidate;
+	if (!*candidate)
+		return NULL;
+	for (;;) {
+		const volatile uint16_t *part = pattern;
+		const volatile uint16_t *cursor = candidate;
+		uint16_t ch = *part;
+
+		for (;;) {
+			uint16_t current = *cursor;
+
+			if (!current)
+				return NULL;
+			if (current != ch)
+				break;
+			ch = *++part;
+			cursor++;
+			if (!ch)
+				return (uint16_t *)candidate;
+		}
+		candidate++;
+		if (!*candidate)
+			return NULL;
+	}
+}
+
 /* The classic tokenizer wrapper calls this export out of line. */
 __attribute__((noinline))
 char *sce_paf_strtok_r(char *str, const char *delimiters, char **save)
