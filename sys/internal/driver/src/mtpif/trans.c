@@ -58,6 +58,17 @@ static int processEvent(SceUID pid, int event)
 	return 0;
 }
 
+/* Sony keeps a separate copy for the kill slot */
+static int processKill(SceUID pid)
+{
+	if (s_mtp.owner == pid) {
+		sceUsbMtpStop();
+		s_mtp.owner = -1;
+		sceUsbMtpStop();
+	}
+	return 0;
+}
+
 static int processExit(SceUID pid)
 {
 	if (s_mtp.owner == pid) {
@@ -124,7 +135,7 @@ int _sceMtpIfModuleStart(SceSize arglen, const char *argp)
 	handlers[0] = sizeof(handlers);
 	handlers[1] = 0;
 	handlers[2] = (SceUInt32)processExit;
-	handlers[3] = (SceUInt32)processExit;
+	handlers[3] = (SceUInt32)processKill;
 	handlers[4] = (SceUInt32)processEvent;
 	handlers[5] = (SceUInt32)processNoop;
 	handlers[6] = 0;
@@ -135,14 +146,14 @@ int _sceMtpIfModuleStart(SceSize arglen, const char *argp)
 	return s_mtp.handler < 0 ? 2 : 0;
 }
 
-int SceMtpIfForDriver_92CD107E(const void *port)
+int __attribute__((noinline)) SceMtpIfForDriver_92CD107E(const void *port)
 {
 	if (port != &s_port)
 		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->reset ? s_mtp.ops->reset() : MTP_ERROR_UNAVAILABLE;
 }
 
-int SceMtpIfForDriver_117F7519(const void *port, void *command)
+int __attribute__((noinline)) SceMtpIfForDriver_117F7519(const void *port, void *command)
 {
 	MtpIfTransfer transfer;
 
@@ -153,7 +164,7 @@ int SceMtpIfForDriver_117F7519(const void *port, void *command)
 		s_mtp.ops->recvCommand(command, &transfer) : MTP_ERROR_UNAVAILABLE;
 }
 
-int SceMtpIfForDriver_5766D257(const void *port, const void *response)
+int __attribute__((noinline)) SceMtpIfForDriver_5766D257(const void *port, const void *response)
 {
 	if (port != &s_port || !response)
 		return MTP_ERROR_INVALID;
@@ -161,7 +172,7 @@ int SceMtpIfForDriver_5766D257(const void *port, const void *response)
 		s_mtp.ops->sendResponse(response) : MTP_ERROR_UNAVAILABLE;
 }
 
-int SceMtpIfForDriver_EDC3AB26(const void *port, void *buffer,
+int __attribute__((noinline)) SceMtpIfForDriver_EDC3AB26(const void *port, void *buffer,
 			     SceUInt32 size, SceUInt32 totalSize)
 {
 	MtpIfTransfer transfer;
@@ -178,7 +189,7 @@ int SceMtpIfForDriver_EDC3AB26(const void *port, void *buffer,
 	return ret == 0 ? (int)transfer.transferred : ret;
 }
 
-int SceMtpIfForDriver_33F1826F(const void *port, MtpIfTransfer *transfer)
+int __attribute__((noinline)) SceMtpIfForDriver_33F1826F(const void *port, MtpIfTransfer *transfer)
 {
 	if (port != &s_port || !transfer->buffer)
 		return MTP_ERROR_INVALID;
@@ -186,7 +197,7 @@ int SceMtpIfForDriver_33F1826F(const void *port, MtpIfTransfer *transfer)
 		s_mtp.ops->sendData(transfer) : MTP_ERROR_UNAVAILABLE;
 }
 
-int SceMtpIfForDriver_F0FA2D86(const void *port, void *buffer, SceUInt32 size)
+int __attribute__((noinline)) SceMtpIfForDriver_F0FA2D86(const void *port, void *buffer, SceUInt32 size)
 {
 	MtpIfTransfer transfer;
 	int ret;
@@ -201,7 +212,7 @@ int SceMtpIfForDriver_F0FA2D86(const void *port, void *buffer, SceUInt32 size)
 	return ret == 0 ? (int)transfer.transferred : ret;
 }
 
-int SceMtpIfForDriver_27D40294(const void *port, MtpIfTransfer *transfer)
+int __attribute__((noinline)) SceMtpIfForDriver_27D40294(const void *port, MtpIfTransfer *transfer)
 {
 	if (port != &s_port || !transfer->buffer)
 		return MTP_ERROR_INVALID;
@@ -209,7 +220,7 @@ int SceMtpIfForDriver_27D40294(const void *port, MtpIfTransfer *transfer)
 		s_mtp.ops->recvData(transfer) : MTP_ERROR_UNAVAILABLE;
 }
 
-int SceMtpIfForDriver_B5E78858(const void *port, const SceUInt32 *command,
+int __attribute__((noinline)) SceMtpIfForDriver_B5E78858(const void *port, const SceUInt32 *command,
 			     SceUInt32 *event)
 {
 	SceUInt32 count;
@@ -226,14 +237,14 @@ int SceMtpIfForDriver_B5E78858(const void *port, const SceUInt32 *command,
 	return s_mtp.ops->sendEvent(event);
 }
 
-int SceMtpIfForDriver_F1EC5992(const void *port)
+int __attribute__((noinline)) SceMtpIfForDriver_F1EC5992(const void *port)
 {
 	if (port != &s_port)
 		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->cancel ? s_mtp.ops->cancel() : MTP_ERROR_UNAVAILABLE;
 }
 
-int SceMtpIfForDriver_05408B5B(const void *port, SceUInt32 timeout)
+int __attribute__((noinline)) SceMtpIfForDriver_05408B5B(const void *port, SceUInt32 timeout)
 {
 	if (port != &s_port)
 		return MTP_ERROR_INVALID;
@@ -241,7 +252,7 @@ int SceMtpIfForDriver_05408B5B(const void *port, SceUInt32 timeout)
 		s_mtp.ops->waitConnect(timeout) : MTP_ERROR_UNAVAILABLE;
 }
 
-int SceMtpIfForDriver_2D9318E1(const void *port)
+int __attribute__((noinline)) SceMtpIfForDriver_2D9318E1(const void *port)
 {
 	if (port != &s_port)
 		return MTP_ERROR_INVALID;
@@ -249,7 +260,7 @@ int SceMtpIfForDriver_2D9318E1(const void *port)
 		s_mtp.ops->isConnected() & 1 : MTP_ERROR_UNAVAILABLE;
 }
 
-int SceMtpIfForDriver_8D16B997(const void *port, int phase)
+int __attribute__((noinline)) SceMtpIfForDriver_8D16B997(const void *port, int phase)
 {
 	if (port != &s_port)
 		return MTP_ERROR_INVALID;
@@ -257,27 +268,33 @@ int SceMtpIfForDriver_8D16B997(const void *port, int phase)
 		s_mtp.ops->changePhase(phase) : MTP_ERROR_UNAVAILABLE;
 }
 
-const void *SceMtpIfForDriver_16D7DBCC(int port)
+const void * __attribute__((noinline)) SceMtpIfForDriver_16D7DBCC(int port)
 {
 	return port == 1 ? &s_port : NULL;
 }
 
-int sceMtpIfStartPort(const void *port)
+int __attribute__((noinline)) sceMtpIfStartPort(const void *port)
 {
-	SceUID pid = s_mtp.owner;
+	SceUID pid;
 
 	if (sceKernelIsUserModeThread()) {
 		pid = sceKernelGetProcessId();
 		if (s_mtp.owner != -1 && pid != s_mtp.owner)
 			return MTP_ERROR_BUSY;
+		s_mtp.owner = pid;
 	}
-	s_mtp.owner = pid;
 	if (port != &s_port)
 		return MTP_ERROR_INVALID;
-	return s_mtp.ops && s_mtp.ops->start ? s_mtp.ops->start() : sceUsbMtpStart();
+	if (s_mtp.ops) {
+		int (*start)(void) = s_mtp.ops->start;
+
+		if (start)
+			return start();
+	}
+	return sceUsbMtpStart();
 }
 
-int SceMtpIfForDriver_E6453F21(const void *port)
+int __attribute__((noinline)) SceMtpIfForDriver_E6453F21(const void *port)
 {
 	if (sceKernelIsUserModeThread()) {
 		if (s_mtp.owner == -1)
@@ -290,12 +307,12 @@ int SceMtpIfForDriver_E6453F21(const void *port)
 		s_mtp.ops->stop() : sceUsbMtpStop();
 }
 
-int SceMtpIfForDriver_CB685AC0(int port)
+int __attribute__((noinline)) SceMtpIfForDriver_CB685AC0(int port)
 {
 	return port == 1 ? sceUsbMtpStart() : MTP_ERROR_INVALID;
 }
 
-int SceMtpIfForDriver_FDF8C3C0(int port)
+int __attribute__((noinline)) SceMtpIfForDriver_FDF8C3C0(int port)
 {
 	return port == 1 ? sceUsbMtpStop() : MTP_ERROR_INVALID;
 }
