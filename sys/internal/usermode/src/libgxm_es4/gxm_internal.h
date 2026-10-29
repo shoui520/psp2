@@ -189,6 +189,8 @@ typedef struct SceGxmTexture {
 	SceUInt32 controlWords[4];
 } SceGxmTexture;
 
+SceGxmTextureFormat sceGxmTextureGetFormat(const SceGxmTexture *texture);
+
 /* control word 0 */
 #define GXM_TEX0_STRIDE_EXT		0x00000006	/* linear strided: stride bits 12..13 */
 #define GXM_TEX0_VADDR_MODE_SHIFT	3
@@ -806,12 +808,6 @@ typedef struct GxmMteState {
 	SceUInt32 vertexOutputs2;
 } GxmMteState;
 
-/* a block the PDS reads, reserved in a chunk buffer per draw */
-typedef struct GxmPdsBlock {
-	SceUInt32 address;
-	SceUInt16 dataSize;		/* what the PDS state words give the hardware */
-	SceUInt16 size;			/* the bytes reserved */
-} GxmPdsBlock;
 
 /*
  * An immediate context's ring buffer (sceGxmCreateContext sets one up for each chunk
@@ -831,6 +827,21 @@ typedef struct GxmRingBuffer {
 
 struct SceGxmPrecomputedFragmentState;
 struct SceGxmPrecomputedVertexState;
+
+/* a VDM primitive command, as gxmVdmWritePrimitive writes it */
+typedef struct GxmVdmPrimitive {
+	SceUInt32 words[6];
+} GxmVdmPrimitive;
+
+/* the SDK's opaque SceGxmPrecomputedDraw (SCE_GXM_PRECOMPUTED_DRAW_WORD_COUNT words) */
+typedef struct SceGxmPrecomputedDraw {
+	const SceGxmVertexProgram *vertexProgram;
+	GxmCommandBlock streamBlock;	/* the vertex program's PDS block, streams patched in */
+	SceUInt32 reserved[2];
+	GxmVdmPrimitive primitive;
+} SceGxmPrecomputedDraw;
+
+_Static_assert(sizeof(SceGxmPrecomputedDraw) == 11 * 4, "SceGxmPrecomputedDraw size");
 struct SceGxmRenderTarget;
 
 /*
@@ -839,6 +850,7 @@ struct SceGxmRenderTarget;
  */
 #define GXM_DEFAULT_UNIFORM_BUFFER_NONE		0
 #define GXM_DEFAULT_UNIFORM_BUFFER_RESERVED	1	/* sceGxmReserve*DefaultUniformBuffer */
+#define GXM_DEFAULT_UNIFORM_BUFFER_USED		2	/* a draw used the reserved one */
 #define GXM_DEFAULT_UNIFORM_BUFFER_SET		3	/* sceGxmSet*DefaultUniformBuffer */
 
 typedef struct SceGxmContext {
@@ -859,8 +871,8 @@ typedef struct SceGxmContext {
 	SceGxmTexture fragmentTextures[16];		/* 0x0a0 */
 	const struct SceGxmPrecomputedFragmentState *precomputedFragmentState;	/* 0x1a0 */
 	const struct SceGxmPrecomputedFragmentState *appliedFragmentState;	/* last written */
-	GxmPdsBlock fragmentDmaBlock;	/* 0x1a8: the uniform buffers' DMA list */
-	GxmPdsBlock fragmentTextureStateBlock;
+	GxmCommandBlock fragmentDmaBlock;	/* 0x1a8: the uniform buffers' DMA list */
+	GxmCommandBlock fragmentTextureStateBlock;
 	SceUInt32 frontFragmentProgramMode;
 	SceUInt32 backFragmentProgramMode;
 	GxmMteState state;		/* 0x1c0 */
@@ -877,8 +889,8 @@ typedef struct SceGxmContext {
 	SceGxmTexture vertexTextures[16];		/* 0x2c0 */
 	const struct SceGxmPrecomputedVertexState *precomputedVertexState;	/* 0x3c0 */
 	const struct SceGxmPrecomputedVertexState *appliedVertexState;
-	GxmPdsBlock vertexDmaBlock;	/* 0x3c8 */
-	GxmPdsBlock vertexStreamBlock;	/* 0x3d0: the streams' descriptors */
+	GxmCommandBlock vertexDmaBlock;	/* 0x3c8 */
+	GxmCommandBlock vertexStreamBlock;	/* 0x3d0: the streams' descriptors */
 
 	SceUInt8 insideScene;		/* 0x3d8: between sceGxmBeginScene and sceGxmEndScene */
 	volatile SceUInt32 *slot;	/* 0x3dc: its slot table slot: the rings' read offsets */
