@@ -442,27 +442,22 @@ int gxmPdsBuildSimpleProgram(GxmChunkBuffer *buffer, SceUInt32 value, SceUInt32 
 	return 0;
 }
 
-/* code offset of the chunk buffer's write position */
-static inline SceUInt32 gxmChunkBufferOffset(const GxmChunkBuffer *buffer)
-{
-	return buffer->cur + buffer->gpuEnd - buffer->end;
-}
-
-int gxmPdsBuildDoutProgram(GxmChunkBuffer *buffer, const GxmPdsDoutParams *params, GxmCodeRef *program)
+int gxmPdsBuildDoutProgram(GxmChunkBuffer *buffer, const SceGxmColorSurface *surface,
+			   GxmCodeRef *program)
 {
 	SceUInt32 words[6], offset;
 	void *code = gxmChunkBufferReserve(buffer, 0x40, 0x10);
 
 	if (code == NULL)
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	words[0] = params->words[0];
-	words[1] = params->words[1];
-	words[2] = params->words[2];
-	words[3] = params->words[3];
+	words[0] = surface->format;
+	words[1] = surface->data;
+	words[2] = surface->stride;
+	words[3] = surface->reserved;
 	offset = gxmChunkBufferOffset(buffer);
-	words[4] = params->words[4];
-	words[5] = params->words[5];
-	buffer->cur = SceGpuEs4User_53CACDAB(code, words, params->count);
+	words[4] = surface->clipMin;
+	words[5] = surface->clipMax;
+	buffer->cur = SceGpuEs4User_53CACDAB(code, words, surface->control);
 	program->address = 0;
 	program->taskControl = 0;
 	gxmCodeRefSetAddress(program, offset);

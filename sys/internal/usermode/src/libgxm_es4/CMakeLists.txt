@@ -1,6 +1,7 @@
 # SceGxm: ARM code built at -O3 (prefetching loops, SLP-vectorized stores),
 # without strict aliasing.
 set(GXM_SOURCES
+	background.c
 	blend_code_f16.c
 	blend_code_f16_assembler.c
 	blend_code_f16_optimizer.c
@@ -41,13 +42,22 @@ set(GXM_SOURCES
 	vertex_unpack.c
 )
 # PARTIAL in Sony's layout: the C still calls sceClibMemcpy, which the original does not import,
-# and __aeabi_idivmod / __aeabi_uidiv, which the original has from its statically linked libgcc;
-# sceGxmFinish (exported) is not written yet
+# and sceGxmFinish (exported) is not written yet
 psp2_module(os0_us_libgxm_es4 KIND user COMPILER gcc48 PARTIAL SOURCES
+	../../../../../toolchains/libgcc/udiv.S
+	../../../../../toolchains/libgcc/idiv.S
+	../../../../../toolchains/libgcc/dvmd_tls.S
 	libgxm_es4.c
 	${GXM_SOURCES}
 )
 set_source_files_properties(${GXM_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O3;-fno-strict-aliasing")
+
+# libgcc's division routines, statically linked first, in ARM code like the library
+include(../../../../../toolchains/libgcc/lib1funcs.cmake)
+gcc48_use_lib1funcs(os0_us_libgxm_es4)
+set_source_files_properties(../../../../../toolchains/libgcc/udiv.S
+	../../../../../toolchains/libgcc/idiv.S ../../../../../toolchains/libgcc/dvmd_tls.S
+	PROPERTIES COMPILE_OPTIONS "-marm")
 # The data segment sits where the original's does, leaving room after the text
 # for the module's SCE tables.
 target_link_options(os0_us_libgxm_es4 PRIVATE -Wl,-Tdata=0x81024000)

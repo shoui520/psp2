@@ -523,6 +523,12 @@ typedef struct GxmCommandBlock {
 	SceUInt16 size;
 } GxmCommandBlock;
 
+/* code offset of the chunk buffer's write position */
+static inline SceUInt32 gxmChunkBufferOffset(const GxmChunkBuffer *buffer)
+{
+	return buffer->cur + buffer->gpuEnd - buffer->end;
+}
+
 void gxmCodeRefSetAddress(GxmCodeRef *ref, SceUInt32 offset);
 SceUInt32 gxmPdsDataWord(SceUInt32 a, SceUInt32 b, SceUInt32 c);
 int gxmWriteProgramBlock(GxmChunkBuffer *buffer, const GxmCodeRef *program, GxmCommandBlock *block);
@@ -604,11 +610,6 @@ typedef struct GxmPdsAttributePatch {
 	SceUInt32 dataWord;
 } GxmPdsAttributePatch;
 
-typedef struct GxmPdsDoutParams {
-	SceUInt32 count;
-	SceUInt32 words[6];
-} GxmPdsDoutParams;
-
 typedef struct GxmPdsState {
 	void *code;
 	SceUInt32 dataSize;		/* in 16-byte units */
@@ -640,7 +641,9 @@ int gxmPdsBuildFragmentProgram(GxmChunkBuffer *buffer, const SceGxmTexture *text
 SceSize gxmPdsSimpleProgramSize(SceUInt32 count, SceSize *dataSize, SceSize unused);
 int gxmPdsBuildSimpleProgram(GxmChunkBuffer *buffer, SceUInt32 value, SceUInt32 count,
 			     const GxmCodeRef *program, GxmCommandBlock *block);
-int gxmPdsBuildDoutProgram(GxmChunkBuffer *buffer, const GxmPdsDoutParams *params,
+struct SceGxmColorSurface;
+/* the surface's control and the six words after it are the PBE's sideband and emit words */
+int gxmPdsBuildDoutProgram(GxmChunkBuffer *buffer, const struct SceGxmColorSurface *surface,
 			   GxmCodeRef *program);
 int gxmPdsBuildNopProgram(GxmChunkBuffer *buffer, GxmCodeRef *program);
 int gxmPdsBuildKickProgram(GxmChunkBuffer *buffer, GxmCodeRef *program);
@@ -916,6 +919,7 @@ typedef struct GxmRingBuffer {
 void gxmRingBufferInit(GxmRingBuffer *ring, GxmChunkBuffer *buffer, void *memory,
 		       SceUInt32 gpuOffset, SceSize size, SceUInt8 linked,
 		       volatile SceUInt32 *readOffset);
+void gxmRingBufferKicked(GxmRingBuffer *ring, GxmChunkBuffer *buffer);
 
 /* --- surfaces --- */
 
@@ -943,6 +947,17 @@ typedef struct SceGxmDepthStencilSurface {
 #define SCE_GXM_COLOR_SURFACE_SCALE_MSAA_DOWNSCALE	1
 
 SceBool sceGxmColorSurfaceIsEnabled(const SceGxmColorSurface *surface);
+SceGxmColorFormat sceGxmColorSurfaceGetFormat(const SceGxmColorSurface *surface);
+
+/* the background object's programs (background.c) */
+int gxmBackgroundBuildProgram(GxmChunkBuffer *buffer, const SceGxmColorSurface *surface,
+			      SceUInt32 samples, GxmCodeRef *program, SceUInt32 *dms);
+int gxmBackgroundBuildTextureProgram(GxmChunkBuffer *buffer, const SceGxmColorSurface *surface,
+				     SceUInt32 samples, const GxmCodeRef *program,
+				     GxmCommandBlock *block);
+int gxmBackgroundBuildFilterProgram(GxmChunkBuffer *buffer, const SceGxmColorSurface *surface,
+				    SceUInt32 width, SceUInt32 height, SceUInt32 samples,
+				    const GxmCodeRef *program, GxmCommandBlock *block);
 int sceGxmColorSurfaceInitDisabled(SceGxmColorSurface *surface);
 SceUInt32 sceGxmColorSurfaceGetScaleMode(const SceGxmColorSurface *surface);
 void *sceGxmColorSurfaceGetData(const SceGxmColorSurface *surface);

@@ -89,3 +89,61 @@ void gxmRingBufferInit(GxmRingBuffer *ring, GxmChunkBuffer *buffer, void *memory
 	buffer->refill = gxmRingBufferRefill;
 	*readOffset = 0;
 }
+
+/* a kick sent the ring up to the buffer's position: the next one is due half a ring on */
+void gxmRingBufferKicked(GxmRingBuffer *ring, GxmChunkBuffer *buffer)
+{
+	SceUInt32 cur = buffer->cur;
+	SceUInt32 offset = cur - ring->memory;
+
+	/* at the end of the ring: wait for the GPU to leave the start */
+	if (offset == ring->usableSize) {
+		for (;;) {
+			SceUInt32 end = buffer->end;
+			SceBool wait;
+
+			do {
+				SceUInt32 read = *ring->readOffset;
+				SceUInt32 endOffset = end - ring->memory;
+				SceUInt32 curOffset = cur - ring->memory;
+				SceSize available;
+
+				if (read == 0) {
+					available = ring->usableSize;
+					wait = endOffset == available;
+				} else {
+					available = read - 1;
+					if (endOffset < available) {
+						wait = SCE_TRUE;
+					} else if (endOffset == ring->usableSize) {
+						if (ring->linked)
+							*(SceUInt32 *)cur = ring->memory >> 2;
+						curOffset = 0;
+						wait = SCE_TRUE;
+					} else if (curOffset >= read) {
+						available = ring->usableSize;
+						wait = SCE_FALSE;
+					} else {
+						available = endOffset;
+						wait = SCE_TRUE;
+					}
+				}
+				cur = ring->memory + curOffset;
+				buffer->cur = cur;
+				end = ring->memory + available;
+				buffer->end = end;
+				buffer->gpuEnd = available + ring->gpuOffset;
+				offset = cur - ring->memory;
+				if (offset != ring->usableSize)
+					goto done;
+			} while (!wait);
+			sceGxmWaitEvent();
+			cur = buffer->cur;
+			offset = cur - ring->memory;
+		}
+	}
+
+done:
+	ring->lastOffset = offset;
+	ring->threshold = cur + ring->halfSize;
+}
