@@ -9,6 +9,9 @@
 
 char *sce_paf_strchr(const char *str, int ch);
 char *sce_paf_strrchr(const char *str, int ch);
+uint16_t *sce_paf_wcschr(const uint16_t *str, int ch);
+uint16_t *sce_paf_wcsrchr(const uint16_t *str, int ch);
+int sce_paf_wcscmp(const uint16_t *left, const uint16_t *right);
 int sce_paf_strcmp(const char *left, const char *right);
 int sce_paf_strncmp(const char *left, const char *right, size_t num);
 int sce_paf_strcasecmp(const char *left, const char *right);

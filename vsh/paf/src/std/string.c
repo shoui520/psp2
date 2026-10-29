@@ -35,6 +35,66 @@ char *sce_paf_strrchr(const char *str, int ch)
 	}
 }
 
+uint16_t *sce_paf_wcschr(const uint16_t *str, int ch)
+{
+	const volatile uint16_t *cursor = (const volatile uint16_t *)str;
+
+	if (!str)
+		return NULL;
+	for (;;) {
+		if (*cursor == (uint16_t)ch)
+			return (uint16_t *)cursor;
+		if (!*cursor++)
+			return NULL;
+	}
+}
+
+uint16_t *sce_paf_wcsrchr(const uint16_t *str, int ch)
+{
+	const volatile uint16_t *cursor;
+	const volatile uint16_t *start = (const volatile uint16_t *)str;
+
+	if (!str)
+		return NULL;
+	cursor = start;
+	while (*cursor)
+		cursor++;
+	for (;;) {
+		if (*cursor == (uint16_t)ch)
+			return (uint16_t *)cursor;
+		if (cursor == start)
+			return NULL;
+		cursor--;
+	}
+}
+
+int sce_paf_wcscmp(const uint16_t *left, const uint16_t *right)
+{
+	const volatile uint16_t *leftByte;
+	const volatile uint16_t *rightByte;
+	int leftCh;
+	int rightCh;
+
+	if (!left || !right) {
+		if (left == right)
+			return 0;
+		return left ? 1 : -1;
+	}
+	leftByte = (const volatile uint16_t *)left;
+	rightByte = (const volatile uint16_t *)right;
+	rightCh = *rightByte++;
+	leftCh = *leftByte;
+	for (;;) {
+		if (leftCh != rightCh)
+			return leftCh - rightByte[-1];
+		/* Sony rereads the current left halfword before advancing. */
+		if (!*leftByte++)
+			return 0;
+		rightCh = *rightByte++;
+		leftCh = *leftByte;
+	}
+}
+
 int sce_paf_strcmp(const char *left, const char *right)
 {
 	const volatile signed char *leftByte;
