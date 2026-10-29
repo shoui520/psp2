@@ -2,6 +2,11 @@
 #ifndef PAF_STD_STRING_H
 #define PAF_STD_STRING_H
 
+char *sce_paf_strchr(const char *str, int ch);
+char *sce_paf_strrchr(const char *str, int ch);
+int sce_paf_strcmp(const char *left, const char *right);
+char *sce_paf_strcpy(char *destination, const char *source);
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>

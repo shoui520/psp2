@@ -4,6 +4,61 @@
 #include "stdlib.h"
 #include <libkernel/libkernel.h>
 
+char *sce_paf_strchr(const char *str, int ch)
+{
+	for (;;) {
+		if ((signed char)*str == ch)
+			return (char *)str;
+		if (!*str++)
+			return NULL;
+	}
+}
+
+char *sce_paf_strrchr(const char *str, int ch)
+{
+	const char *cursor;
+
+	if (!str)
+		return NULL;
+	cursor = str;
+	while (*cursor)
+		cursor++;
+	for (;;) {
+		if ((signed char)*cursor == (signed char)ch)
+			return (char *)cursor;
+		if (cursor == str)
+			return NULL;
+		cursor--;
+	}
+}
+
+int sce_paf_strcmp(const char *left, const char *right)
+{
+	if (!left || !right) {
+		if (left == right)
+			return 0;
+		return left ? 1 : -1;
+	}
+	while (*left == *right) {
+		if (!*left)
+			return 0;
+		left++;
+		right++;
+	}
+	return (unsigned char)*left - (unsigned char)*right;
+}
+
+char *sce_paf_strcpy(char *destination, const char *source)
+{
+	char *result = destination;
+
+	if (!destination || !source)
+		return NULL;
+	while ((*destination++ = *source++) != '\0')
+		;
+	return result;
+}
+
 char *sce_paf_strncpy(char *destination, const char *source, size_t num)
 {
 	char *result = destination;
