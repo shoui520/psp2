@@ -142,6 +142,64 @@ uint16_t *sce_paf_wcscat(uint16_t *destination, const uint16_t *source)
 	}
 }
 
+uint16_t *sce_paf_wcsncpy(uint16_t *destination, const uint16_t *source,
+			  size_t num)
+{
+	volatile uint16_t *dest = (volatile uint16_t *)destination;
+	const volatile uint16_t *src = (const volatile uint16_t *)source;
+	int32_t remaining = (int32_t)num;
+	uint16_t ch;
+
+	if (!destination || !source)
+		return NULL;
+	while (remaining > 0) {
+		ch = *src++;
+		*dest++ = ch;
+		remaining--;
+		if (!ch) {
+			while (remaining > 0) {
+				*dest++ = 0;
+				remaining--;
+			}
+			break;
+		}
+	}
+	return destination;
+}
+
+uint16_t *sce_paf_wcsncat(uint16_t *destination, const uint16_t *source,
+			  size_t num)
+{
+	volatile uint16_t *dest = (volatile uint16_t *)destination;
+	const volatile uint16_t *src = (const volatile uint16_t *)source;
+	uint32_t remaining = num;
+	volatile uint16_t first;
+	uint16_t ch;
+
+	if (!destination || !source)
+		return NULL;
+	/* The original reads source[0] before searching for the terminator. */
+	first = *src++;
+	while (*dest)
+		dest++;
+	ch = first;
+	*dest++ = ch;
+	if (!ch)
+		return destination;
+	for (;;) {
+		remaining--;
+		if (remaining & 0x80000000U) {
+			/* Sony first writes, then replaces the final halfword with NUL. */
+			dest[-1] = 0;
+			return destination;
+		}
+		ch = *src++;
+		*dest++ = ch;
+		if (!ch)
+			return destination;
+	}
+}
+
 int sce_paf_strcmp(const char *left, const char *right)
 {
 	const volatile signed char *leftByte;

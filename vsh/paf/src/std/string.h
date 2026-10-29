@@ -14,6 +14,10 @@ uint16_t *sce_paf_wcsrchr(const uint16_t *str, int ch);
 int sce_paf_wcscmp(const uint16_t *left, const uint16_t *right);
 uint16_t *sce_paf_wcscpy(uint16_t *destination, const uint16_t *source);
 uint16_t *sce_paf_wcscat(uint16_t *destination, const uint16_t *source);
+uint16_t *sce_paf_wcsncpy(uint16_t *destination, const uint16_t *source,
+			  size_t num);
+uint16_t *sce_paf_wcsncat(uint16_t *destination, const uint16_t *source,
+			  size_t num);
 int sce_paf_strcmp(const char *left, const char *right);
 int sce_paf_strncmp(const char *left, const char *right, size_t num);
 int sce_paf_strcasecmp(const char *left, const char *right);
