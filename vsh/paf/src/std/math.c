@@ -211,6 +211,32 @@ float sce_paf_atanf(float x)
 	return number.value;
 }
 
+float sce_paf_atan2f(float x, float y)
+{
+	union {
+		float value;
+		uint32_t bits;
+	} first, second, result;
+	uint32_t firstBits, secondBits;
+
+	first.value = x;
+	second.value = y;
+	firstBits = first.bits;
+	secondBits = second.bits;
+	first.bits &= 0x7fffffffU;
+	second.bits &= 0x7fffffffU;
+	if (second.bits > first.bits)
+		result.value = AtanApprox(first.value / second.value);
+	else
+		result.value = 1.5707963705062866f -
+			       AtanApprox(second.value / first.value);
+	if ((int32_t)secondBits < 0)
+		result.value = 3.1415927410125732f - result.value;
+	result.bits = (firstBits & 0x80000000U) |
+		      (result.bits & 0x7fffffffU);
+	return result.value;
+}
+
 float sce_paf_asinf(float x)
 {
 	union {

@@ -22,6 +22,7 @@ static inline int FloatToInt(float value)
 #define sce_paf_sinf ScePafStdc_C3C6F821
 #define sce_paf_cosf ScePafStdc_99E15A83
 #define sce_paf_atanf ScePafStdc_A74ACFE5
+#define sce_paf_atan2f ScePafStdc_30C3A75E
 #define sce_paf_asinf ScePafStdc_A75AAF07
 #define sce_paf_acosf ScePafStdc_C6A059A7
 #define sce_paf_expf ScePafStdc_28E1E0ED
@@ -34,6 +35,7 @@ static inline int FloatToInt(float value)
 float sce_paf_sinf(float x);
 float sce_paf_cosf(float x);
 float sce_paf_atanf(float x);
+float sce_paf_atan2f(float x, float y);
 float sce_paf_asinf(float x);
 float sce_paf_acosf(float x);
 float sce_paf_expf(float x);
