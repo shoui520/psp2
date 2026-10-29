@@ -415,6 +415,7 @@ int BtSendSerialData(BtConnection *connection, const void *data,
 				data, length, 0);
 }
 
+__attribute__((noinline))
 uintptr_t BtSerialPortOpened(BtConnection *connection)
 {
 	return BtSetConnectedProfiles(connection, NULL, 0x80000);

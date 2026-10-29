@@ -1,6 +1,7 @@
 /* Internet checksum helpers; original source filename unavailable. */
 #include <stdint.h>
 
+__attribute__((noinline))
 unsigned int BtInternetChecksum(unsigned int initialSum,
 				const uint16_t *words, int length)
 {
