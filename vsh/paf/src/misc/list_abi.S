@@ -88,3 +88,41 @@ ScePafMisc_EB1C375C:
 	pop {r4, pc}
 	.fnend
 	.size ScePafMisc_EB1C375C, . - ScePafMisc_EB1C375C
+
+/* The two exported list destructors have identical native instruction bodies. */
+	.macro PafDestroyList name
+	.global \name
+	.type \name, %function
+	.thumb_func
+\name:
+	.fnstart
+	push {r4, r5, r6, lr}
+	adds r4, r0, #0
+	ldr r0, [r4]
+	cbz r0, .Lempty\@
+	ldr r1, [r0, #4]
+	cmp r1, r0
+	beq .Lfreehead\@
+.Lloop\@:
+	ldr r5, [r1, #4]
+	adds r0, r1, #0
+	bl sce_paf_free
+	ldr r0, [r4]
+	adds r1, r5, #0
+	mov r2, r0
+	cmp r1, r2
+	bne .Lloop\@
+.Lfreehead\@:
+	bl sce_paf_free
+.Lempty\@:
+	movs.w r1, #-1
+	str r1, [r4]
+	adds r0, r4, #0
+	str r1, [r4, #4]
+	pop {r4, r5, r6, pc}
+	.fnend
+	.size \name, . - \name
+	.endm
+
+	PafDestroyList ScePafMisc_04B4652F
+	PafDestroyList ScePafMisc_600A1245
