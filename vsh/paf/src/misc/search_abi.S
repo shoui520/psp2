@@ -88,3 +88,64 @@ ScePafMisc_14432321:
 	bx lr
 	.fnend
 	.size ScePafMisc_14432321, . - ScePafMisc_14432321
+
+	.global ScePafMisc_32E2C605
+	.type ScePafMisc_32E2C605, %function
+	.thumb_func
+ScePafMisc_32E2C605:
+	.fnstart
+	cmp r1, #8
+	blo .LinRange32E
+	movs.w r0, #-1
+	b .Lreturn32E
+.LinRange32E:
+	rsb r1, r1, r1, lsl #2
+	add.w ip, r0, r1, lsl #2
+	ldr.w ip, [ip, #0xc]
+	cmp.w ip, #0
+	bne .LhaveTree32E
+	movs r0, #0
+	b .LafterSearch32E
+.LhaveTree32E:
+	ldr.w r0, [ip]
+	ldrsb.w r1, [r0, #0x1d]
+	cbnz r1, .LafterSearch32E
+.Lloop32E:
+	ldr r1, [r0, #0xc]
+	cmp r2, r1
+	ble .LtryLeft32E
+	ldr r0, [r0, #4]
+	ldrsb.w r1, [r0, #0x1d]
+	b .LcheckNode32E
+.LtryLeft32E:
+	cmp r1, r2
+	ble .LbreakTree32E
+	ldr r0, [r0, #8]
+	ldrsb.w r1, [r0, #0x1d]
+	b .LcheckNode32E
+.LbreakTree32E:
+	b .LafterSearch32E
+.LcheckNode32E:
+	cmp r1, #0
+	beq .Lloop32E
+.LafterSearch32E:
+	mov r2, ip
+	movs r1, #0
+	cmp r0, r2
+	beq .Lerror32E
+	cbz r3, .Lset32E
+	ldr r2, [r0, #0x10]
+	ldr r2, [r2, #0x1c]
+	cmp r2, r3
+	bne .Lerror32E
+.Lset32E:
+	movs r2, #1
+	strb r2, [r0, #0x18]
+	adds r0, r1, #0
+	b .Lreturn32E
+.Lerror32E:
+	movs.w r0, #-1
+.Lreturn32E:
+	bx lr
+	.fnend
+	.size ScePafMisc_32E2C605, . - ScePafMisc_32E2C605
