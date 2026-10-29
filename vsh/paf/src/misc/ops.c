@@ -1,5 +1,6 @@
 /* Small original ScePafMisc structure operations. */
 #include <stdint.h>
+#include <stddef.h>
 #include "../std/string.h"
 
 void ScePafMisc_FFE8F348(uint32_t *object)
@@ -237,5 +238,37 @@ void *ScePafMisc_0A03ECFD(const uint32_t *object, uint32_t index)
 
 	if (index >= count)
 		return NULL;
+	return (void *)(uintptr_t)(object[0] + (index << 3));
+}
+
+int ScePafMisc_ABFBDD12(const uint32_t *object, uint32_t index,
+			uint32_t value)
+{
+	uint32_t count = object[2] * object[3];
+	uint32_t *entry;
+	if (index >= count)
+		return 0;
+	entry = (uint32_t *)(uintptr_t)(object[0] + (index << 3));
+	entry[1] = value;
+	return 1;
+}
+
+void *ScePafMisc_4C2D18A3(const uint32_t *object,
+			 const int32_t *coordinates)
+{
+	int32_t x = coordinates[0];
+	int32_t y;
+	int32_t width, height;
+	uint32_t index;
+	if (x < 0)
+		return NULL;
+	y = coordinates[1];
+	if (y < 0)
+		return NULL;
+	width = (int32_t)object[2];
+	height = (int32_t)object[3];
+	if (x >= width || y >= height)
+		return NULL;
+	index = (uint32_t)y * (uint32_t)width + (uint32_t)x;
 	return (void *)(uintptr_t)(object[0] + (index << 3));
 }
