@@ -203,6 +203,13 @@ typedef struct VeneziaDebugCallbacks {
 	int (*checkReset)(void);
 } VeneziaDebugCallbacks;
 
+/* name unknown: the debugger's shared memory, passed to initVeneziaDebugger by value. */
+typedef struct VeneziaDebugMemory {
+	uint32_t virtualBase;
+	uint32_t physicalBase;
+	SceSize size;
+} VeneziaDebugMemory;
+
 /* name unknown: DSP capture geometry, control word, and protocol options. */
 typedef struct VeneziaDebugCaptureConfig {
 	SceSize size;
@@ -666,13 +673,12 @@ getContext:
 }
 
 /* name unknown: bind the host callbacks and initialize the debugger's shared memory. */
-int initVeneziaDebugger(const VeneziaDebugCallbacks *callbacks, uint32_t virtualBase,
-		       uint32_t physicalBase, SceSize size)
+int initVeneziaDebugger(const VeneziaDebugCallbacks *callbacks, VeneziaDebugMemory memory)
 {
 	unsigned int i;
 
-	if (!virtualBase || !physicalBase || ((virtualBase | physicalBase) & 7) ||
-	    size != 0x100000 || !callbacks || !callbacks->lock || !callbacks->unlock ||
+	if (!memory.virtualBase || !memory.physicalBase ||
+	    ((memory.virtualBase | memory.physicalBase) & 7) || memory.size != 0x100000 || !callbacks || !callbacks->lock || !callbacks->unlock ||
 	    !callbacks->readMailbox || !callbacks->writeMailbox || !callbacks->signalMailbox ||
 	    !callbacks->clearReset || !callbacks->setReset || !callbacks->checkReset)
 		return 9;
@@ -687,8 +693,8 @@ int initVeneziaDebugger(const VeneziaDebugCallbacks *callbacks, uint32_t virtual
 	g_veneziaDebugger.callbacks.clearReset = callbacks->clearReset;
 	g_veneziaDebugger.callbacks.checkReset = callbacks->checkReset;
 	g_veneziaDebugger.callbacks.lock = callbacks->lock;
-	g_veneziaDebugger.memoryVirtualBase = virtualBase;
-	g_veneziaDebugger.memoryPhysicalBase = physicalBase;
+	g_veneziaDebugger.memoryVirtualBase = memory.virtualBase;
+	g_veneziaDebugger.memoryPhysicalBase = memory.physicalBase;
 	g_veneziaDebugger.memorySize = 0x100000;
 	for (i = 0; i != 4; i++) {
 		g_veneziaDebugger.captureQueue[i].slot = -1;
@@ -1147,13 +1153,18 @@ allocateSlot:
 }
 
 /* name unknown: configure trace buffers and enqueue a capture-bank transition. */
-int startVeneziaDebugCapture(unsigned int processor,
-	uint32_t imageVirtual, uint32_t imagePhysical, SceSize imageSize,
-	uint32_t bufferVirtual, uint32_t bufferPhysical, SceSize bufferSize,
-	uint32_t scratchVirtual, uint32_t scratchPhysical, SceSize scratchSize,
-	uint32_t auxiliaryVirtual, uint32_t auxiliaryPhysical, SceSize auxiliarySize,
+int startVeneziaDebugCapture(unsigned int processor, VeneziaDebugMemory image,
+	VeneziaDebugMemory buffer, VeneziaDebugMemory scratch, VeneziaDebugMemory auxiliary,
 	const VeneziaDebugCaptureConfig *config)
 {
+	uint32_t imageVirtual = image.virtualBase, imagePhysical = image.physicalBase;
+	SceSize imageSize = image.size;
+	uint32_t bufferVirtual = buffer.virtualBase, bufferPhysical = buffer.physicalBase;
+	SceSize bufferSize = buffer.size;
+	uint32_t scratchPhysical = scratch.physicalBase;
+	SceSize scratchSize = scratch.size;
+	uint32_t auxiliaryVirtual = auxiliary.virtualBase, auxiliaryPhysical = auxiliary.physicalBase;
+	SceSize auxiliarySize = auxiliary.size;
 	VeneziaDebugCaptureCommandWork work;
 	VeneziaDebuggerState *state = &g_veneziaDebugger;
 	VeneziaDebugCaptureQueueEntry previous;
@@ -1165,7 +1176,6 @@ int startVeneziaDebugCapture(unsigned int processor,
 	unsigned char *destination;
 	const unsigned char *source;
 
-	(void)scratchVirtual;
 	if (processor)
 		return 9;
 	if (!state->callbacks.checkReset || state->callbacks.checkReset() != 0)
@@ -3111,9 +3121,9 @@ int startVeneziaVipCapture(unsigned int processor, VeneziaVipProcessStorage *sto
 {
 	VeneziaDebugProcessCapture *capture = &storage->captures[processor];
 	VeneziaDebugCaptureConfig config;
-	uint32_t required, imagePhysical, captureState = 1;
-	uint32_t imageVirtual, imageSize, bufferVirtual, bufferPhysical, bufferSize;
-	uint32_t scratchVirtual, scratchPhysical, scratchSize, alternate;
+	VeneziaDebugMemory image, buffer, scratch, auxiliary;
+	uint32_t required, captureState = 1;
+	uint32_t alternate;
 	int ret, started;
 
 	if (setVeneziaDebugCaptureCommand(processor, 0))
@@ -3124,16 +3134,19 @@ int startVeneziaVipCapture(unsigned int processor, VeneziaVipProcessStorage *sto
 	if (*capacity < required)
 		return -2141060863;
 	capture->snapshot = (VeneziaDebugSnapshot *)capture->snapshotRegion.virtualAddress;
-	imagePhysical = capture->imageMappingMode == 1 ? 0x20000000 : 0;
-	imageVirtual = capture->imageVirtualAddress;
-	imageSize = capture->imageSize;
-	bufferVirtual = capture->bufferRegion.virtualAddress;
-	bufferPhysical = capture->bufferRegion.physicalAddress;
-	bufferSize = capture->bufferRegion.size;
-	scratchVirtual = capture->scratchRegion.virtualAddress;
-	scratchPhysical = capture->scratchRegion.physicalAddress;
-	scratchSize = capture->scratchRegion.size;
-	config.size = getVeneziaVipRingSize(bufferSize);
+	image.physicalBase = capture->imageMappingMode == 1 ? 0x20000000 : 0;
+	image.virtualBase = capture->imageVirtualAddress;
+	image.size = capture->imageSize;
+	buffer.virtualBase = capture->bufferRegion.virtualAddress;
+	buffer.physicalBase = capture->bufferRegion.physicalAddress;
+	buffer.size = capture->bufferRegion.size;
+	scratch.virtualBase = capture->scratchRegion.virtualAddress;
+	scratch.physicalBase = capture->scratchRegion.physicalAddress;
+	scratch.size = capture->scratchRegion.size;
+	auxiliary.virtualBase = 0;
+	auxiliary.physicalBase = 0;
+	auxiliary.size = 0;
+	config.size = getVeneziaVipRingSize(buffer.size);
 	config.startOffset = 4096;
 	config.parameters[0] = 0;
 	config.parameters[1] = 0;
@@ -3150,13 +3163,12 @@ int startVeneziaVipCapture(unsigned int processor, VeneziaVipProcessStorage *sto
 		g_veneziaDebugger.log(42, 3, processor, alternate, started);
 	if (started)
 		return -2141060860;
-	started = startVeneziaDebugCapture(processor, imageVirtual, imagePhysical, imageSize,
-		bufferVirtual, bufferPhysical, bufferSize, scratchVirtual, scratchPhysical,
-		scratchSize, 0, 0, 0, &config);
+	started = startVeneziaDebugCapture(processor, image, buffer, scratch, auxiliary, &config);
 	if (g_veneziaDebugger.log)
-		g_veneziaDebugger.log(17, 12, processor, imageVirtual, capture->imagePhysicalAddress,
-			imageSize, bufferVirtual, bufferPhysical, bufferSize, scratchVirtual,
-			scratchPhysical, scratchSize, 0, 0, 0, started);
+		g_veneziaDebugger.log(17, 12, processor, image.virtualBase,
+			capture->imagePhysicalAddress, image.size, buffer.virtualBase,
+			buffer.physicalBase, buffer.size, scratch.virtualBase, scratch.physicalBase,
+			scratch.size, 0, 0, 0, started);
 	if (started)
 		return -2141060860;
 	while (captureState & 1) {
@@ -3168,7 +3180,7 @@ int startVeneziaVipCapture(unsigned int processor, VeneziaVipProcessStorage *sto
 		sceKernelDelayThread(1000);
 	}
 	storage->captures[0].completedCount = 0;
-	storage->captures[0].bufferEnd = bufferVirtual + bufferSize;
+	storage->captures[0].bufferEnd = buffer.virtualBase + buffer.size;
 	return ret;
 }
 
@@ -4659,7 +4671,7 @@ int synchronizeVeneziaVipProcess(void)
 }
 
 /* name unknown: remove the VIP primary interrupt handler. */
-int releaseVeneziaVipInterrupt(void)
+int releaseVeneziaVipInterrupt(VeneziaVipState *state)
 {
 	sceKernelDisableIntr(56);
 	sceKernelReleaseIntrHandler(56);
@@ -4674,7 +4686,7 @@ int setVeneziaVipDebuggerBase(VeneziaVipState *state)
 }
 
 /* name unknown: the original boot-base cleanup has no work to perform. */
-int releaseVeneziaVipDebuggerBase(void)
+int releaseVeneziaVipDebuggerBase(VeneziaVipState *state)
 {
 	return 0;
 }
@@ -4716,15 +4728,16 @@ int initializeVeneziaVipDebugger(VeneziaVipState *state,
 				VeneziaVipProcessStorage *storage)
 {
 	VeneziaDebugCallbacks callbacks;
+	VeneziaDebugMemory memory;
 	unsigned int mode __attribute__((aligned(8)));
 	unsigned int alternate __attribute__((aligned(8)));
-	uint32_t virtualBase, physicalBase;
 	int ret;
 
 	if (activateVeneziaVipDebugger(state, storage) < 0)
 		return -2141060860;
-	virtualBase = state->debuggerMemory.virtualAddress;
-	physicalBase = state->debuggerMemory.physicalAddress;
+	memory.virtualBase = state->debuggerMemory.virtualAddress;
+	memory.physicalBase = state->debuggerMemory.physicalAddress;
+	memory.size = 0x100000;
 	callbacks.lock = (int (*)(int))lockVeneziaDebugChannel;
 	callbacks.unlock = (void (*)(int))unlockVeneziaDebugChannel;
 	callbacks.readMailbox = readVeneziaVipDebugMailbox;
@@ -4733,9 +4746,9 @@ int initializeVeneziaVipDebugger(VeneziaVipState *state,
 	callbacks.checkReset = checkVeneziaDebugReset;
 	callbacks.writeMailbox = acknowledgeVeneziaVipDebugMailbox;
 	callbacks.signalMailbox = writeVeneziaVipDebugMailbox;
-	ret = initVeneziaDebugger(&callbacks, virtualBase, physicalBase, 0x100000);
+	ret = initVeneziaDebugger(&callbacks, memory);
 	if (g_veneziaDebugger.log)
-		g_veneziaDebugger.log(2, 4, virtualBase, physicalBase, 0x100000, ret);
+		g_veneziaDebugger.log(2, 4, memory.virtualBase, memory.physicalBase, memory.size, ret);
 	if (ret == 6)
 		return 0;
 	if (ret != 0)
@@ -9152,7 +9165,7 @@ int synchronizeVeneziaVipMultiCapture(void)
 }
 
 /* name unknown: release the secondary and primary debugger interrupt handlers. */
-int releaseVeneziaVipInterrupts(void)
+int releaseVeneziaVipInterrupts(VeneziaVipState *state)
 {
 	sceKernelDisableIntr(57);
 	sceKernelReleaseIntrHandler(57);
@@ -9169,7 +9182,7 @@ int programVeneziaVipDebuggerCommandBase(VeneziaVipState *state)
 }
 
 /* name unknown: issue the peripheral reset and ignore its status. */
-int resetVeneziaVipPeripheral(void)
+int resetVeneziaVipPeripheral(VeneziaVipState *state)
 {
 	ScePervasiveForDriver_E2D8F6C3();
 	return 0;
@@ -12145,9 +12158,9 @@ typedef struct VeneziaVipImplementationOperations {
 		const VeneziaDebugImageFormat *format, SceSize *size);
 	int (*removeCapture)(unsigned int processor, int wait, SceUID pid);
 	int (*setDebuggerBase)(VeneziaVipState *state);
-	int (*resetPeripheral)(void);
+	int (*resetPeripheral)(VeneziaVipState *state);
 	int (*initializeInterrupts)(VeneziaVipState *state);
-	int (*releaseInterrupts)(void);
+	int (*releaseInterrupts)(VeneziaVipState *state);
 	int (*beginCaptureConfiguration)(VeneziaVipState *state,
 		VeneziaVipProcessStorage *storage);
 	int (*endCaptureConfiguration)(VeneziaVipState *state,
@@ -12270,7 +12283,7 @@ __attribute__((noinline)) int startVeneziaVipProcessorCapture(unsigned int count
 
 	if (implementationIndex > 1)
 		return -2141060856;
-	return g_veneziaVipImplementations[implementationIndex].resetPeripheral();
+	return g_veneziaVipImplementations[implementationIndex].resetPeripheral(state);
 }
 
 /* name unknown: dispatch through the selected capture implementation. */
@@ -12290,7 +12303,7 @@ __attribute__((noinline)) int stopVeneziaVipProcessorCapture(unsigned int count,
 
 	if (implementationIndex > 1)
 		return -2141060856;
-	return g_veneziaVipImplementations[implementationIndex].releaseInterrupts();
+	return g_veneziaVipImplementations[implementationIndex].releaseInterrupts(state);
 }
 
 /* name unknown: dispatch through the selected capture implementation. */
