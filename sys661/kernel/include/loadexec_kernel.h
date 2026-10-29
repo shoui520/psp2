@@ -420,6 +420,7 @@ SceUID sceKernelCheckExitCallback(void);
  * @return 0.
  */
 s32 LoadExecForKernel_A5ECA6E3(void (*cb)());
+s32 LoadExecForKernel_AA2029EC(void);
 
 #endif	/* LOADEXEC_KERNEL_H */
 

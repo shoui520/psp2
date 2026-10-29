@@ -791,7 +791,7 @@ static int CallSysEventHandler(int ev_id, char *ev_name, void *param, int *resul
 }
 
 /* 0x00001640 */
-static int StopSys(void)
+static int __attribute__((noinline)) StopSys(void)
 {
     sceKernelUnregisterSysEventHandler(&g_sysevent_handler);
     sceKernelReleaseIntrHandler(KIRK_INTERRUPT);
@@ -801,7 +801,7 @@ static int StopSys(void)
 }
 
 /* 0x00001688 */
-static int InitSys(void)
+static int __attribute__((noinline)) InitSys(void)
 {
     int ret;
     u32 mutex_opt[2];

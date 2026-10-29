@@ -1578,7 +1578,7 @@ int module_start(void)
     return 0;
 }
 
-static void restore_resmgr_keys(void)
+static inline void __attribute__((always_inline)) restore_resmgr_keys(void)
 {
     if (g_8DFC == 1) {
         for (u32 i = 0; i < 20; i++) {
@@ -1906,7 +1906,13 @@ int sceNwman_driver_9555D68D(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x35a8 */
 
 int sceResmgr_9DC14891(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x37a8 */
 {
+    s32 old_k1 = pspShiftK1();
+    if (!pspK1DynBufOk(arg0, arg1) || !pspK1StaBufOk(arg2, 4)) {
+        pspSetK1(old_k1);
+        return -110;
+    }
     if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+        pspSetK1(old_k1);
         return -108;
     }
     s32 ret;
@@ -1914,6 +1920,7 @@ int sceResmgr_9DC14891(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x37a8 */
     if (sceKernelSignalSema(g_93F0, 1) != 0) {
         ret = -109;
     }
+    pspSetK1(old_k1);
     return ret;
 }
 
@@ -1981,9 +1988,7 @@ int sceUtilsGetLoadModuleILength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x38b0 */
     if (ret == -301) {
         ret = sub_00E0((u8 *)&g_rodata[0x0078], (u8 *)&g_rodata[0x007c], 75, arg0, arg1, arg2, 0, g_bss_ptrs[0], 0, 0, NULL, NULL);
     }
-    if (ret != -301) {
-        restore_resmgr_keys();
-    }
+    restore_resmgr_keys();
     if (sceKernelSignalSema(g_93F0, 1) != 0) {
         ret = -109;
     }
@@ -2054,9 +2059,7 @@ int sceUtilsGetLoadModuleILengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
     if (ret == -301) {
         ret = sub_00E0((u8 *)&g_rodata[0x0078], (u8 *)&g_rodata[0x007c], 75, arg0, arg1, arg2, 1, g_bss_ptrs[0], 0, 0, NULL, NULL);
     }
-    if (ret != -301) {
-        restore_resmgr_keys();
-    }
+    restore_resmgr_keys();
     if (sceKernelSignalSema(g_93F0, 1) != 0) {
         ret = -109;
     }
@@ -2682,30 +2685,54 @@ int sceUtilsGetLoadModuleWLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
 
 int scePauth_F7AA47F6(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0x7bcc */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
-        return -108;
-    }
+    s32 old_k1 = pspShiftK1();
     s32 ret;
-    ret = sub_00E0((u8 *)&g_rodata[0x0364], (u8 *)&g_rodata[0x0368], 71, arg0, arg1, arg2, 0, g_bss_ptrs[24], 0, 5, (u8 *)&g_rodata[0x0378], arg3);
-    if (ret == -301) {
-        ret = sub_00E0((u8 *)&g_rodata[0x033c], (u8 *)&g_rodata[0x0340], 71, arg0, arg1, arg2, 0, g_bss_ptrs[23], 0, 5, (u8 *)&g_rodata[0x0350], arg3);
+    if (!pspK1DynBufOk(arg0, arg1) || !pspK1StaBufOk(arg2, 4) || !pspK1StaBufOk(arg3, 16)) {
+        ret = -110;
+    } else if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+        ret = -108;
+    } else {
+        ret = sub_00E0((u8 *)&g_rodata[0x0364], (u8 *)&g_rodata[0x0368], 71, arg0, arg1, arg2, 0, g_bss_ptrs[24], 0, 5, (u8 *)&g_rodata[0x0378], arg3);
+        if (ret == -301) {
+            ret = sub_00E0((u8 *)&g_rodata[0x033c], (u8 *)&g_rodata[0x0340], 71, arg0, arg1, arg2, 0, g_bss_ptrs[23], 0, 5, (u8 *)&g_rodata[0x0350], arg3);
+        }
+        if (sceKernelSignalSema(g_93F0, 1) != 0) {
+            ret = -109;
+        }
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
-        ret = -109;
+    if (ret <= -300) {
+        ret = 0x80000108;
+    } else if (ret <= -200) {
+        ret = 0x800001ff;
+    } else if (ret < 0) {
+        ret = 0x80000021;
     }
+    pspSetK1(old_k1);
     return ret;
 }
 
 int scePauth_98B83B5D(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0x7d90 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
-        return -108;
-    }
+    s32 old_k1 = pspShiftK1();
     s32 ret;
-    ret = sub_00E0((u8 *)&g_rodata[0x038c], (u8 *)&g_rodata[0x0390], 71, arg0, arg1, arg2, 0, g_bss_ptrs[25], 0, 5, (u8 *)&g_rodata[0x03a0], arg3);
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
-        ret = -109;
+    if (!pspK1DynBufOk(arg0, arg1) || !pspK1StaBufOk(arg2, 4) || !pspK1StaBufOk(arg3, 16)) {
+        ret = -110;
+    } else if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+        ret = -108;
+    } else {
+        ret = sub_00E0((u8 *)&g_rodata[0x038c], (u8 *)&g_rodata[0x0390], 71, arg0, arg1, arg2, 0, g_bss_ptrs[25], 0, 5, (u8 *)&g_rodata[0x03a0], arg3);
+        if (sceKernelSignalSema(g_93F0, 1) != 0) {
+            ret = -109;
+        }
     }
+    if (ret <= -300) {
+        ret = 0x80000108;
+    } else if (ret <= -200) {
+        ret = 0x800001ff;
+    } else if (ret < 0) {
+        ret = 0x80000021;
+    }
+    pspSetK1(old_k1);
     return ret;
 }
 
@@ -2725,9 +2752,7 @@ int sceUtilsGetLoadModuleYLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
     if (ret == -301) {
         ret = sub_00E0((u8 *)&g_rodata[0x0248], (u8 *)&g_rodata[0x024c], 72, arg0, arg1, arg2, 0, g_bss_ptrs[17], 0, 5, (u8 *)&g_rodata[0x025c], arg3);
     }
-    if (ret != -301) {
-        restore_resmgr_keys();
-    }
+    restore_resmgr_keys();
     if (sceKernelSignalSema(g_93F0, 1) != 0) {
         ret = -109;
     }
@@ -2736,9 +2761,6 @@ int sceUtilsGetLoadModuleYLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
 
 int sceDbsvrGetData(u8 *out20) /* @ 0x8354 */
 {
-    if (out20 == NULL) {
-        return -201;
-    }
     if (sceKernelWaitSema(g_93F4, 1, NULL) != 0) {
         return -108;
     }
@@ -2747,13 +2769,10 @@ int sceDbsvrGetData(u8 *out20) /* @ 0x8354 */
         for (u32 i = 0; i < 20; i++) {
             out20[i] = g_9280[i];
         }
-        for (u32 i = 0; i < 20; i++) {
-            g_9280[i] = 0;
-        }
     } else if (ret < 0) {
-        ret = -102;
+        ret = -101;
     } else {
-        ret = (ret == KIRK_NOT_INITIALIZED) ? -107 : -105;
+        ret = (ret == KIRK_NOT_INITIALIZED) ? -107 : -104;
     }
     if (sceKernelSignalSema(g_93F4, 1) != 0) {
         ret = -109;

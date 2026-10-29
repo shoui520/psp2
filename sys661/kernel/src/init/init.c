@@ -902,7 +902,9 @@ static void InitThreadEntry(SceSize args, void *argp)
         void (*func)(s32) = (void (*)(s32))*(s32 *)(ptr + 8);
         func(2);
     }
-    
+
+    LoadExecForKernel_AA2029EC();
+
     /* Step3: Init stops and unloads itself now. */
     sceKernelStopUnloadSelfModuleWithStatus(SCE_KERNEL_NO_RESIDENT, 0, NULL, NULL, NULL);
 }
@@ -913,14 +915,16 @@ asm(".word init_patch\n");
 #endif
 
 /* Setup the boot process of the rest of the PSP kernel modules. */
-s32 InitInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
+s32 InitInit(SceSize argSize, const void *argBlock)
 {
     SceUID threadId;
      
     const SceLoadCoreBootInfo *bootInfo = argBlock;
     g_MemBase = bootInfo->memBase;
     g_MemSize = bootInfo->memSize;
-    
+
+    sceKernelCheckDebugHandler((void *)argSize, (u32)argBlock);
+
     g_init = sceKernelQueryInitCB();
     InitCBInit(bootInfo);
     

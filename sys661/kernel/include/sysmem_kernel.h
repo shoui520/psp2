@@ -135,7 +135,7 @@ s32 sceKernelSetGcovFunction();
 s32 sceKernelCallGcovFunction();
 s32 sceKernelSetGprofFunction();
 s32 sceKernelCallGprofFunction();
-int sceKernelCheckDebugHandler();
+int sceKernelCheckDebugHandler(void *arg0, u32 arg1);
 s32 SysMemForKernel_7FF2F35A(char *arg);
 s32 SysMemForKernel_A03CB480(char *arg);
 
