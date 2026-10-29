@@ -22,7 +22,6 @@ CallListListener *CallListListenerConstruct(CallListListener *self);
 TimerListener *CallListListenerDestroy(TimerListener *base);
 void CallListListenerDelete(TimerListener *base);
 void CallListListenerOnFinish(TimerListener *base, void *data1, void *data2);
-void CallListListenerOnTick(TimerListener *base, void *data1, void *data2);
 
 static const struct {
 	int offset_to_top;
@@ -31,7 +30,7 @@ static const struct {
 } callListListenerClass = {
 	0, NULL, {
 		CallListListenerDestroy, CallListListenerDelete,
-		CallListListenerOnTick, CallListListenerOnFinish
+		TimerListenerOnTick, CallListListenerOnFinish
 	}
 };
 
@@ -115,7 +114,7 @@ TimerListener *CallListListenerDestroy(TimerListener *base)
 	}
 	self->m_list.m_list.root_node = (CallItemNode *)~0U;
 	self->m_list.m_list.count = ~0U;
-	ScePafMisc_CE6EB459(base);
+	TimerListenerDestroyBase(base);
 	return base;
 }
 
@@ -149,8 +148,4 @@ int CallListListenerInitialize(void)
 	ScePafThread_A5D3F1B5(&s_giant_lock, "ScePafCallListListener", 0);
 	return ScePafStdc_C95732BB(&s_giant_lock,
 		(void (*)(void *))ScePafThread_AD04A33D, &__dso_handle);
-}
-
-void CallListListenerOnTick(TimerListener *base, void *data1, void *data2)
-{
 }

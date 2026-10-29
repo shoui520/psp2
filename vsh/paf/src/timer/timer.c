@@ -28,6 +28,13 @@ const TimerClass timer3DClass = {
 	0, NULL, { Timer3DDestroy, Timer3DDelete }
 };
 
+const TimerListenerClass timerListenerClass = {
+	0, NULL, {
+		TimerListenerDestroy, TimerListenerDelete,
+		TimerListenerOnTick, TimerListenerOnFinish
+	}
+};
+
 Timer *TimerDestroy(Timer *self)
 {
 	float *param = self->m_param_x;
@@ -420,4 +427,40 @@ void Timer3DSetFuncZ(Timer3D *self, int func, const float *param)
 	self->m_func_z = TimerInitFuncParam(&self->base.base, func, param,
 					  &self->m_param_z, &param_count);
 	self->m_param_z_num = param_count;
+}
+
+void TimerListenerOnTick(TimerListener *self, void *data1, void *data2)
+{
+	(void)self;
+	(void)data1;
+	(void)data2;
+}
+
+void TimerListenerOnFinish(TimerListener *self, void *data1, void *data2)
+{
+	(void)self;
+	(void)data1;
+	(void)data2;
+}
+
+TimerListener *TimerListenerDestroy(TimerListener *self)
+{
+	Timer *timer = self->m_timer;
+
+	self->vtable = &timerListenerClass.methods;
+	if (timer)
+		timer->vtable->Delete(timer);
+	self->m_timer = NULL;
+	return self;
+}
+
+void TimerListenerDelete(TimerListener *self)
+{
+	TimerListenerDestroy(self);
+	PafDelete(self);
+}
+
+TimerListener *TimerListenerDestroyBase(TimerListener *self)
+{
+	return TimerListenerDestroy(self);
 }

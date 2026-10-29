@@ -193,6 +193,23 @@ struct TimerListener {
 	void *m_data;
 };
 
+typedef struct TimerListenerClass {
+	int offset_to_top;
+	const void *type_info;
+	TimerListenerVTable methods;
+} TimerListenerClass;
+
+#define timerListenerClass ScePafMisc_CBA79C25
+#define TimerListenerDestroy ScePafMisc_7731B37D
+#define TimerListenerDelete ScePafMisc_A8DFBD8D
+#define TimerListenerDestroyBase ScePafMisc_CE6EB459
+extern const TimerListenerClass timerListenerClass;
+TimerListener *TimerListenerDestroy(TimerListener *self);
+void TimerListenerDelete(TimerListener *self);
+TimerListener *TimerListenerDestroyBase(TimerListener *self);
+void TimerListenerOnTick(TimerListener *self, void *data1, void *data2);
+void TimerListenerOnFinish(TimerListener *self, void *data1, void *data2);
+
 typedef struct TimerListenerList TimerListenerList;
 
 typedef struct ListenerParam {
@@ -380,7 +397,6 @@ float TimerDoFuncSineOut(float rate);
 float TimerDoFuncSwing(float rate);
 float TimerDoFuncAngular(float rate);
 
-void ScePafMisc_CE6EB459(TimerListener *self); /* TimerListener::~TimerListener */
 ListenerParam *ScePafMisc_B90DBCA6(ListenerParam *self, TimerListener *listener,
 				unsigned char interval, void *data1, void *data2);
 void ScePafMisc_C565FD29(TimerListenerList *self, const ListenerParam *param);
