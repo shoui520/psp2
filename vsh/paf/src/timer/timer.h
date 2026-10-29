@@ -254,6 +254,11 @@ typedef char ListenerParamNodeSizeCheck[sizeof(ListenerParamNode) == 24 ? 1 : -1
 typedef char TimerListenerListSizeCheck[sizeof(TimerListenerList) == 56 ? 1 : -1];
 typedef char TimerListenerListMutexOffsetCheck[offsetof(TimerListenerList, m_list_mutex) == 24 ? 1 : -1];
 
+#define TimerListenerListConstruct ScePafMisc_841F0EFC
+#define TimerListenerListConstructBase ScePafMisc_E1666417
+TimerListenerList *TimerListenerListConstruct(TimerListenerList *self);
+TimerListenerList *TimerListenerListConstructBase(TimerListenerList *self);
+
 #define ListenerParamConstruct ScePafMisc_B90DBCA6
 ListenerParam *ListenerParamConstruct(ListenerParam *self, TimerListener *listener,
 				      unsigned char interval, void *data1, void *data2);

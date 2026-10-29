@@ -581,6 +581,36 @@ static void ListenerParamListPushBack(ListenerParamList *list, const ListenerPar
 	}
 }
 
+static TimerListenerList *TimerListenerListInitialize(TimerListenerList *self)
+{
+	ListenerParamNode *root;
+
+	self->m_list.count = 0;
+	root = PafNew(sizeof(*root));
+	if (!root)
+		ScePafStdc_D608246A();
+	self->m_list.root_node = root;
+	if (root) {
+		root->prev = root;
+		root->next = root;
+	}
+	self->m_iterator = NULL;
+	ScePafThread_C4BD9753(&self->m_list_mutex, "ScePafTimerListenerListMutex", 0);
+	self->m_iterator = self->m_list.root_node;
+	self->m_iterator_updated = 0;
+	return self;
+}
+
+TimerListenerList *TimerListenerListConstruct(TimerListenerList *self)
+{
+	return TimerListenerListInitialize(self);
+}
+
+TimerListenerList *TimerListenerListConstructBase(TimerListenerList *self)
+{
+	return TimerListenerListInitialize(self);
+}
+
 void ScePafMisc_C565FD29(TimerListenerList *self, const ListenerParam *param)
 {
 	ScePafThread_F9FFA0BE(&self->m_list_mutex);
