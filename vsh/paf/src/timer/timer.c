@@ -611,6 +611,41 @@ TimerListenerList *TimerListenerListConstructBase(TimerListenerList *self)
 	return TimerListenerListInitialize(self);
 }
 
+void TimerListenerListUpdate(TimerListenerList *self)
+{
+	ListenerParamNode *root;
+	ListenerParamNode *node;
+
+	ScePafThread_F9FFA0BE(&self->m_list_mutex);
+	root = self->m_list.root_node;
+	node = root ? root->next : NULL;
+	self->m_iterator = node;
+	while (node != root) {
+		TimerListenerDoTick(node->val.listener, node->val.data1, node->val.data2);
+		if (self->m_iterator_updated) {
+			self->m_iterator_updated = 0;
+			root = self->m_list.root_node;
+			node = self->m_iterator;
+		} else {
+			if (node->val.interval) {
+				TimerListener *listener = node->val.listener;
+				Timer *timer = listener->m_timer;
+
+				if (!timer || timer->m_state == STATE_HOLD ||
+				    (timer->m_state == STATE_FINISHED && timer->m_repeat == REPEAT_NONE))
+					TimerListenerResetTimer(listener);
+			}
+			node = self->m_iterator;
+			root = self->m_list.root_node;
+			if (node) {
+				node = node->next;
+				self->m_iterator = node;
+			}
+		}
+	}
+	ScePafThread_95F9C45F(&self->m_list_mutex);
+}
+
 void ScePafMisc_C565FD29(TimerListenerList *self, const ListenerParam *param)
 {
 	ScePafThread_F9FFA0BE(&self->m_list_mutex);

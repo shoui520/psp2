@@ -256,8 +256,10 @@ typedef char TimerListenerListMutexOffsetCheck[offsetof(TimerListenerList, m_lis
 
 #define TimerListenerListConstruct ScePafMisc_841F0EFC
 #define TimerListenerListConstructBase ScePafMisc_E1666417
+#define TimerListenerListUpdate ScePafMisc_07602568
 TimerListenerList *TimerListenerListConstruct(TimerListenerList *self);
 TimerListenerList *TimerListenerListConstructBase(TimerListenerList *self);
+void TimerListenerListUpdate(TimerListenerList *self);
 
 #define ListenerParamConstruct ScePafMisc_B90DBCA6
 ListenerParam *ListenerParamConstruct(ListenerParam *self, TimerListener *listener,
