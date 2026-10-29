@@ -121,6 +121,50 @@ ScePafMisc_B207334F:
 	PafEnumSizeWrapper ScePafMisc_24015182, 4
 	PafEnumSizeWrapper ScePafMisc_BD8A2E25, 8
 
+	.global ScePafMisc_2FEF71B0
+	.type ScePafMisc_2FEF71B0, %function
+	.thumb_func
+ScePafMisc_2FEF71B0:
+	.fnstart
+	push {r4, r5, r6, lr}
+	adds r4, r1, #0
+	adds r5, r0, #0
+	adds r0, r4, #0
+	bl ScePafMisc_A48D0607
+	adds r2, r0, #0
+	adds r0, r5, #0
+	ldr r1, [r0, #8]
+	ldr r3, [r0, #0xc]
+	mul r1, r1, r3
+	ldr.w lr, [r4, #0x10]
+	adds r0, r2, #0
+	mul lr, r0, lr
+	movs r3, #0
+	adds r2, r3, #0
+	adds r0, r5, #0
+	cbz r1, .Ldone2FEF
+	mov ip, r3
+.Lcompare2FEF:
+	cmp r3, r1
+	bhs .Lincrement2FEF
+	adds r4, r2, #0
+	cmp r3, r1
+	bhs .Lstore2FEF
+	ldr r4, [r0]
+	adds.w r4, r4, ip
+.Lstore2FEF:
+	str.w lr, [r4, #4]
+.Lincrement2FEF:
+	adds r3, #1
+	add.w ip, ip, #8
+	cmp r3, r1
+	blo .Lcompare2FEF
+.Ldone2FEF:
+	movs r0, #1
+	pop {r4, r5, r6, pc}
+	.fnend
+	.size ScePafMisc_2FEF71B0, . - ScePafMisc_2FEF71B0
+
 	.macro PafEnumSizeInEights name, input_offset
 	.global \name
 	.type \name, %function
