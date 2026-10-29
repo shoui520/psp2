@@ -18,7 +18,7 @@ int StdioInitialize(void)
 				(void (*)(void *))MutexDestroy, &__dso_handle);
 }
 
-void *sce_paf_private_fflush(void)
+void *_stdinit_stdio(void)
 {
 	return sce_paf_memset(streamTable, 0, sizeof(*streamTable));
 }
