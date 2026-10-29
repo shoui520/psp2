@@ -51,3 +51,60 @@ ScePafMisc_EE135486:
 	bx lr
 	.fnend
 	.size ScePafMisc_EE135486, . - ScePafMisc_EE135486
+
+	.global ScePafMisc_293092F5
+	.type ScePafMisc_293092F5, %function
+	.thumb_func
+ScePafMisc_293092F5:
+	.fnstart
+	vldmia r1!, {d16, d17}
+	vmov.i32 q11, #0
+	vldmia r1!, {d18, d19, d20, d21}
+	vorr d26, d16, d16
+	vorr d31, d23, d23
+	vorr d27, d16, d16
+	vorr d28, d20, d20
+	vorr d29, d20, d20
+	vsli.64 d26, d18, #0x20
+	vsri.64 d18, d16, #0x20
+	vorr d16, d21, d21
+	vsri.64 d31, d20, #0x20
+	vsli.64 d28, d22, #0x20
+	vsri.64 d22, d20, #0x20
+	vmov.i64 d24, #0xffffffff
+	vorr d20, d17, d17
+	vorr d0, d18, d18
+	vorr d30, d22, d22
+	vbif d29, d23, d24
+	vbif d21, d23, d24
+	vsli.64 d20, d19, #0x20
+	vbif d27, d19, d24
+	vmov.f32 d22, #1.0
+	vorr d18, d26, d26
+	vorr d19, d29, d29
+	vorr d17, d21, d21
+	vorr d16, d20, d20
+	vorr d20, d0, d0
+	vorr d21, d31, d31
+	adds.w r2, r0, #0x10
+	vmov.i32 d24, #0
+	vshl.i64 d25, d22, #0x20
+	adds.w r3, r2, #0x10
+	vstmia r0, {d18, d19}
+	vstmia r2, {d20, d21}
+	adds.w r2, r3, #0x10
+	vstmia r3, {d16, d17}
+	vstmia r2, {d24, d25}
+	vldmia r1, {d22, d23}
+	vmov.f32 q13, #1.0
+	vneg.f32 q0, q11
+	vmul.f32 q9, q9, d0[0]
+	vmul.f32 q10, q10, d0[1]
+	vmla.f32 q9, q8, d1[0]
+	vmla.f32 q10, q12, q13
+	vadd.f32 q8, q9, q10
+	vstr d16, [r0, #0x30]
+	vstr d17, [r0, #0x38]
+	bx lr
+	.fnend
+	.size ScePafMisc_293092F5, . - ScePafMisc_293092F5
