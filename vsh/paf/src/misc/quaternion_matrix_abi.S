@@ -97,3 +97,53 @@ ScePafMisc_2921E1B2:
 	pop {r4, r5, r6, pc}
 	.fnend
 	.size ScePafMisc_2921E1B2, . - ScePafMisc_2921E1B2
+
+/* Two guarded in-place quaternion-to-matrix adapters with original VFP copies. */
+	.macro PafQuaternionCopy name
+	.global \name
+	.type \name, %function
+	.thumb_func
+\name:
+	.fnstart
+	push {r4, r5, lr}
+	sub sp, #0x44
+	movw r5, #:lower16:__stack_chk_guard
+	movt r5, #:upper16:__stack_chk_guard
+	ldr r2, [r5]
+	str r2, [sp, #0x40]
+	movw r2, #0xb717
+	movt r2, #0x38d1
+	vmov s0, r2
+	adds r4, r0, #0
+	add r0, sp, #0
+	bl ScePafMisc_2921E1B2
+	add r0, sp, #0
+	vldmia r0, {d16, d17}
+	adds.w r1, r0, #0x10
+	vldmia r1, {d18, d19}
+	adds.w r0, r1, #0x10
+	vldmia r0!, {d20, d21}
+	adds.w r1, r4, #0x10
+	vstmia r4, {d16, d17}
+	vstmia r1, {d18, d19}
+	vldmia r0, {d22, d23}
+	adds.w r0, r1, #0x10
+	vstmia r0, {d20, d21}
+	adds.w r1, r0, #0x10
+	adds r0, r4, #0
+	vstmia r1, {d22, d23}
+	ldr r2, [sp, #0x40]
+	ldr r1, [r5]
+	cmp r1, r2
+	bne .Lfail\@
+	add sp, #0x44
+	pop {r4, r5, pc}
+.Lfail\@:
+	blx __stack_chk_fail
+	nop
+	.fnend
+	.size \name, . - \name
+	.endm
+
+	PafQuaternionCopy ScePafMisc_8D77CF9A
+	PafQuaternionCopy ScePafMisc_BF7ABEE9
