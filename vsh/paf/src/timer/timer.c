@@ -486,3 +486,60 @@ void TimerListenerResetTimer(TimerListener *self)
 		TimerResetTimer(timer);
 	}
 }
+
+float Timer2DDoTick(Timer2D *self)
+{
+	Timer *timer = &self->base;
+	float ret;
+
+	if (timer->m_state == STATE_HOLD)
+		return timer->m_curr * timer->m_total_inv;
+	ret = TimerDoTick(timer);
+	if (timer->m_state == STATE_ACTIVE)
+		self->m_mapped_y = TimerDoFunc(timer, ret, self->m_func_y,
+					     self->m_mapped_y, self->m_param_y);
+	else
+		self->m_mapped_y = timer->m_mapped_x;
+	return ret;
+}
+
+float Timer3DDoTick(Timer3D *self)
+{
+	Timer *timer = &self->base.base;
+	float ret;
+
+	if (timer->m_state == STATE_HOLD)
+		return timer->m_curr * timer->m_total_inv;
+	ret = TimerDoTick(timer);
+	if (timer->m_state == STATE_ACTIVE) {
+		self->base.m_mapped_y = TimerDoFunc(timer, ret, self->base.m_func_y,
+						  self->base.m_mapped_y, self->base.m_param_y);
+		self->m_mapped_z = TimerDoFunc(timer, ret, self->m_func_z,
+					     self->m_mapped_z, self->m_param_z);
+	} else {
+		self->base.m_mapped_y = timer->m_mapped_x;
+		self->m_mapped_z = timer->m_mapped_x;
+	}
+	return ret;
+}
+
+float TimerListenerDoTick(TimerListener *self, void *data1, void *data2)
+{
+	Timer *timer = self->m_timer;
+	float ret;
+
+	if (!timer)
+		return 0.0f;
+	if (timer->m_is_3d)
+		ret = Timer3DDoTick((Timer3D *)timer);
+	else if (timer->m_is_2d)
+		ret = Timer2DDoTick((Timer2D *)timer);
+	else
+		ret = TimerDoTick(timer);
+	self->vtable->OnTick(self, data1, data2);
+	timer = self->m_timer;
+	if (timer->m_state == STATE_HOLD ||
+	    (timer->m_state == STATE_FINISHED && timer->m_repeat == REPEAT_NONE))
+		self->vtable->OnFinish(self, data1, data2);
+	return ret;
+}

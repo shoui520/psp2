@@ -211,6 +211,12 @@ void TimerListenerOnTick(TimerListener *self, void *data1, void *data2);
 void TimerListenerOnFinish(TimerListener *self, void *data1, void *data2);
 #define TimerListenerResetTimer ScePafMisc_1F758B43
 void TimerListenerResetTimer(TimerListener *self);
+#define Timer2DDoTick ScePafMisc_D95E74E7
+#define Timer3DDoTick ScePafMisc_3F83FE5B
+#define TimerListenerDoTick ScePafMisc_6C0856E5
+float Timer2DDoTick(Timer2D *self);
+float Timer3DDoTick(Timer3D *self);
+float TimerListenerDoTick(TimerListener *self, void *data1, void *data2);
 
 typedef struct TimerListenerList TimerListenerList;
 
