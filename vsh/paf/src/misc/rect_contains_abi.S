@@ -93,3 +93,67 @@ ScePafMisc_BC570EAF:
 	bx lr
 	.fnend
 	.size ScePafMisc_BC570EAF, . - ScePafMisc_BC570EAF
+
+	.global ScePafMisc_EF621B8C
+	.type ScePafMisc_EF621B8C, %function
+	.thumb_func
+ScePafMisc_EF621B8C:
+	.fnstart
+	vmov.f32 s0, #0.5
+	vldr s3, [r0, #8]
+	vldr s1, [r1, #8]
+	vldr s4, [r0]
+	vldr s2, [r1]
+	vmul.f32 s3, s3, s0
+	vmul.f32 s1, s1, s0
+	vsub.f32 s5, s4, s3
+	vadd.f32 s6, s2, s1
+	vcmp.f32 s5, s6
+	vmrs apsr_nzcv, fpscr
+	bge .Lfalse1EF
+	b .Lnext1EF
+.Lfalse1EF:
+	movs r0, #0
+	b .LreturnEF
+.Lnext1EF:
+	vadd.f32 s3, s4, s3
+	vsub.f32 s1, s2, s1
+	vcmp.f32 s3, s1
+	vmrs apsr_nzcv, fpscr
+	bls .Lfalse2EF
+	b .Lnext2EF
+.Lfalse2EF:
+	movs r0, #0
+	b .LreturnEF
+.Lnext2EF:
+	vldr s2, [r0, #0xc]
+	vldr s4, [r1, #0xc]
+	vldr s3, [r0, #4]
+	vldr s1, [r1, #4]
+	vmul.f32 s2, s2, s0
+	vmul.f32 s0, s4, s0
+	vadd.f32 s4, s3, s2
+	vsub.f32 s5, s1, s0
+	vcmp.f32 s4, s5
+	vmrs apsr_nzcv, fpscr
+	bls .Lfalse3EF
+	b .Lnext3EF
+.Lfalse3EF:
+	movs r0, #0
+	b .LreturnEF
+.Lnext3EF:
+	vsub.f32 s2, s3, s2
+	vadd.f32 s0, s1, s0
+	vcmp.f32 s2, s0
+	vmrs apsr_nzcv, fpscr
+	bge .Lfalse4EF
+	b .LtrueEF
+.Lfalse4EF:
+	movs r0, #0
+	b .LreturnEF
+.LtrueEF:
+	movs r0, #1
+.LreturnEF:
+	bx lr
+	.fnend
+	.size ScePafMisc_EF621B8C, . - ScePafMisc_EF621B8C
