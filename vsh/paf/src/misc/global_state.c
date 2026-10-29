@@ -99,6 +99,19 @@ uint32_t ScePafMisc_57080F75(int32_t mode)
 	return sce_paf_misc_value_1088;
 }
 
+int ScePafMisc_ED289E89(uint32_t requested, int require_all)
+{
+	uint32_t active = 0;
+	uint32_t selected;
+	uint32_t i;
+
+	for (i = 0; i < 7; i++)
+		if ((int32_t)sce_paf_misc_counters_d200[i] > 0)
+			active |= 1U << i;
+	selected = active & requested;
+	return require_all ? selected == requested : selected != 0;
+}
+
 uint32_t ScePafMisc_4E93C051(void)
 {
 	return sce_paf_misc_flags_ee98;
