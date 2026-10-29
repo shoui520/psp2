@@ -710,6 +710,13 @@ int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 address, const SceUInt32 *
 #define SCE_GXM_CONTEXT_TYPE_IMMEDIATE	0
 #define SCE_GXM_CONTEXT_TYPE_DEFERRED	1
 
+typedef enum SceGxmYuvProfile {
+	SCE_GXM_YUV_PROFILE_BT601_STANDARD,
+	SCE_GXM_YUV_PROFILE_BT709_STANDARD,
+	SCE_GXM_YUV_PROFILE_BT601_FULL_RANGE,
+	SCE_GXM_YUV_PROFILE_BT709_FULL_RANGE
+} SceGxmYuvProfile;
+
 /* SceGxmContext.dirty: state words to send with the next draw */
 #define GXM_DIRTY_FRONT_ISP		0x00000001
 #define GXM_DIRTY_FRONT_BIAS		0x00000002

@@ -11,6 +11,7 @@ set(GXM_SOURCES
 	context_deferred.c
 	context_flush.c
 	context_init.c
+	context_job.c
 	context_state.c
 	device_mem.c
 	display_queue.c
