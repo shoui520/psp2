@@ -28,6 +28,7 @@
  * 
  */
 
+#include <sysmem_kernel.h>
 #include <sysmem_utils_kernel.h>
 #include <modulemgr_nids.h>
 #include "clibUtils.h"
@@ -57,8 +58,9 @@ static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFu
                                    va_list ap);
 static SceUID module_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, s32 funcId, 
                                va_list ap);
-static s32 CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion);
-static void updateUIDName(SceModule *mod);
+static SceUID __attribute__((noinline)) getModuleUid(SceSysmemUidCB *cb);
+static s32 __attribute__((noinline)) CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion);
+static void __attribute__((noinline)) updateUIDName(SceModule *mod);
 
 //0x00008020
 /*
@@ -83,7 +85,8 @@ const u32 g_hashData[NUM_MD5_HASHES * sizeof(u32)] = {
 	0x0FC5364D, 0xF2EA99AA, 0x7A418AA1, 0xFEC29EA1,
 };
 
-static SceSysmemUidCB *g_ModuleType; //0x00008404
+static SceSysmemUidCB *g_ModuleType; //0x00008384
+static SceUID g_ModuleUidXor; //0x00008388
 
 //Subroutine LoadCoreForKernel_2C44F793 - Address 0x00006844
 /*
@@ -117,7 +120,7 @@ SceModule *sceKernelCreateModule(void)
         return NULL;
     }
     //0x000068D0 - 0x0000689C
-    mod->modId = cb->uid; //0x000068A0
+    mod->modId = cb->uid ^ g_ModuleUidXor; //0x000068A0
     mod->moduleStartThreadPriority = SCE_KERNEL_VALUE_UNITIALIZED;
     mod->moduleStartThreadStacksize = SCE_KERNEL_VALUE_UNITIALIZED;
     mod->moduleStartThreadAttr = SCE_KERNEL_VALUE_UNITIALIZED;
@@ -170,12 +173,12 @@ s32 sceKernelAssignModule(SceModule *mod, SceLoadCoreExecFileInfo *execFileInfo)
     for (tmpMod = g_loadCore.registeredMods; tmpMod; tmpMod = tmpMod->next) {
          if (strcmp(execFileInfo->moduleInfo->modName, tmpMod->modName) == 0) { //0x0000695C
              if (tmpMod->modId > foundUid) { //0x00006974
-                 foundUid = mod->modId; //0x0000697C
-                 foundMod = mod; //0x00006980
+                 foundUid = tmpMod->modId; //0x0000697C
+                 foundMod = tmpMod; //0x00006980
              }
         }
     }
-    if (foundMod && foundMod->attribute == SCE_MODULE_ATTR_EXCLUSIVE_LOAD) //0x00006990 & 0x000069A0
+    if (foundMod && (foundMod->attribute & SCE_MODULE_ATTR_EXCLUSIVE_LOAD)) //0x00006990 & 0x000069A0
         return SCE_ERROR_KERNEL_EXCLUSIVE_LOAD;
     
     status = CheckDevkitVersion(execFileInfo->moduleInfo, &modDevKitVersion); //0x000069AC
@@ -305,6 +308,7 @@ s32 sceKernelGetModuleIdListForKernel(SceUID *modIdList, u32 size, u32 *modCount
  */
 s32 ModuleServiceInit(void)
 {
+    g_ModuleUidXor = sceKernelGetInitialRandomValue();
     return sceKernelCreateUIDtype(MODULE_UID_TYPE_NAME, sizeof(SceModule), ModuleFuncs, 0, &g_ModuleType);
 }
 
@@ -492,7 +496,7 @@ SceUID sceKernelGetModuleListWithAlloc(u32 *modCount)
     return blockId;
 }
 
-//sub_00007228
+//sub_00007164
 /*
  * Register the created UIDControlBlock for a new module in the
  * linked-list of the UID type of "module" objects?
@@ -502,12 +506,12 @@ static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFu
 {
     SceModule *mod;
     
-    sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcId, ap); //0x00007234
+    sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcId, ap); //0x00007174
     
     mod = UID_CB_TO_DATA(cb, g_ModuleType, SceModule);
     
-    mod->modId = cb->uid; //0x0000725C
-    mod->entryAddr = SCE_KERNEL_VALUE_UNITIALIZED; //0x00007260
+    mod->modId = getModuleUid(cb); //0x00007190
+    mod->entryAddr = SCE_KERNEL_VALUE_UNITIALIZED; //0x0000719c
     mod->version[MODULE_VERSION_MINOR] = 0; //0x00007264
     mod->version[MODULE_VERSION_MAJOR] = 0; //0x00007268
     mod->terminal = 0; //0x0000726C
@@ -528,10 +532,10 @@ static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFu
     mod->entTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B0
     mod->stubTop = (void *)SCE_KERNEL_VALUE_UNITIALIZED; //0x000072B4
     
-    return cb->uid;
+    return getModuleUid(cb);
 }
 
-//sub_000072C0
+//sub_0000720C
 /*
  * Unlink a UIDControlBlock belonging to an unloaded module
  * from the linked-list of the UID type of "module" objects?
@@ -540,10 +544,16 @@ static SceUID module_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, 
                                va_list ap)
 {
     sceKernelCallUIDObjCommonFunction(cb, uidWithFunc, funcId, ap);
-    return cb->uid;
+    return getModuleUid(cb);
 }
 
-//sub_000072E8
+//sub_00007238
+static SceUID __attribute__((noinline)) getModuleUid(SceSysmemUidCB *cb)
+{
+    return cb->uid ^ g_ModuleUidXor;
+}
+
+//sub_0000724C
 /*
  * We check if a module's resident libraries have a legal SDK
  * version.  A library's SDK version is legal when it is 
@@ -551,7 +561,7 @@ static SceUID module_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, 
  * If a resident library does not have a legal SDK version, 
  * the module won't be loaded.
  */
-static s32 CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion)
+static s32 __attribute__((noinline)) CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion)
 {
     u32 i;
     u32 ver;
@@ -564,27 +574,26 @@ static s32 CheckDevkitVersion(SceModuleInfo *modInfo, u32 *fileDevKitVersion)
              //0x0000732C - 0x00007370
              for (i = 0; i < curEntryTable->vStubCount; i++) {
                   if (curEntryTable->entryTable[curEntryTable->stubCount + i] == NID_MODULE_SDK_VERSION) { //0x0000735C
-                      ver = *(u32 *)curEntryTable->entryTable[curEntryTable->stubCount * 2 + curEntryTable->stubCount + i];
+                      ver = *(u32 *)curEntryTable->entryTable[curEntryTable->stubCount * 2 + curEntryTable->vStubCount + i];
                       if (ver > SDK_VERSION) //0x000073A0
                           return SCE_ERROR_KERNEL_UNSUPPORTED_PRX_TYPE;
                       *fileDevKitVersion = ver;
                       return SCE_ERROR_OK;
                   }
-                  break;
              } 
          }
     }
     return SCE_ERROR_OK;
 }
 
-//sub_000073B8
+//sub_0000731C
 /*
  * Once a module is in the process of being loaded, its UID name
  * is updated in order to make identifying the module easier.
  * Recall that creating a module only sets a temporary UID name,
  * as we didn't know the module's name or is purpose back then.
  */
-static void updateUIDName(SceModule *mod)
+static void __attribute__((noinline)) updateUIDName(SceModule *mod)
 {
     if ((mod->status & 0x2000) == 0 && mod->moduleBlockId > 0) { //0x000073D0 & 0x000073DC
         if ((mod->attribute & (SCE_MODULE_KIRK_MEMLMD_LIB | SCE_MODULE_KIRK_SEMAPHORE_LIB)) == 0) {

@@ -227,7 +227,7 @@ static u32 sceKernelSetSetMaskFunction(s32 (*funcPtr)(u32 unk1, vs32 *addr)); //
 static u32 sceKernelSetCompareSubType(s32 (*funcPtr)(u32 tag)); //sub_0000565C
 static u32 sceKernelSetCompareLatestSubType(u32 (*funcPtr)(u32 tag)); //sub_0000566C
 
-static __inline__ void StopLoadCore(void);
+static __inline__ void __attribute__((always_inline)) StopLoadCore(void);
 
 s32 (*g_loadCoreHeap)(void) = (s32 (*)(void))LoadCoreHeapStatic; //0x000080A0
 void (*g_UpdateCacheAll)(void) = UpdateCacheAllStatic; //0x000080A4
@@ -676,7 +676,6 @@ static s32 aVariableLinkApply(u32 *arg1, u32 exportedVar, u32 linkOption, u32 is
 s32 loadCoreInit(SceSize argSize __attribute__((unused)), const void *argBlock)
 {
     u32 i;
-    for (i = 0; i < 480 * 272 * 2; i++) *(int*)(0x44000000 + i * 4) = 0x00FF0000;
     s32 seedPart1;
     s32 status;    
     s32 linkLibsRes;
@@ -1844,7 +1843,6 @@ static s32 doLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32
     for (curStubTable = stubLibEntryTable; curStubTable < stubTableMemRange; 
        curStubTable += ((SceStubLibraryEntryTable *)curStubTable)->len * sizeof(u32)) {       
          stubLib = NewLibStubCB(); //0x000030D8
-         CopyLibStub(stubLib, curStubTable, isUserMode); //0x000030EC
          if (CopyLibStub(stubLib, curStubTable, isUserMode) != SCE_ERROR_OK) { //0x000030F4 
              FreeLibStubCB(stubLib); //0x00003230
              return SCE_ERROR_KERNEL_ERROR; 
@@ -2507,7 +2505,7 @@ s32 sceKernelSegmentChecksum(SceModule *mod)
 }
 
 /* Stop the system initialization. */
-static __inline__ void StopLoadCore(void)
+static __inline__ void __attribute__((always_inline)) StopLoadCore(void)
 {
     s32 intrState;
     u32 hwRamType;
