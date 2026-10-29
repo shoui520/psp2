@@ -112,6 +112,47 @@ int ScePafMisc_ED289E89(uint32_t requested, int require_all)
 	return require_all ? selected == requested : selected != 0;
 }
 
+float *ScePafMisc_ED46DA1B(uint32_t width, uint32_t height)
+{
+	float w = (float)width;
+	float h = (float)height;
+	float x_offset = sce_paf_misc_float_1134;
+	float y_offset = sce_paf_misc_float_1138;
+	float viewport_width = sce_paf_misc_float_113c;
+	float viewport_height = sce_paf_misc_float_1140;
+	float x_scale = viewport_width / (w - x_offset * 2.0f);
+	float y_scale = viewport_height / (h - y_offset * 2.0f);
+
+	sce_paf_misc_float_112c = w;
+	sce_paf_misc_float_1130 = h;
+	sce_paf_misc_float_1144 = x_scale;
+	sce_paf_misc_float_1148 = y_scale;
+	sce_paf_misc_float_114c = 1.0f / x_scale;
+	sce_paf_misc_float_1150 = 1.0f / y_scale;
+	return &sce_paf_misc_float_1150;
+}
+
+float *ScePafMisc_F905553F(int32_t x, int32_t y,
+			uint32_t width, uint32_t height)
+{
+	float fx = (float)x;
+	float fy = (float)y;
+	float w = (float)width;
+	float h = (float)height;
+	float x_scale = w / (sce_paf_misc_float_112c - fx * 2.0f);
+	float y_scale = h / (sce_paf_misc_float_1130 - fy * 2.0f);
+
+	sce_paf_misc_float_1134 = fx;
+	sce_paf_misc_float_1138 = fy;
+	sce_paf_misc_float_113c = w;
+	sce_paf_misc_float_1140 = h;
+	sce_paf_misc_float_1144 = x_scale;
+	sce_paf_misc_float_1148 = y_scale;
+	sce_paf_misc_float_114c = 1.0f / x_scale;
+	sce_paf_misc_float_1150 = 1.0f / y_scale;
+	return &sce_paf_misc_float_1150;
+}
+
 uint32_t ScePafMisc_4E93C051(void)
 {
 	return sce_paf_misc_flags_ee98;
