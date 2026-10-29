@@ -303,8 +303,10 @@ PVRSRV_ERROR PVRSRVFreeSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo)
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 #else
-	if (--psSyncInfo->psSyncDataMemInfoKM->ui32RefCount == 0)
-		FreeDeviceMem(psSyncInfo->psSyncDataMemInfoKM);
+	PVRSRV_KERNEL_MEM_INFO *psSyncDataMemInfoKM = psSyncInfo->psSyncDataMemInfoKM;
+
+	if (--psSyncDataMemInfoKM->ui32RefCount == 0)
+		FreeDeviceMem(psSyncDataMemInfoKM);
 #endif
 	OSFreeMem(psSyncInfo);
 	return PVRSRV_OK;
