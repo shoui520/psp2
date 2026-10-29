@@ -233,7 +233,7 @@ vendorCommand:
 			avc->ctype = 12;
 			goto sendResponse;
 		}
-		goto invalidParameter;
+		goto unsupportedPdu;
 	case 0x120:
 		if (length <= 21 || vendor->packetType)
 			goto invalidParameter;
