@@ -265,8 +265,10 @@ static inline SceSize gxmProgramBufferWords(const SceGxmProgram *program)
 static inline void gxmPatcherFreeRegistered(SceGxmShaderPatcher *patcher,
 					    SceGxmRegisteredProgram *registered)
 {
-	registered->prev->next = registered->next;
-	registered->next->prev = registered->prev;
+	SceGxmRegisteredProgram *prev = registered->prev, *next = registered->next;
+
+	prev->next = next;
+	next->prev = prev;
 	patcher->bufferMemAllocated -= gxmProgramBufferWords(registered->programHeader) * 4;
 	if (registered->thread != NULL) {
 		patcher->bufferFree(patcher->bufferUserData, registered->thread);
@@ -313,7 +315,7 @@ int sceGxmShaderPatcherRegisterProgram(SceGxmShaderPatcher *shaderPatcher,
 				       const SceGxmProgram *programHeader,
 				       SceGxmShaderPatcherId *programId)
 {
-	SceGxmRegisteredProgram *registered, *list;
+	SceGxmRegisteredProgram *registered, *list, *prev;
 	SceSize size;
 	void *mem;
 	int err;
@@ -391,10 +393,11 @@ int sceGxmShaderPatcherRegisterProgram(SceGxmShaderPatcher *shaderPatcher,
 	registered->vertexPrograms = NULL;
 	registered->fragmentPrograms = NULL;
 	list = shaderPatcher->programs;
+	prev = list->prev;
 	registered->next = list;
-	registered->prev = list->prev;
+	registered->prev = prev;
 	list->prev = registered;
-	registered->prev->next = registered;
+	prev->next = registered;
 	shaderPatcher->hostMemAllocated += sizeof(*registered);
 	*programId = registered;
 	return 0;
@@ -1098,7 +1101,7 @@ setup:
 		goto freeHost;
 	}
 	bank = usseOffset >> 24;
-	if (bank != 9 && (bank < 4 || bank > 6)) {
+	if (bank != 9 && bank - 4 > 3) {
 		err = SCE_GXM_ERROR_INVALID_POINTER;
 		shaderPatcher->fragmentUsseFree(shaderPatcher->fragmentUsseUserData, usseMem);
 		goto freeHost;

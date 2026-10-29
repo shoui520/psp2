@@ -139,27 +139,27 @@ divide:
 			for (i = 0, attribute = attributes; i < attributeCount; i++, attribute++) {
 				if (attribute->streamIndex != stream)
 					continue;
+				size = attribute->componentCount *
+				       gxmAttributeFormatGetSize(attribute->format);
 				*code++ = (dataIndex >> 1) << 18 | GXM_PDS_FETCH_ATTRIBUTE;
+				word = (((size + 3) >> 2) - 1) | attribute->regIndex << 8;
 				data[dataIndex * 2] = attribute->offset;
-				data[dataIndex * 2 + 1] =
-					(((attribute->componentCount *
-					   gxmAttributeFormatGetSize(attribute->format) + 3) >> 2) - 1) |
-					attribute->regIndex << 8;
+				data[dataIndex * 2 + 1] = word;
 				dataIndex += 2;
 			}
 		} else {
 			for (i = 0, attribute = attributes; i < attributeCount; i++, attribute++) {
 				if (attribute->streamIndex != stream)
 					continue;
+				size = attribute->componentCount *
+				       gxmAttributeFormatGetSize(attribute->format);
 				*code++ = (dataIndex >> 1) << 18 | GXM_PDS_FETCH_ATTRIBUTE;
+				word = (((size + 3) >> 2) - 1) | attribute->regIndex << 8;
 				patches[i].streamIndex = stream;
 				patches[i].offset = attribute->offset;
 				patches[i].dataWord = dataIndex << 1;
 				data[dataIndex * 2] = attribute->offset;
-				data[dataIndex * 2 + 1] =
-					(((attribute->componentCount *
-					   gxmAttributeFormatGetSize(attribute->format) + 3) >> 2) - 1) |
-					attribute->regIndex << 8;
+				data[dataIndex * 2 + 1] = word;
 				dataIndex += 2;
 			}
 		}
@@ -289,6 +289,7 @@ int gxmPdsBuildFragmentProgram(GxmChunkBuffer *buffer, const SceGxmTexture *text
 	SceUInt32 *data, *code, size, dataSize, words, iterator, slot, word, coord, uv, i, sampler;
 	SceUInt32 dataOffset, programOffset, endOffset, high, low;
 	const GxmProgramFragmentInput *input;
+	const SceGxmTexture *texture;
 
 	if (inputCount == 0) {
 		size = 0x18;
@@ -336,10 +337,11 @@ int gxmPdsBuildFragmentProgram(GxmChunkBuffer *buffer, const SceGxmTexture *text
 			for (i = 0; i < inputCount; i++) {
 				if ((inputs[i].word & 0xf) == 0xf)
 					continue;
-				data[slot + 0] = textures[inputs[i].textureIndex].controlWords[0];
-				data[slot + 1] = textures[inputs[i].textureIndex].controlWords[1];
-				data[slot + 2] = textures[inputs[i].textureIndex].controlWords[2];
-				data[slot + 3] = textures[inputs[i].textureIndex].controlWords[3];
+				texture = &textures[inputs[i].textureIndex];
+				data[slot + 0] = texture->controlWords[0];
+				data[slot + 1] = texture->controlWords[1];
+				data[slot + 2] = texture->controlWords[2];
+				data[slot + 3] = texture->controlWords[3];
 				slot += 4;
 			}
 		}

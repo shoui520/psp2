@@ -95,12 +95,13 @@ int gxmFragmentBuildInit(GxmFragmentBuild *build, const SceGxmProgram *program,
 			return SCE_GXM_ERROR_UNSUPPORTED;
 		blendCount = gxmBlendGetInstructionCount(gxmProgramGetVaryings(program)->fragment.outputRegister,
 							 blendInfo, type, &build->blend);
-		if (!gxmBlendReadsDestination(blendInfo)) {
-			/* blending replaces the output write */
+		if (gxmBlendReadsDestination(blendInfo) && multisampleMode != 0) {
+			/* a phase of its own, after the output write's phase */
+			blendCount++;
+		} else {
+			/* blending is part of the output write */
 			outputCount += blendCount;
 			blendCount = 0;
-		} else if (multisampleMode != 0) {
-			blendCount++;
 		}
 	}
 	if (outputCount == 0)
