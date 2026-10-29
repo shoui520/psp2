@@ -1014,7 +1014,7 @@ int SceCtrlForDriver_B26C2231(SceUID pid)
 }
 
 /* Names unknown: kernel side of the corresponding user APIs. */
-int ctrlIsMultiControllerSupported(void)
+__attribute__((noinline)) int ctrlIsMultiControllerSupported(void)
 {
 	return SceSysrootForDriver_8AA268D6(1);
 }
@@ -1067,7 +1067,7 @@ out:
 }
 
 /* Names unknown: forwarding entries used by the corresponding user APIs. */
-int ctrlSetActuator(int port, const SceCtrlActuator *state)
+__attribute__((noinline)) int ctrlSetActuator(int port, const SceCtrlActuator *state)
 {
 	if (!ctrlStorage.vibrationEnabled)
 		return 0;
@@ -1076,35 +1076,35 @@ int ctrlSetActuator(int port, const SceCtrlActuator *state)
 	return ctrlStorage.virtualDriver->setActuator(port, state);
 }
 
-int ctrlSetLightBar(int port, uint8_t red, uint8_t green, uint8_t blue)
+__attribute__((noinline)) int ctrlSetLightBar(int port, uint8_t red, uint8_t green, uint8_t blue)
 {
 	if (!ctrlStorage.virtualDriver)
 		return SCE_CTRL_ERROR_NOT_SUPPORTED;
 	return ctrlStorage.virtualDriver->setLightBar(port, red, green, blue);
 }
 
-int ctrlResetLightBar(int port)
+__attribute__((noinline)) int ctrlResetLightBar(int port)
 {
 	if (!ctrlStorage.virtualDriver)
 		return SCE_CTRL_ERROR_NOT_SUPPORTED;
 	return ctrlStorage.virtualDriver->resetLightBar(port);
 }
 
-int ctrlSingleControllerMode(int port)
+__attribute__((noinline)) int ctrlSingleControllerMode(int port)
 {
 	if (!ctrlStorage.virtualDriver)
 		return SCE_CTRL_ERROR_NOT_SUPPORTED;
 	return ctrlStorage.virtualDriver->singleControllerMode(port);
 }
 
-int ctrlGetBatteryInfo(int port, uint8_t *battery)
+__attribute__((noinline)) int ctrlGetBatteryInfo(int port, uint8_t *battery)
 {
 	if (!ctrlStorage.virtualDriver)
 		return SCE_CTRL_ERROR_NOT_SUPPORTED;
 	return ctrlStorage.virtualDriver->getBatteryInfo(port, battery);
 }
 
-int ctrlDisconnect(int port)
+__attribute__((noinline)) int ctrlDisconnect(int port)
 {
 	if (!ctrlStorage.virtualDriver)
 		return SCE_CTRL_ERROR_NOT_SUPPORTED;
@@ -2274,7 +2274,7 @@ int ctrlSetAnalogStickCheckTarget(uint32_t target)
 	return 0;
 }
 
-int ctrlGetAnalogStickCheckTarget(uint32_t *target)
+__attribute__((noinline)) int ctrlGetAnalogStickCheckTarget(uint32_t *target)
 {
 	if (!target)
 		return (int)SCE_CTRL_ERROR_INVALID_ARG;
@@ -2300,7 +2300,7 @@ int ctrlSetAnalogStickCheckMode(uint32_t mode)
 	return 0;
 }
 
-int ctrlGetAnalogStickCheckMode(uint32_t *mode)
+__attribute__((noinline)) int ctrlGetAnalogStickCheckMode(uint32_t *mode)
 {
 	if (!mode)
 		return (int)SCE_CTRL_ERROR_INVALID_ARG;
