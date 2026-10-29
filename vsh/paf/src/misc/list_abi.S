@@ -50,3 +50,41 @@ ScePafMisc_0078AC09:
 	pop {r4, pc}
 	.fnend
 	.size ScePafMisc_0078AC09, . - ScePafMisc_0078AC09
+
+	.global ScePafMisc_EB1C375C
+	.type ScePafMisc_EB1C375C, %function
+	.thumb_func
+ScePafMisc_EB1C375C:
+	.fnstart
+	push {r4, lr}
+	adds r4, r0, #0
+	ldr r2, [r4, #8]
+	cbnz r2, .LactiveEB1
+	movs r0, #0
+	b .LreturnEB1
+.LactiveEB1:
+	ldr r1, [r4, #4]
+	ldr r0, [r1]
+	ldr r0, [r0, #8]
+	cbnz r0, .LreturnEB1
+.LloopEB1:
+	cbz r1, .LtestEB1
+	ldr r0, [r1]
+	ldr r2, [r0]
+	ldr r3, [r0, #4]
+	str r2, [r3]
+	ldr r1, [r0, #4]
+	str r1, [r2, #4]
+	bl sce_paf_free
+	ldr r2, [r4, #8]
+	subs r2, #1
+	ldr r1, [r4, #4]
+	str r2, [r4, #8]
+.LtestEB1:
+	cmp r2, #0
+	bne .LloopEB1
+	movs r0, #0
+.LreturnEB1:
+	pop {r4, pc}
+	.fnend
+	.size ScePafMisc_EB1C375C, . - ScePafMisc_EB1C375C
