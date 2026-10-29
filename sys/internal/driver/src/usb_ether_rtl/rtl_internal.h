@@ -78,12 +78,10 @@ int rtlWriteUsb16(struct RtlAdapter *a, unsigned int reg, unsigned short value);
 int rtlWriteUsb32(struct RtlAdapter *a, unsigned int reg, unsigned int value);
 int rtlEnableReceive(struct RtlAdapter *a);
 int rtlUpdateLink(struct RtlAdapter *a);
-int rtlWorker(SceSize length, void *arg);
+int workerEntry(SceSize length, void *arg);
 int rtlProcessEvent(int event, int type, void *parameter, void *context);
 void rtlPowerEvent(int event, int value);
 int rtlSendBuffer(struct RtlAdapter *a, void *data, unsigned int length);
 int rtlReceiveBuffer(struct RtlAdapter *a, void *data, unsigned int length);
-int rtlWakeFeature(struct RtlAdapter *a);
-void rtlPopulateInterface(struct RtlAdapter *a);
 
 #endif
