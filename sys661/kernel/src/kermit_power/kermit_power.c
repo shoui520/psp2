@@ -337,22 +337,22 @@ s32 scePowerGetBatteryLifeTime(void);
 s32 scePowerGetBatteryVolt(void);
 s32 scePower_23436A4A(void);
 
-static int powerSysEventHandler(int ev_id, char *ev_name, void *param, int *result);
-static s32 initSuspendSubsys(void);
-static s32 exitSuspendSubsys(void);
-static s32 initIdleSubsys(void);
-static s32 exitIdleSubsys(void);
-static s32 initClockSubsys(void);
-static s32 exitClockSubsys(void);
-static s32 lockClockMutex(void);
-static s32 unlockClockMutex(void);
-static s32 clockRebootPhase(int phase);
-static s32 changeClockFrequency(int pllfreq, int cpufreq, int busfreq);
-static s32 initBatterySubsys(u32 a0, u32 a1);
-static s32 exitBatterySubsys(void);
-static s32 setBatteryThresholds(u32 a0, u32 a1);
-static s32 resetBatteryState(void);
-static s32 updateBatteryEvent(const u32 *evData, u32 *statusFlags);
+static int __attribute__((noipa)) powerSysEventHandler(int ev_id, char *ev_name, void *param, int *result);
+static s32 __attribute__((noipa)) initSuspendSubsys(void);
+static s32 __attribute__((noipa)) exitSuspendSubsys(void);
+static s32 __attribute__((noipa)) initIdleSubsys(void);
+static s32 __attribute__((noipa)) exitIdleSubsys(void);
+static s32 __attribute__((noipa)) initClockSubsys(void);
+static s32 __attribute__((noipa)) exitClockSubsys(void);
+static s32 __attribute__((noipa)) lockClockMutex(void);
+static s32 __attribute__((noipa)) unlockClockMutex(void);
+static s32 __attribute__((noipa)) clockRebootPhase(int phase);
+static s32 __attribute__((noipa)) changeClockFrequency(int pllfreq, int cpufreq, int busfreq);
+static s32 __attribute__((noipa)) initBatterySubsys(u32 a0, u32 a1);
+static s32 __attribute__((noipa)) exitBatterySubsys(void);
+static s32 __attribute__((noipa)) setBatteryThresholds(u32 a0, u32 a1);
+static s32 __attribute__((noipa)) resetBatteryState(void);
+static s32 __attribute__((noipa)) updateBatteryEvent(const u32 *evData, u32 *statusFlags);
 
 static const ScePowerHandlers g_power_handlers = {
 	sizeof(ScePowerHandlers),
@@ -1121,7 +1121,7 @@ s32 scePower_3951AF53(void)
 	return (res < 0) ? res : 0;
 }
 
-static void disablePeripheralsForSuspend(void)
+static void __attribute__((noipa)) disablePeripheralsForSuspend(void)
 {
 	int i;
 
@@ -1139,7 +1139,7 @@ static void disablePeripheralsForSuspend(void)
 	}
 }
 
-static void syncKermitDma(void)
+static void __attribute__((noipa)) syncKermitDma(void)
 {
 	__asm__ volatile("sync");
 	HW(0xbd000004U) = 0xf;
@@ -1149,14 +1149,16 @@ static void syncKermitDma(void)
 	}
 }
 
-static void saveRestoreClockSysreg(int save);
-static s32 restoreClockSysregPhase(int phase);
+static void __attribute__((noipa)) saveRestoreClockSysreg(int save);
+static s32 __attribute__((noipa)) restoreClockSysregPhase(int phase);
+static void __attribute__((noipa)) powerResumeEntry(u32 *arg);
 
-static s32 executePowerTransition(int transMode)
+static s32 __attribute__((noipa)) executePowerTransition(int transMode)
 {
 	u32 spBuf[0x160 / 4];
 	int intr;
 	int i;
+	s32 retry;
 	s32 savedHcount;
 	u64 sysTime;
 	s32 savedPll = 0, savedCpu = 0, savedBus = 0;
@@ -1212,8 +1214,11 @@ static s32 executePowerTransition(int transMode)
 
 	intr = sceKernelCpuSuspendIntr();
 	sceKernelSysEventDispatch(0xff00, 0x400, "phase1", spBuf, NULL, 0, NULL);
+	retry = 0;
 	for (;;) {
 		sceKernelSysEventDispatch(0xff00, 0x401, "phase1", spBuf, NULL, 0, NULL);
+		if (scePower_driver_var_3080D4C0 != 0 && retry == 499)
+			sceKermitPeripheral_driver_15F5C107();
 		if (sceKernelSysEventDispatch(0xff00, 0x402, "phase1", spBuf,
 					      (int *)&spBuf[0x13c / 4], 1,
 					      (SceSysEventHandler **)&spBuf[0x140 / 4]) >= 0 &&
@@ -1222,6 +1227,7 @@ static s32 executePowerTransition(int transMode)
 		    checkBusyPowerCallbacks(0x90000U, (SceUID *)&spBuf[0x144 / 4]) == 0) {
 			break;
 		}
+		retry++;
 		sceKernelCpuResumeIntr(intr);
 		sceKernelDelayThread(10000);
 		intr = sceKernelCpuSuspendIntr();
@@ -1241,24 +1247,54 @@ static s32 executePowerTransition(int transMode)
 		sceKernelSysEventDispatch(0xff00, 0x4000 + i, "phase0", spBuf, NULL, 0, NULL);
 
 	sceKernelDcacheWritebackAll();
+	{
+		u8 seed[8] = { 0x12, 0x34, 0x56, 0x78, 0x9a, 0x00, 0xde, 0xf0 };
+		u32 sha1[5];
+		sceKernelUtilsSha1Digest(seed, 8, (u8 *)sha1);
+		u64 fuseId = sceSysregGetFuseId();
+		sha1[0] ^= (u32)fuseId;
+		sha1[1] ^= (u32)(fuseId >> 32);
+		sceKernelUtilsSha1Digest((u8 *)sha1, 20, (u8 *)sha1);
+		u32 resumePoint = (((u32)&spBuf[0x80 / 4]) | 1U) ^
+				  (sha1[0] ^ sha1[1] ^ sha1[2] ^ sha1[3] ^ sha1[4]);
+		Kprintf("uiResumePoint: 0x%08X 0x%08x\n", resumePoint, (u32)powerResumeEntry);
+		spBuf[0xb0 / 4] = (u32)powerResumeEntry;
+		HW(0xbfc001fcU) = resumePoint;
+		u32 pllOut = (u32)sceSysregPllGetOutSelect();
+		*(u32 *)(g_suspend_save_buf + 0x5000) = pllOut;
+		u32 ddrVal = (u32)sceDdr_driver_00E36648();
+		*(u32 *)(g_suspend_save_buf + 0x5004) = ddrVal;
+		spBuf[0xac / 4] = ddrVal;
+		spBuf[0xa8 / 4] = pllOut;
+	}
 	saveRestoreClockSysreg(1);
 	sceKernelDispatchSuspendHandlers(0);
 	g_susp_ctx.suspending = 0;
 
 	if ((transMode & 0xf00) == 0x200) {
 		UtilsForKernel_A6B0A6B8();
-		UtilsForKernel_39FFB756(0);
+		int st = UtilsForKernel_39FFB756(0);
 		if (sceSuspendForKernel_67B59042(0) == 0) {
 			sceKernelDcacheWritebackAll();
 			syncKermitDma();
-			HW(0xabd88000U) = 1;
+			HW(0xabd78000U) = 1;
 			syncKermitDma();
 		}
+		UtilsForKernel_39FFB756(st);
+	} else if ((transMode & 0xf00) == 0x300) {
+		UtilsForKernel_A6B0A6B8();
+		int st = UtilsForKernel_39FFB756(0);
+		if (sceSuspendForKernel_67B59042(0) == 0) {
+			memset(g_suspend_save_buf + 0x4e08, 0, 0xd4);
+			g_susp_ctx.resumeCount++;
+			sceSuspendForKernel_B2C9640B(1);
+		}
+		UtilsForKernel_39FFB756(st);
 	}
 
 	sceKernelDispatchResumeHandlers(0);
 	restoreClockSysregPhase(0);
-	sceDdr_driver_E0A39D3E(0);
+	sceDdr_driver_E0A39D3E(*(int *)(g_suspend_save_buf + 0x5004));
 	for (i = 0; i < 16; i++)
 		sceKernelSysEventDispatch(0xff0000, 0x10000 + i, "phase0", &spBuf[0x40 / 4], NULL, 0, NULL);
 
@@ -1267,7 +1303,13 @@ static s32 executePowerTransition(int transMode)
 	sceKernelClearEventFlag(g_susp_ctx.evfId, (u32)(-0x1f4));
 	notifyPowerCallbacks(0x10000U, 0x20000U, 0);
 	scePowerTick(0);
-	sceDisplayAdjustAccumulatedHcount(savedHcount);
+	while (sceDisplayIsVblank() == 0) {
+	}
+	while (sceDisplayIsVblank() != 0) {
+	}
+	while (sceDisplayGetCurrentHcount() < savedHcount) {
+	}
+	sceDisplayAdjustAccumulatedHcount((int)sysTime);
 	sceKernelSysEventDispatch(0xff0000, 0x40000, "melt", &spBuf[0x40 / 4], NULL, 0, NULL);
 	sceKernelCpuResumeIntr(intr);
 
@@ -1287,6 +1329,40 @@ static s32 executePowerTransition(int transMode)
 	sceKermitPeripheral_driver_6D6AA215();
 	sceCtrlSetButtonIntercept(0x10000, 0);
 	return 0;
+}
+
+static void __attribute__((noipa)) powerResumeEntry(u32 *arg)
+{
+	if (arg != NULL) {
+		s32 len = (s32)arg[0];
+		u8 *src = (u8 *)arg;
+		u8 *dst = g_suspend_save_buf + 0x5008;
+		s32 i;
+		for (i = 0; i < len; i++)
+			dst[i] = src[i];
+		*(u32 *)(g_suspend_save_buf + 0x501c) = 0;
+		void (*fn)(u32) = (void (*)(u32))arg[5];
+		if (fn != NULL)
+			fn(*(u32 *)(g_suspend_save_buf + 0x5000));
+	}
+	u32 r0 = HW(0xbfc00200U);
+	u32 r1 = HW(0xbfc00204U);
+	u32 r2 = HW(0xbfc00208U);
+	u32 r3 = HW(0xbfc0020cU);
+	u32 r4 = HW(0xbfc00210U);
+	u32 r5 = HW(0xbfc00214U);
+	u32 r6 = HW(0xbfc00218U);
+	u32 r7 = HW(0xbfc0021cU);
+	g_susp_ctx.resumeCount++;
+	HW(0xbfc00200U) = r0;
+	HW(0xbfc00204U) = r1;
+	HW(0xbfc00208U) = r2;
+	HW(0xbfc0020cU) = r3;
+	HW(0xbfc00210U) = r4;
+	HW(0xbfc00214U) = r5;
+	HW(0xbfc00218U) = r6;
+	HW(0xbfc0021cU) = r7;
+	sceSuspendForKernel_B2C9640B(1);
 }
 
 static int powerMainThread(SceSize args, void *argp)
