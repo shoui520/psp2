@@ -117,3 +117,35 @@ ScePafMisc_49034205:
 	pop {r4, pc}
 	.fnend
 	.size ScePafMisc_49034205, . - ScePafMisc_49034205
+
+	.global ScePafMisc_2B325CC6
+	.type ScePafMisc_2B325CC6, %function
+	.thumb_func
+ScePafMisc_2B325CC6:
+	.fnstart
+	push {r4, lr}
+	ldr r2, [r0, #0x48]
+	cmp r2, #1
+	ldrh.w r4, [r0, #0x52]
+	bne .LnoHalf2B3
+	ldr r2, [r0, #0x20]
+	cbz r1, .LskipHalf2B3
+.LhalfLoop2B3:
+	adds r0, r2, #1
+	add.w r2, r0, r0, lsr #31
+	subs r1, #1
+	asr.w r2, r2, #1
+	bne .LhalfLoop2B3
+.LskipHalf2B3:
+	b .Ldivide2B3
+.LnoHalf2B3:
+	ldr r2, [r0, #0x20]
+.Ldivide2B3:
+	adds r0, r2, r4
+	subs r0, #1
+	adds r1, r4, #0
+	bl __divsi3
+	mul r0, r0, r4
+	pop {r4, pc}
+	.fnend
+	.size ScePafMisc_2B325CC6, . - ScePafMisc_2B325CC6
