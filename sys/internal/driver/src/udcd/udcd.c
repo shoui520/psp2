@@ -235,7 +235,7 @@ SceUInt32 udcdAlarmTick(void *argp)
 static inline __attribute__((always_inline)) void udcdPublishState(int bus)
 {
 	struct udcdBusState *state = &udcdState.buses[bus];
-	unsigned int pattern, changed;
+	unsigned int pattern, activation, changed;
 	int configured;
 
 	sceKernelClearEventFlag(state->stateEvent, 0);
@@ -253,10 +253,13 @@ static inline __attribute__((always_inline)) void udcdPublishState(int bus)
 			state->alarmTickTimer = SceThreadmgrForDriver_C58DF384("SceUdcdAlarmTickTimer",
 				0, udcdAlarmTick, (void *)(uintptr_t)2);
 	}
-	changed = state->activationState & ~state->notifiedMask;
-	if (state->callbackThread != -1 && (changed & state->callbackMask) &&
-	    sceKernelSetEventWithNotifyCallback(state->callbackEvent, 0x1000000, 0, changed) >= 0)
-		state->notifiedMask = changed;
+	activation = state->activationState;
+	if (state->callbackThread != -1) {
+		changed = activation & ~state->notifiedMask;
+		if ((changed & state->callbackMask) &&
+		    sceKernelSetEventWithNotifyCallback(state->callbackEvent, 0x1000000, 0, changed) >= 0)
+			state->notifiedMask = changed;
+	}
 }
 
 void udcdUpdateStateEvent(int bus)
@@ -340,8 +343,8 @@ int SceUdcdForDriver_45EB0177(SceUdcdDeviceInfo *information, int bus)
 {
 	if (!udcdIsDriverBus(bus))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
-	memcpy(information, &udcdState.buses[bus].deviceInformation,
-	       sizeof(udcdState.buses[bus].deviceInformation));
+	information->lastEvent = udcdState.buses[bus].deviceInformation.lastEvent;
+	information->eventDetail = udcdState.buses[bus].deviceInformation.eventDetail;
 	return 0;
 }
 
@@ -490,8 +493,14 @@ int udcdAssignEndpointNumbers(int bus)
 	struct udcdBusState *state = &udcdState.buses[bus];
 	SceUdcdDriver *driver;
 	SceUdcdEndpoint *endpoint, *candidate;
-	int occupied[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
-	int index, alias, number, direction;
+	int occupied[8];
+	int direction[8];
+	int index, alias, number;
+
+	for (number = 0; number < 8; number++)
+		occupied[number] = -1;
+	for (number = 1; number < 8; number++)
+		direction[number] = number & 1 ? 0x80 : 0;
 
 	for (driver = state->drivers; driver; driver = driver->link) {
 		driver->endpoints[0].endpointNumber = 0;
@@ -510,15 +519,15 @@ int udcdAssignEndpointNumbers(int bus)
 			if (endpoint->endpointNumber)
 				continue;
 			for (number = 1; number < 8; number++) {
-				direction = number & 1 ? 0x80 : 0;
-				if (occupied[number] == -1 && endpoint->direction == direction)
+				if (occupied[number] == -1 && endpoint->direction == direction[number]) {
+					endpoint->endpointNumber = number;
+					occupied[number] = number;
+					state->endpoints[endpoint->endpointNumber].endpoint = endpoint;
 					break;
+				}
 			}
-			if (number == 8)
+			if (endpoint->endpointNumber == 0)
 				return 0x80243308;
-			endpoint->endpointNumber = number;
-			occupied[number] = number;
-			state->endpoints[number].endpoint = endpoint;
 		}
 	}
 	return 0;
@@ -834,14 +843,9 @@ static inline __attribute__((always_inline)) int udcdQueueRequest(
 	number = request->endpoint->endpointNumber;
 	endpoint = &state->endpoints[number];
 	tail = endpoint->requestTail;
-	if (!number && tail)
-		return SCE_UDCD_ERROR_DRIVER_IN_PROGRESS;
-	request->transmitted = 0;
-	request->returnCode = receive ? 3 : 2;
-	if (!number) {
-		endpoint->requestHead = request;
-		endpoint->requestTail = request;
-	} else {
+	if (number) {
+		request->transmitted = 0;
+		request->returnCode = receive ? 3 : 2;
 		if (tail)
 			tail->next = request;
 		else
@@ -853,6 +857,13 @@ static inline __attribute__((always_inline)) int udcdQueueRequest(
 			tail = next;
 		}
 		endpoint->requestTail = tail;
+	} else {
+		if (tail)
+			return SCE_UDCD_ERROR_DRIVER_IN_PROGRESS;
+		request->transmitted = 0;
+		request->returnCode = receive ? 3 : 2;
+		endpoint->requestHead = request;
+		endpoint->requestTail = request;
 	}
 	if (receive)
 		udcdState.operations[bus].receiveRequest(number, status, bus);
@@ -1094,6 +1105,7 @@ int udcdSetActivationEnabled(unsigned int flag, int bus)
 /* the event names of each bus */
 static const char *const s_connectNames[3] = { "SceUdcd0Connect", "SceUdcd1Connect", "SceUdcd2Connect" };
 static const char *const s_phyReadyNames[3] = { "SceUdcd0PhyReady", "SceUdcd1PhyReady", "SceUdcd2PhyReady" };
+static const char *const s_callbackNames[3] = { "SceUdcd0Connect", "SceUdcd1Connect", "SceUdcd2Connect" };
 
 int module_start(SceSize args, void *argp)
 {
@@ -1120,7 +1132,7 @@ int module_start(SceSize args, void *argp)
 		state->descriptorMemBlock = 0;
 		state->driverSetting = 0;
 		state->alarmTickTimer = -1;
-		state->callbackEvent = sceKernelCreateSimpleEvent(s_connectNames[bus], 0, 0, NULL);
+		state->callbackEvent = sceKernelCreateSimpleEvent(s_callbackNames[bus], 0, 0, NULL);
 		state->callbackProcess = -1;
 		state->callbackThread = -1;
 		state->lock = 0;
@@ -1285,12 +1297,15 @@ __attribute__((noinline)) int udcdIsDriverBus(int bus)
 int udcdValidateDriverDescriptors(const SceUdcdDriver *driver)
 {
 	const SceUdcdDeviceDescriptor *device = driver->descriptor;
-	const SceUdcdConfiguration *config = driver->configuration;
+	const SceUdcdConfiguration *config;
 	const SceUdcdEndpointDescriptor *endpoint;
 	unsigned int packetSize, transferType;
 	int index;
 
-	if (!device || !config)
+	if (!device)
+		return 0x80243306;
+	config = driver->configuration;
+	if (!config)
 		return 0x80243306;
 	packetSize = device->bMaxPacketSize0;
 	if (packetSize != 8 && packetSize != 16 && packetSize != 32 &&
@@ -1384,13 +1399,9 @@ static inline __attribute__((always_inline)) void udcdFillDeviceQualifier(
 	const SceUdcdDeviceDescriptor *device,
 	SceUdcdDeviceQualifierDescriptor *qualifier)
 {
+	memcpy(qualifier, device, 8);
 	qualifier->bLength = 10;
 	qualifier->bDescriptorType = 6;
-	qualifier->bcdUSB = device->bcdUSB;
-	qualifier->bDeviceClass = device->bDeviceClass;
-	qualifier->bDeviceSubClass = device->bDeviceSubClass;
-	qualifier->bDeviceProtocol = device->bDeviceProtocol;
-	qualifier->bMaxPacketSize0 = device->bMaxPacketSize0;
 	qualifier->bNumConfigurations = device->bNumConfigurations;
 	qualifier->bReserved = 0;
 }
@@ -2031,7 +2042,7 @@ unlock:
 	return result;
 }
 
-int udcdActivateBus(unsigned int productId, unsigned int policy, int bus)
+__attribute__((noinline)) int udcdActivateBus(unsigned int productId, unsigned int policy, int bus)
 {
 	return udcdActivateBusImpl(productId, policy, bus);
 }
@@ -2167,7 +2178,7 @@ static inline __attribute__((always_inline)) int udcdStartDriverImpl(
 	return 0;
 }
 
-int udcdStartDriver(const char *name, unsigned int args, void *argp, int bus)
+__attribute__((noinline)) int udcdStartDriver(const char *name, unsigned int args, void *argp, int bus)
 {
 	return udcdStartDriverImpl(name, args, argp, bus);
 }
@@ -2259,7 +2270,7 @@ static inline __attribute__((always_inline)) int udcdStopDriverImpl(
 	return 0;
 }
 
-int udcdStopDriver(const char *name, unsigned int args, void *argp, int bus)
+__attribute__((noinline)) int udcdStopDriver(const char *name, unsigned int args, void *argp, int bus)
 {
 	return udcdStopDriverImpl(name, args, argp, bus);
 }
@@ -2664,8 +2675,10 @@ int udcdGetStatusRequest(SceKernelIntrStatus *status, int bus)
 		if (state->controlRequest.wIndex)
 			return -1;
 		attributes = state->fullSpeedConfiguration->configDescriptors->bmAttributes;
-		udcdState.controlResponse[0] = (attributes >> 6) & 1;
-		if (state->fullSpeedConfiguration->configDescriptors->bmAttributes & 0x20)
+		udcdState.controlResponse[0] = 0;
+		if (attributes & 0x40)
+			udcdState.controlResponse[0] = 1;
+		if (attributes & 0x20)
 			udcdState.controlResponse[0] |= 2;
 	} else if (recipient == 2) {
 		endpoint = state->controlRequest.wIndex & 0xf;

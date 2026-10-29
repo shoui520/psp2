@@ -371,7 +371,7 @@ int udcdStandardRequest(SceUdcdEP0DeviceRequest *request, SceKernelIntrStatus *s
 int udcdStartController(int bus, SceKernelIntrStatus *status);
 void udcdSendRequest(int number, SceKernelIntrStatus *status, int bus);
 int udcdControllerInterrupt(int intr, void *argp);
-void udcdSuspendAll(void);
+int udcdSuspendAll(void);
 int udcdSuspendCharging(void);
 void udcdResumeAll(void);
 int udcdInitializeControllers(void);

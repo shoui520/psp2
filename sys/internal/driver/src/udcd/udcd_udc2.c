@@ -1428,7 +1428,7 @@ unlock:
 }
 
 /* Original name unknown. System suspend: stop every running controller. */
-void udcdSuspendAll(void)
+int udcdSuspendAll(void)
 {
 	struct udcdBusState *state;
 	SceKernelIntrStatus status;
@@ -1448,6 +1448,7 @@ void udcdSuspendAll(void)
 		}
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	}
+	return 0;
 }
 
 /* Original name unknown. Before suspend: report USB charging as suspended. */

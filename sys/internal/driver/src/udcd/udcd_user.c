@@ -137,7 +137,7 @@ int sceUdcdUnregisterCallback(SceUID callback)
 	}
 	process = sceKernelGetProcessId();
 	thread = sceKernelGetThreadId();
-	if ((process | thread) < 0) {
+	if (process < 0 || thread < 0) {
 		sceSyscallLeave(t);
 		return UDCD_ERROR_NO_THREAD;
 	}
