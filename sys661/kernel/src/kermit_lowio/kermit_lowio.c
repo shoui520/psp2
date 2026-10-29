@@ -17,7 +17,7 @@ extern void *memcpy(void *dst, const void *src, u32 n);
  * Part 1: sceSysreg_driver (178 exported functions)
  * ========================================================================= */
 
-static float g_pllBaseFreq = 37.0f;
+static volatile float g_pllBaseFreq = 37.0f;
 static float g_pllFreqTable[16] = {
 	166.5f, 333.0f, 444.0f, 222.0f, 190.28572f, 380.57144f, 266.4f, 532.8f,
 	148.0f, 148.0f, 148.0f, 148.0f, 148.0f,     148.0f,     148.0f, 148.0f
@@ -28,7 +28,7 @@ static u8 g_usbIoRefMask;
 static u32 g_sysregSubIntrMask;
 static u32 g_sysregSubIntrRot;
 
-static s32 sysreg_mod_reg(u32 addr, u32 mask, s32 enable)
+static inline __attribute__((always_inline)) s32 sysreg_mod_reg(u32 addr, u32 mask, s32 enable)
 {
 	s32 intr = sceKernelCpuSuspendIntr();
 	u32 val = REG32(addr);
@@ -40,37 +40,37 @@ static s32 sysreg_mod_reg(u32 addr, u32 mask, s32 enable)
 	return (val & mask) != 0;
 }
 
-static s32 sysreg_reset_ctrl(u32 mask, s32 enable)
+__attribute__((noipa)) static s32 sysreg_reset_ctrl(u32 mask, s32 enable)
 {
 	return sysreg_mod_reg(0xBC10004C, mask, enable);
 }
 
-static s32 sysreg_busclk_ctrl(u32 mask, s32 enable)
+__attribute__((noipa)) static s32 sysreg_busclk_ctrl(u32 mask, s32 enable)
 {
 	return sysreg_mod_reg(0xBC100050, mask, enable);
 }
 
-static s32 sysreg_clk1_ctrl(u32 mask, s32 enable)
+__attribute__((noipa)) static s32 sysreg_clk1_ctrl(u32 mask, s32 enable)
 {
 	return sysreg_mod_reg(0xBC100054, mask, enable);
 }
 
-static s32 sysreg_clk2_ctrl(u32 mask, s32 enable)
+__attribute__((noipa)) static s32 sysreg_clk2_ctrl(u32 mask, s32 enable)
 {
 	return sysreg_mod_reg(0xBC100058, mask, enable);
 }
 
-static s32 sysreg_io_ctrl(u32 mask, s32 enable)
+__attribute__((noipa)) static s32 sysreg_io_ctrl(u32 mask, s32 enable)
 {
 	return sysreg_mod_reg(0xBC100078, mask, enable);
 }
 
-static s32 sysreg_gpio_io_ctrl(u32 mask, s32 enable)
+__attribute__((noipa)) static s32 sysreg_gpio_io_ctrl(u32 mask, s32 enable)
 {
 	return sysreg_mod_reg(0xBC10007C, mask, enable);
 }
 
-static s32 sysreg_unk74_ctrl(u32 mask, s32 enable)
+__attribute__((noipa)) static s32 sysreg_unk74_ctrl(u32 mask, s32 enable)
 {
 	return sysreg_mod_reg(0xBC100074, mask, enable);
 }
@@ -247,8 +247,8 @@ s32 sceSysregAudioClkDisable(s32 no)
 	if ((u32)no >= 2) return 0x80000102;
 	return sysreg_clk2_ctrl(0x10000 << no, 0);
 }
-static s32 sub_0768(void) { return sysreg_clk2_ctrl(0x80000, 1); }
-static s32 sub_0774(void) { return sysreg_clk2_ctrl(0x80000, 0); }
+static s32 sub_0768(void) { return sysreg_clk2_ctrl(0x40000, 1); }
+static s32 sub_0774(void) { return sysreg_clk2_ctrl(0x40000, 0); }
 s32 sceSysregSircsClkEnable(void) { return sysreg_clk2_ctrl(0x400000, 1); }
 s32 sceSysregSircsClkDisable(void) { return sysreg_clk2_ctrl(0x400000, 0); }
 s32 sceSysregGpioClkEnable(void) { return sysreg_clk2_ctrl(0x800000, 1); }
@@ -256,38 +256,46 @@ s32 sceSysregGpioClkDisable(void) { return sysreg_clk2_ctrl(0x800000, 0); }
 s32 sceSysregAudioClkoutClkEnable(void) { return sysreg_clk2_ctrl(0x1000000, 1); }
 s32 sceSysregAudioClkoutClkDisable(void) { return sysreg_clk2_ctrl(0x1000000, 0); }
 s32 sceSysreg_driver_F9C93DD4(void) { return sysreg_clk2_ctrl(0x2000000, 1); }
-s32 sceSysreg_driver_B6296512(void)
+s32 sceSysreg_driver_B6296512(void) { return sysreg_clk2_ctrl(0x2000000, 0); }
+
+/* Special Clock1 controls (0xBC100054) */
+__attribute__((noipa)) static s32 sub_08f8(s32 a0)
 {
 	s32 intr = sceKernelCpuSuspendIntr();
-	u32 val = REG32(0xBC100058);
-	u32 prev = (val >> 25) & 1;
-	REG32(0xBC100058) = val & ~0x2000000U;
+	u32 val = REG32(0xBC100054);
+	u32 bit31 = (REG32(0xBC100040) >> 31) & 1;
+	u32 m0 = bit31 ? 0x10U : 0x90U;
+	u32 m1 = bit31 ? 0x04010010U : 0x10080U;
+	u32 mask = ((a0 & 2) != 0) ? m1 : m0;
+	u32 next = val & ~mask;
+	if ((a0 & 1) != 0)
+		next = val | mask;
+	REG32(0xBC100054) = next;
+	sceKernelCpuResumeIntr(intr);
+	return 0;
+}
+s32 sceSysreg_driver_FC0131A7(void) { return sub_08f8(1); }
+s32 sceSysreg_driver_C9585F8E(void) { return sub_08f8(0); }
+s32 sceSysreg_driver_68AE6434(void) { return sub_08f8(3); }
+s32 sceSysreg_driver_14EB1393(void) { return sub_08f8(2); }
+__attribute__((noipa)) static s32 sub_0984(s32 mask, s32 enable)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	u32 val = REG32(0xBC100054);
+	u32 prev = (val >> 4) & 0xF;
+	u32 m = mask & 0xF;
+	u32 next_nib = enable ? (prev | m) : (prev & ~m);
+	REG32(0xBC100054) = (val & ~0xF0U) | ((next_nib & 0xF) << 4);
 	sceKernelCpuResumeIntr(intr);
 	return prev;
 }
-
-/* Special Clock1 controls (0xBC100054) */
-s32 sceSysreg_driver_FC0131A7(void) { return sysreg_clk1_ctrl(0x01000000, 1); }
-s32 sceSysreg_driver_C9585F8E(void) { return sysreg_clk1_ctrl(0x01000000, 0); }
-s32 sceSysreg_driver_68AE6434(void) { return sysreg_clk1_ctrl(0x02000000, 1); }
-s32 sceSysreg_driver_14EB1393(void) { return sysreg_clk1_ctrl(0x02000000, 0); }
 s32 sceSysregUsbClkEnable(s32 mask)
 {
-	if ((u32)(mask - 1) >= 15) return 0x80000107;
-	s32 intr = sceKernelCpuSuspendIntr();
-	u32 val = REG32(0xBC100054);
-	REG32(0xBC100054) = val | ((mask & 0xF) << 4);
-	sceKernelCpuResumeIntr(intr);
-	return (val >> 4) & 0xF;
+	return sub_0984(mask, 1);
 }
 s32 sceSysregUsbClkDisable(s32 mask)
 {
-	if ((u32)(mask - 1) >= 15) return 0x80000107;
-	s32 intr = sceKernelCpuSuspendIntr();
-	u32 val = REG32(0xBC100054);
-	REG32(0xBC100054) = val & ~((mask & 0xF) << 4);
-	sceKernelCpuResumeIntr(intr);
-	return (val >> 4) & 0xF;
+	return sub_0984(mask, 0);
 }
 
 /* IO controls (0xBC100078, 0xBC10007C, 0xBC100074) */
@@ -307,8 +315,8 @@ s32 sceSysregMsifIoDisable(s32 no)
 	if ((u32)no >= 2) return 0x80000102;
 	return sysreg_io_ctrl(0x0010 << no, 0);
 }
-static s32 sub_0a80(void);
-static s32 sub_0a8c(void);
+static s32 sub_0a80(void) { return sysreg_io_ctrl(0x0040, 1); }
+static s32 sub_0a8c(void) { return sysreg_io_ctrl(0x0040, 0); }
 s32 sceSysregAudioIoEnable(s32 no)
 {
 	if ((u32)no >= 2) return 0x80000102;
@@ -355,10 +363,10 @@ s32 sceSysreg_driver_DA5B5ED9(s32 no)
 	if ((u32)no >= 2) return 0x80000102;
 	return sysreg_io_ctrl(0x00400000 << no, 0);
 }
-static s32 sub_0ca8(void) { return sysreg_io_ctrl(0x08000000, 1); }
-static s32 sub_0cb4(void) { return sysreg_io_ctrl(0x08000000, 0); }
-static s32 sub_0cc0(void) { return sysreg_io_ctrl(0x10000000, 1); }
-static s32 sub_0ccc(void) { return sysreg_io_ctrl(0x10000000, 0); }
+static s32 sub_0ca8(void) { return sysreg_io_ctrl(0x8000, 1); }
+static s32 sub_0cb4(void) { return sysreg_io_ctrl(0x8000, 0); }
+static s32 sub_0cc0(void) { return sysreg_io_ctrl(0x80000000U, 1); }
+static s32 sub_0ccc(void) { return sysreg_io_ctrl(0x80000000U, 0); }
 s32 sceSysreg_driver_0607A4C4(void) { return sysreg_io_ctrl(0x40000000, 1); }
 s32 sceSysreg_driver_803E5F37(void) { return sysreg_io_ctrl(0x40000000, 0); }
 
@@ -404,49 +412,49 @@ s32 sceSysreg_driver_84E0F197(s32 no, s32 enable)
 /* USB / USBhost / MSIF status & interrupts */
 s32 sceSysregUsbGetConnectStatus(void)
 {
-	return REG32(0xBC100070) & 1;
+	return REG32(0xBC100080) & 1;
 }
 s32 sceSysregUsbQueryIntr(void)
 {
-	return (REG32(0xBC100070) >> 1) & 0xF;
+	return (REG32(0xBC100080) >> 1) & 0xF;
 }
 s32 sceSysregUsbAcquireIntr(s32 mask)
 {
 	s32 intr = sceKernelCpuSuspendIntr();
-	u32 v = (REG32(0xBC100070) >> 1) & 0xF;
-	REG32(0xBC100070) = (mask & v) << 1;
+	u32 v = (REG32(0xBC100080) >> 1) & 0xF;
+	REG32(0xBC100080) = ((mask & v) & 0xF) << 1;
 	sceKernelCpuResumeIntrWithSync(intr);
 	return v;
 }
 s32 sceSysregUsbhostQueryIntr(void)
 {
-	return (REG32(0xBC100070) >> 5) & 3;
+	return REG32(0xBC1000B0) & 7;
 }
 s32 sceSysregUsbhostAcquireIntr(s32 mask)
 {
 	s32 intr = sceKernelCpuSuspendIntr();
-	u32 v = (REG32(0xBC100070) >> 5) & 3;
-	REG32(0xBC100070) = (mask & v) << 5;
+	u32 v = REG32(0xBC1000B0) & 7;
+	REG32(0xBC1000B0) = (mask & v) & 7;
 	sceKernelCpuResumeIntrWithSync(intr);
 	return v;
 }
 s32 sceSysregMsifGetConnectStatus(s32 no)
 {
 	if ((u32)no >= 2) return 0x80000102;
-	return (REG32(0xBC100070) >> ((no << 2) + 8)) & 1;
+	return (REG32(0xBC100080) >> ((no << 3) + 8)) & 1;
 }
 s32 sceSysregMsifQueryConnectIntr(s32 no)
 {
 	if ((u32)no >= 2) return 0x80000102;
-	return (REG32(0xBC100070) >> ((no << 2) + 9)) & 7;
+	return (REG32(0xBC100080) >> ((no << 3) + 9)) & 7;
 }
 s32 sceSysregMsifAcquireConnectIntr(s32 no, s32 mask)
 {
 	if ((u32)no >= 2) return 0x80000102;
 	s32 intr = sceKernelCpuSuspendIntr();
-	u32 shift = (no << 2) + 9;
-	u32 v = (REG32(0xBC100070) >> shift) & 7;
-	REG32(0xBC100070) = (mask & v) << shift;
+	u32 shift = (no << 3) + 9;
+	u32 v = (REG32(0xBC100080) >> shift) & 7;
+	REG32(0xBC100080) = (mask & v) << shift;
 	sceKernelCpuResumeIntrWithSync(intr);
 	return v;
 }
@@ -761,7 +769,16 @@ s32 sceSysreg_driver_9746F3B2(s32 idx, s32 div)
 		prev = 1;
 	else if (prev == 0)
 		prev = 3;
+	if ((sceSysregGetTachyonVersion() & 0xFFE00000) == 0x00800000) {
+		if (div == 3 && (REG32(0xBC100100) & 1) != 0)
+			REG32(0xBC100100) &= ~1U;
+	}
 	REG32(0xBC100060) = (reg & ~(7U << 20)) | ((idx << 22) | (div << 20));
+	if ((sceSysregGetTachyonVersion() & 0xFFE00000) == 0x00800000) {
+		if (div != 3 && (REG32(0xBC1000E8) & 0xAAA) == 0 &&
+		    (REG32(0xBC100058) & 0x2000000) == 0 && (REG32(0xBC100100) & 1) == 0)
+			REG32(0xBC100100) |= 1;
+	}
 	sceKernelCpuResumeIntr(intr);
 	return prev;
 }
@@ -771,8 +788,13 @@ s32 sceSysreg_driver_434E8AF1(s32 sel)
 	s32 intr = sceKernelCpuSuspendIntr();
 	u32 reg = REG32(0xBC100060);
 	s32 prev = (reg >> 24) & 1;
+	if (sel == 1 && (REG32(0xBC100100) & 1) != 0)
+		REG32(0xBC100100) &= ~1U;
 	if (sel >= 0)
 		REG32(0xBC100060) = (reg & ~(1U << 24)) | ((sel & 1) << 24);
+	if (sel != 1 && (REG32(0xBC1000E8) & 0xAAA) == 0 &&
+	    (REG32(0xBC100060) & 0x300000) != 0x300000 && (REG32(0xBC100100) & 1) == 0)
+		REG32(0xBC100100) |= 1;
 	sceKernelCpuResumeIntr(intr);
 	return prev;
 }
@@ -784,7 +806,13 @@ s32 sceSysreg_driver_6596EBC3(s32 no, s32 sel)
 	u32 shift = no << 1;
 	u32 reg = REG32(0xBC1000E8);
 	s32 prev = (reg >> shift) & 3;
-	REG32(0xBC1000E8) = (reg & ~(3U << shift)) | ((sel & 3) << shift);
+	if (sel == 2 && (REG32(0xBC100100) & 1) != 0)
+		REG32(0xBC100100) &= ~1U;
+	u32 next = (reg & ~(3U << shift)) | ((sel & 3) << shift);
+	REG32(0xBC1000E8) = next;
+	if ((next & 0xAAA) == 0 && (REG32(0xBC100060) & 0x300000) != 0x300000 &&
+	    (REG32(0xBC100060) & 0x1000000) == 0 && (REG32(0xBC100100) & 1) == 0)
+		REG32(0xBC100100) |= 1;
 	sceKernelCpuResumeIntr(intr);
 	return prev;
 }
@@ -1167,6 +1195,56 @@ s32 sceDdr_driver_F1005384(s32 a0, s32 a1)
 	__asm__ volatile("sync");
 	return 0;
 }
+static const u32 g_ddrTestPattern[4] = {
+	0xA5A55A5A, 0xFFFFFFFF, 0x55AA55AA, 0xFF00FF00
+};
+
+static s32 sub_13f0(s32 idx, s32 cas, s32 saved_cnt, s32 a3, s32 t0, const u32 *test_pat)
+{
+	sceDdr_driver_6DE74D80(idx, cas);
+	if (saved_cnt >= 0)
+		sceDdr_driver_4F30BFE8(saved_cnt);
+	REG32(0xBC100068) = idx | 0x80;
+	__asm__ volatile("sync");
+	if (a3 >= 0) {
+		sceDdr_driver_F1005384(a3, t0);
+		s32 outer = 2;
+		s32 timeout = 350;
+		while (outer > 0) {
+			do {
+				u32 v = REG32(0xBD000040);
+				if (--timeout < 0)
+					goto check_pat;
+				if ((v & 0x100) != 0)
+					break;
+			} while (1);
+			do {
+				u32 v = REG32(0xBD000040);
+				if (--timeout < 0)
+					goto check_pat;
+				if ((v & 0x100) == 0)
+					break;
+			} while (1);
+			outer--;
+		}
+check_pat:
+		if (test_pat != NULL) {
+			u32 chk;
+			do {
+				__asm__ volatile("cache 0x19, 0(%0)" :: "r"(test_pat));
+				u32 w0 = test_pat[0];
+				u32 w1 = test_pat[1];
+				u32 w2 = test_pat[2];
+				u32 w3 = test_pat[3];
+				u32 c1 = ~(w1 & (w2 | w3));
+				u32 r2 = ((w2 >> 1) | (w2 << 31)) ^ w3;
+				chk = c1 | w0 | r2;
+			} while (chk != 0);
+		}
+	}
+	return 0;
+}
+
 s32 sceDdr_driver_CF07B9E2(s32 idx)
 {
 	if ((u32)(idx | 8) >= 14)
@@ -1174,14 +1252,17 @@ s32 sceDdr_driver_CF07B9E2(s32 idx)
 	s32 intr = sceKernelCpuSuspendIntr();
 	if (g_ddrFreqIdx >= 0)
 		g_ddrSavedParam[g_ddrFreqIdx] = sceDdr_driver_95B9A692();
+	u32 saved = g_ddrSavedParam[idx];
 	g_ddrFreqIdx = idx;
 	sceKernelDcacheWritebackAll();
 	u32 mpriv = REG32(0xBC000044);
 	REG32(0xBC000044) = mpriv & 0xC000FFFFU;
+	(void)REG32(0xBC100068);
 	s32 flush_flag = ((REG32(0xBC10004C) & 4) != 0) ? 5 : 0xF;
 	sceDdrFlush(flush_flag);
-	sceSysregPllUpdateFrequency();
+	((s32 (*)(s32, s32, s32, s32, s32, const u32 *))0xBFC00C00)(idx, 3, (s32)saved, 8, 10, g_ddrTestPattern);
 	REG32(0xBC000044) = mpriv;
+	sceSysregPllUpdateFrequency();
 	sceKernelCpuResumeIntrWithSync(intr);
 	return 0;
 }
@@ -1189,6 +1270,7 @@ static s32 sub_7230(SceSize args, void *argp)
 {
 	(void)args;
 	(void)argp;
+	memcpy((void *)0xBFC00C00, (const void *)sub_13f0, 0x240);
 	sceKernelDmaRegisterDdrFlush(sceDdrFlush);
 	return 0;
 }
@@ -1203,189 +1285,1033 @@ static s32 sub_727c(SceSize args)
  * Part 3: sceDmac, sceDmacplus_driver & sceKermitMemory_driver
  * ========================================================================= */
 
-u32 sceDmacplus_driver_var_374689B0 = 1;
-u32 sceDmacplus_driver_var_9D3DDDF0 = 0;
-u32 sceDmacplus_driver_var_AA2E7E54 = 0;
-u32 sceDmacplus_driver_var_C10B947A = 0;
+typedef struct SceDmacplusLli {
+	u32 src;
+	u32 dst;
+	u32 next;
+	u32 attr;
+} SceDmacplusLli;
 
-static u32 g_lcdcDmacEnabled;
+u32 sceDmacplus_driver_var_AA2E7E54 = 0x1048094B;
+u32 sceDmacplus_driver_var_C10B947A = 0x10480949;
+u32 sceDmacplus_driver_var_374689B0 = 0x10480900;
+u32 sceDmacplus_driver_var_9D3DDDF0 = 0x10482492;
+
+static u16 g_dmacSubIntrMask;
+static u16 g_dmacActiveFlags;
+
 static u32 g_lcdcDmacFrameBuf;
-static u32 g_lcdcDmacFrameWidth;
-static u32 g_lcdcDmacDisplayWidth;
 static u32 g_lcdcDmacPixelFormat;
-static s32 g_sc128SemaId;
-static s32 g_sc128EvFlagId;
-static s32 g_kermitDmacMutexId;
+static u32 g_lcdcDmacDisplayWidth;
+static u32 g_lcdcDmacFrameWidth;
+static u32 g_lcdcDmacCtrl;
+static void (*g_lcdcDmacCb)(s32, void *);
+static void *g_lcdcDmacCbArg;
 
-static s32 dmacplus_kermit_cmd56a(u32 enabled, u32 fb, u32 width, u32 disp_width)
+static SceUID g_avcEvFlagId;
+static void (*g_avcDmacCb)(s32, void *);
+static void *g_avcDmacCbArg;
+static u32 g_avcDmacBusy;
+static void *g_avcDmacSavedArg;
+
+static SceUID g_sc2meEvFlagId;
+static void (*g_sc2meDmacCb)(s32, s32, void *, void *);
+static void *g_sc2meDmacCbArg;
+static void *g_sc2meDmacCurLli;
+static u32 g_sc2meDmacBusy;
+
+static SceUID g_me2scEvFlagId;
+static void (*g_me2scDmacCb)(s32, s32, void *, void *);
+static void *g_me2scDmacCbArg;
+static void *g_me2scDmacCurLli;
+static u32 g_me2scDmacBusy;
+
+static SceUID g_sc128SemaId;
+static SceUID g_sc128EvFlagId;
+
+static u32 g_kermitDmacSmBase1;
+static u32 g_kermitDmacSmBase2;
+static u32 g_kermitDmacSmLimit;
+static SceUID g_kermitDmacMutexId;
+
+/* Forward declarations for internal DMAC functions */
+static s32 sub_2cb4(int ev_id, char *ev_name, void *param, int *result);
+static s32 sub_2d98(s32 sub_intr);
+static s32 sub_2df0(s32 sub_intr);
+static s32 sub_3078(void);
+static s32 sub_3120(void);
+static s32 sub_3224(void);
+static s32 sub_36d0(void);
+static s32 sub_3728(void);
+static s32 sub_37ac(s32 sub_intr, void *arg, s32 status);
+static s32 sub_3dcc(void);
+static s32 sub_3eac(void);
+static s32 sub_3f20(void);
+static s32 sub_3f30(void);
+static s32 sub_40c8(void);
+static s32 sub_4330(void);
+static s32 sub_43cc(void);
+static s32 sub_4440(void);
+static s32 sub_4448(void);
+static s32 sub_453c(void);
+static s32 sub_46b8(void);
+static s32 sub_4754(void);
+static s32 sub_47c8(void);
+static s32 sub_47d0(void);
+static s32 sub_497c(void);
+static s32 sub_49c0(void);
+static s32 sub_49e0(void);
+static s32 sub_4a10(void);
+static s32 sub_4a40(s32 sub_intr, void *arg, s32 status);
+static s32 sub_4a94(s32 sub_intr, void *arg, s32 status);
+static s32 sub_524c(void);
+static s32 sub_5254(u32 a0, u32 a1, u32 a2, u32 a3);
+static s32 sub_5308(const u32 *p);
+static s32 sub_547c(const u32 *p);
+static s32 sub_5600(SceDmacplusLli *lli);
+static s32 sub_56a4(SceDmacplusLli *lli);
+static s32 sub_57e4(SceDmacplusLli *lli);
+static s32 sub_5898(SceDmacplusLli *lli);
+static s32 sub_5c50(void);
+static s32 sub_5ccc(SceDmacplusLli *lli);
+
+static SceSysEventHandler g_dmacplusEvent = {
+	sizeof(SceSysEventHandler),
+	"SceDmacplus",
+	0x00FFFF00,
+	sub_2cb4,
+	0, 0, NULL,
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+};
+
+static s32 sub_3098(s32 intr_code, s32 sub_intr)
+{
+	(void)intr_code;
+	sub_2df0(sub_intr);
+	return 0;
+}
+
+static s32 sub_30bc(s32 intr_code, s32 sub_intr)
+{
+	(void)intr_code;
+	g_dmacSubIntrMask &= ~(1U << sub_intr);
+	return 0;
+}
+
+static s32 sub_30dc(s32 intr_code, s32 sub_intr)
+{
+	(void)intr_code;
+	g_dmacSubIntrMask |= (1U << sub_intr);
+	return 0;
+}
+
+static s32 sub_30fc(s32 intr_code, s32 sub_intr, u32 *prev)
+{
+	(void)intr_code;
+	if (prev != NULL)
+		*prev = (g_dmacSubIntrMask >> sub_intr) & 1;
+	g_dmacSubIntrMask &= ~(1U << sub_intr);
+	return 0;
+}
+
+static s32 sub_311c(s32 intr_code, s32 sub_intr, u32 prev)
+{
+	(void)intr_code;
+	g_dmacSubIntrMask |= ((prev & 1) << sub_intr);
+	return 0;
+}
+
+__attribute__((noipa)) static s32 sub_2d98(s32 sub_intr)
+{
+	if (sub_intr == 0)
+		return 0;
+	if ((u32)sub_intr >= 10)
+		return 0x80000102;
+	s32 shift = sub_intr / 2;
+	if ((sub_intr & 1) == 0)
+		return (REG32(0xBC800014) >> shift) & 1;
+	return (REG32(0xBC800018) >> shift) & 1;
+}
+
+__attribute__((noipa)) static s32 sub_2df0(s32 sub_intr)
+{
+	if (sub_intr == 0)
+		return 0;
+	if ((u32)sub_intr >= 10)
+		return 0x80000102;
+	s32 intr = sceKernelCpuSuspendIntr();
+	s32 shift = sub_intr / 2;
+	u32 v;
+	if ((sub_intr & 1) == 0) {
+		v = (REG32(0xBC800004) >> shift) & 1;
+		REG32(0xBC800008) = v << shift;
+	} else {
+		v = (REG32(0xBC80000C) >> shift) & 1;
+		REG32(0xBC800010) = v << shift;
+	}
+	sceKernelCpuResumeIntrWithSync(intr);
+	return (s32)v;
+}
+
+static s32 sub_2e90(s32 intr_code, void *arg, void *frame)
+{
+	(void)arg;
+	u32 mask = g_dmacSubIntrMask;
+	s32 ch = 0;
+	s32 sub_intr;
+	for (sub_intr = 0; sub_intr < 10; sub_intr += 2, ch++) {
+		u32 ch_bit = 1U << ch;
+		if (sub_intr != 0) {
+			if ((REG32(0xBC800004) & ch_bit) != 0) {
+				REG32(0xBC800008) = ch_bit;
+				if ((mask & (1U << sub_intr)) != 0)
+					sceKernelCallSubIntrHandler(intr_code, sub_intr, (void *)sub_intr, frame);
+			}
+		}
+		s32 odd_sub = sub_intr + 1;
+		if ((REG32(0xBC80000C) & ch_bit) != 0) {
+			REG32(0xBC800010) = ch_bit;
+			if ((mask & (1U << odd_sub)) != 0)
+				sceKernelCallSubIntrHandler(intr_code, odd_sub, (void *)odd_sub, frame);
+		}
+	}
+	return -1;
+}
+
+static u32 g_dmacSubIntrCb[7] = {
+	0, (u32)sub_3098, (u32)sub_30dc, (u32)sub_30bc,
+	(u32)sub_30fc, (u32)sub_311c, (u32)sub_2d98
+};
+static u32 g_dmacIntrOpt[3] = { 0x0C, 0x0A, (u32)g_dmacSubIntrCb };
+
+static s32 sub_2cb4(int ev_id, char *ev_name, void *param, int *result)
+{
+	(void)ev_name;
+	(void)param;
+	(void)result;
+	if (ev_id == 0x402) {
+		return sub_3078();
+	} else if (ev_id == 0x4004) {
+		sub_3728();
+		sub_3f20();
+		sub_4440();
+		sub_47c8();
+		return sub_49c0();
+	} else if (ev_id == 0x10004) {
+		sub_0280();
+		sub_3224();
+		sub_3f30();
+		sub_4448();
+		sub_47d0();
+		sub_524c();
+	}
+	return 0;
+}
+
+static s32 sub_3078(void)
+{
+	if ((g_dmacActiveFlags & 0x1E) != 0)
+		return 0x80000021;
+	return 0;
+}
+
+static s32 sub_2f98(SceSize args, void *argp)
+{
+	(void)args;
+	(void)argp;
+	sub_0280();
+	sceKernelRegisterIntrHandler(21, 2, sub_2e90, NULL, g_dmacIntrOpt);
+	sub_3120();
+	sub_3dcc();
+	sub_4330();
+	sub_46b8();
+	sub_49e0();
+	sceKernelEnableIntr(21);
+	sceKernelUnregisterSysEventHandler(&g_dmacplusEvent);
+	sceKernelRegisterSysEventHandler(&g_dmacplusEvent);
+	sub_5c50();
+	return 0;
+}
+
+static s32 sub_3024(SceSize args)
+{
+	(void)args;
+	sceKernelUnregisterSysEventHandler(&g_dmacplusEvent);
+	sub_4a10();
+	sub_4754();
+	sub_43cc();
+	sub_3eac();
+	sub_36d0();
+	sceKernelReleaseIntrHandler(21);
+	sub_028c();
+	return 0;
+}
+
+/* --- LCDC DMAC (Channel 0) --- */
+static s32 sub_3120(void)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	g_lcdcDmacFrameBuf = REG32(0xBC800100);
+	g_lcdcDmacPixelFormat = REG32(0xBC800104);
+	g_lcdcDmacDisplayWidth = REG32(0xBC800108);
+	g_lcdcDmacFrameWidth = REG32(0xBC80010C);
+	u32 ctrl = REG32(0xBC800110);
+	g_lcdcDmacCtrl = ctrl;
+	if ((ctrl & 1) != 0)
+		g_dmacActiveFlags |= 1;
+	else
+		g_dmacActiveFlags &= ~1U;
+	sceKernelCpuResumeIntrWithSync(intr);
+	sceKernelRegisterSubIntrHandler(21, 1, sub_37ac, NULL);
+	sceKernelEnableSubIntr(21, 1);
+	return 0;
+}
+
+static s32 sub_3224(void)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	REG32(0xBC800100) = g_lcdcDmacFrameBuf;
+	REG32(0xBC800104) = g_lcdcDmacPixelFormat;
+	REG32(0xBC800108) = g_lcdcDmacDisplayWidth;
+	REG32(0xBC80010C) = g_lcdcDmacFrameWidth;
+	u32 ctrl = g_lcdcDmacCtrl;
+	REG32(0xBC800110) = ctrl;
+	if ((ctrl & 1) != 0)
+		g_dmacActiveFlags |= 1;
+	else
+		g_dmacActiveFlags &= ~1U;
+	sceKernelCpuResumeIntrWithSync(intr);
+	return 0;
+}
+
+s32 sceDmacplus_driver_A3AA8D00(void *cb, void *arg)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	g_lcdcDmacCb = (void (*)(s32, void *))cb;
+	g_lcdcDmacCbArg = arg;
+	sceKernelCpuResumeIntr(intr);
+	return 0;
+}
+
+s32 sceDmacplus_driver_88ACB6F1(u32 pformat, u32 disp_width, u32 frame_width)
+{
+	if (pformat >= 4)
+		return 0x80000108;
+	if ((disp_width - 1) >= 2048 || (frame_width - 1) >= 2048)
+		return 0x80000104;
+	s32 intr = sceKernelCpuSuspendIntr();
+	g_lcdcDmacPixelFormat = pformat;
+	g_lcdcDmacDisplayWidth = disp_width;
+	g_lcdcDmacFrameWidth = frame_width;
+	REG32(0xBC800104) = pformat;
+	REG32(0xBC800108) = disp_width;
+	REG32(0xBC80010C) = frame_width;
+	sceKernelCpuResumeIntrWithSync(intr);
+	return 0;
+}
+
+s32 sceDmacplus_driver_33CD36DD(u32 *pformat, u32 *disp_width, u32 *frame_width)
+{
+	if (pformat != NULL) *pformat = g_lcdcDmacPixelFormat;
+	if (disp_width != NULL) *disp_width = g_lcdcDmacDisplayWidth;
+	if (frame_width != NULL) *frame_width = g_lcdcDmacFrameWidth;
+	return 0;
+}
+
+s32 sceDmacplus_driver_ED849260(void)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	if ((REG32(0xBC800110) & 1) == 0) {
+		u32 ctrl = g_lcdcDmacCtrl | 1;
+		g_lcdcDmacCtrl = ctrl;
+		REG32(0xBC800110) = ctrl;
+	}
+	g_dmacActiveFlags |= 1;
+	sceKernelCpuResumeIntrWithSync(intr);
+	return 0;
+}
+
+static s32 sub_36d0(void)
+{
+	sceKernelReleaseSubIntrHandler(21, 0);
+	sceKernelReleaseSubIntrHandler(21, 1);
+	return 0;
+}
+
+static s32 sub_3728(void)
+{
+	g_dmacActiveFlags &= ~1U;
+	return 0;
+}
+
+s32 sceDmacplus_driver_CCCF6069(u32 *fb)
+{
+	if (fb != NULL)
+		*fb = g_lcdcDmacFrameBuf;
+	return 0;
+}
+
+s32 sceDmacplus_driver_E9B746F9(void)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	if ((REG32(0xBC800110) & 1) != 0) {
+		u32 ctrl = g_lcdcDmacCtrl & ~1U;
+		g_lcdcDmacCtrl = ctrl;
+		REG32(0xBC800110) = ctrl;
+	}
+	g_dmacActiveFlags &= ~1U;
+	sceKernelCpuResumeIntrWithSync(intr);
+	return 0;
+}
+
+static s32 sub_37ac(s32 sub_intr, void *arg, s32 status)
+{
+	(void)sub_intr;
+	(void)arg;
+	if (g_lcdcDmacCb != NULL)
+		g_lcdcDmacCb(0, g_lcdcDmacCbArg);
+	return status;
+}
+
+s32 sceDmacplus_driver_D126494B(u32 fb)
+{
+	if (((fb >> 29) & 1) != 0 || (fb & 0xFF800000) == 0)
+		return 0x80000103;
+	s32 intr = sceKernelCpuSuspendIntr();
+	u32 paddr = fb & 0x1FFFFFFF;
+	g_lcdcDmacFrameBuf = paddr;
+	REG32(0xBC800100) = paddr;
+	sceKernelCpuResumeIntrWithSync(intr);
+	return 0;
+}
+
+/* --- AVC DMAC (Channel 1) --- */
+s32 sceDmacplus_driver_9C492B9B(void *cb, void *arg)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	if ((g_dmacActiveFlags & 2) != 0) {
+		sceKernelCpuResumeIntr(intr);
+		return 0x80000021;
+	}
+	g_avcDmacCb = (void (*)(s32, void *))cb;
+	g_avcDmacCbArg = arg;
+	sceKernelCpuResumeIntr(intr);
+	return 0;
+}
+
+s32 sceDmacplus_driver_BF0DB45E(u32 mode)
+{
+	if (mode >= 2)
+		return 0x80000107;
+	u32 out_bits = 0;
+	s32 res;
+	if (mode != 0)
+		res = sceKernelWaitEventFlag(g_avcEvFlagId, 3, 0x21, &out_bits, NULL);
+	else
+		res = sceKernelPollEventFlag(g_avcEvFlagId, 3, 0x21, &out_bits);
+	if (res == (s32)0x800201A8)
+		return 0x80000021;
+	if (res < 0)
+		return res;
+	sub_5308((const u32 *)g_avcDmacSavedArg);
+	if ((out_bits & 2) != 0)
+		return 0x80000024;
+	return 0;
+}
+
+static s32 sub_3dcc(void)
+{
+	g_avcDmacBusy = 0;
+	g_dmacActiveFlags &= ~2U;
+	g_avcDmacCb = NULL;
+	g_avcDmacCbArg = NULL;
+	SceUID ev = sceKernelCreateEventFlag("SceDmacplusAvc", 0x201, 0, NULL);
+	g_avcEvFlagId = ev;
+	if (ev < 0)
+		return ev;
+	s32 r = sceKermit_driver_5280B410(4, sub_40c8);
+	if (r != 0)
+		Kprintf("error: %s lines %d, result = 0x%08X\n", "dmacplus.c", 1110, r);
+	return 0;
+}
+
+static s32 sub_3eac(void)
+{
+	sceKernelReleaseSubIntrHandler(21, 2);
+	sceKernelReleaseSubIntrHandler(21, 3);
+	if (g_avcEvFlagId > 0) {
+		sceKernelDeleteEventFlag(g_avcEvFlagId);
+		g_avcEvFlagId = 0;
+	}
+	return 0;
+}
+
+static s32 sub_3f20(void)
+{
+	return 0;
+}
+
+static s32 sub_3f30(void)
+{
+	g_avcDmacBusy = 0;
+	g_dmacActiveFlags &= ~2U;
+	return 0;
+}
+
+s32 sceDmacplus_driver_B269EAC9(void *arg)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	if (g_avcDmacBusy != 0) {
+		sceKernelCpuResumeIntr(intr);
+		return 0x80000021;
+	}
+	sceKernelClearEventFlag(g_avcEvFlagId, 0);
+	g_avcDmacBusy = 1;
+	g_dmacActiveFlags |= 2;
+	g_avcDmacSavedArg = arg;
+	sceKernelCpuResumeIntrWithSync(intr);
+	sub_547c((const u32 *)arg);
+	return 0;
+}
+
+s32 sceDmacplus_driver_F652F09D(u32 a0, u32 a1, u32 a2, u32 a3)
+{
+	return sub_5254(a0 << 4, a1 << 4, a2 << 4, a3 << 4);
+}
+
+static s32 sub_40c8(void)
+{
+	g_avcDmacBusy = 0;
+	g_dmacActiveFlags &= ~2U;
+	if (g_avcDmacCb != NULL) {
+		sub_5308((const u32 *)g_avcDmacSavedArg);
+		g_avcDmacCb(0, g_avcDmacCbArg);
+		return 0;
+	}
+	sceKernelSetEventFlag(g_avcEvFlagId, 1);
+	return 0;
+}
+
+/* --- SC2ME DMAC (Channel 2) --- */
+s32 sceDmacplus_driver_282CA0D7(void *cb, void *arg)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	if ((g_dmacActiveFlags & 4) != 0) {
+		sceKernelCpuResumeIntr(intr);
+		return 0x80000021;
+	}
+	g_sc2meDmacCb = (void (*)(s32, s32, void *, void *))cb;
+	g_sc2meDmacCbArg = arg;
+	sceKernelCpuResumeIntr(intr);
+	return 0;
+}
+
+s32 sceDmacplus_driver_47D400CB(u32 mode, void **out_lli)
+{
+	if (mode >= 2)
+		return 0x80000107;
+	u32 out_bits = 0;
+	s32 res;
+	if (mode != 0)
+		res = sceKernelWaitEventFlag(g_sc2meEvFlagId, 3, 0x21, &out_bits, NULL);
+	else
+		res = sceKernelPollEventFlag(g_sc2meEvFlagId, 3, 0x21, &out_bits);
+	if (res == (s32)0x800201A8)
+		return 0x80000021;
+	if (res < 0)
+		return res;
+	if ((out_bits & 2) != 0) {
+		if (out_lli != NULL)
+			*out_lli = g_sc2meDmacCurLli;
+		return 0x80000024;
+	}
+	sub_5600((SceDmacplusLli *)g_sc2meDmacCurLli);
+	return 0;
+}
+
+static s32 sub_4330(void)
+{
+	g_sc2meDmacBusy = 0;
+	g_dmacActiveFlags &= ~4U;
+	g_sc2meDmacCb = NULL;
+	g_sc2meDmacCbArg = NULL;
+	g_sc2meDmacCurLli = NULL;
+	SceUID ev = sceKernelCreateEventFlag("SceDmacplusSc2Me", 0x201, 0, NULL);
+	g_sc2meEvFlagId = ev;
+	if (ev < 0)
+		return ev;
+	sceKermit_driver_5280B410(5, sub_453c);
+	return 0;
+}
+
+static s32 sub_43cc(void)
+{
+	sceKernelReleaseSubIntrHandler(21, 4);
+	sceKernelReleaseSubIntrHandler(21, 5);
+	if (g_sc2meEvFlagId > 0) {
+		sceKernelDeleteEventFlag(g_sc2meEvFlagId);
+		g_sc2meEvFlagId = 0;
+	}
+	return 0;
+}
+
+static s32 sub_4440(void)
+{
+	return 0;
+}
+
+static s32 sub_4448(void)
+{
+	g_sc2meDmacBusy = 0;
+	g_dmacActiveFlags &= ~4U;
+	return 0;
+}
+
+s32 sceDmacplus_driver_9EBF7D3E(SceDmacplusLli *lli)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	if (g_sc2meDmacBusy != 0) {
+		sceKernelCpuResumeIntr(intr);
+		return 0x80000021;
+	}
+	sceKernelClearEventFlag(g_sc2meEvFlagId, 0);
+	g_sc2meDmacCurLli = lli;
+	g_sc2meDmacBusy = 1;
+	g_dmacActiveFlags |= 4;
+	sceKernelCpuResumeIntrWithSync(intr);
+	sub_56a4(lli);
+	return 0;
+}
+
+static s32 sub_453c(void)
+{
+	g_sc2meDmacBusy = 0;
+	g_dmacActiveFlags &= ~4U;
+	if (g_sc2meDmacCb != NULL) {
+		sub_5600((SceDmacplusLli *)g_sc2meDmacCurLli);
+		g_sc2meDmacCb(0, 0, NULL, g_sc2meDmacCbArg);
+		return 0;
+	}
+	sceKernelSetEventFlag(g_sc2meEvFlagId, 1);
+	return 0;
+}
+
+/* --- ME2SC DMAC (Channel 3) --- */
+s32 sceDmacplus_driver_5FCF43BD(u32 mode, void **out_lli)
+{
+	if (mode >= 2)
+		return 0x80000107;
+	u32 out_bits = 0;
+	s32 res;
+	if (mode != 0)
+		res = sceKernelWaitEventFlag(g_me2scEvFlagId, 3, 0x21, &out_bits, NULL);
+	else
+		res = sceKernelPollEventFlag(g_me2scEvFlagId, 3, 0x21, &out_bits);
+	if (res == (s32)0x800201A8)
+		return 0x80000021;
+	if (res < 0)
+		return res;
+	if ((out_bits & 2) != 0) {
+		if (out_lli != NULL)
+			*out_lli = g_me2scDmacCurLli;
+		return 0x80000024;
+	}
+	sub_5ccc((SceDmacplusLli *)g_me2scDmacCurLli);
+	return 0;
+}
+
+static s32 sub_46b8(void)
+{
+	g_me2scDmacBusy = 0;
+	g_dmacActiveFlags &= ~8U;
+	g_me2scDmacCb = NULL;
+	g_me2scDmacCbArg = NULL;
+	g_me2scDmacCurLli = NULL;
+	SceUID ev = sceKernelCreateEventFlag("SceDmacplusMe2Sc", 0x201, 0, NULL);
+	g_me2scEvFlagId = ev;
+	if (ev < 0)
+		return ev;
+	sceKermit_driver_5280B410(6, sub_497c);
+	return 0;
+}
+
+static s32 sub_4754(void)
+{
+	sceKernelReleaseSubIntrHandler(21, 6);
+	sceKernelReleaseSubIntrHandler(21, 7);
+	if (g_me2scEvFlagId > 0) {
+		sceKernelDeleteEventFlag(g_me2scEvFlagId);
+		g_me2scEvFlagId = 0;
+	}
+	return 0;
+}
+
+static s32 sub_47c8(void)
+{
+	return 0;
+}
+
+static s32 sub_47d0(void)
+{
+	g_me2scDmacBusy = 0;
+	g_dmacActiveFlags &= ~8U;
+	return 0;
+}
+
+s32 sceDmacplus_driver_DBD8526F(void *cb, void *arg)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	if ((g_dmacActiveFlags & 8) != 0) {
+		sceKernelCpuResumeIntr(intr);
+		return 0x80000021;
+	}
+	g_me2scDmacCb = (void (*)(s32, s32, void *, void *))cb;
+	g_me2scDmacCbArg = arg;
+	sceKernelCpuResumeIntr(intr);
+	return 0;
+}
+
+s32 sceDmacplus_driver_6945F1D3(SceDmacplusLli *lli)
+{
+	s32 intr = sceKernelCpuSuspendIntr();
+	if (g_me2scDmacBusy != 0) {
+		sceKernelCpuResumeIntr(intr);
+		return 0x80000021;
+	}
+	sceKernelClearEventFlag(g_me2scEvFlagId, 0);
+	g_me2scDmacCurLli = lli;
+	g_me2scDmacBusy = 1;
+	g_dmacActiveFlags |= 8;
+	sceKernelCpuResumeIntrWithSync(intr);
+	sub_5898(lli);
+	return 0;
+}
+
+static s32 sub_497c(void)
+{
+	g_me2scDmacBusy = 0;
+	g_dmacActiveFlags &= ~8U;
+	if (g_me2scDmacCb != NULL) {
+		sub_5ccc((SceDmacplusLli *)g_me2scDmacCurLli);
+		g_me2scDmacCb(0, 0, NULL, g_me2scDmacCbArg);
+		return 0;
+	}
+	sceKernelSetEventFlag(g_me2scEvFlagId, 1);
+	return 0;
+}
+
+/* --- SC128 DMAC (Channel 4 / sceDmacMemcpy) --- */
+static s32 sub_49c0(void)
+{
+	s32 res = sceKernelPollSema(g_sc128SemaId, 1);
+	if (res == (s32)0x800201A5)
+		return 0x80000021;
+	return (res < 0) ? res : 0;
+}
+
+static s32 sub_49e0(void)
+{
+	g_dmacActiveFlags &= ~0x10U;
+	SceUID sema = sceKernelCreateSema("SceDmacplusSc128", 1, 1, 1, NULL);
+	g_sc128SemaId = sema;
+	if (sema < 0)
+		return sema;
+	SceUID ev = sceKernelCreateEventFlag("SceDmacplusSc128", 0x201, 0, NULL);
+	g_sc128EvFlagId = ev;
+	if (ev < 0) {
+		sceKernelDeleteSema(g_sc128SemaId);
+		g_sc128SemaId = 0;
+		return ev;
+	}
+	sceKernelRegisterSubIntrHandler(21, 8, sub_4a40, NULL);
+	sceKernelRegisterSubIntrHandler(21, 9, sub_4a94, NULL);
+	sceKernelEnableSubIntr(21, 8);
+	sceKernelEnableSubIntr(21, 9);
+	return 0;
+}
+
+static s32 sub_4a10(void)
+{
+	sceKernelReleaseSubIntrHandler(21, 8);
+	sceKernelReleaseSubIntrHandler(21, 9);
+	if (g_sc128SemaId > 0) {
+		sceKernelDeleteSema(g_sc128SemaId);
+		g_sc128SemaId = 0;
+	}
+	if (g_sc128EvFlagId > 0) {
+		sceKernelDeleteEventFlag(g_sc128EvFlagId);
+		g_sc128EvFlagId = 0;
+	}
+	return 0;
+}
+
+static s32 sub_4a40(s32 sub_intr, void *arg, s32 status)
+{
+	(void)sub_intr;
+	(void)arg;
+	g_dmacActiveFlags &= ~0x10U;
+	if ((status & 1) != 0)
+		sceKernelSetEventFlag(g_sc128EvFlagId, 1);
+	if ((status & 2) != 0)
+		sceKernelSetEventFlag(g_sc128EvFlagId, 2);
+	return 0;
+}
+
+static s32 sub_4a94(s32 sub_intr, void *arg, s32 status)
+{
+	(void)sub_intr;
+	(void)arg;
+	(void)status;
+	g_dmacActiveFlags &= ~0x10U;
+	sceKernelSetEventFlag(g_sc128EvFlagId, 2);
+	return 0;
+}
+
+static s32 sub_4b24(void *dst, const void *src, u32 size, s32 is_try)
+{
+	if (size == 0)
+		return 0x80000104;
+	u32 udst = (u32)dst;
+	u32 usrc = (u32)src;
+	if (((udst ^ usrc) & 0x1FFFFFFF) < size && ((usrc ^ udst) & 0x1FFFFFFF) < size) {
+		/* check overlap */
+	}
+	u32 kmode;
+	__asm__ volatile("mfc0 %0, $24" : "=r"(kmode));
+	s32 intr = sceKernelCpuSuspendIntr();
+	sceKernelCpuResumeIntr(intr);
+	s32 res;
+	if (is_try != 0) {
+		res = sceKernelPollSema(g_sc128SemaId, 1);
+		if (res == (s32)0x800201A5)
+			return 0x80000021;
+	} else {
+		res = sceKernelWaitSema(g_sc128SemaId, 1, NULL);
+	}
+	if (res < 0)
+		return res;
+	if ((kmode & 0xFF) == 0 && size <= 0x1A0) {
+		memcpy(dst, src, size);
+		sceKernelSignalSema(g_sc128SemaId, 1);
+		return 0;
+	}
+	SceDmacplusLli lli_chain[16];
+	u32 pdst = udst & 0x1FFFFFFF;
+	u32 psrc = usrc & 0x1FFFFFFF;
+	if ((pdst >= 0x08000000 && pdst < 0x0C000000) || (psrc >= 0x08000000 && psrc < 0x0C000000))
+		(void)REG32(0xA7F00000);
+	sceDdrFlush(4);
+	intr = sceKernelCpuSuspendIntr();
+	if ((REG32(0xBC8001D0) & 1) != 0) {
+		sceKernelCpuResumeIntr(intr);
+		sceKernelSignalSema(g_sc128SemaId, 1);
+		return 0x80000021;
+	}
+	sceKernelClearEventFlag(g_sc128EvFlagId, 0);
+	u32 shift = __builtin_ctz((udst | usrc | size) | 0x10);
+	if (shift > 4) shift = 4;
+	u32 attr_base = sceDmacplus_driver_var_374689B0 | (shift << 18) | (shift << 21);
+	u32 max_blk = 0xFFFCU << shift;
+	u32 rem = size;
+	s32 idx = 0;
+	while (rem > max_blk && idx < 15) {
+		lli_chain[idx].src = psrc;
+		lli_chain[idx].dst = pdst;
+		lli_chain[idx].next = ((u32)&lli_chain[idx + 1]) & 0x1FFFFFFF;
+		lli_chain[idx].attr = attr_base | 0xFFF;
+		psrc += max_blk;
+		pdst += max_blk;
+		rem -= max_blk;
+		idx++;
+	}
+	lli_chain[idx].src = psrc;
+	lli_chain[idx].dst = pdst;
+	lli_chain[idx].next = 0;
+	lli_chain[idx].attr = attr_base | (rem >> shift) | 0x80000000U;
+	sceKernelDcacheWritebackRange(lli_chain, (idx + 1) * sizeof(SceDmacplusLli));
+	REG32(0xBC8001C0) = lli_chain[0].src;
+	REG32(0xBC8001C4) = lli_chain[0].dst;
+	REG32(0xBC8001C8) = lli_chain[0].next;
+	REG32(0xBC8001CC) = lli_chain[0].attr;
+	g_dmacActiveFlags |= 0x10;
+	REG32(0xBC8001D0) = 1;
+	sceKernelCpuResumeIntrWithSync(intr);
+	u32 out_bits = 0;
+	res = sceKernelWaitEventFlag(g_sc128EvFlagId, 3, 0x21, &out_bits, NULL);
+	sceKernelSignalSema(g_sc128SemaId, 1);
+	if (res < 0)
+		return res;
+	return ((out_bits & 2) != 0) ? 0x80000024 : 0;
+}
+
+s32 sceDmacplus_driver_2C5FC1E3(void *dst, const void *src, u32 size)
+{
+	return sub_4b24(dst, src, size, 0);
+}
+
+s32 sceDmacMemcpy(void *dst, const void *src, u32 size)
+{
+	return sub_4b24(dst, src, size, 0);
+}
+
+s32 sceDmacplus_driver_D57D5BC2(void *dst, const void *src, u32 size)
+{
+	return sub_4b24(dst, src, size, 1);
+}
+
+s32 sceDmacTryMemcpy(void *dst, const void *src, u32 size)
+{
+	return sub_4b24(dst, src, size, 1);
+}
+
+s32 sceDmacplus_driver_B0EC610D(SceDmacplusLli *lli)
+{
+	if (lli == NULL)
+		return 0x80000103;
+	s32 res = sceKernelWaitSema(g_sc128SemaId, 1, NULL);
+	if (res < 0)
+		return res;
+	(void)REG32(0xA7F00000);
+	sceDdrFlush(4);
+	s32 intr = sceKernelCpuSuspendIntr();
+	if ((REG32(0xBC8001D0) & 1) != 0) {
+		sceKernelCpuResumeIntr(intr);
+		sceKernelSignalSema(g_sc128SemaId, 1);
+		return 0x80000021;
+	}
+	sceKernelClearEventFlag(g_sc128EvFlagId, 0);
+	REG32(0xBC8001C0) = lli->src & 0x1FFFFFFF;
+	REG32(0xBC8001C4) = lli->dst & 0x1FFFFFFF;
+	REG32(0xBC8001C8) = lli->next & 0x1FFFFFFF;
+	REG32(0xBC8001CC) = lli->attr;
+	g_dmacActiveFlags |= 0x10;
+	REG32(0xBC8001D0) = 1;
+	sceKernelCpuResumeIntrWithSync(intr);
+	u32 out_bits = 0;
+	res = sceKernelWaitEventFlag(g_sc128EvFlagId, 3, 0x21, &out_bits, NULL);
+	sceKernelSignalSema(g_sc128SemaId, 1);
+	if (res < 0)
+		return res;
+	return ((out_bits & 2) != 0) ? 0x80000024 : 0;
+}
+
+static s32 sub_524c(void)
+{
+	g_dmacActiveFlags &= ~0x10U;
+	return 0;
+}
+
+/* --- Kermit DMAC RPC helpers (0x56A, 0x56B, 0x56C, 0x569) --- */
+static s32 sub_5254(u32 a0, u32 a1, u32 a2, u32 a3)
 {
 	u8 buf[176];
 	SceKermitRequest *req_cached = (SceKermitRequest *)(((u32)buf + 63) & ~63U);
 	sceKernelDcacheInvalidateRange(req_cached, 64);
 	SceKermitRequest *req = (SceKermitRequest *)KERMIT_UNCACHED(req_cached);
 	u64 resp = 0;
-	req->cmd = 0x56A;
-	req->args[0] = enabled;
-	req->args[1] = fb;
-	req->args[2] = width;
-	req->args[3] = disp_width;
+	req->args[0] = a0;
+	req->args[1] = a1;
+	req->args[2] = a2;
+	req->args[3] = a3;
 	s32 res = sceKermit_driver_36666181(req, KERMIT_MODE_LOWIO, 0x56A, 4, 0, &resp);
 	return (res != 0) ? res : (s32)resp;
 }
 
-s32 sceDmacplus_driver_BF0DB45E(s32 a0, s32 a1)
+static s32 sub_5308(const u32 *p)
 {
-	(void)a0;
-	(void)a1;
+	if (p == NULL)
+		return 0;
+	u32 size0 = ((p[1] & 0xFFF) + ((p[1] >> 16) & 0xFFF)) << 4;
+	if (size0 != 0)
+		sceKermitMemory_driver_90B662D0((void *)p[3], size0);
+	u32 size1 = (((p[4] & 0xFFF) << 2) + ((p[4] >> 16) & 0xFFF)) << 2;
+	if (size1 != 0) {
+		sceKermitMemory_driver_90B662D0((void *)p[5], size1);
+		sceKermitMemory_driver_90B662D0((void *)p[6], size1);
+		sceKermitMemory_driver_90B662D0((void *)p[7], size1);
+		sceKermitMemory_driver_90B662D0((void *)p[8], size1);
+		sceKermitMemory_driver_90B662D0((void *)p[9], size1);
+		sceKermitMemory_driver_90B662D0((void *)p[10], size1);
+		sceKermitMemory_driver_90B662D0((void *)p[11], size1);
+		sceKermitMemory_driver_90B662D0((void *)p[12], size1);
+	}
 	return 0;
 }
 
-s32 sceDmacplus_driver_E9B746F9(void)
+static s32 sub_547c(const u32 *p)
 {
-	g_lcdcDmacEnabled = 0;
-	return 0;
+	u8 buf[176];
+	SceKermitRequest *req_cached = (SceKermitRequest *)(((u32)buf + 63) & ~63U);
+	sceKernelDcacheInvalidateRange(req_cached, 64);
+	SceKermitRequest *req = (SceKermitRequest *)KERMIT_UNCACHED(req_cached);
+	u64 resp = 0;
+	u32 in_size = ((p[1] & 0xFFF) + ((p[1] >> 16) & 0xFFF)) << 4;
+	if (in_size != 0)
+		sceKermitMemory_driver_80E1240A((const void *)p[2], in_size);
+	s32 i;
+	for (i = 0; i < 13; i++)
+		req->args[i] = p[i];
+	s32 res = sceKermit_driver_36666181(req, KERMIT_MODE_LOWIO, 0x56B, 13, 1, &resp);
+	return (res != 0) ? res : (s32)resp;
 }
 
-s32 sceDmacplus_driver_F652F09D(void)
-{
-	g_lcdcDmacEnabled = 0;
-	return dmacplus_kermit_cmd56a(0, g_lcdcDmacFrameBuf, g_lcdcDmacFrameWidth, g_lcdcDmacDisplayWidth);
-}
-
-s32 sceDmacplus_driver_33CD36DD(void)
-{
-	s32 intr = sceKernelCpuSuspendIntr();
-	u32 prev = g_lcdcDmacEnabled;
-	g_lcdcDmacEnabled = 1;
-	dmacplus_kermit_cmd56a(1, g_lcdcDmacFrameBuf, g_lcdcDmacFrameWidth, g_lcdcDmacDisplayWidth);
-	sceKernelCpuResumeIntr(intr);
-	return (prev != 0) ? 0x80000020 : 0;
-}
-
-s32 sceDmacplus_driver_88ACB6F1(void)
-{
-	s32 intr = sceKernelCpuSuspendIntr();
-	u32 prev = g_lcdcDmacEnabled;
-	g_lcdcDmacEnabled = 0;
-	dmacplus_kermit_cmd56a(0, g_lcdcDmacFrameBuf, g_lcdcDmacFrameWidth, g_lcdcDmacDisplayWidth);
-	sceKernelCpuResumeIntr(intr);
-	return (prev == 0) ? 0x80000021 : 0;
-}
-
-static s32 sub_0a80(void)
-{
-	return sceDmacplus_driver_33CD36DD();
-}
-
-static s32 sub_0a8c(void)
-{
-	return sceDmacplus_driver_88ACB6F1();
-}
-
-s32 sceDmacplus_driver_D126494B(u32 fb)
-{
-	s32 intr = sceKernelCpuSuspendIntr();
-	g_lcdcDmacFrameBuf = fb;
-	dmacplus_kermit_cmd56a(g_lcdcDmacEnabled, fb, g_lcdcDmacFrameWidth, g_lcdcDmacDisplayWidth);
-	sceKernelCpuResumeIntr(intr);
-	return 0;
-}
-
-s32 sceDmacplus_driver_E9B27A24_5FCF43BD(u32 disp_width, u32 width, u32 pformat);
-s32 sceDmacplus_driver_5FCF43BD(u32 disp_width, u32 width, u32 pformat)
-{
-	if (width == 0 || disp_width > width || pformat >= 4)
-		return 0x80000103;
-	s32 intr = sceKernelCpuSuspendIntr();
-	g_lcdcDmacDisplayWidth = disp_width;
-	g_lcdcDmacFrameWidth = width;
-	g_lcdcDmacPixelFormat = pformat;
-	dmacplus_kermit_cmd56a(g_lcdcDmacEnabled, g_lcdcDmacFrameBuf, width, disp_width);
-	sceKernelCpuResumeIntr(intr);
-	return 0;
-}
-
-s32 sceDmacplus_driver_9C492B9B(u32 *disp_width, u32 *width, u32 *pformat)
-{
-	if (disp_width != NULL) *disp_width = g_lcdcDmacDisplayWidth;
-	if (width != NULL) *width = g_lcdcDmacFrameWidth;
-	if (pformat != NULL) *pformat = g_lcdcDmacPixelFormat;
-	return 0;
-}
-
-s32 sceDmacplus_driver_CCCF6069(u32 a0)
-{
-	(void)a0;
-	return 0;
-}
-
-s32 sceDmacplus_driver_ED849260(void *a0)
-{
-	(void)a0;
-	return 0;
-}
-
-s32 sceDmacplus_driver_9EBF7D3E(void *a0)
-{
-	(void)a0;
-	return 0;
-}
-
-s32 sceDmacplus_driver_47D400CB(void *a0)
-{
-	(void)a0;
-	return 0;
-}
-
-s32 sceDmacplus_driver_DBD8526F(void *a0)
-{
-	(void)a0;
-	return 0;
-}
-
-s32 sceDmacplus_driver_282CA0D7(void *a0)
-{
-	(void)a0;
-	return 0;
-}
-
-s32 sceDmacplus_driver_A3AA8D00(void *a0)
-{
-	(void)a0;
-	return 0;
-}
-
-s32 sceDmacplus_driver_B269EAC9(void *a0)
-{
-	(void)a0;
-	return 0;
-}
-
-s32 sceDmacplus_driver_6945F1D3(void *a0)
-{
-	(void)a0;
-	return 0;
-}
-
-s32 sceDmacplus_driver_B0EC610D(void *lli)
+static s32 sub_5600(SceDmacplusLli *lli)
 {
 	(void)lli;
 	return 0;
 }
 
-s32 sceDmacplus_driver_2C5FC1E3(void *dst, const void *src, u32 size)
+static s32 sub_56a4(SceDmacplusLli *lli)
 {
-	if (size == 0)
-		return 0x80000104;
-	if (dst == NULL || src == NULL)
-		return 0x80000103;
-	memcpy(dst, src, size);
+	u8 buf[176];
+	SceKermitRequest *req_cached = (SceKermitRequest *)(((u32)buf + 63) & ~63U);
+	sceKernelDcacheInvalidateRange(req_cached, 64);
+	SceKermitRequest *req = (SceKermitRequest *)KERMIT_UNCACHED(req_cached);
+	u64 resp = 0;
+	SceDmacplusLli *cur = lli;
+	while (cur != NULL) {
+		u32 shift = (cur->attr >> 18) & 7;
+		u32 len = (cur->attr & 0xFFF) << shift;
+		sceKermitMemory_driver_80E1240A((const void *)cur->src, len);
+		sceKernelDcacheWritebackRange(cur, sizeof(SceDmacplusLli));
+		sceKermitMemory_driver_80E1240A(cur, sizeof(SceDmacplusLli));
+		cur = (SceDmacplusLli *)cur->next;
+	}
+	req->args[0] = lli->src;
+	req->args[1] = lli->dst;
+	req->args[2] = lli->next;
+	req->args[3] = lli->attr;
+	req->args[4] = (u32)lli;
+	s32 res = sceKermit_driver_36666181(req, KERMIT_MODE_LOWIO, 0x56C, 5, 1, &resp);
+	return (res != 0) ? res : (s32)resp;
+}
+
+static s32 sub_57e4(SceDmacplusLli *lli)
+{
+	SceDmacplusLli *cur = lli;
+	while (cur != NULL) {
+		sceKernelDcacheWritebackRange(cur, sizeof(SceDmacplusLli));
+		sceKermitMemory_driver_80E1240A(cur, sizeof(SceDmacplusLli));
+		cur = (SceDmacplusLli *)cur->next;
+	}
 	return 0;
 }
 
-s32 sceDmacplus_driver_D57D5BC2(void *dst, const void *src, u32 size)
+static s32 sub_5898(SceDmacplusLli *lli)
 {
-	return sceDmacplus_driver_2C5FC1E3(dst, src, size);
+	u8 buf[176];
+	SceKermitRequest *req_cached = (SceKermitRequest *)(((u32)buf + 63) & ~63U);
+	sceKernelDcacheInvalidateRange(req_cached, 64);
+	SceKermitRequest *req = (SceKermitRequest *)KERMIT_UNCACHED(req_cached);
+	u64 resp = 0;
+	sub_57e4(lli);
+	req->args[0] = lli->src;
+	req->args[1] = lli->dst;
+	req->args[2] = lli->next;
+	req->args[3] = lli->attr;
+	req->args[4] = (u32)lli;
+	s32 res = sceKermit_driver_36666181(req, KERMIT_MODE_LOWIO, 0x569, 5, 1, &resp);
+	return (res != 0) ? res : (s32)resp;
 }
 
 /* Push PSP memory into shared Kermit mirror before host read */
@@ -1473,6 +2399,29 @@ int sceKermitMemory_driver_90B662D0(void *addr, u32 size)
 	return 0;
 }
 
+static s32 sub_5c50(void)
+{
+	sceKernelMemset((void *)0xABD38000, 0, 0x8000);
+	g_kermitDmacSmBase1 = 0xABD38000;
+	g_kermitDmacSmBase2 = 0xABD3C000;
+	g_kermitDmacSmLimit = 0x4000;
+	SceUID mtx = sceKernelCreateMutex("SceKermitDmacplus", 0x100, 0, NULL);
+	g_kermitDmacMutexId = mtx;
+	return (mtx < 0) ? mtx : 0;
+}
+
+static s32 sub_5ccc(SceDmacplusLli *lli)
+{
+	SceDmacplusLli *cur = lli;
+	while (cur != NULL) {
+		u32 shift = (cur->attr >> 18) & 7;
+		u32 len = (cur->attr & 0xFFF) << shift;
+		sceKermitMemory_driver_90B662D0((void *)cur->dst, len);
+		cur = (SceDmacplusLli *)cur->next;
+	}
+	return 0;
+}
+
 /* Set Kermit request argument and optionally push buffer */
 void sceKermitMemory_driver_AAF047AC(SceKermitRequest *req, int arg_idx, void *addr, u32 size, int copy_flag)
 {
@@ -1480,29 +2429,6 @@ void sceKermitMemory_driver_AAF047AC(SceKermitRequest *req, int arg_idx, void *a
 		sceKermitMemory_driver_80E1240A(addr, size);
 	if (arg_idx < 14)
 		*(u32 *)((u8 *)req + 0x10 + (arg_idx << 3)) = (u32)addr;
-}
-
-static s32 sub_2f98(SceSize args, void *argp)
-{
-	(void)args;
-	(void)argp;
-	sub_0280();
-	g_sc128SemaId = sceKernelCreateSema("SceDmacplusSc128", 1, 1, 1, NULL);
-	g_sc128EvFlagId = sceKernelCreateEventFlag("SceDmacplusSc128", 0x201, 0, NULL);
-	sceKernelMemset((void *)0xABD38000, 0, 0x8000);
-	g_kermitDmacMutexId = sceKernelCreateMutex("SceKermitDmacplus", 0x100, 0, NULL);
-	return 0;
-}
-
-static s32 sub_3024(SceSize args)
-{
-	(void)args;
-	if (g_sc128SemaId > 0)
-		sceKernelDeleteSema(g_sc128SemaId);
-	if (g_sc128EvFlagId > 0)
-		sceKernelDeleteEventFlag(g_sc128EvFlagId);
-	sub_028c();
-	return 0;
 }
 
 /* =========================================================================
@@ -1686,9 +2612,13 @@ static s32 sub_5e8c(void)
 		if ((REG32(0xBE1401A0) & 1) == 0 && (g_lcdc.disp.flags & 1) != 0)
 			sub_64d8();
 		REG32(0xBE1401A0) = g_lcdc.disp.flags & 0xFE;
-		s32 i;
-		for (i = 0; i < 7; i++)
-			REG32(0xBE140180 + i * 4) = g_lcdc.hwData[i];
+		REG32(0xBE140180) = g_lcdc.hwData[0];
+		REG32(0xBE140184) = g_lcdc.hwData[1];
+		REG32(0xBE140188) = g_lcdc.hwData[2];
+		REG32(0xBE14018C) = g_lcdc.hwData[3];
+		REG32(0xBE140190) = g_lcdc.hwData[4];
+		REG32(0xBE140194) = g_lcdc.hwData[5];
+		REG32(0xBE140198) = g_lcdc.hwData[6];
 	}
 	g_lcdc.hwCtl->v2_8 = g_lcdc.v3_28;
 	g_lcdc.hwCtl->xbPrch = g_lcdc.disp.x.bPrch;
@@ -1726,9 +2656,13 @@ s32 sceLcdc_driver_5DF2F52A(void)
 	g_lcdc.disp.syncDiff = g_lcdc.hwCtl->syncDiff & 0xFF;
 	if (g_lcdc.mobo > 0x7FFFFF) {
 		g_lcdc.disp.flags = REG32(0xBE1401A0) & 0xFF;
-		s32 i;
-		for (i = 0; i < 7; i++)
-			g_lcdc.hwData[i] = REG32(0xBE140180 + i * 4);
+		g_lcdc.hwData[0] = REG32(0xBE140180);
+		g_lcdc.hwData[1] = REG32(0xBE140184);
+		g_lcdc.hwData[2] = REG32(0xBE140188);
+		g_lcdc.hwData[3] = REG32(0xBE14018C);
+		g_lcdc.hwData[4] = REG32(0xBE140190);
+		g_lcdc.hwData[5] = REG32(0xBE140194);
+		g_lcdc.hwData[6] = REG32(0xBE140198);
 	}
 	g_lcdc.v3_28 = g_lcdc.hwCtl->v2_8;
 	s32 v28 = g_lcdc.hwCtl->xres;
