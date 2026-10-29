@@ -1,15 +1,18 @@
 /* String storage is reallocated for erase and append; there is no capacity field. */
 #include "../compiler.h"
 #include "string.h"
+#include "ctype.h"
 #include "stdlib.h"
 #include <libkernel/libkernel.h>
 
 char *sce_paf_strchr(const char *str, int ch)
 {
+	const volatile signed char *cursor = (const volatile signed char *)str;
+
 	for (;;) {
-		if ((signed char)*str == ch)
-			return (char *)str;
-		if (!*str++)
+		if (*cursor == ch)
+			return (char *)cursor;
+		if (!*cursor++)
 			return NULL;
 	}
 }
@@ -21,10 +24,10 @@ char *sce_paf_strrchr(const char *str, int ch)
 	if (!str)
 		return NULL;
 	cursor = str;
-	while (*cursor)
+	while (*(const volatile signed char *)cursor)
 		cursor++;
 	for (;;) {
-		if ((signed char)*cursor == (signed char)ch)
+		if (*(const volatile signed char *)cursor == (signed char)ch)
 			return (char *)cursor;
 		if (cursor == str)
 			return NULL;
@@ -34,18 +37,120 @@ char *sce_paf_strrchr(const char *str, int ch)
 
 int sce_paf_strcmp(const char *left, const char *right)
 {
+	const volatile signed char *leftByte;
+	const volatile signed char *rightByte;
+	int leftCh;
+	int rightCh;
+
 	if (!left || !right) {
 		if (left == right)
 			return 0;
 		return left ? 1 : -1;
 	}
-	while (*left == *right) {
-		if (!*left)
+	leftByte = (const volatile signed char *)left;
+	rightByte = (const volatile signed char *)right;
+	rightCh = *rightByte++;
+	leftCh = *leftByte;
+	for (;;) {
+		if (leftCh != rightCh)
+			return (unsigned char)leftCh -
+				(unsigned char)rightByte[-1];
+		/* Sony rereads the matched left byte before advancing. */
+		if (!*leftByte++)
 			return 0;
-		left++;
-		right++;
+		rightCh = *rightByte++;
+		leftCh = *leftByte;
 	}
-	return (unsigned char)*left - (unsigned char)*right;
+}
+
+/* PafStringRfind calls this export out of line in the original. */
+__attribute__((noinline))
+int sce_paf_strncmp(const char *left, const char *right, size_t num)
+{
+	const volatile signed char *leftByte = (const volatile signed char *)left;
+	const volatile signed char *rightByte = (const volatile signed char *)right;
+	uint32_t remaining = num;
+
+	if (!left || !right) {
+		if (left == right)
+			return 0;
+		return left ? 1 : -1;
+	}
+	for (;;) {
+		int leftCh, rightCh;
+
+		/* The native count is decremented and tested as signed. */
+		remaining--;
+		if (remaining & 0x80000000U)
+			return 0;
+		rightCh = *rightByte++;
+		leftCh = *leftByte;
+		if (leftCh != rightCh) {
+			int leftAgain = *leftByte;
+			int rightAgain = rightByte[-1];
+
+			return (unsigned char)leftAgain - (unsigned char)rightAgain;
+		}
+		if (!*leftByte++)
+			return 0;
+	}
+}
+
+int sce_paf_strcasecmp(const char *left, const char *right)
+{
+	const volatile signed char *leftByte = (const volatile signed char *)left;
+	const volatile signed char *rightByte = (const volatile signed char *)right;
+
+	if (!left || !right) {
+		if (left == right)
+			return 0;
+		return left ? 1 : -1;
+	}
+	for (;;) {
+		int leftFolded = sce_paf_tolower(*leftByte);
+		int rightFolded = sce_paf_tolower(*rightByte);
+
+		if (leftFolded != rightFolded) {
+			int leftAgain = sce_paf_tolower(*leftByte);
+			int rightAgain = sce_paf_tolower(*rightByte);
+
+			return (unsigned char)leftAgain - (unsigned char)rightAgain;
+		}
+		if (!*leftByte++)
+			return 0;
+		rightByte++;
+	}
+}
+
+int sce_paf_strncasecmp(const char *left, const char *right, size_t num)
+{
+	const volatile signed char *leftByte = (const volatile signed char *)left;
+	const volatile signed char *rightByte = (const volatile signed char *)right;
+	uint32_t remaining = num;
+
+	if (!left || !right) {
+		if (left == right)
+			return 0;
+		return left ? 1 : -1;
+	}
+	for (;;) {
+		int leftFolded, rightFolded;
+
+		remaining--;
+		if (remaining & 0x80000000U)
+			return 0;
+		leftFolded = sce_paf_tolower(*leftByte);
+		rightFolded = sce_paf_tolower(*rightByte);
+		if (leftFolded != rightFolded) {
+			int leftAgain = sce_paf_tolower(*leftByte);
+			int rightAgain = sce_paf_tolower(*rightByte);
+
+			return (unsigned char)leftAgain - (unsigned char)rightAgain;
+		}
+		if (!*leftByte++)
+			return 0;
+		rightByte++;
+	}
 }
 
 char *sce_paf_strcpy(char *destination, const char *source)
@@ -57,6 +162,57 @@ char *sce_paf_strcpy(char *destination, const char *source)
 	while ((*destination++ = *source++) != '\0')
 		;
 	return result;
+}
+
+char *sce_paf_strcat(char *destination, const char *source)
+{
+	char *cursor = destination;
+	const volatile signed char *src = (const volatile signed char *)source;
+
+	while (*(const volatile signed char *)cursor)
+		cursor++;
+	for (;;) {
+		signed char ch = *src++;
+
+		*(volatile char *)cursor = ch;
+		cursor++;
+		if (!ch)
+			return destination;
+	}
+}
+
+char *sce_paf_strncat(char *destination, const char *source, size_t num)
+{
+	char *cursor = destination;
+	const volatile signed char *src = (const volatile signed char *)source;
+	uint32_t remaining = num;
+	volatile signed char first;
+	signed char ch;
+
+	if (!destination || !source)
+		return NULL;
+	/* The first source read precedes the destination scan in Sony's code. */
+	first = *src++;
+	while (*(const volatile signed char *)cursor)
+		cursor++;
+	ch = first;
+	*(volatile char *)cursor = ch;
+	if (!ch)
+		return destination;
+	cursor++;
+	for (;;) {
+		/* Sony tests the count only after writing the preceding byte. */
+		remaining--;
+		if (remaining & 0x80000000U) {
+			*(volatile char *)(cursor - 1) = '\0';
+			return destination;
+		}
+		ch = *src++;
+		*(volatile char *)cursor = ch;
+		cursor++;
+		if (!ch)
+			return destination;
+	}
 }
 
 char *sce_paf_strncpy(char *destination, const char *source, size_t num)
