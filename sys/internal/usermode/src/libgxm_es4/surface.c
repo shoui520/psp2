@@ -45,18 +45,6 @@
 #define GXM_COLOR5_TILES_Y_SHIFT	28
 #define GXM_COLOR5_TILES		0xff000000
 
-typedef struct SceGxmColorSurface {
-	SceUInt32 control;
-	SceUInt32 format;
-	SceUInt32 data;
-	SceUInt32 stride;
-	SceUInt32 reserved;		/* pbeEmitWords[3], always 0 */
-	SceUInt32 clipMin;
-	SceUInt32 clipMax;
-	SceUInt32 outputRegisterSize;
-	SceGxmTexture backgroundTex;
-} SceGxmColorSurface;
-
 static inline _Bool gxmColorSurfaceIsEnabled(const SceGxmColorSurface *surface)
 {
 	if (gxmGlobals.compatFlags & GXM_COMPAT_COLOR_ENABLE_DATA)
@@ -348,14 +336,6 @@ int sceGxmColorSurfaceSetDitherMode(SceGxmColorSurface *surface, SceUInt32 dithe
 #define GXM_ZLS_BG_STENCIL		0x000000ff
 #define GXM_ZLS_BG_MASK			0x00000100
 #define GXM_ZLS_BG_DEFAULT		0x00000300
-
-typedef struct SceGxmDepthStencilSurface {
-	SceUInt32 zlsControl;
-	void *depthData;
-	void *stencilData;
-	float backgroundDepth;
-	SceUInt32 backgroundControl;
-} SceGxmDepthStencilSurface;
 
 int sceGxmDepthStencilSurfaceInit(SceGxmDepthStencilSurface *surface, SceUInt32 depthStencilFormat,
 				  SceUInt32 surfaceType, SceUInt32 strideInSamples,

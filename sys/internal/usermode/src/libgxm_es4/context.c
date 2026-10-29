@@ -431,6 +431,25 @@ static inline void gxmContextCommitDefaultUniformBuffers(SceGxmContext *context,
 	}
 }
 
+/* the same, at a kick: each program is read only when its buffer is reserved */
+static inline void gxmContextCommitReservedUniformBuffers(SceGxmContext *context)
+{
+	if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
+		SceUInt32 buffer = (SceUInt32)context->vertexDefaultUniformBuffer;
+		SceUInt32 count = context->vertexProgram->programHeader->defaultUniformBufferCount;
+
+		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
+		context->vertexBuffer.cur = buffer + count * 4;
+	}
+	if (context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
+		SceUInt32 buffer = (SceUInt32)context->fragmentDefaultUniformBuffer;
+		SceUInt32 count = context->fragmentProgram->programHeader->defaultUniformBufferCount;
+
+		context->fragmentDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
+		context->fragmentBuffer.cur = buffer + count * 4;
+	}
+}
+
 int sceGxmDrawPrecomputed(SceGxmContext *context, const SceGxmPrecomputedDraw *precomputedDraw)
 {
 	const SceGxmVertexProgram *vertexProgram;
@@ -536,4 +555,292 @@ int sceGxmDrawInstanced(SceGxmContext *context, SceUInt32 primType,
 	if (ret != 0 || context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
 		return ret;
 	return gxmContextKickIfFull(context);
+}
+
+/* depth/stencil surface contents: the load bits, then the store bits */
+#define GXM_ZLS_LOAD_STENCIL		0x00002000
+#define GXM_ZLS_LOAD_DEPTH		0x00004000
+#define GXM_ZLS_LOAD_MASK		0x00008000
+#define GXM_ZLS_STORE_STENCIL		0x00020000
+#define GXM_ZLS_STORE_DEPTH		0x00040000
+#define GXM_ZLS_STORE_MASK		0x00080000
+#define GXM_ZLS_LOAD_CONTROL		0x00e0f002	/* taken from the load surface */
+#define GXM_ZLS_STORE_CONTROL		0xff1f0ffd	/* and the rest from the store surface */
+
+/* sceGxmBeginSceneEx; sceGxmBeginScene loads and stores one depth/stencil surface */
+static inline int gxmBeginScene(SceGxmContext *context, SceUInt32 flags,
+				const struct SceGxmRenderTarget *renderTarget,
+				const SceGxmValidRegion *validRegion,
+				struct SceGxmSyncObject *vertexSyncObject,
+				struct SceGxmSyncObject *fragmentSyncObject,
+				const SceGxmColorSurface *colorSurface,
+				const SceGxmDepthStencilSurface *loadDepthStencil,
+				const SceGxmDepthStencilSurface *storeDepthStencil)
+{
+	GxmRenderTargetInfo info;
+	SceBool colorEnabled;
+	_Bool loadEnabled;
+	SceUInt32 stride, xMax, yMax, width, height;
+	int ret;
+
+	if (context == NULL)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE || (flags & ~GXM_SCENE_FLAGS) != 0)
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	if (renderTarget == NULL || vertexSyncObject != NULL)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (context->insideScene)
+		return SCE_GXM_ERROR_WITHIN_SCENE;
+
+	if (colorSurface != NULL) {
+		context->colorSurface = *colorSurface;
+		colorEnabled = sceGxmColorSurfaceIsEnabled(colorSurface);
+		if (!(gxmGlobals.compatFlags & GXM_COMPAT_COLOR_ENABLE_DATA) && colorEnabled &&
+		    sceGxmColorSurfaceGetData(colorSurface) == NULL)
+			return SCE_GXM_ERROR_INVALID_VALUE;
+	} else {
+		sceGxmColorSurfaceInitDisabled(&context->colorSurface);
+		colorEnabled = SCE_FALSE;
+	}
+
+	loadEnabled = loadDepthStencil != NULL && sceGxmDepthStencilSurfaceIsEnabled(loadDepthStencil);
+	if (storeDepthStencil != NULL && sceGxmDepthStencilSurfaceIsEnabled(storeDepthStencil)) {
+		SceUInt32 load, store;
+
+		if (!loadEnabled)
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		/* what the load surface holds, the store surface must hold too */
+		load = loadDepthStencil->zlsControl;
+		store = storeDepthStencil->zlsControl;
+		if ((load & GXM_ZLS_LOAD_DEPTH) && !(store & GXM_ZLS_STORE_DEPTH))
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		if (!(store & GXM_ZLS_STORE_STENCIL) && (load & GXM_ZLS_LOAD_STENCIL))
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		if (!(store & GXM_ZLS_STORE_MASK) && (load & GXM_ZLS_LOAD_MASK))
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		stride = sceGxmDepthStencilSurfaceGetStrideInSamples(loadDepthStencil);
+		if (stride != sceGxmDepthStencilSurfaceGetStrideInSamples(storeDepthStencil))
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		context->depthStencil.zlsControl = (storeDepthStencil->zlsControl & GXM_ZLS_STORE_CONTROL) |
+						   (loadDepthStencil->zlsControl & GXM_ZLS_LOAD_CONTROL);
+		context->depthStencil.loadDepthData = loadDepthStencil->depthData;
+		context->depthStencil.loadStencilData = loadDepthStencil->stencilData;
+		context->depthStencil.storeDepthData = storeDepthStencil->depthData;
+		context->depthStencil.storeStencilData = storeDepthStencil->stencilData;
+		context->depthStencil.backgroundDepth = loadDepthStencil->backgroundDepth;
+		context->depthStencil.backgroundControl = loadDepthStencil->backgroundControl;
+	} else {
+		if (loadEnabled)
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		context->depthStencil.zlsControl = 0;
+		context->depthStencil.loadDepthData = NULL;
+		context->depthStencil.loadStencilData = NULL;
+		context->depthStencil.storeDepthData = NULL;
+		context->depthStencil.storeStencilData = NULL;
+		context->depthStencil.backgroundDepth = 1.0f;
+		context->depthStencil.backgroundControl = 0x300;
+		/* a scene draws to color, depth/stencil or both */
+		if (!colorEnabled)
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		stride = 0;
+	}
+
+	if (SceGpuEs4User_83D972DF(&gxmGlobals.top, renderTarget, &info) != 0)
+		return SCE_GXM_ERROR_DRIVER;
+	if (colorEnabled && info.samplesX == 1 && info.samplesY == 2 &&
+	    sceGxmColorSurfaceGetScaleMode(colorSurface) != SCE_GXM_COLOR_SURFACE_SCALE_MSAA_DOWNSCALE)
+		return SCE_GXM_ERROR_UNSUPPORTED;
+	if (validRegion != NULL) {
+		xMax = validRegion->xMax;
+		if (xMax >= info.width)
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		yMax = validRegion->yMax;
+		if (yMax >= info.height)
+			return SCE_GXM_ERROR_INVALID_VALUE;
+	} else {
+		xMax = info.width - 1;
+		yMax = info.height - 1;
+	}
+
+	if (colorEnabled) {
+		SceUInt32 scaleMode;
+
+		width = sceGxmTextureGetWidth(&colorSurface->backgroundTex);
+		height = sceGxmTextureGetHeight(&colorSurface->backgroundTex);
+		scaleMode = sceGxmColorSurfaceGetScaleMode(colorSurface);
+		if ((info.samplesX > 1 || info.samplesY > 1) &&
+		    scaleMode == SCE_GXM_COLOR_SURFACE_SCALE_NONE) {
+			width /= info.samplesX;
+			height /= info.samplesY;
+		} else if (info.samplesX == 1 && info.samplesY == 1 &&
+			   scaleMode == SCE_GXM_COLOR_SURFACE_SCALE_MSAA_DOWNSCALE) {
+			width *= 2;
+			height *= 2;
+		}
+		if (xMax + 1 > width || yMax + 1 > height)
+			return SCE_GXM_ERROR_INVALID_VALUE;
+	} else {
+		width = 0;
+		height = 0;
+	}
+	if (loadEnabled) {
+		SceUInt32 rowSamples;
+
+		if (gxmGlobals.compatFlags & GXM_COMPAT_DEPTH_STRIDE_PIXELS)
+			rowSamples = xMax + 1;
+		else
+			rowSamples = (xMax + 32) & ~31;
+		if (stride < info.samplesX * rowSamples)
+			return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (info.wholeRegion && (xMax != info.width - 1 || yMax != info.height - 1))
+		return SCE_GXM_ERROR_INVALID_VALUE;
+
+	ret = gxmSceneBegin();
+	if (ret != 0)
+		return ret;
+	context->renderTarget = renderTarget;
+	context->sceneFlags = flags;
+	context->colorHeight = height;
+	context->flags |= GXM_CONTEXT_FLAG_DEPTH_STENCIL_USED;
+	context->fragmentSyncObject = fragmentSyncObject;
+	context->sampleCount = info.samplesX * info.samplesY;
+	context->colorWidth = width;
+	context->tileLimitX = xMax;
+	context->tileLimitY = yMax;
+	context->insideScene = 1;
+	sceClibMemcpy_safe(&context->scene.tuning, &context->nextScene.tuning, sizeof(GxmSceneTuning));
+	sceClibMemcpy_safe(&context->scene.settings, &context->nextScene.settings,
+			   sizeof(GxmSceneSettings));
+	sceGxmSetDefaultRegionClipAndViewport(context, xMax, yMax);
+	if (gxmRazorMagic == GXM_CALLBACKS_MAGIC) {
+		gxmRazorCallbacks.beginScene(context->vdmRing.size, context->vertexRing.size,
+					     context->fragmentRing.size, context->fragmentUsseRing.size);
+		if (*gxmRazorCallbacks.captureMarker != NULL)
+			(*gxmRazorCallbacks.captureMarker)[8] = gxmGlobals.frameIndex | 0x10000000;
+	}
+	if (gxmInitCallbacksMagic == GXM_CALLBACKS_MAGIC)
+		gxmInitCallbacks.beginScene(gxmGlobals.frameIndex);
+	return 0;
+}
+
+/* the older export: a region with its minimum, and no check of the flags */
+int _sceGxmBeginScene(SceGxmContext *context, SceUInt32 flags,
+		      const struct SceGxmRenderTarget *renderTarget,
+		      const GxmValidRegionWithMin *validRegion,
+		      struct SceGxmSyncObject *vertexSyncObject,
+		      struct SceGxmSyncObject *fragmentSyncObject,
+		      const SceGxmColorSurface *colorSurface,
+		      const SceGxmDepthStencilSurface *depthStencil)
+{
+	SceGxmValidRegion region;
+	const SceGxmValidRegion *max = NULL;
+
+	if (validRegion != NULL) {
+		region = validRegion->max;
+		max = &region;
+	}
+	return gxmBeginScene(context, flags & GXM_SCENE_FLAGS, renderTarget, max, vertexSyncObject,
+			     fragmentSyncObject, colorSurface, depthStencil, depthStencil);
+}
+
+int sceGxmBeginScene(SceGxmContext *context, SceUInt32 flags,
+		     const struct SceGxmRenderTarget *renderTarget,
+		     const SceGxmValidRegion *validRegion,
+		     struct SceGxmSyncObject *vertexSyncObject,
+		     struct SceGxmSyncObject *fragmentSyncObject,
+		     const SceGxmColorSurface *colorSurface,
+		     const SceGxmDepthStencilSurface *depthStencil)
+{
+	return gxmBeginScene(context, flags, renderTarget, validRegion, vertexSyncObject,
+			     fragmentSyncObject, colorSurface, depthStencil, depthStencil);
+}
+
+int sceGxmBeginSceneEx(SceGxmContext *context, SceUInt32 flags,
+		       const struct SceGxmRenderTarget *renderTarget,
+		       const SceGxmValidRegion *validRegion,
+		       struct SceGxmSyncObject *vertexSyncObject,
+		       struct SceGxmSyncObject *fragmentSyncObject,
+		       const SceGxmColorSurface *colorSurface,
+		       const SceGxmDepthStencilSurface *loadDepthStencil,
+		       const SceGxmDepthStencilSurface *storeDepthStencil)
+{
+	return gxmBeginScene(context, flags, renderTarget, validRegion, vertexSyncObject,
+			     fragmentSyncObject, colorSurface, loadDepthStencil, storeDepthStencil);
+}
+
+#define SCE_GXM_MIDSCENE_PRESERVE_DEFAULT_UNIFORM_BUFFERS	0x00000001U
+
+/* the older export: no check of the flags */
+int _sceGxmMidSceneFlush(SceGxmContext *context, SceUInt32 flags,
+			 struct SceGxmSyncObject *vertexSyncObject,
+			 const SceGxmNotification *vertexNotification)
+{
+	int ret;
+
+	if (context == NULL)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	if (vertexSyncObject != NULL)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (!context->insideScene)
+		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
+	gxmContextCommitReservedUniformBuffers(context);
+	ret = gxmContextKick(context,
+			     (flags & SCE_GXM_MIDSCENE_PRESERVE_DEFAULT_UNIFORM_BUFFERS) |
+			     GXM_KICK_MID_SCENE, vertexNotification, NULL);
+	if (ret != 0)
+		return ret;
+	gxmRazorMarker(0x12000000, gxmGlobals.frameIndex);
+	sceClibMemcpy_safe(&context->scene.tuning, &context->nextScene.tuning, sizeof(GxmSceneTuning));
+	return 0;
+}
+
+int sceGxmMidSceneFlush(SceGxmContext *context, SceUInt32 flags,
+			struct SceGxmSyncObject *vertexSyncObject,
+			const SceGxmNotification *vertexNotification)
+{
+	int ret;
+
+	if (context == NULL)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE ||
+	    (flags & ~SCE_GXM_MIDSCENE_PRESERVE_DEFAULT_UNIFORM_BUFFERS) != 0)
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	if (vertexSyncObject != NULL)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (!context->insideScene)
+		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
+	gxmContextCommitReservedUniformBuffers(context);
+	ret = gxmContextKick(context, flags | GXM_KICK_MID_SCENE, vertexNotification, NULL);
+	if (ret != 0)
+		return ret;
+	gxmRazorMarker(0x12000000, gxmGlobals.frameIndex);
+	sceClibMemcpy_safe(&context->scene.tuning, &context->nextScene.tuning, sizeof(GxmSceneTuning));
+	return 0;
+}
+
+int sceGxmEndScene(SceGxmContext *context, const SceGxmNotification *vertexNotification,
+		   const SceGxmNotification *fragmentNotification)
+{
+	int ret;
+
+	if (context == NULL)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	if (!context->insideScene)
+		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
+	gxmContextCommitReservedUniformBuffers(context);
+	ret = gxmContextKick(context, GXM_KICK_END_SCENE, vertexNotification, fragmentNotification);
+	if (ret != 0)
+		return ret;
+	gxmRazorMarker(0x11000000 | (gxmGlobals.sceneIndex & 0xff) << 16,
+		       gxmGlobals.frameIndex & 0xffff);
+	context->insideScene = 0;
+	if (gxmInitCallbacksMagic == GXM_CALLBACKS_MAGIC)
+		gxmInitCallbacks.endScene();
+	gxmGlobals.sceneIndex++;
+	return gxmSceneEnd();
 }

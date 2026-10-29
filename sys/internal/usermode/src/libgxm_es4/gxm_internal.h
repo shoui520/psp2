@@ -825,6 +825,115 @@ typedef struct GxmRingBuffer {
 	SceUInt32 lastOffset;		/* the refill measures from it; 0 at first */
 } GxmRingBuffer;
 
+/* --- surfaces --- */
+
+typedef struct SceGxmColorSurface {
+	SceUInt32 control;
+	SceUInt32 format;
+	SceUInt32 data;
+	SceUInt32 stride;
+	SceUInt32 reserved;		/* pbeEmitWords[3], always 0 */
+	SceUInt32 clipMin;
+	SceUInt32 clipMax;
+	SceUInt32 outputRegisterSize;
+	SceGxmTexture backgroundTex;
+} SceGxmColorSurface;
+
+typedef struct SceGxmDepthStencilSurface {
+	SceUInt32 zlsControl;
+	void *depthData;
+	void *stencilData;
+	float backgroundDepth;
+	SceUInt32 backgroundControl;
+} SceGxmDepthStencilSurface;
+
+#define SCE_GXM_COLOR_SURFACE_SCALE_NONE		0
+#define SCE_GXM_COLOR_SURFACE_SCALE_MSAA_DOWNSCALE	1
+
+SceBool sceGxmColorSurfaceIsEnabled(const SceGxmColorSurface *surface);
+int sceGxmColorSurfaceInitDisabled(SceGxmColorSurface *surface);
+SceUInt32 sceGxmColorSurfaceGetScaleMode(const SceGxmColorSurface *surface);
+void *sceGxmColorSurfaceGetData(const SceGxmColorSurface *surface);
+SceBool sceGxmDepthStencilSurfaceIsEnabled(const SceGxmDepthStencilSurface *surface);
+SceUInt32 sceGxmDepthStencilSurfaceGetStrideInSamples(const SceGxmDepthStencilSurface *surface);
+SceUInt32 sceGxmTextureGetWidth(const SceGxmTexture *texture);
+SceUInt32 sceGxmTextureGetHeight(const SceGxmTexture *texture);
+
+/* --- scenes --- */
+
+#define SCE_GXM_SCENE_FRAGMENT_SET_DEPENDENCY		0x00000001U
+#define SCE_GXM_SCENE_VERTEX_WAIT_FOR_DEPENDENCY	0x00000002U
+#define SCE_GXM_SCENE_FRAGMENT_TRANSFER_SYNC		0x00000004U
+#define SCE_GXM_SCENE_VERTEX_TRANSFER_SYNC		0x00000008U
+#define GXM_SCENE_FLAGS		0x0000000fU
+
+typedef struct SceGxmValidRegion {
+	SceUInt32 xMax;
+	SceUInt32 yMax;
+} SceGxmValidRegion;
+
+/* the region _sceGxmBeginScene (the older export) takes: the maximum after the minimum */
+typedef struct GxmValidRegionWithMin {
+	SceUInt32 xMin;
+	SceUInt32 yMin;
+	SceGxmValidRegion max;
+} GxmValidRegionWithMin;
+
+struct SceGxmRenderTarget;
+struct SceGxmSyncObject;
+struct GxmTopContext;
+
+/* what libgpu_es4 reports for a render target */
+typedef struct GxmRenderTargetInfo {
+	SceUInt32 width;
+	SceUInt32 height;
+	SceUInt16 samplesX;		/* multisampling: samples per pixel across */
+	SceUInt16 samplesY;		/* and down */
+	SceUInt32 wholeRegion;		/* the valid region must be the whole target */
+} GxmRenderTargetInfo;
+
+int SceGpuEs4User_83D972DF(struct GxmTopContext *top, const struct SceGxmRenderTarget *renderTarget,
+			   GxmRenderTargetInfo *info);	/* the render target's size */
+
+/*
+ * The scene's depth/stencil state, from the load and store surfaces of
+ * sceGxmBeginSceneEx (sceGxmBeginScene passes one surface as both).
+ */
+typedef struct GxmSceneDepthStencil {
+	SceUInt32 zlsControl;		/* the store surface's, with the load surface's load bits */
+	void *loadDepthData;
+	void *loadStencilData;
+	void *storeDepthData;
+	void *storeStencilData;
+	float backgroundDepth;
+	SceUInt32 backgroundControl;
+} GxmSceneDepthStencil;
+
+/*
+ * Scene parameters the context's setters store between scenes and
+ * sceGxmBeginScene takes over, in two parts it copies separately. The
+ * SceGxmInternalForTest setters (unnamed exports) set most of them.
+ */
+typedef struct GxmSceneTuning {
+	SceUInt32 option;		/* C65CED80: 0 or 0x80 */
+	SceUInt16 limit;		/* 65FF05BC: 1..0x7fff */
+	SceUInt16 count;		/* 65FF05BC: 0..16 */
+} GxmSceneTuning;
+
+typedef struct GxmSceneSettings {
+	SceUInt32 offsets;		/* 46D6C306: two signed bytes */
+	SceUInt32 mode;			/* D352F90A */
+	SceUInt32 modeValue;
+	void *visibilityBuffer;		/* sceGxmSetVisibilityBuffer */
+	SceUInt32 visibilityStride;	/* per core */
+	SceUInt32 yuvProfile[2];	/* sceGxmSetYuvProfile */
+} GxmSceneSettings;
+
+typedef struct GxmSceneParams {
+	GxmSceneTuning tuning;
+	GxmSceneSettings settings;
+} GxmSceneParams;
+
 struct SceGxmPrecomputedFragmentState;
 struct SceGxmPrecomputedVertexState;
 
@@ -899,11 +1008,19 @@ typedef struct SceGxmContext {
 	GxmRingBuffer fragmentRing;	/* 0x428 */
 	GxmChunkBuffer fragmentUsseBuffer;	/* 0x44c */
 	GxmRingBuffer fragmentUsseRing;	/* 0x460 */
-	SceUInt32 sceneState[9];	/* 0x484: PLACEHOLDER: what the scene's end reads */
+	GxmSceneParams scene;		/* 0x484: the scene's, from nextScene at its beginning */
 	SceUInt32 sceneFlags;		/* 0x4a8: sceGxmBeginScene's flags */
 	const struct SceGxmRenderTarget *renderTarget;
-	SceUInt32 tileLimitX;		/* 0x4b0: stored with tileLimitY, from one pair */
+	SceUInt32 tileLimitX;		/* 0x4b0: the valid region's maximum */
 	SceUInt32 tileLimitY;		/* 0x4b4: immediate contexts clip the region to it */
+	SceUInt32 colorWidth;		/* 0x4b8: the color surface's size, 0 when disabled */
+	SceUInt32 colorHeight;
+	struct SceGxmSyncObject *fragmentSyncObject;	/* 0x4c0 */
+	SceGxmColorSurface colorSurface;	/* 0x4c4 */
+	GxmSceneDepthStencil depthStencil;	/* 0x4f4 */
+	SceUInt32 sampleCount;		/* 0x510: the render target's samples per pixel */
+	SceUInt32 reserved[7];		/* 0x514: PLACEHOLDER: not read by the code written yet */
+	GxmSceneParams nextScene;	/* 0x530: set between scenes */
 } SceGxmContext;
 
 GXM_ASSERT_OFFSET(SceGxmContext, state, 0x1c0);
@@ -917,6 +1034,10 @@ GXM_ASSERT_OFFSET(SceGxmContext, vertexTextures, 0x2c0);
 GXM_ASSERT_OFFSET(SceGxmContext, insideScene, 0x3d8);
 GXM_ASSERT_OFFSET(SceGxmContext, fragmentUsseRing, 0x460);
 GXM_ASSERT_OFFSET(SceGxmContext, sceneFlags, 0x4a8);
+GXM_ASSERT_OFFSET(SceGxmContext, colorSurface, 0x4c4);
+GXM_ASSERT_OFFSET(SceGxmContext, depthStencil, 0x4f4);
+GXM_ASSERT_OFFSET(SceGxmContext, nextScene, 0x530);
+_Static_assert(sizeof(SceGxmContext) == 0x554, "SceGxmContext size");
 
 static inline SceUInt32 gxmFloatBits(float value)
 {
@@ -931,11 +1052,19 @@ void gxmContextUpdateFrontFragmentProgram(SceGxmContext *context,
 void gxmContextUpdateBackFragmentProgram(SceGxmContext *context,
 					 const SceGxmFragmentProgram *program);
 
+void sceGxmSetDefaultRegionClipAndViewport(SceGxmContext *context, SceUInt32 xMax, SceUInt32 yMax);
+
 /* context_flush.c */
 int gxmContextWriteVertexStreams(SceGxmContext *context);
 int gxmContextWriteState(SceGxmContext *context);
 
 /* context_kick.c */
+#define GXM_KICK_END_SCENE	0x00000002	/* the scene's last kick */
+#define GXM_KICK_MID_SCENE	0x00000080	/* a flush inside the scene */
+struct SceGxmNotification;
+int gxmContextKick(SceGxmContext *context, SceUInt32 flags,
+		   const struct SceGxmNotification *vertexNotification,
+		   const struct SceGxmNotification *fragmentNotification);
 int gxmContextKickIfFull(SceGxmContext *context);
 
 /* --- shader patcher --- */
@@ -1093,6 +1222,7 @@ int gxmThreadStateInit(SceUInt32 *state, SceUInt8 *flag);
 #define GXM_COMPAT_PALETTE_OPTIONAL	0x00000800
 #define GXM_COMPAT_GAMMA_INVERTED	0x00001000
 #define GXM_COMPAT_SURFACE_ANY		0x00002000
+#define GXM_COMPAT_DEPTH_STRIDE_PIXELS	0x00000400	/* the depth stride need only cover the region */
 #define GXM_COMPAT_COLOR_ENABLE_DATA	0x00008000	/* a surface is enabled when it has data */
 #define GXM_COMPAT_COLOR_RESTRICTED	0x00010000
 #define GXM_COMPAT_USSE_ANY_SIZE	0x00020000	/* USSE maps may exceed 8 MiB */
@@ -1213,7 +1343,8 @@ typedef struct GxmRazorCallbacks {
 	void (*displayQueueAddEntry)(void);	/* after a flip is queued */
 	void (*padHeartbeat)(void);
 	void (*draw)(void);			/* each draw */
-	void (*beginScene)(void);
+	void (*beginScene)(SceSize vdmSize, SceSize vertexSize, SceSize fragmentSize,
+			   SceSize fragmentUsseSize);	/* the rings' sizes */
 	void (*kick)(void);			/* each scene kick */
 	void (*reserved)(void);			/* never called */
 	SceUInt32 **captureMarker;		/* word 8 of *captureMarker takes markers */
@@ -1223,7 +1354,7 @@ typedef struct GxmInitCallbacks {
 	void (*initialize)(void);
 	void (*terminate)(void);
 	void (*endScene)(void);
-	void (*beginScene)(void);
+	void (*beginScene)(SceUInt32 frame);
 	void (*displayQueueAddEntry)(SceUInt32);	/* 0x10 */
 	void (*contextWritten)(SceGxmContext *context);	/* after a draw or a kick */
 	void (*userMarker)(SceGxmContext *context, const char *marker);
