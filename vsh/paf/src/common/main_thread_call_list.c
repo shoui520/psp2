@@ -54,7 +54,7 @@ CallListListener *CallListListenerConstruct(CallListListener *self)
 	TimerListenerList *list = s_default_list;
 	ListenerParam param;
 	ScePafMisc_C565FD29(list,
-		ScePafMisc_B90DBCA6(&param, &self->base, 1, NULL, NULL));
+		ListenerParamConstruct(&param, &self->base, 1, NULL, NULL));
 	return self;
 }
 

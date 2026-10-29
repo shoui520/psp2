@@ -487,6 +487,16 @@ void TimerListenerResetTimer(TimerListener *self)
 	}
 }
 
+ListenerParam *ListenerParamConstruct(ListenerParam *self, TimerListener *listener,
+				      unsigned char interval, void *data1, void *data2)
+{
+	self->listener = listener;
+	self->data1 = data1;
+	self->data2 = data2;
+	self->interval = interval;
+	return self;
+}
+
 float Timer2DDoTick(Timer2D *self)
 {
 	Timer *timer = &self->base;

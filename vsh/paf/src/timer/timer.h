@@ -224,8 +224,12 @@ typedef struct ListenerParam {
 	TimerListener *listener;
 	void *data1;
 	void *data2;
-	unsigned char interval;
+	unsigned char interval : 1;
 } ListenerParam;
+
+#define ListenerParamConstruct ScePafMisc_B90DBCA6
+ListenerParam *ListenerParamConstruct(ListenerParam *self, TimerListener *listener,
+				      unsigned char interval, void *data1, void *data2);
 
 extern TimerListenerList *s_default_list;
 
@@ -405,8 +409,6 @@ float TimerDoFuncSineOut(float rate);
 float TimerDoFuncSwing(float rate);
 float TimerDoFuncAngular(float rate);
 
-ListenerParam *ScePafMisc_B90DBCA6(ListenerParam *self, TimerListener *listener,
-				unsigned char interval, void *data1, void *data2);
 void ScePafMisc_C565FD29(TimerListenerList *self, const ListenerParam *param);
 void ScePafMisc_A4554B25(TimerListenerList *self, TimerListener *listener);
 
