@@ -575,8 +575,8 @@ static int Configured(int version, void *ctx)
 	int ret;
 
 	s_serial.attached = 1;
-	s_serial.receive.request.size = version == 2 ? 512 : 64;
 	ret = sceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_DETACHED);
+	s_serial.receive.request.size = version == 2 ? 512 : 64;
 	if (s_serial.openCount > 0)
 		ret = StartTransfer();
 	return ret;
