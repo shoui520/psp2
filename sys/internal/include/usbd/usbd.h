@@ -230,7 +230,7 @@ int SceUsbdForDriver_7938DAC7(SceUID pipeId);	/* vitasdk: ksceUsbd_7938DAC7 */
 /* vitasdk: ksceUsbdScanStaticDescriptor */
 void *SceUsbdForDriver_BC3EF82B(SceUID deviceId, void *start, SceUsbdDescriptorType type);
 int SceUsbdForDriver_F304DC5C(SceUID pipeId);	/* vitasdk: ksceUsbdClosePipe */
-int sceUsbdAttach(SceUID uid, unsigned int driverId, unsigned int busIndex, unsigned int address);
+int sceUsbdAttach(SceUID uid, unsigned int driverId, SceUInt8 busIndex, SceUInt8 address);
 int sceUsbdClosePipe(SceUID uid, SceUID pipeId);
 int sceUsbdEnd(SceUID uid);
 int sceUsbdGetDescriptor(SceUID uid, unsigned int deviceId, void *descriptor, SceSize size);

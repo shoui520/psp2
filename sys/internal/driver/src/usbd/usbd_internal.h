@@ -341,8 +341,10 @@ typedef struct UsbdDeviceInfo {
 /* sceUsbdAttachCompositeLdd's argument */
 typedef struct UsbdAttachCompositeParam {
 	unsigned int driverId;
-	unsigned int bus;
-	unsigned int address;
+	SceUInt8 bus;
+	SceUInt8 padding1[3];
+	SceUInt8 address;
+	SceUInt8 padding2[3];
 	int interfaceNumber;
 	int configuration;
 } UsbdAttachCompositeParam;

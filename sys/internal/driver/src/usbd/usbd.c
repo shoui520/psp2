@@ -683,9 +683,10 @@ static __always_inline int usbdFindInterface(UsbdDevice *device,
 }
 
 /* a device appeared on a hub port: enumerate it and offer it to the drivers */
-static void usbdAttachDevice(unsigned int hubId, unsigned int port, unsigned int speed)
+static void usbdAttachDevice(unsigned int hubId, SceUInt8 port, SceUInt8 speed)
 {
 	unsigned int busIndex = USBD_ID_BUS(hubId);
+	unsigned int hubIndex = USBD_ID_INDEX(hubId);
 	UsbdBus *bus = s_usbd.bus[busIndex];
 	SceUsbdDeviceDescriptor *descriptor;
 	UsbdDevice *device, *parent;
@@ -699,14 +700,15 @@ static void usbdAttachDevice(unsigned int hubId, unsigned int port, unsigned int
 	unsigned int length, totalLength = 0, index, count, deviceId, kind;
 	int configured, configurationValue, interfaceNumber, total, i;
 
-	if (bus->rootHub->address == USBD_ID_INDEX(hubId)) {
+	if (bus->rootHub->index == hubIndex) {
 		bus->rootHub->speed = speed;
 		hcd = speed == SCE_USBD_DEVICE_SPEED_HS ? &bus->ehci : &bus->ohci;
 		parent = bus->rootHub;
 	} else {
 		hcd = bus->rootHub->speed == SCE_USBD_DEVICE_SPEED_HS ? &bus->ehci : &bus->ohci;
-		parent = bus->device[USBD_ID_INDEX(hubId)];
+		parent = bus->device[hubIndex];
 		if (parent != bus->rootHub) {
+			hubId = USBD_ID(busIndex, hubIndex);
 			if (hubResetPort(hubId, port) < 0)
 				return;
 			sceKernelDelayThread(500000);
@@ -971,7 +973,7 @@ release:
 }
 
 /* a device left a hub port */
-static void usbdDetachDevice(unsigned int hubId, unsigned int port)
+static void usbdDetachDevice(unsigned int hubId, SceUInt8 port)
 {
 	unsigned int busIndex = USBD_ID_BUS(hubId);
 	UsbdBus *bus = s_usbd.bus[busIndex];
@@ -1588,7 +1590,8 @@ int sceUsbdSuspendPhase2(int busIndex, int flag)
 	result = flag & 1;
 	bus->suspended = 1;
 	if (result) {
-		if ((unsigned int)busIndex < USBD_BUS_COUNT && (bus = s_usbd.bus[busIndex]) != NULL) {
+		if ((SceUInt8)busIndex < USBD_BUS_COUNT &&
+		    (bus = s_usbd.bus[(SceUInt8)busIndex]) != NULL) {
 			result = 0;
 			for (address = 1; address < USBD_DEVICES_PER_BUS; address++) {
 				device = bus->device[address];
@@ -2422,7 +2425,7 @@ int sceUsbdGetDeviceList(SceUID uid, SceSize num, UsbdDeviceInfo *info)
 				continue;
 			driver = usbdGetAttachedDriver(device);
 			list[count].bus = bus->index;
-			list[count].address = device->address;
+			list[count].address = device->index;
 			if (driver == NULL)
 				list[count].driverKind = 0;
 			else if (driver->flags & USBD_DRIVER_COMPOSITE)
@@ -2764,7 +2767,7 @@ out:
 }
 
 /* attach a user LDD to a whole device */
-int sceUsbdAttach(SceUID uid, unsigned int driverId, unsigned int busIndex, unsigned int address)
+int sceUsbdAttach(SceUID uid, unsigned int driverId, SceUInt8 busIndex, SceUInt8 address)
 {
 	UsbdDriver *driver;
 	UsbdDevice *device;
@@ -2775,7 +2778,7 @@ int sceUsbdAttach(SceUID uid, unsigned int driverId, unsigned int busIndex, unsi
 	state = sceSyscallEnter();
 	usbdLock();
 	if (usbdFindClient(uid) == NULL || driverId >= USBD_DRIVER_COUNT ||
-	    busIndex >= USBD_BUS_COUNT || address - 1 >= USBD_DEVICES_PER_BUS - 1 ||
+	    busIndex >= USBD_BUS_COUNT || (unsigned int)(address - 1) >= USBD_DEVICES_PER_BUS - 1 ||
 	    (bus = s_usbd.bus[busIndex]) == NULL) {
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
@@ -2819,7 +2822,7 @@ int sceUsbdAttachCompositeLdd(SceUID uid, const UsbdAttachCompositeParam *userPa
 	if (result < 0)
 		goto out;
 	if (param.driverId >= USBD_DRIVER_COUNT || param.bus >= USBD_BUS_COUNT ||
-	    param.address - 1 >= USBD_DEVICES_PER_BUS - 1 || (bus = s_usbd.bus[param.bus]) == NULL) {
+	    (unsigned int)(param.address - 1) >= USBD_DEVICES_PER_BUS - 1 || (bus = s_usbd.bus[param.bus]) == NULL) {
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
 	}
