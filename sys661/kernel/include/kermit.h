@@ -162,9 +162,9 @@ int sceKernelGetThreadmanIdType(SceUID uid);
 void *sceKernelMemcpy(void *dst, const void *src, SceSize size);
 int sceKernelMemset(void *dst, int ch, SceSize size);
 int sceKernelGetUIDcontrolBlock(SceUID uid, void **block);
-void sceKernelDcacheWritebackRange(const void *p, unsigned int size);
-void sceKernelDcacheInvalidateRange(const void *p, unsigned int size);
-void sceKernelDcacheWritebackInvalidateRange(const void *p, unsigned int size);
+__attribute__((access(none, 1))) void sceKernelDcacheWritebackRange(const void *p, unsigned int size);
+__attribute__((access(none, 1))) void sceKernelDcacheInvalidateRange(const void *p, unsigned int size);
+__attribute__((access(none, 1))) void sceKernelDcacheWritebackInvalidateRange(const void *p, unsigned int size);
 void sceKernelDcacheWritebackInvalidateAll(void);
 
 int sceKernelPowerLock(int lock_type);
