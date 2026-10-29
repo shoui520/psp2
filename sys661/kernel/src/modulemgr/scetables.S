@@ -701,7 +701,7 @@ module_info:
 	.word	sceKernelLoadModuleBufferBootInitConfig /* sceKernelLoadModuleBufferBootInitConfig (0xe8b9d19d) */
 	.word	sceKernelStopUnloadSelfModule /* sceKernelStopUnloadSelfModule (0xe97e0db7) */
 	.word	sceKernelStopUnloadSelfModuleWithStatus /* sceKernelStopUnloadSelfModuleWithStatus (0xee6e8f49) */
-	.word	sceKernelLoadModuleByID /* sceKernelLoadModuleByID (0xeec2a745) */
+	.word	sceKernelLoadModuleByIDForKernel /* sceKernelLoadModuleByID (0xeec2a745) */
 	.word	sceKernelLoadModuleBootInitConfig /* sceKernelLoadModuleBootInitConfig (0xf7c7febc) */
 	.word	sceKernelLoadModuleForLoadExecVSHMs1 /* sceKernelLoadModuleForLoadExecVSHMs1 (0xfe61f16d) */
 	.word	ModuleMgrForKernel_var_57F4B35E /* ModuleMgrForKernel_var_57F4B35E (0x57f4b35e) */

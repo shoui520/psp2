@@ -14,6 +14,7 @@
 #include "override.h"
 
 static SceUID _loadModuleByBufferID(SceModuleMgrParam *pModParams, const SceKernelLMOption *pOption);
+static __attribute__((noinline)) s32 _checkLMOptionConditionsBuf(const SceKernelLMOption *pOption);
 static void _setupForLoadModuleBuffer(SceModuleMgrParam *pModParams, u32 apiType, void *base, 
     SceSize modSize, u32 unk124);
 
@@ -1235,7 +1236,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, const char *path, s32 f
     modParams.unk124 = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000022D0
-    if (status >= 0x0000225C) // 0x000022C0
+    if (status >= SCE_ERROR_OK) // 0x000022C0
         modParams.unk100 = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000022D0
@@ -2159,7 +2160,7 @@ SceUID sceKernelLoadModuleBufferForExitGame(void *base, s32 flag, const SceKerne
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOption); //0x00005170
+    status = _checkLMOptionConditionsBuf(pOption); //0x00005170
     if (status < 0) {
         pspSetK1(oldK1);
         return status;
@@ -2205,7 +2206,7 @@ SceUID sceKernelLoadModuleBufferMs(SceSize size, void *base, s32 flag, const Sce
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOption); //0x00005260
+    status = _checkLMOptionConditionsBuf(pOption); //0x00005260
     if (status < 0) { // 0x0000526C
         pspSetK1(oldK1);
         return status;
@@ -2251,7 +2252,7 @@ SceUID sceKernelLoadModuleBufferApp(SceSize size, void *base, s32 flag, const Sc
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOption); // 0x0000533C
+    status = _checkLMOptionConditionsBuf(pOption); // 0x0000533C
     if (status < 0) { // 0x00005348
         pspSetK1(oldK1);
         return status;
@@ -2293,7 +2294,7 @@ SceUID sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlan(s32 apiType, void *b
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOption); // 0x000053F8
+    status = _checkLMOptionConditionsBuf(pOption); // 0x000053F8
     if (status < 0) {
         pspSetK1(oldK1);
         return status;
@@ -2335,7 +2336,7 @@ SceUID sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlanDebug(s32 apiType, vo
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOption); // 0x000054B4
+    status = _checkLMOptionConditionsBuf(pOption); // 0x000054B4
     if (status < 0) {
         pspSetK1(oldK1);
         return status;
@@ -2382,7 +2383,7 @@ SceUID sceKernelLoadModuleBufferVSH(SceSize size, void *base, s32 flag,
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOption); // 0x00005590
+    status = _checkLMOptionConditionsBuf(pOption); // 0x00005590
     if (status < 0) { // 0x0000559C
         pspSetK1(oldK1);
         return status;
@@ -2425,7 +2426,7 @@ SceUID sceKernelLoadModuleBufferForExitVSHVSH(void *base, s32 flag, const SceKer
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOption); // 0x00005640
+    status = _checkLMOptionConditionsBuf(pOption); // 0x00005640
     if (status < 0) {
         pspSetK1(oldK1);
         return status;
@@ -2466,7 +2467,7 @@ SceUID sceKernelLoadModuleBufferForKernel(SceSize size, void *base, s32 flag,
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOption); // 0x00005708
+    status = _checkLMOptionConditionsBuf(pOption); // 0x00005708
     if (status < 0) { // 0x00005714
         pspSetK1(oldK1);
         return status;
@@ -2509,7 +2510,7 @@ SceUID sceKernelLoadModuleBufferForExitVSHKernel(void *base, s32 flag, const Sce
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOption); // 0x000057B8
+    status = _checkLMOptionConditionsBuf(pOption); // 0x000057B8
     if (status < 0) {
         pspSetK1(oldK1);
         return status;
@@ -2553,7 +2554,7 @@ SceUID sceKernelLoadModuleBufferForRebootKernel(void *base, s32 flag,
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOption); // 0x00005868
+    status = _checkLMOptionConditionsBuf(pOption); // 0x00005868
     if (status < 0) {
         pspSetK1(oldK1);
         return status;
@@ -2606,7 +2607,7 @@ SceUID sceKernelLoadModuleBufferBootInitBtcnf(SceSize size, void *base, s32 flag
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    status = _checkLMOptionConditions(pOption); // 0x0000593C
+    status = _checkLMOptionConditionsBuf(pOption); // 0x0000593C
     if (status < 0) { // 0x00005714
         pspSetK1(oldK1);
         return status;
@@ -2654,6 +2655,12 @@ static SceUID _loadModuleByBufferID(SceModuleMgrParam *pModParams, const SceKern
     pModParams->pExecInfo = NULL;
 
     return _start_exe_thread(pModParams); // 0x000075F4
+}
+
+// Subroutine sub_00007620 - Address 0x00007620
+static __attribute__((noinline)) s32 _checkLMOptionConditionsBuf(const SceKernelLMOption *pOption)
+{
+    return _checkLMOptionConditions(pOption);
 }
 
 // Subroutine sub_00007698 - Address 0x00007698
