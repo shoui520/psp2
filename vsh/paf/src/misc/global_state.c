@@ -28,6 +28,9 @@ uint32_t sce_paf_misc_limits_edf8[2];
 uint8_t sce_paf_misc_cells_dc60[2][8][32] __attribute__((aligned(32)));
 uint8_t sce_paf_misc_cells_de60[2][8][32] __attribute__((aligned(32)));
 uint32_t sce_paf_misc_shared_f3c8;
+uint64_t sce_paf_misc_pair_1170;
+float sce_paf_misc_float_112c;
+float sce_paf_misc_float_1130;
 
 uint32_t ScePafMisc_4E93C051(void)
 {
@@ -259,4 +262,20 @@ void *ScePafMisc_7616DF6C(uint32_t *object, uint32_t first)
 	words[4] = 0x3f;
 	words[5] = (uint32_t)(uintptr_t)&sce_paf_misc_shared_f3c8;
 	return object;
+}
+
+uint32_t ScePafMisc_A08B8D8A(uint32_t value)
+{
+	sce_paf_misc_pair_1170 = value;
+	return value;
+}
+
+void ScePafMisc_DA9F40ED(uint32_t *first, uint32_t *second)
+{
+	float a = sce_paf_misc_float_112c;
+	float b = sce_paf_misc_float_1130;
+	uint32_t x = (uint32_t)a;
+	uint32_t y = (uint32_t)b;
+	*first = x;
+	*second = y;
 }
