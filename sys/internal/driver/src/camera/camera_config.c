@@ -16,8 +16,8 @@ int cameraTranslateFrameBuffer(int devnum, CameraProcess *process, int cache)
 {
 	SceUInt16 format = process->config.wFormat;
 	CameraDevice *device = &cameraDriver->device[devnum];
-	SceKernelPARange physical;
 	SceKernelVARange range;
+	SceKernelPARange physical;
 	int result;
 
 	switch (format) {
@@ -667,11 +667,9 @@ int sceCameraConfigStopPid(int devnum, SceUID processId)
 	storage = NULL;
 	result = sceKernelGetRemoteKPLS(processId,
 			cameraDriver->processLocalStorageKey, (void **)&storage, 0);
-	if (result >= 0 && storage != NULL) {
-		if (storage[devnum].processId != processId)
-			return (int)0x802e0006;
+	if (result >= 0 && storage != NULL &&
+	    storage[devnum].processId == processId)
 		storage[devnum].activeStatus = 0;
-	}
 	return (int)0x802e000e;
 }
 
