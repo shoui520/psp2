@@ -14,12 +14,6 @@
 #endif
 #define _PSP2KERN_KERNEL_KBL_KBL_H_
 
-#include <scetypes.h>
-#include <sysmem/memblock.h>
-#include <sysmem/dipsw.h>
-#include <ss_mgr/ss_mgr.h>
-#include <stdint.h>
-
 /* SceKblParam.poweroff_factor */
 #define SCE_KBL_POWEROFF_PANIC_REBOOT	0x00000001	/* a fatal error rebooted the system */
 #define SCE_KBL_POWEROFF_PANIC		0x00000010	/* a fatal error powered it off */
@@ -31,10 +25,28 @@
 #define BOOT_TYPE_MEMORY_TEST		0x00000008	/* never set by the release second_loader */
 #define BOOT_TYPE_SPECIAL_MEDIA		0x00000040	/* modules come from sd0: (NSKBL) */
 #define BOOT_TYPE_JIG			0x00010000	/* the jig handshake passed */
+#define BOOT_TYPE_RESUME		0x00020000	/* resuming: no boot logo */
 #define BOOT_TYPE_SD_CARD		0x00040000	/* an SD card to mount as sd0: (NSKBL) */
 #define BOOT_TYPE_SD_MODE		0x00080000
 
 #define SCE_KBL_PARAM_MAGIC		0xcbac03aa	/* SceKblParam.magic */
+
+/* SceKblParam.wakeup_factor (names unknown; the henkaku wiki's meanings) */
+#define SCE_KBL_WAKEUP_RESUME		0x00000080	/* resuming from suspend */
+#define SCE_KBL_WAKEUP_REASON_MASK	0x0000007f	/* why the system was powered on */
+#define SCE_KBL_WAKEUP_PANIC_REBOOT	0x17		/* a fatal error rebooted it */
+
+/* the offsets assembly reads the parameters at (checked below) */
+#define SCE_KBL_PARAM_BOOT_TYPE_INDICATOR_1	0x6c
+#define SCE_KBL_PARAM_WAKEUP_FACTOR		0xc4
+
+#ifndef __ASSEMBLER__
+
+#include <scetypes.h>
+#include <sysmem/memblock.h>
+#include <sysmem/dipsw.h>
+#include <ss_mgr/ss_mgr.h>
+#include <stdint.h>
 
 typedef struct SceKblParam {		/* 0x200 bytes since 3.60 */
 	uint16_t version;
@@ -79,3 +91,9 @@ typedef struct SceKblParam {		/* 0x200 bytes since 3.60 */
 } __attribute__((packed)) SceKblParam;
 
 _Static_assert(sizeof(SceKblParam) == 0x200, "SceKblParam");
+_Static_assert(__builtin_offsetof(SceKblParam, boot_type_indicator_1) ==
+	       SCE_KBL_PARAM_BOOT_TYPE_INDICATOR_1, "SceKblParam.boot_type_indicator_1");
+_Static_assert(__builtin_offsetof(SceKblParam, wakeup_factor) == SCE_KBL_PARAM_WAKEUP_FACTOR,
+	       "SceKblParam.wakeup_factor");
+
+#endif /* __ASSEMBLER__ */

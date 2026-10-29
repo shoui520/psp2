@@ -6,15 +6,15 @@
 #include <scetypes.h>
 #include <sysmem/cpu.h>
 
-/* reset.S: the boot save area */
+/*
+ * The boot save area: the start of SKBL's data (boot.c), which reset.S backs up on a cold
+ * boot and restores on a resume, up to its backup (skbl.ld)
+ */
 typedef struct BootSaveArea {
 	SceUInt32 state;		/* 0: cold boot, 0x10: restored from the backup */
 	SceCorelockContext corelock;	/* the CPUs' boot steps */
 	SceCorelockContext kblCorelock;	/* the kernel boot loader's steps */
-	SceUInt32 reserved[23];
 } BootSaveArea;
-
-_Static_assert(sizeof(BootSaveArea) == 0x70, "boot save area");
 
 extern BootSaveArea bootSaveArea;
 

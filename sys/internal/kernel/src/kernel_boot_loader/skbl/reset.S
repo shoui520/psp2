@@ -22,12 +22,14 @@
 #define SCU_INVALIDATE_ALL	0x0c
 #define SCU_SAC			0x50
 #define SCU_SNSAC		0x54
-#define SCU_FILTERING_UNKNOWN	0x30	/* PLACEHOLDER: bit 0 set, register unidentified */
+#define SCU_DIAGNOSTIC_CONTROL	0x30	/* bit 0: ARM erratum 764369's workaround */
 /* L2 cache controller (PL310) at 0x1a002000: reg1_control at 0x100 */
 #define L2C_BASE		0x1a002000
 #define L2C_CONTROL		0x100
 /* KBL Param, where second_loader leaves it (physical 0x100) */
 #define KBL_PARAM		0x100
+
+#include <kernel_boot_loader/kbl_param.h>
 
 	.section .text.vectors, "ax", %progbits
 	.global	_start
@@ -267,9 +269,9 @@ reset:
 	movw	r2, #0xfff
 	orr	r0, r0, r2
 	str	r0, [r1, #SCU_SNSAC]
-	ldr	r0, [r1, #SCU_FILTERING_UNKNOWN]
+	ldr	r0, [r1, #SCU_DIAGNOSTIC_CONTROL]
 	orr	r0, r0, #1
-	str	r0, [r1, #SCU_FILTERING_UNKNOWN]
+	str	r0, [r1, #SCU_DIAGNOSTIC_CONTROL]
 	ldr	r0, [r1, #SCU_CONTROL]
 	orr	r0, r0, #0x40
 	orr	r0, r0, #0x20
@@ -277,22 +279,21 @@ reset:
 	str	r0, [r1, #SCU_CONTROL]
 
 	/*
-	 * PLACEHOLDER: the KBL Param fields tested here (0xc4 bit 7 and value 0x17, 0x6c bit 17)
-	 * and the meaning of the boot save area are not identified yet. When they say so,
-	 * the area is restored from its backup and marked 0x10; otherwise it is backed up
-	 * and marked 0.
+	 * SKBL's data, the boot save area (the linker script): a resume that is not a fatal
+	 * error's reboot starts from the values the cold boot backed up, marked 0x10; any
+	 * other boot backs them up, marked 0.
 	 */
 	movw	r0, #:lower16:KBL_PARAM
 	movt	r0, #:upper16:KBL_PARAM
-	ldr	r1, [r0, #0xc4]
-	and	r2, r1, #0x80
-	cmp	r2, #0x80
+	ldr	r1, [r0, #SCE_KBL_PARAM_WAKEUP_FACTOR]
+	and	r2, r1, #SCE_KBL_WAKEUP_RESUME
+	cmp	r2, #SCE_KBL_WAKEUP_RESUME
 	bne	7f
-	and	r2, r1, #0x7f
-	cmp	r2, #0x17
+	and	r2, r1, #SCE_KBL_WAKEUP_REASON_MASK
+	cmp	r2, #SCE_KBL_WAKEUP_PANIC_REBOOT
 	beq	7f
-	ldr	r1, [r0, #0x6c]
-	mov	r2, #0x20000
+	ldr	r1, [r0, #SCE_KBL_PARAM_BOOT_TYPE_INDICATOR_1]
+	mov	r2, #BOOT_TYPE_RESUME
 	and	r1, r1, r2
 	cmp	r1, r2
 	bne	7f
@@ -381,23 +382,12 @@ fiqEntry:
 
 
 /*
- * PLACEHOLDER: the boot save area (0x70 bytes) and its backup, the start of SKBL's data;
- * what they hold is not identified yet.
- */
-	.data
-	.balign	4
-	.global	bootSaveArea, bootSaveAreaBackup
-bootSaveArea:
-	.space	0x70
-bootSaveAreaBackup:
-	.space	0x70
-
-/*
- * The boot stacks, 0x400 bytes per CPU in each mode (System: 0x1000).
+ * The boot stacks, 0x400 bytes per CPU in each mode (System: 0x1000, and 0x1000 below
+ * the last CPU's that nothing uses).
  */
 	.section .bss.stacks, "aw", %nobits
 	.balign	8
-	.space	0x4000
+	.space	0x5000
 systemStackTop:
 /* boot() clears .bss from here, above the System-mode stack it runs on */
 	.global	_fbss

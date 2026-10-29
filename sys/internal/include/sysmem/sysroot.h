@@ -460,3 +460,5 @@ unsigned int *sceKernelSysrootGetVbaseMonitorVector(void);	/* the monitor vector
 const unsigned int *sceKernelSysrootGetKernelMMUContext(void);
 unsigned int SceSysrootForTZS_317E7556(unsigned int cpu);	/* a core's block */
 unsigned int SceSysrootForTZS_D6FBF445(void);	/* the model (the henkaku wiki's guess) */
+void *SceSysrootForTZS_CC36643A(void *sessionId);	/* SceSysrootForKernel_84783B71 */
+void *SceSysrootForTZS_32546BDB(void *key);	/* the KBL's coredump session key, 32 bytes */

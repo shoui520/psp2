@@ -95,7 +95,7 @@ static inline void GrabWaitPortsIdle(unsigned int mask)
 }
 
 /* 0x11b: stop the ports of mask and wait for them, or restart them */
-static int GrabStopMonitorCall(unsigned int mask, int restart)
+int GrabStopMonitorCall(unsigned int mask, int restart)
 {
 	int state;
 

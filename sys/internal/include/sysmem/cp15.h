@@ -79,6 +79,7 @@
 #define writeAts1cpw(v)		CP_WRITE(p15, 0, c7, c8, 1, v)	/* translate, privileged write */
 #define writeAts1cur(v)		CP_WRITE(p15, 0, c7, c8, 2, v)	/* translate, user read */
 #define writeAts1cuw(v)		CP_WRITE(p15, 0, c7, c8, 3, v)	/* translate, user write */
+#define writeAts12nsopr(v)	CP_WRITE(p15, 0, c7, c8, 4, v)	/* translate, Non-secure PL1 read (Secure state only) */
 #define readPar()		CP_READ(p15, 0, c7, c4, 0)
 #define writePar(v)		CP_WRITE(p15, 0, c7, c4, 0, v)
 /* cache and branch predictor maintenance; IS: all cores in the inner shareable domain */

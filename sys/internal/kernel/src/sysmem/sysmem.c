@@ -628,10 +628,13 @@ void SceSysmemForKernel_CAB15F74(SceUID pid)
 }
 #endif
 
+#if !defined(SYSMEM_SKBL)
 /* PLACEHOLDER: name; a second copy of the canary, written once and never read */
 unsigned int s_stackChkGuardCopy = 0x0b8064e5;
-/* the canary: the boot value until the KBL's replaces it at module start */
+/* the canary: the boot value until the KBL's replaces it at module start (SKBL's:
+ * stack_chk.c) */
 unsigned int __stack_chk_guard = 0x0b8064e5;
+#endif
 
 UIDManager *g_uidManager;
 

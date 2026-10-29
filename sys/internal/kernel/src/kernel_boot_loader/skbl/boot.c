@@ -131,6 +131,12 @@ static inline uint32_t ror5(uint32_t value)
 
 #ifndef BOOT_NSKBL
 
+/* first in SKBL's data (skbl.ld), the boot save area */
+BootSaveArea bootSaveArea __attribute__((section(".data.bootSaveArea"))) = {
+	.corelock = { .lock = 1, .coresLeft = 4, .turn = 4 },
+	.kblCorelock = { .lock = 1, .coresLeft = 4, .turn = 4 },
+};
+
 /* name unknown: the boot-time memory test of the product line */
 void KblMemoryTest(void)
 {

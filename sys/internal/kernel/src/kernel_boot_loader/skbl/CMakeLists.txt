@@ -108,7 +108,7 @@ set(skbl_unwind_source "${CMAKE_CURRENT_BINARY_DIR}/gcc48-unwind.c")
 gcc48_prepare_unwind("${gcc_source}/libgcc/config/arm/unwind-arm.c" "${skbl_unwind_source}")
 set(skbl_libunwind_source "${CMAKE_CURRENT_BINARY_DIR}/libunwind.S")
 gcc48_prepare_libunwind("${gcc_source}/libgcc/config/arm/libunwind.S" "${skbl_libunwind_source}")
-psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld SOURCES
+psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld NO_BIN SOURCES
 	reset.S
 	version.c
 	memory_test.c
@@ -200,3 +200,53 @@ set_property(SOURCE ${libgcc_source}/unwind_pr.c APPEND PROPERTY COMPILE_DEFINIT
 set_property(SOURCE ${skbl_libunwind_source} APPEND PROPERTY COMPILE_OPTIONS "-marm")
 include(${libgcc_source}/lib1funcs.cmake)
 gcc48_use_lib1funcs(slb2_skbl)
+if(TARGET slb2_skbl)
+	# the TrustZone modules SKBL carries, as their own folders build them: SceSysmem as an ARZL
+	# archive, the others as they are (compat_sram.S)
+	set(tzs_build "${CMAKE_BINARY_DIR}/slb2/kbl")
+	set(tzs_archive "${CMAKE_CURRENT_BINARY_DIR}/SceSysmem.arzl")
+	add_custom_command(OUTPUT "${tzs_archive}"
+		COMMAND python3 "${PSP2_SRC}/tools/arzl.py" pack
+			"${tzs_build}/SceSysmem/slb2_kbl_SceSysmem.velf" "${tzs_archive}"
+		DEPENDS slb2_kbl_SceSysmem_velf "${tzs_build}/SceSysmem/slb2_kbl_SceSysmem.velf"
+			"${PSP2_SRC}/tools/arzl.py"
+		VERBATIM)
+	add_custom_target(slb2_skbl_archive DEPENDS "${tzs_archive}")
+	set(tzs_images "${tzs_archive}")
+	set(tzs_defines "TZS_SYSMEM_ARCHIVE=\"${tzs_archive}\"")
+	foreach(entry Excpmgr:SceExcpmgr IntrMgr:SceKernelIntrMgr BusError:SceKernelBusError
+			Smsched:SceSblSmsched DriverTzs:SceDriverTzs)
+		string(REPLACE ":" ";" entry "${entry}")
+		list(GET entry 0 label)
+		list(GET entry 1 module)
+		string(TOUPPER "${label}" label)
+		set(image "${tzs_build}/${module}/slb2_kbl_${module}.velf")
+		list(APPEND tzs_images "${image}")
+		list(APPEND tzs_defines "TZS_${label}_IMAGE=\"${image}\"")
+		add_dependencies(slb2_skbl slb2_kbl_${module}_velf)
+	endforeach()
+	add_dependencies(slb2_skbl slb2_skbl_archive)
+	set_property(SOURCE compat_sram.S APPEND PROPERTY COMPILE_DEFINITIONS ${tzs_defines})
+	set_property(SOURCE compat_sram.S APPEND PROPERTY OBJECT_DEPENDS ${tzs_images})
+
+	# kernel_boot_loader.self as the firmware ships it: SKBL's segments and NSKBL's ARZL
+	# archive (tools/mkkbl.py) in an fSELF of type 9, a boot loader, with Sony's authority ID
+	set(nskbl_bin "${CMAKE_BINARY_DIR}/slb2/nskbl/slb2_nskbl.bin")
+	set(nskbl_archive "${CMAKE_CURRENT_BINARY_DIR}/nskbl.arzl")
+	add_custom_command(OUTPUT "${nskbl_archive}"
+		COMMAND python3 "${PSP2_SRC}/tools/arzl.py" pack "${nskbl_bin}" "${nskbl_archive}"
+		DEPENDS slb2_nskbl_bin "${nskbl_bin}" "${PSP2_SRC}/tools/arzl.py"
+		VERBATIM)
+	add_custom_command(OUTPUT kernel_boot_loader.elf
+		COMMAND python3 "${PSP2_SRC}/tools/mkkbl.py" $<TARGET_FILE:slb2_skbl> "${nskbl_archive}"
+			kernel_boot_loader.elf
+		DEPENDS slb2_skbl $<TARGET_FILE:slb2_skbl> "${nskbl_archive}" "${PSP2_SRC}/tools/mkkbl.py"
+		VERBATIM)
+	math(EXPR kbl_version "(${FW_VERSION} & 0xFFFF0000) << 16" OUTPUT_FORMAT HEXADECIMAL)
+	add_custom_command(OUTPUT kernel_boot_loader.self
+		COMMAND python3 "${PSP2_SRC}/tools/mkfself.py" kernel_boot_loader.elf kernel_boot_loader.self
+			--auth-id 0x2808000000000001 --self-type 9 --app-version ${kbl_version} --no-compress
+		DEPENDS kernel_boot_loader.elf "${PSP2_SRC}/tools/mkfself.py"
+		VERBATIM)
+	add_custom_target(slb2_kernel_boot_loader ALL DEPENDS kernel_boot_loader.self)
+endif()

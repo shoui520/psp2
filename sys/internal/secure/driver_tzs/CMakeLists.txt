@@ -1,5 +1,5 @@
 # slb2:kbl/SceDriverTzs - the secure world's Pervasive, grab, EMC and crash dump driver
-psp2_module(slb2_kbl_SceDriverTzs KIND kernel COMPILER gcc48 PARTIAL SOURCES
+psp2_module(slb2_kbl_SceDriverTzs KIND kernel COMPILER gcc48 SOURCES
 	power_entry.S
 	pervasive_tzs.c
 	pervasive_control_tzs.c
@@ -7,6 +7,7 @@ psp2_module(slb2_kbl_SceDriverTzs KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	grab.c
 	emc_tzs.c
 	power_tzs.c
+	crashdump_tzs.c
 )
 # Sony built pervasive_tzs.c at -O3, as SceLowio: PervasiveInit's mapping
 # loop prefetches its table (pld, only with -fprefetch-loop-arrays) and the

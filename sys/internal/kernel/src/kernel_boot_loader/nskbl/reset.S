@@ -34,8 +34,12 @@ fiqVector:		.word	fiqEntry
 /* the reserved vector shares the reset handler's literal */
 	.set	reservedVector, resetVector
 
-	.space	0x50
-/* PLACEHOLDER: four words of unknown meaning, the same in every build (3.20 to 4.00) */
+	.space	0x40
+/*
+ * SKBL's vector page (skbl/reset.S, bootDefaultDipsw) as it is: the DIP switches a
+ * development kit whose CP has not written any gets, which only SKBL reads.
+ */
+	.word	0, 0, 0, 0
 	.word	0x80000001, 0, 0x000413e7, 0x20000010
 	.space	0x20
 

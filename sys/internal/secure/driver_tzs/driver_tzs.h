@@ -46,6 +46,7 @@
 #define GRAB_MONCALL_REGBUS_WAIT	0x11f
 #define GRAB_MONCALL_GET_CMP_MAP	0x120
 #define GRAB_MONCALL_GPU_CLOCK		0x121
+#define CRASHDUMP_MONCALL		0x122
 
 /* Sony's DMB and DSB are also compiler barriers here: register pointers
  * held across them are reloaded. */
@@ -76,6 +77,10 @@ int GpuGateDisable(unsigned int mask);
 int DmacGateEnable(int n);
 int GpuClockSet(unsigned int core, unsigned int mp);
 int PervasiveModuleStart(SceSize arglen, const void *argp);
+
+/* grab.c, power_tzs.c: what the crash dump calls */
+int GrabStopMonitorCall(unsigned int mask, int restart);
+int sceSysconSetPowerMode(unsigned int mode, unsigned int argument);
 
 /* grab.c, emc_tzs.c, power_tzs.c, crashdump_tzs.c: module_start's later stages */
 int GrabModuleStart(SceSize arglen, const void *argp);

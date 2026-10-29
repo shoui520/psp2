@@ -134,6 +134,7 @@ uint64_t sceKernelAtomicGetAndXor64(uint64_t *address, uint64_t value);
 SceInt32 sceKernelAtomicGetAndClear32(volatile SceInt32 *address, SceInt32 mask);
 void sceKernelDcacheCleanInvalidateRangeForL1WBWA(const void *start, SceSize size);
 void SceCpuForDriver_E813EBB2(void);
+void SceCpuForTZS_4FED4BCE(void);	/* SceCpuForDriver_E813EBB2 */
 int8_t sceKernelAtomicSubAndGet8(int8_t *address, int8_t value);
 /* vitasdk: ksceKernelRWSpinlockLowReadLockCpuSuspendIntr */
 SceKernelIntrStatus SceCpuForDriver_EC53D007(volatile SceKernelRWSpinlock *lock);

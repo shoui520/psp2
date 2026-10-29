@@ -342,15 +342,22 @@ compatSramResumeEnd:
 /*
  * The TrustZone module images follow compatSramResumeEnd in SKBL's read-only
  * data: SceSysmem's ARZL archive, then the plain ELFs of SceExcpmgr,
- * SceKernelIntrMgr, SceKernelBusError, SceSblSmsched and SceDriverTzs
- * (built from their own folders under slb2:kbl/).
+ * SceKernelIntrMgr, SceKernelBusError, SceSblSmsched and SceDriverTzs, end to
+ * end. The build makes them from their own folders under slb2:kbl/ and names
+ * each file here (CMakeLists.txt: TZS_*_IMAGE; tools/arzl.py packs the archive).
  */
 	.global	tzsSysmemArchive, tzsExcpmgrImage, tzsIntrMgrImage, tzsBusErrorImage
 	.global	tzsSmschedImage, tzsDriverTzsImage, tzsImagesEnd
 tzsSysmemArchive:
+	.incbin	TZS_SYSMEM_ARCHIVE
 tzsExcpmgrImage:
+	.incbin	TZS_EXCPMGR_IMAGE
 tzsIntrMgrImage:
+	.incbin	TZS_INTRMGR_IMAGE
 tzsBusErrorImage:
+	.incbin	TZS_BUSERROR_IMAGE
 tzsSmschedImage:
+	.incbin	TZS_SMSCHED_IMAGE
 tzsDriverTzsImage:
+	.incbin	TZS_DRIVERTZS_IMAGE
 tzsImagesEnd:
