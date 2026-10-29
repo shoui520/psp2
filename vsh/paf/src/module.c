@@ -3,12 +3,30 @@
 #include "std/stdc++/atexit.h"
 #include <stddef.h>
 
+/* Only import prototypes are needed; processmgr.h pulls C11-only headers. */
+extern int sceKernelCallModuleExit(int status);
+extern int sceKernelExitProcess(int status);
+
 SceUInt32 global_heap_size;
 SceInt32 reserved_init_param[2];
 SceInt32 cdlg_mode;
 SceInt32 global_heap_alignment;
 SceInt32 global_heap_disable_assert_on_alloc_failure;
 void *__dso_handle;
+static void *paf_private_exit_dso;
+
+void sce_paf_private_atexit(void *dso)
+{
+	paf_private_exit_dso = dso;
+}
+
+void sce_paf_private_exit(int status)
+{
+	sceKernelCallModuleExit(1);
+	ScePafStdc_F36BABE3(paf_private_exit_dso ?
+		paf_private_exit_dso : __dso_handle);
+	sceKernelExitProcess(status);
+}
 
 /* SNC's linker-provided constructor bounds. */
 extern void (*__start__Zpreinit_array[])(void);
