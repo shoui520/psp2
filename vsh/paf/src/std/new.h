@@ -16,6 +16,7 @@
 
 void *PafPlacementNew(size_t size, void *where);
 void __cxa_pure_virtual(void);
+int ScePafStdc_25A6D9BB(void);
 void *PafNew(size_t size);
 void *PafNewArray(size_t size);
 void *PafAlignedNew(size_t size, size_t align);
