@@ -1469,8 +1469,13 @@ int cameraDriverThread(SceSize args, void *argp)
 			if (devnum) {
 				work.location.type = 1;
 				work.location.x = 0;
-				work.location.y = 32;
-				work.location.z = -12;
+				if ((hardwareInfo & 0xff0000) < 0x800000) {
+					work.location.y = 31;
+					work.location.z = -14;
+				} else {
+					work.location.y = 32;
+					work.location.z = -12;
+				}
 			} else {
 				work.location.type = 0;
 				if ((hardwareInfo & 0xff0000) < 0x800000) {
