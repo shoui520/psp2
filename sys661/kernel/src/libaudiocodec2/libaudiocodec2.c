@@ -650,50 +650,6 @@ static s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 *ctx);
 static s32 sub_253c(u32 *work);
 static s32 sub_25bc(u32 *work);
 
-/* 0x276c */
-static __attribute__((noinline)) void *sub_276c(void *dst, int c, u32 size)
-{
-    sceKernelMemset(dst, c, size);
-    return dst;
-}
-
-/* 0x273c */
-static __attribute__((noinline)) u32 sub_273c(u32 mode)
-{
-    if (mode == 6)
-        return 0;
-    if (mode < 7) {
-        if (mode != 4)
-            return 0x270f;
-        return 0;
-    } else {
-        if (mode != 11)
-            return 0x270f;
-        return 1;
-    }
-}
-
-/* 0x26a8 */
-static __attribute__((noinline)) s32 sub_26a8(u32 *work)
-{
-    u32 mode = work[10];
-    if (mode != 6) {
-        u32 expected = (mode < 7) ? 4u : 11u;
-        if (mode != expected)
-            return (s32)0x807f00ff;
-    }
-    const u32 *tbl = (const u32 *)DATA_PTR(0x4dc0);
-    s32 idx = 0;
-    for (; idx < 3; idx++) {
-        if (tbl[idx * 3] == mode)
-            break;
-    }
-    work[11] = 0xac44;
-    work[12] = tbl[idx * 3 + 2];
-    work[13] = tbl[idx * 3 + 1];
-    return 0;
-}
-
 /* 0x0000 */
 static __attribute__((noinline)) s32 sub_0000(s32 channels, s32 joint_stereo, s32 frame_bytes, u8 *ctx)
 {
@@ -726,6 +682,12 @@ static __attribute__((noinline)) s32 sub_0000(s32 channels, s32 joint_stereo, s3
     *(u32 *)(ctx + 0x28) = *(u32 *)(ctx + 0x10);
     *(u32 *)(ctx + 0x2c) = *(u32 *)(ctx + 0x14);
     return (s32)(u32)ctx;
+}
+
+/* 0x0130 */
+static __attribute__((noinline, used)) s32 sub_0130(void)
+{
+    return 0x10600;
 }
 
 /* 0x013c */
@@ -964,7 +926,7 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
             bitpos += 6;
             *(s32 *)(ctx + 0x40) = bitpos;
             s32 h_sel = (b_tbl >> ((~bp_sb) & 7)) & 1;
-            s32 n_subbands = ((w_sb >> (11 - (bitpos - 6 & 7))) & 0x1f) + 1;
+            s32 n_subbands = ((w_sb >> (11 - ((bitpos - 6) & 7))) & 0x1f) + 1;
             u8 *huff_info = RODATA_PTR(0x29d0) + (h_sel << 6);
             s32 *sb_huff = (s32 *)(ch_ctx + 8);
             s32 num_coded = 0;
@@ -1234,6 +1196,7 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
             float acc1 = s0 * qmf_c[0] + p[43];
             float acc2 = d1 + p[44] * qmf_c[0];
             float acc3 = s1 * qmf_c[0] + p[45];
+            #pragma GCC unroll 23
             for (int k = 1; k < 23; k++) {
                 const float *h = &p[134 - k * 4];
                 float c_rev = qmf_c[23 - k];
@@ -1256,6 +1219,7 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
             float y2 = x2 * qmf_c[0] + m2;
             float y1 = x1 + m1 * qmf_c[0];
             float y3 = x3 + m3 * qmf_c[0];
+            #pragma GCC unroll 22
             for (int k = 1; k < 22; k++) {
                 const float *h = &p[42 - k * 2];
                 float c_rev = qmf_c[23 - k];
@@ -1286,6 +1250,33 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
         return -(*(s32 *)(ctx + 0x44));
     }
     return total_consumed;
+}
+
+/* 0x2430 */
+s32 sceAudiocodec2_AA2ED267(u32 *work, s32 type)
+{
+    if (work == NULL || type != 0x1001)
+        return (s32)0x807f00ff;
+    work[2] = 0;
+    work[3] = 0;
+    work[4] = 0x36a8;
+    return 0;
+}
+
+/* 0x246c */
+s32 sceAudiocodec2_E063D402(u32 *work, s32 type)
+{
+    if (work == NULL || work[3] == 0 || type != 0x1001)
+        return (s32)0x807f00ff;
+    return sub_253c(work);
+}
+
+/* 0x24c4 */
+s32 sceAudiocodec2_21D5A83F(u32 *work, s32 type)
+{
+    if (work == NULL || work[3] == 0 || work[6] == 0 || work[8] == 0 || type != 0x1001)
+        return (s32)0x807f00ff;
+    return sub_25bc(work);
 }
 
 /* 0x253c */
@@ -1333,29 +1324,46 @@ static __attribute__((noinline)) s32 sub_25bc(u32 *work)
     return 0;
 }
 
-/* 0x2430 */
-s32 sceAudiocodec2_AA2ED267(u32 *work, s32 type)
+/* 0x26a8 */
+static __attribute__((noinline)) s32 sub_26a8(u32 *work)
 {
-    if (work == NULL || type != 0x1001)
-        return (s32)0x807f00ff;
-    work[2] = 0;
-    work[3] = 0;
-    work[4] = 0x36a8;
+    u32 mode = work[10];
+    if (mode != 6) {
+        u32 expected = (mode < 7) ? 4u : 11u;
+        if (mode != expected)
+            return (s32)0x807f00ff;
+    }
+    const u32 *tbl = (const u32 *)DATA_PTR(0x4dc0);
+    s32 idx = 0;
+    for (; idx < 3; idx++) {
+        if (tbl[idx * 3] == mode)
+            break;
+    }
+    work[11] = 0xac44;
+    work[12] = tbl[idx * 3 + 2];
+    work[13] = tbl[idx * 3 + 1];
     return 0;
 }
 
-/* 0x246c */
-s32 sceAudiocodec2_E063D402(u32 *work, s32 type)
+/* 0x273c */
+static __attribute__((noinline)) u32 sub_273c(u32 mode)
 {
-    if (work == NULL || work[3] == 0 || type != 0x1001)
-        return (s32)0x807f00ff;
-    return sub_253c(work);
+    if (mode == 6)
+        return 0;
+    if (mode < 7) {
+        if (mode != 4)
+            return 0x270f;
+        return 0;
+    } else {
+        if (mode != 11)
+            return 0x270f;
+        return 1;
+    }
 }
 
-/* 0x24c4 */
-s32 sceAudiocodec2_21D5A83F(u32 *work, s32 type)
+/* 0x276c */
+static __attribute__((noinline)) void *sub_276c(void *dst, int c, u32 size)
 {
-    if (work == NULL || work[3] == 0 || work[6] == 0 || work[8] == 0 || type != 0x1001)
-        return (s32)0x807f00ff;
-    return sub_25bc(work);
+    sceKernelMemset(dst, c, size);
+    return dst;
 }
