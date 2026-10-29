@@ -4517,8 +4517,11 @@ int snapshotVeneziaVipDebugger(VeneziaVipProcessStorage *storage, unsigned int f
 	VeneziaVipSnapshotStorage *snapshot = &storage->snapshotStorage;
 	VeneziaVipSnapshotRegion *region;
 	VeneziaDebuggerState *debuggerState;
-	unsigned int memoryCount, processorCount, index, processor;
-	uint32_t physical, virtual;
+	unsigned int index, processor;
+	unsigned int memoryCount __attribute__((aligned(8)));
+	unsigned int processorCount __attribute__((aligned(8)));
+	uint32_t physical __attribute__((aligned(8)));
+	uint32_t virtual __attribute__((aligned(8)));
 	SceSize size, copied = 0;
 	char *destination;
 	int ret;
@@ -4708,7 +4711,8 @@ int initializeVeneziaVipDebugger(VeneziaVipState *state,
 				VeneziaVipProcessStorage *storage)
 {
 	VeneziaDebugCallbacks callbacks;
-	unsigned int mode, alternate;
+	unsigned int mode __attribute__((aligned(8)));
+	unsigned int alternate __attribute__((aligned(8)));
 	uint32_t virtualBase, physicalBase;
 	int ret;
 
@@ -4799,8 +4803,9 @@ int copyVeneziaVipInputToTrace(unsigned int processor, VeneziaVipState *state,
 	VeneziaDebugProcessCapture *capture = &storage->captures[processor];
 	unsigned int captureProcessor = storage->processors[processor];
 	VeneziaVipInputIterator iterator;
-	SceSize remaining, first, copied;
-	uint32_t cursor;
+	SceSize remaining, first;
+	SceSize copied __attribute__((aligned(8)));
+	uint32_t cursor __attribute__((aligned(8)));
 	int ret, copyRet;
 
 	initializeVeneziaVipInputIterator(&iterator, list);
@@ -6504,7 +6509,7 @@ int startVeneziaVipDriver(int mode)
 	VeneziaVipState *state = &g_veneziaVipState;
 	SceUID uid;
 	int ret;
-	unsigned int loadResult;
+	unsigned int loadResult __attribute__((aligned(8)));
 	void *firmwareBase;
 
 	(void)mode;
@@ -7329,7 +7334,10 @@ int setupVeneziaVipCapture(unsigned int processor, VeneziaVipProcessStorage *sto
 	VeneziaVipCommandQueueParam queueParam;
 	VeneziaVipCommandContext *context;
 	const VeneziaVipCaptureImageLayout *layout;
-	SceSize captureSize, contextSize, queueSize, firstSize, secondSize, length;
+	SceSize firstSize, secondSize, length;
+	SceSize captureSize __attribute__((aligned(8)));
+	SceSize contextSize __attribute__((aligned(8)));
+	SceSize queueSize __attribute__((aligned(8)));
 	uint32_t mode, physical, virtualAddress;
 	int ret, status;
 
@@ -7762,7 +7770,8 @@ int finishVeneziaVipStartup(VeneziaVipState *state)
 {
 	VeneziaVipCommandCallbacks callbacks;
 	VeneziaVipMemoryRegion memory;
-	uint32_t main, auxiliary;
+	uint32_t main __attribute__((aligned(8)));
+	uint32_t auxiliary __attribute__((aligned(8)));
 	int ret;
 
 	memory.virtualAddress = state->debuggerMemory.virtualAddress + 0x80000;
@@ -8227,7 +8236,7 @@ int getVeneziaVipMultiTraceAvailable(unsigned int processor)
 	VeneziaVipProcessStorage *storage;
 	VeneziaDebugProcessCapture *capture;
 	VeneziaVipCommandContext *context;
-	SceSize available;
+	SceSize available __attribute__((aligned(8)));
 	unsigned int index = processor - 1, capacity;
 	int ret;
 
@@ -8447,7 +8456,8 @@ int submitVeneziaVipMultiCapture(unsigned int processor, const VeneziaVipVideoIn
 	VeneziaVipCommandContext *context;
 	unsigned int index = processor - 1, captureProcessor;
 	SceSize inputSize = 0, available;
-	SceUInt timeout, event;
+	SceUInt timeout __attribute__((aligned(8)));
+	SceUInt event __attribute__((aligned(8)));
 	int ret, capacity;
 
 	snapshots.count = 0;
@@ -8748,7 +8758,8 @@ int submitVeneziaVipMultiRawCapture(unsigned int processor, const VeneziaVipRawI
 	VeneziaVipCommandContext *context;
 	unsigned int index = processor - 1, captureProcessor;
 	SceSize inputSize = 0, available;
-	SceUInt timeout, event;
+	SceUInt timeout __attribute__((aligned(8)));
+	SceUInt event __attribute__((aligned(8)));
 	int ret, capacity, deferredError = 0;
 
 	snapshots.count = 0;
@@ -9299,8 +9310,9 @@ int copyVeneziaVipInputToCaptureRing(unsigned int index, VeneziaVipState *state,
 	VeneziaDebugProcessCapture *capture = &storage->captures[index];
 	VeneziaVipInputIterator iterator;
 	VeneziaVipCommandContext *context;
-	SceSize remaining, first, copied;
-	uint32_t cursor;
+	SceSize remaining, first;
+	SceSize copied __attribute__((aligned(8)));
+	uint32_t cursor __attribute__((aligned(8)));
 	int ret;
 
 	getVeneziaVipCaptureContext(capture, state, &context);
@@ -9465,7 +9477,7 @@ int waitVeneziaVipCaptureInterrupt(VeneziaDebugProcessCapture *capture,
 {
 	uint32_t events = 0, currentEvents;
 	unsigned int status = 0;
-	SceUInt timeout;
+	SceUInt timeout __attribute__((aligned(8)));
 	VeneziaVipCommandContext *context;
 	unsigned int expected = flags & 2 ? 1 : 2;
 	uint32_t count;
@@ -9540,7 +9552,7 @@ int waitVeneziaVipPrimaryCaptureInterrupt(VeneziaDebugProcessCapture *capture,
 {
 	uint32_t events = 0, currentEvents;
 	unsigned int status = 0;
-	SceUInt timeout;
+	SceUInt timeout __attribute__((aligned(8)));
 	VeneziaVipCommandContext *context;
 	uint32_t count;
 	int ret, statusRet, contextState;
@@ -9614,7 +9626,7 @@ int waitVeneziaVipSecondaryCaptureInterrupt(VeneziaDebugProcessCapture *capture,
 {
 	uint32_t events = 0, currentEvents;
 	unsigned int status = 0;
-	SceUInt timeout;
+	SceUInt timeout __attribute__((aligned(8)));
 	VeneziaVipCommandContext *context;
 	uint32_t count;
 	int ret, statusRet, contextState;
@@ -10651,11 +10663,17 @@ int veneziaVipProcessorThread0(SceSize size, void *arg)
 	VeneziaVipProcessStorage *storage, *active;
 	VeneziaDebugProcessCapture *capture;
 	VeneziaVipCommandContext *context, *startContext;
-	uint32_t events, deferred, response, status, interruptEvents;
-	uint32_t contextState, secondaryState, completionCount, secondaryCount;
+	uint32_t deferred;
+	uint32_t events __attribute__((aligned(8)));
+	uint32_t response __attribute__((aligned(8)));
+	uint32_t status __attribute__((aligned(8)));
+	uint32_t interruptEvents __attribute__((aligned(8)));
+	uint32_t completionCount, secondaryCount;
+	uint32_t contextState __attribute__((aligned(8)));
+	uint32_t secondaryState __attribute__((aligned(8)));
 	uint32_t flags, pending, cursor, queued, forwardCommand, signedRequest;
-	SceSize available;
-	uint8_t value;
+	SceSize available __attribute__((aligned(8)));
+	uint8_t value __attribute__((aligned(8)));
 	int command = 0, captureIndex = -1, recovering, ret, inputState, inputResult;
 
 	ret = sceKernelSetEventFlag(state->processorEvents[0], 0x100000);
@@ -11183,13 +11201,19 @@ int veneziaVipProcessorThread1(SceSize size, void *arg)
 	VeneziaVipProcessStorage *storage, *active;
 	VeneziaDebugProcessCapture *capture;
 	VeneziaVipCommandContext *context;
-	uint32_t events, deferred, response, status, interruptEvents;
-	uint32_t contextState, completionCount, secondaryCount;
-	uint32_t primaryPending, secondaryPending, auxiliaryDelta, auxiliaryCount;
+	uint32_t deferred;
+	uint32_t events __attribute__((aligned(8)));
+	uint32_t response __attribute__((aligned(8)));
+	uint32_t status __attribute__((aligned(8)));
+	uint32_t interruptEvents __attribute__((aligned(8)));
+	uint32_t completionCount, secondaryCount;
+	uint32_t contextState __attribute__((aligned(8)));
+	uint32_t primaryPending, secondaryPending, auxiliaryDelta;
+	uint32_t auxiliaryCount __attribute__((aligned(8)));
 	uint32_t notification, callbackEvents, sequence;
 	uint32_t flags, pending, cursor, queued, forwardCommand, signedRequest;
 	SceSize available;
-	uint8_t value;
+	uint8_t value __attribute__((aligned(8)));
 	int command = 0, captureIndex = -1, recovering, ret, inputState, inputResult;
 
 	ret = sceKernelSetEventFlag(state->processorEvents[1], 0x100000);
