@@ -480,7 +480,7 @@ enableScan:
 				BtSendHciCommand(stack, 0x1406, "2", connection->aclHandle);
 			} else {
 				connection->afhMode = argument;
-				memcpy(connection->afhMap, packet + 9, 10);
+				memcpy(&connection->afhMap, packet + 9, 10);
 				connection->statistics.queryTime = BtGetSystemTimeWide();
 			}
 			break;

@@ -262,9 +262,9 @@ int BtRecvAudio(BtStack *stack, uint64_t deviceAddress, void *buffer,
 				}
 			}
 		} else {
-			unsigned int duration = 1000000 * receive->receivedSamples;
+			int duration = 1000000 * receive->receivedSamples;
 
-			switch (receive->sbcFrameHeader >> 6) {
+			switch ((int)receive->sbcFrameHeader >> 6) {
 			case 0:
 				duration /= 16000;
 				break;

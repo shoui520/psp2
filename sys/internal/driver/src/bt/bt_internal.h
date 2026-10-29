@@ -1176,6 +1176,11 @@ _Static_assert(sizeof(BtInquiryScanActivity) == 4, "inquiry scan activity");
 _Static_assert(offsetof(BtInquiryScanActivity, interval) == 0, "scan interval");
 _Static_assert(offsetof(BtInquiryScanActivity, window) == 2, "scan window");
 
+/* name unknown: the controller's AFH channel map, copied whole. */
+typedef struct BtAfhMap {
+	uint8_t channels[10];
+} BtAfhMap;
+
 typedef struct BtLinkInfoForTest {
 	uint64_t l2capReceivePackets;
 	uint64_t l2capReceiveBytes;
@@ -1189,7 +1194,7 @@ typedef struct BtLinkInfoForTest {
 	uint8_t linkQuality;
 	int8_t rssi;
 	uint8_t afhMode;
-	uint8_t afhMap[10];
+	BtAfhMap afhMap;
 	uint8_t linkState;
 } BtLinkInfoForTest;
 
@@ -1395,7 +1400,7 @@ struct BtConnection {
 	uint8_t linkQuality;
 	int8_t rssi;
 	uint8_t afhMode;
-	uint8_t afhMap[10];
+	BtAfhMap afhMap;
 	BtLinkStatistics statistics;
 	BtAvrcpFragment avrcpCommand;
 	BtAvrcpFragment avrcpResponse;

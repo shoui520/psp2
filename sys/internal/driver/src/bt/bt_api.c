@@ -1513,7 +1513,7 @@ static inline int BtGetLinkInfoApi(uint64_t deviceAddress, void *buffer,
 	info.linkQuality = connection->linkQuality;
 	info.rssi = connection->rssi;
 	info.afhMode = connection->afhMode;
-	memcpy(info.afhMap, connection->afhMap, sizeof(info.afhMap));
+	info.afhMap = connection->afhMap;
 	info.linkState = (connection->linkMode & 3) |
 		((connection->flags & 0x200) ? 4 : 0);
 	result = BtCopyOut(&info, buffer, sizeof(info), userMode);
