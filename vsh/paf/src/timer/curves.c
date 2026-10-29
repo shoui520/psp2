@@ -1050,3 +1050,197 @@ float TimerDoFuncAngular(float rate)
 	return (sce_paf_sinf((rate - 0.5f) * 3.1415927410125732f) +
 		1.0f) * 0.5f;
 }
+
+static float TimerDoFuncExpoInTable(float rate, const float *table)
+{
+	float next, current, fraction;
+	volatile float result;
+	int integral, index;
+
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f || rate == 0.0f)
+		return 0.0f;
+	rate *= 32.0f;
+	integral = FloatToInt(rate);
+	index = FloatToInt(rate);
+	next = table[index + 1];
+	fraction = rate - (float)integral;
+	current = table[index];
+	result = next * fraction;
+	result += current * (1.0f - fraction);
+	return result;
+}
+
+float TimerDoFunc(const Timer *self, float rate, int func, float pre,
+		 float *param)
+{
+	(void)self;
+	(void)pre;
+	switch (func) {
+	case FUNC_SLOWDOWN: {
+		volatile float result;
+
+		if (rate >= 1.0f)
+			return 1.0f;
+		/* The native operation precedes the lower clamp. */
+		result = __builtin_sqrtf(rate);
+		if (rate <= 0.0f)
+			return 0.0f;
+		return result;
+	}
+	case FUNC_FASTUP: {
+		volatile float result;
+
+		if (rate >= 1.0f)
+			return 1.0f;
+		result = rate * rate;
+		if (rate <= 0.0f)
+			return 0.0f;
+		return result;
+	}
+	case FUNC_ANGULAR:
+		return TimerDoFuncAngular(rate);
+	case FUNC_EXPONENT:
+	case FUNC_EXPO_OUT_UNK_29:
+		return TimerDoFuncExponentCurve(rate);
+	case FUNC_BEZIER_3D:
+		return TimerDoFuncBezier3d(rate, param);
+	case FUNC_SWING:
+		return TimerDoFuncSwing(rate);
+	case FUNC_QUAD_IN:
+		return TimerDoFuncQuadIn(rate);
+	case FUNC_CUBIC_IN:
+		return TimerDoFuncCubicIn(rate);
+	case FUNC_QUART_IN:
+		return TimerDoFuncQuartIn(rate);
+	case FUNC_QUINT_IN:
+		return TimerDoFuncQuintIn(rate);
+	case FUNC_SINE_IN:
+		return TimerDoFuncSineIn(rate);
+	case FUNC_EXPO_IN:
+		return TimerDoFuncExpoIn(rate);
+	case FUNC_EXPO_IN_UNK_13:
+		return TimerDoFuncExpoInTable(rate, TimerExpoTable13);
+	case FUNC_EXPO_IN_UNK_14:
+		return TimerDoFuncExpoInTable(rate, TimerExpoTable14);
+	case FUNC_EXPO_IN_UNK_15:
+		return TimerDoFuncExpoInTable(rate, TimerExponentTable);
+	case FUNC_EXPO_IN_UNK_16:
+		return TimerDoFuncExpoInTable(rate, TimerExpoTable16);
+	case FUNC_CIRQ_IN:
+		return TimerDoFuncCirqIn(rate);
+	case FUNC_BACK_IN:
+		return TimerDoFuncBackIn(rate);
+	case FUNC_ELASTIC_IN:
+		return TimerDoFuncElasticIn(rate);
+	case FUNC_BOUNCE_IN:
+		return TimerDoFuncBounceIn(rate);
+	case FUNC_QUAD_OUT:
+		return TimerDoFuncQuadOut(rate);
+	case FUNC_CUBIC_OUT:
+		return TimerDoFuncCubicOut(rate);
+	case FUNC_QUART_OUT:
+		return TimerDoFuncQuartOut(rate);
+	case FUNC_QUINT_OUT:
+		return TimerDoFuncQuintOut(rate);
+	case FUNC_SINE_OUT:
+		return TimerDoFuncSineOut(rate);
+	case FUNC_EXPO_OUT:
+		return TimerDoFuncExpoOut(rate);
+	case FUNC_EXPO_OUT_UNK_27:
+		return TimerDoFuncExpoOut27(rate);
+	case FUNC_EXPO_OUT_UNK_28:
+		return TimerDoFuncExpoOut28(rate);
+	case FUNC_EXPO_OUT_UNK_30:
+		return TimerDoFuncExpoOut30(rate);
+	case FUNC_CIRQ_OUT:
+		return TimerDoFuncCirqOut(rate);
+	case FUNC_BACK_OUT:
+		return TimerDoFuncBackOut(rate);
+	case FUNC_ELASTIC_OUT:
+		return TimerDoFuncElasticOut(rate);
+	case FUNC_BOUNCE_OUT:
+		return TimerDoFuncBounceOut(rate);
+	case FUNC_QUAD_INOUT:
+		return TimerDoFuncQuadInOut(rate);
+	case FUNC_CUBIC_INOUT:
+		return TimerDoFuncCubicInOut(rate);
+	case FUNC_QUART_INOUT:
+		return TimerDoFuncQuartInOut(rate);
+	case FUNC_QUINT_INOUT:
+		return TimerDoFuncQuintInOut(rate);
+	case FUNC_SINE_INOUT:
+		return TimerDoFuncSineInOut(rate);
+	case FUNC_EXPO_INOUT:
+		return TimerDoFuncExpoInOut(rate);
+	case FUNC_EXPO_INOUT_UNK_41:
+		return TimerDoFuncExpoInOut41(rate);
+	case FUNC_EXPO_INOUT_UNK_42:
+		return TimerDoFuncExpoInOut42(rate);
+	case FUNC_EXPO_INOUT_UNK_43:
+		return TimerDoFuncExpoInOut43(rate);
+	case FUNC_EXPO_INOUT_UNK_44:
+		return TimerDoFuncExpoInOut44(rate);
+	case FUNC_CIRQ_INOUT:
+		return TimerDoFuncCirqInOut(rate);
+	case FUNC_BACK_INOUT:
+		return TimerDoFuncBackInOut(rate);
+	case FUNC_ELASTIC_INOUT:
+		return TimerDoFuncElasticInOut(rate);
+	case FUNC_BOUNCE_INOUT:
+		return TimerDoFuncBounceInOut(rate);
+	case FUNC_UNK_49:
+	case FUNC_UNK_52:
+		return TimerDoFunc49_52(rate, param);
+	case FUNC_UNK_50:
+	case FUNC_UNK_53:
+		return TimerDoFunc50_53(rate, param);
+	case FUNC_UNK_51:
+	case FUNC_UNK_54:
+		return TimerDoFunc51_54(rate, param);
+	case FUNC_CUSTOM_EXPO_IN:
+		return TimerDoFuncCustomExpoIn(rate, param);
+	case FUNC_CUSTOM_EXPO_OUT:
+		return TimerDoFuncCustomExpoOut(rate, param);
+	case FUNC_CUSTOM_EXPO_INOUT:
+		return TimerDoFuncCustomExpoInOut(rate, param);
+	case FUNC_CUSTOM_EXPO_OUTIN:
+		return TimerDoFuncCustomExpoOutIn(rate, param);
+	case FUNC_CUSTOM_PARABOLIC_IN:
+		return TimerDoFuncCustomParabolicIn(rate, param);
+	case FUNC_CUSTOM_PARABOLIC_OUT:
+		return TimerDoFuncCustomParabolicOut(rate, param);
+	case FUNC_CUSTOM_PARABOLIC_INOUT:
+		return TimerDoFuncCustomParabolicInOut(rate, param);
+	case FUNC_CUSTOM_PARABOLIC_OUTIN:
+		return TimerDoFuncCustomParabolicOutIn(rate, param);
+	case FUNC_CUSTOM_ELASTIC_IN:
+		return TimerDoFuncCustomElasticIn(rate, param);
+	case FUNC_CUSTOM_ELASTIC_OUT:
+		return TimerDoFuncCustomElasticOut(rate, param);
+	case FUNC_CUSTOM_ELASTIC_INOUT:
+		return TimerDoFuncCustomElasticInOut(rate, param);
+	case FUNC_CUSTOM_ELASTIC_OUTIN:
+		return TimerDoFuncCustomElasticOutIn(rate, param);
+	case FUNC_CUSTOM_UNK_71:
+		return TimerDoFunc71(rate, param);
+	case FUNC_CUSTOM_UNK_72:
+		return TimerDoFunc72(rate, param);
+	case FUNC_CUSTOM_UNK_73:
+		return TimerDoFunc73(rate, param);
+	case FUNC_CUSTOM_UNK_74:
+		return TimerDoFunc74(rate, param);
+	case FUNC_CUSTOM_UNK_75:
+		return TimerDoFunc75(rate, param);
+	case FUNC_CUSTOM_UNK_76:
+		return TimerDoFunc76(rate, param);
+	case FUNC_CUSTOM_UNK_77:
+		return TimerDoFunc77(rate, param);
+	case FUNC_CUSTOM_UNK_78:
+		return TimerDoFunc78(rate, param);
+	case FUNC_LINEAR:
+	default:
+		return TimerDoFuncLinear(rate);
+	}
+}
