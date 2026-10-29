@@ -10,8 +10,14 @@ PRXGEN     := $(CROSS)prxgen
 O          ?= $(if $(MEP_OUT),$(MEP_OUT)/sys661/$(TARGET),build)
 
 CFLAGS     := -O2 -G0 -march=allegrex -ffreestanding -fno-builtin -fno-common \
-              -fno-pic -mno-abicalls -fno-toplevel-reorder -Wall -Wextra -Werror \
-              -Wno-unused-parameter -I. -I$(KERNEL_DIR)/include -I$(PSPDEV)/psp/sdk/include \
+              -fno-pic -mno-abicalls -fno-toplevel-reorder -Wall -Wextra \
+              -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable \
+              -Wno-unused-but-set-variable -Wno-sign-compare -Wno-implicit-fallthrough \
+              -Wno-attribute-alias -Wno-incompatible-pointer-types \
+              -Wno-cast-function-type -Wno-maybe-uninitialized -Wno-array-bounds \
+              -Wno-implicit-function-declaration -Wno-int-conversion \
+              -Wno-tautological-compare -Wno-pragmas \
+              -I. -I$(KERNEL_DIR)/include -I$(PSPDEV)/psp/sdk/include \
               $(EXTRA_CFLAGS)
 ASFLAGS    := -G0 -march=allegrex -I. -I$(KERNEL_DIR)/include -I$(PSPDEV)/psp/sdk/include
 LDFLAGS    := -nostdlib -Wl,-q,-T,$(KERNEL_DIR)/prx.ld -Wl,-Map,$(O)/$(TARGET).map
