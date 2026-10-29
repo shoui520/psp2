@@ -15,6 +15,32 @@ static const float s_default_params_4[4] = { 0.8f, 12.0f, 0.0f, 0.0f };
 static const float s_default_params_5[4] = { 0.1f, 0.0f, 0.0f, 0.0f };
 static const float s_default_params_6[4] = { 0.2f, 0.3f, 0.5f, 0.0f };
 
+/* The first two words precede the ARM C++ ABI vtable address point. */
+const TimerClass timerClass = {
+	0, NULL, { TimerDestroy, TimerDelete }
+};
+
+Timer *TimerDestroy(Timer *self)
+{
+	float *param = self->m_param_x;
+
+	self->vtable = &timerClass.methods;
+	if (param)
+		PafDeleteArray(param);
+	return self;
+}
+
+void TimerDelete(Timer *self)
+{
+	TimerDestroy(self);
+	PafDelete(self);
+}
+
+Timer *TimerDestroyBase(Timer *self)
+{
+	return TimerDestroy(self);
+}
+
 void TimerInitTickUnit(float tick_unit)
 {
 	float unit = tick_unit * 0.001f;

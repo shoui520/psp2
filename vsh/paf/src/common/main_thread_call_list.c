@@ -24,15 +24,6 @@ void CallListListenerDelete(TimerListener *base);
 void CallListListenerOnFinish(TimerListener *base, void *data1, void *data2);
 void CallListListenerOnTick(TimerListener *base, void *data1, void *data2);
 
-/* The ARM C++ ABI places offset-to-top and RTTI before the method pointers. */
-static const struct {
-	int offset_to_top;
-	const void *type_info;
-	TimerVTable methods;
-} timerClass = {
-	0, NULL, { ScePafMisc_70E604B9, ScePafMisc_D29258BB }
-};
-
 static const struct {
 	int offset_to_top;
 	const void *type_info;

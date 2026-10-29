@@ -20,9 +20,18 @@ enum TimerRepeat {
 };
 
 typedef struct TimerVTable {
-	void (*Destroy)(Timer *self);
+	Timer *(*Destroy)(Timer *self);
 	void (*Delete)(Timer *self);
 } TimerVTable;
+
+typedef struct TimerClass {
+	int offset_to_top;
+	const void *type_info;
+	TimerVTable methods;
+} TimerClass;
+
+#define timerClass ScePafMisc_E05FACA7
+extern const TimerClass timerClass;
 
 enum TimerFunc {
 	FUNC_LINEAR,
@@ -159,6 +168,13 @@ extern TimerListenerList *s_default_list;
 extern float TimerTickUnit;
 extern float TimerTickInv;
 extern float TimerTickInterval;
+
+#define TimerDestroy ScePafMisc_70E604B9
+#define TimerDelete ScePafMisc_D29258BB
+#define TimerDestroyBase ScePafMisc_A7D9DBA1
+Timer *TimerDestroy(Timer *self);
+void TimerDelete(Timer *self);
+Timer *TimerDestroyBase(Timer *self);
 
 #define TimerInitTickUnit ScePafMisc_25B066A8
 #define TimerSetCurrTickInterval ScePafMisc_8D59045A
@@ -319,8 +335,6 @@ float TimerDoFuncSineOut(float rate);
 float TimerDoFuncSwing(float rate);
 float TimerDoFuncAngular(float rate);
 
-void ScePafMisc_70E604B9(Timer *self); /* Timer::~Timer */
-void ScePafMisc_D29258BB(Timer *self); /* deleting Timer::~Timer */
 void ScePafMisc_CE6EB459(TimerListener *self); /* TimerListener::~TimerListener */
 ListenerParam *ScePafMisc_B90DBCA6(ListenerParam *self, TimerListener *listener,
 				unsigned char interval, void *data1, void *data2);
