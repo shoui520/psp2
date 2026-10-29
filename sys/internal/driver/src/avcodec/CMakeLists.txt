@@ -9,5 +9,6 @@ psp2_module(os0_kd_bootimage_avcodec KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	jpeg/jpeg.c
 	jpegenc/jpegenc.c
 	videocodec/videocodec_init.c
+	videocodec/vnz_videocodec.c
 	videocodec/ce_dsp0_videocodec.c
 )

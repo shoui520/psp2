@@ -464,13 +464,6 @@ typedef struct VeneziaVipState {
 	uint32_t processorRecoveryEvents[2];
 } VeneziaVipState;
 
-typedef struct VeneziaDebugImageGeometry {
-	uint32_t width;
-	uint32_t height;
-	uint32_t imageCount;
-	uint32_t processorCount;
-} VeneziaDebugImageGeometry;
-
 /* name unknown: full 192-KiB command memory region supplied by VIP initialization.
  * Unidentified protocol banks remain placeholders until their users are converted. */
 typedef struct VeneziaVipCommandQueueSlot {

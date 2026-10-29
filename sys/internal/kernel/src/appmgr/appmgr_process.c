@@ -1847,9 +1847,9 @@ int _appmgrProcessInitialize(void (*callback)(struct AppState *app))
 		processEventRegistrationPanicInfo);
 	result = appmgrUtilWaitObjectInitialize();
 	PROCESS_INITIALIZE_CHECK(result < 0, 1502, processWaitInitializationPanicInfo);
-	/* The provider stores an opaque callback; the actual callback takes pid/usage. */
+	/* avcodec ignores the callback's result */
 	result = SceAvcodecForDriver_C84AFFC4(
-		(void (*)(void))videocodecUsageChangedCallback2);
+		(void (*)(SceUID, int))videocodecUsageChangedCallback2);
 	PROCESS_INITIALIZE_CHECK(result != 0, 1506, videoCodecRegistrationPanicInfo);
 	return 0;
 }

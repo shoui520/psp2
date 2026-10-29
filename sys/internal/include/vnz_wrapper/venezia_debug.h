@@ -160,6 +160,16 @@ _Static_assert(offsetof(VeneziaVipVideoInput, payload) == 32, "Venezia payload")
 _Static_assert(offsetof(VeneziaVipVideoInput, nalLengthSize) == 40, "Venezia NAL length size");
 _Static_assert(offsetof(VeneziaVipVideoInput, flags) == 44, "Venezia video flags");
 
+typedef struct VeneziaDebugImageGeometry {
+	uint32_t width;
+	uint32_t height;
+	uint32_t imageCount;
+	uint32_t processorCount;
+} VeneziaDebugImageGeometry;
+
+int SceCodecEngineWrapperForDriver_8CD35820(const VeneziaDebugImageGeometry *geometry, SceSize *size);
+int SceCodecEngineWrapperForDriver_86861877(unsigned int flags, int wait, SceUID pid);
+
 int SceCodecEngineWrapperForDriver_BB388700(unsigned int processor,
 	const VeneziaVipVideoInput *input, VeneziaDebugSnapshotList *list,
 	unsigned int *completed);

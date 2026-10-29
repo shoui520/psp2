@@ -11,7 +11,7 @@ int SceAvcodecForDriver_48247A20(unsigned int maxSplitDecoder);
 int SceAvcodecForDriver_4DB66E3A(void);	/* vitasdk: ksceJpegEncoderGetContextSize */
 int SceAvcodecForDriver_58F1E353(unsigned int codecType);
 int SceAvcodecForDriver_80F63723(const unsigned char *pJpeg, SceSize isize, void *pRGBA, SceSize osize, int decodeMode, void *pTempBuffer, SceSize tempBufferSize, void *pCoefBuffer, SceSize coefBufferSize);
-int SceAvcodecForDriver_C84AFFC4(void (*callback)(void));
+int SceAvcodecForDriver_C84AFFC4(void (*callback)(SceUID pid, int active));
 int SceAvcodecForDriver_EAAE7737(void *pRGBA, const unsigned char *pYCbCr, int xysize, int iFrameWidth, int colorOption, int sampling);
 
 int _sceAudiodecTermLibrary(SceUInt32 codecType);

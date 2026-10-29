@@ -1,6 +1,7 @@
 #pragma once
 
 #include <scetypes.h>
+#include <kernel/types.h>
 #include <sysmem/spinlock.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <vnz_wrapper/venezia_debug.h>
@@ -77,11 +78,164 @@ typedef struct VideocodecResident {
 	int processLocalStorageId;
 	SceUID activeProcessId;
 	SceUID ownerProcessIds[4];
-	void (*notifyProcessChange)(void);
+	void (*notifyProcessChange)(SceUID pid, int active);
 	struct ThreadmgrFastMutex allMutex;
 } VideocodecResident;
 
 _Static_assert(sizeof(VideocodecResident) == 92, "video codec resident ABI");
+
+/* a range a codec call locks for the hardware: pid 0 locks by mode, else by process */
+typedef struct VideocodecLockedRange {
+	int mode;
+	uintptr_t address;
+	SceSize size;
+} VideocodecLockedRange;
+
+typedef struct VideocodecLockedRanges {
+	SceUID pid;
+	int errorBase;
+	unsigned char numOfRanges;
+	unsigned char maxRanges;
+	unsigned char reserved[2];
+	VideocodecLockedRange *ranges;
+} VideocodecLockedRanges;
+
+_Static_assert(sizeof(VideocodecLockedRange) == 12, "video codec locked range ABI");
+_Static_assert(sizeof(VideocodecLockedRanges) == 16, "video codec locked ranges ABI");
+
+/* the encoder's errors: the video decoder's with 0x1000 set */
+#define VIDEOCODEC_ENCODER_ERROR_INVALID_PARAM		(-2141054974)	/* 0x80621802 */
+#define VIDEOCODEC_ENCODER_ERROR_INVALID_POINTER	(-2141054967)	/* 0x80621809 */
+
+/* the error bases a locked range reports its failures from */
+#define VIDEOCODEC_DECODER_ERROR_BASE	(-2141061120)	/* 0x80620200 */
+#define VIDEOCODEC_ENCODER_ERROR_BASE	(-2141057024)	/* 0x80621000 */
+
+void videocodecInitLockedRanges(VideocodecLockedRanges *ranges, SceUID pid,
+	VideocodecLockedRange *entries, unsigned int maxRanges, int errorBase);
+
+/* the hardware memory a codec library runs in: a memory block, or a process's unmap memory */
+#define VIDEOCODEC_MEMORY_BLOCK		0
+#define VIDEOCODEC_MEMORY_UNMAP		(-1)
+
+typedef struct VideocodecMemory {
+	void *base;
+	SceSize size;
+	int kind;
+	SceUID memBlockId;
+} VideocodecMemory;
+
+_Static_assert(sizeof(VideocodecMemory) == 16, "video codec memory ABI");
+
+/* an AVC decoder on the Venezia codec engine */
+typedef struct VideocodecAvcDecoder {
+	SceAvcdecQueryDecoderInfo info;
+	unsigned int mode;
+	unsigned int handle;
+	unsigned char decodeState[1500];
+	unsigned int decodeFlags;
+	unsigned char decodeStatus[4];
+	unsigned char pictureStatus[4];
+	unsigned int pictureFlags;
+	struct ThreadmgrFastMutex mutex;
+	VideocodecLockedRanges lockedRanges;
+	VideocodecLockedRange lockedRange[1];
+	unsigned int reserved;
+} VideocodecAvcDecoder;
+
+_Static_assert(sizeof(VideocodecAvcDecoder) == 1632, "video codec AVC decoder ABI");
+_Static_assert(offsetof(VideocodecAvcDecoder, mutex) == 1536, "AVC decoder mutex ABI");
+
+/* a decoder on the DSP0 (AVC or MPEG-4) */
+typedef struct VideocodecDsp0Decoder {
+	SceAvcdecQueryDecoderInfo info;
+	unsigned int mode;
+	unsigned int handle;
+	unsigned char decodeStatus[4];
+	unsigned int decodeFlags;
+	unsigned char pictureStatus[8];
+	unsigned int pictureFlags;
+	struct ThreadmgrFastMutex mutex;
+	VideocodecLockedRanges lockedRanges;
+	VideocodecLockedRange lockedRange[1];
+	unsigned int reserved2;
+} VideocodecDsp0Decoder;
+
+_Static_assert(sizeof(VideocodecDsp0Decoder) == 136, "video codec DSP0 decoder ABI");
+_Static_assert(offsetof(VideocodecDsp0Decoder, mutex) == 40, "DSP0 decoder mutex ABI");
+
+/* an AVC encoder on the DSP0 */
+typedef struct VideocodecEncoder {
+	unsigned int handle;
+	unsigned char encodeState[164];
+	unsigned int encodeFlags;
+	unsigned char encodeStatus[8];
+	unsigned int pictureFlags;
+	unsigned char parameters[112];
+	struct ThreadmgrFastMutex mutex;
+	VideocodecLockedRanges lockedRanges;
+	VideocodecLockedRange lockedRange[1];
+	unsigned int reserved;
+} VideocodecEncoder;
+
+_Static_assert(sizeof(VideocodecEncoder) == 392, "video codec encoder ABI");
+_Static_assert(offsetof(VideocodecEncoder, mutex) == 296, "encoder mutex ABI");
+
+/* SceVideodecQueryInitInfoHwAvcdec without its size: what a library was initialized for */
+typedef struct VideocodecLibraryInfo {
+	unsigned int horizontal;
+	unsigned int vertical;
+	unsigned int numOfRefFrames;
+	unsigned int numOfStreams;
+} VideocodecLibraryInfo;
+
+/* a process's video codecs: _GetVideocodecGlobal's process-local storage */
+typedef struct VideocodecGlobal {
+	struct ThreadmgrFastMutex *pAllMutex;
+	unsigned int reserved;
+	int avcdecInitCount;
+	VideocodecLibraryInfo avcdecInfo;
+	VideocodecAvcDecoder avcDecoders[4];
+	VideocodecMemory avcdecMemory;
+	unsigned int avcdecFlags;
+	unsigned int reserved2;
+	int dsp0InitCount;
+	unsigned int dsp0Flags;
+	VideocodecLibraryInfo dsp0DecoderInfo;
+	VideocodecLibraryInfo dsp0EncoderInfo;
+	unsigned int dsp0Library;
+	VideocodecDsp0Decoder dsp0Decoders[4];
+	VideocodecEncoder encoders[1];
+	VideocodecMemory dsp0Memory;
+	unsigned int dsp0MemoryFlags;
+	unsigned int dsp0Config;
+} VideocodecGlobal;
+
+_Static_assert(sizeof(VideocodecGlobal) == 7584, "video codec process storage ABI");
+_Static_assert(offsetof(VideocodecGlobal, avcdecMemory) == 6556, "AVC decoder memory ABI");
+_Static_assert(offsetof(VideocodecGlobal, dsp0Decoders) == 6624, "DSP0 decoders ABI");
+_Static_assert(offsetof(VideocodecGlobal, encoders) == 7168, "encoders ABI");
+
+/* a physically contiguous block a codec library allocates itself */
+typedef struct VideocodecMemBlock {
+	int kind;
+	SceUID memBlockId;
+	void *base;
+	SceSize size;
+} VideocodecMemBlock;
+
+_Static_assert(sizeof(VideocodecMemBlock) == 16, "video codec memory block ABI");
+
+int videocodecFreeMemBlock(VideocodecMemBlock *pMemBlock);
+int videocodecAllocMemBlock(const char *name, SceKernelMemBlockType type, SceSize alignment,
+	SceSize size, VideocodecMemBlock *pMemBlock);
+
+/* the slots of each kind a library holds, or has locked or initialized so far */
+typedef struct VideocodecSlotCounts {
+	unsigned int numOfAvcDecoders;
+	unsigned int numOfDsp0Decoders;
+	unsigned int numOfEncoders;
+} VideocodecSlotCounts;
 
 /* Complete host/RPC allocation; opaque spans contain live coprocessor data. */
 typedef struct Dsp0VideocodecLibraryCommand {
@@ -139,6 +293,15 @@ typedef struct Dsp0VideocodecInitParam {
 } Dsp0VideocodecInitParam;
 
 _Static_assert(sizeof(Dsp0VideocodecInitParam) == 20, "DSP0 initialization ABI");
+
+/* the memory a DSP0 library is built in, and what for */
+typedef struct Dsp0VideocodecLibraryMemory {
+	void *base;
+	SceSize size;
+	const Dsp0VideocodecInitParam *param;
+} Dsp0VideocodecLibraryMemory;
+
+int dsp0VideocodecInitLibrary(unsigned int *pLibrary, const Dsp0VideocodecLibraryMemory *pMemory);
 
 typedef struct AvcencNalUnit {
 	void *data;
@@ -213,6 +376,10 @@ _Static_assert(offsetof(AvcencControl, headers) == 28,
 
 int videocodecTermLibraryForProcess(unsigned int codecType, unsigned int flags,
 				  SceUID pid);
+void *_GetVideocodecGlobal(SceUID pid);
+int videocodecConvertValidationError(int result);
+int videocodecConvertCodecEngineError(int result);
+int videocodecConvertDecoderError(int result);
 int SceAvcodecForDriver_27211864(SceAvcdecCtrl *pCtrl);
 int SceAvcodecForDriver_D9FCDF3E(SceAvcdecCtrl *pCtrl, SceUID cbid);
 int SceAvcodecForDriver_13C530E4(SceAvcdecCtrl *pCtrl);
@@ -278,6 +445,12 @@ int SceAvcodecForDriver_EAEB16D5(const SceAvcdecCtrl *pCtrl,
 	SceAvcdecArrayPicture *pWorkPicture);
 int SceAvcodecForDriver_536C8296(unsigned int codecType,
 	const SceVideodecQueryInitInfo *pInitInfo, SceVideodecMemInfo *pMemInfo);
+int SceAvcodecForDriver_86B1ACC5(unsigned int codecType,
+	const SceVideodecQueryInitInfo *pInitInfo,
+	const SceVideodecQueryInitInfo *pEncoderInfo, SceVideodecMemInfo *pMemInfo);
+int SceAvcodecForDriver_32DEE3C5(unsigned int codecType,
+	const SceVideodecQueryInitInfo *pInitInfo,
+	const SceVideodecQueryInitInfo *pEncoderInfo, SceVideodecMemInfo *pMemInfo);
 int SceAvcodecForDriver_301CCA25(unsigned int codecType, SceAvcdecCtrl *pCtrl,
 		const SceAvcdecQueryDecoderInfo *pDecoderInfo);
 int SceAvcodecForDriver_01387A93(unsigned int codecType,
