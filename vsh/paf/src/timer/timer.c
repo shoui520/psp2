@@ -3,6 +3,8 @@
 #include "../std/new.h"
 #include "../std/string.h"
 
+extern int ScePafStdc_D608246A(void);
+
 float TimerTickUnit = 1.0f / 60.0f;
 float TimerTickInv = 60.0f;
 float TimerTickInterval = 1.0f;
@@ -552,4 +554,68 @@ float TimerListenerDoTick(TimerListener *self, void *data1, void *data2)
 	    (timer->m_state == STATE_FINISHED && timer->m_repeat == REPEAT_NONE))
 		self->vtable->OnFinish(self, data1, data2);
 	return ret;
+}
+
+static void ListenerParamListPushBack(ListenerParamList *list, const ListenerParam *param)
+{
+	ListenerParamNode *node;
+
+	if (!list->root_node)
+		return;
+	node = PafNew(sizeof(*node));
+	if (!node)
+		ScePafStdc_D608246A();
+	if (node) {
+		ListenerParam *value = PafPlacementNew(sizeof(*value), &node->val);
+		if (value)
+			*value = *param;
+	} else {
+		node = list->root_node;
+	}
+	if (node != list->root_node) {
+		node->prev = list->root_node->prev;
+		node->next = list->root_node;
+		list->root_node->prev->next = node;
+		list->root_node->prev = node;
+		++list->count;
+	}
+}
+
+void ScePafMisc_C565FD29(TimerListenerList *self, const ListenerParam *param)
+{
+	ScePafThread_F9FFA0BE(&self->m_list_mutex);
+	ListenerParamListPushBack(&self->m_list, param);
+	ScePafThread_95F9C45F(&self->m_list_mutex);
+}
+
+void ScePafMisc_A4554B25(TimerListenerList *self, TimerListener *listener)
+{
+	ListenerParamNode *root;
+	ListenerParamNode *node;
+
+	ScePafThread_F9FFA0BE(&self->m_list_mutex);
+	root = self->m_list.root_node;
+	node = root ? root->next : NULL;
+	while (node != root) {
+		if (node->val.listener == listener) {
+			int is_iterator = node == self->m_iterator;
+			ListenerParamNode *prev = node->prev;
+			ListenerParamNode *next = node->next;
+
+			next->prev = prev;
+			prev->next = node->next;
+			if (is_iterator) {
+				PafDelete(node);
+				self->m_iterator = next;
+				--self->m_list.count;
+				self->m_iterator_updated = 1;
+			} else {
+				PafDelete(node);
+				--self->m_list.count;
+			}
+			break;
+		}
+		node = node ? node->next : NULL;
+	}
+	ScePafThread_95F9C45F(&self->m_list_mutex);
 }

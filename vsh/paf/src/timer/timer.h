@@ -2,6 +2,9 @@
 #ifndef PAF_TIMER_TIMER_H
 #define PAF_TIMER_TIMER_H
 
+#include "../thread/mutex.h"
+#include <stddef.h>
+
 typedef struct Timer Timer;
 
 enum TimerState {
@@ -226,6 +229,30 @@ typedef struct ListenerParam {
 	void *data2;
 	unsigned char interval : 1;
 } ListenerParam;
+
+typedef struct ListenerParamNode {
+	struct ListenerParamNode *prev;
+	struct ListenerParamNode *next;
+	ListenerParam val;
+} ListenerParamNode;
+
+typedef struct ListenerParamList {
+	ListenerParamNode *root_node;
+	unsigned int count;
+	unsigned char alloc_value;
+	unsigned char alloc_node;
+} ListenerParamList;
+
+struct TimerListenerList {
+	ListenerParamList m_list;
+	ListenerParamNode *m_iterator;
+	unsigned char m_iterator_updated;
+	RMutex m_list_mutex;
+};
+
+typedef char ListenerParamNodeSizeCheck[sizeof(ListenerParamNode) == 24 ? 1 : -1];
+typedef char TimerListenerListSizeCheck[sizeof(TimerListenerList) == 56 ? 1 : -1];
+typedef char TimerListenerListMutexOffsetCheck[offsetof(TimerListenerList, m_list_mutex) == 24 ? 1 : -1];
 
 #define ListenerParamConstruct ScePafMisc_B90DBCA6
 ListenerParam *ListenerParamConstruct(ListenerParam *self, TimerListener *listener,
