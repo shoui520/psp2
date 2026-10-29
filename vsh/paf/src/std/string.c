@@ -95,6 +95,53 @@ int sce_paf_wcscmp(const uint16_t *left, const uint16_t *right)
 	}
 }
 
+uint16_t *sce_paf_wcscpy(uint16_t *destination, const uint16_t *source)
+{
+	volatile uint16_t *dest = (volatile uint16_t *)destination;
+	const volatile uint16_t *src = (const volatile uint16_t *)source;
+
+	if (!destination || !source)
+		return NULL;
+	for (;;) {
+		uint16_t ch = *src++;
+
+		*dest++ = ch;
+		if (!ch)
+			return destination;
+	}
+}
+
+uint16_t *sce_paf_wcscat(uint16_t *destination, const uint16_t *source)
+{
+	const volatile uint16_t *src = (const volatile uint16_t *)source;
+	const volatile uint16_t *sourceEnd;
+	const volatile uint16_t *destinationEnd;
+	volatile uint16_t *dest;
+
+	if (!destination || !source)
+		return NULL;
+	destinationEnd = (const volatile uint16_t *)destination;
+	while (*destinationEnd)
+		destinationEnd++;
+	sourceEnd = src;
+	while (*sourceEnd)
+		sourceEnd++;
+	/* The original rejects an append when both terminator addresses coincide. */
+	if (destinationEnd == sourceEnd)
+		return NULL;
+	/* Sony scans the destination a second time before writing anything. */
+	dest = (volatile uint16_t *)destination;
+	while (*dest)
+		dest++;
+	for (;;) {
+		uint16_t ch = *src++;
+
+		*dest++ = ch;
+		if (!ch)
+			return destination;
+	}
+}
+
 int sce_paf_strcmp(const char *left, const char *right)
 {
 	const volatile signed char *leftByte;
