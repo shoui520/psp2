@@ -10,7 +10,8 @@ PRXGEN     := $(CROSS)prxgen
 O          ?= $(if $(MEP_OUT),$(MEP_OUT)/sys661/$(TARGET),build)
 
 CFLAGS     := -O2 -G0 -march=allegrex -ffreestanding -fno-builtin -fno-common \
-              -fno-pic -mno-abicalls -fno-toplevel-reorder -Wall -Wextra \
+              -fno-pic -mno-abicalls -fno-toplevel-reorder -fno-inline-small-functions \
+              -Wall -Wextra \
               -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable \
               -Wno-unused-but-set-variable -Wno-sign-compare -Wno-implicit-fallthrough \
               -Wno-attribute-alias -Wno-incompatible-pointer-types \

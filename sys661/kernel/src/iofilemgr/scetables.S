@@ -408,7 +408,7 @@ __lib_stub_top:
 	.byte	5, 0
 	.half	4
 	.word	.L_imp_nid_2
-	.word	sceKernelPowerUnlockForUser
+	.word	sceKernelPowerUnlock
 	.word	.L_imp_lib_3
 	.byte	17, 0
 	.half	0x0001
