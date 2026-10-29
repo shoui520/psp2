@@ -41,6 +41,11 @@ float sce_paf_floorf(float x)
 		truncated -= 1.0f;
 	return truncated;
 }
+
+double sce_paf_floor(double x)
+{
+	return (double)sce_paf_floorf((float)x);
+}
 #include <stdint.h>
 #include <intrinsics.h>
 
