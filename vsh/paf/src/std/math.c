@@ -237,6 +237,32 @@ float sce_paf_asinf(float x)
 	return result.value;
 }
 
+float sce_paf_acosf(float x)
+{
+	union {
+		float value;
+		uint32_t bits;
+	} input, root, result;
+	uint32_t inputBits, rootBits;
+
+	input.value = x;
+	inputBits = input.bits;
+	root.value = __builtin_sqrtf(1.0f - x * x);
+	rootBits = root.bits;
+	input.bits &= 0x7fffffffU;
+	root.bits &= 0x7fffffffU;
+	if (input.bits > root.bits)
+		result.value = AtanApprox(root.value / input.value);
+	else
+		result.value = 1.5707963705062866f -
+			       AtanApprox(input.value / root.value);
+	if ((int32_t)inputBits < 0)
+		result.value = 3.1415927410125732f - result.value;
+	result.bits = (rootBits & 0x80000000U) |
+		      (result.bits & 0x7fffffffU);
+	return result.value;
+}
+
 float sce_paf_expf(float x)
 {
 	union {
