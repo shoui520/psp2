@@ -263,49 +263,60 @@ static int writeRegister(struct SceUsbEtherSmscContext *a, unsigned short reg, u
 	return ret;
 }
 
-static void usbEtherSmscOnTxTransferCompletion(int result, int count, void *arg)
+static void __attribute__((noinline, noclone)) onTxComplete(struct SceUsbEtherSmscContext *a, int result)
 {
-	struct SceUsbEtherSmscContext *a = arg;
-
-	(void)count;
 	if (result >= 0)
 		sceKernelSetEventFlag(a->workerEvent, WORKER_TX);
 }
-static void usbEtherSmscOnRxTransferCompletion(int result, int count, void *arg)
+static void __attribute__((noinline, noclone)) onRxComplete(struct SceUsbEtherSmscContext *a, int result,
+						    int count)
 {
-	struct SceUsbEtherSmscContext *a = arg;
-
 	if (result >= 0) {
 		a->rxCount = count;
 		sceKernelSetEventFlag(a->workerEvent, WORKER_RX);
 	}
 }
-static int sendBuffer(struct SceUsbEtherSmscContext *a, void *data, unsigned int length)
+static void usbEtherSmscOnTxTransferCompletion(int result, int count, void *arg)
+{
+	(void)count;
+	onTxComplete(arg, result);
+}
+static void usbEtherSmscOnRxTransferCompletion(int result, int count, void *arg)
+{
+	onRxComplete(arg, result, count);
+}
+static int __attribute__((noinline)) sendBuffer(struct SceUsbEtherSmscContext *a, void *data, unsigned int length)
 {
 	return SceUsbdForDriver_470D5289(a->txPipe, data, length, usbEtherSmscOnTxTransferCompletion, a);
 }
-static int receiveBuffer(struct SceUsbEtherSmscContext *a, void *data, unsigned int length)
+static int __attribute__((noinline)) receiveBuffer(struct SceUsbEtherSmscContext *a, void *data, unsigned int length)
 {
 	return SceUsbdForDriver_470D5289(a->rxPipe, data, length, usbEtherSmscOnRxTransferCompletion, a);
 }
 
-static int connected(struct SceUsbEtherSmscContext *a)
+static int __attribute__((noinline)) connected(struct SceUsbEtherSmscContext *a)
 {
 	__atomic_fetch_or(&a->flags, SMSC_FLAG_ATTACHED, __ATOMIC_SEQ_CST);
 	return sceKernelSetEventFlag(a->workerEvent, WORKER_ATTACHED);
 }
-static int disconnected(struct SceUsbEtherSmscContext *a)
+static int __attribute__((noinline)) disconnected(struct SceUsbEtherSmscContext *a)
 {
 	__atomic_fetch_and(&a->flags, ~SMSC_FLAG_ATTACHED, __ATOMIC_SEQ_CST);
 	sceKernelSetEventFlag(a->workerEvent, WORKER_DETACH);
 	a->link = 0;
 	return 0;
 }
+static struct SceUsbEtherSmscContext * __attribute__((noinline, noclone)) getContext(void)
+{
+	return &s_context;
+}
 static int detachDevice(int device)
 {
+	struct SceUsbEtherSmscContext *a = getContext();
+
 	(void)device;
-	if (sceKernelSetEventFlag(s_context.controlEvent, CONTROL_FAILED) >= 0)
-		return disconnected(&s_context) >> 31;
+	if (a && sceKernelSetEventFlag(a->controlEvent, CONTROL_FAILED) >= 0)
+		return disconnected(a) >> 31;
 	return -1;
 }
 static int probeDevice(int device)
@@ -335,7 +346,7 @@ static int probeDevice(int device)
 }
 static int onAttach(int device)
 {
-	struct SceUsbEtherSmscContext *a = &s_context;
+	struct SceUsbEtherSmscContext *a = getContext();
 	SceUsbdInterfaceDescriptor *iface;
 	SceUsbdEndpointDescriptor *endpoint;
 	SceUsbdDeviceRequest request;
@@ -344,6 +355,8 @@ static int onAttach(int device)
 	void *scan;
 	int ret, i;
 
+	if (!a)
+		return -1;
 	a->controlPipe = a->rxPipe = a->txPipe = -1;
 	ret = sceKernelClearEventFlag(a->controlEvent, 0);
 	if (ret < 0)
@@ -406,7 +419,7 @@ static int onAttach(int device)
 	ret = connected(a);
 	return ret < 0 ? ret : 0;
 }
-static int initializeUsb(struct SceUsbEtherSmscContext *a)
+static int __attribute__((noinline, noclone)) initializeUsb(struct SceUsbEtherSmscContext *a)
 {
 	unsigned int hardware;
 	int ret, n;
@@ -445,7 +458,7 @@ static int initializeUsb(struct SceUsbEtherSmscContext *a)
 	return ret < 0 ? ret : SMSC_ERROR_NO_DEVICE;
 }
 
-static int pollMii(struct SceUsbEtherSmscContext *a, unsigned int *value)
+static inline __attribute__((always_inline)) int pollMii(struct SceUsbEtherSmscContext *a, unsigned int *value)
 {
 	int ret, count = 0;
 
@@ -704,8 +717,15 @@ static int interfaceStart(struct NetDriver *driver, void *memoryBase)
 }
 static int interfaceStop(struct NetDriver *driver, void *memoryBase, int memorySize)
 {
+	struct SceUsbEtherSmscContext *a = driver->private;
+
+	(void)memoryBase;
 	(void)memorySize;
-	return interfaceStart(driver, memoryBase);
+	if (!a->active)
+		return SMSC_ERROR_NOT_READY;
+	sceKernelAtomicAddAndGet32(&a->references, 1);
+	sceKernelAtomicSubAndGet32(&a->references, 1);
+	return 0;
 }
 static int interfaceClose(struct NetDriver *driver, int argument)
 {
@@ -825,7 +845,7 @@ static void powerEvent(int event, int value)
 	}
 }
 
-static int initializeAdapter(struct SceUsbEtherSmscContext *a)
+static inline __attribute__((always_inline)) int initializeAdapter(struct SceUsbEtherSmscContext *a)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	unsigned int value = 0;
@@ -978,8 +998,10 @@ static int initializeAdapter(struct SceUsbEtherSmscContext *a)
 		if (ret < 0)
 			return ret;
 		ret = sceKernelGetMemBlockBase(uid, (void **)&value);
-		if (ret < 0 || !value)
+		if (ret < 0)
 			return ret;
+		if (!value)
+			return -1;
 		a->txBuffer = (void *)value;
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
@@ -992,8 +1014,10 @@ static int initializeAdapter(struct SceUsbEtherSmscContext *a)
 		if (ret < 0)
 			return ret;
 		ret = sceKernelGetMemBlockBase(uid, (void **)&value);
-		if (ret < 0 || !value)
+		if (ret < 0)
 			return ret;
+		if (!value)
+			return -1;
 		a->rxBuffer = (void *)value;
 	}
 	ret = receiveBuffer(a, a->rxBuffer, a->bufferSize);
@@ -1014,7 +1038,7 @@ unlock:
 	return ret;
 }
 
-static int startInterface(struct SceUsbEtherSmscContext *a, int *retries)
+static inline __attribute__((always_inline)) int startInterface(struct SceUsbEtherSmscContext *a, int *retries)
 {
 	int ret;
 
@@ -1023,8 +1047,12 @@ static int startInterface(struct SceUsbEtherSmscContext *a, int *retries)
 			goto attached;
 		sceKernelDelayThread(1000000);
 	}
+	/* Sony leaves the retry count alone when the device never attached */
 	ret = SMSC_ERROR_NO_DEVICE;
-	goto error;
+	a->driver.notify(&a->driver,
+		NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+				 NET_DRIVER_STATUS_ERROR), &ret, 4);
+	return ret;
 attached:
 	if ((a->flags & SMSC_FLAG_INITIALIZED) && (a->link & NET_DRIVER_LINK_UP)) {
 		lockFastMutex(&a->mutex);
@@ -1066,7 +1094,7 @@ error:
 				 NET_DRIVER_STATUS_ERROR), &ret, 4);
 	return ret;
 }
-static int stopInterface(struct SceUsbEtherSmscContext *a)
+static inline __attribute__((always_inline)) int stopInterface(struct SceUsbEtherSmscContext *a)
 {
 	unsigned int value = 0;
 	int ret, count;
@@ -1151,7 +1179,7 @@ errorUnlock:
 				 NET_DRIVER_STATUS_ERROR), &ret, 4);
 	return ret;
 }
-static void startTx(struct SceUsbEtherSmscContext *a)
+static inline __attribute__((always_inline)) void startTx(struct SceUsbEtherSmscContext *a)
 {
 	unsigned char *data = a->txBuffer;
 	unsigned char *end = data + a->bufferSize;
@@ -1210,7 +1238,7 @@ static void startTx(struct SceUsbEtherSmscContext *a)
 	if (old > 1)
 		sceKernelSetEventFlag(a->workerEvent, WORKER_TX);
 }
-static void startRx(struct SceUsbEtherSmscContext *a)
+static inline __attribute__((always_inline)) void startRx(struct SceUsbEtherSmscContext *a)
 {
 	unsigned char *data = a->rxBuffer;
 	unsigned char *end = data + a->rxCount;
@@ -1316,8 +1344,8 @@ static int workerEntry(SceSize arglen, void *argp)
 				__atomic_fetch_and(&a->flags, ~(SMSC_FLAG_INITIALIZED | SMSC_FLAG_OPEN), __ATOMIC_SEQ_CST);
 			retries = 0;
 		}
-		if (bits & WORKER_ATTACHED)
-			initializeAdapter(a);
+		if ((bits & WORKER_ATTACHED) && initializeAdapter(a) == 0)
+			last = 0;
 		if (bits & WORKER_OPEN)
 			startInterface(a, &retries);
 		if (bits & WORKER_CLOSE)
