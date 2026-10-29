@@ -20,6 +20,10 @@ int8_t sce_paf_misc_flag_eef5;
 uint32_t sce_paf_misc_value_1078;
 float sce_paf_misc_float_1178;
 uint64_t sce_paf_misc_pair_1158;
+uint32_t sce_paf_misc_slots_d57c[2];
+uint32_t sce_paf_misc_flags_ede0[2];
+uint32_t sce_paf_misc_counters_edf0[2];
+uint32_t sce_paf_misc_limits_edf8[2];
 
 uint32_t ScePafMisc_4E93C051(void)
 {
@@ -157,4 +161,54 @@ float *ScePafMisc_F8D63B8E(float value)
 uint64_t ScePafMisc_A8133C0A(void)
 {
 	return sce_paf_misc_pair_1158;
+}
+
+uint32_t ScePafMisc_DFEE9387(uint32_t index)
+{
+	return index < 2 ? sce_paf_misc_flags_ede0[index] : 0;
+}
+
+uint32_t ScePafMisc_CBAF777C(uint32_t index, uint32_t value)
+{
+	uint32_t previous;
+	if (index >= 2)
+		return 0;
+	previous = sce_paf_misc_slots_d57c[index];
+	sce_paf_misc_slots_d57c[index] = value;
+	return previous;
+}
+
+uint32_t ScePafMisc_0D4B4B67(uint32_t index)
+{
+	if (index >= 2)
+		return index;
+	sce_paf_misc_counters_edf0[index]++;
+	return index << 2;
+}
+
+uint32_t ScePafMisc_FFE73747(uint32_t index, uint32_t mask)
+{
+	if (index >= 2)
+		return 0;
+	sce_paf_misc_flags_ede0[index] |= mask;
+	return sce_paf_misc_flags_ede0[index];
+}
+
+int ScePafMisc_3DD77645(uint32_t index)
+{
+	return index < 2 &&
+		sce_paf_misc_counters_edf0[index] > sce_paf_misc_limits_edf8[index];
+}
+
+uint32_t ScePafMisc_15613EA2(uint32_t index)
+{
+	uint32_t limit;
+	if (index >= 2)
+		return index;
+	limit = sce_paf_misc_limits_edf8[index];
+	if (sce_paf_misc_counters_edf0[index] > limit) {
+		limit++;
+		sce_paf_misc_limits_edf8[index] = limit;
+	}
+	return limit;
 }
