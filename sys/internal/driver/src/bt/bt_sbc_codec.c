@@ -594,8 +594,8 @@ int SbcEncodeFrames(SbcContext *context, const uint8_t *pcm,
 		context->crc = 15;
 		SbcWriteBits(context, 0x9c, 8, 0);
 		SbcWriteBits(context, (uint8_t)((context->frequency << 6) |
-			((context->blocks / 4 - 1) << 4) | (context->mode << 2) |
-			(context->allocation << 1) | (context->subbands / 4 - 1)), 8, 1);
+			(((context->blocks >> 2) - 1) << 4) | (context->mode << 2) |
+			(context->allocation << 1) | ((context->subbands >> 2) - 1)), 8, 1);
 		SbcWriteBits(context, context->bitpool, 8, 1);
 		context->bitCount = 0;
 		checksum = context->stream++;
