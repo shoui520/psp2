@@ -42,6 +42,8 @@ void *sce_paf_bsearch(const void *key, const void *base, size_t count,
 	return NULL;
 }
 
+/* The native atoi/atol wrappers call this export rather than inlining it. */
+__attribute__((noinline))
 long sce_paf_strtol(const char *str, char **endptr, int base)
 {
 	const volatile signed char *cursor = (const volatile signed char *)str;
@@ -184,6 +186,16 @@ unsigned long sce_paf_strtoul(const char *str, char **endptr, int base)
 	if (endptr)
 		*endptr = (char *)cursor;
 	return result;
+}
+
+int sce_paf_atoi(const char *str)
+{
+	return (int)sce_paf_strtol(str, NULL, 10);
+}
+
+long sce_paf_atol(const char *str)
+{
+	return sce_paf_strtol(str, NULL, 10);
 }
 
 int sce_paf_abs(int value)
