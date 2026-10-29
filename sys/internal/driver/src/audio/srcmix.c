@@ -33,7 +33,7 @@ int audioSetHardwareVolume(int channel, int left, int right);
 extern const uint32_t audioSrcMixProgram[256];
 extern const uint32_t audioSrcMixSecondaryProgram[1414];
 extern const uint32_t audioSrcMixCoefficients[1024];
-extern const uint32_t audioSrcMixSecondCoefficients[1814];
+extern const uint32_t audioSrcMixSecondCoefficients[1822];
 
 int SceAudioForDriver_37517CC9(uintptr_t destination, unsigned int wordCount)
 {
@@ -1308,13 +1308,7 @@ int audioInitializeSrcMix(void)
 		AUDIO_SRCMIX_UPLOAD(audioSrcMixProgram, 256, 0x60, (void)0);
 		AUDIO_SRCMIX_UPLOAD(audioSrcMixSecondaryProgram, 1414, 0x120060, (void)0);
 		AUDIO_SRCMIX_UPLOAD(audioSrcMixCoefficients, 1024, 0x280060, (void)0);
-		AUDIO_SRCMIX_UPLOAD(audioSrcMixSecondCoefficients, 1814, 0x300060,
-			for (operation = 0; operation < 4; ++operation) {
-				const struct AudioClockDivider *divider = &audioClockDividers[operation];
-
-				registers->command = divider->sampleRate | ((uint32_t)divider->divider << 16);
-				registers->command = divider->primaryControl | ((uint32_t)divider->alternateControl << 16);
-			});
+		AUDIO_SRCMIX_UPLOAD(audioSrcMixSecondCoefficients, 1822, 0x300060, (void)0);
 		result = 0;
 		while ((status = registers->status) != 0) {
 			if (status & 0x100)
