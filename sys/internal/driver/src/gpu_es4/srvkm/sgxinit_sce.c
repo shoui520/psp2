@@ -362,7 +362,8 @@ PVRSRV_ERROR SGXDevInitCompatCheck(PVRSRV_DEVICE_NODE *psDeviceNode)
 	psMemInfo = psDevInfo->psKernelSGXMiscMemInfo;
 	psSGXMiscInfoInt = psMemInfo->pvLinAddrKM;
 	psSGXMiscInfoInt->ui32MiscInfoFlags = PVRSRV_USSE_MISCINFO_GET_STRUCT_SIZES;
-	eError = SGXGetMiscInfoUkernel(psMemInfo, psDeviceNode, NULL);
+	eError = SGXGetMiscInfoUkernel(psDevInfo->psKernelSGXMiscMemInfo, psDeviceNode,
+				NULL);
 	if (eError != PVRSRV_OK) {
 		PVR_LOG_SCE("(FAIL) SGXInit: Unable to validate device DDK version");
 		return eError;
@@ -495,12 +496,11 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 {
 	PVRSRV_DEVICE_NODE *psDeviceNode = hDevHandle;
 	PVRSRV_SGXDEV_INFO *psDevInfo = psDeviceNode->pvDevice;
-	PVRSRV_SGX_CCB_INFO *psKernelCCBInfo = NULL;
 	SGX_DEVICE_MAP *psSGXDeviceMap;
 	PVRSRV_ERROR eError;
 #if FW_VERSION >= 0x04000000
 	static const SceKernelDebugInfo dbg_DevInitSGXPart2KM_L1047 = {
-		0xdeee73fd, 0x27af3dc3, 0x0ed9f42a,
+		0xdeee73fd, 0x79c9f635, 0x5ec584fd,
 		"devices/sgx/sgxinit.c", 1047, "DevInitSGXPart2KM"
 	};
 #endif
@@ -521,20 +521,24 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	psDevInfo->psKernel3DSigBufferMemInfo = psInitInfo->hKernel3DSigBufferMemInfo;
 	psDevInfo->ui32ClientBuildOptions = psInitInfo->ui32ClientBuildOptions;
 	psDevInfo->sSGXStructSizes = psInitInfo->sSGXStructSizes;
-	eError = OSAllocMem_Impl(1, sizeof(*psKernelCCBInfo),
-			(IMG_VOID **)&psKernelCCBInfo, NULL);
-	if (eError != PVRSRV_OK) {
-		if (psDevInfo->psKernelCCBInfo != NULL)
-			OSFreeMem_Impl(1, sizeof(*psKernelCCBInfo), psDevInfo->psKernelCCBInfo, NULL);
-		return eError;
+	{
+		PVRSRV_SGX_CCB_INFO *psKernelCCBInfo = NULL;
+
+		eError = OSAllocMem_Impl(1, sizeof(*psKernelCCBInfo),
+				(IMG_VOID **)&psKernelCCBInfo, NULL);
+		if (eError != PVRSRV_OK) {
+			if (psDevInfo->psKernelCCBInfo != NULL)
+				OSFreeMem_Impl(1, sizeof(*psKernelCCBInfo), psDevInfo->psKernelCCBInfo, NULL);
+			return eError;
+		}
+		OSMemSet(psKernelCCBInfo, 0, sizeof(*psKernelCCBInfo));
+		psKernelCCBInfo->psCCBMemInfo = psDevInfo->psKernelCCBMemInfo;
+		psKernelCCBInfo->psCCBCtlMemInfo = psDevInfo->psKernelCCBCtlMemInfo;
+		psKernelCCBInfo->psCommands = psDevInfo->psKernelCCB->asCommands;
+		psKernelCCBInfo->pui32WriteOffset = &psDevInfo->psKernelCCBCtl->ui32WriteOffset;
+		psKernelCCBInfo->pui32ReadOffset = &psDevInfo->psKernelCCBCtl->ui32ReadOffset;
+		psDevInfo->psKernelCCBInfo = psKernelCCBInfo;
 	}
-	OSMemSet(psKernelCCBInfo, 0, sizeof(*psKernelCCBInfo));
-	psKernelCCBInfo->psCCBMemInfo = psDevInfo->psKernelCCBMemInfo;
-	psKernelCCBInfo->psCCBCtlMemInfo = psDevInfo->psKernelCCBCtlMemInfo;
-	psKernelCCBInfo->psCommands = psDevInfo->psKernelCCB->asCommands;
-	psKernelCCBInfo->pui32WriteOffset = &psDevInfo->psKernelCCBCtl->ui32WriteOffset;
-	psKernelCCBInfo->pui32ReadOffset = &psDevInfo->psKernelCCBCtl->ui32ReadOffset;
-	psDevInfo->psKernelCCBInfo = psKernelCCBInfo;
 	OSMemCopy(psDevInfo->aui32HostKickAddr, psInitInfo->aui32HostKickAddr,
 			sizeof(psDevInfo->aui32HostKickAddr));
 	psDevInfo->bForcePTOff = IMG_FALSE;
@@ -748,7 +752,8 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 		psMiscInfo->uData.ui32SGXClockSpeed = ui32ClockSpeed * 1000000;
 		return PVRSRV_OK;
 	case SGX_MISC_INFO_REQUEST_SGXREV:
-		eError = SGXGetMiscInfoUkernel(psMemInfo, psDeviceNode, hDevMemContext);
+		eError = SGXGetMiscInfoUkernel(psDevInfo->psKernelSGXMiscMemInfo, psDeviceNode,
+				hDevMemContext);
 		if (eError != PVRSRV_OK)
 			return eError;
 		psSGXFeatures = &((PVRSRV_SGX_MISCINFO_INFO *)psMemInfo->pvLinAddrKM)->sSGXFeatures;
