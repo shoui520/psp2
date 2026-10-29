@@ -103,3 +103,40 @@ ScePafMisc_5BF60DE9:
 	pop {r4, pc}
 	.fnend
 	.size ScePafMisc_5BF60DE9, . - ScePafMisc_5BF60DE9
+
+	.global ScePafMisc_07A54D87
+	.type ScePafMisc_07A54D87, %function
+	.thumb_func
+ScePafMisc_07A54D87:
+	.fnstart
+	push {r4, r5, lr}
+	sub sp, #0xc
+	movw r5, #:lower16:__stack_chk_guard
+	movt r5, #:upper16:__stack_chk_guard
+	ldr r2, [r5]
+	str r2, [sp, #4]
+	adds r4, r1, #0
+	ldr r0, [r0, #0xc]
+	movs r1, #0
+	str r1, [sp]
+	add r1, sp, #0
+	blx SceHttp_6EAD73EB
+	cmp r0, #0
+	bne .Lcheck07A
+	ldr r1, [sp]
+	cmp r1, #1
+	bne .Lcheck07A
+	movs r1, #1
+	strb r1, [r4]
+.Lcheck07A:
+	ldr r2, [sp, #4]
+	ldr r1, [r5]
+	cmp r1, r2
+	bne .Lfail07A
+	add sp, #0xc
+	pop {r4, r5, pc}
+.Lfail07A:
+	blx __stack_chk_fail
+	nop
+	.fnend
+	.size ScePafMisc_07A54D87, . - ScePafMisc_07A54D87
