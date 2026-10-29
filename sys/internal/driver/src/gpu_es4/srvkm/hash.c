@@ -185,7 +185,7 @@ IMG_UINTPTR_T HASH_Remove_Extended(HASH_TABLE *pHash, IMG_VOID *pKey)
 		return 0;
 	uIndex = pHash->pfnHashFunc(pHash->uKeySize, pKey, pHash->uSize) %
 			pHash->uSize;
-	for (ppBucket = &pHash->ppBucketTable[uIndex]; ppBucket && *ppBucket;
+	for (ppBucket = &pHash->ppBucketTable[uIndex]; *ppBucket;
 			ppBucket = &(*ppBucket)->pNext) {
 		if (pHash->pfnKeyComp(pHash->uKeySize, (*ppBucket)->k, pKey)) {
 			BUCKET *pBucket = *ppBucket;
