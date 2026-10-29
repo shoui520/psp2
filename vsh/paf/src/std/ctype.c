@@ -29,11 +29,22 @@ int sce_paf_look_ctype_table(int ch)
 	return ctype_table[ch + 1];
 }
 
+/* The native private wide-lowercase wrapper calls this export out of line. */
+__attribute__((noinline))
 int sce_paf_tolower(int ch)
 {
 	if ((uint32_t)ch <= 0x7f && (ctype_table[ch + 1] & 1))
 		return (unsigned char)ch + 0x20;
 	return ch;
+}
+
+int sce_paf_private_towlower(int ch)
+{
+	uint16_t wide = (uint16_t)ch;
+
+	if (wide >= 0x80)
+		return wide;
+	return (uint16_t)sce_paf_tolower(wide);
 }
 
 int sce_paf_toupper(int ch)

@@ -5,6 +5,8 @@
 #include <stdint.h>
 
 int sce_paf_abs(int value);
+void sce_paf_srand(unsigned int seed);
+int sce_paf_rand(void);
 
 #define sce_paf_realloc ScePafStdc_0ADEA3AD
 #define GetGlobalHeapAllocator ScePafStdc_261CAF72
