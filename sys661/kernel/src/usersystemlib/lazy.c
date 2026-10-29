@@ -4,70 +4,75 @@
 
 #include "usersystemlib_int.h"
 
-s32 sub_00000208(s32 dlId  __attribute__((unused)), void *stall  __attribute__((unused)))
-{
-    /* The syscall instruction is patched at runtime by ge.prx to run sceGeListUpdateStallAddr */
-    asm __volatile__ (
-        ".set noat\n"
-        ".set noreorder\n"
-        "jr          $ra\n"
-        "syscall     0x0\n"
-    );
-
-    /* Never reached */
-    return 0;
-}
-
-// This function replaces sceGeListUpdateStallAddr() in a patched game (Gensou Suikoden I&II)
-s32 sceGe_lazy_31129B95(s32 dlId, void *stall)
-{
-    s32 ret;
-
-    // Updating the same display list stall address again: update g_lazy.stall and skip if count < max (= 100)
-    if (dlId == g_lazy.dlId) {
-        g_lazy.stall = stall;
-
-        if (stall != NULL) {
-            g_lazy.count++;
-
-            if (g_lazy.count < g_lazy.max) {
-                return 0;
-            }
-        }
-    }
-
-    // Update the stall address of the last display list and reset g_lazy.dlId
-    if (g_lazy.dlId >= 0) {
-        SceBool idErr = 0;
-
-        do {
-            if (pspLl(&g_lazy.dlId) != g_lazy.dlId) {
-                idErr = 1;
-                break;
-            }
-        } while (!pspSc(-1, &g_lazy.dlId));
-
-        if (!idErr) {
-            sub_00000208(g_lazy.dlId, g_lazy.stall);
-        }
-    }
-
-    // Update the specified display list stall address
-    ret = sub_00000208(dlId, stall);
-
-    if (ret < 0) {
-        return ret;
-    }
-
-    // Set the 'lazy' status to the display list we updated the stall address of
-    do {
-        if (pspLl(&g_lazy.dlId) >= 0) {
-            return ret;
-        }
-    } while (!pspSc(dlId, &g_lazy.dlId));
-
-    g_lazy.stall = stall;
-    g_lazy.count = 0;
-
-    return ret;
-}
+/*
+ * Note: ge.prx patches the syscall instruction at (void *)sceGe_lazy_31129B95 + 204 (0xCC)
+ * at runtime to invoke sceGeListUpdateStallAddr, so sceGe_lazy_31129B95 must be exact
+ * 200 bytes (50 instructions) followed immediately by sub_00000208 (jr $ra; syscall 0).
+ */
+__asm__(
+    ".set push\n"
+    ".set noreorder\n"
+    ".set noat\n"
+    ".globl sceGe_lazy_31129B95\n"
+    ".type sceGe_lazy_31129B95, @function\n"
+    "sceGe_lazy_31129B95:\n"
+    "    lui     $at, %hi(g_lazy)\n"
+    "    lw      $v0, %lo(g_lazy)($at)\n"
+    "    bne     $a0, $v0, 1f\n"
+    "    nop\n"
+    "    beqz    $a1, 1f\n"
+    "    sw      $a1, %lo(g_lazy + 4)($at)\n"
+    "    lw      $v1, %lo(g_lazy + 8)($at)\n"
+    "    lw      $a2, %lo(g_lazy + 12)($at)\n"
+    "    addiu   $v1, $v1, 1\n"
+    "    sw      $v1, %lo(g_lazy + 8)($at)\n"
+    "    sltu    $v1, $v1, $a2\n"
+    "    beqz    $v1, 1f\n"
+    "    nop\n"
+    "    jr      $ra\n"
+    "    move    $v0, $zero\n"
+    "1:\n"
+    "    addiu   $sp, $sp, -0x10\n"
+    "    sw      $a0, 0($sp)\n"
+    "    sw      $a1, 4($sp)\n"
+    "    bltz    $v0, 3f\n"
+    "    sw      $ra, 8($sp)\n"
+    "    lw      $a3, %lo(g_lazy + 4)($at)\n"
+    "2:\n"
+    "    ll      $a2, %lo(g_lazy)($at)\n"
+    "    bne     $a2, $v0, 3f\n"
+    "    addiu   $v1, $zero, -1\n"
+    "    sc      $v1, %lo(g_lazy)($at)\n"
+    "    beqz    $v1, 2b\n"
+    "    nop\n"
+    "    move    $a0, $a2\n"
+    "    jal     sub_00000208\n"
+    "    move    $a1, $a3\n"
+    "    lw      $a0, 0($sp)\n"
+    "    lw      $a1, 4($sp)\n"
+    "3:\n"
+    "    jal     sub_00000208\n"
+    "    nop\n"
+    "    bltz    $v0, 5f\n"
+    "    nop\n"
+    "    lw      $a0, 0($sp)\n"
+    "    lui     $at, %hi(g_lazy)\n"
+    "4:\n"
+    "    ll      $v1, %lo(g_lazy)($at)\n"
+    "    bgez    $v1, 5f\n"
+    "    move    $v1, $a0\n"
+    "    sc      $v1, %lo(g_lazy)($at)\n"
+    "    beqz    $v1, 4b\n"
+    "    nop\n"
+    "    lw      $a1, 4($sp)\n"
+    "    sw      $a1, %lo(g_lazy + 4)($at)\n"
+    "    sw      $zero, %lo(g_lazy + 8)($at)\n"
+    "5:\n"
+    "    lw      $ra, 8($sp)\n"
+    "    jr      $ra\n"
+    "    addiu   $sp, $sp, 0x10\n"
+    "sub_00000208:\n"
+    "    jr      $ra\n"
+    "    syscall 0x0\n"
+    ".set pop\n"
+);
