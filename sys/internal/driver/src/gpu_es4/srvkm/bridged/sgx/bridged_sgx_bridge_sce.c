@@ -234,10 +234,6 @@ typedef struct PVRSRV_BRIDGE_OUT_DOKICK {
 	SGX_KICKTA_OUTPUT output;
 } PVRSRV_BRIDGE_OUT_DOKICK;
 
-PVRSRV_ERROR SGXKickTA(PVRSRV_DEVICE_NODE *device, SGX_KICKTA *kick,
-		SGX_KICKTA_RESULT *result, IMG_UINT32 flags,
-		IMG_UINT32 unused);
-
 PVRSRV_ERROR RemoveRenderTargetCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param,
 		IMG_BOOL bForceCleanup);
 IMG_VOID *AllocProcessGpuMemory(IMG_SIZE_T size);

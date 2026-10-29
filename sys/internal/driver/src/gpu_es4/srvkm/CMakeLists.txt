@@ -42,6 +42,7 @@ psp2_module(os0_kd_bootimage_gpu_es4 KIND kernel COMPILER gcc48 SKELETON PARTIAL
 	suspend_sce.c
 	../../gpu/lockup/registerdump.c
 	../../gpu/lockup/registerdump_analysis.c
+	client_kick.c
 	client_pb.c
 	client_render.c
 	client_ccb.c

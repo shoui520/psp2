@@ -176,6 +176,10 @@ typedef struct SGX_KICKTA_RESULT {
 	GpuTransferStatus sourceSyncs[32];
 } SGX_KICKTA_RESULT;
 
+/* client_kick.c */
+PVRSRV_ERROR SGXKickTA(PVRSRV_DEVICE_NODE *device, SGX_KICKTA *kick,
+		SGX_KICKTA_RESULT *result, IMG_UINT32 flags, IMG_UINT32 unused);
+
 _Static_assert(sizeof(SGX_KICKTA_COMMON) == 264, "SCE common render packet");
 _Static_assert(sizeof(SGX_KICKTA) == 756, "SCE render packet");
 _Static_assert(sizeof(SGX_KICKTA_OUTPUT) == 24, "SCE render output");
