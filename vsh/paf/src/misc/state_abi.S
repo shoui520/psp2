@@ -59,3 +59,45 @@ ScePafMisc_7CF66185:
 	bx lr
 	.fnend
 	.size ScePafMisc_7CF66185, . - ScePafMisc_7CF66185
+
+	.global ScePafMisc_1E66D069
+	.type ScePafMisc_1E66D069, %function
+	.thumb_func
+ScePafMisc_1E66D069:
+	.fnstart
+	push {r4, r5, r6, lr}
+	ldr r4, [r1]
+	movs.w ip, #0
+	cmp r4, #0
+	ble .LnoUpdate1E
+	ldr r3, [r1, #4]
+	cmp r3, #0
+	ble .LnoUpdate1E
+	ldr r3, [r0, #0x2c]
+	ldr r0, [r3, #0x44]
+	cbz r0, .LnoUpdate1E
+	cmp r0, #6
+	beq .LnoUpdate1E
+	cmp r0, #7
+	beq .LnoUpdate1E
+	cmp r0, #8
+	bne .Lupdate1E
+.LnoUpdate1E:
+	mov r0, ip
+	b .Lreturn1E
+.Lupdate1E:
+	str r4, [r3, #0x1c]
+	ldr r4, [r1, #4]
+	movs r0, #1
+	str r4, [r3, #0x20]
+	ldr r4, [r1]
+	ldr r5, [r1, #4]
+	str.w ip, [r3, #0x24]
+	str.w ip, [r3, #0x28]
+	str r4, [r3, #0x2c]
+	str r5, [r3, #0x30]
+	str r2, [r3, #0x54]
+.Lreturn1E:
+	pop {r4, r5, r6, pc}
+	.fnend
+	.size ScePafMisc_1E66D069, . - ScePafMisc_1E66D069
