@@ -262,6 +262,188 @@ _Static_assert(offsetof(Dsp0VideocodecLibraryCommand, horizontal) == 44,
 _Static_assert(offsetof(Dsp0VideocodecLibraryCommand, workAddress) == 56,
 	       "DSP0 library work memory ABI");
 
+/*
+ * One of a decoder's two access-unit slots. The host copies the stream into the
+ * slot's buffer; timestamps go in as the coprocessor's {lower, upper} words.
+ */
+typedef struct Dsp0VideocodecAccessUnit {
+	uintptr_t bufferAddress;
+	SceSize bufferSize;
+	uintptr_t esAddress;
+	SceSize esSize;
+	unsigned char valid;
+	unsigned char coprocessorFlags[7];
+	unsigned int dtsLower;
+	unsigned int dtsUpper;
+	unsigned int ptsLower;
+	unsigned int ptsUpper;
+	int numOfOutput;
+	unsigned int coprocessorStatus;
+} Dsp0VideocodecAccessUnit;
+
+_Static_assert(sizeof(Dsp0VideocodecAccessUnit) == 48, "DSP0 access unit ABI");
+
+/* the picture the coprocessor reports; it returns its planes as physical addresses */
+typedef struct Dsp0VideocodecPicture {
+	unsigned char coprocessorInfo[52];
+	uintptr_t planeAddress[3];
+	unsigned char coprocessorState[192];
+} Dsp0VideocodecPicture;
+
+_Static_assert(sizeof(Dsp0VideocodecPicture) == 256, "DSP0 picture ABI");
+
+/* Complete host/RPC decoder command; opaque spans are coprocessor-only. */
+typedef struct Dsp0VideocodecDecoderCommand {
+	uintptr_t contextAddress;
+	unsigned int coprocessorHandle;
+	unsigned int libraryToken;
+	unsigned int coprocessorSetup[2];
+	unsigned short horizontal;
+	unsigned short vertical;
+	unsigned int numOfRefFrames;
+	unsigned char coprocessorModes[3];
+	unsigned char decodeMode;
+	unsigned char coprocessorHeader[16];
+	unsigned int auIndex;
+	unsigned int coprocessorAuState;
+	Dsp0VideocodecAccessUnit au[2];
+	Dsp0VideocodecPicture *pPicture;
+	unsigned int numOfPicture;
+	uintptr_t workAddress;
+	SceSize workSize;
+	uintptr_t frameBufAddress;
+	SceSize frameBufSize;
+	unsigned char coprocessorState[80];
+} Dsp0VideocodecDecoderCommand;
+
+_Static_assert(sizeof(Dsp0VideocodecDecoderCommand) == 256, "DSP0 decoder command ABI");
+_Static_assert(offsetof(Dsp0VideocodecDecoderCommand, au) == 56, "DSP0 access units ABI");
+_Static_assert(offsetof(Dsp0VideocodecDecoderCommand, pPicture) == 152, "DSP0 picture ABI");
+_Static_assert(offsetof(Dsp0VideocodecDecoderCommand, frameBufAddress) == 168,
+	       "DSP0 frame buffer ABI");
+
+/* The M4V decoder's host/RPC command; its access units sit 8 bytes before the AVC one's. */
+typedef struct Dsp0VideocodecM4vDecoderCommand {
+	uintptr_t contextAddress;
+	unsigned int coprocessorHandle;
+	unsigned int libraryToken;
+	unsigned short horizontal;
+	unsigned short vertical;
+	SceSize maxEsSize;
+	unsigned char coprocessorModes[28];
+	Dsp0VideocodecAccessUnit au[2];
+	Dsp0VideocodecPicture *pPicture;
+	unsigned int numOfPicture;
+	uintptr_t workAddress;
+	SceSize workSize;
+	uintptr_t frameBufAddress;
+	SceSize frameBufSize;
+	unsigned char coprocessorState[88];
+} Dsp0VideocodecM4vDecoderCommand;
+
+_Static_assert(sizeof(Dsp0VideocodecM4vDecoderCommand) == 256, "DSP0 M4V decoder command ABI");
+_Static_assert(offsetof(Dsp0VideocodecM4vDecoderCommand, au) == 48, "DSP0 M4V AU ABI");
+_Static_assert(offsetof(Dsp0VideocodecM4vDecoderCommand, pPicture) == 144,
+	       "DSP0 M4V picture ABI");
+_Static_assert(offsetof(Dsp0VideocodecM4vDecoderCommand, frameBufAddress) == 160,
+	       "DSP0 M4V frame buffer ABI");
+
+/* what an encode reports: the stream it wrote and how many NAL units */
+typedef struct Dsp0VideocodecEncodeResult {
+	uintptr_t streamAddress;
+	SceSize streamSize;
+	unsigned int numOfNal;
+	unsigned char coprocessorFlags[4];
+	unsigned int timeStamp[2];
+} Dsp0VideocodecEncodeResult;
+
+typedef struct Dsp0VideocodecNalUnit {
+	uintptr_t address;
+	unsigned int coprocessorInfo[2];
+} Dsp0VideocodecNalUnit;
+
+typedef struct Dsp0VideocodecInputPicture {
+	uintptr_t address;
+	unsigned char coprocessorInfo[28];
+} Dsp0VideocodecInputPicture;
+
+/* what an AVC encoder is created for (64 bytes; checked by dsp0VideocodecCheckEncoderInitParam) */
+typedef struct Dsp0VideocodecEncoderInitParam {
+	unsigned char profile;			/* 'B' or 'N' */
+	unsigned char level;
+	unsigned char userOption[2];
+	unsigned int pitch;
+	unsigned int alignedHorizontal;
+	unsigned int alignedVertical;
+	unsigned int horizontal;
+	unsigned int vertical;
+	unsigned int numOfStreams;
+	unsigned int rateControl[4];
+	unsigned char codingOption[3];
+	unsigned char padding0;
+	unsigned char sliceOption;
+	unsigned char padding1[3];
+	unsigned short sliceParam[2];
+	unsigned char vuiPresent;
+	unsigned char padding2;
+	unsigned char vui[6];
+} Dsp0VideocodecEncoderInitParam;
+
+_Static_assert(sizeof(Dsp0VideocodecEncoderInitParam) == 64, "DSP0 encoder init param ABI");
+
+/* Complete host/RPC encoder command; opaque spans are coprocessor-only. */
+typedef struct Dsp0VideocodecEncoderCommand {
+	uintptr_t contextAddress;
+	unsigned int coprocessorHandle;
+	unsigned int libraryToken;
+	unsigned char profile;			/* 'B' baseline, 'M' main */
+	unsigned char level;
+	unsigned short horizontal;
+	unsigned short vertical;
+	unsigned char fixedMode0;		/* 0 */
+	unsigned char userOption0;
+	unsigned char fixedMode1;		/* 0 */
+	unsigned char fixedMode2;		/* 1 */
+	unsigned char mainProfile;
+	unsigned char userOption1;
+	unsigned int rateControl[4];
+	unsigned char codingOption[3];
+	unsigned char padding0;
+	unsigned int coprocessorCounters[3];
+	unsigned char sliceOption;
+	unsigned char padding1[3];
+	unsigned short sliceParam[2];
+	unsigned char vuiPresent;
+	unsigned char padding2[3];
+	unsigned char vui[6];
+	unsigned char vuiReserved[2];
+	uintptr_t streamAddress;
+	SceSize streamSize;		/* stream memory, when queried */
+	uintptr_t bufferAddress;
+	SceSize bufferSize;		/* frame memory, when queried */
+	SceSize workSize;		/* work memory, when queried */
+	uintptr_t streamWriteAddress;
+	unsigned int coprocessorStreamState[2];
+	uintptr_t streamMarkAddress;
+	unsigned char coprocessorRateControl[32];
+	Dsp0VideocodecEncodeResult *pEncodeResult;
+	unsigned int coprocessorNalState;
+	Dsp0VideocodecNalUnit nal[12];
+	unsigned int coprocessorPictureState[2];
+	unsigned int pictureIndex;
+	Dsp0VideocodecInputPicture picture[2];
+	unsigned char coprocessorState[140];
+} Dsp0VideocodecEncoderCommand;
+
+_Static_assert(sizeof(Dsp0VideocodecEncoderCommand) == 512, "DSP0 encoder command ABI");
+_Static_assert(offsetof(Dsp0VideocodecEncoderCommand, vui) == 68, "DSP0 encoder VUI ABI");
+_Static_assert(offsetof(Dsp0VideocodecEncoderCommand, streamAddress) == 76,
+	       "DSP0 encoder stream ABI");
+_Static_assert(offsetof(Dsp0VideocodecEncoderCommand, pEncodeResult) == 144,
+	       "DSP0 encode result ABI");
+_Static_assert(offsetof(Dsp0VideocodecEncoderCommand, picture) == 308,
+	       "DSP0 encoder pictures ABI");
+
 struct Dsp0VideocodecDecoder;
 struct Dsp0VideocodecEncoder;
 
