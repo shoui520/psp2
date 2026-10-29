@@ -299,6 +299,80 @@ int sce_paf_wcsncasecmp(const uint16_t *left, const uint16_t *right,
 	}
 }
 
+size_t sce_paf_wcsspn(const uint16_t *str, const uint16_t *accept)
+{
+	const volatile uint16_t *cursor = (const volatile uint16_t *)str;
+	const volatile uint16_t *start = cursor;
+	const volatile uint16_t *member;
+	uint16_t ch;
+
+	for (;;) {
+		ch = *cursor;
+		if (!ch)
+			return cursor - start;
+		member = (const volatile uint16_t *)accept;
+		for (;;) {
+			uint16_t candidate = *member;
+
+			if (!candidate)
+				return cursor - start;
+			if (candidate == ch)
+				break;
+			member++;
+		}
+		cursor++;
+	}
+}
+
+size_t sce_paf_wcscspn(const uint16_t *str, const uint16_t *reject)
+{
+	const volatile uint16_t *cursor = (const volatile uint16_t *)str;
+	const volatile uint16_t *start = cursor;
+	const volatile uint16_t *member;
+	uint16_t ch;
+
+	for (;;) {
+		ch = *cursor;
+		if (!ch)
+			return cursor - start;
+		member = (const volatile uint16_t *)reject;
+		for (;;) {
+			uint16_t candidate = *member;
+
+			if (!candidate)
+				break;
+			if (candidate == ch)
+				return cursor - start;
+			member++;
+		}
+		cursor++;
+	}
+}
+
+uint16_t *sce_paf_wcspbrk(const uint16_t *str, const uint16_t *accept)
+{
+	const volatile uint16_t *cursor = (const volatile uint16_t *)str;
+	const volatile uint16_t *member;
+	uint16_t ch;
+
+	for (;;) {
+		ch = *cursor;
+		if (!ch)
+			return NULL;
+		member = (const volatile uint16_t *)accept;
+		for (;;) {
+			uint16_t candidate = *member;
+
+			if (!candidate)
+				break;
+			if (candidate == ch)
+				return (uint16_t *)cursor;
+			member++;
+		}
+		cursor++;
+	}
+}
+
 int sce_paf_strcmp(const char *left, const char *right)
 {
 	const volatile signed char *leftByte;

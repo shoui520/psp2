@@ -22,6 +22,9 @@ int sce_paf_wcsncmp(const uint16_t *left, const uint16_t *right, size_t num);
 int sce_paf_wcscasecmp(const uint16_t *left, const uint16_t *right);
 int sce_paf_wcsncasecmp(const uint16_t *left, const uint16_t *right,
 			 size_t num);
+size_t sce_paf_wcsspn(const uint16_t *str, const uint16_t *accept);
+size_t sce_paf_wcscspn(const uint16_t *str, const uint16_t *reject);
+uint16_t *sce_paf_wcspbrk(const uint16_t *str, const uint16_t *accept);
 int sce_paf_strcmp(const char *left, const char *right);
 int sce_paf_strncmp(const char *left, const char *right, size_t num);
 int sce_paf_strcasecmp(const char *left, const char *right);
