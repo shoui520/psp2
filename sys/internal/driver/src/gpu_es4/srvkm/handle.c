@@ -417,24 +417,27 @@ PVRSRV_ERROR PVRSRVAllocSubHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID *phHandle,
 		}
 	}
 	{
-		struct sHandle *psPrev;
 		struct sHandleList *psPrevIns;
 		IMG_UINT32 ui32Parent;
+		IMG_UINT32 ui32EntryIndex;
 
 		eError = AllocHandle(psBase, &hHandle, pvData, eType, eFlag, hParentKey);
 		if (eError != PVRSRV_OK)
 			return eError;
 		psPHand = INDEX_TO_HANDLE_STRUCT_PTR(psBase, hParent - 1);
 		psCHand = INDEX_TO_HANDLE_STRUCT_PTR(psBase, hHandle - 1);
+
+		/* AdoptChild, HandleListInsertBefore */
 		ui32Parent = psPHand->sChildren.hParent - 1;
-		psPrev = INDEX_TO_HANDLE_STRUCT_PTR(psBase, psPHand->sChildren.ui32Prev);
-		psPrevIns = psPHand->sChildren.ui32Prev == ui32Parent ?
-				&psPrev->sChildren : &psPrev->sSiblings;
+		ui32EntryIndex = psCHand->ui32Index;
+		psPrevIns = LIST_PTR_FROM_INDEX_AND_OFFSET(psBase,
+				psPHand->sChildren.ui32Prev, ui32Parent,
+				CHILDREN_OFFSET, SIBLINGS_OFFSET);
 		psCHand->sSiblings.ui32Prev = psPHand->sChildren.ui32Prev;
-		psPHand->sChildren.ui32Prev = psCHand->ui32Index;
+		psPHand->sChildren.ui32Prev = ui32EntryIndex;
 		psCHand->sSiblings.ui32Next = ui32Parent;
-		psPrevIns->ui32Next = psCHand->ui32Index;
-		psCHand->sSiblings.hParent = psPHand->sChildren.hParent;
+		psPrevIns->ui32Next = ui32EntryIndex;
+		psCHand->sSiblings.hParent = ui32Parent + 1;
 	}
 	*phHandle = hHandle;
 exit_ok:

@@ -271,19 +271,19 @@ PVRSRV_ERROR PVRSRVAllocSyncInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 	psSyncData = psSyncInfo->psSyncDataMemInfoKM->pvLinAddrKM;
 	psSyncInfo->ui32RefCount = 0;
 	psSyncInfo->psSyncData = psSyncData;
-	psSyncInfo->psSyncData->ui32ReadOpsPending = 0;
-	psSyncInfo->psSyncData->ui32WriteOpsComplete = 0;
-	psSyncInfo->psSyncData->ui32WriteOpsPending = 0;
-	psSyncInfo->psSyncData->ui32ReadOpsComplete = 0;
-	psSyncInfo->psSyncData->ui32LastOpDumpVal = 0;
-	psSyncInfo->psSyncData->ui32LastReadOpDumpVal = 0;
+	psSyncData->ui32ReadOpsPending = 0;
+	psSyncData->ui32WriteOpsComplete = 0;
+	psSyncData->ui32WriteOpsPending = 0;
+	psSyncData->ui32ReadOpsComplete = 0;
+	psSyncData->ui32LastOpDumpVal = 0;
+	psSyncData->ui32LastReadOpDumpVal = 0;
 	psSyncInfo->sWriteOpsCompleteDevVAddr.uiAddr =
 			psSyncInfo->psSyncDataMemInfoKM->sDevVAddr.uiAddr +
 			offsetof(PVRSRV_SYNC_DATA, ui32WriteOpsComplete);
-	psSyncInfo->ui32SharedKey = 0;
 	psSyncInfo->sReadOpsCompleteDevVAddr.uiAddr =
 			psSyncInfo->psSyncDataMemInfoKM->sDevVAddr.uiAddr +
 			offsetof(PVRSRV_SYNC_DATA, ui32ReadOpsComplete);
+	psSyncInfo->ui32SharedKey = 0;
 	*ppsSyncInfo = psSyncInfo;
 	return eError;
 }

@@ -50,6 +50,7 @@ u32 HASH_Key_Comp_Default(u32 uKeySize, void *pKey1, void *pKey2)
 IMG_BOOL _Resize(HASH_TABLE *pHash, IMG_UINT32 uNewSize)
 {
 	BUCKET **ppNewTable;
+	BUCKET **ppBucketTable;
 	BUCKET **ppOldTable;
 	IMG_UINT32 uOldSize;
 	IMG_UINT32 uIndex;
@@ -60,6 +61,7 @@ IMG_BOOL _Resize(HASH_TABLE *pHash, IMG_UINT32 uNewSize)
 		return IMG_FALSE;
 	for (uIndex = 0; uIndex < uNewSize; uIndex++)
 		ppNewTable[uIndex] = 0;
+	ppBucketTable = ppNewTable;
 	ppOldTable = pHash->ppBucketTable;
 	uOldSize = pHash->uSize;
 	for (uIndex = 0; uIndex < uOldSize; uIndex++) {
@@ -69,12 +71,12 @@ IMG_BOOL _Resize(HASH_TABLE *pHash, IMG_UINT32 uNewSize)
 			BUCKET *pNextBucket = pBucket->pNext;
 			IMG_UINT32 uSlot;
 
-			if (!pBucket || !ppNewTable || !uNewSize)
+			if (!pBucket || !ppBucketTable || !uNewSize)
 				return IMG_FALSE;
 			uSlot = pHash->pfnHashFunc(pHash->uKeySize, pBucket->k,
 					uNewSize) % uNewSize;
-			pBucket->pNext = ppNewTable[uSlot];
-			ppNewTable[uSlot] = pBucket;
+			pBucket->pNext = ppBucketTable[uSlot];
+			ppBucketTable[uSlot] = pBucket;
 			pBucket = pNextBucket;
 		}
 	}
@@ -133,6 +135,7 @@ IMG_VOID HASH_Delete(HASH_TABLE *pHash)
 IMG_BOOL HASH_Insert_Extended(HASH_TABLE *pHash, IMG_VOID *pKey, IMG_UINTPTR_T v)
 {
 	BUCKET *pBucket;
+	BUCKET *pNewBucket;
 	BUCKET **ppBucketTable;
 	IMG_UINT32 uSize;
 	IMG_UINT32 uIndex;
@@ -144,15 +147,18 @@ IMG_BOOL HASH_Insert_Extended(HASH_TABLE *pHash, IMG_VOID *pKey, IMG_UINTPTR_T v
 		return IMG_FALSE;
 	pBucket->v = v;
 	OSMemCopy(pBucket->k, pKey, pHash->uKeySize);
+
+	/* _ChainInsert */
+	pNewBucket = pBucket;
 	ppBucketTable = pHash->ppBucketTable;
 	uSize = pHash->uSize;
-	if (!pBucket || !ppBucketTable || !uSize) {
-		OSFreeMem_Impl(1, sizeof(*pBucket) + pHash->uKeySize, pBucket, 0);
+	if (!pNewBucket || !ppBucketTable || !uSize) {
+		OSFreeMem_Impl(1, sizeof(*pBucket) + pHash->uKeySize, pNewBucket, 0);
 		return IMG_FALSE;
 	}
-	uIndex = pHash->pfnHashFunc(pHash->uKeySize, pBucket->k, uSize) % uSize;
-	pBucket->pNext = ppBucketTable[uIndex];
-	ppBucketTable[uIndex] = pBucket;
+	uIndex = pHash->pfnHashFunc(pHash->uKeySize, pNewBucket->k, uSize) % uSize;
+	pNewBucket->pNext = ppBucketTable[uIndex];
+	ppBucketTable[uIndex] = pNewBucket;
 	pHash->uCount++;
 	if (pHash->uCount << 1 > pHash->uSize) {
 		IMG_UINT32 uNewSize = pHash->uSize << 1;
