@@ -335,7 +335,7 @@ int sceUsb_driver_32627D8F(void *buf, u32 size)
 		return res;
 	}
 
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, work, size, 2);
+	sceKermitMemory_driver_AAF047AC(req, 0, work, size, 2);
 	req->args[1] = size;
 
 	u64 resp = 0;
@@ -370,8 +370,8 @@ int sceUsb_driver_AB8ADCC8(void *buf1, void *buf2)
 	}
 
 	req->cmd = 0xC6F;
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, work1, 0x30, 2);
-	sceKermitMemory_driver_AAF047AC(req, 1, 1, work2, 0x104, 2);
+	sceKermitMemory_driver_AAF047AC(req, 0, work1, 0x30, 2);
+	sceKermitMemory_driver_AAF047AC(req, 1, work2, 0x104, 2);
 
 	u64 resp = 0;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_USB, 0x159, 2, 0, &resp);
@@ -413,7 +413,7 @@ static int _sceUsbKermitPspcmStart(u32 size, const void *args)
 
 	sceKernelMemcpy(work, args, size);
 	req->args[0] = size;
-	sceKermitMemory_driver_AAF047AC(req, 1, 1, work, size, 1);
+	sceKermitMemory_driver_AAF047AC(req, 1, work, size, 1);
 
 	u64 resp = 0;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_USB, 0x164, 2, 0, &resp);
@@ -645,7 +645,7 @@ static int _sceUsbKermitCmdBuf(u32 cmd, const void *buf, u32 size)
 	}
 
 	sceKernelMemcpy(work, buf, size);
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, work, size, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, work, size, 1);
 
 	u64 resp = 0;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_USB, cmd, 1, 0, &resp);

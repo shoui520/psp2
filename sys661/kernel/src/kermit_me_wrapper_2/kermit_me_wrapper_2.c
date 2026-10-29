@@ -1225,7 +1225,7 @@ static int sceKermitMeBootStart(void)
 	return (res == 0) ? (int)resp : res;
 }
 
-static int bootMeImage(void *data, int wait)
+__attribute__((noipa)) static int bootMeImage(void *data, int wait)
 {
 	sceSysregMeResetEnable();
 	sceSysregMeBusClockEnable();

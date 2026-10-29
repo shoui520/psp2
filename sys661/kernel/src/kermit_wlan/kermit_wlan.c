@@ -2754,8 +2754,8 @@ static int wlanDoScan(void *scan_req, u32 *inout_len, void *out_buf, int compact
 
 	u8 *kout = kbuf + half_size;
 	sceKernelMemcpy(kbuf, scan_req, 0x4c);
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, kbuf, half_size, 1);
-	sceKermitMemory_driver_AAF047AC(req, 1, 1, kout, half_size, 2);
+	sceKermitMemory_driver_AAF047AC(req, 0, kbuf, half_size, 1);
+	sceKermitMemory_driver_AAF047AC(req, 1, kout, half_size, 2);
 	req->args[2] = *inout_len;
 
 	u64 resp = 0;
@@ -2825,7 +2825,7 @@ int sceWlanDrv_lib_19602A86(u32 a0, u32 a1, u32 a2, s32 *out_val)
 	req->args[1] = a1;
 	req->args[2] = a2;
 	req->args[3] = 4;
-	sceKermitMemory_driver_AAF047AC(req, 4, 4, kbuf, 4, 2);
+	sceKermitMemory_driver_AAF047AC(req, 4, kbuf, 4, 2);
 
 	u64 resp = 0;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x40, 5, 0, &resp);
@@ -3145,7 +3145,7 @@ int sceWlanDrv_lib_51FF0D5F(u32 id, u32 cmd, void *buf, u32 size)
 	}
 	req->args[0] = id;
 	req->args[1] = cmd;
-	sceKermitMemory_driver_AAF047AC(req, 2, 2, kbuf, 0x24, 3);
+	sceKermitMemory_driver_AAF047AC(req, 2, kbuf, 0x24, 3);
 
 	u64 resp = 0;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x33, 3, 0, &resp);
@@ -3620,9 +3620,9 @@ static int wlanKermitCmdBuf(u32 cmd, void *buf, u32 size, u32 dir_flags)
 		if (dir_flags & 1) {
 			sceKernelMemcpy(kbuf, buf, size);
 		}
-		sceKermitMemory_driver_AAF047AC(req, 0, 0, kbuf, size, dir_flags);
+		sceKermitMemory_driver_AAF047AC(req, 0, kbuf, size, dir_flags);
 	} else {
-		sceKermitMemory_driver_AAF047AC(req, 0, 0, NULL, 0, dir_flags);
+		sceKermitMemory_driver_AAF047AC(req, 0, NULL, 0, dir_flags);
 	}
 
 	u64 resp = 0;
@@ -3678,7 +3678,7 @@ static int wlanKermitTransferBuf(u32 cmd, void *buf, u32 size, u32 dir_flags)
 	if (dir_flags & 1) {
 		sceKernelMemcpy(kbuf, buf, size);
 	}
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, kbuf, half_size, dir_flags);
+	sceKermitMemory_driver_AAF047AC(req, 0, kbuf, half_size, dir_flags);
 	req->args[1] = size;
 
 	u64 resp = 0;
@@ -3724,7 +3724,7 @@ static int wlanKermitGetParam(u32 cmd, u32 id, void *buf, u32 *inout_len, u32 *o
 	}
 	req->args[0] = id;
 	req->args[1] = xfer_size;
-	sceKermitMemory_driver_AAF047AC(req, 2, 2, kbuf, xfer_size, 3);
+	sceKermitMemory_driver_AAF047AC(req, 2, kbuf, xfer_size, 3);
 
 	u64 resp = 0;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 3, 0, &resp);
@@ -3784,7 +3784,7 @@ static int wlanKermitGetSetOpt(u32 cmd, u32 id, u32 opt, u32 flags, void *buf, u
 	req->args[1] = opt;
 	req->args[2] = flags;
 	req->args[3] = xfer_size;
-	sceKermitMemory_driver_AAF047AC(req, 4, 4, kbuf, xfer_size, dir_flags);
+	sceKermitMemory_driver_AAF047AC(req, 4, kbuf, xfer_size, dir_flags);
 
 	u64 resp = 0;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 5, 0, &resp);
@@ -3828,7 +3828,7 @@ static int wlanKermitSetKey(u32 cmd, u32 id, const void *buf, u32 len)
 	req->args[0] = id;
 	req->args[1] = len;
 	sceKernelMemcpy(kbuf, buf, len);
-	sceKermitMemory_driver_AAF047AC(req, 2, 2, kbuf, len, 1);
+	sceKermitMemory_driver_AAF047AC(req, 2, kbuf, len, 1);
 
 	u64 resp = 0;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 3, 0, &resp);
@@ -3874,7 +3874,7 @@ static int wlanKermitSendGameMode(u32 cmd, void *kbuf, u32 id, u32 total_len, u3
 	*(u32 *)(kb + 0x108) = flags;
 	req->args[0] = id;
 	req->args[1] = xfer_size;
-	sceKermitMemory_driver_AAF047AC(req, 2, 2, kb, xfer_size, dir_flags);
+	sceKermitMemory_driver_AAF047AC(req, 2, kb, xfer_size, dir_flags);
 
 	u64 resp = 0;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 3, 0, &resp);
@@ -3903,7 +3903,7 @@ static int wlanKermitPollScanState(void *out_buf)
 	}
 
 	req->args[0] = 0x90;
-	sceKermitMemory_driver_AAF047AC(req, 1, 1, kbuf, half_size, 2);
+	sceKermitMemory_driver_AAF047AC(req, 1, kbuf, half_size, 2);
 
 	u64 resp = 0;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x50, 2, 0, &resp);

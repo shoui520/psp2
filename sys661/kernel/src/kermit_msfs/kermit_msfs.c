@@ -379,7 +379,7 @@ static int _msIoRead(SceIoIob *iob, char *data, SceSize len)
 		}
 
 		req->args[0] = (u32)slot->kermitFd;
-		sceKermitMemory_driver_AAF047AC(req, 1, 1, work, chunk, 2);
+		sceKermitMemory_driver_AAF047AC(req, 1, work, chunk, 2);
 		req->args[2] = chunk;
 
 		if (sceKermitMsfs_driver_var_BE954163 != 0) {
@@ -425,7 +425,7 @@ static int _msIoRead(SceIoIob *iob, char *data, SceSize len)
 		u32 alignedLen = len & ~0x3Fu;
 		if (alignedLen != 0) {
 			req->args[0] = (u32)slot->kermitFd;
-			sceKermitMemory_driver_AAF047AC(req, 1, 1, data, alignedLen, 2);
+			sceKermitMemory_driver_AAF047AC(req, 1, data, alignedLen, 2);
 			req->args[2] = alignedLen;
 			sceKernelDcacheInvalidateRange(data, alignedLen);
 
@@ -463,7 +463,7 @@ static int _msIoRead(SceIoIob *iob, char *data, SceSize len)
 			}
 
 			req->args[0] = (u32)slot->kermitFd;
-			sceKermitMemory_driver_AAF047AC(req, 1, 1, work, len, 2);
+			sceKermitMemory_driver_AAF047AC(req, 1, work, len, 2);
 			req->args[2] = len;
 
 			if (sceKermitMsfs_driver_var_BE954163 != 0) {
@@ -525,7 +525,7 @@ static int _msIoWrite(SceIoIob *iob, const char *data, SceSize len)
 	sceKernelDcacheWritebackRange((const void *)((u32)data - low6), (low6 + len + 0x3Fu) & ~0x3Fu);
 
 	req->args[0] = (u32)slot->kermitFd;
-	sceKermitMemory_driver_AAF047AC(req, 1, 1, (void *)data, len, 1);
+	sceKermitMemory_driver_AAF047AC(req, 1, (void *)data, len, 1);
 	req->args[2] = len;
 
 	u64 resp = 0;
@@ -621,9 +621,9 @@ static int _msIoIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void 
 
 	req->args[0] = (u32)slot->kermitFd;
 	req->args[1] = (u32)cmd;
-	sceKermitMemory_driver_AAF047AC(req, 2, 2, work1, inlen, 1);
+	sceKermitMemory_driver_AAF047AC(req, 2, work1, inlen, 1);
 	req->args[3] = inlen;
-	sceKermitMemory_driver_AAF047AC(req, 4, 4, NULL, 0, 2);
+	sceKermitMemory_driver_AAF047AC(req, 4, NULL, 0, 2);
 	req->args[5] = 0;
 
 	u64 resp = 0;
@@ -650,7 +650,7 @@ static int _msIoRemove(SceIoIob *iob, const char *name)
 
 	strncpy(work, name, half);
 	work[half - 1] = '\0';
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, work, strlen(work) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 
 	u64 resp = 0;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC6C, 1, 0, &resp);
@@ -676,7 +676,7 @@ static int _msIoMkdir(SceIoIob *iob, const char *name, int mode)
 
 	strncpy(work, name, half);
 	work[half - 1] = '\0';
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, work, strlen(work) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 	req->args[1] = (u32)mode;
 
 	u64 resp = 0;
@@ -703,7 +703,7 @@ static int _msIoRmdir(SceIoIob *iob, const char *name)
 
 	strncpy(work, name, half);
 	work[half - 1] = '\0';
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, work, strlen(work) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 
 	u64 resp = 0;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC61, 1, 0, &resp);
@@ -780,7 +780,7 @@ static int _msIoDread(SceIoIob *iob, void *dir)
 		*(void **)(work1 + 0x158) = work2;
 	}
 
-	sceKermitMemory_driver_AAF047AC(req, 1, 1, work1, 0x160, 3);
+	sceKermitMemory_driver_AAF047AC(req, 1, work1, 0x160, 3);
 	u64 resp = 0;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC65, 2, 0, &resp);
 	if (kres != 0) {
@@ -837,10 +837,10 @@ static int _msIoGetstat(SceIoIob *iob, const char *name, void *stat)
 
 	strncpy(work, name, half);
 	work[half - 1] = '\0';
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, work, strlen(work) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 
 	void *statWork = (u8 *)g_workBuf + (g_workSize >> 1);
-	sceKermitMemory_driver_AAF047AC(req, 1, 1, statWork, 0x58, 2);
+	sceKermitMemory_driver_AAF047AC(req, 1, statWork, 0x58, 2);
 
 	u64 resp = 0;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC69, 2, 0, &resp);
@@ -887,8 +887,8 @@ static int _msIoChstat(SceIoIob *iob, const char *name, void *stat, int bits)
 	}
 
 	req->cmd = 0xC5D;
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, nameWork, strlen(nameWork) + 1u, 1);
-	sceKermitMemory_driver_AAF047AC(req, 1, 1, statWork, 0x58, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, nameWork, strlen(nameWork) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 1, statWork, 0x58, 1);
 	req->args[2] = (u32)bits;
 
 	u64 resp = 0;
@@ -920,8 +920,8 @@ static int _msIoRename(SceIoIob *iob, const char *oldname, const char *newname)
 	strncpy(work2, newname, half);
 	work2[half - 1] = '\0';
 
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, work1, strlen(work1) + 1u, 1);
-	sceKermitMemory_driver_AAF047AC(req, 1, 1, work2, strlen(work2) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, work1, strlen(work1) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 1, work2, strlen(work2) + 1u, 1);
 
 	u64 resp = 0;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC68, 2, 0, &resp);
@@ -947,7 +947,7 @@ static int _msIoChdir(SceIoIob *iob, const char *name)
 
 	strncpy(work, name, half);
 	work[half - 1] = '\0';
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, work, strlen(work) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 
 	u64 resp = 0;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC6D, 1, 0, &resp);
@@ -1046,7 +1046,7 @@ static int _msIoInit(SceIoDeviceEntry *de)
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
 
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, de, 0xC, 3);
+	sceKermitMemory_driver_AAF047AC(req, 0, de, 0xC, 3);
 	u64 resp = 0;
 	int res = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC63, 1, 0, &resp);
 	if (res != 0) {
@@ -1064,7 +1064,7 @@ static int _msIoExit(SceIoDeviceEntry *de)
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
 
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, de, 0xC, 3);
+	sceKermitMemory_driver_AAF047AC(req, 0, de, 0xC, 3);
 	u64 resp = 0;
 	int res = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC6E, 1, 0, &resp);
 	if (res != 0) {
@@ -1208,7 +1208,7 @@ static int _msOpenInternal(SceIoIob *iob, const char *file, int flags, int mode,
 
 	strncpy(work, file, half);
 	work[half - 1] = '\0';
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, work, strlen(work) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 	req->args[1] = (u32)flags;
 	req->args[2] = (u32)mode;
 	req->args[3] = syscallRa;
@@ -1268,11 +1268,11 @@ static int _msKermitDevctl(const char *dev, u32 cmd, const void *indata, u32 inl
 	memset(workOut, 0, outlen);
 
 	req->cmd = 0xC60;
-	sceKermitMemory_driver_AAF047AC(req, 0, 0, workDev, strlen(workDev) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, workDev, strlen(workDev) + 1u, 1);
 	req->args[1] = cmd;
-	sceKermitMemory_driver_AAF047AC(req, 2, 2, workIn, inlen, 1);
+	sceKermitMemory_driver_AAF047AC(req, 2, workIn, inlen, 1);
 	req->args[3] = inlen;
-	sceKermitMemory_driver_AAF047AC(req, 4, 4, workOut, outlen, 2);
+	sceKermitMemory_driver_AAF047AC(req, 4, workOut, outlen, 2);
 	req->args[5] = outlen;
 
 	u64 resp = 0;

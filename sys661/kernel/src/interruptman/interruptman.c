@@ -1179,17 +1179,17 @@ u64 sceKernelGetCpuClockCounterWide()
 }
 
 // 6DDA4D7B
-s32 *QueryInterruptManCB()
+u32 QueryInterruptManCB()
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    return intInfo.grpsOpt;
+    return intInfo.clockCounterLo;
 }
 
 // E6FB16E3
 u32 _sceKernelGetCpuClockCounterLow()
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    return intInfo.clockCounterLo;
+    return intInfo.clockCounterHi;
 }
 
 // 14D4C61A

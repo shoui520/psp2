@@ -2,8 +2,8 @@
 
 const char g_idStorageName[] = "SceIdStorage";
 
-int sceIdStorageInit(void);
-int sceIdStorageEnd(void);
+__attribute__((noipa)) int sceIdStorageInit(void);
+__attribute__((noipa)) int sceIdStorageEnd(void);
 
 int module_start(SceSize args, void *argp)
 {

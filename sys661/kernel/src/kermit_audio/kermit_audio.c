@@ -1484,7 +1484,7 @@ static int kermitAudioOutPanned(void *buf)
 	if (g_kermitAudioMuted != 0)
 		return 0;
 
-	sceKermitMemory_driver_AAF047AC(req, 0, (u32)buf, (void *)0x80, 1, 0);
+	sceKermitMemory_driver_AAF047AC(req, 0, buf, 0x80, 1);
 	int ret = sceKermit_driver_36666181(req, KERMIT_MODE_AUDIOOUT, KERMIT_AUDIOOUT_PANNED_OUT, 1, 0, &resp);
 	if (ret == 0)
 		ret = (int)resp;
@@ -1503,7 +1503,7 @@ static int kermitAudioOutSRC(void *buf, u32 sampleCount, int vol, u32 freq)
 	if (g_kermitAudioMuted != 0)
 		return 0;
 
-	sceKermitMemory_driver_AAF047AC(req, 0, (u32)buf, (void *)(sampleCount << 2), 1, 0);
+	sceKermitMemory_driver_AAF047AC(req, 0, buf, (sampleCount << 2), 1);
 	req->args[1] = (u32)sampleCount;
 	req->args[2] = (u32)vol;
 	req->args[3] = (u32)freq;
@@ -1618,7 +1618,7 @@ static int kermitAudioInTransfer(void *buf)
 
 	int ret;
 	if (buf != NULL) {
-		sceKermitMemory_driver_AAF047AC(req, 0, (u32)buf, (void *)0x80, 2, 0);
+		sceKermitMemory_driver_AAF047AC(req, 0, buf, 0x80, 2);
 		ret = sceKermit_driver_36666181(req, KERMIT_MODE_AUDIOIN, KERMIT_AUDIOIN_INPUT, 1, 0, &resp);
 	} else {
 		ret = sceKermit_driver_36666181(req, KERMIT_MODE_AUDIOIN, KERMIT_AUDIOIN_STOP, 0, 0, &resp);

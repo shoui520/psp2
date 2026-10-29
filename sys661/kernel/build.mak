@@ -11,7 +11,7 @@ O          ?= $(if $(MEP_OUT),$(MEP_OUT)/sys661/$(TARGET),build)
 
 CFLAGS     := -std=gnu17 -O2 -G0 -march=allegrex -ffreestanding -fno-builtin -fno-common \
               -fno-pic -mno-abicalls -fno-toplevel-reorder -fno-inline-small-functions \
-              -fno-ipa-icf -fno-optimize-sibling-calls \
+              -fno-ipa-icf -fno-optimize-sibling-calls -fno-ipa-ra \
               -Wall -Wextra \
               -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable \
               -Wno-unused-but-set-variable -Wno-sign-compare -Wno-implicit-fallthrough \
