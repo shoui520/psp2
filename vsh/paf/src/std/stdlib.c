@@ -188,6 +188,8 @@ unsigned long sce_paf_strtoul(const char *str, char **endptr, int base)
 	return result;
 }
 
+/* Sony's atoll export calls strtoll out of line with automatic radix. */
+__attribute__((noinline))
 long long sce_paf_strtoll(const char *str, char **endptr, int base)
 {
 	const volatile signed char *cursor = (const volatile signed char *)str;
@@ -338,6 +340,11 @@ int sce_paf_atoi(const char *str)
 long sce_paf_atol(const char *str)
 {
 	return sce_paf_strtol(str, NULL, 10);
+}
+
+long long sce_paf_atoll(const char *str)
+{
+	return sce_paf_strtoll(str, NULL, 0);
 }
 
 int sce_paf_abs(int value)
