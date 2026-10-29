@@ -1755,19 +1755,19 @@ static CameraSensorRegister cameraEffect5Registers[6] = {
 
 static CameraSensorInfo cameraSensorInfo[2];
 
-int cameraLockDevice(int devnum)
+__attribute__((noinline)) int cameraLockDevice(int devnum)
 {
 	SceUInt32 timeout = (SceUInt32)-1;
 
 	return sceKernelLockMutex(cameraDriver->device[devnum].mutexId, 1, &timeout);
 }
 
-int cameraUnlockDevice(int devnum)
+__attribute__((noinline)) int cameraUnlockDevice(int devnum)
 {
 	return sceKernelUnlockMutex(cameraDriver->device[devnum].mutexId, 1);
 }
 
-int cameraWriteSensorByte(int devnum, SceUInt16 address, const SceUInt8 *value)
+__attribute__((noinline)) int cameraWriteSensorByte(int devnum, SceUInt16 address, const SceUInt8 *value)
 {
 	SceUInt8 buffer[64];
 	SceUInt8 data;
@@ -1787,7 +1787,7 @@ int cameraWriteSensorByte(int devnum, SceUInt16 address, const SceUInt8 *value)
 	return result;
 }
 
-int cameraReadSensorByte(int devnum, SceUInt16 address, SceUInt8 *value)
+__attribute__((noinline)) int cameraReadSensorByte(int devnum, SceUInt16 address, SceUInt8 *value)
 {
 	SceUInt8 buffer[2];
 	int result = cameraDriver->i2cEnabled;
@@ -1804,7 +1804,7 @@ int cameraReadSensorByte(int devnum, SceUInt16 address, SceUInt8 *value)
 	return result;
 }
 
-int cameraWriteSensorRegisters(int devnum, const CameraSensorRegister *registers, int count)
+__attribute__((noinline)) int cameraWriteSensorRegisters(int devnum, const CameraSensorRegister *registers, int count)
 {
 	SceUInt8 readValue = 0;
 	SceUInt8 values[60], buffer[64];
