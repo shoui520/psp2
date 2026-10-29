@@ -28,3 +28,10 @@ int sce_paf_look_ctype_table(int ch)
 		return 0;
 	return ctype_table[ch + 1];
 }
+
+int sce_paf_tolower(int ch)
+{
+	if ((uint32_t)ch <= 0x7f && (ctype_table[ch + 1] & 1))
+		return (unsigned char)ch + 0x20;
+	return ch;
+}
