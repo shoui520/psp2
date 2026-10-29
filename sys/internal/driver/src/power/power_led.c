@@ -152,10 +152,11 @@ static int powerLedInitWorker(void *arg)
 	if (SceSysrootForDriver_55392965() || SceSysrootForDriver_89D19090() ||
 	    SceSysrootForDriver_7918D44E() || SceSysrootForDriver_79C9AE10())
 		s_powerLedBootEnabled = 0;
-	if (capable)
+	if (capable) {
 		SceSysconForDriver_9CA6EB70(0);
-	if (s_powerLedBootEnabled)
-		sceLedSetMode(2, SCE_LED_MODE_ON, &param);
+		if (s_powerLedBootEnabled)
+			sceLedSetMode(2, SCE_LED_MODE_ON, &param);
+	}
 	SceSysrootForDriver_246AAAB3(sceLedSetMode);
 	return 1;
 }
