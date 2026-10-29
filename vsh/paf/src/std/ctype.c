@@ -35,3 +35,10 @@ int sce_paf_tolower(int ch)
 		return (unsigned char)ch + 0x20;
 	return ch;
 }
+
+int sce_paf_toupper(int ch)
+{
+	if ((uint32_t)ch <= 0x7f && (ctype_table[ch + 1] & 2))
+		return (unsigned char)ch - 0x20;
+	return ch;
+}
