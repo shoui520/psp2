@@ -55,18 +55,18 @@ int ewPowerOffThread(SceSize args, void *argp)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ewg.ew.spinlock, intr);
 
 	for (;;) {
-		sceKernelWaitEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED | EW_EVENT_UNPLUGGED
-					| EW_EVENT_TIMER | EW_EVENT_DISPLAY_TIMER | EW_EVENT_CHARGED
+		sceKernelWaitEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED | EW_EVENT_CHARGED
+					| EW_EVENT_TIMER | EW_EVENT_DISPLAY_TIMER | EW_EVENT_POWER_ON
 					| EW_EVENT_SHUTDOWN,
 					SCE_KERNEL_EVF_WAITMODE_OR |
 					SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
-		if (bits & EW_EVENT_UNPLUGGED) {
+		if (bits & EW_EVENT_CHARGED) {
 			ScePowerForDriver_E4E3C316(5);
 			goto standby;
 		}
 		if (bits & (EW_EVENT_TIMER | EW_EVENT_DISPLAY_TIMER | EW_EVENT_SHUTDOWN))
 			goto standby;
-		if (bits & EW_EVENT_CHARGED)
+		if (bits & EW_EVENT_POWER_ON)
 			break;
 		/* held for 1.5 s: power on */
 		timeout = 1500000;

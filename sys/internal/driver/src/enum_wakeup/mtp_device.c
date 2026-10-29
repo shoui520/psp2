@@ -43,22 +43,20 @@ const MtpPropDesc ewPropDescs[2] = {
 
 /* provider of the device strings */
 
-void mtpSetupDeviceStrings(MtpDeviceStringsProvider provider)
+int mtpSetupDeviceStrings(MtpDeviceStringsProvider provider)
 {
 	memset(&ewg.strings, 0, sizeof(ewg.strings));
 	if (provider || (provider = ewg.provider)) {
 		ewg.provider = provider;
-		if (provider(&ewg.strings.provided, 1) >= 0) {
-			mtpReadSerial(&ewg.strings);
-			return;
-		}
+		if (provider(&ewg.strings.provided, 1) >= 0)
+			return mtpReadSerial(&ewg.strings);
 	}
 	mtpStrcpy(ewg.strings.provided.manufacturer, "Sony Interactive Entertainment Inc.");
 	mtpStrcpy(ewg.strings.provided.model, "PlayStation(R)Vita");
 	mtpStrcpy(ewg.strings.provided.deviceVersion, "");
 	mtpStrcpy(ewg.strings.provided.friendlyName, "PlayStation(R)Vita");
 	mtpStrcpy(ewg.strings.provided.iconPath, "vs0:vsh/mtpresponder/DevIcon.fil");
-	mtpReadSerial(&ewg.strings);
+	return mtpReadSerial(&ewg.strings);
 }
 
 void mtpClearDeviceStrings(void)

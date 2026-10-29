@@ -45,10 +45,10 @@
 /* power-off thread event flag */
 #define EW_EVENT_POWER_PRESSED	0x001
 #define EW_EVENT_POWER_RELEASED	0x002
-#define EW_EVENT_UNPLUGGED	0x010
+#define EW_EVENT_CHARGED	0x010	/* battery charged: standby */
 #define EW_EVENT_TIMER		0x020	/* MTP modes */
 #define EW_EVENT_DISPLAY_TIMER	0x040
-#define EW_EVENT_CHARGED	0x100
+#define EW_EVENT_POWER_ON	0x100	/* cold reset */
 #define EW_EVENT_SHUTDOWN	0x200
 
 #define EW_BUTTON_SELECT	0x00000001
@@ -181,7 +181,7 @@ int mtpStart(int portId, MtpDeviceStringsProvider provider);
 int mtpInit(void);
 int mtpIsSessionOpen(const MtpContext *ctx);
 int mtpBuildPropDesc(SceUInt32 code, char *buf, SceSize size);
-void mtpSetupDeviceStrings(MtpDeviceStringsProvider provider);
+int mtpSetupDeviceStrings(MtpDeviceStringsProvider provider);
 void mtpClearDeviceStrings(void);
 const char *mtpSyncPartner(void);
 const char *mtpIconPath(void);

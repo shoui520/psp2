@@ -1,11 +1,12 @@
 /* SceEnumWakeUp: Files kept in memory for MTP (the device icon). */
 #include "ew_internal.h"
 
+/* a miss returns the entry one past the end, as Sony does (EwGlobals.cacheMiss) */
 static inline __attribute__((always_inline)) MtpCacheEntry *mtpCacheFind(const char *path)
 {
 	int i;
 
-	for (i = 0; i < MTP_CACHE_ENTRIES - 1; i++)
+	for (i = 0; i < MTP_CACHE_ENTRIES; i++)
 		if (strncmp(path, ewg.mtp.cache[i].path, sizeof(ewg.mtp.cache[i].path)) == 0)
 			break;
 	return &ewg.mtp.cache[i];
