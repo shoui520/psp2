@@ -97,6 +97,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/global_vector.c
 	src/misc/global_state.c
 	src/misc/power2_abi.S
+	src/misc/viewport_abi.S
 	../../sys/sdk/target/src/libsnc/i32ops.c
 	../../sys/sdk/target/src/libsnc/i64ops.c
 	../../sys/sdk/target/src/deflt/zlibhdr.c
