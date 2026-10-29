@@ -2340,6 +2340,42 @@ int sceGeListDeQueue(int dlId)
     return ret;
 }
 
+#ifdef GE_2
+int sceGeListUpdateStallAddr(int dlId, void *stall)
+{
+    int ret;
+    sceKernelDcacheWritebackAll();
+    SceGeDisplayList *dl = (SceGeDisplayList *)(dlId ^ g_dlMask);
+    u32 idx = (dl - g_displayLists) / sizeof(SceGeDisplayList);
+    int oldK1 = pspShiftK1();
+    if (idx >= MAX_COUNT_DL) {
+        pspSetK1(oldK1);
+        return SCE_ERROR_INVALID_ID;
+    }
+    int oldIntr = sceKernelCpuSuspendIntr();
+    if (dl->state == SCE_GE_DL_STATE_RUNNING) {
+        dl->stall = stall;
+        HW_GE_STALLADDR = (int)UCACHED(stall);
+        pspSync();
+        if (g_GeLogHandler != NULL)
+            g_GeLogHandler(SCE_GE_LOG_DL_SADR_UPDATE, dlId, stall);
+        ret = 0;
+    } else if (dl->state == SCE_GE_DL_STATE_QUEUED || dl->state == SCE_GE_DL_STATE_PAUSED) {
+        dl->stall = stall;
+        if (g_GeLogHandler != NULL)
+            g_GeLogHandler(SCE_GE_LOG_DL_SADR_UPDATE, dlId, stall);
+        ret = 0;
+    } else if (dl->state == SCE_GE_DL_STATE_COMPLETED) {
+        ret = SCE_ERROR_BUSY;
+    } else {
+        ret = SCE_ERROR_INVALID_ID;
+    }
+    sceKernelCpuResumeIntr(oldIntr);
+    pspSetK1(oldK1);
+    return ret;
+}
+#endif
+
 SceGeListState sceGeListSync(int dlId, int mode)
 {
     int ret;
