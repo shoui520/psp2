@@ -5,6 +5,8 @@
 #include <stdint.h>
 
 int sce_paf_abs(int value);
+long sce_paf_strtol(const char *str, char **endptr, int base);
+unsigned long sce_paf_strtoul(const char *str, char **endptr, int base);
 void *sce_paf_bsearch(const void *key, const void *base, size_t count,
 		      size_t element_size,
 		      int (*compare)(const void *element, const void *key));
