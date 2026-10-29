@@ -45,7 +45,7 @@ static void powerLedSetOutput(unsigned int led, int on)
 		sceGpioPortSet((gpio & 0x20) != 0, gpio & 0x1f);
 }
 
-static inline void powerLedWriteSysconPattern(const uint8_t *pattern, uint32_t level)
+static inline __attribute__((always_inline)) void powerLedWriteSysconPattern(const uint8_t *pattern, uint32_t level)
 {
 	if (SceSysconForDriver_4E0EB57B(0x32, pattern, 24) < 0)
 		return;

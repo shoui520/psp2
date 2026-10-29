@@ -10,6 +10,68 @@
 .thumb
 .text
 
+/* Entry after monitor restore; four CPUs rendezvous before stack setup. */
+.global powerCpuResumeEntry
+.type powerCpuResumeEntry, %function
+.thumb_func
+powerCpuResumeEntry:
+	dsb	sy
+	mov.w	r3, #0
+	mcr	15, 0, r3, c13, c0, 1
+	isb	sy
+	mcr	15, 0, r0, c2, c0, 1
+	isb	sy
+	dsb	sy
+	mcr	15, 0, r1, c13, c0, 1
+	mcr	15, 0, r2, c3, c0, 1
+	dsb	sy
+	isb	sy
+	mov.w	r0, #0
+	mcr	15, 0, r0, c8, c7, 0
+	mrc	15, 0, r0, c0, c0, 5
+	ands.w	r0, r0, #15
+	movw r1, #:lower16:s_powerCpuResumeHandshake
+	movt r1, #:upper16:s_powerCpuResumeHandshake
+	cmp	r0, #0
+	it	eq
+	streq	r0, [r1, #0]
+1:
+	ldrb	r2, [r1, #0]
+	cmp	r0, r2
+	itt	ne
+	wfene
+	bne.n	1b
+	ldrh	r2, [r1, #0]
+	adds	r2, #1
+	adds.w	r2, r2, #256
+	strh	r2, [r1, #0]
+	dsb	sy
+	sev
+2:
+	ldrb	r2, [r1, #1]
+	cmp	r2, #4
+	itt	ne
+	wfene
+	bne.n	2b
+	mov.w	r0, r0, lsl #13
+	movw r1, #:lower16:s_powerScratchPad
+	movt r1, #:upper16:s_powerScratchPad
+	ldr	r1, [r1, #0]
+	adds	r0, r0, r1
+	mov.w	r1, #8192
+	mov.w	r2, #0
+	mov.w	r3, #0
+3:
+	strd	r2, r3, [r0], #8
+	subs	r1, #8
+	bne.n	3b
+	cpsid	aif, #31
+	mov	sp, r0
+	bl	powerResumeCpuContinuation
+	nop
+	bkpt	0x0000
+.size powerCpuResumeEntry, . - powerCpuResumeEntry
+
 .global powerSaveCpuContext
 .type powerSaveCpuContext, %function
 .thumb_func
@@ -110,11 +172,7 @@ powerRestoreCpuContext:
 	ldmia.w	sp!, {r2, lr}
 	vmsr	fpexc, r2
 	bx	lr
-.size powerRestoreCpuContext, . - powerRestoreCpuContext
 
-.global powerClobberVolatileRegisters
-.type powerClobberVolatileRegisters, %function
-.thumb_func
 powerClobberVolatileRegisters:
 	movw	r1, #57005
 	movt	r1, #32640
@@ -139,7 +197,7 @@ powerClobberVolatileRegisters:
 	mov	r3, r1
 	mov	ip, r1
 	bx	lr
-.size powerClobberVolatileRegisters, . - powerClobberVolatileRegisters
+.size powerRestoreCpuContext, . - powerRestoreCpuContext
 
 .global powerSmcResumePrimary
 .type powerSmcResumePrimary, %function
@@ -167,70 +225,3 @@ powerSmcResumeSecondary:
 	smc	#0
 	bx	lr
 .size powerSmcResumeSecondary, . - powerSmcResumeSecondary
-/* Entry after monitor restore; four CPUs rendezvous before stack setup. */
-.syntax unified
-.arch armv7-a
-.arch_extension sec
-.fpu neon
-.thumb
-.text
-.global powerCpuResumeEntry
-.type powerCpuResumeEntry, %function
-.thumb_func
-powerCpuResumeEntry:
-	dsb	sy
-	mov.w	r3, #0
-	mcr	15, 0, r3, c13, c0, 1
-	isb	sy
-	mcr	15, 0, r0, c2, c0, 1
-	isb	sy
-	dsb	sy
-	mcr	15, 0, r1, c13, c0, 1
-	mcr	15, 0, r2, c3, c0, 1
-	dsb	sy
-	isb	sy
-	mov.w	r0, #0
-	mcr	15, 0, r0, c8, c7, 0
-	mrc	15, 0, r0, c0, c0, 5
-	ands.w	r0, r0, #15
-	movw r1, #:lower16:s_powerCpuResumeHandshake
-	movt r1, #:upper16:s_powerCpuResumeHandshake
-	cmp	r0, #0
-	it	eq
-	streq	r0, [r1, #0]
-1:
-	ldrb	r2, [r1, #0]
-	cmp	r0, r2
-	itt	ne
-	wfene
-	bne.n	1b
-	ldrh	r2, [r1, #0]
-	adds	r2, #1
-	adds.w	r2, r2, #256
-	strh	r2, [r1, #0]
-	dsb	sy
-	sev
-2:
-	ldrb	r2, [r1, #1]
-	cmp	r2, #4
-	itt	ne
-	wfene
-	bne.n	2b
-	mov.w	r0, r0, lsl #13
-	movw r1, #:lower16:s_powerScratchPad
-	movt r1, #:upper16:s_powerScratchPad
-	ldr	r1, [r1, #0]
-	adds	r0, r0, r1
-	mov.w	r1, #8192
-	mov.w	r2, #0
-	mov.w	r3, #0
-3:
-	strd	r2, r3, [r0], #8
-	subs	r1, #8
-	bne.n	3b
-	cpsid	aif, #31
-	mov	sp, r0
-	bl	powerResumeCpuContinuation
-	nop
-	bkpt	0x0000
-.size powerCpuResumeEntry, . - powerCpuResumeEntry

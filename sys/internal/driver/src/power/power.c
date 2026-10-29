@@ -80,7 +80,12 @@ int powerProcessSuspendNotification(SceUID pid, int phase, ProcEventParam *param
 static void _scePowerNotifyCallbackProc(SceUID pid, uint32_t clearMask,
 					uint32_t setMask, uint32_t events);
 
-int _scePowerRemoveProcessCallback(SceUID pid)
+/* inlined into the exit and kill callbacks, except in the debug build */
+#if FW_DEBUG
+static int _scePowerRemoveProcessCallback(SceUID pid)
+#else
+static inline int _scePowerRemoveProcessCallback(SceUID pid)
+#endif
 {
 	struct PowerCallbackRecord *record, *previous;
 	SceKernelIntrStatus intrState;
