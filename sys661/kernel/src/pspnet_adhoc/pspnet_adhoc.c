@@ -130,15 +130,16 @@ typedef struct AdhocSocket {
 	AdhocWaiter *wait_list;       /* 0x24 */
 } AdhocSocket;
 
-/* PDP fragment reassembly node (0x18 bytes) */
+/* PDP fragment reassembly node (0x2c bytes) */
 typedef struct PdpFragEntry {
 	struct PdpFragEntry *next;    /* 0x00 */
 	struct PdpFragEntry **prev;   /* 0x04 */
 	u8 src_mac[6];                /* 0x08 */
 	u16 sport;                    /* 0x0e */
-	u16 seq;                      /* 0x10 */
-	u16 cur_off;                  /* 0x12 */
-	AdhocMbuf *m_head;            /* 0x14 */
+	u8 timer[0x1c];               /* 0x10..0x2b */
+	u16 seq;                      /* 0x2c */
+	u16 cur_off;                  /* 0x2e */
+	AdhocMbuf *m_head;            /* 0x30 */
 } PdpFragEntry;
 
 /* PDP PCB (0x3c bytes) allocated by sub_2a9c */
@@ -249,7 +250,7 @@ static void sub_1078(AdhocSocket *sock, s32 flags);
 static s32 sub_1620(PdpPcb *pdp, const u8 *dst_mac, u16 dport, const void *data, s32 len, u32 timeout, s32 flags);
 static s32 sub_1c48(PdpPcb *pdp, u8 *src_mac, u16 *sport, void *data, s32 *data_len, u32 timeout, s32 flags);
 static s32 sub_20c4(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags);
-static void sub_225c(PdpFragEntry *fe);
+static void sub_225c(PdpPcb *pdp);
 static void sub_231c(AdhocMbuf *m);
 static void sub_29ac(void);
 static void sub_2a18(void);
@@ -1439,17 +1440,31 @@ out:
 }
 
 /* === sub_225c @ 0x225c === */
-static void sub_225c(PdpFragEntry *fe)
+static void sub_225c(PdpPcb *pdp)
 {
 	AdhocMbuf *m;
-	AdhocMbuf *next;
+	PdpFragEntry *fe;
 
-	for (m = fe->m_head; m != NULL; m = next) {
-		next = m->m_nextpkt;
+	while ((m = pdp->rx_head) != NULL) {
+		pdp->rx_head = m->m_nextpkt;
+		if (pdp->rx_head == NULL)
+			pdp->rx_tail = NULL;
 		m->m_nextpkt = NULL;
+		pdp->rx_cc = (pdp->rx_cc - (u32)m->m_pkthdr_len) + 0x3c;
 		sceNetIfhandle_lib_F56FAC82(m);
 	}
-	sceNetIfhandle_lib_76BAD213(fe);
+	pdp->rx_cc = 0;
+
+	while ((fe = pdp->frag_head) != NULL) {
+		sceNet_lib_A93A93E9(fe->timer);
+		sceNetIfhandle_lib_F56FAC82(fe->m_head);
+		if (fe->next != NULL)
+			fe->next->prev = fe->prev;
+		else
+			pdp->frag_tail = fe->prev;
+		*fe->prev = fe->next;
+		sceNetIfhandle_lib_76BAD213(fe);
+	}
 }
 
 /* === sub_231c @ 0x231c === */
@@ -1552,7 +1567,8 @@ static void sub_231c(AdhocMbuf *m)
 					pdp->frag_tail = fe->prev;
 				*fe->prev = fe->next;
 				pdp->frag_count--;
-				sub_225c(fe);
+				sceNetIfhandle_lib_F56FAC82(fe->m_head);
+				sceNetIfhandle_lib_76BAD213(fe);
 			}
 		}
 
@@ -1578,7 +1594,8 @@ static void sub_231c(AdhocMbuf *m)
 					pdp->frag_tail = fe->prev;
 				*fe->prev = fe->next;
 				pdp->frag_count--;
-				sub_225c(fe);
+				sceNetIfhandle_lib_F56FAC82(fe->m_head);
+				sceNetIfhandle_lib_76BAD213(fe);
 			}
 
 			if (pdp->frag_count >= 4) {
@@ -1590,11 +1607,12 @@ static void sub_231c(AdhocMbuf *m)
 						pdp->frag_tail = old->prev;
 					*old->prev = old->next;
 					pdp->frag_count--;
-					sub_225c(old);
+					sceNetIfhandle_lib_F56FAC82(old->m_head);
+					sceNetIfhandle_lib_76BAD213(old);
 				}
 			}
 
-			fe = (PdpFragEntry *)sceNetIfhandle_lib_15CFE3C0(0x18);
+			fe = (PdpFragEntry *)sceNetIfhandle_lib_15CFE3C0(0x34);
 			if (fe == NULL) {
 				sceNetIfhandle_lib_F56FAC82(m);
 				g_pdp_stats[2]++;
@@ -1641,7 +1659,8 @@ static void sub_231c(AdhocMbuf *m)
 						pdp->frag_tail = fe->prev;
 					*fe->prev = fe->next;
 					pdp->frag_count--;
-					sub_225c(fe);
+					sceNetIfhandle_lib_F56FAC82(fe->m_head);
+					sceNetIfhandle_lib_76BAD213(fe);
 				}
 				sceNetIfhandle_lib_F56FAC82(m);
 				g_pdp_stats[0]++;
@@ -1833,33 +1852,12 @@ static s32 sub_2b2c(PdpPcb *pdp, const u8 *mac, u16 port, u32 bufsize)
 /* === sub_2d04 @ 0x2d04 === */
 static void sub_2d04(PdpPcb *pdp)
 {
-	AdhocMbuf *m;
-	PdpFragEntry *fe;
-
+	sub_225c(pdp);
 	if (pdp->next != NULL)
 		pdp->next->prev = pdp->prev;
 	else
 		g_pdp_list.tail = pdp->prev;
 	*pdp->prev = pdp->next;
-
-	while ((m = pdp->rx_head) != NULL) {
-		pdp->rx_head = m->m_nextpkt;
-		if (pdp->rx_head == NULL)
-			pdp->rx_tail = NULL;
-		m->m_nextpkt = NULL;
-		sceNetIfhandle_lib_F56FAC82(m);
-	}
-
-	while ((fe = pdp->frag_head) != NULL) {
-		if (fe->next != NULL)
-			fe->next->prev = fe->prev;
-		else
-			pdp->frag_tail = fe->prev;
-		*fe->prev = fe->next;
-		pdp->frag_count--;
-		sub_225c(fe);
-	}
-
 	sceNetIfhandle_lib_76BAD213(pdp);
 }
 
@@ -2721,11 +2719,27 @@ static s32 sub_4a30(PtpPcb **out_ptp)
 /* === sub_4ad4 @ 0x4ad4 === */
 static void sub_4ad4(PtpPcb *ptp)
 {
-	ptp->iss = g_ptp_initial_seq;
-	g_ptp_initial_seq += 0x100;
-	ptp->snd_una = ptp->iss;
-	ptp->snd_nxt = ptp->iss;
-	ptp->snd_max = ptp->iss;
+	AdhocMbuf *m;
+
+	while ((m = ptp->tx_head) != NULL) {
+		ptp->tx_head = m->m_nextpkt;
+		if (ptp->tx_head == NULL)
+			ptp->tx_tail = NULL;
+		m->m_nextpkt = NULL;
+		ptp->tx_cc -= (u32)m->m_pkthdr_len;
+		sceNetIfhandle_lib_F56FAC82(m);
+	}
+	ptp->tx_hiwat = 0;
+
+	while ((m = ptp->rx_head) != NULL) {
+		ptp->rx_head = m->m_nextpkt;
+		if (ptp->rx_head == NULL)
+			ptp->rx_tail = NULL;
+		m->m_nextpkt = NULL;
+		ptp->rx_cc -= (u32)m->m_pkthdr_len;
+		sceNetIfhandle_lib_F56FAC82(m);
+	}
+	ptp->rx_hiwat = 0;
 }
 
 /* === sub_4b7c @ 0x4b7c === */
@@ -3098,15 +3112,34 @@ static void sub_5750(PtpPcb *ptp)
 {
 	PtpPcb *child;
 
-	if (ptp->q_len <= 0)
-		return;
-
-	for (child = ptp->q_head; child != NULL; child = child->acc_next) {
-		if (child->state != 4) {
-			sub_542c(child);
-			return;
+	while ((child = ptp->q_head) != NULL) {
+		AdhocSocket *csock = child->sock;
+		if (child->acc_next != NULL)
+			child->acc_next->acc_prev = child->acc_prev;
+		else
+			ptp->q_tail = child->acc_prev;
+		*child->acc_prev = child->acc_next;
+		ptp->q_len--;
+		sub_4e3c(child);
+		sub_5750(child);
+		if (csock != NULL) {
+			PtpPcb *cpcb = (PtpPcb *)csock->pcb;
+			csock->pcb = NULL;
+			if (cpcb != NULL) {
+				if (cpcb->next != NULL)
+					cpcb->next->prev = cpcb->prev;
+				else
+					g_ptp_list.tail = cpcb->prev;
+				*cpcb->prev = cpcb->next;
+				sceNetIfhandle_lib_76BAD213(cpcb);
+			}
+			sub_0ffc(csock);
 		}
 	}
+	sceKernelMemset(ptp->local_mac, 0, 6);
+	sceKernelMemset(ptp->peer_mac, 0, 6);
+	ptp->local_port = 0;
+	sub_4ad4(ptp);
 }
 
 /* === sub_584c @ 0x584c === */
