@@ -12,6 +12,14 @@ uint32_t sce_paf_misc_flags_d548;
 uint32_t sce_paf_misc_value_cf08;
 uint32_t sce_paf_misc_counter_c224;
 uint32_t sce_paf_misc_value_d41c;
+uint32_t sce_paf_misc_value_1088;
+uint32_t sce_paf_misc_value_d510;
+uint32_t sce_paf_misc_value_d414;
+uint32_t sce_paf_misc_value_ef04;
+int8_t sce_paf_misc_flag_eef5;
+uint32_t sce_paf_misc_value_1078;
+float sce_paf_misc_float_1178;
+uint64_t sce_paf_misc_pair_1158;
 
 uint32_t ScePafMisc_4E93C051(void)
 {
@@ -108,4 +116,45 @@ uint32_t ScePafMisc_7F98B644(uint32_t value)
 	uint32_t previous = sce_paf_misc_value_d41c;
 	sce_paf_misc_value_d41c = value;
 	return previous;
+}
+
+uint32_t ScePafMisc_333C86DC(void)
+{
+	return sce_paf_misc_value_1088;
+}
+
+uint32_t ScePafMisc_8C27F38A(void)
+{
+	return sce_paf_misc_value_d510;
+}
+
+uint32_t ScePafMisc_9CB5D72E(void)
+{
+	return sce_paf_misc_value_d414;
+}
+
+uint32_t ScePafMisc_AF4FC3F4(void)
+{
+	return sce_paf_misc_value_ef04;
+}
+
+int ScePafMisc_C51EF81D(void)
+{
+	return sce_paf_misc_flag_eef5;
+}
+
+int ScePafMisc_862C8916(void)
+{
+	return sce_paf_misc_value_1078 != 0;
+}
+
+float *ScePafMisc_F8D63B8E(float value)
+{
+	sce_paf_misc_float_1178 = value;
+	return &sce_paf_misc_float_1178;
+}
+
+uint64_t ScePafMisc_A8133C0A(void)
+{
+	return sce_paf_misc_pair_1158;
 }
