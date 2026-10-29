@@ -9399,6 +9399,7 @@ int initializeVeneziaVipProcessQueue(VeneziaVipProcessQueue *queue)
 }
 
 /* name unknown: enqueue one unique process byte, failing when four are queued. */
+__attribute__((noinline))
 int enqueueVeneziaVipProcess(VeneziaVipProcessQueue *queue, int value)
 {
 	unsigned int count = queue->count;
@@ -9434,6 +9435,7 @@ int enqueueVeneziaVipProcess(VeneziaVipProcessQueue *queue, int value)
 }
 
 /* name unknown: dequeue the oldest queued byte, or return the empty sentinel. */
+__attribute__((noinline))
 int dequeueVeneziaVipProcess(VeneziaVipProcessQueue *queue, uint8_t *value)
 {
 	unsigned int count = queue->count;
@@ -9452,6 +9454,7 @@ int dequeueVeneziaVipProcess(VeneziaVipProcessQueue *queue, uint8_t *value)
 }
 
 /* name unknown: remove matching process bytes using the original circular scan. */
+__attribute__((noinline))
 int removeVeneziaVipProcess(VeneziaVipProcessQueue *queue, int value)
 {
 	unsigned int count = queue->count;
@@ -9502,6 +9505,7 @@ advance:
 }
 
 /* name unknown: return the number of queued process bytes. */
+__attribute__((noinline))
 int getVeneziaVipProcessQueueCount(const VeneziaVipProcessQueue *queue)
 {
 	return queue->count;
@@ -10869,7 +10873,9 @@ recoveryWait:
 			}
 		}
 		if (command & 0x10) {
-			getVeneziaVipCaptureContext(capture, state, &context);
+			lockVeneziaVipProcess(state->commonProcessorLock);
+			context = capture->commandContext;
+			unlockVeneziaVipProcess(state->commonProcessorLock);
 			ret = submitVeneziaVipCommandContextLocked(state, 0, context);
 			if (g_veneziaDebugger.log)
 				g_veneziaDebugger.log(82, 3, 0, context, ret);
@@ -10894,7 +10900,9 @@ recoveryWait:
 			completeVeneziaVipCaptureRequest(state, captureIndex, 1, &command);
 		}
 		if (command & 0x40) {
-			getVeneziaVipCaptureContext(capture, state, &context);
+			lockVeneziaVipProcess(state->commonProcessorLock);
+			context = capture->commandContext;
+			unlockVeneziaVipProcess(state->commonProcessorLock);
 			ret = configureVeneziaVipCommandCaptureLocked(state, 0, context);
 			if (g_veneziaDebugger.log)
 				g_veneziaDebugger.log(84, 2, 0, ret);
@@ -10935,8 +10943,12 @@ recoveryWait:
 			completeVeneziaVipCaptureRequest(state, captureIndex, 1, &command);
 		if (!(command & 0x1000))
 			continue;
-		getVeneziaVipCaptureProcessorStatus(capture, state, 0, &contextState);
-		getVeneziaVipCaptureContext(capture, state, &context);
+		lockVeneziaVipProcess(state->commonProcessorLock);
+		contextState = capture->processorContextState[0];
+		unlockVeneziaVipProcess(state->commonProcessorLock);
+		lockVeneziaVipProcess(state->commonProcessorLock);
+		context = capture->commandContext;
+		unlockVeneziaVipProcess(state->commonProcessorLock);
 		if (!context)
 			continue;
 		if (contextState != 2 && contextState != 4)
@@ -10951,7 +10963,9 @@ recoveryWait:
 				goto checkCompletion;
 			}
 			if (inputState == 2 && (capture->unidentifiedRingResult & 0x200)) {
-				getVeneziaVipCaptureProcessorStatus(capture, state, 1, &secondaryState);
+				lockVeneziaVipProcess(state->commonProcessorLock);
+				secondaryState = capture->processorContextState[1];
+				unlockVeneziaVipProcess(state->commonProcessorLock);
 				if (secondaryState == 4)
 					capture->unidentifiedRingResult &= ~0x200u;
 				inputResult = 1;
@@ -11113,8 +11127,12 @@ startCapture:
 		if (getVeneziaVipProcessorStatusLocked(state, 0, &status))
 			goto captureFailure;
 		if (status != 6) {
-			getVeneziaVipCaptureContext(capture, state, &startContext);
-			getVeneziaVipCaptureProcessorStatus(capture, state, 0, &contextState);
+			lockVeneziaVipProcess(state->commonProcessorLock);
+			startContext = capture->commandContext;
+			unlockVeneziaVipProcess(state->commonProcessorLock);
+			lockVeneziaVipProcess(state->commonProcessorLock);
+			contextState = capture->processorContextState[0];
+			unlockVeneziaVipProcess(state->commonProcessorLock);
 			if (contextState == 2 || contextState == 4) {
 				ret = startVeneziaVipCommandCaptureLocked(state, 0, startContext, 0);
 				if (g_veneziaDebugger.log)
@@ -11137,6 +11155,7 @@ startCapture:
 				sceKernelSetEventFlag(state->processorEvents[1], 0x1000000);
 				deferred = 0;
 				recovering = 0;
+				events = 0;
 				goto receive;
 			}
 			if (ret < 0)
@@ -11218,7 +11237,9 @@ startCapture:
 			}
 			if (interruptEvents & 0x200)
 				goto acknowledge;
-			getVeneziaVipCaptureProcessorStatus(capture, state, 0, &contextState);
+			lockVeneziaVipProcess(state->commonProcessorLock);
+			contextState = capture->processorContextState[0];
+			unlockVeneziaVipProcess(state->commonProcessorLock);
 			if (contextState != 2 && contextState != 4)
 				goto acknowledge;
 			if (captureIndex == -1) {
@@ -11279,10 +11300,9 @@ int veneziaVipProcessorThread1(SceSize size, void *arg)
 	uint32_t primaryPending, secondaryPending, auxiliaryDelta;
 	uint32_t auxiliaryCount __attribute__((aligned(8)));
 	uint32_t notification, callbackEvents, sequence;
-	uint32_t flags, pending, cursor, queued, forwardCommand, signedRequest;
-	SceSize available;
+	uint32_t flags, pending, queued;
 	uint8_t value __attribute__((aligned(8)));
-	int captureIndex = -1, recovering, ret, inputState, inputResult;
+	int captureIndex = -1, recovering, ret;
 	int command __attribute__((aligned(8))) = 0;
 
 	ret = sceKernelSetEventFlag(state->processorEvents[1], 0x100000);
@@ -11395,7 +11415,7 @@ recoveryWait:
 			if ((command & 0xf9f8f0) || (int)storage->status[0] < 0)
 				goto invalidCapture;
 		} else {
-			if (storage->status[0] <= (unsigned int)captureIndex)
+			if ((int)storage->status[0] <= captureIndex)
 				goto invalidCapture;
 			capture = &storage->captures[captureIndex];
 		}
@@ -11409,7 +11429,9 @@ recoveryWait:
 			}
 		}
 		if (command & 0x10) {
-			getVeneziaVipCaptureContext(capture, state, &context);
+			lockVeneziaVipProcess(state->commonProcessorLock);
+			context = capture->commandContext;
+			unlockVeneziaVipProcess(state->commonProcessorLock);
 			ret = submitVeneziaVipCommandContextLocked(state, 1, context);
 			if (g_veneziaDebugger.log)
 				g_veneziaDebugger.log(82, 3, 1, context, ret);
@@ -11429,7 +11451,9 @@ recoveryWait:
 			}
 		}
 		if (command & 0x20) {
-			getVeneziaVipCaptureContext(capture, state, &context);
+			lockVeneziaVipProcess(state->commonProcessorLock);
+			context = capture->commandContext;
+			unlockVeneziaVipProcess(state->commonProcessorLock);
 			flags = command & 0x40000000 ? 0xc8000000 : 0x88000000;
 			ret = continueVeneziaVipCommandContextLocked(state, 1, context, flags);
 			if (g_veneziaDebugger.log)
@@ -11440,7 +11464,9 @@ recoveryWait:
 				completeVeneziaVipSecondaryCaptureRequest(state, captureIndex, 2, &command);
 		}
 		if (command & 0x40) {
-			getVeneziaVipCaptureContext(capture, state, &context);
+			lockVeneziaVipProcess(state->commonProcessorLock);
+			context = capture->commandContext;
+			unlockVeneziaVipProcess(state->commonProcessorLock);
 			ret = configureVeneziaVipCommandCaptureLocked(state, 1, context);
 			if (g_veneziaDebugger.log)
 				g_veneziaDebugger.log(84, 2, 1, ret);
@@ -11478,11 +11504,16 @@ recoveryWait:
 		if (command & 0x20000)
 			completeVeneziaVipSecondaryCaptureRequest(state, captureIndex, 1, &command);
 		if (command & 0x40000)
-			completeVeneziaVipSecondaryCaptureRequest(state, captureIndex, 1, &command);		if (!(command & 0x1000))
+			completeVeneziaVipSecondaryCaptureRequest(state, captureIndex, 1, &command);
+		if (!(command & 0x1000))
 			continue;
 		interruptEvents = 0;
-		getVeneziaVipCaptureProcessorStatus(capture, state, 1, &contextState);
-		getVeneziaVipCaptureContext(capture, state, &context);
+		lockVeneziaVipProcess(state->commonProcessorLock);
+		contextState = capture->processorContextState[1];
+		unlockVeneziaVipProcess(state->commonProcessorLock);
+		lockVeneziaVipProcess(state->commonProcessorLock);
+		context = capture->commandContext;
+		unlockVeneziaVipProcess(state->commonProcessorLock);
 		if (!context)
 			continue;
 		if (contextState != 2 && contextState != 4)
@@ -11520,8 +11551,12 @@ recoveryWait:
 		if (getVeneziaVipProcessorStatusLocked(state, 1, &status))
 			goto captureFailure;
 		if (status != 6) {
-			getVeneziaVipCaptureContext(capture, state, &context);
-			getVeneziaVipCaptureProcessorStatus(capture, state, 1, &contextState);
+			lockVeneziaVipProcess(state->commonProcessorLock);
+			context = capture->commandContext;
+			unlockVeneziaVipProcess(state->commonProcessorLock);
+			lockVeneziaVipProcess(state->commonProcessorLock);
+			contextState = capture->processorContextState[1];
+			unlockVeneziaVipProcess(state->commonProcessorLock);
 			if (contextState == 2 || contextState == 4) {
 				programVeneziaVipCaptureImage(capture, state);
 				lockVeneziaVipProcess(state->commonProcessorLock);
@@ -11612,7 +11647,9 @@ notifyCapture:
 		notification = 1;
 		flags = 0;
 		if (interruptEvents & 0x80000) {
-			getVeneziaVipCaptureContext(capture, state, &context);
+			lockVeneziaVipProcess(state->commonProcessorLock);
+			context = capture->commandContext;
+			unlockVeneziaVipProcess(state->commonProcessorLock);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			ret = getVeneziaVipCommandAuxiliaryCountLocked(state, context, &auxiliaryCount);
 			if (g_veneziaDebugger.log)
