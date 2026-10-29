@@ -11,5 +11,4 @@ psp2_module(os0_kd_bootimage_usbd KIND kernel COMPILER gcc48 SOURCES
 	hub.c
 )
 target_compile_options(os0_kd_bootimage_usbd PRIVATE -std=gnu11
-	-fno-delete-null-pointer-checks
-	-fsection-anchors)	# each file's data through one base, as in the original
+	-fno-delete-null-pointer-checks)

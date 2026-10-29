@@ -20,36 +20,38 @@
 #include <fw.h>
 #include "usbd_internal.h"
 
-/* one anchored block, in this order (0x81010000) */
-static SceUInt8 s_initialized;
-static SceUID s_eventThreadId;
-static SceUID s_callbackThreadId;
-static SceUID s_deviceEventSemaId;
-static SceUID s_callbackSemaId;
-static SceUID s_enumerationSemaId;
-static SceUID s_bufferMemBlockId;
-static SceUID s_procEventHandlerId;
-static int s_smallBufferCount;
-static int s_largeBufferCount;
-static UsbdBus *s_bus[USBD_BUS_COUNT];
-static UsbdDriver *s_driver[USBD_DRIVER_COUNT];		/* registered, by index */
-static UsbdRequest *s_request[USBD_REQUEST_COUNT];	/* in flight, by id */
-static UsbdClient *s_clientHead;
-static UsbdClient *s_clientTail;
-static UsbdDriver *s_freeDriverHead;
-static UsbdDriver *s_freeDriverTail;
-static SceKernelFastMutex s_mutex;
-static SceKernelSpinlock s_queueLock;
-static UsbdRequest *s_freeRequestHead;
-static UsbdRequest *s_freeRequestTail;
-static UsbdEventQueue s_deviceEvents;		/* for the event thread */
-static UsbdEventQueue s_callbackEvents;		/* for the callback thread */
-static UsbdBufferPool s_smallBuffers;
-static UsbdBufferPool s_largeBuffers;
-static SceUID s_eventId;			/* the callback event */
-static SceUID s_callbackId;
-static SceUID s_callbackPid;
-static unsigned int s_callbackFlags;
+/* the module's data, one object in this order (0x81010000) */
+static struct {
+	SceUInt8 initialized;
+	SceUID eventThreadId;
+	SceUID callbackThreadId;
+	SceUID deviceEventSemaId;
+	SceUID callbackSemaId;
+	SceUID enumerationSemaId;
+	SceUID bufferMemBlockId;
+	SceUID procEventHandlerId;
+	int smallBufferCount;
+	int largeBufferCount;
+	UsbdBus *bus[USBD_BUS_COUNT];
+	UsbdDriver *driver[USBD_DRIVER_COUNT];		/* registered, by index */
+	UsbdRequest *request[USBD_REQUEST_COUNT];	/* in flight, by id */
+	UsbdClient *clientHead;
+	UsbdClient *clientTail;
+	UsbdDriver *freeDriverHead;
+	UsbdDriver *freeDriverTail;
+	SceKernelFastMutex mutex;
+	SceKernelSpinlock queueLock;
+	UsbdRequest *freeRequestHead;
+	UsbdRequest *freeRequestTail;
+	UsbdEventQueue deviceEvents;		/* for the event thread */
+	UsbdEventQueue callbackEvents;		/* for the callback thread */
+	UsbdBufferPool smallBuffers;
+	UsbdBufferPool largeBuffers;
+	SceUID eventId;			/* the callback event */
+	SceUID callbackId;
+	SceUID callbackPid;
+	unsigned int callbackFlags;
+} s_usbd;
 
 static int usbdProcessExit(SceUID pid, ProcEventParam *param, void *common);
 static int usbdProcessKill(SceUID pid, ProcEventParam *param, void *common);
@@ -69,7 +71,7 @@ static const SceKernelProcEventHandler usbdProcEventHandler = {
 /* doubly linked lists kept as head/tail pairs */
 static __always_inline void usbdLock(void)
 {
-	int result = lockFastMutex(&s_mutex);
+	int result = lockFastMutex(&s_usbd.mutex);
 
 	if (result < 0) {
 		SCE_DBG_PRINTF(15, 111, "result=%x\n", result);
@@ -79,7 +81,7 @@ static __always_inline void usbdLock(void)
 
 static __always_inline void usbdUnlock(void)
 {
-	int result = sceKernelUnlockFastMutex(&s_mutex);
+	int result = sceKernelUnlockFastMutex(&s_usbd.mutex);
 
 	if (result < 0) {
 		SCE_DBG_PRINTF(15, 122, "result=%x\n", result);
@@ -90,7 +92,7 @@ static __always_inline void usbdUnlock(void)
 static __always_inline int usbdWaitDeviceResponse(void)
 {
 	SceUInt32 timeout = USBD_RESPONSE_TIMEOUT;
-	int result = sceKernelWaitSema(s_enumerationSemaId, 1, &timeout);
+	int result = sceKernelWaitSema(s_usbd.enumerationSemaId, 1, &timeout);
 
 	if (result < 0)
 		SCE_DBG_PRINTF(15, 135, "result=%x\n", result);
@@ -100,25 +102,25 @@ static __always_inline int usbdWaitDeviceResponse(void)
 static __always_inline void usbdSignalDeviceResponse(void)
 {
 #if FW_SINCE(0x04000000)
-	int result = sceKernelSignalSema(s_enumerationSemaId, 1);
+	int result = sceKernelSignalSema(s_usbd.enumerationSemaId, 1);
 
 	if (result < 0) {
 		SCE_DBG_PRINTF(15, 150, "result=%x\n", result);
 		SCE_DBG_ASSERT(0, 151);
 	}
 #else
-	sceKernelSignalSema(s_enumerationSemaId, 1);
+	sceKernelSignalSema(s_usbd.enumerationSemaId, 1);
 #endif
 }
 
 static __always_inline UsbdDevice *usbdGetDevice(unsigned int deviceId)
 {
-	return s_bus[USBD_ID_BUS(deviceId)]->device[USBD_ID_INDEX(deviceId)];
+	return s_usbd.bus[USBD_ID_BUS(deviceId)]->device[USBD_ID_INDEX(deviceId)];
 }
 
 static __always_inline UsbdPipe *usbdGetPipe(unsigned int pipeId)
 {
-	return s_bus[USBD_ID_BUS(pipeId)]->pipe[USBD_ID_INDEX(pipeId)];
+	return s_usbd.bus[USBD_ID_BUS(pipeId)]->pipe[USBD_ID_INDEX(pipeId)];
 }
 
 static __always_inline int usbdIsDeviceId(unsigned int deviceId)
@@ -137,7 +139,7 @@ static __always_inline UsbdClient *usbdFindClient(SceUID uid)
 {
 	UsbdClient *client;
 
-	for (client = s_clientHead; client != NULL; client = client->next) {
+	for (client = s_usbd.clientHead; client != NULL; client = client->next) {
 		if (client->pid == uid)
 			break;
 	}
@@ -169,12 +171,12 @@ static __always_inline int usbdHasNoDriver(UsbdDevice *device)
 
 static __always_inline UsbdRequest *usbdAllocRequest(void)
 {
-	UsbdRequest *request = s_freeRequestHead;
+	UsbdRequest *request = s_usbd.freeRequestHead;
 
 	if (request == NULL)
 		return NULL;
-	USBD_LIST_REMOVE(s_freeRequestHead, s_freeRequestTail, request);
-	s_request[request->id] = request;
+	USBD_LIST_REMOVE(s_usbd.freeRequestHead, s_usbd.freeRequestTail, request);
+	s_usbd.request[request->id] = request;
 	request->state = 0;
 	return request;
 }
@@ -195,10 +197,10 @@ static __always_inline void usbdFreeBuffer(void *buffer)
 {
 	UsbdBufferPool *pool;
 
-	if (buffer >= s_largeBuffers.base && buffer <= s_largeBuffers.last)
-		pool = &s_largeBuffers;
-	else if (buffer >= s_smallBuffers.base && buffer <= s_smallBuffers.last)
-		pool = &s_smallBuffers;
+	if (buffer >= s_usbd.largeBuffers.base && buffer <= s_usbd.largeBuffers.last)
+		pool = &s_usbd.largeBuffers;
+	else if (buffer >= s_usbd.smallBuffers.base && buffer <= s_usbd.smallBuffers.last)
+		pool = &s_usbd.smallBuffers;
 	else
 		return;
 	if (pool->tail != NULL)
@@ -211,9 +213,9 @@ static __always_inline void usbdQueueEvent(UsbdEventQueue *queue, UsbdEvent *eve
 {
 	SceKernelIntrStatus intr;
 
-	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_queueLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_usbd.queueLock);
 	USBD_LIST_APPEND(queue->head, queue->tail, event);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_queueLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_usbd.queueLock, intr);
 }
 
 static __always_inline UsbdEvent *usbdDequeueEvent(UsbdEventQueue *queue)
@@ -221,11 +223,11 @@ static __always_inline UsbdEvent *usbdDequeueEvent(UsbdEventQueue *queue)
 	SceKernelIntrStatus intr;
 	UsbdEvent *event;
 
-	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_queueLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_usbd.queueLock);
 	event = queue->head;
 	if (event != NULL)
 		USBD_LIST_REMOVE(queue->head, queue->tail, event);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_queueLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_usbd.queueLock, intr);
 	return event;
 }
 
@@ -248,8 +250,8 @@ static void usbdCompleteRequest(UsbdRequest *request)
 		return;
 	event->arg0 = (unsigned int)request;
 	event->type = USBD_EVENT_COMPLETE;
-	usbdQueueEvent(&s_callbackEvents, event);
-	sceKernelSignalSema(s_callbackSemaId, 1);
+	usbdQueueEvent(&s_usbd.callbackEvents, event);
+	sceKernelSignalSema(s_usbd.callbackSemaId, 1);
 }
 
 /* the enumeration's control transfers, each waited for by usbdWaitDeviceResponse */
@@ -338,7 +340,7 @@ static __always_inline int usbdReleaseClient(SceUID pid)
 		result = 0;
 		goto out;
 	}
-	for (entry = s_clientHead; entry != NULL; entry = entry->next) {
+	for (entry = s_usbd.clientHead; entry != NULL; entry = entry->next) {
 		if (entry == client)
 			break;
 	}
@@ -348,16 +350,16 @@ static __always_inline int usbdReleaseClient(SceUID pid)
 	}
 	result = sceKernelDeleteSema(client->semaId);
 	if (result >= 0) {
-		USBD_LIST_REMOVE(s_clientHead, s_clientTail, client);
+		USBD_LIST_REMOVE(s_usbd.clientHead, s_usbd.clientTail, client);
 		result = 0;
 		usbdFree(client);
 	}
 
 out:
-	if (s_callbackPid == pid) {
-		s_callbackId = -1;
-		s_callbackPid = -1;
-		s_callbackFlags = 0;
+	if (s_usbd.callbackPid == pid) {
+		s_usbd.callbackId = -1;
+		s_usbd.callbackPid = -1;
+		s_usbd.callbackFlags = 0;
 	}
 	usbdUnlock();
 	return result;
@@ -378,7 +380,7 @@ static void usbdNotifyClients(UsbdDevice *device, UsbdBus *bus, int type)
 	UsbdClientEvent *event;
 	UsbdClient *client;
 
-	for (client = s_clientHead; client != NULL; client = client->next) {
+	for (client = s_usbd.clientHead; client != NULL; client = client->next) {
 		if (client->closing)
 			continue;
 		event = usbdAlloc(sizeof(*event));
@@ -456,7 +458,7 @@ static int usbdDetachBus(unsigned int busIndex)
 	UsbdBus *bus;
 	int address, i;
 
-	bus = s_bus[busIndex];
+	bus = s_usbd.bus[busIndex];
 	if (bus == NULL)
 		return SCE_USBD_ERROR_INVALID_PARAM;
 	for (address = 1; address < USBD_DEVICES_PER_BUS; address++) {
@@ -493,7 +495,7 @@ static int usbdDetachBus(unsigned int busIndex)
 				usbdLock();
 				continue;
 			}
-			for (client = s_clientHead; client != NULL; client = client->next) {
+			for (client = s_usbd.clientHead; client != NULL; client = client->next) {
 				if (client->closing)
 					continue;
 				event = usbdAlloc(sizeof(*event));
@@ -684,7 +686,7 @@ static __always_inline int usbdFindInterface(UsbdDevice *device,
 static void usbdAttachDevice(unsigned int hubId, unsigned int port, unsigned int speed)
 {
 	unsigned int busIndex = USBD_ID_BUS(hubId);
-	UsbdBus *bus = s_bus[busIndex];
+	UsbdBus *bus = s_usbd.bus[busIndex];
 	SceUsbdDeviceDescriptor *descriptor;
 	UsbdDevice *device, *parent;
 	SceUsbdInterfaceDescriptor *chosen;
@@ -880,7 +882,7 @@ static void usbdAttachDevice(unsigned int hubId, unsigned int port, unsigned int
 	configured = 0;
 	deviceId = USBD_ID(busIndex, device->address);
 	for (i = 0; i < USBD_DRIVER_COUNT; i++) {
-		driver = s_driver[i];
+		driver = s_usbd.driver[i];
 		if (driver == NULL)
 			continue;
 		if (!(driver->flags & USBD_DRIVER_KERNEL)) {
@@ -894,7 +896,7 @@ static void usbdAttachDevice(unsigned int hubId, unsigned int port, unsigned int
 				kind = 2;
 			else
 				continue;
-			for (client = s_clientHead; client != NULL; client = client->next) {
+			for (client = s_usbd.clientHead; client != NULL; client = client->next) {
 				if (client->closing)
 					continue;
 				event = usbdAlloc(sizeof(*event));
@@ -957,8 +959,8 @@ relock:
 		usbdLock();
 	}
 attached:
-	if (usbdHasNoDriver(device) && s_callbackId != -1 && (s_callbackFlags & 1))
-		sceKernelSetEventWithNotifyCallback(s_eventId, 1, 0, 1);
+	if (usbdHasNoDriver(device) && s_usbd.callbackId != -1 && (s_usbd.callbackFlags & 1))
+		sceKernelSetEventWithNotifyCallback(s_usbd.eventId, 1, 0, 1);
 	usbdUnlock();
 	return;
 
@@ -972,7 +974,7 @@ release:
 static void usbdDetachDevice(unsigned int hubId, unsigned int port)
 {
 	unsigned int busIndex = USBD_ID_BUS(hubId);
-	UsbdBus *bus = s_bus[busIndex];
+	UsbdBus *bus = s_usbd.bus[busIndex];
 	UsbdDevice *hub, *device;
 	UsbdDriver *driver;
 	int i;
@@ -996,7 +998,7 @@ static void usbdDetachDevice(unsigned int hubId, unsigned int port)
 			UsbdClientEvent *event;
 			UsbdClient *client;
 
-			for (client = s_clientHead; client != NULL; client = client->next) {
+			for (client = s_usbd.clientHead; client != NULL; client = client->next) {
 				if (client->closing)
 					continue;
 				event = usbdAlloc(sizeof(*event));
@@ -1031,9 +1033,9 @@ static int usbdEventThread(SceSize args, void *argp)
 	UsbdEvent *queued, event;
 
 	for (;;) {
-		if (sceKernelWaitSema(s_deviceEventSemaId, 1, NULL) < 0)
+		if (sceKernelWaitSema(s_usbd.deviceEventSemaId, 1, NULL) < 0)
 			continue;
-		queued = usbdDequeueEvent(&s_deviceEvents);
+		queued = usbdDequeueEvent(&s_usbd.deviceEvents);
 		if (queued == NULL)
 			continue;
 		event = *queued;
@@ -1104,7 +1106,7 @@ void usbdFreeRequest(UsbdRequest *request)
 
 	if (request == NULL || request->isDeviceRequest)
 		return;
-	for (entry = s_freeRequestHead; entry != NULL; entry = entry->next) {
+	for (entry = s_usbd.freeRequestHead; entry != NULL; entry = entry->next) {
 		if (entry == request)
 			return;
 	}
@@ -1112,8 +1114,8 @@ void usbdFreeRequest(UsbdRequest *request)
 		usbdFreeBuffer(request->poolBuffer);
 		request->poolBuffer = NULL;
 	}
-	s_request[request->id] = NULL;
-	USBD_LIST_APPEND(s_freeRequestHead, s_freeRequestTail, request);
+	s_usbd.request[request->id] = NULL;
+	USBD_LIST_APPEND(s_usbd.freeRequestHead, s_usbd.freeRequestTail, request);
 }
 
 static __always_inline void usbdDiscardRequest(UsbdRequest *request)
@@ -1134,9 +1136,9 @@ static int usbdCallbackThread(SceSize args, void *argp)
 	UsbdPipe *pipe;
 
 	for (;;) {
-		if (sceKernelWaitSema(s_callbackSemaId, 1, NULL) < 0)
+		if (sceKernelWaitSema(s_usbd.callbackSemaId, 1, NULL) < 0)
 			continue;
-		queued = usbdDequeueEvent(&s_callbackEvents);
+		queued = usbdDequeueEvent(&s_usbd.callbackEvents);
 		if (queued == NULL)
 			continue;
 		event = *queued;
@@ -1224,8 +1226,8 @@ void usbdNotifyAttach(unsigned int hubId, unsigned int port, unsigned int speed)
 	event->arg1 = port;
 	event->type = USBD_EVENT_ATTACH;
 	event->arg2 = speed;
-	usbdQueueEvent(&s_deviceEvents, event);
-	sceKernelSignalSema(s_deviceEventSemaId, 1);
+	usbdQueueEvent(&s_usbd.deviceEvents, event);
+	sceKernelSignalSema(s_usbd.deviceEventSemaId, 1);
 }
 
 void usbdNotifyDetach(unsigned int hubId, unsigned int port)
@@ -1238,8 +1240,8 @@ void usbdNotifyDetach(unsigned int hubId, unsigned int port)
 	event->arg1 = port;
 	event->arg2 = 0;
 	event->type = USBD_EVENT_DETACH;
-	usbdQueueEvent(&s_deviceEvents, event);
-	sceKernelSignalSema(s_deviceEventSemaId, 1);
+	usbdQueueEvent(&s_usbd.deviceEvents, event);
+	sceKernelSignalSema(s_usbd.deviceEventSemaId, 1);
 }
 
 /* the free list in index order, each entry's index set */
@@ -1276,13 +1278,13 @@ int _sceUsbdInit(void)
 	void *base;
 	int result, b, i;
 
-	if (s_initialized)
+	if (s_usbd.initialized)
 		return SCE_USBD_ERROR_ALREADY_INITIALIZED;
-	s_queueLock = 0;
-	s_eventId = sceKernelCreateSimpleEvent("SceUsbd", 0, 0, NULL);
-	s_callbackFlags = 0;
-	s_callbackId = -1;
-	s_callbackPid = -1;
+	s_usbd.queueLock = 0;
+	s_usbd.eventId = sceKernelCreateSimpleEvent("SceUsbd", 0, 0, NULL);
+	s_usbd.callbackFlags = 0;
+	s_usbd.callbackId = -1;
+	s_usbd.callbackPid = -1;
 	result = usbdCreateHeap();
 	if (result < 0)
 		return result;
@@ -1298,7 +1300,7 @@ int _sceUsbdInit(void)
 		bus->ehci.bus = bus;
 		bus->ohci.bus = bus;
 		bus->reserved.bus = bus;
-		s_bus[b] = bus;
+		s_usbd.bus[b] = bus;
 		for (i = 0; i < USBD_DEVICES_PER_BUS; i++) {
 			device = &pool->device[b][i];
 			device->index = i;
@@ -1342,8 +1344,8 @@ int _sceUsbdInit(void)
 			goto no_memory;
 	}
 
-	s_freeRequestHead = NULL;
-	s_freeRequestTail = NULL;
+	s_usbd.freeRequestHead = NULL;
+	s_usbd.freeRequestTail = NULL;
 	for (i = 0; i < USBD_REQUEST_COUNT; i++) {
 		request = &pool->request[0][i];
 		request->id = i;
@@ -1352,142 +1354,142 @@ int _sceUsbdInit(void)
 		request->setup = usbdAlloc(sizeof(SceUsbdDeviceRequest));
 		if (request->setup == NULL)
 			goto no_memory;
-		USBD_LIST_APPEND(s_freeRequestHead, s_freeRequestTail, request);
-		s_request[i] = NULL;
+		USBD_LIST_APPEND(s_usbd.freeRequestHead, s_usbd.freeRequestTail, request);
+		s_usbd.request[i] = NULL;
 	}
-	USBD_INIT_FREE_LIST(s_freeDriverHead, s_freeDriverTail, pool->driver,
-			    USBD_DRIVER_COUNT, s_driver);
+	USBD_INIT_FREE_LIST(s_usbd.freeDriverHead, s_usbd.freeDriverTail, pool->driver,
+			    USBD_DRIVER_COUNT, s_usbd.driver);
 
 	/* user transfers are staged in these */
 	result = usbdAllocMemBlock(USBD_SMALL_BUFFER_COUNT * USBD_SMALL_BUFFER_SIZE +
 				   USBD_LARGE_BUFFER_COUNT * USBD_LARGE_BUFFER_SIZE, &base);
 	if (result < 0)
 		goto delete_heap;
-	s_bufferMemBlockId = result;
+	s_usbd.bufferMemBlockId = result;
 	buffer = base;
-	s_smallBuffers.head = (void **)buffer;
-	s_smallBuffers.base = buffer;
+	s_usbd.smallBuffers.head = (void **)buffer;
+	s_usbd.smallBuffers.base = buffer;
 	for (i = 0; i < USBD_SMALL_BUFFER_COUNT - 1; i++, buffer += USBD_SMALL_BUFFER_SIZE)
 		*(void **)buffer = buffer + USBD_SMALL_BUFFER_SIZE;
 	*(void **)buffer = NULL;
-	s_smallBuffers.tail = (void **)buffer;
-	s_smallBuffers.last = buffer;
+	s_usbd.smallBuffers.tail = (void **)buffer;
+	s_usbd.smallBuffers.last = buffer;
 	buffer += USBD_SMALL_BUFFER_SIZE;
-	s_largeBuffers.head = (void **)buffer;
-	s_largeBuffers.base = buffer;
-	s_smallBufferCount = USBD_SMALL_BUFFER_COUNT;
+	s_usbd.largeBuffers.head = (void **)buffer;
+	s_usbd.largeBuffers.base = buffer;
+	s_usbd.smallBufferCount = USBD_SMALL_BUFFER_COUNT;
 	for (i = 0; i < USBD_LARGE_BUFFER_COUNT - 1; i++, buffer += USBD_LARGE_BUFFER_SIZE)
 		*(void **)buffer = buffer + USBD_LARGE_BUFFER_SIZE;
 	*(void **)buffer = NULL;
-	s_largeBuffers.tail = (void **)buffer;
-	s_largeBuffers.last = buffer;
-	s_largeBufferCount = USBD_LARGE_BUFFER_COUNT;
+	s_usbd.largeBuffers.tail = (void **)buffer;
+	s_usbd.largeBuffers.last = buffer;
+	s_usbd.largeBufferCount = USBD_LARGE_BUFFER_COUNT;
 
-	s_deviceEvents.head = NULL;
-	s_deviceEvents.tail = NULL;
-	s_callbackEvents.head = NULL;
-	s_callbackEvents.tail = NULL;
-	s_clientHead = NULL;
-	s_clientTail = NULL;
-	result = sceKernelInitializeFastMutex(&s_mutex, "SceUsbd", 0x2002, NULL);
+	s_usbd.deviceEvents.head = NULL;
+	s_usbd.deviceEvents.tail = NULL;
+	s_usbd.callbackEvents.head = NULL;
+	s_usbd.callbackEvents.tail = NULL;
+	s_usbd.clientHead = NULL;
+	s_usbd.clientTail = NULL;
+	result = sceKernelInitializeFastMutex(&s_usbd.mutex, "SceUsbd", 0x2002, NULL);
 	if (result < 0)
 		goto delete_heap;
 	result = sceKernelCreateSema("SceUsbdDeviceEvent", 0, 0, 20, NULL);
 	if (result < 0)
 		goto finalize_mutex;
-	s_deviceEventSemaId = result;
+	s_usbd.deviceEventSemaId = result;
 	result = sceKernelCreateSema("SceUsbdCallback", 0, 0, 20, NULL);
 	if (result < 0)
 		goto delete_device_event_sema;
-	s_callbackSemaId = result;
+	s_usbd.callbackSemaId = result;
 	result = sceKernelCreateSema("SceUsbdEnumeration", 0, 0, 1, NULL);
 	if (result < 0)
 		goto delete_callback_sema;
-	s_enumerationSemaId = result;
+	s_usbd.enumerationSemaId = result;
 	result = sceKernelCreateThread("SceUsbdEvent", usbdEventThread, 60, 0x2000, 0,
 					0x80000, NULL);
 	if (result < 0)
 		goto delete_enumeration_sema;
-	s_eventThreadId = result;
+	s_usbd.eventThreadId = result;
 	result = sceKernelCreateThread("SceUsbdCallback", usbdCallbackThread, 60, 0x2000, 0,
 					0x80000, NULL);
 	if (result < 0)
 		goto delete_event_thread;
-	s_callbackThreadId = result;
-	result = sceKernelStartThread(s_eventThreadId, 0, NULL);
+	s_usbd.callbackThreadId = result;
+	result = sceKernelStartThread(s_usbd.eventThreadId, 0, NULL);
 	if (result < 0)
 		goto delete_callback_thread;
-	result = sceKernelStartThread(s_callbackThreadId, 0, NULL);
+	result = sceKernelStartThread(s_usbd.callbackThreadId, 0, NULL);
 	if (result < 0)
 		goto quit_event_thread;
 
-	result = ehciInit(s_bus[0]);
+	result = ehciInit(s_usbd.bus[0]);
 	if (result < 0)
 		goto quit_callback_thread;
-	result = ohciInit(s_bus[0]);
+	result = ohciInit(s_usbd.bus[0]);
 	if (result < 0)
 		goto term_ehci0;
-	result = ehciInit(s_bus[1]);
+	result = ehciInit(s_usbd.bus[1]);
 	if (result < 0)
 		goto term_ohci0;
-	result = ohciInit(s_bus[1]);
+	result = ohciInit(s_usbd.bus[1]);
 	if (result < 0)
 		goto term_ehci1;
-	result = ehciInit(s_bus[2]);
+	result = ehciInit(s_usbd.bus[2]);
 	if (result < 0)
 		goto term_ohci1;
-	result = ohciInit(s_bus[2]);
+	result = ohciInit(s_usbd.bus[2]);
 	if (result < 0)
 		goto term_ehci2;
 	result = sceKernelRegisterProcEventHandler("SceUsbd", &usbdProcEventHandler, NULL);
 	if (result < 0)
 		goto term_ohci2;
-	s_procEventHandlerId = result;
-	s_initialized = 1;
+	s_usbd.procEventHandlerId = result;
+	s_usbd.initialized = 1;
 	result = hubInit();
 	if (result >= 0)
 		return 0;
 
-	s_initialized = 0;
-	if (sceKernelUnregisterProcEventHandler(s_procEventHandlerId) < 0)
+	s_usbd.initialized = 0;
+	if (sceKernelUnregisterProcEventHandler(s_usbd.procEventHandlerId) < 0)
 		SCE_DBG_ASSERT(0, 2104);
 term_ohci2:
-	if (ohciTerm(s_bus[2]) < 0)
+	if (ohciTerm(s_usbd.bus[2]) < 0)
 		SCE_DBG_ASSERT(0, 2108);
 term_ehci2:
-	if (ehciTerm(s_bus[2]) < 0)
+	if (ehciTerm(s_usbd.bus[2]) < 0)
 		SCE_DBG_ASSERT(0, 2111);
 term_ohci1:
-	if (ohciTerm(s_bus[1]) < 0)
+	if (ohciTerm(s_usbd.bus[1]) < 0)
 		SCE_DBG_ASSERT(0, 2114);
 term_ehci1:
-	if (ehciTerm(s_bus[1]) < 0)
+	if (ehciTerm(s_usbd.bus[1]) < 0)
 		SCE_DBG_ASSERT(0, 2117);
 term_ohci0:
-	ohciTerm(s_bus[0]);
+	ohciTerm(s_usbd.bus[0]);
 term_ehci0:
-	ehciTerm(s_bus[0]);
+	ehciTerm(s_usbd.bus[0]);
 quit_callback_thread:
-	usbdQuitThread(&s_callbackEvents, s_callbackSemaId, s_callbackThreadId);
+	usbdQuitThread(&s_usbd.callbackEvents, s_usbd.callbackSemaId, s_usbd.callbackThreadId);
 quit_event_thread:
-	usbdQuitThread(&s_deviceEvents, s_deviceEventSemaId, s_eventThreadId);
+	usbdQuitThread(&s_usbd.deviceEvents, s_usbd.deviceEventSemaId, s_usbd.eventThreadId);
 delete_callback_thread:
-	if (sceKernelDeleteThread(s_callbackThreadId) < 0)
+	if (sceKernelDeleteThread(s_usbd.callbackThreadId) < 0)
 		SCE_DBG_ASSERT(0, 2128);
 delete_event_thread:
-	if (sceKernelDeleteThread(s_eventThreadId) < 0)
+	if (sceKernelDeleteThread(s_usbd.eventThreadId) < 0)
 		SCE_DBG_ASSERT(0, 2131);
 delete_enumeration_sema:
-	if (sceKernelDeleteSema(s_enumerationSemaId) < 0)
+	if (sceKernelDeleteSema(s_usbd.enumerationSemaId) < 0)
 		SCE_DBG_ASSERT(0, 2134);
 delete_callback_sema:
-	if (sceKernelDeleteSema(s_callbackSemaId) < 0)
+	if (sceKernelDeleteSema(s_usbd.callbackSemaId) < 0)
 		SCE_DBG_ASSERT(0, 2137);
 delete_device_event_sema:
-	if (sceKernelDeleteSema(s_deviceEventSemaId) < 0)
+	if (sceKernelDeleteSema(s_usbd.deviceEventSemaId) < 0)
 		SCE_DBG_ASSERT(0, 2140);
 finalize_mutex:
-	if (sceKernelFinalizeFastMutex(&s_mutex) < 0)
+	if (sceKernelFinalizeFastMutex(&s_usbd.mutex) < 0)
 		SCE_DBG_ASSERT(0, 2143);
 	goto delete_heap;
 
@@ -1506,7 +1508,7 @@ int module_start(SceSize args, void *argp)
 
 int sceUsbdHostStart(int busIndex)
 {
-	UsbdBus *bus = s_bus[busIndex];
+	UsbdBus *bus = s_usbd.bus[busIndex];
 	int result;
 
 	result = ehciStart(bus);
@@ -1522,7 +1524,7 @@ int sceUsbdHostStart(int busIndex)
 
 int sceUsbdHostStop(int busIndex)
 {
-	UsbdBus *bus = s_bus[busIndex];
+	UsbdBus *bus = s_usbd.bus[busIndex];
 	int result;
 
 	if (bus == NULL)
@@ -1539,7 +1541,7 @@ int sceUsbdHostStop(int busIndex)
 
 int sceUsbdSuspend(int busIndex)
 {
-	UsbdBus *bus = s_bus[busIndex];
+	UsbdBus *bus = s_usbd.bus[busIndex];
 	int result;
 
 	if (bus == NULL)
@@ -1553,7 +1555,7 @@ int sceUsbdSuspend(int busIndex)
 
 int sceUsbdResume(int busIndex)
 {
-	UsbdBus *bus = s_bus[busIndex];
+	UsbdBus *bus = s_usbd.bus[busIndex];
 	int result;
 
 	if (bus == NULL)
@@ -1576,7 +1578,7 @@ int sceUsbdResume(int busIndex)
 /* before the suspend: reset the DUALSHOCK 4s, so they do not keep the bus awake */
 int sceUsbdSuspendPhase2(int busIndex, int flag)
 {
-	UsbdBus *bus = s_bus[busIndex];
+	UsbdBus *bus = s_usbd.bus[busIndex];
 	UsbdDevice *device;
 	int result, reset, address;
 
@@ -1586,7 +1588,7 @@ int sceUsbdSuspendPhase2(int busIndex, int flag)
 	result = flag & 1;
 	bus->suspended = 1;
 	if (result) {
-		if ((unsigned int)busIndex < USBD_BUS_COUNT && (bus = s_bus[busIndex]) != NULL) {
+		if ((unsigned int)busIndex < USBD_BUS_COUNT && (bus = s_usbd.bus[busIndex]) != NULL) {
 			result = 0;
 			for (address = 1; address < USBD_DEVICES_PER_BUS; address++) {
 				device = bus->device[address];
@@ -1614,7 +1616,7 @@ int sceUsbdSuspendPhase2(int busIndex, int flag)
 /* every device on every bus that has no configuration yet */
 #define USBD_FOR_EACH_DEVICE(bus, device, b, address)				\
 	for (b = 0; b < USBD_BUS_COUNT; b++)					\
-		if ((bus = s_bus[b]) != NULL && !bus->suspended)		\
+		if ((bus = s_usbd.bus[b]) != NULL && !bus->suspended)		\
 			for (address = 1; address < USBD_DEVICES_PER_BUS; address++)	\
 				if ((device = bus->device[address]) != NULL)
 
@@ -1624,7 +1626,7 @@ static __always_inline UsbdDriver *usbdFindDriver(const char *name)
 	int i;
 
 	for (i = 0; i < USBD_DRIVER_COUNT; i++) {
-		driver = s_driver[i];
+		driver = s_usbd.driver[i];
 		if (driver != NULL && strncmp(name, driver->name, 255) == 0)
 			return driver;
 	}
@@ -1633,12 +1635,12 @@ static __always_inline UsbdDriver *usbdFindDriver(const char *name)
 
 static __always_inline UsbdDriver *usbdAllocDriver(void)
 {
-	UsbdDriver *driver = s_freeDriverHead;
+	UsbdDriver *driver = s_usbd.freeDriverHead;
 
 	if (driver == NULL)
 		return NULL;
-	USBD_LIST_REMOVE(s_freeDriverHead, s_freeDriverTail, driver);
-	s_driver[driver->index] = driver;
+	USBD_LIST_REMOVE(s_usbd.freeDriverHead, s_usbd.freeDriverTail, driver);
+	s_usbd.driver[driver->index] = driver;
 	return driver;
 }
 
@@ -1646,12 +1648,12 @@ static __always_inline void usbdReleaseDriver(UsbdDriver *driver)
 {
 	UsbdDriver *entry;
 
-	for (entry = s_freeDriverHead; entry != NULL; entry = entry->next) {
+	for (entry = s_usbd.freeDriverHead; entry != NULL; entry = entry->next) {
 		if (entry == driver)
 			return;
 	}
-	s_driver[driver->index] = NULL;
-	USBD_LIST_APPEND(s_freeDriverHead, s_freeDriverTail, driver);
+	s_usbd.driver[driver->index] = NULL;
+	USBD_LIST_APPEND(s_usbd.freeDriverHead, s_usbd.freeDriverTail, driver);
 }
 
 int SceUsbdForDriver_1EC94F18(const SceUsbdDriver *driver)
@@ -1662,7 +1664,7 @@ int SceUsbdForDriver_1EC94F18(const SceUsbdDriver *driver)
 	unsigned int deviceId;
 	int result, b, address;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	if (driver == NULL || driver->name == NULL || driver->probe == NULL ||
@@ -1716,7 +1718,7 @@ int sceUsbdRegisterCompositeLdd(const SceUsbdCompositeDriver *driver)
 	int configurationValue, interfaceNumber;
 	int result, b, address, configured;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	chosen = NULL;
@@ -1806,7 +1808,7 @@ static __always_inline int usbdUnregisterDriver(const char *name, unsigned int f
 	int b, address, i;
 
 	for (b = 0; b < USBD_BUS_COUNT; b++) {
-		bus = s_bus[b];
+		bus = s_usbd.bus[b];
 		if (bus == NULL)
 			continue;
 		for (address = 1; address < USBD_DEVICES_PER_BUS; address++) {
@@ -1822,7 +1824,7 @@ static __always_inline int usbdUnregisterDriver(const char *name, unsigned int f
 		}
 	}
 	for (i = 0; i < USBD_DRIVER_COUNT; i++) {
-		driver = s_driver[i];
+		driver = s_usbd.driver[i];
 		if (driver != NULL && strncmp(driver->name, name, 255) == 0) {
 			usbdReleaseDriver(driver);
 			break;
@@ -1835,7 +1837,7 @@ int SceUsbdForDriver_216F108D(const SceUsbdDriver *driver)
 {
 	int result;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	if (driver == NULL || driver->name == NULL || driver->probe == NULL ||
@@ -1851,7 +1853,7 @@ int SceUsbdForDriver_7934BB4A(const SceUsbdCompositeDriver *driver)
 {
 	int result;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	if (driver == NULL || driver->name == NULL || driver->probe == NULL ||
@@ -1873,7 +1875,7 @@ SceUID SceUsbdForDriver_1CDBFF9F(int deviceId, SceUsbdEndpointDescriptor *endpoi
 	unsigned int n;
 	int result;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	if (!usbdIsDeviceId(deviceId) || (device = usbdGetDevice(deviceId)) == NULL) {
@@ -1959,7 +1961,7 @@ int SceUsbdForDriver_F304DC5C(SceUID pipeId)
 	UsbdPipe *pipe;
 	int result;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	if (usbdIsPipeId(pipeId) && (pipe = usbdGetPipe(pipeId)) != NULL)
@@ -1975,7 +1977,7 @@ void *SceUsbdForDriver_BC3EF82B(SceUID deviceId, void *start, SceUsbdDescriptorT
 	SceUInt8 *p = start, *end, *found = NULL;
 	UsbdDevice *device;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return NULL;
 	usbdLock();
 	if (!usbdIsDeviceId(deviceId))
@@ -2027,7 +2029,7 @@ int SceUsbdForDriver_2E05660F(SceUID pipeId, const SceUsbdDeviceRequest *req,
 	SceSize length;
 	int result;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	if (!usbdIsPipeId(pipeId) || (pipe = usbdGetPipe(pipeId)) == NULL || req == NULL ||
@@ -2110,7 +2112,7 @@ out:
 int SceUsbdForDriver_235C094A(SceUID pipeId, unsigned char *buffer, unsigned int length,
 			 SceUsbdDoneCallback cb, void *user_data)
 {
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	return usbdTransfer(pipeId, SCE_USBD_ENDPOINT_TRANSFER_TYPE_BULK, buffer, length, cb,
 			    user_data, 1);
@@ -2119,7 +2121,7 @@ int SceUsbdForDriver_235C094A(SceUID pipeId, unsigned char *buffer, unsigned int
 int SceUsbdForDriver_470D5289(int pipeId, unsigned char *buffer, unsigned int length,
 			  SceUsbdDoneCallback cb, void *user_data)
 {
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	return usbdTransfer(pipeId, SCE_USBD_ENDPOINT_TRANSFER_TYPE_BULK, buffer, length, cb,
 			    user_data, 0);
@@ -2128,7 +2130,7 @@ int SceUsbdForDriver_470D5289(int pipeId, unsigned char *buffer, unsigned int le
 int SceUsbdForDriver_A0BF85B8(SceUID pipeId, unsigned char *buffer, SceSize length,
 			      SceUsbdDoneCallback cb, void *user_data)
 {
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	return usbdTransfer(pipeId, SCE_USBD_ENDPOINT_TRANSFER_TYPE_INTERRUPT, buffer, length,
 			    cb, user_data, 1);
@@ -2153,7 +2155,7 @@ int SceUsbdForDriver_2249BF99(SceUID pipeId, UsbdIsochRequest *transfer,
 	SceSize length = 0;
 	int result;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	if (!usbdIsPipeId(pipeId) || (pipe = usbdGetPipe(pipeId)) == NULL ||
@@ -2206,7 +2208,7 @@ int SceUsbdForDriver_C3BECF5F(int deviceId, SceUInt32 *speed)
 	UsbdDevice *device;
 	int result;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	if (speed == NULL) {
@@ -2238,7 +2240,7 @@ int SceUsbdForDriver_0E73D253(SceUID deviceId, SceUInt32 *location)
 	UsbdDevice *device;
 	int result;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	if (location == NULL)
@@ -2259,7 +2261,7 @@ int SceUsbdForDriver_05073925(SceUID deviceId, int *frame, int *mask)
 	UsbdDevice *device;
 	int result;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	if (mask == NULL || frame == NULL)
@@ -2280,7 +2282,7 @@ int SceUsbdForDriver_7938DAC7(SceUID pipeId)
 	UsbdPipe *pipe;
 	int result;
 
-	if (!s_initialized)
+	if (!s_usbd.initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 	usbdLock();
 	if (!usbdIsPipeId(pipeId) || (pipe = usbdGetPipe(pipeId)) == NULL) {
@@ -2306,7 +2308,7 @@ static __always_inline UsbdDevice *usbdFindDevice(unsigned int deviceId)
 	int b, address;
 
 	for (b = 0; b < USBD_BUS_COUNT; b++) {
-		bus = s_bus[b];
+		bus = s_usbd.bus[b];
 		if (bus == NULL || bus->index != USBD_ID_BUS(deviceId))
 			continue;
 		for (address = 1; address < USBD_DEVICES_PER_BUS; address++) {
@@ -2336,7 +2338,7 @@ int sceUsbdInit(SceUID *uid)
 	if (result < 0)
 		goto out;
 	client->pid = result;
-	for (entry = s_clientHead; entry != NULL; entry = entry->next) {
+	for (entry = s_usbd.clientHead; entry != NULL; entry = entry->next) {
 		if (entry == client) {
 			result = SCE_USBD_ERROR_ALREADY_INITIALIZED;
 			goto out;
@@ -2346,7 +2348,7 @@ int sceUsbdInit(SceUID *uid)
 	if (result < 0)
 		goto out;
 	client->semaId = result;
-	USBD_LIST_APPEND(s_clientHead, s_clientTail, client);
+	USBD_LIST_APPEND(s_usbd.clientHead, s_usbd.clientTail, client);
 	result = sceKernelCopyToUser(uid, &client->pid, sizeof(client->pid));
 out:
 	usbdUnlock();
@@ -2367,7 +2369,7 @@ int sceUsbdEnd(SceUID uid)
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
 	}
-	for (entry = s_clientHead; entry != NULL; entry = entry->next) {
+	for (entry = s_usbd.clientHead; entry != NULL; entry = entry->next) {
 		if (entry == client)
 			break;
 	}
@@ -2377,7 +2379,7 @@ int sceUsbdEnd(SceUID uid)
 	}
 	result = sceKernelDeleteSema(client->semaId);
 	if (result >= 0) {
-		USBD_LIST_REMOVE(s_clientHead, s_clientTail, client);
+		USBD_LIST_REMOVE(s_usbd.clientHead, s_usbd.clientTail, client);
 		result = 0;
 		usbdFree(client);
 	}
@@ -2411,7 +2413,7 @@ int sceUsbdGetDeviceList(SceUID uid, SceSize num, UsbdDeviceInfo *info)
 	}
 	count = 0;
 	for (b = 0; b < USBD_BUS_COUNT; b++) {
-		bus = s_bus[b];
+		bus = s_usbd.bus[b];
 		if (bus == NULL)
 			continue;
 		for (address = 1; address < USBD_DEVICES_PER_BUS && count < num; address++) {
@@ -2577,7 +2579,7 @@ int sceUsbdUnregisterLdd(SceUID uid, const char *userName)
 	if (result < 0)
 		goto out;
 	for (b = 0; b < USBD_BUS_COUNT; b++) {
-		bus = s_bus[b];
+		bus = s_usbd.bus[b];
 		if (bus == NULL)
 			continue;
 		for (address = 1; address < USBD_DEVICES_PER_BUS; address++) {
@@ -2593,7 +2595,7 @@ int sceUsbdUnregisterLdd(SceUID uid, const char *userName)
 		}
 	}
 	for (i = 0; i < USBD_DRIVER_COUNT; i++) {
-		driver = s_driver[i];
+		driver = s_usbd.driver[i];
 		if (driver != NULL && strncmp(driver->name, name, 255) == 0)
 			break;
 	}
@@ -2774,7 +2776,7 @@ int sceUsbdAttach(SceUID uid, unsigned int driverId, unsigned int busIndex, unsi
 	usbdLock();
 	if (usbdFindClient(uid) == NULL || driverId >= USBD_DRIVER_COUNT ||
 	    busIndex >= USBD_BUS_COUNT || address - 1 >= USBD_DEVICES_PER_BUS - 1 ||
-	    (bus = s_bus[busIndex]) == NULL) {
+	    (bus = s_usbd.bus[busIndex]) == NULL) {
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
 	}
@@ -2785,7 +2787,7 @@ int sceUsbdAttach(SceUID uid, unsigned int driverId, unsigned int busIndex, unsi
 		result = SCE_USBD_ERROR_ALREADY_INITIALIZED;
 	} else {
 		result = 0;
-		driver = s_driver[driverId];
+		driver = s_usbd.driver[driverId];
 		device->configuration = 0;
 		driver->configuration = 0;
 		driver->interfaceNumber = 0;
@@ -2817,7 +2819,7 @@ int sceUsbdAttachCompositeLdd(SceUID uid, const UsbdAttachCompositeParam *userPa
 	if (result < 0)
 		goto out;
 	if (param.driverId >= USBD_DRIVER_COUNT || param.bus >= USBD_BUS_COUNT ||
-	    param.address - 1 >= USBD_DEVICES_PER_BUS - 1 || (bus = s_bus[param.bus]) == NULL) {
+	    param.address - 1 >= USBD_DEVICES_PER_BUS - 1 || (bus = s_usbd.bus[param.bus]) == NULL) {
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
 	}
@@ -2836,7 +2838,7 @@ int sceUsbdAttachCompositeLdd(SceUID uid, const UsbdAttachCompositeParam *userPa
 	}
 	result = usbdSetConfiguration(device, param.configuration);
 	if (result >= 0) {
-		driver = s_driver[param.driverId];
+		driver = s_usbd.driver[param.driverId];
 		result = 0;
 		device->configuration = param.configuration;
 		driver->configuration = param.configuration;
@@ -2853,8 +2855,8 @@ out:
 static __always_inline void *usbdAllocTransferBuffer(SceSize length)
 {
 	if (length <= USBD_SMALL_BUFFER_SIZE)
-		return usbdAllocBuffer(&s_smallBuffers);
-	return usbdAllocBuffer(&s_largeBuffers);
+		return usbdAllocBuffer(&s_usbd.smallBuffers);
+	return usbdAllocBuffer(&s_usbd.largeBuffers);
 }
 
 /* the user's data into the staging buffer, for an OUT transfer */
@@ -3055,7 +3057,7 @@ int sceUsbdGetTransferStatus(SceUID uid, const UsbdTransferStatusParam *userPara
 	result = sceKernelCopyFromUser(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
-	if (param.requestId >= USBD_REQUEST_COUNT || (request = s_request[param.requestId]) == NULL)
+	if (param.requestId >= USBD_REQUEST_COUNT || (request = s_usbd.request[param.requestId]) == NULL)
 		goto invalid;
 	result = request->result;
 	count = request->count;
@@ -3087,7 +3089,7 @@ int sceUsbdGetIsochTransferStatus(SceUID uid, const UsbdTransferStatusParam *use
 	result = sceKernelCopyFromUser(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
-	if (param.requestId >= USBD_REQUEST_COUNT || (request = s_request[param.requestId]) == NULL)
+	if (param.requestId >= USBD_REQUEST_COUNT || (request = s_usbd.request[param.requestId]) == NULL)
 		goto invalid;
 	requestResult = request->result;
 	status = request->isochStatus;
@@ -3171,7 +3173,7 @@ int sceUsbdResetDevice(SceUID uid, SceUID deviceId)
 	state = sceSyscallEnter();
 	usbdLock();
 	if (usbdFindClient(uid) == NULL || !usbdIsDeviceId(deviceId) ||
-	    (bus = s_bus[USBD_ID_BUS(deviceId)]) == NULL) {
+	    (bus = s_usbd.bus[USBD_ID_BUS(deviceId)]) == NULL) {
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 	} else if ((device = bus->device[USBD_ID_INDEX(deviceId)]) == NULL) {
 		result = SCE_USBD_ERROR_DEVICE_NOT_FOUND;
@@ -3207,31 +3209,31 @@ int sceUsbdRegisterCallback(SceUID cbid, int flag)
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
 	}
-	result = lockFastMutex(&s_mutex);
+	result = lockFastMutex(&s_usbd.mutex);
 	if (result < 0)
 		goto out;
-	if (s_callbackId != -1) {
-		sceKernelUnlockFastMutex(&s_mutex);
+	if (s_usbd.callbackId != -1) {
+		sceKernelUnlockFastMutex(&s_usbd.mutex);
 		result = SCE_USBD_ERROR_NO_MEMORY;
 		goto out;
 	}
-	s_callbackId = guid;
-	s_callbackPid = pid;
-	s_callbackFlags = flag;
-	result = sceKernelRegisterCallbackToEventForDriver(s_eventId, guid, guid);
+	s_usbd.callbackId = guid;
+	s_usbd.callbackPid = pid;
+	s_usbd.callbackFlags = flag;
+	result = sceKernelRegisterCallbackToEventForDriver(s_usbd.eventId, guid, guid);
 	if (result >= 0) {
-		if ((s_callbackFlags & 1) && s_bus[0] != NULL) {
+		if ((s_usbd.callbackFlags & 1) && s_usbd.bus[0] != NULL) {
 			for (address = 0; address < USBD_DEVICES_PER_BUS; address++) {
-				device = s_bus[0]->device[address];
+				device = s_usbd.bus[0]->device[address];
 				if (device != NULL && usbdHasNoDriver(device)) {
-					sceKernelSetEventWithNotifyCallback(s_eventId, 1, 0, 1);
+					sceKernelSetEventWithNotifyCallback(s_usbd.eventId, 1, 0, 1);
 					break;
 				}
 			}
 		}
 		result = 0;
 	}
-	sceKernelUnlockFastMutex(&s_mutex);
+	sceKernelUnlockFastMutex(&s_usbd.mutex);
 out:
 	sceSyscallLeave(state);
 	return result;
@@ -3250,16 +3252,16 @@ int sceUsbdUnregisterCallback(SceUID cbid)
 	result = scePUIDtoGUID(pid, cbid);
 	if (result < 0)
 		goto out;
-	result = lockFastMutex(&s_mutex);
+	result = lockFastMutex(&s_usbd.mutex);
 	if (result < 0)
 		goto out;
-	if (pid == s_callbackPid && cbid == s_callbackId) {
-		s_callbackId = -1;
-		s_callbackPid = -1;
-		s_callbackFlags = 0;
-		sceKernelUnregisterCallbackFromEvent(s_eventId, -1);
+	if (pid == s_usbd.callbackPid && cbid == s_usbd.callbackId) {
+		s_usbd.callbackId = -1;
+		s_usbd.callbackPid = -1;
+		s_usbd.callbackFlags = 0;
+		sceKernelUnregisterCallbackFromEvent(s_usbd.eventId, -1);
 	}
-	sceKernelUnlockFastMutex(&s_mutex);
+	sceKernelUnlockFastMutex(&s_usbd.mutex);
 	result = 0;
 out:
 	sceSyscallLeave(state);
