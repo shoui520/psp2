@@ -30,3 +30,43 @@ void ScePafMisc_FA68B0F5(uint8_t *object, uint32_t value)
 	words[3] = 0;
 	object[17] = 1;
 }
+
+void ScePafMisc_50D7A1CB(float *object, float value)
+{
+	float middle = object[1];
+	float half_width = object[3] * 0.5f;
+	float left = middle + half_width;
+	float difference = value - left;
+
+	object[1] = middle + difference;
+}
+
+void ScePafMisc_8D824321(float *object, float value)
+{
+	float middle = object[0];
+	float half_width = object[2] * 0.5f;
+	float left = middle - half_width;
+	float difference = value - left;
+
+	object[0] = middle + difference;
+}
+
+void ScePafMisc_A76AD90C(float *object, float value)
+{
+	float middle = object[1];
+	float half_width = object[3] * 0.5f;
+	float left = middle - half_width;
+	float difference = value - left;
+
+	object[1] = middle + difference;
+}
+
+void ScePafMisc_DC12F9E7(float *object, float value)
+{
+	float middle = object[0];
+	float half_width = object[2] * 0.5f;
+	float left = middle + half_width;
+	float difference = value - left;
+
+	object[0] = middle + difference;
+}
