@@ -1109,9 +1109,9 @@ PVRSRV_ERROR CreateTransferQueue(PVRSRV_DEVICE_NODE *psDeviceNode,
 	psHWContext = context->contextMemInfo->pvLinAddrKM;
 	psHWContext->ui32Flags = 1;
 	psHWContext->sCCBDevVAddr = context->commandRing->psBufferMemInfo->sDevVAddr;
+	psHWContext->sCCBControlDevVAddr = context->commandRing->psControlMemInfo->sDevVAddr;
 	psHWContext->firmwarePrivateState[0] = 0;
 	psHWContext->firmwarePrivateState[1] = 0;
-	psHWContext->sCCBControlDevVAddr = context->commandRing->psControlMemInfo->sDevVAddr;
 	psHWContext->firmwarePrivateWord = 0;
 	psHWContext->sPDDevPAddr.uiAddr = psMemoryContext->memory.memoryContext->mmu.pageDirectoryPhysicalAddress;
 	if (!psHWContext->sPDDevPAddr.uiAddr)
@@ -1141,7 +1141,7 @@ PVRSRV_ERROR SubmitTransferCommands(IMG_UINT32 *commands, IMG_UINT32 numCommands
 	struct GpuCommandRing *ring;
 	SGXMKIF_2DCMD *psCommand;
 	PVRSRV_2D_SGX_KICK sKick;
-	IMG_UINT32 pid, ui32CommandCount;
+	IMG_UINT32 pid, ui32CommandCount, ui32BufferSize;
 	PVRSRV_ERROR eError;
 
 	if (!commands || !context || numCommands > 25)
@@ -1153,11 +1153,12 @@ PVRSRV_ERROR SubmitTransferCommands(IMG_UINT32 *commands, IMG_UINT32 numCommands
 	psCommand = AcquireCommandRingSpace(ring, 256, &context->waitGeneration);
 	if (psCommand) {
 		OSMemSet(&sKick, 0, sizeof(sKick));
+		ui32BufferSize = ring->ui32BufferSize;
 		sKick.commandMemory.memoryInfo = ring->psBufferMemInfo;
 		sKick.ui32SharedCmdCCBOffset = *ring->pui32WriteOffset +
 				offsetof(SGXMKIF_2DCMD, sShared);
 		*ring->pui32WriteOffset = (*ring->pui32WriteOffset + 256) &
-				(ring->ui32BufferSize - 1);
+				(ui32BufferSize - 1);
 		OSMemSet(psCommand, 0, sizeof(*psCommand));
 		psCommand->ui32CommandSize = 256;
 		psCommand->ui32NumCommands = numCommands;
@@ -1174,7 +1175,8 @@ PVRSRV_ERROR SubmitTransferCommands(IMG_UINT32 *commands, IMG_UINT32 numCommands
 		sKick.hDevMemContext = context->memoryContext;
 		if (status) {
 			sKick.ui32NumStatusVals = 1;
-			sKick.sStatusUpdate = *status;
+			sKick.sStatusUpdate.sCtlStatus = status->sCtlStatus;
+			sKick.sStatusUpdate.memory.memoryHandle = status->memory.memoryHandle;
 		} else {
 			sKick.ui32NumStatusVals = 0;
 		}
