@@ -187,3 +187,18 @@ void ScePafMisc_9EBE483F(float *object, const float *dimensions)
 	object[2] = dimensions[0] >= 0.0f ? dimensions[0] : 0.0f;
 	object[3] = dimensions[1] >= 0.0f ? dimensions[1] : 0.0f;
 }
+
+int ScePafMisc_79CFC202(uint8_t *object)
+{
+	uint32_t first, second;
+
+	if (!object[17])
+		return 0;
+	first = *(uint32_t *)(object + 8);
+	second = *(uint32_t *)(object + 12);
+	if (first * second) {
+		object[17] = 0;
+		object[16] = 0;
+	}
+	return 1;
+}
