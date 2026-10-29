@@ -8,6 +8,10 @@ uint32_t sce_paf_misc_limit_eea0;
 uint32_t sce_paf_misc_ticks_d550;
 uint32_t sce_paf_misc_limit_d554;
 uint8_t sce_paf_misc_active_1090;
+uint32_t sce_paf_misc_flags_d548;
+uint32_t sce_paf_misc_value_cf08;
+uint32_t sce_paf_misc_counter_c224;
+uint32_t sce_paf_misc_value_d41c;
 
 uint32_t ScePafMisc_4E93C051(void)
 {
@@ -69,4 +73,39 @@ int ScePafMisc_874753FD(void)
 	sce_paf_misc_ticks_d550++;
 	sce_paf_misc_active_1090 = 1;
 	return 1;
+}
+
+uint32_t ScePafMisc_FD24539D(void)
+{
+	return sce_paf_misc_flags_d548;
+}
+
+uint32_t ScePafMisc_2DFE8975(uint32_t mask)
+{
+	sce_paf_misc_flags_d548 |= mask;
+	return sce_paf_misc_flags_d548;
+}
+
+uint32_t ScePafMisc_E9A4171E(void)
+{
+	return sce_paf_misc_value_cf08;
+}
+
+int ScePafMisc_951B7B59(uint32_t value)
+{
+	sce_paf_misc_value_cf08 = value;
+	return 1;
+}
+
+uint32_t *ScePafMisc_7E6CA20C(void)
+{
+	sce_paf_misc_counter_c224++;
+	return &sce_paf_misc_counter_c224;
+}
+
+uint32_t ScePafMisc_7F98B644(uint32_t value)
+{
+	uint32_t previous = sce_paf_misc_value_d41c;
+	sce_paf_misc_value_d41c = value;
+	return previous;
 }
