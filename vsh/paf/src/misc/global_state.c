@@ -36,6 +36,7 @@ uint32_t sce_paf_misc_flags_ee00[2];
 uint32_t sce_paf_misc_cells_da60[2][8][8];
 uint32_t sce_paf_misc_counters_d200[7];
 uint32_t sce_paf_misc_limits_d21c[7];
+uint32_t sce_paf_misc_masks_d498[5][6];
 
 uint32_t ScePafMisc_4E93C051(void)
 {
@@ -361,4 +362,15 @@ uint32_t *ScePafMisc_68657766(void)
 			sce_paf_misc_limits_d21c[index]++;
 	}
 	return sce_paf_misc_limits_d21c + 7;
+}
+
+uint32_t ScePafMisc_C4E8CBE6(uint32_t mask)
+{
+	uint32_t flags = sce_paf_misc_flags_d548;
+	int32_t mode = (int32_t)sce_paf_misc_value_d510;
+	const uint32_t *entry = mode < 5 ?
+		sce_paf_misc_masks_d498[mode] : sce_paf_misc_masks_d498[0];
+	uint32_t result = (mask & entry[2]) | flags;
+	sce_paf_misc_flags_d548 = result;
+	return result;
 }
