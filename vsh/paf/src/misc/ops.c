@@ -225,3 +225,17 @@ int ScePafMisc_37897945(void *unused, const char *const *left,
 {
 	return sce_paf_strcasecmp(*left, *right) > 0;
 }
+
+int ScePafMisc_78C1E8AD(const int32_t *object)
+{
+	return object[4] <= 1;
+}
+
+void *ScePafMisc_0A03ECFD(const uint32_t *object, uint32_t index)
+{
+	uint32_t count = object[2] * object[3];
+
+	if (index >= count)
+		return NULL;
+	return (void *)(uintptr_t)(object[0] + (index << 3));
+}
