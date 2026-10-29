@@ -1,6 +1,7 @@
 /* IMG handle core adapted for the SCE port. Pristine reference and license:
  * contrib/img-sgx-ddk-1.7.862890/services4/srvkm/common/handle.c.
  */
+#include <stddef.h>
 #include "handle-types.h"
 #include <gpu/osfunc_sce.h>
 
@@ -167,11 +168,19 @@ PVRSRV_ERROR IncreaseHandleArraySize(PVRSRV_HANDLE_BASE *psBase,
 #define INDEX_TO_HANDLE_STRUCT_PTR(psBase, index) \
 	(&(psBase)->psHandleArray[(index) >> 8].psHandle[(index) & 0xff])
 
+/* IMG's list pointer of entry i: its child list when i is the parent, else its siblings */
+#define LIST_PTR_FROM_INDEX_AND_OFFSET(psBase, i, p, po, eo) \
+	((struct sHandleList *)((IMG_CHAR *)INDEX_TO_HANDLE_STRUCT_PTR(psBase, i) + \
+		((i) == (p) ? (po) : (eo))))
+#define CHILDREN_OFFSET offsetof(struct sHandle, sChildren)
+#define SIBLINGS_OFFSET offsetof(struct sHandle, sSiblings)
+
 /* IMG FreeHandle and its inlined list helpers, without generic diagnostics. */
 PVRSRV_ERROR FreeHandle(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHandle)
 {
 	IMG_UINT32 aKey[3];
 	IMG_UINT32 ui32Index = psHandle->ui32Index;
+	IMG_UINT32 ui32EntryIndex;
 	IMG_UINT32 ui32ChildIndex;
 	IMG_UINT32 ui32Parent;
 	PVRSRV_ERROR eError;
@@ -181,23 +190,19 @@ PVRSRV_ERROR FreeHandle(PVRSRV_HANDLE_BASE *psBase, struct sHandle *psHandle)
 	aKey[2] = psHandle->eFlag & 4 ? psHandle->sSiblings.hParent : 0;
 	if (!(psHandle->eFlag & 2) && !(psHandle->eInternalFlag & 2))
 		HASH_Remove_Extended(psBase->psHashTab, aKey);
-	if (psHandle->sSiblings.ui32Next != psHandle->ui32Index) {
-		struct sHandle *psPrevHandle = INDEX_TO_HANDLE_STRUCT_PTR(psBase,
-				psHandle->sSiblings.ui32Prev);
-		struct sHandle *psNextHandle = INDEX_TO_HANDLE_STRUCT_PTR(psBase,
-				psHandle->sSiblings.ui32Next);
-		struct sHandleList *psPrev;
-		struct sHandleList *psNext;
+	ui32EntryIndex = psHandle->ui32Index;
+	if (psHandle->sSiblings.ui32Next != ui32EntryIndex) {
+		struct sHandleList *psPrev = LIST_PTR_FROM_INDEX_AND_OFFSET(psBase,
+				psHandle->sSiblings.ui32Prev, psHandle->sSiblings.hParent - 1,
+				CHILDREN_OFFSET, SIBLINGS_OFFSET);
+		struct sHandleList *psNext = LIST_PTR_FROM_INDEX_AND_OFFSET(psBase,
+				psHandle->sSiblings.ui32Next, psHandle->sSiblings.hParent - 1,
+				CHILDREN_OFFSET, SIBLINGS_OFFSET);
 
-		ui32Parent = psHandle->sSiblings.hParent - 1;
-		psPrev = psHandle->sSiblings.ui32Prev == ui32Parent ?
-				&psPrevHandle->sChildren : &psPrevHandle->sSiblings;
-		psNext = psHandle->sSiblings.ui32Next == ui32Parent ?
-				&psNextHandle->sChildren : &psNextHandle->sSiblings;
 		psPrev->ui32Next = psHandle->sSiblings.ui32Next;
 		psNext->ui32Prev = psHandle->sSiblings.ui32Prev;
-		psHandle->sSiblings.ui32Prev = psHandle->ui32Index;
-		psHandle->sSiblings.ui32Next = psHandle->ui32Index;
+		psHandle->sSiblings.ui32Prev = ui32EntryIndex;
+		psHandle->sSiblings.ui32Next = ui32EntryIndex;
 		psHandle->sSiblings.hParent = 0;
 	}
 	ui32Parent = psHandle->sChildren.hParent - 1;

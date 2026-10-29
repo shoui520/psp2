@@ -506,28 +506,23 @@ int SGXAddRenderTargetBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	PVRSRV_DEVICE_NODE *psDeviceNode;
+	IMG_SID hRenderTarget;
 	SGX_RTDATASET *psRTDataSet = 0;
 	SGX_ADDRENDTARG target;
-	IMG_SID hRenderTarget;
 	GpuRenderTargetResource *resource;
-	IMG_UINT32 count;
-	IMG_UINT32 limit;
+	IMG_BOOL full;
 
 	if ((psBridgeIn->target.ui32Flags & 0x180000) == 0x180000) {
 		psBridgeOut->eError = PVRSRV_ERROR_INVALID_PARAMS;
 		return 0;
 	}
-	if (psBridgeIn->target.ui32Flags & 0x80000) {
-		count = psPerProc->numRenderTargets[1];
-		limit = 3;
-	} else if (psBridgeIn->target.ui32Flags & 0x100000) {
-		count = psPerProc->numRenderTargets[2];
-		limit = 1;
-	} else {
-		count = psPerProc->numRenderTargets[0];
-		limit = 47;
-	}
-	if (count > limit) {
+	if (psBridgeIn->target.ui32Flags & 0x80000)
+		full = psPerProc->numRenderTargets[1] > 3;
+	else if (psBridgeIn->target.ui32Flags & 0x100000)
+		full = psPerProc->numRenderTargets[2] > 1;
+	else
+		full = psPerProc->numRenderTargets[0] > 47;
+	if (full) {
 		psBridgeOut->eError = (PVRSRV_ERROR)184;
 		return 0;
 	}
@@ -617,11 +612,11 @@ int SGXCreateRenderContextBW(IMG_UINT32 ui32BridgeID,
 		SGX_BRIDGE_OUT_CREATE_RENDER_CONTEXT *psBridgeOut,
 		PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
+	struct PVRSRV_KERNEL_MEM_INFO *visTestMemInfo;
 	PVRSRV_DEVICE_NODE *psDeviceNode;
+	IMG_SID hRenderContext;
 	struct SGX_RENDERCONTEXT *psRenderContext = 0;
 	SGX_CREATERENDERCONTEXT context;
-	struct PVRSRV_KERNEL_MEM_INFO *visTestMemInfo;
-	IMG_SID hRenderContext;
 
 	psBridgeOut->eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
 			(IMG_VOID **)&psDeviceNode, psBridgeIn->hDevCookie, 2);
@@ -780,14 +775,16 @@ int SGXGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_IN_SGXGETMISCINFO *psBridgeIn,
 		PVRSRV_BRIDGE_RETURN *psBridgeOut, PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
+	IMG_HANDLE hDevCookieInt;
 	PVRSRV_DEVICE_NODE *psDeviceNode;
 	PVRSRV_SGXDEV_INFO *psDevInfo;
 	SGX_MISC_INFO miscInfo;
 
 	psBridgeOut->eError = PVRSRVLookupHandle(psPerProc->psHandleBase,
-			(IMG_VOID **)&psDeviceNode, psBridgeIn->hDevCookie, 2);
+			&hDevCookieInt, psBridgeIn->hDevCookie, 2);
 	if (psBridgeOut->eError != PVRSRV_OK)
 		return 0;
+	psDeviceNode = hDevCookieInt;
 	if (!psDeviceNode)
 		return -14;
 	psDevInfo = psDeviceNode->pvDevice;
@@ -966,8 +963,8 @@ int SGXDoKickInternal(PVRSRV_BRIDGE_IN_DOKICK *psBridgeIn,
 		PVRSRV_BRIDGE_OUT_DOKICK *psBridgeOut, PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
 	PVRSRV_DEVICE_NODE *psDeviceNode;
-	struct PVRSRV_KERNEL_SYNC_INFO *psRenderSync;
 	IMG_SID hRenderSync;
+	struct PVRSRV_KERNEL_SYNC_INFO *psRenderSync;
 	SGX_KICKTA_RESULT result;
 	SGX_KICKTA kick;
 	PVRSRV_ERROR eError;

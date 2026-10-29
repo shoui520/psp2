@@ -126,12 +126,11 @@ IMG_INT PVRSRVGetMappedMemoryInfoBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_OUT_GET_MAPPED_MEMORY_INFO *psBridgeOut,
 		PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
+	GpuMappedMemoryList *list = psPerProc->memoryContext;
 	GpuMappedMemory info;
 
 	psBridgeOut->eError = PVRSRV_ERROR_INVALID_PARAMS;
-	if (psPerProc->memoryContext &&
-			QueryMappedMemory(psPerProc->memoryContext,
-				psBridgeIn->cpuAddress, &info) == PVRSRV_OK) {
+	if (list && QueryMappedMemory(list, psBridgeIn->cpuAddress, &info) == PVRSRV_OK) {
 		psBridgeOut->eError = PVRSRV_OK;
 		psBridgeOut->cpuAddress = info.cpuAddress;
 		psBridgeOut->size = info.size;
@@ -177,12 +176,18 @@ IMG_INT PVRSRVCheckGpuMappingBW(IMG_UINT32 ui32BridgeID,
 		return 0;
 	result = CheckGpuMmuMapping(&context->mmu,
 			psBridgeIn->deviceAddress.uiAddr, psBridgeIn->size, flags);
-	if (result >= (IMG_INT)0x804c0002 && result <= (IMG_INT)0x804c0003)
-		psBridgeOut->eError = PVRSRV_ERROR_MAPPING_NOT_FOUND;
-	else if (!result)
+	switch (result) {
+	case 0:
 		psBridgeOut->eError = PVRSRV_OK;
-	else
+		break;
+	case (IMG_INT)0x804c0002:
+	case (IMG_INT)0x804c0003:
+		psBridgeOut->eError = PVRSRV_ERROR_MAPPING_NOT_FOUND;
+		break;
+	default:
 		psBridgeOut->eError = PVRSRV_ERROR_INVALID_PARAMS;
+		break;
+	}
 	return 0;
 }
 
@@ -220,13 +225,15 @@ IMG_INT PVRSRVRegisterMemBlockBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_OUT_REGISTER_MEMBLOCK *psBridgeOut,
 		PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
+	IMG_BOOL restoreMapping = psBridgeIn->restoreMapping;
+
 	if (psBridgeIn->blockGroupId == 1) {
 		psBridgeOut->eError = PVRSRV_ERROR_INVALID_PARAMS;
 	} else {
 		psBridgeOut->blockGroupId = psBridgeIn->blockGroupId;
 		psBridgeOut->eError = PVRSRVRegisterMemBlockKM(psPerProc,
 				psBridgeIn->memBlockUid, &psBridgeOut->blockGroupId,
-				psBridgeIn->restoreMapping);
+				restoreMapping);
 	}
 	return 0;
 }
@@ -1071,7 +1078,7 @@ IMG_INT PVRSRVCreateSyncInfoModObjBW(IMG_UINT32 ui32BridgeID, IMG_VOID *psBridge
 		PVRSRV_BRIDGE_OUT_CREATE_SYNC_INFO_MOD_OBJ *psBridgeOut,
 		PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
-	MODIFY_SYNC_OP_INFO *psModSyncOpInfo;
+	MODIFY_SYNC_OP_INFO *psModSyncOpInfo, *info;
 	IMG_UINT32 i, mask;
 
 	psBridgeOut->eError = NewHandleBatch(psPerProc, 1);
@@ -1100,9 +1107,10 @@ IMG_INT PVRSRVCreateSyncInfoModObjBW(IMG_UINT32 ui32BridgeID, IMG_VOID *psBridge
 		psBridgeOut->eError = PVRSRV_ERROR_OUT_OF_MEMORY;
 		return 0;
 	}
+	info = psModSyncOpInfo;
 	psPerProc->syncModObjectMask |= mask;
-	psModSyncOpInfo->hResItem = ResManRegisterRes(psPerProc->hResManContext,
-			19, psModSyncOpInfo, 0, ModifyCompleteSyncOpsCallBack);
+	info->hResItem = ResManRegisterRes(psPerProc->hResManContext, 19, info, 0,
+			ModifyCompleteSyncOpsCallBack);
 	psPerProc->bHandlesBatched = IMG_FALSE;
 	psBridgeOut->eError = PVRSRVCommitHandleBatch(psPerProc->psHandleBase);
 	return 0;
@@ -1267,9 +1275,9 @@ IMG_INT PVRSRVAllocDeviceMemBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM *psAllocDeviceMemOUT,
 		PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
+	PVRSRV_KERNEL_MEM_INFO *psMemInfo;
 	PVRSRV_DEVICE_NODE *psDeviceNode;
 	struct GpuHeap *heap;
-	PVRSRV_KERNEL_MEM_INFO *psMemInfo;
 
 	if (psAllocDeviceMemIN->hMemBlockProcRef <= 1 ||
 			!(psAllocDeviceMemIN->ui32Attribs & 0x400000)) {
