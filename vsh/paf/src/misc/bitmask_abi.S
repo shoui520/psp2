@@ -149,3 +149,15 @@ ScePafMisc_2B325CC6:
 	pop {r4, pc}
 	.fnend
 	.size ScePafMisc_2B325CC6, . - ScePafMisc_2B325CC6
+
+	.global ScePafMisc_9CE18975
+	.type ScePafMisc_9CE18975, %function
+	.thumb_func
+ScePafMisc_9CE18975:
+	.fnstart
+	push {r4, lr}
+	ldr r0, [r0, #0x2c]
+	bl ScePafMisc_2B325CC6
+	pop {r4, pc}
+	.fnend
+	.size ScePafMisc_9CE18975, . - ScePafMisc_9CE18975
