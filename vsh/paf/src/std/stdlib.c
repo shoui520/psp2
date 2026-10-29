@@ -528,9 +528,17 @@ int sce_paf_abs(int value)
 	return value;
 }
 
+/* The native failure trap invokes this export out-of-line. */
+__attribute__((noinline))
 int ScePafStdc_D41FD265(void)
 {
 	return 0;
+}
+
+void ScePafStdc_19BB4B73(void)
+{
+	ScePafStdc_D41FD265();
+	__breakpoint(0);
 }
 
 int ScePafStdc_323FC518(void)

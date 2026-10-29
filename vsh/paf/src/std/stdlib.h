@@ -38,6 +38,7 @@ int sce_paf_rand(void);
 
 void *GetGlobalHeapAllocator(void);
 int ScePafStdc_D41FD265(void);
+void ScePafStdc_19BB4B73(void);
 int ScePafStdc_D608246A(void);
 
 void *sce_paf_realloc(void *ptr, size_t size);
