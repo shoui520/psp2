@@ -106,3 +106,13 @@ void ScePafMisc_B421A294(float *destination, const float *rectangle)
 	destination[0] = x + width * 0.5f;
 	destination[1] = y + height * 0.5f;
 }
+
+void ScePafMisc_493F95E4(float *object, float value)
+{
+	object[2] = value >= 0.0f ? value : 0.0f;
+}
+
+void ScePafMisc_824BCB1E(float *object, float value)
+{
+	object[3] = value >= 0.0f ? value : 0.0f;
+}
