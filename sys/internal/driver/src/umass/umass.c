@@ -173,13 +173,15 @@ static void dataDone(int result, int count, void *arg)
 
 	dev->result = result;
 	dev->count = count;
-	if (!result && count >= 0)
-		dev->transferred += count;
+	if (!result) {
+		if (count >= 0)
+			dev->transferred += count;
+	}
 	sceKernelSetEventFlag(dev->eventFlag, 1);
 }
 
 /* name unknown */
-static int waitTransfer(UsbMassDevice *dev, unsigned int mode)
+static inline __attribute__((always_inline)) int waitTransfer(UsbMassDevice *dev, unsigned int mode)
 {
 	unsigned int bits;
 	int ret = sceKernelWaitEventFlag(dev->eventFlag, 3, mode, &bits, NULL);
@@ -243,7 +245,7 @@ static int _sceUsbMassProbe(int deviceId)
 }
 
 /* name unknown */
-static int clearHalt(UsbMassDevice *dev, SceUsbdEndpointDescriptor *endpoint, int inspect)
+static inline __attribute__((always_inline)) int clearHalt(UsbMassDevice *dev, SceUsbdEndpointDescriptor *endpoint, int inspect)
 {
 	SceUsbdDeviceRequest req = {
 		.bmRequestType = SCE_USBD_REQTYPE_RECIP_ENDPOINT,
@@ -342,7 +344,7 @@ static int _sceUsbMassDoCBW(UsbMassDevice *dev, UsbMassCbw *cbw, SceUInt8 *buffe
 	return ret;
 }
 
-static int _sceUsbMassDoCSW(UsbMassDevice *dev, UsbMassCbw *cbw, UsbMassCsw *csw, int requestSense);
+static int __attribute__((noinline, noclone)) _sceUsbMassDoCSW(UsbMassDevice *dev, UsbMassCbw *cbw, UsbMassCsw *csw, int requestSense);
 
 /* a little-endian USB field, stored a byte at a time */
 static inline void putLe32(void *field, SceUInt32 value)
@@ -356,7 +358,7 @@ static inline void putLe32(void *field, SceUInt32 value)
 }
 
 /* name unknown */
-static void newCommand(UsbMassDevice *dev, UsbMassCbw *cbw, unsigned int length,
+static inline __attribute__((always_inline)) void newCommand(UsbMassDevice *dev, UsbMassCbw *cbw, unsigned int length,
 		       unsigned int direction, unsigned int cbLength, unsigned int opcode)
 {
 	memset(cbw, 0, UMASS_CBW_SIZE);
@@ -394,7 +396,7 @@ static void _sceUsbMassDoRequestSense(UsbMassDevice *dev)
 	dev->count = count;
 }
 
-static int _sceUsbMassDoCSW(UsbMassDevice *dev, UsbMassCbw *cbw, UsbMassCsw *csw, int requestSense)
+static int __attribute__((noinline, noclone)) _sceUsbMassDoCSW(UsbMassDevice *dev, UsbMassCbw *cbw, UsbMassCsw *csw, int requestSense)
 {
 	int ret, tries = 1;
 
@@ -672,7 +674,8 @@ int _sceUsbMassGetDevInfo(SceUsbMassDevInfo *info)
 			logError("_sceUsbMassGetDevInfo", "ReadCapacity CBW/Data failed %#x\n", ret);
 		ret = _sceUsbMassDoCSW(dev, &dev->cbw, &dev->csw, 1);
 		if (ret >= 0) {
-			dev->readOnly = ((ScsiModeHeader *)dev->buffer)->deviceSpecific >> 7;
+			/* Sony tests bit 7 of the block descriptor length, not the WP bit */
+			dev->readOnly = ((ScsiModeHeader *)dev->buffer)->blockDescriptorLength >> 7;
 			info->sectorCount = dev->sectors;
 			info->blockSize = dev->sectorSize;
 			info->writeProtected = dev->readOnly;
@@ -690,7 +693,7 @@ unlock:
 }
 
 /* name unknown: common body of the two sector entry points */
-static int transferSectors(unsigned int sector, SceUInt8 *buffer, unsigned int count, int input)
+static inline __attribute__((always_inline)) int transferSectors(unsigned int sector, SceUInt8 *buffer, unsigned int count, int input)
 {
 	UsbMassDevice *dev = attached;
 	unsigned int chunk;
@@ -760,7 +763,7 @@ int SceUsbMassForDriver_3C821E99(int intr, unsigned int subintr)
 
 	if (intr != 15)
 		return (int)SCE_ERROR_ERRNO_EINVAL;
-	sceKernelAtomicGetAndOr32(&enabled, bit < 32 ? 1U << bit : 0);
+	sceKernelAtomicGetAndOr32(&enabled, 1U << bit);
 	return 0;
 }
 
@@ -770,7 +773,7 @@ int SceUsbMassForDriver_7833D935(int intr, unsigned int subintr)
 
 	if (intr != 15)
 		return (int)SCE_ERROR_ERRNO_EINVAL;
-	sceKernelAtomicGetAndClear32(&enabled, bit < 32 ? 1U << bit : 0);
+	sceKernelAtomicGetAndClear32(&enabled, 1U << bit);
 	return 0;
 }
 
