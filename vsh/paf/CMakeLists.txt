@@ -93,6 +93,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/matrix_inverse_abi.S
 	src/misc/enum_table_abi.S
 	src/misc/vector_poly_abi.S
+	src/misc/vector_poly_alt_abi.S
 	src/misc/vector_abi.S
 	src/misc/rect_vector_abi.S
 	src/misc/list_abi.S
