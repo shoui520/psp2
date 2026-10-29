@@ -156,6 +156,14 @@ float sce_paf_cosf(float x)
 	return number.value;
 }
 
+float sce_paf_tanf(float x)
+{
+	float sine = sce_paf_sinf(x);
+	float cosine = sce_paf_cosf(x);
+
+	return sine / cosine;
+}
+
 float AtanApprox(float x)
 {
 	float square, polynomial, offset, product, numerator;
