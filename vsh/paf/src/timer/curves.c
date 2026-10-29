@@ -265,6 +265,38 @@ float TimerDoFunc72(float rate, const float *param)
 	return base + ((amplitude * direction) * cosine) * 0.5f;
 }
 
+float TimerDoFunc71(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	return 1.0f - TimerDoFunc72(1.0f - rate, param);
+}
+
+float TimerDoFunc73(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return TimerDoFunc71(rate * 2.0f, param) * 0.5f;
+	return (1.0f - TimerDoFunc71(2.0f - rate * 2.0f, param)) *
+		0.5f + 0.5f;
+}
+
+float TimerDoFunc74(float rate, const float *param)
+{
+	if (rate >= 1.0f)
+		return 1.0f;
+	if (rate <= 0.0f)
+		return 0.0f;
+	if (rate < 0.5f)
+		return (1.0f - TimerDoFunc71(1.0f - rate * 2.0f, param)) * 0.5f;
+	return TimerDoFunc71(rate * 2.0f + -1.0f, param) * 0.5f + 0.5f;
+}
+
 float TimerDoFunc75(float rate, const float *param)
 {
 	float scale, coefficient;
