@@ -943,7 +943,7 @@ static int ehciSubmitSitd(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 	if (request == NULL)
 		return SCE_USBD_ERROR_INVALID_PARAM;
 	packets = request->isochRequest.numPackets;
-	if (ehci->freeCount.sitd < packets) {
+	if ((unsigned int)ehci->freeCount.sitd < (unsigned int)packets) {
 		if (pipe->waiting)
 			ehciUnwaitPipe(ehci, pipe);
 		return 0;
@@ -1048,7 +1048,7 @@ static int ehciSubmitControl(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 	SceUsbdDeviceRequest *setup;
 	EhciQh *qh;
 	EhciQtd *qtd;
-	int count;
+	unsigned int count;
 
 	if (request != NULL)
 		USBD_LIST_APPEND(pipe->requestHead, pipe->requestTail, request);
