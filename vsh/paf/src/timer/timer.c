@@ -8,6 +8,7 @@ extern int ScePafStdc_D608246A(void);
 float TimerTickUnit = 1.0f / 60.0f;
 float TimerTickInv = 60.0f;
 float TimerTickInterval = 1.0f;
+TimerListenerList *s_default_list;
 
 static const float s_default_params_0[4] = { 0.2f, 1.5f, 0.0f, 0.0f };
 static const float s_default_params_1[4] = { 0.15f, -0.08f, 0.0f, 0.0f };
@@ -609,6 +610,41 @@ TimerListenerList *TimerListenerListConstruct(TimerListenerList *self)
 TimerListenerList *TimerListenerListConstructBase(TimerListenerList *self)
 {
 	return TimerListenerListInitialize(self);
+}
+
+void TimerListenerListInit(void)
+{
+	TimerListenerList *list = PafNew(sizeof(*list));
+
+	if (list)
+		TimerListenerListConstruct(list);
+	s_default_list = list;
+}
+
+void TimerListenerListExit(void)
+{
+	TimerListenerList *list = s_default_list;
+	ListenerParamNode *root;
+
+	if (!list)
+		return;
+	ScePafThread_8CCECAC9(&list->m_list_mutex);
+	root = list->m_list.root_node;
+	if (root) {
+		ListenerParamNode *node = root->next;
+
+		while (node != root) {
+			ListenerParamNode *next = node->next;
+
+			PafDelete(node);
+			root = list->m_list.root_node;
+			node = next;
+		}
+		PafDelete(root);
+	}
+	list->m_list.root_node = (ListenerParamNode *)(uintptr_t)-1;
+	list->m_list.count = (unsigned int)-1;
+	PafDelete(list);
 }
 
 void TimerListenerListUpdate(TimerListenerList *self)
