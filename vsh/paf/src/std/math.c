@@ -1,5 +1,17 @@
 #include "math.h"
 
+float sce_paf_ceilf(float x)
+{
+	float truncated;
+
+	if (x < -2147483648.0f || x > 2147483648.0f)
+		return x;
+	truncated = (float)FloatToInt(x);
+	if (x >= 0.0f && x - truncated > 0.0f)
+		truncated += 1.0f;
+	return truncated;
+}
+
 float sce_paf_floorf(float x)
 {
 	float truncated;
