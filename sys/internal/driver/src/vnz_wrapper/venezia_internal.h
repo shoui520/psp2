@@ -791,7 +791,7 @@ int initializeVeneziaVipProcesses(void);
 int _sceHwd0ProcessCreateEntry(SceUID pid, SceUInt32 type);
 int releaseVeneziaVipProcessStorage(SceUID pid, SceUInt32 type);
 VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid);
-int waitVeneziaVipProcessReady(void);
+int _sceVipCheckProcessSuspend(void);
 int _sceHwd0StartProcessSuspend(SceUID pid);
 int isHwdProcessSuspended(SceUID pid);
 int _sceHwd0ProcessResume(SceUID pid);

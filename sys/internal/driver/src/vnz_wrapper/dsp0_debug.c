@@ -3280,7 +3280,7 @@ int registerVeneziaVipCallback(unsigned int processor, SceUID uid, uint32_t even
 	VeneziaDebugCallback *callbacks, *callback;
 	int ret, kind, saved;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -3338,7 +3338,7 @@ int unregisterVeneziaVipCallback(unsigned int processor, SceUID uid)
 	VeneziaVipProcessStorage *storage;
 	int ret, kind;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -3382,7 +3382,7 @@ int getVeneziaVipCaptureRequirements(const VeneziaDebugImageFormat *geometry,
 	VeneziaVipProcessStorage *storage;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -3419,7 +3419,7 @@ int getVeneziaVipCaptureStorageSize(const VeneziaDebugImageGeometry *geometry,
 	SceSize scratch;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -3453,7 +3453,7 @@ int registerVeneziaVipCapture(unsigned int *processor, const VeneziaVipCapturePa
 	SceSize scratch __attribute__((aligned(8)));
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -3531,7 +3531,7 @@ int unregisterVeneziaVipCapture(unsigned int processor, int wait, SceUID pid)
 	int captureProcessor, ret = 0;
 
 	if (wait) {
-		ret = waitVeneziaVipProcessReady();
+		ret = _sceVipCheckProcessSuspend();
 		if (ret < 0)
 			return ret;
 	}
@@ -3574,7 +3574,7 @@ int getVeneziaVipTraceAvailable(unsigned int processor)
 	SceSize available;
 	int ret, captureProcessor, capacity;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -3605,7 +3605,7 @@ unlock:
 /* name unknown: this entry rejects the operation after validating process state. */
 int rejectVeneziaVipProcessOperation(void)
 {
-	int ret = waitVeneziaVipProcessReady();
+	int ret = _sceVipCheckProcessSuspend();
 
 	if (ret < 0)
 		return ret;
@@ -3628,7 +3628,7 @@ int processVeneziaVipCapture(unsigned int processor, const VeneziaVipVideoInput 
 	SceUInt timeout __attribute__((aligned(8))) = 8000;
 	int ret, capacity, deferredError = 0;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -3773,7 +3773,7 @@ int submitVeneziaVipCapture(unsigned int processor, const VeneziaVipVideoInput *
 	int ret, capacity, deferredError = 0;
 
 	snapshots.count = 0;
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -3951,7 +3951,7 @@ int processVeneziaVipRawCapture(unsigned int processor, const VeneziaVipRawInput
 	SceUInt timeout __attribute__((aligned(8))) = 8000;
 	int ret, capacity, deferredError = 0;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -4106,7 +4106,7 @@ int submitVeneziaVipRawCapture(unsigned int processor, const VeneziaVipRawInput 
 	int ret, capacity, deferredError = 0;
 
 	snapshots.count = 0;
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -4250,7 +4250,7 @@ int waitVeneziaVipCapture(unsigned int processor, VeneziaDebugSnapshotList *list
 	SceUInt timeout = timeoutValue ? *timeoutValue : 8000;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -4355,7 +4355,7 @@ int drainVeneziaVipCapture(unsigned int processor, VeneziaDebugSnapshotList *lis
 	int requestState;
 	int ret, requestRet;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -4470,7 +4470,7 @@ int resetVeneziaVipCapture(unsigned int processor)
 	VeneziaVipProcessStorage *storage;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -4495,7 +4495,7 @@ int consumeVeneziaVipCapture(unsigned int processor)
 	unsigned int captureProcessor, consumed = 0;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -6643,7 +6643,7 @@ cleanup:
 int SceCodecEngineWrapperForDriver_2B7CC150(unsigned int mode)
 {
 	VeneziaVipProcessStorage *storage;
-	int ret = waitVeneziaVipProcessReady();
+	int ret = _sceVipCheckProcessSuspend();
 
 	if (ret < 0)
 		return ret;
@@ -6663,7 +6663,7 @@ int SceCodecEngineWrapperForDriver_86861877(unsigned int flags, int wait, SceUID
 	int ret = -2147418017;
 
 	if (wait) {
-		ret = waitVeneziaVipProcessReady();
+		ret = _sceVipCheckProcessSuspend();
 		if (ret < 0)
 			return ret;
 	}
@@ -6690,7 +6690,7 @@ int SceCodecEngineWrapperForDriver_86861877(unsigned int flags, int wait, SceUID
 int SceCodecEngineWrapperForDriver_62996F94(unsigned int value, unsigned int mask)
 {
 	VeneziaVipProcessStorage *storage;
-	int ret = waitVeneziaVipProcessReady();
+	int ret = _sceVipCheckProcessSuspend();
 
 	if (ret < 0)
 		return ret;
@@ -6718,7 +6718,7 @@ int SceCodecEngineWrapperForDriver_62996F94(unsigned int value, unsigned int mas
 int SceCodecEngineWrapperForDriver_54F39D1D(unsigned int size)
 {
 	VeneziaVipProcessStorage *storage;
-	int ret = waitVeneziaVipProcessReady();
+	int ret = _sceVipCheckProcessSuspend();
 
 	if (ret < 0)
 		return ret;
@@ -7903,7 +7903,7 @@ int registerVeneziaVipCaptureCallback(unsigned int processor, SceUID uid,
 	unsigned int index = processor - 1;
 	int ret, kind;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -7967,7 +7967,7 @@ int unregisterVeneziaVipCaptureCallback(unsigned int processor, SceUID uid)
 	unsigned int index = processor - 1;
 	int ret, kind;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -8009,7 +8009,7 @@ int queryVeneziaVipCaptureSize(const VeneziaDebugImageFormat *geometry,
 	uint32_t count;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -8035,7 +8035,7 @@ int getVeneziaVipMultiCaptureStorageSize(const VeneziaDebugImageGeometry *geomet
 	SceSize scratch;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -8078,7 +8078,7 @@ int registerVeneziaVipMultiCapture(unsigned int *processor,
 	uint32_t state, secondaryFlags, primaryFlags, combinedFlags;
 	int ret, initialize;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -8213,7 +8213,7 @@ int unregisterVeneziaVipMultiCapture(unsigned int processor, int wait, SceUID pi
 	int ret = 0;
 
 	if (wait) {
-		ret = waitVeneziaVipProcessReady();
+		ret = _sceVipCheckProcessSuspend();
 		if (ret < 0)
 			return ret;
 	}
@@ -8272,7 +8272,7 @@ int getVeneziaVipMultiTraceAvailable(unsigned int processor)
 	unsigned int index = processor - 1, capacity;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -8306,7 +8306,7 @@ int configureVeneziaVipCaptureControl(unsigned int processor, unsigned int contr
 	unsigned int index = processor - 1;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -8345,7 +8345,7 @@ int processVeneziaVipMultiCapture(unsigned int processor, const VeneziaVipVideoI
 	SceUInt event __attribute__((aligned(8)));
 	int ret, capacity;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -8497,7 +8497,7 @@ int submitVeneziaVipMultiCapture(unsigned int processor, const VeneziaVipVideoIn
 
 	snapshots.count = 0;
 	timeout = timeoutValue ? *timeoutValue : 8000;
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -8642,7 +8642,7 @@ int processVeneziaVipMultiRawCapture(unsigned int processor, const VeneziaVipRaw
 	SceUInt event __attribute__((aligned(8)));
 	int ret, capacity, deferredError = 0;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -8802,7 +8802,7 @@ int submitVeneziaVipMultiRawCapture(unsigned int processor, const VeneziaVipRawI
 
 	snapshots.count = 0;
 	timeout = timeoutValue ? *timeoutValue : 8000;
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -8945,7 +8945,7 @@ int pollVeneziaVipMultiCapture(unsigned int processor, const VeneziaDebugSnapsho
 	SceUInt event;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -9001,7 +9001,7 @@ int finishVeneziaVipMultiCapture(unsigned int processor,
 	SceUInt status __attribute__((aligned(8)));
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -9088,7 +9088,7 @@ int restartVeneziaVipMultiCapture(unsigned int processor)
 	unsigned int index = processor - 1;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);
@@ -9114,7 +9114,7 @@ int releaseVeneziaVipCaptureResultsForProcessor(unsigned int processor)
 	unsigned int index = processor - 1;
 	int ret;
 
-	ret = waitVeneziaVipProcessReady();
+	ret = _sceVipCheckProcessSuspend();
 	if (ret < 0)
 		return ret;
 	storage = _sceVipGetVipProcessResource(0);

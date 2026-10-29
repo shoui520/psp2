@@ -21,7 +21,7 @@
 int lockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
 int unlockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
 
-extern int waitVeneziaVipProcessReady(void);
+extern int _sceVipCheckProcessSuspend(void);
 extern VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid);
 
 int g_veneziaVipProcessStorageKey = -1;
@@ -102,8 +102,8 @@ VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid)
 	return storage;
 }
 
-/* name unknown: wait until this process's VIP suspend semaphore is available. */
-int waitVeneziaVipProcessReady(void)
+/* Wait until this process's VIP suspend semaphore is available. */
+int _sceVipCheckProcessSuspend(void)
 {
 	VeneziaVipProcessStorage *storage;
 	int ret, signal;
