@@ -410,10 +410,6 @@ void sceGxmSetPrecomputedVertexState(SceGxmContext *context,
 	}
 }
 
-int gxmContextWriteState(SceGxmContext *context);
-int gxmContextWriteVertexStreams(SceGxmContext *context);
-int gxmContextKickIfFull(SceGxmContext *context);
-
 /* a reserved default uniform buffer is used by the draw: keep it in the chunk buffer */
 static inline void gxmContextCommitDefaultUniformBuffers(SceGxmContext *context,
 		const SceGxmVertexProgram *vertexProgram,

@@ -931,6 +931,13 @@ void gxmContextUpdateFrontFragmentProgram(SceGxmContext *context,
 void gxmContextUpdateBackFragmentProgram(SceGxmContext *context,
 					 const SceGxmFragmentProgram *program);
 
+/* context_flush.c */
+int gxmContextWriteVertexStreams(SceGxmContext *context);
+int gxmContextWriteState(SceGxmContext *context);
+
+/* context_kick.c */
+int gxmContextKickIfFull(SceGxmContext *context);
+
 /* --- shader patcher --- */
 
 typedef void *SceGxmShaderPatcherHostAllocCallback(void *userData, SceSize size);
