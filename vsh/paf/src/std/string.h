@@ -24,6 +24,7 @@ int sce_paf_wcsncasecmp(const uint16_t *left, const uint16_t *right,
 			 size_t num);
 size_t sce_paf_wcsspn(const uint16_t *str, const uint16_t *accept);
 size_t sce_paf_wcscspn(const uint16_t *str, const uint16_t *reject);
+size_t sce_paf_wcsnlen(const uint16_t *str, size_t limit);
 uint16_t *sce_paf_wcspbrk(const uint16_t *str, const uint16_t *accept);
 int sce_paf_strcmp(const char *left, const char *right);
 int sce_paf_strncmp(const char *left, const char *right, size_t num);
@@ -74,6 +75,9 @@ extern uint16_t PafWStringEmpty;
 void *sce_paf_memset(void *dst, int ch, size_t len);
 void *sce_paf_memchr(const void *ptr, int ch, size_t count);
 void *sce_paf_memcpy(void *dst, const void *src, size_t count);
+void *sce_paf_wmemcpy(void *destination, const void *source, size_t count);
+uint16_t *sce_paf_wmemset(uint16_t *destination, int value, size_t count);
+int sce_paf_wmemcmp(const uint16_t *left, const uint16_t *right, size_t count);
 void *sce_paf_memmove(void *dst, const void *src, size_t count);
 /* The native bcopy export takes source first. */
 void *sce_paf_bcopy(const void *src, void *dst, size_t count);

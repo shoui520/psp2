@@ -349,6 +349,25 @@ size_t sce_paf_wcscspn(const uint16_t *str, const uint16_t *reject)
 	}
 }
 
+size_t sce_paf_wcsnlen(const uint16_t *str, size_t limit)
+{
+	const volatile uint16_t *cursor = (const volatile uint16_t *)str;
+	uint32_t length = 0;
+
+	if (!str)
+		return 0;
+	/* Sony reads the initial halfword even when limit is zero. */
+	if (!*cursor++)
+		return 0;
+	for (;;) {
+		length++;
+		if (length >= limit)
+			return length;
+		if (!*cursor++)
+			return length;
+	}
+}
+
 uint16_t *sce_paf_wcspbrk(const uint16_t *str, const uint16_t *accept)
 {
 	const volatile uint16_t *cursor = (const volatile uint16_t *)str;
