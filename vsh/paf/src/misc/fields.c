@@ -75,3 +75,47 @@ int ScePafMisc_FBD3FF64(void)
 {
 	return 2;
 }
+
+float ScePafMisc_133C6F11(const float *object)
+{
+	return object[1] + object[3] * 0.5f;
+}
+
+float ScePafMisc_298EA287(const float *object)
+{
+	return object[0] - object[2] * 0.5f;
+}
+
+float ScePafMisc_2AC7BCC1(const float *object)
+{
+	return object[1] - object[3] * 0.5f;
+}
+
+float ScePafMisc_AAE49140(const float *object)
+{
+	return object[2] * object[3];
+}
+
+void ScePafMisc_C5D73892(float *object, float first, float second)
+{
+	object[0] = first;
+	object[1] = second;
+}
+
+void ScePafMisc_BAD25161(float *dst, const float *src)
+{
+	dst[0] = src[0];
+	dst[1] = src[1];
+}
+
+void ScePafMisc_4FA4979E(float *dst, const float *src)
+{
+	dst[0] = src[2];
+	dst[1] = src[3];
+}
+
+void ScePafMisc_CF61842A(float *dst, const float *src)
+{
+	dst[0] = src[0];
+	dst[1] = src[1];
+}
