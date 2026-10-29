@@ -186,8 +186,8 @@ int sceKermit_driver_D69C50BB(void);
 
 /* sceKermitMemory_driver exports */
 int sceKermitMemory_driver_70D1F13C(void *data, u32 size);
-int sceKermitMemory_driver_80E1240A(void *in_data, u32 size);
-int sceKermitMemory_driver_AAF047AC(SceKermitRequest *req, u32 argc, u32 arg_idx, void *data, u32 size, u32 flags);
+int sceKermitMemory_driver_80E1240A(const void *in_data, u32 size);
+void sceKermitMemory_driver_AAF047AC(SceKermitRequest *req, int num_args, int arg_idx, void *data, u32 size, int flags);
 int sceKermitMemory_driver_90B662D0(void *out_data, u32 size);
 
 /* sceKermitPeripheral_driver exports */
