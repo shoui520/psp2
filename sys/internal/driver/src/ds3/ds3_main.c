@@ -2488,8 +2488,6 @@ rejectConnection:
 			if (device->idProduct == 0x0268) {
 				if (event->status == 1) {
 					device->setupRetries++;
-					if (device->setupRetries > 10)
-						break;
 					goto retryDs3;
 				}
 				switch (device->setupStage) {
@@ -2623,7 +2621,6 @@ retryDs3:
 				case 4: ds3BluetoothSendControl(device, 0xb0); goto nextEvent;
 				case 6: reportId = 0xf8; reportLength = 6; break;
 				case 8: reportId = 0xf7; reportLength = 12; break;
-				case 31: ds3BluetoothEnableReports(device); goto nextEvent;
 				default: goto nextEvent;
 				}
 				goto featureRequest;
