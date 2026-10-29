@@ -42,6 +42,32 @@ void *ScePafStdc_6FE032F8(size_t size, size_t alignment,
 			 : NULL;
 }
 
+void ScePafStdc_D04CBFC0(void *ptr, HeapAllocator *allocator)
+{
+	if (allocator && ptr)
+		scePafFreeWithContext(allocator, ptr);
+}
+
+void ScePafStdc_BE896EAF(void *ptr, HeapAllocator *allocator)
+{
+	if (allocator && ptr)
+		scePafFreeWithContext(allocator, ptr);
+}
+
+void ScePafStdc_46A0F0D9(void *ptr, size_t unused1, size_t unused2,
+			 HeapAllocator *allocator)
+{
+	if (allocator && ptr)
+		scePafFreeWithContext(allocator, ptr);
+}
+
+void ScePafStdc_F22F2F50(void *ptr, size_t unused1, size_t unused2,
+			 HeapAllocator *allocator)
+{
+	if (allocator && ptr)
+		scePafFreeWithContext(allocator, ptr);
+}
+
 void *sce_paf_realloc(void *ptr, size_t size)
 {
 	HeapAllocator *heap = ptr ?
