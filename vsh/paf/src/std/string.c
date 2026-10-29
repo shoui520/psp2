@@ -464,6 +464,66 @@ uint16_t *ScePafStdc_3AD58D65(const uint16_t *haystack,
 	}
 }
 
+/* Sony's reentrant tokenizer for 16-bit code units. */
+uint16_t *ScePafStdc_E4A8A732(uint16_t *str, const uint16_t *delimiters,
+			       uint16_t **save)
+{
+	volatile uint16_t *cursor = (volatile uint16_t *)str;
+	const volatile uint16_t *separator =
+		(const volatile uint16_t *)delimiters;
+	uint16_t *token;
+	uint16_t ch;
+
+	if (!cursor) {
+		cursor = (volatile uint16_t *)*save;
+		if (!cursor)
+			return NULL;
+	}
+	for (;;) {
+		const volatile uint16_t *member;
+		uint16_t sep;
+
+		ch = *cursor++;
+		if (!ch)
+			break;
+		member = separator;
+		for (;;) {
+			sep = *member++;
+			if (!sep || sep == ch)
+				break;
+		}
+		if (!sep)
+			break;
+	}
+	if (!ch) {
+		*save = NULL;
+		return NULL;
+	}
+	token = (uint16_t *)(cursor - 1);
+	for (;;) {
+		const volatile uint16_t *member;
+		uint16_t sep;
+
+		ch = *cursor++;
+		if (!ch) {
+			*save = NULL;
+			return token;
+		}
+		member = separator;
+		for (;;) {
+			sep = *member++;
+			if (!sep || sep == ch)
+				break;
+		}
+		if (sep) {
+			/* Unlike the byte tokenizer, Sony stores save first. */
+			*(uint16_t *volatile *)save = (uint16_t *)cursor;
+			cursor[-1] = 0;
+			return token;
+		}
+	}
+}
+
 /* The classic tokenizer wrapper calls this export out of line. */
 __attribute__((noinline))
 char *sce_paf_strtok_r(char *str, const char *delimiters, char **save)
