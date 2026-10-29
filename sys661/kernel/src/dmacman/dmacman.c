@@ -116,31 +116,33 @@ s32 sceKernelDmaExit(SceSize args __attribute__((unused)), void *argp __attribut
     intr = sceKernelCpuSuspendIntr();
 
     for (int j = 0; j < 8; j++) {
-        HW(0xBC900100 + j*32) |= 4;
-        while (!(HW(0xBC900100 + j*32) & 0x2));
+        HW(0xBC900100 + j*32 + 16) |= 0x40000;
+        while (HW(0xBC900100 + j*32 + 16) & 0x20000);
+        HW(0xBC900100 + j*32 + 16) &= 0xFFFF3FFE;
     }
 
     for (int j = 0; j < 8; j++) {
-        HW(0xBCA00100 + j*32) |= 4;
-        while (!(HW(0xBCA00100 + j*32) & 0x2));
+        HW(0xBCA00100 + j*32 + 16) |= 0x40000;
+        while (HW(0xBCA00100 + j*32 + 16) & 0x20000);
+        HW(0xBCA00100 + j*32 + 16) &= 0xFFFF3FFE;
     }
 
     sceKernelDmaOpAllCancel();
 
-    HW(0xBC900100 + 48) &= ~0x1;
-    HW(0xBC900100 + 8) = 0xFF;
-    HW(0xBC900100 + 16) = 0xFF;
+    HW(0xBC900030) &= ~0x1;
+    HW(0xBC900008) = 0xFF;
+    HW(0xBC900010) = 0xFF;
     err |= sceKernelReleaseIntrHandler(22);
     intr2 = sceKernelCpuSuspendIntr();
-    HW(0xBC100000) &= ~0x20;
+    HW(0xBC100050) &= ~0x20;
     sceKernelCpuResumeIntr(intr2);
 
-    HW(0xBCA00100 + 48) &= ~0x1;
-    HW(0xBCA00100 + 8) = 0xFF;
-    HW(0xBCA00100 + 16) = 0xFF;
+    HW(0xBCA00030) &= ~0x1;
+    HW(0xBCA00008) = 0xFF;
+    HW(0xBCA00010) = 0xFF;
     err |= sceKernelReleaseIntrHandler(23);
     intr2 = sceKernelCpuSuspendIntr();
-    HW(0xBC100000) &= ~0x40;
+    HW(0xBC100050) &= ~0x40;
     sceKernelCpuResumeIntr(intr2);
 
     sceKernelCpuResumeIntr(intr);
@@ -576,26 +578,28 @@ int sceKernelDmaOpConcatenate(sceKernelDmaOperation *op, void *arg1)
             op->EndLLI->LLI = (u32)arg1;
             op->EndLLI = unk;
             ret = SCE_ERROR_OK;
-        } else
+        } else {
             ret = SCE_ERROR_KERNEL_ERROR;
-        goto cleanup;
+        }
+        goto sync_exit;
     }
 
     addr = (op->dmaCh / 8) ? 0xBCA00100 : 0xBC900100;
-    addr16 = HW(addr + 16) | 4;
+    addr += (op->dmaCh & 7) << 5;
+    addr16 = HW(addr + 16) | 0x40000;
     HW(addr + 16) = addr16;
     if (!HW(addr + 8)) {
         s32 mask = addr16 & 0x1003800;
-        if ((mask ^ 0x1000000) || (mask ^ 0x1001000) || mask == 0x1003000) {
+        if (mask == 0x1000000 || mask == 0x1001000 || mask == 0x1003000) {
             ret = 0x800202BC;
-            goto cleanup;
+            goto clear_halt;
         }
 
-        while (!(HW(addr + 16) & 0x2));
+        while (HW(addr + 16) & 0x20000);
 
         if (!(HW(addr + 12) & 0xFFF)) {
             ret = 0x800202C4;
-            goto cleanup;
+            goto clear_halt;
         }
 
         HW(addr + 16) &= ~0x1;
@@ -603,14 +607,19 @@ int sceKernelDmaOpConcatenate(sceKernelDmaOperation *op, void *arg1)
 
         HW(addr + 8) = (u32)arg1;
         HW(addr + 16) |= 1;
+        op->EndLLI = unk;
     } else {
         op->EndLLI->LLI = (u32)arg1;
+        op->EndLLI = unk;
     }
-
-    op->EndLLI = unk;
-    HW(addr + 16) &= 0xFFF00001;
-    g_dmacman.unk2136(4);
     ret = SCE_ERROR_OK;
+
+clear_halt:
+    HW(addr + 16) &= ~0x40000;
+sync_exit:
+    g_dmacman.unk2136(4);
+    sceKernelCpuResumeIntrWithSync(intr);
+    return ret;
 
 cleanup:
     sceKernelCpuResumeIntr(intr);
@@ -735,14 +744,14 @@ static s32 interruptHandler(s32 arg0 __attribute__((unused)), s32 arg1)
     sceKernelSetEventFlag(g_dmacman.unk2140, unk3);
     if (!g_dmacman.op2128)
         _sceKernelDmaSchedule();
-    if ((g_dmacman.unk2120 | g_dmacman.unk2112) & 0xFF) {
+    if (!((g_dmacman.unk2120 | g_dmacman.unk2112) & 0xFF)) {
         u32 intr2 = sceKernelCpuSuspendIntr();
-        HW(0xBC100000) &= ~(1 << 6);
+        HW(0xBC100050) &= ~(1 << 5);
         sceKernelCpuResumeIntr(intr2);
     }
-    if ((g_dmacman.unk2120 | g_dmacman.unk2112) & 0xFF00) {
+    if (!((g_dmacman.unk2120 | g_dmacman.unk2112) & 0xFF00)) {
         u32 intr2 = sceKernelCpuSuspendIntr();
-        HW(0xBC100000) &= ~(1 << 5);
+        HW(0xBC100050) &= ~(1 << 6);
         sceKernelCpuResumeIntr(intr2);
     }
     sceKernelCpuResumeIntr(intr);
@@ -803,8 +812,8 @@ static void _sceKernelDmaSchedule(void)
             }
 
             u32 base = (t1->dmaCh / 8) ? 0xBCA00000 : 0xBC900000;
-            if (!(HW(0xBC100080) & (0x20 << (t1->dmaCh / 8)))) {
-                HW(0xBC100080) |= 0x20 << (t1->dmaCh / 8);
+            if (!(HW(0xBC100050) & (0x20 << (t1->dmaCh / 8)))) {
+                HW(0xBC100050) |= 0x20 << (t1->dmaCh / 8);
                 HW(base + 48) |= 1;
                 HW(base + 52) = 0;
 
@@ -990,9 +999,9 @@ static s32 _dummyDdrFlush(s32 arg __attribute__((unused)))
 static void _sceKernelDmacClkEnable(s32 arg0)
 {
     u32 addr = arg0 ? 0xBCA00000 : 0xBC900000;
-    if (HW(0xBC100010) & (0x20 << arg0))
+    if (HW(0xBC100050) & (0x20 << arg0))
         return;
-    HW(0xBC100010) |= (0x20 << arg0);
+    HW(0xBC100050) |= (0x20 << arg0);
     HW(addr + 48) |= 0x1;
     HW(addr + 52) = 0;
     for (int i = 0; i < 8; i++) {
@@ -1002,6 +1011,6 @@ static void _sceKernelDmacClkEnable(s32 arg0)
         HW(addr + 32*i + 268) = 0;
         HW(addr + 32*i + 272) = 0;
     }
-    HW(addr + 8) = 0x100;
-    HW(addr + 16) = 0x100;
+    HW(addr + 8) = 0xFF;
+    HW(addr + 16) = 0xFF;
 }
