@@ -53,8 +53,8 @@ static inline SceUInt32 gxmVdmBlockSize(const GxmCommandBlock *block)
 	return (SceUInt32)(block->dataSize >> 4) << 27;
 }
 
-int gxmVdmWriteVertexState(GxmChunkBuffer *buffer, SceSize size, const GxmCommandBlock *block,
-			   SceBool secondary)
+int gxmVdmWriteFragmentState(GxmChunkBuffer *buffer, SceSize size, const GxmCommandBlock *block,
+			     SceBool secondary)
 {
 	SceUInt32 address = (SceUInt32)block->data;
 	SceUInt32 *words = gxmChunkBufferReserve(buffer, 8, 4);
@@ -68,8 +68,8 @@ int gxmVdmWriteVertexState(GxmChunkBuffer *buffer, SceSize size, const GxmComman
 	return 0;
 }
 
-int gxmVdmWriteFragmentState(GxmChunkBuffer *buffer, const GxmCommandBlock *block, SceSize size,
-			     SceBool secondary)
+int gxmVdmWriteVertexState(GxmChunkBuffer *buffer, const GxmCommandBlock *block, SceSize size,
+			   SceBool secondary)
 {
 	SceUInt32 address = (SceUInt32)block->data;
 	SceUInt32 *words = gxmChunkBufferReserve(buffer, 8, 4);

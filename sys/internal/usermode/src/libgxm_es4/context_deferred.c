@@ -202,7 +202,7 @@ int sceGxmExecuteCommandList(SceGxmContext *immediateContext, SceGxmCommandList 
 	*commandList->returnLink = immediateContext->vdmBuffer.cur >> 2;
 	gxmMteStateInvalidate(&immediateContext->state);
 	immediateContext->appliedVertexState = NULL;
-	immediateContext->flags |= GXM_CONTEXT_FLAG_VERTEX_FENCE;
+	immediateContext->flags |= GXM_CONTEXT_FLAG_VERTEX_PROGRAM;
 	return 0;
 }
 

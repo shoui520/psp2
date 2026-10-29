@@ -24,7 +24,9 @@ void sceGxmSetVertexProgram(SceGxmContext *context, const SceGxmVertexProgram *v
 			context->vertexProgramWords[0] = (SceUInt32)vertexProgram->literals;
 			context->vertexProgramWords[1] = (SceUInt32)vertexProgram->scratch;
 			context->vertexProgramWords[2] = (SceUInt32)vertexProgram->thread;
-			context->flags = (context->flags & ~0x7c0) | vertexProgram->pdsFlags;
+			context->flags = (context->flags & ~(GXM_CONTEXT_FLAG_VERTEX_ALL |
+							    GXM_CONTEXT_FLAG_VERTEX_STREAMS)) |
+					 vertexProgram->pdsFlags;
 		}
 	}
 	if (context->vertexDefaultUniformBufferMode != GXM_DEFAULT_UNIFORM_BUFFER_SET)
@@ -42,7 +44,8 @@ void sceGxmSetFragmentProgram(SceGxmContext *context, const SceGxmFragmentProgra
 			context->fragmentProgramWords[0] = (SceUInt32)fragmentProgram->literals;
 			context->fragmentProgramWords[1] = (SceUInt32)fragmentProgram->scratch;
 			context->fragmentProgramWords[2] = (SceUInt32)fragmentProgram->thread;
-			context->flags = (context->flags & ~0x3e) | fragmentProgram->pdsFlags;
+			context->flags = (context->flags & ~GXM_CONTEXT_FLAG_FRAGMENT_ALL) |
+					 fragmentProgram->pdsFlags;
 		}
 	}
 	if (context->fragmentDefaultUniformBufferMode != GXM_DEFAULT_UNIFORM_BUFFER_SET)
@@ -75,9 +78,9 @@ int sceGxmReserveVertexDefaultUniformBuffer(SceGxmContext *context, void **unifo
 	mode = program->bufferFlags >> 28;
 	if (mode & 3) {
 		if (mode & 2)
-			context->flags |= 0x380;
+			context->flags |= GXM_CONTEXT_FLAG_VERTEX_CONSTANT_UPDATE;
 		else
-			context->flags |= 0x300;
+			context->flags |= GXM_CONTEXT_FLAG_VERTEX_DMA_UPDATE;
 	}
 	buffer = gxmChunkBufferReserve(&context->vertexBuffer, size, 4);
 	if (buffer == NULL) {
@@ -117,9 +120,9 @@ int sceGxmReserveFragmentDefaultUniformBuffer(SceGxmContext *context, void **uni
 	mode = program->bufferFlags >> 28;
 	if (mode & 3) {
 		if (mode & 2)
-			context->flags |= 0x2c;
+			context->flags |= GXM_CONTEXT_FLAG_FRAGMENT_CONSTANT_UPDATE;
 		else
-			context->flags |= 0x28;
+			context->flags |= GXM_CONTEXT_FLAG_FRAGMENT_DMA_UPDATE;
 	}
 	buffer = gxmChunkBufferReserve(&context->fragmentBuffer, size, 4);
 	if (buffer == NULL) {
@@ -147,9 +150,9 @@ int sceGxmSetVertexDefaultUniformBuffer(SceGxmContext *context, const void *unif
 
 			if (mode & 3) {
 				if (mode & 2)
-					context->flags |= 0x380;
+					context->flags |= GXM_CONTEXT_FLAG_VERTEX_CONSTANT_UPDATE;
 				else
-					context->flags |= 0x300;
+					context->flags |= GXM_CONTEXT_FLAG_VERTEX_DMA_UPDATE;
 			}
 		}
 	}
@@ -171,9 +174,9 @@ int sceGxmSetFragmentDefaultUniformBuffer(SceGxmContext *context, const void *un
 
 			if (mode & 3) {
 				if (mode & 2)
-					context->flags |= 0x2c;
+					context->flags |= GXM_CONTEXT_FLAG_FRAGMENT_CONSTANT_UPDATE;
 				else
-					context->flags |= 0x28;
+					context->flags |= GXM_CONTEXT_FLAG_FRAGMENT_DMA_UPDATE;
 			}
 		}
 	}
@@ -234,9 +237,9 @@ int _sceGxmSetVertexTexture(SceGxmContext *context, SceUInt32 textureIndex,
 
 			if (use & 0xf) {
 				if (use & 4)
-					context->flags |= 0x3c0;
+					context->flags |= GXM_CONTEXT_FLAG_VERTEX_ALL;
 				else
-					context->flags |= 0x380;
+					context->flags |= GXM_CONTEXT_FLAG_VERTEX_CONSTANT_UPDATE;
 			}
 		}
 	}
@@ -278,9 +281,9 @@ int sceGxmSetVertexTexture(SceGxmContext *context, SceUInt32 textureIndex,
 
 			if (use & 0xf) {
 				if (use & 4)
-					context->flags |= 0x3c0;
+					context->flags |= GXM_CONTEXT_FLAG_VERTEX_ALL;
 				else
-					context->flags |= 0x380;
+					context->flags |= GXM_CONTEXT_FLAG_VERTEX_CONSTANT_UPDATE;
 			}
 		}
 	}
@@ -320,13 +323,15 @@ int sceGxmSetFragmentTexture(SceGxmContext *context, SceUInt32 textureIndex,
 				SceUInt32 flags;
 
 				if (use & 4)
-					flags = context->flags | 0x2e;
+					flags = context->flags | GXM_CONTEXT_FLAG_FRAGMENT_TEXTURES |
+						GXM_CONTEXT_FLAG_FRAGMENT_CONSTANT_UPDATE;
 				else
-					flags = context->flags | 0x20;
+					flags = context->flags | GXM_CONTEXT_FLAG_FRAGMENT_PROGRAM;
 				if (use & 2)
-					flags |= 0xc;
+					flags |= GXM_CONTEXT_FLAG_FRAGMENT_CONSTANTS |
+						 GXM_CONTEXT_FLAG_FRAGMENT_DATA;
 				if (use & 1)
-					flags |= 0x10;
+					flags |= GXM_CONTEXT_FLAG_FRAGMENT_TEXTURE_STATE;
 				context->flags = flags;
 			}
 		}
@@ -349,9 +354,9 @@ int sceGxmSetVertexUniformBuffer(SceGxmContext *context, SceUInt32 bufferIndex,
 
 			if (mode & 3) {
 				if (mode & 2)
-					context->flags |= 0x380;
+					context->flags |= GXM_CONTEXT_FLAG_VERTEX_CONSTANT_UPDATE;
 				else
-					context->flags |= 0x300;
+					context->flags |= GXM_CONTEXT_FLAG_VERTEX_DMA_UPDATE;
 			}
 		}
 	}
@@ -373,9 +378,9 @@ int sceGxmSetFragmentUniformBuffer(SceGxmContext *context, SceUInt32 bufferIndex
 
 			if (mode & 3) {
 				if (mode & 2)
-					context->flags |= 0x2c;
+					context->flags |= GXM_CONTEXT_FLAG_FRAGMENT_CONSTANT_UPDATE;
 				else
-					context->flags |= 0x28;
+					context->flags |= GXM_CONTEXT_FLAG_FRAGMENT_DMA_UPDATE;
 			}
 		}
 	}
@@ -392,7 +397,7 @@ void sceGxmSetPrecomputedFragmentState(SceGxmContext *context,
 	} else {
 		context->precomputedFragmentState = NULL;
 		if (context->appliedFragmentState != NULL)
-			context->flags |= 0x20;
+			context->flags |= GXM_CONTEXT_FLAG_FRAGMENT_PROGRAM;
 	}
 }
 
@@ -406,7 +411,7 @@ void sceGxmSetPrecomputedVertexState(SceGxmContext *context,
 	} else {
 		context->precomputedVertexState = NULL;
 		if (context->appliedVertexState != NULL)
-			context->flags |= 0x200;
+			context->flags |= GXM_CONTEXT_FLAG_VERTEX_PROGRAM;
 	}
 }
 
@@ -978,6 +983,6 @@ int sceGxmVertexFence(SceGxmContext *context)
 	ret = gxmVdmWriteTerminate(&context->vdmBuffer, &block);
 	if (ret != 0)
 		return ret;
-	context->flags |= GXM_CONTEXT_FLAG_VERTEX_FENCE;
+	context->flags |= GXM_CONTEXT_FLAG_VERTEX_PROGRAM;
 	return 0;
 }

@@ -1205,7 +1205,7 @@ int sceGxmShaderPatcherCreateFragmentProgramForGles(SceGxmShaderPatcher *shaderP
 typedef struct GxmMaskUpdateProgram {
 	SceGxmFragmentProgram fragment;
 	SceGxmProgram program;		/* 0x80 */
-	SceUInt32 pad[2];
+	SceUInt32 pad;
 	SceUInt8 varyings[0x14];	/* 0x11c: the program's fragment varyings */
 } GxmMaskUpdateProgram;
 
@@ -1243,7 +1243,7 @@ int sceGxmShaderPatcherCreateMaskUpdateFragmentProgram(SceGxmShaderPatcher *shad
 		created->fragment.programHeader = &created->program;
 		created->program.varyingsOffset = (char *)created->varyings -
 						  (char *)&created->program.varyingsOffset;
-		created->program.reserved2[0] = 0;
+		created->program.reserved2 = 0;
 		varyings = (GxmProgramVaryings *)created->varyings;
 		varyings->fragment.outputRegisterType = GXM_OUTPUT_TYPE_U8;
 		varyings->fragment.outputComponentCount = 4;

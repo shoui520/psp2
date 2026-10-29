@@ -334,9 +334,50 @@ typedef struct SceGxmProgram {
 	SceUInt32 textureBufferCount;
 	SceUInt32 defaultUniformBufferCount;	/* 0x64, in words */
 	SceInt32 literalBufferOffset;		/* 0x68 */
-	SceUInt32 reserved2[(0x90 - 0x6c) / 4];	/* the first is cleared in a built program */
-	SceUInt32 secondaryPdsDataCount;	/* 0x90: secondary PDS data words */
+	SceUInt32 reserved2;			/* cleared in a built program */
+	SceUInt32 literalCount;			/* 0x70: GxmProgramLiteral */
+	SceInt32 literalsOffset;
+	SceUInt32 bufferRefCount;		/* 0x78: GxmProgramBufferRef */
+	SceInt32 bufferRefsOffset;
+	SceUInt32 constantTextureCount;		/* 0x80: GxmProgramTextureRef */
+	SceInt32 constantTexturesOffset;
+	SceUInt32 textureRefCount;		/* 0x88: GxmProgramTextureRef */
+	SceInt32 textureRefsOffset;
+	SceUInt32 secondaryPdsDataCount;	/* 0x90: GxmProgramDmaEntry */
+	SceInt32 secondaryPdsDataOffset;
 } SceGxmProgram;
+
+GXM_ASSERT_OFFSET(SceGxmProgram, secondaryPdsDataOffset, 0x94);
+
+/*
+ * The tables a program's state blocks are written from. The constant block
+ * (dataBufferCount words) takes literals, uniform buffer addresses and texture
+ * words; the texture block (textureBufferCount words) texture words only.
+ */
+typedef struct GxmProgramLiteral {
+	SceUInt16 dataWord;		/* the word of the constant block */
+	SceUInt16 reserved;
+	SceUInt32 value;
+} GxmProgramLiteral;
+
+typedef struct GxmProgramBufferRef {
+	SceUInt16 bufferIndex;		/* the uniform buffer */
+	SceUInt16 dataWord;
+	SceUInt32 offset;		/* in bytes, added to its address */
+} GxmProgramBufferRef;
+
+typedef struct GxmProgramTextureRef {
+	SceUInt16 textureWord;		/* the word of the context's textures */
+	SceUInt16 dataWord;
+} GxmProgramTextureRef;
+
+/* a DMA of a uniform buffer into the secondary attribute registers */
+typedef struct GxmProgramDmaEntry {
+	SceUInt16 bufferIndex;
+	SceUInt16 offset;		/* in words */
+	SceUInt16 destination;		/* the first register */
+	SceUInt16 size;			/* in words */
+} GxmProgramDmaEntry;
 
 /* the self-relative word at 0x4c: the program's entry, in instructions */
 #define entryOffset	secondaryProgramEndOffset
@@ -650,10 +691,10 @@ int gxmCommandBlockCopy(GxmChunkBuffer *buffer, const GxmCommandBlock *source,
 
 /* --- VDM commands --- */
 
-int gxmVdmWriteVertexState(GxmChunkBuffer *buffer, SceSize size, const GxmCommandBlock *block,
-			   SceBool secondary);
-int gxmVdmWriteFragmentState(GxmChunkBuffer *buffer, const GxmCommandBlock *block, SceSize size,
+int gxmVdmWriteFragmentState(GxmChunkBuffer *buffer, SceSize size, const GxmCommandBlock *block,
 			     SceBool secondary);
+int gxmVdmWriteVertexState(GxmChunkBuffer *buffer, const GxmCommandBlock *block, SceSize size,
+			   SceBool secondary);
 int gxmVdmWritePrimitive(GxmChunkBuffer *buffer, const GxmCommandBlock *block,
 			 const SceUInt8 *programInfo, SceUInt32 primitive, SceUInt32 indexWord,
 			 SceUInt32 count, SceUInt32 flags, SceUInt32 indexAddress, SceUInt8 wordBits);
@@ -684,10 +725,30 @@ int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 address, const SceUInt32 *
 #define GXM_DIRTY_TEXCOORD_OUTPUTS	0x00004000
 #define GXM_DIRTY_VERTEX_OUTPUTS2	0x00008000
 
-/* SceGxmContext.flags */
+/* SceGxmContext.flags: what gxmContextWriteState writes again before the next draw */
+#define GXM_CONTEXT_FLAG_FRAGMENT_TEXTURES	0x00000002	/* the texture block */
+#define GXM_CONTEXT_FLAG_FRAGMENT_CONSTANTS	0x00000004	/* the constant block */
+#define GXM_CONTEXT_FLAG_FRAGMENT_DATA		0x00000008	/* the uniform buffers' DMA list */
+#define GXM_CONTEXT_FLAG_FRAGMENT_TEXTURE_STATE	0x00000010	/* the texture state block */
+#define GXM_CONTEXT_FLAG_FRAGMENT_PROGRAM	0x00000020	/* the PDS state words */
+#define GXM_CONTEXT_FLAG_FRAGMENT_ALL		0x0000003e
+#define GXM_CONTEXT_FLAG_VERTEX_TEXTURES	0x00000040
+#define GXM_CONTEXT_FLAG_VERTEX_CONSTANTS	0x00000080
+#define GXM_CONTEXT_FLAG_VERTEX_DATA		0x00000100
+#define GXM_CONTEXT_FLAG_VERTEX_PROGRAM		0x00000200	/* the vertex state in the VDM stream */
+#define GXM_CONTEXT_FLAG_VERTEX_ALL		0x000003c0
 #define GXM_CONTEXT_FLAG_VERTEX_STREAMS		0x00000400	/* a stream the vertex program reads changed */
-#define GXM_CONTEXT_FLAG_VERTEX_FENCE		0x00000200	/* a fence or a command list is in the VDM stream */
-#define GXM_CONTEXT_FLAG_DEPTH_STENCIL_USED	0x00000800
+#define GXM_CONTEXT_FLAG_DEPTH_STENCIL_USED	0x00000800	/* the depth/stencil modes changed */
+
+/* a buffer the DMA list reads changed; one the constant block reads, too */
+#define GXM_CONTEXT_FLAG_FRAGMENT_DMA_UPDATE \
+	(GXM_CONTEXT_FLAG_FRAGMENT_DATA | GXM_CONTEXT_FLAG_FRAGMENT_PROGRAM)
+#define GXM_CONTEXT_FLAG_FRAGMENT_CONSTANT_UPDATE \
+	(GXM_CONTEXT_FLAG_FRAGMENT_CONSTANTS | GXM_CONTEXT_FLAG_FRAGMENT_DMA_UPDATE)
+#define GXM_CONTEXT_FLAG_VERTEX_DMA_UPDATE \
+	(GXM_CONTEXT_FLAG_VERTEX_DATA | GXM_CONTEXT_FLAG_VERTEX_PROGRAM)
+#define GXM_CONTEXT_FLAG_VERTEX_CONSTANT_UPDATE \
+	(GXM_CONTEXT_FLAG_VERTEX_CONSTANTS | GXM_CONTEXT_FLAG_VERTEX_DMA_UPDATE)
 
 /* ISP control word (front and back) */
 #define GXM_ISP_STENCIL_REF		0x000000ff
@@ -705,6 +766,12 @@ int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 address, const SceUInt32 *
 #define GXM_ISP_FRAGMENT_PROGRAM_MASK	0x0e200000	/* bits the fragment program sets */
 #define GXM_ISP_POINT_LINE_WIDTH_SHIFT	28
 #define GXM_ISP_POINT_LINE_WIDTH	0xf0000000
+#define GXM_ISP_DEPTH_FUNC_ALWAYS	0x01c00000	/* depth funcs NEVER (0) and ALWAYS read no depth */
+#define GXM_ISP_PASS_TYPE_MASK_UPDATE	0x06000000
+
+/* stencil word (front and back) */
+#define GXM_STENCIL_FUNC		0x0e000000
+#define GXM_STENCIL_FUNC_ALWAYS		0x0e000000	/* funcs NEVER (0) and ALWAYS read no stencil */
 
 /* bias word */
 #define GXM_BIAS_VISIBILITY_INDEX	0x00000fff
@@ -812,6 +879,11 @@ typedef struct GxmMteState {
 
 void gxmMteStateInvalidate(GxmMteState *state);
 void gxmMteStateInit(GxmMteState *state);
+int gxmMteWriteStateWords(GxmChunkBuffer *buffer, const GxmMteState *state, SceUInt32 **words,
+			  SceUInt32 *count);
+int gxmMteWriteUpdateBlock(GxmChunkBuffer *buffer, SceUInt32 stateWords, SceUInt32 count,
+			   const GxmCodeRef *copyProgram, GxmCommandBlock *block);
+const GxmCodeRef *gxmMteGetCopyProgram(const GxmCodeRef *programs, SceUInt32 count);
 
 
 /*
@@ -939,8 +1011,36 @@ typedef struct GxmSceneParams {
 	GxmSceneSettings settings;
 } GxmSceneParams;
 
-struct SceGxmPrecomputedFragmentState;
-struct SceGxmPrecomputedVertexState;
+/* a VDM state command, as gxmVdmWriteVertexState and gxmVdmWriteFragmentState write it */
+typedef struct GxmVdmState {
+	SceUInt32 words[2];
+} GxmVdmState;
+
+/*
+ * The SDK's opaque precomputed states (SCE_GXM_PRECOMPUTED_*_STATE_WORD_COUNT
+ * words): a program's blocks, written once into the caller's memory block.
+ */
+typedef struct SceGxmPrecomputedFragmentState {
+	const SceGxmFragmentProgram *program;
+	void *textureStateBlock;	/* the memory block: the PDS program with the textures */
+	void *dmaBlock;			/* the uniform buffers' DMA list */
+	const void *defaultUniformBuffer;
+	void *constantBlock;
+	void *textureBlock;
+	SceUInt32 pdsState[3];		/* gxmPdsWriteStateWords */
+} SceGxmPrecomputedFragmentState;
+
+typedef struct SceGxmPrecomputedVertexState {
+	const SceGxmVertexProgram *program;
+	void *dmaBlock;			/* the memory block */
+	const void *defaultUniformBuffer;
+	void *constantBlock;
+	void *textureBlock;
+	GxmVdmState vdmState;		/* gxmVdmWriteVertexState */
+} SceGxmPrecomputedVertexState;
+
+_Static_assert(sizeof(SceGxmPrecomputedFragmentState) == 9 * 4, "SceGxmPrecomputedFragmentState size");
+_Static_assert(sizeof(SceGxmPrecomputedVertexState) == 7 * 4, "SceGxmPrecomputedVertexState size");
 
 /* a VDM primitive command, as gxmVdmWritePrimitive writes it */
 typedef struct GxmVdmPrimitive {
