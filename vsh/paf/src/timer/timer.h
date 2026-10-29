@@ -168,6 +168,14 @@ void TimerResetTimer(Timer *self);
 #define TimerCheckBezierParam ScePafMisc_E89DF174
 int TimerCheckBezierParam(Timer *self, float *param);
 int TimerCheckCustomParam(Timer *self, float *param);
+#define TimerInitFuncParam ScePafMisc_C6FAB673
+int TimerInitFuncParam(Timer *self, int func, const float *param,
+		       float **ret_param, int *ret_param_num);
+#define TimerSetFuncX ScePafMisc_9BD302A5
+void TimerSetFuncX(Timer *self, int func, const float *param);
+#define TimerInitTimer ScePafMisc_06BD5A37
+void TimerInitTimer(Timer *self, float total, int func, int repeat,
+		    int rep_count, const float *param);
 #define TimerDoFunc ScePafMisc_6C15F987
 void TimerInitTickUnit(float tick_unit);
 void TimerSetCurrTickInterval(float tick_interval);
@@ -311,8 +319,6 @@ float TimerDoFuncSineOut(float rate);
 float TimerDoFuncSwing(float rate);
 float TimerDoFuncAngular(float rate);
 
-void ScePafMisc_06BD5A37(Timer *self, float total, int func, int repeat,
-		      int repeatCount, const float *param); /* Timer::InitTimer */
 void ScePafMisc_70E604B9(Timer *self); /* Timer::~Timer */
 void ScePafMisc_D29258BB(Timer *self); /* deleting Timer::~Timer */
 void ScePafMisc_CE6EB459(TimerListener *self); /* TimerListener::~TimerListener */

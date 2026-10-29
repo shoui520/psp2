@@ -54,7 +54,7 @@ CallListListener *CallListListenerConstruct(CallListListener *self)
 		timer->m_param_x_num = 0;
 		timer->m_param_x = NULL;
 		timer->m_mapped_x = 0.0f;
-		ScePafMisc_06BD5A37(timer, 0.01f, 0, 0, -1, NULL);
+		TimerInitTimer(timer, 0.01f, 0, 0, -1, NULL);
 	}
 	self->base.m_data = NULL;
 	self->base.m_timer = timer;
