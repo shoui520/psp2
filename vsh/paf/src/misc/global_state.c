@@ -27,6 +27,7 @@ uint32_t sce_paf_misc_counters_edf0[2];
 uint32_t sce_paf_misc_limits_edf8[2];
 uint8_t sce_paf_misc_cells_dc60[2][8][32] __attribute__((aligned(32)));
 uint8_t sce_paf_misc_cells_de60[2][8][32] __attribute__((aligned(32)));
+uint32_t sce_paf_misc_shared_f3c8;
 
 uint32_t ScePafMisc_4E93C051(void)
 {
@@ -232,4 +233,30 @@ void *ScePafMisc_B5C459E2(uint32_t group, uint32_t cell, void **output)
 		address = sce_paf_misc_cells_de60[group][cell];
 	*output = address;
 	return address;
+}
+
+void *ScePafMisc_405C4F0A(uint32_t *object, uint32_t first)
+{
+	volatile uint32_t *words = (volatile uint32_t *)object;
+	words[0] = first;
+	words[1] = 0;
+	words[2] = UINT32_MAX;
+	words[3] = UINT32_MAX;
+	words[6] = 0;
+	words[4] = 0x3f;
+	words[5] = (uint32_t)(uintptr_t)&sce_paf_misc_shared_f3c8;
+	return object;
+}
+
+void *ScePafMisc_7616DF6C(uint32_t *object, uint32_t first)
+{
+	volatile uint32_t *words = (volatile uint32_t *)object;
+	words[0] = first;
+	words[1] = 0;
+	words[2] = UINT32_MAX;
+	words[3] = UINT32_MAX;
+	words[6] = 0;
+	words[4] = 0x3f;
+	words[5] = (uint32_t)(uintptr_t)&sce_paf_misc_shared_f3c8;
+	return object;
 }
