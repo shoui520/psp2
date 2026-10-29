@@ -133,3 +133,47 @@ void ScePafMisc_42A76852(float *object, const float *delta)
 	object[0] += x;
 	object[1] += y;
 }
+
+void ScePafMisc_61B990CD(const uint32_t *object, uint32_t *first,
+			uint32_t *second)
+{
+	uint32_t a = object[1], b = object[2];
+
+	*first = a;
+	*second = b;
+}
+
+void ScePafMisc_9A80FBC3(const uint32_t *object, uint32_t *first,
+			uint32_t *second)
+{
+	uint32_t a = object[1], b = object[2];
+
+	*first = a;
+	*second = b;
+}
+
+void ScePafMisc_4DEC597D(uint32_t *dst, const void *object)
+{
+	const uint32_t *inner = *(const uint32_t *const *)
+		((const uint8_t *)object + 44);
+	uint32_t a = inner[9], b = inner[10];
+	uint32_t c = inner[11], d = inner[12];
+
+	dst[0] = a;
+	dst[1] = b;
+	dst[2] = c;
+	dst[3] = d;
+}
+
+void ScePafMisc_5C89D36F(uint32_t *dst, const void *object)
+{
+	const uint32_t *inner = *(const uint32_t *const *)
+		((const uint8_t *)object + 44);
+	uint32_t a = inner[13], b = inner[14];
+	uint32_t c = inner[15], d = inner[16];
+
+	dst[0] = a;
+	dst[1] = b;
+	dst[2] = c;
+	dst[3] = d;
+}
