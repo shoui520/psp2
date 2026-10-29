@@ -3277,8 +3277,7 @@ __attribute__((noinline)) int unlockVeneziaVipProcess(struct ThreadmgrFastMutex 
 int registerVeneziaVipCallback(unsigned int processor, SceUID uid, uint32_t eventMask)
 {
 	VeneziaVipProcessStorage *storage;
-	VeneziaDebugCallback *callback;
-	unsigned int index;
+	VeneziaDebugCallback *callbacks, *callback;
 	int ret, kind, saved;
 
 	ret = waitVeneziaVipProcessReady();
@@ -3299,13 +3298,24 @@ int registerVeneziaVipCallback(unsigned int processor, SceUID uid, uint32_t even
 			ret = -2141060863;
 		} else {
 			saved = sceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
-			for (index = 0; index < 6; index++)
-				if (!storage->callbackState.callbacks[index].uid)
-					break;
-			if (index == 6) {
+			callbacks = storage->callbackState.callbacks;
+			if (!callbacks[0].uid)
+				callback = &callbacks[0];
+			else if (!callbacks[1].uid)
+				callback = &callbacks[1];
+			else if (!callbacks[2].uid)
+				callback = &callbacks[2];
+			else if (!callbacks[3].uid)
+				callback = &callbacks[3];
+			else if (!callbacks[4].uid)
+				callback = &callbacks[4];
+			else if (!callbacks[5].uid)
+				callback = &callbacks[5];
+			else
+				callback = NULL;
+			if (!callback) {
 				ret = -2141060858;
 			} else {
-				callback = &storage->callbackState.callbacks[index];
 				callback->pid = sceKernelGetProcessId();
 				callback->uid = ret;
 				callback->pendingEvents = 0;
@@ -4823,8 +4833,8 @@ int copyVeneziaVipInputToTrace(unsigned int processor, VeneziaVipState *state,
 	unsigned int captureProcessor = storage->processors[processor];
 	VeneziaVipInputIterator iterator;
 	SceSize remaining, first;
-	SceSize copied __attribute__((aligned(8)));
 	uint32_t cursor __attribute__((aligned(8)));
+	SceSize copied __attribute__((aligned(8)));
 	int ret, copyRet;
 
 	initializeVeneziaVipInputIterator(&iterator, list);
@@ -7636,7 +7646,7 @@ int collectVeneziaVipCaptureResults(unsigned int processor, VeneziaVipProcessSto
 	const VeneziaDebugSnapshotList *list, unsigned int index)
 {
 	VeneziaDebugProcessCapture *capture = &storage->captures[processor];
-	VeneziaVipCommandContext *context;
+	VeneziaVipCommandContext *context __attribute__((aligned(8)));
 	VeneziaVipCaptureImageHeader *image;
 	VeneziaVipCaptureSnapshot *output;
 	uint32_t valid = 0;
@@ -7889,7 +7899,7 @@ int registerVeneziaVipCaptureCallback(unsigned int processor, SceUID uid,
 	uint32_t eventMask)
 {
 	VeneziaVipProcessStorage *storage;
-	VeneziaDebugCallback *callbacks, *callback;
+	VeneziaDebugCallback *callbacks, *slots, *callback;
 	unsigned int index = processor - 1;
 	int ret, kind;
 
@@ -7920,19 +7930,20 @@ int registerVeneziaVipCaptureCallback(unsigned int processor, SceUID uid,
 	}
 	getVeneziaVipCaptureCallbacks(&storage->captures[index],
 		&g_veneziaVipState, &callbacks);
+	slots = callbacks;
 	lockVeneziaVipProcess(g_veneziaVipState.commonProcessorLock);
-	if (!callbacks[0].uid)
-		callback = &callbacks[0];
-	else if (!callbacks[1].uid)
-		callback = &callbacks[1];
-	else if (!callbacks[2].uid)
-		callback = &callbacks[2];
-	else if (!callbacks[3].uid)
-		callback = &callbacks[3];
-	else if (!callbacks[4].uid)
-		callback = &callbacks[4];
-	else if (!callbacks[5].uid)
-		callback = &callbacks[5];
+	if (!slots[0].uid)
+		callback = &slots[0];
+	else if (!slots[1].uid)
+		callback = &slots[1];
+	else if (!slots[2].uid)
+		callback = &slots[2];
+	else if (!slots[3].uid)
+		callback = &slots[3];
+	else if (!slots[4].uid)
+		callback = &slots[4];
+	else if (!slots[5].uid)
+		callback = &slots[5];
 	else {
 		ret = -2141060858;
 		goto unlockCallbacks;
@@ -9337,11 +9348,11 @@ int copyVeneziaVipInputToCaptureRing(unsigned int index, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage, const VeneziaVipInputBufferList *list)
 {
 	VeneziaDebugProcessCapture *capture = &storage->captures[index];
-	VeneziaVipInputIterator iterator;
-	VeneziaVipCommandContext *context;
-	SceSize remaining, first;
-	SceSize copied __attribute__((aligned(8)));
 	uint32_t cursor __attribute__((aligned(8)));
+	SceSize copied __attribute__((aligned(8)));
+	VeneziaVipCommandContext *context __attribute__((aligned(8)));
+	VeneziaVipInputIterator iterator;
+	SceSize remaining, first;
 	int ret;
 
 	getVeneziaVipCaptureContext(capture, state, &context);
