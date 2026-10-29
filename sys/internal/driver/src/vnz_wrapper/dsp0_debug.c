@@ -5120,7 +5120,7 @@ int initializeVeneziaVipCommands(const VeneziaVipCommandCallbacks *callbacks,
 	g_veneziaVipCommandState.physicalBase = physicalAddress;
 	g_veneziaVipCommandState.write = write;
 	g_veneziaVipCommandState.read = read;
-	memset(&g_veneziaVipCommandState.memory->commands[0], 0, 256);
+	memset(&virtualAddress->commands[0], 0, 256);
 	g_veneziaVipCommandState.write((uint32_t)&mailbox->debugReceive[0], UINT32_MAX);
 	memset(&g_veneziaVipCommandState.memory->commands[1], 0, 256);
 	g_veneziaVipCommandState.write((uint32_t)&mailbox->debugReceive[1], UINT32_MAX);
@@ -5166,12 +5166,12 @@ VeneziaVipCommandContext *initializeVeneziaVipCommandContext(
 	size = param->size;
 	memory = &g_veneziaVipCommandState.memory->processorMemory[processor];
 	processorSize = memory->auxiliarySize + memory->primarySize + 24 + memory->secondarySize;
+	memory = &g_veneziaVipCommandState.memory->sharedMemory;
+	sharedSize = memory->secondarySize + memory->auxiliarySize + memory->primarySize + 128;
 	if (param->commandValues[0] & 3)
 		return NULL;
 	if (param->commandValues[1] & 3)
 		return NULL;
-	memory = &g_veneziaVipCommandState.memory->sharedMemory;
-	sharedSize = memory->secondarySize + memory->auxiliarySize + memory->primarySize + 128;
 	if (size < sharedSize + processorSize || (size & 15))
 		return NULL;
 	if (param->physicalBase & 15)
@@ -5182,15 +5182,15 @@ VeneziaVipCommandContext *initializeVeneziaVipCommandContext(
 	context->processorState[0] = 0;
 	context->processorState[1] = 0;
 	context->physicalBase = param->physicalBase;
+	context->commandValues[0] = param->commandValues[0];
+	context->commandValues[1] = param->commandValues[1];
 	context->resultFlags = 0;
 	context->payloadOffsets[1] = processorSize + 96;
 	context->activeQueue = NULL;
-	context->commandValues[0] = param->commandValues[0];
-	context->commandValues[1] = param->commandValues[1];
 	context->contextValue = contextValue;
 	context->magic = 1129335126;
 	context->payloadOffsets[0] = 96;
-	return context;
+	return param->context;
 }
 
 typedef struct VeneziaVipCommandQueueRegion {
@@ -5306,6 +5306,7 @@ int initializeVeneziaVipCommandQueues(VeneziaVipCommandContext *context,
 			queues->flags[1] = 0;
 		} else {
 			queues->slots[0].busy = 0;
+			queues = context->queues;
 			if (context->primarySlot == 1)
 				queues->flags[1] = 0;
 			else if (!queues->slots[1].busy && !queues->slots[2].busy &&
