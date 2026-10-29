@@ -31,7 +31,9 @@ SceUInt32 gxmBlendGetInstructionCount(SceUInt32 reg, const SceGxmBlendInfo *blen
 		cache->size = gxmBlendCodeF16(SCE_TRUE, blendInfo, reg, cache->code, sizeof(cache->code));
 		return cache->size >> 3;
 	}
-	return blended + masked;
+	if (masked)
+		return blended + 1;
+	return blended;
 }
 
 /* write the blending code built by gxmBlendGetInstructionCount() */
