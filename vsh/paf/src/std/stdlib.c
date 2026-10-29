@@ -14,6 +14,33 @@ int sce_paf_rand(void)
 	return (paf_random_seed >> 16) & 0x7fff;
 }
 
+void *sce_paf_bsearch(const void *key, const void *base, size_t count,
+		      size_t element_size,
+		      int (*compare)(const void *element, const void *key))
+{
+	int32_t first = 0;
+	int32_t last;
+
+	if (!key || !compare || !count || !element_size)
+		return NULL;
+	last = (int32_t)((uint32_t)count - 1);
+	while (first <= last) {
+		/* The native midpoint uses wrapped signed addition, rounded to zero. */
+		int32_t middle = (int32_t)((uint32_t)first + (uint32_t)last) / 2;
+		const void *element = (const void *)((uintptr_t)base +
+			(uint32_t)middle * (uint32_t)element_size);
+		int comparison = compare(element, key);
+
+		if (!comparison)
+			return (void *)element;
+		if (comparison > 0)
+			last = (int32_t)((uint32_t)middle - 1);
+		else
+			first = (int32_t)((uint32_t)middle + 1);
+	}
+	return NULL;
+}
+
 int sce_paf_abs(int value)
 {
 	if (value < 0)

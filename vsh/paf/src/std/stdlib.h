@@ -5,6 +5,9 @@
 #include <stdint.h>
 
 int sce_paf_abs(int value);
+void *sce_paf_bsearch(const void *key, const void *base, size_t count,
+		      size_t element_size,
+		      int (*compare)(const void *element, const void *key));
 void sce_paf_srand(unsigned int seed);
 int sce_paf_rand(void);
 
