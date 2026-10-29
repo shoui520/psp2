@@ -77,6 +77,7 @@ SGX_PBDESC *InitializeHardwareParameterBufferDescriptor(SGX_PBDESC *psPBDesc,
 	SGX_HWPBDESC *psHWDesc = psPBDesc->psHWPBDesc;
 	IMG_UINT32 ui32FreeListHT;
 	IMG_UINT32 ui32Prev;
+	IMG_DEV_VIRTADDR sPageTableDevVAddr;
 
 	psHWDesc->ui32Control = 0;
 	psHWDesc->ui32TotalPages = psPBDesc->ui32TotalPages;
@@ -84,9 +85,10 @@ SGX_PBDESC *InitializeHardwareParameterBufferDescriptor(SGX_PBDESC *psPBDesc,
 	psHWDesc->ui32InitialFreeListHT = ui32FreeListHT;
 	ui32Prev = psPBDesc->ui32InitialPrev;
 	psHWDesc->ui32InitialPrev = ui32Prev;
+	sPageTableDevVAddr = *psPageTableDevVAddr;
 	psHWDesc->ui32FreeListHT = ui32FreeListHT;
 	psHWDesc->ui32Prev = ui32Prev;
-	psHWDesc->sPageTableDevVAddr = *psPageTableDevVAddr;
+	psHWDesc->sPageTableDevVAddr = sPageTableDevVAddr;
 	psHWDesc->ui32TAThreshold = psPBDesc->ui32TAThreshold;
 	psHWDesc->ui32ZLSThreshold = psPBDesc->ui32ZLSThreshold;
 	psHWDesc->ui32GlobalThreshold = psPBDesc->ui32GlobalThreshold;
