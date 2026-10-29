@@ -332,6 +332,171 @@ unsigned long long sce_paf_strtoull(const char *str, char **endptr, int base)
 	return result;
 }
 
+double sce_paf_atof(const char *str)
+{
+	const volatile signed char *cursor = (const volatile signed char *)str;
+	double sign = 1.0;
+	double value = 0.0;
+	int saw_digit = 0;
+	int ch;
+
+	if (!cursor)
+		return 0.0;
+	ch = *cursor;
+	while (sce_paf_look_ctype_table(ch) & 8)
+		ch = *++cursor;
+	ch = *cursor;
+	while (ch == '-' || ch == '+') {
+		if (ch == '-')
+			sign = -sign;
+		ch = *++cursor;
+	}
+	while (sce_paf_look_ctype_table(ch) & 4) {
+		int digit = *cursor - '0';
+
+		ch = *++cursor;
+		saw_digit = 1;
+		value = (double)digit + value * 10.0;
+	}
+	if (*cursor == '.') {
+		double divisor = 10.0;
+
+		ch = *++cursor;
+		while (sce_paf_look_ctype_table(ch) & 4) {
+			int digit = *cursor - '0';
+
+			ch = *++cursor;
+			saw_digit = 1;
+			value += (double)digit / divisor;
+			divisor *= 10.0;
+		}
+	}
+	if (!saw_digit)
+		return 0.0;
+	ch = *cursor;
+	if (ch == 'd' || ch == 'D' || ch == 'e' || ch == 'E') {
+		uint32_t exponent = 0;
+		int negative = 0;
+		int has_exponent_digit = 0;
+
+		ch = *++cursor;
+		if (ch == '-') {
+			negative = 1;
+			ch = *++cursor;
+		} else if (ch == '+') {
+			ch = *++cursor;
+		}
+		while (sce_paf_look_ctype_table(ch) & 4) {
+			int digit = *cursor - '0';
+
+			ch = *++cursor;
+			exponent = exponent * 10U + (uint32_t)digit;
+			has_exponent_digit = 1;
+		}
+		if (!has_exponent_digit)
+			return 0.0;
+		if (negative) {
+			while (exponent) {
+				exponent--;
+				value /= 10.0;
+			}
+		} else {
+			while (exponent) {
+				exponent--;
+				value *= 10.0;
+			}
+		}
+	}
+	return value * sign;
+}
+
+double sce_paf_strtod(const char *str, char **endptr)
+{
+	const volatile signed char *cursor = (const volatile signed char *)str;
+	double sign = 1.0;
+	double value = 0.0;
+	int saw_digit = 0;
+	uint32_t fractional_exponent = 0;
+	uint32_t parsed_exponent = 0;
+	int exponent_negative = 0;
+	int ch;
+
+	if (!cursor)
+		return 0.0;
+	ch = *cursor;
+	while (sce_paf_look_ctype_table(ch) & 8)
+		ch = *++cursor;
+	ch = *cursor;
+	if (ch == '-') {
+		sign = -sign;
+		ch = *++cursor;
+	} else if (ch == '+') {
+		ch = *++cursor;
+	}
+	while (sce_paf_look_ctype_table(ch) & 4) {
+		int digit = *cursor - '0';
+
+		ch = *++cursor;
+		saw_digit = 1;
+		value = (double)digit + value * 10.0;
+	}
+	if (*cursor == '.') {
+		ch = *++cursor;
+		while (sce_paf_look_ctype_table(ch) & 4) {
+			int digit = *cursor - '0';
+
+			ch = *++cursor;
+			saw_digit = 1;
+			fractional_exponent--;
+			value = (double)digit + value * 10.0;
+		}
+	}
+	if (!saw_digit) {
+		if (endptr)
+			*endptr = (char *)cursor;
+		return 0.0;
+	}
+	ch = *cursor;
+	if (ch == 'd' || ch == 'D' || ch == 'e' || ch == 'E') {
+		int saw_exponent_digit = 0;
+
+		ch = *++cursor;
+		if (ch == '-') {
+			exponent_negative = 1;
+			ch = *++cursor;
+		} else if (ch == '+') {
+			ch = *++cursor;
+		}
+		while (sce_paf_look_ctype_table(ch) & 4) {
+			int digit = *cursor - '0';
+
+			ch = *++cursor;
+			parsed_exponent = parsed_exponent * 10U + (uint32_t)digit;
+			saw_exponent_digit = 1;
+		}
+		if (endptr)
+			*endptr = (char *)cursor;
+		if (!saw_exponent_digit)
+			return 0.0;
+	} else if (endptr) {
+		*endptr = (char *)cursor;
+	}
+	{
+		uint32_t combined = fractional_exponent +
+			(exponent_negative ? 0U - parsed_exponent : parsed_exponent);
+		int32_t exponent = (int32_t)combined;
+
+		if (exponent < 0) {
+			uint32_t remaining = 0U - combined;
+			while (remaining--) value /= 10.0;
+		} else {
+			uint32_t remaining = combined;
+			while (remaining--) value *= 10.0;
+		}
+	}
+	return value * sign;
+}
+
 int sce_paf_atoi(const char *str)
 {
 	return (int)sce_paf_strtol(str, NULL, 10);

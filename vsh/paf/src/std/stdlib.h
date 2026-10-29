@@ -9,6 +9,8 @@ long sce_paf_strtol(const char *str, char **endptr, int base);
 unsigned long sce_paf_strtoul(const char *str, char **endptr, int base);
 long long sce_paf_strtoll(const char *str, char **endptr, int base);
 unsigned long long sce_paf_strtoull(const char *str, char **endptr, int base);
+double sce_paf_atof(const char *str);
+double sce_paf_strtod(const char *str, char **endptr);
 int sce_paf_atoi(const char *str);
 long sce_paf_atol(const char *str);
 long long sce_paf_atoll(const char *str);
