@@ -1,5 +1,6 @@
 /* Miscellaneous ScePaf state words originally held in shared BSS. */
 #include <stdint.h>
+#include <stddef.h>
 
 uint32_t sce_paf_misc_flags_ee98;
 uint32_t sce_paf_misc_counter_ee9c;
@@ -24,6 +25,8 @@ uint32_t sce_paf_misc_slots_d57c[2];
 uint32_t sce_paf_misc_flags_ede0[2];
 uint32_t sce_paf_misc_counters_edf0[2];
 uint32_t sce_paf_misc_limits_edf8[2];
+uint8_t sce_paf_misc_cells_dc60[2][8][32] __attribute__((aligned(32)));
+uint8_t sce_paf_misc_cells_de60[2][8][32] __attribute__((aligned(32)));
 
 uint32_t ScePafMisc_4E93C051(void)
 {
@@ -211,4 +214,22 @@ uint32_t ScePafMisc_15613EA2(uint32_t index)
 		sce_paf_misc_limits_edf8[index] = limit;
 	}
 	return limit;
+}
+
+void *ScePafMisc_2BE3A49D(uint32_t group, uint32_t cell, void **output)
+{
+	void *address = NULL;
+	if (group < 2 && cell < 8)
+		address = sce_paf_misc_cells_dc60[group][cell];
+	*output = address;
+	return address;
+}
+
+void *ScePafMisc_B5C459E2(uint32_t group, uint32_t cell, void **output)
+{
+	void *address = NULL;
+	if (group < 2 && cell < 8)
+		address = sce_paf_misc_cells_de60[group][cell];
+	*output = address;
+	return address;
 }
