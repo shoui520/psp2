@@ -60,6 +60,52 @@ uint32_t sce_paf_misc_cells_da60[2][8][8];
 uint32_t sce_paf_misc_counters_d200[7];
 uint32_t sce_paf_misc_limits_d21c[7];
 uint32_t sce_paf_misc_masks_d498[5][6];
+typedef struct ScePafMiscGridCell {
+	int16_t active;
+	uint8_t reserved[0xce];
+	uint16_t x;
+	uint16_t y;
+	uint8_t tail[4];
+} ScePafMiscGridCell;
+ScePafMiscGridCell sce_paf_misc_cells_e060[2][8];
+
+int ScePafMisc_24D9EBA3(uint32_t group, uint32_t cell,
+			float *x, float *y)
+{
+	ScePafMiscGridCell *item;
+	if (group >= 2 || cell >= 8)
+		return -1;
+	item = &sce_paf_misc_cells_e060[group][cell];
+	if (item->active <= 0) {
+		*y = 0.0f;
+		*x = 0.0f;
+	} else {
+		*x = (float)item->x;
+		*y = (float)item->y;
+	}
+	return 0;
+}
+
+int ScePafMisc_3BA14D8A(uint32_t group, uint32_t cell,
+			float *x, float *y)
+{
+	ScePafMiscGridCell *item;
+	if (group >= 2 || cell >= 8)
+		return -1;
+	item = &sce_paf_misc_cells_e060[group][cell];
+	if (item->active <= 0) {
+		*y = 0.0f;
+		*x = 0.0f;
+	} else {
+		float fx = (float)item->x;
+		float fy = (float)item->y;
+		*x = (fx - sce_paf_misc_float_112c * 0.5f) *
+			sce_paf_misc_float_1144;
+		*y = (sce_paf_misc_float_1130 * 0.5f - fy) *
+			sce_paf_misc_float_1148;
+	}
+	return 0;
+}
 volatile uint32_t sce_paf_misc_selector_103c[3];
 
 uint32_t ScePafMisc_75AFD25C(int32_t index)
