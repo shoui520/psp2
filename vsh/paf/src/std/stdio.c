@@ -2,6 +2,12 @@
 #include "../compiler.h"
 #include <iofilemgr/iofilemgr.h>
 
+int sce_paf_fflush(sce_paf_FILE *stream)
+{
+	(void)stream;
+	return 0;
+}
+
 int sce_paf_fclose(sce_paf_FILE *stream)
 {
 	if (!stream || !stream->type)

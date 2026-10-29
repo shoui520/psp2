@@ -25,6 +25,7 @@ enum PafFileStatus {
 #define sce_paf_fileno ScePafStdc_17A23255
 #define sce_paf_clearerr ScePafStdc_6FAF02EB
 #define sce_paf_ungetc ScePafStdc_84C69938
+#define sce_paf_fflush ScePafStdc_4703B6A0
 
 int sce_paf_feof(sce_paf_FILE *stream);
 int sce_paf_ferror(sce_paf_FILE *stream);
@@ -32,6 +33,7 @@ int sce_paf_fileno(sce_paf_FILE *stream);
 void sce_paf_clearerr(sce_paf_FILE *stream);
 int sce_paf_ungetc(int ch, sce_paf_FILE *stream);
 int sce_paf_fclose(sce_paf_FILE *stream);
+int sce_paf_fflush(sce_paf_FILE *stream);
 size_t sce_paf_fread(void *ptr, size_t size, size_t count, sce_paf_FILE *stream);
 size_t sce_paf_fwrite(const void *ptr, size_t size, size_t count, sce_paf_FILE *stream);
 int sce_paf_fgetc(sce_paf_FILE *stream);
