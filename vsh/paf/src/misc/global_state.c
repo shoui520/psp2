@@ -35,6 +35,24 @@ float sce_paf_misc_float_1144;
 float sce_paf_misc_float_1148;
 float sce_paf_misc_float_114c;
 float sce_paf_misc_float_1150;
+float sce_paf_misc_float_1134;
+float sce_paf_misc_float_1138;
+float sce_paf_misc_float_113c;
+float sce_paf_misc_float_1140;
+
+void ScePafMisc_8BC3FB99(int32_t *first, int32_t *second,
+			uint32_t *third, uint32_t *fourth)
+{
+	float x = sce_paf_misc_float_1134;
+	float y = sce_paf_misc_float_1138;
+	float width = sce_paf_misc_float_113c;
+	float height = sce_paf_misc_float_1140;
+
+	*first = (int32_t)x;
+	*second = (int32_t)y;
+	*third = (uint32_t)width;
+	*fourth = (uint32_t)height;
+}
 uint32_t sce_paf_misc_mode_d570;
 uint32_t sce_paf_misc_value_d410;
 uint32_t sce_paf_misc_flags_ee00[2];
