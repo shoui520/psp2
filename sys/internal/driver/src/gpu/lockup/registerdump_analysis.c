@@ -159,12 +159,18 @@ lookup_pid:
 	return processUid;
 }
 
+/* Device number of a core's fault slot (0 is the master); Sony's name is unknown. */
+static inline unsigned GetCoreDevice(unsigned core)
+{
+	unsigned devices[4] = { 1, 2, 3, 4 };
+
+	return devices[core];
+}
+
 int sceGpuRegisterDumpAnalysis(const SceGpuRegisterDump *dump,
 		unsigned *analysis, int *pid, unsigned *detail)
 {
-	unsigned faultContexts[5] = { -1, -1, -1, -1, -1 };
-	unsigned faultKinds[5] = { 0, 0, 0, 0, 0 };
-	unsigned coreDevices[4] = { 1, 2, 3, 4 };
+	unsigned faultContexts[5], faultKinds[5];
 	unsigned edmCid, taCid, renderCid, ptlaCid, value;
 	unsigned core, device, selectedDevice, faultCount = 0, request;
 	unsigned faultCid, overview = 0, otherCid, activityMask, registerOffset;
@@ -178,6 +184,16 @@ int sceGpuRegisterDumpAnalysis(const SceGpuRegisterDump *dump,
 		return (int)0x804c0000;
 	*analysis = 0;
 	*pid = -1;
+	faultContexts[0] = (unsigned)-1;
+	faultKinds[0] = 0;
+	faultContexts[1] = (unsigned)-1;
+	faultKinds[1] = 0;
+	faultContexts[2] = (unsigned)-1;
+	faultKinds[2] = 0;
+	faultContexts[3] = (unsigned)-1;
+	faultKinds[3] = 0;
+	faultContexts[4] = (unsigned)-1;
+	faultKinds[4] = 0;
 	if (!GetRegisterDumpMasterRegister(dump, &value, EUR_CR_BIF_INT_STAT + (1U << 14))) {
 		if (value & EUR_CR_BIF_INT_STAT_FAULT_TYPE_MASK) {
 			if (((value >> EUR_CR_BIF_INT_STAT_FAULT_TYPE_SHIFT) & 3) == 3)
@@ -192,7 +208,7 @@ int sceGpuRegisterDumpAnalysis(const SceGpuRegisterDump *dump,
 			faultContexts[0] = value & EUR_CR_BIF_FAULT_CID_MASK;
 	}
 	for (core = 0; core < 4; core++) {
-		device = coreDevices[core];
+		device = GetCoreDevice(core);
 		if (!GetRegisterDumpCoreRegister(dump, &value, EUR_CR_BIF_INT_STAT, core) &&
 				(value & EUR_CR_BIF_INT_STAT_FAULT_TYPE_MASK)) {
 			faultCount++;
@@ -220,7 +236,7 @@ int sceGpuRegisterDumpAnalysis(const SceGpuRegisterDump *dump,
 					registerOffset = ((value >> EUR_CR_BIF_BANK_SET_SELECT_TA_SHIFT) & 3) == 3 ?
 						EUR_CR_BIF_BANK1 : EUR_CR_BIF_BANK0;
 					if (!GetRegisterDumpCoreRegister(dump, &value, registerOffset, core))
-						*pid = _sceGpuRegisterDumpGetContextPid(dump, coreDevices[core],
+						*pid = _sceGpuRegisterDumpGetContextPid(dump, GetCoreDevice(core),
 								(value & EUR_CR_BIF_BANK0_INDEX_TA_MASK) >> EUR_CR_BIF_BANK0_INDEX_TA_SHIFT);
 				}
 				break;
