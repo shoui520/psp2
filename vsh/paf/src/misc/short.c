@@ -163,3 +163,27 @@ void ScePafMisc_FDFC29F2(float *object, const float *source)
 	object[2] = source[2] >= 0.0f ? source[2] : 0.0f;
 	object[3] = source[3] >= 0.0f ? source[3] : 0.0f;
 }
+
+void ScePafMisc_669045E4(float *object, const float *position,
+			const float *dimensions)
+{
+	object[0] = position[0];
+	object[1] = position[1];
+	object[2] = dimensions[0] >= 0.0f ? dimensions[0] : 0.0f;
+	object[3] = dimensions[1] >= 0.0f ? dimensions[1] : 0.0f;
+}
+
+void ScePafMisc_EEFF1E1C(float *object, const float *position,
+			const float *dimensions)
+{
+	object[0] = position[0];
+	object[1] = position[1];
+	object[2] = dimensions[0] >= 0.0f ? dimensions[0] : 0.0f;
+	object[3] = dimensions[1] >= 0.0f ? dimensions[1] : 0.0f;
+}
+
+void ScePafMisc_9EBE483F(float *object, const float *dimensions)
+{
+	object[2] = dimensions[0] >= 0.0f ? dimensions[0] : 0.0f;
+	object[3] = dimensions[1] >= 0.0f ? dimensions[1] : 0.0f;
+}
