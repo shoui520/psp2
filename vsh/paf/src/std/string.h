@@ -79,6 +79,7 @@ extern char PafStringEmpty;
 extern uint16_t PafWStringEmpty;
 
 void *sce_paf_memset(void *dst, int ch, size_t len);
+void *ScePafStdc_8A58EE24(void *dst, uint32_t pattern, uint32_t count);
 void *sce_paf_memchr(const void *ptr, int ch, size_t count);
 void *sce_paf_memcpy(void *dst, const void *src, size_t count);
 void *sce_paf_wmemcpy(void *destination, const void *source, size_t count);
