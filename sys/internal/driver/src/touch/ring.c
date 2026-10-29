@@ -1,4 +1,4 @@
-/* SceTouchDummy: a process's ring of the last 64 samples of one panel.
+/* SceTouch, SceTouchDummy: a process's ring of the last 64 samples of one panel.
  * Private names without a recovered SDK name remain unknown.
  */
 #include "private.h"

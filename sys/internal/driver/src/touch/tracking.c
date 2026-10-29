@@ -1,4 +1,4 @@
-/* SceTouchDummy: which panel report is which finger from one sample to the next.
+/* SceTouch, SceTouchDummy: which panel report is which finger from one sample to the next.
  * Private names without a recovered SDK name remain unknown.
  */
 #include "private.h"

@@ -3,6 +3,14 @@
  */
 #include "private.h"
 
+/* the driver's samples of the four pads, and the reads before they are copied out */
+struct virtualBuffers {
+	SceTouchData samples[4];
+	SceTouchData read[64];
+};
+
+static struct virtualBuffers virtualBuffers;
+
 static const char *const padEventNames[4] = {
 	"SceTouchPad1", "SceTouchPad2", "SceTouchPad3", "SceTouchPad4",
 };
@@ -56,7 +64,7 @@ int readVirtual(unsigned port, SceTouchData *out, int count, unsigned flags) /* 
 		for (i = available - 1; i >= 0; i--) {
 			index = index ? index - 1 : 63;
 			sample = &ring->samples[index];
-			data = &storage.virtualBuffer[i];
+			data = &virtualBuffers.read[i];
 			data->timeStamp = sample->timeStamp;
 			data->reportNum = 0;
 			data->status = sample->status;
@@ -70,7 +78,7 @@ int readVirtual(unsigned port, SceTouchData *out, int count, unsigned flags) /* 
 		if (consume)
 			ring->reader = ring->writeIndex;
 	}
-	if (sceKernelCopyToUser(out, storage.virtualBuffer, available * sizeof(SceTouchData)) > 0)
+	if (sceKernelCopyToUser(out, virtualBuffers.read, available * sizeof(SceTouchData)) > 0)
 		SceDebugForDriver_391B74B7("error!\n");
 	if (process->state == 4)
 		process->state = 0;
@@ -262,15 +270,15 @@ int initializeVirtual(void) /* name unknown */
 int sampleVirtual(TouchVirtualSampleCallback driver) /* name unknown */
 {
 	TouchVirtualSampleRequest request = { 0 };
-	SceTouchData *sample = &storage.virtualSamples[0], *data;
+	SceTouchData *sample = &virtualBuffers.samples[0], *data;
 	struct virtualProcess *process;
 	struct virtualRing *ring;
 	unsigned processed, reports, r;
 	int port, ret, i;
 
 	for (i = 0; i < 4; i++) {
-		memset(&storage.virtualSamples[i], 0, sizeof(SceTouchData));
-		request.samples[i] = &storage.virtualSamples[i];
+		memset(&virtualBuffers.samples[i], 0, sizeof(SceTouchData));
+		request.samples[i] = &virtualBuffers.samples[i];
 	}
 	for (port = 1; port != 5; port++) {
 		ret = driver(port, &request);

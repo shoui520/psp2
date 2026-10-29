@@ -1,22 +1,32 @@
-/* SceTouchDummy: the user API (library SceTouch), each export a system call around the kernel's.
+/* SceTouch, SceTouchDummy: the user API (library SceTouch), each export a system call around the kernel's.
  * Private names without a recovered SDK name remain unknown.
  */
 #include "private.h"
 
+/* the kernel's reads land here before they are copied out, one mutex and buffer per kind */
+struct userBuffers {
+	int readMutex __attribute__((aligned(8)));
+	SceTouchData readBuffer[64];
+	int peekMutex;
+	SceTouchData peekBuffer[64];
+};
+
+static struct userBuffers userBuffers;
+
 int initializeUser(void) /* name unknown */
 {
-	storage.peekMutex = -1;
-	storage.readMutex = -1;
-	storage.readMutex = sceKernelCreateMutex("SceTouch1", 0, 0, NULL);
-	if (storage.readMutex >= 0) {
-		storage.peekMutex = sceKernelCreateMutex("SceTouch2", 0, 0, NULL);
-		if (storage.peekMutex >= 0)
+	userBuffers.peekMutex = -1;
+	userBuffers.readMutex = -1;
+	userBuffers.readMutex = sceKernelCreateMutex("SceTouch1", 0, 0, NULL);
+	if (userBuffers.readMutex >= 0) {
+		userBuffers.peekMutex = sceKernelCreateMutex("SceTouch2", 0, 0, NULL);
+		if (userBuffers.peekMutex >= 0)
 			return 0;
-		if (storage.readMutex >= 0)
-			sceKernelDeleteMutex(storage.readMutex);
+		if (userBuffers.readMutex >= 0)
+			sceKernelDeleteMutex(userBuffers.readMutex);
 	}
-	if (storage.peekMutex >= 0)
-		sceKernelDeleteMutex(storage.peekMutex);
+	if (userBuffers.peekMutex >= 0)
+		sceKernelDeleteMutex(userBuffers.peekMutex);
 	return SCE_TOUCH_ERROR_FATAL;
 }
 
@@ -39,11 +49,11 @@ static inline __attribute__((always_inline)) int userRead(unsigned port, void *o
 	if (!out || count - 1 > 63 || port > 1)
 		return SCE_TOUCH_ERROR_INVALID_ARG;
 	if (kind == USER_READ || kind == USER_READ_REGION) {
-		mutex = &storage.readMutex;
-		buffer = storage.readBuffer;
+		mutex = &userBuffers.readMutex;
+		buffer = userBuffers.readBuffer;
 	} else {
-		mutex = &storage.peekMutex;
-		buffer = storage.peekBuffer;
+		mutex = &userBuffers.peekMutex;
+		buffer = userBuffers.peekBuffer;
 	}
 	ret = sceKernelLockMutex(*mutex, 1, NULL);
 	if (ret < 0)
@@ -340,8 +350,7 @@ int sceTouchSetProcessPrivilege(unsigned privilege)
 
 int sceTouchGetProcessInfoForUser(unsigned port, void *out)
 {
-	/* sceTouchGetProcessInfo fills nothing: the copy hands out stack contents */
-	unsigned char info[0x884];
+	struct touchProcessInfo info;
 	unsigned t = sceSyscallEnter();
 	int ret;
 
@@ -349,9 +358,9 @@ int sceTouchGetProcessInfoForUser(unsigned port, void *out)
 		sceSyscallLeave(t);
 		return SCE_TOUCH_ERROR_INVALID_ARG;
 	}
-	ret = sceTouchGetProcessInfo(port, info);
+	ret = sceTouchGetProcessInfo(port, &info);
 	if (ret >= 0)
-		ret = sceKernelCopyToUser(out, info, sizeof(info));
+		ret = sceKernelCopyToUser(out, &info, sizeof(info));
 	sceSyscallLeave(t);
 	return ret;
 }

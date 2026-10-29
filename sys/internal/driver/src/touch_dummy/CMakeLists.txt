@@ -2,6 +2,6 @@
 # the process searches are unrolled into compare chains and the priority copy is vectorised.
 set(MODULE_COMPILE_OPTIONS -O3)
 psp2_module(os0_kd_bootimage_touch_dummy KIND kernel COMPILER gcc48 SOURCES
-	touch_dummy.c ring.c touch_user.c tracking.c virtual.c
+	touch_dummy.c ../touch/ring.c ../touch/touch_user.c ../touch/tracking.c virtual.c
 	IMPORTS sceKernelDeleteEventFlag
 )

@@ -7,23 +7,10 @@
  * frames) and copied into the ring of every process.
  * Private function names and many fields remain unknown.
  */
-#include <stdint.h>
-#include <stddef.h>
-#include <string.h>
-#include <sysmem/cpu.h>
-#include <sysmem/sysmem.h>
-#include <threadmgr/threadmgr.h>
-#include <intrmgr/intrmgr.h>
 #include <modulemgr/modulemgr.h>
-#include <sysmem/procevent.h>
 #include <syscon/syscon.h>
 #include <sysmem/sysroot.h>
-#include <motion_dummy/motion_dummy.h>
-#include <processmgr/processmgr.h>
-#include <sysmem/sysevent.h>
-#include <intrmgr/syscall.h>
-#include <touch_dummy/touch_dummy.h>
-#include <touch/touch.h>
+#include "private.h"
 
 #define TOUCH_ERROR_BUSY	((int)0x80350103)	/* name unknown */
 
@@ -50,49 +37,6 @@
 #define TOUCH_STATE_IDLE	4
 #define TOUCH_STATE_UPDATING	5
 
-struct touchOwner {
-	int pid;
-	unsigned short region, attr;
-};
-struct touchSample {
-	SceTouchData data;
-	struct touchOwner owners[SCE_TOUCH_MAX_REPORT];
-};
-struct touchRegion {
-	int active;
-	short x, y, width, height;
-	unsigned attr;
-};
-struct touchRing {
-	struct touchSample samples[TOUCH_RING_SIZE];
-	unsigned readers[2], writeIndex, reserved;
-};
-struct touchProcessPort {
-	unsigned eventBit, reserved;
-	struct touchRegion regions[TOUCH_REGIONS];
-	struct touchRing ring;
-};
-struct touchProcess {
-	int pid;
-	unsigned char sampling[2], force[2];
-	unsigned privilege;
-	int state;
-	unsigned timestamp;
-	unsigned short generation;
-	unsigned char compat[TOUCH_PORTS];	/* report without force (old SDK / panel) */
-	unsigned reserved;
-	unsigned sdkVersion;
-	struct touchProcessPort ports[TOUCH_PORTS];
-};
-struct touchNode {
-	unsigned char id, reportIndex, padding[2];
-	struct touchOwner owner;
-	struct touchNode *next;
-};
-struct touchTracking {
-	struct touchNode *added, *active, *free;
-	struct touchNode nodes[SCE_TOUCH_MAX_REPORT];
-};
 struct touchPort {
 	struct touchDeviceInfo deviceInfo;
 	unsigned config;			/* mode byte of the set-mode command */
@@ -134,59 +78,17 @@ struct touchState {
 	int (*ctrlCallback)(unsigned, SceTouchData *);
 };
 
-/* force filter coefficients, per panel */
-struct touchForceGain {
-	float gain, gainAlt;
-	unsigned maxForce, minForce;
-};
-struct touchForceSpread {
-	float scaleNear, scaleNearAlt, slope, slopeAlt;
-	unsigned short nearDistance, farDistance;
-	unsigned short lowForce, highForce;
-};
-struct touchForceRange {
-	unsigned short low, high;
-	float scale;
-};
-struct touchForceCurve {
-	float scale;
-	unsigned short low, high;
-};
-struct touchFilter {
-	unsigned enable;
-	struct touchForceCurve curve[TOUCH_PORTS];	/* set at init, never read */
-	struct touchForceGain gain[TOUCH_PORTS];
-	struct touchForceSpread spread[TOUCH_PORTS];
-	struct touchForceRange range[TOUCH_PORTS][3];
-};
-
-_Static_assert(sizeof(SceTouchData) == 0x90, "touch data layout");
-_Static_assert(sizeof(struct touchSample) == 0xd0, "sample layout");
-_Static_assert(sizeof(struct touchRing) == 0x3410, "ring layout");
-_Static_assert(sizeof(struct touchProcessPort) == 0x3498, "process port layout");
-_Static_assert(sizeof(struct touchProcess) == 0x6950, "process layout");
 _Static_assert(sizeof(struct touchPort) == 0xf4, "port layout");
 _Static_assert(sizeof(struct touchCommand) == 0x84, "command layout");
 _Static_assert(offsetof(struct touchState, processCount) == 0x118, "state layout");
 _Static_assert(offsetof(struct touchState, ports) == 0x1a0, "state ports layout");
 _Static_assert(sizeof(struct touchState) == 0x3ac, "state layout");
-_Static_assert(sizeof(struct touchFilter) == 0x94, "filter layout");
 
-static unsigned s_clampCoordinates;
 static unsigned char s_sampleBuffer[0x80];
 static struct touchSample s_samples[TOUCH_PORTS];
 static struct touchState touch;
 static SceSysconPacket s_resetPacket;
 static int s_updateEvent;
-static unsigned s_forceReport;		/* report the raw force sum and spread (debug) */
-static unsigned s_forceFilterMode;	/* use the syscon's state for the force filter */
-static int s_readMutex;
-static SceTouchData s_readBuffer[TOUCH_RING_SIZE];
-static int s_peekMutex;
-static SceTouchData s_peekBuffer[TOUCH_RING_SIZE];
-static struct touchFilter s_filter;
-
-static const float s_forceMax = 255.0f;
 
 static int sampleDone(SceSysconPacket *packet, void *argp);
 static SceUInt32 sampleAlarm(void *argp);
@@ -309,7 +211,7 @@ static int configDone(SceSysconPacket *packet, void *argp)
 /* name unknown: device info of both panels from the newer syscon interface */
 static int readDeviceInfo(void)
 {
-	SceKernelTouchpanelDeviceInfo2 info = { 0 };
+	SceKernelTouchpanelDeviceInfo2 info = { { 0 } };
 	int retries = 3, ret;
 
 	for (;;) {
@@ -572,50 +474,6 @@ static int vblankHandler(void *subintrArg, void *registerArg, unsigned char prio
 
 /* ---------------------------------------------------------------- processes */
 
-/* name unknown: rings */
-static struct touchSample *ringWriteSlot(struct touchRing *ring)
-{
-	return &ring->samples[ring->writeIndex];
-}
-
-/* name unknown */
-static void ringAdvance(struct touchRing *ring)
-{
-	int next = ((int)ring->writeIndex + 1) % TOUCH_RING_SIZE;
-
-	ring->writeIndex = next;
-	if (next == (int)ring->readers[0])
-		ring->readers[0] = (next + 1) % TOUCH_RING_SIZE;
-	if (next == (int)ring->readers[1])
-		ring->readers[1] = (next + 1) % TOUCH_RING_SIZE;
-}
-
-/* name unknown */
-static struct touchSample *ringLastSample(struct touchRing *ring)
-{
-	if (ring->writeIndex == 0)
-		return &ring->samples[TOUCH_RING_SIZE - 1];
-	return &ring->samples[ring->writeIndex - 1];
-}
-
-/* name unknown */
-static int ringReset(struct touchRing *ring)
-{
-	ring->writeIndex = 0;
-	ring->readers[0] = 0;
-	ring->readers[1] = 0;
-	return 0;
-}
-
-/* name unknown: a reader catches up with the writer */
-static int ringSyncReader(struct touchRing *ring, int kind)
-{
-	if (kind >= 2)
-		return SCE_TOUCH_ERROR_INVALID_ARG;
-	ring->readers[kind] = ring->writeIndex;
-	return 0;
-}
-
 static int startProcess(int pid, int event, ProcEventParam *args, void *common) /* name unknown */
 {
 	struct touchProcess *process;
@@ -657,8 +515,8 @@ static int findOwner(unsigned port, const short *x, const short *y, struct touch
 			continue;
 		for (r = TOUCH_REGIONS - 1; r >= 0; r--) {
 			region = &process->ports[port].regions[r];
-			if (region->active && region->x <= *x && region->y <= *y &&
-			    *x < region->x + region->width && *y < region->y + region->height) {
+			if (region->active && region->rect.x <= *x && region->rect.y <= *y &&
+			    *x < region->rect.x + region->rect.width && *y < region->rect.y + region->rect.height) {
 				owner->attr = region->attr;
 				owner->region = r;
 				owner->pid = touch.priorities[i];
@@ -671,7 +529,7 @@ static int findOwner(unsigned port, const short *x, const short *y, struct touch
 
 static inline int regionSet(const struct touchRegion *region)
 {
-	return region->active && region->x + region->width != 0 && region->y + region->height != 0;
+	return region->active && region->rect.x + region->rect.width != 0 && region->rect.y + region->rect.height != 0;
 }
 
 /* name unknown: whether the topmost process with a region on the panel samples it */
@@ -750,25 +608,6 @@ static int killProcess(int pid, ProcEventParam *args, void *common) /* name unkn
 static int exitProcess(int pid, ProcEventParam *args, void *common) /* name unknown */
 {
 	return removeProcess(pid);
-}
-
-/* name unknown: append list *from to *to */
-static int moveNodes(struct touchNode **from, struct touchNode **to)
-{
-	struct touchNode **tail = to;
-
-	while (*tail)
-		tail = &(*tail)->next;
-	*tail = *from;
-	*from = NULL;
-	return 0;
-}
-
-static void appendNodes(struct touchNode **list, struct touchNode *nodes) /* name unknown */
-{
-	while (*list)
-		list = &(*list)->next;
-	*list = nodes;
 }
 
 /* name unknown: owners of new touches, ownership changes of continuing ones */
@@ -855,8 +694,8 @@ static int stopProcess(int pid, int event, ProcEventParam *args, void *common) /
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 		ret = lookupProcess(pid, (void **)&process, 0);
 		if (ret >= 0 && process) {
-			int front = ringLastSample(&process->ports[0].ring)->data.reportNum;
-			int back = ringLastSample(&process->ports[1].ring)->data.reportNum;
+			int front = lastRingSample(&process->ports[0].ring)->data.reportNum;
+			int back = lastRingSample(&process->ports[1].ring)->data.reportNum;
 
 			process->state = front || back ? 1 : 2;
 			process->timestamp = SceThreadmgrForDriver_47F6DE49();
@@ -933,7 +772,7 @@ title:
 	}
 	for (i = 0; i < TOUCH_PORTS; i++) {
 		port = &process->ports[i];
-		ringReset(&port->ring);
+		initializeRing(&port->ring);
 		bit = allocateBit(&touch.ports[i].allocated);
 		port->eventBit = bit;
 		touch.ports[i].stopped &= ~bit;
@@ -941,11 +780,11 @@ title:
 			port->regions[r].active = 0;
 		panel = &touch.ports[i].panel;
 		port->regions[0].active = 1;
-		port->regions[0].x = panel->minAaX;
-		port->regions[0].y = panel->minAaY;
-		port->regions[0].width = panel->maxAaX + 1 - panel->minAaX;
+		port->regions[0].rect.x = panel->minAaX;
+		port->regions[0].rect.y = panel->minAaY;
+		port->regions[0].rect.width = panel->maxAaX + 1 - panel->minAaX;
 		port->regions[0].attr = 0;
-		port->regions[0].height = panel->maxAaY + 1 - panel->minAaY;
+		port->regions[0].rect.height = panel->maxAaY + 1 - panel->minAaY;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 	return 0;
@@ -967,10 +806,6 @@ static SceKernelProcEventHandler procHandlers = {
 
 /* ------------------------------------------------------------------ sampling */
 
-static int parseSamples(unsigned kinds, const unsigned char *buffer, unsigned size,
-			SceTouchData *front, SceTouchData *back);
-static int initializeTracking(struct touchTracking *tracking);
-static int updateTracking(struct touchTracking *tracking, SceTouchData *sample);
 
 /* name unknown: a raise / lower request of a panel's force sensing */
 static __attribute__((noclone)) void checkForceChange(unsigned port, const struct touchSample *sample)
@@ -1042,13 +877,13 @@ static int processSamples(unsigned kinds, const unsigned char *buffer, unsigned 
 		ret = lookupProcess(touch.pids[i], (void **)&process, 0);
 		if (ret != 0 || process->state == 3)
 			continue;
-		front = ringWriteSlot(&process->ports[0].ring);
-		back = ringWriteSlot(&process->ports[1].ring);
+		front = nextRingSample(&process->ports[0].ring);
+		back = nextRingSample(&process->ports[1].ring);
 		copySample(touch.pids[i], process, front, &s_samples[0]);
 		copySample(touch.pids[i], process, back, &s_samples[1]);
 		processed++;
-		ringAdvance(&process->ports[0].ring);
-		ringAdvance(&process->ports[1].ring);
+		advanceRing(&process->ports[0].ring);
+		advanceRing(&process->ports[1].ring);
 	}
 	sceKernelSetEventFlag(touch.ports[0].events[0], touch.ports[0].allocated & ~touch.ports[0].stopped);
 	sceKernelSetEventFlag(touch.ports[0].events[1], touch.ports[0].allocated & ~touch.ports[0].stopped);
@@ -1112,13 +947,11 @@ static int sampleDone(SceSysconPacket *packet, void *argp)
 }
 
 /* name unknown */
-static int isAltPanel(unsigned port)
+int isAltPanel(unsigned port)
 {
 	return touch.ports[port].deviceInfo.vendor == TOUCH_VENDOR_ALT;
 }
 
-static void initializeFilter(void);
-static void setForceFilterMode(unsigned mode);
 
 /* name unknown: SceTouchInit work queue item */
 static int initialize(void *argp)
@@ -1207,23 +1040,6 @@ static int initialize(void *argp)
 	return 1;
 }
 
-static int initializeMutexes(void) /* name unknown */
-{
-	s_peekMutex = -1;
-	s_readMutex = -1;
-	s_readMutex = sceKernelCreateMutex("SceTouch1", 0, 0, NULL);
-	if (s_readMutex >= 0) {
-		s_peekMutex = sceKernelCreateMutex("SceTouch2", 0, 0, NULL);
-		if (s_peekMutex >= 0)
-			return 0;
-		if (s_readMutex >= 0)
-			sceKernelDeleteMutex(s_readMutex);
-	}
-	if (s_peekMutex >= 0)
-		sceKernelDeleteMutex(s_peekMutex);
-	return SCE_TOUCH_ERROR_FATAL;
-}
-
 int module_start(SceSize args, void *argp)
 {
 	memset(&touch, 0, sizeof(touch));
@@ -1247,319 +1063,7 @@ int module_start(SceSize args, void *argp)
 	touch.sample.packet.externalRxSize = sizeof(s_sampleBuffer);
 	touch.lock = 0;
 	sceKernelScheduleWorkTask(0x10023, "SceTouchInit", initialize, NULL);
-	return initializeMutexes() < 0 ? SCE_KERNEL_START_FAILED : SCE_KERNEL_START_SUCCESS;
-}
-
-/* ------------------------------------------------------------- sample parsing */
-
-/* one report of the syscon's sample reply */
-#define TOUCH_RAW_REPORT	6
-#define TOUCH_RAW_FRONT		6	/* reports per panel in the reply */
-#define TOUCH_RAW_BACK		4
-#define TOUCH_RAW_PANEL		0x3c	/* bytes per panel */
-#define TOUCH_RAW_INVALID	0x80	/* id byte of an unused report */
-
-static inline unsigned rawX(const unsigned char *raw)
-{
-	return raw[1] + ((raw[2] & 7) << 8);
-}
-
-static inline unsigned rawY(const unsigned char *raw)
-{
-	return raw[3] + ((raw[4] & 7) << 8);
-}
-
-static inline void clearReserved(SceTouchReport *report)
-{
-	unsigned i;
-
-	for (i = 0; i < sizeof(report->rsv); i++)
-		report->rsv[i] = 0;
-}
-
-/* name unknown: raw force sum and spread (s_forceReport) into reports[0].reserved */
-static inline void reportForceInfo(const unsigned char *panel, unsigned count, SceTouchData *out)
-{
-	unsigned short sum = (panel[0x34] + (panel[0x35] << 8)) << 5;
-	unsigned short spread = 0;
-	unsigned first, last;
-
-	if (count) {
-		first = panel[0x30] + ((panel[0x31] & 0xf) << 8);
-		last = (panel[0x32] << 4) + (panel[0x31] >> 4);
-		if (last < first)
-			last += 0x1000;
-		spread = last - first;
-	}
-	out->report[0].rsv[0] = sum;
-	out->report[0].rsv[2] = spread;
-	out->report[0].rsv[1] = sum >> 8;
-	out->report[0].rsv[3] = spread >> 8;
-}
-
-static void forceSpread(unsigned port, SceTouchData *data, unsigned flags);
-static void forceRange(unsigned port, SceTouchData *data, unsigned flags);
-
-/* name unknown: the syscon's sample reply into one sample per panel */
-static int parseSamples(unsigned kinds, const unsigned char *buffer, unsigned size,
-			SceTouchData *front, SceTouchData *back)
-{
-	SceTouchReport *report;
-	const unsigned char *raw;
-	unsigned n, x, y;
-	uint64_t time;
-	int flags, busy;
-
-	if (!front || !back)
-		return SCE_TOUCH_ERROR_INVALID_ARG;
-	time = sceKernelGetSystemTimeWide();
-	back->status = 0;
-	back->reportNum = 0;
-	front->timeStamp = time;
-	front->status = 0;
-	front->reportNum = 0;
-	back->timeStamp = time;
-
-	if (kinds & 1) {
-		if (!buffer || size < TOUCH_RAW_PANEL)
-			return SCE_TOUCH_ERROR_INVALID_ARG;
-		n = 0;
-		for (raw = buffer; raw != buffer + TOUCH_RAW_FRONT * TOUCH_RAW_REPORT;
-		     raw += TOUCH_RAW_REPORT) {
-			if (raw[0] & TOUCH_RAW_INVALID)
-				continue;
-			report = &front->report[n];
-			report->id = raw[0];
-			x = rawX(raw);
-			y = rawY(raw);
-			if (s_clampCoordinates) {
-				if (x >= 1919)
-					x = 1919;
-				if (y >= 1087)
-					y = 1087;
-			}
-			report->x = x;
-			n++;
-			report->y = y;
-			report->force = raw[5];
-			report->info = 0;
-			clearReserved(report);
-		}
-		if (s_forceReport)
-			reportForceInfo(buffer, n, front);
-		front->reportNum = n;
-		if (!(kinds & 2))
-			goto filter;
-		buffer += TOUCH_RAW_PANEL;
-		size -= TOUCH_RAW_PANEL;
-	} else if (!(kinds & 2)) {
-		goto filter;
-	}
-
-	if (!buffer || size < TOUCH_RAW_PANEL)
-		return SCE_TOUCH_ERROR_INVALID_ARG;
-	n = 0;
-	back->status = 0;
-	for (raw = buffer; raw != buffer + TOUCH_RAW_BACK * TOUCH_RAW_REPORT; raw += TOUCH_RAW_REPORT) {
-		if (raw[0] & TOUCH_RAW_INVALID)
-			continue;
-		report = &back->report[n];
-		report->id = raw[0];
-		x = rawX(raw);
-		y = rawY(raw);
-		if (s_clampCoordinates) {
-			/* the back panel covers display rows 108..889 */
-			report->x = x < 1919 ? x : 1919;
-			report->y = y > 781 ? 889 : y + 108;
-		} else {
-			report->x = x;
-			report->y = y;
-		}
-		n++;
-		report->force = raw[5];
-		report->info = 0;
-		clearReserved(report);
-	}
-	if (s_forceReport)
-		reportForceInfo(buffer, n, back);
-	back->reportNum = n;
-
-filter:
-	if (!isAltPanel(0))
-		return 0;
-	if (!s_forceFilterMode) {
-		forceRange(0, front, 2);
-		forceRange(1, back, 2);
-		return 0;
-	}
-	busy = SceSysconForDriver_142D5E82();
-	if (SceSysconForDriver_9DA2A5AB() == 0) {
-		flags = busy != 0;
-		forceSpread(0, front, flags);
-		forceSpread(1, back, flags);
-	} else {
-		flags = 2;
-	}
-	forceRange(0, front, flags);
-	forceRange(1, back, flags);
-	return 0;
-}
-
-/* ------------------------------------------------------------- force filter */
-
-/*
- * name unknown: raise each touch's force by the pressure spread from the
- * other touches on the panel, then apply the panel's gain curve.
- */
-static void forceSpread(unsigned port, SceTouchData *data, unsigned flags)
-{
-	const struct touchForceSpread *spread = &s_filter.spread[port];
-	const struct touchForceGain *gain = &s_filter.gain[port];
-	float boost[SCE_TOUCH_MAX_REPORT], scaleNear, slope, g, range, w, out, fs, fu;
-	unsigned n = data->reportNum, i, j, d, f, sum, high;
-	SceTouchReport *report;
-	int diff;
-
-	if (!s_filter.enable)
-		return;
-	if (n < 2) {
-		if (n == 1) {
-			f = data->report[0].force;
-			g = flags & 1 ? gain->gainAlt : gain->gain;
-			range = (float)(gain->maxForce - gain->minForce);
-			out = (float)f + (float)(f - gain->minForce) / range * g * (float)(int)f;
-			data->report[0].force = out > s_forceMax ? 255 : (unsigned char)(unsigned)out;
-		}
-		return;
-	}
-
-	scaleNear = flags & 1 ? spread->scaleNearAlt : spread->scaleNear;
-	slope = flags & 1 ? spread->slopeAlt : spread->slope;
-	for (i = 0; i < n; i++) {
-		boost[i] = 0.0f;
-		for (j = 0; j < n; j++) {
-			if (i == j)
-				continue;
-			diff = data->report[i].y - data->report[j].y;
-			if (diff < 0)
-				diff = -diff;
-			d = (unsigned short)diff;
-			if (d < spread->nearDistance)
-				w = scaleNear;
-			else if (d < spread->farDistance)
-				w = (float)(int)(spread->farDistance - diff) * slope;
-			else
-				continue;
-			if (!(w > 0.0f))
-				continue;
-			f = data->report[j].force;
-			if (f <= spread->lowForce)
-				continue;
-			high = spread->highForce;
-			w *= (float)(f <= high ? f - spread->lowForce : high - spread->lowForce) /
-			     (float)(int)(high - spread->lowForce);
-			if (w > boost[i])
-				boost[i] = w;
-		}
-	}
-
-	g = flags & 1 ? gain->gainAlt : gain->gain;
-	range = (float)(gain->maxForce - gain->minForce);
-	for (i = 0; i < n; i++) {
-		report = &data->report[i];
-		if (boost[i] > 0.0f) {
-			sum = report->force + (unsigned)(boost[i] * (float)(int)report->force);
-			if (sum <= 255) {
-				report->force = sum;
-				fs = (float)(int)sum;
-				fu = (float)sum;
-			} else {
-				report->force = 255;
-				sum = 255;
-				fu = s_forceMax;
-				fs = fu;
-			}
-		} else {
-			sum = report->force;
-			fs = (float)(int)sum;
-			fu = (float)sum;
-		}
-		out = fu + (float)(sum - gain->minForce) / range * g * fs;
-		report->force = out > s_forceMax ? 255 : (unsigned char)(unsigned)out;
-	}
-}
-
-/* name unknown: scale each touch's force into the panel's reporting range */
-static void forceRange(unsigned port, SceTouchData *data, unsigned flags)
-{
-	const struct touchForceRange *range;
-	unsigned n, i, f;
-	unsigned char low, high;
-
-	if (!s_filter.enable)
-		return;
-	if (flags & 2)
-		range = &s_filter.range[port][2];
-	else if (flags & 1)
-		range = &s_filter.range[port][1];
-	else
-		range = &s_filter.range[port][0];
-	n = data->reportNum;
-	if (!n)
-		return;
-	low = range->low;
-	high = range->high;
-	for (i = 0; i < n; i++) {
-		f = (unsigned char)(unsigned)((float)(int)data->report[i].force * range->scale);
-		if (f >= high)
-			f = high;
-		data->report[i].force = low < f ? (unsigned char)(f - low) : 1;
-	}
-}
-
-/* name unknown: the force filter's coefficients */
-static void initializeFilter(void)
-{
-	s_filter.enable = 1;
-	s_filter.curve[0].scale = 0.08f;
-	s_filter.curve[0].low = 0x3c;
-	s_filter.curve[0].high = 0xa0;
-	s_filter.curve[1].scale = 0.05f;
-	s_filter.curve[1].low = 0x3c;
-	s_filter.curve[1].high = 0xaa;
-	s_filter.gain[0] = (struct touchForceGain){ 0.6f, 0.18f, 0xff, 0 };
-	s_filter.gain[1] = (struct touchForceGain){ 0.6f, 0.25f, 0xff, 0 };
-	s_filter.spread[0] = (struct touchForceSpread){ 0.45f, 0.1f, 0.45f / 280, 0.1f / 280,
-							 70, 350, 52, 170 };
-	s_filter.spread[1] = (struct touchForceSpread){ 0.45f, 0.15f, 0.45f / 190, 0.15f / 190,
-							 40, 230, 40, 120 };
-	s_filter.range[0][0] = (struct touchForceRange){ 0x40, 0xc0, 0.85f };
-	s_filter.range[0][1] = (struct touchForceRange){ 0x40, 0xc0, 0.8f };
-	s_filter.range[0][2] = (struct touchForceRange){ 0x40, 0xc0, 0.76f };
-	s_filter.range[1][0] = (struct touchForceRange){ 0x38, 0xb8, 0.9f };
-	s_filter.range[1][1] = (struct touchForceRange){ 0x38, 0xb8, 0.9f };
-	s_filter.range[1][2] = (struct touchForceRange){ 0x40, 0xc0, 0.8f };
-}
-
-/* names unknown: debug switches (SceTouchForDriver_062A11A2 / _845E2115) */
-static void setForceReport(unsigned enable)
-{
-	s_forceReport = enable;
-}
-
-static void setForceFilterMode(unsigned mode)
-{
-	s_forceFilterMode = mode;
-}
-
-static void setClampCoordinates(unsigned clamp)
-{
-	s_clampCoordinates = clamp;
-}
-
-static void setFilterEnable(unsigned enable)
-{
-	s_filter.enable = enable;
+	return initializeUser() < 0 ? SCE_KERNEL_START_FAILED : SCE_KERNEL_START_SUCCESS;
 }
 
 /* ------------------------------------------------------- tracking, ring reads */
@@ -1572,121 +1076,6 @@ static void copyWords(void *out, const void *in, unsigned bytes) /* name unknown
 		((unsigned *)out)[i] = ((const unsigned *)in)[i];
 }
 
-static int initializeTracking(struct touchTracking *tracking) /* name unknown */
-{
-	unsigned i;
-
-	memset(tracking, 0, sizeof(*tracking));
-	for (i = 0; i < 8; i++)
-		appendNodes(&tracking->free, &tracking->nodes[i]);
-	return 0;
-}
-
-static int updateTracking(struct touchTracking *tracking, SceTouchData *sample) /* name unknown */
-{
-	struct touchNode *node, *retained = NULL;
-	unsigned remaining = sample->reportNum, seen = 0, i;
-
-	appendNodes(&tracking->active, tracking->added);
-	tracking->added = NULL;
-	if (!remaining) {
-		appendNodes(&tracking->free, tracking->active);
-		tracking->active = NULL;
-		return 0;
-	}
-	while (tracking->active && remaining) {
-		node = tracking->active;
-		tracking->active = node->next;
-		node->next = NULL;
-		for (i = 0; i < sample->reportNum; i++)
-			if (sample->report[i].id == node->id)
-				break;
-		if (i == sample->reportNum) {
-			appendNodes(&tracking->free, node);
-		} else {
-			node->reportIndex = i;
-			seen |= (1U << (i & 255)) & 255;
-			appendNodes(&retained, node);
-			remaining--;
-		}
-	}
-	if (!remaining)
-		appendNodes(&tracking->free, tracking->active);
-	tracking->active = retained;
-	for (i = 0; i < sample->reportNum && remaining; i++) {
-		if ((seen >> (i & 255)) & 1)
-			continue;
-		node = tracking->free;
-		if (!node)
-			return SCE_TOUCH_ERROR_FATAL;
-		tracking->free = node->next;
-		node->next = NULL;
-		node->id = sample->report[i].id;
-		node->reportIndex = i;
-		node->owner.pid = -1;
-		node->owner.region = 0xffff;
-		appendNodes(&tracking->added, node);
-		remaining--;
-	}
-	return remaining ? SCE_TOUCH_ERROR_FATAL : 0;
-}
-
-static unsigned regionBit(unsigned region) /* name unknown */
-{
-	region &= 255;
-	return region < 32 ? 1U << region : 0;
-}
-
-static int readRing(struct touchRing *ring, unsigned kind, SceTouchData *out,
-		    unsigned count, int pid, unsigned regions, unsigned flags) /* name unknown */
-{
-	struct touchSample *sample;
-	SceTouchReport *report;
-	struct touchOwner *owner;
-	unsigned available, index = ring->writeIndex, i, j, reports;
-	int owned;
-
-	if (!out || kind > 1)
-		return SCE_TOUCH_ERROR_INVALID_ARG;
-	available = flags & 1 ? (ring->writeIndex - ring->readers[kind]) & 63 : 64;
-	if (!available)
-		return 0;
-	if (count > available)
-		count = available;
-	for (i = count; i > 0; i--) {
-		index = (index - 1) & 63;
-		sample = &ring->samples[index];
-		out[i - 1].timeStamp = sample->data.timeStamp;
-		out[i - 1].status = sample->data.status;
-		out[i - 1].reportNum = 0;
-		if (!(flags & 0x80000000))
-			continue;
-		reports = sample->data.reportNum;
-#if !FW_DEBUG
-		if ((flags & 0xf0) == 0xd0 && reports > 8)
-			reports = 8;
-#endif
-		for (j = 0; j < reports; j++) {
-			owner = &sample->owners[j];
-			owned = owner->pid == pid && (regionBit(owner->region) & regions);
-			if ((flags & 16) && !owned && (!(flags & 32) || (owner->attr & 1)))
-				continue;
-			report = &out[i - 1].report[out[i - 1].reportNum++];
-			copyWords(report, &sample->data.report[j], 16);
-			if (!(flags & 16))
-				report->info = 0;
-			else if (!owned)
-				report->info = owner->attr & 1;
-			if (!(flags & 64))
-				report->force = 0;
-			else if (!(flags & 128))
-				report->force = 128;
-		}
-	}
-	if (flags & 1)
-		ring->readers[kind] = ring->writeIndex;
-	return count;
-}
 
 /* ------------------------------------------------------------ driver exports */
 
@@ -1757,25 +1146,25 @@ int sceTouchPeekRegion(unsigned port, SceTouchData *out, unsigned count, unsigne
 }
 
 /* name unknown: sceTouchReadRegion of the Ext sampling */
-static int readRegionExt(unsigned port, SceTouchData *out, unsigned count, unsigned regions)
+int readRegionExt(unsigned port, SceTouchData *out, unsigned count, unsigned regions)
 {
 	return readPhysical(port, out, count, regions, 1, 0);
 }
 
 /* name unknown */
-static int peekRegionExt(unsigned port, SceTouchData *out, unsigned count, unsigned regions)
+int peekRegionExt(unsigned port, SceTouchData *out, unsigned count, unsigned regions)
 {
 	return readPhysical(port, out, count, regions, 1, 1);
 }
 
 /* name unknown: virtual touch devices are not supported, nothing to read */
-static int readVirtual(void)
+int readVirtualWait(unsigned device, unsigned port, SceTouchData *out, unsigned count)
 {
 	return 0;
 }
 
 /* name unknown */
-static int peekVirtual(void)
+int readVirtualPeek(unsigned device, unsigned port, SceTouchData *out, unsigned count)
 {
 	return 0;
 }
@@ -1795,7 +1184,7 @@ static int setSampling(unsigned port, unsigned state, unsigned kind) /* name unk
 		old = (process->sampling[kind] >> port) & 1;
 		if (old != state) {
 			if (state) {
-				ringSyncReader(&process->ports[port].ring, kind);
+				resetRingReader(&process->ports[port].ring, kind);
 				bit = process->ports[port].eventBit;
 				if (bit & touch.ports[port].allocated)
 					sceKernelClearEventFlag(touch.ports[port].events[kind], ~bit);
@@ -1815,7 +1204,7 @@ int sceTouchSetSamplingState(unsigned port, unsigned state)
 }
 
 /* name unknown */
-static int setSamplingExt(unsigned port, unsigned state)
+int setSamplingStateExt(unsigned port, unsigned state)
 {
 	return setSampling(port, state, 1);
 }
@@ -1845,7 +1234,7 @@ int sceTouchGetSamplingState(unsigned port, unsigned *state)
 }
 
 /* name unknown */
-static int getSamplingExt(unsigned port, unsigned *state)
+int getSamplingStateExt(unsigned port, unsigned *state)
 {
 	return getSampling(port, state, 1);
 }
@@ -1875,7 +1264,7 @@ int sceTouchEnableTouchForce(unsigned port)
 }
 
 /* name unknown */
-static int enableTouchForceExt(unsigned port)
+int enableTouchForceExt(unsigned port)
 {
 	return setForce(port, 1, 1);
 }
@@ -1886,7 +1275,7 @@ int sceTouchDisableTouchForce(unsigned port)
 }
 
 /* name unknown */
-static int disableTouchForceExt(unsigned port)
+int disableTouchForceExt(unsigned port)
 {
 	return setForce(port, 0, 1);
 }
@@ -1933,7 +1322,7 @@ int sceTouchSetRegion(unsigned port, unsigned region, const short *rect, unsigne
 	if (ret >= 0 && process) {
 		dest = &process->ports[port].regions[region];
 		dest->active = 1;
-		copyWords(&dest->x, rect, 8);
+		copyWords(&dest->rect.x, rect, 8);
 		dest->attr = attr;
 		ret = 0;
 	}
@@ -1958,7 +1347,7 @@ int SceTouchForDriver_E1C5D95F(unsigned port, unsigned region)
 		dest->active = 0;
 		dest->attr = 0;
 		for (i = 0; i < 8; i++)
-			((unsigned char *)&dest->x)[i] = 0;
+			((unsigned char *)&dest->rect.x)[i] = 0;
 		ret = 0;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
@@ -1998,7 +1387,7 @@ int sceTouchActivateRegion(unsigned port, unsigned region, unsigned enable)
 	ret = lookupProcess(pid, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		dest = &process->ports[port].regions[region];
-		if (enable && !validRegion(port, &dest->x, 0))
+		if (enable && !validRegion(port, &dest->rect.x, 0))
 			ret = SCE_TOUCH_ERROR_INVALID_ARG;
 		else
 			dest->active = enable;
@@ -2059,7 +1448,7 @@ int sceTouchGetPanelInfo(unsigned port, SceTouchPanelInfo *out)
 	return 0;
 }
 
-static int getPixelDensity(float *front, float *back) /* name unknown */
+int getPixelDensity(float *front, float *back) /* name unknown */
 {
 	if (!front || !back)
 		return SCE_TOUCH_ERROR_INVALID_ARG;
@@ -2068,7 +1457,7 @@ static int getPixelDensity(float *front, float *back) /* name unknown */
 	return 0;
 }
 
-static int getPixelDensity2(float *frontX, float *frontY, float *backX, float *backY) /* name unknown */
+int getPixelDensity2(float *frontX, float *frontY, float *backX, float *backY) /* name unknown */
 {
 	if (!frontX || !frontY || !backX || !backY)
 		return SCE_TOUCH_ERROR_INVALID_ARG;
@@ -2079,7 +1468,7 @@ static int getPixelDensity2(float *frontX, float *frontY, float *backX, float *b
 	return 0;
 }
 
-static int setPrivilege(unsigned privilege) /* name unknown */
+int setProcessPrivilege(unsigned privilege) /* name unknown */
 {
 	struct touchProcess *process;
 	unsigned intr;
@@ -2095,18 +1484,6 @@ static int setPrivilege(unsigned privilege) /* name unknown */
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 	return ret;
 }
-
-/* the regions of every process with a priority, for one panel */
-struct touchProcessInfo {
-	unsigned count;
-	struct {
-		int pid;
-		unsigned privilege;
-		struct touchRegion regions[TOUCH_REGIONS];
-	} processes[TOUCH_MAX_PROCESSES];
-};
-
-_Static_assert(sizeof(struct touchProcessInfo) == 0x884, "process info layout");
 
 int sceTouchGetProcessInfo(unsigned port, struct touchProcessInfo *out)
 {
@@ -2326,336 +1703,5 @@ int sceTouchUpdateRestart(unsigned panels)
 		}
 	}
 	SceKernelSuspendForDriver_2BB92967(0);
-	return ret;
-}
-
-/* ------------------------------------------------------------ user syscalls */
-
-/* the kernel read behind a user read */
-static inline int kernelRead(unsigned port, SceTouchData *buffer, unsigned count,
-			     unsigned regions, unsigned kind, int peek)
-{
-	if (kind)
-		return peek ? peekRegionExt(port, buffer, count, regions) :
-			      readRegionExt(port, buffer, count, regions);
-	if (regions)
-		return peek ? sceTouchPeekRegion(port, buffer, count, regions) :
-			      sceTouchReadRegion(port, buffer, count, regions);
-	return peek ? sceTouchPeek(port, buffer, count) : sceTouchRead(port, buffer, count);
-}
-
-/* regions 0: the plain read (all regions) */
-static int userRead(unsigned port, void *out, unsigned count, unsigned regions,
-		    unsigned kind, int peek) /* name unknown */
-{
-	SceTouchData *buffer = peek || kind ? s_peekBuffer : s_readBuffer;
-	int mutex = peek || kind ? s_peekMutex : s_readMutex;
-	unsigned t = sceSyscallEnter();
-	int ret, copied, unlocked;
-
-	if (!out || count - 1 >= TOUCH_RING_SIZE || port >= TOUCH_PORTS) {
-		ret = SCE_TOUCH_ERROR_INVALID_ARG;
-	} else {
-		ret = sceKernelLockMutex(mutex, 1, NULL);
-		if (ret >= 0) {
-			ret = kernelRead(port, buffer, count, regions, kind, peek);
-			if (ret > 0) {
-				copied = sceKernelCopyToUser(out, buffer, ret * sizeof(SceTouchData));
-				if (copied < 0) {
-					sceKernelUnlockMutex(mutex, 1);
-					sceSyscallLeave(t);
-					return copied;
-				}
-			}
-			unlocked = sceKernelUnlockMutex(mutex, 1);
-			if (unlocked < 0)
-				ret = unlocked;
-		}
-	}
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchReadForUser(SceUInt32 port, SceTouchData *out, SceUInt32 count)
-{
-	return userRead(port, out, count, 0, 0, 0);
-}
-
-int sceTouchPeekForUser(SceUInt32 port, SceTouchData *out, SceUInt32 count)
-{
-	return userRead(port, out, count, 0, 0, 1);
-}
-
-int sceTouchReadRegionForUser(unsigned port, void *out, unsigned count, unsigned regions)
-{
-	return userRead(port, out, count, regions, 0, 0);
-}
-
-int sceTouchPeekRegionForUser(unsigned port, void *out, unsigned count, unsigned regions)
-{
-	return userRead(port, out, count, regions, 0, 1);
-}
-
-int sceTouchReadRegionExt(unsigned port, void *out, unsigned count, unsigned regions)
-{
-	return userRead(port, out, count, regions, 1, 0);
-}
-
-int sceTouchPeekRegionExt(unsigned port, void *out, unsigned count, unsigned regions)
-{
-	return userRead(port, out, count, regions, 1, 1);
-}
-
-int sceTouchSetSamplingStateForUser(SceUInt32 port, SceUInt32 state)
-{
-	unsigned t = sceSyscallEnter();
-	int ret = sceTouchSetSamplingState(port, state);
-
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchSetSamplingStateExt(unsigned port, unsigned state)
-{
-	unsigned t = sceSyscallEnter();
-	int ret = setSamplingExt(port, state);
-
-	sceSyscallLeave(t);
-	return ret;
-}
-
-static int userGetSampling(unsigned port, void *out, unsigned kind) /* name unknown */
-{
-	unsigned value = 0, t;
-	int ret;
-
-	if (!out)
-		return SCE_TOUCH_ERROR_INVALID_ARG;
-	t = sceSyscallEnter();
-	ret = kind ? getSamplingExt(port, &value) : sceTouchGetSamplingState(port, &value);
-	if (ret >= 0)
-		ret = sceKernelCopyToUser(out, &value, 4);
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchGetSamplingStateForUser(SceUInt32 port, SceUInt32 *out)
-{
-	return userGetSampling(port, out, 0);
-}
-
-int sceTouchGetSamplingStateExt(unsigned port, void *out)
-{
-	return userGetSampling(port, out, 1);
-}
-
-int sceTouchEnableTouchForceForUser(SceUInt32 port)
-{
-	unsigned t = sceSyscallEnter();
-	int ret = sceTouchEnableTouchForce(port);
-
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchEnableTouchForceExt(unsigned port)
-{
-	unsigned t = sceSyscallEnter();
-	int ret = enableTouchForceExt(port);
-
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchDisableTouchForceForUser(SceUInt32 port)
-{
-	unsigned t = sceSyscallEnter();
-	int ret = sceTouchDisableTouchForce(port);
-
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchDisableTouchForceExt(unsigned port)
-{
-	unsigned t = sceSyscallEnter();
-	int ret = disableTouchForceExt(port);
-
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchGetPanelInfoForUser(SceUInt32 port, SceTouchPanelInfo *out)
-{
-	SceTouchPanelInfo info;
-	unsigned t;
-	int ret;
-
-	if (!out)
-		return SCE_TOUCH_ERROR_INVALID_ARG;
-	t = sceSyscallEnter();
-	ret = sceTouchGetPanelInfo(port, &info);
-	if (ret >= 0)
-		ret = sceKernelCopyToUser(out, &info, sizeof(info));
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchGetPixelDensity(void *front, void *back)
-{
-	float values[2] = { 0 };
-	unsigned t = sceSyscallEnter();
-	int ret = SCE_TOUCH_ERROR_INVALID_ARG;
-
-	if (front && back) {
-		ret = getPixelDensity(&values[0], &values[1]);
-		if (ret >= 0)
-			ret = sceKernelCopyToUser(front, &values[0], 4);
-		if (ret >= 0)
-			ret = sceKernelCopyToUser(back, &values[1], 4);
-	}
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchGetPixelDensity2(void *frontX, void *frontY, void *backX, void *backY)
-{
-	float values[4] = { 0 };
-	unsigned t = sceSyscallEnter();
-	int ret = SCE_TOUCH_ERROR_INVALID_ARG;
-
-	if (frontX && frontY && backX && backY) {
-		ret = getPixelDensity2(&values[0], &values[1], &values[2], &values[3]);
-		if (ret >= 0)
-			ret = sceKernelCopyToUser(frontX, &values[0], 4);
-		if (ret >= 0)
-			ret = sceKernelCopyToUser(frontY, &values[1], 4);
-		if (ret >= 0)
-			ret = sceKernelCopyToUser(backX, &values[2], 4);
-		if (ret >= 0)
-			ret = sceKernelCopyToUser(backY, &values[3], 4);
-	}
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchSetRegionForUser(unsigned port, unsigned region, const void *rect, unsigned attr)
-{
-	short copy[4];
-	unsigned t;
-	int ret;
-
-	if (!rect)
-		return SCE_TOUCH_ERROR_INVALID_ARG;
-	t = sceSyscallEnter();
-	ret = sceKernelCopyFromUser(copy, rect, 8);
-	if (!ret)
-		ret = sceTouchSetRegion(port, region, copy, attr);
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchClearRegion(unsigned port, unsigned region)
-{
-	unsigned t = sceSyscallEnter();
-	int ret = SceTouchForDriver_E1C5D95F(port, region);
-
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchActivateRegionForUser(unsigned port, unsigned region, unsigned enable)
-{
-	unsigned t = sceSyscallEnter();
-	int ret = sceTouchActivateRegion(port, region, enable);
-
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchSetRegionAttrForUser(unsigned port, unsigned region, unsigned attr)
-{
-	unsigned t = sceSyscallEnter();
-	int ret = sceTouchSetRegionAttr(port, region, attr);
-
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchSetProcessPrivilege(unsigned privilege)
-{
-	unsigned t = sceSyscallEnter();
-	int ret = SCE_TOUCH_ERROR_PRIV_REQUIRED;
-
-	if (sceSblACMgrIsSystemProgram(0))
-		ret = setPrivilege(privilege);
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchGetProcessInfoForUser(unsigned port, void *out)
-{
-	struct touchProcessInfo info;
-	unsigned t = sceSyscallEnter();
-	int ret = SCE_TOUCH_ERROR_INVALID_ARG;
-
-	if (out) {
-		ret = sceTouchGetProcessInfo(port, &info);
-		if (ret >= 0)
-			ret = sceKernelCopyToUser(out, &info, sizeof(info));
-	}
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchEnableIdleTimerCancelSettingForUser(unsigned port, int enable)
-{
-	unsigned t = sceSyscallEnter();
-	int ret = SCE_TOUCH_ERROR_PRIV_REQUIRED;
-
-	if (sceSblACMgrIsSystemProgram(0))
-		ret = sceTouchEnableIdleTimerCancelSetting(port, enable);
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchGetDeviceInfoForUser(unsigned port, void *out)
-{
-	struct touchDeviceInfo info;
-	unsigned t = sceSyscallEnter();
-	int ret = SCE_TOUCH_ERROR_PRIV_REQUIRED;
-
-	if (sceSblACMgrIsSystemProgram(0)) {
-		ret = sceTouchGetDeviceInfo(port, &info);
-		if (ret >= 0)
-			ret = sceKernelCopyToUser(out, &info, sizeof(info));
-	}
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchRead2(unsigned device, unsigned port, void *out, unsigned count)
-{
-	unsigned t;
-	int ret;
-
-	if (!device)
-		return userRead(port, out, count, 0, 0, 0);
-	t = sceSyscallEnter();
-	ret = readVirtual();
-	sceSyscallLeave(t);
-	return ret;
-}
-
-int sceTouchPeek2(unsigned device, unsigned port, void *out, unsigned count)
-{
-	unsigned t;
-	int ret;
-
-	if (!device)
-		return userRead(port, out, count, 0, 0, 1);
-	t = sceSyscallEnter();
-	ret = peekVirtual();
-	sceSyscallLeave(t);
 	return ret;
 }

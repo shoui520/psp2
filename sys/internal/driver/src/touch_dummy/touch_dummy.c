@@ -930,7 +930,8 @@ int setProcessPrivilege(unsigned privilege) /* name unknown */
 	return 0;
 }
 
-int sceTouchGetProcessInfo(unsigned port, void *out)
+/* SceTouchDummy fills nothing: its user wrapper hands out stack contents */
+int sceTouchGetProcessInfo(unsigned port, struct touchProcessInfo *out)
 {
 	return 0;
 }
