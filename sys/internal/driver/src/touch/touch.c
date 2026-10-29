@@ -84,11 +84,12 @@ _Static_assert(offsetof(struct touchState, processCount) == 0x118, "state layout
 _Static_assert(offsetof(struct touchState, ports) == 0x1a0, "state ports layout");
 _Static_assert(sizeof(struct touchState) == 0x3ac, "state layout");
 
-static unsigned char s_sampleBuffer[0x80];
-static struct touchSample s_samples[TOUCH_PORTS];
-static struct touchState touch;
-static SceSysconPacket s_resetPacket;
+/* defined last to first: GCC 4.8 places a unit's objects in reverse order, Sony's from the buffer up */
 static int s_updateEvent;
+static SceSysconPacket s_resetPacket;
+static struct touchState touch;
+static struct touchSample s_samples[TOUCH_PORTS];
+static unsigned char s_sampleBuffer[0x80] __attribute__((aligned(16)));
 
 static int sampleDone(SceSysconPacket *packet, void *argp);
 static SceUInt32 sampleAlarm(void *argp);
@@ -795,7 +796,7 @@ static int createProcessEvent(int pid, ProcEventCreateParam *args, void *common)
 	return createProcess(pid);
 }
 
-static SceKernelProcEventHandler procHandlers = {
+static const SceKernelProcEventHandler procHandlers = {
 	.size = sizeof(SceKernelProcEventHandler),
 	.create = createProcessEvent,
 	.exit = exitProcess,
@@ -1044,8 +1045,8 @@ int module_start(SceSize args, void *argp)
 {
 	memset(&touch, 0, sizeof(touch));
 	memset(s_sampleBuffer, 0, sizeof(s_sampleBuffer));
-	memset(touch.pids, 0xff, sizeof(touch.pids));
-	memset(touch.priorities, 0xff, sizeof(touch.priorities));
+	memset(touch.pids, -1, sizeof(touch.pids));
+	memset(touch.priorities, -1, sizeof(touch.priorities));
 	touch.ports[0].config = 6;
 	touch.ports[1].config = 4;
 	touch.idleMask = 3;

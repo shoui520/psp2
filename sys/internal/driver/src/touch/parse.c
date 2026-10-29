@@ -10,8 +10,8 @@
 #define TOUCH_RAW_PANEL		0x3c	/* bytes per panel */
 #define TOUCH_RAW_INVALID	0x80	/* id byte of an unused report */
 
-unsigned s_forceReport;			/* report the raw force sum and spread (debug) */
-unsigned s_forceFilterMode;		/* use the syscon's state for the force filter */
+unsigned s_forceFilterMode = 0;		/* use the syscon's state for the force filter */
+unsigned s_forceReport = 0;		/* report the raw force sum and spread (debug) */
 static unsigned s_clampCoordinates = 1;
 
 /* names unknown: debug switches (SceTouchForDriver_062A11A2 / _845E2115) */
