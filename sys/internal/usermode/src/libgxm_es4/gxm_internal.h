@@ -685,6 +685,7 @@ int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 address, const SceUInt32 *
 #define GXM_DIRTY_VERTEX_OUTPUTS2	0x00008000
 
 /* SceGxmContext.flags */
+#define GXM_CONTEXT_FLAG_VERTEX_FENCE		0x00000200	/* sceGxmVertexFence wrote a fence */
 #define GXM_CONTEXT_FLAG_DEPTH_STENCIL_USED	0x00000800
 
 /* ISP control word (front and back) */
@@ -1357,7 +1358,7 @@ typedef struct GxmInitCallbacks {
 	void (*beginScene)(SceUInt32 frame);
 	void (*displayQueueAddEntry)(SceUInt32);	/* 0x10 */
 	void (*contextWritten)(SceGxmContext *context);	/* after a draw or a kick */
-	void (*userMarker)(SceGxmContext *context, const char *marker);
+	int (*userMarker)(SceGxmContext *context, const char *tag);	/* its result picks the marker word */
 	void (*memoryMapped)(SceUInt32 type, void *base, SceUInt32 gpuAddress, SceSize size);
 	void (*memoryUnmapped)(SceUInt32 type, void *base);
 	int (*isCapturing)(void);		/* gates the marker and capture hooks */

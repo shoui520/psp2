@@ -844,3 +844,148 @@ int sceGxmEndScene(SceGxmContext *context, const SceGxmNotification *vertexNotif
 	gxmGlobals.sceneIndex++;
 	return gxmSceneEnd();
 }
+
+/* user markers in the VDM stream: a two-word block, the tag copied in a deferred context */
+#define GXM_USER_MARKER_PUSH		0xc0debf00
+#define GXM_USER_MARKER_POP		0xc0debf01
+#define GXM_USER_MARKER_SET		0xc0debf02
+#define GXM_USER_MARKER_PUSH_TAKEN	0xc0debf03	/* the userMarker callback returned nonzero */
+#define GXM_USER_MARKER_SET_TAKEN	0xc0debf04
+#define GXM_USER_MARKER_PUSH_TAG	0xc0debf05	/* deferred: the tag follows */
+#define GXM_USER_MARKER_POP_DEFERRED	0xc0debf06
+#define GXM_USER_MARKER_SET_TAG		0xc0debf07
+
+#define GXM_USER_MARKER_TAG_SIZE	64
+
+static inline int gxmContextWriteUserMarker(SceGxmContext *context, SceUInt32 marker)
+{
+	SceUInt32 *block = gxmChunkBufferReserve(&context->vdmBuffer, 8, 4);
+
+	if (block == NULL)
+		return SCE_GXM_ERROR_RESERVE_FAILED;
+	block[1] = marker;
+	block[0] = (SceUInt32)&block[2] >> 2;
+	context->vdmBuffer.cur = (SceUInt32)&block[2];
+	return 0;
+}
+
+static inline int gxmContextWriteUserMarkerTag(SceGxmContext *context, SceUInt32 marker,
+					       const char *tag)
+{
+	SceUInt32 *block = gxmChunkBufferReserve(&context->vdmBuffer,
+						 8 + GXM_USER_MARKER_TAG_SIZE, 4);
+	char *start, *end, *dst;
+	char c;
+	SceUInt32 next;
+
+	if (block == NULL)
+		return SCE_GXM_ERROR_RESERVE_FAILED;
+	start = (char *)&block[2];
+	end = start + GXM_USER_MARKER_TAG_SIZE - 1;
+	dst = start;
+	c = *tag++;
+	if (c != '\0') {
+		do {
+			*dst++ = c;
+			if (dst >= end)
+				break;
+			c = *tag++;
+		} while (c != '\0');
+	}
+	*dst = '\0';
+	block[1] = marker;
+	next = (SceUInt32)block + ((dst + 1 - start + 3) & ~3) + 8;
+	block[0] = next >> 2;
+	context->vdmBuffer.cur = next;
+	return 0;
+}
+
+int sceGxmPushUserMarker(SceGxmContext *context, const char *tag)
+{
+	if (context == NULL || tag == NULL)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (!context->insideScene) {
+		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
+		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
+	}
+	if (context->type == SCE_GXM_CONTEXT_TYPE_IMMEDIATE) {
+		if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC || !gxmInitCallbacks.isCapturing())
+			return 0;
+		return gxmContextWriteUserMarker(context,
+				gxmInitCallbacks.userMarker(context, tag) ?
+				GXM_USER_MARKER_PUSH_TAKEN : GXM_USER_MARKER_PUSH);
+	}
+	if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC)
+		return 0;
+	return gxmContextWriteUserMarkerTag(context, GXM_USER_MARKER_PUSH_TAG, tag);
+}
+
+int sceGxmPopUserMarker(SceGxmContext *context)
+{
+	if (context == NULL)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (!context->insideScene) {
+		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
+		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
+	}
+	if (context->type == SCE_GXM_CONTEXT_TYPE_IMMEDIATE) {
+		if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC || !gxmInitCallbacks.isCapturing())
+			return 0;
+		return gxmContextWriteUserMarker(context, GXM_USER_MARKER_POP);
+	}
+	if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC)
+		return 0;
+	return gxmContextWriteUserMarker(context, GXM_USER_MARKER_POP_DEFERRED);
+}
+
+int sceGxmSetUserMarker(SceGxmContext *context, const char *tag)
+{
+	if (context == NULL || tag == NULL)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (!context->insideScene) {
+		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
+		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
+	}
+	if (context->type == SCE_GXM_CONTEXT_TYPE_IMMEDIATE) {
+		if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC || !gxmInitCallbacks.isCapturing())
+			return 0;
+		return gxmContextWriteUserMarker(context,
+				gxmInitCallbacks.userMarker(context, tag) ?
+				GXM_USER_MARKER_SET_TAKEN : GXM_USER_MARKER_SET);
+	}
+	if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC)
+		return 0;
+	return gxmContextWriteUserMarkerTag(context, GXM_USER_MARKER_SET_TAG, tag);
+}
+
+int sceGxmVertexFence(SceGxmContext *context)
+{
+	GxmCommandBlock block;
+	int ret;
+
+	if (context == NULL)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (!context->insideScene) {
+		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
+		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
+	}
+	if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
+		SceUInt32 buffer = (SceUInt32)context->vertexDefaultUniformBuffer;
+		SceUInt32 count = context->vertexProgram->programHeader->defaultUniformBufferCount;
+
+		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
+		context->vertexBuffer.cur = buffer + count * 4;
+	}
+	ret = gxmWriteProgramBlock(&context->vertexBuffer, &gxmGlobals.top.fenceProgram, &block);
+	if (ret != 0)
+		return ret;
+	ret = gxmVdmWriteTerminate(&context->vdmBuffer, &block);
+	if (ret != 0)
+		return ret;
+	context->flags |= GXM_CONTEXT_FLAG_VERTEX_FENCE;
+	return 0;
+}
