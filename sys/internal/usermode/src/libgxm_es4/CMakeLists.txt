@@ -13,6 +13,7 @@ set(GXM_SOURCES
 	context_flush.c
 	context_init.c
 	context_job.c
+	context_kick.c
 	context_state.c
 	device_mem.c
 	display_queue.c
@@ -42,7 +43,7 @@ set(GXM_SOURCES
 	vertex_unpack.c
 )
 # PARTIAL in Sony's layout: the C still calls sceClibMemcpy, which the original does not import,
-# and sceGxmFinish (exported) is not written yet
+# and functions are still missing
 psp2_module(os0_us_libgxm_es4 KIND user COMPILER gcc48 PARTIAL SOURCES
 	../../../../../toolchains/libgcc/udiv.S
 	../../../../../toolchains/libgcc/idiv.S

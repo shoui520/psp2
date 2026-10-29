@@ -553,6 +553,8 @@ void *gxmSlotTableAdd(GxmSlotTable *table, void *item);
 void gxmSlotTableRemove(GxmSlotTable *table, void *record);
 void gxmSlotTableForEach(GxmSlotTable *table, void (*callback)(void *item));
 int gxmSlotTableDestroy(GxmSlotTable *table);
+void gxmWaitForValue(const PVRSRV_CLIENT_MEM_INFO *block, const volatile SceUInt32 *address,
+		     SceUInt32 value);
 
 typedef struct GxmDmsInfo {
 	SceUInt8 tasks;
@@ -739,7 +741,7 @@ typedef enum SceGxmYuvProfile {
 #define GXM_DIRTY_VERTEX_OUTPUTS2	0x00008000
 
 /* SceGxmContext.flags: what gxmContextWriteState writes again before the next draw */
-#define GXM_CONTEXT_FLAG_CREATED		0x00000001	/* set by sceGxmCreateContext; its reader is not written yet */
+#define GXM_CONTEXT_FLAG_BACKGROUND		0x00000001	/* the background programs are to be built */
 #define GXM_CONTEXT_FLAG_FRAGMENT_TEXTURES	0x00000002	/* the texture block */
 #define GXM_CONTEXT_FLAG_FRAGMENT_CONSTANTS	0x00000004	/* the constant block */
 #define GXM_CONTEXT_FLAG_FRAGMENT_DATA		0x00000008	/* the uniform buffers' DMA list */
@@ -898,6 +900,8 @@ int gxmMteWriteStateWords(GxmChunkBuffer *buffer, const GxmMteState *state, SceU
 int gxmMteWriteUpdateBlock(GxmChunkBuffer *buffer, SceUInt32 stateWords, SceUInt32 count,
 			   const GxmCodeRef *copyProgram, GxmCommandBlock *block);
 const GxmCodeRef *gxmMteGetCopyProgram(const GxmCodeRef *programs, SceUInt32 count);
+int gxmMteWriteRegionBlock(GxmChunkBuffer *buffer, const GxmCodeRef *program, SceUInt32 xMin,
+			   SceUInt32 yMin, SceUInt32 xMax, SceUInt32 yMax, GxmCommandBlock *block);
 
 
 /*
@@ -1001,6 +1005,8 @@ typedef struct GxmRenderTargetInfo {
 
 int SceGpuEs4User_83D972DF(struct GxmTopContext *top, const struct SceGxmRenderTarget *renderTarget,
 			   GxmRenderTargetInfo *info);	/* the render target's size */
+int SceGpuEs4User_F0CCE9DB(struct GxmTopContext *top, const SGX_KICKTA *kick,
+			   SGX_KICKTA_OUTPUT *output);	/* kick a scene */
 
 /*
  * The scene's depth/stencil state, from the load and store surfaces of
@@ -1156,7 +1162,10 @@ typedef struct SceGxmContext {
 	SceGxmColorSurface colorSurface;	/* 0x4c4 */
 	GxmSceneDepthStencil depthStencil;	/* 0x4f4 */
 	SceUInt32 sampleCount;		/* 0x510: the render target's samples per pixel */
-	SceUInt32 reserved[7];		/* 0x514: PLACEHOLDER: not read by the code written yet */
+	SceUInt32 backgroundState[3];	/* 0x514: the background object's PDS state words */
+	GxmPdsState pixelState;		/* 0x520: the end-of-tile pixel program */
+	SceUInt8 lastKickVertexOnly;	/* 0x52c: the last kick left the fragment part out */
+	SceUInt8 padding[3];
 	GxmSceneParams nextScene;	/* 0x530: set between scenes */
 	};
 	struct {			/* SCE_GXM_CONTEXT_TYPE_DEFERRED */
@@ -1249,6 +1258,8 @@ static inline SceBool gxmBuffersOverlap(const char *a, SceSize aSize, const char
 }
 
 int sceGxmFinish(SceGxmContext *context);
+int sceGxmPadHeartbeat(const SceGxmColorSurface *displaySurface,
+		       struct SceGxmSyncObject *displaySyncObject);
 int sceGxmWaitEvent(void);
 #define SCE_GXM_MINIMUM_DEFERRED_CONTEXT_BUFFER_SIZE	1024
 
@@ -1304,8 +1315,27 @@ int gxmContextWriteVertexStreams(SceGxmContext *context);
 int gxmContextWriteState(SceGxmContext *context);
 
 /* context_kick.c */
-#define GXM_KICK_END_SCENE	0x00000002	/* the scene's last kick */
+#define SCE_GXM_MIDSCENE_PRESERVE_DEFAULT_UNIFORM_BUFFERS	0x00000001U
+
+#define GXM_KICK_FRAGMENT	0x00000002	/* the fragment part too: the scene's last kick */
+#define GXM_KICK_PARTIAL	0x00000004	/* a partial render: the scene goes on */
+#define GXM_KICK_VDM_FULL	0x00000008	/* gxmContextKickIfFull: the ring that was full */
+#define GXM_KICK_VERTEX_FULL	0x00000010
+#define GXM_KICK_FRAGMENT_FULL	0x00000020
+#define GXM_KICK_USSE_FULL	0x00000040
 #define GXM_KICK_MID_SCENE	0x00000080	/* a flush inside the scene */
+
+/* what the capture tool is given of a kick (GxmInitCallbacks.kickCaptureInfo) */
+typedef struct GxmKickCaptureInfo {
+	SceGxmContext *context;
+	SceUInt32 frame;
+	SceBool fragment;
+	SceUInt32 vdmStart;		/* the kick's first VDM word */
+	SceUInt32 reserved;
+	const SGX_KICKTA *kick;
+	SceUInt32 usseBases[16];	/* the USSE code heaps, in 8 MiB steps */
+} GxmKickCaptureInfo;
+
 struct SceGxmNotification;
 int gxmContextKick(SceGxmContext *context, SceUInt32 flags,
 		   const struct SceGxmNotification *vertexNotification,
@@ -1587,13 +1617,16 @@ typedef struct GxmRazorCallbacks {
 	void (*terminate)(void);
 	void (*parameterBuffer)(SceSize size, SceSize reserved);
 	void (*displayQueueAddEntry)(void);	/* after a flip is queued */
-	void (*padHeartbeat)(void);
-	void (*draw)(void);			/* each draw */
+	void (*padHeartbeat)(const SceGxmColorSurface *displaySurface,
+			     struct SceGxmSyncObject *displaySyncObject);
+	void (*kickIfFull)(SceBool vdmFull, SceBool vertexFull, SceBool fragmentFull,
+			   SceBool fragmentUsseFull);	/* a ring filled up: a partial kick */
 	void (*beginScene)(SceSize vdmSize, SceSize vertexSize, SceSize fragmentSize,
 			   SceSize fragmentUsseSize);	/* the rings' sizes */
-	void (*kick)(void);			/* each scene kick */
+	void (*kick)(SceSize vdmUsed, SceSize vertexUsed, SceSize fragmentUsed,
+		     SceSize fragmentUsseUsed);	/* each kick: the rings' bytes since the last */
 	void (*reserved)(void);			/* never called */
-	SceUInt32 **captureMarker;		/* word 8 of *captureMarker takes markers */
+	SceUInt32 *volatile *captureMarker;	/* word 8 of *captureMarker takes markers */
 } GxmRazorCallbacks;
 
 typedef struct GxmInitCallbacks {
@@ -1608,9 +1641,11 @@ typedef struct GxmInitCallbacks {
 	void (*memoryUnmapped)(SceUInt32 type, void *base);
 	int (*isCapturing)(void);		/* gates the marker and capture hooks */
 	int (*kickCapture)(void);
-	void (*reserved0)(void);		/* never called */
+	void (*colorSurfaceCaptured)(int capture);	/* takes captureColorSurface's result */
 	void (*drawCapture)(void);		/* a draw or a kick while capturing */
-	void (*reserved1[2])(void);		/* never called */
+	int (*captureColorSurface)(SceUInt32 control, const SceUInt32 *words,
+				   SceUInt32 outputRegisterSize, const SceGxmTexture *backgroundTex);
+	void (*kickCaptureInfo)(const struct GxmKickCaptureInfo *info);
 	int (*addRazorGpuCaptureBuffer)(void *base, SceSize size);	/* 0x3c */
 	int (*removeRazorGpuCaptureBuffer)(void *base);
 	void (*parameterBuffer)(SceSize size, SceSize reserved);	/* 0x44 */

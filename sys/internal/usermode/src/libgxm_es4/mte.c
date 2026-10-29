@@ -271,7 +271,8 @@ int gxmSlotTableDestroy(GxmSlotTable *table)
 }
 
 /* sleep on the GPU signal until the word holds the value */
-void gxmWaitForValue(GxmSlotTable *table, const volatile SceUInt32 *address, SceUInt32 value)
+void gxmWaitForValue(const PVRSRV_CLIENT_MEM_INFO *block, const volatile SceUInt32 *address,
+		     SceUInt32 value)
 {
 	while (*address != value) {
 		sceKernelGetTLSAddr(0x44);

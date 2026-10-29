@@ -111,7 +111,7 @@ int sceGxmCreateContext(const SceGxmContextParams *params, SceGxmContext **conte
 	created->nextScene.tuning.limit = 1000;
 	created->nextScene.settings.offsets = 0xe9;
 	gxmMteStateInit(&created->state);
-	created->flags = GXM_CONTEXT_FLAG_CREATED;
+	created->flags = GXM_CONTEXT_FLAG_BACKGROUND;
 	*context = created;
 	return 0;
 }

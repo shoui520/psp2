@@ -766,8 +766,6 @@ int sceGxmBeginSceneEx(SceGxmContext *context, SceUInt32 flags,
 			     fragmentSyncObject, colorSurface, loadDepthStencil, storeDepthStencil);
 }
 
-#define SCE_GXM_MIDSCENE_PRESERVE_DEFAULT_UNIFORM_BUFFERS	0x00000001U
-
 /* the older export: no check of the flags */
 int _sceGxmMidSceneFlush(SceGxmContext *context, SceUInt32 flags,
 			 struct SceGxmSyncObject *vertexSyncObject,
@@ -830,7 +828,7 @@ int sceGxmEndScene(SceGxmContext *context, const SceGxmNotification *vertexNotif
 	if (!context->insideScene)
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
 	gxmContextCommitReservedUniformBuffers(context);
-	ret = gxmContextKick(context, GXM_KICK_END_SCENE, vertexNotification, fragmentNotification);
+	ret = gxmContextKick(context, GXM_KICK_FRAGMENT, vertexNotification, fragmentNotification);
 	if (ret != 0)
 		return ret;
 	gxmRazorMarker(0x11000000 | (gxmGlobals.sceneIndex & 0xff) << 16,
