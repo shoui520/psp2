@@ -22,6 +22,24 @@ int gxmContextCheckCommandList(const SceGxmContext *context, const SceGxmCommand
 	return 0;
 }
 
+/* the vertex program's PDS block, copied with the current streams' addresses patched in */
+int gxmContextWriteVertexStreams(SceGxmContext *context)
+{
+	const SceGxmVertexProgram *program;
+	int ret;
+
+	if (!(context->flags & GXM_CONTEXT_FLAG_VERTEX_STREAMS))
+		return 0;
+	program = context->vertexProgram;
+	ret = gxmCommandBlockCopy(&context->vertexBuffer, &program->pds, &context->vertexStreamBlock);
+	if (ret != 0)
+		return ret;
+	gxmPdsPatchAttributes(context->vertexStreamBlock.data, program->patches, program->patchCount,
+			      (const SceUInt32 *)context->vertexStreams);
+	context->flags &= ~GXM_CONTEXT_FLAG_VERTEX_STREAMS;
+	return 0;
+}
+
 /* a used default uniform buffer is copied, so the next job may change it */
 static inline const void *gxmContextCopyUniformBuffer(GxmChunkBuffer *buffer, const void *source,
 						     const SceGxmProgram *program)

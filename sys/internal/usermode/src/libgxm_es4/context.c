@@ -194,7 +194,7 @@ int sceGxmSetVertexStream(SceGxmContext *context, SceUInt32 streamIndex, const v
 	context->vertexStreams[streamIndex] = streamData;
 	program = context->vertexProgram;
 	if (program != NULL && ((program->streamMask >> streamIndex) & 1))
-		context->flags |= 0x400;
+		context->flags |= GXM_CONTEXT_FLAG_VERTEX_STREAMS;
 	return 0;
 }
 

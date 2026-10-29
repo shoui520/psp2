@@ -685,6 +685,7 @@ int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 address, const SceUInt32 *
 #define GXM_DIRTY_VERTEX_OUTPUTS2	0x00008000
 
 /* SceGxmContext.flags */
+#define GXM_CONTEXT_FLAG_VERTEX_STREAMS		0x00000400	/* a stream the vertex program reads changed */
 #define GXM_CONTEXT_FLAG_VERTEX_FENCE		0x00000200	/* a fence or a command list is in the VDM stream */
 #define GXM_CONTEXT_FLAG_DEPTH_STENCIL_USED	0x00000800
 
