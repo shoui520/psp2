@@ -126,3 +126,50 @@ ScePafMisc_EB1C375C:
 
 	PafDestroyList ScePafMisc_04B4652F
 	PafDestroyList ScePafMisc_600A1245
+
+	.global ScePafMisc_822EC852
+	.type ScePafMisc_822EC852, %function
+	.thumb_func
+ScePafMisc_822EC852:
+	.fnstart
+	push {r4, lr}
+	adds r4, r0, #0
+	ldr.w lr, [r4, #8]
+	cmp.w lr, #0
+	bne .Lactive822
+	movs r0, #0
+	b .Lreturn822
+.Lactive822:
+	ldr r3, [r4, #4]
+	adds r1, r3, #0
+	ldr r2, [r1, #4]
+	ldr r0, [r2, #8]
+	cbnz r0, .Lreturn822
+.Lloop822:
+	cbz r3, .Ltest822
+	ldr r1, [r2]
+	adds r0, r2, #0
+	ldr r3, [r2, #4]
+	str r1, [r3]
+	ldr r2, [r2, #4]
+	str r2, [r1, #4]
+	bl sce_paf_free
+	ldr.w lr, [r4, #8]
+	sub.w lr, lr, #1
+	ldr r1, [r4, #4]
+	str.w lr, [r4, #8]
+.Ltest822:
+	cmp.w lr, #0
+	bne .Lnext822
+	movs r0, #0
+	b .Lreturn822
+.Lnext822:
+	adds r3, r1, #0
+	ldr r2, [r3, #4]
+	ldr r0, [r2, #8]
+	cmp r0, #0
+	beq .Lloop822
+.Lreturn822:
+	pop {r4, pc}
+	.fnend
+	.size ScePafMisc_822EC852, . - ScePafMisc_822EC852
