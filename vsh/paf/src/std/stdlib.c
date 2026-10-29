@@ -523,3 +523,18 @@ int ScePafStdc_D41FD265(void)
 {
 	return 0;
 }
+
+int ScePafStdc_323FC518(void)
+{
+	return 0;
+}
+
+int ScePafStdc_34A63B24(void)
+{
+	return 0;
+}
+
+int ScePafStdc_4E9F0E23(void)
+{
+	return 0;
+}
