@@ -64,3 +64,38 @@ ScePafMisc_95F2C107:
 	pop {r4, pc}
 	.fnend
 	.size ScePafMisc_95F2C107, . - ScePafMisc_95F2C107
+
+	.global ScePafMisc_B002E56C
+	.type ScePafMisc_B002E56C, %function
+	.thumb_func
+ScePafMisc_B002E56C:
+	.fnstart
+	push {r4, lr}
+	sub sp, #0x60
+	movw r4, #:lower16:__stack_chk_guard
+	movt r4, #:upper16:__stack_chk_guard
+	ldr r1, [r4]
+	str r1, [sp, #0x58]
+	add r1, sp, #0
+	blx sceIoGetstat
+	cmp r0, #0
+	bne .LnotdirB002
+	ldr r0, [sp]
+	ands r0, r0, #0x1000
+	beq .LnotdirB002
+	movs r0, #1
+	b .LcheckB002
+.LnotdirB002:
+	movs r0, #0
+.LcheckB002:
+	ldr r2, [sp, #0x58]
+	ldr r1, [r4]
+	cmp r1, r2
+	bne .LfailB002
+	add sp, #0x60
+	pop {r4, pc}
+.LfailB002:
+	blx __stack_chk_fail
+	nop
+	.fnend
+	.size ScePafMisc_B002E56C, . - ScePafMisc_B002E56C
