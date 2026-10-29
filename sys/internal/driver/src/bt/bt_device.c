@@ -405,16 +405,16 @@ found:
 	device->flags &= ~0x3000;
 	device->generation++;
 	device->profiles = 0;
-	if (device->prev)
-		device->prev->next = device->next;
-	else
-		stack->deviceTail = device->next;
 	if (device->next)
 		device->next->prev = device->prev;
 	else
-		stack->deviceHead = device->prev;
-	device->prev = NULL;
+		stack->deviceTail = device->prev;
+	if (device->prev)
+		device->prev->next = device->next;
+	else
+		stack->deviceHead = device->next;
 	device->next = NULL;
+	device->prev = NULL;
 	BtWriteRegisteredDevices(stack, 1);
 	return 0;
 }
