@@ -125,6 +125,29 @@ int _sceGpuRegisterDumpGetContextPid(const SceGpuRegisterDump *dump,
 		return processUid;
 	if (context > 7)
 		return processUid;
+#if FW_VERSION < 0x04000000
+	/* 3.6x numbers the master 5; device 0 has no lookup. */
+	switch (device) {
+	case 1:
+		core = 0;
+		break;
+	case 2:
+		core = 1;
+		break;
+	case 3:
+		core = 2;
+		break;
+	case 4:
+		core = 3;
+		break;
+	case 5:
+		result = GetRegisterDumpMasterRegister(dump, &value,
+				analysisMasterDirectoryRegisters[context]);
+		goto lookup_pid;
+	default:
+		return processUid;
+	}
+#else
 	if (device > 4)
 		return processUid;
 	switch (device) {
@@ -145,6 +168,7 @@ int _sceGpuRegisterDumpGetContextPid(const SceGpuRegisterDump *dump,
 				analysisMasterDirectoryRegisters[context]);
 		goto lookup_pid;
 	}
+#endif
 	result = GetRegisterDumpCoreRegister(dump, &value,
 			analysisCoreDirectoryRegisters[context], core);
 lookup_pid:
