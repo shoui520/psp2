@@ -12,6 +12,8 @@ void *sce_paf_memcpy(void *dst, const void *src, size_t count)
 	return dst;
 }
 
+/* The native wide-memory wrapper calls this export out of line. */
+__attribute__((noinline))
 void *sce_paf_memmove(void *dst, const void *src, size_t count)
 {
 	if (dst != src)
@@ -40,6 +42,11 @@ void *sce_paf_bzero(void *dst, size_t count)
 void *sce_paf_wmemcpy(void *destination, const void *source, size_t count)
 {
 	return sce_paf_memcpy(destination, source, count << 1);
+}
+
+void *sce_paf_wmemmove(void *destination, const void *source, size_t count)
+{
+	return sce_paf_memmove(destination, source, count << 1);
 }
 
 uint16_t *sce_paf_wmemset(uint16_t *destination, int value, size_t count)
