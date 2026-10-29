@@ -1,4 +1,6 @@
 #include "timer.h"
+#include "../std/math.h"
+#include "../std/string.h"
 
 float TimerTickUnit = 1.0f / 60.0f;
 float TimerTickInv = 60.0f;
@@ -25,6 +27,71 @@ void TimerResetTimer(Timer *self)
 	self->m_mapped_x = 0.0f;
 	self->m_state = STATE_STANDBY;
 	self->m_first_tick = 0;
+}
+
+int TimerCheckCustomParam(Timer *self, float *param)
+{
+	float ratio = param[0];
+	float countValue = param[1];
+	float duration = 0.0f;
+	int count;
+
+	(void)self;
+	if (ratio >= 1.0f) {
+		ratio = 1.0f;
+		param[0] = ratio;
+	}
+	if (ratio < 0.0f) {
+		ratio = 0.01f;
+		param[0] = ratio;
+	}
+	if (countValue < 1.0f) {
+		/* The original resets the ratio, leaving the count unchanged. */
+		ratio = 1.0f;
+		param[0] = ratio;
+	}
+	count = FloatToInt(countValue);
+	if (ratio < 1.0f) {
+		float power = sce_paf_powf(ratio, (float)count);
+
+		duration = (1.0f - ratio) / (1.0f - power);
+	}
+	param[2] = duration;
+	return 0;
+}
+
+int TimerCheckBezierParam(Timer *self, float *param)
+{
+	float x1, x2, threeX1, threeX2, cubic, quadratic;
+	float b, c, d, p, cubeB, bc, twiceCubeB;
+	float halfQ, halfQSquared, pCubed;
+
+	(void)self;
+	x1 = param[0];
+	x2 = param[2];
+	threeX1 = x1 * 3.0f;
+	threeX2 = x2 * 3.0f;
+	quadratic = x1 * -6.0f + x2 * 3.0f;
+	cubic = (threeX1 - threeX2) + 1.0f;
+	b = quadratic / cubic;
+	c = threeX1 / cubic;
+	d = 0.0f / cubic;
+	p = (c - (b * b) / 3.0f) / 3.0f;
+	cubeB = sce_paf_powf(b, 3.0f);
+	bc = b * c;
+	twiceCubeB = cubeB * 2.0f;
+	bc /= 3.0f;
+	twiceCubeB /= 27.0f;
+	d += twiceCubeB;
+	d -= bc;
+	halfQ = d * 0.5f;
+	halfQSquared = sce_paf_powf(halfQ, 2.0f);
+	pCubed = sce_paf_powf(p, 3.0f);
+	if (halfQSquared + pCubed < 0.0f) {
+		sce_paf_memset(param, 0, 4 * sizeof(*param));
+		return FUNC_LINEAR;
+	}
+	return FUNC_BEZIER_3D;
 }
 
 float TimerDoTick(Timer *self)

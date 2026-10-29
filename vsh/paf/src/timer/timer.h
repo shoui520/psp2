@@ -165,6 +165,9 @@ extern float TimerTickInterval;
 #define TimerDoTick ScePafMisc_50253C80
 #define TimerResetTimer ScePafMisc_B3794389
 void TimerResetTimer(Timer *self);
+#define TimerCheckBezierParam ScePafMisc_E89DF174
+int TimerCheckBezierParam(Timer *self, float *param);
+int TimerCheckCustomParam(Timer *self, float *param);
 #define TimerDoFunc ScePafMisc_6C15F987
 void TimerInitTickUnit(float tick_unit);
 void TimerSetCurrTickInterval(float tick_interval);
