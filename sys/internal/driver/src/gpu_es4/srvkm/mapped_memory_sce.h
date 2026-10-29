@@ -61,6 +61,9 @@ PVRSRV_ERROR PVRSRVPerProcessDataDeInit(IMG_VOID);
 GpuMemBlockHeap *GetProcessMemBlockHeap(IMG_VOID);
 
 /* osperproc.c */
+struct _PVRSRV_HANDLE_BASE_;
+PVRSRV_ERROR OSPerProcessPrivateDataInit(IMG_HANDLE *phOsPrivateData);
+PVRSRV_ERROR OSPerProcessSetHandleOptions(struct _PVRSRV_HANDLE_BASE_ *psHandleBase);
 PVRSRV_ERROR OSPerProcessPrivateDataDeInit(GpuMappedMemoryList *list);
 
 /* the microkernel's cache invalidations (PowerVR's sgx_mkif_km.h) */

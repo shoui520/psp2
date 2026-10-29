@@ -3,9 +3,12 @@
 #include "../handle-types.h"
 #include "../gpu-blockheap.h"
 #include "../mapped_memory_sce.h"
+#include <string.h>
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
+#include <sysmem/uid_guid.h>
+#include <processmgr/processmgr.h>
 #include <gpu/osfunc_sce.h>
 #include <gpu/resman_sce.h>
 
@@ -42,6 +45,95 @@ PVRSRV_ERROR FreePerProcessData(PVRSRV_PER_PROCESS_DATA *psPerProc)
 	if (eError != PVRSRV_OK)
 		return eError;
 	return OSFreeMem_Impl(2, sizeof(*psPerProc), psPerProc, psPerProc->hBlockAlloc);
+}
+
+/* IMG connect; SCE records the process type and SDK version, and gives every
+ * user process a wait event flag, opened in the process as a PUID.
+ */
+PVRSRV_ERROR PVRSRVPerProcessDataConnect(IMG_UINT32 ui32PID, IMG_UINT32 ui32Flags)
+{
+	PVRSRV_PER_PROCESS_DATA *psPerProc;
+	IMG_HANDLE hBlockAlloc;
+	SceKernelProcessInfo info;
+	SceUInt32 sdkVersion;
+	PVRSRV_ERROR eError;
+	int ret;
+
+	if (psHashTab == NULL)
+		return PVRSRV_ERROR_INIT_FAILURE;
+	psPerProc = (PVRSRV_PER_PROCESS_DATA *)HASH_Retrieve(psHashTab, ui32PID);
+	if (psPerProc == NULL) {
+		memset(&info, 0, sizeof(info));
+		info.size = sizeof(info);
+		ret = sceKernelGetProcessInfo(ui32PID, &info);
+		if (ret < 0) {
+			SCE_DBG_PRINTF(0, 215,
+					"%s: Failed to get process info for PID %08x with error %08x\n",
+					__func__, ui32PID, ret);
+			return PVRSRV_ERROR_INVALID_PARAMS;
+		}
+		ret = SceProcessmgrForDriver_D141C076(ui32PID, &sdkVersion);
+		if (ret < 0) {
+			SCE_DBG_PRINTF(0, 221,
+					"%s: Failed to get SDK version for PID %08x with error %08x\n",
+					__func__, ui32PID, ret);
+			return PVRSRV_ERROR_INVALID_PARAMS;
+		}
+		eError = OSAllocMem_Impl(2, sizeof(*psPerProc), (IMG_VOID **)&psPerProc,
+				&hBlockAlloc);
+		if (eError != PVRSRV_OK)
+			return eError;
+		OSMemSet(psPerProc, 0, sizeof(*psPerProc));
+		psPerProc->hBlockAlloc = hBlockAlloc;
+		if (!HASH_Insert(psHashTab, ui32PID, (IMG_UINTPTR_T)psPerProc)) {
+			eError = PVRSRV_ERROR_INSERT_HASH_TABLE_DATA_FAILED;
+			goto failure;
+		}
+		psPerProc->processFlags = info.type;
+		psPerProc->ui32PID = ui32PID;
+		psPerProc->ui32RefCount = 0;
+		psPerProc->sdkVersion = sdkVersion;
+		eError = OSPerProcessPrivateDataInit((IMG_HANDLE *)&psPerProc->memoryContext);
+		if (eError != PVRSRV_OK)
+			goto failure;
+		eError = PVRSRVAllocHandle(gpsKernelHandleBase, (IMG_SID *)&psPerProc->hPerProcData,
+				psPerProc, 1, 0);
+		if (eError != PVRSRV_OK)
+			goto failure;
+		eError = PVRSRVAllocHandleBase(&psPerProc->psHandleBase);
+		if (eError != PVRSRV_OK)
+			goto failure;
+		eError = OSPerProcessSetHandleOptions(psPerProc->psHandleBase);
+		if (eError != PVRSRV_OK)
+			goto failure;
+		eError = PVRSRVResManConnect(psPerProc, &psPerProc->hResManContext);
+		if (eError != PVRSRV_OK)
+			goto failure;
+		if (psPerProc->ui32PID == SCE_KERNEL_PROCESS_ID) {
+			psPerProc->processHandle = -1;
+			psPerProc->waitEventFlag = -1;
+		} else {
+			psPerProc->waitEventFlag = sceKernelCreateEventFlag("SceGpuWaitEventFlag",
+					0x1000, 0, NULL);
+			if (psPerProc->waitEventFlag < 0) {
+				eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+				goto failure;
+			}
+			psPerProc->processHandle = scePUIDOpenByGUID(psPerProc->ui32PID,
+					psPerProc->waitEventFlag);
+			if (psPerProc->processHandle < 0) {
+				sceKernelDeleteEventFlag(psPerProc->waitEventFlag);
+				eError = PVRSRV_ERROR_OUT_OF_MEMORY;
+				goto failure;
+			}
+		}
+	}
+	psPerProc->ui32RefCount++;
+	return PVRSRV_OK;
+
+failure:
+	FreePerProcessData(psPerProc);
+	return eError;
 }
 
 /* Pristine IMG lookup, with the native32-bit hash key. */

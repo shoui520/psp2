@@ -1,11 +1,5 @@
-/*
- * PowerVR ES4 kernel driver.
- *
- * PLACEHOLDER: initialization, bridge services, MMU and device management
- * are being recovered from the original; the remaining STUB bodies are T2.
- */
+/* PowerVR ES4 kernel driver: SCE module entry and OS services. */
 
-#include <skeleton.h>
 #include <gpu/sce_ddk_port.h>
 #include <intrmgr/syscall.h>
 #include <sysmem/procevent.h>

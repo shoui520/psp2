@@ -306,8 +306,6 @@ IMG_VOID HWRecoveryResetSGX(PVRSRV_DEVICE_NODE *psDeviceNode,
 		unsigned callerId, int lockupId);
 void RecordGpuLockup(SceGpuRegisterDump *dump, unsigned reason,
 		SceUID processUid, unsigned analysisDetail);
-/* NID37F51E91 is unnamed in the pinned SDK; retain its original identity. */
-int SceThreadmgrForDriver_37F51E91(SceUID processUid, int flags);
 
 int LockupThread(SceSize args, void *argp)
 {
@@ -401,7 +399,7 @@ int LockupThread(SceSize args, void *argp)
 		} else {
 			gpuHalted = 1;
 			sceKernelSignalCondAll(lockupCond);
-			SceThreadmgrForDriver_37F51E91(0x10005, 0);
+			threadmgrGpuExceptionHandler(0x10005);
 		}
 	}
 	sceKernelExitDeleteThread(0);
