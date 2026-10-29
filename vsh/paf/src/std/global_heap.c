@@ -18,6 +18,30 @@ void *sce_paf_memalign(size_t align, size_t size)
 	return scePafMallocAlignWithContext(s_heap, align, size);
 }
 
+void *ScePafStdc_D00387E7(size_t size, HeapAllocator *allocator)
+{
+	return allocator ? scePafMallocWithContext(allocator, size) : NULL;
+}
+
+void *ScePafStdc_3CF19248(size_t size, HeapAllocator *allocator)
+{
+	return allocator ? scePafMallocWithContext(allocator, size) : NULL;
+}
+
+void *ScePafStdc_5B828DF7(size_t size, size_t alignment,
+			  HeapAllocator *allocator)
+{
+	return allocator ? scePafMallocAlignWithContext(allocator, alignment, size)
+			 : NULL;
+}
+
+void *ScePafStdc_6FE032F8(size_t size, size_t alignment,
+			  HeapAllocator *allocator)
+{
+	return allocator ? scePafMallocAlignWithContext(allocator, alignment, size)
+			 : NULL;
+}
+
 void *sce_paf_realloc(void *ptr, size_t size)
 {
 	HeapAllocator *heap = ptr ?
