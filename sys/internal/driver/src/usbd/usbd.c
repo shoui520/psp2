@@ -448,7 +448,7 @@ static void usbdDetachChildren(UsbdDevice **children)
 }
 
 /* sceUsbdHostStop, sceUsbdResume: every device on the bus goes; called locked */
-static int usbdDetachBus(unsigned int busIndex)
+static int usbdDetachBus(SceUInt8 busIndex)
 {
 	UsbdDriver *driver;
 	UsbdDevice *device;
@@ -1503,7 +1503,7 @@ delete_heap:
 
 int module_start(SceSize args, void *argp)
 {
-	return _sceUsbdInit() < 0 ? SCE_KERNEL_START_FAILED : SCE_KERNEL_START_SUCCESS;
+	return _sceUsbdInit() < 0 ? SCE_KERNEL_START_NO_RESIDENT : SCE_KERNEL_START_SUCCESS;
 }
 
 int sceUsbdHostStart(int busIndex)
@@ -1800,7 +1800,7 @@ static __always_inline void usbdCloseDriverPipes(UsbdDevice *device, UsbdDriver 
 	device->driver[driver->interfaceNumber] = NULL;
 }
 
-static __always_inline int usbdUnregisterDriver(const char *name, unsigned int flags)
+static __always_inline int usbdUnregisterDriver(const char *const *name, unsigned int flags)
 {
 	UsbdDriver *driver;
 	UsbdDevice *device;
@@ -1818,14 +1818,14 @@ static __always_inline int usbdUnregisterDriver(const char *name, unsigned int f
 			for (i = 0; i < device->interfaceCount; i++) {
 				driver = device->driver[i];
 				if (driver != NULL && (driver->flags & flags) == flags &&
-				    strncmp(driver->name, name, 255) == 0)
+				    strncmp(driver->name, *name, 255) == 0)
 					usbdCloseDriverPipes(device, driver, 0);
 			}
 		}
 	}
 	for (i = 0; i < USBD_DRIVER_COUNT; i++) {
 		driver = s_usbd.driver[i];
-		if (driver != NULL && strncmp(driver->name, name, 255) == 0) {
+		if (driver != NULL && strncmp(driver->name, *name, 255) == 0) {
 			usbdReleaseDriver(driver);
 			break;
 		}
@@ -1844,7 +1844,7 @@ int SceUsbdForDriver_216F108D(const SceUsbdDriver *driver)
 	    driver->attach == NULL || driver->detach == NULL)
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 	else
-		result = usbdUnregisterDriver(driver->name, USBD_DRIVER_KERNEL);
+		result = usbdUnregisterDriver(&driver->name, USBD_DRIVER_KERNEL);
 	usbdUnlock();
 	return result;
 }
@@ -1860,7 +1860,7 @@ int SceUsbdForDriver_7934BB4A(const SceUsbdCompositeDriver *driver)
 	    driver->attach == NULL || driver->detach == NULL)
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 	else
-		result = usbdUnregisterDriver(driver->name,
+		result = usbdUnregisterDriver(&driver->name,
 					      USBD_DRIVER_KERNEL | USBD_DRIVER_COMPOSITE);
 	usbdUnlock();
 	return result;
