@@ -132,21 +132,21 @@ static SceUInt32 resetAlarm(void *argp)
 static int configDone(SceSysconPacket *packet, void *argp)
 {
 	struct touchCommand *cmd = argp;
-	unsigned intr, mask, changed, time;
+	unsigned intr, mask, changed, time, command;
 	int resend;
 
 	if (!cmd)
 		return -1;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
-	if (cmd->pending != 1) {
-		sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
-		return -1;
-	}
+	if (cmd->pending != 1)
+		goto invalid;
+	command = packet->request.command[0] | packet->request.command[1] << 8;
 	cmd->pending = 0;
-	switch (packet->request.command[0] | packet->request.command[1] << 8) {
-	case TOUCH_CMD_SET_MODE:
+	if (command == TOUCH_CMD_SET_MODE) {
+		mask = cmd->packet.request.data[2] ? 2 : 0;
+		if (cmd->packet.request.data[0])
+			mask |= 1;
 		touch.modeMask = 0;
-		mask = (cmd->packet.request.data[2] ? 2 : 0) | (cmd->packet.request.data[0] ? 1 : 0);
 		changed = mask ^ touch.activeMask;
 		touch.activeMask = mask;
 		time = SceThreadmgrForDriver_47F6DE49();
@@ -178,20 +178,17 @@ static int configDone(SceSysconPacket *packet, void *argp)
 			cmd->packet.request.length = 9;
 			resend = 1;
 		}
-		break;
-	case TOUCH_CMD_SET_FORCE:
+	} else if (command == TOUCH_CMD_SET_FORCE) {
 		if (cmd->packet.request.data[0])
 			touch.ports[0].forceMode = touch.ports[0].forceRequest;
 		if (cmd->packet.request.data[4])
 			touch.ports[1].forceMode = touch.ports[1].forceRequest;
 		resend = 0;
-		break;
-	default:
-		sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
-		return -1;
+	} else {
+		goto invalid;
 	}
 
-	if (touch.state == TOUCH_STATE_UPDATING && touch.activeMask == 0) {
+	if (touch.state == TOUCH_STATE_UPDATING && !touch.activeMask) {
 		if (!resend) {
 			if (s_updateEvent != -1)
 				sceKernelSetEventFlag(s_updateEvent, 1);
@@ -207,10 +204,14 @@ static int configDone(SceSysconPacket *packet, void *argp)
 	if (SceSysconForDriver_C2224E82(&cmd->packet, 0, configDone, cmd) < 0)
 		cmd->pending = 0;
 	return 0;
+
+invalid:
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
+	return -1;
 }
 
 /* name unknown: device info of both panels from the newer syscon interface */
-static int readDeviceInfo(void)
+static __attribute__((noinline)) int readDeviceInfo(void)
 {
 	SceKernelTouchpanelDeviceInfo2 info = { { 0 } };
 	int retries = 3, ret;
@@ -243,7 +244,7 @@ static inline unsigned short swap16(unsigned value)
 }
 
 /* name unknown: device info from the older syscon interface */
-static int readDeviceInfoOld(void)
+static __attribute__((noinline)) int readDeviceInfoOld(void)
 {
 	unsigned short info[4] = { 0 };
 	SceUInt32 version = 0;
@@ -360,8 +361,7 @@ static int vblankHandler(void *subintrArg, void *registerArg, unsigned char prio
 		for (i = 0, n = 0; i < TOUCH_MAX_PROCESSES && n < touch.processCount; i++) {
 			if (touch.pids[i] == -1)
 				continue;
-			if (lookupProcess(touch.pids[i], (void **)&process, 0) == 0 && process &&
-			    process->state != 3)
+			if (lookupProcess(touch.pids[i], (void **)&process, 0) == 0 && process->state != 3)
 				mask |= process->sampling[0] | process->sampling[1];
 			n++;
 		}
@@ -842,7 +842,7 @@ static void copySample(int pid, const struct touchProcess *process, struct touch
 }
 
 /* name unknown: the syscon's sample reply into every process ring */
-static int processSamples(unsigned kinds, const unsigned char *buffer, unsigned size)
+static __attribute__((noinline)) int processSamples(unsigned kinds, const unsigned char *buffer, unsigned size)
 {
 	struct touchProcess *process;
 	struct touchSample *front, *back;
@@ -934,14 +934,12 @@ static int sampleDone(SceSysconPacket *packet, void *argp)
 			kinds = 3;
 			break;
 		default:
-			kinds = 0;
-			break;
+			goto out;
 		}
-		if (kinds) {
-			ret = 0;
-			processSamples(kinds, packet->externalRx, packet->externalRxSize);
-		}
+		ret = 0;
+		processSamples(kinds, packet->externalRx, packet->externalRxSize);
 	}
+out:
 	endFrame();
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 	return ret;
@@ -1067,28 +1065,22 @@ int module_start(SceSize args, void *argp)
 	return initializeUser() < 0 ? SCE_KERNEL_START_FAILED : SCE_KERNEL_START_SUCCESS;
 }
 
-/* ------------------------------------------------------- tracking, ring reads */
-
-static void copyWords(void *out, const void *in, unsigned bytes) /* name unknown */
-{
-	unsigned i;
-
-	for (i = 0; i < bytes / 4; i++)
-		((unsigned *)out)[i] = ((const unsigned *)in)[i];
-}
-
-
 /* ------------------------------------------------------------ driver exports */
 
 /* name unknown: read (wait for the next frame) or peek a process' ring */
-static inline int readPhysical(unsigned port, SceTouchData *out, unsigned count,
-			       unsigned regions, unsigned kind, int peek)
+static inline __attribute__((always_inline)) int readPhysical(unsigned port, SceTouchData *out,
+	unsigned count, unsigned regions, int kind, int peek) /* name unknown */
 {
-	struct touchProcess *process;
-	unsigned intr, bit, base, flags;
+	struct touchProcess *process = NULL;
+	struct touchProcessPort *state;
+	unsigned intr, flags, bit;
 	int ret, pid;
 
-	if (port >= TOUCH_PORTS || !out || count > TOUCH_RING_SIZE || (regions & 0xffffff00))
+	if (port > 1)
+		return SCE_TOUCH_ERROR_INVALID_ARG;
+	if (!out)
+		return SCE_TOUCH_ERROR_INVALID_ARG;
+	if (count > 64 || (regions & 0xffffff00))
 		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
@@ -1097,26 +1089,26 @@ static inline int readPhysical(unsigned port, SceTouchData *out, unsigned count,
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 		return ret;
 	}
-	base = (process->sampling[kind] >> port) & 1 ? 0x80000000 : 0;
+	state = &process->ports[port];
+	flags = (process->sampling[kind] >> port) & 1 ? 0x80000000 : 0;
 	if ((process->force[kind] >> port) & 1)
-		base |= 0x40;
-	flags = base | (peek ? 2 : 1);
+		flags |= 0x40;
 	if (!peek) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
-		bit = process->ports[port].eventBit;
-		if (!(bit & touch.ports[port].allocated))
+		if (!(state->eventBit & touch.ports[port].allocated))
 			return SCE_TOUCH_ERROR_INVALID_ARG;
-		ret = sceKernelWaitEventFlag(touch.ports[port].events[kind], bit,
-					      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
+		ret = sceKernelWaitEventFlag(touch.ports[port].events[kind], state->eventBit,
+					     SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 		if (ret < 0)
 			return ret;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
-		bit = process->ports[port].eventBit;
+		bit = state->eventBit;
 		if (bit & touch.ports[port].allocated)
 			sceKernelClearEventFlag(touch.ports[port].events[kind], ~bit);
 	}
 	if (touch.priorityEnabled)
-		flags = base | (peek ? 2 : 1) | (process->privilege ? 0x30 : 0x10);
+		flags |= process->privilege ? 0x30 : 0x10;
+	flags |= peek ? 2 : 1;
 	if (port == 0 ? process->compat[0] : process->compat[1])
 		flags |= 0x80;
 	ret = readRing(&process->ports[port].ring, kind, out, count, process->pid, regions, flags);
@@ -1170,33 +1162,37 @@ int readVirtualPeek(unsigned device, unsigned port, SceTouchData *out, unsigned 
 	return 0;
 }
 
-static int setSampling(unsigned port, unsigned state, unsigned kind) /* name unknown */
+static inline __attribute__((always_inline)) int setSampling(unsigned port, unsigned state,
+	int kind) /* name unknown */
 {
 	struct touchProcess *process;
+	unsigned char *sampling;
 	unsigned intr, old, bit;
 	int ret, pid;
 
-	if (port >= TOUCH_PORTS || state >= 2)
+	if (port > 1 || state > 1)
 		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, (void **)&process, 0);
-	if (ret >= 0 && process) {
-		old = (process->sampling[kind] >> port) & 1;
-		if (old != state) {
-			if (state) {
-				resetRingReader(&process->ports[port].ring, kind);
-				bit = process->ports[port].eventBit;
-				if (bit & touch.ports[port].allocated)
-					sceKernelClearEventFlag(touch.ports[port].events[kind], ~bit);
-			}
-			process->sampling[kind] = (process->sampling[kind] & ~(1U << port)) | (state << port);
-		}
-		process->state = 0;
-		ret = old;
+	if (ret < 0 || !process) {
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
+		return ret;
 	}
+	sampling = &process->sampling[kind];
+	old = (*sampling >> port) & 1;
+	if (state != old) {
+		if (state == 1) {
+			resetRingReader(&process->ports[port].ring, kind);
+			bit = process->ports[port].eventBit;
+			if (bit & touch.ports[port].allocated)
+				sceKernelClearEventFlag(touch.ports[port].events[kind], ~bit);
+		}
+		*sampling = (state << port) | (*sampling & ~(1 << port));
+	}
+	process->state = 0;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
-	return ret;
+	return old;
 }
 
 int sceTouchSetSamplingState(unsigned port, unsigned state)
@@ -1216,17 +1212,20 @@ static int getSampling(unsigned port, unsigned *state, unsigned kind) /* name un
 	unsigned intr;
 	int ret, pid;
 
-	if (port >= TOUCH_PORTS || !state)
+	if (port > 1)
+		return SCE_TOUCH_ERROR_INVALID_ARG;
+	if (!state)
 		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, (void **)&process, 0);
-	if (ret >= 0 && process) {
-		*state = (process->sampling[kind] >> port) & 1;
-		ret = 0;
+	if (ret < 0 || !process) {
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
+		return ret;
 	}
+	*state = (process->sampling[kind] >> port) & 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
-	return ret;
+	return 0;
 }
 
 int sceTouchGetSamplingState(unsigned port, unsigned *state)
@@ -1252,7 +1251,7 @@ static int setForce(unsigned port, unsigned enable, unsigned kind) /* name unkno
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, (void **)&process, 0);
 	if (ret >= 0 && process) {
-		process->force[kind] = (process->force[kind] & ~(1U << port)) | (enable << port);
+		process->force[kind] = (process->force[kind] & ~(1 << port)) | ((int)enable << port);
 		ret = 0;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
@@ -1298,32 +1297,37 @@ int SceTouchForDriver_328E38B0(unsigned port, int enable)
 	return 0;
 }
 
-static int validRegion(unsigned port, const short *rect, int positive) /* name unknown */
+static int validRegion(unsigned port, const struct touchRect *rect) /* name unknown */
 {
 	SceTouchPanelInfo *panel = &touch.ports[port].panel;
 
-	return rect[0] >= panel->minAaX && rect[1] >= panel->minAaY &&
-		(!positive || (rect[2] > 0 && rect[3] > 0)) &&
-		rect[0] + rect[2] - 1 <= panel->maxAaX &&
-		rect[1] + rect[3] - 1 <= panel->maxAaY;
+	return rect->x >= panel->minAaX && rect->y >= panel->minAaY &&
+		rect->width > 0 && rect->height > 0 &&
+		rect->x + rect->width - 1 <= panel->maxAaX &&
+		rect->y + rect->height - 1 <= panel->maxAaY;
 }
 
 int sceTouchSetRegion(unsigned port, unsigned region, const short *rect, unsigned attr)
 {
+	const struct touchRect *area = (const struct touchRect *)rect;
 	struct touchProcess *process;
 	struct touchRegion *dest;
 	unsigned intr;
 	int ret, pid;
 
-	if (port >= TOUCH_PORTS || region >= TOUCH_REGIONS || !rect || !validRegion(port, rect, 1))
+	if (port > 1)
+		return SCE_TOUCH_ERROR_INVALID_ARG;
+	if (region > 7)
+		return SCE_TOUCH_ERROR_INVALID_ARG;
+	if (!area || !validRegion(port, area))
 		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		dest = &process->ports[port].regions[region];
+		__builtin_memcpy(&dest->rect, area, sizeof(dest->rect));
 		dest->active = 1;
-		copyWords(&dest->rect.x, rect, 8);
 		dest->attr = attr;
 		ret = 0;
 	}
@@ -1378,20 +1382,32 @@ int sceTouchActivateRegion(unsigned port, unsigned region, unsigned enable)
 {
 	struct touchProcess *process;
 	struct touchRegion *dest;
+	SceTouchPanelInfo *panel;
 	unsigned intr;
 	int ret, pid;
 
-	if (port >= TOUCH_PORTS || region >= TOUCH_REGIONS || enable >= 2)
+	if (port > 1)
+		return SCE_TOUCH_ERROR_INVALID_ARG;
+	if (region > 7)
+		return SCE_TOUCH_ERROR_INVALID_ARG;
+	if (enable > 1)
 		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		dest = &process->ports[port].regions[region];
-		if (enable && !validRegion(port, &dest->rect.x, 0))
-			ret = SCE_TOUCH_ERROR_INVALID_ARG;
-		else
-			dest->active = enable;
+		if (enable == 1) {
+			panel = &touch.ports[port].panel;
+			if (dest->rect.x + dest->rect.width - 1 > panel->maxAaX ||
+			    dest->rect.y + dest->rect.height - 1 > panel->maxAaY ||
+			    panel->minAaX > dest->rect.x || panel->minAaY > dest->rect.y)
+				ret = SCE_TOUCH_ERROR_INVALID_ARG;
+			else
+				dest->active = 1;
+		} else {
+			dest->active = 0;
+		}
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 	return ret;
@@ -1404,15 +1420,16 @@ int sceTouchActivateRegion(unsigned port, unsigned region, unsigned enable)
  */
 int SceTouchForDriver_3F3FBF69(const TouchProcessPriorities *priorities)
 {
-	unsigned intr, i;
+	unsigned intr, count, i;
 
 	if (!priorities)
 		return SCE_TOUCH_ERROR_INVALID_ARG;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
-	touch.priorityCount = priorities->count;
+	count = priorities->count;
 	touch.priorityEnabled = 1;
-	for (i = 0; i < touch.priorityCount && i < TOUCH_MAX_PROCESSES; i++)
+	for (i = 0; i < count; i++)
 		touch.priorities[i] = priorities->processIds[i];
+	touch.priorityCount = count;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 	return 0;
 }
@@ -1443,9 +1460,11 @@ void SceTouchForDriver_845E2115(unsigned enable)
 
 int sceTouchGetPanelInfo(unsigned port, SceTouchPanelInfo *out)
 {
-	if (port >= TOUCH_PORTS || !out)
+	if (port > 1)
 		return SCE_TOUCH_ERROR_INVALID_ARG;
-	copyWords(out, &touch.ports[port].panel, sizeof(*out));
+	if (!out)
+		return SCE_TOUCH_ERROR_INVALID_ARG;
+	*out = touch.ports[port].panel;
 	return 0;
 }
 
@@ -1489,7 +1508,7 @@ int setProcessPrivilege(unsigned privilege) /* name unknown */
 int sceTouchGetProcessInfo(unsigned port, struct touchProcessInfo *out)
 {
 	struct touchProcess *process;
-	unsigned intr, i;
+	unsigned intr, i, r;
 
 	if (port >= TOUCH_PORTS || !out)
 		return SCE_TOUCH_ERROR_INVALID_ARG;
@@ -1500,8 +1519,8 @@ int sceTouchGetProcessInfo(unsigned port, struct touchProcessInfo *out)
 		if (lookupProcess(touch.priorities[i], (void **)&process, 0) < 0 || !process)
 			continue;
 		out->processes[i].privilege = process->privilege;
-		copyWords(out->processes[i].regions, process->ports[port].regions,
-			  sizeof(out->processes[i].regions));
+		for (r = 0; r < TOUCH_REGIONS; r++)
+			out->processes[i].regions[r] = process->ports[port].regions[r];
 	}
 	out->count = touch.priorityCount;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
@@ -1529,13 +1548,16 @@ void SceTouchForDriver_062A11A2(unsigned enable)
 int SceTouchForDriver_9C8CCB66(unsigned port, unsigned char raised, unsigned char lowered)
 {
 	unsigned intr;
+	int active, bit;
 
 	if (port >= TOUCH_PORTS)
 		return SCE_TOUCH_ERROR_INVALID_ARG;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
+	active = touch.activeMask;
+	bit = 1 << port;
 	touch.ports[port].forceLevel[0] = raised;
 	touch.ports[port].forceLevel[1] = lowered;
-	if ((1U << port) & touch.activeMask) {
+	if (bit & active) {
 		touch.ports[port].forceChange = 1;
 		touch.ports[port].lastTouchTime = SceThreadmgrForDriver_47F6DE49();
 	}
@@ -1559,21 +1581,27 @@ int SceTouchForDriver_384F6C68(unsigned port, unsigned timeout)
 int sceTouchGetDeviceInfo(unsigned port, struct touchDeviceInfo *out)
 {
 	struct touchDeviceInfo *info;
-	unsigned char *clear;
-	unsigned intr, n;
+	unsigned short vendor, product, firmware;
+	unsigned char detail[2];
+	unsigned intr;
 
-	if (port >= TOUCH_PORTS || !out)
+	if (port > 1)
+		return SCE_TOUCH_ERROR_INVALID_ARG;
+	if (!out)
 		return SCE_TOUCH_ERROR_INVALID_ARG;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
-	clear = (unsigned char *)out;
-	for (n = sizeof(*out); n; n--)
-		*clear++ = 0;
+	__builtin_memset(out, 0, sizeof(*out));
 	info = &touch.ports[port].deviceInfo;
-	out->vendor = info->vendor;
-	out->product = info->product;
-	out->firmware = info->firmware;
-	out->detail[0] = info->detail[0];
-	out->detail[1] = info->detail[1];
+	vendor = info->vendor;
+	product = info->product;
+	firmware = info->firmware;
+	detail[0] = info->detail[0];
+	detail[1] = info->detail[1];
+	out->vendor = vendor;
+	out->product = product;
+	out->firmware = firmware;
+	out->detail[0] = detail[0];
+	out->detail[1] = detail[1];
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 	return 0;
 }
