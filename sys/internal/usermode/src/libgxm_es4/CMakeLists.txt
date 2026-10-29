@@ -29,6 +29,7 @@ set(GXM_SOURCES
 	notification.c
 	output_format.c
 	pds_sce.c
+	precomputed.c
 	program.c
 	razor.c
 	ring_buffer.c

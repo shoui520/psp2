@@ -191,6 +191,9 @@ typedef struct SceGxmTexture {
 
 SceGxmTextureFormat sceGxmTextureGetFormat(const SceGxmTexture *texture);
 
+/* control word 0 as bound to a context: bits 29 and 30 are left out */
+#define GXM_TEX0_BOUND_MASK	0x9fffffff
+
 /* control word 0 */
 #define GXM_TEX0_STRIDE_EXT		0x00000006	/* linear strided: stride bits 12..13 */
 #define GXM_TEX0_VADDR_MODE_SHIFT	3
@@ -697,6 +700,47 @@ void gxmPdsWriteStateWords(SceUInt32 *words, const GxmCommandBlock *vertex, SceU
 int gxmCommandBlockCopy(GxmChunkBuffer *buffer, const GxmCommandBlock *source,
 			GxmCommandBlock *copy);
 
+#define GXM_PDS_DMA_CONTROL	0x07000003
+#define GXM_PDS_DMA_END		0x070001a5
+#define GXM_PDS_HALT		0xaf000000
+
+/*
+ * The secondary PDS program, from 16-byte aligned memory: one DMA per uniform
+ * buffer range the program reads, then the secondary program's address and task
+ * control. Returns the end of what it wrote.
+ */
+static inline SceUInt32 *gxmProgramWriteDmaBlock(SceUInt32 *data, GxmCommandBlock *dmaBlock,
+						 const SceGxmProgram *program,
+						 const void *const *uniformBuffers,
+						 const GxmCodeRef *secondaryCode)
+{
+	const GxmProgramDmaEntry *entries;
+	SceUInt32 *control, *code, count, controlOffset, i;
+
+	data = (SceUInt32 *)(((SceUInt32)data + 15) & ~15);
+	entries = GXM_RELATIVE(program->secondaryPdsDataOffset);
+	count = program->secondaryPdsDataCount;
+	dmaBlock->data = data;
+	controlOffset = ((count * 2 + 3) & ~3) + 4;
+	dmaBlock->dataSize = controlOffset * 4;
+	control = data + controlOffset;
+	dmaBlock->size = (count + 2 + controlOffset) * 4;
+	for (i = 0; i < count; i++) {
+		data[0] = (SceUInt32)uniformBuffers[entries[i].bufferIndex] + entries[i].offset * 4;
+		data[1] = (entries[i].size - 1) | entries[i].destination << 8;
+		*control++ = (i >> 1) << 12 | (i >> 1) << 18 | GXM_PDS_DMA_CONTROL |
+			     (i & 1) << 11 | ((i & 1) * 2 | 1) << 8;
+		data += 2;
+	}
+	code = (SceUInt32 *)(((SceUInt32)data + 15) & ~15);
+	code[0] = secondaryCode->address;
+	code[1] = secondaryCode->taskControl;
+	code[2] = 0;
+	control[0] = ((count + 1) >> 1) << 12 | ((count + 1) >> 1) << 18 | GXM_PDS_DMA_END;
+	control[1] = GXM_PDS_HALT;
+	return control + 2;
+}
+
 /* --- VDM commands --- */
 
 int gxmVdmWriteFragmentState(GxmChunkBuffer *buffer, SceSize size, const GxmCommandBlock *block,
@@ -837,6 +881,8 @@ typedef struct SceGxmFragmentProgram {
 } SceGxmFragmentProgram;
 
 _Static_assert(sizeof(SceGxmFragmentProgram) == 0x80, "SceGxmFragmentProgram size");
+
+SceUInt32 sceGxmFragmentProgramGetPassType(const SceGxmFragmentProgram *fragmentProgram);
 
 typedef struct SceGxmVertexProgram {
 	const SceGxmProgram *programHeader;
@@ -1497,6 +1543,7 @@ int gxmThreadStateInit(SceUInt32 *state, SceUInt8 *flag);
 #define GXM_COMPAT_PALETTE_OPTIONAL	0x00000800
 #define GXM_COMPAT_GAMMA_INVERTED	0x00001000
 #define GXM_COMPAT_SURFACE_ANY		0x00002000
+#define GXM_COMPAT_DRAW_STREAMS_UNSET	0x00004000	/* PrecomputedDrawInit leaves the streams unpatched */
 #define GXM_COMPAT_DEPTH_STRIDE_PIXELS	0x00000400	/* the depth stride need only cover the region */
 #define GXM_COMPAT_COLOR_ENABLE_DATA	0x00008000	/* a surface is enabled when it has data */
 #define GXM_COMPAT_FRAGMENT_CALLBACK_VALUE 0x00040000	/* no fragment callback: INVALID_VALUE */

@@ -153,10 +153,6 @@ static inline int gxmContextWriteConstantBlock(GxmChunkBuffer *buffer, void **co
 	return 0;
 }
 
-#define GXM_PDS_DMA_CONTROL	0x07000003
-#define GXM_PDS_DMA_END		0x070001a5
-#define GXM_PDS_HALT		0xaf000000
-
 /*
  * The secondary PDS program: one DMA per uniform buffer range the program
  * reads, then the secondary program's address and task control.
@@ -167,33 +163,11 @@ static inline int gxmContextWriteDmaBlock(GxmChunkBuffer *buffer, GxmCommandBloc
 					  const GxmCodeRef *secondaryCode)
 {
 	SceUInt32 *data = gxmChunkBufferReserve(buffer, size, 16);
-	const GxmProgramDmaEntry *entries;
-	SceUInt32 *control, *code, count, controlOffset, i;
 
 	if (data == NULL)
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	data = (SceUInt32 *)(((SceUInt32)data + 15) & ~15);
-	entries = GXM_RELATIVE(program->secondaryPdsDataOffset);
-	count = program->secondaryPdsDataCount;
-	dmaBlock->data = data;
-	controlOffset = ((count * 2 + 3) & ~3) + 4;
-	dmaBlock->dataSize = controlOffset * 4;
-	control = data + controlOffset;
-	dmaBlock->size = (count + 2 + controlOffset) * 4;
-	for (i = 0; i < count; i++) {
-		data[0] = (SceUInt32)uniformBuffers[entries[i].bufferIndex] + entries[i].offset * 4;
-		data[1] = (entries[i].size - 1) | entries[i].destination << 8;
-		*control++ = (i >> 1) << 12 | (i >> 1) << 18 | GXM_PDS_DMA_CONTROL |
-			     (i & 1) << 11 | ((i & 1) * 2 | 1) << 8;
-		data += 2;
-	}
-	code = (SceUInt32 *)(((SceUInt32)data + 15) & ~15);
-	code[0] = secondaryCode->address;
-	code[1] = secondaryCode->taskControl;
-	code[2] = 0;
-	control[0] = ((count + 1) >> 1) << 12 | ((count + 1) >> 1) << 18 | GXM_PDS_DMA_END;
-	control[1] = GXM_PDS_HALT;
-	buffer->cur = (SceUInt32)(control + 2);
+	buffer->cur = (SceUInt32)gxmProgramWriteDmaBlock(data, dmaBlock, program, uniformBuffers,
+							 secondaryCode);
 	return 0;
 }
 

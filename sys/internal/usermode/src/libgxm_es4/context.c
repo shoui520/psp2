@@ -201,9 +201,6 @@ int sceGxmSetVertexStream(SceGxmContext *context, SceUInt32 streamIndex, const v
 	return 0;
 }
 
-/* control word 0 as bound to a context: bits 29 and 30 are left out */
-#define GXM_TEX0_BOUND_MASK	0x9fffffff
-
 int _sceGxmSetVertexTexture(SceGxmContext *context, SceUInt32 textureIndex,
 		const SceGxmTexture *texture)
 {
