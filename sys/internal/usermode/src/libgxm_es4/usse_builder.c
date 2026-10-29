@@ -141,7 +141,7 @@ int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, 
 
 	/* the program, then its output in the requested format */
 	body = code + program->primaryInstructionCount * 2;
-	sceClibMemcpy(code, GXM_RELATIVE(program->primaryProgramOffset),
+	sceClibMemcpy_safe(code, GXM_RELATIVE(program->primaryProgramOffset),
 		      program->primaryInstructionCount * 8);
 	type = gxmProgramGetVaryings(program)->fragment.outputRegisterType;
 	componentCount = gxmProgramGetVaryings(program)->fragment.outputComponentCount;

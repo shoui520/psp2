@@ -348,7 +348,7 @@ int sceGxmShaderPatcherRegisterProgram(SceGxmShaderPatcher *shaderPatcher,
 			goto freeRegistered;
 		}
 		registered->literals = mem;
-		sceClibMemcpy(mem, GXM_RELATIVE(programHeader->literalBufferOffset), size);
+		sceClibMemcpy_safe(mem, GXM_RELATIVE(programHeader->literalBufferOffset), size);
 		SceGxmInternalForTest_631E95AA(registered->literals, size, 0, 0, "Literal buffer");
 	}
 
@@ -803,8 +803,8 @@ int sceGxmShaderPatcherCreateVertexProgram(SceGxmShaderPatcher *shaderPatcher,
 			 &created->dms);
 	created->attributeCount = attributeCount;
 	created->streamCount = streamCount;
-	sceClibMemcpy(created->attributes, attributes, attributeCount * sizeof(*attributes));
-	sceClibMemcpy(created->streams, streams, streamCount * sizeof(*streams));
+	sceClibMemcpy_safe(created->attributes, attributes, attributeCount * sizeof(*attributes));
+	sceClibMemcpy_safe(created->streams, streams, streamCount * sizeof(*streams));
 	mask = 0;
 	for (i = 0; i < attributeCount; i++)
 		mask |= 1 << attributes[i].streamIndex;
@@ -1073,7 +1073,7 @@ setup:
 		created->blendInfo = NULL;
 	} else {
 		created->blendInfo = tail;
-		sceClibMemcpy(tail, blendInfo, sizeof(*blendInfo));
+		sceClibMemcpy_safe(tail, blendInfo, sizeof(*blendInfo));
 		tail = created->blendInfo + 1;
 	}
 	created->multisampleMode = samples;

@@ -46,9 +46,7 @@ set(GXM_SOURCES
 	vertex_program.c
 	vertex_unpack.c
 )
-# PARTIAL in Sony's layout: the C still calls sceClibMemcpy, which the original does not import,
-# and functions are still missing
-psp2_module(os0_us_libgxm_es4 KIND user COMPILER gcc48 PARTIAL SOURCES
+psp2_module(os0_us_libgxm_es4 KIND user COMPILER gcc48 SOURCES
 	../../../../../toolchains/libgcc/udiv.S
 	../../../../../toolchains/libgcc/idiv.S
 	../../../../../toolchains/libgcc/dvmd_tls.S

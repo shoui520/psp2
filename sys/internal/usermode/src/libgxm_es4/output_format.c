@@ -139,24 +139,55 @@ SceUInt32 *gxmOutputFormatWriteConversion(SceUInt32 *code, SceUInt32 reg, SceUIn
 				      gxmOutputIsWide(*type, *componentCount));
 }
 
-/* copy whole words */
+/*
+ * Copy whole words: 16 bytes first when the source is not 32-byte aligned, then 32-byte
+ * blocks through the core and NEON registers, then single words. Sony's is hand-written
+ * ARM, inlined into its callers and kept out of line as well.
+ */
 void gxmCopyWords(SceUInt32 *dest, const SceUInt32 *src, SceSize size)
 {
-	for (; size != 0; size -= 4)
-		*dest++ = *src++;
+	__asm__ volatile(
+		"movs	r3, %1, lsl #27\n"
+		"ldmne	%1!, {r3-r6}\n"
+		"stmne	%0!, {r3-r6}\n"
+		"subne	%2, %2, #16\n"
+		"subs	%2, %2, #32\n"
+		"blt	2f\n"
+		"1:\n"
+		"ldm	%1!, {r3-r6}\n"
+		"pld	[%1, #0x70]\n"
+		"vldm	%1!, {d0-d1}\n"
+		"subs	%2, %2, #32\n"
+		"stm	%0!, {r3-r6}\n"
+		"vstm	%0!, {d0-d1}\n"
+		"bge	1b\n"
+		"2:\n"
+		"adds	%2, %2, #32\n"
+		"beq	4f\n"
+		"3:\n"
+		"ldr	r3, [%1], #4\n"
+		"subs	%2, %2, #4\n"
+		"str	r3, [%0], #4\n"
+		"bne	3b\n"
+		"4:\n"
+		: "+r" (dest), "+r" (src), "+r" (size)
+		:
+		: "r3", "r4", "r5", "r6", "d0", "d1", "cc", "memory");
 }
 
 /* the PDS state words of a program pair */
 void gxmPdsWriteStateWords(SceUInt32 *words, const GxmCommandBlock *vertex, SceUInt32 flags,
 			   const GxmCommandBlock *fragment)
 {
+	SceUInt32 vertexSize = vertex->dataSize;
+	SceUInt32 fragmentSize = fragment->dataSize;
 	SceUInt32 vertexAddress = (SceUInt32)vertex->data;
 	SceUInt32 fragmentAddress = (SceUInt32)fragment->data;
 
-	words[0] = (vertexAddress << 1) >> 5 | (SceUInt32)(vertex->dataSize >> 4) << 27;
+	words[0] = (vertexAddress << 1) >> 5 | (vertexSize >> 4) << 27;
 	words[1] = ((SceInt32)vertexAddress < 0 ? 0x4000 : 0) | flags |
 		   ((SceInt32)fragmentAddress < 0 ? 0x2000 : 0);
-	words[2] = (fragmentAddress << 1) >> 5 | (SceUInt32)(fragment->dataSize >> 4) << 27;
+	words[2] = (fragmentAddress << 1) >> 5 | (fragmentSize >> 4) << 27;
 }
 
 /* copy a command block into the chunk buffer */
@@ -169,8 +200,8 @@ int gxmCommandBlockCopy(GxmChunkBuffer *buffer, const GxmCommandBlock *source, G
 		return SCE_GXM_ERROR_RESERVE_FAILED;
 	buffer->cur = (SceUInt32)data + size;
 	copy->data = data;
-	copy->size = size;
 	copy->dataSize = source->dataSize;
+	copy->size = size;
 	gxmCopyWords(data, source->data, size);
 	return 0;
 }

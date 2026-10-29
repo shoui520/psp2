@@ -510,7 +510,7 @@ int gxmProgramBuildSecondaryCode(GxmChunkBuffer *buffer, const SceGxmProgram *pr
 		count--;
 		source += 2;
 	}
-	sceClibMemcpy(out, source, count * 8);
+	sceClibMemcpy_safe(out, source, count * 8);
 	buffer->cur = (SceUInt32)(out + count * 2);
 	ref->address = 0;
 	ref->taskControl = 2;
@@ -580,7 +580,7 @@ int gxmProgramBuildVertexCode(GxmChunkBuffer *buffer, const SceGxmProgram *progr
 	if (code == NULL)
 		return SCE_GXM_ERROR_RESERVE_FAILED;
 	offset = buffer->cur + buffer->gpuEnd - buffer->end;
-	sceClibMemcpy(code, GXM_RELATIVE(program->primaryProgramOffset),
+	sceClibMemcpy_safe(code, GXM_RELATIVE(program->primaryProgramOffset),
 		      program->primaryInstructionCount << 3);
 	trailer = code + program->primaryInstructionCount * 2;
 	trailer[0] = GXM_PROGRAM_TRAILER;

@@ -142,8 +142,8 @@ divide:
 				*code++ = (dataIndex >> 1) << 18 | GXM_PDS_FETCH_ATTRIBUTE;
 				data[dataIndex * 2] = attribute->offset;
 				data[dataIndex * 2 + 1] =
-					((attribute->componentCount *
-					  gxmAttributeFormatGetSize(attribute->format) + 3) >> 2) - 1 |
+					(((attribute->componentCount *
+					   gxmAttributeFormatGetSize(attribute->format) + 3) >> 2) - 1) |
 					attribute->regIndex << 8;
 				dataIndex += 2;
 			}
@@ -157,8 +157,8 @@ divide:
 				patches[i].dataWord = dataIndex << 1;
 				data[dataIndex * 2] = attribute->offset;
 				data[dataIndex * 2 + 1] =
-					((attribute->componentCount *
-					  gxmAttributeFormatGetSize(attribute->format) + 3) >> 2) - 1 |
+					(((attribute->componentCount *
+					   gxmAttributeFormatGetSize(attribute->format) + 3) >> 2) - 1) |
 					attribute->regIndex << 8;
 				dataIndex += 2;
 			}

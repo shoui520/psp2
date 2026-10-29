@@ -50,7 +50,7 @@ SceUInt32 *gxmBlendWriteCode(SceUInt32 *code, SceUInt32 reg, const SceGxmBlendIn
 	}
 	if (type != GXM_OUTPUT_TYPE_F16)
 		return gxmBlendCodeU8(code, reg, blendInfo);
-	sceClibMemcpy(code, cache->code, cache->size);
+	sceClibMemcpy_safe(code, cache->code, cache->size);
 	return (SceUInt32 *)((char *)code + (cache->size & ~3));
 }
 

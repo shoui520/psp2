@@ -166,7 +166,7 @@ int sceGxmDisplayQueueAddEntry(void *oldBuffer, void *newBuffer, const void *cal
 	if (SceGpuEs4User_0D27286F(gxmGlobals.gpuDevice, entry->syncHandle, syncObjects, count,
 				   2, NULL, NULL) != 0)
 		return SCE_GXM_ERROR_DRIVER;
-	sceClibMemcpy(entry->callbackData, callbackData, queue->callbackDataSize);
+	sceClibMemcpy_safe(entry->callbackData, callbackData, queue->callbackDataSize);
 	queue->writeIndex++;
 	sceKernelSetEventFlag(queue->readyEvent, 1);
 

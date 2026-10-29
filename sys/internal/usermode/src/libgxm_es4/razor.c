@@ -28,7 +28,7 @@ void sceGxmSetInitializeParamInternal(SceUInt32 magic, const GxmInitCallbacks *c
 	gxmInitCallbacksMagic = 0;
 	if (magic != GXM_CALLBACKS_MAGIC || callbacks == NULL)
 		return;
-	sceClibMemcpy(&gxmInitCallbacks, callbacks, sizeof(gxmInitCallbacks));
+	sceClibMemcpy_safe(&gxmInitCallbacks, callbacks, sizeof(gxmInitCallbacks));
 	gxmInitCallbacksMagic = GXM_CALLBACKS_MAGIC;
 }
 
