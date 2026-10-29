@@ -14,7 +14,7 @@ struct PowerClockControl s_powerClockControl;
  * The rail is raised to `demand` first, if needed, and lowered to the
  * smallest demand of the lanes afterwards.
  */
-inline int powerSetBusRailClockRaw(unsigned int lane, int frequency,
+int powerSetBusRailClockRaw(unsigned int lane, int frequency,
 			    unsigned int selector, uint32_t demand)
 {
 	uint32_t minimum;
@@ -63,8 +63,6 @@ inline int powerSetBusRailClockRaw(unsigned int lane, int frequency,
 	}
 
 	minimum = demand;
-	if (s_powerClockControl.voltageDemand[4] < minimum)
-		minimum = s_powerClockControl.voltageDemand[4];
 	if (s_powerClockControl.voltageDemand[0] < minimum)
 		minimum = s_powerClockControl.voltageDemand[0];
 	if (s_powerClockControl.voltageDemand[1] < minimum)
@@ -73,6 +71,8 @@ inline int powerSetBusRailClockRaw(unsigned int lane, int frequency,
 		minimum = s_powerClockControl.voltageDemand[2];
 	if (s_powerClockControl.voltageDemand[3] < minimum)
 		minimum = s_powerClockControl.voltageDemand[3];
+	if (s_powerClockControl.voltageDemand[4] < minimum)
+		minimum = s_powerClockControl.voltageDemand[4];
 	lowerClockVoltage(1, minimum);
 	powerUnlockClockControl();
 	return 0;
@@ -80,15 +80,15 @@ inline int powerSetBusRailClockRaw(unsigned int lane, int frequency,
 
 int powerInitializeClockControl(void)
 {
-	SceKernelMutexOptParam option = {
-		.size = sizeof(option),
-		.ceilingPriority = 32,
-	};
+	SceKernelMutexOptParam option;
 	SceUID mutex;
 
 	/* Native initializes the original 240-byte prefix, then process flags. */
-	memset(&s_powerClockControl, 0, sizeof(s_powerClockControl));
+	memset(&s_powerClockControl, 0,
+	       offsetof(struct PowerClockControl, kernelClockReduced));
 	s_powerClockControl.frequencies.gpuClockFrequency[0] = 111;
+	option.size = sizeof(option);
+	option.ceilingPriority = 32;
 	mutex = sceKernelCreateMutex("ScePowerFreq", 6, 0, &option);
 	if (mutex < 0)
 		return mutex;
@@ -268,18 +268,31 @@ static inline __attribute__((always_inline)) void lowerClockVoltage(unsigned int
 
 int scePowerSetArmClockFrequency(int frequency)
 {
-	const unsigned char voltageIndex[16] = {
+	static const unsigned char voltageIndex[16] = {
 		0, 5, 0, 5, 5, 4, 3, 2, 1, 0, 2, 0, 4, 2, 1, 0
 	};
 	unsigned int selector;
 	uint32_t demand;
 	int ret;
 
-	if (frequency < 1 || frequency > 444)
+	if (frequency <= 0)
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	selector = frequency <= 41 ? 1 : frequency <= 83 ? 3 :
-		   frequency <= 111 ? 4 : frequency <= 166 ? 5 :
-		   frequency <= 222 ? 6 : frequency <= 333 ? 7 : 14;
+	if (frequency <= 41)
+		selector = 1;
+	else if (frequency <= 83)
+		selector = 3;
+	else if (frequency <= 111)
+		selector = 4;
+	else if (frequency <= 166)
+		selector = 5;
+	else if (frequency <= 222)
+		selector = 6;
+	else if (frequency <= 333)
+		selector = 7;
+	else if (frequency <= 444)
+		selector = 14;
+	else
+		return SCE_POWER_ERROR_INVALID_VALUE;
 	demand = s_powerClockControl.armVoltageTable[voltageIndex[selector]];
 	ret = powerLockClockControl();
 	if (ret < 0)
@@ -306,32 +319,25 @@ uint32_t scePowerGetArmClockFrequency(void)
 	return s_powerClockControl.frequencies.armClockFrequency;
 }
 
-static inline __attribute__((always_inline)) int setMediaClock(unsigned int lane, int frequency)
+static inline __attribute__((always_inline)) int setMediaClock(unsigned int lane, int frequency,
+						unsigned int selector, uint32_t demand)
 {
-	static const unsigned int rates[] = { 41, 55, 83, 111, 166, 222, 333 };
-	uint32_t demand, minimum;
-	unsigned int selector, index;
+	uint32_t minimum;
 	int ret;
 
-	if (frequency < 0 || frequency > (lane ? 222 : 333))
-		return SCE_POWER_ERROR_INVALID_VALUE;
-	selector = 0;
-	demand = 255;
-	if (frequency) {
-		for (index = 0; (unsigned int)frequency > rates[index]; index++)
-			;
-		selector = index + 1;
-		index = index < 4 ? (lane ? 2 : 3) : 6 - index - lane;
-		demand = s_powerClockControl.mediaVoltageTable[index];
-	}
 	ret = powerLockClockControl();
 	if (ret < 0)
 		return ret;
-	if (!lane && demand < s_powerClockControl.railVoltage[2] && demand == 255)
-		demand = s_powerClockControl.mediaVoltageTable[3];
-	ret = raiseClockVoltage(3, demand);
-	if (ret < 0)
-		return ret;
+	if (demand < s_powerClockControl.railVoltage[2]) {
+		if (!lane && demand == 255)
+			demand = s_powerClockControl.mediaVoltageTable[3];
+		ret = SceSysconForDriver_7F198FA2(3, 138 - demand);
+		if (ret < 0) {
+			powerUnlockClockControl();
+			return ret;
+		}
+		s_powerClockControl.railVoltage[2] = demand;
+	}
 	if (!lane) {
 		if (!selector)
 			ScePervasiveForDriver_2EEBE9AE();
@@ -364,7 +370,35 @@ static inline __attribute__((always_inline)) int setMediaClock(unsigned int lane
 
 int ScePowerForDriver_621BD8FD(int frequency)
 {
-	return setMediaClock(0, frequency);
+	uint32_t demand = s_powerClockControl.mediaVoltageTable[3];
+	unsigned int selector;
+
+	if (frequency < 0)
+		return SCE_POWER_ERROR_INVALID_VALUE;
+	if (frequency == 0) {
+		selector = 0;
+		demand = 255;
+	} else if (frequency <= 41) {
+		selector = 1;
+	} else if (frequency <= 55) {
+		selector = 2;
+	} else if (frequency <= 83) {
+		selector = 3;
+	} else if (frequency <= 111) {
+		selector = 4;
+	} else if (frequency <= 166) {
+		selector = 5;
+		demand = s_powerClockControl.mediaVoltageTable[2];
+	} else if (frequency <= 222) {
+		selector = 6;
+		demand = s_powerClockControl.mediaVoltageTable[1];
+	} else if (frequency <= 333) {
+		selector = 7;
+		demand = s_powerClockControl.mediaVoltageTable[0];
+	} else {
+		return SCE_POWER_ERROR_INVALID_VALUE;
+	}
+	return setMediaClock(0, frequency, selector, demand);
 }
 
 uint32_t ScePowerForDriver_64641E6A(void)
@@ -374,7 +408,32 @@ uint32_t ScePowerForDriver_64641E6A(void)
 
 int ScePowerForDriver_E5573571(int frequency)
 {
-	return setMediaClock(1, frequency);
+	uint32_t demand = s_powerClockControl.mediaVoltageTable[2];
+	unsigned int selector;
+
+	if (frequency < 0)
+		return SCE_POWER_ERROR_INVALID_VALUE;
+	if (frequency == 0) {
+		selector = 0;
+		demand = 255;
+	} else if (frequency <= 41) {
+		selector = 1;
+	} else if (frequency <= 55) {
+		selector = 2;
+	} else if (frequency <= 83) {
+		selector = 3;
+	} else if (frequency <= 111) {
+		selector = 4;
+	} else if (frequency <= 166) {
+		selector = 5;
+		demand = s_powerClockControl.mediaVoltageTable[1];
+	} else if (frequency <= 222) {
+		selector = 6;
+		demand = s_powerClockControl.mediaVoltageTable[0];
+	} else {
+		return SCE_POWER_ERROR_INVALID_VALUE;
+	}
+	return setMediaClock(1, frequency, selector, demand);
 }
 
 uint32_t ScePowerForDriver_0E58FCDF(void)
@@ -382,28 +441,13 @@ uint32_t ScePowerForDriver_0E58FCDF(void)
 	return s_powerClockControl.frequencies.vipClockFrequency;
 }
 
-static inline __attribute__((always_inline)) int setXbarClock(int frequency, int compat)
+static inline __attribute__((always_inline)) int setXbarClock(int frequency, int compat,
+					       unsigned int selector, uint32_t demand)
 {
-	uint32_t demand, minimum;
-	unsigned int selector, i;
+	uint32_t minimum;
+	unsigned int i;
 	int ret;
 
-	if (compat) {
-		if (frequency > 333)
-			return SCE_POWER_ERROR_INVALID_VALUE;
-		if (!frequency) {
-			demand = 255;
-			selector = s_powerClockControl.frequencies.gpuXbarSelector;
-		} else {
-			selector = frequency == 222 ? 2 : 0;
-			demand = s_powerClockControl.compatVoltageTable[frequency == 222];
-		}
-	} else {
-		if (frequency < 1 || frequency > 166)
-			return SCE_POWER_ERROR_INVALID_VALUE;
-		selector = frequency <= 83 ? 1 : frequency <= 111 ? 2 : 0;
-		demand = s_powerClockControl.gpuVoltageTable[selector ? 0 : 1];
-	}
 	ret = powerLockClockControl();
 	if (ret < 0)
 		return ret;
@@ -434,7 +478,22 @@ static inline __attribute__((always_inline)) int setXbarClock(int frequency, int
 
 int scePowerSetGpuXbarClockFrequency(int frequency)
 {
-	return setXbarClock(frequency, 0);
+	uint32_t demand = s_powerClockControl.gpuVoltageTable[0];
+	unsigned int selector;
+
+	if (frequency <= 0)
+		return SCE_POWER_ERROR_INVALID_VALUE;
+	if (frequency <= 83) {
+		selector = 1;
+	} else if (frequency <= 111) {
+		selector = 2;
+	} else if (frequency <= 166) {
+		selector = 0;
+		demand = s_powerClockControl.gpuVoltageTable[1];
+	} else {
+		return SCE_POWER_ERROR_INVALID_VALUE;
+	}
+	return setXbarClock(frequency, 0, selector, demand);
 }
 
 uint32_t scePowerGetGpuXbarClockFrequency(void)
@@ -444,7 +503,22 @@ uint32_t scePowerGetGpuXbarClockFrequency(void)
 
 int scePowerSetCompatClockFrequency(int frequency)
 {
-	return setXbarClock(frequency, 1);
+	uint32_t demand;
+	unsigned int selector;
+
+	if (frequency == 0) {
+		demand = 255;
+		selector = s_powerClockControl.frequencies.gpuXbarSelector;
+	} else if (frequency == 222) {
+		selector = 2;
+		demand = s_powerClockControl.compatVoltageTable[1];
+	} else if (frequency > 333) {
+		return SCE_POWER_ERROR_INVALID_VALUE;
+	} else {
+		selector = 0;
+		demand = s_powerClockControl.compatVoltageTable[0];
+	}
+	return setXbarClock(frequency, 1, selector, demand);
 }
 
 uint32_t scePowerGetCompatClockFrequency(void)
@@ -466,32 +540,66 @@ int ScePowerForDriver_711C68DF(void (*before)(uint32_t, uint32_t, int, void *),
 
 int scePowerSetGpuClockFrequencyInternal(int first, int second)
 {
-	const unsigned int rates[] = { 41, 55, 83, 111, 166, 222 };
-	static const unsigned int selectors[] = { 0, 1, 2, 3, 5, 7 };
 	uint32_t firstRate, secondRate, firstSelector, secondSelector;
 	uint32_t demand, minimum, irqState, start;
-	unsigned int index;
 	int ret;
 
-	if (first < 0 || second < 0 || first > 222 || second > 222)
+	if (first < 0 || second < 0)
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	firstRate = secondRate = firstSelector = secondSelector = 0;
-	demand = 255;
-	if (first || second) {
-		for (index = 0; (unsigned int)first > rates[index]; index++)
-			;
-		firstRate = rates[index];
-		firstSelector = selectors[index];
-		for (index = 0; (unsigned int)second > rates[index]; index++)
-			;
-		secondRate = rates[index];
-		secondSelector = selectors[index];
+	if (!first && !second) {
+		firstRate = secondRate = firstSelector = secondSelector = 0;
+		demand = 255;
+	} else {
+		if (first <= 41) {
+			firstRate = 41;
+			firstSelector = 0;
+		} else if (first <= 55) {
+			firstRate = 55;
+			firstSelector = 1;
+		} else if (first <= 83) {
+			firstRate = 83;
+			firstSelector = 2;
+		} else if (first <= 111) {
+			firstRate = 111;
+			firstSelector = 3;
+		} else if (first <= 166) {
+			firstRate = 166;
+			firstSelector = 5;
+		} else if (first <= 222) {
+			firstRate = 222;
+			firstSelector = 7;
+		} else {
+			return SCE_POWER_ERROR_INVALID_VALUE;
+		}
+		if (second <= 41) {
+			secondRate = 41;
+			secondSelector = 0;
+		} else if (second <= 55) {
+			secondRate = 55;
+			secondSelector = 1;
+		} else if (second <= 83) {
+			secondRate = 83;
+			secondSelector = 2;
+		} else if (second <= 111) {
+			secondRate = 111;
+			secondSelector = 3;
+		} else if (second <= 166) {
+			secondRate = 166;
+			secondSelector = 5;
+		} else if (second <= 222) {
+			secondRate = 222;
+			secondSelector = 7;
+		} else {
+			return SCE_POWER_ERROR_INVALID_VALUE;
+		}
 		if (firstRate > secondRate)
 			return SCE_POWER_ERROR_INVALID_VALUE;
-		demand = secondRate <= 111 ? s_powerClockControl.gpuVoltageTable[0] :
-			 s_powerClockControl.gpuVoltageTable[1];
-		if (firstRate == 222)
+		if (secondRate <= 111)
+			demand = s_powerClockControl.gpuVoltageTable[0];
+		else if (firstRate == 222)
 			demand = s_powerClockControl.compatVoltageTable[0];
+		else
+			demand = s_powerClockControl.gpuVoltageTable[1];
 	}
 	ret = powerLockClockControl();
 	if (ret < 0)

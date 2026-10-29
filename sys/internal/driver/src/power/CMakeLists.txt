@@ -17,3 +17,8 @@ psp2_module(os0_kd_bootimage_power KIND kernel COMPILER gcc48 SOURCES
 # SCE_KERNEL_ALL_PROCESS_ID that the file's own callers use.
 set_source_files_properties(power.c PROPERTIES
 	COMPILE_OPTIONS "-fipa-cp-clone")
+
+# The clock unit was built at -O3: the original inlines the bus, dmac5, camera
+# and system clock setters into powerRestoreClockRuntime.
+set_source_files_properties(power_clock.c PROPERTIES
+	COMPILE_OPTIONS "-O3")

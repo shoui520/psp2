@@ -198,13 +198,16 @@ static inline __attribute__((always_inline)) void powerUnlinkProcessState(SceUID
 			s_processStorageKey, (void **)&state, 0) < 0)
 		return;
 	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
-	if (s_powerProcessList == state)
-		s_powerProcessList = state->next;
-	else {
-		for (process = s_powerProcessList; process; process = process->next) {
-			if (process->next == state) {
-				process->next = state->next;
-				break;
+	process = s_powerProcessList;
+	if (process) {
+		if (process == state)
+			s_powerProcessList = state->next;
+		else {
+			for (; process->next; process = process->next) {
+				if (process->next == state) {
+					process->next = state->next;
+					break;
+				}
 			}
 		}
 	}
@@ -272,10 +275,9 @@ static inline __attribute__((always_inline)) int setProcessClockFrequency(SceUID
 	powerLockClockControl();
 	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	for (process = s_powerProcessList; process; process = process->next) {
-		int requested = process->clockFrequency[lane];
-
-		if (!process->clockExcluded && requested > maximum)
-			maximum = requested;
+		if (!process->clockExcluded
+		    && process->clockFrequency[lane] > maximum)
+			maximum = process->clockFrequency[lane];
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	if (lane == POWER_PROCESS_CLOCK_BUS)
