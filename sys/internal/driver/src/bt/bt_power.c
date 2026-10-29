@@ -181,7 +181,7 @@ uintptr_t BtAdvanceShutdown(BtStack *stack)
 		stack->state = 28;
 		mode = (mode & ~0x20u) | 0x40;
 		stack->mode = mode;
-		return BtNotifyEvent(21, 0, mode & ~0x20u, 0);
+		return BtNotifyEvent(21, 0, mode & 0xdf, 0);
 	}
 	return result;
 }
@@ -310,7 +310,7 @@ void BtPowerOffTimedOut(void *argument)
 		stack->state = 28;
 		mode = (mode & ~0x20u) | 0x40;
 		stack->mode = mode;
-		BtNotifyEvent(21, 0, mode & ~0x20u, 0);
+		BtNotifyEvent(21, 0, mode & 0xdf, 0);
 	}
 }
 
