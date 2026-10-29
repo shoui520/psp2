@@ -91,3 +91,24 @@ ScePafMisc_F70087F7:
 	pop {r4, pc}
 	.fnend
 	.size ScePafMisc_F70087F7, . - ScePafMisc_F70087F7
+
+/* Native adaptor: load two VFP coordinate records and call the constructor. */
+	.global ScePafMisc_66CB67D5
+	.type ScePafMisc_66CB67D5, %function
+	.thumb_func
+ScePafMisc_66CB67D5:
+	.fnstart
+	push {r4, lr}
+	vldmia r1, {d0, d1}
+	vldmia r2, {d4, d5}
+	vorr q1, q0, q0
+	vmov.f32 s0, s4
+	vmov.f32 s2, s5
+	vmov.f32 s4, s6
+	vmov.f32 s1, s8
+	vmov.f32 s3, s9
+	vmov.f32 s5, s10
+	bl ScePafMisc_1534ACB0
+	pop {r4, pc}
+	.fnend
+	.size ScePafMisc_66CB67D5, . - ScePafMisc_66CB67D5
