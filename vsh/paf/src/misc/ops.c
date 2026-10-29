@@ -1,5 +1,6 @@
 /* Small original ScePafMisc structure operations. */
 #include <stdint.h>
+#include "../std/string.h"
 
 void ScePafMisc_FFE8F348(uint32_t *object)
 {
@@ -216,4 +217,11 @@ int ScePafMisc_D88EEBD8(const uint8_t *object)
 	if (words[0xc] == 0 && words[0xd] == 0)
 		return 0;
 	return words[4] == 1;
+}
+
+/* Native ordering comparator on the strings held by two key records. */
+int ScePafMisc_37897945(void *unused, const char *const *left,
+			const char *const *right)
+{
+	return sce_paf_strcasecmp(*left, *right) > 0;
 }
