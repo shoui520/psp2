@@ -829,9 +829,6 @@ freeHost:
 	return err;
 }
 
-#define SCE_GXM_MULTISAMPLE_NONE	0
-#define SCE_GXM_MULTISAMPLE_2X		1
-#define SCE_GXM_MULTISAMPLE_4X		2
 
 /* which vertex texture coordinate feeds each fragment texture coordinate */
 static inline void gxmTexCoordRemap(SceUInt8 *remap, const SceGxmProgram *vertexProgram)

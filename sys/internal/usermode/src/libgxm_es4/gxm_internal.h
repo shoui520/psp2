@@ -75,6 +75,11 @@ int sceKernelIsGameBudget(void);
 #define SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST		0x805b002d
 #define SCE_GXM_ERROR_BUFFER_OVERRUN			0x805b002e
 
+/* SceGxmMultisampleMode */
+#define SCE_GXM_MULTISAMPLE_NONE	0
+#define SCE_GXM_MULTISAMPLE_2X		1
+#define SCE_GXM_MULTISAMPLE_4X		2
+
 /* --- texture formats --- */
 
 typedef SceUInt32 SceGxmTextureFormat;
@@ -1755,6 +1760,12 @@ int SceGpuEs4User_A5B14369(SceUInt32 device);					/* disconnect */
 int SceGpuEs4User_0EA7458D(GxmTopContext *top, SceUID block, SceUInt32 *hMemBlockProcRef,
 			   SceUInt32 which);					/* register memory */
 int SceGpuEs4User_156A6B70(GxmTopContext *top, SceUID block);		/* unregister memory */
+int SceGpuEs4User_0162A405(GxmTopContext *top, const SGX_ADDRENDTARG *target,
+			   struct SceGxmRenderTarget **renderTarget);		/* add a render target */
+int SceGpuEs4User_D90B0707(GxmTopContext *top, SceUInt32 renderContext,
+			   struct SceGxmRenderTarget *renderTarget);		/* remove a render target */
+int SceGpuEs4User_804BA13D(GxmTopContext *top, const struct SceGxmRenderTarget *renderTarget,
+			   SceUID *driverMemBlock, SceUInt32 *allocated);	/* its driver memory */
 int SceGpuEs4User_1E0A9C4A(GxmTopContext *top, SceUInt32 *memContext, SceUInt32 *count,
 			   PVRSRV_HEAP_INFO *heaps);			/* heap info */
 int SceGpuEs4User_8A997DBB(GxmTopContext *top, const SGX_CREATERENDERCONTEXT *params,

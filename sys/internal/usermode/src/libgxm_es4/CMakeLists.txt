@@ -32,6 +32,7 @@ set(GXM_SOURCES
 	precomputed.c
 	program.c
 	razor.c
+	render_target.c
 	ring_buffer.c
 	shader_patcher.c
 	surface.c
