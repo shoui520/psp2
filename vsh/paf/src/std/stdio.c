@@ -23,10 +23,10 @@ void *_stdinit_stdio(void)
 	return sce_paf_memset(streamTable, 0, sizeof(*streamTable));
 }
 
-static int ParseStreamMode(const char *mode, int *type, int *flags)
+static int ParseStreamMode(const char *mode)
 {
 	const char *previous;
-	int ch, access;
+	int ch, type;
 
 	if (!mode || !*mode)
 		return -1;
@@ -37,18 +37,12 @@ static int ParseStreamMode(const char *mode, int *type, int *flags)
 			mode++;
 	} while (ch == 'b');
 	ch = sce_paf_tolower((signed char)*mode);
-	*flags = 0;
 	if (ch == 'r') {
-		access = SCE_O_RDONLY;
-		*type = 0x8000;
+		type = 0x8000;
 	} else if (ch == 'w') {
-		access = SCE_O_WRONLY;
-		*flags = SCE_O_CREAT | SCE_O_TRUNC;
-		*type = 0x4000;
+		type = 0x4000;
 	} else if (ch == 'a') {
-		access = SCE_O_WRONLY;
-		*flags = SCE_O_CREAT | SCE_O_APPEND;
-		*type = 0x6000;
+		type = 0x6000;
 	} else {
 		return -1;
 	}
@@ -56,15 +50,12 @@ static int ParseStreamMode(const char *mode, int *type, int *flags)
 	mode++;
 	while (sce_paf_tolower(ch) == 'b')
 		ch = (signed char)*++mode;
-	if (*mode == '+') {
-		access |= SCE_O_RDWR;
-		*type |= 0xc000;
-	}
-	*flags |= access;
-	return 0;
+	if (*mode == '+')
+		type |= 0xc000;
+	return type;
 }
 
-static sce_paf_FILE *AllocateStream(const char *mode, int *flags)
+static sce_paf_FILE *AllocateStream(const char *mode)
 {
 	sce_paf_FILE *stream;
 	int i, type;
@@ -74,7 +65,7 @@ static sce_paf_FILE *AllocateStream(const char *mode, int *flags)
 		if (!(uint8_t)streamTable[i].type)
 			break;
 	}
-	if (i == 20 || ParseStreamMode(mode, &type, flags) < 0) {
+	if (i == 20 || (type = ParseStreamMode(mode)) < 0) {
 		MutexUnlock(&stdioMutex);
 		return NULL;
 	}
@@ -102,13 +93,55 @@ static void SetStreamPosition(sce_paf_FILE *stream, int type, int fd)
 sce_paf_FILE *sce_paf_fopen(const char *filename, const char *mode)
 {
 	sce_paf_FILE *stream;
-	int flags, type, fd;
+	const char *previous;
+	int ch, access, flags, type, fd, i;
 
 	if (!filename || !mode)
 		return NULL;
-	stream = AllocateStream(mode, &flags);
-	if (!stream)
+	MutexLock(&stdioMutex);
+	for (i = 0; i < 20; i++) {
+		if (!(uint8_t)streamTable[i].type)
+			break;
+	}
+	if (i == 20 || !*mode) {
+		MutexUnlock(&stdioMutex);
 		return NULL;
+	}
+	do {
+		previous = mode;
+		ch = sce_paf_tolower((signed char)*mode);
+		if (ch == 'b')
+			mode++;
+	} while (ch == 'b');
+	ch = sce_paf_tolower((signed char)*mode);
+	flags = 0;
+	if (ch == 'r') {
+		access = SCE_O_RDONLY;
+		type = 0x8000;
+	} else if (ch == 'w') {
+		access = SCE_O_WRONLY;
+		flags = SCE_O_CREAT | SCE_O_TRUNC;
+		type = 0x4000;
+	} else if (ch == 'a') {
+		access = SCE_O_WRONLY;
+		flags = SCE_O_CREAT | SCE_O_APPEND;
+		type = 0x6000;
+	} else {
+		MutexUnlock(&stdioMutex);
+		return NULL;
+	}
+	ch = (signed char)previous[1];
+	mode++;
+	while (sce_paf_tolower(ch) == 'b')
+		ch = (signed char)*++mode;
+	if (*mode == '+') {
+		access |= SCE_O_RDWR;
+		type |= 0xc000;
+	}
+	flags |= access;
+	stream = &streamTable[i];
+	stream->type = type | 1;
+	MutexUnlock(&stdioMutex);
 	stream->status = 0;
 	fd = sceIoOpen(filename, flags, 0606);
 	type = stream->type;
@@ -125,11 +158,11 @@ sce_paf_FILE *sce_paf_fopen(const char *filename, const char *mode)
 sce_paf_FILE *sce_paf_fdopen(int fd, const char *mode)
 {
 	sce_paf_FILE *stream;
-	int flags, type;
+	int type;
 
 	if (!mode)
 		return NULL;
-	stream = AllocateStream(mode, &flags);
+	stream = AllocateStream(mode);
 	if (!stream)
 		return NULL;
 	type = stream->type;
