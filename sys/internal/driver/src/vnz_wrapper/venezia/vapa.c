@@ -136,7 +136,12 @@ int sceCodecEngineDsp0ConvertPhysicalToVirtual(VeneziaRpcThunk *thunk)
 {
 	unsigned int count, i;
 	VeneziaRpcMemoryTransfer *transfer;
-	int copyRequired;
+	unsigned int communicationMemory, flags;
+	SceSize size;
+#if FW_DEBUG
+	unsigned int physicalBase;
+	void *virtualBase;
+#endif
 
 #if FW_DEBUG
 	sceKernelAssert(thunk != NULL,
@@ -152,21 +157,26 @@ int sceCodecEngineDsp0ConvertPhysicalToVirtual(VeneziaRpcThunk *thunk)
 	for (i = 0; i != count; i++) {
 		transfer = &thunk->memories[i];
 #if FW_DEBUG
+		virtualBase = transfer->virtualBase;
 		__builtin_prefetch(&thunk->memories[i + 3].virtualBase);
-		if (transfer->virtualBase)
-			sceKernelAssert(transfer->size != 0,
+		physicalBase = transfer->physicalBase;
+#endif
+		size = transfer->size;
+		flags = transfer->flags;
+		communicationMemory = transfer->communicationMemory;
+#if FW_DEBUG
+		if (virtualBase)
+			sceKernelAssert(size != 0,
 				SCE_DBGINFO_FUNC(236, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
 		else
-			sceKernelAssert(transfer->size == 0 && transfer->flags == 1,
+			sceKernelAssert(size == 0 && flags == 1,
 				SCE_DBGINFO_FUNC(238, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
-		sceKernelAssert(transfer->physicalBase != 0,
+		sceKernelAssert(physicalBase != 0,
 			SCE_DBGINFO_FUNC(240, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
-		sceKernelAssert((transfer->flags & 0x30) != 0x30,
+		sceKernelAssert((flags & 0x30) != 0x30,
 			SCE_DBGINFO_FUNC(242, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
 #endif
-		copyRequired = transfer->communicationMemory &&
-			!(transfer->flags & 0x10) && transfer->size != 0;
-		transfer->copyRequired = copyRequired;
+		transfer->copyRequired = communicationMemory && !(flags & 0x10) && size != 0;
 	}
 	return 0;
 }

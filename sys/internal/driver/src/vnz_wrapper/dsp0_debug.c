@@ -532,7 +532,7 @@ static inline __attribute__((always_inline)) int readVeneziaDebugCaptureFlag(uns
 }
 
 /* name unknown: read the pending capture flag, falling back to the channel hardware. */
-int getVeneziaDebugCaptureFlag(unsigned int channel)
+__attribute__((noinline)) int getVeneziaDebugCaptureFlag(unsigned int channel)
 {
 	return readVeneziaDebugCaptureFlag(channel);
 }
@@ -744,7 +744,7 @@ int initVeneziaDebugger(const VeneziaDebugCallbacks *callbacks, uint32_t virtual
 }
 
 /* name unknown: request a debugger mode and notify both DSP mailbox channels. */
-int setVeneziaDebuggerMode(unsigned int request)
+__attribute__((noinline)) int setVeneziaDebuggerMode(unsigned int request)
 {
 	unsigned int mode, alternate, bit;
 
@@ -1058,7 +1058,7 @@ int setVeneziaDebuggerEventMask(unsigned int processor, uint32_t mask)
 }
 
 /* name unknown: execute a three-argument DSP debugger command in a capture slot. */
-int executeVeneziaDebuggerCommand(unsigned int processor, uint32_t first,
+__attribute__((noinline)) int executeVeneziaDebuggerCommand(unsigned int processor, uint32_t first,
 				 uint32_t second, uint32_t third, uint32_t *result)
 {
 	VeneziaDebugExecutionWork work;
@@ -3187,7 +3187,7 @@ int suspendVeneziaVipDebugger(void)
 	for (;;) {
 		ret = getVeneziaDebuggerModes(&mode, &alternateMode);
 		if (g_veneziaDebugger.log)
-			g_veneziaDebugger.log(4, 3, ret, mode, alternateMode, 0);
+			g_veneziaDebugger.log(4, 3, ret, mode, alternateMode);
 		if (ret)
 			return -2141060856;
 		if (mode == 5 && alternateMode == 5)
@@ -4949,7 +4949,7 @@ int submitVeneziaVipCommand(unsigned int processor, const uint32_t *command,
 		} while (index < wordCount);
 	}
 	g_veneziaVipCommandState.read(address);
-	return g_veneziaVipCommandState.write(address, 0x80000000);
+	return g_veneziaVipCommandState.write(address, 0x80000000, destination[0]);
 }
 
 /* name unknown: consume a command response and update its caller-owned context. */
@@ -5555,7 +5555,8 @@ int submitVeneziaVipCommandContext(unsigned int processor, VeneziaVipCommandCont
 	command->request.operation = 2;
 	command->request.commandValue = commandValue;
 	g_veneziaVipCommandState.read(address);
-	g_veneziaVipCommandState.write(address, 0x80000000);
+	g_veneziaVipCommandState.write(address, 0x80000000,
+				       command->request.payloadAddress);
 	return 0;
 }
 
@@ -5589,7 +5590,8 @@ int continueVeneziaVipCommandContext(unsigned int processor,
 	command->request.operation = 4;
 	command->request.commandValue = value;
 	g_veneziaVipCommandState.read(address);
-	g_veneziaVipCommandState.write(address, 0x80000000);
+	g_veneziaVipCommandState.write(address, 0x80000000,
+				       command->request.payloadAddress);
 	return 0;
 }
 
@@ -5723,7 +5725,8 @@ int startVeneziaVipCommandCapture(unsigned int processor,
 		command->request.processorMode = 0;
 		command->request.commandValue = 0;
 		g_veneziaVipCommandState.read(address);
-		g_veneziaVipCommandState.write(address, 0x80000000);
+		g_veneziaVipCommandState.write(address, 0x80000000,
+					       command->request.payloadAddress);
 		ret = 0;
 	}
 	return ret;
@@ -6388,7 +6391,7 @@ int distributeVeneziaVipCaptureMemory(VeneziaVipProcessStorage *storage,
 }
 
 /* name unknown: this firmware retains no separate capture-memory release work. */
-int releaseVeneziaVipCaptureMemory(VeneziaVipProcessStorage *storage)
+__attribute__((noinline)) int releaseVeneziaVipCaptureMemory(VeneziaVipProcessStorage *storage)
 {
 	(void)storage;
 	return 0;
@@ -9249,7 +9252,7 @@ int shutdownVeneziaVipProcessors(VeneziaVipState *state,
 }
 
 /* name unknown: calculate storage for an aligned capture byte capacity. */
-unsigned int getVeneziaVipCaptureWorkSize(unsigned int capacity)
+__attribute__((noinline)) unsigned int getVeneziaVipCaptureWorkSize(unsigned int capacity)
 {
 	if (capacity)
 		return 41 * ((capacity + 7) & ~7u) + 4288;
@@ -10495,7 +10498,7 @@ int requestVeneziaVipCaptureProcessing(unsigned int processor,
 }
 
 /* name unknown: getVeneziaVipActiveProcess follows the original capture accessor. */
-int getVeneziaVipActiveProcess(VeneziaVipState *state,
+__attribute__((noinline)) int getVeneziaVipActiveProcess(VeneziaVipState *state,
 	VeneziaVipProcessStorage **storage)
 {
 	lockVeneziaVipProcess(state->commonProcessorLock);
@@ -10526,7 +10529,7 @@ int getVeneziaVipCaptureContext(VeneziaDebugProcessCapture *capture,
 }
 
 /* name unknown: setVeneziaVipCaptureContext follows the original capture accessor. */
-int setVeneziaVipCaptureContext(VeneziaDebugProcessCapture *capture,
+__attribute__((noinline)) int setVeneziaVipCaptureContext(VeneziaDebugProcessCapture *capture,
 	VeneziaVipState *state, VeneziaVipCommandContext *context)
 {
 	lockVeneziaVipProcess(state->commonProcessorLock);
@@ -10536,7 +10539,7 @@ int setVeneziaVipCaptureContext(VeneziaDebugProcessCapture *capture,
 }
 
 /* name unknown: setVeneziaVipCaptureControl follows the original capture accessor. */
-int setVeneziaVipCaptureControl(VeneziaDebugProcessCapture *capture,
+__attribute__((noinline)) int setVeneziaVipCaptureControl(VeneziaDebugProcessCapture *capture,
 	VeneziaVipState *state, uint32_t control)
 {
 	lockVeneziaVipProcess(state->commonProcessorLock);
@@ -10546,7 +10549,7 @@ int setVeneziaVipCaptureControl(VeneziaDebugProcessCapture *capture,
 }
 
 /* name unknown: getVeneziaVipCaptureCallbacks follows the original capture accessor. */
-int getVeneziaVipCaptureCallbacks(VeneziaDebugProcessCapture *capture,
+__attribute__((noinline)) int getVeneziaVipCaptureCallbacks(VeneziaDebugProcessCapture *capture,
 	VeneziaVipState *state, VeneziaDebugCallback **callbacks)
 {
 	*callbacks = capture->callbacks;
@@ -12122,7 +12125,7 @@ const VeneziaVipImplementationOperations g_veneziaVipImplementations[2] = {
 };
 
 /* name unknown: dispatch through the selected capture implementation. */
-int removeVeneziaVipCallbacks(unsigned int processor, VeneziaVipState *state, VeneziaVipProcessStorage *storage, SceUID uid, SceUID pid)
+__attribute__((noinline)) int removeVeneziaVipCallbacks(unsigned int processor, VeneziaVipState *state, VeneziaVipProcessStorage *storage, SceUID uid, SceUID pid)
 {
 	unsigned int implementationIndex = storage->count & 15;
 
@@ -12162,7 +12165,7 @@ int dispatchVeneziaVipProcessReset(VeneziaVipProcessStorage *storage)
 }
 
 /* name unknown: dispatch through the selected capture implementation. */
-int getVeneziaVipCaptureSize(unsigned int processor, VeneziaVipState *state, const VeneziaDebugImageFormat *geometry, uint32_t *size)
+__attribute__((noinline)) int getVeneziaVipCaptureSize(unsigned int processor, VeneziaVipState *state, const VeneziaDebugImageFormat *geometry, uint32_t *size)
 {
 	unsigned int implementationIndex = processor & 15;
 
@@ -12183,7 +12186,7 @@ int dispatchVeneziaVipCaptureRemoval(unsigned int implementation, unsigned int p
 }
 
 /* name unknown: dispatch through the selected capture implementation. */
-int configureVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state)
+__attribute__((noinline)) int configureVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state)
 {
 	unsigned int implementationIndex = count & 15;
 
@@ -12193,7 +12196,7 @@ int configureVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *sta
 }
 
 /* name unknown: dispatch through the selected capture implementation. */
-int startVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state)
+__attribute__((noinline)) int startVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state)
 {
 	unsigned int implementationIndex = count & 15;
 
@@ -12203,7 +12206,7 @@ int startVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state)
 }
 
 /* name unknown: dispatch through the selected capture implementation. */
-int prepareVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state)
+__attribute__((noinline)) int prepareVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state)
 {
 	unsigned int implementationIndex = count & 15;
 
@@ -12213,7 +12216,7 @@ int prepareVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state
 }
 
 /* name unknown: dispatch through the selected capture implementation. */
-int stopVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state)
+__attribute__((noinline)) int stopVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state)
 {
 	unsigned int implementationIndex = count & 15;
 
@@ -12234,7 +12237,7 @@ __attribute__((noinline)) int beginVeneziaVipCaptureConfiguration(VeneziaVipStat
 }
 
 /* name unknown: dispatch through the selected capture implementation. */
-int endVeneziaVipCaptureConfiguration(VeneziaVipState *state, VeneziaVipProcessStorage *storage)
+__attribute__((noinline)) int endVeneziaVipCaptureConfiguration(VeneziaVipState *state, VeneziaVipProcessStorage *storage)
 {
 	unsigned int implementationIndex = storage->count & 15;
 
@@ -12244,7 +12247,7 @@ int endVeneziaVipCaptureConfiguration(VeneziaVipState *state, VeneziaVipProcessS
 }
 
 /* name unknown: dispatch through the selected capture implementation. */
-int stopVeneziaVipCapture(unsigned int processor, VeneziaVipState *state, VeneziaVipProcessStorage *storage)
+__attribute__((noinline)) int stopVeneziaVipCapture(unsigned int processor, VeneziaVipState *state, VeneziaVipProcessStorage *storage)
 {
 	unsigned int implementationIndex = storage->count & 15;
 

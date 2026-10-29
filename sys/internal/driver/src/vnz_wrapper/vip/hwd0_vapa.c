@@ -72,8 +72,8 @@ int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request)
 #if FW_DEBUG
 		sceKernelAssert(index <= 7, SCE_DBGINFO_FUNC(363, "_dmacMemcpy"), __builtin_return_address(0));
 #endif
-		tag->src = transfer->source;
-		tag->dst = transfer->destination;
+		tag->src = (const void *)source;
+		tag->dst = (void *)destination;
 		tag->len = size;
 		tag->cmd = command;
 		tag->blockSize = 0;
@@ -280,7 +280,7 @@ unsigned int decodeVeneziaVipNalLength(const uint8_t *bytes, unsigned int size)
 	case 3:
 		return (bytes[1] << 8) | (bytes[0] << 16) | bytes[2];
 	case 4:
-		return __builtin_bswap32(*(const uint32_t *)bytes);
+		return (bytes[1] << 16) | (bytes[0] << 24) | bytes[3] | (bytes[2] << 8);
 	default:
 		return 0;
 	}
