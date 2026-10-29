@@ -231,3 +231,51 @@ int ScePafMisc_12DB04A6(const float *left, const float *right)
 	return left[0] != right[0] || left[1] != right[1] ||
 		left[2] != right[2] || left[3] != right[3];
 }
+
+void ScePafMisc_013C980E(float *object, float value)
+{
+	float edge = object[0] - object[2] * 0.5f;
+	float delta = value - edge;
+	if (delta < 0.0f)
+		value = edge;
+	float sum = edge + value;
+	float extent = value - edge;
+	object[0] = sum * 0.5f;
+	object[2] = extent >= 0.0f ? extent : 0.0f;
+}
+
+void ScePafMisc_E0AFE253(float *object, float value)
+{
+	float edge = object[1] - object[3] * 0.5f;
+	float delta = value - edge;
+	if (delta < 0.0f)
+		value = edge;
+	float sum = edge + value;
+	float extent = value - edge;
+	object[1] = sum * 0.5f;
+	object[3] = extent >= 0.0f ? extent : 0.0f;
+}
+
+void ScePafMisc_F9FAA877(float *object, float value)
+{
+	float edge = object[0] + object[2] * 0.5f;
+	float delta = edge - value;
+	if (delta < 0.0f)
+		value = edge;
+	float sum = value + edge;
+	float extent = edge - value;
+	object[0] = sum * 0.5f;
+	object[2] = extent >= 0.0f ? extent : 0.0f;
+}
+
+void ScePafMisc_77865CCC(float *object, float value)
+{
+	float edge = object[1] + object[3] * 0.5f;
+	float delta = edge - value;
+	if (delta < 0.0f)
+		value = edge;
+	float sum = value + edge;
+	float extent = edge - value;
+	object[1] = sum * 0.5f;
+	object[3] = extent >= 0.0f ? extent : 0.0f;
+}
