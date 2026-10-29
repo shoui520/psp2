@@ -1,5 +1,23 @@
 #include "math.h"
 
+float sce_paf_roundf(float x)
+{
+	float truncated;
+	float fraction;
+
+	if (x < -2147483648.0f || x > 2147483648.0f)
+		return x;
+	truncated = (float)FloatToInt(x);
+	fraction = x - truncated;
+	if (x >= 0.0f) {
+		if (fraction >= 0.5f)
+			truncated += 1.0f;
+	} else if (fraction <= -0.5f) {
+		truncated -= 1.0f;
+	}
+	return truncated;
+}
+
 float sce_paf_ceilf(float x)
 {
 	float truncated;

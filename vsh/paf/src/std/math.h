@@ -27,6 +27,7 @@ static inline int FloatToInt(float value)
 #define sce_paf_powf ScePafStdc_992DFB85
 #define sce_paf_floorf ScePafStdc_148C1463
 #define sce_paf_ceilf ScePafStdc_21241EE8
+#define sce_paf_roundf ScePafStdc_65B8E8A9
 
 float sce_paf_sinf(float x);
 float sce_paf_cosf(float x);
@@ -36,5 +37,6 @@ float sce_paf_expf(float x);
 float sce_paf_powf(float base, float exponent);
 float sce_paf_floorf(float x);
 float sce_paf_ceilf(float x);
+float sce_paf_roundf(float x);
 
 #endif
