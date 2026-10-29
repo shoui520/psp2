@@ -10,6 +10,7 @@ set(GXM_SOURCES
 	context.c
 	context_deferred.c
 	context_flush.c
+	context_init.c
 	context_state.c
 	device_mem.c
 	display_queue.c
@@ -27,6 +28,7 @@ set(GXM_SOURCES
 	pds_sce.c
 	program.c
 	razor.c
+	ring_buffer.c
 	shader_patcher.c
 	surface.c
 	sync_object.c

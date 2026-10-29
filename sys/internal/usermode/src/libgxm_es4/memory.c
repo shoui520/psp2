@@ -23,8 +23,6 @@
 #define GXM_USSE_APPLICATION		0
 #define GXM_USSE_INTERNAL		1
 
-int sceGxmFinish(SceGxmContext *context);
-
 static void gxmFinishContext(void *context)
 {
 	sceGxmFinish(context);

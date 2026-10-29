@@ -21,16 +21,6 @@ static inline int gxmCheckDeferredBuffer(void *const *mem, const uint32_t *size)
 	return 0;
 }
 
-static inline SceBool gxmBuffersOverlap(const char *a, SceSize aSize, const char *b, SceSize bSize)
-{
-	const char *start = b < a ? a : b;
-	const char *end = a + aSize;
-
-	if (b + bSize < end)
-		end = b + bSize;
-	return start < end;
-}
-
 int sceGxmCreateDeferredContext(const SceGxmDeferredContextParams *params,
 				SceGxmContext **deferredContext)
 {

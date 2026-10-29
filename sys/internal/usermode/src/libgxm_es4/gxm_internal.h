@@ -483,7 +483,10 @@ struct GxmChunkBuffer {
 	SceUInt32 end;
 	SceUInt32 gpuEnd;		/* the GPU offset of end */
 	void (*refill)(GxmChunkBuffer *buffer, SceSize size, SceSize alignment);
-	GxmDeferredBuffer *source;
+	union {
+	GxmDeferredBuffer *source;	/* a deferred context's */
+	struct GxmRingBuffer *ring;	/* an immediate context's */
+	};
 };
 
 void *gxmChunkBufferReserveSlow(GxmChunkBuffer *buffer, SceSize size, SceSize alignment);
@@ -726,6 +729,7 @@ int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 address, const SceUInt32 *
 #define GXM_DIRTY_VERTEX_OUTPUTS2	0x00008000
 
 /* SceGxmContext.flags: what gxmContextWriteState writes again before the next draw */
+#define GXM_CONTEXT_FLAG_CREATED		0x00000001	/* set by sceGxmCreateContext; its reader is not written yet */
 #define GXM_CONTEXT_FLAG_FRAGMENT_TEXTURES	0x00000002	/* the texture block */
 #define GXM_CONTEXT_FLAG_FRAGMENT_CONSTANTS	0x00000004	/* the constant block */
 #define GXM_CONTEXT_FLAG_FRAGMENT_DATA		0x00000008	/* the uniform buffers' DMA list */
@@ -901,6 +905,10 @@ typedef struct GxmRingBuffer {
 	volatile SceUInt32 *readOffset;	/* the GPU's position, in the context's slot */
 	SceUInt32 lastOffset;		/* the refill measures from it; 0 at first */
 } GxmRingBuffer;
+
+void gxmRingBufferInit(GxmRingBuffer *ring, GxmChunkBuffer *buffer, void *memory,
+		       SceUInt32 gpuOffset, SceSize size, SceUInt8 linked,
+		       volatile SceUInt32 *readOffset);
 
 /* --- surfaces --- */
 
@@ -1182,6 +1190,44 @@ GXM_ASSERT_OFFSET(SceGxmContext, listSerial, 0x40c);
 #define GXM_ZLS_STORE_CONTROL		0xff1f0ffd	/* and the rest from the store surface */
 
 #define SCE_GXM_MINIMUM_CONTEXT_HOST_MEM_SIZE		2048
+
+/* sceGxmCreateContext's smallest ring buffers (no SDK name) */
+#define GXM_MINIMUM_VDM_RING_BUFFER_SIZE		0x1000
+#define GXM_MINIMUM_VERTEX_RING_BUFFER_SIZE		0x8000
+#define GXM_MINIMUM_FRAGMENT_RING_BUFFER_SIZE		0x8000
+#define GXM_MINIMUM_FRAGMENT_USSE_RING_BUFFER_SIZE	0x1000
+
+typedef struct SceGxmContextParams {
+	void *hostMem;
+	uint32_t hostMemSize;
+	void *vdmRingBufferMem;
+	uint32_t vdmRingBufferMemSize;
+	void *vertexRingBufferMem;
+	uint32_t vertexRingBufferMemSize;
+	void *fragmentRingBufferMem;
+	uint32_t fragmentRingBufferMemSize;
+	void *fragmentUsseRingBufferMem;
+	uint32_t fragmentUsseRingBufferMemSize;
+	uint32_t fragmentUsseRingBufferOffset;
+} SceGxmContextParams;
+
+/* until a stream or uniform buffer is set, its address points at unmapped memory */
+#define GXM_UNSET_VERTEX_STREAM(i)	((const void *)((0x3d0 + (i)) << 20))
+#define GXM_UNSET_UNIFORM_BUFFER(i)	((const void *)((0x3e00 + (i)) << 16))
+
+/* whether two buffers given to a context share a byte */
+static inline SceBool gxmBuffersOverlap(const char *a, SceSize aSize, const char *b, SceSize bSize)
+{
+	const char *start = b < a ? a : b;
+	const char *end = a + aSize;
+
+	if (b + bSize < end)
+		end = b + bSize;
+	return start < end;
+}
+
+int sceGxmFinish(SceGxmContext *context);
+int sceGxmWaitEvent(void);
 #define SCE_GXM_MINIMUM_DEFERRED_CONTEXT_BUFFER_SIZE	1024
 
 typedef void *(*SceGxmDeferredContextCallback)(void *userData, uint32_t minSize, uint32_t *size);
@@ -1612,6 +1658,7 @@ int SceGpuEs4User_8A997DBB(GxmTopContext *top, const SGX_CREATERENDERCONTEXT *pa
 int SceGpuEs4User_0BFE1685(GxmTopContext *top, SceUInt32 renderContext, SceUInt32 unused,
 			   SceUInt32 forceCleanup);
 int SceGpuEs4User_B9178277(GxmTopContext *top, SceUInt32 memContext);
+int SceGpuEs4User_9D5C4326(GxmTopContext *top);				/* reset sync waits */
 int SceGpuEs4User_BDE2B9E1(GxmTopContext *top, SceUInt32 reserved, const SceUInt32 *params,
 			   SceUInt32 *queue);					/* transfer queue */
 int SceGpuEs4User_8ED7D698(GxmTopContext *top, SceUInt32 queue, SceUInt32 forceCleanup);
