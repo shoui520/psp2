@@ -15,6 +15,13 @@ typedef int64_t SceOff;
 
 #define NOINLINE __attribute__((noinline))
 
+static inline int pspSdkSetK1(int k1)
+{
+    int old_k1;
+    __asm__ volatile("move %0, $k1\n\tmove $k1, %1" : "=&r"(old_k1) : "r"(k1));
+    return old_k1;
+}
+
 /* Imports */
 extern int sceIoOpen(const char *file, int flags, int mode);
 extern SceOff sceIoLseek(int fd, SceOff offset, int whence);
@@ -37,7 +44,7 @@ extern int SysMemForKernel_F3BDB718(const void *id);
 extern int sceKernelSetQTGP3(const void *qtgp3);
 
 extern void *memset(void *s, int c, u32 n);
-extern u16 *look_ctype_table(void);
+extern int look_ctype_table(int c);
 extern u32 strlen(const char *s);
 extern int strncmp(const char *s1, const char *s2, u32 n);
 extern int memcmp(const void *s1, const void *s2, u32 n);
@@ -109,30 +116,31 @@ extern int sceKernelUnregisterSysEventHandler(void *handler);
 extern int sceWlanDrv_driver_7DD3787C(void);
 
 /* Forward declarations */
-static NOINLINE int sub_00c8(int fd, int mode);
-static NOINLINE int sub_0a34(void *buf, int size, void *key, int seed, void *mac, int flags);
-static NOINLINE int sub_0ad0(void *a0, int a1, int a2);
+int sub_0000(const char *path, int flag, int *out_err);
+static NOINLINE int sub_00c8(const char *path, int flag);
+static NOINLINE int sub_0a34(void *buf, void *entry);
+static NOINLINE int sub_0ad0(void *buf, u32 base_file_off, u32 total_len, int first_blk, int last_blk, void *entry);
 static NOINLINE void sub_0c38(void);
 static NOINLINE int sub_0c4c(void *a0, int a1);
 static NOINLINE int sub_0dc0(void *buf, int size);
 static NOINLINE int sub_0df0(void);
-static NOINLINE int sub_0df8(void *vkey, const char *cid, int flags);
-static NOINLINE int sub_10d8(void *buf, int size, void *hkey, void *vkey, int mode, int seed, int flag);
-static NOINLINE int sub_1188(const void *buf, int size, const void *vkey, const void *hash, int type, int flag);
+static NOINLINE int sub_0df8(void *vkey, const char *cid, int flags, void *act_buf);
+static NOINLINE int sub_10d8(void *buf, int size, u32 seed);
+static NOINLINE int sub_1188(const void *buf, int size, const void *hash);
 static NOINLINE int sub_1228(void *dst, u32 dst_len, const void *src, u32 *next_in);
 static NOINLINE s64 sub_1b38(s64 a, s64 b);
 
-static NOINLINE int sub_2408(int mode);
+static NOINLINE int sub_2408(int mode, const char *aliasname);
 static NOINLINE int sub_2640(void);
 static NOINLINE int sub_26a4(void);
 static NOINLINE void sub_27e0(int stat);
-static NOINLINE int sub_2b28(int mode);
+static NOINLINE int sub_2b28(int mode, const char *aliasname);
 static NOINLINE int sub_2bf0(void);
 static NOINLINE int sub_2d28(void);
 static NOINLINE int sub_2de4(int mode);
 static NOINLINE int sub_2eec(int mode);
 static NOINLINE int sub_303c(void);
-static NOINLINE int sub_3048(int state, int force);
+static NOINLINE void sub_3048(int state);
 static NOINLINE int sub_322c(int ev_id, char *ev_name, void *param, int *result);
 static NOINLINE int sub_3300(SceSize args, void *argp);
 static NOINLINE int sub_3634(void);
@@ -140,74 +148,76 @@ static NOINLINE int sub_3640(void);
 static NOINLINE int sub_368c(void);
 static NOINLINE void sub_36f8(int val);
 static NOINLINE int sub_3704(int cbid, int count, void *arg);
-static NOINLINE int sub_38a8(int state);
-static NOINLINE int sub_3a24(int state);
-static NOINLINE int sub_3b28(void);
-static NOINLINE int sub_3c14(void);
+static NOINLINE int sub_38a8(int mask, int state);
+static NOINLINE void sub_3a24(void);
+static NOINLINE void sub_3b28(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);
+static NOINLINE int sub_3c14(int flag);
 static NOINLINE void sub_3cd0(int val);
 static NOINLINE int sub_3d04(void);
 static NOINLINE int sub_3d10(void);
 static NOINLINE int sub_3d18(void);
 static NOINLINE int sub_3d38(int val);
 static NOINLINE int sub_3d70(void);
+static NOINLINE int sub_3d94(void *arg);
+static NOINLINE int sub_3f74(void *arg);
 
-static NOINLINE int sub_41b0(void *arg, SceOff ofs, int whence);
-static NOINLINE int sub_43ec(void *arg);
-static NOINLINE int sub_4428(int (*fn)(void *), void *arg);
+static NOINLINE SceOff sub_41b0(void *iot, SceOff ofs, int whence);
+static NOINLINE int sub_43ec(int lba, void *buf, int nsectors);
+static NOINLINE int sub_4428(u32 byte_pos, void *buf, u32 byte_len);
 static NOINLINE int sub_4500(void *arg);
-static NOINLINE void sub_4ccc(int val);
-static NOINLINE int sub_4cd8(void);
-static NOINLINE int sub_4ef4(int unit, int *out);
-static NOINLINE int sub_4fa4(int unit, void *out);
+static NOINLINE void *sub_4ccc(void);
+static NOINLINE int sub_4cd8(const u32 *ctx_in);
+static NOINLINE int sub_4ef4(void *out);
+static NOINLINE int sub_4fa4(int *out0, int *out1, int *out2);
 static NOINLINE int sub_5054(void);
 static NOINLINE int sub_50c4(void);
-static NOINLINE int sub_50fc(void *buf, int size, u32 pos_lo, u32 pos_hi);
-static NOINLINE int sub_51a4(int flag);
+static NOINLINE int sub_50fc(void *buf, u32 pos_lo, u32 pos_hi, int size);
+static NOINLINE int sub_51a4(int addr);
 static NOINLINE int sub_5218(void);
 static NOINLINE int sub_5268(void);
-static NOINLINE void sub_52a0(void);
+static NOINLINE int sub_52a0(void);
 static NOINLINE int sub_52ac(int *type_out);
 static NOINLINE int sub_52cc(void);
-static NOINLINE void sub_52d8(void *buf);
-static NOINLINE void sub_5308(void);
-static NOINLINE void sub_531c(int sectors);
-static NOINLINE int sub_5330(int lba, int count);
-static NOINLINE int sub_535c(void *buf, int size, int lba);
-static NOINLINE int sub_538c(int lba);
-static NOINLINE int sub_53a8(void *buf, int size, int lba);
-static NOINLINE int sub_58c4(const char *name);
-static NOINLINE int sub_5968(int unit, u32 cmd, void *indata, int inlen, void *outdata, int outlen);
-static NOINLINE int sub_5af8(void);
-static NOINLINE int sub_5b04(u32 *req);
-static NOINLINE int sub_5d18(void *info);
+static NOINLINE int sub_52d8(void *buf, int size);
+static NOINLINE int sub_5308(void);
+static NOINLINE int sub_531c(void);
+static NOINLINE int sub_5330(void **out, int blk);
+static NOINLINE int sub_535c(void **out, int blk);
+static NOINLINE int sub_538c(int blk);
+static NOINLINE int sub_53a8(int blk);
+static NOINLINE int sub_58c4(const char *name, int *unit_out);
+static NOINLINE int sub_5968(void *outdata, u32 outlen, const u32 *in);
+static NOINLINE void sub_5af8(u32 lba);
+static NOINLINE int sub_5b04(u32 lba, u32 cnt, int seek_only, int table_sel);
+static NOINLINE int sub_5d18(const u32 *in, int *step_out);
 static NOINLINE int sub_5fac(int idx);
-static NOINLINE int sub_5ffc(void);
+static NOINLINE void sub_5ffc(void);
 static NOINLINE int sub_6028(void);
-static NOINLINE void sub_6098(void);
-static NOINLINE void sub_60a4(void);
-static NOINLINE void sub_60b0(void);
-static NOINLINE const char *sub_60bc(void);
-static NOINLINE int sub_60cc(int diff, int flag);
-static NOINLINE int sub_63b4(int diff, int flag);
-static NOINLINE int sub_66f8(int lba);
+static NOINLINE void sub_6098(u16 val);
+static NOINLINE void sub_60a4(u16 val);
+static NOINLINE void sub_60b0(u8 val);
+static NOINLINE void sub_60bc(void **out);
+static NOINLINE void sub_60cc(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_layer);
+static NOINLINE void sub_63b4(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_layer);
+static NOINLINE u32 sub_66f8(u32 lba, u32 prev_lba, int *cross_layer);
 static NOINLINE int sub_678c(void);
 static NOINLINE int sub_68c4(void);
 static NOINLINE int sub_6988(int prio);
 static NOINLINE int sub_69dc(void *dst, u32 dst_len, const void *src);
 static NOINLINE int sub_6a98(SceSize args, void *argp);
 static NOINLINE void sub_6b80(void);
-static NOINLINE int sub_6bd4(int lba, int count, int flag, int *a3, int *t0);
-static NOINLINE int sub_6c9c(int lba, int count, int *a2, int *a3);
-static NOINLINE void sub_6d10(int lba);
-static NOINLINE int sub_6d24(int a0, int a1, int a2, int *a3, int *t0);
-static NOINLINE int sub_6e4c(int a0, int a1, int a2, int *a3);
-static NOINLINE int sub_7004(int lba);
-static NOINLINE int sub_703c(int lba, int count, int idx);
-static NOINLINE int sub_7104(void *req);
-static NOINLINE void sub_73b4(int lba);
-static NOINLINE int sub_73c0(int a0, int a1, int a2, int a3, int t0);
-static NOINLINE int sub_78d0(int a0, int a1, int a2, int a3, int t0);
-static NOINLINE int sub_7ca4(int lba, int count);
+static NOINLINE int sub_6bd4(u32 lba, u32 count, int skip, int table_sel, u32 *rem_lba, u32 *rem_blks);
+static NOINLINE int sub_6c9c(u32 lba, u32 count, int seek_only, int table_sel);
+static NOINLINE void sub_6d10(u32 lo, u32 hi);
+static NOINLINE int sub_6d24(u32 start_lba, u32 blks, int table_sel, u32 *rem_lba, u32 *rem_blks);
+static NOINLINE int sub_6e4c(u32 start_lba, int blks, int table_sel);
+static NOINLINE u32 sub_7004(u32 lba, u32 count, u32 *aligned_start, u32 *aligned_end);
+static NOINLINE int sub_703c(u32 end_lba, int table_sel);
+static NOINLINE int sub_7104(u32 lba, u32 cnt, int seek_only, int mode, u32 *rem_lba, u32 *rem_blks);
+static NOINLINE void sub_73b4(u32 lba);
+static NOINLINE void sub_73c0(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_flags, int req_mode);
+static NOINLINE void sub_78d0(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_flags);
+static NOINLINE u32 sub_7ca4(u32 lba, u32 prev_lba, int *cross_flags);
 
 /* Exports forward declarations */
 int sceUmdMan_driver_65E2B3E0(void);
@@ -221,8 +231,8 @@ int sceUmdActivate(int mode, const char *aliasname);
 int sceUmdRegisterUMDCallBack(SceUID cbid);
 int sceUmdUnRegisterUMDCallBack(SceUID cbid);
 int sceUmdGetDriveStatus(void);
-int sceUmdSetDriveStatus(int stat);
-int sceUmdClearDriveStatus(int stat);
+void sceUmdSetDriveStatus(int stat);
+void sceUmdClearDriveStatus(int stat);
 int sceUmdGetErrorStatus(void);
 void sceUmdSetErrorStatus(int err);
 int sceUmdCheckMedium(void);
@@ -238,11 +248,11 @@ int sceUmdWaitDriveStatCB(int stat, u32 timeout);
 int sceUmdCancelWaitDriveStat(void);
 int sceUmdManRegisterInsertEjectUMDCallBack(int id, void *cb, void *arg);
 int sceUmdManUnRegisterInsertEjectUMDCallBack(int id);
-int sceUmdMan_driver_80D31D5D(void *a0);
-int sceUmdMan_driver_34375DB0(int a0);
-int sceNp9660_driver_8EF69DC6(const char *path, int a1);
+int sceUmdMan_driver_80D31D5D(void *cb, void *arg);
+int sceUmdMan_driver_34375DB0(void);
+int sceNp9660_driver_8EF69DC6(void (*cb)(u32, u32, u32, u32, u32, u32));
 int sceNp9660_driver_B925CA6C(void);
-int sceNp9660_driver_7A05EB3C(void);
+int sceNp9660_driver_7A05EB3C(int *out);
 
 /* .rodata tables */
 static const u8 g_ro_8690[12] = {
@@ -307,213 +317,416 @@ static int g_data_8a14 = 0x6ed;
 static int g_data_8a18 = 0x23d;
 
 /* .bss */
-static int g_bss_8a20;
+static u32 *g_bss_8a20;
 static int g_bss_8a24;
 static void *g_bss_8a28;
 static u8 g_bss_8a2c[64];
 static u8 g_bss_8a6c[16];
 static u8 g_bss_8a7c[16];
-static char g_dmu_str_8a8c[8];
-static SceUID g_mediaman_evf_8a94;
-static int g_drive_status_8a98;
-static int g_error_status_8a9c;
-static int g_active_mode_8aa0;
-static int g_activate_res_8aa4;
+static int g_bss_8a8c;
+static int g_bss_8a90;
+static int g_bss_8a94;
+static int g_bss_8a98;
+static int g_active_mode_8a9c;
+static int g_drive_status_8aa0;
+static int g_error_status_8aa4;
 static SceUID g_umd_cbid_8aa8;
-static char g_assign_dev_8aac[32];
-static u32 g_umdman_8acc;
-static SceUID g_mount_thid_8ad0;
-static SceUID g_fatms_cbid_8ad4;
-static int g_fatms_cb_reg_8ad8;
+static SceUID g_mediaman_evf_8aac;
+static char g_assign_dev_8ab0[32];
+static int g_umdman_suspend_err_8ad0;
+static int g_umdman_init_res_8ad4;
+static SceUID g_mount_thid_8ad8;
 static SceUID g_umdman_evf_8adc;
-static int g_umdman_stop_8ae0;
-static int g_umdman_busy_8ae4;
+static int g_sysevent_reg_8ae0;
+static int g_umdman_resume_flag_8ae4;
 static int g_umdman_state_8ae8;
 static int g_ins_ej_id_8aec;
-static int (*g_ins_ej_cb_8af0)(int, void *, int);
+static int g_ins_ej_gp_8af0;
 static void *g_ins_ej_arg_8af4;
-static void (*g_umdman_cb_8af8)(int, void *);
-static void *g_umdman_cb_arg_8afc;
-static char g_iso_path_8b00[64];
-static void *g_disc_img_8b40;
-static int g_replace_prohibit_8b44;
+static int (*g_ins_ej_cb_8af8)(int, void *, int);
+static int g_umdman_cb_gp_8afc;
+static void *g_umdman_cb_arg_8b00;
+static void (*g_umdman_cb_8b04)(int);
+static int g_np9660_cb_gp_8b08;
+static void (*g_np9660_cb_8b0c)(u32, u32, u32, u32, u32, u32);
+static u32 g_np9660_err_8b10[6];
+static int g_mount_status_8b28;
+static int g_replace_permit_8b2c;
+static int g_last_mount_err_8b30;
+static SceUID g_cur_mutex_8b34;
+static SceUID g_nc_mutex_8b38;
+static SceUID g_main_mutex_8b3c;
+static SceUID g_fpl_8b40;
+static void *g_fpl_block_8b44;
 static struct {
-    int fd;              /* 0x00 */
-    int open_count;      /* 0x04 */
-    SceUID mutex;        /* 0x08 */
-    SceUID fpl;          /* 0x0c */
-    SceUID nc_fpl;       /* 0x10 */
-    void *sector_buf;    /* 0x14 */
-    void *nc_buf;        /* 0x18 */
-    int total_sectors;   /* 0x1c */
-    int disc_type;       /* 0x20 */
-    int unk_24;          /* 0x24 */
-    int block_basis;     /* 0x28 */
-    int num_blocks;      /* 0x2c */
-    int unk_30;          /* 0x30 */
-    int mutex_owner_pri; /* 0x34 */
-    u32 img_offset_lo;   /* 0x38 */
-    u32 img_offset_hi;   /* 0x3c */
-    u32 tbl_offset_lo;   /* 0x40 */
-    u32 tbl_offset_hi;   /* 0x44 */
-    int cached_lba;      /* 0x48 */
-    int cached_blk;      /* 0x4c */
-    int flags;           /* 0x50 */
-    int header_flags;    /* 0x54 */
-    int lba_param;       /* 0x58 */
-    char disc_id[36];    /* 0x5c */
-    int cur_lba;         /* 0x80 */
-    int unk_84[4];       /* 0x84..0x90 */
-    struct {
-        int in_use;
-        int lba;
-    } handles[4];        /* 0x94..0xb0 */
+    int fd;              /* 0x00 (0x8b48) */
+    int total_sectors;   /* 0x04 (0x8b4c) */
+    int num_blocks;      /* 0x08 (0x8b50) */
+    int block_basis;     /* 0x0c (0x8b54) */
+    char disc_id[20];    /* 0x10 (0x8b58..0x8b6b) */
+    int lba_param;       /* 0x24 (0x8b6c) */
+    int unk_28;          /* 0x28 (0x8b70) */
+    int unk_2c;          /* 0x2c (0x8b74) */
+    int unk_30;          /* 0x30 (0x8b78) */
+    int last_lba;        /* 0x34 (0x8b7c) */
+    int thread_prio;     /* 0x38 (0x8b80) */
+    u16 emu_rate2;       /* 0x3c (0x8b84) */
+    u16 emu_rate1;       /* 0x3e (0x8b86) */
+    u8 emu_flags;        /* 0x40 (0x8b88) */
+    u8 pad_41;           /* 0x41 (0x8b89) */
+    u8 flags_42;         /* 0x42 (0x8b8a) */
+    u8 pad_43;           /* 0x43 (0x8b8b) */
+    u32 unk_44[5];       /* 0x44..0x57 (0x8b8c..0x8b9f) */
 } g_umd_ctx_8b48;
+static struct {
+    int in_use;
+    int flags;
+} g_handles_8ba0[8];
+static int g_mutex_owner_pri_8be0;
+static u32 g_part_info_8be4[4];
+static void *g_cache_buf_8bf4;
+static int g_cached_blk_8bf8;
 
-static int g_emu_8c00;
-static int g_emu_8c04;
+static u32 g_emu_8bfc;
+static u32 g_emu_8c00;
+static u32 g_emu_8c04;
 static s64 g_emu_time_8c08;
-static int g_emu_lba_8c10;
-static int g_emu_8c14;
-static int g_emu_8c18;
-static int g_emu_8c1c;
-static int g_emu_8c20;
-static u16 g_emu_8c24;
-static u16 g_emu_8c26;
-static u8 g_emu_8c28;
-static u8 g_emu_8c29;
+static s64 g_emu_time_8c10;
+static s64 g_emu_time_8c18;
+static u32 g_emu_8c20;
+static int g_emu_8c24;
+static u32 g_emu_8c28;
 static int g_emu_8c2c;
-static SceUID g_dec_thid_8c30;
-static SceUID g_dec_mbx_8c34;
-static SceUID g_dec_evf_8c38;
-static u32 g_dec_msg_8c3c[8];
-static int g_cache_8c5c[516];
+static u32 g_emu_8c30;
+static u8 g_emu_flags_8c34;
+static u8 g_pvd_buf_8c38[0x800];
+static SceUID g_dec_thid_9438;
+static SceUID g_dec_mbx_943c;
+static SceUID g_dec_evf_9440;
+static int g_ring0_idx_9444;
+static int g_ring1_idx_9448;
+static u32 g_ring_elapsed_lo_9450;
+static int g_ring_elapsed_hi_9454;
+static struct {
+    u8 valid;
+    u8 pad[3];
+    u32 lba;
+} g_ring0_9480[0xe8];
+static struct {
+    u8 valid;
+    u8 pad[3];
+    u32 lba;
+} g_ring1_9bc0[8];
+static u32 g_emu_9c00;
+static int g_emu_9c04;
+static u32 g_emu_9c08;
+static u32 g_emu_9c0c;
+static s64 g_emu_time_9c10;
+static s64 g_emu_time_9c18;
+static u16 g_emu_rate1_9c20;
+static u16 g_emu_rate2_9c22;
+static int g_emu_9c24;
 
 /* 0x0000 */
-int NOINLINE sub_0000(void)
+int NOINLINE sub_0000(const char *path, int flag, int *out_err)
 {
-    int mode = 0;
-    int fd = sub_3b28();
-    if (fd < 0) {
-        return fd;
+    u32 info[6];
+    sceKernelMemset(info, 0, sizeof(info));
+    g_bss_8a20 = info;
+    int r = sub_00c8(path, flag);
+    if (r != 0) {
+        if (info[0] == 0 || (info[0] == 0x80550914U && flag != 0)) {
+            info[0] = (u32)r;
+        }
     }
-    sceKernelMemset(g_bss_8a2c, 0, 64);
-    int res = sub_00c8(fd, mode);
-    if (res < 0) {
-        return res;
+    g_bss_8a20 = NULL;
+    if (out_err != NULL) {
+        *out_err = (int)info[1];
     }
-    return 0;
+    sub_3b28(info[0], info[1], info[2], info[3], info[4], info[5]);
+    return r;
 }
 
 /* 0x00c8 */
-static NOINLINE int sub_00c8(int fd, int mode)
+static NOINLINE int sub_00c8(const char *path, int flag)
 {
-    u8 hdr[256];
-    u8 mkey[32];
-    u8 ckey[32];
-    u8 idps[16];
-    u8 digest[20];
+    u8 mkey[0x30];
+    u8 ckey[0x20];
+    u8 idps[0x10];
+    u8 vkey[0x10];
+    u8 pbp_hdr[0x30];
+    u8 hdr[0x100];
+    u8 ctx_info[0x60];
+    u8 digest[0x20];
+    u8 pub[0x28];
+    void *work_buf;
 
-    sub_0c38();
-    if (fd < 0) {
-        return -1;
+    for (int i = 0; i < 0x28; i++) {
+        pub[i] = g_npumd_pub_8784[i];
     }
-    g_umd_ctx_8b48.fd = fd;
-    SceOff pos = sceIoLseek(fd, 0, 0);
-    if (pos < 0) {
-        sceIoClose(fd);
-        return (int)pos;
+    work_buf = sub_4ccc();
+    int s4 = -1;
+    int s0 = sceNpDrmGetIDps(idps);
+    if (s0 < 0) {
+        return s0;
     }
-    int rd = sceIoRead(fd, hdr, 0x100);
-    if (rd < 0x28) {
-        sceIoClose(fd);
-        return -1;
+    if (sub_368c() == 0) {
+        return (int)0x80210003;
     }
-    u32 magic = *(u32 *)hdr;
-    u32 pbp_off = 0;
-    if (magic == 0x50425000U) {
-        pbp_off = *(u32 *)(hdr + 0x24);
-        if (sceIoLseek(fd, (SceOff)pbp_off, 0) < 0) {
-            sceIoClose(fd);
-            return -1;
+    int retry = 0;
+    for (;;) {
+        s4 = sceIoOpen(path, 1, 0);
+        retry++;
+        if (s4 != (int)0x802e1012 || retry >= 30) {
+            break;
         }
-        if (sceIoRead(fd, hdr, 0x100) != 0x100) {
-            sceIoClose(fd);
-            return -1;
+        sceKernelDelayThread(100000);
+    }
+    if (s4 < 0) {
+        s0 = s4;
+        goto fail;
+    }
+    s0 = sceIoRead(s4, pbp_hdr, 0x28);
+    if (s0 < 0x28) {
+        goto fail;
+    }
+    if (*(u32 *)(pbp_hdr + 0x00) != 0x50425000U) {
+        goto fail;
+    }
+    u32 psar_off = *(u32 *)(pbp_hdr + 0x24);
+    SceOff pos = sceIoLseek(s4, (SceOff)psar_off, 0);
+    s0 = (int)pos;
+    if (pos != (SceOff)psar_off) {
+        goto fail;
+    }
+    s0 = sceIoRead(s4, hdr, 0x100);
+    if (s0 < 0x100) {
+        goto fail;
+    }
+    if (*(u32 *)(hdr + 0x00) != 0x4d55504eU || *(u32 *)(hdr + 0x04) != 0x474d4944U) {
+        goto fail;
+    }
+    s0 = sceDdrdbHash(hdr, 0xd8, digest);
+    if (s0 < 0) {
+        goto fail;
+    }
+    s0 = sceDdrdbSigvry(pub, digest, hdr + 0xd8);
+    if (s0 < 0) {
+        goto fail;
+    }
+    int cached_match = 0;
+    if (memcmp(g_bss_8a2c, hdr + 0x10, 0x30) == 0 && memcmp(g_bss_8a7c, hdr + 0xa0, 0x10) == 0) {
+        cached_match = 1;
+    } else {
+        if (g_bss_8a2c[0] != 0) {
+            if (sub_3d70() != 1) {
+                s0 = (int)0x80210007;
+                goto fail;
+            }
+        }
+        sub_36f8(1);
+        sub_0c38();
+        sub_531c();
+    }
+    s0 = sub_0df8(vkey, (const char *)(hdr + 0x10), *(int *)(hdr + 0x08), work_buf);
+    if (s0 < 0) {
+        *g_bss_8a20 = (u32)s0;
+        if (cached_match != 0 && s0 == (int)0x80550914 && flag != 0) {
+            sceKernelMemcpy(vkey, g_bss_8a6c, 0x10);
+        } else {
+            goto fail;
         }
     }
-    if (memcmp(hdr, "NPUMDIMG", 8) != 0) {
-        sceIoClose(fd);
-        return (int)0x80550902;
+    if (cached_match != 0) {
+        if (memcmp(vkey, g_bss_8a6c, 0x10) != 0) {
+            s0 = (int)0x80210007;
+            goto fail;
+        }
     }
-    if (sceDdrdbHash(hdr, 0xd8, digest) != 0) {
-        sceIoClose(fd);
-        return -1;
+    s0 = sceDrmBBMacInit(mkey, 3);
+    if (s0 < 0) {
+        goto fail;
     }
-    if (sceDdrdbSigvry(g_npumd_pub_8784, digest, hdr + 0xd8) != 0) {
-        sceIoClose(fd);
-        return (int)0x80550904;
+    s0 = sceDrmBBMacUpdate(mkey, hdr, 0xc0);
+    if (s0 < 0) {
+        goto fail;
     }
-    int r = sub_0df8(g_bss_8a7c, (const char *)(hdr + 0x10), *(int *)(hdr + 0x08));
-    if (r < 0) {
-        sceIoClose(fd);
-        return r;
+    s0 = sceDrmBBMacFinal2(mkey, hdr + 0xc0, vkey);
+    if (s0 < 0) {
+        goto fail;
     }
-    sceDrmBBMacInit(mkey, 3);
-    sceDrmBBMacUpdate(mkey, hdr, 0xc0);
-    sceAmctrl_driver_9227EA79(mkey, hdr, 0);
-    if (sceDrmBBMacFinal2(mkey, hdr + 0xc0, g_bss_8a7c) != 0) {
-        sceIoClose(fd);
-        return (int)0x80550903;
+    s0 = sceDrmBBCipherInit(ckey, 1, 2, hdr + 0xa0, vkey, 0);
+    if (s0 < 0) {
+        goto fail;
     }
-    sceKernelMemcpy(g_bss_8a6c, hdr + 0xa0, 16);
-    sceDrmBBCipherInit(ckey, 1, 2, g_bss_8a6c, g_bss_8a7c, 0);
-    sceDrmBBCipherUpdate(ckey, hdr + 0x40, 0x60);
-    sceDrmBBCipherFinal(ckey);
+    s0 = sceDrmBBCipherUpdate(ckey, hdr + 0x40, 0x60);
+    if (s0 < 0) {
+        goto fail;
+    }
+    s0 = sceDrmBBCipherFinal(ckey);
+    if (s0 < 0) {
+        goto fail;
+    }
+    u32 total_sec = *(u32 *)(hdr + 0x64) - *(u32 *)(hdr + 0x54) + 1U;
+    u32 basis = *(u32 *)(hdr + 0x0c);
+    u32 num_blks = (total_sec / basis) + ((total_sec % basis) != 0 ? 1U : 0U);
+    u32 tbl_bytes = num_blks << 5;
+    if ((*(u32 *)(hdr + 0x68) & (1U << idps[5])) == 0) {
+        goto fail;
+    }
+    u32 off_08 = *(u32 *)(pbp_hdr + 0x08);
+    u32 off_0c = *(u32 *)(pbp_hdr + 0x0c);
+    u32 param_len = off_0c - off_08;
+    if (param_len != 0) {
+        u32 off_20 = *(u32 *)(pbp_hdr + 0x20);
+        if (param_len + 0x30U >= 0x801U) {
+            goto fail;
+        }
+        pos = sceIoLseek(s4, (SceOff)off_08, 0);
+        s0 = (int)pos;
+        if (pos != (SceOff)off_08) {
+            goto fail;
+        }
+        s0 = sceIoRead(s4, work_buf, param_len);
+        if ((u32)s0 < param_len) {
+            goto fail;
+        }
+        sceKernelMemcpy((u8 *)work_buf + param_len, hdr + 0x10, 0x30);
+        pos = sceIoLseek(s4, (SceOff)off_20, 0);
+        s0 = (int)pos;
+        if (pos != (SceOff)off_20) {
+            goto fail;
+        }
+        s0 = sceIoRead(s4, (u8 *)work_buf + param_len + 0x30, 0x28);
+        if (s0 < 0x28) {
+            goto fail;
+        }
+        s0 = sceDdrdbHash(work_buf, (int)(param_len + 0x30U), digest);
+        if (s0 < 0) {
+            goto fail;
+        }
+        s0 = sceDdrdbSigvry(pub, digest, (u8 *)work_buf + param_len + 0x30);
+        if (s0 < 0) {
+            goto fail;
+        }
+    }
+    u32 off_20 = *(u32 *)(pbp_hdr + 0x20);
+    pos = sceIoLseek(s4, (SceOff)off_20 + 0x560, 0);
+    s0 = (int)pos;
+    if (pos != (SceOff)off_20 + 0x560) {
+        goto fail;
+    }
+    s0 = sceIoRead(s4, work_buf, 0x34);
+    if (s0 < 0x34) {
+        goto fail;
+    }
+    if (strcmp((const char *)(hdr + 0x10), (const char *)work_buf) != 0) {
+        goto fail;
+    }
+    for (int i = 0; i < 4; i++) {
+        if (hdr[0x08 + i] != ((u8 *)work_buf)[0x33 - i]) {
+            goto fail;
+        }
+    }
+    s0 = sceDrmBBMacInit(mkey, 3);
+    if (s0 < 0) {
+        goto fail;
+    }
+    u32 tbl_rel = *(u32 *)(hdr + 0x6c);
+    SceOff tbl_pos = (SceOff)psar_off + (SceOff)tbl_rel;
+    pos = sceIoLseek(s4, tbl_pos, 0);
+    s0 = (int)pos;
+    if (pos != tbl_pos) {
+        goto fail;
+    }
+    if ((int)tbl_bytes > 0) {
+        for (int read_so_far = 0; read_so_far < (int)tbl_bytes; read_so_far += 0x8000) {
+            if (sub_368c() == 0) {
+                s0 = (int)0x80210003;
+                goto fail;
+            }
+            int chunk = (int)tbl_bytes - read_so_far;
+            if (chunk > 0x8000) {
+                chunk = 0x8000;
+            }
+            s0 = sceIoRead(s4, work_buf, 0x8000);
+            if (s0 < 0x8000) {
+                goto fail;
+            }
+            s0 = sceAmctrl_driver_9227EA79(mkey, work_buf, chunk);
+            if (s0 < 0) {
+                goto fail;
+            }
+        }
+    }
+    s0 = sceDrmBBMacFinal2(mkey, hdr + 0xb0, vkey);
+    if (s0 < 0) {
+        goto fail;
+    }
+    sceKernelMemset(ctx_info, 0, 0x58);
+    *(int *)(ctx_info + 0x00) = s4;
+    *(u32 *)(ctx_info + 0x04) = total_sec;
+    *(u32 *)(ctx_info + 0x08) = num_blks;
+    *(u32 *)(ctx_info + 0x0c) = basis;
+    sceKernelMemcpy(ctx_info + 0x10, hdr + 0x40, 0x28);
+    *(u32 *)(ctx_info + 0x38) = *(u32 *)(hdr + 0x84);
+    *(u16 *)(ctx_info + 0x3c) = *(u16 *)(hdr + 0x80);
+    *(u16 *)(ctx_info + 0x3e) = *(u16 *)(hdr + 0x82);
+    sceKernelMemcpy(ctx_info + 0x40, hdr + 0x88, 0x18);
 
-    if (strcmp((const char *)(hdr + 0x10), (const char *)(hdr + 0x40)) != 0) {
-        sceIoClose(fd);
-        return -1;
+    g_bss_8a8c = (int)psar_off;
+    g_bss_8a90 = (int)tbl_rel;
+    g_bss_8a94 = *(int *)(hdr + 0x68);
+    g_bss_8a98 = (int)hdr[0x89];
+    sceKernelMemcpy(g_bss_8a2c + 0x00, hdr + 0x10, 0x30);
+    sceKernelMemcpy(g_bss_8a2c + 0x30, hdr + 0x70, 0x10);
+    sceKernelMemcpy(g_bss_8a6c, vkey, 0x10);
+    sceKernelMemcpy(g_bss_8a7c, hdr + 0xa0, 0x10);
+
+    s0 = sub_4cd8(ctx_info);
+    sceKernelMemset(ctx_info, 0, 0x58);
+    if (s0 < 0) {
+        goto fail;
     }
-    if (sceNpDrmGetIDps(idps) < 0) {
-        sceIoClose(fd);
-        return -1;
-    }
-    if (mode == 0) {
-        SysMemForKernel_F3BDB718(hdr + 0x10);
-        sceKernelSetQTGP3(hdr + 0x80);
-    }
-    sceKernelDelayThread(100);
-    int med = sub_368c();
-    sub_36f8(med);
-    sub_4ccc(sub_3d70());
-    sub_531c(*(int *)(hdr + 0x64) - *(int *)(hdr + 0x60) + 1);
-    g_umd_ctx_8b48.block_basis = *(int *)(hdr + 0x0c);
-    g_umd_ctx_8b48.header_flags = *(int *)(hdr + 0x08);
-    g_umd_ctx_8b48.img_offset_lo = pbp_off;
-    g_umd_ctx_8b48.img_offset_hi = 0;
-    g_umd_ctx_8b48.tbl_offset_lo = pbp_off + *(u32 *)(hdr + 0x6c);
-    g_umd_ctx_8b48.tbl_offset_hi = 0;
-    int total_sec = g_umd_ctx_8b48.total_sectors;
-    int basis = g_umd_ctx_8b48.block_basis;
-    g_umd_ctx_8b48.num_blocks = (total_sec + basis - 1) / basis;
-    sceKernelMemcpy(g_umd_ctx_8b48.disc_id, hdr + 0x40, 32);
-    sub_4cd8();
+    SysMemForKernel_F3BDB718(g_bss_8a2c + 0x30);
+    sceKernelSetQTGP3(g_bss_8a2c + 0x30);
+    sceKernelMemset(idps, 0, 0x10);
+    sceKernelMemset(vkey, 0, 0x10);
+    sceKernelMemset(hdr, 0, 0x100);
+    sceKernelMemset(&work_buf, 0, 4);
     return 0;
+
+fail:
+    sceKernelMemset(idps, 0, 0x10);
+    sceKernelMemset(vkey, 0, 0x10);
+    sceKernelMemset(hdr, 0, 0x100);
+    sceKernelMemset(&work_buf, 0, 4);
+    if (s0 >= 0) {
+        s0 = (int)0x80210003;
+    }
+    if (s0 != (int)0x80210007 && s0 != (int)0x80210003) {
+        s0 = (sub_368c() == 0) ? (int)0x80210003 : (int)0x80210001;
+    }
+    if (s4 >= 0) {
+        sceIoClose(s4);
+    }
+    return s0;
 }
 
 /* 0x0a34 */
-static NOINLINE int sub_0a34(void *buf, int size, void *key, int seed, void *mac, int flags)
+static NOINLINE int sub_0a34(void *buf, void *entry)
 {
-    int r;
-    if (!(flags & 2)) {
-        r = sub_1188(buf, size, g_bss_8a7c, mac, 3, flags & 1);
-        if (r < 0) {
-            return r;
-        }
+    u8 *s0 = (u8 *)entry + 8;
+    u32 comp_size = *(u32 *)(s0 + 0x14);
+    u32 rel_off = *(u32 *)(s0 + 0x10);
+    int aligned_size = (int)((comp_size + 15U) & ~15U);
+    u32 seed = rel_off >> 4;
+    int r = sub_1188(buf, aligned_size, s0);
+    if (r < 0) {
+        return r;
     }
-    if (!(flags & 4)) {
-        r = sub_10d8(buf, size, key, g_bss_8a7c, 2, seed, flags & 1);
+    if ((*(u32 *)(s0 + 0x18) & 4U) == 0) {
+        r = sub_10d8(buf, aligned_size, seed);
         if (r < 0) {
             return r;
         }
@@ -522,24 +735,50 @@ static NOINLINE int sub_0a34(void *buf, int size, void *key, int seed, void *mac
 }
 
 /* 0x0ad0 */
-static NOINLINE int sub_0ad0(void *a0, int a1, int a2)
+static NOINLINE int sub_0ad0(void *buf, u32 base_file_off, u32 total_len, int first_blk, int last_blk, void *entry)
 {
-    u8 entry[40];
-    u8 *p = (u8 *)a0;
-    for (int i = 0; i < a2; i++) {
-        int r = sub_0c4c(entry, a1 + i);
+    (void)total_len;
+    u32 span_start = 0;
+    u32 span_end = 0;
+    if (last_blk < first_blk) {
+        return 0;
+    }
+    for (int blk = last_blk; blk >= first_blk; blk--) {
+        int r = sub_0c4c(entry, blk);
         if (r < 0) {
             return r;
         }
-        r = sub_1188(p, *(int *)(entry + 0x18), g_bss_8a7c, entry + 8, 3, 0);
+        u8 *s1 = (u8 *)entry + 8;
+        u32 comp_size = *(u32 *)(s1 + 0x14);
+        u32 blk_file_off = *(u32 *)entry;
+        u32 aligned_size = (comp_size + 15U) & ~15U;
+        r = sub_1188((u8 *)buf + blk_file_off - base_file_off, (int)aligned_size, s1);
         if (r < 0) {
             return r;
         }
-        r = sub_10d8(p, *(int *)(entry + 0x18), g_bss_8a6c, g_bss_8a7c, 2, *(int *)(entry + 0x1c), 0);
+        if (*(u32 *)(s1 + 0x18) & 4U) {
+            if (span_start != 0) {
+                r = sub_10d8((u8 *)buf + span_start - base_file_off, (int)(span_end - span_start), (span_start - (u32)g_bss_8a8c) >> 4);
+                span_start = 0;
+                span_end = 0;
+                if (r < 0) {
+                    return r;
+                }
+            }
+        } else {
+            if (span_end == 0) {
+                span_start = blk_file_off;
+                span_end = span_start + aligned_size;
+            } else {
+                span_start = blk_file_off;
+            }
+        }
+    }
+    if (span_start != 0) {
+        int r = sub_10d8((u8 *)buf + span_start - base_file_off, (int)(span_end - span_start), (span_start - (u32)g_bss_8a8c) >> 4);
         if (r < 0) {
             return r;
         }
-        p += *(int *)(entry + 0x18);
     }
     return 0;
 }
@@ -553,34 +792,32 @@ static NOINLINE void sub_0c38(void)
 /* 0x0c4c */
 static NOINLINE int sub_0c4c(void *a0, int a1)
 {
-    if (a1 < 0 || a1 >= g_umd_ctx_8b48.num_blocks || g_bss_8a28 == NULL) {
-        return (int)0x80550901;
-    }
-    int grp = a1 >> 4;
-    if (g_bss_8a24 != grp) {
-        u64 off = ((u64)g_umd_ctx_8b48.tbl_offset_hi << 32 | g_umd_ctx_8b48.tbl_offset_lo) + ((u64)grp << 9);
-        int rem = g_umd_ctx_8b48.num_blocks - (grp << 4);
-        int sz = (rem < 16 ? rem : 16) << 5;
-        int rd = sub_50fc(g_bss_8a28, sz, (u32)off, (u32)(off >> 32));
-        if (rd != sz) {
-            return rd < 0 ? rd : (int)0x80550901;
+    int s1 = g_bss_8a24;
+    if (s1 == -1 || (u32)a1 < (u32)s1 || (u32)a1 >= (u32)(s1 + 16)) {
+        s1 = a1 & ~15;
+        u32 off = (u32)g_bss_8a8c + (u32)g_bss_8a90 + ((u32)s1 << 5);
+        int rd = sub_50fc(g_bss_8a28, off, 0, 0x200);
+        if (rd < 0) {
+            g_bss_8a24 = -1;
+            return rd;
         }
         u32 *words = (u32 *)g_bss_8a28;
-        int cnt = sz >> 5;
-        for (int i = 0; i < cnt; i++, words += 8) {
-            u32 w4 = words[4] ^ words[0] ^ words[1];
-            u32 w5 = words[5] ^ words[1] ^ words[2];
-            u32 w6 = words[6] ^ words[2] ^ words[3];
-            u32 w7 = words[7] ^ words[3] ^ words[0];
-            words[4] = w4;
-            words[5] = w5;
-            words[6] = w6;
-            words[7] = w7;
+        for (int i = 15; i >= 0; i--, words += 8) {
+            u32 w0 = words[0];
+            u32 w1 = words[1];
+            u32 w2 = words[2];
+            u32 w3 = words[3];
+            words[4] ^= w3 ^ w2;
+            words[5] ^= w2 ^ w1;
+            words[6] ^= w1 ^ w0;
+            words[7] ^= w0 ^ w3;
         }
-        g_bss_8a24 = grp;
+        g_bss_8a24 = s1;
     }
-    u8 *src = (u8 *)g_bss_8a28 + ((a1 & 15) << 5);
-    sceKernelMemcpy((u8 *)a0 + 8, src, 32);
+    u8 *src = (u8 *)g_bss_8a28 + (((u32)(a1 - s1)) << 5);
+    sceKernelMemcpy((u8 *)a0 + 8, src, 0x20);
+    *(u32 *)((u8 *)a0 + 0) = (u32)g_bss_8a8c + *(u32 *)(src + 0x10);
+    *(u32 *)((u8 *)a0 + 4) = *(u32 *)(src + 0x14);
     return 0;
 }
 
@@ -588,7 +825,7 @@ static NOINLINE int sub_0c4c(void *a0, int a1)
 static NOINLINE int sub_0dc0(void *buf, int size)
 {
     if (size != 0x200) {
-        return (int)0x80550901;
+        return (int)0x80010016;
     }
     g_bss_8a28 = buf;
     g_bss_8a24 = -1;
@@ -602,135 +839,420 @@ static NOINLINE int sub_0df0(void)
 }
 
 /* 0x0df8 */
-static NOINLINE int sub_0df8(void *vkey, const char *cid, int flags)
+static NOINLINE int sub_0df8(void *vkey, const char *cid, int flags, void *act_buf)
 {
-    char path[64];
-    u8 rif[160];
-    u8 act[4160];
+    char path[0x40];
+    u8 rif[0xa0];
+    u32 ext_words[2] = { 0, 0 };
 
-    if (strlen(cid) >= 0x25) {
+    if (flags < 0) {
         return (int)0x80550912;
     }
-    sceKernelMemset(vkey, 0, 16);
-    if (flags & 0x01000000) {
-        int r = sceNpDrmGetFixedKey(vkey, cid, 0x01000000);
-        if (r < 0) {
-            return r;
-        }
-        if ((flags & 0x01000003) == 0x01000003) {
-            return 0;
-        }
+    if ((flags & 0x01000000) != 0) {
+        g_bss_8a20[1] = 0x01000003U;
+        return sceNpDrmGetFixedKey(vkey, cid, 0x01000003);
     }
-    snprintf(path, 0x3b, "ms0:/PSP/LICENSE/%s.rif", cid);
+    if (strlen(cid) >= 0x2aU) {
+        return -1;
+    }
+    snprintf(path, 0x40, "ms0:/PSP/LICENSE/%s.rif", cid);
     int fd = sceIoOpen(path, 1, 0);
     if (fd < 0) {
         return (int)0x80550910;
     }
     int rd = sceIoRead(fd, rif, 0x98);
+    if (rd == 0x98) {
+        if (sceIoRead(fd, ext_words, 8) != 8) {
+            ext_words[0] = 0;
+            ext_words[1] = 0;
+        }
+    }
     sceIoClose(fd);
     if (rd < 0x98) {
         return (int)0x80550910;
     }
-    if (strcmp((const char *)(rif + 0x10), cid) != 0) {
-        return (int)0x80550912;
+    if (strcmp(cid, (const char *)(rif + 0x10)) != 0) {
+        return (int)0x80550909;
     }
-    sceKernelMemset(act, 0, 0x1038);
-    u32 acc_hi = *(u32 *)(rif + 0x0c);
-    u32 acc_lo = *(u32 *)(rif + 0x08);
-    if ((acc_hi | acc_lo) != 0) {
-        int afd = sceIoOpen("flash2:/act.dat", 1, 0);
+    u32 rtype = __builtin_bswap32(*(u32 *)(rif + 0x04));
+    g_bss_8a20[1] = rtype;
+    g_bss_8a20[4] = __builtin_bswap32(ext_words[1]);
+    g_bss_8a20[5] = __builtin_bswap32(ext_words[0]);
+    u32 t_lo = *(u32 *)(rif + 0x68);
+    u32 t_hi = *(u32 *)(rif + 0x6c);
+    if ((t_lo | t_hi) != 0) {
+        u64 t = ((u64)__builtin_bswap32(t_lo) << 32) | (u64)__builtin_bswap32(t_hi);
+        t = t * 1000ULL + 0x00dcbffeff2bc000ULL;
+        g_bss_8a20[2] = (u32)t;
+        g_bss_8a20[3] = (u32)(t >> 32);
+    }
+    if (rtype == 3U) {
+        sceKernelMemset(act_buf, 0, 0x1038);
+    } else {
+        int afd = sceIoOpen("flash2:/act.dat", 0x04000001, 0);
         if (afd < 0) {
             return (int)0x80550911;
         }
-        int ard = sceIoRead(afd, act, 0x1038);
+        int ard = sceIoRead(afd, act_buf, 0x1038);
         sceIoClose(afd);
         if (ard != 0x1038) {
             return (int)0x80550911;
         }
     }
-    return sceNpDrmGetVersionKey(vkey, act, rif, flags);
+    int r = sceNpDrmGetVersionKey(vkey, act_buf, rif, flags);
+    return (r < 0) ? r : 0;
 }
 
 /* 0x10d8 */
-static NOINLINE int sub_10d8(void *buf, int size, void *hkey, void *vkey, int mode, int seed, int flag)
+static NOINLINE int sub_10d8(void *buf, int size, u32 seed)
 {
     u8 ckey[32];
-    int r = sceDrmBBCipherInit(ckey, 1, mode, hkey, vkey, (u32)seed);
-    if (r != 0) {
+    int r = sceDrmBBCipherInit(ckey, 1, 2, g_bss_8a7c, g_bss_8a6c, seed);
+    if (r < 0) {
         return r;
     }
-    if (flag == 0) {
-        r = sceDrmBBCipherUpdate(ckey, buf, size);
-    } else {
+    if ((g_bss_8a98 != 0) && (((u32)buf & 3U) == 0)) {
         r = sceAmctrl_driver_E04ADD4C(ckey, buf, size);
+    } else {
+        r = sceDrmBBCipherUpdate(ckey, buf, size);
     }
-    if (r != 0) {
+    if (r < 0) {
         return r;
     }
-    return sceDrmBBCipherFinal(ckey);
+    r = sceDrmBBCipherFinal(ckey);
+    return r < 0 ? r : 0;
 }
 
 /* 0x1188 */
-static NOINLINE int sub_1188(const void *buf, int size, const void *vkey, const void *hash, int type, int flag)
+static NOINLINE int sub_1188(const void *buf, int size, const void *hash)
 {
     u8 mkey[32];
-    int r = sceDrmBBMacInit(mkey, type);
-    if (r != 0) {
+    int r = sceDrmBBMacInit(mkey, 3);
+    if (r < 0) {
         return r;
     }
-    if (flag == 0) {
-        r = sceDrmBBMacUpdate(mkey, buf, size);
-    } else {
+    if ((g_bss_8a98 != 0) && (((u32)buf & 3U) == 0)) {
         r = sceAmctrl_driver_9227EA79(mkey, buf, size);
+    } else {
+        r = sceDrmBBMacUpdate(mkey, buf, size);
     }
-    if (r != 0) {
+    if (r < 0) {
         return r;
     }
-    return sceDrmBBMacFinal2(mkey, hash, vkey);
+    r = sceDrmBBMacFinal2(mkey, hash, g_bss_8a6c);
+    return r < 0 ? r : 0;
 }
 
 /* 0x1228 */
 static NOINLINE int sub_1228(void *dst, u32 dst_len, const void *src, u32 *next_in)
 {
-    u8 probs[2048];
+    u8 probs[0xaf8];
     const u8 *in = (const u8 *)src;
     u8 *out = (u8 *)dst;
     u8 *out_end = out + dst_len;
 
-    u8 bm = *in++;
-    if (bm & 0x80) {
-        return (int)0x80000108;
-    }
-    for (int i = 0; i < 2048; i += 64) {
-        __asm__ volatile("cache 0x18, 0(%0)" :: "r"(probs + i) : "memory");
-        for (int j = 0; j < 64; j++) {
-            probs[i + j] = 0x80;
+    s8 hdr = (s8)*in;
+    u32 code = ((u32)in[1] << 24) | ((u32)in[2] << 16) | ((u32)in[3] << 8) | (u32)in[4];
+    const u8 *in_ptr = in + 5;
+
+    if (hdr < 0) {
+        u8 *copy_end = out + code;
+        if (copy_end >= out_end) {
+            return (int)0x80000104;
         }
+        if (code != 0xffffffffU) {
+            do {
+                *out++ = *in_ptr++;
+            } while (out < copy_end + 1);
+        }
+        if (next_in != NULL) {
+            *next_in = (u32)in_ptr;
+        }
+        return (int)code;
     }
-    u32 code = ((u32)in[0] << 24) | ((u32)in[1] << 16) | ((u32)in[2] << 8) | (u32)in[3];
-    in += 4;
+
+    u8 *p_end = probs + 0xaf8;
+    u32 align_end = ((u32)probs + 0xaf8) & ~0x3fU;
+    u8 *p = probs;
+    u32 init_prob = 0x80 - ((((u32)(u8)hdr >> 3) & 3) << 3);
+
+    do {
+        if (((u32)p & 0x3fU) == 0 && (u32)p < align_end) {
+            __asm__ volatile("cache 0x18, 0(%0)" :: "r"(p) : "memory");
+        }
+        *p++ = (u8)init_prob;
+    } while (p != p_end);
+
+    u32 lc = (u32)(u8)hdr & 7U;
     u32 range = 0xffffffffU;
-    while (out < out_end && range != 0) {
-        if (range < 0x01000000U) {
-            range <<= 8;
-            code = (code << 8) | *in++;
-        }
-        u32 bound = (range >> 8) * probs[bm & 0x7f];
-        if (code < bound) {
+    u32 prev_byte = 0;
+    u8 *state = probs;
+
+    for (;;) {
+        u8 *s0 = state;
+        for (;;) {
+            if (range < 0x01000000U) {
+                range <<= 8;
+                code = (code << 8) + *in_ptr++;
+            }
+            u8 prob = s0[0x9a0];
+            u32 bound = (range >> 8) * prob;
+            if (code >= bound) {
+                range -= bound;
+                code -= bound;
+                s0[0x9a0] = (u8)(prob - (prob >> 3));
+                break;
+            }
+            if (out >= out_end) {
+                return (int)0x80000104;
+            }
+            u32 ctx = prev_byte >> lc;
             range = bound;
-            probs[bm & 0x7f] += (0x100 - probs[bm & 0x7f]) >> 3;
-            *out++ = *in++;
-        } else {
-            code -= bound;
-            range -= bound;
-            probs[bm & 0x7f] -= probs[bm & 0x7f] >> 3;
-            break;
+            s0[0x9a0] = (u8)(prob + (((0x100 - (int)prob) >> 3) & 0x1f));
+            u8 *lit_probs = probs + ctx * 0xff;
+            u32 sym = 1;
+            do {
+                if (range < 0x01000000U) {
+                    range <<= 8;
+                    code = (code << 8) + *in_ptr++;
+                }
+                u8 lprob = lit_probs[sym];
+                u32 lbound = (range >> 8) * lprob;
+                sym <<= 1;
+                if (code < lbound) {
+                    range = lbound;
+                    lit_probs[sym >> 1] = (u8)(lprob + (((0x100 - (int)lprob) >> 3) & 0x1f));
+                } else {
+                    range -= lbound;
+                    code -= lbound;
+                    lit_probs[sym >> 1] = (u8)(lprob - (lprob >> 3));
+                    sym |= 1;
+                }
+            } while ((sym >> 8) == 0);
+            prev_byte = sym & 0xff;
+            *out++ = (u8)prev_byte;
+            s0 = probs;
         }
+
+        u32 len_cat = 0xffffffffU;
+        for (;;) {
+            state += 4;
+            if (range < 0x01000000U) {
+                range <<= 8;
+                code = (code << 8) + *in_ptr++;
+            }
+            len_cat++;
+            u8 prob = state[0x9c0];
+            u32 bound = (range >> 8) * prob;
+            if (code < bound) {
+                range = bound;
+                state[0x9c0] = (u8)(prob + (((0x100 - (int)prob) >> 3) & 0x1f));
+                break;
+            }
+            range -= bound;
+            code -= bound;
+            state[0x9c0] = (u8)(prob - (prob >> 3));
+            if (len_cat >= 6) {
+                len_cat++;
+                break;
+            }
+        }
+
+        u32 match_len;
+        if ((int)len_cat <= 0) {
+            match_len = len_cat;
+        } else {
+            u32 l_bits = len_cat - 1;
+            u32 limit = 1U << l_bits;
+            u8 *len_base;
+            if (len_cat < 4) {
+                len_base = probs + (len_cat << 5) + limit;
+            } else {
+                len_base = probs + (l_bits << 3);
+            }
+            u32 tree = 1;
+            do {
+                if (range < 0x01000000U) {
+                    range <<= 8;
+                    code = (code << 8) + *in_ptr++;
+                }
+                u8 *p_prob = len_base + tree;
+                u8 prob;
+                if (tree >= 0x10) {
+                    if (tree >= 0x20) {
+                        if (tree >= 0x40) {
+                            prob = p_prob[0x9f8];
+                            u32 bound = (range >> 8) * prob;
+                            tree <<= 1;
+                            if (code < bound) {
+                                range = bound;
+                                p_prob[0x9f8] = (u8)(prob + (((0x100 - (int)prob) >> 3) & 0x1f));
+                            } else {
+                                range -= bound;
+                                code -= bound;
+                                p_prob[0x9f8] = (u8)(prob - (prob >> 3));
+                                tree |= 1;
+                            }
+                            continue;
+                        }
+                        prob = p_prob[0xa00];
+                        u32 bound = (range >> 8) * prob;
+                        tree <<= 1;
+                        if (code < bound) {
+                            range = bound;
+                            p_prob[0xa00] = (u8)(prob + (((0x100 - (int)prob) >> 3) & 0x1f));
+                        } else {
+                            range -= bound;
+                            code -= bound;
+                            p_prob[0xa00] = (u8)(prob - (prob >> 3));
+                            tree |= 1;
+                        }
+                        continue;
+                    }
+                    prob = p_prob[0xa08];
+                    u32 bound = (range >> 8) * prob;
+                    tree <<= 1;
+                    if (code < bound) {
+                        range = bound;
+                        p_prob[0xa08] = (u8)(prob + (((0x100 - (int)prob) >> 3) & 0x1f));
+                    } else {
+                        range -= bound;
+                        code -= bound;
+                        p_prob[0xa08] = (u8)(prob - (prob >> 3));
+                        tree |= 1;
+                    }
+                    continue;
+                }
+                prob = p_prob[0xa10];
+                u32 bound = (range >> 8) * prob;
+                tree <<= 1;
+                if (code < bound) {
+                    range = bound;
+                    p_prob[0xa10] = (u8)(prob + (((0x100 - (int)prob) >> 3) & 0x1f));
+                } else {
+                    range -= bound;
+                    code -= bound;
+                    p_prob[0xa10] = (u8)(prob - (prob >> 3));
+                    tree |= 1;
+                }
+            } while (tree < limit);
+
+            match_len = tree + 1;
+            if (match_len == 0x100) {
+                if (next_in != NULL) {
+                    *next_in = (u32)in_ptr;
+                }
+                return (int)(out - (u8 *)dst);
+            }
+        }
+
+        u32 dist_ctx = len_cat < 4 ? len_cat : 3;
+        u32 dist_limit = (match_len == 0) ? 0x40 : 0x160;
+        u8 *dist_base = probs + (dist_ctx << 6) + dist_limit;
+        u32 dist_tree = 1;
+        do {
+            if (range < 0x01000000U) {
+                range <<= 8;
+                code = (code << 8) + *in_ptr++;
+            }
+            u8 *p_prob = dist_base + dist_tree;
+            u8 prob = p_prob[0x7f1];
+            u32 bound = (range >> 8) * prob;
+            dist_tree <<= 1;
+            if (code < bound) {
+                range = bound;
+                p_prob[0x7f1] = (u8)(prob + (((0x100 - (int)prob) >> 3) & 0x1f));
+            } else {
+                range -= bound;
+                code -= bound;
+                p_prob[0x7f1] = (u8)(prob - (prob >> 3));
+                dist_tree |= 1;
+            }
+        } while (dist_tree < 0x40);
+
+        u32 dist_slot = dist_tree & 0x3f;
+        u32 dist;
+        if (dist_slot == 0) {
+            dist = 0;
+        } else {
+            u32 d_bits = ((dist_slot + 6) >> 1) - 3;
+            u32 d_base_idx = 0;
+            u32 d_low = 2 + (dist_slot & 1);
+            if (dist_slot < 8) {
+                d_base_idx = (d_low << d_bits) - dist_slot;
+            }
+            u8 *d_probs = probs + d_base_idx + 0x928;
+            u32 d_val = 1;
+            if ((int)d_bits > 0) {
+                u32 bit_cnt = 0;
+                do {
+                    if (range < 0x01000000U) {
+                        range <<= 8;
+                        code = (code << 8) + *in_ptr++;
+                    }
+                    bit_cnt++;
+                    if (d_val < 0x10) {
+                        u8 *p_prob = d_probs + d_val;
+                        u8 prob = *p_prob;
+                        u32 bound = (range >> 8) * prob;
+                        d_val <<= 1;
+                        if (code < bound) {
+                            range = bound;
+                            *p_prob = (u8)(prob + (((0x100 - (int)prob) >> 3) & 0x1f));
+                        } else {
+                            range -= bound;
+                            code -= bound;
+                            *p_prob = (u8)(prob - (prob >> 3));
+                            d_val |= 1;
+                        }
+                    } else {
+                        range >>= 1;
+                        u32 diff = code - range;
+                        d_val <<= 1;
+                        if ((int)diff >= 0) {
+                            code = diff;
+                            d_val |= 1;
+                        }
+                    }
+                } while (bit_cnt != d_bits);
+            }
+            dist = (d_val & ((1U << d_bits) - 1)) + (d_low << d_bits);
+        }
+
+        u8 *match_end = out + match_len + 2;
+        if (match_end > out_end) {
+            return (int)0x80000104;
+        }
+        u8 *match_src = out - dist - 1;
+        if (match_src < (u8 *)dst) {
+            return (int)0x80000108;
+        }
+
+        state = probs + (dist == 0 ? 4 : 8);
+        if (dist >= 3 && (((u32)match_src ^ (u32)out) & 3) == 0) {
+            while (((u32)out & 3) != 0) {
+                *out++ = *match_src++;
+                if (out == match_end) {
+                    goto match_done;
+                }
+            }
+            u8 *fast_end = match_end - 3;
+            while (out < fast_end) {
+                u32 w = *(u32 *)match_src;
+                match_src += 4;
+                *(u32 *)out = w;
+                out += 4;
+            }
+            if (out >= match_end) {
+                goto match_done;
+            }
+        }
+        do {
+            *out++ = *match_src++;
+        } while (out < match_end);
+match_done:
+        prev_byte = match_src[-1];
     }
-    if (next_in != NULL) {
-        *next_in = (u32)in;
-    }
-    return (int)(out - (u8 *)dst);
 }
 
 /* 0x1b38 */
@@ -926,23 +1448,41 @@ void sceUmd9660_driver_FE3A8B67(void)
 /* 0x225c */
 int NOINLINE sceUmd_040A7090(int err)
 {
-    if (err >= 0) {
-        return err;
+    if (err == 0) {
+        return 0;
     }
     if (sceKernelGetCompiledSdkVersion() != 0) {
         return err;
     }
-    if (err == (int)0x80010013) {
-        return (int)0x80010016;
+    if (err == (int)0x80010074) {
+        return (int)0x8001006e;
     }
-    if (err == (int)0x80010086) {
-        return (int)0x8001005b;
+    if (err > (int)0x80010074) {
+        if (err == (int)0x80010087) {
+            return (int)0x8001007b;
+        }
+        if (err > (int)0x80010087) {
+            if (err == (int)0x8001b006) {
+                return (int)0x8001007c;
+            }
+            return err;
+        }
+        if (err == (int)0x80010086) {
+            return (int)0x8001b000;
+        }
+        return err;
     }
-    if ((u32)(err - 0x8001006f) < 3U) {
-        return (int)0x80010016;
+    if (err == (int)0x80010070) {
+        return (int)0x80010062;
     }
-    if ((err & 0xffff0000) == 0x80210000 && (err & 0xff) >= 4) {
-        return (int)0x80010005;
+    if (err > (int)0x80010070) {
+        if (err == (int)0x80010071) {
+            return (int)0x80010067;
+        }
+        return err;
+    }
+    if (err == (int)0x8001005b) {
+        return (int)0x80010024;
     }
     return err;
 }
@@ -950,374 +1490,446 @@ int NOINLINE sceUmd_040A7090(int err)
 /* 0x2348 */
 int sceUmdActivate(int mode, const char *aliasname)
 {
-    if (aliasname == NULL) {
-        return (int)0x80010016;
-    }
-    int intr = sceKernelCpuSuspendIntr();
-    if (((mode ^ 1) >= 2) || strcmp(aliasname, "disc0:") != 0) {
+    int k1 = pspSdkSetK1(0);
+    int r = (int)0x80010016;
+    if ((((u32)(mode - 1) >= 2U) || aliasname == NULL) == 0 &&
+        ((k1 << 11) & (int)aliasname) >= 0 &&
+        strcmp(aliasname, "disc0:") == 0) {
+        int res = sub_2408(mode, aliasname);
+        int intr = sceKernelCpuSuspendIntr();
+        g_error_status_8aa4 = res;
         sceKernelCpuResumeIntr(intr);
-        return (int)0x80010016;
+        r = 0;
     }
-    if (g_active_mode_8aa0 == mode) {
-        int r = 0;
-        if (!(g_drive_status_8a98 & 0x20)) {
-            r = g_activate_res_8aa4;
-        }
-        sceKernelCpuResumeIntr(intr);
-        return r;
-    }
-    sceKernelCpuResumeIntr(intr);
-    int r = sub_2408(mode);
-    g_activate_res_8aa4 = r;
+    pspSdkSetK1(k1);
     return r;
 }
 
 /* 0x2408 */
-static NOINLINE int sub_2408(int mode)
+static NOINLINE int sub_2408(int mode, const char *aliasname)
 {
-    int r;
-    if (g_active_mode_8aa0 == 0) {
-        r = sceIoAssign("disc0:", "umd0:", "isofs0:", 1, (void *)g_ro_8690, 4);
-        if (r < 0) {
-            if (r != (int)0x80020321) {
-                return r;
-            }
-        } else {
-            strncpy(g_assign_dev_8aac, "disc0:", 0x1f);
+    if (strcmp(g_assign_dev_8ab0, aliasname) != 0) {
+        int ronly = 1;
+        if (g_active_mode_8a9c != 0) {
+            return (int)0x80010010;
         }
-    } else if (strcmp(g_assign_dev_8aac, "disc0:") != 0) {
-        return (int)0x80010010;
+        int r = sceIoAssign(aliasname, "umd0:", "isofs0:", 1, &ronly, 4);
+        if (r != 0) {
+            g_active_mode_8a9c = 0;
+            return r;
+        }
     }
-    g_active_mode_8aa0 = mode;
-    return sub_2de4(mode);
+    int r = sub_2de4(mode);
+    if (r == 0) {
+        strncpy(g_assign_dev_8ab0, aliasname, 0x20);
+        g_active_mode_8a9c = 2;
+        return 0;
+    }
+    g_active_mode_8a9c = 0;
+    return r;
 }
 
 /* 0x24e0 */
 int sceUmdRegisterUMDCallBack(SceUID cbid)
 {
-    void *cb;
-    int intr = sceKernelCpuSuspendIntr();
-    if (sceKernelGetUIDcontrolBlock(cbid, &cb) != 0 ||
-        sceKernelGetThreadmanIdType(cbid) != 8) {
-        sceKernelCpuResumeIntr(intr);
-        return (int)0x80010016;
+    int k1 = pspSdkSetK1(0);
+    void *cb = NULL;
+    int r = (int)0x80010016;
+    if (sceKernelGetThreadmanIdType(cbid) == 8 &&
+        sceKernelGetUIDcontrolBlock(cbid, &cb) == 0) {
+        int ok = 2;
+        if (((u32)(k1 << 11) >> 31) != 0) {
+            ok = *(u16 *)((u8 *)cb + 0x16) & 2;
+        }
+        if (ok != 0) {
+            int intr = sceKernelCpuSuspendIntr();
+            g_umd_cbid_8aa8 = cbid;
+            sceKernelCpuResumeIntr(intr);
+            r = 0;
+        }
     }
-    g_umd_cbid_8aa8 = cbid;
-    sceKernelCpuResumeIntr(intr);
-    return 0;
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x258c */
 int sceUmdUnRegisterUMDCallBack(SceUID cbid)
 {
-    void *cb;
-    int intr = sceKernelCpuSuspendIntr();
-    if (sceKernelGetUIDcontrolBlock(cbid, &cb) == 0 &&
-        g_umd_cbid_8aa8 == cbid) {
-        g_umd_cbid_8aa8 = -1;
-        sceKernelCpuResumeIntr(intr);
-        return 0;
+    int k1 = pspSdkSetK1(0);
+    void *cb = NULL;
+    int r = (int)0x80010016;
+    if (sceKernelGetUIDcontrolBlock(cbid, &cb) == 0) {
+        int ok = 2;
+        if (((u32)(k1 << 11) >> 31) != 0) {
+            ok = *(u16 *)((u8 *)cb + 0x16) & 2;
+        }
+        if (ok != 0 && g_umd_cbid_8aa8 == cbid) {
+            int intr = sceKernelCpuSuspendIntr();
+            g_umd_cbid_8aa8 = 0;
+            sceKernelCpuResumeIntr(intr);
+            int sdk = sceKernelGetCompiledSdkVersion();
+            r = (sdk > 0x03000000) ? 0 : cbid;
+        }
     }
-    int err = (int)0x80010016;
-    if (sceKernelGetCompiledSdkVersion() == 0) {
-        err = (int)0x80020066;
-    }
-    sceKernelCpuResumeIntr(intr);
-    return err;
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x2640 */
 static NOINLINE int sub_2640(void)
 {
-    strncpy(g_dmu_str_8a8c, ":DMU", 8);
-    g_mediaman_evf_8a94 = sceKernelCreateEventFlag("SceMediaManUser", 0x201, 0, NULL);
-    g_drive_status_8a98 = 1;
-    g_error_status_8a9c = 0;
-    g_active_mode_8aa0 = 0;
-    g_umd_cbid_8aa8 = -1;
-    return g_mediaman_evf_8a94 < 0 ? g_mediaman_evf_8a94 : 0;
+    strncpy(g_assign_dev_8ab0, ":DMU", 0x20);
+    SceUID evf = sceKernelCreateEventFlag("SceMediaManUser", 0x201, 0, NULL);
+    if (evf >= 0) {
+        g_active_mode_8a9c = 0;
+        g_mediaman_evf_8aac = evf;
+        return 0;
+    }
+    return evf;
 }
 
 /* 0x26a4 */
 static NOINLINE int sub_26a4(void)
 {
-    int r = sceKernelDeleteEventFlag(g_mediaman_evf_8a94);
-    return r < 0 ? r : 0;
+    if (g_mediaman_evf_8aac > 0) {
+        sceKernelDeleteEventFlag(g_mediaman_evf_8aac);
+        g_mediaman_evf_8aac = 0;
+    }
+    return 0;
 }
 
 /* 0x26e0 */
 int NOINLINE sceUmdGetDriveStatus(void)
 {
-    return g_drive_status_8a98;
+    return g_drive_status_8aa0;
 }
 
 /* 0x26ec */
-int NOINLINE sceUmdSetDriveStatus(int stat)
+void NOINLINE sceUmdSetDriveStatus(int stat)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_drive_status_8a98 |= stat;
-    sceKernelSetEventFlag(g_mediaman_evf_8a94, stat);
+    g_drive_status_8aa0 |= stat;
+    sceKernelSetEventFlag(g_mediaman_evf_8aac, (u32)stat);
     sceKernelCpuResumeIntr(intr);
-    return g_drive_status_8a98;
 }
 
 /* 0x2744 */
-int NOINLINE sceUmdClearDriveStatus(int stat)
+void NOINLINE sceUmdClearDriveStatus(int stat)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_drive_status_8a98 &= ~stat;
-    sceKernelClearEventFlag(g_mediaman_evf_8a94, ~stat);
+    int mask = ~stat;
+    sceKernelClearEventFlag(g_mediaman_evf_8aac, (u32)mask);
+    g_drive_status_8aa0 &= mask;
     sceKernelCpuResumeIntr(intr);
-    return g_drive_status_8a98;
 }
 
 /* 0x27a0 */
 int sceUmdGetErrorStatus(void)
 {
-    return g_error_status_8a9c;
+    return g_error_status_8aa4;
 }
 
 /* 0x27ac */
 void NOINLINE sceUmdSetErrorStatus(int err)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_error_status_8a9c = err;
+    g_error_status_8aa4 = err;
     sceKernelCpuResumeIntr(intr);
 }
 
 /* 0x27e0 */
 static NOINLINE void sub_27e0(int stat)
 {
-    if (g_umd_cbid_8aa8 >= 0) {
-        sceKernelNotifyCallback(g_umd_cbid_8aa8, stat);
+    SceUID cbid = g_umd_cbid_8aa8;
+    if (cbid != 0) {
+        sceKernelNotifyCallback(cbid, stat);
     }
 }
 
 /* 0x2818 */
 int sceUmdCheckMedium(void)
 {
-    return sub_368c() > 0 ? 1 : 0;
+    int k1 = pspSdkSetK1(0);
+    int r = sub_368c();
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x2844 */
 int sceUmdDeactivate(int mode, const char *aliasname)
 {
-    if (aliasname == NULL) {
-        return (int)0x80010016;
-    }
-    int intr = sceKernelCpuSuspendIntr();
-    if ((mode != 1 && mode != 2 && mode != 18) || g_active_mode_8aa0 == 0) {
+    int k1 = pspSdkSetK1(0);
+    int r = (int)0x80010016;
+    if (((k1 << 11) & (int)aliasname) >= 0) {
+        r = sub_2b28(mode, aliasname);
+        int intr = sceKernelCpuSuspendIntr();
+        g_error_status_8aa4 = r;
         sceKernelCpuResumeIntr(intr);
-        return (int)0x80010016;
     }
-    sceKernelCpuResumeIntr(intr);
-    return sub_2b28(mode);
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x28ac */
 int sceUmdGetDiscInfo(u32 *info)
 {
-    int type = 0;
-    if (info == NULL || info[0] != 8) {
-        return (int)0x80010016;
+    int k1 = pspSdkSetK1(0);
+    int r = (int)0x80010016;
+    if (info != NULL && (((int)info | ((int)info + 8)) & (k1 << 11)) >= 0) {
+        if (info[0] == 8) {
+            r = sub_52ac((int *)info);
+        }
     }
-    if (sub_52ac(&type) < 0 || type == 0) {
-        return (int)0x80210001;
-    }
-    info[1] = (u32)type;
-    return 0;
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x291c */
 int sceUmdGetDriveStat(void)
 {
-    return g_drive_status_8a98 & 0x3b;
+    int k1 = pspSdkSetK1(0);
+    int r = g_drive_status_8aa0;
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x2934 */
 int sceUmdGetErrorStat(void)
 {
-    return sceUmd_040A7090(g_error_status_8a9c);
+    int k1 = pspSdkSetK1(0);
+    int r = sceUmd_040A7090(g_error_status_8aa4);
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x2960 */
 int sceUmdReplaceProhibit(void)
 {
-    int r = sub_3d38(1);
-    return r < 0 ? r : 0;
+    int k1 = pspSdkSetK1(0);
+    int r = sub_3d38(0);
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x2990 */
 int sceUmdReplacePermit(void)
 {
-    int r = sub_3d38(0);
-    return r < 0 ? r : 0;
+    int k1 = pspSdkSetK1(0);
+    int r = sub_3d38(1);
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x29c0 */
 int sceUmdWaitDriveStat(int stat)
 {
-    if (!(stat & 0x3b)) {
-        return (int)0x80010016;
+    int k1 = pspSdkSetK1(0);
+    u32 out;
+    int r = (int)0x80010016;
+    if ((stat & 0x3b) != 0) {
+        r = sceKernelWaitEventFlag(g_mediaman_evf_8aac, (u32)stat, 1, &out, NULL);
     }
-    return sceKernelWaitEventFlag(g_mediaman_evf_8a94, stat & 0x3b, 1, NULL, NULL);
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x2a18 */
 int sceUmdWaitDriveStatWithTimer(int stat, u32 timeout)
 {
+    int k1 = pspSdkSetK1(0);
     u32 to = timeout;
-    if (!(stat & 0x3b)) {
-        return (int)0x80010016;
+    u32 out;
+    int r = (int)0x80010016;
+    if ((stat & 0x3b) != 0) {
+        r = sceKernelWaitEventFlag(g_mediaman_evf_8aac, (u32)stat, 1, &out, timeout ? &to : NULL);
     }
-    return sceKernelWaitEventFlag(g_mediaman_evf_8a94, stat & 0x3b, 1, NULL, timeout ? &to : NULL);
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x2a80 */
 int sceUmdWaitDriveStatCB(int stat, u32 timeout)
 {
+    int k1 = pspSdkSetK1(0);
     u32 to = timeout;
-    if (!(stat & 0x3b)) {
-        return (int)0x80010016;
+    u32 out;
+    int r = (int)0x80010016;
+    if ((stat & 0x3b) != 0) {
+        r = sceKernelWaitEventFlagCB(g_mediaman_evf_8aac, (u32)stat, 1, &out, timeout ? &to : NULL);
     }
-    return sceKernelWaitEventFlagCB(g_mediaman_evf_8a94, stat & 0x3b, 1, NULL, timeout ? &to : NULL);
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x2ae8 */
 int sceUmdCancelWaitDriveStat(void)
 {
-    int r = sceKernelCancelEventFlag(g_mediaman_evf_8a94, (u32)g_drive_status_8a98, NULL);
-    return r < 0 ? r : 0;
+    int k1 = pspSdkSetK1(0);
+    int r = sceKernelCancelEventFlag(g_mediaman_evf_8aac, (u32)g_drive_status_8aa0, NULL);
+    pspSdkSetK1(k1);
+    return r;
 }
 
 /* 0x2b28 */
-static NOINLINE int sub_2b28(int mode)
+static NOINLINE int sub_2b28(int mode, const char *aliasname)
 {
-    if ((mode ^ 2) == 0 || (mode & 0x10)) {
-        if (g_assign_dev_8aac[0] != '\0') {
-            int r = sceIoUnassign(g_assign_dev_8aac);
-            if (r >= 0) {
-                memset(g_assign_dev_8aac, 0, 32);
-                strncpy(g_dmu_str_8a8c, ":DMU", 8);
-            }
-        }
-        g_active_mode_8aa0 = 0;
+    if ((u32)mode >= 3U || (mode == 2 && aliasname == NULL)) {
+        return (int)0x80010016;
     }
-    return sub_2eec(mode);
+    if (g_active_mode_8a9c == 0) {
+        return 0;
+    }
+    int r = sceIoUnassign(aliasname);
+    if (r != 0) {
+        return r;
+    }
+    sub_2eec(mode);
+    g_active_mode_8a9c = 0;
+    memset(g_assign_dev_8ab0, 0, 0x20);
+    __builtin_memcpy(g_assign_dev_8ab0, "UMD:", 5);
+    return 0;
 }
 
 /* 0x2bf0 */
 static NOINLINE int sub_2bf0(void)
 {
-    g_umdman_8acc = 0;
-    g_umdman_stop_8ae0 = 0;
-    g_umdman_state_8ae8 = 1;
-    g_ins_ej_cb_8af0 = NULL;
-    g_ins_ej_arg_8af4 = NULL;
-    g_ins_ej_id_8aec = 0;
+    g_umdman_state_8ae8 = 0x20;
+    sceUmdClearDriveStatus(0x3e);
+    sceUmdSetDriveStatus(1);
     int r = sceKernelRegisterSysEventHandler(&g_sysevent_89c8);
-    if (r >= 0) {
-        g_umdman_evf_8adc = sceKernelCreateEventFlag("SceUmdManState", 0x201, 0, NULL);
-        if (g_umdman_evf_8adc >= 0) {
-            g_mount_thid_8ad0 = sceKernelCreateThread("SceNpUmdMount", sub_3300, 0x18, 0x1000, 0x00100001, NULL);
-            if (g_mount_thid_8ad0 >= 0) {
-                r = sceKernelStartThread(g_mount_thid_8ad0, 0, NULL);
-                if (r >= 0) {
-                    u32 to = 1000000;
-                    sceKernelWaitEventFlagCB(g_umdman_evf_8adc, 0xff, 1, NULL, &to);
-                    sceUmdClearDriveStatus(2);
-                    sceUmdSetDriveStatus(1);
-                    return 0;
-                }
-            }
-        }
+    if (r != 0) {
+        sub_2d28();
+        return r;
+    }
+    g_sysevent_reg_8ae0 = 1;
+    SceUID evf = sceKernelCreateEventFlag("SceUmdManState", 0x201, 0, NULL);
+    g_umdman_evf_8adc = evf;
+    if (evf < 0) {
+        sub_2d28();
+        return evf;
+    }
+    SceUID th = sceKernelCreateThread("SceNpUmdMount", sub_3300, 0x0f, 0x1000, 0x00100001, NULL);
+    g_mount_thid_8ad8 = th;
+    if (th < 0) {
+        sub_2d28();
+        return th;
+    }
+    r = sceKernelStartThread(th, 0, NULL);
+    if (r < 0) {
+        sub_2d28();
+        return r;
+    }
+    r = sceKernelWaitEventFlagCB(g_umdman_evf_8adc, 0x40, 0x21, NULL, NULL);
+    if (r >= 0 && g_umdman_init_res_8ad4 >= 0) {
+        return 0;
     }
     sub_2d28();
-    return r < 0 ? r : -1;
+    return (r < 0) ? r : g_umdman_init_res_8ad4;
 }
 
 /* 0x2d28 */
 static NOINLINE int sub_2d28(void)
 {
-    if (g_mount_thid_8ad0 > 0) {
-        g_umdman_stop_8ae0 = 1;
-        if (g_umdman_evf_8adc > 0) {
-            sceKernelSetEventFlag(g_umdman_evf_8adc, 0x100);
-        }
-        u32 to = 100000;
-        sceKernelWaitThreadEnd(g_mount_thid_8ad0, &to);
-        sceKernelDeleteThread(g_mount_thid_8ad0);
-        g_mount_thid_8ad0 = -1;
+    sub_3048(0x80);
+    sceUmdSetErrorStatus((int)0x80210003);
+    if (g_mount_thid_8ad8 != 0) {
+        sceKernelSetEventFlag(g_umdman_evf_8adc, 0x80);
+        sceKernelWaitThreadEnd(g_mount_thid_8ad8, NULL);
+        sceKernelDeleteThread(g_mount_thid_8ad8);
+        g_mount_thid_8ad8 = 0;
     }
-    if (g_umdman_evf_8adc > 0) {
+    if (g_umdman_evf_8adc != 0) {
         sceKernelDeleteEventFlag(g_umdman_evf_8adc);
-        g_umdman_evf_8adc = -1;
+        g_umdman_evf_8adc = 0;
     }
-    sceKernelUnregisterSysEventHandler(&g_sysevent_89c8);
-    sub_3048(1, 0);
-    sceUmdSetErrorStatus(0);
+    if (g_sysevent_reg_8ae0 != 0) {
+        sceKernelUnregisterSysEventHandler(&g_sysevent_89c8);
+        g_sysevent_reg_8ae0 = 0;
+    }
     return 0;
 }
 
 /* 0x2de4 */
 static NOINLINE int sub_2de4(int mode)
 {
-    sub_5054();
+    (void)mode;
+    int r = sub_5054();
+    if (r < 0) {
+        return r;
+    }
     int intr = sceKernelCpuSuspendIntr();
     int prev = g_data_89c0;
-    g_data_89c0 = mode;
     int st = sub_303c();
-    if (st == 0x20) {
-        sub_3048(0x20, 1);
-        sceUmdSetErrorStatus(0);
-    } else if (st == 0x10) {
-        if (prev == 2) {
-            sub_3048(0x20, 0);
+    g_data_89c0 = 2;
+    if ((st & 0xc0) == 0) {
+        if (st == 0x20) {
+            sub_3048(0x20);
+        } else if (prev == 0) {
+            sub_3048(1);
             sceUmdSetErrorStatus(0);
+            sceKernelSetEventFlag(g_umdman_evf_8adc, 1);
+        } else if (prev == 1) {
+            if (st == 1) {
+                sub_3048(4);
+                sceKernelSetEventFlag(g_umdman_evf_8adc, 1);
+            } else if (st != prev) {
+                sub_3048(0x10);
+            }
         } else {
-            sceKernelSetEventFlag(g_umdman_evf_8adc, 0x100);
+            if (st == 8 || (st & 5) == 0) {
+                sub_3048((st == 8) ? 8 : 0x10);
+            }
         }
-    } else if (st == 2 || st == 4) {
-        sub_3048(4, 1);
     }
     sceKernelCpuResumeIntr(intr);
-    sub_50c4();
-    return 0;
+    return sub_50c4();
 }
 
 /* 0x2eec */
 static NOINLINE int sub_2eec(int mode)
 {
-    sub_5054();
+    int r = sub_5054();
+    if (r < 0) {
+        return r;
+    }
     int intr = sceKernelCpuSuspendIntr();
     int prev = g_data_89c0;
     int st = sub_303c();
-    if (mode & 0x40) {
-        g_data_89c0 = 1;
-        g_data_89c4 = 1;
+    int next_mode;
+    if (mode == 1) {
+        next_mode = 1;
+    } else if (mode < 2) {
+        next_mode = 0;
+    } else if (mode == 2) {
+        next_mode = (prev != 0) ? 1 : 0;
     } else {
-        g_data_89c0 = 2;
+        next_mode = 0;
     }
-    if (st == 0x20) {
-        if (mode & 0xc0) {
-            sub_5218();
-            sub_3d04();
-            sub_3048(1, 0);
+    g_data_89c0 = next_mode;
+    g_data_89c4 = 1;
+    if ((st & 0xc0) == 0) {
+        if (st == 0x20) {
+            sub_3048(0x20);
+        } else if (next_mode == 1) {
+            if (prev == 0) {
+                sub_3048(1);
+                sceUmdSetErrorStatus(0);
+                sceKernelSetEventFlag(g_umdman_evf_8adc, 1);
+            } else if ((st & 0x0e) != 0) {
+                sub_3048(2);
+            } else if (st != 1) {
+                sub_3048(0x10);
+            }
         } else {
-            sub_3048(0x10, 0);
-        }
-        sceUmdSetErrorStatus(0);
-    } else if (st == 0x10) {
-        if (prev == 1) {
-            sceKernelSetEventFlag(g_umdman_evf_8adc, 0x100);
-        } else {
-            sub_3048(0x10, 1);
-            sceUmdSetErrorStatus(0);
+            sub_3048(0x10);
+            sceUmdSetErrorStatus((int)0xc0210006);
+            if (sub_3d04() != (int)0x80210003) {
+                sub_5218();
+            }
         }
     }
     sceKernelCpuResumeIntr(intr);
-    sub_50c4();
-    return 0;
+    return sub_50c4();
 }
 
 /* 0x303c */
@@ -1327,108 +1939,198 @@ static NOINLINE int sub_303c(void)
 }
 
 /* 0x3048 */
-static NOINLINE int sub_3048(int state, int force)
+static NOINLINE void sub_3048(int state)
 {
     int intr = sceKernelCpuSuspendIntr();
     int prev = g_umdman_state_8ae8;
-    if (prev == state && !force) {
-        sceKernelCpuResumeIntr(intr);
-        return prev;
-    }
     g_umdman_state_8ae8 = state;
-    if (state == 1) {
-        sceUmdClearDriveStatus(0x3e);
-        sceUmdSetDriveStatus(1);
-    } else if (state == 2 || state == 4 || state == 8) {
-        sceUmdClearDriveStatus(0x31);
-        sceUmdSetDriveStatus(state | 2);
-    } else if (state == 0x10) {
-        sceUmdClearDriveStatus(0x2d);
-        sceUmdSetDriveStatus(0x12);
-    } else if (state == 0x20) {
-        if (sub_5268() != 0) {
-            sub_52a0();
-        }
-        sceUmdClearDriveStatus(0x1d);
+    if (state == 8) {
+        sceUmdClearDriveStatus(9);
         sceUmdSetDriveStatus(0x32);
-    }
-    sub_3a24(state);
-    sceKernelCpuResumeIntr(intr);
-    if (prev != state || force) {
-        int sdk = sceKernelGetCompiledSdkVersion();
-        int notify_stat = g_drive_status_8a98;
-        if (sdk != 0) {
-            notify_stat &= 0x3b;
+        if (sceKernelGetCompiledSdkVersion() != 0 || sub_5268() == 1) {
+            sub_27e0(0x32);
+        } else {
+            sub_27e0(0x22);
         }
-        sub_27e0(notify_stat);
+    } else if ((u32)state < 9U) {
+        if (state == 2 || state == 4) {
+            sceUmdClearDriveStatus(0x2d);
+            sceUmdSetDriveStatus(0x12);
+            if (sub_5268() != 1) {
+                sub_27e0(0x12);
+            }
+        } else if (state == 1) {
+            sceUmdClearDriveStatus(0x3d);
+            sceUmdSetDriveStatus(2);
+            sub_27e0(2);
+        }
+    } else if (state == 0x20) {
+        if (prev != 0x40) {
+            sceUmdClearDriveStatus(0x3e);
+            sceUmdSetDriveStatus(1);
+            sub_27e0(1);
+            if (prev != state) {
+                sub_3a24();
+            }
+        }
+    } else if ((u32)state < 0x21U) {
+        if (state == 0x10) {
+            sceUmdClearDriveStatus(0x35);
+            sceUmdSetDriveStatus(0x0a);
+            sub_27e0(8);
+        }
+    } else if (state == 0x40 || state == 0x80) {
+        if (state != 0x40 || (sub_52a0() & 8) == 0) {
+            sceUmdClearDriveStatus(0x3e);
+            sceUmdSetDriveStatus(1);
+            if (state == 0x40 && prev != 0x20) {
+                sub_27e0(1);
+            }
+        }
     }
-    return prev;
+    sceKernelCpuResumeIntr(intr);
 }
 
 /* 0x322c */
-static NOINLINE int sub_322c(int ev_id, char *ev_name, void *param, int *result)
+static int sub_322c(int ev_id, char *ev_name, void *param, int *result)
 {
     (void)ev_name;
     (void)param;
     (void)result;
     if (ev_id == 0x402) {
-        g_umdman_busy_8ae4 = 1;
-    } else if (ev_id == 0x10000) {
-        g_umdman_busy_8ae4 = 0;
-        sub_3048(1, 0);
-        sceUmdSetErrorStatus((int)0x80210003);
-        if (g_umdman_evf_8adc > 0) {
-            sceKernelSetEventFlag(g_umdman_evf_8adc, 0x100);
+        return g_umdman_suspend_err_8ad0;
+    }
+    if (ev_id < 0x403) {
+        if (ev_id == 0x400) {
+            g_umdman_suspend_err_8ad0 = (int)0x80000021;
+            sub_3048(0x40);
+            sceUmdSetErrorStatus((int)0x80210003);
+            sceKernelSetEventFlag(g_umdman_evf_8adc, 0x10);
         }
+        return 0;
+    }
+    if (ev_id == 0x10009) {
+        g_umdman_resume_flag_8ae4 = 1;
+        sub_3048(0x20);
+        return 0;
+    }
+    if (ev_id == 0x400000) {
+        sceKernelSetEventFlag(g_umdman_evf_8adc, 0x20);
     }
     return 0;
 }
 
 /* 0x3300 */
-static NOINLINE int sub_3300(SceSize args, void *argp)
+static int sub_3300(SceSize args, void *argp)
 {
     (void)args;
     (void)argp;
-    g_fatms_cbid_8ad4 = sceKernelCreateCallback("SceNp9660", sub_3704, NULL);
-    if (g_fatms_cbid_8ad4 >= 0) {
-        if (sceIoDevctl("fatms0:", 0x02415821, &g_fatms_cbid_8ad4, 4, NULL, 0) >= 0) {
-            g_fatms_cb_reg_8ad8 = 1;
+    SceUID cbid = 0;
+    int r = sceKernelCreateCallback("SceNp9660", sub_3704, NULL);
+    if (r >= 0) {
+        cbid = r;
+        SceUID cb_arg = cbid;
+        r = sceIoDevctl("fatms0:", 0x02415821, &cb_arg, 4, NULL, 0);
+        if (r < 0) {
+            sceKernelDeleteCallback(cbid);
         }
     }
-    while (!g_umdman_stop_8ae0) {
-        sub_5054();
-        int st = sub_303c();
-        if (g_data_89c4 != 0 && st == 1) {
-            g_data_89c4 = 0;
-            int r = sub_3c14();
-            if (r >= 0) {
-                int target = (g_data_89c0 == 1) ? 0x20 : 0x10;
-                sub_3048(target, 0);
-                sceUmdSetErrorStatus(0);
-                sub_38a8(1);
-            } else {
-                sub_5218();
-                sub_3d04();
-                sceUmdClearDriveStatus(0x3e);
-                sub_3048(1, 0);
-                sceUmdSetErrorStatus((int)0x80210001);
+    g_umdman_init_res_8ad4 = r;
+    sceKernelSetEventFlag(g_umdman_evf_8adc, 0x40);
+    if (r < 0) {
+        return 0;
+    }
+    for (;;) {
+        u32 out = 0;
+        if (sceKernelWaitEventFlagCB(g_umdman_evf_8adc, 0xb3, 0x21, &out, NULL) < 0) {
+            break;
+        }
+        if ((out & 0x80U) != 0) {
+            break;
+        }
+        if ((out & 0x20U) == 0) {
+            if (sub_5054() < 0) {
+                break;
             }
         }
-        int intr = sceKernelCpuSuspendIntr();
-        sceKernelSetEventFlag(g_umdman_evf_8adc, sub_303c());
-        sceKernelCpuResumeIntr(intr);
-        sub_50c4();
-        u32 out = 0;
-        sceKernelWaitEventFlagCB(g_umdman_evf_8adc, 0x100, 0x21, &out, NULL);
+        if ((out & 1U) != 0) {
+            int intr = sceKernelCpuSuspendIntr();
+            int st = sub_303c();
+            if (st == 1) {
+                int r_flag = g_umdman_resume_flag_8ae4;
+                g_umdman_resume_flag_8ae4 = 0;
+                if (g_data_89c0 == 0) {
+                    sub_3048(0x10);
+                    sceUmdSetErrorStatus((int)0xc0210006);
+                    if (sub_3d04() != (int)0x80210003) {
+                        sub_5218();
+                    }
+                    sceKernelCpuResumeIntr(intr);
+                    goto check_10;
+                }
+                sceKernelCpuResumeIntr(intr);
+                int mr = sub_3c14(r_flag);
+                intr = sceKernelCpuSuspendIntr();
+                st = sub_303c();
+                if (mr < 0) {
+                    if (st == 1) {
+                        sub_3048(0x10);
+                        sceUmdSetErrorStatus(mr);
+                    }
+                    sceKernelCpuResumeIntr(intr);
+                    goto check_10;
+                }
+                if (st != 1) {
+                    sub_5218();
+                    sceKernelCpuResumeIntr(intr);
+                    goto check_10;
+                }
+                if (g_data_89c0 != 2) {
+                    sub_3048(2);
+                    sceKernelCpuResumeIntr(intr);
+                    goto check_10;
+                }
+                sub_3048(4);
+                st = 4;
+            }
+            if (st == 4) {
+                int arg1 = g_data_89c4;
+                sceKernelCpuResumeIntr(intr);
+                int cb_res = sub_38a8(0x20, arg1);
+                if (cb_res != (int)0x80010002) {
+                    intr = sceKernelCpuSuspendIntr();
+                    st = sub_303c();
+                    if (cb_res < 0) {
+                        if (st == 4) {
+                            sub_3048(0x10);
+                            sceUmdSetErrorStatus((int)0x80210001);
+                        }
+                    } else if (st == 4) {
+                        g_data_89c4 = 0;
+                        sub_3048(8);
+                        sceUmdSetErrorStatus(0);
+                    } else {
+                        sceUmdClearDriveStatus(4);
+                    }
+                    sceKernelCpuResumeIntr(intr);
+                }
+            } else {
+                sceKernelCpuResumeIntr(intr);
+            }
+        }
+check_10:
+        if ((out & 0x10U) != 0) {
+            if (sub_3d04() != (int)0x80210003) {
+                sub_5218();
+            }
+            g_umdman_suspend_err_8ad0 = 0;
+        } else if (sub_50c4() < 0) {
+            break;
+        }
     }
-    if (g_fatms_cb_reg_8ad8) {
-        sceIoDevctl("fatms0:", 0x02415822, &g_fatms_cbid_8ad4, 4, NULL, 0);
-        g_fatms_cb_reg_8ad8 = 0;
-    }
-    if (g_fatms_cbid_8ad4 >= 0) {
-        sceKernelDeleteCallback(g_fatms_cbid_8ad4);
-        g_fatms_cbid_8ad4 = -1;
-    }
+    SceUID cb_arg = cbid;
+    sceIoDevctl("fatms0:", 0x02415822, &cb_arg, 4, NULL, 0);
+    sceKernelDeleteCallback(cbid);
     return 0;
 }
 
@@ -1441,24 +2143,26 @@ static NOINLINE int sub_3634(void)
 /* 0x3640 */
 static NOINLINE int sub_3640(void)
 {
-    sub_5218();
-    sub_3d04();
-    sub_3048(1, 0);
-    sceUmdSetErrorStatus(0);
+    sub_3048(0x80);
+    sceUmdSetErrorStatus((int)0x80210003);
+    if (sub_3d04() != (int)0x80210003) {
+        sub_5218();
+    }
     return 0;
 }
 
 /* 0x368c */
 static NOINLINE int sub_368c(void)
 {
-    int st = 0;
-    if (sub_303c() != 1) {
-        return 1;
-    }
-    if (sceIoDevctl("fatms0:", 0x02425823, NULL, 0, &st, 4) < 0) {
+    u32 st = 0;
+    if ((sub_303c() & 0xe0) != 0) {
         return 0;
     }
-    return st == 1 ? 1 : 0;
+    int r = sceIoDevctl("fatms0:", 0x02425823, NULL, 0, &st, 4);
+    if (r < 0) {
+        return r;
+    }
+    return (st == 1U) ? 1 : 0;
 }
 
 /* 0x36f8 */
@@ -1468,21 +2172,29 @@ static NOINLINE void sub_36f8(int val)
 }
 
 /* 0x3704 */
-static NOINLINE int sub_3704(int cbid, int count, void *arg)
+static int sub_3704(int cbid, int count, void *arg)
 {
     (void)cbid;
     (void)arg;
-    if (count == 2) {
+    if ((sub_303c() & 0xc0) != 0) {
+        return 0;
+    }
+    if (count == 1) {
         if (sub_303c() != 1) {
-            sub_5218();
-            sub_3048(1, 0);
+            sub_3048(1);
+            sceUmdSetErrorStatus(0);
+            sceKernelSetEventFlag(g_umdman_evf_8adc, 1);
+        }
+    } else if (count == 2) {
+        sub_5218();
+        if (sub_303c() != 0x20) {
+            sub_3048(0x20);
             sceUmdSetErrorStatus((int)0x80210003);
         }
-    } else if (count == 1) {
-        g_data_89c4 = 1;
-        if (g_umdman_evf_8adc > 0) {
-            sceKernelSetEventFlag(g_umdman_evf_8adc, 0x100);
-        }
+    } else {
+        sub_3048(1);
+        sub_3048(0x10);
+        sceUmdSetErrorStatus((int)0x80210001);
     }
     return 0;
 }
@@ -1491,94 +2203,103 @@ static NOINLINE int sub_3704(int cbid, int count, void *arg)
 int sceUmdManRegisterInsertEjectUMDCallBack(int id, void *cb, void *arg)
 {
     int intr = sceKernelCpuSuspendIntr();
-    if (g_ins_ej_id_8aec != 0 && g_ins_ej_id_8aec != id) {
-        sceKernelCpuResumeIntr(intr);
-        return (int)0x8001000c;
+    int r = (int)0x8001000c;
+    if (g_ins_ej_id_8aec == 0) {
+        u32 gp_val;
+        __asm__ volatile ("move %0, $gp" : "=r"(gp_val));
+        g_ins_ej_id_8aec = id;
+        g_ins_ej_gp_8af0 = gp_val;
+        g_ins_ej_arg_8af4 = arg;
+        g_ins_ej_cb_8af8 = (int (*)(int, void *, int))cb;
+        r = 0;
     }
-    g_ins_ej_id_8aec = id;
-    g_ins_ej_cb_8af0 = (int (*)(int, void *, int))cb;
-    g_ins_ej_arg_8af4 = arg;
-    int drv_st = sceUmdGetDriveStatus();
-    sceKernelSetEventFlag(sub_3634(), sub_303c());
     sceKernelCpuResumeIntr(intr);
-    if (cb != NULL) {
-        int arg3 = (drv_st & 2) ? 1 : 2;
-        ((int (*)(int, void *, int))cb)(id, arg, arg3);
+    if (r == 0) {
+        if ((sceUmdGetDriveStatus() & 0x12) != 0 && sub_303c() == 4) {
+            SceUID evf = sub_3634();
+            if (evf != 0) {
+                sceKernelSetEventFlag(evf, 1);
+            }
+        }
     }
-    return 0;
+    return r;
 }
 
 /* 0x38a8 */
-static NOINLINE int sub_38a8(int state)
+static NOINLINE int sub_38a8(int mask, int arg2)
 {
-    if (g_ins_ej_cb_8af0 != NULL) {
-        return g_ins_ej_cb_8af0(g_ins_ej_id_8aec, g_ins_ej_arg_8af4, state);
+    int r = (int)0x80010002;
+    if (g_ins_ej_cb_8af8 != NULL && (g_ins_ej_id_8aec & mask) != 0) {
+        u32 saved_gp;
+        __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=r"(saved_gp) : "r"(g_ins_ej_gp_8af0));
+        r = g_ins_ej_cb_8af8(g_ins_ej_id_8aec, g_ins_ej_arg_8af4, arg2);
+        __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
     }
-    return 0;
+    return r;
 }
 
 /* 0x3920 */
 int sceUmdManUnRegisterInsertEjectUMDCallBack(int id)
 {
     int intr = sceKernelCpuSuspendIntr();
-    if (g_ins_ej_id_8aec != id) {
-        sceKernelCpuResumeIntr(intr);
-        return (int)0x80010002;
+    int r = (int)0x80010002;
+    if (g_ins_ej_id_8aec == id) {
+        g_ins_ej_id_8aec = 0;
+        g_ins_ej_gp_8af0 = 0;
+        g_ins_ej_arg_8af4 = NULL;
+        g_ins_ej_cb_8af8 = NULL;
+        r = 0;
     }
-    g_ins_ej_id_8aec = 0;
-    g_ins_ej_cb_8af0 = NULL;
-    g_ins_ej_arg_8af4 = NULL;
     sceKernelCpuResumeIntr(intr);
-    return 0;
+    return r;
 }
 
 /* 0x398c */
-int sceUmdMan_driver_80D31D5D(void *a0)
+int sceUmdMan_driver_80D31D5D(void *cb, void *arg)
 {
     int intr = sceKernelCpuSuspendIntr();
-    u32 *p = (u32 *)a0;
-    g_umdman_cb_8af8 = (void (*)(int, void *))p[2];
-    g_umdman_cb_arg_8afc = (void *)p[3];
+    u32 gp_val;
+    __asm__ volatile ("move %0, $gp" : "=r"(gp_val));
+    g_umdman_cb_gp_8afc = gp_val;
+    g_umdman_cb_arg_8b00 = arg;
+    g_umdman_cb_8b04 = (void (*)(int))cb;
     sceKernelCpuResumeIntr(intr);
     return 0;
 }
 
 /* 0x39e4 */
-int sceUmdMan_driver_34375DB0(int a0)
+int sceUmdMan_driver_34375DB0(void)
 {
-    (void)a0;
     int intr = sceKernelCpuSuspendIntr();
-    g_umdman_cb_8af8 = NULL;
-    g_umdman_cb_arg_8afc = NULL;
+    g_umdman_cb_gp_8afc = 0;
+    g_umdman_cb_arg_8b00 = NULL;
+    g_umdman_cb_8b04 = NULL;
     sceKernelCpuResumeIntr(intr);
     return 0;
 }
 
 /* 0x3a24 */
-static NOINLINE int sub_3a24(int state)
+static NOINLINE void sub_3a24(void)
 {
-    if (g_umdman_cb_8af8 != NULL) {
-        g_umdman_cb_8af8(state, g_umdman_cb_arg_8afc);
+    if (g_umdman_cb_8b04 != NULL) {
+        u32 saved_gp;
+        __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=r"(saved_gp) : "r"(g_umdman_cb_gp_8afc));
+        g_umdman_cb_8b04(1);
+        __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
     }
-    return 0;
 }
 
 /* 0x3a78 */
-int sceNp9660_driver_8EF69DC6(const char *path, int a1)
+int sceNp9660_driver_8EF69DC6(void (*cb)(u32, u32, u32, u32, u32, u32))
 {
-    (void)a1;
-    if (path == NULL) {
-        return (int)0x80010016;
-    }
     int intr = sceKernelCpuSuspendIntr();
-    for (int i = 0; i < 63; i++) {
-        g_iso_path_8b00[i] = path[i];
-        if (path[i] == '\0') {
-            break;
-        }
-    }
-    g_iso_path_8b00[63] = '\0';
+    u32 gp_val;
+    __asm__ volatile ("move %0, $gp" : "=r"(gp_val));
+    g_np9660_cb_8b0c = cb;
+    g_np9660_cb_gp_8b08 = gp_val;
     sceKernelCpuResumeIntr(intr);
+    cb(g_np9660_err_8b10[0], g_np9660_err_8b10[1], g_np9660_err_8b10[2],
+       g_np9660_err_8b10[3], g_np9660_err_8b10[4], g_np9660_err_8b10[5]);
     return 0;
 }
 
@@ -1586,36 +2307,52 @@ int sceNp9660_driver_8EF69DC6(const char *path, int a1)
 int sceNp9660_driver_B925CA6C(void)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_iso_path_8b00[0] = '\0';
+    g_np9660_cb_gp_8b08 = 0;
+    g_np9660_cb_8b0c = NULL;
     sceKernelCpuResumeIntr(intr);
     return 0;
 }
 
 /* 0x3b28 */
-static NOINLINE int sub_3b28(void)
+static NOINLINE void sub_3b28(u32 a0, u32 a1, u32 a2, u32 a3, u32 t0, u32 t1)
 {
     int intr = sceKernelCpuSuspendIntr();
-    const char *p = g_iso_path_8b00[0] ? g_iso_path_8b00 : (const char *)g_disc_img_8b40;
+    g_np9660_err_8b10[0] = a0;
+    g_np9660_err_8b10[1] = a1;
+    g_np9660_err_8b10[2] = a2;
+    g_np9660_err_8b10[3] = a3;
+    g_np9660_err_8b10[4] = t0;
+    g_np9660_err_8b10[5] = t1;
     sceKernelCpuResumeIntr(intr);
-    if (p == NULL || p[0] == '\0') {
-        return -1;
+    if (g_np9660_cb_8b0c != NULL) {
+        u32 saved_gp;
+        __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=r"(saved_gp) : "r"(g_np9660_cb_gp_8b08));
+        g_np9660_cb_8b0c(a0, a1, a2, a3, t0, t1);
+        __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
     }
-    return sceIoOpen(p, 0x000f0001, 0);
 }
 
 /* 0x3c14 */
-static NOINLINE int sub_3c14(void)
+static NOINLINE int sub_3c14(int resume_flag)
 {
-    int intr = sceKernelCpuSuspendIntr();
-    if (g_disc_img_8b40 == NULL) {
-        g_disc_img_8b40 = sceKernelInitDiscImage();
+    int err_out = 0;
+    if (sub_3d04() == 1) {
+        return 0;
     }
-    sceKernelCpuResumeIntr(intr);
-    int r = sub_0000();
+    sub_3cd0(0);
+    const char *path = (const char *)sceKernelInitDiscImage();
+    if (path == NULL) {
+        sub_3cd0((int)0x80210001);
+        return (int)0x80210001;
+    }
+    int r = sub_0000(path, resume_flag, &err_out);
     if (r < 0) {
-        sub_3d04();
+        sub_3cd0(r);
         return r;
     }
+    int intr = sceKernelCpuSuspendIntr();
+    g_last_mount_err_8b30 = err_out;
+    sceKernelCpuResumeIntr(intr);
     sub_3cd0(1);
     return 0;
 }
@@ -1624,14 +2361,14 @@ static NOINLINE int sub_3c14(void)
 static NOINLINE void sub_3cd0(int val)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_bss_8a20 = val;
+    g_mount_status_8b28 = val;
     sceKernelCpuResumeIntr(intr);
 }
 
 /* 0x3d04 */
 static NOINLINE int sub_3d04(void)
 {
-    return 0;
+    return g_mount_status_8b28;
 }
 
 /* 0x3d10 */
@@ -1651,7 +2388,7 @@ static NOINLINE int sub_3d18(void)
 static NOINLINE int sub_3d38(int val)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_replace_prohibit_8b44 = val;
+    g_replace_permit_8b2c = val;
     sceKernelCpuResumeIntr(intr);
     return 0;
 }
@@ -1659,89 +2396,112 @@ static NOINLINE int sub_3d38(int val)
 /* 0x3d70 */
 static NOINLINE int sub_3d70(void)
 {
-    return 0x10;
+    return g_replace_permit_8b2c;
 }
 
 /* 0x3d7c */
-int NOINLINE sceNp9660_driver_7A05EB3C(void)
+int NOINLINE sceNp9660_driver_7A05EB3C(int *out)
 {
-    return g_umd_ctx_8b48.fd;
+    if (out != NULL) {
+        *out = g_last_mount_err_8b30;
+    }
+    return 0;
 }
 
 /* 0x3d94 (merged into 0x3d7c by epsp_prx.py because in .rodata) */
 static int umd_io_init(void *arg)
 {
     (void)arg;
-    u32 part_info[6];
-    memset(&g_umd_ctx_8b48, 0, sizeof(g_umd_ctx_8b48));
-    g_umd_ctx_8b48.fd = -1;
-    g_umd_ctx_8b48.cached_lba = -1;
-    g_umd_ctx_8b48.cached_blk = -1;
-    g_umd_ctx_8b48.mutex_owner_pri = -1;
-
-    g_umd_ctx_8b48.mutex = sceKernelCreateMutex("SceNp9660", 0x101, 0, NULL);
-    if (g_umd_ctx_8b48.mutex >= 0) {
-        g_umd_ctx_8b48.fpl = sceKernelCreateFpl("SceNp9660", 1, 0, 0x8200, 1, NULL);
-        if (g_umd_ctx_8b48.fpl >= 0) {
-            if (sceKernelTryAllocateFpl(g_umd_ctx_8b48.fpl, &g_umd_ctx_8b48.sector_buf) >= 0) {
-                int r = sub_0dc0((u8 *)g_umd_ctx_8b48.sector_buf + 0x8000, 0x200);
+    u32 opt[2];
+    void *blk = NULL;
+    memset(&g_umd_ctx_8b48, 0, 0x58);
+    SceUID fpl = sceKernelCreateFpl("SceNp9660", 1, 0x100, 0x10200, 1, NULL);
+    if (fpl >= 0) {
+        g_fpl_8b40 = fpl;
+        int r = sceKernelTryAllocateFpl(fpl, &blk);
+        if (r >= 0) {
+            g_fpl_block_8b44 = blk;
+            u8 *p1 = (u8 *)blk + 0x8000;
+            r = sub_52d8(p1, 0x8000);
+            if (r >= 0) {
+                u8 *p2 = p1 + 0x8000;
+                r = sub_0dc0(p2, 0x200);
                 if (r >= 0) {
-                    part_info[0] = 0x14;
-                    int pid = 1;
-                    if (sceKernelQueryMemoryPartitionInfo(8, part_info) >= 0 && part_info[2] >= 0x8000U) {
-                        pid = 8;
-                    }
-                    int fpl_opts[2] = { 8, 0x40 };
-                    g_umd_ctx_8b48.nc_fpl = sceKernelCreateFpl("SceNp9660NC", pid, 0, 0x8000, 1, fpl_opts);
-                    if (g_umd_ctx_8b48.nc_fpl >= 0) {
-                        if (sceKernelTryAllocateFpl(g_umd_ctx_8b48.nc_fpl, &g_umd_ctx_8b48.nc_buf) >= 0) {
-                            sub_52d8((void *)((u32)g_umd_ctx_8b48.nc_buf | 0x40000000U));
-                            if (sub_678c() >= 0) {
+                    SceUID mtx1 = sceKernelCreateMutex("SceNp9660NC", 0x201, 0, NULL);
+                    if (mtx1 >= 0) {
+                        g_nc_mutex_8b38 = mtx1;
+                        opt[0] = 8;
+                        opt[1] = 0x0f;
+                        SceUID mtx2 = sceKernelCreateMutex("SceNp9660", 0x601, 0, opt);
+                        if (mtx2 >= 0) {
+                            g_main_mutex_8b3c = mtx2;
+                            g_cur_mutex_8b34 = mtx2;
+                            r = sub_678c();
+                            if (r >= 0) {
+                                g_part_info_8be4[0] = 0x10;
+                                sceKernelQueryMemoryPartitionInfo(5, g_part_info_8be4);
+                                g_part_info_8be4[1] &= 0x1fffffffU;
                                 return 0;
                             }
+                        } else {
+                            r = mtx2;
                         }
+                    } else {
+                        r = mtx1;
                     }
                 }
             }
         }
+        sub_68c4();
+        if (g_cur_mutex_8b34 > 0) {
+            sceKernelDeleteMutex(g_cur_mutex_8b34);
+            g_cur_mutex_8b34 = 0;
+        }
+        sub_0df0();
+        sub_5308();
+        if (g_fpl_8b40 > 0) {
+            sceKernelDeleteFpl(g_fpl_8b40);
+            g_fpl_8b40 = 0;
+        }
+        return r;
     }
     sub_68c4();
-    if (g_umd_ctx_8b48.mutex > 0) {
-        sceKernelDeleteMutex(g_umd_ctx_8b48.mutex);
-        g_umd_ctx_8b48.mutex = 0;
+    if (g_cur_mutex_8b34 > 0) {
+        sceKernelDeleteMutex(g_cur_mutex_8b34);
+        g_cur_mutex_8b34 = 0;
     }
     sub_0df0();
     sub_5308();
-    if (g_umd_ctx_8b48.fpl > 0) {
-        sceKernelDeleteFpl(g_umd_ctx_8b48.fpl);
-        g_umd_ctx_8b48.fpl = 0;
+    if (g_fpl_8b40 > 0) {
+        sceKernelDeleteFpl(g_fpl_8b40);
+        g_fpl_8b40 = 0;
     }
-    return -1;
+    return fpl;
 }
 
 /* 0x3f74 */
 static int umd_io_exit(void *arg)
 {
     (void)arg;
-    int intr = sceKernelCpuSuspendIntr();
-    for (int i = 0; i < 4; i++) {
-        g_umd_ctx_8b48.handles[i].in_use = 0;
-    }
-    sceKernelCpuResumeIntr(intr);
     sub_68c4();
-    sub_5308();
+    if (g_cur_mutex_8b34 > 0) {
+        sceKernelDeleteMutex(g_cur_mutex_8b34);
+        g_cur_mutex_8b34 = 0;
+    }
+    if (g_nc_mutex_8b38 > 0) {
+        sceKernelDeleteMutex(g_nc_mutex_8b38);
+        g_nc_mutex_8b38 = 0;
+    }
+    if (g_main_mutex_8b3c > 0) {
+        sceKernelDeleteMutex(g_main_mutex_8b3c);
+        g_main_mutex_8b3c = 0;
+    }
+    memset(&g_umd_ctx_8b48, 0, 0x58);
     sub_0df0();
-    if (g_umd_ctx_8b48.nc_fpl > 0) {
-        sceKernelDeleteFpl(g_umd_ctx_8b48.nc_fpl);
-        g_umd_ctx_8b48.nc_fpl = -1;
-    }
-    if (g_umd_ctx_8b48.fpl > 0) {
-        sceKernelDeleteFpl(g_umd_ctx_8b48.fpl);
-        g_umd_ctx_8b48.fpl = -1;
-    }
-    if (g_umd_ctx_8b48.mutex > 0) {
-        sceKernelDeleteMutex(g_umd_ctx_8b48.mutex);
-        g_umd_ctx_8b48.mutex = -1;
+    sub_5308();
+    if (g_fpl_8b40 > 0) {
+        sceKernelDeleteFpl(g_fpl_8b40);
+        g_fpl_8b40 = 0;
     }
     return 0;
 }
@@ -1749,561 +2509,1046 @@ static int umd_io_exit(void *arg)
 /* 0x4044 */
 static int umd_io_open(void *iot, char *file, int flags, int mode)
 {
-    (void)file;
-    (void)flags;
     (void)mode;
+    if (iot == NULL || file == NULL) {
+        return (int)0x80010016;
+    }
+    if ((flags & 0x0f02) != 0 || (flags & 1) == 0) {
+        return (int)0x8001b004;
+    }
+    if (*(int *)((u8 *)iot + 4) >= 2) {
+        return (int)0x8001b002;
+    }
     int intr = sceKernelCpuSuspendIntr();
-    int slot = -1;
-    for (int i = 0; i < 4; i++) {
-        if (!g_umd_ctx_8b48.handles[i].in_use) {
-            g_umd_ctx_8b48.handles[i].in_use = 1;
-            g_umd_ctx_8b48.handles[i].lba = 0;
-            slot = i;
+    int r = (int)0x80010018;
+    for (int i = 0; i < 8; i++) {
+        if (g_handles_8ba0[i].in_use == 0) {
+            g_handles_8ba0[i].in_use = 1;
+            g_handles_8ba0[i].flags = (flags & 0x4000) ? 0xf0 : 0;
+            *(void **)((u8 *)iot + 0x10) = &g_handles_8ba0[i];
+            *(u32 *)((u8 *)iot + 0x18) = 0;
+            *(u32 *)((u8 *)iot + 0x1c) = 0;
+            r = 0;
             break;
         }
     }
-    if (slot < 0) {
-        sceKernelCpuResumeIntr(intr);
-        return (int)0x80010018;
-    }
-    g_umd_ctx_8b48.open_count++;
-    *(void **)((u8 *)iot + 0x3c) = &g_umd_ctx_8b48.handles[slot];
     sceKernelCpuResumeIntr(intr);
-    return 0;
+    return r;
 }
 
 /* 0x4144 */
 static int umd_io_close(void *iot)
 {
-    int intr = sceKernelCpuSuspendIntr();
-    int *h = *(int **)((u8 *)iot + 0x3c);
-    if (h == NULL || h[0] == 0) {
-        sceKernelCpuResumeIntr(intr);
+    if (iot == NULL) {
         return (int)0x80010016;
     }
-    h[0] = 0;
-    g_umd_ctx_8b48.open_count--;
+    int *h = *(int **)((u8 *)iot + 0x10);
+    if (h == NULL) {
+        return (int)0x80010009;
+    }
+    int r = (int)0x80010009;
+    int intr = sceKernelCpuSuspendIntr();
+    if (h[0] != 0) {
+        h[0] = 0;
+        r = 0;
+    }
     sceKernelCpuResumeIntr(intr);
-    return 0;
+    return r;
 }
 
 /* 0x41b0 */
-static NOINLINE int sub_41b0(void *iot, SceOff ofs, int whence)
+static NOINLINE SceOff sub_41b0(void *iot, SceOff ofs, int whence)
 {
-    int *h = *(int **)((u8 *)iot + 0x3c);
-    int r = sub_43ec(iot);
-    if (r < 0) {
-        return r;
+    if (iot == NULL) {
+        return (SceOff)(u32)0x80010016U;
     }
-    int base = 0;
-    if (whence == 0) {
-        base = 0;
-    } else if (whence == 1) {
-        base = h[1];
-    } else if (whence == 2) {
-        base = g_umd_ctx_8b48.total_sectors;
-    } else {
-        return (int)0x80010016;
+    int *h = *(int **)((u8 *)iot + 0x10);
+    if (h == NULL) {
+        return (SceOff)(u32)0x80010016U;
     }
-    int target = base + (int)ofs;
-    if (target < 0 || target > g_umd_ctx_8b48.total_sectors) {
-        return (int)0x80010016;
+    if (h[0] == 0) {
+        return (SceOff)(u32)0x80010009U;
     }
-    h[1] = target;
-    if (sub_5ffc()) {
-        u32 req[4] = { (u32)target, 0, 0, 0 };
-        if (!sub_6028()) {
-            sub_5b04(req);
+    SceOff target;
+    if (whence == 1) {
+        target = *(SceOff *)((u8 *)iot + 0x18) + ofs;
+    } else if (whence < 2) {
+        if (whence == 0) {
+            target = ofs;
         } else {
-            sub_73b4(target);
+            return (SceOff)(int)0x80010016;
         }
+    } else if (whence == 2) {
+        target = (SceOff)(u64)g_umd_ctx_8b48.last_lba + ofs;
+    } else {
+        return (SceOff)(int)0x80010016;
     }
+    if (target < (SceOff)(u64)g_umd_ctx_8b48.lba_param ||
+        target > (SceOff)(u64)g_umd_ctx_8b48.last_lba) {
+        return (SceOff)(int)0x80210002;
+    }
+    *(SceOff *)((u8 *)iot + 0x18) = target;
+    sub_73b4((u32)target);
     return target;
 }
 
 /* 0x4308 (merged into 0x41b0 by epsp_prx.py because in .rodata) */
 static int umd_io_read(void *iot, char *data, int len)
 {
-    int *h = *(int **)((u8 *)iot + 0x3c);
-    u32 req[4];
-    req[0] = (u32)h[1];
-    req[1] = (u32)len;
-    req[2] = (u32)data;
-    req[3] = 0;
-    int r = sub_4428((int (*)(void *))sub_4500, req);
-    if (r >= 0) {
-        h[1] += r;
+    if (iot == NULL) {
+        return (int)0x80010016;
+    }
+    int *h = *(int **)((u8 *)iot + 0x10);
+    if (h == NULL) {
+        return (int)0x80010009;
+    }
+    if (h[0] == 0) {
+        return (int)0x80010009;
+    }
+    u32 lba = *(u32 *)((u8 *)iot + 0x18);
+    sub_5ffc();
+    int r = sub_43ec((int)lba, data, len);
+    if (r > 0) {
+        *(SceOff *)((u8 *)iot + 0x18) += (SceOff)r;
+        if (sub_6028() != 0) {
+            sub_5b04(lba, (u32)r, 0, h[1] & 0xf0);
+        }
     }
     return r;
 }
 
 /* 0x43ec */
-static NOINLINE int sub_43ec(void *arg)
+static NOINLINE int sub_43ec(int lba, void *buf, int nsectors)
 {
-    return sub_4428(NULL, arg);
+    int r = sub_4428((u32)lba << 11, buf, (u32)nsectors << 11);
+    return (r < 0) ? r : (r / 2048);
 }
 
 /* 0x4428 */
-static NOINLINE int sub_4428(int (*fn)(void *), void *arg)
+static NOINLINE int sub_4428(u32 byte_pos, void *buf, u32 byte_len)
 {
-    int r = sub_51a4(fn == NULL ? 1 : 0);
-    if (r < 0) {
+    if (((0x00220202U >> (((u32)buf >> 27) & 0x1fU)) & 1U) == 0) {
+        return (int)0x8001b001;
+    }
+    if (sub_51a4((int)buf) != 0) {
         sceKernelDelayThread(10000);
+        return (int)0x80210001;
+    }
+    int r = sub_5054();
+    if (r < 0) {
         return r;
     }
-    sub_5054();
-    if (fn != NULL) {
-        r = sceKernelExtendKernelStack(0x2000, fn, arg);
-    } else {
-        r = 0;
+    u32 req[3];
+    req[0] = byte_pos;
+    req[1] = (u32)buf;
+    req[2] = byte_len;
+    int r1 = sceKernelExtendKernelStack(0x800, (void *)sub_4500, req);
+    int r2 = sub_50c4();
+    if (r1 >= 0 && r2 < 0) {
+        return r2;
     }
-    sub_50c4();
-    return r;
+    return r1;
 }
 
 /* 0x4500 */
 static NOINLINE int sub_4500(void *arg)
 {
+    u8 entry[48];
+    void *cache_ptr;
     u32 *req = (u32 *)arg;
-    int lba = (int)req[0];
-    int count = (int)req[1];
-    u8 *dst = (u8 *)req[2];
-    if (count == 0) {
-        return 0;
+    u32 byte_pos = req[0];
+    u8 *cur_dst = (u8 *)req[1];
+    u32 byte_len = req[2];
+    u32 basis = g_umd_ctx_8b48.block_basis;
+    u32 block_bytes = basis << 11;
+    u32 in_blk_off = byte_pos % block_bytes;
+    u32 start_sec = byte_pos >> 11;
+    u32 lba_param = g_umd_ctx_8b48.lba_param;
+    u32 last_lba = g_umd_ctx_8b48.last_lba;
+    u32 done_bytes = 0;
+
+    if (start_sec < lba_param || start_sec > last_lba) {
+        return (int)0x80210002;
     }
-    if (dst == NULL || lba < 0 || count < 0 || lba + count > g_umd_ctx_8b48.total_sectors) {
-        return (int)0x80010016;
+    u32 max_bytes = ((last_lba << 11) - byte_pos) + 0x800U;
+    if (max_bytes < byte_len) {
+        byte_len = max_bytes;
     }
-    int basis = g_umd_ctx_8b48.block_basis;
-    int blk = lba / basis;
-    u8 entry[40];
-    int r = sub_0c4c(entry, blk);
+    u32 rel_end_byte = (byte_pos - (lba_param << 11)) + byte_len - 1U;
+    u32 end_blk_excl = (rel_end_byte / block_bytes) + 1U;
+    u32 blk = (start_sec - lba_param) / basis;
+    u32 total_rel_secs = last_lba - lba_param;
+    u32 last_disc_blk = total_rel_secs / basis;
+    int r = 0;
+    int fp_mode = -1;
+
+    if (blk < end_blk_excl) {
+        do {
+            if (blk == last_disc_blk) {
+                basis = (total_rel_secs % basis) + 1U;
+            }
+            if (in_blk_off == 0 && (((u32)cur_dst & 15U) == 0)) {
+                u32 cur_blk_bytes = g_umd_ctx_8b48.block_basis << 11;
+                u32 rem_bytes = byte_len - done_bytes;
+                if (rem_bytes >= cur_blk_bytes) {
+                    r = sub_535c(&cache_ptr, (int)blk);
+                    if (r < 0) {
+                        goto cleanup;
+                    }
+                    if (r == 1) {
+                        fp_mode = 1;
+                    } else {
+                        r = sub_0c4c(entry, (int)blk);
+                        if (r < 0) {
+                            goto cleanup;
+                        }
+                        if ((*(u32 *)(entry + 0x20) & 8U) != 0) {
+                            r = sub_5330(&cache_ptr, (int)blk);
+                            if (r < 0) {
+                                goto cleanup;
+                            }
+                            fp_mode = 0;
+                        } else {
+                            u32 two_blks = g_umd_ctx_8b48.block_basis << 12;
+                            fp_mode = (rem_bytes < two_blks) ? 2 : 3;
+                            cache_ptr = cur_dst;
+                        }
+                    }
+                    goto process_blk;
+                }
+            }
+            r = sub_5330(&cache_ptr, (int)blk);
+            if (r < 0) {
+                goto cleanup;
+            }
+            if (r == 1) {
+                fp_mode = 1;
+            } else {
+                r = sub_0c4c(entry, (int)blk);
+                if (r < 0) {
+                    goto cleanup;
+                }
+                fp_mode = 0;
+            }
+
+process_blk:
+            if (fp_mode == 3) {
+                u32 b_bytes = g_umd_ctx_8b48.block_basis << 11;
+                u32 span_blks = (byte_len - done_bytes) / b_bytes;
+                u32 span_last = blk + span_blks - 1U;
+                u32 first_off = *(u32 *)(entry + 0x00);
+                r = sub_0c4c(entry, (int)span_last);
+                if (r < 0) {
+                    goto cleanup;
+                }
+                u32 raw_span = (*(u32 *)(entry + 0x00) + *(u32 *)(entry + 0x04)) - first_off;
+                u32 aligned_span = (raw_span + 15U) & ~15U;
+                u32 total_span_bytes = (span_blks * g_umd_ctx_8b48.block_basis) << 11;
+                u8 *read_ptr = (u8 *)(((u32)((u8 *)cache_ptr + total_span_bytes - aligned_span)) & ~15U);
+                r = sub_50fc(read_ptr, first_off, 0, (int)aligned_span);
+                if (r < 0) {
+                    goto cleanup;
+                }
+                r = sub_0ad0(read_ptr, first_off, aligned_span, (int)blk, (int)span_last, entry);
+                if (r < 0) {
+                    goto cleanup;
+                }
+                if (raw_span < ((span_blks * g_umd_ctx_8b48.block_basis) << 11)) {
+                    u8 *out_p = (u8 *)cache_ptr;
+                    for (u32 b = blk; b <= span_last; b++) {
+                        r = sub_0c4c(entry, (int)b);
+                        if (r < 0) {
+                            goto cleanup;
+                        }
+                        u32 b_bytes_cur = g_umd_ctx_8b48.block_basis << 11;
+                        u32 b_comp = *(u32 *)(entry + 0x04);
+                        u8 *b_src = read_ptr + (*(u32 *)(entry + 0x00) - first_off);
+                        if (b_comp < b_bytes_cur) {
+                            void *tmp = sub_4ccc();
+                            sceKernelMemcpy(tmp, b_src, b_comp);
+                            r = sub_69dc(out_p, tmp, (int)(g_umd_ctx_8b48.block_basis << 11));
+                            if (r < 0) {
+                                goto cleanup;
+                            }
+                        } else if (out_p != b_src) {
+                            sceKernelMemmove(out_p, b_src, b_bytes_cur);
+                        }
+                        out_p += (g_umd_ctx_8b48.block_basis << 11);
+                    }
+                }
+                blk = span_last;
+                u32 step_bytes = (span_blks * g_umd_ctx_8b48.block_basis) << 11;
+                goto advance_blk;
+            } else if (fp_mode == 1) {
+                sceKernelDelayThread(100);
+                block_bytes = basis << 11;
+            } else {
+                u32 comp_sz = *(u32 *)(entry + 0x04);
+                block_bytes = basis << 11;
+                u32 aligned_comp = (comp_sz + 15U) & ~15U;
+                void *io_buf = (comp_sz < block_bytes) ? sub_4ccc() : cache_ptr;
+                r = sub_50fc(io_buf, *(u32 *)(entry + 0x00), 0, (int)aligned_comp);
+                if (r < 0) {
+                    goto cleanup;
+                }
+                r = sub_0a34(io_buf, entry);
+                if (r < 0) {
+                    goto cleanup;
+                }
+                if (*(u32 *)(entry + 0x04) < block_bytes) {
+                    r = sub_69dc(cache_ptr, io_buf, (int)block_bytes);
+                    if (r < 0) {
+                        goto cleanup;
+                    }
+                }
+            }
+            {
+                u32 step_bytes = block_bytes - in_blk_off;
+                u32 rem_req = byte_len - done_bytes;
+                if (rem_req < step_bytes) {
+                    step_bytes = rem_req;
+                }
+            advance_blk:
+                if ((u32)(fp_mode - 2) >= 2U) {
+                    sceKernelMemcpy(cur_dst, (u8 *)cache_ptr + in_blk_off, step_bytes);
+                    r = sub_538c((int)blk);
+                    if (r < 0) {
+                        fp_mode = -1;
+                        goto cleanup;
+                    }
+                }
+                fp_mode = -1;
+                cur_dst += step_bytes;
+                done_bytes += step_bytes;
+                blk++;
+                in_blk_off = 0;
+            }
+        } while (blk < end_blk_excl);
+    }
+
+cleanup:
+    if (fp_mode != -1 && fp_mode != 2 && fp_mode != 3) {
+        sub_53a8((int)blk);
+    }
     if (r < 0) {
-        return r;
-    }
-    if (sub_5330(lba, count)) {
-        sub_535c(dst, count << 11, lba);
-        return count;
-    }
-    if (sub_538c(lba)) {
-        sub_53a8(dst, count << 11, lba);
-    }
-    u64 off = ((u64)g_umd_ctx_8b48.img_offset_hi << 32 | g_umd_ctx_8b48.img_offset_lo) + *(u32 *)(entry + 0x14);
-    int rd = sub_50fc(g_umd_ctx_8b48.sector_buf, *(int *)(entry + 0x18), (u32)off, (u32)(off >> 32));
-    if (rd < 0) {
         sceKernelDelayThread(10000);
-        return rd;
+        return (int)0x80210001;
     }
-    r = sub_0a34(g_umd_ctx_8b48.sector_buf, *(int *)(entry + 0x18), g_bss_8a6c, *(int *)(entry + 0x1c), entry + 8, *(int *)(entry + 0x10));
-    if (r < 0) {
-        sub_0ad0(g_umd_ctx_8b48.sector_buf, blk, 1);
-    }
-    if (*(int *)(entry + 0x18) < (basis << 11)) {
-        sub_69dc(dst, count << 11, g_umd_ctx_8b48.sector_buf);
-    } else {
-        if (dst == g_umd_ctx_8b48.sector_buf) {
-            sceKernelMemmove(dst, g_umd_ctx_8b48.sector_buf, count << 11);
-        } else {
-            sceKernelMemcpy(dst, g_umd_ctx_8b48.sector_buf, count << 11);
-        }
-    }
-    g_umd_ctx_8b48.cur_lba = lba + count;
-    if (req[3] != 0) {
-        sub_41b0((void *)req[3], lba, 0);
-        sub_43ec(NULL);
-        sub_4ccc(0x10);
-    }
-    return count;
+    return (int)done_bytes;
 }
 
 /* 0x4acc (merged into 0x4500 by epsp_prx.py because in .rodata) */
 static int umd_io_ioctl(void *iot, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
-    int *h = *(int **)((u8 *)iot + 0x3c);
-    if (cmd == 0x01f20001) {
-        int r = sub_43ec(iot);
-        if (r < 0) {
+    if (iot == NULL) {
+        return (int)0x80010016;
+    }
+    int *h = *(int **)((u8 *)iot + 0x10);
+    if (h == NULL) {
+        return (int)0x80010016;
+    }
+    if (h[0] == 0) {
+        return (int)0x80010009;
+    }
+    if ((int)cmd > (int)0x00208082U) {
+        if (cmd == 0x01f010dbU) {
+            return 0;
+        }
+        if ((int)cmd > (int)0x01f010dbU) {
+            if (cmd == 0x01f100a6U) {
+                if ((u32)inlen < 4U || indata == NULL) {
+                    return (int)0x80010016;
+                }
+                return (int)sub_41b0(iot, *(SceOff *)indata, *((int *)indata + 3));
+            }
+            if (cmd != 0x01f30003U) {
+                return (int)0x80010086;
+            }
+            if ((u32)inlen < 4U || indata == NULL) {
+                return (int)0x80010016;
+            }
+            int nsec = *(int *)indata;
+            if (outdata == NULL || outlen < nsec) {
+                return (int)0x80010016;
+            }
+            u32 cur_lba = *(u32 *)((u8 *)iot + 0x18);
+            u32 max_sec = (g_umd_ctx_8b48.last_lba - cur_lba) + 1U;
+            if ((int)max_sec < nsec) {
+                nsec = (int)max_sec;
+            }
+            int r = sub_43ec((int)cur_lba, outdata, nsec);
+            if (r > 0) {
+                *(SceOff *)((u8 *)iot + 0x18) += (SceOff)r;
+            }
             return r;
         }
-        if (outdata == NULL || outlen < 4) {
+        if (cmd != 0x01d20001U) {
+            return (int)0x80010086;
+        }
+        if ((u32)outlen < 4U || outdata == NULL) {
             return (int)0x80010016;
         }
-        *(int *)outdata = h[1];
+        *(u32 *)outdata = *(u32 *)((u8 *)iot + 0x18);
         return 0;
     }
-    if (cmd == 0x01f100a6) {
-        if (indata == NULL || inlen < 0x10) {
-            return (int)0x80010016;
-        }
-        s64 ofs = *(s64 *)indata;
-        int whence = *(int *)((u8 *)indata + 0x0c);
-        return sub_41b0(iot, ofs, whence);
+    if ((int)cmd >= (int)0x00208081U) {
+        return 0;
     }
-    if (cmd == 0x01f010db) {
-        return sub_43ec(iot);
+    if (cmd == 0x0020800cU) {
+        return 0;
     }
-    if (cmd == 0x01f30003) {
-        if (indata == NULL || inlen < 4 || outdata == NULL) {
-            return (int)0x80010016;
+    if ((int)cmd > (int)0x0020800cU) {
+        if (cmd - 0x00208010U < 2U) {
+            return 0;
         }
-        int cnt = *(int *)indata;
-        if (outlen < cnt) {
-            return (int)0x80010016;
-        }
-        return umd_io_read(iot, (char *)outdata, cnt);
+        return (int)0x80010086;
+    }
+    if (cmd == 0x00208001U || cmd == 0x00208006U) {
+        return 0;
     }
     return (int)0x80010086;
 }
 
 /* 0x4ccc */
-static NOINLINE void sub_4ccc(int val)
+static NOINLINE void *sub_4ccc(void)
 {
-    g_umd_ctx_8b48.disc_type = val;
+    return g_fpl_block_8b44;
 }
 
 /* 0x4cd8 */
-static NOINLINE int sub_4cd8(void)
+static NOINLINE int sub_4cd8(const u32 *ctx_in)
 {
+    u32 count_out;
+    int async_mode = 1;
+    if (ctx_in == NULL || (int)ctx_in[0] <= 0) {
+        return (int)0x80010016;
+    }
+    u8 flg = *((const u8 *)ctx_in + 0x42);
+    if ((flg & 1U) != 0) {
+        if (g_cur_mutex_8b34 == g_main_mutex_8b3c) {
+            sceKernelLockMutex(g_nc_mutex_8b38, 1, NULL);
+            int intr = sceKernelCpuSuspendIntr();
+            sceKernelCancelMutex(g_cur_mutex_8b34, 1, (int *)&count_out);
+            g_cur_mutex_8b34 = g_nc_mutex_8b38;
+            sceKernelCpuResumeIntr(intr);
+            sceKernelUnlockMutex(g_main_mutex_8b3c, 1);
+            flg = *((const u8 *)ctx_in + 0x42);
+        }
+    }
+    if ((flg & 2U) != 0) {
+        int r = sceIoDevctl("ms0:", 0x02425858, &async_mode, 4, NULL, 0);
+        if (r != 0) {
+            return r;
+        }
+    }
     int intr = sceKernelCpuSuspendIntr();
-    g_umd_ctx_8b48.cached_lba = -1;
-    g_umd_ctx_8b48.cached_blk = -1;
-    sceKernelCpuResumeIntr(intr);
-
-    if (g_umd_ctx_8b48.open_count > 0) {
-        sceKernelCancelMutex(g_umd_ctx_8b48.mutex, 1, NULL);
-        sceKernelUnlockMutex(g_umd_ctx_8b48.mutex, 1);
+    u32 *dst = (u32 *)&g_umd_ctx_8b48;
+    const u32 *src = ctx_in;
+    for (int i = 0; i < 20; i += 4) {
+        dst[i + 0] = src[i + 0];
+        dst[i + 1] = src[i + 1];
+        dst[i + 2] = src[i + 2];
+        dst[i + 3] = src[i + 3];
     }
-    int async_mode = 0;
-    if (!(g_umd_ctx_8b48.header_flags & 2)) {
-        sceIoDevctl("ms0:", 0x02425858, &async_mode, 4, NULL, 0);
-    }
-    sub_6098();
+    dst[20] = src[20];
+    dst[21] = src[21];
+    sub_6988((int)g_umd_ctx_8b48.thread_prio);
     void *gi = sceKernelGetGameInfo();
     if (gi != NULL) {
         const char *id = (const char *)gi + 0x44;
-        if (strcmp(id, "ULUS10021") == 0 || strcmp(id, "ULUS10059") == 0) {
-            sub_60a4();
-        } else if (strcmp(id, "ULES00108") == 0) {
-            sub_60b0();
+        if (strcmp(id, "ULUS10021") == 0 || strcmp(id, "ULES00108") == 0) {
+            g_umd_ctx_8b48.emu_rate2 = 0x44c;
+        }
+        if (strcmp(id, "ULUS10059") == 0) {
+            g_umd_ctx_8b48.emu_flags = 8;
+            g_umd_ctx_8b48.emu_rate1 = 0x64;
+            g_umd_ctx_8b48.emu_rate2 = 0x1f4;
         }
     }
-    if (g_umd_ctx_8b48.mutex_owner_pri >= 0) {
-        u32 to = 10000;
-        sceKernelLockMutex(g_umd_ctx_8b48.mutex, 1, &to);
-    }
-    sub_6988(0x18);
+    sub_6098(g_umd_ctx_8b48.emu_rate1);
+    sub_60a4(g_umd_ctx_8b48.emu_rate2);
+    sub_60b0(g_umd_ctx_8b48.emu_flags);
+    sceKernelCpuResumeIntr(intr);
     return 0;
 }
 
 /* 0x4ef4 */
-static NOINLINE int sub_4ef4(int unit, int *out)
+static NOINLINE int sub_4ef4(void *out)
 {
-    if (unit != 0 || out == NULL) {
-        return (int)0x80010016;
-    }
     int intr = sceKernelCpuSuspendIntr();
-    if (g_umd_ctx_8b48.fd < 0) {
+    if (g_umd_ctx_8b48.fd > 0) {
+        u32 *dst = (u32 *)out;
+        const u32 *src = (const u32 *)g_umd_ctx_8b48.disc_id;
+        for (int i = 0; i < 8; i += 4) {
+            dst[i + 0] = src[i + 0];
+            dst[i + 1] = src[i + 1];
+            dst[i + 2] = src[i + 2];
+            dst[i + 3] = src[i + 3];
+        }
+        dst[8] = g_umd_ctx_8b48.unk_30;
+        dst[9] = g_umd_ctx_8b48.last_lba;
         sceKernelCpuResumeIntr(intr);
-        return (int)0x80210001;
+        return 0;
     }
-    *out = g_umd_ctx_8b48.lba_param;
-    sub_3d04();
+    int r = sub_3d04();
+    if (r >= 0) {
+        r = (int)0x80210001;
+    }
     sceKernelCpuResumeIntr(intr);
-    return 0;
+    return r;
 }
 
 /* 0x4fa4 */
-static NOINLINE int sub_4fa4(int unit, void *out)
+static NOINLINE int sub_4fa4(int *out0, int *out1, int *out2)
 {
-    if (unit != 0 || out == NULL) {
-        return (int)0x80010016;
-    }
     int intr = sceKernelCpuSuspendIntr();
-    if (g_umd_ctx_8b48.fd < 0) {
+    if (g_umd_ctx_8b48.fd > 0) {
+        if (out0 != NULL) {
+            *out0 = (int)g_umd_ctx_8b48.lba_param;
+        }
+        if (out1 != NULL) {
+            *out1 = (int)g_umd_ctx_8b48.unk_2c;
+        }
+        if (out2 != NULL) {
+            *out2 = (int)g_umd_ctx_8b48.last_lba;
+        }
         sceKernelCpuResumeIntr(intr);
-        return (int)0x80210001;
+        return 0;
     }
-    int *p = (int *)out;
-    p[1] = g_umd_ctx_8b48.total_sectors;
-    p[2] = g_umd_ctx_8b48.total_sectors;
-    sub_3d04();
+    int r = sub_3d04();
+    if (r >= 0) {
+        r = (int)0x80210001;
+    }
     sceKernelCpuResumeIntr(intr);
-    return 0;
+    return r;
 }
 
 /* 0x5054 */
 static NOINLINE int sub_5054(void)
 {
-    int pri = sceKernelGetThreadCurrentPriority();
-    int r = sceKernelLockMutex(g_umd_ctx_8b48.mutex, 1, NULL);
-    if (r >= 0) {
-        g_umd_ctx_8b48.mutex_owner_pri = pri;
+    if (g_cur_mutex_8b34 == 0) {
+        return (int)0x80000041;
     }
+    g_mutex_owner_pri_8be0 = sceKernelGetThreadCurrentPriority();
+    int r;
+    do {
+        r = sceKernelLockMutex(g_cur_mutex_8b34, 1, NULL);
+    } while (r == (int)0x800201a9);
     return r;
 }
 
 /* 0x50c4 */
 static NOINLINE int sub_50c4(void)
 {
-    g_umd_ctx_8b48.mutex_owner_pri = -1;
-    return sceKernelUnlockMutex(g_umd_ctx_8b48.mutex, 1);
+    if (g_cur_mutex_8b34 == 0) {
+        return (int)0x80000041;
+    }
+    return sceKernelUnlockMutex(g_cur_mutex_8b34, 1);
 }
 
 /* 0x50fc */
-static NOINLINE int sub_50fc(void *buf, int size, u32 pos_lo, u32 pos_hi)
+static NOINLINE int sub_50fc(void *buf, u32 pos_lo, u32 pos_hi, int size)
 {
     SceOff off = ((SceOff)pos_hi << 32) | pos_lo;
     SceOff r = sceIoLseek(g_umd_ctx_8b48.fd, off, 0);
-    if (r < 0) {
-        return (int)r;
+    if (r != off) {
+        return (r < 0) ? (int)r : (int)0x80210001;
     }
-    return sceIoRead(g_umd_ctx_8b48.fd, buf, (SceSize)size);
+    int rd = sceIoRead(g_umd_ctx_8b48.fd, buf, (SceSize)size);
+    if (rd == size) {
+        return 0;
+    }
+    return (rd < 0) ? rd : (int)0x80210001;
 }
 
 /* 0x51a4 */
-static NOINLINE int sub_51a4(int flag)
+static NOINLINE int sub_51a4(int addr)
 {
-    if (g_umdman_busy_8ae4) {
-        return (int)0x8001000c;
+    if (sub_303c() != 0x40) {
+        return 0;
     }
-    int st = sub_303c();
-    if (st != 0x20) {
-        if (st == 0x10 && flag && !sceKernelIsUserModeThread() && sceKernelGetCompiledSdkVersion() != 0) {
-            return 0;
-        }
-        return (int)0x80210001;
+    if (sceKernelIsUserModeThread() == 0) {
+        return 0;
     }
-    return 0;
+    u32 uaddr = (u32)addr & 0x1fffffffU;
+    if (sceKernelGetCompiledSdkVersion() <= 0x03000000) {
+        return 0;
+    }
+    return ((uaddr - g_part_info_8be4[1]) < g_part_info_8be4[2]) ? 1 : 0;
 }
 
 /* 0x5218 */
 static NOINLINE int sub_5218(void)
 {
-    sub_3cd0(0);
-    if (g_umd_ctx_8b48.fd >= 0) {
-        sceIoClose(g_umd_ctx_8b48.fd);
-        g_umd_ctx_8b48.fd = -1;
+    sub_3cd0((int)0x80210003);
+    int r = 0;
+    if (g_umd_ctx_8b48.fd > 0) {
+        r = sceIoClose(g_umd_ctx_8b48.fd);
     }
-    return 0;
+    g_umd_ctx_8b48.fd = 0;
+    return r;
 }
 
 /* 0x5268 */
 static NOINLINE int sub_5268(void)
 {
-    return memcmp(g_umd_ctx_8b48.disc_id, sub_60bc(), 10) != 0;
+    u8 *pvd = NULL;
+    sub_60bc((void **)&pvd);
+    return memcmp(pvd + 0x373, g_dummy_disc_id_8940, 0x20) == 0;
 }
 
 /* 0x52a0 */
-static NOINLINE void sub_52a0(void)
+static NOINLINE int sub_52a0(void)
 {
-    g_umd_ctx_8b48.cur_lba = 0;
+    return g_umd_ctx_8b48.flags_42;
 }
 
 /* 0x52ac */
-static NOINLINE int sub_52ac(int *type_out)
+static NOINLINE int sub_52ac(int *info_out)
 {
-    if (type_out == NULL) {
+    if (info_out == NULL) {
         return (int)0x80010016;
     }
-    *type_out = g_umd_ctx_8b48.disc_type;
+    info_out[1] = 0x10;
     return 0;
 }
 
 /* 0x52cc */
 static NOINLINE int sub_52cc(void)
 {
-    return g_umd_ctx_8b48.mutex_owner_pri;
+    return g_mutex_owner_pri_8be0;
 }
 
 /* 0x52d8 */
-static NOINLINE void sub_52d8(void *buf)
+static NOINLINE int sub_52d8(void *buf, int size)
 {
-    g_umd_ctx_8b48.nc_buf = buf;
-    g_umd_ctx_8b48.cached_lba = -1;
-    g_umd_ctx_8b48.cached_blk = -1;
+    if (size != 0x8000) {
+        return (int)0x80010016;
+    }
+    g_cache_buf_8bf4 = buf;
+    g_cached_blk_8bf8 = -1;
+    return 0;
 }
 
 /* 0x5308 */
-static NOINLINE void sub_5308(void)
+static NOINLINE int sub_5308(void)
 {
-    g_umd_ctx_8b48.nc_buf = NULL;
-    g_umd_ctx_8b48.cached_lba = -1;
+    g_cached_blk_8bf8 = -1;
+    return 0;
 }
 
 /* 0x531c */
-static NOINLINE void sub_531c(int sectors)
+static NOINLINE int sub_531c(void)
 {
-    g_umd_ctx_8b48.total_sectors = sectors;
-    g_umd_ctx_8b48.lba_param = sectors - 1;
+    g_cached_blk_8bf8 = -1;
+    return 0;
 }
 
 /* 0x5330 */
-static NOINLINE int sub_5330(int lba, int count)
+static NOINLINE int sub_5330(void **out, int blk)
 {
-    if (g_umd_ctx_8b48.cached_lba < 0) {
-        return 0;
+    *out = g_cache_buf_8bf4;
+    if (g_cached_blk_8bf8 == blk) {
+        return 1;
     }
-    return (lba >= g_umd_ctx_8b48.cached_lba &&
-            lba + count <= g_umd_ctx_8b48.cached_lba + g_umd_ctx_8b48.block_basis);
+    g_cached_blk_8bf8 = blk;
+    return 0;
 }
 
 /* 0x535c */
-static NOINLINE int sub_535c(void *buf, int size, int lba)
+static NOINLINE int sub_535c(void **out, int blk)
 {
-    int off = (lba - g_umd_ctx_8b48.cached_lba) << 11;
-    if (g_umd_ctx_8b48.nc_buf != NULL && size > 0) {
-        u8 *s = (u8 *)g_umd_ctx_8b48.nc_buf + off;
-        u8 *d = (u8 *)buf;
-        for (int i = 0; i < size; i += 4) {
-            *(u32 *)(d + i) = *(u32 *)(s + i);
-        }
+    if (g_cached_blk_8bf8 == blk) {
+        *out = g_cache_buf_8bf4;
+        return 1;
     }
-    return size;
+    *out = NULL;
+    return 0;
 }
 
 /* 0x538c */
-static NOINLINE int sub_538c(int lba)
+static NOINLINE int sub_538c(int blk)
 {
-    return (g_umd_ctx_8b48.cached_lba == lba);
+    return (g_cached_blk_8bf8 == blk) ? 0 : (int)0x80010006;
 }
 
 /* 0x53a8 */
-static NOINLINE int sub_53a8(void *buf, int size, int lba)
+static NOINLINE int sub_53a8(int blk)
 {
-    (void)buf;
-    (void)size;
-    g_umd_ctx_8b48.cached_lba = lba;
-    return 0;
+    if (g_cached_blk_8bf8 == blk) {
+        g_cached_blk_8bf8 = -1;
+        return 0;
+    }
+    return (int)0x80010006;
 }
 
 /* 0x53d0 (merged into 0x53a8 by epsp_prx.py because in .rodata) */
 static int umd_io_devctl(void *iot, const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
-    int r = sub_58c4(dev);
-    if (r < 0) {
-        return r;
-    }
-    if (cmd == 0x01f20001) {
-        if (outdata == NULL || outlen < 8) {
+    (void)iot;
+    (void)dev;
+    if (cmd == 0x01e38012U) {
+        if (outdata == NULL || (u32)outlen < 0x28U) {
             return (int)0x80010016;
         }
-        int type = 0;
-        sub_52ac(&type);
-        ((int *)outdata)[0] = -1;
-        ((int *)outdata)[1] = type;
+        return sub_4ef4(outdata);
+    }
+    if ((int)cmd > (int)0x01e38012U) {
+        if (cmd == 0x01f100a9U) {
+            if (indata == NULL || (u32)inlen < 4U) {
+                return (int)0x80010016;
+            }
+            return 0;
+        }
+        if ((int)cmd > (int)0x01f100a9U) {
+            if ((int)cmd > (int)0x01f200a2U) {
+                if (cmd == 0x01f21011U) {
+                    return 0;
+                }
+                if ((int)cmd > (int)0x01f21011U) {
+                    if (cmd == 0x01f300a5U) {
+                        if (indata == NULL || (u32)inlen < 0x10U || outdata == NULL || (u32)outlen < 4U) {
+                            return (int)0x80010016;
+                        }
+                        return 0;
+                    }
+                    if (cmd == 0x01f300a7U) {
+                        if (indata == NULL || (u32)inlen < 4U) {
+                            return (int)0x80010016;
+                        }
+                        return 0;
+                    }
+                    return (int)0x80010086;
+                }
+                if (cmd - 0x01f200a4U < 2U) {
+                    return 0;
+                }
+                return (int)0x80010086;
+            }
+            if ((int)cmd >= (int)0x01f200a0U) {
+                return 0;
+            }
+            if (cmd == 0x01f20002U) {
+                if (outdata == NULL || (u32)outlen < 4U) {
+                    return (int)0x80010016;
+                }
+                return sub_4fa4(NULL, NULL, (int *)outdata);
+            }
+            if ((int)cmd > (int)0x01f20002U) {
+                if (cmd == 0x01f20003U) {
+                    if (outdata == NULL || (u32)outlen < 4U) {
+                        return (int)0x80010016;
+                    }
+                    return sub_4fa4(NULL, (int *)outdata, NULL);
+                }
+                if (cmd == 0x01f20014U) {
+                    return 0;
+                }
+                return (int)0x80010086;
+            }
+            if (cmd != 0x01f20001U) {
+                return (int)0x80010086;
+            }
+            if (outdata == NULL || outlen != 8) {
+                return (int)0x80010016;
+            }
+            return sub_52ac((int *)outdata);
+        }
+        if (cmd == 0x01f00003U) {
+            sub_5af8(*(int *)indata);
+            return 0;
+        }
+        if ((int)cmd > (int)0x01f00003U) {
+            if (cmd == 0x01f100a4U) {
+                if (indata == NULL || (u32)inlen < 0x10U) {
+                    return (int)0x80010016;
+                }
+                return 0;
+            }
+            if ((int)cmd > (int)0x01f100a4U) {
+                if (cmd == 0x01f100a6U || cmd == 0x01f100a8U) {
+                    if (indata == NULL || (u32)inlen < 4U) {
+                        return (int)0x80010016;
+                    }
+                    return 0;
+                }
+                return (int)0x80010086;
+            }
+            if (cmd == 0x01f000a6U) {
+                return 0;
+            }
+            if (cmd == 0x01f100a3U) {
+                sub_5af8(*(int *)indata);
+                return 0;
+            }
+            return (int)0x80010086;
+        }
+        if (cmd == 0x01e38034U) {
+            if (indata == NULL || outdata == NULL || (u32)outlen < 4U) {
+                return (int)0x80010016;
+            }
+            return sub_58c4((const char *)indata, (int *)outdata);
+        }
+        if ((int)cmd > (int)0x01e38034U) {
+            if (cmd != 0x01e380c0U) {
+                return (int)0x80010086;
+            }
+            if (indata == NULL || inlen != 0x24 || outdata == NULL) {
+                return (int)0x80010016;
+            }
+            return sub_5968(outdata, (u32)outlen, (const u32 *)indata);
+        }
+        if (cmd - 0x01e38031U < 2U) {
+            return 0;
+        }
+        return (int)0x80010086;
+    }
+    if (cmd == 0x01e18033U) {
         return 0;
     }
-    if (cmd == 0x01f20002) {
-        int r2 = sub_43ec(iot);
-        if (r2 < 0) {
-            return r2;
+    if ((int)cmd > (int)0x01e18033U) {
+        if (cmd == 0x01e28035U) {
+            if (outdata == NULL || (u32)outlen < 4U) {
+                return (int)0x80010016;
+            }
+            int r = sub_43ec(0x10, g_pvd_buf_8c38, 1);
+            if (r == 1) {
+                *(void **)outdata = g_pvd_buf_8c38;
+                return 0;
+            }
+            if (r < 0) {
+                return r;
+            }
+            return (int)0x80010005;
         }
-        return sub_4ef4(0, (int *)outdata);
-    }
-    if (cmd == 0x01f20003) {
-        int r2 = sub_43ec(iot);
-        if (r2 < 0) {
-            return r2;
+        if ((int)cmd > (int)0x01e28035U) {
+            if ((int)cmd > (int)0x01e280d2U) {
+                if (cmd - 0x01e280d9U < 2U) {
+                    return 0;
+                }
+                return (int)0x80010086;
+            }
+            if ((int)cmd >= (int)0x01e280d1U) {
+                return 0;
+            }
+            if (cmd != 0x01e280a9U) {
+                return (int)0x80010086;
+            }
+            if (outdata == NULL || (u32)outlen < 4U) {
+                return (int)0x80010016;
+            }
+            *(int *)outdata = 0x800;
+            return 0;
         }
-        return sub_4fa4(0, outdata);
+        if (cmd == 0x01e180d3U || cmd == 0x01e180c1U || cmd == 0x01e180d0U || cmd == 0x01e180d6U || cmd == 0x01e28013U) {
+            return 0;
+        }
+        return (int)0x80010086;
     }
-    if (cmd == 0x01f100a9) {
-        return sub_5af8();
+    if (cmd == 0x01e080d4U || cmd == 0x01e000d5U || cmd == 0x01e080a8U || cmd == 0x01e18021U || cmd == 0x01e18024U || cmd == 0x01e18030U) {
+        return 0;
     }
-    return sub_5968(0, cmd, indata, inlen, outdata, outlen);
+    if (cmd - 0x00208810U < 2U || cmd - 0x01e080d7U < 2U) {
+        return 0;
+    }
+    return (int)0x80010086;
 }
 
 /* 0x58c4 */
-static NOINLINE int sub_58c4(const char *name)
+static NOINLINE int sub_58c4(const char *name, int *unit_out)
 {
-    if (name == NULL) {
-        return (int)0x80010016;
+    const char *p = name;
+    while ((look_ctype_table((u8)*p) & 8) != 0) {
+        p++;
     }
-    if (strncmp(name, "umd", 3) != 0) {
-        return (int)0x80010016;
+    if (strncmp(p, "umd", 3) != 0) {
+        return (int)0x80010013;
     }
-    u16 *ct = look_ctype_table();
-    if (name[3] != ':' && !(ct[(u8)name[3] + 1] & 4)) {
-        return (int)0x80010016;
+    int c3 = p[3] - '0';
+    if (p[4] != ':' || c3 < 0 || c3 >= 10) {
+        return (int)0x80010013;
     }
+    *unit_out = c3;
     return 0;
 }
 
 /* 0x5968 */
-static NOINLINE int sub_5968(int unit, u32 cmd, void *indata, int inlen, void *outdata, int outlen)
+static NOINLINE int sub_5968(void *outdata, u32 outlen, const u32 *in)
 {
-    (void)unit;
-    (void)inlen;
-    (void)outlen;
-    if (cmd == 0x01e380c0 || cmd == 0x01e38012) {
-        u32 req[4];
-        u32 *in = (u32 *)indata;
-        req[0] = in ? in[2] : 0;
-        req[1] = in ? in[1] : 0;
-        req[2] = (u32)outdata;
-        req[3] = 0;
-        if (sub_5ffc()) {
-            if (sceKernelSearchModuleByName("sceNetAdhoc_Library") >= 0 || sub_6028()) {
-                int a2, a3;
-                sub_6c9c((int)req[0], (int)req[1], &a2, &a3);
-            } else {
-                sub_7104(req);
-            }
+    if (outlen < in[4]) {
+        return (int)0x80010069;
+    }
+    u32 byte_pos = in[2] << 11;
+    u32 off_18 = in[6];
+    if (off_18 != 0) {
+        if (in[5] != 0 || in[7] != 0) {
+            byte_pos = (byte_pos - off_18) + 0x800U;
+        } else {
+            byte_pos += off_18;
         }
-        return sub_4428((int (*)(void *))sub_4500, req);
     }
-    if (cmd == 0x01e18030) {
-        return sub_5d18(indata);
+    sub_5ffc();
+    int r = sub_4428(byte_pos, outdata, in[4]);
+    if (r < 0) {
+        return r;
     }
-    if (cmd == 0x01e00001) {
-        return sub_5fac(0);
+    if (sub_6028() == 0) {
+        return (int)in[3];
     }
-    if (cmd == 0x01e180d3) {
-        return sub_5b04((u32 *)indata);
+    u8 flags = g_emu_flags_8c34;
+    if ((flags & 4U) != 0) {
+        if (sceKernelSearchModuleByName("sceNetAdhoc_Library") < 0) {
+            return (int)in[3];
+        }
+        flags = g_emu_flags_8c34;
     }
-    return 0;
+    int seek_only = (int)((in[0] << 3) & 8U);
+    if ((flags & 2U) == 0) {
+        sub_5b04(in[2], in[3], seek_only, (int)(in[1] & 1U));
+        return (int)in[3];
+    }
+    int step = 0;
+    int mode = (int)(in[1] & 3U);
+    if (sub_5d18(in, &step) == 0) {
+        u32 rem_lba = 0;
+        u32 rem_blks = 0;
+        if (sub_7104(in[2], in[3], seek_only, mode, &rem_lba, &rem_blks) == 0) {
+            u32 lba = rem_lba;
+            u32 cnt = rem_blks << 4;
+            if (rem_lba == 0 || rem_blks == 0) {
+                lba = in[2];
+                cnt = in[3];
+            }
+            sub_6c9c(lba, cnt, seek_only, mode);
+        }
+        sub_5fac(step);
+    }
+    return (int)in[3];
 }
 
 /* 0x5af8 */
-static NOINLINE int sub_5af8(void)
+static NOINLINE void sub_5af8(u32 lba)
 {
-    return 0;
+    g_emu_8c04 = lba;
 }
 
 /* 0x5b04 */
-static NOINLINE int sub_5b04(u32 *req)
+static NOINLINE int sub_5b04(u32 lba, u32 cnt, int seek_only, int table_sel)
 {
-    s64 now = sceKernelGetSystemTimeWide();
-    int lba = req ? (int)req[0] : 0;
-    int cnt = req ? (int)req[1] : 0;
-    int a3 = 0, t0 = 0;
-    if (cnt == 0) {
-        int diff = sub_66f8(lba);
-        if (diff > 0) {
-            sub_60cc(diff, 0);
+    u32 rem_lba = 0;
+    u32 rem_blks = 0;
+    int cross_layer = 0;
+    int hit = 0;
+
+    if (((g_emu_flags_8c34 ^ 1U) == 0) && seek_only == 0) {
+        hit = (sub_6bd4(lba, cnt, 0, table_sel, &rem_lba, &rem_blks) != 0);
+    }
+    u32 seek_dist = 0;
+    if (seek_only != 0 || hit == 0) {
+        seek_dist = sub_66f8(lba, g_emu_8c04, &cross_layer);
+    }
+    g_emu_time_8c08 = sceKernelGetSystemTimeWide();
+    if (g_emu_time_8c10 == 0 || (u64)(g_emu_time_8c08 - g_emu_time_8c10) > 0x4c4b40ULL) {
+        g_emu_8c20 = 0;
+    }
+    if (lba == g_emu_8c04) {
+        if (hit != 0) {
+            sub_63b4(lba, cnt, seek_dist, 1, cross_layer);
         } else {
-            sub_63b4(-diff, 0);
+            sub_60cc(lba, cnt, seek_dist, 1, cross_layer);
         }
     } else {
-        sub_6bd4(lba, cnt, 0, &a3, &t0);
-        sub_6c9c(lba, cnt, &a3, &t0);
+        if (hit != 0) {
+            sub_63b4(lba, cnt, seek_dist, 1, cross_layer);
+        } else {
+            sub_60cc(lba, cnt, seek_dist, 2, cross_layer);
+        }
     }
-    g_emu_time_8c08 = now;
-    g_emu_lba_8c10 = lba + cnt;
-    return 0;
+    g_emu_time_8c10 = sceKernelGetSystemTimeWide();
+    g_emu_8c04 = lba + cnt;
+    g_emu_8bfc = lba + cnt;
+    return sub_6c9c(lba, cnt, seek_only, table_sel);
 }
 
 /* 0x5d18 */
-static NOINLINE int sub_5d18(void *info)
+static NOINLINE int sub_5d18(const u32 *in, int *step_out)
 {
-    if (info == NULL) {
-        return (int)0x80010016;
+    if (in[6] != 0) {
+        *step_out |= 1;
     }
-    u32 *p = (u32 *)info;
-    g_emu_8c14 = (int)p[5];
-    g_emu_8c18 = (int)p[7];
-    g_emu_8c24 = *(u16 *)((u8 *)info + 0x0c);
-    g_emu_8c2c = (int)p[0];
+    if (in[5] != 0) {
+        *step_out |= 2;
+    }
+    if (in[7] != 0) {
+        *step_out |= 4;
+    }
+    u32 lba = in[2];
+    u16 cnt = (u16)in[3];
+    int substep = 0;
+
+    if (lba == g_emu_8c30 && (*step_out == 1 || *step_out == 4) && cnt == 1) {
+        if (g_emu_8c24 == 2) {
+            substep = 1;
+            if (lba == g_emu_8c30 + 1U) {
+                goto check_5ef4;
+            }
+            goto check_5dac;
+        }
+        g_emu_8c28 = lba;
+        goto check_5e40;
+    }
+    if (lba == g_emu_8c30 + 1U) {
+check_5ef4:
+        if ((*step_out == 1 || *step_out == 4) && cnt == 1 && g_emu_8c24 == 5) {
+            substep = 2;
+            g_emu_8c28 = lba;
+            goto check_5e40;
+        }
+    }
+check_5dac:
+    if (lba == g_emu_8c30 && *step_out == 5 && cnt == 2 && g_emu_8c24 == 2) {
+        g_emu_8c28 = lba + 1U;
+        substep = 3;
+        goto check_5e40;
+    }
+    g_emu_8c28 = lba + cnt - 1U;
+    g_emu_8c30 = lba;
+    g_emu_8c2c = 0x20;
+    return 0;
+
+check_5e40:
+    if (g_emu_8c2c != 0x10) {
+        g_emu_8c2c = 0x20;
+        return 0;
+    }
+    int mode = *step_out;
+    if (mode == 1) {
+        if (g_emu_8c24 == 1 || g_emu_8c24 == 4) {
+            return 1;
+        }
+        if (g_emu_8c24 == 5 && (substep == 1 || substep == 2)) {
+            return 1;
+        }
+    } else if (mode == 4) {
+        if (g_emu_8c24 == 1 || g_emu_8c24 == 4) {
+            return 1;
+        }
+        if (g_emu_8c24 == 5) {
+            if (substep == 1) {
+                return 1;
+            }
+            if (substep == 3) {
+                return 1;
+            }
+        } else {
+            return 0;
+        }
+    } else if (mode == 5) {
+        if (substep == 3) {
+            return 1;
+        }
+    }
+    g_emu_8c2c = 0x20;
     return 0;
 }
 
@@ -2328,20 +3573,21 @@ static NOINLINE int sub_5fac(int idx)
     if ((u32)idx >= 8U) {
         return 0;
     }
+    g_emu_8c24 = idx;
     return g_emu_fn_tab_8960[idx]();
 }
 
 /* 0x5fd8 (in .rodata table 0x8960) */
 static int sub_5fd8(void)
 {
-    g_emu_8c00 = 1;
+    g_emu_8c2c = 0x10;
     return 0;
 }
 
 /* 0x5fe8 (in .rodata table 0x8960) */
 static int sub_5fe8(void)
 {
-    g_emu_8c00 = 2;
+    g_emu_8c2c = 0x10;
     return 0;
 }
 
@@ -2352,121 +3598,313 @@ static int sub_5ff4(void)
 }
 
 /* 0x5ffc */
-static NOINLINE int sub_5ffc(void)
+static NOINLINE void sub_5ffc(void)
 {
-    if (g_emu_8c00 == 0) {
-        return 0;
-    }
-    g_emu_time_8c08 = sceKernelGetSystemTimeWide();
-    return 1;
+    g_emu_time_9c18 = sceKernelGetSystemTimeWide();
 }
 
 /* 0x6028 */
 static NOINLINE int sub_6028(void)
 {
-    if (sceWlanDrv_driver_7DD3787C() == 1) {
+    if (g_emu_rate1_9c20 != 0 || g_emu_rate2_9c22 != 0) {
+        if (sceWlanDrv_driver_7DD3787C() != 1) {
+            return 1;
+        }
+    }
+    if ((g_emu_flags_8c34 & 0xcU) != 0) {
         return 1;
     }
     return 0;
 }
 
 /* 0x6098 */
-static NOINLINE void sub_6098(void)
+static NOINLINE void sub_6098(u16 val)
 {
-    g_emu_8c04 = 0;
+    g_emu_rate1_9c20 = val;
 }
 
 /* 0x60a4 */
-static NOINLINE void sub_60a4(void)
+static NOINLINE void sub_60a4(u16 val)
 {
-    g_emu_8c04 = 1;
+    g_emu_rate2_9c22 = val;
 }
 
 /* 0x60b0 */
-static NOINLINE void sub_60b0(void)
+static NOINLINE void sub_60b0(u8 val)
 {
-    g_emu_8c04 = 2;
+    g_emu_flags_8c34 = val;
 }
 
 /* 0x60bc */
-static NOINLINE const char *sub_60bc(void)
+static NOINLINE void sub_60bc(void **out)
 {
-    return g_dummy_disc_id_8940;
+    *out = g_pvd_buf_8c38;
 }
 
 /* 0x60cc */
-static NOINLINE int sub_60cc(int diff, int flag)
+static NOINLINE void sub_60cc(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_layer)
 {
-    u32 t0 = sceKernelGetSystemTimeLow();
-    int delay = (diff * 100) / (g_data_8a08 ? g_data_8a08 : 1);
-    if (flag == 0 && delay > 200) {
-        sceKernelDelayThread((u32)delay);
+    u64 elapsed;
+    if ((u64)g_emu_time_8c08 > (u64)g_emu_time_9c18) {
+        elapsed = (u64)g_emu_time_8c08 - (u64)g_emu_time_9c18;
+    } else {
+        elapsed = ((u64)0 - (u64)g_emu_time_8c08) | (~(u64)g_emu_time_9c18);
     }
     sceUmd9660_driver_887C3193();
-    return (int)(sceKernelGetSystemTimeLow() - t0);
+    u32 low = sceKernelGetSystemTimeLow();
+    u32 s0 = low + 0x23dU;
+    u32 half = (u32)g_data_8a08;
+    u32 mult;
+    if (lba <= half) {
+        if (lba < s0) {
+            mult = 0x6edU;
+        } else {
+            u32 q = (u32)(((u64)lba * 0xe4bf37d9ULL) >> 41);
+            mult = 0x6edU - q;
+            if (mult < 0x3e8U) {
+                mult = 0x3e8U;
+            }
+        }
+    } else {
+        u32 v1 = lba - half;
+        if (v1 < s0) {
+            mult = 0x3e8U;
+        } else {
+            u32 q = (u32)(((u64)v1 * 0xe4bf37d9ULL) >> 41);
+            mult = q + 0x3e8U;
+            if (mult >= 0x6eeU) {
+                mult = 0x6edU;
+            }
+        }
+    }
+
+    u32 factor;
+    if (cnt < 0x10U) {
+        factor = (low & 0x40U) + 0x11bU;
+    } else if (cnt < 0x200U) {
+        factor = 0x236U;
+    } else {
+        factor = (low & 0x80U) + 0x351U;
+    }
+
+    u32 a1 = 0;
+    if (factor != 0 || cnt != 0) {
+        u32 prod = (factor * cnt + 0x35b60U) * mult;
+        a1 = (u32)(((u64)prod * 0x10624dd3ULL) >> 38);
+    }
+    u32 xfer = (u32)(((u64)(a1 * (u32)g_emu_rate1_9c20) * 0x10624dd3ULL) >> 38);
+    u32 total = xfer;
+    if (mode != 1) {
+        u32 s_us = seek_dist * 6U;
+        if (s_us > 0x28847aU) {
+            s_us = 0x28847aU;
+        }
+        if (cross_layer != 0) {
+            s_us += 0xc350U;
+        }
+        u32 seek_scaled = (u32)(((u64)(s_us * (u32)g_emu_rate2_9c22) * 0x10624dd3ULL) >> 38);
+        total = xfer + seek_scaled;
+    }
+
+    if (elapsed >= (u64)total) {
+        g_emu_8c20 += (u32)elapsed - total;
+    } else {
+        u32 wait_us = total - (u32)elapsed;
+        if (wait_us != 0) {
+            sceKernelDelayThread(wait_us);
+        }
+    }
 }
 
 /* 0x63b4 */
-static NOINLINE int sub_63b4(int diff, int flag)
+static NOINLINE void sub_63b4(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_layer)
 {
-    u32 t0 = sceKernelGetSystemTimeLow();
-    int delay = (diff * 120) / (g_data_8a08 ? g_data_8a08 : 1);
-    if (flag == 0 && delay > 200) {
-        sceKernelDelayThread((u32)delay);
-    }
+    u64 elapsed = (u64)g_emu_time_8c08 - (u64)g_emu_time_9c18;
     sceUmd9660_driver_887C3193();
-    return (int)(sceKernelGetSystemTimeLow() - t0);
+    u32 low = sceKernelGetSystemTimeLow();
+    u32 s0 = low + 0x23dU;
+    u32 half = (u32)g_data_8a08;
+    u32 mult;
+    if (lba <= half) {
+        if (lba < s0) {
+            mult = 0x6edU;
+        } else {
+            u32 q = (u32)(((u64)lba * 0xe4bf37d9ULL) >> 41);
+            mult = 0x6edU - q;
+            if (mult < 0x3e8U) {
+                mult = 0x3e8U;
+            }
+        }
+    } else {
+        u32 v1 = lba - half;
+        if (v1 < s0) {
+            mult = 0x3e8U;
+        } else {
+            u32 q = (u32)(((u64)v1 * 0xe4bf37d9ULL) >> 41);
+            mult = q + 0x3e8U;
+            if (mult >= 0x6eeU) {
+                mult = 0x6edU;
+            }
+        }
+    }
+
+    u32 factor;
+    if (cnt >= 0x800U) {
+        u32 qtr = half >> 1;
+        if (lba < qtr) {
+            factor = 0x362U;
+        } else if (lba <= qtr + half) {
+            factor = 0x16eU;
+        } else {
+            factor = 0x362U;
+        }
+    } else if (cnt >= 0x400U) {
+        u32 qtr = half >> 1;
+        if (lba < qtr) {
+            factor = (low & 0x40U) + 0x351U;
+        } else if (lba <= qtr + half) {
+            factor = (low & 0x40U) + 0x11bU;
+        } else {
+            factor = (low & 0x40U) + 0x351U;
+        }
+    } else if (cnt >= 0x200U) {
+        factor = 0U;
+    } else if (cnt >= 0x100U) {
+        u32 qtr = half >> 1;
+        if (lba < qtr) {
+            factor = (low & 0x40U) + 0xfaU;
+        } else if (lba <= qtr + half) {
+            factor = 0x64U;
+        } else {
+            factor = (low & 0x40U) + 0xfaU;
+        }
+    } else if (cnt >= 0x80U) {
+        u32 qtr = half >> 1;
+        if (lba < qtr) {
+            factor = (low & 0x40U) + 0x244U;
+        } else if (lba <= qtr + half) {
+            factor = 0x53U;
+        } else {
+            factor = (low & 0x40U) + 0x244U;
+        }
+    } else if (cnt >= 0x40U) {
+        factor = 0x15cU;
+    } else {
+        factor = 0U;
+        mult = 0x3e8U;
+    }
+
+    u32 t4 = (u32)(((u64)((factor * cnt + 0x157cU) * mult) * 0x10624dd3ULL) >> 38);
+    u32 xfer = (u32)(((u64)(t4 * (u32)g_emu_rate1_9c20) * 0x10624dd3ULL) >> 38);
+    u32 total = xfer;
+    if (mode != 1) {
+        u32 s_us = seek_dist * 6U;
+        if (s_us > 0x28847aU) {
+            s_us = 0x28847aU;
+        }
+        if (cross_layer != 0) {
+            s_us += 0xc350U;
+        }
+        u32 xfer2 = (u32)(((u64)(xfer * mult) * 0x10624dd3ULL) >> 38);
+        u32 seek_scaled = (u32)(((u64)(s_us * (u32)g_emu_rate2_9c22) * 0x10624dd3ULL) >> 38);
+        total = xfer2 + seek_scaled;
+    }
+
+    if (elapsed >= (u64)total) {
+        g_emu_8c20 += (u32)elapsed - total;
+    } else {
+        u32 wait_us = total - (u32)elapsed;
+        if (wait_us != 0) {
+            sceKernelDelayThread(wait_us);
+        }
+    }
 }
 
 /* 0x66f8 */
-static NOINLINE int sub_66f8(int lba)
+static NOINLINE u32 sub_66f8(u32 lba, u32 prev_lba, int *cross_layer)
 {
-    int d = lba - g_emu_lba_8c10;
-    if (g_data_8a08 != 0) {
-        return d;
+    u32 cur = g_emu_8c04;
+    u32 half = (u32)g_data_8a08;
+    if (cur < lba) {
+        u32 diff = lba - prev_lba;
+        if (lba > half && prev_lba < half) {
+            *cross_layer = 1;
+            u32 d1 = lba - half;
+            u32 d2 = half - g_emu_8c04;
+            diff = (d2 < d1) ? (d1 - d2) : (d2 - d1);
+        }
+        return diff;
+    } else {
+        u32 diff = prev_lba - lba;
+        if (prev_lba > half && lba < half) {
+            *cross_layer = 1;
+            u32 d1 = prev_lba - half;
+            u32 d2 = half - lba;
+            diff = (d2 < d1) ? (d1 - d2) : (d2 - d1);
+        }
+        return diff;
     }
-    return 0;
 }
 
 /* 0x678c */
 static NOINLINE int sub_678c(void)
 {
-    g_dec_mbx_8c34 = sceKernelCreateMbx("SceNp9660Dec", 0, NULL);
-    if (g_dec_mbx_8c34 >= 0) {
-        g_dec_evf_8c38 = sceKernelCreateEventFlag("SceNp9660Dec", 0, 0, NULL);
-        if (g_dec_evf_8c38 >= 0) {
-            g_dec_thid_8c30 = sceKernelCreateThread("SceNp9660Dec", sub_6a98, 0x18, 0x1000, 0, NULL);
-            if (g_dec_thid_8c30 >= 0) {
-                if (sceKernelStartThread(g_dec_thid_8c30, 0, NULL) >= 0) {
+    int r = sceKernelCreateMbx("SceNp9660Dec", 1, NULL);
+    if (r >= 0) {
+        g_dec_mbx_943c = r;
+        r = sceKernelCreateEventFlag("SceNp9660Dec", 1, 0, NULL);
+        if (r >= 0) {
+            g_dec_evf_9440 = r;
+            r = sceKernelCreateThread("SceNp9660Dec", sub_6a98, 0x70, 0x1000, 0x00100001, NULL);
+            if (r >= 0) {
+                g_dec_thid_9438 = r;
+                r = sceKernelStartThread(r, 0, NULL);
+                if (r >= 0) {
                     return 0;
                 }
-                sceKernelDeleteThread(g_dec_thid_8c30);
             }
-            sceKernelDeleteEventFlag(g_dec_evf_8c38);
         }
-        sceKernelDeleteMbx(g_dec_mbx_8c34);
     }
-    return -1;
+    if (g_dec_thid_9438 > 0) {
+        sceKernelDeleteThread(g_dec_thid_9438);
+        g_dec_thid_9438 = 0;
+    }
+    if (g_dec_evf_9440 > 0) {
+        sceKernelDeleteEventFlag(g_dec_evf_9440);
+        g_dec_evf_9440 = 0;
+    }
+    if (g_dec_mbx_943c > 0) {
+        sceKernelDeleteMbx(g_dec_mbx_943c);
+        g_dec_mbx_943c = 0;
+    }
+    return r;
 }
 
 /* 0x68c4 */
 static NOINLINE int sub_68c4(void)
 {
-    if (g_dec_thid_8c30 > 0) {
-        g_dec_msg_8c3c[2] = 0;
-        sceKernelSendMbx(g_dec_mbx_8c34, g_dec_msg_8c3c);
-        u32 to = 100000;
-        sceKernelWaitThreadEnd(g_dec_thid_8c30, &to);
-        sceKernelDeleteThread(g_dec_thid_8c30);
-        g_dec_thid_8c30 = -1;
+    u32 msg[6];
+    if (g_dec_thid_9438 > 0 && g_dec_mbx_943c > 0) {
+        msg[0] = 0;
+        msg[1] = 0;
+        msg[2] = 0;
+        msg[3] = 0;
+        msg[4] = 0;
+        msg[5] = 0;
+        sceKernelSendMbx(g_dec_mbx_943c, msg);
+        sceKernelWaitThreadEnd(g_dec_thid_9438, NULL);
     }
-    if (g_dec_evf_8c38 > 0) {
-        sceKernelDeleteEventFlag(g_dec_evf_8c38);
-        g_dec_evf_8c38 = -1;
+    if (g_dec_thid_9438 > 0) {
+        sceKernelDeleteThread(g_dec_thid_9438);
+        g_dec_thid_9438 = 0;
     }
-    if (g_dec_mbx_8c34 > 0) {
-        sceKernelDeleteMbx(g_dec_mbx_8c34);
-        g_dec_mbx_8c34 = -1;
+    if (g_dec_evf_9440 > 0) {
+        sceKernelDeleteEventFlag(g_dec_evf_9440);
+        g_dec_evf_9440 = 0;
+    }
+    if (g_dec_mbx_943c > 0) {
+        sceKernelDeleteMbx(g_dec_mbx_943c);
+        g_dec_mbx_943c = 0;
     }
     return 0;
 }
@@ -2474,31 +3912,39 @@ static NOINLINE int sub_68c4(void)
 /* 0x6988 */
 static NOINLINE int sub_6988(int prio)
 {
-    g_data_8a10 = prio;
-    if (g_dec_thid_8c30 > 0) {
-        return sceKernelChangeThreadPriority(g_dec_thid_8c30, prio);
+    int r = 0;
+    if (prio >= 0) {
+        if (prio == 0) {
+            prio = 0x70;
+        }
+        r = sceKernelChangeThreadPriority(g_dec_thid_9438, prio);
+        if (r < 0) {
+            return r;
+        }
     }
-    return 0;
+    g_data_8a10 = prio;
+    return r;
 }
 
 /* 0x69dc */
 static NOINLINE int sub_69dc(void *dst, u32 dst_len, const void *src)
 {
-    int pri = sub_52cc();
-    if (pri > 0 && pri < g_data_8a10) {
-        sceKernelChangeThreadPriority(g_dec_thid_8c30, pri);
+    u32 msg[6];
+    if (g_data_8a10 < 0) {
+        int r = sceKernelChangeThreadPriority(g_dec_thid_9438, sub_52cc());
+        if (r < 0) {
+            return r;
+        }
     }
-    g_dec_msg_8c3c[2] = (u32)dst;
-    g_dec_msg_8c3c[3] = dst_len;
-    g_dec_msg_8c3c[4] = (u32)src;
-    g_dec_msg_8c3c[5] = 0;
-    sceKernelSendMbx(g_dec_mbx_8c34, g_dec_msg_8c3c);
-    u32 out = 0;
-    sceKernelWaitEventFlag(g_dec_evf_8c38, 1, 0x21, &out, NULL);
-    if (pri > 0 && pri < g_data_8a10) {
-        sceKernelChangeThreadPriority(g_dec_thid_8c30, g_data_8a10);
+    msg[2] = (u32)dst;
+    msg[3] = dst_len;
+    msg[4] = (u32)src;
+    int r = sceKernelSendMbx(g_dec_mbx_943c, msg);
+    if (r < 0) {
+        return r;
     }
-    return (int)g_dec_msg_8c3c[5];
+    r = sceKernelWaitEventFlag(g_dec_evf_9440, 1, 0x21, NULL, NULL);
+    return (r < 0) ? r : (int)msg[5];
 }
 
 /* 0x6a98 */
@@ -2506,161 +3952,598 @@ static NOINLINE int sub_6a98(SceSize args, void *argp)
 {
     (void)args;
     (void)argp;
-    void *msg = NULL;
-    while (sceKernelReceiveMbx(g_dec_mbx_8c34, &msg, NULL) >= 0) {
-        u32 *m = (u32 *)msg;
-        if (m[2] == 0) {
+    u32 *msg = NULL;
+    int r;
+    while ((r = sceKernelReceiveMbx(g_dec_mbx_943c, (void **)&msg, NULL)) >= 0) {
+        u32 dst = msg[2];
+        if (dst == 0) {
             break;
         }
-        int r = sub_1228((void *)m[2], m[3], (const void *)m[4], NULL);
-        m[5] = (u32)r;
-        if (r > 0) {
-            sceKernelDcacheWritebackRange((const void *)m[2], m[3]);
+        u32 cached_addr = dst & ~(3U << 29);
+        if (((0xd3 >> (dst >> 29)) & 1) != 0) {
+            r = sub_1228((void *)dst, msg[4], (const void *)msg[3], NULL);
+            msg[5] = (u32)r;
+        } else {
+            r = sub_1228((void *)cached_addr, msg[4], (const void *)msg[3], NULL);
+            sceKernelDcacheWritebackRange((const void *)cached_addr, msg[4]);
+            msg[5] = (u32)r;
         }
-        sceKernelSetEventFlag(g_dec_evf_8c38, 1);
+        sceKernelSetEventFlag(g_dec_evf_9440, 1);
     }
-    return sceKernelExitThread(0);
+    return sceKernelExitThread(r);
 }
 
 /* 0x6b80 */
 static NOINLINE void sub_6b80(void)
 {
-    for (int i = 0; i < 512; i++) {
-        g_cache_8c5c[i] = -1;
+    for (int i = 0; i < 0xe8; i++) {
+        g_ring0_9480[i].lba = 0;
+        g_ring0_9480[i].valid = 0;
     }
-    g_cache_8c5c[512] = 0;
-    g_cache_8c5c[513] = 0;
+    for (int i = 0; i < 8; i++) {
+        g_ring1_9bc0[i].lba = 0;
+        g_ring1_9bc0[i].valid = 0;
+    }
+    g_ring0_idx_9444 = 0;
+    g_ring1_idx_9448 = 0;
 }
 
 /* 0x6bd4 */
-static NOINLINE int sub_6bd4(int lba, int count, int flag, int *a3, int *t0)
+static NOINLINE int sub_6bd4(u32 lba, u32 count, int skip, int table_sel, u32 *rem_lba, u32 *rem_blks)
 {
-    int idx = sub_7004(lba);
-    sub_703c(lba, count, idx);
-    return sub_6d24(lba, count, flag, a3, t0);
+    u32 aligned_start = 0;
+    u32 aligned_end = 0;
+    if (skip != 0) {
+        return 0;
+    }
+    u32 blks = sub_7004(lba, count, &aligned_start, &aligned_end);
+    int r = sub_6d24(aligned_start, blks, table_sel, rem_lba, rem_blks);
+    if (r != 0) {
+        if (table_sel == 0) {
+            sub_703c(aligned_end, 0);
+        }
+        return 1;
+    }
+    return sub_6d24(aligned_start, blks, 0, rem_lba, rem_blks) != 0;
 }
 
 /* 0x6c9c */
-static NOINLINE int sub_6c9c(int lba, int count, int *a2, int *a3)
+static NOINLINE int sub_6c9c(u32 lba, u32 count, int seek_only, int table_sel)
 {
-    int idx = sub_7004(lba);
-    sub_703c(lba, count, idx);
-    return sub_6e4c(lba, count, idx, a2);
+    (void)seek_only;
+    u32 aligned_start = 0;
+    u32 aligned_end = 0;
+    g_emu_9c24 = 0;
+    u32 blks = sub_7004(lba, count, &aligned_start, &aligned_end);
+    sub_6e4c(aligned_start, (int)blks, table_sel);
+    if (table_sel != 0) {
+        g_emu_9c24 = 0;
+        return 0;
+    }
+    sub_703c(aligned_end, 0);
+    return 0;
 }
 
 /* 0x6d10 */
-static NOINLINE void sub_6d10(int lba)
+static NOINLINE void sub_6d10(u32 lo, u32 hi)
 {
-    g_cache_8c5c[514] = lba;
+    g_ring_elapsed_lo_9450 = lo;
+    g_ring_elapsed_hi_9454 = (int)hi;
 }
 
 /* 0x6d24 */
-static NOINLINE int sub_6d24(int a0, int a1, int a2, int *a3, int *t0)
+static NOINLINE int sub_6d24(u32 start_lba, u32 blks, int table_sel, u32 *rem_lba, u32 *rem_blks)
 {
-    (void)a2;
-    if (a3) {
-        *a3 = a0;
+    u32 off = 0;
+    u32 matched = 0;
+    if (table_sel != 0) {
+        int idx = g_ring1_idx_9448;
+        for (int step = 0; step < 9; step++, idx++) {
+            if (idx >= 8) {
+                idx = 0;
+            }
+            if (g_ring1_9bc0[idx].valid == 1) {
+                u32 target = start_lba + off;
+                if (g_ring1_9bc0[idx].lba == target) {
+                    matched++;
+                    off += 0x10U;
+                    if (matched == blks) {
+                        return 1;
+                    }
+                } else {
+                    if (matched != 0) {
+                        matched = 0;
+                    }
+                }
+                *rem_lba = start_lba + (matched << 4);
+                *rem_blks = blks - matched;
+            }
+        }
+    } else {
+        int idx = g_ring0_idx_9444;
+        for (int step = 0; step < 0xe9; step++, idx++) {
+            if (idx >= 0xe8) {
+                idx = 0;
+            }
+            if (g_ring0_9480[idx].valid == 1) {
+                u32 target = start_lba + off;
+                if (g_ring0_9480[idx].lba == target) {
+                    matched++;
+                    off += 0x10U;
+                    if (matched == blks) {
+                        return 1;
+                    }
+                } else {
+                    if (matched != 0) {
+                        matched = 0;
+                    }
+                }
+                *rem_lba = start_lba + (matched << 4);
+                *rem_blks = blks - matched;
+            }
+        }
     }
-    if (t0) {
-        *t0 = a1;
-    }
-    g_cache_8c5c[506] = a0 + a1;
-    return 0;
+    return (matched == blks) ? 1 : 0;
 }
 
 /* 0x6e4c */
-static NOINLINE int sub_6e4c(int a0, int a1, int a2, int *a3)
+static NOINLINE int sub_6e4c(u32 start_lba, int blks, int table_sel)
 {
-    if (a1 > 0) {
-        g_cache_8c5c[507] = a0 + a1;
+    int full = 0;
+    int off = 0;
+    if (table_sel != 0) {
+        int idx = 0;
+        for (; idx < 8; idx++) {
+            full++;
+            if (g_ring1_9bc0[idx].valid != 1) {
+                full = 0;
+                break;
+            }
+        }
+        if (full != 0) {
+            idx = g_ring1_idx_9448;
+        }
+        if (blks > 0) {
+            for (int rem = blks; rem != 0; rem--, idx++) {
+                if (idx >= 8) {
+                    idx = 0;
+                }
+                g_ring1_idx_9448 = idx;
+                if (full != 0) {
+                    g_ring1_9bc0[idx].lba = start_lba + (u32)off;
+                    g_ring1_9bc0[idx].valid = 1;
+                    off += 0x10;
+                } else if (g_ring1_9bc0[idx].valid != 1) {
+                    g_ring1_9bc0[idx].valid = 1;
+                    g_ring1_9bc0[idx].lba = start_lba + (u32)off;
+                    off += 0x10;
+                    full = 1;
+                }
+            }
+        }
+        g_ring1_idx_9448++;
+        return 0;
     } else {
-        g_cache_8c5c[506] = a0;
+        int idx = 0;
+        for (; idx < 0xe8; idx++) {
+            full++;
+            if (g_ring0_9480[idx].valid != 1) {
+                full = 0;
+                break;
+            }
+        }
+        if (full != 0) {
+            idx = g_ring0_idx_9444;
+        }
+        if (blks > 0) {
+            for (int rem = blks; rem != 0; rem--, idx++) {
+                if (idx >= 0xe8) {
+                    idx = 0;
+                }
+                g_ring0_idx_9444 = idx;
+                if (full != 0) {
+                    g_ring0_9480[idx].lba = start_lba + (u32)off;
+                    g_ring0_9480[idx].valid = 1;
+                    off += 0x10;
+                } else if (g_ring0_9480[idx].valid != 1) {
+                    g_ring0_9480[idx].valid = 1;
+                    g_ring0_9480[idx].lba = start_lba + (u32)off;
+                    off += 0x10;
+                    full = 1;
+                }
+            }
+        }
+        g_ring0_idx_9444++;
+        return 0;
     }
-    if (a3) {
-        *a3 = a2;
-    }
-    return 0;
 }
 
 /* 0x7004 */
-static NOINLINE int sub_7004(int lba)
+static NOINLINE u32 sub_7004(u32 lba, u32 count, u32 *aligned_start, u32 *aligned_end)
 {
-    return (lba >> 4) & 0x1ff;
+    u32 end_blk = (lba + count - 1U) & ~15U;
+    u32 start_blk = lba & ~15U;
+    u32 blks = (start_blk < end_blk) ? (((end_blk - start_blk) >> 4) + 1U) : 1U;
+    *aligned_start = start_blk;
+    *aligned_end = end_blk + 0x10U;
+    return blks;
 }
 
 /* 0x703c */
-static NOINLINE int sub_703c(int lba, int count, int idx)
+static NOINLINE int sub_703c(u32 end_lba, int table_sel)
 {
-    s64 q = sub_1b38((s64)lba + count, 16);
-    int out = (int)q;
-    sub_6e4c(lba, count, idx, &out);
-    return out;
+    int span = 0x40;
+    if (g_ring_elapsed_hi_9454 > 0 || (g_ring_elapsed_hi_9454 == 0 && g_ring_elapsed_lo_9450 > 0x9c3fU)) {
+        u64 elapsed = ((u64)(u32)g_ring_elapsed_hi_9454 << 32) | (u64)g_ring_elapsed_lo_9450;
+        s64 q = sub_1b38((s64)(elapsed - 40000ULL), 8000);
+        int v = (int)q + 0x40;
+        span = (v < 0x3f0) ? v : 0x3f0;
+    }
+    g_emu_9c24 = span;
+    return sub_6e4c(end_lba, span / 16, table_sel);
 }
 
 /* 0x7104 */
-static NOINLINE int sub_7104(void *req)
+static NOINLINE int sub_7104(u32 lba, u32 cnt, int seek_only, int mode, u32 *rem_lba, u32 *rem_blks)
 {
-    u32 *r = (u32 *)req;
-    int lba = (int)r[0];
-    int cnt = (int)r[1];
-    s64 now = sceKernelGetSystemTimeWide();
-    int a3 = 0, t0 = 0;
-    sub_6bd4(lba, cnt, 1, &a3, &t0);
-    sub_6d10(lba);
-    int d = sub_7ca4(lba, cnt);
-    if (d >= 0) {
-        sub_73c0(lba, cnt, d, a3, t0);
-    } else {
-        sub_78d0(lba, cnt, -d, a3, t0);
+    int cross_flags = 0;
+    int hit = 0;
+    if (seek_only == 0) {
+        hit = (sub_6bd4(lba, cnt, 0, mode, rem_lba, rem_blks) != 0);
     }
-    g_emu_time_8c08 = now;
-    return 0;
+    u32 prev_cur = g_emu_8c00;
+    int small_adj = 0;
+    if ((mode & 2) == 0 && hit == 0 && cnt < 0x41U) {
+        u32 d = (lba < prev_cur) ? (prev_cur - lba) : (lba - prev_cur);
+        if (cnt + d < 0x41U && prev_cur != 0) {
+            small_adj = (lba >= prev_cur) ? 1 : 0;
+        }
+    }
+    u32 seek_dist = 0;
+    if (seek_only != 0 || hit == 0) {
+        seek_dist = sub_7ca4(lba, g_emu_9c0c, &cross_flags);
+    }
+    s64 now = sceKernelGetSystemTimeWide();
+    g_emu_time_9c10 = now;
+    if (g_emu_time_8c18 != 0) {
+        u64 diff = (u64)now - (u64)g_emu_time_8c18;
+        sub_6d10((u32)diff, (u32)(diff >> 32));
+    }
+    u32 cur = g_emu_8c00;
+    if (lba == cur) {
+        if ((hit | small_adj) != 0) {
+            sub_78d0(lba, cnt, seek_dist, 1, cross_flags);
+            if (hit == 0 && small_adj != 0) {
+                g_emu_9c0c = lba + cnt + 0x80U;
+            }
+        } else {
+            sub_73c0(lba, cnt, seek_dist, 1, cross_flags, mode);
+        }
+    } else if (lba < cur && (lba >> 4) == (cur >> 4)) {
+        if ((hit | small_adj) != 0) {
+            sub_78d0(lba, cnt, seek_dist, 1, cross_flags);
+            if (hit == 0 && small_adj != 0) {
+                g_emu_9c0c = lba + cnt + 0x80U;
+            }
+        } else {
+            sub_73c0(lba, cnt, seek_dist, 3, cross_flags, mode);
+        }
+    } else if (hit != 0) {
+        sub_78d0(lba, cnt, seek_dist, 1, cross_flags);
+    } else if (small_adj != 0 ||
+               (lba < cur && (lba >> 4) == (cur >> 4)) ||
+               (lba > cur && (lba & 0x0ffffff0U) == (cur >> 4))) {
+        sub_78d0(lba, cnt, seek_dist, 2, cross_flags);
+        if (hit == 0 && small_adj != 0) {
+            g_emu_9c0c = lba + cnt + 0x80U;
+        }
+    } else {
+        sub_73c0(lba, cnt, seek_dist, 3, cross_flags, mode);
+    }
+
+    u32 next_cur = lba + cnt;
+    g_emu_time_8c18 = sceKernelGetSystemTimeWide();
+    g_emu_9c00 = cnt;
+    g_emu_8c00 = next_cur;
+    if (hit == 0) {
+        g_emu_9c08 = (u32)mode;
+        g_emu_9c0c = next_cur + (u32)g_emu_9c24;
+    } else {
+        g_emu_9c08 = (u32)mode | 0xf0000000U;
+    }
+    return hit;
 }
 
 /* 0x73b4 */
-static NOINLINE void sub_73b4(int lba)
+static NOINLINE void sub_73b4(u32 lba)
 {
-    g_emu_lba_8c10 = lba;
+    g_emu_9c0c = lba;
 }
 
 /* 0x73c0 */
-static NOINLINE int sub_73c0(int a0, int a1, int a2, int a3, int t0)
+static NOINLINE void sub_73c0(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_flags, int req_mode)
 {
-    (void)a3;
-    (void)t0;
-    u32 start = sceKernelGetSystemTimeLow();
-    g_data_8a14 = a0 + a1;
-    g_data_8a18 = a2;
-    int delay = (a2 * 100) / (g_data_8a0c ? g_data_8a0c : 1);
-    if (delay > 200) {
-        sceKernelDelayThread((u32)delay);
+    u64 elapsed;
+    if ((u64)g_emu_time_9c10 > (u64)g_emu_time_9c18) {
+        elapsed = (u64)g_emu_time_9c10 - (u64)g_emu_time_9c18;
+    } else {
+        elapsed = ((u64)0 - (u64)g_emu_time_9c10) | (~(u64)g_emu_time_9c18);
+    }
+    if (cnt - 0x81U < 0x80U) {
+        g_data_8a14 = 0x756;
+        g_data_8a18 = 0x1f8;
+    } else if (cnt - 0x41U < 0x40U) {
+        g_data_8a14 = 0x8b8;
+        g_data_8a18 = 0x167;
+    } else {
+        g_data_8a14 = 0x6ed;
+        g_data_8a18 = 0x304;
     }
     sceUmd9660_driver_887C3193();
-    return (int)(sceKernelGetSystemTimeLow() - start);
+    u32 low = sceKernelGetSystemTimeLow();
+    u32 s1 = (u32)g_data_8a18 + low;
+    u32 half = (u32)g_data_8a0c;
+    u32 mult;
+    if (lba <= half) {
+        if (lba < s1) {
+            mult = (u32)g_data_8a14;
+        } else {
+            u32 q = lba / (u32)g_data_8a18;
+            mult = (u32)g_data_8a14 - q;
+            if (mult < 0x3e8U) {
+                mult = 0x3e8U;
+            }
+        }
+    } else {
+        u32 v1 = lba - half;
+        if (v1 < s1) {
+            mult = 0x3e8U;
+        } else {
+            u32 q = v1 / (u32)g_data_8a18;
+            mult = q + 0x3e8U;
+            if (mult < 0x3e8U) {
+                mult = 0x3e8U;
+            }
+            if (mult > (u32)g_data_8a14) {
+                mult = (u32)g_data_8a14;
+            }
+        }
+    }
+
+    u32 factor;
+    if (cnt >= 0x800U) {
+        factor = ((cnt * 5U) >> 10) + 0x3e8U;
+    } else if (cnt >= 0x400U) {
+        factor = ((cnt * 5U) >> 9) + 0x3b6U;
+    } else if (cnt >= 0x200U) {
+        factor = ((cnt * 5U) >> 8) + 0x384U;
+    } else {
+        u32 r31 = low & 0x1fU;
+        if (cnt >= 0x100U) {
+            factor = r31 + 0x35cU;
+        } else if (cnt >= 0x80U) {
+            factor = r31 + 0x348U;
+        } else if (cnt >= 0x40U) {
+            factor = r31 + 0x334U;
+        } else if (cnt >= 0x20U) {
+            factor = r31 + 0x320U;
+        } else if (cnt >= 8U) {
+            factor = r31 + 0x30cU;
+        } else {
+            factor = r31 + 0x2eeU;
+        }
+    }
+
+    u32 xfer = 0;
+    if (factor != 0 || cnt != 0) {
+        u32 v1 = (u32)(((u64)(factor * cnt) * 0x10624dd3ULL) >> 38);
+        xfer = v1 * mult;
+    }
+
+    u32 total;
+    int cf2 = cross_flags & 2;
+    if (mode == 1) {
+        total = (xfer * (u32)g_emu_rate1_9c20) >> 10;
+    } else {
+        xfer += (cnt < 0x80U) ? 0x3bd08U : 0x249f0U;
+        u32 prev_mode = g_emu_9c08;
+        if ((prev_mode & 1U) != 0 && (prev_mode & 0xf0000000U) != 0 && req_mode == 0) {
+            xfer += 0x5000U;
+        }
+        u32 s_us = seek_dist * 5U;
+        if ((cross_flags & 1) != 0) {
+            s_us += 0xc350U;
+        }
+        if (g_emu_9c04 == 0 && cf2 != 0) {
+            if (seek_dist - 0x2a01U <= 0xd5feU) {
+                s_us += 0x60000U;
+            } else if (seek_dist <= 0x10000U) {
+                s_us += 0x28000U;
+            } else {
+                s_us += 0xa0000U;
+            }
+        } else {
+            if ((g_emu_9c04 & 2) != 0 && cf2 == 0) {
+                if (seek_dist < 0x3001U) {
+                    s_us += 0x30000U;
+                } else if (seek_dist <= 0xffffU) {
+                    s_us += 0x80000U;
+                } else if (seek_dist - 0x10001U <= 0xffffU) {
+                    s_us += 0x50000U;
+                } else if (seek_dist <= 0x2ffffU) {
+                    s_us += 0xa0000U;
+                }
+            } else if (seek_dist >= 0x41U) {
+                if (seek_dist - 0x201U < 0x1f0U) {
+                    s_us += 0x15000U;
+                } else if (seek_dist - 0x3f1U < 0xc10U) {
+                    s_us += 0x5000U;
+                } else if (seek_dist - 0x1001U <= 0xefffU) {
+                    s_us += 0x90000U;
+                }
+            }
+        }
+        if (s_us > 0x28847aU) {
+            s_us = 0x28847aU;
+        }
+        total = ((xfer * (u32)g_emu_rate1_9c20) >> 10) + ((s_us * (u32)g_emu_rate2_9c22) >> 10);
+    }
+
+    if (elapsed < (u64)total) {
+        u32 wait_us = total - (u32)elapsed;
+        if (wait_us != 0) {
+            sceKernelDelayThread(wait_us);
+        }
+    }
+    g_emu_9c04 = (cf2 == 0) ? 0 : 2;
 }
 
 /* 0x78d0 */
-static NOINLINE int sub_78d0(int a0, int a1, int a2, int a3, int t0)
+static NOINLINE void sub_78d0(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_flags)
 {
-    (void)a3;
-    (void)t0;
-    u32 start = sceKernelGetSystemTimeLow();
-    g_data_8a14 = a0 + a1;
-    g_data_8a18 = a2;
-    int delay = (a2 * 120) / (g_data_8a0c ? g_data_8a0c : 1);
-    if (delay > 200) {
-        sceKernelDelayThread((u32)delay);
-    }
+    u64 elapsed = (u64)g_emu_time_9c10 - (u64)g_emu_time_9c18;
     sceUmd9660_driver_887C3193();
-    return (int)(sceKernelGetSystemTimeLow() - start);
+    u32 old_8a18 = (u32)g_data_8a18;
+    u32 low = sceKernelGetSystemTimeLow();
+    u32 s3 = old_8a18 + low;
+    if (cnt - 0x81U < 0x80U) {
+        g_data_8a14 = 0x728;
+        g_data_8a18 = 0x213;
+    } else if (cnt - 0x41U < 0x40U) {
+        g_data_8a14 = 0x8d6;
+        g_data_8a18 = 0x15e;
+    } else if (cnt - 0x21U < 0x20U) {
+        g_data_8a14 = 0x6b5;
+        g_data_8a18 = 0x269;
+    } else {
+        g_data_8a18 = 0x23d;
+    }
+
+    u32 half = (u32)g_data_8a0c;
+    u32 mult;
+    if (lba <= half) {
+        if (lba < s3) {
+            mult = (u32)g_data_8a14;
+        } else {
+            u32 q = lba / (u32)g_data_8a18;
+            if ((u32)g_data_8a14 < q) {
+                mult = 0x3e8U;
+            } else {
+                mult = (u32)g_data_8a14 - q;
+                if (mult < 0x3e8U) {
+                    mult = 0x3e8U;
+                }
+            }
+        }
+    } else {
+        u32 v1 = lba - half;
+        if (v1 < s3) {
+            mult = 0x3e8U;
+        } else {
+            u32 q = v1 / (u32)g_data_8a18;
+            mult = q + 0x3e8U;
+            if (mult < 0x3e8U) {
+                mult = 0x3e8U;
+            }
+            if (mult > (u32)g_data_8a14) {
+                mult = (u32)g_data_8a14;
+            }
+        }
+    }
+
+    u32 s6 = 0;
+    u32 factor;
+    if (cnt >= 0x800U) {
+        s6 = (cnt * 5U) >> 10;
+        factor = s6 + 0x3d4U;
+    } else if (cnt >= 0x400U) {
+        s6 = (cnt * 5U) >> 9;
+        factor = s6 + 0x366U;
+    } else if (cnt >= 0x100U) {
+        if (mode == 2) {
+            s6 = (u32)(((int)(cnt * 100U)) / 256) + 0x11170U;
+        }
+        factor = (low & 0x1fU) + 0x352U;
+    } else if (cnt >= 0x80U) {
+        if (mode == 2) {
+            s6 = (u32)(((int)(cnt * 100U)) / 128) + 0x11170U;
+        }
+        factor = 0x320U;
+    } else if (cnt >= 0x40U) {
+        factor = 0x2eeU;
+    } else if (cnt >= 0x20U) {
+        factor = 0x2c6U;
+    } else {
+        factor = 0x280U;
+    }
+
+    u32 t6 = (u32)(((u64)(factor * cnt) * 0x10624dd3ULL) >> 38);
+    u32 xfer = t6 * mult;
+    if (mode == 2) {
+        xfer = (cnt < 0x41U) ? (xfer << 3) : (xfer + s6);
+    }
+    if (g_emu_9c04 != cross_flags) {
+        xfer += (low & 0x4fffU) + 0x1000U;
+    }
+    if (cnt < 0x11U) {
+        xfer += 0x1388U;
+    }
+
+    u32 total;
+    if (mode == 1) {
+        total = (xfer * (u32)g_emu_rate1_9c20) >> 10;
+    } else {
+        u32 s_us = seek_dist * 5U;
+        if (s_us > 0x28847aU) {
+            s_us = 0x28847aU;
+        }
+        if ((cross_flags & 1) != 0) {
+            s_us += 0xc350U;
+        }
+        total = ((xfer * (u32)g_emu_rate1_9c20) >> 10) + ((s_us * (u32)g_emu_rate2_9c22) >> 10);
+    }
+
+    if (elapsed < (u64)total) {
+        u32 wait_us = total - (u32)elapsed;
+        if (wait_us != 0) {
+            sceKernelDelayThread(wait_us);
+        }
+    }
 }
 
 /* 0x7ca4 */
-static NOINLINE int sub_7ca4(int lba, int count)
+static NOINLINE u32 sub_7ca4(u32 lba, u32 prev_lba, int *cross_flags)
 {
-    int lim = g_data_8a0c;
-    if (lim <= 0) {
-        return 0;
+    *cross_flags = 0;
+    u32 ref = g_emu_9c0c;
+    u32 half = (u32)g_data_8a0c;
+    if (ref < lba) {
+        u32 diff = lba - prev_lba;
+        if (lba > half) {
+            if (prev_lba < half) {
+                *cross_flags = (g_emu_8c00 > half) ? 2 : 3;
+                u32 d1 = lba - half;
+                u32 d2 = half - g_emu_9c0c;
+                diff = (d2 < d1) ? (d1 - d2) : (d2 - d1);
+            } else {
+                *cross_flags = 2;
+            }
+        }
+        return diff;
+    } else {
+        u32 diff = prev_lba - lba;
+        if (prev_lba > half) {
+            if (lba < half) {
+                *cross_flags = (g_emu_8c00 > half) ? 1 : 0;
+                u32 d1 = prev_lba - half;
+                u32 d2 = half - lba;
+                diff = (d1 < d2) ? (d2 - d1) : (d1 - d2);
+            } else {
+                *cross_flags = 2;
+            }
+        } else {
+            *cross_flags = 2;
+        }
+        return diff;
     }
-    return (lba + count) - g_emu_lba_8c10;
 }
