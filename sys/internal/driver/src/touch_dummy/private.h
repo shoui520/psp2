@@ -4,6 +4,7 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
+#include <fw.h>
 #include <string.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
@@ -116,13 +117,19 @@ struct virtualState {
 	int lock, plsId;
 	unsigned short generation, padding;
 };
+/* the 3.6x builds place the back panel's sample first, the older 4.00 build after the states */
 struct touchStorage {
+#if !FW_SINCE(0x04000000)
+	struct touchSample back __attribute__((aligned(8)));
+#endif
 	struct touchSample front __attribute__((aligned(8)));
 	SceTouchData emulation[2];
 	struct physicalState physical;
 	struct virtualState virtual;
+#if FW_SINCE(0x04000000)
 	struct touchSample back __attribute__((aligned(8)));
-	int readMutex;
+#endif
+	int readMutex __attribute__((aligned(8)));
 	unsigned padding0;
 	SceTouchData readBuffer[64];
 	int peekMutex;
@@ -136,7 +143,7 @@ extern struct touchStorage storage;
 #define touch storage.physical
 #define pad storage.virtual
 
-_Static_assert(offsetof(struct touchStorage, back) == 0x560, "back buffer layout");
+_Static_assert(offsetof(struct touchStorage, back) == (FW_SINCE(0x04000000) ? 0x560 : 0), "back buffer layout");
 _Static_assert(offsetof(struct touchStorage, virtualSamples) == 0x4e40, "virtual buffers layout");
 _Static_assert(sizeof(SceTouchData) == 0x90, "touch data layout");
 _Static_assert(sizeof(struct touchSample) == 0xd0, "sample layout");

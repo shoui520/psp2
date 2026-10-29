@@ -289,7 +289,7 @@ static int exitProcess(int pid, ProcEventParam *param, void *common) /* name unk
 
 static int updateOwners(unsigned port, struct touchSample *sample, struct touchTracking *tracking) /* name unknown */
 {
-	struct touchProcess *process;
+	struct touchProcess *process, *other;
 	struct touchOwner owner;
 	SceTouchReport *report;
 	struct touchNode *node;
@@ -309,36 +309,39 @@ static int updateOwners(unsigned port, struct touchSample *sample, struct touchT
 		report = &sample->data.report[node->reportIndex];
 		findOwner(port, &report->x, &report->y, &owner);
 		if (owner.pid == -1) {
-			report->info = 1;
+			sample->data.report[node->reportIndex].info = 1;
 			continue;
 		}
 		if (owner.pid == node->owner.pid) {
 			if ((short)node->owner.region == (short)owner.region)
 				continue;
-			report->info = (short)node->owner.region < (short)owner.region ? 1 : 0x100;
-			continue;
-		}
-		if (node->owner.pid == -1)
-			continue;
-		info = 0x100;
-		for (i = 0; i < touch.priorityCount; i++) {
-			if (lookupProcess(touch.priorities[i], touch.plsId, (void **)&process, 0) < 0)
+			info = (short)node->owner.region < (short)owner.region ? 1 : 0x100;
+		} else {
+			if (node->owner.pid == -1)
 				continue;
-			if (!process || process->state == 3)
-				continue;
-			if (touch.priorities[i] == node->owner.pid)
-				break;
-			if (touch.priorities[i] == owner.pid) {
-				info = 1;
-				break;
+			info = 0x100;
+			for (i = 0; i < touch.priorityCount; i++) {
+				if (lookupProcess(touch.priorities[i], touch.plsId, (void **)&other, 0) < 0)
+					continue;
+				if (!other || other->state == 3)
+					continue;
+				if (touch.priorities[i] == node->owner.pid)
+					break;
+				if (touch.priorities[i] == owner.pid) {
+					info = 1;
+					break;
+				}
 			}
 		}
-		report->info = info;
+		sample->data.report[node->reportIndex].info = info;
 	}
 	if (tracking->added)
 		moveNodes(&tracking->added, &tracking->active);
-	for (node = tracking->active; node; node = node->next)
-		sample->owners[node->reportIndex] = node->owner;
+	for (node = tracking->active; node; node = node->next) {
+		sample->owners[node->reportIndex].pid = node->owner.pid;
+		sample->owners[node->reportIndex].region = node->owner.region;
+		sample->owners[node->reportIndex].attr = node->owner.attr;
+	}
 	return 0;
 }
 
