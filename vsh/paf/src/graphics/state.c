@@ -1712,6 +1712,29 @@ int ScePafGraphics_823F7FC5(uint8_t *self)
 	return -2136006143;
 }
 
+int ScePafGraphics_5D9D3B40(const uint8_t *self, int index,
+			    uint32_t *result)
+{
+	if (index > 1) {
+		if (index <= 2) {
+			*result = (int32_t)(int8_t)self[14];
+			return 0;
+		}
+		if (index <= 3) {
+			*result = *(const uint16_t *)(self + 18);
+			return 0;
+		}
+		return -2136005886;
+	}
+	if (index < 0)
+		return -2136005886;
+	if (index == 0)
+		*result = (int32_t)(int8_t)self[12];
+	else
+		*result = (int32_t)(int8_t)self[13];
+	return 0;
+}
+
 int ScePafGraphics_DD80343F(const uint8_t *self, int value)
 {
 	int i;
