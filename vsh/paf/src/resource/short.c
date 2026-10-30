@@ -1,6 +1,7 @@
 /* Small standalone resource-object lifetime and readiness operations. */
 #include <stdint.h>
 #include "../compiler.h"
+#include "../std/new.h"
 
 int ScePafResource_CEED7338(const void *const *self)
 {
@@ -92,6 +93,32 @@ uint32_t **ScePafResource_E2CA0FC4(uint32_t **result,
 			*result = cursor;
 			current += 1;
 		}
+	}
+	return result;
+}
+
+int ScePafResource_946E41E9(uint8_t *self, uint32_t argument)
+{
+	uint32_t *begin = *(uint32_t **)(self + 44);
+	uint32_t *current = begin;
+	uint32_t count = *(uint32_t *)(self + 48);
+	int result = 0;
+
+	*(uint32_t *)(self + 8) = argument;
+	if (begin != begin + count) {
+		do {
+			void *object = (void *)(uintptr_t)*current;
+			result = ((int (**)(void *, uint32_t))*(void **)object)[9](
+				object, argument);
+			if (result)
+				break;
+			current = begin;
+			if (begin) {
+				++begin;
+				++current;
+			}
+		} while (current != *(uint32_t **)(self + 44) +
+				 *(uint32_t *)(self + 48));
 	}
 	return result;
 }
