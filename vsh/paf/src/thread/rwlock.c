@@ -248,6 +248,29 @@ SceUID *ScePafThread_D1D39853(SceUID *self, const char *name,
 	return InitializeSemaphore(self, name, initial, maximum);
 }
 
+/* The native per-core bookkeeping table is indexed by the calling layer. */
+static SceUID threadIdentity[4];
+
+SceUID ScePafThread_C6F80BB3(uint32_t index)
+{
+	return threadIdentity[index];
+}
+
+SceUID ScePafThread_FE2DC4FE(uint32_t index)
+{
+	SceUID id = sceKernelGetThreadId();
+
+	threadIdentity[index] = id;
+	return id;
+}
+
+int ScePafThread_D27FC881(uint32_t index)
+{
+	SceUID recorded = threadIdentity[index];
+
+	return recorded == sceKernelGetThreadId();
+}
+
 unsigned char MutexTryLock(Mutex *self)
 {
 	int32_t result = sceKernelTryLockLwMutex(&self->m_mutex, 1);
