@@ -1588,7 +1588,7 @@ coredump_done:
 				switch (request->type) {
 				COMMAND(0, systemGetConfCmd);
 				COMMAND(4, systemGetRegCmd);
-				COMMAND(6, _setRegister);
+				COMMAND(6, systemSetRegCmd);
 				COMMAND(0x10, systemRdmemCmd);
 				COMMAND(0x12, systemWrmemCmd);
 				COMMAND(0x30, systemGetHwwatchptCmd);

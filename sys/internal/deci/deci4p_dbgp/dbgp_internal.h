@@ -201,6 +201,9 @@ typedef struct ModuleInfoBuf {
 
 _Static_assert(sizeof(ExcpInfoBuf) == 0x314, "debugger exception queue");
 
+/* the size of each of a process's receive, send and work buffers */
+#define DBGP_WORK_BUF_SIZE	0x11000
+
 /* the thread list procGetThreadInfo reads from SceThreadmgr: 192 entries of 0x128 */
 #define DBGP_THREAD_LIST_SIZE	0xde00
 
@@ -621,7 +624,7 @@ int coredumpInfoCreateCoredumpNotification(DbgpProcCB *proc, void *packet,
 /* Command handlers read the packet retained in receive buffer zero. */
 int systemGetConfCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int systemGetRegCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
-int _setRegister(DbgpProcCB *proc, const DbgpPrefix *packet);
+int systemSetRegCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int systemRdmemCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int systemWrmemCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int systemGetHwwatchptCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
