@@ -242,3 +242,38 @@ _Static_assert(offsetof(AudioDevice, port) == 0x558, "port");
 _Static_assert(sizeof(AudioStream) == 0x125c, "stream");
 _Static_assert(sizeof(AudioPacket) == 0x62c, "packet");
 _Static_assert(sizeof(AudioQueue) == 0x12ac, "capture queue");
+
+#define AUDIO_ERROR(name) ((int)USBAUDIO_IN_ERROR_##name)
+
+/* a 16-bit descriptor field, read a byte at a time (little endian) */
+static inline __attribute__((always_inline)) uint16_t readLe16(const uint16_t *field)
+{
+	const uint8_t *p = (const uint8_t *)field;
+
+	return p[0] | p[1] << 8;
+}
+
+static inline __attribute__((always_inline)) int submitIso(int pipe, AudioIso *request,
+							   SceUsbdIsochDoneCallback callback, void *arg)
+{
+	return SceUsbdForDriver_2249BF99(pipe, (void *)request, callback, arg);
+}
+
+/* usbaudio_device.c */
+int initializeAudio(void);
+void debugHook(void);
+int lockAudio(void);
+int unlockAudio(void);
+int lockDevices(void);
+int unlockDevices(void);
+void *allocate(unsigned size);
+void release(void *p);
+int addDevice(unsigned id);
+int removeDevice(unsigned id);
+AudioPort *findPort(unsigned id);
+int getCurrentVolume(unsigned id, int *volume);
+int setCurrentVolume(unsigned id, unsigned value);
+int getMaxVolume(unsigned id, int *volume);
+int getMinVolume(unsigned id, int *volume);
+uint8_t *audioInterface(unsigned id);
+int getDeviceIds(unsigned id, uint16_t *ids);
