@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <arm_neon.h>
 #include "../std/new.h"
+#include "../std/string.h"
 
 int32x4_t *ScePafWidget_73875C21(int32x4_t *result)
 {
@@ -1780,4 +1781,75 @@ uint8_t *ScePafWidget_73D27A1B(uint8_t *self)
 		*(uint32_t *)(self + 664) = 0;
 	}
 	return self;
+}
+
+int ScePafWidget_4ADABE36(uint32_t *self)
+{
+	int result = ScePafResource_598D91C1(self);
+
+	if (result >= 0) {
+		const uint8_t *state = (const uint8_t *)self[8];
+		uint32_t upper = *(const uint32_t *)(state + 640);
+
+		self[30] = *(const uint32_t *)(state + 636);
+		self[31] = upper;
+		return 0;
+	}
+	return result;
+}
+
+int ScePafWidget_670B0492(uint8_t *self)
+{
+	int result = ScePafResource_598D91C1(self);
+
+	if (result >= 0) {
+		const uint8_t *state = *(const uint8_t *const *)(self + 32);
+		uint8_t active = 0;
+
+		if (state[656] & 1)
+			active = (state[656] & 2) != 0;
+		self[120] = active;
+		return 0;
+	}
+	return result;
+}
+
+int ScePafWidget_F9BDDCE4(uint8_t *self)
+{
+	int result = ScePafResource_598D91C1(self);
+
+	if (result >= 0) {
+		const uint8_t *state = *(const uint8_t *const *)(self + 32);
+		uint8_t mode = state[498];
+		int32_t mapped;
+
+		if (mode == 2)
+			mapped = 1;
+		else if (mode == 0)
+			mapped = 0;
+		else
+			mapped = -1;
+		*(int32_t *)(self + 120) = mapped;
+		return 0;
+	}
+	return result;
+}
+
+int ScePafWidget_448CE9C9(uint8_t *self)
+{
+	int result = ScePafResource_598D91C1(self);
+
+	if (result >= 0) {
+		const uint8_t *state = *(const uint8_t *const *)(self + 32);
+		const uint8_t *object = *(const uint8_t *const *)(state + 636);
+
+		if (object) {
+			PafStringCopy((PafString *)(self + 120),
+					(const PafString *)(object + 320));
+			*(uint32_t *)(self + 132) =
+				*(const uint32_t *)(object + 332);
+		}
+		return 0;
+	}
+	return result;
 }
