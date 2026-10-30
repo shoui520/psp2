@@ -266,7 +266,7 @@ void *dsp0VideocodecAllocMemory(unsigned int argument, SceSize size)
 	return SceCodecEngineWrapperForDriver_F9495589(physical);
 }
 
-int dsp0VideocodecInitializeMemory(void *memory)
+__attribute__((noinline)) int dsp0VideocodecInitializeMemory(void *memory)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 	int ret;
@@ -287,7 +287,7 @@ int dsp0VideocodecInitializeMemory(void *memory)
 	return ret;
 }
 
-int dsp0VideocodecQueryMemory(void *command)
+__attribute__((noinline)) int dsp0VideocodecQueryMemory(void *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 	int ret;
@@ -308,7 +308,7 @@ int dsp0VideocodecQueryMemory(void *command)
 	return ret;
 }
 
-int dsp0VideocodecCreateDecoder(void *command)
+__attribute__((noinline)) int dsp0VideocodecCreateDecoder(void *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 	int ret;
@@ -330,7 +330,7 @@ int dsp0VideocodecCreateDecoder(void *command)
 	return ret;
 }
 
-int dsp0VideocodecDeleteDecoder(void *command)
+__attribute__((noinline)) int dsp0VideocodecDeleteDecoder(void *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 	int ret;
@@ -351,7 +351,7 @@ int dsp0VideocodecDeleteDecoder(void *command)
 	return ret;
 }
 
-int dsp0VideocodecQueryDecoderMemory(struct Dsp0VideocodecDecoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecQueryDecoderMemory(struct Dsp0VideocodecDecoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -363,7 +363,7 @@ int dsp0VideocodecQueryDecoderMemory(struct Dsp0VideocodecDecoderCommand *comman
 					      (const unsigned int *)&buffers);
 }
 
-int dsp0VideocodecInitializeDecoder(struct Dsp0VideocodecDecoderCommand *command,
+__attribute__((noinline)) int dsp0VideocodecInitializeDecoder(struct Dsp0VideocodecDecoderCommand *command,
 				   struct Dsp0VideocodecLibraryCommand *library)
 {
 	Dsp0VideocodecRpcBuffers buffers;
@@ -376,7 +376,7 @@ int dsp0VideocodecInitializeDecoder(struct Dsp0VideocodecDecoderCommand *command
 					      (const unsigned int *)&buffers);
 }
 
-int dsp0VideocodecQueryDecoderContext(struct Dsp0VideocodecDecoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecQueryDecoderContext(struct Dsp0VideocodecDecoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -388,7 +388,7 @@ int dsp0VideocodecQueryDecoderContext(struct Dsp0VideocodecDecoderCommand *comma
 					      (const unsigned int *)&buffers);
 }
 
-int dsp0VideocodecInitializeDecoderContext(struct Dsp0VideocodecDecoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecInitializeDecoderContext(struct Dsp0VideocodecDecoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -400,7 +400,7 @@ int dsp0VideocodecInitializeDecoderContext(struct Dsp0VideocodecDecoderCommand *
 					      (const unsigned int *)&buffers);
 }
 
-int dsp0VideocodecDecodePicture(struct Dsp0VideocodecDecoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecDecodePicture(struct Dsp0VideocodecDecoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -412,7 +412,7 @@ int dsp0VideocodecDecodePicture(struct Dsp0VideocodecDecoderCommand *command)
 					      (const unsigned int *)&buffers);
 }
 
-int dsp0VideocodecStopDecoder(struct Dsp0VideocodecDecoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecStopDecoder(struct Dsp0VideocodecDecoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -424,7 +424,7 @@ int dsp0VideocodecStopDecoder(struct Dsp0VideocodecDecoderCommand *command)
 					      (const unsigned int *)&buffers);
 }
 
-int dsp0VideocodecTerminateDecoder(struct Dsp0VideocodecDecoderCommand *command,
+__attribute__((noinline)) int dsp0VideocodecTerminateDecoder(struct Dsp0VideocodecDecoderCommand *command,
 				  struct Dsp0VideocodecLibraryCommand *library)
 {
 	Dsp0VideocodecRpcBuffers buffers;
@@ -552,7 +552,7 @@ __attribute__((noinline)) int dsp0VideocodecTerminateM4vDecoder(Dsp0VideocodecM4
 	return dsp0VideocodecCallM4vDecoderCommand(command, 39, &buffers);
 }
 
-int dsp0VideocodecQueryEncoderMemory(struct Dsp0VideocodecEncoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecQueryEncoderMemory(struct Dsp0VideocodecEncoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -564,7 +564,7 @@ int dsp0VideocodecQueryEncoderMemory(struct Dsp0VideocodecEncoderCommand *comman
 					      (const unsigned int *)&buffers);
 }
 
-int dsp0VideocodecInitializeEncoder(struct Dsp0VideocodecEncoderCommand *command,
+__attribute__((noinline)) int dsp0VideocodecInitializeEncoder(struct Dsp0VideocodecEncoderCommand *command,
 				   struct Dsp0VideocodecLibraryCommand *library)
 {
 	Dsp0VideocodecRpcBuffers buffers;
@@ -577,7 +577,7 @@ int dsp0VideocodecInitializeEncoder(struct Dsp0VideocodecEncoderCommand *command
 					      (const unsigned int *)&buffers);
 }
 
-int dsp0VideocodecEncodePicture(struct Dsp0VideocodecEncoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecEncodePicture(struct Dsp0VideocodecEncoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -589,7 +589,7 @@ int dsp0VideocodecEncodePicture(struct Dsp0VideocodecEncoderCommand *command)
 					      (const unsigned int *)&buffers);
 }
 
-int dsp0VideocodecStopEncoder(struct Dsp0VideocodecEncoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecStopEncoder(struct Dsp0VideocodecEncoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -601,7 +601,7 @@ int dsp0VideocodecStopEncoder(struct Dsp0VideocodecEncoderCommand *command)
 					      (const unsigned int *)&buffers);
 }
 
-int dsp0VideocodecTerminateEncoder(struct Dsp0VideocodecEncoderCommand *command,
+__attribute__((noinline)) int dsp0VideocodecTerminateEncoder(struct Dsp0VideocodecEncoderCommand *command,
 				  struct Dsp0VideocodecLibraryCommand *library)
 {
 	Dsp0VideocodecRpcBuffers buffers;
@@ -1540,4 +1540,84 @@ unlock:
 	sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
 	_unlockProcessSuspendCore();
 	return ret;
+}
+
+int dsp0VideocodecDeleteAvcDecoder(unsigned int handle, SceUID pid)
+{
+	void *storage = NULL;
+	Dsp0VideocodecGlobal *global;
+	Dsp0VideocodecLibraryCommand *library;
+	Dsp0VideocodecDecoder *decoder;
+	Dsp0VideocodecDecoderCommand *command;
+	unsigned int index;
+	int ret;
+
+	if (pid != 0) {
+		if (sceKernelGetRemoteKPLS(pid,
+				dsp0VideocodecLocalStorageId, &storage, 0) < 0)
+			storage = NULL;
+	} else {
+		storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+	}
+#if FW_DEBUG
+	sceKernelAssert(storage != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	global = storage;
+	if (global->initialized != 1)
+		return (int)0x8062020c;
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (ret < 0)
+		return ret;
+	lockFastMutex((SceKernelFastMutex *)global->pMutex);
+	library = global->library;
+	index = handle - 257;
+	decoder = &global->decoders[index];
+	if (index < library->numOfDecoders && decoder->state == 256) {
+		command = decoder->pCommand;
+		if (decoder->status != 2) {
+			decoder->status = 2;
+			dsp0VideocodecStopDecoder(decoder->pCommand);
+		}
+		ret = dsp0VideocodecTerminateDecoder(command, library);
+		decoder->state = 0;
+		if (ret < 0)
+			ret = (int)0x8062020d;
+	} else {
+		ret = (int)0x8062020c;
+	}
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+	_unlockProcessSuspendCore();
+	return ret;
+}
+
+unsigned int dsp0VideocodecAvcDecodeAvailableSize(unsigned int handle)
+{
+	Dsp0VideocodecGlobal *global;
+	Dsp0VideocodecDecoder *decoder;
+	Dsp0VideocodecDecoderCommand *command;
+	unsigned int size, valid;
+
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+#if FW_DEBUG
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	if (global->initialized != 1)
+		return 0x8062020c;
+	decoder = &global->decoders[handle - 257];
+	if (handle - 257 >= global->library->numOfDecoders)
+		return 0x8062020c;
+	if (decoder->state != 256)
+		return 0x8062020c;
+	lockFastMutex((SceKernelFastMutex *)decoder->pMutex);
+	command = decoder->pCommand;
+	valid = command->au[command->auIndex].valid;
+	if (valid != 0) {
+		size = global->param.horizontal * global->param.vertical;
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)decoder->pMutex);
+		return (((3 * size) >> 2) + 255) & 0x7fffff00;
+	}
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)decoder->pMutex);
+	return valid;
 }
