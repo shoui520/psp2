@@ -1007,6 +1007,7 @@ int SceAvcodecForDriver_823E187E(const SceAvcdecCtrl *pCtrl,
 	M4vdecArrayPicture *pWorkPicture);
 int SceAvcodecForDriver_91E94B76(SceAvcdecCtrl *pCtrl);
 int SceAvcodecForDriver_FD805BF1(const SceAvcdecCtrl *pCtrl);
+int SceAvcodecForDriver_A6CAE217(M4vdecPicture *pPictureOut, const M4vdecPicture *pPictureIn);
 int SceAvcodecForDriver_F8BCBE20(SceAvcdecCtrl *pCtrl,
 	SceAvcdecArrayPicture *pArrayPicture, const SceUInt *timeout);
 int SceAvcodecForDriver_E355CAAE(const SceAvcdecCtrl *pCtrl,
