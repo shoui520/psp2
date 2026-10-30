@@ -427,6 +427,52 @@ PafString *ScePafMisc_51E1E267(PafStringVariant *self)
 	return narrow;
 }
 
+int ScePafMisc_6F11BD71(PafStringVariant *self, const uint16_t *other)
+{
+	PafWString *wide = self->wide;
+	const uint16_t *ptr;
+
+	if (!wide) {
+		PafString *narrow = self->narrow;
+
+		if (narrow) {
+			wide = ScePafMisc_A6ABC0B2((const uint8_t *)narrow->ptr, 0);
+			self->wide = wide;
+		}
+	}
+	ptr = wide ? wide->ptr : 0;
+	if (!wide && self->narrow) {
+		wide = ScePafMisc_A6ABC0B2((const uint8_t *)self->narrow->ptr, 0);
+		self->wide = wide;
+	}
+	if (wide && wide->count)
+		return sce_paf_wcscmp(ptr, other) == 0;
+	return *other == 0;
+}
+
+int ScePafMisc_F4176C33(PafStringVariant *self, const char *other)
+{
+	PafString *narrow = self->narrow;
+	const char *ptr;
+
+	if (!narrow) {
+		PafWString *wide = self->wide;
+
+		if (wide) {
+			narrow = ScePafMisc_E690F751(wide->ptr, 0);
+			self->narrow = narrow;
+		}
+	}
+	ptr = narrow ? narrow->ptr : 0;
+	if (!narrow && self->wide) {
+		narrow = ScePafMisc_E690F751(self->wide->ptr, 0);
+		self->narrow = narrow;
+	}
+	if (narrow && narrow->count)
+		return sce_paf_strcmp(ptr, other) == 0;
+	return *other == 0;
+}
+
 PafWString *ScePafMisc_B672E71C(PafStringVariant *self)
 {
 	PafWString *wide = self->wide;
