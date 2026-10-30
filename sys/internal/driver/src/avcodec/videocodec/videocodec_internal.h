@@ -725,6 +725,8 @@ int SceAvcodecForDriver_4F11F915(AvcencCscFrame *pDst,
 int videocodecAvcencInputCsc(VideocodecEncoderFrame *pDst, const AvcencCscFrame *pSrc,
 	unsigned int flags);
 int videocodecAvcencCsc(AvcencCscFrame *pDst, const AvcencCscFrame *pSrc);
+int videocodecDecoderCsc(SceAvcdecFrame *pFrameOut, const SceAvcdecFrame *pFrameIn,
+		unsigned int cscCoefficient, const SceAvcdecArrayPicture *pArrayPicture);
 
 typedef struct AvcencControl {
 	unsigned int handle;

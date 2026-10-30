@@ -2602,3 +2602,183 @@ int videocodecAvcencCsc(AvcencCscFrame *pDst, const AvcencCscFrame *pSrc)
 	return videocodecConvertAvcencError(videocodecCscInline((VideocodecFrame *)&out,
 		(VideocodecFrame *)&in, SCE_AVCDEC_CSC_COEFFICIENT_DEFAULT, videocodecCscLockModes, 0));
 }
+
+/*
+ * Converts a decoder's frame into pFrameOut. The IFTU scales by at most four, so a frame
+ * further from pFrameOut's size, and an interlaced physical frame, is converted through the
+ * work pictures pArrayPicture lends first.
+ */
+int videocodecDecoderCsc(SceAvcdecFrame *pFrameOut, const SceAvcdecFrame *pFrameIn,
+		unsigned int cscCoefficient, const SceAvcdecArrayPicture *pArrayPicture)
+{
+	VideocodecFrame src, work, in;
+	SceAvcdecFrame frame;
+	SceAvcdecPicture *pWork;
+	const SceAvcdecFrame *pFrame;
+	unsigned int alignedWidth, alignedHeight, keepSize, index, count, type;
+	int ret;
+
+	alignedWidth = (pFrameIn->frameWidth + 15) & ~15U;
+	alignedHeight = (pFrameIn->frameHeight + 7) & ~7U;
+	keepSize = pFrameOut->pixelType & VIDEOCODEC_FRAME_KEEP_SIZE;
+	pFrame = pFrameIn;
+	index = 0;
+	count = 1;
+
+	/* an interlaced physical frame is first woven into the first work picture */
+	if (pFrameIn->pixelType == VIDEOCODEC_PIXEL_PHYSICAL &&
+	    (uintptr_t)pFrameIn->pPicture[1] - 2 <= 1 && pArrayPicture != NULL &&
+	    pArrayPicture->numOfElm != 0 && (pWork = pArrayPicture->pPicture[0]) != NULL) {
+		if (pWork->size != sizeof(*pWork))
+			return SCE_AVCDEC_ERROR_INVALID_ARGUMENT_SIZE;
+		if ((pWork->frame.pixelType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER &&
+		    (pWork->frame.pixelType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_RASTER)
+			return SCE_AVCDEC_ERROR_INVALID_PARAM;
+		pWork->frame.horizontalSize = pFrameIn->horizontalSize;
+		pWork->frame.verticalSize = pFrameIn->verticalSize;
+		pWork->frame.frameCropLeftOffset = pFrameIn->frameCropLeftOffset;
+		pWork->frame.frameCropRightOffset = pFrameIn->frameCropRightOffset;
+		pWork->frame.frameCropTopOffset = pFrameIn->frameCropTopOffset;
+		pWork->frame.frameCropBottomOffset = pFrameIn->frameCropBottomOffset;
+		work.frame = pWork->frame;
+		if (pFrameIn->frameWidth <= work.frame.frameWidth &&
+		    pFrameIn->frameHeight <= work.frame.frameHeight) {
+			work.frame.frameWidth = pFrameIn->frameWidth;
+			work.frame.frameHeight = pFrameIn->frameHeight;
+		}
+		src.frame = *pFrameIn;
+		work.frame.pixelType &= ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+		src.frame.pixelType &= ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+		ret = videocodecCscInline(&work, &src, cscCoefficient, videocodecCscLockModes, 1);
+		if (ret < 0)
+			return ret;
+		pFrame = &work.frame;
+		index = 1;
+		count = 2;
+	}
+
+	if (!(keepSize && alignedWidth < pFrameOut->frameWidth &&
+	      pFrameOut->frameWidth > 4 * alignedWidth) &&
+	    !(alignedWidth > pFrameOut->frameWidth && alignedWidth > 4 * pFrameOut->frameWidth) &&
+	    !(keepSize && alignedHeight < pFrameOut->frameHeight &&
+	      pFrameOut->frameHeight > 4 * alignedHeight) &&
+	    !(alignedHeight > pFrameOut->frameHeight && alignedHeight > 4 * pFrameOut->frameHeight)) {
+		src.frame = *pFrame;
+		src.frame.pixelType &= ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+		pFrameOut->pixelType &= ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+		return videocodecCsc((VideocodecFrame *)pFrameOut, &src, cscCoefficient,
+			videocodecCscLockModes);
+	}
+
+	/* scaled in two steps, through a work picture */
+	if (pArrayPicture == NULL || pArrayPicture->numOfElm < count ||
+	    pArrayPicture->pPicture[index] == NULL)
+		return SCE_AVCDEC_ERROR_UNSUPPORT_IMAGE_SIZE;
+	pWork = pArrayPicture->pPicture[index];
+	if (pArrayPicture->numOfElm == 2 && pArrayPicture->pPicture[1] != NULL)
+		pWork = pArrayPicture->pPicture[1];
+	if (pWork->size != sizeof(*pWork))
+		return SCE_AVCDEC_ERROR_INVALID_ARGUMENT_SIZE;
+	if ((pWork->frame.pixelType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER &&
+	    (pWork->frame.pixelType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_RASTER)
+		return SCE_AVCDEC_ERROR_INVALID_PARAM;
+
+	if (pFrame != pFrameIn) {
+		work.frame = pWork->frame;
+		if (pFrame->frameWidth <= work.frame.frameWidth &&
+		    pFrame->frameHeight <= work.frame.frameHeight) {
+			work.frame.frameWidth = pFrame->frameWidth;
+			work.frame.frameHeight = pFrame->frameHeight;
+		}
+		type = pFrame->pixelType;
+		if ((type & 0xEF) != 0 && (type & 0xFF) != SCE_AVCDEC_PIXEL_BGRA8888 &&
+		    (type & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+			return SCE_AVCDEC_ERROR_INVALID_PARAM;
+		if (!VIDEOCODEC_CSC_IS_RGB(work.frame.pixelType & 0xFF) &&
+		    (work.frame.pixelType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+		    (work.frame.pixelType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+			return SCE_AVCDEC_ERROR_INVALID_PARAM;
+		memset(&frame, 0, sizeof(frame));
+		frame.pixelType = type;
+		frame.framePitch = pFrame->framePitch;
+		frame.frameWidth = pFrame->frameWidth;
+		frame.frameHeight = pFrame->frameHeight;
+		frame.horizontalSize = work.frame.horizontalSize = pFrame->horizontalSize;
+		frame.verticalSize = work.frame.verticalSize = pFrame->verticalSize;
+		frame.frameCropLeftOffset = work.frame.frameCropLeftOffset =
+			pFrame->frameCropLeftOffset;
+		frame.frameCropRightOffset = work.frame.frameCropRightOffset =
+			pFrame->frameCropRightOffset;
+		frame.frameCropTopOffset = work.frame.frameCropTopOffset =
+			pFrame->frameCropTopOffset;
+		frame.frameCropBottomOffset = work.frame.frameCropBottomOffset =
+			pFrame->frameCropBottomOffset;
+		frame.opt = pFrame->opt;
+		frame.pPicture[0] = pFrame->pPicture[0];
+		frame.pPicture[1] = pFrame->pPicture[1];
+		if (frame.horizontalSize <= frame.frameWidth &&
+		    frame.verticalSize <= frame.frameHeight) {
+			frame.frameWidth = frame.horizontalSize;
+			frame.frameHeight = frame.verticalSize;
+		}
+		in.frame = frame;
+		work.frame.pixelType &= ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+		ret = videocodecCscInline(&work, &in, cscCoefficient, videocodecCscLockModes, 0);
+	} else {
+		pWork->frame.horizontalSize = pFrameIn->horizontalSize;
+		pWork->frame.verticalSize = pFrameIn->verticalSize;
+		pWork->frame.frameCropLeftOffset = pFrameIn->frameCropLeftOffset;
+		pWork->frame.frameCropRightOffset = pFrameIn->frameCropRightOffset;
+		pWork->frame.frameCropTopOffset = pFrameIn->frameCropTopOffset;
+		pWork->frame.frameCropBottomOffset = pFrameIn->frameCropBottomOffset;
+		work.frame = pWork->frame;
+		if (pFrameIn->frameWidth <= work.frame.frameWidth &&
+		    pFrameIn->frameHeight <= work.frame.frameHeight) {
+			work.frame.frameWidth = pFrameIn->frameWidth;
+			work.frame.frameHeight = pFrameIn->frameHeight;
+		}
+		src.frame = *pFrameIn;
+		src.frame.pixelType &= ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+		work.frame.pixelType &= ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+		ret = videocodecCsc(&work, &src, cscCoefficient, videocodecCscLockModes);
+	}
+	if (ret < 0)
+		return ret;
+
+	/* the work picture into pFrameOut */
+	type = work.frame.pixelType;
+	if ((type & 0xF7) != 0 && (type & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+	    (type & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+		return SCE_AVCDEC_ERROR_INVALID_PARAM;
+	if (!VIDEOCODEC_CSC_IS_RGB(pFrameOut->pixelType & 0xFF) &&
+	    (pFrameOut->pixelType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+	    (pFrameOut->pixelType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+		return SCE_AVCDEC_ERROR_INVALID_PARAM;
+	memset(&frame, 0, sizeof(frame));
+	frame.pixelType = type;
+	frame.framePitch = work.frame.framePitch;
+	frame.frameWidth = work.frame.frameWidth;
+	frame.frameHeight = work.frame.frameHeight;
+	frame.horizontalSize = pFrameOut->horizontalSize = work.frame.horizontalSize;
+	frame.verticalSize = pFrameOut->verticalSize = work.frame.verticalSize;
+	frame.frameCropLeftOffset = pFrameOut->frameCropLeftOffset =
+		work.frame.frameCropLeftOffset;
+	frame.frameCropRightOffset = pFrameOut->frameCropRightOffset =
+		work.frame.frameCropRightOffset;
+	frame.frameCropTopOffset = pFrameOut->frameCropTopOffset =
+		work.frame.frameCropTopOffset;
+	frame.frameCropBottomOffset = pFrameOut->frameCropBottomOffset =
+		work.frame.frameCropBottomOffset;
+	frame.opt = work.frame.opt;
+	frame.pPicture[0] = work.frame.pPicture[0];
+	frame.pPicture[1] = work.frame.pPicture[1];
+	if (frame.horizontalSize <= frame.frameWidth && frame.verticalSize <= frame.frameHeight) {
+		frame.frameWidth = frame.horizontalSize;
+		frame.frameHeight = frame.verticalSize;
+	}
+	in.frame = frame;
+	in.frame.pixelType = type & ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+	pFrameOut->pixelType &= ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+	return videocodecCsc((VideocodecFrame *)pFrameOut, &in, cscCoefficient,
+		videocodecCscLockModes);
+}
