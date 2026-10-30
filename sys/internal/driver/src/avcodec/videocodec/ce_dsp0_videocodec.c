@@ -163,21 +163,21 @@ int dsp0VideocodecCallEncoderCommand(Dsp0VideocodecEncoderCommand *command,
 	}
 	physicalStream = command->streamAddress;
 	if (physicalStream != 0 && stream != 0) {
-		address = command->streamWriteAddress;
+		address = command->headers[0].address;
 		if (address != 0 && stream <= address && address < streamSize + stream)
 			address = physicalStream - stream + address;
 		else
 			address = 0;
-		command->streamWriteAddress = address;
-		address = command->streamMarkAddress;
+		command->headers[0].address = address;
+		address = command->headers[1].address;
 		if (address != 0 && stream <= address && address < streamSize + stream)
 			address = physicalStream - stream + address;
 		else
 			address = 0;
-		command->streamMarkAddress = address;
+		command->headers[1].address = address;
 	} else {
-		command->streamWriteAddress = 0;
-		command->streamMarkAddress = 0;
+		command->headers[0].address = 0;
+		command->headers[1].address = 0;
 	}
 	if (command->pEncodeResult != NULL)
 		command->pEncodeResult->streamAddress = 0;
@@ -204,24 +204,24 @@ int dsp0VideocodecCallEncoderCommand(Dsp0VideocodecEncoderCommand *command,
 	command->picture[0].address = picture[0];
 	command->picture[1].address = picture[1];
 	if (mapped) {
-		address = command->streamWriteAddress;
+		address = command->headers[0].address;
 		if (address != 0 && physicalStream <= address &&
 		    address < physicalStream + streamSize)
 			address = address + stream - physicalStream;
 		else
 			address = 0;
-		command->streamWriteAddress = address;
-		address = command->streamMarkAddress;
+		command->headers[0].address = address;
+		address = command->headers[1].address;
 		if (address != 0 && physicalStream <= address &&
 		    address < physicalStream + streamSize)
 			address = address + stream - physicalStream;
 		else
 			address = 0;
 	} else {
-		command->streamWriteAddress = 0;
+		command->headers[0].address = 0;
 		address = 0;
 	}
-	command->streamMarkAddress = address;
+	command->headers[1].address = address;
 	command->pEncodeResult = result;
 	if (command->pEncodeResult != NULL &&
 	    command->pEncodeResult->streamAddress != 0) {
@@ -2157,5 +2157,163 @@ int dsp0VideocodecM4vDecodeFlush(unsigned int handle)
 			break;
 	} while (numOfOutput != 0);
 	sceKernelUnlockFastMutex((SceKernelFastMutex *)decoder->pMutex);
+	return ret;
+}
+
+int dsp0VideocodecQueryEncoderMemSize(const Dsp0VideocodecEncoderInitParam *param,
+				      SceSize *streamSize, SceSize *bufferSize,
+				      SceSize *workSize)
+{
+	Dsp0VideocodecGlobal *global;
+	Dsp0VideocodecEncoderCommand *command;
+	int ret;
+
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+#if FW_DEBUG
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	if (streamSize == NULL || param == NULL)
+		return (int)0x80620209;
+	if (workSize == NULL || bufferSize == NULL)
+		return (int)0x80620209;
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (ret < 0)
+		return ret;
+	lockFastMutex((SceKernelFastMutex *)global->pMutex);
+	ret = dsp0VideocodecCheckEncoderInitParam(param);
+	if (ret >= 0) {
+		command = dsp0VideocodecAllocMemory(0, sizeof(*command));
+		if (command != NULL) {
+			memset(command, 0, sizeof(*command));
+			ret = dsp0VideocodecQueryEncoderMemorySize(command, param,
+					streamSize, bufferSize, workSize);
+			SceCodecEngineWrapperForDriver_3C5E9CC3(0, command,
+								sizeof(*command));
+			*bufferSize += 2 * ((((3 * param->alignedVertical *
+					       param->pitch) >> 1) + 255) & ~255);
+		} else {
+			ret = (int)0x80620203;
+		}
+	}
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+	_unlockProcessSuspendCore();
+	return ret;
+}
+
+int dsp0VideocodecCreateEncoder(unsigned int codecType, unsigned int *pHandle,
+				Dsp0VideocodecEncoderParam *param)
+{
+	SceSize streamSize = 0, bufferSize = 0, workSize = 0;
+	Dsp0VideocodecGlobal *global;
+	const Dsp0VideocodecEncoderInitParam *initParam;
+	Dsp0VideocodecLibraryCommand *library;
+	Dsp0VideocodecEncoder *encoder;
+	Dsp0VideocodecEncoderCommand *command;
+	SceSize frameSize;
+	unsigned int index;
+	int i, ret;
+
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+#if FW_DEBUG
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	if (codecType != 1)
+		return (int)0x80620201;
+	if (global->initialized != 1)
+		return (int)0x8062020c;
+	if (param == NULL || pHandle == NULL || param->bufferAddress == 0 ||
+	    param->streamAddress == 0 || param->pInitParam == NULL)
+		return (int)0x80620209;
+	if (param->parameter.bitRate[0] < 32000 ||
+	    param->parameter.bitRate[1] < 32000 ||
+	    param->parameter.cpbSize < 80000 ||
+	    param->parameter.gopLength - 1 >= 300 ||
+	    param->parameter.bitRate[0] > 20000000 ||
+	    param->parameter.bitRate[1] > 20000000 ||
+	    param->parameter.cpbSize > 12533760)
+		return (int)0x80620201;
+	if (param->parameter.timeScale != 0 &&
+	    param->parameter.timeScale < 2 * param->parameter.numUnitsInTick)
+		return (int)0x80620201;
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (ret < 0)
+		return ret;
+	lockFastMutex((SceKernelFastMutex *)global->pMutex);
+	initParam = param->pInitParam;
+	ret = dsp0VideocodecCheckEncoderInitParam(initParam);
+	if (ret < 0)
+		goto unlock;
+	library = global->library;
+	encoder = NULL;
+	for (i = 0; i < library->numOfEncoders; i++) {
+		if (global->encoders[i].state == 0) {
+			encoder = &global->encoders[i];
+			index = i + 1;
+			break;
+		}
+	}
+	if (encoder == NULL) {
+		ret = (int)0x8062020e;
+		goto unlock;
+	}
+	command = encoder->pCommand;
+	encoder->status = 2;
+	memset(command, 0, 404);
+	command->libraryToken = library->libraryToken;
+	ret = dsp0VideocodecQueryEncoderMemorySize(command, initParam,
+			&streamSize, &bufferSize, &workSize);
+	encoder->param = *initParam;
+	frameSize = (((3 * initParam->alignedVertical * initParam->pitch) >> 1) +
+		     255) & ~255;
+	if (ret < 0 || param->bufferSize < bufferSize + 2 * frameSize ||
+	    param->streamSize < streamSize) {
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+		_unlockProcessSuspendCore();
+		return (int)0x80620201;
+	}
+	encoder->picture[2].size = param->streamSize;
+	encoder->picture[2].address = param->streamAddress;
+	if (param->streamAddress == 0) {
+		ret = (int)0x80620203;
+		goto unlock;
+	}
+	encoder->picture[0].address = param->bufferAddress + bufferSize;
+	encoder->picture[0].size = frameSize;
+	encoder->picture[1].size = frameSize;
+	encoder->picture[1].address = param->bufferAddress + bufferSize + frameSize;
+	command->contextAddress = encoder->contextAddress;
+	command->streamAddress = param->streamAddress;
+	command->coprocessorBufferAddress[0] = encoder->coprocessorBufferAddress[0];
+	command->coprocessorBufferAddress[1] = encoder->coprocessorBufferAddress[1];
+	command->streamSize = param->streamSize;
+	command->pEncodeResult = encoder->pEncodeResult;
+	command->bufferAddress = param->bufferAddress;
+	command->bufferSize = bufferSize;
+	command->coprocessorNalState = 1;
+	command->parameter = param->parameter;
+	for (i = 0; i < 2; i++) {
+		memset(&command->picture[i], 0, sizeof(command->picture[i]));
+		command->picture[i].valid = 1;
+		command->picture[i].address = encoder->picture[i].address;
+		command->picture[i].alignedHorizontal = initParam->alignedHorizontal;
+		command->picture[i].alignedVertical = initParam->alignedVertical;
+		command->picture[i].lumaPitch = initParam->pitch;
+		command->picture[i].chromaPitch = initParam->pitch;
+	}
+	ret = dsp0VideocodecInitializeEncoder(command, library);
+	if (ret < 0)
+		goto unlock;
+	encoder->state = 4096;
+	encoder->pictureStatus = 1;
+	command->picture[0].valid = 1;
+	command->picture[1].valid = encoder->pictureStatus;
+	*pHandle = index + 4096;
+	param->headers[0] = command->headers[0];
+	param->headers[1] = command->headers[1];
+unlock:
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+	_unlockProcessSuspendCore();
 	return ret;
 }

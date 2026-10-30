@@ -365,8 +365,25 @@ typedef struct Dsp0VideocodecNalUnit {
 
 typedef struct Dsp0VideocodecInputPicture {
 	uintptr_t address;
-	unsigned char coprocessorInfo[28];
+	unsigned char coprocessorInfo[12];
+	unsigned short alignedHorizontal;
+	unsigned short alignedVertical;
+	unsigned short lumaPitch;
+	unsigned short chromaPitch;
+	unsigned char valid;
+	unsigned char coprocessorState[7];
 } Dsp0VideocodecInputPicture;
+
+typedef struct AvcencEncoderParameter {
+	unsigned int bitRate[2];
+	SceSize cpbSize;
+	unsigned int gopLength;
+	unsigned int numUnitsInTick;
+	unsigned int timeScale;
+} AvcencEncoderParameter;
+
+_Static_assert(sizeof(AvcencEncoderParameter) == 24,
+	       "AVC encoder parameter ABI");
 
 /* what an AVC encoder is created for (64 bytes; checked by dsp0VideocodecCheckEncoderInitParam) */
 typedef struct Dsp0VideocodecEncoderInitParam {
@@ -423,14 +440,12 @@ typedef struct Dsp0VideocodecEncoderCommand {
 	uintptr_t bufferAddress;
 	SceSize bufferSize;		/* frame memory, when queried */
 	SceSize workSize;		/* work memory, when queried */
-	uintptr_t streamWriteAddress;
-	unsigned int coprocessorStreamState[2];
-	uintptr_t streamMarkAddress;
-	unsigned char coprocessorRateControl[32];
+	Dsp0VideocodecNalUnit headers[2];	/* SPS and PPS */
+	AvcencEncoderParameter parameter;
 	Dsp0VideocodecEncodeResult *pEncodeResult;
 	unsigned int coprocessorNalState;
 	Dsp0VideocodecNalUnit nal[12];
-	unsigned int coprocessorPictureState[2];
+	uintptr_t coprocessorBufferAddress[2];	/* physical */
 	unsigned int pictureIndex;
 	Dsp0VideocodecInputPicture picture[2];
 	unsigned char coprocessorState[140];
@@ -440,6 +455,8 @@ _Static_assert(sizeof(Dsp0VideocodecEncoderCommand) == 512, "DSP0 encoder comman
 _Static_assert(offsetof(Dsp0VideocodecEncoderCommand, vui) == 68, "DSP0 encoder VUI ABI");
 _Static_assert(offsetof(Dsp0VideocodecEncoderCommand, streamAddress) == 76,
 	       "DSP0 encoder stream ABI");
+_Static_assert(offsetof(Dsp0VideocodecEncoderCommand, parameter) == 120,
+	       "DSP0 encoder rate control ABI");
 _Static_assert(offsetof(Dsp0VideocodecEncoderCommand, pEncodeResult) == 144,
 	       "DSP0 encode result ABI");
 _Static_assert(offsetof(Dsp0VideocodecEncoderCommand, picture) == 308,
@@ -506,14 +523,27 @@ typedef struct Dsp0VideocodecEncoder {
 	Dsp0VideocodecEncoderPicture picture[3];
 	struct ThreadmgrFastMutex mutex;
 	struct ThreadmgrFastMutex *pMutex;
-	unsigned int coprocessorState[2];
-	SceSize maxSize[3];
-	unsigned char encodeState[52];
+	unsigned int pictureStatus;
+	Dsp0VideocodecEncoderInitParam param;
+	int status;				/* 2 while it is created */
 } Dsp0VideocodecEncoder;
 
 _Static_assert(sizeof(Dsp0VideocodecEncoder) == 188, "DSP0 encoder slot ABI");
 _Static_assert(offsetof(Dsp0VideocodecEncoder, mutex) == 48, "DSP0 encoder mutex ABI");
-_Static_assert(offsetof(Dsp0VideocodecEncoder, maxSize) == 124, "DSP0 encoder sizes ABI");
+_Static_assert(offsetof(Dsp0VideocodecEncoder, param) == 120, "DSP0 encoder parameters ABI");
+
+/* what a DSP0 encoder is created with; it returns the stream's SPS and PPS */
+typedef struct Dsp0VideocodecEncoderParam {
+	uintptr_t streamAddress;
+	SceSize streamSize;
+	uintptr_t bufferAddress;
+	SceSize bufferSize;
+	const Dsp0VideocodecEncoderInitParam *pInitParam;
+	Dsp0VideocodecNalUnit headers[2];
+	AvcencEncoderParameter parameter;
+} Dsp0VideocodecEncoderParam;
+
+_Static_assert(sizeof(Dsp0VideocodecEncoderParam) == 68, "DSP0 encoder create ABI");
 
 typedef struct Dsp0VideocodecInitParam {
 	unsigned int horizontal;
@@ -567,17 +597,6 @@ typedef struct AvcencCscFrame {
 	void *pPicture[2];
 	unsigned int encodeMode;
 } AvcencCscFrame;
-
-typedef struct AvcencEncoderParameter {
-	unsigned int bitRate[2];
-	SceSize cpbSize;
-	unsigned int gopLength;
-	unsigned int numUnitsInTick;
-	unsigned int timeScale;
-} AvcencEncoderParameter;
-
-_Static_assert(sizeof(AvcencEncoderParameter) == 24,
-	       "AVC encoder parameter ABI");
 
 _Static_assert(sizeof(AvcencCscFrame) == 48, "AVC encoder CSC frame ABI");
 _Static_assert(offsetof(AvcencCscFrame, pPicture) == 36,
