@@ -9,6 +9,11 @@ typedef struct BbmcHomeNetworkInfo {
 	char description[68];
 } BbmcHomeNetworkInfo;
 
+/* name unknown: the IMEI string, copied whole into IdStorage leaf 0x113 */
+typedef struct BbmcImeiString {
+	char digits[32];
+} BbmcImeiString;
+
 typedef struct BbmcDeviceInformation {
 	char manufacturer[33];
 	SceUInt8 reservedManufacturer[3];
@@ -20,7 +25,7 @@ typedef struct BbmcDeviceInformation {
 	SceUInt8 reservedMsisdn[3];
 	char esn[33];
 	SceUInt8 reservedEsn[3];
-	char imei[32];
+	BbmcImeiString imei;
 	char meid[33];
 	SceUInt8 reservedMeid[3];
 	char iccid[21];

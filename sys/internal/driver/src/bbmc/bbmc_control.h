@@ -103,7 +103,8 @@ struct BbmcControl {
 	BbmcSetupValue setupValue;
 	SceUInt16 versionFamily;
 	SceUInt16 versionBuild;
-	SceUInt8 versionRevision[3];
+	SceUInt16 versionRevision;
+	SceUInt8 versionPatch;
 	SceUInt16 compatibleVersion;
 	SceUInt8 replyInterface;
 	SceUInt8 uartMode;
@@ -137,10 +138,10 @@ struct BbmcControl {
 	SceUInt32 powerTransitionBusy;
 	SceUInt32 registrationPending;
 	SceUInt32 defaultProfile;
-	SceUInt32 attachBusy;
+	SceUInt32 networkScanState;
 	SceUInt32 pendingPacketRequest;
 	SceUInt32 attachChangeBusy;
-	SceUInt32 detachBusy;
+	SceUInt32 networkScanAbortBusy;
 	SceUInt32 forceOperationMode;
 	BbmcUpdateWork updateWork;
 	SceInt32 lastError;
@@ -149,10 +150,10 @@ struct BbmcControl {
 	SceInt32 storedImagesResult;
 	SceUInt32 firmwarePreferenceState;
 	SceInt32 firmwarePreferenceResult;
-	SceUInt32 setFirmwarePreferenceState;
-	SceInt32 setFirmwarePreferenceResult;
 	SceUInt32 firmwareImageState;
 	SceInt32 firmwareImageResult;
+	SceUInt32 setFirmwarePreferenceState;
+	SceInt32 setFirmwarePreferenceResult;
 	SceUInt32 downloadImageCount;
 	SceUInt32 firstDownloadImageType;
 	SceUInt32 secondDownloadImageType;

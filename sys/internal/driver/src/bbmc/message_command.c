@@ -1,6 +1,10 @@
 /* SceBbmc message packet allocation and ownership. */
 #include <stddef.h>
+#include <sysmem/debug.h>
 #include "bbmc_message.h"
+#include "bbmc_control.h"
+#include "bbmc_mailbox.h"
+#include "bbmc_memory.h"
 
 _Static_assert(sizeof(BbmcStringPairList) == 108, "string pair list size");
 _Static_assert(sizeof(BbmcMessage) == 124, "message packet size");
@@ -68,3 +72,47 @@ void msgFreeMsgPacket(BbmcControl *control, BbmcMessage *message)
 	bbmcFree(message);
 }
 
+int msgSendMsgPacket(BbmcControl *control, BbmcMessage *message)
+{
+	int ret;
+
+	if (message == NULL || control == NULL)
+		SCE_PANIC(178);
+	ret = bbmcSendMailbox(control->mailbox, &message->queue);
+	if (ret < 0)
+		SCE_PANIC(186);
+	return ret;
+}
+
+/* a message with no body: allocates it with the command alone and posts it */
+int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command)
+{
+	BbmcMessage *message;
+	int ret;
+
+	if (control == NULL)
+		return 0x80330002;
+	message = bbmcAlloc(sizeof(*message), 0);
+	if (message == NULL)
+		return 0x80330005;
+	message->command = command;
+	ret = bbmcSendMailbox(control->mailbox, &message->queue);
+	if (ret < 0)
+		bbmcFree(message);
+	return ret;
+}
+
+/* name unknown: waits without a timeout for the next message of the manager thread */
+int msgReceiveMsgPacket(BbmcControl *control, BbmcMessage **message)
+{
+	BbmcQueueEntry *entry = NULL;
+	int ret;
+
+	if (message == NULL || control == NULL)
+		return 0x80330002;
+	*message = NULL;
+	ret = bbmcReceiveMailbox(control->mailbox, &entry, NULL);
+	if (ret >= 0)
+		*message = (BbmcMessage *)entry;
+	return ret;
+}

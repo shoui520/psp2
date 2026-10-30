@@ -289,7 +289,7 @@ int bbcmdReadInformationResponse(BbcmdRequest *request,
 						COPY_INFORMATION_STRING(esn);
 						break;
 					case 17:
-						COPY_INFORMATION_STRING(imei);
+						COPY_INFORMATION_STRING(imei.digits);
 						break;
 					case 18:
 						COPY_INFORMATION_STRING(meid);

@@ -77,3 +77,4 @@ int bbmcFinalizeUsbPacketInterface(void);
 int bbmcUnregisterNetworkInterface(void);
 int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context);
 int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context);
+int DisconnectNetwork(void);

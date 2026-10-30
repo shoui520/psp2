@@ -21,11 +21,16 @@ typedef struct BbmcUnblockPinParam {
 	SceUInt8 reservedTail;
 } BbmcUnblockPinParam;
 
+/* name unknown: a control key, copied whole */
+typedef struct BbmcControlKey {
+	char digits[20];
+} BbmcControlKey;
+
 typedef struct BbmcControlKeyParam {
 	SceUInt32 featureId;
 	SceUInt8 controlKeyLength;
 	SceUInt8 reserved[3];
-	char controlKey[20];
+	BbmcControlKey controlKey;
 } BbmcControlKeyParam;
 
 _Static_assert(sizeof(BbmcPinStatus) == 12, "PIN status size");

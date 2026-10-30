@@ -95,12 +95,12 @@ typedef struct BbmcPinMessage {
 typedef struct BbmcFirmwareMessage {
 	SceInt32 storedImagesResult;
 	SceInt32 firmwarePreferenceResult;
-	SceInt32 setFirmwarePreferenceResult;
 	SceInt32 firmwareImageResult;
+	SceInt32 setFirmwarePreferenceResult;
 	QmiStoredImages *storedImages;
 	QmiFirmwarePreference *firmwarePreference;
-	const QmiSetFirmwarePreference *setFirmwarePreference;
 	const QmiFirmwareImage *firmwareImage;
+	const QmiSetFirmwarePreference *setFirmwarePreference;
 	SceUInt32 imageCount;
 	SceUInt32 firstImageType;
 	SceUInt32 secondImageType;
@@ -169,9 +169,9 @@ _Static_assert(sizeof(BbmcFirmwareMessage) == 44, "firmware message family size"
 _Static_assert(offsetof(BbmcFirmwareMessage, storedImages) == 16, "stored images output");
 _Static_assert(offsetof(BbmcFirmwareMessage, firmwarePreference) == 20,
 	"firmware preference output");
-_Static_assert(offsetof(BbmcFirmwareMessage, setFirmwarePreference) == 24,
-	"firmware preference input");
-_Static_assert(offsetof(BbmcFirmwareMessage, firmwareImage) == 28, "firmware image input");
+_Static_assert(offsetof(BbmcFirmwareMessage, firmwareImage) == 24,
+	"firmware image input");
+_Static_assert(offsetof(BbmcFirmwareMessage, setFirmwarePreference) == 28, "firmware preference input");
 _Static_assert(offsetof(BbmcFirmwareMessage, imageCount) == 32, "image completion count");
 _Static_assert(offsetof(BbmcFirmwareMessage, firstImageType) == 36, "first image type");
 _Static_assert(offsetof(BbmcFirmwareMessage, secondImageType) == 40, "second image type");
@@ -223,6 +223,12 @@ _Static_assert(sizeof(BbmcNetworkStopMessage) == 8, "network stop message size")
 _Static_assert(offsetof(BbmcNetworkStopMessage, networkHandle) == 4,
 	"network stop handle");
 
+/* name unknown: command 113 sets (set 1) or clears the packet interface control flags */
+typedef struct BbmcControlFlagMessage {
+	SceUInt32 set;
+	SceUInt32 mask;
+} BbmcControlFlagMessage;
+
 typedef union BbmcMessageBody {
 	SceInt32 commandResult;
 	BbmcSmsListOutput smsListOutput;
@@ -235,6 +241,11 @@ typedef union BbmcMessageBody {
 	BbmcSmsMessage smsMessage;
 	BbmcControlKeyReply controlKeyReply;
 	BbmcChannelRatesMessage channelRatesMessage;
+	BbmcControlFlagMessage controlFlag;
+	const struct BbmcTerminalResponse *terminalResponse;
+	const struct QmiCat2CommandOptions *envelopeOptions;
+	SceUInt32 refreshResponse;
+	const struct BbmcSimFile *simFile;
 	BbmcNetworkStartMessage networkStart;
 	BbmcNetworkStopMessage networkStop;
 	BbmcUpdatePackage updatePackage;
@@ -263,6 +274,8 @@ typedef struct BbmcMessage {
 BbmcMessage *msgAllocMsgPacket(BbmcControl *control, SceUInt32 command);
 void msgFreeMsgPacket(BbmcControl *control, BbmcMessage *message);
 int msgSendMsgPacket(BbmcControl *control, BbmcMessage *message);
+int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
+int msgReceiveMsgPacket(BbmcControl *control, BbmcMessage **message);
 
 /* No surviving caller: these are the three words read by the forwarding helper. */
 typedef struct BbmcNotificationArgs {

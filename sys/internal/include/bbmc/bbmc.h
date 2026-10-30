@@ -43,7 +43,25 @@ _Static_assert(offsetof(BbmcDriverInfo, targetState) == 4 &&
 	offsetof(BbmcDriverInfo, secondBootReply) == 12,
 	"BBMC driver information layout");
 
+/* name unknown: the network's last reject cause and reason, as the caller's
+ * byte buffer receives them */
+typedef struct __attribute__((packed)) BbmcRejectCause {
+	SceUInt32 cause;
+	SceUInt32 reason;
+} BbmcRejectCause;
+
 struct BbmcNetworkInfo;
+struct BbmcNetworkScanInfo;
+struct BbmcCallEndReason;
+struct BbmcProactiveCmd;
+struct BbmcTerminalResponse;
+struct QmiCat2CommandOptions;
+struct BbmcFileRefreshDetail;
+struct BbmcSimFile;
+struct BbmcSimContentInfo;
+struct BbmcControlKeyParam;
+struct QmiIndexedResponse;
+struct BbmcModemConfigurationLeaf;
 struct BbmcUnblockPinParam;
 struct BbmcStringPair;
 struct BbmcStringSet;
@@ -52,6 +70,32 @@ struct BbmcStringPairList;
 /* bbmc.c */
 int SceBbmcForDriver_D98DB926(void);
 int SceBbmcForDriver_D16D0845(void);
+int SceBbmcForDriver_EBC5D3DB(int subscriberId);
+int SceBbmcForDriver_503C7E0B(int subscriberId, struct BbmcNetworkScanInfo *scan);
+int SceBbmcForDriver_739274F3(int subscriberId);
+int SceBbmcForDriver_75FA68D3(int subscriberId, SceInt32 attach);
+int SceBbmcForDriver_3D27000A(int subscriberId);
+int SceBbmcForDriver_BF550F4A(int subscriberId, struct BbmcCallEndReason *reason);
+int SceBbmcForDriver_FB3DA35E(int subscriberId, SceUInt32 flags);
+int SceBbmcForDriver_7EA964B6(int subscriberId, SceUInt32 flags);
+int SceBbmcForDriver_BC3C8942(int subscriberId, SceUInt32 *flags);
+int SceBbmcForDriver_E09808A2(int subscriberId, SceUInt32 *bearer);
+int SceBbmcForDriver_A9CF664F(SceInt32 *transition);
+int SceBbmcForDriver_399EF002(int subscriberId, struct BbmcProactiveCmd *command);
+int SceBbmcForDriver_93E5345A(int subscriberId, const struct BbmcTerminalResponse *response);
+int SceBbmcForDriver_F4C8482D(int subscriberId, const struct QmiCat2CommandOptions *options);
+int SceBbmcForDriver_2930DB51(int subscriberId, struct BbmcFileRefreshDetail *detail);
+int SceBbmcForDriver_009C73D2(int subscriberId, SceUInt32 response);
+int SceBbmcForDriver_D288E771(int subscriberId, const struct BbmcSimFile *file);
+int SceBbmcForDriver_24EE6E9C(int subscriberId, struct BbmcSimContentInfo *content);
+int SceBbmcForDriver_683D19BF(int subscriberId, const struct BbmcControlKeyParam *param);
+int SceBbmcForDriver_6AD4053A(int subscriberId, const struct BbmcControlKeyParam *param);
+int SceBbmcForDriver_3D06FDB0(int subscriberId, SceUInt32 featureId, struct QmiIndexedResponse *status);
+int SceBbmcForDriver_07ADDA90(int subscriberId, struct BbmcModemConfigurationLeaf *leaf);
+int SceBbmcForDriver_FCF6A1EA(int subscriberId, SceUInt32 *version);
+int SceBbmcForDriver_92D7C12C(int subscriberId, BbmcRejectCause *cause);
+int SceBbmcForDriver_864E6CA0(int subscriberId, SceUInt32 *value);
+int SceBbmcForDriver_B17A056F(int subscriberId, char *revision, SceSize size);
 int sceBbmcGetNetworkInfoForDriver(struct BbmcNetworkInfo *info);
 int sceBbmcSubscribeFeatureIdForDriver(BbmcSubscribeFeatureIdParam *parameters);
 int sceBbmcUnsubscribeFeatureForDriver(int subscriberId);
@@ -82,6 +126,7 @@ int sceBbmcDLQDownloadSafeImageForDriver(int subscriberId, const struct BbmcStri
 int sceBbmcDLQDownloadSlotImageForDriver(int subscriberId,
 	const struct BbmcStringPairList *parameters);
 int sceBbmcDLGetSwdlErrorForDriver(int subscriberId, SceInt32 *error);
+int SceBbmcForDriver_B7E650A9(int subscriberId);
 int sceBbmcDLQConfirmChangePartitionForDriver(int subscriberId);
 int sceBbmcDLUpdaterStartForDriver(int subscriberId, BbmcUpdatePackage *package);
 int sceBbmcDLUpdaterContinueForDriver(int subscriberId, BbmcUpdatePackage *package);
@@ -90,7 +135,7 @@ int sceBbmcDLUpdaterGetSequenceForDriver(int subscriberId, SceUInt32 *firstStatu
 	SceUInt32 *secondStatus, BbmcDriverInfo *info);
 int sceBbmcDLUpdaterGetPkgIdForDriver(int subscriberId, SceUInt32 *pkgId);
 /* not written in C yet: the prototype follows update_mgr's use (bbmc_status.c) */
-int SceBbmcForDriver_4281E476(int subscriberId, uint32_t *status);
+int SceBbmcForDriver_4281E476(int subscriberId, SceUInt32 *matches);
 
 /* usb_extif.c */
 int sceBbmcUsbExtIfStart(int mode);

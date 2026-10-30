@@ -20,3 +20,5 @@ int bbmcInitializeMailbox(void);
 int bbmcFinalizeMailbox(void);
 int bbmcCreateMailbox(BbmcMailbox **mailbox);
 unsigned int bbmcDeleteMailbox(BbmcMailbox *mailbox);
+int bbmcSendMailbox(BbmcMailbox *mailbox, BbmcQueueEntry *entry);
+int bbmcReceiveMailbox(BbmcMailbox *mailbox, BbmcQueueEntry **entry, SceUInt *timeout);

@@ -30,6 +30,8 @@
 #include "bbmc_memory.h"
 #include "usb_extif.h"
 #include "usb_device.h"
+#include "sw_dload/sw_dload.h"
+#include "bbmc_netif.h"
 
 static const BbmcSetupDescriptor bbmcSetupDescriptors[8];
 
@@ -44,7 +46,29 @@ int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
 void bbmcPowerEventTimeout(void *argp);
 int bbmcPowerOffStateHandler(BbmcControl *control, BbmcMessage *message);
 int stmInitial_ComBoot(BbmcControl *control, BbmcMessage *message);
+
+/* Descriptive names: the records supply a value and optional equality checks. */
+typedef struct BbmcModeConfiguration {
+	SceUInt32 mode;
+	SceUInt32 checkEnabled;
+	SceUInt32 outputValue;
+	SceUInt32 expectedWords[2];
+	SceUInt16 expectedHalfwords[2];
+	SceUInt8 expectedByte;
+} BbmcModeConfiguration;
+
+_Static_assert(sizeof(BbmcModeConfiguration) == 28,
+	"BBMC mode configuration size");
+_Static_assert(offsetof(BbmcModeConfiguration, checkEnabled) == 4 &&
+	offsetof(BbmcModeConfiguration, outputValue) == 8 &&
+	offsetof(BbmcModeConfiguration, expectedWords) == 12 &&
+	offsetof(BbmcModeConfiguration, expectedHalfwords) == 20 &&
+	offsetof(BbmcModeConfiguration, expectedByte) == 24,
+	"BBMC mode configuration layout");
+
 int bbmcLookupModeValue(int mode, SceUInt32 *output);
+int bbmcLookupModeConfiguration(int mode,
+	const BbmcModeConfiguration **output);
 int managerThread(SceSize argumentSize, void *arguments);
 BbmcControl *g_bbmcControl;
 static BbmcControl bbmcMainControl;
@@ -55,6 +79,73 @@ const SceKernelProcEventHandler bbmcProcessEventHandlers = {
 	.size = sizeof(SceKernelProcEventHandler),
 	.kill = bbmcProcessKillHandler,
 };
+
+/* the entry guard of every API call: nothing is accepted while suspending or suspended */
+static inline int bbmcCheckSuspendState(BbmcControl *control)
+{
+	bbmcEnterCS(&control->mutex);
+	if (control->suspendState - 1U <= 2) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x8033000A;
+	}
+	if (control->suspendState == 4) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x8033000B;
+	}
+	bbmcLeaveCS(&control->mutex);
+	return 0;
+}
+
+/* the subscriber slot of an active subscriber ID, or -1 */
+static inline int bbmcFindSubscriber(BbmcControl *control, int subscriberId)
+{
+	if (control->subscribers[0].active == 1 &&
+	    subscriberId == control->subscribers[0].parameters.subscriberId)
+		return 0;
+	if (control->subscribers[1].active == 1 &&
+	    subscriberId == control->subscribers[1].parameters.subscriberId)
+		return 1;
+	if (control->subscribers[2].active == 1 &&
+	    subscriberId == control->subscribers[2].parameters.subscriberId)
+		return 2;
+	if (control->subscribers[3].active == 1 &&
+	    subscriberId == control->subscribers[3].parameters.subscriberId)
+		return 3;
+	if (control->subscribers[4].active == 1 &&
+	    subscriberId == control->subscribers[4].parameters.subscriberId)
+		return 4;
+	if (control->subscribers[5].active == 1 &&
+	    subscriberId == control->subscribers[5].parameters.subscriberId)
+		return 5;
+	if (control->subscribers[6].active == 1 &&
+	    subscriberId == control->subscribers[6].parameters.subscriberId)
+		return 6;
+	if (control->subscribers[7].active == 1 &&
+	    subscriberId == control->subscribers[7].parameters.subscriberId)
+		return 7;
+	if (control->subscribers[8].active == 1 &&
+	    subscriberId == control->subscribers[8].parameters.subscriberId)
+		return 8;
+	return -1;
+}
+
+/* name unknown: the slot of indexedResponses holding a personalization feature,
+ * or -1 */
+static inline int bbmcFindIndexedResponse(BbmcControl *control, SceUInt32 featureId)
+{
+	if (featureId == control->indexedResponses[0].index)
+		return 0;
+	if (featureId == control->indexedResponses[1].index)
+		return 1;
+	if (featureId == control->indexedResponses[2].index)
+		return 2;
+	if (featureId == control->indexedResponses[3].index)
+		return 3;
+	if (featureId == control->indexedResponses[4].index)
+		return 4;
+	return -1;
+}
+
 
 int bbmcProcessKillHandler(SceUID processId,
 	ProcEventParam *parameters, void *common)
@@ -351,6 +442,24 @@ void bbmcLeaveCS(struct ThreadmgrFastMutex *mutex)
 		SCE_DBG_ASSERT(0, 1398);
 }
 
+/* name unknown: (re)arms the 15 s retry of a network start held back by a power event */
+void bbmcScheduleDeferredNetworkRetry(BbmcControl *control)
+{
+	int timerId;
+
+	if (control->deferredNetworkStart == 0)
+		return;
+	if (control->networkRetryTimer > 0) {
+		bbmcTimerCancelHandler(control->networkRetryTimer);
+		control->networkRetryTimer = 0;
+	}
+	timerId = bbmcTimerSetHandler(15000000, bbmcNetworkRetryTimeout, control);
+	if (timerId > 0)
+		control->networkRetryTimer = timerId;
+	else
+		control->networkRetryTimer = 0;
+}
+
 /* name unknown: translate each selected notification bit into a message. */
 int msgForwardNotifications(SceUInt32 mask, const BbmcNotificationArgs *args)
 {
@@ -629,6 +738,176 @@ int bbmcRequestOperationMode(BbmcControl *control, SceUInt32 operationMode)
 	if (result < 0)
 		msgFreeMsgPacket(control, message);
 	return result;
+}
+
+/* name unknown: posts the modem's new firmware preference (command 161) */
+int bbmcRequestSetFirmwarePreference(BbmcControl *control,
+	const QmiSetFirmwarePreference *preference)
+{
+	BbmcMessage *message;
+	int result;
+
+	message = msgAllocMsgPacket(control, 161);
+	if (message == NULL)
+		return (int)0x80330005;
+	bbmcEnterCS(&control->mutex);
+	if (control->currentState <= 1 || control->setFirmwarePreferenceState == 1) {
+		result = (int)0x80330006;
+		bbmcLeaveCS(&control->mutex);
+		goto fail;
+	}
+	memset(&control->setFirmwarePreference, 0, sizeof(control->setFirmwarePreference));
+	control->downloadImageCount = 0;
+	control->firstDownloadImageType = 0;
+	control->secondDownloadImageType = 0;
+	memcpy(&control->setFirmwarePreference, preference, sizeof(*preference));
+	message->body.firmwareMessage.setFirmwarePreference = &control->setFirmwarePreference;
+	control->setFirmwarePreferenceState = 1;
+	bbmcLeaveCS(&control->mutex);
+	result = msgSendMsgPacket(control, message);
+	if (result >= 0)
+		return result;
+	control->setFirmwarePreferenceState = 0;
+fail:
+	msgFreeMsgPacket(control, message);
+	return result;
+}
+
+/* name unknown: asks the modem for its stored images (command 155) */
+int bbmcRequestStoredImages(BbmcControl *control)
+{
+	BbmcMessage *message;
+	int result;
+
+	message = msgAllocMsgPacket(control, 155);
+	if (message == NULL)
+		return (int)0x80330005;
+	bbmcEnterCS(&control->mutex);
+	if (control->currentState <= 1 || control->storedImagesState == 1) {
+		result = (int)0x80330006;
+		bbmcLeaveCS(&control->mutex);
+		goto fail;
+	}
+	memset(&control->storedImages, 0, sizeof(control->storedImages));
+	message->body.firmwareMessage.storedImages = &control->storedImages;
+	control->storedImagesState = 1;
+	bbmcLeaveCS(&control->mutex);
+	result = msgSendMsgPacket(control, message);
+	if (result >= 0)
+		return result;
+	control->storedImagesState = 0;
+fail:
+	msgFreeMsgPacket(control, message);
+	return result;
+}
+
+/* name unknown: posts one firmware image description to the modem (command 159) */
+int bbmcRequestFirmwareImage(BbmcControl *control, const QmiFirmwareImage *image)
+{
+	BbmcMessage *message;
+	int result;
+
+	message = msgAllocMsgPacket(control, 159);
+	if (message == NULL)
+		return (int)0x80330005;
+	bbmcEnterCS(&control->mutex);
+	if (control->currentState <= 1 || control->firmwareImageState == 1) {
+		result = (int)0x80330006;
+		bbmcLeaveCS(&control->mutex);
+		goto fail;
+	}
+	control->firmwareImage = *image;
+	message->body.firmwareMessage.firmwareImage = &control->firmwareImage;
+	control->firmwareImageState = 1;
+	bbmcLeaveCS(&control->mutex);
+	result = msgSendMsgPacket(control, message);
+	if (result >= 0)
+		return result;
+	control->firmwareImageState = 0;
+fail:
+	msgFreeMsgPacket(control, message);
+	return result;
+}
+
+/* name unknown: the transport is up and has answered */
+int bbmcIsTransportReady(BbmcControl *control)
+{
+	return control->transportReady == 1 && control->transportReplyPending == 1;
+}
+
+/* name unknown: a state change is under way, or the SIM still waits for its PIN */
+int bbmcIsStateTransitionPending(BbmcControl *control)
+{
+	if (control->flags == 0 && control->targetState == control->currentState)
+		return 0;
+	if (control->currentState != 2)
+		return 1;
+	return control->pinStatus.pin1Status - 1 > 1;
+}
+
+/* name unknown: has the download module report to msgForwardNotifications, once */
+int bbmcRegisterDownloadNotification(BbmcControl *control)
+{
+	SwdlClient client;
+	int result = 0;
+
+	if (control->downloadNotificationRegistered == 0) {
+		client.notify = msgForwardNotifications;
+		client.argument = control;
+		result = swdlInitialize(8, &client);
+		if (result >= 0) {
+			result = 0;
+			control->downloadNotificationRegistered = 1;
+		}
+	}
+	return result;
+}
+
+/* name unknown: a forced operation mode overrides the requested one with 8 */
+SceUInt32 bbmcSelectOperationMode(BbmcControl *control, SceUInt32 operationMode)
+{
+	if (control->forceOperationMode != 0)
+		return 8;
+	return operationMode;
+}
+
+/* name unknown: the subscriber events the five indexed control key replies raise */
+SceUInt32 bbmcCollectControlKeyEvents(BbmcControl *control)
+{
+	SceUInt32 events = 0;
+	int i;
+
+	for (i = 0; i < 5; i++) {
+		if (control->indexedResponses[i].primaryValue == 0)
+			continue;
+		bbmcEnterCS(&control->mutex);
+		control->controlKeyReported = 1;
+		bbmcLeaveCS(&control->mutex);
+		if (control->indexedResponses[i].primaryValue == 2 &&
+		    control->indexedResponses[0].detailBytes[1] == 0)
+			events |= 0x1000000;
+		if (control->indexedResponses[i].secondaryValue == 1)
+			events |= 0x800000;
+	}
+	return events;
+}
+
+/* name unknown: remembers where a state transition stopped and why */
+void bbmcSaveTransitionState(BbmcControl *control, SceInt32 status, SceUInt32 step)
+{
+	bbmcEnterCS(&control->mutex);
+	control->previousCurrentState = control->currentState;
+	control->previousTargetState = control->targetState;
+	control->transitionStep = step;
+	control->transitionStatus = status;
+	bbmcLeaveCS(&control->mutex);
+}
+
+/* name unknown: the transport is up, has answered and finished its handshake */
+int bbmcIsTransportHandshakeComplete(BbmcControl *control)
+{
+	return control->transportReady == 1 && control->transportReplyPending == 1 &&
+	       control->transportHandshakePending == 1;
 }
 
 int sceBbmcGetNetworkInfoForDriver(BbmcNetworkInfo *info)
@@ -2925,6 +3204,34 @@ invalid:
 	return (int)0x80330002;
 }
 
+/* feature 7 (update): posts command 123 */
+int SceBbmcForDriver_B7E650A9(int subscriberId)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 7) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330002;
+	}
+	bbmcLeaveCS(&control->mutex);
+	message = msgAllocMsgPacket(control, 123);
+	if (message == NULL)
+		return (int)0x80330005;
+	result = msgSendMsgPacket(control, message);
+	if (result < 0)
+		msgFreeMsgPacket(control, message);
+	return result;
+}
+
 int sceBbmcDLQConfirmChangePartitionForDriver(int subscriberId)
 {
 	BbmcControl *control = bbmcGetControl();
@@ -3047,6 +3354,596 @@ invalidSubscriber:
 out:
 	bbmcLeaveCS(&control->mutex);
 	return result;
+}
+
+/* name unknown: hands the subscriber the cell the modem last reported, GERAN before UMTS */
+int bbmcGetCellLocationResult(int subscriberId, BbmcGpsCellInfo *info)
+{
+	BbmcControl *control = bbmcGetControl();
+	const SceUInt8 *plmn;
+	int index;
+	int digit, mnc;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	bbmcEnterCS(&control->mutex);
+	if (control->suspendState - 1U <= 2) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x8033000A;
+	}
+	if (control->suspendState == 4) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x8033000B;
+	}
+	bbmcLeaveCS(&control->mutex);
+	if (info == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	if (control->subscribers[0].active == 1 &&
+	    subscriberId == control->subscribers[0].parameters.subscriberId)
+		index = 0;
+	else if (control->subscribers[1].active == 1 &&
+		 subscriberId == control->subscribers[1].parameters.subscriberId)
+		index = 1;
+	else if (control->subscribers[2].active == 1 &&
+		 subscriberId == control->subscribers[2].parameters.subscriberId)
+		index = 2;
+	else if (control->subscribers[3].active == 1 &&
+		 subscriberId == control->subscribers[3].parameters.subscriberId)
+		index = 3;
+	else if (control->subscribers[4].active == 1 &&
+		 subscriberId == control->subscribers[4].parameters.subscriberId)
+		index = 4;
+	else if (control->subscribers[5].active == 1 &&
+		 subscriberId == control->subscribers[5].parameters.subscriberId)
+		index = 5;
+	else if (control->subscribers[6].active == 1 &&
+		 subscriberId == control->subscribers[6].parameters.subscriberId)
+		index = 6;
+	else if (control->subscribers[7].active == 1 &&
+		 subscriberId == control->subscribers[7].parameters.subscriberId)
+		index = 7;
+	else if (control->subscribers[8].active == 1 &&
+		 subscriberId == control->subscribers[8].parameters.subscriberId)
+		index = 8;
+	else
+		goto invalidSubscriber;
+	if (control->subscribers[index].parameters.featureId != 3)
+		goto invalidSubscriber;
+	memset(info, 0, sizeof(*info));
+	if (control->cellLocation.geran.cellId != 0xFFFFFFFF) {
+		info->cellId = control->cellLocation.geran.cellId;
+		info->radioInterface = 1;
+		info->lac = control->cellLocation.geran.lac;
+		plmn = control->cellLocation.geran.plmn;
+		info->mcc = 100 * (plmn[0] & 0xF) + 10 * (plmn[0] >> 4) + (plmn[1] & 0xF);
+		digit = plmn[1] >> 4;
+		mnc = 100 * (plmn[2] & 0xF) + 10 * (plmn[2] >> 4);
+		info->mnc = digit == 15 ? mnc / 10 : mnc + digit;
+		info->timingAdvance = control->cellLocation.geran.timingAdvance;
+		info->signalStrength = control->cellLocation.geran.rxLevel > 63 ?
+			-48 : control->cellLocation.geran.rxLevel - 111;
+		info->measurementPresent = 1;
+		info->cellPresent = 1;
+	} else if (control->cellLocation.umts.cellId != 0xFFFF) {
+		info->cellId = control->cellLocation.umts.cellId;
+		info->radioInterface = 2;
+		info->lac = control->cellLocation.umts.lac;
+		plmn = control->cellLocation.umts.plmn;
+		info->mcc = 100 * (plmn[0] & 0xF) + 10 * (plmn[0] >> 4) + (plmn[1] & 0xF);
+		digit = plmn[1] >> 4;
+		mnc = 100 * (plmn[2] & 0xF) + 10 * (plmn[2] >> 4);
+		info->mnc = digit == 15 ? mnc / 10 : mnc + digit;
+		info->measurementPresent = 1;
+		info->cellPresent = 1;
+		info->signalStrength = control->cellLocation.umts.rscp > 0x8000 ?
+			-0x8000 : -control->cellLocation.umts.rscp;
+		info->primaryScramblingCode = control->cellLocation.umts.primaryScramblingCode;
+	} else
+		info->cellPresent = 0;
+	control->cellQueryState = 0;
+	bbmcLeaveCS(&control->mutex);
+	return 0;
+invalidSubscriber:
+	bbmcLeaveCS(&control->mutex);
+	return (int)0x80330002;
+}
+
+/* feature 0: starts a network scan (command 149) */
+int SceBbmcForDriver_EBC5D3DB(int subscriberId)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 0) {
+		result = (int)0x80330002;
+		goto out;
+	}
+	if (control->currentState != 7 || control->networkScanState != 0) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330006;
+	}
+	message = msgAllocMsgPacket(control, 149);
+	if (message == NULL) {
+		result = (int)0x80330005;
+		goto out;
+	}
+	control->networkScanState = 1;
+	result = msgSendMsgPacket(control, message);
+	if (result < 0) {
+		msgFreeMsgPacket(control, message);
+		control->networkScanState = 0;
+	}
+out:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 0: hands out the finished network scan and ends it */
+int SceBbmcForDriver_503C7E0B(int subscriberId, BbmcNetworkScanInfo *scan)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 0)
+		result = (int)0x80330002;
+	else if (control->currentState != 7 || control->networkScanState == 0)
+		result = (int)0x80330006;
+	else if (control->networkScanState == 1)
+		result = (int)0x80330008;
+	else {
+		result = 0;
+		if (scan != NULL)
+			memcpy(scan, &control->networkScan, sizeof(*scan));
+	}
+	control->networkScanState = 0;
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 0: aborts the running network scan (command 151) */
+int SceBbmcForDriver_739274F3(int subscriberId)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 0) {
+		result = (int)0x80330002;
+		goto out;
+	}
+	if (control->currentState != 7 || control->networkScanState != 1 ||
+	    control->networkScanAbortBusy == 1) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330006;
+	}
+	control->networkScanAbortBusy = 1;
+	message = msgAllocMsgPacket(control, 151);
+	if (message == NULL) {
+		result = (int)0x80330005;
+		control->networkScanAbortBusy = 0;
+		goto out;
+	}
+	result = msgSendMsgPacket(control, message);
+	if (result < 0) {
+		msgFreeMsgPacket(control, message);
+		control->networkScanAbortBusy = 0;
+	}
+out:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 0: attaches to or detaches from the packet service (command 152) */
+int SceBbmcForDriver_75FA68D3(int subscriberId, SceInt32 attach)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 0) {
+		result = (int)0x80330002;
+		goto out;
+	}
+	if (control->currentState != 7)
+		goto busy;
+	if (control->networkInfo.serving.psAttachState == 1) {
+		if (attach == 1)
+			goto busy;
+	} else if (attach == 0)
+		goto busy;
+	message = msgAllocMsgPacket(control, 152);
+	if (message == NULL) {
+		result = (int)0x80330005;
+		goto out;
+	}
+	message->body.commandResult = attach;
+	control->attachChangeBusy = 1;
+	result = msgSendMsgPacket(control, message);
+	if (result < 0) {
+		msgFreeMsgPacket(control, message);
+		control->attachChangeBusy = 0;
+	}
+out:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+busy:
+	bbmcLeaveCS(&control->mutex);
+	return (int)0x80330006;
+}
+
+/* feature 5 (network interface): disconnects the network. As Sony's, a failed
+ * lookup returns without leaving the critical section. */
+int SceBbmcForDriver_3D27000A(int subscriberId)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 5)
+		return (int)0x80330002;
+	bbmcLeaveCS(&control->mutex);
+	return DisconnectNetwork();
+}
+
+/* feature 5: the reason the last packet data call ended */
+int SceBbmcForDriver_BF550F4A(int subscriberId, BbmcCallEndReason *reason)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	if (reason == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 5) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330002;
+	}
+	*reason = control->callEndReason;
+	bbmcLeaveCS(&control->mutex);
+	return 0;
+}
+
+/* feature 5: sets packet interface control flags (command 113) */
+int SceBbmcForDriver_FB3DA35E(int subscriberId, SceUInt32 flags)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 5) {
+		result = (int)0x80330002;
+		goto out;
+	}
+	result = (int)0x80330503;
+	if (control->controlFlagsBusy != 0)
+		goto out;
+	message = msgAllocMsgPacket(control, 113);
+	if (message == NULL) {
+		result = (int)0x80330005;
+		goto out;
+	}
+	control->controlFlagsBusy = 1;
+	message->body.controlFlag.set = 1;
+	message->body.controlFlag.mask = flags;
+	control->normalizedControlState = ((control->controlFlags | flags) & 3) == 1;
+	result = msgSendMsgPacket(control, message);
+	if (result < 0) {
+		msgFreeMsgPacket(control, message);
+		control->controlFlagsBusy = 0;
+	}
+out:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 5: clears packet interface control flags (command 113) */
+int SceBbmcForDriver_7EA964B6(int subscriberId, SceUInt32 flags)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 5) {
+		result = (int)0x80330002;
+		goto out;
+	}
+	result = (int)0x80330503;
+	if (control->controlFlagsBusy != 0)
+		goto out;
+	message = msgAllocMsgPacket(control, 113);
+	if (message == NULL) {
+		result = (int)0x80330005;
+		goto out;
+	}
+	control->controlFlagsBusy = 1;
+	message->body.controlFlag.mask = flags;
+	message->body.controlFlag.set = 0;
+	control->normalizedControlState = (control->controlFlags & 3 & ~flags) == 1;
+	result = msgSendMsgPacket(control, message);
+	if (result < 0) {
+		msgFreeMsgPacket(control, message);
+		control->controlFlagsBusy = 0;
+	}
+out:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 5: the packet interface control flags, once no change is pending */
+int SceBbmcForDriver_BC3C8942(int subscriberId, SceUInt32 *flags)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (flags == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 5) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330002;
+	}
+	if (control->controlFlagsBusy != 0) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330503;
+	}
+	*flags = control->controlFlags;
+	bbmcLeaveCS(&control->mutex);
+	return 0;
+}
+
+/* feature 5: the current bearer technology and its details. As Sony's, a failed
+ * lookup returns without leaving the critical section. */
+int SceBbmcForDriver_E09808A2(int subscriberId, SceUInt32 *bearer)
+{
+	BbmcControl *control = bbmcGetControl();
+	SceUInt32 technology, details;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (bearer == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 5)
+		return (int)0x80330002;
+	technology = control->currentBearer;
+	details = control->bearerDetails;
+	bearer[0] = technology;
+	bearer[1] = details;
+	bbmcLeaveCS(&control->mutex);
+	return 0;
+}
+
+/* feature 7: asks the modem for its stored images (command 155); the result is
+ * taken with sceBbmcDLQGetFwListDoneForDriver */
+int sceBbmcDLQGetFwListStartForDriver(int subscriberId)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	message = msgAllocMsgPacket(control, 155);
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (message == NULL)
+		return (int)0x80330005;
+	bbmcEnterCS(&control->mutex);
+	if (control->currentState <= 1 || control->storedImagesState == 1) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 7) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	memset(&control->storedImages, 0, sizeof(control->storedImages));
+	message->body.firmwareMessage.storedImages = &control->storedImages;
+	control->storedImagesState = 1;
+	bbmcLeaveCS(&control->mutex);
+	result = msgSendMsgPacket(control, message);
+	if (result >= 0)
+		return result;
+	control->storedImagesState = 0;
+	goto free;
+unlock:
+	bbmcLeaveCS(&control->mutex);
+free:
+	msgFreeMsgPacket(control, message);
+	return result;
+}
+
+/* feature 7: copies out the stored images once the modem has answered */
+int sceBbmcDLQGetFwListDoneForDriver(int subscriberId, QmiStoredImages *storedImages)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (storedImages == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 7) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->currentState <= 1 || control->storedImagesState != 2) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	result = control->storedImagesResult;
+	if (result == 0)
+		memcpy(storedImages, &control->storedImages, sizeof(*storedImages));
+	control->storedImagesState = 0;
+unlock:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 7: asks the modem for its firmware preference (command 157); the result is
+ * taken with sceBbmcDLQGetCurrentFwDoneForDriver */
+int sceBbmcDLQGetCurrentFwStartForDriver(int subscriberId)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	message = msgAllocMsgPacket(control, 157);
+	if (message == NULL)
+		return (int)0x80330005;
+	bbmcEnterCS(&control->mutex);
+	if (control->currentState <= 1 || control->firmwarePreferenceState == 1) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 7) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	memset(&control->firmwarePreference, 0, sizeof(control->firmwarePreference));
+	message->body.firmwareMessage.firmwarePreference = &control->firmwarePreference;
+	control->firmwarePreferenceState = 1;
+	bbmcLeaveCS(&control->mutex);
+	result = msgSendMsgPacket(control, message);
+	if (result >= 0)
+		return result;
+	control->firmwarePreferenceState = 0;
+	goto free;
+unlock:
+	bbmcLeaveCS(&control->mutex);
+free:
+	msgFreeMsgPacket(control, message);
+	return result;
+}
+
+/* feature 7: copies out the firmware preference once the modem has answered */
+int sceBbmcDLQGetCurrentFwDoneForDriver(int subscriberId, QmiFirmwarePreference *firmwarePreference)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (firmwarePreference == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 7) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->currentState <= 1 || control->firmwarePreferenceState != 2) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	result = control->firmwarePreferenceResult;
+	if (result == 0)
+		memcpy(firmwarePreference, &control->firmwarePreference, sizeof(*firmwarePreference));
+	control->firmwarePreferenceState = 0;
+unlock:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* the state the last transition left: current and target state, the step it
+ * stopped at and its status (bbmcSaveTransitionState) */
+int SceBbmcForDriver_A9CF664F(SceInt32 *transition)
+{
+	BbmcControl *control = bbmcGetControl();
+	SceInt32 targetState, status;
+	SceUInt32 step;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	if (transition == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	targetState = control->previousTargetState;
+	step = control->transitionStep;
+	status = control->transitionStatus;
+	transition[0] = control->previousCurrentState;
+	transition[1] = targetState;
+	transition[2] = step;
+	transition[3] = status;
+	bbmcLeaveCS(&control->mutex);
+	return 0;
 }
 
 int sceBbmcDLUpdaterStartForDriver(int subscriberId, BbmcUpdatePackage *package)
@@ -3205,6 +4102,267 @@ freeMessage:
 	return result;
 }
 
+/* feature 4: copies out the last proactive command of the SIM toolkit (sceBbmcGetProactiveCmd) */
+int SceBbmcForDriver_399EF002(int subscriberId, BbmcProactiveCmd *command)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (command == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 4) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330002;
+	}
+	if (control->currentState <= 1) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330006;
+	}
+	memcpy(command, &control->proactiveCommand, sizeof(*command));
+	bbmcLeaveCS(&control->mutex);
+	return 0;
+}
+
+/* feature 4: answers a proactive command (sceBbmcTerminalResponseCmd) (command 167) */
+int SceBbmcForDriver_93E5345A(int subscriberId, const BbmcTerminalResponse *response)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (response == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 4) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->currentState <= 1) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	message = msgAllocMsgPacket(control, 167);
+	if (message == NULL) {
+		result = (int)0x80330005;
+		goto unlock;
+	}
+	message->body.terminalResponse = memcpy(&control->terminalResponse, response,
+		sizeof(control->terminalResponse));
+	bbmcLeaveCS(&control->mutex);
+	result = msgSendMsgPacket(control, message);
+	if (result >= 0)
+		return result;
+	goto free;
+unlock:
+	message = NULL;
+	bbmcLeaveCS(&control->mutex);
+free:
+	msgFreeMsgPacket(control, message);
+	return result;
+}
+
+/* feature 4: sends a SIM toolkit envelope (sceBbmcEnvelopeCmd) (command 169) */
+int SceBbmcForDriver_F4C8482D(int subscriberId, const QmiCat2CommandOptions *options)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (options == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 4) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->currentState <= 1) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	message = msgAllocMsgPacket(control, 169);
+	if (message == NULL) {
+		result = (int)0x80330005;
+		goto unlock;
+	}
+	control->envelopeOptions = *options;
+	message->body.envelopeOptions = &control->envelopeOptions;
+	bbmcLeaveCS(&control->mutex);
+	result = msgSendMsgPacket(control, message);
+	if (result >= 0)
+		return result;
+	goto free;
+unlock:
+	message = NULL;
+	bbmcLeaveCS(&control->mutex);
+free:
+	msgFreeMsgPacket(control, message);
+	return result;
+}
+
+/* feature 4: copies out the details of the last SIM file refresh (sceBbmcGetFileRefreshDetail) */
+int SceBbmcForDriver_2930DB51(int subscriberId, BbmcFileRefreshDetail *detail)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (detail == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 4) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330002;
+	}
+	if (control->currentState <= 1) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330006;
+	}
+	memcpy(detail, &control->refreshDetail, sizeof(*detail));
+	bbmcLeaveCS(&control->mutex);
+	return 0;
+}
+
+/* feature 4: answers a SIM file refresh (sceBbmcFileRefreshResponse) (command 171) */
+int SceBbmcForDriver_009C73D2(int subscriberId, SceUInt32 response)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (response > 3)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 4) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->currentState <= 1) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	message = msgAllocMsgPacket(control, 171);
+	if (message == NULL) {
+		result = (int)0x80330005;
+		goto unlock;
+	}
+	message->body.refreshResponse = response;
+	bbmcLeaveCS(&control->mutex);
+	result = msgSendMsgPacket(control, message);
+	if (result >= 0)
+		return result;
+	goto free;
+unlock:
+	message = NULL;
+	bbmcLeaveCS(&control->mutex);
+free:
+	msgFreeMsgPacket(control, message);
+	return result;
+}
+
+/* feature 4: reads a SIM file (command 173); the content is taken with
+ * SceBbmcForDriver_24EE6E9C (sceBbmcReadSimContentStart) */
+int SceBbmcForDriver_D288E771(int subscriberId, const BbmcSimFile *file)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (file == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 4) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->currentState != 3 && control->currentState - 5U > 2) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	message = msgAllocMsgPacket(control, 173);
+	if (message == NULL) {
+		result = (int)0x80330005;
+		goto unlock;
+	}
+	message->body.simFile = file;
+	bbmcLeaveCS(&control->mutex);
+	result = msgSendMsgPacket(control, message);
+	if (result >= 0)
+		return result;
+	goto free;
+unlock:
+	message = NULL;
+	bbmcLeaveCS(&control->mutex);
+free:
+	msgFreeMsgPacket(control, message);
+	return result;
+}
+
+/* feature 4: the content of the SIM file read last (sceBbmcReadSimContentDone) */
+int SceBbmcForDriver_24EE6E9C(int subscriberId, BbmcSimContentInfo *content)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (content == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 4) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->currentState != 3 && control->currentState - 5U > 2) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	*content = control->simContent;
+	result = 0;
+unlock:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
 int sceBbmcDLUpdaterGetArchiveVersionForDriver(int subscriberId,
 	SceUInt32 *version)
 {
@@ -3310,6 +4468,209 @@ out:
 	return result;
 }
 
+/* feature 4: lifts the SIM lock of one personalization feature with its control
+ * key (command 179, sceBbmcDepersonalizeCK) */
+int SceBbmcForDriver_683D19BF(int subscriberId, const BbmcControlKeyParam *param)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result, i;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (param == NULL || param->controlKeyLength > 21)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 4) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->currentState <= 1) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	i = bbmcFindIndexedResponse(control, param->featureId);
+	if (i < 0) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->indexedResponses[i].primaryValue == 0) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	control->controlKey.featureId = param->featureId;
+	control->controlKey.controlKeyLength = param->controlKeyLength;
+	memset(&control->controlKey.controlKey, 0, sizeof(control->controlKey.controlKey));
+	control->controlKey.controlKey = param->controlKey;
+	result = bbmcSendSimpleMessage(control, 179);
+unlock:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 4: unblocks the SIM lock of one personalization feature with its control
+ * key (command 180, sceBbmcUnblockCK) */
+int SceBbmcForDriver_6AD4053A(int subscriberId, const BbmcControlKeyParam *param)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result, i;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (param == NULL || param->controlKeyLength > 21)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 4) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->currentState <= 1) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	i = bbmcFindIndexedResponse(control, param->featureId);
+	if (i < 0) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->indexedResponses[i].primaryValue != 2) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	control->controlKey.featureId = param->featureId;
+	control->controlKey.controlKeyLength = param->controlKeyLength;
+	memset(&control->controlKey.controlKey, 0, sizeof(control->controlKey.controlKey));
+	control->controlKey.controlKey = param->controlKey;
+	result = bbmcSendSimpleMessage(control, 180);
+unlock:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 4: the control key status of one personalization feature
+ * (sceBbmcGetCKStatus) */
+int SceBbmcForDriver_3D06FDB0(int subscriberId, SceUInt32 featureId, QmiIndexedResponse *status)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result, i;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (status == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 4) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->currentState <= 1) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	i = bbmcFindIndexedResponse(control, featureId);
+	if (i < 0) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	*status = control->indexedResponses[i];
+	result = 0;
+unlock:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 0: what the modem reported, in the layout of IdStorage leaf 0x113
+ * (sceBbmcGetIdStorageFrom3GModule) */
+int SceBbmcForDriver_07ADDA90(int subscriberId, BbmcModemConfigurationLeaf *leaf)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	if (leaf == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 0) {
+		result = (int)0x80330002;
+		goto unlock;
+	}
+	if (control->currentState - 5U > 2) {
+		result = (int)0x80330006;
+		goto unlock;
+	}
+	leaf->imei = control->deviceInformation.imei;
+	leaf->controlKeyReported = control->controlKeyReported;
+	leaf->firmwareBuildSelection = control->firmwareBuildSelection;
+	leaf->replyOperationMode = control->replyOperationMode;
+	leaf->runningStorageIndex = control->runningStorageIndex;
+	leaf->firmwareRevisionSelection = control->firmwareRevisionSelection;
+	leaf->configurationReplySeen = control->configurationReplySeen;
+	leaf->completionPending = control->completionPending;
+	leaf->imeiSoftwareVersion = control->deviceInformation.imeiSoftwareVersion;
+	result = 0;
+unlock:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 0: the syscon reports the modem may run at the current temperature (sceBbmcIsAbleToRunUnderCurrentTemp) */
+int sceBbmcIsAbleToRunUnderCurrentTempForDriver(int subscriberId)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 0)
+		return (int)0x80330002;
+	return control->sysconPowerInverted;
+}
+
+/* feature 0: the battery voltage lets the modem run (sceBbmcIsAbleToRunUnderCurrentVoltage) */
+int sceBbmcIsAbleToRunUnderCurrentVoltageForDriver(int subscriberId)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 0)
+		return (int)0x80330002;
+	return control->powerAvailable;
+}
+
+/* feature 0: a power event forbids changing the power configuration now (sceBbmcIsPowerConfigForbiddenMode) */
+int sceBbmcIsPowerConfigForbiddenModeForDriver(int subscriberId)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 0)
+		return (int)0x80330002;
+	return control->powerEventActive != 0 || control->recentPowerEvent != 0;
+}
+
 int sceBbmcDLUpdaterGetSequenceForDriver(int subscriberId,
 	SceUInt32 *firstStatus, SceUInt32 *secondStatus, BbmcDriverInfo *info)
 {
@@ -3383,6 +4744,256 @@ invalid:
 out:
 	bbmcLeaveCS(&control->mutex);
 	return result;
+}
+
+/* features 7 and 0: whether the modem firmware is the one the configuration
+ * mode expects (sceBbmcDLUpdaterCheckComVersion) */
+int SceBbmcForDriver_4281E476(int subscriberId, SceUInt32 *matches)
+{
+	BbmcControl *control = bbmcGetControl();
+	const BbmcModeConfiguration *configuration;
+	int index, result, firstActive;
+
+	if (matches == NULL)
+		return (int)0x80330002;
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	bbmcEnterCS(&control->mutex);
+	firstActive = control->subscribers[0].active;
+	if (firstActive == 1 &&
+	    subscriberId == control->subscribers[0].parameters.subscriberId)
+		index = 0;
+	else if (control->subscribers[1].active == 1 &&
+		 subscriberId == control->subscribers[1].parameters.subscriberId)
+		index = 1;
+	else if (control->subscribers[2].active == 1 &&
+		 subscriberId == control->subscribers[2].parameters.subscriberId)
+		index = 2;
+	else if (control->subscribers[3].active == 1 &&
+		 subscriberId == control->subscribers[3].parameters.subscriberId)
+		index = 3;
+	else if (control->subscribers[4].active == 1 &&
+		 subscriberId == control->subscribers[4].parameters.subscriberId)
+		index = 4;
+	else if (control->subscribers[5].active == 1 &&
+		 subscriberId == control->subscribers[5].parameters.subscriberId)
+		index = 5;
+	else if (control->subscribers[6].active == 1 &&
+		 subscriberId == control->subscribers[6].parameters.subscriberId)
+		index = 6;
+	else if (control->subscribers[7].active == 1 &&
+		 subscriberId == control->subscribers[7].parameters.subscriberId)
+		index = 7;
+	else if (control->subscribers[8].active == 1 &&
+		 subscriberId == control->subscribers[8].parameters.subscriberId)
+		index = 8;
+	else
+		goto checkSystemFeature;
+	if (control->subscribers[index].parameters.featureId == 7)
+		goto checkVersion;
+checkSystemFeature:
+	if (firstActive == 1 &&
+	    subscriberId == control->subscribers[0].parameters.subscriberId)
+		index = 0;
+	else if (control->subscribers[1].active == 1 &&
+		 subscriberId == control->subscribers[1].parameters.subscriberId)
+		index = 1;
+	else if (control->subscribers[2].active == 1 &&
+		 subscriberId == control->subscribers[2].parameters.subscriberId)
+		index = 2;
+	else if (control->subscribers[3].active == 1 &&
+		 subscriberId == control->subscribers[3].parameters.subscriberId)
+		index = 3;
+	else if (control->subscribers[4].active == 1 &&
+		 subscriberId == control->subscribers[4].parameters.subscriberId)
+		index = 4;
+	else if (control->subscribers[5].active == 1 &&
+		 subscriberId == control->subscribers[5].parameters.subscriberId)
+		index = 5;
+	else if (control->subscribers[6].active == 1 &&
+		 subscriberId == control->subscribers[6].parameters.subscriberId)
+		index = 6;
+	else if (control->subscribers[7].active == 1 &&
+		 subscriberId == control->subscribers[7].parameters.subscriberId)
+		index = 7;
+	else if (control->subscribers[8].active == 1 &&
+		 subscriberId == control->subscribers[8].parameters.subscriberId)
+		index = 8;
+	else
+		goto invalid;
+	if (control->subscribers[index].parameters.featureId != 0)
+		goto invalid;
+checkVersion:
+	if (control->configurationReplyValid != 1) {
+		result = (int)0x8033070F;
+		goto out;
+	}
+	result = bbmcLookupModeConfiguration(control->configurationMode, &configuration);
+	if (result >= 0)
+		*matches = configuration->checkEnabled != 1 ||
+			(control->firstConfigurationReply == configuration->expectedWords[0] &&
+			 control->secondConfigurationReply == configuration->expectedWords[1] &&
+			 control->versionFamily == configuration->expectedHalfwords[0] &&
+			 control->versionRevision == configuration->expectedHalfwords[1] &&
+			 control->versionPatch == configuration->expectedByte);
+	goto out;
+invalid:
+	result = (int)0x80330002;
+out:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* features 7 and 0: the firmware archive version the configuration mode
+ * expects (sceBbmcDLUpdaterGetLatestArchiveVersion) */
+int SceBbmcForDriver_FCF6A1EA(int subscriberId, SceUInt32 *version)
+{
+	BbmcControl *control = bbmcGetControl();
+	const BbmcModeConfiguration *configuration;
+	int index, result, firstActive;
+
+	if (version == NULL)
+		return (int)0x80330002;
+	if (control == NULL)
+		return (int)0x80330003;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	bbmcEnterCS(&control->mutex);
+	firstActive = control->subscribers[0].active;
+	if (firstActive == 1 &&
+	    subscriberId == control->subscribers[0].parameters.subscriberId)
+		index = 0;
+	else if (control->subscribers[1].active == 1 &&
+		 subscriberId == control->subscribers[1].parameters.subscriberId)
+		index = 1;
+	else if (control->subscribers[2].active == 1 &&
+		 subscriberId == control->subscribers[2].parameters.subscriberId)
+		index = 2;
+	else if (control->subscribers[3].active == 1 &&
+		 subscriberId == control->subscribers[3].parameters.subscriberId)
+		index = 3;
+	else if (control->subscribers[4].active == 1 &&
+		 subscriberId == control->subscribers[4].parameters.subscriberId)
+		index = 4;
+	else if (control->subscribers[5].active == 1 &&
+		 subscriberId == control->subscribers[5].parameters.subscriberId)
+		index = 5;
+	else if (control->subscribers[6].active == 1 &&
+		 subscriberId == control->subscribers[6].parameters.subscriberId)
+		index = 6;
+	else if (control->subscribers[7].active == 1 &&
+		 subscriberId == control->subscribers[7].parameters.subscriberId)
+		index = 7;
+	else if (control->subscribers[8].active == 1 &&
+		 subscriberId == control->subscribers[8].parameters.subscriberId)
+		index = 8;
+	else
+		goto checkSystemFeature;
+	if (control->subscribers[index].parameters.featureId == 7)
+		goto getVersion;
+checkSystemFeature:
+	if (firstActive == 1 &&
+	    subscriberId == control->subscribers[0].parameters.subscriberId)
+		index = 0;
+	else if (control->subscribers[1].active == 1 &&
+		 subscriberId == control->subscribers[1].parameters.subscriberId)
+		index = 1;
+	else if (control->subscribers[2].active == 1 &&
+		 subscriberId == control->subscribers[2].parameters.subscriberId)
+		index = 2;
+	else if (control->subscribers[3].active == 1 &&
+		 subscriberId == control->subscribers[3].parameters.subscriberId)
+		index = 3;
+	else if (control->subscribers[4].active == 1 &&
+		 subscriberId == control->subscribers[4].parameters.subscriberId)
+		index = 4;
+	else if (control->subscribers[5].active == 1 &&
+		 subscriberId == control->subscribers[5].parameters.subscriberId)
+		index = 5;
+	else if (control->subscribers[6].active == 1 &&
+		 subscriberId == control->subscribers[6].parameters.subscriberId)
+		index = 6;
+	else if (control->subscribers[7].active == 1 &&
+		 subscriberId == control->subscribers[7].parameters.subscriberId)
+		index = 7;
+	else if (control->subscribers[8].active == 1 &&
+		 subscriberId == control->subscribers[8].parameters.subscriberId)
+		index = 8;
+	else
+		goto invalid;
+	if (control->subscribers[index].parameters.featureId != 0)
+		goto invalid;
+getVersion:
+	result = bbmcLookupModeConfiguration(control->configurationMode, &configuration);
+	if (result >= 0)
+		*version = configuration->outputValue;
+	goto out;
+invalid:
+	result = (int)0x80330002;
+out:
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 0: the network's last reject cause (sceBbmcNetGetRejectCause) */
+int SceBbmcForDriver_92D7C12C(int subscriberId, BbmcRejectCause *cause)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	if (cause == NULL)
+		return (int)0x80330002;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 0) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330002;
+	}
+	if (control->currentState <= 1) {
+		result = (int)0x80330006;
+	} else {
+		memset(cause, 0, sizeof(*cause));
+		result = 0;
+		cause->cause = control->nasCause;
+		cause->reason = control->nasReason;
+	}
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* feature 4: the value the last SIM refresh command carried
+ * (sceBbmcSimGetPLMNModeBit) */
+int SceBbmcForDriver_864E6CA0(int subscriberId, SceUInt32 *value)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	if (value == NULL)
+		return (int)0x80330002;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 4) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330002;
+	}
+	if (control->currentState <= 1) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330006;
+	}
+	*value = control->refreshCommandValue;
+	bbmcLeaveCS(&control->mutex);
+	return 0;
 }
 
 int sceBbmcDLUpdaterGetPkgIdForDriver(int subscriberId,
@@ -3478,6 +5089,34 @@ invalid:
 out:
 	bbmcLeaveCS(&control->mutex);
 	return result;
+}
+
+/* feature 0: the modem firmware revision string (sceBbmcGetComFirmVersion) */
+int SceBbmcForDriver_B17A056F(int subscriberId, char *revision, SceSize size)
+{
+	BbmcControl *control = bbmcGetControl();
+	int index, result;
+
+	if (control == NULL)
+		return (int)0x80330003;
+	if (revision == NULL || size - 1 > 103)
+		return (int)0x80330002;
+	result = bbmcCheckSuspendState(control);
+	if (result < 0)
+		return result;
+	bbmcEnterCS(&control->mutex);
+	index = bbmcFindSubscriber(control, subscriberId);
+	if (index < 0 || control->subscribers[index].parameters.featureId != 0) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330002;
+	}
+	if (control->currentState <= 1) {
+		bbmcLeaveCS(&control->mutex);
+		return (int)0x80330006;
+	}
+	memcpy(revision, control->deviceInformation.revision, size);
+	bbmcLeaveCS(&control->mutex);
+	return 0;
 }
 
 int bbmcSendSysconCommand(BbmcControl *control,
@@ -3589,24 +5228,6 @@ static const BbmcModeValue bbmcModeValues[12] = {
 	{ 11, 5 },
 };
 
-/* Descriptive names: the records supply a value and optional equality checks. */
-typedef struct BbmcModeConfiguration {
-	SceUInt32 mode;
-	SceUInt32 checkEnabled;
-	SceUInt32 outputValue;
-	SceUInt32 expectedWords[2];
-	SceUInt16 expectedHalfwords[2];
-	SceUInt8 expectedByte;
-} BbmcModeConfiguration;
-
-_Static_assert(sizeof(BbmcModeConfiguration) == 28,
-	"BBMC mode configuration size");
-_Static_assert(offsetof(BbmcModeConfiguration, checkEnabled) == 4 &&
-	offsetof(BbmcModeConfiguration, outputValue) == 8 &&
-	offsetof(BbmcModeConfiguration, expectedWords) == 12 &&
-	offsetof(BbmcModeConfiguration, expectedHalfwords) == 20 &&
-	offsetof(BbmcModeConfiguration, expectedByte) == 24,
-	"BBMC mode configuration layout");
 
 static const BbmcModeConfiguration bbmcModeConfigurations[12] = {
 	{ 1, 0, 29, { 13, 13 }, { 0x641, 0x400 }, 6 },
@@ -3694,34 +5315,6 @@ int bbmcLookupModeConfiguration(int mode,
 	return 0;
 }
 
-STUB(SceBbmcForDriver_009C73D2)
-STUB(SceBbmcForDriver_07ADDA90)
-STUB(SceBbmcForDriver_24EE6E9C)
-STUB(SceBbmcForDriver_2930DB51)
-STUB(SceBbmcForDriver_399EF002)
-STUB(SceBbmcForDriver_3D06FDB0)
-STUB(SceBbmcForDriver_3D27000A)
-STUB_FUNC(int, SceBbmcForDriver_4281E476, (int subscriberId, uint32_t *status))
-STUB(SceBbmcForDriver_503C7E0B)
-STUB(SceBbmcForDriver_683D19BF)
-STUB(SceBbmcForDriver_6AD4053A)
-STUB(SceBbmcForDriver_739274F3)
-STUB(SceBbmcForDriver_75FA68D3)
-STUB(SceBbmcForDriver_7EA964B6)
-STUB(SceBbmcForDriver_864E6CA0)
-STUB(SceBbmcForDriver_92D7C12C)
-STUB(SceBbmcForDriver_93E5345A)
-STUB(SceBbmcForDriver_A9CF664F)
-STUB(SceBbmcForDriver_B17A056F)
-STUB(SceBbmcForDriver_B7E650A9)
-STUB(SceBbmcForDriver_BC3C8942)
-STUB(SceBbmcForDriver_BF550F4A)
-STUB(SceBbmcForDriver_D288E771)
-STUB(SceBbmcForDriver_E09808A2)
-STUB(SceBbmcForDriver_EBC5D3DB)
-STUB(SceBbmcForDriver_F4C8482D)
-STUB(SceBbmcForDriver_FB3DA35E)
-STUB(SceBbmcForDriver_FCF6A1EA)
 STUB(sceBbmcVerifyPin)
 STUB(sceBbmcNetworkScanStart)
 STUB(sceBbmcSMSGetListDone)

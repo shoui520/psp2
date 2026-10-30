@@ -1119,7 +1119,7 @@ allocate:
 		break;
 	case 38:
 		message = msgAllocMsgPacket(control, 162);
-		message->body.firmwareMessage.firmwareImageResult = result;
+		message->body.firmwareMessage.setFirmwarePreferenceResult = result;
 		message->body.firmwareMessage.imageCount = output[2].value;
 		if (output[2].value != 0) {
 			message->body.firmwareMessage.firstImageType = output[3].value;
@@ -1137,7 +1137,7 @@ allocate:
 		break;
 	case 41:
 		message = msgAllocMsgPacket(control, 160);
-		message->body.firmwareMessage.setFirmwarePreferenceResult = result;
+		message->body.firmwareMessage.firmwareImageResult = result;
 		break;
 	case 50:
 		if (input[1].value != 0) {
@@ -7972,7 +7972,7 @@ int bbcmdDepersonalizeUim(BbcmdRequest *request)
 		parameters->controlKeyLength = keyLength;
 		parameters->operation = request->input[1].value;
 		key = request->input[0].pointer;
-		memcpy(parameters->controlKey, key->controlKey, keyLength);
+		memcpy(parameters->controlKey, key->controlKey.digits, keyLength);
 		client = binding->client;
 		if (client->service != 11) {
 			result = 0x80330002;
