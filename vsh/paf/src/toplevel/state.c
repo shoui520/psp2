@@ -25,6 +25,38 @@ int ScePafToplevel_1F15D1D7(uint8_t *self)
 	return result;
 }
 
+int32_t ScePafToplevel_1DF2C6FD(const uint8_t *self, int32_t value)
+{
+	int32_t *root = *(int32_t *const *)(self + 88);
+	int32_t *node;
+
+	if (root) {
+		node = (int32_t *)(uintptr_t)*root;
+		if (!*((uint8_t *)node + 21)) {
+			int32_t sentinel;
+
+			do {
+				int32_t key = node[3];
+
+				if (value >= key) {
+					if (key >= value)
+						break;
+					node = (int32_t *)(uintptr_t)node[2];
+					sentinel = *((char *)node + 21);
+				} else {
+					node = (int32_t *)(uintptr_t)node[1];
+					sentinel = *((char *)node + 21);
+				}
+			} while (!sentinel);
+		}
+	} else {
+		node = 0;
+	}
+	if (node == root)
+		return 0;
+	return node[4];
+}
+
 uint32_t ScePafToplevel_F72FC59E(void)
 {
 	return sce_paf_toplevel_value_1194;
