@@ -157,6 +157,92 @@ uint32_t ScePafGraphics_1768C282(const uint8_t *self, const char *name)
 	return sceGxmProgramParameterGetResourceIndex(parameter);
 }
 
+uint32_t ScePafGraphics_222995DF(const uint8_t *self, const char *name)
+{
+	SceGxmShaderPatcherId id =
+		*(SceGxmShaderPatcherId const *)(self + 28);
+	const SceGxmProgram *program = sceGxmShaderPatcherGetProgramFromId(id);
+	const SceGxmProgramParameter *parameter =
+		sceGxmProgramFindParameterByName(program, name);
+
+	if (!parameter)
+		return UINT32_MAX;
+	sceGxmProgramParameterGetCategory(parameter);
+	return sceGxmProgramParameterGetResourceIndex(parameter);
+}
+
+__attribute__((noinline))
+uint8_t *ScePafGraphics_4CA149A5(uint8_t *self)
+{
+	int16_t next = *(int16_t *)(self + 102) + 1;
+	int16_t maximum = *(int16_t *)(self + 100);
+	uint8_t flags;
+
+	*(int16_t *)(self + 102) = next;
+	flags = self[64];
+	if (next >= maximum)
+		*(int16_t *)(self + 102) = 0;
+	self[64] = flags & ~0x10;
+	return self;
+}
+
+uint8_t *ScePafGraphics_39003F6D(uint8_t *self)
+{
+	int32_t mode = *(int32_t *)(self + 368);
+
+	if (mode > 1) {
+		if (mode <= 3)
+			return ScePafGraphics_4CA149A5(self);
+	} else if (mode >= 0 && self[292]) {
+		return ScePafGraphics_4CA149A5(self);
+	}
+	return self;
+}
+
+int ScePafGraphics_C44935BE(const uint8_t *first,
+			     const uint8_t *second)
+{
+	if (first[4] != second[4])
+		return 0;
+	return ((*(const int16_t *)(first + 6) ^
+		  *(const int16_t *)(second + 6)) & 0x123) == 0;
+}
+
+void ScePafGraphics_03097911(uint8_t *self, int value)
+{
+	Mutex *lock = (Mutex *)(self + 40);
+	uint8_t *object;
+
+	MutexLock(lock);
+	object = *(uint8_t **)(self + 4);
+	if (object)
+		((void (**)(uint8_t *, int))*(void **)object)[3](object, value);
+	--*(int32_t *)(self + 32);
+	MutexUnlock(lock);
+}
+
+void *ScePafGraphics_549C344C(uint32_t *self, void **destination,
+			      uint32_t index)
+{
+	void *result = self;
+
+	if (index < 4) {
+		void *next;
+		result = *destination;
+		next = (void *)(uintptr_t)self[49 + index];
+		if (next != *destination) {
+			if (result)
+				result = (void *)(uintptr_t)
+					ScePafGraphics_9FAF51CF(result);
+			*destination = next;
+			if (next)
+				return (void *)(uintptr_t)
+					ScePafGraphics_29FC820B(next);
+		}
+	}
+	return result;
+}
+
 void *ScePafGraphics_771E7F81(uint8_t *self, void **destination,
 			     int skip)
 {
@@ -183,6 +269,7 @@ void *ScePafGraphics_771E7F81(uint8_t *self, void **destination,
 
 extern uint8_t *sce_paf_graphics_indicator_3070;
 uint8_t sce_paf_graphics_reset_flag_3074;
+uint8_t sce_paf_graphics_reset_gate_3075;
 
 uint8_t *ScePafGraphics_00B9D8CC(void)
 {
@@ -191,6 +278,18 @@ uint8_t *ScePafGraphics_00B9D8CC(void)
 	if (result) {
 		sce_paf_graphics_reset_flag_3074 = 1;
 		*result = 0;
+	}
+	return result;
+}
+
+uint8_t *ScePafGraphics_906BE45C(void)
+{
+	uint8_t *result = sce_paf_graphics_indicator_3070;
+
+	if (result) {
+		sce_paf_graphics_reset_flag_3074 = 0;
+		if (!sce_paf_graphics_reset_gate_3075)
+			*result = 1;
 	}
 	return result;
 }
