@@ -4787,6 +4787,59 @@ int _sceAvcencSetAvailablePreset(unsigned int codecType, unsigned int preset)
 	return SceAvcodecForDriver_7DC13C29(codecType, preset);
 }
 
+int _sceAvcencQueryEncoderMemSize(unsigned int codecType, const AvcencInitParam *pParam,
+		AvcencEncoderMemSize *pMemSize)
+{
+	AvcencInitParam *param;
+	AvcencEncoderMemSize *memSize;
+	int ret, copied;
+
+	if (pParam != NULL) {
+		param = __builtin_alloca(sizeof(*param));
+		ret = sceKernelCopyFromUser(param, pParam, sizeof(*param));
+		if (ret < 0)
+			return ret;
+		pParam = param;
+	}
+	if (pMemSize == NULL)
+		return SceAvcodecForDriver_5C3434FB(codecType, pParam, pMemSize);
+	memSize = __builtin_alloca(sizeof(*memSize));
+	*memSize = (AvcencEncoderMemSize){0};
+	ret = SceAvcodecForDriver_5C3434FB(codecType, pParam, memSize);
+	copied = sceKernelCopyToUser(pMemSize, memSize, sizeof(*memSize));
+	return copied < 0 ? copied : ret;
+}
+
+int _sceAvcencCreateEncoder(unsigned int codecType, AvcencControl *pCtrl,
+		const AvcencInitParam *pParam)
+{
+	AvcencControl *ctrl = NULL;
+	AvcencInitParam *param;
+	int ret, copied;
+
+	if (pCtrl != NULL) {
+		ctrl = __builtin_alloca(sizeof(*ctrl));
+		*ctrl = (AvcencControl){0};
+		ret = sceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		if (ret < 0)
+			return ret;
+	}
+	if (pParam != NULL) {
+		param = __builtin_alloca(sizeof(*param));
+		ret = sceKernelCopyFromUser(param, pParam, sizeof(*param));
+		if (ret < 0)
+			return ret;
+		pParam = param;
+	}
+	ret = SceAvcodecForDriver_B2A51EB0(codecType, ctrl, pParam);
+	if (pCtrl != NULL) {
+		copied = sceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		if (copied < 0)
+			return copied;
+	}
+	return ret;
+}
+
 int _sceAvcencSetEncoderParameter(const AvcencControl *pCtrl,
 				 const AvcencEncoderParameter *pParameter)
 {
@@ -4810,9 +4863,311 @@ int _sceAvcencSetEncoderParameter(const AvcencControl *pCtrl,
 	return SceAvcodecForDriver_E0232BFE(ctrl, parameter);
 }
 
+int _sceAvcencQueryEncoderMemSizeInternal(unsigned int codecType, const AvcencInitParamInternal *pParam,
+		AvcencEncoderMemSize *pMemSize)
+{
+	AvcencInitParamInternal *param;
+	AvcencEncoderMemSize *memSize;
+	int ret, copied;
+
+	if (pParam != NULL) {
+		param = __builtin_alloca(sizeof(*param));
+		ret = sceKernelCopyFromUser(param, pParam, sizeof(*param));
+		if (ret < 0)
+			return ret;
+		pParam = param;
+	}
+	if (pMemSize == NULL)
+		return SceAvcodecForDriver_BF3835E2(codecType, pParam, pMemSize);
+	memSize = __builtin_alloca(sizeof(*memSize));
+	*memSize = (AvcencEncoderMemSize){0};
+	ret = SceAvcodecForDriver_BF3835E2(codecType, pParam, memSize);
+	copied = sceKernelCopyToUser(pMemSize, memSize, sizeof(*memSize));
+	return copied < 0 ? copied : ret;
+}
+
+int _sceAvcencCreateEncoderInternal(unsigned int codecType, AvcencControl *pCtrl,
+		const AvcencInitParamInternal *pParam)
+{
+	AvcencControl *ctrl = NULL;
+	AvcencInitParamInternal *param;
+	int ret, copied;
+
+	if (pCtrl != NULL) {
+		ctrl = __builtin_alloca(sizeof(*ctrl));
+		*ctrl = (AvcencControl){0};
+		ret = sceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		if (ret < 0)
+			return ret;
+	}
+	if (pParam != NULL) {
+		param = __builtin_alloca(sizeof(*param));
+		ret = sceKernelCopyFromUser(param, pParam, sizeof(*param));
+		if (ret < 0)
+			return ret;
+		pParam = param;
+	}
+	ret = SceAvcodecForDriver_71C37694(codecType, ctrl, pParam);
+	if (pCtrl != NULL) {
+		copied = sceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		if (copied < 0)
+			return copied;
+	}
+	return ret;
+}
+
+int _sceVideoencInitLibrary(unsigned int codecType,
+		const SceVideodecQueryInitInfo *pInitInfo,
+		const SceVideodecQueryInitInfo *pEncoderInfo)
+{
+	SceVideodecQueryInitInfo *initInfo, *encoderInfo;
+	int ret;
+
+	if (pInitInfo != NULL) {
+		initInfo = __builtin_alloca(sizeof(*initInfo));
+		ret = sceKernelCopyFromUser(initInfo, pInitInfo, sizeof(*initInfo));
+		if (ret < 0)
+			return ret;
+		pInitInfo = initInfo;
+	}
+	if (pEncoderInfo != NULL) {
+		encoderInfo = __builtin_alloca(sizeof(*encoderInfo));
+		ret = sceKernelCopyFromUser(encoderInfo, pEncoderInfo,
+					   sizeof(*encoderInfo));
+		if (ret < 0)
+			return ret;
+		pEncoderInfo = encoderInfo;
+	}
+	return SceAvcodecForDriver_E782E735(codecType, pInitInfo, pEncoderInfo);
+}
+
+int _sceVideoencQueryMemSize(unsigned int codecType,
+		const SceVideodecQueryInitInfo *pInitInfo,
+		const SceVideodecQueryInitInfo *pEncoderInfo,
+		SceVideodecMemInfo *pMemInfo)
+{
+	SceVideodecQueryInitInfo *initInfo, *encoderInfo;
+	SceVideodecMemInfo *memInfo;
+	int ret, copied;
+
+	if (pInitInfo != NULL) {
+		initInfo = __builtin_alloca(sizeof(*initInfo));
+		ret = sceKernelCopyFromUser(initInfo, pInitInfo, sizeof(*initInfo));
+		if (ret < 0)
+			return ret;
+		pInitInfo = initInfo;
+	}
+	if (pEncoderInfo != NULL) {
+		encoderInfo = __builtin_alloca(sizeof(*encoderInfo));
+		ret = sceKernelCopyFromUser(encoderInfo, pEncoderInfo,
+					   sizeof(*encoderInfo));
+		if (ret < 0)
+			return ret;
+		pEncoderInfo = encoderInfo;
+	}
+	if (pMemInfo == NULL)
+		return SceAvcodecForDriver_32DEE3C5(codecType, pInitInfo, pEncoderInfo, pMemInfo);
+	memInfo = __builtin_alloca(sizeof(*memInfo));
+	*memInfo = (SceVideodecMemInfo){0};
+	ret = SceAvcodecForDriver_32DEE3C5(codecType, pInitInfo, pEncoderInfo, memInfo);
+	copied = sceKernelCopyToUser(pMemInfo, memInfo, sizeof(*memInfo));
+	return copied < 0 ? copied : ret;
+}
+
+int _sceVideoencInitLibraryWithUnmapMem(unsigned int codecType,
+		SceVideodecCtrl *pCtrl, const SceVideodecQueryInitInfo *pInitInfo,
+		const SceVideodecQueryInitInfo *pEncoderInfo)
+{
+	SceVideodecCtrl ctrlBuf, *ctrl = NULL;
+	SceVideodecQueryInitInfo *initInfo, *encoderInfo;
+	int ret, copied;
+
+	if (pCtrl != NULL) {
+		ctrl = &ctrlBuf;
+		__builtin_memset(ctrl, 0, sizeof(*ctrl));
+		copied = sceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		if (copied < 0)
+			return copied;
+	}
+	if (pInitInfo != NULL) {
+		initInfo = __builtin_alloca(sizeof(*initInfo));
+		copied = sceKernelCopyFromUser(initInfo, pInitInfo,
+					      sizeof(*initInfo));
+		if (copied < 0)
+			return copied;
+		pInitInfo = initInfo;
+	}
+	if (pEncoderInfo != NULL) {
+		encoderInfo = __builtin_alloca(sizeof(*encoderInfo));
+		copied = sceKernelCopyFromUser(encoderInfo, pEncoderInfo,
+					      sizeof(*encoderInfo));
+		if (copied < 0)
+			return copied;
+		pEncoderInfo = encoderInfo;
+	}
+	ret = SceAvcodecForDriver_CD7FE8D0(codecType, ctrl, pInitInfo, pEncoderInfo);
+	if (pCtrl != NULL) {
+		copied = sceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		if (copied < 0)
+			return copied;
+	}
+	return ret;
+}
+
+int _sceVideoencInitLibraryInternal(unsigned int codecType,
+		const SceVideodecQueryInitInfo *pInitInfo,
+		const SceVideodecQueryInitInfo *pEncoderInfo)
+{
+	SceVideodecQueryInitInfo *initInfo, *encoderInfo;
+	int ret;
+
+	if (pInitInfo != NULL) {
+		initInfo = __builtin_alloca(sizeof(*initInfo));
+		ret = sceKernelCopyFromUser(initInfo, pInitInfo, sizeof(*initInfo));
+		if (ret < 0)
+			return ret;
+		pInitInfo = initInfo;
+	}
+	if (pEncoderInfo != NULL) {
+		encoderInfo = __builtin_alloca(sizeof(*encoderInfo));
+		ret = sceKernelCopyFromUser(encoderInfo, pEncoderInfo,
+					   sizeof(*encoderInfo));
+		if (ret < 0)
+			return ret;
+		pEncoderInfo = encoderInfo;
+	}
+	return SceAvcodecForDriver_04F734CC(codecType, pInitInfo, pEncoderInfo);
+}
+
+int _sceVideoencQueryMemSizeInternal(unsigned int codecType,
+		const SceVideodecQueryInitInfo *pInitInfo,
+		const SceVideodecQueryInitInfo *pEncoderInfo,
+		SceVideodecMemInfo *pMemInfo)
+{
+	SceVideodecQueryInitInfo *initInfo, *encoderInfo;
+	SceVideodecMemInfo *memInfo;
+	int ret, copied;
+
+	if (pInitInfo != NULL) {
+		initInfo = __builtin_alloca(sizeof(*initInfo));
+		ret = sceKernelCopyFromUser(initInfo, pInitInfo, sizeof(*initInfo));
+		if (ret < 0)
+			return ret;
+		pInitInfo = initInfo;
+	}
+	if (pEncoderInfo != NULL) {
+		encoderInfo = __builtin_alloca(sizeof(*encoderInfo));
+		ret = sceKernelCopyFromUser(encoderInfo, pEncoderInfo,
+					   sizeof(*encoderInfo));
+		if (ret < 0)
+			return ret;
+		pEncoderInfo = encoderInfo;
+	}
+	if (pMemInfo == NULL)
+		return SceAvcodecForDriver_86B1ACC5(codecType, pInitInfo, pEncoderInfo, pMemInfo);
+	memInfo = __builtin_alloca(sizeof(*memInfo));
+	*memInfo = (SceVideodecMemInfo){0};
+	ret = SceAvcodecForDriver_86B1ACC5(codecType, pInitInfo, pEncoderInfo, memInfo);
+	copied = sceKernelCopyToUser(pMemInfo, memInfo, sizeof(*memInfo));
+	return copied < 0 ? copied : ret;
+}
+
+int _sceVideoencInitLibraryWithUnmapMemInternal(unsigned int codecType,
+		SceVideodecCtrl *pCtrl, const SceVideodecQueryInitInfo *pInitInfo,
+		const SceVideodecQueryInitInfo *pEncoderInfo)
+{
+	SceVideodecCtrl ctrlBuf, *ctrl = NULL;
+	SceVideodecQueryInitInfo *initInfo, *encoderInfo;
+	int ret, copied;
+
+	if (pCtrl != NULL) {
+		ctrl = &ctrlBuf;
+		__builtin_memset(ctrl, 0, sizeof(*ctrl));
+		copied = sceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		if (copied < 0)
+			return copied;
+	}
+	if (pInitInfo != NULL) {
+		initInfo = __builtin_alloca(sizeof(*initInfo));
+		copied = sceKernelCopyFromUser(initInfo, pInitInfo,
+					      sizeof(*initInfo));
+		if (copied < 0)
+			return copied;
+		pInitInfo = initInfo;
+	}
+	if (pEncoderInfo != NULL) {
+		encoderInfo = __builtin_alloca(sizeof(*encoderInfo));
+		copied = sceKernelCopyFromUser(encoderInfo, pEncoderInfo,
+					      sizeof(*encoderInfo));
+		if (copied < 0)
+			return copied;
+		pEncoderInfo = encoderInfo;
+	}
+	ret = SceAvcodecForDriver_BCB769EB(codecType, ctrl, pInitInfo, pEncoderInfo);
+	if (pCtrl != NULL) {
+		copied = sceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		if (copied < 0)
+			return copied;
+	}
+	return ret;
+}
+
 int _sceVideoencTermLibrary(unsigned int codecType)
 {
 	return SceAvcodecForDriver_58F1E353(codecType);
+}
+
+int _sceAvcencQueryEncoderMemSizeBasic(unsigned int codecType, const AvcencInitParamBasic *pParam,
+		AvcencEncoderMemSize *pMemSize)
+{
+	AvcencInitParamBasic *param;
+	AvcencEncoderMemSize *memSize;
+	int ret, copied;
+
+	if (pParam != NULL) {
+		param = __builtin_alloca(sizeof(*param));
+		ret = sceKernelCopyFromUser(param, pParam, sizeof(*param));
+		if (ret < 0)
+			return ret;
+		pParam = param;
+	}
+	if (pMemSize == NULL)
+		return SceAvcodecForDriver_7385FB51(codecType, pParam, pMemSize);
+	memSize = __builtin_alloca(sizeof(*memSize));
+	*memSize = (AvcencEncoderMemSize){0};
+	ret = SceAvcodecForDriver_7385FB51(codecType, pParam, memSize);
+	copied = sceKernelCopyToUser(pMemSize, memSize, sizeof(*memSize));
+	return copied < 0 ? copied : ret;
+}
+
+int _sceAvcencCreateEncoderBasic(unsigned int codecType, AvcencControl *pCtrl,
+		const AvcencInitParamBasic *pParam)
+{
+	AvcencControl *ctrl = NULL;
+	AvcencInitParamBasic *param;
+	int ret, copied;
+
+	if (pCtrl != NULL) {
+		ctrl = __builtin_alloca(sizeof(*ctrl));
+		*ctrl = (AvcencControl){0};
+		ret = sceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		if (ret < 0)
+			return ret;
+	}
+	if (pParam != NULL) {
+		param = __builtin_alloca(sizeof(*param));
+		ret = sceKernelCopyFromUser(param, pParam, sizeof(*param));
+		if (ret < 0)
+			return ret;
+		pParam = param;
+	}
+	ret = SceAvcodecForDriver_C5E720E2(codecType, ctrl, pParam);
+	if (pCtrl != NULL) {
+		copied = sceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		if (copied < 0)
+			return copied;
+	}
+	return ret;
 }
 
 int _sceAvcencDeleteEncoder(AvcencControl *pCtrl)

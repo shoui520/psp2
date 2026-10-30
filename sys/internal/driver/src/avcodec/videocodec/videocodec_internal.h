@@ -1214,6 +1214,18 @@ int SceAvcodecForDriver_86B1ACC5(unsigned int codecType,
 int SceAvcodecForDriver_32DEE3C5(unsigned int codecType,
 	const SceVideodecQueryInitInfo *pInitInfo,
 	const SceVideodecQueryInitInfo *pEncoderInfo, SceVideodecMemInfo *pMemInfo);
+int SceAvcodecForDriver_E782E735(unsigned int codecType,
+	const SceVideodecQueryInitInfo *pInitInfo,
+	const SceVideodecQueryInitInfo *pEncoderInfo);
+int SceAvcodecForDriver_04F734CC(unsigned int codecType,
+	const SceVideodecQueryInitInfo *pInitInfo,
+	const SceVideodecQueryInitInfo *pEncoderInfo);
+int SceAvcodecForDriver_CD7FE8D0(unsigned int codecType, const SceVideodecCtrl *pCtrl,
+	const SceVideodecQueryInitInfo *pInitInfo,
+	const SceVideodecQueryInitInfo *pEncoderInfo);
+int SceAvcodecForDriver_BCB769EB(unsigned int codecType, const SceVideodecCtrl *pCtrl,
+	const SceVideodecQueryInitInfo *pInitInfo,
+	const SceVideodecQueryInitInfo *pEncoderInfo);
 int SceAvcodecForDriver_301CCA25(unsigned int codecType, SceAvcdecCtrl *pCtrl,
 		const SceAvcdecQueryDecoderInfo *pDecoderInfo);
 int SceAvcodecForDriver_01387A93(unsigned int codecType,
