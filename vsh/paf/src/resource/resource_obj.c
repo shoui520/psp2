@@ -21,6 +21,11 @@ extern void ScePafStdc_5C468294(void *ptr);
 static const char s_default_string[] = "";
 static const char s_buffer_filename[] = "";
 
+int ScePafResource_598D91C1(const ResourceObj *self)
+{
+	return self->string_buffer ? 0 : -1;
+}
+
 char *ResourceObjGetFileName(const ResourceObj *self)
 {
 	return self->filename.ptr;
