@@ -41,14 +41,18 @@ typedef struct cpu_core {
 	uint8_t cpuc_pad[14];
 } cpu_core_t;
 
+/*
+ * Apple's dtrace_cpu_t, which Sony's port follows: 60 bytes under dtrace.h's
+ * pack(4), the chill mark at 0x28 (dtrace_init allocates 4 * 60 bytes)
+ */
 typedef struct cpu {
 	processorid_t cpu_id;
 	struct cpu *cpu_next;		/* next CPU in the ring */
 	krwlock_t cpu_ft_lock;		/* DTrace: fasttrap lock */
+	uintptr_t cpu_dtrace_caller;	/* DTrace: caller, if any */
 	hrtime_t cpu_dtrace_chillmark;	/* DTrace: chill mark time */
 	hrtime_t cpu_dtrace_chilled;	/* DTrace: total chill time */
-	uintptr_t cpu_profile_pc;	/* kernel PC in profile interrupt */
-	uintptr_t cpu_profile_upc;	/* user PC in profile interrupt */
+	boolean_t cpu_dtrace_invop_underway; /* DTrace: guards against invalid op re-entrancy */
 } cpu_t;
 
 typedef enum {
