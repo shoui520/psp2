@@ -167,3 +167,133 @@ int ScePafWidget_295F20D1(void)
 {
 	return sce_paf_widget_state_142d8 != 0;
 }
+
+int ScePafWidget_01EF18C7(const uint8_t *self, uint8_t *output)
+{
+	*output = self[648] & 1;
+	return 0;
+}
+
+int ScePafWidget_027F9135(void *self, uint32_t *attributes)
+{
+	attributes[1] = (attributes[1] & 0xF0FFFFFFU) | 0x01000000U;
+	return 0;
+}
+
+int ScePafWidget_BF3DEACA(const uint8_t *self)
+{
+	const uint8_t *value = *(const uint8_t *const *)(self + 636);
+
+	return value ? *(const int32_t *)(value + 4) : -1;
+}
+
+int ScePafWidget_CEFCBAA6(const uint8_t *self)
+{
+	const uint8_t *value = *(const uint8_t *const *)(self + 364);
+
+	return value ? *(const int32_t *)(value + 640) : 0;
+}
+
+int ScePafWidget_7B4B305A(const uint8_t *self)
+{
+	return (self[649] & 4) != 0;
+}
+
+int ScePafWidget_CEA84D74(uint8_t *self, uint8_t value)
+{
+	if (self[772] != value)
+		self[772] = value;
+	return 0;
+}
+
+uint32_t ScePafWidget_81FE70D6(const uint8_t *self, int32_t index)
+{
+	if (index < 0 || index > 2)
+		return 0;
+	return ((const uint32_t *)*(const void *const *)(self + 636))[index + 1];
+}
+
+int ScePafWidget_02A5FA8E(const uint8_t *self, int32_t index)
+{
+	if (index < 0 || index > 2)
+		return -2136014706;
+	((uint32_t *)*(void *const *)(self + 636))[index + 1] = 0;
+	return 0;
+}
+
+int ScePafWidget_28D9B1FE(uint8_t *self, int32_t index)
+{
+	if (index < 0 || index > 1)
+		return -2136014706;
+	*(uint32_t *)(self + 652) = index;
+	return 0;
+}
+
+int ScePafWidget_E636C722(const uint8_t *self, uint32_t *result,
+			      int32_t index)
+{
+	if (index < 0 || index > 2)
+		return -2136014706;
+	*result = ((const uint32_t *)(self + 672))[index];
+	return 0;
+}
+
+int ScePafWidget_B86ADE3E(const uint8_t *self, uint32_t *result,
+			      int32_t index)
+{
+	if (index < 0 || index > 2)
+		return -2136014706;
+	*result = ((const uint32_t *)(self + 684))[index];
+	return 0;
+}
+
+int ScePafWidget_C14E8BB4(uint8_t *self, int32_t index)
+{
+	if (index < 0 || index > 2)
+		return -2136014706;
+	*(uint32_t *)(self + 756) = index;
+	return 0;
+}
+
+int ScePafWidget_CEBDCDB3(const uint8_t *self, const uint8_t *other)
+{
+	return other &&
+		*(const uint32_t *)(self + 636) ==
+		(uint8_t)*(const uint32_t *)(other + 8);
+}
+
+int ScePafWidget_B4A711BB(const uint8_t *self)
+{
+	return !*(const uint32_t *)(self + 44) &&
+		!*(const uint32_t *)(self + 56) && self[213] != 0;
+}
+
+int ScePafWidget_439A6529(uint8_t *self, uint32_t value)
+{
+	if (!value)
+		return -2136014706;
+	**(uint32_t **)(self + 636) = value;
+	*(uint32_t *)(self + 724) |= 12;
+	return 0;
+}
+
+uint32_t ScePafWidget_C003A59B(const uint8_t *self, int32_t index)
+{
+	if (index < 0 || index >= *(const int32_t *)(self + 1064))
+		return 0;
+	return *(const uint32_t *)(
+		((const uint8_t *const *)*(const void *const *)(self + 1060))[index]
+		+ 12);
+}
+
+int ScePafWidget_75420B80(const uint8_t *self, int32_t index)
+{
+	uint32_t type;
+
+	if (index < 0 || index >= *(const int32_t *)(self + 1064))
+		return 0;
+	type = *(const uint32_t *)(
+		((const uint8_t *const *)*(const void *const *)(self + 1060))[index]
+		+ 4);
+	return type == 3 ? 1 : type;
+}
