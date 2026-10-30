@@ -1247,6 +1247,46 @@ void ScePafGraphics_9989498E(void *target)
 	MutexUnlock(&sce_paf_graphics_registry_mutex_1278);
 }
 
+typedef struct PafGraphicsItemNode {
+	struct PafGraphicsItemNode *previous;
+	struct PafGraphicsItemNode *next;
+	void *value;
+} PafGraphicsItemNode;
+
+PafGraphicsItemNode *sce_paf_graphics_items_12a0;
+Mutex sce_paf_graphics_items_mutex_12b0;
+
+void *ScePafGraphics_0AED177D(int32_t index)
+{
+	PafGraphicsItemNode *head;
+	PafGraphicsItemNode *node = NULL;
+	void *value;
+
+	MutexLock(&sce_paf_graphics_items_mutex_12b0);
+	head = sce_paf_graphics_items_12a0;
+	if (head)
+		node = head->next;
+	if (node != head) {
+		if (index <= 0)
+			goto found;
+	advance:
+		--index;
+		if (node)
+			node = node->next;
+		if (node == head)
+			goto empty;
+		if (index > 0)
+			goto advance;
+	found:
+		value = node->value;
+		MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
+		return value;
+	}
+	empty:
+	MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
+	return NULL;
+}
+
 int ScePafGraphics_309D2902(const uint8_t *self, int index,
 			      int arg3, int arg4, int arg5, int arg6,
 			      const void *source)
