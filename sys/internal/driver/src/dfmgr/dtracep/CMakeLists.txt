@@ -21,13 +21,14 @@ endforeach()
 
 psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	dtrace_change_stack.S
-	deci4p_dtracep.c
 	dtrace_client.c
 	dtrace_client_list.c
 	dtracep.c
 	dtracep_command.c
 	dtracep_module.c
 	dtracep_packet_queue.c
+	dtracep_syscalls.c
+	dtracep_pmep.c
 	${dtrace_cddl_sources}
 	dtrace/sce/dtrace_backtrace.c
 	dtrace/sce/dtrace_bookmark.c
