@@ -6,6 +6,21 @@
 RMutex CacheManagerImplRMutex;
 extern uint32_t sce_paf_misc_counter_c224;
 
+int ScePafMisc_5F18F5F7(const uint8_t *self)
+{
+	int result;
+	const uint8_t *state;
+
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	state = *(const uint8_t *const *)(self + 4);
+	if (state)
+		result = state[65];
+	else
+		result = 1;
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	return result;
+}
+
 void ScePafMisc_F4B797C2(CacheManagerImpl *self)
 {
 	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);

@@ -5,6 +5,23 @@
 extern int sceAppMgrIsGameProgram(void);
 extern int sceAppMgrIsNonGameProgram(void);
 extern uint32_t ScePafMisc_AF4FC3F4(void);
+extern int sceCtrlSetSamplingMode(unsigned int mode);
+extern int sceCtrlSetSamplingModeExt(unsigned int mode);
+
+uint32_t sce_paf_misc_controller_mode_d418;
+
+int ScePafMisc_30EAFB53(void)
+{
+	int result;
+
+	if (sce_paf_misc_controller_mode_d418 == 2)
+		result = sceCtrlSetSamplingModeExt(0);
+	else
+		result = sceCtrlSetSamplingMode(0);
+	if (!result)
+		return 0;
+	return result;
+}
 
 /* Native BSS byte queried by the program-class flag exports. */
 uint8_t sce_paf_misc_program_flags_eefc;
