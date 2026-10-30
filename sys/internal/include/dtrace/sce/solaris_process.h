@@ -18,7 +18,7 @@ typedef struct SceProcessObject proc_t;
 pid_t proc_pid(proc_t *p);
 pid_t proc_ppid(proc_t *p);
 proc_t *proc_find(pid_t pid);
-void proc_rele(proc_t *p);
+int proc_rele(proc_t *p);
 proc_t *sprlock(pid_t pid);
 void sprunlock(proc_t *p);
 void proc_lock(proc_t *p);
