@@ -70,6 +70,35 @@ int ScePafGraphics_1D522F83(uint8_t *self, int32_t mode)
 	return (int)(uintptr_t)self;
 }
 
+void *ScePafGraphics_5AF8179A(const uint8_t *self, const uint64_t *value)
+{
+	uint8_t *target = *(uint8_t *const *)(self + 80);
+	uint64x2_t pair;
+
+	if (target) {
+		pair = *(const uint64x2_t *)value;
+		target[85] |= 4;
+		*(uint64_t *)(target + 120) = vgetq_lane_u64(pair, 0);
+		*(uint64_t *)(target + 128) = vgetq_lane_u64(pair, 1);
+	}
+	return target;
+}
+
+void *ScePafGraphics_4F80DA00(uint8_t *self, int first, int second)
+{
+	int8_t value = *(int8_t *)(self + 1931);
+
+	if ((value & 15) != first ||
+	    (((uint32_t)value >> 4) & 15) != second) {
+		uint32_t updated = ((uint32_t)value & ~15U) | (first & 15);
+
+		self[1928] = 1;
+		self[1931] = (uint8_t)((updated & ~0xf0U) |
+					  ((second & 15) << 4));
+	}
+	return self;
+}
+
 static const SceGxmProgramParameter *GraphicsFindNamedProgramParameter(
 		const uint8_t *self, const char *name)
 {
