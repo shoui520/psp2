@@ -3,8 +3,27 @@
 #include <stddef.h>
 #include "../compiler.h"
 #include "../std/string.h"
+#include "../thread/thread.h"
 
 uint32_t sce_paf_toplevel_value_1194;
+volatile int32_t sce_paf_toplevel_pending_4694;
+
+int ScePafToplevel_1F15D1D7(uint8_t *self)
+{
+	int result = *(const uint32_t *)(self + 228) & 0x10;
+	int (*callback)(void *);
+
+	if (result) {
+		for (result = sce_paf_toplevel_pending_4694;
+		     sce_paf_toplevel_pending_4694 > 0;
+		     result = sce_paf_toplevel_pending_4694)
+			ScePafThread_651F4F81(17);
+	}
+	callback = *(int (**)(void *))(self + 44);
+	if (callback)
+		return callback(self);
+	return result;
+}
 
 uint32_t ScePafToplevel_F72FC59E(void)
 {
