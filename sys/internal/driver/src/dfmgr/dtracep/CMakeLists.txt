@@ -1,6 +1,6 @@
 # os0:kd/deci4p_dtracep - DTrace (Sony's port); being converted to C
 psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	deci4p_dtracep.c
-	dtrace_bookmark.c
+	dtrace/sce/dtrace_bookmark.c
 	global_timer.c
 )

@@ -74,7 +74,7 @@ os0/kd/deci4p_ctrlp	sys/internal/deci/deci4p_ctrlp	os0:kd/deci4p_ctrlp.skprx	4.0
 os0/kd/deci4p_dbgp	sys/internal/deci/deci4p_dbgp	os0:kd/deci4p_dbgp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
 os0/kd/deci4p_dfmgr	sys/internal/deci/deci4p_dfmgr	os0:kd/deci4p_dfmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
 os0/kd/deci4p_drfp	sys/internal/deci/deci4p_drfp	os0:kd/deci4p_drfp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
-os0/kd/deci4p_dtracep	sys/internal/deci/deci4p_dtracep	os0:kd/deci4p_dtracep.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_dtracep	sys/internal/driver/src/dfmgr/dtracep	os0:kd/deci4p_dtracep.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	sdk	Sony's libdtrace source package (dtrace-cddl-src.zip, diff.txt): driver/src/dfmgr/dtracep/dtrace/cddl/dtrace.c
 os0/kd/deci4p_loadp	sys/internal/deci/deci4p_loadp	os0:kd/deci4p_loadp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
 os0/kd/deci4p_pamp	sys/internal/deci/deci4p_pamp	os0:kd/deci4p_pamp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
 os0/kd/deci4p_rdrfp	sys/internal/deci/deci4p_rdrfp	os0:kd/deci4p_rdrfp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
