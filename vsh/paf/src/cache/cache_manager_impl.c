@@ -122,6 +122,34 @@ void ScePafMisc_CB20D5B3(CacheManagerImpl *self)
 	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
 }
 
+/* Two transaction-state variants use the same guarded allocation cleanup. */
+static inline __attribute__((always_inline))
+void ClearCacheTransient(CacheManagerImpl *self)
+{
+	PafCacheTransient *state = (PafCacheTransient *)self;
+
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	if (state->allocation) {
+		if (self->longLifeHeap)
+			ScePafMisc_511CFBA2((CacheManagerImpl *)self->longLifeHeap,
+					     state->allocation);
+		state->allocation = 0;
+	}
+	state->timestampLow = 0;
+	state->timestampHigh = 0;
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+}
+
+void ScePafMisc_297A9338(CacheManagerImpl *self)
+{
+	ClearCacheTransient(self);
+}
+
+void ScePafMisc_AD1073C1(CacheManagerImpl *self)
+{
+	ClearCacheTransient(self);
+}
+
 int ScePafMisc_E2F15E2D(CacheManagerImpl *self, int32_t status,
 			 uint8_t *completed)
 {

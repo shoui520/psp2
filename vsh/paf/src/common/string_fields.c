@@ -235,6 +235,31 @@ PafCommonSharedPointer *ScePafCommon_EA03EA22(
 	return result;
 }
 
+typedef struct PafCommonSharedPointerRange {
+	PafCommonSharedPointer *items;
+	uint32_t firstIndex;
+} PafCommonSharedPointerRange;
+
+PafCommonSharedPointer *ScePafCommon_4A6AF5C3(
+		PafCommonSharedPointer *result,
+		const PafCommonSharedPointerRange *range, uint32_t index)
+{
+	if (range->firstIndex >= index) {
+		result->object = 0;
+		result->control = 0;
+	} else {
+		PafCommonSharedPointer *source = &range->items[index];
+
+		result->object = source->object;
+		result->control = source->control;
+		if (result->object)
+			return (PafCommonSharedPointer *)(uintptr_t)(
+				(uint32_t)sceAtomicIncrement32AcqRel(
+					(volatile int32_t *)result->control + 1) + 1);
+	}
+	return result;
+}
+
 typedef struct PafCommonReference {
 	void **methods;
 	volatile int32_t count;
