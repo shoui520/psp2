@@ -1218,6 +1218,35 @@ void ScePafGraphics_B902E8F1(uint8_t *self)
 	ScePafThread_95F9C45F(&sce_paf_graphics_rmutex_1230);
 }
 
+typedef struct PafGraphicsRegistryAnchor {
+	void *previous;
+	void *next;
+} PafGraphicsRegistryAnchor;
+
+PafGraphicsRegistryAnchor sce_paf_graphics_registry_1270;
+Mutex sce_paf_graphics_registry_mutex_1278;
+
+void ScePafGraphics_9989498E(void *target)
+{
+	uint8_t *link;
+	uint8_t *sentinel = (uint8_t *)&sce_paf_graphics_registry_1270;
+
+	MutexLock(&sce_paf_graphics_registry_mutex_1278);
+	link = sce_paf_graphics_registry_1270.next;
+	while (link != sentinel) {
+		uint8_t *node = NULL;
+
+		if (link)
+			node = link - 16;
+		if (*(void **)(node + 32) == target) {
+			*(void **)(node + 32) = NULL;
+			*(void **)(node + 36) = NULL;
+		}
+		link = *(uint8_t **)(link + 4);
+	}
+	MutexUnlock(&sce_paf_graphics_registry_mutex_1278);
+}
+
 int ScePafGraphics_309D2902(const uint8_t *self, int index,
 			      int arg3, int arg4, int arg5, int arg6,
 			      const void *source)
