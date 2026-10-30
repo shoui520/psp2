@@ -328,7 +328,9 @@ typedef struct Dsp0VideocodecM4vDecoderCommand {
 	unsigned short horizontal;
 	unsigned short vertical;
 	SceSize maxEsSize;
-	unsigned char coprocessorModes[28];
+	unsigned char coprocessorModes[20];
+	unsigned int auIndex;
+	unsigned char reserved[4];
 	Dsp0VideocodecAccessUnit au[2];
 	Dsp0VideocodecPicture *pPicture;
 	unsigned int numOfPicture;
@@ -340,6 +342,7 @@ typedef struct Dsp0VideocodecM4vDecoderCommand {
 } Dsp0VideocodecM4vDecoderCommand;
 
 _Static_assert(sizeof(Dsp0VideocodecM4vDecoderCommand) == 256, "DSP0 M4V decoder command ABI");
+_Static_assert(offsetof(Dsp0VideocodecM4vDecoderCommand, auIndex) == 40, "DSP0 M4V AU index ABI");
 _Static_assert(offsetof(Dsp0VideocodecM4vDecoderCommand, au) == 48, "DSP0 M4V AU ABI");
 _Static_assert(offsetof(Dsp0VideocodecM4vDecoderCommand, pPicture) == 144,
 	       "DSP0 M4V picture ABI");
