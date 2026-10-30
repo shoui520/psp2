@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "../compiler.h"
+#include "../std/string.h"
 
 uint32_t sce_paf_toplevel_value_1194;
 
@@ -53,4 +54,28 @@ int32_t ScePafToplevel_CE0BFCFE(const uint8_t *self)
 	if (nested)
 		return *(const int32_t *)(nested + 268);
 	return *(const int32_t *)(self + 92);
+}
+
+static inline __attribute__((always_inline))
+uint32_t *InitTopLevelRequest(uint32_t *self)
+{
+	self[0] = (uint32_t)(uintptr_t)&PafStringEmpty;
+	self[1] = 0;
+	self[3] = 0;
+	self[4] = 0;
+	self[5] = 0;
+	self[6] = 0;
+	self[8] = (uint32_t)-1;
+	self[7] = 0;
+	return self;
+}
+
+uint32_t *ScePafToplevel_7C8CF5E8(uint32_t *self)
+{
+	return InitTopLevelRequest(self);
+}
+
+uint32_t *ScePafToplevel_99DD7850(uint32_t *self)
+{
+	return InitTopLevelRequest(self);
 }
