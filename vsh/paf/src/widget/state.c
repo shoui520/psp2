@@ -634,3 +634,31 @@ uint32_t ScePafWidget_3F295AA9(void)
 {
 	return sce_paf_widget_state_155c + 36;
 }
+
+/* Resource readiness is exposed through several widget compatibility aliases. */
+extern int ScePafResource_598D91C1(const void *resource);
+
+static inline __attribute__((always_inline))
+int WidgetResourceReady(const void *resource)
+{
+	int result = ScePafResource_598D91C1(resource);
+
+	if (result >= 0)
+		return 0;
+	return result;
+}
+
+int ScePafWidget_890AF221(const void *resource)
+{
+	return WidgetResourceReady(resource);
+}
+
+int ScePafWidget_CEC4F335(const void *resource)
+{
+	return WidgetResourceReady(resource);
+}
+
+int ScePafWidget_FC3C881A(const void *resource)
+{
+	return WidgetResourceReady(resource);
+}
