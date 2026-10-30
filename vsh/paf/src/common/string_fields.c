@@ -300,3 +300,85 @@ uint32_t ScePafCommon_3728D46C(PafCommonReferenceString *self)
 	}
 	return remaining;
 }
+
+/* Find a keyed string-property pair in the native node tree. */
+PafCommonSharedPointer *ScePafCommon_91CDF7D0(
+		PafCommonSharedPointer *result, const uint8_t *self,
+		const uint8_t *key)
+{
+	uint32_t *sentinel = *(uint32_t *const *)(self + 44);
+	uint32_t *node;
+
+	if (sentinel) {
+		node = (uint32_t *)*sentinel;
+		if (!((uint8_t *)node)[41]) {
+			uint32_t wanted = *(const uint32_t *)(key + 12);
+
+			do {
+				uint32_t actual = node[7];
+
+				if (wanted >= actual) {
+					if (actual >= wanted)
+						break;
+					node = (uint32_t *)node[2];
+				} else {
+					node = (uint32_t *)node[1];
+				}
+			} while (!((uint8_t *)node)[41]);
+		}
+	} else {
+		node = 0;
+	}
+	if (node == sentinel) {
+		result->object = 0;
+		result->control = 0;
+	} else {
+		*(uint64_t *)result = *(uint64_t *)(node + 8);
+	}
+	return result;
+}
+
+/* Find a keyed shared resource and retain its reference-counted owner. */
+PafCommonSharedPointer *ScePafCommon_97478EC4(
+		PafCommonSharedPointer *result, const uint8_t *self,
+		const uint8_t *key)
+{
+	uint32_t *sentinel = *(uint32_t *const *)(self + 16);
+	uint32_t *node;
+
+	if (sentinel) {
+		node = (uint32_t *)*sentinel;
+		if (!((uint8_t *)node)[37]) {
+			uint32_t wanted = *(const uint32_t *)(key + 12);
+
+			do {
+				uint32_t actual = node[6];
+
+				if (wanted >= actual) {
+					if (actual >= wanted)
+						break;
+					node = (uint32_t *)node[2];
+				} else {
+					node = (uint32_t *)node[1];
+				}
+			} while (!((uint8_t *)node)[37]);
+		}
+	} else {
+		node = 0;
+	}
+	if (node == sentinel) {
+		result->object = 0;
+		result->control = 0;
+	} else {
+		void *object = (void *)(uintptr_t)node[7];
+		uint32_t control = node[8];
+
+		result->object = object;
+		result->control = (void *)(uintptr_t)control;
+		if (object)
+			return (PafCommonSharedPointer *)(uintptr_t)(
+				(uint32_t)sceAtomicIncrement32AcqRel(
+					(volatile int32_t *)(uintptr_t)(control + 4)) + 1);
+	}
+	return result;
+}
