@@ -196,6 +196,8 @@ int SceCodecEngineWrapperForDriver_8DEF9631(unsigned int processor, unsigned int
 int SceCodecEngineWrapperForDriver_972F0D0F(unsigned int processor,
 	const VeneziaVipVideoInput *input, const SceUInt *timeout);
 
+struct SceAvcdecAu;
+
 int SceCodecEngineWrapperForDriver_16506603(unsigned int processor, SceUID cbid,
 	unsigned int eventMask);
 int SceCodecEngineWrapperForDriver_8FE370E6(unsigned int processor, SceUID cbid);
