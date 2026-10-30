@@ -6,8 +6,53 @@
 #include "../std/new.h"
 #include "../thread/thread.h"
 
+extern uint32_t ScePafGraphics_29FC820B(uint8_t *self);
+extern uint32_t ScePafGraphics_9FAF51CF(uint8_t *self);
+extern int ScePafGraphics_C34E1F2C(uint8_t *self, int32_t mode);
+
 uint32_t sce_paf_toplevel_value_1194;
 volatile int32_t sce_paf_toplevel_pending_4694;
+
+int ScePafToplevel_8299E7E4(const uint8_t *self)
+{
+	uint8_t *graphics;
+	uint8_t *frame;
+
+	if (*(const uint32_t *)(self + 84) != 4)
+		return -1;
+	graphics = *(uint8_t *const *)(self + 76);
+	graphics = *(uint8_t **)(graphics + 812);
+	if (!graphics)
+		return -1;
+	frame = *(uint8_t **)(graphics + 64);
+	if (!frame)
+		return 2;
+	ScePafGraphics_29FC820B(frame);
+	ScePafGraphics_9FAF51CF(frame);
+	return *(uint32_t *)(frame + 368) == 2 ? 2 : 3;
+}
+
+int ScePafToplevel_C722E0C5(const uint8_t *self, int32_t requestedMode)
+{
+	uint8_t *graphics;
+	uint8_t *frame;
+	int32_t mode;
+
+	if (*(const uint32_t *)(self + 84) != 4)
+		return -1;
+	graphics = *(uint8_t *const *)(self + 76);
+	graphics = *(uint8_t **)(graphics + 812);
+	if (!graphics)
+		return -1;
+	frame = *(uint8_t **)(graphics + 64);
+	if (!frame)
+		return -1;
+	ScePafGraphics_29FC820B(*(uint8_t **)(graphics + 64));
+	ScePafGraphics_9FAF51CF(frame);
+	mode = requestedMode == 3 ? 3 : 2;
+	ScePafGraphics_C34E1F2C(frame, mode);
+	return 0;
+}
 
 static inline __attribute__((always_inline))
 int RemoveTopLevelListKey(uint8_t *self, size_t listOffset, int32_t key)
