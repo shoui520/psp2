@@ -1,6 +1,8 @@
 /* Standalone native widget state constructors and field operations. */
 #include <stdint.h>
 
+uint32_t sce_paf_widget_state_155c;
+
 static inline __attribute__((always_inline))
 uint32_t *InitializeWidgetRecord(uint32_t *self, uint32_t payload)
 {
@@ -610,4 +612,25 @@ uint8_t *ScePafWidget_7E86AC9D(const uint32_t *self, uint32_t value)
 			++cursor;
 	}
 	return 0;
+}
+
+uint32_t *ScePafWidget_4DDDFF68(uint32_t *self, uint32_t payload)
+{
+	return InitializeWidgetRecord(self, payload);
+}
+
+int ScePafWidget_A8C5CE9E(void *self, uint32_t *attributes)
+{
+	attributes[1] = (attributes[1] & 0xF0FFFFFFU) | 0x01000000U;
+	return 0;
+}
+
+uint32_t ScePafWidget_7B788425(int32_t index)
+{
+	return ((const uint32_t *)sce_paf_widget_state_155c)[index];
+}
+
+uint32_t ScePafWidget_3F295AA9(void)
+{
+	return sce_paf_widget_state_155c + 36;
 }
