@@ -3,6 +3,30 @@
 #include "../compiler.h"
 #include "../std/new.h"
 
+__attribute__((noinline)) int ScePafResource_D58CCBBB(const uint8_t *self)
+{
+	return self[12];
+}
+
+__attribute__((noinline))
+uint8_t *ScePafResource_120CECA8(uint8_t *self, uint8_t value)
+{
+	self[12] = value;
+	return self;
+}
+
+int ScePafResource_AB07D1DC(uint8_t *self)
+{
+	void *resource = *(void **)(self + 4);
+
+	if (resource) {
+		if (ScePafResource_D58CCBBB(resource))
+			((void (*)(void *))(*(void ***)self)[3])(self);
+		ScePafResource_120CECA8(*(uint8_t **)(self + 4), 0);
+	}
+	return 0;
+}
+
 /* Resource handle destruction: release the owned allocation and invalidate
  * the native three-word reference state. */
 static inline __attribute__((always_inline))

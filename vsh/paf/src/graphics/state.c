@@ -22,6 +22,12 @@ extern uint32_t sce_paf_graphics_state_12b0;
 extern uint32_t sce_paf_graphics_state_11fc;
 extern uint8_t sce_paf_graphics_flag_06e8;
 extern int32_t *sce_paf_graphics_active_surface_2e94;
+uint32_t sce_paf_graphics_core_06f8;
+
+uint32_t *ScePafGraphics_4E038C05(void)
+{
+	return &sce_paf_graphics_core_06f8;
+}
 
 /* Update the native four-lane graphics parameter and its mirrored state. */
 uint8_t *ScePafGraphics_7120023D(uint8_t *self, const float32x4_t *input)
