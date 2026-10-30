@@ -706,3 +706,46 @@ uint8_t *ScePafWidget_62D63539(void)
 	sce_paf_widget_state_142d8 = 1;
 	return ScePafGraphics_A05227FA();
 }
+
+int ScePafWidget_1D442DC0(void *self, uint32_t value)
+{
+	void *const *methods = *(void *const *const *)self;
+
+	((void (*)(void *, uint32_t, uint32_t))methods[24])(
+		self, 1048585, value);
+	return 0;
+}
+
+int ScePafWidget_66D4EAE7(void *self, uint32_t value)
+{
+	void *const *methods = *(void *const *const *)self;
+
+	((void (*)(void *, uint32_t, uint32_t))methods[24])(
+		self, 65555, value);
+	return 0;
+}
+
+int ScePafWidget_722CAC54(void *self, void *other)
+{
+	void *const *methods = *(void *const *const *)other;
+
+	return ((int (*)(void *, void *))methods[95])(other, self);
+}
+
+void *ScePafWidget_64A10940(uint8_t *self)
+{
+	void *other = *(void **)(self + 24);
+	void *const *methods = *(void *const *const *)other;
+
+	((void (*)(void *))methods[27])(other);
+	return self;
+}
+
+void *ScePafWidget_40F2A311(uint32_t *self)
+{
+	if (self[118] == 0) {
+		void *const *methods = *(void *const *const *)self;
+		return ((void *(*)(void *))methods[104])(self);
+	}
+	return self;
+}
