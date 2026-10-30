@@ -1,5 +1,6 @@
 /* Lightweight native PAF property/string field constructors. */
 #include "../std/string.h"
+#include "../std/new.h"
 #include "../compiler.h"
 #include "property_list.h"
 #include <sce_atomic.h>
@@ -224,6 +225,30 @@ uint32_t ScePafCommon_5221EB33(PafCommonReference *self)
 		void *method = self->methods[1];
 		((void (*)(PafCommonReference *, void *, int, int))
 		 method)(self, method, 0, 0);
+	}
+	return remaining;
+}
+
+typedef struct PafCommonReferenceString {
+	char *ptr;
+	uint32_t count;
+	uint32_t allocator;
+	volatile int32_t references;
+} PafCommonReferenceString;
+
+uint32_t ScePafCommon_3728D46C(PafCommonReferenceString *self)
+{
+	uint32_t remaining = (uint32_t)sceAtomicDecrement32AcqRel(
+		&self->references) - 1;
+
+	if (!remaining && self) {
+		char *ptr = self->ptr;
+
+		if (ptr != &PafStringEmpty)
+			PafDelete(ptr);
+		self->ptr = (char *)-1;
+		self->count = UINT32_MAX;
+		PafDelete(self);
 	}
 	return remaining;
 }
