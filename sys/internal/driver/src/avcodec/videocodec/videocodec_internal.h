@@ -1275,6 +1275,8 @@ int SceAvcodecForDriver_DFC0AAC6(const SceAvcdecCtrl *pCtrl,
 int SceAvcodecForDriver_D46B8463(const SceAvcdecCtrl *pCtrl);
 int SceAvcodecForDriver_16B501C9(SceAvcdecPicture *pDst,
 			       const SceAvcdecPicture *pSrc);
+int SceAvcodecForDriver_B8A9632A(VideocodecPicture *pDst,
+			       const VideocodecPicture *pSrc);
 
 /* videocodec/ce_dsp0_videocodec.c */
 int initializeDsp0Videocodec(void);

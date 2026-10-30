@@ -3774,6 +3774,23 @@ int _sceAvcdecCreateDecoderNongameapp(unsigned int codecType,
 	return ret;
 }
 
+int _sceVideodecQueryInstanceNongameapp(unsigned int codecType,
+		VideocodecInstanceInfo *pInfo)
+{
+	VideocodecInstanceInfo info;
+	int ret, copied;
+
+	if (pInfo == NULL)
+		return SceAvcodecForDriver_F9E271DE(codecType, NULL);
+	__builtin_memset(&info, 0, sizeof(info));
+	ret = sceKernelCopyFromUser(&info, pInfo, sizeof(info));
+	if (ret < 0)
+		return ret;
+	ret = SceAvcodecForDriver_F9E271DE(codecType, &info);
+	copied = sceKernelCopyToUser(pInfo, &info, sizeof(info));
+	return copied < 0 ? copied : ret;
+}
+
 int _sceVideodecQueryMemSizeNongameapp(unsigned int codecType,
 		const SceVideodecQueryInitInfo *pInitInfo,
 		SceVideodecMemInfo *pMemInfo)
@@ -4200,6 +4217,35 @@ int _sceAvcdecCsc(SceAvcdecPicture *pDst, const SceAvcdecPicture *pSrc)
 		pSrc = src;
 	}
 	ret = SceAvcodecForDriver_16B501C9(dst, pSrc);
+	if (pDst != NULL) {
+		copied = sceKernelCopyToUser(pDst, dst, sizeof(*dst));
+		if (copied < 0)
+			return copied;
+	}
+	return ret;
+}
+
+int _sceAvcdecCscInternal(VideocodecPicture *pDst, const VideocodecPicture *pSrc)
+{
+	VideocodecPicture *dst = NULL;
+	VideocodecPicture *src;
+	int ret, copied;
+
+	if (pDst != NULL) {
+		dst = __builtin_alloca(sizeof(*dst));
+		memset(dst, 0, sizeof(*dst));
+		ret = sceKernelCopyFromUser(dst, pDst, sizeof(*dst));
+		if (ret < 0)
+			return ret;
+	}
+	if (pSrc != NULL) {
+		src = __builtin_alloca(sizeof(*src));
+		ret = sceKernelCopyFromUser(src, pSrc, sizeof(*src));
+		if (ret < 0)
+			return ret;
+		pSrc = src;
+	}
+	ret = SceAvcodecForDriver_B8A9632A(dst, pSrc);
 	if (pDst != NULL) {
 		copied = sceKernelCopyToUser(pDst, dst, sizeof(*dst));
 		if (copied < 0)

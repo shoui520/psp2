@@ -49,8 +49,6 @@ STUB(SceAvcodecForDriver_EA07A3B7)
 STUB(SceAvcodecForDriver_EAEB16D5)
 STUB(SceAvcodecForDriver_F714DB9A)
 STUB(SceAvcodecForDriver_F8BCBE20)
-STUB(_sceVideodecQueryInstanceNongameapp)
-STUB(_sceAvcdecCscInternal)
 
 int _sceAudiodecInitLibrary(SceUInt32 codecType, SceAudiodecInitParam *param)
 {
