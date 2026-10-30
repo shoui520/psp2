@@ -20,6 +20,8 @@ typedef struct ThreadKernelOpt {
 typedef char ThreadKernelOptSizeCheck[sizeof(ThreadKernelOpt) == 28 ? 1 : -1];
 
 static ThreadOpt threadDefaultOpt;
+/* The job/runtime option triple is distinct from the Thread class default. */
+static ThreadOpt threadRuntimeOpt;
 
 const ThreadClass threadClass = {
 	0, NULL,
@@ -174,6 +176,38 @@ SceUInt32 ThreadSetDefaultOpt(const ThreadOpt *opt)
 	threadDefaultOpt.cpuAffinityMask = opt->cpuAffinityMask;
 	threadDefaultOpt.stackMemoryType = opt->stackMemoryType;
 	return threadDefaultOpt.stackMemoryType;
+}
+
+__attribute__((noinline)) ThreadOpt *ScePafThread_2AD8B80F(void)
+{
+	return &threadRuntimeOpt;
+}
+
+SceUInt32 ScePafThread_82A6C26A(const ThreadOpt *opt)
+{
+	threadRuntimeOpt.attr = opt->attr;
+	threadRuntimeOpt.cpuAffinityMask = opt->cpuAffinityMask;
+	threadRuntimeOpt.stackMemoryType = opt->stackMemoryType;
+	return threadRuntimeOpt.stackMemoryType;
+}
+
+static uint32_t *InitializeThreadStartupOptions(uint32_t *result)
+{
+	result[0] = ScePafThread_2AD8B80F()->cpuAffinityMask;
+	result[1] = 0x4000;
+	result[2] = 1;
+	result[3] = 0;
+	return result;
+}
+
+uint32_t *ScePafThread_E3D0FAC7(uint32_t *result)
+{
+	return InitializeThreadStartupOptions(result);
+}
+
+uint32_t *ScePafThread_F4C3881C(uint32_t *result)
+{
+	return InitializeThreadStartupOptions(result);
 }
 
 SceInt32 ThreadInternalThreadEntry(SceSize argSize, void *argBlock)
