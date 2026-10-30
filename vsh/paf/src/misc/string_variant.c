@@ -415,3 +415,73 @@ PafStringPair *ScePafMisc_EF52733C(PafStringPair *self,
 	}
 	return self;
 }
+
+static PafStringPair *ConstructNarrowBytes(PafStringPair *self,
+					 const char *source)
+{
+	PafString *value = PafNew(sizeof(*value));
+
+	if (value) {
+		size_t length;
+
+		PafStringInitialize(value);
+		length = source ? sce_paf_strlen(source) : 0;
+		PafStringAssign(value, source, length);
+	}
+	self->narrow = value;
+	self->wide = 0;
+	return self;
+}
+
+PafStringPair *ScePafMisc_AB04B8B7(PafStringPair *self, const char *source)
+{
+	return ConstructNarrowBytes(self, source);
+}
+
+PafStringPair *ScePafMisc_CE859024(PafStringPair *self, const char *source)
+{
+	return ConstructNarrowBytes(self, source);
+}
+
+PafStringPair *ScePafMisc_EEBED3C6(PafStringPair *self, const char *source)
+{
+	return ConstructNarrowBytes(self, source);
+}
+
+PafStringPair *ScePafMisc_FD631CC2(PafStringPair *self, const char *source)
+{
+	return ConstructNarrowBytes(self, source);
+}
+
+static PafStringPair *ConstructPairFromStringRef(
+		PafStringPair *self, const PafString *const *source)
+{
+	const PafString *value;
+	PafString *copy;
+
+	self->narrow = 0;
+	self->wide = 0;
+	value = *source;
+	ScePafMisc_8FDF9295(self);
+	if (value) {
+		copy = PafNew(sizeof(*copy));
+		if (copy) {
+			PafStringInitialize(copy);
+			PafStringCopy(copy, value);
+		}
+		self->narrow = copy;
+	}
+	return self;
+}
+
+PafStringPair *ScePafMisc_1B896933(PafStringPair *self,
+				    const PafString *const *source)
+{
+	return ConstructPairFromStringRef(self, source);
+}
+
+PafStringPair *ScePafMisc_36CF059C(PafStringPair *self,
+				    const PafString *const *source)
+{
+	return ConstructPairFromStringRef(self, source);
+}
