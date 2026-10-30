@@ -1565,6 +1565,26 @@ uint32_t ScePafGraphics_F3A83569(const uint8_t *self)
 	return *(const uint32_t *)(items + 8 * index);
 }
 
+uint8_t *ScePafGraphics_62EDB616(uint8_t *self, const uint8_t *source)
+{
+	uint64_t values;
+	uint32_t value20;
+	uint16_t value6;
+
+	self[4] = source[4];
+	values = *(const uint64_t *)(source + 8);
+	*(uint32_t *)(self + 16) = *(const uint32_t *)(source + 16);
+	value20 = *(const uint32_t *)(source + 20);
+	*(uint64_t *)(self + 8) = values;
+	*(uint32_t *)(self + 20) = value20;
+	value6 = *(const uint16_t *)(source + 6);
+	*(uint32_t *)(self + 24) = *(const uint32_t *)(source + 24);
+	*(uint16_t *)(self + 6) = value6;
+	*(uint32_t *)(self + 28) = *(const uint32_t *)(source + 28);
+	*(uint32_t *)(self + 32) = *(const uint32_t *)(source + 32);
+	return self;
+}
+
 int ScePafGraphics_DD80343F(const uint8_t *self, int value)
 {
 	int i;
