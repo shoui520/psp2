@@ -32,6 +32,27 @@ int ScePafMisc_104CC765(uint8_t *self)
 	return 0;
 }
 
+int ScePafMisc_0A5D5353(const uint8_t *self, const char *name,
+			 PafString *resultString)
+{
+	char *headers;
+	SceSize headerSize;
+	const char *value;
+	SceSize valueLength;
+	int result = sceHttpGetAllResponseHeaders(
+		*(const int32_t *)(self + 12), &headers, &headerSize);
+
+	if (result >= 0) {
+		result = sceHttpParseResponseHeader(headers, headerSize,
+						name, &value, &valueLength);
+		if (result >= 0) {
+			PafStringAssign(resultString, value, valueLength);
+			result = 0;
+		}
+	}
+	return result;
+}
+
 extern int sce_paf_strcasecmp(const char *left, const char *right);
 extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
 extern int sce_paf_strcmp(const char *left, const char *right);
