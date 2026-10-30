@@ -206,3 +206,66 @@ int ScePafGraphics_83ABDFF5(const uint8_t *self, uint8_t argument)
 			object, argument);
 	return 0;
 }
+
+uint8_t *ScePafGraphics_87657577(const uint8_t *self, int32_t index)
+{
+	uint8_t *base = *(uint8_t *const *)(self + 108);
+
+	if (base)
+		return base + *(const int32_t *)(self + 56) * index;
+	return 0;
+}
+
+uint32_t *ScePafGraphics_E79F111A(uint32_t *self, uint32_t value)
+{
+	self[2] = value;
+	self[0] = 0;
+	self[1] = 0;
+	self[3] = (uint32_t)-2;
+	return self;
+}
+
+static inline __attribute__((always_inline))
+uint32_t *InitializeGraphicsFlags(uint32_t *self)
+{
+	self[0] = 0;
+	self[1] = 0;
+	self[5] = 0x100000;
+	self[7] = 0;
+	self[6] = 0;
+	return self;
+}
+
+uint32_t *ScePafGraphics_212605A1(uint32_t *self)
+{
+	return InitializeGraphicsFlags(self);
+}
+
+uint32_t *ScePafGraphics_2F46C2B9(uint32_t *self)
+{
+	return InitializeGraphicsFlags(self);
+}
+
+int32_t ScePafGraphics_133EC137(void *self, SceGxmTexture **texture,
+			       void *palette)
+{
+	int32_t result = sceGxmTextureSetPalette(*texture, palette);
+	return result >= 0 ? 0 : result;
+}
+
+int ScePafGraphics_D53DC736(const uint8_t *self)
+{
+	void *object = *(void *const *)(self + 4);
+
+	if (object)
+		return ((int (**)(void *))*(void **)object)[4](object);
+	return 0;
+}
+
+int ScePafGraphics_B000FA14(const uint8_t *self)
+{
+	int result = *(const int16_t *)(self + 102) - 1;
+	if (result < 0)
+		return *(const int16_t *)(self + 100) - 1;
+	return result;
+}
