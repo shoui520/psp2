@@ -1765,3 +1765,19 @@ uint32_t *ScePafWidget_D0D78958(uint32_t *self, uint32_t *first,
 	*third = self[10];
 	return self;
 }
+
+uint8_t *ScePafWidget_73D27A1B(uint8_t *self)
+{
+	uint32_t state = *(uint32_t *)(self + 636);
+
+	if (state == 1) {
+		float progress = *(float *)(self + 664) / 0.3f;
+
+		*(uint32_t *)(self + 636) = 3;
+		*(float *)(self + 664) = (1.0f - progress) * 0.5f;
+	} else if (state == 2) {
+		*(uint32_t *)(self + 636) = 3;
+		*(uint32_t *)(self + 664) = 0;
+	}
+	return self;
+}
