@@ -6,6 +6,99 @@
 
 JobQueueList JobQueueQueueList;
 static Mutex mutex;
+void *sce_paf_default_job_queue;
+
+int ScePafThread_B958E592(void)
+{
+	int count;
+
+	MutexLock(&mutex);
+	count = JobQueueQueueList.count;
+	if (sce_paf_default_job_queue)
+		count = JobQueueQueueList.count - 1;
+	MutexUnlock(&mutex);
+	return count;
+}
+
+typedef struct PafPendingJobNode {
+	struct PafPendingJobNode *previous;
+	struct PafPendingJobNode *next;
+	JobItemSharedPtr item;
+} PafPendingJobNode;
+
+typedef struct PafPendingJobList {
+	PafPendingJobNode *root;
+	uint32_t count;
+} PafPendingJobList;
+
+struct JobQueue {
+	uint8_t reserved[20];
+	uint32_t workerCount;
+	uint8_t reserved2[4];
+	PafPendingJobList pending;
+};
+
+_Static_assert(offsetof(JobQueue, workerCount) == 20,
+	       "job queue worker count offset");
+_Static_assert(offsetof(JobQueue, pending) == 28,
+	       "job queue pending list offset");
+_Static_assert(sizeof(PafPendingJobNode) == 16,
+	       "pending job node size");
+
+__attribute__((noinline))
+static void AppendPendingJob(PafPendingJobList *list,
+			    const JobItemSharedPtr *item)
+{
+	PafPendingJobNode *node;
+	PafPendingJobNode *root = list->root;
+
+	if (!root)
+		return;
+	node = PafNew(sizeof(*node));
+	if (node) {
+		JobItemSharedPtr *placement =
+			PafPlacementNew(sizeof(*placement), &node->item);
+
+		if (placement) {
+			JobItem *job = item->m_ptr;
+
+			placement->m_ptr = job;
+			JobItemRefCounter *counter = item->m_ref_counter;
+			placement->m_ref_counter = counter;
+			if (job)
+				sceAtomicIncrement32AcqRel(
+					&counter->m_counter);
+		}
+	} else {
+		ScePafStdc_D608246A();
+		node = list->root;
+	}
+	root = list->root;
+	if (node != root) {
+		node->previous = root->previous;
+		node->next = root;
+		root->previous->next = node;
+		root->previous = node;
+		++list->count;
+	}
+}
+
+int JobQueueEnqueue(JobQueue *self, JobItemSharedPtr *item)
+{
+	MutexLock(&mutex);
+	if (item->m_ptr->m_status != 0) {
+		MutexUnlock(&mutex);
+		return -2136012543;
+	}
+	if (!self->workerCount) {
+		MutexUnlock(&mutex);
+		return -2136012542;
+	}
+	item->m_ptr->m_status = 1;
+	AppendPendingJob(&self->pending, item);
+	MutexUnlock(&mutex);
+	return 0;
+}
 
 JobItem *ScePafThread_88DA7B11(JobItem *self);
 void ScePafThread_CCE903F3(JobItem *self);
