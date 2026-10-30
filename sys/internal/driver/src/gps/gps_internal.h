@@ -2,6 +2,8 @@
 #include "gps.h"
 #include <threadmgr/fast_mutex_object.h>
 
+#define GPS_ERROR(code) ((int)(0x80390000U | (code)))
+
 /* Private names/layouts unknown: offsets confirmed against the originals. */
 typedef struct GpsContext {
 	int apiMutex, dataMutex, event, thread, callback;
@@ -22,6 +24,15 @@ typedef struct GpsPending {
 	void *data;
 	unsigned size;
 } GpsPending;
+/* a registered device: what _sceGpsGetDeviceInfo returns */
+typedef struct GpsDeviceInfo {
+	unsigned device, flags;
+} GpsDeviceInfo;
+
+/* gpsLock / gpsUnlock */
+#define GPS_LOCK_API	1
+#define GPS_LOCK_DATA	2
+
 /* NMEA sentences the parser takes (gpsParseSentence) */
 enum GpsSentence {
 	GPS_SENTENCE_NONE,
@@ -89,47 +100,55 @@ _Static_assert(offsetof(GpsNavigation, speed) == 108, "GpsNavigation speed");
 _Static_assert(sizeof(GpsSatelliteParse) == 0x140, "GpsSatelliteParse");
 _Static_assert(offsetof(GpsSatelliteParse, count) == 0x34, "GpsSatelliteParse count");
 
-typedef struct GpsGlobals {
-	GpsQueue queue;
-	GpsContext context;
-	GpsPending *pending;
-	GpsQueue *activeQueue;
-	GpsContext *active;
-	GpsPending request;
-	GpsLocation location;
-	GpsDriver driver[4];
-	GpsSatellites satellites;
-	unsigned selected, info[4][2], reserved;
-	GpsNavigation navigation;
-	GpsSatelliteParse satelliteParse;
-	union {
-		char number[0x20];			/* a field being converted */
-		unsigned numberWord[8];
-	};
-} GpsGlobals;
-extern GpsGlobals s_gps;
+/* gps.c: the context, its mutexes, the state and the callback queue */
+GpsContext *gpsContext(void);
 void gpsLock(unsigned which);
 void gpsUnlock(unsigned which);
-
-/*
- * The data mutex (2) is locked inline in Sony's code; after the active device has been
- * dereferenced, the compiler drops the NULL check of the inlined unlock. The API mutex
- * (1) goes through the out-of-line gpsLock / gpsUnlock, which keep their checks.
- */
-static inline __attribute__((always_inline)) void gpsDataLock(void)
-{
-	if (s_gps.active)
-		sceKernelLockMutex(s_gps.active->dataMutex, 1, NULL);
-}
-
-static inline __attribute__((always_inline)) void gpsDataUnlock(void)
-{
-	if (s_gps.active)
-		sceKernelUnlockMutex(s_gps.active->dataMutex, 1);
-}
 unsigned gpsState(void);
 int gpsSetState(unsigned state);
+int gpsCheckState(unsigned api);
+int gpsSuspended(void);
+int gpsSignal(unsigned command, unsigned mode);
+int gpsNotify(unsigned event, unsigned result);
+int gpsSetCallback(SceUID callback);
+int gpsStart(unsigned mode);
+int gpsStop(void);
+int gpsClose(void);
+int gpsStagePending(unsigned command, const void *data, unsigned size);
+int gpsClearPending(void);
+int gpsResumeCallback(void);
+
+/* gps_device.c: the registered devices and the data they report */
+int startDevice(unsigned mode);
+int stopDevice(unsigned mode);
+int applyStopResult(unsigned result);
+int gpsLocationUpdated(void);
+int gpsPublishNavigation(const GpsNavigation *navigation);
+int gpsPublishSatellites(const GpsSatelliteParse *parse);
+int gpsGetData(GpsLocation *location, GpsSatellites *satellites);
+int getDeviceInfo(GpsDeviceInfo *info);
+int resetDevices(unsigned device);
+int gpsIsDevice(void);
+int deviceIoctl(unsigned command, void *data, unsigned size);
+int gpsSelectDevice(unsigned device);
+unsigned deviceState(void);
+int setDeviceState(unsigned state);
+
+/* nmea.c */
 int gpsResetParser(unsigned what);
-int gpsPublishNavigation(void);
-int gpsPublishSatellites(void);
 int gpsParseSentence(const char *sentence, unsigned size);
+
+/* gps_api.c: the syscall bodies */
+int openCallback(SceUID callback);
+int closeCallback(void);
+int startAcquisition(unsigned mode);
+int stopAcquisition(void);
+int requestIoctl(unsigned command, void *data, unsigned size);
+int chooseDevice(unsigned device);
+int readState(unsigned *state);
+int readLocation(GpsLocation *location, GpsSatellites *satellites);
+int readInfo(GpsDeviceInfo *info);
+int queryDevice(void);
+int resumeNotices(void);
+int specialStop(const GpsDriver *driver);
+int canSetClock(const GpsDriver *driver);

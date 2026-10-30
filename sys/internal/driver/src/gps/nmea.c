@@ -17,87 +17,36 @@
 #define RECEIVED_NAVIGATION	0x01010101	/* GpsNavigation.received.all: every sentence */
 #define RECEIVED_SATELLITES	0x0101		/* GpsSatelliteParse.received.all */
 
+static GpsNavigation s_navigation;
+static GpsSatelliteParse s_satelliteParse;
+static union {
+	char number[0x20];			/* a field being converted */
+	unsigned numberWord[8];
+} s_field;
+
 int gpsResetParser(unsigned what)
 {
 	if (what == PARSER_NAVIGATION)
-		memset(&s_gps.navigation, 0, sizeof(s_gps.navigation));
+		memset(&s_navigation, 0, sizeof(s_navigation));
 	else if (what == PARSER_SATELLITES)
-		memset(&s_gps.satelliteParse, 0, sizeof(s_gps.satelliteParse));
+		memset(&s_satelliteParse, 0, sizeof(s_satelliteParse));
 	else if (what == PARSER_ALL) {
-		memset(&s_gps.navigation, 0, sizeof(s_gps.navigation));
-		memset(&s_gps.satelliteParse, 0, sizeof(s_gps.satelliteParse));
+		memset(&s_navigation, 0, sizeof(s_navigation));
+		memset(&s_satelliteParse, 0, sizeof(s_satelliteParse));
 	}
 	return 0;
 }
 
-int gpsPublishNavigation(void)
-{
-	GpsLocation *location = &s_gps.location;
-	const GpsNavigation *navigation = &s_gps.navigation;
+/* Sony inlines these where noted and keeps a copy for the other callers */
+#define INLINE static inline __attribute__((always_inline))
+#define OUTLINE static __attribute__((noinline))
 
-	gpsDataLock();
-	location->fixQuality = navigation->fixQuality;
-	location->fixType = navigation->fixType;
-	location->time = navigation->time;
-	location->altitude = navigation->altitude;
-	location->speed = navigation->speed;
-	location->pdop = navigation->pdop;
-	location->course = navigation->course;
-	location->geoidSeparation = navigation->geoidSeparation;
-	location->magneticCourse = navigation->magneticCourse;
-	location->hdop = navigation->hdop;
-	location->vdop = navigation->vdop;
-	location->latitude = (float)navigation->latitudeDegrees +
-			     (float)navigation->latitudeMinutes / 60.0f;
-	location->longitude = (float)navigation->longitudeDegrees +
-			      (float)navigation->longitudeMinutes / 60.0f;
-	location->noClock = 0;
-	gpsDataUnlock();
-	int ret = gpsResetParser(PARSER_NAVIGATION);
-	sceKernelSetEventFlag(s_gps.active->event, 8);
-	return ret;
-}
-
-int gpsPublishSatellites(void)
-{
-	const GpsSatelliteParse *parse = &s_gps.satelliteParse;
-
-	gpsDataLock();
-	s_gps.satellites.count = parse->count;
-	if (s_gps.satellites.count > GPS_SATELLITES_MAX)
-		s_gps.satellites.count = 0;
-	else {
-		for (unsigned i = 0; i < GPS_SATELLITES_MAX; i++) {
-			GpsSatellite *out = &s_gps.satellites.satellite[i];
-			const GpsSatellite *in = &parse->satellite[i];
-			if (i < parse->count) {
-				out->prn = in->prn;
-				out->elevation = in->elevation;
-				out->azimuth = in->azimuth;
-				out->snr = in->snr;
-				out->used = 0;
-				for (unsigned j = 0; j < parse->usedCount; j++)
-					if (parse->used[j] == in->prn) {
-						out->used = 1;
-						break;
-					}
-			} else
-				for (unsigned j = 0; j < sizeof(*out); j++)
-					((uint8_t *)out)[j] = 0;
-		}
-	}
-	gpsDataUnlock();
-	int ret = gpsResetParser(PARSER_SATELLITES);
-	sceKernelSetEventFlag(s_gps.active->event, 0x10);
-	return ret;
-}
-
-static int white(unsigned c)
+INLINE int white(unsigned c)
 {
 	return c == ' ' || (c >= '\t' && c <= '\r');
 }
 
-static unsigned parseInteger(const char *value)
+INLINE unsigned integerValue(const char *value)
 {
 	unsigned number = 0;
 
@@ -108,7 +57,7 @@ static unsigned parseInteger(const char *value)
 	return number;
 }
 
-static float parseFloat(const char *value)
+INLINE float floatValue(const char *value)
 {
 	float sign = 1.0f, result = 0.0f, divisor = 1.0f;
 
@@ -130,18 +79,28 @@ static float parseFloat(const char *value)
 	return (sign * result) / divisor;
 }
 
-static void clearNumber(void)
+OUTLINE float parseFloat(const char *value)
+{
+	return floatValue(value);
+}
+
+OUTLINE unsigned parseInteger(const char *value)
+{
+	return integerValue(value);
+}
+
+INLINE void clearNumber(void)
 {
 	for (unsigned i = 0; i < 8; i++)
-		s_gps.numberWord[i] = 0;
+		s_field.numberWord[i] = 0;
 }
 
-static void copyNumber(const char *field, unsigned size)
+INLINE void copyNumber(const char *field, unsigned size)
 {
-	memcpy(s_gps.number, field, size);
+	memcpy(s_field.number, field, size);
 }
 
-static unsigned integerField(const char *field, unsigned size)
+OUTLINE unsigned integerField(const char *field, unsigned size)
 {
 	if (size >= 32)
 		return 0;
@@ -149,30 +108,30 @@ static unsigned integerField(const char *field, unsigned size)
 	if (!field || !size)
 		return 0;
 	copyNumber(field, size);
-	return parseInteger(s_gps.number);
+	return integerValue(s_field.number);
 }
 
-static float floatField(const char *field, unsigned size)
+OUTLINE float floatField(const char *field, unsigned size)
 {
 	if (size >= 32)
 		return 0.0f;
 	clearNumber();
 	if (field && size)
 		copyNumber(field, size);
-	return parseFloat(s_gps.number);
+	return floatValue(s_field.number);
 }
 
-static const char *copyField(const char *field, unsigned size)
+INLINE const char *copyField(const char *field, unsigned size)
 {
 	if (size >= 32)
 		return NULL;
 	clearNumber();
 	if (field && size)
 		copyNumber(field, size);
-	return s_gps.number;
+	return s_field.number;
 }
 
-static void parseTime(const char *field, unsigned size)
+INLINE void parseTime(const char *field, unsigned size)
 {
 	const char *number = copyField(field, size);
 	/* Sony assumes a field shorter than the scratch buffer here. */
@@ -180,49 +139,49 @@ static void parseTime(const char *field, unsigned size)
 	for (unsigned i = 0; i < 3; i++) {
 		part[0] = number[i * 2];
 		part[1] = number[i * 2 + 1];
-		s_gps.navigation.timePart[3 + i] = parseInteger(part);	/* hour, minute, second */
+		s_navigation.timePart[3 + i] = parseInteger(part);	/* hour, minute, second */
 	}
 	for (unsigned i = 0; i < 4; i++)
 		part[i] = number[6 + i];
 	float microseconds = parseFloat(part) * 1000.0f * 1000.0f;
-	s_gps.navigation.time.microsecond = (unsigned)microseconds;
+	s_navigation.time.microsecond = (unsigned)microseconds;
 }
 
-static int parseDate(const char *field, unsigned size)
+INLINE int parseDate(const char *field, unsigned size)
 {
 	if (size != 6)
 		return (int)GPS_ERROR_SENTENCE;
 	clearNumber();
 	for (unsigned i = 0; i < 6; i++)
-		s_gps.number[i] = field[i];
+		s_field.number[i] = field[i];
 	char part[4] = {0, 0, 0, 0};
 	for (unsigned i = 0; i < 3; i++) {
-		part[0] = s_gps.number[2 * i];
-		part[1] = s_gps.number[2 * i + 1];
+		part[0] = s_field.number[2 * i];
+		part[1] = s_field.number[2 * i + 1];
 		/* DDMMYY: day, month, year */
-		s_gps.navigation.timePart[2 - i] = parseInteger(part) + (i == 2 ? 2000 : 0);
+		s_navigation.timePart[2 - i] = parseInteger(part) + (i == 2 ? 2000 : 0);
 	}
 	return 0;
 }
 
-static void coordinate(const char *field, unsigned size, unsigned degrees)
+INLINE void coordinate(const char *field, unsigned size, unsigned degrees)
 {
 	const char *number = copyField(field, size);
 	char part[4] = {0, 0, 0, 0};
 	for (unsigned i = 0; i < degrees; i++)
 		part[i] = number[i];
 	/* latitude is DDMM.MMMM, longitude DDDMM.MMMM */
-	*(degrees == 2 ? &s_gps.navigation.latitudeDegrees : &s_gps.navigation.longitudeDegrees) =
+	*(degrees == 2 ? &s_navigation.latitudeDegrees : &s_navigation.longitudeDegrees) =
 		parseInteger(part);
-	*(degrees == 2 ? &s_gps.navigation.latitudeMinutes : &s_gps.navigation.longitudeMinutes) =
+	*(degrees == 2 ? &s_navigation.latitudeMinutes : &s_navigation.longitudeMinutes) =
 		(double)parseFloat(number + degrees);
 }
 
-static int parseFields(unsigned type, const char *start)
+INLINE int parseFields(unsigned type, const char *start)
 {
 	unsigned index = 0, size = 0, used = 0;
-	GpsNavigation *navigation = &s_gps.navigation;
-	GpsSatelliteParse *parse = &s_gps.satelliteParse;
+	GpsNavigation *navigation = &s_navigation;
+	GpsSatelliteParse *parse = &s_satelliteParse;
 	GpsSatellite *satellite = NULL;
 	for (const char *p = start; *p; p++) {
 		char ch = *p;
@@ -381,10 +340,13 @@ static int parseFields(unsigned type, const char *start)
 
 int gpsParseSentence(const char *sentence, unsigned size)
 {
-	unsigned length = 0;
-	while (length < size && sentence[length])
-		length++;
-	if (length == size)
+	unsigned length;
+
+	/* Sony reads up to the byte after the buffer */
+	for (length = 0; sentence[length]; length++)
+		if (length == size)
+			return (int)GPS_ERROR_SENTENCE;
+	if (length >= size)
 		return (int)GPS_ERROR_SENTENCE;
 	unsigned phase = 0, count = 0, type = 0, checksum = 0;
 	const char *fields = NULL;
@@ -404,10 +366,10 @@ int gpsParseSentence(const char *sentence, unsigned size)
 					return (int)GPS_ERROR_SENTENCE;
 				clearNumber();
 				for (unsigned i = 0; i < 5; i++)
-					s_gps.number[i] = p[(int)i - 5];
+					s_field.number[i] = p[(int)i - 5];
 				static const char *const names[] = {"GPRMC", "GPGGA", "GPGSA", "GPGSV", "GPVTG"};
 				for (unsigned i = 0; i < 5; i++)
-					if (!strncmp(s_gps.number, names[i], 5)) {
+					if (!strncmp(s_field.number, names[i], 5)) {
 						type = i + 1;
 						break;
 					}
@@ -417,7 +379,7 @@ int gpsParseSentence(const char *sentence, unsigned size)
 			} else
 				count++;
 			clearNumber();
-			s_gps.number[0] = ch;
+			s_field.number[0] = ch;
 			checksum ^= ch;
 		} else if (phase == 2) {
 			if (ch == '*') {
@@ -425,7 +387,7 @@ int gpsParseSentence(const char *sentence, unsigned size)
 				count = 0;
 			} else {
 				clearNumber();
-				s_gps.number[0] = ch;
+				s_field.number[0] = ch;
 				checksum ^= ch;
 				count++;
 			}
@@ -433,9 +395,9 @@ int gpsParseSentence(const char *sentence, unsigned size)
 			if (ch == 255)
 				return (int)GPS_ERROR_SENTENCE;
 			clearNumber();
-			s_gps.number[0] = p[0];
-			s_gps.number[1] = p[1];
-			if ((uint8_t)strtol(s_gps.number, NULL, 16) != checksum)
+			s_field.number[0] = p[0];
+			s_field.number[1] = p[1];
+			if ((uint8_t)strtol(s_field.number, NULL, 16) != checksum)
 				ret = (int)GPS_ERROR_CHECKSUM;
 			phase = 4;
 			p++;
@@ -449,9 +411,9 @@ int gpsParseSentence(const char *sentence, unsigned size)
 			goto publish;
 	}
 publish:
-	if (s_gps.navigation.received.all == RECEIVED_NAVIGATION)
-		ret = gpsPublishNavigation();
-	if (s_gps.satelliteParse.received.all == RECEIVED_SATELLITES)
-		ret = gpsPublishSatellites();
+	if (s_navigation.received.all == RECEIVED_NAVIGATION)
+		ret = gpsPublishNavigation(&s_navigation);
+	if (s_satelliteParse.received.all == RECEIVED_SATELLITES)
+		ret = gpsPublishSatellites(&s_satelliteParse);
 	return ret;
 }
