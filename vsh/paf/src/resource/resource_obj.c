@@ -155,6 +155,36 @@ HeapAllocator *ScePafResource_C240421A(uint8_t *self,
 	return ReleaseResourceBuffer(self, allocator, 40, 52, 64);
 }
 
+int ScePafResource_378D6AE0(uint32_t *self)
+{
+	uint32_t node = 0;
+	uint32_t root;
+	uint32_t next;
+
+	if (!self[9])
+		return -1;
+	root = self[8];
+	if (root)
+		node = *(uint32_t *)(root + 4);
+	next = node;
+	while (next != root) {
+		uint32_t object = *(uint32_t *)(next + 8);
+
+		if (object) {
+			uint32_t value = self[11];
+
+			next = node;
+			*(uint8_t *)(object + 631) = (uint8_t)self[12];
+			*(uint32_t *)(object + 632) = value;
+		}
+		if (next) {
+			node = *(uint32_t *)(next + 4);
+			next = node;
+		}
+	}
+	return 0;
+}
+
 char *ResourceObjGetFileName(const ResourceObj *self)
 {
 	return self->filename.ptr;
