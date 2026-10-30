@@ -273,7 +273,10 @@ typedef struct VideocodecAvcDecoder {
 	SceAvcdecQueryDecoderInfo info;
 	unsigned int mode;
 	unsigned int handle;
-	unsigned char decodeState[1500];
+	union {
+		VeneziaDebugSnapshotOutput output;	/* the codec engine's last picture */
+		unsigned char decodeState[1500];
+	};
 	unsigned int frameBufFlags;
 	SceAvcdecBuf frameBuf;			/* the frame buffer the decoder runs in */
 	SceUID frameBufMemBlockId;		/* with VIDEOCODEC_FRAME_BUF_MEMBLOCK */
@@ -1006,6 +1009,7 @@ int dsp0VideocodecQueryAvcDecoderMemSize(const VideocodecDecoderQuery *pInfo,
 int dsp0VideocodecCreateAvcDecoder(unsigned int codecType, unsigned int *pHandle,
 	const Dsp0VideocodecDecoderParam *param);
 int dsp0VideocodecDeleteAvcDecoder(unsigned int handle, SceUID pid);
+unsigned int dsp0VideocodecAvcDecodeAvailableSize(unsigned int handle);
 int dsp0VideocodecQueryM4vDecoderMemSize(const Dsp0VideocodecM4vDecoderInfo *pInfo,
 	SceSize *frameMemSize);
 int dsp0VideocodecCreateM4vDecoder(unsigned int codecType, unsigned int *pHandle,
