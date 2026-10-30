@@ -1437,3 +1437,8 @@ float ScePafWidget_4983B3FC(uint8_t *self)
 		return *(const float *)(delegate + 668);
 	return (float)*(const int32_t *)(self + 644);
 }
+
+const char *ScePafWidget_F3A13905(void)
+{
+	return "style_scroll_view";
+}
