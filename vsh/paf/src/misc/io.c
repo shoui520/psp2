@@ -1,6 +1,47 @@
 /* Directory adapters and directory-type predicate. */
 #include <stdint.h>
 #include <kernel/iofilemgr.h>
+#include "../std/string.h"
+
+typedef struct PafDirectoryEntry {
+	int32_t kind;
+	PafString name;
+	uint64_t size;
+} PafDirectoryEntry;
+
+int32_t ScePafMisc_A4F553B0(const int32_t *directory,
+			    PafDirectoryEntry *entry)
+{
+	SceIoDirent native;
+	int32_t fd;
+	int32_t result;
+
+	if (!entry)
+		return -2135992063;
+	fd = *directory;
+	if (fd == -1)
+		return -2135992063;
+	native.d_stat.st_mode = 0;
+	ScePafStdc_75ECC54E(&native.d_stat.st_attr, 0, 0x54);
+	ScePafStdc_75ECC54E(native.d_name, 0, 0x108);
+	result = sceIoDread(fd, &native);
+	if (result < 0)
+		return result;
+	if (result == 0)
+		return -2135992062;
+	if (native.d_stat.st_mode & 0x1000)
+		entry->kind = 0;
+	else if (native.d_stat.st_mode & 0x2000)
+		entry->kind = 1;
+	else if (native.d_stat.st_mode & 0x4000)
+		entry->kind = 2;
+	else
+		entry->kind = 3;
+	PafStringAssign(&entry->name, native.d_name,
+			sce_paf_strlen(native.d_name));
+	entry->size = native.d_stat.st_size;
+	return 0;
+}
 
 extern int32_t sceIoMkdir(const char *path, int32_t mode);
 extern int32_t sceIoDclose(int32_t fd);
