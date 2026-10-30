@@ -119,7 +119,7 @@ _Static_assert(sizeof(VideocodecLockedRanges) == 16, "video codec locked ranges 
 #define VIDEOCODEC_ENCODER_ERROR_INVALID_POINTER	(-2141054967)	/* 0x80621809 */
 
 /* the error bases a locked range reports its failures from */
-#define VIDEOCODEC_DECODER_ERROR_BASE	(-2141061120)	/* 0x80620200 */
+#define VIDEOCODEC_DECODER_ERROR_BASE	(-2141061120)	/* 0x80620000 */
 #define VIDEOCODEC_ENCODER_ERROR_BASE	(-2141057024)	/* 0x80621000 */
 
 int videocodecInitLockedRanges(VideocodecLockedRanges *ranges, SceUID pid,
@@ -164,12 +164,19 @@ _Static_assert(offsetof(VideocodecFrame, pPlane) == 64, "video codec frame ABI")
 /* videocodecLockRange: a range outside the uncached window is kept coherent by cacheOp */
 #define VIDEOCODEC_LOCK_CACHED			0x10
 
-/* a colour conversion's errors */
-#define VIDEOCODEC_CSC_ERROR_UNSUPPORT_IMAGE_SIZE	(-2141061115)	/* 0x80620205 */
-#define VIDEOCODEC_CSC_ERROR_INVALID_COLOR_FORMAT	(-2141061114)	/* 0x80620206 */
-#define VIDEOCODEC_CSC_ERROR_INVALID_POINTER		(-2141061111)	/* 0x80620209 */
+/* the MPEG-4 decoder's and the encoder's errors: the AVC decoder's with 0x900 or 0x1000 set */
 #define VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM		(-2141058814)	/* 0x80620902 */
 #define VIDEOCODEC_M4VDEC_ERROR_INVALID_ARGUMENT_SIZE	(-2141058802)	/* 0x8062090E */
+
+#define VIDEOCODEC_ENCODER_ERROR_INVALID_ARGUMENT_SIZE	(-2141057010)	/* 0x8062100E */
+
+/* the frame the encoder converts its input into: YUV420, tiled */
+typedef struct VideocodecEncoderFrame {
+	void *pPicture;
+	unsigned int framePitch;
+	unsigned int frameWidth;
+	unsigned int frameHeight;
+} VideocodecEncoderFrame;
 
 int videocodecM4vdecCsc(M4vdecPicture *pPictureOut, const M4vdecPicture *pPictureIn);
 int videocodecAvcdecCsc(SceAvcdecPicture *pPictureOut, const SceAvcdecPicture *pPictureIn);
@@ -715,6 +722,9 @@ _Static_assert(offsetof(AvcencCscFrame, pPicture) == 36,
 
 int SceAvcodecForDriver_4F11F915(AvcencCscFrame *pDst,
 			       const AvcencCscFrame *pSrc);	/* vitasdk: ksceAvcencCsc */
+int videocodecAvcencInputCsc(VideocodecEncoderFrame *pDst, const AvcencCscFrame *pSrc,
+	unsigned int flags);
+int videocodecAvcencCsc(AvcencCscFrame *pDst, const AvcencCscFrame *pSrc);
 
 typedef struct AvcencControl {
 	unsigned int handle;
