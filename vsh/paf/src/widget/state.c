@@ -1487,3 +1487,55 @@ int ScePafWidget_4CB11B2D(const uint8_t *self, int32_t requested)
 	}
 	return 0;
 }
+
+int ScePafWidget_94C76F94(uint8_t *self, void *replacement)
+{
+	void *previous = *(void **)(self + 660);
+	const uint8_t *vtable;
+
+	if (previous) {
+		const uint8_t *methods = *(const uint8_t *const *)previous;
+
+		((void (*)(void *))*(void *const *)(methods + 4))(previous);
+	}
+	vtable = *(const uint8_t *const *)self;
+	*(void **)(self + 660) = replacement;
+	((void (*)(void *))*(void *const *)(vtable + 568))(self);
+	vtable = *(const uint8_t *const *)self;
+	return ((int (*)(void *))*(void *const *)(vtable + 560))(self);
+}
+
+void *ScePafWidget_A18278A9(uint8_t *self, int32_t index)
+{
+	uint32_t *list = *(uint32_t **)(self + 1064);
+	void *fallback = self + 1080;
+	int32_t count;
+	void *entry;
+
+	if (index < 0)
+		return fallback;
+	count = (int32_t)list[1];
+	if (count <= index)
+		return fallback;
+	if ((uint32_t)index >= (uint32_t)count)
+		ScePafStdc_D608246A();
+	entry = *(void **)((uint8_t *)(uintptr_t)list[0] + 8 * (uint32_t)index);
+	if (entry)
+		return (uint8_t *)entry + 80;
+	return fallback;
+}
+
+void *ScePafWidget_55D83675(uint8_t *self, uint32_t *replacement)
+{
+	uint32_t *previous = *(uint32_t **)(self + 528);
+	const uint8_t *vtable;
+
+	if (previous == replacement)
+		return previous;
+	if (previous && --*previous == 0)
+		PafDelete(previous);
+	*(uint32_t **)(self + 528) = replacement;
+	++*replacement;
+	vtable = *(const uint8_t *const *)self;
+	return ((void *(*)(void *))*(void *const *)(vtable + 160))(self);
+}
