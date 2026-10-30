@@ -1416,6 +1416,44 @@ int ScePafGraphics_A842275A(const uint8_t *self,
 	return result;
 }
 
+int ScePafGraphics_F4986A3A(const uint8_t *self, const void *source)
+{
+	void *destination = *(void *const *)(self + 36);
+
+	if (!destination)
+		return -2136006144;
+	sce_paf_memcpy(destination, source,
+		((*(const int16_t *)(self + 28) <<
+		  *(const uint32_t *)(self + 12)) + 7) >> 3);
+	return 0;
+}
+
+Mutex sce_paf_graphics_flag_mutex_1250;
+
+void ScePafGraphics_400B595D(uint8_t *self)
+{
+	MutexLock(&sce_paf_graphics_flag_mutex_1250);
+	if (self[64] & 1)
+		self[64] &= (uint8_t)~1;
+	MutexUnlock(&sce_paf_graphics_flag_mutex_1250);
+}
+
+uint32_t *sce_paf_graphics_current_ref_0f7c;
+
+uint32_t *ScePafGraphics_F6BF0E18(uint32_t *result)
+{
+	uint32_t *current = sce_paf_graphics_current_ref_0f7c;
+
+	*result = (uint32_t)current;
+	if (current) {
+		uint32_t *count = current + 2;
+
+		sceAtomicIncrement32AcqRel((volatile int32_t *)count);
+		return count;
+	}
+	return current;
+}
+
 uint32_t ScePafGraphics_0C88DD20(int32_t value)
 {
 	uint32_t current;
