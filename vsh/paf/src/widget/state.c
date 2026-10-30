@@ -1376,3 +1376,23 @@ int ScePafWidget_C3D53C98(void *self, int first, int second)
 	return ((int (*)(void *, int, int, int))*(void *const *)(vtable + 272))(
 		self, first, second, 0);
 }
+
+uint32_t sce_paf_widget_serial_13cd8;
+
+void *ScePafWidget_CFA20521(uint8_t *result, const uint64_t *payload)
+{
+	uint32_t previous = sce_paf_widget_serial_13cd8;
+
+	*(uint64_t *)result = *payload;
+	sce_paf_widget_serial_13cd8 = previous + 1;
+	*(uint32_t *)(result + 8) = previous;
+	return result;
+}
+
+int ScePafWidget_F130F006(uint8_t *self, uint32_t value)
+{
+	if ((int32_t)value < 0 || (int32_t)value > 2)
+		return -2136014706;
+	*(uint32_t *)(self + 716) = value;
+	return 0;
+}
