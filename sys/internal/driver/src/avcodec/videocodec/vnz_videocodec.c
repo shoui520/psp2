@@ -2131,6 +2131,279 @@ static __attribute__((noinline)) int avcencQueryEncoderMemSize(const AvcencInitP
 	return avcencQueryEncoderMemSizeInline(pParam, pMemSize);
 }
 
+/*
+ * Create an AVC encoder in a free slot of the process: its stream memory from the caller or a
+ * block of its own, its frame memory the caller's, and the stream's SPS and PPS copied to the
+ * caller's header memory.
+ */
+static __attribute__((noinline)) int avcencCreateEncoder(AvcencControl *pCtrl,
+	const AvcencInitParamInternal *pParam)
+{
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	VideocodecEncoder *encoder;
+	VideocodecLockedRanges ranges;
+	VideocodecLockedRange range[1];
+	Dsp0VideocodecEncoderInitParam param;
+	Dsp0VideocodecEncoderParam createParam;
+	AvcencEncoderMemSize memSize;
+	VideocodecMemBlock memBlock;
+	uintptr_t physicalAddress;
+	uintptr_t bufferAddress;
+	void *base;
+	unsigned int handle, i;
+	int ret;
+
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		return ret;
+	if (global->dsp0Library == 0) {
+		sceKernelUnlockFastMutex(global->pAllMutex);
+		return VIDEOCODEC_AVCENC_ERROR_NOT_INITIALIZE;
+	}
+	encoder = &global->encoders[0];
+	for (i = 0; i < global->dsp0EncoderInfo.numOfStreams; i++, encoder++) {
+		ret = lockFastMutex(&encoder->mutex);
+		if (ret < 0) {
+			sceKernelUnlockFastMutex(global->pAllMutex);
+			return ret;
+		}
+		if (encoder->handle == 0)
+			break;
+		sceKernelUnlockFastMutex(&encoder->mutex);
+	}
+	if (i >= global->dsp0EncoderInfo.numOfStreams) {
+		sceKernelUnlockFastMutex(global->pAllMutex);
+		return VIDEOCODEC_AVCENC_ERROR_ALREADY_USED;
+	}
+	videocodecInitLockedRanges(&encoder->lockedRanges, 0, encoder->lockedRange, 1,
+		VIDEOCODEC_ENCODER_ERROR_BASE);
+	videocodecInitLockedRanges(&ranges, 0, range, 1, VIDEOCODEC_ENCODER_ERROR_BASE);
+	encoder->encodeFlags = 0;
+
+	memset(&param, 0, sizeof(param));
+	param.profile = pParam->profile;
+	param.level = pParam->level;
+	param.userOption[0] = pParam->userOption[0];
+	param.userOption[1] = pParam->userOption[1];
+	param.pitch = pParam->pitch;
+	param.alignedHorizontal = pParam->alignedHorizontal;
+	param.alignedVertical = pParam->alignedVertical;
+	param.horizontal = pParam->horizontal;
+	param.vertical = pParam->vertical;
+	param.numOfStreams = pParam->numOfStreams != 0 ? pParam->numOfStreams : 1;
+	param.rateControl[0] = pParam->parameter.numUnitsInTick;
+	param.rateControl[1] = pParam->parameter.timeScale;
+	param.rateControl[2] = pParam->rateControl[0];
+	param.rateControl[3] = pParam->rateControl[1];
+	param.codingOption[0] = pParam->codingOption[0];
+	param.codingOption[1] = pParam->codingOption[1];
+	param.codingOption[2] = pParam->codingOption[2];
+	param.sliceOption = pParam->sliceOption;
+	param.sliceParam[0] = pParam->sliceParam[0];
+	param.sliceParam[1] = pParam->sliceParam[1];
+	param.vuiPresent = pParam->vui.videoSignalTypePresentFlag;
+	param.vui[0] = pParam->vui.videoFormat;
+	param.vui[1] = pParam->vui.videoFullRangeFlag;
+	param.vui[2] = pParam->vui.colourDescriptionPresentFlag;
+	param.vui[3] = pParam->vui.colourPrimaries;
+	param.vui[4] = pParam->vui.transferCharacteristics;
+	param.vui[5] = pParam->vui.matrixCoefficients;
+	memSize.streamMemorySize = 0;
+	memSize.bufferMemorySize = 0;
+	memSize.workMemorySize = 0;
+	ret = avcencQueryEncoderMemSize(pParam, &memSize);
+	if (ret < 0)
+		goto release;
+
+	/* the stream memory: the caller's, or a block of its own */
+	encoder->streamMemory.kind = VIDEOCODEC_MEMORY_BLOCK;
+	if (pCtrl->workMemory != NULL) {
+		if (memSize.streamMemorySize > pCtrl->workMemorySize) {
+			ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+			goto release;
+		}
+		if (((uintptr_t)pCtrl->workMemory & 0xFF) != 0) {
+			ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+			goto release;
+		}
+		ret = sceCodecEngineRegisterUnmapMemory(0, (SceUIntVAddr)pCtrl->workMemory,
+			pCtrl->workMemorySize);
+		if (ret < 0)
+			goto release;
+		ret = sceCodecEngineUnmapUserVAtoKernelVA(0, pCtrl->workMemory, &base);
+		if (ret < 0) {
+			sceCodecEngineUnregisterUnmapMemory(0, (SceUIntVAddr)pCtrl->workMemory,
+				pCtrl->workMemorySize);
+			goto release;
+		}
+		encoder->streamMemory.base = base;
+		encoder->streamMemory.memBlockId = 0;
+		encoder->streamMemory.size = pCtrl->workMemorySize;
+		encoder->streamMemory.kind = VIDEOCODEC_MEMORY_UNMAP;
+	} else {
+		if (videocodecAllocMemBlock("SceAvcencSwMemBuf_Phycont",
+				SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_PHYCONT_NC_RW, 0x40000,
+				(memSize.streamMemorySize + 0x3FFFF) >> 18 << 18, &memBlock) < 0) {
+			ret = VIDEOCODEC_AVCENC_ERROR_OUT_OF_MEMORY;
+			goto release;
+		}
+		encoder->streamMemory.size = memBlock.size;
+		encoder->streamMemory.kind = VIDEOCODEC_MEMORY_BLOCK;
+		encoder->streamMemory.base = memBlock.base;
+		encoder->streamMemory.memBlockId = memBlock.memBlockId;
+	}
+	memset(encoder->streamMemory.base, 0, encoder->streamMemory.size);
+	encoder->encodeFlags |= VIDEOCODEC_ENCODER_STREAM_MEMORY;
+
+	/* the frame memory: the caller's, locked or mapped for the hardware */
+	if (pCtrl->frameMemory == NULL || ((uintptr_t)pCtrl->frameMemory & 0xFF) != 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+		goto release;
+	}
+	if (pCtrl->frameMemorySize < memSize.bufferMemorySize) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto release;
+	}
+	ret = sceCodecEngineRegisterUnmapMemory(0, (SceUIntVAddr)pCtrl->frameMemory,
+		pCtrl->frameMemorySize);
+	if (ret == SCE_CODECENGINE_ERROR_INVALID_POINTER) {
+		if (videocodecLockRange(&encoder->lockedRanges, &physicalAddress,
+				(uintptr_t)pCtrl->frameMemory, pCtrl->frameMemorySize, 32,
+				VIDEOCODEC_CACHE_INVALIDATE, VIDEOCODEC_LOCK_CACHED) < 0) {
+			ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+			goto release;
+		}
+		encoder->frameBuf.pBuf = pCtrl->frameMemory;
+		encoder->frameBuf.size = pCtrl->frameMemorySize;
+		bufferAddress = (uintptr_t)pCtrl->frameMemory;
+	} else {
+		if (ret < 0) {
+			ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+			goto release;
+		}
+		ret = sceCodecEngineUnmapUserVAtoKernelVA(0, pCtrl->frameMemory, &base);
+		if (ret < 0) {
+			sceCodecEngineUnregisterUnmapMemory(0, (SceUIntVAddr)pCtrl->frameMemory,
+				pCtrl->frameMemorySize);
+			goto release;
+		}
+		encoder->frameBuf.pBuf = base;
+		encoder->frameBuf.size = pCtrl->frameMemorySize;
+		encoder->encodeFlags |= VIDEOCODEC_ENCODER_FRAME_BUF_UNMAP;
+		bufferAddress = (uintptr_t)base;
+	}
+
+	createParam.streamAddress = (uintptr_t)encoder->streamMemory.base;
+	createParam.streamSize = encoder->streamMemory.size;
+	createParam.bufferAddress = bufferAddress;
+	createParam.bufferSize = pCtrl->frameMemorySize;
+	createParam.pInitParam = &param;
+	createParam.parameter.bitRate[0] = pParam->parameter.bitRate[0];
+	createParam.parameter.bitRate[1] = pParam->parameter.bitRate[1];
+	createParam.parameter.cpbSize = pParam->parameter.cpbSize * 8;
+	createParam.parameter.gopLength = pParam->parameter.gopLength;
+	createParam.parameter.numUnitsInTick = encoder->numUnitsInTick;
+	createParam.parameter.timeScale = encoder->timeScale;
+	ret = dsp0VideocodecCreateEncoder(global->dsp0Library, &handle, &createParam);
+	ret = videocodecMapAvcencError(ret);
+	if (ret < 0)
+		goto release;
+	encoder->handle = handle;
+	pCtrl->handle = handle - 1;
+	encoder->level = param.level;
+	encoder->frameRateGop = param.codingOption[2];
+	encoder->pitch = param.pitch;
+	encoder->bitRate[0] = pParam->parameter.bitRate[0];
+	encoder->bitRate[1] = pParam->parameter.bitRate[1];
+	encoder->cpbSize = pParam->parameter.cpbSize * 8;
+	encoder->gopLength = pParam->parameter.gopLength;
+	encoder->alignedHorizontal = param.alignedHorizontal;
+	encoder->alignedVertical = param.alignedVertical;
+	encoder->numUnitsInTick = param.rateControl[0];
+	encoder->timeStampNumUnitsInTick = param.rateControl[0];
+	encoder->timeScale = param.rateControl[1];
+	encoder->timeStampTimeScale = param.rateControl[1];
+	encoder->lastStreamAddress = 0;
+	encoder->lastStreamSize = 0;
+	encoder->encodeFlags |= VIDEOCODEC_ENCODER_NEW_PARAMETERS;
+
+	/* the SPS and PPS, one after the other in the caller's header memory */
+	if (pCtrl->headerMemory != NULL) {
+		void *header = pCtrl->headerMemory;
+
+		if (createParam.headers[0].size + createParam.headers[1].size > 0x400) {
+			ret = VIDEOCODEC_AVCENC_ERROR_INVALID_STATE;
+			goto release;
+		}
+		if (pCtrl->headerMemorySize < 0x400) {
+			ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+			goto release;
+		}
+		if (videocodecLockRange(&ranges, &physicalAddress, (uintptr_t)header,
+				pCtrl->headerMemorySize, 32, 0,
+				VIDEOCODEC_LOCK_CACHED | VIDEOCODEC_LOCK_SCATTERED) < 0) {
+			ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+			goto release;
+		}
+		ret = SceCodecEngineWrapperForDriver_FAF590A6(header,
+			(const void *)createParam.headers[0].address, createParam.headers[0].size);
+		if (ret < 0)
+			goto release;
+		pCtrl->headers[0].data = header;
+		pCtrl->headers[0].size = createParam.headers[0].size;
+		pCtrl->headers[0].type = createParam.headers[0].type;
+		pCtrl->headers[0].referencePriority = createParam.headers[0].referencePriority;
+		header = (char *)header + createParam.headers[0].size;
+		ret = SceCodecEngineWrapperForDriver_FAF590A6(header,
+			(const void *)createParam.headers[1].address, createParam.headers[1].size);
+		if (ret < 0)
+			goto release;
+		pCtrl->headers[1].data = header;
+		pCtrl->headers[1].type = createParam.headers[1].type;
+		pCtrl->headers[1].referencePriority = createParam.headers[1].referencePriority;
+		pCtrl->headers[1].size = createParam.headers[1].size;
+	}
+	videocodecUnlockRanges(&ranges);
+	goto unlock;
+
+release:
+	if (encoder->encodeFlags & VIDEOCODEC_ENCODER_FRAME_BUF_MEMBLOCK) {
+		sceKernelFreeMemBlock(encoder->frameBufMemBlockId);
+		encoder->encodeFlags &= ~VIDEOCODEC_ENCODER_FRAME_BUF_MEMBLOCK;
+	}
+	if (encoder->encodeFlags & VIDEOCODEC_ENCODER_FRAME_BUF_UNMAP) {
+		sceCodecEngineUnmapKernelVAtoUserVA(0, encoder->frameBuf.pBuf, &base);
+		sceCodecEngineUnregisterUnmapMemory(0, (SceUIntVAddr)base, encoder->frameBuf.size);
+		encoder->encodeFlags &= ~VIDEOCODEC_ENCODER_FRAME_BUF_UNMAP;
+	}
+	__builtin_memset(&encoder->frameBuf, 0, sizeof(encoder->frameBuf));
+	if (encoder->encodeFlags & VIDEOCODEC_ENCODER_STREAM_MEMORY) {
+		if (encoder->streamMemory.kind != VIDEOCODEC_MEMORY_BLOCK) {
+			if (sceCodecEngineUnmapKernelVAtoUserVA(0, encoder->streamMemory.base,
+					&base) >= 0)
+				sceCodecEngineUnregisterUnmapMemory(0, (SceUIntVAddr)base,
+					encoder->streamMemory.size);
+		} else {
+			memBlock.kind = 0;
+			memBlock.memBlockId = encoder->streamMemory.memBlockId;
+			memBlock.base = encoder->streamMemory.base;
+			memBlock.size = encoder->streamMemory.size;
+			videocodecFreeMemBlock(&memBlock);
+		}
+		encoder->streamMemory.base = NULL;
+		encoder->streamMemory.size = 0;
+		encoder->streamMemory.kind = 0;
+		encoder->streamMemory.memBlockId = 0;
+		encoder->encodeFlags &= ~VIDEOCODEC_ENCODER_STREAM_MEMORY;
+	}
+	videocodecUnlockRanges(&ranges);
+	videocodecUnlockRanges(&encoder->lockedRanges);
+unlock:
+	sceKernelUnlockFastMutex(&encoder->mutex);
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	return ret;
+}
+
 int SceAvcodecForDriver_7DC13C29(unsigned int codecType, unsigned int preset)
 {
 	SceUInt32 syscall = sceSyscallEnter();
@@ -2251,6 +2524,108 @@ int SceAvcodecForDriver_BF3835E2(unsigned int codecType, const AvcencInitParamIn
 		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
 	else
 		ret = avcencQueryEncoderMemSizeInline(pParam, pMemSize);
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_C5E720E2(unsigned int codecType, AvcencControl *pCtrl,
+	const AvcencInitParamBasic *pParam)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	const AvcencBasicGeometry *geometry;
+	AvcencInitParamInternal internal;
+	AvcencInitParam param;
+	unsigned int flags, frameRate, bitRateIndex, gopLength, bitRate[2];
+	int ret;
+
+	if (codecType != VIDEOCODEC_CODEC_TYPE_AVCENC)
+		goto invalid;
+	if (pCtrl == NULL || pParam == NULL)
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+	if (pParam->size != sizeof(*pParam)) {
+		ret = VIDEOCODEC_ENCODER_ERROR_INVALID_ARGUMENT_SIZE;
+		goto out;
+	}
+	flags = pParam->flags;
+	frameRate = pParam->frameRate - 1;
+	bitRateIndex = pParam->bitRateIndex;
+	if (frameRate > 1 || (flags & AVCENC_BASIC_GEOMETRY) - 1 > 2 || bitRateIndex - 1 > 4)
+		goto invalid;
+	geometry = &avcencBasicGeometries[(flags & AVCENC_BASIC_GEOMETRY) - 1];
+	if (flags & AVCENC_BASIC_BIT_RATE) {
+		bitRate[0] = pParam->bitRate[0];
+		bitRate[1] = pParam->bitRate[1];
+	} else {
+		bitRate[0] = avcencBasicBitRates[bitRateIndex];
+		bitRate[1] = bitRate[0] * 12 / 10;
+	}
+	if (flags & AVCENC_BASIC_GOP_LENGTH)
+		gopLength = pParam->gopLength;
+	else
+		gopLength = avcencBasicGopLengths[frameRate];
+	param = (AvcencInitParam){
+		.pitch = geometry->pitch,
+		.alignedHorizontal = geometry->alignedHorizontal,
+		.alignedVertical = geometry->alignedVertical,
+		.horizontal = geometry->horizontal,
+		.vertical = geometry->vertical,
+		.bitRate = { bitRate[0], bitRate[1] },
+		.mode = 2,
+		.preset = geometry->preset,
+		.numUnitsInTick = avcencBasicNumUnitsInTick[frameRate],
+		.timeScale = 240000,
+	};
+	ret = avcencCheckInitParam(&param);
+	if (ret >= 0) {
+		avcencInitParamToInternal(&internal, &param);
+		if (gopLength != 0)
+			internal.parameter.gopLength = gopLength;
+		internal.parameter.cpbSize = 3 * param.alignedHorizontal * param.alignedVertical / 8;
+		ret = avcencCreateEncoder(pCtrl, &internal);
+	}
+	goto out;
+invalid:
+	ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+out:
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_B2A51EB0(unsigned int codecType, AvcencControl *pCtrl,
+	const AvcencInitParam *pParam)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	AvcencInitParamInternal internal;
+	int ret;
+
+	if (codecType != VIDEOCODEC_CODEC_TYPE_AVCENC) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+	} else {
+		if (pParam == NULL || pCtrl == NULL)
+			return VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+		ret = avcencCheckInitParam(pParam);
+		if (ret >= 0) {
+			avcencInitParamToInternal(&internal, pParam);
+			ret = avcencCreateEncoder(pCtrl, &internal);
+		}
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_71C37694(unsigned int codecType, AvcencControl *pCtrl,
+	const AvcencInitParamInternal *pParam)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int ret;
+
+	if (codecType != VIDEOCODEC_CODEC_TYPE_AVCENC) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+	} else {
+		if (pParam == NULL || pCtrl == NULL)
+			return VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+		ret = avcencCreateEncoder(pCtrl, pParam);
+	}
 	sceSyscallLeave(syscall);
 	return ret;
 }

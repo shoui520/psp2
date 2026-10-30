@@ -304,22 +304,71 @@ typedef struct VideocodecDsp0Decoder {
 _Static_assert(sizeof(VideocodecDsp0Decoder) == 136, "video codec DSP0 decoder ABI");
 _Static_assert(offsetof(VideocodecDsp0Decoder, mutex) == 40, "DSP0 decoder mutex ABI");
 
+typedef struct Dsp0VideocodecNalUnit {
+	uintptr_t address;
+	SceSize size;
+	unsigned char type;
+	unsigned char referencePriority;
+	unsigned char padding[2];
+} Dsp0VideocodecNalUnit;
+
+typedef struct Dsp0VideocodecEncodeAu {
+	SceVideodecTimeStamp pts;
+	uintptr_t streamAddress;
+	SceSize streamSize;
+	unsigned char coprocessorFlags[3];
+	unsigned char numOfNal;
+	Dsp0VideocodecNalUnit nal[12];
+} Dsp0VideocodecEncodeAu;
+
+_Static_assert(sizeof(Dsp0VideocodecEncodeAu) == 164, "DSP0 encode AU ABI");
+
 /* an AVC encoder on the DSP0 */
 typedef struct VideocodecEncoder {
 	unsigned int handle;
-	unsigned char encodeState[164];
-	unsigned int encodeFlags;
-	unsigned char encodeStatus[8];
-	unsigned int pictureFlags;
-	unsigned char parameters[112];
+	Dsp0VideocodecEncodeAu au;		/* the last encode's output */
+	unsigned int encodeFlags;		/* VIDEOCODEC_ENCODER_* */
+	SceAvcdecBuf frameBuf;
+	SceUID frameBufMemBlockId;
+	VideocodecMemory streamMemory;		/* kind: -1 the caller's memory, 0 a memory block */
+	unsigned int numOfEncoded;		/* frames since the parameters last changed */
+	unsigned int timeStampNumUnitsInTick;
+	unsigned int timeStampTimeScale;
+	unsigned int padding0;
+	SceUInt64 decodeTime;			/* in timeStampTimeScale units, doubled */
+	SceUInt64 presentationTime;
+	unsigned int pendingNumUnitsInTick[2];	/* the two frames in flight */
+	unsigned int pendingTimeScale[2];
+	uintptr_t lastStreamAddress;
+	SceSize lastStreamSize;
+	unsigned char level;
+	unsigned char reserved[2];
+	unsigned char frameRateGop;		/* codingOption[2]: the GOP follows the frame rate */
+	unsigned int pitch;
+	unsigned int alignedHorizontal;
+	unsigned int alignedVertical;
+	unsigned int numUnitsInTick;
+	unsigned int timeScale;
+	unsigned int bitRate[2];
+	unsigned int cpbSize;			/* in bits */
+	unsigned int gopLength;
 	struct ThreadmgrFastMutex mutex;
 	VideocodecLockedRanges lockedRanges;
 	VideocodecLockedRange lockedRange[1];
-	unsigned int reserved;
+	unsigned int reserved2;
 } VideocodecEncoder;
 
 _Static_assert(sizeof(VideocodecEncoder) == 392, "video codec encoder ABI");
+_Static_assert(offsetof(VideocodecEncoder, encodeFlags) == 168, "encoder flags ABI");
+_Static_assert(offsetof(VideocodecEncoder, decodeTime) == 216, "encoder time stamps ABI");
+_Static_assert(offsetof(VideocodecEncoder, level) == 256, "encoder level ABI");
 _Static_assert(offsetof(VideocodecEncoder, mutex) == 296, "encoder mutex ABI");
+
+/* VideocodecEncoder.encodeFlags */
+#define VIDEOCODEC_ENCODER_FRAME_BUF_MEMBLOCK	0x1	/* frameBufMemBlockId is ours */
+#define VIDEOCODEC_ENCODER_STREAM_MEMORY	0x2	/* streamMemory is set */
+#define VIDEOCODEC_ENCODER_FRAME_BUF_UNMAP	0x4	/* frameBuf is the caller's memory, mapped */
+#define VIDEOCODEC_ENCODER_NEW_PARAMETERS	0x8	/* restart the time stamps at the next encode */
 
 /* SceVideodecQueryInitInfoHwAvcdec without its size: what a library was initialized for */
 typedef struct VideocodecLibraryInfo {
@@ -607,13 +656,6 @@ typedef struct Dsp0VideocodecEncodeResult {
 	unsigned int timeStamp[2];
 } Dsp0VideocodecEncodeResult;
 
-typedef struct Dsp0VideocodecNalUnit {
-	uintptr_t address;
-	SceSize size;
-	unsigned char type;
-	unsigned char referencePriority;
-	unsigned char padding[2];
-} Dsp0VideocodecNalUnit;
 
 typedef struct Dsp0VideocodecInputPicture {
 	uintptr_t address;
@@ -904,6 +946,8 @@ typedef struct Dsp0VideocodecEncoderParam {
 } Dsp0VideocodecEncoderParam;
 
 _Static_assert(sizeof(Dsp0VideocodecEncoderParam) == 68, "DSP0 encoder create ABI");
+int dsp0VideocodecCreateEncoder(unsigned int codecType, unsigned int *pHandle,
+	Dsp0VideocodecEncoderParam *param);
 
 /* a picture handed to a DSP0 encode; mode 0 or a NULL picture flushes */
 typedef struct Dsp0VideocodecEncodeFrame {
@@ -916,17 +960,8 @@ typedef struct Dsp0VideocodecEncodeFrame {
 } Dsp0VideocodecEncodeFrame;
 
 /* what a DSP0 encode returns */
-typedef struct Dsp0VideocodecEncodeAu {
-	SceVideodecTimeStamp pts;
-	uintptr_t streamAddress;
-	SceSize streamSize;
-	unsigned char coprocessorFlags[3];
-	unsigned char numOfNal;
-	Dsp0VideocodecNalUnit nal[12];
-} Dsp0VideocodecEncodeAu;
 
 _Static_assert(sizeof(Dsp0VideocodecEncodeFrame) == 44, "DSP0 encode frame ABI");
-_Static_assert(sizeof(Dsp0VideocodecEncodeAu) == 164, "DSP0 encode AU ABI");
 
 typedef struct Dsp0VideocodecInitParam {
 	unsigned int horizontal;
@@ -1026,6 +1061,16 @@ typedef struct AvcencControl {
 	SceSize headerMemorySize;
 	AvcencNalUnit headers[2];
 } AvcencControl;
+
+/* vitasdk: ksceAvcencCreateEncoderBasic */
+int SceAvcodecForDriver_C5E720E2(unsigned int codecType, AvcencControl *pCtrl,
+	const AvcencInitParamBasic *pParam);
+/* vitasdk: ksceAvcencCreateEncoder */
+int SceAvcodecForDriver_B2A51EB0(unsigned int codecType, AvcencControl *pCtrl,
+	const AvcencInitParam *pParam);
+/* vitasdk: ksceAvcencCreateEncoderInternal */
+int SceAvcodecForDriver_71C37694(unsigned int codecType, AvcencControl *pCtrl,
+	const AvcencInitParamInternal *pParam);
 
 struct AvcencAu;
 

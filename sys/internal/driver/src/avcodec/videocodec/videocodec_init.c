@@ -712,15 +712,8 @@ int _sceVideocodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 	}
 	global->encoders[0].handle = 0;
 	global->encoders[0].encodeFlags = 0;
-	global->encoders[0].pictureFlags = 0;
-	global->encoders[0].encodeStatus[0] = 0;
-	global->encoders[0].encodeStatus[1] = 0;
-	global->encoders[0].encodeStatus[2] = 0;
-	global->encoders[0].encodeStatus[3] = 0;
-	global->encoders[0].encodeStatus[4] = 0;
-	global->encoders[0].encodeStatus[5] = 0;
-	global->encoders[0].encodeStatus[6] = 0;
-	global->encoders[0].encodeStatus[7] = 0;
+	global->encoders[0].frameBufMemBlockId = 0;
+	__builtin_memset(&global->encoders[0].frameBuf, 0, sizeof(global->encoders[0].frameBuf));
 	videocodecInitLockedRanges(&global->encoders[0].lockedRanges, 0,
 		global->encoders[0].lockedRange, 1, VIDEOCODEC_ENCODER_ERROR_BASE);
 	return 0;
