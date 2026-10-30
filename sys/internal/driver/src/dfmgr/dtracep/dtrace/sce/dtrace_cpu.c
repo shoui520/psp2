@@ -11,7 +11,8 @@ static void dtrace_sync_func(void)
 {
 }
 
-int dtrace_is_interrupt_context(void)
+/* the interrupt priority level DTrace reports: whether an interrupt is running */
+int dtrace_getipl(void)
 {
 	return sceKernelIsIntrContext() != 0;
 }
