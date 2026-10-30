@@ -1631,3 +1631,59 @@ uint32x4_t *ScePafWidget_60E4E162(uint32x4_t *result,
 	*result = source ? *source : vdupq_n_u32(0);
 	return result;
 }
+
+uint8_t *ScePafWidget_0DCB8EA5(uint8_t *self, float seconds)
+{
+	if (seconds < 0.0f)
+		seconds = 200.0f;
+	*(float *)(self + 976) = seconds;
+	return self;
+}
+
+uint8_t *ScePafWidget_D7D7712F(uint8_t *self, float value)
+{
+	if (value > 0.0f) {
+		*(float *)(self + 672) = value;
+		*(uint32_t *)(self + 656) = 1059117436U;
+	}
+	return self;
+}
+
+int ScePafWidget_2CAFDB70(uint8_t *self, uint32_t value, uint8_t flag)
+{
+	const uint8_t *vtable = *(const uint8_t *const *)self;
+
+	*(uint32_t *)(self + 648) = value;
+	((void (*)(uint8_t *, uint32_t))*(void *const *)(vtable + 396))(
+		self, value);
+	vtable = *(const uint8_t *const *)self;
+	((void (*)(uint8_t *, int))*(void *const *)(vtable + 404))(
+		self, flag);
+	return 0;
+}
+
+int ScePafWidget_A38D5EAB(uint8_t *self, uint32_t value, uint8_t flag)
+{
+	const uint8_t *vtable = *(const uint8_t *const *)self;
+
+	*(uint32_t *)(self + 660) = value;
+	((void (*)(uint8_t *, uint32_t))*(void *const *)(vtable + 436))(
+		self, value);
+	vtable = *(const uint8_t *const *)self;
+	((void (*)(uint8_t *, int))*(void *const *)(vtable + 440))(
+		self, flag);
+	return 0;
+}
+
+int ScePafWidget_686BD68A(uint8_t *self, uint8_t execute)
+{
+	const uint8_t *vtable;
+
+	if (!execute)
+		return (int)(uintptr_t)self;
+	vtable = *(const uint8_t *const *)self;
+	((void (*)(uint8_t *, int))*(void *const *)(vtable + 556))(
+		self, -1);
+	vtable = *(const uint8_t *const *)self;
+	return ((int (*)(uint8_t *))*(void *const *)(vtable + 560))(self);
+}
