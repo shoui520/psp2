@@ -115,8 +115,7 @@ typedef struct DbgpTime {
 typedef struct ExcpInfo {
 	SceUInt32 reason;
 	SceUInt32 pc;
-	SceUID pid;
-	SceUID thid;
+	DbgpThreadIdentity thread;
 	SceUInt32 valid;
 	SceUInt32 deferred;
 } ExcpInfo;
@@ -180,6 +179,28 @@ typedef struct ModuleInfoBuf {
 } ModuleInfoBuf;
 
 _Static_assert(sizeof(ExcpInfoBuf) == 0x314, "debugger exception queue");
+
+/* the thread list procGetThreadInfo reads from SceThreadmgr: 192 entries of 0x128 */
+#define DBGP_THREAD_LIST_SIZE	0xde00
+
+/* one thread of a stop notification, as procGetThreadInfo fills it */
+typedef struct DbgpThreadInfo {
+	SceUInt32 size;
+	SceUID thid;
+	char name[32];
+	SceUInt32 fields[33];		/* named with process.c's procGetThreadInfo */
+} DbgpThreadInfo;
+
+/* the threads part of a stop notification, followed by the stop time */
+typedef struct DbgpStopThreads {
+	SceUInt32 reserved;
+	SceUID thid;
+	SceUInt32 count;
+	DbgpThreadInfo info[];
+} DbgpStopThreads;
+
+_Static_assert(sizeof(DbgpThreadInfo) == 172, "DBGP thread record");
+_Static_assert(sizeof(DbgpStopThreads) == 12, "DBGP stop thread list");
 _Static_assert(sizeof(ThreadInfoBuf) == 0x60c, "debugger thread queue");
 _Static_assert(sizeof(ProcessInfoBuf) == 0x6c, "debugger process queue");
 _Static_assert(sizeof(ModuleInfoBuf) == 0xac, "debugger module queue");
@@ -509,7 +530,8 @@ int checkGetTargetAddrOpcode(const void *address, SceUInt32 cpsr, SceUID pid,
 			     int *isThumb);
 int checkGetTargetAddrStopCause(DbgpProcCB *proc, const void *address,
 				SceUInt32 cpsr, SceUID pid, SceUInt32 *flags);
-int checkGetTargetAddrStopCauseDabt(void);
+int checkGetTargetAddrStopCauseDabt(DbgpProcCB *proc, const void *address,
+				    SceUInt32 cpsr, SceUID pid);
 int isDbgpThreadPcBkpt(SceUID pid, const void *address, SceUInt32 cpsr);
 int swbkptHasAddress(const DbgpProcCB *proc, SceUID pid, const void *address);
 int processSuspendProcessByDBGP(SceUID pid, int *alreadySuspended);
@@ -519,8 +541,8 @@ int processWaitThreadSuspendForProcess(SceUID pid, SceUID *threads, int mode);
 int processChangeStatusThreadResumeForProcess(SceUID pid, SceUID *threads);
 int processThreadStatusIntegration(SceUID pid, int mode, SceUID *threads);
 int swbkptClearSwbrkptDetach(DbgpProcCB *proc, SceUID pid);
-int swbkptGetAlignId(const DbgpProcCB *proc, const void *address, SceUID pid,
-		     SceUID thid, int *stopCause);
+int swbkptGetAlignId(const DbgpProcCB *proc, const void *address,
+		     DbgpThreadIdentity thread, SceUInt32 *stopCause);
 int swbkptGetSwbrkptCount(const DbgpProcCB *proc, SceUID pid);
 int swbkptGetSwbrkpt(const DbgpProcCB *proc, DbgpGetSwbrkptResponse *reply,
 		     int id);
@@ -553,10 +575,16 @@ int excpInfoSave(DbgpProcCB *proc, const DbgpThreadIdentity *thread,
 		 SceUInt32 reason, SceUInt32 pc, int kind);
 int excpInfoLoad(DbgpProcCB *proc, DbgpThreadIdentity *thread,
 		 SceUInt32 *reason, SceUInt32 *pc);
+int excpInfoClearAll(DbgpProcCB *proc, SceUID pid);
 int excpInfoGetCount(DbgpProcCB *proc);
 int excpInfoCreateStopNotification(DbgpProcCB *proc,
 				   const DbgpThreadIdentity *thread,
 				   SceUInt32 reason, SceUInt32 pc);
+int procGetProcInfoForPacket(DbgpProcCB *proc, SceUID pid);
+int procGetProcessInfo(DbgpProcCB *proc, void *info, SceUID pid,
+		       SceUInt32 reason, SceUInt32 pc);
+int procGetThreadInfo(DbgpProcCB *proc, DbgpThreadInfo *info, int *count,
+		      SceUID pid, void *work, SceUInt32 reason);
 int threadInfoGetCount(DbgpProcCB *proc);
 int processInfoGetCount(DbgpProcCB *proc);
 int moduleInfoGetCount(DbgpProcCB *proc);

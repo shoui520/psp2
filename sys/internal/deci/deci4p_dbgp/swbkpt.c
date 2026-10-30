@@ -26,20 +26,20 @@ int swbkptHasAddress(const DbgpProcCB *proc, SceUID pid, const void *address)
 	return 0;
 }
 
-int swbkptGetAlignId(const DbgpProcCB *proc, const void *address, SceUID pid,
-		     SceUID thid, int *stopCause)
+int swbkptGetAlignId(const DbgpProcCB *proc, const void *address,
+		     DbgpThreadIdentity thread, SceUInt32 *stopCause)
 {
 	int i;
 
 	for (i = 0; i != 256; ++i) {
 		if (proc->swbkpt[i].active != 0 &&
 		    proc->swbkpt[i].address == address &&
-		    pid == proc->swbkpt[i].pid)
+		    thread.pid == proc->swbkpt[i].pid)
 			break;
 	}
 	if (i == 256)
 		return -5;
-	if (proc->swbkpt[i].thid != thid && proc->swbkpt[i].thid != -1 &&
+	if (proc->swbkpt[i].thid != thread.thid && proc->swbkpt[i].thid != -1 &&
 	    stopCause != NULL)
 		*stopCause = 2;
 	return i;

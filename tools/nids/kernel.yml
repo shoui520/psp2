@@ -649,8 +649,8 @@ modules:
         kernel: true
         nid: 0xFBD04C34
         functions:
-          SceDeci4pDbgpForDriver_7251789E: 0x7251789E
-          SceDeci4pDbgpForDriver_9CD5EE8C: 0x9CD5EE8C
+          sceDbgpSetDTraceUsdtHandler: 0x7251789E
+          sceDbgpGetDTraceUsdtHandler: 0x9CD5EE8C
           sceDbgpGetDTraceBreakpointHandler: 0x01D7C7BF
           sceDbgpSetDTraceBreakpointHandler: 0x0509AC51
   SceDeci4pDfMgr:

@@ -768,6 +768,7 @@ int threadGetAppObjectCmd(DbgpProcCB *proc, const DbgpPrefix *packet)
 	result = buildAndSendGetAppObjectInfoRes(proc, pid, array, param, work);
 	ret = sceUlobjMgrReleaseInfoArray(procCB);
 	SCE_DBG_ASSERT(ret == 0, 599);
+	(void)ret;
 	return result;
 }
 
@@ -1004,5 +1005,6 @@ int threadGetFiberStackInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet)
 	result = buildAndSendGetFiberStackInfoRes(proc, pid, array, param, work);
 	ret = sceUlobjMgrReleaseInfoArray(procCB);
 	SCE_DBG_ASSERT(ret == 0, 1333);
+	(void)ret;
 	return result;
 }

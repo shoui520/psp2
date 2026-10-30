@@ -604,7 +604,8 @@ int checkGetTargetAddrStopCause(DbgpProcCB *proc, const void *address,
 	return 32;
 }
 
-int checkGetTargetAddrStopCauseDabt(void)
+int checkGetTargetAddrStopCauseDabt(DbgpProcCB *proc, const void *address,
+				    SceUInt32 cpsr, SceUID pid)
 {
 	SceUInt32 dfsr;
 
