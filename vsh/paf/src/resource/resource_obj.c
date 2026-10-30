@@ -114,6 +114,47 @@ int ScePafResource_9637E38B(uint32_t *self)
 	return 0;
 }
 
+static inline __attribute__((always_inline))
+HeapAllocator *ReleaseResourceBuffer(uint8_t *self, HeapAllocator *allocator,
+				     size_t bufferOffset, size_t arrayOffset,
+				     size_t countOffset)
+{
+	HeapAllocator *result = allocator;
+
+	if (*(uint32_t *)(self + 76) != 1) {
+		void *buffer = *(void **)(self + bufferOffset);
+
+		if (buffer) {
+			if (result ||
+			    (result = *(HeapAllocator **)(self + 28)) != NULL)
+				scePafFreeWithContext(result, buffer);
+			else
+				sce_paf_free(*(void **)(self + bufferOffset));
+			*(void **)(self + bufferOffset) = NULL;
+		}
+		result = *(HeapAllocator **)(self + arrayOffset);
+		if (result) {
+			PafDeleteArray(result);
+			*(void **)(self + arrayOffset) = NULL;
+			*(uint32_t *)(self + countOffset) = 0;
+			return NULL;
+		}
+	}
+	return result;
+}
+
+HeapAllocator *ScePafResource_D60FF214(uint8_t *self,
+				       HeapAllocator *allocator)
+{
+	return ReleaseResourceBuffer(self, allocator, 36, 48, 60);
+}
+
+HeapAllocator *ScePafResource_C240421A(uint8_t *self,
+				       HeapAllocator *allocator)
+{
+	return ReleaseResourceBuffer(self, allocator, 40, 52, 64);
+}
+
 char *ResourceObjGetFileName(const ResourceObj *self)
 {
 	return self->filename.ptr;
