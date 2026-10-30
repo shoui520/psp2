@@ -112,6 +112,14 @@ PafGrid *ScePafMisc_3D747A33(PafGrid *grid)
 	return grid;
 }
 
+PafGrid *ScePafMisc_823265B6(PafGrid *grid)
+{
+	ScePafMisc_1F7BB8D0(grid);
+	PafDeleteArray(grid->entries);
+	grid->entries = 0;
+	return grid;
+}
+
 int ScePafMisc_4D549043(PafGrid *grid)
 {
 	ScePafMisc_1F7BB8D0(grid);

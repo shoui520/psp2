@@ -1,5 +1,6 @@
 /* Ownership operations for PAF's narrow/wide dynamic-string variants. */
 #include <stdint.h>
+#include "../compiler.h"
 #include "../std/string.h"
 #include "../std/new.h"
 #include <ces/libces_ucs.h>
@@ -484,4 +485,18 @@ PafStringPair *ScePafMisc_36CF059C(PafStringPair *self,
 				    const PafString *const *source)
 {
 	return ConstructPairFromStringRef(self, source);
+}
+
+typedef struct PafEmbeddedString {
+	uint8_t reserved[20];
+	PafString value;
+} PafEmbeddedString;
+
+_Static_assert(offsetof(PafEmbeddedString, value) == 20,
+	       "embedded string offset");
+
+int ScePafMisc_20814ED1(const PafEmbeddedString *self, PafString *output)
+{
+	PafStringCopy(output, &self->value);
+	return 0;
 }
