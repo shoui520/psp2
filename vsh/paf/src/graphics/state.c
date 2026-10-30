@@ -1287,6 +1287,77 @@ void *ScePafGraphics_0AED177D(int32_t index)
 	return NULL;
 }
 
+int32_t ScePafGraphics_16A2074A(void *target)
+{
+	PafGraphicsItemNode *head;
+	PafGraphicsItemNode *node = NULL;
+	int32_t index = 0;
+
+	MutexLock(&sce_paf_graphics_items_mutex_12b0);
+	head = sce_paf_graphics_items_12a0;
+	if (head)
+		node = head->next;
+	if (node != head) {
+	scan:
+		if (node->value == target)
+			goto found;
+		++index;
+		if (node)
+			node = node->next;
+		if (node != head)
+			goto scan;
+		goto not_found;
+	found:
+		MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
+		return index;
+	}
+not_found:
+	MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
+	return -1;
+}
+
+void *ScePafGraphics_02F42C91(const char *name)
+{
+	PafGraphicsItemNode *head;
+	PafGraphicsItemNode *node = NULL;
+	PafGraphicsItemNode *cursor;
+	void *result;
+
+	MutexLock(&sce_paf_graphics_items_mutex_12b0);
+	head = sce_paf_graphics_items_12a0;
+	if (head)
+		node = head->next;
+	cursor = node;
+	if (node == head)
+		goto not_found;
+	scan:
+		const char *entryName =
+			*(const char **)((uint8_t *)cursor->value + 16);
+
+		if (entryName) {
+			int comparison = sce_paf_strcmp(entryName, name);
+
+			head = sce_paf_graphics_items_12a0;
+			cursor = node;
+			if (!comparison)
+				goto found;
+		}
+		if (cursor) {
+			node = cursor->next;
+			cursor = node;
+		}
+		if (cursor != head)
+			goto scan;
+		goto not_found;
+	found:
+	result = node->value;
+	MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
+	return result;
+not_found:
+	MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
+	return NULL;
+}
+
 int ScePafGraphics_309D2902(const uint8_t *self, int index,
 			      int arg3, int arg4, int arg5, int arg6,
 			      const void *source)
