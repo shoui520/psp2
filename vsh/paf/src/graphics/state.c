@@ -1454,6 +1454,55 @@ uint32_t *ScePafGraphics_F6BF0E18(uint32_t *result)
 	return current;
 }
 
+int ScePafGraphics_EB2B332C(const uint8_t *self, int selector,
+			     int32_t *result)
+{
+	if (!result)
+		return -2136006138;
+	if (selector == 0) {
+		int value = *(const int16_t *)(self + 102) - 1;
+
+		if (value < 0)
+			value = *(const int16_t *)(self + 100) - 1;
+		*result = value;
+	} else if (selector == 1) {
+		*result = *(const int16_t *)(self + 102);
+	}
+	return 0;
+}
+
+void ScePafGraphics_84619C66(uint8_t *self, SceGxmPolygonMode mode,
+			     unsigned int flags)
+{
+	if (flags & 1) {
+		SceGxmContext *context =
+			*(SceGxmContext **)(self + 1676);
+
+		*(uint32_t *)(self + 1876) = mode;
+		sceGxmSetFrontPolygonMode(context, mode);
+	}
+	if (flags & 2) {
+		SceGxmContext *context =
+			*(SceGxmContext **)(self + 1676);
+
+		*(uint32_t *)(self + 1872) = mode;
+		sceGxmSetBackPolygonMode(context, mode);
+	}
+}
+
+uint32_t ScePafGraphics_FBAF7B7F(uint32_t *self)
+{
+	uint32_t remaining =
+		(uint32_t)sceAtomicDecrement32AcqRel(
+			(volatile int32_t *)&self[6]) - 1;
+
+	if (remaining != 0)
+		return self[6];
+	if (self)
+		((void (*)(uint32_t *))(*(void ***)(self))[1])(self);
+	return 0;
+}
+
 uint32_t ScePafGraphics_0C88DD20(int32_t value)
 {
 	uint32_t current;
