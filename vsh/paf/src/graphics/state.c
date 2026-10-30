@@ -1503,6 +1503,76 @@ uint32_t ScePafGraphics_FBAF7B7F(uint32_t *self)
 	return 0;
 }
 
+static const int32_t graphicsFormatMap[4] = {
+	4, 0,
+	-1, -1
+};
+
+static const int32_t graphicsUsageMap[8] = {
+	1, 0,
+	2, 0x08000000,
+	3, 0x04000000,
+	0, -1
+};
+
+static const int32_t graphicsMemoryMap[6] = {
+	100, 0x02444000,
+	101, 0x00044000,
+	-1, -1
+};
+
+int ScePafGraphics_2B0AC967(int value)
+{
+	int i;
+
+	for (i = 0; i < 3; ++i)
+		if (graphicsMemoryMap[2 * i] == value)
+			return graphicsMemoryMap[2 * i + 1];
+	return -1;
+}
+
+int ScePafGraphics_DD80343F(const uint8_t *self, int value)
+{
+	int i;
+
+	for (i = 0; i < 4; ++i)
+		if (graphicsUsageMap[2 * i] == value)
+			return graphicsUsageMap[2 * i + 1];
+	return -1;
+}
+
+int ScePafGraphics_A9057335(const uint8_t *self)
+{
+	int i;
+	int value = *(const int32_t *)(self + 32);
+
+	for (i = 0; i < 4; ++i)
+		if (graphicsUsageMap[2 * i] == value)
+			return graphicsUsageMap[2 * i + 1];
+	return -1;
+}
+
+int ScePafGraphics_D82ECDCB(const uint8_t *self, int value)
+{
+	int i;
+
+	for (i = 0; i < 2; ++i)
+		if (graphicsFormatMap[2 * i] == value)
+			return graphicsFormatMap[2 * i + 1];
+	return -1;
+}
+
+int ScePafGraphics_E27A477D(const uint8_t *self)
+{
+	int i;
+	int value = *(const int32_t *)(self + 4);
+
+	for (i = 0; i < 2; ++i)
+		if (graphicsFormatMap[2 * i] == value)
+			return graphicsFormatMap[2 * i + 1];
+	return -1;
+}
+
 uint32_t ScePafGraphics_0C88DD20(int32_t value)
 {
 	uint32_t current;
