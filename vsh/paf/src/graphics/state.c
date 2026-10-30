@@ -1603,6 +1603,21 @@ uint8_t *ScePafGraphics_FE59371C(uint8_t *self, int index)
 	return result;
 }
 
+uint8_t *ScePafGraphics_9B144A7E(uint8_t *self, int first,
+				   uint8_t second, uint8_t third, int fourth)
+{
+	uint8_t packed = (first ? 2 : 0) |
+		(second ? 4 : 0) |
+		(third ? 8 : 0) |
+		(fourth ? 1 : 0);
+
+	if (self[1930] != packed) {
+		self[1930] = packed;
+		self[1928] = 1;
+	}
+	return self;
+}
+
 int ScePafGraphics_DD80343F(const uint8_t *self, int value)
 {
 	int i;
