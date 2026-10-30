@@ -78,6 +78,27 @@ void ScePafMisc_8BC3FB99(int32_t *first, int32_t *second,
 	*fourth = (uint32_t)height;
 }
 uint32_t sce_paf_misc_mode_d570;
+extern uint32_t sce_paf_misc_counters_d200[7];
+extern int sceAppMgrSetSystemImposeState2(int state);
+
+int ScePafMisc_F68553A5(int value)
+{
+	uint32_t mode = value == 1 ? 2U : 1U;
+	uint32_t i;
+	uint32_t mask = 0;
+
+	if (sce_paf_misc_mode_d570 != mode) {
+		sce_paf_misc_mode_d570 = mode;
+		for (i = 0; i < 7; ++i) {
+			if ((int32_t)sce_paf_misc_counters_d200[i] > 0)
+				mask |= 1U << i;
+		}
+		if (mask & 0x6fU)
+			return sceAppMgrSetSystemImposeState2((int)mode);
+	}
+	return (int)mode;
+}
+
 uint32_t sce_paf_misc_value_d410;
 uint32_t sce_paf_misc_flags_ee00[2];
 uint32_t sce_paf_misc_cells_da60[2][8][8];
