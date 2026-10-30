@@ -5,6 +5,11 @@
 JobQueueList JobQueueQueueList;
 static Mutex mutex;
 
+int JobItemIsCanceled(JobItem *self)
+{
+	return self->m_canceled;
+}
+
 JobQueueList *JobQueueListConstruct(JobQueueList *self, const void *allocator)
 {
 	JobQueueNode *root;

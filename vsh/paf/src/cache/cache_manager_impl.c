@@ -1,8 +1,58 @@
 #include "cache_manager_impl.h"
 #include "../std/stdc++/atexit.h"
 #include "../std/stdlib.h"
+#include "../job/job.h"
 
 RMutex CacheManagerImplRMutex;
+
+typedef struct PafCacheGate {
+	uint8_t reserved[48];
+	int (*check)(void *context);
+	void *context;
+	uint8_t reserved2[9];
+	uint8_t blocked;
+} PafCacheGate;
+
+typedef struct PafCachePendingJob {
+	uint32_t reserved;
+	PafCacheGate *gate;
+	uint8_t reserved2[20];
+	JobItem *item;
+} PafCachePendingJob;
+
+_Static_assert(offsetof(PafCacheGate, check) == 48, "cache gate callback offset");
+_Static_assert(offsetof(PafCacheGate, blocked) == 65, "cache gate flag offset");
+_Static_assert(offsetof(PafCachePendingJob, item) == 28,
+	       "cache pending job offset");
+
+int ScePafMisc_5A7093DE(PafCachePendingJob *self)
+{
+	PafCacheGate *gate;
+	int result = 0;
+
+	if (!self)
+		return 0;
+	gate = self->gate;
+	if (!gate ||
+	    ((!gate->check || !(result = gate->check(gate->context))) &&
+	     !(result = gate->blocked))) {
+		JobItem *item = self->item;
+
+		if (item)
+			return JobItemIsCanceled(item);
+	}
+	return result;
+}
+
+void ScePafMisc_511CFBA2(CacheManagerImpl *self, void *ptr)
+{
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	if (self->longLifeHeap)
+		scePafFreeWithContext(self->longLifeHeap, ptr);
+	else
+		sce_paf_free(ptr);
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+}
 
 typedef struct PafCacheRefObject PafCacheRefObject;
 typedef struct PafCacheRefMethods {
