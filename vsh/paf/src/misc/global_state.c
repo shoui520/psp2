@@ -535,3 +535,24 @@ uint32_t ScePafMisc_C4E8CBE6(uint32_t mask)
 	sce_paf_misc_flags_d548 = result;
 	return result;
 }
+
+/* Sum outstanding work in the three optional job queues. */
+struct PafJobWaitState;
+extern int ScePafThread_A59ABB3B(struct PafJobWaitState *self);
+
+struct PafJobWaitState *sce_paf_misc_job_queue_103c;
+struct PafJobWaitState *sce_paf_misc_job_queue_1040;
+struct PafJobWaitState *sce_paf_misc_job_queue_1044;
+
+int ScePafMisc_52C7998E(void)
+{
+	int count = 0;
+
+	if (sce_paf_misc_job_queue_103c)
+		count = ScePafThread_A59ABB3B(sce_paf_misc_job_queue_103c);
+	if (sce_paf_misc_job_queue_1040)
+		count += ScePafThread_A59ABB3B(sce_paf_misc_job_queue_1040);
+	if (sce_paf_misc_job_queue_1044)
+		count += ScePafThread_A59ABB3B(sce_paf_misc_job_queue_1044);
+	return count;
+}
