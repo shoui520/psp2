@@ -1,5 +1,6 @@
 /* Standalone native widget state constructors and field operations. */
 #include <stdint.h>
+#include "../std/new.h"
 
 uint32_t sce_paf_widget_state_155c;
 
@@ -661,4 +662,47 @@ int ScePafWidget_CEC4F335(const void *resource)
 int ScePafWidget_FC3C881A(const void *resource)
 {
 	return WidgetResourceReady(resource);
+}
+
+int ScePafWidget_13CF9C4E(const void *self, const char *tag)
+{
+	return tag == "cell_source";
+}
+
+void ScePafWidget_0A87E13F(uint32_t *self)
+{
+	*self = (uint32_t)-2127612860;
+	PafDelete(self);
+}
+
+void ScePafWidget_346AE909(uint32_t *self)
+{
+	*self = (uint32_t)-2127593716;
+	PafDelete(self);
+}
+
+int ScePafWidget_4BDA4BAA(void *self, uint32_t value)
+{
+	void *const *methods = *(void *const *const *)self;
+
+	((void (*)(void *, uint32_t, uint32_t))methods[24])(
+		self, 0x800000, value);
+	return 0;
+}
+
+int ScePafWidget_FDB59013(void *self, const uint8_t *argument)
+{
+	void *const *methods = *(void *const *const *)self;
+
+	((void (*)(void *, uint32_t))methods[24])(
+		self, *(const uint32_t *)(argument + 16));
+	return 0;
+}
+
+extern uint8_t *ScePafGraphics_A05227FA(void);
+
+uint8_t *ScePafWidget_62D63539(void)
+{
+	sce_paf_widget_state_142d8 = 1;
+	return ScePafGraphics_A05227FA();
 }
