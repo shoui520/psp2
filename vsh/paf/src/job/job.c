@@ -2,9 +2,66 @@
 #include "../thread/mutex.h"
 #include "../thread/thread.h"
 #include "../std/stdc++/atexit.h"
+#include "../std/new.h"
 
 JobQueueList JobQueueQueueList;
 static Mutex mutex;
+
+JobItem *ScePafThread_88DA7B11(JobItem *self);
+void ScePafThread_CCE903F3(JobItem *self);
+
+/* The native base-class vtable has two pure-virtual job callbacks. */
+static const JobItemVTable jobItemVTable = {
+	ScePafThread_88DA7B11, ScePafThread_CCE903F3, JobItemCancel,
+	(int (*)(JobItem *))__cxa_pure_virtual,
+	(void (*)(JobItem *, int))__cxa_pure_virtual
+};
+
+JobItem *JobItemConstructBase(JobItem *self, const char *name,
+			      const JobItemOption *option)
+{
+	size_t length = 0;
+
+	self->vtable = &jobItemVTable;
+	self->m_name.ptr = &PafStringEmpty;
+	self->m_name.count = 0;
+	if (name)
+		length = sce_paf_strlen(name);
+	PafStringAssign(&self->m_name, name, length);
+	self->m_status = 0;
+	self->m_result = 0;
+	self->m_canceled = 0;
+	return self;
+}
+
+static inline __attribute__((always_inline))
+JobItem *DestroyJobItem(JobItem *self)
+{
+	char *ptr = self->m_name.ptr;
+
+	self->vtable = &jobItemVTable;
+	if (ptr != &PafStringEmpty)
+		PafDelete(ptr);
+	self->m_name.ptr = (char *)-1;
+	self->m_name.count = (size_t)-1;
+	return self;
+}
+
+JobItem *JobItemDestroyBase(JobItem *self)
+{
+	return DestroyJobItem(self);
+}
+
+JobItem *ScePafThread_88DA7B11(JobItem *self)
+{
+	return DestroyJobItem(self);
+}
+
+void ScePafThread_CCE903F3(JobItem *self)
+{
+	DestroyJobItem(self);
+	PafDelete(self);
+}
 
 typedef struct PafJobWaitState {
 	uint8_t reserved[12];
@@ -68,7 +125,8 @@ JobQueueList *JobQueueListConstruct(JobQueueList *self, const void *allocator)
 	JobQueueNode *root;
 
 	self->count = 0;
-	root = PafNew(sizeof(*root));
+	/* Native JobQueue roots reserve a 36-byte node/control block. */
+	root = PafNew(36);
 	if (!root)
 		ScePafStdc_D608246A();
 	self->root_node = root;
