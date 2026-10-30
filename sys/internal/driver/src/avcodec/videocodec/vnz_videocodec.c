@@ -2813,6 +2813,114 @@ int _sceAvcdecDecodeNalAuWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 	return ret;
 }
 
+int _sceM4vdecQueryDecoderMemSizeInternal(unsigned int codecType,
+		const Dsp0VideocodecM4vDecoderInfo *pInfo, SceSize *pFrameMemSize)
+{
+	Dsp0VideocodecM4vDecoderInfo *info;
+	SceSize *frameMemSize;
+	int ret, copied;
+
+	if (pInfo != NULL) {
+		info = __builtin_alloca(sizeof(*info));
+		ret = sceKernelCopyFromUser(info, pInfo, sizeof(*info));
+		if (ret < 0)
+			return ret;
+		pInfo = info;
+	}
+	if (pFrameMemSize == NULL)
+		return SceAvcodecForDriver_C99242F5(codecType, pInfo, pFrameMemSize);
+	frameMemSize = __builtin_alloca(sizeof(*frameMemSize));
+	*frameMemSize = 0;
+	ret = SceAvcodecForDriver_C99242F5(codecType, pInfo, frameMemSize);
+	copied = sceKernelCopyToUser(pFrameMemSize, frameMemSize,
+				    sizeof(*frameMemSize));
+	return copied < 0 ? copied : ret;
+}
+
+int _sceM4vdecCreateDecoderInternal(unsigned int codecType,
+		SceAvcdecCtrl *pCtrl, const Dsp0VideocodecM4vDecoderInfo *pInfo)
+{
+	SceAvcdecCtrl *ctrl = NULL;
+	Dsp0VideocodecM4vDecoderInfo *info;
+	int ret, copied;
+
+	if (pCtrl != NULL) {
+		ctrl = __builtin_alloca(sizeof(*ctrl));
+		*ctrl = (SceAvcdecCtrl){0};
+		ret = sceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		if (ret < 0)
+			return ret;
+	}
+	if (pInfo != NULL) {
+		info = __builtin_alloca(sizeof(*info));
+		ret = sceKernelCopyFromUser(info, pInfo, sizeof(*info));
+		if (ret < 0)
+			return ret;
+		pInfo = info;
+	}
+	ret = SceAvcodecForDriver_C363B31A(codecType, ctrl, pInfo);
+	if (pCtrl != NULL) {
+		copied = sceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		if (copied < 0)
+			return copied;
+	}
+	return ret;
+}
+
+int _sceM4vdecQueryDecoderMemSize(unsigned int codecType,
+		const Dsp0VideocodecM4vDecoderInfo *pInfo, SceSize *pFrameMemSize)
+{
+	Dsp0VideocodecM4vDecoderInfo *info;
+	SceSize *frameMemSize;
+	int ret, copied;
+
+	if (pInfo != NULL) {
+		info = __builtin_alloca(sizeof(*info));
+		ret = sceKernelCopyFromUser(info, pInfo, sizeof(*info));
+		if (ret < 0)
+			return ret;
+		pInfo = info;
+	}
+	if (pFrameMemSize == NULL)
+		return SceAvcodecForDriver_C5C10C8B(codecType, pInfo, pFrameMemSize);
+	frameMemSize = __builtin_alloca(sizeof(*frameMemSize));
+	*frameMemSize = 0;
+	ret = SceAvcodecForDriver_C5C10C8B(codecType, pInfo, frameMemSize);
+	copied = sceKernelCopyToUser(pFrameMemSize, frameMemSize,
+				    sizeof(*frameMemSize));
+	return copied < 0 ? copied : ret;
+}
+
+int _sceM4vdecCreateDecoder(unsigned int codecType,
+		SceAvcdecCtrl *pCtrl, const Dsp0VideocodecM4vDecoderInfo *pInfo)
+{
+	SceAvcdecCtrl *ctrl = NULL;
+	Dsp0VideocodecM4vDecoderInfo *info;
+	int ret, copied;
+
+	if (pCtrl != NULL) {
+		ctrl = __builtin_alloca(sizeof(*ctrl));
+		*ctrl = (SceAvcdecCtrl){0};
+		ret = sceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		if (ret < 0)
+			return ret;
+	}
+	if (pInfo != NULL) {
+		info = __builtin_alloca(sizeof(*info));
+		ret = sceKernelCopyFromUser(info, pInfo, sizeof(*info));
+		if (ret < 0)
+			return ret;
+		pInfo = info;
+	}
+	ret = SceAvcodecForDriver_47D8E150(codecType, ctrl, pInfo);
+	if (pCtrl != NULL) {
+		copied = sceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		if (copied < 0)
+			return copied;
+	}
+	return ret;
+}
+
 int _sceM4vdecDeleteDecoder(SceAvcdecCtrl *pCtrl)
 {
 	SceAvcdecCtrl *ctrl;
@@ -2941,6 +3049,35 @@ int _sceM4vdecDecodeFlush(const SceAvcdecCtrl *pCtrl)
 			return ret;
 	}
 	return SceAvcodecForDriver_FD805BF1(ctrl);
+}
+
+int _sceM4vdecCsc(M4vdecPicture *pDst, const M4vdecPicture *pSrc)
+{
+	M4vdecPicture *dst = NULL;
+	M4vdecPicture *src;
+	int ret, copied;
+
+	if (pDst != NULL) {
+		dst = __builtin_alloca(sizeof(*dst));
+		memset(dst, 0, sizeof(*dst));
+		ret = sceKernelCopyFromUser(dst, pDst, sizeof(*dst));
+		if (ret < 0)
+			return ret;
+	}
+	if (pSrc != NULL) {
+		src = __builtin_alloca(sizeof(*src));
+		ret = sceKernelCopyFromUser(src, pSrc, sizeof(*src));
+		if (ret < 0)
+			return ret;
+		pSrc = src;
+	}
+	ret = SceAvcodecForDriver_A6CAE217(dst, pSrc);
+	if (pDst != NULL) {
+		copied = sceKernelCopyToUser(pDst, dst, sizeof(*dst));
+		if (copied < 0)
+			return copied;
+	}
+	return ret;
 }
 
 int _sceM4vdecDecodeWithWorkPicture(const SceAvcdecCtrl *pCtrl,
