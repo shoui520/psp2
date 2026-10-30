@@ -7,8 +7,10 @@
 #include <gxm.h>
 #include <sce_atomic.h>
 #include <kernel/sysmem.h>
+#include <display.h>
 
 extern int sceSharedFbGetShellRenderPort(void);
+extern int ScePafThread_26225225(void *condition, int milliseconds);
 extern const SceGxmProgramParameter *sceGxmProgramFindParameterBySemantic(
 	const SceGxmProgram *program, SceGxmParameterSemantic semantic,
 	unsigned int index);
@@ -1641,6 +1643,28 @@ uint32_t *ScePafGraphics_E2687C25(uint8_t *self, const uint8_t *source)
 		return count;
 	}
 	return counter;
+}
+
+void ScePafGraphics_B63D3B14(uint8_t *self)
+{
+	int mode = *(int32_t *)(self + 368);
+
+	if (mode > 1) {
+		if (mode > 3)
+			return;
+		sceDisplayWaitVblankStart();
+		return;
+	}
+	if (mode < 0)
+		return;
+	if (!self[293]) {
+		sceDisplayWaitVblankStart();
+		return;
+	}
+	MutexLock((Mutex *)(self + 296));
+	if (self[293])
+		ScePafThread_26225225(self + 328, 0);
+	MutexUnlock((Mutex *)(self + 296));
 }
 
 int ScePafGraphics_DD80343F(const uint8_t *self, int value)
