@@ -75,6 +75,60 @@ void *ScePafGraphics_CA9687DF(const uint8_t *self, void **destination)
 	return result;
 }
 
+int ScePafGraphics_6EA0C6D7(uint8_t *self, int value)
+{
+	int result = value % *(int16_t *)(self + 100);
+
+	*(int16_t *)(self + 104) = (int16_t)result;
+	return result;
+}
+
+static inline __attribute__((always_inline))
+uint8_t *DestroyGraphicsOwnedPointer(uint8_t *self)
+{
+	if (self[4])
+		PafDelete(*(void **)self);
+	*(void **)self = NULL;
+	return self;
+}
+
+uint8_t *ScePafGraphics_BEA98E74(uint8_t *self)
+{
+	return DestroyGraphicsOwnedPointer(self);
+}
+
+uint8_t *ScePafGraphics_E5D162EB(uint8_t *self)
+{
+	return DestroyGraphicsOwnedPointer(self);
+}
+
+void *ScePafGraphics_E69349E0(const uint8_t *self)
+{
+	void **slot = *(void ***)(self + 112);
+	void *result = *slot;
+
+	if (result) {
+		ScePafGraphics_9FAF51CF(result);
+		*slot = NULL;
+		return NULL;
+	}
+	return result;
+}
+
+extern uint8_t *sce_paf_graphics_indicator_3070;
+uint8_t sce_paf_graphics_reset_flag_3074;
+
+uint8_t *ScePafGraphics_00B9D8CC(void)
+{
+	uint8_t *result = sce_paf_graphics_indicator_3070;
+
+	if (result) {
+		sce_paf_graphics_reset_flag_3074 = 1;
+		*result = 0;
+	}
+	return result;
+}
+
 uint8_t sce_paf_graphics_flag_306c;
 uint32_t sce_paf_graphics_state_11e0;
 uint32_t sce_paf_graphics_state_12ac;
