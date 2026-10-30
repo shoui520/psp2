@@ -114,6 +114,66 @@ int ScePafResource_9637E38B(uint32_t *self)
 	return 0;
 }
 
+int ScePafResource_3B89338E(uint32_t *self, uint32_t target)
+{
+	uint32_t *node = NULL;
+	uint32_t *root;
+
+	if (!target)
+		return -1;
+	root = (uint32_t *)self[8];
+	if (root)
+		node = (uint32_t *)root[1];
+	if (node == root)
+		goto not_found;
+again:
+	if (node[2] == target) {
+		uint32_t previous = *node;
+
+		*(uint32_t *)node[1] = previous;
+		*(uint32_t *)(previous + 4) = node[1];
+		PafDelete(node);
+		--self[9];
+		return 0;
+	}
+	if (node)
+		node = (uint32_t *)node[1];
+	if (node != root)
+		goto again;
+not_found:
+	return -1;
+}
+
+uint32_t *ScePafResource_4F62CBB4(uint8_t *self)
+{
+	/* The firmware stores this virtual callback as a two-word member pointer. */
+	static const volatile struct {
+		int32_t offset;
+		int32_t adjustment;
+	} callback = {32, 1};
+	uint32_t *node = *(uint32_t **)(self + 44);
+	uint32_t *end = node + *(uint32_t *)(self + 48);
+	int32_t slot = callback.offset;
+	int32_t adjust = callback.adjustment;
+	int32_t baseOffset = adjust >> 1;
+	uint32_t indirect = (uint32_t)adjust & 1;
+
+	while (node != end) {
+		uint32_t object = *node;
+		uint32_t target = (uint32_t)slot;
+		uint32_t adjustedObject = object + baseOffset;
+
+		if (indirect) {
+			uint32_t methods = *(uint32_t *)(object + baseOffset);
+			target = *(uint32_t *)(methods + slot);
+		}
+		((void (*)(uint32_t))target)(adjustedObject);
+		if (node)
+			++node;
+	}
+	return end;
+}
+
 static inline __attribute__((always_inline))
 HeapAllocator *ReleaseResourceBuffer(uint8_t *self, HeapAllocator *allocator,
 				     size_t bufferOffset, size_t arrayOffset,
