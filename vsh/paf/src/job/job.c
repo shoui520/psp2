@@ -17,6 +17,22 @@ static const JobItemVTable jobItemVTable = {
 	(void (*)(JobItem *, int))__cxa_pure_virtual
 };
 
+JobItem *ScePafThread_A54DB064(JobItem *self, const char *name)
+{
+	size_t length = 0;
+
+	self->vtable = &jobItemVTable;
+	self->m_name.ptr = &PafStringEmpty;
+	self->m_name.count = 0;
+	if (name)
+		length = sce_paf_strlen(name);
+	PafStringAssign(&self->m_name, name, length);
+	self->m_status = 0;
+	self->m_result = 0;
+	self->m_canceled = 0;
+	return self;
+}
+
 JobItem *JobItemConstructBase(JobItem *self, const char *name,
 			      const JobItemOption *option)
 {
@@ -92,6 +108,16 @@ void ScePafThread_789B263C(PafJobWaitState *self)
 		ScePafThread_651F4F81(10);
 	}
 	MutexUnlock(&mutex);
+}
+
+int ScePafThread_A59ABB3B(PafJobWaitState *self)
+{
+	int count;
+
+	MutexLock(&mutex);
+	count = self->queued;
+	MutexUnlock(&mutex);
+	return count;
 }
 
 void ScePafThread_64FF39DE(PafJobThreadOwner *self, int priority)

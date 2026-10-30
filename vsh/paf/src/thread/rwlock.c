@@ -305,6 +305,13 @@ SceUID *ScePafThread_E72CBBE1(SceUID *self)
 	return self;
 }
 
+SceUID *ScePafThread_323F3E4D(SceUID *self)
+{
+	if (sceKernelDeleteSema(*self))
+		on_error();
+	return self;
+}
+
 static SceUID *InitializeEventFlag(SceUID *self, const char *name)
 {
 	self[1] = 0;
