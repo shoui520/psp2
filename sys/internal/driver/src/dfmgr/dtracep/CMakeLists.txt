@@ -75,6 +75,10 @@ psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 PARTIAL SOURCES
 # default null pointer check deletion (no NULL test of a pointer already dereferenced)
 target_compile_options(os0_kd_deci4p_dtracep PRIVATE -fsigned-char -O3 -fbuiltin -fdelete-null-pointer-checks)
 target_compile_definitions(os0_kd_deci4p_dtracep PRIVATE __SCE__ KERNEL DTRACE_KERNEL)
+# the release firmwares are DTrace's release build: no DIF/DOF error reports, no command names
+if(NOT FW_DEBUG)
+	target_compile_definitions(os0_kd_deci4p_dtracep PRIVATE DTRACE_RELEASE_VERSION=1)
+endif()
 target_include_directories(os0_kd_deci4p_dtracep PRIVATE
 	"${dtrace_cddl}/driver/src/dfmgr/dtracep"
 	"${dtrace_cddl}/include"
