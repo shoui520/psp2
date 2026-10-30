@@ -1,6 +1,7 @@
 /* Native ScePafGraphics globals, field accessors and GXM context forwarding. */
 #include <stdint.h>
 #include "../compiler.h"
+#include "../std/string.h"
 #include <gxm.h>
 
 uint8_t sce_paf_graphics_flag_306c;
@@ -9,6 +10,8 @@ uint32_t sce_paf_graphics_state_12ac;
 uint32_t sce_paf_graphics_state_10fe4;
 uint32_t sce_paf_graphics_state_11fc;
 uint32_t sce_paf_graphics_state_12b0;
+uint8_t sce_paf_graphics_flag_06e8;
+int32_t *sce_paf_graphics_active_surface_2e94;
 
 uint32_t ScePafGraphics_6C448991(void)
 {
@@ -92,4 +95,64 @@ void ScePafGraphics_E4B3B1D2(const uint8_t *self)
 int32_t ScePafGraphics_F3CD22A0(void)
 {
 	return -2127491096;
+}
+
+int ScePafGraphics_1AD606BC(uint8_t *self, uint16_t bits)
+{
+	*(uint16_t *)(self + 112) |= bits;
+	return 0;
+}
+
+int32_t ScePafGraphics_22AB24A0(const uint8_t *self, int32_t value)
+{
+	return ((value << *(const uint32_t *)(self + 12)) + 7) >> 3;
+}
+
+int32_t ScePafGraphics_3B5327DF(const uint8_t *self)
+{
+	return *(const int32_t *)(self + 56) *
+		(3 - *(const int32_t *)(self + 32));
+}
+
+uint8_t *ScePafGraphics_4C4593FF(void)
+{
+	sce_paf_graphics_flag_06e8 = 0;
+	return &sce_paf_graphics_flag_06e8;
+}
+
+uint8_t *ScePafGraphics_A05227FA(void)
+{
+	sce_paf_graphics_flag_06e8 = 1;
+	return &sce_paf_graphics_flag_06e8;
+}
+
+int32_t *ScePafGraphics_8624501D(int32_t *result)
+{
+	*result = -2127676444;
+	return result;
+}
+
+int32_t *ScePafGraphics_AAB453CB(int32_t *result)
+{
+	*result = -2127676444;
+	return result;
+}
+
+void *ScePafGraphics_AE20B115(void *self, void *destination,
+			      const void *source, uint32_t count)
+{
+	return sce_paf_memcpy(destination, source, count);
+}
+
+int32_t ScePafGraphics_BEF37718(void)
+{
+	return *sce_paf_graphics_active_surface_2e94;
+}
+
+int ScePafGraphics_E61D19A9(const uint8_t *self,
+			     uint32_t *first, uint32_t *second)
+{
+	*first = *(const uint32_t *)(self + 4);
+	*second = *(const uint32_t *)(self + 8);
+	return 0;
 }
