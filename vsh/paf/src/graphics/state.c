@@ -78,6 +78,61 @@ int ScePafGraphics_30754CE0(const uint8_t *left, const uint8_t *right)
 	return !GraphicsDescriptorEqual(left, right);
 }
 
+/* Advance an indexed graphics entry across the native grouped ranges. */
+int ScePafGraphics_7B6D79FB(const uint8_t *self, uint32_t index,
+			     uint32_t *output)
+{
+	int result = -2136005885;
+
+	if (!(*(const uint16_t *)(self + 112) & 0x22)) {
+		result = -2136005886;
+		if (index < *(const uint32_t *)(self + 120)) {
+			uint32_t count = *(const uint32_t *)(self + 128);
+			const uint8_t *entry =
+				*(const uint8_t *const *)(self + 116) + index * 12;
+			uint32_t groupIndex = *(const uint32_t *)(entry + 8);
+
+			if (groupIndex < count) {
+				const uint32_t *groups =
+					*(const uint32_t *const *)(self + 124);
+				const uint8_t *group =
+					(const uint8_t *)(uintptr_t)groups[groupIndex];
+				uint32_t size = *(const uint32_t *)(group + 32);
+				uint32_t last = UINT32_MAX;
+
+				if (size) {
+					const uint32_t *children = *(const uint32_t *const *)(group + 28);
+					const uint8_t *child =
+						(const uint8_t *)(uintptr_t)children[size - 1];
+					last = *(const uint32_t *)(child + 28) +
+						*(const uint32_t *)(child + 32) - 1;
+				}
+				if (index >= last) {
+					if (groupIndex >= count - 1) {
+						*output = index;
+					} else {
+						const uint8_t *next =
+							(const uint8_t *)(uintptr_t)groups[groupIndex + 1];
+						uint32_t first = 0;
+						if (*(const uint32_t *)(next + 32)) {
+							const uint32_t *children =
+								*(const uint32_t *const *)(next + 28);
+							const uint8_t *child =
+								(const uint8_t *)(uintptr_t)children[0];
+							first = *(const uint32_t *)(child + 28);
+						}
+						*output = first;
+					}
+				} else {
+					*output = index + 1;
+				}
+				return 0;
+			}
+		}
+	}
+	return result;
+}
+
 int32_t ScePafGraphics_61C250D7(const uint8_t *self, uint32_t index,
 				uint8_t *output)
 {
