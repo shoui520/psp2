@@ -1442,3 +1442,48 @@ const char *ScePafWidget_F3A13905(void)
 {
 	return "style_scroll_view";
 }
+
+int ScePafWidget_3E4AABD3(uint8_t *self, void *replacement)
+{
+	void *previous = *(void **)(self + 716);
+
+	if (previous != replacement) {
+		if (previous) {
+			const uint8_t *methods = *(const uint8_t *const *)previous;
+
+			((void (*)(void *, void *))*(void *const *)(methods + 12))(
+				previous, self);
+		}
+		*(void **)(self + 716) = replacement;
+	}
+	return 0;
+}
+
+int ScePafWidget_3F5AFF90(const uint8_t *self, int32_t index)
+{
+	int32_t count;
+
+	if (index < 0)
+		return 0;
+	count = *(const int32_t *)(self + 4);
+	if (count <= index)
+		return 0;
+	if ((uint32_t)index >= (uint32_t)count)
+		ScePafStdc_D608246A();
+	return *(const int32_t *)(*(const uint8_t *const *)self +
+				  8 * (uint32_t)index);
+}
+
+int ScePafWidget_4CB11B2D(const uint8_t *self, int32_t requested)
+{
+	const uint8_t *root = *(const uint8_t *const *)(self + 4);
+	const uint8_t *node = root ? *(const uint8_t *const *)(root + 4) : NULL;
+
+	while (node != root) {
+		if (*(const int32_t *)(node + 8) == requested)
+			return requested;
+		if (node)
+			node = *(const uint8_t *const *)(node + 4);
+	}
+	return 0;
+}
