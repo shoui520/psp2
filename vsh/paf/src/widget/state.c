@@ -1557,3 +1557,18 @@ void *ScePafWidget_DBD8EC0D(const uint8_t *self)
 	}
 	return 0;
 }
+
+int ScePafWidget_7B743729(uint8_t *self, int32_t value)
+{
+	const uint8_t *vtable;
+
+	if (value <= 0)
+		return -2136014706;
+	*(int32_t *)(self + 656) = value;
+	vtable = *(const uint8_t *const *)self;
+	((void (*)(void *, uint32_t, int))*(void *const *)(vtable + 392))(
+		self, *(uint32_t *)(self + 660), 0);
+	vtable = *(const uint8_t *const *)self;
+	((void (*)(void *, int))*(void *const *)(vtable + 444))(self, 2);
+	return 0;
+}
