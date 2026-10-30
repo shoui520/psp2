@@ -1698,6 +1698,20 @@ done:
 	return status;
 }
 
+int ScePafGraphics_823F7FC5(uint8_t *self)
+{
+	ScePafThread_F9FFA0BE(&sce_paf_graphics_rmutex_1230);
+	if (*(uint32_t *)(self + 36)) {
+		int result = ((int (*)(uint8_t *))
+			(*(void ***)self)[15])(self);
+
+		ScePafThread_95F9C45F(&sce_paf_graphics_rmutex_1230);
+		return result;
+	}
+	ScePafThread_95F9C45F(&sce_paf_graphics_rmutex_1230);
+	return -2136006143;
+}
+
 int ScePafGraphics_DD80343F(const uint8_t *self, int value)
 {
 	int i;
