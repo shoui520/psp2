@@ -13,27 +13,14 @@
 #include <sysmem/sysmem.h>
 #include <string.h>
 
-STUB(SceAvcodecForDriver_13C530E4)
 STUB(SceAvcodecForDriver_16B501C9)
-STUB(SceAvcodecForDriver_20892154)
-STUB(SceAvcodecForDriver_27211864)
 STUB(SceAvcodecForDriver_427914D5)
-STUB(SceAvcodecForDriver_48DECA56)
 STUB(SceAvcodecForDriver_6E250A5F)
-STUB(SceAvcodecForDriver_78BA8E98)
-STUB(SceAvcodecForDriver_90F394E6)
 STUB(SceAvcodecForDriver_B8A9632A)
 STUB(SceAvcodecForDriver_BC244D21)
-STUB(SceAvcodecForDriver_D2ACCE22)
 STUB(SceAvcodecForDriver_D46B8463)
-STUB(SceAvcodecForDriver_D7CD7F82)
-STUB(SceAvcodecForDriver_D9FCDF3E)
 STUB(SceAvcodecForDriver_DFC0AAC6)
 STUB(SceAvcodecForDriver_E355CAAE)
-STUB(SceAvcodecForDriver_E4F668C5)
-STUB(SceAvcodecForDriver_E7E14DE4)
-STUB(SceAvcodecForDriver_EAEB16D5)
-STUB(SceAvcodecForDriver_F8BCBE20)
 
 int _sceAudiodecInitLibrary(SceUInt32 codecType, SceAudiodecInitParam *param)
 {

@@ -1010,6 +1010,8 @@ int dsp0VideocodecCreateAvcDecoder(unsigned int codecType, unsigned int *pHandle
 	const Dsp0VideocodecDecoderParam *param);
 int dsp0VideocodecDeleteAvcDecoder(unsigned int handle, SceUID pid);
 unsigned int dsp0VideocodecAvcDecodeAvailableSize(unsigned int handle);
+int dsp0VideocodecAvcDecode(unsigned int handle, const SceAvcdecAu *pAu,
+	const Dsp0VideocodecArrayPicture *pArrayPicture, unsigned int *pNumOfOutput);
 int dsp0VideocodecQueryM4vDecoderMemSize(const Dsp0VideocodecM4vDecoderInfo *pInfo,
 	SceSize *frameMemSize);
 int dsp0VideocodecCreateM4vDecoder(unsigned int codecType, unsigned int *pHandle,
