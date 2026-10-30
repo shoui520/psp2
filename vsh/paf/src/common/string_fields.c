@@ -301,6 +301,62 @@ uint32_t ScePafCommon_3728D46C(PafCommonReferenceString *self)
 	return remaining;
 }
 
+/* Native fixed-tag constructors and deleting destructor aliases. */
+static inline __attribute__((always_inline))
+uint32_t *ConstructCommonTag(uint32_t *self)
+{
+	self[0] = (uint32_t)-2127688360;
+	return self;
+}
+
+uint32_t *ScePafCommon_0691F7F7(uint32_t *self)
+{
+	return ConstructCommonTag(self);
+}
+
+uint32_t *ScePafCommon_31766A0F(uint32_t *self)
+{
+	return ConstructCommonTag(self);
+}
+
+uint32_t *ScePafCommon_559CDA63(uint32_t *self)
+{
+	return ConstructCommonTag(self);
+}
+
+uint32_t *ScePafCommon_D4CE120A(uint32_t *self)
+{
+	return ConstructCommonTag(self);
+}
+
+static inline __attribute__((always_inline))
+uint32_t *ConstructCommonTagPair(uint32_t *self)
+{
+#if defined(FW_TYPE_CEX)
+	self[0] = 0x812e0e20U;
+#else
+	self[0] = 0x812e1ad8U;
+#endif
+	self[1] = 0;
+	return self;
+}
+
+uint32_t *ScePafCommon_2CDB40AC(uint32_t *self)
+{
+	return ConstructCommonTagPair(self);
+}
+
+uint32_t *ScePafCommon_97C2B0FE(uint32_t *self)
+{
+	return ConstructCommonTagPair(self);
+}
+
+void ScePafCommon_38964597(uint32_t *self)
+{
+	self[0] = (uint32_t)-2127688360;
+	PafDelete(self);
+}
+
 /* Find a keyed string-property pair in the native node tree. */
 PafCommonSharedPointer *ScePafCommon_91CDF7D0(
 		PafCommonSharedPointer *result, const uint8_t *self,
