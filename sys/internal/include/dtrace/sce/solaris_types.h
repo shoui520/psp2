@@ -6,6 +6,7 @@
  */
 #pragma once
 
+#include <fw.h>
 #include <scetypes.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -21,12 +22,14 @@
 #define _LITTLE_ENDIAN
 
 /*
- * Sony built the CDDL code with the checked string copies (_FORTIFY_SOURCE): a
- * copy into an object of known size goes through __strncpy_chk or
- * __strlcpy_chk, the rest stays a plain strncpy.
+ * Sony built 4.00's CDDL code with the checked string copies (_FORTIFY_SOURCE):
+ * a copy into an object of known size goes through __strncpy_chk or
+ * __strlcpy_chk, the rest stays a plain strncpy. 3.6x imports neither.
  */
+#if FW_SINCE(0x04000000)
 #define strncpy(dst, src, n)	__builtin___strncpy_chk(dst, src, n, __builtin_object_size(dst, 0))
 #define strlcpy(dst, src, size)	__strlcpy_chk(dst, src, size, __builtin_object_size(dst, 0))
+#endif
 
 /* the kernel's errno values are the SCE error codes (sceerror.h) */
 #undef EFAULT
