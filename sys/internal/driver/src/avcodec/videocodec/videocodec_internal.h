@@ -339,8 +339,7 @@ typedef struct VideocodecEncoder {
 	SceUInt64 presentationTime;
 	unsigned int pendingNumUnitsInTick[2];	/* the two frames in flight */
 	unsigned int pendingTimeScale[2];
-	uintptr_t lastStreamAddress;
-	SceSize lastStreamSize;
+	SceVideodecTimeStamp lastPts;		/* the last AU's */
 	unsigned char level;
 	unsigned char reserved[2];
 	unsigned char frameRateGop;		/* codingOption[2]: the GOP follows the frame rate */
@@ -948,6 +947,8 @@ typedef struct Dsp0VideocodecEncoderParam {
 _Static_assert(sizeof(Dsp0VideocodecEncoderParam) == 68, "DSP0 encoder create ABI");
 int dsp0VideocodecCreateEncoder(unsigned int codecType, unsigned int *pHandle,
 	Dsp0VideocodecEncoderParam *param);
+int dsp0VideocodecDeleteEncoder(unsigned int handle, SceUID pid);
+int dsp0VideocodecGetInputPicture(unsigned int handle, struct Dsp0VideocodecEncoderPicture *pPicture);
 
 /* a picture handed to a DSP0 encode; mode 0 or a NULL picture flushes */
 typedef struct Dsp0VideocodecEncodeFrame {
@@ -962,6 +963,10 @@ typedef struct Dsp0VideocodecEncodeFrame {
 /* what a DSP0 encode returns */
 
 _Static_assert(sizeof(Dsp0VideocodecEncodeFrame) == 44, "DSP0 encode frame ABI");
+int dsp0VideocodecEncode(unsigned int handle, Dsp0VideocodecEncodeFrame *pFrame,
+	Dsp0VideocodecEncodeAu *pAu, unsigned int *pNumOfOutput);
+int dsp0VideocodecEncodeStop(unsigned int handle, Dsp0VideocodecEncodeAu *pAu,
+	unsigned int *pNumOfOutput);
 
 typedef struct Dsp0VideocodecInitParam {
 	unsigned int horizontal;
@@ -1072,7 +1077,26 @@ int SceAvcodecForDriver_B2A51EB0(unsigned int codecType, AvcencControl *pCtrl,
 int SceAvcodecForDriver_71C37694(unsigned int codecType, AvcencControl *pCtrl,
 	const AvcencInitParamInternal *pParam);
 
-struct AvcencAu;
+/* an AVC encoder time stamp: integer units of timeStampTimeScale and the fraction in timeScale */
+typedef struct AvcencTimeStamp {
+	unsigned int integer;
+	unsigned int fraction;
+	unsigned int timeScale;
+} AvcencTimeStamp;
+
+/* an encoded access unit, its stream in the caller's es buffer */
+typedef struct AvcencAu {
+	SceSize size;
+	AvcencTimeStamp dts;
+	AvcencTimeStamp pts;
+	void *pEs;
+	SceSize esSize;
+	unsigned char numOfNal;
+	unsigned char coprocessorFlags[2];
+	unsigned char reserved;
+} AvcencAu;
+
+_Static_assert(sizeof(AvcencAu) == 40, "AVC encoder AU ABI");
 
 typedef struct AvcencArrayAu {
 	unsigned int numOfOutput;
@@ -1207,6 +1231,7 @@ int SceAvcodecForDriver_A2085B6B(unsigned int codecType, unsigned int size);
 /* vitasdk: ksceAvcencSetAvailablePreset */
 int SceAvcodecForDriver_7DC13C29(unsigned int codecType, unsigned int preset);
 int SceAvcodecForDriver_2895CB6D(AvcencControl *pCtrl);	/* vitasdk: ksceAvcencDeleteEncoder */
+int avcencDeleteEncoderForProcess(AvcencControl *pCtrl, SceUID pid);
 int SceAvcodecForDriver_229AB2CF(const AvcencControl *pCtrl);	/* vitasdk: ksceAvcencEncodeFlush */
 /* vitasdk: ksceAvcencSetEncoderParameter */
 int SceAvcodecForDriver_E0232BFE(const AvcencControl *pCtrl,

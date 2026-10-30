@@ -2001,7 +2001,7 @@ static __attribute__((noinline)) int avcencInitParamToInternal(AvcencInitParamIn
 	return 0;
 }
 
-static inline __attribute__((always_inline)) int videocodecMapAvcencError(int result)
+static inline __attribute__((always_inline)) int videocodecMapAvcencErrorInline(int result)
 {
 	unsigned int index = (unsigned int)result - 0x80620201;
 
@@ -2111,7 +2111,7 @@ avcencQueryEncoderMemSizeInline(const AvcencInitParamInternal *pParam,
 	param.vui[4] = pParam->vui.transferCharacteristics;
 	param.vui[5] = pParam->vui.matrixCoefficients;
 	ret = dsp0VideocodecQueryEncoderMemSize(&param, &streamSize, &bufferSize, &workSize);
-	ret = videocodecMapAvcencError(ret);
+	ret = videocodecMapAvcencErrorInline(ret);
 	if (ret >= 0) {
 		pMemSize->streamMemorySize = (streamSize + 0x3FFFF) >> 18 << 18;
 		pMemSize->bufferMemorySize = (bufferSize + 0x3FFFF) >> 18 << 18;
@@ -2305,7 +2305,7 @@ static __attribute__((noinline)) int avcencCreateEncoder(AvcencControl *pCtrl,
 	createParam.parameter.numUnitsInTick = encoder->numUnitsInTick;
 	createParam.parameter.timeScale = encoder->timeScale;
 	ret = dsp0VideocodecCreateEncoder(global->dsp0Library, &handle, &createParam);
-	ret = videocodecMapAvcencError(ret);
+	ret = videocodecMapAvcencErrorInline(ret);
 	if (ret < 0)
 		goto release;
 	encoder->handle = handle;
@@ -2323,8 +2323,8 @@ static __attribute__((noinline)) int avcencCreateEncoder(AvcencControl *pCtrl,
 	encoder->timeStampNumUnitsInTick = param.rateControl[0];
 	encoder->timeScale = param.rateControl[1];
 	encoder->timeStampTimeScale = param.rateControl[1];
-	encoder->lastStreamAddress = 0;
-	encoder->lastStreamSize = 0;
+	encoder->lastPts.upper = 0;
+	encoder->lastPts.lower = 0;
 	encoder->encodeFlags |= VIDEOCODEC_ENCODER_NEW_PARAMETERS;
 
 	/* the SPS and PPS, one after the other in the caller's header memory */
@@ -2402,6 +2402,11 @@ unlock:
 	sceKernelUnlockFastMutex(&encoder->mutex);
 	sceKernelUnlockFastMutex(global->pAllMutex);
 	return ret;
+}
+
+static __attribute__((noinline)) int videocodecMapAvcencError(int result)
+{
+	return videocodecMapAvcencErrorInline(result);
 }
 
 int SceAvcodecForDriver_7DC13C29(unsigned int codecType, unsigned int preset)
@@ -2626,6 +2631,681 @@ int SceAvcodecForDriver_71C37694(unsigned int codecType, AvcencControl *pCtrl,
 			return VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
 		ret = avcencCreateEncoder(pCtrl, pParam);
 	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+/* Delete the AVC encoder pCtrl names in process pid, releasing its frame and stream memory. */
+static inline __attribute__((always_inline)) int
+avcencDeleteEncoderInline(AvcencControl *pCtrl, SceUID pid)
+{
+	VideocodecGlobal *global = _GetVideocodecGlobal(pid);
+	VideocodecEncoder *encoder;
+	VideocodecMemBlock memBlock;
+	unsigned int handle, index;
+	void *base;
+	int ret, err;
+
+	if (pCtrl == NULL)
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+	handle = pCtrl->handle;
+	if (handle == 0)
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		return ret;
+	if (handle < 4096 || (index = handle - 4096) >= global->dsp0EncoderInfo.numOfStreams) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto unlock;
+	}
+	encoder = &global->encoders[index];
+	ret = lockFastMutex(&encoder->mutex);
+	if (ret < 0)
+		goto unlock;
+	handle = encoder->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		sceKernelUnlockFastMutex(&encoder->mutex);
+		goto unlock;
+	}
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	err = dsp0VideocodecDeleteEncoder(handle, pid);
+	err = videocodecMapAvcencErrorInline(err);
+	if (err == SCE_KERNEL_ERROR_THREAD_STOPPED || err == SCE_KERNEL_ERROR_THREAD_SUSPENDED) {
+		sceKernelUnlockFastMutex(&encoder->mutex);
+		return err;
+	}
+	encoder->handle = 0;
+	if (encoder->encodeFlags & VIDEOCODEC_ENCODER_FRAME_BUF_MEMBLOCK) {
+		sceKernelFreeMemBlock(encoder->frameBufMemBlockId);
+		encoder->encodeFlags &= ~VIDEOCODEC_ENCODER_FRAME_BUF_MEMBLOCK;
+	}
+	if (encoder->encodeFlags & VIDEOCODEC_ENCODER_FRAME_BUF_UNMAP) {
+		sceCodecEngineUnmapKernelVAtoUserVA(pid, encoder->frameBuf.pBuf, &base);
+		ret = sceCodecEngineUnregisterUnmapMemory(pid, (SceUIntVAddr)base,
+			encoder->frameBuf.size);
+		encoder->encodeFlags &= ~VIDEOCODEC_ENCODER_FRAME_BUF_UNMAP;
+	}
+	__builtin_memset(&encoder->frameBuf, 0, sizeof(encoder->frameBuf));
+	if (encoder->encodeFlags & VIDEOCODEC_ENCODER_STREAM_MEMORY) {
+		if (encoder->streamMemory.kind != VIDEOCODEC_MEMORY_BLOCK) {
+			if (sceCodecEngineUnmapKernelVAtoUserVA(pid, encoder->streamMemory.base,
+					&base) >= 0)
+				sceCodecEngineUnregisterUnmapMemory(pid, (SceUIntVAddr)base,
+					encoder->streamMemory.size);
+		} else {
+			memBlock.kind = 0;
+			memBlock.memBlockId = encoder->streamMemory.memBlockId;
+			memBlock.base = encoder->streamMemory.base;
+			memBlock.size = encoder->streamMemory.size;
+			videocodecFreeMemBlock(&memBlock);
+		}
+		encoder->streamMemory.base = NULL;
+		encoder->streamMemory.size = 0;
+		encoder->streamMemory.kind = 0;
+		encoder->streamMemory.memBlockId = 0;
+		encoder->encodeFlags &= ~VIDEOCODEC_ENCODER_STREAM_MEMORY;
+	}
+	__builtin_memset(&encoder->streamMemory, 0, 8);
+	encoder->encodeFlags = 0;
+	videocodecUnlockRangesProc(&encoder->lockedRanges, pid);
+	sceKernelUnlockFastMutex(&encoder->mutex);
+	if (ret != 0)
+		return ret;
+	return err < 0 ? err : 0;
+
+unlock:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	return ret;
+}
+
+int avcencDeleteEncoderForProcess(AvcencControl *pCtrl, SceUID pid)
+{
+	return avcencDeleteEncoderInline(pCtrl, pid);
+}
+
+int SceAvcodecForDriver_2895CB6D(AvcencControl *pCtrl)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int ret;
+
+	ret = avcencDeleteEncoderInline(pCtrl, 0);
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+/*
+ * Encodes pFrame on the AVC encoder pCtrl names. The one AU pArrayAu names is copied in from
+ * the caller, filled with the encoded stream (copied to its es buffer) and its time stamps,
+ * and copied back out.
+ */
+int SceAvcodecForDriver_A0E63278(const AvcencControl *pCtrl, const AvcencCscFrame *pFrame,
+	AvcencArrayAu *pArrayAu)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	VideocodecGlobal *global;
+	VideocodecEncoder *encoder;
+	AvcencAu **userAu = NULL, **kernelAu = NULL;
+	AvcencAu *userAus[1], *aus[1], *au;
+	VideocodecLockedRange lockedRange[1];
+	VideocodecLockedRanges ranges;
+	Dsp0VideocodecEncoderPicture input;
+	Dsp0VideocodecEncodeFrame frame;
+	uintptr_t physicalAddress;
+	unsigned int handle, index, numOfOutput, prevNumUnitsInTick, prevTimeScale, timeScale;
+	unsigned int mode, i;
+	SceUInt64 decodeTime, presentationTime;
+	char auBuf[sizeof(AvcencAu)];
+	int ret, copied = 0;
+
+	if (pArrayAu == NULL) {
+		_GetVideocodecGlobal(0);
+		copied = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+		goto out;
+	}
+	if (pArrayAu->numOfElm == 1) {
+		userAu = pArrayAu->pAu;
+		if (userAu != NULL) {
+			copied = sceKernelCopyFromUser(userAus, userAu, sizeof(userAus));
+			if (copied < 0 || (copied = videocodecCopyInPictures(pArrayAu->numOfElm,
+					(void **)aus, auBuf, (void *const *)userAus,
+					sizeof(AvcencAu))) < 0) {
+				pArrayAu->pAu = userAu;
+				goto out;
+			}
+			pArrayAu->pAu = aus;
+			kernelAu = aus;
+		}
+	}
+	global = _GetVideocodecGlobal(0);
+	if (pCtrl == NULL || pFrame == NULL || pArrayAu->pAu[0] == NULL) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+		goto copyOut;
+	}
+	if (pArrayAu->numOfElm != 1 || (handle = pCtrl->handle) == 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto copyOut;
+	}
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		goto copyOut;
+	if (handle < 4096 || (index = handle - 4096) >= global->dsp0EncoderInfo.numOfStreams) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto unlockAll;
+	}
+	encoder = &global->encoders[index];
+	ret = lockFastMutex(&encoder->mutex);
+	if (ret < 0)
+		goto unlockAll;
+	handle = encoder->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		sceKernelUnlockFastMutex(&encoder->mutex);
+		goto unlockAll;
+	}
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	videocodecInitLockedRanges(&ranges, 0, lockedRange, 1, VIDEOCODEC_ENCODER_ERROR_BASE);
+	au = pArrayAu->pAu[0];
+	if (au->size != sizeof(*au)) {
+		ret = VIDEOCODEC_ENCODER_ERROR_INVALID_ARGUMENT_SIZE;
+		goto unlockRanges;
+	}
+	if ((pFrame->pixelType != 32 && pFrame->pixelType != 16) ||
+	    pFrame->frameWidth != encoder->alignedHorizontal ||
+	    pFrame->frameHeight != encoder->alignedVertical) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto unlockRanges;
+	}
+	if (encoder->encodeFlags & VIDEOCODEC_ENCODER_NEW_PARAMETERS) {
+		encoder->encodeFlags &= ~VIDEOCODEC_ENCODER_NEW_PARAMETERS;
+		encoder->numOfEncoded = 0;
+		encoder->decodeTime = 0;
+		encoder->presentationTime = 0;
+		encoder->pendingNumUnitsInTick[0] = encoder->numUnitsInTick;
+		encoder->pendingNumUnitsInTick[1] = encoder->numUnitsInTick;
+		encoder->pendingTimeScale[0] = encoder->timeScale;
+		encoder->pendingTimeScale[1] = encoder->timeScale;
+	}
+	ret = dsp0VideocodecGetInputPicture(handle, &input);
+	ret = videocodecMapAvcencErrorInline(ret);
+	if (ret < 0)
+		goto unlockRanges;
+	if (input.size < 3 * pFrame->frameHeight * pFrame->framePitch / 2) {
+		ret = VIDEOCODEC_AVCENC_ERROR_UNSUPPORT_IMAGE_SIZE;
+		goto unlockRanges;
+	}
+	frame.pPicture = (const void *)input.address;
+	frame.pitch = pFrame->framePitch;
+	frame.horizontal = pFrame->frameWidth;
+	frame.vertical = pFrame->frameHeight;
+	mode = pFrame->encodeMode;
+	if (mode == 32 || mode == 1 || mode == 64) {
+		ret = videocodecAvcencInputCsc((VideocodecEncoderFrame *)&frame, pFrame,
+			encoder->encodeFlags &
+			(VIDEOCODEC_ENCODER_FRAME_BUF_MEMBLOCK | VIDEOCODEC_ENCODER_FRAME_BUF_UNMAP));
+		if (ret < 0)
+			goto unlockRanges;
+		mode = pFrame->encodeMode;
+	}
+	frame.mode = mode;
+	frame.parameter.bitRate[0] = encoder->bitRate[0];
+	frame.parameter.bitRate[1] = encoder->bitRate[1];
+	frame.parameter.cpbSize = encoder->cpbSize;
+	frame.parameter.gopLength = encoder->gopLength;
+	frame.parameter.numUnitsInTick = encoder->numUnitsInTick;
+	frame.parameter.timeScale = encoder->timeScale;
+	ret = dsp0VideocodecEncode(handle, &frame, &encoder->au, &numOfOutput);
+	ret = videocodecMapAvcencError(ret);
+	if (ret < 0 && ret != VIDEOCODEC_AVCENC_ERROR_ES_BUFFER_FULL)
+		goto unlockRanges;
+
+	/* the time stamps run two frames behind the parameters */
+	prevNumUnitsInTick = encoder->pendingNumUnitsInTick[0];
+	prevTimeScale = encoder->pendingTimeScale[0];
+	encoder->pendingNumUnitsInTick[0] = encoder->pendingNumUnitsInTick[1];
+	encoder->pendingNumUnitsInTick[1] = encoder->numUnitsInTick;
+	encoder->pendingTimeScale[0] = encoder->pendingTimeScale[1];
+	encoder->pendingTimeScale[1] = encoder->timeScale;
+	if (numOfOutput != 0) {
+		int err;
+
+		err = videocodecLockRange(&ranges, &physicalAddress, (uintptr_t)au->pEs,
+			encoder->au.streamSize, 16, 0,
+			VIDEOCODEC_LOCK_CACHED | VIDEOCODEC_LOCK_SCATTERED);
+		if (err < 0 || (err = SceCodecEngineWrapperForDriver_FAF590A6(au->pEs,
+				(const void *)encoder->au.streamAddress,
+				encoder->au.streamSize)) < 0) {
+			ret = err;
+			goto unlockRanges;
+		}
+		au->esSize = encoder->au.streamSize;
+		timeScale = encoder->timeStampTimeScale;
+		if (encoder->numOfEncoded != 0) {
+			SceInt64 delta = (SceInt64)((SceUInt64)(2 * prevNumUnitsInTick) * timeScale) /
+				prevTimeScale;
+
+			decodeTime = encoder->decodeTime + delta;
+			presentationTime = encoder->presentationTime + delta;
+			encoder->decodeTime = decodeTime;
+			encoder->presentationTime = presentationTime;
+		} else {
+			decodeTime = encoder->decodeTime;
+			presentationTime = encoder->presentationTime;
+		}
+		au->dts.integer = decodeTime / timeScale;
+		au->dts.fraction = decodeTime % timeScale * prevTimeScale / timeScale;
+		au->dts.timeScale = prevTimeScale;
+		au->pts.integer = presentationTime / timeScale;
+		au->pts.fraction = presentationTime % timeScale * prevTimeScale / timeScale;
+		au->pts.timeScale = prevTimeScale;
+		encoder->lastPts = encoder->au.pts;
+		au->numOfNal = encoder->au.numOfNal;
+		au->coprocessorFlags[0] = encoder->au.coprocessorFlags[0];
+		au->reserved = 0;
+		au->coprocessorFlags[1] = encoder->au.coprocessorFlags[1];
+		encoder->numOfEncoded++;
+		for (i = 0; i < encoder->au.numOfNal; i++)
+			encoder->au.nal[i].address += (uintptr_t)au->pEs - encoder->au.streamAddress;
+	}
+	pArrayAu->numOfOutput = numOfOutput;
+unlockRanges:
+	videocodecUnlockRanges(&ranges);
+	sceKernelUnlockFastMutex(&encoder->mutex);
+copyOut:
+	if (pArrayAu->numOfElm == 1 && userAu != NULL) {
+		copied = videocodecCopyOutPictures(1, (void *const *)userAus,
+			(void *const *)kernelAu, sizeof(AvcencAu));
+		pArrayAu->pAu = userAu;
+	}
+	if (ret < 0)
+		copied = ret;
+out:
+	sceSyscallLeave(syscall);
+	return copied;
+
+unlockAll:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	goto copyOut;
+}
+
+/*
+ * Stops the AVC encoder pCtrl names: the last AU is delivered into the one AU pArrayAu names
+ * as A0E63278 does, and the time stamps restart at the next encode.
+ */
+int SceAvcodecForDriver_DE515BFF(const AvcencControl *pCtrl, AvcencArrayAu *pArrayAu)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	VideocodecGlobal *global;
+	VideocodecEncoder *encoder;
+	AvcencAu **userAu = NULL, **kernelAu = NULL;
+	AvcencAu *userAus[1], *aus[1], *au;
+	VideocodecLockedRange lockedRange[1];
+	VideocodecLockedRanges ranges;
+	uintptr_t physicalAddress;
+	unsigned int handle, index, numOfOutput, prevNumUnitsInTick, prevTimeScale, timeScale;
+	unsigned int i;
+	SceUInt64 decodeTime, presentationTime;
+	SceInt64 delta;
+	char auBuf[sizeof(AvcencAu)];
+	int ret, copied = 0;
+
+	if (pArrayAu == NULL) {
+		_GetVideocodecGlobal(0);
+		copied = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+		goto out;
+	}
+	if (pArrayAu->numOfElm == 1) {
+		userAu = pArrayAu->pAu;
+		if (userAu != NULL) {
+			copied = sceKernelCopyFromUser(userAus, userAu, sizeof(userAus));
+			if (copied < 0 || (copied = videocodecCopyInPictures(pArrayAu->numOfElm,
+					(void **)aus, auBuf, (void *const *)userAus,
+					sizeof(AvcencAu))) < 0) {
+				pArrayAu->pAu = userAu;
+				goto out;
+			}
+			pArrayAu->pAu = aus;
+			kernelAu = aus;
+		}
+	}
+	global = _GetVideocodecGlobal(0);
+	if (pCtrl == NULL || pArrayAu->pAu[0] == NULL) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+		goto copyOut;
+	}
+	if (pArrayAu->numOfElm != 1 || (handle = pCtrl->handle) == 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto copyOut;
+	}
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		goto copyOut;
+	if (handle < 4096 || (index = handle - 4096) >= global->dsp0EncoderInfo.numOfStreams) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto unlockAll;
+	}
+	encoder = &global->encoders[index];
+	ret = lockFastMutex(&encoder->mutex);
+	if (ret < 0)
+		goto unlockAll;
+	handle = encoder->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		sceKernelUnlockFastMutex(&encoder->mutex);
+		goto unlockAll;
+	}
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	videocodecInitLockedRanges(&ranges, 0, lockedRange, 1,
+		VIDEOCODEC_ENCODER_ERROR_BASE);
+	au = pArrayAu->pAu[0];
+	if (au->size != sizeof(*au)) {
+		ret = VIDEOCODEC_ENCODER_ERROR_INVALID_ARGUMENT_SIZE;
+		goto unlockRanges;
+	}
+	ret = dsp0VideocodecEncodeStop(handle, &encoder->au, &numOfOutput);
+	ret = videocodecMapAvcencErrorInline(ret);
+	if (ret < 0)
+		goto unlockRanges;
+	prevNumUnitsInTick = encoder->pendingNumUnitsInTick[0];
+	encoder->pendingNumUnitsInTick[0] = encoder->pendingNumUnitsInTick[1];
+	encoder->pendingNumUnitsInTick[1] = encoder->numUnitsInTick;
+	prevTimeScale = encoder->pendingTimeScale[0];
+	encoder->pendingTimeScale[0] = encoder->pendingTimeScale[1];
+	encoder->pendingTimeScale[1] = encoder->timeScale;
+	if (numOfOutput != 0) {
+		ret = videocodecLockRange(&ranges, &physicalAddress, (uintptr_t)au->pEs,
+			encoder->au.streamSize, 16, 0,
+			VIDEOCODEC_LOCK_CACHED | VIDEOCODEC_LOCK_SCATTERED);
+		if (ret < 0)
+			goto unlockRanges;
+		ret = SceCodecEngineWrapperForDriver_FAF590A6(au->pEs,
+			(const void *)encoder->au.streamAddress, encoder->au.streamSize);
+		if (ret < 0)
+			goto unlockRanges;
+		timeScale = encoder->timeStampTimeScale;
+		au->esSize = encoder->au.streamSize;
+		delta = (SceInt64)((SceUInt64)(2 * prevNumUnitsInTick) * timeScale) / prevTimeScale;
+		decodeTime = encoder->decodeTime + delta;
+		presentationTime = encoder->presentationTime + delta;
+		encoder->decodeTime = decodeTime;
+		encoder->presentationTime = presentationTime;
+		au->dts.integer = decodeTime / timeScale;
+		au->dts.fraction = decodeTime % timeScale * prevTimeScale / timeScale;
+		au->dts.timeScale = prevTimeScale;
+		au->pts.integer = presentationTime / timeScale;
+		au->pts.fraction = presentationTime % timeScale * prevTimeScale / timeScale;
+		au->pts.timeScale = prevTimeScale;
+		ret = sceKernelVAtoPA((const void *)encoder->au.streamAddress, &physicalAddress);
+		encoder->lastPts.upper = encoder->au.pts.upper + 2;
+		encoder->lastPts.lower = encoder->au.pts.lower + 2;
+		au->numOfNal = encoder->au.numOfNal;
+		au->coprocessorFlags[0] = encoder->au.coprocessorFlags[0];
+		au->reserved = 0;
+		au->coprocessorFlags[1] = encoder->au.coprocessorFlags[1];
+		encoder->numOfEncoded++;
+		for (i = 0; i < encoder->au.numOfNal; i++)
+			encoder->au.nal[i].address += (uintptr_t)au->pEs - encoder->au.streamAddress;
+	}
+	pArrayAu->numOfOutput = numOfOutput;
+unlockRanges:
+	encoder->encodeFlags |= VIDEOCODEC_ENCODER_NEW_PARAMETERS;
+	videocodecUnlockRanges(&ranges);
+	sceKernelUnlockFastMutex(&encoder->mutex);
+copyOut:
+	if (pArrayAu->numOfElm == 1 && userAu != NULL) {
+		copied = videocodecCopyOutPictures(1, (void *const *)userAus,
+			(void *const *)kernelAu, sizeof(AvcencAu));
+		pArrayAu->pAu = userAu;
+	}
+	if (ret < 0)
+		copied = ret;
+out:
+	sceSyscallLeave(syscall);
+	return copied;
+
+unlockAll:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	goto copyOut;
+}
+
+/* Flushes the AVC encoder pCtrl names; the time stamps restart at the next encode. */
+int SceAvcodecForDriver_229AB2CF(const AvcencControl *pCtrl)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	VideocodecEncoder *encoder;
+	unsigned int handle, index, numOfOutput;
+	int ret;
+
+	if (pCtrl == NULL) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+		goto out;
+	}
+	handle = pCtrl->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto out;
+	}
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		goto out;
+	if (handle < 4096 || (index = handle - 4096) >= global->dsp0EncoderInfo.numOfStreams) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto unlockAll;
+	}
+	encoder = &global->encoders[index];
+	ret = lockFastMutex(&encoder->mutex);
+	if (ret < 0)
+		goto unlockAll;
+	handle = encoder->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		sceKernelUnlockFastMutex(&encoder->mutex);
+		goto unlockAll;
+	}
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	ret = dsp0VideocodecEncodeStop(handle, &encoder->au, &numOfOutput);
+	ret = videocodecMapAvcencErrorInline(ret);
+	if (ret >= 0) {
+		encoder->pendingNumUnitsInTick[0] = encoder->pendingNumUnitsInTick[1];
+		encoder->pendingNumUnitsInTick[1] = encoder->numUnitsInTick;
+		encoder->pendingTimeScale[0] = encoder->pendingTimeScale[1];
+		encoder->pendingTimeScale[1] = encoder->timeScale;
+		if (numOfOutput != 0) {
+			encoder->lastPts.upper = encoder->au.pts.upper + 2;
+			encoder->lastPts.lower = encoder->au.pts.lower + 2;
+		}
+	}
+	encoder->encodeFlags |= VIDEOCODEC_ENCODER_NEW_PARAMETERS;
+	sceKernelUnlockFastMutex(&encoder->mutex);
+out:
+	ret = videocodecConvertAvcencError(ret);
+	sceSyscallLeave(syscall);
+	return ret;
+
+unlockAll:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	goto out;
+}
+
+/*
+ * Changes the bit rates, CPB size, GOP length and frame rate of the AVC encoder pCtrl names;
+ * a zero field keeps the current value. Checked against the encoder's level as at create.
+ */
+int SceAvcodecForDriver_E0232BFE(const AvcencControl *pCtrl, const AvcencEncoderParameter *pParam)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	VideocodecEncoder *encoder;
+	const AvcencLevelLimit *limit;
+	unsigned int handle, index, level, mbs;
+	AvcencEncoderParameter param;
+	int ret;
+
+	if (pParam == NULL || pCtrl == NULL) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+		goto out;
+	}
+	handle = pCtrl->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto out;
+	}
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		goto out;
+	if (handle < 4096 || (index = handle - 4096) >= global->dsp0EncoderInfo.numOfStreams) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto unlockAll;
+	}
+	encoder = &global->encoders[index];
+	ret = lockFastMutex(&encoder->mutex);
+	if (ret < 0)
+		goto unlockAll;
+	if (encoder->handle == 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		sceKernelUnlockFastMutex(&encoder->mutex);
+		goto unlockAll;
+	}
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	param = *pParam;
+	if (param.bitRate[0] == 0)
+		param.bitRate[0] = encoder->bitRate[0];
+	if (param.bitRate[1] == 0)
+		param.bitRate[1] = encoder->bitRate[1];
+	if (param.cpbSize == 0)
+		param.cpbSize = encoder->cpbSize >> 3;
+	if (param.gopLength == 0)
+		param.gopLength = encoder->gopLength;
+	if (param.numUnitsInTick == 0)
+		param.numUnitsInTick = encoder->numUnitsInTick;
+	if (param.timeScale == 0)
+		param.timeScale = encoder->timeScale;
+	if (encoder->frameRateGop == 1)
+		param.gopLength = param.timeScale / param.numUnitsInTick;
+	level = encoder->level;
+	if (level <= 13) {
+		limit = &avcencLevelLimits[0];
+	} else {
+		if (level > 41)
+			goto invalid;
+		if ((unsigned char)(level - 20) > 21)
+			goto invalid;
+		limit = avcencLevelLimitTable[(unsigned char)(level - 20)];
+		if (limit == NULL)
+			goto invalid;
+	}
+	if (param.numUnitsInTick > 120000 || param.timeScale < 2 * param.numUnitsInTick ||
+	    param.timeScale > 60 * param.numUnitsInTick) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_FRAME_RATE;
+		goto unlock;
+	}
+	mbs = ((encoder->alignedHorizontal + 15) >> 4) * ((encoder->alignedVertical + 15) >> 4);
+	if (limit->maxMbps <
+		    (unsigned int)((unsigned long long)param.timeScale * mbs / param.numUnitsInTick / 2) ||
+	    mbs > limit->maxFs ||
+	    limit->maxBr < param.bitRate[1] || limit->maxBr < param.bitRate[0] ||
+	    param.bitRate[1] < 32000 || param.bitRate[0] < 32000 ||
+	    param.cpbSize > limit->maxFs * 768 / 4)
+		goto invalid;
+	if (param.gopLength > 300 ||
+	    param.numUnitsInTick * 2 * param.gopLength > 10 * param.timeScale) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_GOP_LENGTH;
+		goto unlock;
+	}
+	ret = 0;
+	encoder->bitRate[0] = param.bitRate[0];
+	encoder->bitRate[1] = param.bitRate[1];
+	encoder->numUnitsInTick = param.numUnitsInTick;
+	encoder->timeScale = param.timeScale;
+	encoder->cpbSize = param.cpbSize * 8;
+	encoder->gopLength = param.gopLength;
+	goto unlock;
+invalid:
+	ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+unlock:
+	sceKernelUnlockFastMutex(&encoder->mutex);
+out:
+	sceSyscallLeave(syscall);
+	return ret;
+
+unlockAll:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	goto out;
+}
+
+/* Copies NAL unit index of the AVC encoder's last AU to pNalUnit. */
+int SceAvcodecForDriver_1A584DB7(const AvcencControl *pCtrl, unsigned int index,
+	AvcencNalUnit *pNalUnit)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	VideocodecEncoder *encoder;
+	const Dsp0VideocodecNalUnit *nal;
+	unsigned int handle, slot;
+	int ret;
+
+	if (pNalUnit == NULL || pCtrl == NULL) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+		goto out;
+	}
+	handle = pCtrl->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto out;
+	}
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		goto out;
+	if (handle < 4096 || (slot = handle - 4096) >= global->dsp0EncoderInfo.numOfStreams) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		goto unlockAll;
+	}
+	encoder = &global->encoders[slot];
+	ret = lockFastMutex(&encoder->mutex);
+	if (ret < 0)
+		goto unlockAll;
+	if (encoder->handle == 0) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+		sceKernelUnlockFastMutex(&encoder->mutex);
+		goto unlockAll;
+	}
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	if (index < encoder->au.numOfNal && encoder->numOfEncoded != 0) {
+		nal = &encoder->au.nal[index];
+		pNalUnit->data = (void *)nal->address;
+		pNalUnit->size = nal->size;
+		pNalUnit->type = nal->type;
+		pNalUnit->referencePriority = nal->referencePriority;
+	} else {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+	}
+	sceKernelUnlockFastMutex(&encoder->mutex);
+out:
+	sceSyscallLeave(syscall);
+	return ret;
+
+unlockAll:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	goto out;
+}
+
+int SceAvcodecForDriver_4F11F915(AvcencCscFrame *pDst, const AvcencCscFrame *pSrc)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	int ret;
+
+	if (pSrc == NULL || pDst == NULL) {
+		ret = SCE_AVCDEC_ERROR_INVALID_POINTER;
+	} else {
+		ret = lockFastMutex(global->pAllMutex);
+		if (ret >= 0) {
+			ret = videocodecAvcencCsc(pDst, pSrc);
+			sceKernelUnlockFastMutex(global->pAllMutex);
+		}
+	}
+	ret = videocodecConvertAvcencError(ret);
 	sceSyscallLeave(syscall);
 	return ret;
 }

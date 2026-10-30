@@ -20,7 +20,6 @@
 int dsp0VideocodecQueryLibraryMemory(const Dsp0VideocodecInitParam *param,
 				   SceSize *memorySize);
 int dsp0VideocodecTermLibraryForProcess(unsigned int library, SceUID pid);
-int avcencDeleteEncoderForProcess(AvcencControl *pCtrl, SceUID pid);
 
 
 char videocodecSwDecoderMutexName[16] = "SceVcodecSWDec0";
