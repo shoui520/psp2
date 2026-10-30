@@ -125,6 +125,59 @@ int ScePafGraphics_D193CA56(uint8_t *self, int mode)
 	return GraphicsSetSamplerMode(self, 88, mode);
 }
 
+__attribute__((noinline))
+int ScePafGraphics_7BF244E7(uint8_t *self, int mode)
+{
+	int filter;
+	int wrapping;
+
+	switch (mode) {
+	case 0:
+	case 2:
+		filter = 0;
+		wrapping = 0;
+		break;
+	case 1:
+	case 3:
+		filter = 1;
+		wrapping = 0;
+		break;
+	case 4:
+		filter = 0;
+		wrapping = 512;
+		break;
+	case 5:
+		filter = 1;
+		wrapping = 512;
+		break;
+	default:
+		return -2136006142;
+	}
+	if (filter != *(int32_t *)(self + 76) ||
+	    wrapping != *(int32_t *)(self + 80)) {
+		*(int32_t *)(self + 76) = filter;
+		*(int32_t *)(self + 80) = wrapping;
+		self[96] = 1;
+	}
+	return 0;
+}
+
+__attribute__((noinline))
+int ScePafGraphics_5D18583B(uint8_t *self, int mode)
+{
+	int mapped = 0;
+
+	if (mode)
+		mapped = mode == 1 ? 1 : -1;
+	if (mapped != *(int32_t *)(self + 72)) {
+		if (mapped == -1)
+			return -2136006142;
+		*(int32_t *)(self + 72) = mapped;
+		self[96] = 1;
+	}
+	return 0;
+}
+
 int ScePafGraphics_0F98D1F8(const uint8_t *self, int mode,
 			     uint32_t index)
 {
@@ -143,6 +196,28 @@ int ScePafGraphics_26D2C953(const uint8_t *self, int mode,
 		uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
 		if (item)
 			return ScePafGraphics_DFE83DCA(item, mode);
+	}
+	return -1;
+}
+
+int ScePafGraphics_C5B9145C(const uint8_t *self, int mode,
+			     uint32_t index)
+{
+	if (index < 4) {
+		uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
+		if (item)
+			return ScePafGraphics_7BF244E7(item, mode);
+	}
+	return -1;
+}
+
+int ScePafGraphics_C85E8878(const uint8_t *self, int mode,
+			     uint32_t index)
+{
+	if (index < 4) {
+		uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
+		if (item)
+			return ScePafGraphics_5D18583B(item, mode);
 	}
 	return -1;
 }
