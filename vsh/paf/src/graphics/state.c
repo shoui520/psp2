@@ -245,6 +245,75 @@ uint8_t *ScePafGraphics_8E9DF1C8(
 	return self;
 }
 
+/* Forward resource field queries through the active graphics view. */
+int ScePafGraphics_4EF76BA1(const uint8_t *self, uint32_t index,
+			     uint8_t *output)
+{
+	const uint8_t *active = *(const uint8_t *const *)(self + 80);
+
+	if (active)
+		return ScePafGraphics_61C250D7(active, index, output);
+	return -2136014814;
+}
+
+int ScePafGraphics_5AF2E479(const uint8_t *self, int index,
+			     uint32_t *output)
+{
+	const uint8_t *active = *(const uint8_t *const *)(self + 80);
+
+	if (active)
+		return ScePafGraphics_5D9D3B40(active, index, output);
+	return -2136014814;
+}
+
+int ScePafGraphics_830D5848(const uint8_t *self, uint32_t index,
+			     uint32_t *output)
+{
+	const uint8_t *active = *(const uint8_t *const *)(self + 80);
+
+	if (active)
+		return ScePafGraphics_7B6D79FB(active, index, output);
+	return -2136014814;
+}
+
+int ScePafGraphics_A1B995E7(const uint8_t *self, uint32_t *output)
+{
+	const uint8_t *active = *(const uint8_t *const *)(self + 80);
+
+	if (active)
+		return ScePafGraphics_BFDF8AC1(active, output);
+	return -2136014814;
+}
+
+int ScePafGraphics_BE22EED6(const uint8_t *self, int index,
+			     uint64_t *output)
+{
+	const uint8_t *active = *(const uint8_t *const *)(self + 80);
+
+	if (active)
+		return ScePafGraphics_E48BBEAB(active, index, output);
+	return -2136014814;
+}
+
+int ScePafGraphics_D48AB212(const uint8_t *self, uint32_t *first,
+			     uint32_t *second)
+{
+	const uint8_t *active = *(const uint8_t *const *)(self + 80);
+
+	if (active)
+		return ScePafGraphics_428855D1(active, first, second);
+	return -2136014814;
+}
+
+int ScePafGraphics_E73E0E33(const uint8_t *self, uint64_t *output)
+{
+	const uint8_t *active = *(const uint8_t *const *)(self + 80);
+
+	if (active)
+		return ScePafGraphics_D08F1491(active, output);
+	return -2136014814;
+}
+
 int32_t ScePafGraphics_61C250D7(const uint8_t *self, uint32_t index,
 				uint8_t *output)
 {
@@ -950,6 +1019,7 @@ char *ScePafGraphics_0EC5770E(void)
 	return result;
 }
 
+__attribute__((noinline))
 int ScePafGraphics_D08F1491(const uint8_t *self, uint64_t *output)
 {
 	if (*(const uint16_t *)(self + 112) & 0x22)
@@ -1314,6 +1384,7 @@ uint32_t *ScePafGraphics_FA81A18E(uint32_t *result,
 	return result;
 }
 
+__attribute__((noinline))
 int ScePafGraphics_BFDF8AC1(const uint8_t *self, uint32_t *output)
 {
 	if (*(const uint16_t *)(self + 112) & 0x11)
@@ -1412,6 +1483,7 @@ uint32_t *ScePafGraphics_A5727A5A(uint32_t *self)
 	return InitializeGraphicsState(self);
 }
 
+__attribute__((noinline))
 int ScePafGraphics_428855D1(const uint8_t *self,
 			     uint32_t *first, uint32_t *second)
 {
@@ -2099,6 +2171,7 @@ void ScePafGraphics_B63D3B14(uint8_t *self)
 	MutexUnlock((Mutex *)(self + 296));
 }
 
+__attribute__((noinline))
 int ScePafGraphics_E48BBEAB(const uint8_t *self, int index,
 			     uint64_t *result)
 {
@@ -2144,6 +2217,7 @@ int ScePafGraphics_823F7FC5(uint8_t *self)
 	return -2136006143;
 }
 
+__attribute__((noinline))
 int ScePafGraphics_5D9D3B40(const uint8_t *self, int index,
 			    uint32_t *result)
 {
