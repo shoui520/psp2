@@ -3,10 +3,53 @@
 #include <stddef.h>
 #include "../compiler.h"
 #include "../std/string.h"
+#include "../std/new.h"
 #include "../thread/thread.h"
 
 uint32_t sce_paf_toplevel_value_1194;
 volatile int32_t sce_paf_toplevel_pending_4694;
+
+static inline __attribute__((always_inline))
+int RemoveTopLevelListKey(uint8_t *self, size_t listOffset, int32_t key)
+{
+	int result = (int)(uintptr_t)self;
+	int32_t *root = *(int32_t **)(self + listOffset);
+	int32_t *next = NULL;
+	int32_t *node;
+
+	if (root)
+		next = (int32_t *)root[1];
+	node = next;
+	while (node != root) {
+		result = node[2];
+		if (result == key) {
+			int32_t previous = *node;
+
+			*(int32_t *)node[1] = previous;
+			*(int32_t *)(previous + 4) = node[1];
+			PafDelete(node);
+			node = next;
+			root = *(int32_t **)(self + listOffset);
+			result = *(int32_t *)(self + listOffset + 4) - 1;
+			*(int32_t *)(self + listOffset + 4) = result;
+		}
+		if (node) {
+			next = (int32_t *)node[1];
+			node = next;
+		}
+	}
+	return result;
+}
+
+int ScePafToplevel_D198980D(uint8_t *self, int32_t key)
+{
+	return RemoveTopLevelListKey(self, 244, key);
+}
+
+int ScePafToplevel_E3F5A4B9(uint8_t *self, int32_t key)
+{
+	return RemoveTopLevelListKey(self, 232, key);
+}
 
 int ScePafToplevel_1F15D1D7(uint8_t *self)
 {
