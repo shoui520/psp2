@@ -441,6 +441,10 @@ void sceKernelApiDeclareTypeInt32(void);
 void sceKernelApiDeclareTypeUInt32(void);
 int sceKernelSysrootBacktrace(SceUID thid, struct SceKernelBacktraceFrameForKernel *frames, SceSize size, SceSize *count, SceUInt32 flags);
 int sceKernelSysrootCoredumpCancel(int arg);
+int sceKernelSysrootCoredumpTrigger(SceUID pid,
+	SceKernelCoredumpStateUpdateCallback update,
+	SceKernelCoredumpStateFinishCallback finish,
+	SceCoredumpTriggerParam *param);
 uint32_t sceKernelSysrootGetCurrentProcessCB(void);
 int sceKernelSysrootGetCurrentThreadAttr(uint32_t *attr);
 void *sceKernelSysrootGetProcessCBExitDeleteThread(struct SceProcessObject *process);

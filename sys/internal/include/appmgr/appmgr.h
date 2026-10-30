@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include <scetypes.h>
 #include <stdint.h>
 #include <appmgr/appmgr_launch.h>
@@ -100,11 +101,51 @@ int sceAppMgrLaunchAppForTest2(const char *appPath, const char *name, SceUInt32 
 		const char *param, SceUInt32 processAttr, int startByUpdater,
 		const char *const *argv, const struct AppmgrLaunchAppOption *option);
 
+/* the status SceAppMgrForDriver_DC13160A reports of a process's application */
+typedef struct AppmgrInfobarState {
+	unsigned char visibility;
+	unsigned char color;
+	unsigned char transparency;
+	unsigned char reserved;
+} AppmgrInfobarState;
+
+typedef struct SceAppMgrAppStatus {
+	SceUID launchSourceProcessId;
+	SceUInt32 launchMode;
+	SceUInt32 protectionMode;
+	char appName[32];
+	SceUInt32 paramDeliveryHandled;
+	int appId;
+	SceUID processId;
+	SceBool activated;
+	SceBool processRunRequested;
+	SceUInt32 networkDisconnectionWarningDialogEnabled;
+	int launchSourceAppId;
+	AppmgrInfobarState infobar;
+	SceUInt32 launchArgumentMarker;
+	char bgmProxyAppName[32];
+	unsigned char launchOrigin;
+	unsigned char budgetType;
+	SceUInt32 processAttr;
+	int systemOrientation;
+	SceUInt32 recommendedOrientationActivated;
+} SceAppMgrAppStatus;
+
+_Static_assert(sizeof(SceAppMgrAppStatus) == 128 &&
+	       offsetof(SceAppMgrAppStatus, appName) == 12 &&
+	       offsetof(SceAppMgrAppStatus, appId) == 48 &&
+	       offsetof(SceAppMgrAppStatus, infobar) == 72 &&
+	       offsetof(SceAppMgrAppStatus, bgmProxyAppName) == 80 &&
+	       offsetof(SceAppMgrAppStatus, launchOrigin) == 112 &&
+	       offsetof(SceAppMgrAppStatus, budgetType) == 113 &&
+	       offsetof(SceAppMgrAppStatus, processAttr) == 116 &&
+	       offsetof(SceAppMgrAppStatus, recommendedOrientationActivated) == 124,
+	       "application status output");
+
 /* not written in C yet: the prototypes are their callers' (vshbridge, deci4p_loadp, appmgr's
  * system calls) */
 int sceAppMgrLaunchAppByNameForDebugger(const char *name, const char *param);
 int SceAppMgrForDriver_99AA37C1(const char *name);
-struct SceAppMgrAppStatus;
 int SceAppMgrForDriver_DC13160A(SceUID pid, struct SceAppMgrAppStatus *status);
 int sceAppMgrUmount(const char *driveId);
 int sceAppMgrDestroyAppForTest(SceUID pid);

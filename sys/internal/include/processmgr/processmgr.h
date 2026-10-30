@@ -130,6 +130,18 @@ typedef struct SceKernelProcessOpt {
 
 _Static_assert(sizeof(SceKernelProcessOpt) == 0x40, "SceKernelProcessOpt size");
 
+/*
+ * the process event flag (SceProcessObject.eventFlag), which
+ * sceKernelWaitProcessEventCompletion waits on
+ */
+#define PROCESS_EVF_CREATED		0x00000001
+#define PROCESS_EVF_STARTED		0x00000002
+#define PROCESS_EVF_SUSPENDED		0x00000010
+#define PROCESS_EVF_RESUMED		0x00000020
+#define PROCESS_EVF_DELETED		0x00000100
+#define PROCESS_EVF_NOT_DEBUG_SUSPENDED	0x00010000
+#define PROCESS_EVF_DEBUG_RESUME	0x10000000
+
 int SceProcessmgrForDriver_2CEB1C7A(SceUID pid, SceUInt32 *buf, SceSize size);	/* random bytes */
 int sceKernelGetSyscallTraceFlag(SceUInt32 *flag);
 int SceProcessmgrForDriver_5E882B60(void (*callback)(SceUID pid, int exitStatus));

@@ -1,5 +1,4 @@
-# Debugger conversion: unresolved policy functions remain to be written.
-psp2_module(os0_kd_deci4p_dbgp KIND kernel COMPILER gcc48 PARTIAL SOURCES
+psp2_module(os0_kd_deci4p_dbgp KIND kernel COMPILER gcc48 SOURCES
 	excp_entries.S
 	dbgp.c
 	check.c
@@ -25,7 +24,8 @@ psp2_module(os0_kd_deci4p_dbgp KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	group_module.c
 	group_file.c
 	group_net.c
-	deci4p_dbgp.c
+	group_coredump.c
+	dbgp_syscall.c
 )
 # Sony built this module at -O3 without inlining non-inline functions: hwwtpt.c's
 # watchpoint scans are peeled and its byte-select mask vectorized, while

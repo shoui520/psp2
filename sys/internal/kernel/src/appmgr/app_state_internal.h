@@ -14,13 +14,6 @@
 #include "mount_holder_internal.h"
 #include "process_content_internal.h"
 
-typedef struct AppmgrInfobarState {
-	unsigned char visibility;
-	unsigned char color;
-	unsigned char transparency;
-	unsigned char reserved;
-} AppmgrInfobarState;
-
 struct SceAppMgrAppInfo {
 	SceUInt32 processRunRequested;
 	SceUInt8 reserved[124];
@@ -30,39 +23,6 @@ _Static_assert(sizeof(struct SceAppMgrAppInfo) == 128 &&
 	       offsetof(struct SceAppMgrAppInfo, processRunRequested) == 0 &&
 	       offsetof(struct SceAppMgrAppInfo, reserved) == 4,
 	       "application run request output");
-
-typedef struct SceAppMgrAppStatus {
-	SceUID launchSourceProcessId;
-	SceUInt32 launchMode;
-	SceUInt32 protectionMode;
-	char appName[32];
-	SceUInt32 paramDeliveryHandled;
-	int appId;
-	SceUID processId;
-	SceBool activated;
-	SceBool processRunRequested;
-	SceUInt32 networkDisconnectionWarningDialogEnabled;
-	int launchSourceAppId;
-	AppmgrInfobarState infobar;
-	SceUInt32 launchArgumentMarker;
-	char bgmProxyAppName[32];
-	unsigned char launchOrigin;
-	unsigned char budgetType;
-	SceUInt32 processAttr;
-	int systemOrientation;
-	SceUInt32 recommendedOrientationActivated;
-} SceAppMgrAppStatus;
-
-_Static_assert(sizeof(SceAppMgrAppStatus) == 128 &&
-	       offsetof(SceAppMgrAppStatus, appName) == 12 &&
-	       offsetof(SceAppMgrAppStatus, appId) == 48 &&
-	       offsetof(SceAppMgrAppStatus, infobar) == 72 &&
-	       offsetof(SceAppMgrAppStatus, bgmProxyAppName) == 80 &&
-	       offsetof(SceAppMgrAppStatus, launchOrigin) == 112 &&
-	       offsetof(SceAppMgrAppStatus, budgetType) == 113 &&
-	       offsetof(SceAppMgrAppStatus, processAttr) == 116 &&
-	       offsetof(SceAppMgrAppStatus, recommendedOrientationActivated) == 124,
-	       "application status output");
 
 typedef struct AppmgrProcessState {
 	char appName[32];

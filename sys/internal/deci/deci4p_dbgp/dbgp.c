@@ -12,6 +12,8 @@
 #include <sysmem/dipsw.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/sysclib.h>
+#include <sysmem/uid_guid.h>
+#include <appmgr/appmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include "dbgp_internal.h"
 
@@ -698,7 +700,7 @@ int DbgpModuleStart(SceSize args, const void *argp)
 	    swbkptInit(&g_dbgp) < 0 || threadAppObjectInit(&g_dbgp) < 0)
 		return 2;
 	sceKernelRegisterSysEventHandler("SceDeci4pDbgp", dbgpSysEventHandler, NULL);
-	SceSysrootForDriver_3999F917(&dbgpHandler);
+	SceSysrootForKernel_3999F917(&dbgpHandler);
 	if (dbgpCreateWorkerThread(0) < 0)
 		return 2;
 	return 0;
@@ -1902,6 +1904,34 @@ DbgpCB *dbgpGetDbgpCB(void)
 int dbgpIsDebugTarget(SceUID pid)
 {
 	return dbgpGetProcCB(pid) != NULL;
+}
+
+/* an attached application in the foreground holds the PS button */
+int dbgpIsPsButtonCaptured(void)
+{
+	SceAppMgrAppStatus appStatus;
+	SceUID pids[16];
+	SceUInt32 status = 0;
+	SceSize count = 0;
+	int i;
+
+	memset(pids, 0, sizeof(pids));
+	if (SceProcessmgrForKernel_EFFF2975(3, pids, sizeof(pids), &count) < 0)
+		return 0;
+	for (i = 0; i < (int)count; ++i) {
+		if (pids[i] == SCE_KERNEL_PROCESS_ID)
+			continue;
+		if (dbgpGetProcCB(pids[i]) == NULL)
+			continue;
+		if (sceKernelGetProcessStatus(pids[i], &status) < 0)
+			continue;
+		status = (SceUInt8)status;
+		if ((status & 0x10) != 0 &&
+		    SceAppMgrForDriver_DC13160A(pids[i], &appStatus) >= 0 &&
+		    appStatus.activated)
+			return 1;
+	}
+	return 0;
 }
 
 int dbgpIsProcessAttached(SceUID pid)

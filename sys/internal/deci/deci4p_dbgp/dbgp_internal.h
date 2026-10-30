@@ -541,6 +541,10 @@ void dbgpFillResponseHeader(DbgpProcCB *proc, SceUInt8 group, SceUInt8 type,
 SceUInt32 dbgpTestStatus(const DbgpCB *dbgp, SceUInt32 mask);
 SceUInt32 dbgpTestProcStatus(const DbgpProcCB *proc, SceUInt32 mask);
 void dbgpSetProcStatus(DbgpProcCB *proc, SceUInt32 mask, int set);
+
+/* the process status bit set while a core dump of it runs */
+#define DBGP_PROC_COREDUMP	0x80000
+
 void dbgpFreeRecvBuf(DbgpProcCB *proc);
 void _dbgpFreeWorkBuf(DbgpProcCB *proc);
 void _dbgpFreeBuf(DbgpProcCB *proc, unsigned int which);

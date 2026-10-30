@@ -41,15 +41,6 @@
 #define PROCESS_ATTR_LOAD_FLAG		0x40000000
 #define PROCESS_ATTR_SUSPENDED		0x80000000	/* created suspended (preload) */
 
-/* the process event flag (SceProcessObject.eventFlag) */
-#define PROCESS_EVF_CREATED		0x00000001
-#define PROCESS_EVF_STARTED		0x00000002
-#define PROCESS_EVF_SUSPENDED		0x00000010
-#define PROCESS_EVF_RESUMED		0x00000020
-#define PROCESS_EVF_DELETED		0x00000100
-#define PROCESS_EVF_NOT_DEBUG_SUSPENDED	0x00010000
-#define PROCESS_EVF_DEBUG_RESUME	0x10000000
-
 /* requests queued to the process event thread */
 #define PROCESS_REQUEST_EXIT		0x01
 #define PROCESS_REQUEST_KILL		0x02

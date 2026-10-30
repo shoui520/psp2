@@ -9,9 +9,6 @@
 #include <sysmem/sysclib.h>
 #include "dbgp_internal.h"
 
-/* the process status bit set while a core dump of it runs */
-#define DBGP_PROC_COREDUMP	0x80000
-
 /* the path lengths the result fits in proc->coredumpPath */
 #define COREDUMP_PATH_MIN	2
 #define COREDUMP_PATH_MAX	0x532
