@@ -735,6 +735,46 @@ unlock:
 }
 
 /*
+ * Copies count pictures in from the user pointers in pUser, each into the next
+ * VIDEOCODEC_PICTURE_COPY_STRIDE bytes of buf, and points pKernel at the copies.
+ */
+static __attribute__((noinline, noclone)) int videocodecCopyInPictures(unsigned int count,
+	void **pKernel, char *buf, void *const *pUser, SceSize size)
+{
+	unsigned int i;
+	int ret = 0;
+
+	for (i = 0; i != count; i++, buf += VIDEOCODEC_PICTURE_COPY_STRIDE) {
+		if (pUser[i] == NULL) {
+			pKernel[i] = NULL;
+			continue;
+		}
+		pKernel[i] = buf;
+		ret = sceKernelCopyFromUser(buf, pUser[i], size);
+		if (ret < 0)
+			break;
+	}
+	return ret;
+}
+
+/* Copies the count pictures pKernel points at back out to the user pointers in pUser. */
+static __attribute__((noinline, noclone)) int videocodecCopyOutPictures(unsigned int count,
+	void *const *pUser, void *const *pKernel, SceSize size)
+{
+	unsigned int i;
+	int ret = 0;
+
+	for (i = 0; i != count; i++) {
+		if (pKernel[i] == NULL)
+			continue;
+		ret = sceKernelCopyToUser(pUser[i], pKernel[i], size);
+		if (ret < 0)
+			break;
+	}
+	return ret;
+}
+
+/*
  * Creates an MPEG-4 decoder for pInfo in a free DSP0 slot, in pCtrl's frame buffer: the
  * process's unmap memory, memory locked for the decoder, or, when pCtrl has none, a block of
  * its own.
@@ -947,7 +987,8 @@ int SceAvcodecForDriver_C363B31A(unsigned int codecType, SceAvcdecCtrl *pCtrl,
  * Deletes pid's MPEG-4 decoder pCtrl->handle names (from 512, on the DSP0) and frees its frame
  * buffer, unless the delete was stopped by a thread suspend.
  */
-int m4vdecDeleteDecoderForProcess(SceAvcdecCtrl *pCtrl, SceUID pid)
+static inline __attribute__((always_inline)) int
+m4vdecDeleteDecoderInline(SceAvcdecCtrl *pCtrl, SceUID pid)
 {
 	VideocodecGlobal *global = _GetVideocodecGlobal(pid);
 	VideocodecDsp0Decoder *decoder;
@@ -1005,6 +1046,206 @@ int m4vdecDeleteDecoderForProcess(SceAvcdecCtrl *pCtrl, SceUID pid)
 unlock:
 	sceKernelUnlockFastMutex(global->pAllMutex);
 	return ret;
+}
+
+int m4vdecDeleteDecoderForProcess(SceAvcdecCtrl *pCtrl, SceUID pid)
+{
+	return m4vdecDeleteDecoderInline(pCtrl, pid);
+}
+
+int SceAvcodecForDriver_77529FD2(SceAvcdecCtrl *pCtrl)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int ret;
+
+	ret = m4vdecDeleteDecoderInline(pCtrl, 0);
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_91E94B76(SceAvcdecCtrl *pCtrl)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	VideocodecDsp0Decoder *decoder;
+	unsigned int handle, index;
+	int ret;
+
+	if (pCtrl == NULL) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+		goto out;
+	}
+	handle = pCtrl->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+		goto out;
+	}
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		goto out;
+	if (handle < 512 || (index = handle - 512) >= global->dsp0DecoderInfo.numOfStreams) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+		goto unlock;
+	}
+	decoder = &global->dsp0Decoders[index];
+	ret = lockFastMutex(&decoder->mutex);
+	if (ret < 0)
+		goto unlock;
+	handle = decoder->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+		sceKernelUnlockFastMutex(&decoder->mutex);
+		goto unlock;
+	}
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	ret = videocodecMapM4vdecError(dsp0VideocodecM4vDecodeAvailableSize(handle));
+	if (ret > VIDEOCODEC_M4VDEC_MAX_AVAILABLE_SIZE)
+		ret = VIDEOCODEC_M4VDEC_MAX_AVAILABLE_SIZE;
+	sceKernelUnlockFastMutex(&decoder->mutex);
+out:
+	sceSyscallLeave(syscall);
+	return ret;
+
+unlock:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	goto out;
+}
+
+/*
+ * Decodes pAu on the MPEG-4 decoder pCtrl names. The one picture pArrayPicture may name is
+ * copied in from the caller, filled from the DSP0's output, and copied back out.
+ */
+int SceAvcodecForDriver_2C7A9841(const SceAvcdecCtrl *pCtrl, const M4vdecAu *pAu,
+	M4vdecArrayPicture *pArrayPicture)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	VideocodecGlobal *global;
+	VideocodecDsp0Decoder *decoder;
+	M4vdecPicture **userPicture = NULL, **kernelPicture = NULL;
+	M4vdecPicture *userPictures[1], *pictures[1];
+	VideocodecLockedRange lockedRange[1];
+	VideocodecLockedRanges ranges;
+	Dsp0VideocodecArrayPicture outputArray;
+	Dsp0VideocodecPicture **pOutput;
+	SceAvcdecAu au;
+	uintptr_t physicalAddress;
+	unsigned int handle, index, numOfOutput;
+	char pictureBuf[sizeof(M4vdecPicture)];
+	int ret, copied = 0, err;
+
+	if (pArrayPicture != NULL && pArrayPicture->numOfElm == 1) {
+		userPicture = pArrayPicture->pPicture;
+		if (userPicture != NULL) {
+			copied = sceKernelCopyFromUser(userPictures, userPicture,
+				sizeof(userPictures));
+			if (copied < 0 || (copied = videocodecCopyInPictures(pArrayPicture->numOfElm,
+					(void **)pictures, pictureBuf, (void *const *)userPictures,
+					sizeof(M4vdecPicture))) < 0) {
+				pArrayPicture->pPicture = userPicture;
+				goto out;
+			}
+			pArrayPicture->pPicture = pictures;
+			kernelPicture = pictures;
+		}
+	}
+	global = _GetVideocodecGlobal(0);
+	if (pCtrl == NULL) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+		goto copyOut;
+	}
+	if (pAu == NULL && pArrayPicture == NULL) {
+		copied = VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+		goto out;
+	}
+	if (pArrayPicture != NULL) {
+		if (pArrayPicture->numOfElm == 1) {
+			if (pArrayPicture->pPicture[0] == NULL) {
+				ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+				goto copyOut;
+			}
+		} else if (pArrayPicture->numOfElm > 1) {
+			ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+			goto copyOut;
+		}
+	}
+	handle = pCtrl->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+		goto copyOut;
+	}
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		goto copyOut;
+	if (handle < 512 || (index = handle - 512) >= global->dsp0DecoderInfo.numOfStreams) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+		goto unlockAll;
+	}
+	decoder = &global->dsp0Decoders[index];
+	ret = lockFastMutex(&decoder->mutex);
+	if (ret < 0)
+		goto unlockAll;
+	handle = decoder->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+		sceKernelUnlockFastMutex(&decoder->mutex);
+		goto unlockAll;
+	}
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	videocodecInitLockedRanges(&ranges, 0, lockedRange, 1, VIDEOCODEC_M4VDEC_ERROR_BASE);
+	if (pAu != NULL && pAu->es.pBuf != NULL) {
+		ret = videocodecLockRange(&ranges, &physicalAddress, (uintptr_t)pAu->es.pBuf,
+			pAu->es.size, 16, 0, VIDEOCODEC_LOCK_CACHED | VIDEOCODEC_LOCK_SCATTERED);
+		if (ret < 0)
+			goto unlockRanges;
+	}
+	if (pAu != NULL && pAu->es.pBuf != NULL) {
+		__builtin_memcpy(&au, pAu, sizeof(au));
+	} else {
+		au.pts.upper = SCE_VIDEODEC_VOID_TIMESTAMP;
+		au.pts.lower = SCE_VIDEODEC_VOID_TIMESTAMP;
+		au.dts.upper = SCE_VIDEODEC_VOID_TIMESTAMP;
+		au.dts.lower = SCE_VIDEODEC_VOID_TIMESTAMP;
+		au.es.pBuf = NULL;
+		au.es.size = 0;
+	}
+	outputArray.numOfElm = 0;
+	if (pArrayPicture != NULL) {
+		outputArray.numOfElm = pArrayPicture->numOfElm;
+		pArrayPicture->numOfOutput = 0;
+	}
+	pOutput = &decoder->pOutput;
+	outputArray.pPicture = &pOutput;
+	err = dsp0VideocodecM4vDecode(handle, &au, &outputArray, &numOfOutput);
+	ret = videocodecMapM4vdecError(err);
+	if ((ret < 0 && ret != VIDEOCODEC_M4VDEC_ERROR_ES_BUFFER_FULL) ||
+	    outputArray.numOfElm == 0 || numOfOutput == 0)
+		goto unlockRanges;
+	if (outputArray.numOfElm < numOfOutput) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_STATE;
+		goto unlockRanges;
+	}
+	err = videocodecDsp0M4vdecPicture(pArrayPicture->pPicture[0], pOutput, NULL);
+	pArrayPicture->numOfOutput = numOfOutput;
+	if (ret >= 0 && err < 0)
+		ret = err;
+unlockRanges:
+	videocodecUnlockRanges(&ranges);
+	sceKernelUnlockFastMutex(&decoder->mutex);
+copyOut:
+	if (pArrayPicture != NULL && pArrayPicture->numOfElm == 1 && userPicture != NULL) {
+		copied = videocodecCopyOutPictures(1, (void *const *)userPictures,
+			(void *const *)kernelPicture, sizeof(M4vdecPicture));
+		pArrayPicture->pPicture = userPicture;
+	}
+	if (ret < 0)
+		copied = ret;
+out:
+	sceSyscallLeave(syscall);
+	return copied;
+
+unlockAll:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	goto copyOut;
 }
 
 int _sceAvcdecSetDecodeModeInternal(unsigned int codecType, unsigned int mode)

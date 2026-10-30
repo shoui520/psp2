@@ -704,10 +704,7 @@ int _sceVideocodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 		decoder->mode = 0;
 		decoder->handle = 0;
 		decoder->frameBufFlags = 0;
-		decoder->decodeStatus[0] = 0;
-		decoder->decodeStatus[1] = 0;
-		decoder->decodeStatus[2] = 0;
-		decoder->decodeStatus[3] = 0;
+		__builtin_memset(&decoder->pOutput, 0, sizeof(decoder->pOutput));
 		decoder->frameBufMemBlockId = 0;
 		__builtin_memset(&decoder->frameBuf, 0, sizeof(decoder->frameBuf));
 		videocodecInitLockedRanges(&decoder->lockedRanges, 0, decoder->lockedRange, 1,

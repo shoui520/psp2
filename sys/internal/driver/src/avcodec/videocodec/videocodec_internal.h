@@ -241,6 +241,12 @@ _Static_assert(sizeof(VideocodecMemory) == 16, "video codec memory ABI");
 #define VIDEOCODEC_FRAME_BUF_MEMBLOCK	1
 #define VIDEOCODEC_FRAME_BUF_UNMAP	2
 
+/* The space a kernel copy of one user picture takes. */
+#define VIDEOCODEC_PICTURE_COPY_STRIDE	100
+
+/* the most an MPEG-4 decoder reports free in its stream buffer */
+#define VIDEOCODEC_M4VDEC_MAX_AVAILABLE_SIZE	691200
+
 /* the size a DSP0 AVC decoder is queried or created for, and its decode mode */
 typedef struct VideocodecDecoderQuery {
 	SceAvcdecQueryDecoderInfo info;
@@ -270,7 +276,7 @@ typedef struct VideocodecDsp0Decoder {
 	SceAvcdecQueryDecoderInfo info;
 	unsigned int mode;
 	unsigned int handle;
-	unsigned char decodeStatus[4];
+	struct Dsp0VideocodecPicture *pOutput;	/* the picture the last decode returned */
 	unsigned int frameBufFlags;
 	SceAvcdecBuf frameBuf;
 	SceUID frameBufMemBlockId;
@@ -843,6 +849,12 @@ int dsp0VideocodecQueryM4vDecoderMemSize(const Dsp0VideocodecM4vDecoderInfo *pIn
 int dsp0VideocodecCreateM4vDecoder(unsigned int codecType, unsigned int *pHandle,
 	const Dsp0VideocodecDecoderParam *param);
 int dsp0VideocodecDeleteM4vDecoder(unsigned int handle, SceUID pid);
+unsigned int dsp0VideocodecM4vDecodeAvailableSize(unsigned int handle);
+int dsp0VideocodecM4vDecode(unsigned int handle, const SceAvcdecAu *pAu,
+	const Dsp0VideocodecArrayPicture *pArrayPicture, unsigned int *pNumOfOutput);
+int dsp0VideocodecM4vDecodeStop(unsigned int handle,
+	const Dsp0VideocodecArrayPicture *pArrayPicture, unsigned int *pNumOfOutput);
+int dsp0VideocodecM4vDecodeFlush(unsigned int handle);
 
 typedef struct AvcencNalUnit {
 	void *data;
