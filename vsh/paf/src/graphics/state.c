@@ -1618,6 +1618,31 @@ uint8_t *ScePafGraphics_9B144A7E(uint8_t *self, int first,
 	return self;
 }
 
+uint32_t *ScePafGraphics_E2687C25(uint8_t *self, const uint8_t *source)
+{
+	uint32_t references;
+	uint32_t *counter;
+
+	*(uint32_t *)self = *(const uint32_t *)(source + 36);
+	*(uint32_t *)(self + 4) = *(const uint32_t *)(source + 40);
+	self[8] = source[44];
+	self[9] = source[45];
+	self[10] = source[46];
+	self[11] = source[47];
+	*(uint32_t *)(self + 12) = *(const uint32_t *)(source + 48);
+	references = *(const uint32_t *)(source + 52);
+	*(uint32_t *)(self + 16) = references;
+	counter = *(uint32_t *const *)(source + 56);
+	*(uint32_t **)(self + 20) = counter;
+	if (references) {
+		uint32_t *count = counter + 1;
+
+		sceAtomicIncrement32AcqRel((volatile int32_t *)count);
+		return count;
+	}
+	return counter;
+}
+
 int ScePafGraphics_DD80343F(const uint8_t *self, int value)
 {
 	int i;
