@@ -13,7 +13,8 @@ typedef struct PafLockProtectedState {
 typedef struct PafLockProtectedDimensions {
 	uint8_t reserved[12];
 	int32_t width;
-	uint8_t reserved2[40];
+	uint8_t reserved2[36];
+	int32_t intermediateDimension;
 	int32_t height;
 	uint8_t reserved3[4];
 	Mutex lock;
@@ -25,6 +26,8 @@ _Static_assert(offsetof(PafLockProtectedState, lock) == 56,
 	       "lock-protected mutex offset");
 _Static_assert(offsetof(PafLockProtectedDimensions, width) == 12,
 	       "dimension width offset");
+_Static_assert(offsetof(PafLockProtectedDimensions, intermediateDimension) == 52,
+	       "intermediate dimension offset");
 _Static_assert(offsetof(PafLockProtectedDimensions, height) == 56,
 	       "dimension height offset");
 _Static_assert(offsetof(PafLockProtectedDimensions, lock) == 64,
@@ -66,4 +69,18 @@ int32_t ScePafMisc_78209706(PafLockProtectedDimensions *self)
 	area = (int32_t)((uint32_t)self->width * (uint32_t)self->height);
 	MutexUnlock(lock);
 	return area;
+}
+
+void ScePafMisc_07BE1242(PafLockProtectedDimensions *self, int32_t *dimensions)
+{
+	Mutex *lock = &self->lock;
+	int32_t middle, last;
+
+	MutexLock(lock);
+	middle = self->intermediateDimension;
+	last = self->height;
+	dimensions[0] = self->width;
+	dimensions[1] = middle;
+	dimensions[2] = last;
+	MutexUnlock(lock);
 }

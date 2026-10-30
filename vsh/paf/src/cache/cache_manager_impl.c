@@ -4,6 +4,21 @@
 
 RMutex CacheManagerImplRMutex;
 
+typedef struct PafCacheSharedCounter {
+	uint8_t reserved[16];
+	uint32_t count;
+} PafCacheSharedCounter;
+
+int32_t ScePafMisc_E5B70924(PafCacheSharedCounter *counter)
+{
+	uint32_t count;
+
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	count = ++counter->count;
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	return (int32_t)count;
+}
+
 void ScePafMisc_33ADBB0A(CacheManagerImpl *self, uint32_t flags)
 {
 	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);

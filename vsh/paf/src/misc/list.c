@@ -1,6 +1,7 @@
 /* Linked-list unlinking, draining and destruction. */
 #include <stdint.h>
 #include "../std/stdlib.h"
+#include "../std/new.h"
 
 typedef struct PafListNode {
 	struct PafListNode *previous;
@@ -18,6 +19,32 @@ typedef struct PafListCursor {
 	PafListNode *head;
 	int32_t count;
 } PafListCursor;
+
+static PafList *ConstructList(PafList *list)
+{
+	PafListNode *head;
+
+	list->count = 0;
+	head = PafNew(sizeof(*head));
+	if (!head)
+		ScePafStdc_D608246A();
+	list->head = head;
+	if (head) {
+		head->previous = head;
+		head->next = head;
+	}
+	return list;
+}
+
+PafList *ScePafMisc_45755C06(PafList *list)
+{
+	return ConstructList(list);
+}
+
+PafList *ScePafMisc_BEA27D34(PafList *list)
+{
+	return ConstructList(list);
+}
 
 static void UnlinkNode(PafListNode *node)
 {

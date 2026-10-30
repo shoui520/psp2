@@ -52,6 +52,16 @@ typedef struct PafGrid {
 	uint8_t cleared;
 } PafGrid;
 
+typedef struct PafDualGrid {
+	uint32_t reserved;
+	PafGrid primary;
+	PafGrid secondary;
+} PafDualGrid;
+
+_Static_assert(sizeof(PafGrid) == 20, "PafGrid size");
+_Static_assert(offsetof(PafDualGrid, primary) == 4, "first grid offset");
+_Static_assert(offsetof(PafDualGrid, secondary) == 24, "second grid offset");
+
 /* This grid can own the buffers stored in each entry, independently of its
  * own entry-array allocation.  The native loop rechecks its dimensions after
  * each free, since allocator callbacks can affect the owner. */
@@ -84,6 +94,14 @@ int ScePafMisc_1F7BB8D0(PafGrid *grid)
 		grid->cleared = 1;
 	}
 	return 1;
+}
+
+int ScePafMisc_6E026A17(PafDualGrid *self)
+{
+	int first = ScePafMisc_1F7BB8D0(&self->primary);
+	int second = ScePafMisc_1F7BB8D0(&self->secondary);
+
+	return first != 0 && second != 0;
 }
 
 PafGrid *ScePafMisc_3D747A33(PafGrid *grid)
