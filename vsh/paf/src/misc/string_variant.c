@@ -326,6 +326,44 @@ char *ScePafMisc_A7C6AF5C(PafStringVariant *self)
 	return narrow ? narrow->ptr : 0;
 }
 
+PafString *ScePafMisc_51E1E267(PafStringVariant *self)
+{
+	PafString *narrow = self->narrow;
+
+	if (!narrow) {
+		PafWString *wide = self->wide;
+
+		if (wide) {
+			narrow = ScePafMisc_E690F751(wide->ptr, 0);
+			self->narrow = narrow;
+		} else {
+			ScePafMisc_86181366(self, "", 1);
+			return self->narrow;
+		}
+	}
+	return narrow;
+}
+
+PafWString *ScePafMisc_B672E71C(PafStringVariant *self)
+{
+	PafWString *wide = self->wide;
+
+	if (!wide) {
+		PafString *narrow = self->narrow;
+
+		if (narrow) {
+			wide = ScePafMisc_A6ABC0B2((const uint8_t *)narrow->ptr, 0);
+			self->wide = wide;
+		} else {
+			static const uint16_t empty[] = {0};
+
+			ScePafMisc_6DBCED34(self, empty, 2);
+			return self->wide;
+		}
+	}
+	return wide;
+}
+
 /* Copy-construct narrow-string pairs: the alternate encoding starts empty. */
 static PafStringPair *ConstructNarrowPair(PafStringPair *self,
 					const PafString *source)

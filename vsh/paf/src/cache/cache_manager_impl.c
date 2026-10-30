@@ -44,13 +44,42 @@ int ScePafMisc_5A7093DE(PafCachePendingJob *self)
 	return result;
 }
 
-void ScePafMisc_511CFBA2(CacheManagerImpl *self, void *ptr)
+__attribute__((noinline)) void ScePafMisc_511CFBA2(CacheManagerImpl *self, void *ptr)
 {
 	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
 	if (self->longLifeHeap)
 		scePafFreeWithContext(self->longLifeHeap, ptr);
 	else
 		sce_paf_free(ptr);
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+}
+
+/* Native cache transaction state following the manager's allocator prefix. */
+typedef struct PafCacheTransient {
+	uint8_t prefix[44];
+	void *allocation;
+	uint32_t timestampLow;
+	uint32_t timestampHigh;
+} PafCacheTransient;
+
+_Static_assert(offsetof(PafCacheTransient, allocation) == 44,
+	       "cache transient allocation offset");
+_Static_assert(offsetof(PafCacheTransient, timestampLow) == 48,
+	       "cache transient timestamp offset");
+
+void ScePafMisc_CB20D5B3(CacheManagerImpl *self)
+{
+	PafCacheTransient *state = (PafCacheTransient *)self;
+
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	if (state->allocation) {
+		if (self->longLifeHeap)
+			ScePafMisc_511CFBA2((CacheManagerImpl *)self->longLifeHeap,
+					     state->allocation);
+		state->allocation = 0;
+	}
+	state->timestampLow = 0;
+	state->timestampHigh = 0;
 	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
 }
 
