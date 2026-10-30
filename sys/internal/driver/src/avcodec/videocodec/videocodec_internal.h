@@ -9,10 +9,26 @@
 #include <stddef.h>
 #include <avcodec/avcodec.h>
 
-/* an MPEG-4 decoder's picture: an SceAvcdecPicture with a shorter stream information */
+/*
+ * An MPEG-4 decoder's picture: an SceAvcdecPicture with a shorter stream information,
+ * SceAvcdecInfo's fields in their MPEG-4 VOL form.
+ */
 typedef struct M4vdecInfo {
-	unsigned int data[6];
+	SceUInt32 vopTimeIncrementResolution;
+	SceUChar8 fixedVopRate;
+	SceUChar8 aspectRatioInfo;
+	SceUShort16 parWidth;
+	SceUShort16 parHeight;
+	SceUChar8 colourPrimaries;
+	SceUChar8 transferCharacteristics;
+	SceUChar8 matrixCoefficients;
+	SceUChar8 videoRange;
+	SceUChar8 infoFlags;
+	SceUChar8 padding;
+	SceVideodecTimeStamp outputPts;
 } M4vdecInfo;
+
+_Static_assert(sizeof(M4vdecInfo) == 24, "M4V picture information ABI");
 
 typedef struct M4vdecPicture {
 	SceSize size;
@@ -166,6 +182,7 @@ _Static_assert(offsetof(VideocodecFrame, pPlane) == 64, "video codec frame ABI")
 
 /* the MPEG-4 decoder's and the encoder's errors: the AVC decoder's with 0x900 or 0x1000 set */
 #define VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM		(-2141058814)	/* 0x80620902 */
+#define VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER	(-2141058807)	/* 0x80620909 */
 #define VIDEOCODEC_M4VDEC_ERROR_INVALID_ARGUMENT_SIZE	(-2141058802)	/* 0x8062090E */
 
 #define VIDEOCODEC_ENCODER_ERROR_INVALID_ARGUMENT_SIZE	(-2141057010)	/* 0x8062100E */
@@ -445,7 +462,20 @@ typedef struct Dsp0VideocodecPicture {
 			unsigned char coprocessorState[8];
 			SceUInt64 pts;
 		} avc;
-		unsigned char coprocessorInfo[56];
+		struct {
+			unsigned char transferCharacteristics;
+			unsigned char matrixCoefficients;
+			unsigned char videoRange;
+			unsigned char infoFlags;
+			unsigned int vopTimeIncrementResolution;
+			unsigned char fixedVopRate;
+			unsigned char aspectRatioInfo;
+			unsigned char parWidth;
+			unsigned char parHeight;
+			unsigned char colourPrimaries;
+			unsigned char coprocessorInfo[11];
+			SceUInt64 pts;
+		} m4v;
 	};
 	unsigned char coprocessorState[176];
 } Dsp0VideocodecPicture;
@@ -454,6 +484,9 @@ _Static_assert(sizeof(Dsp0VideocodecPicture) == 256, "DSP0 picture ABI");
 _Static_assert(offsetof(Dsp0VideocodecPicture, avc.frameCroppingFlag) == 43, "DSP0 crop ABI");
 _Static_assert(offsetof(Dsp0VideocodecPicture, avc.pVui) == 52, "DSP0 VUI pointer ABI");
 _Static_assert(offsetof(Dsp0VideocodecPicture, avc.pts) == 72, "DSP0 pts ABI");
+_Static_assert(offsetof(Dsp0VideocodecPicture, m4v.vopTimeIncrementResolution) == 28,
+	       "DSP0 M4V time ABI");
+_Static_assert(offsetof(Dsp0VideocodecPicture, m4v.pts) == 48, "DSP0 M4V pts ABI");
 
 /* Complete host/RPC decoder command; opaque spans are coprocessor-only. */
 typedef struct Dsp0VideocodecDecoderCommand {
@@ -805,6 +838,8 @@ int videocodecAvcdecPicture(SceAvcdecPicture *pPicture, const VeneziaDebugSnapsh
 		const SceAvcdecArrayPicture *pArrayPicture, int interlaced);
 int videocodecDsp0AvcdecPicture(SceAvcdecPicture *pPicture, Dsp0VideocodecPicture *const *ppOutput,
 		const SceAvcdecArrayPicture *pArrayPicture);
+int videocodecDsp0M4vdecPicture(M4vdecPicture *pPicture, Dsp0VideocodecPicture *const *ppOutput,
+		const M4vdecArrayPicture *pArrayPicture);
 
 typedef struct AvcencControl {
 	unsigned int handle;

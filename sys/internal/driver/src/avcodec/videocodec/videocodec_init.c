@@ -3031,3 +3031,80 @@ int videocodecDsp0AvcdecPicture(SceAvcdecPicture *pPicture, Dsp0VideocodecPictur
 	}
 	return videocodecDecoderCsc(&pPicture->frame, &frame, cscCoefficient, pArrayPicture);
 }
+
+/*
+ * Fills an MPEG-4 decoder's picture from the picture the DSP0 decoder reported: its VOL
+ * information, its size, and its pixels converted with the default coefficients, through
+ * the work pictures pArrayPicture lends (one or two).
+ */
+int videocodecDsp0M4vdecPicture(M4vdecPicture *pPicture, Dsp0VideocodecPicture *const *ppOutput,
+		const M4vdecArrayPicture *pArrayPicture)
+{
+	const Dsp0VideocodecPicture *pOutput = *ppOutput;
+	SceAvcdecArrayPicture array;
+	SceAvcdecPicture *pWork[2];
+	SceAvcdecPicture work[2];
+	SceAvcdecFrame frame;
+	unsigned int format, i;
+	int ret;
+
+	if (pOutput == NULL)
+		return VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+	if (pPicture->size != sizeof(*pPicture))
+		return VIDEOCODEC_M4VDEC_ERROR_INVALID_ARGUMENT_SIZE;
+	if ((pPicture->frame.framePitch & 0xF) != 0 ||
+	    ((pPicture->frame.frameWidth | pPicture->frame.frameHeight) & 0xF) != 0)
+		return SCE_AVCDEC_ERROR_UNSUPPORT_IMAGE_SIZE;
+	format = pPicture->frame.pixelType & 0xFF;
+	if (!VIDEOCODEC_CSC_IS_RGB(format) && format != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+	    format != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+		return VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+
+	memset(&pPicture->info, -1, sizeof(pPicture->info));
+	pPicture->info.vopTimeIncrementResolution = pOutput->m4v.vopTimeIncrementResolution;
+	pPicture->info.fixedVopRate = pOutput->m4v.fixedVopRate;
+	pPicture->info.aspectRatioInfo = pOutput->m4v.aspectRatioInfo;
+	pPicture->info.parWidth = pOutput->m4v.parWidth;
+	pPicture->info.parHeight = pOutput->m4v.parHeight;
+	pPicture->info.colourPrimaries = pOutput->m4v.colourPrimaries;
+	pPicture->info.transferCharacteristics = pOutput->m4v.transferCharacteristics;
+	pPicture->info.videoRange = pOutput->m4v.videoRange;
+	pPicture->info.infoFlags = pOutput->m4v.infoFlags;
+	pPicture->info.outputPts.upper = pOutput->m4v.pts >> 32;
+	pPicture->info.outputPts.lower = pOutput->m4v.pts;
+
+	memset(&frame, 0, sizeof(frame));
+	pPicture->frame.horizontalSize = pOutput->frameWidth;
+	frame.pPicture[0] = (void *)pOutput->lumaAddress;
+	frame.pPicture[1] = (void *)pOutput->chromaAddress;
+	frame.horizontalSize = pOutput->frameWidth;
+	pPicture->frame.verticalSize = pOutput->frameHeight;
+	frame.verticalSize = pOutput->frameHeight;
+	frame.frameWidth = pOutput->frameWidth;
+	frame.frameHeight = pOutput->frameHeight;
+	frame.pixelType = VIDEOCODEC_PIXEL_PHYSICAL_PACKED;
+	frame.framePitch = pOutput->lumaPitch | pOutput->chromaPitch << 16;
+	pPicture->frame.frameCropLeftOffset = 0;
+	pPicture->frame.frameCropRightOffset = 0;
+	pPicture->frame.frameCropTopOffset = 0;
+	pPicture->frame.frameCropBottomOffset = 0;
+
+	if (pArrayPicture != NULL) {
+		if (pArrayPicture->numOfElm - 1 > 1)
+			return VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+		for (i = 0; i < pArrayPicture->numOfElm; i++) {
+			if (pArrayPicture->pPicture[i]->size != sizeof(M4vdecPicture))
+				return VIDEOCODEC_M4VDEC_ERROR_INVALID_ARGUMENT_SIZE;
+			work[i].size = sizeof(work[i]);
+			work[i].frame = pArrayPicture->pPicture[i]->frame;
+			pWork[i] = &work[i];
+		}
+		array.numOfElm = pArrayPicture->numOfElm;
+		array.pPicture = pWork;
+	}
+	ret = videocodecDecoderCsc(&pPicture->frame, &frame,
+		SCE_AVCDEC_CSC_COEFFICIENT_DEFAULT, pArrayPicture != NULL ? &array : NULL);
+	if ((ret & 0xFFFFFF00) == VIDEOCODEC_DECODER_ERROR_BASE)
+		ret |= 0x900;
+	return ret;
+}
