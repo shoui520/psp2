@@ -160,9 +160,20 @@ int videocodecConvertM4vdecError(int result);
 typedef struct VideocodecFrame {
 	SceAvcdecFrame frame;
 	void *pPlane[3];
+	unsigned int reserved[3];
 } VideocodecFrame;
 
-_Static_assert(offsetof(VideocodecFrame, pPlane) == 64, "video codec frame ABI");
+_Static_assert(sizeof(VideocodecFrame) == 88, "video codec frame ABI");
+_Static_assert(offsetof(VideocodecFrame, pPlane) == 64, "video codec frame planes ABI");
+
+/* an SceAvcdecPicture whose frame may have separate planes */
+typedef struct VideocodecPicture {
+	SceSize size;
+	VideocodecFrame frame;
+	SceAvcdecInfo info;
+} VideocodecPicture;
+
+_Static_assert(sizeof(VideocodecPicture) == 124, "video codec picture ABI");
 
 /* pixelType flags above the pixel format */
 #define VIDEOCODEC_FRAME_SEPARATE_PLANES	0x40000	/* the planes are pPlane[0..2] */
@@ -840,6 +851,7 @@ int videocodecDsp0AvcdecPicture(SceAvcdecPictureForInterlaced *pPicture, Dsp0Vid
 		const SceAvcdecArrayPicture *pArrayPicture);
 int videocodecDsp0M4vdecPicture(M4vdecPicture *pPicture, Dsp0VideocodecPicture *const *ppOutput,
 		const M4vdecArrayPicture *pArrayPicture);
+int videocodecAvcdecCscInternal(VideocodecPicture *pPictureOut, const VideocodecPicture *pPictureIn);
 
 typedef struct AvcencControl {
 	unsigned int handle;

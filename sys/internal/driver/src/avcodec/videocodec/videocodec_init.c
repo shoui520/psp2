@@ -3113,3 +3113,76 @@ int videocodecDsp0M4vdecPicture(M4vdecPicture *pPicture, Dsp0VideocodecPicture *
 		ret |= 0x900;
 	return ret;
 }
+
+/*
+ * Converts an AVC decoder's picture into pPictureOut's pixel format, as videocodecAvcdecCsc,
+ * for pictures whose frames may have separate planes.
+ */
+int videocodecAvcdecCscInternal(VideocodecPicture *pPictureOut, const VideocodecPicture *pPictureIn)
+{
+	VideocodecFrame in;
+	unsigned int inType, outType, cscCoefficient, fullRange;
+
+	if (pPictureIn->size != sizeof(*pPictureIn) || pPictureOut->size != sizeof(*pPictureOut))
+		return SCE_AVCDEC_ERROR_INVALID_ARGUMENT_SIZE;
+	if ((pPictureIn->frame.frame.framePitch & 0xF) != 0 ||
+	    ((pPictureIn->frame.frame.frameWidth | pPictureIn->frame.frame.frameHeight) & 0xF) != 0 ||
+	    (pPictureOut->frame.frame.framePitch & 0xF) != 0 ||
+	    ((pPictureOut->frame.frame.frameWidth | pPictureOut->frame.frame.frameHeight) & 0xF) != 0)
+		return SCE_AVCDEC_ERROR_UNSUPPORT_IMAGE_SIZE;
+	pPictureOut->info = pPictureIn->info;
+	cscCoefficient = SCE_AVCDEC_CSC_COEFFICIENT_DEFAULT;
+	if (pPictureOut->info.matrixCoefficients != 255) {
+		if ((unsigned int)(pPictureOut->info.matrixCoefficients - 4) <= 2) {
+			fullRange = SCE_AVCDEC_CSC_COEFFICIENT_ITU601_FULL;
+			cscCoefficient = SCE_AVCDEC_CSC_COEFFICIENT_ITU601;
+		} else {
+			fullRange = SCE_AVCDEC_CSC_COEFFICIENT_ITU709_FULL;
+			cscCoefficient = SCE_AVCDEC_CSC_COEFFICIENT_ITU709;
+		}
+		if (pPictureOut->info.videoFullRangeFlag == 1)
+			cscCoefficient = fullRange;
+	}
+	inType = pPictureIn->frame.frame.pixelType;
+	outType = pPictureOut->frame.frame.pixelType;
+	if ((inType & 0xEF) != 0 && (inType & 0xFF) != SCE_AVCDEC_PIXEL_BGRA8888 &&
+	    (inType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+		return SCE_AVCDEC_ERROR_INVALID_PARAM;
+	if (!VIDEOCODEC_CSC_IS_RGB(outType & 0xFF) &&
+	    (outType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+	    (outType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+		return SCE_AVCDEC_ERROR_INVALID_PARAM;
+
+	memset(&in, 0, sizeof(in));
+	in.frame.pixelType = inType;
+	in.frame.framePitch = pPictureIn->frame.frame.framePitch;
+	in.frame.frameWidth = pPictureIn->frame.frame.frameWidth;
+	in.frame.frameHeight = pPictureIn->frame.frame.frameHeight;
+	in.frame.horizontalSize = pPictureOut->frame.frame.horizontalSize =
+		pPictureIn->frame.frame.horizontalSize;
+	in.frame.verticalSize = pPictureOut->frame.frame.verticalSize =
+		pPictureIn->frame.frame.verticalSize;
+	in.frame.frameCropLeftOffset = pPictureOut->frame.frame.frameCropLeftOffset =
+		pPictureIn->frame.frame.frameCropLeftOffset;
+	in.frame.frameCropRightOffset = pPictureOut->frame.frame.frameCropRightOffset =
+		pPictureIn->frame.frame.frameCropRightOffset;
+	in.frame.frameCropTopOffset = pPictureOut->frame.frame.frameCropTopOffset =
+		pPictureIn->frame.frame.frameCropTopOffset;
+	in.frame.frameCropBottomOffset = pPictureOut->frame.frame.frameCropBottomOffset =
+		pPictureIn->frame.frame.frameCropBottomOffset;
+	in.frame.opt = pPictureIn->frame.frame.opt;
+	in.frame.pPicture[0] = pPictureIn->frame.frame.pPicture[0];
+	in.frame.pPicture[1] = pPictureIn->frame.frame.pPicture[1];
+	in.pPlane[0] = pPictureIn->frame.pPlane[0];
+	in.pPlane[1] = pPictureIn->frame.pPlane[1];
+	in.pPlane[2] = pPictureIn->frame.pPlane[2];
+	in.reserved[0] = pPictureIn->frame.reserved[0];
+	in.reserved[1] = pPictureIn->frame.reserved[1];
+	in.reserved[2] = pPictureIn->frame.reserved[2];
+	if (in.frame.horizontalSize <= in.frame.frameWidth &&
+	    in.frame.verticalSize <= in.frame.frameHeight) {
+		in.frame.frameWidth = in.frame.horizontalSize;
+		in.frame.frameHeight = in.frame.verticalSize;
+	}
+	return videocodecCscInline(&pPictureOut->frame, &in, cscCoefficient, videocodecCscLockModes, 1);
+}
