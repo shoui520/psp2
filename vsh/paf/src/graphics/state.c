@@ -1200,6 +1200,24 @@ void *ScePafGraphics_04F03872(void)
 	return &sce_paf_graphics_active_surface_2e94;
 }
 
+RMutex sce_paf_graphics_rmutex_1230;
+void *sce_paf_graphics_selected_object_12a4;
+
+void ScePafGraphics_B902E8F1(uint8_t *self)
+{
+	void *object;
+
+	ScePafThread_F9FFA0BE(&sce_paf_graphics_rmutex_1230);
+	object = *(void **)(self + 128);
+	if (object && *(uint32_t *)(self + 108)) {
+		(*(void (**)(void *))(*(uint8_t **)object + 12))(object);
+		*(uint32_t *)(self + 108) = 0;
+	}
+	if (sce_paf_graphics_selected_object_12a4 == self)
+		sce_paf_graphics_selected_object_12a4 = NULL;
+	ScePafThread_95F9C45F(&sce_paf_graphics_rmutex_1230);
+}
+
 int ScePafGraphics_309D2902(const uint8_t *self, int index,
 			      int arg3, int arg4, int arg5, int arg6,
 			      const void *source)
