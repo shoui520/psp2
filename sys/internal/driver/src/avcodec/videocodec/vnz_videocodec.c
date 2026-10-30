@@ -2066,7 +2066,8 @@ int SceAvcodecForDriver_48DECA56(const SceAvcdecCtrl *pCtrl, const SceAvcdecAu *
 		}
 		pOutput = &avc->output;
 		outputList.snapshots = &pOutput;
-		ret = SceCodecEngineWrapperForDriver_BB02EB22(handle, &au, &outputList,
+		ret = SceCodecEngineWrapperForDriver_BB02EB22(handle,
+			(const VeneziaVipRawInput *)&au, &outputList,
 			&numOfOutput);
 		ret = videocodecMapCodecEngineError(ret);
 		if ((ret < 0 && ret != SCE_AVCDEC_ERROR_ES_BUFFER_FULL) ||
@@ -2267,7 +2268,8 @@ int SceAvcodecForDriver_EAEB16D5(const SceAvcdecCtrl *pCtrl, const SceAvcdecAu *
 		}
 		pOutput = &avc->output;
 		outputList.snapshots = &pOutput;
-		ret = SceCodecEngineWrapperForDriver_BB02EB22(handle, &au, &outputList,
+		ret = SceCodecEngineWrapperForDriver_BB02EB22(handle,
+			(const VeneziaVipRawInput *)&au, &outputList,
 			&numOfOutput);
 		ret = videocodecMapCodecEngineError(ret);
 		if ((ret < 0 && ret != SCE_AVCDEC_ERROR_ES_BUFFER_FULL) ||
@@ -2363,7 +2365,8 @@ videocodecDecodeAuInline(SceAvcdecCtrl *pCtrl, const SceAvcdecAu *pAu, const Sce
 				VIDEOCODEC_LOCK_CACHED | VIDEOCODEC_LOCK_SCATTERED);
 			if (ret >= 0) {
 				au = *pAu;
-				ret = SceCodecEngineWrapperForDriver_B420ABAC(handle, &au, timeout);
+				ret = SceCodecEngineWrapperForDriver_B420ABAC(handle,
+					(const VeneziaVipRawInput *)&au, timeout);
 				ret = videocodecMapCodecEngineError(ret);
 			}
 		}

@@ -130,6 +130,12 @@ typedef struct VeneziaVipVideoInput {
 	uint32_t flags;
 } VeneziaVipVideoInput;
 
+typedef struct VeneziaVipRawInput {
+	uint64_t presentationTimestamp;
+	uint64_t decodingTimestamp;
+	VeneziaVipInputBuffer payload;
+} VeneziaVipRawInput;
+
 _Static_assert(sizeof(VeneziaDebugHalfwordPair) == 4, "Venezia halfword pair");
 _Static_assert(sizeof(VeneziaDebugContextInfo) == 60, "Venezia context info");
 _Static_assert(sizeof(VeneziaDebugRegisterBank) == 296, "Venezia register bank");
@@ -196,8 +202,6 @@ int SceCodecEngineWrapperForDriver_8DEF9631(unsigned int processor, unsigned int
 int SceCodecEngineWrapperForDriver_972F0D0F(unsigned int processor,
 	const VeneziaVipVideoInput *input, const SceUInt *timeout);
 
-struct SceAvcdecAu;
-
 int SceCodecEngineWrapperForDriver_16506603(unsigned int processor, SceUID cbid,
 	unsigned int eventMask);
 int SceCodecEngineWrapperForDriver_8FE370E6(unsigned int processor, SceUID cbid);
@@ -207,9 +211,10 @@ int SceCodecEngineWrapperForDriver_B48B02A3(unsigned int processor,
 	VeneziaDebugSnapshotList *list, unsigned int *pNumOfOutput);
 int SceCodecEngineWrapperForDriver_9EB3D63E(unsigned int processor);
 int SceCodecEngineWrapperForDriver_B420ABAC(unsigned int processor,
-	const struct SceAvcdecAu *au, const SceUInt *timeout);
+	const VeneziaVipRawInput *input, const SceUInt *timeout);
 int SceCodecEngineWrapperForDriver_BB02EB22(unsigned int processor,
-	const struct SceAvcdecAu *au, VeneziaDebugSnapshotList *list, unsigned int *pNumOfOutput);
+	const VeneziaVipRawInput *input, VeneziaDebugSnapshotList *list,
+	unsigned int *completed);
 int SceCodecEngineWrapperForDriver_BB388700(unsigned int processor,
 	const VeneziaVipVideoInput *input, VeneziaDebugSnapshotList *list,
 	unsigned int *completed);

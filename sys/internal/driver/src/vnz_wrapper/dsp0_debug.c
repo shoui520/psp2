@@ -3899,12 +3899,6 @@ unlock:
 	return ret;
 }
 
-typedef struct VeneziaVipRawInput {
-	uint64_t presentationTimestamp;
-	uint64_t decodingTimestamp;
-	VeneziaVipInputBuffer payload;
-} VeneziaVipRawInput;
-
 typedef struct VeneziaVipPesHeader {
 	uint8_t startCode[3];
 	uint8_t streamId;
