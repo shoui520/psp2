@@ -6,6 +6,7 @@
 #include "../thread/mutex.h"
 #include <gxm.h>
 #include <sce_atomic.h>
+#include <kernel/sysmem.h>
 
 extern int sceSharedFbGetShellRenderPort(void);
 extern const SceGxmProgramParameter *sceGxmProgramFindParameterBySemantic(
@@ -1397,6 +1398,22 @@ int ScePafGraphics_BB119805(const uint8_t *self)
 		return 9728;
 	}
 	return 9728;
+}
+
+int ScePafGraphics_A842275A(const uint8_t *self,
+			     SceGxmRenderTarget *target)
+{
+	SceUID driverMemBlock;
+	int result;
+
+	if (!target)
+		return -2136006139;
+	if (!self[160])
+		return 0;
+	sceGxmRenderTargetGetDriverMemBlock(target, &driverMemBlock);
+	result = sceGxmDestroyRenderTarget(target);
+	sceKernelFreeMemBlock(driverMemBlock);
+	return result;
 }
 
 uint32_t ScePafGraphics_0C88DD20(int32_t value)
