@@ -100,3 +100,22 @@ int ScePafMisc_716D378A(const uint8_t *self, const int32_t *requested)
 	}
 	return 0;
 }
+
+int ScePafMisc_02802435(const uint8_t *self, const uint8_t *candidate)
+{
+	const int32_t *a = (const int32_t *)self;
+	const int32_t *b = (const int32_t *)candidate;
+
+	if (!candidate)
+		return 0;
+	if (((b[10] > 0 && b[11] > 0) || (a[28] > 0 && a[29] > 0)) &&
+	    (b[8] != a[26] || b[9] != a[27] ||
+	     b[10] != a[28] || b[11] != a[29]))
+		return 1;
+	if (b[12] != a[30] || b[13] != a[31] ||
+	    b[14] != a[32] || b[3] != a[14] ||
+	    b[4] != a[15] || candidate[60] != self[132] ||
+	    b[16] != a[34] || b[17] != a[35])
+		return 1;
+	return 0;
+}

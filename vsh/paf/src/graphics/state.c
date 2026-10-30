@@ -44,6 +44,35 @@ int ScePafGraphics_08C21EFC(const uint8_t *left, const uint8_t *right)
 	return result;
 }
 
+int32_t ScePafGraphics_61C250D7(const uint8_t *self, uint32_t index,
+				uint8_t *output)
+{
+	const uint8_t *entry;
+	const uint8_t *const *lookup;
+	uint32_t entryIndex;
+	int32_t result = -2136005885;
+
+	if (!(*(const int16_t *)(self + 112) & 0x22)) {
+		result = -2136005886;
+		if (index < *(const uint32_t *)(self + 120)) {
+			entry = *(const uint8_t *const *)(self + 116) + 12 * index;
+			entryIndex = *(const uint32_t *)(entry + 8);
+			if (entryIndex < *(const uint32_t *)(self + 128)) {
+				float32x4_t values;
+
+				lookup = *(const uint8_t *const *const *)(self + 124);
+				values = *(const volatile float32x4_t *)(lookup[entryIndex] + 8);
+				result = 0;
+				*(uint32_t *)(output + 8) = entryIndex;
+				*(float *)(output + 4) =
+					vgetq_lane_f32(values, 0) +
+					*(const float *)(entry + 4);
+			}
+		}
+	}
+	return result;
+}
+
 int ScePafGraphics_70ED91E6(uint8_t *self, const uint32_t *values)
 {
 	float32x2_t pair;
