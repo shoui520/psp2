@@ -3,6 +3,7 @@
 #include "../compiler.h"
 #include "../std/string.h"
 #include "../std/new.h"
+#include "../thread/mutex.h"
 #include <gxm.h>
 
 uint8_t sce_paf_graphics_flag_306c;
@@ -102,6 +103,26 @@ int ScePafGraphics_1AD606BC(uint8_t *self, uint16_t bits)
 {
 	*(uint16_t *)(self + 112) |= bits;
 	return 0;
+}
+
+int ScePafGraphics_74E0DEAA(uint8_t *self, uint16_t bits)
+{
+	*(uint16_t *)(self + 112) &= (uint16_t)~bits;
+	return 0;
+}
+
+int ScePafGraphics_C16D98B4(uint8_t *self)
+{
+	RMutex *mutex = *(RMutex **)(self + 140);
+
+	if (mutex) {
+		ScePafThread_F9FFA0BE(mutex);
+		mutex = *(RMutex **)(self + 140);
+	}
+	*(uint16_t *)(self + 112) |= 7;
+	if (mutex)
+		ScePafThread_95F9C45F(mutex);
+	return 7;
 }
 
 int32_t ScePafGraphics_22AB24A0(const uint8_t *self, int32_t value)
