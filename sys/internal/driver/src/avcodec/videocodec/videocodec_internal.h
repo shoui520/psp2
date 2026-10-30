@@ -372,14 +372,88 @@ typedef struct Dsp0VideocodecAccessUnit {
 
 _Static_assert(sizeof(Dsp0VideocodecAccessUnit) == 48, "DSP0 access unit ABI");
 
-/* the picture the coprocessor reports; it returns its planes as physical addresses */
+/* the VUI of the stream an AVC picture belongs to, in the order of H.264's syntax */
+typedef struct Dsp0VideocodecVui {
+	unsigned char aspectRatioInfoPresentFlag;
+	unsigned char aspectRatioIdc;
+	unsigned char padding0[2];
+	unsigned int sarWidth;
+	unsigned int sarHeight;
+	unsigned char overscanInfoPresentFlag;
+	unsigned char overscanAppropriateFlag;
+	unsigned char videoSignalTypePresentFlag;
+	unsigned char videoFormat;
+	unsigned char videoFullRangeFlag;
+	unsigned char colourDescriptionPresentFlag;
+	unsigned char colourPrimaries;
+	unsigned char transferCharacteristics;
+	unsigned char matrixCoefficients;
+	unsigned char chromaLocInfoPresentFlag;
+	unsigned char timingInfoPresentFlag;
+	unsigned char padding1;
+	unsigned int chromaSampleLocTypeTopField;
+	unsigned int chromaSampleLocTypeBottomField;
+	unsigned int numUnitsInTick;
+	unsigned int timeScale;
+	unsigned char fixedFrameRateFlag;
+	unsigned char nalHrdParametersPresentFlag;
+	unsigned char vclHrdParametersPresentFlag;
+	unsigned char lowDelayHrdFlag;
+	unsigned char picStructPresentFlag;
+} Dsp0VideocodecVui;
+
+_Static_assert(offsetof(Dsp0VideocodecVui, timingInfoPresentFlag) == 22, "DSP0 VUI timing ABI");
+_Static_assert(offsetof(Dsp0VideocodecVui, numUnitsInTick) == 32, "DSP0 VUI ticks ABI");
+_Static_assert(offsetof(Dsp0VideocodecVui, picStructPresentFlag) == 44, "DSP0 VUI pic_struct ABI");
+
+/* the SEI messages of an AVC picture */
+#define DSP0_VIDEOCODEC_SEI_PICTURE_TIMING	0x2
+
+typedef struct Dsp0VideocodecSei {
+	unsigned char flags;			/* DSP0_VIDEOCODEC_SEI_* present */
+	unsigned char coprocessorSei[19];
+	VideocodecSeiPictureTiming pictureTiming;
+} Dsp0VideocodecSei;
+
+_Static_assert(offsetof(Dsp0VideocodecSei, pictureTiming) == 20, "DSP0 SEI timing ABI");
+
+/*
+ * The picture the coprocessor reports: its planes as physical addresses, its size and
+ * pitches, and per codec its crop, stream information and time stamp. dsp0's decode turns
+ * the AVC information pointers into virtual addresses.
+ */
 typedef struct Dsp0VideocodecPicture {
-	unsigned char coprocessorInfo[52];
-	uintptr_t planeAddress[3];
-	unsigned char coprocessorState[192];
+	uintptr_t lumaAddress;
+	unsigned char coprocessorInfo0[4];
+	uintptr_t chromaAddress;
+	unsigned char coprocessorInfo1[4];
+	unsigned short frameWidth;
+	unsigned short frameHeight;
+	unsigned short lumaPitch;
+	unsigned short chromaPitch;
+	union {
+		struct {
+			unsigned char coprocessorInfo[19];
+			unsigned char frameCroppingFlag;
+			unsigned short frameCropLeftOffset;
+			unsigned short frameCropRightOffset;
+			unsigned short frameCropTopOffset;
+			unsigned short frameCropBottomOffset;
+			const Dsp0VideocodecVui *pVui;
+			const Dsp0VideocodecSei *pSei;
+			const void *pUserData;
+			unsigned char coprocessorState[8];
+			SceUInt64 pts;
+		} avc;
+		unsigned char coprocessorInfo[56];
+	};
+	unsigned char coprocessorState[176];
 } Dsp0VideocodecPicture;
 
 _Static_assert(sizeof(Dsp0VideocodecPicture) == 256, "DSP0 picture ABI");
+_Static_assert(offsetof(Dsp0VideocodecPicture, avc.frameCroppingFlag) == 43, "DSP0 crop ABI");
+_Static_assert(offsetof(Dsp0VideocodecPicture, avc.pVui) == 52, "DSP0 VUI pointer ABI");
+_Static_assert(offsetof(Dsp0VideocodecPicture, avc.pts) == 72, "DSP0 pts ABI");
 
 /* Complete host/RPC decoder command; opaque spans are coprocessor-only. */
 typedef struct Dsp0VideocodecDecoderCommand {
@@ -729,6 +803,8 @@ int videocodecDecoderCsc(SceAvcdecFrame *pFrameOut, const SceAvcdecFrame *pFrame
 		unsigned int cscCoefficient, const SceAvcdecArrayPicture *pArrayPicture);
 int videocodecAvcdecPicture(SceAvcdecPicture *pPicture, const VeneziaDebugSnapshotOutput *pOutput,
 		const SceAvcdecArrayPicture *pArrayPicture, int interlaced);
+int videocodecDsp0AvcdecPicture(SceAvcdecPicture *pPicture, Dsp0VideocodecPicture *const *ppOutput,
+		const SceAvcdecArrayPicture *pArrayPicture);
 
 typedef struct AvcencControl {
 	unsigned int handle;

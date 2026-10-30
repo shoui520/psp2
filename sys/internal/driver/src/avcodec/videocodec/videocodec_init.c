@@ -2917,3 +2917,117 @@ int videocodecAvcdecPicture(SceAvcdecPicture *pPicture, const VeneziaDebugSnapsh
 	sceKernelUnlockFastMutex(&videocodecTileRegMutex);
 	return ret;
 }
+
+/*
+ * Fills an AVC decoder's picture from the picture the DSP0 decoder reported: its timing,
+ * aspect, colour and picture timing information, its crop, and its pixels converted with
+ * the coefficients its stream asks for.
+ */
+int videocodecDsp0AvcdecPicture(SceAvcdecPicture *pPicture, Dsp0VideocodecPicture *const *ppOutput,
+		const SceAvcdecArrayPicture *pArrayPicture)
+{
+	const Dsp0VideocodecPicture *pOutput = *ppOutput;
+	const Dsp0VideocodecVui *vui;
+	const Dsp0VideocodecSei *sei;
+	SceAvcdecFrame frame;
+	unsigned int format, aspectRatioIdc, picStruct, cscCoefficient, fullRange;
+	unsigned int cropLeft, cropRight, cropTop, cropBottom;
+
+	if (pOutput == NULL)
+		return SCE_AVCDEC_ERROR_INVALID_PARAM;
+	if (pPicture->size != sizeof(*pPicture))
+		return SCE_AVCDEC_ERROR_INVALID_ARGUMENT_SIZE;
+	if ((pPicture->frame.framePitch & 0xF) != 0 ||
+	    ((pPicture->frame.frameWidth | pPicture->frame.frameHeight) & 0xF) != 0)
+		return SCE_AVCDEC_ERROR_UNSUPPORT_IMAGE_SIZE;
+	format = pPicture->frame.pixelType & 0xFF;
+	if (!VIDEOCODEC_CSC_IS_RGB(format) && format != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+	    format != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+		return SCE_AVCDEC_ERROR_INVALID_PARAM;
+
+	memset(&pPicture->info, -1, sizeof(pPicture->info));
+	pPicture->info.reserved[2] = 0;
+	vui = pOutput->avc.pVui;
+	if (vui != NULL) {
+		sei = pOutput->avc.pSei;
+		if (vui->timingInfoPresentFlag) {
+			pPicture->info.numUnitsInTick = vui->numUnitsInTick;
+			pPicture->info.timeScale = vui->timeScale;
+			pPicture->info.fixedFrameRateFlag = vui->fixedFrameRateFlag;
+		}
+		if (vui->aspectRatioInfoPresentFlag) {
+			aspectRatioIdc = vui->aspectRatioIdc;
+			pPicture->info.aspectRatioIdc = aspectRatioIdc;
+			if (aspectRatioIdc == 255) {
+				pPicture->info.sarWidth = vui->sarWidth;
+				pPicture->info.sarHeight = vui->sarHeight;
+			}
+		}
+		if (vui->colourDescriptionPresentFlag) {
+			pPicture->info.colourPrimaries = vui->colourPrimaries;
+			pPicture->info.transferCharacteristics = vui->transferCharacteristics;
+			pPicture->info.matrixCoefficients = vui->matrixCoefficients;
+		}
+		if (vui->videoSignalTypePresentFlag)
+			pPicture->info.videoFullRangeFlag = vui->videoFullRangeFlag;
+		if (sei != NULL && vui->picStructPresentFlag &&
+		    (sei->flags & DSP0_VIDEOCODEC_SEI_PICTURE_TIMING)) {
+			pPicture->info.reserved[2] = 0x80;
+			picStruct = sei->pictureTiming.picStruct;
+			pPicture->info.reserved[1] = 0xFF;
+			pPicture->info.reserved[0] = picStruct;
+			if (sei->pictureTiming.clockTimestampFlag[0]) {
+				pPicture->info.reserved[2] = 0xC0;
+				pPicture->info.reserved[2] = 0xC0 |
+					(sei->pictureTiming.clockTimestamp[0].clockMetadata[0] & 3);
+			}
+		}
+	}
+	pPicture->info.outputPts.upper = pOutput->avc.pts >> 32;
+	pPicture->info.outputPts.lower = pOutput->avc.pts;
+
+	memset(&frame, 0, sizeof(frame));
+	pPicture->frame.horizontalSize = pOutput->frameWidth;
+	pPicture->frame.verticalSize = pOutput->frameHeight;
+	if (pOutput->avc.frameCroppingFlag) {
+		cropLeft = pOutput->avc.frameCropLeftOffset;
+		cropRight = pOutput->avc.frameCropRightOffset;
+		cropTop = pOutput->avc.frameCropTopOffset;
+		cropBottom = pOutput->avc.frameCropBottomOffset;
+	} else {
+		cropLeft = 0;
+		cropRight = 0;
+		cropTop = 0;
+		cropBottom = 0;
+	}
+	frame.frameCropLeftOffset = cropLeft;
+	frame.frameCropRightOffset = cropRight;
+	frame.frameCropTopOffset = cropTop;
+	frame.frameCropBottomOffset = cropBottom;
+	pPicture->frame.frameCropLeftOffset = cropLeft;
+	pPicture->frame.frameCropRightOffset = cropRight;
+	pPicture->frame.frameCropTopOffset = cropTop;
+	pPicture->frame.frameCropBottomOffset = cropBottom;
+	frame.pixelType = VIDEOCODEC_PIXEL_PHYSICAL_PACKED;
+	frame.framePitch = pOutput->lumaPitch | pOutput->chromaPitch << 16;
+	frame.frameWidth = pOutput->frameWidth;
+	frame.frameHeight = pOutput->frameHeight;
+	frame.horizontalSize = pOutput->frameWidth;
+	frame.verticalSize = pOutput->frameHeight;
+	frame.pPicture[0] = (void *)pOutput->lumaAddress;
+	frame.pPicture[1] = (void *)pOutput->chromaAddress;
+
+	cscCoefficient = SCE_AVCDEC_CSC_COEFFICIENT_DEFAULT;
+	if (pPicture->info.matrixCoefficients != 255) {
+		if ((unsigned int)(pPicture->info.matrixCoefficients - 4) <= 2) {
+			fullRange = SCE_AVCDEC_CSC_COEFFICIENT_ITU601_FULL;
+			cscCoefficient = SCE_AVCDEC_CSC_COEFFICIENT_ITU601;
+		} else {
+			fullRange = SCE_AVCDEC_CSC_COEFFICIENT_ITU709_FULL;
+			cscCoefficient = SCE_AVCDEC_CSC_COEFFICIENT_ITU709;
+		}
+		if (pPicture->info.videoFullRangeFlag == 1)
+			cscCoefficient = fullRange;
+	}
+	return videocodecDecoderCsc(&pPicture->frame, &frame, cscCoefficient, pArrayPicture);
+}

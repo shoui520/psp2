@@ -124,15 +124,15 @@ int dsp0VideocodecCallDecoderCommand(Dsp0VideocodecDecoderCommand *command,
 	command->pPicture = pPicture;
 	command->frameBufAddress = frameBuf;
 	if (pPicture != NULL) {
-		if (pPicture->planeAddress[0] != 0)
-			pPicture->planeAddress[0] = (uintptr_t)
-				SceCodecEngineWrapperForDriver_F9495589(pPicture->planeAddress[0]);
-		if (pPicture->planeAddress[1] != 0)
-			pPicture->planeAddress[1] = (uintptr_t)
-				SceCodecEngineWrapperForDriver_F9495589(pPicture->planeAddress[1]);
-		if (pPicture->planeAddress[2] != 0)
-			pPicture->planeAddress[2] = (uintptr_t)
-				SceCodecEngineWrapperForDriver_F9495589(pPicture->planeAddress[2]);
+		if ((uintptr_t)pPicture->avc.pVui != 0)
+			pPicture->avc.pVui = SceCodecEngineWrapperForDriver_F9495589(
+				(uintptr_t)pPicture->avc.pVui);
+		if ((uintptr_t)pPicture->avc.pSei != 0)
+			pPicture->avc.pSei = SceCodecEngineWrapperForDriver_F9495589(
+				(uintptr_t)pPicture->avc.pSei);
+		if ((uintptr_t)pPicture->avc.pUserData != 0)
+			pPicture->avc.pUserData = SceCodecEngineWrapperForDriver_F9495589(
+				(uintptr_t)pPicture->avc.pUserData);
 	}
 	return ret;
 }
