@@ -57,6 +57,80 @@ int32_t ScePafToplevel_1DF2C6FD(const uint8_t *self, int32_t value)
 	return node[4];
 }
 
+static inline __attribute__((always_inline))
+int32_t LookupTopLevelValue(const uint8_t *self, size_t treeOffset,
+			    const uint8_t *key)
+{
+	int32_t *root = *(int32_t *const *)(self + treeOffset);
+	int32_t *node;
+	uint32_t wanted = *(const uint32_t *)(key + 12);
+
+	if (root) {
+		node = (int32_t *)(uintptr_t)*root;
+		if (!*((uint8_t *)node + 21)) {
+			int32_t sentinel;
+
+			do {
+				uint32_t actual = (uint32_t)node[3];
+
+				if (wanted >= actual) {
+					if (actual >= wanted)
+						break;
+					node = (int32_t *)(uintptr_t)node[2];
+					sentinel = *((char *)node + 21);
+				} else {
+					node = (int32_t *)(uintptr_t)node[1];
+					sentinel = *((char *)node + 21);
+				}
+			} while (!sentinel);
+		}
+	} else {
+		node = 0;
+	}
+	return node == root ? 0 : node[4];
+}
+
+int32_t ScePafToplevel_9EA96CE0(const uint8_t *self, const uint8_t *key)
+{
+	return LookupTopLevelValue(self, 124, key);
+}
+
+int32_t ScePafToplevel_E1DC7DF5(const uint8_t *self, const uint8_t *key)
+{
+	return LookupTopLevelValue(self, 100, key);
+}
+
+uint8_t *ScePafToplevel_820E3DBD(const uint8_t *self, const uint8_t *key)
+{
+	uint32_t *root = *(uint32_t *const *)(self + 136);
+	uint32_t *node;
+	uint32_t wanted = *(const uint32_t *)(key + 12);
+
+	if (root) {
+		node = (uint32_t *)(uintptr_t)*root;
+		if (!*((uint8_t *)node + 49)) {
+			int32_t sentinel;
+
+			do {
+				uint32_t actual = node[3];
+
+				if (wanted >= actual) {
+					if (actual >= wanted)
+						break;
+					node = (uint32_t *)(uintptr_t)node[2];
+					sentinel = *((char *)node + 49);
+				} else {
+					node = (uint32_t *)(uintptr_t)node[1];
+					sentinel = *((char *)node + 49);
+				}
+			} while (!sentinel);
+		}
+	} else {
+		node = 0;
+	}
+	return node == root ? 0 : (uint8_t *)node + 16;
+}
+
 uint32_t ScePafToplevel_F72FC59E(void)
 {
 	return sce_paf_toplevel_value_1194;
