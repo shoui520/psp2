@@ -177,6 +177,10 @@ typedef struct __attribute__((packed, aligned(4))) ProcessInfoBuf {
 	ProcessInfo info[4];
 } ProcessInfoBuf;
 
+/* ModuleInfo.type */
+#define MODULE_INFO_START	0
+#define MODULE_INFO_STOP	1
+
 typedef struct ModuleInfo {
 	SceUInt32 type;
 	SceUID pid;
@@ -492,6 +496,7 @@ int threadInfoCreateExitNotification(DbgpProcCB *proc, void *packet,
 				     const ThreadInfo *info);
 
 /* module_info.c */
+int moduleInfoSave(DbgpProcCB *proc, const ModuleInfo *info);
 int moduleInfoLoad(DbgpProcCB *proc, ModuleInfo *info);
 int _createModuleLoadNotification(DbgpProcCB *proc, void *packet,
 				  const ModuleInfo *info);
