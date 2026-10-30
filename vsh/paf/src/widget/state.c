@@ -872,3 +872,40 @@ uint32_t *ScePafWidget_AE0C4046(void)
 	sce_paf_widget_state_142d8 = 0;
 	return &sce_paf_widget_state_142d8;
 }
+
+int ScePafWidget_85A01D8F(void *self, unsigned int value)
+{
+	if (value <= 1) {
+		if (value)
+			return 1;
+	} else if (value <= 2) {
+		return 2;
+	}
+	return 0;
+}
+
+int ScePafWidget_2385B189(uint8_t *self, unsigned int index, int value)
+{
+	if (index >= 6)
+		return -2135998193;
+	*(uint32_t *)(self + 11592) |= 1U << index;
+	*(int *)(self + 11600 + 4 * index) = value;
+	return 0;
+}
+
+uint8_t *ScePafWidget_730AA895(uint8_t *self, uint32_t value,
+				uint8_t toggle)
+{
+	if (*(uint32_t *)(self + 408) != value) {
+		*(uint32_t *)(self + 408) = value;
+		if (toggle) {
+			if (value) {
+				if (!self[500])
+					self[500] = 1;
+			} else if (self[500]) {
+				self[500] = 0;
+			}
+		}
+	}
+	return self;
+}
