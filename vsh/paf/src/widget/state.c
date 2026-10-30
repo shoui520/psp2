@@ -919,7 +919,7 @@ uint32_t ScePafWidget_27278DC0(const uint32_t *self)
 	return *(const uint32_t *)((const uint8_t *)self[0] + 8 * (index - 1));
 }
 
-int ScePafWidget_8EDFDE19(const void *self, const char *tag)
+__attribute__((noinline)) int ScePafWidget_8EDFDE19(const void *self, const char *tag)
 {
 	return tag == "widget_base";
 }
@@ -946,4 +946,34 @@ int ScePafWidget_F0D05847(uint32_t *self, uint32_t value)
 
 	self[255] = value;
 	return ((int (*)(uint32_t *))*(void **)(vtable + 572))(self);
+}
+
+int ScePafWidget_0521777F(const void *self, const char *tag)
+{
+	if (tag == "scrollbar2d")
+		return 1;
+	return ScePafWidget_8EDFDE19(self, tag);
+}
+
+int ScePafWidget_11F157B4(const void *self, const char *tag)
+{
+	if (tag == "group")
+		return 1;
+	return ScePafWidget_8EDFDE19(self, tag);
+}
+
+int ScePafWidget_A4E53390(uint8_t *self)
+{
+	uint8_t *vtable = *(uint8_t **)self;
+
+	self[992] = 1;
+	return ((int (*)(uint8_t *))*(void **)(vtable + 560))(self);
+}
+
+int ScePafWidget_CBB4D949(int a1, int a2, int a3, uint8_t *self)
+{
+	uint8_t *vtable = *(uint8_t **)self;
+
+	return ((int (*)(uint8_t *, int, int, int))*(void **)(vtable + 592))(
+		self, a1, a2, a3);
 }
