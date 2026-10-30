@@ -9,6 +9,7 @@
 #include <dtrace/sce/solaris_mutex.h>
 #include <dtrace/sce/solaris_rwlock.h>
 #include <dtrace/sce/dtrace_cpu.h>
+#include <intrmgr/intrmgr.h>
 
 #define NCPU		4
 
@@ -72,4 +73,4 @@ void register_cpu_setup_func(cpu_setup_func_t *func, void *arg);
 void unregister_cpu_setup_func(cpu_setup_func_t *func, void *arg);
 
 #define CPU		(&cpu_list[dtrace_processor_id()])
-#define CPU_ON_INTR(cpu)	dtrace_is_interrupt_context()
+#define CPU_ON_INTR(cpu)	sceKernelIsIntrContext()

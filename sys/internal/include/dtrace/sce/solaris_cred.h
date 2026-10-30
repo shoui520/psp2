@@ -8,10 +8,10 @@
 
 typedef struct cred {
 	uid_t cr_uid;
-	uid_t cr_ruid;
-	uid_t cr_suid;
 	gid_t cr_gid;
+	uid_t cr_ruid;
 	gid_t cr_rgid;
+	uid_t cr_suid;
 	gid_t cr_sgid;
 } cred_t;
 
