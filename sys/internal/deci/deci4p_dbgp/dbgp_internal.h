@@ -71,6 +71,10 @@ _Static_assert(sizeof(DbgpBuf) == 0x5c, "debugger buffer control block");
 _Static_assert(offsetof(DbgpBuf, status) == 0x40, "debugger buffer status");
 
 /* Result and progress callbacks publish the same seven-word queue record. */
+/* CoredumpInfo.type */
+#define COREDUMP_INFO_RESULT	0
+#define COREDUMP_INFO_PROGRESS	1
+
 typedef struct CoredumpInfo {
 	SceUInt32 type;
 	SceUID pid;
@@ -608,6 +612,7 @@ int threadInfoGetCount(DbgpProcCB *proc);
 int processInfoGetCount(DbgpProcCB *proc);
 int moduleInfoGetCount(DbgpProcCB *proc);
 int moduleInfoSendPrxLoadNotificationFake(DbgpProcCB *proc);
+int coredumpInfoSave(DbgpProcCB *proc, const CoredumpInfo *info);
 int coredumpInfoLoad(DbgpProcCB *proc, CoredumpInfo *info);
 int coredumpInfoGetCount(DbgpProcCB *proc);
 int coredumpInfoCreateCoredumpNotification(DbgpProcCB *proc, void *packet,
@@ -654,6 +659,10 @@ int GetNetInterfaceInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int GetNetResolverInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int GetNetEmulationSettingCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int SetNetEmulationSettingCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
+int coredumpHandlerResultCallback(int task_id, SceUID pid, int result,
+				  const char *path, SceSize path_len,
+				  int encrypted);
+int coredumpHandlerProgressCallback(int task_id, SceUID pid, int progress);
 int coredumpTriggerCoredumpCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int coredumpCancelCoredumpCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 
