@@ -71,8 +71,9 @@ psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 PARTIAL SOURCES
 )
 # Sony built DTrace with signed chars (its sign-extended char loads and compares) and at -O3
 # (vectorized loops in the stack walks; dtrace.c keeps 104 functions, -O2 would keep 137), with
-# the C library builtins (values live across strcmp, the checked copies fold)
-target_compile_options(os0_kd_deci4p_dtracep PRIVATE -fsigned-char -O3 -fbuiltin)
+# the C library builtins (values live across strcmp, the checked copies fold) and GCC's
+# default null pointer check deletion (no NULL test of a pointer already dereferenced)
+target_compile_options(os0_kd_deci4p_dtracep PRIVATE -fsigned-char -O3 -fbuiltin -fdelete-null-pointer-checks)
 target_compile_definitions(os0_kd_deci4p_dtracep PRIVATE __SCE__ KERNEL DTRACE_KERNEL)
 target_include_directories(os0_kd_deci4p_dtracep PRIVATE
 	"${dtrace_cddl}/driver/src/dfmgr/dtracep"
