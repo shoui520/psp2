@@ -75,6 +75,7 @@ unsigned char ThreadIsCanceled(Thread *self);
 unsigned char ThreadIsAlive(Thread *self);
 SceUID ThreadGetID(Thread *self);
 void ThreadChangePriority(Thread *self, SceInt32 priority);
+int ScePafThread_651F4F81(SceUInt32 milliseconds);
 SceInt32 ThreadInternalThreadEntry(SceSize argSize, void *argBlock);
 ThreadOpt *ThreadOptConstruct(ThreadOpt *self);
 ThreadOpt *ThreadOptConstructBase(ThreadOpt *self);
