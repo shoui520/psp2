@@ -10,6 +10,11 @@ int JobItemIsCanceled(JobItem *self)
 	return self->m_canceled;
 }
 
+void JobItemCancel(JobItem *self)
+{
+	self->m_canceled = 1;
+}
+
 JobQueueList *JobQueueListConstruct(JobQueueList *self, const void *allocator)
 {
 	JobQueueNode *root;

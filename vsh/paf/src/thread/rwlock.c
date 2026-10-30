@@ -39,16 +39,86 @@ Mutex *MutexDestroyBase(Mutex *self)
 	return self;
 }
 
-void MutexLock(Mutex *self)
+__attribute__((noinline)) void MutexLock(Mutex *self)
 {
 	if (sceKernelLockLwMutex(&self->m_mutex, 1, NULL))
 		on_error();
 }
 
-void MutexUnlock(Mutex *self)
+__attribute__((noinline)) void MutexUnlock(Mutex *self)
 {
 	if (sceKernelUnlockLwMutex(&self->m_mutex, 1))
 		on_error();
+}
+
+RMutex *ScePafThread_C4BD9753(RMutex *self, const char *name, int option)
+{
+	uint32_t attr = SCE_KERNEL_LW_MUTEX_ATTR_TH_PRIO | 2;
+
+	if (option & MutexOption_FIFO)
+		attr = SCE_KERNEL_LW_MUTEX_ATTR_TH_FIFO | 2;
+	if (sceKernelCreateLwMutex(&self->m_mutex, name, attr, 0, NULL))
+		on_error();
+	return self;
+}
+
+RMutex *ScePafThread_8CCECAC9(RMutex *self)
+{
+	if (sceKernelDeleteLwMutex(&self->m_mutex))
+		on_error();
+	return self;
+}
+
+RMutex *ScePafThread_D1BEBE2D(RMutex *self)
+{
+	if (sceKernelDeleteLwMutex(&self->m_mutex))
+		on_error();
+	return self;
+}
+
+void ScePafThread_F9FFA0BE(RMutex *self)
+{
+	if (sceKernelLockLwMutex(&self->m_mutex, 1, NULL))
+		on_error();
+}
+
+void ScePafThread_95F9C45F(RMutex *self)
+{
+	if (sceKernelUnlockLwMutex(&self->m_mutex, 1))
+		on_error();
+}
+
+typedef struct PafProtectedCounter {
+	uint8_t reserved[36];
+	int32_t count;
+} PafProtectedCounter;
+
+int32_t ScePafThread_9F2131F9(PafProtectedCounter *self)
+{
+	int32_t count;
+
+	MutexLock((Mutex *)self);
+	count = self->count;
+	MutexUnlock((Mutex *)self);
+	return count;
+}
+
+void ScePafThread_733814FD(uint8_t *self)
+{
+	if (sceKernelSignalLwCond((SceKernelLwCondWork *)(self + 4)))
+		on_error();
+}
+
+RWLock *ScePafThread_A8DB7042(RWLock *self)
+{
+	sceKernelDeleteEventFlag(self->m_evf);
+	return self;
+}
+
+RWLock *ScePafThread_F17CAAB0(RWLock *self)
+{
+	sceKernelDeleteEventFlag(self->m_evf);
+	return self;
 }
 
 unsigned char MutexTryLock(Mutex *self)
