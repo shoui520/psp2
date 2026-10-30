@@ -34,6 +34,114 @@ uint32_t ScePafGraphics_E57F91FC(uint8_t *self)
 	return (uint32_t)*count;
 }
 
+__attribute__((noinline))
+uint32_t ScePafGraphics_9FAF51CF(uint8_t *self)
+{
+	volatile int32_t *count = (volatile int32_t *)(self + 24);
+	int32_t oldCount = sceAtomicDecrement32AcqRel(count);
+
+	if (oldCount != 1)
+		return (uint32_t)*count;
+	if (self)
+		((void (**)(void *))*(void **)self)[1](self);
+	return 0;
+}
+
+static inline __attribute__((always_inline))
+uint32_t *DestroyGraphicsRefPair(uint32_t *self)
+{
+	uint32_t second = self[1];
+
+	if (second)
+		ScePafGraphics_9FAF51CF((uint8_t *)(uintptr_t)second);
+	if (self[0])
+		ScePafGraphics_9FAF51CF((uint8_t *)(uintptr_t)self[0]);
+	return self;
+}
+
+uint32_t *ScePafGraphics_025C548E(uint32_t *self)
+{
+	return DestroyGraphicsRefPair(self);
+}
+
+uint32_t *ScePafGraphics_9E20360C(uint32_t *self)
+{
+	return DestroyGraphicsRefPair(self);
+}
+
+static inline __attribute__((always_inline))
+int GraphicsSetSamplerMode(uint8_t *self, uint32_t fieldOffset, int mode)
+{
+	int mapped = 2;
+
+	if (mode) {
+		int selected = 0;
+		if (mode != 1) {
+			if (mode != 2) {
+				mapped = 1;
+				if (mode != 4) {
+					mapped = 3;
+					if (mode != 5) {
+						mapped = 4;
+						if (mode != 6) {
+							mapped = 6;
+							if (mode != 7) {
+								mapped = 5;
+								if (mode != 8) {
+									mapped = -1;
+									if (mode == 9)
+										mapped = 7;
+								}
+							}
+						}
+					}
+				}
+			}
+			selected = mapped;
+		}
+		mapped = selected;
+		if (selected == -1)
+			return -2136006142;
+	}
+	if (mapped != *(int32_t *)(self + fieldOffset)) {
+		*(int32_t *)(self + fieldOffset) = mapped;
+		self[96] = 1;
+	}
+	return 0;
+}
+
+int ScePafGraphics_DFE83DCA(uint8_t *self, int mode)
+{
+	return GraphicsSetSamplerMode(self, 84, mode);
+}
+
+int ScePafGraphics_D193CA56(uint8_t *self, int mode)
+{
+	return GraphicsSetSamplerMode(self, 88, mode);
+}
+
+int ScePafGraphics_0F98D1F8(const uint8_t *self, int mode,
+			     uint32_t index)
+{
+	if (index < 4) {
+		uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
+		if (item)
+			return ScePafGraphics_D193CA56(item, mode);
+	}
+	return -1;
+}
+
+int ScePafGraphics_26D2C953(const uint8_t *self, int mode,
+			     uint32_t index)
+{
+	if (index < 4) {
+		uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
+		if (item)
+			return ScePafGraphics_DFE83DCA(item, mode);
+	}
+	return -1;
+}
+
 static inline __attribute__((always_inline))
 uint32_t *InitGraphicsRefParameter(uint32_t *result,
 				   const uint32_t *source, uint32_t value)
