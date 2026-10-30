@@ -7,6 +7,11 @@
 #include <gxm.h>
 #include <sce_atomic.h>
 
+extern int sceSharedFbGetShellRenderPort(void);
+extern const SceGxmProgramParameter *sceGxmProgramFindParameterBySemantic(
+	const SceGxmProgram *program, SceGxmParameterSemantic semantic,
+	unsigned int index);
+
 uint8_t sce_paf_graphics_flag_306c;
 uint32_t sce_paf_graphics_state_11e0;
 uint32_t sce_paf_graphics_state_12ac;
@@ -152,6 +157,34 @@ int ScePafGraphics_96173730(const uint8_t *self)
 	result = *(int *)(object + 4);
 	if (object)
 		ScePafGraphics_9FAF51CF(object);
+	return result;
+}
+
+int ScePafGraphics_EA29AF79(const uint8_t *self)
+{
+	int result = 0;
+
+	if (*(const uint32_t *)(self + 368) == 1) {
+		result = sceSharedFbGetShellRenderPort();
+		if (result < 0)
+			return 0;
+	}
+	return result;
+}
+
+const SceGxmProgramParameter *ScePafGraphics_B2C9A58C(
+	const uint8_t *self, SceGxmParameterSemantic semantic,
+	unsigned int index, uint8_t flag)
+{
+	SceGxmShaderPatcherId programId =
+		*(SceGxmShaderPatcherId const *)(self + 28);
+	const SceGxmProgram *program =
+		sceGxmShaderPatcherGetProgramFromId(programId);
+	const SceGxmProgramParameter *result =
+		sceGxmProgramFindParameterBySemantic(program, semantic, index);
+
+	if (!result && !flag)
+		return 0;
 	return result;
 }
 
