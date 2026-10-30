@@ -4,6 +4,49 @@
 #include <sce_atomic.h>
 
 static InputListenerList inputListeners;
+/* The 56-byte input event is initialized by ScePafMisc_B51652DF. */
+static uint8_t inputEvent[0x38];
+
+int ScePafMisc_996A8C03(void)
+{
+	InputListenerNode *root = inputListeners.root_node;
+	InputListenerNode *next = root ? root->next : NULL;
+	InputListenerNode *node = next;
+
+	while (node != inputListeners.root_node) {
+		InputListener *item = node->val.m_ptr;
+		void (**methods)(void) = *(void (***)(void))item;
+
+		((void (*)(InputListener *, const void *))methods[3])(item, inputEvent);
+		node = next;
+		if (next) {
+			next = next->next;
+			node = next;
+		}
+	}
+	return 0;
+}
+
+int ScePafMisc_26F81894(uint8_t state)
+{
+	InputListenerNode *root = inputListeners.root_node;
+	InputListenerNode *next = root ? root->next : NULL;
+	InputListenerNode *node = next;
+
+	while (node != inputListeners.root_node) {
+		InputListener *item = node->val.m_ptr;
+		void (**methods)(void) = *(void (***)(void))item;
+
+		((void (*)(InputListener *, const void *, int))methods[4])(
+			item, inputEvent, state);
+		node = next;
+		if (next) {
+			next = next->next;
+			node = next;
+		}
+	}
+	return 0;
+}
 
 InputListenerList *InputListenerListConstruct(InputListenerList *self,
 					     const void *allocator)
