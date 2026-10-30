@@ -264,7 +264,7 @@ _Static_assert(offsetof(Dsp0VideocodecLibraryCommand, workAddress) == 56,
 
 /*
  * One of a decoder's two access-unit slots. The host copies the stream into the
- * slot's buffer; timestamps go in as the coprocessor's {lower, upper} words.
+ * slot's buffer; timestamps go in as 64-bit values.
  */
 typedef struct Dsp0VideocodecAccessUnit {
 	uintptr_t bufferAddress;
@@ -273,10 +273,8 @@ typedef struct Dsp0VideocodecAccessUnit {
 	SceSize esSize;
 	unsigned char valid;
 	unsigned char coprocessorFlags[7];
-	unsigned int dtsLower;
-	unsigned int dtsUpper;
-	unsigned int ptsLower;
-	unsigned int ptsUpper;
+	SceUInt64 dts;
+	SceUInt64 pts;
 	int numOfOutput;
 	unsigned int coprocessorStatus;
 } Dsp0VideocodecAccessUnit;
@@ -457,6 +455,15 @@ typedef struct Dsp0VideocodecDecoderParam {
 	SceSize frameBufSize;
 	const void *pInfo;	/* VideocodecDsp0Decoder or Dsp0VideocodecM4vDecoderInfo */
 } Dsp0VideocodecDecoderParam;
+
+/*
+ * Where a DSP0 decode puts its pictures: up to one element, each a pointer to
+ * the caller's picture pointer.
+ */
+typedef struct Dsp0VideocodecArrayPicture {
+	unsigned int numOfElm;
+	Dsp0VideocodecPicture ***pPicture;
+} Dsp0VideocodecArrayPicture;
 
 typedef struct Dsp0VideocodecAuBuffer {
 	uintptr_t address;

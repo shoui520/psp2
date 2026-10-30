@@ -1621,3 +1621,115 @@ unsigned int dsp0VideocodecAvcDecodeAvailableSize(unsigned int handle)
 	sceKernelUnlockFastMutex((SceKernelFastMutex *)decoder->pMutex);
 	return valid;
 }
+
+int dsp0VideocodecAvcDecodeCore(Dsp0VideocodecGlobal *global, unsigned int handle,
+				const SceAvcdecAu *pAu,
+				const Dsp0VideocodecArrayPicture *pArrayPicture,
+				unsigned int *pNumOfOutput, unsigned int *pNumOfDecoded)
+{
+	Dsp0VideocodecDecoder *decoder;
+	Dsp0VideocodecDecoderCommand *command;
+	unsigned int index, auIndex;
+	int ret;
+
+	if (global->initialized != 1)
+		return (int)0x8062020c;
+	if (pNumOfOutput == NULL || pArrayPicture == NULL ||
+	    pArrayPicture->pPicture == NULL)
+		return (int)0x80620209;
+	if (pArrayPicture->numOfElm > 1)
+		return (int)0x80620201;
+	index = handle - 257;
+	if (index >= global->library->numOfDecoders)
+		return (int)0x8062020c;
+	decoder = &global->decoders[index];
+	if (decoder->state != 256)
+		return (int)0x8062020c;
+	command = decoder->pCommand;
+	auIndex = command->auIndex;
+	if (pAu == NULL || pAu->es.pBuf == NULL || command->au[auIndex].valid == 0) {
+		command->au[auIndex].esSize = 0;
+		command->au[auIndex].valid = 0;
+	} else {
+		if (decoder->au[auIndex].size < pAu->es.size)
+			return (int)0x8062020f;
+		ret = SceCodecEngineWrapperForDriver_FAF590A6(
+			(void *)decoder->au[auIndex].address, pAu->es.pBuf,
+			pAu->es.size);
+		if (ret < 0)
+			return ret;
+		command->au[auIndex].valid = decoder->auStatus;
+		command->au[auIndex].esSize = pAu->es.size;
+		command->au[auIndex].pts = (SceUInt64)pAu->pts.upper << 32 |
+					   pAu->pts.lower;
+		command->au[auIndex].dts = (SceUInt64)pAu->dts.upper << 32 |
+					   pAu->dts.lower;
+	}
+	command->au[auIndex].numOfOutput = 0;
+	command->au[auIndex].esAddress = command->au[auIndex].bufferAddress;
+	ret = dsp0VideocodecDecodePicture(command);
+	if (ret >= 0) {
+		decoder->status = 1;
+		if (pAu != NULL && pAu->es.pBuf != NULL && command->au[auIndex].valid == 0)
+			ret = (int)0x80620210;
+		*pNumOfOutput = command->au[auIndex].numOfOutput > 0 ? command->numOfPicture : 0;
+		if (pNumOfDecoded != NULL)
+			*pNumOfDecoded = command->au[auIndex].numOfOutput;
+		if ((unsigned int)command->au[auIndex].numOfOutput <= command->numOfPicture)
+			command->au[command->auIndex].valid = decoder->auStatus;
+		else
+			command->au[command->auIndex].valid = 0;
+		*pArrayPicture->pPicture[0] = command->pPicture;
+	}
+	return ret;
+}
+
+int dsp0VideocodecAvcDecode(unsigned int handle, const SceAvcdecAu *pAu,
+			    const Dsp0VideocodecArrayPicture *pArrayPicture,
+			    unsigned int *pNumOfOutput)
+{
+	Dsp0VideocodecGlobal *global;
+	Dsp0VideocodecDecoder *decoder;
+	Dsp0VideocodecArrayPicture retryPicture;
+	Dsp0VideocodecPicture *picture;
+	Dsp0VideocodecPicture **pPicture;
+	unsigned int numOfDecoded, numOfOutput;
+	int ret;
+
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+#if FW_DEBUG
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	decoder = &global->decoders[handle - 257];
+	numOfDecoded = 0;
+	if (handle - 257 >= global->library->numOfDecoders ||
+	    decoder->state != 256)
+		return (int)0x8062020c;
+	ret = lockFastMutex((SceKernelFastMutex *)decoder->pMutex);
+	if (ret < 0)
+		return ret;
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (ret >= 0) {
+		ret = dsp0VideocodecAvcDecodeCore(global, handle, pAu,
+				pArrayPicture, pNumOfOutput, &numOfDecoded);
+		if (ret == (int)0x80620210 && pNumOfOutput != NULL) {
+			if (*pNumOfOutput >= numOfDecoded && pAu != NULL &&
+			    pAu->es.pBuf != NULL) {
+				retryPicture.numOfElm = 1;
+				pPicture = &picture;
+				retryPicture.pPicture = &pPicture;
+				ret = dsp0VideocodecAvcDecodeCore(global, handle,
+						pAu, &retryPicture, &numOfOutput,
+						&numOfDecoded);
+				if (ret >= 0 && numOfOutput != 0)
+					ret = (int)0x80620204;
+			} else {
+				ret = (int)0x80620210;
+			}
+		}
+		_unlockProcessSuspendCore();
+	}
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)decoder->pMutex);
+	return ret;
+}
