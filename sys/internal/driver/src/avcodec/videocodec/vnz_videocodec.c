@@ -68,6 +68,145 @@ static const int videocodecM4vdecErrors[] = {
 	VIDEOCODEC_M4VDEC_ERROR_ALREADY_USED,
 };
 
+/* the VUI an encoder writes for AvcencInitParam.vuiIndex: NTSC, SMPTE 170M or BT.709 */
+static const AvcencVui avcencVuis[] = {
+	{ 0, 0, 0, 0, 0, 0, 0, 0 },
+	{ 1, 0, 2, 0, 1, 6, 6, 6 },
+	{ 1, 0, 2, 0, 1, 1, 1, 1 },
+	{ 1, 0, 2, 1, 1, 6, 6, 6 },
+	{ 1, 0, 2, 1, 1, 1, 1, 1 },
+};
+
+/* codingOption[0] for each coding mode, 1..9 */
+static const unsigned char avcencCodingOptions[] = {
+	0, 0x10, 0, 0x10, 0x10, 0x10, 0x10, 0, 0x10,
+};
+
+/* the picture sizes sceAvcencQueryEncoderMemSizeBasic offers */
+typedef struct AvcencBasicGeometry {
+	unsigned char preset;
+	unsigned char padding;
+	unsigned short pitch;
+	unsigned short alignedHorizontal;
+	unsigned short alignedVertical;
+	unsigned short horizontal;
+	unsigned short vertical;
+} AvcencBasicGeometry;
+
+static const AvcencBasicGeometry avcencBasicGeometries[] = {
+	{ 1, 0, 320, 320, 192, 320, 180 },
+	{ 4, 0, 640, 640, 368, 640, 360 },
+	{ 4, 0, 640, 640, 480, 640, 480 },
+};
+
+/* an H.264 level's limits: macroblocks per second, frame size in macroblocks, bit rate */
+typedef struct AvcencLevelLimit {
+	unsigned int maxMbps;
+	unsigned int maxFs;
+	unsigned int maxBr;
+} AvcencLevelLimit;
+
+static const AvcencLevelLimit avcencLevelLimits[9];
+
+/* levels 20..41 by level - 20 (level_idc), NULL where no level is */
+static const AvcencLevelLimit *const avcencLevelLimitTable[] = {
+	&avcencLevelLimits[1], &avcencLevelLimits[2], &avcencLevelLimits[3],
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	&avcencLevelLimits[4], &avcencLevelLimits[5], &avcencLevelLimits[6],
+	NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	&avcencLevelLimits[7], &avcencLevelLimits[8],
+};
+
+/* the GOP length for each basic frame rate */
+static const unsigned int avcencBasicGopLengths[] = { 28, 58 };
+
+/* levels 1b..1.3, 2, 2.1, 2.2, 3, 3.1, 3.2, 4, 4.1 */
+static const AvcencLevelLimit avcencLevelLimits[] = {
+	{ 11880, 396, 768000 },
+	{ 11880, 396, 2000000 },
+	{ 19800, 792, 4000000 },
+	{ 20250, 1620, 4000000 },
+	{ 40500, 1620, 10000000 },
+	{ 108000, 3600, 14000000 },
+	{ 216000, 5120, 20000000 },
+	{ 245760, 8192, 20000000 },
+	{ 245760, 8192, 50000000 },
+};
+
+/* a preset's level and frame rate (frameRate * 1000 / frameRateScale) */
+typedef struct AvcencPresetRate {
+	unsigned char levelLimit;
+	unsigned char frameRate;
+	unsigned short frameRateScale;
+} AvcencPresetRate;
+
+static const AvcencPresetRate avcencPresetRates[] = {
+	{ 0, 30, 1001 },
+	{ 2, 30, 1001 },
+	{ 4, 15, 1001 },
+	{ 4, 30, 1001 },
+};
+
+/* sceAvcencQueryEncoderMemSizeBasic's bit rates, by bitRateIndex */
+static const unsigned int avcencBasicBitRates[] = {
+	0, 320000, 416000, 640000, 1000000, 1500000,
+};
+
+/* presets 1..4: what a zero field of an AvcencInitParam takes */
+static const AvcencInitParamInternal avcencPresets[] = {
+	{
+		.profile = 'B', .level = 13, .userOption = { 1, 2 },
+		.pitch = 320, .alignedHorizontal = 320, .alignedVertical = 240,
+		.horizontal = 320, .vertical = 240, .numOfStreams = 1,
+		.rateControl = { 768000, 921600 }, .codingOption = { 0x10 }, .sliceOption = 1,
+		.parameter = { { 768000, 768000 }, 28800, 58, 4004, 240000 },
+	},
+	{
+		.profile = 'B', .level = 21, .userOption = { 1, 2 },
+		.pitch = 480, .alignedHorizontal = 480, .alignedVertical = 272,
+		.horizontal = 480, .vertical = 272, .numOfStreams = 1,
+		.rateControl = { 4000000, 4800000 }, .codingOption = { 0x10 }, .sliceOption = 1,
+		.parameter = { { 1000000, 1200000 }, 48960, 58, 4004, 240000 },
+	},
+	{
+		.profile = 'B', .level = 30, .userOption = { 1, 2 },
+		.pitch = 640, .alignedHorizontal = 640, .alignedVertical = 480,
+		.horizontal = 640, .vertical = 480, .numOfStreams = 1,
+		.rateControl = { 10000000, 12000000 }, .codingOption = { 0x10 }, .sliceOption = 1,
+		.parameter = { { 2000000, 2400000 }, 115200, 28, 8008, 240000 },
+	},
+	{
+		.profile = 'B', .level = 30, .userOption = { 1, 2 },
+		.pitch = 640, .alignedHorizontal = 640, .alignedVertical = 480,
+		.horizontal = 640, .vertical = 480, .numOfStreams = 1,
+		.rateControl = { 10000000, 12000000 }, .codingOption = { 0x10 }, .sliceOption = 1,
+		.parameter = { { 2000000, 2400000 }, 115200, 58, 4004, 240000 },
+	},
+};
+
+/* sceAvcencQueryEncoderMemSizeBasic's numUnitsInTick for each frame rate (timeScale 240000) */
+static const unsigned int avcencBasicNumUnitsInTick[] = { 8008, 4004 };
+
+static const int videocodecAvcencErrors[] = {
+	VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM,
+	VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM,
+	VIDEOCODEC_AVCENC_ERROR_OUT_OF_MEMORY,
+	VIDEOCODEC_AVCENC_ERROR_INVALID_STATE,
+	VIDEOCODEC_AVCENC_ERROR_UNSUPPORT_IMAGE_SIZE,
+	VIDEOCODEC_AVCENC_ERROR_INVALID_STATE,
+	VIDEOCODEC_AVCENC_ERROR_INVALID_STATE,
+	VIDEOCODEC_AVCENC_ERROR_ALREADY_USED,
+	VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER,
+	VIDEOCODEC_AVCENC_ERROR_INVALID_STATE,
+	VIDEOCODEC_AVCENC_ERROR_INITIALIZE,
+	VIDEOCODEC_AVCENC_ERROR_NOT_INITIALIZE,
+	VIDEOCODEC_AVCENC_ERROR_INVALID_STATE,
+	VIDEOCODEC_AVCENC_ERROR_ALREADY_USED,
+	VIDEOCODEC_AVCENC_ERROR_UNSUPPORT_IMAGE_SIZE,
+	VIDEOCODEC_AVCENC_ERROR_ES_BUFFER_FULL,
+	VIDEOCODEC_AVCENC_ERROR_ALREADY_USED,
+};
+
 static inline __attribute__((always_inline)) int videocodecMapCodecEngineError(int result)
 {
 	unsigned int index = (unsigned int)result - 0x80620101;
@@ -1705,6 +1844,413 @@ int SceAvcodecForDriver_A6CAE217(M4vdecPicture *pPictureOut, const M4vdecPicture
 			sceKernelUnlockFastMutex(global->pAllMutex);
 		}
 	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+/* Checks an AVC encoder's init parameters, the preset filling their zero fields. */
+static __attribute__((noinline)) int avcencCheckInitParam(const AvcencInitParam *pParam)
+{
+	AvcencInitParam param = *pParam;
+	const AvcencInitParamInternal *preset;
+	const AvcencPresetRate *rate;
+	const AvcencLevelLimit *limit;
+	VideocodecGlobal *global;
+	unsigned int mode, presetIndex, config, mbs;
+	int ret;
+
+	if (param.preset > 4)
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+	if (param.mode == 0)
+		param.mode = 2;
+	mode = param.mode & AVCENC_MODE_MASK;
+	if (param.preset == 0)
+		param.preset = 4;
+	presetIndex = param.preset - 1;
+	preset = &avcencPresets[presetIndex];
+	if (param.pitch == 0)
+		param.pitch = preset->pitch;
+	if (param.alignedHorizontal == 0)
+		param.alignedHorizontal = preset->alignedHorizontal;
+	if (param.alignedVertical == 0)
+		param.alignedVertical = preset->alignedVertical;
+	if (param.horizontal == 0)
+		param.horizontal = preset->horizontal;
+	if (param.vertical == 0)
+		param.vertical = preset->vertical;
+	if (param.numOfStreams == 0)
+		param.numOfStreams = preset->numOfStreams;
+	if (param.bitRate[0] == 0)
+		param.bitRate[0] = preset->parameter.bitRate[0];
+	if (param.bitRate[1] == 0)
+		param.bitRate[1] = preset->parameter.bitRate[1];
+	if (param.numUnitsInTick == 0)
+		param.numUnitsInTick = preset->parameter.numUnitsInTick;
+	if (param.timeScale == 0)
+		param.timeScale = preset->parameter.timeScale;
+	if (param.sliceOption == 0)
+		param.sliceOption = preset->sliceOption;
+	if (param.sliceParam[0] == 0)
+		param.sliceParam[0] = preset->sliceParam[0];
+	if (param.sliceParam[1] == 0)
+		param.sliceParam[1] = preset->sliceParam[1];
+
+	if (param.pitch > 736 || param.alignedHorizontal > 720 || param.alignedVertical > 480 ||
+	    param.pitch < param.alignedHorizontal ||
+	    param.alignedHorizontal < param.horizontal ||
+	    param.alignedVertical < param.vertical ||
+	    param.horizontal < 64 || param.horizontal > 720 ||
+	    param.vertical < 64 || param.vertical > 480 ||
+	    param.numOfStreams > 1 ||
+	    mode < 1 || mode > 9 || (mode >= 4 && mode <= 7) ||
+	    (param.mode & AVCENC_MODE_RESERVED) != 0 ||
+	    ((param.mode & AVCENC_MODE_VUI) && param.vuiIndex > 2) ||
+	    (param.sliceOption != 255 &&
+	     (param.sliceParam[0] != 0 || param.sliceParam[1] != 0)))
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+
+	global = _GetVideocodecGlobal(0);
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		return ret;
+	config = global->availablePreset;
+	ret = sceKernelUnlockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		return ret;
+	if (mode == 3 && config != 3)
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+
+	rate = &avcencPresetRates[presetIndex];
+	limit = &avcencLevelLimits[rate->levelLimit];
+	mbs = ((param.horizontal + 15) >> 4) * ((param.vertical + 15) >> 4);
+	if (mbs * 1000 * rate->frameRate / rate->frameRateScale > limit->maxMbps ||
+	    mbs > limit->maxFs || limit->maxBr < param.bitRate[0] ||
+	    limit->maxBr < param.bitRate[1])
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+	return ret;
+}
+
+/* Fills pOut from the preset pParam names, with pParam's own fields over it. */
+static __attribute__((noinline)) int avcencInitParamToInternal(AvcencInitParamInternal *pOut,
+	const AvcencInitParam *pParam)
+{
+	AvcencInitParam param = *pParam;
+	const AvcencInitParamInternal *preset;
+	unsigned int mode;
+
+	if (param.preset > 4)
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+	if (param.mode == 0)
+		param.mode = 2;
+	mode = param.mode & AVCENC_MODE_MASK;
+	if (param.preset == 0)
+		param.preset = 4;
+	preset = &avcencPresets[param.preset - 1];
+	if (param.pitch == 0)
+		param.pitch = preset->pitch;
+	if (param.alignedHorizontal == 0)
+		param.alignedHorizontal = preset->alignedHorizontal;
+	if (param.alignedVertical == 0)
+		param.alignedVertical = preset->alignedVertical;
+	if (param.horizontal == 0)
+		param.horizontal = preset->horizontal;
+	if (param.vertical == 0)
+		param.vertical = preset->vertical;
+	if (param.numOfStreams == 0)
+		param.numOfStreams = preset->numOfStreams;
+	if (param.bitRate[0] == 0)
+		param.bitRate[0] = preset->parameter.bitRate[0];
+	if (param.bitRate[1] == 0)
+		param.bitRate[1] = preset->parameter.bitRate[1];
+	if (param.numUnitsInTick == 0)
+		param.numUnitsInTick = preset->parameter.numUnitsInTick;
+	if (param.timeScale == 0)
+		param.timeScale = preset->parameter.timeScale;
+	if (param.sliceOption == 0)
+		param.sliceOption = preset->sliceOption;
+	if (param.sliceParam[0] == 0)
+		param.sliceParam[0] = preset->sliceParam[0];
+	if (param.sliceParam[1] == 0)
+		param.sliceParam[1] = preset->sliceParam[1];
+
+	memset(pOut, 0, sizeof(*pOut));
+	memcpy(pOut, preset, sizeof(*pOut));
+	pOut->pitch = param.pitch;
+	pOut->alignedHorizontal = param.alignedHorizontal;
+	pOut->alignedVertical = param.alignedVertical;
+	pOut->codingOption[0] = avcencCodingOptions[mode - 1];
+	pOut->horizontal = param.horizontal;
+	pOut->vertical = param.vertical;
+	pOut->numOfStreams = param.numOfStreams;
+	if (mode == 3) {
+		pOut->codingOption[1] = 1;
+		pOut->codingOption[2] = 1;
+		pOut->parameter.gopLength = param.timeScale / param.numUnitsInTick;
+	} else if (mode == 8 || mode == 9) {
+		pOut->userOption[1] = 0;
+	}
+	pOut->sliceOption = param.sliceOption;
+	pOut->sliceParam[0] = param.sliceParam[0];
+	pOut->parameter.bitRate[0] = param.bitRate[0];
+	pOut->sliceParam[1] = param.sliceParam[1];
+	pOut->parameter.bitRate[1] = param.bitRate[1];
+	pOut->parameter.numUnitsInTick = param.numUnitsInTick;
+	pOut->parameter.timeScale = param.timeScale;
+	if ((param.mode & AVCENC_MODE_VUI) && param.vuiIndex <= 4)
+		pOut->vui = avcencVuis[param.vuiIndex];
+	return 0;
+}
+
+static inline __attribute__((always_inline)) int videocodecMapAvcencError(int result)
+{
+	unsigned int index = (unsigned int)result - 0x80620201;
+
+	if (index <= 16)
+		return videocodecAvcencErrors[index];
+	if (result == (int)0x80620541)
+		return VIDEOCODEC_AVCENC_ERROR_DSP0_PARAM;
+	if (result == (int)0x80620542)
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_GOP_LENGTH;
+	if (result == (int)0x80620543)
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_FRAME_RATE;
+	if (result == (int)0x80620580)
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_STREAM;
+	if (result == (int)0x806205C0)
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_STATE;
+	return result;
+}
+
+/* The memory an AVC encoder for pParam needs, checked against the level's limits. */
+static inline __attribute__((always_inline)) int
+avcencQueryEncoderMemSizeInline(const AvcencInitParamInternal *pParam,
+	AvcencEncoderMemSize *pMemSize)
+{
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	Dsp0VideocodecEncoderInitParam param;
+	const AvcencLevelLimit *limit;
+	unsigned int horizontal, vertical, numOfStreams, level;
+	unsigned int alignedHorizontal, alignedVertical, numUnitsInTick, timeScale, mbs;
+	SceSize streamSize, bufferSize, workSize;
+	int ret;
+
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		return ret;
+	horizontal = pParam->horizontal;
+	if (horizontal > global->dsp0EncoderInfo.horizontal)
+		goto invalid;
+	vertical = pParam->vertical;
+	if (vertical > global->dsp0EncoderInfo.vertical)
+		goto invalid;
+	numOfStreams = pParam->numOfStreams;
+	if (numOfStreams > global->dsp0EncoderInfo.numOfRefFrames)
+		goto invalid;
+	level = pParam->level;
+	alignedHorizontal = pParam->alignedHorizontal;
+	alignedVertical = pParam->alignedVertical;
+	numUnitsInTick = pParam->parameter.numUnitsInTick;
+	timeScale = pParam->parameter.timeScale;
+	if (level <= 13) {
+		limit = &avcencLevelLimits[0];
+	} else {
+		if (level > 41)
+			goto invalid;
+		if ((unsigned char)(level - 20) > 21)
+			goto invalid;
+		limit = avcencLevelLimitTable[(unsigned char)(level - 20)];
+		if (limit == NULL)
+			goto invalid;
+	}
+	if (numUnitsInTick > 120000 || timeScale < 2 * numUnitsInTick ||
+	    timeScale > 60 * numUnitsInTick) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_FRAME_RATE;
+		goto unlock;
+	}
+	mbs = ((alignedHorizontal + 15) >> 4) * ((alignedVertical + 15) >> 4);
+	if (limit->maxMbps < (unsigned int)((unsigned long long)mbs * timeScale / numUnitsInTick / 2) ||
+	    mbs > limit->maxFs ||
+	    pParam->parameter.bitRate[1] > limit->maxBr ||
+	    limit->maxBr < pParam->parameter.bitRate[0] ||
+	    pParam->parameter.bitRate[1] < 32000 || pParam->parameter.bitRate[0] < 32000 ||
+	    pParam->parameter.cpbSize > limit->maxFs * 768 / 4)
+		goto invalid;
+	if (pParam->parameter.gopLength > 300 ||
+	    2 * numUnitsInTick * pParam->parameter.gopLength > 10 * timeScale) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_GOP_LENGTH;
+		goto unlock;
+	}
+	if (level - 10 > 31)
+		goto invalid;
+
+	memset(&param, 0, sizeof(param));
+	param.profile = pParam->profile;
+	param.level = level;
+	param.userOption[0] = pParam->userOption[0];
+	param.userOption[1] = pParam->userOption[1];
+	param.pitch = pParam->pitch;
+	param.alignedHorizontal = alignedHorizontal;
+	param.alignedVertical = alignedVertical;
+	param.horizontal = horizontal;
+	param.vertical = vertical;
+	param.numOfStreams = numOfStreams != 0 ? numOfStreams : 1;
+	param.rateControl[0] = numUnitsInTick;
+	param.rateControl[1] = timeScale;
+	param.rateControl[2] = pParam->rateControl[0];
+	param.rateControl[3] = pParam->rateControl[1];
+	param.codingOption[0] = pParam->codingOption[0];
+	param.codingOption[1] = pParam->codingOption[1];
+	param.codingOption[2] = pParam->codingOption[2];
+	param.sliceOption = pParam->sliceOption;
+	param.sliceParam[0] = pParam->sliceParam[0];
+	param.sliceParam[1] = pParam->sliceParam[1];
+	param.vuiPresent = pParam->vui.videoSignalTypePresentFlag;
+	param.vui[0] = pParam->vui.videoFormat;
+	param.vui[1] = pParam->vui.videoFullRangeFlag;
+	param.vui[2] = pParam->vui.colourDescriptionPresentFlag;
+	param.vui[3] = pParam->vui.colourPrimaries;
+	param.vui[4] = pParam->vui.transferCharacteristics;
+	param.vui[5] = pParam->vui.matrixCoefficients;
+	ret = dsp0VideocodecQueryEncoderMemSize(&param, &streamSize, &bufferSize, &workSize);
+	ret = videocodecMapAvcencError(ret);
+	if (ret >= 0) {
+		pMemSize->streamMemorySize = (streamSize + 0x3FFFF) >> 18 << 18;
+		pMemSize->bufferMemorySize = (bufferSize + 0x3FFFF) >> 18 << 18;
+		pMemSize->workMemorySize = workSize;
+	}
+	goto unlock;
+invalid:
+	ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+unlock:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	return ret;
+}
+
+static __attribute__((noinline)) int avcencQueryEncoderMemSize(const AvcencInitParamInternal *pParam,
+	AvcencEncoderMemSize *pMemSize)
+{
+	return avcencQueryEncoderMemSizeInline(pParam, pMemSize);
+}
+
+int SceAvcodecForDriver_7DC13C29(unsigned int codecType, unsigned int preset)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	int ret, unlocked;
+
+	if (codecType != VIDEOCODEC_CODEC_TYPE_AVCENC) {
+		sceSyscallLeave(syscall);
+		return VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+	}
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret >= 0) {
+		global->availablePreset = preset;
+		unlocked = sceKernelUnlockFastMutex(global->pAllMutex);
+		if (ret == 0)
+			ret = unlocked;
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_7385FB51(unsigned int codecType, const AvcencInitParamBasic *pParam,
+	AvcencEncoderMemSize *pMemSize)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	const AvcencBasicGeometry *geometry;
+	AvcencInitParamInternal internal;
+	AvcencInitParam param;
+	unsigned int flags, frameRate, bitRateIndex, gopLength, bitRate[2];
+	int ret;
+
+	if (codecType != VIDEOCODEC_CODEC_TYPE_AVCENC)
+		goto invalid;
+	if (pParam == NULL || pMemSize == NULL) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+		goto out;
+	}
+	if (pParam->size != sizeof(*pParam)) {
+		ret = VIDEOCODEC_ENCODER_ERROR_INVALID_ARGUMENT_SIZE;
+		goto out;
+	}
+	flags = pParam->flags;
+	frameRate = pParam->frameRate - 1;
+	bitRateIndex = pParam->bitRateIndex;
+	if (frameRate > 1 || (flags & AVCENC_BASIC_GEOMETRY) - 1 > 2 || bitRateIndex - 1 > 4)
+		goto invalid;
+	geometry = &avcencBasicGeometries[(flags & AVCENC_BASIC_GEOMETRY) - 1];
+	if (flags & AVCENC_BASIC_BIT_RATE) {
+		bitRate[0] = pParam->bitRate[0];
+		bitRate[1] = pParam->bitRate[1];
+	} else {
+		bitRate[0] = avcencBasicBitRates[bitRateIndex];
+		bitRate[1] = bitRate[0] * 12 / 10;
+	}
+	if (flags & AVCENC_BASIC_GOP_LENGTH)
+		gopLength = pParam->gopLength;
+	else
+		gopLength = avcencBasicGopLengths[frameRate];
+	param = (AvcencInitParam){
+		.pitch = geometry->pitch,
+		.alignedHorizontal = geometry->alignedHorizontal,
+		.alignedVertical = geometry->alignedVertical,
+		.horizontal = geometry->horizontal,
+		.vertical = geometry->vertical,
+		.bitRate = { bitRate[0], bitRate[1] },
+		.mode = 2,
+		.preset = geometry->preset,
+		.numUnitsInTick = avcencBasicNumUnitsInTick[frameRate],
+		.timeScale = 240000,
+	};
+	ret = avcencCheckInitParam(&param);
+	if (ret >= 0) {
+		avcencInitParamToInternal(&internal, &param);
+		if (gopLength != 0)
+			internal.parameter.gopLength = gopLength;
+		internal.parameter.cpbSize = 3 * param.alignedHorizontal * param.alignedVertical / 8;
+		ret = avcencQueryEncoderMemSize(&internal, pMemSize);
+	}
+	goto out;
+invalid:
+	ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+out:
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_5C3434FB(unsigned int codecType, const AvcencInitParam *pParam,
+	AvcencEncoderMemSize *pMemSize)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	AvcencInitParamInternal internal;
+	int ret;
+
+	if (codecType != VIDEOCODEC_CODEC_TYPE_AVCENC) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+	} else if (pParam == NULL || pMemSize == NULL) {
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+	} else {
+		ret = avcencCheckInitParam(pParam);
+		if (ret >= 0) {
+			avcencInitParamToInternal(&internal, pParam);
+			ret = avcencQueryEncoderMemSize(&internal, pMemSize);
+		}
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_BF3835E2(unsigned int codecType, const AvcencInitParamInternal *pParam,
+	AvcencEncoderMemSize *pMemSize)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int ret;
+
+	if (codecType != VIDEOCODEC_CODEC_TYPE_AVCENC)
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM;
+	else if (pParam == NULL || pMemSize == NULL)
+		ret = VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER;
+	else
+		ret = avcencQueryEncoderMemSizeInline(pParam, pMemSize);
 	sceSyscallLeave(syscall);
 	return ret;
 }

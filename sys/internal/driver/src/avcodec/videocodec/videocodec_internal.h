@@ -208,6 +208,21 @@ _Static_assert(sizeof(VideocodecPicture) == 124, "video codec picture ABI");
 
 #define VIDEOCODEC_ENCODER_ERROR_INVALID_ARGUMENT_SIZE	(-2141057010)	/* 0x8062100E */
 
+/* the AVC encoder's errors: the AVC decoder's with 0x1000 set */
+#define VIDEOCODEC_AVCENC_ERROR_INVALID_PARAM		(-2141057022)	/* 0x80621002 */
+#define VIDEOCODEC_AVCENC_ERROR_OUT_OF_MEMORY		(-2141057021)	/* 0x80621003 */
+#define VIDEOCODEC_AVCENC_ERROR_INVALID_STATE		(-2141057020)	/* 0x80621004 */
+#define VIDEOCODEC_AVCENC_ERROR_UNSUPPORT_IMAGE_SIZE	(-2141057019)	/* 0x80621005 */
+#define VIDEOCODEC_AVCENC_ERROR_ALREADY_USED		(-2141057016)	/* 0x80621008 */
+#define VIDEOCODEC_AVCENC_ERROR_INVALID_POINTER	(-2141057015)	/* 0x80621009 */
+#define VIDEOCODEC_AVCENC_ERROR_ES_BUFFER_FULL		(-2141057014)	/* 0x8062100A */
+#define VIDEOCODEC_AVCENC_ERROR_INITIALIZE		(-2141057013)	/* 0x8062100B */
+#define VIDEOCODEC_AVCENC_ERROR_NOT_INITIALIZE		(-2141057012)	/* 0x8062100C */
+#define VIDEOCODEC_AVCENC_ERROR_INVALID_STREAM		(-2141057011)	/* 0x8062100D */
+#define VIDEOCODEC_AVCENC_ERROR_DSP0_PARAM		(-2141056959)	/* 0x80621041 */
+#define VIDEOCODEC_AVCENC_ERROR_INVALID_GOP_LENGTH	(-2141056958)	/* 0x80621042 */
+#define VIDEOCODEC_AVCENC_ERROR_INVALID_FRAME_RATE	(-2141056957)	/* 0x80621043 */
+
 /* the frame the encoder converts its input into: YUV420, tiled */
 typedef struct VideocodecEncoderFrame {
 	void *pPicture;
@@ -351,7 +366,7 @@ typedef struct VideocodecGlobal {
 	VideocodecDsp0Decoder dsp0Decoders[4];
 	VideocodecEncoder encoders[1];
 	VideocodecMemory dsp0Memory;
-	unsigned int dsp0MemoryFlags;
+	unsigned int availablePreset;	/* sceAvcencSetAvailablePreset */
 	unsigned int dsp0Config;
 } VideocodecGlobal;
 
@@ -623,6 +638,110 @@ typedef struct AvcencEncoderParameter {
 _Static_assert(sizeof(AvcencEncoderParameter) == 24,
 	       "AVC encoder parameter ABI");
 
+/* the AVC encoder's codec type */
+#define VIDEOCODEC_CODEC_TYPE_AVCENC	4098
+
+/* what a caller asks an AVC encoder for (52 bytes); zero fields take the preset's */
+typedef struct AvcencInitParam {
+	unsigned int pitch;
+	unsigned int alignedHorizontal;
+	unsigned int alignedVertical;
+	unsigned int horizontal;
+	unsigned int vertical;
+	unsigned int numOfStreams;
+	unsigned int bitRate[2];
+	unsigned char mode;		/* coding mode in the low nibble, AVCENC_MODE_VUI */
+	unsigned char preset;		/* 1..4; 0: the last */
+	unsigned char padding0[2];
+	unsigned int numUnitsInTick;
+	unsigned int timeScale;
+	unsigned char sliceOption;
+	unsigned char vuiIndex;
+	unsigned char padding1[2];
+	unsigned short sliceParam[2];
+} AvcencInitParam;
+
+_Static_assert(sizeof(AvcencInitParam) == 52, "AVC encoder init param ABI");
+
+#define AVCENC_MODE_MASK	0x0F
+#define AVCENC_MODE_RESERVED	0x70
+#define AVCENC_MODE_VUI		0x80	/* vuiIndex selects the VUI */
+
+/* the VUI video signal type an encoder writes, in the order of H.264's syntax */
+typedef struct AvcencVui {
+	unsigned char videoSignalTypePresentFlag;
+	unsigned char padding;
+	unsigned char videoFormat;		/* 2: NTSC */
+	unsigned char videoFullRangeFlag;
+	unsigned char colourDescriptionPresentFlag;
+	unsigned char colourPrimaries;		/* 6: SMPTE 170M, 1: BT.709 */
+	unsigned char transferCharacteristics;
+	unsigned char matrixCoefficients;
+} AvcencVui;
+
+_Static_assert(sizeof(AvcencVui) == 8, "AVC encoder VUI ABI");
+
+/* an AvcencInitParam with the preset filled in: what the memory query and create take */
+typedef struct AvcencInitParamInternal {
+	unsigned char profile;
+	unsigned char level;
+	unsigned char userOption[2];
+	unsigned int pitch;
+	unsigned int alignedHorizontal;
+	unsigned int alignedVertical;
+	unsigned int horizontal;
+	unsigned int vertical;
+	unsigned int numOfStreams;
+	unsigned int rateControl[2];
+	unsigned char codingOption[3];
+	unsigned char padding0;
+	unsigned char sliceOption;
+	unsigned char padding1[3];
+	unsigned short sliceParam[2];
+	AvcencEncoderParameter parameter;
+	AvcencVui vui;
+} AvcencInitParamInternal;
+
+_Static_assert(sizeof(AvcencInitParamInternal) == 80, "AVC encoder internal init param ABI");
+_Static_assert(offsetof(AvcencInitParamInternal, parameter) == 48,
+	       "AVC encoder internal parameter ABI");
+
+/* sceAvcencQueryEncoderMemSizeBasic's request (32 bytes) */
+typedef struct AvcencInitParamBasic {
+	SceSize size;
+	unsigned int flags;		/* AVCENC_BASIC_*, the geometry index in the low bits */
+	unsigned int frameRate;		/* 1..2 */
+	unsigned int bitRateIndex;	/* 1..5 */
+	unsigned int bitRate[2];	/* with AVCENC_BASIC_BIT_RATE */
+	unsigned int gopLength;		/* with AVCENC_BASIC_GOP_LENGTH */
+	unsigned int reserved;
+} AvcencInitParamBasic;
+
+_Static_assert(sizeof(AvcencInitParamBasic) == 32, "AVC encoder basic init param ABI");
+
+#define AVCENC_BASIC_BIT_RATE		0x80000000
+#define AVCENC_BASIC_GOP_LENGTH		0x40000000
+#define AVCENC_BASIC_GEOMETRY		0x3FFFFFFF
+
+/* the memory an AVC encoder needs */
+typedef struct AvcencEncoderMemSize {
+	SceSize streamMemorySize;	/* in 256 KiB units */
+	SceSize bufferMemorySize;	/* in 256 KiB units */
+	SceSize workMemorySize;
+} AvcencEncoderMemSize;
+
+_Static_assert(sizeof(AvcencEncoderMemSize) == 12, "AVC encoder memory size ABI");
+
+/* vitasdk: ksceAvcencQueryEncoderMemSizeBasic */
+int SceAvcodecForDriver_7385FB51(unsigned int codecType, const AvcencInitParamBasic *pParam,
+	AvcencEncoderMemSize *pMemSize);
+/* vitasdk: ksceAvcencQueryEncoderMemSize */
+int SceAvcodecForDriver_5C3434FB(unsigned int codecType, const AvcencInitParam *pParam,
+	AvcencEncoderMemSize *pMemSize);
+/* vitasdk: ksceAvcencQueryEncoderMemSizeInternal */
+int SceAvcodecForDriver_BF3835E2(unsigned int codecType, const AvcencInitParamInternal *pParam,
+	AvcencEncoderMemSize *pMemSize);
+
 /* what an AVC encoder is created for (64 bytes; checked by dsp0VideocodecCheckEncoderInitParam) */
 typedef struct Dsp0VideocodecEncoderInitParam {
 	unsigned char profile;			/* 'B' or 'N' */
@@ -646,6 +765,9 @@ typedef struct Dsp0VideocodecEncoderInitParam {
 } Dsp0VideocodecEncoderInitParam;
 
 _Static_assert(sizeof(Dsp0VideocodecEncoderInitParam) == 64, "DSP0 encoder init param ABI");
+int dsp0VideocodecQueryEncoderMemSize(const Dsp0VideocodecEncoderInitParam *param,
+				      SceSize *streamSize, SceSize *bufferSize,
+				      SceSize *workSize);
 
 /* Complete host/RPC encoder command; opaque spans are coprocessor-only. */
 typedef struct Dsp0VideocodecEncoderCommand {

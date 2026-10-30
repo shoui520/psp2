@@ -693,7 +693,7 @@ int _sceVideocodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 	global->dsp0EncoderInfo.numOfRefFrames = 1;
 	global->dsp0EncoderInfo.numOfStreams = 0;
 	global->dsp0Library = 0;
-	global->dsp0MemoryFlags = 0;
+	global->availablePreset = 0;
 	global->dsp0Config = 0;
 	for (i = 0; i < 4; i++) {
 		VideocodecDsp0Decoder *decoder = &global->dsp0Decoders[i];
