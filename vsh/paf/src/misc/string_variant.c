@@ -249,6 +249,89 @@ PafStringVariant *ScePafMisc_2F0BF4FF(PafStringVariant *self,
 	return self;
 }
 
+static inline __attribute__((always_inline))
+PafStringVariant *ConstructVariantFromNarrowString(
+		PafStringVariant *self, const PafString *src, int mode)
+{
+	InitializeStringVariant(self);
+	ScePafMisc_AF142E26(self);
+	if (mode == 2) {
+		self->wide = ScePafMisc_A6ABC0B2(
+			(const uint8_t *)src->ptr, self->wide);
+	} else {
+		PafString *narrow = self->narrow;
+
+		if (narrow) {
+			PafStringCopy(narrow, src);
+		} else {
+			PafString *value = PafNew(sizeof(*value));
+
+			if (value) {
+				PafStringInitialize(value);
+				PafStringCopy(value, src);
+			}
+			self->narrow = value;
+		}
+	}
+	self->kind = 1;
+	return self;
+}
+
+PafStringVariant *ScePafMisc_069F8E86(PafStringVariant *self,
+				       const PafString *src, int mode)
+{
+	return ConstructVariantFromNarrowString(self, src, mode);
+}
+
+PafStringVariant *ScePafMisc_09BAD2FF(PafStringVariant *self,
+				       const PafString *src, int mode)
+{
+	return ConstructVariantFromNarrowString(self, src, mode);
+}
+
+static inline __attribute__((always_inline))
+PafStringVariant *ConstructVariantFromWideString(
+		PafStringVariant *self, const PafWString *src, int mode)
+{
+	uint32_t kind;
+
+	InitializeStringVariant(self);
+	ScePafMisc_AF142E26(self);
+	if (mode == 1) {
+		self->narrow = ScePafMisc_E690F751(src->ptr, self->narrow);
+		kind = 1;
+	} else {
+		PafWString *wide = self->wide;
+
+		if (wide) {
+			PafWStringCopy(wide, src);
+		} else {
+			PafWString *value = PafNew(sizeof(*value));
+
+			if (value) {
+				PafWStringInitialize(value);
+				PafWStringCopy(value, src);
+			}
+			self->wide = value;
+		}
+		kind = 2;
+	}
+	self->kind = kind;
+	return self;
+}
+
+PafStringVariant *ScePafMisc_51BA74C0(PafStringVariant *self,
+				       const PafWString *src, int mode)
+{
+	return ConstructVariantFromWideString(self, src, mode);
+}
+
+PafStringVariant *ScePafMisc_7709D1B2(PafStringVariant *self,
+				       const PafWString *src, int mode)
+{
+	return ConstructVariantFromWideString(self, src, mode);
+}
+
 PafStringVariant *ScePafMisc_DCBA2BD4(PafStringVariant *self,
 				      const uint16_t *src, int mode)
 {
