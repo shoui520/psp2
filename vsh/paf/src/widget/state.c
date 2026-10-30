@@ -1591,3 +1591,43 @@ int ScePafWidget_2DDBB8E3(uint8_t *self, uint32_t first,
 	record[3] = third;
 	return result;
 }
+
+float ScePafWidget_53456E51(uint8_t *self, int32_t index)
+{
+	union {
+		uint32_t bits;
+		float value;
+	} error;
+
+	if (index >= 0 && index <= 1)
+		return *(const float *)(self + 676 + 4 * index);
+	error.bits = 1325444865U;
+	return error.value;
+}
+
+int ScePafWidget_97020684(uint8_t *self)
+{
+	if (!*(uint32_t *)(self + 4))
+		return 0;
+	if (*(void **)(self + 8))
+		return (*(int (**)(void))(self + 8))();
+	return 0;
+}
+
+int ScePafWidget_ECC76080(uint8_t *self, float *output, int32_t index)
+{
+	if (index < 0 || index > 2)
+		return -2136014706;
+	*output = *(const float *)(self + 696 + 4 * index);
+	return 0;
+}
+
+uint32x4_t *ScePafWidget_60E4E162(uint32x4_t *result,
+					  const uint8_t *self)
+{
+	const uint8_t *value = *(const uint8_t *const *)(self + 80);
+	const uint32x4_t *source = *(const uint32x4_t *const *)(value + 40);
+
+	*result = source ? *source : vdupq_n_u32(0);
+	return result;
+}
