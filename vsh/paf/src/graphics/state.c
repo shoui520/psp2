@@ -115,6 +115,72 @@ void *ScePafGraphics_E69349E0(const uint8_t *self)
 	return result;
 }
 
+int ScePafGraphics_5F488CA8(const uint8_t *self,
+			     SceGxmTextureAddrMode mode)
+{
+	const uint8_t *descriptor = *(const uint8_t *const *)(self + 4);
+	int limited = (*(const uint32_t *)(descriptor + 12) & 0x80) == 0;
+	SceGxmTexture *texture = *(SceGxmTexture *const *)(self + 124);
+
+	if ((mode == SCE_GXM_TEXTURE_ADDR_CLAMP_FULL_BORDER ||
+	     mode == SCE_GXM_TEXTURE_ADDR_CLAMP_HALF_BORDER) &&
+	    limited)
+		mode = SCE_GXM_TEXTURE_ADDR_CLAMP;
+	return sceGxmTextureSetVAddrMode(texture, mode);
+}
+
+int ScePafGraphics_BB032333(const uint8_t *self,
+			     SceGxmTextureAddrMode mode)
+{
+	const uint8_t *descriptor = *(const uint8_t *const *)(self + 4);
+	int limited = (*(const uint32_t *)(descriptor + 12) & 0x80) == 0;
+	SceGxmTexture *texture = *(SceGxmTexture *const *)(self + 124);
+
+	if ((mode == SCE_GXM_TEXTURE_ADDR_CLAMP_FULL_BORDER ||
+	     mode == SCE_GXM_TEXTURE_ADDR_CLAMP_HALF_BORDER) &&
+	    limited)
+		mode = SCE_GXM_TEXTURE_ADDR_CLAMP;
+	return sceGxmTextureSetUAddrMode(texture, mode);
+}
+
+uint32_t ScePafGraphics_1768C282(const uint8_t *self, const char *name)
+{
+	SceGxmShaderPatcherId id =
+		*(SceGxmShaderPatcherId const *)(self + 28);
+	const SceGxmProgram *program = sceGxmShaderPatcherGetProgramFromId(id);
+	const SceGxmProgramParameter *parameter =
+		sceGxmProgramFindParameterByName(program, name);
+
+	if (!parameter)
+		return UINT32_MAX;
+	sceGxmProgramParameterGetCategory(parameter);
+	return sceGxmProgramParameterGetResourceIndex(parameter);
+}
+
+void *ScePafGraphics_771E7F81(uint8_t *self, void **destination,
+			     int skip)
+{
+	void *result = self;
+	uint8_t *owner = *(uint8_t **)(self + 80);
+
+	if (owner && !skip) {
+		void *next;
+
+		result = *destination;
+		next = *(void **)(owner + 80);
+		if (next != *destination) {
+			if (result)
+				result = (void *)(uintptr_t)
+					ScePafGraphics_9FAF51CF(result);
+			*destination = next;
+			if (next)
+				return (void *)(uintptr_t)
+					ScePafGraphics_29FC820B(next);
+		}
+	}
+	return result;
+}
+
 extern uint8_t *sce_paf_graphics_indicator_3070;
 uint8_t sce_paf_graphics_reset_flag_3074;
 
