@@ -124,6 +124,29 @@ int ScePafCommon_ED0D1711(const void *self, const char *tag)
 	return tag == "property_element";
 }
 
+int ScePafCommon_DAC99BB6(const PafString *text, const PafString *suffix)
+{
+	int length = (int)text->count;
+	int matched = 0;
+	int suffixLength;
+	int offset;
+
+	if (!length)
+		return 0;
+	suffixLength = (int)suffix->count;
+	offset = length - suffixLength;
+	if (suffixLength <= 0)
+		return 1;
+	while (offset >= 0 && offset < length &&
+	       text->ptr[offset] == suffix->ptr[matched]) {
+		++matched;
+		++offset;
+		if (matched >= suffixLength)
+			return 1;
+	}
+	return 0;
+}
+
 int ScePafCommon_B8FC8757(const void *self, const char *tag)
 {
 	return tag == "string_element" || tag == "property_element";
