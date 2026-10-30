@@ -3,9 +3,25 @@
 #include <kernel/iofilemgr.h>
 
 extern int32_t sceIoMkdir(const char *path, int32_t mode);
-extern int32_t sceIoClose(int32_t fd);
+extern int32_t sceIoDclose(int32_t fd);
 extern int32_t sceIoDopen(const char *path);
 extern int32_t sceIoGetstat(const char *path, SceIoStat *stat);
+
+int32_t ScePafMisc_40573275(const char *path)
+{
+	SceIoStat second;
+	SceIoStat first;
+
+	if (!path)
+		return -2135992063;
+	if (sceIoGetstat(path, &first) != 0)
+		return 0;
+	if (sceIoGetstat(path, &second) != 0)
+		return sceIoRemove(path);
+	if ((second.st_mode & SCE_STM_FDIR) != 0)
+		return sceIoRmdir(path);
+	return sceIoRemove(path);
+}
 
 int32_t ScePafMisc_53EAF163(const char *path, int32_t mode)
 {
@@ -21,7 +37,7 @@ void ScePafMisc_2E8E9CBB(int32_t *directory)
 {
 	if (*directory == -1)
 		return;
-	sceIoClose(*directory);
+	sceIoDclose(*directory);
 	*directory = -1;
 }
 
