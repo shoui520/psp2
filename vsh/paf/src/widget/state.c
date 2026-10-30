@@ -377,3 +377,170 @@ void *ScePafWidget_C6559467(uint64_t *destination, const uint8_t *self)
 	destination[1] = upper;
 	return destination;
 }
+
+int ScePafWidget_074187EF(uint8_t *self, int32_t index)
+{
+	uint32_t flags;
+
+	if (index < 0 || index > 3)
+		return -2136014706;
+	flags = *(uint32_t *)(self + 724) | 4;
+	*(uint32_t *)(self + 656) = index;
+	*(uint32_t *)(self + 724) = flags;
+	return 0;
+}
+
+int ScePafWidget_316164E1(uint8_t *self, int32_t index)
+{
+	uint32_t flags;
+
+	if (index < 0 || index > 9)
+		return -2136014706;
+	flags = *(uint32_t *)(self + 724) | 16;
+	*(uint32_t *)(self + 760) = index;
+	*(uint32_t *)(self + 724) = flags;
+	return 0;
+}
+
+int ScePafWidget_7621796A(uint8_t *self, int32_t index)
+{
+	uint32_t flags;
+
+	if (index < 0 || index > 9)
+		return -2136014706;
+	flags = *(uint32_t *)(self + 724) | 8;
+	*(uint32_t *)(self + 660) = index;
+	*(uint32_t *)(self + 724) = flags;
+	return 0;
+}
+
+uint32_t *ScePafWidget_5245A0F2(uint32_t *result, const uint32_t *source)
+{
+	uint32_t first = source[0];
+	uint32_t second = source[1];
+
+	result[0] = source[0];
+	uint32_t third = source[2];
+	result[1] = second;
+	result[2] = third;
+	result[10] = first;
+	result[11] = second;
+	result[12] = first;
+	result[13] = second;
+	result[14] = 1062045612u;
+	return result;
+}
+
+static inline __attribute__((always_inline))
+uint32_t *ResetWidgetTransform(uint32_t *result)
+{
+	result[5] = 0;
+	result[6] = 0;
+	result[7] = 0;
+	result[8] = 0;
+	result[9] = 0;
+	result[10] = 0;
+	result[11] = 0;
+	result[12] = 0;
+	result[13] = 0;
+	result[14] = 0;
+	result[15] = 0;
+	result[16] = 0;
+	result[17] = 0;
+	result[18] = 0;
+	result[19] = 0;
+	result[20] = 0;
+	result[22] = 0;
+	result[21] = 0;
+	return result;
+}
+
+uint32_t *ScePafWidget_AB05B0A4(uint32_t *result)
+{
+	return ResetWidgetTransform(result);
+}
+
+uint32_t *ScePafWidget_ECB0651E(uint32_t *result)
+{
+	return ResetWidgetTransform(result);
+}
+
+int ScePafWidget_D2BF4CC7(uint8_t *self, const uint8_t *source)
+{
+	uint8_t value;
+
+	*(uint32_t *)(self + 744) = *(const uint32_t *)(source + 4);
+	*(uint32_t *)(self + 752) = *(const uint32_t *)(source + 12);
+	value = source[8];
+	*(uint32_t *)(self + 756) = *(const uint32_t *)(source + 16);
+	self[748] = value;
+	uint32_t trailing = *(const uint32_t *)(source + 24);
+	*(uint32_t *)(self + 760) = *(const uint32_t *)(source + 20);
+	*(uint32_t *)(self + 764) = trailing;
+	return 0;
+}
+
+int ScePafWidget_FFC580E3(const uint8_t *self, uint8_t *result)
+{
+	uint8_t value;
+	uint32_t tail, extra;
+
+	*(uint32_t *)(result + 4) = *(const uint32_t *)(self + 744);
+	*(uint32_t *)(result + 12) = *(const uint32_t *)(self + 752);
+	value = self[748];
+	*(uint32_t *)(result + 16) = *(const uint32_t *)(self + 756);
+	result[8] = value;
+	tail = *(const uint32_t *)(self + 760);
+	extra = *(const uint32_t *)(self + 764);
+	*(uint32_t *)(result + 20) = tail;
+	*(uint32_t *)(result + 24) = extra;
+	return 0;
+}
+
+uint8_t *ScePafWidget_F09837F9(uint8_t *self, uint32_t value)
+{
+	if (*(uint32_t *)(self + 644) != value) {
+		*(uint32_t *)(self + 644) = value;
+		uint8_t flags = self[405];
+		if (value == 2)
+			self[405] = flags & 0xFE;
+		else
+			self[405] = flags | 1;
+	}
+	return self;
+}
+
+uint8_t *ScePafWidget_2BACA6A8(uint8_t *self, const uint8_t *value)
+{
+	if (*(const uint8_t **)(self + 920) == value) {
+		uint32_t state = value[36];
+
+		*(uint32_t *)(self + 920) = 0;
+		if (!state) {
+			self = *(uint8_t **)(self + 532);
+			if (self)
+				self[12] |= 1;
+		}
+	}
+	return self;
+}
+
+uint8_t *ScePafWidget_76BA63C3(uint8_t *self, uint8_t *value, int32_t mode)
+{
+	uint8_t *node;
+
+	if (!value || *(int32_t *)(value + 36) > 0)
+		return 0;
+	if (mode == 2) {
+		if (*(uint8_t **)(value + 360) != self)
+			return 0;
+	} else {
+		node = value;
+		while (node != self) {
+			node = *(uint8_t **)(node + 360);
+			if (!node)
+				return 0;
+		}
+	}
+	return value;
+}
