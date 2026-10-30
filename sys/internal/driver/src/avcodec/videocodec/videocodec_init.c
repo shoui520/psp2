@@ -76,8 +76,8 @@ static void videocodecFinalizeAvcDecoderMutexes(VideocodecGlobal *global,
 	}
 }
 
-__attribute__((noinline)) int videocodecInitAvcDecoderMutexes(VideocodecGlobal *global,
-		const VideocodecSlotCounts *counts)
+static inline __attribute__((always_inline)) int
+videocodecInitAvcDecoderMutexesInline(VideocodecGlobal *global, const VideocodecSlotCounts *counts)
 {
 	VideocodecSlotCounts initialized = {0, 0, 0};
 	unsigned int i;
@@ -94,6 +94,12 @@ __attribute__((noinline)) int videocodecInitAvcDecoderMutexes(VideocodecGlobal *
 		initialized.numOfAvcDecoders = ++i;
 	}
 	return ret;
+}
+
+__attribute__((noinline)) int videocodecInitAvcDecoderMutexes(VideocodecGlobal *global,
+		const VideocodecSlotCounts *counts)
+{
+	return videocodecInitAvcDecoderMutexesInline(global, counts);
 }
 
 __attribute__((noinline)) int videocodecFinalizeDsp0Mutexes(VideocodecGlobal *global,
@@ -934,9 +940,14 @@ int videocodecAllocMemBlock(const char *name, SceKernelMemBlockType type, SceSiz
 	return ret;
 }
 
-int videocodecInitLibraryWithUnmapMem(unsigned int codecType, const SceVideodecCtrl *pCtrl,
+/*
+ * Initializes a library of codecType in pCtrl's memory (or a new block), for pInitInfo and, on
+ * the DSP0, pEncoderInfo. The query runs out of line or, where the caller inlines it, inline.
+ */
+static inline __attribute__((always_inline)) int
+videocodecInitLibraryWithUnmapMemInline(unsigned int codecType, const SceVideodecCtrl *pCtrl,
 		const SceVideodecQueryInitInfo *pInitInfo,
-		const SceVideodecQueryInitInfo *pEncoderInfo)
+		const SceVideodecQueryInitInfo *pEncoderInfo, int inlineQuery, int inlineMutexes)
 {
 	VideocodecGlobal *global = videocodecGetGlobal(0);
 	SceUID pid = sceKernelGetProcessId();
@@ -953,7 +964,10 @@ int videocodecInitLibraryWithUnmapMem(unsigned int codecType, const SceVideodecC
 	int isDsp0, owner, ret;
 	void *base;
 
-	ret = videocodecQueryMemSize(codecType, pInitInfo, pEncoderInfo, &memInfo);
+	if (inlineQuery)
+		ret = videocodecQueryMemSizeInline(codecType, pInitInfo, pEncoderInfo, &memInfo);
+	else
+		ret = videocodecQueryMemSize(codecType, pInitInfo, pEncoderInfo, &memInfo);
 	if (ret < 0)
 		return ret;
 	if (codecType == SCE_VIDEODEC_TYPE_HW_AVCDEC) {
@@ -1058,7 +1072,10 @@ int videocodecInitLibraryWithUnmapMem(unsigned int codecType, const SceVideodecC
 		if (ret < 0)
 			goto release;
 		flags = 1;
-		ret = videocodecInitAvcDecoderMutexes(global, &counts);
+		if (inlineMutexes)
+			ret = videocodecInitAvcDecoderMutexesInline(global, &counts);
+		else
+			ret = videocodecInitAvcDecoderMutexes(global, &counts);
 		if (ret < 0)
 			goto release;
 		global->avcdecInfo.horizontal = horizontal;
@@ -1182,6 +1199,386 @@ out:
 	return ret;
 }
 
+__attribute__((noinline))
+int videocodecInitLibraryWithUnmapMem(unsigned int codecType, const SceVideodecCtrl *pCtrl,
+		const SceVideodecQueryInitInfo *pInitInfo,
+		const SceVideodecQueryInitInfo *pEncoderInfo)
+{
+	return videocodecInitLibraryWithUnmapMemInline(codecType, pCtrl, pInitInfo, pEncoderInfo,
+		0, 0);
+}
+
+int SceAvcodecForDriver_F9E271DE(unsigned int codecType, VideocodecInstanceInfo *pInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	VideocodecGlobal *global = videocodecGetGlobal(0);
+	VideocodecSlotCounts counts = {0, 0, 0};
+	VideocodecSlotCounts locked;
+	unsigned int numOfInstances;
+	int ret, unlockRet;
+
+	if (codecType != SCE_VIDEODEC_TYPE_HW_AVCDEC) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_PARAM;
+		goto leave;
+	}
+	if (pInfo == NULL) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_POINTER;
+		goto leave;
+	}
+	if (pInfo->size != sizeof(*pInfo)) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_ARGUMENT_SIZE;
+		goto leave;
+	}
+	ret = lockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
+	if (ret < 0)
+		goto leave;
+	counts.numOfAvcDecoders = global->avcdecInfo.numOfStreams;
+	locked.numOfAvcDecoders = 0;
+	locked.numOfDsp0Decoders = 0;
+	locked.numOfEncoders = 0;
+	ret = videocodecLockAvcDecoders(global, &counts, &locked);
+	if (ret < 0)
+		goto unlockAll;
+	pInfo->horizontal = 0;
+	pInfo->vertical = 0;
+	pInfo->numOfRefFrames = 0;
+	pInfo->numOfStreams = 0;
+	pInfo->memoryType = 0;
+	pInfo->numOfInstances = 0;
+	if (global->avcdecInitCount == 0) {
+		ret = SCE_VIDEODEC_ERROR_NOT_INITIALIZE;
+	} else {
+		pInfo->memoryType = VIDEOCODEC_INSTANCE_MEMORY_BLOCK;
+		if (global->avcdecMemory.kind == VIDEOCODEC_MEMORY_UNMAP)
+			pInfo->memoryType = VIDEOCODEC_INSTANCE_MEMORY_UNMAP;
+		numOfInstances = global->avcDecoders[0].handle != 0;
+		if (global->avcDecoders[1].handle != 0)
+			numOfInstances++;
+		if (global->avcDecoders[2].handle != 0)
+			numOfInstances++;
+		if (global->avcDecoders[3].handle != 0)
+			numOfInstances++;
+		pInfo->horizontal = global->avcdecInfo.horizontal;
+		pInfo->vertical = global->avcdecInfo.vertical;
+		pInfo->numOfRefFrames = global->avcdecInfo.numOfRefFrames;
+		pInfo->numOfStreams = global->avcdecInfo.numOfStreams;
+		pInfo->numOfInstances = numOfInstances;
+	}
+	videocodecUnlockAvcDecoders(global, &counts);
+unlockAll:
+	unlockRet = sceKernelUnlockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
+	if (unlockRet < 0)
+		return unlockRet;
+leave:
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_95E8AFCA(unsigned int codecType,
+		const SceVideodecQueryInitInfo *pInitInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceAvcdecQueryDecoderInfo decoderInfo;
+	SceVideodecCtrl ctrl;
+	int ret;
+
+	if (codecType != SCE_VIDEODEC_TYPE_HW_AVCDEC) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_PARAM;
+	} else if (pInitInfo == NULL) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_POINTER;
+	} else {
+		decoderInfo.horizontal = pInitInfo->hwAvc.horizontal;
+		decoderInfo.vertical = pInitInfo->hwAvc.vertical;
+		decoderInfo.numOfRefFrames = pInitInfo->hwAvc.numOfRefFrames;
+		ret = videocodecConvertCodecEngineError(
+			videocodecValidatePublicDecoderInfo(codecType, &decoderInfo));
+		if (ret >= 0) {
+			ctrl.memBuf.pBuf = NULL;
+			ctrl.memBuf.size = 0;
+			ctrl.memBufUid = 0;
+			ctrl.vaContext = 0;
+			ctrl.contextSize = 0;
+			ret = videocodecInitLibraryWithUnmapMemInline(codecType, &ctrl, pInitInfo,
+				NULL, 1, 0);
+		}
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_4DD3826D(unsigned int codecType,
+		const SceVideodecQueryInitInfo *pInitInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceAvcdecQueryDecoderInfo decoderInfo;
+	SceVideodecCtrl ctrl;
+	int ret;
+
+	if (codecType != SCE_VIDEODEC_TYPE_HW_AVCDEC) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_PARAM;
+	} else if (pInitInfo == NULL) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_POINTER;
+	} else {
+		decoderInfo.horizontal = pInitInfo->hwAvc.horizontal;
+		decoderInfo.vertical = pInitInfo->hwAvc.vertical;
+		decoderInfo.numOfRefFrames = pInitInfo->hwAvc.numOfRefFrames;
+		ret = videocodecConvertCodecEngineError(
+			videocodecValidateDecoderInfo(codecType, &decoderInfo));
+		if (ret >= 0) {
+			ctrl.memBuf.pBuf = NULL;
+			ctrl.memBuf.size = 0;
+			ctrl.memBufUid = 0;
+			ctrl.vaContext = 0;
+			ctrl.contextSize = 0;
+			ret = videocodecInitLibraryWithUnmapMemInline(codecType, &ctrl, pInitInfo,
+				NULL, 1, 0);
+		}
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_4AE6B437(unsigned int codecType,
+		const SceVideodecQueryInitInfo *pInitInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceVideodecCtrl ctrl;
+	int ret;
+
+	if (codecType - SCE_VIDEODEC_TYPE_HW_AVCDEC > 1) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_PARAM;
+	} else if (pInitInfo == NULL) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_POINTER;
+	} else {
+		ctrl.memBuf.pBuf = NULL;
+		ctrl.memBuf.size = 0;
+		ctrl.memBufUid = 0;
+		ctrl.vaContext = 0;
+		ctrl.contextSize = 0;
+		ret = videocodecInitLibraryWithUnmapMemInline(codecType, &ctrl, pInitInfo, NULL,
+			1, 1);
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_C93DA0C7(unsigned int codecType, SceVideodecCtrl *pCtrl,
+		const SceVideodecQueryInitInfo *pInitInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceAvcdecQueryDecoderInfo decoderInfo;
+	SceVideodecCtrl ctrl;
+	int ret;
+
+	if (codecType != SCE_VIDEODEC_TYPE_HW_AVCDEC) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_PARAM;
+	} else if (pInitInfo == NULL || pCtrl == NULL) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_POINTER;
+	} else {
+		decoderInfo.horizontal = pInitInfo->hwAvc.horizontal;
+		decoderInfo.vertical = pInitInfo->hwAvc.vertical;
+		decoderInfo.numOfRefFrames = pInitInfo->hwAvc.numOfRefFrames;
+		ret = videocodecConvertCodecEngineError(
+			videocodecValidatePublicDecoderInfo(codecType, &decoderInfo));
+		if (ret >= 0) {
+			ctrl.memBuf.pBuf = NULL;
+			ctrl.memBuf.size = 0;
+			ctrl.memBufUid = 0;
+			ctrl.vaContext = pCtrl->vaContext;
+			ctrl.contextSize = pCtrl->contextSize;
+			ret = videocodecInitLibraryWithUnmapMemInline(codecType, &ctrl, pInitInfo,
+				NULL, 0, 0);
+		}
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_6DC39EDC(unsigned int codecType, SceVideodecCtrl *pCtrl,
+		const SceVideodecQueryInitInfo *pInitInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceAvcdecQueryDecoderInfo decoderInfo;
+	SceVideodecCtrl ctrl;
+	int ret;
+
+	if (codecType != SCE_VIDEODEC_TYPE_HW_AVCDEC) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_PARAM;
+	} else if (pInitInfo == NULL || pCtrl == NULL) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_POINTER;
+	} else {
+		decoderInfo.horizontal = pInitInfo->hwAvc.horizontal;
+		decoderInfo.vertical = pInitInfo->hwAvc.vertical;
+		decoderInfo.numOfRefFrames = pInitInfo->hwAvc.numOfRefFrames;
+		ret = videocodecConvertCodecEngineError(
+			videocodecValidateDecoderInfo(codecType, &decoderInfo));
+		if (ret >= 0) {
+			ctrl.memBuf.pBuf = NULL;
+			ctrl.memBuf.size = 0;
+			ctrl.memBufUid = 0;
+			ctrl.vaContext = pCtrl->vaContext;
+			ctrl.contextSize = pCtrl->contextSize;
+			ret = videocodecInitLibraryWithUnmapMemInline(codecType, &ctrl, pInitInfo,
+				NULL, 0, 0);
+		}
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_BC55D10F(unsigned int codecType, SceVideodecCtrl *pCtrl,
+		const SceVideodecQueryInitInfo *pInitInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceVideodecCtrl ctrl;
+	int ret;
+
+	if (codecType - SCE_VIDEODEC_TYPE_HW_AVCDEC > 1) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_PARAM;
+	} else if (pInitInfo == NULL || pCtrl == NULL) {
+		ret = SCE_VIDEODEC_ERROR_INVALID_POINTER;
+	} else {
+		ctrl.memBuf.pBuf = NULL;
+		ctrl.memBuf.size = 0;
+		ctrl.memBufUid = 0;
+		ctrl.vaContext = pCtrl->vaContext;
+		ctrl.contextSize = pCtrl->contextSize;
+		ret = videocodecInitLibraryWithUnmapMemInline(codecType, &ctrl, pInitInfo, NULL,
+			1, 1);
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+/* The video encoder's errors are the decoder's with 0x1000 set. */
+static inline int videocodecToEncoderError(int ret)
+{
+	if (((unsigned int)ret & 0xFFFFFF00) == 0x80620800)
+		ret |= 0x1000;
+	return ret;
+}
+
+int SceAvcodecForDriver_E782E735(unsigned int codecType,
+		const SceVideodecQueryInitInfo *pInitInfo,
+		const SceVideodecQueryInitInfo *pEncoderInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceVideodecQueryInitInfo initInfo;
+	SceVideodecCtrl ctrl;
+	int ret;
+
+	if (codecType != 0x1002) {
+		ret = VIDEOCODEC_ENCODER_ERROR_INVALID_PARAM;
+	} else if (pInitInfo != NULL || pEncoderInfo == NULL) {
+		ret = VIDEOCODEC_ENCODER_ERROR_INVALID_POINTER;
+	} else {
+		initInfo = (SceVideodecQueryInitInfo){
+			.hwAvc = {
+				.size = sizeof(initInfo.hwAvc),
+				.horizontal = pEncoderInfo->hwAvc.horizontal,
+				.vertical = pEncoderInfo->hwAvc.vertical,
+				.numOfRefFrames = 1,
+				.numOfStreams = 1,
+			},
+		};
+		ctrl.memBuf.pBuf = NULL;
+		ctrl.memBuf.size = 0;
+		ctrl.memBufUid = 0;
+		ctrl.vaContext = 0;
+		ctrl.contextSize = 0;
+		ret = videocodecToEncoderError(videocodecInitLibraryWithUnmapMem(codecType, &ctrl,
+			&initInfo, pEncoderInfo));
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_04F734CC(unsigned int codecType,
+		const SceVideodecQueryInitInfo *pInitInfo,
+		const SceVideodecQueryInitInfo *pEncoderInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceVideodecCtrl ctrl;
+	int ret;
+
+	if (codecType != 0x1002) {
+		ret = VIDEOCODEC_ENCODER_ERROR_INVALID_PARAM;
+	} else {
+		/* Sony returns here without leaving the syscall */
+		if (pEncoderInfo == NULL || pInitInfo == NULL)
+			return SCE_VIDEODEC_ERROR_INVALID_POINTER;
+		ctrl.memBuf.pBuf = NULL;
+		ctrl.memBuf.size = 0;
+		ctrl.memBufUid = 0;
+		ctrl.vaContext = 0;
+		ctrl.contextSize = 0;
+		ret = videocodecToEncoderError(videocodecInitLibraryWithUnmapMem(codecType, &ctrl,
+			pInitInfo, pEncoderInfo));
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_CD7FE8D0(unsigned int codecType, const SceVideodecCtrl *pCtrl,
+		const SceVideodecQueryInitInfo *pInitInfo,
+		const SceVideodecQueryInitInfo *pEncoderInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceVideodecQueryInitInfo initInfo;
+	SceVideodecCtrl ctrl;
+	int ret;
+
+	if (codecType != 0x1002) {
+		ret = VIDEOCODEC_ENCODER_ERROR_INVALID_PARAM;
+	} else if (pCtrl == NULL || pInitInfo != NULL || pEncoderInfo == NULL) {
+		ret = VIDEOCODEC_ENCODER_ERROR_INVALID_POINTER;
+	} else {
+		initInfo = (SceVideodecQueryInitInfo){
+			.hwAvc = {
+				.size = sizeof(initInfo.hwAvc),
+				.horizontal = pEncoderInfo->hwAvc.horizontal,
+				.vertical = pEncoderInfo->hwAvc.vertical,
+				.numOfRefFrames = 1,
+				.numOfStreams = 1,
+			},
+		};
+		ctrl.memBuf.pBuf = NULL;
+		ctrl.memBuf.size = 0;
+		ctrl.memBufUid = 0;
+		ctrl.vaContext = pCtrl->vaContext;
+		ctrl.contextSize = pCtrl->contextSize;
+		ret = videocodecToEncoderError(videocodecInitLibraryWithUnmapMem(codecType, &ctrl,
+			&initInfo, pEncoderInfo));
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_BCB769EB(unsigned int codecType, const SceVideodecCtrl *pCtrl,
+		const SceVideodecQueryInitInfo *pInitInfo,
+		const SceVideodecQueryInitInfo *pEncoderInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceVideodecCtrl ctrl;
+	int ret;
+
+	if (codecType != 0x1002) {
+		ret = VIDEOCODEC_ENCODER_ERROR_INVALID_PARAM;
+	} else if (pInitInfo == NULL || pCtrl == NULL || pEncoderInfo == NULL) {
+		ret = VIDEOCODEC_ENCODER_ERROR_INVALID_POINTER;
+	} else {
+		ctrl.memBuf.pBuf = NULL;
+		ctrl.memBuf.size = 0;
+		ctrl.memBufUid = 0;
+		ctrl.vaContext = pCtrl->vaContext;
+		ctrl.contextSize = pCtrl->contextSize;
+		ret = videocodecToEncoderError(videocodecInitLibraryWithUnmapMem(codecType, &ctrl,
+			pInitInfo, pEncoderInfo));
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
 int SceAvcodecForDriver_2641888C(unsigned int codecType)
 {
 	SceUInt32 syscall = sceSyscallEnter();
@@ -1207,4 +1604,48 @@ int SceAvcodecForDriver_58F1E353(unsigned int codecType)
 	}
 	sceSyscallLeave(syscall);
 	return ret;
+}
+
+/* _sceVideodecSetConfig and its Internal twin: the AVC decoder's codec-engine configuration */
+static inline __attribute__((always_inline)) int
+videocodecSetConfigInline(unsigned int codecType, unsigned int flags)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	VideocodecGlobal *global = videocodecGetGlobal(0);
+	SceUID pid;
+	int ret;
+
+	if (codecType != SCE_VIDEODEC_TYPE_HW_AVCDEC) {
+		sceSyscallLeave(syscall);
+		return SCE_VIDEODEC_ERROR_INVALID_PARAM;
+	}
+	pid = sceKernelGetProcessId();
+	if (pid >= 0) {
+		ret = lockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
+		if (ret < 0)
+			goto leave;
+		if (global->avcdecInfo.numOfStreams == 0) {
+			ret = videocodecConvertValidationError(
+				SceCodecEngineWrapperForDriver_86861877(flags, 1, pid));
+			sceKernelUnlockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
+			goto leave;
+		}
+		pid = SCE_VIDEODEC_ERROR_ALREADY_USED;
+	}
+	/* Sony unlocks here also when it never locked (a negative process ID) */
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
+	ret = pid;
+leave:
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_12DAE04A(unsigned int codecType, unsigned int flags)
+{
+	return videocodecSetConfigInline(codecType, flags);
+}
+
+int SceAvcodecForDriver_43985AA8(unsigned int codecType, unsigned int flags)
+{
+	return videocodecSetConfigInline(codecType, flags);
 }

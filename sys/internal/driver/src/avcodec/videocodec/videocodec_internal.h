@@ -189,6 +189,25 @@ typedef struct VideocodecLibraryInfo {
 	unsigned int numOfStreams;
 } VideocodecLibraryInfo;
 
+/* what _sceVideodecQueryInstanceNongameapp reports of a process's AVC decoder library */
+typedef struct VideocodecInstanceInfo {
+	SceSize size;
+	unsigned int horizontal;
+	unsigned int vertical;
+	unsigned int numOfRefFrames;
+	unsigned int numOfStreams;
+	unsigned int memoryType;
+	unsigned int numOfInstances;
+} VideocodecInstanceInfo;
+
+_Static_assert(sizeof(VideocodecInstanceInfo) == 28, "video codec instance info ABI");
+
+/* VideocodecInstanceInfo.memoryType: the library's memory block, or the process's unmap memory */
+#define VIDEOCODEC_INSTANCE_MEMORY_BLOCK	1
+#define VIDEOCODEC_INSTANCE_MEMORY_UNMAP	3
+
+int SceAvcodecForDriver_F9E271DE(unsigned int codecType, VideocodecInstanceInfo *pInfo);
+
 /* a process's video codecs: _GetVideocodecGlobal's process-local storage */
 typedef struct VideocodecGlobal {
 	struct ThreadmgrFastMutex *pAllMutex;
@@ -691,6 +710,8 @@ int SceAvcodecForDriver_663B3195(unsigned int codecType,
 	SceAvcdecCtrl *pCtrl, const SceAvcdecQueryDecoderInfo *pDecoderInfo);
 int videocodecCreateDecoder(unsigned int codecType,
 	SceAvcdecCtrl *pCtrl, const SceAvcdecQueryDecoderInfo *pDecoderInfo);
+int videocodecValidatePublicDecoderInfo(unsigned int codecType,
+	const SceAvcdecQueryDecoderInfo *pDecoderInfo);
 int videocodecValidateDecoderInfo(unsigned int codecType,
 	const SceAvcdecQueryDecoderInfo *pDecoderInfo);
 int SceAvcodecForDriver_D5A34236(unsigned int codecType,
