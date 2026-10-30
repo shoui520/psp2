@@ -263,3 +263,64 @@ PafStringVariant *ScePafMisc_E07B9A18(PafStringVariant *self,
 	ScePafMisc_6DBCED34(self, src, mode);
 	return self;
 }
+
+/* The cached opposite encoding is generated only on first access. */
+uint32_t ScePafMisc_183DD5C3(PafStringVariant *self)
+{
+	PafWString *wide = self->wide;
+
+	if (!wide) {
+		PafString *narrow = self->narrow;
+
+		if (narrow) {
+			wide = ScePafMisc_A6ABC0B2((const uint8_t *)narrow->ptr, 0);
+			self->wide = wide;
+		}
+	}
+	return wide ? wide->count : 0;
+}
+
+uint32_t ScePafMisc_40753A45(PafStringVariant *self)
+{
+	PafString *narrow = self->narrow;
+
+	if (!narrow) {
+		PafWString *wide = self->wide;
+
+		if (wide) {
+			narrow = ScePafMisc_E690F751(wide->ptr, 0);
+			self->narrow = narrow;
+		}
+	}
+	return narrow ? narrow->count : 0;
+}
+
+uint16_t *ScePafMisc_53948F03(PafStringVariant *self)
+{
+	PafWString *wide = self->wide;
+
+	if (!wide) {
+		PafString *narrow = self->narrow;
+
+		if (narrow) {
+			wide = ScePafMisc_A6ABC0B2((const uint8_t *)narrow->ptr, 0);
+			self->wide = wide;
+		}
+	}
+	return wide ? wide->ptr : 0;
+}
+
+char *ScePafMisc_A7C6AF5C(PafStringVariant *self)
+{
+	PafString *narrow = self->narrow;
+
+	if (!narrow) {
+		PafWString *wide = self->wide;
+
+		if (wide) {
+			narrow = ScePafMisc_E690F751(wide->ptr, 0);
+			self->narrow = narrow;
+		}
+	}
+	return narrow ? narrow->ptr : 0;
+}

@@ -4,6 +4,20 @@
 
 RMutex CacheManagerImplRMutex;
 
+void ScePafMisc_33ADBB0A(CacheManagerImpl *self, uint32_t flags)
+{
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	self->httpFileOpenFlags = flags;
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+}
+
+void ScePafMisc_BF5194CD(CacheManagerImpl *self, uint8_t shutdown)
+{
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	self->shutdown = shutdown;
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+}
+
 void *CacheManagerImplAllocInstantHeap(CacheManagerImpl *self, size_t size)
 {
 	HeapAllocator *heap;
