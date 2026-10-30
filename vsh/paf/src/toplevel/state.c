@@ -5,6 +5,10 @@
 #include "../std/string.h"
 #include "../std/new.h"
 #include "../thread/thread.h"
+#include "../memory/heap_allocator.h"
+
+extern HeapAllocator *ScePafResource_D60FF214(uint8_t *self,
+					      HeapAllocator *allocator);
 
 extern uint32_t ScePafGraphics_29FC820B(uint8_t *self);
 extern uint32_t ScePafGraphics_9FAF51CF(uint8_t *self);
@@ -360,4 +364,19 @@ int ScePafToplevel_869CF80C(const uint8_t *self, const uint8_t *key)
 		return 0;
 	return *(const uint32_t *)(
 		*(const uint8_t *const *)(self + 52) + 20 * node[4] + 16);
+}
+
+/* Release the page's resource buffer once its pending-state flag clears. */
+int ScePafToplevel_D046C077(uint8_t *self)
+{
+	int status = *(const int32_t *)(self + 292);
+
+	if (!status) {
+		ScePafResource_D60FF214(
+			*(uint8_t **)(self + 176),
+			*(HeapAllocator **)(self + 200));
+		self[272] = 0;
+		return 0;
+	}
+	return status;
 }
