@@ -156,3 +156,53 @@ int ScePafGraphics_E61D19A9(const uint8_t *self,
 	*second = *(const uint32_t *)(self + 8);
 	return 0;
 }
+
+int32_t *sce_paf_graphics_buffer_11e4;
+uint8_t *sce_paf_graphics_display_06f8;
+
+uint8_t ScePafGraphics_505CD74E(uint8_t value)
+{
+	sce_paf_graphics_display_06f8[1432] = value;
+	return value;
+}
+
+uint32_t *ScePafGraphics_57664903(const void *self, uint32_t index)
+{
+	return sce_paf_graphics_buffer_11e4 + index;
+}
+
+int ScePafGraphics_59EC6C24(const uint8_t *self, PafWString *result)
+{
+	PafWStringCopy(result, (const PafWString *)(self + 4));
+	return 0;
+}
+
+int32_t ScePafGraphics_59FF472E(const uint8_t *self)
+{
+	return ((*(const int16_t *)(self + 28) <<
+		  *(const uint32_t *)(self + 12)) + 7) >> 3;
+}
+
+uint8_t *ScePafGraphics_5B6A4EA2(const uint8_t *self, uint32_t index)
+{
+	return *(uint8_t *const *)(self + 148) + index * 48;
+}
+
+uint32_t *ScePafGraphics_7E87FE3F(uint32_t *self, uint32_t value)
+{
+	self[2] = value;
+	self[0] = 0;
+	self[1] = 0;
+	self[3] = (uint32_t)-2;
+	return self;
+}
+
+int ScePafGraphics_83ABDFF5(const uint8_t *self, uint8_t argument)
+{
+	void *object = *(void *const *)(self + 4);
+
+	if (object)
+		return ((int (**)(void *, uint8_t))*(void **)object)[7](
+			object, argument);
+	return 0;
+}
