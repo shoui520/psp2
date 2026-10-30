@@ -1657,7 +1657,7 @@ videocodecInitLockedRangesInline(VideocodecLockedRanges *ranges, SceUID pid,
 	return 0;
 }
 
-int videocodecInitLockedRanges(VideocodecLockedRanges *ranges, SceUID pid,
+__attribute__((noinline)) int videocodecInitLockedRanges(VideocodecLockedRanges *ranges, SceUID pid,
 		VideocodecLockedRange *entries, unsigned int maxRanges, int errorBase)
 {
 	return videocodecInitLockedRangesInline(ranges, pid, entries, maxRanges, errorBase);
