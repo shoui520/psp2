@@ -2404,6 +2404,29 @@ int dsp0VideocodecGetInputPicture(unsigned int handle,
 	return 0;
 }
 
+static inline void dsp0VideocodecCopyEncodeAu(const Dsp0VideocodecEncoderCommand *command,
+					      Dsp0VideocodecEncodeAu *pAu)
+{
+	const Dsp0VideocodecEncodeResult *result;
+	unsigned int numOfNal, i;
+
+	result = command->pEncodeResult;
+	pAu->pts.upper = result->timeStamp[1];
+	pAu->pts.lower = result->timeStamp[0];
+	pAu->streamAddress = result->streamAddress;
+	pAu->streamSize = result->streamSize;
+	pAu->coprocessorFlags[0] = result->coprocessorFlags[0];
+	pAu->coprocessorFlags[1] = command->pEncodeResult->coprocessorFlags[2];
+	numOfNal = (unsigned char)command->pEncodeResult->numOfNal;
+	pAu->numOfNal = numOfNal;
+	for (i = 0; i < numOfNal && i < 12; i++) {
+		pAu->nal[i].address = command->nal[i].address;
+		pAu->nal[i].size = command->nal[i].size;
+		pAu->nal[i].type = command->nal[i].type;
+		pAu->nal[i].referencePriority = command->nal[i].referencePriority;
+	}
+}
+
 int dsp0VideocodecEncodeCore(Dsp0VideocodecGlobal *global, unsigned int handle,
 			     Dsp0VideocodecEncodeFrame *pFrame,
 			     Dsp0VideocodecEncodeAu *pAu,
@@ -2411,8 +2434,7 @@ int dsp0VideocodecEncodeCore(Dsp0VideocodecGlobal *global, unsigned int handle,
 {
 	Dsp0VideocodecEncoder *encoder;
 	Dsp0VideocodecEncoderCommand *command;
-	Dsp0VideocodecEncodeResult *result;
-	unsigned int index, pictureIndex, numOfNal, i;
+	unsigned int index, pictureIndex;
 	SceSize size;
 	int noFrame, ret;
 
@@ -2503,23 +2525,99 @@ encode:
 			encoder->pictureStatus;
 	else
 		command->picture[command->pictureIndex].valid = 0;
-	if (*pNumOfOutput != 0) {
-		result = command->pEncodeResult;
-		pAu->pts.upper = result->timeStamp[1];
-		pAu->pts.lower = result->timeStamp[0];
-		pAu->streamAddress = result->streamAddress;
-		pAu->streamSize = result->streamSize;
-		pAu->coprocessorFlags[0] = result->coprocessorFlags[0];
-		pAu->coprocessorFlags[1] = command->pEncodeResult->coprocessorFlags[2];
-		numOfNal = (unsigned char)command->pEncodeResult->numOfNal;
-		pAu->numOfNal = numOfNal;
-		for (i = 0; i < numOfNal && i < 12; i++) {
-			pAu->nal[i].address = command->nal[i].address;
-			pAu->nal[i].size = command->nal[i].size;
-			pAu->nal[i].type = command->nal[i].type;
-			pAu->nal[i].referencePriority =
-				command->nal[i].referencePriority;
+	if (*pNumOfOutput != 0)
+		dsp0VideocodecCopyEncodeAu(command, pAu);
+	return ret;
+}
+
+int dsp0VideocodecEncode(unsigned int handle, Dsp0VideocodecEncodeFrame *pFrame,
+			 Dsp0VideocodecEncodeAu *pAu, unsigned int *pNumOfOutput)
+{
+	Dsp0VideocodecGlobal *global;
+	Dsp0VideocodecEncoder *encoder;
+	Dsp0VideocodecEncodeAu retryAu;
+	unsigned int numOfEncoded, numOfOutput;
+	int ret;
+
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+#if FW_DEBUG
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	encoder = &global->encoders[handle - 4097];
+	numOfEncoded = 0;
+	if (handle - 4097 >= global->library->numOfEncoders ||
+	    encoder->state != 4096)
+		return (int)0x8062020c;
+	ret = lockFastMutex((SceKernelFastMutex *)encoder->pMutex);
+	if (ret < 0)
+		return ret;
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (ret >= 0) {
+		ret = dsp0VideocodecEncodeCore(global, handle, pFrame, pAu,
+					       pNumOfOutput, &numOfEncoded);
+		if (ret == (int)0x80620210 && pNumOfOutput != NULL) {
+			if (*pNumOfOutput >= numOfEncoded && pAu != NULL) {
+				ret = dsp0VideocodecEncodeCore(global, handle,
+						pFrame, &retryAu, &numOfOutput,
+						&numOfEncoded);
+				if (ret >= 0 && numOfOutput != 0)
+					ret = (int)0x80620204;
+			} else {
+				ret = (int)0x80620210;
+			}
 		}
+		_unlockProcessSuspendCore();
 	}
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)encoder->pMutex);
+	return ret;
+}
+
+int dsp0VideocodecEncodeStop(unsigned int handle, Dsp0VideocodecEncodeAu *pAu,
+			     unsigned int *pNumOfOutput)
+{
+	Dsp0VideocodecGlobal *global;
+	Dsp0VideocodecEncoder *encoder;
+	Dsp0VideocodecEncoderCommand *command;
+	unsigned int pictureIndex;
+	int ret;
+
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+#if FW_DEBUG
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	if (global->initialized != 1)
+		return (int)0x8062020c;
+	if (pNumOfOutput == NULL || pAu == NULL)
+		return (int)0x80620209;
+	if (handle - 4097 >= global->library->numOfEncoders)
+		return (int)0x8062020c;
+	encoder = &global->encoders[handle - 4097];
+	if (encoder->state != 4096)
+		return (int)0x8062020c;
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (ret < 0)
+		return ret;
+	lockFastMutex((SceKernelFastMutex *)encoder->pMutex);
+	command = encoder->pCommand;
+	pictureIndex = command->pictureIndex;
+	command->picture[pictureIndex].valid = 0;
+	ret = dsp0VideocodecStopEncoder(command);
+	if (ret >= 0) {
+		encoder->status = 2;
+		*pNumOfOutput = command->picture[pictureIndex].numOfOutput != 0 ?
+				command->numOfPicture : 0;
+		if (command->picture[pictureIndex].numOfOutput <=
+		    command->numOfPicture)
+			command->picture[command->pictureIndex].valid =
+				encoder->pictureStatus;
+		else
+			command->picture[command->pictureIndex].valid = 0;
+		if (*pNumOfOutput != 0)
+			dsp0VideocodecCopyEncodeAu(command, pAu);
+	}
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)encoder->pMutex);
+	_unlockProcessSuspendCore();
 	return ret;
 }
