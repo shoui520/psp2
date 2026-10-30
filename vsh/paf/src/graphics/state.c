@@ -20,6 +20,25 @@ uint32_t ScePafGraphics_6C448991(void)
 	return sce_paf_graphics_state_11e0;
 }
 
+static inline __attribute__((always_inline))
+void *InitGraphicsHeapSlot(uint8_t *self)
+{
+	*(void **)self = 0;
+	self[4] = 1;
+	*(void **)self = PafNew(16);
+	return self;
+}
+
+void *ScePafGraphics_00AFCFE2(uint8_t *self)
+{
+	return InitGraphicsHeapSlot(self);
+}
+
+void *ScePafGraphics_D46C64C4(uint8_t *self)
+{
+	return InitGraphicsHeapSlot(self);
+}
+
 uint32_t ScePafGraphics_77872076(void)
 {
 	return sce_paf_graphics_state_12ac;
@@ -109,6 +128,54 @@ int ScePafGraphics_74E0DEAA(uint8_t *self, uint16_t bits)
 {
 	*(uint16_t *)(self + 112) &= (uint16_t)~bits;
 	return 0;
+}
+
+int32_t ScePafGraphics_A9D60F9B(const uint8_t *self, uint32_t index)
+{
+	if (index < 4) {
+		const uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
+		if (item)
+			return *(const int32_t *)(item + 84);
+	}
+	return -1;
+}
+
+int32_t ScePafGraphics_D9C76401(const uint8_t *self, uint32_t index)
+{
+	if (index < 4) {
+		const uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
+		if (item)
+			return *(const int32_t *)(item + 88);
+	}
+	return -1;
+}
+
+int ScePafGraphics_AB29233A(const uint8_t *self,
+			     uint32_t *first, uint32_t *second)
+{
+	const uint8_t *item = *(uint8_t *const *)(self + 16);
+	uint32_t value = 0;
+	if (item)
+		value = *(const uint32_t *)(item + 4);
+	*first = value;
+	*second = (uint32_t)(uintptr_t)item;
+	return 0;
+}
+
+int32_t ScePafGraphics_F5D1E17D(const uint8_t *self, int32_t shiftCount)
+{
+	int32_t result = *(const int32_t *)(self + 60);
+	int32_t iteration;
+
+	for (iteration = shiftCount - 1; ; --iteration) {
+		int32_t oldCount = shiftCount;
+		shiftCount = iteration;
+		if (oldCount <= 0)
+			break;
+		if (result > 1)
+			result >>= 1;
+	}
+	return result;
 }
 
 int ScePafGraphics_C16D98B4(uint8_t *self)
@@ -355,6 +422,13 @@ __attribute__((noinline))
 int ScePafGraphics_8D25DDE9(const void *self, const char *tag)
 {
 	return tag == "DrawObj";
+}
+
+int ScePafGraphics_D3A10EAF(const void *self, const char *tag)
+{
+	if (tag == "BubbleObj")
+		return 1;
+	return ScePafGraphics_8D25DDE9(self, tag);
 }
 
 uint8_t *sce_paf_graphics_indicator_3070;
