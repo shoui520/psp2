@@ -11,6 +11,69 @@ extern int sceSharedFbGetShellRenderPort(void);
 extern const SceGxmProgramParameter *sceGxmProgramFindParameterBySemantic(
 	const SceGxmProgram *program, SceGxmParameterSemantic semantic,
 	unsigned int index);
+uint32_t ScePafGraphics_29FC820B(uint8_t *self);
+uint32_t ScePafGraphics_9FAF51CF(uint8_t *self);
+
+static const SceGxmProgramParameter *GraphicsFindNamedProgramParameter(
+		const uint8_t *self, const char *name)
+{
+	SceGxmShaderPatcherId programId =
+		*(SceGxmShaderPatcherId const *)(self + 28);
+	const SceGxmProgram *program =
+		sceGxmShaderPatcherGetProgramFromId(programId);
+	const SceGxmProgramParameter *parameter =
+		sceGxmProgramFindParameterByName(program, name);
+
+	if (parameter)
+		sceGxmProgramParameterGetCategory(parameter);
+	return parameter;
+}
+
+const SceGxmProgramParameter *ScePafGraphics_689ED3F2(
+		const uint8_t *self, const char *name)
+{
+	return GraphicsFindNamedProgramParameter(self, name);
+}
+
+const SceGxmProgramParameter *ScePafGraphics_AF2AE70A(
+		const uint8_t *self, const char *name)
+{
+	return GraphicsFindNamedProgramParameter(self, name);
+}
+
+void *ScePafGraphics_C4ED1731(const uint8_t *self, void *const *source)
+{
+	void **slot = *(void ***)(self + 112);
+	void *previous = *slot;
+	void *next = *source;
+	void *result = previous;
+
+	if (previous != next) {
+		if (previous)
+			result = (void *)(uintptr_t)ScePafGraphics_9FAF51CF(previous);
+		*slot = next;
+		if (next)
+			return (void *)(uintptr_t)ScePafGraphics_29FC820B(next);
+	}
+	return result;
+}
+
+void *ScePafGraphics_CA9687DF(const uint8_t *self, void **destination)
+{
+	void **slot = *(void ***)(self + 112);
+	void *previous = *destination;
+	void *next = *slot;
+	void *result = previous;
+
+	if (previous != next) {
+		if (previous)
+			result = (void *)(uintptr_t)ScePafGraphics_9FAF51CF(previous);
+		*destination = next;
+		if (next)
+			return (void *)(uintptr_t)ScePafGraphics_29FC820B(next);
+	}
+	return result;
+}
 
 uint8_t sce_paf_graphics_flag_306c;
 uint32_t sce_paf_graphics_state_11e0;
