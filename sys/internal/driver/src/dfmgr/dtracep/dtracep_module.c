@@ -119,7 +119,7 @@ int dtraceModuleStart(SceSize args, const void *argp)
 	int res;
 
 	if (!sceKernelCheckDipsw(194)) {
-		SceDebugForDriver_D9703808(1, 11, SCE_DBGINFO(280),
+		SCE_DBG_PRINTF(11, 280,
 			"dtrace module start failed: disabled by dipsw; user DECI disabled\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
