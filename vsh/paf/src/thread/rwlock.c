@@ -1,8 +1,11 @@
 #include "mutex.h"
 #include "../common/halt_assert.h"
+#include "../std/new.h"
+#include "../std/stdlib.h"
 #include <kernel/error.h>
 #include <stddef.h>
 
+__attribute__((noinline))
 Mutex *MutexConstruct(Mutex *self, const char *name, int32_t option)
 {
 	uint32_t attr = SCE_KERNEL_LW_MUTEX_ATTR_TH_PRIO;
@@ -12,6 +15,104 @@ Mutex *MutexConstruct(Mutex *self, const char *name, int32_t option)
 	if (sceKernelCreateLwMutex(&self->m_mutex, name, attr, 0, NULL))
 		on_error();
 	return self;
+}
+
+typedef struct PafThreadCondition {
+	SceKernelLwMutexWork *mutex;
+	SceKernelLwCondWork work;
+} PafThreadCondition;
+
+typedef struct PafThreadQueueNode {
+	struct PafThreadQueueNode *previous;
+	struct PafThreadQueueNode *next;
+	void *value;
+} PafThreadQueueNode;
+
+typedef struct PafThreadQueueCounter {
+	Mutex mutex;
+	PafThreadQueueNode *root;
+	int32_t count;
+} PafThreadQueueCounter;
+
+_Static_assert(offsetof(PafThreadQueueCounter, root) == 32,
+	       "queue counter root offset");
+_Static_assert(offsetof(PafThreadQueueCounter, count) == 36,
+	       "queue counter count offset");
+
+static PafThreadQueueCounter *InitializeThreadQueueCounter(
+		PafThreadQueueCounter *self, const char *name)
+{
+	PafThreadQueueNode *root;
+
+	MutexConstruct(&self->mutex, name, 0);
+	self->count = 0;
+	root = PafNew(sizeof(*root));
+	if (!root)
+		ScePafStdc_D608246A();
+	self->root = root;
+	if (root) {
+		root->previous = root;
+		root->next = root;
+	}
+	return self;
+}
+
+PafThreadQueueCounter *ScePafThread_5A72B9FC(
+		PafThreadQueueCounter *self, const char *name)
+{
+	return InitializeThreadQueueCounter(self, name);
+}
+
+PafThreadQueueCounter *ScePafThread_A87BC0AE(
+		PafThreadQueueCounter *self, const char *name)
+{
+	return InitializeThreadQueueCounter(self, name);
+}
+
+static PafThreadCondition *ConstructThreadCondition(PafThreadCondition *self,
+					SceKernelLwMutexWork *mutex,
+					const char *name, int option)
+{
+	uint32_t attr = SCE_KERNEL_LW_MUTEX_ATTR_TH_PRIO;
+
+	self->mutex = mutex;
+	if (option & MutexOption_FIFO)
+		attr = SCE_KERNEL_LW_MUTEX_ATTR_TH_FIFO;
+	if (sceKernelCreateLwCond(&self->work, name, attr, mutex, NULL))
+		on_error();
+	return self;
+}
+
+PafThreadCondition *ScePafThread_8291E6C4(PafThreadCondition *self,
+					  SceKernelLwMutexWork *mutex,
+					  const char *name, int option)
+{
+	return ConstructThreadCondition(self, mutex, name, option);
+}
+
+PafThreadCondition *ScePafThread_BA5BD169(PafThreadCondition *self,
+					  SceKernelLwMutexWork *mutex,
+					  const char *name, int option)
+{
+	return ConstructThreadCondition(self, mutex, name, option);
+}
+
+int ScePafThread_26225225(PafThreadCondition *self, int32_t milliseconds)
+{
+	uint32_t timeout;
+	uint32_t *timeoutPtr = NULL;
+	int result;
+
+	if (milliseconds > 0) {
+		timeout = (uint32_t)milliseconds * 1000U;
+		timeoutPtr = &timeout;
+	}
+	result = sceKernelWaitLwCond(&self->work, timeoutPtr);
+	if (result == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
+		return 1;
+	if (result)
+		on_error();
+	return 0;
 }
 
 Mutex *MutexConstructBase(Mutex *self, const char *name, int32_t option)
@@ -25,11 +126,44 @@ Mutex *MutexConstructBase(Mutex *self, const char *name, int32_t option)
 	return self;
 }
 
-Mutex *MutexDestroy(Mutex *self)
+__attribute__((noinline)) Mutex *MutexDestroy(Mutex *self)
 {
 	if (sceKernelDeleteLwMutex(&self->m_mutex))
 		on_error();
 	return self;
+}
+
+static PafThreadQueueCounter *DestroyThreadQueueCounter(
+		PafThreadQueueCounter *self)
+{
+	PafThreadQueueNode *root = self->root;
+
+	if (root) {
+		PafThreadQueueNode *node = root->next;
+
+		while (node != root) {
+			PafThreadQueueNode *next = node->next;
+
+			PafDelete(node);
+			root = self->root;
+			node = next;
+		}
+		PafDelete(root);
+	}
+	self->root = (PafThreadQueueNode *)-1;
+	self->count = -1;
+	MutexDestroy(&self->mutex);
+	return self;
+}
+
+PafThreadQueueCounter *ScePafThread_6B1322CB(PafThreadQueueCounter *self)
+{
+	return DestroyThreadQueueCounter(self);
+}
+
+PafThreadQueueCounter *ScePafThread_BE9A9155(PafThreadQueueCounter *self)
+{
+	return DestroyThreadQueueCounter(self);
 }
 
 Mutex *MutexDestroyBase(Mutex *self)
@@ -52,6 +186,17 @@ __attribute__((noinline)) void MutexUnlock(Mutex *self)
 }
 
 RMutex *ScePafThread_C4BD9753(RMutex *self, const char *name, int option)
+{
+	uint32_t attr = SCE_KERNEL_LW_MUTEX_ATTR_TH_PRIO | 2;
+
+	if (option & MutexOption_FIFO)
+		attr = SCE_KERNEL_LW_MUTEX_ATTR_TH_FIFO | 2;
+	if (sceKernelCreateLwMutex(&self->m_mutex, name, attr, 0, NULL))
+		on_error();
+	return self;
+}
+
+RMutex *ScePafThread_A48CABF3(RMutex *self, const char *name, int option)
 {
 	uint32_t attr = SCE_KERNEL_LW_MUTEX_ATTR_TH_PRIO | 2;
 
@@ -264,11 +409,52 @@ SceUID ScePafThread_FE2DC4FE(uint32_t index)
 	return id;
 }
 
-int ScePafThread_D27FC881(uint32_t index)
+__attribute__((noinline)) int ScePafThread_D27FC881(uint32_t index)
 {
 	SceUID recorded = threadIdentity[index];
 
 	return recorded == sceKernelGetThreadId();
+}
+
+typedef struct PafThreadEventRequest {
+	SceUID event;
+	int (*callback)(void *argument);
+	void *argument;
+	int32_t result;
+} PafThreadEventRequest;
+
+int ScePafThread_58876337(PafThreadEventRequest *self)
+{
+	int result = sceKernelPollEventFlag(self->event, 1, 4, NULL);
+
+	if (result >= 0) {
+		SceUID event;
+
+		self->result = self->callback(self->argument);
+		event = self->event;
+		self->argument = NULL;
+		self->callback = NULL;
+		return sceKernelSetEventFlag(event, 2);
+	}
+	return result;
+}
+
+int ScePafThread_004445E7(PafThreadEventRequest *self,
+			    int (*callback)(void *), void *argument)
+{
+	int result;
+
+	if (ScePafThread_D27FC881(0))
+		return callback(argument);
+	sceKernelWaitEventFlag(self->event, 4, 4, NULL, NULL);
+	self->callback = callback;
+	self->argument = argument;
+	self->result = 0;
+	sceKernelSetEventFlag(self->event, 1);
+	sceKernelWaitEventFlag(self->event, 2, 4, NULL, NULL);
+	result = self->result;
+	sceKernelSetEventFlag(self->event, 4);
+	return result;
 }
 
 unsigned char MutexTryLock(Mutex *self)
