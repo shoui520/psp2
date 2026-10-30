@@ -111,8 +111,21 @@ _Static_assert(sizeof(VideocodecLockedRanges) == 16, "video codec locked ranges 
 #define VIDEOCODEC_DECODER_ERROR_BASE	(-2141061120)	/* 0x80620200 */
 #define VIDEOCODEC_ENCODER_ERROR_BASE	(-2141057024)	/* 0x80621000 */
 
-void videocodecInitLockedRanges(VideocodecLockedRanges *ranges, SceUID pid,
+int videocodecInitLockedRanges(VideocodecLockedRanges *ranges, SceUID pid,
 	VideocodecLockedRange *entries, unsigned int maxRanges, int errorBase);
+int videocodecUnlockRanges(VideocodecLockedRanges *ranges);
+int videocodecUnlockRangesProc(VideocodecLockedRanges *ranges, SceUID pid);
+
+/* videocodecLockRange's flags and cache operations */
+#define VIDEOCODEC_LOCK_SCATTERED		1
+#define VIDEOCODEC_CACHE_CLEAN			1
+#define VIDEOCODEC_CACHE_INVALIDATE		2
+#define VIDEOCODEC_CACHE_CLEAN_INVALIDATE	3
+
+int videocodecLockRange(VideocodecLockedRanges *ranges, uintptr_t *pPhysicalAddress,
+	uintptr_t address, SceSize size, int mode, int cacheOp, unsigned int flags);
+int videocodecConvertM4vdecError(int result);
+int videocodecConvertAvcencError(int result);
 
 /* the hardware memory a codec library runs in: a memory block, or a process's unmap memory */
 #define VIDEOCODEC_MEMORY_BLOCK		0

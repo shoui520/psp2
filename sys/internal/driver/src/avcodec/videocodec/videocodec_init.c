@@ -10,6 +10,8 @@
 #include <threadmgr/threadmgr.h>
 #include <kernel/error.h>
 #include <vnz_wrapper/vnz_wrapper.h>
+#include <sysmem/memblock.h>
+#include <sysmem/cpu.h>
 
 /* not a game process: no budget for the library's memory block */
 #define VIDEOCODEC_ERROR_NOT_GAME_PROCESS	(-2141059008)	/* 0x80620840 */
@@ -1648,4 +1650,162 @@ int SceAvcodecForDriver_12DAE04A(unsigned int codecType, unsigned int flags)
 int SceAvcodecForDriver_43985AA8(unsigned int codecType, unsigned int flags)
 {
 	return videocodecSetConfigInline(codecType, flags);
+}
+
+/* The MPEG-4 decoder's errors: the video codec's with 0x900 set. */
+int videocodecConvertM4vdecError(int result)
+{
+	if (((unsigned int)result & 0xFFFFFF00) == 0x80620000)
+		return result | 0x900;
+	return result;
+}
+
+/* The AVC encoder's errors: the video codec's with 0x1000 set. */
+int videocodecConvertAvcencError(int result)
+{
+	if (((unsigned int)result & 0xFFFFFF00) == 0x80620000)
+		return result | 0x1000;
+	return result;
+}
+
+int videocodecInitLockedRanges(VideocodecLockedRanges *ranges, SceUID pid,
+		VideocodecLockedRange *entries, unsigned int maxRanges, int errorBase)
+{
+	ranges->pid = pid;
+	ranges->maxRanges = maxRanges;
+	ranges->ranges = entries;
+	ranges->errorBase = errorBase;
+	ranges->reserved[1] = 0;
+	ranges->reserved[0] = 0;
+	ranges->numOfRanges = 0;
+	memset(entries, 0, maxRanges * sizeof(*entries));
+	return 0;
+}
+
+static inline __attribute__((always_inline)) void
+videocodecUnlockRangesInline(VideocodecLockedRanges *ranges, SceUID pid)
+{
+	VideocodecLockedRange *range;
+	unsigned char n = ranges->numOfRanges;
+
+	if (n == 0)
+		return;
+	if (pid != 0) {
+		do {
+			range = &ranges->ranges[n - 1];
+			sceKernelUnlockRangeProc(pid, (void *)range->address, range->size);
+			n = ranges->numOfRanges - 1;
+			ranges->numOfRanges = n;
+		} while (n != 0);
+	} else {
+		do {
+			range = &ranges->ranges[n - 1];
+			sceKernelUnlockRangeWithMode(range->mode, (void *)range->address,
+				range->size);
+			n = ranges->numOfRanges - 1;
+			ranges->numOfRanges = n;
+		} while (n != 0);
+	}
+}
+
+/* Unlocks every range ranges holds, last first, in its own process. */
+int videocodecUnlockRanges(VideocodecLockedRanges *ranges)
+{
+	videocodecUnlockRangesInline(ranges, ranges->pid);
+	return 0;
+}
+
+/* Unlocks every range ranges holds, last first, in process pid (0: the kernel's). */
+int videocodecUnlockRangesProc(VideocodecLockedRanges *ranges, SceUID pid)
+{
+	videocodecUnlockRangesInline(ranges, pid);
+	return 0;
+}
+
+/*
+ * Locks (or, for a mode without kernel access, checks) the 256-byte aligned range around
+ * [address, address + size) and returns its physical address in *pPhysicalAddress. The range
+ * must lie in one physical range unless flags has VIDEOCODEC_LOCK_SCATTERED; outside the
+ * uncached physical window the caller's flags allow it after cacheOp. On failure every range
+ * ranges holds is unlocked.
+ */
+int videocodecLockRange(VideocodecLockedRanges *ranges, uintptr_t *pPhysicalAddress,
+		uintptr_t address, SceSize size, int mode, int cacheOp, unsigned int flags)
+{
+	unsigned int offset = address & 0xFF;
+	uintptr_t start = address & ~0xFFU;
+	SceSize lockSize = (size + 0xFF + offset) & ~0xFFU;
+	VideocodecLockedRange *range;
+	SceKernelVARange vaRange;
+	SceKernelPAVector vector;
+	SceKernelPARange paRange;
+	uintptr_t physicalAddress;
+	int ret;
+
+	if (ranges->numOfRanges >= ranges->maxRanges) {
+		ret = (ranges->errorBase & ~0xFF) | 4;
+		if (ranges->errorBase < 0)
+			goto fail;
+		ret = sceKernelIsAccessibleRange(mode, (const void *)start, lockSize);
+		if (ret < 0)
+			goto fail;
+	} else if ((mode & (SCE_KERNEL_MEMORY_REF_PERM_KERN_R |
+			    SCE_KERNEL_MEMORY_REF_PERM_KERN_W)) == 0) {
+		ret = sceKernelIsAccessibleRange(mode, (const void *)start, lockSize);
+		if (ret < 0)
+			goto fail;
+	} else {
+		ret = sceKernelLockRangeWithMode(mode, (void *)start, lockSize);
+		if (ret < 0)
+			goto fail;
+		range = &ranges->ranges[ranges->numOfRanges];
+		range->mode = mode;
+		range->address = start;
+		range->size = lockSize;
+		ranges->numOfRanges++;
+		ret = sceKernelIsAccessibleRange(mode, (const void *)start, lockSize);
+		if (ret < 0)
+			goto fail;
+	}
+
+	vaRange.addr = start;
+	vaRange.size = lockSize;
+	vector.size = sizeof(vector);
+	vector.capacity = 1;
+	vector.nDataInVector = 0;
+	vector.total = 0;
+	vector.pRanges = &paRange;
+	ret = sceKernelVARangeToPAVector(&vaRange, &vector);
+	if (flags & VIDEOCODEC_LOCK_SCATTERED) {
+		if (ret < 0)
+			goto fault;
+	} else if (ret < 0 || vector.total > 1) {
+		goto fault;
+	}
+	physicalAddress = paRange.addr;
+	if (physicalAddress == 0)
+		goto fault;
+	if (!(physicalAddress >= 0x20000000 && lockSize + physicalAddress <= 0x28000000)) {
+		if (flags == 0)
+			goto fault;
+		switch (cacheOp) {
+		case VIDEOCODEC_CACHE_INVALIDATE:
+			sceKernelDcacheInvalidateRange((const void *)start, lockSize);
+			break;
+		case VIDEOCODEC_CACHE_CLEAN_INVALIDATE:
+			sceKernelDcacheCleanInvalidateRange((const void *)start, lockSize);
+			break;
+		case VIDEOCODEC_CACHE_CLEAN:
+			sceKernelDcacheCleanRange((const void *)start, lockSize);
+			break;
+		}
+	}
+	*pPhysicalAddress = physicalAddress + offset;
+	return 0;
+
+fault:
+	ret = (ranges->errorBase & ~0xFF) | 7;
+fail:
+	videocodecUnlockRangesInline(ranges, ranges->pid);
+	return ret;
 }
