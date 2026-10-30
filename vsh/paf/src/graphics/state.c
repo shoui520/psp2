@@ -23,6 +23,95 @@ extern uint32_t sce_paf_graphics_state_11fc;
 extern uint8_t sce_paf_graphics_flag_06e8;
 extern int32_t *sce_paf_graphics_active_surface_2e94;
 
+/* Update the native four-lane graphics parameter and its mirrored state. */
+uint8_t *ScePafGraphics_7120023D(uint8_t *self, const float32x4_t *input)
+{
+	uint8_t *mirror = *(uint8_t **)(self + 80);
+
+	*(float32x4_t *)(self + 24) =
+		vmaxq_f32(vdupq_n_f32(0.0f), *input);
+	if (!sce_paf_graphics_flag_06e8) {
+		uint32_t value = *(uint32_t *)(self + 52);
+		*(uint32_t *)(self + 52) =
+			(value & ~0xCu) |
+			(4u * (sce_paf_graphics_state_11fc & 3u));
+	}
+	if (mirror)
+		*(float32x4_t *)(mirror + 32) = *input;
+	return self;
+}
+
+uint8_t *ScePafGraphics_9998DD07(uint8_t *self, const float32x4_t *input)
+{
+	uint8_t *mirror = *(uint8_t **)(self + 80);
+
+	*(float32x4_t *)(self + 24) =
+		vmaxq_f32(vdupq_n_f32(0.0f), *input);
+	if (!sce_paf_graphics_flag_06e8) {
+		uint32_t value = *(uint32_t *)(self + 52);
+		*(uint32_t *)(self + 52) =
+			(value & ~0xCu) |
+			(4u * (sce_paf_graphics_state_11fc & 3u));
+	}
+	if (mirror)
+		*(float32x4_t *)(mirror + 32) =
+			vdupq_n_f32(vgetq_lane_f32(*input, 0));
+	return self;
+}
+
+uint8_t *ScePafGraphics_4DC3442F(uint8_t *self, const float32x4_t *input)
+{
+	uint32x4_t equal = vceqq_f32(*input, *(float32x4_t *)(self + 24));
+	uint32_t allEqual = vgetq_lane_u32(equal, 0) &
+		vgetq_lane_u32(equal, 1) &
+		vgetq_lane_u32(equal, 2) &
+		vgetq_lane_u32(equal, 3);
+
+	if (!allEqual) {
+		*(float32x4_t *)(self + 24) =
+			vmaxq_f32(vdupq_n_f32(0.0f), *input);
+		if (!sce_paf_graphics_flag_06e8) {
+			uint32_t value = *(uint32_t *)(self + 52);
+			*(uint32_t *)(self + 52) =
+				(value & ~0xCu) |
+				(4u * (sce_paf_graphics_state_11fc & 3u));
+		}
+		self[80] |= 0xCu;
+	}
+	return self;
+}
+
+/* Initialize a graphics descriptor, preserving the native field-copy order. */
+uint8_t *ScePafGraphics_068F2FC7(uint8_t *self, const uint8_t *source)
+{
+	uint64_t packed;
+	uint32_t value;
+	uint16_t flags;
+
+	*(uint32_t *)(self + 0) = (uint32_t)-2127676444;
+	*(uint64_t *)(self + 8) = 0;
+	self[4] = 0;
+	*(uint16_t *)(self + 6) = 0;
+	*(uint32_t *)(self + 16) = UINT32_MAX;
+	*(uint32_t *)(self + 20) = 1711276032u;
+	*(uint32_t *)(self + 24) = 0;
+	*(uint32_t *)(self + 28) = 0;
+	*(uint32_t *)(self + 32) = 0;
+
+	self[4] = source[4];
+	packed = *(const uint64_t *)(source + 8);
+	*(uint32_t *)(self + 16) = *(const uint32_t *)(source + 16);
+	value = *(const uint32_t *)(source + 20);
+	*(uint64_t *)(self + 8) = packed;
+	*(uint32_t *)(self + 20) = value;
+	flags = *(const uint16_t *)(source + 6);
+	*(uint32_t *)(self + 24) = *(const uint32_t *)(source + 24);
+	*(uint16_t *)(self + 6) = flags;
+	*(uint32_t *)(self + 28) = *(const uint32_t *)(source + 28);
+	*(uint32_t *)(self + 32) = *(const uint32_t *)(source + 32);
+	return self;
+}
+
 int ScePafGraphics_08C21EFC(const uint8_t *left, const uint8_t *right)
 {
 	float32x2_t first, second;
