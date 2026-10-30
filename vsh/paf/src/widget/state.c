@@ -297,3 +297,83 @@ int ScePafWidget_75420B80(const uint8_t *self, int32_t index)
 		+ 4);
 	return type == 3 ? 1 : type;
 }
+
+int ScePafWidget_222D55C7(const uint8_t *self, uint8_t *output)
+{
+	*output = (self[648] & 2) != 0;
+	return 0;
+}
+
+int ScePafWidget_CF11ECB0(const uint8_t *self, uint8_t *output)
+{
+	*output = (self[648] & 8) != 0;
+	return 0;
+}
+
+int ScePafWidget_E0D414F7(const uint8_t *self, uint8_t *output)
+{
+	*output = (self[648] & 4) != 0;
+	return 0;
+}
+
+uint32_t sce_paf_widget_global_counter_112dc;
+
+uint32_t *ScePafWidget_10BEC7CF(uint32_t *self)
+{
+	++sce_paf_widget_global_counter_112dc;
+	++*self;
+	return self;
+}
+
+uint32_t *ScePafWidget_DB993F51(uint32_t *self)
+{
+	uint32_t count = *self;
+
+	if (count) {
+		if (sce_paf_widget_global_counter_112dc) {
+			--sce_paf_widget_global_counter_112dc;
+			count = *self;
+		}
+		*self = count - 1;
+	}
+	return self;
+}
+
+uint32_t ScePafWidget_3546C104(const uint8_t *self, uint8_t filter)
+{
+	uint32_t flags = *(const uint32_t *)(self + 852);
+
+	if (filter)
+		return flags & ~*(const uint32_t *)(self + 864);
+	return flags;
+}
+
+uint32_t ScePafWidget_7DA29D35(const uint8_t *self)
+{
+	uint32_t result = *(const uint32_t *)(self + 336);
+	const uint8_t *state = *(const uint8_t *const *)(self + 640);
+
+	if (state && !(state[52] & 16))
+		return 0;
+	return result;
+}
+
+void *ScePafWidget_FFD97FCD(uint8_t *self, const uint64_t *source)
+{
+	uint64_t upper = source[1];
+	uint64_t *destination = (uint64_t *)(self + 1040);
+
+	destination[0] = source[0];
+	destination[1] = upper;
+	return destination;
+}
+
+void *ScePafWidget_C6559467(uint64_t *destination, const uint8_t *self)
+{
+	const uint64_t *source = (const uint64_t *)(self + 1040);
+	uint64_t upper = source[1];
+
+	destination[0] = source[0];
+	destination[1] = upper;
+	return destination;
+}
