@@ -198,7 +198,7 @@ _Static_assert(offsetof(PafJobThreadOwner, root) == 16,
 _Static_assert(offsetof(PafJobCancelOwner, root) == 28,
 	       "job cancellation list offset");
 
-void ScePafThread_88061E60(PafJobCancelOwner *self)
+__attribute__((noinline)) void ScePafThread_88061E60(PafJobCancelOwner *self)
 {
 	JobQueueNode *root;
 	JobQueueNode *next;
@@ -219,6 +219,24 @@ void ScePafThread_88061E60(PafJobCancelOwner *self)
 		}
 	}
 	MutexUnlock(&mutex);
+}
+
+/* Cancel queued jobs across the three native job manager instances. */
+PafJobCancelOwner *sce_paf_job_manager_one;
+PafJobCancelOwner *sce_paf_job_manager_two;
+PafJobCancelOwner *sce_paf_job_manager_three;
+
+void ScePafMisc_E23ADF42(void)
+{
+	PafJobCancelOwner *owner = sce_paf_job_manager_one;
+	if (owner)
+		ScePafThread_88061E60(owner);
+	owner = sce_paf_job_manager_two;
+	if (owner)
+		ScePafThread_88061E60(owner);
+	owner = sce_paf_job_manager_three;
+	if (owner)
+		ScePafThread_88061E60(owner);
 }
 
 void ScePafThread_789B263C(PafJobWaitState *self)
