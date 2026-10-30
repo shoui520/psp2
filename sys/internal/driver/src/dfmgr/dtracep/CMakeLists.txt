@@ -24,6 +24,7 @@ psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	deci4p_dtracep.c
 	dtrace_client.c
 	dtrace_client_list.c
+	dtracep.c
 	dtracep_packet_queue.c
 	${dtrace_cddl_sources}
 	dtrace/sce/dtrace_backtrace.c
