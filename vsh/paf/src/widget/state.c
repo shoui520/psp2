@@ -1054,3 +1054,28 @@ DEFINE_WIDGET_TYPE(915460AF, "radio_box", 8EDFDE19)
 DEFINE_WIDGET_TYPE(941FE103, "sliding_drawer", E83DA42E)
 
 #undef DEFINE_WIDGET_TYPE
+
+/* Test membership in the indexed widget selector table. */
+__attribute__((noinline))
+int ScePafWidget_9F450B64(const uint8_t *self, uint32_t value)
+{
+	const uint32_t *list = *(const uint32_t *const *)(self + 12);
+	const uint32_t *cursor = *(const uint32_t *const *)list;
+	const uint32_t *previous = cursor;
+	const uint32_t *end = cursor + list[1];
+
+	for (; cursor != end; previous = cursor) {
+		if (*cursor == value)
+			break;
+		if (cursor)
+			++cursor;
+	}
+	return previous != end;
+}
+
+int ScePafWidget_730C0464(const uint8_t *self, uint32_t index)
+{
+	if (ScePafWidget_9F450B64(self, index))
+		return index;
+	return 255;
+}
