@@ -178,6 +178,50 @@ int ScePafGraphics_97A429ED(uint8_t *self, const float32x4_t *values)
 	return (int)(uintptr_t)self;
 }
 
+/* Copy the native 128-byte state record, retaining its last shared owner. */
+uint32_t *ScePafGraphics_B609BD86(uint32_t *result, const uint32_t *source)
+{
+	uint16_t *targetHalfwords = (uint16_t *)result;
+	const uint16_t *sourceHalfwords = (const uint16_t *)(source + 9);
+	int32_t remaining = 12;
+
+	do {
+		targetHalfwords[0] = sourceHalfwords[0];
+		targetHalfwords[1] = sourceHalfwords[1];
+		--remaining;
+		((volatile uint8_t *)targetHalfwords)[4] =
+			((const volatile uint8_t *)sourceHalfwords)[4];
+		((volatile uint8_t *)targetHalfwords)[5] =
+			((const volatile uint8_t *)sourceHalfwords)[5];
+		targetHalfwords[3] = sourceHalfwords[3];
+		targetHalfwords += 4;
+		sourceHalfwords += 4;
+	} while (remaining);
+	result[24] = source[33];
+	targetHalfwords = (uint16_t *)(result + 25);
+	sourceHalfwords = (const uint16_t *)(source + 34);
+	remaining = 2;
+	do {
+		targetHalfwords[0] = sourceHalfwords[0];
+		--remaining;
+		targetHalfwords[1] = sourceHalfwords[1];
+		targetHalfwords[2] = sourceHalfwords[2];
+		targetHalfwords[3] = sourceHalfwords[3];
+		targetHalfwords += 4;
+		sourceHalfwords += 4;
+	} while (remaining);
+	uint32_t active = source[39];
+	uint32_t reference = source[40];
+
+	result[30] = active;
+	result[29] = source[38];
+	result[31] = reference;
+	if (active)
+		return (uint32_t *)(uintptr_t)((uint32_t)sceAtomicIncrement32AcqRel(
+			(volatile int32_t *)(uintptr_t)(reference + 4)) + 1);
+	return result;
+}
+
 int32_t ScePafGraphics_61C250D7(const uint8_t *self, uint32_t index,
 				uint8_t *output)
 {
