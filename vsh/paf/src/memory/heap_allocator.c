@@ -330,6 +330,11 @@ HeapAllocator *scePafDeleteHeap(HeapAllocator *self)
 	return self;
 }
 
+HeapAllocator *ScePafMisc_4A434F81(HeapAllocator *self)
+{
+	return scePafDeleteHeap(self);
+}
+
 void ScePafMisc_79F13D72(HeapAllocator *self)
 {
 	scePafDeleteHeap(self);
