@@ -55,11 +55,6 @@
 #define TRAP_REQUEST_CRITICAL_ERROR	0x01000000	/* the syscall's misuse is in the frame */
 #define TRAP_REQUEST_DEBUG_SUSPEND	0x02000000
 
-/* SceKernelThreadInfo.waitType beyond the SDK's SCE_KERNEL_WAITTYPE_* (no Sony name found) */
-#define WAIT_TYPE_EXCEPTION		0x01000000
-#define WAIT_TYPE_WORK_QUEUE		0x04000000
-#define WAIT_TYPE_WORK_TASK		0x08000000
-
 /* waits */
 #define WAIT_ATTR_UNINTERRUPTIBLE	0x00008000	/* PLACEHOLDER: name */
 #define WAIT_ID_MULTIPLE_EVENTS		((SceUID)0x80000000)	/* thread->waitId while in a WME */

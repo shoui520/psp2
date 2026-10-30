@@ -784,7 +784,7 @@ int threadAppObjectIsSupported(SceUID pid)
 }
 
 /* The size of the records of all objects of one type. */
-static int _getUltSyncObjInfoSizeOfType(SceUID pid, int type)
+int _getUltSyncObjInfoSizeOfType(SceUID pid, int type)
 {
 	SceUInt32 ids[128];
 	int syncObjType, num, size, skip, n, i;

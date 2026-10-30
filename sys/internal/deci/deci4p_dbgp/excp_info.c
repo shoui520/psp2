@@ -21,9 +21,6 @@
 #define DBGP_STOP_GROUP		0x10
 #define DBGP_STOP_TYPE		0xc0
 
-/* the most threads one notification reports */
-#define DBGP_STOP_MAX_THREADS	192
-
 static SceKernelSpinlock s_stopInfoLock;
 
 static int excpInfoNext(int index)
@@ -247,13 +244,13 @@ int excpInfoCreateStopNotification(DbgpProcCB *proc,
 	}
 	packet = _dbgpAllocSendBuf(proc, size + sizeof(DbgpResponseHeader) +
 				   sizeof(DbgpStopThreads) +
-				   DBGP_STOP_MAX_THREADS * sizeof(DbgpThreadInfo) +
+				   DBGP_THREAD_MAX * sizeof(DbgpThreadInfo) +
 				   sizeof(DbgpTime));
 	if (packet == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	memset(packet, 0, size + sizeof(DbgpResponseHeader) +
 	       sizeof(DbgpStopThreads) +
-	       DBGP_STOP_MAX_THREADS * sizeof(DbgpThreadInfo) +
+	       DBGP_THREAD_MAX * sizeof(DbgpThreadInfo) +
 	       sizeof(DbgpTime));
 	dbgpFillResponseHeader(proc, DBGP_STOP_GROUP, DBGP_STOP_TYPE, 0, 0);
 	result = procGetProcessInfo(proc, packet + sizeof(DbgpResponseHeader),

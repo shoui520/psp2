@@ -36,12 +36,6 @@ _Static_assert(sizeof(ThreadmgrThreadInfoForDebugger) == 0x128 &&
 	       offsetof(ThreadmgrThreadInfoForDebugger, waitDetail) == 0x108,
 	       "thread info for debugger layout");
 
-/* getThreadNameListProc's entries (0x24) */
-typedef struct ThreadmgrThreadName {
-	SceUID threadId;
-	char name[32];
-} ThreadmgrThreadName;
-
 /* the VFP save area's FPSCR (initVfpContext's layout) */
 #define VFP_FPSCR(vfp)		(*(uint32_t *)((uintptr_t)(vfp) + 0x100))
 #define VFP_Q(vfp, n)		((uint32_t *)((uintptr_t)(vfp) + (n) * 0x10))

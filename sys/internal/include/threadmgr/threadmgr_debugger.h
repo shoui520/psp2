@@ -66,6 +66,17 @@ typedef struct ThreadmgrThreadInfoForDebugger {
 
 _Static_assert(sizeof(ThreadmgrThreadInfoForDebugger) == 0x128, "debugger thread info");
 
+/* SceKernelThreadInfo.waitType beyond the SDK's SCE_KERNEL_WAITTYPE_* (no Sony name found) */
+#define WAIT_TYPE_EXCEPTION		0x01000000
+#define WAIT_TYPE_WORK_QUEUE		0x04000000
+#define WAIT_TYPE_WORK_TASK		0x08000000
+
+/* the entries of a process's thread name list */
+typedef struct ThreadmgrThreadName {
+	SceUID threadId;
+	char name[32];
+} ThreadmgrThreadName;
+
 int SceThreadmgrForDriver_555CA6BB(SceUID threadId, uint32_t flags,
 				   ThreadmgrThreadInfoForDebugger *info);
 int SceThreadmgrForKernel_C976719E(SceUID threadId, uint32_t flags,
@@ -76,6 +87,11 @@ int SceThreadmgrForKernel_B011EA69(uint32_t flags, ThreadmgrThreadInfoForDebugge
 				   SceSize size, SceSize *count);
 int SceThreadmgrForKernel_6351A13A(SceUID pid, uint32_t flags,
 				   ThreadmgrThreadInfoForDebugger *infos, SceSize size,
+				   SceSize *count);
+int SceThreadmgrForDriver_F2C9DC97(SceUID pid, uint32_t flags,
+				   ThreadmgrThreadInfoForDebugger *infos, SceSize size,
+				   SceSize *count);
+int SceThreadmgrForDriver_FD87586C(SceUID pid, ThreadmgrThreadName *names, SceSize size,
 				   SceSize *count);
 int sceKernelGetThreadInfoForDebugger(SceUID threadId, uint32_t flags,
 				   ThreadmgrThreadInfoForDebugger *info);

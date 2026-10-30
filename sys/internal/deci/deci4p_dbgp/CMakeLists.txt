@@ -20,6 +20,7 @@ psp2_module(os0_kd_deci4p_dbgp KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	coredump_handler.c
 	coredump_info.c
 	group_system.c
+	group_thread.c
 	deci4p_dbgp.c
 )
 # Sony built this module at -O3 without inlining non-inline functions: hwwtpt.c's

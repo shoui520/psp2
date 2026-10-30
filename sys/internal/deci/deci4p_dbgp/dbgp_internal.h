@@ -204,16 +204,64 @@ _Static_assert(sizeof(ExcpInfoBuf) == 0x314, "debugger exception queue");
 /* the size of each of a process's receive, send and work buffers */
 #define DBGP_WORK_BUF_SIZE	0x11000
 
+/* the most threads the debugger reports for a process */
+#define DBGP_THREAD_MAX		192
+
 /* the thread list procGetThreadInfo reads from SceThreadmgr: 192 entries of 0x128 */
 #define DBGP_THREAD_LIST_SIZE	0xde00
 
-/* one thread of a stop notification, as procGetThreadInfo fills it */
+/* why a thread stopped (procGetThreadDbgpStopReason) */
+typedef struct DbgpStopReason {
+	SceSize size;
+	SceUInt32 reason;
+	SceUInt32 data;			/* the breakpoint or watchpoint */
+	SceUInt32 reserved[2];
+} DbgpStopReason;
+
+/* a thread as the host sees it (from SceThreadmgr's debugger information) */
 typedef struct DbgpThreadInfo {
-	SceUInt32 size;
+	SceSize size;
 	SceUID thid;
 	char name[32];
-	SceUInt32 fields[33];		/* named with process.c's procGetThreadInfo */
+	SceUInt32 initAttr;		/* 0x28 */
+	SceUInt32 attr;
+	SceUInt32 status;		/* 0x30: DBGP_THREAD_STATUS_* | THREAD_STATUS_* */
+	SceUInt32 entry;
+	SceUInt32 stackBase;		/* 0x38: the user stack */
+	SceSize stackSize;
+	SceSize stackMaxUsed;
+	SceSize argSize;		/* 0x44 */
+	SceUInt32 argBlock;
+	int initPriority;
+	int currentPriority;		/* 0x50 */
+	SceUInt32 initCpuAffinityMask;
+	SceUInt32 cpuAffinityMask;
+	int lastCpuId;			/* 0x5c */
+	SceUInt32 waitType;
+	SceUID waitId;
+	SceUInt32 runClocksLow;		/* 0x68 */
+	SceUInt32 runClocksHigh;
+	DbgpStopReason stopReason;	/* 0x70 */
+	int exitStatus;			/* 0x84 */
+	SceUInt32 intrPreemptCount;
+	SceUInt32 threadPreemptCount;
+	SceUInt32 threadReleaseCount;	/* 0x90 */
+	SceUInt32 changeCpuCount;
+	SceUInt32 valid;		/* 0x98: always 1 */
+	SceUInt32 pc;
+	SceUInt32 timeout;		/* 0xa0 */
+	SceUInt32 waitDetail[2];	/* by wait type */
 } DbgpThreadInfo;
+
+/* the extended record (DBGP thread type 2) */
+typedef struct DbgpThreadInfoEx {
+	DbgpThreadInfo info;
+	SceUInt32 waitDetail[9];	/* 0xac: by wait type, in place of info.waitDetail */
+} DbgpThreadInfoEx;
+
+/* DbgpThreadInfo.status bits besides the thread's own */
+#define DBGP_THREAD_STATUS_STOPPED	0x1		/* the thread the process stopped on */
+#define DBGP_THREAD_STATUS_SYSCALL	0x80000000	/* in a system call: pc is the caller's */
 
 /* the threads part of a stop notification, followed by the stop time */
 typedef struct DbgpStopThreads {
@@ -224,6 +272,8 @@ typedef struct DbgpStopThreads {
 } DbgpStopThreads;
 
 _Static_assert(sizeof(DbgpThreadInfo) == 172, "DBGP thread record");
+_Static_assert(sizeof(DbgpThreadInfoEx) == 208, "DBGP extended thread record");
+_Static_assert(offsetof(DbgpThreadInfo, stopReason) == 0x70, "DBGP thread stop reason");
 _Static_assert(sizeof(DbgpStopThreads) == 12, "DBGP stop thread list");
 _Static_assert(sizeof(ThreadInfoBuf) == 0x60c, "debugger thread queue");
 _Static_assert(sizeof(ProcessInfoBuf) == 0x6c, "debugger process queue");
@@ -609,6 +659,8 @@ int excpInfoCreateStopNotification(DbgpProcCB *proc,
 int procGetProcInfoForPacket(DbgpProcCB *proc, SceUID pid);
 int procGetProcessInfo(DbgpProcCB *proc, void *info, SceUID pid,
 		       SceUInt32 reason, SceUInt32 pc);
+int procGetThreadDbgpStopReason(DbgpProcCB *proc, DbgpStopReason *reason,
+				SceUID thid, SceUID pid, SceUInt32 stopReason);
 int procGetThreadInfo(DbgpProcCB *proc, DbgpThreadInfo *info, int *count,
 		      SceUID pid, void *work, SceUInt32 reason);
 int threadInfoGetCount(DbgpProcCB *proc);
@@ -652,6 +704,9 @@ int _getStackInfo(DbgpProcCB *proc, const DbgpPrefix *packet);
 int _getSyncPrimitiveInfo(DbgpProcCB *proc, const DbgpPrefix *packet);
 int threadGetAppObjectCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int threadGetFiberStackInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
+int _getUltSyncObjInfoSizeOfType(SceUID pid, int type);
+int _getUltSyncObjInfo(SceUID pid, int type, SceUInt32 *buf);
+int _getUltSyncObjInfoSize(SceUID pid, SceUInt32 num, const int *types);
 int moduleGetModInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int moduleGetMetaDataCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int moduleGetModuleListCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
