@@ -1,6 +1,7 @@
 /* Lightweight native PAF property/string field constructors. */
 #include "../std/string.h"
 #include "../compiler.h"
+#include "property_list.h"
 #include <sce_atomic.h>
 #include <stdint.h>
 
@@ -120,4 +121,109 @@ uint32_t ScePafCommon_A704EEE6(uint32_t *self)
 int ScePafCommon_ED0D1711(const void *self, const char *tag)
 {
 	return tag == "property_element";
+}
+
+int ScePafCommon_B8FC8757(const void *self, const char *tag)
+{
+	return tag == "string_element" || tag == "property_element";
+}
+
+int ScePafCommon_CF5AC562(const void *self, const char *tag)
+{
+	return tag == "wstring_element" || tag == "property_element";
+}
+
+PafCommonStringField *ScePafCommon_25E1C8C4(PafCommonStringField *self,
+					    const char *source)
+{
+	size_t length = 0;
+
+	InitCommonStringField(self);
+	if (source)
+		length = sce_paf_strlen(source);
+	PafStringAssign(&self->string, source, length);
+	return self;
+}
+
+PafCommonStringField *ScePafCommon_AED94915(PafCommonStringField *self,
+					    const char *source)
+{
+	size_t length = 0;
+
+	InitCommonStringField(self);
+	if (source)
+		length = sce_paf_strlen(source);
+	PafStringAssign(&self->string, source, length);
+	return self;
+}
+
+typedef struct PafCommonElement {
+	int (**methods)(struct PafCommonElement *self, const char *tag);
+	uint8_t contents[];
+} PafCommonElement;
+
+PafString *ScePafCommon_FE3900DF(PafCommonElement **self)
+{
+	PafCommonElement *element = *self;
+
+	if (element && element->methods[0](element, "string_element") &&
+	    (element = *self) != 0)
+		return (PafString *)element->contents;
+	return &StringElementEmptyString;
+}
+
+PafWString *ScePafCommon_215DA541(PafCommonElement **self)
+{
+	PafCommonElement *element = *self;
+
+	if (element && element->methods[0](element, "wstring_element") &&
+	    (element = *self) != 0)
+		return (PafWString *)element->contents;
+	return &WStringElementEmptyString;
+}
+
+typedef struct PafCommonSharedPointer {
+	void *object;
+	void *control;
+} PafCommonSharedPointer;
+
+typedef struct PafCommonPointerList {
+	uint8_t reserved[28];
+	PafCommonSharedPointer *items;
+	uint32_t count;
+} PafCommonPointerList;
+
+_Static_assert(offsetof(PafCommonPointerList, items) == 28,
+	       "common pointer list offset");
+_Static_assert(offsetof(PafCommonPointerList, count) == 32,
+	       "common pointer list count offset");
+
+PafCommonSharedPointer *ScePafCommon_EA03EA22(
+		PafCommonSharedPointer *result, PafCommonPointerList *self,
+		uint32_t index)
+{
+	if (index >= self->count) {
+		result->object = 0;
+		result->control = 0;
+	} else {
+		*(uint64_t *)result = *(uint64_t *)&self->items[index];
+	}
+	return result;
+}
+
+typedef struct PafCommonReference {
+	void **methods;
+	volatile int32_t count;
+} PafCommonReference;
+
+uint32_t ScePafCommon_5221EB33(PafCommonReference *self)
+{
+	uint32_t remaining = (uint32_t)sceAtomicDecrement32AcqRel(&self->count) - 1;
+
+	if (!remaining && self) {
+		void *method = self->methods[1];
+		((void (*)(PafCommonReference *, void *, int, int))
+		 method)(self, method, 0, 0);
+	}
+	return remaining;
 }
