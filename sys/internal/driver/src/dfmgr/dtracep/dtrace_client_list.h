@@ -8,7 +8,7 @@
 extern list_t *dtraceClients;
 
 list_t *dtraceCreateClientList(void);
-DtraceClientCB *dtraceAllocClient(dev_t dev, SceUID processId, SceUID moduleId, int flags,
+DtraceClientCB *dtraceAllocClient(dev_info_t *devi, SceUID processId, SceUID moduleId, int flags,
 				  int token);
 DtraceClientCB *dtraceFindClientByToken(list_t *list, int token);
 DtraceClientCB *dtraceFindClientByProcessId(list_t *list, SceUID processId);

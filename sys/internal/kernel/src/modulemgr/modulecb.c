@@ -8,7 +8,7 @@
 #define SEG_OFFSET(x)	((x) & 0x3fffffff)
 
 #if !MODULEMGR_SKBL
-void (*g_statusCallback)(SceModuleCB *cb);
+void (*g_statusCallback)(SceModuleCB *cb, int status);
 #endif
 
 int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
@@ -191,7 +191,7 @@ int ModuleCBCopyInfo(LoadelfContext *ctx)
 }
 
 #if !MODULEMGR_NSKBL
-int SceModulemgrForKernel_74A4E0EE(void (*callback)(SceModuleCB *cb))
+int SceModulemgrForKernel_74A4E0EE(void (*callback)(SceModuleCB *cb, int status))
 {
 	if (g_statusCallback != NULL && g_statusCallback != callback)
 		return SCE_KERNEL_ERROR_MODULEMGR_BUSY;
@@ -199,7 +199,7 @@ int SceModulemgrForKernel_74A4E0EE(void (*callback)(SceModuleCB *cb))
 	return 0;
 }
 
-int SceModulemgrForKernel_ACBC97C9(void (*callback)(SceModuleCB *cb))
+int SceModulemgrForKernel_ACBC97C9(void (*callback)(SceModuleCB *cb, int status))
 {
 	if (g_statusCallback != callback)
 		return SCE_KERNEL_ERROR_MODULEMGR_NOENT;
@@ -214,7 +214,7 @@ void ModuleCBSetStatus(SceModuleCB *cb, SceUInt8 status)
 {
 	cb->status = status;
 	if (g_statusCallback != NULL)
-		g_statusCallback(cb);
+		g_statusCallback(cb, status);
 }
 
 /* name unknown */

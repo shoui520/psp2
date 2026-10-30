@@ -20,7 +20,9 @@ foreach(src IN LISTS dtrace_cddl_sources)
 endforeach()
 
 psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 PARTIAL SOURCES
+	dtrace_change_stack.S
 	deci4p_dtracep.c
+	dtrace_client.c
 	dtrace_client_list.c
 	dtracep_packet_queue.c
 	${dtrace_cddl_sources}

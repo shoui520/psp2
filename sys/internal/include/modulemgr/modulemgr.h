@@ -79,12 +79,12 @@ SceUID SceModulemgrForKernel_4E85022D(SceUID pid, const char *path, SceUInt32 fl
 /* vitasdk: ksceKernelGetModuleInfoMinByAddr */
 int SceModulemgrForKernel_5564A860(SceUID pid, SceUInt32 addr, SceUInt32 *fingerprint,
 				   void **textBase, char *name);
-int SceModulemgrForKernel_74A4E0EE(void (*callback)(SceModuleCB *cb));
+int SceModulemgrForKernel_74A4E0EE(void (*callback)(SceModuleCB *cb, int status));
 /* vitasdk: ksceKernelGetModulePath */
 int SceModulemgrForKernel_79E761B5(SceUID modid, char *path, SceSize size);
 /* vitasdk: ksceKernelGetModuleEntryPoint */
 SceModuleEntry SceModulemgrForKernel_7B302C5D(SceUID modid);
-int SceModulemgrForKernel_ACBC97C9(void (*callback)(SceModuleCB *cb));
+int SceModulemgrForKernel_ACBC97C9(void (*callback)(SceModuleCB *cb, int status));
 int sceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
 int sceKernelUnloadProcessModules(SceUID pid);
 /* vitasdk: ksceKernelGetModuleIsSharedByAddr */

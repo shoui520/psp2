@@ -21,12 +21,12 @@ list_t *dtraceCreateClientList(void)
 	return list;
 }
 
-DtraceClientCB *dtraceAllocClient(dev_t dev, SceUID processId, SceUID moduleId, int flags,
+DtraceClientCB *dtraceAllocClient(dev_info_t *devi, SceUID processId, SceUID moduleId, int flags,
 				  int token)
 {
 	DtraceClientCB *client;
 
-	SCE_DBG_ASSERT_CHECK(dev != 0, 34);
+	SCE_DBG_ASSERT_CHECK(devi != NULL, 34);
 
 	client = dtrace_heap_alloc(sizeof(*client));
 	if (client == NULL) {
@@ -38,7 +38,7 @@ DtraceClientCB *dtraceAllocClient(dev_t dev, SceUID processId, SceUID moduleId, 
 	client->moduleId = moduleId;
 	client->flags = flags;
 	client->token = token;
-	client->dtraceDev = makedevice(getmajor(dev), 0);
+	client->dtraceDev = makedevice(getmajor((dev_t)devi), 0);
 	client->helperDofGen = -1;
 	return client;
 }

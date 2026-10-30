@@ -36,6 +36,11 @@ typedef enum {
 	DDI_INFO_DEVT2INSTANCE = 1
 } ddi_info_cmd_t;
 
+/* a provider's device: DTrace's clients keep one per provider (dtrace_client.c) */
+struct dev_info {
+	int attached;		/* set by the client code once attach succeeds */
+};
+
 typedef struct dev_info dev_info_t;
 
 int ddi_soft_state_init(void **state_p, size_t size, size_t n_items);

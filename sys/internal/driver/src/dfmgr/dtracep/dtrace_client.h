@@ -25,5 +25,7 @@ typedef struct DtraceClientCB {
 	int helperDofGen;		/* its helper DOF's generation; -1: none */
 } DtraceClientCB;
 
+int dtraceClientInit(void);
+int dtraceClientFini(void);
 int sceDTraceClientOpen(const char *path, SceUID processId, SceUID moduleId, int flags);
 int sceDTraceClientClose(int token);

@@ -76,6 +76,15 @@ typedef struct SceModuleCB {
 	SceUInt32 sdt_nprobes;		/* set once DTrace has provided its probes */
 } SceModuleCB;
 
+/* SceModuleCB.status */
+#define MODULE_STATUS_NONE		0
+#define MODULE_STATUS_LOADED		1
+#define MODULE_STATUS_STARTING		2
+#define MODULE_STATUS_STARTED		3
+#define MODULE_STATUS_STOPPING		4
+#define MODULE_STATUS_STOPPED		5
+#define MODULE_STATUS_START_SUSPENDED	0x10
+
 #ifndef __cplusplus
 _Static_assert(sizeof(SceModuleSegment) == 0x14, "module segment record");
 _Static_assert(sizeof(SceModuleCB) == 0xe8, "module control record");

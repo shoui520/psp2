@@ -73,15 +73,6 @@
 #define MODULE_FLAG_PROCESS_IMAGE	0x4000
 #define MODULE_FLAG_SELF_FIXED		0x8000	/* ELF type 0xfe04 */
 
-/* SceModuleCB.status */
-#define MODULE_STATUS_NONE		0
-#define MODULE_STATUS_LOADED		1
-#define MODULE_STATUS_STARTING		2
-#define MODULE_STATUS_STARTED		3
-#define MODULE_STATUS_STOPPING		4
-#define MODULE_STATUS_STOPPED		5
-#define MODULE_STATUS_START_SUSPENDED	0x10
-
 /* SceModuleCB.segment[].perms */
 #define SEGMENT_PERM_WRITE		0x2
 #define SEGMENT_PERM_MASK		0x7
@@ -408,7 +399,7 @@ extern ModulemgrPrivate *g_private;
 extern SceClass *g_libraryClass;
 extern SceClass *g_stubClass;
 extern int g_threadStateSlot;
-extern void (*g_statusCallback)(SceModuleCB *cb);
+extern void (*g_statusCallback)(SceModuleCB *cb, int status);
 extern int g_sharedFlag;
 extern SceKernelSpinlock g_sharedLock;
 extern SharedModuleEntry *g_sharedModules;
