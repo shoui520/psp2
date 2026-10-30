@@ -124,6 +124,23 @@ void *ScePafGraphics_12BDEBFF(void)
 	return result;
 }
 
+int ScePafGraphics_586E6F73(const SceGxmVertexAttribute *attributes,
+			    SceGxmVertexProgram **vertexProgram)
+{
+	const uint8_t *source = (const uint8_t *)attributes;
+	const uint8_t *registered = *(const uint8_t *const *)(source + 120);
+	SceGxmShaderPatcher *patcher =
+		**(SceGxmShaderPatcher *const *const *)(registered + 44);
+	SceGxmShaderPatcherId programId =
+		*(const SceGxmShaderPatcherId *)(registered + 28);
+
+	return sceGxmShaderPatcherCreateVertexProgram(
+		patcher, programId, attributes,
+		*(const uint32_t *)(source + 96),
+		(const SceGxmVertexStream *)(source + 100),
+		*(const uint32_t *)(source + 116), vertexProgram);
+}
+
 static const SceGxmProgramParameter *GraphicsFindNamedProgramParameter(
 		const uint8_t *self, const char *name)
 {
