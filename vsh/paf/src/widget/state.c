@@ -1147,6 +1147,138 @@ uint32_t *ScePafWidget_AEC1B38D(uint32_t *self, const uint64_t *value)
 	return self;
 }
 
+/* Native single-dispatch widget methods. */
+static inline __attribute__((always_inline))
+int WidgetInvokeSlot(void *self, uint32_t offset)
+{
+	const uint8_t *vtable = *(const uint8_t *const *)self;
+	return ((int (*)(void *))*(void *const *)(vtable + offset))(self);
+}
+
+int ScePafWidget_001CA5F6(void *self)
+{
+	return WidgetInvokeSlot(self, 448);
+}
+
+int ScePafWidget_17BFAECF(void *self)
+{
+	return WidgetInvokeSlot(self, 468);
+}
+
+int ScePafWidget_33B0385F(void *self)
+{
+	return WidgetInvokeSlot(self, 140);
+}
+
+int ScePafWidget_37133F0F(void *self)
+{
+	return WidgetInvokeSlot(self, 416);
+}
+
+int ScePafWidget_3EFA0B3A(void *self)
+{
+	return WidgetInvokeSlot(self, 484);
+}
+
+int ScePafWidget_6E59DBBC(void *self)
+{
+	return WidgetInvokeSlot(self, 448);
+}
+
+int ScePafWidget_BDEF4D3F(void *self)
+{
+	return WidgetInvokeSlot(self, 552);
+}
+
+int ScePafWidget_BC080BD7(void *self)
+{
+	(void)((void (*)(void *))*(void *const *)
+		(*(const uint8_t *const *)self + 20))(self);
+	return 0;
+}
+
+uint8_t *ScePafWidget_4EA317B8(const uint8_t *self, const uint64_t *value)
+{
+	/* The native VLDM fetches the entire 128-bit pair before loading self. */
+	const volatile uint32_t *words = (const volatile uint32_t *)value;
+	uint32_t lo = words[0];
+	uint32_t hi = words[1];
+	volatile uint32_t unused2 = words[2];
+	volatile uint32_t unused3 = words[3];
+	uint8_t *target = *(uint8_t *const *)(self + 12);
+	(void)unused2;
+	(void)unused3;
+	*(uint64_t *)(target + 720) = (uint64_t)lo | ((uint64_t)hi << 32);
+	return target;
+}
+
+uint8_t *ScePafWidget_6CC95725(const uint8_t *self, const uint64_t *value)
+{
+	const volatile uint32_t *words = (const volatile uint32_t *)value;
+	uint32_t lo = words[0];
+	uint32_t hi = words[1];
+	volatile uint32_t unused2 = words[2];
+	volatile uint32_t unused3 = words[3];
+	uint8_t *target = *(uint8_t *const *)(self + 12);
+	(void)unused2;
+	(void)unused3;
+	*(uint64_t *)(target + 712) = (uint64_t)lo | ((uint64_t)hi << 32);
+	return target;
+}
+
+int ScePafWidget_8552BF82(void *self, const uint8_t *argument)
+{
+	void *target = *(void *const *)(argument + 12);
+	const uint8_t *vtable = *(const uint8_t *const *)target;
+	return ((int (*)(void *))*(void *const *)(vtable + 108))(target);
+}
+
+int ScePafWidget_6B4F7595(void *unused0, void *unused1,
+			  void *unused2, void *unused3, void *target)
+{
+	if (target) {
+		const uint8_t *vtable = *(const uint8_t *const *)target;
+		return ((int (*)(void *))*(void *const *)(vtable + 108))(target);
+	}
+	return 0;
+}
+
+uint32_t *ScePafWidget_006A5DE6(uint32_t *self)
+{
+	*self = (uint32_t)-2127593716;
+	return self;
+}
+
+uint32_t *ScePafWidget_36F89F9C(uint32_t *self)
+{
+	*self = (uint32_t)-2127593716;
+	return self;
+}
+
+uint32_t *ScePafWidget_61FC862B(uint32_t *self)
+{
+	*self = (uint32_t)-2127593716;
+	return self;
+}
+
+uint32_t *ScePafWidget_4F5ED653(uint32_t *self)
+{
+	*self = (uint32_t)-2127612828;
+	return self;
+}
+
+uint32_t *ScePafWidget_76C04679(uint32_t *self)
+{
+	*self = (uint32_t)-2127612860;
+	return self;
+}
+
+uint32_t *ScePafWidget_9224D27B(uint32_t *self)
+{
+	*self = (uint32_t)-2127612860;
+	return self;
+}
+
 /* Test membership in the indexed widget selector table. */
 __attribute__((noinline))
 int ScePafWidget_9F450B64(const uint8_t *self, uint32_t value)
