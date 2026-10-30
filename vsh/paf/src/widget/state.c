@@ -1711,3 +1711,14 @@ int ScePafWidget_B9F2249C(uint8_t *self, const uint64_t *value)
 	*(uint64_t *)(target + 40) = *value;
 	return 0;
 }
+
+uint8_t *ScePafWidget_2B4B4266(uint8_t *self, const uint8_t *flags)
+{
+	if (flags) {
+		uint8_t value = (self[404] & 0xfe) | ((flags[0] & 2) != 0);
+
+		self[404] = value;
+		self[404] = (value & 0xfd) | (2 * ((flags[0] & 4) != 0));
+	}
+	return self;
+}
