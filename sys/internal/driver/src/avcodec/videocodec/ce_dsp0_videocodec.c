@@ -9,6 +9,8 @@
 #include <string.h>
 
 int dsp0VideocodecLocalStorageId = -1;
+char dsp0VideocodecDecoderMutexName[24] = "SceDsp0VcodecDec0";
+char dsp0VideocodecEncoderMutexName[24] = "SceDsp0VcodecEnc0";
 
 #if FW_DEBUG
 SCE_DBGINFO_DEFINE(static, dsp0VideocodecCreateStorage, 415,
@@ -612,6 +614,64 @@ int dsp0VideocodecTerminateEncoder(struct Dsp0VideocodecEncoderCommand *command,
 					      (const unsigned int *)&buffers);
 }
 
+int dsp0VideocodecReleaseLibraryBuffers(Dsp0VideocodecGlobal *global)
+{
+	Dsp0VideocodecLibraryCommand *library = global->library;
+	Dsp0VideocodecDecoder *decoder;
+	Dsp0VideocodecEncoder *encoder;
+	int i;
+
+	if (library == NULL)
+		return 0;
+	encoder = global->encoders;
+	if (encoder != NULL) {
+		for (i = 0; i < library->numOfEncoders; i++, encoder++) {
+			if (encoder->pEncodeResult != NULL)
+				encoder->pEncodeResult = NULL;
+			if (encoder->coprocessorBufferAddress[1] != 0)
+				encoder->coprocessorBufferAddress[1] = 0;
+			if (encoder->coprocessorBufferAddress[0] != 0)
+				encoder->coprocessorBufferAddress[0] = 0;
+			if (encoder->contextAddress != 0)
+				encoder->contextAddress = 0;
+			if (encoder->pCommand != NULL)
+				encoder->pCommand = NULL;
+			if (encoder->pMutex != NULL) {
+				sceKernelFinalizeFastMutex(encoder->pMutex);
+				encoder->pMutex = NULL;
+			}
+		}
+		if (global->encoders != NULL)
+			global->encoders = NULL;
+	}
+	decoder = global->decoders;
+	if (decoder != NULL) {
+		for (i = 0; i < library->numOfDecoders; i++, decoder++) {
+			if (decoder->workAddress != 0)
+				decoder->workAddress = 0;
+			if (decoder->au[1].address != 0)
+				decoder->au[1].address = 0;
+			if (decoder->au[0].address != 0)
+				decoder->au[0].address = 0;
+			if (decoder->pPicture != NULL)
+				decoder->pPicture = NULL;
+			if (decoder->contextAddress != 0)
+				decoder->contextAddress = 0;
+			if (decoder->pCommand != NULL)
+				decoder->pCommand = NULL;
+			if (decoder->pMutex != NULL) {
+				sceKernelFinalizeFastMutex(decoder->pMutex);
+				decoder->pMutex = NULL;
+			}
+		}
+		if (global->decoders != NULL)
+			global->decoders = NULL;
+	}
+	if (library->workAddress != 0)
+		library->workAddress = 0;
+	return 0;
+}
+
 int dsp0VideocodecQueryEncoderMemorySize(Dsp0VideocodecEncoderCommand *command,
 		const Dsp0VideocodecEncoderInitParam *param, SceSize *streamSize,
 		SceSize *bufferSize, SceSize *workSize)
@@ -729,9 +789,9 @@ int dsp0VideocodecCalculateLibraryMemory(const Dsp0VideocodecInitParam *param,
 	if (ret < 0) {
 		ret = (int)0x8062020d;
 	} else {
-		*librarySize = (command->workSize + 255) & ~255u;
 		pictureSize = (((3 * param->vertical * param->horizontal) >> 2) +
 			       255) & 0x7fffff00;
+		*librarySize = (command->workSize + 255) & ~255u;
 		decoderMemory = pictureSize < 81920 ? 92544 : pictureSize + 10624;
 		*memorySize = (((command->workSize + 255) & ~255u) +
 			1536 * command->numOfEncoders + 262911 +
@@ -997,6 +1057,185 @@ int dsp0VideocodecQueryLibraryMemory(const Dsp0VideocodecInitParam *param,
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
 		_unlockProcessSuspendCore();
 	}
+	return ret;
+}
+
+/*
+ * The caller's memory holds, in order: the memory and library commands, the
+ * library's context and work memory, the decoder slots and their buffers, then
+ * the encoder slots and theirs.
+ */
+int dsp0VideocodecInitLibrary(unsigned int *pLibrary, const Dsp0VideocodecLibraryMemory *pMemory)
+{
+	Dsp0VideocodecGlobal *global;
+	const Dsp0VideocodecInitParam *param;
+	Dsp0VideocodecLibraryCommand *library;
+	Dsp0VideocodecDecoder *decoder;
+	Dsp0VideocodecEncoder *encoder;
+	unsigned char *memory, *buffer;
+	SceSize requiredSize, librarySize, tableSize;
+	unsigned int pictureSize;
+	uintptr_t physical;
+	SceKernelIntrStatus intr;
+	int i, ret;
+
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+#if FW_DEBUG
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	if (pMemory == NULL || pLibrary == NULL || (param = pMemory->param) == NULL)
+		return (int)0x80620209;
+	if (global->initialized != 0)
+		return (int)0x80620208;
+	if (param->horizontal - 64 > 1216 || param->vertical - 64 > 656 ||
+	    ((param->horizontal | param->vertical) & 15) != 0 ||
+	    param->numOfRefFrames - 1 > 15 || param->numOfStreams - 1 > 3)
+		return (int)0x80620201;
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (ret < 0)
+		return ret;
+	lockFastMutex((SceKernelFastMutex *)global->pMutex);
+	ret = dsp0VideocodecCalculateLibraryMemory(param, &requiredSize, &librarySize);
+	if (ret < 0)
+		goto release;
+	memory = pMemory->base;
+	if (memory == NULL || ((uintptr_t)memory & 255) != 0)
+		goto invalid;
+	if (pMemory->size < requiredSize) {
+		ret = (int)0x80620203;
+		goto release;
+	}
+	memset(memory, 0, pMemory->size);
+	global->workMemory = memory;
+	library = (Dsp0VideocodecLibraryCommand *)(memory + 256);
+	global->library = library;
+	library->contextAddress = (uintptr_t)(memory + 512);
+	if (dsp0VideocodecInitializeMemory(memory) < 0)
+		goto failed;
+	global->param = *param;
+	library = global->library;
+	library->numOfDecoders = global->param.numOfStreams;
+	library->commandSize = sizeof(*library);
+	library->horizontal = global->param.horizontal;
+	library->coprocessorQueryData[0] = 0;
+	library->coprocessorQueryData[1] = 0;
+	library->numOfEncoders = 1;
+	if (dsp0VideocodecQueryMemory(library) < 0)
+		goto failed;
+
+	library = global->library;
+	library->workAddress = (uintptr_t)(memory + 768);
+	library->workSize = librarySize;
+	global->decoders = (Dsp0VideocodecDecoder *)(memory + 768 + librarySize);
+	tableSize = (sizeof(Dsp0VideocodecDecoder) * library->numOfDecoders + 255) & ~255u;
+	buffer = (unsigned char *)global->decoders + tableSize;
+	memset(global->decoders, 0, tableSize);
+	pictureSize = (((3 * global->param.vertical * global->param.horizontal) >> 2) +
+		       255) & 0x7fffff00;
+	if (pictureSize < 81920)
+		pictureSize = 81920;
+	decoder = global->decoders;
+	for (i = 0; i < library->numOfDecoders; i++, decoder++) {
+		dsp0VideocodecDecoderMutexName[16] = '0' + i % 10;
+		ret = sceKernelInitializeFastMutex(&decoder->mutex,
+				dsp0VideocodecDecoderMutexName, 0x8002, 0);
+		if (ret < 0)
+			goto releaseBuffers;
+		decoder->pCommand = buffer;
+		decoder->contextAddress = (uintptr_t)(buffer + 256);
+		decoder->pPicture = (Dsp0VideocodecPicture *)(buffer + 512);
+		decoder->au[0].address = (uintptr_t)(buffer + 768);
+		decoder->au[0].size = pictureSize;
+		decoder->au[1].address = (uintptr_t)(buffer + 768 + pictureSize);
+		decoder->au[1].size = pictureSize;
+		decoder->workAddress = (uintptr_t)(buffer + 768 + 2 * pictureSize);
+		decoder->workSize = 20480;
+		decoder->pMutex = &decoder->mutex;
+		buffer += 768 + 2 * pictureSize + 20480;
+	}
+
+	global->encoders = (Dsp0VideocodecEncoder *)buffer;
+	tableSize = (sizeof(Dsp0VideocodecEncoder) * library->numOfEncoders + 255) & ~255u;
+	memset(buffer, 0, tableSize);
+	buffer += tableSize;
+	encoder = global->encoders;
+	for (i = 0; i < library->numOfEncoders; i++, encoder++) {
+		dsp0VideocodecEncoderMutexName[16] = '0' + i % 10;
+		ret = sceKernelInitializeFastMutex(&encoder->mutex,
+				dsp0VideocodecEncoderMutexName, 0x8002, 0);
+		if (ret < 0)
+			goto releaseBuffers;
+		encoder->pCommand = (Dsp0VideocodecEncoderCommand *)buffer;
+		encoder->contextAddress = (uintptr_t)(buffer + 512);
+		encoder->coprocessorBufferAddress[0] = (uintptr_t)(buffer + 768);
+		encoder->coprocessorBufferAddress[1] = (uintptr_t)(buffer + 1024);
+		encoder->pEncodeResult = (Dsp0VideocodecEncodeResult *)(buffer + 1280);
+		encoder->pMutex = &encoder->mutex;
+		buffer += 1536;
+	}
+
+	library = global->library;
+	if (sceKernelVAtoPA((const void *)library->contextAddress, &physical) < 0)
+		goto invalid;
+	library->contextAddress = physical;
+	if (sceKernelVAtoPA((const void *)library->workAddress, &physical) < 0)
+		goto invalid;
+	library->workAddress = physical;
+	for (i = 0; i < library->numOfDecoders; i++) {
+		decoder = &global->decoders[i];
+		if (sceKernelVAtoPA((const void *)decoder->contextAddress, &physical) < 0)
+			goto invalid;
+		decoder->contextAddress = physical;
+		if (sceKernelVAtoPA((const void *)decoder->workAddress, &physical) < 0)
+			goto invalid;
+		decoder->workAddress = physical;
+	}
+	for (i = 0; i < library->numOfEncoders; i++) {
+		encoder = &global->encoders[i];
+		if (sceKernelVAtoPA((const void *)encoder->contextAddress, &physical) < 0)
+			goto invalid;
+		encoder->contextAddress = physical;
+		if (sceKernelVAtoPA((const void *)encoder->coprocessorBufferAddress[0],
+				    &physical) < 0)
+			goto invalid;
+		encoder->coprocessorBufferAddress[0] = physical;
+		if (sceKernelVAtoPA((const void *)encoder->coprocessorBufferAddress[1],
+				    &physical) < 0)
+			goto invalid;
+		encoder->coprocessorBufferAddress[1] = physical;
+	}
+	ret = dsp0VideocodecCreateDecoder(global->library);
+	if (ret < 0)
+		goto failed;
+	global->initialized = 1;
+	*pLibrary = 1;
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&global->statusLock);
+	global->status = 1;
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+	_unlockProcessSuspendCore();
+	return ret;
+
+releaseBuffers:
+	dsp0VideocodecReleaseLibraryBuffers(global);
+	goto release;
+failed:
+	ret = (int)0x8062020d;
+	goto release;
+invalid:
+	ret = (int)0x80620209;
+release:
+	dsp0VideocodecReleaseLibraryBuffers(global);
+	if (global->library != NULL) {
+		if (global->library->contextAddress != 0)
+			global->library->contextAddress = 0;
+		global->library = NULL;
+	}
+	if (global->workMemory != NULL)
+		global->workMemory = NULL;
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+	_unlockProcessSuspendCore();
 	return ret;
 }
 

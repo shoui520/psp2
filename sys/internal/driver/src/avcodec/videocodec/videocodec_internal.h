@@ -444,27 +444,52 @@ _Static_assert(offsetof(Dsp0VideocodecEncoderCommand, pEncodeResult) == 144,
 _Static_assert(offsetof(Dsp0VideocodecEncoderCommand, picture) == 308,
 	       "DSP0 encoder pictures ABI");
 
-struct Dsp0VideocodecDecoder;
-struct Dsp0VideocodecEncoder;
+typedef struct Dsp0VideocodecAuBuffer {
+	uintptr_t address;
+	SceSize size;
+} Dsp0VideocodecAuBuffer;
 
-typedef struct Dsp0VideocodecGlobal {
-	unsigned int horizontal;
-	unsigned int vertical;
-	unsigned int numOfRefFrames;
-	unsigned int numOfStreams;
-	unsigned int numOfEncoders;
-	void *workMemory;
-	struct Dsp0VideocodecLibraryCommand *library;
+/* A decoder slot; its buffers are laid out by dsp0VideocodecInitLibrary. */
+typedef struct Dsp0VideocodecDecoder {
+	int state;				/* 0 free, 256 AVC, 512 M4V */
+	void *pCommand;				/* 256 bytes */
+	uintptr_t contextAddress;		/* 256 bytes, physical */
+	Dsp0VideocodecPicture *pPicture;
+	Dsp0VideocodecAuBuffer au[2];
+	uintptr_t workAddress;			/* physical */
+	SceSize workSize;
 	struct ThreadmgrFastMutex mutex;
 	struct ThreadmgrFastMutex *pMutex;
-	int initialized;
-	struct Dsp0VideocodecDecoder *decoders;
-	struct Dsp0VideocodecEncoder *encoders;
-	SceKernelSpinlock statusLock;
-	int status;
-} Dsp0VideocodecGlobal;
+	unsigned int auStatus;
+	int codecType;				/* 1 AVC, 2 M4V */
+} Dsp0VideocodecDecoder;
 
-_Static_assert(sizeof(Dsp0VideocodecGlobal) == 116, "DSP0 process storage ABI");
+_Static_assert(sizeof(Dsp0VideocodecDecoder) == 116, "DSP0 decoder slot ABI");
+_Static_assert(offsetof(Dsp0VideocodecDecoder, mutex) == 40, "DSP0 decoder mutex ABI");
+
+typedef struct Dsp0VideocodecEncoderPicture {
+	uintptr_t address;
+	SceSize size;
+} Dsp0VideocodecEncoderPicture;
+
+/* An encoder slot; its buffers are laid out by dsp0VideocodecInitLibrary. */
+typedef struct Dsp0VideocodecEncoder {
+	int state;				/* 0 free */
+	Dsp0VideocodecEncoderCommand *pCommand;
+	uintptr_t contextAddress;		/* 256 bytes, physical */
+	uintptr_t coprocessorBufferAddress[2];	/* 256 bytes each, physical */
+	Dsp0VideocodecEncodeResult *pEncodeResult;
+	Dsp0VideocodecEncoderPicture picture[3];
+	struct ThreadmgrFastMutex mutex;
+	struct ThreadmgrFastMutex *pMutex;
+	unsigned int coprocessorState[2];
+	SceSize maxSize[3];
+	unsigned char encodeState[52];
+} Dsp0VideocodecEncoder;
+
+_Static_assert(sizeof(Dsp0VideocodecEncoder) == 188, "DSP0 encoder slot ABI");
+_Static_assert(offsetof(Dsp0VideocodecEncoder, mutex) == 48, "DSP0 encoder mutex ABI");
+_Static_assert(offsetof(Dsp0VideocodecEncoder, maxSize) == 124, "DSP0 encoder sizes ABI");
 
 typedef struct Dsp0VideocodecInitParam {
 	unsigned int horizontal;
@@ -475,6 +500,21 @@ typedef struct Dsp0VideocodecInitParam {
 } Dsp0VideocodecInitParam;
 
 _Static_assert(sizeof(Dsp0VideocodecInitParam) == 20, "DSP0 initialization ABI");
+
+typedef struct Dsp0VideocodecGlobal {
+	Dsp0VideocodecInitParam param;		/* what the library was initialized for */
+	void *workMemory;
+	struct Dsp0VideocodecLibraryCommand *library;
+	struct ThreadmgrFastMutex mutex;
+	struct ThreadmgrFastMutex *pMutex;
+	int initialized;
+	Dsp0VideocodecDecoder *decoders;
+	Dsp0VideocodecEncoder *encoders;
+	SceKernelSpinlock statusLock;
+	int status;
+} Dsp0VideocodecGlobal;
+
+_Static_assert(sizeof(Dsp0VideocodecGlobal) == 116, "DSP0 process storage ABI");
 
 /* the memory a DSP0 library is built in, and what for */
 typedef struct Dsp0VideocodecLibraryMemory {
