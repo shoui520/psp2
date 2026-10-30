@@ -8,6 +8,8 @@
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 
+int maxclsyspri = 16;
+
 void delay(clock_t ticks)
 {
 	if (ticks >= 0)

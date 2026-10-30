@@ -23,7 +23,7 @@ typedef ThreadCB kthread_t;
 #define t_dtrace_ft		dtraceState->ft
 #define t_taskq			dtraceState->taskq
 
-#define maxclsyspri	64
+extern int maxclsyspri;
 
 #ifndef _KERNEL
 #define _KERNEL

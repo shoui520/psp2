@@ -17,6 +17,8 @@
 #include <threadmgr/mutex.h>
 #include <threadmgr/threadmgr.h>
 
+kmutex_t mod_lock;
+
 #define MUTEX_NAME_PREFIX	"SceDeci4pDtracep"
 
 #define UID_PUID		0x40000000	/* a process's own UID for an object */

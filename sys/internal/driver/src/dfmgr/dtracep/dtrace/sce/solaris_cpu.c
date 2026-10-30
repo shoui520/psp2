@@ -7,6 +7,12 @@
 
 #define NCPU_SETUPS	20
 
+cpu_t *cpu_list;
+cpu_core_t *cpu_core;
+kmutex_t cpu_lock;
+int max_ncpus = NCPU;
+int boot_max_ncpus = -1;
+
 static struct cpu_setup_func {
 	cpu_setup_func_t *func;
 	void *arg;

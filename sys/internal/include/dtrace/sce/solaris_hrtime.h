@@ -9,7 +9,7 @@
 typedef long clock_t;
 
 extern int hz;			/* clock ticks per second */
-extern clock_t lbolt;		/* clock ticks since boot */
+#define lbolt		0	/* Sony's waits count from now, not from boot */
 
 hrtime_t gethrtime(void);
 void delay(clock_t ticks);

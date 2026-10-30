@@ -107,3 +107,8 @@ SceUID dtrace_get_current_process_id(void)
 
 	return info.processId;
 }
+
+puid_t dtrace_get_thread_puid(SceUID threadId)
+{
+	return SceThreadmgrForDriver_F311808F(threadId);
+}

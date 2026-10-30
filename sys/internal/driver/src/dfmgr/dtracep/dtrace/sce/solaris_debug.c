@@ -4,6 +4,8 @@
  */
 #include <dtrace/sce/solaris_debug.h>
 
+int panic_quiesce;
+
 int vuprintf(const char *fmt, va_list ap)
 {
 	return SceDebugForDriver_411C0733(fmt, ap);

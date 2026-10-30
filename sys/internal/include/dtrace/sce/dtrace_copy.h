@@ -6,6 +6,20 @@
 
 #include <dtrace/sce/solaris_types.h>
 
-int dtrace_copyin_user(void *kaddr, uintptr_t uaddr, size_t size);
-int copyin(uintptr_t uaddr, void *kaddr, size_t size);
-int copyout(const void *kaddr, uintptr_t uaddr, size_t size);
+#include <sysmem/sysmem.h>
+
+/* Sony's copies from and to the calling process: the kernel's own, inlined */
+static inline int dtrace_copyin_user(void *kaddr, uintptr_t uaddr, size_t size)
+{
+	return sceKernelCopyFromUser(kaddr, (const void *)uaddr, size);
+}
+
+static inline int copyin(uintptr_t uaddr, void *kaddr, size_t size)
+{
+	return sceKernelCopyFromUser(kaddr, (const void *)uaddr, size);
+}
+
+static inline int copyout(const void *kaddr, uintptr_t uaddr, size_t size)
+{
+	return sceKernelCopyToUser((void *)uaddr, kaddr, size);
+}

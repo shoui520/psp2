@@ -61,10 +61,13 @@ dev_t makedevice(major_t maj, minor_t min);
 int ddi_prop_lookup_int_array(dev_t match_dev, dev_info_t *dip, uint_t flags,
     const char *name, int **data, uint_t *nelements);
 int ddi_prop_free(void *data);
-int ddi_driver_major(dev_info_t *dip);
 
-#define major(dev)	getmajor(dev)
-#define minor(dev)	getminor(dev)
+/* the device a dev_info_t stands for is in its address: Sony's major number from it */
+#define ddi_driver_major(dip)	getmajor((dev_t)(dip))
+
+/* a D program's getmajor() and getminor(), worked out in place */
+#define major(dev)	(((dev) >> 8) & 0xff)
+#define minor(dev)	((dev) & 0xff)
 #define ddi_getprop(dev, dip, flags, name, defvalue)	(defvalue)
 #define nulldev		NULL
 

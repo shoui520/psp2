@@ -75,27 +75,83 @@ typedef struct dtrace_thread_state {
 	uintptr_t reg[18];	/* r0-r12, sp, lr, pc, cpsr, fpscr */
 } dtrace_thread_state_t;
 
-struct ThreadCB;
 struct taskq;
 
-int64_t dtrace_get_thread_vtime(struct ThreadCB *thread);
-int dtrace_get_thread_reentering(struct ThreadCB *thread);
-void dtrace_set_thread_reentering(struct ThreadCB *thread, int reentering);
-void dtrace_set_thread_predcache(struct ThreadCB *thread, uint32_t predcache);
 void dtrace_set_thread_taskq(int thread, struct taskq *tq);
-void dtrace_thread_probelock_lock(struct ThreadCB *thread);
-void dtrace_thread_probelock_unlock(struct ThreadCB *thread);
 uint64_t dtrace_getreg_thread(struct ThreadCB *thread, unsigned int reg);
-int dtrace_thread_start(int thread, unsigned int argSize, void *argp);
-void dtrace_thread_exit(int status);
-int dtrace_get_thread_puid(int threadId);
 void dtrace_get_current_thread_name(char *name, unsigned int size);
 int dtrace_get_current_thread_type(void);
-int dtrace_get_current_thread_priority(void);
-unsigned int dtrace_get_current_thread_cpu_affinity_mask(void);
 int dtrace_thread_state_init(void);
 int dtrace_thread_state_exit(void);
-uint32_t dtrace_get_thread_predcache(struct ThreadCB *thread);
-int dtrace_get_thread_tracing(struct ThreadCB *thread);
-void dtrace_set_thread_tracing(struct ThreadCB *thread, int tracing);
-void dtrace_set_thread_vtime(struct ThreadCB *thread, int64_t vtime);
+
+/*
+ * Sony's accessors, inlined everywhere they are used: the state threadmgr keeps
+ * for DTrace is read through the thread each time, and the probe lock is the
+ * thread's DTrace spinlock.
+ */
+#include <sysmem/cpu.h>
+#include <threadmgr/threadcb.h>
+#include <threadmgr/threadmgr.h>
+
+static inline int64_t dtrace_get_thread_tracing(struct ThreadCB *thread)
+{
+	return thread->dtraceState->start;
+}
+
+static inline void dtrace_set_thread_tracing(struct ThreadCB *thread, int64_t tracing)
+{
+	thread->dtraceState->start = tracing;
+}
+
+static inline int64_t dtrace_get_thread_vtime(struct ThreadCB *thread)
+{
+	return thread->dtraceState->vtime;
+}
+
+static inline void dtrace_set_thread_vtime(struct ThreadCB *thread, int64_t vtime)
+{
+	thread->dtraceState->vtime = vtime;
+}
+
+static inline uint32_t dtrace_get_thread_predcache(struct ThreadCB *thread)
+{
+	return thread->dtraceState->predcache;
+}
+
+static inline void dtrace_set_thread_predcache(struct ThreadCB *thread, uint32_t predcache)
+{
+	thread->dtraceState->predcache = predcache;
+}
+
+static inline int dtrace_get_thread_reentering(struct ThreadCB *thread)
+{
+	return thread->dtraceState->flags & DTRACE_THREAD_REENTERING;
+}
+
+static inline void dtrace_set_thread_reentering(struct ThreadCB *thread, int reentering)
+{
+	if (reentering)
+		thread->dtraceState->flags |= DTRACE_THREAD_REENTERING;
+	else
+		thread->dtraceState->flags &= ~DTRACE_THREAD_REENTERING;
+}
+
+static inline void dtrace_thread_probelock_lock(struct ThreadCB *thread)
+{
+	sceKernelSpinlockLowLock(&thread->dtraceLock);
+}
+
+static inline void dtrace_thread_probelock_unlock(struct ThreadCB *thread)
+{
+	sceKernelSpinlockLowUnlock(&thread->dtraceLock);
+}
+
+static inline int dtrace_thread_start(SceUID thread, SceSize argSize, void *argp)
+{
+	return sceKernelStartThread(thread, argSize, argp);
+}
+
+static inline void dtrace_thread_exit(int status)
+{
+	sceKernelExitDeleteThread(status);
+}

@@ -213,7 +213,7 @@ int ddi_prop_free(void *data)
 	return DDI_PROP_SUCCESS;
 }
 
-int ddi_driver_major(dev_info_t *dip)
+int kdi_dtrace_set(kdi_dtrace_set_t transition)
 {
 	return 0;
 }

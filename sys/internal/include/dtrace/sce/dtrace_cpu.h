@@ -17,6 +17,9 @@ static inline processorid_t dtrace_processor_id(void)
 }
 
 int dtrace_is_interrupt_context(void);
+
+/* the interrupt priority level DTrace reports: whether an interrupt is running */
+#define dtrace_getipl	dtrace_is_interrupt_context
 dtrace_icookie_t dtrace_interrupt_disable(void);
 void dtrace_interrupt_enable(dtrace_icookie_t cookie);
 void dtrace_xcall(processorid_t cpu, void (*func)(void *), void *arg);

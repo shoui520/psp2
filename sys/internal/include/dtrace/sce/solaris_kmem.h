@@ -10,6 +10,7 @@
 #define KM_NOSLEEP	0x0001	/* cannot block for memory; may fail */
 
 void *kmem_alloc(size_t size, int kmflags);
-void *kmem_zalloc(size_t size, int kmflags);
+/* Sony's checked string copies know the size of what it returns */
+void *kmem_zalloc(size_t size, int kmflags) __attribute__((alloc_size(1)));
 void *kmem_zalloc_nocheck(size_t size, int kmflags);
 void kmem_free(const void *buf, size_t size);
