@@ -9,7 +9,7 @@
 #define DTRACE_KERNEL_PROCESS	0x10005		/* the kernel's process ID */
 
 #define DTRACE_PROCESS_NAME_LEN	256
-#define DTRACE_MODULE_NAME_LEN	31
+#define DTRACE_MODULE_NAME_LEN	256
 
 /* dtrace_get_process_type */
 #define DT_PROCESS_GAME		0
