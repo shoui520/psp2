@@ -1173,6 +1173,74 @@ int32_t ScePafGraphics_BEF37718(void)
 	return *sce_paf_graphics_active_surface_2e94;
 }
 
+void *ScePafGraphics_04F03872(void)
+{
+	uint8_t *state = (uint8_t *)sce_paf_graphics_active_surface_2e94;
+
+	if (*(uint32_t *)state) {
+		void *callbackAddress = *(void **)(state + 28);
+		/* Preserve the native BLX register arguments in ordinary C. */
+		void (*callback)(void *, void *, void *, void *) = callbackAddress;
+		void *argument = *(void **)(state + 32);
+
+		*(void **)(state + 28) = NULL;
+		void *resetState = *(void *volatile *)&sce_paf_graphics_active_surface_2e94;
+		*(void **)((uint8_t *)resetState + 32) = NULL;
+		if (callback)
+			callback(argument, callbackAddress, resetState, NULL);
+		state = (uint8_t *)sce_paf_graphics_active_surface_2e94;
+		*(void **)(state + 28) = NULL;
+		*(uint32_t *)state = 0;
+		uint8_t *lastState =
+			*(uint8_t *volatile *)&sce_paf_graphics_active_surface_2e94;
+		*(uint32_t *)(state + 4) = 0;
+		*(uint32_t *)(lastState + 32) = 0;
+		return lastState;
+	}
+	return &sce_paf_graphics_active_surface_2e94;
+}
+
+int ScePafGraphics_309D2902(const uint8_t *self, int index,
+			      int arg3, int arg4, int arg5, int arg6,
+			      const void *source)
+{
+	const uint8_t *resource;
+	uint8_t *destination;
+	uint32_t offset;
+	uint32_t length;
+
+	if (!*(const uint32_t *)(self + 136) ||
+	    !*(const uint32_t *)(self + 140))
+		return 0;
+	resource = *(const uint8_t *const *)(self + 4);
+	destination = **(uint8_t ***)(resource + 20);
+	offset = *(const uint32_t *)(resource + 16 * index + 36);
+	length = *(const uint32_t *)(resource + 16 * index + 40);
+	sce_paf_memcpy(destination + offset, source, length);
+	return 1;
+}
+
+int ScePafGraphics_BB119805(const uint8_t *self)
+{
+	uint8_t *object = *(uint8_t *const *)(self + 1684);
+	uint32_t mode;
+
+	if (object)
+		ScePafGraphics_29FC820B(object);
+	mode = *(const uint32_t *)(object + 32);
+	if (object)
+		ScePafGraphics_9FAF51CF(object);
+	if (mode > 1) {
+		if (mode <= 2)
+			return 12800;
+		if (mode <= 3)
+			return 10752;
+	} else if (mode > 0) {
+		return 9728;
+	}
+	return 9728;
+}
+
 int ScePafGraphics_E61D19A9(const uint8_t *self,
 			     uint32_t *first, uint32_t *second)
 {
