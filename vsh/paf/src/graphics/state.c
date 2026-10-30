@@ -44,6 +44,40 @@ int ScePafGraphics_08C21EFC(const uint8_t *left, const uint8_t *right)
 	return result;
 }
 
+/* Compare the native packed graphics descriptor, including IEEE float lanes. */
+static inline __attribute__((always_inline))
+int GraphicsDescriptorEqual(const uint8_t *left, const uint8_t *right)
+{
+	float32x2_t lvalues, rvalues;
+	uint32x2_t equality;
+
+	if (*(const int8_t *)(left + 4) != *(const int8_t *)(right + 4) ||
+	    *(const int16_t *)(left + 6) != *(const int16_t *)(right + 6))
+		return 0;
+	rvalues = *(const volatile float32x2_t *)(right + 8);
+	lvalues = *(const volatile float32x2_t *)(left + 8);
+	equality = vand_u32(
+		vceq_f32(vdup_lane_f32(rvalues, 0), vdup_lane_f32(lvalues, 0)),
+		vceq_f32(vdup_lane_f32(rvalues, 1), vdup_lane_f32(lvalues, 1)));
+	if (!vget_lane_u32(equality, 0))
+		return 0;
+	return *(const uint32_t *)(left + 16) == *(const uint32_t *)(right + 16) &&
+	       *(const uint32_t *)(left + 20) == *(const uint32_t *)(right + 20) &&
+	       *(const uint32_t *)(left + 24) == *(const uint32_t *)(right + 24) &&
+	       *(const uint32_t *)(left + 28) == *(const uint32_t *)(right + 28) &&
+	       *(const uint32_t *)(left + 32) == *(const uint32_t *)(right + 32);
+}
+
+int ScePafGraphics_2D4CEF1B(const uint8_t *left, const uint8_t *right)
+{
+	return GraphicsDescriptorEqual(left, right);
+}
+
+int ScePafGraphics_30754CE0(const uint8_t *left, const uint8_t *right)
+{
+	return !GraphicsDescriptorEqual(left, right);
+}
+
 int32_t ScePafGraphics_61C250D7(const uint8_t *self, uint32_t index,
 				uint8_t *output)
 {
