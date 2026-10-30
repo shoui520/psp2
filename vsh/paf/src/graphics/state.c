@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include "../compiler.h"
 #include "../std/string.h"
+#include "../std/new.h"
 #include <gxm.h>
 
 uint8_t sce_paf_graphics_flag_306c;
@@ -332,4 +333,43 @@ void ScePafGraphics_722A4987(uint8_t *self, SceGxmCullMode mode)
 int ScePafGraphics_8D25DDE9(const void *self, const char *tag)
 {
 	return tag == "DrawObj";
+}
+
+uint8_t *sce_paf_graphics_indicator_3070;
+
+int ScePafGraphics_BD1F2F7D(uint8_t *self, uint32_t value)
+{
+	if (value > 0x3f)
+		return -1;
+	*(uint32_t *)(self + 92) = value;
+	return 0;
+}
+
+int ScePafGraphics_DD2002B4(void)
+{
+	if (sce_paf_graphics_indicator_3070)
+		return *sce_paf_graphics_indicator_3070;
+	return 0;
+}
+
+void ScePafGraphics_EA96F738(int32_t *self)
+{
+	*self = -2127676444;
+	PafDelete(self);
+}
+
+int ScePafGraphics_FBC9302A(const uint32_t *self)
+{
+	return GraphicsInvokeOffset20(self);
+}
+
+uint32_t *ScePafGraphics_570E7907(uint32_t *self, uint32_t second,
+				    uint32_t third, uint32_t fourth,
+				    uint32_t fifth)
+{
+	self[88] = third;
+	self[89] = second;
+	self[90] = fourth;
+	self[91] = fifth;
+	return self;
 }
