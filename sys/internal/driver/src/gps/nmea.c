@@ -17,6 +17,18 @@
 #define RECEIVED_NAVIGATION	0x01010101	/* GpsNavigation.received.all: every sentence */
 #define RECEIVED_SATELLITES	0x0101		/* GpsSatelliteParse.received.all */
 
+/* the sentences gpsParseSentence takes */
+static const struct {
+	unsigned type;
+	const char *name;
+} s_sentences[] = {
+	{ GPS_SENTENCE_RMC, "GPRMC" },
+	{ GPS_SENTENCE_GGA, "GPGGA" },
+	{ GPS_SENTENCE_GSA, "GPGSA" },
+	{ GPS_SENTENCE_GSV, "GPGSV" },
+	{ GPS_SENTENCE_VTG, "GPVTG" },
+};
+
 static GpsNavigation s_navigation;
 static GpsSatelliteParse s_satelliteParse;
 static union {
@@ -183,6 +195,8 @@ INLINE int parseFields(unsigned type, const char *start)
 	GpsNavigation *navigation = &s_navigation;
 	GpsSatelliteParse *parse = &s_satelliteParse;
 	GpsSatellite *satellite = NULL;
+	const char *number;
+
 	for (const char *p = start; *p; p++) {
 		char ch = *p;
 		if (type == GPS_SENTENCE_RMC) {
@@ -221,12 +235,15 @@ INLINE int parseFields(unsigned type, const char *start)
 				switch (index) {
 				case 1: coordinate(field, size, 2); break;
 				case 2:
-					if (size && size < 32 && *copyField(field, size) == 'S')
+					/* Sony reads the hemisphere even past a field too long to copy */
+					number = copyField(field, size);
+					if ((size > 31 || (field && size)) && *number == 'S')
 						navigation->latitudeDegrees = -navigation->latitudeDegrees;
 					break;
 				case 3: coordinate(field, size, 3); break;
 				case 4:
-					if (size && size < 32 && *copyField(field, size) == 'W')
+					number = copyField(field, size);
+					if ((size > 31 || (field && size)) && *number == 'W')
 						navigation->longitudeDegrees = -navigation->longitudeDegrees;
 					break;
 				case 5: navigation->fixQuality = integerField(field, size); break;
@@ -367,10 +384,9 @@ int gpsParseSentence(const char *sentence, unsigned size)
 				clearNumber();
 				for (unsigned i = 0; i < 5; i++)
 					s_field.number[i] = p[(int)i - 5];
-				static const char *const names[] = {"GPRMC", "GPGGA", "GPGSA", "GPGSV", "GPVTG"};
-				for (unsigned i = 0; i < 5; i++)
-					if (!strncmp(s_field.number, names[i], 5)) {
-						type = i + 1;
+				for (unsigned i = 0; i < sizeof(s_sentences) / sizeof(s_sentences[0]); i++)
+					if (!strncmp(s_field.number, s_sentences[i].name, 5)) {
+						type = s_sentences[i].type;
 						break;
 					}
 				fields = p + 1;
@@ -397,20 +413,17 @@ int gpsParseSentence(const char *sentence, unsigned size)
 			clearNumber();
 			s_field.number[0] = p[0];
 			s_field.number[1] = p[1];
-			if ((uint8_t)strtol(s_field.number, NULL, 16) != checksum)
+			if (strtol(s_field.number, NULL, 16) != (long)checksum)
 				ret = (int)GPS_ERROR_CHECKSUM;
 			phase = 4;
 			p++;
-		}
+		} else
+			p++;		/* Sony skips the rest of the sentence two characters at a time */
 	}
 	if (ret)
 		return ret;
-	if (type && fields) {
+	if (type && fields)
 		ret = parseFields(type, fields);
-		if (ret)
-			goto publish;
-	}
-publish:
 	if (s_navigation.received.all == RECEIVED_NAVIGATION)
 		ret = gpsPublishNavigation(&s_navigation);
 	if (s_satelliteParse.received.all == RECEIVED_SATELLITES)
