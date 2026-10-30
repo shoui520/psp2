@@ -1013,7 +1013,7 @@ int ScePafWidget_766B09F4(const void *self, const char *tag)
 	return ScePafWidget_8EDFDE19(self, tag);
 }
 
-int ScePafWidget_7BBA6B10(const void *self, const char *tag)
+__attribute__((noinline)) int ScePafWidget_7BBA6B10(const void *self, const char *tag)
 {
 	if (tag == "text")
 		return 1;
@@ -1058,6 +1058,14 @@ DEFINE_WIDGET_TYPE(B954B379, "busyindicator", 8EDFDE19)
 DEFINE_WIDGET_TYPE(C7D6AD89, "pageturn", 31C1301C)
 DEFINE_WIDGET_TYPE(CC24A689, "rich_text", E83DA42E)
 DEFINE_WIDGET_TYPE(CCB1364A, "image_slidebar", 8EDFDE19)
+DEFINE_WIDGET_TYPE(D123A71C, "slidebar", 8EDFDE19)
+DEFINE_WIDGET_TYPE(D24DB0D6, "corner_button", 02B20FBB)
+DEFINE_WIDGET_TYPE(E07625DE, "dialog", 8F603B76)
+DEFINE_WIDGET_TYPE(E972265A, "text_box", 7BBA6B10)
+DEFINE_WIDGET_TYPE(F11BB524, "composite_drawer", 8EDFDE19)
+DEFINE_WIDGET_TYPE(FA0BFE83, "supplier", B7F6DF9C)
+DEFINE_WIDGET_TYPE(FA17CA06, "page", 8EDFDE19)
+DEFINE_WIDGET_TYPE(FE7FF370, "radio_button", F0408EDF)
 
 #undef DEFINE_WIDGET_TYPE
 
@@ -1068,6 +1076,19 @@ int ScePafWidget_9BE8F98D(uint32_t *self)
 	((void (*)(uint32_t *))*(void **)(vtable + 612))(self);
 	vtable = (uint8_t *)self[0];
 	return ((int (*)(uint32_t *))*(void **)(vtable + 616))(self);
+}
+
+/* The native delete callback marks the dispatch scope in a shared word. */
+uint32_t sce_paf_widget_dispatch_guard_142d4;
+
+int ScePafWidget_0C7FE13F(uint32_t *self)
+{
+	uint8_t *vtable = (uint8_t *)self[0];
+
+	sce_paf_widget_dispatch_guard_142d4 = 1;
+	((void (*)(uint32_t *))*(void **)(vtable + 8))(self);
+	sce_paf_widget_dispatch_guard_142d4 = 0;
+	return 0;
 }
 
 /* Test membership in the indexed widget selector table. */
