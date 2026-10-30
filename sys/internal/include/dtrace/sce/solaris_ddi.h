@@ -41,6 +41,7 @@ typedef struct dev_info dev_info_t;
 int ddi_soft_state_init(void **state_p, size_t size, size_t n_items);
 int ddi_soft_state_zalloc(void *state, int item);
 void *ddi_get_soft_state(void *state, int item);
+int ddi_get_last_soft_state(void **state_p);
 void ddi_soft_state_free(void *state, int item);
 void ddi_soft_state_fini(void **state_p);
 
