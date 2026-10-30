@@ -12,6 +12,7 @@
 #include <vnz_wrapper/vnz_wrapper.h>
 #include <sysmem/memblock.h>
 #include <sysmem/cpu.h>
+#include <lowio/iftu.h>
 
 /* not a game process: no budget for the library's memory block */
 #define VIDEOCODEC_ERROR_NOT_GAME_PROCESS	(-2141059008)	/* 0x80620840 */
@@ -1668,7 +1669,8 @@ int videocodecConvertAvcencError(int result)
 	return result;
 }
 
-int videocodecInitLockedRanges(VideocodecLockedRanges *ranges, SceUID pid,
+static inline __attribute__((always_inline)) int
+videocodecInitLockedRangesInline(VideocodecLockedRanges *ranges, SceUID pid,
 		VideocodecLockedRange *entries, unsigned int maxRanges, int errorBase)
 {
 	ranges->pid = pid;
@@ -1680,6 +1682,12 @@ int videocodecInitLockedRanges(VideocodecLockedRanges *ranges, SceUID pid,
 	ranges->numOfRanges = 0;
 	memset(entries, 0, maxRanges * sizeof(*entries));
 	return 0;
+}
+
+int videocodecInitLockedRanges(VideocodecLockedRanges *ranges, SceUID pid,
+		VideocodecLockedRange *entries, unsigned int maxRanges, int errorBase)
+{
+	return videocodecInitLockedRangesInline(ranges, pid, entries, maxRanges, errorBase);
 }
 
 static inline __attribute__((always_inline)) void
@@ -1808,4 +1816,678 @@ fault:
 fail:
 	videocodecUnlockRangesInline(ranges, ranges->pid);
 	return ret;
+}
+
+/* Nine-bit fixed-point RGB to YCbCr coefficients: ITU-R BT.601, BT.709, then both full range. */
+static const SceIftuCscParams videocodecCscToYuv[4] = { {
+	.post_add_0 = 64,
+	.post_add_1_2 = 514,
+	.post_clamp_max_0 = 943,
+	.post_clamp_min_0 = 64,
+	.post_clamp_max_1_2 = 963,
+	.post_clamp_min_1_2 = 64,
+	.ctm = {
+		{ 131, 258, 50 },
+		{ 0xfb4, 0xf6c, 224 },
+		{ 224, 0xf44, 0xfdc },
+	},
+}, {
+	.post_add_0 = 64,
+	.post_add_1_2 = 514,
+	.post_clamp_max_0 = 943,
+	.post_clamp_min_0 = 64,
+	.post_clamp_max_1_2 = 963,
+	.post_clamp_min_1_2 = 64,
+	.ctm = {
+		{ 93, 314, 31 },
+		{ 0xfcd, 0xf53, 224 },
+		{ 224, 0xf34, 0xfec },
+	},
+}, {
+	.post_add_0 = 0,
+	.post_add_1_2 = 514,
+	.post_clamp_max_0 = 1023,
+	.post_clamp_min_0 = 0,
+	.post_clamp_max_1_2 = 1023,
+	.post_clamp_min_1_2 = 0,
+	.ctm = {
+		{ 153, 300, 58 },
+		{ 0xfaa, 0xf57, 256 },
+		{ 256, 0xf2a, 0xfd7 },
+	},
+}, {
+	.post_add_0 = 0,
+	.post_add_1_2 = 514,
+	.post_clamp_max_0 = 1023,
+	.post_clamp_min_0 = 0,
+	.post_clamp_max_1_2 = 1023,
+	.post_clamp_min_1_2 = 0,
+	.ctm = {
+		{ 108, 366, 36 },
+		{ 0xfc6, 0xf3b, 256 },
+		{ 256, 0xf18, 0xfe9 },
+	},
+} };
+
+/* the modes a colour conversion locks its source and its destination with */
+static const int videocodecCscLockModes[2] = {
+	SCE_KERNEL_MEMORY_REF_PERM_KERN_R, SCE_KERNEL_MEMORY_REF_PERM_KERN_W
+};
+
+/* Nine-bit fixed-point YCbCr to RGB coefficients, in videocodecCscToYuv's order. */
+static const SceIftuCscParams videocodecCscToRgb[4] = { {
+	.post_add_0 = 64,
+	.post_add_1_2 = 514,
+	.post_clamp_max_0 = 1023,
+	.post_clamp_min_0 = 0,
+	.post_clamp_max_1_2 = 0,
+	.post_clamp_min_1_2 = 0,
+	.ctm = {
+		{ 596, 0, 817 },
+		{ 596, 0xf38, 0xe60 },
+		{ 596, 1032, 0 },
+	},
+}, {
+	.post_add_0 = 64,
+	.post_add_1_2 = 514,
+	.post_clamp_max_0 = 1023,
+	.post_clamp_min_0 = 0,
+	.post_clamp_max_1_2 = 0,
+	.post_clamp_min_1_2 = 0,
+	.ctm = {
+		{ 596, 0, 917 },
+		{ 596, 0xf93, 0xef0 },
+		{ 596, 1081, 0 },
+	},
+}, {
+	.post_add_0 = 0,
+	.post_add_1_2 = 514,
+	.post_clamp_max_0 = 1023,
+	.post_clamp_min_0 = 0,
+	.post_clamp_max_1_2 = 0,
+	.post_clamp_min_1_2 = 0,
+	.ctm = {
+		{ 512, 0, 717 },
+		{ 512, 0xf50, 0xe93 },
+		{ 512, 907, 0 },
+	},
+}, {
+	.post_add_0 = 0,
+	.post_add_1_2 = 514,
+	.post_clamp_max_0 = 1023,
+	.post_clamp_min_0 = 0,
+	.post_clamp_max_1_2 = 0,
+	.post_clamp_min_1_2 = 0,
+	.ctm = {
+		{ 512, 0, 806 },
+		{ 512, 0xfa1, 0xf11 },
+		{ 512, 950, 0 },
+	},
+} };
+
+/* pixel formats a colour conversion takes */
+#define VIDEOCODEC_CSC_IS_RGB(format) \
+	((format) == SCE_AVCDEC_PIXEL_BGRA8888 || (format) <= VIDEOCODEC_PIXEL_BGRA5551)
+#define VIDEOCODEC_CSC_IS_YUV(format) \
+	((format) - SCE_AVCDEC_PIXEL_YUV420_RASTER <= 1 || \
+	 (format) - SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER <= 1)
+
+/*
+ * Converts the picture pSrc holds into pDst's pixel format and size on the IFTU, locking
+ * both for the conversion with the modes pModes gives (source, destination). An
+ * interlaced source is converted one field at a time into the two halves of pDst.
+ */
+static inline __attribute__((always_inline)) int
+videocodecCscInline(VideocodecFrame *pDst, VideocodecFrame *pSrc, unsigned int cscCoefficient,
+		const int *pModes)
+{
+	VideocodecLockedRanges ranges;
+	VideocodecLockedRange lockedRange[8];
+	SceIftuConvParams params;
+	SceIftuFrameBuf dstBuf;
+	SceIftuPlaneState srcPlane;
+	unsigned int dstType = pDst->frame.pixelType;
+	unsigned int dstFormat = dstType & 0xFF;
+	unsigned int dstPitch = pDst->frame.framePitch;
+	unsigned int dstWidth = pDst->frame.frameWidth;
+	unsigned int dstHeight = pDst->frame.frameHeight;
+	uintptr_t dstPicture = (uintptr_t)pDst->frame.pPicture[0];
+	unsigned int srcType = pSrc->frame.pixelType;
+	unsigned int srcFormat = srcType & 0xFF;
+	unsigned int srcPitch = pSrc->frame.framePitch;
+	unsigned int srcWidth = pSrc->frame.frameWidth;
+	unsigned int srcHeight = pSrc->frame.frameHeight;
+	unsigned int srcAlignedWidth = (srcWidth + 15) & ~15U;
+	unsigned int srcAlignedHeight = (srcHeight + 7) & ~7U;
+	uintptr_t srcPicture = (uintptr_t)pSrc->frame.pPicture[0];
+	uintptr_t srcFields = (uintptr_t)pSrc->frame.pPicture[1];
+	uintptr_t srcY, srcCb = 0, srcCr = 0, dstY, dstCb = 0, dstCr = 0;
+	unsigned int srcIftuFormat, dstIftuFormat, alpha;
+	unsigned int srcPadding, srcChromaPadding, dstPadding, dstChromaPadding;
+	SceSize srcLumaSize = 0, srcChromaSize = 0, dstLumaSize, dstChromaSize, dstSize;
+	uintptr_t lockAddress;
+	SceSize lockSize;
+	int fields, fieldMode, halfHeight;
+	int ret;
+
+	videocodecInitLockedRangesInline(&ranges, 0, lockedRange, 8, VIDEOCODEC_DECODER_ERROR_BASE);
+
+	alpha = 255;
+	if (VIDEOCODEC_CSC_IS_RGB(dstFormat)) {
+		if (dstType & SCE_AVCDEC_OPTION_ENABLE) {
+			alpha = pDst->frame.opt.rgba.alpha;
+			if (pDst->frame.opt.rgba.cscCoefficient != 0)
+				cscCoefficient = pDst->frame.opt.rgba.cscCoefficient;
+		}
+		if (cscCoefficient == SCE_AVCDEC_CSC_COEFFICIENT_DEFAULT)
+			cscCoefficient = (srcHeight > 576 || srcWidth > 720) ?
+				SCE_AVCDEC_CSC_COEFFICIENT_ITU709 : SCE_AVCDEC_CSC_COEFFICIENT_ITU601;
+	}
+	if ((srcType & 0xF7) == 0) {
+		if (srcType & SCE_AVCDEC_OPTION_ENABLE) {
+			alpha = pSrc->frame.opt.rgba.alpha;
+			if (pSrc->frame.opt.rgba.cscCoefficient != 0)
+				cscCoefficient = pSrc->frame.opt.rgba.cscCoefficient;
+		}
+		if (cscCoefficient == SCE_AVCDEC_CSC_COEFFICIENT_DEFAULT)
+			cscCoefficient = (dstHeight > 576 || dstWidth > 720) ?
+				SCE_AVCDEC_CSC_COEFFICIENT_ITU709 : SCE_AVCDEC_CSC_COEFFICIENT_ITU601;
+		cscCoefficient--;
+	} else if (cscCoefficient != SCE_AVCDEC_CSC_COEFFICIENT_DEFAULT) {
+		cscCoefficient--;
+	}
+
+	if (srcType & VIDEOCODEC_FRAME_SEPARATE_PLANES) {
+		if (srcFormat != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+		    srcFormat != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+			return VIDEOCODEC_CSC_ERROR_INVALID_COLOR_FORMAT;
+		srcPicture = (uintptr_t)pSrc->pPlane[0];
+		if (srcFormat == SCE_AVCDEC_PIXEL_YUV420_RASTER) {
+			if (pSrc->pPlane[1] == NULL || ((uintptr_t)pSrc->pPlane[1] & 0xF) != 0 ||
+			    pSrc->pPlane[2] == NULL || ((uintptr_t)pSrc->pPlane[2] & 0xF) != 0)
+				return VIDEOCODEC_CSC_ERROR_INVALID_POINTER;
+		} else if (pSrc->pPlane[1] == NULL || ((uintptr_t)pSrc->pPlane[1] & 0xF) != 0) {
+			return VIDEOCODEC_CSC_ERROR_INVALID_POINTER;
+		}
+	}
+	if (dstType & VIDEOCODEC_FRAME_SEPARATE_PLANES) {
+		if (dstFormat != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+		    dstFormat != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+			return VIDEOCODEC_CSC_ERROR_INVALID_COLOR_FORMAT;
+		dstPicture = (uintptr_t)pDst->pPlane[0];
+		if (dstFormat == SCE_AVCDEC_PIXEL_YUV420_RASTER) {
+			if (pDst->pPlane[1] == NULL || ((uintptr_t)pDst->pPlane[1] & 0xF) != 0 ||
+			    pDst->pPlane[2] == NULL || ((uintptr_t)pDst->pPlane[2] & 0xF) != 0)
+				return VIDEOCODEC_CSC_ERROR_INVALID_POINTER;
+		} else if (pDst->pPlane[1] == NULL || ((uintptr_t)pDst->pPlane[1] & 0xF) != 0) {
+			return VIDEOCODEC_CSC_ERROR_INVALID_POINTER;
+		}
+	}
+	if (srcPicture == 0 || (srcPicture & 0xF) != 0 || dstPicture == 0 || (dstPicture & 0xF) != 0)
+		return VIDEOCODEC_CSC_ERROR_INVALID_POINTER;
+
+	if (!(dstType & VIDEOCODEC_FRAME_KEEP_SIZE) &&
+	    srcAlignedHeight <= dstHeight && srcAlignedWidth <= dstWidth) {
+		dstHeight = srcAlignedHeight;
+		dstWidth = srcAlignedWidth;
+	}
+	if (srcAlignedWidth - 64 > 1968 || srcAlignedHeight - 64 > 1024 ||
+	    srcWidth > (srcPitch & 0xFFFF) ||
+	    dstHeight - 64 > 1024 || dstWidth - 64 > 1968 ||
+	    dstWidth > dstPitch || dstPitch - 64 > 1968 ||
+	    (dstWidth > srcAlignedWidth && dstWidth > 4 * srcAlignedWidth) ||
+	    (dstWidth < srcAlignedWidth && srcAlignedWidth > 4 * dstWidth) ||
+	    (dstHeight > srcAlignedHeight && dstHeight > 4 * srcAlignedHeight) ||
+	    (dstHeight < srcAlignedHeight && srcAlignedHeight > 4 * dstHeight))
+		return VIDEOCODEC_CSC_ERROR_UNSUPPORT_IMAGE_SIZE;
+	if ((srcFormat != VIDEOCODEC_PIXEL_PHYSICAL && srcFormat != VIDEOCODEC_PIXEL_PHYSICAL_PACKED &&
+	     !VIDEOCODEC_CSC_IS_RGB(srcFormat) && !VIDEOCODEC_CSC_IS_YUV(srcFormat)) ||
+	    (!VIDEOCODEC_CSC_IS_RGB(dstFormat) && !VIDEOCODEC_CSC_IS_YUV(dstFormat)) ||
+	    cscCoefficient > 3)
+		return VIDEOCODEC_CSC_ERROR_INVALID_COLOR_FORMAT;
+
+	srcPadding = (srcPitch & 0xFFFF) - srcWidth;
+	halfHeight = 0;
+	if (srcFormat == VIDEOCODEC_PIXEL_PHYSICAL) {
+		srcY = srcPicture;
+		srcIftuFormat = VIDEOCODEC_IFTU_PHYSICAL;
+		srcChromaPadding = srcPadding;
+		if (srcFields != 0) {
+			if (dstFormat == VIDEOCODEC_PIXEL_YUV420_TILED ||
+			    dstFormat == VIDEOCODEC_PIXEL_YUV420_PACKED_TILED)
+				return VIDEOCODEC_CSC_ERROR_INVALID_COLOR_FORMAT;
+			fields = 1;
+			fieldMode = srcFields == 2 ? 2 : 3;
+			dstHeight >>= 1;
+			halfHeight = 1;
+		} else {
+			fields = 0;
+			fieldMode = 0;
+		}
+	} else if (srcFormat == VIDEOCODEC_PIXEL_PHYSICAL_PACKED) {
+		if (srcWidth > srcPitch >> 16)
+			return VIDEOCODEC_CSC_ERROR_UNSUPPORT_IMAGE_SIZE;
+		if (srcFields == 0 || (srcFields & 0xF) != 0)
+			return VIDEOCODEC_CSC_ERROR_INVALID_POINTER;
+		fields = 0;
+		fieldMode = 0;
+		srcY = srcPicture;
+		srcCb = srcFields;
+		srcChromaPadding = (srcPitch >> 16) - srcWidth;
+		srcIftuFormat = VIDEOCODEC_IFTU_TILED | SCE_IFTU_PIXELFORMAT_YUV420;
+	} else if ((srcType & 0xF7) == 0) {
+		if ((srcPitch & 3) != 0 || ((srcHeight | srcWidth) & 7) != 0 || srcFields != 0)
+			return VIDEOCODEC_CSC_ERROR_UNSUPPORT_IMAGE_SIZE;
+		ret = videocodecLockRange(&ranges, &srcY, srcPicture,
+			4 * (srcPitch & 0xFFFF) * srcHeight, pModes[0], 0, VIDEOCODEC_LOCK_CACHED);
+		if (ret < 0)
+			goto unlock;
+		srcIftuFormat = srcFormat != SCE_AVCDEC_PIXEL_RGBA8888 ?
+			SCE_IFTU_PIXELFORMAT_RGBX8888 : SCE_IFTU_PIXELFORMAT_BGRX8888;
+		srcPadding *= 4;
+		fields = 0;
+		fieldMode = 0;
+		srcChromaPadding = 0;
+	} else if (srcFormat - 1 <= 1) {
+		if ((srcPitch & 7) != 0 || ((srcHeight | srcWidth) & 7) != 0 || srcFields != 0)
+			return VIDEOCODEC_CSC_ERROR_UNSUPPORT_IMAGE_SIZE;
+		ret = videocodecLockRange(&ranges, &srcY, srcPicture,
+			2 * (srcPitch & 0xFFFF) * srcHeight, pModes[0], 0, VIDEOCODEC_LOCK_CACHED);
+		if (ret < 0)
+			goto unlock;
+		srcIftuFormat = srcFormat == VIDEOCODEC_PIXEL_BGR565 ?
+			SCE_IFTU_PIXELFORMAT_BGR565 : SCE_IFTU_PIXELFORMAT_BGRA5551;
+		srcPadding *= 2;
+		fields = 0;
+		fieldMode = 0;
+		srcChromaPadding = 0;
+	} else {
+		if (srcFields != 0) {
+			srcHeight >>= 1;
+			srcAlignedHeight >>= 1;
+			fields = 2;
+		} else {
+			fields = 0;
+		}
+		srcLumaSize = (srcPitch & 0xFFFF) * srcHeight;
+		srcChromaSize = srcLumaSize >> 2;
+		if (srcType & VIDEOCODEC_FRAME_SEPARATE_PLANES) {
+			lockAddress = (uintptr_t)pSrc->pPlane[0];
+			lockSize = srcLumaSize;
+		} else {
+			lockAddress = srcPicture;
+			lockSize = srcLumaSize + 2 * srcChromaSize;
+		}
+		ret = videocodecLockRange(&ranges, &srcY, lockAddress, lockSize, pModes[0], 0,
+			VIDEOCODEC_LOCK_CACHED);
+		if (ret < 0)
+			goto unlock;
+		if (srcFormat == SCE_AVCDEC_PIXEL_YUV420_RASTER) {
+			if ((srcPitch & 0x1F) != 0 || (srcWidth & 0xF) != 0 || (srcHeight & 7) != 0)
+				goto badSize;
+			srcChromaPadding = srcPadding >> 1;
+			if (pSrc->frame.pixelType & VIDEOCODEC_FRAME_SEPARATE_PLANES) {
+				ret = videocodecLockRange(&ranges, &srcCb, (uintptr_t)pSrc->pPlane[1],
+					srcChromaSize, pModes[0], 0, VIDEOCODEC_LOCK_CACHED);
+				if (ret < 0)
+					goto unlock;
+				ret = videocodecLockRange(&ranges, &srcCr, (uintptr_t)pSrc->pPlane[2],
+					srcChromaSize, pModes[0], 0, VIDEOCODEC_LOCK_CACHED);
+				if (ret < 0)
+					goto unlock;
+			} else {
+				srcCb = srcY + srcLumaSize;
+				srcCr = srcY + srcLumaSize + srcChromaSize;
+			}
+			srcIftuFormat = SCE_IFTU_PIXELFORMAT_YUV420;
+		} else if (srcFormat == VIDEOCODEC_PIXEL_YUV420_TILED) {
+			if ((srcPitch & 0xF) != 0 || ((srcHeight | srcWidth) & 0xF) != 0)
+				goto badSize;
+			if ((srcPicture & 0xFF) != 0)
+				goto badPointer;
+			srcIftuFormat = VIDEOCODEC_IFTU_TILED | SCE_IFTU_PIXELFORMAT_YUV420;
+			srcChromaPadding = srcPadding;
+			srcCb = srcY + srcLumaSize;
+		} else if (srcFormat == SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER) {
+			if (((srcPitch | srcWidth) & 0xF) != 0 || (srcHeight & 7) != 0)
+				goto badSize;
+			if (pSrc->frame.pixelType & VIDEOCODEC_FRAME_SEPARATE_PLANES) {
+				ret = videocodecLockRange(&ranges, &srcCb, (uintptr_t)pSrc->pPlane[1],
+					2 * srcChromaSize, pModes[0], 0, VIDEOCODEC_LOCK_CACHED);
+				if (ret < 0)
+					goto unlock;
+			} else {
+				srcCb = srcY + srcLumaSize;
+			}
+			srcChromaPadding = srcPadding;
+			srcIftuFormat = SCE_IFTU_PIXELFORMAT_NV12;
+		} else if (srcFormat == VIDEOCODEC_PIXEL_YUV420_PACKED_TILED) {
+			if ((srcPitch & 0xF) != 0 || (srcWidth & 0x1F) != 0 || (srcHeight & 7) != 0)
+				goto badSize;
+			if ((srcPicture & 0xFF) != 0)
+				goto badPointer;
+			srcIftuFormat = VIDEOCODEC_IFTU_TILED | SCE_IFTU_PIXELFORMAT_NV12;
+			srcChromaPadding = srcPadding;
+			srcCb = srcY + srcLumaSize;
+		} else {
+			ret = VIDEOCODEC_CSC_ERROR_INVALID_COLOR_FORMAT;
+			goto unlock;
+		}
+		fieldMode = 0;
+		if (fields != 0) {
+			if (pDst->frame.pixelType & VIDEOCODEC_FRAME_WHOLE_FIELDS) {
+				fields = 0;
+			} else {
+				fields = 3;
+				dstHeight >>= 1;
+				halfHeight = 1;
+			}
+		}
+	}
+
+	if ((dstType & 0xF7) == 0) {
+		if ((dstPitch & 3) != 0 || ((dstHeight | dstWidth) & 7) != 0)
+			goto badSize;
+		dstIftuFormat = dstFormat != SCE_AVCDEC_PIXEL_RGBA8888 ?
+			SCE_IFTU_PIXELFORMAT_RGBX8888 : SCE_IFTU_PIXELFORMAT_BGRX8888;
+		dstLumaSize = 0;
+		dstChromaSize = 0;
+		dstPadding = 4 * (dstPitch - dstWidth);
+		dstChromaPadding = 0;
+		dstSize = 4 * dstPitch * dstHeight;
+	} else if (dstFormat - 1 <= 1) {
+		if ((dstPitch & 7) != 0 || ((dstHeight | dstWidth) & 7) != 0)
+			goto badSize;
+		dstIftuFormat = dstFormat == VIDEOCODEC_PIXEL_BGR565 ?
+			SCE_IFTU_PIXELFORMAT_BGR565 : SCE_IFTU_PIXELFORMAT_BGRA5551;
+		dstLumaSize = 0;
+		dstChromaSize = 0;
+		dstPadding = 2 * (dstPitch - dstWidth);
+		dstChromaPadding = 0;
+		dstSize = 2 * dstPitch * dstHeight;
+	} else {
+		dstLumaSize = dstPitch * dstHeight;
+		dstChromaSize = dstLumaSize >> 2;
+		if (dstFormat == SCE_AVCDEC_PIXEL_YUV420_RASTER) {
+			if ((dstPitch & 0x1F) != 0 || (dstWidth & 0xF) != 0 || (dstHeight & 7) != 0)
+				goto badSize;
+			dstPadding = dstPitch - dstWidth;
+			dstChromaPadding = (dstPitch - dstWidth) >> 1;
+			dstIftuFormat = SCE_IFTU_PIXELFORMAT_YUV420;
+		} else if (dstFormat == VIDEOCODEC_PIXEL_YUV420_TILED) {
+			if ((dstPitch & 0xF) != 0 || ((dstHeight | dstWidth) & 0xF) != 0 ||
+			    dstHeight != srcAlignedHeight || dstWidth != srcAlignedWidth)
+				goto badSize;
+			if ((dstPicture & 0xFF) != 0)
+				goto badPointer;
+			dstIftuFormat = VIDEOCODEC_IFTU_TILED | SCE_IFTU_PIXELFORMAT_YUV420;
+			dstPadding = dstPitch - dstWidth;
+			dstChromaPadding = dstPitch - dstWidth;
+		} else if (dstFormat == SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER) {
+			if (((dstWidth | dstPitch) & 0xF) != 0 || (dstHeight & 7) != 0)
+				goto badSize;
+			dstPadding = dstPitch - dstWidth;
+			dstChromaPadding = dstPitch - dstWidth;
+			dstIftuFormat = SCE_IFTU_PIXELFORMAT_NV12;
+		} else if (dstFormat == VIDEOCODEC_PIXEL_YUV420_PACKED_TILED) {
+			if ((dstPitch & 0xF) != 0 || (dstWidth & 0x1F) != 0 || (dstHeight & 7) != 0 ||
+			    dstHeight != srcAlignedHeight || dstWidth != srcAlignedWidth)
+				goto badSize;
+			if ((dstPicture & 0xFF) != 0)
+				goto badPointer;
+			dstPadding = dstPitch - dstWidth;
+			dstIftuFormat = VIDEOCODEC_IFTU_TILED | SCE_IFTU_PIXELFORMAT_NV12;
+			dstChromaPadding = dstPitch - dstWidth;
+		} else {
+			ret = VIDEOCODEC_CSC_ERROR_INVALID_COLOR_FORMAT;
+			goto unlock;
+		}
+		dstSize = (3 * dstLumaSize) >> 1;
+	}
+
+	if (halfHeight)
+		dstSize *= 2;
+	if (pDst->frame.pixelType & VIDEOCODEC_FRAME_SEPARATE_PLANES) {
+		ret = videocodecLockRange(&ranges, &dstY, dstPicture, dstLumaSize, pModes[1],
+			VIDEOCODEC_CACHE_INVALIDATE, VIDEOCODEC_LOCK_CACHED);
+		if (ret < 0)
+			goto unlock;
+		if ((pDst->frame.pixelType & 0xFF) == SCE_AVCDEC_PIXEL_YUV420_RASTER) {
+			ret = videocodecLockRange(&ranges, &dstCb, (uintptr_t)pDst->pPlane[1],
+				dstChromaSize, pModes[1], VIDEOCODEC_CACHE_INVALIDATE,
+				VIDEOCODEC_LOCK_CACHED);
+			if (ret < 0)
+				goto unlock;
+			ret = videocodecLockRange(&ranges, &dstCr, (uintptr_t)pDst->pPlane[2],
+				dstChromaSize, pModes[1], VIDEOCODEC_CACHE_INVALIDATE,
+				VIDEOCODEC_LOCK_CACHED);
+			if (ret < 0)
+				goto unlock;
+		} else {
+			ret = videocodecLockRange(&ranges, &dstCb, (uintptr_t)pDst->pPlane[1],
+				2 * dstChromaSize, pModes[1], VIDEOCODEC_CACHE_INVALIDATE,
+				VIDEOCODEC_LOCK_CACHED);
+			if (ret < 0)
+				goto unlock;
+			dstCr = 0;
+		}
+	} else {
+		ret = videocodecLockRange(&ranges, &dstY, dstPicture, dstSize, pModes[1],
+			VIDEOCODEC_CACHE_INVALIDATE, VIDEOCODEC_LOCK_CACHED);
+		if (ret < 0)
+			goto unlock;
+		dstCb = dstY + dstLumaSize;
+		dstCr = dstY + dstLumaSize + dstChromaSize;
+	}
+	if (fieldMode != 0)
+		dstHeight *= 2;
+
+	srcPlane.fb.pixelformat = srcIftuFormat;
+	srcPlane.fb.width = srcAlignedWidth;
+	srcPlane.fb.height = srcAlignedHeight;
+	srcPlane.fb.leftover_stride = srcPadding;
+	srcPlane.fb.leftover_align = srcChromaPadding;
+	srcPlane.fb.paddr0 = srcY;
+	srcPlane.fb.paddr1 = srcCb;
+	srcPlane.fb.paddr2 = srcCr;
+	srcPlane.dst_x = 0;
+	srcPlane.dst_y = 0;
+	srcPlane.sampleX = 0;
+	srcPlane.sampleY = 0;
+	srcPlane.vtop_padding = 0;
+	srcPlane.vbot_padding = 0;
+	srcPlane.hleft_padding = 0;
+	srcPlane.hright_padding = 0;
+	dstBuf.pixelformat = dstIftuFormat;
+	dstBuf.width = dstWidth;
+	dstBuf.height = dstHeight;
+	dstBuf.leftover_stride = dstPadding;
+	dstBuf.leftover_align = dstChromaPadding;
+	dstBuf.paddr0 = dstY;
+	dstBuf.paddr1 = dstCb;
+	dstBuf.paddr2 = dstCr;
+	params.size = sizeof(params);
+	params.filterMode = 1;
+	params.csc_params1 = (SceIftuCscParams *)&videocodecCscToYuv[cscCoefficient];
+	params.csc_params2 = (SceIftuCscParams *)&videocodecCscToRgb[cscCoefficient];
+	params.csc_control = 1;
+	params.backgroundColor[0] = 0;
+	params.backgroundColor[1] = 0;
+	params.backgroundColor[2] = 0;
+	params.alpha = alpha;
+	params.fieldMode = fieldMode;
+	srcPlane.scaleX = (srcAlignedWidth << 16) / dstWidth;
+	srcPlane.scaleY = (srcAlignedHeight << 16) / dstHeight;
+	ret = sceIftuConvert(&dstBuf, &srcPlane, &params);
+	if (ret < 0 || fields == 0)
+		goto unlock;
+
+	/* the second field, into the second half of the destination */
+	if ((pSrc->frame.pixelType & VIDEOCODEC_FRAME_SEPARATE_PLANES) ||
+	    (pDst->frame.pixelType & VIDEOCODEC_FRAME_SEPARATE_PLANES))
+		goto badSize;
+	if (fieldMode != 0) {
+		fieldMode = fieldMode == 2 ? 3 : 2;
+	} else {
+		ret = videocodecLockRange(&ranges, &srcY, srcFields, srcLumaSize + 2 * srcChromaSize,
+			pModes[0], 0, VIDEOCODEC_LOCK_CACHED);
+		if (ret < 0)
+			goto unlock;
+		srcCb = srcY + srcLumaSize;
+		srcCr = srcY + srcLumaSize + srcChromaSize;
+	}
+	ret = videocodecLockRange(&ranges, &dstY, dstPicture + (dstSize >> 1), dstSize >> 1,
+		pModes[1], VIDEOCODEC_CACHE_INVALIDATE, VIDEOCODEC_LOCK_CACHED);
+	if (ret < 0)
+		goto unlock;
+	srcPlane.fb.paddr0 = srcY;
+	srcPlane.fb.paddr1 = srcCb;
+	srcPlane.fb.paddr2 = srcCr;
+	pDst->frame.pPicture[1] = (void *)(dstPicture + (dstSize >> 1));
+	params.fieldMode = fieldMode;
+	dstBuf.paddr0 = dstY;
+	dstCb = dstY + dstLumaSize;
+	dstBuf.paddr1 = dstCb;
+	dstCr = dstY + dstLumaSize + dstChromaSize;
+	dstBuf.paddr2 = dstCr;
+	ret = sceIftuConvert(&dstBuf, &srcPlane, &params);
+	goto unlock;
+
+badSize:
+	ret = VIDEOCODEC_CSC_ERROR_UNSUPPORT_IMAGE_SIZE;
+	goto unlock;
+badPointer:
+	ret = VIDEOCODEC_CSC_ERROR_INVALID_POINTER;
+unlock:
+	videocodecUnlockRangesInline(&ranges, ranges.pid);
+	return ret;
+}
+
+static __attribute__((noinline, noclone)) int videocodecCsc(VideocodecFrame *pDst, VideocodecFrame *pSrc,
+		unsigned int cscCoefficient, const int *pModes)
+{
+	return videocodecCscInline(pDst, pSrc, cscCoefficient, pModes);
+}
+
+/* Converts an MPEG-4 decoder's picture into pPictureOut's pixel format. */
+int videocodecM4vdecCsc(M4vdecPicture *pPictureOut, const M4vdecPicture *pPictureIn)
+{
+	SceAvcdecFrame frame;
+	VideocodecFrame in;
+	unsigned int inType, outType;
+
+	if (pPictureIn->size != sizeof(*pPictureIn) || pPictureOut->size != sizeof(*pPictureOut))
+		return VIDEOCODEC_M4VDEC_ERROR_INVALID_ARGUMENT_SIZE;
+	if ((pPictureIn->frame.framePitch & 0xF) != 0 ||
+	    ((pPictureIn->frame.frameWidth | pPictureIn->frame.frameHeight) & 0xF) != 0 ||
+	    (pPictureOut->frame.framePitch & 0xF) != 0 ||
+	    ((pPictureOut->frame.frameWidth | pPictureOut->frame.frameHeight) & 0xF) != 0)
+		return VIDEOCODEC_CSC_ERROR_UNSUPPORT_IMAGE_SIZE;
+	outType = pPictureOut->frame.pixelType;
+	pPictureOut->info = pPictureIn->info;
+	inType = pPictureIn->frame.pixelType;
+	if ((inType & 0xF7) != 0 && (inType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+	    (inType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+		return VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+	if (!VIDEOCODEC_CSC_IS_RGB(outType & 0xFF) &&
+	    (outType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+	    (outType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+		return VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+
+	memset(&frame, 0, sizeof(frame));
+	frame.pixelType = inType;
+	frame.framePitch = pPictureIn->frame.framePitch;
+	frame.frameWidth = pPictureIn->frame.frameWidth;
+	frame.frameHeight = pPictureIn->frame.frameHeight;
+	frame.horizontalSize = pPictureOut->frame.horizontalSize = pPictureIn->frame.horizontalSize;
+	frame.verticalSize = pPictureOut->frame.verticalSize = pPictureIn->frame.verticalSize;
+	frame.frameCropLeftOffset = pPictureOut->frame.frameCropLeftOffset =
+		pPictureIn->frame.frameCropLeftOffset;
+	frame.frameCropRightOffset = pPictureOut->frame.frameCropRightOffset =
+		pPictureIn->frame.frameCropRightOffset;
+	frame.frameCropTopOffset = pPictureOut->frame.frameCropTopOffset =
+		pPictureIn->frame.frameCropTopOffset;
+	frame.frameCropBottomOffset = pPictureOut->frame.frameCropBottomOffset =
+		pPictureIn->frame.frameCropBottomOffset;
+	frame.opt = pPictureIn->frame.opt;
+	frame.pPicture[0] = pPictureIn->frame.pPicture[0];
+	frame.pPicture[1] = pPictureIn->frame.pPicture[1];
+	if (frame.horizontalSize <= frame.frameWidth && frame.verticalSize <= frame.frameHeight) {
+		frame.frameWidth = frame.horizontalSize;
+		frame.frameHeight = frame.verticalSize;
+	}
+	in.frame = frame;
+	in.frame.pixelType = inType & ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+	pPictureOut->frame.pixelType = outType & ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+	return videocodecConvertM4vdecError(videocodecCsc((VideocodecFrame *)&pPictureOut->frame,
+		&in, SCE_AVCDEC_CSC_COEFFICIENT_DEFAULT, videocodecCscLockModes));
+}
+
+/*
+ * Converts an AVC decoder's picture into pPictureOut's pixel format, with the coefficients
+ * its stream's matrix coefficients and range ask for.
+ */
+int videocodecAvcdecCsc(SceAvcdecPicture *pPictureOut, const SceAvcdecPicture *pPictureIn)
+{
+	SceAvcdecFrame frame;
+	VideocodecFrame in;
+	unsigned int inType, outType, cscCoefficient, fullRange;
+
+	if (pPictureIn->size != sizeof(*pPictureIn) || pPictureOut->size != sizeof(*pPictureOut))
+		return SCE_AVCDEC_ERROR_INVALID_ARGUMENT_SIZE;
+	if ((pPictureIn->frame.framePitch & 0xF) != 0 ||
+	    ((pPictureIn->frame.frameWidth | pPictureIn->frame.frameHeight) & 0xF) != 0 ||
+	    (pPictureOut->frame.framePitch & 0xF) != 0 ||
+	    ((pPictureOut->frame.frameWidth | pPictureOut->frame.frameHeight) & 0xF) != 0)
+		return VIDEOCODEC_CSC_ERROR_UNSUPPORT_IMAGE_SIZE;
+	pPictureOut->info = pPictureIn->info;
+	cscCoefficient = SCE_AVCDEC_CSC_COEFFICIENT_DEFAULT;
+	if (pPictureOut->info.matrixCoefficients != 255) {
+		if (pPictureOut->info.matrixCoefficients - 4 <= 2) {
+			fullRange = SCE_AVCDEC_CSC_COEFFICIENT_ITU601_FULL;
+			cscCoefficient = SCE_AVCDEC_CSC_COEFFICIENT_ITU601;
+		} else {
+			fullRange = SCE_AVCDEC_CSC_COEFFICIENT_ITU709_FULL;
+			cscCoefficient = SCE_AVCDEC_CSC_COEFFICIENT_ITU709;
+		}
+		if (pPictureOut->info.videoFullRangeFlag == 1)
+			cscCoefficient = fullRange;
+	}
+	inType = pPictureIn->frame.pixelType;
+	outType = pPictureOut->frame.pixelType;
+	if ((inType & 0xF7) != 0 && (inType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+	    (inType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+		return SCE_AVCDEC_ERROR_INVALID_PARAM;
+	if (!VIDEOCODEC_CSC_IS_RGB(outType & 0xFF) &&
+	    (outType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_RASTER &&
+	    (outType & 0xFF) != SCE_AVCDEC_PIXEL_YUV420_PACKED_RASTER)
+		return SCE_AVCDEC_ERROR_INVALID_PARAM;
+
+	memset(&frame, 0, sizeof(frame));
+	frame.pixelType = inType;
+	frame.framePitch = pPictureIn->frame.framePitch;
+	frame.frameWidth = pPictureIn->frame.frameWidth;
+	frame.frameHeight = pPictureIn->frame.frameHeight;
+	frame.horizontalSize = pPictureOut->frame.horizontalSize = pPictureIn->frame.horizontalSize;
+	frame.verticalSize = pPictureOut->frame.verticalSize = pPictureIn->frame.verticalSize;
+	frame.frameCropLeftOffset = pPictureOut->frame.frameCropLeftOffset =
+		pPictureIn->frame.frameCropLeftOffset;
+	frame.frameCropRightOffset = pPictureOut->frame.frameCropRightOffset =
+		pPictureIn->frame.frameCropRightOffset;
+	frame.frameCropTopOffset = pPictureOut->frame.frameCropTopOffset =
+		pPictureIn->frame.frameCropTopOffset;
+	frame.frameCropBottomOffset = pPictureOut->frame.frameCropBottomOffset =
+		pPictureIn->frame.frameCropBottomOffset;
+	frame.opt = pPictureIn->frame.opt;
+	frame.pPicture[0] = pPictureIn->frame.pPicture[0];
+	frame.pPicture[1] = pPictureIn->frame.pPicture[1];
+	if (frame.horizontalSize <= frame.frameWidth && frame.verticalSize <= frame.frameHeight) {
+		frame.frameWidth = frame.horizontalSize;
+		frame.frameHeight = frame.verticalSize;
+	}
+	in.frame = frame;
+	in.frame.pixelType = inType & ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+	pPictureOut->frame.pixelType = outType & ~VIDEOCODEC_FRAME_SEPARATE_PLANES;
+	return videocodecCsc((VideocodecFrame *)&pPictureOut->frame, &in, cscCoefficient,
+		videocodecCscLockModes);
 }

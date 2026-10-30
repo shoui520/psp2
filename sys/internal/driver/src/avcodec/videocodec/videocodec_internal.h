@@ -9,7 +9,18 @@
 #include <stddef.h>
 #include <avcodec/avcodec.h>
 
-struct M4vdecPicture;
+/* an MPEG-4 decoder's picture: an SceAvcdecPicture with a shorter stream information */
+typedef struct M4vdecInfo {
+	unsigned int data[6];
+} M4vdecInfo;
+
+typedef struct M4vdecPicture {
+	SceSize size;
+	SceAvcdecFrame frame;
+	M4vdecInfo info;
+} M4vdecPicture;
+
+_Static_assert(sizeof(M4vdecPicture) == 92, "M4V picture ABI");
 
 typedef struct M4vdecAu {
 	unsigned char timingMetadata[16];
@@ -125,6 +136,47 @@ int videocodecUnlockRangesProc(VideocodecLockedRanges *ranges, SceUID pid);
 int videocodecLockRange(VideocodecLockedRanges *ranges, uintptr_t *pPhysicalAddress,
 	uintptr_t address, SceSize size, int mode, int cacheOp, unsigned int flags);
 int videocodecConvertM4vdecError(int result);
+
+/*
+ * The frame a colour conversion reads or writes: an SceAvcdecFrame, followed, when its
+ * pixelType has VIDEOCODEC_FRAME_SEPARATE_PLANES, by the addresses of its separate planes.
+ */
+typedef struct VideocodecFrame {
+	SceAvcdecFrame frame;
+	void *pPlane[3];
+} VideocodecFrame;
+
+_Static_assert(offsetof(VideocodecFrame, pPlane) == 64, "video codec frame ABI");
+
+/* pixelType flags above the pixel format */
+#define VIDEOCODEC_FRAME_SEPARATE_PLANES	0x40000	/* the planes are pPlane[0..2] */
+#define VIDEOCODEC_FRAME_KEEP_SIZE		0x80000	/* convert to the frame's whole size */
+#define VIDEOCODEC_FRAME_WHOLE_FIELDS		0x10000	/* an interlaced source in one pass */
+
+/* the pixel formats a conversion takes besides the SDK's (pixelType & 0xFF) */
+#define VIDEOCODEC_PIXEL_BGR565			0x01
+#define VIDEOCODEC_PIXEL_BGRA5551		0x02
+#define VIDEOCODEC_PIXEL_YUV420_TILED		0x11
+#define VIDEOCODEC_PIXEL_YUV420_PACKED_TILED	0x21
+#define VIDEOCODEC_PIXEL_PHYSICAL_PACKED	0x41	/* physical planes, pitches in framePitch */
+#define VIDEOCODEC_PIXEL_PHYSICAL		0x80	/* a physical picture; pPicture[1]: its fields */
+
+/* videocodecLockRange: a range outside the uncached window is kept coherent by cacheOp */
+#define VIDEOCODEC_LOCK_CACHED			0x10
+
+/* a colour conversion's errors */
+#define VIDEOCODEC_CSC_ERROR_UNSUPPORT_IMAGE_SIZE	(-2141061115)	/* 0x80620205 */
+#define VIDEOCODEC_CSC_ERROR_INVALID_COLOR_FORMAT	(-2141061114)	/* 0x80620206 */
+#define VIDEOCODEC_CSC_ERROR_INVALID_POINTER		(-2141061111)	/* 0x80620209 */
+#define VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM		(-2141058814)	/* 0x80620902 */
+#define VIDEOCODEC_M4VDEC_ERROR_INVALID_ARGUMENT_SIZE	(-2141058802)	/* 0x8062090E */
+
+int videocodecM4vdecCsc(M4vdecPicture *pPictureOut, const M4vdecPicture *pPictureIn);
+int videocodecAvcdecCsc(SceAvcdecPicture *pPictureOut, const SceAvcdecPicture *pPictureIn);
+
+/* the IFTU's tiled formats */
+#define VIDEOCODEC_IFTU_TILED			0x80000000U
+#define VIDEOCODEC_IFTU_PHYSICAL		0x80140000U
 int videocodecConvertAvcencError(int result);
 
 /* the hardware memory a codec library runs in: a memory block, or a process's unmap memory */
