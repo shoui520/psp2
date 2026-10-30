@@ -49,6 +49,9 @@ psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	dtrace/sce/solaris_ddi.c
 	dtrace/sce/solaris_debug.c
 	dtrace/sce/solaris_hrtime.c
+	dtrace/sce/solaris_kmem.c
+	dtrace/sce/solaris_kmemcache.c
+	dtrace/sce/solaris_mutex.c
 	global_timer.c
 )
 # Sony built DTrace with signed chars (its sign-extended char loads and compares) and at -O3
