@@ -91,12 +91,42 @@ typedef struct PafJobThreadOwner {
 	JobQueueNode *root;
 } PafJobThreadOwner;
 
+typedef struct PafJobCancelOwner {
+	uint8_t reserved[28];
+	JobQueueNode *root;
+} PafJobCancelOwner;
+
 _Static_assert(offsetof(PafJobWaitState, busy) == 12,
 	       "job busy flag offset");
 _Static_assert(offsetof(PafJobWaitState, queued) == 32,
 	       "job queued count offset");
 _Static_assert(offsetof(PafJobThreadOwner, root) == 16,
 	       "job thread list offset");
+_Static_assert(offsetof(PafJobCancelOwner, root) == 28,
+	       "job cancellation list offset");
+
+void ScePafThread_88061E60(PafJobCancelOwner *self)
+{
+	JobQueueNode *root;
+	JobQueueNode *next;
+	JobQueueNode *node;
+
+	MutexLock(&mutex);
+	root = self->root;
+	next = root ? root->next : NULL;
+	node = next;
+	while (node != self->root) {
+		JobItem *job = (JobItem *)node->val;
+
+		job->vtable->Cancel(job);
+		node = next;
+		if (next) {
+			next = next->next;
+			node = next;
+		}
+	}
+	MutexUnlock(&mutex);
+}
 
 void ScePafThread_789B263C(PafJobWaitState *self)
 {
