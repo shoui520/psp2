@@ -3,6 +3,26 @@
 #include <stddef.h>
 #include "../std/string.h"
 
+extern uint32_t ScePafGraphics_9FAF51CF(uint8_t *self);
+
+int ScePafMisc_5A80D3F5(uint8_t *self)
+{
+	uint8_t *owned;
+
+	if (!self || self[8] != 1)
+		return 0;
+	if (((int (*)(uint8_t *))((void **) *(void **)self)[14])(self) > 1)
+		return 0;
+	owned = *(uint8_t **)(self + 156);
+	if (!owned)
+		return 1;
+	if (*(int32_t *)(owned + 24) > 1)
+		return 0;
+	ScePafGraphics_9FAF51CF(owned);
+	*(void **)(self + 156) = 0;
+	return 1;
+}
+
 int ScePafMisc_9CF90429(const PafString *source)
 {
 	PafString prefix;
