@@ -1722,3 +1722,26 @@ uint8_t *ScePafWidget_2B4B4266(uint8_t *self, const uint8_t *flags)
 	}
 	return self;
 }
+
+uint8_t *ScePafWidget_C0033104(uint8_t *self, uint16_t flags)
+{
+	uint8_t *result = self;
+
+	if (((uint8_t)flags & *(uint16_t *)(self + 572)) &&
+	    (*(uint16_t *)(self + 572) & flags & 0xff00)) {
+		uint8_t *parent = *(uint8_t **)(self + 360);
+
+		if (parent) {
+			uint8_t *parentObject = *(uint8_t **)(parent + 532);
+
+			if (parentObject)
+				parentObject[12] |= 1;
+		}
+		if (flags & 2) {
+			result = *(uint8_t **)(self + 532);
+			if (result)
+				result[12] |= 1;
+		}
+	}
+	return result;
+}
