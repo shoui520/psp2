@@ -1368,3 +1368,11 @@ int ScePafWidget_730C0464(const uint8_t *self, uint32_t index)
 		return index;
 	return 255;
 }
+
+int ScePafWidget_C3D53C98(void *self, int first, int second)
+{
+	const uint8_t *vtable = *(const uint8_t *const *)self;
+
+	return ((int (*)(void *, int, int, int))*(void *const *)(vtable + 272))(
+		self, first, second, 0);
+}
