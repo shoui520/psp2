@@ -1745,3 +1745,23 @@ uint8_t *ScePafWidget_C0033104(uint8_t *self, uint16_t flags)
 	}
 	return result;
 }
+
+uint32_t *ScePafWidget_D0D78958(uint32_t *self, uint32_t *first,
+				uint32_t *second, uint32_t *third,
+				uint32_t *fourth)
+{
+	uint32_t *value = (uint32_t *)self[11];
+	uint32_t additional;
+
+	if (value) {
+		*second = value[0];
+		additional = value[1];
+	} else {
+		*second = 0;
+		additional = 0;
+	}
+	*fourth = additional;
+	*first = self[9];
+	*third = self[10];
+	return self;
+}
