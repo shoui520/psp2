@@ -4,6 +4,7 @@
  * suicide (Sony's intr_handler.c). Each records a stop for the process.
  */
 
+#include <fw.h>
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/threadmgr_debugger.h>
@@ -247,3 +248,15 @@ int intrHandlerInit(DbgpCB *dbgp)
 	}
 	return 0;
 }
+
+/* intrHandlerTerm is left out of Sony's link; its records stay */
+SCE_DBGINFO_DEFINE_ORPHAN(intrHandlerTermRecord136, 136, "intrHandlerTerm");
+#if FW_SINCE(0x04000000)
+SCE_DBGINFO_DEFINE_ORPHAN(intrHandlerTermRecord154, 154, "intrHandlerTerm");
+#else
+SCE_DBGINFO_DEFINE_ORPHAN(intrHandlerTermRecord145, 145, "intrHandlerTerm");
+SCE_DBGINFO_DEFINE_ORPHAN(intrHandlerTermRecord163, 163, "intrHandlerTerm");
+#endif
+SCE_DBGINFO_DEFINE_ORPHAN(intrHandlerTermRecord172, 172, "intrHandlerTerm");
+SCE_DBGINFO_DEFINE_ORPHAN(intrHandlerTermRecord181, 181, "intrHandlerTerm");
+SCE_DBGINFO_DEFINE_ORPHAN(intrHandlerTermRecord190, 190, "intrHandlerTerm");

@@ -55,7 +55,7 @@ typedef struct DbgpConfResponse {
 	SceUInt32 hwbkptMax;
 	SceUInt32 reserved;
 	SceUInt32 hwwtptMax;
-	SceUInt32 flags;
+	SceUInt32 sdkVersion;		/* of the system software */
 } DbgpConfResponse;
 
 /* what systemGetRegCmd reads a thread's registers into */
@@ -144,7 +144,7 @@ int systemGetConfCmd(DbgpProcCB *proc, const DbgpPrefix *packet)
 	conf->hwbkptMax = 0;
 	conf->reserved = 0;
 	conf->hwwtptMax = 3;
-	conf->flags = 0x4000000;
+	conf->sdkVersion = FW_SDK_VERSION;
 	return 0;
 }
 

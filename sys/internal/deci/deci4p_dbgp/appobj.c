@@ -4,6 +4,7 @@
  * (Sony's appobj.c).
  */
 
+#include <fw.h>
 #include <kernel/error.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/threadmgr_debugger.h>
@@ -153,6 +154,20 @@ static const int s_ultSyncObjInfoTypes[] = {
 	ULOBJ_SYNC_OBJ_COND,
 };
 
+/*
+ * What the counters are handed: SceUlobjMgr's param in 4.00, its entry count
+ * in the 3.6x builds
+ */
+#if FW_SINCE(0x04000000)
+typedef UlobjInfoArrayParam UlobjCountParam;
+#define ULOBJ_COUNT_PARAM(param)	(param)
+#define ULOBJ_COUNT_NUM_ENTRIES(count)	((count)->numEntries)
+#else
+typedef SceUInt32 UlobjCountParam;
+#define ULOBJ_COUNT_PARAM(param)	(&(param)->numEntries)
+#define ULOBJ_COUNT_NUM_ENTRIES(count)	(*(count))
+#endif
+
 INLINE int expectNumUlobjsUnderUltRuntime(SceUID pid, SceUIntPtr address,
 					  SceUInt32 *num, SceUIntPtr *table)
 {
@@ -184,7 +199,7 @@ INLINE int expectNumUlobjsUnderUltRuntime(SceUID pid, SceUIntPtr address,
 
 /* The fibers and ULTs the fiber stack response lists. */
 void expectNumFiberUlobjs(SceUID pid, const UlobjInfoArray *array,
-			  const UlobjInfoArrayParam *param, SceUInt32 *num,
+			  const UlobjCountParam *param, SceUInt32 *num,
 			  SceUIntPtr *table)
 {
 	SceUInt32 numEntries, value, n, i;
@@ -194,7 +209,7 @@ void expectNumFiberUlobjs(SceUID pid, const UlobjInfoArray *array,
 	SCE_DBG_ASSERT(param != NULL, 433);
 	SCE_DBG_ASSERT(table != NULL, 434);
 	*num = 0;
-	numEntries = param->numEntries;
+	numEntries = ULOBJ_COUNT_NUM_ENTRIES(param);
 	for (i = 0; i != numEntries; i++) {
 		value = array->entry[i];
 		if ((value & ULOBJ_ENTRY_USED) == 0)
@@ -278,7 +293,7 @@ INLINE int getNumUlobjsUnderUltRuntime(SceUID pid, SceUIntPtr address,
 
 /* The records the application object response holds, by kind. */
 void getNumUlobjs(SceUID pid, const UlobjInfoArray *array,
-		  const UlobjInfoArrayParam *param, int *numRunning,
+		  const UlobjCountParam *param, int *numRunning,
 		  int *numOthers, int *numRuntimes, int *numUlts,
 		  SceUIntPtr *table)
 {
@@ -296,7 +311,7 @@ void getNumUlobjs(SceUID pid, const UlobjInfoArray *array,
 	*numOthers = 0;
 	*numRuntimes = 0;
 	*numUlts = 0;
-	numEntries = param->numEntries;
+	numEntries = ULOBJ_COUNT_NUM_ENTRIES(param);
 	for (i = 0; i != numEntries; i++) {
 		value = array->entry[i];
 		if ((value & ULOBJ_ENTRY_USED) == 0)
@@ -607,7 +622,13 @@ int fillFiberStackInfo(SceUID pid, SceUIntPtr address,
 	return 1;
 }
 
-/* The stack records of a ULT runtime's fibers; their number. */
+/*
+ * The stack records of a ULT runtime's fibers; their number. The 3.6x builds
+ * inline fillFiberStackInfo here.
+ */
+#if !FW_SINCE(0x04000000)
+__attribute__((flatten))
+#endif
 int fillFiberStackInfoFromUltRuntime(SceUID pid, SceUIntPtr address,
 				     DbgpFiberStackInfo *info, SceUIntPtr *table)
 {
@@ -672,8 +693,8 @@ INLINE int buildAndSendGetAppObjectInfoRes(DbgpProcCB *proc, SceUID pid,
 	SCE_DBG_ASSERT(proc != NULL, 904);
 	if (array == NULL)
 		return buildAndSendNullGetAppObjectInfoRes(proc);
-	getNumUlobjs(pid, array, param, &numRunning, &numOthers, &numRuntimes,
-		     &numUlts, work->table);
+	getNumUlobjs(pid, array, ULOBJ_COUNT_PARAM(param), &numRunning,
+		     &numOthers, &numRuntimes, &numUlts, work->table);
 	if (numRunning == 0 && numOthers == 0 && numRuntimes == 0 && numUlts == 0)
 		return buildAndSendNullGetAppObjectInfoRes(proc);
 
@@ -935,7 +956,8 @@ INLINE int buildAndSendGetFiberStackInfoRes(DbgpProcCB *proc, SceUID pid,
 	SCE_DBG_ASSERT(proc != NULL, 1392);
 	if (array == NULL)
 		return buildAndSendNullGetFiberStackInfoRes(proc);
-	expectNumFiberUlobjs(pid, array, param, &num, work->table);
+	expectNumFiberUlobjs(pid, array, ULOBJ_COUNT_PARAM(param), &num,
+			     work->table);
 	if (num == 0)
 		return buildAndSendNullGetFiberStackInfoRes(proc);
 	size = FIBER_STACK_RES_SIZE(num);

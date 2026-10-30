@@ -51,3 +51,6 @@ int threadHandlerInit(DbgpCB *dbgp)
 	}
 	return 0;
 }
+
+/* threadHandlerTerm is left out of Sony's link; its record stays */
+SCE_DBGINFO_DEFINE_ORPHAN(threadHandlerTermRecord56, 56, "threadHandlerTerm");

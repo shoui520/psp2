@@ -706,6 +706,9 @@ int DbgpModuleStart(SceSize args, const void *argp)
 	return 0;
 }
 
+/* _dbgpTerm is left out of Sony's link; its record stays */
+SCE_DBGINFO_DEFINE_ORPHAN(dbgpTermRecord, SCE_LINE(419, 411), "_dbgpTerm");
+
 int dbgpDeleteWorkerThread(SceUID pid)
 {
 	DbgpProcCB *proc;

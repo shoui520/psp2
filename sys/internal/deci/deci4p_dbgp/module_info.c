@@ -3,6 +3,7 @@
  * unload notifications sent for them (Sony's module_info.c).
  */
 
+#include <fw.h>
 #include <kernel/error.h>
 #include <modulemgr/modulemgr.h>
 #include <modulemgr/modulemgr_control.h>
@@ -73,10 +74,14 @@ _Static_assert(sizeof(DbgpModuleUnloadNotification) == 0x2c, "module unload noti
 
 static SceKernelSpinlock s_moduleInfoLock;
 
-static void moduleInfoFillLoadNotification(const SceModuleCB *module,
-					    SceSize pathSize,
-					    DbgpModuleLoadInfo *body,
-					    SceSize metadataSize)
+/* a function of its own in 4.00; the 3.6x builds inline it into both callers */
+#if FW_SINCE(0x04000000)
+static void
+#else
+static inline __attribute__((always_inline)) void
+#endif
+moduleInfoFillLoadNotification(const SceModuleCB *module, SceSize pathSize,
+			       DbgpModuleLoadInfo *body, SceSize metadataSize)
 {
 	const SceModuleSegment *segment;
 	char *p;

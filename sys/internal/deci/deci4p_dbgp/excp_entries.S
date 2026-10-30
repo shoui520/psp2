@@ -7,10 +7,10 @@
 .arm
 .text
 
-.macro DBGP_EXCEPTION_ENTRY entry, handler
+.macro DBGP_EXCEPTION_ENTRY entry, handler, pool=0
 .balign 4
 .global \entry
-.type \entry, %object
+.type \entry, %function
 \entry:
 	.word 0, 0
 \entry\()Code:
@@ -18,7 +18,7 @@
 	mov r3, r1
 	mov r4, r0
 	ldr r1, [r0, #0x3c]
-	push {lr}
+	stmdb sp!, {lr}
 	sub sp, sp, #4
 	cpsie i
 	blx \handler
@@ -26,16 +26,18 @@
 	mov r1, r0
 	mov r0, r4
 	add sp, sp, #4
-	pop {lr}
+	ldmia sp!, {lr}
 	ldr r2, =\entry
 	ldr r2, [r2]
 	add r2, r2, #8
 	mov pc, r2
+.if \pool
+	.ltorg			/* the three entries' literals, after the last */
+.endif
 .size \entry, .-\entry
 .endm
 
 DBGP_EXCEPTION_ENTRY dbgpPrefetchAbortEntry, excpHandlerPrefetchAbort
 DBGP_EXCEPTION_ENTRY dbgpDataAbortEntry, excpHandlerDataAbort
-DBGP_EXCEPTION_ENTRY dbgpUndefinedEntry, excpHandlerUndefined
-.ltorg
+DBGP_EXCEPTION_ENTRY dbgpUndefinedEntry, excpHandlerUndefined, 1
 .section .note.GNU-stack, "", %progbits
