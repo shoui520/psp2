@@ -749,3 +749,37 @@ void *ScePafWidget_40F2A311(uint32_t *self)
 	}
 	return self;
 }
+
+int ScePafWidget_A8F7D4C1(void *self, uint32_t value)
+{
+	void *const *methods = *(void *const *const *)self;
+
+	return ((int (*)(void *, uint32_t, uint32_t, uint32_t))methods[63])(
+		self, value, 1, 0);
+}
+
+int ScePafWidget_E38C03C5(void *self)
+{
+	void *const *methods = *(void *const *const *)self;
+
+	return ((int (*)(void *, uint32_t, uint32_t))methods[152])(
+		self, 268435458, 0);
+}
+
+uint64_t *ScePafWidget_3D6C290E(uint64_t *result, const uint8_t *self)
+{
+	const uint8_t *source = *(const uint8_t *const *)(self + 12);
+
+	result[0] = *(const uint64_t *)(source + 712);
+	result[1] = 0;
+	return result;
+}
+
+uint64_t *ScePafWidget_6206FB7E(uint64_t *result, const uint8_t *self)
+{
+	const uint8_t *source = *(const uint8_t *const *)(self + 12);
+
+	result[0] = *(const uint64_t *)(source + 720);
+	result[1] = 0;
+	return result;
+}
