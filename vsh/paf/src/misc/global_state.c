@@ -1,6 +1,30 @@
 /* Miscellaneous ScePaf state words originally held in shared BSS. */
 #include <stdint.h>
 #include <stddef.h>
+#include "../compiler.h"
+#include <kernel/threadmgr.h>
+
+extern int32_t sceBtUnregisterCallback(void);
+
+int32_t sce_paf_bt_callback_uid;
+int32_t sce_paf_bt_callback_state;
+
+int ScePafMisc_2825FFFD(void)
+{
+	int result;
+
+	if (sce_paf_bt_callback_uid == 0)
+		return -2135994015;
+	result = sceBtUnregisterCallback();
+	if (result >= 0) {
+		result = sceKernelDeleteCallback(sce_paf_bt_callback_uid);
+		if (result >= 0) {
+			sce_paf_bt_callback_uid = 0;
+			sce_paf_bt_callback_state = 0;
+		}
+	}
+	return result;
+}
 
 uint32_t sce_paf_misc_flags_ee98;
 uint32_t sce_paf_misc_counter_ee9c;
