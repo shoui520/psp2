@@ -2317,3 +2317,89 @@ unlock:
 	_unlockProcessSuspendCore();
 	return ret;
 }
+
+int dsp0VideocodecDeleteEncoder(unsigned int handle, SceUID pid)
+{
+	void *storage = NULL;
+	Dsp0VideocodecGlobal *global;
+	Dsp0VideocodecLibraryCommand *library;
+	Dsp0VideocodecEncoder *encoder;
+	Dsp0VideocodecEncoderCommand *command;
+	unsigned int index;
+	int ret;
+
+	if (pid != 0) {
+		if (sceKernelGetRemoteKPLS(pid,
+				dsp0VideocodecLocalStorageId, &storage, 0) < 0)
+			storage = NULL;
+	} else {
+		storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+	}
+#if FW_DEBUG
+	sceKernelAssert(storage != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	global = storage;
+	if (global->initialized != 1)
+		return (int)0x8062020c;
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (ret < 0)
+		return ret;
+	lockFastMutex((SceKernelFastMutex *)global->pMutex);
+	library = global->library;
+	index = handle - 4097;
+	encoder = &global->encoders[index];
+	if (index < library->numOfEncoders && encoder->state == 4096) {
+		command = encoder->pCommand;
+		if (encoder->status != 2) {
+			encoder->status = 2;
+			dsp0VideocodecStopEncoder(encoder->pCommand);
+		}
+		ret = dsp0VideocodecTerminateEncoder(command, library);
+		if (ret < 0)
+			ret = (int)0x8062020d;
+		if (encoder->picture[2].address != 0)
+			encoder->picture[2].address = 0;
+		encoder->picture[0].address = 0;
+		encoder->picture[1].address = 0;
+		encoder->state = 0;
+	} else {
+		ret = (int)0x8062020c;
+	}
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+	_unlockProcessSuspendCore();
+	return ret;
+}
+
+int dsp0VideocodecGetInputPicture(unsigned int handle,
+				  Dsp0VideocodecEncoderPicture *pPicture)
+{
+	Dsp0VideocodecGlobal *global;
+	Dsp0VideocodecEncoder *encoder;
+	Dsp0VideocodecEncoderCommand *command;
+	unsigned int index;
+
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+#if FW_DEBUG
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	if (global->initialized != 1)
+		return (int)0x8062020c;
+	if (pPicture == NULL)
+		return (int)0x80620209;
+	encoder = &global->encoders[handle - 4097];
+	if (handle - 4097 >= global->library->numOfEncoders)
+		return (int)0x8062020c;
+	if (encoder->state != 4096)
+		return (int)0x8062020c;
+	lockFastMutex((SceKernelFastMutex *)encoder->pMutex);
+	command = encoder->pCommand;
+	index = command->pictureIndex;
+	if (command->picture[index].valid == 0)
+		index = (index + 1) & 1;
+	pPicture->address = encoder->picture[index].address;
+	pPicture->size = encoder->picture[index].size;
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)encoder->pMutex);
+	return 0;
+}
