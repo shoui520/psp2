@@ -17,6 +17,9 @@
 #include <sceerror.h>
 #include <kernel/error.h>
 
+/* the byte order (Solaris's isa_defs.h): a 32-bit pointer in a 64-bit slot comes first */
+#define _LITTLE_ENDIAN
+
 /*
  * Sony built the CDDL code with the checked string copies (_FORTIFY_SOURCE): a
  * copy into an object of known size goes through __strncpy_chk or
