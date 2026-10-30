@@ -1585,6 +1585,24 @@ uint8_t *ScePafGraphics_62EDB616(uint8_t *self, const uint8_t *source)
 	return self;
 }
 
+uint8_t *ScePafGraphics_FE59371C(uint8_t *self, int index)
+{
+	uint8_t *buffer;
+	uint8_t *result = 0;
+
+	MutexLock(&sce_paf_graphics_flag_mutex_1250);
+	if (self[64] & 1) {
+		MutexUnlock(&sce_paf_graphics_flag_mutex_1250);
+		return 0;
+	}
+	buffer = *(uint8_t **)(self + 108);
+	self[64] |= 1;
+	if (buffer)
+		result = buffer + *(const uint32_t *)(self + 56) * index;
+	MutexUnlock(&sce_paf_graphics_flag_mutex_1250);
+	return result;
+}
+
 int ScePafGraphics_DD80343F(const uint8_t *self, int value)
 {
 	int i;
