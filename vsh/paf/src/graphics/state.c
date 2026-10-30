@@ -15,6 +15,8 @@ uint32_t ScePafGraphics_29FC820B(uint8_t *self);
 uint32_t ScePafGraphics_9FAF51CF(uint8_t *self);
 uint32_t ScePafGraphics_6C448991(void);
 extern uint32_t sce_paf_graphics_state_12b0;
+extern uint32_t sce_paf_graphics_state_11fc;
+extern uint8_t sce_paf_graphics_flag_06e8;
 
 static const SceGxmProgramParameter *GraphicsFindNamedProgramParameter(
 		const uint8_t *self, const char *name)
@@ -245,6 +247,104 @@ uint8_t *ScePafGraphics_39003F6D(uint8_t *self)
 		return ScePafGraphics_4CA149A5(self);
 	}
 	return self;
+}
+
+uint8_t *ScePafGraphics_14F2FA80(uint8_t *self, uint32_t first,
+				  uint32_t second)
+{
+	if (*(uint32_t *)(self + 92) != first ||
+	    *(uint32_t *)(self + 96) != second) {
+		*(uint32_t *)(self + 92) = first;
+		*(uint32_t *)(self + 96) = second;
+		if (!sce_paf_graphics_flag_06e8) {
+			uint32_t value = *(uint32_t *)(self + 52);
+			*(uint32_t *)(self + 52) =
+				(value & ~0x0cu) |
+				(4u * (sce_paf_graphics_state_11fc & 3u));
+		}
+		self[80] |= 0x0c;
+	}
+	return self;
+}
+
+uint8_t *ScePafGraphics_D3411AF4(uint8_t *self, uint32_t first,
+				  uint32_t second)
+{
+	if (*(uint32_t *)(self + 84) != first ||
+	    *(uint32_t *)(self + 88) != second) {
+		*(uint32_t *)(self + 84) = first;
+		*(uint32_t *)(self + 88) = second;
+		if (!sce_paf_graphics_flag_06e8) {
+			uint32_t value = *(uint32_t *)(self + 52);
+			*(uint32_t *)(self + 52) =
+				(value & ~0x0cu) |
+				(4u * (sce_paf_graphics_state_11fc & 3u));
+		}
+		self[80] |= 4;
+	}
+	return self;
+}
+
+uint8_t *ScePafGraphics_93A32E5C(uint8_t *self)
+{
+	uint8_t nibbleA;
+	uint8_t nibbleB;
+	int8_t oldMode = *(volatile int8_t *)(self + 9);
+
+	*(uint32_t *)(self + 12) = 1;
+	*(uint32_t *)(self + 4) = 0;
+	nibbleA = (self[10] & 0xf0) | 1;
+	*(uint32_t *)(self + 16) = 0;
+	*(uint32_t *)(self + 20) = 0;
+	nibbleB = (self[11] & 0xf0) | 1;
+	self[8] = 15;
+	self[9] = (uint8_t)((oldMode & ~0x0f) & ~0xf0);
+	self[10] = nibbleA & 0x0f;
+	self[11] = nibbleB & 0x0f;
+	return self;
+}
+
+void ScePafGraphics_2AE23377(uint8_t *self, uint8_t enabled,
+			      uint8_t sides)
+{
+	if (sides & 1) {
+		SceGxmDepthWriteMode mode = SCE_GXM_DEPTH_WRITE_DISABLED;
+		SceGxmContext *context;
+
+		self[1892] = enabled;
+		context = *(SceGxmContext **)(self + 1676);
+		if (enabled)
+			mode = SCE_GXM_DEPTH_WRITE_ENABLED;
+		sceGxmSetFrontDepthWriteEnable(context, mode);
+	}
+	if (sides & 2) {
+		SceGxmDepthWriteMode mode = SCE_GXM_DEPTH_WRITE_DISABLED;
+
+		self[1893] = enabled;
+		if (enabled)
+			mode = SCE_GXM_DEPTH_WRITE_ENABLED;
+		sceGxmSetBackDepthWriteEnable(
+			*(SceGxmContext **)(self + 1676), mode);
+	}
+}
+
+void ScePafGraphics_7EC1D482(uint8_t *self, SceGxmDepthFunc depthFunc,
+			      uint8_t sides)
+{
+	if (sides & 1) {
+		int enabled = self[1938];
+		*(uint32_t *)(self + 1884) = depthFunc;
+		if (enabled)
+			sceGxmSetFrontDepthFunc(
+				*(SceGxmContext **)(self + 1676), depthFunc);
+	}
+	if (sides & 2) {
+		int enabled = self[1938];
+		*(uint32_t *)(self + 1888) = depthFunc;
+		if (enabled)
+			sceGxmSetFrontDepthFunc(
+				*(SceGxmContext **)(self + 1676), depthFunc);
+	}
 }
 
 int ScePafGraphics_C44935BE(const uint8_t *first,
