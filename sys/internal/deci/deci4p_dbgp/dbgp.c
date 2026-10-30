@@ -1644,12 +1644,12 @@ coredump_done:
 				break;
 			case 0x70:
 				switch (request->type) {
-				COMMAND(0, GetNetSystemInfoCmd);
-				COMMAND(2, GetNetSockInfoCmd);
-				COMMAND(4, GetNetInterfaceInfoCmd);
-				COMMAND(6, GetNetResolverInfoCmd);
-				COMMAND(8, GetNetEmulationSettingCmd);
-				COMMAND(0xa, SetNetEmulationSettingCmd);
+				COMMAND(0, netGetNetSystemInfoCmd);
+				COMMAND(2, netGetNetSockInfoCmd);
+				COMMAND(4, netGetNetInterfaceInfoCmd);
+				COMMAND(6, netGetNetResolverInfoCmd);
+				COMMAND(8, netGetNetEmulationSettingCmd);
+				COMMAND(0xa, netSetNetEmulationSettingCmd);
 				default: UNKNOWN_COMMAND(0x70); break;
 				}
 				break;

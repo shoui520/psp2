@@ -56,6 +56,53 @@ _Static_assert(offsetof(SceNetPsDebugEmulationRequest, parameterSize) == 8,
 _Static_assert(offsetof(SceNetPsDebugEmulationRequest, parameters) == 12,
 	       "debug request parameters");
 
+/* Kernel syscall result, distinct from libnet's six-word public statistics. */
+typedef struct SceNetPsKernelStatistics {
+	unsigned int kernel_mem_free_min;
+	unsigned int kernel_mem_free_size;
+	int packet_count;
+	int packet_qos_count;
+} SceNetPsKernelStatistics;
+
+_Static_assert(sizeof(SceNetPsKernelStatistics) == 16,
+	       "SceNetPsKernelStatistics size");
+
+/* Debug enumeration writes the whole header followed by SDK socket records. */
+typedef struct SceNetPsDebugSockInfo {
+	SceUID processId;
+	int count;
+	unsigned int recordSize;
+	SceNetSockInfo sockets[];
+} SceNetPsDebugSockInfo;
+
+_Static_assert(sizeof(SceNetPsDebugSockInfo) == 12, "debug sockinfo header size");
+_Static_assert(offsetof(SceNetPsDebugSockInfo, processId) == 0,
+	       "debug sockinfo process");
+_Static_assert(offsetof(SceNetPsDebugSockInfo, count) == 4,
+	       "debug sockinfo count");
+_Static_assert(offsetof(SceNetPsDebugSockInfo, recordSize) == 8,
+	       "debug sockinfo record size");
+_Static_assert(offsetof(SceNetPsDebugSockInfo, sockets) == 12,
+	       "debug sockinfo records");
+
+/*
+ * SCE: a debugger registered with SceNetPsForDriver 83A12CCC; the stack
+ * fills in its two command entry points.
+ */
+typedef struct SceNetPsDebugClient {
+	/* takes the stack lock */
+	int (*control)(struct SceNetPsDebugClient *client, int command,
+		       void *input, unsigned int inputSize, void *output,
+		       unsigned int outputSize);
+	/* for a caller that holds it */
+	int (*controlUnlocked)(struct SceNetPsDebugClient *client, int command,
+			       void *input, unsigned int inputSize,
+			       void *output, unsigned int outputSize);
+	unsigned int flags;	/* 1: the debugger holds the locks; 2: wait at most 3 s */
+} SceNetPsDebugClient;
+
+_Static_assert(sizeof(SceNetPsDebugClient) == 12, "debug client size");
+
 /* The connection-control getter reports all five words of this record. */
 typedef struct SceNetPsConnectionParam {
 	int connectTimeoutSeconds;

@@ -756,12 +756,12 @@ int moduleGetModInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int moduleGetMetaDataCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int moduleGetModuleListCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int fileGetFdInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
-int GetNetSystemInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
-int GetNetSockInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
-int GetNetInterfaceInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
-int GetNetResolverInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
-int GetNetEmulationSettingCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
-int SetNetEmulationSettingCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
+int netGetNetSystemInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
+int netGetNetSockInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
+int netGetNetInterfaceInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
+int netGetNetResolverInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
+int netGetNetEmulationSettingCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
+int netSetNetEmulationSettingCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int coredumpHandlerResultCallback(int task_id, SceUID pid, int result,
 				  const char *path, SceSize path_len,
 				  int encrypted);
