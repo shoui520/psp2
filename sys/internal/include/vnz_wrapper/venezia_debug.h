@@ -167,6 +167,25 @@ typedef struct VeneziaDebugImageGeometry {
 	uint32_t processorCount;
 } VeneziaDebugImageGeometry;
 
+typedef struct VeneziaDebugImageFormat {
+	uint32_t width;
+	uint32_t height;
+	uint32_t imageCount;
+} VeneziaDebugImageFormat;
+
+typedef struct VeneziaVipCaptureParam {
+	uint32_t imageVirtualAddress;
+	SceSize imageSize;
+	uint32_t storageVirtualAddress;
+	SceSize storageSize;
+	const VeneziaDebugImageFormat *imageFormat;
+	const VeneziaDebugImageGeometry *geometry;
+} VeneziaVipCaptureParam;
+
+int SceCodecEngineWrapperForDriver_2B74706E(const VeneziaDebugImageFormat *geometry,
+	uint32_t *size);
+int SceCodecEngineWrapperForDriver_9D3B1425(unsigned int *processor,
+	const VeneziaVipCaptureParam *param);
 int SceCodecEngineWrapperForDriver_8CD35820(const VeneziaDebugImageGeometry *geometry, SceSize *size);
 int SceCodecEngineWrapperForDriver_86861877(unsigned int flags, int wait, SceUID pid);
 

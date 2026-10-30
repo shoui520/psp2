@@ -19,6 +19,7 @@ int sceCodecEngineRegisterProcExitHandler(CodecEngineProcExitHandler handler);
 int sceCodecEngineRegisterProcKillHandler(CodecEngineProcExitHandler handler);
 
 /* codecengine/memory.c: unmapped memory a process shares with the codec engine */
+#define SCE_CODECENGINE_ERROR_INVALID_POINTER	(-2141192192)	/* 0x80600000 */
 int sceCodecEngineRegisterUnmapMemory(SceUID pid, SceUIntVAddr address, SceSize size);
 int sceCodecEngineUnregisterUnmapMemory(SceUID pid, SceUIntVAddr address, SceSize size);
 int sceCodecEngineIsUnmapMemory(SceUID pid, const void *address, SceSize size);

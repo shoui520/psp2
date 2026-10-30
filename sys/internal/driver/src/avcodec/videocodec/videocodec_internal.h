@@ -227,16 +227,25 @@ typedef struct VideocodecMemory {
 
 _Static_assert(sizeof(VideocodecMemory) == 16, "video codec memory ABI");
 
+/* where a decoder's frame buffer came from: a block of its own, or the process's unmap memory */
+#define VIDEOCODEC_FRAME_BUF_MEMBLOCK	1
+#define VIDEOCODEC_FRAME_BUF_UNMAP	2
+
+/* the size a DSP0 AVC decoder is queried or created for, and its decode mode */
+typedef struct VideocodecDecoderQuery {
+	SceAvcdecQueryDecoderInfo info;
+	unsigned int mode;
+} VideocodecDecoderQuery;
+
 /* an AVC decoder on the Venezia codec engine */
 typedef struct VideocodecAvcDecoder {
 	SceAvcdecQueryDecoderInfo info;
 	unsigned int mode;
 	unsigned int handle;
 	unsigned char decodeState[1500];
-	unsigned int decodeFlags;
-	unsigned char decodeStatus[4];
-	unsigned char pictureStatus[4];
-	unsigned int pictureFlags;
+	unsigned int frameBufFlags;
+	SceAvcdecBuf frameBuf;			/* the frame buffer the decoder runs in */
+	SceUID frameBufMemBlockId;		/* with VIDEOCODEC_FRAME_BUF_MEMBLOCK */
 	struct ThreadmgrFastMutex mutex;
 	VideocodecLockedRanges lockedRanges;
 	VideocodecLockedRange lockedRange[1];
@@ -252,9 +261,9 @@ typedef struct VideocodecDsp0Decoder {
 	unsigned int mode;
 	unsigned int handle;
 	unsigned char decodeStatus[4];
-	unsigned int decodeFlags;
-	unsigned char pictureStatus[8];
-	unsigned int pictureFlags;
+	unsigned int frameBufFlags;
+	SceAvcdecBuf frameBuf;
+	SceUID frameBufMemBlockId;
 	struct ThreadmgrFastMutex mutex;
 	VideocodecLockedRanges lockedRanges;
 	VideocodecLockedRange lockedRange[1];
@@ -686,7 +695,7 @@ typedef struct Dsp0VideocodecM4vDecoderInfo {
 typedef struct Dsp0VideocodecDecoderParam {
 	void *pFrameBuf;
 	SceSize frameBufSize;
-	const void *pInfo;	/* VideocodecDsp0Decoder or Dsp0VideocodecM4vDecoderInfo */
+	const void *pInfo;	/* VideocodecDecoderQuery or Dsp0VideocodecM4vDecoderInfo */
 } Dsp0VideocodecDecoderParam;
 
 /*
@@ -814,6 +823,10 @@ typedef struct Dsp0VideocodecLibraryMemory {
 } Dsp0VideocodecLibraryMemory;
 
 int dsp0VideocodecInitLibrary(unsigned int *pLibrary, const Dsp0VideocodecLibraryMemory *pMemory);
+int dsp0VideocodecQueryAvcDecoderMemSize(const VideocodecDecoderQuery *pInfo,
+	SceSize *frameMemSize);
+int dsp0VideocodecCreateAvcDecoder(unsigned int codecType, unsigned int *pHandle,
+	const Dsp0VideocodecDecoderParam *param);
 
 typedef struct AvcencNalUnit {
 	void *data;
@@ -910,8 +923,12 @@ int SceAvcodecForDriver_6E250A5F(SceAvcdecCtrl *pCtrl,
 	SceAvcdecArrayPicture *pWorkPicture, const SceUInt *timeout);
 int SceAvcodecForDriver_663B3195(unsigned int codecType,
 	SceAvcdecCtrl *pCtrl, const SceAvcdecQueryDecoderInfo *pDecoderInfo);
+int videocodecQueryDecoderMemSize(unsigned int codecType,
+	const SceAvcdecQueryDecoderInfo *pDecoderInfo, SceSize *pFrameMemSize);
 int videocodecCreateDecoder(unsigned int codecType,
 	SceAvcdecCtrl *pCtrl, const SceAvcdecQueryDecoderInfo *pDecoderInfo);
+/* a decoder's own frame buffer is only for a game process */
+#define VIDEOCODEC_AVCDEC_ERROR_NOT_GAME_PROCESS	(-2141061056)	/* 0x80620040 */
 int videocodecValidatePublicDecoderInfo(unsigned int codecType,
 	const SceAvcdecQueryDecoderInfo *pDecoderInfo);
 int videocodecValidateDecoderInfo(unsigned int codecType,

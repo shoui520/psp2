@@ -1286,7 +1286,7 @@ int dsp0VideocodecTermLibraryForProcess(unsigned int codecType, SceUID pid)
 	return ret;
 }
 
-int dsp0VideocodecQueryAvcDecoderMemSize(const VideocodecDsp0Decoder *pInfo,
+int dsp0VideocodecQueryAvcDecoderMemSize(const VideocodecDecoderQuery *pInfo,
 					 SceSize *frameMemSize)
 {
 	Dsp0VideocodecGlobal *global;
@@ -1332,7 +1332,7 @@ int dsp0VideocodecCreateAvcDecoder(unsigned int codecType, unsigned int *pHandle
 				   const Dsp0VideocodecDecoderParam *param)
 {
 	Dsp0VideocodecGlobal *global;
-	const VideocodecDsp0Decoder *pInfo;
+	const VideocodecDecoderQuery *pInfo;
 	Dsp0VideocodecLibraryCommand *library;
 	Dsp0VideocodecDecoder *decoder;
 	Dsp0VideocodecDecoderCommand *command;
@@ -1389,7 +1389,7 @@ int dsp0VideocodecCreateAvcDecoder(unsigned int codecType, unsigned int *pHandle
 	command->coprocessorModes[2] = 1;
 	command->coprocessorSetup[0] = 2;
 	command->coprocessorSetup[1] = 4;
-	command->decodeMode = ((const VideocodecDsp0Decoder *)param->pInfo)->mode;
+	command->decodeMode = ((const VideocodecDecoderQuery *)param->pInfo)->mode;
 	ret = dsp0VideocodecQueryDecoderMemory(command);
 	if (ret < 0)
 		goto unlock;

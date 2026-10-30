@@ -8,6 +8,7 @@
 #include <avcdec.h>
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
+#include <vnz_wrapper/vnz_wrapper.h>
 
 static const int videocodecDecoderErrors[] = {
 	SCE_AVCDEC_ERROR_INVALID_PARAM,
@@ -45,6 +46,347 @@ static const int videocodecCodecEngineErrors[] = {
 	SCE_AVCDEC_ERROR_OUT_OF_MEMORY,
 	SCE_AVCDEC_ERROR_GREATER_THAN_1200_AT_LV30,
 };
+
+static inline __attribute__((always_inline)) int videocodecMapCodecEngineError(int result)
+{
+	unsigned int index = (unsigned int)result - 0x80620101;
+
+	if (index <= 13)
+		result = videocodecCodecEngineErrors[index];
+	return result;
+}
+
+static inline __attribute__((always_inline)) int videocodecMapDecoderError(int result)
+{
+	unsigned int index = (unsigned int)result - 0x80620201;
+
+	if (index <= 16)
+		return videocodecDecoderErrors[index];
+	if (result == (int)0x80620380)
+		return SCE_AVCDEC_ERROR_INVALID_STREAM;
+	if (result == (int)0x806203C0)
+		return SCE_AVCDEC_ERROR_INVALID_STATE;
+	return result;
+}
+
+/* The frame buffer an AVC decoder of codecType needs for pDecoderInfo, in 256 KiB units. */
+int videocodecQueryDecoderMemSize(unsigned int codecType,
+		const SceAvcdecQueryDecoderInfo *pDecoderInfo, SceSize *pFrameMemSize)
+{
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	uint32_t frameMemSize;
+	unsigned int numOfRefFrames;
+	int ret;
+
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		return ret;
+	numOfRefFrames = pDecoderInfo->numOfRefFrames;
+	if (numOfRefFrames == 0)
+		numOfRefFrames = 1;
+	if (codecType == SCE_VIDEODEC_TYPE_HW_AVCDEC) {
+		VeneziaDebugImageFormat format;
+
+		format.width = pDecoderInfo->horizontal;
+		format.height = pDecoderInfo->vertical;
+		format.imageCount = numOfRefFrames;
+		ret = SceCodecEngineWrapperForDriver_2B74706E(&format, &frameMemSize);
+		ret = videocodecMapCodecEngineError(ret);
+	} else {
+		VideocodecDecoderQuery query;
+
+		query.info.horizontal = pDecoderInfo->horizontal;
+		query.info.vertical = pDecoderInfo->vertical;
+		query.info.numOfRefFrames = numOfRefFrames;
+		query.mode = 0;
+		ret = dsp0VideocodecQueryAvcDecoderMemSize(&query, &frameMemSize);
+		ret = videocodecMapDecoderError(ret);
+	}
+	if (ret >= 0)
+		*pFrameMemSize = (frameMemSize + 0x3FFFF) >> 18 << 18;
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	return ret;
+}
+
+/*
+ * Creates an AVC decoder of codecType for pDecoderInfo in a free slot, in pCtrl's frame buffer:
+ * the process's unmap memory, memory locked for the decoder, or, when pCtrl has none, a block
+ * of its own.
+ */
+int videocodecCreateDecoder(unsigned int codecType,
+		SceAvcdecCtrl *pCtrl, const SceAvcdecQueryDecoderInfo *pDecoderInfo)
+{
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	SceKernelAllocMemBlockKernelOpt opt;
+	VideocodecAvcDecoder *avc;
+	VideocodecDsp0Decoder *dsp0;
+	uintptr_t physicalAddress;
+	unsigned int i, numOfRefFrames, handle;
+	void *base;
+	int ret;
+
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		return ret;
+	if (codecType == SCE_VIDEODEC_TYPE_HW_AVCDEC) {
+		if (global->avcdecInitCount == 0)
+			goto notInitialized;
+		for (i = 0; i < global->avcdecInfo.numOfStreams; i++) {
+			avc = &global->avcDecoders[i];
+			ret = lockFastMutex(&avc->mutex);
+			if (ret < 0) {
+				sceKernelUnlockFastMutex(global->pAllMutex);
+				return ret;
+			}
+			if (avc->handle == 0)
+				break;
+			sceKernelUnlockFastMutex(&avc->mutex);
+		}
+		if (i >= global->avcdecInfo.numOfStreams)
+			goto alreadyUsed;
+		videocodecInitLockedRanges(&avc->lockedRanges, 0, avc->lockedRange, 1,
+			VIDEOCODEC_DECODER_ERROR_BASE);
+	} else {
+		if (global->dsp0Library == 0)
+			goto notInitialized;
+		for (i = 0; i < global->dsp0DecoderInfo.numOfStreams; i++) {
+			dsp0 = &global->dsp0Decoders[i];
+			ret = lockFastMutex(&dsp0->mutex);
+			if (ret < 0) {
+				sceKernelUnlockFastMutex(global->pAllMutex);
+				return ret;
+			}
+			if (dsp0->handle == 0)
+				break;
+			sceKernelUnlockFastMutex(&dsp0->mutex);
+		}
+		if (i >= global->dsp0DecoderInfo.numOfStreams)
+			goto alreadyUsed;
+		videocodecInitLockedRanges(&dsp0->lockedRanges, 0, dsp0->lockedRange, 1,
+			VIDEOCODEC_DECODER_ERROR_BASE);
+	}
+
+	numOfRefFrames = pDecoderInfo->numOfRefFrames;
+	if (numOfRefFrames == 0)
+		numOfRefFrames = 1;
+	if (codecType == SCE_VIDEODEC_TYPE_HW_AVCDEC) {
+		VeneziaDebugImageGeometry libraryInfo;
+		VeneziaDebugImageFormat decoderInfo;
+		VeneziaVipCaptureParam param;
+
+		if (global->avcdecInfo.horizontal < pDecoderInfo->horizontal ||
+		    global->avcdecInfo.vertical < pDecoderInfo->vertical ||
+		    numOfRefFrames > global->avcdecInfo.numOfRefFrames) {
+			ret = SCE_AVCDEC_ERROR_INVALID_PARAM;
+			goto avcUnlockRanges;
+		}
+		libraryInfo.width = global->avcdecInfo.horizontal;
+		libraryInfo.height = global->avcdecInfo.vertical;
+		libraryInfo.imageCount = global->avcdecInfo.numOfRefFrames;
+		libraryInfo.processorCount = global->avcdecInfo.numOfStreams;
+		decoderInfo.width = pDecoderInfo->horizontal;
+		decoderInfo.height = pDecoderInfo->vertical;
+		decoderInfo.imageCount = numOfRefFrames;
+		if (pCtrl->frameBuf.pBuf != NULL) {
+			if (((uintptr_t)pCtrl->frameBuf.pBuf & 0xFFFFF) != 0) {
+				ret = SCE_AVCDEC_ERROR_INVALID_POINTER;
+				goto avcUnlockRanges;
+			}
+			ret = sceCodecEngineRegisterUnmapMemory(0, (SceUIntVAddr)pCtrl->frameBuf.pBuf,
+				pCtrl->frameBuf.size);
+			if (ret == SCE_CODECENGINE_ERROR_INVALID_POINTER) {
+				if (videocodecLockRange(&avc->lockedRanges, &physicalAddress,
+						(uintptr_t)pCtrl->frameBuf.pBuf, pCtrl->frameBuf.size, 32,
+						VIDEOCODEC_CACHE_INVALIDATE, VIDEOCODEC_LOCK_CACHED) < 0) {
+					ret = SCE_AVCDEC_ERROR_INVALID_POINTER;
+					goto avcUnlockRanges;
+				}
+				avc->frameBufFlags = 0;
+				avc->frameBuf = pCtrl->frameBuf;
+			} else {
+				if (ret < 0) {
+					ret = SCE_AVCDEC_ERROR_INVALID_POINTER;
+					goto avcUnlockRanges;
+				}
+				ret = sceCodecEngineUnmapUserVAtoKernelVA(0, pCtrl->frameBuf.pBuf, &base);
+				if (ret < 0) {
+					sceCodecEngineUnregisterUnmapMemory(0,
+						(SceUIntVAddr)pCtrl->frameBuf.pBuf, pCtrl->frameBuf.size);
+					goto avcUnlockRanges;
+				}
+				avc->frameBufFlags = VIDEOCODEC_FRAME_BUF_UNMAP;
+				avc->frameBuf.pBuf = base;
+				avc->frameBuf.size = pCtrl->frameBuf.size;
+			}
+		} else {
+			SceSize frameMemSize;
+
+			if (!sceKernelIsGameBudget()) {
+				ret = VIDEOCODEC_AVCDEC_ERROR_NOT_GAME_PROCESS;
+				goto avcUnlockRanges;
+			}
+			frameMemSize = 0;
+			ret = videocodecQueryDecoderMemSize(SCE_VIDEODEC_TYPE_HW_AVCDEC, pDecoderInfo,
+				&frameMemSize);
+			if (ret < 0)
+				goto avcUnlockRanges;
+			memset(&opt, 0, sizeof(opt));
+			opt.size = sizeof(opt);
+			opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_ALIGNMENT;
+			opt.alignment = 0x100000;
+			ret = sceKernelAllocMemBlockForKernel("SceAvcdecHwFrameBuf",
+				SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_CDRAM_RW, frameMemSize, &opt);
+			if (ret < 0) {
+				ret = SCE_AVCDEC_ERROR_OUT_OF_MEMORY;
+				goto avcUnlockRanges;
+			}
+			avc->frameBufMemBlockId = ret;
+			avc->frameBufFlags |= VIDEOCODEC_FRAME_BUF_MEMBLOCK;
+			sceKernelGetMemBlockBase(ret, &avc->frameBuf.pBuf);
+			avc->frameBuf.size = frameMemSize;
+		}
+		param.imageVirtualAddress = (uint32_t)avc->frameBuf.pBuf;
+		param.imageSize = avc->frameBuf.size;
+		param.storageVirtualAddress = (uint32_t)global->avcdecMemory.base;
+		param.storageSize = global->avcdecMemory.size;
+		param.imageFormat = &decoderInfo;
+		param.geometry = &libraryInfo;
+		ret = SceCodecEngineWrapperForDriver_9D3B1425(&handle, &param);
+		ret = videocodecMapCodecEngineError(ret);
+		if (ret >= 0) {
+			avc->mode = 0;
+			avc->info.horizontal = pDecoderInfo->horizontal;
+			avc->info.vertical = pDecoderInfo->vertical;
+			avc->info.numOfRefFrames = numOfRefFrames;
+			pCtrl->handle = handle;
+			avc->handle = handle;
+			goto avcUnlock;
+		}
+		if (avc->frameBufFlags & VIDEOCODEC_FRAME_BUF_MEMBLOCK) {
+			sceKernelFreeMemBlock(avc->frameBufMemBlockId);
+			avc->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_MEMBLOCK;
+		}
+		if (avc->frameBufFlags & VIDEOCODEC_FRAME_BUF_UNMAP) {
+			sceCodecEngineUnmapKernelVAtoUserVA(0, avc->frameBuf.pBuf, &base);
+			sceCodecEngineUnregisterUnmapMemory(0, (SceUIntVAddr)base,
+				avc->frameBuf.size);
+			avc->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_UNMAP;
+		}
+		__builtin_memset(&avc->frameBuf, 0, sizeof(avc->frameBuf));
+avcUnlockRanges:
+		videocodecUnlockRanges(&avc->lockedRanges);
+avcUnlock:
+		sceKernelUnlockFastMutex(&avc->mutex);
+	} else {
+		Dsp0VideocodecDecoderParam param;
+		VideocodecDecoderQuery query;
+
+		if (global->dsp0DecoderInfo.horizontal < pDecoderInfo->horizontal ||
+		    global->dsp0DecoderInfo.vertical < pDecoderInfo->vertical ||
+		    numOfRefFrames > global->dsp0DecoderInfo.numOfRefFrames) {
+			ret = SCE_AVCDEC_ERROR_INVALID_PARAM;
+			goto dsp0UnlockRanges;
+		}
+		dsp0->frameBufFlags = 0;
+		query.info.horizontal = pDecoderInfo->horizontal;
+		query.info.vertical = pDecoderInfo->vertical;
+		query.info.numOfRefFrames = numOfRefFrames;
+		query.mode = global->dsp0Config;
+		if (pCtrl->frameBuf.pBuf != NULL) {
+			if (((uintptr_t)pCtrl->frameBuf.pBuf & 0xFF) != 0) {
+				ret = SCE_AVCDEC_ERROR_INVALID_POINTER;
+				goto dsp0UnlockRanges;
+			}
+			ret = sceCodecEngineRegisterUnmapMemory(0, (SceUIntVAddr)pCtrl->frameBuf.pBuf,
+				pCtrl->frameBuf.size);
+			if (ret == SCE_CODECENGINE_ERROR_INVALID_POINTER) {
+				if (videocodecLockRange(&dsp0->lockedRanges, &physicalAddress,
+						(uintptr_t)pCtrl->frameBuf.pBuf, pCtrl->frameBuf.size, 32,
+						VIDEOCODEC_CACHE_INVALIDATE, VIDEOCODEC_LOCK_CACHED) < 0) {
+					ret = SCE_AVCDEC_ERROR_INVALID_POINTER;
+					goto dsp0UnlockRanges;
+				}
+				dsp0->frameBuf = pCtrl->frameBuf;
+			} else {
+				if (ret < 0) {
+					ret = SCE_AVCDEC_ERROR_INVALID_POINTER;
+					goto dsp0UnlockRanges;
+				}
+				ret = sceCodecEngineUnmapUserVAtoKernelVA(0, pCtrl->frameBuf.pBuf, &base);
+				if (ret < 0) {
+					sceCodecEngineUnregisterUnmapMemory(0,
+						(SceUIntVAddr)pCtrl->frameBuf.pBuf, pCtrl->frameBuf.size);
+					goto dsp0UnlockRanges;
+				}
+				dsp0->frameBufFlags |= VIDEOCODEC_FRAME_BUF_UNMAP;
+				dsp0->frameBuf.pBuf = base;
+				dsp0->frameBuf.size = pCtrl->frameBuf.size;
+			}
+		} else {
+			SceSize frameMemSize;
+
+			ret = VIDEOCODEC_AVCDEC_ERROR_NOT_GAME_PROCESS;
+			if (!sceKernelIsGameBudget())
+				goto dsp0UnlockRanges;
+			frameMemSize = 0;
+			ret = videocodecQueryDecoderMemSize(codecType, pDecoderInfo, &frameMemSize);
+			if (ret < 0)
+				goto dsp0UnlockRanges;
+			memset(&opt, 0, sizeof(opt));
+			opt.size = sizeof(opt);
+			opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_ALIGNMENT;
+			opt.alignment = 0x100000;
+			ret = sceKernelAllocMemBlockForKernel("SceAvcdecSwFrameBuf",
+				SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_CDRAM_RW, frameMemSize, &opt);
+			if (ret < 0) {
+				ret = SCE_AVCDEC_ERROR_OUT_OF_MEMORY;
+				goto dsp0UnlockRanges;
+			}
+			dsp0->frameBufMemBlockId = ret;
+			dsp0->frameBufFlags |= VIDEOCODEC_FRAME_BUF_MEMBLOCK;
+			sceKernelGetMemBlockBase(ret, &dsp0->frameBuf.pBuf);
+			dsp0->frameBuf.size = frameMemSize;
+		}
+		param.pFrameBuf = dsp0->frameBuf.pBuf;
+		param.frameBufSize = dsp0->frameBuf.size;
+		param.pInfo = &query;
+		ret = dsp0VideocodecCreateAvcDecoder(global->dsp0Library, &handle, &param);
+		ret = videocodecMapDecoderError(ret);
+		if (ret >= 0) {
+			dsp0->mode = 0;
+			dsp0->info.horizontal = pDecoderInfo->horizontal;
+			dsp0->info.vertical = pDecoderInfo->vertical;
+			dsp0->info.numOfRefFrames = numOfRefFrames;
+			dsp0->handle = handle;
+			pCtrl->handle = handle - 1;
+			goto dsp0Unlock;
+		}
+		if (dsp0->frameBufFlags & VIDEOCODEC_FRAME_BUF_MEMBLOCK) {
+			sceKernelFreeMemBlock(dsp0->frameBufMemBlockId);
+			dsp0->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_MEMBLOCK;
+		}
+		if (dsp0->frameBufFlags & VIDEOCODEC_FRAME_BUF_UNMAP) {
+			sceCodecEngineUnmapKernelVAtoUserVA(0, dsp0->frameBuf.pBuf, &base);
+			sceCodecEngineUnregisterUnmapMemory(0, (SceUIntVAddr)base,
+				dsp0->frameBuf.size);
+			dsp0->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_UNMAP;
+		}
+		__builtin_memset(&dsp0->frameBuf, 0, sizeof(dsp0->frameBuf));
+dsp0UnlockRanges:
+		videocodecUnlockRanges(&dsp0->lockedRanges);
+dsp0Unlock:
+		sceKernelUnlockFastMutex(&dsp0->mutex);
+	}
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	return ret;
+
+notInitialized:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	return SCE_AVCDEC_ERROR_NOT_INITIALIZE;
+alreadyUsed:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	return SCE_AVCDEC_ERROR_ALREADY_USED;
+}
 
 int videocodecConvertValidationError(int result)
 {

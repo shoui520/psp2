@@ -278,23 +278,6 @@ typedef struct VeneziaDebugChannelRecord {
  * These are live state words, not unused padding. The complete owner allocation
  * and all four capture records are represented here.
  */
-typedef struct VeneziaDebugImageFormat {
-	uint32_t width;
-	uint32_t height;
-	uint32_t imageCount;
-} VeneziaDebugImageFormat;
-
-struct VeneziaDebugImageGeometry;
-
-typedef struct VeneziaVipCaptureParam {
-	uint32_t imageVirtualAddress;
-	SceSize imageSize;
-	uint32_t storageVirtualAddress;
-	SceSize storageSize;
-	const VeneziaDebugImageFormat *imageFormat;
-	const struct VeneziaDebugImageGeometry *geometry;
-} VeneziaVipCaptureParam;
-
 typedef struct VeneziaVipMemoryRegion {
 	uintptr_t physicalAddress;
 	uint32_t virtualAddress;

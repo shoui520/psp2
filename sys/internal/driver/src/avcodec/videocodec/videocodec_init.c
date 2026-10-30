@@ -678,17 +678,10 @@ int _sceVideocodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 		decoder->info.numOfRefFrames = 4;
 		decoder->mode = 0;
 		decoder->handle = 0;
-		decoder->decodeFlags = 0;
+		decoder->frameBufFlags = 0;
 		memset(decoder->decodeState, 0, sizeof(decoder->decodeState));
-		decoder->decodeStatus[0] = 0;
-		decoder->decodeStatus[1] = 0;
-		decoder->decodeStatus[2] = 0;
-		decoder->decodeStatus[3] = 0;
-		decoder->pictureFlags = 0;
-		decoder->pictureStatus[0] = 0;
-		decoder->pictureStatus[1] = 0;
-		decoder->pictureStatus[2] = 0;
-		decoder->pictureStatus[3] = 0;
+		__builtin_memset(&decoder->frameBuf, 0, sizeof(decoder->frameBuf));
+		decoder->frameBufMemBlockId = 0;
 		videocodecInitLockedRanges(&decoder->lockedRanges, 0, decoder->lockedRange, 1,
 			VIDEOCODEC_DECODER_ERROR_BASE);
 	}
@@ -712,20 +705,13 @@ int _sceVideocodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 		decoder->info.numOfRefFrames = 9;
 		decoder->mode = 0;
 		decoder->handle = 0;
-		decoder->decodeFlags = 0;
+		decoder->frameBufFlags = 0;
 		decoder->decodeStatus[0] = 0;
 		decoder->decodeStatus[1] = 0;
 		decoder->decodeStatus[2] = 0;
 		decoder->decodeStatus[3] = 0;
-		decoder->pictureFlags = 0;
-		decoder->pictureStatus[0] = 0;
-		decoder->pictureStatus[1] = 0;
-		decoder->pictureStatus[2] = 0;
-		decoder->pictureStatus[3] = 0;
-		decoder->pictureStatus[4] = 0;
-		decoder->pictureStatus[5] = 0;
-		decoder->pictureStatus[6] = 0;
-		decoder->pictureStatus[7] = 0;
+		decoder->frameBufMemBlockId = 0;
+		__builtin_memset(&decoder->frameBuf, 0, sizeof(decoder->frameBuf));
 		videocodecInitLockedRanges(&decoder->lockedRanges, 0, decoder->lockedRange, 1,
 			VIDEOCODEC_DECODER_ERROR_BASE);
 	}
