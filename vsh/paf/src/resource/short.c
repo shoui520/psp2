@@ -3,6 +3,42 @@
 #include "../compiler.h"
 #include "../std/new.h"
 
+/* Resource handle destruction: release the owned allocation and invalidate
+ * the native three-word reference state. */
+static inline __attribute__((always_inline))
+uint32_t *DestroyResourceHandle(uint32_t *self)
+{
+	void *owned = (void *)(uintptr_t)self[4];
+
+#if defined(FW_TYPE_CEX)
+	self[0] = 0x812e1f58U;
+#else
+	self[0] = 0x812e2c10U;
+#endif
+	if (owned)
+		PafDelete(owned);
+	self[4] = UINT32_MAX;
+	self[5] = UINT32_MAX;
+	self[6] = UINT32_MAX;
+	return self;
+}
+
+uint32_t *ScePafResource_71049596(uint32_t *self)
+{
+	return DestroyResourceHandle(self);
+}
+
+uint32_t *ScePafResource_22CE8E13(uint32_t *self)
+{
+	return DestroyResourceHandle(self);
+}
+
+void ScePafResource_0A3E0BBF(uint32_t *self)
+{
+	DestroyResourceHandle(self);
+	PafDelete(self);
+}
+
 extern int ScePafResource_3B89338E(uint32_t *self, uint32_t target);
 
 int ScePafResource_BFC7537A(uint32_t target, uint32_t *self)
