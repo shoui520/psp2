@@ -4,6 +4,36 @@
 
 RMutex CacheManagerImplRMutex;
 
+typedef struct PafCacheRefObject PafCacheRefObject;
+typedef struct PafCacheRefMethods {
+	void *reserved[3];
+	void (*onZeroReferences)(PafCacheRefObject *self);
+} PafCacheRefMethods;
+
+struct PafCacheRefObject {
+	const PafCacheRefMethods *methods;
+	uint8_t reserved[12];
+	uint32_t references;
+};
+
+_Static_assert(offsetof(PafCacheRefObject, references) == 16,
+	       "reference count offset");
+
+uint32_t ScePafMisc_8A35B3D9(PafCacheRefObject *self)
+{
+	uint32_t references;
+
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	references = --self->references;
+	if (!references) {
+		self->methods->onZeroReferences(self);
+		ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+		return 0;
+	}
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	return references;
+}
+
 typedef struct PafCacheSharedCounter {
 	uint8_t reserved[16];
 	uint32_t count;
