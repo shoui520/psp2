@@ -20,8 +20,9 @@ typedef struct DtraceClientCB {
 	dev_t systraceDev;
 	dev_t irqtraceDev;
 	dev_t fasttrapDev;
-	void *buffer;			/* freed with the client */
-	uint32_t reserved[2];
+	void *bigData;			/* a reply too big for one packet */
+	SceSize bigDataSize;
+	SceSize bigDataOffset;		/* what the host has of it */
 	int helperDofGen;		/* its helper DOF's generation; -1: none */
 } DtraceClientCB;
 

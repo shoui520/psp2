@@ -101,9 +101,9 @@ void dtraceFreeClient(DtraceClientCB *client)
 {
 	SCE_DBG_ASSERT_CHECK(client != NULL, 117);
 
-	if (client->buffer != NULL) {
-		dtrace_heap_free(client->buffer);
-		client->buffer = NULL;
+	if (client->bigData != NULL) {
+		dtrace_heap_free(client->bigData);
+		client->bigData = NULL;
 	}
 	dtrace_heap_free(client);
 }

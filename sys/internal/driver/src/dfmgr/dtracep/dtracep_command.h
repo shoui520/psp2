@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include "dtrace_client.h"
 #include "dtracep.h"
 
 #define DTRACEP_CMD_TEST		0x00
@@ -33,8 +34,14 @@
 #define DTRACEP_CMD_GET_MODULE_INFO	0x50
 #define DTRACEP_CMD_GET_PROCESS_INFO	0x52
 
+/* what the target sends the host unasked */
+#define DTRACEP_TEST_NOTIFICATION	0x80
+
 /* the error status a reply carries */
 #define DTRACEP_ERROR_INVALID_COMMAND	8
+#define DTRACEP_ERROR_STATE		0x40001	/* a big data input out of step */
+#define DTRACEP_ERROR_INVALID		0x40002	/* a short request, a bad token */
+#define DTRACEP_ERROR_NO_MEMORY		0x40005
 
 int dtracepTestCmd(DtracepChannel *ch, DtracepPacket *packet);
 int dtracepOpenCmd(DtracepChannel *ch, DtracepPacket *packet);
@@ -65,3 +72,6 @@ int dtracepGetProcessInfoCmd(DtracepChannel *ch, DtracepPacket *packet);
 
 /* reply to a request with an error status */
 int dtracepSendErrorReply(DtracepChannel *ch, SceUInt8 command, int error);
+
+/* whether the predicates and actions of a client's enablings use only its variables */
+int dtracepCheckStateVariables(DtraceClientCB *client);
