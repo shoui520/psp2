@@ -11,6 +11,7 @@
 #include <fw.h>
 #include <sysmem/debug.h>
 #include <intrmgr/gic_regs.h>
+#include "global_timer.h"
 
 /* the error messages are new in 4.00 */
 #if FW_SINCE(0x04000000)

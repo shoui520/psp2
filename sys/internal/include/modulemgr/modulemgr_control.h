@@ -28,7 +28,10 @@ typedef struct SceModuleCB {
 	SceUInt8 status;
 	SceUInt8 reserved0;
 	SceUInt32 sdkVersion;
-	SceUID modid;
+	union {
+		SceUID modid;
+		SceUID uid;		/* DTrace's name for it (struct modctl, sdt.c) */
+	};
 	SceUID puid;
 	SceUID pid;
 	SceUInt16 attr;
@@ -69,8 +72,8 @@ typedef struct SceModuleCB {
 	struct SharedModuleEntry *shared;
 	SceUInt32 reserved1;
 	struct SceModuleProbesInfo *probesInfo;
-	void **probes;
-	SceUInt32 reserved2;
+	void **sdt_probes;		/* DTrace's names (struct modctl, sdt.c) */
+	SceUInt32 sdt_nprobes;		/* set once DTrace has provided its probes */
 } SceModuleCB;
 
 #ifndef __cplusplus

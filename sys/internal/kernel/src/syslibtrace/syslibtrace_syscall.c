@@ -232,7 +232,7 @@ static inline int FindTargetLibs(LibEntCB **list, SceSize num, SceUInt32 library
 }
 
 /* select a syscall-exported library (or all of them) for tracing */
-int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid)
+int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid, const SceSyslibtraceOpt *opt)
 {
 	LibEntCB **list;
 	SceSize num;
@@ -270,7 +270,7 @@ int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid)
 }
 
 /* deselect a syscall-exported library (or all of them) */
-int sceSyslibtraceClearTargetSyscallLib(SceUInt32 libraryNid)
+int sceSyslibtraceClearTargetSyscallLib(SceUInt32 libraryNid, const SceSyslibtraceOpt *opt)
 {
 	LibEntCB **list;
 	SceSize num;
@@ -313,7 +313,7 @@ static inline SceUInt32 SyscallNumber(const LibEntCB *lib, SceUInt32 index)
 }
 
 /* route the syscalls of every target library through the trampoline */
-int sceSyslibtraceStartSyscallTrace(void)
+int sceSyslibtraceStartSyscallTrace(const SceSyslibtraceOpt *opt)
 {
 	LibEntCB **list;
 	SceSize num;
@@ -362,7 +362,7 @@ int sceSyslibtraceStartSyscallTrace(void)
 }
 
 /* give the traced syscalls their functions back */
-int sceSyslibtraceStopSyscallTrace(void)
+int sceSyslibtraceStopSyscallTrace(const SceSyslibtraceOpt *opt)
 {
 	LibEntCB **list;
 	SceSize num;

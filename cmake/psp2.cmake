@@ -94,13 +94,19 @@ endforeach()
 
 # __FILE_NAME__ of each C/C++ source, as Sony's debug records name it: the path from its
 # component's folder (the nearest folder above it with a CMakeLists.txt); the bare file name
-# outside a component (contrib/, generated). tools/sonycc.py file_name() is the same. GCC 4.8
+# outside a component (contrib/, generated), unless the module's CMakeLists names it.
+# tools/sonycc.py file_name() is the same. GCC 4.8
 # has no built-in __FILE_NAME__, so every source gets the define (a header whose records name
 # the header defines it itself).
 function(psp2_file_names)
 	get_filename_component(root "${PSP2_SRC}" REALPATH)
 	foreach(src IN LISTS ARGN)
 		if(NOT src MATCHES "\\.(c|cpp)$")
+			continue()
+		endif()
+		# a source compiled from outside its Sony component names itself (contrib code)
+		get_property(defs SOURCE "${src}" PROPERTY COMPILE_DEFINITIONS)
+		if(defs MATCHES "__FILE_NAME__=")
 			continue()
 		endif()
 		get_filename_component(abs "${src}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")

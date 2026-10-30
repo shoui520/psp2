@@ -364,9 +364,9 @@ static int ProcessConstructor(SceProcessObject *process)
 	process->syscallTraceFlag = 0;
 	process->prevState = 0;
 	process->pendingRequests = 0;
-	process->reserved2[0] = 0;
-	process->reserved2[1] = 0;
-	process->reserved2[2] = 0;
+	process->dtraceProbes = 0;
+	process->dtraceCount = 0;
+	process->dtraceHelpers = NULL;
 	process->localStorageLock = 0;
 	process->dtraceFlags = 4;
 	for (i = 0; i != PROCESS_LOCAL_STORAGE_MAX; i++)

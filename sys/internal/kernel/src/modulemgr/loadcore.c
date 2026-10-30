@@ -143,7 +143,7 @@ int LoadcoreSetModuleEntry(SceNID nid, void *entry, int type, void *arg)
 		break;
 	case NID_MODULE_PROBES:
 		if (ModuleCBGetPid(cb) == SCE_KERNEL_PROCESS_ID)
-			cb->probes = entry;
+			cb->sdt_probes = entry;
 		size = 1;
 		break;
 	default:
@@ -261,7 +261,7 @@ int LoadcoreSetModuleEntry(SceNID nid, void *entry, int type, void *arg)
 		cb->probesInfo = entry;
 		break;
 	case NID_MODULE_PROBES:
-		cb->probes = entry;
+		cb->sdt_probes = entry;
 		break;
 	default:
 		return 0;

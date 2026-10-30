@@ -49,10 +49,18 @@ typedef struct SceNidsymtblEntry {
 
 int sceSyslibtraceCallbackRegisterLibs(SceUInt32 flags);
 int sceSyslibtraceCallbackDeregisterLibs(SceUInt32 flags);
-int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid);
-int sceSyslibtraceClearTargetSyscallLib(SceUInt32 libraryNid);
-int sceSyslibtraceStartSyscallTrace(void);
-int sceSyslibtraceStopSyscallTrace(void);
+/*
+ * the option of the trace controls: DTrace passes its size, syslibtrace does not
+ * read it
+ */
+typedef struct SceSyslibtraceOpt {
+	SceSize size;
+} SceSyslibtraceOpt;
+
+int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid, const SceSyslibtraceOpt *opt);
+int sceSyslibtraceClearTargetSyscallLib(SceUInt32 libraryNid, const SceSyslibtraceOpt *opt);
+int sceSyslibtraceStartSyscallTrace(const SceSyslibtraceOpt *opt);
+int sceSyslibtraceStopSyscallTrace(const SceSyslibtraceOpt *opt);
 
 /* names unknown */
 int SceSyslibtraceForKernel_F9CB8BA9(const SceSyslibtraceCallbacks *callbacks, SceUInt32 flags);	/* set callbacks */

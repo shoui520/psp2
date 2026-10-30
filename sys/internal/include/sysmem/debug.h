@@ -175,9 +175,17 @@ int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDeb
 #define SCE_PRINTF_WITH_INFO_FUNC(_level, _line, _func, _fmt, ...)	\
 	SceDebugForDriver_02B04343((_level), SCE_DBGINFO_FUNC(_line, _func), _fmt, ##__VA_ARGS__)
 
-/* kernel panic: compiled in on every firmware */
-#define SCE_PANIC(_line)						\
+/*
+ * kernel panic: compiled in on every firmware. Sony's SCE_PANIC() takes no
+ * argument (DTrace's sources call it so) and records its own line; ours also
+ * takes the line, for code whose record names another.
+ */
+#define SCE_PANIC_AT(_line)						\
 	SceDebugForDriver_391B5B74(SCE_DBGINFO(_line), __builtin_return_address(0))
+#define SCE_PANIC_HERE()		SCE_PANIC_AT(__LINE__)
+#define SCE_PANIC_PICK(_0, _1, _name, ...)	_name
+#define SCE_PANIC(...)							\
+	SCE_PANIC_PICK(_0, ##__VA_ARGS__, SCE_PANIC_AT, SCE_PANIC_HERE)(__VA_ARGS__)
 
 /* the same in a helper inlined into another function, under the helper's name */
 #define SCE_PANIC_FUNC(_line, _func)					\

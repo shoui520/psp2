@@ -35,3 +35,67 @@ typedef struct SceDtraceThreadCB {
 	struct taskq *taskq;			/* 0x24: the task queue it works for */
 } SceDtraceThreadCB;
 _Static_assert(sizeof(SceDtraceThreadCB) == 0x28, "SceDtraceThreadCB size");
+
+#define DTRACE_THREAD_NAME_LEN	31
+#define DTRACE_OK		0
+
+/* dtrace_get_current_thread_type (Sony's sce.d: DTRACETHR_*) */
+#define DT_THREAD_UNKNOWN	(-1)
+#define DT_THREAD_GAME		0
+#define DT_THREAD_SYSTEM	1
+#define DT_THREAD_KERNEL	2
+#define DT_THREAD_KERNEL_IDLE	3
+
+/*
+ * PLACEHOLDER: what the interrupt entry leaves right below the guard of a
+ * nesting level (SceIntrmgrForKernel_01911612), as DTrace reads it: the
+ * interrupted thread, or the interrupted pc and cpsr when no thread ran (the
+ * frame's layout and names unknown)
+ */
+struct ThreadCB;
+typedef struct dtrace_intr_frame {
+	struct ThreadCB *thread;		/* 0x000 */
+	uint32_t reserved[0x4d];
+	uint32_t pc;				/* 0x138 */
+	uint32_t cpsr;				/* 0x13c */
+} dtrace_intr_frame_t;
+_Static_assert(sizeof(dtrace_intr_frame_t) == 0x140, "dtrace_intr_frame_t size");
+
+/* a thread's registers, as the debugger hands them to the pid provider */
+#define REG_R0		0
+#define REG_R1		1
+#define REG_R2		2
+#define REG_R3		3
+#define REG_SP		13
+#define REG_LR		14
+#define REG_PC		15
+#define REG_CPSR	16
+
+typedef struct dtrace_thread_state {
+	uintptr_t reg[18];	/* r0-r12, sp, lr, pc, cpsr, fpscr */
+} dtrace_thread_state_t;
+
+struct ThreadCB;
+struct taskq;
+
+int64_t dtrace_get_thread_vtime(struct ThreadCB *thread);
+int dtrace_get_thread_reentering(struct ThreadCB *thread);
+void dtrace_set_thread_reentering(struct ThreadCB *thread, int reentering);
+void dtrace_set_thread_predcache(struct ThreadCB *thread, uint32_t predcache);
+void dtrace_set_thread_taskq(int thread, struct taskq *tq);
+void dtrace_thread_probelock_lock(struct ThreadCB *thread);
+void dtrace_thread_probelock_unlock(struct ThreadCB *thread);
+uint64_t dtrace_getreg_thread(struct ThreadCB *thread, unsigned int reg);
+int dtrace_thread_start(int thread, unsigned int argSize, void *argp);
+void dtrace_thread_exit(int status);
+int dtrace_get_thread_puid(int threadId);
+void dtrace_get_current_thread_name(char *name, unsigned int size);
+int dtrace_get_current_thread_type(void);
+int dtrace_get_current_thread_priority(void);
+unsigned int dtrace_get_current_thread_cpu_affinity_mask(void);
+int dtrace_thread_state_init(void);
+int dtrace_thread_state_exit(void);
+uint32_t dtrace_get_thread_predcache(struct ThreadCB *thread);
+int dtrace_get_thread_tracing(struct ThreadCB *thread);
+void dtrace_set_thread_tracing(struct ThreadCB *thread, int tracing);
+void dtrace_set_thread_vtime(struct ThreadCB *thread, int64_t vtime);

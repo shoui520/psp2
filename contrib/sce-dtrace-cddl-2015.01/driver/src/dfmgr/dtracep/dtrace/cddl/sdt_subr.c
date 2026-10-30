@@ -1,0 +1,238 @@
+/*
+ * CDDL HEADER START
+ *
+ * The contents of this file are subject to the terms of the
+ * Common Development and Distribution License (the "License").
+ * You may not use this file except in compliance with the License.
+ *
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+ * or http://www.opensolaris.org/os/licensing.
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ *
+ * When distributing Covered Code, include this CDDL HEADER in each
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+ * If applicable, add the following below this CDDL HEADER, with the
+ * fields enclosed by brackets "[]" replaced with your own identifying
+ * information: Portions Copyright [yyyy] [name of copyright owner]
+ *
+ * CDDL HEADER END
+ */
+/*
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Use is subject to license terms.
+ */
+
+/*
+ * Copyright (C) 2015 Sony Computer Entertainment Inc.
+ * All Rights Reserved.
+ */
+
+/* #pragma ident	"@(#)sdt_subr.c	1.12	08/02/06 SMI" */
+
+#include <sys/sdt_impl.h>
+
+#if 0
+static dtrace_pattr_t vtrace_attr = {
+{ DTRACE_STABILITY_UNSTABLE, DTRACE_STABILITY_UNSTABLE, DTRACE_CLASS_ISA },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_UNSTABLE, DTRACE_STABILITY_UNSTABLE, DTRACE_CLASS_ISA },
+};
+
+static dtrace_pattr_t info_attr = {
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_ISA },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_ISA },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_ISA },
+};
+
+static dtrace_pattr_t fpu_attr = {
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_ISA },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_CPU },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_ISA },
+};
+
+static dtrace_pattr_t fsinfo_attr = {
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_ISA },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_ISA },
+};
+#endif
+
+static dtrace_pattr_t stab_attr = {
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_ISA },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_ISA },
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_ISA },
+};
+
+static dtrace_pattr_t sdt_attr = {
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_ISA },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_ISA },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_ISA },
+};
+
+#if 0
+static dtrace_pattr_t xpv_attr = {
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_PLATFORM },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_PLATFORM },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_PLATFORM },
+};
+#endif
+
+#if defined(__SCE__)
+static dtrace_pattr_t power_attr = {
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_ISA },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_PRIVATE, DTRACE_STABILITY_PRIVATE, DTRACE_CLASS_UNKNOWN },
+{ DTRACE_STABILITY_EVOLVING, DTRACE_STABILITY_EVOLVING, DTRACE_CLASS_ISA },
+};
+#endif /* __SCE__ */
+
+
+sdt_provider_t sdt_providers[] = {
+#if defined(__SOLARIS__)
+	{ "vtrace", "__vtrace_", &vtrace_attr, 0 },
+	{ "sysinfo", "__cpu_sysinfo_", &info_attr, 0 },
+	{ "vminfo", "__cpu_vminfo_", &info_attr, 0 },
+	{ "fpuinfo", "__fpuinfo_", &fpu_attr, 0 },
+	{ "sched", "__sched_", &stab_attr, 0 },
+	{ "proc", "__proc_", &stab_attr, 0 },
+	{ "io", "__io_", &stab_attr, 0 },
+	{ "mib", "__mib_", &stab_attr, 0 },
+	{ "fsinfo", "__fsinfo_", &fsinfo_attr, 0 },
+	{ "nfsv3", "__nfsv3_", &stab_attr, 0 },
+	{ "nfsv4", "__nfsv4_", &stab_attr, 0 },
+	{ "xpv", "__xpv_", &xpv_attr, 0 },
+	{ "sysevent", "__sysevent_", &stab_attr, 0 },
+	{ "sdt", NULL, &sdt_attr, 0 },
+	{ NULL }
+#elif defined(__SCE__)
+	{ "interrupt", "__interrupt_", &stab_attr, 0 },
+	{ "sched", "__sched_", &stab_attr, 0 },
+	{ "proc", "__proc_", &stab_attr, 0 },
+	{ "power", "__power_", &power_attr, 0 },
+	{ "sdt", NULL, &sdt_attr, 0 },
+	{ NULL, NULL, NULL, 0 }
+#endif /* __SCE__ */
+};
+
+sdt_argdesc_t sdt_args[] = {
+#if defined(__SCE__)
+	{ "sched", "wakeup", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+	{ "sched", "wakeup", 1, 1, "proc_t *", "psinfo_t *" },
+	{ "sched", "dequeue", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+	{ "sched", "dequeue", 1, 1, "proc_t *", "psinfo_t *" },
+	{ "sched", "dequeue", 2, 2, "cpu_t *", "cpuinfo_t *" },
+	{ "sched", "enqueue", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+	{ "sched", "enqueue", 1, 1, "proc_t *", "psinfo_t *" },
+	{ "sched", "enqueue", 2, 2, "cpu_t *", "cpuinfo_t *" },
+	{ "sched", "enqueue", 3, 3, "int", NULL },
+	{ "sched", "off-cpu", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+	{ "sched", "off-cpu", 1, 1, "proc_t *", "psinfo_t *" },
+//	{ "sched", "tick", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+//	{ "sched", "tick", 1, 0, "kthread_t *", "psinfo_t *" },
+	{ "sched", "change-pri", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+	{ "sched", "change-pri", 1, 1, "proc_t *", "psinfo_t *" },
+	{ "sched", "change-pri", 2, 2, "pri_t", NULL },
+//	{ "sched", "schedctl-nopreempt", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+//	{ "sched", "schedctl-nopreempt", 1, 0, "kthread_t *", "psinfo_t *" },
+//	{ "sched", "schedctl-nopreempt", 2, 1, "int", NULL },
+//	{ "sched", "schedctl-preempt", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+//	{ "sched", "schedctl-preempt", 1, 0, "kthread_t *", "psinfo_t *" },
+//	{ "sched", "schedctl-yield", 0, 0, "int", NULL },
+//	{ "sched", "surrender", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+//	{ "sched", "surrender", 1, 0, "kthread_t *", "psinfo_t *" },
+//	{ "sched", "cpucaps-sleep", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+//	{ "sched", "cpucaps-sleep", 1, 0, "kthread_t *", "psinfo_t *" },
+//	{ "sched", "cpucaps-wakeup", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+//	{ "sched", "cpucaps-wakeup", 1, 0, "kthread_t *", "psinfo_t *" },
+
+	{ "proc", "create", 0, 0, "proc_t *", "psinfo_t *" },
+	{ "proc", "exec", 0, 0, "string", NULL },
+	{ "proc", "exec-failure", 0, 0, "int", NULL },
+	{ "proc", "exit", 0, 0, "int", NULL },
+//	{ "proc", "fault", 0, 0, "int", NULL },
+//	{ "proc", "fault", 1, 1, "siginfo_t *", NULL },
+	{ "proc", "lwp-create", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+	{ "proc", "lwp-create", 1, 1, "proc_t *", "psinfo_t *" },
+//	{ "proc", "signal-clear", 0, 0, "int", NULL },
+//	{ "proc", "signal-clear", 1, 1, "siginfo_t *", NULL },
+//	{ "proc", "signal-discard", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+//	{ "proc", "signal-discard", 1, 1, "proc_t *", "psinfo_t *" },
+//	{ "proc", "signal-discard", 2, 2, "int", NULL },
+//	{ "proc", "signal-handle", 0, 0, "int", NULL },
+//	{ "proc", "signal-handle", 1, 1, "siginfo_t *", NULL },
+//	{ "proc", "signal-handle", 2, 2, "void (*)(void)", NULL },
+//	{ "proc", "signal-send", 0, 0, "kthread_t *", "lwpsinfo_t *" },
+//	{ "proc", "signal-send", 1, 0, "kthread_t *", "psinfo_t *" },
+//	{ "proc", "signal-send", 2, 1, "int", NULL },
+#endif /* __SCE__ */
+	{ NULL, NULL, 0, 0, NULL, NULL }
+};
+
+/*ARGSUSED*/
+void
+sdt_getargdesc(void *arg, dtrace_id_t id, void *parg, dtrace_argdesc_t *desc)
+{
+#if defined(__SCE__)
+	(void)arg;
+	(void)id;
+#endif /* __SCE__ */
+
+#if defined(__SCE__)
+	sdt_probe_t *sdp = (sdt_probe_t *)parg;
+#else
+	sdt_probe_t *sdp = parg;
+#endif
+	int i;
+
+	desc->dtargd_native[0] = '\0';
+	desc->dtargd_xlate[0] = '\0';
+
+	for (i = 0; sdt_args[i].sda_provider != NULL; i++) {
+		sdt_argdesc_t *a = &sdt_args[i];
+
+		if (strcmp(sdp->sdp_provider->sdtp_name, a->sda_provider) != 0)
+			continue;
+
+		if (a->sda_name != NULL &&
+		    strcmp(sdp->sdp_name, a->sda_name) != 0)
+			continue;
+
+		if (desc->dtargd_ndx != a->sda_ndx)
+			continue;
+
+#if defined(__SOLARIS__)
+		if (a->sda_native != NULL)
+			(void) strcpy(desc->dtargd_native, a->sda_native);
+
+		if (a->sda_xlate != NULL)
+			(void) strcpy(desc->dtargd_xlate, a->sda_xlate);
+#else /* Quiet compiler warning */
+		if (a->sda_native != NULL)
+			(void) strncpy(desc->dtargd_native, a->sda_native, DTRACE_ARGTYPELEN);
+
+		if (a->sda_xlate != NULL)
+			(void) strncpy(desc->dtargd_xlate, a->sda_xlate, DTRACE_ARGTYPELEN);
+#endif /* __SOLARIS__ */
+
+		desc->dtargd_mapping = a->sda_mapping;
+		return;
+	}
+
+	desc->dtargd_ndx = DTRACE_ARGNONE;
+}

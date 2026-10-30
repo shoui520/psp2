@@ -78,11 +78,13 @@ def compile_one(src, out, kind, defines, includes, opt, gcc=None, extra=(), mode
 	if kind != 'gcc48' and mode != 'thumb':
 		raise ValueError('ARM source mode is not implemented for SNC')
 	out.parent.mkdir(parents=True, exist_ok=True)
-	name = f'-D__FILE_NAME__="{file_name(src)}"'
+	# unless the build names the source itself (contrib code compiled into a component)
+	name = [] if any(d.startswith('-D__FILE_NAME__=') for d in defines) else \
+		[f'-D__FILE_NAME__="{file_name(src)}"']
 	if kind == 'gcc48':
 		cmd = host.linux_command([str(gcc or GCC48), '-m' + mode, *GCC48_TARGET, opt, '-std=gnu11',
 					  '-fstack-protector-strong' if gcc is None else '-fstack-protector',
-					  *GCC48_CODE, *extra, *GCC48_FREESTANDING, '-w', name, *defines,
+					  *GCC48_CODE, *extra, *GCC48_FREESTANDING, '-w', *name, *defines,
 					  *includes,
 					  '-S' if stage == 'assembly' else '-c', str(src), '-o', str(out)], cwd=ROOT)
 	else:
@@ -90,7 +92,7 @@ def compile_one(src, out, kind, defines, includes, opt, gcc=None, extra=(), mode
 		extra = [f'-I{win(i[2:])}' if i.startswith('-I') and len(i) > 2 else i for i in extra]
 		# asm is a C++ keyword (the SDK's xkeycheck.h rejects redefining it)
 		asm = [] if src.suffix == '.cpp' else ['-Dasm=__asm__']
-		cmd = snc_command(opt, ['-Xthumb', *extra, *asm, name, *defines, *incs,
+		cmd = snc_command(opt, ['-Xthumb', *extra, *asm, *name, *defines, *incs,
 					'-c', win(src), '-o', win(out)])
 	result = subprocess.run(cmd, capture_output=True, text=True)
 	if result.returncode:

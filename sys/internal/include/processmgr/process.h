@@ -175,7 +175,9 @@ typedef struct SceProcessObject {
 	SceUInt32 defaultPmuserenr;		/* its threads' PMUSERENR */
 	SceUInt32 defaultPmcr;			/* its threads' PMCR */
 	SceUInt32 prevState;
-	SceUInt32 reserved2[3];
+	SceUInt32 dtraceProbes;			/* DTrace: its fasttrap probes (p_dtrace_probes) */
+	SceUInt32 dtraceCount;			/* DTrace: its enabled fasttrap tracepoints (p_dtrace_count) */
+	void *dtraceHelpers;			/* DTrace: its helpers (p_dtrace_helpers) */
 	SceUInt32 dtraceFlags;			/* DTRACE_PROCESS_START: __proc_:start pending */
 	ListNode recoveryNode;		/* resource recovery queue */
 	SceKernelSpinlock lock;			/* its status and its thread list */

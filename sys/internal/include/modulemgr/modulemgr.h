@@ -66,6 +66,8 @@ void SceModulemgrForKernel_2E4A10A0(SceUInt32 num, void *func);
 int SceModulemgrForKernel_2F82EEBC(void);	/* vitasdk: ksceKernelModuleUnloadMySelf */
 /* vitasdk: ksceKernelGetModuleFingerprint */
 int SceModulemgrForKernel_337A3908(SceUID modid, SceUInt32 *fingerprint);
+int sceKernelGetModuleList(SceUID pid, SceUInt32 flags, SceUInt32 type, SceUID *list,
+			   SceSize *num);
 /* vitasdk: ksceKernelGetModuleCB */
 int SceModulemgrForKernel_37512E29(SceUID modid, SceModuleCB **cb);
 int sceKernelStartRemoteModule(SceUID pid, SceUID modid, SceSize args, void *argp,
@@ -131,6 +133,16 @@ SceUID sceKernelGetModuleIdByAddrForUser(const void *addr);
 int sceKernelGetModuleInfoForUser(SceUID modid, SceKernelModuleInfo *uinfo);
 int sceKernelInhibitLoadingModule(SceUInt32 flags);
 int sceKernelIsCalledFromSysModule(const void *addr);
+
+/* backtrace.c: SceBacktraceForDriver */
+struct SceKernelBacktraceFrame;
+struct SceKernelBacktraceFrameForKernel;	/* sysmem/sysroot_modulemgr.h */
+int sceKernelBacktrace(SceUID thid, struct SceKernelBacktraceFrame *frames, SceSize size,
+			SceSize *count, SceUInt32 flags);	/* vitasdk: ksceKernelBacktrace */
+int SceBacktraceForDriver_888E99B8(SceUID thid, struct SceKernelBacktraceFrameForKernel *frames,
+				   SceSize size, SceSize *count, SceUInt32 flags);
+int SceBacktraceForDriver_7C878F90(SceUID pid, const struct SceKernelBacktraceFrameForKernel *frames,
+				   SceSize count, SceUInt32 start);
 
 #ifdef __cplusplus
 }

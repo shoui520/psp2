@@ -571,11 +571,11 @@ static inline int ModulemgrCallStartEntry(SceModuleCB *cb, SceSize args, void *a
 #endif
 		probesInfo = cb->probesInfo;
 		if (probesInfo == NULL) {
-			if (cb->probes != NULL)
+			if (cb->sdt_probes != NULL)
 				SCE_DBG_PRINTF_LEVEL(1, 0, 571,
 					"WARNING: module %s exports static probes but not probes info\n",
 					cb->path);
-		} else if (cb->probes == NULL) {
+		} else if (cb->sdt_probes == NULL) {
 			SCE_DBG_PRINTF_LEVEL(1, 0, 567,
 				"WARNING: module %s exports static probes info but not probes\n",
 				cb->path);
@@ -584,15 +584,15 @@ static inline int ModulemgrCallStartEntry(SceModuleCB *cb, SceSize args, void *a
 				"WARNING: ignoring static probes in module %s with incorrect version (%d != %d)\n",
 				cb->path, probesInfo->version, 1);
 			cb->probesInfo = NULL;
-			cb->probes = NULL;
+			cb->sdt_probes = NULL;
 		} else if (probesInfo->count == 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0, 538, "WARNING: module %s exports zero probes\n",
 					     cb->path);
 			cb->probesInfo = NULL;
-			cb->probes = NULL;
+			cb->sdt_probes = NULL;
 		} else {
 			n = 0;
-			for (probe = cb->probes; *probe != NULL; probe++)
+			for (probe = cb->sdt_probes; *probe != NULL; probe++)
 				n++;
 			if (probesInfo->count == n) {
 				SCE_DBG_PRINTF_LEVEL(1, 0, 557, "module %s defines %d static probes\n",
@@ -602,7 +602,7 @@ static inline int ModulemgrCallStartEntry(SceModuleCB *cb, SceSize args, void *a
 					"WARNING: module %s static probe count mismatch (%d != %d)\n",
 					cb->path, n, probesInfo->count);
 				cb->probesInfo = NULL;
-				cb->probes = NULL;
+				cb->sdt_probes = NULL;
 			}
 		}
 #if !MODULEMGR_NSKBL
