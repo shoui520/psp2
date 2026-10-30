@@ -36,6 +36,29 @@ int ScePafResource_0C1A596E(uint8_t *self)
 	return 0;
 }
 
+int ScePafResource_4FC016F9(uint8_t *self, const uint8_t *value)
+{
+	uint32_t packed;
+	uint32_t attributes;
+	uint8x8_t bytes;
+	uint16x8_t components;
+	float32x4_t converted;
+
+	if (!value)
+		return -1;
+	packed = *(const uint32_t *)(value + 44);
+	bytes = vreinterpret_u8_s32(vdup_n_s32((int32_t)packed));
+	components = vmovl_u8(bytes);
+	converted = vcvtq_f32_u32(vmovl_u16(vget_low_u16(components)));
+	*(float32x4_t *)(self + 56) =
+		vmulq_f32(converted, vdupq_n_f32(1.0f / 255.0f));
+	attributes = *(const uint32_t *)(value + 48);
+	*(uint32_t *)(self + 72) = attributes & 0xF;
+	self[76] = (uint8_t)(attributes >> 15) & 1;
+	self[77] = (uint8_t)(attributes >> 16) & 1;
+	return 0;
+}
+
 int ScePafResource_2B6B99EF(uint8_t *self)
 {
 	uint32_t *root = *(uint32_t **)(self + 40);
