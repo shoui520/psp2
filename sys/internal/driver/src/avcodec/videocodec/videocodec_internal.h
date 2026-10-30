@@ -95,7 +95,24 @@ typedef struct VideocodecSeiUserData {
 	VideocodecSeiUserDataEntry userData[15];
 } VideocodecSeiUserData;
 
+/*
+ * The SEI user data of one field as the codec engine leaves it: the payloads follow at
+ * dataOffset, each 8-byte aligned.
+ */
+typedef struct VideocodecSeiUserDataBlock {
+	SceSize dataOffset;
+	unsigned char reserved[7];
+	unsigned char info;		/* VIDEOCODEC_SEI_USER_DATA_* */
+	unsigned int userData[15];	/* each payload's size, its type in bits 30-31 */
+} VideocodecSeiUserDataBlock;
+
+/* the block's last header byte: the payload count and how the SEI ended */
+#define VIDEOCODEC_SEI_USER_DATA_COUNT(info)	(((info) >> 2) & 0xF)
+#define VIDEOCODEC_SEI_USER_DATA_TRUNCATED	0x40
+#define VIDEOCODEC_SEI_USER_DATA_INCOMPLETE	0x80
+
 _Static_assert(sizeof(VideocodecSeiUserDataEntry) == 8, "SEI user data entry ABI");
+_Static_assert(sizeof(VideocodecSeiUserDataBlock) == 72, "SEI user data block ABI");
 _Static_assert(sizeof(VideocodecSeiUserData) == 132, "SEI user data ABI");
 _Static_assert(offsetof(VideocodecSeiUserData, userData) == 12,
 	       "SEI user data entries ABI");
@@ -191,6 +208,11 @@ _Static_assert(sizeof(VideocodecPicture) == 124, "video codec picture ABI");
 /* videocodecLockRange: a range outside the uncached window is kept coherent by cacheOp */
 #define VIDEOCODEC_LOCK_CACHED			0x10
 
+/* the AVC decoder's SEI errors, which the SDK does not name */
+#define VIDEOCODEC_AVCDEC_ERROR_NO_SEI		(-2141061054)	/* 0x80620042: the picture has none */
+#define VIDEOCODEC_AVCDEC_ERROR_SEI_TRUNCATED	(-2141061040)	/* 0x80620050 */
+#define VIDEOCODEC_AVCDEC_ERROR_SEI_INCOMPLETE	(-2141061039)	/* 0x80620051 */
+
 /* the MPEG-4 decoder's and the encoder's errors: the AVC decoder's with 0x900 or 0x1000 set */
 #define VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM		(-2141058814)	/* 0x80620902 */
 #define VIDEOCODEC_M4VDEC_ERROR_OUT_OF_MEMORY		(-2141058813)	/* 0x80620903 */
@@ -274,7 +296,11 @@ typedef struct VideocodecAvcDecoder {
 	unsigned int mode;
 	unsigned int handle;
 	union {
-		VeneziaDebugSnapshotOutput output;	/* the codec engine's last picture */
+		struct {
+			VeneziaDebugSnapshotOutput output;	/* the codec engine's last picture */
+			const VideocodecSeiUserDataBlock *pSeiUserData[2];	/* per field */
+			SceSize seiUserDataSize;	/* the payload room of each block */
+		};
 		unsigned char decodeState[1500];
 	};
 	unsigned int frameBufFlags;
@@ -1012,6 +1038,9 @@ int dsp0VideocodecDeleteAvcDecoder(unsigned int handle, SceUID pid);
 unsigned int dsp0VideocodecAvcDecodeAvailableSize(unsigned int handle);
 int dsp0VideocodecAvcDecode(unsigned int handle, const SceAvcdecAu *pAu,
 	const Dsp0VideocodecArrayPicture *pArrayPicture, unsigned int *pNumOfOutput);
+int dsp0VideocodecAvcDecodeStop(unsigned int handle,
+	const Dsp0VideocodecArrayPicture *pArrayPicture, unsigned int *pNumOfOutput);
+int dsp0VideocodecAvcDecodeFlush(unsigned int handle);
 int dsp0VideocodecQueryM4vDecoderMemSize(const Dsp0VideocodecM4vDecoderInfo *pInfo,
 	SceSize *frameMemSize);
 int dsp0VideocodecCreateM4vDecoder(unsigned int codecType, unsigned int *pHandle,

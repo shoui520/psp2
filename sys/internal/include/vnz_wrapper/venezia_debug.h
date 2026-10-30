@@ -203,6 +203,9 @@ int SceCodecEngineWrapperForDriver_16506603(unsigned int processor, SceUID cbid,
 int SceCodecEngineWrapperForDriver_8FE370E6(unsigned int processor, SceUID cbid);
 int SceCodecEngineWrapperForDriver_30F6AFD4(unsigned int processor,
 	VeneziaDebugSnapshotList *list, unsigned int *pNumOfOutput, const SceUInt *timeout);
+int SceCodecEngineWrapperForDriver_B48B02A3(unsigned int processor,
+	VeneziaDebugSnapshotList *list, unsigned int *pNumOfOutput);
+int SceCodecEngineWrapperForDriver_9EB3D63E(unsigned int processor);
 int SceCodecEngineWrapperForDriver_B420ABAC(unsigned int processor,
 	const struct SceAvcdecAu *au, const SceUInt *timeout);
 int SceCodecEngineWrapperForDriver_BB02EB22(unsigned int processor,
