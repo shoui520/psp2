@@ -2,6 +2,7 @@
 #include "../common/halt_assert.h"
 #include "../std/new.h"
 #include "../std/stdlib.h"
+#include "../std/string.h"
 #include <kernel/error.h>
 #include <stddef.h>
 
@@ -38,6 +39,42 @@ _Static_assert(offsetof(PafThreadQueueCounter, root) == 32,
 	       "queue counter root offset");
 _Static_assert(offsetof(PafThreadQueueCounter, count) == 36,
 	       "queue counter count offset");
+
+typedef struct PafThreadPendingAction {
+	PafString name;
+	void (*callback)(void *argument);
+	void *argument;
+} PafThreadPendingAction;
+
+void ScePafThread_98EA7399(PafThreadQueueCounter *self)
+{
+	MutexLock(&self->mutex);
+	while (self->count) {
+		PafThreadQueueNode *root = self->root;
+		PafThreadQueueNode *node = root->next;
+		PafThreadPendingAction *action = node->value;
+
+		if (root) {
+			PafThreadQueueNode *previous = node->previous;
+
+			node->next->previous = previous;
+			previous->next = node->next;
+			PafDelete(node);
+			--self->count;
+		}
+		MutexUnlock(&self->mutex);
+		action->callback(action->argument);
+		MutexLock(&self->mutex);
+		if (action) {
+			if (action->name.ptr != &PafStringEmpty)
+				PafDelete(action->name.ptr);
+			action->name.ptr = (char *)-1;
+			action->name.count = (size_t)-1;
+			PafDelete(action);
+		}
+	}
+	MutexUnlock(&self->mutex);
+}
 
 static PafThreadQueueCounter *InitializeThreadQueueCounter(
 		PafThreadQueueCounter *self, const char *name)
