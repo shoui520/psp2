@@ -1091,6 +1091,62 @@ int ScePafWidget_0C7FE13F(uint32_t *self)
 	return 0;
 }
 
+int ScePafWidget_3C06E3D4(const uint8_t *self, uint64_t *output)
+{
+	const uint8_t *item = *(const uint8_t *const *)(self + 700);
+
+	if (!item)
+		return -2136014814;
+	*output = *(const uint64_t *)(item + 48);
+	return 0;
+}
+
+int ScePafWidget_4608F7EF(const uint8_t *self, uint64_t *output)
+{
+	const uint8_t *item = *(const uint8_t *const *)(self + 712);
+
+	if (!item)
+		return -2136014814;
+	*output = *(const uint64_t *)(item + 48);
+	return 0;
+}
+
+static inline __attribute__((always_inline))
+uint32_t *InitializeWidgetStatusRecord(uint32_t *self)
+{
+#if defined(FW_TYPE_CEX)
+	((volatile uint32_t *)self)[0] = 0x812f05e0U;
+#else
+	((volatile uint32_t *)self)[0] = 0x812f1298U;
+#endif
+	((volatile uint32_t *)self)[1] = 1114112U;
+	((volatile uint32_t *)self)[8] = 0;
+	((volatile uint32_t *)self)[2] = 0;
+	return self;
+}
+
+uint32_t *ScePafWidget_69498B64(uint32_t *self)
+{
+	return InitializeWidgetStatusRecord(self);
+}
+
+uint32_t *ScePafWidget_A48FBB8E(uint32_t *self)
+{
+	return InitializeWidgetStatusRecord(self);
+}
+
+uint32_t sce_paf_widget_token_counter_13cd8;
+
+uint32_t *ScePafWidget_AEC1B38D(uint32_t *self, const uint64_t *value)
+{
+	uint32_t previous = sce_paf_widget_token_counter_13cd8;
+
+	*(uint64_t *)self = *value;
+	sce_paf_widget_token_counter_13cd8 = previous + 1;
+	self[2] = previous;
+	return self;
+}
+
 /* Test membership in the indexed widget selector table. */
 __attribute__((noinline))
 int ScePafWidget_9F450B64(const uint8_t *self, uint32_t value)
