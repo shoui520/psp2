@@ -32,6 +32,37 @@ int ScePafMisc_104CC765(uint8_t *self)
 	return 0;
 }
 
+uint8_t *ScePafMisc_947EDCC9(uint8_t *self)
+{
+	MainThreadCall *callback = *(MainThreadCall **)(self + 4);
+	int32_t request;
+	int32_t connection;
+	PafString *name = (PafString *)(self + 20);
+	char *ptr;
+
+	if (callback) {
+		PafDelete(MainThreadCallDestroy(callback));
+		*(void **)(self + 4) = 0;
+	}
+	request = *(int32_t *)(self + 12);
+	if (request > 0) {
+		sceHttpDeleteRequest(request);
+		*(int32_t *)(self + 12) = -1;
+	}
+	connection = *(int32_t *)(self + 8);
+	if (connection > 0) {
+		sceHttpDeleteConnection(connection);
+		*(int32_t *)(self + 8) = -1;
+	}
+	PafStringAssign(name, 0, 0);
+	ptr = name->ptr;
+	if (ptr != &PafStringEmpty)
+		PafDelete(ptr);
+	name->ptr = (char *)-1;
+	name->count = (size_t)-1;
+	return self;
+}
+
 int ScePafMisc_0A5D5353(const uint8_t *self, const char *name,
 			 PafString *resultString)
 {
