@@ -66,6 +66,54 @@ int ScePafResource_AC088A9C(uint32_t *self)
 	return 0;
 }
 
+int ScePafResource_0E854333(uint32_t *self)
+{
+	uint32_t node = 0;
+	uint32_t root;
+	uint32_t next;
+
+	if (!self[9])
+		return -1;
+	root = self[8];
+	if (root)
+		node = *(uint32_t *)(root + 4);
+	next = node;
+	while (next != self[8]) {
+		((void (*)(uint32_t *, uint32_t))(*(void ***)self)[12])(
+			self, *(uint32_t *)(next + 8));
+		next = node;
+		if (node) {
+			node = *(uint32_t *)(node + 4);
+			next = node;
+		}
+	}
+	return 0;
+}
+
+int ScePafResource_9637E38B(uint32_t *self)
+{
+	uint32_t node = 0;
+	uint32_t root;
+	uint32_t next;
+
+	if (!self[11])
+		return -1;
+	root = self[10];
+	if (root)
+		node = *(uint32_t *)(root + 4);
+	next = node;
+	while (next != self[10]) {
+		((void (*)(uint32_t *, uint32_t))(*(void ***)self)[12])(
+			self, *(uint32_t *)(next + 8));
+		next = node;
+		if (node) {
+			node = *(uint32_t *)(node + 4);
+			next = node;
+		}
+	}
+	return 0;
+}
+
 char *ResourceObjGetFileName(const ResourceObj *self)
 {
 	return self->filename.ptr;
