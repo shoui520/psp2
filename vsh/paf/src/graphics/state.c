@@ -133,6 +133,51 @@ int ScePafGraphics_7B6D79FB(const uint8_t *self, uint32_t index,
 	return result;
 }
 
+static inline __attribute__((always_inline))
+int GraphicsFourFloatsEqual(const float32x4_t *left, const float32x4_t *right)
+{
+	float32x4_t a = *(const volatile float32x4_t *)left;
+	float32x4_t b = *(const volatile float32x4_t *)right;
+	uint32x4_t equal = vceqq_f32(a, b);
+
+	return vgetq_lane_u32(equal, 0) & vgetq_lane_u32(equal, 1) &
+	       vgetq_lane_u32(equal, 2) & vgetq_lane_u32(equal, 3);
+}
+
+int ScePafGraphics_1005231C(uint8_t *self, const float32x4_t *values)
+{
+	float32x4_t *current = (float32x4_t *)(self + 8);
+
+	if (!GraphicsFourFloatsEqual(values, current)) {
+		*current = *values;
+		if (!sce_paf_graphics_flag_06e8) {
+			uint32_t *flags = (uint32_t *)(self + 52);
+
+			*flags = (*flags & 0xfffffff3U) |
+				 (4 * (sce_paf_graphics_state_11fc & 3));
+		}
+		self[80] |= 4;
+	}
+	return (int)(uintptr_t)self;
+}
+
+int ScePafGraphics_97A429ED(uint8_t *self, const float32x4_t *values)
+{
+	float32x4_t *current = (float32x4_t *)(self + 136);
+
+	if (!GraphicsFourFloatsEqual(values, current)) {
+		*current = *values;
+		if (!sce_paf_graphics_flag_06e8) {
+			uint32_t *flags = (uint32_t *)(self + 52);
+
+			*flags = (*flags & 0xfffffff3U) |
+				 (4 * (sce_paf_graphics_state_11fc & 3));
+		}
+		self[80] |= 0xC;
+	}
+	return (int)(uintptr_t)self;
+}
+
 int32_t ScePafGraphics_61C250D7(const uint8_t *self, uint32_t index,
 				uint8_t *output)
 {
