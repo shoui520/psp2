@@ -3,6 +3,27 @@
 #include <stddef.h>
 #include "../std/string.h"
 
+int ScePafMisc_9CF90429(const PafString *source)
+{
+	PafString prefix;
+	char *ptr;
+	int result = 0;
+	int isHttp;
+
+	PafStringSubstring(&prefix, source, 0, 4);
+	ptr = prefix.ptr;
+	if (*ptr == 'h') {
+		isHttp = sce_paf_strcmp(prefix.ptr, "http") == 0;
+		ptr = prefix.ptr;
+		result = 0;
+		if (isHttp)
+			result = 1;
+	}
+	if (ptr != &PafStringEmpty)
+		PafDelete(ptr);
+	return result != 0;
+}
+
 void ScePafMisc_FFE8F348(uint32_t *object)
 {
 	*object = UINT32_MAX;
