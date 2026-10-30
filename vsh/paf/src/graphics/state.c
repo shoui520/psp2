@@ -168,6 +168,40 @@ void ScePafGraphics_D9EA2729(uint32_t *self, uint32_t flags, float width)
 	GraphicsSetPointLineWidth(self, flags, width);
 }
 
+typedef struct PafGraphicsCallbackEntry {
+	void (*callback)(void *argument);
+	void *argument;
+} PafGraphicsCallbackEntry;
+
+typedef struct PafGraphicsCallbackList {
+	PafGraphicsCallbackEntry *entries;
+	uint32_t count;
+} PafGraphicsCallbackList;
+
+PafGraphicsCallbackList sce_paf_graphics_callback_list_1208;
+
+void *ScePafGraphics_59CF681E(void)
+{
+	PafGraphicsCallbackEntry *cursor =
+		sce_paf_graphics_callback_list_1208.entries;
+	PafGraphicsCallbackEntry *end =
+		cursor + sce_paf_graphics_callback_list_1208.count;
+
+	while (cursor != end) {
+		void (*callback)(void *, uintptr_t, void *) =
+			(void (*)(void *, uintptr_t, void *))cursor->callback;
+
+		callback(cursor->argument, (uintptr_t)callback, cursor);
+		PafGraphicsCallbackEntry *entries =
+			sce_paf_graphics_callback_list_1208.entries;
+
+		if (entries)
+			cursor++;
+		end = entries + sce_paf_graphics_callback_list_1208.count;
+	}
+	return end;
+}
+
 static const SceGxmProgramParameter *GraphicsFindNamedProgramParameter(
 		const uint8_t *self, const char *name)
 {
