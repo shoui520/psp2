@@ -116,3 +116,36 @@ void CommonStringGetWString(PafWString *result, const CommonString *self)
 	if (!result->count && self->m_string.count)
 		Utf8StringToUtf16(&self->m_string, result, 0);
 }
+
+/* Native bounded decimal parser (non-digits contribute a zero digit). */
+int ScePafCommon_5383A280(const char *text, int length)
+{
+	int sign = 1;
+	int first = 0;
+	int multiplier = 1;
+	int result = 0;
+	int index;
+
+	if (!length)
+		return 0;
+	if (*text == '-')
+		sign = -1;
+	if (*text == '-' || text[1] == '+')
+		first = 1;
+	index = length - 1;
+	if (index >= first) {
+		const char *current = text + index;
+		do {
+			int digit = 0;
+			int character = *current;
+
+			if (character >= '0' && character <= '9')
+				digit = character - '0';
+			result += multiplier * digit;
+			--index;
+			--current;
+			multiplier *= 10;
+		} while (index >= first);
+	}
+	return result * sign;
+}
