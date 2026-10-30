@@ -15,22 +15,12 @@
 #include <scetypes.h>
 #include <libkernel/libkernel.h>
 #include <gpu/pvrsrv_client.h>
+#include <gpu/pvr_bridge.h>
 #include <gpu/gpu_es4_trace.h>
-
-/* the SceGpuEs4ForUser syscall interface */
-struct SceGpuBridgePackage {
-	uint32_t id;
-	uint32_t size;
-	void *in;
-	uint32_t in_size;
-	void *out;
-	uint32_t out_size;
-	uint32_t h_services;
-};
 
 int PVRSRVOpen(void);
 int PVRSRVRelease(void);
-int PVRSRV_BridgeDispatchKM(uint32_t id, struct SceGpuBridgePackage *pkg);
+int PVRSRV_BridgeDispatchKM(uint32_t id, PVRSRV_BRIDGE_PACKAGE *pkg);
 
 /* services result codes (the kernel's numbering) */
 #define GPU_OK				0x00

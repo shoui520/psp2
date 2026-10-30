@@ -78,7 +78,7 @@ SceUInt32 *SceGpuEs4User_E98914E4(GpuPdsProgram *pds, SceUInt32 *buffer, int tex
 				  int variant)
 {
 	if (textured != 0) {
-		sceClibMemcpy(buffer, &s_pdsPrograms[variant == 2 ? PDS_PROGRAM_1 : PDS_PROGRAM_3],
+		sceClibMemcpy_safe(buffer, &s_pdsPrograms[variant == 2 ? PDS_PROGRAM_1 : PDS_PROGRAM_3],
 			      PDS_PROGRAM_COPY_SIZE);
 		pds->size = PDS_PROGRAM_SIZE_LONG;
 		buffer[0] = pds->constant[0];
@@ -98,7 +98,7 @@ SceUInt32 *SceGpuEs4User_E98914E4(GpuPdsProgram *pds, SceUInt32 *buffer, int tex
 			program = &s_pdsPrograms[PDS_PROGRAM_2];
 		else
 			program = &s_pdsPrograms[PDS_PROGRAM_4];
-		sceClibMemcpy(buffer, program, PDS_PROGRAM_COPY_SIZE);
+		sceClibMemcpy_safe(buffer, program, PDS_PROGRAM_COPY_SIZE);
 		pds->size = PDS_PROGRAM_SIZE_SHORT;
 		buffer[0] = pds->constant[0];
 		buffer[1] = pds->constant[1];

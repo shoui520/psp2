@@ -1,7 +1,5 @@
 # os0:us/libgpu_es4.suprx - SGX services client (bridge into gpu_es4.skprx)
-# PARTIAL in Sony's layout: the C still calls sceClibMemcpy (pds.c), which the original does not
-# import, and __aeabi_uidiv (dms.c), which the original has from its statically linked libgcc
-psp2_module(os0_us_libgpu_es4 KIND user COMPILER gcc48 PARTIAL SOURCES
+psp2_module(os0_us_libgpu_es4 KIND user COMPILER gcc48 SOURCES
 	gpu_user.c
 	sgx.c
 	pvrsrv.c
@@ -11,3 +9,6 @@ psp2_module(os0_us_libgpu_es4 KIND user COMPILER gcc48 PARTIAL SOURCES
 	usse.c
 	IMPORTS sceClibMspaceCalloc
 )
+# Sony built this library at -O3 without strict aliasing, like libgxm_es4: its USSE emitter is
+# vectorized and the bridge wrappers keep their stores in source order
+target_compile_options(os0_us_libgpu_es4 PRIVATE -O3 -fno-strict-aliasing)

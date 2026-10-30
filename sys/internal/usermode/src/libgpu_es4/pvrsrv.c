@@ -34,6 +34,29 @@ struct GpuHandleOut {
 	SceUInt32 handle;
 };
 
+static inline __attribute__((always_inline)) int AcquireDeviceData(PVRSRV_CONNECTION *conn, SceUInt32 index,
+							      PVRSRV_DEV_DATA *dev, SceUInt32 type)
+{
+	struct {
+		SceUInt32 bridgeFlags;
+		SceUInt32 index;
+		SceUInt32 type;
+	} in;
+	struct GpuHandleOut out;
+
+	in.index = index;
+	in.type = type;
+	if (GpuBridgeCall(conn->services, PVRSRV_BRIDGE_ACQUIRE_DEVICEINFO, &in, sizeof(in),
+			  &out, sizeof(out)) != GPU_OK)
+		return GPU_ERROR_BRIDGE_CALL_FAILED;
+	if (out.error != GPU_OK)
+		return out.error;
+
+	dev->psConnection = conn;
+	dev->hDevCookie = out.handle;
+	return out.error;
+}
+
 int SceGpuEs4User_228252A2(PVRSRV_CONNECTION **pconn, SceUInt32 flags)
 {
 	PVRSRV_CONNECTION *conn;
@@ -53,9 +76,8 @@ int SceGpuEs4User_228252A2(PVRSRV_CONNECTION **pconn, SceUInt32 flags)
 	ret = GpuServicesConnect(&(*pconn)->services, flags);
 	if (ret != GPU_OK)
 		return ret;
-	g_gpuConnected = 1;
-
 	conn = *pconn;
+	g_gpuConnected = 1;
 	if (conn == NULL)
 		return GPU_OK;
 	conn->ui32SrvFlags = flags;
@@ -76,7 +98,7 @@ int SceGpuEs4User_228252A2(PVRSRV_CONNECTION **pconn, SceUInt32 flags)
 		conn->reserved = 0;
 	}
 
-	ret = SceGpuEs4User_70800B46(*pconn, conn->device.ui32DeviceIndex, &dev, 0);
+	ret = AcquireDeviceData(*pconn, conn->device.ui32DeviceIndex, &dev, 0);
 	if (ret != GPU_OK)
 		return ret;
 	if (conn->checkDevice != NULL) {
@@ -131,24 +153,7 @@ int SceGpuEs4User_4447D217(PVRSRV_CONNECTION *conn, SceUInt32 *numDevices,
 
 int SceGpuEs4User_70800B46(PVRSRV_CONNECTION *conn, SceUInt32 index, PVRSRV_DEV_DATA *dev, SceUInt32 type)
 {
-	struct {
-		SceUInt32 bridgeFlags;
-		SceUInt32 index;
-		SceUInt32 type;
-	} in;
-	struct GpuHandleOut out;
-
-	in.index = index;
-	in.type = type;
-	if (GpuBridgeCall(conn->services, PVRSRV_BRIDGE_ACQUIRE_DEVICEINFO, &in, sizeof(in),
-			  &out, sizeof(out)) != GPU_OK)
-		return GPU_ERROR_BRIDGE_CALL_FAILED;
-	if (out.error != GPU_OK)
-		return out.error;
-
-	dev->psConnection = conn;
-	dev->hDevCookie = out.handle;
-	return out.error;
+	return AcquireDeviceData(conn, index, dev, type);
 }
 
 int SceGpuEs4User_1E0A9C4A(PVRSRV_DEV_DATA *dev, SceUInt32 *hContext, SceUInt32 *numHeaps,

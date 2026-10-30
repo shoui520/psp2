@@ -17,26 +17,22 @@
 
 /* one address load into a slot */
 #define USSE_LOAD_LO(slot, addr)	(((addr) & 0x1fffff) | ((slot) << 21))
-#define USSE_LOAD_HI(addr)		((((addr) >> 17) & 0x1f0) | (((addr) >> 26) << 12) | 0xfca00000)
+#define USSE_LOAD_HI(addr)		(((((addr) >> 21) << 4) & 0x1f0) | ((((addr) >> 26) << 12) & 0x3f000) | 0xfca00000)
 
 /* the sequence's last instruction */
-#define USSE_LOAD_END_LO(count)		((((count) & 0x3f) << 22) | 0x200082)
-#define USSE_LOAD_END_HI(count)		((((count) & 0x3000) << 10) | (((count) >> 3) & 0x1f8) | 0xfb240000)
-
-typedef struct UsseProgram32 {
-	SceUInt32 word[8];
-} UsseProgram32;
-
-static const UsseProgram32 s_usseProgram32 = { {
-	USSE_LOAD_HEADER_LO, USSE_LOAD_HEADER_HI,
-	USSE_LOAD_LO(0, 0), USSE_LOAD_HI(0),
-	USSE_LOAD_LO(1, 0), USSE_LOAD_HI(0),
-	0x81200000, 0xfb260000,		/* encoding unknown */
-} };
+#define USSE_LOAD_END_LO(count)		((((count) << 22) & 0x0fc00000) | 0x200082)
+#define USSE_LOAD_END_HI(count)		((((count) << 10) & 0x00c00000) | (((count) >> 3) & 0x1f8) | 0xfb240000)
 
 SceUInt32 *SceGpuEs4User_86FC3202(SceUInt32 *out)
 {
-	*(UsseProgram32 *)out = s_usseProgram32;
+	out[0] = USSE_LOAD_HEADER_LO;
+	out[1] = USSE_LOAD_HEADER_HI;
+	out[2] = USSE_LOAD_LO(0, 0);
+	out[3] = USSE_LOAD_HI(0);
+	out[4] = USSE_LOAD_LO(1, 0);
+	out[5] = USSE_LOAD_HI(0);
+	out[6] = 0x81200000;		/* encoding unknown */
+	out[7] = 0xfb260000;
 	return out + 8;
 }
 
@@ -48,8 +44,10 @@ SceUInt32 *SceGpuEs4User_53CACDAB(SceUInt32 *out, const SceUInt32 *address, SceU
 	out[0] = USSE_LOAD_HEADER_LO;
 	out[1] = USSE_LOAD_HEADER_HI;
 	for (i = 0; i < USSE_LOAD_SLOTS; i++) {
-		insn[2 * i] = USSE_LOAD_LO(i, address[i]);
-		insn[2 * i + 1] = USSE_LOAD_HI(address[i]);
+		SceUInt32 addr = address[i];
+
+		insn[2 * i] = USSE_LOAD_LO(i, addr);
+		insn[2 * i + 1] = USSE_LOAD_HI(addr);
 	}
 	out[14] = USSE_LOAD_END_LO(count);
 	out[15] = USSE_LOAD_END_HI(count);

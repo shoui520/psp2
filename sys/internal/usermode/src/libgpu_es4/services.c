@@ -24,7 +24,7 @@ int GpuServicesConnect(GpuServices **services, SceUInt32 flags)
 {
 	struct GpuConnectServicesIn in;
 	struct GpuConnectServicesOut out;
-	struct SceGpuBridgePackage pkg;
+	PVRSRV_BRIDGE_PACKAGE pkg;
 	int ret;
 
 	if (PVRSRVOpen() < 0)
@@ -32,13 +32,13 @@ int GpuServicesConnect(GpuServices **services, SceUInt32 flags)
 
 	g_gpuServices.hServices = 0;
 	in.flags = flags;
-	pkg.id = PVRSRV_BRIDGE_CONNECT_SERVICES;
-	pkg.size = sizeof(pkg);
-	pkg.in = &in;
-	pkg.in_size = sizeof(in);
-	pkg.out = &out;
-	pkg.out_size = sizeof(out);
-	pkg.h_services = 0;
+	pkg.ui32BridgeID = PVRSRV_BRIDGE_CONNECT_SERVICES;
+	pkg.ui32Size = sizeof(pkg);
+	pkg.pvParamIn = &in;
+	pkg.ui32InBufferSize = sizeof(in);
+	pkg.pvParamOut = &out;
+	pkg.ui32OutBufferSize = sizeof(out);
+	pkg.hKernelServices = 0;
 	while ((ret = PVRSRV_BridgeDispatchKM(PVRSRV_BRIDGE_CONNECT_SERVICES, &pkg)) == GPU_ERROR_RETRY)
 		sceKernelDelayThread(GPU_BRIDGE_RETRY_DELAY);
 	if (ret != GPU_OK)
@@ -53,18 +53,18 @@ int GpuServicesConnect(GpuServices **services, SceUInt32 flags)
 int GpuServicesDisconnect(GpuServices *services)
 {
 	struct GpuConnectServicesOut out;
-	struct SceGpuBridgePackage pkg;
+	PVRSRV_BRIDGE_PACKAGE pkg;
 
 	if (services == NULL)
 		return GPU_ERROR_INVALID_PARAMS;
 
-	pkg.id = PVRSRV_BRIDGE_DISCONNECT_SERVICES;
-	pkg.size = sizeof(pkg);
-	pkg.in = NULL;
-	pkg.in_size = 0;
-	pkg.out = &out;
-	pkg.out_size = sizeof(out);
-	pkg.h_services = services->hServices;
+	pkg.ui32BridgeID = PVRSRV_BRIDGE_DISCONNECT_SERVICES;
+	pkg.ui32Size = sizeof(pkg);
+	pkg.pvParamIn = NULL;
+	pkg.ui32InBufferSize = 0;
+	pkg.pvParamOut = &out;
+	pkg.ui32OutBufferSize = sizeof(out);
+	pkg.hKernelServices = services->hServices;
 	while (PVRSRV_BridgeDispatchKM(PVRSRV_BRIDGE_DISCONNECT_SERVICES, &pkg) == GPU_ERROR_RETRY)
 		sceKernelDelayThread(GPU_BRIDGE_RETRY_DELAY);
 	PVRSRVRelease();
@@ -75,16 +75,16 @@ int GpuServicesDisconnect(GpuServices *services)
 int GpuBridgeCall(GpuServices *services, SceUInt32 id, void *in, SceSize inSize, void *out,
 		  SceSize outSize)
 {
-	struct SceGpuBridgePackage pkg;
+	PVRSRV_BRIDGE_PACKAGE pkg;
 	int ret;
 
-	pkg.id = id;
-	pkg.size = sizeof(pkg);
-	pkg.in = in;
-	pkg.in_size = inSize;
-	pkg.out = out;
-	pkg.out_size = outSize;
-	pkg.h_services = services->hServices;
+	pkg.ui32BridgeID = id;
+	pkg.ui32Size = sizeof(pkg);
+	pkg.pvParamIn = in;
+	pkg.ui32InBufferSize = inSize;
+	pkg.pvParamOut = out;
+	pkg.ui32OutBufferSize = outSize;
+	pkg.hKernelServices = services->hServices;
 	while ((ret = PVRSRV_BridgeDispatchKM(id, &pkg)) == GPU_ERROR_RETRY)
 		sceKernelDelayThread(GPU_BRIDGE_RETRY_DELAY);
 	return ret;
