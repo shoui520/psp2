@@ -206,6 +206,48 @@ void ScePafThread_0164145D(PafProtectedCounter *self)
 	}
 }
 
+int ScePafThread_18AF6844(RMutex *self)
+{
+	int32_t result = sceKernelTryLockLwMutex(&self->m_mutex, 1);
+
+	if (result == SCE_KERNEL_ERROR_LW_MUTEX_FAILED_TO_OWN)
+		return 1;
+	if (result)
+		on_error();
+	return 0;
+}
+
+uint32_t *ScePafThread_EE889AAF(uint32_t *result)
+{
+	result[0] = 268435727U;
+	result[1] = 268435732U;
+	result[2] = 268435736U;
+	return result;
+}
+
+static SceUID *InitializeSemaphore(SceUID *self, const char *name,
+				   int32_t initial, int32_t maximum)
+{
+	SceUID sema = sceKernelCreateSema(name, 0x2000U, initial, maximum, NULL);
+
+	*self = sema;
+	if (sema < 0)
+		on_error();
+	return self;
+}
+
+SceUID *ScePafThread_1089526C(SceUID *self, const char *name,
+				 int32_t initial, int32_t maximum)
+{
+	return InitializeSemaphore(self, name, initial, maximum);
+}
+
+SceUID *ScePafThread_D1D39853(SceUID *self, const char *name,
+				 int32_t initial, int32_t maximum)
+{
+	return InitializeSemaphore(self, name, initial, maximum);
+}
+
 unsigned char MutexTryLock(Mutex *self)
 {
 	int32_t result = sceKernelTryLockLwMutex(&self->m_mutex, 1);
