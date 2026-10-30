@@ -93,6 +93,17 @@ __attribute__((noinline)) void ScePafMisc_511CFBA2(CacheManagerImpl *self, void 
 	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
 }
 
+void ScePafMisc_5D7F00C2(void *allocation, const uint8_t *owner)
+{
+	const uint8_t *heap = *(const uint8_t *const *)(owner + 4);
+
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	heap = *(const uint8_t *const *)(owner + 4);
+	if (heap && !heap[66])
+		ScePafMisc_511CFBA2((CacheManagerImpl *)heap, allocation);
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+}
+
 /* Native cache transaction state following the manager's allocator prefix. */
 typedef struct PafCacheTransient {
 	uint8_t prefix[44];

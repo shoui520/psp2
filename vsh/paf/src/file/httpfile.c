@@ -1,11 +1,36 @@
 #include "httpfile.h"
 #include "httpfile_reader.h"
+#include "../common/main_thread_call.h"
 #include "../paf_types.h"
 #include "../std/new.h"
 #include "../std/stdlib.h"
 #include "../std/ctype.h"
 #include <libhttp.h>
 #include <kernel/iofilemgr.h>
+
+int ScePafMisc_104CC765(uint8_t *self)
+{
+	MainThreadCall *callback = *(MainThreadCall **)(self + 4);
+	int32_t request;
+	int32_t connection;
+
+	if (callback) {
+		PafDelete(MainThreadCallDestroy(callback));
+		*(void **)(self + 4) = 0;
+	}
+	request = *(int32_t *)(self + 12);
+	if (request > 0) {
+		sceHttpDeleteRequest(request);
+		*(int32_t *)(self + 12) = -1;
+	}
+	connection = *(int32_t *)(self + 8);
+	if (connection > 0) {
+		sceHttpDeleteConnection(connection);
+		*(int32_t *)(self + 8) = -1;
+	}
+	PafStringAssign((PafString *)(self + 20), NULL, 0);
+	return 0;
+}
 
 extern int sce_paf_strcasecmp(const char *left, const char *right);
 extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
