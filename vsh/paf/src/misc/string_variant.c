@@ -366,3 +366,52 @@ PafStringPair *ScePafMisc_C1DE0AC2(PafStringPair *self,
 	self->narrow = value;
 	return self;
 }
+
+/* Replace a pair's narrow representation from a zero-terminated string. */
+static PafStringPair *AssignNarrowPair(PafStringPair *self, const char *source)
+{
+	PafString *value = 0;
+
+	ScePafMisc_8FDF9295(self);
+	value = PafNew(sizeof(*value));
+	if (value) {
+		size_t length;
+
+		PafStringInitialize(value);
+		length = source ? sce_paf_strlen(source) : 0;
+		PafStringAssign(value, source, length);
+	}
+	self->narrow = value;
+	return self;
+}
+
+PafStringPair *ScePafMisc_5BAA3517(PafStringPair *self, const char *source)
+{
+	return AssignNarrowPair(self, source);
+}
+
+PafStringPair *ScePafMisc_AD5E57B0(PafStringPair *self, const char *source)
+{
+	return AssignNarrowPair(self, source);
+}
+
+PafStringPair *ScePafMisc_EF52733C(PafStringPair *self,
+				  const PafString *const *source)
+{
+	const PafString *value = *source;
+
+	if (value) {
+		PafString *copy = 0;
+
+		ScePafMisc_8FDF9295(self);
+		copy = PafNew(sizeof(*copy));
+		if (copy) {
+			PafStringInitialize(copy);
+			PafStringCopy(copy, value);
+		}
+		self->narrow = copy;
+	} else {
+		ScePafMisc_8FDF9295(self);
+	}
+	return self;
+}

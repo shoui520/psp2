@@ -34,6 +34,33 @@ uint32_t ScePafMisc_8A35B3D9(PafCacheRefObject *self)
 	return references;
 }
 
+typedef struct PafCacheCallbackContext {
+	uint8_t callbackState[144];
+	int (*callback)(void *callbackState, void *user, void *data);
+	void *data;
+} PafCacheCallbackContext;
+
+_Static_assert(offsetof(PafCacheCallbackContext, callback) == 144,
+	       "cache callback pointer offset");
+_Static_assert(offsetof(PafCacheCallbackContext, data) == 148,
+	       "cache callback data offset");
+
+int ScePafMisc_F47E07B4(void *user, PafCacheCallbackContext *context)
+{
+	int result = 0;
+
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	if (context->callback) {
+		int callbackResult = context->callback(context->callbackState + 32,
+						 user, context->data);
+
+		if (callbackResult < 0)
+			result = callbackResult;
+	}
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	return result;
+}
+
 typedef struct PafCacheSharedCounter {
 	uint8_t reserved[16];
 	uint32_t count;
