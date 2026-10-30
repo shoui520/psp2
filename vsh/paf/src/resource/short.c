@@ -3,6 +3,13 @@
 #include "../compiler.h"
 #include "../std/new.h"
 
+extern int ScePafResource_3B89338E(uint32_t *self, uint32_t target);
+
+int ScePafResource_BFC7537A(uint32_t target, uint32_t *self)
+{
+	return ScePafResource_3B89338E(self, target);
+}
+
 int ScePafResource_CEED7338(const void *const *self)
 {
 	void *object = *(void *const *)self;

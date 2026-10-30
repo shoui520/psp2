@@ -2478,6 +2478,7 @@ int ScePafGraphics_83ABDFF5(const uint8_t *self, uint8_t argument)
 	return 0;
 }
 
+__attribute__((noinline))
 uint8_t *ScePafGraphics_87657577(const uint8_t *self, int32_t index)
 {
 	uint8_t *base = *(uint8_t *const *)(self + 108);
@@ -2716,4 +2717,35 @@ void *ScePafGraphics_0C968320(const uint8_t *self, const uint64_t *data)
 	*(uint64_t *)(target + 92) = data[0];
 	*(uint64_t *)(target + 100) = second;
 	return target;
+}
+
+/* Advance through the native mip-chain layout for a selected buffer. */
+uint8_t *ScePafGraphics_D821B69F(const uint8_t *self, int32_t index,
+				 int32_t levels)
+{
+	uint8_t *result = ScePafGraphics_87657577(self, index);
+
+	if (!result)
+		return 0;
+	if (levels > 0) {
+		int32_t stride = *(const int32_t *)(self + 60);
+		int32_t height = *(const int16_t *)(self + 46);
+		int32_t count = levels - 1;
+		int32_t next = levels - 2;
+		int32_t offset;
+
+		for (offset = stride * height; ; offset += stride * height) {
+			int32_t check = count;
+			count = next;
+			if (check <= 0)
+				break;
+			--next;
+			if (stride > 1)
+				stride >>= 1;
+			if (height > 1)
+				height >>= 1;
+		}
+		result += offset;
+	}
+	return result;
 }
