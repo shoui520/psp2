@@ -218,6 +218,41 @@ typedef struct DbgpStopReason {
 	SceUInt32 reserved[2];
 } DbgpStopReason;
 
+/* a process as the host sees it, followed by its path and unwind tables */
+typedef struct DbgpProcessInfo {
+	SceSize size;
+	SceUID pid;
+	SceUInt32 attr;			/* DBGP_PROCESS_ATTR_* */
+	char name[32];			/* 0x0c */
+	SceUInt32 param;		/* 0x2c */
+	SceUInt32 cpuAffinityMask;
+	void *entryPoint;
+	SceUInt32 fingerprint;		/* 0x38 */
+	SceUID parentPid;		/* -1 for the kernel */
+	DbgpStopReason stopReason;	/* 0x40 */
+	SceSize pathLength;		/* 0x54: with its NUL */
+	char path[];			/* padded to 4, then DbgpProcessUnwind */
+} DbgpProcessInfo;
+
+/* the main module's unwind tables, after the padded path */
+typedef struct DbgpProcessUnwind {
+	void *exidxTop;
+	void *exidxBtm;
+	void *extabTop;
+	void *extabBtm;
+} DbgpProcessUnwind;
+
+/* DbgpProcessInfo.attr */
+#define DBGP_PROCESS_ATTR_VALID		0x1
+#define DBGP_PROCESS_ATTR_SUSPENDED	0x2	/* process status 2 */
+#define DBGP_PROCESS_ATTR_SYSTEM	0x4
+#define DBGP_PROCESS_ATTR_STOPPED	0x8	/* process status 3 */
+#define DBGP_PROCESS_ATTR_DEBUGGABLE	0x10000
+#define DBGP_PROCESS_ATTR_ATTACHED	0x20000
+#define DBGP_PROCESS_ATTR_ULT_INFO	0x1000000
+
+_Static_assert(sizeof(DbgpProcessInfo) == 88, "DBGP process record");
+
 /* a thread as the host sees it (from SceThreadmgr's debugger information) */
 typedef struct DbgpThreadInfo {
 	SceSize size;
@@ -517,6 +552,7 @@ int moduleHandlerInit(DbgpCB *dbgp);
 int procInit(DbgpCB *dbgp);
 int swbkptInit(DbgpCB *dbgp);
 int threadAppObjectInit(DbgpCB *dbgp);
+int threadAppObjectIsSupported(SceUID pid);
 
 int processHandlerStartHandler(SceUID parentPid, SceUID pid, SceUInt64 time);
 int processHandlerExitHandler(SceUID pid, int exitStatus, SceUInt64 time);
@@ -659,6 +695,9 @@ int excpInfoCreateStopNotification(DbgpProcCB *proc,
 int procGetProcInfoForPacket(DbgpProcCB *proc, SceUID pid);
 int procGetProcessInfo(DbgpProcCB *proc, void *info, SceUID pid,
 		       SceUInt32 reason, SceUInt32 pc);
+int procGetProcessAttribute(DbgpProcCB *proc, SceUID pid, SceUInt32 *attr);
+void procGetProcessDbgpStopReason(DbgpProcCB *proc, DbgpStopReason *stop,
+				  SceUID pid, SceUInt32 reason, SceUInt32 pc);
 int procGetThreadDbgpStopReason(DbgpProcCB *proc, DbgpStopReason *reason,
 				SceUID thid, SceUID pid, SceUInt32 stopReason);
 int procGetThreadInfo(DbgpProcCB *proc, DbgpThreadInfo *info, int *count,
