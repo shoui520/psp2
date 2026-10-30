@@ -52,6 +52,8 @@ int sceCodecEngineDsp0GetThreadExecGroup(unsigned int thread);
 /* venezia/vapa.c: DSP addresses, and the memory an RPC passes */
 void *SceCodecEngineWrapperForDriver_F9495589(uintptr_t physical);
 uintptr_t SceCodecEngineWrapperForDriver_C7C150AE(const void *address);
+/* selects the 1 MiB page of main or external memory a picture at physicalAddress is in */
+int SceCodecEngineWrapperForDriver_18197103(uint32_t physicalAddress);
 int sceCodecEngineDsp0ConvertVirtualToPhysical(VeneziaRpcThunk *thunk, void *base, SceSize size,
 		const VeneziaMemoryOption *option);
 int sceCodecEngineDsp0ConvertPhysicalToVirtual(VeneziaRpcThunk *thunk);

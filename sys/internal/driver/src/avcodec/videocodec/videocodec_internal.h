@@ -727,6 +727,8 @@ int videocodecAvcencInputCsc(VideocodecEncoderFrame *pDst, const AvcencCscFrame 
 int videocodecAvcencCsc(AvcencCscFrame *pDst, const AvcencCscFrame *pSrc);
 int videocodecDecoderCsc(SceAvcdecFrame *pFrameOut, const SceAvcdecFrame *pFrameIn,
 		unsigned int cscCoefficient, const SceAvcdecArrayPicture *pArrayPicture);
+int videocodecAvcdecPicture(SceAvcdecPicture *pPicture, const VeneziaDebugSnapshotOutput *pOutput,
+		const SceAvcdecArrayPicture *pArrayPicture, int interlaced);
 
 typedef struct AvcencControl {
 	unsigned int handle;
