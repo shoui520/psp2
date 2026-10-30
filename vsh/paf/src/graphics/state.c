@@ -5,6 +5,7 @@
 #include "../std/new.h"
 #include "../thread/mutex.h"
 #include <gxm.h>
+#include <arm_neon.h>
 #include <sce_atomic.h>
 #include <kernel/sysmem.h>
 #include <display.h>
@@ -20,6 +21,54 @@ uint32_t ScePafGraphics_6C448991(void);
 extern uint32_t sce_paf_graphics_state_12b0;
 extern uint32_t sce_paf_graphics_state_11fc;
 extern uint8_t sce_paf_graphics_flag_06e8;
+
+int ScePafGraphics_70ED91E6(uint8_t *self, const uint32_t *values)
+{
+	float32x2_t pair;
+	uint8_t *target;
+
+	pair = *(const volatile float32x2_t *)values;
+	target = *(uint8_t **)(self + 80);
+	*(float *)(target + 88) = vget_lane_f32(pair, 0);
+	pair = *(const volatile float32x2_t *)values;
+	*(float *)(target + 84) = vget_lane_f32(pair, 1);
+	return (int)(uintptr_t)target;
+}
+
+int ScePafGraphics_1D522F83(uint8_t *self, int32_t mode)
+{
+	volatile uint8_t *flags = self;
+	if (*(uint16_t *)(self + 132) != mode) {
+		*(uint16_t *)(self + 132) = (uint16_t)mode;
+		switch ((uint16_t)mode) {
+		case 0:
+			flags[135] = 0;
+			flags[134] = 0;
+			break;
+		case 1:
+			flags[134] = 0;
+			flags[135] = 1;
+			break;
+		case 2:
+			flags[134] = 1;
+			flags[135] = 0;
+			break;
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+		case 8:
+		case 9:
+			flags[135] = 1;
+			flags[134] = 1;
+			break;
+		default:
+			break;
+		}
+	}
+	return (int)(uintptr_t)self;
+}
 
 static const SceGxmProgramParameter *GraphicsFindNamedProgramParameter(
 		const uint8_t *self, const char *name)
