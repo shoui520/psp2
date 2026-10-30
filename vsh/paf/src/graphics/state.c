@@ -330,6 +330,7 @@ void ScePafGraphics_722A4987(uint8_t *self, SceGxmCullMode mode)
 	sceGxmSetCullMode(context, mode);
 }
 
+__attribute__((noinline))
 int ScePafGraphics_8D25DDE9(const void *self, const char *tag)
 {
 	return tag == "DrawObj";
@@ -372,4 +373,70 @@ uint32_t *ScePafGraphics_570E7907(uint32_t *self, uint32_t second,
 	self[90] = fourth;
 	self[91] = fifth;
 	return self;
+}
+
+int ScePafGraphics_0FD022D5(uint8_t *self, int mode, uint8_t value)
+{
+	if (mode != 0)
+		return -2136005886;
+	self[4] = value;
+	return 0;
+}
+
+static inline __attribute__((always_inline))
+int GraphicsIndexedValue(const uint8_t *self, uint32_t index)
+{
+	if (index < 4) {
+		uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
+		if (item)
+			return *(const int32_t *)(item + 72);
+	}
+	return -1;
+}
+
+int ScePafGraphics_1D53BDC2(const uint8_t *self, uint32_t index)
+{
+	return GraphicsIndexedValue(self, index);
+}
+
+int ScePafGraphics_9DCF66E4(const uint8_t *self, uint32_t index)
+{
+	return GraphicsIndexedValue(self, index);
+}
+
+int ScePafGraphics_5FDB925A(const void *self, const char *tag)
+{
+	if (tag == "PlaneObj")
+		return 1;
+	return ScePafGraphics_8D25DDE9(self, tag);
+}
+
+int ScePafGraphics_88561C1B(const void *self, const char *tag)
+{
+	if (tag == "PanelObj")
+		return 1;
+	return ScePafGraphics_8D25DDE9(self, tag);
+}
+
+int ScePafGraphics_8D9E23C2(const void *self, const char *tag)
+{
+	if (tag == "PageTurnObj")
+		return 1;
+	return ScePafGraphics_8D25DDE9(self, tag);
+}
+
+int ScePafGraphics_930F72BF(const void *self, const char *tag)
+{
+	if (tag == "TextObj")
+		return 1;
+	return ScePafGraphics_8D25DDE9(self, tag);
+}
+
+void *ScePafGraphics_0C968320(const uint8_t *self, const uint64_t *data)
+{
+	uint64_t second = data[1];
+	uint8_t *target = *(uint8_t *const *)(self + 80);
+	*(uint64_t *)(target + 92) = data[0];
+	*(uint64_t *)(target + 100) = second;
+	return target;
 }
