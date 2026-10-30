@@ -830,3 +830,45 @@ int ScePafWidget_85421D01(const uint8_t *self, uint32_t *first,
 		return ScePafGraphics_D48AB212(graphics, first, second);
 	return -2136014814;
 }
+
+extern int ScePafGraphics_BE22EED6(const uint8_t *self, int index,
+					   uint64_t *output);
+extern int ScePafGraphics_E73E0E33(const uint8_t *self, uint64_t *output);
+extern int ScePafGraphics_5AF2E479(const uint8_t *self, int index,
+					   uint32_t *output);
+extern uint8_t *ScePafGraphics_4C4593FF(void);
+
+int ScePafWidget_09B7286A(const uint8_t *self, int index, uint64_t *output)
+{
+	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
+
+	if (graphics)
+		return ScePafGraphics_BE22EED6(graphics, index, output);
+	return -2136014814;
+}
+
+int ScePafWidget_4CABAAE0(const uint8_t *self, uint64_t *output)
+{
+	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
+
+	if (graphics)
+		return ScePafGraphics_E73E0E33(graphics, output);
+	return -2136014814;
+}
+
+int ScePafWidget_B3BC5EE1(const uint8_t *self, int index,
+			   uint32_t *output)
+{
+	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
+
+	if (graphics)
+		return ScePafGraphics_5AF2E479(graphics, index, output);
+	return -2136014814;
+}
+
+uint32_t *ScePafWidget_AE0C4046(void)
+{
+	ScePafGraphics_4C4593FF();
+	sce_paf_widget_state_142d8 = 0;
+	return &sce_paf_widget_state_142d8;
+}
