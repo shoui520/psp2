@@ -79,3 +79,24 @@ uint32_t *ScePafToplevel_99DD7850(uint32_t *self)
 {
 	return InitTopLevelRequest(self);
 }
+
+int ScePafToplevel_9A4B0DC4(uint8_t *self)
+{
+	if (!self[112]) {
+		void (*callback)(uint32_t) =
+			*(void (**)(uint32_t))(self + 40);
+
+		if (callback)
+			callback(*(uint32_t *)(self + 44));
+	}
+	self[112] = 1;
+	return 1;
+}
+
+int ScePafToplevel_9974EC7E(void *unused0, void *unused1,
+			      uint8_t *object)
+{
+	if (object && !(object[405] & 8))
+		return ((int (**)(void *))*(void **)object)[27](object);
+	return (int)(uintptr_t)object;
+}
