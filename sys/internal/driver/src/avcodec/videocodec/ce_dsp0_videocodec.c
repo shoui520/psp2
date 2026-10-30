@@ -2015,6 +2015,123 @@ int dsp0VideocodecM4vDecodeCore(Dsp0VideocodecGlobal *global, unsigned int handl
 	return ret;
 }
 
+static inline void dsp0VideocodecSuspendEncoder(Dsp0VideocodecGlobal *global,
+						unsigned int index)
+{
+	Dsp0VideocodecEncoder *encoder;
+	Dsp0VideocodecEncoderCommand *command;
+	unsigned int pictureIndex, numOfOutput;
+
+	if (global->initialized != 1 ||
+	    index >= global->library->numOfEncoders)
+		return;
+	encoder = &global->encoders[index];
+	if (encoder->state != 4096)
+		return;
+	command = encoder->pCommand;
+	pictureIndex = command->pictureIndex;
+	command->picture[pictureIndex].alignedHorizontal =
+		encoder->param.alignedHorizontal;
+	command->picture[pictureIndex].alignedVertical =
+		encoder->param.alignedVertical;
+	command->picture[pictureIndex].valid = 0;
+	command->picture[pictureIndex].numOfOutput = 0;
+	command->picture[pictureIndex].lumaPitch = encoder->param.pitch;
+	command->picture[pictureIndex].chromaPitch = encoder->param.pitch;
+	if (dsp0VideocodecEncodePicture(command) < 0)
+		return;
+	numOfOutput = command->picture[pictureIndex].numOfOutput;
+	encoder->status = 1;
+	if (numOfOutput == 0 || numOfOutput <= command->numOfPicture)
+		command->picture[command->pictureIndex].valid =
+			encoder->pictureStatus;
+	else
+		command->picture[command->pictureIndex].valid = 0;
+}
+
+int dsp0VideocodecProcessSuspend(SceUID pid)
+{
+	void *storage = NULL;
+	Dsp0VideocodecGlobal *global;
+	Dsp0VideocodecLibraryCommand *library;
+	Dsp0VideocodecDecoder *decoders;
+	Dsp0VideocodecEncoder *encoders;
+	Dsp0VideocodecArrayPicture arrayPicture;
+	Dsp0VideocodecPicture *picture;
+	Dsp0VideocodecPicture **pPicture;
+	SceKernelIntrStatus intr;
+	unsigned int numOfOutput;
+	int i;
+
+	if (pid != 0) {
+		if (sceKernelGetRemoteKPLS(pid,
+				dsp0VideocodecLocalStorageId, &storage, 0) < 0)
+			storage = NULL;
+	} else {
+		storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+	}
+#if FW_DEBUG
+	sceKernelAssert(storage != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	global = storage;
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&global->statusLock);
+	global->status = 2;
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
+	library = global->library;
+	decoders = global->decoders;
+	pPicture = &picture;
+	if (decoders != NULL && library != NULL) {
+		for (i = 0; i < library->numOfDecoders; i++) {
+			if (decoders[i].status != 1)
+				continue;
+			if (decoders[i].state == 256) {
+				Dsp0VideocodecDecoderCommand *command =
+					decoders[i].pCommand;
+
+				arrayPicture.numOfElm = 0;
+				arrayPicture.pPicture = &pPicture;
+				command->numOfPicture = 0;
+				dsp0VideocodecAvcDecodeCore(global, i + 257, NULL,
+						&arrayPicture, &numOfOutput, NULL);
+				command->numOfPicture = 1;
+			} else if (decoders[i].state == 512) {
+				Dsp0VideocodecM4vDecoderCommand *command =
+					decoders[i].pCommand;
+
+				arrayPicture.numOfElm = 0;
+				arrayPicture.pPicture = &pPicture;
+				command->numOfPicture = 0;
+				dsp0VideocodecM4vDecodeCore(global, i + 513, NULL,
+						&arrayPicture, &numOfOutput, NULL);
+				command->numOfPicture = 1;
+			} else {
+				break;
+			}
+		}
+	}
+	library = global->library;
+	encoders = global->encoders;
+	if (encoders != NULL && library != NULL) {
+		for (i = 0; i < library->numOfEncoders; i++) {
+			Dsp0VideocodecEncoderCommand *command;
+
+			if (encoders[i].status != 1)
+				continue;
+			if (encoders[i].state != 4096)
+				break;
+			command = encoders[i].pCommand;
+			command->numOfPicture = 0;
+			dsp0VideocodecSuspendEncoder(global, i);
+			command->numOfPicture = 1;
+		}
+	}
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&global->statusLock);
+	global->status = 3;
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
+	return 0;
+}
+
 int dsp0VideocodecM4vDecode(unsigned int handle, const SceAvcdecAu *pAu,
 			    const Dsp0VideocodecArrayPicture *pArrayPicture,
 			    unsigned int *pNumOfOutput)
