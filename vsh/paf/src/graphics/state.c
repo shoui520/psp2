@@ -141,6 +141,33 @@ int ScePafGraphics_586E6F73(const SceGxmVertexAttribute *attributes,
 		*(const uint32_t *)(source + 116), vertexProgram);
 }
 
+static inline __attribute__((always_inline))
+void GraphicsSetPointLineWidth(uint32_t *self, uint32_t flags, float width)
+{
+	uint32_t integerWidth = (uint32_t)width;
+
+	if (flags & 1) {
+		self[475] = integerWidth;
+		sceGxmSetFrontPointLineWidth((SceGxmContext *)self[419],
+					     integerWidth);
+	}
+	if (flags & 2) {
+		self[476] = integerWidth;
+		sceGxmSetBackPointLineWidth((SceGxmContext *)self[419],
+					    integerWidth);
+	}
+}
+
+void ScePafGraphics_9EAD43B5(uint32_t *self, uint32_t flags, float width)
+{
+	GraphicsSetPointLineWidth(self, flags, width);
+}
+
+void ScePafGraphics_D9EA2729(uint32_t *self, uint32_t flags, float width)
+{
+	GraphicsSetPointLineWidth(self, flags, width);
+}
+
 static const SceGxmProgramParameter *GraphicsFindNamedProgramParameter(
 		const uint8_t *self, const char *name)
 {
