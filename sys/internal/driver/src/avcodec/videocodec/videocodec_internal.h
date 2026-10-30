@@ -360,7 +360,10 @@ typedef struct Dsp0VideocodecEncodeResult {
 
 typedef struct Dsp0VideocodecNalUnit {
 	uintptr_t address;
-	unsigned int coprocessorInfo[2];
+	SceSize size;
+	unsigned char type;
+	unsigned char referencePriority;
+	unsigned char padding[2];
 } Dsp0VideocodecNalUnit;
 
 typedef struct Dsp0VideocodecInputPicture {
@@ -371,7 +374,8 @@ typedef struct Dsp0VideocodecInputPicture {
 	unsigned short lumaPitch;
 	unsigned short chromaPitch;
 	unsigned char valid;
-	unsigned char coprocessorState[7];
+	unsigned char coprocessorState[3];
+	unsigned int numOfOutput;
 } Dsp0VideocodecInputPicture;
 
 typedef struct AvcencEncoderParameter {
@@ -443,7 +447,7 @@ typedef struct Dsp0VideocodecEncoderCommand {
 	Dsp0VideocodecNalUnit headers[2];	/* SPS and PPS */
 	AvcencEncoderParameter parameter;
 	Dsp0VideocodecEncodeResult *pEncodeResult;
-	unsigned int coprocessorNalState;
+	unsigned int numOfPicture;
 	Dsp0VideocodecNalUnit nal[12];
 	uintptr_t coprocessorBufferAddress[2];	/* physical */
 	unsigned int pictureIndex;
@@ -544,6 +548,29 @@ typedef struct Dsp0VideocodecEncoderParam {
 } Dsp0VideocodecEncoderParam;
 
 _Static_assert(sizeof(Dsp0VideocodecEncoderParam) == 68, "DSP0 encoder create ABI");
+
+/* a picture handed to a DSP0 encode; mode 0 or a NULL picture flushes */
+typedef struct Dsp0VideocodecEncodeFrame {
+	const void *pPicture;
+	unsigned int pitch;
+	unsigned int horizontal;
+	unsigned int vertical;
+	unsigned int mode;			/* 1, 32, 64 or 128 */
+	AvcencEncoderParameter parameter;
+} Dsp0VideocodecEncodeFrame;
+
+/* what a DSP0 encode returns */
+typedef struct Dsp0VideocodecEncodeAu {
+	SceVideodecTimeStamp pts;
+	uintptr_t streamAddress;
+	SceSize streamSize;
+	unsigned char coprocessorFlags[3];
+	unsigned char numOfNal;
+	Dsp0VideocodecNalUnit nal[12];
+} Dsp0VideocodecEncodeAu;
+
+_Static_assert(sizeof(Dsp0VideocodecEncodeFrame) == 44, "DSP0 encode frame ABI");
+_Static_assert(sizeof(Dsp0VideocodecEncodeAu) == 164, "DSP0 encode AU ABI");
 
 typedef struct Dsp0VideocodecInitParam {
 	unsigned int horizontal;

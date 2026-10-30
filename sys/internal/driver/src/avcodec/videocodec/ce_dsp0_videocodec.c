@@ -2291,7 +2291,7 @@ int dsp0VideocodecCreateEncoder(unsigned int codecType, unsigned int *pHandle,
 	command->pEncodeResult = encoder->pEncodeResult;
 	command->bufferAddress = param->bufferAddress;
 	command->bufferSize = bufferSize;
-	command->coprocessorNalState = 1;
+	command->numOfPicture = 1;
 	command->parameter = param->parameter;
 	for (i = 0; i < 2; i++) {
 		memset(&command->picture[i], 0, sizeof(command->picture[i]));
@@ -2402,4 +2402,124 @@ int dsp0VideocodecGetInputPicture(unsigned int handle,
 	pPicture->size = encoder->picture[index].size;
 	sceKernelUnlockFastMutex((SceKernelFastMutex *)encoder->pMutex);
 	return 0;
+}
+
+int dsp0VideocodecEncodeCore(Dsp0VideocodecGlobal *global, unsigned int handle,
+			     Dsp0VideocodecEncodeFrame *pFrame,
+			     Dsp0VideocodecEncodeAu *pAu,
+			     unsigned int *pNumOfOutput, unsigned int *pNumOfEncoded)
+{
+	Dsp0VideocodecEncoder *encoder;
+	Dsp0VideocodecEncoderCommand *command;
+	Dsp0VideocodecEncodeResult *result;
+	unsigned int index, pictureIndex, numOfNal, i;
+	SceSize size;
+	int noFrame, ret;
+
+	if (global->initialized != 1)
+		return (int)0x8062020c;
+	if (pNumOfOutput == NULL || pAu == NULL)
+		return (int)0x80620209;
+	index = handle - 4097;
+	encoder = &global->encoders[index];
+	if (index >= global->library->numOfEncoders)
+		return (int)0x8062020c;
+	if (encoder->state != 4096)
+		return (int)0x8062020c;
+	command = encoder->pCommand;
+	pictureIndex = command->pictureIndex;
+	noFrame = 1;
+	if (pFrame != NULL && pFrame->pPicture != NULL && pFrame->mode != 0) {
+		noFrame = command->picture[pictureIndex].valid;
+		if (noFrame != 0) {
+			if (pFrame->pitch < pFrame->horizontal ||
+			    ((pFrame->horizontal | pFrame->pitch) & 15) != 0 ||
+			    (pFrame->vertical & 15) != 0 ||
+			    pFrame->pitch > encoder->param.pitch ||
+			    pFrame->horizontal > encoder->param.alignedHorizontal ||
+			    pFrame->vertical > encoder->param.alignedVertical ||
+			    pFrame->pitch < command->horizontal ||
+			    pFrame->horizontal < command->horizontal ||
+			    pFrame->vertical < command->vertical ||
+			    (pFrame->mode > 1 && pFrame->mode != 32 &&
+			     pFrame->mode != 64 && pFrame->mode != 128))
+				return (int)0x80620201;
+			if (pFrame->parameter.bitRate[0] < 32000 ||
+			    pFrame->parameter.bitRate[1] < 32000 ||
+			    pFrame->parameter.cpbSize < 80000 ||
+			    pFrame->parameter.gopLength - 1 >= 300 ||
+			    pFrame->parameter.bitRate[0] > 20000000 ||
+			    pFrame->parameter.bitRate[1] > 20000000 ||
+			    pFrame->parameter.cpbSize > 12533760)
+				return (int)0x80620201;
+			if (pFrame->parameter.timeScale != 0 &&
+			    pFrame->parameter.timeScale <
+			    2 * pFrame->parameter.numUnitsInTick)
+				return (int)0x80620201;
+			size = (3 * pFrame->vertical * pFrame->pitch) >> 1;
+			if (size > encoder->picture[pictureIndex].size)
+				return (int)0x8062020f;
+			if (pFrame->pPicture !=
+			    (const void *)encoder->picture[pictureIndex].address)
+				memcpy((void *)encoder->picture[pictureIndex].address,
+				       pFrame->pPicture, size);
+			if (pFrame->mode == 32 && command->codingOption[2] == 0)
+				pFrame->mode = 64;
+			command->picture[pictureIndex].alignedHorizontal =
+				pFrame->horizontal;
+			command->picture[pictureIndex].alignedVertical =
+				pFrame->vertical;
+			command->picture[pictureIndex].lumaPitch = pFrame->pitch;
+			command->picture[pictureIndex].chromaPitch = pFrame->pitch;
+			command->picture[pictureIndex].numOfOutput = 0;
+			command->picture[pictureIndex].valid = pFrame->mode;
+			command->parameter = pFrame->parameter;
+			encoder->pictureStatus = pFrame->mode;
+			noFrame = 0;
+			goto encode;
+		}
+	}
+	command->picture[pictureIndex].alignedHorizontal =
+		encoder->param.alignedHorizontal;
+	command->picture[pictureIndex].alignedVertical =
+		encoder->param.alignedVertical;
+	command->picture[pictureIndex].valid = 0;
+	command->picture[pictureIndex].numOfOutput = 0;
+	command->picture[pictureIndex].lumaPitch = encoder->param.pitch;
+	command->picture[pictureIndex].chromaPitch = encoder->param.pitch;
+encode:
+	ret = dsp0VideocodecEncodePicture(command);
+	if (ret < 0)
+		return ret;
+	encoder->status = 1;
+	if (command->picture[pictureIndex].valid == 0 && noFrame == 0)
+		ret = (int)0x80620210;
+	*pNumOfOutput = command->picture[pictureIndex].numOfOutput != 0 ?
+			command->numOfPicture : 0;
+	if (pNumOfEncoded != NULL)
+		*pNumOfEncoded = command->picture[pictureIndex].numOfOutput;
+	if (command->picture[pictureIndex].numOfOutput <= command->numOfPicture)
+		command->picture[command->pictureIndex].valid =
+			encoder->pictureStatus;
+	else
+		command->picture[command->pictureIndex].valid = 0;
+	if (*pNumOfOutput != 0) {
+		result = command->pEncodeResult;
+		pAu->pts.upper = result->timeStamp[1];
+		pAu->pts.lower = result->timeStamp[0];
+		pAu->streamAddress = result->streamAddress;
+		pAu->streamSize = result->streamSize;
+		pAu->coprocessorFlags[0] = result->coprocessorFlags[0];
+		pAu->coprocessorFlags[1] = command->pEncodeResult->coprocessorFlags[2];
+		numOfNal = (unsigned char)command->pEncodeResult->numOfNal;
+		pAu->numOfNal = numOfNal;
+		for (i = 0; i < numOfNal && i < 12; i++) {
+			pAu->nal[i].address = command->nal[i].address;
+			pAu->nal[i].size = command->nal[i].size;
+			pAu->nal[i].type = command->nal[i].type;
+			pAu->nal[i].referencePriority =
+				command->nal[i].referencePriority;
+		}
+	}
+	return ret;
 }
