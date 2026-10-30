@@ -156,3 +156,29 @@ int ScePafResource_BED256D0(uint32_t *self)
 	}
 	return 0;
 }
+
+/* Propagate a resource mode to its children before optional owner release. */
+int ScePafResource_B62F6AFA(uint32_t *self, int mode)
+{
+	uint32_t *begin = (uint32_t *)(uintptr_t)self[11];
+	uint32_t *current = begin;
+
+	if (begin != begin + self[12]) {
+		do {
+			void *object = (void *)(uintptr_t)*current;
+			((void (*)(void *, int))(*(void ***)object)[6])(object, mode);
+			current = begin;
+			if (begin) {
+				++begin;
+				++current;
+			}
+		} while (current != (uint32_t *)(uintptr_t)self[11] + self[12]);
+	}
+	if (mode & 1) {
+		void *owner = (void *)(uintptr_t)self[1];
+		if (owner)
+			((void (*)(void *))(*(void ***)owner)[1])(owner);
+		self[1] = 0;
+	}
+	return 0;
+}
