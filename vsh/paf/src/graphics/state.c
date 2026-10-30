@@ -21,6 +21,7 @@ uint32_t ScePafGraphics_6C448991(void);
 extern uint32_t sce_paf_graphics_state_12b0;
 extern uint32_t sce_paf_graphics_state_11fc;
 extern uint8_t sce_paf_graphics_flag_06e8;
+extern int32_t *sce_paf_graphics_active_surface_2e94;
 
 int ScePafGraphics_70ED91E6(uint8_t *self, const uint32_t *values)
 {
@@ -97,6 +98,30 @@ void *ScePafGraphics_4F80DA00(uint8_t *self, int first, int second)
 					  ((second & 15) << 4));
 	}
 	return self;
+}
+
+void *ScePafGraphics_12BDEBFF(void)
+{
+	uint32_t *state = *(uint32_t *volatile *)
+		&sce_paf_graphics_active_surface_2e94;
+	void (*callback)(void *, uintptr_t, uintptr_t, uintptr_t) =
+		(void (*)(void *, uintptr_t, uintptr_t, uintptr_t))
+		(uintptr_t)state[7];
+	void *argument = (void *)(uintptr_t)state[8];
+
+	state[7] = 0;
+	state = *(uint32_t *volatile *)&sce_paf_graphics_active_surface_2e94;
+	state[8] = 0;
+	if (callback)
+		callback(argument, (uintptr_t)callback, (uintptr_t)state, 0);
+	state = *(uint32_t *volatile *)&sce_paf_graphics_active_surface_2e94;
+	state[7] = 0;
+	state[0] = 3;
+	uint32_t *result = *(uint32_t *volatile *)
+		&sce_paf_graphics_active_surface_2e94;
+	state[1] = 0;
+	result[8] = 0;
+	return result;
 }
 
 static const SceGxmProgramParameter *GraphicsFindNamedProgramParameter(
