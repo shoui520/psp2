@@ -13,6 +13,8 @@ extern const SceGxmProgramParameter *sceGxmProgramFindParameterBySemantic(
 	unsigned int index);
 uint32_t ScePafGraphics_29FC820B(uint8_t *self);
 uint32_t ScePafGraphics_9FAF51CF(uint8_t *self);
+uint32_t ScePafGraphics_6C448991(void);
+extern uint32_t sce_paf_graphics_state_12b0;
 
 static const SceGxmProgramParameter *GraphicsFindNamedProgramParameter(
 		const uint8_t *self, const char *name)
@@ -171,6 +173,52 @@ uint32_t ScePafGraphics_222995DF(const uint8_t *self, const char *name)
 	return sceGxmProgramParameterGetResourceIndex(parameter);
 }
 
+static inline __attribute__((always_inline))
+uint32_t GraphicsNamedParameterResourceWithFlag(
+		const uint8_t *self, const char *name, uint8_t flag)
+{
+	SceGxmShaderPatcherId id =
+		*(SceGxmShaderPatcherId const *)(self + 28);
+	const SceGxmProgram *program = sceGxmShaderPatcherGetProgramFromId(id);
+	const SceGxmProgramParameter *parameter =
+		sceGxmProgramFindParameterByName(program, name);
+	const SceGxmProgramParameter *checked = NULL;
+
+	if (parameter || flag) {
+		sceGxmProgramParameterGetCategory(parameter);
+		checked = parameter;
+	}
+	if (checked || flag)
+		return sceGxmProgramParameterGetResourceIndex(checked);
+	return UINT32_MAX;
+}
+
+uint32_t ScePafGraphics_267BDBF8(const uint8_t *self,
+				   const char *name, uint8_t flag)
+{
+	return GraphicsNamedParameterResourceWithFlag(self, name, flag);
+}
+
+uint32_t ScePafGraphics_9A8925E2(const uint8_t *self,
+				   const char *name, int unused, uint8_t flag)
+{
+	return GraphicsNamedParameterResourceWithFlag(self, name, flag);
+}
+
+const SceGxmProgramParameter *ScePafGraphics_77E59D4F(
+		const uint8_t *self, const char *name, int unused, uint8_t flag)
+{
+	SceGxmShaderPatcherId id =
+		*(SceGxmShaderPatcherId const *)(self + 28);
+	const SceGxmProgram *program = sceGxmShaderPatcherGetProgramFromId(id);
+	const SceGxmProgramParameter *parameter =
+		sceGxmProgramFindParameterByName(program, name);
+
+	if (parameter || flag)
+		sceGxmProgramParameterGetCategory(parameter);
+	return parameter;
+}
+
 __attribute__((noinline))
 uint8_t *ScePafGraphics_4CA149A5(uint8_t *self)
 {
@@ -240,6 +288,55 @@ void *ScePafGraphics_549C344C(uint32_t *self, void **destination,
 					ScePafGraphics_29FC820B(next);
 		}
 	}
+	return result;
+}
+
+/* A global graphics pointer uses the SDK's acquire/release atomic counter. */
+uint32_t *sce_paf_graphics_shared_reference_0f84;
+
+uint32_t *ScePafGraphics_0E62DA32(uint32_t **output)
+{
+	uint32_t *result = sce_paf_graphics_shared_reference_0f84;
+
+	*output = result;
+	if (result) {
+		result += 2;
+		sceAtomicIncrement32AcqRel((volatile int32_t *)result);
+	}
+	return result;
+}
+
+uint8_t *ScePafGraphics_8BC6C129(uint8_t *self)
+{
+	uint8_t *result = *(uint8_t **)(self + 124);
+
+	if (result) {
+		int32_t previous = sceAtomicDecrement32AcqRel(
+			(volatile int32_t *)(result + 24));
+		if (previous == 1)
+			((void (**)(void *))*(void **)result)[1](result);
+		*(void **)(self + 124) = NULL;
+		return NULL;
+	}
+	return result;
+}
+
+int ScePafGraphics_D5E30C64(const uint8_t *self,
+			     SceGxmNotification *vertexNotification,
+			     SceGxmNotification *fragmentNotification)
+{
+	SceGxmContext *context =
+		(SceGxmContext *)(uintptr_t)sce_paf_graphics_state_12b0;
+
+	if (!context)
+		context = *(SceGxmContext **)(uintptr_t)
+			(ScePafGraphics_6C448991() + 1676);
+	if (!context)
+		return -2136006139;
+	int result = sceGxmEndScene(context, vertexNotification,
+				    fragmentNotification);
+	if (result >= 0)
+		return 0;
 	return result;
 }
 
