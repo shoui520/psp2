@@ -985,7 +985,7 @@ int ScePafWidget_1AC6007B(const void *self, const char *tag)
 	return ScePafWidget_8EDFDE19(self, tag);
 }
 
-int ScePafWidget_31C1301C(const void *self, const char *tag)
+__attribute__((noinline)) int ScePafWidget_31C1301C(const void *self, const char *tag)
 {
 	if (tag == "pageturn_base")
 		return 1;
@@ -1052,8 +1052,23 @@ DEFINE_WIDGET_TYPE(8E3BBEA4, "directbar", 8EDFDE19)
 DEFINE_WIDGET_TYPE(9074BCF9, "plane_button", 824BA45C)
 DEFINE_WIDGET_TYPE(915460AF, "radio_box", 8EDFDE19)
 DEFINE_WIDGET_TYPE(941FE103, "sliding_drawer", E83DA42E)
+DEFINE_WIDGET_TYPE(B7F6DF9C, "plane", 8EDFDE19)
+DEFINE_WIDGET_TYPE(8F603B76, "box", B7F6DF9C)
+DEFINE_WIDGET_TYPE(B954B379, "busyindicator", 8EDFDE19)
+DEFINE_WIDGET_TYPE(C7D6AD89, "pageturn", 31C1301C)
+DEFINE_WIDGET_TYPE(CC24A689, "rich_text", E83DA42E)
+DEFINE_WIDGET_TYPE(CCB1364A, "image_slidebar", 8EDFDE19)
 
 #undef DEFINE_WIDGET_TYPE
+
+int ScePafWidget_9BE8F98D(uint32_t *self)
+{
+	uint8_t *vtable = (uint8_t *)self[0];
+
+	((void (*)(uint32_t *))*(void **)(vtable + 612))(self);
+	vtable = (uint8_t *)self[0];
+	return ((int (*)(uint32_t *))*(void **)(vtable + 616))(self);
+}
 
 /* Test membership in the indexed widget selector table. */
 __attribute__((noinline))
