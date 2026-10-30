@@ -1539,3 +1539,21 @@ void *ScePafWidget_55D83675(uint8_t *self, uint32_t *replacement)
 	vtable = *(const uint8_t *const *)self;
 	return ((void *(*)(void *))*(void *const *)(vtable + 160))(self);
 }
+
+void *ScePafWidget_DBD8EC0D(const uint8_t *self)
+{
+	uint8_t *parent;
+
+	if (!self)
+		return 0;
+	parent = *(uint8_t *const *)(self + 360);
+	while (parent) {
+		const uint8_t *vtable = *(const uint8_t *const *)parent;
+
+		if (((int (*)(void *, const char *))*(void *const *)(vtable + 100))(
+			parent, "list_item"))
+			return parent;
+		parent = *(uint8_t **)(parent + 360);
+	}
+	return 0;
+}
