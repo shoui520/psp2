@@ -203,6 +203,80 @@ typedef struct SwbkptInfo {
 	SceUID modid;
 } SwbkptInfo;
 
+/* A software breakpoint as the host sets and reads it. */
+typedef struct DbgpSwbrkptInfo {
+	SceUInt32 size;
+	SceUInt32 id;
+	SceUID thid;
+	void *address;
+	SceUInt32 attr;
+	SceUInt32 data;
+	SceUInt32 extSize;
+	SceUInt32 ext;
+} DbgpSwbrkptInfo;
+
+typedef struct DbgpSetSwbrkptRequest {
+	DbgpRequestHeader header;
+	DbgpSwbrkptInfo info;
+} DbgpSetSwbrkptRequest;
+
+typedef struct DbgpSetSwbrkptResponse {
+	DbgpResponseHeader header;
+	SceUID pid;
+	SceUInt32 id;
+	SceUInt32 opcodeBits;
+	SceUInt32 opcode;
+} DbgpSetSwbrkptResponse;
+
+typedef struct DbgpClearSwbrkptRequest {
+	DbgpRequestHeader header;
+	SceUInt32 id;
+} DbgpClearSwbrkptRequest;
+
+typedef struct DbgpGetSwbrkptResponse {
+	DbgpResponseHeader header;
+	SceUID pid;
+	SceUInt32 count;
+	DbgpSwbrkptInfo info[];
+} DbgpGetSwbrkptResponse;
+
+_Static_assert(sizeof(DbgpSwbrkptInfo) == 32, "breakpoint packet record");
+_Static_assert(offsetof(DbgpGetSwbrkptResponse, info) == 36,
+	       "breakpoint list response");
+
+/* A breakpoint a stepped thread lifts and puts back. */
+typedef struct SwbkptSpecificInfo {
+	SceSize size;
+	void *address;
+	SceUID pid;
+	SceUID thid;
+	SceUInt32 thumb;
+	union {
+		SceUInt32 opcode;
+		SceUInt8 bytes[4];
+	} original;
+	SceUInt32 index;
+} SwbkptSpecificInfo;
+
+_Static_assert(sizeof(SwbkptSpecificInfo) == 28, "step breakpoint record");
+
+/* A thread list a resume command names (one process). */
+typedef struct DbgpThreadListRequest {
+	DbgpRequestHeader header;
+	int count;
+	SceUID thid[];
+} DbgpThreadListRequest;
+
+typedef struct DbgpThreadListResponse {
+	DbgpResponseHeader header;
+	SceUID pid;
+	SceUInt32 count;
+	SceUID thid[];
+} DbgpThreadListResponse;
+
+_Static_assert(offsetof(DbgpThreadListRequest, thid) == 28, "thread list request");
+_Static_assert(offsetof(DbgpThreadListResponse, thid) == 36, "thread list response");
+
 typedef struct HwwtptInfo {
 	SceUInt32 id;
 	void *address;
@@ -212,6 +286,23 @@ typedef struct HwwtptInfo {
 	SceUInt32 reserved;
 } HwwtptInfo;
 
+/* A hardware watchpoint as the host sets and reads it. */
+typedef struct DbgpHwwatchptInfo {
+	SceUInt32 size;
+	SceUInt32 id;
+	void *address;
+	SceUInt32 control;
+} DbgpHwwatchptInfo;
+
+typedef struct DbgpGetHwwatchptResponse {
+	DbgpResponseHeader header;
+	SceUID pid;
+	SceUInt32 count;
+	DbgpHwwatchptInfo info[];
+} DbgpGetHwwatchptResponse;
+
+_Static_assert(sizeof(DbgpHwwatchptInfo) == 16, "watchpoint packet record");
+
 typedef struct DbgpProcCB {
 	SceKernelSpinlock lock;
 	SceUInt32 status;
@@ -220,7 +311,7 @@ typedef struct DbgpProcCB {
 	SceUID fragmentPid;
 	SceSize fragmentOffset;
 	SceUInt32 fragmentSequence;
-	SceUInt32 skipIndex;
+	int skipIndex;
 	SceUID pid;
 	SceUID prxModid;
 	SceUInt32 prxStopReason;
@@ -239,7 +330,7 @@ typedef struct DbgpProcCB {
 	SwbkptInfo swbkpt[256];
 	StepSwbkptInfo stepSwbkpt[3];
 	HwwtptInfo hwwtpt[3];
-	void *resumePacket;
+	const DbgpThreadListRequest *resumePacket;
 	SceUID resumePid;
 	SceUID resumeThid;
 	ExcpInfoBuf stopInfoBuf;
@@ -313,6 +404,9 @@ void dbgpSendError(DbgpProcCB *proc, SceUInt8 group, SceUInt8 type,
 		   SceUInt8 code, SceUInt32 result);
 void dbgpFillResponseHeader(DbgpProcCB *proc, SceUInt8 group, SceUInt8 type,
 			    SceUInt8 code, SceUInt32 result);
+SceUInt32 dbgpTestStatus(const DbgpCB *dbgp, SceUInt32 mask);
+SceUInt32 dbgpTestProcStatus(const DbgpProcCB *proc, SceUInt32 mask);
+void dbgpSetProcStatus(DbgpProcCB *proc, SceUInt32 mask, int set);
 void dbgpFreeRecvBuf(DbgpProcCB *proc);
 void _dbgpFreeWorkBuf(DbgpProcCB *proc);
 void _dbgpFreeBuf(DbgpProcCB *proc, unsigned int which);
@@ -422,15 +516,41 @@ int processSuspendProcessByDBGP(SceUID pid, int *alreadySuspended);
 int processResumeProcessByDBGP(SceUID pid, int alreadySuspended);
 void processClearDebugInfo(SceUID pid);
 int processWaitThreadSuspendForProcess(SceUID pid, SceUID *threads, int mode);
+int processChangeStatusThreadResumeForProcess(SceUID pid, SceUID *threads);
 int processThreadStatusIntegration(SceUID pid, int mode, SceUID *threads);
 int swbkptClearSwbrkptDetach(DbgpProcCB *proc, SceUID pid);
+int swbkptGetAlignId(const DbgpProcCB *proc, const void *address, SceUID pid,
+		     SceUID thid, int *stopCause);
+int swbkptGetSwbrkptCount(const DbgpProcCB *proc, SceUID pid);
+int swbkptGetSwbrkpt(const DbgpProcCB *proc, DbgpGetSwbrkptResponse *reply,
+		     int id);
+int swbkptSetSwbrkpt(DbgpProcCB *proc, const DbgpSetSwbrkptRequest *request,
+		     DbgpSetSwbrkptResponse *reply);
+int swbkptSetSpecificSwbkpt(DbgpProcCB *proc, SwbkptSpecificInfo info);
+int swbkptClearSwbrkpt(DbgpProcCB *proc, const DbgpClearSwbrkptRequest *request,
+		       int keep);
+int swbkptClearSwbrkptProcess(DbgpProcCB *proc, SceUID pid);
+int swbkptClearSwbrkptModule(DbgpProcCB *proc, SceUID pid, SceUID modid);
+int swbkptGetSpecificSwbkpt(const DbgpProcCB *proc, SceUID pid, SceUID thid,
+			    void *address, SwbkptSpecificInfo *info);
+int excpInfoCancel(DbgpProcCB *proc, SceUID pid, SceUID thid,
+		   const void *pc);
 int hwwtptClearHwwtpt(DbgpProcCB *proc, SceUID pid, int id, SceUInt32 flags);
+int hwwtptGetHitId(const DbgpProcCB *proc, DbgpThreadIdentity thread);
+int hwwtptGetHwwtptCount(const DbgpProcCB *proc, SceUID pid);
+int hwwtptGetHwwtpt(const DbgpProcCB *proc, DbgpGetHwwatchptResponse *reply,
+		    int id);
+int hwwtptSetHwwtpt(DbgpProcCB *proc, const DbgpHwwatchptInfo *info,
+		    SceUID pid, SceUInt32 *id);
 int isProcessNotification(SceUInt8 group, SceUInt8 type);
 
 int stepThreadSpecificBpPre(DbgpProcCB *proc);
 int stepThreadSpecificBpPost(DbgpProcCB *proc);
+int stepAutoSkipBpPre(DbgpProcCB *proc, const DbgpThreadListRequest *packet);
 int stepAutoSkipBpMid(DbgpProcCB *proc);
 int stepAutoSkipBpPost(DbgpProcCB *proc);
+int excpInfoSave(DbgpProcCB *proc, const DbgpThreadIdentity *thread,
+		 SceUInt32 reason, SceUInt32 pc, int kind);
 int excpInfoLoad(DbgpProcCB *proc, DbgpThreadIdentity *thread,
 		 SceUInt32 *reason, SceUInt32 *pc);
 int excpInfoGetCount(DbgpProcCB *proc);

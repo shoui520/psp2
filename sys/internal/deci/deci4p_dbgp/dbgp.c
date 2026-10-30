@@ -1301,6 +1301,28 @@ void dbgpFillResponseHeader(DbgpProcCB *proc, SceUInt8 group, SceUInt8 type,
 	_dbgpSetBufStatus(buf, 0, 4);
 }
 
+SceUInt32 dbgpTestStatus(const DbgpCB *dbgp, SceUInt32 mask)
+{
+	return dbgp->status & mask;
+}
+
+SceUInt32 dbgpTestProcStatus(const DbgpProcCB *proc, SceUInt32 mask)
+{
+	return proc->status & mask;
+}
+
+void dbgpSetProcStatus(DbgpProcCB *proc, SceUInt32 mask, int set)
+{
+	SceKernelIntrStatus state;
+
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&proc->lock);
+	if (set != 0)
+		proc->status |= mask;
+	else
+		proc->status &= ~mask;
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state);
+}
+
 void dbgpFreeRecvBuf(DbgpProcCB *proc)
 {
 	DbgpBuf *buf;
