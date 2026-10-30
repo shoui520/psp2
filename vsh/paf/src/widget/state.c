@@ -977,3 +977,45 @@ int ScePafWidget_CBB4D949(int a1, int a2, int a3, uint8_t *self)
 	return ((int (*)(uint8_t *, int, int, int))*(void **)(vtable + 592))(
 		self, a1, a2, a3);
 }
+
+int ScePafWidget_1AC6007B(const void *self, const char *tag)
+{
+	if (tag == "camera")
+		return 1;
+	return ScePafWidget_8EDFDE19(self, tag);
+}
+
+int ScePafWidget_31C1301C(const void *self, const char *tag)
+{
+	if (tag == "pageturn_base")
+		return 1;
+	return ScePafWidget_8EDFDE19(self, tag);
+}
+
+int ScePafWidget_61D34238(const void *self, const char *tag)
+{
+	if (tag == "app_icon_simple")
+		return 1;
+	return ScePafWidget_8EDFDE19(self, tag);
+}
+
+int ScePafWidget_743F6B5A(const void *self, const char *tag)
+{
+	if (tag == "spin_base")
+		return 1;
+	return ScePafWidget_8EDFDE19(self, tag);
+}
+
+int ScePafWidget_766B09F4(const void *self, const char *tag)
+{
+	if (tag == "scroll_view_parent")
+		return 1;
+	return ScePafWidget_8EDFDE19(self, tag);
+}
+
+int ScePafWidget_7BBA6B10(const void *self, const char *tag)
+{
+	if (tag == "text")
+		return 1;
+	return ScePafWidget_8EDFDE19(self, tag);
+}
