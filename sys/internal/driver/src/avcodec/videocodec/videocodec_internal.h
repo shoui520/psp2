@@ -842,6 +842,7 @@ int dsp0VideocodecQueryM4vDecoderMemSize(const Dsp0VideocodecM4vDecoderInfo *pIn
 	SceSize *frameMemSize);
 int dsp0VideocodecCreateM4vDecoder(unsigned int codecType, unsigned int *pHandle,
 	const Dsp0VideocodecDecoderParam *param);
+int dsp0VideocodecDeleteM4vDecoder(unsigned int handle, SceUID pid);
 
 typedef struct AvcencNalUnit {
 	void *data;
@@ -944,6 +945,7 @@ int videocodecCreateDecoder(unsigned int codecType,
 	SceAvcdecCtrl *pCtrl, const SceAvcdecQueryDecoderInfo *pDecoderInfo);
 int videocodecDeleteDecoderForProcess(SceAvcdecCtrl *pCtrl, unsigned int flags, SceUID pid);
 int m4vdecCreateDecoder(SceAvcdecCtrl *pCtrl, const Dsp0VideocodecM4vDecoderInfo *pInfo);
+int m4vdecDeleteDecoderForProcess(SceAvcdecCtrl *pCtrl, SceUID pid);
 int SceAvcodecForDriver_C5C10C8B(unsigned int codecType,
 	const Dsp0VideocodecM4vDecoderInfo *pInfo, SceSize *pFrameMemSize);
 int SceAvcodecForDriver_C99242F5(unsigned int codecType,

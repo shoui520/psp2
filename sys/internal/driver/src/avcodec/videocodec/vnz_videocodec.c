@@ -943,6 +943,70 @@ int SceAvcodecForDriver_C363B31A(unsigned int codecType, SceAvcdecCtrl *pCtrl,
 	return ret;
 }
 
+/*
+ * Deletes pid's MPEG-4 decoder pCtrl->handle names (from 512, on the DSP0) and frees its frame
+ * buffer, unless the delete was stopped by a thread suspend.
+ */
+int m4vdecDeleteDecoderForProcess(SceAvcdecCtrl *pCtrl, SceUID pid)
+{
+	VideocodecGlobal *global = _GetVideocodecGlobal(pid);
+	VideocodecDsp0Decoder *decoder;
+	unsigned int handle, index;
+	void *base;
+	int ret, err;
+
+	if (pCtrl == NULL)
+		return VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+	handle = pCtrl->handle;
+	if (handle == 0)
+		return VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		return ret;
+	if (handle < 512 || (index = handle - 512) >= global->dsp0DecoderInfo.numOfStreams) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+		goto unlock;
+	}
+	decoder = &global->dsp0Decoders[index];
+	ret = lockFastMutex(&decoder->mutex);
+	if (ret < 0)
+		goto unlock;
+	handle = decoder->handle;
+	if (handle == 0) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+		sceKernelUnlockFastMutex(&decoder->mutex);
+		goto unlock;
+	}
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	err = dsp0VideocodecDeleteM4vDecoder(handle, pid);
+	err = videocodecMapM4vdecError(err);
+	if (err == SCE_KERNEL_ERROR_THREAD_STOPPED || err == SCE_KERNEL_ERROR_THREAD_SUSPENDED) {
+		sceKernelUnlockFastMutex(&decoder->mutex);
+		return err;
+	}
+	decoder->handle = 0;
+	if (decoder->frameBufFlags & VIDEOCODEC_FRAME_BUF_MEMBLOCK) {
+		sceKernelFreeMemBlock(decoder->frameBufMemBlockId);
+		decoder->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_MEMBLOCK;
+	}
+	if (decoder->frameBufFlags & VIDEOCODEC_FRAME_BUF_UNMAP) {
+		sceCodecEngineUnmapKernelVAtoUserVA(pid, decoder->frameBuf.pBuf, &base);
+		ret = sceCodecEngineUnregisterUnmapMemory(pid, (SceUIntVAddr)base,
+			decoder->frameBuf.size);
+		decoder->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_UNMAP;
+	}
+	__builtin_memset(&decoder->frameBuf, 0, sizeof(decoder->frameBuf));
+	videocodecUnlockRangesProc(&decoder->lockedRanges, pid);
+	sceKernelUnlockFastMutex(&decoder->mutex);
+	if (ret != 0)
+		return ret;
+	return err < 0 ? err : 0;
+
+unlock:
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	return ret;
+}
+
 int _sceAvcdecSetDecodeModeInternal(unsigned int codecType, unsigned int mode)
 {
 	return SceAvcodecForDriver_866B49BF(codecType, mode);
