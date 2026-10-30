@@ -632,6 +632,7 @@ int checkIllegalProcessStatus(SceUID pid);
 int checkIllegalProcessStatusResumeProcess(SceUID pid);
 int checkAttachedProcess(const DbgpProcCB *proc, SceUID pid);
 int checkAlreadyAttachedProcess(SceUID pid);
+int checkModuleInfoProcess(SceUID pid);
 int checkProcessIsSuspendedAlready(SceUID pid);
 int checkIllegalThreadStatusResumeThread(SceUID pid, SceUID thid);
 int checkIllegalThreadStatusResumeProcess(SceUID pid, SceUID thid,

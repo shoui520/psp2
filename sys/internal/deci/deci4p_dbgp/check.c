@@ -345,6 +345,12 @@ int checkAlreadyAttachedProcess(SceUID pid)
 	return dbgpGetProcCB(pid) != NULL ? 0x20052 : 0;
 }
 
+/* the module information of every process may be read */
+int checkModuleInfoProcess(SceUID pid)
+{
+	return 0;
+}
+
 int checkProcessIsSuspendedAlready(SceUID pid)
 {
 	SceUInt32 status;
