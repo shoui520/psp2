@@ -32,6 +32,12 @@
 #include "usb_device.h"
 #include "sw_dload/sw_dload.h"
 #include "bbmc_netif.h"
+#include <intrmgr/syscall.h>
+#include <acmgr/acmgr.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/pmmgr.h>
+#include <post_ss_mgr/sblpostssmgr.h>
+#include <sceerror.h>
 
 static const BbmcSetupDescriptor bbmcSetupDescriptors[8];
 
@@ -4958,7 +4964,7 @@ int SceBbmcForDriver_92D7C12C(int subscriberId, BbmcRejectCause *cause)
 	if (control->currentState <= 1) {
 		result = (int)0x80330006;
 	} else {
-		memset(cause, 0, sizeof(*cause));
+		__builtin_memset(cause, 0, sizeof(*cause));
 		result = 0;
 		cause->cause = control->nasCause;
 		cause->reason = control->nasReason;
@@ -5116,6 +5122,1576 @@ int SceBbmcForDriver_B17A056F(int subscriberId, char *revision, SceSize size)
 	}
 	memcpy(revision, control->deviceInformation.revision, size);
 	bbmcLeaveCS(&control->mutex);
+	return 0;
+}
+
+/* The user API: each syscall checks the caller (system programs, or any program on a
+ * tool), copies its arguments in and out of user memory and calls the driver API.
+ */
+
+/* the user API is for system programs, or any program on a tool */
+static inline __attribute__((always_inline)) int bbmcCheckUserPermission(void)
+{
+	uint8_t mode = 0;
+	int ret;
+
+	if (sceSblACMgrIsSystemProgram(0) || SceSblPostSsMgrForDriver_128FB35A(0) ||
+	    SceQafMgrForDriver_BFD5E463())
+		return 0;
+	ret = sceSblPmMgrGetProductMode(&mode);
+	if (ret < 0)
+		return ret;
+	if (mode != 1)
+		return (int)SCE_ERROR_ERRNO_ENOSYS;
+	return 0;
+}
+
+/* the user updater package mapped into the kernel between Start and Fin */
+typedef struct BbmcUpdaterMapping {
+	SceUID uid;
+	const void *buffer;
+	SceSize size;
+} BbmcUpdaterMapping;
+
+static BbmcUpdaterMapping bbmcUpdaterMapping = { .uid = -1 };
+
+int sceBbmcGetNetworkInfo(BbmcNetworkInfo *info)
+{
+	BbmcNetworkInfo *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (info == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = sceBbmcGetNetworkInfoForDriver(buffer);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(info, buffer, sizeof(*buffer));
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSubscribeFeatureId(SceUInt32 featureId, SceUInt32 eventMask, SceUID callback)
+{
+	BbmcSubscribeFeatureIdParam parameters;
+	SceUInt32 saved;
+	int ret;
+
+	parameters.featureId = featureId;
+	parameters.eventMask = eventMask;
+	parameters.callbackId = scePUIDtoGUID(0, callback);
+	if (parameters.callbackId < 0)
+		return parameters.callbackId;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret == 0) {
+		ret = sceBbmcSubscribeFeatureIdForDriver(&parameters);
+		if (ret < 0)
+			parameters.subscriberId = ret;
+		ret = parameters.subscriberId;
+	}
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcUnsubscribeFeature(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcUnsubscribeFeatureForDriver(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcClearEvent(int subscriberId, SceUInt32 eventMask)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcClearEventForDriver(subscriberId, eventMask);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcResumeSubscriberCallback(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcResumeSubscriberCallbackForDriver(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcTurnOn(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcTurnOnForDriver(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcTurnOff(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcTurnOffForDriver(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcGetPinStatus(int subscriberId, SceUInt32 *status, SceUInt16 *retries)
+{
+	SceUInt32 pinStatus;
+	SceUInt16 pinRetries;
+	SceUInt32 saved;
+	int ret;
+
+	if (status == NULL || retries == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	ret = sceBbmcGetPinStatusForDriver(subscriberId, &pinStatus, &pinRetries);
+	if (ret < 0)
+		goto leave;
+	ret = sceKernelCopyToUser(status, &pinStatus, sizeof(pinStatus));
+	if (ret < 0)
+		goto leave;
+	ret = sceKernelCopyToUser(retries, &pinRetries, sizeof(pinRetries));
+	if (ret >= 0)
+		ret = 0;
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcUnblockPin(int subscriberId, const BbmcUnblockPinParam *parameters)
+{
+	BbmcUnblockPinParam *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (parameters == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = sceKernelCopyFromUser(buffer, parameters, sizeof(*buffer));
+	if (ret >= 0) {
+		if (buffer->pukLength <= 33 && buffer->pinLength <= 9)
+			ret = sceBbmcUnblockPinForDriver(subscriberId, buffer);
+		else
+			ret = (int)0x80330002;
+	}
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcVerifyPin(int subscriberId, const void *pin, SceSize length)
+{
+	SceUInt32 saved;
+	void *buffer;
+	int ret;
+
+	if (length > 33)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	if (pin != NULL) {
+		buffer = __builtin_alloca(length);
+		ret = sceKernelCopyFromUser(buffer, pin, length);
+		if (ret < 0)
+			goto leave;
+		pin = buffer;
+	}
+	ret = sceBbmcVerifyPinForDriver(subscriberId, pin, length);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcGetDriverInfo(int subscriberId, BbmcDriverInfo *info)
+{
+	BbmcDriverInfo driverInfo;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (info == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	ret = sceBbmcGetDriverInfoForDriver(subscriberId, &driverInfo);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(info, &driverInfo, sizeof(driverInfo));
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcReserveOperationMode(int subscriberId, SceUInt32 operationMode)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcReserveOperationModeForDriver(subscriberId, operationMode);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSetLPMMode(int subscriberId, int mode)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcSetLPMModeForDriver(subscriberId, mode);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSMSGetListStart(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcSMSGetListStartForDriver(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSMSGetListDone(int subscriberId, SceUInt32 *count, SceUInt32 *indices,
+	SceUInt32 maxCount)
+{
+	SceUInt32 listCount = 0;
+	SceUInt32 *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (count == NULL || indices == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(maxCount * sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = sceBbmcSMSGetListDoneForDriver(subscriberId, &listCount, buffer, maxCount);
+	if (ret >= 0) {
+		ret = sceKernelCopyToUser(count, &listCount, sizeof(listCount));
+		if (ret >= 0)
+			ret = sceKernelCopyToUser(indices, buffer, listCount * sizeof(*buffer));
+	}
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSMSReadStart(int subscriberId, SceUInt32 memoryIndex)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcSMSReadStartForDriver(subscriberId, memoryIndex);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSMSReadDone(int subscriberId, void *data, SceUInt32 *format)
+{
+	SceUInt32 messageFormat = 7;
+	SceUInt32 saved;
+	void *buffer;
+	int ret;
+	int copied;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (format == NULL || data == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(256, 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = sceBbmcSMSReadDoneForDriver(subscriberId, buffer, &messageFormat);
+	if (ret >= 0) {
+		copied = sceKernelCopyToUser(data, buffer, ret);
+		if (copied >= 0)
+			copied = sceKernelCopyToUser(format, &messageFormat, sizeof(messageFormat));
+		if (copied < 0)
+			ret = copied;
+	}
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSMSReadAck(int subscriberId, SceUInt32 memoryIndex, SceUInt32 deleteMessage)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcSMSReadAckForDriver(subscriberId, memoryIndex, deleteMessage);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSMSSend(int subscriberId, const void *data, SceSize length, SceUInt32 format)
+{
+	SceUInt32 saved;
+	void *buffer;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (length == 0 || data == NULL || format > 6)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(length, 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	memset(buffer, 0, length);
+	ret = sceKernelCopyFromUser(buffer, data, length);
+	if (ret >= 0)
+		ret = sceBbmcSMSSendForDriver(subscriberId, buffer, length, format);
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSetupSetValue(int subscriberId, SceUInt32 type, const void *input, SceSize size)
+{
+	SceUInt32 saved;
+	void *buffer;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (input == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(size, 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	memset(buffer, 0, size);
+	ret = sceKernelCopyFromUser(buffer, input, size);
+	if (ret >= 0)
+		ret = sceBbmcSetupSetValueForDriver(subscriberId, type, buffer, size);
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSetupGetValueStart(int subscriberId, SceUInt32 type)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcSetupGetValueStartForDriver(subscriberId, type);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSetupGetValueDone(int subscriberId, SceUInt32 type, void *output, SceSize size)
+{
+	SceUInt32 saved;
+	void *buffer;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (size == 0 || output == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(size, 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = sceBbmcSetupGetValueDoneForDriver(subscriberId, type, buffer, size);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(output, buffer, size);
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcNetworkScanStart(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = SceBbmcForDriver_EBC5D3DB(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcNetworkScanDone(int subscriberId, BbmcNetworkScanInfo *scan)
+{
+	BbmcNetworkScanInfo *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	if (scan == NULL) {
+		ret = SceBbmcForDriver_503C7E0B(subscriberId, NULL);
+		goto leave;
+	}
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = SceBbmcForDriver_503C7E0B(subscriberId, buffer);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(scan, buffer, sizeof(*buffer));
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcNetworkScanAbort(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = SceBbmcForDriver_739274F3(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcNetworkAttach(int subscriberId, SceInt32 attach)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = SceBbmcForDriver_75FA68D3(subscriberId, attach);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcNetGetRejectCause(int subscriberId, BbmcRejectCause *cause)
+{
+	BbmcRejectCause rejectCause;
+	SceUInt32 saved;
+	int ret;
+
+	if (cause == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	ret = SceBbmcForDriver_92D7C12C(subscriberId, &rejectCause);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(cause, &rejectCause, sizeof(rejectCause));
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcPacketReleasePDPContext(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = SceBbmcForDriver_3D27000A(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcPacketGetLastCallEndReason(int subscriberId, BbmcCallEndReason *reason)
+{
+	BbmcCallEndReason endReason;
+	SceUInt32 saved;
+	int ret;
+
+	if (reason == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	ret = SceBbmcForDriver_BF550F4A(subscriberId, &endReason);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(reason, &endReason, sizeof(endReason));
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcPacketIfSetControlFlag(int subscriberId, SceUInt32 flags)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = SceBbmcForDriver_FB3DA35E(subscriberId, flags);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcPacketIfClearControlFlag(int subscriberId, SceUInt32 flags)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = SceBbmcForDriver_7EA964B6(subscriberId, flags);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcPacketIfGetControlFlag(int subscriberId, SceUInt32 *flags)
+{
+	SceUInt32 controlFlags;
+	SceUInt32 saved;
+	int ret;
+
+	if (flags == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	ret = SceBbmcForDriver_BC3C8942(subscriberId, &controlFlags);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(flags, &controlFlags, sizeof(controlFlags));
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcPacketGetCurrentBearerTech(int subscriberId, SceUInt32 *bearer)
+{
+	SceUInt32 bearerTech[2];
+	SceUInt32 saved;
+	int ret;
+
+	if (bearer == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	ret = SceBbmcForDriver_E09808A2(subscriberId, bearerTech);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(bearer, bearerTech, sizeof(bearerTech));
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLQBackupEFSNV(int subscriberId, const BbmcStringPair *parameters)
+{
+	BbmcStringPair strings;
+	SceUInt32 saved = sceSyscallEnter();
+	char *first;
+	char *second;
+	int ret = bbmcCheckUserPermission();
+
+	if (ret)
+		goto leave;
+	if (parameters == NULL)
+		goto invalid;
+	ret = sceKernelCopyFromUser(&strings, parameters, sizeof(strings));
+	if (ret < 0)
+		goto leave;
+	if (strings.firstLength > 255 || strings.secondLength > 255)
+		goto invalid;
+	first = __builtin_alloca(strings.firstLength + 1);
+	second = __builtin_alloca(strings.secondLength + 1);
+	ret = sceKernelCopyFromUser(first, strings.first, strings.firstLength);
+	if (ret < 0)
+		goto leave;
+	first[strings.firstLength] = '\0';
+	ret = sceKernelCopyFromUser(second, strings.second, strings.secondLength);
+	if (ret < 0)
+		goto leave;
+	second[strings.secondLength] = '\0';
+	strings.first = first;
+	strings.second = second;
+	ret = sceBbmcDLQBackupEFSNVForDriver(subscriberId, &strings);
+	goto leave;
+invalid:
+	ret = (int)0x80330002;
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLQRestoreEFSNV(int subscriberId, const BbmcStringPair *parameters)
+{
+	BbmcStringPair strings;
+	SceUInt32 saved = sceSyscallEnter();
+	char *first;
+	char *second;
+	int ret = bbmcCheckUserPermission();
+
+	if (ret)
+		goto leave;
+	if (parameters == NULL)
+		goto invalid;
+	ret = sceKernelCopyFromUser(&strings, parameters, sizeof(strings));
+	if (ret < 0)
+		goto leave;
+	if (strings.firstLength > 255 || strings.secondLength > 255)
+		goto invalid;
+	first = __builtin_alloca(strings.firstLength + 1);
+	second = __builtin_alloca(strings.secondLength + 1);
+	ret = sceKernelCopyFromUser(first, strings.first, strings.firstLength);
+	if (ret < 0)
+		goto leave;
+	first[strings.firstLength] = '\0';
+	ret = sceKernelCopyFromUser(second, strings.second, strings.secondLength);
+	if (ret < 0)
+		goto leave;
+	second[strings.secondLength] = '\0';
+	strings.first = first;
+	strings.second = second;
+	ret = sceBbmcDLQRestoreEFSNVForDriver(subscriberId, &strings);
+	goto leave;
+invalid:
+	ret = (int)0x80330002;
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLQDownloadSafeImage(int subscriberId, const BbmcStringSet *parameters)
+{
+	BbmcStringSet set;
+	SceUInt32 saved = sceSyscallEnter();
+	char *strings[5];
+	int ret = bbmcCheckUserPermission();
+
+	if (ret)
+		goto leave;
+	if (parameters == NULL)
+		goto invalid;
+	ret = sceKernelCopyFromUser(&set, parameters, sizeof(set));
+	if (ret < 0)
+		goto leave;
+	if (set.lengths[0] > 255 || set.lengths[1] > 255 || set.lengths[2] > 255 ||
+	    set.lengths[3] > 255 || set.lengths[4] > 255)
+		goto invalid;
+	strings[0] = __builtin_alloca(set.lengths[0] + 1);
+	strings[1] = __builtin_alloca(set.lengths[1] + 1);
+	strings[2] = __builtin_alloca(set.lengths[2] + 1);
+	strings[3] = __builtin_alloca(set.lengths[3] + 1);
+	strings[4] = __builtin_alloca(set.lengths[4] + 1);
+	ret = sceKernelCopyFromUser(strings[0], set.strings[0], set.lengths[0]);
+	if (ret < 0)
+		goto leave;
+	strings[0][set.lengths[0]] = '\0';
+	ret = sceKernelCopyFromUser(strings[1], set.strings[1], set.lengths[1]);
+	if (ret < 0)
+		goto leave;
+	strings[1][set.lengths[1]] = '\0';
+	ret = sceKernelCopyFromUser(strings[2], set.strings[2], set.lengths[2]);
+	if (ret < 0)
+		goto leave;
+	strings[2][set.lengths[2]] = '\0';
+	ret = sceKernelCopyFromUser(strings[3], set.strings[3], set.lengths[3]);
+	if (ret < 0)
+		goto leave;
+	strings[3][set.lengths[3]] = '\0';
+	ret = sceKernelCopyFromUser(strings[4], set.strings[4], set.lengths[4]);
+	if (ret < 0)
+		goto leave;
+	strings[4][set.lengths[4]] = '\0';
+	set.strings[0] = strings[0];
+	set.strings[1] = strings[1];
+	set.strings[2] = strings[2];
+	set.strings[3] = strings[3];
+	set.strings[4] = strings[4];
+	ret = sceBbmcDLQDownloadSafeImageForDriver(subscriberId, &set);
+	goto leave;
+invalid:
+	ret = (int)0x80330002;
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLQDownloadSlotImage(int subscriberId, const BbmcStringPairList *parameters)
+{
+	BbmcStringPairList list;
+	BbmcStringPairEntry *entry;
+	SceUInt32 saved = sceSyscallEnter();
+	char *string;
+	int ret = bbmcCheckUserPermission();
+
+	if (ret)
+		goto leave;
+	if (parameters == NULL)
+		goto invalid;
+	ret = sceKernelCopyFromUser(&list, parameters, sizeof(list));
+	if (ret < 0)
+		goto leave;
+	for (entry = &list.entries[0]; entry != &list.entries[5]; entry++) {
+		if (entry->strings.firstLength > 255 || entry->strings.secondLength > 255)
+			goto invalid;
+		if (entry->strings.firstLength == 0) {
+			entry->strings.first = NULL;
+		} else {
+			string = __builtin_alloca(entry->strings.firstLength + 1);
+			if (sceKernelCopyFromUser(string, entry->strings.first,
+					entry->strings.firstLength) < 0)
+				goto invalid;
+			entry->strings.first = string;
+			string[entry->strings.firstLength] = '\0';
+		}
+		if (entry->strings.secondLength == 0) {
+			entry->strings.second = NULL;
+		} else {
+			string = __builtin_alloca(entry->strings.secondLength + 1);
+			if (sceKernelCopyFromUser(string, entry->strings.second,
+					entry->strings.secondLength) < 0)
+				goto invalid;
+			entry->strings.second = string;
+			string[entry->strings.secondLength] = '\0';
+		}
+	}
+	ret = sceBbmcDLQDownloadSlotImageForDriver(subscriberId, &list);
+	goto leave;
+invalid:
+	ret = (int)0x80330002;
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLQAbort(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = SceBbmcForDriver_B7E650A9(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLQConfirmChangePartition(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcDLQConfirmChangePartitionForDriver(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLGetSwdlError(int subscriberId, SceInt32 *error)
+{
+	SceInt32 swdlError;
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0) {
+		ret = sceBbmcDLGetSwdlErrorForDriver(subscriberId, &swdlError);
+		if (ret >= 0)
+			ret = sceKernelCopyToUser(error, &swdlError, sizeof(swdlError));
+	}
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcGetFailureInfo(SceInt32 *transition)
+{
+	SceInt32 failure[4];
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0) {
+		ret = SceBbmcForDriver_A9CF664F(failure);
+		if (ret >= 0)
+			ret = sceKernelCopyToUser(transition, failure, sizeof(failure));
+	}
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLQGetFwListStart(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcDLQGetFwListStartForDriver(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLQGetFwListDone(int subscriberId, QmiStoredImages *storedImages)
+{
+	QmiStoredImages *buffer;
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret)
+		goto leave;
+	if (storedImages == NULL) {
+		ret = (int)0x80330002;
+		goto leave;
+	}
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = sceBbmcDLQGetFwListDoneForDriver(subscriberId, buffer);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(storedImages, buffer, sizeof(*buffer));
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLQGetCurrentFwStart(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = sceBbmcDLQGetCurrentFwStartForDriver(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLQGetCurrentFwDone(int subscriberId, QmiFirmwarePreference *firmwarePreference)
+{
+	QmiFirmwarePreference *buffer;
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret)
+		goto leave;
+	if (firmwarePreference == NULL) {
+		ret = (int)0x80330002;
+		goto leave;
+	}
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = sceBbmcDLQGetCurrentFwDoneForDriver(subscriberId, buffer);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(firmwarePreference, buffer, sizeof(*buffer));
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLUpdaterStart(int subscriberId, const BbmcUpdatePackage *package)
+{
+	BbmcUpdatePackage mapped;
+	void *kernelPage;
+	SceSize kernelSize;
+	SceUInt32 kernelOffset;
+	SceUInt32 saved;
+	int ret;
+
+	if (package == NULL)
+		return (int)0x80330002;
+	if (bbmcUpdaterMapping.uid != -1)
+		return (int)0x8033000C;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	bbmcUpdaterMapping.uid = -1;
+	ret = sceKernelCopyFromUser(&mapped, package, sizeof(mapped));
+	if (ret < 0)
+		goto leave;
+	ret = sceKernelUserMap("SceBbmcDLUpdaterStart", 1, mapped.buffer, mapped.size,
+		&kernelPage, &kernelSize, &kernelOffset);
+	if (ret < 0)
+		goto leave;
+	bbmcUpdaterMapping.uid = ret;
+	bbmcUpdaterMapping.buffer = mapped.buffer;
+	bbmcUpdaterMapping.size = mapped.size;
+	mapped.buffer = (char *)kernelPage + kernelOffset;
+	ret = sceBbmcDLUpdaterStartForDriver(subscriberId, &mapped);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLUpdaterContinue(int subscriberId, const BbmcUpdatePackage *package)
+{
+	BbmcUpdatePackage mapped;
+	void *kernelPage;
+	SceSize kernelSize;
+	SceUInt32 kernelOffset;
+	SceUInt32 saved;
+	int ret;
+
+	if (package == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	if (bbmcUpdaterMapping.uid == -1) {
+		ret = (int)0x8033000C;
+		goto leave;
+	}
+	sceKernelUserUnmap(bbmcUpdaterMapping.uid, bbmcUpdaterMapping.buffer,
+		bbmcUpdaterMapping.size);
+	bbmcUpdaterMapping.uid = -1;
+	ret = sceKernelCopyFromUser(&mapped, package, sizeof(mapped));
+	if (ret < 0)
+		goto leave;
+	ret = sceKernelUserMap("SceBbmcDLUpdaterCont", 1, mapped.buffer, mapped.size,
+		&kernelPage, &kernelSize, &kernelOffset);
+	if (ret < 0)
+		goto leave;
+	bbmcUpdaterMapping.uid = ret;
+	bbmcUpdaterMapping.buffer = mapped.buffer;
+	bbmcUpdaterMapping.size = mapped.size;
+	mapped.buffer = (char *)kernelPage + kernelOffset;
+	ret = sceBbmcDLUpdaterContinueForDriver(subscriberId, &mapped);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLUpdaterFin(void)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret)
+		goto leave;
+	if (bbmcUpdaterMapping.uid == -1) {
+		ret = (int)0x8033000C;
+		goto leave;
+	}
+	ret = sceKernelUserUnmap(bbmcUpdaterMapping.uid, bbmcUpdaterMapping.buffer,
+		bbmcUpdaterMapping.size);
+	if (ret >= 0)
+		bbmcUpdaterMapping.uid = -1;
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLUpdaterGetSequence(int subscriberId, SceUInt32 *firstStatus,
+	SceUInt32 *secondStatus, BbmcDriverInfo *info)
+{
+	SceUInt32 first;
+	SceUInt32 second;
+	BbmcDriverInfo driverInfo;
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret)
+		goto leave;
+	ret = sceBbmcDLUpdaterGetSequenceForDriver(subscriberId, &first, &second, &driverInfo);
+	if (ret < 0)
+		goto leave;
+	if (firstStatus != NULL) {
+		ret = sceKernelCopyToUser(firstStatus, &first, sizeof(first));
+		if (ret < 0)
+			goto leave;
+	}
+	if (secondStatus != NULL) {
+		ret = sceKernelCopyToUser(secondStatus, &second, sizeof(second));
+		if (ret < 0)
+			goto leave;
+	}
+	if (info != NULL)
+		ret = sceKernelCopyToUser(info, &driverInfo, sizeof(driverInfo));
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLUpdaterGetArchiveVersion(int subscriberId, SceUInt32 *version)
+{
+	SceUInt32 archiveVersion;
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0) {
+		ret = sceBbmcDLUpdaterGetArchiveVersionForDriver(subscriberId, &archiveVersion);
+		if (ret >= 0 && version != NULL)
+			ret = sceKernelCopyToUser(version, &archiveVersion, sizeof(archiveVersion));
+	}
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLUpdaterGetLatestArchiveVersion(int subscriberId, SceUInt32 *version)
+{
+	SceUInt32 latestVersion;
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0) {
+		ret = SceBbmcForDriver_FCF6A1EA(subscriberId, &latestVersion);
+		if (ret >= 0 && version != NULL)
+			ret = sceKernelCopyToUser(version, &latestVersion, sizeof(latestVersion));
+	}
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLUpdaterCheckComVersion(int subscriberId, SceUInt32 *matches)
+{
+	SceUInt32 versionMatches;
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0) {
+		ret = SceBbmcForDriver_4281E476(subscriberId, &versionMatches);
+		if (ret >= 0 && matches != NULL)
+			ret = sceKernelCopyToUser(matches, &versionMatches, sizeof(versionMatches));
+	}
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDLUpdaterGetPkgId(int subscriberId, SceUInt32 *pkgId)
+{
+	SceUInt32 packageId;
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0) {
+		ret = sceBbmcDLUpdaterGetPkgIdForDriver(subscriberId, &packageId);
+		if (ret >= 0 && pkgId != NULL)
+			ret = sceKernelCopyToUser(pkgId, &packageId, sizeof(packageId));
+	}
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcGetProactiveCmd(int subscriberId, BbmcProactiveCmd *command)
+{
+	BbmcProactiveCmd *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (command == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = SceBbmcForDriver_399EF002(subscriberId, buffer);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(command, buffer, sizeof(*buffer));
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcTerminalResponseCmd(int subscriberId, const BbmcTerminalResponse *response)
+{
+	BbmcTerminalResponse *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (response == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	memset(buffer, 0, sizeof(*buffer));
+	ret = sceKernelCopyFromUser(buffer, response, sizeof(*buffer));
+	if (ret >= 0)
+		ret = SceBbmcForDriver_93E5345A(subscriberId, buffer);
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcEnvelopeCmd(int subscriberId, const QmiCat2CommandOptions *options)
+{
+	QmiCat2CommandOptions *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (options == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	memset(buffer, 0, sizeof(*buffer));
+	ret = sceKernelCopyFromUser(buffer, options, sizeof(*buffer));
+	if (ret >= 0)
+		ret = SceBbmcForDriver_F4C8482D(subscriberId, buffer);
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcGetFileRefreshDetail(int subscriberId, BbmcFileRefreshDetail *detail)
+{
+	BbmcFileRefreshDetail *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (detail == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = SceBbmcForDriver_2930DB51(subscriberId, buffer);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(detail, buffer, sizeof(*buffer));
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcFileRefreshResponse(int subscriberId, SceUInt32 response)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = SceBbmcForDriver_009C73D2(subscriberId, response);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcReadSimContentStart(int subscriberId, const BbmcSimFile *file)
+{
+	BbmcSimFile *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (file == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	__builtin_memset(buffer, 0, sizeof(*buffer));
+	ret = sceKernelCopyFromUser(buffer, file, sizeof(*buffer));
+	if (ret >= 0)
+		ret = SceBbmcForDriver_D288E771(subscriberId, buffer);
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcReadSimContentDone(int subscriberId, BbmcSimContentInfo *content)
+{
+	BbmcSimContentInfo *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (content == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = SceBbmcForDriver_24EE6E9C(subscriberId, buffer);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(content, buffer, sizeof(*buffer));
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcGpsCellGetLocationInfoStart(int subscriberId)
+{
+	SceUInt32 saved = sceSyscallEnter();
+	int ret = bbmcCheckUserPermission();
+
+	if (ret == 0)
+		ret = bbmcStartCellLocationQuery(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcGpsCellGetLocationInfoDone(int subscriberId, BbmcGpsCellInfo *info)
+{
+	BbmcGpsCellInfo *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (info == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	memset(buffer, 0, sizeof(*buffer));
+	ret = sceKernelCopyFromUser(buffer, info, sizeof(*buffer));
+	if (ret >= 0) {
+		ret = bbmcGetCellLocationResult(subscriberId, buffer);
+		if (ret >= 0)
+			ret = sceKernelCopyToUser(info, buffer, sizeof(*buffer));
+	}
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcDepersonalizeCK(int subscriberId, const BbmcControlKeyParam *param)
+{
+	BbmcControlKeyParam *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (param == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = sceKernelCopyFromUser(buffer, param, sizeof(*buffer));
+	if (ret >= 0)
+		ret = SceBbmcForDriver_683D19BF(subscriberId, buffer);
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcUnblockCK(int subscriberId, const BbmcControlKeyParam *param)
+{
+	BbmcControlKeyParam *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (param == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = sceKernelCopyFromUser(buffer, param, sizeof(*buffer));
+	if (ret >= 0)
+		ret = SceBbmcForDriver_6AD4053A(subscriberId, buffer);
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcGetCKStatus(int subscriberId, SceUInt32 featureId, QmiIndexedResponse *status)
+{
+	QmiIndexedResponse *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (status == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = SceBbmcForDriver_3D06FDB0(subscriberId, featureId, buffer);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(status, buffer, sizeof(*buffer));
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcSimGetPLMNModeBit(int subscriberId, SceUInt32 *value)
+{
+	SceUInt32 modeBit = 0;
+	SceUInt32 saved;
+	int ret;
+
+	if (value == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	ret = SceBbmcForDriver_864E6CA0(subscriberId, &modeBit);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(value, &modeBit, sizeof(modeBit));
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcGetIdStorageFrom3GModule(int subscriberId, BbmcModemConfigurationLeaf *leaf)
+{
+	BbmcModemConfigurationLeaf *buffer;
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (leaf == NULL)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(sizeof(*buffer), 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = SceBbmcForDriver_07ADDA90(subscriberId, buffer);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(leaf, buffer, sizeof(*buffer));
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcIsAbleToRunUnderCurrentTemp(int subscriberId)
+{
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret == 0)
+		ret = sceBbmcIsAbleToRunUnderCurrentTempForDriver(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcIsAbleToRunUnderCurrentVoltage(int subscriberId)
+{
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret == 0)
+		ret = sceBbmcIsAbleToRunUnderCurrentVoltageForDriver(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcIsPowerConfigForbiddenMode(int subscriberId)
+{
+	SceUInt32 saved;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret == 0)
+		ret = sceBbmcIsPowerConfigForbiddenModeForDriver(subscriberId);
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+int sceBbmcGetComFirmVersion(int subscriberId, char *revision, SceSize size)
+{
+	SceUInt32 saved;
+	char *buffer;
+	int ret;
+
+	if (bbmcGetControl() == NULL)
+		return (int)0x80330003;
+	if (revision == NULL || size - 1 > 103)
+		return (int)0x80330002;
+	saved = sceSyscallEnter();
+	ret = bbmcCheckUserPermission();
+	if (ret)
+		goto leave;
+	buffer = bbmcAlloc(size, 0);
+	if (buffer == NULL) {
+		ret = (int)0x80330005;
+		goto leave;
+	}
+	ret = SceBbmcForDriver_B17A056F(subscriberId, buffer, size);
+	if (ret >= 0)
+		ret = sceKernelCopyToUser(revision, buffer, size);
+	bbmcFree(buffer);
+leave:
+	sceSyscallLeave(saved);
+	return ret;
+}
+
+/* the debug output of the release build does nothing */
+int sceBbmcDebugSelectOutMedia(void)
+{
+	return 0;
+}
+
+int sceBbmcDebugOutString(void)
+{
 	return 0;
 }
 
@@ -5314,77 +6890,3 @@ int bbmcLookupModeConfiguration(int mode,
 	*output = &bbmcModeConfigurations[mode];
 	return 0;
 }
-
-STUB(sceBbmcVerifyPin)
-STUB(sceBbmcNetworkScanStart)
-STUB(sceBbmcSMSGetListDone)
-STUB(sceBbmcDLQGetCurrentFwDone)
-STUB(sceBbmcIsAbleToRunUnderCurrentVoltage)
-STUB(sceBbmcUnblockPin)
-STUB(sceBbmcIsAbleToRunUnderCurrentTemp)
-STUB(sceBbmcDLQConfirmChangePartition)
-STUB(sceBbmcSimGetPLMNModeBit)
-STUB(sceBbmcSetupSetValue)
-STUB(sceBbmcSetupGetValueDone)
-STUB(sceBbmcDLQGetCurrentFwStart)
-STUB(sceBbmcSMSReadAck)
-STUB(sceBbmcDLUpdaterGetLatestArchiveVersion)
-STUB(sceBbmcReadSimContentStart)
-STUB(sceBbmcGetNetworkInfo)
-STUB(sceBbmcGetComFirmVersion)
-STUB(sceBbmcResumeSubscriberCallback)
-STUB(sceBbmcDLQGetFwListStart)
-STUB(sceBbmcDLUpdaterCheckComVersion)
-STUB(sceBbmcDLQRestoreEFSNV)
-STUB(sceBbmcGpsCellGetLocationInfoStart)
-STUB(sceBbmcDepersonalizeCK)
-STUB(sceBbmcSMSGetListStart)
-STUB(sceBbmcDebugSelectOutMedia)
-STUB(sceBbmcDLQBackupEFSNV)
-STUB(sceBbmcSMSReadStart)
-STUB(sceBbmcEnvelopeCmd)
-STUB(sceBbmcPacketGetLastCallEndReason)
-STUB(sceBbmcNetworkAttach)
-STUB(sceBbmcDLUpdaterFin)
-STUB(sceBbmcDebugOutString)
-STUB(sceBbmcSMSReadDone)
-STUB(sceBbmcClearEvent)
-STUB(sceBbmcGetFileRefreshDetail)
-STUB(sceBbmcReserveOperationMode)
-STUB(sceBbmcDLQDownloadSafeImage)
-STUB(sceBbmcGetIdStorageFrom3GModule)
-STUB(sceBbmcFileRefreshResponse)
-STUB(sceBbmcGetFailureInfo)
-STUB(sceBbmcGpsCellGetLocationInfoDone)
-STUB(sceBbmcDLUpdaterStart)
-STUB(sceBbmcSMSSend)
-STUB(sceBbmcDLQDownloadSlotImage)
-STUB(sceBbmcPacketReleasePDPContext)
-STUB(sceBbmcGetDriverInfo)
-STUB(sceBbmcPacketIfSetControlFlag)
-STUB(sceBbmcSetLPMMode)
-STUB(sceBbmcDLQGetFwListDone)
-STUB(sceBbmcDLUpdaterGetSequence)
-STUB(sceBbmcPacketIfClearControlFlag)
-STUB(sceBbmcPacketIfGetControlFlag)
-STUB(sceBbmcDLUpdaterContinue)
-STUB(sceBbmcGetProactiveCmd)
-STUB(sceBbmcNetworkScanDone)
-STUB(sceBbmcUnblockCK)
-STUB(sceBbmcSetupGetValueStart)
-STUB(sceBbmcDLGetSwdlError)
-STUB(sceBbmcIsPowerConfigForbiddenMode)
-STUB(sceBbmcUnsubscribeFeature)
-STUB(sceBbmcTerminalResponseCmd)
-STUB(sceBbmcDLUpdaterGetPkgId)
-STUB(sceBbmcSubscribeFeatureId)
-STUB(sceBbmcNetGetRejectCause)
-STUB(sceBbmcReadSimContentDone)
-STUB(sceBbmcGetPinStatus)
-STUB(sceBbmcNetworkScanAbort)
-STUB(sceBbmcPacketGetCurrentBearerTech)
-STUB(sceBbmcDLUpdaterGetArchiveVersion)
-STUB(sceBbmcTurnOff)
-STUB(sceBbmcTurnOn)
-STUB(sceBbmcDLQAbort)
-STUB(sceBbmcGetCKStatus)
