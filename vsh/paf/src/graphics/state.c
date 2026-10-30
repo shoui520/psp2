@@ -1259,6 +1259,54 @@ int ScePafGraphics_BB119805(const uint8_t *self)
 	return 9728;
 }
 
+uint32_t ScePafGraphics_0C88DD20(int32_t value)
+{
+	uint32_t current;
+	uint32_t step8;
+	uint32_t step4;
+	uint32_t step2;
+	int32_t high;
+
+	if (value <= 0)
+		return 1;
+	if (((value - 1) & value) == 0)
+		return (uint32_t)value;
+	step8 = (((int32_t)((uint32_t)value - 0x100) >> 16) & 8);
+	current = (uint32_t)value << step8;
+	step4 = (((int32_t)(current - 0x1000) >> 16) & 4);
+	current <<= step4;
+	step2 = (((int32_t)(current - 0x4000) >> 16) & 2);
+	current <<= step2;
+	high = (int32_t)current >> 14;
+	return 1U << ((high & ~(high >> 1)) -
+			 (int32_t)(step8 + step4 + step2) + 14);
+}
+
+uint32_t ScePafGraphics_641E3FAE(int32_t *result,
+				 const uint8_t *self)
+{
+	uint8_t *first = *(uint8_t *const *)(self + 1684);
+	uint8_t *second = first;
+	uint32_t last = (uint32_t)(uintptr_t)result;
+	int32_t width;
+	int32_t height;
+
+	if (first)
+		last = ScePafGraphics_29FC820B(first);
+	second = *(uint8_t *const *)(self + 1684);
+	width = *(int16_t *)(first + 28);
+	if (second)
+		last = ScePafGraphics_29FC820B(second);
+	height = *(int16_t *)(second + 30);
+	if (second)
+		last = ScePafGraphics_9FAF51CF(second);
+	if (first)
+		last = ScePafGraphics_9FAF51CF(first);
+	result[0] = width;
+	result[1] = height;
+	return last;
+}
+
 int ScePafGraphics_E61D19A9(const uint8_t *self,
 			     uint32_t *first, uint32_t *second)
 {
