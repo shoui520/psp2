@@ -4,6 +4,30 @@
 #include "../job/job.h"
 
 RMutex CacheManagerImplRMutex;
+extern uint32_t sce_paf_misc_counter_c224;
+
+void ScePafMisc_F4B797C2(CacheManagerImpl *self)
+{
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	self->httpFileOpenFlags = sce_paf_misc_counter_c224;
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+}
+
+int ScePafMisc_3E898511(CacheManagerImpl *self)
+{
+	int result = 0;
+
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	if (self->longLifeHeap && ((uint8_t *)self)[81] &&
+	    ((int (*)(CacheManagerImpl *))((const void **)self->vtable)[5])(self) >= 0) {
+		ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+		self->httpFileOpenFlags = sce_paf_misc_counter_c224;
+		ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+		result = *(int32_t *)((uint8_t *)self + 44);
+	}
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	return result;
+}
 
 typedef struct PafCacheGate {
 	uint8_t reserved[48];
@@ -81,6 +105,55 @@ void ScePafMisc_CB20D5B3(CacheManagerImpl *self)
 	state->timestampLow = 0;
 	state->timestampHigh = 0;
 	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+}
+
+int ScePafMisc_E2F15E2D(CacheManagerImpl *self, int32_t status,
+			 uint8_t *completed)
+{
+	uint8_t *bytes = (uint8_t *)self;
+	int result;
+
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	if (self->longLifeHeap) {
+		*(int32_t *)(bytes + 12) = status;
+		if (status < 0) {
+			int32_t *retryCount = (int32_t *)(bytes + 84);
+
+			if (status == -2135994334 || status == -2135994332) {
+				*retryCount = 0;
+			} else {
+				int32_t remaining = *retryCount;
+
+				if (remaining > 0) {
+					remaining--;
+					*retryCount = remaining;
+				}
+				if (!*(uint32_t *)(bytes + 88) || remaining == 0)
+					*(int32_t *)(bytes + 12) = -2135993294;
+			}
+			ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+			if (*(void **)(bytes + 44)) {
+				if (self->longLifeHeap)
+					ScePafMisc_511CFBA2(
+						(CacheManagerImpl *)self->longLifeHeap,
+						*(void **)(bytes + 44));
+				*(void **)(bytes + 44) = 0;
+			}
+			*(uint32_t *)(bytes + 48) = 0;
+			*(uint32_t *)(bytes + 52) = 0;
+			ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+		}
+		*completed = 1;
+		ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+		self->httpFileOpenFlags = sce_paf_misc_counter_c224;
+		ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+		result = 0;
+	} else {
+		result = -2135993338;
+	}
+	*(uint32_t *)(bytes + 28) = 0;
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	return result;
 }
 
 typedef struct PafCacheRefObject PafCacheRefObject;
