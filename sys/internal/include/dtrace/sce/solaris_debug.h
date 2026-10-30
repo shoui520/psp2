@@ -10,7 +10,7 @@
 #include <dtrace/logging.h>
 
 #define SCE_PURE_ASSERT(_cond)		SCE_DBG_ASSERT((_cond), __LINE__)
-#define SCE_PURE_ASSERT1(_cond)		SCE_DBG_ASSERT((_cond), __LINE__)
+#define SCE_PURE_ASSERT1(_cond)		SCE_DBG_ASSERT_CHECK((_cond), __LINE__)
 
 #ifndef ASSERT
 #define ASSERT(_cond)			SCE_PURE_ASSERT(_cond)
