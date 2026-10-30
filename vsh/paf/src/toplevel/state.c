@@ -326,3 +326,38 @@ int ScePafToplevel_9974EC7E(void *unused0, void *unused1,
 		return ((int (**)(void *))*(void **)object)[27](object);
 	return (int)(uintptr_t)object;
 }
+
+/* Find a page's indexed object by its native tree key. */
+int ScePafToplevel_869CF80C(const uint8_t *self, const uint8_t *key)
+{
+	uint32_t wanted = *(const uint32_t *)(key + 12);
+	uint32_t *root = *(uint32_t *const *)(self + 60);
+	uint32_t *node;
+
+	if (root) {
+		node = (uint32_t *)(uintptr_t)root[0];
+		if (*((uint8_t *)node + 21) == 0) {
+			int flag;
+
+			do {
+				uint32_t actual = node[3];
+
+				if (wanted >= actual) {
+					if (actual >= wanted)
+						break;
+					node = (uint32_t *)(uintptr_t)node[2];
+					flag = *(char *)((uint8_t *)node + 21);
+				} else {
+					node = (uint32_t *)(uintptr_t)node[1];
+					flag = *(char *)((uint8_t *)node + 21);
+				}
+			} while (flag == 0);
+		}
+	} else {
+		node = 0;
+	}
+	if (node == *(uint32_t *const *)(self + 60))
+		return 0;
+	return *(const uint32_t *)(
+		*(const uint8_t *const *)(self + 52) + 20 * node[4] + 16);
+}
