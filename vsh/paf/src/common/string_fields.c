@@ -382,3 +382,20 @@ PafCommonSharedPointer *ScePafCommon_97478EC4(
 	}
 	return result;
 }
+/* Convert the native property representation class to its float bit pattern. */
+uint32_t ScePafCommon_DE5322EB(uint32_t kind)
+{
+	switch (kind) {
+	case 0: case 6: case 7: case 8: case 9: case 10: case 11: case 13:
+		return 1125515264u;
+	case 1: case 2: case 3: case 4: case 5: case 12:
+	case 14: case 15: case 18: case 19:
+		return 1132068864u;
+	case 16: case 17: case 20: case 21:
+		return 1138819072u;
+	case 22: case 23: case 24: case 25:
+		return 1140457472u;
+	default:
+		return kind;
+	}
+}
