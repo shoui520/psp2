@@ -121,6 +121,72 @@ RWLock *ScePafThread_F17CAAB0(RWLock *self)
 	return self;
 }
 
+void ScePafThread_12911164(uint8_t *self)
+{
+	if (sceKernelSignalLwCondAll((SceKernelLwCondWork *)(self + 4)))
+		on_error();
+}
+
+uint8_t *ScePafThread_52F363A9(uint8_t *self)
+{
+	if (sceKernelDeleteLwCond((SceKernelLwCondWork *)(self + 4)))
+		on_error();
+	return self;
+}
+
+uint8_t *ScePafThread_E3D5D9BB(uint8_t *self)
+{
+	if (sceKernelDeleteLwCond((SceKernelLwCondWork *)(self + 4)))
+		on_error();
+	return self;
+}
+
+void ScePafThread_FB300461(SceUID *self)
+{
+	if (sceKernelWaitSema(*self, 1, NULL))
+		on_error();
+}
+
+void ScePafThread_534F14D4(SceUID *self)
+{
+	if (sceKernelSignalSema(*self, 1))
+		on_error();
+}
+
+SceUID *ScePafThread_E72CBBE1(SceUID *self)
+{
+	if (sceKernelDeleteSema(*self))
+		on_error();
+	return self;
+}
+
+static SceUID *InitializeEventFlag(SceUID *self, const char *name)
+{
+	self[1] = 0;
+	self[2] = 0;
+	self[3] = 0;
+	self[0] = sceKernelCreateEventFlag(name, 0x1000U, 4, NULL);
+	return self;
+}
+
+SceUID *ScePafThread_465970E2(SceUID *self, const char *name)
+{
+	return InitializeEventFlag(self, name);
+}
+
+SceUID *ScePafThread_94138DD2(SceUID *self, const char *name)
+{
+	return InitializeEventFlag(self, name);
+}
+
+uint32_t *ScePafThread_15F029A2(uint32_t *result)
+{
+	result[0] = 268435727U;
+	result[1] = 268435732U;
+	result[2] = 268435736U;
+	return result;
+}
+
 unsigned char MutexTryLock(Mutex *self)
 {
 	int32_t result = sceKernelTryLockLwMutex(&self->m_mutex, 1);
