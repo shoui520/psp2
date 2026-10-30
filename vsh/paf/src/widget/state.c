@@ -544,3 +544,70 @@ uint8_t *ScePafWidget_76BA63C3(uint8_t *self, uint8_t *value, int32_t mode)
 	}
 	return value;
 }
+
+uint8_t *ScePafWidget_0BEBC84F(uint8_t *self, uint8_t *item)
+{
+	int8_t flags = *(int8_t *)(item + 404);
+
+	if (!(flags & 1)) {
+		item[404] = flags | 1;
+		self = *(uint8_t **)(self + 532);
+		if (self)
+			self[12] |= 1;
+	}
+	return self;
+}
+
+uint8_t *ScePafWidget_9C553208(uint8_t *self, uint8_t *item)
+{
+	int8_t flags = *(int8_t *)(item + 404);
+
+	if (flags & 1) {
+		item[404] = flags & ~1;
+		self = *(uint8_t **)(self + 532);
+		if (self)
+			self[12] |= 1;
+	}
+	return self;
+}
+
+uint8_t *ScePafWidget_32053276(uint8_t *self, uint16_t mask)
+{
+	uint16_t flags = *(uint16_t *)(self + 574);
+
+	if ((flags & (uint8_t)mask) && (flags & (mask & 0xFF00U))) {
+		self = *(uint8_t **)(self + 536);
+		if (self)
+			*(uint16_t *)(self + 12) |= 1;
+	}
+	return self;
+}
+
+int ScePafWidget_939005A0(const uint8_t *self, uint32_t value)
+{
+	uint32_t count = *(const uint32_t *)(self + 1036);
+	const uint32_t *cursor = *(const uint32_t *const *)(self + 1032);
+	const uint32_t *end = cursor + count;
+
+	while (cursor != end) {
+		if (*cursor == value)
+			break;
+		if (cursor)
+			++cursor;
+	}
+	return cursor != end;
+}
+
+uint8_t *ScePafWidget_7E86AC9D(const uint32_t *self, uint32_t value)
+{
+	const uint8_t *const *cursor = (const uint8_t *const *)self[0];
+	const uint8_t *const *end = cursor + self[1];
+
+	while (cursor != end) {
+		if (*(const uint32_t *)(*cursor + 8) == value)
+			return (uint8_t *)*cursor;
+		if (cursor)
+			++cursor;
+	}
+	return 0;
+}
