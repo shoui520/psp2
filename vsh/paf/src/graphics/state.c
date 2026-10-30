@@ -142,6 +142,39 @@ int ScePafGraphics_26D2C953(const uint8_t *self, int mode,
 	return -1;
 }
 
+int ScePafGraphics_96173730(const uint8_t *self)
+{
+	uint8_t *object = *(uint8_t *const *)(self + 1684);
+	int result;
+
+	if (object)
+		ScePafGraphics_29FC820B(object);
+	result = *(int *)(object + 4);
+	if (object)
+		ScePafGraphics_9FAF51CF(object);
+	return result;
+}
+
+int ScePafGraphics_3EA43639(uint8_t *self, float value)
+{
+	if (value != *(float *)(self + 188)) {
+		uint8_t flag = self[80];
+		*(float *)(self + 188) = value;
+		self[80] = flag | 8;
+	}
+	return (int)(uintptr_t)self;
+}
+
+int ScePafGraphics_6FD7F728(uint8_t *self, float value)
+{
+	if (value != *(float *)(self + 192)) {
+		uint8_t flag = self[80];
+		*(float *)(self + 192) = value;
+		self[80] = flag | 8;
+	}
+	return (int)(uintptr_t)self;
+}
+
 static inline __attribute__((always_inline))
 uint32_t *InitGraphicsRefParameter(uint32_t *result,
 				   const uint32_t *source, uint32_t value)
