@@ -269,3 +269,67 @@ int ScePafGraphics_B000FA14(const uint8_t *self)
 		return *(const int16_t *)(self + 100) - 1;
 	return result;
 }
+
+static inline __attribute__((always_inline))
+uint32_t *InitializeGraphicsZeros(uint32_t *self)
+{
+	self[0] = 0;
+	self[1] = 0;
+	self[2] = 0;
+	self[3] = 0;
+	self[4] = 0;
+	self[5] = 0;
+	self[7] = 0;
+	self[6] = 0;
+	return self;
+}
+
+uint32_t *ScePafGraphics_19163245(uint32_t *self)
+{
+	return InitializeGraphicsZeros(self);
+}
+
+uint32_t *ScePafGraphics_BF863FEE(uint32_t *self)
+{
+	return InitializeGraphicsZeros(self);
+}
+
+int ScePafGraphics_404AC3D7(const uint8_t *self)
+{
+	void *object = *(void *const *)(self + 4);
+
+	if (object)
+		return ((int (**)(void *))*(void **)object)[8](object);
+	return 1;
+}
+
+static inline __attribute__((always_inline))
+int GraphicsInvokeOffset20(const uint32_t *self)
+{
+	void *object = (void *)(uintptr_t)self[0];
+	return ((int (**)(void *, uint32_t, uint32_t, uint32_t))
+		*(void **)object)[5](object, self[1], self[2], self[3]);
+}
+
+int ScePafGraphics_4423922B(const uint32_t *self)
+{
+	return GraphicsInvokeOffset20(self);
+}
+
+int ScePafGraphics_7C402472(const uint32_t *self)
+{
+	return GraphicsInvokeOffset20(self);
+}
+
+void ScePafGraphics_722A4987(uint8_t *self, SceGxmCullMode mode)
+{
+	SceGxmContext *context =
+		*(SceGxmContext *const *)(self + 1676);
+	*(SceGxmCullMode *)(self + 1896) = mode;
+	sceGxmSetCullMode(context, mode);
+}
+
+int ScePafGraphics_8D25DDE9(const void *self, const char *tag)
+{
+	return tag == "DrawObj";
+}
