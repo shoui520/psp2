@@ -222,6 +222,29 @@ uint32_t *ScePafGraphics_B609BD86(uint32_t *result, const uint32_t *source)
 	return result;
 }
 
+/* Update four packed graphics modes if any nibble changed. */
+uint8_t *ScePafGraphics_8E9DF1C8(
+		uint8_t *self, int mode0, int mode1, int mode2, int mode3)
+{
+	int first = ((const volatile int8_t *)self)[1932];
+	int second;
+
+	if ((first & 15) != mode0 ||
+	    ((second = ((const volatile int8_t *)self)[1933]) & 15) != mode2 ||
+	    (((uint32_t)first >> 4) & 15) != mode1 ||
+	    (((uint32_t)second >> 4) & 15) != mode3) {
+		int priorFirst = first & ~15;
+		int priorSecond = ((const volatile int8_t *)self)[1933] & ~15;
+		int newFirst = priorFirst | (mode0 & 15);
+		int newSecond = priorSecond | (mode2 & 15);
+
+		self[1928] = 1;
+		self[1932] = (newFirst & 15) | ((mode1 & 15) << 4);
+		self[1933] = (newSecond & 15) | ((mode3 & 15) << 4);
+	}
+	return self;
+}
+
 int32_t ScePafGraphics_61C250D7(const uint8_t *self, uint32_t index,
 				uint8_t *output)
 {
