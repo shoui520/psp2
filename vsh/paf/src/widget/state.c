@@ -1687,3 +1687,27 @@ int ScePafWidget_686BD68A(uint8_t *self, uint8_t execute)
 	vtable = *(const uint8_t *const *)self;
 	return ((int (*)(uint8_t *))*(void *const *)(vtable + 560))(self);
 }
+
+uint8_t *ScePafWidget_31892C5A(uint8_t *self, float value)
+{
+	*(float *)(self + 960) = value > 0.0f ? value : 0.0f;
+	return self;
+}
+
+int ScePafWidget_6A60296B(uint8_t *self, uint32_t index, float value)
+{
+	if (index >= 8)
+		return -1;
+	*(float *)(self + 1156 + index * 4) = value;
+	return 0;
+}
+
+int ScePafWidget_B9F2249C(uint8_t *self, const uint64_t *value)
+{
+	uint8_t *target = *(uint8_t **)(self + 712);
+
+	if (!target)
+		return -2136014814;
+	*(uint64_t *)(target + 40) = *value;
+	return 0;
+}
