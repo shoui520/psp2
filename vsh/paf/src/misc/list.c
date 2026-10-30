@@ -46,33 +46,26 @@ PafList *ScePafMisc_BEA27D34(PafList *list)
 	return ConstructList(list);
 }
 
-static void UnlinkNode(PafListNode *node)
-{
-	PafListNode *previous = node->previous;
-	PafListNode *next = node->next;
-
-	next->previous = previous;
-	previous->next = next;
-	sce_paf_free(node);
-}
-
 uint32_t ScePafMisc_0078AC09(PafList *list, void *payload)
 {
-	PafListNode *head = list->head;
+	PafListNode *head;
 	PafListNode *node;
 
 	if (!payload)
 		return 0x80af5002U;
+	head = list->head;
 	node = head ? head->next : (PafListNode *)0;
 	while (node != head) {
-		PafListNode *next = node->next;
-
 		if (node->payload == payload) {
-			UnlinkNode(node);
+			PafListNode *previous = node->previous;
+			node->next->previous = previous;
+			previous->next = node->next;
+			PafDelete(node);
 			list->count--;
 			return 0;
 		}
-		node = next;
+		if (node)
+			node = node->next;
 	}
 	return 0;
 }
@@ -81,19 +74,29 @@ void *ScePafMisc_EB1C375C(PafListCursor *list)
 {
 	PafListNode *head, *node;
 	void *payload;
+	int32_t count;
 
-	if (!list->count)
+	count = list->count;
+	if (!count)
 		return 0;
 	head = list->head;
 	node = head->previous;
 	payload = node->payload;
 	if (payload)
 		return payload;
-	while (list->count) {
-		node = head->previous;
-		UnlinkNode(node);
-		list->count--;
-	}
+	do {
+		if (head) {
+			PafListNode *previous;
+			node = head->previous;
+			previous = node->previous;
+			node->next->previous = previous;
+			previous->next = node->next;
+			PafDelete(node);
+			count = list->count - 1;
+			head = list->head;
+			list->count = count;
+		}
+	} while (count);
 	return 0;
 }
 
@@ -104,13 +107,13 @@ static PafList *DestroyList(PafList *list)
 	if (head) {
 		PafListNode *node = head->next;
 
-		while (node != head) {
+		while (node != list->head) {
 			PafListNode *next = node->next;
 
-			sce_paf_free(node);
+			PafDelete(node);
 			node = next;
 		}
-		sce_paf_free(head);
+		PafDelete(list->head);
 	}
 	list->head = (PafListNode *)(uintptr_t)UINT32_MAX;
 	list->count = -1;
@@ -132,16 +135,24 @@ void *ScePafMisc_822EC852(PafListCursor *list)
 	PafListNode *head;
 	PafListNode *node;
 	void *payload;
+	int32_t count = list->count;
 
-	if (!list->count)
+	if (!count)
 		return 0;
 	head = list->head;
 	node = head->next;
 	payload = node->payload;
 	while (!payload) {
-		UnlinkNode(node);
-		list->count--;
-		if (!list->count)
+		if (head) {
+			PafListNode *previous = node->previous;
+			node->next->previous = previous;
+			previous->next = node->next;
+			PafDelete(node);
+			count = list->count - 1;
+			head = list->head;
+			list->count = count;
+		}
+		if (!count)
 			return 0;
 		node = head->next;
 		payload = node->payload;
