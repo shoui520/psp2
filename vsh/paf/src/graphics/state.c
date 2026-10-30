@@ -15,9 +15,18 @@ uint32_t sce_paf_graphics_state_12b0;
 uint8_t sce_paf_graphics_flag_06e8;
 int32_t *sce_paf_graphics_active_surface_2e94;
 
-uint32_t ScePafGraphics_6C448991(void)
+__attribute__((noinline)) uint32_t ScePafGraphics_6C448991(void)
 {
 	return sce_paf_graphics_state_11e0;
+}
+
+uint32_t ScePafGraphics_E6EB3D67(void)
+{
+	uint32_t result = sce_paf_graphics_state_12b0;
+
+	if (!result)
+		return *(uint32_t *)(uintptr_t)(ScePafGraphics_6C448991() + 1676);
+	return result;
 }
 
 static inline __attribute__((always_inline))
@@ -176,6 +185,51 @@ int32_t ScePafGraphics_F5D1E17D(const uint8_t *self, int32_t shiftCount)
 			result >>= 1;
 	}
 	return result;
+}
+
+int32_t ScePafGraphics_EF7B7032(const uint8_t *self,
+				 int32_t unused, int32_t shiftCount)
+{
+	int32_t result = *(const int16_t *)(self + 30);
+	int32_t iteration;
+
+	for (iteration = shiftCount - 1; ; --iteration) {
+		int32_t oldCount = shiftCount;
+		shiftCount = iteration;
+		if (oldCount <= 0)
+			break;
+		if (result > 1)
+			result >>= 1;
+	}
+	return result;
+}
+
+int ScePafGraphics_111C68BE(const uint8_t *self, uint64_t *output)
+{
+	const uint8_t *item = *(uint8_t *const *)(self + 136);
+	uint64_t value = 0;
+
+	if (item)
+		value = *(const uint64_t *)(item + 16);
+	*output = value;
+	return (int)(uintptr_t)item;
+}
+
+int ScePafGraphics_89425A43(uint8_t *self, uint8_t enabled)
+{
+	uint8_t old = self[64];
+
+	self[64] = (uint8_t)((old & 0xF7) | (8 * (enabled & 1)));
+	return (old & 8) != 0;
+}
+
+int ScePafGraphics_A1BB7F6C(const uint8_t *self,
+			    int32_t index, int32_t *output)
+{
+	if (index)
+		return -2136005886;
+	*output = (int8_t)self[4];
+	return 0;
 }
 
 int ScePafGraphics_C16D98B4(uint8_t *self)
