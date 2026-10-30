@@ -58,6 +58,8 @@ psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	dtrace/sce/solaris_vmem.c
 	dtrace/sce/dtrace_breakpoint.c
 	global_timer.c
+	heap.c
+	utility.c
 )
 # Sony built DTrace with signed chars (its sign-extended char loads and compares) and at -O3
 # (vectorized loops in the stack walks; dtrace.c keeps 104 functions, -O2 would keep 137)
