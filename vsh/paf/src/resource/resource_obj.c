@@ -9,6 +9,7 @@
 #include "../std/new.h"
 #include "../versatileparam/idparam.h"
 #include <sce_atomic.h>
+#include <arm_neon.h>
 #include <kernel/iofilemgr.h>
 
 extern int sce_paf_strcmp(const char *left, const char *right);
@@ -24,6 +25,45 @@ static const char s_buffer_filename[] = "";
 int ScePafResource_598D91C1(const ResourceObj *self)
 {
 	return self->string_buffer ? 0 : -1;
+}
+
+int ScePafResource_0C1A596E(uint8_t *self)
+{
+	*(uint32_t *)(self + 72) = 1;
+	*(int8_t *)(self + 76) = -1;
+	*(int8_t *)(self + 77) = -1;
+	*(float32x4_t *)(self + 56) = vdupq_n_f32(1.0f);
+	return 0;
+}
+
+int ScePafResource_2B6B99EF(uint8_t *self)
+{
+	uint32_t *root = *(uint32_t **)(self + 40);
+	uint32_t *node;
+
+	*(uint32_t *)(self + 36) = 0;
+	node = root ? (uint32_t *)root[1] : NULL;
+	while (node != root) {
+		node[4] = 0;
+		if (node)
+			node = (uint32_t *)node[1];
+	}
+	return 0;
+}
+
+int ScePafResource_AC088A9C(uint32_t *self)
+{
+	uint32_t item = 0;
+	uint32_t node;
+
+	if (!self[9])
+		return -1;
+	node = self[8];
+	if (node)
+		item = *(uint32_t *)(node + 4);
+	((void (*)(uint32_t *, uint32_t))(*(void ***)self)[13])(
+		self, *(uint32_t *)(item + 8));
+	return 0;
 }
 
 char *ResourceObjGetFileName(const ResourceObj *self)
