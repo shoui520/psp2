@@ -6,6 +6,21 @@
 RMutex CacheManagerImplRMutex;
 extern uint32_t sce_paf_misc_counter_c224;
 
+void ScePafMisc_DF92A43B(const uint8_t *self)
+{
+	JobItem *item;
+
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	item = *(JobItem *const *)(self + 28);
+	if (item && JobItemIsCanceled(item) != 1) {
+		item = *(JobItem *const *)(self + 28);
+		const uint8_t *vtable = *(const uint8_t *const *)item;
+
+		((void (*)(void *))*(void *const *)(vtable + 8))(item);
+	}
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+}
+
 int ScePafMisc_5F18F5F7(const uint8_t *self)
 {
 	int result;
