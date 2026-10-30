@@ -8,10 +8,13 @@
 extern list_t *dtraceClients;
 
 list_t *dtraceCreateClientList(void);
-DtraceClientCB *dtraceAllocClient(dev_info_t *devi, SceUID processId, SceUID moduleId,
-				  int flags, int token);
+DtraceClientCB *dtraceAllocClient(dev_t dev, SceUID processId, SceUID moduleId, int flags,
+				  int token);
 DtraceClientCB *dtraceFindClientByToken(list_t *list, int token);
 DtraceClientCB *dtraceFindClientByProcessId(list_t *list, SceUID processId);
-DtraceClientCB *dtraceFindClientByModuleId(list_t *list, SceUID moduleId);
+DtraceClientCB *dtraceFindClientByModuleId(list_t *list, SceUID processId, SceUID moduleId);
+int dtraceIsClientListEmpty(list_t *list);
+void dtraceAddClient(list_t *list, DtraceClientCB *client);
+void dtraceRemoveClient(list_t *list, DtraceClientCB *client);
 void dtraceFreeClient(DtraceClientCB *client);
 void dtraceDestroyClientList(list_t *list);
