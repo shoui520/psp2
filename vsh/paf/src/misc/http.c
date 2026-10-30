@@ -25,6 +25,45 @@ extern int32_t SceHttp_9CA58B99(int32_t id, uint32_t a, uint32_t b, uint32_t c);
 extern int32_t SceHttp_F30073EC(int32_t id, uint32_t flags);
 extern int32_t SceHttp_6EAD73EB(int32_t id, int32_t *state);
 
+/* The upload/download adapter supplies writable data through two virtual
+ * accessors: buffer pointer at slot 0 and capacity at slot 2. */
+typedef struct PafHttpReadBuffer PafHttpReadBuffer;
+
+typedef struct PafHttpReadBufferMethods {
+	void *(*data)(PafHttpReadBuffer *buffer);
+	void *reserved;
+	uint32_t (*capacity)(PafHttpReadBuffer *buffer);
+} PafHttpReadBufferMethods;
+
+struct PafHttpReadBuffer {
+	const PafHttpReadBufferMethods *methods;
+};
+
+typedef struct PafHttpReadSource {
+	uint8_t reserved[12];
+	volatile int32_t requestId;
+} PafHttpReadSource;
+
+int32_t ScePafMisc_0668FA2F(const PafHttpReadSource *source,
+			     PafHttpReadBuffer *volatile *buffer,
+			     int32_t *bytesRead)
+{
+	/* The request handle is captured before invoking buffer virtual methods;
+	 * those callbacks can otherwise mutate the owner. */
+	int32_t requestId = source->requestId;
+	PafHttpReadBuffer *target = *buffer;
+	void *destination = target->methods->data(target);
+	target = *buffer; /* The first callback may replace the buffer. */
+	uint32_t capacity = target->methods->capacity(target);
+	int32_t result = sceHttpReadData(requestId, destination, capacity);
+
+	if (result < 0)
+		return result;
+	if (bytesRead)
+		*bytesRead = result;
+	return 0;
+}
+
 int32_t ScePafMisc_23F9BC0A(const PafHttpRequestOwner *owner, uint32_t flags)
 {
 	return SceHttp_43A7CC70(owner->request->id, flags);

@@ -1,5 +1,8 @@
 /* Element-size lookups and grid entry operations. */
 #include <stdint.h>
+#include "../memory/heap_allocator.h"
+#include "../std/stdlib.h"
+#include "../std/new.h"
 
 typedef struct PafEnumDescriptor {
 	uint32_t reserved;
@@ -10,16 +13,94 @@ typedef struct PafEnumDescriptor {
 } PafEnumDescriptor;
 
 typedef struct PafGridEntry {
-	uint32_t object;
+	void *object;
 	uint32_t elementSize;
 } PafGridEntry;
 
+typedef struct PafGridInterface PafGridInterface;
+
+typedef struct PafGridInterfaceMethods {
+	void *reserved[2];
+	int32_t (*queryCapacity)(PafGridInterface *object);
+	int32_t (*querySize)(PafGridInterface *object);
+} PafGridInterfaceMethods;
+
+struct PafGridInterface {
+	const PafGridInterfaceMethods *methods;
+};
+
+int32_t ScePafMisc_54E90DE0(PafGridInterface *const *source)
+{
+	PafGridInterface *object = *source;
+
+	return object ? object->methods->queryCapacity(object) : 0;
+}
+
+int32_t ScePafMisc_C63958CC(PafGridInterface *const *source)
+{
+	PafGridInterface *object = *source;
+
+	return object ? object->methods->querySize(object) : 0;
+}
+
 typedef struct PafGrid {
 	PafGridEntry *entries;
-	uint32_t reserved;
+	HeapAllocator *allocator;
 	int32_t width;
 	int32_t height;
+	uint8_t ownsElements;
+	uint8_t cleared;
 } PafGrid;
+
+/* This grid can own the buffers stored in each entry, independently of its
+ * own entry-array allocation.  The native loop rechecks its dimensions after
+ * each free, since allocator callbacks can affect the owner. */
+int ScePafMisc_1F7BB8D0(PafGrid *grid)
+{
+	if (!grid->cleared) {
+		uint32_t count = (uint32_t)grid->width * (uint32_t)grid->height;
+		uint32_t index;
+
+		if (grid->ownsElements) {
+			for (index = 0; index < count; index++) {
+				PafGridEntry *entry = &grid->entries[index];
+				HeapAllocator *allocator = grid->allocator;
+
+				if (allocator)
+					scePafFreeWithContext(allocator, entry->object);
+				else
+					sce_paf_free(entry->object);
+				entry->elementSize = 0;
+				entry->object = 0;
+				count = (uint32_t)grid->width * (uint32_t)grid->height;
+			}
+		} else {
+			for (index = 0; index < count; index++) {
+				grid->entries[index].object = 0;
+				grid->entries[index].elementSize = 0;
+			}
+		}
+		grid->ownsElements = 0;
+		grid->cleared = 1;
+	}
+	return 1;
+}
+
+PafGrid *ScePafMisc_3D747A33(PafGrid *grid)
+{
+	ScePafMisc_1F7BB8D0(grid);
+	PafDeleteArray(grid->entries);
+	grid->entries = 0;
+	return grid;
+}
+
+int ScePafMisc_4D549043(PafGrid *grid)
+{
+	ScePafMisc_1F7BB8D0(grid);
+	PafDeleteArray(grid->entries);
+	grid->entries = 0;
+	return 1;
+}
 
 uint32_t ScePafMisc_B207334F(int32_t format)
 {
