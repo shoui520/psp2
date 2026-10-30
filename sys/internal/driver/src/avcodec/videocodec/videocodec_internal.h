@@ -444,6 +444,20 @@ _Static_assert(offsetof(Dsp0VideocodecEncoderCommand, pEncodeResult) == 144,
 _Static_assert(offsetof(Dsp0VideocodecEncoderCommand, picture) == 308,
 	       "DSP0 encoder pictures ABI");
 
+/* the M4V decoder's counterpart of SceAvcdecQueryDecoderInfo */
+typedef struct Dsp0VideocodecM4vDecoderInfo {
+	unsigned int horizontal;
+	unsigned int vertical;
+	SceSize maxEsSize;
+} Dsp0VideocodecM4vDecoderInfo;
+
+/* what a DSP0 decoder is created with */
+typedef struct Dsp0VideocodecDecoderParam {
+	void *pFrameBuf;
+	SceSize frameBufSize;
+	const void *pInfo;	/* VideocodecDsp0Decoder or Dsp0VideocodecM4vDecoderInfo */
+} Dsp0VideocodecDecoderParam;
+
 typedef struct Dsp0VideocodecAuBuffer {
 	uintptr_t address;
 	SceSize size;
@@ -461,7 +475,7 @@ typedef struct Dsp0VideocodecDecoder {
 	struct ThreadmgrFastMutex mutex;
 	struct ThreadmgrFastMutex *pMutex;
 	unsigned int auStatus;
-	int codecType;				/* 1 AVC, 2 M4V */
+	int status;				/* 2 while it is created */
 } Dsp0VideocodecDecoder;
 
 _Static_assert(sizeof(Dsp0VideocodecDecoder) == 116, "DSP0 decoder slot ABI");

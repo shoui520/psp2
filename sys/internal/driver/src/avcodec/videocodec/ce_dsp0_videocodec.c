@@ -473,7 +473,7 @@ static inline int dsp0VideocodecCallM4vDecoderCommand(Dsp0VideocodecM4vDecoderCo
 	return ret;
 }
 
-int dsp0VideocodecQueryM4vDecoderMemory(Dsp0VideocodecM4vDecoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecQueryM4vDecoderMemory(Dsp0VideocodecM4vDecoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -484,7 +484,7 @@ int dsp0VideocodecQueryM4vDecoderMemory(Dsp0VideocodecM4vDecoderCommand *command
 	return dsp0VideocodecCallM4vDecoderCommand(command, 32, &buffers);
 }
 
-int dsp0VideocodecInitializeM4vDecoder(Dsp0VideocodecM4vDecoderCommand *command,
+__attribute__((noinline)) int dsp0VideocodecInitializeM4vDecoder(Dsp0VideocodecM4vDecoderCommand *command,
 		struct Dsp0VideocodecLibraryCommand *library)
 {
 	Dsp0VideocodecRpcBuffers buffers;
@@ -496,7 +496,7 @@ int dsp0VideocodecInitializeM4vDecoder(Dsp0VideocodecM4vDecoderCommand *command,
 	return dsp0VideocodecCallM4vDecoderCommand(command, 33, &buffers);
 }
 
-int dsp0VideocodecQueryM4vDecoderContext(Dsp0VideocodecM4vDecoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecQueryM4vDecoderContext(Dsp0VideocodecM4vDecoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -507,7 +507,7 @@ int dsp0VideocodecQueryM4vDecoderContext(Dsp0VideocodecM4vDecoderCommand *comman
 	return dsp0VideocodecCallM4vDecoderCommand(command, 35, &buffers);
 }
 
-int dsp0VideocodecInitializeM4vDecoderContext(Dsp0VideocodecM4vDecoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecInitializeM4vDecoderContext(Dsp0VideocodecM4vDecoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -518,7 +518,7 @@ int dsp0VideocodecInitializeM4vDecoderContext(Dsp0VideocodecM4vDecoderCommand *c
 	return dsp0VideocodecCallM4vDecoderCommand(command, 36, &buffers);
 }
 
-int dsp0VideocodecDecodeM4vPicture(Dsp0VideocodecM4vDecoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecDecodeM4vPicture(Dsp0VideocodecM4vDecoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -529,7 +529,7 @@ int dsp0VideocodecDecodeM4vPicture(Dsp0VideocodecM4vDecoderCommand *command)
 	return dsp0VideocodecCallM4vDecoderCommand(command, 37, &buffers);
 }
 
-int dsp0VideocodecStopM4vDecoder(Dsp0VideocodecM4vDecoderCommand *command)
+__attribute__((noinline)) int dsp0VideocodecStopM4vDecoder(Dsp0VideocodecM4vDecoderCommand *command)
 {
 	Dsp0VideocodecRpcBuffers buffers;
 
@@ -540,7 +540,7 @@ int dsp0VideocodecStopM4vDecoder(Dsp0VideocodecM4vDecoderCommand *command)
 	return dsp0VideocodecCallM4vDecoderCommand(command, 38, &buffers);
 }
 
-int dsp0VideocodecTerminateM4vDecoder(Dsp0VideocodecM4vDecoderCommand *command,
+__attribute__((noinline)) int dsp0VideocodecTerminateM4vDecoder(Dsp0VideocodecM4vDecoderCommand *command,
 		struct Dsp0VideocodecLibraryCommand *library)
 {
 	Dsp0VideocodecRpcBuffers buffers;
@@ -1283,5 +1283,261 @@ int dsp0VideocodecTermLibraryForProcess(unsigned int codecType, SceUID pid)
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
 		_unlockProcessSuspendCore();
 	}
+	return ret;
+}
+
+int dsp0VideocodecQueryAvcDecoderMemSize(const VideocodecDsp0Decoder *pInfo,
+					 SceSize *frameMemSize)
+{
+	Dsp0VideocodecGlobal *global;
+	Dsp0VideocodecDecoderCommand *command;
+	int ret;
+
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+#if FW_DEBUG
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	if (frameMemSize == NULL || pInfo == NULL)
+		return (int)0x80620209;
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (ret < 0)
+		return ret;
+	lockFastMutex((SceKernelFastMutex *)global->pMutex);
+	command = dsp0VideocodecAllocMemory(0, sizeof(*command));
+	if (command != NULL) {
+		memset(command, 0, sizeof(*command));
+		command->coprocessorModes[0] = 1;
+		command->coprocessorModes[1] = 1;
+		command->coprocessorModes[2] = 1;
+		command->decodeMode = pInfo->mode;
+		command->horizontal = pInfo->info.horizontal;
+		command->vertical = pInfo->info.vertical;
+		command->numOfRefFrames = pInfo->info.numOfRefFrames;
+		ret = dsp0VideocodecQueryDecoderContext(command);
+		if (ret >= 0) {
+			ret = 0;
+			*frameMemSize = command->frameBufSize;
+		}
+		SceCodecEngineWrapperForDriver_3C5E9CC3(0, command, sizeof(*command));
+	} else {
+		ret = (int)0x80620203;
+	}
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+	_unlockProcessSuspendCore();
+	return ret;
+}
+
+int dsp0VideocodecCreateAvcDecoder(unsigned int codecType, unsigned int *pHandle,
+				   const Dsp0VideocodecDecoderParam *param)
+{
+	Dsp0VideocodecGlobal *global;
+	const VideocodecDsp0Decoder *pInfo;
+	Dsp0VideocodecLibraryCommand *library;
+	Dsp0VideocodecDecoder *decoder;
+	Dsp0VideocodecDecoderCommand *command;
+	unsigned int index;
+	int i, ret;
+
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+#if FW_DEBUG
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	if (codecType != 1)
+		return (int)0x80620201;
+	if (global->initialized != 1)
+		return (int)0x8062020c;
+	if (param == NULL || pHandle == NULL || param->pFrameBuf == NULL ||
+	    param->pInfo == NULL)
+		return (int)0x80620209;
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (ret < 0)
+		return ret;
+	lockFastMutex((SceKernelFastMutex *)global->pMutex);
+	pInfo = param->pInfo;
+	if (pInfo->info.horizontal < 64 ||
+	    pInfo->info.horizontal > global->param.horizontal ||
+	    pInfo->info.vertical < 64 ||
+	    pInfo->info.vertical > global->param.vertical ||
+	    ((pInfo->info.horizontal | pInfo->info.vertical) & 15) != 0 ||
+	    pInfo->info.numOfRefFrames == 0 ||
+	    pInfo->info.numOfRefFrames > global->param.numOfRefFrames ||
+	    pInfo->mode > 2) {
+		ret = (int)0x80620201;
+		goto unlock;
+	}
+	library = global->library;
+	decoder = NULL;
+	for (i = 0; i < library->numOfDecoders; i++) {
+		if (global->decoders[i].state == 0) {
+			decoder = &global->decoders[i];
+			index = i + 1;
+			break;
+		}
+	}
+	if (decoder == NULL) {
+		ret = (int)0x8062020e;
+		goto unlock;
+	}
+	command = decoder->pCommand;
+	decoder->status = 2;
+	memset(command, 0, 208);
+	command->libraryToken = library->libraryToken;
+	command->coprocessorModes[0] = 1;
+	command->coprocessorModes[1] = 1;
+	command->coprocessorModes[2] = 1;
+	command->coprocessorSetup[0] = 2;
+	command->coprocessorSetup[1] = 4;
+	command->decodeMode = ((const VideocodecDsp0Decoder *)param->pInfo)->mode;
+	ret = dsp0VideocodecQueryDecoderMemory(command);
+	if (ret < 0)
+		goto unlock;
+	if (command->workSize > decoder->workSize) {
+		ret = (int)0x8062020d;
+		goto unlock;
+	}
+	command->workAddress = decoder->workAddress;
+	command->au[0].bufferAddress = decoder->au[0].address;
+	command->au[0].bufferSize = decoder->au[0].size;
+	command->contextAddress = decoder->contextAddress;
+	command->au[1].bufferAddress = decoder->au[1].address;
+	command->au[1].bufferSize = decoder->au[1].size;
+	command->pPicture = decoder->pPicture;
+	command->numOfPicture = 1;
+	ret = dsp0VideocodecInitializeDecoder(command, library);
+	if (ret < 0)
+		goto unlock;
+	pInfo = param->pInfo;
+	command->coprocessorModes[0] = 1;
+	command->coprocessorModes[1] = 1;
+	command->coprocessorModes[2] = 1;
+	command->decodeMode = pInfo->mode;
+	command->horizontal = pInfo->info.horizontal;
+	command->vertical = pInfo->info.vertical;
+	command->numOfRefFrames = pInfo->info.numOfRefFrames;
+	if (dsp0VideocodecQueryDecoderContext(command) >= 0 &&
+	    param->frameBufSize >= command->frameBufSize) {
+		command->frameBufAddress = (uintptr_t)param->pFrameBuf;
+		command->frameBufSize = param->frameBufSize;
+		ret = dsp0VideocodecInitializeDecoderContext(command);
+		if (ret >= 0) {
+			decoder->state = 256;
+			decoder->auStatus = 7;
+			command->au[0].valid = 7;
+			command->au[1].valid = decoder->auStatus;
+			*pHandle = index + 256;
+			goto unlock;
+		}
+	}
+	ret = dsp0VideocodecTerminateDecoder(command, library);
+	decoder->state = 0;
+	if (ret < 0)
+		ret = (int)0x8062020d;
+unlock:
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+	_unlockProcessSuspendCore();
+	return ret;
+}
+
+int dsp0VideocodecCreateM4vDecoder(unsigned int codecType, unsigned int *pHandle,
+				   const Dsp0VideocodecDecoderParam *param)
+{
+	Dsp0VideocodecGlobal *global;
+	const Dsp0VideocodecM4vDecoderInfo *pInfo;
+	Dsp0VideocodecLibraryCommand *library;
+	Dsp0VideocodecDecoder *decoder;
+	Dsp0VideocodecM4vDecoderCommand *command;
+	unsigned int index;
+	int i, ret;
+
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
+#if FW_DEBUG
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
+			 __builtin_return_address(0));
+#endif
+	if (codecType != 1)
+		return (int)0x80620201;
+	if (global->initialized != 1)
+		return (int)0x8062020c;
+	if (param == NULL || pHandle == NULL || param->pFrameBuf == NULL ||
+	    param->pInfo == NULL)
+		return (int)0x80620209;
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (ret < 0)
+		return ret;
+	lockFastMutex((SceKernelFastMutex *)global->pMutex);
+	pInfo = param->pInfo;
+	if (pInfo->horizontal < 64 || pInfo->horizontal > global->param.horizontal ||
+	    pInfo->vertical < 64 || pInfo->vertical > global->param.vertical ||
+	    ((pInfo->horizontal | pInfo->vertical) & 15) != 0 ||
+	    pInfo->maxEsSize - 2048 > 0x17c000 - 2048) {
+		ret = (int)0x80620201;
+		goto unlock;
+	}
+	library = global->library;
+	decoder = NULL;
+	for (i = 0; i < library->numOfDecoders; i++) {
+		if (global->decoders[i].state == 0) {
+			decoder = &global->decoders[i];
+			index = i + 1;
+			break;
+		}
+	}
+	if (decoder == NULL) {
+		ret = (int)0x8062020e;
+		goto unlock;
+	}
+	command = decoder->pCommand;
+	decoder->status = 2;
+	memset(command, 0, 200);
+	command->libraryToken = library->libraryToken;
+	command->coprocessorModes[0] = 1;
+	command->coprocessorModes[1] = 1;
+	ret = dsp0VideocodecQueryM4vDecoderMemory(command);
+	if (ret < 0)
+		goto unlock;
+	if (command->workSize > decoder->workSize) {
+		ret = (int)0x8062020d;
+		goto unlock;
+	}
+	command->contextAddress = decoder->contextAddress;
+	command->workAddress = decoder->workAddress;
+	command->au[0].bufferAddress = decoder->au[0].address;
+	command->au[0].bufferSize = decoder->au[0].size;
+	command->au[1].bufferAddress = decoder->au[1].address;
+	command->au[1].bufferSize = decoder->au[1].size;
+	command->pPicture = decoder->pPicture;
+	command->numOfPicture = 1;
+	ret = dsp0VideocodecInitializeM4vDecoder(command, library);
+	if (ret < 0)
+		goto unlock;
+	pInfo = param->pInfo;
+	command->vertical = pInfo->vertical;
+	command->horizontal = pInfo->horizontal;
+	command->maxEsSize = pInfo->maxEsSize;
+	command->coprocessorModes[0] = 1;
+	command->coprocessorModes[1] = 1;
+	if (dsp0VideocodecQueryM4vDecoderContext(command) >= 0 &&
+	    param->frameBufSize >= command->frameBufSize) {
+		command->frameBufAddress = (uintptr_t)param->pFrameBuf;
+		command->frameBufSize = param->frameBufSize;
+		ret = dsp0VideocodecInitializeM4vDecoderContext(command);
+		if (ret >= 0) {
+			decoder->state = 512;
+			decoder->auStatus = 7;
+			command->au[0].valid = 7;
+			command->au[1].valid = decoder->auStatus;
+			*pHandle = index + 512;
+			goto unlock;
+		}
+	}
+	ret = dsp0VideocodecTerminateM4vDecoder(command, library);
+	decoder->state = 0;
+	if (ret < 0)
+		ret = (int)0x8062020d;
+unlock:
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+	_unlockProcessSuspendCore();
 	return ret;
 }
