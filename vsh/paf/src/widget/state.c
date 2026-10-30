@@ -1572,3 +1572,22 @@ int ScePafWidget_7B743729(uint8_t *self, int32_t value)
 	((void (*)(void *, int))*(void *const *)(vtable + 444))(self, 2);
 	return 0;
 }
+
+int ScePafWidget_2DDBB8E3(uint8_t *self, uint32_t first,
+			     uint32_t second, uint32_t third)
+{
+	uint32_t *record = *(uint32_t **)(self + 12);
+	uint32_t *previous = (uint32_t *)(uintptr_t)record[3];
+	int result = (int)(uintptr_t)previous;
+
+	if (previous) {
+		const uint8_t *vtable = *(const uint8_t *const *)previous;
+
+		result = ((int (*)(void *))*(void *const *)(vtable + 4))(previous);
+	}
+	record[0] = *(const uint32_t *)(self + 8);
+	record[1] = first;
+	record[2] = second;
+	record[3] = third;
+	return result;
+}
