@@ -1531,6 +1531,40 @@ int ScePafGraphics_2B0AC967(int value)
 	return -1;
 }
 
+int ScePafGraphics_0C599428(const uint8_t *self)
+{
+	int i;
+	const uint8_t *resource = *(const uint8_t *const *)(self + 120);
+	int value = *(const int32_t *)(resource + 4);
+
+	for (i = 0; i < 3; ++i)
+		if (graphicsMemoryMap[2 * i] == value)
+			return graphicsMemoryMap[2 * i + 1];
+	return -1;
+}
+
+uint32_t ScePafGraphics_F3A83569(const uint8_t *self)
+{
+	const uint8_t *items = *(const uint8_t *const *)(self + 68);
+	int index;
+	int offset;
+
+	if (!items)
+		return 0;
+	index = *(const int16_t *)(self + 102);
+	offset = *(const int16_t *)(self + 104);
+	if (offset) {
+		int total = *(const int16_t *)(self + 100);
+
+		index += offset;
+		if (index < 0)
+			index = total - 1;
+		else if (total < index)
+			index = 0;
+	}
+	return *(const uint32_t *)(items + 8 * index);
+}
+
 int ScePafGraphics_DD80343F(const uint8_t *self, int value)
 {
 	int i;
