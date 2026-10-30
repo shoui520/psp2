@@ -23,6 +23,27 @@ extern uint32_t sce_paf_graphics_state_11fc;
 extern uint8_t sce_paf_graphics_flag_06e8;
 extern int32_t *sce_paf_graphics_active_surface_2e94;
 
+int ScePafGraphics_08C21EFC(const uint8_t *left, const uint8_t *right)
+{
+	float32x2_t first, second;
+	uint32x2_t lowEqual, highEqual;
+	int result = 0;
+
+	if (*(const int8_t *)(left + 4) == *(const int8_t *)(right + 4) &&
+	    !((*(const int16_t *)(left + 6) ^
+	       *(const int16_t *)(right + 6)) & 0x1A3)) {
+		first = *(const volatile float32x2_t *)(right + 8);
+		second = *(const volatile float32x2_t *)(left + 8);
+		lowEqual = vceq_f32(vdup_lane_f32(first, 0),
+				    vdup_lane_f32(second, 0));
+		highEqual = vceq_f32(vdup_lane_f32(first, 1),
+				     vdup_lane_f32(second, 1));
+		if (vget_lane_u32(vand_u32(lowEqual, highEqual), 0))
+			result = 1;
+	}
+	return result;
+}
+
 int ScePafGraphics_70ED91E6(uint8_t *self, const uint32_t *values)
 {
 	float32x2_t pair;
