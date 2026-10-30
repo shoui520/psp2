@@ -187,6 +187,25 @@ uint32_t *ScePafThread_15F029A2(uint32_t *result)
 	return result;
 }
 
+__attribute__((noinline)) int ScePafThread_651F4F81(uint32_t milliseconds)
+{
+	return sceKernelDelayThread(milliseconds * 1000U);
+}
+
+void ScePafThread_0164145D(PafProtectedCounter *self)
+{
+	for (;;) {
+		int32_t remaining;
+
+		MutexLock((Mutex *)self);
+		remaining = self->count;
+		MutexUnlock((Mutex *)self);
+		if (remaining <= 0)
+			break;
+		ScePafThread_651F4F81(10);
+	}
+}
+
 unsigned char MutexTryLock(Mutex *self)
 {
 	int32_t result = sceKernelTryLockLwMutex(&self->m_mutex, 1);
