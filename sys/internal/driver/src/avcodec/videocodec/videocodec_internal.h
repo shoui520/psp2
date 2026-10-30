@@ -834,9 +834,9 @@ int videocodecAvcencInputCsc(VideocodecEncoderFrame *pDst, const AvcencCscFrame 
 int videocodecAvcencCsc(AvcencCscFrame *pDst, const AvcencCscFrame *pSrc);
 int videocodecDecoderCsc(SceAvcdecFrame *pFrameOut, const SceAvcdecFrame *pFrameIn,
 		unsigned int cscCoefficient, const SceAvcdecArrayPicture *pArrayPicture);
-int videocodecAvcdecPicture(SceAvcdecPicture *pPicture, const VeneziaDebugSnapshotOutput *pOutput,
+int videocodecAvcdecPicture(SceAvcdecPictureForInterlaced *pPicture, const VeneziaDebugSnapshotOutput *pOutput,
 		const SceAvcdecArrayPicture *pArrayPicture, int interlaced);
-int videocodecDsp0AvcdecPicture(SceAvcdecPicture *pPicture, Dsp0VideocodecPicture *const *ppOutput,
+int videocodecDsp0AvcdecPicture(SceAvcdecPictureForInterlaced *pPicture, Dsp0VideocodecPicture *const *ppOutput,
 		const SceAvcdecArrayPicture *pArrayPicture);
 int videocodecDsp0M4vdecPicture(M4vdecPicture *pPicture, Dsp0VideocodecPicture *const *ppOutput,
 		const M4vdecArrayPicture *pArrayPicture);

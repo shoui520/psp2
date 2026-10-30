@@ -1874,7 +1874,7 @@ static const SceIftuCscParams videocodecCscToYuv[4] = { {
 	},
 } };
 
-/* a decoded picture's type bits in its info, by the decoder's picture type */
+/* SCE_AVCDEC_CT_TYPE_BIT_IDR_I_P_B_PIC_TYPE_FIELD values (before the shift), by the VIP's picture type */
 static const unsigned char videocodecPictureTypeBits[8] = { 0, 1, 0, 3, 0, 2 };
 
 /* the modes the encoder's input conversion locks with otherwise */
@@ -2791,12 +2791,12 @@ int videocodecDecoderCsc(SceAvcdecFrame *pFrameOut, const SceAvcdecFrame *pFrame
  * colour and picture timing information, its crop, and its pixels converted with the
  * coefficients its stream asks for. An interlaced picture needs interlaced set.
  */
-int videocodecAvcdecPicture(SceAvcdecPicture *pPicture, const VeneziaDebugSnapshotOutput *pOutput,
+int videocodecAvcdecPicture(SceAvcdecPictureForInterlaced *pPicture, const VeneziaDebugSnapshotOutput *pOutput,
 		const SceAvcdecArrayPicture *pArrayPicture, int interlaced)
 {
 	SceAvcdecFrame frame;
 	unsigned int format, typeBits, fieldMode, cscCoefficient, fullRange;
-	unsigned int aspectRatioIdc, picStruct, countingType;
+	unsigned int aspectRatioIdc, picStruct, ctTypeField;
 	int structure, width, height, ret;
 
 	if (pPicture->size != sizeof(*pPicture))
@@ -2810,9 +2810,9 @@ int videocodecAvcdecPicture(SceAvcdecPicture *pPicture, const VeneziaDebugSnapsh
 		return SCE_AVCDEC_ERROR_INVALID_PARAM;
 
 	memset(&pPicture->info, -1, sizeof(pPicture->info));
-	pPicture->info.reserved[2] = 0;
+	pPicture->info.ctType = 0;
 	typeBits = videocodecPictureTypeBits[(signed char)pOutput->context.executionMode % 6] << 2;
-	pPicture->info.reserved[2] = typeBits;
+	pPicture->info.ctType = typeBits;
 	fieldMode = 0;
 	if (pOutput->valid & 1) {
 		const VeneziaDebugRegisterInfo *vui = &pOutput->data.registers;
@@ -2838,32 +2838,35 @@ int videocodecAvcdecPicture(SceAvcdecPicture *pPicture, const VeneziaDebugSnapsh
 		if (vui->control[4])
 			pPicture->info.videoFullRangeFlag = vui->control[6];
 		if (vui->executionFlags[1] && (pOutput->valid & 4)) {
-			pPicture->info.reserved[2] = typeBits | 0x80;
+			pPicture->info.ctType = typeBits | SCE_AVCDEC_CT_TYPE_BIT_ENABLE_PIC_STRUCT;
 			picStruct = pOutput->data.channels[0].status[0];
-			pPicture->info.reserved[0] = picStruct;
+			pPicture->info.picStruct[0] = picStruct;
 			if (pOutput->data.channels[0].status[1]) {
-				pPicture->info.reserved[2] = typeBits | 0xC0;
-				countingType = pOutput->data.channels[0].control[0][0] & 3;
-				pPicture->info.reserved[2] = typeBits | 0xC0 | countingType;
+				pPicture->info.ctType = typeBits | SCE_AVCDEC_CT_TYPE_BIT_ENABLE_PIC_STRUCT |
+					SCE_AVCDEC_CT_TYPE_BIT_ENABLE_CT_TYPE;
+				ctTypeField = pOutput->data.channels[0].control[0][0] & SCE_AVCDEC_CT_TYPE_BIT_CT_TYPE_FIELD;
+				pPicture->info.ctType = typeBits | SCE_AVCDEC_CT_TYPE_BIT_ENABLE_PIC_STRUCT |
+					SCE_AVCDEC_CT_TYPE_BIT_ENABLE_CT_TYPE | ctTypeField;
 				if (picStruct == 1)
 					fieldMode = 2;
 				else if (picStruct == 2)
 					fieldMode = 3;
-				else if (picStruct == 3 && countingType == 1)
+				else if (picStruct == 3 && ctTypeField == 1)
 					fieldMode = 2;
-				else if (picStruct == 4 && countingType == 1)
+				else if (picStruct == 4 && ctTypeField == 1)
 					fieldMode = 3;
 			}
 			if (pOutput->valid & 0x20)
-				pPicture->info.reserved[1] = pOutput->data.channels[1].status[0];
+				pPicture->info.picStruct[1] = pOutput->data.channels[1].status[0];
 		}
 	}
 
 	structure = (signed char)pOutput->context.instructionWidth;
 	if (structure == 2) {
-		pPicture->info.reserved[2] |= 0x20;
+		pPicture->info.ctType |= SCE_AVCDEC_CT_TYPE_BIT_FIELD_PAIR;
 		if (pOutput->context.flagA == 1)
-			pPicture->info.reserved[2] |= 0x30;
+			pPicture->info.ctType |= SCE_AVCDEC_CT_TYPE_BIT_FIELD_PAIR |
+				SCE_AVCDEC_CT_TYPE_BIT_TOP_FIELD_FIRST;
 		else
 			structure = 3;
 		fieldMode = structure;
@@ -2923,7 +2926,7 @@ int videocodecAvcdecPicture(SceAvcdecPicture *pPicture, const VeneziaDebugSnapsh
  * aspect, colour and picture timing information, its crop, and its pixels converted with
  * the coefficients its stream asks for.
  */
-int videocodecDsp0AvcdecPicture(SceAvcdecPicture *pPicture, Dsp0VideocodecPicture *const *ppOutput,
+int videocodecDsp0AvcdecPicture(SceAvcdecPictureForInterlaced *pPicture, Dsp0VideocodecPicture *const *ppOutput,
 		const SceAvcdecArrayPicture *pArrayPicture)
 {
 	const Dsp0VideocodecPicture *pOutput = *ppOutput;
@@ -2946,7 +2949,7 @@ int videocodecDsp0AvcdecPicture(SceAvcdecPicture *pPicture, Dsp0VideocodecPictur
 		return SCE_AVCDEC_ERROR_INVALID_PARAM;
 
 	memset(&pPicture->info, -1, sizeof(pPicture->info));
-	pPicture->info.reserved[2] = 0;
+	pPicture->info.ctType = 0;
 	vui = pOutput->avc.pVui;
 	if (vui != NULL) {
 		sei = pOutput->avc.pSei;
@@ -2972,14 +2975,16 @@ int videocodecDsp0AvcdecPicture(SceAvcdecPicture *pPicture, Dsp0VideocodecPictur
 			pPicture->info.videoFullRangeFlag = vui->videoFullRangeFlag;
 		if (sei != NULL && vui->picStructPresentFlag &&
 		    (sei->flags & DSP0_VIDEOCODEC_SEI_PICTURE_TIMING)) {
-			pPicture->info.reserved[2] = 0x80;
+			pPicture->info.ctType = SCE_AVCDEC_CT_TYPE_BIT_ENABLE_PIC_STRUCT;
 			picStruct = sei->pictureTiming.picStruct;
-			pPicture->info.reserved[1] = 0xFF;
-			pPicture->info.reserved[0] = picStruct;
+			pPicture->info.picStruct[1] = 0xFF;
+			pPicture->info.picStruct[0] = picStruct;
 			if (sei->pictureTiming.clockTimestampFlag[0]) {
-				pPicture->info.reserved[2] = 0xC0;
-				pPicture->info.reserved[2] = 0xC0 |
-					(sei->pictureTiming.clockTimestamp[0].clockMetadata[0] & 3);
+				pPicture->info.ctType = SCE_AVCDEC_CT_TYPE_BIT_ENABLE_PIC_STRUCT |
+					SCE_AVCDEC_CT_TYPE_BIT_ENABLE_CT_TYPE;
+				pPicture->info.ctType = SCE_AVCDEC_CT_TYPE_BIT_ENABLE_PIC_STRUCT |
+					SCE_AVCDEC_CT_TYPE_BIT_ENABLE_CT_TYPE |
+					(sei->pictureTiming.clockTimestamp[0].clockMetadata[0] & SCE_AVCDEC_CT_TYPE_BIT_CT_TYPE_FIELD);
 			}
 		}
 	}
