@@ -5,17 +5,17 @@
 #include "ulobjmgr_internal.h"
 
 int sceUlobjMgrRetainInfoArray(SceUID pid, UlobjInfoArray **pInfoArray,
-				  SceUInt32 **pSdkVersion, UlobjProcCB **pProcCB)
+				  UlobjInfoArrayParam **pParam, UlobjProcCB **pProcCB)
 {
 	UlobjProcCB *procCB;
 
-	if (pInfoArray == NULL || pSdkVersion == NULL || pProcCB == NULL)
+	if (pInfoArray == NULL || pParam == NULL || pProcCB == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	procCB = getAndLockUlobjInfoArrayForKernel(pid);
 	if (procCB == NULL)
 		return SCE_ERROR_ERRNO_ENOENT;
 	*pInfoArray = procCB->infoArray;
-	*pSdkVersion = &procCB->sdkVersion;
+	*pParam = &procCB->param;
 	*pProcCB = procCB;
 	return 0;
 }

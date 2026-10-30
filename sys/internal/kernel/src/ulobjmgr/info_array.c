@@ -41,8 +41,8 @@ int allocateInfoArray(UlobjProcCB *procCB, SceUInt32 numEntries, SceUInt32 sdkVe
 	SCE_DBG_ASSERT(procCB->driverMemBlock == -1, 65);
 	SCE_DBG_ASSERT(procCB->userMemBlock == -1, 66);
 
-	procCB->sdkVersion = sdkVersion;
-	procCB->numEntries = numEntries;
+	procCB->param.sdkVersion = sdkVersion;
+	procCB->param.numEntries = numEntries;
 
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);

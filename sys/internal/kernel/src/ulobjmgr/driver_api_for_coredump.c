@@ -9,59 +9,6 @@
 #include "ulobjmgr_internal.h"
 #include "util.h"
 
-#define ULT_FIBER_MAGIC_SAVED	0x5a5a5a5a	/* context saved, checksummed */
-#define ULT_FIBER_MAGIC_RUNNING	0x5aa55aa5
-#define ULT_FIBER_ENTRY_KEY	0x963c5aa5
-
-/*
- * The registers a suspended fiber saved: r4-r11, d8-d15 and, by their
- * places around them, sp, lr and fpscr.
- */
-typedef struct UltFiberContext {
-	SceUInt32 sp;
-	SceUInt32 reg[8];
-	SceUInt32 lr;
-	SceUInt64 vfp[8];
-	SceUInt32 fpscr;
-	SceUInt32 reserved;
-} UltFiberContext;
-
-typedef struct UltFiber {
-	SceUInt32 checksum;		/* XOR of words 2..31 */
-	SceUInt32 magic;
-	/* as in SceFiberInfo */
-	SceUInt32 entry;		/* stored XORed with ULT_FIBER_ENTRY_KEY */
-	SceUInt32 argOnInitialize;
-	SceUIntPtr addrContext;
-	SceUInt32 sizeContext;
-	SceUInt64 encodedName[4];	/* XORed with a fixed pattern */
-	SceUIntPtr context;		/* UltFiberContext */
-	SceUInt32 threadId;		/* while running */
-	SceUInt32 reserved[16];
-} UltFiber;
-
-typedef struct Ult {
-	char name[32];
-	UltFiber fiber;
-	SceUInt16 state;
-	SceUInt8 reserved0[6];
-	SceUInt32 opaque[3];		/* reported unchanged in UlobjUltInfo */
-	SceUInt32 reserved1;
-} Ult;
-
-typedef struct UltRuntime {
-	char name[32];
-	SceUInt32 opaque;		/* reported unchanged in UlobjUltRuntimeInfo */
-	SceUInt32 reserved[2];
-	SceUInt32 numUlts;
-	SceUIntPtr ultTable;		/* numUlts addresses, 0 for a free slot */
-} UltRuntime;
-
-_Static_assert(sizeof(UltFiberContext) == 0x70, "UltFiberContext");
-_Static_assert(sizeof(UltFiber) == 0x80, "UltFiber");
-_Static_assert(sizeof(Ult) == 0xb8, "Ult");
-_Static_assert(sizeof(UltRuntime) == 0x34, "UltRuntime");
-
 enum {
 	TRAVERSE_FIBER = 1,
 	TRAVERSE_ULT = 2,
@@ -148,7 +95,7 @@ SceUInt32 sceUlobjMgrGetFiberId(SceUID pid, UlobjProcCB *procCB, SceUInt32 *ids,
 	UlobjInfoArray *infoArray;
 
 	SCE_DBG_ASSERT(procCB != NULL, 150);
-	numEntries = procCB->numEntries;
+	numEntries = procCB->param.numEntries;
 	infoArray = procCB->infoArray;
 	for (i = 0; i < numEntries; i++) {
 		entry = infoArray->entry[i];
@@ -184,7 +131,7 @@ SceUInt32 sceUlobjMgrGetUltId(SceUID pid, UlobjProcCB *procCB, SceUInt32 *ids,
 	UlobjInfoArray *infoArray;
 
 	SCE_DBG_ASSERT(procCB != NULL, 209);
-	numEntries = procCB->numEntries;
+	numEntries = procCB->param.numEntries;
 	infoArray = procCB->infoArray;
 	for (i = 0; i < numEntries; i++) {
 		entry = infoArray->entry[i];
@@ -206,7 +153,7 @@ SceUInt32 sceUlobjMgrGetUltRuntimeId(UlobjProcCB *procCB, SceUInt32 *ids, SceUIn
 	UlobjInfoArray *infoArray;
 
 	SCE_DBG_ASSERT(procCB != NULL, 241);
-	numEntries = procCB->numEntries;
+	numEntries = procCB->param.numEntries;
 	infoArray = procCB->infoArray;
 	for (i = 0; i < numEntries; i++) {
 		entry = infoArray->entry[i];

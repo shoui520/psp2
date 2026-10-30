@@ -7,14 +7,6 @@
  */
 #include "ult_sync_obj.h"
 
-#define ULOBJ_SYNC_OBJ_MUTEX	0x11
-#define ULOBJ_SYNC_OBJ_COND	0x12
-#define ULOBJ_SYNC_OBJ_SEMA	0x13
-#define ULOBJ_SYNC_OBJ_RWLOCK	0x14
-#define ULOBJ_SYNC_OBJ_QUEUE	0x15
-#define ULOBJ_SYNC_OBJ_WQRP	0x16
-#define ULOBJ_SYNC_OBJ_QDRP	0x17
-
 static inline __attribute__((always_inline)) SceUInt8 getSceUltObjectType(int type)
 {
 	switch (type) {
@@ -51,7 +43,7 @@ int sceUlobjMgrGetUltSyncObjId(SceUID pid, SceUInt32 *ids, SceUInt32 maxIds, Sce
 
 	SCE_DBG_ASSERT(procCB != NULL, 68);
 	objectType = getSceUltObjectType(type);
-	numEntries = procCB->numEntries;
+	numEntries = procCB->param.numEntries;
 	infoArray = procCB->infoArray;
 	for (i = 0; i < numEntries; i++) {
 		entry = infoArray->entry[i];

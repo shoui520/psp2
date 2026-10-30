@@ -28,39 +28,10 @@
 
 #define ULOBJ_PROC_CB_COUNT	16
 
-/* one slot per process using libult */
-typedef struct UlobjProcCB {
-	SceUID pid;			/* -1: free */
-	SceUID driverMemBlock;		/* kernel alias of the info array */
-	SceUID userMemBlock;		/* user mapping of the info array */
-	SceUInt32 sdkVersion;
-	SceUInt32 numEntries;
-	struct UlobjInfoArray *infoArray;	/* driverMemBlock base */
-} UlobjProcCB;
-
 typedef struct UlobjInstance {
 	UlobjProcCB procCB[ULOBJ_PROC_CB_COUNT];
 	SceKernelSpinlock lock;
 } UlobjInstance;
-
-/* info array entry: object address | ULOBJ_ENTRY_USED | kind */
-#define ULOBJ_ENTRY_KIND_MASK	3
-#define ULOBJ_ENTRY_USED	4
-#define ULOBJ_ENTRY_TAG_MASK	7
-#define ULOBJ_ENTRY_ADDRESS(e)	((e) & ~(SceUInt32)ULOBJ_ENTRY_TAG_MASK)
-#define ULOBJ_ENTRY_END		0xfffffff8	/* last link of the free list */
-
-enum {
-	ULOBJ_KIND_FIBER = 0,
-	ULOBJ_KIND_ULT_RUNTIME = 1,
-	ULOBJ_KIND_SYNC_OBJECT = 2,
-};
-
-typedef struct UlobjInfoArray {
-	SceUInt32 userData[3];		/* the user library's; the kernel clears the last */
-	SceUInt32 ulobjmgrFlag;		/* the debugger's (dbgpUpdateUlobjmgrFlag*) */
-	SceUInt32 entry[];		/* free entries link to the next as index * 8 */
-} UlobjInfoArray;
 
 extern UlobjInstance g_ulobjInstance;
 
@@ -221,14 +192,6 @@ _Static_assert(sizeof(UltQueue) == 0x94, "UltQueue");
  * Information handed to the drivers
  */
 
-/* SceUlobjMgrSyncObjInfo.type */
-#define ULOBJ_INFO_SEMA				0x12
-#define ULOBJ_INFO_MUTEX			0x32
-#define ULOBJ_INFO_QUEUE_DATA_RESOURCE_POOL	0x42
-#define ULOBJ_INFO_WAITING_QUEUE_RESOURCE_POOL	0x43
-#define ULOBJ_INFO_QUEUE			0x52
-#define ULOBJ_INFO_RWLOCK			0x92
-#define ULOBJ_INFO_COND				0xa2
 
 /* ult_sync_obj.c */
 int getUltWaitThreadIds(SceUID pid, SceUIntPtr waitList, SceUInt32 mask, SceUIntPtr object,

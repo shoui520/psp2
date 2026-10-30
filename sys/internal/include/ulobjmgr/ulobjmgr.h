@@ -1,7 +1,99 @@
-/* User-level object records returned to the coredump. */
+/* SceUlobjMgr: the info array, libult's objects and the records handed to the drivers. */
 #pragma once
 
 #include <scetypes.h>
+
+/* The kernel's record of a process using libult, and the info array libult fills. */
+typedef struct UlobjInfoArrayParam {
+	SceUInt32 sdkVersion;
+	SceUInt32 numEntries;
+} UlobjInfoArrayParam;
+
+/* one slot per process using libult */
+typedef struct UlobjProcCB {
+	SceUID pid;			/* -1: free */
+	SceUID driverMemBlock;		/* kernel alias of the info array */
+	SceUID userMemBlock;		/* user mapping of the info array */
+	UlobjInfoArrayParam param;	/* sceUlobjMgrRetainInfoArray hands it out */
+	struct UlobjInfoArray *infoArray;	/* driverMemBlock base */
+} UlobjProcCB;
+
+/* info array entry: object address | ULOBJ_ENTRY_USED | kind */
+#define ULOBJ_ENTRY_KIND_MASK	3
+#define ULOBJ_ENTRY_USED	4
+#define ULOBJ_ENTRY_TAG_MASK	7
+#define ULOBJ_ENTRY_ADDRESS(e)	((e) & ~(SceUInt32)ULOBJ_ENTRY_TAG_MASK)
+#define ULOBJ_ENTRY_END		0xfffffff8	/* last link of the free list */
+
+enum {
+	ULOBJ_KIND_FIBER = 0,
+	ULOBJ_KIND_ULT_RUNTIME = 1,
+	ULOBJ_KIND_SYNC_OBJECT = 2,
+};
+
+typedef struct UlobjInfoArray {
+	SceUInt32 userData[3];		/* the user library's; the kernel clears the last */
+	SceUInt32 ulobjmgrFlag;		/* the debugger's (dbgpUpdateUlobjmgrFlag*) */
+	SceUInt32 entry[];		/* free entries link to the next as index * 8 */
+} UlobjInfoArray;
+
+/* libult's objects in user memory (read with sceKernelCopyFromUserProc) */
+#define ULT_FIBER_MAGIC_SAVED	0x5a5a5a5a	/* context saved, checksummed */
+#define ULT_FIBER_MAGIC_RUNNING	0x5aa55aa5
+#define ULT_FIBER_ENTRY_KEY	0x963c5aa5
+
+/*
+ * The registers a suspended fiber saved: r4-r11, d8-d15 and, by their
+ * places around them, sp, lr and fpscr.
+ */
+typedef struct UltFiberContext {
+	SceUInt32 sp;
+	SceUInt32 reg[8];
+	SceUInt32 lr;
+	SceUInt64 vfp[8];
+	SceUInt32 fpscr;
+	SceUInt32 reserved;
+} UltFiberContext;
+
+typedef struct UltFiber {
+	SceUInt32 checksum;		/* XOR of words 2..31 */
+	SceUInt32 magic;
+	/* as in SceFiberInfo */
+	SceUInt32 entry;		/* stored XORed with ULT_FIBER_ENTRY_KEY */
+	SceUInt32 argOnInitialize;
+	SceUIntPtr addrContext;
+	SceUInt32 sizeContext;
+	SceUInt64 encodedName[4];	/* XORed with a fixed pattern */
+	SceUIntPtr context;		/* UltFiberContext */
+	SceUInt32 threadId;		/* while running */
+	SceUInt32 flags;
+	SceUInt32 reserved[15];
+} UltFiber;
+
+/* UltFiber.flags: its context is filled to measure the stack used */
+#define ULT_FIBER_FLAG_CONTEXT_SIZE_CHECK	0x10
+
+typedef struct Ult {
+	char name[32];
+	UltFiber fiber;
+	SceUInt16 state;
+	SceUInt8 reserved0[6];
+	SceUInt32 opaque[3];		/* reported unchanged in UlobjUltInfo */
+	SceUInt32 reserved1;
+} Ult;
+
+typedef struct UltRuntime {
+	char name[32];
+	SceUInt32 opaque;		/* reported unchanged in UlobjUltRuntimeInfo */
+	SceUInt32 reserved[2];
+	SceUInt32 numUlts;
+	SceUIntPtr ultTable;		/* numUlts addresses, 0 for a free slot */
+} UltRuntime;
+
+_Static_assert(sizeof(UltFiberContext) == 0x70, "UltFiberContext");
+_Static_assert(sizeof(UltFiber) == 0x80, "UltFiber");
+_Static_assert(sizeof(Ult) == 0xb8, "Ult");
+_Static_assert(sizeof(UltRuntime) == 0x34, "UltRuntime");
 
 typedef struct UlobjFiberInfo {
 	char name[32];
@@ -125,6 +217,28 @@ _Static_assert(sizeof(UlobjFiberInfo) == 0xa8, "UlobjFiberInfo");
 _Static_assert(sizeof(UlobjUltInfo) == 0x40, "UlobjUltInfo");
 _Static_assert(sizeof(UlobjUltRuntimeInfo) == 0x30, "UlobjUltRuntimeInfo");
 
+/* the object types of SceUlobjMgrForDriver's ID lists and records */
+#define ULOBJ_SYNC_OBJ_MUTEX	0x11
+#define ULOBJ_SYNC_OBJ_COND	0x12
+#define ULOBJ_SYNC_OBJ_SEMA	0x13
+#define ULOBJ_SYNC_OBJ_RWLOCK	0x14
+#define ULOBJ_SYNC_OBJ_QUEUE	0x15
+#define ULOBJ_SYNC_OBJ_WQRP	0x16
+#define ULOBJ_SYNC_OBJ_QDRP	0x17
+
+/* SceUlobjMgrSyncObjInfo.type */
+#define ULOBJ_INFO_SEMA				0x12
+#define ULOBJ_INFO_MUTEX			0x32
+#define ULOBJ_INFO_QUEUE_DATA_RESOURCE_POOL	0x42
+#define ULOBJ_INFO_WAITING_QUEUE_RESOURCE_POOL	0x43
+#define ULOBJ_INFO_QUEUE			0x52
+#define ULOBJ_INFO_RWLOCK			0x92
+#define ULOBJ_INFO_COND				0xa2
+
+int sceUlobjMgrRetainInfoArray(SceUID pid, UlobjInfoArray **pInfoArray,
+				  UlobjInfoArrayParam **pParam, UlobjProcCB **pProcCB);
+int sceUlobjMgrReleaseInfoArray(UlobjProcCB *procCB);
+int SceUlobjMgrForDriver_6F868221(SceUID pid);
 int sceUlobjMgrGetIdForFiber(SceUID pid, SceUInt32 *ids, SceUInt32 maxIds,
 			   SceUInt32 skip, int type);
 int SceUlobjMgrForDriver_3D6E2EF3(SceUID pid, SceUIntPtr runtimeId,
@@ -153,3 +267,5 @@ int SceUlobjMgrForDriver_6BCB4568(SceUID pid, SceUIntPtr address,
 			      UlobjWaitingQueueResourcePoolInfo *info);
 int SceUlobjMgrForDriver_ADAAA961(SceUID pid, SceUIntPtr address,
 			      UlobjQueueDataResourcePoolInfo *info);
+int SceUlobjMgrForDriver_CDAD91AD(SceUID pid, SceUIntPtr address, int type);
+int SceUlobjMgrForDriver_B978DB70(SceUID pid, SceUIntPtr address, int type, void *info);
