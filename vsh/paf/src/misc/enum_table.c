@@ -58,9 +58,54 @@ typedef struct PafDualGrid {
 	PafGrid secondary;
 } PafDualGrid;
 
+typedef struct PafGridOwner {
+	void *primaryObject;
+	PafGrid primary;
+	PafGrid secondary;
+	void *secondaryObject;
+	uint8_t reserved[24];
+	void *buffer;
+	uint32_t bufferLength;
+	HeapAllocator *allocator;
+} PafGridOwner;
+
+__attribute__((noinline)) PafGrid *ScePafMisc_3D747A33(PafGrid *grid);
+
 _Static_assert(sizeof(PafGrid) == 20, "PafGrid size");
 _Static_assert(offsetof(PafDualGrid, primary) == 4, "first grid offset");
 _Static_assert(offsetof(PafDualGrid, secondary) == 24, "second grid offset");
+_Static_assert(offsetof(PafGridOwner, secondaryObject) == 44,
+	       "owned grid secondary object offset");
+_Static_assert(offsetof(PafGridOwner, buffer) == 72,
+	       "owned grid buffer offset");
+
+PafGridOwner *ScePafMisc_05ECDDBF(PafGridOwner *self)
+{
+	void *object = self->secondaryObject;
+
+	if (object) {
+		((void (*)(void *))((void **) *(void **)object)[5])(object);
+		self->secondaryObject = 0;
+	}
+	object = self->primaryObject;
+	if (object) {
+		((void (*)(void *))((void **) *(void **)object)[5])(object);
+		self->primaryObject = 0;
+	}
+	if (self->buffer) {
+		HeapAllocator *allocator = self->allocator;
+
+		if (allocator)
+			scePafFreeWithContext(allocator, self->buffer);
+		else
+			sce_paf_free(self->buffer);
+		self->buffer = 0;
+		self->bufferLength = 0;
+	}
+	ScePafMisc_3D747A33(&self->secondary);
+	ScePafMisc_3D747A33(&self->primary);
+	return self;
+}
 
 /* This grid can own the buffers stored in each entry, independently of its
  * own entry-array allocation.  The native loop rechecks its dimensions after
