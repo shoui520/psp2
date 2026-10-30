@@ -193,8 +193,18 @@ _Static_assert(sizeof(VideocodecPicture) == 124, "video codec picture ABI");
 
 /* the MPEG-4 decoder's and the encoder's errors: the AVC decoder's with 0x900 or 0x1000 set */
 #define VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM		(-2141058814)	/* 0x80620902 */
+#define VIDEOCODEC_M4VDEC_ERROR_OUT_OF_MEMORY		(-2141058813)	/* 0x80620903 */
+#define VIDEOCODEC_M4VDEC_ERROR_INVALID_STATE		(-2141058812)	/* 0x80620904 */
+#define VIDEOCODEC_M4VDEC_ERROR_UNSUPPORT_IMAGE_SIZE	(-2141058811)	/* 0x80620905 */
+#define VIDEOCODEC_M4VDEC_ERROR_ALREADY_USED		(-2141058808)	/* 0x80620908 */
 #define VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER	(-2141058807)	/* 0x80620909 */
+#define VIDEOCODEC_M4VDEC_ERROR_ES_BUFFER_FULL		(-2141058806)	/* 0x8062090A */
+#define VIDEOCODEC_M4VDEC_ERROR_INITIALIZE		(-2141058805)	/* 0x8062090B */
+#define VIDEOCODEC_M4VDEC_ERROR_NOT_INITIALIZE		(-2141058804)	/* 0x8062090C */
+#define VIDEOCODEC_M4VDEC_ERROR_INVALID_STREAM		(-2141058803)	/* 0x8062090D */
 #define VIDEOCODEC_M4VDEC_ERROR_INVALID_ARGUMENT_SIZE	(-2141058802)	/* 0x8062090E */
+#define VIDEOCODEC_M4VDEC_ERROR_NOT_GAME_PROCESS	(-2141058752)	/* 0x80620940 */
+#define VIDEOCODEC_M4VDEC_ERROR_BASE			(-2141058816)	/* 0x80620900 */
 
 #define VIDEOCODEC_ENCODER_ERROR_INVALID_ARGUMENT_SIZE	(-2141057010)	/* 0x8062100E */
 
@@ -828,6 +838,10 @@ int dsp0VideocodecQueryAvcDecoderMemSize(const VideocodecDecoderQuery *pInfo,
 int dsp0VideocodecCreateAvcDecoder(unsigned int codecType, unsigned int *pHandle,
 	const Dsp0VideocodecDecoderParam *param);
 int dsp0VideocodecDeleteAvcDecoder(unsigned int handle, SceUID pid);
+int dsp0VideocodecQueryM4vDecoderMemSize(const Dsp0VideocodecM4vDecoderInfo *pInfo,
+	SceSize *frameMemSize);
+int dsp0VideocodecCreateM4vDecoder(unsigned int codecType, unsigned int *pHandle,
+	const Dsp0VideocodecDecoderParam *param);
 
 typedef struct AvcencNalUnit {
 	void *data;
@@ -929,6 +943,15 @@ int videocodecQueryDecoderMemSize(unsigned int codecType,
 int videocodecCreateDecoder(unsigned int codecType,
 	SceAvcdecCtrl *pCtrl, const SceAvcdecQueryDecoderInfo *pDecoderInfo);
 int videocodecDeleteDecoderForProcess(SceAvcdecCtrl *pCtrl, unsigned int flags, SceUID pid);
+int m4vdecCreateDecoder(SceAvcdecCtrl *pCtrl, const Dsp0VideocodecM4vDecoderInfo *pInfo);
+int SceAvcodecForDriver_C5C10C8B(unsigned int codecType,
+	const Dsp0VideocodecM4vDecoderInfo *pInfo, SceSize *pFrameMemSize);
+int SceAvcodecForDriver_C99242F5(unsigned int codecType,
+	const Dsp0VideocodecM4vDecoderInfo *pInfo, SceSize *pFrameMemSize);
+int SceAvcodecForDriver_47D8E150(unsigned int codecType, SceAvcdecCtrl *pCtrl,
+	const Dsp0VideocodecM4vDecoderInfo *pInfo);
+int SceAvcodecForDriver_C363B31A(unsigned int codecType, SceAvcdecCtrl *pCtrl,
+	const Dsp0VideocodecM4vDecoderInfo *pInfo);
 /* a decoder's own frame buffer is only for a game process */
 #define VIDEOCODEC_AVCDEC_ERROR_NOT_GAME_PROCESS	(-2141061056)	/* 0x80620040 */
 int videocodecValidatePublicDecoderInfo(unsigned int codecType,

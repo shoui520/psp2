@@ -48,6 +48,26 @@ static const int videocodecCodecEngineErrors[] = {
 	SCE_AVCDEC_ERROR_GREATER_THAN_1200_AT_LV30,
 };
 
+static const int videocodecM4vdecErrors[] = {
+	VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM,
+	VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM,
+	VIDEOCODEC_M4VDEC_ERROR_OUT_OF_MEMORY,
+	VIDEOCODEC_M4VDEC_ERROR_INVALID_STATE,
+	VIDEOCODEC_M4VDEC_ERROR_UNSUPPORT_IMAGE_SIZE,
+	VIDEOCODEC_M4VDEC_ERROR_INVALID_STATE,
+	VIDEOCODEC_M4VDEC_ERROR_INVALID_STATE,
+	VIDEOCODEC_M4VDEC_ERROR_ALREADY_USED,
+	VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER,
+	VIDEOCODEC_M4VDEC_ERROR_INVALID_STATE,
+	VIDEOCODEC_M4VDEC_ERROR_INITIALIZE,
+	VIDEOCODEC_M4VDEC_ERROR_NOT_INITIALIZE,
+	VIDEOCODEC_M4VDEC_ERROR_INVALID_STATE,
+	VIDEOCODEC_M4VDEC_ERROR_ALREADY_USED,
+	VIDEOCODEC_M4VDEC_ERROR_INVALID_STREAM,
+	VIDEOCODEC_M4VDEC_ERROR_ES_BUFFER_FULL,
+	VIDEOCODEC_M4VDEC_ERROR_ALREADY_USED,
+};
+
 static inline __attribute__((always_inline)) int videocodecMapCodecEngineError(int result)
 {
 	unsigned int index = (unsigned int)result - 0x80620101;
@@ -68,6 +88,42 @@ static inline __attribute__((always_inline)) int videocodecMapDecoderError(int r
 	if (result == (int)0x806203C0)
 		return SCE_AVCDEC_ERROR_INVALID_STATE;
 	return result;
+}
+
+static inline __attribute__((always_inline)) int videocodecMapM4vdecError(int result)
+{
+	unsigned int index = (unsigned int)result - 0x80620201;
+
+	if (index <= 16)
+		return videocodecM4vdecErrors[index];
+	if (result == (int)0x80620480)
+		return VIDEOCODEC_M4VDEC_ERROR_INVALID_STREAM;
+	if (result == (int)0x806204C0)
+		return VIDEOCODEC_M4VDEC_ERROR_INVALID_STATE;
+	return result;
+}
+
+/* The frame buffer an MPEG-4 decoder needs for pInfo, in 256 KiB units. */
+static inline __attribute__((always_inline)) int
+m4vdecQueryDecoderMemSizeInline(const Dsp0VideocodecM4vDecoderInfo *pInfo, SceSize *pFrameMemSize)
+{
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	Dsp0VideocodecM4vDecoderInfo info;
+	SceSize frameMemSize;
+	int ret;
+
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		return ret;
+	info.horizontal = pInfo->horizontal;
+	info.vertical = pInfo->vertical;
+	info.maxEsSize = pInfo->maxEsSize;
+	ret = dsp0VideocodecQueryM4vDecoderMemSize(&info, &frameMemSize);
+	ret = videocodecMapM4vdecError(ret);
+	if (ret >= 0)
+		*pFrameMemSize = (frameMemSize + 0x3FFFF) >> 18 << 18;
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	return ret;
 }
 
 /* The frame buffer an AVC decoder of codecType needs for pDecoderInfo, in 256 KiB units. */
@@ -675,6 +731,215 @@ invalidParam:
 	ret = SCE_AVCDEC_ERROR_INVALID_PARAM;
 unlock:
 	sceKernelUnlockFastMutex(global->pAllMutex);
+	return ret;
+}
+
+/*
+ * Creates an MPEG-4 decoder for pInfo in a free DSP0 slot, in pCtrl's frame buffer: the
+ * process's unmap memory, memory locked for the decoder, or, when pCtrl has none, a block of
+ * its own.
+ */
+int m4vdecCreateDecoder(SceAvcdecCtrl *pCtrl, const Dsp0VideocodecM4vDecoderInfo *pInfo)
+{
+	VideocodecGlobal *global = _GetVideocodecGlobal(0);
+	SceKernelAllocMemBlockKernelOpt opt;
+	Dsp0VideocodecDecoderParam param;
+	Dsp0VideocodecM4vDecoderInfo info;
+	VideocodecDsp0Decoder *decoder;
+	uintptr_t physicalAddress;
+	SceSize frameMemSize;
+	unsigned int i, handle;
+	void *base;
+	int ret;
+
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		return ret;
+	if (global->dsp0Library == 0) {
+		sceKernelUnlockFastMutex(global->pAllMutex);
+		return VIDEOCODEC_M4VDEC_ERROR_NOT_INITIALIZE;
+	}
+	for (i = 0; i < global->dsp0DecoderInfo.numOfStreams; i++) {
+		decoder = &global->dsp0Decoders[i];
+		ret = lockFastMutex(&decoder->mutex);
+		if (ret < 0) {
+			sceKernelUnlockFastMutex(global->pAllMutex);
+			return ret;
+		}
+		if (decoder->handle == 0)
+			break;
+		sceKernelUnlockFastMutex(&decoder->mutex);
+	}
+	if (i >= global->dsp0DecoderInfo.numOfStreams) {
+		sceKernelUnlockFastMutex(global->pAllMutex);
+		return VIDEOCODEC_M4VDEC_ERROR_ALREADY_USED;
+	}
+	videocodecInitLockedRanges(&decoder->lockedRanges, 0, decoder->lockedRange, 1,
+		VIDEOCODEC_M4VDEC_ERROR_BASE);
+
+	if (global->dsp0DecoderInfo.horizontal < pInfo->horizontal ||
+	    global->dsp0DecoderInfo.vertical < pInfo->vertical) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+		goto unlockRanges;
+	}
+	info.horizontal = pInfo->horizontal;
+	info.vertical = pInfo->vertical;
+	info.maxEsSize = pInfo->maxEsSize;
+	decoder->frameBufFlags = 0;
+	if (pCtrl->frameBuf.pBuf != NULL) {
+		if (((uintptr_t)pCtrl->frameBuf.pBuf & 0xFF) != 0) {
+			ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+			goto unlockRanges;
+		}
+		ret = sceCodecEngineRegisterUnmapMemory(0, (SceUIntVAddr)pCtrl->frameBuf.pBuf,
+			pCtrl->frameBuf.size);
+		if (ret == SCE_CODECENGINE_ERROR_INVALID_POINTER) {
+			if (videocodecLockRange(&decoder->lockedRanges, &physicalAddress,
+					(uintptr_t)pCtrl->frameBuf.pBuf, pCtrl->frameBuf.size, 32,
+					VIDEOCODEC_CACHE_INVALIDATE, VIDEOCODEC_LOCK_CACHED) < 0) {
+				ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+				goto unlockRanges;
+			}
+			decoder->frameBuf = pCtrl->frameBuf;
+		} else {
+			if (ret < 0) {
+				ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+				goto unlockRanges;
+			}
+			ret = sceCodecEngineUnmapUserVAtoKernelVA(0, pCtrl->frameBuf.pBuf, &base);
+			if (ret < 0) {
+				sceCodecEngineUnregisterUnmapMemory(0, (SceUIntVAddr)pCtrl->frameBuf.pBuf,
+					pCtrl->frameBuf.size);
+				goto unlockRanges;
+			}
+			decoder->frameBufFlags |= VIDEOCODEC_FRAME_BUF_UNMAP;
+			decoder->frameBuf.pBuf = base;
+			decoder->frameBuf.size = pCtrl->frameBuf.size;
+		}
+	} else {
+		ret = VIDEOCODEC_M4VDEC_ERROR_NOT_GAME_PROCESS;
+		if (!sceKernelIsGameBudget())
+			goto unlockRanges;
+		frameMemSize = 0;
+		ret = m4vdecQueryDecoderMemSizeInline(pInfo, &frameMemSize);
+		if (ret < 0)
+			goto unlockRanges;
+		memset(&opt, 0, sizeof(opt));
+		opt.size = sizeof(opt);
+		opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_ALIGNMENT;
+		opt.alignment = 0x100000;
+		ret = sceKernelAllocMemBlockForKernel("SceM4vdecSwFrameBuf",
+			SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_CDRAM_RW, frameMemSize, &opt);
+		if (ret < 0) {
+			ret = VIDEOCODEC_M4VDEC_ERROR_OUT_OF_MEMORY;
+			goto unlockRanges;
+		}
+		decoder->frameBufMemBlockId = ret;
+		decoder->frameBufFlags |= VIDEOCODEC_FRAME_BUF_MEMBLOCK;
+		sceKernelGetMemBlockBase(ret, &decoder->frameBuf.pBuf);
+		decoder->frameBuf.size = frameMemSize;
+	}
+	param.pFrameBuf = decoder->frameBuf.pBuf;
+	param.frameBufSize = decoder->frameBuf.size;
+	param.pInfo = &info;
+	ret = dsp0VideocodecCreateM4vDecoder(global->dsp0Library, &handle, &param);
+	ret = videocodecMapM4vdecError(ret);
+	if (ret >= 0) {
+		decoder->mode = 0;
+		decoder->info.horizontal = pInfo->horizontal;
+		decoder->info.vertical = pInfo->vertical;
+		decoder->info.numOfRefFrames = pInfo->maxEsSize;
+		decoder->handle = handle;
+		pCtrl->handle = handle - 1;
+		goto unlock;
+	}
+	if (decoder->frameBufFlags & VIDEOCODEC_FRAME_BUF_MEMBLOCK) {
+		sceKernelFreeMemBlock(decoder->frameBufMemBlockId);
+		decoder->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_MEMBLOCK;
+	}
+	if (decoder->frameBufFlags & VIDEOCODEC_FRAME_BUF_UNMAP) {
+		sceCodecEngineUnmapKernelVAtoUserVA(0, decoder->frameBuf.pBuf, &base);
+		sceCodecEngineUnregisterUnmapMemory(0, (SceUIntVAddr)base, decoder->frameBuf.size);
+		decoder->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_UNMAP;
+	}
+	__builtin_memset(&decoder->frameBuf, 0, sizeof(decoder->frameBuf));
+unlockRanges:
+	videocodecUnlockRanges(&decoder->lockedRanges);
+unlock:
+	sceKernelUnlockFastMutex(&decoder->mutex);
+	sceKernelUnlockFastMutex(global->pAllMutex);
+	return ret;
+}
+
+int SceAvcodecForDriver_C5C10C8B(unsigned int codecType,
+		const Dsp0VideocodecM4vDecoderInfo *pInfo, SceSize *pFrameMemSize)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int ret;
+
+	if (codecType != SCE_VIDEODEC_TYPE_HW_AVCDEC + 1) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+	} else if (pFrameMemSize == NULL || pInfo == NULL) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+	} else if (pInfo->horizontal > 1280 || pInfo->vertical > 720 ||
+		   pInfo->maxEsSize > 0x17C000) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+	} else {
+		ret = m4vdecQueryDecoderMemSizeInline(pInfo, pFrameMemSize);
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_C99242F5(unsigned int codecType,
+		const Dsp0VideocodecM4vDecoderInfo *pInfo, SceSize *pFrameMemSize)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int ret;
+
+	if (codecType != SCE_VIDEODEC_TYPE_HW_AVCDEC + 1)
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+	else if (pFrameMemSize == NULL || pInfo == NULL)
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+	else
+		ret = m4vdecQueryDecoderMemSizeInline(pInfo, pFrameMemSize);
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_47D8E150(unsigned int codecType, SceAvcdecCtrl *pCtrl,
+		const Dsp0VideocodecM4vDecoderInfo *pInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int ret;
+
+	if (codecType != SCE_VIDEODEC_TYPE_HW_AVCDEC + 1) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+	} else if (pInfo == NULL || pCtrl == NULL) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+	} else if (pInfo->horizontal > 1280 || pInfo->vertical > 720 ||
+		   pInfo->maxEsSize > 0x17C000) {
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+	} else {
+		ret = m4vdecCreateDecoder(pCtrl, pInfo);
+	}
+	sceSyscallLeave(syscall);
+	return ret;
+}
+
+int SceAvcodecForDriver_C363B31A(unsigned int codecType, SceAvcdecCtrl *pCtrl,
+		const Dsp0VideocodecM4vDecoderInfo *pInfo)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int ret;
+
+	if (codecType != SCE_VIDEODEC_TYPE_HW_AVCDEC + 1)
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_PARAM;
+	else if (pInfo == NULL || pCtrl == NULL)
+		ret = VIDEOCODEC_M4VDEC_ERROR_INVALID_POINTER;
+	else
+		ret = m4vdecCreateDecoder(pCtrl, pInfo);
+	sceSyscallLeave(syscall);
 	return ret;
 }
 
