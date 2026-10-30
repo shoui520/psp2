@@ -55,7 +55,15 @@ void dtrace_get_module_name(SceUID moduleId, char *name, size_t size)
 	name[size - 1] = '\0';
 }
 
+/*
+ * The main module's file name: 4.00 (an older build) answers a process's
+ * name with it, 3.6x the executable's name; the GUID name below the other.
+ */
+#if FW_SINCE(0x04000000)
 void dtrace_get_current_process_name(char *name, size_t size)
+#else
+void dtrace_get_current_process_execname(char *name, size_t size)
+#endif
 {
 	SceKernelProcessInfo info;
 	char path[DTRACE_MODULE_PATH_LEN];
@@ -98,7 +106,11 @@ void dtrace_get_current_process_name(char *name, size_t size)
 	name[size - 1] = '\0';
 }
 
+#if FW_SINCE(0x04000000)
 void dtrace_get_current_process_execname(char *name, size_t size)
+#else
+void dtrace_get_current_process_name(char *name, size_t size)
+#endif
 {
 	const char *guidName = NULL;
 	SceUID pid;
