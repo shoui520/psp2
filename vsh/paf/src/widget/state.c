@@ -1,6 +1,13 @@
 /* Standalone native widget state constructors and field operations. */
 #include <stdint.h>
+#include <arm_neon.h>
 #include "../std/new.h"
+
+int32x4_t *ScePafWidget_73875C21(int32x4_t *result)
+{
+	*result = vdupq_n_s32(0x42800000);
+	return result;
+}
 
 uint32_t sce_paf_widget_state_155c;
 
