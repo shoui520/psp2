@@ -1,5 +1,6 @@
 /* Miscellaneous record state transitions. */
 #include <stdint.h>
+#include <sce_atomic.h>
 
 typedef struct PafReferenceBlock {
 	uint32_t reserved;
@@ -17,7 +18,6 @@ typedef struct PafReferenceSource {
 	PafReferenceBlock *block;
 } PafReferenceSource;
 
-extern void PafAtomicIncrementStrong(volatile uint32_t *count);
 
 volatile uint32_t *ScePafMisc_679B51BB(PafReferencePair *destination,
 					const PafReferenceSource *source)
@@ -28,7 +28,7 @@ volatile uint32_t *ScePafMisc_679B51BB(PafReferencePair *destination,
 	destination->block = block;
 	if (!block)
 		return 0;
-	PafAtomicIncrementStrong(&block->strongCount);
+	sceAtomicIncrement32AcqRel((volatile int32_t *)&block->strongCount);
 	return &block->strongCount;
 }
 

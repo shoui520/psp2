@@ -107,7 +107,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/io.c
 	src/misc/copy_guard.c
 	src/misc/search.c
-	src/misc/state_abi.S
 	src/misc/state.c
 	src/misc/matrix_ops.c
 	src/misc/transform.c
