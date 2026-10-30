@@ -1396,3 +1396,44 @@ int ScePafWidget_F130F006(uint8_t *self, uint32_t value)
 	*(uint32_t *)(self + 716) = value;
 	return 0;
 }
+
+static inline __attribute__((always_inline))
+void *DestroyWidgetResourceHandle(uint8_t *self)
+{
+	void *handle = *(void **)(self + 12);
+
+	if (handle) {
+		const uint8_t *vtable = *(const uint8_t *const *)handle;
+
+		((void (*)(void *))*(void *const *)(vtable + 4))(handle);
+	}
+	*(uint32_t *)(self + 12) = UINT32_MAX;
+	return self;
+}
+
+void *ScePafWidget_42D6C09C(uint8_t *self)
+{
+	return DestroyWidgetResourceHandle(self);
+}
+
+void *ScePafWidget_4C70D824(uint8_t *self)
+{
+	return DestroyWidgetResourceHandle(self);
+}
+
+int ScePafWidget_46E5C1ED(void *self)
+{
+	const uint8_t *vtable = *(const uint8_t *const *)self;
+
+	return ((int (*)(void *, int, int))*(void *const *)(vtable + 444))(
+		self, 1, 1);
+}
+
+float ScePafWidget_4983B3FC(uint8_t *self)
+{
+	const uint8_t *delegate = *(const uint8_t *const *)(self + 680);
+
+	if (delegate)
+		return *(const float *)(delegate + 668);
+	return (float)*(const int32_t *)(self + 644);
+}
