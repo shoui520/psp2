@@ -999,7 +999,7 @@ int ScePafWidget_61D34238(const void *self, const char *tag)
 	return ScePafWidget_8EDFDE19(self, tag);
 }
 
-int ScePafWidget_743F6B5A(const void *self, const char *tag)
+__attribute__((noinline)) int ScePafWidget_743F6B5A(const void *self, const char *tag)
 {
 	if (tag == "spin_base")
 		return 1;
@@ -1019,3 +1019,33 @@ int ScePafWidget_7BBA6B10(const void *self, const char *tag)
 		return 1;
 	return ScePafWidget_8EDFDE19(self, tag);
 }
+
+/* Type tags are compared by pointer identity in the native widget hierarchy. */
+#define DEFINE_WIDGET_TYPE(name, tag, parent) \
+__attribute__((noinline)) int ScePafWidget_##name(const void *self, const char *type) \
+{ \
+	if (type == tag) \
+		return 1; \
+	return ScePafWidget_##parent(self, type); \
+}
+
+DEFINE_WIDGET_TYPE(824BA45C, "button_base", 8EDFDE19)
+DEFINE_WIDGET_TYPE(F0408EDF, "state_button_base", 824BA45C)
+DEFINE_WIDGET_TYPE(D48B7AF1, "scrollbar", 8EDFDE19)
+DEFINE_WIDGET_TYPE(E83DA42E, "scroll_view_base", 8EDFDE19)
+DEFINE_WIDGET_TYPE(8097275D, "list_view", E83DA42E)
+DEFINE_WIDGET_TYPE(4E7DAB19, "app_icon_base", 8EDFDE19)
+DEFINE_WIDGET_TYPE(B4A0700B, "progressbar", 8EDFDE19)
+DEFINE_WIDGET_TYPE(02B20FBB, "button", 824BA45C)
+DEFINE_WIDGET_TYPE(1459FA05, "composite_button", 824BA45C)
+DEFINE_WIDGET_TYPE(315650EC, "check_box", F0408EDF)
+DEFINE_WIDGET_TYPE(42E04324, "image_button", 02B20FBB)
+DEFINE_WIDGET_TYPE(0354FA10, "num_spin", 743F6B5A)
+DEFINE_WIDGET_TYPE(483E2C1D, "item_spin", 743F6B5A)
+DEFINE_WIDGET_TYPE(3AAD3226, "scrollbar_touch", D48B7AF1)
+DEFINE_WIDGET_TYPE(43B03F9F, "scroll_view", E83DA42E)
+DEFINE_WIDGET_TYPE(4C462EB0, "file_list", 8097275D)
+DEFINE_WIDGET_TYPE(6436B60C, "app_icon_2d", 4E7DAB19)
+DEFINE_WIDGET_TYPE(7D0C8076, "progressbar_touch", B4A0700B)
+
+#undef DEFINE_WIDGET_TYPE
