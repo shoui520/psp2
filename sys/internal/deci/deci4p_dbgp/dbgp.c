@@ -1605,7 +1605,7 @@ coredump_done:
 				COMMAND(0, processGetProcessInfoCmd);
 				COMMAND(0x10, processAttachProcessCmd);
 				COMMAND(0x12, processDetachProcessCmd);
-				COMMAND(0x20, _getSuspendThreadInfo);
+				COMMAND(0x20, processSuspendProcessCmd);
 				COMMAND(0x22, processResumeProcessCmd);
 				COMMAND(0x24, processSuspendApplicationCmd);
 				COMMAND(0x26, processResumeApplicationCmd);

@@ -242,6 +242,11 @@ typedef struct DbgpProcessUnwind {
 	void *extabBtm;
 } DbgpProcessUnwind;
 
+/* a 32-byte name, copied whole (Sony copies it word by word) */
+typedef struct __attribute__((may_alias)) DbgpName {
+	char name[32];
+} DbgpName;
+
 /* DbgpProcessInfo.attr */
 #define DBGP_PROCESS_ATTR_VALID		0x1
 #define DBGP_PROCESS_ATTR_SUSPENDED	0x2	/* process status 2 */
@@ -727,7 +732,7 @@ int systemClearSwbrkptCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int processGetProcessInfoCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int processAttachProcessCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int processDetachProcessCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
-int _getSuspendThreadInfo(DbgpProcCB *proc, const DbgpPrefix *packet);
+int processSuspendProcessCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int processResumeProcessCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int processSuspendApplicationCmd(DbgpProcCB *proc, const DbgpPrefix *packet);
 int processResumeApplicationCmd(DbgpProcCB *proc, const DbgpPrefix *packet);

@@ -239,6 +239,8 @@ int sceUlobjMgrRetainInfoArray(SceUID pid, UlobjInfoArray **pInfoArray,
 				  UlobjInfoArrayParam **pParam, UlobjProcCB **pProcCB);
 int sceUlobjMgrReleaseInfoArray(UlobjProcCB *procCB);
 int SceUlobjMgrForDriver_6F868221(SceUID pid);
+int SceUlobjMgrForDriver_332F2E58(SceUID pid, void *dbgp, void *process, SceUInt32 set,
+				  SceUInt32 clear);
 int sceUlobjMgrGetIdForFiber(SceUID pid, SceUInt32 *ids, SceUInt32 maxIds,
 			   SceUInt32 skip, int type);
 int SceUlobjMgrForDriver_3D6E2EF3(SceUID pid, SceUIntPtr runtimeId,

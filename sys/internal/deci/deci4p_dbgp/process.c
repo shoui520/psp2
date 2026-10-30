@@ -54,11 +54,6 @@
 #define STOP_REASON_ILLEGAL_NUMBER	0x100000
 #define STOP_REASON_DECLARE_SUICIDE	0x200000
 
-/* a process name, copied whole (as Sony's word copy) */
-typedef struct __attribute__((may_alias)) DbgpProcessName {
-	char name[32];
-} DbgpProcessName;
-
 /* sceKernelIsThreadDebugSuspended's flags beside the suspend state (bits 0, 1) */
 #define THREAD_DEBUG_SUSPENDED		0x1
 
@@ -530,7 +525,7 @@ int procGetProcessInfo(DbgpProcCB *proc, void *info, SceUID pid,
 	result = procGetProcessAttribute(proc, pid, &out->attr);
 	if (result != 0)
 		SCE_PRINTF_WITH_INFO(15, 985, "0x%08x\n", result);
-	*(DbgpProcessName *)out->name = *(DbgpProcessName *)buf.process.name;
+	*(DbgpName *)out->name = *(DbgpName *)buf.process.name;
 	procGetProcessDbgpStopReason(proc, &out->stopReason, pid, reason, pc);
 	unwind = (DbgpProcessUnwind *)(out->path + length + 1);
 	if (padding != 0) {
