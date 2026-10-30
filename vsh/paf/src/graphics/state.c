@@ -1667,6 +1667,37 @@ void ScePafGraphics_B63D3B14(uint8_t *self)
 	MutexUnlock((Mutex *)(self + 296));
 }
 
+int ScePafGraphics_E48BBEAB(const uint8_t *self, int index,
+			     uint64_t *result)
+{
+	int status = 0;
+
+	if (index > 6) {
+		if (index <= 7) {
+			const volatile double *values =
+				(const volatile double *)(self + 40);
+			double first = values[0];
+
+			(void)values[1];
+			*(double *)result = first;
+			goto done;
+		}
+		if (index <= 8) {
+			*(double *)result = *(const double *)(self + 48);
+			goto done;
+		}
+		status = -2136005886;
+		goto done;
+	}
+	if (index <= 5) {
+		status = -2136005886;
+		goto done;
+	}
+	*(double *)result = *(const double *)(self + 28);
+done:
+	return status;
+}
+
 int ScePafGraphics_DD80343F(const uint8_t *self, int value)
 {
 	int i;
