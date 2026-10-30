@@ -827,6 +827,7 @@ int dsp0VideocodecQueryAvcDecoderMemSize(const VideocodecDecoderQuery *pInfo,
 	SceSize *frameMemSize);
 int dsp0VideocodecCreateAvcDecoder(unsigned int codecType, unsigned int *pHandle,
 	const Dsp0VideocodecDecoderParam *param);
+int dsp0VideocodecDeleteAvcDecoder(unsigned int handle, SceUID pid);
 
 typedef struct AvcencNalUnit {
 	void *data;
@@ -927,6 +928,7 @@ int videocodecQueryDecoderMemSize(unsigned int codecType,
 	const SceAvcdecQueryDecoderInfo *pDecoderInfo, SceSize *pFrameMemSize);
 int videocodecCreateDecoder(unsigned int codecType,
 	SceAvcdecCtrl *pCtrl, const SceAvcdecQueryDecoderInfo *pDecoderInfo);
+int videocodecDeleteDecoderForProcess(SceAvcdecCtrl *pCtrl, unsigned int flags, SceUID pid);
 /* a decoder's own frame buffer is only for a game process */
 #define VIDEOCODEC_AVCDEC_ERROR_NOT_GAME_PROCESS	(-2141061056)	/* 0x80620040 */
 int videocodecValidatePublicDecoderInfo(unsigned int codecType,

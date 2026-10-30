@@ -8,6 +8,7 @@
 #include <avcdec.h>
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
+#include <kernel/error.h>
 #include <vnz_wrapper/vnz_wrapper.h>
 
 static const int videocodecDecoderErrors[] = {
@@ -571,6 +572,109 @@ int SceAvcodecForDriver_663B3195(unsigned int codecType,
 			ret = videocodecCreateDecoder(codecType, pCtrl, pDecoderInfo);
 	}
 	sceSyscallLeave(syscall);
+	return ret;
+}
+
+/*
+ * Deletes pid's AVC decoder pCtrl->handle names (1 to 255 on the codec engine, from 256 on the
+ * DSP0) and frees its frame buffer, unless the delete was stopped by a thread suspend.
+ */
+int videocodecDeleteDecoderForProcess(SceAvcdecCtrl *pCtrl, unsigned int flags, SceUID pid)
+{
+	VideocodecGlobal *global = _GetVideocodecGlobal(pid);
+	unsigned int handle;
+	void *base;
+	int ret, err;
+
+	if (pCtrl == NULL)
+		return SCE_AVCDEC_ERROR_INVALID_POINTER;
+	handle = pCtrl->handle;
+	if (handle == 0)
+		return SCE_AVCDEC_ERROR_INVALID_PARAM;
+	ret = lockFastMutex(global->pAllMutex);
+	if (ret < 0)
+		return ret;
+	if (handle < 256) {
+		VideocodecAvcDecoder *avc;
+
+		if (handle > global->avcdecInfo.numOfStreams)
+			goto invalidParam;
+		avc = &global->avcDecoders[handle - 1];
+		ret = lockFastMutex(&avc->mutex);
+		if (ret < 0)
+			goto unlock;
+		if (handle != avc->handle) {
+			ret = SCE_AVCDEC_ERROR_INVALID_PARAM;
+			sceKernelUnlockFastMutex(&avc->mutex);
+			goto unlock;
+		}
+		sceKernelUnlockFastMutex(global->pAllMutex);
+		err = SceCodecEngineWrapperForDriver_B280BA55(handle, flags, pid);
+		err = videocodecMapCodecEngineError(err);
+		if (err == SCE_KERNEL_ERROR_THREAD_STOPPED || err == SCE_KERNEL_ERROR_THREAD_SUSPENDED) {
+			ret = err;
+		} else {
+			avc->handle = 0;
+			if (avc->frameBufFlags & VIDEOCODEC_FRAME_BUF_MEMBLOCK) {
+				sceKernelFreeMemBlock(avc->frameBufMemBlockId);
+				avc->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_MEMBLOCK;
+			}
+			if (avc->frameBufFlags & VIDEOCODEC_FRAME_BUF_UNMAP) {
+				sceCodecEngineUnmapKernelVAtoUserVA(pid, avc->frameBuf.pBuf, &base);
+				ret = sceCodecEngineUnregisterUnmapMemory(pid, (SceUIntVAddr)base,
+					avc->frameBuf.size);
+				avc->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_UNMAP;
+			}
+			__builtin_memset(&avc->frameBuf, 0, sizeof(avc->frameBuf));
+			videocodecUnlockRangesProc(&avc->lockedRanges, pid);
+		}
+		sceKernelUnlockFastMutex(&avc->mutex);
+	} else {
+		VideocodecDsp0Decoder *dsp0;
+		unsigned int index = handle - 256;
+
+		if (index >= global->dsp0DecoderInfo.numOfStreams)
+			goto invalidParam;
+		dsp0 = &global->dsp0Decoders[index];
+		ret = lockFastMutex(&dsp0->mutex);
+		if (ret < 0)
+			goto unlock;
+		handle = dsp0->handle;
+		if (handle == 0) {
+			ret = SCE_AVCDEC_ERROR_INVALID_PARAM;
+			sceKernelUnlockFastMutex(&dsp0->mutex);
+			goto unlock;
+		}
+		sceKernelUnlockFastMutex(global->pAllMutex);
+		err = dsp0VideocodecDeleteAvcDecoder(handle, pid);
+		err = videocodecMapDecoderError(err);
+		if (err == SCE_KERNEL_ERROR_THREAD_STOPPED || err == SCE_KERNEL_ERROR_THREAD_SUSPENDED) {
+			ret = err;
+		} else {
+			dsp0->handle = 0;
+			if (dsp0->frameBufFlags & VIDEOCODEC_FRAME_BUF_MEMBLOCK) {
+				sceKernelFreeMemBlock(dsp0->frameBufMemBlockId);
+				dsp0->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_MEMBLOCK;
+			}
+			if (dsp0->frameBufFlags & VIDEOCODEC_FRAME_BUF_UNMAP) {
+				sceCodecEngineUnmapKernelVAtoUserVA(pid, dsp0->frameBuf.pBuf, &base);
+				ret = sceCodecEngineUnregisterUnmapMemory(pid, (SceUIntVAddr)base,
+					dsp0->frameBuf.size);
+				dsp0->frameBufFlags &= ~VIDEOCODEC_FRAME_BUF_UNMAP;
+			}
+			__builtin_memset(&dsp0->frameBuf, 0, sizeof(dsp0->frameBuf));
+			videocodecUnlockRangesProc(&dsp0->lockedRanges, pid);
+		}
+		sceKernelUnlockFastMutex(&dsp0->mutex);
+	}
+	if (ret != 0)
+		return ret;
+	return err < 0 ? err : 0;
+
+invalidParam:
+	ret = SCE_AVCDEC_ERROR_INVALID_PARAM;
+unlock:
+	sceKernelUnlockFastMutex(global->pAllMutex);
 	return ret;
 }
 

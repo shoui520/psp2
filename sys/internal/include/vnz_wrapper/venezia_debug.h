@@ -186,6 +186,7 @@ int SceCodecEngineWrapperForDriver_2B74706E(const VeneziaDebugImageFormat *geome
 	uint32_t *size);
 int SceCodecEngineWrapperForDriver_9D3B1425(unsigned int *processor,
 	const VeneziaVipCaptureParam *param);
+int SceCodecEngineWrapperForDriver_B280BA55(unsigned int processor, int wait, SceUID pid);
 int SceCodecEngineWrapperForDriver_8CD35820(const VeneziaDebugImageGeometry *geometry, SceSize *size);
 int SceCodecEngineWrapperForDriver_86861877(unsigned int flags, int wait, SceUID pid);
 
