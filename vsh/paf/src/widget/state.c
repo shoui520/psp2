@@ -1310,6 +1310,33 @@ int ScePafWidget_A3EBC15F(const uint8_t *self)
 	return ((int (*)(void *))*(void *const *)(vtable + 152))(target);
 }
 
+void *ScePafWidget_1D7D7860(uint8_t *self)
+{
+	void *target = *(void **)(self + 24);
+	const uint8_t *vtable = *(const uint8_t *const *)target;
+
+	((void (*)(void *))*(void *const *)(vtable + 108))(target);
+	return self;
+}
+
+int ScePafWidget_036BCE96(uint8_t *self, float value)
+{
+	uint32_t flags = *(const uint32_t *)(self + 724);
+
+	*(float *)(self + 764) = value;
+	*(uint32_t *)(self + 724) = flags | 0x10U;
+	return 0;
+}
+
+int ScePafWidget_734468C9(uint8_t *self, float value)
+{
+	uint32_t flags = *(const uint32_t *)(self + 724);
+
+	*(float *)(self + 664) = value;
+	*(uint32_t *)(self + 724) = flags | 8U;
+	return 0;
+}
+
 /* Test membership in the indexed widget selector table. */
 __attribute__((noinline))
 int ScePafWidget_9F450B64(const uint8_t *self, uint32_t value)
