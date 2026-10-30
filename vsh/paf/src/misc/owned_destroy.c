@@ -1,6 +1,7 @@
 /* Native PAF objects can be allocated with a per-owner heap or globally. */
 #include <stdint.h>
 #include <stddef.h>
+#include "../cache/cache_manager_impl.h"
 #include "../memory/heap_allocator.h"
 #include "../std/stdlib.h"
 
@@ -57,4 +58,19 @@ void ScePafMisc_87466AA5(PafOwnedObject *self)
 void ScePafMisc_C1A97796(PafOwnedObject *self)
 {
 	DestroyOwnedObject(self);
+}
+
+/* Cache-owned objects are destroyed while the cache global lock is held. */
+void ScePafMisc_232CE52A(PafOwnedObject *self)
+{
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	DestroyOwnedObject(self);
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+}
+
+void ScePafMisc_D64D39A6(PafOwnedObject *self)
+{
+	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	DestroyOwnedObject(self);
+	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
 }
