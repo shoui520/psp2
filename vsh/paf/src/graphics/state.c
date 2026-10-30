@@ -5,6 +5,7 @@
 #include "../std/new.h"
 #include "../thread/mutex.h"
 #include <gxm.h>
+#include <sce_atomic.h>
 
 uint8_t sce_paf_graphics_flag_306c;
 uint32_t sce_paf_graphics_state_11e0;
@@ -14,6 +15,111 @@ uint32_t sce_paf_graphics_state_11fc;
 uint32_t sce_paf_graphics_state_12b0;
 uint8_t sce_paf_graphics_flag_06e8;
 int32_t *sce_paf_graphics_active_surface_2e94;
+
+__attribute__((noinline))
+uint32_t ScePafGraphics_29FC820B(uint8_t *self)
+{
+	volatile int32_t *count = (volatile int32_t *)(self + 24);
+
+	sceAtomicIncrement32AcqRel(count);
+	return (uint32_t)*count;
+}
+
+__attribute__((noinline))
+uint32_t ScePafGraphics_E57F91FC(uint8_t *self)
+{
+	volatile int32_t *count = (volatile int32_t *)(self + 24);
+
+	sceAtomicIncrement32AcqRel(count);
+	return (uint32_t)*count;
+}
+
+static inline __attribute__((always_inline))
+uint32_t *InitGraphicsRefParameter(uint32_t *result,
+				   const uint32_t *source, uint32_t value)
+{
+	uint32_t object = source[0];
+
+	result[0] = source[0];
+	if (object)
+		ScePafGraphics_29FC820B((uint8_t *)(uintptr_t)object);
+	result[2] = value;
+	result[1] = 0;
+	return result;
+}
+
+uint32_t *ScePafGraphics_3D0309E3(uint32_t *result,
+				   const uint32_t *source, uint32_t value)
+{
+	return InitGraphicsRefParameter(result, source, value);
+}
+
+uint32_t *ScePafGraphics_A078C447(uint32_t *result,
+				   const uint32_t *source, uint32_t value)
+{
+	return InitGraphicsRefParameter(result, source, value);
+}
+
+int ScePafGraphics_B54C77D3(uint8_t *self, uint8_t enabled)
+{
+	uint8_t old = self[64];
+
+	self[64] = (uint8_t)((old & 0xFB) | (4 * (enabled & 1)));
+	return (old & 4) != 0;
+}
+
+int ScePafGraphics_C34E1F2C(uint8_t *self, int32_t mode)
+{
+	if (mode != 2 && mode != 3)
+		return -2136006138;
+	*(int32_t *)(self + 368) = mode;
+	return 0;
+}
+
+int ScePafGraphics_CA0F3549(uint32_t flags)
+{
+	uint32_t mask = 0x80000000U;
+	int index;
+
+	for (index = 31; index != 0; --index) {
+		if (flags & mask)
+			return index;
+		mask >>= 1;
+	}
+	return 0;
+}
+
+uint32_t *ScePafGraphics_FA81A18E(uint32_t *result,
+				  uint32_t unused1, uint32_t unused2,
+				  uint32_t value)
+{
+	result[0] = 0x200000;
+	result[1] = 0;
+	result[5] = 0x100000;
+	result[2] = value;
+	result[3] = value;
+	result[4] = value;
+	result[6] = 0;
+	result[7] = 0x100000;
+	return result;
+}
+
+int ScePafGraphics_BFDF8AC1(const uint8_t *self, uint32_t *output)
+{
+	if (*(const uint16_t *)(self + 112) & 0x11)
+		return -2136005885;
+	*output = *(const uint32_t *)(self + 128);
+	return 0;
+}
+
+int ScePafGraphics_D1081027(uint8_t *self, int32_t index,
+			     const uint64_t *value)
+{
+	if (index != 1)
+		return -2136005886;
+	*(uint64_t *)(self + 8) = *value;
+	return 0;
+}
 
 __attribute__((noinline)) uint32_t ScePafGraphics_6C448991(void)
 {
