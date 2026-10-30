@@ -909,3 +909,41 @@ uint8_t *ScePafWidget_730AA895(uint8_t *self, uint32_t value,
 	}
 	return self;
 }
+
+uint32_t ScePafWidget_27278DC0(const uint32_t *self)
+{
+	uint32_t index = self[1];
+
+	if (!index)
+		return 0;
+	return *(const uint32_t *)((const uint8_t *)self[0] + 8 * (index - 1));
+}
+
+int ScePafWidget_8EDFDE19(const void *self, const char *tag)
+{
+	return tag == "widget_base";
+}
+
+int ScePafWidget_9B80FB29(const void *self, const char *tag)
+{
+	return tag == "segment_source";
+}
+
+int ScePafWidget_FC6F4E29(const void *self, const char *tag)
+{
+	return tag == "visualizer";
+}
+
+void ScePafWidget_D3AFE81E(uint32_t *self)
+{
+	*self = (uint32_t)-2127612828;
+	PafDelete(self);
+}
+
+int ScePafWidget_F0D05847(uint32_t *self, uint32_t value)
+{
+	uint8_t *vtable = (uint8_t *)self[0];
+
+	self[255] = value;
+	return ((int (*)(uint32_t *))*(void **)(vtable + 572))(self);
+}
