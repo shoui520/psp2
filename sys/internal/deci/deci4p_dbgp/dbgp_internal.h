@@ -145,17 +145,30 @@ typedef struct __attribute__((packed, aligned(4))) ThreadInfoBuf {
 	ThreadInfo info[64];
 } ThreadInfoBuf;
 
+/* a process event; for a spawn the parent is the process that exits to it */
 typedef struct ProcessInfo {
-	SceUInt32 type;
+	SceUInt32 type;			/* PROCESS_INFO_* */
 	SceUID pid;
-	union {
-		SceUID parentPid;
-		SceUID spawnPid;
-		SceUID prevPid;
-	};
-	int exitStatus;
+	SceUID parentPid;
+	int exitStatus;			/* PROCESS_INFO_EXIT_SPAWN: the spawn's result */
 	SceUInt64 time;
 } ProcessInfo;
+
+#define PROCESS_INFO_START		0
+#define PROCESS_INFO_EXIT		1
+#define PROCESS_INFO_KILL		2
+#define PROCESS_INFO_SUSPEND		3
+#define PROCESS_INFO_RESUME		4
+#define PROCESS_INFO_SPONTANEOUS_EXIT	5
+#define PROCESS_INFO_EXIT_TO_SPAWN	6
+#define PROCESS_INFO_APP_ABORT		7
+#define PROCESS_INFO_EXIT_SPAWN		8
+
+/* the process a debugged process exits to, and its PRX debug flags */
+typedef struct DbgpSpawnInfo {
+	SceUID pid;
+	SceUInt32 prxDebugFlag;
+} DbgpSpawnInfo;
 
 typedef struct __attribute__((packed, aligned(4))) ProcessInfoBuf {
 	int write;
@@ -388,8 +401,7 @@ typedef struct DbgpCB {
 	int procCount;
 	int procActive[17];
 	DbgpProcCB *procCB[17];
-	SceUID spawnPid;
-	SceUInt32 spawnPrxDebugFlag;
+	DbgpSpawnInfo spawn;
 	SceKernelSpinlock procLock;
 	DbgpProcessDebugInfo *processDebugInfo;
 } DbgpCB;
@@ -450,7 +462,7 @@ int processHandlerExitHandler(SceUID pid, int exitStatus, SceUInt64 time);
 int processHandlerKillHandler(SceUID pid, SceUInt64 time);
 int processHandlerSpontaneousExitHandler(SceUID pid, SceUInt32 status, SceUInt64 time);
 int processHandlerExitToSpawnHandler(SceUID pid, SceUID spawnPid, SceUInt64 time);
-int processHandlerExitSpawnHandler(SceUID pid, SceUID spawnPid, SceUID prevPid,
+int processHandlerExitSpawnHandler(SceUID pid, SceUID spawnPid, int result,
 				   SceUInt64 time);
 int processHandlerSuspendHandler(SceUID pid);
 int processHandlerResumeHandler(SceUID pid);
@@ -472,6 +484,7 @@ int _dbgpUpdateUlobjmgrFlagForDbgp(DbgpCB *dbgp, DbgpProcCB *proc,
 int _dbgpUpdateUlobjmgrFlagForLibfiber(SceUID pid, SceUInt32 *flag);
 
 /* thread_info.c */
+int threadInfoSave(DbgpProcCB *proc, const ThreadInfo *info);
 int threadInfoLoad(DbgpProcCB *proc, ThreadInfo *info);
 int threadInfoCreateThreadNotification(DbgpProcCB *proc, void *packet,
 				       const ThreadInfo *info);
@@ -486,6 +499,7 @@ int _createModuleLoadNotification(DbgpProcCB *proc, void *packet,
 /* process_info.c and process.c */
 int procSuspendProcess(DbgpProcCB *proc, SceUID pid, SceUID thid,
 		       SceUInt32 reason);
+int processInfoSave(DbgpProcCB *proc, const ProcessInfo *info);
 int processInfoLoad(DbgpProcCB *proc, ProcessInfo *info);
 int processInfoCreateProcessNotification(DbgpProcCB *proc, void *packet,
 					 const ProcessInfo *info);

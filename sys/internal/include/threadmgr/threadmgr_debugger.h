@@ -92,3 +92,24 @@ _Static_assert(sizeof(ThreadmgrWaitingThread) == 0x10, "waiting thread entry siz
 
 int sceKernelGetWaitingThreadList(SceUID waitId, ThreadmgrWaitingThread *list,
 				  SceSize size, SceSize *count);
+
+/*
+ * The debugger's handlers (SceThreadmgrForDriver_6C2E3A49): group 0 is told
+ * of an event, group 1 decides what happens to the thread.
+ */
+typedef int (*ThreadmgrDebugHandler)(SceSize size, void *message);
+
+int SceThreadmgrForDriver_6C2E3A49(unsigned int group, unsigned int index,
+				   ThreadmgrDebugHandler handler);
+
+#define DEBUG_THREAD_EVENT_CREATE	0
+#define DEBUG_THREAD_EVENT_EXIT		3	/* the exit status comes with it */
+
+/* what the thread event handlers (handler index 0) hear */
+struct ThreadmgrDebugThreadEvent {
+	SceUID processId;
+	SceUID threadId;			/* the user thread ID */
+	uint32_t event;				/* DEBUG_THREAD_EVENT_* */
+	uint32_t reserved;
+	int status;				/* 0x10: DEBUG_THREAD_EVENT_EXIT only */
+};

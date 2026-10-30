@@ -7,17 +7,13 @@
 #include <sysmem/uid_class.h>
 #include <processmgr/process.h>
 #include <systimer/timer_regs.h>
+#include <threadmgr/threadmgr_debugger.h>
 
 struct IntrRequest;
 struct ThreadCB;
 struct ThreadmgrTimer;
 struct SceUIDWaitableObject;
 
-/*
- * The debugger's handlers (SceThreadmgrForDriver_6C2E3A49): group 0 is told
- * of an event, group 1 decides what happens to the thread.
- */
-typedef int (*ThreadmgrDebugHandler)(SceSize size, void *message);
 
 /* Per-CPU scheduler state begins at the VBAR+0x2c indirection. */
 struct ThreadMgrCpuCB {

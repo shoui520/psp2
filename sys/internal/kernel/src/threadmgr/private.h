@@ -83,7 +83,6 @@
 #define SAVE_ALIGN			64	/* the context save areas' alignment */
 #define SAVE_ALIGNED(buffer)		(((uintptr_t)(buffer) + SAVE_ALIGN - 1) & ~(SAVE_ALIGN - 1))
 #define PROCESS_DEBUG_SUSPEND_EXCEPTION	0x11	/* PLACEHOLDER: SceSysrootForKernel_1247A825's reason */
-#define DEBUG_THREAD_EVENT_EXIT		3	/* the exit status comes with it */
 
 /* The PMU access an SGI carries to the CPU the thread runs on. */
 #define DEBUG_HANDLER_THREAD_EVENT	0
@@ -105,15 +104,6 @@
 #define DEBUG_SUSPEND_UNK100000		0x00100000	/* PLACEHOLDER: name; the kind comes with it */
 
 int debugSuspendThreadSelf(uint32_t reason, SceSize size, void *message);
-
-/* what the thread event handlers (DEBUG_HANDLER_THREAD_EVENT) hear */
-struct ThreadmgrDebugThreadEvent {
-	SceUID processId;
-	SceUID threadId;			/* the user thread ID */
-	uint32_t event;				/* DEBUG_THREAD_EVENT_* */
-	uint32_t reserved;
-	int status;				/* 0x10: DEBUG_THREAD_EVENT_EXIT only */
-};
 
 struct ThreadmgrPmonRequest {
 	SceUID threadId;
