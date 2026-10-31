@@ -15,6 +15,7 @@ psp2_module(os0_kd_bootimage_bbmc KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	state_machine/suspend.c
 	state_machine/setup.c
 	state_machine/test_mode.c
+	sequence/proc_swdl.c
 	sequence/resume.c
 	sequence/start_net_if.c
 	sequence/stop_net_if.c

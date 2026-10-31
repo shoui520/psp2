@@ -236,6 +236,12 @@ typedef struct BbmcGpsRequestMessage {
 	void *output;
 } BbmcGpsRequestMessage;
 
+/* name unknown: message 165 carries the syscon's proactive word, and 1 when message 15 asked for it */
+typedef struct BbmcProactiveReplyMessage {
+	SceUInt32 sysconValue;
+	SceUInt32 fetchRequested;
+} BbmcProactiveReplyMessage;
+
 typedef union BbmcMessageBody {
 	SceInt32 commandResult;
 	BbmcSmsListOutput smsListOutput;
@@ -250,6 +256,7 @@ typedef union BbmcMessageBody {
 	BbmcChannelRatesMessage channelRatesMessage;
 	BbmcControlFlagMessage controlFlag;
 	BbmcGpsRequestMessage gpsRequest;
+	BbmcProactiveReplyMessage proactiveReply;
 	const struct BbmcTerminalResponse *terminalResponse;
 	const struct QmiCat2CommandOptions *envelopeOptions;
 	SceUInt32 refreshResponse;
