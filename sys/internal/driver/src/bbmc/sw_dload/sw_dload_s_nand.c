@@ -5364,6 +5364,7 @@ static inline int swdlUpdateSendImage(SwdlContext *context, SceUID fd, SceUInt8 
 	SceUInt8 *buffer;
 	SceUInt32 freePackets;
 	SceUInt32 address;
+	SceUInt32 base;
 	SceSize size;
 	int result;
 
@@ -5388,9 +5389,9 @@ wait:
 		buffer[1] = 0x07;
 		size = context->hello.window.blockSize;
 		address = context->fileOffset;
+		base = context->hello.window.baseAddress;
 		*(SceUInt32 *)(buffer + 2) = address;
-		result = swdlReadFileAt(fd, buffer + 6, address - context->hello.window.baseAddress,
-					&size);
+		result = swdlReadFileAt(fd, buffer + 6, address - base, &size);
 		if (result < 0)
 			return result;
 		if (size == 0) {
