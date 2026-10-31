@@ -17,12 +17,43 @@
 
 /* the pm_sm services (names unknown) */
 #define PM_SM_SET_NVS_MODE	2
+#define PM_SM_AUTH_CHALLENGE	3
+#define PM_SM_AUTH_EXCHANGE4	4
+#define PM_SM_AUTH_VERIFY5	5
+#define PM_SM_AUTH_EXCHANGE6	6
+#define PM_SM_AUTH_VERIFY7	7
 #define PM_SM_SYSCON_MODE	8
+#define PM_SM_AUTH_GET_CERT	9
+#define PM_SM_AUTH_SET_CERT	10
 
 /* PM_SM_SYSCON_MODE steps (names unknown) */
 #define PM_SM_GET_MODE_REQUEST	0
 #define PM_SM_GET_MODE_RESPONSE	1
 #define PM_SM_SET_MODE_RESPONSE	3
+
+/* a PM_SM_AUTH_* (services 3 to 7) request (names unknown) */
+typedef struct ScePmSmAuthCommand {
+	int type;
+	SceUInt32 version;
+	SceUInt32 data[0x28 / 4];
+} ScePmSmAuthCommand;
+
+/* a PM_SM_AUTH_*_CERT (services 9 and 10) request (names unknown) */
+typedef struct ScePmSmCertCommand {
+	int type;
+	SceUInt32 reserved;
+	SceUInt8 cert[0x104];
+} ScePmSmCertCommand;
+
+static SceUInt8 g_pmJigSeq;	/* name unknown */
+
+int pmSmAuthGetChallenge(void *challenge, int type);
+int pmSmAuthExchange4(void *data, int type);
+int pmSmAuthVerify5(const void *data, int type);
+int pmSmAuthExchange6(void *data, int type);
+int pmSmAuthVerify7(const void *data, int type);
+int pmSmAuthGetCertificate(void *certificate, int type);
+int pmSmAuthSetCertificate(const void *certificate, int type);
 
 /* the NVS bytes the product mode lives in (name unknown) */
 typedef struct ScePmNvsArea {
@@ -144,68 +175,380 @@ int pmJigClose(void)	/* name unknown */
 	return 0;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: authenticates the
- * jig through pm_sm (challenge and response over pmJigWrite and pmJigRead) */
-POST_SS_DEFERRED int pm_auth_common(int type, const char *path)
+/* authenticates the jig through pm_sm (challenge and response over pmJigWrite and pmJigRead) */
+int pm_auth_common(int type)
 {
-	(void)path;
-	if (type != 0xe)
+	SceUInt8 data[0x28];
+	int ret, closeRet;
+
+	ret = pmJigOpen();
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 511, "syscon jig setup fail\n");
+		return ret;
+	}
+	sceKernelDelayThread(1000000);
+	ret = pmSmAuthGetChallenge(data, type);
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 520, "gen_req_hello fail\n");
+		goto close;
+	}
+	ret = pmJigWrite(data, sizeof(data));
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 527, "send message to SC fail\n");
+		goto close;
+	}
+	memset(data, 0xff, sizeof(data));
+	ret = pmJigRead(data, sizeof(data));
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 535, "receive message from SC fail(0x%08X)\n", ret);
+		goto close;
+	}
+	ret = pmSmAuthExchange4(data, type);
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 544, "gen_challenge fail\n");
+		goto close;
+	}
+	ret = pmJigWrite(data, sizeof(data));
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 551, "send message to SC fail\n");
+		goto close;
+	}
+	ret = pmJigRead(data, sizeof(data));
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 559, "receive message from SC fail\n");
+		goto close;
+	}
+	ret = pmSmAuthVerify5(data, type);
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 568, "check_response fail\n");
+		goto close;
+	}
+	if (type == 0xc)
+		goto close;
+	ret = pmSmAuthExchange6(data, type);
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 582, "gen_req_result fail\n");
+		goto close;
+	}
+	ret = pmJigWrite(data, sizeof(data));
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 591, "send message to SC fail\n");
+		goto close;
+	}
+	ret = pmJigRead(data, sizeof(data));
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 597, "receive message from SC fail\n");
+		goto close;
+	}
+	ret = pmSmAuthVerify7(data, type);
+	if (ret != 0)
+		SCE_DBG_PRINTF(11, 605, "check_result fail\n");
+close:
+	closeRet = pmJigClose();
+	if (closeRet != 0) {
+		SCE_DBG_PRINTF(11, 615, "stop pm_sm fail\n");
+		ret = closeRet;
+	}
+	return ret;
+}
+
+/* the second jig authentication through pm_sm */
+int pm_auth2_common(int type)
+{
+	SceUInt8 cert[0x104];
+	SceUInt8 pkt[0x28];
+	SceUInt8 ack[2];
+	SceSize left, offset, n;
+	SceUInt8 seq;
+	int ret, closeRet;
+
+	if ((type & ~8) != 4)
 		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
-	return SCE_SBL_ERROR_UNSUPPORTED;
+	ret = pmJigOpen();
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 640, "syscon jig setup fail\n");
+		return ret;
+	}
+	sceKernelDelayThread(1000000);
+	memset(cert, 0, sizeof(cert));
+	ret = pmSmAuthGetCertificate(cert, type);
+	if (ret != 0) {
+		SCE_DBG_PRINTF(11, 650, "gen_challenge fail\n");
+		goto close;
+	}
+	left = sizeof(cert);
+	offset = 0;
+	seq = g_pmJigSeq;
+	n = 0x26;
+	pkt[0] = 0xf1;
+	pkt[1] = seq;
+	for (;;) {
+		memcpy(pkt + 2, cert + offset, n);
+		ret = pmJigWrite(pkt, n + 2);
+		if (ret != 0) {
+			SCE_DBG_PRINTF(11, 657, "send message to SC fail\n");
+			goto close;
+		}
+		if ((signed char)pkt[1] < 0)
+			break;
+		seq = g_pmJigSeq;
+		ret = pmJigWait(10000);
+		if (ret != 0) {
+			SCE_DBG_PRINTF(11, 657, "send message to SC fail\n");
+			goto close;
+		}
+		ret = SceSysconForDriver_3C80B529(0, 2, ack);
+		if (ret != 0) {
+			SCE_DBG_PRINTF(11, 657, "send message to SC fail\n");
+			goto close;
+		}
+		if (ack[0] != 0xf2 || (ack[1] & 0x7f) != seq) {
+			ret = 0x800f0a24;
+			SCE_DBG_PRINTF(11, 657, "send message to SC fail\n");
+			goto close;
+		}
+		left -= n;
+		offset += n;
+		seq = (g_pmJigSeq + 1) & 0x7f;
+		g_pmJigSeq = seq;
+		if (left == 0)
+			goto recv;
+		pkt[0] = 0xf1;
+		if (left <= 0x26) {
+			pkt[1] = seq | 0x80;
+			n = left;
+		} else {
+			pkt[1] = seq;
+			n = 0x26;
+		}
+	}
+	g_pmJigSeq = (g_pmJigSeq + 1) & 0x7f;
+recv:
+	left = sizeof(cert);
+	offset = 0;
+	memset(cert, 0, sizeof(cert));
+	do {
+		n = left < 0x26 ? left : 0x26;
+		ret = pmJigRead(pkt, n + 2);
+		if (ret != 0) {
+			SCE_DBG_PRINTF(11, 665, "receive message from SC fail(0x%08X)\n", ret);
+			goto close;
+		}
+		memcpy(cert + offset, pkt + 2, n);
+		if ((signed char)pkt[1] < 0)
+			break;
+		pkt[0] = 0xf2;
+		ret = pmJigWrite(pkt, 2);
+		if (ret != 0) {
+			SCE_DBG_PRINTF(11, 665, "receive message from SC fail(0x%08X)\n", ret);
+			goto close;
+		}
+		left -= n;
+		offset += n;
+	} while (left != 0);
+	ret = pmSmAuthSetCertificate(cert, type);
+	if (ret != 0)
+		SCE_DBG_PRINTF(11, 674, "vefiry_response fail\n");
+close:
+	closeRet = pmJigClose();
+	if (closeRet != 0) {
+		SCE_DBG_PRINTF(11, 683, "stop pm_sm fail\n");
+		ret = closeRet;
+	}
+	return ret;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: the second jig
- * authentication through pm_sm */
-POST_SS_DEFERRED int pm_auth2_common(int type)
+/* pm_sm service 3 of the jig authentication, a 0x28-byte challenge */
+int pmSmAuthGetChallenge(void *challenge, int type)	/* name unknown */
 {
-	if (type != 4 && type != 0xc)
+	ScePmSmAuthCommand command;
+	SceUInt32 result = 0;
+	int ret;
+
+	switch (type) {
+	case 4:
+	case 6:
+	case 12:
+		command.type = type;
+		break;
+	case 14:
+		command.type = 6;
+		break;
+	default:
 		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
-	return SCE_SBL_ERROR_UNSUPPORTED;
+	}
+	switch (type) {
+	case 4:
+	case 6:
+	case 12:
+		command.version = 1;
+		break;
+	case 14:
+		command.version = 2;
+		break;
+	default:
+		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	}
+	ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_AUTH_CHALLENGE, &result, &command,
+				    sizeof(command));
+	if (ret != 0)
+		return ret;
+	__builtin_memcpy(challenge, command.data, sizeof(command.data));
+	return result;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: pm_sm service 3 of
- * the jig authentication, a 0x28-byte challenge */
-POST_SS_DEFERRED int pmSmAuthGetChallenge(void *challenge, int type)	/* name unknown */
+/* pm_sm service 4 of the jig authentication */
+int pmSmAuthExchange4(void *data, int type)	/* name unknown */
 {
-	(void)type;
-	SceSblSsMgrForDriver_CD98CC92(challenge, 0, 0x28);
-	return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	ScePmSmAuthCommand command;
+	SceUInt32 result = 0;
+	int ret;
+
+	__builtin_memcpy(command.data, data, sizeof(command.data));
+	switch (type) {
+	case 4:
+	case 6:
+	case 12:
+		command.type = type;
+		break;
+	case 14:
+		command.type = 6;
+		break;
+	default:
+		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	}
+	switch (type) {
+	case 4:
+	case 6:
+	case 12:
+		command.version = 1;
+		break;
+	case 14:
+		command.version = 2;
+		break;
+	default:
+		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	}
+	ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_AUTH_EXCHANGE4, &result, &command,
+				    sizeof(command));
+	if (ret != 0)
+		return ret;
+	__builtin_memcpy(data, command.data, sizeof(command.data));
+	return result;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: pm_sm service 4 of
- * the jig authentication */
-POST_SS_DEFERRED int pmSmAuthExchange4(void *data, int type)	/* name unknown */
+/* pm_sm service 5 of the jig authentication */
+int pmSmAuthVerify5(const void *data, int type)	/* name unknown */
 {
-	(void)type;
-	SceSblSsMgrForDriver_CD98CC92(data, 0, 0x28);
-	return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	ScePmSmAuthCommand command;
+	SceUInt32 result = 0;
+	int ret;
+
+	__builtin_memcpy(command.data, data, sizeof(command.data));
+	switch (type) {
+	case 4:
+	case 6:
+	case 12:
+		command.type = type;
+		break;
+	case 14:
+		command.type = 6;
+		break;
+	default:
+		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	}
+	switch (type) {
+	case 4:
+	case 6:
+	case 12:
+		command.version = 1;
+		break;
+	case 14:
+		command.version = 2;
+		break;
+	default:
+		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	}
+	ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_AUTH_VERIFY5, &result, &command,
+				    sizeof(command));
+	return ret == 0 ? (int)result : ret;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: pm_sm service 5 of
- * the jig authentication */
-POST_SS_DEFERRED int pmSmAuthVerify5(const void *data, int type)	/* name unknown */
+/* pm_sm service 6 of the jig authentication */
+int pmSmAuthExchange6(void *data, int type)	/* name unknown */
 {
-	(void)data;
-	(void)type;
-	return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	ScePmSmAuthCommand command;
+	SceUInt32 result = 0;
+	int ret;
+
+	__builtin_memcpy(command.data, data, sizeof(command.data));
+	switch (type) {
+	case 4:
+	case 6:
+	case 12:
+		command.type = type;
+		break;
+	case 14:
+		command.type = 6;
+		break;
+	default:
+		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	}
+	switch (type) {
+	case 4:
+	case 6:
+	case 12:
+		command.version = 1;
+		break;
+	case 14:
+		command.version = 2;
+		break;
+	default:
+		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	}
+	ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_AUTH_EXCHANGE6, &result, &command,
+				    sizeof(command));
+	if (ret != 0)
+		return ret;
+	__builtin_memcpy(data, command.data, sizeof(command.data));
+	return result;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: pm_sm service 6 of
- * the jig authentication */
-POST_SS_DEFERRED int pmSmAuthExchange6(void *data, int type)	/* name unknown */
+/* pm_sm service 7 of the jig authentication */
+int pmSmAuthVerify7(const void *data, int type)	/* name unknown */
 {
-	(void)type;
-	SceSblSsMgrForDriver_CD98CC92(data, 0, 0x28);
-	return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
-}
+	ScePmSmAuthCommand command;
+	SceUInt32 result = 0;
+	int ret;
 
-/* PLACEHOLDER: cryptographic routine, deferred: pm_sm service 7 of
- * the jig authentication */
-POST_SS_DEFERRED int pmSmAuthVerify7(const void *data, int type)	/* name unknown */
-{
-	(void)data;
-	(void)type;
-	return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	__builtin_memcpy(command.data, data, sizeof(command.data));
+	switch (type) {
+	case 4:
+	case 6:
+	case 12:
+		command.type = type;
+		break;
+	case 14:
+		command.type = 6;
+		break;
+	default:
+		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	}
+	switch (type) {
+	case 4:
+	case 6:
+	case 12:
+		command.version = 1;
+		break;
+	case 14:
+		command.version = 2;
+		break;
+	default:
+		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	}
+	ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_AUTH_VERIFY7, &result, &command,
+				    sizeof(command));
+	return ret == 0 ? (int)result : ret;
 }
 
 /* pm_sm updates the product mode in the NVS data */
@@ -245,22 +588,44 @@ int stop_pm_secure_module(void)
 	return sceSblSmCommStopSm(g_pmSmId, &result);
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: pm_sm service 9 of
- * the jig authentication, a 0x104-byte certificate */
-POST_SS_DEFERRED int pmSmAuthGetCertificate(void *certificate, int type)	/* name unknown */
+/* pm_sm service 9 of the jig authentication, a 0x104-byte certificate */
+int pmSmAuthGetCertificate(void *certificate, int type)	/* name unknown */
 {
-	(void)type;
-	SceSblSsMgrForDriver_CD98CC92(certificate, 0, 0x104);
-	return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	ScePmSmCertCommand command;
+	SceUInt32 result = 0;
+	int ret;
+
+	if (type == 4)
+		command.type = 0x48;
+	else if (type == 0xc)
+		command.type = 0x49;
+	else
+		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_AUTH_GET_CERT, &result, &command,
+				    sizeof(command));
+	if (ret != 0)
+		return ret;
+	(memcpy)(certificate, command.cert, sizeof(command.cert));
+	return result;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: pm_sm service 10 of
- * the jig authentication */
-POST_SS_DEFERRED int pmSmAuthSetCertificate(const void *certificate, int type)	/* name unknown */
+/* pm_sm service 10 of the jig authentication */
+int pmSmAuthSetCertificate(const void *certificate, int type)	/* name unknown */
 {
-	(void)certificate;
-	(void)type;
-	return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	ScePmSmCertCommand command;
+	SceUInt32 result = 0;
+	int ret;
+
+	if (type == 4)
+		command.type = 0x48;
+	else if (type == 0xc)
+		command.type = 0x49;
+	else
+		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
+	(memcpy)(command.cert, certificate, sizeof(command.cert));
+	ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_AUTH_SET_CERT, &result, &command,
+				    sizeof(command));
+	return ret == 0 ? (int)result : ret;
 }
 
 /* the product mode the syscon keeps, read by pm_sm */

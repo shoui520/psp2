@@ -46,6 +46,8 @@ int SceSblPostSsMgrForDriver_2C463AF1(SceUInt32 type, SceSize size, void *key);
 int SceSblPostSsMgrForDriver_3DB69911(const void *signature, const void *hash, const void *key, int type);
 int SceSblPostSsMgrForDriver_3F9BDEDF(SceUInt32 time);	/* vitasdk: ksceSblPostSsMgrSetCpRtc */
 int SceSblPostSsMgrForDriver_4100B9E9(void);
+/* vitasdk: ksceSblPostSsMgrDebugEncryptKeystone */
+int SceSblPostSsMgrForDriver_42474C8B(const void *src, ScePostSsKeystone *keystone);
 int sceSblPmMgrGetProductModeFromNVS(SceUInt8 *mode);
 int sceSblLicMgrGetExpireDate(SceUInt32 *date, int fromNvs);
 int SceSblPostSsMgrForDriver_739C981E(SceUInt32 version, SceUInt32 index, void *keys);
@@ -62,6 +64,8 @@ int SceSblPostSsMgrForDriver_C6684F7E(void *keys);
 SceUInt8 SceSblPostSsMgrForDriver_C93C0A0D(void);
 int SceSblPostSsMgrForDriver_C977601E(void);
 int SceSblPostSsMgrForDriver_CB5436BD(SceUInt32 type, SceSize size, void *key);
+/* vitasdk: ksceSblPostSsMgrDebugDecryptKeystone */
+int SceSblPostSsMgrForDriver_CC5AA5A5(const ScePostSsKeystone *keystone, void *dst);
 int sceSblRtcMgrSetCpRtcLogical(void);
 /* vitasdk: ksceSblPostSsMgrVerifyKeystone */
 int SceSblPostSsMgrForDriver_DDA6FA6D(const ScePostSsKeystone *keystone, SceUInt16 type);

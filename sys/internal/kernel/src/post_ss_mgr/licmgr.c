@@ -82,6 +82,33 @@ typedef struct SceActSig {
 	SceUInt8 signature[0x100];
 } SceActSig;
 
+/* an ACT_SM_DECRYPT_NVS request (names unknown) */
+typedef struct SceActSmDecryptNvsCommand {
+	SceActNvsData nvs;
+	SceUInt8 reserved[0x60];
+} SceActSmDecryptNvsCommand;
+
+/* an ACT_SM_CHECK request (names unknown) */
+typedef struct SceActSmCheckCommand {
+	int timeResult;
+	SceUInt32 now;
+	int status;
+	SceUInt32 endDate;
+	SceUInt32 reserved[2];
+	SceActNvsData nvs;
+	SceActData act;
+	SceActSig sig;
+} SceActSmCheckCommand;
+
+/* an ACT_SM_ACTIVATE request (names unknown) */
+typedef struct SceActSmActivateCommand {
+	SceActData act;
+	SceActSig sig;
+	SceActData oldAct;
+	SceActSig oldSig;
+	SceActNvsData nvs;
+} SceActSmActivateCommand;
+
 int licMgrHexDecode(const char *hex, void *data, SceSize size);
 int licMgrGetHeaderValue(const char *header, SceSize size, SceUInt32 *value, const char *key);
 int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path);
@@ -994,40 +1021,84 @@ int invoke_act_secure_module(const char *path)	/* name unknown */
 	return sceSblSmCommStartSm(0, path, 0, &info, &g_actSmId);
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: act_sm service 4,
- * decrypts the activation kept in the NVS */
-POST_SS_DEFERRED int actSmDecryptNvs(SceActNvsData *nvs)
+/* act_sm service 4, decrypts the activation kept in the NVS */
+int actSmDecryptNvs(SceActNvsData *nvs)
 {
-	(void)nvs;
-	return SCE_SBL_ERROR_UNSUPPORTED;
+	SceActSmDecryptNvsCommand command;
+	SceSblSmCommPair stopResult;
+	SceUInt32 result = 0;
+	int ret, stop;
+
+	ret = invoke_act_secure_module(ACT_SM_PATH);
+	if (ret != 0)
+		return ret;
+	command.nvs = *nvs;
+	ret = sceSblSmCommCallFunc(g_actSmId, ACT_SM_DECRYPT_NVS, &result, &command,
+				    sizeof(command));
+	if (ret != 0)
+		result = SCE_SBL_ERROR_LIC_NO_MEMORY;
+	stop = sceSblSmCommStopSm(g_actSmId, &stopResult);
+	if (stop != 0)
+		return stop;
+	*nvs = command.nvs;
+	return result;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: act_sm service 11,
- * verifies the activation and gives its end date and the license status */
-POST_SS_DEFERRED int actSmCheck(int timeResult, SceUInt32 now, const SceActNvsData *nvs,
-				const SceActData *act, const SceActSig *sig, SceUInt32 *endDate,
-				int *status)
+/* act_sm service 11, verifies the activation and gives its end date and the license status */
+int actSmCheck(int timeResult, SceUInt32 now, const SceActNvsData *nvs,
+	       const SceActData *act, const SceActSig *sig, SceUInt32 *endDate,
+	       int *status)
 {
-	(void)timeResult;
-	(void)now;
-	(void)nvs;
-	(void)act;
-	(void)sig;
-	(void)endDate;
-	(void)status;
-	return SCE_SBL_ERROR_UNSUPPORTED;
+	SceActSmCheckCommand command;
+	SceSblSmCommPair stopResult;
+	SceUInt32 result = 0;
+	int ret, stop;
+
+	ret = invoke_act_secure_module(ACT_SM_PATH);
+	if (ret != 0)
+		return ret;
+	command.timeResult = timeResult;
+	command.now = now;
+	command.nvs = *nvs;
+	memcpy(&command.act, act, sizeof(command.act));
+	memcpy(&command.sig, sig, sizeof(command.sig));
+	ret = sceSblSmCommCallFunc(g_actSmId, ACT_SM_CHECK, &result, &command,
+				    sizeof(command));
+	if (ret != 0)
+		result = SCE_SBL_ERROR_LIC_NO_MEMORY;
+	stop = sceSblSmCommStopSm(g_actSmId, &stopResult);
+	if (stop != 0)
+		return stop;
+	*endDate = command.endDate;
+	*status = command.status;
+	return result;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: act_sm service 10,
- * verifies a new activation code and gives the NVS data for it */
-POST_SS_DEFERRED int actSmActivate(const SceActData *act, const SceActSig *sig,
-				   SceActNvsData *nvs, const SceActData *oldAct,
-				   const SceActSig *oldSig)
+/* act_sm service 10, verifies a new activation code and gives the NVS data for it */
+int actSmActivate(const SceActData *act, const SceActSig *sig,
+		  SceActNvsData *nvs, const SceActData *oldAct,
+		  const SceActSig *oldSig)
 {
-	(void)act;
-	(void)sig;
-	(void)nvs;
-	(void)oldAct;
-	(void)oldSig;
-	return SCE_SBL_ERROR_UNSUPPORTED;
+	SceActSmActivateCommand command;
+	SceSblSmCommPair stopResult;
+	SceUInt32 result = 0;
+	int ret, stop;
+
+	ret = invoke_act_secure_module(ACT_SM_PATH);
+	if (ret != 0)
+		return ret;
+	memcpy(&command.act, act, sizeof(command.act));
+	command.nvs = *nvs;
+	memcpy(&command.sig, sig, sizeof(command.sig));
+	memcpy(&command.oldAct, oldAct, sizeof(command.oldAct));
+	memcpy(&command.oldSig, oldSig, sizeof(command.oldSig));
+	ret = sceSblSmCommCallFunc(g_actSmId, ACT_SM_ACTIVATE, &result, &command,
+				    sizeof(command));
+	if (ret != 0)
+		result = SCE_SBL_ERROR_LIC_NO_MEMORY;
+	stop = sceSblSmCommStopSm(g_actSmId, &stopResult);
+	if (stop != 0)
+		return stop;
+	*nvs = command.nvs;
+	return result;
 }

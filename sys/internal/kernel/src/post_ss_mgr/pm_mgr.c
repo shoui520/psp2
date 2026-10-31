@@ -83,7 +83,7 @@ int sceSblPmMgrSetProductModeCommon(int mode, int useSm)
 			return stop;
 		}
 		if (mode == PM_MODE_ON) {
-			ret = pm_auth_common(0xe, PM_SM_PATH);
+			ret = pm_auth_common(0xe);
 			if (ret != 0) {
 				SCE_PRINTF_WITH_INFO(0, 402, "STEP 8657(0x%08x)\n", ret);
 				stop = stop_pm_secure_module();

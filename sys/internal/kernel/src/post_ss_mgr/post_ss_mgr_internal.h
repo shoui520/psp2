@@ -86,7 +86,7 @@ int sceSblPmMgrInit(void);
 int sceSblPmMgrSetProductModeCommon(int mode, int useSm);
 
 /* pm_syscon_jig.c */
-int pm_auth_common(int type, const char *path);
+int pm_auth_common(int type);
 int pm_auth2_common(int type);
 int invoke_pm_secure_module(const char *path);			/* name unknown */
 int stop_pm_secure_module(void);					/* name unknown */
