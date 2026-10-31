@@ -12,6 +12,11 @@ MsgPipe::MsgPipe()
 	m_owner = false;
 }
 
+MsgPipe::~MsgPipe()
+{
+	m_id = -1;
+}
+
 int MsgPipe::create(const char *name, SceSize bufSize, int budget, int openLimit)
 {
 	SceKernelMsgPipeOptParam opt;

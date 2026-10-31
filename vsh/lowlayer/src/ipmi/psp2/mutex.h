@@ -11,6 +11,7 @@ namespace psp2 {
 class Mutex {
 public:
 	Mutex();
+	~Mutex();
 
 	int create();
 	int finalize();

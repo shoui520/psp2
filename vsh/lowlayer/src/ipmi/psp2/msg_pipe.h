@@ -32,6 +32,7 @@ namespace psp2 {
 class MsgPipe {
 public:
 	MsgPipe();
+	~MsgPipe();
 
 	int create(const char *name, SceSize bufSize, int budget, int openLimit);
 	int open(const char *name);

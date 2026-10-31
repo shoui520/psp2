@@ -11,6 +11,7 @@ namespace psp2 {
 class Semaphore {
 public:
 	Semaphore();
+	~Semaphore();
 
 	int create(const char *name, int maxCount, int initCount);
 	int open(const char *name);

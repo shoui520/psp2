@@ -11,6 +11,11 @@ Semaphore::Semaphore()
 	m_owner = false;
 }
 
+Semaphore::~Semaphore()
+{
+	m_id = -1;
+}
+
 int Semaphore::create(const char *name, int maxCount, int initCount)
 {
 	SceUID id = sceKernelCreateSema(name,

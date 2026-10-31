@@ -10,6 +10,11 @@ Mutex::Mutex()
 	m_id = -1;
 }
 
+Mutex::~Mutex()
+{
+	m_id = -1;
+}
+
 int Mutex::create()
 {
 	SceUID id = sceKernelCreateMutex("SceLibIpmi", SCE_KERNEL_MUTEX_ATTR_TH_PRIO, 0, NULL);
