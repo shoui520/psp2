@@ -12,6 +12,7 @@
 #include <std/setjmp.h>
 #include "gif_lib.h"
 #include "jpeglib.h"
+#include "png.h"
 
 namespace paf {
 
@@ -242,6 +243,8 @@ public:
 	virtual ~PngAttribute();
 };
 
+class PngReader;
+
 /* PNG. */
 class PngCodec : public ImageCodec {
 public:
@@ -259,11 +262,40 @@ public:
 			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
 	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
 			       ImageArray *images, ImageArray *cluts);
+	virtual bool Open(common::SharedPtr<File> file, int64_t offset, size_t size,
+			  const ImageAttribute *attr);
+	virtual bool Open(common::SharedPtr<Buffer> buf, const ImageAttribute *attr);
+	virtual bool Close();
+	virtual bool BeginLines(const ImageAttribute *attr, const ImageArray *images,
+				uint32_t *pitch, bool *topdown);
+	virtual bool EndLines();
+	virtual bool PrepareLine();
+	virtual bool ReadLine(void *dst, const ImageRect *rect);
+	virtual bool SkipLine();
 	virtual ~PngCodec();
 
 private:
-	/* PROVISIONAL: the codec's state, until image_png.cpp is written (0x40 bytes in all). */
-	uint8_t m_state[0x34];
+	/* The libpng transformations ReadHeader chooses for the image. */
+	enum {
+		Transform_StripAlpha = 0x01,
+		Transform_Packing = 0x02,
+		Transform_Filler = 0x04,
+		Transform_Strip16 = 0x08,
+		Transform_GrayToRGB = 0x10,
+		Transform_ExpandGray = 0x20
+	};
+
+	bool MakeCLUT(PngReader *reader, uint8_t *dst, const png_color *palette, int32_t count);
+	bool Decode(PngReader *reader, const ImageAttribute *attr, ImageArray *images,
+		    ImageArray *cluts, DecodeCancelFunc cancelfunc, void *userdata);
+	bool ReadHeader(PngReader *reader, ImageAttribute *attr, ImageArray *images,
+			ImageArray *cluts);
+
+	uint32_t m_transforms;
+	int32_t m_pitch;		/* bytes of a decoded row */
+	PngReader *m_reader;		/* the image Open opened for line decoding */
+	thread::Mutex m_mutex;
+	memory::HeapAllocator *m_allocator;
 };
 
 class JpgAttribute : public ImageAttribute {
