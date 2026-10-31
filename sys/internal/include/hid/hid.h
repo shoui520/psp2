@@ -71,3 +71,13 @@ int sceHidMouseUnregisterReadHintCallback(SceUID callbackId);
 
 int sceHidKeyboardClear(SceUID handle);
 int sceHidKeyboardEnumerate(SceUID *handle, int count);
+
+/* A keyboard's input report, as sceHidKeyboardPeek returns them (0x18 bytes). */
+typedef struct SceHidKeyboardReport {
+	SceUInt8 reserved;
+	SceUInt8 modifiers[2];
+	SceUInt8 keycodes[13];
+	SceUInt64 timestamp;
+} SceHidKeyboardReport;
+
+int sceHidKeyboardPeek(SceUID handle, SceHidKeyboardReport *reports, int count);

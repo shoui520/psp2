@@ -2,8 +2,6 @@
 #include "../std/string.h"
 #include "../std/stdc++/atexit.h"
 
-static InputTimerList inputTimers;
-
 InputTimerList *InputTimerListConstruct(InputTimerList *self,
 				       const void *allocator)
 {
@@ -41,14 +39,4 @@ InputTimerList *InputTimerListDestroy(InputTimerList *self)
 	self->root_node = (InputTimerNode *)-1;
 	self->count = -1;
 	return self;
-}
-
-void InputDeviceTimerListInitialize(void)
-{
-	extern void *__dso_handle;
-	unsigned char allocator[4];
-
-	InputTimerListConstruct(&inputTimers, allocator);
-	ScePafStdc_C95732BB(&inputTimers,
-			  (void (*)(void *))InputTimerListDestroy, &__dso_handle);
 }

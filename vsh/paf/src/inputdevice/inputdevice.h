@@ -23,6 +23,5 @@ typedef char InputTimerListSizeCheck[sizeof(InputTimerList) == 12 ? 1 : -1];
 InputTimerList *InputTimerListConstruct(InputTimerList *self,
 				       const void *allocator);
 InputTimerList *InputTimerListDestroy(InputTimerList *self);
-void InputDeviceTimerListInitialize(void);
 
 #endif
