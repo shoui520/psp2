@@ -73,7 +73,7 @@ SceUInt16 swdlCalculateCrc(const SceUInt8 *data, SceSize size)
 }
 
 /* name unknown: make sure the frame buffer holds at least 140 bytes */
-int swdlAllocateFrameBuffer(SwdlContext *context)
+__attribute__((noinline)) int swdlAllocateFrameBuffer(SwdlContext *context)
 {
 	if (context->bufferCapacity > 139)
 		return 0;
@@ -93,7 +93,7 @@ int swdlAllocateFrameBuffer(SwdlContext *context)
 }
 
 /* name unknown: free the frame buffer and the list */
-int swdlReleaseBuffers(SwdlContext *context)
+__attribute__((noinline)) int swdlReleaseBuffers(SwdlContext *context)
 {
 	SwdlListNode *node;
 	SwdlListNode *next;
@@ -122,7 +122,7 @@ int swdlReleaseBuffers(SwdlContext *context)
 }
 
 /* name unknown: make sure the frame buffer holds at least size bytes */
-int swdlReserveFrameBuffer(SwdlContext *context, SceSize size)
+__attribute__((noinline)) int swdlReserveFrameBuffer(SwdlContext *context, SceSize size)
 {
 	if (context->bufferCapacity >= size)
 		return 0;
@@ -341,7 +341,7 @@ int swdlReadHexRecords(SwdlHexReader *reader)
 }
 
 /* name unknown: read *size bytes at offset of the image file; *size becomes what was read */
-int swdlReadFileAt(SceUID fd, void *data, SceUInt32 offset, SceSize *size)
+__attribute__((noinline)) int swdlReadFileAt(SceUID fd, void *data, SceUInt32 offset, SceSize *size)
 {
 	int result;
 
@@ -356,7 +356,7 @@ int swdlReadFileAt(SceUID fd, void *data, SceUInt32 offset, SceSize *size)
 }
 
 /* name unknown: end an HDLC frame: its check sequence and the flag byte 0x7e */
-int swdlEndFrame(const SceUInt8 *data, SceSize *size, SceUInt8 *trailer)
+__attribute__((noinline)) int swdlEndFrame(const SceUInt8 *data, SceSize *size, SceUInt8 *trailer)
 {
 	SceUInt16 crc = swdlCalculateCrc(data, *size);
 
@@ -368,7 +368,7 @@ int swdlEndFrame(const SceUInt8 *data, SceSize *size, SceUInt8 *trailer)
 }
 
 /* name unknown: the version an empty slot reports */
-void swdlGetZeroVersion(const void **version, SceSize *size)
+__attribute__((noinline)) void swdlGetZeroVersion(const void **version, SceSize *size)
 {
 	*version = swdlZeroVersion;
 	*size = 6;
@@ -401,7 +401,7 @@ static inline int swdlStartFrameTimer(SwdlContext *context)
  * name unknown: send what the sequence has to send: transmitState 1, 2, 5 and 7 ask the
  * step for a frame, 3 sends the last one again; 0, 4 and 6 wait for a reply.
  */
-int swdlSendFrames(SwdlContext *context)
+__attribute__((noinline)) int swdlSendFrames(SwdlContext *context)
 {
 	SwdlPortInterface *port = context->port;
 	SceUInt32 state = context->transmitState;
@@ -489,7 +489,7 @@ out:
 
 /* name unknown: take a frame from the port (waiting when received is given) and give it
  * to the step; a frame with a bad check sequence is asked for again twice */
-int swdlReceiveFrame(SwdlContext *context, int *received)
+__attribute__((noinline)) int swdlReceiveFrame(SwdlContext *context, int *received)
 {
 	SwdlPortInterface *port = context->port;
 	int wait = received != NULL;
@@ -545,7 +545,7 @@ int swdlReceiveFrame(SwdlContext *context, int *received)
 }
 
 /* name unknown: no reply in time: tell the step, ten times at most */
-int swdlHandleFrameTimeout(SwdlContext *context)
+__attribute__((noinline)) int swdlHandleFrameTimeout(SwdlContext *context)
 {
 	int result;
 
@@ -570,7 +570,7 @@ int swdlHandleFrameTimeout(SwdlContext *context)
 }
 
 /* name unknown: the download was cancelled: tell the step */
-int swdlHandleCancel(SwdlContext *context)
+__attribute__((noinline)) int swdlHandleCancel(SwdlContext *context)
 {
 	int result;
 
@@ -591,14 +591,14 @@ int swdlHandleCancel(SwdlContext *context)
 }
 
 /* start sending the current step's frames */
-int swdlStartSend(SwdlContext *context)
+__attribute__((noinline)) int swdlStartSend(SwdlContext *context)
 {
 	context->transmitState = 1;
 	return swdlSendFrames(context);
 }
 
 /* take size bytes from *cursor into data (skip them when data is NULL) */
-void swdlUnpackBytes(SceUInt8 *data, const SceUInt8 **cursor, SceSize size)
+__attribute__((noinline)) void swdlUnpackBytes(SceUInt8 *data, const SceUInt8 **cursor, SceSize size)
 {
 	SceUInt8 *end;
 
@@ -614,14 +614,14 @@ void swdlUnpackBytes(SceUInt8 *data, const SceUInt8 **cursor, SceSize size)
 	while (data != end);
 }
 
-int swdlSetResponseTimeout(SwdlContext *context, SceUInt32 timeout)
+__attribute__((noinline)) int swdlSetResponseTimeout(SwdlContext *context, SceUInt32 timeout)
 {
 	context->responseTimeout = timeout;
 	return 0;
 }
 
 /* the largest packet the port takes */
-int swdlGetPortPacketSize(SwdlContext *context, SceSize *size)
+__attribute__((noinline)) int swdlGetPortPacketSize(SwdlContext *context, SceSize *size)
 {
 	SwdlPortInterface *port = context->port;
 
@@ -631,7 +631,7 @@ int swdlGetPortPacketSize(SwdlContext *context, SceSize *size)
 }
 
 /* the packets the port can still queue */
-int swdlGetPortFreePackets(SwdlContext *context, SceUInt32 *count)
+__attribute__((noinline)) int swdlGetPortFreePackets(SwdlContext *context, SceUInt32 *count)
 {
 	SwdlPortInterface *port = context->port;
 
@@ -676,7 +676,7 @@ int swdlIsWithinTimeout(SceUInt32 start, SceUInt32 timeout)
 }
 
 /* the port's last error */
-int swdlGetPortError(SwdlPortInterface *port)
+__attribute__((noinline)) int swdlGetPortError(SwdlPortInterface *port)
 {
 	int error;
 	int result;
@@ -688,7 +688,7 @@ int swdlGetPortError(SwdlPortInterface *port)
 }
 
 /* hand the attach event to the current step */
-int swdlHandleAttach(SwdlContext *context)
+__attribute__((noinline)) int swdlHandleAttach(SwdlContext *context)
 {
 	int result;
 
@@ -2276,7 +2276,7 @@ int swdlWriteNvItem(SwdlContext *context, const void *data, SceSize size)
 }
 
 /* save the item a read reply carries (none on an error status); 1 when all are done */
-int swdlBackupNvItem(SwdlContext *context, const SceUInt8 *reply, SceSize length)
+__attribute__((noinline)) int swdlBackupNvItem(SwdlContext *context, const SceUInt8 *reply, SceSize length)
 {
 	SwdlNvRecordHeader table;
 	int result;
@@ -2305,7 +2305,7 @@ int swdlBackupNvItem(SwdlContext *context, const SceUInt8 *reply, SceSize length
 }
 
 /* the reads the backup makes: every instance of every item (0xffff without a file) */
-int swdlCountNvItems(SwdlContext *context)
+__attribute__((noinline)) int swdlCountNvItems(SwdlContext *context)
 {
 	SceUInt32 total;
 	int i;
@@ -2323,7 +2323,7 @@ int swdlCountNvItems(SwdlContext *context)
 }
 
 /* the item after item (0xfffe: the first), 0xffff after the last */
-int swdlNextNvItem(SwdlContext *context, SceUInt16 item, SceUInt16 *next)
+__attribute__((noinline)) int swdlNextNvItem(SwdlContext *context, SceUInt16 item, SceUInt16 *next)
 {
 	SceUInt16 id = 0xffff;
 
@@ -2347,7 +2347,7 @@ int swdlNextNvItem(SwdlContext *context, SceUInt16 item, SceUInt16 *next)
 }
 
 /* write the table header with the count of items saved */
-int swdlWriteNvTable(SwdlContext *context)
+__attribute__((noinline)) int swdlWriteNvTable(SwdlContext *context)
 {
 	SwdlNvRecordHeader table;
 	SceUInt16 count = context->nvItemsWritten;
@@ -2363,7 +2363,7 @@ int swdlWriteNvTable(SwdlContext *context)
 }
 
 /* mark the backup file complete */
-int swdlWriteBackupMagic(SwdlContext *context)
+__attribute__((noinline)) int swdlWriteBackupMagic(SwdlContext *context)
 {
 	int result;
 
@@ -2791,7 +2791,7 @@ unlock:
 }
 
 /* name unknown: close the channel open() opened */
-int swdlPortClose(SwdlPortInterface *interface)
+int swdlPortClose(SwdlPortInterface *interface, int flags)
 {
 	SwdlPort *port;
 	int result;
@@ -3462,4 +3462,1094 @@ void swdlDestroyPort(SwdlPortInterface *interface)
 	sceKernelFinalizeFastMutex(&port->rxLock);
 	sceKernelFinalizeFastMutex(&port->txLock);
 	port->initialized = 0;
+}
+
+/* the last step of each sequence: the sequence is over */
+int swdlBackupEndSend(SwdlContext *context)
+{
+	return 3;
+}
+
+int swdlDownloadEndSend(SwdlContext *context)
+{
+	return 3;
+}
+
+int swdlModeChangeEndSend(SwdlContext *context)
+{
+	return 3;
+}
+
+int swdlUpdateEndSend(SwdlContext *context)
+{
+	return 3;
+}
+
+int swdlRestoreEndSend(SwdlContext *context)
+{
+	return 3;
+}
+
+int swdlBackupEndReceive(SwdlContext *context)
+{
+	return 3;
+}
+
+int swdlDownloadEndReceive(SwdlContext *context)
+{
+	return 3;
+}
+
+int swdlModeChangeEndReceive(SwdlContext *context)
+{
+	return 3;
+}
+
+int swdlUpdateEndReceive(SwdlContext *context)
+{
+	return 3;
+}
+
+int swdlRestoreEndReceive(SwdlContext *context)
+{
+	return 3;
+}
+
+/* name unknown: DIAG command 0x30, argument 0 */
+int swdlSendCommand30Start(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+
+	buffer[0] = 0x30;
+	buffer[1] = 0;
+	buffer[2] = 0;
+	context->bufferLength = 3;
+	swdlEndFrame(buffer, &context->bufferLength, buffer + 3);
+	context->transmitState = 4;
+	return 0;
+}
+
+/* name unknown: DIAG command 0x30, argument 1 */
+int swdlSendCommand30End(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+
+	buffer[0] = 0x30;
+	buffer[1] = 0;
+	buffer[2] = 1;
+	context->bufferLength = 3;
+	swdlEndFrame(buffer, &context->bufferLength, buffer + 3);
+	context->transmitState = 4;
+	return 0;
+}
+
+/* name unknown: DIAG command 0x2f */
+int swdlSendCommand2f(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+
+	buffer[0] = 0x2f;
+	buffer[1] = 0;
+	buffer[2] = 0;
+	context->bufferLength = 3;
+	swdlEndFrame(buffer, &context->bufferLength, buffer + 3);
+	context->transmitState = 4;
+	return 0;
+}
+
+/* name unknown: the status request: DIAG 0x0c in mode 1, subsystem 4 command 0x0e in
+ * mode 2 */
+static inline int swdlSendStatus(SwdlContext *context)
+{
+	SceUInt8 *buffer;
+
+	if (context->mode == 1) {
+		buffer = context->buffer;
+		buffer[0] = 0x0c;
+		context->bufferLength = 1;
+		swdlEndFrame(buffer, &context->bufferLength, buffer + 1);
+		context->transmitState = 4;
+		return 0;
+	}
+	if (context->mode == 2) {
+		buffer = context->buffer;
+		buffer[0] = 0x4b;
+		buffer[2] = 0x0e;
+		buffer[3] = 0;
+		buffer[1] = 4;
+		context->bufferLength = 4;
+		swdlEndFrame(buffer, &context->bufferLength, buffer + 4);
+		context->transmitState = 4;
+		return 0;
+	}
+	return (int)0x80330002;
+}
+
+int swdlBackupSendStatus(SwdlContext *context)
+{
+	return swdlSendStatus(context);
+}
+
+int swdlModeChangeSendStatus(SwdlContext *context)
+{
+	return swdlSendStatus(context);
+}
+
+int swdlRestoreSendStatus(SwdlContext *context)
+{
+	return swdlSendStatus(context);
+}
+
+/* name unknown: the service programming code (DIAG 0x41), the empty slot's "000000" */
+typedef struct __attribute__((packed)) SwdlSpc {
+	SceUInt32 low;
+	SceUInt16 high;
+} SwdlSpc;
+
+static inline void swdlSendSpc(SwdlContext *context)
+{
+	const void *version;
+	SceSize size;
+	SceUInt8 *buffer;
+	SceUInt8 *cursor;
+
+	swdlGetZeroVersion(&version, &size);
+	buffer = context->buffer;
+	cursor = buffer;
+	*cursor++ = 0x41;
+	((SwdlSpc *)cursor)->low = ((const SceUInt32 *)version)[0];
+	((SwdlSpc *)cursor)->high = ((const SceUInt16 *)version)[2];
+	context->bufferLength = 7;
+	swdlEndFrame(buffer, &context->bufferLength, buffer + 7);
+	context->transmitState = 4;
+}
+
+int swdlBackupSendSpc(SwdlContext *context)
+{
+	swdlSendSpc(context);
+	return 0;
+}
+
+int swdlRestoreSendSpc(SwdlContext *context)
+{
+	if (context->restore.fd == 0)
+		return 1;
+	swdlSendSpc(context);
+	return 0;
+}
+
+/* name unknown: the replies to commands 0x30 and 0x2f */
+int swdlReceiveCommand30Start(SwdlContext *context)
+{
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->receiveBuffer[0] == 0x30)
+			return 1;
+		return (int)0x80330708;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+int swdlReceiveCommand30End(SwdlContext *context)
+{
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->receiveBuffer[0] == 0x30)
+			return 1;
+		return (int)0x80330708;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+int swdlReceiveCommand2f(SwdlContext *context)
+{
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->receiveBuffer[0] == 0x2f)
+			return 1;
+		return (int)0x80330708;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the SPC reply: 0x41 with 1 when the code was accepted */
+static inline int swdlReceiveSpc(SwdlContext *context)
+{
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->receiveBuffer[0] != 0x41)
+			return (int)0x80330708;
+		if (context->receiveBuffer[1] == 1)
+			return 1;
+		return (int)0x80330709;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+int swdlBackupReceiveSpc(SwdlContext *context)
+{
+	return swdlReceiveSpc(context);
+}
+
+int swdlRestoreReceiveSpc(SwdlContext *context)
+{
+	return swdlReceiveSpc(context);
+}
+
+/* name unknown: the status reply; a mode 1 request the target rejects (0x13) is sent
+ * again in mode 2 */
+static inline int swdlReceiveStatus(SwdlContext *context)
+{
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->mode == 1) {
+			if (context->receiveBuffer[0] == 0x0c)
+				return 1;
+			if (context->receiveBuffer[0] != 0x13)
+				return (int)0x80330708;
+			context->transmitState = 1;
+			context->mode = 2;
+			return 0;
+		}
+		if (context->mode != 2)
+			return (int)0x80330708;
+		if (context->receiveBuffer[0] == 0x4b)
+			return 1;
+		return (int)0x80330708;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+int swdlBackupReceiveStatus(SwdlContext *context)
+{
+	return swdlReceiveStatus(context);
+}
+
+int swdlModeChangeReceiveStatus(SwdlContext *context)
+{
+	return swdlReceiveStatus(context);
+}
+
+int swdlRestoreReceiveStatus(SwdlContext *context)
+{
+	return swdlReceiveStatus(context);
+}
+
+/* name unknown: an NV read reply (0x26) goes to the backup file; a rejected item
+ * (0x13 to 0x15) is skipped */
+int swdlBackupReceiveNvItem(SwdlContext *context)
+{
+	SceUInt32 command;
+	int result;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		command = context->receiveBuffer[0];
+		if (command == 0x26) {
+			result = swdlBackupNvItem(context, context->receiveBuffer,
+						  context->receiveLength - 2);
+			if (result == 0)
+				context->transmitState = 1;
+			return result;
+		}
+		if (command - 0x13 > 2)
+			return (int)0x80330708;
+		context->transmitState = 1;
+		context->nvItemsDone++;
+		return 0;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: read the next NV item (DIAG 0x26) */
+int swdlBackupSendNvItem(SwdlContext *context)
+{
+	SceUInt8 *buffer;
+	int result;
+
+	if (context->backup.fd == 0)
+		return 1;
+	result = swdlNextNvItem(context, context->nvItem, &context->nvItem);
+	if (result < 0)
+		return result;
+	if (context->nvItem == 0xffff)
+		return 1;
+	buffer = context->buffer;
+	buffer[0] = 0x26;
+	buffer[1] = context->nvItem;
+	buffer[131] = 0;
+	buffer[132] = 0;
+	buffer[2] = context->nvItem >> 8;
+	memset(buffer + 3, 0, 0x80);
+	buffer[3] = context->nvTableInstance;
+	context->bufferLength = 133;
+	swdlEndFrame(buffer, &context->bufferLength, buffer + 133);
+	context->transmitState = 4;
+	return result;
+}
+
+/* name unknown: the backup sequence */
+static const SwdlStep swdlBackupSteps[7] = {
+	{ swdlBackupSendStatus, swdlBackupReceiveStatus },
+	{ swdlBackupSendSpc, swdlBackupReceiveSpc },
+	{ swdlSendCommand2f, swdlReceiveCommand2f },
+	{ swdlSendCommand30End, swdlReceiveCommand30End },
+	{ swdlBackupSendNvItem, swdlBackupReceiveNvItem },
+	{ swdlSendCommand30Start, swdlReceiveCommand30Start },
+	{ swdlBackupEndSend, swdlBackupEndReceive },
+};
+
+/* the backup is over: close the port and complete the file */
+static inline void swdlFinishBackup(SwdlContext *context)
+{
+	context->port->close(context->port, 0);
+	swdlReleaseBuffers(context);
+	swdlWriteNvTable(context);
+	swdlWriteBackupMagic(context);
+	context->notify(1, &context->notification);
+	context->state = 0;
+}
+
+/* name unknown: state 1, the NV backup */
+int swdlExecBackup(SwdlContext *context, SceUInt32 events)
+{
+	SwdlPortInterface *port = context->port;
+	SceUInt32 total;
+	SceUInt32 progress;
+	int result = events & 2;
+
+	if (events & 2) {
+		context->nvItemsDone = 0;
+		context->reserved528 = 0;
+		context->nvItem = 0xfffe;
+		context->backupSize = 0;
+		context->reserved520 = 0;
+		context->nvItemsWritten = 0;
+		context->progress = 0;
+		context->reportedProgress = 0;
+		memset(&context->stepIndex, 0, 0x468);
+		context->mode = 2;
+		context->steps = swdlBackupSteps;
+		result = swdlAllocateFrameBuffer(context);
+		if (result < 0)
+			goto error;
+		result = swdlCountNvItems(context);
+		if (result < 0)
+			goto error;
+		result = swdlSetResponseTimeout(context, 3000);
+		if (result < 0)
+			goto error;
+		result = port->open(port, 1);
+		if (result < 0)
+			goto error;
+		result = swdlStartSend(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishBackup(context);
+	}
+	if (events & 0x200) {
+		result = swdlReceiveFrame(context, NULL);
+		if (result < 0)
+			goto error;
+		total = context->nvItemTotal;
+		if (total != 0 && total != 0xffff) {
+			progress = 100 * context->nvItemsDone / total;
+			context->progress = progress;
+			if (progress > context->reportedProgress + 1) {
+				context->reportedProgress = progress;
+				context->notification.forwardedValue1 = (SceUInt8)progress;
+				context->notify(64, &context->notification);
+			}
+		}
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishBackup(context);
+	}
+	if (events & 0x1800) {
+		result = swdlHandleCancel(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishBackup(context);
+	}
+	if (events & 0x400) {
+		result = swdlHandleFrameTimeout(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishBackup(context);
+	}
+	if (events & 0x100000) {
+		result = context->lastError;
+error:
+		port->close(port, 0);
+		swdlReleaseBuffers(context);
+		context->notification.forwardedValue2 = result;
+		context->notify(128, &context->notification);
+	}
+	return result;
+}
+
+/* name unknown: start at the first image's open */
+int swdlDownloadStartImages(SwdlContext *context)
+{
+	context->phase = 1;
+	return 1;
+}
+
+int swdlUpdateStartImages(SwdlContext *context)
+{
+	context->phase = 1;
+	return 1;
+}
+
+/* name unknown: a step that waits for no reply */
+int swdlDownloadSkipReply(SwdlContext *context)
+{
+	return 1;
+}
+
+int swdlUpdateSkipReply(SwdlContext *context)
+{
+	return 1;
+}
+
+/* name unknown: send nothing, wait for the device to come back */
+int swdlDownloadWaitAttach(SwdlContext *context)
+{
+	context->transmitState = 4;
+	context->bufferLength = 0;
+	return 0;
+}
+
+int swdlDownloadReceiveAttach(SwdlContext *context)
+{
+	switch (context->receiveEvent) {
+	case 0x200:
+	case 0x400:
+	case 0x800:
+		return 0;
+	case 0x20000:
+		return 1;
+	default:
+		return (int)0x80330708;
+	}
+}
+
+/* name unknown: the streaming reset (0x2d), sent without waiting for a reply */
+int swdlDownloadSendReset(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+
+	buffer[0] = 0x7e;
+	buffer[1] = 0x2d;
+	context->bufferLength = 1;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 2);
+	context->transmitState = 7;
+	context->bufferLength++;
+	return 1;
+}
+
+/* name unknown: the streaming close (0x29) */
+int swdlDownloadSendClose(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+
+	buffer[0] = 0x7e;
+	buffer[1] = 0x29;
+	context->bufferLength = 1;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 2);
+	context->transmitState = 4;
+	context->bufferLength++;
+	return 0;
+}
+
+/* name unknown: the target's log text (0x0e), ended at the frame check sequence */
+static inline void swdlReceiveLog(SwdlContext *context)
+{
+	context->receiveBuffer[context->receiveLength - 3] = 0;
+	context->transmitState = 4;
+}
+
+/* name unknown: the open (0x26) and write (0x28) replies of the current image */
+int swdlDownloadReceiveImage(SwdlContext *context)
+{
+	SwdlPortInterface *port;
+	const SceUInt8 *cursor;
+	int index = context->download.index;
+	SceUInt8 code;
+	SceUInt8 skip[2];
+	SceUInt16 status;
+	SceInt8 mode;
+	SceUInt32 address;
+	SceSize size;
+	int raw;
+	int result;
+
+	switch (context->phase) {
+	case 1:
+		raw = 1;
+		port = context->port;
+		switch (context->receiveEvent) {
+		case 0x200:
+			cursor = context->receiveBuffer + 1;
+			if (context->receiveBuffer[0] != 0x26) {
+				if (context->receiveBuffer[0] != 0x0e)
+					return (int)0x80330708;
+				swdlReceiveLog(context);
+				return 0;
+			}
+			swdlUnpackBytes((SceUInt8 *)&status, &cursor, 2);
+			swdlUnpackBytes((SceUInt8 *)&mode, &cursor, 1);
+			if (status != 0) {
+				if (status != 7)
+					return (int)0x80330708;
+				context->transmitState = 1;
+				context->phase = 3;
+				return 0;
+			}
+			if (mode != 1)
+				return (int)0x80330708;
+			result = swdlReserveFrameBuffer(context, 0x2000);
+			if (result < 0)
+				return result;
+			result = port->control(port, 6, &raw, sizeof(raw));
+			if (result < 0)
+				return result;
+			swdlUnpackBytes((SceUInt8 *)&context->windowSize, &cursor, 4);
+			context->fileOffset = 0;
+			context->imageWritten = 0;
+			context->sequence = 0;
+			size = context->windowSize;
+			if (size > context->imageSize)
+				size = context->imageSize;
+			context->transmitState = 1;
+			context->windowRemaining = size;
+			context->windowSize = size;
+			context->phase = 2;
+			return result;
+		case 0x400:
+			context->transmitState = 4;
+			return 0;
+		case 0x800:
+			return swdlGetPortError(context->port);
+		default:
+			return (int)0x80330002;
+		}
+	case 2:
+		port = context->port;
+		size = context->download.images[index].size;
+		switch (context->receiveEvent) {
+		case 0x200:
+			cursor = context->receiveBuffer;
+			swdlUnpackBytes(&code, &cursor, 1);
+			swdlUnpackBytes(skip, &cursor, 2);
+			swdlUnpackBytes((SceUInt8 *)&address, &cursor, 4);
+			swdlUnpackBytes((SceUInt8 *)&status, &cursor, 2);
+			if (code != 0x28) {
+				if (code != 0x0e)
+					return (int)0x80330708;
+				swdlReceiveLog(context);
+				return 0;
+			}
+			if (status != 0)
+				return (int)0x80330708;
+			context->windowRemaining = context->windowSize;
+			if (size > context->imageWritten) {
+				raw = 1;
+				result = port->control(port, 6, &raw, sizeof(raw));
+				if (result >= 0)
+					context->transmitState = 2;
+				return result;
+			}
+			context->notification.forwardedValue1 = context->progressBytes;
+			context->notify(64, &context->notification);
+			context->progressBytes = 0;
+			context->phase = 3;
+			context->transmitState = 1;
+			return 0;
+		case 0x400:
+			context->transmitState = 4;
+			return 0;
+		case 0x800:
+			return swdlGetPortError(context->port);
+		default:
+			return (int)0x80330002;
+		}
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: open the current image (0x25), then write it a window at a time:
+ * each window starts with a write header (0x27), raw, without HDLC framing */
+int swdlDownloadSendImage(SwdlContext *context)
+{
+	SwdlPortInterface *port;
+	SwdlDownloadImage *image;
+	SceUInt8 *buffer;
+	SceUInt8 *data;
+	int index = context->download.index;
+	int count = context->download.count;
+	SceUInt32 offset;
+	SceSize remaining;
+	SceSize window;
+	SceSize capacity;
+	SceSize size;
+	SceUInt32 freePackets;
+	int raw;
+	int result;
+
+	if (index >= count)
+		return 1;
+	image = &context->download.images[index];
+	if (image->fd == 0)
+		return (int)0x80330002;
+	switch (context->phase) {
+	case 1:
+		buffer = context->buffer;
+		size = image->size;
+		buffer[2] = image->type;
+		*(SceUInt32 *)(buffer + 3) = size;
+		buffer[7] = 1;
+		buffer[0] = 0x7e;
+		buffer[1] = 0x25;
+		buffer[8] = 0;
+		buffer[9] = 0;
+		buffer[10] = 0;
+		buffer[12] = 0;
+		buffer[13] = 0;
+		buffer[11] = 4;
+		context->imageSize = size;
+		context->bufferLength = 13;
+		swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 14);
+		context->transmitState = 4;
+		context->bufferLength++;
+		return 0;
+	case 2:
+		raw = 0;
+		port = context->port;
+		result = swdlGetPortFreePackets(context, &freePackets);
+		if (result < 0)
+			return result;
+		if (freePackets == 0) {
+			context->transmitState = 5;
+			return result;
+		}
+		remaining = context->windowRemaining;
+		window = context->windowSize;
+		if (window == remaining) {
+			capacity = (context->bufferCapacity - 13) & ~3;
+			data = context->buffer + 13;
+		} else {
+			if (remaining == 0)
+				goto end;
+			data = context->buffer;
+			capacity = context->bufferCapacity;
+		}
+		offset = context->fileOffset;
+		size = capacity;
+		if (remaining < capacity)
+			size = remaining;
+		result = swdlReadFileAt(image->fd, data, offset, &size);
+		if (result < 0)
+			return result;
+		if (size == 0)
+			goto end;
+		context->bufferLength = size;
+		if (window == remaining) {
+			buffer = context->buffer;
+			buffer[0] = 0x27;
+			*(SceUInt16 *)(buffer + 1) = context->sequence;
+			*(SceUInt32 *)(buffer + 3) = offset;
+			*(SceUInt32 *)(buffer + 7) = window;
+			*(SceUInt16 *)(buffer + 11) = swdlCalculateCrc(buffer, 11);
+			context->sequence++;
+			context->bufferLength += 13;
+		}
+		context->fileOffset += size;
+		context->windowRemaining -= size;
+		context->imageWritten += size;
+		context->progressBytes += size;
+		if (context->progressBytes > 0xc800) {
+			context->notification.forwardedValue1 = context->progressBytes;
+			context->progressBytes = 0;
+			context->notify(64, &context->notification);
+		}
+		context->transmitState = 2;
+		return result;
+end:
+		result = port->control(port, 6, &raw, sizeof(raw));
+		if (result >= 0) {
+			context->bufferLength = 0;
+			context->transmitState = 4;
+		}
+		return result;
+	case 3:
+		context->download.index = ++index;
+		return count > index ? 2 : 1;
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the high speed hello (0x01) */
+int swdlDownloadSendHello(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+
+	buffer[1] = 1;
+	buffer[0] = 0x7e;
+	memset(buffer + 2, 0, 32);
+	strncpy((char *)buffer + 2, "QCOM high speed protocol hst", 32);
+	buffer[36] = 0x30;
+	buffer[34] = 6;
+	buffer[35] = 6;
+	buffer[37] = 0;
+	buffer[38] = 0;
+	buffer[39] = 0;
+	context->bufferLength = 39;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 40);
+	context->transmitState = 4;
+	context->bufferLength++;
+	return 0;
+}
+
+/* name unknown: the fast download hello (0x01) */
+int swdlUpdateSendHello(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+
+	buffer[0] = 0x7e;
+	buffer[1] = 1;
+	__builtin_memcpy(buffer + 2, "QCOM fast download protocol host", 32);
+	buffer[34] = 3;
+	buffer[35] = 2;
+	buffer[36] = 8;
+	buffer[37] = 0;
+	buffer[38] = 0;
+	buffer[39] = 0;
+	context->bufferLength = 39;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 40);
+	context->transmitState = 4;
+	context->bufferLength++;
+	return 0;
+}
+
+/* name unknown: the close reply (0x2a) */
+int swdlDownloadReceiveClose(SwdlContext *context)
+{
+	const SceUInt8 *cursor;
+	SceUInt16 status;
+	SceUInt8 error;
+
+	switch (context->receiveEvent) {
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	case 0x200:
+		cursor = context->receiveBuffer + 1;
+		if (context->receiveBuffer[0] == 0x2a) {
+			swdlUnpackBytes((SceUInt8 *)&status, &cursor, 2);
+			if (status == 0)
+				return 1;
+			swdlUnpackBytes(&error, &cursor, 1);
+			return (int)0x80330708;
+		}
+		if (context->receiveBuffer[0] != 0x0e)
+			return (int)0x80330708;
+		swdlReceiveLog(context);
+		return 0;
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the high speed hello reply (0x02): the protocol, and versions 6 */
+int swdlDownloadReceiveHello(SwdlContext *context)
+{
+	const SceUInt8 *cursor;
+	char magic[24];
+	SceUInt32 reserved;
+	SceUInt16 version[2];
+	SceUInt8 level[2];
+	SceUInt32 features;
+	SceUInt8 skip;
+	SceUInt16 count;
+	SceSize left;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->receiveBuffer[0] == 0x02) {
+			cursor = context->receiveBuffer + 1;
+			__builtin_memset(magic, 0, sizeof(magic));
+			reserved = 0;
+			__builtin_memset(version, 0, sizeof(version));
+			__builtin_memset(level, 0, sizeof(level));
+			features = 0;
+			swdlUnpackBytes((SceUInt8 *)magic, &cursor, 24);
+			swdlUnpackBytes((SceUInt8 *)&reserved, &cursor, 4);
+			swdlUnpackBytes((SceUInt8 *)&version[0], &cursor, 2);
+			swdlUnpackBytes((SceUInt8 *)&version[1], &cursor, 2);
+			swdlUnpackBytes(&level[0], &cursor, 1);
+			swdlUnpackBytes(&level[1], &cursor, 1);
+			swdlUnpackBytes(NULL, &cursor, 4);
+			swdlUnpackBytes(NULL, &cursor, 4);
+			swdlUnpackBytes(&skip, &cursor, 1);
+			swdlUnpackBytes(NULL, &cursor, skip);
+			swdlUnpackBytes(NULL, &cursor, 2);
+			swdlUnpackBytes((SceUInt8 *)&count, &cursor, 2);
+			swdlUnpackBytes(NULL, &cursor, 4 * count);
+			if (context->receiveLength < (SceSize)(cursor - context->receiveBuffer) + 2)
+				return (int)0x80330002;
+			left = context->receiveLength - 2 - (cursor - context->receiveBuffer);
+			if (left <= 4)
+				swdlUnpackBytes((SceUInt8 *)&features, &cursor, left);
+			if (memcmp(magic, "QCOM high speed protocol", 24) == 0 && level[0] > 5 &&
+			    level[1] > 5) {
+				if ((features & 0x30) == 0x30)
+					return 1;
+				return (int)0x80330708;
+			}
+		} else if (context->receiveBuffer[0] == 0x0e) {
+			swdlReceiveLog(context);
+			return 0;
+		}
+		return (int)0x80330708;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the fast download hello reply (0x02) */
+typedef struct SwdlFastHello {
+	char magic[32];
+	SceUInt8 version;
+	SceUInt8 compatibleVersion;
+	SwdlHelloWindow window;
+	SceUInt16 flags;
+	SceUInt16 count;
+	SceUInt32 ids[16];
+} SwdlFastHello;
+
+int swdlUpdateReceiveHello(SwdlContext *context)
+{
+	const SceUInt8 *cursor;
+	const SceUInt8 *start;
+	SwdlFastHello hello;
+	SceUInt8 skip;
+	SceUInt8 trailer[4];
+	SceSize packetSize;
+	SceSize size;
+	SceSize left;
+	int result;
+	int i;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->receiveBuffer[0] != 0x02) {
+			if (context->receiveBuffer[0] != 0x0e)
+				return (int)0x80330708;
+			swdlReceiveLog(context);
+			return 0;
+		}
+		start = context->receiveBuffer + 1;
+		cursor = start;
+		swdlUnpackBytes((SceUInt8 *)hello.magic, &cursor, 32);
+		swdlUnpackBytes(&hello.version, &cursor, 1);
+		swdlUnpackBytes(&hello.compatibleVersion, &cursor, 1);
+		swdlUnpackBytes((SceUInt8 *)&hello.window.blockSize, &cursor, 4);
+		swdlUnpackBytes((SceUInt8 *)&hello.window.window, &cursor, 4);
+		swdlUnpackBytes(&skip, &cursor, 1);
+		swdlUnpackBytes(NULL, &cursor, skip);
+		swdlUnpackBytes((SceUInt8 *)&hello.flags, &cursor, 2);
+		swdlUnpackBytes((SceUInt8 *)&hello.count, &cursor, 2);
+		for (i = 0; i < hello.count; i++)
+			swdlUnpackBytes(i > 15 ? NULL : (SceUInt8 *)&hello.ids[i], &cursor, 4);
+		if (context->receiveLength < (SceSize)(cursor - start) - 2)
+			return (int)0x80330002;
+		left = context->receiveLength - 2 - (cursor - start);
+		if (left <= 4)
+			swdlUnpackBytes(trailer, &cursor, left);
+		result = swdlGetPortPacketSize(context, &packetSize);
+		if (result < 0)
+			return result;
+		size = hello.window.blockSize + 9;
+		if (size > packetSize) {
+			hello.window.blockSize = (packetSize - 9) & ~3;
+			size = hello.window.blockSize + 9;
+		}
+		result = swdlReserveFrameBuffer(context, size > 517 ? size : 518);
+		if (result == 0) {
+			context->hello.window = hello.window;
+			context->hello.flags = hello.flags;
+			result = 1;
+		}
+		return result;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the streaming download of the requested images */
+static const SwdlStep swdlDownloadSteps[7] = {
+	{ swdlDownloadSendHello, swdlDownloadReceiveHello },
+	{ swdlDownloadStartImages, swdlDownloadSkipReply },
+	{ swdlDownloadSendImage, swdlDownloadReceiveImage },
+	{ swdlDownloadSendClose, swdlDownloadReceiveClose },
+	{ swdlDownloadSendReset, swdlDownloadSkipReply },
+	{ swdlDownloadWaitAttach, swdlDownloadReceiveAttach },
+	{ swdlDownloadEndSend, swdlDownloadEndReceive },
+};
+
+/* the download is over: close the port */
+static inline void swdlFinishDownload(SwdlContext *context)
+{
+	context->port->close(context->port, 0);
+	swdlReleaseBuffers(context);
+	context->notify(4, &context->notification);
+	context->state = 0;
+}
+
+/* name unknown: state 3, the streaming download */
+int swdlExecDownload(SwdlContext *context, SceUInt32 events)
+{
+	SwdlPortInterface *port = context->port;
+	int result = events & 8;
+
+	if (events & 8) {
+		memset(&context->stepIndex, 0, 0x468);
+		__builtin_memset(&context->hello, 0, sizeof(context->hello));
+		context->steps = swdlDownloadSteps;
+		context->progressBytes = 0;
+		context->download.index = 0;
+		result = swdlAllocateFrameBuffer(context);
+		if (result < 0)
+			goto error;
+		result = swdlSetResponseTimeout(context, 3000);
+		if (result < 0)
+			goto error;
+		result = port->open(port, 3);
+		if (result < 0)
+			goto error;
+		result = swdlStartSend(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishDownload(context);
+	}
+	if (events & 0x200) {
+		result = swdlReceiveFrame(context, NULL);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			goto finish;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+finish:
+			swdlFinishDownload(context);
+	}
+	if (events & 0x100) {
+		result = swdlSendFrames(context);
+		if (result == 3)
+			swdlFinishDownload(context);
+	}
+	if (events & 0x1800) {
+		result = swdlHandleCancel(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishDownload(context);
+	}
+	if (events & 0x400) {
+		result = swdlHandleFrameTimeout(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishDownload(context);
+	}
+	if (events & 0x20000) {
+		result = swdlHandleAttach(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishDownload(context);
+	}
+	if (events & 0x100000) {
+		result = context->lastError;
+error:
+		port->close(port, 0);
+		swdlReleaseBuffers(context);
+		context->notification.forwardedValue2 = result;
+		context->notify(128, &context->notification);
+	}
+	return result;
 }

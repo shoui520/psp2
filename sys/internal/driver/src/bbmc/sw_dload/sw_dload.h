@@ -33,7 +33,7 @@ _Static_assert(sizeof(SwdlHexReader) == 44, "HEX reader");
 /* name unknown: the port the download runs over (SceBbmcSwdlPort), as its users see it */
 typedef struct SwdlPortInterface {
 	int (*open)(struct SwdlPortInterface *port, int mode);
-	int (*close)(struct SwdlPortInterface *port);
+	int (*close)(struct SwdlPortInterface *port, int flags);	/* passed 0, not read */
 	int (*send)(struct SwdlPortInterface *port, const void **data, SceSize *size,
 		    int flags);		/* passed 0, not read */
 	int (*control)(struct SwdlPortInterface *port, int command, void *data, SceSize size);
@@ -145,9 +145,33 @@ typedef struct SwdlUpdateRequest {
 	SceUInt32 reserved16[9];
 } SwdlUpdateRequest;
 
+/* name unknown: an image the streaming download writes */
+typedef struct SwdlDownloadImage {
+	SceUInt8 type;			/* the open command's image type */
+	SceUInt8 padding[3];
+	SceUID fd;
+	SceSize size;
+} SwdlDownloadImage;
+
 typedef struct SwdlDownloadRequest {
-	SceUInt32 reserved0[8];
+	int count;
+	SwdlDownloadImage images[2];
+	int index;			/* the image in work */
 } SwdlDownloadRequest;
+
+_Static_assert(sizeof(SwdlDownloadRequest) == 32, "swdl download request");
+
+/* name unknown: what the target's fast download hello reply asks for */
+typedef struct SwdlHelloWindow {
+	SceSize blockSize;		/* of a write, fitted to the port's packets */
+	SceUInt32 window;
+} SwdlHelloWindow;
+
+typedef struct __attribute__((packed)) SwdlHelloParameters {
+	SwdlHelloWindow window;
+	SceUInt16 flags;
+	SceUInt16 reserved;
+} SwdlHelloParameters;
 
 _Static_assert(sizeof(SwdlUpdateRequest) == 52, "swdl update request");
 
@@ -193,7 +217,15 @@ typedef struct SwdlContext {
 	SceUInt32 savedTransmitState;
 	SceUInt32 timeouts;
 	SceUInt32 responseTimeout;	/* ms */
-	SceUInt8 reservede8[0x10c - 0xe8];
+	SceUInt8 reservede8[0xf0 - 0xe8];
+	SceUInt32 fileOffset;		/* of the image's next bytes */
+	SceSize imageWritten;		/* the image's bytes sent */
+	SceSize imageSize;
+	SceUInt32 phase;		/* of the image: 1 open, 2 write, 3 done */
+	SceSize windowRemaining;	/* of the write in work */
+	SceSize windowSize;		/* the bytes the target takes per write */
+	SceUInt16 sequence;		/* of the writes */
+	SceUInt16 padding;
 	SceSize receiveLength;
 	SceUInt8 receiveBuffer[1024];
 	SceUInt8 reserved510[0x518 - 0x510];
@@ -210,9 +242,10 @@ typedef struct SwdlContext {
 	SceUInt16 nvTableInstance;	/* of that entry's instances */
 	SceUInt32 progress;		/* percent */
 	SceUInt32 reportedProgress;
-	SceUInt32 reserved544;
+	SceSize progressBytes;		/* sent since the last progress report */
 	SwdlHexReader hexReader;
-	SceUInt8 reserved574[0x584 - 0x574];
+	SwdlHelloParameters hello;
+	SceUInt32 reserved580;
 	SceUInt32 timerFlags;		/* 0x400 frame timer, 0x40000/0x80000 attach/detach */
 	SceUInt32 attachTime;
 	SceUInt32 frameTime;		/* ms */
@@ -237,6 +270,7 @@ _Static_assert(offsetof(SwdlContext, stepIndex) == 0xb0, "swdl steps");
 _Static_assert(offsetof(SwdlContext, receiveBuffer) == 0x110, "swdl receive buffer");
 _Static_assert(offsetof(SwdlContext, nvItem) == 0x518, "swdl NV item");
 _Static_assert(offsetof(SwdlContext, hexReader) == 0x548, "swdl HEX reader");
+_Static_assert(offsetof(SwdlContext, hello) == 0x574, "swdl hello");
 _Static_assert(offsetof(SwdlContext, timerFlags) == 0x584, "swdl timer flags");
 _Static_assert(sizeof(SwdlContext) == 0x5a8, "swdl context");
 
