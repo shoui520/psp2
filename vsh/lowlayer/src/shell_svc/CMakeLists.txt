@@ -1,4 +1,12 @@
-# generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(vs0_sys_external_libshellsvc KIND user SKELETON SOURCES
+# vs0:sys/external/libshellsvc - SceShellSvc, built with SNC. It links Sony's libipmi
+# (vsh/lowlayer/src/ipmi, blocking_ipc, ipmi_wrapper); unconverted exports remain in
+# libshellsvc.c.
+set(ipmi_source ../ipmi)
+enable_language(CXX)
+psp2_module(vs0_sys_external_libshellsvc KIND user COMPILER snc PARTIAL SOURCES
 	libshellsvc.c
+	${ipmi_source}/psp2/event_flag.cpp
+	${ipmi_source}/psp2/msg_pipe.cpp
+	${ipmi_source}/psp2/mutex.cpp
+	${ipmi_source}/psp2/semaphore.cpp
 )

@@ -150,6 +150,17 @@ extern "C" {
 						 SCE_KERNEL_MSG_PIPE_ATTR_TH_FIFO_R)
 #define SCE_KERNEL_MSG_PIPE_OPT_ATTR_OPEN_LIMITATION	0x00000100U	/* openLimit given */
 
+/* message pipes: when a send or receive completes, and whether it waits */
+#define SCE_KERNEL_MSG_PIPE_MODE_ASAP		0x00000000U	/* once any byte moved */
+#define SCE_KERNEL_MSG_PIPE_MODE_FULL		0x00000001U	/* once every byte moved */
+#define SCE_KERNEL_MSG_PIPE_MODE_WAIT		0x00000000U
+#define SCE_KERNEL_MSG_PIPE_MODE_DONT_WAIT	0x00000010U
+#define SCE_KERNEL_MSG_PIPE_MODE_DONT_REMOVE	0x00000100U	/* receive without removing */
+
+/* message pipes: the memory the pipe's buffer comes from */
+#define SCE_KERNEL_MSG_PIPE_TYPE_USER_MAIN	64
+#define SCE_KERNEL_MSG_PIPE_TYPE_USER_CDRAM	66
+
 /* VFP exceptions a thread takes (sceKernelChangeThreadVfpException) */
 #define SCE_KERNEL_VFP_EXCEPTION_MASK_QCE	0x08000000U
 #define SCE_KERNEL_VFP_EXCEPTION_MASK_IDE	0x00000080U
