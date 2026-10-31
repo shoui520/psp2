@@ -9,6 +9,7 @@
 
 #include <image/image.h>
 #include <thread/thread.h>
+#include "gif_lib.h"
 
 namespace paf {
 
@@ -368,8 +369,45 @@ public:
 	virtual ~GifCodec();
 
 private:
-	/* PROVISIONAL: the codec's state, until image_gif.cpp is written (0x68 bytes in all). */
-	uint8_t m_state[0x5c];
+	/* What the decoder reads from: a File, or a buffer's bytes with a position. */
+	struct Source {
+		Source()
+		{
+			data = NULL;
+			pos = 0;
+			size = 0;
+			allocator = NULL;
+		}
+
+		void *data;			/* the File, or the next byte of the buffer */
+		int64_t size;
+		uint32_t pos;			/* bytes of the buffer read */
+		uint32_t reserved;
+		InputFunc read;
+		int64_t (*seek)(Source *src, int64_t offset, int32_t whence);
+		GifMallocFunc malloc;
+		GifFreeFunc free;
+		GifReallocFunc realloc;
+		GifCallocFunc calloc;
+		memory::HeapAllocator *allocator;
+	};
+
+	bool MakeCLUT(uint8_t *dst, const ColorMapObject *map, int32_t transparent, int32_t count);
+	bool DecodeImage(GifFileType *gif, const ImageBuffer *image, const ImageAttribute *attr,
+			 int32_t *transparent, DecodeCancelFunc cancelfunc, void *userdata);
+	bool Decode(GifFileType *gif, const ImageAttribute *attr, ImageArray *images,
+		    ImageArray *cluts, DecodeCancelFunc cancelfunc, void *userdata);
+	GifFileType *OpenFile(common::SharedPtr<File> file, int64_t offset, size_t size);
+	GifFileType *OpenBuffer(common::SharedPtr<Buffer> buf);
+	bool ReadHeader(GifFileType *gif, ImageAttribute *attr, ImageArray *images,
+			ImageArray *cluts);
+
+	static int ReadFile(GifFileType *gif, GifByteType *buf, int len);
+	static int64_t SeekFile(Source *src, int64_t offset, int32_t whence);
+	static int ReadBuffer(GifFileType *gif, GifByteType *buf, int len);
+
+	Source m_source;
+	thread::Mutex m_mutex;
 };
 
 class GimAttribute : public ImageAttribute {
