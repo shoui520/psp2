@@ -2327,7 +2327,7 @@ __attribute__((noinline)) int swdlCountNvItems(SwdlContext *context)
 	}
 	context->nvItemTotal = 6577;
 	total = 6577;
-	for (i = 0; i < 6577; i++)
+	for (i = 0; i < 6576; i++)
 		total += swdlNvItems[i].instances;
 	context->nvItemTotal = total;
 	return 0;
