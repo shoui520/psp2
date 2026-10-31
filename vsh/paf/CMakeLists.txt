@@ -16,6 +16,9 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 # any budget from 4 to 12 reproduces TTY's and Output's constructors, Output::WaitSoundStopped
 # and common::Utf8ToUtf16, 0 and 13 or more do not (2026-10-31).
 set(MODULE_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:C,CXX>:-Xautoinlinesize=8>)
+# zlib.h for paf::compress, configured as the kernel modules' zlib 1.2.5 is.
+include("${PSP2_SRC}/sys/internal/kernel/src/post_ss_mgr/zlib/zlib.cmake")
+psp2_zlib_sce(paf_zlib)
 enable_language(CXX)
 psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/module.c
@@ -31,7 +34,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/httpfile_date.c
 	src/file/httpfile_openarg.c
 	src/file/error.c
-	src/compress/decompress.c
+	src/compress/compress.cpp
 	src/datetime/datetime.c
 	src/datetime/datetime_abi.S
 	src/rtc/rtc.c
@@ -151,7 +154,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 )
 
 target_include_directories(vs0_sys_external_libpaf PRIVATE
-	"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt")
+	"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt"
+	"${paf_zlib_INCLUDE}")
 set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIES
 	COMPILE_DEFINITIONS "sceZlibDecompress=ScePafLowlayer_D7DAA151")
 

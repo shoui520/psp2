@@ -283,29 +283,6 @@ public:
 	_Ax alloc;
 };
 
-/* Sony's build calls the wide append everywhere rather than inlining it. */
-template<>
-inline __attribute__((noinline)) basic_string<wchar_t> &
-basic_string<wchar_t>::append(const wchar_t *src, size_type len)
-{
-	wchar_t *dst = alloc.allocate(count + len + 1);
-
-	if (dst == NULL)
-		ScePafStdc_D608246A();
-	if (dst != NULL) {
-		size_type size = count + len;
-
-		char_traits<wchar_t>::copy(dst, ptr, count);
-		char_traits<wchar_t>::copy(dst + count, src, len);
-		dst[count + len] = 0;
-		if (ptr != &empty_string)
-			alloc.deallocate(ptr, count + 1);
-		ptr = dst;
-		count = size;
-	}
-	return *this;
-}
-
 template<class _Elem, class _Traits, class _Ax>
 basic_string<_Elem, _Traits, _Ax> &
 basic_string<_Elem, _Traits, _Ax>::assign(const _Elem *src, size_type len)
@@ -482,6 +459,29 @@ operator+(const basic_string<_Elem, _Traits, _Ax> &left, const basic_string<_Ele
 
 template<> char basic_string<char>::empty_string;
 template<> wchar_t basic_string<wchar_t>::empty_string;
+
+/* Sony's build calls the wide append everywhere rather than inlining it. */
+template<>
+inline __attribute__((noinline)) basic_string<wchar_t> &
+basic_string<wchar_t>::append(const wchar_t *src, size_type len)
+{
+	wchar_t *dst = alloc.allocate(count + len + 1);
+
+	if (dst == NULL)
+		ScePafStdc_D608246A();
+	if (dst != NULL) {
+		size_type size = count + len;
+
+		char_traits<wchar_t>::copy(dst, ptr, count);
+		char_traits<wchar_t>::copy(dst + count, src, len);
+		dst[count + len] = 0;
+		if (ptr != &empty_string)
+			alloc.deallocate(ptr, count + 1);
+		ptr = dst;
+		count = size;
+	}
+	return *this;
+}
 
 typedef basic_string<char> string;
 typedef basic_string<wchar_t> wstring;

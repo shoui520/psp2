@@ -1055,7 +1055,7 @@ ScePaf:
         - ScePafMisc_CB582B61: 0xCB582B61
         - _ZN3paf11inputdevice11touchscreen16SetDeviceHandlerEjPFvPNS1_8DataListEE: 0xCBAF777C
         - _ZN3paf5Timer23DoFuncCustomParabolicInEfPKf: 0xCBB88FB0
-        - ScePafMisc_CBF1D1C9: 0xCBF1D1C9
+        - _ZN3paf8compress8CompressENS_6common9SharedPtrINS_4FileEEEPKvjNS0_12CompressTypeEPNS_6memory13HeapAllocatorE: 0xCBF1D1C9
         - _ZNK3paf3Url14GetPathWStringEv: 0xCC331BFF
         - _ZN3paf12BufferedFileD1Ev: 0xCC870760
         - ScePafMisc_CD2B0967: 0xCD2B0967

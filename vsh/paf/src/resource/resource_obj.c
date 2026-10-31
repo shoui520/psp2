@@ -3,7 +3,7 @@
 #include "../file/localfile.h"
 #include "../file/bufferedfile.h"
 #include "../file/memfile.h"
-#include "../compress/decompress.h"
+#include <compress/compress.h>
 #include "../paf_types.h"
 #include "../std/stdlib.h"
 #include "../std/new.h"
