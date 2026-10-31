@@ -3,7 +3,7 @@
 # libshellsvc.c.
 set(ipmi_source ../ipmi)
 enable_language(CXX)
-psp2_module(vs0_sys_external_libshellsvc KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(vs0_sys_external_libshellsvc KIND user COMPILER snc SOURCES
 	libshellsvc.c
 	../blocking_ipc/blocking_ipc_client.cpp
 	../blocking_ipc/blocking_ipc_server.cpp
@@ -23,6 +23,7 @@ psp2_module(vs0_sys_external_libshellsvc KIND user COMPILER snc PARTIAL SOURCES
 	shell_util_ipc_client.cpp
 	text_clipboard.cpp
 	svc_ctrl.cpp
+	allocator.cpp
 	shell_svc_client.cpp
 	shell_svc_ipc_client.cpp
 )

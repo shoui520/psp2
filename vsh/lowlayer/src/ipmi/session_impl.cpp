@@ -1021,3 +1021,8 @@ int SessionImpl::tryDispatch(void *pBuffer, SceSize bufferSize)
 
 }
 }
+
+/* An empty function the original ends this file with; nothing refers to it. The name is ours. */
+void sessionImplEnd()
+{
+}

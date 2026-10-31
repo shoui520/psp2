@@ -1,10 +1,8 @@
 /*
  * SceShellSvc: module start and stop. The shell starts the library with a one-byte
  * argument that is non-zero; it creates the text clipboard and needs no ShellSvc client.
- * The SceIpmi variables are still skeleton placeholders.
  */
 
-#include <skeleton.h>
 #include <kernel/modulemgr.h>
 #include "shellsvc.h"
 #include "text_clipboard.h"
@@ -27,10 +25,8 @@ int module_stop(SceSize argSize, const void *pArgBlock)
 	return shellSvcFinalize();
 }
 
-STUB_VAR(SceIpmi_1B0607E7)
-STUB_VAR(SceIpmi_28CF9138)
-STUB_VAR(SceIpmi_41D521B4)
-STUB_VAR(SceIpmi_7DEDA068)
-STUB_VAR(SceIpmi_89E30D08)
-STUB_VAR(SceIpmi_9DA8C301)
-STUB_VAR(SceIpmi_C4379635)
+/*
+ * A 4-byte SceIpmi variable nothing in the library reads (0x8101305c in .bss). Its other
+ * SceIpmi variables are the IPMI classes' vtables, exported under their own names.
+ */
+int SceIpmi_9DA8C301;

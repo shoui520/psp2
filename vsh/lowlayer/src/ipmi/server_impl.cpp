@@ -451,3 +451,8 @@ void ServerImpl::notify_process_exit()
 
 }
 }
+
+/* An empty function the original ends this file with; nothing refers to it. The name is ours. */
+void serverImplEnd()
+{
+}

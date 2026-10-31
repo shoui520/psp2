@@ -1367,3 +1367,8 @@ int ClientImpl::tryGetMsg(SceUInt32 index, void *pBuffer, SceSize *pSize, SceSiz
 
 }
 }
+
+/* An empty function the original ends this file with; nothing refers to it. The name is ours. */
+void clientImplEnd()
+{
+}

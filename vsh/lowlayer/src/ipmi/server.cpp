@@ -104,3 +104,8 @@ void Server::EventHandler::onSessionKilled(Session *pSession)
 }
 
 }
+
+/* An empty function the original ends this file with; nothing refers to it. The name is ours. */
+void serverEnd()
+{
+}

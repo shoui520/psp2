@@ -183,10 +183,10 @@ SceShellSvc:
         - _ZN11IpmiWrapper6Server14signalCallbackEPN4IPMI7SessionEj: 0xF5D3ACC2
         - _ZN11IpmiWrapper6Server11threadEntryEjPv: 0xF5E5D1B7
       variables:
-        - SceIpmi_1B0607E7: 0x1B0607E7
-        - SceIpmi_28CF9138: 0x28CF9138
-        - SceIpmi_41D521B4: 0x41D521B4
-        - SceIpmi_7DEDA068: 0x7DEDA068
-        - SceIpmi_89E30D08: 0x89E30D08
+        - _ZTVN4IPMI6Server12EventHandlerE: 0x1B0607E7
+        - _ZTVN11IpmiWrapper6ServerE: 0x28CF9138
+        - _ZTVN11BlockingIpc6ServerE: 0x41D521B4
+        - _ZTVN4IPMI7SessionE: 0x7DEDA068
+        - _ZTVN4IPMI6ServerE: 0x89E30D08
         - SceIpmi_9DA8C301: 0x9DA8C301
-        - SceIpmi_C4379635: 0xC4379635
+        - _ZTVN4IPMI6ClientE: 0xC4379635
