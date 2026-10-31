@@ -3,6 +3,7 @@
  * The remaining exports are explicit skeleton placeholders.
  */
 
+#include <fw.h>
 #include <skeleton.h>
 #include <bbmc/bbmc.h>
 #include <sysmem/debug.h>
@@ -90,20 +91,16 @@ const SceKernelProcEventHandler bbmcProcessEventHandlers = {
 /* the entry guard of every API call: nothing is accepted while suspending or suspended */
 static inline int bbmcCheckSuspendState(BbmcControl *control)
 {
-	if (bbmcLockFastMutex(&control->mutex) < 0)
-			SCE_DBG_ASSERT_FUNC(0, 1375, "bbmcEnterCS");
+	bbmcEnterCS(&control->mutex);
 	if (control->suspendState - 1U <= 2) {
-		if (bbmcUnlockFastMutex(&control->mutex) < 0)
-			SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
+		bbmcLeaveCS(&control->mutex);
 		return (int)0x8033000A;
 	}
 	if (control->suspendState == 4) {
-		if (bbmcUnlockFastMutex(&control->mutex) < 0)
-			SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
+		bbmcLeaveCS(&control->mutex);
 		return (int)0x8033000B;
 	}
-	if (bbmcUnlockFastMutex(&control->mutex) < 0)
-			SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
+	bbmcLeaveCS(&control->mutex);
 	return 0;
 }
 
@@ -340,8 +337,7 @@ void bbmcPowerProcessFlagsChanged(SceUID processId, SceUInt32 flags, void *argp)
 
 	if (processId != 65569)
 		return;
-	if (bbmcLockFastMutex(&control->mutex) < 0)
-		SCE_DBG_ASSERT_FUNC(0, 1375, "bbmcEnterCS");
+	bbmcEnterCS(&control->mutex);
 	active = (flags & 0x20) != 0;
 	if (active == control->powerEventActive)
 		goto out;
@@ -392,8 +388,7 @@ void bbmcPowerProcessFlagsChanged(SceUID processId, SceUInt32 flags, void *argp)
 		events = 0x8000000;
 	}
 out:
-	if (bbmcUnlockFastMutex(&control->mutex) < 0)
-		SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
+	bbmcLeaveCS(&control->mutex);
 	if (events != 0) {
 		vst1_u32(control->pendingEvents,
 			vorr_u32(vld1_u32(control->pendingEvents), vdup_n_u32(events)));
@@ -487,16 +482,14 @@ int _managerThread(SceSize argumentSize, void *arguments)
 		} else if (control->suspendMessageHandler != NULL) {
 			ret = control->suspendMessageHandler(control, message);
 			if (ret == 0) {
-				if (bbmcLockFastMutex(&control->mutex) < 0)
-					SCE_DBG_ASSERT_FUNC(0, 1375, "bbmcEnterCS");
+				bbmcEnterCS(&control->mutex);
 				control->suspendMessageHandler = NULL;
 				if (control->suspendState == 2) {
 					bbmcGpioTransitionHook();
 					bbmcFlushTimers();
 					control->suspendState = 3;
 				}
-				if (bbmcUnlockFastMutex(&control->mutex) < 0)
-					SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
+				bbmcLeaveCS(&control->mutex);
 			} else if (ret == 2) {
 				control->suspendMessageHandler = NULL;
 			} else if (ret < 0) {
@@ -536,8 +529,7 @@ int _managerThread(SceSize argumentSize, void *arguments)
 			(*sequence)(control, message);
 		msgFreeMsgPacket(control, message);
 
-		if (bbmcLockFastMutex(&control->mutex) < 0)
-			SCE_DBG_ASSERT_FUNC(0, 1375, "bbmcEnterCS");
+		bbmcEnterCS(&control->mutex);
 		for (i = 0; i < 9; i++) {
 			if (control->subscribers[i].active == 1 &&
 			    control->subscribers[i].parameters.callbackId > 0) {
@@ -555,8 +547,7 @@ int _managerThread(SceSize argumentSize, void *arguments)
 			control->acknowledgedEvents[i] = 0;
 			control->pendingEvents[i] = 0;
 		}
-		if (bbmcUnlockFastMutex(&control->mutex) < 0)
-			SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
+		bbmcLeaveCS(&control->mutex);
 
 		if ((control->flags & 1) != 0 && control->currentState == 0 &&
 		    control->targetState == 0)
@@ -580,7 +571,17 @@ finalize:
 	return ret;
 }
 
-void bbmcEnterCS(struct ThreadmgrFastMutex *mutex)
+/*
+ * Sony's 4.00 build inlines these into bbmc.c's callers; its 3.6x builds, where the asserts
+ * are compiled out, call them whole.
+ */
+#if FW_SINCE(0x04000000)
+#define BBMC_CS_INLINE
+#else
+#define BBMC_CS_INLINE	__attribute__((noinline))
+#endif
+
+BBMC_CS_INLINE void bbmcEnterCS(struct ThreadmgrFastMutex *mutex)
 {
 	int ret = bbmcLockFastMutex(mutex);
 
@@ -588,7 +589,7 @@ void bbmcEnterCS(struct ThreadmgrFastMutex *mutex)
 		SCE_DBG_ASSERT(0, 1375);
 }
 
-void bbmcLeaveCS(struct ThreadmgrFastMutex *mutex)
+BBMC_CS_INLINE void bbmcLeaveCS(struct ThreadmgrFastMutex *mutex)
 {
 	int ret = bbmcUnlockFastMutex(mutex);
 
