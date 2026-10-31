@@ -78,7 +78,7 @@ static Request s_requests[SHELL_UTIL_MAX_REQUESTS];
 static SceKernelLwMutexWork s_mutex;
 
 static int clientThread(SceSize argSize, void *pArgBlock);
-static int psButtonCallback(int event);
+static int psButtonCallback(int event, void *pArg);
 
 static Request *findFreeRequest()
 {
@@ -673,7 +673,7 @@ static int clientThread(SceSize argSize, void *pArgBlock)
 }
 
 /* ShellSvc's callback for a PS-button event while a PS-button lock is held. */
-static int psButtonCallback(int event)
+static int psButtonCallback(int event, void *pArg)
 {
 	int param;
 

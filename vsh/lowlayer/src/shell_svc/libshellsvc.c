@@ -1,24 +1,31 @@
 /*
- * SceShellSvc skeleton: export stubs.
- *
- * Generated (T2). Every body is a placeholder.
+ * SceShellSvc: module start and stop. The shell starts the library with a one-byte
+ * argument that is non-zero; it creates the text clipboard and needs no ShellSvc client.
+ * The SceIpmi variables are still skeleton placeholders.
  */
 
 #include <skeleton.h>
+#include <kernel/modulemgr.h>
+#include "shellsvc.h"
+#include "text_clipboard.h"
 
-STUB_MAIN(module_start)
-STUB_MAIN(module_stop)
+int module_start(SceSize argSize, const void *pArgBlock)
+{
+	bool isShell = false;
 
-STUB(SceShellSvc_1FAB9A1E)
-STUB(SceShellSvc_7CBF442B)
-STUB(SceShellSvc_8D4F9F2E)
-STUB(SceShellSvc_A0B067AC)
-STUB(SceShellSvc_B31E7F1C)
-STUB(SceShellSvc_B452A177)
-STUB(SceShellSvc_BD4161B0)
-STUB(SceShellSvc_D943CE15)
-STUB(SceShellSvc_E91AEAD4)
-STUB(SceShellSvc_FB03FBC9)
+	if (argSize == 1)
+		isShell = *(const bool *)pArgBlock;
+	textClipboardInitialize(isShell);
+	if (isShell)
+		return SCE_KERNEL_START_SUCCESS;
+	return SceShellSvc_E91AEAD4();
+}
+
+int module_stop(SceSize argSize, const void *pArgBlock)
+{
+	textClipboardFinalize();
+	return shellSvcFinalize();
+}
 
 STUB_VAR(SceIpmi_1B0607E7)
 STUB_VAR(SceIpmi_28CF9138)
