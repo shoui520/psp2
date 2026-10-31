@@ -716,7 +716,7 @@ __attribute__((noinline)) int swdlHandleDetach(SwdlContext *context)
 	return result;
 }
 
-/* 1 when id is one of the IDs the target reports */
+/* 1 when id is one of context->ids */
 __attribute__((noinline)) int swdlHasId(SwdlContext *context, SceUInt16 id)
 {
 	SceUInt32 i;
@@ -6022,5 +6022,388 @@ error:
 	context->updateState = 0;
 	context->abortState = 0;
 	context->notify(128, &context->notification);
+	return result;
+}
+
+/* name unknown: the restore's first step, nothing to send */
+int swdlRestoreStartSend(SwdlContext *context)
+{
+	return 1;
+}
+
+int swdlRestoreStartReceive(SwdlContext *context)
+{
+	return 1;
+}
+
+/* name unknown: the NV write reply (DIAG 0x27) of the extra item; 0x13 (bad command)
+ * counts it done */
+int swdlRestoreReceiveExtraItem(SwdlContext *context)
+{
+	SceUInt32 command;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		command = context->receiveBuffer[0];
+		if (command == 0x27) {
+			if (context->receiveBuffer[1] != context->buffer[1] ||
+			    context->receiveBuffer[2] != context->buffer[2])
+				break;
+			context->nvItemsDone++;
+			return 1;
+		}
+		if (command != 0x13)
+			return (int)0x80330708;
+		context->transmitState = 1;
+		context->nvItemsDone++;
+		return 0;
+	case 0x400:
+		break;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+	context->transmitState = 4;
+	return 0;
+}
+
+/* name unknown: the NV write reply (DIAG 0x27) of an item of the file, until all are
+ * written (mode 1: the last one is the extra item) */
+int swdlRestoreReceiveNvItem(SwdlContext *context)
+{
+	SceUInt32 command;
+	SceUInt32 total;
+	SceUInt32 done;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		command = context->receiveBuffer[0];
+		if (command == 0x27) {
+			if (context->receiveBuffer[1] != context->buffer[1] ||
+			    context->receiveBuffer[2] != context->buffer[2])
+				break;
+			total = context->nvItemTotal;
+			if (context->restore.mode == 1) {
+				if (total == 0)
+					return (int)0x80330002;
+				total--;
+			}
+			done = context->nvItemsDone + 1;
+			context->nvItemsDone = done;
+			if (done >= total)
+				return 1;
+			context->transmitState = 1;
+			return 0;
+		}
+		if (command != 0x13)
+			return (int)0x80330708;
+		context->transmitState = 1;
+		context->nvItemsDone++;
+		return 0;
+	case 0x400:
+		break;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+	context->transmitState = 4;
+	return 0;
+}
+
+/* name unknown: the target's ready reply: the status (DIAG 0x0c) in mode 1, the
+ * subsystem reply (0x4b) in mode 2; one that is not ready yet asks again */
+int swdlRestoreReceiveReady(SwdlContext *context)
+{
+	SceUInt32 mode;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		mode = context->mode;
+		if (mode == 1) {
+			if (context->receiveBuffer[0] != 0x0c)
+				return (int)0x80330708;
+			if ((context->receiveBuffer[0x20] | context->receiveBuffer[0x21] << 8) == 2)
+				return mode;
+			context->transmitState = 1;
+			return 0;
+		}
+		if (mode != 2 || context->receiveBuffer[0] != 0x4b)
+			return (int)0x80330708;
+		if ((context->receiveBuffer[3] | context->receiveBuffer[4] << 8) == 0)
+			return 1;
+		context->transmitState = 1;
+		return 0;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the mode change reply (DIAG 0x29) */
+int swdlRestoreReceiveOffline(SwdlContext *context)
+{
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->receiveBuffer[0] == 0x29)
+			return 1;
+		return (int)0x80330708;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: mode 1 writes NV item 0xc353 (DIAG 0x27) after the file's items */
+int swdlRestoreSendExtraItem(SwdlContext *context)
+{
+	SceUInt8 *buffer;
+
+	if (context->restore.mode == 0)
+		return 1;
+	buffer = context->buffer;
+	buffer[0] = 0x27;
+	buffer[1] = 0x53;
+	buffer[2] = 0xc3;
+	buffer[3] = context->restore.extraItemValue;
+	buffer[4] = context->restore.extraItemValue >> 8;
+	buffer[5] = context->restore.extraItemValue >> 16;
+	buffer[6] = context->restore.extraItemValue >> 24;
+	buffer[131] = 0;
+	buffer[132] = 0;
+	context->bufferLength = 133;
+	swdlEndFrame(buffer, &context->bufferLength, buffer + 133);
+	context->transmitState = 4;
+	return 0;
+}
+
+/* name unknown: take the target offline (DIAG 0x29, mode 1) before the writes */
+int swdlRestoreSendOffline(SwdlContext *context)
+{
+	SceUInt8 *buffer;
+
+	if (context->restore.fd == 0)
+		return 1;
+	buffer = context->buffer;
+	buffer[0] = 0x29;
+	buffer[1] = 1;
+	buffer[2] = 0;
+	context->bufferLength = 3;
+	swdlEndFrame(buffer, &context->bufferLength, buffer + 3);
+	context->transmitState = 4;
+	return 0;
+}
+
+/* name unknown: write the file's next item (DIAG 0x27), past the ones the restore skips */
+int swdlRestoreSendNvItem(SwdlContext *context)
+{
+	SceUInt8 *buffer;
+	SceSize size;
+	int result = 1;
+
+	if (context->restore.fd != 0) {
+		buffer = context->buffer;
+		size = 130;
+		while ((result = swdlReadNvItem(context, buffer + 1, &size,
+						context->nvItemsDone)) >= 0) {
+			result = swdlHasId(context, buffer[1] | buffer[2] << 8);
+			if (result == 1) {
+				context->nvItemsDone++;
+				continue;
+			}
+			if (result == 0) {
+				buffer[131] = 0;
+				buffer[132] = 0;
+				buffer[0] = 0x27;
+				context->bufferLength = 133;
+				swdlEndFrame(buffer, &context->bufferLength, buffer + 133);
+				context->transmitState = 4;
+				break;
+			}
+		}
+	}
+	return result;
+}
+
+/* name unknown: ask whether the target is ready (mode 1 status, mode 2 subsystem 4
+ * command 0x0e), for at most 7 seconds */
+int swdlRestoreSendReady(SwdlContext *context)
+{
+	SceUInt8 *buffer;
+	int result;
+
+	if (context->restore.fd == 0)
+		return 1;
+	if (context->readyWaiting != 0) {
+		result = swdlIsWithinTimeout(context->readyWaitStart, 7000);
+		if (result < 0)
+			return result;
+		if (result != 0) {
+			context->readyWaiting = 0;
+			return 1;
+		}
+	} else {
+		result = swdlGetTime(&context->readyWaitStart);
+		if (result < 0)
+			return result;
+		context->readyWaiting = 1;
+	}
+	switch (context->mode) {
+	case 1:
+		buffer = context->buffer;
+		buffer[0] = 0x0c;
+		context->bufferLength = 1;
+		swdlEndFrame(buffer, &context->bufferLength, buffer + 1);
+		break;
+	case 2:
+		buffer = context->buffer;
+		buffer[2] = 0x0e;
+		buffer[0] = 0x4b;
+		buffer[3] = 0;
+		buffer[1] = 4;
+		context->bufferLength = 4;
+		swdlEndFrame(buffer, &context->bufferLength, buffer + 4);
+		break;
+	default:
+		return (int)0x80330002;
+	}
+	context->transmitState = 4;
+	return 0;
+}
+
+/* name unknown: the restore's steps */
+static const SwdlStep swdlRestoreSteps[8] = {
+	{ swdlRestoreSendStatus, swdlRestoreReceiveStatus },
+	{ swdlRestoreStartSend, swdlRestoreStartReceive },
+	{ swdlRestoreSendOffline, swdlRestoreReceiveOffline },
+	{ swdlRestoreSendReady, swdlRestoreReceiveReady },
+	{ swdlRestoreSendSpc, swdlRestoreReceiveSpc },
+	{ swdlRestoreSendNvItem, swdlRestoreReceiveNvItem },
+	{ swdlRestoreSendExtraItem, swdlRestoreReceiveExtraItem },
+	{ swdlRestoreEndSend, swdlRestoreEndReceive },
+};
+
+/* name unknown: the NV items the restore leaves as the target has them */
+static const SceUInt16 swdlRestoreSkippedItems[4] = { 0x1bf1, 0x1bf2, 0x1bf3, 0x1bf4 };
+
+/* name unknown: the restore is over */
+static inline void swdlFinishRestore(SwdlContext *context)
+{
+	context->port->close(context->port, 0);
+	swdlReleaseBuffers(context);
+	context->notify(8, &context->notification);
+	context->state = 0;
+}
+
+/* name unknown: state 4, the NV restore */
+int swdlExecRestore(SwdlContext *context, SceUInt32 events)
+{
+	SwdlPortInterface *port = context->port;
+	SceUInt32 total;
+	SceUInt32 progress;
+	SceUInt32 previous;
+	int result = events & 0x20;
+
+	if (events & 0x20) {
+		context->nvItemsDone = 0;
+		context->progress = 0;
+		context->reportedProgress = 0;
+		context->nvItem = 0xfffe;
+		memset(&context->stepIndex, 0, 0x468);
+		context->mode = 2;
+		context->steps = swdlRestoreSteps;
+		context->ids = swdlRestoreSkippedItems;
+		context->idCount = 4;
+		result = swdlAllocateFrameBuffer(context);
+		if (result < 0)
+			goto error;
+		result = swdlOpenBackup(context);
+		if (result < 0)
+			goto error;
+		total = context->nvItemTotal;
+		if (total == 0) {
+			result = (int)0x80330705;
+			goto error;
+		}
+		if (total == 0xffff) {
+			if (context->restore.mode == 0) {
+				result = (int)0x80330002;
+				goto error;
+			}
+			if (context->restore.mode == 1)
+				context->nvItemTotal = 1;
+		} else if (context->restore.mode == 1) {
+			context->nvItemTotal = total + 1;
+		}
+		result = swdlSetResponseTimeout(context, 3000);
+		if (result < 0)
+			goto error;
+		result = port->open(port, 1);
+		if (result < 0)
+			goto error;
+		result = swdlStartSend(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishRestore(context);
+	}
+	if (events & 0x200) {
+		result = swdlReceiveFrame(context, NULL);
+		if (result < 0)
+			goto error;
+		total = context->nvItemTotal;
+		if (total != 0 && total != 0xffff) {
+			previous = context->progress;
+			context->reportedProgress = previous;
+			progress = 100 * context->nvItemsDone / total;
+			context->progress = progress;
+			if (previous != progress) {
+				context->notification.forwardedValue1 = (SceUInt8)progress;
+				context->notify(64, &context->notification);
+			}
+		}
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishRestore(context);
+	}
+	if (events & 0x1800) {
+		result = swdlHandleCancel(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishRestore(context);
+	}
+	if (events & 0x400) {
+		result = swdlHandleFrameTimeout(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishRestore(context);
+	}
+	if (events & 0x100000) {
+		result = context->lastError;
+error:
+		port->close(port, 0);
+		swdlReleaseBuffers(context);
+		context->notification.forwardedValue2 = result;
+		context->notify(128, &context->notification);
+	}
 	return result;
 }

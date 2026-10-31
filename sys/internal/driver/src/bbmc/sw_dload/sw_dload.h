@@ -136,7 +136,7 @@ typedef struct SwdlRestoreRequest {
 	SceUInt32 reserved0;
 	SceUID fd;			/* the backup file read */
 	SceUInt32 mode;			/* 1: one item more than the file says */
-	SceUInt32 reserved12;
+	SceUInt32 extraItemValue;	/* mode 1: NV item 0xc353, written after the file's */
 } SwdlRestoreRequest;
 
 typedef struct SwdlUpdateRequest {
@@ -235,7 +235,8 @@ typedef struct SwdlContext {
 	SceUInt16 padding;
 	SceSize receiveLength;
 	SceUInt8 receiveBuffer[1024];
-	SceUInt8 reserved510[0x518 - 0x510];
+	SceUInt32 readyWaiting;		/* the restore waits for the target to be ready */
+	SceUInt32 readyWaitStart;	/* ms */
 	SceUInt16 nvItem;		/* the NV item in work (0xfffe: none yet) */
 	SceUInt16 nvItemsWritten;
 	SceSize backupSize;		/* bytes written to the backup file */
@@ -244,7 +245,7 @@ typedef struct SwdlContext {
 	SceUInt32 reserved528;
 	SceUInt32 nvItemTotal;		/* 0xffff: no file */
 	SceUInt32 idCount;
-	const SceUInt16 *ids;		/* the IDs the target reports */
+	const SceUInt16 *ids;		/* the NV items the restore skips */
 	SceUInt16 nvTableIndex;		/* in swdlNvItems */
 	SceUInt16 nvTableInstance;	/* of that entry's instances */
 	SceUInt32 progress;		/* percent */
