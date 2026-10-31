@@ -36,6 +36,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/error.c
 	src/compress/compress.cpp
 	src/datetime/datetime.cpp
+	src/dir/dir.cpp
 	src/rtc/rtc.c
 	src/thread/callqueue.cpp
 	src/thread/cond.cpp
@@ -134,7 +135,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/dispatch.c
 	src/misc/vtable_init.c
 	src/misc/http.c
-	src/misc/io.c
 	src/misc/copy_guard.c
 	src/misc/search.c
 	src/misc/state.c
@@ -164,7 +164,7 @@ set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIE
 set_source_files_properties(
 	src/buffer/buffer.cpp src/cache/cache_base.cpp src/cache/cache_manager.cpp
 	src/cache/cache_manager_impl.cpp
-	src/job/job.cpp src/math/matrix.cpp src/math/rect.cpp
+	src/dir/dir.cpp src/job/job.cpp src/math/matrix.cpp src/math/rect.cpp
 	src/memory/heap_allocator.cpp src/memory/range_allocator.cpp src/memory/pool_allocator.cpp
 	src/thread/callqueue.cpp src/thread/cond.cpp src/thread/mutex.cpp src/thread/priority.cpp
 	src/thread/rmutex.cpp src/thread/rwlock.cpp src/thread/semaphore.cpp src/thread/sleep.cpp

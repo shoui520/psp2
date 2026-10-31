@@ -111,6 +111,11 @@ public:
 		return head->next->value;
 	}
 
+	_Ty &back()
+	{
+		return head->prev->value;
+	}
+
 	void push_back(const _Ty &val);
 
 	iterator erase(iterator where);
@@ -122,6 +127,19 @@ public:
 		_Node *node = head->next;
 
 		if (head != NULL) {
+			node->next->prev = node->prev;
+			node->prev->next = node->next;
+			node->value.~_Ty();
+			operator delete(node);
+			--count;
+		}
+	}
+
+	void pop_back()
+	{
+		if (count != 0 && head != NULL) {
+			_Node *node = head->prev;
+
 			node->next->prev = node->prev;
 			node->prev->next = node->next;
 			node->value.~_Ty();

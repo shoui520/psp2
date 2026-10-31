@@ -830,7 +830,7 @@ ScePaf:
         - _ZN3paf5image5Image12SetErrorTypeEi: 0x951B7B59
         - _ZNK3paf4math6matrix21extractEulerAnglesYXZEv: 0x95705617
         - _ZN3paf11inputdevice3pad4InitERNS1_9InitParamE: 0x95C420EC
-        - sce_paf_misc_does_file_exist: 0x95F14046
+        - _ZN3paf3Dir7IsExistEPKc: 0x95F14046
         - _ZN3paf3Dir4OpenEPKc: 0x95F2C107
         - _ZN3paf8datetime8DateTime3NowEv: 0x96345146
         - _ZN3paf5Timer12DoFuncSlowerEf: 0x963A768B

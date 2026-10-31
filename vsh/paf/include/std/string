@@ -460,6 +460,15 @@ operator+(const basic_string<_Elem, _Traits, _Ax> &left, const _Elem *right)
 	return result.append(right);
 }
 
+template<class _Elem, class _Traits, class _Ax>
+inline basic_string<_Elem, _Traits, _Ax>
+operator+(const basic_string<_Elem, _Traits, _Ax> &left, _Elem right)
+{
+	basic_string<_Elem, _Traits, _Ax> result(left);
+
+	return result.append(1, right);
+}
+
 template<> char basic_string<char>::empty_string;
 template<> wchar_t basic_string<wchar_t>::empty_string;
 
