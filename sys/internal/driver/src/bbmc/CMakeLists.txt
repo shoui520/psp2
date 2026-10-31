@@ -6,6 +6,7 @@ psp2_module(os0_kd_bootimage_bbmc KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	bbmc_mailbox.c
 	bbmc_timer.c
 	bbmc.c
+	state_machine/activated.c
 	state_machine/authorized.c
 	state_machine/com_boot.c
 	state_machine/connected.c

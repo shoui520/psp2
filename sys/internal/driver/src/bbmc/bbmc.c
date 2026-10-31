@@ -6739,6 +6739,27 @@ int bbmcSendSizedSysconCommand(BbmcControl *control,
 	return SceSysconForDriver_C2224E82(packet, 0, callback, control);
 }
 
+int bbmcSendSysconPowerCommand(BbmcControl *control,
+	int (*callback)(SceSysconPacket *, void *), SceSysconPacket *packet,
+	unsigned int value)
+{
+	int ret;
+
+	memset(packet, 0, sizeof(*packet));
+	packet->request.length = 2;
+	packet->request.command[1] = 0x08;
+	packet->request.data[0] = value;
+	packet->request.command[0] = 0x8d;
+	bbmcEnterCS(&control->mutex);
+	if ((value & 0x7f) == 0)
+		control->sysconPowerRequestPending = 1;
+	ret = SceSysconForDriver_C2224E82(packet, 0, callback, control);
+	if (ret < 0)
+		control->sysconPowerRequestPending = 0;
+	bbmcLeaveCS(&control->mutex);
+	return ret;
+}
+
 int bbmcSendSysconByteCommand(BbmcControl *control,
 	int (*callback)(SceSysconPacket *packet, void *argp),
 	SceSysconPacket *packet, SceUInt8 value)
