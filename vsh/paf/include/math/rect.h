@@ -90,7 +90,7 @@ private:
 }
 
 /* No Sony name for these exports: the overlap and the bounding box of two rectangles. */
-extern "C" paf::math::rect ScePafMisc_B2795FE2(const paf::math::rect &obj, const paf::math::rect &other);
+extern "C" paf::math::rect ScePafMisc_B2795FE2(const paf::math::rect &obj, paf::math::rect other);
 extern "C" paf::math::rect ScePafMisc_8C14E735(const paf::math::rect &obj, const paf::math::rect &other);
 
 #endif

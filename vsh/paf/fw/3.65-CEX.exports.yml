@@ -1053,7 +1053,7 @@ ScePaf:
         - _ZN3paf11inputdevice16DelInputListenerERNS_6common9SharedPtrINS0_13InputListenerEEE: 0xCB28E1E3
         - ScePafMisc_CB4DB658: 0xCB4DB658
         - ScePafMisc_CB582B61: 0xCB582B61
-        - _ZN3paf11inputdevice11touchscreen16SetDeviceHandlerEjPFvPNS1_8DataListEE: 0xCBAF777C
+        - _ZN3paf11inputdevice11touchscreen16SetDeviceHandlerEjPFvPNS1_4DataEE: 0xCBAF777C
         - _ZN3paf5Timer23DoFuncCustomParabolicInEfPKf: 0xCBB88FB0
         - _ZN3paf8compress8CompressENS_6common9SharedPtrINS_4FileEEEPKvjNS0_12CompressTypeEPNS_6memory13HeapAllocatorE: 0xCBF1D1C9
         - _ZNK3paf3Url14GetPathWStringEv: 0xCC331BFF

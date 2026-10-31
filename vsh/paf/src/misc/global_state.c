@@ -36,38 +36,9 @@ int8_t sce_paf_misc_flag_eef5;
 uint32_t sce_paf_misc_value_1078;
 float sce_paf_misc_float_1178;
 uint64_t sce_paf_misc_pair_1158;
-uint32_t sce_paf_misc_slots_d57c[2];
-uint32_t sce_paf_misc_flags_ede0[2];
-uint32_t sce_paf_misc_counters_edf0[2];
-uint32_t sce_paf_misc_limits_edf8[2];
-uint8_t sce_paf_misc_cells_dc60[2][8][32] __attribute__((aligned(32)));
-uint8_t sce_paf_misc_cells_de60[2][8][32] __attribute__((aligned(32)));
 uint32_t sce_paf_misc_shared_f3c8;
 uint64_t sce_paf_misc_pair_1170;
-float sce_paf_misc_float_112c;
-float sce_paf_misc_float_1130;
-float sce_paf_misc_float_1144;
-float sce_paf_misc_float_1148;
-float sce_paf_misc_float_114c;
-float sce_paf_misc_float_1150;
-float sce_paf_misc_float_1134;
-float sce_paf_misc_float_1138;
-float sce_paf_misc_float_113c;
-float sce_paf_misc_float_1140;
 
-void ScePafMisc_8BC3FB99(int32_t *first, int32_t *second,
-			uint32_t *third, uint32_t *fourth)
-{
-	float x = sce_paf_misc_float_1134;
-	float y = sce_paf_misc_float_1138;
-	float width = sce_paf_misc_float_113c;
-	float height = sce_paf_misc_float_1140;
-
-	*first = (int32_t)x;
-	*second = (int32_t)y;
-	*third = (uint32_t)width;
-	*fourth = (uint32_t)height;
-}
 uint32_t sce_paf_misc_mode_d570;
 extern uint32_t sce_paf_misc_counters_d200[7];
 extern int sceAppMgrSetSystemImposeState2(int state);
@@ -90,56 +61,9 @@ int ScePafMisc_F68553A5(int value)
 	return (int)mode;
 }
 
-uint32_t sce_paf_misc_flags_ee00[2];
-uint32_t sce_paf_misc_cells_da60[2][8][8];
 uint32_t sce_paf_misc_counters_d200[7];
 uint32_t sce_paf_misc_limits_d21c[7];
-typedef struct ScePafMiscGridCell {
-	int16_t active;
-	uint8_t reserved[0xce];
-	uint16_t x;
-	uint16_t y;
-	uint8_t tail[4];
-} ScePafMiscGridCell;
-ScePafMiscGridCell sce_paf_misc_cells_e060[2][8];
 
-int ScePafMisc_24D9EBA3(uint32_t group, uint32_t cell,
-			float *x, float *y)
-{
-	ScePafMiscGridCell *item;
-	if (group >= 2 || cell >= 8)
-		return -1;
-	item = &sce_paf_misc_cells_e060[group][cell];
-	if (item->active <= 0) {
-		*y = 0.0f;
-		*x = 0.0f;
-	} else {
-		*x = (float)item->x;
-		*y = (float)item->y;
-	}
-	return 0;
-}
-
-int ScePafMisc_3BA14D8A(uint32_t group, uint32_t cell,
-			float *x, float *y)
-{
-	ScePafMiscGridCell *item;
-	if (group >= 2 || cell >= 8)
-		return -1;
-	item = &sce_paf_misc_cells_e060[group][cell];
-	if (item->active <= 0) {
-		*y = 0.0f;
-		*x = 0.0f;
-	} else {
-		float fx = (float)item->x;
-		float fy = (float)item->y;
-		*x = (fx - sce_paf_misc_float_112c * 0.5f) *
-			sce_paf_misc_float_1144;
-		*y = (sce_paf_misc_float_1130 * 0.5f - fy) *
-			sce_paf_misc_float_1148;
-	}
-	return 0;
-}
 volatile uint32_t sce_paf_misc_selector_103c[3];
 
 uint32_t ScePafMisc_75AFD25C(int32_t index)
@@ -167,47 +91,6 @@ int ScePafMisc_ED289E89(uint32_t requested, int require_all)
 			active |= 1U << i;
 	selected = active & requested;
 	return require_all ? selected == requested : selected != 0;
-}
-
-float *ScePafMisc_ED46DA1B(uint32_t width, uint32_t height)
-{
-	float w = (float)width;
-	float h = (float)height;
-	float x_offset = sce_paf_misc_float_1134;
-	float y_offset = sce_paf_misc_float_1138;
-	float viewport_width = sce_paf_misc_float_113c;
-	float viewport_height = sce_paf_misc_float_1140;
-	float x_scale = viewport_width / (w - x_offset * 2.0f);
-	float y_scale = viewport_height / (h - y_offset * 2.0f);
-
-	sce_paf_misc_float_112c = w;
-	sce_paf_misc_float_1130 = h;
-	sce_paf_misc_float_1144 = x_scale;
-	sce_paf_misc_float_1148 = y_scale;
-	sce_paf_misc_float_114c = 1.0f / x_scale;
-	sce_paf_misc_float_1150 = 1.0f / y_scale;
-	return &sce_paf_misc_float_1150;
-}
-
-float *ScePafMisc_F905553F(int32_t x, int32_t y,
-			uint32_t width, uint32_t height)
-{
-	float fx = (float)x;
-	float fy = (float)y;
-	float w = (float)width;
-	float h = (float)height;
-	float x_scale = w / (sce_paf_misc_float_112c - fx * 2.0f);
-	float y_scale = h / (sce_paf_misc_float_1130 - fy * 2.0f);
-
-	sce_paf_misc_float_1134 = fx;
-	sce_paf_misc_float_1138 = fy;
-	sce_paf_misc_float_113c = w;
-	sce_paf_misc_float_1140 = h;
-	sce_paf_misc_float_1144 = x_scale;
-	sce_paf_misc_float_1148 = y_scale;
-	sce_paf_misc_float_114c = 1.0f / x_scale;
-	sce_paf_misc_float_1150 = 1.0f / y_scale;
-	return &sce_paf_misc_float_1150;
 }
 
 uint32_t ScePafMisc_4E93C051(void)
@@ -281,104 +164,6 @@ uint64_t ScePafMisc_A8133C0A(void)
 	return sce_paf_misc_pair_1158;
 }
 
-uint32_t ScePafMisc_DFEE9387(uint32_t index)
-{
-	return index < 2 ? sce_paf_misc_flags_ede0[index] : 0;
-}
-
-uint32_t ScePafMisc_CBAF777C(uint32_t index, uint32_t value)
-{
-	uint32_t previous;
-	if (index >= 2)
-		return 0;
-	previous = sce_paf_misc_slots_d57c[index];
-	sce_paf_misc_slots_d57c[index] = value;
-	return previous;
-}
-
-uint32_t ScePafMisc_0D4B4B67(uint32_t index)
-{
-	if (index >= 2)
-		return index;
-	sce_paf_misc_counters_edf0[index]++;
-	return index << 2;
-}
-
-uint32_t ScePafMisc_FFE73747(uint32_t index, uint32_t mask)
-{
-	if (index >= 2)
-		return 0;
-	sce_paf_misc_flags_ede0[index] |= mask;
-	return sce_paf_misc_flags_ede0[index];
-}
-
-int ScePafMisc_3DD77645(uint32_t index)
-{
-	return index < 2 &&
-		sce_paf_misc_counters_edf0[index] > sce_paf_misc_limits_edf8[index];
-}
-
-uint32_t ScePafMisc_15613EA2(uint32_t index)
-{
-	uint32_t limit;
-	if (index >= 2)
-		return index;
-	limit = sce_paf_misc_limits_edf8[index];
-	if (sce_paf_misc_counters_edf0[index] > limit) {
-		limit++;
-		sce_paf_misc_limits_edf8[index] = limit;
-	}
-	return limit;
-}
-
-void *ScePafMisc_2BE3A49D(uint32_t group, uint32_t cell, void **output)
-{
-	void *address = NULL;
-	if (group < 2 && cell < 8)
-		address = sce_paf_misc_cells_dc60[group][cell];
-	*output = address;
-	return address;
-}
-
-void *ScePafMisc_B5C459E2(uint32_t group, uint32_t cell, void **output)
-{
-	void *address = NULL;
-	if (group < 2 && cell < 8)
-		address = sce_paf_misc_cells_de60[group][cell];
-	*output = address;
-	return address;
-}
-
-int ScePafMisc_49BD531A(uint32_t group, uint32_t cell,
-			float *first, float *second)
-{
-	const int32_t *values;
-	int32_t a, b;
-	if (group >= 2 || cell >= 8)
-		return -1;
-	values = (const int32_t *)sce_paf_misc_cells_de60[group][cell];
-	a = values[2];
-	b = values[3];
-	*first = (float)a;
-	*second = (float)b;
-	return 0;
-}
-
-int ScePafMisc_4E922BF6(uint32_t group, uint32_t cell,
-			float *first, float *second)
-{
-	const int32_t *values;
-	int32_t a, b;
-	if (group >= 2 || cell >= 8)
-		return -1;
-	values = (const int32_t *)sce_paf_misc_cells_de60[group][cell];
-	a = values[6];
-	b = values[7];
-	*first = (float)a;
-	*second = (float)b;
-	return 0;
-}
-
 void *ScePafMisc_405C4F0A(uint32_t *object, uint32_t first)
 {
 	volatile uint32_t *words = (volatile uint32_t *)object;
@@ -409,40 +194,6 @@ uint32_t ScePafMisc_A08B8D8A(uint32_t value)
 {
 	sce_paf_misc_pair_1170 = value;
 	return value;
-}
-
-void ScePafMisc_DA9F40ED(uint32_t *first, uint32_t *second)
-{
-	float a = sce_paf_misc_float_112c;
-	float b = sce_paf_misc_float_1130;
-	uint32_t x = (uint32_t)a;
-	uint32_t y = (uint32_t)b;
-	*first = x;
-	*second = y;
-}
-
-int ScePafMisc_0495CE33(void)
-{
-	uint32_t mode = sce_paf_misc_mode_d570;
-	uint32_t index;
-	for (index = 0; index < 2; ++index) {
-		if (mode == 2)
-			sce_paf_misc_flags_ee00[index] ^= 0x80;
-	}
-	return 0;
-}
-
-int ScePafMisc_DD2F6FFC(uint32_t group)
-{
-	uint32_t index;
-	if (group >= 2)
-		return 1;
-	for (index = 0; index < 8; ++index) {
-		uint32_t type = sce_paf_misc_cells_da60[group][index][5];
-		if (type == 1 || type == 3)
-			return 0;
-	}
-	return 1;
 }
 
 uint32_t ScePafMisc_2FBC2819(uint32_t mask)

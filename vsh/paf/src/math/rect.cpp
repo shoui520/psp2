@@ -184,7 +184,7 @@ float rect::get_area() const
 using paf::math::rect;
 
 /* The overlap, empty (and placed on the nearer edges) when there is none. */
-rect ScePafMisc_B2795FE2(const rect &obj, const rect &other)
+rect ScePafMisc_B2795FE2(const rect &obj, rect other)
 {
 	float objTop = obj.top();
 	float top = other.top();
