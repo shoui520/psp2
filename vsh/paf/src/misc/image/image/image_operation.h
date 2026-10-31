@@ -201,6 +201,9 @@ public:
 	FlipOperation(ImageFlipType type, memory::HeapAllocator *allocator);
 
 	virtual ~FlipOperation();
+	virtual bool Init(const ImageAttribute *srcattr, const ImageArray *srcimages,
+			  const ImageArray *srccluts, ImageAttribute *dstattr, ImageArray *dstimages,
+			  ImageArray *dstcluts);
 	virtual bool OperateImage(const ImagePoint &index, const ImageAttribute *srcattr,
 				  const ImageBuffer *srcimage, const ImageBuffer *srcclut,
 				  ImageAttribute *dstattr, ImageBuffer *dstimage, ImageArray *dstclut);
