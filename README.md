@@ -123,18 +123,7 @@ Sony's SELF layout with the original's auth ID (`tools/mkfself.py`), so it can (
 used in place of the original on PSP2.
 ## Current status
 
-The priority is: base kernel (`sys/internal/kernel`) -> full kernel (`sys/internal/drivers` and `os0:us` of sys/internal/usermode) -> ScePaf -> SceShell -> ?? anything else.  
-
-To summarize:
-* Kernel: substantial C reimplementation exists for nearly all `os0:kd` modules. Not complete and not exact yet. 
-* ScePaf: Not started
-* SceShell: Not started
-* `wp`: Not started
-* `ernie`: Done
-* `first_loader`: Done
-* `cp` (devkit communication processor): Not started
-
-Contributions welcome!
+Ever changing, please check the source code!
 
 ## Tiers
 * T0: Inventoried
@@ -145,7 +134,9 @@ Contributions welcome!
 * T5: Byte identical
 
 ## AI disclosure
-This was done using Claude and Codex.  
+This was done using Claude, Codex and Gemini 4.  
 ## Special Thanks
 Thanks to all the people who made this possible:  
 Mathieulh, CreepNT, CelesteBlue, Princess-of-Sleeping, SKGleba, isage, SonicMastr, bythos14, dots-tb, cuevavirus, xyzz, DaveeFTW, ProximaV, GrapheneCt, zecoxao, xerpi, LiEnby, Electry, TheOfficialFloW and yifanlu
+
+The ePSP firmware tree includes code from uOFW, which includes code from PSPSDK, which is licensed under the BSD license. For more copyright and license information about uOFW, see [COPYING](https://github.com/uofw/uofw/blob/master/COPYING).
