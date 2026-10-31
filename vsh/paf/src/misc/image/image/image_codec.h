@@ -421,7 +421,9 @@ public:
 	virtual ~GimAttribute();
 };
 
-/* GIM. */
+struct GimImageHeader;
+
+/* GIM: the images of the file are used in place, not decoded. */
 class GimCodec : public ImageCodec {
 public:
 	GimCodec();
@@ -439,6 +441,14 @@ public:
 	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
 			       ImageArray *images, ImageArray *cluts);
 	virtual ~GimCodec();
+
+private:
+	bool FindBlocks(common::SharedPtr<Buffer> buf, const GimImageHeader **image,
+			const GimImageHeader **palette);
+	bool ReadHeader(ImageAttribute *attr, const GimImageHeader *image,
+			const GimImageHeader *palette, ImageArray *images, ImageArray *cluts);
+
+	static ImageMode GetImageMode(uint16_t format);
 };
 
 class GxtAttribute : public ImageAttribute {
