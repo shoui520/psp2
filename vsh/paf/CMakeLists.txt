@@ -33,6 +33,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/openurl.cpp
 	src/http/http.cpp
 	src/misc/image/image/image_filter.cpp
+	src/misc/image/image/image_array.cpp
+	src/misc/image/image/image_attribute.cpp
 	src/file/httpfile.cpp
 	src/file/httpfile_reader.cpp
 	src/file/httpfile_range_reader.cpp
@@ -136,7 +138,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/rect_contains.c
 	src/misc/list.c
 	src/misc/dispatch.c
-	src/misc/vtable_init.c
 	src/misc/copy_guard.c
 	src/misc/search.c
 	src/misc/state.c

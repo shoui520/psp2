@@ -1,28 +1,6 @@
 /* Native small structured operations. */
 #include <stdint.h>
 
-void ScePafMisc_8D99A9E5(uint8_t *object, uint32_t value)
-{
-	volatile uint32_t *words = (volatile uint32_t *)object;
-	words[1] = value;
-	object[16] = 0;
-	words[0] = 0;
-	words[2] = 0;
-	words[3] = 0;
-	object[17] = 1;
-}
-
-void ScePafMisc_FA68B0F5(uint8_t *object, uint32_t value)
-{
-	volatile uint32_t *words = (volatile uint32_t *)object;
-	words[1] = value;
-	object[16] = 0;
-	words[0] = 0;
-	words[2] = 0;
-	words[3] = 0;
-	object[17] = 1;
-}
-
 void ScePafMisc_50D7A1CB(float *object, float value)
 {
 	float middle = object[1];
@@ -178,21 +156,6 @@ void ScePafMisc_9EBE483F(float *object, const float *dimensions)
 {
 	object[2] = dimensions[0] >= 0.0f ? dimensions[0] : 0.0f;
 	object[3] = dimensions[1] >= 0.0f ? dimensions[1] : 0.0f;
-}
-
-int ScePafMisc_79CFC202(uint8_t *object)
-{
-	uint32_t first, second;
-
-	if (!object[17])
-		return 0;
-	first = *(uint32_t *)(object + 8);
-	second = *(uint32_t *)(object + 12);
-	if (first * second) {
-		object[17] = 0;
-		object[16] = 0;
-	}
-	return 1;
 }
 
 void ScePafMisc_11D0025A(float *object, const float *position,

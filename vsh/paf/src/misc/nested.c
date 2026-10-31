@@ -55,11 +55,6 @@ uint32_t ScePafMisc_D8F98A86(const void *object)
 	return *(const uint32_t *)(inner + 76);
 }
 
-uint32_t ScePafMisc_97DBBDA7(const uint32_t *object)
-{
-	return object[2] * object[3];
-}
-
 void ScePafMisc_741DE852(uint32_t *object)
 {
 	*object = UINT32_MAX;

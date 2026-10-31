@@ -13,6 +13,10 @@ public:
 	{
 	}
 
+	ImageExtent(int32_t _w, int32_t _h) : w(_w), h(_h)
+	{
+	}
+
 	int32_t w;
 	int32_t h;
 };
@@ -23,12 +27,30 @@ public:
 	{
 	}
 
+	ImagePoint(int32_t _x, int32_t _y) : x(_x), y(_y)
+	{
+	}
+
 	int32_t x;
 	int32_t y;
 };
 
 class ImageRect {
 public:
+	ImageRect()
+	{
+	}
+
+	ImageRect(const ImagePoint &p, const ImageExtent &e)
+	{
+		origin = p;
+		extent = e;
+	}
+
+	ImageRect(int32_t x, int32_t y, int32_t w, int32_t h) : origin(x, y), extent(w, h)
+	{
+	}
+
 	ImagePoint origin;
 	ImageExtent extent;
 };

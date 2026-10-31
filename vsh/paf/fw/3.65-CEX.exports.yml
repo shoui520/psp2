@@ -281,7 +281,7 @@ ScePaf:
         - ScePafMisc_1156F852: 0x1156F852
         - _ZN3paf4math4rectC2ERKNS0_2v2ES4_: 0x11D0025A
         - _ZN3paf11inputdevice20InputGestureListener21update_gesture_deleteEj: 0x1218158A
-        - ScePafMisc_12D2FAA7: 0x12D2FAA7
+        - _ZN3paf5image5Image12GetAttributeEjRNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x12D2FAA7
         - _ZNK3paf4math4rectneERKS1_: 0x12DB04A6
         - _ZN3paf5Timer13DoFuncExpoOutEf: 0x12DBDCD0
         - _ZN3paf4http11Transaction16GetContentLengthERy: 0x12DC2F23
@@ -735,7 +735,7 @@ ScePaf:
         - _ZN3paf5cache12CacheManager11GetJobCountEv: 0x7E4672CA
         - _ZN3paf5cache9CacheBaseD2Ev: 0x7E54FAA6
         - _ZN3paf5cache12CacheManager5TouchEv: 0x7E6CA20C
-        - ScePafMisc_7E7BC632: 0x7E7BC632
+        - _ZN3paf5image5Image12GetAttributeEjRb: 0x7E7BC632
         - ScePafMisc_7EA133E0: 0x7EA133E0
         - _ZN3paf12MallocBuffer6CreateEPvj: 0x7ECAD6F8
         - ScePafMisc_7ED8F03C: 0x7ED8F03C
@@ -972,7 +972,7 @@ ScePaf:
         - ScePafMisc_B7CFFF5C: 0xB7CFFF5C
         - _ZN3paf12MallocBufferD2Ev: 0xB7F83390
         - _ZNK3paf8HttpFile17GetResponseHeaderEPKcRNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0xB8282602
-        - ScePafMisc_B8A95C4E: 0xB8A95C4E
+        - _ZN3paf5image5Image12GetAttributeEjRf: 0xB8A95C4E
         - _ZN3paf17TimerListenerList13ListenerParamC1EPNS_13TimerListenerEbPvS4_: 0xB90DBCA6
         - ScePafMisc_B92E588A: 0xB92E588A
         - _ZN3paf3rtc22FormatRFC3339LocalTimeEPcPKy: 0xB94B29AC
@@ -1168,7 +1168,7 @@ ScePaf:
         - _ZN3paf6memory13HeapAllocator25sce_paf_check_memoryleaksEPvS2_: 0xE4AF397E
         - _ZN3paf5image6filter4FlipEPNS0_11ImageBufferEPKS2_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatENS0_13ImageFlipTypeE: 0xE4E696C8
         - _ZN3paf11inputdevice3pad6UnlockEv: 0xE4F9C1B6
-        - ScePafMisc_E56F76BF: 0xE56F76BF
+        - _ZN3paf5image5Image12GetAttributeEjRi: 0xE56F76BF
         - _ZN3paf5Timer18DoFuncElasticInOutEf: 0xE5801EA1
         - _ZN3paf5cache9CacheBase6AddRefEv: 0xE5B70924
         - _ZN3paf5Timer18DoFuncCustomExpoInEfPKf: 0xE5CC9FFD
