@@ -138,8 +138,8 @@ typedef struct QmiPdsSuplPrompt {
 	SceUInt8 initHash[8];
 	SceUInt8 mode;
 	SceUInt32 ipv4Port;
-	SceUInt8 ipv4Address[4];
 	SceUInt32 ipv6Port;
+	SceUInt8 ipv4Address[4];
 	SceUInt8 ipv6Address[16];
 	SceUInt32 sessionId;
 	SceUInt8 serverUrlLength;
@@ -204,5 +204,10 @@ _Static_assert(offsetof(QmiPdsEventReport, vxPrompt) == 4900, "PDS VX placement"
 _Static_assert(offsetof(QmiPdsEventReport, suplPrompt) == 5176, "PDS SUPL placement");
 _Static_assert(offsetof(QmiPdsEventReport, suplHorizontalAccuracy) == 5581, "PDS SUPL accuracy placement");
 _Static_assert(offsetof(QmiPdsEventReport, umtsCpPrompt) == 5584, "PDS UMTS placement");
+_Static_assert(offsetof(QmiPdsSuplPrompt, ipv4Port) == 16, "PDS SUPL IPv4 port");
+_Static_assert(offsetof(QmiPdsSuplPrompt, ipv6Port) == 20, "PDS SUPL IPv6 port");
+_Static_assert(offsetof(QmiPdsSuplPrompt, ipv4Address) == 24, "PDS SUPL IPv4 address");
+_Static_assert(offsetof(QmiPdsSuplPrompt, ipv6Address) == 28, "PDS SUPL IPv6 address");
+_Static_assert(offsetof(QmiPdsSuplPrompt, sessionId) == 44, "PDS SUPL session");
 
 #endif
