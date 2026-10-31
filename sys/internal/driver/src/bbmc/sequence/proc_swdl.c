@@ -7,6 +7,7 @@
 #include "../bbmc_memory.h"
 #include "../bbmc_netif.h"
 #include "../bbcmd.h"
+#include "../updater/updater.h"
 #include <power/power.h>
 #include <gps/gps.h>
 
@@ -49,6 +50,33 @@ int modemWakeupPending;
 SceUInt32 pinStatusRequeued;
 SceUInt32 controlFlagMask;
 SceUInt32 controlFlagSet;
+SceUID swdlTimerId;
+SceUInt32 swdlNextStep;
+
+/* name unknown: the download request being run, and _waitTransition's counts */
+typedef struct SwdlWork {
+	BbmcMessage request;
+	SceUInt32 carrierFlags[3];
+	SceUInt32 stableCount;
+	SceUInt32 unstableCount;
+} SwdlWork;
+
+static SwdlWork swdlWork;
+
+#if FW_DEBUG
+static const SceKernelDebugInfo dbg__waitTransition_L1410
+	__attribute__((section(".sce_dbginfo"), used)) = {
+	.file = "sequence/proc_swdl.c",
+	.line = 1410,
+	.func = "_waitTransition",
+};
+
+static const SceKernelDebugInfoSource dbg__waitTransition_L1410Source
+	__attribute__((section(SCE_DBGSRC_SECTION), used)) = {
+	&dbg__waitTransition_L1410, "sequence/proc_swdl.c", 1410,
+	"_waitTransition",
+};
+#endif
 
 /* name unknown: command 163 reads the serving cell into control->cellLocation */
 int seqGetCellLocation(BbmcControl *control, BbmcMessage *message)
@@ -1997,4 +2025,444 @@ failed:
 		return result;
 	}
 	return 0;
+}
+
+/* name unknown: the timer callbacks of the download sequences */
+void swdlTransitionTimeoutHandler(void *arg)
+{
+	bbmcSendSimpleMessage(arg, 78);
+}
+
+void swdlComPowerTimeoutHandler(void *arg)
+{
+	bbmcSendSimpleMessage(arg, 178);
+}
+
+void swdlEdlComPowerTimeoutHandler(void *arg)
+{
+	bbmcSendSimpleMessage(arg, 178);
+}
+
+void swdlCarrierReplyTimeoutHandler(void *arg)
+{
+	BbmcControl *control = arg;
+	BbmcMessage *message;
+
+	message = msgAllocMsgPacket(control, 187);
+	if (message) {
+		message->body.timedOutCommand = 59;
+		msgSendMsgPacket(control, message);
+	}
+}
+
+void swdlEdlReplyTimeoutHandler(void *arg)
+{
+	BbmcControl *control = arg;
+	BbmcMessage *message;
+
+	message = msgAllocMsgPacket(control, 187);
+	if (message) {
+		message->body.timedOutCommand = 59;
+		msgSendMsgPacket(control, message);
+	}
+}
+
+void swdlCarrierPowerOffTimeoutHandler(void *arg)
+{
+	BbmcControl *control = arg;
+	BbmcMessage *message;
+
+	message = msgAllocMsgPacket(control, 187);
+	if (message) {
+		message->body.timedOutCommand = 9;
+		msgSendMsgPacket(control, message);
+	}
+}
+
+void swdlEdlPowerOffTimeoutHandler(void *arg)
+{
+	BbmcControl *control = arg;
+	BbmcMessage *message;
+
+	message = msgAllocMsgPacket(control, 187);
+	if (message) {
+		message->body.timedOutCommand = 9;
+		msgSendMsgPacket(control, message);
+	}
+}
+
+/* name unknown: close the five update files the file-set download opened */
+int swdlCloseUpdateFiles(BbmcControl *control)
+{
+	BbmcFileSetUpdateWork *work = &control->updateWork.fileSet;
+	int result = 0, error;
+
+	if (work->files[0] != 0) {
+		error = udIoClose(work->files[0]);
+		if (error < 0)
+			result = error;
+	}
+	if (work->files[1] != 0) {
+		error = udIoClose(work->files[1]);
+		if (error < 0)
+			result = error;
+	}
+	if (work->files[2] != 0) {
+		error = udIoClose(work->files[2]);
+		if (error < 0)
+			result = error;
+	}
+	if (work->files[3] != 0) {
+		error = udIoClose(work->files[3]);
+		if (error < 0)
+			result = error;
+	}
+	if (work->files[4] != 0) {
+		error = udIoClose(work->files[4]);
+		if (error < 0)
+			result = error;
+	}
+	memset(&control->updateWork, 0, sizeof(control->updateWork));
+	return result;
+}
+
+/* Wait for the modem to settle in a state at least `state`: two calls in a row
+ * that find it there send command 78 and go on to `nextStep`, otherwise a
+ * two-second timer calls again, at most ten times. */
+int _waitTransition(BbmcControl *control, SceInt32 state, SceUInt32 nextStep)
+{
+	int result;
+
+	if (control->currentState < state ||
+	    bbmcIsStateTransitionPending(control)) {
+		swdlWork.stableCount = 0;
+		if (++swdlWork.unstableCount > 9)
+			return (int)0x80330006;
+	} else {
+		swdlWork.unstableCount = 0;
+		if (++swdlWork.stableCount > 1) {
+			result = bbmcSendSimpleMessage(control, 78);
+			if (result >= 0)
+				swdlNextStep = nextStep;
+			return result;
+		}
+	}
+	result = bbmcTimerSetHandler(2000000, swdlTransitionTimeoutHandler,
+				     control);
+	if (result < 0) {
+#if FW_DEBUG
+		sceKernelAssert(0, &dbg__waitTransition_L1410,
+				__builtin_return_address(0));
+#endif
+	} else {
+		swdlTimerId = result;
+	}
+	return result;
+}
+
+/* name unknown: free the strings of the request copy and clear it */
+void swdlFreeRequest(void)
+{
+	BbmcStringPairEntry *entry;
+
+	switch (swdlWork.request.command) {
+	case 119:
+		if (swdlWork.request.body.stringPair.first != NULL)
+			bbmcFree(swdlWork.request.body.stringPair.first);
+		if (swdlWork.request.body.stringPair.second != NULL)
+			bbmcFree(swdlWork.request.body.stringPair.second);
+		break;
+	case 122:
+		if (swdlWork.request.body.stringPair.first != NULL)
+			bbmcFree(swdlWork.request.body.stringPair.first);
+		if (swdlWork.request.body.stringPair.second != NULL)
+			bbmcFree(swdlWork.request.body.stringPair.second);
+		break;
+	case 120:
+	case 125:
+	case 126:
+		if (swdlWork.request.body.stringSet.strings[0] != NULL)
+			bbmcFree(swdlWork.request.body.stringSet.strings[0]);
+		if (swdlWork.request.body.stringSet.strings[1] != NULL)
+			bbmcFree(swdlWork.request.body.stringSet.strings[1]);
+		if (swdlWork.request.body.stringSet.strings[2] != NULL)
+			bbmcFree(swdlWork.request.body.stringSet.strings[2]);
+		if (swdlWork.request.body.stringSet.strings[3] != NULL)
+			bbmcFree(swdlWork.request.body.stringSet.strings[3]);
+		if (swdlWork.request.body.stringSet.strings[4] != NULL)
+			bbmcFree(swdlWork.request.body.stringSet.strings[4]);
+		break;
+	case 121:
+		for (entry = swdlWork.request.body.stringPairs.entries;
+		     entry != &swdlWork.request.body.stringPairs.entries[5]; entry++) {
+			if (entry->strings.first != NULL)
+				bbmcFree(entry->strings.first);
+			if (entry->strings.second != NULL)
+				bbmcFree(entry->strings.second);
+		}
+		memset(&swdlWork.request.body, 0, sizeof(swdlWork.request.body));
+		break;
+	}
+	memset(&swdlWork.request, 0, sizeof(swdlWork.request));
+}
+
+/* name unknown: open the five update files a file-set request names and add up
+ * their sizes */
+int swdlOpenUpdateFiles(BbmcControl *control, const BbmcStringSet *request)
+{
+	BbmcFileSetUpdateWork *work = &control->updateWork.fileSet;
+	const char *first = request->strings[0];
+	const char *second = request->strings[1];
+	const char *third = request->strings[2];
+	const char *fourth = request->strings[3];
+	const char *fifth = request->strings[4];
+	SceOff size;
+	int result;
+
+	memset(&control->updateWork, 0, sizeof(control->updateWork));
+	result = (int)first;
+	if (first != NULL) {
+		result = udIoOpen(first, UD_IO_OPEN_FLAGS, 0400);
+		if (result < 0)
+			goto failed;
+		work->files[0] = result;
+		size = udIoGetSize(result);
+		if (size < 0)
+			goto sizeFailed;
+		work->sizes[0] = size;
+	}
+	if (second != NULL) {
+		result = udIoOpen(second, UD_IO_OPEN_FLAGS, 0400);
+		if (result < 0)
+			goto failed;
+		work->files[1] = result;
+		size = udIoGetSize(result);
+		if (size < 0)
+			goto sizeFailed;
+		work->sizes[1] = size;
+	}
+	if (third != NULL) {
+		result = udIoOpen(third, UD_IO_OPEN_FLAGS, 0400);
+		if (result < 0)
+			goto failed;
+		work->files[2] = result;
+		size = udIoGetSize(result);
+		if (size < 0)
+			goto sizeFailed;
+		work->sizes[2] = size;
+	}
+	if (fourth != NULL) {
+		result = udIoOpen(fourth, UD_IO_OPEN_FLAGS, 0400);
+		if (result < 0)
+			goto failed;
+		work->files[3] = result;
+		size = udIoGetSize(result);
+		if (size < 0)
+			goto sizeFailed;
+		work->sizes[3] = size;
+	}
+	if (fifth != NULL) {
+		result = udIoOpen(fifth, UD_IO_OPEN_FLAGS, 0400);
+		if (result < 0)
+			goto failed;
+		work->files[4] = result;
+		size = udIoGetSize(result);
+		if (size < 0)
+			goto sizeFailed;
+		work->sizes[4] = size;
+	}
+	work->forwardedOptions[0] = request->forwardedValues[0];
+	work->forwardedOptions[1] = request->forwardedValues[1];
+	work->forwardedOptions[2] = request->forwardedValues[2];
+	work->completedBytes = 0;
+	work->totalBytes = work->sizes[0] + work->sizes[1] + work->sizes[2] +
+			   work->sizes[3] + work->sizes[4];
+	return result;
+
+sizeFailed:
+	result = (int)size;
+failed:
+	if (work->files[0] != 0)
+		udIoClose(work->files[0]);
+	if (work->files[1] != 0)
+		udIoClose(work->files[1]);
+	if (work->files[2] != 0)
+		udIoClose(work->files[2]);
+	if (work->files[3] != 0)
+		udIoClose(work->files[3]);
+	if (work->files[4] != 0)
+		udIoClose(work->files[4]);
+	memset(&control->updateWork, 0, sizeof(control->updateWork));
+	return result;
+}
+
+/* name unknown: copy a string of a request into the bbmc heap (as the API does) */
+static inline char *swdlCopyString(const char *source, SceSize length)
+{
+	SceSize copySize = length + 1, remainder, allocationSize;
+	char *copy;
+
+	if (source == NULL || copySize == 0)
+		return NULL;
+	remainder = copySize % 124;
+	allocationSize = remainder == 0 ? copySize : length + 125 - remainder;
+	copy = bbmcAlloc(allocationSize, 0);
+	if (copy == NULL)
+		return NULL;
+	memcpy(copy, source, copySize);
+	return copy;
+}
+
+/* name unknown: keep a copy of a download request, with its strings, while the
+ * download runs */
+int swdlCopyRequest(const BbmcMessage *message)
+{
+	BbmcStringPairEntry *entry;
+	const BbmcStringPairEntry *source;
+	char *copy;
+	int i;
+
+	if (message == NULL)
+		return (int)0x80330002;
+	memset(&swdlWork.request, 0, sizeof(swdlWork.request));
+	switch (message->command) {
+	case 119:
+		swdlWork.request.command = 119;
+		if (message->body.stringPair.firstLength != 0) {
+			copy = swdlCopyString(message->body.stringPair.first,
+					      message->body.stringPair.firstLength);
+			swdlWork.request.body.stringPair.first = copy;
+			if (copy == NULL)
+				goto failed;
+			swdlWork.request.body.stringPair.firstLength =
+				message->body.stringPair.firstLength;
+		}
+		if (message->body.stringPair.secondLength != 0) {
+			copy = swdlCopyString(message->body.stringPair.second,
+					      message->body.stringPair.secondLength);
+			swdlWork.request.body.stringPair.second = copy;
+			if (copy == NULL)
+				goto failed;
+			swdlWork.request.body.stringPair.secondLength =
+				message->body.stringPair.secondLength;
+		}
+		return 0;
+	case 120:
+	case 125:
+	case 126:
+		swdlWork.request.command = message->command;
+		swdlWork.request.body.stringSet.forwardedValues[0] =
+			message->body.stringSet.forwardedValues[0];
+		swdlWork.request.body.stringSet.forwardedValues[1] =
+			message->body.stringSet.forwardedValues[1];
+		swdlWork.request.body.stringSet.forwardedValues[2] =
+			message->body.stringSet.forwardedValues[2];
+		if (message->body.stringSet.lengths[0] != 0) {
+			copy = swdlCopyString(message->body.stringSet.strings[0],
+					      message->body.stringSet.lengths[0]);
+			swdlWork.request.body.stringSet.strings[0] = copy;
+			if (copy == NULL)
+				goto failed;
+			swdlWork.request.body.stringSet.lengths[0] =
+				message->body.stringSet.lengths[0];
+		}
+		if (message->body.stringSet.lengths[1] != 0) {
+			copy = swdlCopyString(message->body.stringSet.strings[1],
+					      message->body.stringSet.lengths[1]);
+			swdlWork.request.body.stringSet.strings[1] = copy;
+			if (copy == NULL)
+				goto failed;
+			swdlWork.request.body.stringSet.lengths[1] =
+				message->body.stringSet.lengths[1];
+		}
+		if (message->body.stringSet.lengths[2] != 0) {
+			copy = swdlCopyString(message->body.stringSet.strings[2],
+					      message->body.stringSet.lengths[2]);
+			swdlWork.request.body.stringSet.strings[2] = copy;
+			if (copy == NULL)
+				goto failed;
+			swdlWork.request.body.stringSet.lengths[2] =
+				message->body.stringSet.lengths[2];
+		}
+		if (message->body.stringSet.lengths[3] != 0) {
+			copy = swdlCopyString(message->body.stringSet.strings[3],
+					      message->body.stringSet.lengths[3]);
+			swdlWork.request.body.stringSet.strings[3] = copy;
+			if (copy == NULL)
+				goto failed;
+			swdlWork.request.body.stringSet.lengths[3] =
+				message->body.stringSet.lengths[3];
+		}
+		if (message->body.stringSet.lengths[4] != 0) {
+			copy = swdlCopyString(message->body.stringSet.strings[4],
+					      message->body.stringSet.lengths[4]);
+			swdlWork.request.body.stringSet.strings[4] = copy;
+			if (copy == NULL)
+				goto failed;
+			swdlWork.request.body.stringSet.lengths[4] =
+				message->body.stringSet.lengths[4];
+		}
+		return 0;
+	case 121:
+		swdlWork.request.body.stringPairs.count =
+			message->body.stringPairs.count;
+		swdlWork.request.body.stringPairs.selectedIndex =
+			message->body.stringPairs.selectedIndex;
+		swdlWork.request.command = 121;
+		for (i = 0; i < 5; i++) {
+			entry = &swdlWork.request.body.stringPairs.entries[i];
+			source = &message->body.stringPairs.entries[i];
+			if (source->strings.firstLength != 0) {
+				copy = swdlCopyString(source->strings.first,
+						      source->strings.firstLength);
+				if (copy == NULL) {
+					swdlWork.request.body.stringPairs.entries[i].strings.first = NULL;
+					goto failed;
+				}
+				entry->strings.first = copy;
+				entry->strings.firstLength = source->strings.firstLength;
+				entry->forwardedValue = source->forwardedValue;
+			}
+			if (source->strings.secondLength != 0) {
+				copy = swdlCopyString(source->strings.second,
+						      source->strings.secondLength);
+				if (copy == NULL) {
+					swdlWork.request.body.stringPairs.entries[i].strings.second = NULL;
+					goto failed;
+				}
+				entry->strings.second = copy;
+				entry->strings.secondLength = source->strings.secondLength;
+			}
+		}
+		return 0;
+	case 122:
+		swdlWork.request.command = 122;
+		if (message->body.stringPair.firstLength != 0) {
+			copy = swdlCopyString(message->body.stringPair.first,
+					      message->body.stringPair.firstLength);
+			swdlWork.request.body.stringPair.first = copy;
+			if (copy == NULL)
+				goto failed;
+			swdlWork.request.body.stringPair.firstLength =
+				message->body.stringPair.firstLength;
+		}
+		if (message->body.stringPair.secondLength != 0) {
+			copy = swdlCopyString(message->body.stringPair.second,
+					      message->body.stringPair.secondLength);
+			swdlWork.request.body.stringPair.second = copy;
+			if (copy == NULL)
+				goto failed;
+			swdlWork.request.body.stringPair.secondLength =
+				message->body.stringPair.secondLength;
+		}
+		return 0;
+	default:
+		memcpy(&swdlWork.request, message, sizeof(swdlWork.request));
+		return 0;
+	}
+
+failed:
+	swdlFreeRequest();
+	memset(&swdlWork.request, 0, sizeof(swdlWork.request));
+	return (int)0x80330005;
 }
