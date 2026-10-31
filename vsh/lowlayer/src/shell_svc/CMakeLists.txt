@@ -19,4 +19,6 @@ psp2_module(vs0_sys_external_libshellsvc KIND user COMPILER snc PARTIAL SOURCES
 	${ipmi_source}/psp2/semaphore.cpp
 	../ipmi_wrapper/ipmi_wrapper_client.cpp
 	../ipmi_wrapper/ipmi_wrapper_server.cpp
+	shell_util.cpp
+	shell_util_ipc_client.cpp
 )
