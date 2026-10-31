@@ -10,3 +10,7 @@ dlmalloc/malloc.c). The version follows from Sony's debug records: their line
 numbers fit 2.8.4 plus Sony's insertions, and 2.8.5 already places
 destroy_mspace after Sony's line for it. Sony's changes are kept separate in
 sys/internal/kernel/src/sysmem/dlmalloc_sce.patch, applied at configure time.
+
+It is also the base of PAF's heap in vs0:sys/external/libpaf.suprx, built as
+mspaces with tagged feet, padding and an address-ordered bin for large
+requests; those changes are in vsh/paf/src/memory/dlmalloc_sce.patch.

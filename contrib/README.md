@@ -18,7 +18,7 @@ upstream. When a build needs another file, add it from the same release.
 | bsd-stdlib-7.0.0 | FreeBSD 7.0 `strtoll.c` | the file | sysclib |
 | bsd-string-1998 | FreeBSD 7.0 `strlcpy.c` | the file | sysclib |
 | dlmalloc-2.8.3 | Doug Lea's malloc 2.8.3 | `malloc.c` | libkernel (heap) |
-| dlmalloc-2.8.4 | Doug Lea's malloc 2.8.4 | `malloc.c` | sysmem |
+| dlmalloc-2.8.4 | Doug Lea's malloc 2.8.4 | `malloc.c` | sysmem, libpaf |
 | gcc-4.8-2014.05 | Sourcery CodeBench Lite 2014.05-28 GCC, the base of Sony's GCC | the ARM runtime files libkernel reads | libkernel (through `toolchains/libgcc`) |
 | img-sgx-ddk-1.7.862890 | Imagination SGX DDK for Linux 1.7 | the full import (not trimmed yet) | gpu_es4, gpuinit_es4, gpucoredump_es4 (through the shared SGX headers) |
 | netbsd-2.1, netbsd-3.0 | NetBSD `syssrc` 2.1 and 3.0 | the network stack files and the system headers net_ps reads | net_ps, net_ps_dev, wlanbt (through `net_ps/include`) |
