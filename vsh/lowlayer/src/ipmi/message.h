@@ -15,11 +15,13 @@ struct Header {
 };
 
 #define IPMI_MESSAGE_TYPE_CONNECT_REQUEST	1
+#define IPMI_MESSAGE_TYPE_CONNECT_RESPONSE	2
 #define IPMI_MESSAGE_TYPE_DISCONNECT_REQUEST	3
 #define IPMI_MESSAGE_TYPE_SYNC_CALL_REQUEST	4
 #define IPMI_MESSAGE_TYPE_ASYNC_CALL_REQUEST	6
 #define IPMI_MESSAGE_TYPE_SYNC_MULTI_CALL_REQUEST	8
 #define IPMI_MESSAGE_TYPE_ASYNC_MULTI_CALL_REQUEST	10
+#define IPMI_MESSAGE_TYPE_PROCESS_EXIT		12
 
 /*
  * A client asking to connect, sent to the server's pipe: the client's limits, then its message
@@ -77,6 +79,14 @@ struct ConnectResponse : Header {
 	int error;
 	int result;
 	SceUInt32 sessionId;
+};
+
+/*
+ * A client's process has exited: the server sends this into its own pipe, so that its
+ * dispatcher drops the sessions of every exited process (ServerImpl::handle_process_exit).
+ */
+struct ProcessExitNotification : Header {
+	SceUInt32 reserved[2];
 };
 
 /* A synchronous method call, followed in the pipe by its inSize bytes of input. */

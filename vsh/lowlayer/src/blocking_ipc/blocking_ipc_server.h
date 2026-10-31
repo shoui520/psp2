@@ -91,7 +91,8 @@ public:
 	virtual void onAsyncMethodDispatch(IPMI::Session *pSession, SceUInt32 requestId,
 					   SceUInt32 methodId, const IPMI::DataInfo *pInList,
 					   SceUInt32 inCount);
-	virtual int onNewClient(IPMI::Server *pServer);
+	virtual int onNewClient(IPMI::Server *pServer, const IPMI::Session::Config *pConfig,
+				const void *pParam, SceSize paramSize);
 	virtual void onSessionClosedByClient(IPMI::Session *pSession);
 	virtual void onSessionKilled(IPMI::Session *pSession);
 

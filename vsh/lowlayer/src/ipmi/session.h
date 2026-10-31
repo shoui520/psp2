@@ -10,9 +10,13 @@ namespace IPMI {
 /* The server's end of one client's connection (Sony's IPMI::Session, session_impl.cpp). */
 class Session {
 public:
-	/* What the server allocates for one client: the client's Config, as the server sees it. */
+	/*
+	 * What the server allocates for one client: the client's Config, as its ConnectRequest
+	 * gives it, and the session's buffer size (getBufferSize).
+	 */
 	struct Config {
-		SceUInt32 sessionParam[2];
+		SceUID processId;
+		int appId;
 		SceUInt32 syncCallCount;
 		SceSize maxSyncCallInSize;
 		SceSize maxSyncCallOutSize;
@@ -22,7 +26,7 @@ public:
 		SceUInt32 eventFlagCount;
 		SceUInt32 msgQueueCount;
 		SceSize msgQueueBufferSize[32];
-		int budget;
+		SceSize bufferSize;
 	};
 
 	static SceSize getBufferSize(const Config *pConfig);

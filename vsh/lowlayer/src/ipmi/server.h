@@ -14,11 +14,13 @@ namespace IPMI {
  */
 class Server {
 public:
+	class EventHandler;
+
 	/* What the server allocates; the event handler receives every call. */
 	struct Config {
 		SceSize maxRequestSize;
 		SceSize maxMessageSize;
-		void *pUserData;
+		EventHandler *pEventHandler;
 		char serviceName[16];
 		SceUInt32 reserved;
 		int budget;
@@ -28,7 +30,7 @@ public:
 		{
 			maxRequestSize = 0xF00;
 			maxMessageSize = 0xF00;
-			pUserData = NULL;
+			pEventHandler = NULL;
 			budget = DEFAULT_BUDGET;
 			openLimit = -1;
 			serviceName[0] = '\0';
@@ -51,12 +53,14 @@ public:
 		virtual void onAsyncMethodDispatch(Session *pSession, SceUInt32 requestId,
 						   SceUInt32 methodId, const DataInfo *pInList,
 						   SceUInt32 inCount);
-		virtual int onNewClient(Server *pServer) = 0;
+		/* A client connects with its Config and parameter; call createSession to accept it. */
+		virtual int onNewClient(Server *pServer, const Session::Config *pConfig,
+					const void *pParam, SceSize paramSize) = 0;
 		virtual void onSessionClosedByClient(Session *pSession) = 0;
 		virtual void onSessionKilled(Session *pSession);
 	};
 
-	static int create(Server **ppServer, const Config *pConfig, EventHandler *pHandler,
+	static int create(Server **ppServer, const Config *pConfig, void *pUserData,
 			  void *pMemory);
 	static SceSize getWorkBufferSize(const Config *pConfig);
 

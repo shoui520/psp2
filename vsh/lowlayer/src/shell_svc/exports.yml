@@ -101,28 +101,28 @@ SceShellSvc:
       functions:
         - SceIpmi_006EFA9D: 0x006EFA9D
         - _ZN11BlockingIpc6Server11threadEntryEjPv: 0x0400DE60
-        - SceIpmi_08E0BAE1: 0x08E0BAE1
+        - _ZN4IPMI6ServerD1Ev: 0x08E0BAE1
         - SceIpmi_095C92A6: 0x095C92A6
         - _ZN11BlockingIpc6Server23onSessionClosedByClientEPN4IPMI7SessionE: 0x0B829281
         - _ZN11BlockingIpc6Server5startEv: 0x0BBBE77C
         - SceIpmi_0E0728BE: 0x0E0728BE
         - _ZN11BlockingIpc6Client9getClientEv: 0x1372C7B7
         - _ZN11BlockingIpc6Server7destroyEv: 0x146B3C78
-        - SceIpmi_1746BC8B: 0x1746BC8B
+        - _ZN4IPMI6Server12EventHandlerD1Ev: 0x1746BC8B
         - SceIpmi_1D7F6CE9: 0x1D7F6CE9
-        - SceIpmi_1F3D805E: 0x1F3D805E
-        - SceIpmi_1FF8764B: 0x1FF8764B
+        - _ZN4IPMI6Server12EventHandler15onSessionKilledEPNS_7SessionE: 0x1F3D805E
+        - _ZN4IPMI4impl10ServerImpl17notifyProcessExitEi: 0x1FF8764B
         - SceIpmi_22625598: 0x22625598
         - _ZN11BlockingIpc6Client13getBufferSizeEPKNS0_6ConfigE: 0x296D44D4
         - SceIpmi_2B081B77: 0x2B081B77
-        - SceIpmi_2B646CEA: 0x2B646CEA
+        - _ZN4IPMI6Server6createEPPS0_PKNS0_6ConfigEPvS6_: 0x2B646CEA
         - _ZN11BlockingIpc6Client7connectEv: 0x2C6DB642
-        - SceIpmi_2DE2B1F0: 0x2DE2B1F0
-        - SceIpmi_2E318972: 0x2E318972
+        - _ZN4IPMI6Server12EventHandler21onAsyncMethodDispatchEPNS_7SessionEjjPvjS4_j: 0x2DE2B1F0
+        - _ZN4IPMI6Server12EventHandler20onSyncMethodDispatchEPNS_7SessionEjPvjjS4_j: 0x2E318972
         - _ZN11BlockingIpc6Server10initializeEPKNS0_6ConfigE: 0x2FF6EF6D
         - _ZN11BlockingIpc6Client10disconnectEv: 0x3554D4B0
         - _ZN11BlockingIpc6Client13createRequestEPiPKvj: 0x367CEF82
-        - SceIpmi_391B02AA: 0x391B02AA
+        - _ZN4IPMI6Server17getWorkBufferSizeEPKNS0_6ConfigE: 0x391B02AA
         - SceIpmi_3A564438: 0x3A564438
         - SceIpmi_3B6BF028: 0x3B6BF028
         - SceIpmi_40F31ABF: 0x40F31ABF
@@ -139,7 +139,7 @@ SceShellSvc:
         - _ZN11BlockingIpc6Server13getBufferSizeEPKNS0_6ConfigE: 0x691931E8
         - _ZN4IPMI6ClientD0Ev: 0x6964FD2A
         - SceIpmi_6A9D2D70: 0x6A9D2D70
-        - SceIpmi_6CAE7340: 0x6CAE7340
+        - _ZN4IPMI6ServerD0Ev: 0x6CAE7340
         - SceIpmi_70DFD08F: 0x70DFD08F
         - SceIpmi_7714F7BB: 0x7714F7BB
         - _ZN11BlockingIpc6Server20onSyncMethodDispatchEPN4IPMI7SessionEjPKNS1_8DataInfoEjPNS1_10BufferInfoEj: 0x79C2EB5D
@@ -150,10 +150,10 @@ SceShellSvc:
         - SceIpmi_8941B364: 0x8941B364
         - _ZN11BlockingIpc6Client14endBlockingIpcEi: 0x8A0BAC4E
         - _ZN11BlockingIpc6Server13runDispatcherEv: 0x8DE3BDC8
-        - SceIpmi_8DF92251: 0x8DF92251
+        - _ZN4IPMI6Server12EventHandler21onAsyncMethodDispatchEPNS_7SessionEjjPKNS_8DataInfoEj: 0x8DF92251
         - SceIpmi_8F252BAF: 0x8F252BAF
         - SceIpmi_9097E0AD: 0x9097E0AD
-        - SceIpmi_969B1899: 0x969B1899
+        - _ZN4IPMI6ServerD2Ev: 0x969B1899
         - SceIpmi_9E5154FC: 0x9E5154FC
         - SceIpmi_9EE9496B: 0x9EE9496B
         - _ZN11BlockingIpc6Client7destroyEv: 0xA20BB95B
@@ -161,8 +161,8 @@ SceShellSvc:
         - _ZN11BlockingIpc6Server21onAsyncMethodDispatchEPN4IPMI7SessionEjjPKNS1_8DataInfoEj: 0xA360D58A
         - _ZN4IPMI6ClientD1Ev: 0xA5AA193C
         - _ZN4IPMI6ClientC2Ev: 0xA68863F9
-        - _ZN11BlockingIpc6Server11onNewClientEPN4IPMI6ServerE: 0xAC75DB57
-        - SceIpmi_B0304313: 0xB0304313
+        - _ZN11BlockingIpc6Server11onNewClientEPN4IPMI6ServerEPKNS1_7Session6ConfigEPKvj: 0xAC75DB57
+        - _ZN4IPMI6Server12EventHandlerD0Ev: 0xB0304313
         - _ZN4IPMI6Client6createEPPS0_PKNS0_6ConfigEPvS6_: 0xB282B430
         - _ZN11BlockingIpc6Server6createEPPS0_PKNS0_6ConfigEPv: 0xB50625FA
         - _ZN4IPMI6ClientD2Ev: 0xB509D16D
@@ -171,12 +171,12 @@ SceShellSvc:
         - _ZN11BlockingIpc6Client6createEPPS0_PKNS0_6ConfigEPv: 0xBC3A3031
         - _ZN4IPMI6ClientC1Ev: 0xC6EA9161
         - _ZN11BlockingIpc6Client20getSessionBufferSizeEPKNS0_6ConfigE: 0xCBD4547A
-        - SceIpmi_CE42D450: 0xCE42D450
+        - _ZN4IPMI6Server12EventHandler20onSyncMethodDispatchEPNS_7SessionEjPKNS_8DataInfoEjPNS_10BufferInfoEj: 0xCE42D450
         - SceIpmi_D15C6742: 0xD15C6742
         - SceIpmi_D73C03D2: 0xD73C03D2
         - _ZN11BlockingIpc6Server20onSyncMethodDispatchEPN4IPMI7SessionEjPvjjS4_j: 0xDA312C81
         - _ZN11BlockingIpc6Client10initializeEPKNS0_6ConfigE: 0xDC6AE587
-        - SceIpmi_F089979A: 0xF089979A
+        - _ZN4IPMI6Server12EventHandlerD2Ev: 0xF089979A
         - SceIpmi_F38BFC2D: 0xF38BFC2D
         - SceIpmi_F3BB29DC: 0xF3BB29DC
         - SceIpmi_F5CFFDF6: 0xF5CFFDF6

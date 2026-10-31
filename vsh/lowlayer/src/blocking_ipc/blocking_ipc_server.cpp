@@ -53,7 +53,7 @@ int Server::initialize(const Config *pConfig)
 
 	serverConfig.budget = pConfig->budget;
 	sceClibStrncpy(serverConfig.serviceName, pConfig->name, sizeof(serverConfig.serviceName));
-	serverConfig.pUserData = this;
+	serverConfig.pEventHandler = this;
 	serverConfig.maxMessageSize = SERVER_MAX(SERVER_MAX(pConfig->maxSyncCallInSize,
 		pConfig->maxAsyncCallInSize), pConfig->maxBlockingInSize);
 	ret = IPMI::Server::create(&m_pServer, &serverConfig, this, this + 1);
@@ -213,7 +213,8 @@ void Server::onAsyncMethodDispatch(IPMI::Session *pSession, SceUInt32 requestId,
 	}
 }
 
-int Server::onNewClient(IPMI::Server *pServer)
+int Server::onNewClient(IPMI::Server *pServer, const IPMI::Session::Config *pConfig,
+			 const void *pParam, SceSize paramSize)
 {
 	SessionEntry *pEntry;
 	SceUInt32 i;
