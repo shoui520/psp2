@@ -4,6 +4,8 @@
 #include "../bbcmd.h"
 #include "../bbmc_netif.h"
 #include "../usb_extif.h"
+#include "../sw_dload/sw_dload.h"
+#include <string.h>
 
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int message);
 int bbmcFinalizeGps(void);
@@ -964,5 +966,337 @@ int seqResume(BbmcControl *control, BbmcMessage *message)
 	bbmcNotifyFeatureEvent(control, 0, 0x100000);
 	result = bbmcSendSimpleMessage(control, 46);
 	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+SceUInt32 smsSendStep;
+SceUInt32 controlKeyStep;
+SceUInt32 operationModeStep;
+SceUID operationModeTimerId;
+SceUInt32 operationModeRegisteredDownload;
+
+/* name unknown: sends a stored SMS (command 90) and reports its result (reply 91) */
+int seqSendSms(BbmcControl *control, BbmcMessage *message)
+{
+	int result;
+
+	if (smsSendStep == 0) {
+		if (message->command == 90) {
+			BbcmdArgument input[7];
+
+			input[0].pointer = message->body.smsSendRequest.data;
+			input[1].value = message->body.smsSendRequest.length;
+			input[2].value = message->body.smsSendRequest.format;
+			input[3].value = 0;
+			input[4].value = 0;
+			input[5].value = 0;
+			input[6].value = 0;
+			result = bbcmdExecute(0, 0x12, input, NULL,
+					      bbcmdManagerCompletion, control);
+			if (result < 0)
+				goto finish;
+			smsSendStep = 1;
+		}
+		return 1;
+	}
+	if (smsSendStep != 1) {
+		result = (int)0x80330001;
+		goto finish;
+	}
+	if (message->command != 91)
+		return 1;
+	result = message->body.commandResult;
+	if (result != 0)
+		bbmcNotifyFeatureEvent(control, 2, 0x20);
+	else
+		bbmcNotifyFeatureEvent(control, 2, 8);
+	if (result > 0)
+		result = 0;
+finish:
+	smsSendStep = 0;
+	bbmcEnterCS(&control->mutex);
+	control->smsSendBusy = 0;
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/*
+ * name unknown: depersonalizes (command 179) or unblocks (command 180) a control
+ * key, and records the retries its reply (182 or 183) reports
+ */
+int seqControlKey(BbmcControl *control, BbmcMessage *message)
+{
+	QmiIndexedResponse *response;
+	int result;
+
+	if (controlKeyStep == 0) {
+		BbcmdArgument output[6];
+		BbcmdArgument input[7];
+
+		if (message->command - 179 > 1)
+			return 1;
+		input[0].pointer = &control->controlKey;
+		input[1].value = 0;
+		input[2].value = 0;
+		input[3].value = 0;
+		input[4].value = 0;
+		input[5].value = 0;
+		input[6].value = 0;
+		if (message->command != 179)
+			input[1].value = 1;
+		output[0].pointer = control->indexedResponses;
+		output[1].value = 0;
+		output[2].value = 0;
+		output[3].value = 0;
+		output[4].value = 0;
+		output[5].value = 0;
+		result = bbcmdExecute(0, 0x32, input, output,
+				      bbcmdManagerCompletion, control);
+		if (result < 0)
+			goto failed;
+		controlKeyStep = 1;
+		return 1;
+	}
+	if (controlKeyStep != 1) {
+		result = (int)0x80330001;
+		goto failed;
+	}
+	if (message->command == 182) {
+		result = message->body.controlKeyReply.result;
+		if (result == (int)0x8033500C || result == 0 ||
+		    result == (int)0x80335023) {
+			bbmcEnterCS(&control->mutex);
+			control->indexedResponses[message->body.controlKeyReply.featureId]
+				.detailBytes[0] =
+				message->body.controlKeyReply.remainingRetries;
+			bbmcLeaveCS(&control->mutex);
+		}
+	} else if (message->command == 183) {
+		result = message->body.controlKeyReply.result;
+		response = &control->indexedResponses[
+			message->body.controlKeyReply.featureId];
+		if (result == 0) {
+			bbmcEnterCS(&control->mutex);
+			response->detailBytes[1] =
+				message->body.controlKeyReply.remainingRetries;
+			bbmcLeaveCS(&control->mutex);
+			response->secondaryValue = result;
+		} else if (result == (int)0x8033500C || result == (int)0x80335023) {
+			bbmcEnterCS(&control->mutex);
+			response->detailBytes[1] =
+				message->body.controlKeyReply.remainingRetries;
+			bbmcLeaveCS(&control->mutex);
+			if (response->detailBytes[1] == 0)
+				bbmcNotifyFeatureEvent(control, 4, 0x1000000);
+		}
+	} else {
+		return 1;
+	}
+	bbmcNotifyFeatureEvent(control, 4, 0x400000);
+	controlKeyStep = 0;
+	memset(&control->controlKey, 0, sizeof(control->controlKey));
+	return 0;
+
+failed:
+	controlKeyStep = 0;
+	memset(&control->controlKey, 0, sizeof(control->controlKey));
+	return result;
+}
+
+/*
+ * name unknown: compares two modem firmware versions (family, major, minor,
+ * patch, build), most significant first
+ */
+static inline int bbmcCompareModemVersion(const SceUInt32 *version,
+	const SceUInt32 *reference)
+{
+	if (version[0] != reference[0])
+		return version[0] > reference[0] ? 1 : -1;
+	if (version[1] != reference[1])
+		return version[1] > reference[1] ? 1 : -1;
+	if (version[2] != reference[2])
+		return version[2] > reference[2] ? 1 : -1;
+	if (version[3] != reference[3])
+		return version[3] > reference[3] ? 1 : -1;
+	if (version[4] != reference[4])
+		return version[4] > reference[4] ? 1 : -1;
+	return 0;
+}
+
+/* name unknown: whether the modem runs a firmware that is switched to mode 6 by a download */
+static inline int bbmcIsDownloadFirmware(BbmcControl *control)
+{
+	const SceUInt32 first[5] = { 1575, 0, 4, 4, 0 };
+	const SceUInt32 second[5] = { 1600, 0, 2, 1, 0 };
+	const SceUInt8 *revision = (const SceUInt8 *)&control->versionRevision;
+	SceUInt32 version[5];
+
+	version[0] = control->versionFamily;
+	version[1] = revision[0];
+	version[2] = revision[1] % 50;
+	version[3] = control->versionPatch;
+	version[4] = control->versionBuild;
+	if (version[0] >= 1600)
+		return bbmcCompareModemVersion(version, second) >= 0;
+	if (version[0] <= 1499)
+		return 0;
+	return bbmcCompareModemVersion(version, first) >= 0;
+}
+
+/*
+ * name unknown: moves the modem to the operation mode command 116 asks for,
+ * through syscon or, for mode 6 on a download firmware, through the download mode
+ */
+int seqChangeOperationMode(BbmcControl *control, BbmcMessage *message)
+{
+	BbmcMessage *reply;
+	SceUInt32 mode;
+	int result;
+
+	switch (operationModeStep) {
+	case 0:
+		if (message->command != 116)
+			return 1;
+		operationModeRegisteredDownload = 0;
+		switch (message->body.operationMode) {
+		case 6:
+			if (control->currentState > 0 && bbmcIsDownloadFirmware(control)) {
+				if (control->downloadNotificationRegistered == 0) {
+					result = bbmcRegisterDownloadNotification(control);
+					if (result < 0)
+						goto finish;
+					operationModeRegisteredDownload = 1;
+				}
+				result = bbmcAcquireGpio(NULL);
+				if (result < 0)
+					goto finish;
+				result = swdlWaitAttach(0);
+				if (result < 0)
+					goto finish;
+				operationModeStep = 2;
+				return 1;
+			}
+			mode = 1;
+			break;
+		case 0:
+			mode = 4;
+			break;
+		case 1:
+			mode = 0;
+			break;
+		case 2:
+			mode = 1;
+			break;
+		case 3:
+			mode = 2;
+			break;
+		case 4:
+			mode = 3;
+			break;
+		case 5:
+			mode = 6;
+			break;
+		case 7:
+			mode = 8;
+			break;
+		default:
+			result = (int)0x80330002;
+			goto finish;
+		}
+		break;
+	case 1:
+		if (message->command == 117) {
+			bbmcTimerCancelHandler(operationModeTimerId);
+			operationModeTimerId = 0;
+			if (message->body.commandResult != 0)
+				result = (int)0x80330001;
+			else
+				result = 0;
+			goto finish;
+		}
+		if (message->command != 187 || message->body.timedOutCommand != 117)
+			return 1;
+		result = (int)0x80330001;
+		goto finish;
+	case 2:
+		if (message->command == 135) {
+			if (swdlRequestDownloadMode() < 0)
+				goto detached;
+			operationModeStep = 3;
+			return 1;
+		}
+		if (message->command != 137)
+			return 1;
+		bbmcReleaseGpio(NULL);
+		mode = 1;
+		break;
+	case 3:
+		if (message->command == 141) {
+			bbmcReleaseGpio(NULL);
+			swdlWaitDetach();
+			operationModeStep = 4;
+		} else if (message->command == 134) {
+detached:
+			bbmcReleaseGpio(NULL);
+			swdlWaitDetach();
+			operationModeStep = 5;
+		}
+		return 1;
+	case 4:
+		if ((message->command & ~2U) != 136)
+			return 1;
+		if ((unsigned int)bbmcGetBaryonVersion() <= 0x904FF)
+			mode = 1;
+		else
+			mode = 7;
+		break;
+	case 5:
+		if ((message->command & ~2U) != 136)
+			return 1;
+		mode = 1;
+		break;
+	default:
+		result = (int)0x80330001;
+		goto finish;
+	}
+
+	modemWakeupPending = 1;
+	result = bbmcSendSizedSysconCommand(control, modemWakeupCallback,
+		&control->operationModePacket, 4, 2, 2, mode, 0);
+	if (result < 0) {
+		modemWakeupPending = 0;
+		goto finish;
+	}
+	result = bbmcTimerSetHandler(60000000, operationModeTimeoutHandler, control);
+	if (result < 0) {
+		bbmcCancelSysconCommand(&control->operationModePacket,
+			&modemWakeupPending);
+		goto finish;
+	}
+	operationModeStep = 1;
+	operationModeTimerId = result;
+	return 1;
+
+finish:
+	operationModeStep = 0;
+	bbmcCancelSysconCommand(&control->operationModePacket, &modemWakeupPending);
+	if (operationModeRegisteredDownload == 1 &&
+	    control->downloadNotificationRegistered == 1) {
+		swdlTerminate();
+		control->downloadNotificationRegistered = 0;
+	}
+	operationModeRegisteredDownload = 0;
+	if (result >= 0) {
+		bbmcNotifyFeatureEvent(control, 0, 0x1000);
+		return 0;
+	}
+	bbmcNotifyFeatureEvent(control, 0, 0x2000);
+	reply = msgAllocMsgPacket(control, 117);
+	if (reply != NULL) {
+		reply->body.commandResult = result;
+		result = msgSendMsgPacket(control, reply);
+		if (result < 0)
+			msgFreeMsgPacket(control, reply);
+	}
 	return result;
 }

@@ -442,7 +442,7 @@ static int (*const bbmcSequences[32])(BbmcControl *, BbmcMessage *) = {
 	seqSysconEvent, seqUpdateNetworkInfo, seqSetModemLink, seqSysconStatus,
 	seqListSms, seqReadSms, seqSendSms, seqUpdateGPS,
 	seqGpsRequest, seqStartNetIF, seqStopNetIF, seqGetChannelRates,
-	seqChangeControlFlags, seqCheckModemVersion, seqAccessSetupValue,
+	seqChangeControlFlags, seqChangeOperationMode, seqAccessSetupValue,
 	seqScanNetworks, seqChangeAttach, seqGetStoredImages,
 	seqGetFirmwarePreference, seqSetFirmwareImage, seqSetFirmwarePreference,
 	seqGetCellLocation, _swdlSeqCarrierQmi, _udSeqChkComPower,

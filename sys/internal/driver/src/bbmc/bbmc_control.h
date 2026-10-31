@@ -316,6 +316,17 @@ int bbmcTimerSetHandler(SceUInt32 delay, void (*callback)(void *arg), void *arg)
 int bbmcTimerCancelHandler(int id);
 int bbmcFlushTimers(void);
 
+/* bbmc.c */
+int bbmcRegisterDownloadNotification(BbmcControl *control);
+int bbmcGetBaryonVersion(void);
+
+/* bbmc_operation_mode.c */
+void operationModeTimeoutHandler(void *arg);
+
+/* sequence/proc_swdl.c */
+extern int modemWakeupPending;
+int modemWakeupCallback(SceSysconPacket *packet, void *argp);
+
 /* the sequences _managerThread offers every message to, in its order */
 int seqSysconEvent(BbmcControl *control, BbmcMessage *message);
 int seqUpdateNetworkInfo(BbmcControl *control, BbmcMessage *message);
@@ -330,7 +341,7 @@ int seqStartNetIF(BbmcControl *control, BbmcMessage *message);
 int seqStopNetIF(BbmcControl *control, BbmcMessage *message);
 int seqGetChannelRates(BbmcControl *control, BbmcMessage *message);
 int seqChangeControlFlags(BbmcControl *control, BbmcMessage *message);
-int seqCheckModemVersion(BbmcControl *control, BbmcMessage *message);
+int seqChangeOperationMode(BbmcControl *control, BbmcMessage *message);
 int seqAccessSetupValue(BbmcControl *control, BbmcMessage *message);
 int seqScanNetworks(BbmcControl *control, BbmcMessage *message);
 int seqChangeAttach(BbmcControl *control, BbmcMessage *message);
