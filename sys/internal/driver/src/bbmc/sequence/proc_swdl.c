@@ -1069,6 +1069,8 @@ int seqRefreshPinStatus(BbmcControl *control, BbmcMessage *message)
 			BbcmdArgument input[7] = { { .value = 1 } };
 
 			__builtin_memset(&control->pinStatus, 0, sizeof(control->pinStatus));
+			output[1].pointer = &control->pinStatus.pin1VerifyRetries;
+			output[2].pointer = &control->pinStatus.pin1UnblockRetries;
 			result = bbcmdExecute(0, 0x0b, input, output,
 					      bbcmdManagerCompletion, control);
 			if (result >= 0) {
