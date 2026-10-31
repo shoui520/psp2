@@ -360,7 +360,7 @@ ScePaf:
         - _ZN3paf5Timer13DoFuncSineOutEf: 0x2607CDE2
         - ScePafMisc_2678FFEB: 0x2678FFEB
         - _ZN3paf3UrlD1Ev: 0x269A36D7
-        - ScePafMisc_26BCDBCA: 0x26BCDBCA
+        - _ZN3paf11inputdevice4btrm7SetMaskEj: 0x26BCDBCA
         - _ZN3paf7MemFile4OpenEPvjPi: 0x26BF1B5B
         - _ZN3paf11inputdevice3EndEv: 0x26C77CAE
         - _ZN3paf11inputdevice13UpdateGestureEb: 0x26F81894
@@ -537,7 +537,7 @@ ScePaf:
         - _ZNK3paf5image5Image7GetClipEv: 0x4DEC597D
         - ScePafMisc_4E787F5E: 0x4E787F5E
         - _ZN3paf11inputdevice11touchscreen18GetPointFromCenterEjjRfS2_: 0x4E922BF6
-        - ScePafMisc_4E93C051: 0x4E93C051
+        - _ZN3paf11inputdevice4btrm7GetMaskEv: 0x4E93C051
         - _ZN3paf7MemFile5CloseEv: 0x4E981745
         - ScePafMisc_4EAE8284: 0x4EAE8284
         - _ZN3paf12BufferedFile9OpenAsyncEPKNS_4File7OpenArgE: 0x4ECC56A4
@@ -805,7 +805,7 @@ ScePaf:
         - _ZN3paf4math6matrixC1ENS0_10quaternionE: 0x8D77CF9A
         - _ZN3paf4math4rect10align_leftEf: 0x8D824321
         - _ZN3paf5image10ImageArrayC1EPNS_6memory13HeapAllocatorE: 0x8D99A9E5
-        - ScePafMisc_8DA260AE: 0x8DA260AE
+        - _ZN3paf11inputdevice4btrm8IsLockedEv: 0x8DA260AE
         - _ZN3paf5cache16CacheManagerImpl11CancelCacheERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x8DFD3AC2
         - _ZNK3paf8HttpFile15GetResponseCodeERt: 0x8E656E2D
         - _ZN3paf3UrlaSERKS0_: 0x8F7AEE8C
@@ -1014,7 +1014,7 @@ ScePaf:
         - ScePafMisc_C098F659: 0xC098F659
         - _ZN3paf12BufferedFile9SeekAsyncExi: 0xC09E34B0
         - _ZN3paf11inputdevice11touchscreen6UpdateEfPPKNS1_4DataES5_S5_S5_: 0xC0B69287
-        - ScePafMisc_C11453F8: 0xC11453F8
+        - _ZN3paf11inputdevice4btrm16SetDeviceHandlerEPFvPNS1_4DataEE: 0xC11453F8
         - ScePafMisc_C11CB5E4: 0xC11CB5E4
         - _ZN3paf5sound6OutputC2Ei: 0xC14C88EF
         - ScePafMisc_C160806C: 0xC160806C

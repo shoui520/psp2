@@ -4,32 +4,6 @@
 #include "../compiler.h"
 #include <kernel/threadmgr.h>
 
-extern int32_t sceBtUnregisterCallback(void);
-
-int32_t sce_paf_bt_callback_uid;
-int32_t sce_paf_bt_callback_state;
-
-int ScePafMisc_2825FFFD(void)
-{
-	int result;
-
-	if (sce_paf_bt_callback_uid == 0)
-		return -2135994015;
-	result = sceBtUnregisterCallback();
-	if (result >= 0) {
-		result = sceKernelDeleteCallback(sce_paf_bt_callback_uid);
-		if (result >= 0) {
-			sce_paf_bt_callback_uid = 0;
-			sce_paf_bt_callback_state = 0;
-		}
-	}
-	return result;
-}
-
-uint32_t sce_paf_misc_flags_ee98;
-uint32_t sce_paf_misc_counter_ee9c;
-uint32_t sce_paf_misc_value_ee6c;
-uint32_t sce_paf_misc_limit_eea0;
 uint32_t sce_paf_misc_counter_c224;
 uint32_t sce_paf_misc_value_ef04;
 int8_t sce_paf_misc_flag_eef5;
@@ -91,45 +65,6 @@ int ScePafMisc_ED289E89(uint32_t requested, int require_all)
 			active |= 1U << i;
 	selected = active & requested;
 	return require_all ? selected == requested : selected != 0;
-}
-
-uint32_t ScePafMisc_4E93C051(void)
-{
-	return sce_paf_misc_flags_ee98;
-}
-
-uint32_t ScePafMisc_26BCDBCA(uint32_t mask)
-{
-	sce_paf_misc_flags_ee98 |= mask;
-	return sce_paf_misc_flags_ee98;
-}
-
-void ScePafMisc_9FFF47AE(void)
-{
-	sce_paf_misc_counter_ee9c++;
-}
-
-uint32_t ScePafMisc_C11453F8(uint32_t new_value)
-{
-	uint32_t old_value = sce_paf_misc_value_ee6c;
-	sce_paf_misc_value_ee6c = new_value;
-	return old_value;
-}
-
-uint32_t ScePafMisc_8D33865E(void)
-{
-	uint32_t limit = sce_paf_misc_limit_eea0;
-	if ((int32_t)sce_paf_misc_counter_ee9c > (int32_t)limit) {
-		limit++;
-		sce_paf_misc_limit_eea0 = limit;
-	}
-	return limit;
-}
-
-int ScePafMisc_8DA260AE(void)
-{
-	return (int32_t)sce_paf_misc_counter_ee9c >
-		(int32_t)sce_paf_misc_limit_eea0;
 }
 
 uint32_t *ScePafMisc_7E6CA20C(void)

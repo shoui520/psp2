@@ -112,6 +112,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/inputdevice/motionsensor/motionsensor.cpp
 	src/inputdevice/pad/pad.cpp
 	src/inputdevice/touchscreen/touchscreen.cpp
+	src/inputdevice/btrm/btrm.cpp
 	src/timer/timer.c
 	src/timer/curves.c
 	src/std/math.c
@@ -224,7 +225,8 @@ set_source_files_properties(src/http/http.cpp PROPERTIES COMPILE_OPTIONS -Xautoi
 # GestureListener::Detach: budgets 24 to 31 do (2026-10-31).
 set_source_files_properties(src/inputdevice/gesturelistener.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
-# motionsensor's, pad's and touchscreen's Update inline the timer list's erase and Unlock (2026-10-31).
+# motionsensor's, pad's, touchscreen's and btrm's Update inline the timer list's erase and Unlock
+# (2026-10-31).
 set_source_files_properties(src/inputdevice/motionsensor/motionsensor.cpp src/inputdevice/pad/pad.cpp
-	src/inputdevice/touchscreen/touchscreen.cpp
+	src/inputdevice/touchscreen/touchscreen.cpp src/inputdevice/btrm/btrm.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
