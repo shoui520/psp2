@@ -9,6 +9,7 @@
 #include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <iofilemgr/iofilemgr.h>
+#include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
 #include "sw_dload.h"
 #include "../usb_serial.h"
@@ -150,7 +151,7 @@ __attribute__((noinline)) int swdlSeekFile(SceUID fd, SceUInt32 offset)
 
 /* name unknown: start reading the image file as Intel HEX, into the frame buffer after
  * its 8-byte header, size bytes at most */
-int swdlOpenHexReader(SwdlContext *context, SceSize size)
+__attribute__((noinline)) int swdlOpenHexReader(SwdlContext *context, SceSize size)
 {
 	SwdlHexReader *reader = &context->hexReader;
 	SceSize capacity;
@@ -201,7 +202,7 @@ fail:
 }
 
 /* name unknown: stop reading the image file */
-int swdlCloseHexReader(SwdlContext *context)
+__attribute__((noinline)) int swdlCloseHexReader(SwdlContext *context)
 {
 	if (context->hexReader.line != NULL)
 		sceKernelFreeHeapMemory(context->heapId, context->hexReader.line);
@@ -223,7 +224,7 @@ static inline int swdlHexDigit(SceUInt8 c)
 
 /* name unknown: the next HEX records whose data follow each other, into the reader's
  * data; stops before a record that does not fit or changes the address */
-int swdlReadHexRecords(SwdlHexReader *reader)
+__attribute__((noinline)) int swdlReadHexRecords(SwdlHexReader *reader)
 {
 	SceUInt8 *line = reader->line;
 	SceSize length = 0;
@@ -375,7 +376,7 @@ __attribute__((noinline)) void swdlGetZeroVersion(const void **version, SceSize 
 }
 
 /* name unknown: the version an erased slot reads as */
-void swdlGetErasedVersion(const void **version, SceSize *size)
+__attribute__((noinline)) void swdlGetErasedVersion(const void **version, SceSize *size)
 {
 	*version = swdlErasedVersion;
 	*size = 8;
@@ -641,7 +642,7 @@ __attribute__((noinline)) int swdlGetPortFreePackets(SwdlContext *context, SceUI
 }
 
 /* the time in ms */
-int swdlGetTime(SceUInt32 *time)
+__attribute__((noinline)) int swdlGetTime(SceUInt32 *time)
 {
 	SceUInt64 now;
 	int result;
@@ -655,7 +656,7 @@ int swdlGetTime(SceUInt32 *time)
 }
 
 /* 1 while no more than timeout ms (0: no limit) passed since start */
-int swdlIsWithinTimeout(SceUInt32 start, SceUInt32 timeout)
+__attribute__((noinline)) int swdlIsWithinTimeout(SceUInt32 start, SceUInt32 timeout)
 {
 	SceUInt64 now;
 	SceUInt64 elapsed;
@@ -702,7 +703,7 @@ __attribute__((noinline)) int swdlHandleAttach(SwdlContext *context)
 }
 
 /* hand the detach event to the current step */
-int swdlHandleDetach(SwdlContext *context)
+__attribute__((noinline)) int swdlHandleDetach(SwdlContext *context)
 {
 	int result;
 
@@ -716,7 +717,7 @@ int swdlHandleDetach(SwdlContext *context)
 }
 
 /* 1 when id is one of the IDs the target reports */
-int swdlHasId(SwdlContext *context, SceUInt16 id)
+__attribute__((noinline)) int swdlHasId(SwdlContext *context, SceUInt16 id)
 {
 	SceUInt32 i;
 
@@ -728,7 +729,7 @@ int swdlHasId(SwdlContext *context, SceUInt16 id)
 }
 
 /* append copies of data and extra to the context's list */
-int swdlAppendListNode(SwdlContext *context, const void *data, SceSize dataSize,
+__attribute__((noinline)) int swdlAppendListNode(SwdlContext *context, const void *data, SceSize dataSize,
 		       const void *extra, SceSize extraSize)
 {
 	SwdlListNode *last;
@@ -782,7 +783,7 @@ unlock:
 /* name unknown: the thread's handler for each state (context->state) */
 int swdlExecIdle(SwdlContext *context, SceUInt32 events);
 int swdlExecBackup(SwdlContext *context, SceUInt32 events);
-int _abortExec(SwdlContext *context, SceUInt32 events);
+int swdlExecUpdate(SwdlContext *context, SceUInt32 events);
 int swdlExecDownload(SwdlContext *context, SceUInt32 events);
 int swdlExecRestore(SwdlContext *context, SceUInt32 events);
 int swdlExecModeChange(SwdlContext *context, SceUInt32 events);
@@ -790,7 +791,7 @@ int swdlExecModeChange(SwdlContext *context, SceUInt32 events);
 static int (*const swdlExecHandlers[6])(SwdlContext *context, SceUInt32 events) = {
 	swdlExecIdle,
 	swdlExecBackup,
-	_abortExec,
+	swdlExecUpdate,
 	swdlExecDownload,
 	swdlExecRestore,
 	swdlExecModeChange,
@@ -870,8 +871,8 @@ fail:
 		if (events & 2)
 			context->state = 1;
 		if (events & 0x600004) {
-			context->reserved5a4 = 0;
-			context->reserved20 = 0;
+			context->updateState = 0;
+			context->abortState = 0;
 			context->state = 2;
 		}
 		if (events & 8)
@@ -2508,7 +2509,7 @@ unlock:
 }
 
 /* name unknown: stop reading from the modem */
-int swdlPortStopReceive(SwdlPortInterface *interface)
+int swdlPortStopReceive(SwdlPortInterface *interface, int flags)
 {
 	SwdlPort *port;
 
@@ -4379,9 +4380,9 @@ typedef struct SwdlFastHello {
 	SceUInt8 version;
 	SceUInt8 compatibleVersion;
 	SwdlHelloWindow window;
-	SceUInt16 flags;
-	SceUInt16 count;
-	SceUInt32 ids[16];
+	SceUInt16 windowSize;
+	SceUInt16 sectorCount;
+	SceUInt32 sectorSizes[16];
 } SwdlFastHello;
 
 int swdlUpdateReceiveHello(SwdlContext *context)
@@ -4411,13 +4412,13 @@ int swdlUpdateReceiveHello(SwdlContext *context)
 		swdlUnpackBytes(&hello.version, &cursor, 1);
 		swdlUnpackBytes(&hello.compatibleVersion, &cursor, 1);
 		swdlUnpackBytes((SceUInt8 *)&hello.window.blockSize, &cursor, 4);
-		swdlUnpackBytes((SceUInt8 *)&hello.window.window, &cursor, 4);
+		swdlUnpackBytes((SceUInt8 *)&hello.window.baseAddress, &cursor, 4);
 		swdlUnpackBytes(&skip, &cursor, 1);
 		swdlUnpackBytes(NULL, &cursor, skip);
-		swdlUnpackBytes((SceUInt8 *)&hello.flags, &cursor, 2);
-		swdlUnpackBytes((SceUInt8 *)&hello.count, &cursor, 2);
-		for (i = 0; i < hello.count; i++)
-			swdlUnpackBytes(i > 15 ? NULL : (SceUInt8 *)&hello.ids[i], &cursor, 4);
+		swdlUnpackBytes((SceUInt8 *)&hello.windowSize, &cursor, 2);
+		swdlUnpackBytes((SceUInt8 *)&hello.sectorCount, &cursor, 2);
+		for (i = 0; i < hello.sectorCount; i++)
+			swdlUnpackBytes(i > 15 ? NULL : (SceUInt8 *)&hello.sectorSizes[i], &cursor, 4);
 		if (context->receiveLength < (SceSize)(cursor - start) - 2)
 			return (int)0x80330002;
 		left = context->receiveLength - 2 - (cursor - start);
@@ -4434,7 +4435,7 @@ int swdlUpdateReceiveHello(SwdlContext *context)
 		result = swdlReserveFrameBuffer(context, size > 517 ? size : 518);
 		if (result == 0) {
 			context->hello.window = hello.window;
-			context->hello.flags = hello.flags;
+			context->hello.windowSize = hello.windowSize;
 			result = 1;
 		}
 		return result;
@@ -4551,5 +4552,1475 @@ error:
 		context->notification.forwardedValue2 = result;
 		context->notify(128, &context->notification);
 	}
+	return result;
+}
+
+/* name unknown: the reply to the queued command must be the one queued with it; then
+ * the next command goes */
+int swdlModeChangeReceiveCommand(SwdlContext *context)
+{
+	SwdlListNode *node = context->list;
+	void *extra;
+
+	if (node == NULL)
+		return (int)0x80330002;
+	switch (context->receiveEvent) {
+	case 0x200:
+		extra = node->extra;
+		if (memcmp(context->receiveBuffer, extra, node->extraSize) != 0)
+			return (int)0x80330708;
+		context->listCount--;
+		context->list = node->next;
+		if (node->data != NULL) {
+			sceKernelFreeHeapMemory(context->heapId, node->data);
+			extra = node->extra;
+		}
+		if (extra != NULL)
+			sceKernelFreeHeapMemory(context->heapId, extra);
+		sceKernelFreeHeapMemory(context->heapId, node);
+		context->transmitState = 1;
+		return 0;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: send the first queued command */
+int swdlModeChangeSendCommand(SwdlContext *context)
+{
+	SwdlListNode *node = context->list;
+
+	if (node == NULL)
+		return 1;
+	memcpy(context->buffer, node->data, node->dataSize);
+	context->bufferLength = node->dataSize;
+	swdlEndFrame(context->buffer, &context->bufferLength, context->buffer + node->dataSize);
+	context->transmitState = 4;
+	return 0;
+}
+
+/* name unknown: the mode change: the status, then the queued commands */
+static const SwdlStep swdlModeChangeSteps[3] = {
+	{ swdlModeChangeSendStatus, swdlModeChangeReceiveStatus },
+	{ swdlModeChangeSendCommand, swdlModeChangeReceiveCommand },
+	{ swdlModeChangeEndSend, swdlModeChangeEndReceive },
+};
+
+/* the mode change is over: close the port */
+static inline void swdlFinishModeChange(SwdlContext *context)
+{
+	context->port->close(context->port, 0);
+	swdlReleaseBuffers(context);
+	context->notify(0x4000, &context->notification);
+	context->state = 0;
+}
+
+/* name unknown: state 5, the mode change */
+int swdlExecModeChange(SwdlContext *context, SceUInt32 events)
+{
+	SwdlPortInterface *port = context->port;
+	int result = events & 0x800000;
+
+	if (events & 0x800000) {
+		memset(&context->stepIndex, 0, 0x468);
+		context->mode = 2;
+		context->steps = swdlModeChangeSteps;
+		result = swdlAllocateFrameBuffer(context);
+		if (result < 0)
+			goto error;
+		result = swdlSetResponseTimeout(context, 3000);
+		if (result < 0)
+			goto error;
+		result = port->open(port, 1);
+		if (result < 0)
+			goto error;
+		result = swdlStartSend(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishModeChange(context);
+	}
+	if (events & 0x200) {
+		result = swdlReceiveFrame(context, NULL);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishModeChange(context);
+	}
+	if (events & 0x1800) {
+		result = swdlHandleCancel(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishModeChange(context);
+	}
+	if (events & 0x400) {
+		result = swdlHandleFrameTimeout(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishModeChange(context);
+	}
+	if (events & 0x100000) {
+		result = context->lastError;
+error:
+		port->close(port, 0);
+		swdlReleaseBuffers(context);
+		context->notification.forwardedValue2 = result;
+		context->notify(128, &context->notification);
+	}
+	return result;
+}
+
+/* name unknown: state 0, nothing in work: a device that attaches is checked (port
+ * control 2), a stop closes the port */
+int swdlExecIdle(SwdlContext *context, SceUInt32 events)
+{
+	SwdlPortInterface *port = context->port;
+
+	if (events & 0x80) {
+		if (port->control(port, 2, NULL, 0) < 0)
+			sceKernelSetEventFlag(context->eventFlagId, 0x2000);
+	}
+	if (events & 0x2000) {
+		port->close(port, 0);
+		swdlReleaseBuffers(context);
+		context->notify(16, &context->notification);
+	}
+	if (events & 0x100000) {
+		swdlReleaseBuffers(context);
+		context->notification.forwardedValue2 = context->lastError;
+		context->notify(128, &context->notification);
+	}
+	return 0;
+}
+
+/* name unknown: move stepIndex to the step that sends or receives with handler; 0 when
+ * the sequence ends first */
+int swdlSeekStep(SwdlContext *context, int (*handler)(SwdlContext *context))
+{
+	SceUInt32 index = context->stepIndex;
+	const SwdlStep *step = &context->steps[index];
+	int (*send)(SwdlContext *context) = step->send;
+	int (*receive)(SwdlContext *context) = step->receive;
+
+	if (send == swdlUpdateEndSend)
+		return 0;
+	if (send == handler || receive == handler)
+		return 1;
+	do {
+		index++;
+		send = step[1].send;
+		receive = step[1].receive;
+		step++;
+		if (send == swdlUpdateEndSend) {
+			context->stepIndex = index;
+			return 0;
+		}
+	} while (handler != send && handler != receive);
+	context->stepIndex = index;
+	return 1;
+}
+
+/* name unknown: after the go the device leaves (detach) and comes back in streaming
+ * download mode (attach) */
+int swdlUpdateReceiveRestart(SwdlContext *context)
+{
+	SwdlPortInterface *port = context->port;
+	int result;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->receiveBuffer[0] == 0x02) {
+			result = port->stopReceive(port, 0);
+			if (result < 0)
+				return result;
+		} else {
+			result = (int)0x80330708;
+		}
+		context->acknowledged = 1;
+		return result;
+	case 0x400:
+		if (context->acknowledged == 1)
+			return 0;
+		return (int)0x80330706;
+	case 0x800:
+		return 0;
+	case 0x10000:
+		result = port->open(port, 2);
+		if (result < 0)
+			return result;
+		context->updateState = 3;
+		return 1;
+	case 0x20000:
+		if (context->acknowledged != 0) {
+			result = 0;
+		} else {
+			result = port->stopReceive(port, 0);
+			if (result < 0)
+				return result;
+		}
+		context->acknowledged = 1;
+		return result;
+	default:
+		return (int)0x80330708;
+	}
+}
+
+/* name unknown: the update is over: close the port and the image, report how it ended */
+int swdlFinishUpdate(SwdlContext *context)
+{
+	int result;
+
+	context->port->close(context->port, 0);
+	swdlReleaseBuffers(context);
+	result = swdlCloseHexReader(context);
+	if (context->abortState != 0) {
+		result = context->notify(16, &context->notification);
+	} else {
+		switch (context->updateKind) {
+		case 0:
+			result = context->notify(2, &context->notification);
+			break;
+		case 1:
+			result = context->notify(0x1000, &context->notification);
+			break;
+		case 2:
+			result = context->notify(0x2000, &context->notification);
+			break;
+		}
+	}
+	context->state = 0;
+	context->updateState = 0;
+	context->abortState = 0;
+	return result;
+}
+
+/* name unknown: the streaming reset (0x0b), or the power down (0x0a) before the image
+ * download started */
+int swdlUpdateSendReset(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+	SceUInt8 command;
+
+	if (context->updateState > 1)
+		command = 0x0b;
+	else
+		command = 0x0a;
+	buffer[0] = 0x7e;
+	buffer[1] = command;
+	context->bufferLength = 1;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 2);
+	context->transmitState = 4;
+	context->bufferLength++;
+	context->updateState = 6;
+	return 0;
+}
+
+/* name unknown: the streaming security mode (0x17), trusted */
+int swdlUpdateSendSecurityMode(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+
+	buffer[0] = 0x7e;
+	buffer[1] = 0x17;
+	buffer[2] = 1;
+	context->bufferLength = 2;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 3);
+	context->transmitState = 4;
+	context->updateState = 4;
+	context->bufferLength++;
+	return 0;
+}
+
+/* name unknown: the DMSS go (0x05) to the boot loader's start address */
+int swdlUpdateSendGo(SwdlContext *context)
+{
+	SceUInt8 *buffer;
+
+	if (context->hexReader.hasStartAddress == 0)
+		return (int)0x80330002;
+	buffer = context->buffer;
+	buffer[0] = 0x7e;
+	buffer[1] = 0x05;
+	buffer[2] = context->hexReader.startAddress >> 24;
+	buffer[3] = context->hexReader.startAddress >> 16;
+	buffer[4] = context->hexReader.startAddress >> 8;
+	buffer[5] = context->hexReader.startAddress;
+	context->bufferLength = 5;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 6);
+	context->transmitState = 4;
+	context->acknowledged = 0;
+	context->bufferLength++;
+	context->updateState = 2;
+	return 0;
+}
+
+/* name unknown: the DMSS parameter request (0x07) */
+int swdlUpdateSendParameterRequest(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+
+	buffer[0] = 0x7e;
+	buffer[1] = 0x07;
+	context->bufferLength = 1;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 2);
+	context->transmitState = 4;
+	context->bufferLength++;
+	return 0;
+}
+
+/* name unknown: the DMSS no-operation (0x06) */
+int swdlUpdateSendNop(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+
+	buffer[0] = 0x7e;
+	buffer[1] = 0x06;
+	context->bufferLength = 1;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 2);
+	context->transmitState = 4;
+	context->bufferLength++;
+	return 0;
+}
+
+/* name unknown: the boot loader download (DMSS), the target's flash and its partition
+ * table, then the three images (streaming download) */
+static const SwdlStep swdlUpdateSteps[17];
+/* name unknown: the same with the module's own partition table, without the images */
+static const SwdlStep swdlCarrierUpdateSteps[11];
+/* name unknown: the same with the partition table of the request, without the images */
+static const SwdlStep swdlPartitionTableSteps[10];
+
+/* name unknown: state 2's start: the sequence of the update kind */
+int swdlStartUpdate(SwdlContext *context)
+{
+	SwdlPortInterface *port = context->port;
+	int result;
+
+	memset(&context->stepIndex, 0, 0x468);
+	context->updateState = 1;
+	__builtin_memset(&context->hello, 0, sizeof(context->hello));
+	switch (context->updateKind) {
+	case 0:
+		context->steps = swdlUpdateSteps;
+		break;
+	case 1:
+		context->steps = swdlCarrierUpdateSteps;
+		break;
+	case 2:
+		context->steps = swdlPartitionTableSteps;
+		break;
+	default:
+		return (int)0x80330002;
+	}
+	result = swdlAllocateFrameBuffer(context);
+	if (result < 0)
+		return result;
+	context->progressBytes = 0;
+	result = swdlSetResponseTimeout(context, 3000);
+	if (result < 0)
+		return result;
+	result = port->open(port, 2);
+	if (result < 0)
+		return result;
+	context->updateState = 1;
+	return swdlStartSend(context);
+}
+
+/* name unknown: the request's partition table (0x19), forced when the request or the
+ * target asks for it */
+int swdlUpdateSendPartitionTable(SwdlContext *context)
+{
+	SceUInt8 *buffer = context->buffer;
+	int result;
+	int size;
+
+	memset(buffer, 0, 0x206);
+	buffer[0] = 0x7e;
+	buffer[1] = 0x19;
+	buffer[2] = 0;
+	if (context->update.forcePartitionTable == 1 ||
+	    (context->hello.partitionTableStatus == 1 && context->update.partitionTableForced == 1))
+		buffer[2] = 1;
+	result = swdlSeekFile(context->update.partitionTableFd, 0);
+	if (result != 0)
+		return result;
+	size = udIoRead(context->update.partitionTableFd, buffer + 3, 512);
+	if (size < 0)
+		return size;
+	if (size == 0)
+		return (int)0x80330703;
+	context->progressBytes += size;
+	context->bufferLength = size + 2;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + size + 3);
+	context->transmitState = 4;
+	context->bufferLength++;
+	return size;
+}
+
+/* name unknown: the partition table the module carries */
+typedef struct SwdlPartitionEntry {
+	char name[16];
+	SceUInt32 start;
+	SceUInt32 length;
+	SceUInt8 attributes[4];
+} SwdlPartitionEntry;
+
+typedef struct SwdlPartitionTable {
+	SceUInt32 magic[2];
+	SceUInt32 version;
+	SceUInt32 count;
+	SwdlPartitionEntry entries[6];
+	SceUInt8 padding[280];
+} SwdlPartitionTable;
+
+static const SwdlPartitionTable swdlDefaultPartitionTable = {
+	.magic = { 0xaa7d1b9a, 0x1f7d48bc },
+	.version = 3,
+	.count = 6,
+	.entries = {
+		{ "0:MIBIB", 6, 4, { 0xff, 0xff, 0xff, 0xfe } },
+		{ "0:SIM_SECURE", 4, 1, { 0xff, 0xff, 0xff, 0xfe } },
+		{ "0:FSBL", 0x40, 0x40, { 0xff, 0xff, 0xff, 0xff } },
+		{ "0:OSBL", 0x40, 0x40, { 0xff, 0xff, 0xff, 0xff } },
+		{ "0:AMSS", 0x40, 0x40, { 0xff, 0xff, 0xff, 0xff } },
+		{ "0:EFS2", 0xffffffff, 0xffff, { 0xff, 0xff, 0xff, 0xff } },
+	},
+};
+
+_Static_assert(sizeof(SwdlPartitionTable) == 464, "swdl partition table");
+
+/* name unknown: the module's partition table (0x19), forced */
+int swdlUpdateSendDefaultPartitionTable(SwdlContext *context)
+{
+	SceUInt8 *buffer;
+
+	if (context->update.forcePartitionTable == 0) {
+		context->bufferLength = 0;
+		return 1;
+	}
+	buffer = context->buffer;
+	memset(buffer, 0, 0x206);
+	context->hello.partitionTableStatus = 0;
+	buffer[0] = 0x7e;
+	buffer[1] = 0x19;
+	buffer[2] = 1;
+	memcpy(buffer + 3, &swdlDefaultPartitionTable, sizeof(swdlDefaultPartitionTable));
+	context->progressBytes += sizeof(swdlDefaultPartitionTable);
+	context->bufferLength = sizeof(swdlDefaultPartitionTable) + 2;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 467);
+	context->transmitState = 4;
+	context->bufferLength++;
+	return 0;
+}
+
+/* name unknown: erase the flash (0x1d) before a forced partition table */
+int swdlUpdateSendErase(SwdlContext *context)
+{
+	SceUInt8 *buffer;
+
+	if (context->update.forcePartitionTable == 0) {
+		context->bufferLength = 0;
+		return 1;
+	}
+	buffer = context->buffer;
+	buffer[2] = 0;
+	buffer[3] = 0;
+	buffer[4] = 0;
+	buffer[0] = 0x7e;
+	buffer[1] = 0x1d;
+	context->bufferLength = 1;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 2);
+	context->transmitState = 4;
+	context->bufferLength++;
+	return 0;
+}
+
+/* name unknown: the reset acknowledge (0x0c); a reset the abort sent may go unanswered */
+int swdlUpdateReceiveReset(SwdlContext *context)
+{
+	SceUInt8 command;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		command = context->receiveBuffer[0];
+		if (command == 0x0c || command == 0x02)
+			return 1;
+		if (context->abortState != 7)
+			return (int)0x80330708;
+		context->transmitState = 4;
+		return 0;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* the target's error (0x0d) or log (0x0e) text */
+static inline int swdlIsErrorOrLog(SceUInt32 command)
+{
+	return command - 0x0d <= 1;
+}
+
+/* name unknown: the partition table reply (0x1a) to the module's table */
+int swdlUpdateReceiveDefaultPartitionTable(SwdlContext *context)
+{
+	SceUInt32 command;
+	SceUInt32 status;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		command = context->receiveBuffer[0];
+		if (command == 0x1a) {
+			status = context->receiveBuffer[1];
+			context->hello.partitionTableStatus = status;
+			if (status == 0)
+				return 1;
+			if (status == 1)
+				return (int)0x80330708;
+			return (int)0x80330703;
+		}
+		if (!swdlIsErrorOrLog(command))
+			return (int)0x80330708;
+		swdlReceiveLog(context);
+		return 0;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the erase reply (0x1e): the partition table goes forced */
+int swdlUpdateReceiveErase(SwdlContext *context)
+{
+	SceUInt32 command;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		command = context->receiveBuffer[0];
+		if (command == 0x1e) {
+			context->update.forcePartitionTable = 0;
+			context->update.partitionTableForced = 1;
+			return 1;
+		}
+		if (command == 0x0e) {
+			swdlReceiveLog(context);
+			return 0;
+		}
+		if (command == 0x0d)
+			return 1;
+		return (int)0x80330708;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the security mode reply (0x18) */
+int swdlUpdateReceiveSecurityMode(SwdlContext *context)
+{
+	SceUInt32 command;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		command = context->receiveBuffer[0];
+		if (command == 0x18)
+			return 1;
+		if (command == 0x0e) {
+			swdlReceiveLog(context);
+			return 0;
+		}
+		return (int)0x80330708;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the DMSS acknowledge (0x02) of a HEX record: the next one goes */
+int swdlUpdateReceiveWriteAck(SwdlContext *context)
+{
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->receiveBuffer[0] != 0x02)
+			return (int)0x80330708;
+		context->transmitState = 1;
+		context->progressBytes += context->hexReader.consumed;
+		return 0;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the DMSS acknowledge (0x02) of the unlock and the no-operation */
+int swdlUpdateReceiveUnlockAck(SwdlContext *context)
+{
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->receiveBuffer[0] == 0x02)
+			return 1;
+		return (int)0x80330708;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+int swdlUpdateReceiveNopAck(SwdlContext *context)
+{
+	switch (context->receiveEvent) {
+	case 0x200:
+		if (context->receiveBuffer[0] == 0x02)
+			return 1;
+		return (int)0x80330708;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the reply to the request's partition table; a table that differs from
+ * the target's is reported (32), and sent again forced when allowed */
+int swdlUpdateReceivePartitionTable(SwdlContext *context)
+{
+	SceUInt32 command;
+	SceUInt32 status;
+
+	switch (context->receiveEvent) {
+	case 0x200:
+		command = context->receiveBuffer[0];
+		if (command == 0x1a) {
+			status = context->receiveBuffer[1];
+			context->hello.partitionTableStatus = status;
+			if (status == 0)
+				return 1;
+			if (status != 1)
+				return (int)0x80330703;
+			if (context->update.partitionTableForced != 0) {
+				context->transmitState = 1;
+				return 0;
+			}
+			context->notify(32, &context->notification);
+			if (context->updateKind == 2)
+				return 1;
+			context->transmitState = 6;
+			return 0;
+		}
+		if (!swdlIsErrorOrLog(command))
+			return (int)0x80330708;
+		swdlReceiveLog(context);
+		return 0;
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: the next record of the boot loader as a DMSS 32-bit write (0x0f) */
+int swdlUpdateSendHexRecord(SwdlContext *context)
+{
+	SwdlHexReader *reader = &context->hexReader;
+	SceUInt8 *buffer;
+	SceSize length;
+	int result;
+
+	result = swdlReadHexRecords(reader);
+	if (result != 0)
+		return result;
+	if (reader->endOfFile == 1)
+		return 1;
+	buffer = context->buffer;
+	buffer[0] = 0x7e;
+	buffer[1] = 0x0f;
+	buffer[2] = reader->upperAddress >> 8;
+	buffer[3] = reader->upperAddress;
+	buffer[4] = reader->address >> 8;
+	buffer[5] = reader->address;
+	buffer[6] = reader->length >> 8;
+	buffer[7] = reader->length;
+	length = reader->length + 7;
+	context->bufferLength = length;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + length + 1);
+	context->transmitState = 4;
+	context->bufferLength++;
+	return 0;
+}
+
+/* name unknown: the DMSS unlock (0x0b) with the erased slot's code */
+int swdlUpdateSendUnlock(SwdlContext *context)
+{
+	const void *code;
+	SceSize size;
+	SceUInt8 *buffer;
+
+	if (context->update.unlock == 0)
+		return 1;
+	swdlGetErasedVersion(&code, &size);
+	buffer = context->buffer;
+	buffer[1] = 0x0b;
+	buffer[0] = 0x7e;
+	memcpy(buffer + 2, code, size);
+	context->bufferLength = 9;
+	swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 10);
+	context->transmitState = 4;
+	context->bufferLength++;
+	return 0;
+}
+
+/* name unknown: the DMSS parameters (0x08): the HEX records are read as large as the
+ * target and the port take */
+int swdlUpdateReceiveParameters(SwdlContext *context)
+{
+	SceSize packetSize;
+	SceSize size;
+	int result;
+
+	switch (context->receiveEvent) {
+	case 0x400:
+		context->transmitState = 4;
+		return 0;
+	case 0x800:
+		return swdlGetPortError(context->port);
+	case 0x200:
+		if (context->receiveBuffer[0] != 0x08)
+			return (int)0x80330708;
+		size = context->receiveBuffer[4] | context->receiveBuffer[3] << 8;
+		result = swdlGetPortPacketSize(context, &packetSize);
+		if (result < 0)
+			return result;
+		if (size + 4 > packetSize)
+			size = (packetSize - 4) & ~3;
+		result = swdlOpenHexReader(context, size);
+		if (result < 0)
+			return result;
+		return 1;
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: open the image (0x1b), write it (0x07) as far as the window allows, close
+ * it (0x15) */
+static inline int swdlUpdateSendImage(SwdlContext *context, SceUID fd, SceUInt8 type)
+{
+	SceUInt8 *buffer;
+	SceUInt32 freePackets;
+	SceUInt32 address;
+	SceSize size;
+	int result;
+
+	if (fd == 0)
+		return 1;
+	switch (context->phase) {
+	case 2:
+		context->streaming = 1;
+		result = context->windowCredits;
+		if (result == 0)
+			goto wait;
+		result = swdlGetPortFreePackets(context, &freePackets);
+		if (result < 0)
+			return result;
+		if (freePackets == 0) {
+wait:
+			context->transmitState = 5;
+			return result;
+		}
+		buffer = context->buffer;
+		buffer[0] = 0x7e;
+		buffer[1] = 0x07;
+		size = context->hello.window.blockSize;
+		address = context->fileOffset;
+		*(SceUInt32 *)(buffer + 2) = address;
+		result = swdlReadFileAt(fd, buffer + 6, address - context->hello.window.baseAddress,
+					&size);
+		if (result < 0)
+			return result;
+		if (size == 0) {
+			context->bufferLength = 0;
+			context->transmitState = 4;
+			return result;
+		}
+		context->windowCredits--;
+		context->fileOffset += size;
+		context->bufferLength = size + 5;
+		swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 1 + size + 5);
+		context->bufferLength++;
+		context->transmitState = context->streaming == 1 ? 2 : 4;
+		return result;
+	case 3:
+		buffer = context->buffer;
+		buffer[0] = 0x7e;
+		buffer[1] = 0x15;
+		context->bufferLength = 1;
+		swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 2);
+		context->transmitState = 4;
+		context->bufferLength++;
+		return 0;
+	case 1:
+		buffer = context->buffer;
+		buffer[0] = 0x7e;
+		buffer[1] = 0x1b;
+		buffer[2] = type;
+		context->bufferLength = 2;
+		swdlEndFrame(buffer + 1, &context->bufferLength, buffer + 3);
+		context->transmitState = 4;
+		context->updateState = 5;
+		context->bufferLength++;
+		return 0;
+	default:
+		return (int)0x80330002;
+	}
+}
+
+int swdlUpdateSendImage1(SwdlContext *context)
+{
+	return swdlUpdateSendImage(context, context->update.imageFds[1], 0x10);
+}
+
+int swdlUpdateSendImage0(SwdlContext *context)
+{
+	return swdlUpdateSendImage(context, context->update.imageFds[0], 0x0f);
+}
+
+int swdlUpdateSendImage2(SwdlContext *context)
+{
+	return swdlUpdateSendImage(context, context->update.imageFds[2], 0x05);
+}
+
+/* name unknown: the open (0x1c), write (0x08) and close (0x16) replies of an image */
+static inline int swdlUpdateReceiveImage(SwdlContext *context, const SceSize *imageSize)
+{
+	const SceUInt8 *cursor;
+	SceUInt8 command;
+	SceUInt8 status;
+	SceUInt8 address[4];
+	SceSize size;
+	SceSize written;
+	SceSize progress;
+
+	switch (context->phase) {
+	case 1:
+		switch (context->receiveEvent) {
+		case 0x200:
+			command = context->receiveBuffer[0];
+			status = context->receiveBuffer[1];
+			if (command == 0x1c) {
+				if (status != 0)
+					return (int)0x80330708;
+				context->imageWritten = 0;
+				context->transmitState = 1;
+				context->windowCredits = context->hello.windowSize;
+				context->fileOffset = context->hello.window.baseAddress;
+				context->phase = 2;
+				return 0;
+			}
+			if (command != 0x0e)
+				return (int)0x80330708;
+			swdlReceiveLog(context);
+			return 0;
+		case 0x400:
+			context->transmitState = 4;
+			return 0;
+		case 0x800:
+			return swdlGetPortError(context->port);
+		default:
+			return (int)0x80330002;
+		}
+	case 2:
+		size = *imageSize;
+		switch (context->receiveEvent) {
+		case 0x200:
+			cursor = context->receiveBuffer;
+			swdlUnpackBytes(&command, &cursor, 1);
+			swdlUnpackBytes(address, &cursor, 4);
+			if (command != 0x08) {
+				if (command != 0x0e)
+					return (int)0x80330708;
+				swdlReceiveLog(context);
+				return 0;
+			}
+			written = context->imageWritten + context->hello.window.blockSize;
+			context->imageWritten = written;
+			context->windowCredits++;
+			if (size <= written) {
+				progress = context->progressBytes;
+				context->phase = 3;
+				context->transmitState = 1;
+				context->streaming = 0;
+				context->progressBytes = 0;
+				context->notification.forwardedValue1 = progress + written - size;
+				context->notify(64, &context->notification);
+				return 0;
+			}
+			context->progressBytes += context->hello.window.blockSize;
+			if (context->transmitState != 3) {
+				if (context->streaming == 1)
+					context->transmitState = 2;
+				else
+					context->transmitState = 1;
+			}
+			return 0;
+		case 0x400:
+			context->transmitState = 4;
+			return 0;
+		case 0x800:
+			return swdlGetPortError(context->port);
+		default:
+			return (int)0x80330002;
+		}
+	case 3:
+		switch (context->receiveEvent) {
+		case 0x200:
+			if (context->receiveBuffer[0] == 0x16)
+				return 1;
+			if (context->receiveBuffer[0] != 0x0e)
+				return (int)0x80330708;
+			swdlReceiveLog(context);
+			return 0;
+		case 0x400:
+			context->transmitState = 4;
+			return 0;
+		case 0x800:
+			return swdlGetPortError(context->port);
+		default:
+			return (int)0x80330002;
+		}
+	default:
+		return (int)0x80330002;
+	}
+}
+
+int swdlUpdateReceiveImage0(SwdlContext *context)
+{
+	return swdlUpdateReceiveImage(context, &context->update.imageSizes[0]);
+}
+
+int swdlUpdateReceiveImage2(SwdlContext *context)
+{
+	return swdlUpdateReceiveImage(context, &context->update.imageSizes[2]);
+}
+
+int swdlUpdateReceiveImage1(SwdlContext *context)
+{
+	return swdlUpdateReceiveImage(context, &context->update.imageSizes[1]);
+}
+
+static const SwdlStep swdlUpdateSteps[17] = {
+	{ swdlUpdateSendNop, swdlUpdateReceiveNopAck },
+	{ swdlUpdateSendParameterRequest, swdlUpdateReceiveParameters },
+	{ swdlUpdateSendUnlock, swdlUpdateReceiveUnlockAck },
+	{ swdlUpdateSendHexRecord, swdlUpdateReceiveWriteAck },
+	{ swdlUpdateSendGo, swdlUpdateReceiveRestart },
+	{ swdlUpdateSendHello, swdlUpdateReceiveHello },
+	{ swdlUpdateSendSecurityMode, swdlUpdateReceiveSecurityMode },
+	{ swdlUpdateSendErase, swdlUpdateReceiveErase },
+	{ swdlUpdateSendPartitionTable, swdlUpdateReceivePartitionTable },
+	{ swdlUpdateStartImages, swdlUpdateSkipReply },
+	{ swdlUpdateSendImage0, swdlUpdateReceiveImage0 },
+	{ swdlUpdateStartImages, swdlUpdateSkipReply },
+	{ swdlUpdateSendImage1, swdlUpdateReceiveImage1 },
+	{ swdlUpdateStartImages, swdlUpdateSkipReply },
+	{ swdlUpdateSendImage2, swdlUpdateReceiveImage2 },
+	{ swdlUpdateSendReset, swdlUpdateReceiveReset },
+	{ swdlUpdateEndSend, swdlUpdateEndReceive },
+};
+
+static const SwdlStep swdlCarrierUpdateSteps[11] = {
+	{ swdlUpdateSendNop, swdlUpdateReceiveNopAck },
+	{ swdlUpdateSendParameterRequest, swdlUpdateReceiveParameters },
+	{ swdlUpdateSendUnlock, swdlUpdateReceiveUnlockAck },
+	{ swdlUpdateSendHexRecord, swdlUpdateReceiveWriteAck },
+	{ swdlUpdateSendGo, swdlUpdateReceiveRestart },
+	{ swdlUpdateSendHello, swdlUpdateReceiveHello },
+	{ swdlUpdateSendSecurityMode, swdlUpdateReceiveSecurityMode },
+	{ swdlUpdateSendErase, swdlUpdateReceiveErase },
+	{ swdlUpdateSendDefaultPartitionTable, swdlUpdateReceiveDefaultPartitionTable },
+	{ swdlUpdateSendReset, swdlUpdateReceiveReset },
+	{ swdlUpdateEndSend, swdlUpdateEndReceive },
+};
+
+static const SwdlStep swdlPartitionTableSteps[10] = {
+	{ swdlUpdateSendNop, swdlUpdateReceiveNopAck },
+	{ swdlUpdateSendParameterRequest, swdlUpdateReceiveParameters },
+	{ swdlUpdateSendUnlock, swdlUpdateReceiveUnlockAck },
+	{ swdlUpdateSendHexRecord, swdlUpdateReceiveWriteAck },
+	{ swdlUpdateSendGo, swdlUpdateReceiveRestart },
+	{ swdlUpdateSendHello, swdlUpdateReceiveHello },
+	{ swdlUpdateSendSecurityMode, swdlUpdateReceiveSecurityMode },
+	{ swdlUpdateSendPartitionTable, swdlUpdateReceivePartitionTable },
+	{ swdlUpdateSendReset, swdlUpdateReceiveReset },
+	{ swdlUpdateEndSend, swdlUpdateEndReceive },
+};
+
+#if FW_DEBUG
+static const SceKernelDebugInfo dbg__abortExec_L2139
+	__attribute__((section(".sce_dbginfo"), used)) = {
+	.file = "sw_dload/sw_dload_s_nand.c",
+	.line = 2139,
+	.func = "_abortExec",
+};
+
+static const SceKernelDebugInfoSource dbg__abortExec_L2139Source
+	__attribute__((section(SCE_DBGSRC_SECTION), used)) = {
+	&dbg__abortExec_L2139, "sw_dload/sw_dload_s_nand.c", 2139,
+	"_abortExec",
+};
+
+static const SceKernelDebugInfo dbg__abortExec_L2156
+	__attribute__((section(".sce_dbginfo"), used)) = {
+	.file = "sw_dload/sw_dload_s_nand.c",
+	.line = 2156,
+	.func = "_abortExec",
+};
+
+static const SceKernelDebugInfoSource dbg__abortExec_L2156Source
+	__attribute__((section(SCE_DBGSRC_SECTION), used)) = {
+	&dbg__abortExec_L2156, "sw_dload/sw_dload_s_nand.c", 2156,
+	"_abortExec",
+};
+
+static const SceKernelDebugInfo dbg__abortExec_L2212
+	__attribute__((section(".sce_dbginfo"), used)) = {
+	.file = "sw_dload/sw_dload_s_nand.c",
+	.line = 2212,
+	.func = "_abortExec",
+};
+
+static const SceKernelDebugInfoSource dbg__abortExec_L2212Source
+	__attribute__((section(SCE_DBGSRC_SECTION), used)) = {
+	&dbg__abortExec_L2212, "sw_dload/sw_dload_s_nand.c", 2212,
+	"_abortExec",
+};
+
+static const SceKernelDebugInfo dbg__abortExec_L2260
+	__attribute__((section(".sce_dbginfo"), used)) = {
+	.file = "sw_dload/sw_dload_s_nand.c",
+	.line = 2260,
+	.func = "_abortExec",
+};
+
+static const SceKernelDebugInfoSource dbg__abortExec_L2260Source
+	__attribute__((section(SCE_DBGSRC_SECTION), used)) = {
+	&dbg__abortExec_L2260, "sw_dload/sw_dload_s_nand.c", 2260,
+	"_abortExec",
+};
+
+static const SceKernelDebugInfo dbg__abortExec_L2341
+	__attribute__((section(".sce_dbginfo"), used)) = {
+	.file = "sw_dload/sw_dload_s_nand.c",
+	.line = 2341,
+	.func = "_abortExec",
+};
+
+static const SceKernelDebugInfoSource dbg__abortExec_L2341Source
+	__attribute__((section(SCE_DBGSRC_SECTION), used)) = {
+	&dbg__abortExec_L2341, "sw_dload/sw_dload_s_nand.c", 2341,
+	"_abortExec",
+};
+
+static const SceKernelDebugInfo dbg__abortExec_L2404
+	__attribute__((section(".sce_dbginfo"), used)) = {
+	.file = "sw_dload/sw_dload_s_nand.c",
+	.line = 2404,
+	.func = "_abortExec",
+};
+
+static const SceKernelDebugInfoSource dbg__abortExec_L2404Source
+	__attribute__((section(SCE_DBGSRC_SECTION), used)) = {
+	&dbg__abortExec_L2404, "sw_dload/sw_dload_s_nand.c", 2404,
+	"_abortExec",
+};
+#endif
+
+/* state 2 stopped (event 0x80): end the update where it stands, by the step it is in
+ * (abortState: 2 restart the boot loader, 3 wait for the streaming mode, 4 wait for
+ * the security mode reply, 5 for the image's close, 6 reset, 7 wait for the reset's
+ * reply) */
+static inline int _abortExec(SwdlContext *context, SceUInt32 events)
+{
+	SwdlPortInterface *port = context->port;
+	SceUInt32 state;
+	int received;
+	int result = 0;
+
+	if (context->abortState == 1) {
+		state = context->updateState;
+		if (state == 0)
+			context->abortState = 2;
+		else if (state == 1 || state == 4)
+			context->abortState = 6;
+		else if (state == 2)
+			context->abortState = 3;
+		else if (state == 3)
+			context->abortState = 4;
+		else if (state == 5)
+			context->abortState = 5;
+		else if (state == 6)
+			context->abortState = 7;
+		else
+			return (int)0x80330002;
+	}
+	state = context->abortState;
+	if (state == 2) {
+		memset(&context->stepIndex, 0, 0x468);
+		__builtin_memset(&context->hello, 0, sizeof(context->hello));
+		context->steps = swdlCarrierUpdateSteps;
+		context->updateState = 1;
+		result = swdlAllocateFrameBuffer(context);
+		if (result < 0)
+			return result;
+		context->progressBytes = 0;
+		result = swdlSetResponseTimeout(context, 3000);
+		if (result < 0)
+			return result;
+		result = port->open(port, 2);
+		if (result < 0)
+			return result;
+		if (!swdlSeekStep(context, swdlUpdateSendReset)) {
+#if FW_DEBUG
+			sceKernelAssert(0, &dbg__abortExec_L2139, __builtin_return_address(0));
+#endif
+		}
+		result = swdlStartSend(context);
+		if (result < 0)
+			return result;
+		context->abortState = 7;
+		return result;
+	} else if (state == 3) {
+		if (!swdlSeekStep(context, swdlUpdateReceiveRestart)) {
+#if FW_DEBUG
+			sceKernelAssert(0, &dbg__abortExec_L2156, __builtin_return_address(0));
+#endif
+		}
+		if (events & 0x200) {
+			do {
+				result = swdlReceiveFrame(context, &received);
+				if (result != 0)
+					return result;
+			} while (received > 0);
+		}
+		if (events & 0x1800) {
+			result = swdlHandleCancel(context);
+			if (result < 0)
+				return result;
+		}
+		if (events & 0x400) {
+			result = swdlHandleFrameTimeout(context);
+			if (result < 0)
+				return result;
+		}
+		if (events & 0x10000) {
+			result = swdlHandleDetach(context);
+			if (result < 0)
+				return result;
+			if (result == 1) {
+				result = swdlSendFrames(context);
+				if (result < 0)
+					return result;
+				context->abortState = 4;
+			} else {
+#if FW_DEBUG
+				sceKernelAssert(0, &dbg__abortExec_L2212, __builtin_return_address(0));
+#endif
+			}
+		}
+		if (events & 0x20000) {
+			result = swdlHandleAttach(context);
+			if (result != 0)
+				return result;
+		}
+	} else if (state == 4) {
+		if (events & 0x200) {
+			for (;;) {
+				result = swdlReceiveFrame(context, &received);
+				if (result < 0)
+					return result;
+				if (result == 1) {
+					if (context->receiveBuffer[0] != 0x18) {
+						result = swdlSendFrames(context);
+						if (result < 0)
+							return result;
+						break;
+					}
+					if (!swdlSeekStep(context, swdlUpdateSendReset)) {
+#if FW_DEBUG
+						sceKernelAssert(0, &dbg__abortExec_L2260, __builtin_return_address(0));
+#endif
+					}
+					result = swdlStartSend(context);
+					if (result < 0)
+						return result;
+					context->abortState = 7;
+					break;
+				}
+				if (received <= 0)
+					break;
+			}
+		}
+		goto cancel;
+	} else if (state == 5) {
+		if (events & 0x200) {
+			for (;;) {
+				result = swdlReceiveFrame(context, &received);
+				if (result < 0)
+					return result;
+				if (result != 1) {
+					if (context->sendRetries == 0) {
+						result = swdlSendFrames(context);
+						if (result < 0)
+							return result;
+					}
+					if (received > 0)
+						continue;
+					if (result != 1)
+						break;
+				}
+				if (context->receiveBuffer[0] == 0x16) {
+					if (!swdlSeekStep(context, swdlUpdateSendReset)) {
+#if FW_DEBUG
+						sceKernelAssert(0, &dbg__abortExec_L2341, __builtin_return_address(0));
+#endif
+					}
+					result = swdlStartSend(context);
+					if (result < 0)
+						return result;
+					context->abortState = 7;
+				} else {
+					result = swdlSendFrames(context);
+					if (result < 0)
+						return result;
+				}
+				break;
+			}
+		}
+		if (events & 0x100) {
+			result = swdlSendFrames(context);
+			if (result < 0)
+				return result;
+		}
+		goto cancel;
+	} else if (state == 6) {
+		if (!swdlSeekStep(context, swdlUpdateSendReset)) {
+#if FW_DEBUG
+			sceKernelAssert(0, &dbg__abortExec_L2404, __builtin_return_address(0));
+#endif
+		}
+		result = swdlStartSend(context);
+		if (result < 0)
+			return result;
+		context->abortState = 7;
+		return result;
+	} else if (state == 7) {
+		if (events & 0x200) {
+			do {
+				result = swdlReceiveFrame(context, &received);
+				if (result < 0)
+					return result;
+				if (result == 1) {
+					context->abortState = 8;
+					swdlFinishUpdate(context);
+					return result;
+				}
+			} while (received > 0);
+		}
+cancel:
+		if (events & 0x1800) {
+			result = swdlHandleCancel(context);
+			if (result < 0)
+				return result;
+		}
+		if (events & 0x400) {
+			result = swdlHandleFrameTimeout(context);
+			if (result < 0)
+				return result;
+		}
+	} else {
+		return (int)0x80330002;
+	}
+	if (events & 0x100000)
+		result = context->lastError;
+	return result;
+}
+
+/* name unknown: state 2, the modem update: the boot loader (DMSS), then the partition
+ * table and the images (streaming download); 4, 0x200000 and 0x400000 start the
+ * sequence of each update kind */
+int swdlExecUpdate(SwdlContext *context, SceUInt32 events)
+{
+	SwdlPortInterface *port = context->port;
+	int received;
+	int result = 0;
+
+	if ((events & 0x80) && context->abortState == 0)
+		context->abortState = 1;
+	if (context->abortState != 0) {
+		result = _abortExec(context, events);
+		if (result < 0)
+			goto error;
+		return result;
+	}
+	if (events & 4) {
+		context->updateKind = 0;
+		result = swdlStartUpdate(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishUpdate(context);
+	}
+	if (events & 0x200000) {
+		context->updateKind = 1;
+		result = swdlStartUpdate(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishUpdate(context);
+	}
+	if (events & 0x400000) {
+		context->updateKind = 2;
+		result = swdlStartUpdate(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishUpdate(context);
+	}
+	if (events & 0x10) {
+		if (context->hello.partitionTableStatus == 1)
+			context->update.partitionTableForced = 1;
+		result = swdlStartSend(context);
+		if (result < 0)
+			goto error;
+	}
+	if (events & 0x200) {
+		do {
+			result = swdlReceiveFrame(context, &received);
+			if (result < 0)
+				goto error;
+			if (context->progressBytes > 0xc800) {
+				context->notification.forwardedValue1 = context->progressBytes;
+				context->progressBytes = 0;
+				context->notify(64, &context->notification);
+			}
+			if (result == 3) {
+				swdlFinishUpdate(context);
+				break;
+			}
+			if (context->sendRetries == 0) {
+				result = swdlSendFrames(context);
+				if (result < 0)
+					goto error;
+				if (result == 3) {
+					swdlFinishUpdate(context);
+					break;
+				}
+			}
+		} while (received > 0);
+	}
+	if (events & 0x100) {
+		result = swdlSendFrames(context);
+		if (result == 3)
+			swdlFinishUpdate(context);
+	}
+	if (events & 0x1800) {
+		result = swdlHandleCancel(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishUpdate(context);
+	}
+	if (events & 0x400) {
+		result = swdlHandleFrameTimeout(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishUpdate(context);
+	}
+	if (events & 0x10000) {
+		result = swdlHandleDetach(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishUpdate(context);
+	}
+	if (events & 0x20000) {
+		result = swdlHandleAttach(context);
+		if (result < 0)
+			goto error;
+		result = swdlSendFrames(context);
+		if (result < 0)
+			goto error;
+		if (result == 3)
+			swdlFinishUpdate(context);
+	}
+	if (events & 0x100000) {
+		result = context->lastError;
+		goto error;
+	}
+	return result;
+
+error:
+	port->close(port, 0);
+	swdlReleaseBuffers(context);
+	swdlCloseHexReader(context);
+	context->notification.forwardedValue2 = result;
+	context->updateState = 0;
+	context->abortState = 0;
+	context->notify(128, &context->notification);
 	return result;
 }

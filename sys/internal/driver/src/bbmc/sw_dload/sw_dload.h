@@ -39,7 +39,7 @@ typedef struct SwdlPortInterface {
 	int (*control)(struct SwdlPortInterface *port, int command, void *data, SceSize size);
 	int (*receive)(struct SwdlPortInterface *port, void *data, SceSize *size, int wait);
 	int (*getFrameLength)(struct SwdlPortInterface *port, SceSize *length);
-	int (*stopReceive)(struct SwdlPortInterface *port);
+	int (*stopReceive)(struct SwdlPortInterface *port, int flags);
 	struct SwdlPort *owner;
 	int (*eventHandler)(struct SwdlPortInterface *port, SceUInt32 events, void *data,
 			    SceSize size);
@@ -140,9 +140,14 @@ typedef struct SwdlRestoreRequest {
 } SwdlRestoreRequest;
 
 typedef struct SwdlUpdateRequest {
-	SceUInt32 reserved0[3];
-	SceUID fd;			/* the Intel HEX image */
-	SceUInt32 reserved16[9];
+	SceUInt32 unlock;		/* send the unlock code first */
+	SceUInt32 forcePartitionTable;	/* write the partition table over the target's */
+	SceUInt32 partitionTableForced;	/* the target asked for it, resend it forced */
+	SceUID fd;			/* the Intel HEX image (the boot loader) */
+	SceUID partitionTableFd;
+	SceUID imageFds[3];
+	SceUInt32 reserved[2];
+	SceSize imageSizes[3];
 } SwdlUpdateRequest;
 
 /* name unknown: an image the streaming download writes */
@@ -164,13 +169,14 @@ _Static_assert(sizeof(SwdlDownloadRequest) == 32, "swdl download request");
 /* name unknown: what the target's fast download hello reply asks for */
 typedef struct SwdlHelloWindow {
 	SceSize blockSize;		/* of a write, fitted to the port's packets */
-	SceUInt32 window;
+	SceUInt32 baseAddress;		/* of the flash */
 } SwdlHelloWindow;
 
 typedef struct __attribute__((packed)) SwdlHelloParameters {
 	SwdlHelloWindow window;
-	SceUInt16 flags;
-	SceUInt16 reserved;
+	SceUInt16 windowSize;		/* the writes the target takes before an answer */
+	SceUInt8 partitionTableStatus;	/* 1: the target's table differs */
+	SceUInt8 padding;
 } SwdlHelloParameters;
 
 _Static_assert(sizeof(SwdlUpdateRequest) == 52, "swdl update request");
@@ -192,7 +198,7 @@ typedef struct SwdlContext {
 	SceUInt32 state;		/* the thread's handler */
 	SceUInt32 mode;
 	int lastError;
-	SceUInt32 reserved20;
+	SceUInt32 abortState;		/* _abortExec's step, 0: no abort */
 	SwdlPortInterface *port;
 	SceUInt32 attached;
 	SceUInt32 waiting;		/* 1 attach, 2 detach */
@@ -217,8 +223,9 @@ typedef struct SwdlContext {
 	SceUInt32 savedTransmitState;
 	SceUInt32 timeouts;
 	SceUInt32 responseTimeout;	/* ms */
-	SceUInt8 reservede8[0xf0 - 0xe8];
-	SceUInt32 fileOffset;		/* of the image's next bytes */
+	SceUInt32 streaming;		/* the update writes an image */
+	SceUInt32 windowCredits;	/* the writes the target still takes */
+	SceUInt32 fileOffset;		/* of the image's next bytes (the update: its address) */
 	SceSize imageWritten;		/* the image's bytes sent */
 	SceSize imageSize;
 	SceUInt32 phase;		/* of the image: 1 open, 2 write, 3 done */
@@ -250,10 +257,11 @@ typedef struct SwdlContext {
 	SceUInt32 attachTime;
 	SceUInt32 frameTime;		/* ms */
 	SceUInt32 attachTimeout;
-	SceUInt8 reserved594[0x59c - 0x594];
+	SceUInt32 updateKind;		/* the update's sequence: 0, 1 or 2 */
+	SceUInt32 acknowledged;		/* the target answered the update's current command */
 	SceUInt32 listCount;
 	struct SwdlListNode *list;
-	SceUInt32 reserved5a4;
+	SceUInt32 updateState;
 } SwdlContext;
 
 /* name unknown: a node of the context's list */
