@@ -42,22 +42,14 @@ int installRecord(int slot, const MagicGateRecordHeader *record,
 				   identity->path, record, size);
 	if (result < 0)
 		goto out;
-	installedRecord.count[0] = (unsigned int)count >> 24;
-	installedRecord.count[1] = (unsigned int)count >> 16;
-	installedRecord.count[2] = (unsigned int)count >> 8;
-	installedRecord.count[3] = count;
-	installedRecord.depth[0] = (unsigned int)depth >> 24;
-	installedRecord.depth[1] = (unsigned int)depth >> 16;
-	installedRecord.depth[2] = (unsigned int)depth >> 8;
-	installedRecord.depth[3] = depth;
+	*(uint32_t *)installedRecord.count = __builtin_bswap32(count);
+	*(uint32_t *)installedRecord.depth = __builtin_bswap32(depth);
 	installedRecord.identity = record->identity;
 	if (record->identity.authenticationMode == 2) {
 		result = installRecordKey(slot, type, &installedRecord, NULL);
 		if (result < 0)
 			goto out;
-		treeSize = (unsigned int)record->treeSize[0] << 24 |
-			   (unsigned int)record->treeSize[1] << 16 |
-			   (unsigned int)record->treeSize[2] << 8 | record->treeSize[3];
+		treeSize = __builtin_bswap32(*(const uint32_t *)record->treeSize);
 		result = verifyRecordTag(record->tag, &installedRecord.identity.identifier,
 					 record + 1, treeSize, slot);
 		if (result < 0)
@@ -378,14 +370,8 @@ int SceMagicGateForDriver_CA74A13D(void *output, unsigned int capacity,
 		result = selectRecordBlocks(installedRecord.blocks, &count, &depth,
 					    challenge->path, record, size);
 		if (result >= 0) {
-			installedRecord.count[0] = (unsigned int)count >> 24;
-			installedRecord.count[1] = (unsigned int)count >> 16;
-			installedRecord.count[2] = (unsigned int)count >> 8;
-			installedRecord.count[3] = count;
-			installedRecord.depth[0] = (unsigned int)depth >> 24;
-			installedRecord.depth[1] = (unsigned int)depth >> 16;
-			installedRecord.depth[2] = (unsigned int)depth >> 8;
-			installedRecord.depth[3] = depth;
+			*(uint32_t *)installedRecord.count = __builtin_bswap32(count);
+			*(uint32_t *)installedRecord.depth = __builtin_bswap32(depth);
 			copied = (count + 1) * 16;
 			result = copied;
 			if (capacity < copied)
@@ -426,16 +412,15 @@ int SceMagicGateForDriver_0B01FE3F(const void *tag,
 			result = encryptedResult;
 		goto out;
 	}
-	if (record->identity.authenticationMode != 2 || record->identity.keyMode != 2)
-		goto invalid;
-	treeSize = (unsigned int)record->treeSize[0] << 24 |
-		   (unsigned int)record->treeSize[1] << 16 |
-		   (unsigned int)record->treeSize[2] << 8 | record->treeSize[3];
+	if (record->identity.authenticationMode != 2 || record->identity.keyMode != 2) {
+invalid:
+		result = (int)0x80501004;
+		SceMagicGateForDriver_492EE950();
+		return result;
+	}
+	treeSize = __builtin_bswap32(*(const uint32_t *)record->treeSize);
 	result = verifyRecordTag(tag, &record->identity.identifier,
 				 record + 1, treeSize, slot);
-	goto out;
-invalid:
-	result = (int)0x80501004;
 out:
 	SceMagicGateForDriver_492EE950();
 	return result;
@@ -466,7 +451,7 @@ int SceMagicGateForDriver_01FD0260(int slot, const void *input, int sourceSlot)
 
 int SceMagicGateForDriver_07BDCE2F(void *output, int slot, int sourceSlot)
 {
-	MagicGateKey key __attribute__((aligned(16)));
+	MagicGateKey key;
 	MagicGateKey source;
 	int result;
 

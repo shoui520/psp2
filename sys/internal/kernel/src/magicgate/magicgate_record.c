@@ -31,54 +31,56 @@ void notifyRecordInstalled(int slot, const MagicGateRecordIdentity *identity)
 int verifyRecordTag(const void *tag, const uint32_t *identifier,
 		    const void *data, unsigned int size, int slot)
 {
-	struct {
+	uint8_t workspaceStorage[0x50];
+	struct Workspace {
 		MagicGateKey iv;
 		MagicGateKey finalBlock;
 		MagicGateKey key;
 		MagicGateKey message;
-	} workspace __attribute__((aligned(16)));
+	} *workspace = (struct Workspace *)(workspaceStorage +
+			  (-(SceUInt32)(SceUIntPtr)workspaceStorage & 0xf));
 	const uint8_t *input = data;
 	const uint8_t *tail;
 	const uint32_t *words;
 	unsigned int remaining;
 	int result;
 
-	result = getDriverKey(&workspace.key, 0);
+	result = getDriverKey(&workspace->key, 0);
 	if (result < 0)
 		return result;
-	result = getDriverKey(&workspace.finalBlock, 1);
+	result = getDriverKey(&workspace->finalBlock, 1);
 	if (result < 0)
 		return result;
-	workspace.iv.words[0] = 0;
-	workspace.iv.words[1] = 0;
-	workspace.iv.words[2] = 0;
-	workspace.iv.words[3] = 0;
-	workspace.message.words[0] = *identifier;
-	workspace.key.halves[0] ^= slotKeys[slot].halves[0];
-	workspace.key.halves[1] ^= slotKeys[slot].halves[1];
+	workspace->iv.words[0] = 0;
+	workspace->iv.words[1] = 0;
+	workspace->iv.words[2] = 0;
+	workspace->iv.words[3] = 0;
+	workspace->message.words[0] = *identifier;
+	workspace->key.halves[0] ^= slotKeys[slot].halves[0];
+	workspace->key.halves[1] ^= slotKeys[slot].halves[1];
 	if (size <= 11) {
-		memcpy(&workspace.message.bytes[4], input, size);
-		tail = workspace.message.bytes;
+		memcpy(&workspace->message.bytes[4], input, size);
+		tail = workspace->message.bytes;
 		remaining = size + 4;
 	} else {
 		words = (const uint32_t *)input;
-		workspace.message.words[1] = words[0];
-		workspace.message.words[2] = words[1];
-		workspace.message.words[3] = words[2];
-		result = encryptRecordCbc(&workspace.key, &workspace.message,
-					  &workspace.iv, 16, &workspace.iv);
+		workspace->message.words[1] = words[0];
+		workspace->message.words[2] = words[1];
+		workspace->message.words[3] = words[2];
+		result = encryptRecordCbc(&workspace->key, &workspace->message,
+					  &workspace->iv, 16, &workspace->iv);
 		if (result < 0)
 			return result;
 		remaining = size - 12;
 		tail = input + 12;
 		while (remaining > 16) {
 			words = (const uint32_t *)tail;
-			workspace.message.words[0] = words[0];
-			workspace.message.words[1] = words[1];
-			workspace.message.words[2] = words[2];
-			workspace.message.words[3] = words[3];
-			result = encryptRecordCbc(&workspace.key, &workspace.message,
-						  &workspace.iv, 16, &workspace.iv);
+			workspace->message.words[0] = words[0];
+			workspace->message.words[1] = words[1];
+			workspace->message.words[2] = words[2];
+			workspace->message.words[3] = words[3];
+			result = encryptRecordCbc(&workspace->key, &workspace->message,
+						  &workspace->iv, 16, &workspace->iv);
 			if (result < 0)
 				return result;
 			remaining -= 16;
@@ -86,18 +88,18 @@ int verifyRecordTag(const void *tag, const uint32_t *identifier,
 		}
 	}
 	if (remaining) {
-		memmove(&workspace.message, tail, remaining);
-		memset(&workspace.message.bytes[remaining], 0, 16 - remaining);
-		result = encryptRecordCbc(&workspace.key, &workspace.message,
-					  &workspace.iv, 16, &workspace.iv);
+		memmove(&workspace->message, tail, remaining);
+		memset(&workspace->message.bytes[remaining], 0, 16 - remaining);
+		result = encryptRecordCbc(&workspace->key, &workspace->message,
+					  &workspace->iv, 16, &workspace->iv);
 		if (result < 0)
 			return result;
 	}
-	result = encryptRecordCbc(&workspace.key, &workspace.finalBlock,
-				  &workspace.message, 16, &workspace.iv);
+	result = encryptRecordCbc(&workspace->key, &workspace->finalBlock,
+				  &workspace->message, 16, &workspace->iv);
 	if (result < 0)
 		return result;
-	if (timingsafe_memcmp(tag, &workspace.message, 16))
+	if (timingsafe_memcmp(tag, &workspace->message, 16))
 		return (int)0x80501004;
 	return 0;
 }

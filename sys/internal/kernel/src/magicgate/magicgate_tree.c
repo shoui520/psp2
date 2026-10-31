@@ -17,10 +17,7 @@ int selectRecordBlocks(MagicGateBlock *output, int *count, int *depth,
 {
 	const uint8_t *tree = (const uint8_t *)(record + 1);
 	const MagicGateBlock *blocks = (const MagicGateBlock *)
-		(tree + ((unsigned int)record->treeSize[0] << 24 |
-			 (unsigned int)record->treeSize[1] << 16 |
-			 (unsigned int)record->treeSize[2] << 8 |
-			 record->treeSize[3]));
+		(tree + __builtin_bswap32(*(const uint32_t *)record->treeSize));
 	const MagicGateBlock *source;
 	int capacity;
 	int block = -1;

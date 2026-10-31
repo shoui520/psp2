@@ -4,7 +4,7 @@ if(FW STREQUAL "4.00-DEBUGGER" OR FW STREQUAL "3.630.011-DEBUGGER")
 else()
 	set(MAGICGATE_WRAPPED_DATA data/wrapped-retail.c)
 endif()
-psp2_module(os0_kd_magicgate KIND kernel COMPILER gcc48 PARTIAL SOURCES
+psp2_module(os0_kd_magicgate KIND kernel COMPILER gcc48 SOURCES
 	magicgate_lifecycle.c
 	magicgate_mutex.c
 	magicgate_tree.c

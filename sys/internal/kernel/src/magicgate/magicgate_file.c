@@ -8,9 +8,13 @@
 #include <sysmem/suspend.h>
 #include <msif/msif.h>
 
-/* These supplied keys still need their entries identified in the reference. */
-extern const MagicGateKey fileIdentityKey;
-extern const MagicGateKey fileServiceKey;
+/* The file service's embedded service key is the module's own data object at
+ * 0x810066a0, identical in all four firmwares; the identity key the original
+ * builds on the stack with immediate byte stores. */
+const MagicGateKey fileServiceKey = {
+	.bytes = { 0xc1, 0xbd, 0x05, 0xa2, 0xe1, 0x4a, 0x8f, 0x0d,
+		   0xe0, 0xd4, 0xb4, 0xb7, 0x04, 0x53, 0x98, 0x00 }
+};
 
 MagicGateFileService magicGateFileService = {
 	.selectedGroup = -1,
@@ -536,7 +540,23 @@ createDirectory:
 		if (result < 0)
 			goto ioFailed;
 	}
-	workspace.identityKey = fileIdentityKey;
+	/* The original's identity key, built on the stack with byte stores. */
+	workspace.identityKey.bytes[0] = 0x44;
+	workspace.identityKey.bytes[1] = 0xb9;
+	workspace.identityKey.bytes[2] = 0x14;
+	workspace.identityKey.bytes[3] = 0x69;
+	workspace.identityKey.bytes[4] = 0x5d;
+	workspace.identityKey.bytes[5] = 0x31;
+	workspace.identityKey.bytes[6] = 0xe9;
+	workspace.identityKey.bytes[7] = 0x05;
+	workspace.identityKey.bytes[8] = 0xcb;
+	workspace.identityKey.bytes[9] = 0x39;
+	workspace.identityKey.bytes[10] = 0x82;
+	workspace.identityKey.bytes[11] = 0x1d;
+	workspace.identityKey.bytes[12] = 0x99;
+	workspace.identityKey.bytes[13] = 0x23;
+	workspace.identityKey.bytes[14] = 0x9f;
+	workspace.identityKey.bytes[15] = 0x6e;
 	result = sceMsifGetMediaId((uint8_t *)&workspace.identity);
 	if (result < 0)
 		goto failed;
