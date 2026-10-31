@@ -5,8 +5,6 @@
 #include <kernel/threadmgr.h>
 
 uint32_t sce_paf_misc_counter_c224;
-uint32_t sce_paf_misc_value_ef04;
-int8_t sce_paf_misc_flag_eef5;
 uint32_t sce_paf_misc_value_1078;
 float sce_paf_misc_float_1178;
 uint32_t sce_paf_misc_shared_f3c8;
@@ -70,16 +68,6 @@ uint32_t *ScePafMisc_7E6CA20C(void)
 {
 	sce_paf_misc_counter_c224++;
 	return &sce_paf_misc_counter_c224;
-}
-
-uint32_t ScePafMisc_AF4FC3F4(void)
-{
-	return sce_paf_misc_value_ef04;
-}
-
-int ScePafMisc_C51EF81D(void)
-{
-	return sce_paf_misc_flag_eef5;
 }
 
 int ScePafMisc_862C8916(void)

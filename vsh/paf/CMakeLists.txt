@@ -115,6 +115,9 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/inputdevice/btrm/btrm.cpp
 	src/module/module.cpp
 	src/module/module_impl.cpp
+	src/system/system_param.cpp
+	src/system/capability.cpp
+	src/system/model.cpp
 	src/timer/timer.c
 	src/timer/curves.c
 	src/std/math.c
@@ -173,7 +176,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/containment.c
 	src/misc/global_vector.c
 	src/misc/global_state.c
-	src/misc/app_program.c
 	../../sys/sdk/target/src/libsnc/i32ops.c
 	../../sys/sdk/target/src/libsnc/i64ops.c
 	../../sys/sdk/target/src/deflt/zlibhdr.c
@@ -235,3 +237,6 @@ set_source_files_properties(src/inputdevice/motionsensor/motionsensor.cpp src/in
 
 # Module inlines map's operator[] and the interface table's find (2026-10-31).
 set_source_files_properties(src/module/module.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+
+# paf::system::SystemParam's constructor inlines ReadParamFlags (2026-10-31).
+set_source_files_properties(src/system/system_param.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
