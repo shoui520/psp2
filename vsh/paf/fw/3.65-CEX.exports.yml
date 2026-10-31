@@ -295,7 +295,7 @@ ScePaf:
         - _ZN3paf4math6matrix5OrthoEffffff: 0x1534ACB0
         - _ZN3paf11inputdevice11touchscreen6UnlockEj: 0x15613EA2
         - ScePafMisc_15A2CCBE: 0x15A2CCBE
-        - ScePafMisc_15D182BE: 0x15D182BE
+        - _ZN3paf5image5Image5BlendENS_6common9SharedPtrIS1_EEf: 0x15D182BE
         - _ZNK3paf4math6matrix7inverseEv: 0x1613B4E7
         - _ZN3paf5cache10CacheImage9JobFinishEiRb: 0x16F7F4B3
         - _ZN3paf9LocalFile10RenameFileEPKcS2_: 0x1702CD72
@@ -555,7 +555,7 @@ ScePaf:
         - _ZN3paf8HttpFile7GetstatEPKcPNS_12HttpFileStatE: 0x5155B290
         - _ZN3paf4http11Transaction19DumpResponseHeadersEv: 0x51940F6B
         - ScePafMisc_51BA74C0: 0x51BA74C0
-        - ScePafMisc_51D5DDA3: 0x51D5DDA3
+        - _ZN3paf5image5Image16CreateFromBufferENS_6common9SharedPtrINS_6BufferEEES5_jRKNS0_11ImageExtentE9ImageModePNS_6memory13HeapAllocatorE: 0x51D5DDA3
         - ScePafMisc_51E1E267: 0x51E1E267
         - _ZN3paf5Timer4CbrtEf: 0x51E31BC8
         - ScePafMisc_529F328C: 0x529F328C
@@ -883,7 +883,7 @@ ScePaf:
         - _ZN3paf17LocalFilePsp2ImplC2Ev: 0xA495CC6B
         - _ZNK3paf4math4rect12right_bottomEv: 0xA4F47E0A
         - _ZN3paf3Dir4ReadEPNS_6DirEntE: 0xA4F553B0
-        - ScePafMisc_A572530C: 0xA572530C
+        - _ZN3paf5image5Image9SaveAsPngEPvjRjPKvjRKNS0_11ImageExtentE9ImageModePNS_6memory13HeapAllocatorE: 0xA572530C
         - _ZNK3paf12BufferedFile8IsOpenedEv: 0xA5DE4664
         - _ZN3paf5Timer10GetValueV4Ev: 0xA60CFE13
         - _ZN3paf3rtc10IsLeapYearEt: 0xA6178A4C
@@ -974,7 +974,7 @@ ScePaf:
         - _ZNK3paf8HttpFile17GetResponseHeaderEPKcRNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0xB8282602
         - _ZN3paf5image5Image12GetAttributeEjRf: 0xB8A95C4E
         - _ZN3paf17TimerListenerList13ListenerParamC1EPNS_13TimerListenerEbPvS4_: 0xB90DBCA6
-        - ScePafMisc_B92E588A: 0xB92E588A
+        - _ZN3paf5image5Image9SaveAsDdsEPvjPKvjRKNS0_11ImageExtentE9ImageModej: 0xB92E588A
         - _ZN3paf3rtc22FormatRFC3339LocalTimeEPcPKy: 0xB94B29AC
         - _ZN3paf3UrlC1Ev: 0xB998FE26
         - ScePafMisc_B9C99123: 0xB9C99123
@@ -1021,7 +1021,7 @@ ScePaf:
         - _ZN3paf5cache10CacheImage20DestroyCacheInstanceEPS1_: 0xC1A97796
         - ScePafMisc_C1DE0AC2: 0xC1DE0AC2
         - _ZN3paf5cache12CacheManager10ClearCacheERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0xC1EBC01D
-        - ScePafMisc_C3111A86: 0xC3111A86
+        - _ZN3paf5image5Image16CreateFromBufferEPvjS2_jjRKNS0_11ImageExtentE9ImageModePNS_6memory13HeapAllocatorE: 0xC3111A86
         - _ZN3paf6memory13HeapAllocator11GetFreeSizeEv: 0xC32ECD73
         - _ZN3paf5image5Image4OpenEPvjPNS_6memory13HeapAllocatorENS0_11ImageFormatE: 0xC341D895
         - ScePafMisc_C3E27C0A: 0xC3E27C0A
