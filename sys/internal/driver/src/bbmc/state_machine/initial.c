@@ -1,6 +1,8 @@
 #include <syscon/syscon.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysroot.h>
+#include <string.h>
+#include <stddef.h>
 #include "../bbmc_control.h"
 #include "../bbmc_message.h"
 #include "../bbmc_memory.h"
@@ -14,6 +16,7 @@ void bbmcSaveTransitionState(BbmcControl *control, SceInt32 status,
 SceUInt32 initialComBootStep;
 int initialSysconPending;
 SceUID initialComBootTimer;
+SceUInt32 initialSuspendStep;
 
 typedef struct BbmcBootVersionRequirement {
 	SceUInt32 enabled;
@@ -657,5 +660,64 @@ failed:
 finish:
 	bbmcCancelSysconCommand(&control->transitionPacket, &initialSysconPending);
 	initialComBootStep = 1;
+	return result;
+}
+
+int suspendSteadyComBoot(BbmcControl *control, BbmcMessage *message)
+{
+	int result = 0;
+
+	control->suspendError = (int)0x80010300;
+	bbmcUnregisterNetworkInterface();
+	bbmcEnterCS(&control->mutex);
+	control->currentState = 0;
+	control->suspendStep = 10;
+	if (bbmcSendSimpleMessage(control, 42) >= 0)
+		result = 2;
+	else
+		control->flags |= 2;
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+int suspendInitialToComBoot(BbmcControl *control, BbmcMessage *message)
+{
+	SceUInt32 step = initialSuspendStep;
+	int result;
+
+	if (step == 0) {
+		control->suspendError = (int)0x80010200;
+		result = SceSysconForDriver_99A254A9();
+		if (result) {
+			SceSysconForDriver_7BAFE083(0);
+			control->flags |= 8;
+			SceSysconForDriver_DD16ABD9(0);
+			bbmcEnterCS(&control->mutex);
+			control->sysconPowerRequestPending = 1;
+			memset(&control->pinStatus, 0, offsetof(BbmcControl, smsListBusy) -
+			       offsetof(BbmcControl, pinStatus));
+			bbmcLeaveCS(&control->mutex);
+			initialSuspendStep = 1;
+			return 1;
+		}
+	} else if (step == 1) {
+		control->suspendError = (int)0x80010201;
+		if (message->command != 9)
+			return 1;
+		result = 0;
+	} else {
+		result = (int)0x80330001;
+	}
+	initialSuspendStep = 0;
+	control->suspendError = (int)0x80010202;
+	if (result == 0) {
+		if (bbmcSendSimpleMessage(control, 42) >= 0) {
+			bbmcEnterCS(&control->mutex);
+			control->targetState = 0;
+			bbmcLeaveCS(&control->mutex);
+			return 2;
+		}
+		control->flags |= 2;
+	}
 	return result;
 }
