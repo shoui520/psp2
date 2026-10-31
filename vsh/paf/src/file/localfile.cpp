@@ -456,10 +456,10 @@ bool LocalFile::IsDirectory(const char *path)
 	return FileHasMode(path, SCE_STM_FDIR);
 }
 
+int32_t LocalFile::SetThreadDefaultPriority(int32_t priority)
+{
+	return LocalFilePsp2Impl::SetThreadDefaultPriority(priority);
 }
 
-/* LocalFilePsp2Impl's thread default priority, from LocalFile; no Sony name. */
-extern "C" int32_t ScePafMisc_B1E2960A(int32_t priority)
-{
-	return ScePafMisc_A283AD47(priority);
 }
+

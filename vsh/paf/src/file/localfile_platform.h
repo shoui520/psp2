@@ -55,6 +55,7 @@ public:
 	static int32_t RenameFile(const char *oldname, const char *newname);
 	static int32_t Getstat(const char *path, LocalFileStat *stat);
 	static int32_t Chstat(const char *path, LocalFileStat *stat, uint32_t cbit);
+	static int32_t SetThreadDefaultPriority(int32_t priority);
 
 private:
 	bool m_is_opened;
@@ -65,8 +66,5 @@ private:
 };
 
 }
-
-/* The thread's default I/O priority for the files it opens; no Sony name. */
-extern "C" int32_t ScePafMisc_A283AD47(int32_t priority);
 
 #endif

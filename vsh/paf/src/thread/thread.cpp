@@ -8,11 +8,7 @@
 #include <common/common_internal.h>
 #include <kernel/error.h>
 #include <kernel/sysmem/memblock.h>
-
-extern "C" {
-/* name unknown: paf::LocalFile's I/O priority for the calling thread */
-int ScePafMisc_B1E2960A(int priority);
-}
+#include <file/localfile.h>
 
 namespace paf {
 namespace thread {
@@ -141,7 +137,7 @@ void Thread::SetDefaultOption(const Option &option)
 
 SceInt32 Thread::ThreadFunc(SceSize argSize, void *argBlock)
 {
-	ScePafMisc_B1E2960A(THREAD_FILE_PRIORITY);
+	LocalFile::SetThreadDefaultPriority(THREAD_FILE_PRIORITY);
 
 	Thread *self = *(Thread **)argBlock;
 

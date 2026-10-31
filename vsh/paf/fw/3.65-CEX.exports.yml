@@ -361,7 +361,7 @@ ScePaf:
         - ScePafMisc_2678FFEB: 0x2678FFEB
         - _ZN3paf3UrlD1Ev: 0x269A36D7
         - ScePafMisc_26BCDBCA: 0x26BCDBCA
-        - ScePafMisc_26BF1B5B: 0x26BF1B5B
+        - _ZN3paf7MemFile4OpenEPvjPi: 0x26BF1B5B
         - _ZN3paf11inputdevice3EndEv: 0x26C77CAE
         - ScePafMisc_26F81894: 0x26F81894
         - _ZN3paf6memory13PoolAllocator5AllocEv: 0x2713C850
@@ -698,7 +698,7 @@ ScePaf:
         - _ZN3paf12BufferedFile5IsEofEv: 0x772634EA
         - ScePafMisc_7731B37D: 0x7731B37D
         - _ZN3paf4math4rect10set_bottomEf: 0x77865CCC
-        - ScePafMisc_77B378EC: 0x77B378EC
+        - _ZN3paf7MemFile4OpenENS_6common9SharedPtrINS_6BufferEEEPi: 0x77B378EC
         - _ZN3paf4math10quaternion18FromEulerAnglesXYZENS0_2v3E: 0x78190BD6
         - _ZN3paf6memory13PoolAllocator11GetFreeSizeEv: 0x78209706
         - _ZN3paf6memory13HeapAllocator27sce_paf_report_memoryblocksEPFiPvjiS2_ES2_: 0x786D314A
@@ -871,7 +871,7 @@ ScePaf:
         - ScePafMisc_A05DD777: 0xA05DD777
         - ScePafMisc_A08B8D8A: 0xA08B8D8A
         - _ZN3paf5image5Image4LoadEb: 0xA0DEC4E5
-        - ScePafMisc_A283AD47: 0xA283AD47
+        - _ZN3paf17LocalFilePsp2Impl24SetThreadDefaultPriorityEi: 0xA283AD47
         - _ZN3paf6memory13HeapAllocatorC1EPvjPKcPKNS1_6OptionE: 0xA2B0BF4D
         - ScePafMisc_A2DA8396: 0xA2DA8396
         - ScePafMisc_A32583BE: 0xA32583BE
@@ -947,7 +947,7 @@ ScePaf:
         - ScePafMisc_B15E3890: 0xB15E3890
         - _ZN3paf17LocalFilePsp2Impl10RemoveFileEPKc: 0xB18C734D
         - _ZN3paf5cache12CacheManager9FindCacheERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEERNS_13intrusive_ptrINS0_9CacheBaseEEE: 0xB1C584EB
-        - ScePafMisc_B1E2960A: 0xB1E2960A
+        - _ZN3paf9LocalFile24SetThreadDefaultPriorityEi: 0xB1E2960A
         - _ZN3paf5image14ImageAttribute12GetPixelSizeE9ImageMode: 0xB207334F
         - _ZN3paf17LocalFilePsp2Impl6ChstatEPKcPNS_13LocalFileStatEj: 0xB26CBAFE
         - ScePafMisc_B2795FE2: 0xB2795FE2

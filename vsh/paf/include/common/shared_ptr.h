@@ -53,6 +53,15 @@ public:
 			sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
 	}
 
+	/* From a SharedPtr of a derived (or less const) class: the same counter block. */
+	template<class U>
+	SharedPtr(const SharedPtr<U> &src)
+		: m_ptr(src.m_ptr), m_ref_counter((RefCounter *)src.m_ref_counter)
+	{
+		if (m_ptr != NULL)
+			sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+	}
+
 	~SharedPtr()
 	{
 		Release();

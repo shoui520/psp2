@@ -484,13 +484,13 @@ int32_t LocalFilePsp2Impl::Chstat(const char *path, LocalFileStat *stat, uint32_
 	return ret;
 }
 
-}
-
-int32_t ScePafMisc_A283AD47(int32_t priority)
+int32_t LocalFilePsp2Impl::SetThreadDefaultPriority(int32_t priority)
 {
 	int32_t ret = sceIoSetThreadDefaultPriorityForSystem(priority);
 
 	if (ret < 0)
 		return ToPafError(ret);
 	return ret;
+}
+
 }

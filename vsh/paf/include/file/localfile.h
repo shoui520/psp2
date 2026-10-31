@@ -110,6 +110,7 @@ public:
 	static bool Exists(const char *path);
 	static bool IsFile(const char *path);
 	static bool IsDirectory(const char *path);
+	static int32_t SetThreadDefaultPriority(int32_t priority);
 
 private:
 	void CreateImpl();
