@@ -635,7 +635,7 @@ ScePaf:
         - ScePafMisc_679B51BB: 0x679B51BB
         - _ZN3paf3UrlC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x67BA6456
         - _ZN3paf11inputdevice4InitERNS0_9InitParamE: 0x680B4595
-        - ScePafMisc_684125AA: 0x684125AA
+        - _ZN3paf4math10quaternion15RotationBetweenENS0_2v4ES2_f: 0x684125AA
         - ScePafMisc_68657766: 0x68657766
         - ScePafMisc_68A6B37B: 0x68A6B37B
         - _ZNK3paf6memory13HeapAllocator7GetNameEv: 0x68B7420B

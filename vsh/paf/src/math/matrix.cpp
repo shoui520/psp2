@@ -262,13 +262,6 @@ string matrix::getCoordSysError()
 	return math_matrix::GetCoordSysError();
 }
 
-/* asinf's argument, kept in [-1, 1]. */
-static inline float ClampUnit(float value)
-{
-	value = value < -1.0f ? -1.0f : value;
-	return value < 1.0f ? value : 1.0f;
-}
-
 /*
  * The angles of the rotation this matrix makes, for the rotations applied in
  * the order the name gives. At gimbal lock the last angle is 0.

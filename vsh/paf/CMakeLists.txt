@@ -49,8 +49,9 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/path.c
 	src/common/property_list.c
 	src/common/shared_ptr.c
-	src/job/job.cpp src/math/matrix.cpp
+	src/job/job.cpp
 	src/math/matrix.cpp
+	src/math/quaternion.cpp
 	src/cache/cache_manager.c
 	src/cache/cache_manager_impl.c
 	src/inputdevice/inputdevice.c
@@ -104,13 +105,10 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/short.c
 	src/misc/bounds.c
 	src/misc/bitmask.c
-	src/misc/quaternion_matrix.c
 	src/misc/enum_table.c
 	src/misc/string_variant.c
 	src/misc/lock.c
 	src/misc/owned_destroy.c
-	src/misc/vector_poly.c
-	src/misc/vector.c
 	src/misc/rect_vector.c
 	src/misc/rect_contains.c
 	src/misc/list.c
