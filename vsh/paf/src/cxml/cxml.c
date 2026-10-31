@@ -313,7 +313,7 @@ void CxmlDefaultAllocator(AllocationType type, void *userdata, void *old_addr,
 	case AllocationType_Alloc_FloatArrayTable:
 	case AllocationType_Alloc_FileTable:
 		if (allocator)
-			*addr = scePafReallocWithContext(allocator, old_addr, required_size);
+			*addr = HeapAllocatorRealloc(allocator, old_addr, required_size);
 		else
 			*addr = sce_paf_realloc(old_addr, required_size);
 		*size = required_size;
@@ -328,7 +328,7 @@ void CxmlDefaultAllocator(AllocationType type, void *userdata, void *old_addr,
 	case AllocationType_Free_FloatArrayTable:
 	case AllocationType_Free_FileTable:
 		if (allocator)
-			scePafFreeWithContext(allocator, old_addr);
+			HeapAllocatorFree(allocator, old_addr);
 		else
 			sce_paf_free(old_addr);
 		break;

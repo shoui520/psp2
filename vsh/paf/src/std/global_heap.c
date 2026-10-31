@@ -10,62 +10,62 @@ static HeapAllocator *s_heap;
 
 void *sce_paf_malloc(size_t size)
 {
-	return scePafMallocWithContext(s_heap, size);
+	return HeapAllocatorMalloc(s_heap, size);
 }
 
 void *sce_paf_memalign(size_t align, size_t size)
 {
-	return scePafMallocAlignWithContext(s_heap, align, size);
+	return HeapAllocatorMemalign(s_heap, align, size);
 }
 
 void *ScePafStdc_D00387E7(size_t size, HeapAllocator *allocator)
 {
-	return allocator ? scePafMallocWithContext(allocator, size) : NULL;
+	return allocator ? HeapAllocatorMalloc(allocator, size) : NULL;
 }
 
 void *ScePafStdc_3CF19248(size_t size, HeapAllocator *allocator)
 {
-	return allocator ? scePafMallocWithContext(allocator, size) : NULL;
+	return allocator ? HeapAllocatorMalloc(allocator, size) : NULL;
 }
 
 void *ScePafStdc_5B828DF7(size_t size, size_t alignment,
 			  HeapAllocator *allocator)
 {
-	return allocator ? scePafMallocAlignWithContext(allocator, alignment, size)
+	return allocator ? HeapAllocatorMemalign(allocator, alignment, size)
 			 : NULL;
 }
 
 void *ScePafStdc_6FE032F8(size_t size, size_t alignment,
 			  HeapAllocator *allocator)
 {
-	return allocator ? scePafMallocAlignWithContext(allocator, alignment, size)
+	return allocator ? HeapAllocatorMemalign(allocator, alignment, size)
 			 : NULL;
 }
 
 void ScePafStdc_D04CBFC0(void *ptr, HeapAllocator *allocator)
 {
 	if (allocator && ptr)
-		scePafFreeWithContext(allocator, ptr);
+		HeapAllocatorFree(allocator, ptr);
 }
 
 void ScePafStdc_BE896EAF(void *ptr, HeapAllocator *allocator)
 {
 	if (allocator && ptr)
-		scePafFreeWithContext(allocator, ptr);
+		HeapAllocatorFree(allocator, ptr);
 }
 
 void ScePafStdc_46A0F0D9(void *ptr, size_t unused1, size_t unused2,
 			 HeapAllocator *allocator)
 {
 	if (allocator && ptr)
-		scePafFreeWithContext(allocator, ptr);
+		HeapAllocatorFree(allocator, ptr);
 }
 
 void ScePafStdc_F22F2F50(void *ptr, size_t unused1, size_t unused2,
 			 HeapAllocator *allocator)
 {
 	if (allocator && ptr)
-		scePafFreeWithContext(allocator, ptr);
+		HeapAllocatorFree(allocator, ptr);
 }
 
 void *sce_paf_realloc(void *ptr, size_t size)
@@ -73,7 +73,7 @@ void *sce_paf_realloc(void *ptr, size_t size)
 	HeapAllocator *heap = ptr ?
 		(HeapAllocator *)(uintptr_t)mspace_ptr_get_tag(ptr) : s_heap;
 
-	return scePafReallocWithContext(heap, ptr, size);
+	return HeapAllocatorRealloc(heap, ptr, size);
 }
 
 void *sce_paf_calloc(size_t nitems, size_t size)
@@ -86,7 +86,7 @@ void sce_paf_free(void *ptr)
 	if (ptr) {
 		HeapAllocator *heap = (HeapAllocator *)(uintptr_t)mspace_ptr_get_tag(ptr);
 
-		scePafFreeWithContext(heap, ptr);
+		HeapAllocatorFree(heap, ptr);
 	}
 }
 
@@ -157,7 +157,7 @@ HeapAllocator *GlobalHeapConstruct(HeapAllocator *self)
 	opt.alignment = alignment;
 	heap = PafPlacementNew(sizeof(*self), self);
 	if (heap)
-		heap = scePafCreateHeap(heap, NULL, global_heap_size,
+		heap = HeapAllocatorConstruct(heap, NULL, global_heap_size,
 				       "ScePafGlobalHeap", &opt);
 	s_heap = heap;
 	return self;

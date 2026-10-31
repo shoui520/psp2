@@ -42,7 +42,7 @@ static void DestroyOwnedObject(PafOwnedObject *self)
 			HeapAllocator *allocator = owner->allocator;
 
 			self->methods->destruct(self);
-			scePafFreeWithContext(allocator, self);
+			HeapAllocatorFree(allocator, self);
 		}
 	} else {
 		self->methods->destruct(self);

@@ -36,7 +36,7 @@ const FileClass localFileClass = {
 void LocalFileCreateImpl(LocalFile *self)
 {
 	if (self->m_allocator) {
-		void *buffer = scePafMallocAlignWithContext(self->m_allocator, 8,
+		void *buffer = HeapAllocatorMemalign(self->m_allocator, 8,
 							LocalFilePsp2ImplSize);
 
 		if (buffer) {
@@ -430,7 +430,7 @@ void LocalFileDeleteImpl(LocalFile *self)
 	if (impl) {
 		impl->vtable->Destroy(impl);
 		if (self->m_allocator)
-			scePafFreeWithContext(self->m_allocator, self->m_pimpl);
+			HeapAllocatorFree(self->m_allocator, self->m_pimpl);
 		self->m_pimpl = NULL;
 	}
 }

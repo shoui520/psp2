@@ -1,5 +1,5 @@
-#ifndef PAF_MEMORY_HEAP_ALLOCATOR_H
-#define PAF_MEMORY_HEAP_ALLOCATOR_H
+#ifndef PAF_SRC_MEMORY_HEAP_ALLOCATOR_H
+#define PAF_SRC_MEMORY_HEAP_ALLOCATOR_H
 
 #include "../thread/mutex.h"
 #include <stddef.h>
@@ -62,64 +62,39 @@ _Static_assert(offsetof(HeapAllocator, m_heap_memblk_type) == 92,
 _Static_assert(offsetof(HeapAllocatorOption, memblk_type) == 12,
 	       "HeapAllocator::Option block type");
 
-HeapAllocator *scePafCreateHeap(HeapAllocator *self, void *membase,
+/*
+ * The C view of paf::memory::HeapAllocator (include/memory/heap_allocator.h)
+ * for the C files not yet converted: its methods by their link names.
+ */
+#define HeapAllocatorConstruct _ZN3paf6memory13HeapAllocatorC1EPvjPKcPKNS1_6OptionE
+#define HeapAllocatorDestroy _ZN3paf6memory13HeapAllocatorD1Ev
+#define HeapAllocatorMalloc _ZN3paf6memory13HeapAllocator14sce_paf_mallocEj
+#define HeapAllocatorFree _ZN3paf6memory13HeapAllocator12sce_paf_freeEPv
+#define HeapAllocatorRealloc _ZN3paf6memory13HeapAllocator15sce_paf_reallocEPvj
+#define HeapAllocatorMemalign _ZN3paf6memory13HeapAllocator16sce_paf_memalignEjj
+#define HeapAllocatorCalloc _ZN3paf6memory13HeapAllocator14sce_paf_callocEjj
+#define HeapAllocatorTrim _ZN3paf6memory13HeapAllocator13sce_paf_mtrimEv
+#define HeapAllocatorUsableSize _ZN3paf6memory13HeapAllocator20sce_paf_musable_sizeEPv
+#define HeapAllocatorDumpHeapInfo _ZN3paf6memory13HeapAllocator22sce_paf_dump_heap_infoEi
+#define HeapAllocatorDumpHeapStatus _ZN3paf6memory13HeapAllocator24sce_paf_dump_heap_statusEv
+#define HeapAllocatorReportMemoryBlocks \
+	_ZN3paf6memory13HeapAllocator27sce_paf_report_memoryblocksEPFiPvjiS2_ES2_
+#define HeapAllocatorCheckMemoryBoundsAll _ZN3paf6memory13HeapAllocator26sce_paf_check_memoryboundsEv
+
+HeapAllocator *HeapAllocatorConstruct(HeapAllocator *self, void *membase,
 		size_t size, const char *name, const HeapAllocatorOption *option);
-HeapAllocator *ScePafMisc_F36F1C66(HeapAllocator *self, void *membase,
-		size_t size, const char *name, const HeapAllocatorOption *option);
-HeapAllocator *scePafDeleteHeap(HeapAllocator *self);
-void ScePafMisc_79F13D72(HeapAllocator *self);
-
-#define HeapAllocatorGetType ScePafMisc_9B22F2FE
-#define HeapAllocatorGetBlockType ScePafMisc_D9E9BEC8
-#define HeapAllocatorGetName ScePafMisc_68B7420B
-#define HeapAllocatorGetRange ScePafMisc_D4358B8E
-#define HeapAllocatorGetFreeSize ScePafMisc_C32ECD73
-
-uint32_t HeapAllocatorGetType(const HeapAllocator *self);
-AllocationBlockType HeapAllocatorGetBlockType(const HeapAllocator *self);
-const char *HeapAllocatorGetName(const HeapAllocator *self);
-void HeapAllocatorGetRange(const HeapAllocator *self, void **membase, size_t *size);
-size_t HeapAllocatorGetFreeSize(HeapAllocator *self);
-
-#define HeapAllocatorCheckMemoryBounds ScePafMisc_0A463284
-#define HeapAllocatorFreeDebug ScePafMisc_FE016005
-#define HeapAllocatorReallocDebug ScePafMisc_18667637
-#define HeapAllocatorReportMemoryBlocks ScePafMisc_786D314A
-#define HeapAllocatorMallocDebug ScePafMisc_F474D8A9
-#define HeapAllocatorCalloc ScePafMisc_E7AFBC2B
-#define HeapAllocatorCallocDebug ScePafMisc_D3D1F615
-#define HeapAllocatorMemalignDebug ScePafMisc_4D204547
-#define HeapAllocatorTrim ScePafMisc_039D7846
-#define HeapAllocatorUsableSize ScePafMisc_9E07A92C
-#define HeapAllocatorDumpHeapStatus ScePafMisc_5C8AD3E0
-#define HeapAllocatorDumpHeapInfo ScePafMisc_344EF0B7
-#define HeapAllocatorQueryInfo ScePafMisc_E74AC75A
-#define HeapAllocatorCheckMemoryBoundsAll ScePafMisc_A9D10F39
-
-int HeapAllocatorCheckMemoryBounds(HeapAllocator *self, void *ptr);
-void HeapAllocatorFreeDebug(HeapAllocator *self, void *ptr, const char *filename,
-			   int32_t lineno, int32_t type);
-void *HeapAllocatorReallocDebug(HeapAllocator *self, void *ptr, size_t size,
-			       const char *filename, int32_t lineno, int32_t type);
-int32_t HeapAllocatorReportMemoryBlocks(HeapAllocator *self,
-		int (*callback)(void *, size_t, int, void *), void *userdata);
-void *HeapAllocatorMallocDebug(HeapAllocator *self, size_t size,
-		const char *filename, int32_t lineno, int32_t type);
+HeapAllocator *HeapAllocatorDestroy(HeapAllocator *self);
+void *HeapAllocatorMalloc(HeapAllocator *self, size_t size);
+void HeapAllocatorFree(HeapAllocator *self, void *ptr);
+void *HeapAllocatorRealloc(HeapAllocator *self, void *ptr, size_t size);
+void *HeapAllocatorMemalign(HeapAllocator *self, size_t alignment, size_t size);
 void *HeapAllocatorCalloc(HeapAllocator *self, size_t nitems, size_t size);
-void *HeapAllocatorCallocDebug(HeapAllocator *self, size_t nitems, size_t size,
-		const char *filename, int32_t lineno, int32_t type);
-void *HeapAllocatorMemalignDebug(HeapAllocator *self, size_t alignment, size_t size,
-		const char *filename, int32_t lineno, int32_t type);
 void HeapAllocatorTrim(HeapAllocator *self);
 size_t HeapAllocatorUsableSize(HeapAllocator *self, const void *ptr);
-void HeapAllocatorDumpHeapStatus(HeapAllocator *self);
 void HeapAllocatorDumpHeapInfo(HeapAllocator *self, int32_t sort_policy);
-void HeapAllocatorQueryInfo(HeapAllocator *self, HeapInfo *info);
+void HeapAllocatorDumpHeapStatus(HeapAllocator *self);
+int32_t HeapAllocatorReportMemoryBlocks(HeapAllocator *self,
+		int (*callback)(void *, size_t, int, void *), void *userdata);
 int32_t HeapAllocatorCheckMemoryBoundsAll(HeapAllocator *self);
-
-void *scePafMallocWithContext(HeapAllocator *allocator, size_t size);
-void *scePafMallocAlignWithContext(HeapAllocator *allocator, size_t align, size_t size);
-void *scePafReallocWithContext(HeapAllocator *allocator, void *ptr, size_t size);
-void scePafFreeWithContext(HeapAllocator *allocator, void *ptr);
 
 #endif

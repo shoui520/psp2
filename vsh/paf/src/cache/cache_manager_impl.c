@@ -102,7 +102,7 @@ __attribute__((noinline)) void ScePafMisc_511CFBA2(CacheManagerImpl *self, void 
 {
 	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	if (self->longLifeHeap)
-		scePafFreeWithContext(self->longLifeHeap, ptr);
+		HeapAllocatorFree(self->longLifeHeap, ptr);
 	else
 		sce_paf_free(ptr);
 	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
@@ -319,7 +319,7 @@ void *CacheManagerImplAllocInstantHeap(CacheManagerImpl *self, size_t size)
 	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	heap = self->instantHeap;
 	if (heap)
-		allocated = scePafMallocAlignWithContext(heap, self->instantAlignment, size);
+		allocated = HeapAllocatorMemalign(heap, self->instantAlignment, size);
 	else
 		allocated = sce_paf_memalign(self->instantAlignment, size);
 	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
@@ -333,7 +333,7 @@ void CacheManagerImplFreeInstantHeap(CacheManagerImpl *self, void *ptr)
 	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	heap = self->instantHeap;
 	if (heap)
-		scePafFreeWithContext(heap, ptr);
+		HeapAllocatorFree(heap, ptr);
 	else
 		sce_paf_free(ptr);
 	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);

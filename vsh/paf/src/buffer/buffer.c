@@ -92,9 +92,9 @@ void HeapAllocBufferAllocate(BufferSharedPtr *result, size_t size,
 
 	if (allocator) {
 		if (size < 64)
-			addr = scePafMallocWithContext(allocator, size);
+			addr = HeapAllocatorMalloc(allocator, size);
 		else
-			addr = scePafMallocAlignWithContext(allocator, 64, size);
+			addr = HeapAllocatorMemalign(allocator, 64, size);
 	} else {
 		if (size < 64)
 			addr = sce_paf_malloc(size);
@@ -112,7 +112,7 @@ void HeapAllocBufferAllocate(BufferSharedPtr *result, size_t size,
 		BufferSharedPtrInitialize(result, &buffer->base, BufferDefaultDelete);
 	} else {
 		if (allocator)
-			scePafFreeWithContext(allocator, addr);
+			HeapAllocatorFree(allocator, addr);
 		else
 			sce_paf_free(addr);
 		result->m_ptr = NULL;
@@ -142,7 +142,7 @@ Buffer *HeapAllocBufferDestroy(Buffer *base)
 
 	base->vtable = &heapAllocBufferClass.methods;
 	if (allocator)
-		scePafFreeWithContext(allocator, addr);
+		HeapAllocatorFree(allocator, addr);
 	else
 		sce_paf_free(addr);
 	base->vtable = &bufferClass.methods;

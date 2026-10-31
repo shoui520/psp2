@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void *mspace;
 
 struct mallinfo {
@@ -33,5 +37,9 @@ unsigned int mspace_report_free_blocks(mspace heap,
 		int (*handler)(void *, size_t, int, void *), void *arg);
 int mspace_check_memorybounds(mspace heap, void *mem, unsigned int tag);
 unsigned int mspace_ptr_get_tag(const void *mem);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

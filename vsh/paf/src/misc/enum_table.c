@@ -96,7 +96,7 @@ PafGridOwner *ScePafMisc_05ECDDBF(PafGridOwner *self)
 		HeapAllocator *allocator = self->allocator;
 
 		if (allocator)
-			scePafFreeWithContext(allocator, self->buffer);
+			HeapAllocatorFree(allocator, self->buffer);
 		else
 			sce_paf_free(self->buffer);
 		self->buffer = 0;
@@ -122,7 +122,7 @@ int ScePafMisc_1F7BB8D0(PafGrid *grid)
 				HeapAllocator *allocator = grid->allocator;
 
 				if (allocator)
-					scePafFreeWithContext(allocator, entry->object);
+					HeapAllocatorFree(allocator, entry->object);
 				else
 					sce_paf_free(entry->object);
 				entry->elementSize = 0;

@@ -210,7 +210,7 @@ HeapAllocator *ReleaseResourceBuffer(uint8_t *self, HeapAllocator *allocator,
 		if (buffer) {
 			if (result ||
 			    (result = *(HeapAllocator **)(self + 28)) != NULL)
-				scePafFreeWithContext(result, buffer);
+				HeapAllocatorFree(result, buffer);
 			else
 				sce_paf_free(*(void **)(self + bufferOffset));
 			*(void **)(self + bufferOffset) = NULL;
@@ -915,9 +915,9 @@ void *ResourceObjAllocFileBuffer(const ResourceObj *self, HeapAllocator *allocat
 				 size_t size)
 {
 	if (allocator)
-		return scePafMallocAlignWithContext(allocator, 64, size);
+		return HeapAllocatorMemalign(allocator, 64, size);
 	if (self->rscallocator)
-		return scePafMallocAlignWithContext(self->rscallocator, 64, size);
+		return HeapAllocatorMemalign(self->rscallocator, 64, size);
 	return sce_paf_memalign(64, size);
 }
 
@@ -926,9 +926,9 @@ void ResourceObjFreeFileBuffer(const ResourceObj *self, HeapAllocator *allocator
 			      void *addr)
 {
 	if (allocator)
-		scePafFreeWithContext(allocator, addr);
+		HeapAllocatorFree(allocator, addr);
 	else if (self->rscallocator)
-		scePafFreeWithContext(self->rscallocator, addr);
+		HeapAllocatorFree(self->rscallocator, addr);
 	else
 		sce_paf_free(addr);
 }
@@ -1399,7 +1399,7 @@ static inline __attribute__((always_inline))
 void ResourceObjFreeDescriptionBuffer(ResourceObj *self, void *addr)
 {
 	if (self->rscallocator)
-		scePafFreeWithContext(self->rscallocator, addr);
+		HeapAllocatorFree(self->rscallocator, addr);
 	else
 		sce_paf_free(addr);
 }
@@ -1431,7 +1431,7 @@ int32_t ResourceObjLoadResourceDescription(ResourceObj *self, const char *name)
 		void *addr;
 
 		if (self->rscallocator)
-			addr = scePafMallocAlignWithContext(self->rscallocator, 64, 4096);
+			addr = HeapAllocatorMemalign(self->rscallocator, 64, 4096);
 		else
 			addr = sce_paf_memalign(64, 4096);
 		if (addr) {
@@ -1462,7 +1462,7 @@ int32_t ResourceObjLoadResourceDescription(ResourceObj *self, const char *name)
 	if (length & 0x80000000)
 		goto file;
 	if (self->rscallocator)
-		data = scePafMallocAlignWithContext(self->rscallocator, 64, length);
+		data = HeapAllocatorMemalign(self->rscallocator, 64, length);
 	else
 		data = sce_paf_memalign(64, length);
 	if (!data) {
@@ -1607,7 +1607,7 @@ ResourceObj *ResourceObjDestroy(ResourceObj *self)
 		self->string_document = NULL;
 		if (self->create_type == 0 && self->string_buffer) {
 			if (self->rscallocator)
-				scePafFreeWithContext(self->rscallocator, self->string_buffer);
+				HeapAllocatorFree(self->rscallocator, self->string_buffer);
 			else
 				sce_paf_free(self->string_buffer);
 		}
@@ -1705,7 +1705,7 @@ ResourceObj *ResourceObjConstructFromFile(ResourceObj *self, const char *name,
 		void *addr;
 
 		if (self->rscallocator)
-			addr = scePafMallocAlignWithContext(self->rscallocator, 64, 4096);
+			addr = HeapAllocatorMemalign(self->rscallocator, 64, 4096);
 		else
 			addr = sce_paf_memalign(64, 4096);
 		if (addr) {
