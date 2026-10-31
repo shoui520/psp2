@@ -68,8 +68,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/math/rect.cpp
 	src/cache/cache_base.cpp
 	src/cache/cache_image.cpp
-	src/cache/cache_manager.c
-	src/cache/cache_manager_impl.c
+	src/cache/cache_manager.cpp
+	src/cache/cache_manager_impl.cpp
 	src/inputdevice/inputdevice.c
 	src/inputdevice/inputlistener.c
 	src/inputdevice/gesturelistener.c
@@ -158,7 +158,8 @@ set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIE
 # them call C1/D1, and CallQueue::Enqueue calls string::assign out of line; budgets 29 to 31 do
 # both (2026-10-31).
 set_source_files_properties(
-	src/buffer/buffer.cpp src/cache/cache_base.cpp
+	src/buffer/buffer.cpp src/cache/cache_base.cpp src/cache/cache_manager.cpp
+	src/cache/cache_manager_impl.cpp
 	src/job/job.cpp src/math/matrix.cpp src/math/rect.cpp
 	src/memory/heap_allocator.cpp src/memory/range_allocator.cpp src/memory/pool_allocator.cpp
 	src/thread/callqueue.cpp src/thread/cond.cpp src/thread/mutex.cpp src/thread/priority.cpp

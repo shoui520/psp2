@@ -66,6 +66,12 @@ public:
 	int sce_paf_check_memorybounds();
 	int sce_paf_check_memoryleaks(void *start, void *end);
 
+	/* A failed allocation returns NULL without the assert (a name of ours). */
+	void SetDisableAssertOnAllocFailure(bool disable)
+	{
+		m_heap_disable_assert_on_alloc_failure = disable;
+	}
+
 private:
 	void *m_heap_id;
 	void *m_heap_addr;

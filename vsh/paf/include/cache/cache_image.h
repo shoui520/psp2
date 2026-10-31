@@ -19,7 +19,6 @@
 #include <image/image.h>
 #include <graphics/surface/surface.h>
 #include <cache/cache_base.h>
-#include <cache/cache_manager.h>
 
 namespace paf {
 
@@ -29,12 +28,12 @@ class IDParam;
 namespace cache {
 
 /*
- * What a cached image offers its users (a name of ours: no record or export
- * names the interface). CacheImage implements it beside CacheBase.
+ * What a cached image offers its users (Sony's name, from CacheManager's
+ * ClearCache export, NID 358C89CE). CacheImage implements it beside CacheBase.
  */
-class ImageCacheInterface {
+class CacheImageInterface {
 public:
-	virtual ~ImageCacheInterface()
+	virtual ~CacheImageInterface()
 	{
 	}
 
@@ -52,7 +51,7 @@ public:
 	}
 };
 
-class CacheImage : public CacheBase, public ImageCacheInterface {
+class CacheImage : public CacheBase, public CacheImageInterface {
 public:
 	/* Checks a decoded image before its surface is made; path is the cache's. */
 	typedef int32_t (*CheckImageFunc)(const string &path,
@@ -138,14 +137,7 @@ public:
 	static bool CheckSurfacePool(CacheBase *cache);
 
 	/* The queue for the next job: by the path, a decode after a read goes back to a read. */
-	void ResetJobQueue()
-	{
-		m_jobq[0] = CacheManager::GetJobQueue(CacheManager::IsHttpFile(m_path) ?
-						      CacheManager::JobQueueType_Net :
-						      CacheManager::JobQueueType_Local);
-		if (m_load_step == LoadStep_Decode)
-			m_load_step = LoadStep_ReadFile;
-	}
+	inline void ResetJobQueue();
 
 protected:
 	image::ImageRect m_sub_rect;

@@ -129,6 +129,9 @@ public:
 	static intrusive_ptr<Surface> Load(SurfacePool *pool, void *buf, int64_t size,
 					   LoadOption *option);
 
+	/* SCE_PAF_ERROR_GRAPHICS_NO_SPACE while pool cannot hold a width x height surface. */
+	static int32_t IsAllocatableSurfacePool(SurfacePool *pool, uint32_t width, uint32_t height);
+
 	int32_t AddRef();
 	int32_t Release();
 
@@ -202,6 +205,9 @@ protected:
 
 }
 }
+
+/* A surface pool export Sony's exports do not name yet: the pool's virtual 7 with flag. */
+extern "C" int ScePafGraphics_83ABDFF5(paf::graph::SurfacePool *pool, uint8_t flag);
 
 /* Surface loads Sony's exports do not name yet: the file and memory Load for an image_order. */
 extern "C" paf::intrusive_ptr<paf::graph::Surface>

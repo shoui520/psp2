@@ -16,6 +16,15 @@ namespace cache {
 
 extern const char s_empty_id[];
 
+inline void CacheImage::ResetJobQueue()
+{
+	m_jobq[0] = CacheManager::GetJobQueue(CacheManager::IsHttpFile(m_path) ?
+					      CacheManager::JobQueueType_Net :
+					      CacheManager::JobQueueType_Local);
+	if (m_load_step == LoadStep_Decode)
+		m_load_step = LoadStep_ReadFile;
+}
+
 CacheImage::CacheImage(CacheManagerImpl *manager, const Option *option)
 	: CacheBase(manager, option, 1), m_resize_type(image::ImageResizeType_NearestNeighbor),
 	  m_direct_load(false), m_image_order(ImageOrder_NONE), m_image_order_param(0),

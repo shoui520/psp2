@@ -92,6 +92,8 @@ public:
 		}
 	}
 
+	list(const list &other);
+
 	~list();
 
 	iterator begin()
@@ -137,6 +139,43 @@ public:
 	size_type count;
 	_Ax alloc;
 };
+
+template<class _Ty, class _Ax>
+list<_Ty, _Ax>::list(const list &other)
+{
+	count = 0;
+
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node == NULL)
+		ScePafStdc_D608246A();
+	head = node;
+	if (node != NULL) {
+		_Node *tail = node;
+		_Node *src = other.head != NULL ? other.head->next : NULL;
+
+		while (src != other.head) {
+			_Node *copy = (_Node *)operator new(sizeof(_Node));
+
+			if (copy != NULL) {
+				new (&copy->value) _Ty(src->value);
+			} else {
+				ScePafStdc_D608246A();
+				copy = head;
+			}
+			if (copy == head)
+				break;
+			copy->prev = tail;
+			tail->next = copy;
+			tail = copy;
+			++count;
+			if (src != NULL)
+				src = src->next;
+		}
+		tail->next = head;
+		head->prev = tail;
+	}
+}
 
 template<class _Ty, class _Ax>
 list<_Ty, _Ax>::~list()

@@ -41,7 +41,127 @@ public:
 		char isnil;
 	};
 
+	class iterator {
+	public:
+		iterator(_Node *where) : node(where)
+		{
+		}
+
+		iterator(const iterator &other) : node(other.node)
+		{
+		}
+
+		iterator &operator=(const iterator &other)
+		{
+			node = other.node;
+			return *this;
+		}
+
+		value_type &operator*() const
+		{
+			return node->value;
+		}
+
+		value_type *operator->() const
+		{
+			return &node->value;
+		}
+
+		/* In order: the leftmost node of the right subtree, else the first ancestor on the left. */
+		iterator &operator++()
+		{
+			if (node != NULL) {
+				if (!node->right->isnil) {
+					_Node *next = node->right;
+
+					for (_Node *left = next->left; !left->isnil; left = left->left)
+						next = left;
+					node = next;
+				} else {
+					_Node *parent = node->parent;
+
+					while (!parent->isnil && parent->left != node) {
+						node = parent;
+						parent = parent->parent;
+					}
+					node = parent;
+				}
+			}
+			return *this;
+		}
+
+		iterator operator++(int)
+		{
+			iterator tmp = *this;
+
+			++*this;
+			return tmp;
+		}
+
+		bool operator==(const iterator &other) const
+		{
+			return node == other.node;
+		}
+
+		bool operator!=(const iterator &other) const
+		{
+			return !(*this == other);
+		}
+
+		_Node *node;
+	};
+
+	_Tree() : count(0)
+	{
+		_Node *node = (_Node *)operator new(sizeof(_Node));
+
+		if (node == NULL)
+			ScePafStdc_D608246A();
+		head = node;
+		if (node != NULL) {
+			node->parent = node;
+			node->left = node;
+			node->right = node;
+			node->color = _Black;
+			head->isnil = true;
+		}
+	}
+
+	~_Tree()
+	{
+		_Tidy();
+		operator delete(head);
+		head = (_Node *)-1;
+		count = (size_type)-1;
+	}
+
+	iterator begin()
+	{
+		return iterator(head != NULL ? head->left : NULL);
+	}
+
+	iterator end()
+	{
+		return iterator(head);
+	}
+
+	size_type size() const
+	{
+		return count;
+	}
+
 	_Node *_Insert(const value_type &val, bool *inserted);
+	iterator find(const key_type &key);
+	void erase(const key_type &key);
+	void erase(iterator first, iterator last);
+	void _Tidy();
+
+	/* By its key: the node itself is unlinked by _Erase. */
+	void erase(iterator where)
+	{
+		if (where.node != NULL)
+			erase(_Traits::_Kfn(where.node->value));
+	}
 
 	_Node *head;
 	size_type count;
@@ -91,6 +211,8 @@ private:
 	}
 
 	void _Rebalance(_Node *node);
+	void _EraseFixup(_Node *fixnode, _Node *fixnodeparent);
+	void _Erase(_Node *erasednode);
 };
 
 template<class _Traits>
@@ -192,6 +314,233 @@ typename _Tree<_Traits>::_Node *_Tree<_Traits>::_Insert(const value_type &val, b
 	if (inserted != NULL)
 		*inserted = true;
 	return newnode;
+}
+
+template<class _Traits>
+typename _Tree<_Traits>::iterator _Tree<_Traits>::find(const key_type &key)
+{
+	if (head == NULL)
+		return iterator(NULL);
+
+	_Node *node = head->parent;
+
+	while (!node->isnil) {
+		if (comp(key, _Traits::_Kfn(node->value)))
+			node = node->left;
+		else if (comp(_Traits::_Kfn(node->value), key))
+			node = node->right;
+		else
+			break;
+	}
+	return iterator(node);
+}
+
+/* Deletes every node but the head, children before their parents. */
+template<class _Traits>
+void _Tree<_Traits>::_Tidy()
+{
+	if (head == NULL)
+		return;
+
+	_Node *node = head->left;
+
+	while (!node->isnil) {
+		if (!node->left->isnil) {
+			node = node->left;
+		} else if (!node->right->isnil) {
+			node = node->right;
+		} else {
+			_Node *parent = node->parent;
+
+			if (!parent->isnil) {
+				if (parent->left == node)
+					parent->left = head;
+				else
+					parent->right = head;
+			}
+			node->value.~value_type();
+			operator delete(node);
+			node = parent;
+		}
+	}
+	head->parent = head;
+	head->left = head;
+	head->right = head;
+	count = 0;
+}
+
+/* Restores the red-black rules after a black node left fixnodeparent's subtree. */
+template<class _Traits>
+void _Tree<_Traits>::_EraseFixup(_Node *fixnode, _Node *fixnodeparent)
+{
+	if (head == NULL)
+		return;
+
+	while (!fixnodeparent->isnil && fixnode->color == _Black) {
+		if (fixnode == fixnodeparent->left) {
+			_Node *sibling = fixnodeparent->right;
+
+			if (sibling->color == _Red) {
+				sibling->color = _Black;
+				fixnodeparent->color = _Red;
+				_Lrotate(fixnodeparent);
+				sibling = fixnodeparent->right;
+			}
+			if (sibling->left->color == _Black && sibling->right->color == _Black) {
+				sibling->color = _Red;
+				fixnode = fixnodeparent;
+			} else {
+				if (sibling->right->color == _Black) {
+					sibling->left->color = _Black;
+					sibling->color = _Red;
+					_Rrotate(sibling);
+					sibling = fixnodeparent->right;
+				}
+				sibling->color = fixnodeparent->color;
+				fixnodeparent->color = _Black;
+				sibling->right->color = _Black;
+				_Lrotate(fixnodeparent);
+				fixnode = head->parent;
+			}
+		} else {
+			_Node *sibling = fixnodeparent->left;
+
+			if (sibling->color == _Red) {
+				sibling->color = _Black;
+				fixnodeparent->color = _Red;
+				_Rrotate(fixnodeparent);
+				sibling = fixnodeparent->left;
+			}
+			if (sibling->right->color == _Black && sibling->left->color == _Black) {
+				sibling->color = _Red;
+				fixnode = fixnodeparent;
+			} else {
+				if (sibling->left->color == _Black) {
+					sibling->right->color = _Black;
+					sibling->color = _Red;
+					_Lrotate(sibling);
+					sibling = fixnodeparent->left;
+				}
+				sibling->color = fixnodeparent->color;
+				fixnodeparent->color = _Black;
+				sibling->left->color = _Black;
+				_Rrotate(fixnodeparent);
+				fixnode = head->parent;
+			}
+		}
+		fixnodeparent = fixnode->parent;
+	}
+	fixnode->color = _Black;
+}
+
+/*
+ * Unlinks erasednode, or its in-order successor when erasednode has two children (the
+ * successor then takes its place and color), and deletes it.
+ */
+template<class _Traits>
+void _Tree<_Traits>::_Erase(_Node *erasednode)
+{
+	if (head == NULL)
+		return;
+
+	_Node *pnode;
+	_Node *fixnodeparent;
+
+	if (erasednode->left->isnil || erasednode->right->isnil) {
+		pnode = erasednode;
+		fixnodeparent = erasednode->parent;
+	} else {
+		pnode = erasednode->right;
+		if (pnode->left->isnil) {
+			fixnodeparent = pnode;
+		} else {
+			while (!pnode->left->isnil)
+				pnode = pnode->left;
+			fixnodeparent = pnode->parent;
+		}
+	}
+
+	_Node *fixnode = !pnode->left->isnil ? pnode->left : pnode->right;
+
+	if (!fixnode->isnil)
+		fixnode->parent = pnode->parent;
+	if (pnode->parent->isnil)
+		head->parent = fixnode;
+	else if (pnode->parent->left == pnode)
+		pnode->parent->left = fixnode;
+	else
+		pnode->parent->right = fixnode;
+
+	bool fixup = pnode->color == _Black;
+
+	if (pnode != erasednode) {
+		pnode->parent = erasednode->parent;
+		if (erasednode->parent->isnil)
+			head->parent = pnode;
+		else if (erasednode->parent->left == erasednode)
+			erasednode->parent->left = pnode;
+		else
+			erasednode->parent->right = pnode;
+		pnode->left = erasednode->left;
+		if (!erasednode->left->isnil)
+			erasednode->left->parent = pnode;
+		pnode->right = erasednode->right;
+		if (!erasednode->right->isnil)
+			erasednode->right->parent = pnode;
+		pnode->color = erasednode->color;
+	}
+	if (fixup)
+		_EraseFixup(fixnode, fixnodeparent);
+	if (head->left == erasednode) {
+		_Node *node = fixnodeparent;
+
+		if (!fixnode->isnil) {
+			node = fixnode;
+			while (!node->left->isnil)
+				node = node->left;
+		}
+		head->left = node;
+	}
+	if (head->right == erasednode) {
+		_Node *node = fixnodeparent;
+
+		if (!fixnode->isnil) {
+			node = fixnode;
+			while (!node->right->isnil)
+				node = node->right;
+		}
+		head->right = node;
+	}
+	erasednode->value.~value_type();
+	operator delete(erasednode);
+	--count;
+}
+
+template<class _Traits>
+void _Tree<_Traits>::erase(const key_type &key)
+{
+	if (head == NULL)
+		return;
+
+	_Node *node = head->parent;
+
+	while (!node->isnil) {
+		if (comp(key, _Traits::_Kfn(node->value)))
+			node = node->left;
+		else if (comp(_Traits::_Kfn(node->value), key))
+			node = node->right;
+		else
+			break;
+	}
+	if (node != NULL && !node->isnil)
+		_Erase(node);
+}
+
+template<class _Traits>
+void _Tree<_Traits>::erase(iterator first, iterator last)
+{
+	while (first != last)
+		erase(first++);
 }
 
 }
