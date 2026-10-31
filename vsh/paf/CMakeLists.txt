@@ -88,6 +88,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/std/stdio.c
 	src/std/global_heap.c
 	src/memory/heap_allocator.cpp
+	src/memory/range_allocator.cpp
+	src/memory/pool_allocator.cpp
 	src/memory/dlmalloc.c
 	src/std/string.c
 	src/std/memory.c
@@ -143,7 +145,7 @@ set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIE
 # both (2026-10-31).
 set_source_files_properties(
 	src/job/job.cpp src/math/matrix.cpp src/math/rect.cpp
-	src/memory/heap_allocator.cpp
+	src/memory/heap_allocator.cpp src/memory/range_allocator.cpp src/memory/pool_allocator.cpp
 	src/thread/callqueue.cpp src/thread/cond.cpp src/thread/mutex.cpp src/thread/priority.cpp
 	src/thread/rmutex.cpp src/thread/rwlock.cpp src/thread/semaphore.cpp src/thread/sleep.cpp
 	src/thread/synccall.cpp src/thread/thread.cpp src/thread/thread_id_cache.cpp

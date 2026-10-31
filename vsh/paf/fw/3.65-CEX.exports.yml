@@ -246,7 +246,7 @@ ScePaf:
         - _ZNK3paf4math6matrix13fixedCoordSysEv: 0x077B31E6
         - _ZN3paf4http11Transaction15GetAutoRedirectERb: 0x07A54D87
         - _ZN3paf10TimerQueue10IsFinishedEv: 0x07A5D381
-        - ScePafMisc_07BE1242: 0x07BE1242
+        - _ZN3paf6memory13PoolAllocator9QueryInfoEPNS0_8PoolInfoE: 0x07BE1242
         - _ZN3paf3rtc19ParseSQLiteDateTimeEPyPKc: 0x0853896D
         - _ZN3paf8datetime8DateTime24ConvertDateTimeToRtcTickERS1_: 0x08943D3E
         - ScePafMisc_0955141F: 0x0955141F
@@ -268,7 +268,7 @@ ScePaf:
         - ScePafMisc_0D1B028E: 0x0D1B028E
         - _ZN3paf11inputdevice11touchscreen4LockEj: 0x0D4B4B67
         - ScePafMisc_0DE3F659: 0x0DE3F659
-        - ScePafMisc_0E353BB3: 0x0E353BB3
+        - _ZN3paf6memory14RangeAllocatorC1EPvjPKcPKNS1_6OptionE: 0x0E353BB3
         - ScePafMisc_0E846E5C: 0x0E846E5C
         - _ZN3paf5cache10CacheImageC2EPNS0_16CacheManagerImplEPKNS1_6OptionE: 0x0EB2C9D6
         - _ZN3paf5image5Image19SetDecodeCancelFuncEPFbPvES2_: 0x0EB94344
@@ -318,7 +318,7 @@ ScePaf:
         - _ZN3paf7MemFileC2Ev: 0x19BD0EAB
         - _ZN3paf5Timer16DoFuncElasticOutEf: 0x19F2E022
         - _ZN3paf7MemFile4OpenEPKvjPi: 0x19FE55A8
-        - ScePafMisc_1A257563: 0x1A257563
+        - _ZN3paf6memory14RangeAllocatorC2EPvjPKcPKNS1_6OptionE: 0x1A257563
         - _ZNK3paf3Url16GetAnchorWStringEv: 0x1A33F18C
         - ScePafMisc_1AD9BAA9: 0x1AD9BAA9
         - _ZN3paf3rtc21ConvertDateTimeToTickEPKNS0_8DateTimeEPy: 0x1B012451
@@ -335,7 +335,7 @@ ScePaf:
         - _ZN3paf8datetime8DateTime17SetDateTimeFormatEPKw: 0x1F723D5D
         - _ZN3paf13TimerListener10ResetTimerEv: 0x1F758B43
         - _ZN3paf5image10ImageArray4FreeEv: 0x1F7BB8D0
-        - ScePafMisc_1FD33B17: 0x1FD33B17
+        - _ZN3paf6memory14RangeAllocatorD0Ev: 0x1FD33B17
         - ScePafMisc_20814ED1: 0x20814ED1
         - _ZN3paf8datetime8DateTime12ParseRFC3339EPKc: 0x209DB708
         - _ZN3paf9LocalFileC2Ev: 0x20ACD611
@@ -364,7 +364,7 @@ ScePaf:
         - ScePafMisc_26BF1B5B: 0x26BF1B5B
         - _ZN3paf11inputdevice3EndEv: 0x26C77CAE
         - ScePafMisc_26F81894: 0x26F81894
-        - ScePafMisc_2713C850: 0x2713C850
+        - _ZN3paf6memory13PoolAllocator5AllocEv: 0x2713C850
         - _ZN3paf5Timer15DoFuncBounceOutEf: 0x27705AD9
         - _ZNK3paf5image5Image11GetCLUTModeEv: 0x2795D5F1
         - ScePafMisc_27AD8159: 0x27AD8159
@@ -389,7 +389,7 @@ ScePaf:
         - _ZN3paf3rtc14GetDaysInMonthEPKy: 0x2B9F804B
         - _ZN3paf11inputdevice11touchscreen10GetDataPreEjjPPKNS1_4DataE: 0x2BE3A49D
         - ScePafMisc_2C227FFD: 0x2C227FFD
-        - ScePafMisc_2C89D449: 0x2C89D449
+        - _ZN3paf6memory13PoolAllocatorD2Ev: 0x2C89D449
         - ScePafMisc_2CA79755: 0x2CA79755
         - ScePafMisc_2CF401D9: 0x2CF401D9
         - _ZN3paf5sound6OutputD2Ev: 0x2CFC62B6
@@ -413,13 +413,13 @@ ScePaf:
         - ScePafMisc_3132A0D3: 0x3132A0D3
         - _ZN3paf4math10quaternion18FromEulerAnglesYZXENS0_2v3E: 0x315CCB24
         - _ZN3paf12BufferedFile4SeekExi: 0x326FDFA7
-        - ScePafMisc_32729AC8: 0x32729AC8
+        - _ZNK3paf6memory14RangeAllocator7GetTypeEv: 0x32729AC8
         - _ZN3paf4math4rect8set_sizeEff: 0x3291450C
         - ScePafMisc_32E2C605: 0x32E2C605
         - ScePafMisc_333C86DC: 0x333C86DC
         - _ZN3paf11inputdevice11touchscreen13GetDeviceInfoEjPNS1_10DeviceInfoE: 0x33450EB9
         - _ZN3paf5cache9CacheBase8SetTicksEi: 0x33ADBB0A
-        - ScePafMisc_33EDF2E1: 0x33EDF2E1
+        - _ZN3paf6memory13PoolAllocator8DumpInfoEi: 0x33EDF2E1
         - _ZN3paf8HttpFile10WriteAsyncEPKvj: 0x341895C8
         - _ZN3paf6memory13HeapAllocator22sce_paf_dump_heap_infoEi: 0x344EF0B7
         - _ZN3paf3UrlaSERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEE: 0x34716241
@@ -439,11 +439,11 @@ ScePaf:
         - ScePafMisc_37959090: 0x37959090
         - _ZN3paf8HttpFile7OpenArgC1Ev: 0x37A4ADA9
         - _ZN3paf4math10quaternionC1ERKNS0_6matrixE: 0x3808BC91
-        - ScePafMisc_38AC0BE6: 0x38AC0BE6
+        - _ZN3paf6memory13PoolAllocatorD1Ev: 0x38AC0BE6
         - _ZN3paf17LocalFilePsp2Impl4SeekExi: 0x38D851FF
         - _ZN3paf8HttpFile5AbortEv: 0x39910437
         - _ZN3paf4math10quaternion18FromEulerAnglesYXZENS0_2v3E: 0x39B88D48
-        - ScePafMisc_3A9F5294: 0x3A9F5294
+        - _ZN3paf6memory14RangeAllocator11GetFreeSizeEv: 0x3A9F5294
         - _ZN3paf17LocalFilePsp2Impl11GetFileSizeEv: 0x3AB24248
         - _ZN3paf9LocalFile7OpenUrlEPKcjjPiPb: 0x3B1FA385
         - ScePafMisc_3BA14D8A: 0x3BA14D8A
@@ -611,7 +611,7 @@ ScePaf:
         - _ZN3paf4math4rect12set_center_xEf: 0x617E1590
         - _ZN3paf17LocalFilePsp2Impl11SetPriorityEi: 0x619FA110
         - _ZN3paf17LocalFilePsp2Impl5FlushEv: 0x61B3C8C6
-        - ScePafMisc_61B990CD: 0x61B990CD
+        - _ZNK3paf6memory13PoolAllocator8GetRangeEPPvPj: 0x61B990CD
         - _ZN3paf5Timer12DoFuncExpoInEf: 0x61EA5DF3
         - ScePafMisc_6222005E: 0x6222005E
         - _ZN3paf8datetime8DateTime13GetTimeFormatEv: 0x6227AE12
@@ -672,9 +672,9 @@ ScePaf:
         - _ZN3paf9LocalFile11SetPriorityEi: 0x718411BE
         - _ZN3paf9LocalFileD2Ev: 0x71A0A754
         - _ZN3paf5cache9CacheBaseC2EPNS0_16CacheManagerImplEPKNS1_6OptionEh: 0x71B3AFE4
-        - ScePafMisc_71E4B8B3: 0x71E4B8B3
+        - _ZN3paf6memory14RangeAllocatorD1Ev: 0x71E4B8B3
         - _ZN3paf4http11Transaction15SetAutoRedirectEb: 0x71F59160
-        - ScePafMisc_7270DC05: 0x7270DC05
+        - _ZNK3paf6memory14RangeAllocator7GetNameEv: 0x7270DC05
         - ScePafMisc_72A885A6: 0x72A885A6
         - _ZN3paf12BufferedFile9ReadAsyncEPvj: 0x72D393AD
         - _ZNK3paf5image5Image13GetPitchAlignEv: 0x73032689
@@ -700,7 +700,7 @@ ScePaf:
         - _ZN3paf4math4rect10set_bottomEf: 0x77865CCC
         - ScePafMisc_77B378EC: 0x77B378EC
         - _ZN3paf4math10quaternion18FromEulerAnglesXYZENS0_2v3E: 0x78190BD6
-        - ScePafMisc_78209706: 0x78209706
+        - _ZN3paf6memory13PoolAllocator11GetFreeSizeEv: 0x78209706
         - _ZN3paf6memory13HeapAllocator27sce_paf_report_memoryblocksEPFiPvjiS2_ES2_: 0x786D314A
         - _ZN3paf4math4rect3setERKS1_: 0x78B8B32F
         - _ZN3paf5cache9CacheBase23IsEnableReleaseInstanceEv: 0x78C1E8AD
@@ -723,7 +723,7 @@ ScePaf:
         - _ZN3paf3rtc14TickAddMinutesEPyPKyx: 0x7C9BA0C5
         - ScePafMisc_7C9C7E59: 0x7C9C7E59
         - ScePafMisc_7CC037DE: 0x7CC037DE
-        - ScePafMisc_7CE97FC7: 0x7CE97FC7
+        - _ZN3paf6memory13PoolAllocatorC2EPvjjPKcPKNS1_6OptionE: 0x7CE97FC7
         - ScePafMisc_7CF66185: 0x7CF66185
         - _ZNK3paf9LocalFile11GetFileTypeEv: 0x7D13C35B
         - _ZN3paf4http6ClientD1Ev: 0x7D7C31A2
@@ -743,7 +743,7 @@ ScePaf:
         - _ZN3paf5cache16CacheManagerImpl12EnqueueCacheEPNS0_9CacheBaseEj: 0x7FD7057D
         - _ZNK3paf3Url18GetPasswordWStringEv: 0x7FE63098
         - _ZN3paf15UnmanagedBuffer6CreateEPvj: 0x7FED0E58
-        - ScePafMisc_802D12CD: 0x802D12CD
+        - _ZN3paf6memory13PoolAllocator4FreeEPv: 0x802D12CD
         - _ZN3paf7MemFile10CloseAsyncEv: 0x807CCDB4
         - _ZN3paf4http11Transaction13GetStatusCodeERi: 0x807E22C4
         - _ZN3paf5sound6Output12StopSoundAllEv: 0x80D8B47B
@@ -763,7 +763,7 @@ ScePaf:
         - _ZN3paf5image10ImageArrayaSERKS1_: 0x843D1763
         - ScePafMisc_84A50E1F: 0x84A50E1F
         - ScePafMisc_84B49847: 0x84B49847
-        - ScePafMisc_84C9E414: 0x84C9E414
+        - _ZN3paf6memory13PoolAllocatorD0Ev: 0x84C9E414
         - _ZN3paf8HttpFile10FlushAsyncEv: 0x84E88034
         - _ZN3paf7Timer3D8SetFuncZEiPKf: 0x8502EEDA
         - _ZN3paf8datetime8DateTimeC1Ettttttj: 0x8523A173
@@ -791,7 +791,7 @@ ScePaf:
         - _ZN3paf5cache9CacheBase7ReleaseEv: 0x8A35B3D9
         - ScePafMisc_8A3E1472: 0x8A3E1472
         - _ZN3paf8datetime8DateTime9DayOfWeekEttt: 0x8A79BF51
-        - ScePafMisc_8AB8866F: 0x8AB8866F
+        - _ZN3paf6memory14RangeAllocator16CheckMemoryLeaksEv: 0x8AB8866F
         - _ZN3paf7MemFileD1Ev: 0x8AF3CC45
         - _ZN3paf11inputdevice11touchscreen17GetScreenViewportERiS2_RjS3_: 0x8BC3FB99
         - ScePafMisc_8C14E735: 0x8C14E735
@@ -846,7 +846,7 @@ ScePaf:
         - _ZN3paf17LocalFilePsp2Impl4ReadEPvj: 0x999CDF39
         - _ZN3paf8HttpFile7OpenArg16AddRequestHeaderEPKcS3_: 0x99A8215F
         - _ZN3paf9LocalFile4SeekExi: 0x99AAA9F7
-        - ScePafMisc_9A80FBC3: 0x9A80FBC3
+        - _ZNK3paf6memory14RangeAllocator8GetRangeEPPvPj: 0x9A80FBC3
         - _ZNK3paf5image5Image11GetCLUTSizeEv: 0x9ADD8A26
         - _ZNK3paf6memory13HeapAllocator7GetTypeEv: 0x9B22F2FE
         - ScePafMisc_9BA007B9: 0x9BA007B9
@@ -907,14 +907,14 @@ ScePaf:
         - _ZN3paf8HttpFile4OpenEPKcPij: 0xA9958563
         - _ZN3paf5Timer15DoFuncCirqInOutEf: 0xA9A54EAB
         - _ZN3paf6memory13HeapAllocator26sce_paf_check_memoryboundsEv: 0xA9D10F39
-        - ScePafMisc_AA0732F6: 0xAA0732F6
+        - _ZN3paf6memory14RangeAllocator5AllocEij: 0xAA0732F6
         - _ZN3paf4math10quaternion11toAxisAngleERNS0_2v3ERf: 0xAA908D1A
         - _ZN3paf4http11Transaction24SetResponseHeaderMaxSizeEj: 0xAA992DF5
         - _ZNK3paf4math4rect8get_areaEv: 0xAAE49140
         - ScePafMisc_AB04B8B7: 0xAB04B8B7
         - _ZN3paf5Timer14DoFuncQuintOutEf: 0xAB4E6BDC
         - _ZN3paf5image6filter12CopyWithEdgeEPNS0_11ImageBufferEPKS2_S5_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatEj: 0xAB56D412
-        - ScePafMisc_ABA3A343: 0xABA3A343
+        - _ZN3paf6memory14RangeAllocator13QueryFreeSizeEPj: 0xABA3A343
         - _ZN3paf5Timer16DoFuncExponent_iEffPKf: 0xABAC8071
         - _ZN3paf5image10ImageArray7SetSizeEjj: 0xABFBDD12
         - _ZN3paf11inputdevice16AddInputListenerERNS_6common9SharedPtrINS0_13InputListenerEEE: 0xAC108E50
@@ -987,7 +987,7 @@ ScePaf:
         - _ZN3paf9LocalFile6ChstatEPKcPNS_13LocalFileStatEj: 0xBB870784
         - _ZN3paf8HttpFile4OpenEPNS_3UrlEPij: 0xBBB786F9
         - _ZN3paf4math4rectC2Ev: 0xBBC18829
-        - ScePafMisc_BC1135F2: 0xBC1135F2
+        - _ZNK3paf6memory13PoolAllocator12GetBlockTypeEv: 0xBC1135F2
         - _ZN3paf4math4rect16is_point_in_rectERKNS0_2v2E: 0xBC570EAF
         - ScePafMisc_BCC6EFCB: 0xBCC6EFCB
         - _ZN3paf9LocalFile4ReadEPvj: 0xBD49E2B3
@@ -1078,7 +1078,7 @@ ScePaf:
         - _ZN3paf12MallocBufferD1Ev: 0xD11D7CE3
         - _ZN3paf9LocalFile5AbortEv: 0xD184BC69
         - _ZN3paf3UrlD0Ev: 0xD19653CB
-        - ScePafMisc_D1A490F2: 0xD1A490F2
+        - _ZN3paf6memory14RangeAllocator4FreeEj: 0xD1A490F2
         - ScePafMisc_D1E648EF: 0xD1E648EF
         - _ZN3paf5sound6OutputC1Ei: 0xD21E94FC
         - _ZN3paf8HttpFile4OpenEPKNS_4File7OpenArgE: 0xD2221E7B
@@ -1095,7 +1095,7 @@ ScePaf:
         - ScePafMisc_D4ECC9FC: 0xD4ECC9FC
         - _ZNK3paf5image5Image12GetArraySizeEv: 0xD50E863E
         - _ZN3paf8HttpFile9PollAsyncEPx: 0xD5543A0D
-        - ScePafMisc_D5DCD40C: 0xD5DCD40C
+        - _ZNK3paf6memory14RangeAllocator12GetBlockTypeEv: 0xD5DCD40C
         - _ZN3paf5cache9CacheBase15DestroyInstanceEv: 0xD64D39A6
         - _ZN3paf9LocalFile10CreateImplEv: 0xD67EA1A0
         - _ZN3paf8HttpFile7OpenArg8ParseUrlEPNS_3UrlE: 0xD6D82FF9
@@ -1125,7 +1125,7 @@ ScePaf:
         - ScePafMisc_DC13D542: 0xDC13D542
         - _ZN3paf5cache12CacheManager20GetCacheManagerCountEv: 0xDC369733
         - ScePafMisc_DCBA2BD4: 0xDCBA2BD4
-        - ScePafMisc_DCE49A56: 0xDCE49A56
+        - _ZN3paf6memory14RangeAllocator8DumpInfoEi: 0xDCE49A56
         - ScePafMisc_DD2F6FFC: 0xDD2F6FFC
         - _ZNK3paf3Url13GetUserStringEv: 0xDD45D368
         - _ZN3paf12BufferedFile9WaitAsyncEPx: 0xDDC527B9
@@ -1187,8 +1187,8 @@ ScePaf:
         - _ZN3paf5Timer12DoFuncLinearEf: 0xE872D707
         - _ZN3paf5Timer18check_bezier_paramEPf: 0xE89DF174
         - _ZN3paf5sound6Output11EnableSoundEb: 0xE8E4B916
-        - ScePafMisc_E8F1AAF8: 0xE8F1AAF8
-        - ScePafMisc_E904B4E0: 0xE904B4E0
+        - _ZN3paf6memory14RangeAllocatorD2Ev: 0xE8F1AAF8
+        - _ZNK3paf6memory13PoolAllocator7GetNameEv: 0xE904B4E0
         - _ZN3paf8HttpFileD2Ev: 0xE93C0EBB
         - _ZN3paf5image5Image12GetErrorTypeEv: 0xE9A4171E
         - _ZN3paf15HeapAllocBuffer8AllocateEjPNS_6memory13HeapAllocatorE: 0xE9C6A564
@@ -1226,7 +1226,7 @@ ScePaf:
         - _ZNK3paf5image5Image17GetOriginalExtentEv: 0xF262A130
         - _ZN3paf6ModuleC2EPKcS2_iPKNS0_11ExtraOptionE: 0xF297D14C
         - _ZN3paf7MemFile9OpenAsyncEPKNS_4File7OpenArgE: 0xF2A15807
-        - ScePafMisc_F2D1028C: 0xF2D1028C
+        - _ZN3paf6memory13PoolAllocatorC1EPvjjPKcPKNS1_6OptionE: 0xF2D1028C
         - _ZN3paf6memory13HeapAllocatorC2EPvjPKcPKNS1_6OptionE: 0xF36F1C66
         - ScePafMisc_F39DF886: 0xF39DF886
         - ScePafMisc_F4176C33: 0xF4176C33
@@ -1265,7 +1265,7 @@ ScePaf:
         - ScePafMisc_FA86D1FA: 0xFA86D1FA
         - _ZN3paf5image5Image4OpenEPKcPNS_6memory13HeapAllocatorENS0_11ImageFormatExj: 0xFAA808C2
         - ScePafMisc_FB754143: 0xFB754143
-        - ScePafMisc_FBD3FF64: 0xFBD3FF64
+        - _ZNK3paf6memory13PoolAllocator7GetTypeEv: 0xFBD3FF64
         - _ZN3paf5image5Image11SetArrayPosERNS0_10ImagePointE: 0xFBE1B9F7
         - _ZN3paf5image5Image4FlipENS0_13ImageFlipTypeE: 0xFBFB4ED7
         - _ZN3paf5cache16CacheManagerImpl13CheckCacheAllEPFbPNS0_9CacheBaseEEPS3_: 0xFC4FD91F
