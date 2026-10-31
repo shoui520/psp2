@@ -10,6 +10,7 @@
 #include <modulemgr/module_info.h>
 #include <modulemgr/module_library.h>
 #include <modulemgr/modulemgr_control.h>
+#include <modulemgr/modulemgr_debugger.h>
 #include <modulemgr/modulemgr_patch.h>
 #include <authmgr/sblauthmgr.h>
 

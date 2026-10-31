@@ -475,20 +475,20 @@ static inline int _sdbgpParseRecvPacket(SdbgpCpuState *cpu, SdbgpHeader *packet)
 		return 0;
 	case SDBGP_GROUP_FILE:
 		switch (packet->command) {
-		case 0x00: return sdbgpCmd60_00(cpu, packet, packet->command);
-		case 0x12: return sdbgpCmd60_12(cpu, packet, packet->command);
-		case 0x14: return sdbgpCmd60_14(cpu, packet, packet->command);
-		case 0x16: return sdbgpCmd60_16(cpu, packet, packet->command);
-		case 0x18: return sdbgpCmd60_18(cpu, packet, packet->command);
-		case 0x1a: return sdbgpCmd60_1a(cpu, packet, packet->command);
+		case 0x00: return sdbgpCmd60_00(cpu, packet);
+		case 0x12: return sdbgpCmd60_12(cpu, packet);
+		case 0x14: return sdbgpCmd60_14(cpu, packet);
+		case 0x16: return sdbgpCmd60_16(cpu, packet);
+		case 0x18: return sdbgpCmd60_18(cpu, packet);
+		case 0x1a: return sdbgpCmd60_1a(cpu, packet);
 		}
 		return sdbgpNotSupported(cpu, packet, SDBGP_GROUP_FILE);
 	case SDBGP_GROUP_MISC:
 		switch (packet->command) {
-		case 0x00: return sdbgpCmd70_00(cpu, packet, packet->command);
-		case 0x02: return sdbgpCmd70_02(cpu, packet, packet->command);
-		case 0x04: return sdbgpCmd70_04(cpu, packet, packet->command);
-		case 0x06: return sdbgpCmd70_06(cpu, packet, packet->command);
+		case 0x00: return sdbgpCmd70_00(cpu, packet);
+		case 0x02: return sdbgpCmd70_02(cpu, packet);
+		case 0x04: return sdbgpCmd70_04(cpu, packet);
+		case 0x06: return sdbgpCmd70_06(cpu, packet);
 		}
 		return sdbgpNotSupported(cpu, packet, SDBGP_GROUP_MISC);
 	case SDBGP_GROUP_TRACE:

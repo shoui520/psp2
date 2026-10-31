@@ -4,29 +4,6 @@
 
 #include "modulemgr_internal.h"
 
-/* what sceKernelGetStubInfoForDebugger reports */
-typedef struct SceKernelStubInfoForDebugger {
-	SceSize size;
-	SceUID stubid;
-	SceUID modid;
-	SceNID libnid;
-	SceUInt16 version;
-	SceUInt16 attr;
-	SceUInt16 nfunc;
-	SceUInt16 nvar;
-	SceUInt16 ntls;
-	SceUInt16 reserved;
-	char libname[0x100];
-	SceUID libPid;			/* the library the stub is linked to */
-	SceUID libModid;
-	SceUID libid;
-} SceKernelStubInfoForDebugger;
-
-typedef struct SceKernelStubNidEntry {
-	SceNID nid;
-	void *entry;
-} SceKernelStubNidEntry;
-
 /* name unknown: bring a 0x24- or 0x34-byte import entry into the 0x24-byte form */
 #if MODULEMGR_NSKBL
 static	/* NSKBL inlines it into its two callers */

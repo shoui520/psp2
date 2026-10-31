@@ -637,20 +637,7 @@ typedef struct ScePfsMapArg {
 	ScePfsFileKey *key;			/* set up on the first map */
 } ScePfsMapArg;
 
-/* what ScePfsMgrForKernel_4C148288 reports about a PFS mount */
-typedef struct ScePfsMountInfo {
-	SceVfsMount *mount;
-	const char *path;
-	const char *rootPath;
-	const char *assignName;
-	SceUInt16 mode;
-	SceUInt32 quota;
-	SceUInt32 version;
-	SceInt32 approvedMax;
-	SceUInt64 *approved;
-	SceInt32 acidDirCount;
-	void *acidDirs[16];
-} ScePfsMountInfo;
+/* ScePfsMountInfo is in <sysmem/sysroot.h> */
 
 extern const SceVfsOpTable g_pfsRedirectVfsOps;
 extern const SceVopTable g_pfsRedirectVops;

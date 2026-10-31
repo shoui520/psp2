@@ -36,6 +36,7 @@ static inline uint32_t readFpscr(void)
 /* the protocol's errors */
 #define SDBGP_ERROR_INVALID_ARGUMENT	((int)0x80090001)
 #define SDBGP_ERROR_ILLEGAL_ADDRESS	((int)0x80090005)
+#define SDBGP_ERROR_PACKET_SIZE		((int)0x80090006)
 
 /* sceSDfMgrExReqSend's "already requested" */
 #define SDFMGR_ERROR_ALREADY_REQUESTED	((int)0x80090007)
@@ -75,6 +76,8 @@ static inline uint32_t readFpscr(void)
 #define SDBGP_RESULT_ALREADY_SET		3
 #define SDBGP_RESULT_ILLEGAL_VALUE		7
 #define SDBGP_RESULT_NOT_SUPPORTED		8
+#define SDBGP_RESULT_PACKET_TOO_SHORT		9
+#define SDBGP_RESULT_PACKET_TOO_LARGE		10
 #define SDBGP_RESULT_ILLEGAL_PROCESS_ID		0x20011
 #define SDBGP_RESULT_ILLEGAL_THREAD_ID		0x20012
 #define SDBGP_RESULT_ILLEGAL_ADDRESS		0x20030
@@ -564,16 +567,16 @@ int sdbgpCmd20_60(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
 int sdbgpCmd20_80(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
 int sdbgpCmd20_82(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
 int sdbgpCmd20_84(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
-int sdbgpCmd60_00(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
-int sdbgpCmd60_12(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
-int sdbgpCmd60_14(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
-int sdbgpCmd60_16(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
-int sdbgpCmd60_18(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
-int sdbgpCmd60_1a(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
-int sdbgpCmd70_00(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
-int sdbgpCmd70_02(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
-int sdbgpCmd70_04(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
-int sdbgpCmd70_06(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command);
+int sdbgpCmd60_00(SdbgpCpuState *cpu, SdbgpHeader *packet);
+int sdbgpCmd60_12(SdbgpCpuState *cpu, SdbgpHeader *packet);
+int sdbgpCmd60_14(SdbgpCpuState *cpu, SdbgpHeader *packet);
+int sdbgpCmd60_16(SdbgpCpuState *cpu, SdbgpHeader *packet);
+int sdbgpCmd60_18(SdbgpCpuState *cpu, SdbgpHeader *packet);
+int sdbgpCmd60_1a(SdbgpCpuState *cpu, SdbgpHeader *packet);
+int sdbgpCmd70_00(SdbgpCpuState *cpu, SdbgpHeader *packet);
+int sdbgpCmd70_02(SdbgpCpuState *cpu, SdbgpHeader *packet);
+int sdbgpCmd70_04(SdbgpCpuState *cpu, SdbgpHeader *packet);
+int sdbgpCmd70_06(SdbgpCpuState *cpu, SdbgpHeader *packet);
 int sdbgpCmd30_00(SdbgpCpuState *cpu, SdbgpHeader *packet);
 int sdbgpCmd30_02(SdbgpCpuState *cpu, SdbgpHeader *packet);
 int sdbgpCmd30_10(SdbgpCpuState *cpu, SdbgpHeader *packet);

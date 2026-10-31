@@ -55,6 +55,8 @@ typedef struct SceKernelLostLibraryInfo {
 	void **funcent;
 	SceNID *varnid;
 	void **varent;
+	SceNID *tlsnid;
+	void **tlsent;
 } SceKernelLostLibraryInfo;
 
 /* sceKernelGetLostLibraryList* */
@@ -85,10 +87,36 @@ typedef struct SceKernelLibraryExportEntry {
 	void *entry;
 } SceKernelLibraryExportEntry;
 
-_Static_assert(sizeof(SceKernelLostLibraryInfo) == 0x124, "SceKernelLostLibraryInfo size");
+/* what sceKernelGetStubInfoForDebugger reports */
+typedef struct SceKernelStubInfoForDebugger {
+	SceSize size;
+	SceUID stubid;
+	SceUID modid;
+	SceNID libnid;
+	SceUInt16 version;
+	SceUInt16 attr;
+	SceUInt16 nfunc;
+	SceUInt16 nvar;
+	SceUInt16 ntls;
+	SceUInt16 reserved;
+	char libname[0x100];
+	SceUID libPid;			/* the library the stub is linked to */
+	SceUID libModid;
+	SceUID libid;
+} SceKernelStubInfoForDebugger;
+
+typedef struct SceKernelStubNidEntry {
+	SceNID nid;
+	void *entry;
+} SceKernelStubNidEntry;
+
+_Static_assert(sizeof(SceKernelLostLibraryInfo) == 0x12c, "SceKernelLostLibraryInfo size");
 _Static_assert(sizeof(SceKernelLibraryInfoForDebugger) == 0x120,
 	       "SceKernelLibraryInfoForDebugger size");
 _Static_assert(sizeof(SceKernelLibraryExportEntry) == 8, "SceKernelLibraryExportEntry size");
+_Static_assert(sizeof(SceKernelStubInfoForDebugger) == 0x128,
+	       "SceKernelStubInfoForDebugger size");
+_Static_assert(sizeof(SceKernelStubNidEntry) == 8, "SceKernelStubNidEntry size");
 
 int sceKernelGetLibraryInfoForDebugger(SceUID pid, SceUID libid,
 				       SceKernelLibraryInfoForDebugger *info);
@@ -96,6 +124,22 @@ int sceKernelGetLibraryInfoForDebugger(SceUID pid, SceUID libid,
 int sceKernelGetLibraryExportInfoForDebugger(SceUID pid, SceUID libid,
 					     SceKernelLibraryExportEntry *list, SceSize *num,
 					     SceUInt32 start);
+
+int sceKernelGetLostLibraryInfo(SceUID pid, SceUID modid, SceNID libnid,
+				SceKernelLostLibraryInfo *info);
+
+int sceKernelGetLostLibraryList(SceUID pid, SceKernelLostLibraryEntry *list,
+				SceSize *num);
+
+int sceKernelGetLostLibraryListInModule(SceUID pid, SceUID modid,
+					SceKernelLostLibraryEntry *list, SceSize *num);
+
+int sceKernelGetStubInfoForDebugger(SceUID pid, SceUID stubid,
+				    SceKernelStubInfoForDebugger *info);
+
+int sceKernelGetStubNidTableForDebugger(SceUID pid, SceUID stubid,
+					SceKernelStubNidEntry *table,
+					SceUInt32 *count, SceUInt32 start);
 
 int sceKernelGetModuleInfoForDebugger(SceUID pid,
 				    SceKernelModuleInfoForDebugger *info, int *num);

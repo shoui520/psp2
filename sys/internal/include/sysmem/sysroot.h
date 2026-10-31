@@ -38,8 +38,20 @@ typedef int (*SysrootSetSwInfoStr)(const char *name, SceSize nameLength, const c
 typedef int (*SysrootSetSwInfoBin)(const char *name, SceSize nameLength, const void *data,
 				   SceSize dataSize);
 struct SceVfsMount;
-struct ScePfsMountInfo;
-typedef int (*SysrootPfsMgrGetMountInfo)(struct SceVfsMount *mount, struct ScePfsMountInfo *info);
+typedef struct ScePfsMountInfo {
+	struct SceVfsMount *mount;
+	const char *path;
+	const char *rootPath;
+	const char *assignName;
+	SceUInt16 mode;
+	SceUInt32 quota;
+	SceUInt32 version;
+	SceInt32 approvedMax;
+	SceUInt64 *approved;
+	SceInt32 acidDirCount;
+	void *acidDirs[16];
+} ScePfsMountInfo;
+typedef int (*SysrootPfsMgrGetMountInfo)(struct SceVfsMount *mount, ScePfsMountInfo *info);
 typedef int (*SysrootTmcpCommand)(SceUInt32 flags, const char *pathName,
 				  const char *cmdLine, const char *workDir, SceUInt32 *id,
 				  SceUInt32 *value, SceUID callbackUid, void *status, int async);
