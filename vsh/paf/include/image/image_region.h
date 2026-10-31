@@ -17,6 +17,20 @@ public:
 	{
 	}
 
+	bool operator==(const ImageExtent &e) const
+	{
+		if (w == e.w && h == e.h)
+			return true;
+		return false;
+	}
+
+	bool operator!=(const ImageExtent &e) const
+	{
+		if (w != e.w || h != e.h)
+			return true;
+		return false;
+	}
+
 	int32_t w;
 	int32_t h;
 };
@@ -29,6 +43,13 @@ public:
 
 	ImagePoint(int32_t _x, int32_t _y) : x(_x), y(_y)
 	{
+	}
+
+	bool operator==(const ImagePoint &p) const
+	{
+		if (x == p.x && y == p.y)
+			return true;
+		return false;
 	}
 
 	int32_t x;

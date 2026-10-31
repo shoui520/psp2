@@ -32,6 +32,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/memfile.cpp
 	src/file/openurl.cpp
 	src/http/http.cpp
+	src/misc/image/image/image.cpp
 	src/misc/image/image/image_filter.cpp
 	src/misc/image/image/image_array.cpp
 	src/misc/image/image/image_attribute.cpp
@@ -132,20 +133,16 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/short.c
 	src/misc/bounds.c
 	src/misc/bitmask.c
-	src/misc/enum_table.c
 	src/misc/string_variant.c
 	src/misc/lock.c
 	src/misc/rect_contains.c
 	src/misc/list.c
-	src/misc/dispatch.c
-	src/misc/copy_guard.c
 	src/misc/search.c
 	src/misc/state.c
 	src/misc/containment.c
 	src/misc/global_vector.c
 	src/misc/global_state.c
 	src/misc/app_program.c
-	src/misc/power2.c
 	src/misc/viewport.c
 	../../sys/sdk/target/src/libsnc/i32ops.c
 	../../sys/sdk/target/src/libsnc/i64ops.c

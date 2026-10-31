@@ -1,4 +1,4 @@
-/* Counter bitmasks and quantized dimensions. */
+/* Counter bitmasks. */
 #include <stdint.h>
 
 typedef struct PafBitmaskState {
@@ -8,23 +8,6 @@ typedef struct PafBitmaskState {
 	uint32_t count;
 } PafBitmaskState;
 
-typedef struct PafQuantizedDimensions {
-	uint8_t reserved[28];
-	int32_t x;
-	int32_t y;
-	uint8_t reserved2[36];
-	int32_t scalingMode;
-	uint8_t reserved3[6];
-	uint16_t quantum;
-} PafQuantizedDimensions;
-
-/* paf::image::ImageAttribute::GetMemHeight (image_attribute.cpp). */
-int32_t ScePafMisc_2B325CC6(const PafQuantizedDimensions *dimensions, uint32_t halves);
-
-typedef struct PafQuantizedOwner {
-	uint8_t reserved[44];
-	PafQuantizedDimensions *dimensions;
-} PafQuantizedOwner;
 
 uint32_t ScePafMisc_1805D207(PafBitmaskState *state, uint32_t bit)
 {
@@ -63,9 +46,4 @@ int32_t ScePafMisc_49034205(PafBitmaskState *state, uint32_t bit)
 		return -1;
 	state->allocated &= ~mask;
 	return --state->count;
-}
-
-int32_t ScePafMisc_9CE18975(const PafQuantizedOwner *owner, uint32_t halves)
-{
-	return ScePafMisc_2B325CC6(owner->dimensions, halves);
 }

@@ -8,28 +8,9 @@ void ScePafMisc_FFE8F348(uint32_t *object)
 	*object = UINT32_MAX;
 }
 
-int ScePafMisc_0EB94344(uint32_t *object, uint32_t first, uint32_t second)
-{
-	object[17] = second;
-	object[16] = first;
-	return 1;
-}
-
-void ScePafMisc_B38C90B6(uint32_t *dst, const uint32_t *src)
-{
-	dst[0] = src[14];
-	dst[1] = src[15];
-}
-
 float ScePafMisc_D7825ABE(const float *object)
 {
 	return object[0] + object[2] * 0.5f;
-}
-
-void ScePafMisc_E7FC564D(uint32_t *dst, const uint32_t *src)
-{
-	dst[0] = src[12];
-	dst[1] = src[13];
 }
 
 void ScePafMisc_1C571D8E(float *dst, const float *src)
@@ -74,26 +55,6 @@ void ScePafMisc_CE8FA30A(uint32_t *object)
 	object[3] = 0;
 }
 
-void ScePafMisc_EBEBC3F0(uint32_t *dst, const void *object)
-{
-	const uint32_t *inner =
-		*(const uint32_t *const *)((const uint8_t *)object + 44);
-	uint32_t first = inner[7], second = inner[8];
-
-	dst[0] = first;
-	dst[1] = second;
-}
-
-void ScePafMisc_F262A130(uint32_t *dst, const void *object)
-{
-	const uint32_t *inner =
-		*(const uint32_t *const *)((const uint8_t *)object + 44);
-	uint32_t first = inner[5], second = inner[6];
-
-	dst[0] = first;
-	dst[1] = second;
-}
-
 void ScePafMisc_73074712(float *object, float x, float y)
 {
 	object[0] += x;
@@ -114,32 +75,6 @@ void ScePafMisc_42A76852(float *object, const float *delta)
 
 	object[0] += x;
 	object[1] += y;
-}
-
-void ScePafMisc_4DEC597D(uint32_t *dst, const void *object)
-{
-	const uint32_t *inner = *(const uint32_t *const *)
-		((const uint8_t *)object + 44);
-	uint32_t a = inner[9], b = inner[10];
-	uint32_t c = inner[11], d = inner[12];
-
-	dst[0] = a;
-	dst[1] = b;
-	dst[2] = c;
-	dst[3] = d;
-}
-
-void ScePafMisc_5C89D36F(uint32_t *dst, const void *object)
-{
-	const uint32_t *inner = *(const uint32_t *const *)
-		((const uint8_t *)object + 44);
-	uint32_t a = inner[13], b = inner[14];
-	uint32_t c = inner[15], d = inner[16];
-
-	dst[0] = a;
-	dst[1] = b;
-	dst[2] = c;
-	dst[3] = d;
 }
 
 void ScePafMisc_3C2E7C36(uint8_t *object, uint32_t first, uint32_t flag,
