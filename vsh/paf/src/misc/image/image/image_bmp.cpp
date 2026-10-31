@@ -1323,7 +1323,8 @@ bool BmpCodec::GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
 	return true;
 }
 
-bool BmpCodec::Open(common::SharedPtr<File> file, int64_t offset, size_t size)
+bool BmpCodec::Open(common::SharedPtr<File> file, int64_t offset, size_t size,
+		    const ImageAttribute *attr)
 {
 	m_mutex.Lock();
 	SetDecodeError(SCE_OK);
@@ -1348,7 +1349,7 @@ bool BmpCodec::Open(common::SharedPtr<File> file, int64_t offset, size_t size)
 	return true;
 }
 
-bool BmpCodec::Open(common::SharedPtr<Buffer> buf)
+bool BmpCodec::Open(common::SharedPtr<Buffer> buf, const ImageAttribute *attr)
 {
 	m_mutex.Lock();
 	SetDecodeError(SCE_OK);

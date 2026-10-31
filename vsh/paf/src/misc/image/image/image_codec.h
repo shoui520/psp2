@@ -21,8 +21,9 @@ class ImageCodec {
 public:
 	/* How the image sources load what the codec decodes. */
 	enum {
-		LoadType_Line = 1,	/* line by line (ReadLine) */
-		LoadType_Image = 2	/* the whole image at once (LoadImage) */
+		LoadType_Line = 1,	/* line by line (ReadLine), resized as it is read */
+		LoadType_Image = 2,	/* the whole image (LoadImage), then cropped and resized */
+		LoadType_Scaled = 3	/* decoded at the size CalcDecodeExtent gives, then resized */
 	};
 
 	ImageCodec();
@@ -35,15 +36,19 @@ public:
 			       void *userdata) = 0;
 	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
 			       ImageArray *images, ImageArray *cluts) = 0;
-	/* The size the image decodes to for subrect; true only for the whole image. */
-	virtual bool CalcDecodeExtent(const ImageExtent &extent, const ImageRect &subrect,
-				      ImageResizeType type, ImageExtent *out);
+	/*
+	 * The size the codec decodes subrect of an image of original to, for a
+	 * result of extent; the base codec decodes only the whole image.
+	 */
+	virtual bool CalcDecodeExtent(const ImageExtent &original, const ImageRect &subrect,
+				      const ImageExtent &extent, ImageExtent *out);
 	virtual bool GetHeader(common::SharedPtr<File> file, int64_t offset, size_t size,
 			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts) = 0;
 	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
 			       ImageArray *images, ImageArray *cluts) = 0;
-	virtual bool Open(common::SharedPtr<File> file, int64_t offset, size_t size);
-	virtual bool Open(common::SharedPtr<Buffer> buf);
+	virtual bool Open(common::SharedPtr<File> file, int64_t offset, size_t size,
+			  const ImageAttribute *attr);
+	virtual bool Open(common::SharedPtr<Buffer> buf, const ImageAttribute *attr);
 	virtual bool Close();
 	/* Starts line decoding into images; pitch and top-down order of the lines. */
 	virtual bool BeginLines(const ImageAttribute *attr, const ImageArray *images,
@@ -99,8 +104,9 @@ public:
 			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
 	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
 			       ImageArray *images, ImageArray *cluts);
-	virtual bool Open(common::SharedPtr<File> file, int64_t offset, size_t size);
-	virtual bool Open(common::SharedPtr<Buffer> buf);
+	virtual bool Open(common::SharedPtr<File> file, int64_t offset, size_t size,
+			  const ImageAttribute *attr);
+	virtual bool Open(common::SharedPtr<Buffer> buf, const ImageAttribute *attr);
 	virtual bool Close();
 	virtual bool BeginLines(const ImageAttribute *attr, const ImageArray *images,
 				uint32_t *pitch, bool *topdown);
@@ -431,6 +437,36 @@ private:
 	/* PROVISIONAL: the codec's state, until image_gxt.cpp is written (0x2c bytes in all). */
 	uint8_t m_state[0x20];
 };
+
+/*
+ * The codec for format, made when buf (the start of the file) is an image of
+ * that format; *attr gets the format's attribute.
+ */
+ImageCodec *CreateCodec(common::SharedPtr<Buffer> buf, ImageFormat format, ImageAttribute **attr);
+
+/* A codec for the image of format in file at offset, with its header read. */
+ImageCodec *OpenCodec(common::SharedPtr<File> file, int64_t offset, size_t size,
+		      ImageFormat format, ImageAttribute **attr, ImageArray *images,
+		      ImageArray *cluts);
+/* A codec for the image of format in buf, with its header read. */
+ImageCodec *OpenCodec(common::SharedPtr<Buffer> buf, ImageFormat format, ImageAttribute **attr,
+		      ImageArray *images, ImageArray *cluts);
+
+/*
+ * Decode attr's subrect of the image in buf, or in file when buf is empty,
+ * into images at attr's extent, by the codec's load type (reader is the codec
+ * for LoadType_Line, codec for the others).
+ */
+bool LoadLines(ImageCodec *reader, common::SharedPtr<File> file, int64_t offset, size_t size,
+	       common::SharedPtr<Buffer> buf, ImageAttribute *attr, ImageCodec *codec,
+	       ImageArray *images, ImageArray *cluts, DecodeCancelFunc cancelfunc, void *userdata);
+bool LoadWhole(ImageCodec *reader, common::SharedPtr<File> file, int64_t offset, size_t size,
+	       common::SharedPtr<Buffer> buf, ImageAttribute *attr, ImageCodec *codec,
+	       ImageArray *images, ImageArray *cluts, DecodeCancelFunc cancelfunc, void *userdata);
+bool LoadScaled(ImageCodec *reader, common::SharedPtr<File> file, int64_t offset, size_t size,
+		common::SharedPtr<Buffer> buf, ImageAttribute *attr, ImageCodec *codec,
+		ImageArray *images, ImageArray *cluts, DecodeCancelFunc cancelfunc,
+		void *userdata);
 
 }
 }

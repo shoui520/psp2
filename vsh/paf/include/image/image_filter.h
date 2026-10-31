@@ -94,4 +94,18 @@ bool Transparentize(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int
 }
 }
 
+/*
+ * The resampling the filters share with the codecs' line loading: the
+ * contributions of src pixels to each of dst pixels, the horizontal pass of a
+ * source row into a column of a transposed image, and the vertical pass back.
+ */
+struct ContribList;
+
+void FreeContribList(ContribList *contrib, int n, paf::memory::HeapAllocator *allocator);
+void ApplyContribV(int src_n, int dst_n, int dst_pitch, const uint8_t *tmp, int count,
+		   uint8_t *dst, const ContribList *contrib);
+ContribList *CalcContrib(int src, int dst, paf::image::ImageResizeType type,
+			 paf::memory::HeapAllocator *allocator);
+void ApplyContribH(const uint8_t *src, uint8_t *out, int n, int pitch, const ContribList *contrib);
+
 #endif

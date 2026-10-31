@@ -1089,7 +1089,7 @@ bool filter::ResizeQuarter(ImageBuffer *dst, const ImageBuffer *src, int dst_pit
 	return true;
 }
 
-static void FreeContribList(ContribList *contrib, int n, HeapAllocator *allocator)
+void FreeContribList(ContribList *contrib, int n, HeapAllocator *allocator)
 {
 	if (contrib == NULL)
 		return;
@@ -1106,7 +1106,7 @@ static void FreeContribList(ContribList *contrib, int n, HeapAllocator *allocato
  * The vertical pass: tmp holds the image transposed, each of its count rows a
  * destination column, written from the right.
  */
-static void ApplyContribV(int src_n, int dst_n, int dst_pitch, const uint8_t *tmp, int count,
+void ApplyContribV(int src_n, int dst_n, int dst_pitch, const uint8_t *tmp, int count,
 			  uint8_t *dst, const ContribList *contrib)
 {
 	const int16x4_t zero = vdup_n_s16(0);
@@ -1268,13 +1268,13 @@ static inline __attribute__((always_inline)) ContribList *CalcContribList(int sr
 	return contrib;
 }
 
-static __attribute__((noinline)) ContribList *CalcContrib(int src, int dst, ImageResizeType type, HeapAllocator *allocator)
+__attribute__((noinline)) ContribList *CalcContrib(int src, int dst, ImageResizeType type, HeapAllocator *allocator)
 {
 	return CalcContribList(src, dst, type, allocator, false);
 }
 
 /* The horizontal pass: one source row into a column of tmp, written upwards. */
-static __attribute__((noinline)) void ApplyContribH(const uint8_t *src, uint8_t *out, int n, int pitch,
+__attribute__((noinline)) void ApplyContribH(const uint8_t *src, uint8_t *out, int n, int pitch,
 			  const ContribList *contrib)
 {
 	const int16x4_t zero = vdup_n_s16(0);
