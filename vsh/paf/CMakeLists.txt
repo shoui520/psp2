@@ -31,6 +31,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/localfile_platform.cpp
 	src/file/memfile.cpp
 	src/file/openurl.cpp
+	src/http/http.cpp
 	src/file/httpfile.cpp
 	src/file/httpfile_reader.cpp
 	src/file/httpfile_range_reader.cpp
@@ -135,7 +136,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/list.c
 	src/misc/dispatch.c
 	src/misc/vtable_init.c
-	src/misc/http.c
 	src/misc/copy_guard.c
 	src/misc/search.c
 	src/misc/state.c
@@ -188,3 +188,7 @@ set_source_files_properties(
 	src/file/localfile.cpp src/file/localfile_platform.cpp src/file/memfile.cpp
 	src/file/openurl.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+
+# paf::http::Transaction's base destructor calls its complete one, which inlines Destroy: budget 20
+# does that, 30 copies the complete one (2026-10-31).
+set_source_files_properties(src/http/http.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=20)

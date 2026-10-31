@@ -239,7 +239,7 @@ ScePaf:
         - _ZN3paf17LocalFilePsp2Impl10RenameFileEPKcS2_: 0x05C19D34
         - _ZN3paf5image5ImageD1Ev: 0x05ECDDBF
         - _ZNK3paf8HttpFile11GetFileTypeEv: 0x065AF035
-        - ScePafMisc_0668FA2F: 0x0668FA2F
+        - _ZN3paf4http11Transaction15ReceiveResponseERNS_6common9SharedPtrINS_6BufferEEEPj: 0x0668FA2F
         - ScePafMisc_069F8E86: 0x069F8E86
         - _ZN3paf5Timer9InitTimerEfiiiPKf: 0x06BD5A37
         - _ZN3paf17TimerListenerList6UpdateEv: 0x07602568
@@ -276,7 +276,7 @@ ScePaf:
         - _ZN3paf5image5Image12CopyWithEdgeEj: 0x0EF9CA58
         - _ZNK3paf4math6matrix21extractEulerAnglesYZXEv: 0x0FA14CEA
         - ScePafMisc_10271650: 0x10271650
-        - ScePafMisc_104CC765: 0x104CC765
+        - _ZN3paf4http11Transaction7DestroyEv: 0x104CC765
         - _ZN3paf5cache12CacheManager15RequestShutdownEv: 0x104FE238
         - ScePafMisc_1156F852: 0x1156F852
         - _ZN3paf4math4rectC2ERKNS0_2v2ES4_: 0x11D0025A
@@ -336,7 +336,7 @@ ScePaf:
         - _ZN3paf13TimerListener10ResetTimerEv: 0x1F758B43
         - _ZN3paf5image10ImageArray4FreeEv: 0x1F7BB8D0
         - _ZN3paf6memory14RangeAllocatorD0Ev: 0x1FD33B17
-        - ScePafMisc_20814ED1: 0x20814ED1
+        - _ZN3paf4http11Transaction6GetURLERNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x20814ED1
         - _ZN3paf8datetime8DateTime12ParseRFC3339EPKc: 0x209DB708
         - _ZN3paf9LocalFileC2Ev: 0x20ACD611
         - _ZN3paf9LocalFile9OpenAsyncEPKNS_4File7OpenArgE: 0x20F863FD
@@ -378,7 +378,7 @@ ScePaf:
         - _ZNK3paf4math6matrix8inverse1Ev: 0x293092F5
         - _ZN3paf5cache12CacheManagerC1EPKNS1_6ParamsE: 0x29644C6E
         - _ZN3paf5cache9CacheBase4TermEv: 0x297A9338
-        - ScePafMisc_2984E347: 0x2984E347
+        - _ZN3paf4http6ClientC1ERKNS1_5ParamE: 0x2984E347
         - _ZNK3paf4math4rect4leftEv: 0x298EA287
         - _ZN3paf10TimerQueue10EraseFrontEb: 0x29E7434D
         - ScePafMisc_29E8BCA7: 0x29E8BCA7
@@ -675,7 +675,7 @@ ScePaf:
         - _ZN3paf6memory14RangeAllocatorD1Ev: 0x71E4B8B3
         - _ZN3paf4http11Transaction15SetAutoRedirectEb: 0x71F59160
         - _ZNK3paf6memory14RangeAllocator7GetNameEv: 0x7270DC05
-        - ScePafMisc_72A885A6: 0x72A885A6
+        - _ZN3paf4http11Transaction8GetRealmERNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x72A885A6
         - _ZN3paf12BufferedFile9ReadAsyncEPvj: 0x72D393AD
         - _ZNK3paf5image5Image13GetPitchAlignEv: 0x73032689
         - _ZN3paf4math4rect4moveEff: 0x73074712
@@ -820,7 +820,7 @@ ScePaf:
         - ScePafMisc_925B7948: 0x925B7948
         - _ZN3paf3rtc12TickAddYearsEPyPKyi: 0x9263D1D0
         - ScePafMisc_928EBAC4: 0x928EBAC4
-        - ScePafMisc_92DC3409: 0x92DC3409
+        - _ZN3paf4http6ClientC2ERKNS1_5ParamE: 0x92DC3409
         - _ZN3paf12BufferedFile10AttachFileENS_6common9SharedPtrINS_4FileEEE: 0x9311E7BB
         - _ZN3paf9LocalFileD1Ev: 0x932FCF17
         - _ZN3paf9LocalFile7GetstatEPKcPNS_13LocalFileStatE: 0x93900EA9

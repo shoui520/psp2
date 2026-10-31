@@ -235,7 +235,63 @@ public:
 		return find_first_not_of(&ch, pos, 1);
 	}
 
+	size_type find_first_of(const _Elem *set, size_type pos, size_type len) const
+	{
+		if (pos < count) {
+			const _Elem *at = ptr + pos;
+
+			for (; at != ptr + count; ++at) {
+				const _Elem *member = set;
+
+				for (; member != set + len; ++member)
+					if (*member == *at)
+						return at - ptr;
+			}
+		}
+		return npos;
+	}
+
+	size_type find_first_of(const _Elem *set, size_type pos = 0) const
+	{
+		return find_first_of(set, pos, _Traits::length(set));
+	}
+
+	size_type find_first_of(_Elem ch, size_type pos = 0) const
+	{
+		return find_first_of(&ch, pos, 1);
+	}
+
 	size_type rfind(const _Elem *str, size_type pos, size_type len) const;
+
+	size_type rfind(_Elem ch, size_type pos = npos) const
+	{
+		return rfind(&ch, pos, 1);
+	}
+
+	_Elem &at(size_type pos)
+	{
+		if (pos >= count)
+			ScePafStdc_D608246A();
+		return ptr[pos];
+	}
+
+	const _Elem &at(size_type pos) const
+	{
+		if (pos >= count)
+			ScePafStdc_D608246A();
+		return ptr[pos];
+	}
+
+	void swap(_Myt &other)
+	{
+		_Elem *other_ptr = other.ptr;
+		size_type other_count = other.count;
+
+		other.ptr = ptr;
+		other.count = count;
+		ptr = other_ptr;
+		count = other_count;
+	}
 
 	_Myt &operator=(const _Myt &src)
 	{
