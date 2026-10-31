@@ -57,120 +57,7 @@ _Static_assert(offsetof(SceNetPsHeapBlock, next) == 16, "heap block next");
 _Static_assert(offsetof(SceNetPsHeapBlock, prev) == 20, "heap block prev");
 _Static_assert(offsetof(SceNetPsHeapBlock, capacity) == 24, "heap block capacity");
 
-/* Complete serialized record: 168c initializes all320 bytes; 1eb8 augments it.
- * 2f10 only changes byte order and clears private controls for serialization.
- * Reserved words have no operational producer; zero is retained on output.
- */
-typedef struct SceNetPsInterfaceAddress {
-	unsigned int address;
-	unsigned int broadcastAddress;
-	unsigned int broadcastAddressCopy;
-	unsigned int subnetMask;
-} SceNetPsInterfaceAddress;
-
-typedef struct SceNetPsInterfaceInfo {
-	char name[16];
-	char parentName[16];
-	unsigned int interfaceIndex;
-	unsigned int parentInterfaceIndex;
-	SceNetPsInterfaceAddress addresses[2];
-	unsigned int flags;
-	unsigned int driverType;
-	SceNetEtherAddr hardwareAddress;
-	unsigned int mtu;
-	unsigned int driverMtu;
-	/* Each wire counter group is passed as one complete eight-word array. */
-	union {
-		struct {
-			unsigned int txBytes, txPackets;
-			unsigned int txBroadcastBytes, txBroadcastPackets;
-			unsigned int txMulticastBytes, txMulticastPackets;
-			unsigned int txErrors, txDrops;
-		};
-		unsigned int txCounters[8];
-	};
-	union {
-		struct {
-			unsigned int rxBytes, rxPackets;
-			unsigned int rxBroadcastBytes, rxBroadcastPackets;
-			unsigned int rxMulticastBytes, rxMulticastPackets;
-			unsigned int rxDrops, rxErrors;
-		};
-		unsigned int rxCounters[8];
-	};
-	union {
-		struct {
-			unsigned int reservedTxCounters[6];
-			unsigned int softwareTxDrops;
-			unsigned int reservedTxCounter;
-		};
-		unsigned int softwareTxCounters[8];
-	};
-	union {
-		struct {
-			unsigned int reservedRxCounters[6];
-			unsigned int softwareRxDrops;
-			unsigned int reservedRxCounter;
-		};
-		unsigned int softwareRxCounters[8];
-	};
-	int connectionState;
-	int idleSeconds;
-	union {
-		struct {
-			unsigned int reservedControls[2];
-			int idleTimeoutSeconds;
-			int autoConnectPolicy;
-			unsigned int reservedControl;
-		};
-		unsigned int privateControls[5];
-	};
-	int linkStatus;
-	int emulationSeedPresent;
-	union {
-		struct {
-			int promiscuousEnabled;
-			int promiscuousReferences;
-		};
-		int promiscuousControls[2];
-	};
-	int uptimeSeconds;
-	unsigned int generation;
-	unsigned int reservedTail[11];
-} SceNetPsInterfaceInfo;
-
-_Static_assert(sizeof(SceNetPsInterfaceAddress) == 16, "interface address size");
-_Static_assert(sizeof(SceNetPsInterfaceInfo) == 320, "interface info size");
-_Static_assert(offsetof(SceNetPsInterfaceInfo, addresses) == 40,
-	       "interface IPv4 records");
-_Static_assert(offsetof(SceNetPsInterfaceInfo, txBytes) == 96,
-	       "interface driver counters");
-_Static_assert(offsetof(SceNetPsInterfaceInfo, connectionState) == 224,
-	       "interface connection state");
-_Static_assert(offsetof(SceNetPsInterfaceInfo, linkStatus) == 252,
-	       "interface link status");
-_Static_assert(offsetof(SceNetPsInterfaceInfo, generation) == 272,
-	       "interface generation");
 int sceNetPsGetInterfaceList(SceNetPsInterfaceInfo *records, int capacity);
-
-/*
- * SCE: the sceNetControl record of the driver event commands: register a
- * callback (0x20000003), take its events (0x10000002), post events
- * (0x20000005)
- */
-typedef struct SceNetPsDriverEventControl {
-	SceUID callbackId;
-	int clearPending;
-	unsigned int reserved[2];
-	SceUInt64 events;
-	int error;
-	unsigned int reserved2;
-} SceNetPsDriverEventControl;
-
-_Static_assert(sizeof(SceNetPsDriverEventControl) == 32,
-	       "driver event control size");
-_Static_assert(offsetof(SceNetPsDriverEventControl, events) == 16,
-	       "driver event control events");
 
 /* SCE: debug command 4's result, one interface's record */
 typedef struct SceNetPsDebugInterfaceInfo {
@@ -298,14 +185,6 @@ typedef struct SceNetPsSendRequest {
 } SceNetPsSendRequest;
 
 _Static_assert(sizeof(SceNetPsSendRequest) == 60, "SceNetPsSendRequest size");
-
-/* SCE: the processes that sent data since the list was last taken */
-typedef struct SceNetPsSenderList {
-	SceUID processId[16];
-	int count;
-} SceNetPsSenderList;
-
-_Static_assert(sizeof(SceNetPsSenderList) == 68, "SceNetPsSenderList size");
 
 /* net_ps_glue.c */
 int sceNetPsQueuePendingRequest(SceNetPsPendingRequest *request);

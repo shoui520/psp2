@@ -228,6 +228,190 @@ _Static_assert(offsetof(SceNetSyscallSysctlParam, newData) == 16,
 _Static_assert(offsetof(SceNetSyscallSysctlParam, newLength) == 20,
 	       "sysctl new length");
 
+/* the interface record sceNetPsGetInterfaceList fills, and libnet reads */
+typedef struct SceNetPsInterfaceAddress {
+	unsigned int address;
+	unsigned int broadcastAddress;
+	unsigned int broadcastAddressCopy;
+	unsigned int subnetMask;
+} SceNetPsInterfaceAddress;
+
+typedef struct SceNetPsInterfaceInfo {
+	char name[16];
+	char parentName[16];
+	unsigned int interfaceIndex;
+	unsigned int parentInterfaceIndex;
+	SceNetPsInterfaceAddress addresses[2];
+	unsigned int flags;
+	unsigned int driverType;
+	SceNetEtherAddr hardwareAddress;
+	unsigned int mtu;
+	unsigned int driverMtu;
+	/* Each wire counter group is passed as one complete eight-word array. */
+	union {
+		struct {
+			unsigned int txBytes, txPackets;
+			unsigned int txBroadcastBytes, txBroadcastPackets;
+			unsigned int txMulticastBytes, txMulticastPackets;
+			unsigned int txErrors, txDrops;
+		};
+		unsigned int txCounters[8];
+	};
+	union {
+		struct {
+			unsigned int rxBytes, rxPackets;
+			unsigned int rxBroadcastBytes, rxBroadcastPackets;
+			unsigned int rxMulticastBytes, rxMulticastPackets;
+			unsigned int rxDrops, rxErrors;
+		};
+		unsigned int rxCounters[8];
+	};
+	union {
+		struct {
+			unsigned int reservedTxCounters[6];
+			unsigned int softwareTxDrops;
+			unsigned int reservedTxCounter;
+		};
+		unsigned int softwareTxCounters[8];
+	};
+	union {
+		struct {
+			unsigned int reservedRxCounters[6];
+			unsigned int softwareRxDrops;
+			unsigned int reservedRxCounter;
+		};
+		unsigned int softwareRxCounters[8];
+	};
+	int connectionState;
+	int idleSeconds;
+	union {
+		struct {
+			unsigned int reservedControls[2];
+			int idleTimeoutSeconds;
+			int autoConnectPolicy;
+			unsigned int reservedControl;
+		};
+		unsigned int privateControls[5];
+	};
+	int linkStatus;
+	int emulationSeedPresent;
+	union {
+		struct {
+			int promiscuousEnabled;
+			int promiscuousReferences;
+		};
+		int promiscuousControls[2];
+	};
+	int uptimeSeconds;
+	unsigned int generation;
+	unsigned int reservedTail[11];
+} SceNetPsInterfaceInfo;
+
+_Static_assert(sizeof(SceNetPsInterfaceAddress) == 16, "interface address size");
+_Static_assert(sizeof(SceNetPsInterfaceInfo) == 320, "interface info size");
+_Static_assert(offsetof(SceNetPsInterfaceInfo, addresses) == 40,
+	       "interface IPv4 records");
+_Static_assert(offsetof(SceNetPsInterfaceInfo, txBytes) == 96,
+	       "interface driver counters");
+_Static_assert(offsetof(SceNetPsInterfaceInfo, connectionState) == 224,
+	       "interface connection state");
+_Static_assert(offsetof(SceNetPsInterfaceInfo, linkStatus) == 252,
+	       "interface link status");
+_Static_assert(offsetof(SceNetPsInterfaceInfo, generation) == 272,
+	       "interface generation");
+
+/* sceNetSyscallControl's commands (net_ps_socket.c); no SDK header names them */
+#define SCE_NETPS_CONTROL_GET_STATISTICS		0x00000001
+#define SCE_NETPS_CONTROL_GET_DNS_CONFIG		0x00000002
+#define SCE_NETPS_CONTROL_GET_CONNECTION_PARAM		0x00000004
+#define SCE_NETPS_CONTROL_GET_PROMISCUOUS		0x00000013
+#define SCE_NETPS_CONTROL_GET_RANDOM			0x00000014
+#define SCE_NETPS_CONTROL_GET_SLEEP_COUNTS		0x00000016
+#define SCE_NETPS_CONTROL_GET_THREAD_LIST		0x00000021
+#define SCE_NETPS_CONTROL_TAKE_SENDERS			0x00000022
+#define SCE_NETPS_CONTROL_TAKE_DRIVER_EVENTS		0x10000002
+#define SCE_NETPS_CONTROL_GET_EMULATION			0x10000012
+#define SCE_NETPS_CONTROL_GET_PROCESS_POLICY		0x10000017
+#define SCE_NETPS_CONTROL_GET_ERROR			0x10000018
+#define SCE_NETPS_CONTROL_GET_THREAD_MODE		0x10000019
+#define SCE_NETPS_CONTROL_SET_DNS_CONFIG		0x20000002
+#define SCE_NETPS_CONTROL_REGISTER_DRIVER_CALLBACK	0x20000003
+#define SCE_NETPS_CONTROL_SET_CONNECTION_PARAM		0x20000004
+#define SCE_NETPS_CONTROL_POST_EVENTS			0x20000005
+#define SCE_NETPS_CONTROL_UPDATE_CONNECTIONS		0x20000006
+#define SCE_NETPS_CONTROL_UNREGISTER_DRIVER_CALLBACK	0x20000007
+#define SCE_NETPS_CONTROL_RESET_IDLE_TIME		0x20000011
+#define SCE_NETPS_CONTROL_SET_EMULATION			0x20000012
+#define SCE_NETPS_CONTROL_SET_PROMISCUOUS		0x20000013
+#define SCE_NETPS_CONTROL_SET_PROCESS_POLICY		0x20000017
+#define SCE_NETPS_CONTROL_SET_ERROR			0x20000018
+#define SCE_NETPS_CONTROL_SET_THREAD_MODE		0x20000019
+#define SCE_NETPS_CONTROL_SOCKET_SUSPEND_POLICY		0x20000020
+#define SCE_NETPS_CONTROL_SET_TCP_MSS			0x20000023
+
+/*
+ * SCE: the sceNetControl record of the driver event commands: register a
+ * callback (0x20000003), take its events (0x10000002), post events
+ * (0x20000005)
+ */
+typedef struct SceNetPsDriverEventControl {
+	SceUID callbackId;
+	int clearPending;
+	unsigned int reserved[2];
+	SceUInt64 events;
+	int error;
+	unsigned int reserved2;
+} SceNetPsDriverEventControl;
+
+_Static_assert(sizeof(SceNetPsDriverEventControl) == 32,
+	       "driver event control size");
+_Static_assert(offsetof(SceNetPsDriverEventControl, events) == 16,
+	       "driver event control events");
+
+/* SCE: the processes that sent data since the list was last taken */
+typedef struct SceNetPsSenderList {
+	SceUID processId[16];
+	int count;
+} SceNetPsSenderList;
+
+_Static_assert(sizeof(SceNetPsSenderList) == 68, "SceNetPsSenderList size");
+
+/* SceNetPsForSyscalls: what libnet calls (net_ps_glue.c) */
+int sceNetSyscallGetSockinfo(int socket, void *buffer, int count, int flags);
+int sceNetSyscallSocketAbort(int socket, int flags);
+int sceNetSyscallSocket(const char *name, int domain, int type, int protocol);
+int sceNetSyscallBind(int socket, const SceNetSockaddr *address, unsigned int addressLength);
+int sceNetSyscallListen(int socket, int backlog);
+int sceNetSyscallAccept(int socket, SceNetSockaddr *address, unsigned int *addressLength);
+int sceNetSyscallConnect(int socket, const SceNetSockaddr *address, unsigned int addressLength);
+int sceNetSyscallIcmConnect(int socket, int flags);
+int sceNetSyscallSendmsg(int socket, const SceNetMsghdr *message, int flags);
+int sceNetSyscallSendto(const SceNetSyscallSendtoParam *parameter);
+int sceNetSyscallRecvmsg(int socket, SceNetMsghdr *message, int flags);
+int sceNetSyscallRecvfrom(const SceNetSyscallRecvfromParam *parameter);
+int sceNetSyscallShutdown(int socket, int how);
+int sceNetSyscallSetsockopt(const SceNetSyscallSetsockoptParam *parameter);
+int sceNetSyscallGetsockname(int socket, SceNetSockaddr *address, unsigned int *addressLength);
+int sceNetSyscallGetsockopt(const SceNetSyscallGetsockoptParam *parameter);
+int sceNetSyscallGetpeername(int socket, SceNetSockaddr *address, unsigned int *addressLength);
+int sceNetSyscallIoctl(int socket, unsigned int command, void *data);
+int sceNetSyscallClose(int socket);
+int sceNetSyscallEpollCreate(const char *name, int flags);
+int sceNetSyscallEpollCtl(int epoll, int operation, int socket, SceNetEpollEvent *event);
+int sceNetSyscallEpollWait(const SceNetSyscallEpollWaitParam *parameter);
+int sceNetSyscallEpollClose(int epoll);
+int sceNetSyscallEpollAbort(int epoll, int flags);
+int sceNetSyscallDumpCreate(const char *name, int length, int flags);
+int sceNetSyscallDumpRead(int dump, void *buffer, int length, int *flags);
+int sceNetSyscallDumpClose(int dump);
+int sceNetSyscallDumpAbort(int dump, int flags);
+int sceNetSyscallDescriptorCreate(const char *name, int flags);
+int sceNetSyscallDescriptorCtl(int descriptor, int operation, int socket, void *info);
+int sceNetSyscallDescriptorClose(int descriptor);
+int sceNetSyscallGetIfList(void *list, int count);
+int sceNetSyscallControl(int interfaceIndex, int command, void *data, int length);
+int sceNetSyscallSysctl(const SceNetSyscallSysctlParam *parameter);
+
 #endif
 
 /* net_ps_glue.c */
