@@ -518,11 +518,11 @@ int seqSysconEvent(BbmcControl *control, BbmcMessage *message)
 			events = message->body.sysconReplyWords.words[1];
 		}
 		if (events & 0x10) {
-			if ((control->suspendState & ~4) != 0) {
+			if ((control->suspendState & ~4) == 0) {
+				bbmcNotifyFeatureEvent(control, 2, 1);
+			} else {
 				control->resumePending = 1;
 				scePowerRequestResume();
-			} else {
-				bbmcNotifyFeatureEvent(control, 2, 1);
 			}
 			events = message->body.sysconReplyWords.words[1];
 		}
