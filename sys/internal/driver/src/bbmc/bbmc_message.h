@@ -229,6 +229,13 @@ typedef struct BbmcControlFlagMessage {
 	SceUInt32 mask;
 } BbmcControlFlagMessage;
 
+/* name unknown: command 101 asks the manager to run a GPS request through bbcmd */
+typedef struct BbmcGpsRequestMessage {
+	SceUInt32 code;
+	const void *input;
+	void *output;
+} BbmcGpsRequestMessage;
+
 typedef union BbmcMessageBody {
 	SceInt32 commandResult;
 	BbmcSmsListOutput smsListOutput;
@@ -242,6 +249,7 @@ typedef union BbmcMessageBody {
 	BbmcControlKeyReply controlKeyReply;
 	BbmcChannelRatesMessage channelRatesMessage;
 	BbmcControlFlagMessage controlFlag;
+	BbmcGpsRequestMessage gpsRequest;
 	const struct BbmcTerminalResponse *terminalResponse;
 	const struct QmiCat2CommandOptions *envelopeOptions;
 	SceUInt32 refreshResponse;
