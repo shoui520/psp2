@@ -66,8 +66,19 @@ typedef struct SceKernelUIDEntryInfo {
 	SceUID pid;				/* 0x20 */
 } SceKernelUIDEntryInfo;
 
+/* sceKernelGetClassInfoAll */
+typedef struct SceKernelClassInfo {
+	SceSize size;				/* 0x10 */
+	SceClass *cls;
+	SceClass *parent;
+	const char *name;
+} SceKernelClassInfo;
+
+int SceSysmemForKernel_100B4029(SceKernelClassInfo *info, SceUInt32 max, SceUInt32 *count);
 int sceGUIDGetEntryInfoAll(SceUInt32 level, SceUInt32 state, SceKernelUIDEntryInfo *infos,
 				SceSize size, SceSize *ret_num);
+int PUIDGetEntryInfoAll(SceUID pid, SceUInt32 level, SceUInt32 reserved, SceKernelUIDEntryInfo *infos,
+			int size, SceSize *ret_num);
 int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level, SceUID *vector, SceSize size, SceSize *ret_num);
 int SceSysmemForKernel_02DAD732(void);
 int scePUIDGetUIDVectorByClass(SceUID pid, SceClass *cls, SceUInt32 level, SceUID *vector, SceSize num, SceSize *ret_num);

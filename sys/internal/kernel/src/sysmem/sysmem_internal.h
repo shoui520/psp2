@@ -460,14 +460,6 @@ int UIDClassStart(struct UIDManager *manager);
 int UIDClassModuleStart(struct UIDManager *manager);
 #endif
 
-/* sceKernelGetClassInfoAll */
-typedef struct SceKernelClassInfo {
-	SceSize size;				/* 0x10 */
-	SceClass *cls;
-	SceClass *parent;
-	const char *name;
-} SceKernelClassInfo;
-
 /* scePUIDGetInfo */
 typedef struct SceKernelPUIDInfo {
 	SceSize size;				/* 0x14 */

@@ -1021,16 +1021,6 @@ int sceHidControllerUnregisterReadHintCallback(SceUID callbackId)
 	return (int)0x803B0004;
 }
 
-typedef struct HidHintCallbackInfo {
-	SceSize size;
-	unsigned int deviceType;
-	unsigned int hintType;
-	SceUID callbackId;
-	SceUID pid;
-} HidHintCallbackInfo;
-
-_Static_assert(sizeof(HidHintCallbackInfo) == 20, "HID callback diagnostic record");
-
 #define COUNT_HINT_CALLBACKS(first, head) do { \
 	(first) = (head).link.next; \
 	listCount = 0; \

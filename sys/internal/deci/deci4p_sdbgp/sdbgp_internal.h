@@ -157,11 +157,12 @@ typedef struct SdbgpRequest {
 	uint8_t tag;				/* 0x13 */
 } SdbgpRequest;
 
-/* a thread's priority (SDBGP_GROUP_THREAD 0x40) */
+/* a thread's priority and affinity mask (SDBGP_GROUP_THREAD 0x40) */
 typedef struct SdbgpThreadPriorityRequest {
 	SdbgpRequest header;
 	SceUID threadId;			/* 0x14 */
 	int priority;				/* 0x18 */
+	int cpuAffinityMask;			/* 0x1c */
 } SdbgpThreadPriorityRequest;
 
 /* a process's control flags (SDBGP_GROUP_PROCESS 0x60) */
@@ -837,7 +838,25 @@ extern struct SysrootProfiler s_sdbgpProfiler;
 void sdbgpInitProfiler(struct SysrootProfiler *profiler);
 int KernelUtilsFixedHeapLeakCheckStart(SceUID uid, void **ctx);
 int KernelUtilsFixedHeapLeakCheck(void *ctx);
+int kernelUtility(int id);
 int NameHeapLogSaveCore(void);
+
+/* thread.c, sync.c */
+int sdbgpGetKernelWorkQueueInfo(SdbgpCpuState *cpu, void *reply,
+				ThreadmgrWorkQueueInfoFull *work, SceSize size, int kernelOnly);
+int sdbgpGetProcessWorkQueueInfo(SdbgpCpuState *cpu, void *reply,
+				 ThreadmgrWorkQueueInfoFull *work, SceSize size);
+int sdbgpGetThreadInfoList(SdbgpCpuState *cpu, void *out, void *work, SceUID pid,
+			   uint32_t detail, SceSize *size, SceSize *count);
+int sdbgpGetThreadWaypointTrace(SceUID *pid, void *work, void *out, SceSize *count,
+				SceSize *size);
+int sdbgpGetSyncInfoList(const SdbgpThreadListRequest *req, void *out, void *work,
+			 SceSize *size);
+SceSize sdbgpGetSyncAllCount(const SdbgpThreadListRequest *req, void *work);
+int sdbgpGetSyncAllInfo(const SdbgpThreadListRequest *req, void *out, void *work);
+
+/* SceCodecEngineWrapperForDebugger (os0:kd/vnz_wrapper.skprx) */
+int SceCodecEngineWrapperForDebugger_771190E7(unsigned int cmd, void *buf);
 
 /* bg_check.c */
 int bgCheckStart(void);
@@ -892,4 +911,4 @@ void sdbgpReadAbtRegister(uint32_t code, uint32_t *value);
 void sdbgpReadUndRegister(uint32_t code, uint32_t *value);
 void sdbgpReadIrqRegister(uint32_t code, uint32_t *value);
 void sdbgpReadFiqRegister(uint32_t code, uint32_t *value);
-int sdbgpCallSecureMonitor(void);
+int sdbgpCallSecureMonitor(uint32_t flags, uint32_t ttbr0, uint32_t vbar, void *sysroot);

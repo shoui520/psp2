@@ -4,28 +4,6 @@
 
 extern HidDevice *hidDevices[8];
 
-typedef struct HidDeviceInfo {
-	SceSize size;
-	unsigned int transportType;
-	char name[256];
-	/* These spans are untouched by this producer, including failed copies. */
-	uint8_t untouchedAfterName[4];
-	uint32_t mac0;
-	uint32_t mac1;
-	uint16_t vendorId;
-	uint16_t productId;
-	uint16_t version;
-	uint8_t primary;
-	uint8_t untouchedAfterPrimary;
-	HidCollectionInfo collections[8];
-	uint8_t untouchedTail[192];
-} HidDeviceInfo;
-
-_Static_assert(sizeof(HidDeviceInfo) == 572, "HID device diagnostic stride");
-_Static_assert(offsetof(HidDeviceInfo, mac0) == 268, "HID diagnostic address");
-_Static_assert(offsetof(HidDeviceInfo, collections) == 284,
-	       "HID diagnostic collections");
-
 int hidDumpDevices(void *buffer, SceSize size, SceUInt32 *count)
 {
 	HidDeviceInfo *output = buffer;

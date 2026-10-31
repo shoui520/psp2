@@ -12,14 +12,6 @@
 typedef struct HidCollection HidCollection;
 typedef struct HidProcessContext HidProcessContext;
 
-typedef struct HidCollectionInfo {
-	SceSize size;
-	int id;
-	int type;
-} HidCollectionInfo;
-
-_Static_assert(sizeof(HidCollectionInfo) == 12, "HID collection diagnostic record");
-
 typedef struct HidGlobalState {
 	uint16_t usagePage;
 	int logicalMinimum;

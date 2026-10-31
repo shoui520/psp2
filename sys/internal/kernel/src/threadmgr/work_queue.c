@@ -112,49 +112,6 @@ _Static_assert(sizeof(SceUIDWorkQueueObject) == 0x68 && sizeof(SceUIDWorkTaskObj
 #define TASK_FROM_LINK(l) \
 	((ThreadmgrWorkTaskCB *)((uintptr_t)(l) - offsetof(ThreadmgrWorkTaskCB, link)))
 
-/* the information lists' entries: their threads follow ((threadCount + 0x12) * 4) */
-typedef struct ThreadmgrWorkQueueInfoFull {
-	SceSize size;
-	SceUID workQueueId;
-	SceUID creatorPid;
-	SceUID reservedId;			/* 0x0c: the queue's */
-	char name[32];				/* 0x10 */
-	uint32_t attr;				/* 0x30 */
-	uint32_t threadCount;
-	uint64_t scheduled;			/* 0x38 */
-	uint32_t pendingCount;			/* 0x40 */
-	SceUID threads[];			/* 0x44 */
-} ThreadmgrWorkQueueInfoFull;
-
-/* the work task information (0x58) */
-typedef struct ThreadmgrWorkTaskInfo {
-	SceSize size;
-	SceUID workTaskId;
-	SceUID creatorPid;
-	SceUID puid;
-	char name[32];				/* 0x10 */
-	uintptr_t entry;			/* 0x30 */
-	void *arg;
-	SceUID workQueueId;			/* 0x38 */
-	SceUID threadId;
-	SceUID creatorThreadId;			/* 0x40 */
-	const void *caller;
-	int priority;				/* 0x48 */
-	int permission;
-	SceUID tlsProcessId;
-	uint32_t ioFlags;			/* 0x54 */
-} ThreadmgrWorkTaskInfo;
-
-/* SceThreadmgrForDriver_0B604A3C (0x34) */
-typedef struct ThreadmgrWorkTaskInfoShort {
-	SceSize size;
-	SceUID workTaskId;
-	char name[32];				/* 0x08 */
-	uintptr_t entry;			/* 0x28 */
-	void *arg;
-	SceUID workQueueId;			/* 0x30 */
-} ThreadmgrWorkTaskInfoShort;
-
 _Static_assert(sizeof(ThreadmgrWorkQueueInfo) == 0x40 && sizeof(ThreadmgrWorkTaskInfo) == 0x58 &&
 	       sizeof(ThreadmgrWorkTaskInfoShort) == 0x34 &&
 	       offsetof(ThreadmgrWorkQueueInfoFull, threads) == 0x44,
