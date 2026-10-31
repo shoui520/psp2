@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <string.h>
+#include <fw.h>
 #include <syscon/syscon.h>
 #include <sysmem/debug.h>
 #include "../bbmc_control.h"
@@ -2218,8 +2219,13 @@ void swdlFreeRequest(void)
 }
 
 /* name unknown: open the five update files a file-set request names and add up
- * their sizes */
+ * their sizes (the 3.6x builds inline it into _swdlSeqCarrierQmi) */
+#if FW_SINCE(0x04000000)
 int swdlOpenUpdateFiles(BbmcControl *control, const BbmcStringSet *request)
+#else
+static inline __attribute__((always_inline)) int
+swdlOpenUpdateFiles(BbmcControl *control, const BbmcStringSet *request)
+#endif
 {
 	BbmcFileSetUpdateWork *work = &control->updateWork.fileSet;
 	const char *first = request->strings[0];
