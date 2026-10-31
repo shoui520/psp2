@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <sce_atomic.h>
 #include "../std/string.h"
-#include "../datetime/datetime.h"
+#include <datetime/datetime.h>
 
 typedef struct File File;
 typedef struct FileOpenArg FileOpenArg;

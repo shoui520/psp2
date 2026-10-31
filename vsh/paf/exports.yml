@@ -832,7 +832,7 @@ ScePaf:
         - _ZN3paf11inputdevice3pad4InitERNS1_9InitParamE: 0x95C420EC
         - sce_paf_misc_does_file_exist: 0x95F14046
         - _ZN3paf3Dir4OpenEPKc: 0x95F2C107
-        - scePafGetCurrentClockLocalTime: 0x96345146
+        - _ZN3paf8datetime8DateTime3NowEv: 0x96345146
         - _ZN3paf5Timer12DoFuncSlowerEf: 0x963A768B
         - _ZN3paf7MemFile10FlushAsyncEv: 0x964C67E5
         - _ZN3paf8HttpFileD1Ev: 0x967C0019
@@ -1092,7 +1092,7 @@ ScePaf:
         - _ZN3paf5cache9CacheBaseC1EPNS0_16CacheManagerImplEPKNS1_6OptionEh: 0xD40A68A6
         - _ZNK3paf6memory13HeapAllocator8GetRangeEPPvPj: 0xD4358B8E
         - _ZN3paf4math11math_matrix16GetCoordSysErrorEv: 0xD456092E
-        - ScePafMisc_D4ECC9FC: 0xD4ECC9FC
+        - _ZNK3paf8datetime8DateTime9FormatMsgEPwjPKw: 0xD4ECC9FC
         - _ZNK3paf5image5Image12GetArraySizeEv: 0xD50E863E
         - _ZN3paf8HttpFile9PollAsyncEPx: 0xD5543A0D
         - _ZNK3paf6memory14RangeAllocator12GetBlockTypeEv: 0xD5DCD40C
@@ -1249,7 +1249,7 @@ ScePaf:
         - ScePafMisc_F77AD7C3: 0xF77AD7C3
         - _ZN3paf11inputdevice20InputGestureListener4InitEv: 0xF77C8E56
         - _ZN3paf8HttpFile7OpenArgC2Ev: 0xF8213E1C
-        - ScePafMisc_F8D1975F: 0xF8D1975F
+        - _ZNK3paf8datetime8DateTime6FormatEPwjPKwb: 0xF8D1975F
         - ScePafMisc_F8D63B8E: 0xF8D63B8E
         - _ZN3paf7Timer2DD1Ev: 0xF8E57331
         - _ZN3paf11inputdevice11touchscreen17SetScreenViewportEiijj: 0xF905553F
@@ -1358,7 +1358,7 @@ ScePaf:
         - _ZN3paf6common8internal15ResetFrameCountEv: 0x23B36031
         - ScePafCommon_25E1C8C4: 0x25E1C8C4
         - _ZN3paf6common8internal14IncrFrameCountEv: 0x2700B0E2
-        - ScePafCommon_275A7FD9: 0x275A7FD9
+        - _ZN3paf6common15GetCommonStringERKNS_7IDParamE: 0x275A7FD9
         - _ZN3paf6common13property_list12PropertyList10SetWStringERKNS_7IDParamERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEE: 0x28D781B5
         - _ZN3paf6common6StringC1Ev: 0x298D25EE
         - _ZN3paf6common13StripFilenameERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEES8_: 0x2BD4F07A

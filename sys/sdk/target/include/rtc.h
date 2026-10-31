@@ -1,7 +1,7 @@
 /*
  * rtc.h: the real-time clock's error codes and records, under Sony's names and with Sony's
- * definitions (SDK Release 03.570.011, target/include/rtc.h). The kernel takes these; the user
- * library's functions come with the user-mode SDK headers.
+ * definitions (SDK Release 03.570.011, target/include/rtc.h). The kernel takes the records; user
+ * code also the user library's functions, as user code needs them.
  */
 #ifndef _SCE_RTC_RTC_H
 #define _SCE_RTC_RTC_H
@@ -38,6 +38,28 @@ typedef struct SceRtcTick {
 #define SCE_RTC_DAYOFWEEK_THURSDAY	4
 #define SCE_RTC_DAYOFWEEK_FRIDAY	5
 #define SCE_RTC_DAYOFWEEK_SATURDAY	6
+
+#if defined(_LANGUAGE_C_PLUS_PLUS)||defined(__cplusplus)||defined(c_plusplus)
+extern "C" {
+#endif	/* defined(_LANGUAGE_C_PLUS_PLUS)||defined(__cplusplus)||defined(c_plusplus) */
+
+/* SceRtcUser */
+int sceRtcGetCurrentClock(SceDateTime *pTime, int iTimeZone);
+int sceRtcGetCurrentClockLocalTime(SceDateTime *pTime);
+int sceRtcGetCurrentNetworkTick(SceRtcTick *pTick);
+int sceRtcSetTick(SceDateTime *pTime, const SceRtcTick *pTick);
+int sceRtcGetTick(const SceDateTime *pTime, SceRtcTick *pTick);
+int sceRtcTickAddMicroseconds(SceRtcTick *pTick0, const SceRtcTick *pTick1, SceLong64 lAdd);
+int sceRtcTickAddSeconds(SceRtcTick *pTick0, const SceRtcTick *pTick1, SceLong64 lAdd);
+int sceRtcTickAddMinutes(SceRtcTick *pTick0, const SceRtcTick *pTick1, SceLong64 lAdd);
+int sceRtcTickAddHours(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
+int sceRtcTickAddDays(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
+int sceRtcTickAddMonths(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
+int sceRtcTickAddYears(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
+
+#if defined(_LANGUAGE_C_PLUS_PLUS)||defined(__cplusplus)||defined(c_plusplus)
+}
+#endif	/* defined(_LANGUAGE_C_PLUS_PLUS)||defined(__cplusplus)||defined(c_plusplus) */
 
 #endif /* !_LANGUAGE_ASSEMBLY */
 

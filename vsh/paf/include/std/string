@@ -74,13 +74,7 @@ public:
 	static const size_type npos = (size_type)-1;
 	static _Elem empty_string;
 
-	basic_string()
-	{
-		ptr = &empty_string;
-		count = 0;
-	}
-
-	explicit basic_string(const _Ax &)
+	explicit basic_string(const _Ax &al = _Ax())
 	{
 		ptr = &empty_string;
 		count = 0;
@@ -451,6 +445,15 @@ basic_string<_Elem, _Traits, _Ax>::rfind(const _Elem *str, size_type pos, size_t
 template<class _Elem, class _Traits, class _Ax>
 inline basic_string<_Elem, _Traits, _Ax>
 operator+(const basic_string<_Elem, _Traits, _Ax> &left, const basic_string<_Elem, _Traits, _Ax> &right)
+{
+	basic_string<_Elem, _Traits, _Ax> result(left);
+
+	return result.append(right);
+}
+
+template<class _Elem, class _Traits, class _Ax>
+inline basic_string<_Elem, _Traits, _Ax>
+operator+(const basic_string<_Elem, _Traits, _Ax> &left, const _Elem *right)
 {
 	basic_string<_Elem, _Traits, _Ax> result(left);
 

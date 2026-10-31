@@ -35,8 +35,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/httpfile_openarg.c
 	src/file/error.c
 	src/compress/compress.cpp
-	src/datetime/datetime.c
-	src/datetime/datetime_abi.S
+	src/datetime/datetime.cpp
 	src/rtc/rtc.c
 	src/thread/callqueue.cpp
 	src/thread/cond.cpp

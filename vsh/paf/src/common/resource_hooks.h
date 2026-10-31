@@ -21,7 +21,7 @@ CommonStringFunction SetCommonStringFunction(CommonStringFunction func);
 CommonTextureFunction SetCommonTextureFunction(CommonTextureFunction func);
 
 #define CommonTemplateOpen ScePafCommon_CAAB7E61
-#define CommonGetString ScePafCommon_275A7FD9
+#define CommonGetString _ZN3paf6common15GetCommonStringERKNS_7IDParamE
 #define CommonGetTexture ScePafCommon_F820A54B
 
 int CommonTemplateOpen(Widget *parent, const IDParam *id);
