@@ -50,6 +50,7 @@ int modemWakeupPending;
 SceUInt32 pinStatusRequeued;
 SceUInt32 controlFlagMask;
 SceUInt32 controlFlagSet;
+SceUInt32 smsReadStep;
 SceUID swdlTimerId;
 SceUInt32 swdlNextStep;
 
@@ -2465,4 +2466,132 @@ failed:
 	swdlFreeRequest();
 	memset(&swdlWork.request, 0, sizeof(swdlWork.request));
 	return (int)0x80330005;
+}
+
+/* name unknown: command 86 reads an SMS, 88 acknowledges it (deleting it on request) */
+int seqReadSms(BbmcControl *control, BbmcMessage *message)
+{
+	SceUInt32 state, event;
+	int result;
+
+	switch (smsReadStep) {
+	case 0:
+		if (message->command != 86)
+			return 1;
+		bbmcEnterCS(&control->mutex);
+		if (control->smsReadState != 1 || control->smsListBusy != 0) {
+			result = 0;
+		} else {
+			BbcmdArgument output[6];
+			BbcmdArgument input[7];
+			SceUInt32 memoryIndex = message->body.smsReadRequest.memoryIndex;
+
+			output[0].pointer = message->body.smsReadRequest.format;
+			output[1].pointer = message->body.smsReadRequest.data;
+			output[2].pointer = message->body.smsReadRequest.length;
+			output[3].value = 0;
+			output[4].value = 0;
+			output[5].value = 0;
+			input[0].value = memoryIndex;
+			input[1].value = 0;
+			input[2].value = 0;
+			input[3].value = memoryIndex;
+			input[4].value = 0;
+			input[5].value = 0;
+			input[6].value = 0;
+			result = bbcmdExecute(0, 0x10, input, output,
+					      bbcmdManagerCompletion, control);
+			if (result < 0) {
+				smsReadStep = 4;
+				event = 0x80;
+				state = 4;
+				bbmcLeaveCS(&control->mutex);
+				goto check;
+			}
+			smsReadStep = 1;
+		}
+		bbmcLeaveCS(&control->mutex);
+		state = 0;
+		event = 0;
+check:
+		if (smsReadStep != 4)
+			return 1;
+		bbmcEnterCS(&control->mutex);
+		control->smsReadState = state;
+		bbmcLeaveCS(&control->mutex);
+		if (event == 0)
+			goto finish;
+		goto notify;
+	case 1:
+		if (message->command != 87)
+			return 1;
+		result = message->body.smsMessage.readResult;
+		if (result != 0) {
+			state = 4;
+			event = 0x80;
+			smsReadStep = 4;
+			break;
+		}
+		bbmcEnterCS(&control->mutex);
+		control->smsReadState = 4;
+		bbmcLeaveCS(&control->mutex);
+		bbmcNotifyFeatureEvent(control, 2, 4);
+		smsReadStep = 2;
+		return 1;
+	case 2:
+		if (message->command != 88)
+			return 1;
+		if (message->body.smsReadAcknowledgement.deleteMessage == 1) {
+			BbcmdArgument input[7];
+
+			input[0].value = message->body.smsReadAcknowledgement.memoryIndex;
+			input[1].value = 0;
+			input[2].value = 0;
+			input[3].value = 0;
+			input[4].value = 0;
+			input[5].value = 0;
+			input[6].value = 0;
+			result = bbcmdExecute(0, 0x11, input, NULL,
+					      bbcmdManagerCompletion, control);
+			if (result >= 0) {
+				smsReadStep = 3;
+				return 1;
+			}
+			smsReadStep = 4;
+			event = 0x100;
+			bbmcEnterCS(&control->mutex);
+			control->smsReadState = 0;
+			bbmcLeaveCS(&control->mutex);
+			goto notify;
+		}
+		smsReadStep = 4;
+		state = 0;
+		result = 0;
+		event = 0x10;
+		break;
+	case 3:
+		if (message->command != 89)
+			return 1;
+		result = message->body.smsMessage.completion.acknowledgementResult;
+		smsReadStep = 4;
+		state = 0;
+		event = result != 0 ? 0x100 : 0x10;
+		break;
+	default:
+		result = (int)0x80330001;
+		state = 0;
+		event = 0x100;
+		smsReadStep = 4;
+		break;
+	}
+	bbmcEnterCS(&control->mutex);
+	control->smsReadState = state;
+	bbmcLeaveCS(&control->mutex);
+notify:
+	bbmcNotifyFeatureEvent(control, 2, event);
+finish:
+	if (control->flags & 4)
+		result = bbmcSendSimpleMessage(control, 92);
+	smsReadStep = 0;
+	return result < 0 ? result : 0;
 }
