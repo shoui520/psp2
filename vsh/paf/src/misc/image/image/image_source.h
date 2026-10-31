@@ -13,6 +13,8 @@
 namespace paf {
 namespace image {
 
+class ImageCodec;
+
 /* Whether buf starts with the format's signature. */
 bool IsGim(common::SharedPtr<Buffer> buf);
 bool IsPng(common::SharedPtr<Buffer> buf);
@@ -37,7 +39,7 @@ public:
 	virtual ~ImageDecoder();
 
 	common::SharedPtr<Buffer> m_buffer;
-	int32_t m_errortype;
+	ImageCodec *m_codec;
 };
 
 /* PNG, JPEG, TIFF, GIF and BMP in a file, read from offset. */
@@ -55,12 +57,10 @@ public:
 	virtual ~ImageFileDecoder();
 
 	common::SharedPtr<File> m_file;
-	void *m_codec;
 	int64_t m_offset;
 	size_t m_size;
-	bool m_opened;
-	int32_t m_errortype;
-	void *m_userdata;
+	bool m_opened;		/* opened here by name: closed with the decoder */
+	ImageCodec *m_codec;
 };
 
 class GimDecoder : public ImageSource {
@@ -76,7 +76,7 @@ public:
 	virtual ~GimDecoder();
 
 	common::SharedPtr<Buffer> m_buffer;
-	int32_t m_errortype;
+	ImageCodec *m_codec;
 };
 
 class DdsDecoder : public ImageSource {
@@ -92,7 +92,7 @@ public:
 	virtual ~DdsDecoder();
 
 	common::SharedPtr<Buffer> m_buffer;
-	int32_t m_errortype;
+	ImageCodec *m_codec;
 };
 
 class GxtDecoder : public ImageSource {
@@ -108,7 +108,7 @@ public:
 	virtual ~GxtDecoder();
 
 	common::SharedPtr<Buffer> m_buffer;
-	int32_t m_errortype;
+	ImageCodec *m_codec;
 };
 
 /* Pixels and a palette already in memory, used as they are. */
