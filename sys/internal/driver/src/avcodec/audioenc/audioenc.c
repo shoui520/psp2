@@ -18,6 +18,7 @@ static const char *const audioencMutexNames[2] = {
 	"SceAudioencCelp", "SceAudioencSilk"
 };
 
+#if FW_DEBUG
 SCE_DBGINFO_DEFINE(static, copyOutInfoSource, 631, "_copyOutSceAudioenc");
 SCE_DBGINFO_DEFINE(static, copyOutInfoDestination, 632, "_copyOutSceAudioenc");
 SCE_DBGINFO_DEFINE(static, copyOutCtrlInfo, 776, "_copyOutSceAudioencCtrl");
@@ -34,6 +35,7 @@ SCE_DBGINFO_DEFINE(static, createEncoderBudget, 1211, "sceAudioencCreateEncoderF
 SCE_DBGINFO_DEFINE(static, deleteEncoderBudget, 1390, "sceAudioencDeleteEncoderForUser");
 SCE_DBGINFO_DEFINE(static, copyInCtrlInfo, 691, "_copyInSceAudioencCtrl");
 SCE_DBGINFO_DEFINE(static, copyInCtrlInfoDestination, 692, "_copyInSceAudioencCtrl");
+#endif
 
 int _copyOutSceAudioencCtrl(SceAudioencCtrl *userCtrl, SceAudioencInfo *userInfo,
 			  SceAudioencOptInfo *userOptInfo, SceAudioencCtrl *ctrl)

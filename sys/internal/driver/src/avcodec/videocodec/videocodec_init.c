@@ -17,6 +17,16 @@
 /* not a game process: no budget for the library's memory block */
 #define VIDEOCODEC_ERROR_NOT_GAME_PROCESS	(-2141059008)	/* 0x80620840 */
 
+/*
+ * i % 10 by the reciprocal of 10, as Sony's code computes the mutex name digit (exact for
+ * every 32-bit i): in the size-optimized DSP0 loops GCC would call __aeabi_uidivmod, which
+ * the module neither contains nor imports
+ */
+static inline __attribute__((always_inline)) unsigned int videocodecDecimalDigit(unsigned int i)
+{
+	return i - (unsigned int)(((unsigned long long)i * 0xCCCCCCCDu) >> 35) * 10;
+}
+
 int dsp0VideocodecQueryLibraryMemory(const Dsp0VideocodecInitParam *param,
 				   SceSize *memorySize);
 int dsp0VideocodecTermLibraryForProcess(unsigned int library, SceUID pid);
@@ -1118,7 +1128,7 @@ videocodecInitLibraryWithUnmapMemInline(unsigned int codecType, const SceVideode
 		initialized.numOfEncoders = 0;
 		flags = 1;
 		for (i = 0; i < counts.numOfDsp0Decoders; i++) {
-			videocodecSwDecoderMutexName[14] = '0' + i % 10;
+			videocodecSwDecoderMutexName[14] = '0' + videocodecDecimalDigit(i);
 			ret = sceKernelInitializeFastMutex(
 				(SceKernelFastMutex *)&global->dsp0Decoders[i].mutex,
 				videocodecSwDecoderMutexName, 0x8002, 0);
@@ -1130,7 +1140,7 @@ videocodecInitLibraryWithUnmapMemInline(unsigned int codecType, const SceVideode
 			initialized.numOfDsp0Decoders++;
 		}
 		for (i = 0; i < counts.numOfEncoders; i++) {
-			videocodecSwEncoderMutexName[14] = '0' + i % 10;
+			videocodecSwEncoderMutexName[14] = '0' + videocodecDecimalDigit(i);
 			ret = sceKernelInitializeFastMutex(
 				(SceKernelFastMutex *)&global->encoders[i].mutex,
 				videocodecSwEncoderMutexName, 0x8002, 0);

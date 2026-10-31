@@ -5,12 +5,14 @@
 #include <threadmgr/threadmgr.h>
 #include <string.h>
 
+#if FW_DEBUG
 SCE_DBGINFO_DEFINE(static, initLibraryContext, 117, "_audioencInternalInitLibrary");
 SCE_DBGINFO_DEFINE(static, initLibraryContextSize, 120, "_audioencInternalInitLibrary");
 SCE_DBGINFO_DEFINE(static, deleteEncoderContext, 592, "_audioencInternalDeleteEncoder");
 SCE_DBGINFO_DEFINE(static, createEncoderContext, 409, "_audioencInternalCreateEncoder");
 SCE_DBGINFO_DEFINE(static, createEncoderOwner, 433, "_audioencInternalCreateEncoder");
 SCE_DBGINFO_DEFINE(static, exitLibraryContext, 756, "_audioencInternalExitLibrary");
+#endif
 
 int _audioencInternalInitLibrary(AudioencWorkManager *manager,
 			       const SceAudioencInitParam *param, int allocate)

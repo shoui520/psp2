@@ -1,5 +1,5 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(os0_kd_bootimage_avcodec KIND kernel COMPILER gcc48 PARTIAL SOURCES
+psp2_module(os0_kd_bootimage_avcodec KIND kernel COMPILER gcc48 SOURCES
 	entry.c
 	audiodec/audiodec.c
 	audiodec/audiodec_i.c
