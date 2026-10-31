@@ -28,6 +28,25 @@ public:
 	{
 	}
 
+	/* Takes ownership of ptr; on no memory for the counter block it holds nothing. */
+	explicit SharedPtr(T *ptr) : m_ptr(ptr)
+	{
+		if (ptr != NULL) {
+			m_ref_counter = (RefCounter *)operator new(sizeof(RefCounter));
+			if (m_ref_counter != NULL) {
+				m_ref_counter->m_ptr = ptr;
+				m_ref_counter->m_counter = 1;
+				m_ref_counter->m_weak_counter = 1;
+				m_ref_counter->m_deleter = DefaultDeleter;
+			} else {
+				m_ptr = NULL;
+				m_ref_counter = NULL;
+			}
+		} else {
+			m_ref_counter = NULL;
+		}
+	}
+
 	SharedPtr(const SharedPtr &src) : m_ptr(src.m_ptr), m_ref_counter(src.m_ref_counter)
 	{
 		if (m_ptr != NULL)
@@ -74,6 +93,11 @@ public:
 	T &operator*() const
 	{
 		return *m_ptr;
+	}
+
+	static void DefaultDeleter(T *ptr)
+	{
+		delete ptr;
 	}
 
 	T *m_ptr;

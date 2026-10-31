@@ -15,12 +15,6 @@ typedef struct BufferVTable {
 	void (*Delete)(Buffer *self);
 } BufferVTable;
 
-typedef struct BufferClass {
-	int offset_to_top;
-	const void *type_info;
-	BufferVTable methods;
-} BufferClass;
-
 struct Buffer {
 	const BufferVTable *vtable;
 	void *m_addr;
@@ -73,52 +67,27 @@ typedef char BufferVTableSizeCheck[sizeof(BufferVTable) == 20 ? 1 : -1];
 typedef char HeapAllocBufferSizeCheck[sizeof(HeapAllocBuffer) == 16 ? 1 : -1];
 typedef char BufferRefCounterSizeCheck[sizeof(BufferRefCounter) == 16 ? 1 : -1];
 typedef char BufferSharedPtrSizeCheck[sizeof(BufferSharedPtr) == 8 ? 1 : -1];
-typedef char BufferClassSizeCheck[sizeof(BufferClass) == 28 ? 1 : -1];
 typedef char SubBufferSizeCheck[sizeof(SubBuffer) == 20 ? 1 : -1];
 typedef char SubConstBufferSizeCheck[sizeof(SubConstBuffer) == 24 ? 1 : -1];
 typedef char UnmanagedBufferSizeCheck[sizeof(UnmanagedBuffer) == 12 ? 1 : -1];
 typedef char UnmanagedConstBufferSizeCheck[sizeof(UnmanagedConstBuffer) == 16 ? 1 : -1];
 typedef char MallocBufferSizeCheck[sizeof(MallocBuffer) == 12 ? 1 : -1];
 
-#define HeapAllocBufferCreate ScePafMisc_22F87132
-#define HeapAllocBufferAllocate ScePafMisc_E9C6A564
-#define HeapAllocBufferDestroy ScePafMisc_75CB07DC
-#define HeapAllocBufferDelete ScePafMisc_5A9ACD28
-#define HeapAllocBufferDestroyBase ScePafMisc_44C18EAD
-#define SubBufferCreate ScePafMisc_7DE5F71A
-#define SubConstBufferCreate ScePafMisc_86EC46F4
-#define UnmanagedBufferCreate ScePafMisc_7FED0E58
-#define UnmanagedConstBufferCreate ScePafMisc_DEB7A1CF
-#define MallocBufferAllocate ScePafMisc_220C5418
-#define MallocBufferCreate ScePafMisc_7ECAD6F8
-#define MallocBufferDestroy ScePafMisc_D11D7CE3
-#define MallocBufferDelete ScePafMisc_FA39CB2E
-#define MallocBufferDestroyBase ScePafMisc_B7F83390
-#define subBufferClass ScePafMisc_50950FCB
-#define subConstBufferClass ScePafMisc_C817C2F9
-#define unmanagedBufferClass ScePafMisc_E8362884
-#define unmanagedConstBufferClass ScePafMisc_17F973DF
-#define mallocBufferClass ScePafMisc_C1BBF9B4
+/*
+ * The C view of paf::Buffer (include/buffer/buffer.h) for the C files not yet
+ * converted: the factories by their link names. A factory's SharedPtr result
+ * is returned through the pointer in r0; a SharedPtr argument by value is
+ * passed as a pointer to the caller's copy.
+ */
+#define SubBufferCreate _ZN3paf9SubBuffer6CreateEPvjNS_6common9SharedPtrINS_6BufferEEE
+#define SubConstBufferCreate _ZN3paf14SubConstBuffer6CreateEPKvjNS_6common9SharedPtrIKNS_6BufferEEE
+#define UnmanagedBufferCreate _ZN3paf15UnmanagedBuffer6CreateEPvj
+#define UnmanagedConstBufferCreate _ZN3paf20UnmanagedConstBuffer6CreateEPKvj
+#define MallocBufferAllocate _ZN3paf12MallocBuffer8AllocateEj
+#define MallocBufferCreate _ZN3paf12MallocBuffer6CreateEPvj
+#define HeapAllocBufferAllocate _ZN3paf15HeapAllocBuffer8AllocateEjPNS_6memory13HeapAllocatorE
+#define HeapAllocBufferCreate _ZN3paf15HeapAllocBuffer6CreateEPvjPNS_6memory13HeapAllocatorE
 
-extern const BufferClass subBufferClass;
-extern const BufferClass subConstBufferClass;
-extern const BufferClass unmanagedBufferClass;
-extern const BufferClass unmanagedConstBufferClass;
-extern const BufferClass mallocBufferClass;
-
-void *BufferGetAddr(Buffer *self);
-const void *BufferGetConstAddr(const Buffer *self);
-size_t BufferGetSize(const Buffer *self);
-Buffer *BufferDestroy(Buffer *self);
-void BufferDelete(Buffer *self);
-void BufferDefaultDelete(Buffer *ptr);
-void HeapAllocBufferCreate(BufferSharedPtr *result, void *addr, size_t size,
-			   HeapAllocator *allocator);
-void HeapAllocBufferAllocate(BufferSharedPtr *result, size_t size,
-			     HeapAllocator *allocator);
-Buffer *HeapAllocBufferDestroy(Buffer *base);
-Buffer *HeapAllocBufferDestroyBase(Buffer *base);
-void HeapAllocBufferDelete(Buffer *base);
 void SubBufferCreate(BufferSharedPtr *result, void *addr, size_t size,
 		     const BufferSharedPtr *buffer);
 void SubConstBufferCreate(BufferSharedPtr *result, const void *addr, size_t size,
@@ -127,24 +96,10 @@ void UnmanagedBufferCreate(BufferSharedPtr *result, void *addr, size_t size);
 void UnmanagedConstBufferCreate(BufferSharedPtr *result, const void *addr, size_t size);
 void MallocBufferAllocate(BufferSharedPtr *result, size_t size);
 void MallocBufferCreate(BufferSharedPtr *result, void *addr, size_t size);
-Buffer *MallocBufferDestroy(Buffer *base);
-Buffer *MallocBufferDestroyBase(Buffer *base);
-void MallocBufferDelete(Buffer *base);
-Buffer *SubBufferDestroy(Buffer *base);
-Buffer *SubConstBufferDestroy(Buffer *base);
-Buffer *UnmanagedBufferDestroy(Buffer *base);
-Buffer *UnmanagedConstBufferDestroy(Buffer *base);
-void SubBufferDelete(Buffer *base);
-void SubConstBufferDelete(Buffer *base);
-void UnmanagedBufferDelete(Buffer *base);
-void UnmanagedConstBufferDelete(Buffer *base);
-const void *SubConstBufferGetConstAddr(const Buffer *base);
-const void *UnmanagedConstBufferGetConstAddr(const Buffer *base);
-void SubBufferDefaultDelete(Buffer *ptr);
-void SubConstBufferDefaultDelete(Buffer *ptr);
-void MallocBufferDefaultDelete(Buffer *ptr);
-void UnmanagedBufferDefaultDelete(Buffer *ptr);
-void UnmanagedConstBufferDefaultDelete(Buffer *ptr);
+void HeapAllocBufferAllocate(BufferSharedPtr *result, size_t size,
+			     HeapAllocator *allocator);
+void HeapAllocBufferCreate(BufferSharedPtr *result, void *addr, size_t size,
+			   HeapAllocator *allocator);
 
 static inline __attribute__((always_inline))
 void BufferSharedPtrCopy(BufferSharedPtr *self, const BufferSharedPtr *src)

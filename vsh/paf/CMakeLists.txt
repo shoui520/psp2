@@ -21,7 +21,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/module.c
 	src/avout/sound.cpp
 	src/avout/wave.c
-	src/buffer/buffer.c
+	src/buffer/buffer.cpp
 	src/file/file.c
 	src/file/bufferedfile.c
 	src/file/localfile.c
@@ -157,7 +157,7 @@ set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIE
 # them call C1/D1, and CallQueue::Enqueue calls string::assign out of line; budgets 29 to 31 do
 # both (2026-10-31).
 set_source_files_properties(
-	src/job/job.cpp src/math/matrix.cpp src/math/rect.cpp
+	src/buffer/buffer.cpp src/job/job.cpp src/math/matrix.cpp src/math/rect.cpp
 	src/memory/heap_allocator.cpp src/memory/range_allocator.cpp src/memory/pool_allocator.cpp
 	src/thread/callqueue.cpp src/thread/cond.cpp src/thread/mutex.cpp src/thread/priority.cpp
 	src/thread/rmutex.cpp src/thread/rwlock.cpp src/thread/semaphore.cpp src/thread/sleep.cpp
