@@ -1286,20 +1286,25 @@ int ClientImpl::getMsg(SceUInt32 index, void *pBuffer, SceSize *pSize, SceSize b
 	IPMI_ASSERT_SUCCESS(ret);
 	for (;;) {
 		while (pQueue->header.size == 0) {
-			timeout = 500000;
-			ret = pQueue->counter.wait(pTimeout != NULL ? pTimeout : &timeout);
+			/* Without a timeout of the caller's, waits on while the server lives. */
+			for (;;) {
+				timeout = 500000;
+				ret = pQueue->counter.wait(pTimeout != NULL ? pTimeout : &timeout);
+				if (ret != IPMI_ERROR_TIMEOUT)
+					break;
+				if (!is_server_alive()) {
+					ret = IPMI_ERROR_TERMINATED;
+					break;
+				}
+				if (pTimeout != NULL)
+					break;
+			}
 			if (ret == 0) {
 				ret = pQueue->pipe.tryReceive(&pQueue->header, &size,
 							      sizeof(pQueue->header));
 				if (ret != IPMI_ERROR_WOULD_BLOCK)
 					IPMI_ASSERT(size == sizeof(pQueue->header));
 				continue;
-			}
-			if (ret == IPMI_ERROR_TIMEOUT) {
-				if (!is_server_alive())
-					ret = IPMI_ERROR_TERMINATED;
-				else if (pTimeout == NULL)
-					continue;
 			}
 			if (ret == IPMI_ERROR_CANCELED) {
 				if (m_sessionId == 0) {
