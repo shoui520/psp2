@@ -188,12 +188,12 @@ static inline int seqResumeNasIndication(BbmcControl *control, BbmcMessage *mess
 #endif
 		break;
 	}
-	if (resumeNasIndicationStep == 2) {
+	if (resumeNasIndicationStep != 2)
+		return 1;
 complete:
-		resumeNasIndicationStep = 0;
-		if (result >= 0)
-			result = 0;
-	}
+	resumeNasIndicationStep = 0;
+	if (result >= 0)
+		result = 0;
 	return result;
 }
 
