@@ -7,12 +7,6 @@
 
 namespace IPMI {
 
-/* One piece of a method's input: an address and a size (Sony's IPMI::DataInfo). */
-struct DataInfo {
-	const void *pData;
-	SceSize dataSize;
-};
-
 /*
  * The client end of an IPMI connection. Sony's class: IPMI::Client, its implementation
  * IPMI::impl::ClientImpl (client_impl.cpp); the method names are 0.990's.
@@ -23,13 +17,13 @@ public:
 	struct Config {
 		char serviceName[16];
 		SceUInt32 reserved;
-		SceUInt32 requestCount;
-		SceSize maxRequestSize;
-		SceSize maxResponseSize;
 		SceUInt32 syncCallCount;
 		SceSize maxSyncCallInSize;
 		SceSize maxSyncCallOutSize;
 		SceUInt32 asyncCallCount;
+		SceSize maxAsyncCallInSize;
+		SceSize maxAsyncCallOutSize;
+		SceUInt32 eventFlagCount;
 		SceUInt32 msgQueueCount;
 		SceSize msgQueueBufferSize[32];
 		int budget;
@@ -37,13 +31,13 @@ public:
 
 		Config()
 		{
-			requestCount = 1;
-			maxRequestSize = 0xF00;
-			maxResponseSize = 0xF00;
 			syncCallCount = 1;
 			maxSyncCallInSize = 0xF00;
 			maxSyncCallOutSize = 0xF00;
 			asyncCallCount = 1;
+			maxAsyncCallInSize = 0xF00;
+			maxAsyncCallOutSize = 0xF00;
+			eventFlagCount = 1;
 			msgQueueCount = 0;
 			for (int i = 0; i < 32; i++)
 				msgQueueBufferSize[i] = 0;
@@ -52,6 +46,8 @@ public:
 			serviceName[0] = '\0';
 		}
 	};
+
+	Client();
 
 	static int create(Client **ppClient, const Config *pConfig, void *pUserData,
 			  void *pMemory);
@@ -62,8 +58,8 @@ public:
 	virtual int disconnect() = 0;
 	virtual int terminateConnection() = 0;
 	virtual int invokeSyncMethod(SceUInt32 methodId, const void *pIn, SceSize inSize,
-				     int *pResult, void *pOut, SceSize outSize,
-				     SceSize *pOutSize) = 0;
+				     int *pResult, void *pOut, SceSize *pOutSize,
+				     SceSize outSize) = 0;
 	virtual int invokeSyncMethod(SceUInt32 methodId, const DataInfo *pInList,
 				     SceUInt32 inCount, int *pResult, BufferInfo *pOutList,
 				     SceUInt32 outCount) = 0;

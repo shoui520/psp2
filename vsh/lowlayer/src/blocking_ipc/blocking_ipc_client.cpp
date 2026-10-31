@@ -23,15 +23,15 @@ int Client::initialize(const Config *pConfig)
 
 	sceClibStrncpy(clientConfig.serviceName, pConfig->name, sizeof(clientConfig.serviceName));
 	clientConfig.budget = pConfig->budget;
-	clientConfig.requestCount = pConfig->requestCount;
-	clientConfig.maxRequestSize = pConfig->maxRequestSize;
-	clientConfig.maxResponseSize = pConfig->maxResponseSize;
-	clientConfig.syncCallCount = pConfig->syncCallCount + pConfig->blockingIpcCount;
-	clientConfig.maxSyncCallInSize = pConfig->maxSyncCallInSize > pConfig->maxBlockingInSize ?
-		pConfig->maxSyncCallInSize : pConfig->maxBlockingInSize;
-	clientConfig.maxSyncCallOutSize = pConfig->maxSyncCallOutSize > pConfig->maxBlockingOutSize ?
-		pConfig->maxSyncCallOutSize : pConfig->maxBlockingOutSize;
+	clientConfig.syncCallCount = pConfig->syncCallCount;
+	clientConfig.maxSyncCallInSize = pConfig->maxSyncCallInSize;
+	clientConfig.maxSyncCallOutSize = pConfig->maxSyncCallOutSize;
 	clientConfig.asyncCallCount = pConfig->asyncCallCount + pConfig->blockingIpcCount;
+	clientConfig.maxAsyncCallInSize = pConfig->maxAsyncCallInSize > pConfig->maxBlockingInSize ?
+		pConfig->maxAsyncCallInSize : pConfig->maxBlockingInSize;
+	clientConfig.maxAsyncCallOutSize = pConfig->maxAsyncCallOutSize > pConfig->maxBlockingOutSize ?
+		pConfig->maxAsyncCallOutSize : pConfig->maxBlockingOutSize;
+	clientConfig.eventFlagCount = pConfig->eventFlagCount + pConfig->blockingIpcCount;
 	clientConfig.msgQueueCount = pConfig->msgQueueCount;
 	for (i = 0; i < pConfig->msgQueueCount; i++)
 		clientConfig.msgQueueBufferSize[i] =
@@ -73,7 +73,7 @@ int Client::initialize(const Config *pConfig)
 		m_pSlots[i].sema = sema;
 	}
 	m_activeCount = 0;
-	m_eventFlagBase = pConfig->asyncCallCount;
+	m_eventFlagBase = pConfig->eventFlagCount;
 	m_pWaitQueue = NULL;
 	return 0;
 }
@@ -190,7 +190,7 @@ int Client::createRequest(int *pRequestId, const void *pParam, SceSize paramSize
 	IPMI_ASSERT_SUCCESS(ret);
 
 	ret = m_pClient->invokeSyncMethod(METHOD_CREATE_REQUEST, pParam, paramSize, &requestId,
-					  NULL, 0, NULL);
+					  NULL, NULL, 0);
 	IPMI_ASSERT_SUCCESS(ret);
 
 	ret = sceKernelLockLwMutex(&m_mutex, 1, NULL);
@@ -243,7 +243,7 @@ int Client::destroyRequest(int requestId)
 	IPMI_ASSERT_SUCCESS(ret);
 
 	ret = m_pClient->invokeSyncMethod(METHOD_DESTROY_REQUEST, &requestId, sizeof(requestId),
-					  &result, NULL, 0, NULL);
+					  &result, NULL, NULL, 0);
 	IPMI_ASSERT_SUCCESS(ret);
 
 	ret = sceKernelLockLwMutex(&m_mutex, 1, NULL);
@@ -291,7 +291,7 @@ int Client::abortRequest(int requestId)
 		IPMI_ASSERT_SUCCESS(ret);
 
 		ret = m_pClient->invokeSyncMethod(METHOD_ABORT_REQUEST, &requestId,
-						  sizeof(requestId), &result, NULL, 0, NULL);
+						  sizeof(requestId), &result, NULL, NULL, 0);
 		IPMI_ASSERT_SUCCESS(ret);
 
 		ret = sceKernelLockLwMutex(&m_mutex, 1, NULL);
@@ -449,15 +449,15 @@ SceSize Client::getBufferSize(const Config *pConfig)
 	IPMI::Client::Config clientConfig;
 	int i;
 
-	clientConfig.requestCount = pConfig->requestCount;
-	clientConfig.maxRequestSize = pConfig->maxRequestSize;
-	clientConfig.maxResponseSize = pConfig->maxResponseSize;
-	clientConfig.syncCallCount = pConfig->syncCallCount + pConfig->blockingIpcCount;
-	clientConfig.maxSyncCallInSize = pConfig->maxSyncCallInSize > pConfig->maxBlockingInSize ?
-		pConfig->maxSyncCallInSize : pConfig->maxBlockingInSize;
-	clientConfig.maxSyncCallOutSize = pConfig->maxSyncCallOutSize > pConfig->maxBlockingOutSize ?
-		pConfig->maxSyncCallOutSize : pConfig->maxBlockingOutSize;
-	clientConfig.asyncCallCount = pConfig->asyncCallCount + slotCount;
+	clientConfig.syncCallCount = pConfig->syncCallCount;
+	clientConfig.maxSyncCallInSize = pConfig->maxSyncCallInSize;
+	clientConfig.maxSyncCallOutSize = pConfig->maxSyncCallOutSize;
+	clientConfig.asyncCallCount = pConfig->asyncCallCount + pConfig->blockingIpcCount;
+	clientConfig.maxAsyncCallInSize = pConfig->maxAsyncCallInSize > pConfig->maxBlockingInSize ?
+		pConfig->maxAsyncCallInSize : pConfig->maxBlockingInSize;
+	clientConfig.maxAsyncCallOutSize = pConfig->maxAsyncCallOutSize > pConfig->maxBlockingOutSize ?
+		pConfig->maxAsyncCallOutSize : pConfig->maxBlockingOutSize;
+	clientConfig.eventFlagCount = pConfig->eventFlagCount + slotCount;
 	clientConfig.msgQueueCount = pConfig->msgQueueCount;
 	for (i = 0; i < 32; i++)
 		clientConfig.msgQueueBufferSize[i] =
@@ -470,15 +470,15 @@ SceSize Client::getSessionBufferSize(const Config *pConfig)
 {
 	IPMI::Session::Config sessionConfig;
 
-	sessionConfig.requestCount = pConfig->requestCount;
-	sessionConfig.maxRequestSize = pConfig->maxRequestSize;
-	sessionConfig.maxResponseSize = pConfig->maxResponseSize;
-	sessionConfig.syncCallCount = pConfig->syncCallCount + pConfig->blockingIpcCount;
-	sessionConfig.maxSyncCallInSize = pConfig->maxSyncCallInSize > pConfig->maxBlockingInSize ?
-		pConfig->maxSyncCallInSize : pConfig->maxBlockingInSize;
-	sessionConfig.maxSyncCallOutSize = pConfig->maxSyncCallOutSize > pConfig->maxBlockingOutSize ?
-		pConfig->maxSyncCallOutSize : pConfig->maxBlockingOutSize;
+	sessionConfig.syncCallCount = pConfig->syncCallCount;
+	sessionConfig.maxSyncCallInSize = pConfig->maxSyncCallInSize;
+	sessionConfig.maxSyncCallOutSize = pConfig->maxSyncCallOutSize;
 	sessionConfig.asyncCallCount = pConfig->asyncCallCount + pConfig->blockingIpcCount;
+	sessionConfig.maxAsyncCallInSize = pConfig->maxAsyncCallInSize > pConfig->maxBlockingInSize ?
+		pConfig->maxAsyncCallInSize : pConfig->maxBlockingInSize;
+	sessionConfig.maxAsyncCallOutSize = pConfig->maxAsyncCallOutSize > pConfig->maxBlockingOutSize ?
+		pConfig->maxAsyncCallOutSize : pConfig->maxBlockingOutSize;
+	sessionConfig.eventFlagCount = pConfig->eventFlagCount + pConfig->blockingIpcCount;
 	sessionConfig.msgQueueCount = pConfig->msgQueueCount;
 	return IPMI::Session::getBufferSize(&sessionConfig);
 }

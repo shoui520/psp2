@@ -13,13 +13,13 @@ public:
 	/* What the server allocates for one client: the client's Config, as the server sees it. */
 	struct Config {
 		SceUInt32 sessionParam[2];
-		SceUInt32 requestCount;
-		SceSize maxRequestSize;
-		SceSize maxResponseSize;
 		SceUInt32 syncCallCount;
 		SceSize maxSyncCallInSize;
 		SceSize maxSyncCallOutSize;
 		SceUInt32 asyncCallCount;
+		SceSize maxAsyncCallInSize;
+		SceSize maxAsyncCallOutSize;
+		SceUInt32 eventFlagCount;
 		SceUInt32 msgQueueCount;
 		SceSize msgQueueBufferSize[32];
 		int budget;

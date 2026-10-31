@@ -18,7 +18,7 @@ int Server::initialize(const Config *pConfig)
 	int ret;
 
 	m_maxSessions = pConfig->maxSessions;
-	m_asyncCallCount = pConfig->asyncCallCount;
+	m_eventFlagCount = pConfig->eventFlagCount;
 	m_msgQueueCount = pConfig->msgQueueCount;
 	m_activeSessions = 0;
 	m_running = 0;
@@ -28,15 +28,15 @@ int Server::initialize(const Config *pConfig)
 
 	IPMI::Session::Config sessionConfig;
 
-	sessionConfig.requestCount = pConfig->requestCount;
-	sessionConfig.maxRequestSize = pConfig->maxRequestSize;
-	sessionConfig.maxResponseSize = pConfig->maxResponseSize;
-	sessionConfig.syncCallCount = pConfig->syncCallCount + pConfig->blockingIpcCount;
-	sessionConfig.maxSyncCallInSize =
-		SERVER_MAX(pConfig->maxSyncCallInSize, pConfig->maxBlockingInSize);
-	sessionConfig.maxSyncCallOutSize =
-		SERVER_MAX(pConfig->maxSyncCallOutSize, pConfig->maxBlockingOutSize);
+	sessionConfig.syncCallCount = pConfig->syncCallCount;
+	sessionConfig.maxSyncCallInSize = pConfig->maxSyncCallInSize;
+	sessionConfig.maxSyncCallOutSize = pConfig->maxSyncCallOutSize;
 	sessionConfig.asyncCallCount = pConfig->asyncCallCount + pConfig->blockingIpcCount;
+	sessionConfig.maxAsyncCallInSize =
+		SERVER_MAX(pConfig->maxAsyncCallInSize, pConfig->maxBlockingInSize);
+	sessionConfig.maxAsyncCallOutSize =
+		SERVER_MAX(pConfig->maxAsyncCallOutSize, pConfig->maxBlockingOutSize);
+	sessionConfig.eventFlagCount = pConfig->eventFlagCount + pConfig->blockingIpcCount;
 	sessionConfig.msgQueueCount = pConfig->msgQueueCount;
 	sessionSize = IPMI::Session::getBufferSize(&sessionConfig);
 
@@ -54,8 +54,8 @@ int Server::initialize(const Config *pConfig)
 	serverConfig.budget = pConfig->budget;
 	sceClibStrncpy(serverConfig.serviceName, pConfig->name, sizeof(serverConfig.serviceName));
 	serverConfig.pUserData = this;
-	serverConfig.maxMessageSize = SERVER_MAX(SERVER_MAX(pConfig->maxRequestSize,
-		pConfig->maxSyncCallInSize), pConfig->maxBlockingInSize);
+	serverConfig.maxMessageSize = SERVER_MAX(SERVER_MAX(pConfig->maxSyncCallInSize,
+		pConfig->maxAsyncCallInSize), pConfig->maxBlockingInSize);
 	ret = IPMI::Server::create(&m_pServer, &serverConfig, this, this + 1);
 	if (ret != 0)
 		return ret;
@@ -298,17 +298,17 @@ SceSize Server::getBufferSize(const Config *pConfig)
 	IPMI::Session::Config sessionConfig;
 	IPMI::Server::Config serverConfig;
 
-	serverConfig.maxMessageSize = SERVER_MAX(SERVER_MAX(pConfig->maxRequestSize,
-		pConfig->maxSyncCallInSize), pConfig->maxBlockingInSize);
-	sessionConfig.requestCount = pConfig->requestCount;
-	sessionConfig.maxRequestSize = pConfig->maxRequestSize;
-	sessionConfig.maxResponseSize = pConfig->maxResponseSize;
-	sessionConfig.syncCallCount = pConfig->syncCallCount + pConfig->blockingIpcCount;
-	sessionConfig.maxSyncCallInSize =
-		SERVER_MAX(pConfig->maxSyncCallInSize, pConfig->maxBlockingInSize);
-	sessionConfig.maxSyncCallOutSize =
-		SERVER_MAX(pConfig->maxSyncCallOutSize, pConfig->maxBlockingOutSize);
+	serverConfig.maxMessageSize = SERVER_MAX(SERVER_MAX(pConfig->maxSyncCallInSize,
+		pConfig->maxAsyncCallInSize), pConfig->maxBlockingInSize);
+	sessionConfig.syncCallCount = pConfig->syncCallCount;
+	sessionConfig.maxSyncCallInSize = pConfig->maxSyncCallInSize;
+	sessionConfig.maxSyncCallOutSize = pConfig->maxSyncCallOutSize;
 	sessionConfig.asyncCallCount = pConfig->asyncCallCount + pConfig->blockingIpcCount;
+	sessionConfig.maxAsyncCallInSize =
+		SERVER_MAX(pConfig->maxAsyncCallInSize, pConfig->maxBlockingInSize);
+	sessionConfig.maxAsyncCallOutSize =
+		SERVER_MAX(pConfig->maxAsyncCallOutSize, pConfig->maxBlockingOutSize);
+	sessionConfig.eventFlagCount = pConfig->eventFlagCount + pConfig->blockingIpcCount;
 	sessionConfig.msgQueueCount = pConfig->msgQueueCount;
 	return 16 * pConfig->maxSessions +
 		((IPMI::Session::getBufferSize(&sessionConfig) + 15) & ~15) * pConfig->maxSessions +

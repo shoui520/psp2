@@ -35,6 +35,10 @@ extern "C" {
 int sceKernelExitProcess(SceInt32 res);
 SceInt32 sceKernelPowerTick(SceInt32 arg);
 
+/* not in the SDK: the power lock the system libraries hold while they talk to a service */
+int sceKernelPowerLock(int type);
+int sceKernelPowerUnlock(int type);
+
 /* the time since the process started, in microseconds */
 SceInt32 sceKernelGetProcessTime(SceKernelSysClock *pClock);
 SceUInt32 sceKernelGetProcessTimeLow(void);

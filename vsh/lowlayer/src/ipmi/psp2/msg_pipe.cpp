@@ -112,7 +112,7 @@ int MsgPipe::trySend(const void *buf, SceSize size)
 	return ret;
 }
 
-int MsgPipe::sendVector(const BufferInfo *info, SceUInt32 count, SceUInt32 *timeout)
+int MsgPipe::sendVector(const DataInfo *info, SceUInt32 count, SceUInt32 *timeout)
 {
 	SceUInt32 used, i;
 	int ret;
@@ -124,10 +124,10 @@ int MsgPipe::sendVector(const BufferInfo *info, SceUInt32 count, SceUInt32 *time
 
 	used = 0;
 	for (i = 0; i < count; i++, info++) {
-		if (info->bufferSize == 0)
+		if (info->dataSize == 0)
 			continue;
-		vector[used].pBase = info->pBuffer;
-		vector[used].bufSize = info->bufferSize;
+		vector[used].pBase = const_cast<void *>(info->pData);
+		vector[used].bufSize = info->dataSize;
 		used++;
 	}
 	ret = 0;
@@ -144,7 +144,7 @@ int MsgPipe::sendVector(const BufferInfo *info, SceUInt32 count, SceUInt32 *time
 	return ret;
 }
 
-int MsgPipe::trySendVector(const BufferInfo *info, SceUInt32 count)
+int MsgPipe::trySendVector(const DataInfo *info, SceUInt32 count)
 {
 	SceUInt32 used, i;
 	int ret;
@@ -156,10 +156,10 @@ int MsgPipe::trySendVector(const BufferInfo *info, SceUInt32 count)
 
 	used = 0;
 	for (i = 0; i < count; i++, info++) {
-		if (info->bufferSize == 0)
+		if (info->dataSize == 0)
 			continue;
-		vector[used].pBase = info->pBuffer;
-		vector[used].bufSize = info->bufferSize;
+		vector[used].pBase = const_cast<void *>(info->pData);
+		vector[used].bufSize = info->dataSize;
 		used++;
 	}
 	ret = 0;

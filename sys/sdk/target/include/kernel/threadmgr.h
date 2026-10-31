@@ -653,6 +653,8 @@ SceUID sceKernelCreateMsgPipe(const char *pName, SceUInt32 type, SceUInt32 attr,
 			      const SceKernelMsgPipeOptParam *pOptParam);
 SceInt32 sceKernelDeleteMsgPipe(SceUID msgPipeId);
 SceUID sceKernelOpenMsgPipe(const char *pName);
+/* not in the SDK: the process that created the named message pipe */
+SceUID sceKernelGetMsgPipeCreatorId(const char *pName);
 SceInt32 sceKernelCloseMsgPipe(SceUID msgPipeId);
 SceInt32 sceKernelSendMsgPipe(SceUID msgPipeId, const void *pSendBuf, SceSize sendSize,
 			      SceUInt32 waitMode, SceSize *pResult, SceUInt32 *pTimeout);

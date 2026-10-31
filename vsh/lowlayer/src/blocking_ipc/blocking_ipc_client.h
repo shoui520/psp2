@@ -40,16 +40,16 @@ class Client {
 public:
 	struct Config {
 		char name[32];
-		SceUInt32 requestCount;
-		SceSize maxRequestSize;
-		SceSize maxResponseSize;
 		SceUInt32 syncCallCount;
 		SceSize maxSyncCallInSize;
 		SceSize maxSyncCallOutSize;
+		SceUInt32 asyncCallCount;
+		SceSize maxAsyncCallInSize;
+		SceSize maxAsyncCallOutSize;
 		SceUInt32 blockingIpcCount;
 		SceSize maxBlockingInSize;
 		SceSize maxBlockingOutSize;
-		SceUInt32 asyncCallCount;
+		SceUInt32 eventFlagCount;
 		SceUInt32 msgQueueCount;
 		struct {
 			SceSize msgSize;

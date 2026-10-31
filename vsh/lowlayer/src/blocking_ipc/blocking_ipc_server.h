@@ -51,16 +51,16 @@ public:
 		int threadPriority;
 		SceSize threadStackSize;
 		SceUInt32 maxSessions;
-		SceUInt32 requestCount;
-		SceSize maxRequestSize;
-		SceSize maxResponseSize;
 		SceUInt32 syncCallCount;
 		SceSize maxSyncCallInSize;
 		SceSize maxSyncCallOutSize;
+		SceUInt32 asyncCallCount;
+		SceSize maxAsyncCallInSize;
+		SceSize maxAsyncCallOutSize;
 		SceUInt32 blockingIpcCount;
 		SceSize maxBlockingInSize;
 		SceSize maxBlockingOutSize;
-		SceUInt32 asyncCallCount;
+		SceUInt32 eventFlagCount;
 		SceUInt32 msgQueueCount;
 		struct {
 			SceSize msgSize;
@@ -105,7 +105,7 @@ private:
 	};
 
 	SceUInt32 m_maxSessions;
-	SceUInt32 m_asyncCallCount;
+	SceUInt32 m_eventFlagCount;
 	SceUInt32 m_msgQueueCount;
 	SceUInt32 m_slotCount;
 	IPMI::Server *m_pServer;

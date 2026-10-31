@@ -4,7 +4,6 @@
 
 #include "gxm_internal.h"
 
-int SceLibKernel_9F793F84(void);	/* the application's SDK version */
 int sceKernelGetProcessTitleId(char *titleId, SceSize size);
 
 #define SCE_GXM_INITIALIZE_FLAG_PB_LPDDR		0x00000001

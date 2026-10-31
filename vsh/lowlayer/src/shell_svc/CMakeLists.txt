@@ -7,6 +7,8 @@ psp2_module(vs0_sys_external_libshellsvc KIND user COMPILER snc PARTIAL SOURCES
 	libshellsvc.c
 	../blocking_ipc/blocking_ipc_client.cpp
 	../blocking_ipc/blocking_ipc_server.cpp
+	${ipmi_source}/client.cpp
+	${ipmi_source}/client_impl.cpp
 	${ipmi_source}/psp2/event_flag.cpp
 	${ipmi_source}/psp2/msg_pipe.cpp
 	${ipmi_source}/psp2/mutex.cpp

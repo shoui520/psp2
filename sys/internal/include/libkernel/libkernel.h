@@ -84,6 +84,9 @@ SceBool sceClibMspaceIsHeapEmpty(void *mspace);
 uint32_t sceKernelAtomicCompareAndSet32(uint32_t *address, uint32_t expected,
 					uint32_t replacement);
 
+/* the SDK version the calling process was built with (sdkVersion of its process param) */
+uint32_t SceLibKernel_9F793F84(void);
+
 /* the calling thread's TLS word at index */
 void *sceKernelGetTLSAddr(SceUInt32 index);
 

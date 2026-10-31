@@ -17,10 +17,17 @@ enum MemoryBudget {
 	PHYCONT_BUDGET = 3
 };
 
-/* An address and a size, one part of a message sent in pieces. */
+/* One piece of a message or a method's input: an address and a size (Sony's IPMI::DataInfo). */
+struct DataInfo {
+	const void *pData;
+	SceSize dataSize;
+};
+
+/* One of a method's output buffers (Sony's IPMI::BufferInfo): outSize is what was written. */
 struct BufferInfo {
 	void *pBuffer;
 	SceSize bufferSize;
+	SceSize outSize;
 };
 
 namespace impl {
@@ -39,8 +46,8 @@ public:
 	int close();
 	int send(const void *buf, SceSize size, SceUInt32 *timeout);
 	int trySend(const void *buf, SceSize size);
-	int sendVector(const BufferInfo *info, SceUInt32 count, SceUInt32 *timeout);
-	int trySendVector(const BufferInfo *info, SceUInt32 count);
+	int sendVector(const DataInfo *info, SceUInt32 count, SceUInt32 *timeout);
+	int trySendVector(const DataInfo *info, SceUInt32 count);
 	int tryReceive(void *buf, SceSize *result, SceSize size);
 	int cancel();
 
