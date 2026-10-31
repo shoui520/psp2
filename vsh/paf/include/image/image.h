@@ -72,8 +72,8 @@ public:
 	 * srcimages; dstcluts gets srccluts when it has buffers.
 	 */
 	bool Operate(const ImageAttribute *srcattr, const ImageArray *srcimages,
-		     const ImageArray *srccluts, const ImageAttribute *dstattr,
-		     ImageArray *dstimages, ImageArray *dstcluts);
+		     const ImageArray *srccluts, ImageAttribute *dstattr, ImageArray *dstimages,
+		     ImageArray *dstcluts);
 
 	/* Takes parent as the image to work on and makes the header of the result. */
 	bool SetParent(Image *parent, ImageAttribute *dstattr, ImageArray *dstimages,
