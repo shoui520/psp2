@@ -37,6 +37,7 @@ SceUInt32 attachChangeStep;
 SceUInt32 networkScanStep;
 SceUInt32 controlFlagStep;
 SceUInt32 setupStep;
+SceUInt32 pinUnlockStep;
 SceUInt32 firmwarePreferenceStep;
 SceUInt32 firmwareImageStep;
 SceUInt32 setFirmwarePreferenceStep;
@@ -1492,7 +1493,7 @@ int seqAccessSetupValue(BbmcControl *control, BbmcMessage *message)
 			input[0].value = kind;
 			input[1].value = message->body.setupMessage.valueSize;
 			input[2].value = 1;
-			input[3].pointer = message->body.setupMessage.inputBuffer;
+			input[3].value = (SceUInt32)message->body.setupMessage.inputBuffer;
 			bbmcEnterCS(&control->mutex);
 			switch (kind) {
 			case 1:
@@ -1640,4 +1641,360 @@ int seqSendResultMessage(BbmcControl *control, SceInt32 value)
 		return result;
 	}
 	return result;
+}
+
+/* name unknown: message 34 unlocks the SIM: read the PIN state, then verify or unblock it */
+int seqUnlockPin(BbmcControl *control, BbmcMessage *message)
+{
+	SceUInt32 step = pinUnlockStep;
+	SceUInt32 flags, command, pinUnavailable;
+	SceInt32 value, reported;
+	unsigned int completed;
+	SceUInt8 retries;
+	BbmcMessage *reply;
+	int result;
+
+	switch (step) {
+	case 0:
+		if (message->command != 34)
+			return 1;
+		flags = control->flags;
+		if (flags & 5) {
+			value = (flags & 1) ? (int)0x80330006 : (int)0x8033000a;
+			reply = msgAllocMsgPacket(control, 35);
+			if (reply == NULL) {
+				result = (int)0x80330005;
+				goto check;
+			}
+			reply->body.commandResult = value;
+			result = msgSendMsgPacket(control, reply);
+			if (result < 0) {
+				msgFreeMsgPacket(control, reply);
+				goto check;
+			}
+			pinUnlockStep = 0;
+			return 1;
+		}
+		completed = 0;
+		result = bbcmdGetCompletedMask(0, &completed);
+		if (result < 0)
+			goto failed;
+		if ((completed & 4) == 0)
+			goto check;
+		{
+			BbcmdArgument output[6] = {{0}};
+			BbcmdArgument input[7] = {{0}};
+
+			bbmcEnterCS(&control->mutex);
+			memset(&control->unblockPin, 0, sizeof(control->unblockPin));
+			control->pinStatus.pin1UnblockRetries = 0;
+			control->pinStatus.pin1VerifyRetries = 0;
+			input[0].value = 1;
+			output[1].pointer = &control->pinStatus.pin1VerifyRetries;
+			output[2].pointer = &control->pinStatus.pin1UnblockRetries;
+			bbmcLeaveCS(&control->mutex);
+			result = bbcmdExecute(0, 0x0b, input, output,
+					      bbcmdManagerCompletion, control);
+			if (result < 0)
+				goto failed;
+		}
+		pinUnlockStep = 1;
+		return 1;
+	case 1:
+		flags = control->flags;
+		if (flags & 5) {
+			value = (flags & 1) ? (int)0x80330006 : (int)0x8033000a;
+			reply = msgAllocMsgPacket(control, 35);
+			if (reply == NULL) {
+				result = (int)0x80330005;
+				goto failed;
+			}
+sendReply:
+			reply->body.commandResult = value;
+			result = msgSendMsgPacket(control, reply);
+			if (result < 0)
+				msgFreeMsgPacket(control, reply);
+			goto failed;
+		}
+		command = message->command;
+		if (command != 64)
+			goto other;
+		result = message->body.pinMessage.cardStatusResult;
+		if (result != 0)
+			goto failed;
+		bbmcEnterCS(&control->mutex);
+		if (message->body.pinMessage.cardUnavailable == 1) {
+			control->pinStatus.pin1Status = 3;
+			reported = 3;
+			pinUnlockStep = 7;
+			goto report;
+		}
+		pinUnavailable = message->body.pinMessage.pinStatusUnavailable;
+		if (message->body.pinMessage.applicationNotReady == 1) {
+			if (pinUnavailable == 1) {
+				BbcmdArgument output[1];
+
+				bbmcEnterCS(&control->mutex);
+				memset(control->indexedResponses, 0,
+				       sizeof(control->indexedResponses));
+				output[0].pointer = control->indexedResponses;
+				bbmcLeaveCS(&control->mutex);
+				pinUnlockStep = 6;
+				result = bbcmdExecute(0, 0x31, NULL, output,
+						      bbcmdManagerCompletion, control);
+				if (result < 0)
+					goto failed;
+				goto leave;
+			}
+		} else if (pinUnavailable == 1) {
+			reported = 4;
+			pinUnlockStep = 7;
+			goto report;
+		}
+		if (message->body.pinMessage.status.flags.blocked == 1) {
+			bbmcNotifyFeatureEvent(control, 4, 8);
+			control->pinStatus.pin1Status = 1;
+			pinUnlockStep = 3;
+		} else if (message->body.pinMessage.status.flags.enabled != 1 ||
+			   message->body.pinMessage.status.flags.verified != 0) {
+			if (message->body.pinMessage.status.flags.enabled == 0 ||
+			    message->body.pinMessage.status.flags.verified == 1) {
+				bbmcNotifyFeatureEvent(control, 4, 0x40);
+				control->pinStatus.pin1Status = 0;
+				reported = 0;
+				pinUnlockStep = 7;
+			} else {
+				reported = 1;
+				bbmcNotifyFeatureEvent(control, 4, 0x80);
+				control->pinStatus.pin1Status = 3;
+				pinUnlockStep = 7;
+			}
+report:
+			bbmcLeaveCS(&control->mutex);
+			reply = msgAllocMsgPacket(control, 35);
+			if (reply == NULL) {
+				result = (int)0x80330005;
+				goto failed;
+			}
+			reply->body.commandResult = reported;
+			result = msgSendMsgPacket(control, reply);
+			if (result < 0) {
+				msgFreeMsgPacket(control, reply);
+				goto failed;
+			}
+			goto check;
+		} else {
+			bbmcNotifyFeatureEvent(control, 4, 4);
+			control->pinStatus.pin1Status = 2;
+			pinUnlockStep = 2;
+		}
+leave:
+		bbmcLeaveCS(&control->mutex);
+		goto check;
+	case 2:
+	case 3:
+		if (control->flags != 0) {
+			bbmcNotifyFeatureEvent(control, 4, pinUnlockStep == 3 ? 32 : 16);
+			reply = msgAllocMsgPacket(control, 35);
+			if (reply == NULL) {
+				result = (int)0x80330005;
+				goto check;
+			}
+			reply->body.commandResult = 1;
+			result = msgSendMsgPacket(control, reply);
+			if (result >= 0)
+				goto failed;
+			msgFreeMsgPacket(control, reply);
+			goto check;
+		}
+		switch (message->command) {
+		case 11:
+			goto cancelled;
+		case 32: {
+			BbcmdArgument input[7] = { { .value = control->flags } };
+			SceUInt32 pukLength, pinLength;
+
+			bbmcEnterCS(&control->mutex);
+			pukLength = control->unblockPin.pukLength;
+			input[1].value = pukLength;
+			pinLength = control->unblockPin.pinLength;
+			if (pukLength - 8 <= 25)
+				input[0].pointer = control->unblockPin.puk;
+			input[3].value = pinLength;
+			if (pinLength - 4 <= 5)
+				input[2].pointer = control->unblockPin.pin;
+			bbmcLeaveCS(&control->mutex);
+			result = bbcmdExecute(0, 0x0d, input, NULL,
+					      bbcmdManagerCompletion, control);
+			if (result >= 0) {
+				pinUnlockStep = 5;
+				return 1;
+			}
+			break;
+		}
+		case 33: {
+			BbcmdArgument input[7] = { { .value = control->flags } };
+			SceUInt32 pinLength;
+
+			bbmcEnterCS(&control->mutex);
+			pinLength = control->unblockPin.pinLength;
+			input[1].value = pinLength;
+			if (pinLength <= 9)
+				input[0].pointer = control->unblockPin.pin;
+			bbmcLeaveCS(&control->mutex);
+			result = bbcmdExecute(0, 0x0c, input, NULL,
+					      bbcmdManagerCompletion, control);
+			if (result >= 0) {
+				pinUnlockStep = 4;
+				return 1;
+			}
+			break;
+		}
+		default:
+			return 1;
+		}
+		goto failed;
+	case 4:
+	case 5:
+		command = message->command;
+		if (command - 65 > 1)
+			goto other;
+		memset(&control->unblockPin, 0, sizeof(control->unblockPin));
+		result = message->body.pinMessage.status.result;
+		if (result < 0) {
+			if (control->flags & 4) {
+				result = seqSendResultMessage(control, (int)0x8033000a);
+				if (result < 0)
+					goto check;
+				goto failed;
+			}
+			if (result != (int)0x8033500c &&
+			    (SceUInt32)result - 0x80335023 > 1)
+				goto failed;
+			retries = message->body.pinMessage.detail.retries;
+			if (step == 5) {
+				control->pinStatus.pin1UnblockRetries = retries;
+				if (message->body.pinMessage.detail.retries == 0) {
+					bbmcNotifyFeatureEvent(control, 4, 0x880);
+					bbmcEnterCS(&control->mutex);
+					control->pinStatus.pin1Status = 3;
+					bbmcLeaveCS(&control->mutex);
+					result = seqSendResultMessage(control, 1);
+					if (result < 0)
+						goto check;
+					goto failed;
+				}
+				bbmcNotifyFeatureEvent(control, 4, 0xa00);
+				pinUnlockStep = 3;
+			} else {
+				control->pinStatus.pin1VerifyRetries = retries;
+				if (message->body.pinMessage.detail.retries == 0) {
+					bbmcNotifyFeatureEvent(control, 4, 0x808);
+					control->pinStatus.pin1Status = 1;
+					result = bbmcSendSimpleMessage(control, 20);
+					if (result >= 0) {
+						pinUnlockStep = 3;
+						return 1;
+					}
+					goto failed;
+				}
+				bbmcNotifyFeatureEvent(control, 4, 0xc00);
+				pinUnlockStep = 2;
+			}
+			result = bbmcSendSimpleMessage(control, 20);
+			if (result >= 0)
+				goto check;
+		} else if (step == 5) {
+			control->pinStatus.pin1Status = 2;
+			control->pinStatus.pin1UnblockRetries = 10;
+			flags = control->flags;
+			control->pinStatus.pin1VerifyRetries =
+				message->body.pinMessage.detail.retries;
+			if (flags & 4) {
+				reply = msgAllocMsgPacket(control, 35);
+				if (reply == NULL) {
+					result = (int)0x80330005;
+					goto check;
+				}
+				reply->body.commandResult = (int)0x8033000a;
+				result = msgSendMsgPacket(control, reply);
+				if (result >= 0) {
+					pinUnlockStep = 2;
+					return 1;
+				}
+				msgFreeMsgPacket(control, reply);
+				goto check;
+			}
+			bbmcNotifyFeatureEvent(control, 4, 4);
+			result = bbmcSendSimpleMessage(control, 20);
+			if (result >= 0) {
+				pinUnlockStep = 2;
+				return 1;
+			}
+		} else {
+			bbmcEnterCS(&control->mutex);
+			control->pinStatus.pin1Status = 4;
+			retries = message->body.pinMessage.detail.retries;
+			control->pinStatus.pin1UnblockRetries = 10;
+			control->pinStatus.pin1VerifyRetries = retries;
+			bbmcLeaveCS(&control->mutex);
+			bbmcNotifyFeatureEvent(control, 4, 0x100);
+			reply = msgAllocMsgPacket(control, 35);
+			if (reply == NULL) {
+				result = (int)0x80330005;
+				goto check;
+			}
+			reply->body.commandResult = 0;
+			result = msgSendMsgPacket(control, reply);
+			if (result < 0) {
+				msgFreeMsgPacket(control, reply);
+				goto check;
+			}
+		}
+		goto failed;
+	case 6:
+		if (message->command != 181)
+			return 1;
+		value = message->body.commandResult;
+		if (value == 0)
+			value = (bbmcCollectIndexedResponseEvents(control) & 0x1000000) ?
+				2 : 4;
+		if (control == NULL) {
+			result = (int)0x80330002;
+			goto failed;
+		}
+		reply = msgAllocMsgPacket(control, 35);
+		if (reply == NULL) {
+			result = (int)0x80330005;
+			goto failed;
+		}
+		goto sendReply;
+	default:
+		result = (int)0x80330001;
+		goto failed;
+	}
+other:
+	if (command != 11)
+		return 1;
+cancelled:
+	result = 0;
+	goto failed;
+check:
+	if (pinUnlockStep != 7)
+		return 1;
+failed:
+	pinUnlockStep = 0;
+	memset(&control->unblockPin, 0, sizeof(control->unblockPin));
+	if (result < 0) {
+		if (control != NULL) {
+			reply = msgAllocMsgPacket(control, 35);
+			if (reply != NULL) {
+				reply->body.commandResult = result;
+				if (msgSendMsgPacket(control, reply) < 0)
+					msgFreeMsgPacket(control, reply);
+			}
+		}
+		return result;
+	}
+	return 0;
 }
