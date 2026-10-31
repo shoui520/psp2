@@ -57,3 +57,5 @@ psp2_module(os0_kd_bootimage_bbmc KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	usb_host.c
 	usb_device.c
 )
+# The updater decompresses the modem images with bzip2 1.0.5.
+target_include_directories(os0_kd_bootimage_bbmc PRIVATE "${PSP2_SRC}/contrib/bzip2-1.0.5")

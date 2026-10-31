@@ -17,6 +17,7 @@ upstream. When a build needs another file, add it from the same release.
 | bsd-stdio-net2-5.47 | 4.3BSD Net/2 `vfprintf.c` 5.47 | the file | sysclib (`bsd_prnt.c` + patch) |
 | bsd-stdlib-7.0.0 | FreeBSD 7.0 `strtoll.c` | the file | sysclib |
 | bsd-string-1998 | FreeBSD 7.0 `strlcpy.c` | the file | sysclib |
+| bzip2-1.0.5 | bzip2 1.0.5 | `bzlib.h` (the decompressor sources when built) | bbmc (updater) |
 | dlmalloc-2.8.3 | Doug Lea's malloc 2.8.3 | `malloc.c` | libkernel (heap) |
 | dlmalloc-2.8.4 | Doug Lea's malloc 2.8.4 | `malloc.c` | sysmem, libpaf |
 | gcc-4.8-2014.05 | Sourcery CodeBench Lite 2014.05-28 GCC, the base of Sony's GCC | the ARM runtime files libkernel reads | libkernel (through `toolchains/libgcc`) |
