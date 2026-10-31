@@ -335,7 +335,8 @@ int modemWakeupCallback(SceSysconPacket *packet, void *argp);
 void swdlComPowerTimeoutHandler(void *arg);
 
 /* updater/updater_seq_QMDM6200.c */
-int _udSeqEdlPrepare(BbmcControl *control, BbmcMessage *message);
+int _udSeqUpdate_QMDM6200(BbmcControl *control, BbmcMessage *message);
+SceInt32 udSelectBootTarget(BbmcControl *control, SceInt32 targetState);
 
 /* the sequences _managerThread offers every message to, in its order */
 int seqSysconEvent(BbmcControl *control, BbmcMessage *message);

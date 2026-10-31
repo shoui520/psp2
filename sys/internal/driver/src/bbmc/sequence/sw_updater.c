@@ -43,8 +43,8 @@ static const SceKernelDebugInfoSource dbg__udSeqPrepareComPower_L491Source
 
 /* the updater sequence of each update handler */
 static int (*const udSequences[2])(BbmcControl *, BbmcMessage *) = {
-	_udSeqEdlPrepare,
-	_udSeqEdlPrepare,
+	_udSeqUpdate_QMDM6200,
+	_udSeqUpdate_QMDM6200,
 };
 
 SceUInt32 udSeqStep;

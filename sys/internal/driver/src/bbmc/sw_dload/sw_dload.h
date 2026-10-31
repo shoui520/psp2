@@ -146,7 +146,8 @@ typedef struct SwdlUpdateRequest {
 	SceUID fd;			/* the Intel HEX image (the boot loader) */
 	SceUID partitionTableFd;
 	SceUID imageFds[3];
-	SceUInt32 reserved[2];
+	SceSize hexSize;
+	SceSize partitionTableSize;
 	SceSize imageSizes[3];
 } SwdlUpdateRequest;
 
@@ -295,3 +296,8 @@ int swdlRequestDownloadMode(void);
 int swdlWaitAttach(int extended);
 /* name unknown: wait 5 s for the download device to detach */
 int swdlWaitDetach(void);
+int swdlRequestBackup(const SwdlBackupRequest *request);
+int swdlRequestRestore(const SwdlRestoreRequest *request);
+int swdlRequestUpdate(const SwdlUpdateRequest *request);
+int swdlRequestDownload(const SwdlDownloadRequest *request);
+int swdlCancel(void);

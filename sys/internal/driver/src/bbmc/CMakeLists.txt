@@ -57,6 +57,7 @@ psp2_module(os0_kd_bootimage_bbmc KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	sequence/sw_updater.c
 	sequence/update_gps.c
 	updater/updater_QMDM6200.c
+	updater/updater_seq_QMDM6200.c
 	${bbmc_bzip2_sources}
 	bbmc_syscon_events.c
 	bbmc_operation_mode.c

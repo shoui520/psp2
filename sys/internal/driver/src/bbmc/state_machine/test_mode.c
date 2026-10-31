@@ -9,7 +9,6 @@ int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
 void bbmcSaveTransitionState(BbmcControl *control, SceInt32 status,
 	SceUInt32 step);
 SceUInt32 bbmcSelectOperationMode(BbmcControl *control, SceUInt32 operationMode);
-SceInt32 udSelectBootTarget(BbmcControl *control, SceInt32 targetState);
 
 int stmInitial_ComBoot(BbmcControl *control, BbmcMessage *message);
 int stmComBoot_TestMode(BbmcControl *control, BbmcMessage *message);
