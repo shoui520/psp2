@@ -110,6 +110,35 @@ extern "C" {
 #define SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR_LIST		0x00001000U
 #define SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_ALLOW_PARTIAL_OP		0x04000000U
 
+/*
+ * The user allocation options: SceKernelAllocMemBlockOpt as the kernel reads it, up to 0x40
+ * bytes (sysmem's AllocMemBlockForUser; libshellsvc's text clipboard passes all of it). The
+ * client fields go to SceKernelAllocMemBlockKernelOpt's of the same names.
+ */
+typedef struct MemBlockUserOpt {
+	SceSize size;			/* 0x14, 0x38, 0x3c or 0x40 */
+	SceUInt32 attr;
+	SceSize alignment;		/* 0x08 */
+	SceUID uidBaseBlock;		/* 0x0c */
+	const char *strBaseBlockName;	/* 0x10 */
+	SceUInt32 openFlags;		/* 0x14: to opt.openFlags */
+	SceUInt32 capabilities[8];	/* 0x18: to opt.capabilities */
+	SceUInt32 unitSize;		/* 0x38: to opt.unitSize */
+	SceUInt32 extAttr;		/* 0x3c: bit 0 DMAC clear, bit 1 never */
+} MemBlockUserOpt;
+
+#ifndef __cplusplus	/* C only; g++ 4.8 (C++98) has no static_assert */
+_Static_assert(sizeof(MemBlockUserOpt) == 0x40, "MemBlockUserOpt size");
+#endif
+
+/* sceKernelOpenMemBlock's flags; also the openFlags a client-info block allows */
+#define MEMBLOCK_OPEN_RO		0x10
+#define MEMBLOCK_OPEN_RW		0x30
+
+/* SceSysmem's user syscalls for named blocks, which the SDK does not declare */
+SceUID sceKernelOpenMemBlock(const char *name, SceUInt32 flags);
+int sceKernelCloseMemBlock(SceUID uid);
+
 /* the access sceKernelLockRangeWithMode checks (memblock.c gives a type's access in these bits) */
 typedef enum SceKernelMemoryRefPerm {
 	SCE_KERNEL_MEMORY_REF_PERM_ANY		= 0,

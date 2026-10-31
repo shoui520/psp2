@@ -1160,18 +1160,6 @@ int sceKernelFreeMemBlock(SceUID guid)
 	return FreeMemBlockCore(guid, 0, NULL, NULL, NULL, NULL);
 }
 
-/* the user allocation options: SceKernelAllocMemBlockOpt as the kernel reads it, up to 0x40 bytes */
-typedef struct MemBlockUserOpt {
-	SceSize size;			/* 0x14, 0x38, 0x3c or 0x40 */
-	SceUInt32 attr;
-	SceSize alignment;		/* 0x08 */
-	SceUID uidBaseBlock;		/* 0x0c */
-	const char *strBaseBlockName;	/* 0x10 */
-	SceUInt32 client[9];		/* 0x14: to opt fields 0x34..0x54 */
-	SceUInt32 unitSize;		/* 0x38: to opt.unitSize */
-	SceUInt32 extAttr;		/* 0x3c: bit 0 DMAC clear, bit 1 never */
-} MemBlockUserOpt;
-
 /* the attr bits each option size accepts (the rest must be clear) */
 #define USER_OPT_ATTR_INVALID_14	0xfedfbffb
 #define USER_OPT_ATTR_INVALID_38	0xfedfbfdb
@@ -1338,15 +1326,15 @@ SceUID AllocMemBlockForUser(const char *userName, SceUInt32 type, SceSize size, 
 	}
 	if (uopt.size >= 0x38) {
 		if (kopt.attr & ALLOC_ATTR_HAS_CLIENT_INFO) {
-			kopt.openFlags = uopt.client[0];
-			kopt.capabilities[0] = uopt.client[1];
-			kopt.capabilities[1] = uopt.client[2];
-			kopt.capabilities[2] = uopt.client[3];
-			kopt.capabilities[3] = uopt.client[4];
-			kopt.capabilities[4] = uopt.client[5];
-			kopt.capabilities[5] = uopt.client[6];
-			kopt.capabilities[6] = uopt.client[7];
-			kopt.capabilities[7] = uopt.client[8];
+			kopt.openFlags = uopt.openFlags;
+			kopt.capabilities[0] = uopt.capabilities[0];
+			kopt.capabilities[1] = uopt.capabilities[1];
+			kopt.capabilities[2] = uopt.capabilities[2];
+			kopt.capabilities[3] = uopt.capabilities[3];
+			kopt.capabilities[4] = uopt.capabilities[4];
+			kopt.capabilities[5] = uopt.capabilities[5];
+			kopt.capabilities[6] = uopt.capabilities[6];
+			kopt.capabilities[7] = uopt.capabilities[7];
 		}
 		if (uopt.size >= 0x40 && (kopt.attr & ALLOC_ATTR_HAS_UNIT_SIZE))
 			kopt.unitSize = uopt.unitSize;
@@ -2543,8 +2531,6 @@ int sceKernelFreeMemBlockForVMForUser(SceUID puid)
 }
 #endif
 
-#define MEMBLOCK_OPEN_RO		0x10
-#define MEMBLOCK_OPEN_RW		0x30
 
 #if !SYSMEM_NSKBL
 /*
