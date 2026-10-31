@@ -159,24 +159,6 @@ void ScePafMisc_3C2E7C36(uint8_t *object, uint32_t first, uint32_t flag,
 	object[12] = (uint8_t)((old_flags & ~1) | (flag & 1));
 }
 
-int ScePafMisc_D7F9C062(const uint32_t *object, uint32_t needle)
-{
-	const uint32_t *head = (const uint32_t *)(uintptr_t)object[0];
-	const uint32_t *item;
-
-	if (!head)
-		return 0;
-	item = (const uint32_t *)(uintptr_t)head[1];
-	while (item != head) {
-		if (item[2] == needle)
-			return 1;
-		if (!item)
-			break;
-		item = (const uint32_t *)(uintptr_t)item[1];
-	}
-	return 0;
-}
-
 int ScePafMisc_D88EEBD8(const uint8_t *object)
 {
 	const uint32_t *words = (const uint32_t *)object;

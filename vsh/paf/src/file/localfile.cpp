@@ -30,15 +30,15 @@ LocalFile::LocalFile() : m_lock_mutex("ScePafLocalFileCsLock", 0)
 	CreateImpl();
 }
 
-common::SharedPtr<LocalFile> LocalFile::Open(const char *path, uint32_t flag, uint32_t mode,
-					     int32_t *error)
+common::SharedPtr<File> LocalFile::Open(const char *path, uint32_t flag, uint32_t mode,
+					int32_t *error)
 {
 	LocalFile *file = new LocalFile();
 
 	if (file == NULL) {
 		if (error != NULL)
 			*error = SCE_PAF_ERROR_FILE_NO_MEMORY;
-		return common::SharedPtr<LocalFile>();
+		return common::SharedPtr<File>();
 	}
 
 	OpenArg arg;
@@ -53,9 +53,9 @@ common::SharedPtr<LocalFile> LocalFile::Open(const char *path, uint32_t flag, ui
 	if (error != NULL)
 		*error = ret;
 	if (file->IsOpened())
-		return common::SharedPtr<LocalFile>(file);
+		return common::SharedPtr<File>(file);
 	delete file;
-	return common::SharedPtr<LocalFile>();
+	return common::SharedPtr<File>();
 }
 
 int32_t LocalFile::GetFileType() const
@@ -403,11 +403,11 @@ LocalFile::~LocalFile()
 	DeleteImpl();
 }
 
-common::SharedPtr<LocalFile> LocalFile::OpenUrl(const char *path, uint32_t flag, uint32_t mode,
-						int32_t *error, bool *ignored)
+common::SharedPtr<File> LocalFile::OpenUrl(const char *path, uint32_t flag, uint32_t mode,
+					   int32_t *error, bool *ignored)
 {
 	if (ignored == NULL || *ignored)
-		return common::SharedPtr<LocalFile>();
+		return common::SharedPtr<File>();
 	return Open(path, flag, mode, error);
 }
 

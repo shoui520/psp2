@@ -30,6 +30,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/localfile.cpp
 	src/file/localfile_platform.cpp
 	src/file/memfile.cpp
+	src/file/openurl.cpp
 	src/file/httpfile.cpp
 	src/file/httpfile_reader.cpp
 	src/file/httpfile_range_reader.cpp
@@ -180,9 +181,10 @@ set_source_files_properties("${paf_dlmalloc_source}" PROPERTIES COMPILE_OPTIONS 
 # while IsResourcePath is inlined: budget 16 does both, 12 and 20 do not (2026-10-31).
 set_source_files_properties(src/cache/cache_image.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)
 
-# HttpFile's, LocalFile's and MemFile's units were written and matched at the C++ units' budget, 30
-# (2026-10-31): LocalFile's constructors inline CreateImpl, its destructor Close and DeleteImpl.
+# The file units (HttpFile, LocalFile, MemFile, OpenUrl) were written and matched at the C++
+# units' budget, 30 (2026-10-31): LocalFile's constructors inline CreateImpl, its destructor Close and DeleteImpl.
 set_source_files_properties(
 	src/file/httpfile.cpp src/file/httpfile_reader.cpp src/file/httpfile_range_reader.cpp
 	src/file/localfile.cpp src/file/localfile_platform.cpp src/file/memfile.cpp
+	src/file/openurl.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)

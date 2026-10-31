@@ -212,7 +212,7 @@ ScePaf:
         - _ZN3paf11inputdevice20InputGestureListener19OnUpdateGesturePortEPKNS0_4DataEj: 0x001F903C
         - _ZN3paf9LocalFile5CloseEv: 0x00383A45
         - _ZNK3paf4math4recteqERKS1_: 0x00387752
-        - ScePafMisc_0078AC09: 0x0078AC09
+        - _ZN3paf7OpenUrl18UnregisterOpenFuncEPFNS_6common9SharedPtrINS_4FileEEEPKcjjPiPbE: 0x0078AC09
         - _ZN3paf17LocalFilePsp2Impl5AbortEv: 0x00AB4F34
         - _ZN3paf3UrlaSERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x00CF14FB
         - _ZN3paf4math4rect9set_rightEf: 0x013C980E
@@ -230,7 +230,7 @@ ScePaf:
         - _ZN3paf5image6filter6RotateEPNS0_11ImageBufferEPKS2_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatENS0_15ImageRotateTypeE: 0x0474CEB5
         - _ZN3paf11inputdevice11touchscreen3EndEv: 0x0495CE33
         - _ZN3paf5cache16CacheManagerImpl16AllocInstantHeapEj: 0x049AEA94
-        - ScePafMisc_04B4652F: 0x04B4652F
+        - _ZN3paf7OpenUrlD2Ev: 0x04B4652F
         - _ZN3paf12BufferedFile4ReadEPvj: 0x04D2DDC1
         - _ZN3paf5Timer15DoFuncSineInOutEf: 0x04DEE7F8
         - _ZN3paf17get_time_internalEv: 0x050A790F
@@ -320,7 +320,7 @@ ScePaf:
         - _ZN3paf7MemFile4OpenEPKvjPi: 0x19FE55A8
         - _ZN3paf6memory14RangeAllocatorC2EPvjPKcPKNS1_6OptionE: 0x1A257563
         - _ZNK3paf3Url16GetAnchorWStringEv: 0x1A33F18C
-        - ScePafMisc_1AD9BAA9: 0x1AD9BAA9
+        - _ZN3paf7OpenUrl4OpenEPKcjjPi: 0x1AD9BAA9
         - _ZN3paf3rtc21ConvertDateTimeToTickEPKNS0_8DateTimeEPy: 0x1B012451
         - _ZN3paf8HttpFile9ReadAsyncEPvj: 0x1B7C42FA
         - ScePafMisc_1B896933: 0x1B896933
@@ -494,7 +494,7 @@ ScePaf:
         - _ZN3paf15HeapAllocBufferD2Ev: 0x44C18EAD
         - _ZN3paf7MemFile9ReadAsyncEPvj: 0x44FE3320
         - _ZNK3paf14BufferedReader13GetCapabilityEv: 0x4558694C
-        - ScePafMisc_45755C06: 0x45755C06
+        - _ZN3paf7OpenUrlC1Ev: 0x45755C06
         - _ZNK3paf8HttpFile17GetResponsePhraseERNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x45ADBF5A
         - _ZN3paf5Timer21DoFuncCustomExpoInOutEfPKf: 0x45BF143C
         - ScePafMisc_4638FBA1: 0x4638FBA1
@@ -603,7 +603,7 @@ ScePaf:
         - _ZN3paf8compress10DecompressEPvjPKvjNS0_14DecompressTypeE: 0x5E39FCE1
         - _ZN3paf5cache12CacheManager19IsRequestedShutdownEv: 0x5F18F5F7
         - _ZNK3paf5image5Image16GetCLUTArraySizeEv: 0x5F20E13E
-        - ScePafMisc_600A1245: 0x600A1245
+        - _ZN3paf7OpenUrlD1Ev: 0x600A1245
         - _ZNK3paf5cache12CacheManager7GetNameEv: 0x603E93D8
         - _ZN3paf17LocalFilePsp2Impl10WriteAsyncEPKvj: 0x604D3C31
         - _ZN3paf4math4rectC2Effff: 0x6070930D
@@ -921,7 +921,7 @@ ScePaf:
         - _ZN3paf17LocalFilePsp2Impl11GetFileSizeEPKc: 0xAC689344
         - _ZN3paf5image5Image14TransparentizeEf: 0xACD51BED
         - ScePafMisc_ACE64B1E: 0xACE64B1E
-        - ScePafMisc_AD0652C4: 0xAD0652C4
+        - _ZN3paf7OpenUrl16RegisterOpenFuncEPFNS_6common9SharedPtrINS_4FileEEEPKcjjPiPbE: 0xAD0652C4
         - _ZN3paf5cache9CacheBase5ClearEv: 0xAD1073C1
         - ScePafMisc_AD3D3047: 0xAD3D3047
         - ScePafMisc_AD5E57B0: 0xAD5E57B0
@@ -1000,7 +1000,7 @@ ScePaf:
         - ScePafMisc_BE023998: 0xBE023998
         - ScePafMisc_BE18253B: 0xBE18253B
         - ScePafMisc_BE315CCB: 0xBE315CCB
-        - ScePafMisc_BEA27D34: 0xBEA27D34
+        - _ZN3paf7OpenUrlC2Ev: 0xBEA27D34
         - _ZN3paf11inputdevice12motionsensor16SetDeviceHandlerEPFvPNS1_4DataEE: 0xBEA9803E
         - _ZN3paf9LocalFileC1EPNS_6memory13HeapAllocatorE: 0xBEDFC256
         - _ZN3paf5Timer12DoFuncFasterEf: 0xBF0D952A
@@ -1105,7 +1105,7 @@ ScePaf:
         - _ZNK3paf4math4rect5rightEv: 0xD7825ABE
         - _ZN3paf12HttpResponseD2Ev: 0xD7CB06F9
         - _ZN3paf4math10quaternion18FromEulerAnglesZXYENS0_2v3E: 0xD7E919C5
-        - ScePafMisc_D7F9C062: 0xD7F9C062
+        - _ZNK3paf7OpenUrl20IsRegisteredOpenFuncEPFNS_6common9SharedPtrINS_4FileEEEPKcjjPiPbE: 0xD7F9C062
         - _ZN3paf5cache9CacheBase17CheckLongLifeHeapEPS1_: 0xD88EEBD8
         - _ZN3paf8datetime8DateTime13GetDateFormatEv: 0xD8B77FA4
         - ScePafMisc_D8D642F5: 0xD8D642F5

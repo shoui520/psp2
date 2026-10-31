@@ -98,10 +98,11 @@ public:
 	virtual int32_t SetPriority(int32_t priority);
 	virtual ~LocalFile();
 
-	static common::SharedPtr<LocalFile> Open(const char *path, uint32_t flag, uint32_t mode,
-						 int32_t *error);
-	static common::SharedPtr<LocalFile> OpenUrl(const char *path, uint32_t flag, uint32_t mode,
-						    int32_t *error, bool *ignored);
+	static common::SharedPtr<File> Open(const char *path, uint32_t flag, uint32_t mode,
+					    int32_t *error);
+	/* An OpenUrl::OpenFunc: opens path unless *ignored is already set. */
+	static common::SharedPtr<File> OpenUrl(const char *path, uint32_t flag, uint32_t mode,
+					       int32_t *error, bool *ignored);
 	static int32_t Getstat(const char *path, LocalFileStat *stat);
 	static int64_t GetFileSize(const char *path);
 	static int32_t RemoveFile(const char *path);
