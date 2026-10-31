@@ -589,9 +589,9 @@ static int _udSeqEdlDownload(BbmcControl *control, BbmcMessage *message)
 			udSeqSubState = 0;
 			return result;
 		}
-		if (bbmcIsTransportReady(control)) {
+		if (bbmcIsTransportReady(control) == 1) {
 			swdlCancel();
-			control->lastError = (int)0x80330101;
+			control->lastError = (int)0x80330701;
 		}
 		return 0;
 	default:
