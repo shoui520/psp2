@@ -148,6 +148,290 @@ private:
 	thread::Mutex m_mutex;
 };
 
+class DdsAttribute : public ImageAttribute {
+public:
+	DdsAttribute();
+
+	virtual bool GetAttribute(uint32_t key, bool &value);
+	virtual bool GetAttribute(uint32_t key, int &value);
+	virtual bool GetAttribute(uint32_t key, float &value);
+	virtual bool GetAttribute(uint32_t key, string &value);
+	virtual ~DdsAttribute();
+};
+
+struct DdsHeader;
+
+/* The mipmap levels of one face of a DDS image, in the file's data. */
+struct DdsSurface {
+	DdsSurface()
+	{
+		for (int32_t i = 0; i < 16; i++)
+			mip[i] = NULL;
+	}
+
+	const uint8_t *mip[16];
+};
+
+/* What a DDS file's header says, and where its surfaces are. */
+struct DdsInfo {
+	DdsInfo()
+		: data(NULL), mode(ImageMode_NONE), reserved(0), channels(0), width(0), height(0),
+		  mipcount(0), facecount(0), error(0)
+	{
+	}
+
+	/* Reads the file at buf; error is set when it cannot be read. */
+	DdsInfo(common::SharedPtr<Buffer> buf);
+
+	/* The bytes of a w x h surface in mode. */
+	static size_t GetSurfaceSize(uint32_t w, uint32_t h, ImageMode mode);
+	bool GetFormat(const DdsHeader *header, ImageMode *mode, int32_t *channels);
+
+	const uint8_t *data;
+	ImageMode mode;
+	int32_t reserved;
+	int32_t channels;
+	uint32_t width;
+	uint32_t height;
+	uint32_t mipcount;
+	uint32_t facecount;
+	DdsSurface surface[6];
+	int32_t error;
+};
+
+/* DDS: DXT1, DXT3, DXT5, RGBA8888, BGRA8888, RGB888, A8 and L8, from memory. */
+class DdsCodec : public ImageCodec {
+public:
+	DdsCodec();
+
+	virtual bool LoadImage(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       const ImageAttribute *attr, ImageArray *images, ImageArray *cluts,
+			       DecodeCancelFunc cancelfunc, void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts, DecodeCancelFunc cancelfunc,
+			       void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual ~DdsCodec();
+
+private:
+	DdsInfo m_info;
+};
+
+class PngAttribute : public ImageAttribute {
+public:
+	PngAttribute();
+
+	virtual bool GetAttribute(uint32_t key, bool &value);
+	virtual bool GetAttribute(uint32_t key, int &value);
+	virtual bool GetAttribute(uint32_t key, float &value);
+	virtual bool GetAttribute(uint32_t key, string &value);
+	virtual ~PngAttribute();
+};
+
+/* PNG. */
+class PngCodec : public ImageCodec {
+public:
+	PngCodec();
+
+	virtual bool LoadImage(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       const ImageAttribute *attr, ImageArray *images, ImageArray *cluts,
+			       DecodeCancelFunc cancelfunc, void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts, DecodeCancelFunc cancelfunc,
+			       void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual ~PngCodec();
+
+private:
+	/* PROVISIONAL: the codec's state, until image_png.cpp is written (0x40 bytes in all). */
+	uint8_t m_state[0x34];
+};
+
+class JpgAttribute : public ImageAttribute {
+public:
+	JpgAttribute();
+
+	virtual bool GetAttribute(uint32_t key, bool &value);
+	virtual bool GetAttribute(uint32_t key, int &value);
+	virtual bool GetAttribute(uint32_t key, float &value);
+	virtual bool GetAttribute(uint32_t key, string &value);
+	virtual ~JpgAttribute();
+
+private:
+	/* PROVISIONAL: until image_jpg.cpp is written (0x60 bytes in all). */
+	uint8_t m_state[8];
+};
+
+/* JPEG. */
+class JpgCodec : public ImageCodec {
+public:
+	JpgCodec();
+
+	virtual bool LoadImage(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       const ImageAttribute *attr, ImageArray *images, ImageArray *cluts,
+			       DecodeCancelFunc cancelfunc, void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts, DecodeCancelFunc cancelfunc,
+			       void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual ~JpgCodec();
+
+private:
+	/* PROVISIONAL: the codec's state, until image_jpg.cpp is written (0x370 bytes in all). */
+	uint8_t m_state[0x364];
+};
+
+class TifAttribute : public ImageAttribute {
+public:
+	TifAttribute();
+
+	virtual bool GetAttribute(uint32_t key, bool &value);
+	virtual bool GetAttribute(uint32_t key, int &value);
+	virtual bool GetAttribute(uint32_t key, float &value);
+	virtual bool GetAttribute(uint32_t key, string &value);
+	virtual ~TifAttribute();
+};
+
+/* TIFF. */
+class TifCodec : public ImageCodec {
+public:
+	TifCodec();
+
+	virtual bool LoadImage(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       const ImageAttribute *attr, ImageArray *images, ImageArray *cluts,
+			       DecodeCancelFunc cancelfunc, void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts, DecodeCancelFunc cancelfunc,
+			       void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual ~TifCodec();
+
+private:
+	/* PROVISIONAL: the codec's state, until image_tif.cpp is written (0xa8 bytes in all). */
+	uint8_t m_state[0x9c];
+};
+
+class GifAttribute : public ImageAttribute {
+public:
+	GifAttribute();
+
+	virtual bool GetAttribute(uint32_t key, bool &value);
+	virtual bool GetAttribute(uint32_t key, int &value);
+	virtual bool GetAttribute(uint32_t key, float &value);
+	virtual bool GetAttribute(uint32_t key, string &value);
+	virtual ~GifAttribute();
+};
+
+/* GIF. */
+class GifCodec : public ImageCodec {
+public:
+	GifCodec();
+
+	virtual bool LoadImage(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       const ImageAttribute *attr, ImageArray *images, ImageArray *cluts,
+			       DecodeCancelFunc cancelfunc, void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts, DecodeCancelFunc cancelfunc,
+			       void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual ~GifCodec();
+
+private:
+	/* PROVISIONAL: the codec's state, until image_gif.cpp is written (0x68 bytes in all). */
+	uint8_t m_state[0x5c];
+};
+
+class GimAttribute : public ImageAttribute {
+public:
+	GimAttribute();
+
+	virtual bool GetAttribute(uint32_t key, bool &value);
+	virtual bool GetAttribute(uint32_t key, int &value);
+	virtual bool GetAttribute(uint32_t key, float &value);
+	virtual bool GetAttribute(uint32_t key, string &value);
+	virtual ~GimAttribute();
+};
+
+/* GIM. */
+class GimCodec : public ImageCodec {
+public:
+	GimCodec();
+
+	virtual bool LoadImage(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       const ImageAttribute *attr, ImageArray *images, ImageArray *cluts,
+			       DecodeCancelFunc cancelfunc, void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts, DecodeCancelFunc cancelfunc,
+			       void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual ~GimCodec();
+};
+
+class GxtAttribute : public ImageAttribute {
+public:
+	GxtAttribute();
+
+	virtual bool GetAttribute(uint32_t key, bool &value);
+	virtual bool GetAttribute(uint32_t key, int &value);
+	virtual bool GetAttribute(uint32_t key, float &value);
+	virtual bool GetAttribute(uint32_t key, string &value);
+	virtual ~GxtAttribute();
+};
+
+/* GXT. */
+class GxtCodec : public ImageCodec {
+public:
+	GxtCodec();
+
+	virtual bool LoadImage(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       const ImageAttribute *attr, ImageArray *images, ImageArray *cluts,
+			       DecodeCancelFunc cancelfunc, void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts, DecodeCancelFunc cancelfunc,
+			       void *userdata);
+	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<File> file, int64_t offset, size_t size,
+			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
+	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
+			       ImageArray *images, ImageArray *cluts);
+	virtual ~GxtCodec();
+
+private:
+	/* PROVISIONAL: the codec's state, until image_gxt.cpp is written (0x2c bytes in all). */
+	uint8_t m_state[0x20];
+};
+
 }
 }
 
