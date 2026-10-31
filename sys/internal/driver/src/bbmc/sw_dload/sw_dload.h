@@ -29,7 +29,67 @@ typedef struct SwdlHexReader {
 
 _Static_assert(sizeof(SwdlHexReader) == 44, "HEX reader");
 
-/* name unknown: the download module's state (one, at g_swdlContextStorage) */
+/* name unknown: the port the download runs over (SceBbmcSwdlPort), as its users see it */
+typedef struct SwdlPortInterface {
+	int (*open)(struct SwdlPortInterface *port, int mode);
+	int (*close)(struct SwdlPortInterface *port, int mode);
+	int (*send)(struct SwdlPortInterface *port, const void **data, SceSize *size, int wait);
+	int (*control)(struct SwdlPortInterface *port, int command, void *data, SceSize size);
+	int (*receive)(struct SwdlPortInterface *port, void *data, SceSize *size, int wait);
+	int (*reserved20)(struct SwdlPortInterface *port, ...);
+	int (*reserved24)(struct SwdlPortInterface *port, ...);
+	void *owner;
+	int (*eventHandler)(struct SwdlPortInterface *port, SceUInt32 events);
+} SwdlPortInterface;
+
+struct SwdlContext;
+
+/* name unknown: an NV item the backup saves, with the instances after it */
+typedef struct SwdlNvItem {
+	SceUInt16 id;
+	SceUInt16 instances;
+} SwdlNvItem;
+
+/* name unknown: the backup file: swdlBackupHeader, the magic, the table header and
+ * then one record per item */
+typedef struct SwdlNvRecordHeader {
+	SceUInt32 magic;		/* "NVTL" for the table, "NVIM" for an item */
+	SceSize size;			/* the table's item count, or the item's bytes */
+} SwdlNvRecordHeader;
+
+/* name unknown: what each request hands the thread (copied into the context) */
+typedef struct SwdlBackupRequest {
+	SceUInt32 reserved0;
+	SceUID fd;			/* the backup file written */
+} SwdlBackupRequest;
+
+typedef struct SwdlRestoreRequest {
+	SceUInt32 reserved0;
+	SceUID fd;			/* the backup file read */
+	SceUInt32 mode;			/* 1: one item more than the file says */
+	SceUInt32 reserved12;
+} SwdlRestoreRequest;
+
+typedef struct SwdlUpdateRequest {
+	SceUInt32 reserved0[3];
+	SceUID fd;			/* the Intel HEX image */
+	SceUInt32 reserved16[9];
+} SwdlUpdateRequest;
+
+typedef struct SwdlDownloadRequest {
+	SceUInt32 reserved0[8];
+} SwdlDownloadRequest;
+
+_Static_assert(sizeof(SwdlUpdateRequest) == 52, "swdl update request");
+
+/* name unknown: one step of a download sequence: what it sends, and what it makes of
+ * the reply (1 next step, 2 previous step) */
+typedef struct SwdlStep {
+	int (*send)(struct SwdlContext *context);
+	int (*receive)(struct SwdlContext *context);
+} SwdlStep;
+
+/* name unknown: the download module's state (one, swdlContextStorage) */
 typedef struct SwdlContext {
 	SceKernelSpinlock lock;
 	SceUInt32 reserved0;
@@ -40,21 +100,55 @@ typedef struct SwdlContext {
 	SceUInt32 mode;
 	int lastError;
 	SceUInt32 reserved20;
-	void *port;
+	SwdlPortInterface *port;
 	SceUInt32 attached;
 	SceUInt32 waiting;		/* 1 attach, 2 detach */
 	void *clientArgument;
 	BbmcNotificationArgs notification;
 	int (*notify)(SceUInt32 mask, const BbmcNotificationArgs *args);
-	SceUInt8 reserved44[0x68 - 0x44];
-	SceUID fd;
-	SceUInt8 reserved6c[0xbc - 0x6c];
-	SceUInt8 *buffer;
+	SwdlBackupRequest backup;
+	SwdlRestoreRequest restore;
+	SwdlUpdateRequest update;
+	SwdlDownloadRequest download;
+	SceUInt32 stepIndex;
+	const SwdlStep *steps;
+	SceUInt32 receiveEvent;		/* 512 frame, 1024 timeout, 2048 cancelled */
+	SceUInt8 *buffer;		/* the frame to send */
 	SceSize bufferLength;
 	SceSize bufferCapacity;
-	SceUInt8 reservedc8[0x548 - 0xc8];
+	const void *transmitData;
+	SceSize transmitLength;
+	int crcRetries;
+	int sendRetries;
+	SceUInt32 transmitState;
+	SceUInt32 savedTransmitState;
+	SceUInt32 timeouts;
+	SceUInt32 responseTimeout;	/* ms */
+	SceUInt8 reservede8[0x10c - 0xe8];
+	SceSize receiveLength;
+	SceUInt8 receiveBuffer[1024];
+	SceUInt8 reserved510[0x518 - 0x510];
+	SceUInt16 nvItem;		/* the NV item in work (0xfffe: none yet) */
+	SceUInt16 nvItemsWritten;
+	SceSize backupSize;		/* bytes written to the backup file */
+	SceUInt32 reserved520;
+	SceUInt32 nvItemsDone;
+	SceUInt32 reserved528;
+	SceUInt32 nvItemTotal;		/* 0xffff: no file */
+	SceUInt32 idCount;
+	const SceUInt16 *ids;		/* the IDs the target reports */
+	SceUInt16 nvTableIndex;		/* in swdlNvItems */
+	SceUInt16 nvTableInstance;	/* of that entry's instances */
+	SceUInt32 progress;		/* percent */
+	SceUInt32 reportedProgress;
+	SceUInt32 reserved544;
 	SwdlHexReader hexReader;
-	SceUInt8 reserved574[0x59c - 0x574];
+	SceUInt8 reserved574[0x584 - 0x574];
+	SceUInt32 timerFlags;		/* 0x400 frame timer, 0x40000/0x80000 attach/detach */
+	SceUInt32 attachTime;
+	SceUInt32 frameTime;		/* ms */
+	SceUInt32 attachTimeout;
+	SceUInt8 reserved594[0x59c - 0x594];
 	SceUInt32 listCount;
 	struct SwdlListNode *list;
 	SceUInt32 reserved5a4;
@@ -62,16 +156,24 @@ typedef struct SwdlContext {
 
 /* name unknown: a node of the context's list */
 typedef struct SwdlListNode {
-	SceUInt32 reserved0;
+	SceSize dataSize;
 	void *data;
-	SceUInt32 reserved8;
+	SceSize extraSize;
 	void *extra;
 	struct SwdlListNode *next;
 } SwdlListNode;
 
 _Static_assert(offsetof(SwdlContext, notify) == 0x40, "swdl notify");
+_Static_assert(offsetof(SwdlContext, stepIndex) == 0xb0, "swdl steps");
+_Static_assert(offsetof(SwdlContext, receiveBuffer) == 0x110, "swdl receive buffer");
+_Static_assert(offsetof(SwdlContext, nvItem) == 0x518, "swdl NV item");
 _Static_assert(offsetof(SwdlContext, hexReader) == 0x548, "swdl HEX reader");
+_Static_assert(offsetof(SwdlContext, timerFlags) == 0x584, "swdl timer flags");
 _Static_assert(sizeof(SwdlContext) == 0x5a8, "swdl context");
+
+/* name unknown: the port the download runs over */
+SwdlPortInterface *swdlCreatePort(void);
+void swdlDestroyPort(SwdlPortInterface *port);
 
 int swdlInitialize(SceUInt32 version, const SwdlClient *client);
 int swdlTerminate(void);
