@@ -47,7 +47,6 @@ extern int bbmcNotifyGpsExtendedNmea(QmiPdsNmeaReport *report);
 extern int bbmcNotifyGpsWifiRequest(QmiPdsWifiRequest *request);
 extern int bbmcNotifyGpsSatellites(QmiPdsSatelliteReport *report);
 extern int bbmcNotifyTrackingStarted(void);
-extern int bbmcSetPacketServiceStatus(int connectionStatus, int reconfigurationRequired);
 
 const SceUInt16 g_qmiSmscParameterMessages[2] = { 53, 52 };
 const SceUInt16 g_qmiSystemSelectionMessages[2] = { 51, 52 };

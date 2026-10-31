@@ -75,6 +75,8 @@ _Static_assert(offsetof(BbmcPacketInterface, expiryLock) == 480, "packet expiry 
 int bbmcInitializeUsbPacketInterface(void);
 int bbmcFinalizeUsbPacketInterface(void);
 int bbmcUnregisterNetworkInterface(void);
+int bbmcSetPacketServiceStatus(int connectionStatus, int reconfigurationRequired);
 int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context);
 int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context);
+int ConnectNetwork(struct NetDriver *driver, int argument);
 int DisconnectNetwork(void);

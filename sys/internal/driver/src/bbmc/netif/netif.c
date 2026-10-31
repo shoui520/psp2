@@ -12,6 +12,7 @@
 #include <udcd/udcd.h>
 #include "../usb_serial.h"
 #include "../usb_device.h"
+#include "../qmi_usb.h"
 #include <threadmgr/threadmgr.h>
 
 extern int bbmcInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
@@ -35,6 +36,16 @@ BbmcPacketInterface g_bbmcPacketInterfaceStorage;
 BbmcPacketInterface *g_bbmcPacketInterface;
 
 #if FW_DEBUG
+static const SceKernelDebugInfo dbg_ConnectNetwork_L910
+	__attribute__((section(".sce_dbginfo"), used)) = {
+	.file = "netif/netif.c", .line = 910, .func = "ConnectNetwork",
+};
+
+static const SceKernelDebugInfoSource dbg_ConnectNetwork_L910Source
+	__attribute__((section(SCE_DBGSRC_SECTION), used)) = {
+	&dbg_ConnectNetwork_L910, "netif/netif.c", 910, "ConnectNetwork",
+};
+
 static const SceKernelDebugInfo dbg_DisconnectNetwork_L1005
 	__attribute__((section(".sce_dbginfo"), used)) = {
 	.file = "netif/netif.c", .line = 1005, .func = "DisconnectNetwork",
@@ -638,6 +649,188 @@ int bbmcUnregisterNetworkInterface(void)
 	return SceNetPsForDriver_F5788FF8(&control->driver);
 }
 
+/* name unknown: report a packet service status change from the modem as interface events */
+int bbmcSetPacketServiceStatus(int connectionStatus, int reconfigurationRequired)
+{
+	unsigned int events = 0;
+
+	if (connectionStatus == 2)
+		events = 4;
+	else if (connectionStatus == 1)
+		events = 8;
+	if (reconfigurationRequired == 1)
+		events |= 32;
+	return bbmcNotifyPacketInterfaceEvent(events, 0);
+}
+
+/*
+ * name unknown: apply interface events (1 link up, 2 link down, 4 USB attached, 8 USB
+ * detached, 16 failed, 32 address lost, 64 call ended, 0x10000 stopped) and report them
+ * to SceNetPs, with status when one is given.
+ */
+int bbmcNotifyPacketInterfaceEvent(unsigned int events, int status)
+{
+	BbmcControl *control = bbmcGetControl();
+	BbmcPacketInterface *interface = &g_bbmcPacketInterfaceStorage;
+	int (*notify)(struct NetDriver *driver, SceUInt64 events, const void *data,
+		      int size);
+	SceKernelIntrStatus intr;
+	SceUInt32 linkState;
+	SceUInt32 low;
+	SceUInt32 high;
+	int statusValid;
+	int started;
+	int result;
+	int i;
+
+	if (control->controlFlags & 4)
+		return 0;
+	bbmcEnterCS(&control->mutex);
+	if (control->connectPending != 0 && (events & 1)) {
+		control->connectPending = 0;
+		started = 1;
+		bbmcLockFastMutex(&interface->flagMutex);
+		interface->linkOpen = 1;
+		bbmcUnlockFastMutex(&interface->flagMutex);
+		linkState = 3;
+	} else {
+		started = 0;
+		linkState = 2;
+	}
+	bbmcLeaveCS(&control->mutex);
+	low = 0;
+	high = (events & 2) ? linkState : started;
+
+	result = events & 4;
+	if (events & 4) {
+		result = qmiGetUsbDeviceSpeed(&interface->usbSpeed);
+		if (result < 0)
+			return result;
+		interface->maxPacketSize = interface->usbSpeed == 2 ? 512 : 64;
+		result = qmiOpenUsbBulkOut();
+		if (result < 0)
+			return result;
+		interface->transmitPipe = result;
+		result = qmiOpenUsbBulkIn();
+		if (result < 0) {
+			qmiCloseUsbPipe(interface->transmitPipe);
+			return result;
+		}
+		interface->receivePipe = result;
+		for (i = 0; i < 4; i++)
+			result = SceUsbdForDriver_235C094A(interface->receivePipe,
+				interface->receiveBuffers[i].data,
+				interface->receiveBuffers[i].length,
+				(SceUsbdDoneCallback)bbmcPacketReceiveCompleted,
+				&interface->receiveBuffers[i]);
+		if (result < 0)
+			return result;
+		low = 1;
+		bbmcLockFastMutex(&interface->flagMutex);
+		interface->usbAttached = 1;
+		bbmcUnlockFastMutex(&interface->flagMutex);
+		interface->expiryTimer = SceThreadmgrForDriver_C58DF384(
+			"SceBbmcPacketIfExpire", 3600000000U, bbmcPacketInterfaceExpire,
+			interface);
+	}
+
+	statusValid = 0;
+	if (events & 8) {
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&interface->expiryLock);
+		if (interface->expiryTimer > 0)
+			sceKernelCancelAlarm(interface->expiryTimer);
+		interface->expiryCount = 0;
+		interface->expiryTimer = 0;
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&interface->expiryLock, intr);
+		interface->ipv4Address = 0;
+		qmiCloseUsbPipe(interface->receivePipe);
+		interface->receivePipe = 0;
+		qmiCloseUsbPipe(interface->transmitPipe);
+		interface->transmitPipe = 0;
+		bbmcEnterCS(&control->mutex);
+		if (control->suspendState != 0) {
+			if (control->operationBusy != 0)
+				control->operationBusy = 0;
+		} else if (control->operationBusy != 0) {
+			high |= 16;
+			control->operationBusy = 0;
+			status = (int)0x80330509;
+			statusValid = 1;
+		} else {
+			low |= 2;
+		}
+		control->pendingPacketRequest = 0;
+		bbmcLockFastMutex(&interface->flagMutex);
+		interface->usbAttached = 0;
+		bbmcUnlockFastMutex(&interface->flagMutex);
+		bbmcLeaveCS(&control->mutex);
+	}
+	if (events & 32) {
+		low |= 4;
+		interface->ipv4Address = 0;
+	}
+	if (events & 0x10000)
+		low |= 0x100000;
+
+	notify = interface->driver.notify;
+	bbmcEnterCS(&control->mutex);
+	if ((control->connectPending != 0 || control->closeNetworkLinkInProgress != 0) &&
+	    (events & 16)) {
+		high |= 8;
+		if (control->connectPending != 0) {
+			control->connectPending = 0;
+			interface->linkOpen = 1;
+			if (status == (int)0x80330505 && control->reservedOperation == 0)
+				bbmcNotifyFeatureEvent(control, 5, 0x20);
+		}
+		bbmcLeaveCS(&control->mutex);
+	} else {
+		bbmcLeaveCS(&control->mutex);
+		if ((events & 64) == 0) {
+			if (low == 0 && high == 0)
+				return result;
+			if (!statusValid) {
+				notify(&interface->driver, ((SceUInt64)high << 32) | low, NULL, 0);
+				return result;
+			}
+			goto report;
+		}
+	}
+	if (events & 64)
+		high |= 16;
+report:
+	notify(&interface->driver, ((SceUInt64)high << 32) | low, &status, 4);
+	return result;
+}
+
+/* the driver's close: take the link down and report it */
+int bbmcCloseNetworkLink(struct NetDriver *driver, int argument)
+{
+	BbmcPacketInterface *interface = driver->private;
+	BbmcControl *control = bbmcGetControl();
+	int result;
+
+	if (control == NULL)
+		return 0x80330003;
+	sceKernelAtomicAddAndGet32((SceInt32 *)&interface->activeCalls, 1);
+	bbmcEnterCS(&control->mutex);
+	control->closeNetworkLinkInProgress = 1;
+	bbmcLockFastMutex(&interface->flagMutex);
+	if (interface->linkOpen != 0) {
+		interface->linkOpen = 0;
+		result = 0;
+		bbmcNotifyPacketInterfaceEvent(2, 0);
+	} else {
+		result = 0x80330508;
+		bbmcNotifyPacketInterfaceEvent(16, 0x80330508);
+	}
+	bbmcUnlockFastMutex(&interface->flagMutex);
+	control->closeNetworkLinkInProgress = 0;
+	bbmcLeaveCS(&control->mutex);
+	sceKernelAtomicSubAndGet32((SceInt32 *)&interface->activeCalls, 1);
+	return result;
+}
+
 int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context);
 int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context);
 
@@ -661,6 +854,93 @@ int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context)
 	device->atOutBuffer = NULL;
 	device->atInBuffer = NULL;
 	return 0;
+}
+
+/* the driver's open: ask the manager to start the packet network (message 103) */
+int ConnectNetwork(struct NetDriver *driver, int argument)
+{
+	BbmcPacketInterface *interface = driver->private;
+	BbmcControl *control = bbmcGetControl();
+	BbmcControl *current;
+	BbmcMessage *message;
+	SceUInt32 suspendState;
+	SceUInt32 scanState;
+	SceUInt32 powerTransitionBusy;
+	int currentState;
+	int status;
+	int result;
+
+	if (control == NULL)
+		return 0x80330003;
+	sceKernelAtomicAddAndGet32((SceInt32 *)&interface->activeCalls, 1);
+	bbmcEnterCS(&control->mutex);
+	bbmcLockFastMutex(&interface->flagMutex);
+	if (control->connectPending != 0 || interface->linkOpen != 0) {
+		result = 0x80330506;
+		bbmcNotifyPacketInterfaceEvent(16, 0x80330506);
+		goto out;
+	}
+	control->connectPending = 1;
+	if (interface->usbAttached != 0 && interface->disconnectPending == 0) {
+		bbmcNotifyPacketInterfaceEvent(1, 0);
+		result = 0;
+		goto out;
+	}
+
+	current = bbmcGetControl();
+	bbmcEnterCS(&current->mutex);
+	currentState = current->currentState;
+	scanState = current->networkScanState;
+	suspendState = current->suspendState;
+	powerTransitionBusy = current->powerTransitionBusy;
+	bbmcLeaveCS(&current->mutex);
+	if ((suspendState & ~4U) != 0) {
+		status = 0x8033000A;
+	} else if ((current->powerEventActive != 0 || current->recentPowerEvent == 0) &&
+		   (powerTransitionBusy != 0 || currentState != 7)) {
+		status = 0x80330501;
+	} else if (current->powerPolicy == 0 && currentState == 6) {
+		status = 0x80330501;
+	} else if (current->normalizedControlState != 0) {
+		status = 0x80330502;
+	} else if (scanState != 0) {
+		status = 0x8033000D;
+	} else {
+		bbmcEnterCS(&current->mutex);
+		if (current->pendingPacketRequest != 0 && interface->disconnectPending == 0) {
+			bbmcLeaveCS(&current->mutex);
+			status = 0x80330504;
+		} else {
+			current->pendingPacketRequest = 1;
+			bbmcLeaveCS(&current->mutex);
+			message = msgAllocMsgPacket(current, 103);
+			if (message == NULL) {
+#if FW_DEBUG
+				sceKernelAssert(0, &dbg_ConnectNetwork_L910,
+						__builtin_return_address(0));
+#endif
+				status = 0x80330005;
+			} else {
+				message->body.networkStart.networkHandle =
+					&interface->networkHandle;
+				message->body.networkStart.ipv4Address = &interface->ipv4Address;
+				message->body.networkStart.hasIpv4Address =
+					&interface->hasIpv4Address;
+				message->body.networkStart.runtimeValue = &interface->runtimeValue;
+				result = msgSendMsgPacket(current, message);
+				if (result >= 0)
+					goto out;
+				status = result;
+			}
+		}
+	}
+	result = 0;
+	bbmcNotifyPacketInterfaceEvent(16, status);
+out:
+	bbmcUnlockFastMutex(&interface->flagMutex);
+	bbmcLeaveCS(&control->mutex);
+	sceKernelAtomicSubAndGet32((SceInt32 *)&interface->activeCalls, 1);
+	return result;
 }
 
 int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context)
@@ -784,6 +1064,67 @@ failed:
 	device->atInterruptBuffer = NULL;
 	device->atOutBuffer = NULL;
 	device->atInBuffer = NULL;
+	return result;
+}
+
+/* ask the manager to stop the packet network (message 104), or retry a start (107) */
+int DisconnectNetwork(void)
+{
+	BbmcPacketInterface *interface = g_bbmcPacketInterface;
+	BbmcControl *control = bbmcGetControl();
+	BbmcMessage *message;
+	SceUInt32 startBusy;
+	SceUInt32 packetRequest;
+	int result;
+
+	bbmcEnterCS(&control->mutex);
+	startBusy = control->networkStartBusy;
+	packetRequest = control->pendingPacketRequest;
+	bbmcLeaveCS(&control->mutex);
+	if (startBusy != 0) {
+		bbmcEnterCS(&control->mutex);
+		if (control->networkRetryPending != 0) {
+			bbmcLeaveCS(&control->mutex);
+			return 0x80330507;
+		}
+		if (control->deferredNetworkStart != 0) {
+			result = 0x80330508;
+			bbmcSendSimpleMessage(control, 107);
+		} else {
+			control->networkRetryPending = 1;
+			result = bbmcSendSimpleMessage(control, 107);
+		}
+		bbmcLeaveCS(&control->mutex);
+		return result;
+	}
+	if (packetRequest == 0)
+		return 0x80330508;
+	bbmcEnterCS(&control->mutex);
+	bbmcLockFastMutex(&interface->flagMutex);
+	if (interface->disconnectPending != 0) {
+		result = 0x80330507;
+	} else if (control->networkStarted != 0 || control->clientOnline != 0 ||
+		   control->clientInitialized != 0) {
+		interface->disconnectPending = 1;
+		message = msgAllocMsgPacket(control, 104);
+		if (message == NULL) {
+			result = 0x80330005;
+#if FW_DEBUG
+			sceKernelAssert(0, &dbg_DisconnectNetwork_L1005,
+					__builtin_return_address(0));
+#endif
+		} else {
+			message->body.networkStop.networkHandle = &interface->networkHandle;
+			control->reservedOperation = 0;
+			result = msgSendMsgPacket(control, message);
+			if (result < 0)
+				control->reservedOperation = 0;
+		}
+	} else {
+		result = 0x80330508;
+	}
+	bbmcUnlockFastMutex(&interface->flagMutex);
+	bbmcLeaveCS(&control->mutex);
 	return result;
 }
 
