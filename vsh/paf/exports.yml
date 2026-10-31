@@ -381,7 +381,7 @@ ScePaf:
         - _ZN3paf4http6ClientC1ERKNS1_5ParamE: 0x2984E347
         - _ZNK3paf4math4rect4leftEv: 0x298EA287
         - _ZN3paf10TimerQueue10EraseFrontEb: 0x29E7434D
-        - ScePafMisc_29E8BCA7: 0x29E8BCA7
+        - _ZN3paf5image5Image11ConvertModeE9ImageModeNS0_20ImageConvertModeTypeE: 0x29E8BCA7
         - _ZN3paf5image14ImageAttributeC2Ev: 0x2A230DDC
         - _ZNK3paf4math4rect6bottomEv: 0x2AC7BCC1
         - _ZN3paf5sound6OutputD1Ev: 0x2AD3D189
@@ -436,7 +436,7 @@ ScePaf:
         - ScePafMisc_376DFF8C: 0x376DFF8C
         - _ZN3paf5image5Image12FadeWithEdgeEv: 0x3778BD50
         - ScePafMisc_37897945: 0x37897945
-        - ScePafMisc_37959090: 0x37959090
+        - _ZN3paf5image5Image4CropERKNS0_9ImageRectE: 0x37959090
         - _ZN3paf8HttpFile7OpenArgC1Ev: 0x37A4ADA9
         - _ZN3paf4math10quaternionC1ERKNS0_6matrixE: 0x3808BC91
         - _ZN3paf6memory13PoolAllocatorD1Ev: 0x38AC0BE6
@@ -451,7 +451,7 @@ ScePaf:
         - ScePafMisc_3BE6AFE6: 0x3BE6AFE6
         - _ZN3paf17TimerListenerList13ListenerParamC2EPNS_13TimerListenerEbPvS4_: 0x3C2E7C36
         - ScePafMisc_3C879D5F: 0x3C879D5F
-        - ScePafMisc_3CA35598: 0x3CA35598
+        - _ZN3paf5image5Image5PasteENS_6common9SharedPtrIS1_EERKNS0_10ImagePointE: 0x3CA35598
         - _ZN3paf5image6filter6ResizeEPNS0_11ImageBufferEPKS2_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatES6_NS0_15ImageResizeTypeEPNS_6memory13HeapAllocatorE: 0x3CF78947
         - ScePafMisc_3D21E902: 0x3D21E902
         - _ZNK3paf4math4rect8get_TLBREv: 0x3D34B4D1
@@ -596,7 +596,7 @@ ScePaf:
         - _ZN3paf6memory13HeapAllocator24sce_paf_dump_heap_statusEv: 0x5C8AD3E0
         - _ZNK3paf7MemFile8IsOpenedEv: 0x5C9FFE3E
         - ScePafMisc_5D36CFBA: 0x5D36CFBA
-        - ScePafMisc_5D401DAA: 0x5D401DAA
+        - _ZN3paf5image5Image11RoundCornerEii: 0x5D401DAA
         - ScePafMisc_5D64A09C: 0x5D64A09C
         - _ZN3paf5cache10CacheImage8FreeHeapEPvS2_: 0x5D7F00C2
         - _ZNK3paf4math4rect11left_bottomEv: 0x5D8D81CB
@@ -1044,7 +1044,7 @@ ScePaf:
         - _ZN3paf5image5Image18CheckAlignArgumentEi: 0xC875DB31
         - _ZN3paf9LocalFile10RemoveFileEPKc: 0xC8CA2008
         - _ZNK3paf14BufferedReader11GetFileTypeEv: 0xC8E1B9B2
-        - ScePafMisc_CA674A19: 0xCA674A19
+        - _ZN3paf5image6filter11ConvertModeEPNS0_11ImageBufferEPKS2_S5_iiRKNS0_11ImageExtentES8_9ImageModeNS0_11ImageFormatES9_NS0_20ImageConvertModeTypeE: 0xCA674A19
         - ScePafMisc_CA7A4BB2: 0xCA7A4BB2
         - ScePafMisc_CAABF0B0: 0xCAABF0B0
         - _ZN3paf5Timer11DoFuncSwingEf: 0xCAF6AD0B
@@ -1111,7 +1111,7 @@ ScePaf:
         - ScePafMisc_D8D642F5: 0xD8D642F5
         - _ZNK3paf5image14ImageAttribute11GetMemPitchEj: 0xD8EBF9E8
         - _ZNK3paf5image5Image8GetYTypeEv: 0xD8F98A86
-        - ScePafMisc_D94BEC9F: 0xD94BEC9F
+        - _ZN3paf5image6filter21ResizeWithConvertModeEPNS0_11ImageBufferEPKS2_S5_iiRKNS0_11ImageExtentES8_9ImageModeNS0_11ImageFormatES9_NS0_15ImageResizeTypeENS0_20ImageConvertModeTypeEPNS_6memory13HeapAllocatorE: 0xD94BEC9F
         - _ZN3paf7Timer2D6DoTickEv: 0xD95E74E7
         - _ZN3paf5cache12CacheManager10ClearCacheERNS_13intrusive_ptrINS0_9CacheBaseEEE: 0xD9DF1BED
         - _ZNK3paf6memory13HeapAllocator12GetBlockTypeEv: 0xD9E9BEC8
@@ -1141,7 +1141,7 @@ ScePaf:
         - _ZNK3paf3Url22GetRelativePathWStringEv: 0xDED512ED
         - _ZN3paf5Timer24DoFuncCustomElasticInOutEfPKf: 0xDF101936
         - _ZN3paf17LocalFilePsp2ImplD0Ev: 0xDF3A09D4
-        - ScePafMisc_DF470C0B: 0xDF470C0B
+        - _ZN3paf5image5Image21ResizeWithConvertModeERKNS0_11ImageExtentENS0_15ImageResizeTypeE9ImageModeNS0_20ImageConvertModeTypeE: 0xDF470C0B
         - ScePafMisc_DF4C99BA: 0xDF4C99BA
         - _ZN3paf5cache9CacheBase9CancelJobEv: 0xDF92A43B
         - _ZN3paf9LocalFileC1Ev: 0xDFE98F6E

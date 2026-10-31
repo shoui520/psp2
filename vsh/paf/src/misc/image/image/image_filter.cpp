@@ -174,25 +174,25 @@ bool filter::Blend(ImageBuffer *dst, const ImageBuffer *src1, const ImageBuffer 
 		   int dst_pitch, int src_pitch, ImageExtent extent, ImageMode mode,
 		   ImageFormat format, float rate)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format) ||
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format) ||
 	    (mode != ImageMode_RGBA8888 && mode != ImageMode_BGRA8888))
 		return false;
 
 	if (rate <= 0.0f) {
-		CopyPixels32((uint32_t *)dst->m_addr, (const uint32_t *)src1->m_addr, dst_pitch,
+		CopyPixels32((uint32_t *)dst->buff, (const uint32_t *)src1->buff, dst_pitch,
 			     src_pitch, extent.w, extent.h, PixelCopy());
 		return true;
 	}
 	if (rate >= 1.0f) {
-		CopyPixels32((uint32_t *)dst->m_addr, (const uint32_t *)src2->m_addr, dst_pitch,
+		CopyPixels32((uint32_t *)dst->buff, (const uint32_t *)src2->buff, dst_pitch,
 			     src_pitch, extent.w, extent.h, PixelCopy());
 		return true;
 	}
 
-	uint8_t *d = (uint8_t *)dst->m_addr;
-	const uint8_t *s1 = (const uint8_t *)src1->m_addr;
-	const uint8_t *s2 = (const uint8_t *)src2->m_addr;
+	uint8_t *d = (uint8_t *)dst->buff;
+	const uint8_t *s1 = (const uint8_t *)src1->buff;
+	const uint8_t *s2 = (const uint8_t *)src2->buff;
 
 	for (int y = 0; y < extent.h; y++) {
 		uint8_t *dp = d;
@@ -222,9 +222,9 @@ bool filter::Blur(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int s
 	int w = extent.w;
 	int h = extent.h;
 
-	if (dst->m_addr == NULL)
+	if (dst->buff == NULL)
 		return false;
-	if (dst->m_size < ImageAttribute::CalcMemSize(w, h, 1, 1, mode, format) ||
+	if (dst->size < ImageAttribute::CalcMemSize(w, h, 1, 1, mode, format) ||
 	    (mode != ImageMode_RGBA8888 && mode != ImageMode_BGRA8888))
 		return false;
 
@@ -232,8 +232,8 @@ bool filter::Blur(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int s
 	if (tmp == NULL)
 		return false;
 
-	const uint8_t *s = (const uint8_t *)src->m_addr;
-	uint8_t *d = (uint8_t *)dst->m_addr;
+	const uint8_t *s = (const uint8_t *)src->buff;
+	uint8_t *d = (uint8_t *)dst->buff;
 	uint8_t *t = tmp;
 	int radius = (int)(sigma * 3.0f);
 	double *kernel = (double *)Alloc(allocator, 8 * (radius + 1));
@@ -311,7 +311,7 @@ bool filter::Blur(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int s
 
 /* DXT blocks to RGBA8888; the blocks' rows are padded to a power of two. */
 static bool DecompressDxt(uint32_t *dst, const uint8_t *blocks, int dst_pitch, int src_pitch,
-			  int w, int h, ImageMode mode, ImageCompressQuality quality)
+			  int w, int h, ImageMode mode, ImageConvertModeType quality)
 {
 	int flags;
 
@@ -329,14 +329,14 @@ static bool DecompressDxt(uint32_t *dst, const uint8_t *blocks, int dst_pitch, i
 		return false;
 	}
 	switch (quality) {
-	case ImageCompressQuality_ClusterFit:
-	case ImageCompressQuality_Default:
+	case ImageConvertModeType_Default:
+	case ImageConvertModeType_MediumQuality:
 		flags |= squish::kColourClusterFit;
 		break;
-	case ImageCompressQuality_RangeFit:
+	case ImageConvertModeType_LowQuality:
 		flags |= squish::kColourRangeFit;
 		break;
-	case ImageCompressQuality_IterativeClusterFit:
+	case ImageConvertModeType_HighQuality:
 		flags |= squish::kColourIterativeClusterFit;
 		break;
 	default:
@@ -404,11 +404,11 @@ static bool DecompressDxt(uint32_t *dst, const uint8_t *blocks, int dst_pitch, i
 static bool CompressDxt1(ImageBuffer *dst, const ImageBuffer *src, const ImageBuffer *clut,
 			 int dst_pitch, int src_pitch, const ImageExtent *dst_extent,
 			 const ImageExtent *src_extent, ImageMode src_mode, ImageFormat format,
-			 ImageCompressQuality quality)
+			 ImageConvertModeType quality)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(dst_extent->w, dst_extent->h, 1, 1,
-						      ImageMode_DXT1, ImageFormat_DXT))
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(dst_extent->w, dst_extent->h, 1, 1,
+						      ImageMode_DXT1, ImageFormat_Dds))
 		return false;
 
 	int w = src_extent->w;
@@ -418,9 +418,9 @@ static bool CompressDxt1(ImageBuffer *dst, const ImageBuffer *src, const ImageBu
 	uint32_t block_step = ImageAttribute::GetPixelSize(src_mode) * 4 / 8;
 	int blocks_h = (dst_extent->h + 3) / 4;
 	int blocks_w = (dst_extent->w + 3) / 4;
-	const uint32_t *row = (const uint32_t *)src->m_addr;
-	uint8_t *out = (uint8_t *)dst->m_addr;
-	const uint8_t *last = (const uint8_t *)src->m_addr + src_pitch * h - src_pitch;
+	const uint32_t *row = (const uint32_t *)src->buff;
+	uint8_t *out = (uint8_t *)dst->buff;
+	const uint8_t *last = (const uint8_t *)src->buff + src_pitch * h - src_pitch;
 
 	for (int by = 0; by < blocks_h; by++) {
 		const uint8_t *p = (const uint8_t *)row;
@@ -463,14 +463,14 @@ static bool CompressDxt1(ImageBuffer *dst, const ImageBuffer *src, const ImageBu
 
 			int flags;
 			switch (quality) {
-			case ImageCompressQuality_ClusterFit:
-			case ImageCompressQuality_Default:
+			case ImageConvertModeType_Default:
+			case ImageConvertModeType_MediumQuality:
 				flags = squish::kDxt1 | squish::kColourClusterFit;
 				break;
-			case ImageCompressQuality_RangeFit:
+			case ImageConvertModeType_LowQuality:
 				flags = squish::kDxt1 | squish::kColourRangeFit;
 				break;
-			case ImageCompressQuality_IterativeClusterFit:
+			case ImageConvertModeType_HighQuality:
 				flags = squish::kDxt1 | squish::kColourIterativeClusterFit;
 				break;
 			default:
@@ -492,14 +492,14 @@ static bool CompressDxt1(ImageBuffer *dst, const ImageBuffer *src, const ImageBu
  */
 static inline bool CompressDxtAlpha(ImageBuffer *dst, const ImageBuffer *src,
 				    const ImageExtent *dst_extent, const ImageExtent *src_extent,
-				    int src_pitch, ImageMode src_mode, ImageCompressQuality quality,
+				    int src_pitch, ImageMode src_mode, ImageConvertModeType quality,
 				    int method)
 {
 	int w = src_extent->w;
 	int h;
 
 	if (w != dst_extent->w || (h = src_extent->h) != dst_extent->h) {
-		sce_paf_memset(dst->m_addr, 0, dst->m_size);
+		sce_paf_memset(dst->buff, 0, dst->size);
 		w = src_extent->w;
 		h = src_extent->h;
 	}
@@ -510,9 +510,9 @@ static inline bool CompressDxtAlpha(ImageBuffer *dst, const ImageBuffer *src,
 	int blocks_h = (h + 3) / 4;
 	uint32_t block_step = ImageAttribute::GetPixelSize(src_mode) * 4 / 8;
 	int dst_blocks_w = (dst_extent->w + 3) / 4;
-	const uint32_t *row = (const uint32_t *)src->m_addr;
-	uint8_t *out = (uint8_t *)dst->m_addr;
-	const uint8_t *last = (const uint8_t *)src->m_addr + src_pitch * h - src_pitch;
+	const uint32_t *row = (const uint32_t *)src->buff;
+	uint8_t *out = (uint8_t *)dst->buff;
+	const uint8_t *last = (const uint8_t *)src->buff + src_pitch * h - src_pitch;
 
 	for (int by = 0; by < blocks_h; by++) {
 		const uint8_t *p = (const uint8_t *)row;
@@ -559,14 +559,14 @@ static inline bool CompressDxtAlpha(ImageBuffer *dst, const ImageBuffer *src,
 
 			int flags;
 			switch (quality) {
-			case ImageCompressQuality_ClusterFit:
-			case ImageCompressQuality_Default:
+			case ImageConvertModeType_Default:
+			case ImageConvertModeType_MediumQuality:
 				flags = method | squish::kColourClusterFit;
 				break;
-			case ImageCompressQuality_RangeFit:
+			case ImageConvertModeType_LowQuality:
 				flags = method | squish::kColourRangeFit;
 				break;
-			case ImageCompressQuality_IterativeClusterFit:
+			case ImageConvertModeType_HighQuality:
 				flags = method | squish::kColourIterativeClusterFit;
 				break;
 			default:
@@ -585,11 +585,11 @@ static inline bool CompressDxtAlpha(ImageBuffer *dst, const ImageBuffer *src,
 static bool CompressDxt3(ImageBuffer *dst, const ImageBuffer *src, const ImageBuffer *clut,
 			 int dst_pitch, int src_pitch, const ImageExtent *dst_extent,
 			 const ImageExtent *src_extent, ImageMode src_mode, ImageFormat format,
-			 ImageCompressQuality quality)
+			 ImageConvertModeType quality)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(dst_extent->w, dst_extent->h, 1, 1,
-						      ImageMode_DXT3, ImageFormat_DXT))
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(dst_extent->w, dst_extent->h, 1, 1,
+						      ImageMode_DXT3, ImageFormat_Dds))
 		return false;
 	return CompressDxtAlpha(dst, src, dst_extent, src_extent, src_pitch, src_mode, quality,
 				squish::kDxt3);
@@ -598,68 +598,68 @@ static bool CompressDxt3(ImageBuffer *dst, const ImageBuffer *src, const ImageBu
 static bool CompressDxt5(ImageBuffer *dst, const ImageBuffer *src, const ImageBuffer *clut,
 			 int dst_pitch, int src_pitch, const ImageExtent *dst_extent,
 			 const ImageExtent *src_extent, ImageMode src_mode, ImageFormat format,
-			 ImageCompressQuality quality)
+			 ImageConvertModeType quality)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(dst_extent->w, dst_extent->h, 1, 1,
-						      ImageMode_DXT5, ImageFormat_DXT))
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(dst_extent->w, dst_extent->h, 1, 1,
+						      ImageMode_DXT5, ImageFormat_Dds))
 		return false;
 	return CompressDxtAlpha(dst, src, dst_extent, src_extent, src_pitch, src_mode, quality,
 				squish::kDxt5);
 }
 
-bool ScePafMisc_CA674A19(ImageBuffer *dst, const ImageBuffer *src, const ImageBuffer *clut,
+bool filter::ConvertMode(ImageBuffer *dst, const ImageBuffer *src, const ImageBuffer *clut,
 			 int dst_pitch, int src_pitch, const ImageExtent &dst_extent,
 			 const ImageExtent &src_extent, ImageMode src_mode, ImageFormat format,
-			 ImageMode dst_mode, ImageCompressQuality quality)
+			 ImageMode dst_mode, ImageConvertModeType quality)
 {
 	switch (dst_mode) {
 	case ImageMode_RGBA8888: {
-		if (dst->m_addr == NULL ||
-		    dst->m_size < ImageAttribute::CalcMemSize(dst_extent.w, dst_extent.h, 1, 1,
+		if (dst->buff == NULL ||
+		    dst->size < ImageAttribute::CalcMemSize(dst_extent.w, dst_extent.h, 1, 1,
 							      src_mode, format))
 			return false;
 
 		const uint32_t *palette = NULL;
 		if (clut != NULL)
-			palette = (const uint32_t *)clut->m_addr;
+			palette = (const uint32_t *)clut->buff;
 
 		switch (src_mode) {
-		case ImageMode_RGB565:
-			ConvertRGB565((uint8_t *)dst->m_addr, (const uint16_t *)src->m_addr, dst_pitch,
+		case ImageMode_XBGR0565:
+			ConvertRGB565((uint8_t *)dst->buff, (const uint16_t *)src->buff, dst_pitch,
 				      src_pitch, dst_extent.w, dst_extent.h, PixelConvert());
 			return true;
-		case ImageMode_RGBA5551:
-			ConvertRGBA5551((uint8_t *)dst->m_addr, (const uint16_t *)src->m_addr,
+		case ImageMode_ABGR1555:
+			ConvertRGBA5551((uint8_t *)dst->buff, (const uint16_t *)src->buff,
 					dst_pitch, src_pitch, dst_extent.w, dst_extent.h,
 					PixelConvert());
 			return true;
-		case ImageMode_RGBA4444:
-			ConvertRGBA4444((uint8_t *)dst->m_addr, (const uint16_t *)src->m_addr,
+		case ImageMode_ABGR4444:
+			ConvertRGBA4444((uint8_t *)dst->buff, (const uint16_t *)src->buff,
 					dst_pitch, src_pitch, dst_extent.w, dst_extent.h,
 					PixelConvert());
 			return true;
 		case ImageMode_RGBA8888:
-			CopyPixels32((uint32_t *)dst->m_addr, (const uint32_t *)src->m_addr, dst_pitch,
+			CopyPixels32((uint32_t *)dst->buff, (const uint32_t *)src->buff, dst_pitch,
 				     src_pitch, dst_extent.w, dst_extent.h, PixelCopy());
 			return true;
 		case ImageMode_BGRA8888:
-			ConvertBGRA8888((uint8_t *)dst->m_addr, (const uint8_t *)src->m_addr,
+			ConvertBGRA8888((uint8_t *)dst->buff, (const uint8_t *)src->buff,
 					dst_pitch, src_pitch, dst_extent.w, dst_extent.h,
 					PixelConvert());
 			return true;
 		case ImageMode_DXT1:
 		case ImageMode_DXT3:
 		case ImageMode_DXT5:
-			DecompressDxt((uint32_t *)dst->m_addr, (const uint8_t *)src->m_addr, dst_pitch,
+			DecompressDxt((uint32_t *)dst->buff, (const uint8_t *)src->buff, dst_pitch,
 				      src_pitch, dst_extent.w, dst_extent.h, src_mode, quality);
 			return true;
-		case ImageMode_CLUT4:
-			ConvertCLUT4((uint32_t *)dst->m_addr, (const uint8_t *)src->m_addr, dst_pitch,
+		case ImageMode_index4:
+			ConvertCLUT4((uint32_t *)dst->buff, (const uint8_t *)src->buff, dst_pitch,
 				     src_pitch, dst_extent.w, dst_extent.h, PixelLookup(palette));
 			return true;
-		case ImageMode_CLUT8:
-			ConvertCLUT8((uint32_t *)dst->m_addr, (const uint8_t *)src->m_addr, dst_pitch,
+		case ImageMode_index8:
+			ConvertCLUT8((uint32_t *)dst->buff, (const uint8_t *)src->buff, dst_pitch,
 				     src_pitch, dst_extent.w, dst_extent.h, PixelLookup(palette));
 			return true;
 		default:
@@ -683,33 +683,33 @@ bool ScePafMisc_CA674A19(ImageBuffer *dst, const ImageBuffer *src, const ImageBu
 bool filter::Copy(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int src_pitch,
 		  ImageExtent extent, ImageMode mode, ImageFormat format)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format))
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format))
 		return false;
 
 	switch (mode) {
-	case ImageMode_RGB565:
-	case ImageMode_RGBA5551:
-	case ImageMode_RGBA4444:
-	case ImageMode_CLUT16:
-		CopyPixels16((uint16_t *)dst->m_addr, (const uint16_t *)src->m_addr, dst_pitch,
+	case ImageMode_XBGR0565:
+	case ImageMode_ABGR1555:
+	case ImageMode_ABGR4444:
+	case ImageMode_index16:
+		CopyPixels16((uint16_t *)dst->buff, (const uint16_t *)src->buff, dst_pitch,
 			     src_pitch, extent.w, extent.h, PixelCopy());
 		return true;
 	case ImageMode_RGBA8888:
 	case ImageMode_BGRA8888:
-	case ImageMode_CLUT32:
-		CopyPixels32((uint32_t *)dst->m_addr, (const uint32_t *)src->m_addr, dst_pitch,
+	case ImageMode_index32:
+		CopyPixels32((uint32_t *)dst->buff, (const uint32_t *)src->buff, dst_pitch,
 			     src_pitch, extent.w, extent.h, PixelCopy());
 		return true;
 	case ImageMode_DXT1:
-	case ImageMode_CLUT4:
-		CopyPixels4((uint8_t *)dst->m_addr, (const uint8_t *)src->m_addr, dst_pitch,
+	case ImageMode_index4:
+		CopyPixels4((uint8_t *)dst->buff, (const uint8_t *)src->buff, dst_pitch,
 			    src_pitch, extent.w, extent.h, PixelCopy());
 		return true;
 	case ImageMode_DXT3:
 	case ImageMode_DXT5:
-	case ImageMode_CLUT8:
-		CopyPixels8((uint8_t *)dst->m_addr, (const uint8_t *)src->m_addr, dst_pitch,
+	case ImageMode_index8:
+		CopyPixels8((uint8_t *)dst->buff, (const uint8_t *)src->buff, dst_pitch,
 			    src_pitch, extent.w, extent.h, PixelCopy());
 		return true;
 	default:
@@ -721,43 +721,43 @@ bool filter::CopyWithEdge(ImageBuffer *dst, const ImageBuffer *src, const ImageB
 			  int dst_pitch, int src_pitch, ImageExtent extent, ImageMode mode,
 			  ImageFormat format, uint32_t edge)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format))
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format))
 		return false;
 
 	const uint32_t *palette = NULL;
 	if (clut != NULL)
-		palette = (const uint32_t *)clut->m_addr;
+		palette = (const uint32_t *)clut->buff;
 	int inner_h = extent.h - 2 * edge;
 	int inner_w = extent.w - 2 * edge;
 
 	switch (mode) {
-	case ImageMode_RGB565:
-		ConvertRGB565WithEdge(dst->m_addr, (const uint16_t *)src->m_addr, dst_pitch,
+	case ImageMode_XBGR0565:
+		ConvertRGB565WithEdge(dst->buff, (const uint16_t *)src->buff, dst_pitch,
 				      src_pitch, inner_w, inner_h, PixelConvert(), edge);
 		break;
-	case ImageMode_RGBA5551:
-		ConvertRGBA5551WithEdge(dst->m_addr, (const uint16_t *)src->m_addr, dst_pitch,
+	case ImageMode_ABGR1555:
+		ConvertRGBA5551WithEdge(dst->buff, (const uint16_t *)src->buff, dst_pitch,
 					src_pitch, inner_w, inner_h, PixelConvert(), edge);
 		break;
-	case ImageMode_RGBA4444:
-		ConvertRGBA4444WithEdge(dst->m_addr, (const uint16_t *)src->m_addr, dst_pitch,
+	case ImageMode_ABGR4444:
+		ConvertRGBA4444WithEdge(dst->buff, (const uint16_t *)src->buff, dst_pitch,
 					src_pitch, inner_w, inner_h, PixelConvert(), edge);
 		break;
 	case ImageMode_RGBA8888:
-		CopyPixels32WithEdge(dst->m_addr, (const uint32_t *)src->m_addr, dst_pitch,
+		CopyPixels32WithEdge(dst->buff, (const uint32_t *)src->buff, dst_pitch,
 				     src_pitch, inner_w, inner_h, PixelCopy(), edge);
 		break;
 	case ImageMode_BGRA8888:
-		ConvertBGRA8888WithEdge(dst->m_addr, (const uint8_t *)src->m_addr, dst_pitch,
+		ConvertBGRA8888WithEdge(dst->buff, (const uint8_t *)src->buff, dst_pitch,
 					src_pitch, inner_w, inner_h, PixelConvert(), edge);
 		break;
-	case ImageMode_CLUT4:
-		ConvertCLUT4WithEdge(dst->m_addr, (const uint8_t *)src->m_addr, dst_pitch,
+	case ImageMode_index4:
+		ConvertCLUT4WithEdge(dst->buff, (const uint8_t *)src->buff, dst_pitch,
 				     src_pitch, inner_w, inner_h, PixelLookup(palette), edge);
 		break;
-	case ImageMode_CLUT8:
-		ConvertCLUT8WithEdge(dst->m_addr, (const uint8_t *)src->m_addr, dst_pitch,
+	case ImageMode_index8:
+		ConvertCLUT8WithEdge(dst->buff, (const uint8_t *)src->buff, dst_pitch,
 				     src_pitch, inner_w, inner_h, PixelLookup(palette), edge);
 		break;
 	default:
@@ -768,7 +768,7 @@ bool filter::CopyWithEdge(ImageBuffer *dst, const ImageBuffer *src, const ImageB
 	uint32_t stride = pitch / 4;
 
 	/* The left and right borders take their row's outermost pixel. */
-	uint32_t *p = (uint32_t *)dst->m_addr + stride * edge;
+	uint32_t *p = (uint32_t *)dst->buff + stride * edge;
 	for (int y = 0; y < inner_h; y++) {
 		uint32_t left = p[edge] & 0xFFFFFF;
 		for (uint32_t x = 0; x < edge; x++)
@@ -781,18 +781,18 @@ bool filter::CopyWithEdge(ImageBuffer *dst, const ImageBuffer *src, const ImageB
 	}
 
 	/* The top border repeats the first row. */
-	uint32_t *top = (uint32_t *)dst->m_addr + (stride * edge - stride);
+	uint32_t *top = (uint32_t *)dst->buff + (stride * edge - stride);
 	for (int x = 0; x < extent.w; x++, top++)
 		*top = top[stride] & 0xFFFFFF;
 	top -= extent.w;
-	uint32_t *row = (uint32_t *)dst->m_addr;
+	uint32_t *row = (uint32_t *)dst->buff;
 	for (uint32_t y = 1; y < edge; y++) {
 		sce_paf_memcpy(row, top, pitch);
 		row += stride;
 	}
 
 	/* And the bottom border the last. */
-	uint32_t *bottom = (uint32_t *)dst->m_addr + (stride * (edge + inner_h) - stride);
+	uint32_t *bottom = (uint32_t *)dst->buff + (stride * (edge + inner_h) - stride);
 	for (int x = 0; x < extent.w; x++, bottom++)
 		bottom[stride] = *bottom & 0xFFFFFF;
 	row = bottom + stride;
@@ -806,13 +806,13 @@ bool filter::CopyWithEdge(ImageBuffer *dst, const ImageBuffer *src, const ImageB
 bool filter::Crop(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int src_pitch,
 		  ImageExtent extent, ImageMode mode, ImageFormat format, ImageRect rect)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format))
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format))
 		return false;
 
-	const uint8_t *s = (const uint8_t *)src->m_addr + rect.origin.y * src_pitch;
+	const uint8_t *s = (const uint8_t *)src->buff + rect.origin.y * src_pitch;
 	s += (int)((float)ImageAttribute::GetPixelSize(mode) * 0.125f * (float)rect.origin.x);
-	CopyPixels32((uint32_t *)dst->m_addr, (const uint32_t *)s, dst_pitch, src_pitch, extent.w,
+	CopyPixels32((uint32_t *)dst->buff, (const uint32_t *)s, dst_pitch, src_pitch, extent.w,
 		     extent.h, PixelCopy());
 	return true;
 }
@@ -820,15 +820,15 @@ bool filter::Crop(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int s
 bool filter::FadeWithEdge(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int src_pitch,
 			  ImageExtent extent, ImageMode mode, ImageFormat format)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format) ||
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format) ||
 	    (mode != ImageMode_RGBA8888 && mode != ImageMode_BGRA8888))
 		return false;
 
-	CopyPixels32((uint32_t *)dst->m_addr, (const uint32_t *)src->m_addr, dst_pitch, src_pitch,
+	CopyPixels32((uint32_t *)dst->buff, (const uint32_t *)src->buff, dst_pitch, src_pitch,
 		     extent.w, extent.h, PixelCopy());
 
-	uint32_t *p = (uint32_t *)dst->m_addr;
+	uint32_t *p = (uint32_t *)dst->buff;
 	for (int x = 0; x < extent.w; x++)
 		((uint8_t *)&p[x])[3] = 0;
 	p += extent.w;
@@ -845,27 +845,27 @@ bool filter::FadeWithEdge(ImageBuffer *dst, const ImageBuffer *src, int dst_pitc
 bool filter::Flip(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int src_pitch,
 		  ImageExtent extent, ImageMode mode, ImageFormat format, ImageFlipType type)
 {
-	if (dst->m_addr == NULL)
+	if (dst->buff == NULL)
 		return false;
-	if (dst->m_size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format))
+	if (dst->size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format))
 		return false;
 
 	switch (mode) {
-	case ImageMode_RGB565:
-	case ImageMode_RGBA5551:
-	case ImageMode_RGBA4444:
-	case ImageMode_CLUT16:
-		return FlipImage((uint16_t *)dst->m_addr, (const uint16_t *)src->m_addr, dst_pitch,
+	case ImageMode_XBGR0565:
+	case ImageMode_ABGR1555:
+	case ImageMode_ABGR4444:
+	case ImageMode_index16:
+		return FlipImage((uint16_t *)dst->buff, (const uint16_t *)src->buff, dst_pitch,
 				 src_pitch, extent.w, extent.h, mode, type);
 	case ImageMode_RGBA8888:
 	case ImageMode_BGRA8888:
-	case ImageMode_CLUT32:
-		return FlipImage((uint32_t *)dst->m_addr, (const uint32_t *)src->m_addr, dst_pitch,
+	case ImageMode_index32:
+		return FlipImage((uint32_t *)dst->buff, (const uint32_t *)src->buff, dst_pitch,
 				 src_pitch, extent.w, extent.h, mode, type);
-	case ImageMode_CLUT4:
+	case ImageMode_index4:
 		return false;
-	case ImageMode_CLUT8:
-		return FlipImage((uint8_t *)dst->m_addr, (const uint8_t *)src->m_addr, dst_pitch,
+	case ImageMode_index8:
+		return FlipImage((uint8_t *)dst->buff, (const uint8_t *)src->buff, dst_pitch,
 				 src_pitch, extent.w, extent.h, mode, type);
 	default:
 		return false;
@@ -877,19 +877,19 @@ bool filter::Paste(ImageBuffer *dst, const ImageBuffer *src, const ImageBuffer *
 		   ImageExtent overlay_extent, ImageMode mode, ImageFormat format,
 		   const ImagePoint &pos)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format) ||
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format) ||
 	    (mode != ImageMode_BGRA8888 && mode != ImageMode_RGBA8888))
 		return false;
 
-	CopyPixels32((uint32_t *)dst->m_addr, (const uint32_t *)src->m_addr, dst_pitch, src_pitch,
+	CopyPixels32((uint32_t *)dst->buff, (const uint32_t *)src->buff, dst_pitch, src_pitch,
 		     extent.w, extent.h, PixelCopy());
 
 	uint32_t bpp = ImageAttribute::GetPixelSize(mode) >> 3;
-	uint8_t *d = (uint8_t *)dst->m_addr;
+	uint8_t *d = (uint8_t *)dst->buff;
 	int left = pos.x;
 	int right = pos.x + overlay_extent.w;
-	const uint8_t *s = (const uint8_t *)overlay->m_addr;
+	const uint8_t *s = (const uint8_t *)overlay->buff;
 
 	if (right < 0 || left >= extent.w)
 		return true;
@@ -991,10 +991,10 @@ void filter::ResizeHalf(void *dst, const void *src, int dst_pitch, int src_pitch
 bool filter::ResizeHalf(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int src_pitch,
 			ImageExtent extent, ImageMode mode)
 {
-	if (dst->m_addr == NULL || dst->m_size < (uint32_t)(extent.w / 2 * (extent.h / 2) * 4) ||
+	if (dst->buff == NULL || dst->size < (uint32_t)(extent.w / 2 * (extent.h / 2) * 4) ||
 	    (mode != ImageMode_RGBA8888 && mode != ImageMode_BGRA8888))
 		return false;
-	ResizeHalf(dst->m_addr, src->m_addr, dst_pitch, src_pitch, extent.w, extent.h);
+	ResizeHalf(dst->buff, src->buff, dst_pitch, src_pitch, extent.w, extent.h);
 	return true;
 }
 
@@ -1082,10 +1082,10 @@ void filter::ResizeQuarter(void *dst, const void *src, int dst_pitch, int src_pi
 bool filter::ResizeQuarter(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch,
 			   int src_pitch, ImageExtent extent, ImageMode mode)
 {
-	if (dst->m_addr == NULL || dst->m_size < (uint32_t)(extent.w / 4 * (extent.h / 4) * 4) ||
+	if (dst->buff == NULL || dst->size < (uint32_t)(extent.w / 4 * (extent.h / 4) * 4) ||
 	    (mode != ImageMode_RGBA8888 && mode != ImageMode_BGRA8888))
 		return false;
-	ResizeQuarter(dst->m_addr, src->m_addr, dst_pitch, src_pitch, extent.w, extent.h);
+	ResizeQuarter(dst->buff, src->buff, dst_pitch, src_pitch, extent.w, extent.h);
 	return true;
 }
 
@@ -1143,31 +1143,31 @@ static bool GetFilter(ImageResizeType type, FilterFunc *filter, float *support)
 {
 	switch (type) {
 	case ImageResizeType_NearestNeighbor:
-	case ImageResizeType_Box:
+	case ImageResizeType_BoxFilter:
 		*filter = BoxFilter;
 		*support = 0.5f;
 		return true;
-	case ImageResizeType_Triangle:
+	case ImageResizeType_Linear:
 		*filter = TriangleFilter;
 		*support = 1.0f;
 		return true;
-	case ImageResizeType_Bell:
+	case ImageResizeType_BellFilter:
 		*filter = BellFilter;
 		*support = 1.0f;
 		return true;
-	case ImageResizeType_Hermite:
+	case ImageResizeType_HermitFilter:
 		*filter = HermiteFilter;
 		*support = 1.0f;
 		return true;
-	case ImageResizeType_BSpline:
+	case ImageResizeType_B_SplineFilter:
 		*filter = BSplineFilter;
 		*support = 2.0f;
 		return true;
-	case ImageResizeType_Mitchell:
+	case ImageResizeType_MitchellFilter:
 		*filter = MitchellFilter;
 		*support = 2.0f;
 		return true;
-	case ImageResizeType_Lanczos3:
+	case ImageResizeType_Lanczos3Filter:
 		*filter = Lanczos3Filter;
 		*support = 3.0f;
 		return true;
@@ -1342,9 +1342,9 @@ bool filter::Resize(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int
 		    ImageExtent extent, ImageMode mode, ImageFormat format, ImageExtent dst_extent,
 		    ImageResizeType type, HeapAllocator *allocator)
 {
-	if (dst->m_addr == NULL)
+	if (dst->buff == NULL)
 		return false;
-	if (dst->m_size <
+	if (dst->size <
 	    ImageAttribute::CalcMemSize(dst_extent.w, dst_extent.h, 1, 1, mode, format))
 		return false;
 
@@ -1352,7 +1352,7 @@ bool filter::Resize(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int
 		switch (mode) {
 		case ImageMode_RGBA8888:
 		case ImageMode_BGRA8888:
-			return ResizeFiltered((uint8_t *)dst->m_addr, (const uint8_t *)src->m_addr,
+			return ResizeFiltered((uint8_t *)dst->buff, (const uint8_t *)src->buff,
 					      dst_pitch, src_pitch, extent.w, extent.h, mode,
 					      dst_extent.w, dst_extent.h, type, allocator);
 		default:
@@ -1361,22 +1361,22 @@ bool filter::Resize(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int
 	}
 
 	switch (mode) {
-	case ImageMode_RGB565:
-	case ImageMode_RGBA5551:
-	case ImageMode_RGBA4444:
-	case ImageMode_CLUT16:
-		return ResizeNearestNeighbor((uint16_t *)dst->m_addr, (const uint16_t *)src->m_addr,
+	case ImageMode_XBGR0565:
+	case ImageMode_ABGR1555:
+	case ImageMode_ABGR4444:
+	case ImageMode_index16:
+		return ResizeNearestNeighbor((uint16_t *)dst->buff, (const uint16_t *)src->buff,
 					     dst_pitch, src_pitch, extent.w, extent.h, mode,
 					     dst_extent.w, dst_extent.h, type, allocator);
 	case ImageMode_RGBA8888:
 	case ImageMode_BGRA8888:
-	case ImageMode_CLUT32:
-		return ResizeNearestNeighbor((uint32_t *)dst->m_addr, (const uint32_t *)src->m_addr,
+	case ImageMode_index32:
+		return ResizeNearestNeighbor((uint32_t *)dst->buff, (const uint32_t *)src->buff,
 					     dst_pitch, src_pitch, extent.w, extent.h, mode,
 					     dst_extent.w, dst_extent.h, type, allocator);
-	case ImageMode_CLUT4: {
-		uint8_t *d = (uint8_t *)dst->m_addr;
-		const uint8_t *s = (const uint8_t *)src->m_addr;
+	case ImageMode_index4: {
+		uint8_t *d = (uint8_t *)dst->buff;
+		const uint8_t *s = (const uint8_t *)src->buff;
 		float scale_y = (float)extent.h / (float)dst_extent.h;
 		int *xs = (int *)Alloc(allocator, 4 * dst_extent.w);
 		if (xs == NULL) {
@@ -1412,8 +1412,8 @@ bool filter::Resize(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int
 		Free(allocator, xs);
 		return true;
 	}
-	case ImageMode_CLUT8:
-		return ResizeNearestNeighbor((uint8_t *)dst->m_addr, (const uint8_t *)src->m_addr,
+	case ImageMode_index8:
+		return ResizeNearestNeighbor((uint8_t *)dst->buff, (const uint8_t *)src->buff,
 					     dst_pitch, src_pitch, extent.w, extent.h, mode,
 					     dst_extent.w, dst_extent.h, type, allocator);
 	default:
@@ -1517,7 +1517,7 @@ static void GetPixel(ImageMode mode, const uint8_t *src, uint32_t x, const uint8
 		     uint8_t *r, uint8_t *g, uint8_t *b, uint8_t *a)
 {
 	switch (mode) {
-	case ImageMode_RGB565: {
+	case ImageMode_XBGR0565: {
 		uint16_t c = src[2 * x] | (src[2 * x + 1] << 8);
 
 		*r = ((c & 0x1F) << 3) | ((c >> 2) & 7);
@@ -1526,7 +1526,7 @@ static void GetPixel(ImageMode mode, const uint8_t *src, uint32_t x, const uint8
 		*a = 0xFF;
 		break;
 	}
-	case ImageMode_RGBA5551: {
+	case ImageMode_ABGR1555: {
 		uint16_t c = src[2 * x] | (src[2 * x + 1] << 8);
 
 		*r = ((c & 0x1F) << 3) | ((c >> 2) & 7);
@@ -1535,7 +1535,7 @@ static void GetPixel(ImageMode mode, const uint8_t *src, uint32_t x, const uint8
 		*a = (c & 0x8000) ? 0xFF : 0;
 		break;
 	}
-	case ImageMode_RGBA4444: {
+	case ImageMode_ABGR4444: {
 		uint16_t c = src[2 * x] | (src[2 * x + 1] << 8);
 
 		*r = (c & 0xF) | ((c & 0xF) << 4);
@@ -1562,7 +1562,7 @@ static void GetPixel(ImageMode mode, const uint8_t *src, uint32_t x, const uint8
 		*a = p[3];
 		break;
 	}
-	case ImageMode_CLUT4: {
+	case ImageMode_index4: {
 		uint8_t c = src[x >> 1];
 		const uint8_t *p = &clut[4 * (c & 0xF)];
 
@@ -1574,7 +1574,7 @@ static void GetPixel(ImageMode mode, const uint8_t *src, uint32_t x, const uint8
 		*a = p[3];
 		break;
 	}
-	case ImageMode_CLUT8: {
+	case ImageMode_index8: {
 		const uint8_t *p = &clut[4 * src[x]];
 
 		*r = p[0];
@@ -1604,34 +1604,34 @@ static bool ConvertResize(ImageBuffer *dst, const ImageBuffer *src, const ImageB
 			  const ImageExtent *src_extent, ImageMode src_mode, ImageFormat format,
 			  ImageMode dst_mode, ImageResizeType type, HeapAllocator *allocator)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(dst_extent->w, dst_extent->h, 1, 1,
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(dst_extent->w, dst_extent->h, 1, 1,
 						      dst_mode, format))
 		return false;
 
 	if (type == ImageResizeType_NearestNeighbor) {
 		switch (src_mode) {
-		case ImageMode_RGB565:
-		case ImageMode_RGBA5551:
-		case ImageMode_RGBA4444:
-			return ConvertNearestNeighbor((uint32_t *)dst->m_addr,
-						      (const uint16_t *)src->m_addr, NULL,
+		case ImageMode_XBGR0565:
+		case ImageMode_ABGR1555:
+		case ImageMode_ABGR4444:
+			return ConvertNearestNeighbor((uint32_t *)dst->buff,
+						      (const uint16_t *)src->buff, NULL,
 						      dst_pitch, src_pitch, dst_extent->w,
 						      dst_extent->h, src_extent->w, src_extent->h,
 						      src_mode, dst_mode, allocator);
 		case ImageMode_RGBA8888:
 		case ImageMode_BGRA8888:
-			return ConvertNearestNeighbor((uint32_t *)dst->m_addr,
-						      (const uint32_t *)src->m_addr, NULL,
+			return ConvertNearestNeighbor((uint32_t *)dst->buff,
+						      (const uint32_t *)src->buff, NULL,
 						      dst_pitch, src_pitch, dst_extent->w,
 						      dst_extent->h, src_extent->w, src_extent->h,
 						      src_mode, dst_mode, allocator);
-		case ImageMode_CLUT4: {
-			const uint8_t *palette = (const uint8_t *)clut->m_addr;
+		case ImageMode_index4: {
+			const uint8_t *palette = (const uint8_t *)clut->buff;
 			int dst_w = dst_extent->w;
 			int dst_h = dst_extent->h;
-			const uint8_t *s = (const uint8_t *)src->m_addr;
-			uint8_t *d = (uint8_t *)dst->m_addr;
+			const uint8_t *s = (const uint8_t *)src->buff;
+			uint8_t *d = (uint8_t *)dst->buff;
 			float scale_x = (float)src_extent->w / (float)dst_w;
 			float scale_y = (float)src_extent->h / (float)dst_h;
 			uint32_t *xs = (uint32_t *)Alloc(allocator, 4 * dst_w);
@@ -1666,10 +1666,10 @@ static bool ConvertResize(ImageBuffer *dst, const ImageBuffer *src, const ImageB
 			Free(allocator, xs);
 			return true;
 		}
-		case ImageMode_CLUT8:
-			return ConvertNearestNeighbor((uint32_t *)dst->m_addr,
-						      (const uint8_t *)src->m_addr,
-						      (const uint8_t *)clut->m_addr, dst_pitch,
+		case ImageMode_index8:
+			return ConvertNearestNeighbor((uint32_t *)dst->buff,
+						      (const uint8_t *)src->buff,
+						      (const uint8_t *)clut->buff, dst_pitch,
 						      src_pitch, dst_extent->w, dst_extent->h,
 						      src_extent->w, src_extent->h, src_mode,
 						      dst_mode, allocator);
@@ -1679,22 +1679,22 @@ static bool ConvertResize(ImageBuffer *dst, const ImageBuffer *src, const ImageB
 	}
 
 	switch (src_mode) {
-	case ImageMode_RGB565:
-	case ImageMode_RGBA5551:
-	case ImageMode_RGBA4444:
+	case ImageMode_XBGR0565:
+	case ImageMode_ABGR1555:
+	case ImageMode_ABGR4444:
 	case ImageMode_RGBA8888:
 	case ImageMode_BGRA8888:
-	case ImageMode_CLUT4:
-	case ImageMode_CLUT8:
+	case ImageMode_index4:
+	case ImageMode_index8:
 		break;
 	default:
 		return false;
 	}
 
-	const uint8_t *s = (const uint8_t *)src->m_addr;
+	const uint8_t *s = (const uint8_t *)src->buff;
 	const uint8_t *palette = NULL;
 	if (clut != NULL)
-		palette = (const uint8_t *)clut->m_addr;
+		palette = (const uint8_t *)clut->buff;
 	int dst_w = dst_extent->w;
 	int dst_h = dst_extent->h;
 	int src_w = src_extent->w;
@@ -1758,17 +1758,18 @@ static bool ConvertResize(ImageBuffer *dst, const ImageBuffer *src, const ImageB
 		Free(allocator, tmp);
 		return false;
 	}
-	ApplyContribV(src_h, dst_h, dst_pitch, tmp, dst_w, (uint8_t *)dst->m_addr, contrib);
+	ApplyContribV(src_h, dst_h, dst_pitch, tmp, dst_w, (uint8_t *)dst->buff, contrib);
 	FreeContribList(contrib, dst_h, allocator);
 	Free(allocator, tmp);
 	return true;
 }
 
-bool ScePafMisc_D94BEC9F(ImageBuffer *dst, const ImageBuffer *src, const ImageBuffer *clut,
-			 uint32_t dst_pitch, int src_pitch, const ImageExtent &dst_extent,
-			 const ImageExtent &src_extent, ImageMode src_mode, ImageFormat format,
-			 ImageMode dst_mode, ImageResizeType type, ImageCompressQuality quality,
-			 HeapAllocator *allocator)
+bool filter::ResizeWithConvertMode(ImageBuffer *dst, const ImageBuffer *src,
+				   const ImageBuffer *clut, int dst_pitch, int src_pitch,
+				   const ImageExtent &dst_extent, const ImageExtent &src_extent,
+				   ImageMode src_mode, ImageFormat format, ImageMode dst_mode,
+				   ImageResizeType type, ImageConvertModeType quality,
+				   HeapAllocator *allocator)
 {
 	if (dst_mode != ImageMode_RGBA8888)
 		return false;
@@ -1779,36 +1780,36 @@ bool ScePafMisc_D94BEC9F(ImageBuffer *dst, const ImageBuffer *src, const ImageBu
 bool filter::Rotate(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int src_pitch,
 		    ImageExtent extent, ImageMode mode, ImageFormat format, ImageRotateType type)
 {
-	if (type == ImageRotateType_90 || type == ImageRotateType_270) {
-		if (dst->m_addr == NULL)
+	if (type == ImageRotateType_Degree90 || type == ImageRotateType_Degree270) {
+		if (dst->buff == NULL)
 			return false;
-		if (dst->m_size <
+		if (dst->size <
 		    ImageAttribute::CalcMemSize(extent.h, extent.w, 1, 1, mode, format))
 			return false;
 	} else {
-		if (dst->m_addr == NULL)
+		if (dst->buff == NULL)
 			return false;
-		if (dst->m_size <
+		if (dst->size <
 		    ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format))
 			return false;
 	}
 
 	switch (mode) {
-	case ImageMode_RGB565:
-	case ImageMode_RGBA5551:
-	case ImageMode_RGBA4444:
-	case ImageMode_CLUT16:
-		return RotateImage((uint16_t *)dst->m_addr, (const uint16_t *)src->m_addr,
+	case ImageMode_XBGR0565:
+	case ImageMode_ABGR1555:
+	case ImageMode_ABGR4444:
+	case ImageMode_index16:
+		return RotateImage((uint16_t *)dst->buff, (const uint16_t *)src->buff,
 				   dst_pitch, src_pitch, extent.w, extent.h, mode, type);
 	case ImageMode_RGBA8888:
 	case ImageMode_BGRA8888:
-	case ImageMode_CLUT32:
-		return RotateImage((uint32_t *)dst->m_addr, (const uint32_t *)src->m_addr,
+	case ImageMode_index32:
+		return RotateImage((uint32_t *)dst->buff, (const uint32_t *)src->buff,
 				   dst_pitch, src_pitch, extent.w, extent.h, mode, type);
-	case ImageMode_CLUT4:
+	case ImageMode_index4:
 		return false;
-	case ImageMode_CLUT8:
-		return RotateImage((uint8_t *)dst->m_addr, (const uint8_t *)src->m_addr, dst_pitch,
+	case ImageMode_index8:
+		return RotateImage((uint8_t *)dst->buff, (const uint8_t *)src->buff, dst_pitch,
 				   src_pitch, extent.w, extent.h, mode, type);
 	default:
 		return false;
@@ -1819,8 +1820,8 @@ bool filter::RoundCorner(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch
 			 ImageExtent extent, ImageMode mode, ImageFormat format, int pitch_align,
 			 int radius, int margin)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format) ||
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format) ||
 	    radius <= 0 || margin < 0 || pitch_align <= 0 ||
 	    (mode != ImageMode_RGBA8888 && mode != ImageMode_BGRA8888))
 		return false;
@@ -1829,10 +1830,10 @@ bool filter::RoundCorner(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch
 	if (extent.w < diameter || extent.h < diameter)
 		return false;
 
-	CopyPixels32((uint32_t *)dst->m_addr, (const uint32_t *)src->m_addr, dst_pitch, src_pitch,
+	CopyPixels32((uint32_t *)dst->buff, (const uint32_t *)src->buff, dst_pitch, src_pitch,
 		     extent.w, extent.h, PixelCopy());
 
-	uint8_t *base = (uint8_t *)dst->m_addr;
+	uint8_t *base = (uint8_t *)dst->buff;
 	int pitch = (pitch_align + 4 * extent.w - 1) / pitch_align * pitch_align;
 	base += 4 * margin + pitch * margin;
 	int inner = (diameter - 3) * (diameter - 3);
@@ -1887,9 +1888,9 @@ bool filter::Sharpen(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, in
 	int w = extent.w;
 	int h = extent.h;
 
-	if (dst->m_addr == NULL)
+	if (dst->buff == NULL)
 		return false;
-	if (dst->m_size < ImageAttribute::CalcMemSize(w, h, 1, 1, mode, format) ||
+	if (dst->size < ImageAttribute::CalcMemSize(w, h, 1, 1, mode, format) ||
 	    (mode != ImageMode_BGRA8888 && mode != ImageMode_RGBA8888))
 		return false;
 
@@ -1899,7 +1900,7 @@ bool filter::Sharpen(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, in
 
 	/* tmp: the image blurred, its colour channels only. */
 	uint8_t *t = tmp;
-	const uint8_t *s = (const uint8_t *)src->m_addr;
+	const uint8_t *s = (const uint8_t *)src->buff;
 	for (int y = 0; y < h; y++) {
 		int y0 = Mirror(y - 1, h) * src_pitch;
 		int y1 = Mirror(y, h) * src_pitch;
@@ -1915,11 +1916,11 @@ bool filter::Sharpen(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, in
 					s[y1 + x0 + c] + 4 * s[y1 + x1 + c] + s[y1 + x2 + c] +
 					s[y2 + x0 + c] + s[y2 + x1 + c] + s[y2 + x2 + c]) / 12;
 			t += 4;
-			s = (const uint8_t *)src->m_addr;
+			s = (const uint8_t *)src->buff;
 		}
 	}
 
-	uint8_t *d = (uint8_t *)dst->m_addr;
+	uint8_t *d = (uint8_t *)dst->buff;
 	t = tmp;
 	for (int y = 0; y < h; y++) {
 		for (int x = 0; x < w; x++) {
@@ -1943,15 +1944,15 @@ bool filter::Transparentize(ImageBuffer *dst, const ImageBuffer *src, int dst_pi
 			    int src_pitch, ImageExtent extent, ImageMode mode, ImageFormat format,
 			    float alpha)
 {
-	if (dst->m_addr == NULL ||
-	    dst->m_size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format) ||
+	if (dst->buff == NULL ||
+	    dst->size < ImageAttribute::CalcMemSize(extent.w, extent.h, 1, 1, mode, format) ||
 	    (mode != ImageMode_RGBA8888 && mode != ImageMode_BGRA8888))
 		return false;
 
-	CopyPixels32((uint32_t *)dst->m_addr, (const uint32_t *)src->m_addr, dst_pitch, src_pitch,
+	CopyPixels32((uint32_t *)dst->buff, (const uint32_t *)src->buff, dst_pitch, src_pitch,
 		     extent.w, extent.h, PixelCopy());
 
-	uint8_t *p = (uint8_t *)dst->m_addr;
+	uint8_t *p = (uint8_t *)dst->buff;
 	for (int y = 0; y < extent.h; y++) {
 		uint8_t *q = p;
 
@@ -2311,7 +2312,7 @@ static bool FlipImage(T *dst, const T *src, uint32_t dst_pitch, uint32_t src_pit
 	T *end = dst + w;
 
 	switch (type) {
-	case ImageFlipType_Horizontal: {
+	case ImageFlipType_LeftRight: {
 		const T *s = src + w - 1;
 
 		for (int y = 0; y < h; y++) {
@@ -2323,7 +2324,7 @@ static bool FlipImage(T *dst, const T *src, uint32_t dst_pitch, uint32_t src_pit
 		}
 		return true;
 	}
-	case ImageFlipType_Vertical: {
+	case ImageFlipType_TopButtom: {
 		const T *s = src + (h * src_stride - src_stride);
 
 		for (int y = 0; y < h; y++) {
@@ -2438,7 +2439,7 @@ static bool RotateImage(T *dst, const T *src, uint32_t dst_pitch, uint32_t src_p
 	uint32_t dst_stride = dst_pitch / (ImageAttribute::GetPixelSize(mode) >> 3);
 
 	switch (type) {
-	case ImageRotateType_90: {
+	case ImageRotateType_Degree90: {
 		T *end = dst + w;
 		const T *column = src + (w * src_stride - src_stride);
 
@@ -2454,7 +2455,7 @@ static bool RotateImage(T *dst, const T *src, uint32_t dst_pitch, uint32_t src_p
 		}
 		return true;
 	}
-	case ImageRotateType_180: {
+	case ImageRotateType_Degree180: {
 		T *end = dst + w;
 		const T *s = src + (h * src_stride - src_stride) + w - 1;
 
@@ -2467,7 +2468,7 @@ static bool RotateImage(T *dst, const T *src, uint32_t dst_pitch, uint32_t src_p
 		}
 		return true;
 	}
-	case ImageRotateType_270: {
+	case ImageRotateType_Degree270: {
 		T *end = dst + w;
 		const T *column = src + h - 1;
 

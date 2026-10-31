@@ -20,13 +20,6 @@ class HeapAllocator;
 
 namespace image {
 
-/* A pixel buffer: its address and size in bytes. */
-class ImageBuffer {
-public:
-	void *m_addr;
-	uint32_t m_size;
-};
-
 namespace filter {
 
 /* src1 at rate 0, src2 at rate 1, each channel interpolated in between. */
@@ -36,6 +29,14 @@ bool Blend(ImageBuffer *dst, const ImageBuffer *src1, const ImageBuffer *src2, i
 bool Blur(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int src_pitch,
 	  ImageExtent extent, ImageMode mode, ImageFormat format, float sigma,
 	  memory::HeapAllocator *allocator);
+/*
+ * Converts src (palette clut) from src_mode to dst_mode, DXT modes compressed as
+ * quality says.
+ */
+bool ConvertMode(ImageBuffer *dst, const ImageBuffer *src, const ImageBuffer *clut, int dst_pitch,
+		 int src_pitch, const ImageExtent &dst_extent, const ImageExtent &src_extent,
+		 ImageMode src_mode, ImageFormat format, ImageMode dst_mode,
+		 ImageConvertModeType quality = ImageConvertModeType_Default);
 bool Copy(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int src_pitch,
 	  ImageExtent extent, ImageMode mode, ImageFormat format);
 /*
@@ -66,6 +67,12 @@ bool ResizeQuarter(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int 
 bool Resize(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int src_pitch,
 	    ImageExtent extent, ImageMode mode, ImageFormat format, ImageExtent dst_extent,
 	    ImageResizeType type, memory::HeapAllocator *allocator);
+/* Converts src to RGBA8888 while resizing it from src_extent to dst_extent; quality is unused. */
+bool ResizeWithConvertMode(ImageBuffer *dst, const ImageBuffer *src, const ImageBuffer *clut,
+			   int dst_pitch, int src_pitch, const ImageExtent &dst_extent,
+			   const ImageExtent &src_extent, ImageMode src_mode, ImageFormat format,
+			   ImageMode dst_mode, ImageResizeType type,
+			   ImageConvertModeType quality, memory::HeapAllocator *allocator);
 bool Rotate(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int src_pitch,
 	    ImageExtent extent, ImageMode mode, ImageFormat format, ImageRotateType type);
 /*
@@ -85,27 +92,6 @@ bool Transparentize(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int
 
 }
 }
-}
-
-/*
- * Exports whose Sony names no NID search has found: converting between modes
- * (DXT compression at the given quality), and converting to RGBA8888 while
- * resizing (quality is unused). clut is the source's palette.
- */
-extern "C" {
-bool ScePafMisc_CA674A19(paf::image::ImageBuffer *dst, const paf::image::ImageBuffer *src,
-			 const paf::image::ImageBuffer *clut, int dst_pitch, int src_pitch,
-			 const paf::image::ImageExtent &dst_extent,
-			 const paf::image::ImageExtent &src_extent, ImageMode src_mode,
-			 paf::image::ImageFormat format, ImageMode dst_mode,
-			 paf::image::ImageCompressQuality quality);
-bool ScePafMisc_D94BEC9F(paf::image::ImageBuffer *dst, const paf::image::ImageBuffer *src,
-			 const paf::image::ImageBuffer *clut, uint32_t dst_pitch, int src_pitch,
-			 const paf::image::ImageExtent &dst_extent,
-			 const paf::image::ImageExtent &src_extent, ImageMode src_mode,
-			 paf::image::ImageFormat format, ImageMode dst_mode,
-			 paf::image::ImageResizeType type, paf::image::ImageCompressQuality quality,
-			 paf::memory::HeapAllocator *allocator);
 }
 
 #endif
