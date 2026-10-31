@@ -1,4 +1,3 @@
-/* Sony: qmi_solution/cmd_sequencer/tracking_start.h */
 #ifndef BBMC_TRACKING_START_H
 #define BBMC_TRACKING_START_H
 
