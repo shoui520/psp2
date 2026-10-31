@@ -22,4 +22,5 @@ psp2_module(vs0_sys_external_libshellsvc KIND user COMPILER snc PARTIAL SOURCES
 	shell_util.cpp
 	shell_util_ipc_client.cpp
 	text_clipboard.cpp
+	svc_ctrl.cpp
 )
