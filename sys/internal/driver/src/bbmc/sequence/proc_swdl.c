@@ -1153,8 +1153,8 @@ int seqGpsRequest(BbmcControl *control, BbmcMessage *message)
 		if (message->command != 101)
 			return 1;
 		input[0].value = message->body.gpsRequest.code;
-		input[1].value = (SceUInt32)message->body.gpsRequest.input;
-		input[2].pointer = message->body.gpsRequest.output;
+		input[1].value = message->body.gpsRequest.size;
+		input[2].pointer = message->body.gpsRequest.data;
 		input[3].value = 0;
 		input[4].value = 0;
 		input[5].value = 0;

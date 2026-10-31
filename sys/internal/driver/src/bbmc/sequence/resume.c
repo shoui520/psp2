@@ -1,5 +1,6 @@
 #include <sysmem/debug.h>
 #include "../bbmc_control.h"
+#include "../bbmc_gps.h"
 #include "../bbmc_message.h"
 #include "../bbcmd.h"
 #include "../bbmc_netif.h"
@@ -8,7 +9,6 @@
 #include <string.h>
 
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int message);
-int bbmcFinalizeGps(void);
 
 int seqResumeFromConnected(BbmcControl *control, BbmcMessage *message);
 int seqResumeResetAuthorized(BbmcControl *control, BbmcMessage *message);

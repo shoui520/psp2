@@ -88,9 +88,9 @@ int gpsStopOneShotTracking(BbmcControl *control, BbmcMessage *message)
 				result = (int)0x80330005;
 				goto finish;
 			}
-			request->body.gpsRequest.output = NULL;
+			request->body.gpsRequest.data = NULL;
 			request->body.gpsRequest.code = 0x53001000;
-			request->body.gpsRequest.input = NULL;
+			request->body.gpsRequest.size = 0;
 			bbmcEnterCS(&control->mutex);
 			control->gpsIoctlPending = 1;
 			bbmcLeaveCS(&control->mutex);

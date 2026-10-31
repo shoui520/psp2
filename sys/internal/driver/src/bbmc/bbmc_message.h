@@ -229,11 +229,11 @@ typedef struct BbmcControlFlagMessage {
 	SceUInt32 mask;
 } BbmcControlFlagMessage;
 
-/* name unknown: command 101 asks the manager to run a GPS request through bbcmd */
+/* name unknown: command 101 asks the manager to run a SceGps ioctl through bbcmd */
 typedef struct BbmcGpsRequestMessage {
 	SceUInt32 code;
-	const void *input;
-	void *output;
+	SceUInt32 size;
+	void *data;
 } BbmcGpsRequestMessage;
 
 /* name unknown: message 165 carries the syscon's proactive word, and 1 when message 15 asked for it */

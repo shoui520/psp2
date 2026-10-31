@@ -9,6 +9,7 @@
 #include "bbmc_message.h"
 #include "bbcmd_fp.h"
 #include "bbmc_netif.h"
+#include "bbmc_gps.h"
 #include "qmi_custom_messages.h"
 #include "qmi_network_operations.h"
 
@@ -39,14 +40,6 @@ static const int g_cat2TerminalCommandTypes[19] = {
 	1, 2, 3, 4, 5, 6, 0, 0, 0, -1, -1, 7, 8, 9, 0, 13, 10, 11, 12,
 };
 
-extern int bbmcNotifyTrackingStopped(void);
-extern int bbmcNotifyGpsSessionStatus(SceUInt8 *status);
-extern int bbmcNotifyGpsPosition(QmiPdsPosition *position);
-extern int bbmcNotifyGpsNmea(QmiPdsNmeaReport *report);
-extern int bbmcNotifyGpsExtendedNmea(QmiPdsNmeaReport *report);
-extern int bbmcNotifyGpsWifiRequest(QmiPdsWifiRequest *request);
-extern int bbmcNotifyGpsSatellites(QmiPdsSatelliteReport *report);
-extern int bbmcNotifyTrackingStarted(void);
 
 const SceUInt16 g_qmiSmscParameterMessages[2] = { 53, 52 };
 const SceUInt16 g_qmiSystemSelectionMessages[2] = { 51, 52 };

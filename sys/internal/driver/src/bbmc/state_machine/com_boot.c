@@ -3,13 +3,12 @@
 #include <threadmgr/threadmgr.h>
 #include <string.h>
 #include "../bbmc_control.h"
+#include "../bbmc_gps.h"
 #include "../bbmc_message.h"
 #include "../bbmc_memory.h"
 #include "../bbcmd.h"
 
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
-int bbmcFinalizeGps(void);
-int bbmcInitializeGps(void);
 int bbmcUnregisterNetworkInterface(void);
 void bbmcSaveTransitionState(BbmcControl *control, SceInt32 status,
 	SceUInt32 step);

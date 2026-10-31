@@ -1,12 +1,12 @@
 #include <sysmem/debug.h>
 #include <string.h>
 #include "../bbmc_control.h"
+#include "../bbmc_gps.h"
 #include "../bbmc_message.h"
 #include "../bbmc_memory.h"
 #include "../bbcmd.h"
 
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
-int bbmcFinalizeGps(void);
 int (*seqSuspendSelectHandler(int currentState, int targetState))(BbmcControl *,
 	BbmcMessage *);
 
