@@ -834,6 +834,7 @@ extern struct SysrootProfiler s_sdbgpProfiler;
 void sdbgpInitProfiler(struct SysrootProfiler *profiler);
 int KernelUtilsFixedHeapLeakCheckStart(SceUID uid, void **ctx);
 int KernelUtilsFixedHeapLeakCheck(void *ctx);
+int NameHeapLogSaveCore(void);
 
 /* bg_check.c */
 int bgCheckStart(void);

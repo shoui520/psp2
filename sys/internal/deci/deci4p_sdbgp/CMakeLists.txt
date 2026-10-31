@@ -14,5 +14,5 @@ psp2_module(os0_kd_deci4p_sdbgp KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	excp_handler.c
 	probe.S
 	excp_info.c
-	deci4p_sdbgp.c
+	testapi.c
 )
