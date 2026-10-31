@@ -28,6 +28,7 @@ psp2_module(os0_kd_bootimage_bbmc KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	bbcmd.c
 	netif/netif.c
 	bbmc_gps.c
+	sw_dload/sw_dload_s_nand.c
 	qmi_information.c
 	qmi_uim_card_status.c
 	qmi_service_parameters.c
