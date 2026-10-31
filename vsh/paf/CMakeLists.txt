@@ -1,4 +1,17 @@
 # ScePaf was built with SNC. Unconverted exports remain in libpaf.c.
+# PAF's heap is dlmalloc 2.8.4: pristine upstream from contrib plus Sony's changes
+# (src/memory/dlmalloc_sce.patch), applied at configure time into the build directory.
+set(paf_dlmalloc_source "${CMAKE_CURRENT_BINARY_DIR}/src/memory/dlmalloc.c")
+configure_file("${PSP2_SRC}/contrib/dlmalloc-2.8.4/malloc.c" "${paf_dlmalloc_source}" COPYONLY)
+execute_process(COMMAND patch -s "${paf_dlmalloc_source}"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/memory/dlmalloc_sce.patch"
+	RESULT_VARIABLE paf_patch_result ERROR_VARIABLE paf_patch_error)
+if(NOT paf_patch_result EQUAL 0)
+	message(FATAL_ERROR "PAF's dlmalloc patch failed: ${paf_patch_error}")
+endif()
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+	"${PSP2_SRC}/contrib/dlmalloc-2.8.4/malloc.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/memory/dlmalloc_sce.patch")
 # Sony's build inlined functions declared inline (class bodies) and only the smallest others:
 # any budget from 4 to 12 reproduces TTY's and Output's constructors, Output::WaitSoundStopped
 # and common::Utf8ToUtf16, 0 and 13 or more do not (2026-10-31).
@@ -90,7 +103,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/memory/heap_allocator.cpp
 	src/memory/range_allocator.cpp
 	src/memory/pool_allocator.cpp
-	src/memory/dlmalloc.c
+	${paf_dlmalloc_source}
 	src/std/string.c
 	src/std/memory.c
 	src/std/tty.cpp
@@ -150,3 +163,8 @@ set_source_files_properties(
 	src/thread/rmutex.cpp src/thread/rwlock.cpp src/thread/semaphore.cpp src/thread/sleep.cpp
 	src/thread/synccall.cpp src/thread/thread.cpp src/thread/thread_id_cache.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+
+# Sony's dlmalloc inlined init_mparams, init_top, segment_holding and internal_mallinfo but not
+# init_user_mstate: budgets 21 to 24 do that, 20 or less keeps internal_mallinfo out of line
+# (2026-10-31).
+set_source_files_properties("${paf_dlmalloc_source}" PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=21)
