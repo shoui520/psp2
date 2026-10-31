@@ -32,6 +32,7 @@
 #include "usb_device.h"
 #include "sw_dload/sw_dload.h"
 #include "bbmc_netif.h"
+#include "bbcmd.h"
 #include <intrmgr/syscall.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/qafmgr.h>
@@ -75,7 +76,7 @@ _Static_assert(offsetof(BbmcModeConfiguration, checkEnabled) == 4 &&
 int bbmcLookupModeValue(int mode, SceUInt32 *output);
 int bbmcLookupModeConfiguration(int mode,
 	const BbmcModeConfiguration **output);
-int managerThread(SceSize argumentSize, void *arguments);
+int _managerThread(SceSize argumentSize, void *arguments);
 BbmcControl *g_bbmcControl;
 static BbmcControl bbmcMainControl;
 int bbmcProcessKillHandler(SceUID processId,
@@ -89,16 +90,20 @@ const SceKernelProcEventHandler bbmcProcessEventHandlers = {
 /* the entry guard of every API call: nothing is accepted while suspending or suspended */
 static inline int bbmcCheckSuspendState(BbmcControl *control)
 {
-	bbmcEnterCS(&control->mutex);
+	if (bbmcLockFastMutex(&control->mutex) < 0)
+			SCE_DBG_ASSERT_FUNC(0, 1375, "bbmcEnterCS");
 	if (control->suspendState - 1U <= 2) {
-		bbmcLeaveCS(&control->mutex);
+		if (bbmcUnlockFastMutex(&control->mutex) < 0)
+			SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
 		return (int)0x8033000A;
 	}
 	if (control->suspendState == 4) {
-		bbmcLeaveCS(&control->mutex);
+		if (bbmcUnlockFastMutex(&control->mutex) < 0)
+			SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
 		return (int)0x8033000B;
 	}
-	bbmcLeaveCS(&control->mutex);
+	if (bbmcUnlockFastMutex(&control->mutex) < 0)
+			SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
 	return 0;
 }
 
@@ -432,6 +437,149 @@ void bbmcPowerEventTimeout(void *argp)
 		SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
 }
 
+/* every message goes to the state machine (or the suspend handler), then to each sequence */
+static int (*const bbmcSequences[32])(BbmcControl *, BbmcMessage *) = {
+	seqSysconEvent, seqUpdateNetworkInfo, seqSetModemLink, seqSysconStatus,
+	seqListSms, seqReadSms, seqSendSms, seqUpdateGPS,
+	seqGpsRequest, seqStartNetIF, seqStopNetIF, seqGetChannelRates,
+	seqChangeControlFlags, seqCheckModemVersion, seqAccessSetupValue,
+	seqScanNetworks, seqChangeAttach, seqGetStoredImages,
+	seqGetFirmwarePreference, seqSetFirmwareImage, seqSetFirmwarePreference,
+	seqGetCellLocation, _swdlSeqCarrierQmi, _udSeqChkComPower,
+	seqSimRefresh, seqProactiveCommand, seqSuspend, seqResume,
+	seqUnlockPin, seqControlKey, seqRefreshPinStatus, seqDisconnectNetwork,
+};
+
+int _managerThread(SceSize argumentSize, void *arguments)
+{
+	BbmcControl *control = *(BbmcControl **)arguments;
+	int (*const *sequence)(BbmcControl *, BbmcMessage *);
+	int (*handler)(BbmcControl *, BbmcMessage *);
+	BbmcMessage *message = NULL;
+	SceUInt32 events;
+	int i, ret;
+
+	ret = bbcmdInitialize(1);
+	if (ret < 0)
+		return ret;
+	ret = bbcmdExecute(3, 1, NULL, NULL, bbcmdManagerCompletion, &bbmcMainControl);
+	if (ret < 0)
+		goto finalize;
+	ret = bbcmdExecute(0, 3, NULL, NULL, bbcmdManagerCompletion, &bbmcMainControl);
+	if (ret < 0)
+		goto close_channel3;
+	ret = bbcmdExecute(1, 3, NULL, NULL, bbcmdManagerCompletion, &bbmcMainControl);
+	if (ret < 0)
+		goto close_channel0;
+
+	control->sysconPowerInverted = SceSysconForDriver_63B14156() == 0;
+	SceSysconForDriver_85E5DEBF(bbmcSysconPowerStateChanged, control);
+	control->powerEventActive = ScePowerForDriver_5210A6FE(65569) > 0;
+	ScePowerForDriver_B24263F0(1, bbmcPowerProcessFlagsChanged, control);
+
+	for (;;) {
+		if (msgReceiveMsgPacket(control, &message) < 0)
+			return 0;
+		if (message->command == 0)
+			control->flags |= 1;
+		if (control->suspendState <= 1) {
+			stmProcessMessage(control, message);
+		} else if (control->suspendMessageHandler != NULL) {
+			ret = control->suspendMessageHandler(control, message);
+			if (ret == 0) {
+				if (bbmcLockFastMutex(&control->mutex) < 0)
+					SCE_DBG_ASSERT_FUNC(0, 1375, "bbmcEnterCS");
+				control->suspendMessageHandler = NULL;
+				if (control->suspendState == 2) {
+					bbmcGpioTransitionHook();
+					bbmcFlushTimers();
+					control->suspendState = 3;
+				}
+				if (bbmcUnlockFastMutex(&control->mutex) < 0)
+					SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
+			} else if (ret == 2) {
+				control->suspendMessageHandler = NULL;
+			} else if (ret < 0) {
+				int (*const suspendHandlers[24])(BbmcControl *, BbmcMessage *) = {
+					suspendSteadyComBoot, suspendInitialToComBoot,
+					suspendSteadyStandby, suspendDuringFromComBootToStandby,
+					suspendDuringFromComBootToInitial,
+					suspendDuringFromStandbyToAuthorized,
+					suspendDuringFromStandbyToComBoot, suspendSteadyTestMode,
+					suspendSteadyAuthorized,
+					suspendDuringFromAuthorizedToActivated,
+					suspendDuringFromAuthorizedToStandby,
+					suspendSteadyActivated,
+					suspendDuringFromActivatedToConnected,
+					suspendDuringFromActivatedToLowPowerMode,
+					suspendActivatedToStandbyOrAuthorized,
+					suspendSteadyConnected,
+					suspendConnectedToLowPowerModeOrStandby, suspendGotoLPM,
+					suspendDuringFromLpmToConnected,
+					suspendLowPowerModeToStandby, suspendSteadyLowPowerMode,
+					suspendGotoConnected, suspendTestModeToAuthorized,
+					suspendTestModeToStandby,
+				};
+
+				handler = control->suspendMessageHandler;
+				for (i = 0; i < 24; i++)
+					if (handler == suspendHandlers[i])
+						break;
+				if (i == 24)
+					control->suspendError = 0x80030118;
+				else
+					control->suspendError = 0x80030100 | i;
+				SCE_DBG_ASSERT_FUNC(0, 750, "_managerThread");
+			}
+		}
+		for (sequence = bbmcSequences; sequence != &bbmcSequences[32]; sequence++)
+			(*sequence)(control, message);
+		msgFreeMsgPacket(control, message);
+
+		if (bbmcLockFastMutex(&control->mutex) < 0)
+			SCE_DBG_ASSERT_FUNC(0, 1375, "bbmcEnterCS");
+		for (i = 0; i < 9; i++) {
+			if (control->subscribers[i].active == 1 &&
+			    control->subscribers[i].parameters.callbackId > 0) {
+				events = (control->deliveredEvents[i] &
+					  ~control->acknowledgedEvents[i]) |
+					 (control->pendingEvents[i] &
+					  control->subscribers[i].parameters.eventMask);
+				if (events == 0 || control->callbackPending[i] != 0)
+					continue;
+				control->callbackPending[i] = 1;
+				sceKernelNotifyCallback(
+					control->subscribers[i].parameters.callbackId, events);
+				control->deliveredEvents[i] = events;
+			}
+			control->acknowledgedEvents[i] = 0;
+			control->pendingEvents[i] = 0;
+		}
+		if (bbmcUnlockFastMutex(&control->mutex) < 0)
+			SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
+
+		if ((control->flags & 1) != 0 && control->currentState == 0 &&
+		    control->targetState == 0)
+			break;
+	}
+	control->flags &= ~1;
+	ScePowerForDriver_B24263F0(1, NULL, NULL);
+	SceSysconForDriver_85E5DEBF(NULL, NULL);
+	bbcmdExecute(1, 4, NULL, NULL, bbcmdManagerCompletion, &bbmcMainControl);
+	bbcmdExecute(0, 4, NULL, NULL, bbcmdManagerCompletion, &bbmcMainControl);
+	bbcmdExecute(3, 2, NULL, NULL, bbcmdManagerCompletion, &bbmcMainControl);
+	bbcmdFinalize();
+	return 0;
+
+close_channel0:
+	bbcmdExecute(0, 4, NULL, NULL, bbcmdManagerCompletion, &bbmcMainControl);
+close_channel3:
+	bbcmdExecute(3, 2, NULL, NULL, bbcmdManagerCompletion, &bbmcMainControl);
+finalize:
+	bbcmdFinalize();
+	return ret;
+}
+
 void bbmcEnterCS(struct ThreadmgrFastMutex *mutex)
 {
 	int ret = bbmcLockFastMutex(mutex);
@@ -639,7 +787,7 @@ int module_start(SceSize argumentSize, const void *arguments)
 		SCE_DBG_ASSERT_FUNC(0, 1322, "bbmcCreateCS");
 	if (bbmcCreateMailbox(&control->mailbox) < 0)
 		goto deleteHeap;
-	result = sceKernelCreateThread("SceBbmcMain", managerThread, 96,
+	result = sceKernelCreateThread("SceBbmcMain", _managerThread, 96,
 		0x2000, 0x10000000, 0x80000, NULL);
 	if (result < 0)
 		goto deleteMailbox;

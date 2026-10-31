@@ -306,6 +306,7 @@ int bbmcResetGpio(void);
 int bbmcAcquireGpio(int *previous);
 int bbmcReleaseGpio(int *previous);
 int bbmcGetGpioUsers(void);
+int bbmcGpioTransitionHook(void);
 
 /* bbmc_timer.c */
 int bbmcInitializeTimer(void);
@@ -313,6 +314,66 @@ int bbmcFinalizeTimer(void);
 int bbmcTimerResetHook(void);
 int bbmcTimerSetHandler(SceUInt32 delay, void (*callback)(void *arg), void *arg);
 int bbmcTimerCancelHandler(int id);
+int bbmcFlushTimers(void);
+
+/* the sequences _managerThread offers every message to, in its order */
+int seqSysconEvent(BbmcControl *control, BbmcMessage *message);
+int seqUpdateNetworkInfo(BbmcControl *control, BbmcMessage *message);
+int seqSetModemLink(BbmcControl *control, BbmcMessage *message);
+int seqSysconStatus(BbmcControl *control, BbmcMessage *message);
+int seqListSms(BbmcControl *control, BbmcMessage *message);
+int seqReadSms(BbmcControl *control, BbmcMessage *message);
+int seqSendSms(BbmcControl *control, BbmcMessage *message);
+int seqUpdateGPS(BbmcControl *control, BbmcMessage *message);
+int seqGpsRequest(BbmcControl *control, BbmcMessage *message);
+int seqStartNetIF(BbmcControl *control, BbmcMessage *message);
+int seqStopNetIF(BbmcControl *control, BbmcMessage *message);
+int seqGetChannelRates(BbmcControl *control, BbmcMessage *message);
+int seqChangeControlFlags(BbmcControl *control, BbmcMessage *message);
+int seqCheckModemVersion(BbmcControl *control, BbmcMessage *message);
+int seqAccessSetupValue(BbmcControl *control, BbmcMessage *message);
+int seqScanNetworks(BbmcControl *control, BbmcMessage *message);
+int seqChangeAttach(BbmcControl *control, BbmcMessage *message);
+int seqGetStoredImages(BbmcControl *control, BbmcMessage *message);
+int seqGetFirmwarePreference(BbmcControl *control, BbmcMessage *message);
+int seqSetFirmwareImage(BbmcControl *control, BbmcMessage *message);
+int seqSetFirmwarePreference(BbmcControl *control, BbmcMessage *message);
+int seqGetCellLocation(BbmcControl *control, BbmcMessage *message);
+int _swdlSeqCarrierQmi(BbmcControl *control, BbmcMessage *message);
+int _udSeqChkComPower(BbmcControl *control, BbmcMessage *message);
+int seqSimRefresh(BbmcControl *control, BbmcMessage *message);
+int seqProactiveCommand(BbmcControl *control, BbmcMessage *message);
+int seqSuspend(BbmcControl *control, BbmcMessage *message);
+int seqResume(BbmcControl *control, BbmcMessage *message);
+int seqUnlockPin(BbmcControl *control, BbmcMessage *message);
+int seqControlKey(BbmcControl *control, BbmcMessage *message);
+int seqRefreshPinStatus(BbmcControl *control, BbmcMessage *message);
+int seqDisconnectNetwork(BbmcControl *control, BbmcMessage *message);
+
+/* state_machine/test_mode.c */
+int stmProcessMessage(BbmcControl *control, BbmcMessage *message);
+
+/* the suspend handlers, in the order of their suspendError codes */
+int suspendSteadyComBoot(BbmcControl *control, BbmcMessage *message);
+int suspendInitialToComBoot(BbmcControl *control, BbmcMessage *message);
+int suspendSteadyStandby(BbmcControl *control, BbmcMessage *message);
+int suspendDuringFromComBootToInitial(BbmcControl *control, BbmcMessage *message);
+int suspendDuringFromStandbyToAuthorized(BbmcControl *control, BbmcMessage *message);
+int suspendDuringFromStandbyToComBoot(BbmcControl *control, BbmcMessage *message);
+int suspendSteadyTestMode(BbmcControl *control, BbmcMessage *message);
+int suspendSteadyAuthorized(BbmcControl *control, BbmcMessage *message);
+int suspendDuringFromAuthorizedToActivated(BbmcControl *control, BbmcMessage *message);
+int suspendDuringFromAuthorizedToStandby(BbmcControl *control, BbmcMessage *message);
+int suspendSteadyActivated(BbmcControl *control, BbmcMessage *message);
+int suspendDuringFromActivatedToConnected(BbmcControl *control, BbmcMessage *message);
+int suspendDuringFromActivatedToLowPowerMode(BbmcControl *control, BbmcMessage *message);
+int suspendActivatedToStandbyOrAuthorized(BbmcControl *control, BbmcMessage *message);
+int suspendConnectedToLowPowerModeOrStandby(BbmcControl *control, BbmcMessage *message);
+int suspendDuringFromLpmToConnected(BbmcControl *control, BbmcMessage *message);
+int suspendLowPowerModeToStandby(BbmcControl *control, BbmcMessage *message);
+int suspendSteadyLowPowerMode(BbmcControl *control, BbmcMessage *message);
+int suspendTestModeToAuthorized(BbmcControl *control, BbmcMessage *message);
+int suspendTestModeToStandby(BbmcControl *control, BbmcMessage *message);
 
 /* state_machine/com_boot.c */
 int suspendDuringFromComBootToStandby(BbmcControl *control, BbmcMessage *message);

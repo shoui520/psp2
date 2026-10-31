@@ -26,6 +26,8 @@ typedef void (*BbcmdCompletion)(SceUInt32 channel, SceUInt32 command,
 void bbcmdManagerCompletion(SceUInt32 channel, SceUInt32 command, int result,
 			    BbcmdArgument *input, BbcmdArgument *output, void *arg);
 
+int bbcmdInitialize(unsigned int protocolKind);
+int bbcmdFinalize(void);
 int bbcmdExecute(unsigned int channel, unsigned int command,
 		 BbcmdArgument *input, BbcmdArgument *output,
 		 BbcmdCompletion completion, void *completionArg);
