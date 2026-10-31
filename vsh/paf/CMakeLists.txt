@@ -113,6 +113,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/inputdevice/pad/pad.cpp
 	src/inputdevice/touchscreen/touchscreen.cpp
 	src/inputdevice/btrm/btrm.cpp
+	src/module/module.cpp
+	src/module/module_impl.cpp
 	src/timer/timer.c
 	src/timer/curves.c
 	src/std/math.c
@@ -230,3 +232,6 @@ set_source_files_properties(src/inputdevice/gesturelistener.cpp PROPERTIES COMPI
 set_source_files_properties(src/inputdevice/motionsensor/motionsensor.cpp src/inputdevice/pad/pad.cpp
 	src/inputdevice/touchscreen/touchscreen.cpp src/inputdevice/btrm/btrm.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+
+# Module inlines map's operator[] and the interface table's find (2026-10-31).
+set_source_files_properties(src/module/module.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)

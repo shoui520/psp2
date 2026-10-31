@@ -42,6 +42,10 @@ typedef struct SceKernelUnloadModuleOpt {
 } SceKernelUnloadModuleOpt;
 
 #ifndef PSP2_KERNEL
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* the user library's module functions (a kernel unit has the kernel's, modulemgr/modulemgr.h) */
 SceUID sceKernelLoadModule(const char *moduleFileName, SceUInt32 flags,
 			   const SceKernelLoadModuleOpt *pOpt);
@@ -54,6 +58,10 @@ int sceKernelStopModule(SceUID uid, SceSize args, const void *argp, SceUInt32 fl
 int sceKernelUnloadModule(SceUID uid, SceUInt32 flags, const SceKernelUnloadModuleOpt *pOpt);
 int sceKernelStopUnloadModule(SceUID uid, SceSize args, const void *argp, SceUInt32 flags,
 			      const SceKernelUnloadModuleOpt *pOpt, int *pRes);
+
+#ifdef __cplusplus
+}
+#endif
 #endif
 
 #endif /* !_LANGUAGE_ASSEMBLY */

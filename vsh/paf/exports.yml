@@ -1085,7 +1085,7 @@ ScePaf:
         - ScePafMisc_D27C91C0: 0xD27C91C0
         - _ZN3paf5TimerD0Ev: 0xD29258BB
         - _ZN3paf9LocalFileC2EPNS_6memory13HeapAllocatorE: 0xD2DB93D0
-        - ScePafMisc_D2E471DC: 0xD2E471DC
+        - _ZN3paf6Module9GetStatusEv: 0xD2E471DC
         - _ZN3paf11inputdevice12motionsensor8IsLockedEv: 0xD350BADF
         - _ZN3paf6memory13HeapAllocator16sce_paf_calloc_dEjjPKcii: 0xD3D1F615
         - _ZN3paf4http11Transaction16SetRequestHeaderEPKcS3_: 0xD3E4B405

@@ -9,7 +9,6 @@ uint32_t sce_paf_misc_value_ef04;
 int8_t sce_paf_misc_flag_eef5;
 uint32_t sce_paf_misc_value_1078;
 float sce_paf_misc_float_1178;
-uint64_t sce_paf_misc_pair_1158;
 uint32_t sce_paf_misc_shared_f3c8;
 uint64_t sce_paf_misc_pair_1170;
 
@@ -92,11 +91,6 @@ float *ScePafMisc_F8D63B8E(float value)
 {
 	sce_paf_misc_float_1178 = value;
 	return &sce_paf_misc_float_1178;
-}
-
-uint64_t ScePafMisc_A8133C0A(void)
-{
-	return sce_paf_misc_pair_1158;
 }
 
 void *ScePafMisc_405C4F0A(uint32_t *object, uint32_t first)
