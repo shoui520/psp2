@@ -96,7 +96,7 @@ int32_t paf::inputdevice::hidkeyboard::Init(InitParam &init_param)
 	return 0;
 }
 
-int32_t paf::inputdevice::hidkeyboard::RegisterCallback()
+int32_t paf::inputdevice::hidkeyboard::Activate()
 {
 	if (s_enum_hint_cbid > 0 || s_read_hint_cbid > 0)
 		return SCE_PAF_ERROR_INPUTDEVICE_ALREADY_REGISTERED;
@@ -117,7 +117,7 @@ int32_t paf::inputdevice::hidkeyboard::RegisterCallback()
 	return sceHidKeyboardRegisterReadHintCallback(cbid);
 }
 
-int32_t paf::inputdevice::hidkeyboard::UnregisterCallback()
+int32_t paf::inputdevice::hidkeyboard::Deactivate()
 {
 	if (s_enum_hint_cbid == 0 || s_read_hint_cbid == 0)
 		return SCE_PAF_ERROR_INPUTDEVICE_NOT_REGISTERED;

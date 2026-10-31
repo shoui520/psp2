@@ -110,8 +110,8 @@ public:
 
 int32_t Init(InitParam &init_param);
 int32_t End();
-int32_t RegisterCallback();
-int32_t UnregisterCallback();
+int32_t Activate();
+int32_t Deactivate();
 bool IsActive();
 int32_t Update(float diff_time, const Data **data, const Data **data_pre);
 void Lock();
