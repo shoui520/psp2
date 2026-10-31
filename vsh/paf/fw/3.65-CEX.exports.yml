@@ -363,7 +363,7 @@ ScePaf:
         - ScePafMisc_26BCDBCA: 0x26BCDBCA
         - _ZN3paf7MemFile4OpenEPvjPi: 0x26BF1B5B
         - _ZN3paf11inputdevice3EndEv: 0x26C77CAE
-        - ScePafMisc_26F81894: 0x26F81894
+        - _ZN3paf11inputdevice13UpdateGestureEb: 0x26F81894
         - _ZN3paf6memory13PoolAllocator5AllocEv: 0x2713C850
         - _ZN3paf5Timer15DoFuncBounceOutEf: 0x27705AD9
         - _ZNK3paf5image5Image11GetCLUTModeEv: 0x2795D5F1
@@ -693,7 +693,7 @@ ScePaf:
         - _ZN3paf4http11TransactionC1ERNS0_6ClientE: 0x7616DF6C
         - _ZN3paf5sound6Output9StopSoundEPKc: 0x7698EC42
         - SHA1PadMessage: 0x76CC0B17
-        - ScePafMisc_77039A6F: 0x77039A6F
+        - _ZN3paf11inputdevice20InputGestureListener15OnUpdateGestureEPKNS0_4DataEb: 0x77039A6F
         - ScePafMisc_7709D1B2: 0x7709D1B2
         - _ZN3paf12BufferedFile5IsEofEv: 0x772634EA
         - ScePafMisc_7731B37D: 0x7731B37D

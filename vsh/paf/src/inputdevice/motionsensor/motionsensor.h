@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "../../timer/timer.h"
 
 typedef struct MotionSensorData {
 	uint32_t timestamp;
@@ -14,6 +15,27 @@ typedef struct MotionSensorData {
 	float basic_orientation[4];
 	unsigned char dataInfo;
 } MotionSensorData;
+
+/* paf::list<Timer> (its C++ COMDATs are hidkeyboard.cpp's). */
+typedef struct InputTimerNode {
+	struct InputTimerNode *prev;
+	struct InputTimerNode *next;
+	Timer val;
+} InputTimerNode;
+
+typedef struct InputTimerList {
+	InputTimerNode *root_node;
+	int32_t count;
+	unsigned char alloc_value;
+	unsigned char alloc_node;
+} InputTimerList;
+
+typedef char InputTimerNodeSizeCheck[sizeof(InputTimerNode) == 36 ? 1 : -1];
+typedef char InputTimerListSizeCheck[sizeof(InputTimerList) == 12 ? 1 : -1];
+
+InputTimerList *InputTimerListConstruct(InputTimerList *self,
+				       const void *allocator);
+InputTimerList *InputTimerListDestroy(InputTimerList *self);
 
 typedef void (*MotionSensorDeviceHandler)(MotionSensorData *data);
 

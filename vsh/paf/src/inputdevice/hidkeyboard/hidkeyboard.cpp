@@ -265,7 +265,7 @@ void paf::inputdevice::hidkeyboard::LockTimer(float time)
 	s_lock_count++;
 }
 
-bool paf::inputdevice::hidkeyboard::IsValid()
+bool paf::inputdevice::hidkeyboard::IsOwnershipReleasable()
 {
 	return true;
 }

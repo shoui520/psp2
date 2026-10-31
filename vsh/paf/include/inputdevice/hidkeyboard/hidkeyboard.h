@@ -118,7 +118,7 @@ void Lock();
 void Reserved();
 void LockTimer(float time);
 int32_t Unlock();
-bool IsValid();
+bool IsOwnershipReleasable();
 float GetIdleTime();
 
 }

@@ -63,6 +63,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/image/image/image_transparentize.cpp
 	src/misc/image/image/image_gxt.cpp
 	src/inputdevice/hidkeyboard/hidkeyboard.cpp
+	src/inputdevice/inputdevice.cpp
 	src/file/httpfile.cpp
 	src/file/httpfile_reader.cpp
 	src/file/httpfile_range_reader.cpp
@@ -107,8 +108,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/cache/cache_manager.cpp
 	src/cache/cache_manager_impl.cpp
 	src/common/encoded_string.cpp
-	src/inputdevice/inputdevice.c
-	src/inputdevice/inputlistener.c
 	src/inputdevice/gesturelistener.c
 	src/inputdevice/motionsensor/motionsensor.c
 	src/timer/timer.c

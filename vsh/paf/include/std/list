@@ -251,14 +251,14 @@ typename list<_Ty, _Ax>::iterator
 list<_Ty, _Ax>::erase(iterator where)
 {
 	_Node *node = where.node;
-	iterator next(node->next);
+	_Node *next = node->next;
 
 	node->next->prev = node->prev;
 	node->prev->next = node->next;
 	destroy(&node->value);
 	operator delete(node);
 	--count;
-	return next;
+	return iterator(next);
 }
 
 /* Sony's build calls remove rather than inlining it. */
