@@ -337,7 +337,8 @@ void bbmcPowerProcessFlagsChanged(SceUID processId, SceUInt32 flags, void *argp)
 
 	if (processId != 65569)
 		return;
-	bbmcEnterCS(&control->mutex);
+	if (bbmcLockFastMutex(&control->mutex) < 0)
+		SCE_DBG_ASSERT_FUNC(0, 1375, "bbmcEnterCS");
 	active = (flags & 0x20) != 0;
 	if (active == control->powerEventActive)
 		goto out;
@@ -388,7 +389,8 @@ void bbmcPowerProcessFlagsChanged(SceUID processId, SceUInt32 flags, void *argp)
 		events = 0x8000000;
 	}
 out:
-	bbmcLeaveCS(&control->mutex);
+	if (bbmcUnlockFastMutex(&control->mutex) < 0)
+		SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
 	if (events != 0) {
 		vst1_u32(control->pendingEvents,
 			vorr_u32(vld1_u32(control->pendingEvents), vdup_n_u32(events)));
@@ -482,14 +484,16 @@ int _managerThread(SceSize argumentSize, void *arguments)
 		} else if (control->suspendMessageHandler != NULL) {
 			ret = control->suspendMessageHandler(control, message);
 			if (ret == 0) {
-				bbmcEnterCS(&control->mutex);
+				if (bbmcLockFastMutex(&control->mutex) < 0)
+					SCE_DBG_ASSERT_FUNC(0, 1375, "bbmcEnterCS");
 				control->suspendMessageHandler = NULL;
 				if (control->suspendState == 2) {
 					bbmcGpioTransitionHook();
 					bbmcFlushTimers();
 					control->suspendState = 3;
 				}
-				bbmcLeaveCS(&control->mutex);
+				if (bbmcUnlockFastMutex(&control->mutex) < 0)
+					SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
 			} else if (ret == 2) {
 				control->suspendMessageHandler = NULL;
 			} else if (ret < 0) {
@@ -529,7 +533,8 @@ int _managerThread(SceSize argumentSize, void *arguments)
 			(*sequence)(control, message);
 		msgFreeMsgPacket(control, message);
 
-		bbmcEnterCS(&control->mutex);
+		if (bbmcLockFastMutex(&control->mutex) < 0)
+			SCE_DBG_ASSERT_FUNC(0, 1375, "bbmcEnterCS");
 		for (i = 0; i < 9; i++) {
 			if (control->subscribers[i].active == 1 &&
 			    control->subscribers[i].parameters.callbackId > 0) {
@@ -547,7 +552,8 @@ int _managerThread(SceSize argumentSize, void *arguments)
 			control->acknowledgedEvents[i] = 0;
 			control->pendingEvents[i] = 0;
 		}
-		bbmcLeaveCS(&control->mutex);
+		if (bbmcUnlockFastMutex(&control->mutex) < 0)
+			SCE_DBG_ASSERT_FUNC(0, 1398, "bbmcLeaveCS");
 
 		if ((control->flags & 1) != 0 && control->currentState == 0 &&
 		    control->targetState == 0)

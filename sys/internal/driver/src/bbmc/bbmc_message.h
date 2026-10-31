@@ -223,6 +223,16 @@ _Static_assert(sizeof(BbmcNetworkStopMessage) == 8, "network stop message size")
 _Static_assert(offsetof(BbmcNetworkStopMessage, networkHandle) == 4,
 	"network stop handle");
 
+/* The updater's chunk (commands 175/176): the package fields, under the message's own type. */
+typedef struct BbmcUpdatePackageMessage {
+	SceUInt32 chunkCount;
+	SceUInt32 chunkIndex;
+	void *buffer;
+	SceSize size;
+} BbmcUpdatePackageMessage;
+
+_Static_assert(sizeof(BbmcUpdatePackageMessage) == 16, "update package message size");
+
 /* name unknown: command 113 sets (set 1) or clears the packet interface control flags */
 typedef struct BbmcControlFlagMessage {
 	SceUInt32 set;
@@ -263,7 +273,7 @@ typedef union BbmcMessageBody {
 	const struct BbmcSimFile *simFile;
 	BbmcNetworkStartMessage networkStart;
 	BbmcNetworkStopMessage networkStop;
-	BbmcUpdatePackage updatePackage;
+	BbmcUpdatePackageMessage updatePackage;
 	SceUInt32 timedOutCommand;
 	SceUInt32 operationMode;
 	SceUInt32 sysconReplyFlags;
