@@ -499,6 +499,8 @@ static inline int lock_mutex(psp2::Mutex &mutex)
 	default:
 		IPMI_ASSERT_UNEXPECTED(ret);
 	}
+	/* After an unexpected error is reported, the caller goes on as if locked. */
+	return 0;
 }
 
 static inline void unlock_mutex(psp2::Mutex &mutex)
