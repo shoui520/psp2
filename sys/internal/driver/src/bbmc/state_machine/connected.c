@@ -719,14 +719,16 @@ int stmConnected_Activated(BbmcControl *control, BbmcMessage *message)
 			return 1;
 		goto finish;
 	}
-	if (connectedTransitionStep != 0) {
-		if (connectedTransitionStep == 1) {
-			if (message->command != 57)
-				return 1;
-			result = control->flags & 2;
-		} else {
-			result = (int)0x80330001;
-		}
+	switch (connectedTransitionStep) {
+	case 0:
+		break;
+	case 1:
+		if (message->command != 57)
+			return 1;
+		result = control->flags & 2;
+		goto finish;
+	default:
+		result = (int)0x80330001;
 		goto finish;
 	}
 	if (control->pendingPacketRequest == 0) {

@@ -11246,7 +11246,8 @@ int bbcmdFinalizeProtocol(unsigned int command, BbcmdControl *control)
 	return ret;
 }
 
-int bbcmdOpenChannel(unsigned int command, unsigned int channel)
+/* completionArg: bbcmdExecute passes its caller's, unused here (as Sony's). */
+int bbcmdOpenChannel(unsigned int command, unsigned int channel, void *completionArg)
 {
 	unsigned int channels[2] = { 0, 1 };
 	int ret = (int)0x80330002;
@@ -11262,7 +11263,7 @@ out:
 	return ret;
 }
 
-int bbcmdCloseChannel(unsigned int command, unsigned int channel)
+int bbcmdCloseChannel(unsigned int command, unsigned int channel, void *completionArg)
 {
 	unsigned int channels[2] = { 0, 1 };
 	int ret = (int)0x80330002;

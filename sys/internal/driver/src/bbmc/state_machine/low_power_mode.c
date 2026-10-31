@@ -1,6 +1,5 @@
 #include <syscon/syscon.h>
 #include <sysmem/debug.h>
-#include <string.h>
 #include "../bbmc_control.h"
 #include "../bbmc_message.h"
 #include "../bbmc_memory.h"
@@ -78,7 +77,13 @@ static inline int lowPowerConnectSequence(BbmcControl *control,
 			result = (int)0x80330006;
 			goto cleanup;
 		}
-		memset(input, 0, sizeof(input));
+		input[0].value = 0;
+		input[1].value = 0;
+		input[2].value = 0;
+		input[3].value = 0;
+		input[4].value = 0;
+		input[5].value = 0;
+		input[6].value = 0;
 		result = bbcmdExecute(0, 37, input, NULL,
 				      bbcmdManagerCompletion, control);
 		if (result < 0)
@@ -408,7 +413,13 @@ int suspendGotoConnected(BbmcControl *control, BbmcMessage *message)
 			result = (int)0x80330006;
 			goto cleanup;
 		}
-		memset(input, 0, sizeof(input));
+		input[0].value = 0;
+		input[1].value = 0;
+		input[2].value = 0;
+		input[3].value = 0;
+		input[4].value = 0;
+		input[5].value = 0;
+		input[6].value = 0;
 		result = bbcmdExecute(0, 37, input, NULL,
 				      bbcmdManagerCompletion, control);
 		if (result < 0)

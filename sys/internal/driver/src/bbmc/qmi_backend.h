@@ -982,8 +982,8 @@ int bbcmdUpdateCompletedMaskForState(BbcmdRequest *request, int state);
 int bbcmdSendEmptyDmsMessages(BbcmdRequest *request, QmiEmptyMessageList messageList);
 int bbcmdInitializeProtocol(unsigned int command, BbcmdControl *control);
 int bbcmdFinalizeProtocol(unsigned int command, BbcmdControl *control);
-int bbcmdOpenChannel(unsigned int command, unsigned int channel);
-int bbcmdCloseChannel(unsigned int command, unsigned int channel);
+int bbcmdOpenChannel(unsigned int command, unsigned int channel, void *completionArg);
+int bbcmdCloseChannel(unsigned int command, unsigned int channel, void *completionArg);
 int bbcmdResetChannel(unsigned int command, unsigned int channel, BbcmdControl *control);
 
 /* qmi_transmit.c */

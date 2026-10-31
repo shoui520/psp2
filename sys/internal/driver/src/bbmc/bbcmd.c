@@ -377,7 +377,7 @@ cancel_unlock:
 			goto invalid_state;
 		if (control->protocolKind != 1)
 			goto invalid_protocol;
-		ret = bbcmdOpenChannel(3, channel);
+		ret = bbcmdOpenChannel(3, channel, completionArg);
 		goto done;
 	case 4:
 		if (channel > 1)
@@ -386,7 +386,7 @@ cancel_unlock:
 			goto invalid_state;
 		if (control->protocolKind != 1)
 			goto invalid_protocol;
-		ret = bbcmdCloseChannel(4, channel);
+		ret = bbcmdCloseChannel(4, channel, completionArg);
 		goto done;
 	case 5:
 		if (channel > 1)
