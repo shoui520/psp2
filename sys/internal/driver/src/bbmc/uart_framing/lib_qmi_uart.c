@@ -875,12 +875,16 @@ int qmiDecodeUartFrame(const unsigned char *data, unsigned int length,
 				goto panic;
 			last = control->receiveData[(consumer + advance) & 2047];
 			marker |= last;
-			if (marker == startMarker || marker == 0x06f9 || marker == 0x15ea) {
+			if (marker == startMarker) {
 				advance--;
 				goto resynchronized;
 			}
 			if (marker == endMarker) {
 				advance++;
+				goto resynchronized;
+			}
+			if (marker == 0x06f9 || marker == 0x15ea) {
+				advance--;
 				goto resynchronized;
 			}
 		}
