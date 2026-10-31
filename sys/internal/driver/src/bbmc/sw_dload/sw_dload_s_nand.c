@@ -57,8 +57,12 @@ static const SceUInt16 swdlCrcTable[256] = {
 	0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78,
 };
 
-/* name unknown: the frame check sequence of a frame's bytes */
-SceUInt16 swdlCalculateCrc(const SceUInt8 *data, SceSize size)
+/*
+ * The frame check sequence of a frame's bytes. Sony's swdlEndFrame has the loop inlined and
+ * swdlDownloadSendImage calls swdlCalculateCrc whole; GCC would split the size test from the
+ * loop into a clone for both, so the loop is one inline body and the function is noinline.
+ */
+static inline __attribute__((always_inline)) SceUInt16 swdlCrc(const SceUInt8 *data, SceSize size)
 {
 	const SceUInt8 *end;
 	SceUInt32 crc;
@@ -71,6 +75,12 @@ SceUInt16 swdlCalculateCrc(const SceUInt8 *data, SceSize size)
 		crc = swdlCrcTable[(SceUInt8)(*data++ ^ crc)] ^ (crc >> 8);
 	while (data != end);
 	return (SceUInt16)~crc;
+}
+
+/* name unknown */
+__attribute__((noinline)) SceUInt16 swdlCalculateCrc(const SceUInt8 *data, SceSize size)
+{
+	return swdlCrc(data, size);
 }
 
 /* name unknown: make sure the frame buffer holds at least 140 bytes */
@@ -359,7 +369,7 @@ __attribute__((noinline)) int swdlReadFileAt(SceUID fd, void *data, SceUInt32 of
 /* name unknown: end an HDLC frame: its check sequence and the flag byte 0x7e */
 __attribute__((noinline)) int swdlEndFrame(const SceUInt8 *data, SceSize *size, SceUInt8 *trailer)
 {
-	SceUInt16 crc = swdlCalculateCrc(data, *size);
+	SceUInt16 crc = swdlCrc(data, *size);
 
 	trailer[1] = crc >> 8;
 	trailer[0] = crc;
