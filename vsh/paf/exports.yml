@@ -267,7 +267,7 @@ ScePaf:
         - _ZN3paf9LocalFile9ReadAsyncEPvj: 0x0CD740C5
         - ScePafMisc_0D1B028E: 0x0D1B028E
         - _ZN3paf11inputdevice11touchscreen4LockEj: 0x0D4B4B67
-        - ScePafMisc_0DE3F659: 0x0DE3F659
+        - _ZN3paf5image6filter5PasteEPNS0_11ImageBufferEPKS2_S5_iiiNS0_11ImageExtentES6_9ImageModeNS0_11ImageFormatERKNS0_10ImagePointE: 0x0DE3F659
         - _ZN3paf6memory14RangeAllocatorC1EPvjPKcPKNS1_6OptionE: 0x0E353BB3
         - ScePafMisc_0E846E5C: 0x0E846E5C
         - _ZN3paf5cache10CacheImageC2EPNS0_16CacheManagerImplEPKNS1_6OptionE: 0x0EB2C9D6
@@ -410,7 +410,7 @@ ScePaf:
         - _ZN3paf5image10ImageArray11SetCLUTSizeEPKNS0_14ImageAttributeE: 0x2FEF71B0
         - ScePafMisc_30A8AD46: 0x30A8AD46
         - _ZN3paf11inputdevice3pad3EndEv: 0x30EAFB53
-        - ScePafMisc_3132A0D3: 0x3132A0D3
+        - _ZN3paf5image6filter4CropEPNS0_11ImageBufferEPKS2_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatENS0_9ImageRectE: 0x3132A0D3
         - _ZN3paf4math10quaternion18FromEulerAnglesYZXENS0_2v3E: 0x315CCB24
         - _ZN3paf12BufferedFile4SeekExi: 0x326FDFA7
         - _ZNK3paf6memory14RangeAllocator7GetTypeEv: 0x32729AC8
@@ -613,7 +613,7 @@ ScePaf:
         - _ZN3paf17LocalFilePsp2Impl5FlushEv: 0x61B3C8C6
         - _ZNK3paf6memory13PoolAllocator8GetRangeEPPvPj: 0x61B990CD
         - _ZN3paf5Timer12DoFuncExpoInEf: 0x61EA5DF3
-        - ScePafMisc_6222005E: 0x6222005E
+        - _ZN3paf5image6filter5BlendEPNS0_11ImageBufferEPKS2_S5_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatEf: 0x6222005E
         - _ZN3paf8datetime8DateTime13GetTimeFormatEv: 0x6227AE12
         - _ZNK3paf4math6matrix8inverse3Ev: 0x62EB3B09
         - _ZNK3paf3Url14GetQueryStringEv: 0x63446442
@@ -815,7 +815,7 @@ ScePaf:
         - _ZN3paf5image14ImageAttributeC1Ev: 0x9057D20F
         - _ZN3paf3rtc21ConvertUtcToLocalTimeEPKyPy: 0x909913D9
         - _ZNK3paf3Url12GetUrlStringEv: 0x9120E3DA
-        - ScePafMisc_916E3CE4: 0x916E3CE4
+        - _ZN3paf5image6filter11RoundCornerEPNS0_11ImageBufferEPKS2_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatEiii: 0x916E3CE4
         - _ZN3paf5cache12CacheManagerD2Ev: 0x91D656B9
         - ScePafMisc_925B7948: 0x925B7948
         - _ZN3paf3rtc12TickAddYearsEPyPKyi: 0x9263D1D0

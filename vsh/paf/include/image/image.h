@@ -13,6 +13,8 @@ public:
 	ImageMode GetMode() const;
 	ImageOrder GetOrder() const;
 	ImageExtent GetExtent() const;
+
+	static void SetErrorType(int error);
 };
 
 }

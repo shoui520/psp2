@@ -28,6 +28,7 @@ upstream. When a build needs another file, add it from the same release.
 | sce-dtrace-cddl-2015.01 | Sony's CDDL DTrace sources (the Vita SDK's libdtrace source package, 2015/01) | the kernel driver files and their headers | deci4p_dtracep |
 | sqlite-3.6.23.1 | SQLite 3.6.23.1 amalgamation | `sqlite3.c`, `sqlite3.h` | libSceSqlite |
 | sqlite-3.7.6.3 | SQLite 3.7.6.3 source archive | what configure and the amalgamation build read | sqlite |
+| squish-1.11 | Simon Brown's libsquish 1.11 | the library sources and headers (`PROVENANCE.md`) | libpaf (`squish.h`, for the DXT filters) |
 | zlib-1.2.5 | zlib 1.2.5 | the library sources | post_ss_mgr (`post_ss_mgr/zlib`) |
 
 Upstream code that no module builds from yet is not vendored; it is added here when a

@@ -32,6 +32,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/memfile.cpp
 	src/file/openurl.cpp
 	src/http/http.cpp
+	src/misc/image/image/image_filter.cpp
 	src/file/httpfile.cpp
 	src/file/httpfile_reader.cpp
 	src/file/httpfile_range_reader.cpp
@@ -155,7 +156,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 
 target_include_directories(vs0_sys_external_libpaf PRIVATE
 	"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt"
-	"${paf_zlib_INCLUDE}")
+	"${paf_zlib_INCLUDE}"
+	"${CMAKE_SOURCE_DIR}/contrib/squish-1.11")
 set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIES
 	COMPILE_DEFINITIONS "sceZlibDecompress=ScePafLowlayer_D7DAA151")
 
