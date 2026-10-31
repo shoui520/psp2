@@ -5,6 +5,7 @@ set(ipmi_source ../ipmi)
 enable_language(CXX)
 psp2_module(vs0_sys_external_libshellsvc KIND user COMPILER snc PARTIAL SOURCES
 	libshellsvc.c
+	../blocking_ipc/blocking_ipc_client.cpp
 	${ipmi_source}/psp2/event_flag.cpp
 	${ipmi_source}/psp2/msg_pipe.cpp
 	${ipmi_source}/psp2/mutex.cpp
