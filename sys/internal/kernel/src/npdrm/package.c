@@ -99,6 +99,219 @@ static const unsigned int gNpDrmPackageRsaModuli[4][64] = {
 	},
 };
 
+/* RSA CRT key material the package signatures are made and unwrapped with. */
+const struct NpDrmPackageRsaCrtMaterial gNpDrmPackageRetailRsaKey = {
+	.primeP = {
+		0x3f579c7d, 0x30b2bf19, 0x892f9ba8, 0x1e66865d,
+		0xd6d35fe6, 0x9e5ac7b1, 0x3db81ab2, 0xc7464070,
+		0xeeafad74, 0x8dcfc5d7, 0x98114a81, 0xd39d3307,
+		0xb3302cce, 0xe46f0ab0, 0xeae682bf, 0xa5589fae,
+		0x41d30e6e, 0x8a0c87c0, 0x775ca3a3, 0x3fdac941,
+		0x0d2baba8, 0xfb5b56f5, 0x3950fe55, 0xeb352e9f,
+		0x367c1790, 0x09602465, 0x20354a86, 0x32835ea0,
+		0xc1702c1b, 0x82ae6a37, 0x6b344543, 0xa1878b98,
+	},
+	.primeQ = {
+		0x9a39b74b, 0xb3d19f49, 0xacb223f8, 0xdcaba78c,
+		0xa468b436, 0xcc05fcef, 0x2df1e9c9, 0x3af9636b,
+		0xc775015e, 0xa53fd614, 0xe6ad550b, 0x4c8ed511,
+		0x47de1e49, 0x02289d9b, 0x821d09cb, 0x8eb698e9,
+		0xf0efc600, 0x46dde9a0, 0x39dff79c, 0xcdc81121,
+		0xcac8d205, 0x5e0c791f, 0x97354b08, 0x1a37b49e,
+		0x3af6ccb8, 0x39c42728, 0xc737ef7a, 0xffec8640,
+		0xd21188d9, 0x325e4624, 0x3cb832e4, 0xcfb6363a,
+	},
+	.exponentP = {
+		0x18354419, 0x66e9b251, 0x6b58cba6, 0x888bca92,
+		0xe9be829d, 0xb3872052, 0x43af5ff3, 0x58faa811,
+		0x9ca89ea3, 0x7eaf511f, 0xbd44d8c4, 0x892b1398,
+		0xe1b40483, 0xb8cdff86, 0xc88dde7c, 0x72ac52cf,
+		0xe69eab7b, 0x10a8ee7a, 0xfc318f60, 0x5f3e0c12,
+		0x7b0577d5, 0x1819f868, 0xf9db0e00, 0x38a7db3b,
+		0x0b1b2401, 0x6a964000, 0xdba24290, 0x53a61e34,
+		0x62ffbd82, 0x27fd3b0f, 0x3a4d941a, 0x3018a60e,
+	},
+	.exponentQ = {
+		0xd6e23661, 0x8a87dc88, 0x6db9ff31, 0x8423b88a,
+		0xf6d6d3e5, 0x2d093f7f, 0x17669fd4, 0x491455bf,
+		0x9277e3c2, 0x62b4a813, 0x854023e8, 0x366d2fe3,
+		0x79450abc, 0x5472b9a1, 0x368b816d, 0x5be5122c,
+		0xaf104840, 0x2489edef, 0xfbfc75c5, 0x14dd6b21,
+		0x3f4cf64d, 0xdf9d9d27, 0x6dc02e9d, 0x108aedc4,
+		0x02da88b8, 0x6a87385c, 0xfd7eb286, 0xeadb844a,
+		0x77e5ea83, 0x633539f4, 0x7bf91e01, 0x0608d52a,
+	},
+	.coefficient = {
+		0x055999a3, 0x688a92a7, 0xc4643009, 0x236b4132,
+		0xe552aa9a, 0xc3ac9239, 0x335ab621, 0xc7f14d15,
+		0x26d19dd8, 0x960e3f77, 0xf3da2cbb, 0xbe105401,
+		0x634386ec, 0x7e066ee9, 0x2da63b0a, 0x8af713d4,
+		0x80ef722e, 0x138b1b3b, 0xbdfc560f, 0x303d1419,
+		0x6529b0b4, 0x54705e25, 0x08bb2d2d, 0x67a01b60,
+		0x011d5b23, 0x0e210a17, 0x60cbf992, 0x071095a4,
+		0xd46e866c, 0x02168696, 0xee16c69c, 0x406bf63e,
+	},
+};
+
+const struct NpDrmPackageRsaCrtMaterial gNpDrmPackageDebugRsaKey = {
+	.primeP = {
+		0xe7f76073, 0x40edb893, 0x30797c74, 0x5f5751ae,
+		0xf053c3fb, 0xdffe4048, 0x21ce9669, 0xedcf15e7,
+		0x32a2652c, 0xe77686ba, 0xcc01203e, 0xa6e57d55,
+		0x2422c88c, 0x5d179a2c, 0x4be78cef, 0xe215790e,
+		0xe0e7b99f, 0x2e16cdec, 0x57814ca5, 0x6d9877e9,
+		0x5cb7d771, 0x3eb44e4b, 0xf551938c, 0x2312ab5c,
+		0x97653a01, 0x9a68e2e6, 0x35745037, 0xf906a041,
+		0xf02cf2c9, 0x7e61d7ec, 0x182f9d6d, 0xa5728154,
+	},
+	.primeQ = {
+		0xc5cb2ecb, 0xc6e09c7a, 0xafba52ae, 0xfe268339,
+		0x2439ec31, 0x07663f8e, 0x482ea463, 0x5b7b7c89,
+		0xfd7cd294, 0x877ce6b3, 0xdb7df56a, 0x964f08e1,
+		0x4713a301, 0x3d8561a3, 0xa7eb7930, 0x92cd10ce,
+		0xfe0f499c, 0xf030941c, 0x463d9157, 0x6c37af1e,
+		0x3c744da2, 0xe2f62d5e, 0x34841990, 0x621ff088,
+		0x1ab21eaa, 0x797b7f08, 0x35c06809, 0xaf09f99d,
+		0x2f9a02b1, 0xf55b860b, 0x99ba3f5a, 0xd4b1af1f,
+	},
+	.exponentP = {
+		0xb9a74c5d, 0x08514215, 0xa725a2a1, 0x587c73a6,
+		0x2f656377, 0xdeb78917, 0x4a85d53f, 0xfdf6475f,
+		0x3cd00a06, 0x6d73606f, 0xc09ab295, 0x717dd35d,
+		0x1a51e981, 0x895b4249, 0xa585741a, 0xeaa4efc5,
+		0xad8b77a8, 0x2c4d3ab6, 0xa2d67eca, 0x697e7c38,
+		0x7fcf0e2b, 0x4ca60840, 0x74342609, 0xa4d1f909,
+		0x5f9cb3bb, 0x3c4e7572, 0xe320fd33, 0x874959cc,
+		0x78605c04, 0x5fe0a341, 0x689a656c, 0x4fe3d0eb,
+	},
+	.exponentQ = {
+		0xac911e09, 0x72be2533, 0xbdd76c0c, 0x1595dcda,
+		0xd39614c9, 0x8310d3a3, 0x9475d9af, 0x84d8e684,
+		0xc28b220f, 0x923262f3, 0x8a3beddd, 0x0a25fd2b,
+		0x04323e61, 0x02618498, 0xdb338d7e, 0x965524f1,
+		0xdc1d39b0, 0xdd308373, 0xeea26df8, 0x9cbef848,
+		0x136a7f1c, 0xdbe29459, 0x69ee3dbc, 0x4bf02bfe,
+		0xc4eb2542, 0x8c61f80a, 0x5da59987, 0xd0c07791,
+		0x67660a06, 0x905a908c, 0x4e925b1c, 0x5a502880,
+	},
+	.coefficient = {
+		0xdeccca00, 0x4fe35263, 0xb0e3c45a, 0x27da4a06,
+		0x086b2847, 0x846ebc5d, 0xfd2d56d7, 0x22a1abec,
+		0x8878db19, 0x3783fe4f, 0xeaeab9dc, 0x96f6bc51,
+		0x1c2d8a76, 0x4a15a8bb, 0x4f1de956, 0x60249035,
+		0x28f7efa1, 0x57794904, 0xeec46ce6, 0x6bbd309b,
+		0xa4fb3bc3, 0x9c646a7e, 0xed0066ef, 0x4e61a27e,
+		0x38b4ce0b, 0xd0d6a520, 0x7383563e, 0xb52ae1aa,
+		0xc049758e, 0x62daa510, 0x0afe1c76, 0x02532212,
+	},
+};
+
+const struct NpDrmPackageRsaCrtMaterial gNpDrmPackageSigningRsaKey = {
+	.primeP = {
+		0x8dcdaa61, 0xf5fbcf19, 0xe1f677b6, 0xa4e48589,
+		0xc30864fe, 0x03fa6dba, 0x442afa44, 0x71b320b1,
+		0xbc407467, 0x05f51b0f, 0xc7c50f45, 0x0c363896,
+		0x1b0ecbe6, 0x17059394, 0x27a9b12c, 0xadfff18f,
+		0xbf6bb173, 0x50caaaca, 0xdb4b0d5b, 0x134deb30,
+		0xd46f0541, 0x2f0c6b6a, 0xbff814df, 0x92764528,
+		0x55091812, 0x907c5184, 0x52aceb08, 0xdeb1ce9d,
+		0x5e1aaee1, 0xf079c46f, 0xa2c6d2f0, 0xb946286f,
+	},
+	.primeQ = {
+		0x6c2be867, 0x93602654, 0x6b3c7839, 0xdd36ef6b,
+		0xb82c5968, 0xcf12c3ad, 0x3604e5f0, 0xd4c75058,
+		0xe134e684, 0x5a8fec4c, 0xd61b74d6, 0x972d9c43,
+		0x3752bfea, 0xd0a226a4, 0x42d62598, 0xca37cf71,
+		0x4ecd05be, 0x4819d592, 0xe5355194, 0x4440a14e,
+		0x0b365ab3, 0x1bf6c350, 0x12c09cb8, 0x08cd8535,
+		0xfbac4ec5, 0x7e204da9, 0x3047b17a, 0x2c59d248,
+		0xa4a5c447, 0x27781d97, 0xc186e807, 0xc5df25ed,
+	},
+	.exponentP = {
+		0x7abde8c1, 0xd5c9570d, 0x8441bb62, 0x709cb06d,
+		0xbe3e66d6, 0x4e74e657, 0xae139285, 0xa167ba64,
+		0xeb9e6090, 0x0c54a864, 0xef8b9c00, 0x20be5c62,
+		0x8fa4cb35, 0x32106f72, 0x3d138c41, 0x07f79099,
+		0x7db9bcf0, 0x04d1ce20, 0x02a82cbb, 0x3c0a11df,
+		0xe74ea7ef, 0x7b58f6ca, 0x5d3140b5, 0xc6d83dc6,
+		0x5fcad3e0, 0x15e49af6, 0x1a356988, 0x19572c0e,
+		0x1a4a3a41, 0x6b746a15, 0x075a459c, 0x2c0fd55a,
+	},
+	.exponentQ = {
+		0x063f8703, 0x4fb16c3b, 0x081191e7, 0xdbbdab26,
+		0x4be6eb17, 0x524566b7, 0x77841d2f, 0xfca36ccd,
+		0xe51fdfd4, 0x22052a96, 0xcff22d0a, 0xfd0fcabc,
+		0xf1a21cd8, 0xef1a25a2, 0x58c7de97, 0xc2dcedd4,
+		0x967758f2, 0x9d549afe, 0x03d9d0da, 0x9173af29,
+		0xe6e38857, 0xda1e844a, 0x62f4939f, 0x3b343cc5,
+		0x188e0963, 0xaaa0a8ae, 0xb945471a, 0xda884771,
+		0x106d1563, 0x576f811a, 0x42c0841b, 0x4211e7bd,
+	},
+	.coefficient = {
+		0x3832029e, 0x791d676f, 0xb856b832, 0xc5481fe1,
+		0x9fc016ef, 0x958f72eb, 0x94bec081, 0x0d097f64,
+		0x4f83226d, 0xe67767b6, 0xb37a0e68, 0x29249a42,
+		0xb61c6fab, 0x9221fc43, 0x6d7e191a, 0x1c08f6ba,
+		0x54f6b2a5, 0x1d4a8aff, 0x1c13eecc, 0xd5de4a06,
+		0xaa68b518, 0x68ec0bd0, 0x8d3bf191, 0x04e17667,
+		0xccc6470e, 0xa4699f6a, 0x18c7fccc, 0xa27873b2,
+		0xad777285, 0xe6faa125, 0xd68e4f4c, 0x8359e4de,
+	},
+};
+
+const struct NpDrmPackageRsaCrtMaterial gNpDrmPackageEncryptedKeyRsaKey = {
+	.primeP = {
+		0xfe8c4463, 0xe49b3ae3, 0xe0facabf, 0x21a02003,
+		0xbc6af94e, 0xd0a57673, 0xcd6a9399, 0x33b2fe10,
+		0xf2eebfb4, 0xfe21e09f, 0xe7814746, 0xc3c94e89,
+		0x662218eb, 0x591c3584, 0x7e008fdf, 0x9a4aad54,
+		0xf6f89383, 0x981d2f74, 0x11b801dc, 0xceaa4dbc,
+		0x9225619a, 0x417c041f, 0x714af590, 0x84119161,
+		0x9bca99a3, 0x037b1dad, 0xd89cc4a9, 0x152064a2,
+		0x985afd23, 0x25c9d4fd, 0xdfecb580, 0xa275011f,
+	},
+	.primeQ = {
+		0xf2d9262d, 0xbd77a955, 0x9e188525, 0x1e71212c,
+		0x949bb303, 0x7d02e5fd, 0x725f5763, 0xa99f98be,
+		0xea76f0a6, 0x4a8ffd21, 0x2b95161d, 0x8cedf0c5,
+		0x0219383a, 0xcc48effb, 0xbac9a0b6, 0x0c397412,
+		0xa005cd78, 0x53ebb8ac, 0x1bf43756, 0x6dcc3fe3,
+		0xb5d04391, 0x43a7d686, 0xfff98f16, 0xfb7551a2,
+		0x61fa73cc, 0x488f356e, 0x9fd4b73c, 0x52604528,
+		0xed408d8d, 0x0c672075, 0x796afc31, 0xe4c75da5,
+	},
+	.exponentP = {
+		0x1b36fcbd, 0xdf14d08f, 0xcf240028, 0x07a5ccf5,
+		0x750c85b4, 0xbc8949cb, 0xc6e86ca3, 0x818d755f,
+		0x9dea917c, 0x6e2ecbd4, 0x2e03e8a7, 0x1b4cf008,
+		0x52184ff0, 0x5c87c381, 0x0d8405a6, 0x2f306c36,
+		0x0f47df92, 0xa42d3692, 0x1bf19c78, 0x2c4e2f38,
+		0xb0f1dda4, 0xf4a4b17d, 0x07e26d64, 0xe6708cd8,
+		0x46d95df4, 0xbc3f0093, 0x64d3eaa5, 0xf2efdef4,
+		0x9ea0bc0f, 0x3a5f12c0, 0x6d88a03b, 0xa1a8084c,
+	},
+	.exponentQ = {
+		0xf8d58e8d, 0x7c97e1b0, 0x977bc7f5, 0xc5afc624,
+		0xea7d74bc, 0xfed7c020, 0x1e679ee4, 0x3e25993d,
+		0x657387a6, 0x2ee9a30f, 0xb23338b1, 0xac8aab89,
+		0x9bf18b8d, 0xf54cee6d, 0x8729223a, 0x9668aaf4,
+		0x570d7d74, 0x8462bace, 0x8893f907, 0xf6acbcc6,
+		0x59976865, 0x056eddb6, 0x55d4378d, 0x73beb4a4,
+		0x994f3cfc, 0x7dca764a, 0x933199e4, 0x6db489f3,
+		0xa13c7bce, 0x4d6b4f49, 0xf6cc3244, 0x56f07064,
+	},
+	.coefficient = {
+		0x44b67962, 0xd73bfa61, 0xcbeddfd6, 0x94b7f614,
+		0x7b0e1360, 0xbdfef7c8, 0xf987b1b8, 0x6e0174fb,
+		0x25da1983, 0xc8ce8a0c, 0x07525662, 0xa92fce19,
+		0xa41681bd, 0x0386d786, 0xa62b051a, 0xa4c8121b,
+		0x17e7d2dd, 0x2c183f38, 0x045680f5, 0xc10304c7,
+		0x6f5b08c0, 0x83aed02c, 0x3f690e9a, 0x521abb5a,
+		0x311c5fd2, 0x65e942c3, 0xa5fad6d1, 0xeb759bcf,
+		0x1bfe3d94, 0x3ebd3f4e, 0xb4f39cb9, 0x93d10539,
+	},
+};
+
 char gNpDrmPackageContentId[48];
 struct NpDrmPackageContext gNpDrmPackageContexts[6];
 const struct NpDrmPackageRsaCrtMaterial *gNpDrmPackageUnwrapKey;
@@ -117,12 +330,10 @@ int NpDrmPackageCheckDebugSignature(const unsigned char *signature,
 	end = digest + 20;
 	difference = 0;
 	do {
-		difference += (unsigned char)(signature[0] - digest[0]);
-		difference += (unsigned char)(signature[1] - digest[1]);
-		difference += (unsigned char)(signature[2] - digest[2]);
-		difference += (unsigned char)(signature[3] - digest[3]);
-		signature += 4;
-		digest += 4;
+		difference += (unsigned char)(*signature++ - *digest++);
+		difference += (unsigned char)(*signature++ - *digest++);
+		difference += (unsigned char)(*signature++ - *digest++);
+		difference += (unsigned char)(*signature++ - *digest++);
 	} while (digest != end);
 	return difference ? 0x80871004 : 0;
 }
@@ -134,7 +345,8 @@ int NpDrmPackageInitializeContext(struct NpDrmPackageContext *context,
 		unsigned char bytes[16];
 	} key;
 	unsigned char *destination;
-	volatile unsigned char *wipe;
+	unsigned char *wipe;
+	unsigned char *wipeEnd;
 	const unsigned char *source;
 	unsigned int keyId = (header->extended.keyId >> 24) & 7;
 
@@ -177,10 +389,11 @@ int NpDrmPackageInitializeContext(struct NpDrmPackageContext *context,
 	     source = header->main.initialVector;
 	     destination < (unsigned char *)(context->counter + 2);)
 		*destination++ = *source++;
-	for (wipe = key.bytes; wipe < key.bytes + sizeof(key);)
-		*wipe++ = 0xff;
-	for (wipe = key.bytes; wipe < key.bytes + sizeof(key);)
-		*wipe++ = 0;
+	wipeEnd = key.bytes + sizeof(key);
+	for (wipe = key.bytes; wipe < wipeEnd; wipe++)
+		*wipe = 0xff;
+	for (wipe = key.bytes; wipe < wipeEnd; wipe++)
+		*wipe = 0;
 	return 0;
 }
 
@@ -491,10 +704,8 @@ int NpDrmPackageCryptDebugData(struct NpDrmPackageContext *context,
 	(void)flags;
 	while (cursor < (unsigned char *)(&seed + 1))
 		*cursor++ = 0;
-	seed.firstDigest[0] = context->counter[0];
-	seed.firstDigest[1] = context->counter[0];
-	seed.secondDigest[0] = context->counter[1];
-	seed.secondDigest[1] = context->counter[1];
+	seed = *(const struct NpDrmPackageDebugSeed *)((const unsigned char *)context
+		+ 0x18);
 	skip = seed.hashSuffix[23] & 0x10;
 	seed.blockCounter = __builtin_bswap64(offset);
 	while (size) {
@@ -516,26 +727,31 @@ int NpDrmPackageCryptDebugData(struct NpDrmPackageContext *context,
 int NpDrmPackageVerifyDebugSignature(const unsigned char *signature,
 	const unsigned char *digest)
 {
-	uint64_t rotatedDigest[2];
+	union {
+		uint64_t word[2];
+		struct {
+			unsigned char front[13];
+			unsigned char tail[3];
+		} bytes;
+	} rotated;
 	struct NpDrmPackageDebugSeed seed;
 	unsigned char output[16];
 	unsigned char hash[20];
-	unsigned char *rotated = (unsigned char *)rotatedDigest;
 	unsigned char *cursor = (unsigned char *)&seed;
 	volatile unsigned int difference = 0;
 	unsigned int skip;
 	unsigned int i;
 
-	for (i = 0; i < 13; i++)
-		rotated[i] = digest[i + 4];
-	for (i = 0; i < 3; i++)
-		rotated[i + 13] = digest[i + 1];
+	for (i = 0; i < sizeof(rotated.bytes.front); i++)
+		rotated.bytes.front[i] = digest[i + 4];
+	for (i = 0; i < sizeof(rotated.bytes.tail); i++)
+		rotated.bytes.tail[i] = digest[i + 1];
 	while (cursor < (unsigned char *)(&seed + 1))
 		*cursor++ = 0;
-	seed.firstDigest[0] = rotatedDigest[0];
-	seed.firstDigest[1] = rotatedDigest[0];
-	seed.secondDigest[0] = rotatedDigest[1];
-	seed.secondDigest[1] = rotatedDigest[1];
+	seed.firstDigest[0] = rotated.word[0];
+	seed.firstDigest[1] = rotated.word[0];
+	seed.secondDigest[0] = rotated.word[1];
+	seed.secondDigest[1] = rotated.word[1];
 	seed.blockCounter = 0;
 	for (i = 0; i < sizeof(output); i++)
 		output[i] = 0;
@@ -631,7 +847,7 @@ int NpDrmPackageProcessHeader(unsigned char *data, unsigned int size,
 				return 0x80871800;
 			result = context->operations->checkSignature(data, size, digest);
 			memset(context->aesContext, 0, context->aesContextSize);
-			memset(context, 0, sizeof(*context));
+			*context = (struct NpDrmPackageContext){ NULL };
 			return result;
 		}
 	}
@@ -695,7 +911,7 @@ int NpDrmPackageProcessHeader(unsigned char *data, unsigned int size,
 	sceSha1Digest(data, hmacOffset, hash);
 	if (!operations->verifySignature(data + hmacOffset, hash))
 		return 0x80871004;
-	if ((keyId & 7) - 1 > 3)
+	if (((keyId >> 24) & 7) - 1 > 3)
 		return 0x80871006;
 	offset = NPDRM_BE32(extended->fullHeaderHmacOffset);
 	if (offset) {
@@ -1281,8 +1497,8 @@ int scePsmDrmGetRifName(char *name)
 {
 	int ret;
 
-	BLOCK_OUT(name, 48, PsmDrmGetRifName(NULL),
-		PsmDrmGetRifName((char *)k));
+	BLOCK_OUT(name, 48, PsmDrmGetRifName(NULL, 0, 0),
+		PsmDrmGetRifName((char *)k, 0, 0));
 }
 
 int scePsmDrmGetRifNameForInstall(char *name, const ScePsmDrmLicense *license)
@@ -1388,10 +1604,11 @@ __attribute__((noinline)) int PsmDrmGetRifInfo(const ScePsmDrmLicense *license,
 	return ret;
 }
 
-__attribute__((noinline)) int PsmDrmGetRifName(char *name)
+__attribute__((noinline)) int PsmDrmGetRifName(char *name, int size,
+	SceUInt64 accountId)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = PsmDrmGetRifNameForDriver(name);
+	int ret = PsmDrmGetRifNameForDriver(name, syscall << 16, accountId);
 
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1565,7 +1782,7 @@ __attribute__((noinline)) int NpDrmPackageAesCtr(const void *input,
 	return SceSblSsMgrForDriver_82B5DCEF(input, output, size, key, keyBits, counter, 1);
 }
 
-__attribute__((noinline)) int NpDrmPackageHashTransform(const void *input,
+int NpDrmPackageHashTransform(const void *input,
 	void *digest, unsigned int size, SceSblDmac5HashTransformContext *context,
 	unsigned int flags)
 {

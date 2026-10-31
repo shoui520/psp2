@@ -222,11 +222,11 @@ int PsmDrmGetActInfo(int *actType, int *versionFlag, uint64_t *accountId,
 	uint64_t *startTime, uint64_t *expirationTime);
 int PsmDrmGetRifInfo(const ScePsmDrmLicense *license, char *contentId,
 	uint64_t *accountId, uint64_t *startTime, uint64_t *expirationTime);
-int PsmDrmGetRifName(char *name);
+int PsmDrmGetRifName(char *name, int size, SceUInt64 accountId);
 int PsmDrmGetRifNameForInstall(char *name, const ScePsmDrmLicense *license);
 int PsmDrmGetRifKey(const ScePsmDrmLicense *license, ScePsmDrmKeySet *keydata,
 	int *flags, SceRtcTick *startTime, SceRtcTick *expirationTime);
-int PsmDrmGetRifNameForDriver(char *name);
+int PsmDrmGetRifNameForDriver(char *name, int size, SceUInt64 accountId);
 int PsmDrmGetRifNameForInstallForDriver(char *name,
 	const ScePsmDrmLicense *license);
 int NpDrmPackageCheckForUser(const void *buffer, unsigned int size,

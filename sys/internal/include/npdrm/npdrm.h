@@ -43,7 +43,9 @@ typedef struct SceNpDrmActivationData {
 	SceUInt8 primary_key_table[0x80][0x10];
 	SceUInt8 reserved[0x40];
 	SceUInt8 openpsid[0x10];
-	SceUInt8 reserved2[0x20];
+	SceUInt8 reserved2[0x10];
+	SceRtcTick start_time;
+	SceRtcTick expiration_time;
 	SceUInt8 secondary_key_table[0x65][0x10];
 	SceUInt8 rsa_signature[0x100];
 	SceUInt8 reserved3[0x40];
@@ -138,7 +140,8 @@ int SceNpDrmForDriver_116FC0D6(SceUInt64 accountId);	/* vitasdk: ksceNpDrmUpdate
 
 /* not written in C yet: the prototypes are vshbridge's, PspEbootVerify's vitasdk's */
 /* vitasdk: ksceNpDrmGetLegacyDocKey */
-int SceNpDrmForDriver_4E321BDE(void *a, void *b, void *c, void *d);
+int SceNpDrmForDriver_4E321BDE(const SceNpDrmLicense *license, const char *doc,
+	unsigned int size, void *key);
 /* vitasdk: ksceNpDrmPspEbootVerify */
 int SceNpDrmForDriver_B6CA3A2C(const char *ebootPath, const void *signature);
 int SceNpDrmForDriver_FC84CA1A(void);	/* vitasdk: ksceNpDrmIsLooseAccountBind */
