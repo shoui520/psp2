@@ -6274,6 +6274,7 @@ finish:
 int bbcmdConfiguredServiceClientCallback(unsigned int event,
 	BbcmdProtocolClient *incomingClient)
 {
+	BbcmdControl *control;
 	BbcmdRequest *request;
 	BbcmdRequestNode *node;
 	BbcmdProtocolContext *context;
@@ -6523,8 +6524,9 @@ deactivated:
 	if (event > 1 && event != 3)
 		goto out;
 	node = request->node;
+	control = node->control;
 	binding->requestBits &= ~(1U << node->index);
-	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(control->event, 1U << node->index);
 	if (service == 3 && request->result == (int)0x80335004)
 		goto out;
 	bits = binding->requestBits;
@@ -6550,6 +6552,7 @@ out:
 /* name unknown: complete requests and release queued UIM clients. */
 int bbcmdUimClientCallback(unsigned int event, BbcmdProtocolClient *incomingClient)
 {
+	BbcmdControl *control;
 	BbcmdRequest *request;
 	BbcmdRequestNode *node;
 	BbcmdProtocolContext *context;
@@ -6633,8 +6636,9 @@ deactivated:
 	if (event > 1 && event != 3)
 		goto out;
 	node = request->node;
+	control = node->control;
 	binding->requestBits &= ~(1U << node->index);
-	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -6657,6 +6661,7 @@ out:
 
 int bbcmdDmsClientCallback(unsigned int event, BbcmdProtocolClient *incomingClient)
 {
+	BbcmdControl *control;
 	BbcmdRequest *request;
 	BbcmdRequestNode *node;
 	BbcmdProtocolContext *context;
@@ -6740,8 +6745,9 @@ deactivated:
 	if (event > 1 && event != 3)
 		goto out;
 	node = request->node;
+	control = node->control;
 	binding->requestBits &= ~(1U << node->index);
-	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -6764,6 +6770,7 @@ out:
 
 int bbcmdQosClientCallback(unsigned int event, BbcmdProtocolClient *incomingClient)
 {
+	BbcmdControl *control;
 	BbcmdRequest *request;
 	BbcmdRequestNode *node;
 	BbcmdProtocolContext *context;
@@ -6847,8 +6854,9 @@ deactivated:
 	if (event > 1 && event != 3)
 		goto out;
 	node = request->node;
+	control = node->control;
 	binding->requestBits &= ~(1U << node->index);
-	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -6871,6 +6879,7 @@ out:
 
 int bbcmdAtClientCallback(unsigned int event, BbcmdProtocolClient *incomingClient)
 {
+	BbcmdControl *control;
 	BbcmdRequest *request;
 	BbcmdRequestNode *node;
 	BbcmdProtocolContext *context;
@@ -6954,8 +6963,9 @@ deactivated:
 	if (event > 1 && event != 3)
 		goto out;
 	node = request->node;
+	control = node->control;
 	binding->requestBits &= ~(1U << node->index);
-	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -6978,6 +6988,7 @@ out:
 
 int bbcmdCat2ClientCallback(unsigned int event, BbcmdProtocolClient *incomingClient)
 {
+	BbcmdControl *control;
 	BbcmdRequest *request;
 	BbcmdRequestNode *node;
 	BbcmdProtocolContext *context;
@@ -7061,8 +7072,9 @@ deactivated:
 	if (event > 1 && event != 3)
 		goto out;
 	node = request->node;
+	control = node->control;
 	binding->requestBits &= ~(1U << node->index);
-	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -7085,6 +7097,7 @@ out:
 
 int bbcmdPdsClientCallback(unsigned int event, BbcmdProtocolClient *incomingClient)
 {
+	BbcmdControl *control;
 	BbcmdRequest *request;
 	BbcmdRequestNode *node;
 	BbcmdProtocolContext *context;
@@ -7203,8 +7216,9 @@ deactivated:
 	if (event > 1 && event != 3)
 		goto out;
 	node = request->node;
+	control = node->control;
 	binding->requestBits &= ~(1U << node->index);
-	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -7227,6 +7241,7 @@ out:
 
 int bbcmdWdsClientCallback(unsigned int event, BbcmdProtocolClient *incomingClient)
 {
+	BbcmdControl *control;
 	BbcmdRequest *request;
 	BbcmdRequestNode *node;
 	BbcmdProtocolContext *context;
@@ -7353,8 +7368,9 @@ deactivated:
 	if (event > 1 && event != 3)
 		goto out;
 	node = request->node;
+	control = node->control;
 	binding->requestBits &= ~(1U << node->index);
-	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -7377,6 +7393,7 @@ out:
 
 int bbcmdNasClientCallback(unsigned int event, BbcmdProtocolClient *incomingClient)
 {
+	BbcmdControl *control;
 	BbcmdRequest *request;
 	BbcmdRequestNode *node;
 	BbcmdProtocolContext *context;
@@ -7512,8 +7529,9 @@ deactivated:
 	if (event > 1 && event != 3)
 		goto out;
 	node = request->node;
+	control = node->control;
 	binding->requestBits &= ~(1U << node->index);
-	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(control->event, 1U << node->index);
 	if (request->result == (int)0x80335004)
 		goto out;
 	bits = binding->requestBits;
@@ -7538,6 +7556,7 @@ out:
 
 int bbcmdWmsClientCallback(unsigned int event, BbcmdProtocolClient *incomingClient)
 {
+	BbcmdControl *control;
 	BbcmdRequest *request;
 	BbcmdRequestNode *node;
 	BbcmdProtocolContext *context;
@@ -7621,8 +7640,9 @@ deactivated:
 	if (event > 1 && event != 3)
 		goto out;
 	node = request->node;
+	control = node->control;
 	binding->requestBits &= ~(1U << node->index);
-	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
