@@ -2206,7 +2206,7 @@ __attribute__((noinline)) void udCopyBytes(void *dst, const SceUInt8 **cursor, S
 int udReadFileInformation(SceUID fd, UdFileInformation *information)
 {
 	UdFileTrailer trailer;
-	SceOff offset;
+	int offset;
 	int result;
 
 	if (information == NULL)
