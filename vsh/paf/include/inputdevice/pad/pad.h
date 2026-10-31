@@ -84,6 +84,10 @@ int32_t GetCurrPort();
 int32_t SetCurrPort(int32_t port);
 bool IsOwnershipReleasable();
 void ResetIdleTime();
+/* the controller type of a port (1: DualShock 3, 2: DualShock 4) */
+int32_t GetPortType(int32_t port);
+/* the time with no key held, in seconds */
+float GetIdleTime();
 
 }
 }
@@ -92,9 +96,7 @@ void ResetIdleTime();
 /*
  * No Sony names found for these NIDs: the current port's held keys added to
  * the mask; the pad locked for a time; the enter button (0: circle) asked for
- * and the one in use; the main port set and read; the controller type of a
- * port (1: DualShock 3, 2: DualShock 4); the time with no key held, in
- * seconds.
+ * and the one in use; the main port set and read.
  */
 extern "C" void ScePafMisc_C4E8CBE6(uint32_t mask);
 extern "C" void ScePafMisc_FA86D1FA(float time);
@@ -102,7 +104,5 @@ extern "C" int32_t ScePafMisc_0D1B028E(int32_t enter_button);
 extern "C" int32_t ScePafMisc_9CB5D72E(void);
 extern "C" int32_t ScePafMisc_57080F75(int32_t port);
 extern "C" int32_t ScePafMisc_333C86DC(void);
-extern "C" int32_t ScePafMisc_CD2B0967(int32_t port);
-extern "C" float ScePafMisc_7C9C7E59(void);
 
 #endif /* PAF_INPUTDEVICE_PAD_PAD_H */

@@ -1003,7 +1003,7 @@ bool paf::inputdevice::touchscreen::IsOwnershipReleasable(uint32_t port)
 	return IsReleased(&s_data[port]);
 }
 
-float ScePafMisc_A2DA8396(uint32_t port)
+float paf::inputdevice::touchscreen::GetIdleTime(uint32_t port)
 {
 	if (ScePafMisc_DD2F6FFC(port) && s_idle_time[port] != 0) {
 		SceUInt64 now = sceKernelGetProcessTimeWide();

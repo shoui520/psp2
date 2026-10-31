@@ -422,7 +422,7 @@ int32_t paf::inputdevice::pad::SetCurrPort(int32_t port)
 	return s_port;
 }
 
-int32_t ScePafMisc_CD2B0967(int32_t port)
+int32_t paf::inputdevice::pad::GetPortType(int32_t port)
 {
 	SceCtrlPortInfo info;
 	int32_t type = 0;
@@ -441,7 +441,7 @@ bool paf::inputdevice::pad::IsOwnershipReleasable()
 	return true;
 }
 
-float ScePafMisc_7C9C7E59(void)
+float paf::inputdevice::pad::GetIdleTime()
 {
 	if (GetPortData(s_port_data, s_port)->buttons == 0 && s_idle_time != 0) {
 		SceUInt64 now = sceKernelGetProcessTimeWide();

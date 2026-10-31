@@ -100,6 +100,8 @@ int32_t GetPointFromCenter(uint32_t port, uint32_t id, float &x, float &y);
 void GetData(uint32_t port, uint32_t id, const Data **data);
 void GetDataPre(uint32_t port, uint32_t id, const Data **data);
 bool IsOwnershipReleasable(uint32_t port);
+/* the time in seconds with no finger on a panel */
+float GetIdleTime(uint32_t port);
 
 }
 }
@@ -111,8 +113,7 @@ bool IsOwnershipReleasable(uint32_t port);
  * the screen and back; a layout rectangle as the screen sees it; a panel
  * locked for a time; a finger's speed over the last milliseconds given, in
  * screen pixels and in layout units per millisecond; where a finger touched
- * down, from the top left and from the centre; the time in seconds with no
- * finger on a panel.
+ * down, from the top left and from the centre.
  */
 extern "C" int32_t ScePafMisc_DD2F6FFC(uint32_t port);
 extern "C" void ScePafMisc_8424A840(float *center_x, float *center_y, float x, float y);
@@ -125,6 +126,5 @@ extern "C" int32_t ScePafMisc_88F4A40B(uint32_t port, uint32_t id, uint64_t time
 				       float *vy);
 extern "C" int32_t ScePafMisc_24D9EBA3(uint32_t port, uint32_t id, float *x, float *y);
 extern "C" int32_t ScePafMisc_3BA14D8A(uint32_t port, uint32_t id, float *x, float *y);
-extern "C" float ScePafMisc_A2DA8396(uint32_t port);
 
 #endif /* PAF_INPUTDEVICE_TOUCHSCREEN_TOUCHSCREEN_H */

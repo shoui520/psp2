@@ -721,7 +721,7 @@ ScePaf:
         - _ZN3paf5cache12CacheManager7DestroyEv: 0x7C36E7A9
         - _ZN3paf6ModuleD1Ev: 0x7C86911E
         - _ZN3paf3rtc14TickAddMinutesEPyPKyx: 0x7C9BA0C5
-        - ScePafMisc_7C9C7E59: 0x7C9C7E59
+        - _ZN3paf11inputdevice3pad11GetIdleTimeEv: 0x7C9C7E59
         - _ZN3paf11inputdevice25ReleaseOwnershipImmediateEj: 0x7CC037DE
         - _ZN3paf6memory13PoolAllocatorC2EPvjjPKcPKNS1_6OptionE: 0x7CE97FC7
         - ScePafMisc_7CF66185: 0x7CF66185
@@ -873,7 +873,7 @@ ScePaf:
         - _ZN3paf5image5Image4LoadEb: 0xA0DEC4E5
         - _ZN3paf17LocalFilePsp2Impl24SetThreadDefaultPriorityEi: 0xA283AD47
         - _ZN3paf6memory13HeapAllocatorC1EPvjPKcPKNS1_6OptionE: 0xA2B0BF4D
-        - ScePafMisc_A2DA8396: 0xA2DA8396
+        - _ZN3paf11inputdevice11touchscreen11GetIdleTimeEj: 0xA2DA8396
         - ScePafMisc_A32583BE: 0xA32583BE
         - _ZN3paf5image6filter10ResizeHalfEPvPKviiii: 0xA38C62D1
         - _ZN3paf5image6filter13ResizeQuarterEPNS0_11ImageBufferEPKS2_iiNS0_11ImageExtentE9ImageMode: 0xA449AA27
@@ -1058,7 +1058,7 @@ ScePaf:
         - _ZN3paf8compress8CompressENS_6common9SharedPtrINS_4FileEEEPKvjNS0_12CompressTypeEPNS_6memory13HeapAllocatorE: 0xCBF1D1C9
         - _ZNK3paf3Url14GetPathWStringEv: 0xCC331BFF
         - _ZN3paf12BufferedFileD1Ev: 0xCC870760
-        - ScePafMisc_CD2B0967: 0xCD2B0967
+        - _ZN3paf11inputdevice3pad11GetPortTypeEi: 0xCD2B0967
         - _ZN3paf5Timer15DoFuncBackInOutEf: 0xCD383801
         - _ZN3paf12BufferedFile9PollAsyncEPx: 0xCD57D018
         - _ZN3paf5Timer26DoFuncCustomParabolicOutInEfPKf: 0xCD7BB14F
