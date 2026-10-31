@@ -8,6 +8,9 @@
 #include "../bbmc_netif.h"
 #include "../bbcmd.h"
 #include "../updater/updater.h"
+#include "../sw_dload/sw_dload.h"
+#include <iofilemgr/iofilemgr.h>
+#include <sysmem/sysclib.h>
 #include <power/power.h>
 #include <gps/gps.h>
 
@@ -19,6 +22,9 @@ int bbmcSysconEventReply(SceSysconPacket *packet, void *argp);
 int bbmcSysconStatusReply(SceSysconPacket *packet, void *argp);
 
 void seqClearSimDetected(void);
+int bbmcRequestSetFirmwarePreference(BbmcControl *control,
+	const QmiSetFirmwarePreference *preference);
+int bbmcPollUsbSerialHost(SceUInt32 *events);
 
 extern SceUInt32 sysconEventStep;
 extern int sysconEventPending;
@@ -51,6 +57,7 @@ SceUInt32 pinStatusRequeued;
 SceUInt32 controlFlagMask;
 SceUInt32 controlFlagSet;
 SceUInt32 smsReadStep;
+SceUInt32 swdlCarrierStep;
 SceUID swdlTimerId;
 SceUInt32 swdlNextStep;
 
@@ -77,6 +84,9 @@ static const SceKernelDebugInfoSource dbg__waitTransition_L1410Source
 	&dbg__waitTransition_L1410, "sequence/proc_swdl.c", 1410,
 	"_waitTransition",
 };
+
+SCE_DBGINFO_DEFINE(static, dbg__swdlSeqCarrierQmi_L2498, 2498, "_swdlSeqCarrierQmi");
+SCE_DBGINFO_DEFINE(static, dbg__swdlSeqFinalize_L2988, 2988, "_swdlSeqFinalize");
 #endif
 
 /* name unknown: command 163 reads the serving cell into control->cellLocation */
@@ -1986,7 +1996,7 @@ leave:
 			return 1;
 		value = message->body.commandResult;
 		if (value == 0)
-			value = (bbmcCollectIndexedResponseEvents(control) & 0x1000000) ?
+			value = (bbmcCollectControlKeyEvents(control) & 0x1000000) ?
 				2 : 4;
 		if (control == NULL) {
 			result = (int)0x80330002;
@@ -2466,6 +2476,1138 @@ failed:
 	swdlFreeRequest();
 	memset(&swdlWork.request, 0, sizeof(swdlWork.request));
 	return (int)0x80330005;
+}
+
+/* name unknown: the carrier download sequence's steps (swdlCarrierStep) */
+enum {
+	SWDL_CARRIER_IDLE = 0,
+	SWDL_CARRIER_PREPARE = 1,		/* power the modem into its download mode */
+	SWDL_CARRIER_ATTACH = 2,		/* wait for the download device */
+	SWDL_CARRIER_REQUEST = 3,		/* hand the request to the download thread */
+	SWDL_CARRIER_BACKUP = 4,
+	SWDL_CARRIER_UPDATE = 5,
+	SWDL_CARRIER_PREFERENCE = 6,		/* select a carrier's images on the modem */
+	SWDL_CARRIER_DOWNLOAD = 7,
+	SWDL_CARRIER_NEXT_PAIR = 8,
+	SWDL_CARRIER_RESTORE = 9,
+	SWDL_CARRIER_DETACHED = 10,
+	SWDL_CARRIER_FINALIZE = 11,
+	SWDL_CARRIER_FINISHED = 12,
+};
+
+/* name unknown: the next carrier to download, the first one asked for first */
+static inline SceUInt32 swdlSelectPair(const BbmcPairedUpdateWork *work)
+{
+	SceUInt32 selected = 5, i;
+
+	for (i = 0; i < 5; i++) {
+		if (work->pairs[i].state != 0 || work->pairs[i].firstFile == 0)
+			continue;
+		if (work->pairs[i].forwardedValue == 1)
+			return i;
+		if (selected == 5)
+			selected = i;
+	}
+	return selected;
+}
+
+/* name unknown: close the two files of a backup or restore */
+static inline void swdlCloseFilePair(BbmcControl *control)
+{
+	if (control->updateWork.files[0] != 0)
+		udIoClose(control->updateWork.files[0]);
+	if (control->updateWork.files[1] != 0)
+		udIoClose(control->updateWork.files[1]);
+	memset(&control->updateWork, 0, sizeof(control->updateWork));
+}
+
+/* name unknown: release the download device, then wait for the request's reply */
+static inline void swdlDetach(void)
+{
+	bbmcReleaseGpio(NULL);
+	swdlWaitDetach();
+	swdlCarrierStep = SWDL_CARRIER_DETACHED;
+}
+
+/* name unknown: progress notification, `percent` in the event's top byte */
+static inline void swdlNotifyProgress(BbmcControl *control, SceUInt32 percent)
+{
+	control->pendingEvents[8] &= 0xFFFFFF;
+	bbmcNotifyFeatureEvent(control, 7, (percent << 24) | 0x100);
+}
+
+/* power the modem back down after the download and report the result */
+static inline int _swdlSeqFinalize(BbmcControl *control, BbmcMessage *message)
+{
+	SceUInt32 command = message->command;
+	int result, reply;
+
+	if (command == 123) {
+		swdlWork.carrierFlags[0] = 1;
+		return 0;
+	}
+	switch (swdlNextStep) {
+	case 0:
+		if (command != 78)
+			return 0;
+		switch (control->forceOperationMode) {
+		case 1:
+		case 2:
+			result = bbmcReleasePowerReference(control);
+			if (result < 0)
+				return result;
+			break;
+		case 3:
+		case 4:
+		case 5:
+			if (control->lastError >= 0 && (swdlWork.carrierFlags[0] != 1 ||
+							swdlWork.carrierFlags[2] != 0)) {
+				result = bbmcTimerSetHandler(60000000,
+					swdlCarrierPowerOffTimeoutHandler, control);
+				if (result < 0) {
+#if FW_DEBUG
+					sceKernelAssert(0, &dbg__swdlSeqFinalize_L2988,
+							__builtin_return_address(0));
+#endif
+					return result;
+				}
+				swdlTimerId = result;
+				result = bbmcSendSimpleMessage(control, 78);
+				if (result < 0) {
+					bbmcTimerCancelHandler(swdlTimerId);
+					swdlTimerId = 0;
+					return result;
+				}
+			} else {
+				result = bbmcReleasePowerReference(control);
+				if (result < 0)
+					return result;
+			}
+			break;
+		default:
+			return (int)0x80330002;
+		}
+		swdlNextStep = 1;
+		return result;
+	case 1:
+		if (bbmcIsTransportHandshakeComplete(control) == 1) {
+			swdlTimerId = 0;
+			return (int)0x80330710;
+		}
+		if (bbmcIsTransportReady(control) != 1)
+			return 0;
+		bbmcTimerCancelHandler(swdlTimerId);
+		swdlTimerId = 0;
+		result = bbmcRequestOperationMode(control, 1);
+		if (result >= 0)
+			swdlNextStep = 2;
+		return result;
+	case 2:
+		if (command != 117)
+			return 0;
+		reply = message->body.commandResult;
+		result = control->lastError;
+		if (reply >= 0)
+			reply = 0;
+		else
+			swdlCarrierStep = SWDL_CARRIER_FINISHED;
+		if (result < 0) {
+			swdlCarrierStep = SWDL_CARRIER_FINISHED;
+			return result;
+		}
+		if (swdlWork.carrierFlags[1] == 1) {
+			bbmcNotifyFeatureEvent(control, 7, 0x800);
+			swdlCarrierStep = SWDL_CARRIER_FINISHED;
+			return reply;
+		}
+		switch (control->forceOperationMode) {
+		case 1:
+			bbmcNotifyFeatureEvent(control, 7, 2);
+			break;
+		case 2:
+			bbmcNotifyFeatureEvent(control, 7, 0x80);
+			break;
+		case 3:
+			bbmcNotifyFeatureEvent(control, 7, 8);
+			break;
+		case 4:
+			bbmcNotifyFeatureEvent(control, 7, 0x100000);
+			break;
+		case 5:
+			if (swdlWork.carrierFlags[0] == 1) {
+				bbmcNotifyFeatureEvent(control, 7, 0x800);
+				break;
+			}
+			/* the next carrier */
+			result = bbmcSendSimpleMessage(control, 143);
+			if (result < 0)
+				return result;
+			swdlCarrierStep = SWDL_CARRIER_NEXT_PAIR;
+			swdlNextStep = 0;
+			return result;
+		default:
+			return (int)0x80330002;
+		}
+		swdlCarrierStep = SWDL_CARRIER_FINISHED;
+		return reply;
+	default:
+		return (int)0x80330001;
+	}
+}
+
+/* Commands 119 to 126: back up (119), update (120, 125, 126), download carriers (121)
+ * or restore (122) the modem's software over its download port, the modem powered into
+ * its download mode first and back to normal after. */
+int _swdlSeqCarrierQmi(BbmcControl *control, BbmcMessage *message)
+{
+	BbmcPairedUpdateWork *paired = &control->updateWork.paired;
+	BbmcFileSetUpdateWork *fileSet = &control->updateWork.fileSet;
+	SceUInt32 command = message->command;
+	const BbmcStringPairEntry *entry;
+	BbmcUpdateFilePair *pair;
+	QmiSetFirmwarePreference preference;
+	UdFileInformation information;
+	SwdlBackupRequest backup;
+	SwdlRestoreRequest restore;
+	SwdlUpdateRequest update;
+	SwdlDownloadRequest download;
+	BbmcMessage *reply;
+	SceIoStat stat;
+	SceUInt32 events, imageCount, selected, i;
+	SceSize length;
+	SceInt32 index;
+	int result, extended;
+
+	if (!(command == 19 || command - 119 <= 24 || command == 18 || command == 3 ||
+	      command == 9 || command == 39 || (command & ~8) == 51 ||
+	      command - 116 <= 1 || command - 21 <= 2 || command == 78 ||
+	      command == 187 || command == 162))
+		goto done;
+	if (command == 18) {
+		control->transportReady = 0;
+		control->transportReplyPending = 0;
+		control->transportHandshakePending = 0;
+	} else if (command == 3 || command == 9) {
+		control->transportReady = 1;
+	} else if (command == 39) {
+		control->transportReplyPending = 1;
+	} else if (command == 187 && message->body.timedOutCommand == 9) {
+		control->transportReady = 1;
+		control->transportReplyPending = 1;
+		control->transportHandshakePending = 1;
+	}
+	if (command == 3 || command == 9 || command == 39) {
+		if (bbmcIsTransportReady(control) == 1)
+			bbmcNotifyFeatureEvent(control, 7, 0x2000);
+	} else if (command == 117) {
+		if (message->body.commandResult == 0) {
+			bbmcNotifyFeatureEvent(control, 7, 0x1000);
+		} else if (udIsInitialized() == 0 && swdlCarrierStep == SWDL_CARRIER_IDLE) {
+			result = message->body.commandResult;
+			goto check;
+		}
+	}
+
+	switch (swdlCarrierStep) {
+	case SWDL_CARRIER_IDLE:
+		if (udIsInitialized() == 1)
+			goto done;
+		switch (command) {
+		case 119:
+			control->forceOperationMode = 1;
+			break;
+		case 120:
+		case 126:
+			control->forceOperationMode = 3;
+			break;
+		case 121:
+			control->forceOperationMode = 5;
+			break;
+		case 122:
+			control->forceOperationMode = 2;
+			break;
+		case 125:
+			control->forceOperationMode = 4;
+			break;
+		case 123:
+			bbmcNotifyFeatureEvent(control, 7, 0x800);
+			/* fall through */
+		default:
+			if (control->forceOperationMode == 0)
+				goto done;
+			break;
+		}
+		control->lastError = 0;
+		memset(&swdlWork, 0, sizeof(swdlWork));
+		udDisableRamIo();
+		swdlWork.request.command = 189;
+		result = swdlCopyRequest(message);
+		if (result < 0)
+			goto failed;
+		if (control->forceOperationMode == 5) {
+			if (message->command != 121) {
+				result = (int)0x80330002;
+				goto failed;
+			}
+			/* open the carriers' image pairs */
+			memset(&control->updateWork, 0, sizeof(control->updateWork));
+			memset(&control->updateWork, 0, sizeof(control->updateWork));
+			for (i = 0; i < 5; i++) {
+				entry = &message->body.stringPairs.entries[i];
+				pair = &paired->pairs[i];
+				if (entry->strings.first != NULL) {
+					result = udIoOpen(entry->strings.first, UD_IO_OPEN_FLAGS, 0400);
+					if (result < 0)
+						goto failed;
+					pair->firstFile = result;
+					if (result == 0) {
+						result = (int)0x80330002;
+						goto failed;
+					}
+					result = sceIoGetstatByFd(result, &stat);
+					if (result < 0)
+						goto failed;
+					pair->firstSize = stat.st_size;
+					pair->forwardedValue = entry->forwardedValue;
+					paired->totalBytes += stat.st_size;
+				}
+				if (entry->strings.second != NULL) {
+					result = udIoOpen(entry->strings.second, UD_IO_OPEN_FLAGS, 0400);
+					if (result < 0)
+						goto failed;
+					pair->secondFile = result;
+					if (result == 0) {
+						result = (int)0x80330002;
+						goto failed;
+					}
+					result = sceIoGetstatByFd(result, &stat);
+					if (result < 0)
+						goto failed;
+					pair->secondSize = stat.st_size;
+					paired->totalBytes += stat.st_size;
+				}
+			}
+			paired->requestedIndex = (SceInt16)message->body.stringPairs.selectedIndex;
+			paired->operationMode = message->body.stringPairs.count;
+			goto selectPair;
+		}
+		if (result != 0)
+			goto check;
+		goto start;
+	case SWDL_CARRIER_PREPARE:
+		if (command == 123)
+			swdlWork.carrierFlags[0] = 1;
+		if (swdlWork.carrierFlags[0] == 1) {
+			/* cancelled: bring the modem back */
+			if (control->forceOperationMode == 5 ||
+			    control->forceOperationMode - 1 <= 1)
+				goto cancelled;
+			switch (swdlNextStep) {
+			case 0:
+			case 1:
+			case 2:
+				goto cancelled;
+			case 3:
+				if (command != 117)
+					goto done;
+				result = message->body.commandResult;
+				if (result < 0)
+					goto failed;
+				result = bbmcRequestOperationMode(control, 1);
+				if (result < 0)
+					goto failed;
+				swdlNextStep = 7;
+				goto check;
+			case 4:
+				swdlNextStep = 5;
+				goto done;
+			case 5:
+				if (command != 78) {
+					if ((command != 59 && command != 23) ||
+					    control->currentState != 8)
+						goto done;
+					bbmcTimerCancelHandler(swdlTimerId);
+					swdlTimerId = 0;
+				}
+				if (control->secondBootReply != 1) {
+					result = (int)0x80330006;
+					goto failed;
+				}
+				result = bbmcReleasePowerReference(control);
+				if (result < 0)
+					goto failed;
+				swdlNextStep = 6;
+				goto check;
+			case 6:
+				if (bbmcIsTransportHandshakeComplete(control) == 1) {
+					result = (int)0x80330710;
+					goto failed;
+				}
+				if (bbmcIsTransportReady(control) != 1)
+					goto done;
+				result = bbmcRequestOperationMode(control, 1);
+				if (result < 0)
+					goto failed;
+				swdlNextStep = 7;
+				goto check;
+			case 7:
+				if (command == 117)
+					goto cancelled;
+				goto done;
+			default:
+				goto done;
+			}
+		}
+		switch (swdlNextStep) {
+		case 0:
+			if (command != 78)
+				goto done;
+			result = _waitTransition(control, 0, 1);
+			goto check;
+		case 1:
+			if (command != 78)
+				goto done;
+			if (bbmcIsStateTransitionPending(control) == 1) {
+				result = (int)0x80330006;
+				goto failed;
+			}
+			switch (control->forceOperationMode) {
+			case 1:
+			case 2:
+			case 5:
+				/* the download mode is operation mode 1 */
+				if (control->currentState == 0) {
+					result = bbmcRequestOperationMode(control, 1);
+					if (result < 0)
+						goto failed;
+					swdlNextStep = 3;
+					goto check;
+				}
+				if (control->currentState <= 1) {
+					result = (int)0x80330006;
+					goto failed;
+				}
+				result = bbmcSendSimpleMessage(control, 78);
+				if (result < 0)
+					goto failed;
+				swdlNextStep = 5;
+				goto check;
+			case 3:
+			case 4:
+				if (control->currentState == 0) {
+					result = bbmcRequestOperationMode(control,
+						swdlWork.request.body.stringSet.forwardedValues[0] == 1 ? 3 : 2);
+					if (result < 0)
+						goto failed;
+					swdlNextStep = 3;
+					goto check;
+				}
+				if (control->currentState <= 1) {
+					result = (int)0x80330006;
+					goto failed;
+				}
+				result = bbmcReleasePowerReference(control);
+				if (result < 0)
+					goto failed;
+				swdlNextStep = 2;
+				goto check;
+			default:
+				goto done;
+			}
+		case 2:
+			if (bbmcIsTransportHandshakeComplete(control) == 1) {
+				result = (int)0x80330710;
+				goto failed;
+			}
+			if (bbmcIsTransportReady(control) != 1)
+				goto done;
+			result = bbmcRequestOperationMode(control,
+				swdlWork.request.body.stringSet.forwardedValues[0] == 1 ? 3 : 2);
+			if (result < 0)
+				goto failed;
+			swdlNextStep = 3;
+			goto check;
+		case 3:
+			if (command != 117)
+				goto done;
+			result = message->body.commandResult;
+			if (result < 0)
+				goto failed;
+			result = bbmcAcquirePowerReference(control);
+			if (result < 0)
+				goto failed;
+			result = bbmcSendSimpleMessage(control, 78);
+			if (result < 0)
+				goto failed;
+			swdlWork.stableCount = 0;
+			swdlWork.unstableCount = 0;
+			swdlNextStep = 4;
+			goto check;
+		case 4:
+			if (command != 78)
+				goto done;
+			result = _waitTransition(control, 2, 5);
+			goto check;
+		case 5:
+			if (command != 78)
+				goto done;
+			swdlTimerId = 0;
+			switch (control->forceOperationMode) {
+			case 1:
+			case 2:
+				result = bbmcRegisterDownloadNotification(control);
+				if (result < 0)
+					goto failed;
+				bbmcAcquireGpio(NULL);
+				swdlWaitAttach(0);
+				break;
+			case 3:
+			case 4:
+				result = bbmcRegisterDownloadNotification(control);
+				if (result < 0)
+					goto failed;
+				extended = swdlWork.request.body.stringSet.forwardedValues[0] == 0;
+				bbmcAcquireGpio(NULL);
+				swdlWaitAttach(extended);
+				break;
+			case 5:
+				/* select the carrier's images on the modem */
+				index = paired->activeIndex;
+				pair = &paired->pairs[index];
+				if (pair->state != 1) {
+					result = (int)0x80330002;
+					goto failed;
+				}
+				if (control->setFirmwarePreferenceState == 1) {
+					result = (int)0x80330006;
+					goto failed;
+				}
+				memset(&preference, 0, sizeof(preference));
+				result = udReadFileInformation(pair->firstFile, &information);
+				if (result < 0)
+					goto failed;
+				__builtin_memcpy(preference.preference.images[0].uniqueId,
+						 information.buildId, sizeof(information.buildId));
+				preference.preference.images[0].imageType = 0;
+				length = strnlen(information.name, 35);
+				preference.preference.images[0].buildIdLength = length;
+#if FW_VERSION >= 0x04000000
+				__memcpy_chk(preference.preference.images[0].buildId,
+					     information.name, length, sizeof(preference) -
+					     offsetof(QmiSetFirmwarePreference,
+						      preference.images[0].buildId));
+#else
+				memcpy(preference.preference.images[0].buildId,
+				       information.name, length);
+#endif
+				preference.preference.count++;
+				preference.downloadOverride = pair->forwardedValue;
+				result = udReadFileInformation(pair->secondFile, &information);
+				if (result < 0)
+					goto failed;
+				__builtin_memcpy(preference.preference.images[1].uniqueId,
+						 information.buildId, sizeof(information.buildId));
+				preference.preference.images[1].imageType = 1;
+				length = strnlen(information.name, 35);
+				preference.preference.images[1].buildIdLength = length;
+#if FW_VERSION >= 0x04000000
+				__memcpy_chk(preference.preference.images[1].buildId,
+					     information.name, length, sizeof(preference) -
+					     offsetof(QmiSetFirmwarePreference,
+						      preference.images[1].buildId));
+#else
+				memcpy(preference.preference.images[1].buildId,
+				       information.name, length);
+#endif
+				preference.preference.count++;
+				if (preference.downloadOverride == 1) {
+					preference.hasStorageIndex = 1;
+					preference.storageIndex = index + 1;
+				}
+				result = bbmcRequestSetFirmwarePreference(control, &preference);
+				if (result < 0)
+					goto failed;
+				swdlCarrierStep = SWDL_CARRIER_PREFERENCE;
+				swdlNextStep = 0;
+				goto check;
+			default:
+				goto done;
+			}
+			swdlCarrierStep = SWDL_CARRIER_ATTACH;
+			swdlNextStep = 0;
+			goto check;
+		default:
+			goto done;
+		}
+	case SWDL_CARRIER_ATTACH:
+		switch (command) {
+		case 123:
+			swdlFreeRequest();
+			swdlWork.carrierFlags[0] = 1;
+			if (control->forceOperationMode == 5)
+				swdlWork.carrierFlags[2] = 1;
+			swdlDetach();
+			goto done;
+		case 135:
+			/* the device is there: post the request again for the next step */
+			if (!(swdlWork.request.command - 119 <= 3 ||
+			      swdlWork.request.command == 143 ||
+			      swdlWork.request.command == 125)) {
+				result = (int)0x80330002;
+				goto failed;
+			}
+			reply = msgAllocMsgPacket(control, swdlWork.request.command);
+			if (reply == NULL) {
+				result = (int)0x80330001;
+				goto failed;
+			}
+			memcpy(&reply->body, &swdlWork.request.body,
+			       sizeof(BbmcMessage) - offsetof(BbmcMessage, body));
+			result = msgSendMsgPacket(control, reply);
+			if (result < 0) {
+				msgFreeMsgPacket(control, reply);
+				goto check;
+			}
+			memset(&swdlWork.request, 0, sizeof(swdlWork.request));
+			swdlCarrierStep = SWDL_CARRIER_REQUEST;
+			goto check;
+		case 137:
+			bbmcReleaseGpio(NULL);
+			result = -1;
+			goto failed;
+		default:
+			goto done;
+		}
+	case SWDL_CARRIER_REQUEST:
+		if (swdlWork.carrierFlags[0] == 1) {
+			if (command - 119 <= 24 && (0x100004F & (1 << (command - 119))) != 0) {
+				if (control->forceOperationMode == 5)
+					swdlWork.carrierFlags[2] = 1;
+				swdlDetach();
+				goto done;
+			}
+			result = (int)0x80330002;
+			goto failed;
+		}
+		switch (command) {
+		case 119:
+			result = bbmcPollUsbSerialHost(&events);
+			if (result < 0)
+				goto failed;
+			if (!(events & 1) || message->command != 119)
+				goto invalid;
+			__builtin_memset(&backup, 0, sizeof(backup));
+			memset(&control->updateWork, 0, sizeof(control->updateWork));
+			if (message->body.stringPair.first != NULL) {
+				result = udIoOpen(message->body.stringPair.first,
+						  SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC | 0x04000000, 0600);
+				if (result < 0)
+					goto openFailed;
+				control->updateWork.files[0] = result;
+			}
+			if (message->body.stringPair.second != NULL) {
+				result = udIoOpen(message->body.stringPair.second,
+						  SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC | 0x04000000, 0600);
+				if (result < 0)
+					goto openFailed;
+				control->updateWork.files[1] = result;
+			}
+			__builtin_memcpy(&backup, control->updateWork.files, sizeof(backup));
+			result = swdlRequestBackup(&backup);
+			if (result < 0)
+				goto failed;
+			bbmcNotifyFeatureEvent(control, 7, 1);
+			swdlCarrierStep = SWDL_CARRIER_BACKUP;
+			goto check;
+		case 120:
+			result = bbmcPollUsbSerialHost(&events);
+			if (result < 0)
+				goto failed;
+			if (!(events & 0x10) || message->command != 120)
+				goto invalid;
+			__builtin_memset(&update, 0, sizeof(update));
+			result = swdlOpenUpdateFiles(control, &message->body.stringSet);
+			if (result < 0)
+				goto failed;
+			update.unlock = fileSet->forwardedOptions[0] != 0;
+			update.forcePartitionTable = fileSet->forwardedOptions[1];
+			update.partitionTableForced = fileSet->forwardedOptions[2];
+			update.fd = fileSet->files[0];
+			update.partitionTableFd = fileSet->files[1];
+			update.imageFds[0] = fileSet->files[2];
+			update.imageFds[1] = fileSet->files[3];
+			update.imageFds[2] = fileSet->files[4];
+			update.hexSize = fileSet->sizes[0];
+			update.partitionTableSize = fileSet->sizes[1];
+			update.imageSizes[0] = fileSet->sizes[2];
+			update.imageSizes[1] = fileSet->sizes[3];
+			update.imageSizes[2] = fileSet->sizes[4];
+			result = swdlRequestUpdate(&update);
+			if (result < 0)
+				goto failed;
+			bbmcNotifyFeatureEvent(control, 7, 4);
+			swdlCarrierStep = SWDL_CARRIER_UPDATE;
+			goto check;
+		case 121:
+		case 143:
+			result = bbmcPollUsbSerialHost(&events);
+			if (result < 0)
+				goto failed;
+			if (!(events & 0x40))
+				goto invalid;
+			__builtin_memset(&download, 0, sizeof(download));
+			pair = &paired->pairs[paired->activeIndex];
+			if (pair->state == 1) {
+				download.count = 2;
+				download.images[0].type = 5;
+				download.images[0].fd = pair->firstFile;
+				download.images[0].size = pair->firstSize;
+				download.images[1].type = 13;
+				download.images[1].fd = pair->secondFile;
+				download.images[1].size = pair->secondSize;
+			}
+			result = swdlRequestDownload(&download);
+			if (result < 0)
+				goto failed;
+			bbmcNotifyFeatureEvent(control, 7, 0x10);
+			swdlCarrierStep = SWDL_CARRIER_DOWNLOAD;
+			goto check;
+		case 122:
+			result = bbmcPollUsbSerialHost(&events);
+			if (result < 0)
+				goto failed;
+			if (!(events & 1) || message->command != 122)
+				goto invalid;
+			__builtin_memset(&restore, 0, sizeof(restore));
+			memset(&control->updateWork, 0, sizeof(control->updateWork));
+			if (message->body.stringPair.first != NULL) {
+				result = udIoOpen(message->body.stringPair.first,
+						  UD_IO_OPEN_FLAGS, 0400);
+				if (result < 0)
+					goto openFailed;
+				control->updateWork.files[0] = result;
+			}
+			if (message->body.stringPair.second != NULL) {
+				result = udIoOpen(message->body.stringPair.second,
+						  UD_IO_OPEN_FLAGS, 0400);
+				if (result < 0)
+					goto openFailed;
+				control->updateWork.files[1] = result;
+			}
+			__builtin_memcpy(&restore, control->updateWork.files,
+					 sizeof(control->updateWork.files));
+			result = swdlRequestRestore(&restore);
+			if (result < 0)
+				goto failed;
+			bbmcNotifyFeatureEvent(control, 7, 0x40);
+			swdlCarrierStep = SWDL_CARRIER_RESTORE;
+			goto check;
+		case 123:
+			swdlWork.carrierFlags[0] = 1;
+			goto done;
+		case 125:
+			result = bbmcPollUsbSerialHost(&events);
+			if (result < 0)
+				goto failed;
+			if (!(events & 0x10) || message->command != 125)
+				goto invalid;
+			__builtin_memset(&update, 0, sizeof(update));
+			result = swdlOpenUpdateFiles(control, &message->body.stringSet);
+			if (result < 0)
+				goto failed;
+			if (fileSet->forwardedOptions[0] != 0)
+				goto invalid;
+			update.forcePartitionTable = 1;
+			update.fd = fileSet->files[0];
+			result = swdlRequestCarrierUpdate(&update);
+			if (result < 0)
+				goto failed;
+			swdlCarrierStep = SWDL_CARRIER_UPDATE;
+			goto check;
+		default:
+			goto invalid;
+		}
+	case SWDL_CARRIER_BACKUP:
+		switch (command) {
+		case 123:
+			swdlCancel();
+			goto done;
+		case 127:
+		case 131:
+		case 134:
+			goto finished;
+		case 133:
+			swdlNotifyProgress(control, message->notificationValue2);
+			goto done;
+		default:
+			goto done;
+		}
+	case SWDL_CARRIER_UPDATE:
+		switch (command) {
+		case 123:
+			swdlCancel();
+			goto done;
+		case 124:
+			swdlRequestStop();
+			goto done;
+		case 128:
+		case 131:
+		case 134:
+		case 139:
+			goto finished;
+		case 132:
+			bbmcNotifyFeatureEvent(control, 7, 0x400);
+			goto done;
+		case 133:
+			fileSet->completedBytes += message->notificationValue2;
+			swdlNotifyProgress(control,
+				100 * fileSet->completedBytes / fileSet->totalBytes);
+			goto done;
+		default:
+			goto done;
+		}
+	case SWDL_CARRIER_PREFERENCE:
+		if (command == 123)
+			swdlWork.carrierFlags[0] = 1;
+		switch (swdlNextStep) {
+		case 0:
+			if (command != 162)
+				goto done;
+			bbmcEnterCS(&control->mutex);
+			result = message->body.firmwareMessage.setFirmwarePreferenceResult;
+			imageCount = message->body.firmwareMessage.imageCount;
+			control->setFirmwarePreferenceState = 0;
+			bbmcLeaveCS(&control->mutex);
+			if (result < 0)
+				goto failed;
+			if (imageCount == 0) {
+				/* the modem has the carrier's images: next carrier */
+				bbmcNotifyFeatureEvent(control, 7,
+					swdlWork.carrierFlags[0] == 1 ? 0x800 : 0x20);
+				swdlNextStep = 0;
+				swdlCarrierStep = SWDL_CARRIER_FINISHED;
+				goto done;
+			}
+			result = bbmcReleasePowerReference(control);
+			if (result < 0)
+				goto failed;
+			swdlNextStep = 1;
+			goto check;
+		case 1:
+			if (bbmcIsTransportHandshakeComplete(control) == 1) {
+				result = (int)0x80330710;
+				goto failed;
+			}
+			if (bbmcIsTransportReady(control) != 1)
+				goto done;
+			result = bbmcRequestOperationMode(control, 5);
+			if (result < 0)
+				goto failed;
+			swdlNextStep = 2;
+			goto check;
+		case 2:
+			if (command != 117)
+				goto done;
+			result = message->body.commandResult;
+			if (result < 0)
+				goto failed;
+			result = bbmcAcquirePowerReference(control);
+			if (result < 0)
+				goto failed;
+			result = bbmcTimerSetHandler(60000000, swdlCarrierReplyTimeoutHandler,
+						     control);
+			if (result < 0) {
+#if FW_DEBUG
+				sceKernelAssert(0, &dbg__swdlSeqCarrierQmi_L2498,
+						__builtin_return_address(0));
+#endif
+			} else {
+				swdlNextStep = 3;
+				swdlTimerId = result;
+			}
+			goto check;
+		case 3:
+			if (command == 187) {
+				if (message->body.timedOutCommand != 59)
+					goto done;
+				swdlTimerId = 0;
+				result = (int)0x80330006;
+				goto failed;
+			}
+			if (command == 51) {
+				if ((SceInt16)control->secondBootReply >= 0)
+					goto done;
+			} else if (command == 22) {
+				if (control->currentState != 8)
+					goto done;
+			} else {
+				if ((command != 59 && command != 23) || control->currentState != 8)
+					goto done;
+				bbmcTimerCancelHandler(swdlTimerId);
+				swdlTimerId = 0;
+				if (control->secondBootReply != 6) {
+					result = (int)0x80330006;
+					goto failed;
+				}
+				if (swdlWork.carrierFlags[0] == 1) {
+					swdlNextStep = 4;
+					goto done;
+				}
+				result = bbmcRegisterDownloadNotification(control);
+				if (result < 0)
+					goto failed;
+				bbmcAcquireGpio(NULL);
+				swdlWaitAttach(0);
+				swdlNextStep = 0;
+				swdlCarrierStep = SWDL_CARRIER_ATTACH;
+				goto check;
+			}
+			result = (int)0x80330006;
+			bbmcTimerCancelHandler(swdlTimerId);
+			swdlTimerId = 0;
+			goto failed;
+		case 4:
+			if (bbmcIsTransportReady(control) != 1)
+				goto done;
+			result = bbmcRequestOperationMode(control, 1);
+			if (result < 0)
+				goto failed;
+			swdlNextStep = 5;
+			goto check;
+		case 5:
+			if (command == 117)
+				goto cancelled;
+			goto done;
+		default:
+			result = (int)0x80330001;
+			goto failed;
+		}
+	case SWDL_CARRIER_DOWNLOAD:
+		switch (command) {
+		case 123:
+			swdlCancel();
+			goto done;
+		case 129:
+			pair = &paired->pairs[paired->activeIndex];
+			if (pair->state == 1)
+				pair->state = 2;
+			goto finished;
+		case 131:
+		case 134:
+			goto finished;
+		case 133:
+			paired->completedBytes += message->notificationValue2;
+			swdlNotifyProgress(control,
+				100 * paired->completedBytes / paired->totalBytes);
+			goto done;
+		default:
+			goto done;
+		}
+	case SWDL_CARRIER_NEXT_PAIR:
+		if (command == 123)
+			goto cancelled;
+		if (command != 143)
+			goto done;
+		selected = swdlSelectPair(paired);
+		if (selected == 5) {
+			if (paired->operationMode == 1 ||
+			    paired->requestedIndex == (SceInt32)paired->activeIndex)
+				goto allDone;
+			index = paired->requestedIndex;
+			if (paired->pairs[index].firstFile == 0 ||
+			    paired->pairs[index].secondFile == 0)
+				goto noPair;
+			paired->pairs[index].forwardedValue = 0;
+			paired->pairs[index].state = 1;
+			paired->requestedIndex = -1;
+			paired->activeIndex = index;
+		} else {
+			if (paired->pairs[selected].secondFile == 0)
+				goto noPair;
+			paired->pairs[selected].state = 1;
+			paired->activeIndex = selected;
+		}
+		result = swdlCopyRequest(message);
+		if (result < 0)
+			goto failed;
+		result = bbmcSendSimpleMessage(control, 78);
+		if (result < 0)
+			goto failed;
+		swdlWork.stableCount = 0;
+		swdlNextStep = 0;
+		swdlCarrierStep = SWDL_CARRIER_PREPARE;
+		goto check;
+	case SWDL_CARRIER_RESTORE:
+		switch (command) {
+		case 123:
+			swdlCancel();
+			goto done;
+		case 130:
+		case 131:
+		case 134:
+			goto finished;
+		case 133:
+			swdlNotifyProgress(control, message->notificationValue2);
+			goto done;
+		default:
+			goto done;
+		}
+	case SWDL_CARRIER_DETACHED:
+		if (command != 136 && command != 138) {
+			if (command == 123)
+				swdlWork.carrierFlags[0] = 1;
+			goto done;
+		}
+		/* the request's reply is in: power the modem back */
+		switch (swdlWork.request.command) {
+		case 127:
+		case 128:
+		case 129:
+		case 130:
+		case 139:
+			if (swdlWork.carrierFlags[0] == 1)
+				swdlWork.carrierFlags[1] = 1;
+			break;
+		case 131:
+			swdlWork.carrierFlags[1] = 1;
+			break;
+		case 134:
+			control->lastError = swdlWork.request.notificationValue1;
+			break;
+		default:
+			if (swdlWork.carrierFlags[0] != 1) {
+				result = (int)0x80330001;
+				swdlFreeRequest();
+				goto check;
+			}
+			swdlWork.carrierFlags[1] = 1;
+			break;
+		}
+		result = bbmcSendSimpleMessage(control, 78);
+		if (result < 0)
+			goto failed;
+		swdlCarrierStep = SWDL_CARRIER_FINALIZE;
+		swdlFreeRequest();
+		goto check;
+	case SWDL_CARRIER_FINALIZE:
+		result = _swdlSeqFinalize(control, message);
+		goto check;
+	default:
+		result = (int)0x80330001;
+		goto failed;
+	}
+
+selectPair:
+	selected = swdlSelectPair(paired);
+	if (selected == 5) {
+		if (paired->operationMode == 1 ||
+		    paired->requestedIndex == (SceInt32)paired->activeIndex)
+			goto allDone;
+		index = paired->requestedIndex;
+		if (paired->pairs[index].firstFile == 0 || paired->pairs[index].secondFile == 0)
+			goto noPair;
+		paired->pairs[index].forwardedValue = 0;
+		paired->pairs[index].state = 1;
+		paired->requestedIndex = -1;
+		paired->activeIndex = index;
+	} else {
+		if (paired->pairs[selected].secondFile == 0)
+			goto noPair;
+		paired->pairs[selected].state = 1;
+		paired->activeIndex = selected;
+	}
+start:
+	result = bbmcSendSimpleMessage(control, 78);
+	if (result < 0)
+		goto failed;
+	swdlNextStep = 0;
+	swdlWork.stableCount = 0;
+	swdlWork.unstableCount = 0;
+	swdlCarrierStep = SWDL_CARRIER_PREPARE;
+	goto check;
+allDone:
+	paired->requestedIndex = -1;
+	paired->activeIndex = 0;
+	bbmcNotifyFeatureEvent(control, 7, 0x20);
+	swdlCarrierStep = SWDL_CARRIER_FINISHED;
+	goto done;
+noPair:
+	paired->activeIndex = 0;
+	result = (int)0x80330002;
+	goto failed;
+cancelled:
+	bbmcNotifyFeatureEvent(control, 7, 0x800);
+	swdlCarrierStep = SWDL_CARRIER_FINISHED;
+	goto done;
+finished:
+	/* the request is done: release the device and wait for its reply */
+	bbmcReleaseGpio(NULL);
+	swdlWaitDetach();
+	result = swdlCopyRequest(message);
+	if (result < 0)
+		goto failed;
+	swdlCarrierStep = SWDL_CARRIER_DETACHED;
+	goto check;
+openFailed:
+	swdlCloseFilePair(control);
+	goto check;
+invalid:
+	result = (int)0x80330002;
+	goto failed;
+
+check:
+	if (result < 0)
+		goto failed;
+done:
+	if (swdlCarrierStep != SWDL_CARRIER_FINISHED)
+		return 1;
+	goto finish;
+failed:
+	bbmcEnterCS(&control->mutex);
+	control->lastError = result;
+	bbmcLeaveCS(&control->mutex);
+	bbmcNotifyFeatureEvent(control, 7, 0x200);
+	swdlCarrierStep = SWDL_CARRIER_FINISHED;
+finish:
+	if (control->downloadNotificationRegistered == 1) {
+		swdlTerminate();
+		control->downloadNotificationRegistered = 0;
+	}
+	swdlCarrierStep = SWDL_CARRIER_IDLE;
+	swdlNextStep = 0;
+	swdlFreeRequest();
+	if (control->forceOperationMode == 1) {
+		swdlCloseFilePair(control);
+	} else if (control->forceOperationMode == 2) {
+		swdlCloseFilePair(control);
+	} else if (control->forceOperationMode == 3 || control->forceOperationMode == 4) {
+		swdlCloseUpdateFiles(control);
+	} else if (control->forceOperationMode == 5) {
+		if (paired->pairs[0].firstFile != 0)
+			udIoClose(paired->pairs[0].firstFile);
+		if (paired->pairs[1].firstFile != 0)
+			udIoClose(paired->pairs[1].firstFile);
+		if (paired->pairs[2].firstFile != 0)
+			udIoClose(paired->pairs[2].firstFile);
+		if (paired->pairs[3].firstFile != 0)
+			udIoClose(paired->pairs[3].firstFile);
+		if (paired->pairs[4].firstFile != 0)
+			udIoClose(paired->pairs[4].firstFile);
+		if (paired->pairs[0].secondFile != 0)
+			udIoClose(paired->pairs[0].secondFile);
+		if (paired->pairs[1].secondFile != 0)
+			udIoClose(paired->pairs[1].secondFile);
+		if (paired->pairs[2].secondFile != 0)
+			udIoClose(paired->pairs[2].secondFile);
+		if (paired->pairs[3].secondFile != 0)
+			udIoClose(paired->pairs[3].secondFile);
+		if (paired->pairs[4].secondFile != 0)
+			udIoClose(paired->pairs[4].secondFile);
+		memset(&control->updateWork, 0, sizeof(control->updateWork));
+	}
+	control->forceOperationMode = 0;
+	memset(&swdlWork, 0, sizeof(swdlWork));
+	return 0;
 }
 
 /* name unknown: command 86 reads an SMS, 88 acknowledges it (deleting it on request) */

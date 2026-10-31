@@ -33,7 +33,7 @@ set_source_files_properties(${bbmc_bzip2_sources} PROPERTIES
 	COMPILE_OPTIONS "-O3"
 	COMPILE_DEFINITIONS BZ_NO_STDIO)
 
-psp2_module(os0_kd_bootimage_bbmc KIND kernel COMPILER gcc48 PARTIAL SOURCES
+psp2_module(os0_kd_bootimage_bbmc KIND kernel COMPILER gcc48 SOURCES
 	message_command.c
 	bbmc_gpio.c
 	bbmc_memory.c

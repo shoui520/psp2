@@ -300,4 +300,6 @@ int swdlRequestBackup(const SwdlBackupRequest *request);
 int swdlRequestRestore(const SwdlRestoreRequest *request);
 int swdlRequestUpdate(const SwdlUpdateRequest *request);
 int swdlRequestDownload(const SwdlDownloadRequest *request);
+int swdlRequestCarrierUpdate(const SwdlUpdateRequest *request);
 int swdlCancel(void);
+int swdlRequestStop(void);

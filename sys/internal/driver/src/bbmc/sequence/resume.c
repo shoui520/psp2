@@ -773,7 +773,7 @@ complete:
 		if (sendResult < 0 && result == 0)
 			result = sendResult;
 		if (control->currentState != control->savedTargetState ||
-		    bbmcCollectIndexedResponseEvents(control) == 0)
+		    bbmcCollectControlKeyEvents(control) == 0)
 			bbmcSendSimpleMessage(control, completionMessage);
 	}
 	return result;

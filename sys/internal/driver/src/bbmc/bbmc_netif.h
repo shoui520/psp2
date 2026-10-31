@@ -8,7 +8,6 @@ typedef struct BbmcPacketInterface BbmcPacketInterface;
 
 int bbmcNotifyPacketInterfaceEvent(unsigned int events, int status);
 int bbmcClearPacketInterfaceUsbState(void);
-int bbmcRequestNetworkStop(void);
 int bbmcRegisterNetworkInterface(void);
 
 typedef struct BbmcPacketPrefix {

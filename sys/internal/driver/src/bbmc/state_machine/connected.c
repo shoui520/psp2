@@ -848,7 +848,7 @@ int suspendGotoLPM(BbmcControl *control, BbmcMessage *message)
 			result = (int)0x80330006;
 			goto finish;
 		}
-		result = bbmcRequestNetworkStop();
+		result = DisconnectNetwork();
 		if (result < 0) {
 			if (result == (int)0x80330508) {
 				result = connectedRequestLowPowerMode(control);
@@ -983,7 +983,7 @@ finish:
 	bbmcCancelSysconCommand(&control->transitionPacket,
 			       &connectedSysconPending);
 	if (result < 0) {
-		stopResult = bbmcRequestNetworkStop();
+		stopResult = DisconnectNetwork();
 		if (stopResult == 0) {
 			connectedTransitionStep = 5;
 			bbmcNotifyPacketInterfaceEvent(16, result);

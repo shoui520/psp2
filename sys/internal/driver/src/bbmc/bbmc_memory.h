@@ -11,7 +11,6 @@ void bbmcEnterCS(struct ThreadmgrFastMutex *mutex);
 void bbmcLeaveCS(struct ThreadmgrFastMutex *mutex);
 int bbmcNotifyFeatureEvent(BbmcControl *control, SceUInt32 featureId,
 	SceUInt32 eventMask);
-int bbmcCollectIndexedResponseEvents(BbmcControl *control);
 int bbmcIsStateTransitionPending(BbmcControl *control);
 void bbmcScheduleDeferredNetworkRetry(BbmcControl *control);
 int bbmcPrepareUsbShutdown(BbmcControl *control);

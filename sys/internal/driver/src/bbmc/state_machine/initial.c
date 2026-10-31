@@ -237,7 +237,7 @@ int stmInitial_ComBoot(BbmcControl *control, BbmcMessage *message)
 	case 0:
 		if (message->command != 18)
 			return 1;
-		if (SceSysrootForKernel_4373AC96() && SceSysconForDriver_99A254A9())
+		if (SceSysrootForDriver_4373AC96() && SceSysconForDriver_99A254A9())
 			initialComBootStep = 12;
 		else
 			initialComBootStep = 1;
@@ -613,7 +613,7 @@ int stmInitial_ComBoot(BbmcControl *control, BbmcMessage *message)
 			initialComBootStep = 16;
 			goto finish;
 		}
-		if (!SceSysrootForKernel_4373AC96()) {
+		if (!SceSysrootForDriver_4373AC96()) {
 			result = (int)0x80330001;
 			goto reset;
 		}
