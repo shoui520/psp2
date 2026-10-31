@@ -52,6 +52,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/job/job.cpp
 	src/math/matrix.cpp
 	src/math/quaternion.cpp
+	src/math/rect.cpp
 	src/cache/cache_manager.c
 	src/cache/cache_manager_impl.c
 	src/inputdevice/inputdevice.c
@@ -109,7 +110,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/string_variant.c
 	src/misc/lock.c
 	src/misc/owned_destroy.c
-	src/misc/rect_vector.c
 	src/misc/rect_contains.c
 	src/misc/list.c
 	src/misc/dispatch.c
@@ -142,7 +142,7 @@ set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIE
 # them call C1/D1, and CallQueue::Enqueue calls string::assign out of line; budgets 29 to 31 do
 # both (2026-10-31).
 set_source_files_properties(
-	src/job/job.cpp src/math/matrix.cpp
+	src/job/job.cpp src/math/matrix.cpp src/math/rect.cpp
 	src/thread/callqueue.cpp src/thread/cond.cpp src/thread/mutex.cpp src/thread/priority.cpp
 	src/thread/rmutex.cpp src/thread/rwlock.cpp src/thread/semaphore.cpp src/thread/sleep.cpp
 	src/thread/synccall.cpp src/thread/thread.cpp src/thread/thread_id_cache.cpp

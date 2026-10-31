@@ -428,7 +428,7 @@ ScePaf:
         - ScePafMisc_351C9F8E: 0x351C9F8E
         - _ZN3paf5image6filter12FadeWithEdgeEPNS0_11ImageBufferEPKS2_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatE: 0x358B8BA7
         - ScePafMisc_358C89CE: 0x358C89CE
-        - ScePafMisc_362D3890: 0x362D3890
+        - _ZNK3paf4math4rect7convertENS0_2v2ES2_S2_: 0x362D3890
         - _ZN3paf9LocalFile9PollAsyncEPx: 0x3636127A
         - _ZN3paf12BufferedFile5AbortEv: 0x364D2AE7
         - ScePafMisc_36CF059C: 0x36CF059C
@@ -635,7 +635,7 @@ ScePaf:
         - ScePafMisc_679B51BB: 0x679B51BB
         - _ZN3paf3UrlC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x67BA6456
         - _ZN3paf11inputdevice4InitERNS0_9InitParamE: 0x680B4595
-        - ScePafMisc_684125AA: 0x684125AA
+        - _ZN3paf4math10quaternion15RotationBetweenENS0_2v4ES2_f: 0x684125AA
         - ScePafMisc_68657766: 0x68657766
         - ScePafMisc_68A6B37B: 0x68A6B37B
         - _ZNK3paf6memory13HeapAllocator7GetNameEv: 0x68B7420B
@@ -1091,7 +1091,7 @@ ScePaf:
         - _ZN3paf4http11Transaction16SetRequestHeaderEPKcS3_: 0xD3E4B405
         - _ZN3paf5cache9CacheBaseC1EPNS0_16CacheManagerImplEPKNS1_6OptionEh: 0xD40A68A6
         - _ZNK3paf6memory13HeapAllocator8GetRangeEPPvPj: 0xD4358B8E
-        - ScePafMisc_D456092E: 0xD456092E
+        - _ZN3paf4math11math_matrix16GetCoordSysErrorEv: 0xD456092E
         - ScePafMisc_D4ECC9FC: 0xD4ECC9FC
         - _ZNK3paf5image5Image12GetArraySizeEv: 0xD50E863E
         - _ZN3paf8HttpFile9PollAsyncEPx: 0xD5543A0D
@@ -1203,7 +1203,7 @@ ScePaf:
         - ScePafMisc_ED289E89: 0xED289E89
         - _ZN3paf11inputdevice11touchscreen19SetScreenResolutionEjj: 0xED46DA1B
         - ScePafMisc_EDE4297A: 0xEDE4297A
-        - ScePafMisc_EE135486: 0xEE135486
+        - _ZN3paf4math6matrix6ShadowENS0_2v3ES2_NS0_2v4E: 0xEE135486
         - ScePafMisc_EE1CA56C: 0xEE1CA56C
         - _ZN3paf17LocalFilePsp2Impl9PollAsyncEPx: 0xEE7027E7
         - ScePafMisc_EEBED3C6: 0xEEBED3C6

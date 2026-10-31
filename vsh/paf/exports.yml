@@ -428,7 +428,7 @@ ScePaf:
         - ScePafMisc_351C9F8E: 0x351C9F8E
         - _ZN3paf5image6filter12FadeWithEdgeEPNS0_11ImageBufferEPKS2_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatE: 0x358B8BA7
         - ScePafMisc_358C89CE: 0x358C89CE
-        - ScePafMisc_362D3890: 0x362D3890
+        - _ZNK3paf4math4rect7convertENS0_2v2ES2_S2_: 0x362D3890
         - _ZN3paf9LocalFile9PollAsyncEPx: 0x3636127A
         - _ZN3paf12BufferedFile5AbortEv: 0x364D2AE7
         - ScePafMisc_36CF059C: 0x36CF059C
