@@ -493,7 +493,7 @@ ScePaf:
         - _ZNK3paf5image10ImageArray12GetArraySizeEv: 0x447B094F
         - _ZN3paf15HeapAllocBufferD2Ev: 0x44C18EAD
         - _ZN3paf7MemFile9ReadAsyncEPvj: 0x44FE3320
-        - ScePafMisc_4558694C: 0x4558694C
+        - _ZNK3paf14BufferedReader13GetCapabilityEv: 0x4558694C
         - ScePafMisc_45755C06: 0x45755C06
         - _ZNK3paf8HttpFile17GetResponsePhraseERNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x45ADBF5A
         - _ZN3paf5Timer21DoFuncCustomExpoInOutEfPKf: 0x45BF143C
@@ -772,7 +772,7 @@ ScePaf:
         - ScePafMisc_86181366: 0x86181366
         - ScePafMisc_862C8916: 0x862C8916
         - _ZN3paf17TimerListenerList4InitEv: 0x86997E06
-        - ScePafMisc_86A764CB: 0x86A764CB
+        - _ZN3paf12BufferedFile4OpenEPKNS_4File7OpenArgENS_6common9SharedPtrINS_6BufferEEE: 0x86A764CB
         - _ZN3paf14SubConstBuffer6CreateEPKvjNS_6common9SharedPtrIKNS_6BufferEEE: 0x86EC46F4
         - _ZN3paf7MemFile4ReadEPvj: 0x871AFA61
         - _ZN3paf5cache9CacheBase20DestroyCacheInstanceEPS1_: 0x87466AA5
@@ -821,7 +821,7 @@ ScePaf:
         - _ZN3paf3rtc12TickAddYearsEPyPKyi: 0x9263D1D0
         - ScePafMisc_928EBAC4: 0x928EBAC4
         - ScePafMisc_92DC3409: 0x92DC3409
-        - ScePafMisc_9311E7BB: 0x9311E7BB
+        - _ZN3paf12BufferedFile10AttachFileENS_6common9SharedPtrINS_4FileEEE: 0x9311E7BB
         - _ZN3paf9LocalFileD1Ev: 0x932FCF17
         - _ZN3paf9LocalFile7GetstatEPKcPNS_13LocalFileStatE: 0x93900EA9
         - _ZN3paf4http11TransactionD1Ev: 0x947EDCC9
@@ -1043,7 +1043,7 @@ ScePaf:
         - _ZN3paf5image5Image7SharpenEfi: 0xC7F5B98E
         - _ZN3paf5image5Image18CheckAlignArgumentEi: 0xC875DB31
         - _ZN3paf9LocalFile10RemoveFileEPKc: 0xC8CA2008
-        - ScePafMisc_C8E1B9B2: 0xC8E1B9B2
+        - _ZNK3paf14BufferedReader11GetFileTypeEv: 0xC8E1B9B2
         - ScePafMisc_CA674A19: 0xCA674A19
         - ScePafMisc_CA7A4BB2: 0xCA7A4BB2
         - ScePafMisc_CAABF0B0: 0xCAABF0B0

@@ -60,10 +60,10 @@ public:
 
 	SharedPtr &operator=(const SharedPtr &src)
 	{
-		if (m_ptr != src.m_ptr) {
-			T *ptr = src.m_ptr;
-			RefCounter *counter = src.m_ref_counter;
+		T *ptr = src.m_ptr;
+		RefCounter *counter = src.m_ref_counter;
 
+		if (m_ptr != ptr) {
 			Release();
 			m_ptr = ptr;
 			m_ref_counter = counter;
