@@ -457,9 +457,9 @@ bool Image::Load(bool delete_flag)
 {
 	if (m_imageattr->m_clip.extent.w <= 0 || m_imageattr->m_clip.extent.h <= 0 ||
 	    m_imageattr->m_subrect.extent.w <= 0 || m_imageattr->m_subrect.extent.h <= 0) {
-		s_errortype = SCE_PAF_ERROR_IMAGE_INVALID_EXTENT;
+		s_errortype = SCE_PAF_ERROR_IMAGE_INVALID_DATA;
 		if (m_imagesrc != NULL)
-			m_imagesrc->SetErrorType(SCE_PAF_ERROR_IMAGE_INVALID_EXTENT);
+			m_imagesrc->SetErrorType(SCE_PAF_ERROR_IMAGE_INVALID_DATA);
 		return false;
 	}
 	if (m_images.GetMax() == 0 && m_cluts.GetMax() == 0)

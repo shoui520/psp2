@@ -1189,7 +1189,7 @@ static inline __attribute__((always_inline)) ContribList *CalcContribList(int sr
 	GetFilter(type, &filter, &support);
 	ContribList *contrib = (ContribList *)Alloc(allocator, 8 * dst);
 	if (contrib == NULL) {
-		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 		return NULL;
 	}
 
@@ -1202,7 +1202,7 @@ static inline __attribute__((always_inline)) ContribList *CalcContribList(int sr
 			contrib[i].n = 0;
 			contrib[i].p = (Contrib *)Alloc(allocator, 8 * (int)(width * 2.0f + 2.0f));
 			if (contrib[i].p == NULL) {
-				Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+				Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 				return NULL;
 			}
 
@@ -1236,7 +1236,7 @@ static inline __attribute__((always_inline)) ContribList *CalcContribList(int sr
 			contrib[i].p = (Contrib *)Alloc(allocator,
 							8 * (int)(support * 2.0f + 2.0f));
 			if (contrib[i].p == NULL) {
-				Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+				Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 				return NULL;
 			}
 
@@ -1307,13 +1307,13 @@ static bool ResizeFiltered(uint8_t *dst, const uint8_t *src, int dst_pitch, int 
 {
 	ContribList *contrib = CalcContrib(src_w, dst_w, type, allocator);
 	if (contrib == NULL) {
-		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 		return false;
 	}
 
 	uint8_t *tmp = (uint8_t *)Alloc(allocator, 4 * src_h * dst_w);
 	if (tmp == NULL) {
-		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 		FreeContribList(contrib, dst_w, allocator);
 		return false;
 	}
@@ -1328,7 +1328,7 @@ static bool ResizeFiltered(uint8_t *dst, const uint8_t *src, int dst_pitch, int 
 
 	contrib = CalcContrib(src_h, dst_h, type, allocator);
 	if (contrib == NULL) {
-		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 		Free(allocator, tmp);
 		return false;
 	}
@@ -1380,7 +1380,7 @@ bool filter::Resize(ImageBuffer *dst, const ImageBuffer *src, int dst_pitch, int
 		float scale_y = (float)extent.h / (float)dst_extent.h;
 		int *xs = (int *)Alloc(allocator, 4 * dst_extent.w);
 		if (xs == NULL) {
-			Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+			Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 			return false;
 		}
 
@@ -1636,7 +1636,7 @@ static bool ConvertResize(ImageBuffer *dst, const ImageBuffer *src, const ImageB
 			float scale_y = (float)src_extent->h / (float)dst_h;
 			uint32_t *xs = (uint32_t *)Alloc(allocator, 4 * dst_w);
 			if (xs == NULL) {
-				Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+				Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 				return false;
 			}
 
@@ -1702,13 +1702,13 @@ static bool ConvertResize(ImageBuffer *dst, const ImageBuffer *src, const ImageB
 
 	ContribList *contrib = CalcContribIndex(src_w, dst_w, type, allocator);
 	if (contrib == NULL) {
-		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 		FreeContribList(contrib, dst_w, allocator);
 		return false;
 	}
 	uint8_t *tmp = (uint8_t *)Alloc(allocator, 4 * src_h * dst_w);
 	if (tmp == NULL) {
-		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 		FreeContribList(contrib, dst_w, allocator);
 		return false;
 	}
@@ -1753,7 +1753,7 @@ static bool ConvertResize(ImageBuffer *dst, const ImageBuffer *src, const ImageB
 
 	contrib = CalcContrib(src_h, dst_h, type, allocator);
 	if (contrib == NULL) {
-		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 		FreeContribList(contrib, dst_h, allocator);
 		Free(allocator, tmp);
 		return false;
@@ -2352,7 +2352,7 @@ static bool ResizeNearestNeighbor(T *dst, const T *src, uint32_t dst_pitch, uint
 	uint32_t dst_stride = dst_pitch / (ImageAttribute::GetPixelSize(mode) >> 3);
 	int *xs = (int *)Alloc(allocator, 4 * dst_w);
 	if (xs == NULL) {
-		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 		return false;
 	}
 
@@ -2397,7 +2397,7 @@ static bool ConvertNearestNeighbor(uint32_t *dst, const T *src, const uint8_t *c
 	uint32_t dst_stride = dst_pitch / (ImageAttribute::GetPixelSize(dst_mode) >> 3);
 	uint32_t *xs = (uint32_t *)Alloc(allocator, 4 * dst_w);
 	if (xs == NULL) {
-		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 		return false;
 	}
 

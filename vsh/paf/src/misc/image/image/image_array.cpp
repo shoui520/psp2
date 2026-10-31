@@ -137,7 +137,7 @@ bool ImageArray::Alloc()
 		else
 			buffer->buff = sce_paf_malloc(buffer->size);
 		if (buffer->buff == NULL) {
-			Image::SetErrorType(SCE_PAF_ERROR_IMAGE_NO_MEMORY);
+			Image::SetErrorType(SCE_PAF_ERROR_IMAGE_OUT_OF_MEMORY);
 			break;
 		}
 	}
