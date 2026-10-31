@@ -33,6 +33,11 @@ public:
 			color = _Red;
 		}
 
+		_Node(_Node *parent, _Node *left, _Node *right, const value_type &val, char color)
+			: parent(parent), left(left), right(right), value(val), color(color), isnil(false)
+		{
+		}
+
 		_Node *parent;
 		_Node *left;
 		_Node *right;
@@ -127,10 +132,34 @@ public:
 		}
 	}
 
+	_Tree(const _Tree &src);
+
+	_Tree &operator=(const _Tree &right)
+	{
+		_Tree copy(right);
+
+		copy.swap(*this);
+		return *this;
+	}
+
+	void swap(_Tree &right)
+	{
+		_Node *node = head;
+
+		head = right.head;
+		right.head = node;
+
+		size_type size = count;
+
+		count = right.count;
+		right.count = size;
+	}
+
 	~_Tree()
 	{
 		_Tidy();
-		operator delete(head);
+		if (head != NULL)
+			operator delete(head);
 		head = (_Node *)-1;
 		count = (size_type)-1;
 	}
@@ -156,12 +185,7 @@ public:
 	void erase(iterator first, iterator last);
 	void _Tidy();
 
-	/* By its key: the node itself is unlinked by _Erase. */
-	void erase(iterator where)
-	{
-		if (where.node != NULL)
-			erase(_Traits::_Kfn(where.node->value));
-	}
+	void erase(iterator where);
 
 	_Node *head;
 	size_type count;
@@ -210,10 +234,70 @@ private:
 		where->parent = node;
 	}
 
+	_Node *_Copy(_Node *parent, const _Node *src);
 	void _Rebalance(_Node *node);
 	void _EraseFixup(_Node *fixnode, _Node *fixnodeparent);
 	void _Erase(_Node *erasednode);
 };
+
+template<class _Traits>
+_Tree<_Traits>::_Tree(const _Tree &src) : count(0)
+{
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node == NULL)
+		ScePafStdc_D608246A();
+	head = node;
+	if (node != NULL) {
+		node->parent = node;
+		node->left = node;
+		node->right = node;
+		node->color = _Black;
+		_Node *nil = head;
+
+		nil->isnil = true;
+		if (src.head != NULL && !src.head->parent->isnil) {
+			_Node *root = _Copy(nil, src.head->parent);
+
+			nil = head;
+
+			if (root != nil) {
+				nil->parent = root;
+
+				_Node *left = root;
+
+				while (!left->left->isnil)
+					left = left->left;
+				nil->left = left;
+
+				_Node *right = root;
+
+				while (!right->right->isnil)
+					right = right->right;
+				nil->right = right;
+				count = src.count;
+			}
+		}
+	}
+}
+
+/* A copy of src's subtree under parent, the colours kept. */
+template<class _Traits>
+typename _Tree<_Traits>::_Node *_Tree<_Traits>::_Copy(_Node *parent, const _Node *src)
+{
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node == NULL) {
+		ScePafStdc_D608246A();
+		return head;
+	}
+	new (node) _Node(parent, head, head, src->value, src->color);
+	if (!src->left->isnil)
+		node->left = _Copy(node, src->left);
+	if (!src->right->isnil)
+		node->right = _Copy(node, src->right);
+	return node;
+}
 
 template<class _Traits>
 void _Tree<_Traits>::_Rebalance(_Node *node)
@@ -222,11 +306,11 @@ void _Tree<_Traits>::_Rebalance(_Node *node)
 		return;
 
 	node->color = _Red;
-	while (node != head->parent && node->parent->color == _Red) {
+	while (node != head->parent && node->parent->color != _Black) {
 		if (node->parent == node->parent->parent->left) {
 			_Node *uncle = node->parent->parent->right;
 
-			if (uncle->color == _Red) {
+			if (uncle->color != _Black) {
 				node->parent->color = _Black;
 				uncle->color = _Black;
 				node->parent->parent->color = _Red;
@@ -243,7 +327,7 @@ void _Tree<_Traits>::_Rebalance(_Node *node)
 		} else {
 			_Node *uncle = node->parent->parent->left;
 
-			if (uncle->color == _Red) {
+			if (uncle->color != _Black) {
 				node->parent->color = _Black;
 				uncle->color = _Black;
 				node->parent->parent->color = _Red;
@@ -440,7 +524,9 @@ void _Tree<_Traits>::_EraseFixup(_Node *fixnode, _Node *fixnodeparent)
 template<class _Traits>
 void _Tree<_Traits>::_Erase(_Node *erasednode)
 {
-	if (head == NULL)
+	_Node *nil = head;
+
+	if (nil == NULL)
 		return;
 
 	_Node *pnode;
@@ -465,7 +551,7 @@ void _Tree<_Traits>::_Erase(_Node *erasednode)
 	if (!fixnode->isnil)
 		fixnode->parent = pnode->parent;
 	if (pnode->parent->isnil)
-		head->parent = fixnode;
+		nil->parent = fixnode;
 	else if (pnode->parent->left == pnode)
 		pnode->parent->left = fixnode;
 	else
@@ -476,7 +562,7 @@ void _Tree<_Traits>::_Erase(_Node *erasednode)
 	if (pnode != erasednode) {
 		pnode->parent = erasednode->parent;
 		if (erasednode->parent->isnil)
-			head->parent = pnode;
+			nil->parent = pnode;
 		else if (erasednode->parent->left == erasednode)
 			erasednode->parent->left = pnode;
 		else
@@ -489,9 +575,11 @@ void _Tree<_Traits>::_Erase(_Node *erasednode)
 			erasednode->right->parent = pnode;
 		pnode->color = erasednode->color;
 	}
-	if (fixup)
+	if (fixup) {
 		_EraseFixup(fixnode, fixnodeparent);
-	if (head->left == erasednode) {
+		nil = head;
+	}
+	if (nil->left == erasednode) {
 		_Node *node = fixnodeparent;
 
 		if (!fixnode->isnil) {
@@ -499,9 +587,9 @@ void _Tree<_Traits>::_Erase(_Node *erasednode)
 			while (!node->left->isnil)
 				node = node->left;
 		}
-		head->left = node;
+		nil->left = node;
 	}
-	if (head->right == erasednode) {
+	if (nil->right == erasednode) {
 		_Node *node = fixnodeparent;
 
 		if (!fixnode->isnil) {
@@ -509,7 +597,7 @@ void _Tree<_Traits>::_Erase(_Node *erasednode)
 			while (!node->right->isnil)
 				node = node->right;
 		}
-		head->right = node;
+		nil->right = node;
 	}
 	erasednode->value.~value_type();
 	operator delete(erasednode);
@@ -534,6 +622,14 @@ void _Tree<_Traits>::erase(const key_type &key)
 	}
 	if (node != NULL && !node->isnil)
 		_Erase(node);
+}
+
+/* By its key: the node itself is unlinked by _Erase. */
+template<class _Traits>
+void _Tree<_Traits>::erase(iterator where)
+{
+	if (where.node != NULL)
+		erase(_Traits::_Kfn(where.node->value));
 }
 
 template<class _Traits>

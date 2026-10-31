@@ -1,6 +1,11 @@
 /* HTTP adapters operating on wrapped request and connection handles. */
 #include <stdint.h>
 #include <libhttp.h>
+#include "../common/main_thread_call.h"
+#include "../paf_types.h"
+#include "../std/new.h"
+#include "../std/stdlib.h"
+#include "../std/string.h"
 
 typedef struct PafHttpHandle {
 	uint32_t reserved[3];
@@ -43,6 +48,82 @@ typedef struct PafHttpReadSource {
 	uint8_t reserved[12];
 	volatile int32_t requestId;
 } PafHttpReadSource;
+
+int ScePafMisc_104CC765(uint8_t *self)
+{
+	MainThreadCall *callback = *(MainThreadCall **)(self + 4);
+	int32_t request;
+	int32_t connection;
+
+	if (callback) {
+		PafDelete(MainThreadCallDestroy(callback));
+		*(void **)(self + 4) = 0;
+	}
+	request = *(int32_t *)(self + 12);
+	if (request > 0) {
+		sceHttpDeleteRequest(request);
+		*(int32_t *)(self + 12) = -1;
+	}
+	connection = *(int32_t *)(self + 8);
+	if (connection > 0) {
+		sceHttpDeleteConnection(connection);
+		*(int32_t *)(self + 8) = -1;
+	}
+	PafStringAssign((PafString *)(self + 20), NULL, 0);
+	return 0;
+}
+
+uint8_t *ScePafMisc_947EDCC9(uint8_t *self)
+{
+	MainThreadCall *callback = *(MainThreadCall **)(self + 4);
+	int32_t request;
+	int32_t connection;
+	PafString *name = (PafString *)(self + 20);
+	char *ptr;
+
+	if (callback) {
+		PafDelete(MainThreadCallDestroy(callback));
+		*(void **)(self + 4) = 0;
+	}
+	request = *(int32_t *)(self + 12);
+	if (request > 0) {
+		sceHttpDeleteRequest(request);
+		*(int32_t *)(self + 12) = -1;
+	}
+	connection = *(int32_t *)(self + 8);
+	if (connection > 0) {
+		sceHttpDeleteConnection(connection);
+		*(int32_t *)(self + 8) = -1;
+	}
+	PafStringAssign(name, 0, 0);
+	ptr = name->ptr;
+	if (ptr != &PafStringEmpty)
+		PafDelete(ptr);
+	name->ptr = (char *)-1;
+	name->count = (size_t)-1;
+	return self;
+}
+
+int ScePafMisc_0A5D5353(const uint8_t *self, const char *name,
+			 PafString *resultString)
+{
+	char *headers;
+	SceSize headerSize;
+	const char *value;
+	SceSize valueLength;
+	int result = sceHttpGetAllResponseHeaders(
+		*(const int32_t *)(self + 12), &headers, &headerSize);
+
+	if (result >= 0) {
+		result = sceHttpParseResponseHeader(headers, headerSize,
+						name, &value, &valueLength);
+		if (result >= 0) {
+			PafStringAssign(resultString, value, valueLength);
+			result = 0;
+		}
+	}
+	return result;
+}
 
 int32_t ScePafMisc_0668FA2F(const PafHttpReadSource *source,
 			     PafHttpReadBuffer *volatile *buffer,

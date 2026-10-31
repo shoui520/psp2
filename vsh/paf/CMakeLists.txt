@@ -30,9 +30,9 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/file/localfile.c
 	src/file/localfile_platform.c
 	src/file/memfile.c
-	src/file/httpfile.c
-	src/file/httpfile_date.c
-	src/file/httpfile_openarg.c
+	src/file/httpfile.cpp
+	src/file/httpfile_reader.cpp
+	src/file/httpfile_range_reader.cpp
 	src/file/error.c
 	src/compress/compress.cpp
 	src/datetime/datetime.cpp
@@ -179,3 +179,8 @@ set_source_files_properties("${paf_dlmalloc_source}" PROPERTIES COMPILE_OPTIONS 
 # CacheImage's destructor stays out of line in its subclass's and its own deleting destructors,
 # while IsResourcePath is inlined: budget 16 does both, 12 and 20 do not (2026-10-31).
 set_source_files_properties(src/cache/cache_image.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)
+
+# HttpFile's units were written and matched at the C++ units' budget, 30 (2026-10-31).
+set_source_files_properties(
+	src/file/httpfile.cpp src/file/httpfile_reader.cpp src/file/httpfile_range_reader.cpp
+	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)

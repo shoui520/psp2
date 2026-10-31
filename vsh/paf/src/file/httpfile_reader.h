@@ -1,181 +1,119 @@
+/*
+ * HttpFile's insides. A reader sends one request and reads its response: a
+ * HttpFileHttpReader by itself, or a HttpFileRangeReader that opens one per byte
+ * range it asks for. The readers share their connections through the file's
+ * context, a pool of keep-alive connections. The request and response headers
+ * are a HttpHeader, a map from name to values whose names compare without case.
+ */
 #ifndef PAF_FILE_HTTPFILE_READER_H
 #define PAF_FILE_HTTPFILE_READER_H
 
-#include "httpfile.h"
-#include "../std/map.h"
-#include "../std/list.h"
-#include "../buffer/buffer.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <file/httpfile.h>
+#include <buffer/buffer.h>
+#include <common/shared_ptr.h>
+#include <std/string>
+#include <std/vector>
+#include <std/list>
+#include <std/map>
+#include <std/string.h>
+#include <thread/thread.h>
+#include <src/paf_types.h>
 
-typedef struct HttpFileHeaderEntry {
-	PafString first;
-	PafStringVector second;
-} HttpFileHeaderEntry;
+#define SCE_PAF_ERROR_FILE_UNKNOWN_RESPONSE (-2135994284) /* 0x80AF5054 */
+#define SCE_PAF_ERROR_FILE_INVALID_CONTENT_RANGE (-2135994283) /* 0x80AF5055 */
+#define SCE_PAF_ERROR_FILE_STATUS_100 (-2135994224) /* 0x80AF5090 */
+#define SCE_PAF_ERROR_FILE_STATUS_300 (-2135994208) /* 0x80AF50A0 */
+#define SCE_PAF_ERROR_FILE_STATUS_400 (-2135994192) /* 0x80AF50B0 */
+#define SCE_PAF_ERROR_FILE_STATUS_410 (-2135994176) /* 0x80AF50C0 */
+#define SCE_PAF_ERROR_FILE_STATUS_420 (-2135994160) /* 0x80AF50D0 */
+#define SCE_PAF_ERROR_FILE_STATUS_500 (-2135994144) /* 0x80AF50E0 */
 
-typedef struct HttpFileHeaderMapNode {
-	struct HttpFileHeaderMapNode *_Parent;
-	struct HttpFileHeaderMapNode *_Left;
-	struct HttpFileHeaderMapNode *_Right;
-	HttpFileHeaderEntry _Myval;
-	unsigned char _Color;
-	unsigned char _Isnil;
-} HttpFileHeaderMapNode;
+namespace paf {
 
-struct HttpFileReaderParam {
-	PafString scheme;
-	PafString host;
+/* Header names, ordered without case (descending, as the map was built). */
+class HttpHeaderCompare {
+public:
+	bool operator()(const string &left, const string &right) const
+	{
+		return sce_paf_strcasecmp(left.c_str(), right.c_str()) > 0;
+	}
+};
+
+typedef map<string, vector<string>, HttpHeaderCompare> HttpHeader;
+
+typedef int32_t (*HttpHeaderCallback)(const char *name, const char *value, void *userdata);
+
+/* The status line of a response. */
+class HttpResponse {
+public:
+	HttpResponse();
+	HttpResponse(const char *line, size_t len);
+	~HttpResponse();
+
+	uint16_t code;
+	string phrase;
+	uint8_t major;
+	uint8_t minor;
+	bool valid;
+};
+
+/* What HttpFile::Open was asked, kept while the file is open. */
+class HttpFileReaderParam {
+public:
+	HttpFileReaderParam()
+	{
+	}
+
+	~HttpFileReaderParam()
+	{
+	}
+
+	string scheme;
+	string host;
 	uint16_t port;
-	PafString method;
-	PafString version;
-	PafString uri;
-	PafString user;
-	PafString passwd;
-	PafMap header;
-	BufferSharedPtr msg_body;
+	string method;
+	string version;
+	string uri;
+	string user;
+	string passwd;
+	HttpHeader header;
+	common::SharedPtr<const Buffer> msg_body;
 	uint32_t open_flag;
 	uint32_t https_flag;
-	HttpFileTimeout timeout;
+	HttpFile::Timeout timeout;
 	int32_t accept_encoding_gzip;
-	HttpFileReaderContextSharedPtr context;
+	common::SharedPtr<HttpFileReaderContext> context;
 	uint32_t template_option;
 	size_t response_header_max_size;
 };
 
-typedef char HttpFileHeaderMapNodeSizeCheck[sizeof(HttpFileHeaderMapNode) == 44 ? 1 : -1];
-typedef char HttpFileReaderParamSizeCheck[sizeof(HttpFileReaderParam) == 152 ? 1 : -1];
-typedef char HttpFileReaderParamBodyOffsetCheck[offsetof(HttpFileReaderParam, msg_body) == 100 ? 1 : -1];
-typedef char HttpFileReaderParamContextOffsetCheck[offsetof(HttpFileReaderParam, context) == 136 ? 1 : -1];
+/* A reader's request: the parameter's strings and a copy of its headers. */
+class HttpFileReaderConfig {
+public:
+	HttpFileReaderConfig(const HttpFileReaderParam &param);
 
-PafMap *HttpFileHeaderMapClear(PafMap *self);
-PafMap *HttpFileHeaderMapCopy(PafMap *self, const PafMap *src);
-HttpFileHeaderMapNode *HttpFileHeaderMapRebalance(PafMap *self,
-					       HttpFileHeaderMapNode *node);
-HttpFileHeaderMapNode *HttpFileHeaderMapInsert(PafMap *self,
-					    const HttpFileHeaderEntry *value,
-					    unsigned char *inserted);
-PafStringVector *HttpFileHeaderMapSubscript(PafMap *self, const PafString *key);
-uintptr_t HttpFileHeaderMapEraseRebalance(PafMap *self,
-					HttpFileHeaderMapNode *node,
-					HttpFileHeaderMapNode *parent);
-uintptr_t HttpFileHeaderMapEraseNode(PafMap *self, HttpFileHeaderMapNode *node);
-uintptr_t HttpFileHeaderMapErase(PafMap *self, HttpFileHeaderMapNode *const *where);
+	HttpFileReaderConfig()
+	{
+	}
 
-#define HttpFileHeaderMapSet ScePafMisc_1156F852
-#define HttpFileHeaderMapParseLine ScePafMisc_DB5A6E15
-#define HttpFileHeaderMapRemove ScePafMisc_E21E796D
-#define HttpFileHeaderMapForEach ScePafMisc_5D64A09C
-#define HttpFileHeaderMapParse ScePafMisc_DBF32F34
+	HttpFileReaderConfig(const HttpFileReaderConfig &src)
+	{
+		*this = src;
+	}
 
-typedef int32_t (*HttpFileHeaderCallback)(const char *name, const char *value,
-					void *userdata);
+	~HttpFileReaderConfig()
+	{
+	}
 
-int32_t HttpFileHeaderMapForEach(const PafMap *self, HttpFileHeaderCallback callback,
-			       void *userdata);
-int32_t HttpFileHeaderMapParse(PafMap *self, const char *header, size_t len);
+	bool IsHttpsCheckEnabled() const;
+	bool IsProxyIgnored() const;
 
-void HttpFileHeaderMapSet(PafMap *self, const char *name, const char *value,
-			 unsigned char replace);
-PafMap *ScePafMisc_F39DF886(PafMap *self);
-int32_t HttpFileHeaderMapParseLine(PafMap *self, const char *line, size_t len);
-int32_t HttpFileHeaderMapRemove(PafMap *self, const char *name);
-HttpFileHeaderMapNode *HttpFileHeaderMapCopyNodes(PafMap *self,
-					      HttpFileHeaderMapNode *parent,
-					      const HttpFileHeaderMapNode *src);
-int32_t HttpFileDeleteReader(HttpFile *self);
-int32_t HttpFileCreateReader(HttpFile *self, const HttpFileOpenArg *arg);
-int32_t HttpFileResponseCodeToError(uint16_t code);
+	static common::SharedPtr<HttpFileReaderConfig> Create(const HttpFileReaderParam &param);
+	static common::SharedPtr<HttpFileReaderConfig> Clone(
+		common::SharedPtr<HttpFileReaderConfig> src);
 
-typedef int32_t (*HttpFileIoFunction)(HttpFileReader *self);
-
-/* ARM member-function pointers encode the virtual flag in the this adjustment. */
-typedef union HttpFileIoMethod {
-	HttpFileIoFunction function;
-	uintptr_t vtable_offset;
-} HttpFileIoMethod;
-
-typedef struct HttpFileIoCall {
-	HttpFileReader *m_object;
-	HttpFileIoMethod m_method;
-	int32_t m_adjustment;
-} HttpFileIoCall;
-
-typedef char HttpFileIoCallSizeCheck[sizeof(HttpFileIoCall) == 12 ? 1 : -1];
-
-typedef int32_t (*HttpFileReadIoFunction)(HttpFileReader *self, void *buf, size_t nbyte);
-typedef int64_t (*HttpFileSeekIoFunction)(HttpFileReader *self, int64_t offset, int32_t whence);
-
-typedef union HttpFileReadIoMethod {
-	HttpFileReadIoFunction function;
-	uintptr_t vtable_offset;
-} HttpFileReadIoMethod;
-
-typedef union HttpFileSeekIoMethod {
-	HttpFileSeekIoFunction function;
-	uintptr_t vtable_offset;
-} HttpFileSeekIoMethod;
-
-typedef struct HttpFileReadIoCall {
-	HttpFileReader *m_object;
-	HttpFileReadIoMethod m_method;
-	int32_t m_adjustment;
-	void *m_buf;
-	size_t m_nbyte;
-} HttpFileReadIoCall;
-
-typedef struct HttpFileSeekIoCall {
-	HttpFileReader *m_object;
-	HttpFileSeekIoMethod m_method;
-	int32_t m_adjustment;
-	int64_t m_offset;
-	int32_t m_whence;
-} HttpFileSeekIoCall;
-
-typedef char HttpFileReadIoCallSizeCheck[sizeof(HttpFileReadIoCall) == 20 ? 1 : -1];
-typedef char HttpFileReadIoCallBufferOffsetCheck[offsetof(HttpFileReadIoCall, m_buf) == 12 ? 1 : -1];
-typedef char HttpFileSeekIoCallSizeCheck[sizeof(HttpFileSeekIoCall) == 32 ? 1 : -1];
-typedef char HttpFileSeekIoCallOffsetOffsetCheck[offsetof(HttpFileSeekIoCall, m_offset) == 16 ? 1 : -1];
-typedef char HttpFileSeekIoCallWhenceOffsetCheck[offsetof(HttpFileSeekIoCall, m_whence) == 24 ? 1 : -1];
-
-/* The I/O thread owns the separately allocated member-call object. */
-typedef struct HttpFileIoThread {
-	Thread base;
-	int32_t m_operation;
-	int64_t m_result;
-	void *m_call;
-} HttpFileIoThread;
-
-typedef char HttpFileIoThreadSizeCheck[sizeof(HttpFileIoThread) == 32 ? 1 : -1];
-typedef char HttpFileIoThreadResultOffsetCheck[offsetof(HttpFileIoThread, m_result) == 16 ? 1 : -1];
-typedef char HttpFileIoThreadCallOffsetCheck[offsetof(HttpFileIoThread, m_call) == 24 ? 1 : -1];
-
-extern const ThreadClass httpFileIoThreadBaseClass;
-extern const ThreadClass httpFileIoThreadClass;
-Thread *HttpFileIoThreadDestroyBase(Thread *self);
-void HttpFileIoThreadDeleteBase(Thread *self);
-Thread *HttpFileIoThreadDestroy(Thread *self);
-void HttpFileIoThreadDelete(Thread *self);
-void HttpFileIoThreadEntryFunction(Thread *self);
-
-extern const ThreadClass httpFileReadIoThreadClass;
-extern const ThreadClass httpFileSeekIoThreadClass;
-Thread *HttpFileReadIoThreadDestroy(Thread *self);
-void HttpFileReadIoThreadDelete(Thread *self);
-void HttpFileReadIoThreadEntryFunction(Thread *self);
-Thread *HttpFileSeekIoThreadDestroy(Thread *self);
-void HttpFileSeekIoThreadDelete(Thread *self);
-void HttpFileSeekIoThreadEntryFunction(Thread *self);
-
-#define HttpFileCompleteAsync ScePafMisc_C098F659
-int32_t HttpFileCompleteAsync(HttpFile *self, int64_t *result);
-
-typedef struct HttpFileReaderConfig HttpFileReaderConfig;
-typedef struct HttpFileReaderConfigRefCounter HttpFileReaderConfigRefCounter;
-
-typedef struct HttpFileReaderConfigSharedPtr {
-	HttpFileReaderConfig *m_ptr;
-	HttpFileReaderConfigRefCounter *m_ref_counter;
-} HttpFileReaderConfigSharedPtr;
-
-struct HttpFileReaderConfig {
 	const char *scheme;
 	const char *host;
 	uint16_t port;
@@ -184,295 +122,291 @@ struct HttpFileReaderConfig {
 	const char *uri;
 	const char *user;
 	const char *passwd;
-	PafMap header;
-	BufferSharedPtr msg_body;
+	HttpHeader header;
+	common::SharedPtr<const Buffer> msg_body;
 	uint32_t open_flag;
 	uint32_t https_flag;
-	HttpFileTimeout timeout;
+	HttpFile::Timeout timeout;
 	int32_t accept_encoding_gzip;
-	HttpFileReaderContextSharedPtr context;
+	common::SharedPtr<HttpFileReaderContext> context;
 	uint32_t template_option;
 	size_t response_header_max_size;
 };
 
-struct HttpFileReaderConfigRefCounter {
-	HttpFileReaderConfig *m_ptr;
-	int32_t m_counter;
-	int32_t m_weak_counter;
-	void (*m_deleter)(HttpFileReaderConfig *ptr);
-};
-
-typedef char HttpFileReaderConfigSizeCheck[sizeof(HttpFileReaderConfig) == 96 ? 1 : -1];
-typedef char HttpFileReaderConfigBodyOffsetCheck[offsetof(HttpFileReaderConfig, msg_body) == 44 ? 1 : -1];
-typedef char HttpFileReaderConfigContextOffsetCheck[offsetof(HttpFileReaderConfig, context) == 80 ? 1 : -1];
-typedef char HttpFileReaderConfigRefCounterSizeCheck[sizeof(HttpFileReaderConfigRefCounter) == 16 ? 1 : -1];
-
-HttpFileReaderConfig *HttpFileReaderConfigConstruct(HttpFileReaderConfig *self,
-						  const HttpFileReaderParam *param);
-HttpFileReaderConfigRefCounter *HttpFileReaderConfigCreate(HttpFileReaderConfigSharedPtr *result,
-							 const HttpFileReaderParam *param);
-void HttpFileReaderConfigDelete(HttpFileReaderConfig *self);
-void HttpFileReaderConfigClone(HttpFileReaderConfigSharedPtr *result,
-			       const HttpFileReaderConfigSharedPtr *src);
-int32_t HttpFileReaderConfigIsHttpsCheckEnabled(const HttpFileReaderConfig *self);
-int32_t HttpFileReaderConfigIsProxyIgnored(const HttpFileReaderConfig *self);
-
-typedef struct HttpFileResponse {
-	uint16_t code;
-	PafString phrase;
-	unsigned char major;
-	unsigned char minor;
-	unsigned char valid;
-} HttpFileResponse;
-
-#define HttpFileResponseConstruct ScePafMisc_6C99DC26
-#define HttpFileResponseConstructBase ScePafMisc_8D31D15D
-#define HttpFileResponseParse ScePafMisc_EA63635D
-#define HttpFileResponseConstructFromLine ScePafMisc_7A05075E
-#define HttpFileResponseConstructBaseFromLine ScePafMisc_78D68A6B
-#define HttpFileResponseDestroy ScePafMisc_75985405
-#define HttpFileResponseDestroyBase ScePafMisc_D7CB06F9
-#define HttpFileHeaderMapGet ScePafMisc_82171187
-
-HttpFileResponse *HttpFileResponseConstruct(HttpFileResponse *self);
-HttpFileResponse *HttpFileResponseConstructBase(HttpFileResponse *self);
-int32_t HttpFileResponseParse(HttpFileResponse *self, const char *line, size_t len);
-HttpFileResponse *HttpFileResponseConstructFromLine(HttpFileResponse *self,
-						const char *line, size_t len);
-HttpFileResponse *HttpFileResponseConstructBaseFromLine(HttpFileResponse *self,
-						    const char *line, size_t len);
-HttpFileResponse *HttpFileResponseDestroy(HttpFileResponse *self);
-HttpFileResponse *HttpFileResponseDestroyBase(HttpFileResponse *self);
-
-typedef struct HttpFileReaderVTable {
-	HttpFileReader *(*Destroy)(HttpFileReader *self);
-	void (*Delete)(HttpFileReader *self);
-	int32_t (*Open)(HttpFileReader *self);
-	int32_t (*Close)(HttpFileReader *self);
-	int32_t (*Read)(HttpFileReader *self, void *buf, size_t nbyte);
-	int64_t (*Seek)(HttpFileReader *self, int64_t offset, int32_t whence);
-	int32_t (*Abort)(HttpFileReader *self);
-	int64_t (*GetFileSize)(HttpFileReader *self);
-	HttpFileResponse *(*GetResponse)(HttpFileReader *self);
-	PafMap *(*GetResponseHeaders)(HttpFileReader *self);
-} HttpFileReaderVTable;
-
-typedef struct HttpFileReaderClass {
-	int offset_to_top;
-	const void *type_info;
-	HttpFileReaderVTable methods;
-} HttpFileReaderClass;
-
-extern const HttpFileReaderClass httpFileReaderClass;
-
-HttpFileReader *HttpFileReaderDestroy(HttpFileReader *self);
-void HttpFileReaderDelete(HttpFileReader *self);
-HttpFileResponse *HttpFileReaderGetResponse(HttpFileReader *self);
-PafMap *HttpFileReaderGetResponseHeaders(HttpFileReader *self);
-
-struct HttpFileReader {
-	const HttpFileReaderVTable *vtable;
-	HttpFileReaderConfigSharedPtr m_config;
-	PafMap m_response_headers;
-	HttpFileResponse m_response;
-	int32_t m_result[3];
-};
-
-typedef char HttpFileResponseSizeCheck[sizeof(HttpFileResponse) == 20 ? 1 : -1];
-typedef char HttpFileResponseValidOffsetCheck[offsetof(HttpFileResponse, valid) == 18 ? 1 : -1];
-typedef char HttpFileReaderSizeCheck[sizeof(HttpFileReader) == 56 ? 1 : -1];
-typedef char HttpFileReaderResultOffsetCheck[offsetof(HttpFileReader, m_result) == 44 ? 1 : -1];
-typedef char HttpFileReaderVTableSizeCheck[sizeof(HttpFileReaderVTable) == 40 ? 1 : -1];
-typedef char HttpFileReaderClassSizeCheck[sizeof(HttpFileReaderClass) == 48 ? 1 : -1];
-
-typedef struct HttpFileReaderConnection HttpFileReaderConnection;
-typedef struct HttpFileReaderConnectionRefCounter HttpFileReaderConnectionRefCounter;
-
-typedef struct HttpFileReaderConnectionSharedPtr {
-	HttpFileReaderConnection *m_ptr;
-	HttpFileReaderConnectionRefCounter *m_ref_counter;
-} HttpFileReaderConnectionSharedPtr;
-
-typedef struct HttpFileReaderConnectionParam {
+/* What a connection was made for: a pooled one is reused only for the same. */
+class HttpFileReaderConnectionParam {
+public:
 	int32_t http_version;
-	PafString user_agent;
-	PafString host;
-	PafString scheme;
+	string user_agent;
+	string host;
+	string scheme;
 	uint16_t port;
-	unsigned char auto_proxy;
-	unsigned char enable_keepalive;
+	bool auto_proxy;
+	bool enable_keepalive;
 	uint32_t https_flag;
 	uint32_t template_option;
 	size_t response_header_max_size;
-} HttpFileReaderConnectionParam;
+};
 
-struct HttpFileReaderConnection {
+class HttpFileReaderConnection {
+public:
+	HttpFileReaderConnection(const HttpFileReaderConnectionParam &param);
+	~HttpFileReaderConnection();
+
+	static int32_t CreateHandles(const HttpFileReaderConnectionParam &param,
+				     int32_t *template_id, int32_t *connection_id);
+
 	HttpFileReaderConnectionParam param;
 	int32_t m_template_id;
 	int32_t m_connection_id;
 	uint32_t m_https_flag;
 };
 
-struct HttpFileReaderConnectionRefCounter {
-	HttpFileReaderConnection *m_ptr;
-	int32_t m_counter;
-	int32_t m_weak_counter;
-	void (*m_deleter)(HttpFileReaderConnection *ptr);
-};
+/* The keep-alive connections, at most m_capacity of them. */
+class HttpFileReaderContext {
+public:
+	HttpFileReaderContext(size_t capacity);
 
-typedef struct HttpFileReaderConnectionListNode {
-	struct HttpFileReaderConnectionListNode *prev;
-	struct HttpFileReaderConnectionListNode *next;
-	HttpFileReaderConnectionSharedPtr val;
-} HttpFileReaderConnectionListNode;
+	~HttpFileReaderContext()
+	{
+	}
 
-struct HttpFileReaderContext {
+	static int32_t GetConnection(common::SharedPtr<HttpFileReaderContext> context,
+				     const HttpFileReaderConnectionParam &param,
+				     common::SharedPtr<HttpFileReaderConnection> &result);
+	static int32_t ReturnConnection(common::SharedPtr<HttpFileReaderContext> context,
+					common::SharedPtr<HttpFileReaderConnection> &connection);
+
 	size_t m_capacity;
-	PafList m_connections;
-	Mutex m_mutex;
+	list<common::SharedPtr<HttpFileReaderConnection> > m_connections;
+	thread::Mutex m_mutex;
 };
 
-typedef char HttpFileReaderConnectionParamSizeCheck[sizeof(HttpFileReaderConnectionParam) == 56 ? 1 : -1];
-typedef char HttpFileReaderConnectionSizeCheck[sizeof(HttpFileReaderConnection) == 68 ? 1 : -1];
-typedef char HttpFileReaderConnectionRefCounterSizeCheck[sizeof(HttpFileReaderConnectionRefCounter) == 16 ? 1 : -1];
-typedef char HttpFileReaderConnectionListNodeSizeCheck[sizeof(HttpFileReaderConnectionListNode) == 16 ? 1 : -1];
-typedef char HttpFileReaderContextSizeCheck[sizeof(HttpFileReaderContext) == 48 ? 1 : -1];
-typedef char HttpFileReaderContextMutexOffsetCheck[offsetof(HttpFileReaderContext, m_mutex) == 16 ? 1 : -1];
+class HttpFileReader {
+public:
+	HttpFileReader(common::SharedPtr<HttpFileReaderConfig> config) : m_config(config)
+	{
+		m_result[0] = 0;
+		m_result[1] = 0;
+		m_result[2] = 0;
+	}
 
-HttpFileReaderConnection *HttpFileReaderConnectionConstruct(HttpFileReaderConnection *self,
-							 const HttpFileReaderConnectionParam *param);
-HttpFileReaderConnection *HttpFileReaderConnectionDestroy(HttpFileReaderConnection *self);
-void HttpFileReaderConnectionDelete(HttpFileReaderConnection *self);
-int32_t HttpFileReaderConnectionCreateHandles(const HttpFileReaderConnectionParam *param,
-					    int32_t *template_id, int32_t *connection_id);
-uintptr_t HttpFileReaderConnectionListPushBack(PafList *self,
-					    const HttpFileReaderConnectionSharedPtr *value);
-int32_t HttpFileReaderConnectionListPopFront(PafList *self);
-int32_t HttpFileReaderConnectionListErase(HttpFileReaderConnectionListNode **result,
-					PafList *self,
-					HttpFileReaderConnectionListNode *const *where);
-PafList *HttpFileReaderConnectionListDestroy(PafList *self);
-HttpFileReaderContext *HttpFileReaderContextConstruct(HttpFileReaderContext *self,
-						   size_t capacity);
-void HttpFileReaderContextDelete(HttpFileReaderContext *self);
-int32_t HttpFileReaderContextReturnConnection(const HttpFileReaderContextSharedPtr *self,
-					    HttpFileReaderConnectionSharedPtr *connection);
-int32_t HttpFileReaderContextGetConnection(const HttpFileReaderContextSharedPtr *self,
-					 const HttpFileReaderConnectionParam *param,
-					 HttpFileReaderConnectionSharedPtr *result);
+	virtual ~HttpFileReader()
+	{
+	}
 
-#define HttpFileReaderContextCreate ScePafMisc_84A50E1F
-HttpFileReaderContextRefCounter *HttpFileReaderContextCreate(HttpFileReaderContextSharedPtr *result,
-							 size_t capacity);
+	virtual int32_t Open() = 0;
+	virtual int32_t Close() = 0;
+	virtual int32_t Read(void *buf, size_t nbyte) = 0;
+	virtual int64_t Seek(int64_t offset, int32_t whence) = 0;
+	virtual int32_t Abort() = 0;
+	virtual int64_t GetFileSize() = 0;
 
-typedef struct HttpFileHttpReader {
-	HttpFileReader base;
-	HttpFileReaderConnectionSharedPtr m_connection;
+	virtual HttpResponse *GetResponse()
+	{
+		return &m_response;
+	}
+
+	virtual HttpHeader *GetResponseHeaders()
+	{
+		return &m_response_headers;
+	}
+
+	/* The request headers HttpFile::OpenArg's user_agent and referer become. */
+	static const char *const header_user_agent;
+	static const char *const header_referer;
+
+	common::SharedPtr<HttpFileReaderConfig> m_config;
+	HttpHeader m_response_headers;
+	HttpResponse m_response;
+	int32_t m_result[3];
+};
+
+/* What HttpFileHttpReader::AddHeader adds a request header to. */
+class HttpRequestHeaderParam {
+public:
+	int32_t id;
+	int32_t mode;
+};
+
+class HttpFileHttpReader : public HttpFileReader {
+public:
+	HttpFileHttpReader(common::SharedPtr<HttpFileReaderConfig> config);
+	virtual ~HttpFileHttpReader();
+
+	virtual int32_t Open();
+	virtual int32_t Close();
+	virtual int32_t Read(void *buf, size_t nbyte);
+	virtual int64_t Seek(int64_t offset, int32_t whence);
+	virtual int32_t Abort();
+	virtual int64_t GetFileSize();
+
+	static int32_t AddHeader(const char *name, const char *value, void *userdata);
+
+	common::SharedPtr<HttpFileReaderConnection> m_connection;
 	int32_t m_request_id;
 	int64_t m_position;
 	int64_t m_content_length;
-	RWLock m_lock;
-	unsigned char m_aborted;
-} HttpFileHttpReader;
-
-typedef struct HttpFileRequestHeaderParam {
-	int32_t id;
-	int32_t mode;
-} HttpFileRequestHeaderParam;
-
-typedef char HttpFileRequestHeaderParamSizeCheck[sizeof(HttpFileRequestHeaderParam) == 8 ? 1 : -1];
-
-enum {
-	HTTPFILE_OPEN_SKIP_STATUS_CHECK = 0x00800000,
-	HTTPFILE_OPEN_HTTP_OPTION4 = 0x10000000
+	thread::RWLock m_lock;
+	bool m_aborted;
 };
 
-enum {
-	HTTPFILE_ERROR_UNKNOWN_RESPONSE = -2135994284, /* 0x80AF5054 */
-	HTTPFILE_ERROR_STATUS_100 = -2135994224, /* 0x80AF5090 */
-	HTTPFILE_ERROR_STATUS_300 = -2135994208, /* 0x80AF50A0 */
-	HTTPFILE_ERROR_STATUS_400 = -2135994192, /* 0x80AF50B0 */
-	HTTPFILE_ERROR_STATUS_410 = -2135994176, /* 0x80AF50C0 */
-	HTTPFILE_ERROR_STATUS_420 = -2135994160, /* 0x80AF50D0 */
-	HTTPFILE_ERROR_STATUS_500 = -2135994144 /* 0x80AF50E0 */
-};
+/* Reads by "Range: bytes=" requests while the server answers them. */
+class HttpFileRangeReader : public HttpFileReader {
+public:
+	HttpFileRangeReader(common::SharedPtr<HttpFileReaderConfig> config);
+	virtual ~HttpFileRangeReader();
 
-extern const HttpFileReaderClass httpFileHttpReaderClass;
+	virtual int32_t Open();
+	virtual int32_t Close();
+	virtual int32_t Read(void *buf, size_t nbyte);
+	virtual int64_t Seek(int64_t offset, int32_t whence);
+	virtual int32_t Abort();
+	virtual int64_t GetFileSize();
 
-HttpFileHttpReader *HttpFileHttpReaderConstruct(HttpFileHttpReader *self,
-					     const HttpFileReaderConfigSharedPtr *config);
-HttpFileHttpReader *HttpFileHttpReaderDestroy(HttpFileHttpReader *self);
-void HttpFileHttpReaderDelete(HttpFileHttpReader *self);
-int32_t HttpFileHttpReaderOpen(HttpFileHttpReader *self);
-int32_t HttpFileHttpReaderClose(HttpFileHttpReader *self);
+	virtual HttpResponse *GetResponse()
+	{
+		if (m_reader != NULL)
+			return m_reader->GetResponse();
+		return &m_response;
+	}
 
-int32_t HttpFileHttpReaderAddHeader(const char *name, const char *value,
-				  void *userdata);
+	virtual HttpHeader *GetResponseHeaders()
+	{
+		if (m_reader != NULL)
+			return m_reader->GetResponseHeaders();
+		return &m_response_headers;
+	}
 
-typedef char HttpFileHttpReaderSizeCheck[sizeof(HttpFileHttpReader) == 104 ? 1 : -1];
-typedef char HttpFileHttpReaderPositionOffsetCheck[offsetof(HttpFileHttpReader, m_position) == 72 ? 1 : -1];
-typedef char HttpFileHttpReaderLockOffsetCheck[offsetof(HttpFileHttpReader, m_lock) == 88 ? 1 : -1];
-typedef char HttpFileHttpReaderAbortedOffsetCheck[offsetof(HttpFileHttpReader, m_aborted) == 96 ? 1 : -1];
+	virtual bool FormatRange(char *dst, size_t max, size_t nbyte);
 
-int32_t HttpFileHttpReaderRead(HttpFileHttpReader *self, void *buf, size_t nbyte);
-int64_t HttpFileHttpReaderSeek(HttpFileHttpReader *self, int64_t offset,
-			       int32_t whence);
-int32_t HttpFileHttpReaderAbort(HttpFileHttpReader *self);
-int64_t HttpFileHttpReaderGetFileSize(HttpFileHttpReader *self);
-
-typedef struct HttpFileRangeReader {
-	HttpFileReader base;
-	unsigned char m_range_enabled;
+	bool m_range_enabled;
 	HttpFileReader *m_reader;
 	int64_t m_position;
 	int64_t m_range_begin;
 	int64_t m_range_end;
 	int64_t m_content_length;
-} HttpFileRangeReader;
-
-typedef char HttpFileRangeReaderSizeCheck[sizeof(HttpFileRangeReader) == 96 ? 1 : -1];
-typedef char HttpFileRangeReaderReaderOffsetCheck[offsetof(HttpFileRangeReader, m_reader) == 60 ? 1 : -1];
-typedef char HttpFileRangeReaderPositionOffsetCheck[offsetof(HttpFileRangeReader, m_position) == 64 ? 1 : -1];
-typedef char HttpFileRangeReaderContentLengthOffsetCheck[offsetof(HttpFileRangeReader, m_content_length) == 88 ? 1 : -1];
-
-typedef struct HttpFileRangeReaderVTable {
-	HttpFileReaderVTable base;
-	int32_t (*FormatRange)(HttpFileRangeReader *self, char *dst,
-			       size_t max, size_t nbyte);
-} HttpFileRangeReaderVTable;
-
-typedef struct HttpFileRangeReaderClass {
-	int offset_to_top;
-	const void *type_info;
-	HttpFileRangeReaderVTable methods;
-} HttpFileRangeReaderClass;
-
-typedef char HttpFileRangeReaderVTableSizeCheck[sizeof(HttpFileRangeReaderVTable) == 44 ? 1 : -1];
-typedef char HttpFileRangeReaderClassSizeCheck[sizeof(HttpFileRangeReaderClass) == 52 ? 1 : -1];
-
-enum {
-	HTTPFILE_ERROR_INVALID_CONTENT_RANGE = -2135994283 /* 0x80AF5055 */
 };
 
-extern const HttpFileRangeReaderClass httpFileRangeReaderClass;
+/* Runs one of a file's calls on its own thread; m_operation says which. */
+class FileIoThread : public thread::Thread {
+public:
+	enum Operation {
+		Operation_Open = 0,
+		Operation_Close = 1,
+		Operation_Read = 2,
+		Operation_Seek = 4
+	};
 
-HttpFileRangeReader *HttpFileRangeReaderConstruct(HttpFileRangeReader *self,
-					       const HttpFileReaderConfigSharedPtr *config);
-HttpFileRangeReader *HttpFileRangeReaderDestroy(HttpFileRangeReader *self);
-void HttpFileRangeReaderDelete(HttpFileRangeReader *self);
-int32_t HttpFileRangeReaderOpen(HttpFileRangeReader *self);
-int32_t HttpFileRangeReaderClose(HttpFileRangeReader *self);
-int32_t HttpFileRangeReaderRead(HttpFileRangeReader *self, void *buf, size_t nbyte);
-int64_t HttpFileRangeReaderSeek(HttpFileRangeReader *self, int64_t offset,
-				int32_t whence);
-int32_t HttpFileRangeReaderAbort(HttpFileRangeReader *self);
-int64_t HttpFileRangeReaderGetFileSize(HttpFileRangeReader *self);
-HttpFileResponse *HttpFileRangeReaderGetResponse(HttpFileRangeReader *self);
-PafMap *HttpFileRangeReaderGetResponseHeaders(HttpFileRangeReader *self);
-int32_t HttpFileRangeReaderFormatRange(HttpFileRangeReader *self, char *dst,
-				     size_t max, size_t nbyte);
+	FileIoThread(int32_t operation)
+		: thread::Thread(SCE_KERNEL_DEFAULT_PRIORITY_USER, 0x4000, "ScePafFileIoThread", NULL),
+		  m_operation(operation), m_result(0)
+	{
+	}
 
-const char *HttpFileHeaderMapGet(const PafMap *headers, const char *name,
-			       int32_t index);
+	virtual ~FileIoThread()
+	{
+	}
+
+	int32_t m_operation;
+	int64_t m_result;
+};
+
+/* A member function call on an object, with the arguments it is made with. */
+template<class R, class T>
+class MemberCall0 {
+public:
+	MemberCall0(T *object, R (T::*method)()) : m_object(object), m_method(method)
+	{
+	}
+
+	R operator()()
+	{
+		return (m_object->*m_method)();
+	}
+
+	T *m_object;
+	R (T::*m_method)();
+};
+
+template<class R, class T, class A1, class A2>
+class MemberCall2 {
+public:
+	MemberCall2(T *object, R (T::*method)(A1, A2), A1 arg1, A2 arg2)
+		: m_object(object), m_method(method), m_arg1(arg1), m_arg2(arg2)
+	{
+	}
+
+	R operator()()
+	{
+		return (m_object->*m_method)(m_arg1, m_arg2);
+	}
+
+	T *m_object;
+	R (T::*m_method)(A1, A2);
+	A1 m_arg1;
+	A2 m_arg2;
+};
+
+template<class Call>
+class FileIoCallThread : public FileIoThread {
+public:
+	FileIoCallThread(int32_t operation, Call *call) : FileIoThread(operation), m_call(call)
+	{
+	}
+
+	virtual ~FileIoCallThread()
+	{
+		delete m_call;
+	}
+
+	virtual void EntryFunction()
+	{
+		m_result = (*m_call)();
+	}
+
+	Call *m_call;
+};
+
+typedef FileIoCallThread<MemberCall0<int32_t, HttpFileReader> > HttpFileIoThread;
+typedef FileIoCallThread<MemberCall2<int32_t, HttpFileReader, void *, size_t> > HttpFileReadIoThread;
+typedef FileIoCallThread<MemberCall2<int64_t, HttpFileReader, int64_t, int32_t> > HttpFileSeekIoThread;
+
+int32_t HttpFileResponseCodeToError(uint16_t code);
+datetime::DateTime HttpFileParseDate(const char *text);
+
+}
+
+extern "C" {
+
+/* The exported header and status-line functions keep their NIDs. */
+void ScePafMisc_1156F852(paf::HttpHeader *self, const char *name, const char *value,
+			 bool replace);
+int32_t ScePafMisc_E21E796D(paf::HttpHeader *self, const char *name);
+const char *ScePafMisc_82171187(const paf::HttpHeader *self, const char *name, int32_t index);
+int32_t ScePafMisc_5D64A09C(const paf::HttpHeader *self, paf::HttpHeaderCallback callback,
+			    void *userdata);
+bool ScePafMisc_4EAE8284(const paf::HttpHeader *self, char *buf, size_t *size);
+int32_t ScePafMisc_DB5A6E15(paf::HttpHeader *self, const char *line, size_t len);
+int32_t ScePafMisc_DBF32F34(paf::HttpHeader *self, const char *header, size_t len);
+void ScePafMisc_F39DF886(paf::HttpHeader *self);
+bool ScePafMisc_37897945(const paf::HttpHeaderCompare *self, const paf::string &left,
+			 const paf::string &right);
+
+bool ScePafMisc_EA63635D(paf::HttpResponse *self, const char *line, size_t len);
+
+int32_t ScePafMisc_ED1839C2(paf::HttpFile::OpenArg *self, int32_t value,
+			    paf::HttpFile::OpenArg::OptionType type);
+int32_t ScePafMisc_30A8AD46(int32_t value, paf::HttpFile::OpenArg::OptionType type);
+int32_t ScePafMisc_C098F659(paf::HttpFile *self, int64_t *result);
+void ScePafMisc_28BE7C38(paf::HttpFile *self,
+			 const paf::common::SharedPtr<paf::HttpFileReaderContext> &context);
+paf::common::SharedPtr<paf::HttpFileReaderContext> ScePafMisc_679B51BB(const paf::HttpFile *self);
+paf::common::SharedPtr<paf::HttpFileReaderContext> ScePafMisc_84A50E1F(size_t capacity);
+paf::common::SharedPtr<paf::HttpFile> ScePafMisc_BE023998(const char *path, uint32_t flag,
+							   uint32_t mode, int32_t *error,
+							   const void *userdata);
+
+}
 
 #endif

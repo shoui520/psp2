@@ -650,7 +650,7 @@ ScePaf:
         - _ZN3paf5Timer14DoFuncQuartOutEf: 0x6BBC0E11
         - _ZN3paf13TimerListener6DoTickEPvS1_: 0x6C0856E5
         - _ZNK3paf5Timer6DoFuncEfifPf: 0x6C15F987
-        - ScePafMisc_6C99DC26: 0x6C99DC26
+        - _ZN3paf12HttpResponseC1Ev: 0x6C99DC26
         - _ZN3paf4math4rectC1Ev: 0x6D6E44C1
         - _ZN3paf5image5Image12DetectFormatENS_6common9SharedPtrINS_4FileEEExj: 0x6D8D3426
         - ScePafMisc_6DA00D89: 0x6DA00D89
@@ -687,7 +687,7 @@ ScePaf:
         - _ZNK3paf9LocalFile8IsOpenedEv: 0x74D9B6F4
         - _ZN3paf6memory13HeapAllocator15sce_paf_reallocEPvj: 0x74DB7F5D
         - _ZN3paf17LocalFilePsp2Impl5CloseEv: 0x757CC8B1
-        - ScePafMisc_75985405: 0x75985405
+        - _ZN3paf12HttpResponseD1Ev: 0x75985405
         - _ZN3paf5cache12CacheManager11GetJobQueueENS1_12JobQueueTypeE: 0x75AFD25C
         - _ZN3paf15HeapAllocBufferD1Ev: 0x75CB07DC
         - _ZN3paf4http11TransactionC1ERNS0_6ClientE: 0x7616DF6C
@@ -704,12 +704,12 @@ ScePaf:
         - _ZN3paf6memory13HeapAllocator27sce_paf_report_memoryblocksEPFiPvjiS2_ES2_: 0x786D314A
         - _ZN3paf4math4rect3setERKS1_: 0x78B8B32F
         - _ZN3paf5cache9CacheBase23IsEnableReleaseInstanceEv: 0x78C1E8AD
-        - ScePafMisc_78D68A6B: 0x78D68A6B
+        - _ZN3paf12HttpResponseC2EPKcj: 0x78D68A6B
         - _ZN3paf5cache12CacheManager11GetJobQueueERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPNS_3job8JobQueueE: 0x790E32E5
         - _ZN3paf9LocalFile10WriteAsyncEPKvj: 0x79277F10
         - _ZN3paf5image10ImageArray7SetLinkEv: 0x79CFC202
         - _ZN3paf6memory13HeapAllocatorD0Ev: 0x79F13D72
-        - ScePafMisc_7A05075E: 0x7A05075E
+        - _ZN3paf12HttpResponseC1EPKcj: 0x7A05075E
         - _ZNK3paf4math4rect8get_LTRBEv: 0x7A4AAFF2
         - _ZN3paf5sound6Output16WaitSoundStoppedEv: 0x7ACADFBB
         - _ZNK3paf5image5Image8GetOrderEv: 0x7B15112F
@@ -799,7 +799,7 @@ ScePaf:
         - _ZN3paf5Timer16DoFuncCubicInOutEf: 0x8C32850A
         - _ZN3paf9LocalFile11IsDirectoryEPKc: 0x8C97C54C
         - _ZN3paf11inputdevice3pad8IsLockedEv: 0x8D0DC873
-        - ScePafMisc_8D31D15D: 0x8D31D15D
+        - _ZN3paf12HttpResponseC2Ev: 0x8D31D15D
         - ScePafMisc_8D33865E: 0x8D33865E
         - _ZN3paf5Timer19SetCurrTickIntervalEf: 0x8D59045A
         - _ZN3paf4math6matrixC1ENS0_10quaternionE: 0x8D77CF9A
@@ -1103,7 +1103,7 @@ ScePaf:
         - _ZN3paf4http11TransactionD2Ev: 0xD73531FD
         - _ZN3paf5image5Image12DetectFormatEPvj: 0xD77AEA5F
         - _ZNK3paf4math4rect5rightEv: 0xD7825ABE
-        - ScePafMisc_D7CB06F9: 0xD7CB06F9
+        - _ZN3paf12HttpResponseD2Ev: 0xD7CB06F9
         - _ZN3paf4math10quaternion18FromEulerAnglesZXYENS0_2v3E: 0xD7E919C5
         - ScePafMisc_D7F9C062: 0xD7F9C062
         - _ZN3paf5cache9CacheBase17CheckLongLifeHeapEPS1_: 0xD88EEBD8

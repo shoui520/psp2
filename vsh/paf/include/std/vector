@@ -69,6 +69,18 @@ public:
 
 	bool reserve(size_type size);
 
+	void clear()
+	{
+		if (ptr != NULL) {
+			for (size_type i = 0; i < count; ++i)
+				ptr[i].~_Ty();
+			alloc.deallocate(ptr, limit);
+			ptr = NULL;
+			count = 0;
+			limit = 0;
+		}
+	}
+
 	int push_back(const _Ty &val);
 
 	_Ty &operator[](size_type pos)

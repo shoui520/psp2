@@ -1,6 +1,5 @@
 #include "file.h"
 #include "localfile.h"
-#include "httpfile.h"
 #include "../paf_types.h"
 
 extern void ScePafStdc_2730262C(void); /* __cxa_pure_virtual */
@@ -33,12 +32,6 @@ const FileClass fileClass = {
 		FileGetstat, FileSetPriority, FileDestroy, FileDelete
 	}
 };
-
-void HttpFileDefaultDelete(File *file)
-{
-	if (file)
-		file->vtable->Delete(file);
-}
 
 int32_t FileGetstat(File *self, FileStat *stat)
 {
