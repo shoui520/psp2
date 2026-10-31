@@ -30,15 +30,7 @@ uint32_t sce_paf_misc_flags_ee98;
 uint32_t sce_paf_misc_counter_ee9c;
 uint32_t sce_paf_misc_value_ee6c;
 uint32_t sce_paf_misc_limit_eea0;
-uint32_t sce_paf_misc_ticks_d550;
-uint32_t sce_paf_misc_limit_d554;
-uint8_t sce_paf_misc_active_1090;
-uint32_t sce_paf_misc_flags_d548;
 uint32_t sce_paf_misc_counter_c224;
-uint32_t sce_paf_misc_value_d41c;
-uint32_t sce_paf_misc_value_1088;
-uint32_t sce_paf_misc_value_d510;
-uint32_t sce_paf_misc_value_d414;
 uint32_t sce_paf_misc_value_ef04;
 int8_t sce_paf_misc_flag_eef5;
 uint32_t sce_paf_misc_value_1078;
@@ -98,12 +90,10 @@ int ScePafMisc_F68553A5(int value)
 	return (int)mode;
 }
 
-uint32_t sce_paf_misc_value_d410;
 uint32_t sce_paf_misc_flags_ee00[2];
 uint32_t sce_paf_misc_cells_da60[2][8][8];
 uint32_t sce_paf_misc_counters_d200[7];
 uint32_t sce_paf_misc_limits_d21c[7];
-uint32_t sce_paf_misc_masks_d498[5][6];
 typedef struct ScePafMiscGridCell {
 	int16_t active;
 	uint8_t reserved[0xce];
@@ -164,29 +154,6 @@ uint32_t ScePafMisc_75AFD25C(int32_t index)
 	default:
 		return 0;
 	}
-}
-
-uint32_t ScePafMisc_0D1B028E(uint32_t value)
-{
-	uint32_t ticks = ++sce_paf_misc_ticks_d550;
-	sce_paf_misc_value_d410 = value;
-	uint32_t limit = sce_paf_misc_limit_d554;
-	sce_paf_misc_active_1090 = 1;
-	if ((int32_t)ticks > (int32_t)limit)
-		sce_paf_misc_limit_d554 = limit + 1;
-	return sce_paf_misc_value_d414;
-}
-
-uint32_t ScePafMisc_57080F75(int32_t mode)
-{
-	uint32_t ticks = ++sce_paf_misc_ticks_d550;
-	sce_paf_misc_active_1090 = 1;
-	uint32_t limit = sce_paf_misc_limit_d554;
-	if (mode >= 0 && mode < 5)
-		sce_paf_misc_value_1088 = (uint32_t)mode;
-	if ((int32_t)ticks > (int32_t)limit)
-		sce_paf_misc_limit_d554 = limit + 1;
-	return sce_paf_misc_value_1088;
 }
 
 int ScePafMisc_ED289E89(uint32_t requested, int require_all)
@@ -282,66 +249,10 @@ int ScePafMisc_8DA260AE(void)
 		(int32_t)sce_paf_misc_limit_eea0;
 }
 
-int ScePafMisc_8D0DC873(void)
-{
-	return (int32_t)sce_paf_misc_ticks_d550 >
-		(int32_t)sce_paf_misc_limit_d554;
-}
-
-uint32_t ScePafMisc_E4F9C1B6(void)
-{
-	uint32_t limit = sce_paf_misc_limit_d554;
-	if ((int32_t)sce_paf_misc_ticks_d550 > (int32_t)limit) {
-		limit++;
-		sce_paf_misc_limit_d554 = limit;
-	}
-	return limit;
-}
-
-int ScePafMisc_874753FD(void)
-{
-	sce_paf_misc_ticks_d550++;
-	sce_paf_misc_active_1090 = 1;
-	return 1;
-}
-
-uint32_t ScePafMisc_FD24539D(void)
-{
-	return sce_paf_misc_flags_d548;
-}
-
-uint32_t ScePafMisc_2DFE8975(uint32_t mask)
-{
-	sce_paf_misc_flags_d548 |= mask;
-	return sce_paf_misc_flags_d548;
-}
-
 uint32_t *ScePafMisc_7E6CA20C(void)
 {
 	sce_paf_misc_counter_c224++;
 	return &sce_paf_misc_counter_c224;
-}
-
-uint32_t ScePafMisc_7F98B644(uint32_t value)
-{
-	uint32_t previous = sce_paf_misc_value_d41c;
-	sce_paf_misc_value_d41c = value;
-	return previous;
-}
-
-uint32_t ScePafMisc_333C86DC(void)
-{
-	return sce_paf_misc_value_1088;
-}
-
-uint32_t ScePafMisc_8C27F38A(void)
-{
-	return sce_paf_misc_value_d510;
-}
-
-uint32_t ScePafMisc_9CB5D72E(void)
-{
-	return sce_paf_misc_value_d414;
 }
 
 uint32_t ScePafMisc_AF4FC3F4(void)
@@ -556,17 +467,6 @@ uint32_t *ScePafMisc_68657766(void)
 			sce_paf_misc_limits_d21c[index]++;
 	}
 	return sce_paf_misc_limits_d21c + 7;
-}
-
-uint32_t ScePafMisc_C4E8CBE6(uint32_t mask)
-{
-	uint32_t flags = sce_paf_misc_flags_d548;
-	int32_t mode = (int32_t)sce_paf_misc_value_d510;
-	const uint32_t *entry = mode < 5 ?
-		sce_paf_misc_masks_d498[mode] : sce_paf_misc_masks_d498[0];
-	uint32_t result = (mask & entry[2]) | flags;
-	sce_paf_misc_flags_d548 = result;
-	return result;
 }
 
 /* Sum outstanding work in the three optional job queues. */
