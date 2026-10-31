@@ -33,6 +33,11 @@ public:
 	{
 	}
 
+	static matrix Zero()
+	{
+		return matrix(sce::Vectormath::Simd::Aos::Matrix4::zero());
+	}
+
 	matrix(quaternion quat);
 
 	matrix inverse3() const;

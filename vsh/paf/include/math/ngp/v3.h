@@ -21,6 +21,16 @@ public:
 	{
 	}
 
+	static v3 _000()
+	{
+		return v3(0.0f, 0.0f, 0.0f);
+	}
+
+	static v3 _010()
+	{
+		return v3(0.0f, 1.0f, 0.0f);
+	}
+
 	float extract_x() const
 	{
 		return vgetq_lane_f32(_impl.get128(), 0);

@@ -24,6 +24,16 @@ public:
 
 	quaternion(const matrix &mat);
 
+	static quaternion Identity()
+	{
+		return quaternion(sce::Vectormath::Simd::Aos::Quat::identity());
+	}
+
+	quaternion(float xvalue, float yvalue, float zvalue, float wvalue)
+		: _impl(xvalue, yvalue, zvalue, wvalue)
+	{
+	}
+
 	quaternion(sce::Vectormath::Simd::Aos::Quat value) : _impl(value)
 	{
 	}
