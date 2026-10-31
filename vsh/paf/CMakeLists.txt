@@ -49,7 +49,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/path.c
 	src/common/property_list.c
 	src/common/shared_ptr.c
-	src/job/job.c
+	src/job/job.cpp
 	src/cache/cache_manager.c
 	src/cache/cache_manager_impl.c
 	src/inputdevice/inputdevice.c
@@ -144,10 +144,11 @@ target_include_directories(vs0_sys_external_libpaf PRIVATE
 set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIES
 	COMPILE_DEFINITIONS "sceZlibDecompress=ScePafLowlayer_D7DAA151")
 
-# paf::thread's constructors and destructors have full C2/D2 copies where 8 makes them call
-# C1/D1, and CallQueue::Enqueue calls string::assign out of line; budgets 29 to 31 do both
-# (2026-10-31).
+# paf::thread's and paf::job's constructors and destructors have full C2/D2 copies where 8 makes
+# them call C1/D1, and CallQueue::Enqueue calls string::assign out of line; budgets 29 to 31 do
+# both (2026-10-31).
 set_source_files_properties(
+	src/job/job.cpp
 	src/thread/callqueue.cpp src/thread/cond.cpp src/thread/mutex.cpp src/thread/priority.cpp
 	src/thread/rmutex.cpp src/thread/rwlock.cpp src/thread/semaphore.cpp src/thread/sleep.cpp
 	src/thread/synccall.cpp src/thread/thread.cpp src/thread/thread_id_cache.cpp

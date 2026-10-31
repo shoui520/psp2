@@ -29,6 +29,16 @@ public:
 		{
 		}
 
+		iterator(const iterator &other) : node(other.node)
+		{
+		}
+
+		iterator &operator=(const iterator &other)
+		{
+			node = other.node;
+			return *this;
+		}
+
 		_Ty &operator*() const
 		{
 			return node->value;
@@ -46,6 +56,14 @@ public:
 			return *this;
 		}
 
+		iterator operator++(int)
+		{
+			iterator tmp = *this;
+
+			++*this;
+			return tmp;
+		}
+
 		bool operator==(const iterator &other) const
 		{
 			return node == other.node;
@@ -59,7 +77,7 @@ public:
 		_Node *node;
 	};
 
-	list()
+	explicit list(const _Ax &al = _Ax()) : alloc(al)
 	{
 		count = 0;
 
@@ -74,25 +92,7 @@ public:
 		}
 	}
 
-	~list()
-	{
-		if (head != NULL) {
-			_Node *node = head->next;
-
-			if (node != head) {
-				do {
-					_Node *next = node->next;
-
-					node->value.~_Ty();
-					operator delete(node);
-					node = next;
-				} while (node != head);
-			}
-			operator delete(head);
-		}
-		head = (_Node *)-1;
-		count = (size_type)-1;
-	}
+	~list();
 
 	iterator begin()
 	{
@@ -110,6 +110,10 @@ public:
 	}
 
 	void push_back(const _Ty &val);
+
+	iterator erase(iterator where);
+
+	void remove(const _Ty &val);
 
 	void pop_front()
 	{
@@ -131,7 +135,29 @@ public:
 
 	_Node *head;
 	size_type count;
+	_Ax alloc;
 };
+
+template<class _Ty, class _Ax>
+list<_Ty, _Ax>::~list()
+{
+	if (head != NULL) {
+		_Node *node = head->next;
+
+		if (node != head) {
+			do {
+				_Node *next = node->next;
+
+				node->value.~_Ty();
+				operator delete(node);
+				node = next;
+			} while (node != head);
+		}
+		operator delete(head);
+	}
+	head = (_Node *)-1;
+	count = (size_type)-1;
+}
 
 template<class _Ty, class _Ax>
 void
@@ -154,6 +180,45 @@ list<_Ty, _Ax>::push_back(const _Ty &val)
 		head->prev->next = node;
 		head->prev = node;
 		++count;
+	}
+}
+
+template<class _Ty, class _Ax>
+typename list<_Ty, _Ax>::iterator
+list<_Ty, _Ax>::erase(iterator where)
+{
+	_Node *node = where.node;
+	iterator next(node->next);
+
+	node->next->prev = node->prev;
+	node->prev->next = node->next;
+	node->value.~_Ty();
+	operator delete(node);
+	--count;
+	return next;
+}
+
+/* Sony's build calls remove rather than inlining it. */
+template<class _Ty, class _Ax>
+__attribute__((noinline)) void
+list<_Ty, _Ax>::remove(const _Ty &val)
+{
+	_Node *node = begin().node;
+
+	while (node != head) {
+		if (node->value == val) {
+			_Node *prev = node->prev;
+			_Node *next = node->next;
+
+			next->prev = prev;
+			prev->next = node->next;
+			node->value.~_Ty();
+			operator delete(node);
+			--count;
+			node = next;
+		} else if (node != NULL) {
+			node = node->next;
+		}
 	}
 }
 

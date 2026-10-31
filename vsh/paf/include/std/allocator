@@ -18,6 +18,10 @@ public:
 	{
 	}
 
+	allocator(const allocator &)
+	{
+	}
+
 	pointer allocate(size_type count)
 	{
 		return (pointer)operator new(count * sizeof(_Ty));
