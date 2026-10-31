@@ -344,7 +344,7 @@ run:
 		current = control->currentState;
 		target = control->targetState;
 		if (current == target)
-			goto report;
+			goto none;
 		switch (current) {
 		case 0:
 			if (target <= 0)
@@ -450,7 +450,6 @@ run:
 	goto reported;
 none:
 	result = 0;
-report:
 	current = control->currentState;
 reported:
 	if (stmReportedState != current) {
