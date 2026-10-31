@@ -14,6 +14,7 @@
 #include "jpeglib.h"
 #include "png.h"
 #include "tiffio.h"
+#include <gxt.h>
 
 namespace paf {
 
@@ -621,8 +622,16 @@ public:
 	virtual ~GxtCodec();
 
 private:
-	/* PROVISIONAL: the codec's state, until image_gxt.cpp is written (0x2c bytes in all). */
-	uint8_t m_state[0x20];
+	bool FindBlocks(common::SharedPtr<Buffer> buf, const void **image, const void **palette);
+	bool ReadHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr, const void *image,
+			const void *palette, ImageArray *images, ImageArray *cluts);
+
+	static ImageMode GetImageMode(SceGxmTextureFormat format);
+	static size_t GetPitchAlign(SceGxmTextureFormat format, SceGxmTextureType type);
+	static ImageOrder GetImageOrder(SceGxmTextureType type);
+
+	/* the file's header, as far as FindBlocks reads it */
+	SceGxtHeader m_header;
 };
 
 /*
