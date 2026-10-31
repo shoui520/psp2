@@ -1,14 +1,6 @@
 /* Native small structured operations. */
 #include <stdint.h>
 
-uint32_t ScePafMisc_C160806C(const uint32_t *object)
-{
-	const uint32_t *inner = (const uint32_t *)(uintptr_t)object[1];
-	if (!inner)
-		return 0;
-	return (inner[1] << 1) + 2;
-}
-
 void ScePafMisc_8D99A9E5(uint8_t *object, uint32_t value)
 {
 	volatile uint32_t *words = (volatile uint32_t *)object;

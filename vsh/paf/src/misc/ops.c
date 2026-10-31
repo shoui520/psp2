@@ -21,24 +21,10 @@ void ScePafMisc_447B094F(uint32_t *dst, const uint32_t *src)
 	dst[1] = src[3];
 }
 
-void ScePafMisc_A857C48F(uint32_t *object)
-{
-	object[0] = 0;
-	object[2] = 0;
-	object[1] = 0;
-}
-
 void ScePafMisc_B38C90B6(uint32_t *dst, const uint32_t *src)
 {
 	dst[0] = src[14];
 	dst[1] = src[15];
-}
-
-void ScePafMisc_D1E648EF(uint32_t *object)
-{
-	object[0] = 0;
-	object[2] = 0;
-	object[1] = 0;
 }
 
 float ScePafMisc_D7825ABE(const float *object)
