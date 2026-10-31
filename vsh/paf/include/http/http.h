@@ -10,6 +10,7 @@
 #include <std/string>
 #include <buffer/buffer.h>
 #include <common/shared_ptr.h>
+#include <file/file.h>
 
 struct MainThreadCall;
 struct StateCheck;
@@ -22,6 +23,13 @@ public:
 	/* A client's settings; the client keeps a copy. Timeouts of 0 take libhttp's defaults. */
 	class Param {
 	public:
+		Param(const string &user_agent = string())
+			: m_user_agent(user_agent), m_ssl_flags(1), m_resolve_timeout(0),
+			  m_resolve_retry(0), m_connect_timeout(0), m_send_timeout(0),
+			  m_recv_timeout(0), m_reserved_flag(true)
+		{
+		}
+
 		Param(const Param &src)
 			: m_user_agent(src.m_user_agent), m_ssl_flags(src.m_ssl_flags),
 			  m_user_name(src.m_user_name), m_password(src.m_password),
@@ -97,6 +105,19 @@ public:
 	string m_url;
 };
 
+namespace url {
+
+/*
+ * Encode writes %XX for every byte but [A-Za-z0-9-._~], Decode reads it back;
+ * the Form kinds write and read a space as '+'.
+ */
+string Encode(const char *src);
+string Decode(const char *src);
+string FormEncode(const char *src);
+string FormDecode(const char *src);
+
+}
+
 }
 }
 
@@ -115,6 +136,9 @@ int32_t ScePafMisc_CA7A4BB2(const char *url, paf::string &name);
 int32_t ScePafMisc_A7E7AF41(paf::http::Transaction *self);
 int32_t ScePafMisc_23F9BC0A(paf::http::Transaction *self, uint32_t flags);
 int32_t ScePafMisc_7EA133E0(paf::http::Transaction *self);
+int32_t ScePafMisc_EE1CA56C(paf::http::Transaction *self,
+			    paf::common::SharedPtr<paf::File> &file, uint64_t max_size);
+int32_t ScePafMisc_4E787F5E(const char *url, const char *dir, paf::string *name);
 }
 
 #endif

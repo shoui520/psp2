@@ -640,7 +640,7 @@ ScePaf:
         - ScePafMisc_68A6B37B: 0x68A6B37B
         - _ZNK3paf6memory13HeapAllocator7GetNameEv: 0x68B7420B
         - _ZN3paf17LocalFilePsp2Impl9SeekAsyncExi: 0x69798A47
-        - ScePafMisc_6A113D2E: 0x6A113D2E
+        - _ZN3paf4http3url6EncodeEPKc: 0x6A113D2E
         - _ZN3paf12BufferedFileD2Ev: 0x6A3E8E69
         - _ZN3paf5image6filter13ResizeQuarterEPvPKviiii: 0x6A3F0657
         - ScePafMisc_6A59DFB6: 0x6A59DFB6
@@ -928,7 +928,7 @@ ScePaf:
         - _ZNK3paf12BufferedFile11GetFileTypeEv: 0xAD71B82B
         - _ZThn100_N3paf5cache10CacheImageD0Ev: 0xAD85991C
         - _ZN3paf12BufferedFile10FlushAsyncEv: 0xAD99F77E
-        - ScePafMisc_ADCDCBB7: 0xADCDCBB7
+        - _ZN3paf4http3url10FormEncodeEPKc: 0xADCDCBB7
         - _ZNK3paf3Url18GetParamaterStringEv: 0xADCFF4C7
         - _ZN3paf5image5Image4CopyEv: 0xAE21F4D3
         - _ZN3paf5image6filter4BlurEPNS0_11ImageBufferEPKS2_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatEfPNS_6memory13HeapAllocatorE: 0xAE226547
@@ -1214,7 +1214,7 @@ ScePaf:
         - ScePafMisc_EF52733C: 0xEF52733C
         - _ZN3paf4math4rect3hitERKS1_: 0xEF621B8C
         - _ZN3paf7MemFile4SeekExi: 0xEF7C46F1
-        - ScePafMisc_EFE7C1A8: 0xEFE7C1A8
+        - _ZN3paf4http3url6DecodeEPKc: 0xEFE7C1A8
         - _ZN3paf4http11Transaction11GetFileNameERNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0xEFEA34FB
         - _ZN3paf9LocalFile10CloseAsyncEv: 0xF035266A
         - ScePafMisc_F080858F: 0xF080858F
@@ -1281,7 +1281,7 @@ ScePaf:
         - _ZN3paf5image10ImageArray4InitERKNS0_10ImagePointE: 0xFFA03C4D
         - _ZN3paf4math4rect16is_point_in_rectEff: 0xFFB654B3
         - _ZN3paf11inputdevice3pad6UpdateEfPPKNS1_4DataES5_: 0xFFC5D622
-        - ScePafMisc_FFCA7E02: 0xFFCA7E02
+        - _ZN3paf4http3url10FormDecodeEPKc: 0xFFCA7E02
         - _ZN3paf11inputdevice11touchscreen7SetMaskEjj: 0xFFE73747
         - _ZN3paf3DirC1Ev: 0xFFE8F348
       variables:

@@ -1,0 +1,21 @@
+/* paf::min and paf::max (Dinkumware's <algorithm>). */
+#ifndef PAF_STD_ALGORITHM
+#define PAF_STD_ALGORITHM
+
+namespace paf {
+
+template<class _Ty>
+inline const _Ty &min(const _Ty &left, const _Ty &right)
+{
+	return right < left ? right : left;
+}
+
+template<class _Ty>
+inline const _Ty &max(const _Ty &left, const _Ty &right)
+{
+	return left < right ? right : left;
+}
+
+}
+
+#endif
