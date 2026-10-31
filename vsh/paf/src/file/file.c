@@ -1,5 +1,4 @@
 #include "file.h"
-#include "localfile.h"
 #include "../paf_types.h"
 
 extern void ScePafStdc_2730262C(void); /* __cxa_pure_virtual */
@@ -56,12 +55,6 @@ void FileDelete(File *self)
 }
 
 void FileDefaultDelete(File *file)
-{
-	if (file)
-		file->vtable->Delete(file);
-}
-
-void LocalFileDefaultDelete(File *file)
 {
 	if (file)
 		file->vtable->Delete(file);
