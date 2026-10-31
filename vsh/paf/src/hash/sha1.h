@@ -25,8 +25,6 @@ enum {
 #define SHA1Reset scePafSha1Init
 #define SHA1Input scePafSha1Update
 #define SHA1Result scePafSha1Result
-#define SHA1PadMessage ScePafMisc_76CC0B17
-#define SHA1ProcessMessageBlock ScePafMisc_F130E72D
 
 typedef char SHA1ContextSizeCheck[sizeof(SHA1Context) == 104 ? 1 : -1];
 
