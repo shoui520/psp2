@@ -63,14 +63,14 @@ void ScePafMisc_C1A97796(PafOwnedObject *self)
 /* Cache-owned objects are destroyed while the cache global lock is held. */
 void ScePafMisc_232CE52A(PafOwnedObject *self)
 {
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	DestroyOwnedObject(self);
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 }
 
 void ScePafMisc_D64D39A6(PafOwnedObject *self)
 {
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	DestroyOwnedObject(self);
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 }

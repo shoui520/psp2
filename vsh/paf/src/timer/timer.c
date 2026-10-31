@@ -596,7 +596,7 @@ static TimerListenerList *TimerListenerListInitialize(TimerListenerList *self)
 		root->next = root;
 	}
 	self->m_iterator = NULL;
-	ScePafThread_C4BD9753(&self->m_list_mutex, "ScePafTimerListenerListMutex", 0);
+	_ZN3paf6thread6RMutexC1EPKci(&self->m_list_mutex, "ScePafTimerListenerListMutex", 0);
 	self->m_iterator = self->m_list.root_node;
 	self->m_iterator_updated = 0;
 	return self;
@@ -628,7 +628,7 @@ void TimerListenerListExit(void)
 
 	if (!list)
 		return;
-	ScePafThread_8CCECAC9(&list->m_list_mutex);
+	_ZN3paf6thread6RMutexD1Ev(&list->m_list_mutex);
 	root = list->m_list.root_node;
 	if (root) {
 		ListenerParamNode *node = root->next;
@@ -652,7 +652,7 @@ void TimerListenerListUpdate(TimerListenerList *self)
 	ListenerParamNode *root;
 	ListenerParamNode *node;
 
-	ScePafThread_F9FFA0BE(&self->m_list_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_list_mutex);
 	root = self->m_list.root_node;
 	node = root ? root->next : NULL;
 	self->m_iterator = node;
@@ -679,14 +679,14 @@ void TimerListenerListUpdate(TimerListenerList *self)
 			}
 		}
 	}
-	ScePafThread_95F9C45F(&self->m_list_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_list_mutex);
 }
 
 void ScePafMisc_C565FD29(TimerListenerList *self, const ListenerParam *param)
 {
-	ScePafThread_F9FFA0BE(&self->m_list_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_list_mutex);
 	ListenerParamListPushBack(&self->m_list, param);
-	ScePafThread_95F9C45F(&self->m_list_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_list_mutex);
 }
 
 void ScePafMisc_A4554B25(TimerListenerList *self, TimerListener *listener)
@@ -694,7 +694,7 @@ void ScePafMisc_A4554B25(TimerListenerList *self, TimerListener *listener)
 	ListenerParamNode *root;
 	ListenerParamNode *node;
 
-	ScePafThread_F9FFA0BE(&self->m_list_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_list_mutex);
 	root = self->m_list.root_node;
 	node = root ? root->next : NULL;
 	while (node != root) {
@@ -718,5 +718,5 @@ void ScePafMisc_A4554B25(TimerListenerList *self, TimerListener *listener)
 		}
 		node = node ? node->next : NULL;
 	}
-	ScePafThread_95F9C45F(&self->m_list_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_list_mutex);
 }

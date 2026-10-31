@@ -22,8 +22,17 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/datetime/datetime.c
 	src/datetime/datetime_abi.S
 	src/rtc/rtc.c
-	src/thread/rwlock.c
-	src/thread/thread.c
+	src/thread/callqueue.cpp
+	src/thread/cond.cpp
+	src/thread/mutex.cpp
+	src/thread/priority.cpp
+	src/thread/rmutex.cpp
+	src/thread/rwlock.cpp
+	src/thread/semaphore.cpp
+	src/thread/sleep.cpp
+	src/thread/synccall.cpp
+	src/thread/thread.cpp
+	src/thread/thread_id_cache.cpp
 	src/common/call_list.c
 	src/common/main_thread_call_list.c
 	src/common/main_thread_call.c
@@ -134,3 +143,12 @@ target_include_directories(vs0_sys_external_libpaf PRIVATE
 	"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt")
 set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIES
 	COMPILE_DEFINITIONS "sceZlibDecompress=ScePafLowlayer_D7DAA151")
+
+# paf::thread's constructors and destructors have full C2/D2 copies where 8 makes them call
+# C1/D1, and CallQueue::Enqueue calls string::assign out of line; budgets 29 to 31 do both
+# (2026-10-31).
+set_source_files_properties(
+	src/thread/callqueue.cpp src/thread/cond.cpp src/thread/mutex.cpp src/thread/priority.cpp
+	src/thread/rmutex.cpp src/thread/rwlock.cpp src/thread/semaphore.cpp src/thread/sleep.cpp
+	src/thread/synccall.cpp src/thread/thread.cpp src/thread/thread_id_cache.cpp
+	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)

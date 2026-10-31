@@ -62,9 +62,12 @@ public:
 	list()
 	{
 		count = 0;
-		head = (_Node *)operator new(sizeof(_Node));
-		if (head == NULL)
+
+		_Node *node = (_Node *)operator new(sizeof(_Node));
+
+		if (node == NULL)
 			ScePafStdc_D608246A();
+		head = node;
 		if (head != NULL) {
 			head->prev = head;
 			head->next = head;
@@ -87,6 +90,8 @@ public:
 			}
 			operator delete(head);
 		}
+		head = (_Node *)-1;
+		count = (size_type)-1;
 	}
 
 	iterator begin()
@@ -99,7 +104,25 @@ public:
 		return iterator(head);
 	}
 
+	_Ty &front()
+	{
+		return head->next->value;
+	}
+
 	void push_back(const _Ty &val);
+
+	void pop_front()
+	{
+		_Node *node = head->next;
+
+		if (head != NULL) {
+			node->next->prev = node->prev;
+			node->prev->next = node->next;
+			node->value.~_Ty();
+			operator delete(node);
+			--count;
+		}
+	}
 
 	size_type size() const
 	{

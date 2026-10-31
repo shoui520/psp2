@@ -45,21 +45,21 @@ typedef char ThreadCancelOffsetCheck[offsetof(Thread, m_canceled) == 10 ? 1 : -1
 typedef char ThreadClassSizeCheck[sizeof(ThreadClass) == 20 ? 1 : -1];
 typedef char ThreadOptSizeCheck[sizeof(ThreadOpt) == 12 ? 1 : -1];
 
-#define ThreadConstruct ScePafThread_6E829BD8
-#define ThreadConstructBase ScePafThread_1740FB30
-#define ThreadDestroy ScePafThread_52C62CD1
-#define ThreadDestroyBase ScePafThread_7EA6B501
-#define ThreadDelete ScePafThread_1013F3C0
-#define ThreadStart ScePafThread_60910895
-#define ThreadJoin ScePafThread_C5F24067
-#define ThreadCancel ScePafThread_F95B2895
-#define ThreadIsCanceled ScePafThread_4CE6D88B
-#define ThreadIsAlive ScePafThread_318AD6B7
-#define ThreadGetID ScePafThread_7E669E6E
-#define ThreadChangePriority ScePafThread_FCCF62D6
-#define ThreadInternalThreadEntry ScePafThread_918D89FC
-#define ThreadOptConstruct ScePafThread_5712350E
-#define ThreadOptConstructBase ScePafThread_CC65DF88
+#define ThreadConstruct _ZN3paf6thread6ThreadC2EijPKcPKNS1_6OptionE
+#define ThreadConstructBase _ZN3paf6thread6ThreadC1EijPKcPKNS1_6OptionE
+#define ThreadDestroy _ZN3paf6thread6ThreadD1Ev
+#define ThreadDestroyBase _ZN3paf6thread6ThreadD2Ev
+#define ThreadDelete _ZN3paf6thread6ThreadD0Ev
+#define ThreadStart _ZN3paf6thread6Thread5StartEv
+#define ThreadJoin _ZN3paf6thread6Thread4JoinEv
+#define ThreadCancel _ZN3paf6thread6Thread6CancelEv
+#define ThreadIsCanceled _ZN3paf6thread6Thread10IsCanceledEv
+#define ThreadIsAlive _ZN3paf6thread6Thread7IsAliveEv
+#define ThreadGetID _ZN3paf6thread6Thread5GetIDEv
+#define ThreadChangePriority _ZN3paf6thread6Thread14ChangePriorityEi
+#define ThreadInternalThreadEntry _ZN3paf6thread6Thread10ThreadFuncEjPv
+#define ThreadOptConstruct _ZN3paf6thread6Thread6OptionC1Ev
+#define ThreadOptConstructBase _ZN3paf6thread6Thread6OptionC2Ev
 
 Thread *ThreadConstruct(Thread *self, SceInt32 priority, SceSize stackSize,
 			const char *name, const ThreadOpt *opt);
@@ -75,7 +75,7 @@ unsigned char ThreadIsCanceled(Thread *self);
 unsigned char ThreadIsAlive(Thread *self);
 SceUID ThreadGetID(Thread *self);
 void ThreadChangePriority(Thread *self, SceInt32 priority);
-int ScePafThread_651F4F81(SceUInt32 milliseconds);
+int _ZN3paf6thread5SleepEi(SceUInt32 milliseconds);
 SceInt32 ThreadInternalThreadEntry(SceSize argSize, void *argBlock);
 ThreadOpt *ThreadOptConstruct(ThreadOpt *self);
 ThreadOpt *ThreadOptConstructBase(ThreadOpt *self);

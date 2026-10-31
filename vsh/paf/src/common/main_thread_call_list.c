@@ -63,7 +63,7 @@ CallListListener *CallListListenerConstruct(CallListListener *self)
 
 void MainThreadCallListRegister(Function entry, void *userdata)
 {
-	ScePafThread_4EA3A3D5(&s_giant_lock);
+	_ZN3paf6thread5Mutex4LockEv(&s_giant_lock);
 	CallListListener *listener = s_instance;
 	if (!listener) {
 		listener = ScePafStdc_FC5CD359(sizeof(*listener));
@@ -73,14 +73,14 @@ void MainThreadCallListRegister(Function entry, void *userdata)
 	}
 	CallItem item = { entry, userdata };
 	CallListPushBack(&listener->m_list.m_list, &item);
-	ScePafThread_9100D580(&s_giant_lock);
+	_ZN3paf6thread5Mutex6UnlockEv(&s_giant_lock);
 }
 
 void MainThreadCallListUnregister(Function entry, void *userdata)
 {
 	CallListListener *toDelete = NULL;
 
-	ScePafThread_4EA3A3D5(&s_giant_lock);
+	_ZN3paf6thread5Mutex4LockEv(&s_giant_lock);
 	if (s_instance) {
 		CallListUnregister(&s_instance->m_list, entry, userdata);
 		CallListListener *listener = s_instance;
@@ -89,7 +89,7 @@ void MainThreadCallListUnregister(Function entry, void *userdata)
 			toDelete = listener;
 		}
 	}
-	ScePafThread_9100D580(&s_giant_lock);
+	_ZN3paf6thread5Mutex6UnlockEv(&s_giant_lock);
 	if (toDelete)
 		toDelete->base.vtable->Delete(&toDelete->base);
 }
@@ -100,7 +100,7 @@ TimerListener *CallListListenerDestroy(TimerListener *base)
 
 	base->vtable = &callListListenerClass.methods;
 	ScePafMisc_A4554B25(s_default_list, base);
-	ScePafThread_8CCECAC9(&self->m_list.m_item_mtx);
+	_ZN3paf6thread6RMutexD1Ev(&self->m_list.m_item_mtx);
 	CallItemNode *root = self->m_list.m_list.root_node;
 	if (root) {
 		CallItemNode *item = root->next;
@@ -128,7 +128,7 @@ void CallListListenerOnFinish(TimerListener *base, void *data1, void *data2)
 {
 	CallListListener *self = (CallListListener *)base;
 
-	ScePafThread_4EA3A3D5(&s_giant_lock);
+	_ZN3paf6thread5Mutex4LockEv(&s_giant_lock);
 	if (s_instance) {
 		self->m_is_calling = 1;
 		CallListUpdate(&self->m_list, &s_giant_lock);
@@ -140,12 +140,12 @@ void CallListListenerOnFinish(TimerListener *base, void *data1, void *data2)
 			s_instance = NULL;
 		}
 	}
-	ScePafThread_9100D580(&s_giant_lock);
+	_ZN3paf6thread5Mutex6UnlockEv(&s_giant_lock);
 }
 
 int CallListListenerInitialize(void)
 {
-	ScePafThread_A5D3F1B5(&s_giant_lock, "ScePafCallListListener", 0);
+	_ZN3paf6thread5MutexC1EPKci(&s_giant_lock, "ScePafCallListListener", 0);
 	return ScePafStdc_C95732BB(&s_giant_lock,
-		(void (*)(void *))ScePafThread_AD04A33D, &__dso_handle);
+		(void (*)(void *))_ZN3paf6thread5MutexD1Ev, &__dso_handle);
 }

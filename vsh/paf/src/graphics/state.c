@@ -11,7 +11,7 @@
 #include <display.h>
 
 extern int sceSharedFbGetShellRenderPort(void);
-extern int ScePafThread_26225225(void *condition, int milliseconds);
+extern int _ZN3paf6thread4Cond4WaitEi(void *condition, int milliseconds);
 extern const SceGxmProgramParameter *sceGxmProgramFindParameterBySemantic(
 	const SceGxmProgram *program, SceGxmParameterSemantic semantic,
 	unsigned int index);
@@ -1720,12 +1720,12 @@ int ScePafGraphics_C16D98B4(uint8_t *self)
 	RMutex *mutex = *(RMutex **)(self + 140);
 
 	if (mutex) {
-		ScePafThread_F9FFA0BE(mutex);
+		_ZN3paf6thread6RMutex4LockEv(mutex);
 		mutex = *(RMutex **)(self + 140);
 	}
 	*(uint16_t *)(self + 112) |= 7;
 	if (mutex)
-		ScePafThread_95F9C45F(mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(mutex);
 	return 7;
 }
 
@@ -1809,7 +1809,7 @@ void ScePafGraphics_B902E8F1(uint8_t *self)
 {
 	void *object;
 
-	ScePafThread_F9FFA0BE(&sce_paf_graphics_rmutex_1230);
+	_ZN3paf6thread6RMutex4LockEv(&sce_paf_graphics_rmutex_1230);
 	object = *(void **)(self + 128);
 	if (object && *(uint32_t *)(self + 108)) {
 		(*(void (**)(void *))(*(uint8_t **)object + 12))(object);
@@ -1817,7 +1817,7 @@ void ScePafGraphics_B902E8F1(uint8_t *self)
 	}
 	if (sce_paf_graphics_selected_object_12a4 == self)
 		sce_paf_graphics_selected_object_12a4 = NULL;
-	ScePafThread_95F9C45F(&sce_paf_graphics_rmutex_1230);
+	_ZN3paf6thread6RMutex6UnlockEv(&sce_paf_graphics_rmutex_1230);
 }
 
 typedef struct PafGraphicsRegistryAnchor {
@@ -2262,7 +2262,7 @@ void ScePafGraphics_B63D3B14(uint8_t *self)
 	}
 	MutexLock((Mutex *)(self + 296));
 	if (self[293])
-		ScePafThread_26225225(self + 328, 0);
+		_ZN3paf6thread4Cond4WaitEi(self + 328, 0);
 	MutexUnlock((Mutex *)(self + 296));
 }
 
@@ -2300,15 +2300,15 @@ done:
 
 int ScePafGraphics_823F7FC5(uint8_t *self)
 {
-	ScePafThread_F9FFA0BE(&sce_paf_graphics_rmutex_1230);
+	_ZN3paf6thread6RMutex4LockEv(&sce_paf_graphics_rmutex_1230);
 	if (*(uint32_t *)(self + 36)) {
 		int result = ((int (*)(uint8_t *))
 			(*(void ***)self)[15])(self);
 
-		ScePafThread_95F9C45F(&sce_paf_graphics_rmutex_1230);
+		_ZN3paf6thread6RMutex6UnlockEv(&sce_paf_graphics_rmutex_1230);
 		return result;
 	}
-	ScePafThread_95F9C45F(&sce_paf_graphics_rmutex_1230);
+	_ZN3paf6thread6RMutex6UnlockEv(&sce_paf_graphics_rmutex_1230);
 	return -2136006143;
 }
 

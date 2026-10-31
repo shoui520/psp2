@@ -9,9 +9,9 @@ size_t CacheManagerGetCacheManagerCount(void)
 {
 	size_t count;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	count = CacheManagerCacheList.count;
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 	return count;
 }
 

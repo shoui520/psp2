@@ -122,7 +122,7 @@ int ScePafToplevel_1F15D1D7(uint8_t *self)
 		for (result = sce_paf_toplevel_pending_4694;
 		     sce_paf_toplevel_pending_4694 > 0;
 		     result = sce_paf_toplevel_pending_4694)
-			ScePafThread_651F4F81(17);
+			_ZN3paf6thread5SleepEi(17);
 	}
 	callback = *(int (**)(void *))(self + 44);
 	if (callback)

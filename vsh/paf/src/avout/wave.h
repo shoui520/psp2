@@ -20,9 +20,6 @@ int WaveIsPlaying(int voice);
 int WaveKeyOn(int voice, int left, int right);
 int WaveKeyOffAll(void);
 
-/* paf::thread::Thread::Sleep, exported by ScePafThread. */
-void ScePafThread_651F4F81(unsigned int milliseconds);
-
 #ifdef __cplusplus
 }
 #endif

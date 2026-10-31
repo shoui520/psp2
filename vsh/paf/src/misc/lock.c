@@ -158,12 +158,12 @@ uint32_t ScePafMisc_4558694C(PafLockedFlagOwner *self)
 	uint32_t flags = 63;
 	PafFlagSource *source;
 
-	ScePafThread_F9FFA0BE(lock);
-	ScePafThread_F9FFA0BE(lock);
+	_ZN3paf6thread6RMutex4LockEv(lock);
+	_ZN3paf6thread6RMutex4LockEv(lock);
 	source = self->source;
 	if (source)
 		flags = source->methods->getFlags(source) & 63;
-	ScePafThread_95F9C45F(lock);
-	ScePafThread_95F9C45F(lock);
+	_ZN3paf6thread6RMutex6UnlockEv(lock);
+	_ZN3paf6thread6RMutex6UnlockEv(lock);
 	return flags & 0x17;
 }

@@ -3,7 +3,7 @@
 #include <sce_atomic.h>
 
 extern size_t sce_paf_strlen(const char *str);
-extern void ScePafThread_651F4F81(unsigned int milliseconds);
+extern void _ZN3paf6thread5SleepEi(unsigned int milliseconds);
 
 typedef struct CallQueueJobItem {
 	JobItem base;
@@ -45,7 +45,7 @@ void JobCallQueueCheck(JobCallQueue *self)
 {
 	Mutex *mutex = &self->m_mutex;
 
-	ScePafThread_4EA3A3D5(mutex);
+	_ZN3paf6thread5Mutex4LockEv(mutex);
 	if (self->m_call_queue) {
 		CallQueueJobItem *job = ScePafStdc_FC5CD359(sizeof(*job));
 		JobItemSharedPtr item;
@@ -88,7 +88,7 @@ void JobCallQueueCheck(JobCallQueue *self)
 				ScePafStdc_1B77082E(item.m_ref_counter);
 		}
 	}
-	ScePafThread_9100D580(mutex);
+	_ZN3paf6thread5Mutex6UnlockEv(mutex);
 }
 
 void JobCallQueueEnqueue(JobCallQueue *self, const char *name,
@@ -96,7 +96,7 @@ void JobCallQueueEnqueue(JobCallQueue *self, const char *name,
 {
 	Mutex *mutex = &self->m_mutex;
 
-	ScePafThread_4EA3A3D5(mutex);
+	_ZN3paf6thread5Mutex4LockEv(mutex);
 	if (!self->m_call_queue) {
 		CallQueue *body = ScePafStdc_FC5CD359(sizeof(*body));
 
@@ -115,17 +115,17 @@ void JobCallQueueEnqueue(JobCallQueue *self, const char *name,
 		}
 	}
 	CallQueueEnqueue(self->m_call_queue, name, entry, userdata);
-	ScePafThread_9100D580(mutex);
+	_ZN3paf6thread5Mutex6UnlockEv(mutex);
 }
 
 int JobCallQueueNumItems(JobCallQueue *self)
 {
 	int count = 0;
 
-	ScePafThread_4EA3A3D5(&self->m_mutex);
+	_ZN3paf6thread5Mutex4LockEv(&self->m_mutex);
 	if (self->m_call_queue)
 		count = CallQueueNumItems(self->m_call_queue);
-	ScePafThread_9100D580(&self->m_mutex);
+	_ZN3paf6thread5Mutex6UnlockEv(&self->m_mutex);
 	return count;
 }
 
@@ -134,13 +134,13 @@ void JobCallQueueWaitEmpty(JobCallQueue *self)
 	for (;;) {
 		int count = 0;
 
-		ScePafThread_4EA3A3D5(&self->m_mutex);
+		_ZN3paf6thread5Mutex4LockEv(&self->m_mutex);
 		if (self->m_call_queue)
 			count = CallQueueNumItems(self->m_call_queue);
-		ScePafThread_9100D580(&self->m_mutex);
+		_ZN3paf6thread5Mutex6UnlockEv(&self->m_mutex);
 		if (count <= 0)
 			return;
-		ScePafThread_651F4F81(10);
+		_ZN3paf6thread5SleepEi(10);
 	}
 }
 
@@ -156,7 +156,7 @@ JobCallQueue *JobCallQueueConstruct(JobCallQueue *self, const PafString *name,
 	PafStringInitialize(&mutex_name);
 	PafStringCopy(&mutex_name, &joined);
 	PafStringDestroy(&joined);
-	ScePafThread_A5D3F1B5(&self->m_mutex, mutex_name.ptr, 0);
+	_ZN3paf6thread5MutexC1EPKci(&self->m_mutex, mutex_name.ptr, 0);
 	PafStringDestroy(&mutex_name);
 	PafStringDestroy(&prefix);
 	self->m_call_queue = NULL;
@@ -173,7 +173,7 @@ JobCallQueue *JobCallQueueDestroy(JobCallQueue *self)
 {
 	if (self->m_call_queue)
 		ScePafStdc_1B77082E(CallQueueDestroy(self->m_call_queue));
-	ScePafThread_AD04A33D(&self->m_mutex);
+	_ZN3paf6thread5MutexD1Ev(&self->m_mutex);
 	PafStringDestroy(&self->m_name);
 	return self;
 }
@@ -182,7 +182,7 @@ JobCallQueue *JobCallQueueDestroyBase(JobCallQueue *self)
 {
 	if (self->m_call_queue)
 		ScePafStdc_1B77082E(CallQueueDestroy(self->m_call_queue));
-	ScePafThread_AD04A33D(&self->m_mutex);
+	_ZN3paf6thread5MutexD1Ev(&self->m_mutex);
 	PafStringDestroy(&self->m_name);
 	return self;
 }

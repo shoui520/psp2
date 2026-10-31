@@ -25,13 +25,13 @@ typedef enum MutexOption {
 	MutexOption_Default = 0
 } MutexOption;
 
-#define MutexConstruct ScePafThread_A5D3F1B5
-#define MutexConstructBase ScePafThread_BC109843
-#define MutexDestroy ScePafThread_AD04A33D
-#define MutexDestroyBase ScePafThread_9BA75E36
-#define MutexLock ScePafThread_4EA3A3D5
-#define MutexUnlock ScePafThread_9100D580
-#define MutexTryLock ScePafThread_E09598ED
+#define MutexConstruct _ZN3paf6thread5MutexC1EPKci
+#define MutexConstructBase _ZN3paf6thread5MutexC2EPKci
+#define MutexDestroy _ZN3paf6thread5MutexD1Ev
+#define MutexDestroyBase _ZN3paf6thread5MutexD2Ev
+#define MutexLock _ZN3paf6thread5Mutex4LockEv
+#define MutexUnlock _ZN3paf6thread5Mutex6UnlockEv
+#define MutexTryLock _ZN3paf6thread5Mutex7TryLockEv
 
 Mutex *MutexConstruct(Mutex *self, const char *name, int32_t option);
 Mutex *MutexConstructBase(Mutex *self, const char *name, int32_t option);
@@ -41,14 +41,14 @@ void MutexLock(Mutex *self);
 void MutexUnlock(Mutex *self);
 unsigned char MutexTryLock(Mutex *self);
 
-#define RWLockConstruct ScePafThread_02C1347F
-#define RWLockConstructBase ScePafThread_1ECE442B
-#define RWLockDestroy ScePafThread_221624F8
-#define RWLockDestroyBase ScePafThread_6FBDD800
-#define RWLockLockShared ScePafThread_AFB836B3
-#define RWLockUnlockShared ScePafThread_38D35DEF
-#define RWLockLockExclusive ScePafThread_39B3F3CA
-#define RWLockUnlockExclusive ScePafThread_AEE8496E
+#define RWLockConstruct _ZN3paf6thread6RWLockC1EPKci
+#define RWLockConstructBase _ZN3paf6thread6RWLockC2EPKci
+#define RWLockDestroy _ZN3paf6thread6RWLockD1Ev
+#define RWLockDestroyBase _ZN3paf6thread6RWLockD2Ev
+#define RWLockLockShared _ZN3paf6thread6RWLock10ReaderLockEv
+#define RWLockUnlockShared _ZN3paf6thread6RWLock12ReaderUnlockEv
+#define RWLockLockExclusive _ZN3paf6thread6RWLock10WriterLockEv
+#define RWLockUnlockExclusive _ZN3paf6thread6RWLock12WriterUnlockEv
 
 RWLock *RWLockConstruct(RWLock *self, const char *name, int32_t option);
 RWLock *RWLockConstructBase(RWLock *self, const char *name, int32_t option);
@@ -60,9 +60,9 @@ void RWLockLockExclusive(RWLock *self);
 void RWLockUnlockExclusive(RWLock *self);
 
 /* Existing ScePafThread exports, kept under their current link names. */
-RMutex *ScePafThread_C4BD9753(RMutex *mutex, const char *name, int option);
-void ScePafThread_F9FFA0BE(RMutex *mutex); /* RMutex::Lock */
-void ScePafThread_95F9C45F(RMutex *mutex); /* RMutex::Unlock */
-RMutex *ScePafThread_8CCECAC9(RMutex *mutex); /* RMutex::~RMutex */
+RMutex *_ZN3paf6thread6RMutexC1EPKci(RMutex *mutex, const char *name, int option);
+void _ZN3paf6thread6RMutex4LockEv(RMutex *mutex); /* RMutex::Lock */
+void _ZN3paf6thread6RMutex6UnlockEv(RMutex *mutex); /* RMutex::Unlock */
+RMutex *_ZN3paf6thread6RMutexD1Ev(RMutex *mutex); /* RMutex::~RMutex */
 
 #endif

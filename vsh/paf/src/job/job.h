@@ -24,7 +24,7 @@ typedef struct JobQueueList {
 typedef char JobQueueNodeSizeCheck[sizeof(JobQueueNode) == 12 ? 1 : -1];
 typedef char JobQueueListSizeCheck[sizeof(JobQueueList) == 12 ? 1 : -1];
 
-#define JobQueueQueueList ScePafThread_5B60F892
+#define JobQueueQueueList _ZN3paf3job8JobQueue10queue_listE
 extern JobQueueList JobQueueQueueList;
 
 JobQueueList *JobQueueListConstruct(JobQueueList *self, const void *allocator);
@@ -62,11 +62,11 @@ typedef struct JobItemSharedPtr {
 typedef char JobItemSizeCheck[sizeof(JobItem) == 28 ? 1 : -1];
 typedef char JobItemRefCounterSizeCheck[sizeof(JobItemRefCounter) == 16 ? 1 : -1];
 
-#define JobItemConstructBase ScePafThread_ECF8334D
-#define JobItemDestroyBase ScePafThread_E639D331
-#define JobItemCancel ScePafThread_2AE6D3EB
-#define JobQueueEnqueue ScePafThread_93F7A9D6
-#define JobItemIsCanceled ScePafThread_142E7F78
+#define JobItemConstructBase _ZN3paf3job7JobItemC2EPKcPKNS1_6OptionE
+#define JobItemDestroyBase _ZN3paf3job7JobItemD2Ev
+#define JobItemCancel _ZN3paf3job7JobItem6CancelEv
+#define JobQueueEnqueue _ZN3paf3job8JobQueue7EnqueueERNS_6common9SharedPtrINS0_7JobItemEEE
+#define JobItemIsCanceled _ZNK3paf3job7JobItem10IsCanceledEv
 
 JobItem *JobItemConstructBase(JobItem *self, const char *name,
 			      const JobItemOption *option);

@@ -2294,7 +2294,7 @@ ScePaf:
         - _ZN3paf6thread9SemaphoreC1EPKciii: 0x1089526C
         - _ZN3paf6thread4Cond9NotifyAllEv: 0x12911164
         - _ZNK3paf3job7JobItem10IsCanceledEv: 0x142E7F78
-        - ScePafThread_15F029A2: 0x15F029A2
+        - _ZN3paf6thread8PriorityC2Ev: 0x15F029A2
         - _ZN3paf6thread6ThreadC1EijPKcPKNS1_6OptionE: 0x1740FB30
         - _ZN3paf6thread6RMutex7TryLockEv: 0x18AF6844
         - _ZN3paf3job8JobQueueD1Ev: 0x1ABA2C42
@@ -2302,14 +2302,14 @@ ScePaf:
         - _ZN3paf6thread6RWLockD1Ev: 0x221624F8
         - _ZN3paf6thread9CallQueue7EnqueueEPKcPFvPvES4_: 0x23B8F66F
         - _ZN3paf6thread4Cond4WaitEi: 0x26225225
-        - ScePafThread_2AD8B80F: 0x2AD8B80F
+        - _ZN3paf6thread11GetPriorityEv: 0x2AD8B80F
         - _ZN3paf3job7JobItem6CancelEv: 0x2AE6D3EB
         - _ZN3paf3job8JobQueueD2Ev: 0x2CA36E35
         - _ZN3paf3job8JobQueue4ExitEv: 0x30154F76
         - _ZN3paf6thread6Thread7IsAliveEv: 0x318AD6B7
         - _ZN3paf6thread9SemaphoreD2Ev: 0x323F3E4D
-        - ScePafThread_38D35DEF: 0x38D35DEF
-        - ScePafThread_39B3F3CA: 0x39B3F3CA
+        - _ZN3paf6thread6RWLock12ReaderUnlockEv: 0x38D35DEF
+        - _ZN3paf6thread6RWLock10WriterLockEv: 0x39B3F3CA
         - _ZN3paf6thread8SyncCallC1EPKc: 0x465970E2
         - _ZN3paf6thread6Thread10IsCanceledEv: 0x4CE6D88B
         - _ZN3paf6thread5Mutex4LockEv: 0x4EA3A3D5
@@ -2332,7 +2332,7 @@ ScePaf:
         - _ZN3paf6thread6Thread5GetIDEv: 0x7E669E6E
         - _ZN3paf6thread6ThreadD2Ev: 0x7EA6B501
         - _ZN3paf6thread4CondC2ERNS0_5MutexEPKci: 0x8291E6C4
-        - ScePafThread_82A6C26A: 0x82A6C26A
+        - _ZN3paf6thread11SetPriorityERKNS0_8PriorityE: 0x82A6C26A
         - _ZN3paf3job8JobQueue14CancelAllItemsEv: 0x88061E60
         - _ZN3paf3job7JobItemD1Ev: 0x88DA7B11
         - _ZN3paf6thread6RMutexD1Ev: 0x8CCECAC9
@@ -2352,8 +2352,8 @@ ScePaf:
         - _ZN3paf6thread9CallQueueC2EPKc: 0xA87BC0AE
         - _ZN3paf6thread8SyncCallD2Ev: 0xA8DB7042
         - _ZN3paf6thread5MutexD1Ev: 0xAD04A33D
-        - ScePafThread_AEE8496E: 0xAEE8496E
-        - ScePafThread_AFB836B3: 0xAFB836B3
+        - _ZN3paf6thread6RWLock12WriterUnlockEv: 0xAEE8496E
+        - _ZN3paf6thread6RWLock10ReaderLockEv: 0xAFB836B3
         - _ZN3paf3job8JobQueue9NumQueuesEv: 0xB958E592
         - _ZN3paf6thread4CondC1ERNS0_5MutexEPKci: 0xBA5BD169
         - _ZN3paf6thread5MutexC2EPKci: 0xBC109843
@@ -2373,7 +2373,7 @@ ScePaf:
         - _ZN3paf3job7JobItemD2Ev: 0xE639D331
         - _ZN3paf6thread9SemaphoreD1Ev: 0xE72CBBE1
         - _ZN3paf3job7JobItemC2EPKcPKNS1_6OptionE: 0xECF8334D
-        - ScePafThread_EE889AAF: 0xEE889AAF
+        - _ZN3paf6thread8PriorityC1Ev: 0xEE889AAF
         - _ZN3paf3job8JobQueueC1EPKcPKNS1_6OptionE: 0xEEDBA99E
         - _ZN3paf6thread8SyncCallD1Ev: 0xF17CAAB0
         - _ZN3paf3job8JobQueue6OptionC1Ev: 0xF4C3881C

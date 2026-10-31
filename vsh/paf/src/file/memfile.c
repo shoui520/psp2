@@ -42,7 +42,7 @@ MemFile *MemFileConstruct(MemFile *self)
 	self->m_mem_size = 0;
 	self->m_mem_pos = 0;
 	self->m_io_result = 0;
-	ScePafThread_C4BD9753(&self->m_lock_mutex, "ScePafMemFileCsLock", 0);
+	_ZN3paf6thread6RMutexC1EPKci(&self->m_lock_mutex, "ScePafMemFileCsLock", 0);
 	return self;
 }
 
@@ -152,12 +152,12 @@ int64_t MemFileGetFileSize(const MemFile *self)
 	RMutex *mutex = (RMutex *)&self->m_lock_mutex;
 	int64_t result;
 
-	ScePafThread_F9FFA0BE(mutex);
+	_ZN3paf6thread6RMutex4LockEv(mutex);
 	if (self->base.vtable->IsOpened(&self->base))
 		result = self->m_mem_size;
 	else
 		result = SCE_PAF_ERROR_FILE_NOT_OPENED;
-	ScePafThread_95F9C45F(mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(mutex);
 	return result;
 }
 
@@ -174,11 +174,11 @@ int32_t MemFileOpenArgMethod(MemFile *self, const FileOpenArg *param)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	ret = self->base.vtable->OpenAsync(&self->base, param);
 	if (!ret)
 		ret = MemFileGetSyncResult(self);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -188,7 +188,7 @@ int32_t MemFileOpenAsync(MemFile *self, const FileOpenArg *param)
 	BufferSharedPtr buffer;
 	int32_t ret = SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (self->base.vtable->IsOpened(&self->base)) {
 		ret = SCE_PAF_ERROR_FILE_ALREADY_OPENED;
 		goto done;
@@ -217,7 +217,7 @@ int32_t MemFileOpenAsync(MemFile *self, const FileOpenArg *param)
 	}
 	BufferSharedPtrRelease(&buffer);
 done:
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -225,11 +225,11 @@ int32_t MemFileClose(MemFile *self)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	ret = self->base.vtable->CloseAsync(&self->base);
 	if (!ret)
 		ret = MemFileGetSyncResult(self);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -237,7 +237,7 @@ int32_t MemFileCloseAsync(MemFile *self)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (!self->base.vtable->IsOpened(&self->base))
 		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
 	else if (self->m_waiting_for_sync)
@@ -247,7 +247,7 @@ int32_t MemFileCloseAsync(MemFile *self)
 		self->m_waiting_for_sync = 1;
 		ret = 0;
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -256,9 +256,9 @@ unsigned char MemFileIsOpened(const MemFile *self)
 	RMutex *mutex = (RMutex *)&self->m_lock_mutex;
 	unsigned char result;
 
-	ScePafThread_F9FFA0BE(mutex);
+	_ZN3paf6thread6RMutex4LockEv(mutex);
 	result = self->m_is_opened;
-	ScePafThread_95F9C45F(mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(mutex);
 	return result;
 }
 
@@ -266,19 +266,19 @@ unsigned char MemFileIsEof(MemFile *self)
 {
 	unsigned char result;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	result = self->m_mem_pos == self->m_mem_size;
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return result;
 }
 
 int32_t MemFileAbort(MemFile *self)
 {
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (self->m_waiting_for_sync)
 		self->m_io_result = 0;
 	self->m_waiting_for_sync = 0;
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return 0;
 }
 
@@ -286,11 +286,11 @@ int32_t MemFileRead(MemFile *self, void *buf, size_t nbyte)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	ret = self->base.vtable->ReadAsync(&self->base, buf, nbyte);
 	if (!ret)
 		ret = MemFileGetSyncResult(self);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -302,7 +302,7 @@ int32_t MemFileTransfer(MemFile *self, void *buf, size_t nbyte, unsigned char wr
 	size_t count = nbyte;
 	void *addr;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (!self->base.vtable->IsOpened(&self->base)) {
 		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
 		goto done;
@@ -343,7 +343,7 @@ int32_t MemFileTransfer(MemFile *self, void *buf, size_t nbyte, unsigned char wr
 	self->m_io_result = count;
 	self->m_mem_pos = (int64_t)((uint64_t)position + count);
 done:
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -356,11 +356,11 @@ int32_t MemFileWrite(MemFile *self, const void *buf, size_t nbyte)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	ret = self->base.vtable->WriteAsync(&self->base, buf, nbyte);
 	if (!ret)
 		ret = MemFileGetSyncResult(self);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -373,11 +373,11 @@ int64_t MemFileSeek(MemFile *self, int64_t offset, int32_t whence)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	ret = self->base.vtable->SeekAsync(&self->base, offset, whence);
 	if (!ret)
 		ret = MemFileGetSyncResult(self);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -386,7 +386,7 @@ int32_t MemFileSeekAsync(MemFile *self, int64_t offset, int32_t whence)
 	int32_t ret = 0;
 	int64_t position;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (!self->base.vtable->IsOpened(&self->base)) {
 		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
 		goto done;
@@ -421,21 +421,21 @@ int32_t MemFileSeekAsync(MemFile *self, int64_t offset, int32_t whence)
 	self->m_io_result = position;
 	self->m_waiting_for_sync = 1;
 done:
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
 int32_t MemFileFlush(MemFile *self)
 {
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return 0;
 }
 
 int32_t MemFileFlushAsync(MemFile *self)
 {
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return 0;
 }
 
@@ -443,7 +443,7 @@ int32_t MemFileWaitAsync(MemFile *self, int64_t *result)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (self->m_waiting_for_sync) {
 		int64_t value = self->m_io_result;
 
@@ -453,7 +453,7 @@ int32_t MemFileWaitAsync(MemFile *self, int64_t *result)
 	} else {
 		ret = SCE_PAF_ERROR_FILE_NOT_BUSY;
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -461,7 +461,7 @@ int32_t MemFilePollAsync(MemFile *self, int64_t *result)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (!self->base.vtable->IsOpened(&self->base))
 		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
 	else if (self->m_waiting_for_sync) {
@@ -473,7 +473,7 @@ int32_t MemFilePollAsync(MemFile *self, int64_t *result)
 	} else {
 		ret = SCE_PAF_ERROR_FILE_NOT_BUSY;
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -485,7 +485,7 @@ MemFile *MemFileConstructBase(MemFile *self)
 MemFile *MemFileDestroy(MemFile *self)
 {
 	self->base.vtable = &memFileClass.methods;
-	ScePafThread_8CCECAC9(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutexD1Ev(&self->m_lock_mutex);
 	BufferSharedPtrRelease(&self->m_buffer);
 	self->base.vtable = &fileClass.methods;
 	return self;

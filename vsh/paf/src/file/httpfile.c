@@ -513,14 +513,14 @@ HttpFileReaderContext *HttpFileReaderContextConstruct(HttpFileReaderContext *sel
 		root->prev = root;
 		root->next = root;
 	}
-	ScePafThread_A5D3F1B5(&self->m_mutex, "ScePafHttpConnectionPool", 0);
+	_ZN3paf6thread5MutexC1EPKci(&self->m_mutex, "ScePafHttpConnectionPool", 0);
 	return self;
 }
 
 void HttpFileReaderContextDelete(HttpFileReaderContext *self)
 {
 	if (self) {
-		ScePafThread_AD04A33D(&self->m_mutex);
+		_ZN3paf6thread5MutexD1Ev(&self->m_mutex);
 		HttpFileReaderConnectionListDestroy(&self->m_connections);
 		ScePafStdc_1B77082E(self);
 	}
@@ -563,13 +563,13 @@ int32_t HttpFileReaderContextReturnConnection(const HttpFileReaderContextSharedP
 	    connection->m_ptr->param.enable_keepalive && context->m_capacity) {
 		Mutex *mutex = &context->m_mutex;
 
-		ScePafThread_4EA3A3D5(mutex);
+		_ZN3paf6thread5Mutex4LockEv(mutex);
 		while ((uint32_t)self->m_ptr->m_connections.count >=
 		       self->m_ptr->m_capacity)
 			HttpFileReaderConnectionListPopFront(&self->m_ptr->m_connections);
 		HttpFileReaderConnectionListPushBack(&self->m_ptr->m_connections,
 						    connection);
-		ScePafThread_9100D580(mutex);
+		_ZN3paf6thread5Mutex6UnlockEv(mutex);
 	}
 	HttpFileReaderConnectionSharedPtrRelease(connection);
 	connection->m_ptr = NULL;
@@ -894,7 +894,7 @@ int32_t HttpFileGetstat(HttpFile *self, FileStat *stat)
 	int64_t size;
 	PafString value;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (!stat) {
 		ret = SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
 		goto unlock;
@@ -932,7 +932,7 @@ int32_t HttpFileGetstat(HttpFile *self, FileStat *stat)
 	}
 	PafStringDestroy(&value);
 unlock:
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -987,7 +987,7 @@ HttpFile *HttpFileConstruct(HttpFile *self)
 	self->base.vtable = &httpFileClass.methods;
 	self->m_is_opened = 0;
 	RWLockConstruct(&self->m_lock_rwlock, "ScePafHttpFileRwLock", 0);
-	ScePafThread_C4BD9753(&self->m_lock_mutex, "ScePafHttpFileCsLock", 0);
+	_ZN3paf6thread6RMutexC1EPKci(&self->m_lock_mutex, "ScePafHttpFileCsLock", 0);
 	self->m_io_thread = NULL;
 	self->m_http_reader = NULL;
 	self->m_reader_param = NULL;
@@ -1004,7 +1004,7 @@ HttpFile *HttpFileConstructBase(HttpFile *self)
 	self->base.vtable = &httpFileClass.methods;
 	self->m_is_opened = 0;
 	RWLockConstruct(&self->m_lock_rwlock, "ScePafHttpFileRwLock", 0);
-	ScePafThread_C4BD9753(&self->m_lock_mutex, "ScePafHttpFileCsLock", 0);
+	_ZN3paf6thread6RMutexC1EPKci(&self->m_lock_mutex, "ScePafHttpFileCsLock", 0);
 	self->m_io_thread = NULL;
 	self->m_http_reader = NULL;
 	self->m_reader_param = NULL;
@@ -1087,17 +1087,17 @@ int32_t HttpFileOpenWithArg(HttpFile *self, const FileOpenArg *param)
 	HttpFileReader *reader;
 	int32_t result;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (!arg || self->base.vtable->GetFileType(&self->base) != arg->file_type) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
 	}
 	if (self->m_io_thread) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_BUSY;
 	}
 	if (self->m_is_opened) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_ALREADY_OPENED;
 	}
 	if (arg->response_code)
@@ -1106,7 +1106,7 @@ int32_t HttpFileOpenWithArg(HttpFile *self, const FileOpenArg *param)
 	result = HttpFileCreateReader(self, arg);
 	RWLockUnlockExclusive(&self->m_lock_rwlock);
 	if (result) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return result;
 	}
 	RWLockLockShared(&self->m_lock_rwlock);
@@ -1134,7 +1134,7 @@ int32_t HttpFileOpenWithArg(HttpFile *self, const FileOpenArg *param)
 	else
 		self->m_is_opened = 1;
 	RWLockUnlockExclusive(&self->m_lock_rwlock);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return result;
 }
 
@@ -1238,17 +1238,17 @@ int32_t HttpFileOpenAsync(HttpFile *self, const FileOpenArg *param)
 	const HttpFileOpenArg *arg = (const HttpFileOpenArg *)param;
 	int32_t result;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (!arg || self->base.vtable->GetFileType(&self->base) != arg->file_type) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
 	}
 	if (self->m_io_thread) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_BUSY;
 	}
 	if (self->m_is_opened) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_ALREADY_OPENED;
 	}
 	RWLockLockExclusive(&self->m_lock_rwlock);
@@ -1261,7 +1261,7 @@ int32_t HttpFileOpenAsync(HttpFile *self, const FileOpenArg *param)
 			RWLockLockExclusive(&self->m_lock_rwlock);
 			HttpFileDeleteReader(self);
 			RWLockUnlockExclusive(&self->m_lock_rwlock);
-			ScePafThread_95F9C45F(&self->m_lock_mutex);
+			_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 			return SCE_PAF_ERROR_FILE_NO_MEMORY;
 		}
 		result = ThreadStart(self->m_io_thread);
@@ -1275,7 +1275,7 @@ int32_t HttpFileOpenAsync(HttpFile *self, const FileOpenArg *param)
 		}
 	}
 	/* The original keeps the exclusive lock when CreateReader fails. */
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return result;
 }
 
@@ -1283,13 +1283,13 @@ int32_t HttpFileCloseAsync(HttpFile *self)
 {
 	int32_t result;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (self->m_io_thread) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_BUSY;
 	}
 	if (!self->m_is_opened) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_NOT_OPENED;
 	}
 	RWLockLockExclusive(&self->m_lock_rwlock);
@@ -1297,7 +1297,7 @@ int32_t HttpFileCloseAsync(HttpFile *self)
 					1, offsetof(HttpFileReaderVTable, Close));
 	RWLockUnlockExclusive(&self->m_lock_rwlock);
 	if (!self->m_io_thread) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_NO_MEMORY;
 	}
 	result = ThreadStart(self->m_io_thread);
@@ -1308,7 +1308,7 @@ int32_t HttpFileCloseAsync(HttpFile *self)
 		self->m_io_thread = NULL;
 		RWLockUnlockExclusive(&self->m_lock_rwlock);
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return result;
 }
 
@@ -1463,17 +1463,17 @@ int32_t HttpFileReadAsync(HttpFile *self, void *buf, size_t nbyte)
 {
 	int32_t result;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (!buf) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
 	}
 	if (self->m_io_thread) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_BUSY;
 	}
 	if (!self->m_is_opened) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_NOT_OPENED;
 	}
 	RWLockLockExclusive(&self->m_lock_rwlock);
@@ -1481,7 +1481,7 @@ int32_t HttpFileReadAsync(HttpFile *self, void *buf, size_t nbyte)
 							     buf, nbyte);
 	RWLockUnlockExclusive(&self->m_lock_rwlock);
 	if (!self->m_io_thread) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_NO_MEMORY;
 	}
 	result = ThreadStart(self->m_io_thread);
@@ -1492,7 +1492,7 @@ int32_t HttpFileReadAsync(HttpFile *self, void *buf, size_t nbyte)
 		self->m_io_thread = NULL;
 		RWLockUnlockExclusive(&self->m_lock_rwlock);
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return result;
 }
 
@@ -1500,13 +1500,13 @@ int32_t HttpFileSeekAsync(HttpFile *self, int64_t offset, int32_t whence)
 {
 	int32_t result;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (self->m_io_thread) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_BUSY;
 	}
 	if (!self->m_is_opened) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_NOT_OPENED;
 	}
 	RWLockLockExclusive(&self->m_lock_rwlock);
@@ -1514,7 +1514,7 @@ int32_t HttpFileSeekAsync(HttpFile *self, int64_t offset, int32_t whence)
 							     offset, whence);
 	RWLockUnlockExclusive(&self->m_lock_rwlock);
 	if (!self->m_io_thread) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_NO_MEMORY;
 	}
 	result = ThreadStart(self->m_io_thread);
@@ -1525,7 +1525,7 @@ int32_t HttpFileSeekAsync(HttpFile *self, int64_t offset, int32_t whence)
 		self->m_io_thread = NULL;
 		RWLockUnlockExclusive(&self->m_lock_rwlock);
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return result;
 }
 
@@ -1568,14 +1568,14 @@ int32_t HttpFileWaitAsync(HttpFile *self, int64_t *result)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (!self->m_io_thread) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_NOT_BUSY;
 	}
 	ThreadJoin(self->m_io_thread);
 	ret = HttpFileCompleteAsync(self, result);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -1583,17 +1583,17 @@ int32_t HttpFilePollAsync(HttpFile *self, int64_t *result)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (!self->m_io_thread) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return SCE_PAF_ERROR_FILE_NOT_BUSY;
 	}
 	if (ThreadIsAlive(self->m_io_thread)) {
-		ScePafThread_95F9C45F(&self->m_lock_mutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 		return 1;
 	}
 	ret = HttpFileCompleteAsync(self, result);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -1601,16 +1601,16 @@ unsigned char HttpFileIsOpened(HttpFile *self)
 {
 	unsigned char opened;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	opened = self->m_is_opened;
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return opened;
 }
 
 unsigned char HttpFileIsEof(HttpFile *self)
 {
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return 0;
 }
 
@@ -1626,15 +1626,15 @@ int32_t HttpFileWriteAsync(HttpFile *self, const void *buf, size_t nbyte)
 
 int32_t HttpFileFlush(HttpFile *self)
 {
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return SCE_PAF_ERROR_FILE_READ_ONLY;
 }
 
 int32_t HttpFileFlushAsync(HttpFile *self)
 {
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return SCE_PAF_ERROR_FILE_READ_ONLY;
 }
 
@@ -1642,14 +1642,14 @@ int64_t HttpFileGetFileSize(HttpFile *self)
 {
 	int64_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (self->m_io_thread)
 		ret = SCE_PAF_ERROR_FILE_BUSY;
 	else if (self->m_is_opened)
 		ret = self->m_http_reader->vtable->GetFileSize(self->m_http_reader);
 	else
 		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -1670,7 +1670,7 @@ int32_t HttpFileRead(HttpFile *self, void *buf, size_t nbyte)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (!buf) {
 		ret = SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
 	} else if (self->m_io_thread) {
@@ -1688,7 +1688,7 @@ int32_t HttpFileRead(HttpFile *self, void *buf, size_t nbyte)
 	} else {
 		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -1696,7 +1696,7 @@ int64_t HttpFileSeek(HttpFile *self, int64_t offset, int32_t whence)
 {
 	int64_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (self->m_io_thread) {
 		ret = SCE_PAF_ERROR_FILE_BUSY;
 	} else if (self->m_is_opened) {
@@ -1712,7 +1712,7 @@ int64_t HttpFileSeek(HttpFile *self, int64_t offset, int32_t whence)
 	} else {
 		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -1721,7 +1721,7 @@ int32_t HttpFileGetResponseCode(HttpFile *self, uint16_t *code)
 	int32_t ret;
 	unsigned char opened;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	opened = self->m_is_opened;
 	*code = 0;
 	if (opened && self->m_http_reader) {
@@ -1736,7 +1736,7 @@ int32_t HttpFileGetResponseCode(HttpFile *self, uint16_t *code)
 	} else {
 		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -1745,7 +1745,7 @@ int32_t HttpFileGetResponseVersion(HttpFile *self, unsigned char *major,
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	*minor = 0;
 	*major = 0;
 	if (!self->m_is_opened || !self->m_http_reader) {
@@ -1764,7 +1764,7 @@ int32_t HttpFileGetResponseVersion(HttpFile *self, unsigned char *major,
 			ret = SCE_PAF_ERROR_FILE_INVALID_OFFSET;
 		}
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -1772,7 +1772,7 @@ int32_t HttpFileGetResponsePhrase(HttpFile *self, PafString *phrase)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	PafStringAssign(phrase, "", sce_paf_strlen(""));
 	if (!self->m_is_opened || !self->m_http_reader) {
 		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
@@ -1791,7 +1791,7 @@ int32_t HttpFileGetResponsePhrase(HttpFile *self, PafString *phrase)
 			ret = SCE_PAF_ERROR_FILE_INVALID_OFFSET;
 		}
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -1800,7 +1800,7 @@ int32_t HttpFileGetResponseHeader(HttpFile *self, const char *name,
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	PafStringAssign(value, "", sce_paf_strlen(""));
 	if (!self->m_is_opened || !self->m_http_reader) {
 		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
@@ -1814,7 +1814,7 @@ int32_t HttpFileGetResponseHeader(HttpFile *self, const char *name,
 		PafStringAssign(value, text, len);
 		ret = SCE_PAF_OK;
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -1822,7 +1822,7 @@ int32_t HttpFileClose(HttpFile *self)
 {
 	int32_t ret;
 
-	ScePafThread_F9FFA0BE(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex4LockEv(&self->m_lock_mutex);
 	if (self->m_io_thread) {
 		ret = SCE_PAF_ERROR_FILE_BUSY;
 	} else if (self->m_is_opened) {
@@ -1834,7 +1834,7 @@ int32_t HttpFileClose(HttpFile *self)
 	} else {
 		ret = SCE_PAF_ERROR_FILE_NOT_OPENED;
 	}
-	ScePafThread_95F9C45F(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&self->m_lock_mutex);
 	return ret;
 }
 
@@ -1852,7 +1852,7 @@ HttpFile *HttpFileDestroy(HttpFile *self)
 		self->m_http_reader->vtable->Close(self->m_http_reader);
 	HttpFileDeleteReader(self);
 	HttpFileReaderContextSharedPtrRelease(&self->m_reader_context);
-	ScePafThread_8CCECAC9(&self->m_lock_mutex);
+	_ZN3paf6thread6RMutexD1Ev(&self->m_lock_mutex);
 	RWLockDestroy(&self->m_lock_rwlock);
 	self->base.vtable = &fileClass.methods;
 	return self;

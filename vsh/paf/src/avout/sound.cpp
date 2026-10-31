@@ -2,6 +2,7 @@
 #include "sound.h"
 #include "wave.h"
 #include <sysmem/memblock.h>
+#include <thread/thread.h>
 
 namespace paf {
 namespace sound {
@@ -103,7 +104,7 @@ void Output::WaitSoundStopped()
 		return;
 
 	for (int retry = 0; retry < 125; ++retry) {
-		ScePafThread_651F4F81(40);
+		thread::Sleep(40);
 		Update();
 		bool playing = false;
 		for (int i = 0; i < 8; ++i) {

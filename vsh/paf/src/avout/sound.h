@@ -18,7 +18,7 @@ public:
 
 	Output(int mode);
 	~Output();
-	void Update()
+	__declspec(dllexport) void Update()
 	{
 		if (!m_is_init)
 			return;

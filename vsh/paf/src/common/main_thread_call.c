@@ -1,7 +1,7 @@
 /* A call executes once its state check reports ready. */
 #include "main_thread_call.h"
 
-extern void ScePafThread_651F4F81(unsigned int milliseconds);
+extern void _ZN3paf6thread5SleepEi(unsigned int milliseconds);
 extern void _ZN3paf6common18MainThreadCallList8RegisterEPFvPvES2_(Function func,
 							    void *userdata);
 extern void _ZN3paf6common18MainThreadCallList10UnregisterEPFvPvES2_(Function func,
@@ -9,7 +9,7 @@ extern void _ZN3paf6common18MainThreadCallList10UnregisterEPFvPvES2_(Function fu
 
 void StateCheckSleep(StateCheck *self)
 {
-	ScePafThread_651F4F81(10);
+	_ZN3paf6thread5SleepEi(10);
 }
 
 MainThreadCall *MainThreadCallConstruct(MainThreadCall *self, StateCheck *check,

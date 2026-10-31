@@ -10,7 +10,7 @@ void ScePafMisc_DF92A43B(const uint8_t *self)
 {
 	JobItem *item;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	item = *(JobItem *const *)(self + 28);
 	if (item && JobItemIsCanceled(item) != 1) {
 		item = *(JobItem *const *)(self + 28);
@@ -18,7 +18,7 @@ void ScePafMisc_DF92A43B(const uint8_t *self)
 
 		((void (*)(void *))*(void *const *)(vtable + 8))(item);
 	}
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 }
 
 int ScePafMisc_5F18F5F7(const uint8_t *self)
@@ -26,36 +26,36 @@ int ScePafMisc_5F18F5F7(const uint8_t *self)
 	int result;
 	const uint8_t *state;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	state = *(const uint8_t *const *)(self + 4);
 	if (state)
 		result = state[65];
 	else
 		result = 1;
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 	return result;
 }
 
 void ScePafMisc_F4B797C2(CacheManagerImpl *self)
 {
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	self->httpFileOpenFlags = sce_paf_misc_counter_c224;
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 }
 
 int ScePafMisc_3E898511(CacheManagerImpl *self)
 {
 	int result = 0;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	if (self->longLifeHeap && ((uint8_t *)self)[81] &&
 	    ((int (*)(CacheManagerImpl *))((const void **)self->vtable)[5])(self) >= 0) {
-		ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+		_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 		self->httpFileOpenFlags = sce_paf_misc_counter_c224;
-		ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 		result = *(int32_t *)((uint8_t *)self + 44);
 	}
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 	return result;
 }
 
@@ -100,23 +100,23 @@ int ScePafMisc_5A7093DE(PafCachePendingJob *self)
 
 __attribute__((noinline)) void ScePafMisc_511CFBA2(CacheManagerImpl *self, void *ptr)
 {
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	if (self->longLifeHeap)
 		scePafFreeWithContext(self->longLifeHeap, ptr);
 	else
 		sce_paf_free(ptr);
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 }
 
 void ScePafMisc_5D7F00C2(void *allocation, const uint8_t *owner)
 {
 	const uint8_t *heap = *(const uint8_t *const *)(owner + 4);
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	heap = *(const uint8_t *const *)(owner + 4);
 	if (heap && !heap[66])
 		ScePafMisc_511CFBA2((CacheManagerImpl *)heap, allocation);
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 }
 
 /* Native cache transaction state following the manager's allocator prefix. */
@@ -136,7 +136,7 @@ void ScePafMisc_CB20D5B3(CacheManagerImpl *self)
 {
 	PafCacheTransient *state = (PafCacheTransient *)self;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	if (state->allocation) {
 		if (self->longLifeHeap)
 			ScePafMisc_511CFBA2((CacheManagerImpl *)self->longLifeHeap,
@@ -145,7 +145,7 @@ void ScePafMisc_CB20D5B3(CacheManagerImpl *self)
 	}
 	state->timestampLow = 0;
 	state->timestampHigh = 0;
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 }
 
 /* Two transaction-state variants use the same guarded allocation cleanup. */
@@ -154,7 +154,7 @@ void ClearCacheTransient(CacheManagerImpl *self)
 {
 	PafCacheTransient *state = (PafCacheTransient *)self;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	if (state->allocation) {
 		if (self->longLifeHeap)
 			ScePafMisc_511CFBA2((CacheManagerImpl *)self->longLifeHeap,
@@ -163,7 +163,7 @@ void ClearCacheTransient(CacheManagerImpl *self)
 	}
 	state->timestampLow = 0;
 	state->timestampHigh = 0;
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 }
 
 void ScePafMisc_297A9338(CacheManagerImpl *self)
@@ -182,7 +182,7 @@ int ScePafMisc_E2F15E2D(CacheManagerImpl *self, int32_t status,
 	uint8_t *bytes = (uint8_t *)self;
 	int result;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	if (self->longLifeHeap) {
 		*(int32_t *)(bytes + 12) = status;
 		if (status < 0) {
@@ -200,7 +200,7 @@ int ScePafMisc_E2F15E2D(CacheManagerImpl *self, int32_t status,
 				if (!*(uint32_t *)(bytes + 88) || remaining == 0)
 					*(int32_t *)(bytes + 12) = -2135993294;
 			}
-			ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+			_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 			if (*(void **)(bytes + 44)) {
 				if (self->longLifeHeap)
 					ScePafMisc_511CFBA2(
@@ -210,18 +210,18 @@ int ScePafMisc_E2F15E2D(CacheManagerImpl *self, int32_t status,
 			}
 			*(uint32_t *)(bytes + 48) = 0;
 			*(uint32_t *)(bytes + 52) = 0;
-			ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+			_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 		}
 		*completed = 1;
-		ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+		_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 		self->httpFileOpenFlags = sce_paf_misc_counter_c224;
-		ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 		result = 0;
 	} else {
 		result = -2135993338;
 	}
 	*(uint32_t *)(bytes + 28) = 0;
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 	return result;
 }
 
@@ -244,14 +244,14 @@ uint32_t ScePafMisc_8A35B3D9(PafCacheRefObject *self)
 {
 	uint32_t references;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	references = --self->references;
 	if (!references) {
 		self->methods->onZeroReferences(self);
-		ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+		_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 		return 0;
 	}
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 	return references;
 }
 
@@ -270,7 +270,7 @@ int ScePafMisc_F47E07B4(void *user, PafCacheCallbackContext *context)
 {
 	int result = 0;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	if (context->callback) {
 		int callbackResult = context->callback(context->callbackState + 32,
 						 user, context->data);
@@ -278,7 +278,7 @@ int ScePafMisc_F47E07B4(void *user, PafCacheCallbackContext *context)
 		if (callbackResult < 0)
 			result = callbackResult;
 	}
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 	return result;
 }
 
@@ -291,24 +291,24 @@ int32_t ScePafMisc_E5B70924(PafCacheSharedCounter *counter)
 {
 	uint32_t count;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	count = ++counter->count;
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 	return (int32_t)count;
 }
 
 void ScePafMisc_33ADBB0A(CacheManagerImpl *self, uint32_t flags)
 {
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	self->httpFileOpenFlags = flags;
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 }
 
 void ScePafMisc_BF5194CD(CacheManagerImpl *self, uint8_t shutdown)
 {
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	self->shutdown = shutdown;
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 }
 
 void *CacheManagerImplAllocInstantHeap(CacheManagerImpl *self, size_t size)
@@ -316,13 +316,13 @@ void *CacheManagerImplAllocInstantHeap(CacheManagerImpl *self, size_t size)
 	HeapAllocator *heap;
 	void *allocated;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	heap = self->instantHeap;
 	if (heap)
 		allocated = scePafMallocAlignWithContext(heap, self->instantAlignment, size);
 	else
 		allocated = sce_paf_memalign(self->instantAlignment, size);
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 	return allocated;
 }
 
@@ -330,22 +330,22 @@ void CacheManagerImplFreeInstantHeap(CacheManagerImpl *self, void *ptr)
 {
 	HeapAllocator *heap;
 
-	ScePafThread_F9FFA0BE(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex4LockEv(&CacheManagerImplRMutex);
 	heap = self->instantHeap;
 	if (heap)
 		scePafFreeWithContext(heap, ptr);
 	else
 		sce_paf_free(ptr);
-	ScePafThread_95F9C45F(&CacheManagerImplRMutex);
+	_ZN3paf6thread6RMutex6UnlockEv(&CacheManagerImplRMutex);
 }
 
 int CacheManagerImplInitialize(void)
 {
 	extern void *__dso_handle;
 
-	ScePafThread_C4BD9753(&CacheManagerImplRMutex, "ScePafCacheRmutex",
+	_ZN3paf6thread6RMutexC1EPKci(&CacheManagerImplRMutex, "ScePafCacheRmutex",
 			    MutexOption_None);
 	return ScePafStdc_C95732BB(&CacheManagerImplRMutex,
-				(void (*)(void *))ScePafThread_8CCECAC9,
+				(void (*)(void *))_ZN3paf6thread6RMutexD1Ev,
 				&__dso_handle);
 }

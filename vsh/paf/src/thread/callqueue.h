@@ -32,11 +32,11 @@ typedef struct CallQueue {
 
 typedef char CallQueueSizeCheck[sizeof(CallQueue) == 48 ? 1 : -1];
 
-#define CallQueueConstruct ScePafThread_5A72B9FC
-#define CallQueueDestroy ScePafThread_BE9A9155
-#define CallQueueCheck ScePafThread_98EA7399
-#define CallQueueEnqueue ScePafThread_23B8F66F
-#define CallQueueNumItems ScePafThread_9F2131F9
+#define CallQueueConstruct _ZN3paf6thread9CallQueueC1EPKc
+#define CallQueueDestroy _ZN3paf6thread9CallQueueD1Ev
+#define CallQueueCheck _ZN3paf6thread9CallQueue5CheckEv
+#define CallQueueEnqueue _ZN3paf6thread9CallQueue7EnqueueEPKcPFvPvES4_
+#define CallQueueNumItems _ZN3paf6thread9CallQueue8NumItemsEv
 
 CallQueue *CallQueueConstruct(CallQueue *self, const char *name);
 CallQueue *CallQueueDestroy(CallQueue *self);

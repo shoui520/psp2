@@ -8,7 +8,7 @@ JobQueueList JobQueueQueueList;
 static Mutex mutex;
 void *sce_paf_default_job_queue;
 
-int ScePafThread_B958E592(void)
+int _ZN3paf3job8JobQueue9NumQueuesEv(void)
 {
 	int count;
 
@@ -100,17 +100,17 @@ int JobQueueEnqueue(JobQueue *self, JobItemSharedPtr *item)
 	return 0;
 }
 
-JobItem *ScePafThread_88DA7B11(JobItem *self);
-void ScePafThread_CCE903F3(JobItem *self);
+JobItem *_ZN3paf3job7JobItemD1Ev(JobItem *self);
+void _ZN3paf3job7JobItemD0Ev(JobItem *self);
 
 /* The native base-class vtable has two pure-virtual job callbacks. */
 static const JobItemVTable jobItemVTable = {
-	ScePafThread_88DA7B11, ScePafThread_CCE903F3, JobItemCancel,
+	_ZN3paf3job7JobItemD1Ev, _ZN3paf3job7JobItemD0Ev, JobItemCancel,
 	(int (*)(JobItem *))__cxa_pure_virtual,
 	(void (*)(JobItem *, int))__cxa_pure_virtual
 };
 
-JobItem *ScePafThread_A54DB064(JobItem *self, const char *name)
+JobItem *_ZN3paf3job7JobItemC1EPKcPKNS1_6OptionE(JobItem *self, const char *name)
 {
 	size_t length = 0;
 
@@ -161,12 +161,12 @@ JobItem *JobItemDestroyBase(JobItem *self)
 	return DestroyJobItem(self);
 }
 
-JobItem *ScePafThread_88DA7B11(JobItem *self)
+JobItem *_ZN3paf3job7JobItemD1Ev(JobItem *self)
 {
 	return DestroyJobItem(self);
 }
 
-void ScePafThread_CCE903F3(JobItem *self)
+void _ZN3paf3job7JobItemD0Ev(JobItem *self)
 {
 	DestroyJobItem(self);
 	PafDelete(self);
@@ -198,7 +198,7 @@ _Static_assert(offsetof(PafJobThreadOwner, root) == 16,
 _Static_assert(offsetof(PafJobCancelOwner, root) == 28,
 	       "job cancellation list offset");
 
-__attribute__((noinline)) void ScePafThread_88061E60(PafJobCancelOwner *self)
+__attribute__((noinline)) void _ZN3paf3job8JobQueue14CancelAllItemsEv(PafJobCancelOwner *self)
 {
 	JobQueueNode *root;
 	JobQueueNode *next;
@@ -230,28 +230,28 @@ void ScePafMisc_E23ADF42(void)
 {
 	PafJobCancelOwner *owner = sce_paf_job_manager_one;
 	if (owner)
-		ScePafThread_88061E60(owner);
+		_ZN3paf3job8JobQueue14CancelAllItemsEv(owner);
 	owner = sce_paf_job_manager_two;
 	if (owner)
-		ScePafThread_88061E60(owner);
+		_ZN3paf3job8JobQueue14CancelAllItemsEv(owner);
 	owner = sce_paf_job_manager_three;
 	if (owner)
-		ScePafThread_88061E60(owner);
+		_ZN3paf3job8JobQueue14CancelAllItemsEv(owner);
 }
 
-void ScePafThread_789B263C(PafJobWaitState *self)
+void _ZN3paf3job8JobQueue9WaitEmptyEv(PafJobWaitState *self)
 {
 	for (;;) {
 		MutexLock(&mutex);
 		if (!self->queued && !self->busy)
 			break;
 		MutexUnlock(&mutex);
-		ScePafThread_651F4F81(10);
+		_ZN3paf6thread5SleepEi(10);
 	}
 	MutexUnlock(&mutex);
 }
 
-int ScePafThread_A59ABB3B(PafJobWaitState *self)
+int _ZNK3paf3job8JobQueue8NumItemsEv(PafJobWaitState *self)
 {
 	int count;
 
@@ -261,7 +261,7 @@ int ScePafThread_A59ABB3B(PafJobWaitState *self)
 	return count;
 }
 
-void ScePafThread_64FF39DE(PafJobThreadOwner *self, int priority)
+void _ZN3paf3job8JobQueue14ChangePriorityEi(PafJobThreadOwner *self, int priority)
 {
 	JobQueueNode *root = self->root;
 	JobQueueNode *next = root ? root->next : NULL;

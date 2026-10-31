@@ -35,7 +35,7 @@ void CallListUnregister(CallList *self, Function entry, void *userdata)
 
 	if (item == self->m_iterator) {
 		if (!self->m_iterator_updated)
-			ScePafThread_F9FFA0BE(&self->m_item_mtx);
+			_ZN3paf6thread6RMutex4LockEv(&self->m_item_mtx);
 		CallItemNode *next = item->next;
 		next->prev = item->prev;
 		item->prev->next = item->next;
@@ -43,7 +43,7 @@ void CallListUnregister(CallList *self, Function entry, void *userdata)
 		--self->m_list.count;
 		self->m_iterator = next;
 		if (!self->m_iterator_updated) {
-			ScePafThread_95F9C45F(&self->m_item_mtx);
+			_ZN3paf6thread6RMutex6UnlockEv(&self->m_item_mtx);
 			self->m_iterator_updated = 1;
 		}
 	} else {
@@ -67,13 +67,13 @@ void CallListUpdate(CallList *self, Mutex *extMtx)
 		item = item->next;
 	self->m_iterator = item;
 	while (item != self->m_list.root_node) {
-		ScePafThread_F9FFA0BE(&self->m_item_mtx);
+		_ZN3paf6thread6RMutex4LockEv(&self->m_item_mtx);
 		if (extMtx)
-			ScePafThread_9100D580(extMtx);
+			_ZN3paf6thread5Mutex6UnlockEv(extMtx);
 		item->val.m_func(item->val.m_data);
-		ScePafThread_95F9C45F(&self->m_item_mtx);
+		_ZN3paf6thread6RMutex6UnlockEv(&self->m_item_mtx);
 		if (extMtx)
-			ScePafThread_4EA3A3D5(extMtx);
+			_ZN3paf6thread5Mutex4LockEv(extMtx);
 		item = self->m_iterator;
 		if (self->m_iterator_updated) {
 			self->m_iterator_updated = 0;
@@ -98,7 +98,7 @@ static inline __attribute__((always_inline)) CallList *CallListInitialize(CallLi
 	}
 	self->m_iterator = root;
 	self->m_iterator_updated = 0;
-	ScePafThread_C4BD9753(&self->m_item_mtx, "ScePafCallListItem", 0);
+	_ZN3paf6thread6RMutexC1EPKci(&self->m_item_mtx, "ScePafCallListItem", 0);
 	return self;
 }
 
