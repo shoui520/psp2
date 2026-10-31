@@ -129,10 +129,12 @@ public:
 	_Myt &append(const _Elem *src, size_type len)
 	{
 		_Elem *dst = alloc.allocate(count + len + 1);
-	
+
+		if (dst == NULL)
+			ScePafStdc_D608246A();
 		if (dst != NULL) {
 			size_type size = count + len;
-	
+
 			_Traits::copy(dst, ptr, count);
 			_Traits::copy(dst + count, src, len);
 			dst[count + len] = 0;
@@ -140,8 +142,6 @@ public:
 				alloc.deallocate(ptr, count + 1);
 			ptr = dst;
 			count = size;
-		} else {
-			ScePafStdc_D608246A();
 		}
 		return *this;
 	}
@@ -149,6 +149,16 @@ public:
 	_Myt &append(const _Myt &src)
 	{
 		return append(src.ptr, src.count);
+	}
+
+	_Myt &append(const _Elem *src)
+	{
+		return append(src, _Traits::length(src));
+	}
+
+	_Myt &operator+=(const _Elem *src)
+	{
+		return append(src);
 	}
 
 	_Myt &append(size_type len, _Elem ch);

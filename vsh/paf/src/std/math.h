@@ -34,6 +34,10 @@ static inline int FloatToInt(float value)
 #define sce_paf_roundf ScePafStdc_65B8E8A9
 #define sce_paf_floor ScePafStdc_1D16BA78
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 float sce_paf_sinf(float x);
 float sce_paf_cosf(float x);
 float sce_paf_tanf(float x);
@@ -48,5 +52,9 @@ float sce_paf_floorf(float x);
 float sce_paf_ceilf(float x);
 float sce_paf_roundf(float x);
 double sce_paf_floor(double x);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,4 +1,4 @@
-/* Quaternion conversion and two copying adapters. */
+/* Quaternion conversion. */
 typedef struct PafQuaternion {
 	float x;
 	float y;
@@ -54,26 +54,4 @@ void ScePafMisc_2921E1B2(float *matrix, const PafQuaternion *q)
 	matrix[13] = 0.0f;
 	matrix[14] = 0.0f;
 	matrix[15] = 1.0f;
-}
-
-static float *CopyQuaternionMatrix(float *destination,
-				    const PafQuaternion *source)
-{
-	float matrix[16];
-	unsigned i;
-
-	ScePafMisc_2921E1B2(matrix, source);
-	for (i = 0; i < 16; i++)
-		destination[i] = matrix[i];
-	return destination;
-}
-
-float *ScePafMisc_8D77CF9A(float *destination, const PafQuaternion *source)
-{
-	return CopyQuaternionMatrix(destination, source);
-}
-
-float *ScePafMisc_BF7ABEE9(float *destination, const PafQuaternion *source)
-{
-	return CopyQuaternionMatrix(destination, source);
 }
