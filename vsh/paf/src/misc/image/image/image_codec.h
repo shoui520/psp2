@@ -13,6 +13,7 @@
 #include "gif_lib.h"
 #include "jpeglib.h"
 #include "png.h"
+#include "tiffio.h"
 
 namespace paf {
 
@@ -388,7 +389,7 @@ public:
 	virtual ~TifAttribute();
 };
 
-/* TIFF. */
+/* TIFF, through libtiff: palette images as indices, the others as RGBA. */
 class TifCodec : public ImageCodec {
 public:
 	TifCodec();
@@ -405,11 +406,75 @@ public:
 			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
 	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
 			       ImageArray *images, ImageArray *cluts);
+	virtual bool Open(common::SharedPtr<File> file, int64_t offset, size_t size,
+			  const ImageAttribute *attr);
+	virtual bool Open(common::SharedPtr<Buffer> buf, const ImageAttribute *attr);
+	virtual bool Close();
+	virtual bool BeginLines(const ImageAttribute *attr, const ImageArray *images,
+				uint32_t *pitch, bool *topdown);
+	virtual bool EndLines();
+	virtual bool PrepareLine();
+	virtual bool ReadLine(void *dst, const ImageRect *rect);
+	virtual bool SkipLine();
 	virtual ~TifCodec();
 
+	/*
+	 * What the libtiff client procs read: a File (with the offset and size
+	 * of the image in it), or a buffer's bytes with the count read.
+	 */
+	struct Source {
+		Source()
+		{
+			data = NULL;
+			pos = 0;
+			size = 0;
+		}
+
+		void *data;
+		int64_t size;
+		uint32_t pos;
+		uint32_t reserved;
+	};
+
 private:
-	/* PROVISIONAL: the codec's state, until image_tif.cpp is written (0xa8 bytes in all). */
-	uint8_t m_state[0x9c];
+	bool DecodeRGBA(TIFF *tif, uint8_t *dst, const ImageAttribute *attr,
+			DecodeCancelFunc cancelfunc, void *userdata);
+	bool DecodeIndex(TIFF *tif, uint8_t *dst, const ImageAttribute *attr,
+			 DecodeCancelFunc cancelfunc, void *userdata);
+	bool MakeCLUT(uint8_t *dst, const uint16_t *red, const uint16_t *green,
+		      const uint16_t *blue, int32_t bits);
+	bool Decode(TIFF *tif, const ImageAttribute *attr, ImageArray *images, ImageArray *cluts,
+		    DecodeCancelFunc cancelfunc, void *userdata);
+	TIFF *OpenTiff(common::SharedPtr<File> file, int64_t offset, size_t size);
+	TIFF *OpenTiff(common::SharedPtr<Buffer> buf);
+	bool ReadHeader(TIFF *tif, ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
+
+	Source m_source;
+	TIFFReadWriteProc m_read;
+	TIFFReadWriteProc m_write;
+	TIFFSeekProc m_seek;
+	TIFFCloseProc m_close;
+	TIFFSizeProc m_size;
+	TIFFMapFileProc m_map;
+	TIFFUnmapFileProc m_unmap;
+	TIFFMallocProc m_malloc;
+	TIFFReallocProc m_realloc;
+	TIFFFreeProc m_free;
+
+	/* Line decoding (LoadType_Line): RGBA strips, read bottom row first. */
+	TIFF *m_tif;
+	uint32_t m_strips;		/* strips in the image */
+	uint32_t m_rows;		/* rows of the current strip not read yet */
+	uint32_t m_strip;		/* the next strip */
+	uint32_t m_rowsperstrip;
+	uint32_t m_lastrows;		/* rows of the last strip, 0 when it is full */
+	uint32_t *m_raster;		/* the current strip */
+	uint8_t *m_dst;
+	int32_t m_top;			/* the first row of the subrect */
+	int32_t m_pitch;		/* bytes of a row as LoadImage stores it */
+	uint32_t m_width;
+	thread::Mutex m_mutex;
+	memory::HeapAllocator *m_allocator;
 };
 
 class GifAttribute : public ImageAttribute {
