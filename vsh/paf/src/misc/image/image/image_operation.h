@@ -242,6 +242,9 @@ public:
 	SharpenOperation(float amount, int32_t threshold, memory::HeapAllocator *allocator);
 
 	virtual ~SharpenOperation();
+	virtual bool Init(const ImageAttribute *srcattr, const ImageArray *srcimages,
+			  const ImageArray *srccluts, ImageAttribute *dstattr, ImageArray *dstimages,
+			  ImageArray *dstcluts);
 	virtual bool OperateImage(const ImagePoint &index, const ImageAttribute *srcattr,
 				  const ImageBuffer *srcimage, const ImageBuffer *srcclut,
 				  ImageAttribute *dstattr, ImageBuffer *dstimage, ImageArray *dstclut);
@@ -269,6 +272,9 @@ public:
 	RoundCornerOperation(int32_t width, int32_t height, memory::HeapAllocator *allocator);
 
 	virtual ~RoundCornerOperation();
+	virtual bool Init(const ImageAttribute *srcattr, const ImageArray *srcimages,
+			  const ImageArray *srccluts, ImageAttribute *dstattr, ImageArray *dstimages,
+			  ImageArray *dstcluts);
 	virtual bool OperateImage(const ImagePoint &index, const ImageAttribute *srcattr,
 				  const ImageBuffer *srcimage, const ImageBuffer *srcclut,
 				  ImageAttribute *dstattr, ImageBuffer *dstimage, ImageArray *dstclut);
