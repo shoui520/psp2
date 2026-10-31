@@ -15,6 +15,9 @@ public:
 	CopyOperation(memory::HeapAllocator *allocator);
 
 	virtual ~CopyOperation();
+	virtual bool Init(const ImageAttribute *srcattr, const ImageArray *srcimages,
+			  const ImageArray *srccluts, ImageAttribute *dstattr, ImageArray *dstimages,
+			  ImageArray *dstcluts);
 	virtual bool OperateImage(const ImagePoint &index, const ImageAttribute *srcattr,
 				  const ImageBuffer *srcimage, const ImageBuffer *srcclut,
 				  ImageAttribute *dstattr, ImageBuffer *dstimage, ImageArray *dstclut);
@@ -25,6 +28,9 @@ public:
 	ConvertToRGBA8888Operation(ImageConvertModeType type, memory::HeapAllocator *allocator);
 
 	virtual ~ConvertToRGBA8888Operation();
+	virtual bool Init(const ImageAttribute *srcattr, const ImageArray *srcimages,
+			  const ImageArray *srccluts, ImageAttribute *dstattr, ImageArray *dstimages,
+			  ImageArray *dstcluts);
 	virtual bool OperateImage(const ImagePoint &index, const ImageAttribute *srcattr,
 				  const ImageBuffer *srcimage, const ImageBuffer *srcclut,
 				  ImageAttribute *dstattr, ImageBuffer *dstimage, ImageArray *dstclut);
@@ -38,6 +44,9 @@ public:
 	ConvertToDXT1Operation(ImageConvertModeType type, memory::HeapAllocator *allocator);
 
 	virtual ~ConvertToDXT1Operation();
+	virtual bool Init(const ImageAttribute *srcattr, const ImageArray *srcimages,
+			  const ImageArray *srccluts, ImageAttribute *dstattr, ImageArray *dstimages,
+			  ImageArray *dstcluts);
 	virtual bool OperateImage(const ImagePoint &index, const ImageAttribute *srcattr,
 				  const ImageBuffer *srcimage, const ImageBuffer *srcclut,
 				  ImageAttribute *dstattr, ImageBuffer *dstimage, ImageArray *dstclut);
@@ -51,6 +60,9 @@ public:
 	ConvertToDXT3Operation(ImageConvertModeType type, memory::HeapAllocator *allocator);
 
 	virtual ~ConvertToDXT3Operation();
+	virtual bool Init(const ImageAttribute *srcattr, const ImageArray *srcimages,
+			  const ImageArray *srccluts, ImageAttribute *dstattr, ImageArray *dstimages,
+			  ImageArray *dstcluts);
 	virtual bool OperateImage(const ImagePoint &index, const ImageAttribute *srcattr,
 				  const ImageBuffer *srcimage, const ImageBuffer *srcclut,
 				  ImageAttribute *dstattr, ImageBuffer *dstimage, ImageArray *dstclut);
@@ -64,6 +76,9 @@ public:
 	ConvertToDXT5Operation(ImageConvertModeType type, memory::HeapAllocator *allocator);
 
 	virtual ~ConvertToDXT5Operation();
+	virtual bool Init(const ImageAttribute *srcattr, const ImageArray *srcimages,
+			  const ImageArray *srccluts, ImageAttribute *dstattr, ImageArray *dstimages,
+			  ImageArray *dstcluts);
 	virtual bool OperateImage(const ImagePoint &index, const ImageAttribute *srcattr,
 				  const ImageBuffer *srcimage, const ImageBuffer *srcclut,
 				  ImageAttribute *dstattr, ImageBuffer *dstimage, ImageArray *dstclut);
@@ -92,6 +107,9 @@ public:
 	CropOperation(const ImageRect &crop, memory::HeapAllocator *allocator);
 
 	virtual ~CropOperation();
+	virtual bool Init(const ImageAttribute *srcattr, const ImageArray *srcimages,
+			  const ImageArray *srccluts, ImageAttribute *dstattr, ImageArray *dstimages,
+			  ImageArray *dstcluts);
 	virtual bool OperateImage(const ImagePoint &index, const ImageAttribute *srcattr,
 				  const ImageBuffer *srcimage, const ImageBuffer *srcclut,
 				  ImageAttribute *dstattr, ImageBuffer *dstimage, ImageArray *dstclut);
@@ -105,6 +123,9 @@ public:
 	CopyWithEdgeOperation(uint32_t extlines, memory::HeapAllocator *allocator);
 
 	virtual ~CopyWithEdgeOperation();
+	virtual bool Init(const ImageAttribute *srcattr, const ImageArray *srcimages,
+			  const ImageArray *srccluts, ImageAttribute *dstattr, ImageArray *dstimages,
+			  ImageArray *dstcluts);
 	virtual bool OperateImage(const ImagePoint &index, const ImageAttribute *srcattr,
 				  const ImageBuffer *srcimage, const ImageBuffer *srcclut,
 				  ImageAttribute *dstattr, ImageBuffer *dstimage, ImageArray *dstclut);
