@@ -24,7 +24,9 @@
 #include <sysmem/debug.h>
 #include <gcauthmgr/sblgcauthmgrmssavebb.h>
 #include "param_sfo.h"
+#include <post_ss_mgr/sblpostssmgr.h>
 #include <ss_mgr/ss_mgr.h>
+#include <sysmem/utils.h>
 
 extern SceUID g_appmgrSaveDataHeap;
 extern SceUID g_appmgrCoreHeap;
@@ -1993,21 +1995,186 @@ leave:
 	return result;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred (signs a cloud data header: SHA-256, RSA-2048) */
+typedef struct AppmgrCloudDataHeader {
+	SceUInt32 magic;		/* "PSVB" */
+	SceUInt32 version;
+	SceDateTime createdTime;
+	SceUInt64 dataSize;
+	char accountId[16];
+	SceUInt32 keyVersion;
+	SceUInt32 keyIndex;
+	SceUInt32 cipherType;
+	SceUInt8 reserved[20];
+	SceUInt8 digest[32];
+	SceUInt8 signature[256];
+} AppmgrCloudDataHeader;
+
+_Static_assert(sizeof(AppmgrCloudDataHeader) == 0x170, "cloud data header size");
+
+typedef struct AppmgrRsaBuffer {
+	void *data;
+	SceSize size;
+} AppmgrRsaBuffer;
+
+typedef struct AppmgrRsaPrivateKey {
+	void *n;
+	void *e;
+	void *d;
+	void *r2;
+	void *p;
+	void *q;
+	void *dmp1;
+	void *dmq1;
+	void *iqmp;
+} AppmgrRsaPrivateKey;
+
+typedef struct AppmgrRsaPublicKey {
+	void *n;
+	void *e;
+} AppmgrRsaPublicKey;
+
+static const unsigned char offlineIdHmacKey[8] = {
+	0x93, 0x4e, 0x89, 0x9e, 0xe8, 0x8c, 0x1e, 0x3c
+};
+
 int SceAppMgrForDriver_ED87F191(const char *accountId, SceSize size, const void *digest,
 				void *header)
 {
-	if (digest == NULL || accountId == NULL || size > 0x40000000 || header == NULL)
-		return 0x80800001;
-	return 0x80800081;
+	AppmgrCloudDataHeader *cloudHeader = header;
+	AppmgrRsaBuffer hashBuffer;
+	AppmgrRsaBuffer signatureBuffer;
+	AppmgrRsaPrivateKey privateKey;
+	SceUInt8 hash[32];
+	char *keys;
+	int clearHeader;
+	int result;
+
+	clearHeader = digest == NULL || accountId == NULL;
+	if (clearHeader) {
+		result = 0x80800001;
+		goto done;
+	}
+	clearHeader = size > 0x40000000;
+	if (cloudHeader == NULL)
+		clearHeader |= 1;
+	if (clearHeader) {
+		result = 0x80800001;
+		goto done;
+	}
+	if (memcmp(accountId, "0000000000000000", 16) == 0) {
+		result = 0x80800001;
+		clearHeader = 1;
+		goto done;
+	}
+	memset(cloudHeader, 0, sizeof(privateKey));
+	memset(cloudHeader, 0, sizeof(*cloudHeader));
+	cloudHeader->version = 1;
+	__builtin_memcpy(&cloudHeader->magic, "PSVB", 4);
+	result = sceRtcGetCurrentClockLocalTime(&cloudHeader->createdTime);
+	if (result < 0) {
+		clearHeader = 1;
+		goto done;
+	}
+	cloudHeader->dataSize = size;
+	__builtin_memcpy(cloudHeader->accountId, accountId, sizeof(cloudHeader->accountId));
+	cloudHeader->keyVersion = 1;
+	cloudHeader->keyIndex = 1;
+	cloudHeader->cipherType = 1;
+	__builtin_memcpy(cloudHeader->digest, digest, sizeof(cloudHeader->digest));
+	keys = appmgrAllocMountHeapMemory(0x2a0);
+	if (keys == NULL) {
+		result = 0x80801006;
+		clearHeader = 1;
+		goto done;
+	}
+	result = SceSblPostSsMgrForDriver_C6684F7E(keys);
+	if (result < 0) {
+		clearHeader = 1;
+		goto freeKeys;
+	}
+	hashBuffer.data = hash;
+	hashBuffer.size = sizeof(hash);
+	result = sceSha256Digest(cloudHeader, offsetof(AppmgrCloudDataHeader, signature), hash);
+	if (result < 0) {
+		result = 0x80800081;
+		clearHeader = 1;
+		goto callPostSs;
+	}
+	signatureBuffer.data = cloudHeader->signature;
+	signatureBuffer.size = sizeof(cloudHeader->signature);
+	privateKey.p = keys + 0x10;
+	privateKey.q = keys + 0x90;
+	privateKey.dmp1 = keys + 0x110;
+	privateKey.dmq1 = keys + 0x190;
+	privateKey.iqmp = keys + 0x210;
+	result = SceSblPostSsMgrForDriver_07BAD056(&signatureBuffer, &hashBuffer,
+						   &privateKey, 11);
+	if (result < 0) {
+		clearHeader = 1;
+		result = 0x80800082;
+	}
+callPostSs:
+	SceSblPostSsMgrForDriver_2BF04B8E();
+freeKeys:
+	memset(keys, 0, 0x2a0);
+	appmgrFreeMountHeapMemory(keys);
+done:
+	if (cloudHeader != NULL && (clearHeader & 1))
+		memset(cloudHeader, 0, sizeof(*cloudHeader));
+	return result;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred (verifies a cloud data header's signature) */
 int SceAppMgrForDriver_55D48190(const void *header)
 {
-	if (header == NULL)
+	const AppmgrCloudDataHeader *cloudHeader = header;
+	SceUInt64 accountId = 0;
+	AppmgrRsaPublicKey publicKey;
+	AppmgrRsaBuffer hashBuffer;
+	AppmgrRsaBuffer signatureBuffer;
+	char accountIdString[17] = "";
+	SceUInt8 hash[32];
+	char *keys;
+	int result;
+
+	if (cloudHeader == NULL)
 		return 0x80800001;
-	return 0x80800083;
+	keys = appmgrAllocMountHeapMemory(0x208);
+	if (keys == NULL)
+		return 0x80801006;
+	result = SceSblPostSsMgrForDriver_739C981E(cloudHeader->keyVersion, cloudHeader->keyIndex,
+						   keys);
+	if (result < 0)
+		goto freeKeys;
+	hashBuffer.data = hash;
+	hashBuffer.size = sizeof(hash);
+	result = sceSha256Digest(cloudHeader, offsetof(AppmgrCloudDataHeader, signature),
+				 hash);
+	if (result < 0) {
+		result = 0x80800081;
+		goto callPostSs;
+	}
+	signatureBuffer.data = (void *)cloudHeader->signature;
+	signatureBuffer.size = sizeof(cloudHeader->signature);
+	publicKey.n = keys;
+	publicKey.e = keys + 0x104;
+	result = SceSblPostSsMgrForDriver_3DB69911(&signatureBuffer, &hashBuffer,
+						   &publicKey, 11);
+	if (result < 0)
+		result = 0x80800083;
+callPostSs:
+	SceSblPostSsMgrForDriver_2BF04B8E();
+freeKeys:
+	memset(keys, 0, 0x208);
+	appmgrFreeMountHeapMemory(keys);
+	if (result >= 0) {
+		result = appmgrGetAccountIdentity(&accountId, NULL, NULL);
+		if (result >= 0) {
+			snprintf(accountIdString, sizeof(accountIdString), "%016llx", accountId);
+			if (memcmp(cloudHeader->accountId, accountIdString, 16) != 0)
+				result = 0x80800084;
+		}
+	}
+	return result;
 }
 
 /* The cloud data key: the account ID in hex and the key's parameters. */
@@ -2030,20 +2197,90 @@ int SceAppMgrForDriver_2FAA6ABD(SceAppMgrCloudDataKey *key)
 	return result;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred (derives the offline ID: HMAC-SHA256, embedded key) */
 int SceAppMgrForDriver_61B13981(void *offlineId, SceUInt32 *checkWord)
 {
+	SceKernelOpenPsId openPsId;
+	SceUInt32 digest[8];
+	int result;
+
 	if (checkWord == NULL || offlineId == NULL)
 		return 0x80800001;
-	return 0x80800081;
+	result = appmgrGetAccountIdentity((SceUInt64 *)offlineId, &openPsId, NULL);
+	if (result < 0)
+		return result;
+	result = sceHmacSha256Digest(offlineIdHmacKey, sizeof(offlineIdHmacKey),
+				     &openPsId, sizeof(openPsId), digest);
+	if (result < 0)
+		return 0x80800081;
+	appmgrDebugHexDump(&openPsId, sizeof(openPsId));
+	appmgrDebugHexDump(digest, sizeof(digest));
+	__builtin_memcpy(offlineId, digest, 8);
+	*checkWord = digest[7];
+	return result;
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred (verifies an offline backup header) */
 int SceAppMgrForDriver_62E98C42(const void *header)
 {
-	if (header == NULL)
+	const AppmgrCloudDataHeader *cloudHeader = header;
+	SceUInt64 offlineId = 0;
+	AppmgrRsaPublicKey publicKey;
+	AppmgrRsaBuffer hashBuffer;
+	AppmgrRsaBuffer signatureBuffer;
+	SceKernelOpenPsId openPsId;
+	char offlineIdString[17] = "";
+	SceUInt8 hash[32];
+	char *keys;
+	int result;
+
+	if (cloudHeader == NULL)
 		return 0x80800001;
-	return 0x80800083;
+	keys = appmgrAllocMountHeapMemory(0x208);
+	if (keys == NULL)
+		return 0x80801006;
+	result = SceSblPostSsMgrForDriver_739C981E(cloudHeader->keyVersion, cloudHeader->keyIndex,
+						   keys);
+	if (result < 0)
+		goto freeKeys;
+	hashBuffer.data = hash;
+	hashBuffer.size = sizeof(hash);
+	result = sceSha256Digest(cloudHeader, offsetof(AppmgrCloudDataHeader, signature),
+				 hash);
+	if (result < 0) {
+		result = 0x80800081;
+		goto callPostSs;
+	}
+	signatureBuffer.data = (void *)cloudHeader->signature;
+	signatureBuffer.size = sizeof(cloudHeader->signature);
+	publicKey.n = keys;
+	publicKey.e = keys + 0x104;
+	result = SceSblPostSsMgrForDriver_3DB69911(&signatureBuffer, &hashBuffer,
+						   &publicKey, 11);
+	if (result < 0)
+		result = 0x80800083;
+callPostSs:
+	SceSblPostSsMgrForDriver_2BF04B8E();
+freeKeys:
+	memset(keys, 0, 0x208);
+	appmgrFreeMountHeapMemory(keys);
+	if (result >= 0) {
+		result = appmgrGetAccountIdentity(NULL, &openPsId, NULL);
+		if (result >= 0) {
+			result = sceHmacSha256Digest(offlineIdHmacKey, sizeof(offlineIdHmacKey),
+						     &openPsId, sizeof(openPsId), hash);
+			if (result < 0) {
+				result = 0x80800081;
+			} else {
+				appmgrDebugHexDump(&openPsId, sizeof(openPsId));
+				appmgrDebugHexDump(hash, sizeof(hash));
+				__builtin_memcpy(&offlineId, hash, sizeof(offlineId));
+				snprintf(offlineIdString, sizeof(offlineIdString), "%016llx",
+					 offlineId);
+				if (memcmp(cloudHeader->accountId, offlineIdString, 16) != 0)
+					result = 0x80800084;
+			}
+		}
+	}
+	return result;
 }
 
 /*
