@@ -8,6 +8,7 @@
 #include "../bbmc_netif.h"
 #include "../bbcmd.h"
 #include <power/power.h>
+#include <gps/gps.h>
 
 int bbmcSendSysconByteCommand(BbmcControl *control,
 	int (*callback)(SceSysconPacket *packet, void *argp),
@@ -29,6 +30,13 @@ SceUInt32 sysconStatusStep;
 SceUInt32 simRefreshStep;
 SceUInt32 channelRatesStep;
 SceUInt32 proactiveStep;
+SceUInt32 pinStatusStep;
+SceUInt32 gpsRequestStep;
+SceUInt32 smsListStep;
+SceUInt32 attachChangeStep;
+SceUInt32 networkScanStep;
+SceUInt32 controlFlagStep;
+SceUInt32 setupStep;
 SceUInt32 firmwarePreferenceStep;
 SceUInt32 firmwareImageStep;
 SceUInt32 setFirmwarePreferenceStep;
@@ -37,6 +45,9 @@ SceUInt32 sysconEventDeferred;
 SceUInt32 simDetectFlags;
 int proactivePending;
 int modemWakeupPending;
+SceUInt32 pinStatusRequeued;
+SceUInt32 controlFlagMask;
+SceUInt32 controlFlagSet;
 
 /* name unknown: command 163 reads the serving cell into control->cellLocation */
 int seqGetCellLocation(BbmcControl *control, BbmcMessage *message)
@@ -808,8 +819,10 @@ int modemWakeupCallback(SceSysconPacket *packet, void *argp)
 {
 	BbmcControl *control = argp;
 	BbmcMessage *message;
+	SceUInt16 command;
 
-	if (*(SceUInt16 *)packet->request.command == 0x0a81) {
+	__builtin_memcpy(&command, packet->request.command, sizeof(command));
+	if (command == 0x0a81) {
 		message = msgAllocMsgPacket(control, 117);
 		if (message != NULL) {
 			message->body.commandResult = 0;
@@ -959,4 +972,672 @@ done:
 finish:
 	proactiveStep = 0;
 	return 0;
+}
+
+/* name unknown: message 184 rereads the card and PIN status, then runs held power requests */
+int seqRefreshPinStatus(BbmcControl *control, BbmcMessage *message)
+{
+	unsigned int completed;
+	SceUInt32 command;
+	int ready = 0;
+	int result;
+
+	switch (pinStatusStep) {
+	case 0:
+		if (message->command != 184 || control->currentState <= 1)
+			return 1;
+		completed = 0;
+		result = bbcmdGetCompletedMask(0, &completed);
+		if (result < 0)
+			goto failed;
+		if ((completed & 5) == 0)
+			goto check;
+		result = bbcmdExecute(0, 0x21, NULL, NULL, bbcmdManagerCompletion,
+				      control);
+		if (result < 0)
+			goto failed;
+		pinStatusStep = 1;
+		return 1;
+	case 1:
+		command = message->command;
+		if (command != 185) {
+			if (command == 184)
+				pinStatusRequeued = pinStatusStep;
+			return 1;
+		}
+		if (message->body.pinMessage.status.result != 0) {
+			result = 0;
+			pinStatusStep = 3;
+			goto requeue;
+		}
+		bbmcEnterCS(&control->mutex);
+		if (control->simRefreshPending != 0) {
+			result = 0;
+		} else if ((SceInt32)message->body.pinMessage.detail.configuredServiceValue > 0) {
+			if (control->currentState != 0 || control->targetState != 0) {
+				bbmcNotifyFeatureEvent(control, 4, 2);
+				seqClearSimDetected();
+				control->simRefreshPending = 1;
+			}
+			result = bbmcSendSimpleMessage(control, 11);
+			pinStatusStep = 3;
+			bbmcLeaveCS(&control->mutex);
+			goto requeue;
+		} else {
+			BbcmdArgument output[4] = {{0}};
+			BbcmdArgument input[7] = { { .value = 1 } };
+
+			__builtin_memset(&control->pinStatus, 0, sizeof(control->pinStatus));
+			result = bbcmdExecute(0, 0x0b, input, output,
+					      bbcmdManagerCompletion, control);
+			if (result >= 0) {
+				pinStatusStep = 2;
+				bbmcLeaveCS(&control->mutex);
+				goto requeue;
+			}
+		}
+		pinStatusStep = 3;
+		bbmcLeaveCS(&control->mutex);
+	requeue:
+		if (pinStatusRequeued == 1)
+			result = bbmcSendSimpleMessage(control, 184);
+	check:
+		if (pinStatusStep != 3)
+			return 1;
+		goto failed;
+	case 2:
+		if (message->command != 64)
+			return 1;
+		result = message->body.pinMessage.cardStatusResult;
+		if (result != 0) {
+			result = result < 0 ? result : 0;
+		} else if (message->body.pinMessage.cardUnavailable == 1) {
+			bbmcNotifyFeatureEvent(control, 4, 2);
+			seqClearSimDetected();
+			bbmcEnterCS(&control->mutex);
+			control->simRefreshPending = 1;
+			bbmcLeaveCS(&control->mutex);
+			result = bbmcSendSimpleMessage(control, 11);
+			result = result < 0 ? result : 0;
+		} else if (message->body.pinMessage.pinStatusUnavailable == 1) {
+			bbmcNotifyFeatureEvent(control, 4, 0x8000000);
+			result = bbmcSendSimpleMessage(control, 11);
+			result = result < 0 ? result : 0;
+		} else {
+			ready = 1;
+			if (control->pinCommandInterrupted != 0) {
+				control->pinCommandInterrupted = 0;
+				command = 15;
+			} else {
+				result = 0;
+				if (control->pinCommandDeferred == 0)
+					break;
+				control->pinCommandDeferred = 0;
+				command = 17;
+			}
+			result = bbmcSendSimpleMessage(control, command);
+			result = result < 0 ? result : 0;
+		}
+		break;
+	default:
+		result = (int)0x80330001;
+		break;
+	}
+	goto finish;
+failed:
+	result = result < 0 ? result : 0;
+finish:
+	pinStatusRequeued = 0;
+	pinStatusStep = 0;
+	bbmcEnterCS(&control->mutex);
+	if (control->pendingPowerDown != 0) {
+		control->pendingPowerDown = 0;
+		if (control->currentState == 6 && ready &&
+		    control->powerTransitionBusy == 0 &&
+		    control->powerEventActive == 0 &&
+		    control->recentPowerEvent == 0) {
+			control->powerTransitionBusy = 1;
+			result = bbmcSendSimpleMessage(control, 30);
+		}
+	}
+	if (control->pendingPowerUp != 0) {
+		control->pendingPowerUp = 0;
+		if (control->currentState == 7 && ready &&
+		    control->powerTransitionBusy == 0) {
+			control->powerTransitionBusy = 1;
+			result = bbmcSendSimpleMessage(control, 29);
+		}
+	}
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* name unknown: message 101 runs one GPS request through bbcmd and tells the GPS driver */
+int seqGpsRequest(BbmcControl *control, BbmcMessage *message)
+{
+	BbcmdArgument input[7];
+	int result;
+
+	switch (gpsRequestStep) {
+	case 0:
+		if (message->command != 101)
+			return 1;
+		input[0].value = message->body.gpsRequest.code;
+		input[1].value = (SceUInt32)message->body.gpsRequest.input;
+		input[2].pointer = message->body.gpsRequest.output;
+		input[3].value = 0;
+		input[4].value = 0;
+		input[5].value = 0;
+		input[6].value = 0;
+		result = bbcmdExecute(0, 0x17, input, NULL, bbcmdManagerCompletion,
+				      control);
+		if (result < 0)
+			break;
+		gpsRequestStep = 1;
+		return result;
+	case 1:
+		if (message->command != 102)
+			return gpsRequestStep;
+		bbmcEnterCS(&control->mutex);
+		result = (int)0x80330001;
+		if (control->gpsIoctlPending != 0) {
+			control->gpsIoctlPending = 0;
+			result = 1;
+			if (message->body.commandResult != 0)
+				SceGpsForDriver_F2049C02(0, 0x60032);
+			else
+				SceGpsForDriver_F2049C02(0, 0x60000);
+		}
+		bbmcLeaveCS(&control->mutex);
+		gpsRequestStep = 0;
+		if (result >= 0)
+			return 0;
+		goto clear;
+	default:
+		result = (int)0x80330001;
+		break;
+	}
+	gpsRequestStep = 0;
+clear:
+	bbmcEnterCS(&control->mutex);
+	control->gpsIoctlPending = 0;
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* name unknown: message 84 lists the SMS indices stored on the SIM */
+int seqListSms(BbmcControl *control, BbmcMessage *message)
+{
+	int result;
+
+	switch (smsListStep) {
+	case 0:
+		if (message->command == 84) {
+			BbcmdArgument output[6];
+			BbcmdArgument input[7];
+
+			output[0].pointer = message->body.smsListOutput.indices;
+			output[1].pointer = message->body.smsListOutput.count;
+			output[2].value = 0;
+			output[3].value = 0;
+			output[4].value = 0;
+			output[5].value = 0;
+			input[1].value = 0;
+			input[2].value = 0;
+			input[3].value = 0;
+			input[4].value = 0;
+			input[5].value = 0;
+			input[6].value = 0;
+			input[0].value = 64;
+			result = bbcmdExecute(0, 0x0f, input, output,
+					      bbcmdManagerCompletion, control);
+			if (result < 0) {
+				bbmcNotifyFeatureEvent(control, 2, 0x40);
+				break;
+			}
+			smsListStep = 1;
+		}
+		return 1;
+	case 1:
+		if (message->command != 85)
+			return 1;
+		bbmcEnterCS(&control->mutex);
+		control->smsListBusy = 2;
+		bbmcLeaveCS(&control->mutex);
+		if (message->body.smsMessage.completion.listResult != 0)
+			bbmcNotifyFeatureEvent(control, 2, 0x40);
+		else
+			bbmcNotifyFeatureEvent(control, 2, 2);
+		smsListStep = 0;
+		return 0;
+	default:
+		result = (int)0x80330001;
+		break;
+	}
+	smsListStep = 0;
+	bbmcEnterCS(&control->mutex);
+	control->smsListBusy = 2;
+	bbmcLeaveCS(&control->mutex);
+	return result;
+}
+
+/* name unknown: message 152 changes the packet attach setting */
+int seqChangeAttach(BbmcControl *control, BbmcMessage *message)
+{
+	int result;
+
+	switch (attachChangeStep) {
+	case 0:
+		if (message->command != 152)
+			return 1;
+		{
+			BbcmdArgument output[6] = {{0}};
+			BbcmdArgument input[7] = {
+				{ .value = message->body.commandResult }
+			};
+
+			result = bbcmdExecute(0, 0x1d, input, output,
+					      bbcmdManagerCompletion, control);
+		}
+		if (result >= 0) {
+			attachChangeStep = 1;
+			return 1;
+		}
+		attachChangeStep = 2;
+		break;
+	case 1:
+		if (message->command != 153)
+			return 1;
+		if (message->body.commandResult != 0)
+			bbmcNotifyFeatureEvent(control, 0, 0x40000);
+		else
+			bbmcNotifyFeatureEvent(control, 0, 0x20000);
+		bbmcEnterCS(&control->mutex);
+		control->attachChangeBusy = 0;
+		bbmcLeaveCS(&control->mutex);
+		attachChangeStep = 0;
+		return 0;
+	default:
+		result = (int)0x80330001;
+		attachChangeStep = 2;
+		break;
+	}
+	bbmcEnterCS(&control->mutex);
+	control->attachChangeBusy = 0;
+	bbmcLeaveCS(&control->mutex);
+	bbmcNotifyFeatureEvent(control, 0, 0x40000);
+	attachChangeStep = 0;
+	return result;
+}
+
+/* name unknown: message 149 scans for networks, dropping the packet link first */
+int seqScanNetworks(BbmcControl *control, BbmcMessage *message)
+{
+	SceUInt32 linkUp;
+	int result;
+
+	switch (networkScanStep) {
+	case 0:
+		if (message->command != 149)
+			return 1;
+		bbmcEnterCS(&control->mutex);
+		linkUp = control->pendingPacketRequest;
+		bbmcLeaveCS(&control->mutex);
+		if (linkUp == 1) {
+			result = DisconnectNetwork();
+			if (result >= 0) {
+				networkScanStep = 2;
+				return 1;
+			}
+		} else {
+			BbcmdArgument output[6] = {{0}};
+			BbcmdArgument input[7] = {{0}};
+
+			memset(&control->networkScan, 0, sizeof(control->networkScan));
+			output[0].pointer = &control->networkScan;
+			result = bbcmdExecute(0, 0x1c, input, output,
+					      bbcmdManagerCompletion, control);
+			if (result >= 0) {
+				networkScanStep = 1;
+				return 1;
+			}
+		}
+		networkScanStep = 3;
+		goto failed;
+	case 1:
+		if (message->command - 150 > 1)
+			return 1;
+		if (message->command == 150) {
+			SceUInt32 event = message->body.commandResult != 0 ?
+				0x10000 : 0x8000;
+
+			bbmcEnterCS(&control->mutex);
+			control->networkScanState = 2;
+			control->networkScanAbortBusy = 0;
+			bbmcLeaveCS(&control->mutex);
+			bbmcNotifyFeatureEvent(control, 0, event);
+			goto finish;
+		} else {
+			BbcmdArgument input[2];
+
+			input[0].value = 1;
+			input[1].value = 28;
+			result = bbcmdExecute(0, 0, input, NULL,
+					      bbcmdManagerCompletion, control);
+			if (result < 0) {
+				if (networkScanStep == 3)
+					goto failed;
+				return result;
+			}
+			if (networkScanStep == 3)
+				goto finish;
+			return 1;
+		}
+	case 2:
+		if (message->command != 154)
+			return 1;
+		result = bbmcSendSimpleMessage(control, 149);
+		if (result >= 0)
+			goto finish;
+		networkScanStep = 3;
+		goto failed;
+	default:
+		result = (int)0x80330001;
+		networkScanStep = 3;
+		goto failed;
+	}
+failed:
+	bbmcEnterCS(&control->mutex);
+	control->networkScanState = 2;
+	control->networkScanAbortBusy = 0;
+	bbmcLeaveCS(&control->mutex);
+	bbmcNotifyFeatureEvent(control, 0, 0x10000);
+	networkScanStep = 0;
+	return result;
+finish:
+	networkScanStep = 0;
+	return 0;
+}
+
+/* name unknown: message 113 sets or clears packet interface control flags, cycling the link */
+int seqChangeControlFlags(BbmcControl *control, BbmcMessage *message)
+{
+	SceUInt32 flags, newFlags, set, mask, initialized, command;
+	int result;
+
+	switch (controlFlagStep) {
+	case 0:
+		if (message->command != 113)
+			return 0;
+		set = message->body.controlFlag.set;
+		mask = message->body.controlFlag.mask;
+		controlFlagSet = set;
+		controlFlagMask = mask;
+		initialized = control->clientInitialized;
+		flags = control->controlFlags;
+		newFlags = set != 0 ? flags | mask : flags & ~mask;
+		if (flags != newFlags && (newFlags & 3) == 1 && initialized != 0) {
+			result = DisconnectNetwork();
+			if (result >= 0 || result == (int)0x80330507) {
+				controlFlagStep = 1;
+				return 1;
+			}
+			if (result != (int)0x80330508)
+				goto failed;
+		}
+		controlFlagStep = 2;
+		result = bbmcSendSimpleMessage(control, 188);
+		if (result < 0)
+			goto failed;
+		break;
+	case 1:
+		command = message->command;
+		if (command == 106) {
+			if (message->body.commandResult != 0) {
+				result = 0;
+				goto finish;
+			}
+		} else if (command != 57 && command != 108) {
+			return 0;
+		}
+		controlFlagStep = 2;
+		return 1;
+	case 2:
+		set = controlFlagSet;
+		mask = controlFlagMask;
+		bbmcEnterCS(&control->mutex);
+		flags = control->controlFlags;
+		newFlags = set != 0 ? flags | mask : flags & ~mask;
+		control->controlFlags = newFlags;
+		control->controlFlagsBusy = 0;
+		control->normalizedControlState = (newFlags & 3) == 1;
+		bbmcLeaveCS(&control->mutex);
+		bbmcNotifyFeatureEvent(control, 5, 4);
+		result = 0;
+		goto finish;
+	default:
+		result = (int)0x80330001;
+		break;
+	}
+	if (controlFlagStep != 3)
+		return result;
+failed:
+	result = result < 0 ? result : 0;
+finish:
+	controlFlagStep = 0;
+	return result;
+}
+
+/* name unknown: messages 145 (read) and 147 (write) run one setup value through bbcmd */
+int seqAccessSetupValue(BbmcControl *control, BbmcMessage *message)
+{
+	SceUInt32 command, event, deferredEvent, kind;
+	int result;
+
+	switch (setupStep) {
+	case 0:
+		if (message->command == 145) {
+			BbcmdArgument output[6];
+			BbcmdArgument input[7];
+
+			kind = message->body.setupMessage.type;
+			bbmcEnterCS(&control->mutex);
+			switch (kind) {
+			case 0:
+				if (control->currentState == 4)
+					goto badRead;
+				break;
+			case 2:
+			case 3:
+			case 4:
+			case 6:
+				break;
+			default:
+			badRead:
+				bbmcLeaveCS(&control->mutex);
+				bbmcEnterCS(&control->mutex);
+				control->setupReadState = 2;
+				bbmcLeaveCS(&control->mutex);
+				bbmcNotifyFeatureEvent(control, 0, 0x40);
+				goto finish;
+			}
+			bbmcLeaveCS(&control->mutex);
+			output[0].pointer = message->body.setupMessage.outputBuffer;
+			input[1].value = message->body.setupMessage.valueSize;
+			input[0].value = message->body.setupMessage.type;
+			output[1].value = 0;
+			output[2].value = 0;
+			output[3].value = 0;
+			output[4].value = 0;
+			output[5].value = 0;
+			input[2].value = 0;
+			input[4].value = 0;
+			input[5].value = 0;
+			input[6].value = 0;
+			input[3].pointer = message->body.setupMessage.outputBuffer;
+			result = bbcmdExecute(0, 0x24, input, output,
+					      bbcmdManagerCompletion, control);
+			if (result < 0) {
+				bbmcEnterCS(&control->mutex);
+				control->setupReadState = 2;
+				bbmcLeaveCS(&control->mutex);
+				setupStep = 2;
+				goto failed;
+			}
+		} else if (message->command == 147) {
+			BbcmdArgument output[6] = {{0}};
+			BbcmdArgument input[7] = {{0}};
+
+			kind = message->body.setupMessage.type;
+			input[0].value = kind;
+			input[1].value = message->body.setupMessage.valueSize;
+			input[2].value = 1;
+			input[3].pointer = message->body.setupMessage.inputBuffer;
+			bbmcEnterCS(&control->mutex);
+			switch (kind) {
+			case 1:
+				output[0].pointer = &control->smscAddress;
+				break;
+			case 2:
+			case 3:
+				output[0].pointer = &control->pinStatus;
+				break;
+			case 4:
+			case 6:
+				break;
+			case 5:
+				output[0].pointer = &control->profile;
+				break;
+			case 7:
+				output[0].pointer = &control->countedBytes;
+				break;
+			default:
+				result = (int)0x80330002;
+				bbmcLeaveCS(&control->mutex);
+				bbmcEnterCS(&control->mutex);
+				control->setupWriteState = 0;
+				bbmcLeaveCS(&control->mutex);
+				setupStep = 2;
+				goto failed;
+			}
+			bbmcLeaveCS(&control->mutex);
+			result = bbcmdExecute(0, 0x24, input, output,
+					      bbcmdManagerCompletion, control);
+			if (result < 0) {
+				bbmcEnterCS(&control->mutex);
+				control->setupWriteState = 0;
+				bbmcLeaveCS(&control->mutex);
+				setupStep = 2;
+				goto failed;
+			}
+		} else {
+			return 1;
+		}
+		setupStep = 1;
+		return 1;
+	case 1:
+		if (message->command != 148 && message->command != 146)
+			return 1;
+		bbmcEnterCS(&control->mutex);
+		if (message->command == 146)
+			control->setupReadState = 2;
+		else
+			control->setupWriteState = 0;
+		bbmcLeaveCS(&control->mutex);
+		command = message->command;
+		if (message->body.setupMessage.result >= 0) {
+			if (command == 146) {
+				event = 0x40;
+				kind = message->body.setupMessage.type - 2;
+				goto notify;
+			}
+			if (command == 148) {
+				if (message->body.setupMessage.type - 2 > 1) {
+					event = 0x100;
+					goto notifyOperation;
+				}
+				event = 0x2000000;
+				goto notifySim;
+			}
+			event = 0;
+			kind = message->body.setupMessage.type - 2;
+			goto notify;
+		}
+		if (command == 146) {
+			event = 0x80;
+			kind = message->body.setupMessage.type - 2;
+			goto notify;
+		}
+		if (command != 148) {
+			event = 0;
+			kind = message->body.setupMessage.type - 2;
+			goto notify;
+		}
+		kind = message->body.setupMessage.type - 2;
+		if (kind >= 2) {
+			deferredEvent = 0xa00;
+			event = 0x200;
+		} else {
+			deferredEvent = 0x4000800;
+			event = 0x4000000;
+		}
+		if (message->body.setupMessage.completionFlag != 1)
+			goto notify;
+		if (control->pinStatus.pin1VerifyRetries != 0) {
+			event = deferredEvent;
+			goto notify;
+		}
+		result = bbmcSendSimpleMessage(control, 36);
+		if (result >= 0) {
+			event = deferredEvent;
+			kind = message->body.setupMessage.type - 2;
+			goto notify;
+		}
+		setupStep = 2;
+		goto failed;
+	default:
+		result = (int)0x80330001;
+		setupStep = 2;
+		goto failed;
+	}
+notify:
+	if (kind <= 1)
+		goto notifySim;
+notifyOperation:
+	bbmcNotifyFeatureEvent(control, 0, event);
+	goto finish;
+notifySim:
+	bbmcNotifyFeatureEvent(control, 4, event);
+	memset(&control->setupValue, 0, sizeof(control->setupValue));
+finish:
+	setupStep = 0;
+	return 0;
+failed:
+	command = message->command;
+	if (command - 147 <= 1)
+		bbmcNotifyFeatureEvent(control, 4, 0x4000000);
+	else if (command - 145 <= 1)
+		bbmcNotifyFeatureEvent(control, 0, 0x80);
+	setupStep = 0;
+	return result;
+}
+
+/* name unknown: posts message 35 with one result word */
+int seqSendResultMessage(BbmcControl *control, SceInt32 value)
+{
+	BbmcMessage *message;
+	int result;
+
+	if (control == NULL)
+		return (int)0x80330002;
+	message = msgAllocMsgPacket(control, 35);
+	if (message == NULL)
+		return (int)0x80330005;
+	message->body.commandResult = value;
+	result = msgSendMsgPacket(control, message);
+	if (result < 0) {
+		msgFreeMsgPacket(control, message);
+		return result;
+	}
+	return result;
 }
