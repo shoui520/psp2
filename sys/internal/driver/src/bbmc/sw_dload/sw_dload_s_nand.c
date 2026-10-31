@@ -11,6 +11,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <threadmgr/threadmgr.h>
 #include "sw_dload.h"
+#include "../usb_serial.h"
 #include "../updater/updater.h"
 
 /* the 8 bytes an erased version reads as, and the version of an empty slot */
@@ -953,7 +954,7 @@ SwdlContext swdlContextStorage;
 SwdlContext *swdlContext;
 
 /* turn the port's events into the thread's */
-int swdlPortEventHandler(SwdlPortInterface *port, SceUInt32 events)
+int swdlPortEventHandler(SwdlPortInterface *port, SceUInt32 events, void *data, SceSize size)
 {
 	SceUInt32 pattern;
 
@@ -2429,4 +2430,1036 @@ int swdlReadNvItem(SwdlContext *context, void *data, SceSize *size, SceUInt32 in
 		return result;
 	*size = result;
 	return 0;
+}
+
+/* the port the download runs over: one, over the modem's USB serial channel */
+SwdlPort swdlPortStorage;
+
+/* name unknown: the length of the frame the receive ring holds, 0 while there is none */
+int swdlPortGetFrameLength(SwdlPortInterface *interface, SceSize *length)
+{
+	SwdlPort *port;
+
+	if (length == NULL || interface == NULL)
+		return (int)0x80330002;
+	port = interface->owner;
+	if (port == NULL)
+		return (int)0x80330002;
+	*length = port->frameLength;
+	return 0;
+}
+
+/* name unknown: look for the end of a frame (0x7e) in the receive ring; returns its
+ * length, 0 while the ring holds none */
+int swdlPortFindFrame(SwdlPort *port)
+{
+	SceSize length;
+	SceUInt32 writePos;
+	SceUInt32 pos;
+
+	lockFastMutex(&port->rxLock);
+	length = port->frameLength;
+	if (length != 0)
+		goto unlock;
+	writePos = port->writePos;
+	for (;;) {
+		pos = port->scanPos;
+		if (pos == writePos)
+			break;
+		length = port->frameScan;
+		if (port->ring[pos] != 0x7e) {
+			do {
+				length++;
+				if (pos + 1 < 1024) {
+					pos++;
+					port->scanPos = pos;
+				} else {
+					pos -= 1023;
+					port->scanPos = pos;
+				}
+				if (pos == writePos) {
+					port->frameScan = length;
+					goto none;
+				}
+			} while (port->ring[pos] != 0x7e);
+			port->frameScan = length;
+		}
+		if (length != 0) {
+			port->frameScan = 0;
+			port->frameLength = length;
+			goto unlock;
+		}
+		/* a flag with nothing before it: drop it */
+		if (port->scanPos + 1 < 1024)
+			port->scanPos++;
+		else
+			port->scanPos -= 1023;
+		if (port->readPos + 1 < 1024)
+			port->readPos++;
+		else
+			port->readPos -= 1023;
+		port->rxCount--;
+	}
+none:
+	length = 0;
+unlock:
+	sceKernelUnlockFastMutex(&port->rxLock);
+	return length;
+}
+
+/* name unknown: stop reading from the modem */
+int swdlPortStopReceive(SwdlPortInterface *interface)
+{
+	SwdlPort *port;
+
+	if (interface == NULL)
+		return (int)0x80330002;
+	port = interface->owner;
+	if (port == NULL)
+		return (int)0x80330002;
+	lockFastMutex(&port->rxLock);
+	port->rxActive = 0;
+	sceKernelUnlockFastMutex(&port->rxLock);
+	return sceKernelSetEventFlag(port->eventFlagId, 8);
+}
+
+/* a control argument: one word */
+static inline int swdlPortIsWord(const void *data, SceSize size)
+{
+	int valid = size == 4;
+
+	if (data == NULL)
+		valid = 0;
+	return valid;
+}
+
+/* name unknown: 0 packet size, 1 free packets, 2 abort, 5 last error, 6 raw mode */
+int swdlPortControl(SwdlPortInterface *interface, int command, void *data, SceSize size)
+{
+	SwdlPort *port;
+	int rawMode;
+
+	if (interface == NULL)
+		return (int)0x80330002;
+	port = interface->owner;
+	if (port == NULL)
+		return (int)0x80330002;
+	if (port->connected == 0)
+		return (int)0x80330006;
+
+	switch (command) {
+	case 0:
+		if (!swdlPortIsWord(data, size))
+			return (int)0x80330002;
+		*(SceSize *)data = 2048;
+		return 0;
+	case 1:
+		if (!swdlPortIsWord(data, size))
+			return (int)0x80330002;
+		lockFastMutex(&port->txLock);
+		*(SceUInt32 *)data = 16 - port->txCount;
+		sceKernelUnlockFastMutex(&port->txLock);
+		return 0;
+	case 2:
+		return sceKernelSetEventFlag(port->eventFlagId, 16);
+	case 5:
+		if (!swdlPortIsWord(data, size))
+			return (int)0x80330002;
+		lockFastMutex(&port->errorLock);
+		*(int *)data = port->error;
+		sceKernelUnlockFastMutex(&port->errorLock);
+		return 0;
+	case 6:
+		if (!swdlPortIsWord(data, size))
+			return 0;
+		lockFastMutex(&port->errorLock);
+		rawMode = *(int *)data;
+		port->rawMode = rawMode;
+		sceKernelUnlockFastMutex(&port->errorLock);
+		if (rawMode != 0)
+			return 0;
+		/* framing again: scan what the ring holds from its start */
+		lockFastMutex(&port->rxLock);
+		port->frameScan = 0;
+		port->frameLength = 0;
+		port->scanPos = port->readPos;
+		sceKernelUnlockFastMutex(&port->rxLock);
+		if (swdlPortFindFrame(port) != 0)
+			interface->eventHandler(interface, 2, NULL, 0);
+		return 0;
+	default:
+		return (int)0x80330002;
+	}
+}
+
+/* name unknown: a write finished */
+int swdlPortTransmitDone(int forwardedValue, BbmcUsbSerialRequest *request, int result)
+{
+	SwdlPortRequestContext *context;
+	SwdlPort *port;
+	SceUInt32 events;
+
+	if (request == NULL)
+		return (int)0x80330002;
+	context = request->context;
+	if (context == NULL)
+		return (int)0x80330002;
+	port = context->port;
+	if (port == NULL)
+		return (int)0x80330002;
+	if (result <= 0) {
+		context->result = result;
+		return sceKernelSetEventFlag(port->eventFlagId, 256);
+	}
+	events = context->last == 1 ? 32 : 64;
+	return sceKernelSetEventFlag(port->eventFlagId, events);
+}
+
+/* name unknown: the abort timer ran out */
+SceUInt32 swdlPortAbortTimer(void *argument)
+{
+	SwdlPort *port = argument;
+
+	if (port->abortEvent != 0)
+		sceKernelSetEventFlag(port->eventFlagId, port->abortEvent);
+	return 0;
+}
+
+/* name unknown: the USB serial device came or went */
+void swdlPortUsbStateChanged(SceUInt32 events, void *context)
+{
+	SwdlPort *port = context;
+
+	if (port == NULL)
+		return;
+	if (events == 64 || events == 1 || events == 16) {
+		port->connected = 1;
+		sceKernelSetEventFlag(port->eventFlagId, 2048);
+	} else if (events == 128 || events == 2 || events == 32) {
+		port->connected = 0;
+		sceKernelSetEventFlag(port->eventFlagId, 4096);
+	}
+}
+
+/* name unknown: a read finished */
+int swdlPortReceiveDone(int forwardedValue, BbmcUsbSerialRequest *request, int result)
+{
+	SwdlPortRequestContext *context;
+	SwdlPort *port;
+
+	if (request == NULL)
+		return (int)0x80330002;
+	context = request->context;
+	if (context == NULL)
+		return (int)0x80330002;
+	port = context->port;
+	if (port == NULL)
+		return (int)0x80330002;
+	if (result < 0) {
+		context->result = result;
+		return sceKernelSetEventFlag(port->eventFlagId, 512);
+	}
+	request->arguments.bulk.length = result;
+	return sceKernelSetEventFlag(port->eventFlagId, 128);
+}
+
+/* name unknown: take what the ring holds: the bytes as they are in raw mode, else the
+ * frame, unescaped; wait 1 does not report the next frame */
+int swdlPortReceive(SwdlPortInterface *interface, void *data, SceSize *size, int wait)
+{
+	SwdlPort *port;
+	SwdlPortEscape *escape;
+	SceSize capacity;
+	SceSize available;
+	SceSize contiguous;
+	SceSize chunk;
+	SceSize rest;
+	SceSize used;
+	SceSize i;
+	const SceUInt8 *source;
+	SceUInt8 *dest;
+	int rawMode;
+	int result;
+
+	if (data == NULL || interface == NULL || size == NULL || *size == 0)
+		return (int)0x80330002;
+	port = interface->owner;
+	if (port == NULL)
+		return (int)0x80330002;
+
+	lockFastMutex(&port->errorLock);
+	rawMode = port->rawMode;
+	sceKernelUnlockFastMutex(&port->errorLock);
+	lockFastMutex(&port->rxLock);
+
+	if (rawMode == 1) {
+		available = port->rxCount;
+		capacity = *size;
+		contiguous = 1024 - port->readPos;
+		source = &port->ring[port->readPos];
+		*size = 0;
+		do {
+			chunk = available < capacity ? available : capacity;
+			if (chunk >= contiguous)
+				chunk = contiguous;
+			memcpy(data, source, chunk);
+			if (port->readPos + chunk < 1024)
+				port->readPos += chunk;
+			else
+				port->readPos += chunk - 1024;
+			available -= chunk;
+			capacity -= chunk;
+			port->rxCount -= chunk;
+			*size += chunk;
+			if (capacity == 0 && available != 0) {
+				result = (int)0x80330005;
+				goto unlock;
+			}
+		} while (available != 0);
+		result = 0;
+unlock:
+		sceKernelUnlockFastMutex(&port->rxLock);
+		return result;
+	}
+
+	/* the frame may wrap around the end of the ring */
+	chunk = port->frameLength;
+	contiguous = 1024 - port->readPos;
+	source = &port->ring[port->readPos];
+	if (chunk > contiguous) {
+		rest = chunk - contiguous;
+		chunk = contiguous;
+	} else {
+		rest = 0;
+	}
+	escape = &port->receive;
+	capacity = *size;
+	memset(escape, 0, sizeof(*escape));
+	escape->capacity = capacity;
+	dest = data;
+	escape->dest = dest;
+	escape->source = source;
+	escape->sourceLength = chunk;
+	used = 0;
+	for (;;) {
+		for (i = chunk; i != 0; i--) {
+			if (escape->length >= escape->capacity)
+				break;
+			if (source[used] == 0x7d) {
+				escape->sourcePos = ++used;
+				escape->escaped = 1;
+			} else if (source[used] == 0x7e) {
+				escape->sourcePos = ++used;
+			} else {
+				escape->sourcePos = used + 1;
+				if (escape->escaped == 1) {
+					dest[escape->length++] = source[used] ^ 0x20;
+					escape->escaped = 0;
+				} else {
+					dest[escape->length++] = source[used];
+				}
+				used = escape->sourcePos;
+			}
+		}
+		port->readPos = port->readPos + used < 1024 ? port->readPos + used :
+			port->readPos + used - 1024;
+		port->rxCount -= used;
+		port->frameLength -= used;
+		if (escape->sourceLength != used) {
+			sceKernelUnlockFastMutex(&port->rxLock);
+			return (int)0x80330005;
+		}
+		if (rest == 0)
+			break;
+		escape->sourceLength = rest;
+		source = &port->ring[port->readPos];
+		chunk = rest;
+		rest = 0;
+		escape->source = source;
+		escape->sourcePos = 0;
+		used = 0;
+		dest = escape->dest;
+	}
+	sceKernelUnlockFastMutex(&port->rxLock);
+	*size = escape->length;
+	result = swdlPortFindFrame(port);
+	if (result == 0)
+		return 0;
+	if (wait != 1)
+		return interface->eventHandler(interface, 2, NULL, 0);
+	return result;
+}
+
+/* name unknown: close the channel open() opened */
+int swdlPortClose(SwdlPortInterface *interface)
+{
+	SwdlPort *port;
+	int result;
+
+	if (interface == NULL)
+		return (int)0x80330002;
+	port = interface->owner;
+	if (port == NULL)
+		return (int)0x80330002;
+	lockFastMutex(&port->rxLock);
+	port->rxActive = 0;
+	sceKernelUnlockFastMutex(&port->rxLock);
+	switch (port->mode) {
+	case 1:
+		result = bbmcCloseUsbSerialQcom(port->channel);
+		break;
+	case 2:
+		result = bbmcCloseUsbSerialQedl(port->channel);
+		break;
+	case 3:
+		result = bbmcCloseUsbSerialQdl(port->channel);
+		break;
+	default:
+		return (int)0x80330002;
+	}
+	if (result < 0)
+		return result;
+	return sceKernelSetEventFlag(port->eventFlagId, 8);
+}
+
+/* name unknown: open the modem's channel: 1 QCOM, 2 QEDL, 3 QDL */
+int swdlPortOpen(SwdlPortInterface *interface, int mode)
+{
+	SwdlPort *port;
+	int result;
+
+	if (interface == NULL)
+		return (int)0x80330002;
+	port = interface->owner;
+	if (port == NULL)
+		return (int)0x80330002;
+	if (port->connected == 0)
+		return (int)0x80330006;
+	switch (mode) {
+	case 1:
+		result = bbmcOpenUsbSerialQcom(&port->channel);
+		break;
+	case 2:
+		result = bbmcOpenUsbSerialQedl(&port->channel);
+		break;
+	case 3:
+		result = bbmcOpenUsbSerialQdl(&port->channel);
+		break;
+	default:
+		return (int)0x80330002;
+	}
+	if (result < 0)
+		return result;
+	port->mode = mode;
+	return sceKernelSetEventFlag(port->eventFlagId, 4);
+}
+
+/* name unknown: a bulk request with its buffer (64-byte aligned) and its context */
+BbmcUsbSerialRequest *swdlPortAllocRequest(SceUID *heapId, SceSize size)
+{
+	BbmcUsbSerialRequest *request;
+	SceAllocOpt opt = {
+		.size = sizeof(opt),
+		.align = 64,
+	};
+
+	request = sceKernelAllocHeapMemory(*heapId, sizeof(*request));
+	if (request == NULL)
+		return NULL;
+	memset(request, 0, sizeof(*request));
+	request->transferType = 1;
+	request->arguments.bulk.data = sceKernelAllocHeapMemoryWithOption(*heapId, size, &opt);
+	if (request->arguments.bulk.data == NULL) {
+		sceKernelFreeHeapMemory(*heapId, request);
+		return NULL;
+	}
+	request->context = sceKernelAllocHeapMemory(*heapId, sizeof(SwdlPortRequestContext));
+	if (request->context == NULL) {
+		sceKernelFreeHeapMemory(*heapId, request->arguments.bulk.data);
+		sceKernelFreeHeapMemory(*heapId, request);
+		return NULL;
+	}
+	memset(request->context, 0, sizeof(SwdlPortRequestContext));
+	return request;
+}
+
+static inline void swdlPortFreeRequest(SwdlPort *port, BbmcUsbSerialRequest *request)
+{
+	sceKernelFreeHeapMemory(port->heapId, request->context);
+	sceKernelFreeHeapMemory(port->heapId, request->arguments.bulk.data);
+	sceKernelFreeHeapMemory(port->heapId, request);
+}
+
+/* the one read request, created with the port */
+static inline int swdlPortCreateReceiveRequest(SwdlPort *port)
+{
+	BbmcUsbSerialRequest *request;
+	SwdlPortRequestContext *context;
+
+	request = swdlPortAllocRequest(&port->heapId, 1024);
+	if (request == NULL)
+		return (int)0x80330005;
+	context = request->context;
+	request->completed = swdlPortReceiveDone;
+	request->transferType = 1;
+	request->arguments.bulk.length = 1024;
+	context->port = port;
+	lockFastMutex(&port->rxLock);
+	port->rxRequest = request;
+	sceKernelUnlockFastMutex(&port->rxLock);
+	return 0;
+}
+
+static inline void swdlPortDeleteReceiveRequest(SwdlPort *port)
+{
+	BbmcUsbSerialRequest *request;
+
+	lockFastMutex(&port->rxLock);
+	request = port->rxRequest;
+	port->rxRequest = NULL;
+	sceKernelUnlockFastMutex(&port->rxLock);
+	if (request != NULL)
+		swdlPortFreeRequest(port, request);
+}
+
+/* the transmit queue, under txLock */
+static inline void swdlPortQueueTransmit(SwdlPort *port, BbmcUsbSerialRequest *request)
+{
+	SwdlPortRequestContext *tail;
+
+	lockFastMutex(&port->txLock);
+	if (port->txHead == NULL) {
+		port->txHead = request;
+		port->txTail = request;
+	} else {
+		tail = port->txTail->context;
+		tail->next = request;
+		port->txTail = request;
+	}
+	port->txCount++;
+	sceKernelUnlockFastMutex(&port->txLock);
+	sceKernelSetEventFlag(port->eventFlagId, 2);
+}
+
+static inline BbmcUsbSerialRequest *swdlPortDequeueTransmit(SwdlPort *port)
+{
+	BbmcUsbSerialRequest *request;
+	SwdlPortRequestContext *context;
+
+	lockFastMutex(&port->txLock);
+	request = port->txHead;
+	if (request != NULL) {
+		context = request->context;
+		if (request == port->txTail)
+			port->txTail = NULL;
+		port->txHead = context->next;
+		context->next = NULL;
+		port->txCount--;
+	}
+	sceKernelUnlockFastMutex(&port->txLock);
+	return request;
+}
+
+/* name unknown: queue data for the modem, HDLC-escaped into 2048-byte packets, or as it
+ * is in raw mode; *data and *size come back past what was queued */
+int swdlPortSend(SwdlPortInterface *interface, const void **data, SceSize *size, int flags)
+{
+	SwdlPort *port;
+	SwdlPortEscape *escape;
+	SwdlPortRequestContext *context;
+	BbmcUsbSerialRequest *request;
+	const SceUInt8 *source;
+	const SceUInt8 *packet;
+	SceUInt8 *dest;
+	SceSize remaining;
+	SceSize chunk;
+	SceUInt32 free;
+	int rawMode;
+	int more;
+	SceUInt8 c;
+
+	if (data == NULL || interface == NULL || size == NULL)
+		return (int)0x80330002;
+	port = interface->owner;
+	if (port == NULL)
+		return (int)0x80330002;
+	if (port->connected == 0)
+		return (int)0x80330006;
+	source = *data;
+	remaining = *size;
+	lockFastMutex(&port->errorLock);
+	rawMode = port->rawMode;
+	sceKernelUnlockFastMutex(&port->errorLock);
+
+	if (rawMode != 1) {
+		escape = &port->transmit;
+		memset(escape, 0, sizeof(*escape));
+		escape->dest = NULL;
+		escape->source = source;
+		escape->capacity = 0;
+		escape->sourceLength = remaining;
+		do {
+			request = swdlPortAllocRequest(&port->heapId, 2048);
+			if (request == NULL)
+				goto no_memory;
+			dest = request->arguments.bulk.data;
+			packet = escape->source;
+			escape->capacity = 2048;
+			escape->length = 0;
+			escape->dest = dest;
+			for (;;) {
+				if (escape->escaped == 1) {
+					dest[escape->length++] =
+						packet[escape->sourcePos++] ^ 0x20;
+					escape->escaped = 0;
+				} else {
+					c = packet[escape->sourcePos];
+					if (c == 0x7d || (c == 0x7e && escape->sourcePos != 0 &&
+							  escape->sourcePos != escape->sourceLength - 1)) {
+						/* escaped: 0x7d, then the byte ^ 0x20 */
+						dest[escape->length++] = 0x7d;
+						escape->escaped = 1;
+					} else {
+						dest[escape->length++] =
+							packet[escape->sourcePos++];
+					}
+				}
+				if (escape->sourcePos == escape->sourceLength) {
+					more = 0;
+					break;
+				}
+				if (escape->length >= escape->capacity) {
+					more = 1;
+					break;
+				}
+			}
+			request->arguments.bulk.length = escape->length;
+			request->transferType = 1;
+			remaining = escape->sourceLength - escape->sourcePos;
+			source = escape->source + escape->sourcePos;
+			context = request->context;
+			request->completed = swdlPortTransmitDone;
+			context->port = port;
+			if (!more)
+				context->last = 1;
+			swdlPortQueueTransmit(port, request);
+		} while (more);
+		goto done;
+	}
+
+	lockFastMutex(&port->txLock);
+	free = 16 - port->txCount;
+	sceKernelUnlockFastMutex(&port->txLock);
+	if (remaining > free << 11)
+		goto no_memory;
+	do {
+		chunk = remaining < 2048 ? remaining : 2048;
+		request = swdlPortAllocRequest(&port->heapId, 2048);
+		if (request == NULL)
+			goto no_memory;
+		request->transferType = 1;
+		memcpy(request->arguments.bulk.data, source, chunk);
+		source += chunk;
+		remaining -= chunk;
+		context = request->context;
+		request->arguments.bulk.length = chunk;
+		request->completed = swdlPortTransmitDone;
+		context->port = port;
+		if (remaining == 0)
+			context->last = 1;
+		swdlPortQueueTransmit(port, request);
+	} while (remaining != 0);
+done:
+	*data = source;
+	*size = remaining;
+	return 0;
+no_memory:
+	*data = source;
+	*size = remaining;
+	return (int)0x80330005;
+}
+
+/* name unknown: a write failed: record it, report it (4) and drop every queued write */
+void swdlPortFailTransmit(SwdlPort *port, int error, BbmcUsbSerialRequest *request)
+{
+	if (port != NULL) {
+		lockFastMutex(&port->errorLock);
+		port->error = error;
+		sceKernelUnlockFastMutex(&port->errorLock);
+	}
+	port->interface.eventHandler(&port->interface, 4, NULL, 0);
+	if (request != NULL)
+		swdlPortFreeRequest(port, request);
+	while ((request = swdlPortDequeueTransmit(port)) != NULL)
+		swdlPortFreeRequest(port, request);
+	port->txCurrent = NULL;
+	port->txPending = 0;
+}
+
+/* name unknown: drop the queued writes and stop the read in flight (a 1 s timer ends
+ * the wait for it); 32 reports a port already idle */
+int swdlPortAbort(SwdlPort *port)
+{
+	BbmcUsbSerialRequest *request;
+	int result;
+
+	if (port->txPending == 1) {
+		while ((request = swdlPortDequeueTransmit(port)) != NULL)
+			swdlPortFreeRequest(port, request);
+	}
+	if (port->rxPending == 1) {
+		lockFastMutex(&port->rxLock);
+		port->rxActive = 0;
+		sceKernelUnlockFastMutex(&port->rxLock);
+		port->abortEvent = 1024;
+		result = SceThreadmgrForDriver_C58DF384("SceBbmcSwdlAbort", 1000,
+							swdlPortAbortTimer, port);
+		if (result < 0) {
+			lockFastMutex(&port->errorLock);
+			port->error = result;
+			sceKernelUnlockFastMutex(&port->errorLock);
+			port->interface.eventHandler(&port->interface, 16, NULL, 0);
+		} else {
+			port->abortTimerId = result;
+		}
+	} else {
+		result = 0;
+	}
+	if (port->txPending == 1 || port->rxPending == 1)
+		port->stopping = 1;
+	else if (port->terminating == 0)
+		port->interface.eventHandler(&port->interface, 32, NULL, 0);
+	return result;
+}
+
+static inline void swdlPortStartTransmit(SwdlPort *port)
+{
+	BbmcUsbSerialRequest *request;
+	int result;
+
+	request = swdlPortDequeueTransmit(port);
+	if (request == NULL) {
+		port->txPending = 0;
+		return;
+	}
+	port->txCurrent = request;
+	port->txPending = 1;
+	result = bbmcWriteUsbSerial(port->channel, request);
+	if (result < 0)
+		swdlPortFailTransmit(port, result, request);
+}
+
+static inline int swdlPortStartReceive(SwdlPort *port)
+{
+	BbmcUsbSerialRequest *request;
+	SwdlPortRequestContext *context;
+
+	lockFastMutex(&port->rxLock);
+	request = port->rxRequest;
+	context = request->context;
+	request->transferType = 1;
+	request->arguments.bulk.length = 1024;
+	context->result = 0;
+	sceKernelUnlockFastMutex(&port->rxLock);
+	port->rxPending = 1;
+	return bbmcReadUsbSerial(port->channel, request);
+}
+
+static inline int swdlPortIsReceiving(SwdlPort *port)
+{
+	int active;
+
+	lockFastMutex(&port->rxLock);
+	active = port->rxActive;
+	sceKernelUnlockFastMutex(&port->rxLock);
+	return active;
+}
+
+/* a read failed: record it, and report it (8) while the reading goes on */
+static inline void swdlPortFailReceive(SwdlPort *port, int error)
+{
+	lockFastMutex(&port->errorLock);
+	port->error = error;
+	sceKernelUnlockFastMutex(&port->errorLock);
+	port->rxPending = 0;
+	if (swdlPortIsReceiving(port) == 1)
+		port->interface.eventHandler(&port->interface, 8, NULL, 0);
+}
+
+/* name unknown: the port's thread (SceBbmcSwdlPort): it submits the writes and reads
+ * and reports to the event handler (1 sent, 2 frame, 4 write error, 8 read error,
+ * 16 abort error, 32 stopped, 64/128 device attached/detached) */
+int swdlPortThread(SceSize args, void *argp)
+{
+	SwdlPort *port;
+	SwdlPortInterface *interface;
+	BbmcUsbSerialRequest *request;
+	SwdlPortRequestContext *context;
+	SceUInt32 events;
+	const SceUInt8 *source;
+	SceSize length;
+	SceSize chunk;
+	SceSize rest;
+	int rawMode;
+	int active;
+	int result;
+
+	if (argp == NULL)
+		return 0;
+	port = *(SwdlPort **)argp;
+	interface = &port->interface;
+	port->terminating = 0;
+	for (;;) {
+		events = 0;
+		result = sceKernelWaitEventFlag(port->eventFlagId, 0x1fff, 1, &events, NULL);
+		if (result < 0)
+			return result;
+		result = sceKernelClearEventFlag(port->eventFlagId, ~events);
+		if (result < 0)
+			return result;
+
+		if (port->stopping != 1) {
+			if (events & 1) {
+				port->terminating = 1;
+				swdlPortAbort(port);
+				if (port->stopping != 1) {
+					port->terminating = 0;
+					return 0;
+				}
+				continue;
+			}
+			if ((events & 2) && port->txPending != 1) {
+				request = swdlPortDequeueTransmit(port);
+				if (request != NULL) {
+					port->txCurrent = request;
+					port->txPending = 1;
+					result = bbmcWriteUsbSerial(port->channel, request);
+					if (result < 0)
+						swdlPortFailTransmit(port, result, request);
+				}
+			}
+			if ((events & 4) && swdlPortIsReceiving(port) != 1) {
+				lockFastMutex(&port->rxLock);
+				port->rxActive = 1;
+				sceKernelUnlockFastMutex(&port->rxLock);
+				if (port->rxPending != 1) {
+					result = swdlPortStartReceive(port);
+					if (result < 0)
+						swdlPortFailReceive(port, result);
+				}
+			}
+			if (events & 0x10)
+				swdlPortAbort(port);
+			if (events & 0x20) {
+				request = port->txCurrent;
+				if (request != NULL)
+					swdlPortFreeRequest(port, request);
+				port->txCurrent = NULL;
+				interface->eventHandler(interface, 1, NULL, 0);
+				swdlPortStartTransmit(port);
+			}
+			if (events & 0x40) {
+				request = port->txCurrent;
+				if (request != NULL)
+					swdlPortFreeRequest(port, request);
+				port->txCurrent = NULL;
+				swdlPortStartTransmit(port);
+			}
+			if ((events & 0x80) && swdlPortIsReceiving(port) != 0) {
+				/* into the ring, wrapping at its end */
+				lockFastMutex(&port->rxLock);
+				request = port->rxRequest;
+				length = request->arguments.bulk.length;
+				source = request->arguments.bulk.data;
+				for (chunk = length; chunk != 0; chunk = rest) {
+					if (chunk > 1024 - port->writePos) {
+						rest = chunk - (1024 - port->writePos);
+						chunk = 1024 - port->writePos;
+					} else {
+						rest = 0;
+					}
+					memcpy(&port->ring[port->writePos], source, chunk);
+					source += chunk;
+					port->writePos = port->writePos + chunk < 1024 ?
+						port->writePos + chunk :
+						port->writePos + chunk - 1024;
+					port->rxCount += chunk;
+				}
+				sceKernelUnlockFastMutex(&port->rxLock);
+				if (request->arguments.bulk.length != 0) {
+					if (port->rxCount > 1024) {
+						swdlPortFailReceive(port, (int)0x8033070A);
+						goto received;
+					}
+					lockFastMutex(&port->errorLock);
+					rawMode = port->rawMode;
+					sceKernelUnlockFastMutex(&port->errorLock);
+					if (rawMode == 1 || swdlPortFindFrame(port) != 0)
+						interface->eventHandler(interface, 2, NULL, 0);
+				}
+				result = swdlPortStartReceive(port);
+				if (result < 0)
+					swdlPortFailReceive(port, result);
+			}
+received:
+			if (events & 0x100) {
+				request = port->txCurrent;
+				context = request->context;
+				swdlPortFailTransmit(port, context->result, request);
+			}
+			if (events & 0x200) {
+				lockFastMutex(&port->rxLock);
+				context = port->rxRequest->context;
+				result = context->result;
+				sceKernelUnlockFastMutex(&port->rxLock);
+				swdlPortFailReceive(port, result);
+			}
+			if (events & 0x800)
+				interface->eventHandler(interface, 64, NULL, 0);
+			if (events & 0x1000)
+				interface->eventHandler(interface, 128, NULL, 0);
+			continue;
+		}
+
+		/* stopping: wait for the write and the read in flight to end */
+		result = 0;
+		if (events & 0x160) {
+			request = port->txCurrent;
+			if (request != NULL)
+				swdlPortFreeRequest(port, request);
+			port->txCurrent = NULL;
+			port->txPending = 0;
+		}
+		if (events & 0x80) {
+			if (port->abortEvent == 0)
+				port->rxPending = 0;
+			else
+				result = swdlPortStartReceive(port);
+		}
+		if (events & 0x200) {
+			sceKernelCancelAlarm(port->abortTimerId);
+			port->rxPending = 0;
+			port->abortTimerId = 0;
+			port->abortEvent = 0;
+		}
+		if (events & 0x400) {
+			port->rxPending = 0;
+			port->abortTimerId = 0;
+			port->abortEvent = 0;
+		}
+		if (events & 0x800) {
+			result = 0;
+			interface->eventHandler(interface, 64, NULL, 0);
+		}
+		if (events & 0x1000) {
+			result = 0;
+			interface->eventHandler(interface, 128, NULL, 0);
+		}
+		active = swdlPortIsReceiving(port);
+		if (result < 0) {
+			lockFastMutex(&port->errorLock);
+			port->error = result;
+			sceKernelUnlockFastMutex(&port->errorLock);
+			interface->eventHandler(interface, 8, NULL, 0);
+			interface->eventHandler(interface, 32, NULL, 0);
+			port->stopping = 0;
+		} else if (port->txPending == 0 && (port->rxPending | active) == 0 &&
+			   port->terminating == 0) {
+			interface->eventHandler(interface, 32, NULL, 0);
+			port->stopping = 0;
+		}
+		if (port->terminating == 1 && port->stopping == 0) {
+			port->terminating = 0;
+			return 0;
+		}
+	}
+}
+
+/* name unknown: set the port up: its locks, event flag, heap, read request and thread */
+SwdlPortInterface *swdlCreatePort(void)
+{
+	SwdlPort *port;
+	int result;
+
+	memset(&swdlPortStorage, 0, sizeof(swdlPortStorage));
+	port = &swdlPortStorage;
+	swdlPortStorage.initialized = 1;
+	if (sceKernelInitializeFastMutex(&swdlPortStorage.txLock, "SwdlPortTxLock", 0, NULL) < 0)
+		goto failed;
+	if (sceKernelInitializeFastMutex(&port->rxLock, "SwdlPortRxLock", 0, NULL) < 0)
+		goto finalize_tx;
+	if (sceKernelInitializeFastMutex(&port->errorLock, "SwdlPortErrCodeLock", 0, NULL) < 0)
+		goto finalize_rx;
+	result = sceKernelCreateEventFlag("SceBbmcSwdlPort", 4096, 0, NULL);
+	if (result < 0)
+		goto finalize_error;
+	port->eventFlagId = result;
+	result = sceKernelCreateHeap("SceBbmcSwdlPort", 68144, NULL);
+	if (result < 0)
+		goto delete_event_flag;
+	port->heapId = result;
+	if (bbmcRegisterUsbSerialState(swdlPortUsbStateChanged, port) < 0)
+		goto delete_heap;
+	if (swdlPortCreateReceiveRequest(port) < 0)
+		goto unregister;
+	result = sceKernelCreateThread("SceBbmcSwdlPort", swdlPortThread, 96, 0x2000, 0, 0x80000,
+				       NULL);
+	if (result < 0)
+		goto free_request;
+	port->threadId = result;
+	if (sceKernelStartThread(result, sizeof(port), &port) < 0) {
+		sceKernelDeleteThread(port->threadId);
+		goto free_request;
+	}
+	port->interface.open = swdlPortOpen;
+	port->interface.owner = port;
+	port->interface.close = swdlPortClose;
+	port->interface.send = swdlPortSend;
+	port->interface.control = swdlPortControl;
+	port->interface.receive = swdlPortReceive;
+	port->interface.getFrameLength = swdlPortGetFrameLength;
+	port->interface.stopReceive = swdlPortStopReceive;
+	return &port->interface;
+
+free_request:
+	swdlPortDeleteReceiveRequest(port);
+unregister:
+	bbmcUnregisterUsbSerialState(swdlPortUsbStateChanged);
+delete_heap:
+	sceKernelDeleteHeap(port->heapId);
+delete_event_flag:
+	sceKernelDeleteEventFlag(port->eventFlagId);
+finalize_error:
+	sceKernelFinalizeFastMutex(&port->errorLock);
+finalize_rx:
+	sceKernelFinalizeFastMutex(&port->rxLock);
+finalize_tx:
+	sceKernelFinalizeFastMutex(&port->txLock);
+failed:
+	port->initialized = 0;
+	return NULL;
+}
+
+/* name unknown: end the port's thread (10 s at most) and release what create set up */
+void swdlDestroyPort(SwdlPortInterface *interface)
+{
+	SwdlPort *port;
+	SceUInt32 timeout = 10000000;
+
+	if (interface == NULL)
+		return;
+	port = interface->owner;
+	if (port == NULL || port->initialized == 0)
+		return;
+	if (sceKernelSetEventFlag(port->eventFlagId, 1) >= 0)
+		sceKernelWaitThreadEnd(port->threadId, NULL, &timeout);
+	sceKernelDeleteThread(port->threadId);
+	swdlPortDeleteReceiveRequest(port);
+	bbmcUnregisterUsbSerialState(swdlPortUsbStateChanged);
+	sceKernelDeleteHeap(port->heapId);
+	sceKernelDeleteEventFlag(port->eventFlagId);
+	sceKernelFinalizeFastMutex(&port->errorLock);
+	sceKernelFinalizeFastMutex(&port->rxLock);
+	sceKernelFinalizeFastMutex(&port->txLock);
+	port->initialized = 0;
 }
