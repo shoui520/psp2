@@ -2385,9 +2385,12 @@ int bbcmdGetFirmwarePreference(BbcmdRequest *request)
 
 					if (status != 0 && status != 1)
 						goto invalid_response;
-					if (status == 1 && errorCode != 0) {
-						result = errorCode | 0x80335000;
-						goto failed_response;
+					if (status == 1) {
+						if (errorCode != 0) {
+							result = errorCode | 0x80335000;
+							goto failed_response;
+						}
+						break;
 					}
 				} else if (messageId == 71 && size != 0 && parameter->type == 1) {
 					const QmiFirmwareListWire *list = (const QmiFirmwareListWire *)payload;
@@ -2485,7 +2488,6 @@ failed_response:
 failed:
 	node = request->node;
 failed_node:
-	request->result = result;
 	control = node->control;
 error:
 	bbcmdUnlockMutex(&control->mutex);
@@ -2596,9 +2598,12 @@ int bbcmdListStoredImages(BbcmdRequest *request)
 
 					if (status != 0 && status != 1)
 						goto invalid_response;
-					if (status == 1 && errorCode != 0) {
-						result = errorCode | 0x80335000;
-						goto failed_response;
+					if (status == 1) {
+						if (errorCode != 0) {
+							result = errorCode | 0x80335000;
+							goto failed_response;
+						}
+						break;
 					}
 				} else if (messageId == 73 && size != 0 && parameter->type == 1) {
 					QmiStoredImages *output = request->output[0].pointer;
@@ -2731,7 +2736,6 @@ failed_response:
 failed:
 	node = request->node;
 failed_node:
-	request->result = result;
 	control = node->control;
 error:
 	bbcmdUnlockMutex(&control->mutex);
