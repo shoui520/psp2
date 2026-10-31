@@ -1,0 +1,139 @@
+/*
+ * paf::list: a doubly linked ring of nodes on the paf heap around a head node
+ * that holds no value.
+ */
+#ifndef PAF_STD_LIST
+#define PAF_STD_LIST
+
+#include <stddef.h>
+#include <std/allocator>
+#include <std/stdlib.h>
+
+namespace paf {
+
+template<class _Ty, class _Ax = allocator<_Ty> >
+class list {
+public:
+	typedef list<_Ty, _Ax> _Myt;
+	typedef size_t size_type;
+
+	struct _Node {
+		_Node *prev;
+		_Node *next;
+		_Ty value;
+	};
+
+	class iterator {
+	public:
+		iterator(_Node *where) : node(where)
+		{
+		}
+
+		_Ty &operator*() const
+		{
+			return node->value;
+		}
+
+		_Ty *operator->() const
+		{
+			return &node->value;
+		}
+
+		iterator &operator++()
+		{
+			if (node != NULL)
+				node = node->next;
+			return *this;
+		}
+
+		bool operator==(const iterator &other) const
+		{
+			return node == other.node;
+		}
+
+		bool operator!=(const iterator &other) const
+		{
+			return node != other.node;
+		}
+
+		_Node *node;
+	};
+
+	list()
+	{
+		count = 0;
+		head = (_Node *)operator new(sizeof(_Node));
+		if (head == NULL)
+			ScePafStdc_D608246A();
+		if (head != NULL) {
+			head->prev = head;
+			head->next = head;
+		}
+	}
+
+	~list()
+	{
+		if (head != NULL) {
+			_Node *node = head->next;
+
+			if (node != head) {
+				do {
+					_Node *next = node->next;
+
+					node->value.~_Ty();
+					operator delete(node);
+					node = next;
+				} while (node != head);
+			}
+			operator delete(head);
+		}
+	}
+
+	iterator begin()
+	{
+		return iterator(head != NULL ? head->next : NULL);
+	}
+
+	iterator end()
+	{
+		return iterator(head);
+	}
+
+	void push_back(const _Ty &val);
+
+	size_type size() const
+	{
+		return count;
+	}
+
+	_Node *head;
+	size_type count;
+};
+
+template<class _Ty, class _Ax>
+void
+list<_Ty, _Ax>::push_back(const _Ty &val)
+{
+	if (head == NULL)
+		return;
+
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node != NULL) {
+		new (&node->value) _Ty(val);
+	} else {
+		ScePafStdc_D608246A();
+		node = head;
+	}
+	if (node != head) {
+		node->prev = head->prev;
+		node->next = head;
+		head->prev->next = node;
+		head->prev = node;
+		++count;
+	}
+}
+
+}
+
+#endif

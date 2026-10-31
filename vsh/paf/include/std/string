@@ -1,0 +1,477 @@
+/*
+ * paf::basic_string: a counted, NUL-terminated string on the paf heap. An empty
+ * string points at the shared empty_string; a destroyed one is poisoned.
+ */
+#ifndef PAF_STD_STRING
+#define PAF_STD_STRING
+
+#include <stddef.h>
+#include <std/allocator>
+#include <std/string.h>
+#include <std/stdlib.h>
+
+namespace paf {
+
+template<class _Elem>
+struct char_traits;
+
+template<>
+struct char_traits<char> {
+	typedef char char_type;
+
+	static size_t length(const char_type *str)
+	{
+		return sce_paf_strlen(str);
+	}
+
+	static char_type *copy(char_type *dst, const char_type *src, size_t count)
+	{
+		return (char_type *)sce_paf_memcpy(dst, src, count);
+	}
+
+	static int compare(const char_type *left, const char_type *right, size_t count)
+	{
+		return sce_paf_strncmp(left, right, count);
+	}
+
+	static const char_type *find(const char_type *str, char_type ch)
+	{
+		return sce_paf_strchr(str, ch);
+	}
+};
+
+template<>
+struct char_traits<wchar_t> {
+	typedef wchar_t char_type;
+
+	static size_t length(const char_type *str)
+	{
+		return sce_paf_wcslen(str);
+	}
+
+	static char_type *copy(char_type *dst, const char_type *src, size_t count)
+	{
+		return (char_type *)sce_paf_memcpy(dst, src, count * sizeof(char_type));
+	}
+
+	static int compare(const char_type *left, const char_type *right, size_t count)
+	{
+		return sce_paf_wcsncmp(left, right, count);
+	}
+
+	static const char_type *find(const char_type *str, char_type ch)
+	{
+		return sce_paf_wcschr(str, ch);
+	}
+};
+
+template<class _Elem, class _Traits = char_traits<_Elem>, class _Ax = allocator<_Elem> >
+class basic_string {
+public:
+	typedef basic_string<_Elem, _Traits, _Ax> _Myt;
+	typedef size_t size_type;
+
+	static const size_type npos = (size_type)-1;
+	static _Elem empty_string;
+
+	basic_string()
+	{
+		ptr = &empty_string;
+		count = 0;
+	}
+
+	explicit basic_string(const _Ax &)
+	{
+		ptr = &empty_string;
+		count = 0;
+	}
+
+	basic_string(const _Elem *src)
+	{
+		ptr = &empty_string;
+		count = 0;
+		assign(src);
+	}
+
+	basic_string(const _Elem *src, size_type len)
+	{
+		ptr = &empty_string;
+		count = 0;
+		assign(src, len);
+	}
+
+	basic_string(const _Myt &src)
+	{
+		ptr = &empty_string;
+		count = 0;
+		assign(src);
+	}
+
+	~basic_string()
+	{
+		if (ptr != &empty_string)
+			alloc.deallocate(ptr, count + 1);
+		ptr = (_Elem *)-1;
+		count = (size_type)-1;
+	}
+
+	_Myt &assign(const _Elem *src, size_type len);
+
+	_Myt &assign(const _Elem *src)
+	{
+		return assign(src, src != NULL ? _Traits::length(src) : 0);
+	}
+
+	_Myt &assign(const _Myt &src);
+
+	_Myt &assign(_Elem ch);
+
+	_Myt &append(const _Elem *src, size_type len)
+	{
+		_Elem *dst = alloc.allocate(count + len + 1);
+	
+		if (dst != NULL) {
+			size_type size = count + len;
+	
+			_Traits::copy(dst, ptr, count);
+			_Traits::copy(dst + count, src, len);
+			dst[count + len] = 0;
+			if (ptr != &empty_string)
+				alloc.deallocate(ptr, count + 1);
+			ptr = dst;
+			count = size;
+		} else {
+			ScePafStdc_D608246A();
+		}
+		return *this;
+	}
+
+	_Myt &append(const _Myt &src)
+	{
+		return append(src.ptr, src.count);
+	}
+
+	_Myt &append(size_type len, _Elem ch);
+
+	_Myt &erase(size_type pos, size_type len);
+
+	void resize(size_type len, _Elem ch)
+	{
+		if (len < count)
+			erase(len, npos);
+		else if (len > count)
+			append(len - count, ch);
+	}
+
+	void resize(size_type len)
+	{
+		resize(len, 0);
+	}
+
+	void clear()
+	{
+		assign((const _Elem *)NULL, 0);
+	}
+
+	_Myt substr(size_type pos, size_type len) const;
+
+	size_type find(const _Elem *str, size_type pos, size_type len) const
+	{
+		size_type left = count - pos;
+
+		if (pos < count && left != 0) {
+			const _Elem *at = ptr + pos;
+
+			do {
+				const _Elem *found = _Traits::find(at, *str);
+
+				if (found == NULL)
+					break;
+				if (_Traits::compare(found, str, len) == 0)
+					return found - ptr;
+				left -= found - at + 1;
+				at = found + 1;
+			} while (left != 0);
+		}
+		return npos;
+	}
+
+	size_type find(_Elem ch, size_type pos = 0) const
+	{
+		return find(&ch, pos, 1);
+	}
+
+	size_type find_first_not_of(const _Elem *set, size_type pos, size_type len) const
+	{
+		if (pos < count) {
+			const _Elem *at = ptr + pos;
+
+			for (; at != ptr + count; ++at) {
+				const _Elem *member = set;
+
+				for (; member != set + len; ++member)
+					if (*member == *at)
+						break;
+				if (member == set + len)
+					return at - ptr;
+			}
+		}
+		return npos;
+	}
+
+	size_type find_first_not_of(_Elem ch, size_type pos = 0) const
+	{
+		return find_first_not_of(&ch, pos, 1);
+	}
+
+	size_type rfind(const _Elem *str, size_type pos, size_type len) const;
+
+	_Myt &operator=(const _Myt &src)
+	{
+		return assign(src);
+	}
+
+	_Myt &operator=(const _Elem *src)
+	{
+		return assign(src);
+	}
+
+	const _Elem *c_str() const
+	{
+		return ptr;
+	}
+
+	const _Elem *data() const
+	{
+		return ptr;
+	}
+
+	size_type size() const
+	{
+		return count;
+	}
+
+	size_type length() const
+	{
+		return count;
+	}
+
+	bool empty() const
+	{
+		return count == 0;
+	}
+
+	_Elem *ptr;
+	size_type count;
+	_Ax alloc;
+};
+
+template<class _Elem, class _Traits, class _Ax>
+basic_string<_Elem, _Traits, _Ax> &
+basic_string<_Elem, _Traits, _Ax>::assign(const _Elem *src, size_type len)
+{
+	if (ptr != src) {
+		if (ptr != &empty_string)
+			alloc.deallocate(ptr, count + 1);
+		if (len != 0 && src != NULL && *src != 0) {
+			_Elem *dst = alloc.allocate(len + 1);
+
+			if (dst != NULL) {
+				ptr = dst;
+				count = len;
+				_Traits::copy(dst, src, len);
+				ptr[len] = 0;
+			} else {
+				ScePafStdc_D608246A();
+				ptr = &empty_string;
+				count = 0;
+			}
+		} else {
+			ptr = &empty_string;
+			count = 0;
+		}
+	}
+	return *this;
+}
+
+template<class _Elem, class _Traits, class _Ax>
+basic_string<_Elem, _Traits, _Ax> &
+basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src)
+{
+	if (&src != this) {
+		if (ptr != &empty_string)
+			alloc.deallocate(ptr, count + 1);
+		if (src.count != 0) {
+			_Elem *dst = alloc.allocate(src.count + 1);
+
+			if (dst != NULL) {
+				ptr = dst;
+				count = src.count;
+				_Traits::copy(dst, src.ptr, src.count + 1);
+			} else {
+				ScePafStdc_D608246A();
+				ptr = &empty_string;
+				count = 0;
+			}
+		} else {
+			ptr = &empty_string;
+			count = 0;
+		}
+	}
+	return *this;
+}
+
+template<class _Elem, class _Traits, class _Ax>
+basic_string<_Elem, _Traits, _Ax> &
+basic_string<_Elem, _Traits, _Ax>::assign(_Elem ch)
+{
+	if (ptr != &empty_string)
+		alloc.deallocate(ptr, count + 1);
+	if (ch != 0) {
+		_Elem *dst = alloc.allocate(2);
+
+		if (dst != NULL) {
+			ptr = dst;
+			count = 1;
+			dst[0] = ch;
+			ptr[1] = 0;
+		} else {
+			ScePafStdc_D608246A();
+			ptr = &empty_string;
+			count = 0;
+		}
+	} else {
+		ptr = &empty_string;
+		count = 0;
+	}
+	return *this;
+}
+
+template<class _Elem, class _Traits, class _Ax>
+basic_string<_Elem, _Traits, _Ax> &
+basic_string<_Elem, _Traits, _Ax>::append(size_type len, _Elem ch)
+{
+	_Elem *dst = alloc.allocate(count + len + 1);
+
+	if (dst != NULL) {
+		size_type size = count + len;
+
+		_Traits::copy(dst, ptr, count);
+		for (size_type i = 0; i < len; ++i)
+			dst[count + i] = ch;
+		dst[count + len] = 0;
+		if (ptr != &empty_string)
+			alloc.deallocate(ptr, count + 1);
+		ptr = dst;
+		count = size;
+	} else {
+		ScePafStdc_D608246A();
+	}
+	return *this;
+}
+
+template<class _Elem, class _Traits, class _Ax>
+basic_string<_Elem, _Traits, _Ax> &
+basic_string<_Elem, _Traits, _Ax>::erase(size_type pos, size_type len)
+{
+	if (pos > count)
+		ScePafStdc_D608246A();
+	if (len > count - pos)
+		len = count - pos;
+
+	_Elem *dst = alloc.allocate(count - len + 1);
+
+	if (dst == NULL)
+		ScePafStdc_D608246A();
+	if (dst != NULL) {
+		size_type size = count;
+		size_type tail = size - pos - len;
+
+		_Traits::copy(dst, ptr, pos);
+		_Traits::copy(dst + pos, ptr + pos + len, tail);
+		dst[size - len] = 0;
+		if (ptr != &empty_string)
+			alloc.deallocate(ptr, count + 1);
+		ptr = dst;
+		count = size - len;
+	}
+	return *this;
+}
+
+template<class _Elem, class _Traits, class _Ax>
+basic_string<_Elem, _Traits, _Ax>
+basic_string<_Elem, _Traits, _Ax>::substr(size_type pos, size_type len) const
+{
+	if (pos > count)
+		ScePafStdc_D608246A();
+	if (pos >= count)
+		return _Myt();
+	if (len == npos || pos + len > count)
+		len = count - pos;
+	return _Myt(ptr + pos, len);
+}
+
+template<class _Elem, class _Traits, class _Ax>
+typename basic_string<_Elem, _Traits, _Ax>::size_type
+basic_string<_Elem, _Traits, _Ax>::rfind(const _Elem *str, size_type pos, size_type len) const
+{
+	if (len == 0)
+		return pos < count ? pos : count;
+	if (len > count)
+		return npos;
+
+	const _Elem *at = ptr + (pos < count - len ? pos : count - len);
+
+	for (;;) {
+		if (*at == *str && _Traits::compare(at, str, len) == 0)
+			return at - ptr;
+		if (at == ptr)
+			return npos;
+		--at;
+	}
+}
+
+template<class _Elem, class _Traits, class _Ax>
+inline basic_string<_Elem, _Traits, _Ax>
+operator+(const basic_string<_Elem, _Traits, _Ax> &left, const basic_string<_Elem, _Traits, _Ax> &right)
+{
+	basic_string<_Elem, _Traits, _Ax> result(left);
+
+	return result.append(right);
+}
+
+template<> char basic_string<char>::empty_string;
+template<> wchar_t basic_string<wchar_t>::empty_string;
+
+typedef basic_string<char> string;
+typedef basic_string<wchar_t> wstring;
+
+inline bool operator==(const string &left, const string &right)
+{
+	return *left.c_str() == *right.c_str() && sce_paf_strcmp(left.c_str(), right.c_str()) == 0;
+}
+
+inline bool operator==(const wstring &left, const wstring &right)
+{
+	return *left.c_str() == *right.c_str() && sce_paf_wcscmp(left.c_str(), right.c_str()) == 0;
+}
+
+inline bool operator!=(const string &left, const string &right)
+{
+	return !(left == right);
+}
+
+inline bool operator!=(const wstring &left, const wstring &right)
+{
+	return !(left == right);
+}
+
+inline bool operator<(const string &left, const string &right)
+{
+	return (unsigned char)*left.c_str() < (unsigned char)*right.c_str() ||
+	       sce_paf_strcmp(left.c_str(), right.c_str()) < 0;
+}
+
+}
+
+#endif

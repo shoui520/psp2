@@ -1,0 +1,199 @@
+/*
+ * paf::_Tree: the red-black tree behind paf::map. The head node holds no
+ * value: its parent is the root, its left the smallest node and its right the
+ * largest, and every leaf points back at it.
+ */
+#ifndef PAF_STD_XTREE
+#define PAF_STD_XTREE
+
+#include <stddef.h>
+#include <std/allocator>
+#include <std/stdlib.h>
+
+namespace paf {
+
+template<class _Traits>
+class _Tree {
+public:
+	typedef typename _Traits::key_type key_type;
+	typedef typename _Traits::value_type value_type;
+	typedef typename _Traits::key_compare key_compare;
+	typedef size_t size_type;
+
+	enum _Redbl {
+		_Black,
+		_Red
+	};
+
+	struct _Node {
+		_Node(_Node *parent, _Node *left, _Node *right, const value_type &val)
+			: parent(parent), left(left), right(right), value(val)
+		{
+			isnil = false;
+			color = _Red;
+		}
+
+		_Node *parent;
+		_Node *left;
+		_Node *right;
+		value_type value;
+		char color;
+		char isnil;
+	};
+
+	_Node *_Insert(const value_type &val, bool *inserted);
+
+	_Node *head;
+	size_type count;
+	key_compare comp;
+
+private:
+	void _Lrotate(_Node *where)
+	{
+		if (head == NULL)
+			return;
+
+		_Node *node = where->right;
+
+		where->right = node->left;
+		if (!node->left->isnil)
+			node->left->parent = where;
+		node->parent = where->parent;
+		if (where->parent->isnil)
+			head->parent = node;
+		else if (where == where->parent->left)
+			where->parent->left = node;
+		else
+			where->parent->right = node;
+		node->left = where;
+		where->parent = node;
+	}
+
+	void _Rrotate(_Node *where)
+	{
+		if (head == NULL)
+			return;
+
+		_Node *node = where->left;
+
+		where->left = node->right;
+		if (!node->right->isnil)
+			node->right->parent = where;
+		node->parent = where->parent;
+		if (where->parent->isnil)
+			head->parent = node;
+		else if (where == where->parent->right)
+			where->parent->right = node;
+		else
+			where->parent->left = node;
+		node->right = where;
+		where->parent = node;
+	}
+
+	void _Rebalance(_Node *node);
+};
+
+template<class _Traits>
+void _Tree<_Traits>::_Rebalance(_Node *node)
+{
+	if (head == NULL)
+		return;
+
+	node->color = _Red;
+	while (node != head->parent && node->parent->color == _Red) {
+		if (node->parent == node->parent->parent->left) {
+			_Node *uncle = node->parent->parent->right;
+
+			if (uncle->color == _Red) {
+				node->parent->color = _Black;
+				uncle->color = _Black;
+				node->parent->parent->color = _Red;
+				node = node->parent->parent;
+			} else {
+				if (node == node->parent->right) {
+					node = node->parent;
+					_Lrotate(node);
+				}
+				node->parent->color = _Black;
+				node->parent->parent->color = _Red;
+				_Rrotate(node->parent->parent);
+			}
+		} else {
+			_Node *uncle = node->parent->parent->left;
+
+			if (uncle->color == _Red) {
+				node->parent->color = _Black;
+				uncle->color = _Black;
+				node->parent->parent->color = _Red;
+				node = node->parent->parent;
+			} else {
+				if (node == node->parent->left) {
+					node = node->parent;
+					_Rrotate(node);
+				}
+				node->parent->color = _Black;
+				node->parent->parent->color = _Red;
+				_Lrotate(node->parent->parent);
+			}
+		}
+	}
+	head->parent->color = _Black;
+}
+
+template<class _Traits>
+typename _Tree<_Traits>::_Node *_Tree<_Traits>::_Insert(const value_type &val, bool *inserted)
+{
+	if (head == NULL)
+		return NULL;
+
+	_Node *where = head;
+	_Node *node = head->parent;
+	int dir = 0;
+
+	if (inserted != NULL)
+		*inserted = false;
+	while (!node->isnil) {
+		where = node;
+		if (comp(_Traits::_Kfn(val), _Traits::_Kfn(node->value))) {
+			node = node->left;
+			dir = -1;
+		} else if (comp(_Traits::_Kfn(node->value), _Traits::_Kfn(val))) {
+			node = node->right;
+			dir = 1;
+		} else {
+			return node;
+		}
+	}
+
+	_Node *newnode = (_Node *)operator new(sizeof(_Node));
+
+	if (newnode == NULL) {
+		ScePafStdc_D608246A();
+		return head;
+	}
+	new (newnode) _Node(where, head, head, val);
+	if (dir == 0) {
+		_Node *root = head;
+
+		root->parent = newnode;
+		root->left = newnode;
+		root->right = newnode;
+	} else if (dir >= 0) {
+		where->right = newnode;
+		if (where == head->right)
+			head->right = newnode;
+	} else {
+		where->left = newnode;
+		if (where == head->left)
+			head->left = newnode;
+	}
+	++count;
+	_Rebalance(newnode);
+	if (inserted != NULL)
+		*inserted = true;
+	return newnode;
+}
+
+}
+
+#endif

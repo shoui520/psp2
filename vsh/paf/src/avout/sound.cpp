@@ -50,17 +50,6 @@ Output::~Output()
 	}
 }
 
-void Output::Update()
-{
-	if (!m_is_init)
-		return;
-
-	for (int i = 0; i < 8; ++i) {
-		if (m_sounds[i].state != Sound::State_Default && !WaveIsPlaying(i))
-			m_sounds[i].state = Sound::State_Default;
-	}
-}
-
 bool Output::EnableSound(bool enable)
 {
 	int count = m_disable_count;
@@ -180,6 +169,7 @@ void Output::PlayADPCM2ch(const char *buffer1, unsigned int size1,
 	if ((!ignore_init && !m_enabled) || !buffer1 || !buffer2)
 		return;
 
+	int voices[2] = { -1, -1 };
 	int stopped = 0;
 	for (int i = 0; i < 8; ++i) {
 		if (m_sounds[i].state == Sound::State_Playing &&
@@ -192,17 +182,16 @@ void Output::PlayADPCM2ch(const char *buffer1, unsigned int size1,
 		}
 	}
 
-	int voices[2] = { -1, -1 };
 	int count = 0;
-	for (int i = 0; i < 8; ++i) {
+	for (int i = 0; ; ) {
 		if (m_sounds[i].state == Sound::State_Default) {
 			voices[count++] = i;
 			if (count >= 2)
 				break;
 		}
+		if (++i >= 8)
+			return;
 	}
-	if (count < 2)
-		return;
 
 	int voice = voices[0];
 	m_sounds[voice].state = Sound::State_Playing;

@@ -53,7 +53,8 @@ def compile_options(argv):
                 includes=includes,
                 opt=opts[-1] if opts else '-O2',
                 extra=[x for x in argv if x.startswith('-f') and x not in DEFAULT_F or
-                       x.startswith(FPU_OPTIONS) and x not in DEFAULT_FPU],
+                       x.startswith(FPU_OPTIONS) and x not in DEFAULT_FPU or
+                       x.startswith('-X')],  # SNC's own options (MODULE_COMPILE_OPTIONS)
                 mode=instruction_mode(argv))
 
 

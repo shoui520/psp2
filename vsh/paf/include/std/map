@@ -1,0 +1,43 @@
+/* paf::map: unique keys in a paf::_Tree. */
+#ifndef PAF_STD_MAP
+#define PAF_STD_MAP
+
+#include <std/xtree>
+#include <std/utility>
+#include <std/functional>
+
+namespace paf {
+
+template<class _Kty, class _Ty, class _Pr>
+struct _Tmap_traits {
+	typedef _Kty key_type;
+	typedef pair<_Kty, _Ty> value_type;
+	typedef _Pr key_compare;
+
+	static const _Kty &_Kfn(const value_type &val)
+	{
+		return val.first;
+	}
+};
+
+template<class _Kty, class _Ty, class _Pr = less<_Kty>,
+	 class _Ax = allocator<_Ty> >
+class map : public _Tree<_Tmap_traits<_Kty, _Ty, _Pr> > {
+public:
+	typedef _Tree<_Tmap_traits<_Kty, _Ty, _Pr> > _Mybase;
+	typedef _Kty key_type;
+	typedef _Ty mapped_type;
+	typedef typename _Mybase::value_type value_type;
+
+	mapped_type &operator[](const key_type &key);
+};
+
+template<class _Kty, class _Ty, class _Pr, class _Ax>
+_Ty &map<_Kty, _Ty, _Pr, _Ax>::operator[](const key_type &key)
+{
+	return this->_Insert(value_type(key, mapped_type()), NULL)->value.second;
+}
+
+}
+
+#endif

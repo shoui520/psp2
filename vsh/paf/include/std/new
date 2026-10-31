@@ -1,0 +1,22 @@
+/* paf's operators new and delete (ScePafStdc). */
+#ifndef PAF_STD_NEW
+#define PAF_STD_NEW
+
+#include <stddef.h>
+
+void *operator new(size_t size);
+void *operator new[](size_t size);
+void *operator new(size_t size, size_t align);
+void *operator new[](size_t size, size_t align);
+void operator delete(void *ptr);
+void operator delete[](void *ptr);
+void operator delete(void *ptr, size_t size, size_t align);
+void operator delete[](void *ptr, size_t size, size_t align);
+
+/* Sony's build calls this one rather than inlining it (_ZnwjPv in the template code). */
+inline __attribute__((noinline)) void *operator new(size_t, void *where)
+{
+	return where;
+}
+
+#endif

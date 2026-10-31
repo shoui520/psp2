@@ -1,0 +1,26 @@
+/* paf::pair. */
+#ifndef PAF_STD_UTILITY
+#define PAF_STD_UTILITY
+
+namespace paf {
+
+template<class _Ty1, class _Ty2>
+struct pair {
+	typedef _Ty1 first_type;
+	typedef _Ty2 second_type;
+
+	pair(const _Ty1 &val1, const _Ty2 &val2) : first(val1), second(val2)
+	{
+	}
+
+	~pair()
+	{
+	}
+
+	_Ty1 first;
+	_Ty2 second;
+};
+
+}
+
+#endif

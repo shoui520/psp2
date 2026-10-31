@@ -3,6 +3,7 @@
 #define PAF_AVOUT_SOUND_H
 
 #include <stddef.h>
+#include "wave.h"
 
 namespace paf {
 namespace sound {
@@ -17,7 +18,17 @@ public:
 
 	Output(int mode);
 	~Output();
-	void Update();
+	void Update()
+	{
+		if (!m_is_init)
+			return;
+
+		for (int i = 0; i < 8; ++i) {
+			if (m_sounds[i].state != Sound::State_Default && !WaveIsPlaying(i))
+				m_sounds[i].state = Sound::State_Default;
+		}
+	}
+
 	bool EnableSound(bool enable);
 	void StopSound(const char *buffer);
 	void StopSoundAll();

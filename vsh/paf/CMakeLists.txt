@@ -1,4 +1,8 @@
 # ScePaf was built with SNC. Unconverted exports remain in libpaf.c.
+# Sony's build inlined functions declared inline (class bodies) and only the smallest others:
+# any budget from 4 to 12 reproduces TTY's and Output's constructors, Output::WaitSoundStopped
+# and common::Utf8ToUtf16, 0 and 13 or more do not (2026-10-31).
+set(MODULE_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:C,CXX>:-Xautoinlinesize=8>)
 enable_language(CXX)
 psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/module.c
@@ -23,12 +27,10 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/call_list.c
 	src/common/main_thread_call_list.c
 	src/common/main_thread_call.c
-	src/common/char_encoding.c
-	src/common/string_util.c
+	src/common/char_encoding.cpp
+	src/common/string_util.cpp
 	src/common/string_fields.c
 	src/url/uri.c
-	src/url/url.c
-	src/url/url_components.c
 	src/common/resource_hooks.c
 	src/common/frame_count.c
 	src/common/halt_assert.c

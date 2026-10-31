@@ -1,0 +1,34 @@
+/* paf::allocator: the paf heap behind every paf container. */
+#ifndef PAF_STD_ALLOCATOR
+#define PAF_STD_ALLOCATOR
+
+#include <stddef.h>
+#include <std/new>
+
+namespace paf {
+
+template<class _Ty>
+class allocator {
+public:
+	typedef _Ty value_type;
+	typedef _Ty *pointer;
+	typedef size_t size_type;
+
+	allocator()
+	{
+	}
+
+	pointer allocate(size_type count)
+	{
+		return (pointer)operator new(count * sizeof(_Ty));
+	}
+
+	void deallocate(pointer ptr, size_type)
+	{
+		operator delete(ptr);
+	}
+};
+
+}
+
+#endif

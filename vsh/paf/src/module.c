@@ -9,7 +9,7 @@ extern int sceKernelExitProcess(int status);
 
 SceUInt32 global_heap_size;
 SceInt32 reserved_init_param[2];
-SceInt32 cdlg_mode;
+SceInt32 sce_paf_is_common_dialog_mode;
 SceInt32 global_heap_alignment;
 SceInt32 global_heap_disable_assert_on_alloc_failure;
 void *__dso_handle;
@@ -42,7 +42,7 @@ int module_start(SceSize argSize, const void *argp)
 	global_heap_size = param->global_heap_size;
 	reserved_init_param[0] = param->reserved[0];
 	reserved_init_param[1] = param->reserved[1];
-	cdlg_mode = param->cdlg_mode;
+	sce_paf_is_common_dialog_mode = param->cdlg_mode;
 	global_heap_alignment = param->global_heap_alignment;
 	__dso_handle = &__dso_handle;
 	global_heap_disable_assert_on_alloc_failure =

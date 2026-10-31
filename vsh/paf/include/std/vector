@@ -1,0 +1,189 @@
+/*
+ * paf::vector: a counted array on the paf heap. It grows by ten elements at a
+ * time and copies its elements over when it does.
+ */
+#ifndef PAF_STD_VECTOR
+#define PAF_STD_VECTOR
+
+#include <stddef.h>
+#include <std/allocator>
+#include <std/stdlib.h>
+
+namespace paf {
+
+template<class _Ty, class _Ax = allocator<_Ty> >
+class vector {
+public:
+	typedef vector<_Ty, _Ax> _Myt;
+	typedef size_t size_type;
+	typedef _Ty *iterator;
+	typedef const _Ty *const_iterator;
+
+	vector()
+	{
+		ptr = NULL;
+		count = 0;
+		limit = 0;
+	}
+
+	explicit vector(size_type size)
+	{
+		count = 0;
+		limit = 0;
+		ptr = alloc.allocate(size);
+		if (ptr == NULL)
+			ScePafStdc_D608246A();
+		if (ptr != NULL) {
+			count = size;
+			limit = size;
+			for (size_type i = 0; i < count; ++i)
+				new (&ptr[i]) _Ty();
+		}
+	}
+
+	vector(const _Myt &src);
+
+	~vector();
+
+	_Myt &operator=(const _Myt &src)
+	{
+		_Myt(src).swap(*this);
+		return *this;
+	}
+
+	void swap(_Myt &other)
+	{
+		_Ty *old_ptr = ptr;
+		int old_count = count;
+
+		count = other.count;
+		ptr = other.ptr;
+		other.count = old_count;
+		other.ptr = old_ptr;
+
+		int old_limit = limit;
+
+		limit = other.limit;
+		other.limit = old_limit;
+	}
+
+	bool reserve(size_type size);
+
+	int push_back(const _Ty &val);
+
+	_Ty &operator[](size_type pos)
+	{
+		return ptr[pos];
+	}
+
+	const _Ty &operator[](size_type pos) const
+	{
+		return ptr[pos];
+	}
+
+	iterator begin()
+	{
+		return ptr;
+	}
+
+	iterator end()
+	{
+		return ptr + count;
+	}
+
+	size_type size() const
+	{
+		return count;
+	}
+
+	bool empty() const
+	{
+		return count == 0;
+	}
+
+	_Ty *ptr;
+	int count;
+	int limit;
+	_Ax alloc;
+};
+
+template<class _Ty, class _Ax>
+vector<_Ty, _Ax>::vector(const _Myt &src)
+{
+	count = 0;
+	limit = 0;
+
+	_Ty *data = alloc.allocate(src.limit);
+
+	if (data == NULL)
+		ScePafStdc_D608246A();
+	ptr = data;
+	if (data != NULL) {
+		count = src.count;
+		limit = src.limit;
+		for (size_type i = 0; i < count; ++i)
+			new (&ptr[i]) _Ty(src.ptr[i]);
+	}
+}
+
+template<class _Ty, class _Ax>
+vector<_Ty, _Ax>::~vector()
+{
+	if (ptr != NULL) {
+		for (size_type i = count; i != 0; --i)
+			ptr[i - 1].~_Ty();
+		alloc.deallocate(ptr, limit);
+	}
+	ptr = (_Ty *)-1;
+	count = -1;
+	limit = -1;
+}
+
+template<class _Ty, class _Ax>
+bool
+vector<_Ty, _Ax>::reserve(size_type size)
+{
+	if (ptr == NULL) {
+		_Ty *data = alloc.allocate(size);
+
+		if (data == NULL)
+			ScePafStdc_D608246A();
+		ptr = data;
+		if (data == NULL)
+			return false;
+		limit = size;
+		return true;
+	}
+
+	_Ty *dst = alloc.allocate(size);
+
+	if (dst == NULL) {
+		ScePafStdc_D608246A();
+		return false;
+	}
+	for (size_type i = 0; i < count; ++i)
+		new (&dst[i]) _Ty(ptr[i]);
+	for (size_type i = 0; i < count; ++i)
+		ptr[i].~_Ty();
+	alloc.deallocate(ptr, limit);
+	ptr = dst;
+	limit = size;
+	return true;
+}
+
+template<class _Ty, class _Ax>
+int
+vector<_Ty, _Ax>::push_back(const _Ty &val)
+{
+	int result;
+
+	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
+		new (&ptr[count]) _Ty(val);
+		result = ++count;
+	}
+	return result;
+}
+
+}
+
+#endif

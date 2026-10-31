@@ -142,7 +142,7 @@ int GlobalHeapInitialize(void)
 
 HeapAllocator *GlobalHeapConstruct(HeapAllocator *self)
 {
-	AllocationBlockType type = cdlg_mode ? AllocationBlockType_User_Cdlg :
+	AllocationBlockType type = sce_paf_is_common_dialog_mode ? AllocationBlockType_User_Cdlg :
 					     AllocationBlockType_User;
 	int disable_assert = global_heap_disable_assert_on_alloc_failure;
 	int alignment = global_heap_alignment;

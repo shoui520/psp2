@@ -2,8 +2,13 @@
 #define PAF_URL_URL_H
 
 #include "../std/string.h"
-#include "../common/string_util.h"
 #include "uri.h"
+
+/* The C view of paf::common::String (include/common/string_util.h) until url is C++. */
+typedef struct CommonString {
+	PafString m_string;
+	PafWString m_wstring;
+} CommonString;
 
 typedef struct Url Url;
 typedef struct UrlVTable {

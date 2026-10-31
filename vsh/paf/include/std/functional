@@ -1,0 +1,17 @@
+/* paf::less: the default ordering of paf::map. */
+#ifndef PAF_STD_FUNCTIONAL
+#define PAF_STD_FUNCTIONAL
+
+namespace paf {
+
+template<class _Ty>
+struct less {
+	bool operator()(const _Ty &left, const _Ty &right) const
+	{
+		return left < right;
+	}
+};
+
+}
+
+#endif

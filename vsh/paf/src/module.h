@@ -15,7 +15,7 @@ typedef struct ScePafInit {
 typedef char ScePafInitSizeCheck[sizeof(ScePafInit) == 0x18 ? 1 : -1];
 
 extern SceUInt32 global_heap_size;
-extern SceInt32 cdlg_mode;
+extern SceInt32 sce_paf_is_common_dialog_mode;
 extern SceInt32 global_heap_alignment;
 extern SceInt32 global_heap_disable_assert_on_alloc_failure;
 
