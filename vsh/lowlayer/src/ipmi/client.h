@@ -64,11 +64,12 @@ public:
 				     SceUInt32 inCount, int *pResult, BufferInfo *pOutList,
 				     SceUInt32 outCount) = 0;
 	virtual int invokeAsyncMethod(SceUInt32 methodId, const void *pIn, SceSize inSize,
-				      int *pRequestId) = 0;
+				      int *pRequestId, const EventFlagInfo *pEventFlag) = 0;
 	virtual int invokeAsyncMethod(SceUInt32 methodId, const DataInfo *pInList,
-				      SceUInt32 inCount, int *pRequestId) = 0;
-	virtual int tryGetResult(SceUInt32 methodId, int requestId, int *pResult,
-				 void *pOut, SceSize outSize, SceSize *pOutSize) = 0;
+				      SceUInt32 inCount, int *pRequestId,
+				      const EventFlagInfo *pEventFlag) = 0;
+	virtual int tryGetResult(int requestId, int *pResult, void *pOut, SceSize *pOutSize,
+				 SceSize outSize) = 0;
 	virtual int tryGetResult(SceUInt32 methodId, int requestId, int *pResult,
 				 BufferInfo *pOutList, SceUInt32 outCount) = 0;
 	virtual int pollEventFlag(SceUInt32 index, SceUInt32 bitPattern, SceUInt32 waitMode,

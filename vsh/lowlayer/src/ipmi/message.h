@@ -17,7 +17,9 @@ struct Header {
 #define IPMI_MESSAGE_TYPE_CONNECT_REQUEST	1
 #define IPMI_MESSAGE_TYPE_DISCONNECT_REQUEST	3
 #define IPMI_MESSAGE_TYPE_SYNC_CALL_REQUEST	4
+#define IPMI_MESSAGE_TYPE_ASYNC_CALL_REQUEST	6
 #define IPMI_MESSAGE_TYPE_SYNC_MULTI_CALL_REQUEST	8
+#define IPMI_MESSAGE_TYPE_ASYNC_MULTI_CALL_REQUEST	10
 
 /*
  * A client asking to connect, sent to the server's pipe: the client's limits, then its message
@@ -104,6 +106,59 @@ struct SyncMultiCallRequest : Header {
 	SceUInt32 inCount;
 	SceUInt32 outCount;
 	SceUInt32 reserved[2];
+};
+
+/*
+ * An asynchronous method call, followed by its input. The answer goes to the client's
+ * asyncCallIndex response pipe; eventFlagIndex (-1: none) gets eventFlagBitPattern set.
+ */
+struct AsyncCallRequest : Header {
+	SceUInt32 sessionId;
+	SceUInt32 methodId;
+	int requestId;
+	SceSize inSize;
+	SceUInt32 eventFlagIndex;
+	SceUInt32 eventFlagBitPattern;
+	SceUInt32 asyncCallIndex;
+	SceUInt32 reserved[3];
+};
+
+/* An asynchronous call with several inputs: the input sizes padded to 16, then each input padded to 16. */
+struct AsyncMultiCallRequest : Header {
+	SceUInt32 sessionId;
+	SceUInt32 methodId;
+	int requestId;
+	SceUInt32 inCount;
+	SceUInt32 reserved0;
+	SceUInt32 eventFlagIndex;
+	SceUInt32 eventFlagBitPattern;
+	SceUInt32 asyncCallIndex;
+	SceUInt32 reserved[2];
+};
+
+/* The server's answer to an AsyncCallRequest, in the call's response pipe, then its output. */
+struct AsyncCallResponse : Header {
+	SceUInt32 reserved0;
+	int result;
+	SceSize outSize;
+	int requestId;
+	SceUInt32 reserved[2];
+};
+
+/* The server's answer to an AsyncMultiCallRequest: then the outCount output sizes and outputs. */
+struct AsyncMultiCallResponse : Header {
+	SceUInt32 methodId;
+	int requestId;
+	SceUInt32 reserved0;
+	int result;
+	SceUInt32 outCount;
+	SceUInt32 reserved1;
+};
+
+/* What the server sends into a client message queue before each message. */
+struct MsgQueueHeader {
+	SceSize size;
+	SceUInt32 reserved[3];
 };
 
 /* The server's answer to a SyncMultiCallRequest, followed by the outCount output sizes and outputs. */

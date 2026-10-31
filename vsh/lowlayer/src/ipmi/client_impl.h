@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <kernel.h>
 #include "client.h"
+#include "message.h"
 #include "psp2/event_flag.h"
 #include "psp2/msg_pipe.h"
 #include "psp2/mutex.h"
@@ -14,6 +15,15 @@
 #define IPMI_CLIENT_STATE_DISCONNECTED	1
 #define IPMI_CLIENT_STATE_CONNECTED	2
 #define IPMI_CLIENT_STATE_TERMINATED	3
+
+/*
+ * AsyncCall::state: its answer was read from the response pipe; the call was made with
+ * several inputs (its result comes as several buffers); its output was lost (a buffer was
+ * too small for it, and the bytes stay in the pipe).
+ */
+#define IPMI_ASYNC_CALL_STATE_RECEIVED	0x00000001
+#define IPMI_ASYNC_CALL_STATE_MULTI	0x00008000
+#define IPMI_ASYNC_CALL_STATE_LOST	0x80000000
 
 namespace IPMI {
 namespace impl {
@@ -42,11 +52,12 @@ public:
 				     SceUInt32 inCount, int *pResult, BufferInfo *pOutList,
 				     SceUInt32 outCount);
 	virtual int invokeAsyncMethod(SceUInt32 methodId, const void *pIn, SceSize inSize,
-				      int *pRequestId);
+				      int *pRequestId, const EventFlagInfo *pEventFlag);
 	virtual int invokeAsyncMethod(SceUInt32 methodId, const DataInfo *pInList,
-				      SceUInt32 inCount, int *pRequestId);
-	virtual int tryGetResult(SceUInt32 methodId, int requestId, int *pResult,
-				 void *pOut, SceSize outSize, SceSize *pOutSize);
+				      SceUInt32 inCount, int *pRequestId,
+				      const EventFlagInfo *pEventFlag);
+	virtual int tryGetResult(int requestId, int *pResult, void *pOut, SceSize *pOutSize,
+				 SceSize outSize);
 	virtual int tryGetResult(SceUInt32 methodId, int requestId, int *pResult,
 				 BufferInfo *pOutList, SceUInt32 outCount);
 	virtual int pollEventFlag(SceUInt32 index, SceUInt32 bitPattern, SceUInt32 waitMode,
@@ -66,19 +77,19 @@ private:
 		psp2::MsgPipe responsePipe;
 		psp2::Semaphore responseCounter;
 		SceUInt32 state;
-		SceUInt32 methodId;
-		SceUInt32 magic;
+		SceSize outSize;
 		int result;
-		SceSize resultSize;
+		SceUInt32 methodId;
+		SceUInt32 outCount;
 
 		AsyncCall()
 		{
 			requestId = -1;
 			state = 0;
-			methodId = 0;
-			magic = 0xDEADBEEF;
-			result = -1;
-			resultSize = 0;
+			outSize = 0;
+			result = 0xDEADBEEF;
+			methodId = -1;
+			outCount = 0;
 		}
 	};
 
@@ -87,18 +98,15 @@ private:
 		psp2::Mutex mutex;
 		psp2::Semaphore counter;
 		psp2::MsgPipe pipe;
-		SceUInt32 msgCount;
-		SceUInt32 readIndex;
-		SceUInt32 writeIndex;
-		SceUInt32 waiterCount;
+		message::MsgQueueHeader header;	/* of the next message; size 0: none read yet */
 		SceSize bufferSize;
 
 		MsgQueue()
 		{
-			msgCount = 0;
-			readIndex = 0;
-			writeIndex = 0;
-			waiterCount = 0;
+			header.size = 0;
+			header.reserved[0] = 0;
+			header.reserved[1] = 0;
+			header.reserved[2] = 0;
 		}
 	};
 
@@ -125,6 +133,10 @@ private:
 					 SceUInt32 inCount, const SceSize *pInSizes, SceSize inTotal,
 					 const BufferInfo *pOutList, SceUInt32 outCount,
 					 const SceSize *pOutSizes);
+	AsyncCall *find_free_async_call(SceUInt32 *pIndex);
+	int new_request_id();
+	AsyncCall *find_async_call(int requestId);
+	void release_async_call(AsyncCall *pCall);
 
 	char m_serviceName[16];
 	SceUInt32 m_reserved;

@@ -746,17 +746,15 @@ int ClientImpl::invokeSyncMethod(SceUInt32 methodId, const void *pIn, SceSize in
 	return ret;
 }
 
-/* What the multi-buffer messages pad each piece with, up to 16 bytes. */
-static const char s_padding[16] = { 0 };
-
 int ClientImpl::send_sync_multi_call_request(SceUInt32 methodId, const DataInfo *pInList,
 					     SceUInt32 inCount, const SceSize *pInSizes,
 					     SceSize inTotal, const BufferInfo *pOutList,
 					     SceUInt32 outCount, const SceSize *pOutSizes)
 {
+	static const char padding[16] = { 0 };
 	SuspendLock lock;
 	message::SyncMultiCallRequest request;
-	SceSize sizesSize, sizesPadded, padding;
+	SceSize sizesSize, sizesPadded, paddingSize;
 	SceUInt32 i;
 
 	sizesSize = sizeof(SceSize) * (inCount + outCount);
@@ -770,12 +768,12 @@ int ClientImpl::send_sync_multi_call_request(SceUInt32 methodId, const DataInfo 
 	IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(&request, sizeof(request)));
 	IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(pInSizes, sizeof(SceSize) * inCount));
 	IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(pOutSizes, sizeof(SceSize) * outCount));
-	IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(s_padding, sizesPadded - sizesSize));
+	IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(padding, sizesPadded - sizesSize));
 	for (i = 0; i < inCount; i++) {
 		IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(pInList[i].pData, pInList[i].dataSize));
-		padding = ((pInList[i].dataSize + 15) & ~15) - pInList[i].dataSize;
-		if (padding != 0)
-			IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(s_padding, padding));
+		paddingSize = ((pInList[i].dataSize + 15) & ~15) - pInList[i].dataSize;
+		if (paddingSize != 0)
+			IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(padding, paddingSize));
 	}
 	IPMI_ASSERT_SUCCESS(m_requestCounter.signal());
 	return wake_up_server_dispatcher();
@@ -875,6 +873,495 @@ int ClientImpl::invokeSyncMethod(SceUInt32 methodId, const DataInfo *pInList, Sc
 		}
 	}
 	m_pendingSyncCallCount--;
+	return 0;
+}
+
+/* A free asynchronous call slot; one is free while fewer calls than slots are pending. */
+inline ClientImpl::AsyncCall *ClientImpl::find_free_async_call(SceUInt32 *pIndex)
+{
+	AsyncCall *pCall, *pFree;
+	SceUInt32 index, i;
+
+	pFree = NULL;
+	index = 0;
+	for (i = 0, pCall = m_pAsyncCalls; i < m_asyncCallCount; i++, pCall++) {
+		if (pCall->requestId == -1) {
+			pFree = pCall;
+			index = i;
+			break;
+		}
+	}
+	IPMI_ASSERT(pFree != NULL);
+	*pIndex = index;
+	return pFree;
+}
+
+/* The next request ID no pending call uses (never -1, which marks a free slot). */
+inline int ClientImpl::new_request_id()
+{
+	AsyncCall *pCall;
+	SceUInt32 i;
+	int requestId;
+
+	do {
+		requestId = m_nextRequestId++;
+		if (m_nextRequestId == (SceUInt32)-1)
+			m_nextRequestId++;
+		for (i = 0, pCall = m_pAsyncCalls; i < m_asyncCallCount; i++, pCall++) {
+			if (pCall->requestId == requestId)
+				requestId = -1;
+		}
+	} while (requestId == -1);
+	return requestId;
+}
+
+int ClientImpl::invokeAsyncMethod(SceUInt32 methodId, const void *pIn, SceSize inSize,
+				  int *pRequestId, const EventFlagInfo *pEventFlag)
+{
+	SuspendLock lock;
+	message::AsyncCallRequest request;
+	AsyncCall *pCall;
+	SceUInt32 index;
+	int requestId, ret;
+
+	if (pRequestId == NULL || (inSize != 0 && pIn == NULL))
+		return IPMI_ERROR_INVALID_ARGUMENT;
+	if (inSize > m_maxAsyncCallInSize)
+		return IPMI_ERROR_INPUT_TOO_LARGE;
+	if (pEventFlag != NULL && pEventFlag->index >= m_eventFlagCount)
+		return IPMI_ERROR_INVALID_EVENT_FLAG;
+	ret = m_asyncCallMutex.lock();
+	if (ret == IPMI_ERROR_CANCELED)
+		return IPMI_ERROR_TERMINATED;
+	IPMI_ASSERT_SUCCESS(ret);
+
+	MutexUnlocker asyncCallUnlocker(m_asyncCallMutex);
+
+	ret = m_requestMutex.lock();
+	if (ret == IPMI_ERROR_CANCELED)
+		return IPMI_ERROR_TERMINATED;
+	IPMI_ASSERT_SUCCESS(ret);
+
+	MutexUnlocker requestUnlocker(m_requestMutex);
+
+	if (m_sessionId == 0)
+		return IPMI_ERROR_NOT_CONNECTED;
+	if (m_pendingAsyncCallCount == m_asyncCallCount)
+		return IPMI_ERROR_TOO_MANY_ASYNC_CALLS;
+	m_pendingAsyncCallCount++;
+	pCall = find_free_async_call(&index);
+	requestId = new_request_id();
+	*pRequestId = requestId;
+	pCall->requestId = requestId;
+	request.type = IPMI_MESSAGE_TYPE_ASYNC_CALL_REQUEST;
+	request.size = inSize + sizeof(request);
+	request.sessionId = m_sessionId;
+	request.methodId = methodId;
+	request.requestId = requestId;
+	request.inSize = inSize;
+	request.eventFlagIndex = pEventFlag != NULL ? pEventFlag->index : -1;
+	request.eventFlagBitPattern = pEventFlag != NULL ? pEventFlag->bitPattern : 0;
+	request.asyncCallIndex = index;
+	IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(&request, sizeof(request)));
+	if (inSize != 0)
+		IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(pIn, inSize));
+	IPMI_ASSERT_SUCCESS(m_requestCounter.signal());
+	ret = wake_up_server_dispatcher();
+	if (ret != 0)
+		return ret;
+	return 0;
+}
+
+int ClientImpl::invokeAsyncMethod(SceUInt32 methodId, const DataInfo *pInList, SceUInt32 inCount,
+				  int *pRequestId, const EventFlagInfo *pEventFlag)
+{
+	static const char padding[16] = { 0 };
+	SuspendLock lock;
+	message::AsyncMultiCallRequest request;
+	AsyncCall *pCall;
+	SceSize sizesSize, sizesPadded, inTotal, paddingSize;
+	SceUInt32 index, i;
+	int requestId, ret;
+
+	if (pRequestId == NULL || (inCount != 0 && pInList == NULL))
+		return IPMI_ERROR_INVALID_ARGUMENT;
+
+	SceSize inSizes[inCount];
+
+	sizesSize = sizeof(SceSize) * inCount;
+	sizesPadded = (sizesSize + 15) & ~15;
+	inTotal = 0;
+	for (i = 0; i < inCount; i++) {
+		inSizes[i] = pInList[i].dataSize;
+		inTotal += (pInList[i].dataSize + 15) & ~15;
+	}
+	inTotal += sizesPadded;
+	if (inTotal > m_maxAsyncCallInSize)
+		return IPMI_ERROR_INPUT_TOO_LARGE;
+	if (pEventFlag != NULL && pEventFlag->index >= m_eventFlagCount)
+		return IPMI_ERROR_INVALID_EVENT_FLAG;
+	ret = m_asyncCallMutex.lock();
+	if (ret == IPMI_ERROR_CANCELED)
+		return IPMI_ERROR_TERMINATED;
+	IPMI_ASSERT_SUCCESS(ret);
+
+	MutexUnlocker asyncCallUnlocker(m_asyncCallMutex);
+
+	ret = m_requestMutex.lock();
+	if (ret == IPMI_ERROR_CANCELED)
+		return IPMI_ERROR_TERMINATED;
+	IPMI_ASSERT_SUCCESS(ret);
+
+	MutexUnlocker requestUnlocker(m_requestMutex);
+
+	if (m_sessionId == 0)
+		return IPMI_ERROR_NOT_CONNECTED;
+	if (m_pendingAsyncCallCount == m_asyncCallCount)
+		return IPMI_ERROR_TOO_MANY_ASYNC_CALLS;
+	m_pendingAsyncCallCount++;
+	pCall = find_free_async_call(&index);
+	requestId = new_request_id();
+	*pRequestId = requestId;
+	pCall->requestId = requestId;
+	pCall->state |= IPMI_ASYNC_CALL_STATE_MULTI;
+	request.type = IPMI_MESSAGE_TYPE_ASYNC_MULTI_CALL_REQUEST;
+	request.size = inTotal + sizeof(request);
+	request.sessionId = m_sessionId;
+	request.methodId = methodId;
+	request.requestId = requestId;
+	request.inCount = inCount;
+	request.eventFlagIndex = pEventFlag != NULL ? pEventFlag->index : -1;
+	request.eventFlagBitPattern = pEventFlag != NULL ? pEventFlag->bitPattern : 0;
+	request.asyncCallIndex = index;
+	IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(&request, sizeof(request)));
+	if (inCount != 0) {
+		IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(inSizes, sizesSize));
+		if (sizesPadded != sizesSize)
+			IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(padding,
+								  sizesPadded - sizesSize));
+		for (i = 0; i < inCount; i++) {
+			IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(pInList[i].pData,
+								  pInList[i].dataSize));
+			paddingSize = ((pInList[i].dataSize + 15) & ~15) - pInList[i].dataSize;
+			if (paddingSize != 0)
+				IPMI_ASSERT_SUCCESS(m_requestPipe.trySend(padding, paddingSize));
+		}
+	}
+	IPMI_ASSERT_SUCCESS(m_requestCounter.signal());
+	ret = wake_up_server_dispatcher();
+	if (ret != 0)
+		return ret;
+	return 0;
+}
+
+/* The pending call with this request ID. */
+inline ClientImpl::AsyncCall *ClientImpl::find_async_call(int requestId)
+{
+	AsyncCall *pCall;
+	SceUInt32 i;
+
+	for (i = 0, pCall = m_pAsyncCalls; i < m_asyncCallCount; i++, pCall++) {
+		if (pCall->requestId == requestId)
+			return pCall;
+	}
+	return NULL;
+}
+
+/* Frees a call slot once its result has been taken. */
+inline void ClientImpl::release_async_call(AsyncCall *pCall)
+{
+	pCall->requestId = -1;
+	pCall->state = 0;
+	pCall->outSize = 0;
+	pCall->result = 0xDEADBEEF;
+	pCall->methodId = -1;
+	pCall->outCount = 0;
+	m_pendingAsyncCallCount--;
+}
+
+int ClientImpl::tryGetResult(int requestId, int *pResult, void *pOut, SceSize *pOutSize,
+			     SceSize outSize)
+{
+	message::AsyncCallResponse response;
+	AsyncCall *pCall;
+	SceSize size;
+	int ret;
+
+	if (pResult == NULL || (outSize != 0 && (pOut == NULL || pOutSize == NULL)))
+		return IPMI_ERROR_INVALID_ARGUMENT;
+	if (outSize > m_maxAsyncCallOutSize)
+		return IPMI_ERROR_OUTPUT_TOO_LARGE;
+	if (requestId == -1)
+		return IPMI_ERROR_INVALID_REQUEST_ID;
+	ret = m_asyncCallMutex.lock();
+	if (ret == IPMI_ERROR_CANCELED)
+		return IPMI_ERROR_TERMINATED;
+	IPMI_ASSERT_SUCCESS(ret);
+	if (m_sessionId == 0) {
+		unlock_mutex(m_asyncCallMutex);
+		return IPMI_ERROR_NOT_CONNECTED;
+	}
+	pCall = find_async_call(requestId);
+	if (pCall == NULL) {
+		unlock_mutex(m_asyncCallMutex);
+		return IPMI_ERROR_INVALID_REQUEST_ID;
+	}
+	if (pCall->state & IPMI_ASYNC_CALL_STATE_MULTI) {
+		unlock_mutex(m_asyncCallMutex);
+		return IPMI_ERROR_INVALID_CALL_TYPE;
+	}
+	if (!(pCall->state & IPMI_ASYNC_CALL_STATE_RECEIVED)) {
+		ret = pCall->responseCounter.tryWait();
+		if (ret == IPMI_ERROR_WOULD_BLOCK) {
+			unlock_mutex(m_asyncCallMutex);
+			return is_server_alive() ? IPMI_ERROR_WOULD_BLOCK : IPMI_ERROR_TERMINATED;
+		}
+		IPMI_ASSERT_SUCCESS(ret);
+		IPMI_ASSERT_SUCCESS(pCall->responsePipe.tryReceive(&response, &size,
+								    sizeof(response)));
+		IPMI_ASSERT(size == sizeof(response));
+		IPMI_ASSERT(response.requestId == requestId);
+		pCall->result = response.result;
+		pCall->state |= IPMI_ASYNC_CALL_STATE_RECEIVED;
+		pCall->outSize = response.outSize;
+	}
+	if (pCall->outSize != 0) {
+		if (pCall->outSize > outSize) {
+			unlock_mutex(m_asyncCallMutex);
+			return IPMI_ERROR_OUTPUT_BUFFER_TOO_SMALL;
+		}
+		IPMI_ASSERT_SUCCESS(pCall->responsePipe.tryReceive(pOut, &size, pCall->outSize));
+		IPMI_ASSERT(size == pCall->outSize);
+		*pOutSize = pCall->outSize;
+	}
+	*pResult = pCall->result;
+	release_async_call(pCall);
+	unlock_mutex(m_asyncCallMutex);
+	return 0;
+}
+
+int ClientImpl::tryGetResult(SceUInt32 methodId, int requestId, int *pResult,
+			     BufferInfo *pOutList, SceUInt32 outCount)
+{
+	message::AsyncMultiCallResponse response;
+	AsyncCall *pCall;
+	SceSize size;
+	SceUInt32 i;
+	int ret;
+
+	if (pResult == NULL || (outCount != 0 && pOutList == NULL))
+		return IPMI_ERROR_INVALID_ARGUMENT;
+	if (requestId == -1)
+		return IPMI_ERROR_INVALID_REQUEST_ID;
+	ret = m_asyncCallMutex.lock();
+	if (ret == IPMI_ERROR_CANCELED)
+		return IPMI_ERROR_TERMINATED;
+	IPMI_ASSERT_SUCCESS(ret);
+	if (m_sessionId == 0) {
+		unlock_mutex(m_asyncCallMutex);
+		return IPMI_ERROR_NOT_CONNECTED;
+	}
+	pCall = find_async_call(requestId);
+	if (pCall == NULL) {
+		unlock_mutex(m_asyncCallMutex);
+		return IPMI_ERROR_INVALID_REQUEST_ID;
+	}
+	if (!(pCall->state & IPMI_ASYNC_CALL_STATE_MULTI)) {
+		unlock_mutex(m_asyncCallMutex);
+		return IPMI_ERROR_INVALID_CALL_TYPE;
+	}
+	if (!(pCall->state & IPMI_ASYNC_CALL_STATE_RECEIVED)) {
+		ret = pCall->responseCounter.tryWait();
+		if (ret == IPMI_ERROR_WOULD_BLOCK) {
+			unlock_mutex(m_asyncCallMutex);
+			return is_server_alive() ? IPMI_ERROR_WOULD_BLOCK : IPMI_ERROR_TERMINATED;
+		}
+		IPMI_ASSERT_SUCCESS(ret);
+		IPMI_ASSERT_SUCCESS(pCall->responsePipe.tryReceive(&response, &size,
+								    sizeof(response)));
+		IPMI_ASSERT(size == sizeof(response));
+		IPMI_ASSERT(response.requestId == requestId);
+		pCall->methodId = response.methodId;
+		pCall->outCount = response.outCount;
+		pCall->result = response.result;
+		pCall->state |= IPMI_ASYNC_CALL_STATE_RECEIVED;
+	}
+	if (pCall->methodId != methodId) {
+		unlock_mutex(m_asyncCallMutex);
+		return IPMI_ERROR_METHOD_MISMATCH;
+	}
+	if (pCall->state & IPMI_ASYNC_CALL_STATE_LOST) {
+		unlock_mutex(m_asyncCallMutex);
+		return IPMI_ERROR_INTERNAL;
+	}
+	if (pCall->outCount != 0) {
+		if (pCall->outCount != outCount) {
+			unlock_mutex(m_asyncCallMutex);
+			return IPMI_ERROR_INVALID_OUT_COUNT;
+		}
+
+		SceSize outSizes[outCount];
+
+		IPMI_ASSERT_SUCCESS(pCall->responsePipe.tryReceive(outSizes, &size,
+								    sizeof(SceSize) * outCount));
+		for (i = 0; i < outCount; i++) {
+			if (pOutList[i].bufferSize < outSizes[i]) {
+				pCall->state |= IPMI_ASYNC_CALL_STATE_LOST;
+				unlock_mutex(m_asyncCallMutex);
+				return IPMI_ERROR_OUTPUT_BUFFER_TOO_SMALL;
+			}
+		}
+		for (i = 0; i < outCount; i++)
+			IPMI_ASSERT_SUCCESS(pCall->responsePipe.tryReceive(pOutList[i].pBuffer,
+									    &pOutList[i].outSize,
+									    outSizes[i]));
+	}
+	*pResult = pCall->result;
+	release_async_call(pCall);
+	unlock_mutex(m_asyncCallMutex);
+	return 0;
+}
+
+int ClientImpl::pollEventFlag(SceUInt32 index, SceUInt32 bitPattern, SceUInt32 waitMode,
+			      SceUInt32 *pResultPattern)
+{
+	int ret;
+
+	if (index >= m_eventFlagCount)
+		return IPMI_ERROR_INVALID_EVENT_FLAG;
+	ret = m_pEventFlags[index].poll(bitPattern, waitMode, pResultPattern);
+	if (ret != 0)
+		return ret;
+	if (!is_server_alive())
+		return IPMI_ERROR_TERMINATED;
+	return 0;
+}
+
+int ClientImpl::waitEventFlag(SceUInt32 index, SceUInt32 bitPattern, SceUInt32 waitMode,
+			      SceUInt32 *pResultPattern, SceUInt32 *pTimeout)
+{
+	SceUInt32 timeout;
+	int ret;
+
+	if (index >= m_eventFlagCount)
+		return IPMI_ERROR_INVALID_EVENT_FLAG;
+	for (;;) {
+		timeout = 500000;
+		ret = m_pEventFlags[index].wait(bitPattern, waitMode, pResultPattern,
+						pTimeout != NULL ? pTimeout : &timeout);
+		if (ret == 0)
+			return 0;
+		if (ret != IPMI_ERROR_TIMEOUT)
+			return ret;
+		if (!is_server_alive())
+			return IPMI_ERROR_TERMINATED;
+		if (pTimeout != NULL)
+			return ret;
+	}
+}
+
+void *ClientImpl::getUserData()
+{
+	return m_pUserData;
+}
+
+int ClientImpl::getMsg(SceUInt32 index, void *pBuffer, SceSize *pSize, SceSize bufferSize,
+		       SceUInt32 *pTimeout)
+{
+	MsgQueue *pQueue;
+	SceUInt32 timeout;
+	SceSize size;
+	int ret;
+
+	if (pBuffer == NULL || pSize == NULL)
+		return IPMI_ERROR_INVALID_ARGUMENT;
+	if (index >= m_msgQueueCount)
+		return IPMI_ERROR_INVALID_MSG_QUEUE;
+	pQueue = &m_pMsgQueues[index];
+	ret = pQueue->mutex.lock();
+	if (ret == IPMI_ERROR_CANCELED)
+		return IPMI_ERROR_TERMINATED;
+	IPMI_ASSERT_SUCCESS(ret);
+	for (;;) {
+		while (pQueue->header.size == 0) {
+			timeout = 500000;
+			ret = pQueue->counter.wait(pTimeout != NULL ? pTimeout : &timeout);
+			if (ret == 0) {
+				ret = pQueue->pipe.tryReceive(&pQueue->header, &size,
+							      sizeof(pQueue->header));
+				if (ret != IPMI_ERROR_WOULD_BLOCK)
+					IPMI_ASSERT(size == sizeof(pQueue->header));
+				continue;
+			}
+			if (ret == IPMI_ERROR_TIMEOUT) {
+				if (!is_server_alive())
+					ret = IPMI_ERROR_TERMINATED;
+				else if (pTimeout == NULL)
+					continue;
+			}
+			if (ret == IPMI_ERROR_CANCELED) {
+				if (m_sessionId == 0) {
+					unlock_mutex(pQueue->mutex);
+					return IPMI_ERROR_TERMINATED;
+				}
+				continue;
+			}
+			unlock_mutex(pQueue->mutex);
+			return ret;
+		}
+		if (pQueue->header.size > bufferSize) {
+			unlock_mutex(pQueue->mutex);
+			return IPMI_ERROR_OUTPUT_BUFFER_TOO_SMALL;
+		}
+		ret = pQueue->pipe.tryReceive(pBuffer, &size, pQueue->header.size);
+		if (ret == 0)
+			break;
+		IPMI_ASSERT(ret == IPMI_ERROR_WOULD_BLOCK);
+		pQueue->header.size = 0;
+	}
+	*pSize = size;
+	pQueue->header.size = 0;
+	unlock_mutex(pQueue->mutex);
+	return 0;
+}
+
+int ClientImpl::tryGetMsg(SceUInt32 index, void *pBuffer, SceSize *pSize, SceSize bufferSize)
+{
+	MsgQueue *pQueue;
+	SceSize size;
+	int ret;
+
+	if (pBuffer == NULL || pSize == NULL)
+		return IPMI_ERROR_INVALID_ARGUMENT;
+	if (index >= m_msgQueueCount)
+		return IPMI_ERROR_INVALID_MSG_QUEUE;
+	pQueue = &m_pMsgQueues[index];
+	ret = pQueue->mutex.lock();
+	if (ret == IPMI_ERROR_CANCELED)
+		return IPMI_ERROR_TERMINATED;
+	IPMI_ASSERT_SUCCESS(ret);
+	if (pQueue->header.size == 0) {
+		ret = pQueue->counter.tryWait();
+		if (ret == 0) {
+			IPMI_ASSERT_SUCCESS(pQueue->pipe.tryReceive(&pQueue->header, &size,
+								     sizeof(pQueue->header)));
+			IPMI_ASSERT(size == sizeof(pQueue->header));
+		} else {
+			unlock_mutex(pQueue->mutex);
+			IPMI_ASSERT(ret == IPMI_ERROR_WOULD_BLOCK);
+			if (!is_server_alive())
+				return IPMI_ERROR_TERMINATED;
+			return ret;
+		}
+	}
+	if (pQueue->header.size > bufferSize) {
+		unlock_mutex(pQueue->mutex);
+		return IPMI_ERROR_OUTPUT_BUFFER_TOO_SMALL;
+	}
+	IPMI_ASSERT_SUCCESS(pQueue->pipe.tryReceive(pBuffer, &size, pQueue->header.size));
+	*pSize = size;
+	pQueue->header.size = 0;
+	unlock_mutex(pQueue->mutex);
 	return 0;
 }
 

@@ -23,6 +23,12 @@ struct DataInfo {
 	SceSize dataSize;
 };
 
+/* The client event flag an asynchronous call sets when its result arrives. */
+struct EventFlagInfo {
+	SceUInt32 index;
+	SceUInt32 bitPattern;
+};
+
 /* One of a method's output buffers (Sony's IPMI::BufferInfo): outSize is what was written. */
 struct BufferInfo {
 	void *pBuffer;
