@@ -204,7 +204,7 @@ static inline int udRemoveDeleteList(const char *name, SceUInt32 length, SceUInt
  * The carriers whose AMSS and UQCN firmwares the modem already has are taken off the
  * delete list; the others are marked to be written.
  */
-int _udCompareVersionCarrierImage(UdQmdm6200Work *work, UdModemFirmList *list)
+static int _udCompareVersionCarrierImage(UdQmdm6200Work *work, UdModemFirmList *list)
 {
 	UdModemFirm *info;
 	UdCarrier *carrier;

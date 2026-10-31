@@ -273,7 +273,6 @@ int udParseImage_QMDM6200(const SceUInt8 **cursor, SceUInt32 *length);
 void udReleaseImage_QMDM6200(UdContext *context, UdQmdm6200Work *work);
 int udPrepareImage_QMDM6200(SceUInt32 configurationMode, UdQmdm6200Work *work);
 int udResetDeleteList_QMDM6200(void);
-int _udCompareVersionCarrierImage(UdQmdm6200Work *work, UdModemFirmList *list);
 int udCheckUpdateNoNeed_QMDM6200(const UdModemInformation *information);
 int udSetUpdateFirmImages_QMDM6200(void);
 int udSetUpdateCarrierImages_QMDM6200(void);
