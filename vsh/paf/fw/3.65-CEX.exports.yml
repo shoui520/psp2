@@ -415,7 +415,7 @@ ScePaf:
         - _ZN3paf12BufferedFile4SeekExi: 0x326FDFA7
         - _ZNK3paf6memory14RangeAllocator7GetTypeEv: 0x32729AC8
         - _ZN3paf4math4rect8set_sizeEff: 0x3291450C
-        - ScePafMisc_32E2C605: 0x32E2C605
+        - _ZN3paf11inputdevice20InputGestureListener21DetachGestureListenerEjjPv: 0x32E2C605
         - ScePafMisc_333C86DC: 0x333C86DC
         - _ZN3paf11inputdevice11touchscreen13GetDeviceInfoEjPNS1_10DeviceInfoE: 0x33450EB9
         - _ZN3paf5cache9CacheBase8SetTicksEi: 0x33ADBB0A
@@ -859,7 +859,7 @@ ScePaf:
         - _ZN3paf17LocalFilePsp2Impl4OpenEPKcjj: 0x9DD7B62D
         - ScePafMisc_9DE7DA6D: 0x9DE7DA6D
         - _ZN3paf4math4rect10is_in_rectERKS1_: 0x9DF81658
-        - ScePafMisc_9E05ECF0: 0x9E05ECF0
+        - _ZN3paf11inputdevice20InputGestureListener21AttachGestureListenerEjjNS_6common9SharedPtrINS0_15GestureListenerEEE: 0x9E05ECF0
         - _ZN3paf6memory13HeapAllocator20sce_paf_musable_sizeEPv: 0x9E07A92C
         - _ZN3paf4math4rect8set_sizeERKNS0_2v2E: 0x9EBE483F
         - _ZN3paf5cache10CacheImage8GetImageEv: 0x9F7CBA3B

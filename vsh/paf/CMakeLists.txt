@@ -108,7 +108,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/cache/cache_manager.cpp
 	src/cache/cache_manager_impl.cpp
 	src/common/encoded_string.cpp
-	src/inputdevice/gesturelistener.c
+	src/inputdevice/gesturelistener.cpp
 	src/inputdevice/motionsensor/motionsensor.c
 	src/timer/timer.c
 	src/timer/curves.c
@@ -218,3 +218,7 @@ set_source_files_properties(
 # paf::http::Transaction's base destructor calls its complete one, which inlines Destroy: budget 20
 # does that, 30 copies the complete one (2026-10-31).
 set_source_files_properties(src/http/http.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=20)
+
+# The gesture listeners inline map::find, the erase by key into erase(iterator) and
+# GestureListener::Detach: budgets 24 to 31 do (2026-10-31).
+set_source_files_properties(src/inputdevice/gesturelistener.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)

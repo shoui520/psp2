@@ -28,8 +28,22 @@ public:
 	typedef _Kty key_type;
 	typedef _Ty mapped_type;
 	typedef typename _Mybase::value_type value_type;
+	typedef typename _Mybase::iterator iterator;
+	typedef _Ax allocator_type;
+
+	explicit map(const allocator_type &al = allocator_type())
+	{
+	}
 
 	mapped_type &operator[](const key_type &key);
+
+	pair<iterator, bool> insert(const value_type &val)
+	{
+		bool inserted;
+		typename _Mybase::_Node *node = this->_Insert(val, &inserted);
+
+		return pair<iterator, bool>(iterator(node), inserted);
+	}
 };
 
 template<class _Kty, class _Ty, class _Pr, class _Ax>

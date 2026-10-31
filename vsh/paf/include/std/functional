@@ -1,4 +1,4 @@
-/* paf::less: the default ordering of paf::map. */
+/* paf::less: the default ordering of paf::map; paf::greater its reverse. */
 #ifndef PAF_STD_FUNCTIONAL
 #define PAF_STD_FUNCTIONAL
 
@@ -9,6 +9,14 @@ struct less {
 	bool operator()(const _Ty &left, const _Ty &right) const
 	{
 		return left < right;
+	}
+};
+
+template<class _Ty>
+struct greater {
+	bool operator()(const _Ty &left, const _Ty &right) const
+	{
+		return left > right;
 	}
 };
 

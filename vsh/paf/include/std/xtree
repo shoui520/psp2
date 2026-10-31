@@ -77,18 +77,14 @@ public:
 		{
 			if (node != NULL) {
 				if (!node->right->isnil) {
-					_Node *next = node->right;
-
-					for (_Node *left = next->left; !left->isnil; left = left->left)
-						next = left;
-					node = next;
+					node = node->right;
+					while (!node->left->isnil)
+						node = node->left;
 				} else {
-					_Node *parent = node->parent;
+					_Node *parent;
 
-					while (!parent->isnil && parent->left != node) {
+					while (!(parent = node->parent)->isnil && node != parent->left)
 						node = parent;
-						parent = parent->parent;
-					}
 					node = parent;
 				}
 			}
@@ -192,6 +188,25 @@ public:
 	key_compare comp;
 
 private:
+	/* The node of key, else the nil node it ends at; NULL without a head. */
+	_Node *_Find(const key_type &key)
+	{
+		if (head == NULL)
+			return NULL;
+
+		_Node *node = head->parent;
+
+		while (!node->isnil) {
+			if (comp(key, _Traits::_Kfn(node->value)))
+				node = node->left;
+			else if (comp(_Traits::_Kfn(node->value), key))
+				node = node->right;
+			else
+				break;
+		}
+		return node;
+	}
+
 	void _Lrotate(_Node *where)
 	{
 		if (head == NULL)
@@ -403,20 +418,7 @@ typename _Tree<_Traits>::_Node *_Tree<_Traits>::_Insert(const value_type &val, b
 template<class _Traits>
 typename _Tree<_Traits>::iterator _Tree<_Traits>::find(const key_type &key)
 {
-	if (head == NULL)
-		return iterator(NULL);
-
-	_Node *node = head->parent;
-
-	while (!node->isnil) {
-		if (comp(key, _Traits::_Kfn(node->value)))
-			node = node->left;
-		else if (comp(_Traits::_Kfn(node->value), key))
-			node = node->right;
-		else
-			break;
-	}
-	return iterator(node);
+	return iterator(_Find(key));
 }
 
 /* Deletes every node but the head, children before their parents. */
@@ -464,7 +466,7 @@ void _Tree<_Traits>::_EraseFixup(_Node *fixnode, _Node *fixnodeparent)
 		if (fixnode == fixnodeparent->left) {
 			_Node *sibling = fixnodeparent->right;
 
-			if (sibling->color == _Red) {
+			if (sibling->color != _Black) {
 				sibling->color = _Black;
 				fixnodeparent->color = _Red;
 				_Lrotate(fixnodeparent);
@@ -489,13 +491,13 @@ void _Tree<_Traits>::_EraseFixup(_Node *fixnode, _Node *fixnodeparent)
 		} else {
 			_Node *sibling = fixnodeparent->left;
 
-			if (sibling->color == _Red) {
+			if (sibling->color != _Black) {
 				sibling->color = _Black;
 				fixnodeparent->color = _Red;
 				_Rrotate(fixnodeparent);
 				sibling = fixnodeparent->left;
 			}
-			if (sibling->right->color == _Black && sibling->left->color == _Black) {
+			if (sibling->left->color == _Black && sibling->right->color == _Black) {
 				sibling->color = _Red;
 				fixnode = fixnodeparent;
 			} else {
@@ -607,19 +609,8 @@ void _Tree<_Traits>::_Erase(_Node *erasednode)
 template<class _Traits>
 void _Tree<_Traits>::erase(const key_type &key)
 {
-	if (head == NULL)
-		return;
+	_Node *node = _Find(key);
 
-	_Node *node = head->parent;
-
-	while (!node->isnil) {
-		if (comp(key, _Traits::_Kfn(node->value)))
-			node = node->left;
-		else if (comp(_Traits::_Kfn(node->value), key))
-			node = node->right;
-		else
-			break;
-	}
 	if (node != NULL && !node->isnil)
 		_Erase(node);
 }
