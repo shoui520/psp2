@@ -37,7 +37,6 @@ _Static_assert(offsetof(CacheManagerImpl, httpFileOpenFlags) == 76,
 
 void *CacheManagerImplAllocInstantHeap(CacheManagerImpl *self, size_t size);
 void CacheManagerImplFreeInstantHeap(CacheManagerImpl *self, void *ptr);
-void ScePafMisc_33ADBB0A(CacheManagerImpl *self, uint32_t flags);
 void ScePafMisc_BF5194CD(CacheManagerImpl *self, uint8_t shutdown);
 
 int CacheManagerImplInitialize(void);

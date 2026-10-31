@@ -1,0 +1,78 @@
+/*
+ * paf::intrusive_ptr: a pointer to an object that counts its own references
+ * (AddRef and Release of the object).
+ */
+#ifndef PAF_STD_MEMORY
+#define PAF_STD_MEMORY
+
+#include <stddef.h>
+
+namespace paf {
+
+template<class T>
+class intrusive_ptr {
+public:
+	intrusive_ptr() : m_ptr(NULL)
+	{
+	}
+
+	intrusive_ptr(T *ptr) : m_ptr(ptr)
+	{
+		if (m_ptr != NULL)
+			m_ptr->AddRef();
+	}
+
+	intrusive_ptr(const intrusive_ptr &src) : m_ptr(src.m_ptr)
+	{
+		if (m_ptr != NULL)
+			m_ptr->AddRef();
+	}
+
+	~intrusive_ptr()
+	{
+		if (m_ptr != NULL)
+			m_ptr->Release();
+	}
+
+	intrusive_ptr &operator=(const intrusive_ptr &src)
+	{
+		if (src.m_ptr != m_ptr) {
+			if (m_ptr != NULL)
+				m_ptr->Release();
+			m_ptr = src.m_ptr;
+			if (m_ptr != NULL)
+				m_ptr->AddRef();
+		}
+		return *this;
+	}
+
+	void clear()
+	{
+		if (m_ptr != NULL) {
+			m_ptr->Release();
+			m_ptr = NULL;
+		}
+	}
+
+	T *get() const
+	{
+		return m_ptr;
+	}
+
+	T *operator->() const
+	{
+		return m_ptr;
+	}
+
+	T &operator*() const
+	{
+		return *m_ptr;
+	}
+
+private:
+	T *m_ptr;
+};
+
+}
+
+#endif

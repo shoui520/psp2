@@ -1,0 +1,57 @@
+/*
+ * paf::File: the interface of paf's files (local, memory, HTTP, buffered).
+ * The files themselves are still C (src/file/); this is their C++ view.
+ */
+#ifndef PAF_FILE_FILE_H
+#define PAF_FILE_FILE_H
+
+#include <stddef.h>
+#include <stdint.h>
+
+namespace paf {
+
+class FileStat;
+
+class File {
+public:
+	enum Type {
+		Type_None = 0,
+		Type_Local = 1,
+		Type_Mem = 2,
+		Type_Http = 3
+	};
+
+	/* What Open() takes; each kind of file extends it. */
+	class OpenArg {
+	public:
+		uint32_t file_type;
+	};
+
+	virtual int32_t GetFileType() const = 0;
+	virtual int32_t GetCapability() const = 0;
+	virtual int64_t GetFileSize() const = 0;
+	virtual int32_t Open(const OpenArg *param) = 0;
+	virtual int32_t OpenAsync(const OpenArg *param) = 0;
+	virtual int32_t Close() = 0;
+	virtual int32_t CloseAsync() = 0;
+	virtual bool IsOpened() const = 0;
+	virtual bool IsEof() = 0;
+	virtual int32_t Abort() = 0;
+	virtual int32_t Read(void *buf, size_t nbyte) = 0;
+	virtual int32_t ReadAsync(void *buf, size_t nbyte) = 0;
+	virtual int32_t Write(const void *buf, size_t nbyte) = 0;
+	virtual int32_t WriteAsync(const void *buf, size_t nbyte) = 0;
+	virtual int64_t Seek(int64_t offset, int32_t whence) = 0;
+	virtual int32_t SeekAsync(int64_t offset, int32_t whence) = 0;
+	virtual int32_t Flush() = 0;
+	virtual int32_t FlushAsync() = 0;
+	virtual int32_t WaitAsync(int64_t *result) = 0;
+	virtual int32_t PollAsync(int64_t *result) = 0;
+	virtual int32_t Getstat(FileStat *stat);
+	virtual int32_t SetPriority(int32_t priority);
+	virtual ~File();
+};
+
+}
+
+#endif

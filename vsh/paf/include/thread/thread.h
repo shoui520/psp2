@@ -43,6 +43,23 @@ public:
 	SceKernelLwMutexWork m_mutex;
 };
 
+/* Holds an RMutex for its scope. */
+class RMutexLock {
+public:
+	RMutexLock(RMutex *rmutex) : m_rmutex(rmutex)
+	{
+		m_rmutex->Lock();
+	}
+
+	~RMutexLock()
+	{
+		m_rmutex->Unlock();
+	}
+
+private:
+	RMutex *m_rmutex;
+};
+
 class Cond {
 public:
 	Cond(Mutex &mutex, const char *name, int option);

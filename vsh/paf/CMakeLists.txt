@@ -66,6 +66,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/math/matrix.cpp
 	src/math/quaternion.cpp
 	src/math/rect.cpp
+	src/cache/cache_base.cpp
+	src/cache/cache_image.cpp
 	src/cache/cache_manager.c
 	src/cache/cache_manager_impl.c
 	src/inputdevice/inputdevice.c
@@ -124,7 +126,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/enum_table.c
 	src/misc/string_variant.c
 	src/misc/lock.c
-	src/misc/owned_destroy.c
 	src/misc/rect_contains.c
 	src/misc/list.c
 	src/misc/dispatch.c
@@ -157,7 +158,8 @@ set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIE
 # them call C1/D1, and CallQueue::Enqueue calls string::assign out of line; budgets 29 to 31 do
 # both (2026-10-31).
 set_source_files_properties(
-	src/buffer/buffer.cpp src/job/job.cpp src/math/matrix.cpp src/math/rect.cpp
+	src/buffer/buffer.cpp src/cache/cache_base.cpp
+	src/job/job.cpp src/math/matrix.cpp src/math/rect.cpp
 	src/memory/heap_allocator.cpp src/memory/range_allocator.cpp src/memory/pool_allocator.cpp
 	src/thread/callqueue.cpp src/thread/cond.cpp src/thread/mutex.cpp src/thread/priority.cpp
 	src/thread/rmutex.cpp src/thread/rwlock.cpp src/thread/semaphore.cpp src/thread/sleep.cpp
@@ -168,3 +170,7 @@ set_source_files_properties(
 # init_user_mstate: budgets 21 to 24 do that, 20 or less keeps internal_mallinfo out of line
 # (2026-10-31).
 set_source_files_properties("${paf_dlmalloc_source}" PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=21)
+
+# CacheImage's destructor stays out of line in its subclass's and its own deleting destructors,
+# while IsResourcePath is inlined: budget 16 does both, 12 and 20 do not (2026-10-31).
+set_source_files_properties(src/cache/cache_image.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)

@@ -84,6 +84,8 @@ public:
 	wstring m_wstring;
 };
 
+string FormatString(const char *format, ...);
+
 namespace string_util {
 
 void tokenize(list<string> &tokens, const string &str, size_t pos, char delimiter);

@@ -409,7 +409,7 @@ basic_string<_Elem, _Traits, _Ax>::erase(size_type pos, size_type len)
 }
 
 template<class _Elem, class _Traits, class _Ax>
-basic_string<_Elem, _Traits, _Ax>
+__attribute__((noinline)) basic_string<_Elem, _Traits, _Ax>
 basic_string<_Elem, _Traits, _Ax>::substr(size_type pos, size_type len) const
 {
 	if (pos > count)
@@ -459,6 +459,11 @@ typedef basic_string<wchar_t> wstring;
 inline bool operator==(const string &left, const string &right)
 {
 	return *left.c_str() == *right.c_str() && sce_paf_strcmp(left.c_str(), right.c_str()) == 0;
+}
+
+inline bool operator==(const string &left, const char *right)
+{
+	return *left.c_str() == *right && sce_paf_strcmp(left.c_str(), right) == 0;
 }
 
 inline bool operator==(const wstring &left, const wstring &right)

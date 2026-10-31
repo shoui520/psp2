@@ -73,6 +73,23 @@ public:
 		return *this;
 	}
 
+	/* From a SharedPtr of a derived class: the same counter block. */
+	template<class U>
+	SharedPtr &operator=(const SharedPtr<U> &src)
+	{
+		if (m_ptr != src.m_ptr) {
+			T *ptr = src.m_ptr;
+			RefCounter *counter = (RefCounter *)src.m_ref_counter;
+
+			Release();
+			m_ptr = ptr;
+			m_ref_counter = counter;
+			if (m_ptr != NULL)
+				sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+		}
+		return *this;
+	}
+
 	void reset()
 	{
 		Release();
