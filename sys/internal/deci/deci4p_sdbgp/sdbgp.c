@@ -229,19 +229,19 @@ int sdbgpSendErrorHeader(SdbgpCpuState *cpu, uint8_t group, uint8_t command,
 	return sdbgpUpdateBufStatus(&cpu->sendStatus, SDBGP_BUF_HEADER, 1);
 }
 
-uint32_t sdbgpGetFlags(SdbgpCpuState *cpu, uint32_t mask)
+uint32_t sdbgpGetFlags(SdbgpState *state, uint32_t mask)
 {
-	return cpu->flags & mask;
+	return state->flags & mask;
 }
 
-void sdbgpUpdateFlags(SdbgpCpuState *cpu, uint32_t bits, int set)
+void sdbgpUpdateFlags(SdbgpState *state, uint32_t bits, int set)
 {
 	SceKernelIntrStatus intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_sdbgpFlagsLock);
 
 	if (set)
-		cpu->flags |= bits;
+		state->flags |= bits;
 	else
-		cpu->flags &= ~bits;
+		state->flags &= ~bits;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdbgpFlagsLock, intr);
 }
 

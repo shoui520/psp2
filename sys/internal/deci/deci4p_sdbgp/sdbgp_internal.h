@@ -19,6 +19,7 @@
 #include <iofilemgr/vfs.h>
 #include <processmgr/process_info.h>
 #include <sysmem/heap_info.h>
+#include <sysmem/address_space.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/uid_class.h>
 #include <threadmgr/threadmgr_debugger.h>
@@ -319,7 +320,8 @@ typedef struct SdbgpCpuState {
 	int handle;				/* 0x04: of the SDfMgr protocol */
 	uint32_t flags;				/* 0x08 */
 	uint32_t hostMode;			/* 0x0c */
-	uint32_t reserved0[2];			/* 0x10 */
+	SceUID stoppedTid;			/* 0x10 */
+	uint32_t reserved0;			/* 0x14 */
 	uint32_t recvStatus;			/* 0x18: SDBGP_BUF_* */
 	SceSize recvSize;			/* 0x1c */
 	SdbgpHeader *recvBuf;			/* 0x20 */
@@ -465,10 +467,11 @@ _Static_assert(sizeof(SdbgpLeakCheck) == 0x34, "leak check state");
 typedef struct SdbgpState {
 	SceUID memblock;			/* 0x000 */
 	void *base;				/* 0x004 */
-	uint32_t reserved0[2];			/* 0x008 */
+	uint32_t flags;				/* 0x008 */
+	uint32_t reserved0;			/* 0x00c */
 	SdbgpSwbkpt swbkpt[SDBGP_SWBKPT_MAX];	/* 0x010 */
 	SdbgpSwbkpt sysSwbkpt;			/* 0x330: one taken out to step over it */
-	uint32_t reserved1[10];			/* 0x358 */
+	SdbgpSwbkpt stepSwbkpt;			/* 0x358: step over a call */
 	SdbgpHwSlot hwbkpt[SDBGP_HWBKPT_MAX];	/* 0x380 */
 	SdbgpDisabledHwbkpt disabledHwbkpt;	/* 0x410: hwbkptDisableHWBP */
 	SdbgpHwSlot hwwatch[SDBGP_HWWATCH_MAX];	/* 0x428 */
@@ -476,9 +479,10 @@ typedef struct SdbgpState {
 	SdbgpDisabledHwwtpt disabledHwwtpt;	/* 0x444: hwwtptDisableHWWP */
 	uint32_t reserved4[2];			/* 0x450 */
 	uint32_t enabled;			/* 0x458 */
-	uint32_t reserved5[4];			/* 0x45c */
+	SceUID stoppedTid[4];			/* 0x45c */
 	uint32_t stopReason[4];			/* 0x46c: per core, SDBGP_STOP_* */
-	uint32_t reserved6[4];			/* 0x47c */
+	uint32_t reserved6[3];			/* 0x47c */
+	uint32_t stepCount;			/* 0x488 */
 	SdfMgrDebugCpuState *debugCpu;		/* 0x48c: the SDfMgr break records */
 	SdbgpLeakCheck leakCheck;		/* 0x490 */
 	void *traceBase;			/* 0x4c4 */
@@ -500,8 +504,8 @@ int sdbgpUpdateBufStatus(uint32_t *status, uint32_t bits, int set);
 int _sdbgpFreeSendBuf(SdbgpCpuState *cpu);
 int sdbgpSendErrorHeader(SdbgpCpuState *cpu, uint8_t group, uint8_t command,
 			 uint8_t tag, uint32_t result);
-uint32_t sdbgpGetFlags(SdbgpCpuState *cpu, uint32_t mask);
-void sdbgpUpdateFlags(SdbgpCpuState *cpu, uint32_t bits, int set);
+uint32_t sdbgpGetFlags(SdbgpState *state, uint32_t mask);
+void sdbgpUpdateFlags(SdbgpState *state, uint32_t bits, int set);
 uint32_t sdbgpGetStatus(SdbgpCpuState *cpu, uint32_t mask);
 void sdbgpUpdateStatus(SdbgpCpuState *cpu, uint32_t bits, int set);
 SceSize sdbgpGetRecvSize(SdbgpCpuState *cpu);
@@ -637,10 +641,21 @@ int isThreadIsSuspendedAlready(SceUID tid);
 int isAddressOverflow(uintptr_t address, SceSize size);
 int isIllegalFd(SceUID pid, SceUID fd, SceIofileInfo *info);
 int isIllegalSysFd(SceUID fd, SceIofileInfo *info);
-int checkSdbgpTargetAddrStopCausePabt(uint32_t ifar, SceUID pid, SceUID tid,
-				      uintptr_t pc, uint32_t cpsr, int addressSpace);
-int checkSdbgpTargetAddrStopCauseDabt(uint32_t dfar, SceUID pid, SceUID tid,
-				      uintptr_t pc, uint32_t cpsr, int mode);
+/* the context an exception handler passes to checkSdbgpTargetAddrStopCause* */
+typedef struct SdbgpExcpInfo {
+	SceExcpmgrContext *context;		/* 0x00 */
+	SceUID processId;			/* 0x04 */
+	SceUID threadId;			/* 0x08 */
+	uintptr_t pc;				/* 0x0c */
+	uint32_t cpsr;				/* 0x10 */
+	int addressSpace;			/* 0x14: 1 intr, 16 kernel, 32 user */
+	uint32_t stopReason;			/* 0x18 */
+} SdbgpExcpInfo;
+
+_Static_assert(sizeof(SdbgpExcpInfo) == 0x1c, "SDBGP exception info");
+
+int checkSdbgpTargetAddrStopCausePabt(SdbgpExcpInfo info, int mode);
+int checkSdbgpTargetAddrStopCauseDabt(uint32_t dfar, SdbgpExcpInfo info, int mode);
 int getCpuStopReason(SdbgpCpuState *cpu, uint32_t *reason);
 
 /* swbkpt.c */
@@ -779,6 +794,8 @@ int _leakcheckReset(void);
 
 /* group_system.c */
 int sdbgpDecodeOpcode(int thumb, const void *buf, uint32_t *opcode);
+int sdbgpCheckStepOverCall(SdbgpState *state, SceUID pid, uintptr_t pc, uint32_t cpsr,
+			   int *isCall);
 
 /* hwbkpt.c */
 int hwbkptWriteAllCpu(uint32_t value, uint32_t control);
@@ -810,23 +827,60 @@ void hwwtptEnable(SdbgpCpuState *cpu);
 int sceKernelPhysicalMemReadForDebugger(void *dest, uintptr_t psrc, SceSize size, SceSize width);
 int sceKernelPhysicalMemWriteForDebugger(uintptr_t pdest, const void *src, SceSize size,
 					 SceSize width);
-void sdbgpInitPhysicalAccess(int unused);
+int sdbgpInitPhysicalAccess(int unused);
 
 /* kernel_util.c */
 extern struct SysrootProfiler s_sdbgpProfiler;
 void sdbgpInitProfiler(struct SysrootProfiler *profiler);
+int KernelUtilsFixedHeapLeakCheckStart(SceUID uid, void **ctx);
+int KernelUtilsFixedHeapLeakCheck(void *ctx);
 
 /* bg_check.c */
-void bgCheckStart(void);
+int bgCheckStart(void);
 
-/* excp_handler.c */
+/* sysmem_address_space.c, sysmem_partition.c, cpu_mmu.c */
+typedef struct SceKernelMMUL1Info {
+	uint32_t vbase;
+	uint32_t pbase;
+	uint32_t type;
+} SceKernelMMUL1Info;
+
+typedef struct SceKernelMMUL1AllInfo {
+	SceSize size;				/* 0x400c */
+	uintptr_t split;
+	uint32_t l2Count;
+	uint32_t table[4096];
+} SceKernelMMUL1AllInfo;
+
+typedef struct SceKernelMMUL2AllInfo {
+	SceSize size;				/* 0x404 */
+	uint32_t table[256];
+} SceKernelMMUL2AllInfo;
+
+int sceKernelAddressSpaceGetMMUL1Info(SceUID asid, uintptr_t va, SceKernelMMUL1Info *info);
+int sceKernelAddressSpaceGetMMUL1AllInfo(SceUID asid, SceKernelMMUL1AllInfo *info);
+int sceKernelAddressSpaceGetMMUL2AllInfo(SceUID asid, uintptr_t va, SceKernelMMUL2AllInfo *info);
+int PartitionGetMMUL2AllInfo(Partition *part, uintptr_t va,
+			     SceKernelMMUL2AllInfo *info);
+int L1PageTableGetInfo(L1PageTable *l1pt, uintptr_t va, SceKernelMMUL1Info *info);
+int L1PageTableGetAllInfo(L1PageTable *l1pt, SceKernelMMUL1AllInfo *info);
+int sceKernelMMUL1GetInfo(const uint32_t *table, uintptr_t va, SceKernelMMUL1Info *info);
+
+/* excp_handler.c, excp_info.c */
 int excpHandlerInit(SdbgpCpuState *cpu);
+int excpGetExcpStopReason(SdbgpCpuState *cpu, SdbgpExcpDetail *detail, uint32_t stopReason);
 
 /* trace.c */
 int traceInit(void);
 
 /* the probe loads and stores (probe.S) the exception manager resumes */
 extern const char sdbgpProbeStart[], sdbgpProbeEnd[];
+int sceKernelVMRead8(uint8_t *dst, const void *src);
+int sceKernelVMRead16(uint16_t *dst, const void *src);
+int sceKernelVMRead32(uint32_t *dst, const void *src);
+int sceKernelVMWrite8(void *dst, uint8_t value);
+int sceKernelVMWrite16(void *dst, uint16_t value);
+int sceKernelVMWrite32(void *dst, uint32_t value);
 
 /* cpu_regs.S */
 void sdbgpReadSvcRegister(uint32_t code, uint32_t *value);

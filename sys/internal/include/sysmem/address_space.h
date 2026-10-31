@@ -149,3 +149,6 @@ typedef struct AddressSpaceObject {
 #define ADDRESS_SPACE_DEAD_FILL		0x07fd9f97
 
 _Static_assert(sizeof(AddressSpaceObject) == 0x170, "AddressSpaceObject size");
+
+struct Partition *SceSysmemForKernel_1F84FE44(AddressSpaceObject *as, SceUInt32 index);
+L2PageTable *SceSysmemForKernel_456ECB54(Partition *partition, uintptr_t va);

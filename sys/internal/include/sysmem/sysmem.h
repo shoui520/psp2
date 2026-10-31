@@ -283,6 +283,8 @@ typedef struct PartitionInfo {
 _Static_assert(sizeof(PartitionInfo) == 0x30, "PartitionInfo size");
 #endif
 
+int sceKernelPartitionGetInfo(SceUID uid, PartitionInfo *info);
+
 /* an address space's partitions and physical memory partitions (sceKernelGetAddressSpaceInfo) */
 typedef struct AddressSpaceInfo {
 	SceSize size;				/* sizeof(AddressSpaceInfo) */

@@ -112,27 +112,6 @@ _Static_assert(sizeof(SceUIDWorkQueueObject) == 0x68 && sizeof(SceUIDWorkTaskObj
 #define TASK_FROM_LINK(l) \
 	((ThreadmgrWorkTaskCB *)((uintptr_t)(l) - offsetof(ThreadmgrWorkTaskCB, link)))
 
-/* sceKernelCreateWorkQueue's option (0x14) */
-typedef struct ThreadmgrWorkQueueOpt {
-	SceSize size;
-	uint32_t threadCount;
-	int priority;
-	SceSize stackSize;
-	uint32_t cpuAffinityMask;
-} ThreadmgrWorkQueueOpt;
-
-/* SceThreadmgrForDriver_B92709C4 (0x40) */
-typedef struct ThreadmgrWorkQueueInfo {
-	SceSize size;
-	SceUID workQueueId;
-	char name[32];				/* 0x08 */
-	uint32_t attr;				/* 0x28 */
-	uint32_t threadCount;
-	uint64_t scheduled;			/* 0x30 */
-	uint32_t pendingCount;			/* 0x38 */
-	uint32_t reserved;
-} ThreadmgrWorkQueueInfo;
-
 /* the information lists' entries: their threads follow ((threadCount + 0x12) * 4) */
 typedef struct ThreadmgrWorkQueueInfoFull {
 	SceSize size;

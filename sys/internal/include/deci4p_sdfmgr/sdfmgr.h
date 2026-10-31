@@ -70,16 +70,39 @@ int SceDeci4pSDfMgrForKernel_59C077B3(void (*control)(int id));		/* UnregisterCo
 #define SDFMGR_STEP_THUMB_POLL		0x20
 
 /* the debugger's per-core break records (deci4p_sdbgp allocates them; the rest is its own) */
+typedef struct SceExcpmgrContext SceExcpmgrContext;
+
 typedef struct SdfMgrDebugCpuState {
-	uint8_t reserved0[0x18c];
-	SceUID pid;				/* of the stopped thread */
-	SceUID tid;
-	uint32_t pc;				/* where it stopped */
-	uint32_t reserved1;
-	uint32_t stepMode;			/* SDFMGR_STEP_* */
-	uint8_t reserved2[0x10];
-	uint32_t stepAddress;			/* Thumb step; bit 1: the upper halfword */
-	uint8_t reserved3[0x1dc];
+	uint32_t gpr[16];			/* 0x000 */
+	uint32_t cpsr;				/* 0x040 */
+	uint32_t vfp[64];			/* 0x044 */
+	uint32_t fpscr;				/* 0x144 */
+	uint32_t fpexc;				/* 0x148 */
+	uint32_t ifsr;				/* 0x14c */
+	uint32_t ifar;				/* 0x150 */
+	uint32_t aifsr;				/* 0x154 */
+	uint32_t dfsr;				/* 0x158 */
+	uint32_t dfar;				/* 0x15c */
+	uint32_t adfsr;				/* 0x160 */
+	uint32_t cpacr;				/* 0x164 */
+	uint32_t dacr;				/* 0x168 */
+	uint32_t ttbr1;				/* 0x16c */
+	uint32_t tpidrurw;			/* 0x170 */
+	uint32_t tpidruro;			/* 0x174 */
+	uint32_t tpidrprw;			/* 0x178 */
+	uint32_t contextId;			/* 0x17c */
+	uint32_t pmselr;			/* 0x180 */
+	uint32_t pmcntenset;			/* 0x184 */
+	uint32_t reserved0;			/* 0x188 */
+	SceUID pid;				/* 0x18c: of the stopped thread */
+	SceUID tid;				/* 0x190 */
+	uint32_t pc;				/* 0x194: where it stopped */
+	uint32_t state;				/* 0x198 */
+	uint32_t stepMode;			/* 0x19c: SDFMGR_STEP_* */
+	uint8_t reserved2[0x10];		/* 0x1a0 */
+	uint32_t stepAddress;			/* 0x1b0: Thumb step; bit 1: the upper halfword */
+	SceExcpmgrContext *context;		/* 0x1b4 */
+	uint8_t reserved3[0x1d8];		/* 0x1b8 */
 } SdfMgrDebugCpuState;
 
 SdfMgrDebugCpuState **SceDeci4pSDfMgrForKernel_BFB482D8(void);
@@ -88,6 +111,8 @@ uint32_t SceDeci4pSDfMgrForKernel_C38EA67A(void);
 uint32_t SceDeci4pSDfMgrForKernel_0A6437B6(void);
 int SceDeci4pSDfMgrForKernel_682D0EFB(void);
 int SceDeci4pSDfMgrForKernel_58D7597A(void);
-int SceDeci4pSDfMgrForKernel_6BF5553C(void (*hook)(void), unsigned index);
+int SceDeci4pSDfMgrForKernel_9A653F19(void);
+int SceDeci4pSDfMgrForKernel_EDFBA012(void);
+int SceDeci4pSDfMgrForKernel_6BF5553C(void *hook, unsigned index);
 void *SceDeci4pSDfMgrForKernel_5996E2DB(void *destination, const void *source,
 				   SceSize size);					/* memcpy */

@@ -104,6 +104,27 @@ typedef struct ThreadmgrThreadEventInfo {
 	uint32_t arg;
 } ThreadmgrThreadEventInfo;
 
+/* sceKernelCreateWorkQueue's option (0x14) */
+typedef struct ThreadmgrWorkQueueOpt {
+	SceSize size;
+	uint32_t threadCount;
+	int priority;
+	SceSize stackSize;
+	uint32_t cpuAffinityMask;
+} ThreadmgrWorkQueueOpt;
+
+/* SceThreadmgrForDriver_B92709C4 (0x40) */
+typedef struct ThreadmgrWorkQueueInfo {
+	SceSize size;
+	SceUID workQueueId;
+	char name[32];				/* 0x08 */
+	uint32_t attr;				/* 0x28 */
+	uint32_t threadCount;
+	uint64_t scheduled;			/* 0x30 */
+	uint32_t pendingCount;			/* 0x38 */
+	uint32_t reserved;
+} ThreadmgrWorkQueueInfo;
+
 /* what sceKernelExtendKernelStackWide runs on a stack of its own */
 typedef int64_t (*ThreadmgrStackFunction)(void *arg);
 
@@ -555,6 +576,8 @@ int sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32
 int sceKernelPollSema(SceUID semaId, int needCount);
 int sceKernelRegisterCallbackToEvent(SceUID eventId, SceUID callbackId);
 int sceKernelResumeThreadForVM(SceUID threadId);
+SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
+				const ThreadmgrWorkQueueOpt *option);
 SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, int (*entry)(void *arg),
 				  void *arg);
 int sceKernelSendSignal(SceUID threadId);

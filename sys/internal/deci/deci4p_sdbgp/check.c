@@ -362,16 +362,17 @@ int isIllegalSysFd(SceUID fd, SceIofileInfo *info)
 }
 
 /* Why a prefetch abort stopped the core: a break point, a BKPT, or no debug event. */
-int checkSdbgpTargetAddrStopCausePabt(uint32_t ifar, SceUID pid, SceUID tid,
-				      uintptr_t pc, uint32_t cpsr, int addressSpace)
+int checkSdbgpTargetAddrStopCausePabt(SdbgpExcpInfo info, int mode)
 {
-	SdbgpCpuState *cpu = sdbgpGetCpuState();
-	uint32_t ifsr = readIfsr();
+	SdbgpCpuState *cpu;
+	uint32_t ifsr;
 	uint32_t opcode = 0;
 	uint8_t code[4];
 	int thumb;
 	int result;
 
+	cpu = sdbgpGetCpuState();
+	ifsr = readIfsr();
 	if (FSR_STATUS(ifsr) != FSR_DEBUG_EVENT)
 		return SDBGP_STOP_PABT;
 	if (sceKernelCheckDipsw(SDBGP_DIPSW_HW_DEBUG)) {
@@ -380,39 +381,43 @@ int checkSdbgpTargetAddrStopCausePabt(uint32_t ifar, SceUID pid, SceUID tid,
 		if (moe == DBGDSCR_MOE_BREAKPOINT) {
 			if (sdbgpGetStatus(cpu, 0x400) || sdbgpGetStatus(cpu, 0x100))
 				return SDBGP_STOP_STEPPING;
-			result = hwbkptCheckStop(pid, tid, pc, cpsr);
+			result = hwbkptCheckStop(info.processId, info.threadId,
+						 info.pc, info.cpsr);
 			if (result > 0)
 				return result;
-		} else if ((cpsr & PSR_MODE_MASK) == PSR_MODE_USR) {
+		} else if ((info.cpsr & PSR_MODE_MASK) == PSR_MODE_USR) {
 			if (moe == DBGDSCR_MOE_BKPT)
 				return SDBGP_STOP_BKPT_C0;
 			return SDBGP_STOP_USER_DEBUG_EVENT;
 		}
 	}
-	if ((cpsr & PSR_MODE_MASK) == PSR_MODE_USR)
+	if ((info.cpsr & PSR_MODE_MASK) == PSR_MODE_USR)
 		return SDBGP_STOP_USER_DEBUG_EVENT;
-	thumb = cpsr & PSR_THUMB;
-	if (addressSpace == 1 || addressSpace == 16) {
-		if (sceKernelIsAccessibleRangeProc(pid, 1, (const void *)pc, 4) < 0)
+	thumb = info.cpsr & PSR_THUMB;
+	if (info.addressSpace == 1 || info.addressSpace == 16) {
+		if (sceKernelIsAccessibleRangeProc(info.processId, 1,
+						   (const void *)info.pc, 4) < 0)
 			return SDBGP_STOP_PABT;
 		if (!thumb) {
-			SceDeci4pSDfMgrForKernel_5996E2DB(code, (const void *)pc, 4);
+			SceDeci4pSDfMgrForKernel_5996E2DB(code, (const void *)info.pc, 4);
 			goto arm;
 		}
-		SceDeci4pSDfMgrForKernel_5996E2DB(code, (const void *)pc, 2);
+		SceDeci4pSDfMgrForKernel_5996E2DB(code, (const void *)info.pc, 2);
 	} else {
 		if (!thumb) {
-			if (sceKernelCopyFromUserProc(pid, code, (const void *)pc, 4) < 0)
+			if (sceKernelCopyFromUserProc(info.processId, code,
+						      (const void *)info.pc, 4) < 0)
 				return SCE_KERNEL_ERROR_SYSMEM_ERROR;
 			goto arm;
 		}
-		if (sceKernelCopyFromUserProc(pid, code, (const void *)pc, 2) < 0)
+		if (sceKernelCopyFromUserProc(info.processId, code,
+					      (const void *)info.pc, 2) < 0)
 			return SCE_KERNEL_ERROR_SYSMEM_ERROR;
 	}
 	result = sdbgpDecodeOpcode(1, code, &opcode);
 	if (result < 0)
 		return result;
-	result = swbkptTypeOpcode(opcode, 1, cpsr);
+	result = swbkptTypeOpcode(opcode, 1, info.cpsr);
 	if (result > 0)
 		return result;
 	return SDBGP_STOP_PABT;
@@ -420,15 +425,14 @@ arm:
 	result = sdbgpDecodeOpcode(thumb, code, &opcode);
 	if (result < 0)
 		return result;
-	result = swbkptTypeOpcode(opcode, thumb, cpsr);
+	result = swbkptTypeOpcode(opcode, thumb, info.cpsr);
 	if (result > 0)
 		return result;
 	return SDBGP_STOP_PABT;
 }
 
 /* Why a data abort stopped the core: a watch point, or no debug event. */
-int checkSdbgpTargetAddrStopCauseDabt(uint32_t dfar, SceUID pid, SceUID tid,
-				      uintptr_t pc, uint32_t cpsr, int mode)
+int checkSdbgpTargetAddrStopCauseDabt(uint32_t dfar, SdbgpExcpInfo info, int mode)
 {
 	uint32_t dfsr = readDfsr();
 	int result;
@@ -437,7 +441,7 @@ int checkSdbgpTargetAddrStopCauseDabt(uint32_t dfar, SceUID pid, SceUID tid,
 	    !sceKernelCheckDipsw(SDBGP_DIPSW_HW_DEBUG) ||
 	    (readDbgdscrExt() & 0x1c) != DBGDSCR_MOE_WATCHPOINT)
 		return SDBGP_STOP_DABT;
-	result = hwwtptCheckStop(tid, dfar, mode);
+	result = hwwtptCheckStop(info.threadId, dfar, mode);
 	if (result <= 0)
 		return SDBGP_STOP_DABT;
 	return result;

@@ -148,6 +148,9 @@
 /* CP14 debug */
 #define readDbgdscr()		CP_READ(p14, 0, c0, c1, 0)
 #define readDbgdscrExt()	CP_READ(p14, 0, c0, c2, 2)
+#define writeDbgdscrExt(v)	CP_WRITE(p14, 0, c0, c2, 2, v)
+#define writeDbgoslar(v)	CP_WRITE(p14, 0, c1, c0, 4, v)
+#define writeDbgclaimclr(v)	CP_WRITE(p14, 0, c7, c9, 6, v)
 
 /* CP14 ThumbEE */
 #define readTeecr()		CP_READ(p14, 6, c0, c0, 0)

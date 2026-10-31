@@ -7,11 +7,9 @@
 #include <skeleton.h>
 
 
-STUB(sceKernelAddressSpaceGetMMUL1Info)
 STUB(SceDeci4pSdbgpForKernel_17E9BFED)
 STUB(SceDeci4pSdbgpForKernel_762BFAE0)
 STUB(SceDeci4pSdbgpForKernel_7B25F7A5)
-STUB(sceSdbgpGetSystemResourceSnapshot)
 STUB(sceTestUnloadModuleForUser)
 STUB(sceTestCreateBudgetForUser)
 STUB(sceTestLoadModuleForUser)
