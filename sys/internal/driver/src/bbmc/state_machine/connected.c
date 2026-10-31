@@ -701,6 +701,12 @@ int stmConnected_LowPowerMode(BbmcControl *control, BbmcMessage *message)
 	return result;
 }
 
+/* name unknown: Connected to Test Mode has nothing to do */
+int stmConnected_TestMode(BbmcControl *control, BbmcMessage *message)
+{
+	return 0;
+}
+
 int stmConnected_Activated(BbmcControl *control, BbmcMessage *message)
 {
 	int result;

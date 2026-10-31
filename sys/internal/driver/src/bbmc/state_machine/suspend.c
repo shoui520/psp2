@@ -4,6 +4,7 @@
 #include "../bbmc_message.h"
 #include "../bbmc_memory.h"
 #include "../bbcmd.h"
+#include "../usb_extif.h"
 
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
 
@@ -209,6 +210,17 @@ failed:
 finish:
 	networkServiceStopStep = 0;
 	return result;
+}
+
+int bbmcPrepareUsbShutdown(BbmcControl *control)
+{
+	int mode;
+
+	if (bbmcUsbExtIfGetMode(&mode) == 0 && mode >= 0) {
+		control->backendShutdownRequested = 1;
+		bbmcUsbExtIfReleaseGpio();
+	}
+	return 0;
 }
 
 int suspendStopPositionTracking(BbmcControl *control, BbmcMessage *message)
