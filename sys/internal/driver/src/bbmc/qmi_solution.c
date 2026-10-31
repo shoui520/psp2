@@ -4833,7 +4833,8 @@ int bbcmdSetFirmwarePreference(BbcmdRequest *request)
 
 				if (parameter->type == 2) {
 					const QmiResultTlv *operation = (const QmiResultTlv *)parameter;
-					unsigned int status = operation->resultLow;
+					unsigned int status = operation->resultLow |
+						(operation->resultHigh << 8);
 					unsigned int errorCode = operation->errorLow |
 						(operation->errorHigh << 8);
 
@@ -5084,7 +5085,8 @@ int bbcmdDeleteStoredImage(BbcmdRequest *request)
 
 				if (parameter->type == 2) {
 					const QmiResultTlv *operation = (const QmiResultTlv *)parameter;
-					unsigned int status = operation->resultLow;
+					unsigned int status = operation->resultLow |
+						(operation->resultHigh << 8);
 					unsigned int errorCode = operation->errorLow |
 						(operation->errorHigh << 8);
 
