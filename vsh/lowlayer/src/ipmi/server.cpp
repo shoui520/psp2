@@ -100,7 +100,7 @@ void Server::EventHandler::onAsyncMethodDispatch(Session *pSession, SceUInt32 re
  */
 void Server::EventHandler::onSessionKilled(Session *pSession)
 {
-	pSession->getClientUserData();
+	pSession->getServer();
 }
 
 }

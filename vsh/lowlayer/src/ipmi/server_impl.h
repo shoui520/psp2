@@ -47,6 +47,8 @@ public:
 	virtual void notify_process_exit();
 
 private:
+	friend class SessionImpl;
+
 	int try_dispatch_call_request(void *pBuffer, SceSize bufferSize);
 	int handle_process_exit(message::Header *pHeader, SceSize bufferSize);
 	int handle_new_client(message::Header *pHeader, SceSize bufferSize);

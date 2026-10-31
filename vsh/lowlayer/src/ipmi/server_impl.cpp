@@ -211,7 +211,7 @@ int ServerImpl::handle_new_client(message::Header *pHeader, SceSize bufferSize)
 	config.maxAsyncCallOutSize = pRequest->maxAsyncCallOutSize;
 	config.eventFlagCount = pRequest->eventFlagCount;
 	config.msgQueueCount = pRequest->msgQueueCount;
-	config.bufferSize = Session::getBufferSize(&config);
+	config.bufferSize = SessionImpl::getBufferSize(&config);
 	config.clientIndex = pRequest->clientIndex;
 
 	for (pSession = m_pSessionHead; pSession != NULL; pSession = pSession->m_pNext) {

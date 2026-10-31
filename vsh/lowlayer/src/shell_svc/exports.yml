@@ -105,7 +105,7 @@ SceShellSvc:
         - SceIpmi_095C92A6: 0x095C92A6
         - _ZN11BlockingIpc6Server23onSessionClosedByClientEPN4IPMI7SessionE: 0x0B829281
         - _ZN11BlockingIpc6Server5startEv: 0x0BBBE77C
-        - SceIpmi_0E0728BE: 0x0E0728BE
+        - _ZN4IPMI7SessionD2Ev: 0x0E0728BE
         - _ZN11BlockingIpc6Client9getClientEv: 0x1372C7B7
         - _ZN11BlockingIpc6Server7destroyEv: 0x146B3C78
         - _ZN4IPMI6Server12EventHandlerD1Ev: 0x1746BC8B
@@ -128,9 +128,9 @@ SceShellSvc:
         - SceIpmi_40F31ABF: 0x40F31ABF
         - _ZN11BlockingIpc6Server15onSessionKilledEPN4IPMI7SessionE: 0x44AF00BA
         - _ZN11BlockingIpc6Client12abortRequestEi: 0x48E072C8
-        - SceIpmi_4A389FF9: 0x4A389FF9
+        - _ZN4IPMI7SessionD0Ev: 0x4A389FF9
         - _ZN11BlockingIpc6Server4stopEv: 0x4AA4166D
-        - SceIpmi_4DEDA4F2: 0x4DEDA4F2
+        - _ZN4IPMI7Session13getBufferSizeEPKNS0_6ConfigE: 0x4DEDA4F2
         - _ZN4IPMI6Client13getBufferSizeEPKNS0_6ConfigE: 0x4E255C31
         - SceIpmi_4E5E2881: 0x4E5E2881
         - SceIpmi_5000D63E: 0x5000D63E
@@ -141,7 +141,7 @@ SceShellSvc:
         - SceIpmi_6A9D2D70: 0x6A9D2D70
         - _ZN4IPMI6ServerD0Ev: 0x6CAE7340
         - SceIpmi_70DFD08F: 0x70DFD08F
-        - SceIpmi_7714F7BB: 0x7714F7BB
+        - _ZN4IPMI7Session7destroyEPS0_: 0x7714F7BB
         - _ZN11BlockingIpc6Server20onSyncMethodDispatchEPN4IPMI7SessionEjPKNS1_8DataInfoEjPNS1_10BufferInfoEj: 0x79C2EB5D
         - _ZN11BlockingIpc6Client16beginBlockingIpcEiPNS0_6HandleE: 0x7C002FEC
         - SceIpmi_7D217169: 0x7D217169
@@ -151,7 +151,7 @@ SceShellSvc:
         - _ZN11BlockingIpc6Client14endBlockingIpcEi: 0x8A0BAC4E
         - _ZN11BlockingIpc6Server13runDispatcherEv: 0x8DE3BDC8
         - _ZN4IPMI6Server12EventHandler21onAsyncMethodDispatchEPNS_7SessionEjjPKNS_8DataInfoEj: 0x8DF92251
-        - SceIpmi_8F252BAF: 0x8F252BAF
+        - _ZN4IPMI7SessionD1Ev: 0x8F252BAF
         - SceIpmi_9097E0AD: 0x9097E0AD
         - _ZN4IPMI6ServerD2Ev: 0x969B1899
         - SceIpmi_9E5154FC: 0x9E5154FC

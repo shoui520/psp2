@@ -29,27 +29,27 @@ public:
 		SceSize bufferSize;
 	};
 
+	static int destroy(Session *pSession);
 	static SceSize getBufferSize(const Config *pConfig);
 
-	/*
-	 * Slots 2 and 7 are the ones BlockingIpc calls; the getters' and the later slots'
-	 * names are provisional until session_impl.cpp is converted.
-	 */
 	virtual ~Session();
 	virtual int destroy() = 0;
 	virtual SceUID getProcessId() = 0;
-	virtual SceUID getThreadId() = 0;
+	virtual int getAppId() = 0;
 	virtual void *getUserData() = 0;
-	virtual void *getClientUserData() = 0;
+	virtual class Server *getServer() = 0;
 	virtual int respondToSyncMethodRequest(int result, const void *pOut, SceSize outSize) = 0;
-	virtual int sendAsyncResult(SceUInt32 requestId, int result, const void *pOut,
-				    SceSize outSize) = 0;
-	virtual int sendMsg(SceUInt32 index, const void *pMsg, SceSize msgSize) = 0;
-	virtual int setEventFlag(SceUInt32 index, SceUInt32 bitPattern) = 0;
 	virtual int respondToSyncMethodRequest(int result, const BufferInfo *pOutList,
 					       SceUInt32 outCount) = 0;
-	virtual int sendAsyncResult(SceUInt32 requestId, int result, const BufferInfo *pOutList,
-				    SceUInt32 outCount) = 0;
+	virtual int respondToAsyncMethodRequest(int requestId, int result, const void *pOut,
+						SceSize outSize) = 0;
+	virtual int respondToAsyncMethodRequest(SceUInt32 methodId, int requestId, int result,
+						const DataInfo *pOutList, SceUInt32 outCount) = 0;
+	virtual int setEventFlag(SceUInt32 index, SceUInt32 bitPattern) = 0;
+	virtual int sendMsg(SceUInt32 index, const void *pMsg, SceSize msgSize,
+			    SceUInt32 *pTimeout) = 0;
+	virtual int trySendMsg(SceUInt32 index, const void *pMsg, SceSize msgSize) = 0;
+	virtual int emptyMsgQueue(SceUInt32 index) = 0;
 };
 
 }

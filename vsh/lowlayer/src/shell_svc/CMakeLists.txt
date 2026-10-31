@@ -11,6 +11,8 @@ psp2_module(vs0_sys_external_libshellsvc KIND user COMPILER snc PARTIAL SOURCES
 	${ipmi_source}/client_impl.cpp
 	${ipmi_source}/server.cpp
 	${ipmi_source}/server_impl.cpp
+	${ipmi_source}/session.cpp
+	${ipmi_source}/session_impl.cpp
 	${ipmi_source}/psp2/event_flag.cpp
 	${ipmi_source}/psp2/msg_pipe.cpp
 	${ipmi_source}/psp2/mutex.cpp
