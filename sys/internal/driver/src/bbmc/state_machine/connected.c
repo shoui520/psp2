@@ -12,6 +12,8 @@ int bbmcPrepareUsbShutdown(BbmcControl *control);
 int gpsStopOneShotTracking(BbmcControl *control, BbmcMessage *message);
 int suspendStopPositionTracking(BbmcControl *control, BbmcMessage *message);
 int suspendStopNetworkService(BbmcControl *control, BbmcMessage *message);
+int (*seqSuspendSelectHandler(int currentState, int targetState))(BbmcControl *,
+	BbmcMessage *);
 
 SceUInt32 connectedTransitionStep;
 SceUID connectedTransitionTimer;
@@ -427,15 +429,20 @@ int connectedRequestLowPowerMode(BbmcControl *control)
 	return bbcmdExecute(0, 37, input, NULL, bbcmdManagerCompletion, control);
 }
 
-int connectedSuspendEnterLowPower(BbmcControl *control, BbmcMessage *message,
-		SceUInt32 *nextStep)
+/*
+ * Connected -> Low Power Mode: stop the network, put the modem into low power
+ * (command 37) and wait for the syscon to report it. Returns 1 while in
+ * progress; once *finished is set, the sequence's result.
+ */
+static inline int connectedLowPowerSequence(BbmcControl *control,
+		BbmcMessage *message, int *finished)
 {
 	BbcmdArgument input[7];
 	int result = 1;
 	int currentState;
 	SceUInt16 reply;
 
-	*nextStep = 12;
+	*finished = 0;
 	if (message->command == 11 || message->command == 36) {
 		connectedRestartRequested = 1;
 		bbmcEnterCS(&control->mutex);
@@ -594,6 +601,20 @@ finish:
 	connectedTransitionStep = 0;
 	bbmcCancelSysconCommand(&control->transitionPacket,
 			       &connectedSysconPending);
+	*finished = 1;
+	return result;
+}
+
+int connectedSuspendEnterLowPower(BbmcControl *control, BbmcMessage *message,
+		SceUInt32 *nextStep)
+{
+	int finished;
+	int result;
+
+	*nextStep = 12;
+	result = connectedLowPowerSequence(control, message, &finished);
+	if (!finished)
+		return 1;
 	if (result < 0) {
 		if (DisconnectNetwork() == 0) {
 			connectedTransitionStep = 5;
@@ -627,6 +648,142 @@ notify:
 	if (result >= 0)
 		return 1;
 	return result;
+}
+
+int stmConnected_LowPowerMode(BbmcControl *control, BbmcMessage *message)
+{
+	SceUInt32 flags = control->flags;
+	int finished;
+	int result;
+	int status;
+
+	if (flags & 0xa) {
+		connectedTransitionStep = 0;
+		bbmcEnterCS(&control->mutex);
+		control->currentState = 5;
+		control->powerTransitionBusy = 0;
+		bbmcLeaveCS(&control->mutex);
+		connectedRestartRequested = 0;
+		connectedSysconPending = 0;
+		return bbmcSendSimpleMessage(control, 22);
+	}
+	if (flags & 4) {
+		bbmcEnterCS(&control->mutex);
+		if (control->suspendState == 1) {
+			control->suspendState = 2;
+			control->suspendStep = connectedTransitionStep;
+			control->suspendMessageHandler = seqSuspendSelectHandler(
+				control->currentState, control->targetState);
+		}
+		bbmcLeaveCS(&control->mutex);
+		return 0;
+	}
+	result = connectedLowPowerSequence(control, message, &finished);
+	if (!finished)
+		return 1;
+	if (result < 0) {
+		if (DisconnectNetwork() != 0) {
+			bbmcEnterCS(&control->mutex);
+			control->powerTransitionBusy = 0;
+			bbmcLeaveCS(&control->mutex);
+		} else {
+			status = result;
+			connectedTransitionStep = 5;
+			result = 1;
+			bbmcNotifyPacketInterfaceEvent(16, status);
+		}
+	} else {
+		result = control->flags & 4;
+		if (result != 0)
+			result = bbmcSendSimpleMessage(control, 42);
+	}
+	connectedRestartRequested = 0;
+	return result;
+}
+
+int stmConnected_Activated(BbmcControl *control, BbmcMessage *message)
+{
+	int result;
+
+	if (control->flags & 2) {
+		control->currentState = 5;
+		connectedTransitionStep = 2;
+		result = bbmcSendSimpleMessage(control, 22);
+		if (connectedTransitionStep != 2)
+			return 1;
+		goto finish;
+	}
+	if (connectedTransitionStep != 0) {
+		if (connectedTransitionStep == 1) {
+			if (message->command != 57)
+				return 1;
+			result = control->flags & 2;
+		} else {
+			result = (int)0x80330001;
+		}
+		goto finish;
+	}
+	if (control->pendingPacketRequest == 0) {
+		if (control->clientInitialized == 0) {
+			result = control->clientOnline;
+			if (result == 0)
+				goto finish;
+		}
+		result = 0;
+		if (control->networkStarted != 0)
+			goto finish;
+		result = bbmcSendSimpleMessage(control, 115);
+		if (result < 0)
+			goto finish;
+	} else {
+		result = DisconnectNetwork();
+		if (result < 0)
+			goto finish;
+	}
+	connectedTransitionStep = 1;
+	return 1;
+finish:
+	connectedTransitionStep = 0;
+	if (result == 0)
+		control->currentState = 5;
+	return result;
+}
+
+int suspendConnectedToLowPowerModeOrStandby(BbmcControl *control,
+		BbmcMessage *message)
+{
+	int finished;
+	int result;
+
+	result = connectedLowPowerSequence(control, message, &finished);
+	if (!finished)
+		return 1;
+	if (result < 0) {
+		if (DisconnectNetwork() != 0) {
+			bbmcEnterCS(&control->mutex);
+			control->powerTransitionBusy = 0;
+			bbmcLeaveCS(&control->mutex);
+			connectedRestartRequested = 0;
+			goto failed;
+		}
+		connectedTransitionStep = 5;
+		bbmcNotifyPacketInterfaceEvent(16, result);
+		connectedRestartRequested = 0;
+		return 1;
+	}
+	if ((control->flags & 4) == 0) {
+		connectedRestartRequested = 0;
+		return 2;
+	}
+	result = bbmcSendSimpleMessage(control, 42);
+	connectedRestartRequested = 0;
+	if (result == 1)
+		return 1;
+	if (result >= 0)
+		return 2;
+failed:
+	control->flags |= 2;
+	return 0;
 }
 
 int suspendSteadyConnected(BbmcControl *control, BbmcMessage *message)
