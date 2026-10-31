@@ -65,7 +65,7 @@ int udPrepareImage(SceUInt32 hardwareType, SceUInt32 configurationMode,
 	return 0;
 }
 
-int udWaitImageData(SceUInt32 size)
+int udWaitImageChunk(SceUInt32 chunkIndex)
 {
 	UdContext *context = udContext;
 	SceUInt32 timeout = 60000000;
@@ -75,10 +75,10 @@ int udWaitImageData(SceUInt32 size)
 	result = sceKernelClearEventFlag(context->eventFlagId, ~1U);
 	if (result < 0)
 		return result;
-	while (context->receivedBytes < size) {
-		if (context->requestData == NULL)
+	while (context->chunkIndex < chunkIndex) {
+		if (context->requestChunk == NULL)
 			return (int)0x80330002;
-		result = context->requestData(size);
+		result = context->requestChunk(chunkIndex);
 		if (result < 0)
 			return result;
 		result = sceKernelWaitEventFlag(context->eventFlagId, 1, 1, &pattern,
@@ -91,7 +91,7 @@ int udWaitImageData(SceUInt32 size)
 		if (result < 0)
 			return result;
 	}
-	if (size < context->receivedBytes)
+	if (chunkIndex < context->chunkIndex)
 		result = (int)0x80330002;
 	return result;
 }
@@ -173,7 +173,7 @@ int udInitialize(SceUInt32 version, const UdClient *client)
 		if (eventFlagId >= 0) {
 			context->eventFlagId = eventFlagId;
 			context->heapId = heapId;
-			context->requestData = client->requestData;
+			context->requestChunk = client->requestChunk;
 			udSetContext(context);
 			return eventFlagId;
 		}
@@ -202,7 +202,7 @@ int udTerminate(void)
 	return 0;
 }
 
-int udSetImageSource(SceUInt32 totalBytes, SceUInt32 receivedBytes, const void *data,
+int udSetImageChunk(SceUInt32 chunkCount, SceUInt32 chunkIndex, const void *data,
 		     SceUInt32 size)
 {
 	UdContext *context = udGetContext();
@@ -216,8 +216,8 @@ int udSetImageSource(SceUInt32 totalBytes, SceUInt32 receivedBytes, const void *
 	if (state != 0)
 		return (int)0x80330002;
 	sceKernelSpinlockLowLock(&context->lock);
-	context->receivedBytes = receivedBytes;
-	context->totalBytes = totalBytes;
+	context->chunkIndex = chunkIndex;
+	context->chunkCount = chunkCount;
 	context->imageData = data;
 	context->imageSize = size;
 	sceKernelSpinlockLowUnlock(&context->lock);
@@ -258,7 +258,7 @@ int udLoadImage(void)
 
 	if (context == NULL)
 		return (int)0x80330003;
-	if (context->state != 2 || context->receivedBytes != 0)
+	if (context->state != 2 || context->chunkIndex != 0)
 		return (int)0x80330002;
 	sceKernelSpinlockLowLock(&context->lock);
 	memset(&context->work, 0, sizeof(context->work));
@@ -379,7 +379,7 @@ int udCheckUpdateNoNeed(const SceUInt8 *information)
 	return result;
 }
 
-int udReceiveImageData(SceUInt32 totalBytes, SceUInt32 receivedBytes, const void *data,
+int udReceiveImageChunk(SceUInt32 chunkCount, SceUInt32 chunkIndex, const void *data,
 		       SceUInt32 size)
 {
 	UdContext *context = udGetContext();
@@ -387,11 +387,11 @@ int udReceiveImageData(SceUInt32 totalBytes, SceUInt32 receivedBytes, const void
 
 	if (context == NULL)
 		return (int)0x80330003;
-	if (context->state <= 2 || totalBytes <= receivedBytes ||
-	    context->totalBytes != totalBytes)
+	if (context->state <= 2 || chunkCount <= chunkIndex ||
+	    context->chunkCount != chunkCount)
 		return (int)0x80330002;
 	sceKernelSpinlockLowLock(&context->lock);
-	context->receivedBytes = receivedBytes;
+	context->chunkIndex = chunkIndex;
 	context->imageData = data;
 	context->imageSize = size;
 	sceKernelSpinlockLowUnlock(&context->lock);

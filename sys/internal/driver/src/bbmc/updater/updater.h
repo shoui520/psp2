@@ -16,7 +16,7 @@ typedef struct UdQmdm6200Work {
 
 /* name unknown: the client the updater asks for more image data */
 typedef struct UdClient {
-	int (*requestData)(SceUInt32 size);
+	int (*requestChunk)(SceUInt32 size);
 	void *argument;
 } UdClient;
 
@@ -30,15 +30,15 @@ typedef struct UdContext {
 	SceUInt32 configurationMode;
 	SceUInt32 imageVersion;
 	UdQmdm6200Work work;
-	SceUInt32 receivedBytes;
-	SceUInt32 totalBytes;
+	SceUInt32 chunkIndex;
+	SceUInt32 chunkCount;
 	const SceUInt8 *imageData;
 	SceUInt32 imageSize;
-	int (*requestData)(SceUInt32 size);
+	int (*requestChunk)(SceUInt32 size);
 } UdContext;
 
 _Static_assert(sizeof(UdContext) == 0xa4, "updater context size");
-_Static_assert(offsetof(UdContext, receivedBytes) == 0x90, "updater received bytes");
+_Static_assert(offsetof(UdContext, chunkIndex) == 0x90, "updater received bytes");
 
 /* name unknown: the image header and the header of each hardware's entry after it */
 typedef struct UdImageHeader {
@@ -99,13 +99,13 @@ SceOff udRamIoGetSize(SceUID fd);
 void udCopyBytes(void *dst, const SceUInt8 **cursor, SceUInt32 size);
 int udInitialize(SceUInt32 version, const UdClient *client);
 int udTerminate(void);
-int udSetImageSource(SceUInt32 totalBytes, SceUInt32 receivedBytes, const void *data,
+int udSetImageChunk(SceUInt32 chunkCount, SceUInt32 chunkIndex, const void *data,
 		     SceUInt32 size);
 int udSetTarget(SceUInt32 hardwareType, SceUInt32 configurationMode);
 int udLoadImage(void);
 int udResetDeleteList(void);
 int udCheckUpdateNoNeed(const SceUInt8 *information);
-int udReceiveImageData(SceUInt32 totalBytes, SceUInt32 receivedBytes, const void *data,
+int udReceiveImageChunk(SceUInt32 chunkCount, SceUInt32 chunkIndex, const void *data,
 		       SceUInt32 size);
 int udGetWriteSize(void);
 int udGetDeleteSize(void);
@@ -113,7 +113,7 @@ int udGetImageVersion(SceUInt32 *version);
 int udIsInitialized(void);
 int udEnableRamIo(void);
 int udDisableRamIo(void);
-int udWaitImageData(SceUInt32 size);
+int udWaitImageChunk(SceUInt32 chunkIndex);
 int udIsUpdateNeeded(SceUInt32 *needed);
 int udReadFileInformation(SceUID fd, UdFileInformation *information);
 

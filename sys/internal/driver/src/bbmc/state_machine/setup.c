@@ -8,7 +8,6 @@
 #include "../bbcmd.h"
 
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
-SceUInt32 bbmcCollectControlKeyEvents(BbmcControl *control);
 int (*seqSuspendSelectHandler(int currentState, int targetState))(BbmcControl *,
 	BbmcMessage *);
 int gpsStopOneShotTracking(BbmcControl *control, BbmcMessage *message);

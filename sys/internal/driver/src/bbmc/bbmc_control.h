@@ -319,6 +319,12 @@ int bbmcFlushTimers(void);
 /* bbmc.c */
 int bbmcRegisterDownloadNotification(BbmcControl *control);
 int bbmcGetBaryonVersion(void);
+int bbmcAcquirePowerReference(BbmcControl *control);
+int bbmcReleasePowerReference(BbmcControl *control);
+int bbmcRequestOperationMode(BbmcControl *control, SceUInt32 operationMode);
+int bbmcIsTransportReady(BbmcControl *control);
+SceUInt32 bbmcCollectControlKeyEvents(BbmcControl *control);
+int bbmcIsTransportHandshakeComplete(BbmcControl *control);
 
 /* bbmc_operation_mode.c */
 void operationModeTimeoutHandler(void *arg);
@@ -326,6 +332,10 @@ void operationModeTimeoutHandler(void *arg);
 /* sequence/proc_swdl.c */
 extern int modemWakeupPending;
 int modemWakeupCallback(SceSysconPacket *packet, void *argp);
+void swdlComPowerTimeoutHandler(void *arg);
+
+/* updater/updater_seq_QMDM6200.c */
+int _udSeqEdlPrepare(BbmcControl *control, BbmcMessage *message);
 
 /* the sequences _managerThread offers every message to, in its order */
 int seqSysconEvent(BbmcControl *control, BbmcMessage *message);

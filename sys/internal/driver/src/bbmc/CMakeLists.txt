@@ -20,6 +20,7 @@ psp2_module(os0_kd_bootimage_bbmc KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	sequence/start_net_if.c
 	sequence/stop_net_if.c
 	sequence/suspend.c
+	sequence/sw_updater.c
 	sequence/update_gps.c
 	updater/updater_QMDM6200.c
 	bbmc_syscon_events.c
