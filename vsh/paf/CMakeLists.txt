@@ -50,6 +50,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/image/image/image_flip.cpp
 	src/misc/image/image/image_gif.cpp
 	src/misc/image/image/image_gim.cpp
+	src/misc/image/image/image_jpg.cpp
 	src/file/httpfile.cpp
 	src/file/httpfile_reader.cpp
 	src/file/httpfile_range_reader.cpp

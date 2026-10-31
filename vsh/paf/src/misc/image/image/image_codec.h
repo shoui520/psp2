@@ -9,7 +9,9 @@
 
 #include <image/image.h>
 #include <thread/thread.h>
+#include <std/setjmp.h>
 #include "gif_lib.h"
+#include "jpeglib.h"
 
 namespace paf {
 
@@ -275,11 +277,13 @@ public:
 	virtual ~JpgAttribute();
 
 private:
-	/* PROVISIONAL: until image_jpg.cpp is written (0x60 bytes in all). */
-	uint8_t m_state[8];
+	friend class JpgCodec;
+
+	bool m_progressive;	/* key 0: a progressive JPEG */
+	int32_t m_sampling;	/* key 1: 0 4:2:0, 1 4:2:2, 2 4:4:4 YCbCr, -1 other */
 };
 
-/* JPEG. */
+/* JPEG, through libjpeg. */
 class JpgCodec : public ImageCodec {
 public:
 	JpgCodec();
@@ -292,15 +296,53 @@ public:
 			       void *userdata);
 	virtual bool LoadImage(common::SharedPtr<Buffer> buf, const ImageAttribute *attr,
 			       ImageArray *images, ImageArray *cluts);
+	virtual bool CalcDecodeExtent(const ImageExtent &original, const ImageRect &subrect,
+				      const ImageExtent &extent, ImageExtent *out);
 	virtual bool GetHeader(common::SharedPtr<File> file, int64_t offset, size_t size,
 			       ImageAttribute *attr, ImageArray *images, ImageArray *cluts);
 	virtual bool GetHeader(common::SharedPtr<Buffer> buf, ImageAttribute *attr,
 			       ImageArray *images, ImageArray *cluts);
 	virtual ~JpgCodec();
 
+	/*
+	 * What libpaf's source managers read: a File at its seek position, or
+	 * a buffer's bytes with the count read. For a file, the range only.
+	 */
+	struct Source {
+		Source()
+		{
+			data = NULL;
+			pos = 0;
+			size = 0;
+		}
+
+		void *data;
+		int64_t size;
+		uint32_t pos;
+		uint32_t reserved;
+	};
+
+	/* libjpeg's error manager, with where error_exit jumps back to. */
+	struct ErrorManager {
+		struct jpeg_error_mgr pub;
+		jmp_buf setjmp_buffer;
+	};
+
 private:
-	/* PROVISIONAL: the codec's state, until image_jpg.cpp is written (0x370 bytes in all). */
-	uint8_t m_state[0x364];
+	bool DecodeRegion(const ImageAttribute *attr, ImageArray *images, ImageArray *cluts,
+			  DecodeCancelFunc cancelfunc, void *userdata);
+	bool DecodeWhole(const ImageAttribute *attr, ImageArray *images, ImageArray *cluts,
+			 DecodeCancelFunc cancelfunc, void *userdata);
+	bool ReadHeader(common::SharedPtr<File> file, ImageAttribute *attr, ImageArray *images,
+			ImageArray *cluts);
+	ImageExtent CalcScaledExtent(const ImageExtent &original, const ImageExtent &extent);
+
+	Source m_source;
+	ErrorManager m_error;
+	uint32_t m_reserved[5];		/* only cleared by the constructor */
+	struct jpeg_decompress_struct m_cinfo;
+	uint32_t m_scale;		/* the scale_denom to decode at: 1, 2, 4 or 8 */
+	thread::Mutex m_mutex;
 };
 
 class TifAttribute : public ImageAttribute {
