@@ -1,0 +1,18 @@
+--- a/huffman.c
++++ b/huffman.c
+@@ -59,6 +59,7 @@
+ }
+ 
+ 
++#if 0 /* SCE: not in Sony's build (the decompressor only) */
+ /*---------------------------------------------------*/
+ void BZ2_hbMakeCodeLengths ( UChar *len, 
+                              Int32 *freq,
+@@ -166,6 +167,7 @@
+ }
+ 
+ 
++#endif /* SCE */
+ /*---------------------------------------------------*/
+ void BZ2_hbCreateDecodeTables ( Int32 *limit,
+                                 Int32 *base,

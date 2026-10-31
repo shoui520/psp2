@@ -1,0 +1,51 @@
+--- a/bzlib.c
++++ b/bzlib.c
+@@ -101,17 +101,24 @@
+ static
+ void* default_bzalloc ( void* opaque, Int32 items, Int32 size )
+ {
++#if 1 /* SCE: the kernel has no malloc; the updater passes its own allocator */
++   return NULL;
++#else
+    void* v = malloc ( items * size );
+    return v;
++#endif
+ }
+ 
+ static
+ void default_bzfree ( void* opaque, void* addr )
+ {
++#if 0 /* SCE: the kernel has no free */
+    if (addr != NULL) free ( addr );
++#endif
+ }
+ 
+ 
++#if 0 /* SCE: not in Sony's build (the decompressor only) */
+ /*---------------------------------------------------*/
+ static
+ void prepare_new_block ( EState* s )
+@@ -484,6 +491,7 @@
+ }
+ 
+ 
++#endif /* SCE */
+ /*---------------------------------------------------*/
+ /*--- Decompression stuff                         ---*/
+ /*---------------------------------------------------*/
+@@ -1242,6 +1250,7 @@
+ /*--- Misc convenience stuff                      ---*/
+ /*---------------------------------------------------*/
+ 
++#if 0 /* SCE: not in Sony's build (the decompressor only) */
+ /*---------------------------------------------------*/
+ int BZ_API(BZ2_bzBuffToBuffCompress) 
+                          ( char*         dest, 
+@@ -1366,6 +1375,7 @@
+ {
+    return BZ_VERSION;
+ }
++#endif /* SCE */
+ 
+ 
+ #ifndef BZ_NO_STDIO

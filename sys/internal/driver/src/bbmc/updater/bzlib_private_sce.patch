@@ -1,0 +1,14 @@
+--- a/bzlib_private.h
++++ b/bzlib_private.h
+@@ -39,7 +39,11 @@
+ #define BZ_VERSION  "1.0.4, 20-Dec-2006"
+ 
+ typedef char            Char;
++#if 1 /* SCE: Bool is a word (Sony's DState is 64932 bytes) */
++typedef int             Bool;
++#else
+ typedef unsigned char   Bool;
++#endif
+ typedef unsigned char   UChar;
+ typedef int             Int32;
+ typedef unsigned int    UInt32;
