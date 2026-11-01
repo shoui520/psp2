@@ -1225,6 +1225,64 @@ int32_t ScePafToplevel_68607CDE(Plugin *plugin, ui::Scene *page, int32_t mode, b
 	return 0;
 }
 
+void ScePafToplevel_995AE4B6(Plugin *plugin, ui::Widget *page, const Plugin::PageOpenParam &param)
+{
+	if (!param.fade && param.transition_type == Plugin::TransitionType_None)
+		return;
+
+	float time = 0.0f;
+
+	if (param.fade) {
+		page->m_transition_complete = false;
+		page->m_transition = 0xff;
+		page->DoTransitionReverse_core(0.0f, true);
+		ScePafWidget_4588699E(page, NULL, 2, 0.0f, NULL);
+
+		float fade_time_ms = param.fade_time_ms;
+
+		if (fade_time_ms > 0.0f) {
+			Timer *timer = new Timer(fade_time_ms);
+
+			if (!page->m_transition_complete) {
+				page->m_transition = 0xff;
+				page->m_transition_complete = true;
+				page->DoTransition_core(0.0f, true);
+			}
+			ScePafWidget_FF5BC957(page, timer, 2, 0.0f, NULL);
+		} else {
+			if (!page->m_transition_complete) {
+				page->m_transition = 0xff;
+				page->m_transition_complete = true;
+				page->DoTransition_core(0.0f, true);
+			}
+			ScePafWidget_FF5BC957(page, NULL, 2, 0.0f, NULL);
+		}
+		time = param.fade_time_ms;
+	}
+	switch (param.transition_type) {
+	case Plugin::TransitionType_SlideFromTop:
+		ScePafCommon_6CF3A3C8(0.0f, page, common::transition::Type_SlideFromTop3, false, false);
+		break;
+	case Plugin::TransitionType_SlideFromBottom:
+		ScePafCommon_6CF3A3C8(0.0f, page, common::transition::Type_SlideFromBottom4, false,
+				      false);
+		break;
+	case Plugin::TransitionType_SlideFromLeft:
+		ScePafCommon_6CF3A3C8(0.0f, page, common::transition::Type_SlideFromLeft1, false,
+				      false);
+		break;
+	case Plugin::TransitionType_SlideFromRight:
+		ScePafCommon_6CF3A3C8(0.0f, page, common::transition::Type_SlideFromRight2, false,
+				      false);
+		break;
+	default:
+		break;
+	}
+	if (time < 0.0f)
+		time = 0.0f;
+	ScePafWidget_AC0C81D5(page, time);
+}
+
 namespace paf {
 
 Plugin::InitParam2::InitParam2()

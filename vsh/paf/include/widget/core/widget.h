@@ -255,6 +255,9 @@ int32_t ScePafWidget_8AF26B1F(paf::ui::Widget *widget, bool auto_delete, float t
 /* Hide(Timer *, int32_t opt, float delay, AnimCB): hides the widget, over the timer's time */
 int32_t ScePafWidget_4588699E(paf::ui::Widget *widget, paf::Timer *t, int32_t opt, float delay,
 			      paf::ui::AnimCB cb_fin);
+/* Show(Timer *, int32_t opt, float delay, AnimCB): shows the widget, over the timer's time */
+int32_t ScePafWidget_FF5BC957(paf::ui::Widget *widget, paf::Timer *t, int32_t opt, float delay,
+			      paf::ui::AnimCB cb_fin);
 /* the widget's transition ends after the time */
 int32_t ScePafWidget_AC0C81D5(paf::ui::Widget *widget, float time);
 /* the widget's transition ends after the time, and the widget is deleted */
