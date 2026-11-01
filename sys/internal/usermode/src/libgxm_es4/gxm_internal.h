@@ -81,6 +81,9 @@ int sceKernelIsGameBudget(void);
 /* the debug build's messages for a function's parameter and scene checks */
 #define GXM_DBG_ERROR_NULL(line, function, parameter)				\
 	GXM_DBG_ERROR(line, "Parameter " #parameter " to function " #function " is NULL.")
+#define GXM_DBG_ERROR_RANGE(line, function, parameter, max)				\
+	GXM_DBG_ERROR(line, "Parameter " #parameter " to function " #function			\
+		      " has value %u, which is not in the range [0, %u].", parameter, max)
 #define GXM_DBG_ERROR_OUTSIDE_SCENE(line, function, context)			\
 	GXM_DBG_ERROR(line, "Function " #function " has been called outside of a %s.",	\
 		      (context)->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE ? "command list" : "scene")

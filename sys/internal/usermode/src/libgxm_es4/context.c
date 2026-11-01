@@ -224,15 +224,24 @@ int sceGxmReserveFragmentDefaultUniformBuffer(SceGxmContext *context, void **uni
 	return gxmContextCheckCallbacks(context);
 }
 
-int sceGxmSetVertexDefaultUniformBuffer(SceGxmContext *context, const void *uniformBuffer)
+int sceGxmSetVertexDefaultUniformBuffer(SceGxmContext *context, const void *bufferData)
 {
-	if (context == NULL || uniformBuffer == NULL)
+	if (context == NULL || bufferData == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(466, sceGxmSetVertexDefaultUniformBuffer, context);
+		else
+			GXM_DBG_ERROR_NULL(470, sceGxmSetVertexDefaultUniformBuffer, bufferData);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (context->vertexUniformBuffers[14] != uniformBuffer) {
+	}
+	if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED &&
+	    gxmWarningIsEnabled(SCE_GXM_WARNING_VERTEX_DEFAULT_UNIFORM_BUFFER_RECYCLED))
+		GXM_DBG_WARNING(476, "The previous vertex default uniform buffer reservation has not been "
+				"used by any draw calls and has been recycled.");
+	if (context->vertexUniformBuffers[14] != bufferData) {
 		const SceGxmVertexProgram *program = context->vertexProgram;
 
-		context->vertexUniformBuffers[14] = uniformBuffer;
-		context->vertexDefaultUniformBuffer = uniformBuffer;
+		context->vertexUniformBuffers[14] = bufferData;
+		context->vertexDefaultUniformBuffer = bufferData;
 		if (program != NULL) {
 			SceUInt32 mode = program->program->bufferFlags >> 28;
 
@@ -248,15 +257,24 @@ int sceGxmSetVertexDefaultUniformBuffer(SceGxmContext *context, const void *unif
 	return 0;
 }
 
-int sceGxmSetFragmentDefaultUniformBuffer(SceGxmContext *context, const void *uniformBuffer)
+int sceGxmSetFragmentDefaultUniformBuffer(SceGxmContext *context, const void *bufferData)
 {
-	if (context == NULL || uniformBuffer == NULL)
+	if (context == NULL || bufferData == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(523, sceGxmSetFragmentDefaultUniformBuffer, context);
+		else
+			GXM_DBG_ERROR_NULL(527, sceGxmSetFragmentDefaultUniformBuffer, bufferData);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (context->fragmentUniformBuffers[14] != uniformBuffer) {
+	}
+	if (context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED &&
+	    gxmWarningIsEnabled(SCE_GXM_WARNING_FRAGMENT_DEFAULT_UNIFORM_BUFFER_RECYCLED))
+		GXM_DBG_WARNING(533, "The previous fragment default uniform buffer reservation has not been "
+				"used by any draw calls and has been recycled.");
+	if (context->fragmentUniformBuffers[14] != bufferData) {
 		const SceGxmFragmentProgram *program = context->fragmentProgram;
 
-		context->fragmentUniformBuffers[14] = uniformBuffer;
-		context->fragmentDefaultUniformBuffer = uniformBuffer;
+		context->fragmentUniformBuffers[14] = bufferData;
+		context->fragmentDefaultUniformBuffer = bufferData;
 		if (program != NULL) {
 			SceUInt32 mode = program->program->bufferFlags >> 28;
 
@@ -276,10 +294,17 @@ int sceGxmSetVertexStream(SceGxmContext *context, SceUInt32 streamIndex, const v
 {
 	const SceGxmVertexProgram *program;
 
-	if (context == NULL || streamData == NULL)
+	if (context == NULL || streamData == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(581, sceGxmSetVertexStream, context);
+		else
+			GXM_DBG_ERROR_NULL(585, sceGxmSetVertexStream, streamData);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (streamIndex > 15)
+	}
+	if (streamIndex > 15) {
+		GXM_DBG_ERROR_RANGE(593, sceGxmSetVertexStream, streamIndex, 15);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	if (context->vertexStreams[streamIndex] == streamData)
 		return 0;
 	context->vertexStreams[streamIndex] = streamData;
@@ -296,12 +321,22 @@ int _sceGxmSetVertexTexture(SceGxmContext *context, SceUInt32 textureIndex,
 	SceUInt32 word0, word1, word2, word3;
 	SceUInt32 bound0, bound1, bound2, bound3;
 
-	if (context == NULL || texture == NULL)
+	if (context == NULL || texture == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(622, sceGxmSetVertexTexture, context);
+		else
+			GXM_DBG_ERROR_NULL(626, sceGxmSetVertexTexture, texture);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (gxmTextureFormatIsYuv(sceGxmTextureGetFormat(texture)))
+	}
+	if (gxmTextureFormatIsYuv(sceGxmTextureGetFormat(texture))) {
+		GXM_DBG_ERROR(631, "Parameter texture to function sceGxmSetVertexTexture cannot refer "
+			      "to a texture that is based on a YUV texture format.");
 		return SCE_GXM_ERROR_UNSUPPORTED;
-	if (textureIndex > 15)
+	}
+	if (textureIndex > 15) {
+		GXM_DBG_ERROR_RANGE(639, sceGxmSetVertexTexture, textureIndex, 15);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	bound = &context->vertexTextures[textureIndex];
 	word0 = texture->controlWords[0] & GXM_TEX0_BOUND_MASK;
 	word1 = texture->controlWords[1];
@@ -339,13 +374,28 @@ int sceGxmSetVertexTexture(SceGxmContext *context, SceUInt32 textureIndex,
 	SceUInt32 word0, word1, word2, word3;
 	SceUInt32 bound0, bound1, bound2, bound3;
 
-	if (context == NULL || texture == NULL)
+	if (context == NULL || texture == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(691, sceGxmSetVertexTexture, context);
+		else
+			GXM_DBG_ERROR_NULL(695, sceGxmSetVertexTexture, texture);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (textureIndex > 15)
+	}
+	if (textureIndex > 15) {
+		GXM_DBG_ERROR_RANGE(701, sceGxmSetVertexTexture, textureIndex, 15);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	format = sceGxmTextureGetFormat(texture);
-	if (gxmTextureFormatIsYuv(format) || gxmTextureFormatIsPalettized(format))
+	if (gxmTextureFormatIsYuv(format)) {
+		GXM_DBG_ERROR(708, "Parameter texture to function sceGxmSetVertexTexture cannot refer "
+			      "to a texture with YUV texture format.");
 		return SCE_GXM_ERROR_UNSUPPORTED;
+	}
+	if (gxmTextureFormatIsPalettized(format)) {
+		GXM_DBG_ERROR(712, "Parameter texture to function sceGxmSetVertexTexture cannot refer "
+			      "to a texture with palettized texture format.");
+		return SCE_GXM_ERROR_UNSUPPORTED;
+	}
 	bound = &context->vertexTextures[textureIndex];
 	word0 = texture->controlWords[0] & GXM_TEX0_BOUND_MASK;
 	word1 = texture->controlWords[1];
@@ -382,10 +432,17 @@ int sceGxmSetFragmentTexture(SceGxmContext *context, SceUInt32 textureIndex,
 	SceUInt32 word0, word1, word2, word3;
 	SceUInt32 bound0, bound1, bound2, bound3;
 
-	if (context == NULL || texture == NULL)
+	if (context == NULL || texture == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(764, sceGxmSetFragmentTexture, context);
+		else
+			GXM_DBG_ERROR_NULL(768, sceGxmSetFragmentTexture, texture);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (textureIndex > 15)
+	}
+	if (textureIndex > 15) {
+		GXM_DBG_ERROR_RANGE(776, sceGxmSetFragmentTexture, textureIndex, 15);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	bound = &context->fragmentTextures[textureIndex];
 	word0 = texture->controlWords[0] & GXM_TEX0_BOUND_MASK;
 	word1 = texture->controlWords[1];
@@ -427,10 +484,17 @@ int sceGxmSetFragmentTexture(SceGxmContext *context, SceUInt32 textureIndex,
 int sceGxmSetVertexUniformBuffer(SceGxmContext *context, SceUInt32 bufferIndex,
 		const void *bufferData)
 {
-	if (context == NULL || bufferData == NULL)
+	if (context == NULL || bufferData == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(832, sceGxmSetVertexUniformBuffer, context);
+		else
+			GXM_DBG_ERROR_NULL(836, sceGxmSetVertexUniformBuffer, bufferData);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (bufferIndex > 13)
+	}
+	if (bufferIndex > 13) {
+		GXM_DBG_ERROR_RANGE(844, sceGxmSetVertexUniformBuffer, bufferIndex, 13);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	if (context->vertexUniformBuffers[bufferIndex] != bufferData) {
 		context->vertexUniformBuffers[bufferIndex] = bufferData;
 		if (context->vertexProgram != NULL) {
@@ -451,10 +515,17 @@ int sceGxmSetVertexUniformBuffer(SceGxmContext *context, SceUInt32 bufferIndex,
 int sceGxmSetFragmentUniformBuffer(SceGxmContext *context, SceUInt32 bufferIndex,
 		const void *bufferData)
 {
-	if (context == NULL || bufferData == NULL)
+	if (context == NULL || bufferData == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(886, sceGxmSetFragmentUniformBuffer, context);
+		else
+			GXM_DBG_ERROR_NULL(890, sceGxmSetFragmentUniformBuffer, bufferData);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (bufferIndex > 13)
+	}
+	if (bufferIndex > 13) {
+		GXM_DBG_ERROR_RANGE(898, sceGxmSetFragmentUniformBuffer, bufferIndex, 13);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	if (context->fragmentUniformBuffers[bufferIndex] != bufferData) {
 		context->fragmentUniformBuffers[bufferIndex] = bufferData;
 		if (context->fragmentProgram != NULL) {
