@@ -500,6 +500,13 @@ SceSize _sceHttpRequestMakeHeader(HttpRequest *req, char *buf, SceSize size, Sce
 int _sceHttpRequestCreateHeader(char **header, HttpRequest *req);
 int _sceHttpRequestFreeHeader(HttpRequest *req, char **header);
 int _sceHttpReadResponseHeader(HttpRequest *req);
+int _sceHttpResponseParse(const char *header, SceSize len, HttpResponse *resp);
+int _sceHttpRequestRecvResponseHeader(HttpRequest *req, HttpConnection *conn);
+int _sceHttpRequestGetResponseHeader(HttpRequest *req);
+int _sceHttpRemoveRequestHeader(int id, const char *name);
+int _sceHttpGetTemplateById(int id, HttpTemplate **tmpl, HttpConnection **conn,
+			    HttpRequest **req);
+void _sceHttpRequestResetResponseHeader(HttpRequest *req);
 int _sceHttpMakeHostHeader(const HttpAllocator *allocator, char **header, SceBool https,
 			   const char *hostname, SceUShort16 port);
 
@@ -521,6 +528,7 @@ int _sceHttpRequestRelease(HttpRequest *req);
 int _sceHttpLock(int which);
 int _sceHttpUnlock(int which);
 int _sceHttpGetSdkVersion(void);
+SceULong64 _sceHttpStrToULong64(const char *s);
 
 /* the library's pool */
 void *_sceHttpDefaultMalloc(SceSize size);
