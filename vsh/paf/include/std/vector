@@ -177,6 +177,7 @@ public:
 		return iterator(ptr + count);
 	}
 
+	iterator insert(const iterator &where, const _Ty &val);
 	iterator erase(const iterator &first, const iterator &last);
 
 	iterator erase(iterator where)
@@ -298,6 +299,39 @@ vector<_Ty, _Ax>::resize(size_type size, const _Ty &val)
 			alloc.construct(&ptr[i], val);
 		count = size;
 	}
+}
+
+/*
+ * The array grows by ten when full; the last element is copied one up and the rest
+ * move up to where, which takes the value. A failed growth returns end().
+ */
+template<class _Ty, class _Ax>
+typename vector<_Ty, _Ax>::iterator
+vector<_Ty, _Ax>::insert(const iterator &where, const _Ty &val)
+{
+	size_type off = 0;
+
+	if (count != 0)
+		off = where - begin();
+
+	bool grown = true;
+
+	if (count + 1 > limit)
+		grown = reserve(limit + 10);
+	if (grown) {
+		if (count != 0) {
+			new (&ptr[count]) _Ty(ptr[count - 1]);
+			for (size_type i = count - 1; i > off; --i)
+				ptr[i] = ptr[i - 1];
+			ptr[off] = val;
+		} else {
+			new (&ptr[count]) _Ty(val);
+		}
+		++count;
+	} else {
+		off = count;
+	}
+	return begin() + off;
 }
 
 /* The elements after last move down; the array shrinks by ten once twenty are spare. */

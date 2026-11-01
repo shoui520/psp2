@@ -337,6 +337,9 @@ public:
 	void SetNodeEntity_Widget(const cxml::Element &node, ui::Widget *widget);
 	void ClearNodeEntity_ForEachWidget(const cxml::Element &node);
 	void SetDrawOrder_Remove(ui::Scene *page);
+	void SetDrawOrder_Insert(ui::Scene *page, int32_t view_priority, int32_t page_priority);
+	/* inserts the page by its draw priority and its place in the resource's page table */
+	void AdjustPageDrawOrder(ui::Scene *page, const IDParam &id, int32_t view_priority);
 	ui::Widget *GetNodeEntity_Widget(const IDParam &id) const;
 	ui::Widget *GetNodeEntity_Widget(const cxml::Element &node) const;
 	void PageClose(const cxml::Element &node, const PageCloseParam &param);

@@ -179,6 +179,8 @@ public:
 			       float delay, AnimCB cb_fin, void *usrdata);
 	int32_t SetAlign(uint32_t ax, uint32_t ay, uint32_t az, Timer *t);
 	int32_t SetPosCenter(const math::v4 &v);
+	/* puts the widget behind the other in its parent's draw order */
+	int32_t SetBehind(Widget *w);
 
 	AnimQueue *FindAnim(int32_t id);
 	int32_t KillAnimType(int32_t type);

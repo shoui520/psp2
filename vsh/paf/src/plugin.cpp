@@ -1285,6 +1285,52 @@ void ScePafToplevel_995AE4B6(Plugin *plugin, ui::Widget *page, const Plugin::Pag
 
 namespace paf {
 
+void Plugin::SetDrawOrder_Insert(ui::Scene *page, int32_t view_priority, int32_t page_priority)
+{
+	for (vector<DrawOrderElement>::iterator it = m_draw_order.begin();
+	     it != m_draw_order.end(); ++it) {
+		if (it->view_priority < view_priority ||
+		    (it->view_priority == view_priority && it->page_priority < page_priority)) {
+			page->SetBehind(it->page);
+
+			DrawOrderElement elm = { page, view_priority, page_priority };
+
+			m_draw_order.insert(it, elm);
+			return;
+		}
+	}
+
+	DrawOrderElement elm = { page, view_priority, page_priority };
+
+	m_draw_order.push_back(elm);
+}
+
+void Plugin::AdjustPageDrawOrder(ui::Scene *page, const IDParam &id, int32_t view_priority)
+{
+	if (m_rscobj == NULL)
+		return;
+
+	int32_t page_priority = 0;
+	cxml::Element pages = m_rscobj->GetTableElement(resource::TableType_Page);
+
+	if (pages.doc != NULL && pages.offset >= 0) {
+		cxml::Element node;
+
+		for (node = pages.GetFirstChild(); node.doc != NULL && node.offset >= 0;
+		     node = node.GetNextSibling(), page_priority--) {
+			uint32_t idhash;
+
+			if (scePafResourceGetAttributeIdIntLpb(&node, "id", &idhash) != 0)
+				continue;
+			if (id.m_idhash == IDParam(s_empty_id, idhash).m_idhash)
+				break;
+		}
+	}
+	if (view_priority < 0)
+		view_priority = m_draw_priority;
+	SetDrawOrder_Insert(page, view_priority, page_priority);
+}
+
 Plugin::InitParam2::InitParam2()
 {
 	draw_priority = 150;
