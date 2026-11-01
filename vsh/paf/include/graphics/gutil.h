@@ -13,8 +13,10 @@ namespace graph {
 class SurfacePool;
 
 namespace arl {
+class ArlInstance;
+
 /* the GXM state (src/graphics/state.c, still C) */
-void *Gl();
+ArlInstance *Gl();
 }
 }
 
