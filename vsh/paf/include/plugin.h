@@ -321,6 +321,7 @@ public:
 	void SetNodeEntity_Widget(const IDParam &id, ui::Widget *widget);
 	void SetNodeEntity_Widget(const cxml::Element &node, ui::Widget *widget);
 	void ClearNodeEntity_ForEachWidget(const cxml::Element &node);
+	void SetDrawOrder_Remove(ui::Scene *page);
 	ui::Widget *GetNodeEntity_Widget(const IDParam &id) const;
 	ui::Widget *GetNodeEntity_Widget(const cxml::Element &node) const;
 
@@ -426,6 +427,9 @@ void ScePafToplevel_952CD3CF(paf::Plugin *plugin);
 void ScePafToplevel_1230A05F(paf::Plugin *plugin);
 /* lets the resource's sound table go (Sony's name not found) */
 void ScePafToplevel_E87AD3F3(paf::Plugin *plugin);
+/* closes a page: fades it out and slides it away as the parameter says, else destroys it */
+void ScePafToplevel_340EE53C(paf::Plugin *plugin, paf::ui::Widget *page,
+			     const paf::Plugin::PageCloseParam &param);
 /* a sound of the plugin's resource, else of the common resource's */
 int32_t ScePafToplevel_CA3E606F(paf::Plugin *plugin, const paf::IDParam &id,
 				const char **buffer1, uint32_t *size1, const char **buffer2,

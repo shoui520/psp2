@@ -26,6 +26,7 @@
 #include <graphics/gutil.h>
 #include <widget/core/environment.h>
 #include <widget/w_scene.h>
+#include <common/transition.h>
 
 extern "C" int sceAppMgrConvertVs0UserDrivePath(const char *path, char *out, int out_size);
 
@@ -913,6 +914,79 @@ void Plugin::ClearNodeEntity_ForEachWidget(const cxml::Element &node)
 	if (scePafResourceGetAttributeIdIntLpb(&node, "id", &idhash) == 0)
 		id.m_idhash = idhash;
 	SetNodeEntity_Widget(id, NULL);
+}
+
+}
+
+using namespace paf;
+
+void ScePafToplevel_340EE53C(Plugin *plugin, ui::Widget *page,
+			     const Plugin::PageCloseParam &param)
+{
+	if (!param.fade && param.transition_type == Plugin::TransitionType_None) {
+		if (!page->m_destroy_protected)
+			page->DestroyWidget();
+		return;
+	}
+
+	float time = 0.0f;
+
+	if (param.fade) {
+		float fade_time_ms = param.fade_time_ms;
+
+		if (fade_time_ms > 0.0f) {
+			Timer *timer = new Timer(fade_time_ms);
+			float total = timer != NULL ? timer->GetTotalTime() : 0.0f;
+
+			page->m_transition_complete = false;
+			page->m_transition = 0xff;
+			page->DoTransitionReverse_core(total, true);
+			ScePafWidget_4588699E(page, timer, 2, 0.0f, NULL);
+		} else {
+			page->m_transition_complete = false;
+			page->m_transition = 0xff;
+			page->DoTransitionReverse_core(0.0f, true);
+			ScePafWidget_4588699E(page, NULL, 2, 0.0f, NULL);
+		}
+		time = param.fade_time_ms;
+	}
+	switch (param.transition_type) {
+	case Plugin::TransitionType_SlideFromTop:
+		ScePafCommon_B48C9BDC(0.0f, page, common::transition::Type_SlideFromTop3, true, false);
+		break;
+	case Plugin::TransitionType_SlideFromBottom:
+		ScePafCommon_B48C9BDC(0.0f, page, common::transition::Type_SlideFromBottom4, true,
+				      false);
+		break;
+	case Plugin::TransitionType_SlideFromLeft:
+		ScePafCommon_B48C9BDC(0.0f, page, common::transition::Type_SlideFromLeft1, true,
+				      false);
+		break;
+	case Plugin::TransitionType_SlideFromRight:
+		ScePafCommon_B48C9BDC(0.0f, page, common::transition::Type_SlideFromRight2, true,
+				      false);
+		break;
+	default:
+		break;
+	}
+	if (time < 0.0f)
+		time = 0.0f;
+	ScePafWidget_AC0C81D5(page, time);
+	if (time > 0.0f && !page->m_destroy_protected)
+		ScePafWidget_5A9793B0(page, time);
+}
+
+namespace paf {
+
+void Plugin::SetDrawOrder_Remove(ui::Scene *page)
+{
+	for (vector<DrawOrderElement>::iterator it = m_draw_order.begin();
+	     it != m_draw_order.end(); ++it) {
+		if (it->page == page) {
+			m_draw_order.erase(it);
+			return;
+		}
+	}
 }
 
 ui::Widget *Plugin::GetNodeEntity_Widget(const IDParam &id) const

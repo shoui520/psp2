@@ -120,8 +120,8 @@ public:
 	virtual void RegisterChild(Widget *obj, Widget *sibling);
 	virtual bool ReorderChild(Widget *obj, Widget *sibling);
 	virtual Widget *GetInternalWidget();
-	virtual int32_t DoTransition_core(float parameter, uint32_t type, bool set);
-	virtual int32_t DoTransitionReverse_core(float parameter, uint32_t type, bool set);
+	virtual int32_t DoTransition_core(float parameter, bool set);
+	virtual int32_t DoTransitionReverse_core(float parameter, bool set);
 	virtual int32_t SetColor_core(const math::v4 &v);
 	virtual int32_t SetSize_core_force(const math::v4 &v, uint32_t notify_layout,
 					   bool force);
@@ -202,7 +202,29 @@ public:
 	Widget *m_parent;
 	Scene *m_scene;
 	list<Widget *> m_children;
-	uint8_t reserved3[0x3c];
+	uint8_t reserved3[8];
+	/* 0xff before a reverse transition (name after ScePaf-RE) */
+	uint8_t m_transition;
+	uint8_t reserved3a[0x10];
+	bool reserved3b : 1;
+	bool reserved3c : 1;
+	bool reserved3d : 1;
+	/* not destroyed when its page closes (name ours) */
+	bool m_destroy_protected : 1;
+	bool reserved3e : 1;
+	bool reserved3f : 1;
+	bool reserved3g : 1;
+	bool reserved3h : 1;
+	bool reserved3i : 1;
+	bool reserved3j : 1;
+	bool reserved3k : 1;
+	bool reserved3l : 1;
+	bool reserved3m : 1;
+	bool reserved3n : 1;
+	bool reserved3o : 1;
+	/* cleared before a reverse transition (name after ScePaf-RE) */
+	bool m_transition_complete : 1;
+	uint8_t reserved3p[0x21];
 	Timer *m_resolution_timer;
 	Timer *m_resolution_timer_next;
 	ResolutionData *m_pos_array;
@@ -230,6 +252,9 @@ public:
 extern "C" {
 /* puts the widget into its transition: auto_delete deletes it once the time ends */
 int32_t ScePafWidget_8AF26B1F(paf::ui::Widget *widget, bool auto_delete, float time);
+/* Hide(Timer *, int32_t opt, float delay, AnimCB): hides the widget, over the timer's time */
+int32_t ScePafWidget_4588699E(paf::ui::Widget *widget, paf::Timer *t, int32_t opt, float delay,
+			      paf::ui::AnimCB cb_fin);
 /* the widget's transition ends after the time */
 int32_t ScePafWidget_AC0C81D5(paf::ui::Widget *widget, float time);
 /* the widget's transition ends after the time, and the widget is deleted */
