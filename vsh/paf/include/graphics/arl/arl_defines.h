@@ -135,6 +135,21 @@ public:
 	int32_t m_height;
 };
 
+/* what Clear clears, bits: ClearBase clears the colour alone (names ours) */
+enum ClearBit {
+	COLOR_BUFFER_BIT = 4
+};
+
+/* what DrawArrays draws, GXM's primitive types (names ours) */
+enum Primitive {
+	TRIANGLES = SCE_GXM_PRIMITIVE_TRIANGLES,
+	LINES = SCE_GXM_PRIMITIVE_LINES,
+	POINTS = SCE_GXM_PRIMITIVE_POINTS,
+	TRIANGLE_STRIP = SCE_GXM_PRIMITIVE_TRIANGLE_STRIP,
+	TRIANGLE_FAN = SCE_GXM_PRIMITIVE_TRIANGLE_FAN,
+	TRIANGLE_EDGES = SCE_GXM_PRIMITIVE_TRIANGLE_EDGES
+};
+
 /* the size of GXM's tiles, which every arl file has its copy of (name ours) */
 static const SurfaceSize s_tile_size(32, 32);
 

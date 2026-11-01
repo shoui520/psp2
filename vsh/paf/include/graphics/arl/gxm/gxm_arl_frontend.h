@@ -15,6 +15,7 @@
 #include <graphics/arl/gxm/gxm_render_target_pool.h>
 #include <graphics/arl/gxm/gxm_shader.h>
 #include <graphics/arl/gxm/gxm_texture.h>
+#include <graphics/arl/gxm/gxm_vertex_array.h>
 #include <graphics/graphmem/graphmem.h>
 #include <math/ngp/matrix.h>
 #include <math/ngp/v4.h>
@@ -30,7 +31,7 @@ class Surface;
 namespace arl {
 
 class FrameBufferObject;
-class ClearProgram;
+class ClearBase;
 class CopyProgram;
 class IndexBuffer;
 class ArlInstance;
@@ -154,11 +155,14 @@ public:
 	ViewportStack m_viewport;
 };
 
-/* the shader state: the textures and buffers bound and which of them changed */
+/* the shader state: the vertex array specs made for each predefined slot, and which kinds of
+   input changed */
 class ShaderState {
 public:
 	enum {
-		MAX_BINDINGS = 144
+		MAX_SLOTS = 36,
+		/* the four layouts ScePafGraphics_4D1E289A makes a slot's spec in */
+		MAX_SPEC_MODES = 4
 	};
 
 	ShaderState()
@@ -167,7 +171,7 @@ public:
 		m_dirty_fragment = 0;
 	}
 
-	common::SharedPtr<TextureObject> m_bindings[MAX_BINDINGS];
+	common::SharedPtr<VertexArraySpec> m_specs[MAX_SLOTS][MAX_SPEC_MODES];
 	uint32_t m_dirty_vertex;
 	uint32_t m_dirty_fragment;
 };
@@ -332,14 +336,7 @@ public:
 	common::SharedPtr<Texture2D> m_noise;
 };
 
-/* the programs that clear a surface and copy into a texture, laid out when their files
-   are converted */
-class ClearProgram {
-public:
-	void SetColor(math::v4 color);
-	void Clear(ArlInstance &gl, uint32_t clear_mask);
-};
-
+/* the program that copies into a texture, laid out when its file is converted */
 class CopyProgram {
 public:
 	void Copy(ArlInstance &gl, common::SharedPtr<TextureObject> texture, int32_t type,
@@ -392,6 +389,24 @@ public:
 		return m_context;
 	}
 
+	/* the marker of what the GPU is doing pushed, and popped: the marker left is the one
+	   popped (names ours) */
+	void PushMarker(const char *marker)
+	{
+		++m_marker_depth;
+		m_markers.push_back(marker);
+		m_marker = marker;
+	}
+
+	void PopMarker()
+	{
+		if (m_marker_depth != 0) {
+			m_marker = m_markers.back();
+			m_markers.pop_back();
+			--m_marker_depth;
+		}
+	}
+
 	DefaultTextures m_default_textures;
 	SceneDataStack m_scene_stack;
 	SceGxmContextParams m_context_params;
@@ -404,7 +419,7 @@ public:
 	SceGxmColorSurface *m_color_surface;
 	bool m_scene_requested;
 	bool m_in_scene;
-	ClearProgram *m_clear;
+	ClearBase *m_clear;
 	CopyProgram *m_copy;
 	RenderTargetPool *m_render_target_pool;
 	IndexBuffer *m_quad_indices;
@@ -479,6 +494,9 @@ void ScePafGraphics_93CBC733(paf::graph::arl::ArlInstance *gl,
 void ScePafGraphics_4581906A(paf::graph::arl::ArlInstance *gl,
 			     SceGxmNotification *notification);
 void ScePafGraphics_E7B32741(paf::graph::arl::ArlInstance *gl);
+/* the spec of a predefined slot in one of four layouts, made the first time it is asked for */
+paf::common::SharedPtr<paf::graph::arl::VertexArraySpec>
+ScePafGraphics_4D1E289A(paf::graph::arl::ShaderState *state, int32_t slot, int32_t mode);
 /* the scene begun with GXM's scene flags; a scene asked for, and done with */
 void ScePafGraphics_01CA92B7(paf::graph::arl::ArlInstance *gl, uint32_t flags);
 void ScePafGraphics_199BD5F2(paf::graph::arl::ArlInstance *gl, uint32_t flags);

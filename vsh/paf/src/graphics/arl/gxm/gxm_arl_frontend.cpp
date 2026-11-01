@@ -9,6 +9,7 @@
 #include <math/ngp/v2.h>
 #include <graphics/arl/arl_defines.h>
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
+#include <graphics/arl/gxm/gxm_clear.h>
 #include <graphics/arl/gxm/gxm_texture.h>
 #include <graphics/color.h>
 #include <graphics/surface/surface_screen.h>
@@ -554,7 +555,7 @@ void ArlInstance::PolygonMode(PolygonModeEnum mode, FaceEnum face)
 
 void ArlInstance::Clear(uint32_t clear_mask)
 {
-	m_clear->Clear(*this, clear_mask);
+	m_clear->clear(*this, clear_mask);
 }
 
 void ArlInstance::ClearColor(math::v4 color)

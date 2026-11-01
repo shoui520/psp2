@@ -242,7 +242,7 @@ int FragCreateDependency::createProgram(SceGxmFragmentProgram *&program)
 }
 
 ShaderParameterBase::ShaderParameterBase(ShaderParameterSetupData &setup)
-	: m_param(NULL), m_reserved(0), m_setup(&setup), m_index(UNIFORM)
+	: m_param(NULL), m_missing(0), m_setup(&setup), m_index(UNIFORM)
 {
 }
 

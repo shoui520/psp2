@@ -149,6 +149,22 @@ public:
 
 	int push_back(const _Ty &val);
 
+	/* gives back ten elements whenever twenty are spare */
+	void pop_back()
+	{
+		if (count != 0) {
+			ptr[count - 1].~_Ty();
+			--count;
+			if (count < limit - 20)
+				reserve(limit - 10);
+		}
+	}
+
+	_Ty &back()
+	{
+		return ptr[size() - 1];
+	}
+
 	_Ty &operator[](size_type pos)
 	{
 		return ptr[pos];

@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <gxm.h>
 #include <common/shared_ptr.h>
+#include <math/ngp/v4.h>
 #include <graphics/arl/gxm/gxm_vertex_array.h>
 #include <std/map>
 #include <std/string>
@@ -299,6 +300,11 @@ public:
 /* what a shader's parameters are set up and written with */
 class ShaderParameterSetupData {
 public:
+	ShaderParameterSetupData()
+		: m_context(NULL), m_program(NULL), m_uniform_buffer(NULL), m_object(NULL)
+	{
+	}
+
 	SceGxmContext *m_context;
 	ShaderProgram *m_program;
 	/* the default uniform buffer reserved for the draw */
@@ -319,7 +325,8 @@ public:
 	void init(const char *name, int32_t unit, int32_t offset);
 
 	const SceGxmProgramParameter *m_param;
-	uint32_t m_reserved;
+	/* the applies that found no parameter in the program */
+	uint32_t m_missing;
 	ShaderParameterSetupData *m_setup;
 	/* the sampler's resource index, -1 where the program has none, UNIFORM for a uniform */
 	int32_t m_index;
@@ -353,6 +360,40 @@ public:
 	/* reserves the uniform buffer and writes the parameters when they changed */
 	virtual bool SetupUniforms() = 0;
 };
+
+/* a parameter and its value, written into the uniform buffer when applied */
+template<class T>
+class ShaderParameter : public ShaderParameterBase {
+public:
+	ShaderParameter(ShaderParameterSetupData &setup) : ShaderParameterBase(setup)
+	{
+	}
+
+	void Apply();
+
+	/* the value kept, and written at once while a shader object is begun whose
+	   SetupUniforms did not write it */
+	void Set(const T &value)
+	{
+		if (m_param == NULL)
+			return;
+		m_value = value;
+		if (m_setup->m_object != NULL && !m_setup->m_object->SetupUniforms())
+			Apply();
+	}
+
+	T m_value;
+};
+
+template<>
+inline void ShaderParameter<math::v4>::Apply()
+{
+	if (m_param == NULL)
+		m_missing++;
+	else
+		sceGxmSetUniformDataF(m_setup->m_uniform_buffer, m_param, 0, 4,
+				      (const float *)&m_value);
+}
 
 /* a vertex or fragment shader object: the programs it made, by GXM program, and the one bound */
 template<class Program>
@@ -454,6 +495,19 @@ private:
 	static void UnbindProgram();
 
 	static FragShaderObject *s_current;
+};
+
+/* a shader's interface and the shader object over it, kept together by the classes that draw
+   with them (name ours) */
+template<class Interface, class Object>
+class ShaderInstance {
+public:
+	ShaderInstance() : m_object(&m_interface)
+	{
+	}
+
+	Interface m_interface;
+	Object m_object;
 };
 
 }
