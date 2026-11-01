@@ -4,6 +4,8 @@ psp2_module(vs0_sys_external_np_common KIND user COMPILER snc PARTIAL SOURCES
 	base64.c
 	callout.c
 	util.c
+	jid.c
+	strtol.c
 	np_common.c
 	../../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 	../../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c

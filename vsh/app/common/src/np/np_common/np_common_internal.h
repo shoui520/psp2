@@ -40,6 +40,14 @@ typedef struct NpCommonSettings {
 	int param1401993;		/* 0x38 */
 } NpCommonSettings;
 
+/* a Jabber ID, node@domain/resource, its parts pointing into one buffer */
+typedef struct NpJid {
+	const char *node;		/* 0x00: the online ID */
+	const char *domain;		/* 0x04: "xx.yy.<environment>.playstation.net" */
+	const char *resource;		/* 0x08: the platform */
+	SceUInt32 reserved;		/* 0x0C */
+} NpJid;
+
 /* a timer of a callout thread, in its list sorted by time */
 typedef struct NpCallout {
 	struct NpCallout *next;		/* 0x00 */
@@ -62,5 +70,9 @@ typedef struct NpCalloutContext {
 /* util.c */
 int SceNpCommon_619FB198(SceSize size, void *memblock);
 void SceNpCommon_622F004B(void);
+
+/* strtol.c */
+int SceNpCommon_4C4AA451(const char *str, const char **end, int base);
+SceInt64 SceNpCommon_37954C1F(const char *str, const char **end, int base);
 
 #endif /* NP_COMMON_INTERNAL_H */
