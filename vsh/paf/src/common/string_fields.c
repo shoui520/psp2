@@ -2,7 +2,6 @@
 #include "../std/string.h"
 #include "../std/new.h"
 #include "../compiler.h"
-#include "property_list.h"
 #include <sce_atomic.h>
 #include <stdint.h>
 
@@ -119,11 +118,6 @@ uint32_t ScePafCommon_A704EEE6(uint32_t *self)
 	return (uint32_t)sceAtomicIncrement32AcqRel((volatile int32_t *)&self[3]) + 1;
 }
 
-int ScePafCommon_ED0D1711(const void *self, const char *tag)
-{
-	return tag == "property_element";
-}
-
 int ScePafCommon_DAC99BB6(const PafString *text, const PafString *suffix)
 {
 	int length = (int)text->count;
@@ -145,16 +139,6 @@ int ScePafCommon_DAC99BB6(const PafString *text, const PafString *suffix)
 			return 1;
 	}
 	return 0;
-}
-
-int ScePafCommon_B8FC8757(const void *self, const char *tag)
-{
-	return tag == "string_element" || tag == "property_element";
-}
-
-int ScePafCommon_CF5AC562(const void *self, const char *tag)
-{
-	return tag == "wstring_element" || tag == "property_element";
 }
 
 PafCommonStringField *ScePafCommon_25E1C8C4(PafCommonStringField *self,
@@ -179,85 +163,6 @@ PafCommonStringField *ScePafCommon_AED94915(PafCommonStringField *self,
 		length = sce_paf_strlen(source);
 	PafStringAssign(&self->string, source, length);
 	return self;
-}
-
-typedef struct PafCommonElement {
-	int (**methods)(struct PafCommonElement *self, const char *tag);
-	uint8_t contents[];
-} PafCommonElement;
-
-PafString *ScePafCommon_FE3900DF(PafCommonElement **self)
-{
-	PafCommonElement *element = *self;
-
-	if (element && element->methods[0](element, "string_element") &&
-	    (element = *self) != 0)
-		return (PafString *)element->contents;
-	return &StringElementEmptyString;
-}
-
-PafWString *ScePafCommon_215DA541(PafCommonElement **self)
-{
-	PafCommonElement *element = *self;
-
-	if (element && element->methods[0](element, "wstring_element") &&
-	    (element = *self) != 0)
-		return (PafWString *)element->contents;
-	return &WStringElementEmptyString;
-}
-
-typedef struct PafCommonSharedPointer {
-	void *object;
-	void *control;
-} PafCommonSharedPointer;
-
-typedef struct PafCommonPointerList {
-	uint8_t reserved[28];
-	PafCommonSharedPointer *items;
-	uint32_t count;
-} PafCommonPointerList;
-
-_Static_assert(offsetof(PafCommonPointerList, items) == 28,
-	       "common pointer list offset");
-_Static_assert(offsetof(PafCommonPointerList, count) == 32,
-	       "common pointer list count offset");
-
-PafCommonSharedPointer *ScePafCommon_EA03EA22(
-		PafCommonSharedPointer *result, PafCommonPointerList *self,
-		uint32_t index)
-{
-	if (index >= self->count) {
-		result->object = 0;
-		result->control = 0;
-	} else {
-		*(uint64_t *)result = *(uint64_t *)&self->items[index];
-	}
-	return result;
-}
-
-typedef struct PafCommonSharedPointerRange {
-	PafCommonSharedPointer *items;
-	uint32_t firstIndex;
-} PafCommonSharedPointerRange;
-
-PafCommonSharedPointer *ScePafCommon_4A6AF5C3(
-		PafCommonSharedPointer *result,
-		const PafCommonSharedPointerRange *range, uint32_t index)
-{
-	if (range->firstIndex >= index) {
-		result->object = 0;
-		result->control = 0;
-	} else {
-		PafCommonSharedPointer *source = &range->items[index];
-
-		result->object = source->object;
-		result->control = source->control;
-		if (result->object)
-			return (PafCommonSharedPointer *)(uintptr_t)(
-				(uint32_t)sceAtomicIncrement32AcqRel(
-					(volatile int32_t *)result->control + 1) + 1);
-	}
-	return result;
 }
 
 typedef struct PafCommonReference {
@@ -357,87 +262,6 @@ void ScePafCommon_38964597(uint32_t *self)
 	PafDelete(self);
 }
 
-/* Find a keyed string-property pair in the native node tree. */
-PafCommonSharedPointer *ScePafCommon_91CDF7D0(
-		PafCommonSharedPointer *result, const uint8_t *self,
-		const uint8_t *key)
-{
-	uint32_t *sentinel = *(uint32_t *const *)(self + 44);
-	uint32_t *node;
-
-	if (sentinel) {
-		node = (uint32_t *)*sentinel;
-		if (!((uint8_t *)node)[41]) {
-			uint32_t wanted = *(const uint32_t *)(key + 12);
-
-			do {
-				uint32_t actual = node[7];
-
-				if (wanted >= actual) {
-					if (actual >= wanted)
-						break;
-					node = (uint32_t *)node[2];
-				} else {
-					node = (uint32_t *)node[1];
-				}
-			} while (!((uint8_t *)node)[41]);
-		}
-	} else {
-		node = 0;
-	}
-	if (node == sentinel) {
-		result->object = 0;
-		result->control = 0;
-	} else {
-		*(uint64_t *)result = *(uint64_t *)(node + 8);
-	}
-	return result;
-}
-
-/* Find a keyed shared resource and retain its reference-counted owner. */
-PafCommonSharedPointer *ScePafCommon_97478EC4(
-		PafCommonSharedPointer *result, const uint8_t *self,
-		const uint8_t *key)
-{
-	uint32_t *sentinel = *(uint32_t *const *)(self + 16);
-	uint32_t *node;
-
-	if (sentinel) {
-		node = (uint32_t *)*sentinel;
-		if (!((uint8_t *)node)[37]) {
-			uint32_t wanted = *(const uint32_t *)(key + 12);
-
-			do {
-				uint32_t actual = node[6];
-
-				if (wanted >= actual) {
-					if (actual >= wanted)
-						break;
-					node = (uint32_t *)node[2];
-				} else {
-					node = (uint32_t *)node[1];
-				}
-			} while (!((uint8_t *)node)[37]);
-		}
-	} else {
-		node = 0;
-	}
-	if (node == sentinel) {
-		result->object = 0;
-		result->control = 0;
-	} else {
-		void *object = (void *)(uintptr_t)node[7];
-		uint32_t control = node[8];
-
-		result->object = object;
-		result->control = (void *)(uintptr_t)control;
-		if (object)
-			return (PafCommonSharedPointer *)(uintptr_t)(
-				(uint32_t)sceAtomicIncrement32AcqRel(
-					(volatile int32_t *)(uintptr_t)(control + 4)) + 1);
-	}
-	return result;
-}
 /* Convert the native property representation class to its float bit pattern. */
 uint32_t ScePafCommon_DE5322EB(uint32_t kind)
 {

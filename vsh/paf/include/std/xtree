@@ -170,6 +170,11 @@ public:
 		return iterator(head);
 	}
 
+	iterator end() const
+	{
+		return iterator(head);
+	}
+
 	size_type size() const
 	{
 		return count;
@@ -177,6 +182,11 @@ public:
 
 	_Node *_Insert(const value_type &val, bool *inserted);
 	iterator find(const key_type &key);
+
+	iterator find(const key_type &key) const
+	{
+		return iterator(_Find(key));
+	}
 	void erase(const key_type &key);
 	void erase(iterator first, iterator last);
 	void _Tidy();
@@ -189,7 +199,7 @@ public:
 
 private:
 	/* The node of key, else the nil node it ends at; NULL without a head. */
-	_Node *_Find(const key_type &key)
+	_Node *_Find(const key_type &key) const
 	{
 		if (head == NULL)
 			return NULL;

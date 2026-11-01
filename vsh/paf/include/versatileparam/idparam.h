@@ -39,6 +39,12 @@ public:
 		return m_idhash;
 	}
 
+	/* IDs order by their hash */
+	bool operator<(const IDParam &right) const
+	{
+		return m_idhash < right.m_idhash;
+	}
+
 	string m_id;
 	uint32_t m_idhash;
 };
