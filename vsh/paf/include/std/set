@@ -1,0 +1,42 @@
+/* paf::set: unique keys in a paf::_Tree. */
+#ifndef PAF_STD_SET
+#define PAF_STD_SET
+
+#include <std/xtree>
+#include <std/utility>
+#include <std/functional>
+
+namespace paf {
+
+template<class _Kty, class _Pr>
+struct _Tset_traits {
+	typedef _Kty key_type;
+	typedef _Kty value_type;
+	typedef _Pr key_compare;
+
+	static const _Kty &_Kfn(const value_type &val)
+	{
+		return val;
+	}
+};
+
+template<class _Kty, class _Pr = less<_Kty>, class _Ax = allocator<_Kty> >
+class set : public _Tree<_Tset_traits<_Kty, _Pr> > {
+public:
+	typedef _Tree<_Tset_traits<_Kty, _Pr> > _Mybase;
+	typedef _Kty key_type;
+	typedef _Kty value_type;
+	typedef typename _Mybase::iterator iterator;
+
+	pair<iterator, bool> insert(const value_type &val)
+	{
+		bool inserted;
+		typename _Mybase::_Node *node = this->_Insert(val, &inserted);
+
+		return pair<iterator, bool>(iterator(node), inserted);
+	}
+};
+
+}
+
+#endif

@@ -124,6 +124,7 @@ public:
 	}
 
 	_Myt &assign(const _Myt &src);
+	_Myt &assign(const _Myt &src, size_type pos, size_type len);
 
 	_Myt &assign(_Elem ch);
 
@@ -410,6 +411,44 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src)
 			ptr = &empty_string;
 			count = 0;
 		}
+	}
+	return *this;
+}
+
+/* At most len elements from pos; a pos past the end is reported and gives an empty string. */
+template<class _Elem, class _Traits, class _Ax>
+basic_string<_Elem, _Traits, _Ax> &
+basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src, size_type pos, size_type len)
+{
+	size_type size = 0;
+
+	if (pos > src.count)
+		ScePafStdc_D608246A();
+	if (pos < src.count) {
+		size_type left = src.count - pos;
+
+		if (left < len)
+			len = left;
+		size = len;
+	}
+	if (ptr != &empty_string)
+		alloc.deallocate(ptr, count + 1);
+	if (size != 0) {
+		_Elem *dst = alloc.allocate(size + 1);
+
+		if (dst != NULL) {
+			ptr = dst;
+			count = size;
+			_Traits::copy(dst, src.ptr + pos, size);
+			ptr[size] = 0;
+		} else {
+			ScePafStdc_D608246A();
+			count = 0;
+			ptr = &empty_string;
+		}
+	} else {
+		count = 0;
+		ptr = &empty_string;
 	}
 	return *this;
 }

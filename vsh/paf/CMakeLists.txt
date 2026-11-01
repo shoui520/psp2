@@ -99,6 +99,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/job_slots.c
 	src/common/path.c
 	src/common/property_list.cpp
+	src/common/shared_string.cpp
 	src/common/shared_ptr.c
 	src/job/job.cpp
 	src/math/matrix.cpp
