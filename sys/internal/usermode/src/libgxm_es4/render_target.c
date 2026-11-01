@@ -3,6 +3,7 @@
  */
 
 #include "gxm_internal.h"
+#include "memory_util_private.h"
 
 typedef struct SceGxmRenderTargetParams {
 	SceUInt32 flags;		/* SCE_GXM_RENDER_TARGET_* */
@@ -60,52 +61,130 @@ static inline SceSize gxmPageFit(SceSize offset, SceSize size)
 	return offset;
 }
 
-static __attribute__((noinline)) int gxmRenderTargetCheckParams(const SceGxmRenderTargetParams *params)
-{
-	SceUInt32 flags, width, height, multisampleMode, countX, countY, macrotileHeight;
+/* the debug build's checks report the public function, which the release build does not pass */
+#if SCE_DBG_ASSERTS_ENABLED
+#define GXM_RT_FUNCTION_PARAM	, const char *function
+#define GXM_RT_FUNCTION(name)	, name
+#else
+#define GXM_RT_FUNCTION_PARAM
+#define GXM_RT_FUNCTION(name)
+#endif
 
-	if (params == NULL)
+static __attribute__((noinline)) int gxmRenderTargetCheckParams(const SceGxmRenderTargetParams *params
+								GXM_RT_FUNCTION_PARAM)
+{
+	SceUInt32 flags, width, height, multisampleMode, countX, countY;
+	SceUInt32 macrotileWidth, macrotileHeight;
+
+	if (params == NULL) {
+		GXM_DBG_ERROR(71, "Parameter params to function %s is NULL.", function);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	flags = params->flags;
-	if (flags & ~GXM_RENDER_TARGET_INTERNAL_MASK)
+	if (flags & ~GXM_RENDER_TARGET_INTERNAL_MASK) {
+		GXM_DBG_ERROR(83, "Parameter params->flags to function %s has unexpected bits set.",
+			      function);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	if ((flags & (GXM_RENDER_TARGET_SYSTEM_POOL | GXM_RENDER_TARGET_SYSTEM_SINGLE)) ==
-	    (GXM_RENDER_TARGET_SYSTEM_POOL | GXM_RENDER_TARGET_SYSTEM_SINGLE))
+	    (GXM_RENDER_TARGET_SYSTEM_POOL | GXM_RENDER_TARGET_SYSTEM_SINGLE)) {
+		GXM_DBG_ERROR(89, "Parameter params->flags to function %s cannot use both internal "
+			      "budgets.", function);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if ((flags & SCE_GXM_RENDER_TARGET_USE_DISPLAY_QUEUE_PARAMS) &&
-	    (!gxmGlobals.initialized || gxmGlobals.displayQueue == NULL))
-		return SCE_GXM_ERROR_INVALID_VALUE;
-	width = params->width;
-	if (width - 1 >= 0x1000)
-		return SCE_GXM_ERROR_INVALID_VALUE;
-	height = params->height;
-	if (height - 1 >= 0x1000)
-		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (params->scenesPerFrame - 1U > 7)
-		return SCE_GXM_ERROR_INVALID_VALUE;
-	multisampleMode = params->multisampleMode;
-	if (multisampleMode > SCE_GXM_MULTISAMPLE_4X)
-		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (!(flags & SCE_GXM_RENDER_TARGET_MACROTILE_SYNC)) {
-		if (flags & 0xff00)
+	}
+	if (flags & SCE_GXM_RENDER_TARGET_USE_DISPLAY_QUEUE_PARAMS) {
+		if (!gxmGlobals.initialized) {
+			GXM_DBG_ERROR(95, "Parameter params->flags to function %s cannot use the flag "
+				      "USE_DISPLAY_QUEUE_PARAMS when libgxm is not initialized.",
+				      function);
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+		if (gxmGlobals.displayQueue == NULL) {
+			GXM_DBG_ERROR(100, "Parameter params->flags to function %s cannot use the flag "
+				      "USE_DISPLAY_QUEUE_PARAMS when libgxm is not using the display "
+				      "queue.", function);
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+	}
+	width = params->width;
+	if (width - 1 >= 0x1000) {
+		GXM_DBG_ERROR(108, "Parameter params->width to function %s has value %u, which is not "
+			      "in the range [1, %u].", function, width, 0x1000);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	height = params->height;
+	if (height - 1 >= 0x1000) {
+		/* Sony's message names the width */
+		GXM_DBG_ERROR(115, "Parameter params->width to function %s has value %u, which is not "
+			      "in the range [1, %u].", function, height, 0x1000);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (params->scenesPerFrame - 1U > 7) {
+		GXM_DBG_ERROR(122, "Parameter params->scenesPerFrame to function %s has value %u, which "
+			      "is not in the range [1, %u].", function, params->scenesPerFrame, 8);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	multisampleMode = params->multisampleMode;
+	if (multisampleMode > SCE_GXM_MULTISAMPLE_4X) {
+		GXM_DBG_ERROR(127, "Parameter params->multisampleMode to function %s is not a valid "
+			      "multisample mode.", function);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (!(flags & SCE_GXM_RENDER_TARGET_MACROTILE_SYNC)) {
+		if (flags & 0xff00) {
+			GXM_DBG_ERROR(193, "Parameter params->flags to function %s encodes macrotile "
+				      "counts, but MACROTILE_SYNC is not used.", function);
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		return 0;
 	}
 
 	/* 2 to 16 macrotiles of whole 128-pixel tiles, at most 1024 pixels each, no MSAA */
 	countX = gxmMacrotileCountX(flags);
 	countY = gxmMacrotileCountY(flags);
-	if (countX - 1 > 3 || countY - 1 > 3)
+	if (countX - 1 > 3) {
+		GXM_DBG_ERROR(138, "Parameter params->flags to function %s encodes a macrotile X count "
+			      "of value %d, which is not in the range [1, 4].", function, countX);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (countX <= 1 && countY <= 1)
+	}
+	if (countY - 1 > 3) {
+		GXM_DBG_ERROR(144, "Parameter params->flags to function %s encodes a macrotile Y count "
+			      "of value %d, which is not in the range [1, 4].", function, countY);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (width % (countX << 7) != 0 || height % (countY << 7) != 0)
+	}
+	if (countX <= 1 && countY <= 1) {
+		GXM_DBG_ERROR(151, "Parameter params->flags to function %s encodes macrotile "
+			      "synchronization on only 1 macrotile.", function);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (width % (countX << 7) != 0) {
+		GXM_DBG_ERROR(158, "Parameter params->width to function %s does not align each "
+			      "macrotile to a multiple of 128 pixels.", function);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (height % (countY << 7) != 0) {
+		GXM_DBG_ERROR(163, "Parameter params->height to function %s does not align each "
+			      "macrotile to a multiple of 128 pixels.", function);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	macrotileWidth = width / countX;
 	macrotileHeight = height / countY;
-	if (width / countX > 0x400 || macrotileHeight > 0x400)
+	if (macrotileWidth > 0x400) {
+		GXM_DBG_ERROR(173, "Parameter params->flags to function %s encodes a macrotile width of "
+			      "%d, which is over the limit of 1024 pixels.", function, macrotileWidth);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (multisampleMode != SCE_GXM_MULTISAMPLE_NONE)
+	}
+	if (macrotileHeight > 0x400) {
+		GXM_DBG_ERROR(179, "Parameter params->flags to function %s encodes a macrotile height "
+			      "of %d, which is over the limit of 1024 pixels.", function,
+			      macrotileHeight);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (multisampleMode != SCE_GXM_MULTISAMPLE_NONE) {
+		GXM_DBG_ERROR(186, "Parameter params->multisampleMode to function %s specifies MSAA, but "
+			      "this cannot be used with macrotile synchronization.", function);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	return 0;
 }
 
@@ -225,6 +304,18 @@ static inline int gxmRenderTargetCreate(const SceGxmRenderTargetParams *params,
 	SceUID driverMemBlock;
 	int err;
 
+	if (!gxmGlobals.initialized) {
+		GXM_DBG_ERROR_UNINITIALIZED(209, sceGxmCreateRenderTarget);
+		return SCE_GXM_ERROR_UNINITIALIZED;
+	}
+	err = gxmRenderTargetCheckParams(params GXM_RT_FUNCTION("sceGxmCreateRenderTarget"));
+	if (err != 0)
+		return err;
+	if (renderTarget == NULL) {
+		GXM_DBG_ERROR_NULL(216, sceGxmCreateRenderTarget, renderTarget);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+
 	size = 0;
 	gxmRenderTargetGetDriverMemSize(params, &size);
 	driverMemBlock = params->driverMemBlock;
@@ -232,17 +323,22 @@ static inline int gxmRenderTargetCreate(const SceGxmRenderTargetParams *params,
 		driverMemBlock = sceKernelAllocMemBlock("SceGxmRenderTarget",
 							SCE_KERNEL_MEMBLOCK_TYPE_USER_RW_UNCACHE, size,
 							NULL);
-		if (driverMemBlock < 0)
+		if (driverMemBlock < 0) {
+			GXM_DBG_ERROR(237, "Failed to allocate memblock of size %d in "
+				      "sceGxmCreateRenderTarget.", size);
 			return SCE_GXM_ERROR_OUT_OF_MEMORY;
+		}
 	} else {
 		SceKernelMemBlockInfo info;
-		void *base;
 
-		if (sceKernelGetMemBlockBase(driverMemBlock, &base) != 0)
+		if (gxmGetMemBlockInfo(driverMemBlock, &info) != 0)
 			return SCE_GXM_ERROR_INVALID_VALUE;
-		info.size = sizeof(info);
-		if (sceKernelGetMemBlockInfoByAddr(base, &info) != 0 || size > info.mappedSize)
+		if (size > info.mappedSize) {
+			GXM_DBG_ERROR(251, "Parameter params->driverMemBlock to function "
+				      "sceGxmCreateRenderTarget has size %u, which under the minimum "
+				      "driver memory size of %u.", info.mappedSize, size);
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 	}
 	hMemBlockProcRef = 0;
 	if (SceGpuEs4User_0EA7458D(&gxmGlobals.top, driverMemBlock, &hMemBlockProcRef, 1) != 0) {
@@ -299,7 +395,13 @@ static inline int gxmRenderTargetCreate(const SceGxmRenderTargetParams *params,
 			sceKernelFreeMemBlock(driverMemBlock);
 		*renderTarget = NULL;
 		/* PVRSRV_ERROR_OUT_OF_RENDER_TARGETS */
-		return err == 184 ? SCE_GXM_ERROR_OUT_OF_RENDER_TARGETS : SCE_GXM_ERROR_DRIVER;
+		if (err == 184) {
+			GXM_DBG_ERROR(341, "sceGxmCreateRenderTarget failed because the maximum number "
+				      "of %d render targets have already been created.", 48);
+			return SCE_GXM_ERROR_OUT_OF_RENDER_TARGETS;
+		}
+		GXM_DBG_ERROR(347, "sceGxmCreateRenderTarget failed in the driver layer (0x%08X).", err);
+		return SCE_GXM_ERROR_DRIVER;
 	}
 	return 0;
 }
@@ -307,36 +409,25 @@ static inline int gxmRenderTargetCreate(const SceGxmRenderTargetParams *params,
 int sceGxmCreateRenderTargetInternal(const SceGxmRenderTargetParams *params,
 				     struct SceGxmRenderTarget **renderTarget)
 {
-	int ret;
-
-	if (params == NULL)
+	if (params == NULL) {
+		GXM_DBG_ERROR_NULL(363, sceGxmCreateRenderTarget, params);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (!gxmGlobals.initialized)
-		return SCE_GXM_ERROR_UNINITIALIZED;
-	ret = gxmRenderTargetCheckParams(params);
-	if (ret != 0)
-		return ret;
-	if (renderTarget == NULL)
-		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	return gxmRenderTargetCreate(params, renderTarget);
 }
 
 int sceGxmCreateRenderTarget(const SceGxmRenderTargetParams *params,
 			     struct SceGxmRenderTarget **renderTarget)
 {
-	int ret;
-
-	if (params == NULL)
+	if (params == NULL) {
+		GXM_DBG_ERROR_NULL(377, sceGxmCreateRenderTarget, params);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (params->flags & ~GXM_RENDER_TARGET_PUBLIC_MASK)
+	}
+	if (params->flags & ~GXM_RENDER_TARGET_PUBLIC_MASK) {
+		GXM_DBG_ERROR(386, "Parameter params->flags to function sceGxmCreateRenderTarget has "
+			      "unexpected bits set.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (!gxmGlobals.initialized)
-		return SCE_GXM_ERROR_UNINITIALIZED;
-	ret = gxmRenderTargetCheckParams(params);
-	if (ret != 0)
-		return ret;
-	if (renderTarget == NULL)
-		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	return gxmRenderTargetCreate(params, renderTarget);
 }
 
@@ -345,11 +436,21 @@ int sceGxmRenderTargetGetDriverMemBlock(const struct SceGxmRenderTarget *renderT
 {
 	SceUID block;
 	SceUInt32 allocated;
+	int err;
 
-	if (renderTarget == NULL || driverMemBlock == NULL)
+	if (renderTarget == NULL) {
+		GXM_DBG_ERROR_NULL(400, sceGxmRenderTargetGetDriverMemBlock, renderTarget);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (SceGpuEs4User_804BA13D(&gxmGlobals.top, renderTarget, &block, &allocated) != 0)
+	}
+	if (driverMemBlock == NULL) {
+		GXM_DBG_ERROR_NULL(405, sceGxmRenderTargetGetDriverMemBlock, driverMemBlock);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	err = SceGpuEs4User_804BA13D(&gxmGlobals.top, renderTarget, &block, &allocated);
+	if (err != 0) {
+		GXM_DBG_ERROR(414, "Failed due to error in driver layer (%08X).", err);
 		return SCE_GXM_ERROR_DRIVER;
+	}
 	/* memory libgxm allocated is not the application's */
 	*driverMemBlock = allocated ? SCE_UID_INVALID_UID : block;
 	return 0;
@@ -359,15 +460,27 @@ int sceGxmDestroyRenderTarget(struct SceGxmRenderTarget *renderTarget)
 {
 	SceUID block;
 	SceUInt32 allocated;
+	int err;
 
-	if (!gxmGlobals.initialized)
+	if (!gxmGlobals.initialized) {
+		GXM_DBG_ERROR_UNINITIALIZED(426, sceGxmDestroyRenderTarget);
 		return SCE_GXM_ERROR_UNINITIALIZED;
-	if (renderTarget == NULL)
+	}
+	if (renderTarget == NULL) {
+		GXM_DBG_ERROR_NULL(432, sceGxmDestroyRenderTarget, renderTarget);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	allocated = 0;
-	if (SceGpuEs4User_804BA13D(&gxmGlobals.top, renderTarget, &block, &allocated) != 0 ||
-	    SceGpuEs4User_D90B0707(&gxmGlobals.top, gxmGlobals.top.renderContext, renderTarget) != 0)
+	err = SceGpuEs4User_804BA13D(&gxmGlobals.top, renderTarget, &block, &allocated);
+	if (err != 0) {
+		GXM_DBG_ERROR(439, "Failed due to error in driver layer (%08X).", err);
 		return SCE_GXM_ERROR_DRIVER;
+	}
+	err = SceGpuEs4User_D90B0707(&gxmGlobals.top, gxmGlobals.top.renderContext, renderTarget);
+	if (err != 0) {
+		GXM_DBG_ERROR(446, "Failed due to error in driver layer (%08X).", err);
+		return SCE_GXM_ERROR_DRIVER;
+	}
 	SceGpuEs4User_156A6B70(&gxmGlobals.top, block);
 	if (allocated == 1)
 		sceKernelFreeMemBlock(block);
@@ -379,15 +492,22 @@ int sceGxmGetRenderTargetMemSize(const SceGxmRenderTargetParams *params, SceSize
 	SceSize size;
 	int ret;
 
-	if (params == NULL)
+	if (params == NULL) {
+		GXM_DBG_ERROR_NULL(740, sceGxmGetRenderTargetMemSize, params);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (params->flags & ~GXM_RENDER_TARGET_PUBLIC_MASK)
+	}
+	if (params->flags & ~GXM_RENDER_TARGET_PUBLIC_MASK) {
+		GXM_DBG_ERROR(749, "Parameter params->flags to function sceGxmGetRenderTargetMemSize "
+			      "has unexpected bits set.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	ret = gxmRenderTargetCheckParams(params);
+	}
+	ret = gxmRenderTargetCheckParams(params GXM_RT_FUNCTION("sceGxmGetRenderTargetMemSize"));
 	if (ret != 0)
 		return ret;
-	if (driverMemSize == NULL)
+	if (driverMemSize == NULL) {
+		GXM_DBG_ERROR_NULL(764, sceGxmGetRenderTargetMemSize, driverMemSize);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	gxmRenderTargetGetDriverMemSize(params, &size);
 	*driverMemSize = size;
 	return 0;
@@ -399,11 +519,13 @@ int sceGxmGetRenderTargetMemSizeInternal(const SceGxmRenderTargetParams *params,
 	SceSize size;
 	int ret;
 
-	ret = gxmRenderTargetCheckParams(params);
+	ret = gxmRenderTargetCheckParams(params GXM_RT_FUNCTION("sceGxmGetRenderTargetMemSize"));
 	if (ret != 0)
 		return ret;
-	if (driverMemSize == NULL)
+	if (driverMemSize == NULL) {
+		GXM_DBG_ERROR_NULL(764, sceGxmGetRenderTargetMemSize, driverMemSize);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	gxmRenderTargetGetDriverMemSize(params, &size);
 	*driverMemSize = size;
 	return 0;

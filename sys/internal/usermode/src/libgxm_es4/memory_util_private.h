@@ -8,6 +8,26 @@
 
 #include "gxm_internal.h"
 
+/* the size and mapping of a memory block the caller gave by its UID */
+static inline __attribute__((always_inline)) int gxmGetMemBlockInfo(SceUID memBlock,
+								    SceKernelMemBlockInfo *info)
+{
+	void *base;
+
+	if (sceKernelGetMemBlockBase(memBlock, &base) != 0) {
+		GXM_DBG_ERROR_AT("memory_util_private.h", 29,
+				 "Failed to find base address for memblock id 0x%08x", memBlock);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	info->size = sizeof(*info);
+	if (sceKernelGetMemBlockInfoByAddr(base, info) != 0) {
+		GXM_DBG_ERROR_AT("memory_util_private.h", 38,
+				 "Failed to find memblock info for memblock id 0x%08x", memBlock);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	return 0;
+}
+
 static inline __attribute__((always_inline)) int gxmAllocGpuBlock(SceUInt32 heap, SceUInt32 attr, SceSize size, SceSize alignment,
 			    PVRSRV_CLIENT_MEM_INFO **block)
 {
