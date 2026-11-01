@@ -62,7 +62,7 @@ typedef struct HttpHeader {
 typedef struct HttpTemplate {
 	HttpObject object;
 	int httpVer;
-	int reserved18;
+	SceBool proxyEnabled;
 	SceBool keepAlive;
 	SceBool autoRedirect;
 	SceBool cookieEnabled;
@@ -103,9 +103,9 @@ typedef struct HttpTemplate {
 	int reservedC4[2];
 	SceUShort16 proxyPort;
 	SceUShort16 reservedCe;
-	int reservedD0;
+	SceBool acceptEncodingGzipEnabled;
 	int reservedD4;
-	int reservedD8;
+	SceBool inflateGzipEnabled;
 	int reservedDc;
 	int reservedE0;
 } HttpTemplate;
@@ -140,6 +140,12 @@ typedef struct HttpConnection {
 } HttpConnection;
 _Static_assert(sizeof(HttpConnection) == 0x190, "HttpConnection");
 
+/* what sceHttpCreateRequest2 and sceHttpCreateRequestWithURL2 add to a request (0x20 bytes) */
+typedef struct HttpRequestExtra {
+	char *method;
+	int reserved04[7];
+} HttpRequestExtra;
+
 /* a request (0x460 bytes) */
 typedef struct HttpRequest {
 	HttpObject object;
@@ -149,7 +155,7 @@ typedef struct HttpRequest {
 	int authRetries;
 	SceULong64 contentLength;
 	int reserved30[6];
-	void *reserved48;
+	struct HttpRequestExtra *extra;	/* method 8's name, ... */
 	HttpTemplate tmpl;
 	HttpConnection *connection;
 	HttpConnection *childConnections;
@@ -172,7 +178,7 @@ typedef struct HttpRequest {
 	SceSize responseHeaderLen;
 	int reserved3ec;
 	int icmSock;			/* "SceLibHttpIcm" */
-	int reserved3f4;
+	int icmOption;
 	SceKernelLwMutexWork lock;
 	void *reserved418;
 	int reserved41c[4];
@@ -459,6 +465,7 @@ int _sceHttpHeaderCreate(const HttpAllocator *allocator, HttpHeader **header, co
 void _sceHttpHeaderFree(HttpHeader *header);
 int _sceHttpHeaderCopy(const HttpAllocator *allocator, HttpHeader **copy, const HttpHeader *list);
 int _sceHttpHeaderRemove(HttpHeader **list, const char *name);
+SceSize _sceHttpRequestMakeHeader(HttpRequest *req, char *buf, SceSize size, SceBool countOnly);
 int _sceHttpMakeHostHeader(const HttpAllocator *allocator, char **header, SceBool https,
 			   const char *hostname, SceUShort16 port);
 
