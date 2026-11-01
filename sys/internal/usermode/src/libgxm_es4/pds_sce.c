@@ -9,6 +9,8 @@
 
 #include "gxm_internal.h"
 
+#define SCE_GXM_PDS_ALIGNMENT	16
+
 /* DOUTD control words, by register bank and data size */
 static const SceUInt32 gxmPdsDoutWords[4][4] = {
 	{ 0x00000000, 0x07000000, 0x07000100, 0x07000180 },
@@ -16,6 +18,60 @@ static const SceUInt32 gxmPdsDoutWords[4][4] = {
 	{ 0x00000000, 0x07000aa0, 0x07000ba0, 0x07000b20 },
 	{ 0x07000b10, 0x07000ff0, 0x07000cf0, 0x07000c70 },
 };
+
+/*
+ * Copy whole words: 16 bytes first when the source is not 32-byte aligned, then 32-byte
+ * blocks through the core and NEON registers, then single words. Sony's is hand-written
+ * ARM, inlined into its callers and kept out of line as well.
+ */
+void gxmCopyWords(SceUInt32 *dest, const SceUInt32 *src, SceSize size)
+{
+	GXM_DBG_ASSERT(21, SCE_GXM_PTR_IS_ALIGNED(dest, SCE_GXM_PDS_ALIGNMENT));
+	GXM_DBG_ASSERT(22, SCE_GXM_PTR_IS_ALIGNED(src, SCE_GXM_PDS_ALIGNMENT));
+	GXM_DBG_ASSERT(23, size >= 16);
+	__asm__ volatile(
+		"movs	r3, %1, lsl #27\n"
+		"ldmne	%1!, {r3-r6}\n"
+		"stmne	%0!, {r3-r6}\n"
+		"subne	%2, %2, #16\n"
+		"subs	%2, %2, #32\n"
+		"blt	2f\n"
+		"1:\n"
+		"ldm	%1!, {r3-r6}\n"
+		"pld	[%1, #0x70]\n"
+		"vldm	%1!, {d0-d1}\n"
+		"subs	%2, %2, #32\n"
+		"stm	%0!, {r3-r6}\n"
+		"vstm	%0!, {d0-d1}\n"
+		"bge	1b\n"
+		"2:\n"
+		"adds	%2, %2, #32\n"
+		"beq	4f\n"
+		"3:\n"
+		"ldr	r3, [%1], #4\n"
+		"subs	%2, %2, #4\n"
+		"str	r3, [%0], #4\n"
+		"bne	3b\n"
+		"4:\n"
+		: "+r" (dest), "+r" (src), "+r" (size)
+		:
+		: "r3", "r4", "r5", "r6", "d0", "d1", "cc", "memory");
+}
+
+/* the PDS state words of a program pair */
+void gxmPdsWriteStateWords(SceUInt32 *words, const GxmCommandBlock *vertex, SceUInt32 flags,
+			   const GxmCommandBlock *fragment)
+{
+	SceUInt32 vertexSize = vertex->dataSize;
+	SceUInt32 fragmentSize = fragment->dataSize;
+	SceUInt32 vertexAddress = (SceUInt32)vertex->data;
+	SceUInt32 fragmentAddress = (SceUInt32)fragment->data;
+
+	words[0] = (vertexAddress << 1) >> 5 | (vertexSize >> 4) << 27;
+	words[1] = ((SceInt32)vertexAddress < 0 ? 0x4000 : 0) | flags |
+		   ((SceInt32)fragmentAddress < 0 ? 0x2000 : 0);
+	words[2] = (fragmentAddress << 1) >> 5 | (fragmentSize >> 4) << 27;
+}
 
 /* where data word n lives: pairs, interleaved after the first two */
 static inline SceUInt32 gxmPdsDataSlot(SceUInt32 n)
@@ -59,6 +115,24 @@ GXM_NOINLINE SceSize gxmPdsVertexProgramSize(SceUInt32 attributeCount, const Sce
 	if (dataSize != NULL)
 		*dataSize = data << 2;
 	return (data + code) * 4;
+}
+
+/* copy a command block into the chunk buffer */
+int gxmCommandBlockCopy(GxmChunkBuffer *buffer, const GxmCommandBlock *source, GxmCommandBlock *copy)
+{
+	SceSize size = source->totalSize;
+	SceUInt32 *data = gxmChunkBufferReserve(buffer, size, 0x10);
+
+	if (data == NULL) {
+		GXM_DBG_ERROR(175, "Could not reserve %d bytes.", size);
+		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
+	gxmChunkBufferCommit(buffer, (SceUInt8 *)data + size);
+	copy->data = data;
+	copy->dataSize = source->dataSize;
+	copy->totalSize = size;
+	gxmCopyWords(data, source->data, size);
+	return 0;
 }
 
 #define GXM_PDS_FETCH_STREAM		0x67800070

@@ -92,6 +92,7 @@ int sceKernelIsGameBudget(void);
 
 /* Sony's alignment test (sceGxmExecuteCommandList's assertion names it) */
 #define SCE_GXM_IS_ALIGNED(value, alignment)	(((value) & ((alignment) - 1)) == 0)
+#define SCE_GXM_PTR_IS_ALIGNED(ptr, alignment)	SCE_GXM_IS_ALIGNED((uintptr_t)(ptr), alignment)
 /* Sony's power of two test (sceGxmDisplayQueueCreate's assertion names it) */
 #define SCE_GXM_IS_POW2(value)			(((value) & ((value) - 1)) == 0)
 

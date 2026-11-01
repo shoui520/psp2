@@ -6,6 +6,8 @@
  * is a short USSE sequence after the program.
  */
 
+#include <stdbool.h>
+
 #include "gxm_internal.h"
 
 #define SCE_GXM_OUTPUT_REGISTER_FORMAT_DECLARED	0
@@ -23,7 +25,7 @@ typedef struct GxmOutputFormatInfo {
 	SceUInt8 componentCount;
 } GxmOutputFormatInfo;
 
-static const GxmOutputFormatInfo gxmOutputFormats[12] = {
+static const GxmOutputFormatInfo gxmOutputFormats[] = {
 	[SCE_GXM_OUTPUT_REGISTER_FORMAT_DECLARED] = { SCE_GXM_PARAMETER_TYPE_AGGREGATE, 0 },
 	[SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4] = { 7, 4 },
 	[SCE_GXM_OUTPUT_REGISTER_FORMAT_CHAR4] = { 8, 4 },
@@ -36,14 +38,17 @@ static const GxmOutputFormatInfo gxmOutputFormats[12] = {
 };
 
 /* bits per component, by parameter type */
-static const SceUInt8 gxmParameterTypeBits[12] = {
+static const SceUInt8 gxmParameterTypeBits[] = {
 	32, 16, 10, 32, 32, 16, 16, 8, 8,
 };
 
 /* a 64-bit output register */
 SceBool gxmOutputIsWide(SceUInt32 type, SceUInt32 componentCount)
 {
-	return componentCount * gxmParameterTypeBits[type] == 64;
+	SceUInt32 totalBits = componentCount * gxmParameterTypeBits[type];
+
+	GXM_DBG_ASSERT(30, totalBits == 32 || totalBits == 64);
+	return totalBits == 64;
 }
 
 /*
@@ -74,6 +79,8 @@ int gxmOutputFormatResolve(SceUInt32 format, SceUInt32 *type, SceUInt32 *compone
 		*mode = 2;
 		return 0;
 	}
+	GXM_DBG_ERROR(84, "Fragment output format conversion is only possible if the fragment "
+		      "program outputs half4.");
 	return SCE_GXM_ERROR_INVALID_VALUE;
 }
 
@@ -129,6 +136,9 @@ SceUInt32 *gxmOutputFormatWriteConversion(SceUInt32 *code, SceUInt32 reg, SceUIn
 				code[0] = head | 0xa0198000;
 				code[1] = GXM_PACK(0xb85 + delta);
 				return code + 2;
+			default:
+				GXM_DBG_ASSERT(229, false);
+				break;
 			}
 			return code;
 		}
@@ -137,71 +147,4 @@ SceUInt32 *gxmOutputFormatWriteConversion(SceUInt32 *code, SceUInt32 reg, SceUIn
 		return code;
 	return gxmUsseWriteOutputMove(code, reg,
 				      gxmOutputIsWide(*type, *componentCount));
-}
-
-/*
- * Copy whole words: 16 bytes first when the source is not 32-byte aligned, then 32-byte
- * blocks through the core and NEON registers, then single words. Sony's is hand-written
- * ARM, inlined into its callers and kept out of line as well.
- */
-void gxmCopyWords(SceUInt32 *dest, const SceUInt32 *src, SceSize size)
-{
-	__asm__ volatile(
-		"movs	r3, %1, lsl #27\n"
-		"ldmne	%1!, {r3-r6}\n"
-		"stmne	%0!, {r3-r6}\n"
-		"subne	%2, %2, #16\n"
-		"subs	%2, %2, #32\n"
-		"blt	2f\n"
-		"1:\n"
-		"ldm	%1!, {r3-r6}\n"
-		"pld	[%1, #0x70]\n"
-		"vldm	%1!, {d0-d1}\n"
-		"subs	%2, %2, #32\n"
-		"stm	%0!, {r3-r6}\n"
-		"vstm	%0!, {d0-d1}\n"
-		"bge	1b\n"
-		"2:\n"
-		"adds	%2, %2, #32\n"
-		"beq	4f\n"
-		"3:\n"
-		"ldr	r3, [%1], #4\n"
-		"subs	%2, %2, #4\n"
-		"str	r3, [%0], #4\n"
-		"bne	3b\n"
-		"4:\n"
-		: "+r" (dest), "+r" (src), "+r" (size)
-		:
-		: "r3", "r4", "r5", "r6", "d0", "d1", "cc", "memory");
-}
-
-/* the PDS state words of a program pair */
-void gxmPdsWriteStateWords(SceUInt32 *words, const GxmCommandBlock *vertex, SceUInt32 flags,
-			   const GxmCommandBlock *fragment)
-{
-	SceUInt32 vertexSize = vertex->dataSize;
-	SceUInt32 fragmentSize = fragment->dataSize;
-	SceUInt32 vertexAddress = (SceUInt32)vertex->data;
-	SceUInt32 fragmentAddress = (SceUInt32)fragment->data;
-
-	words[0] = (vertexAddress << 1) >> 5 | (vertexSize >> 4) << 27;
-	words[1] = ((SceInt32)vertexAddress < 0 ? 0x4000 : 0) | flags |
-		   ((SceInt32)fragmentAddress < 0 ? 0x2000 : 0);
-	words[2] = (fragmentAddress << 1) >> 5 | (fragmentSize >> 4) << 27;
-}
-
-/* copy a command block into the chunk buffer */
-int gxmCommandBlockCopy(GxmChunkBuffer *buffer, const GxmCommandBlock *source, GxmCommandBlock *copy)
-{
-	SceSize size = source->totalSize;
-	SceUInt32 *data = gxmChunkBufferReserve(buffer, size, 0x10);
-
-	if (data == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
-	buffer->cur = (SceUInt32)data + size;
-	copy->data = data;
-	copy->dataSize = source->dataSize;
-	copy->totalSize = size;
-	gxmCopyWords(data, source->data, size);
-	return 0;
 }
