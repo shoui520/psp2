@@ -159,6 +159,14 @@ public:
 		return ptr[pos];
 	}
 
+	/* reports a position past the end, then reads it anyway */
+	_Ty &at(size_type pos)
+	{
+		if (pos >= count)
+			ScePafStdc_D608246A();
+		return ptr[pos];
+	}
+
 	iterator begin()
 	{
 		return iterator(ptr);

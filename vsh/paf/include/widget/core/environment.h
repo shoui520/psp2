@@ -12,6 +12,7 @@
 #include <math/ngp/v4.h>
 #include <math/rect.h>
 #include <versatileparam/idparam.h>
+#include <graphics/surface/surface.h>
 
 namespace paf {
 namespace graph {

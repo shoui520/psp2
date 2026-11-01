@@ -27,34 +27,6 @@ uint32_t _ZN3paf6common6RefObj7ReleaseEv(PafCommonReference *self)
 	return remaining;
 }
 
-/* Native fixed-tag constructors and deleting destructor aliases. */
-static inline __attribute__((always_inline))
-uint32_t *ConstructCommonTag(uint32_t *self)
-{
-	self[0] = (uint32_t)-2127688360;
-	return self;
-}
-
-uint32_t *ScePafCommon_0691F7F7(uint32_t *self)
-{
-	return ConstructCommonTag(self);
-}
-
-uint32_t *ScePafCommon_31766A0F(uint32_t *self)
-{
-	return ConstructCommonTag(self);
-}
-
-uint32_t *ScePafCommon_559CDA63(uint32_t *self)
-{
-	return ConstructCommonTag(self);
-}
-
-uint32_t *ScePafCommon_D4CE120A(uint32_t *self)
-{
-	return ConstructCommonTag(self);
-}
-
 static inline __attribute__((always_inline))
 uint32_t *ConstructCommonTagPair(uint32_t *self)
 {
@@ -75,10 +47,4 @@ uint32_t *_ZN3paf6common6RefObjC2Ev(uint32_t *self)
 uint32_t *_ZN3paf6common6RefObjC1Ev(uint32_t *self)
 {
 	return ConstructCommonTagPair(self);
-}
-
-void ScePafCommon_38964597(uint32_t *self)
-{
-	self[0] = (uint32_t)-2127688360;
-	PafDelete(self);
 }
