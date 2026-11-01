@@ -231,7 +231,7 @@ public:
 	static void UnloadAsync(const char *name, UnloadFinishCallback finish, int32_t option);
 	static Plugin *Find(const char *name);
 
-	VersatileParam *CallFactoryStyle(const char *name);
+	static VersatileParam *CallFactoryStyle(const char *name);
 	ui::Scene *PageOpen(const cxml::Element &node, const PageOpenParam &param);
 	void PageActivate(const cxml::Element &node);
 
@@ -259,6 +259,26 @@ public:
 
 	/* The resource's texture id: the plugin's surface, its texture table, the common ones. */
 	intrusive_ptr<graph::Surface> GetTexture(const IDParam &id, graph::SurfacePool *pool);
+	intrusive_ptr<graph::Surface> GetTexture(const cxml::Element &node);
+
+	void LoadResourceTable_Style();
+	void LoadResourceTable_Texture();
+	void UnloadResourceTable_Texture();
+	void SetResourceTable_Texture();
+	void SetNodeEntity_Surface(const IDParam &id, graph::Surface *surface);
+	void SetNodeEntity_Surface(const cxml::Element &node, graph::Surface *surface);
+	graph::Surface *GetNodeEntity_Surface(const IDParam &id) const;
+	graph::Surface *GetNodeEntity_Surface(const cxml::Element &node) const;
+
+	/*
+	 * A texture element's surface: the one made before, else loaded from the resource's
+	 * buffer or file (zlib when compress="on"), cut by its div_ and margin_ attributes
+	 * (names ours).
+	 */
+	intrusive_ptr<graph::Surface> GetTexture(const cxml::Element &node, graph::SurfacePool *pool);
+	intrusive_ptr<graph::Surface> LoadTexture(graph::SurfacePool *pool, void *buf, uint32_t size,
+						  uint32_t type, bool compressed, uint32_t origsize);
+	void SetTextureDivide(const cxml::Element &node, graph::Surface *surface);
 
 	bool m_initialized;
 	string m_name;
@@ -346,6 +366,9 @@ void ScePafToplevel_3B003F16(paf::Plugin *plugin, paf::string *id, uint32_t idha
 paf::VersatileParam *ScePafToplevel_417B0721(const char *name);
 /* reads the file table's parameters into the third parameter manager */
 void ScePafToplevel_C1BE28B4(paf::Plugin *plugin);
+/* the plugin's sound table, from its resource's file and as loaded (Sony's names not found) */
+void ScePafToplevel_952CD3CF(paf::Plugin *plugin);
+void ScePafToplevel_1230A05F(paf::Plugin *plugin);
 /* a sound of the plugin's resource, else of the common resource's */
 int32_t ScePafToplevel_CA3E606F(paf::Plugin *plugin, const paf::IDParam &id,
 				const char **buffer1, uint32_t *size1, const char **buffer2,

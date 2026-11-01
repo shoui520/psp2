@@ -12,10 +12,12 @@
 #include <std/memory>
 #include <common/shared_ptr.h>
 #include <image/image.h>
+#include <math/ngp/v2.h>
 
 namespace paf {
 
 class File;
+class Plugin;
 
 namespace memory {
 class HeapAllocator;
@@ -135,6 +137,10 @@ public:
 	int32_t AddRef();
 	int32_t Release();
 
+	/* how the surface is cut for drawing (3x3, 3x1, ...), and the stretching parts' ratio */
+	void SetDivideMode(uint32_t mode);
+	void SetDivideStretchRatio(math::v2 ratio);
+
 	int32_t GetRefCount() const
 	{
 		return m_ref_count;
@@ -145,6 +151,9 @@ public:
 	{
 		return m_mem.bp;
 	}
+
+	/* the texture loader sets the margins */
+	friend class ::paf::Plugin;
 
 protected:
 	class TexParam {
@@ -197,14 +206,19 @@ protected:
 	uint8_t m_reserved2;
 	uint8_t m_reserved3;
 	int32_t m_reserved4;
-	int16_t m_reserved5;
-	int16_t m_reserved6;
-	int16_t m_reserved7;
-	int16_t m_reserved8;
+	/* the texture element's margin_h and margin_v (Plugin's texture loader) */
+	int16_t m_margin_left;
+	int16_t m_margin_bottom;
+	int16_t m_margin_right;
+	int16_t m_margin_top;
 };
 
 }
 }
+
+/* the division's ratios across and down (Sony's name not found) */
+extern "C" void ScePafGraphics_36960B24(paf::graph::Surface *surface, paf::math::v2 ratio_h,
+					paf::math::v2 ratio_v);
 
 /* A surface pool export Sony's exports do not name yet: the pool's virtual 7 with flag. */
 extern "C" int ScePafGraphics_83ABDFF5(paf::graph::SurfacePool *pool, uint8_t flag);

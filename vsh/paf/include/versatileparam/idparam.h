@@ -8,6 +8,9 @@
 
 namespace paf {
 
+/* the name of an ID known only by its hash (one object, in cache_image.cpp) */
+extern const char s_empty_id[];
+
 class IDParam {
 public:
 	IDParam(const char *id)

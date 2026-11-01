@@ -61,6 +61,18 @@ public:
 	cxml::Element GetTableElement(TableType type) const;
 	/* the "id:", "src:" or "type:" (kind 0, 1, 2) of an ID's debug symbol; -1 without one */
 	int32_t GetDebugSymbol(uint32_t idhash, int32_t kind, string *symbol) const;
+	const char *GetFileName() const;
+	int32_t GetTextureFromBuffer(const cxml::Element &elm, void **addr, uint32_t *size,
+				     uint32_t *type) const;
+	int32_t GetTextureFromFile(const cxml::Element &elm, cxml::File *src, uint32_t *size,
+				   uint32_t *type) const;
+	/*
+	 * The child of a texture element for this resolution or model, else the element
+	 * (names ours, not converted yet: 0x8106e652, the tables 0x81072ad6, 0x81072cfa).
+	 */
+	cxml::Element GetOverrideElement(const cxml::Element &elm) const;
+	int32_t SetTextureTable(uint32_t flag);
+	int32_t SetSoundTable(uint32_t flag);
 
 	/* the layout of the C struct, up to what C++ reads; the id map and default string follow */
 	common::SharedPtr<File> m_rscfp;
@@ -83,6 +95,16 @@ public:
 };
 
 }
+}
+
+/* the texture table's loads (not converted yet; the names are their NIDs) */
+extern "C" {
+int32_t ScePafResource_B72D030D(paf::resource::ResourceObj *rscobj, uint32_t flag,
+				paf::memory::HeapAllocator *heap);
+paf::memory::HeapAllocator *ScePafResource_D60FF214(paf::resource::ResourceObj *rscobj,
+						    paf::memory::HeapAllocator *heap);
+int32_t ScePafResource_EA11BD0B(paf::resource::ResourceObj *rscobj, uint32_t flag, int32_t arg,
+				bool mode, bool pool);
 }
 
 #endif

@@ -1624,7 +1624,7 @@ ScePaf:
         - ScePafGraphics_1C294786: 0x1C294786
         - _ZN3paf5graph3arl25GetTemporaryInitCheckFlagEv: 0x1C687E2B
         - _ZN3paf5gutil5debug4InitEii: 0x1D0766FA
-        - ScePafGraphics_1D522F83: 0x1D522F83
+        - _ZN3paf5graph7Surface13SetDivideModeEj: 0x1D522F83
         - _ZN3paf5graph8PlaneObj12GetMinFilterEj: 0x1D53BDC2
         - _ZN3paf5graph13ScreenSurface16InitColorSurfaceEv: 0x1D542B4F
         - ScePafGraphics_1DE68EC6: 0x1DE68EC6
@@ -2110,7 +2110,7 @@ ScePaf:
         - ScePafGraphics_D5D8B3B1: 0xD5D8B3B1
         - ScePafGraphics_D5E30C64: 0xD5E30C64
         - _ZN3paf5graph7DrawObj13SetDirtyCountEj: 0xD666D983
-        - ScePafGraphics_D7705EF1: 0xD7705EF1
+        - _ZN3paf5graph7Surface21SetDivideStretchRatioENS_4math2v2E: 0xD7705EF1
         - ScePafGraphics_D7ACD410: 0xD7ACD410
         - ScePafGraphics_D811125C: 0xD811125C
         - _ZNK3paf5graph8PlaneObj14GetDrawObjTypeEv: 0xD81F2F54

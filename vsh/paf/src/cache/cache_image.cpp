@@ -14,8 +14,6 @@
 namespace paf {
 namespace cache {
 
-extern const char s_empty_id[];
-
 inline void CacheImage::ResetJobQueue()
 {
 	m_jobq[0] = CacheManager::GetJobQueue(CacheManager::IsHttpFile(m_path) ?
@@ -643,7 +641,8 @@ out:
 	return ret;
 }
 
+}
+
 const char s_empty_id[] = "";
 
-}
 }

@@ -451,7 +451,7 @@ int ScePafGraphics_70ED91E6(uint8_t *self, const uint32_t *values)
 	return (int)(uintptr_t)target;
 }
 
-int ScePafGraphics_1D522F83(uint8_t *self, int32_t mode)
+int _ZN3paf5graph7Surface13SetDivideModeEj(uint8_t *self, int32_t mode)
 {
 	volatile uint8_t *flags = self;
 	if (*(uint16_t *)(self + 132) != mode) {
