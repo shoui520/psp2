@@ -11,8 +11,8 @@
 
 GXM_ASSERT_OFFSET(SceGxmShaderPatcher, programs, 0x30);
 GXM_ASSERT_OFFSET(SceGxmShaderPatcher, hostMemAllocated, 0x84);
-_Static_assert(sizeof(SceGxmShaderPatcher) == 0xb8, "SceGxmShaderPatcher size");
-_Static_assert(sizeof(SceGxmRegisteredProgram) == 0x24, "SceGxmRegisteredProgram size");
+GXM_ASSERT_SIZE(SceGxmShaderPatcher, 0xb8);
+GXM_ASSERT_SIZE(SceGxmRegisteredProgram, 0x24);
 
 /* heap nodes come from host memory */
 static GxmHeapNode *gxmPatcherAllocNode(void *patcher)
@@ -1209,7 +1209,7 @@ typedef struct GxmMaskUpdateProgram {
 	SceUInt8 varyings[0x14];	/* 0x11c: the program's fragment varyings */
 } GxmMaskUpdateProgram;
 
-_Static_assert(sizeof(GxmMaskUpdateProgram) == 0x130, "GxmMaskUpdateProgram size");
+GXM_ASSERT_SIZE(GxmMaskUpdateProgram, 0x130);
 
 #define GXM_PROGRAM_MAGIC	0x00505847	/* "GXP" */
 

@@ -13,8 +13,10 @@ int gxmBackgroundBuildProgram(GxmChunkBuffer *buffer, const SceGxmColorSurface *
 	SceUInt32 *code = gxmChunkBufferReserve(buffer, 0x40, 0x10);
 	SceUInt32 *end, offset, taskControl, primaryRegs, secondaryRegs, tempRegs;
 
-	if (code == NULL)
+	if (code == NULL) {
+		GXM_DBG_ERROR(40, "Could not reserve %d bytes.", 0x40);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
 	offset = gxmChunkBufferOffset(buffer);
 	code[1] = 0xfa440700;
 	code[0] = 0x00000000;
@@ -64,7 +66,7 @@ int gxmBackgroundBuildProgram(GxmChunkBuffer *buffer, const SceGxmColorSurface *
 		primaryRegs = 2;
 		secondaryRegs = 20;
 	}
-	buffer->cur = (SceUInt32)end;
+	gxmChunkBufferCommit(buffer, end);
 	program->taskControl = taskControl;
 	program->address = 0;
 	gxmCodeRefSetAddress(program, offset);
@@ -118,8 +120,10 @@ int gxmBackgroundBuildFilterProgram(GxmChunkBuffer *buffer, const SceGxmColorSur
 	if (samples <= 1)
 		return gxmPdsBuildSimpleProgram(buffer, 0, 0, program, block);
 	filter = gxmChunkBufferReserve(buffer, sizeof(*filter), 4);
-	if (filter == NULL)
+	if (filter == NULL) {
+		GXM_DBG_ERROR(407, "Could not reserve %d bytes.", sizeof(*filter));
 		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
 	filter->offsets[0] = 0.0f;
 	dy = 0.25f / (float)height;
 	filter->offsets[3] = 0.0f;
@@ -142,7 +146,7 @@ int gxmBackgroundBuildFilterProgram(GxmChunkBuffer *buffer, const SceGxmColorSur
 	filter->texture.controlWords[1] = surface->backgroundTex.controlWords[1];
 	filter->texture.controlWords[2] = surface->backgroundTex.controlWords[2];
 	filter->texture.controlWords[3] = surface->backgroundTex.controlWords[3];
-	buffer->cur = (SceUInt32)(filter + 1);
+	gxmChunkBufferCommit(buffer, filter + 1);
 	return gxmPdsBuildSimpleProgram(buffer, (SceUInt32)filter, sizeof(*filter) / 4, program,
 					block);
 }

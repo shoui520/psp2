@@ -23,8 +23,16 @@ int sceKernelIsGameBudget(void);
 /* a function Sony's build kept out of line although it could be inlined */
 #define GXM_NOINLINE	__attribute__((noinline))
 
+/* the release build's layout (the debug build's chunk buffers are a word longer) */
+#if SCE_DBG_ASSERTS_ENABLED
+#define GXM_ASSERT_OFFSET(type, field, offset)
+#define GXM_ASSERT_SIZE(type, size)
+#else
 #define GXM_ASSERT_OFFSET(type, field, offset) \
 	_Static_assert(offsetof(type, field) == (offset), #type "." #field)
+#define GXM_ASSERT_SIZE(type, size) \
+	_Static_assert(sizeof(type) == (size), #type " size")
+#endif
 
 /*
  * SceGxmDbg (vs0:sys/external/libgxm_dbg_es4) is the debug build of these sources, built with
@@ -538,6 +546,9 @@ struct GxmChunkBuffer {
 	GxmDeferredBuffer *source;	/* a deferred context's */
 	struct GxmRingBuffer *ring;	/* an immediate context's */
 	};
+#if SCE_DBG_ASSERTS_ENABLED
+	SceUInt32 reserved;		/* the end of the block last reserved */
+#endif
 };
 
 void *gxmChunkBufferReserveSlow(GxmChunkBuffer *buffer, SceSize size, SceSize alignment);
@@ -555,8 +566,21 @@ static inline void *gxmChunkBufferReserve(GxmChunkBuffer *buffer, SceSize size, 
 
 	if (buffer->end < block + size)
 		return gxmChunkBufferReserveSlow(buffer, size, alignment);
+#if SCE_DBG_ASSERTS_ENABLED
+	buffer->reserved = block + size;
+#endif
 	buffer->cur = block;
 	return (void *)block;
+}
+
+/* what was written into the block reserved last ends at current */
+static inline void gxmChunkBufferCommit(GxmChunkBuffer *buffer, void *current)
+{
+#if SCE_DBG_ASSERTS_ENABLED
+	GXM_DBG_ASSERT_AT("buffer_private.h", 94,
+			  (uintptr_t)current <= (uintptr_t)buffer->reserved);
+#endif
+	buffer->cur = (SceUInt32)current;
 }
 
 /* --- GPU memory, code and command blocks --- */
@@ -928,7 +952,7 @@ typedef struct SceGxmFragmentProgram {
 	/* then textureIndices[textureIndexCount], the blend info and the PDS program */
 } SceGxmFragmentProgram;
 
-_Static_assert(sizeof(SceGxmFragmentProgram) == 0x80, "SceGxmFragmentProgram size");
+GXM_ASSERT_SIZE(SceGxmFragmentProgram, 0x80);
 
 SceUInt32 sceGxmFragmentProgramGetPassType(const SceGxmFragmentProgram *fragmentProgram);
 
@@ -961,7 +985,7 @@ typedef struct SceGxmVertexProgram {
 	struct SceGxmVertexProgram *next;	/* in the registered program's list */
 } SceGxmVertexProgram;
 
-_Static_assert(sizeof(SceGxmVertexProgram) == 0x78, "SceGxmVertexProgram size");
+GXM_ASSERT_SIZE(SceGxmVertexProgram, 0x78);
 
 /*
  * The render state the GPU's MTE takes, one word per dirty bit group;
@@ -1169,8 +1193,8 @@ typedef struct SceGxmPrecomputedVertexState {
 	GxmVdmState vdmState;		/* gxmVdmWriteVertexState */
 } SceGxmPrecomputedVertexState;
 
-_Static_assert(sizeof(SceGxmPrecomputedFragmentState) == 9 * 4, "SceGxmPrecomputedFragmentState size");
-_Static_assert(sizeof(SceGxmPrecomputedVertexState) == 7 * 4, "SceGxmPrecomputedVertexState size");
+GXM_ASSERT_SIZE(SceGxmPrecomputedFragmentState, 9 * 4);
+GXM_ASSERT_SIZE(SceGxmPrecomputedVertexState, 7 * 4);
 
 /* a VDM primitive command, as gxmVdmWritePrimitive writes it */
 typedef struct GxmVdmPrimitive {
@@ -1185,7 +1209,7 @@ typedef struct SceGxmPrecomputedDraw {
 	GxmVdmPrimitive primitive;
 } SceGxmPrecomputedDraw;
 
-_Static_assert(sizeof(SceGxmPrecomputedDraw) == 11 * 4, "SceGxmPrecomputedDraw size");
+GXM_ASSERT_SIZE(SceGxmPrecomputedDraw, 11 * 4);
 struct SceGxmRenderTarget;
 
 /*
@@ -1288,7 +1312,7 @@ GXM_ASSERT_OFFSET(SceGxmContext, sceneFlags, 0x4a8);
 GXM_ASSERT_OFFSET(SceGxmContext, colorSurface, 0x4c4);
 GXM_ASSERT_OFFSET(SceGxmContext, depthStencil, 0x4f4);
 GXM_ASSERT_OFFSET(SceGxmContext, nextScene, 0x530);
-_Static_assert(sizeof(SceGxmContext) == 0x554, "SceGxmContext size");
+GXM_ASSERT_SIZE(SceGxmContext, 0x554);
 GXM_ASSERT_OFFSET(SceGxmContext, vdmSource, 0x3dc);
 GXM_ASSERT_OFFSET(SceGxmContext, listStart, 0x400);
 GXM_ASSERT_OFFSET(SceGxmContext, listSerial, 0x40c);
@@ -1384,7 +1408,7 @@ typedef struct SceGxmCommandList {
 	SceUInt32 serial;		/* the deferred context's listSerial */
 } SceGxmCommandList;
 
-_Static_assert(sizeof(SceGxmCommandList) == 8 * 4, "SceGxmCommandList size");
+GXM_ASSERT_SIZE(SceGxmCommandList, 8 * 4);
 
 static inline SceUInt32 gxmFloatBits(float value)
 {
@@ -1675,7 +1699,7 @@ GXM_ASSERT_OFFSET(GxmGlobals, counter, 0x3b8);
 GXM_ASSERT_OFFSET(GxmGlobals, compatFlags, 0x3a0);
 GXM_ASSERT_OFFSET(GxmGlobals, formatLevel, 0x3a8);
 GXM_ASSERT_OFFSET(GxmGlobals, frameIndex, 0x3b0);
-_Static_assert(sizeof(GxmGlobals) == 0x3c0, "GxmGlobals size");
+GXM_ASSERT_SIZE(GxmGlobals, 0x3c0);
 
 #define SCE_GXM_INITIALIZE_FLAG_SHARED_SYNC	0x00000002
 
@@ -1748,8 +1772,8 @@ typedef struct GxmInitCallbacks {
 
 GXM_ASSERT_OFFSET(GxmInitCallbacks, memoryMapped, 0x1c);
 GXM_ASSERT_OFFSET(GxmInitCallbacks, addRazorGpuCaptureBuffer, 0x3c);
-_Static_assert(sizeof(GxmInitCallbacks) == 0x48, "GxmInitCallbacks size");
-_Static_assert(sizeof(GxmRazorCallbacks) == 0x28, "GxmRazorCallbacks size");
+GXM_ASSERT_SIZE(GxmInitCallbacks, 0x48);
+GXM_ASSERT_SIZE(GxmRazorCallbacks, 0x28);
 
 extern SceUInt32 gxmRazorMagic;			/* GXM_CALLBACKS_MAGIC when set */
 extern GxmRazorCallbacks gxmRazorCallbacks;
