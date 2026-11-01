@@ -23,6 +23,10 @@ int sceAppMgrIsNonGameProgram(void);
 /* vitasdk: sceKernelGetSystemTimeLow */
 extern SceUInt32 SceThreadmgr_47F6DE49(void);
 
+/* sceClib's character classes */
+#define isspace(c)	(sceClibLookCtypeTable(c) & SCE_CLIB_CTYPE_SPACE)
+#define isdigit(c)	(sceClibLookCtypeTable(c) & SCE_CLIB_CTYPE_DIGIT)
+
 /* the memory functions an object allocates with; NULL takes the library's pool */
 typedef struct HttpAllocator {
 	void *(*malloc)(SceSize size);
@@ -549,6 +553,7 @@ int _sceHttpEpollWait(HttpRequest *req, int arg, int events);
 
 /* requests */
 int _sceHttpAddRequestHeader(int id, const char *name, const char *value, int mode);
+int _sceHttpAddRequestHeaderRaw(int id, const char *header, int mode);
 int _sceHttpRequestRemoveAuthHeaders(HttpRequest *req, SceBool remove, SceBool proxy,
 				     SceBool www);
 int _sceHttpRequestSetBasicAuth(HttpRequest *req, const char *username, const char *password);

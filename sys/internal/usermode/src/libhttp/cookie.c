@@ -45,9 +45,6 @@ static struct HttpCookieJar {
 #define HTTP_COOKIE_RECORD_PORT_COUNT	9
 #define HTTP_COOKIE_RECORD_END		0xff
 
-#define isspace(c)	(sceClibLookCtypeTable(c) & SCE_CLIB_CTYPE_SPACE)
-#define isdigit(c)	(sceClibLookCtypeTable(c) & SCE_CLIB_CTYPE_DIGIT)
-
 SceSize _sceHttpCookieFreeFields(HttpCookie *cookie)
 {
 	SceSize size = cookie->size;
