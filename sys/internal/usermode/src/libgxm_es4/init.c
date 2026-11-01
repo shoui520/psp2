@@ -3,6 +3,7 @@
  */
 
 #include "gxm_internal.h"
+#include "memory_util_private.h"
 
 int sceKernelGetProcessTitleId(char *titleId, SceSize size);
 
@@ -18,10 +19,91 @@ int sceKernelGetProcessTitleId(char *titleId, SceSize size);
 #define SCE_KERNEL_CPU_MASK_USER_1	0x00020000
 #define SCE_KERNEL_CPU_MASK_USER_2	0x00040000
 
+#define GXM_HEAP_GENERAL		0
+#define GXM_HEAP_FRAGMENT_USSE		4
+#define GXM_HEAP_VERTEX_USSE		5
+#define GXM_HEAP_SLOTS			8
+#define GXM_HEAP_14			14
+#define GXM_HEAP_FRAGMENT_USSE_INTERNAL	18
+#define GXM_HEAP_VERTEX_USSE_INTERNAL	19
+
+/* where the driver put the heaps the library maps into */
+int gxmQueryHeaps(void)
+{
+	PVRSRV_HEAP_INFO heaps[32];
+	SceUInt32 count, i;
+	int err;
+
+	err = SceGpuEs4User_1E0A9C4A(&gxmGlobals.top, &gxmGlobals.top.memContext, &count, heaps);
+	if (err != 0) {
+		GXM_DBG_ERROR(147, "Failed due to error in driver layer (%08X).", err);
+		return SCE_GXM_ERROR_DRIVER;
+	}
+	for (i = 0; i < count; i++) {
+		switch (heaps[i].ui32HeapID & 0xffffff) {
+		case GXM_HEAP_GENERAL:
+			gxmGlobals.top.generalHeap = heaps[i].hDevMemHeap;
+			break;
+		case GXM_HEAP_FRAGMENT_USSE:
+			gxmGlobals.top.usse[0].heap[1] = heaps[i].hDevMemHeap;
+			gxmGlobals.top.usse[0].base[1] = heaps[i].sDevVAddrBase;
+			break;
+		case GXM_HEAP_VERTEX_USSE:
+			gxmGlobals.top.usse[0].heap[0] = heaps[i].hDevMemHeap;
+			gxmGlobals.top.usse[0].base[0] = heaps[i].sDevVAddrBase;
+			break;
+		case GXM_HEAP_SLOTS:
+			gxmGlobals.top.slotHeap = heaps[i].hDevMemHeap;
+			break;
+		case GXM_HEAP_14:
+			gxmGlobals.top.heap14 = heaps[i].hDevMemHeap;
+			break;
+		case GXM_HEAP_FRAGMENT_USSE_INTERNAL:
+			gxmGlobals.top.usse[1].heap[1] = heaps[i].hDevMemHeap;
+			gxmGlobals.top.usse[1].base[1] = heaps[i].sDevVAddrBase;
+			break;
+		case GXM_HEAP_VERTEX_USSE_INTERNAL:
+			gxmGlobals.top.usse[1].heap[0] = heaps[i].hDevMemHeap;
+			gxmGlobals.top.usse[1].base[0] = heaps[i].sDevVAddrBase;
+			break;
+		}
+	}
+	if (gxmGlobals.top.generalHeap == 0 || gxmGlobals.top.usse[0].heap[0] == 0 ||
+	    gxmGlobals.top.usse[0].heap[1] == 0 || gxmGlobals.top.slotHeap == 0 ||
+	    gxmGlobals.top.usse[1].heap[0] == 0 || gxmGlobals.top.usse[1].heap[1] == 0 ||
+	    gxmGlobals.top.heap14 == 0) {
+		GXM_DBG_ERROR(194, "Services general heap not found.");
+		return SCE_GXM_ERROR_OUT_OF_MEMORY;
+	}
+	return 0;
+}
+
+/* the debug build keeps it out of line: initialization's failures and sceGxmTerminate call it */
+static inline GXM_DBG_NOINLINE int gxmCloseDevice(void)
+{
+	int err;
+
+	err = SceGpuEs4User_5273D097(&gxmGlobals.top, gxmGlobals.top.driverState);
+	if (err != 0) {
+		GXM_DBG_ERROR(124, "Failed due to error in driver layer (%08X).", err);
+		return SCE_GXM_ERROR_DRIVER;
+	}
+	err = SceGpuEs4User_F4735A47(gxmGlobals.gpuDevice, &gxmGlobals.deviceInfo);
+	if (err != 0) {
+		GXM_DBG_ERROR(127, "Failed due to error in driver layer (%08X).", err);
+		return SCE_GXM_ERROR_DRIVER;
+	}
+	err = SceGpuEs4User_A5B14369(gxmGlobals.gpuDevice);
+	if (err != 0) {
+		GXM_DBG_ERROR(131, "Failed due to error in driver layer (%08X).", err);
+		return SCE_GXM_ERROR_DRIVER;
+	}
+	return 0;
+}
+
 #define GXM_DRIVER_MEMORY_SIZE		0x00100000
 #define GXM_NOTIFICATION_BLOCK_SIZE	0x820
 #define GXM_FENCE_BLOCK_SIZE		0x10
-#define GXM_FENCE_PROGRAM_SIZE		0x180
 
 typedef struct SceGxmInitializeParams {
 	SceUInt32 flags;
@@ -37,32 +119,19 @@ static inline SceSize gxmParameterBufferReserve(SceUInt32 flags, SceSize lpddr, 
 	return (flags & SCE_GXM_INITIALIZE_FLAG_PB_LPDDR) ? lpddr : cdram;
 }
 
-GXM_NOINLINE int sceGxmGetParameterBufferThreshold(SceUInt32 *threshold)
+GXM_NOINLINE int sceGxmGetParameterBufferThreshold(SceUInt32 *parameterBufferSize)
 {
-	if (!gxmGlobals.initialized)
+	if (!gxmGlobals.initialized) {
+		GXM_DBG_ERROR(254, "Function sceGxmGetParameterBufferThreshold has been called while "
+			      "the library is uninitialized.");
 		return SCE_GXM_ERROR_UNINITIALIZED;
-	if (threshold == NULL)
+	}
+	if (parameterBufferSize == NULL) {
+		GXM_DBG_ERROR_NULL(260, sceGxmGetParameterBufferThreshold, parameterBufferSize);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	*threshold = gxmGlobals.parameterBufferSize - 0x40000 -
+	}
+	*parameterBufferSize = gxmGlobals.parameterBufferSize - 0x40000 -
 		     gxmParameterBufferReserve(gxmGlobals.initFlags, 0x15000, 0x40000);
-	return 0;
-}
-
-static inline __attribute__((always_inline)) void gxmFreeGpuBlock(PVRSRV_CLIENT_MEM_INFO *block)
-{
-	if (gxmInitCallbacksMagic == GXM_CALLBACKS_MAGIC)
-		gxmInitCallbacks.memoryUnmapped(0, block->pvLinAddr);
-	SceGpuEs4User_B6CFD213(&gxmGlobals.top, block);
-}
-
-static inline __attribute__((always_inline)) int gxmAllocGpuBlock(SceUInt32 heap, SceUInt32 attr, SceSize size, SceSize alignment,
-			    PVRSRV_CLIENT_MEM_INFO **block)
-{
-	if (SceGpuEs4User_071E62F0(&gxmGlobals.top, heap, attr, size, alignment,
-				   gxmGlobals.top.hMemBlockProcRef, block) != 0)
-		return SCE_GXM_ERROR_DRIVER;
-	if (gxmInitCallbacksMagic == GXM_CALLBACKS_MAGIC)
-		gxmInitCallbacks.memoryMapped(0, (*block)->pvLinAddr, (*block)->sDevVAddr, (*block)->uAllocSize);
 	return 0;
 }
 
@@ -81,6 +150,9 @@ GXM_NOINLINE static int gxmInitialize(const SceGxmInitializeParams *params)
 	gxmGlobals.initialized = 1;
 	gxmGlobals.initFlags = params->flags;
 	gxmGlobals.frameIndex = 0;
+#if SCE_DBG_ASSERTS_ENABLED
+	gxmGlobals.warningMask = 0xffffffff;
+#endif
 	gxmGlobals.counter = 0;
 	gxmGlobals.sceneIndex = 0;
 	gxmGlobals.formatLevel = (params->flags & SCE_GXM_INITIALIZE_FLAG_EXTENDED_FORMAT) >> 4;
@@ -89,19 +161,38 @@ GXM_NOINLINE static int gxmInitialize(const SceGxmInitializeParams *params)
 		goto out;
 
 	/* open the device */
-	if (SceGpuEs4User_228252A2(&gxmGlobals.gpuDevice, 0) != 0)
+	err2 = SceGpuEs4User_228252A2(&gxmGlobals.gpuDevice, 0);
+	if (err2 != 0) {
+		GXM_DBG_ERROR(59, "Failed due to error in driver layer (%08X).", err2);
 		goto driverError;
+	}
 	gxmGlobals.deviceInfo = 8;
-	if (SceGpuEs4User_73E945A1(gxmGlobals.gpuDevice, &gxmGlobals.deviceInfo) != 0)
+	err2 = SceGpuEs4User_73E945A1(gxmGlobals.gpuDevice, &gxmGlobals.deviceInfo);
+	if (err2 != 0) {
+		GXM_DBG_ERROR(70, "Failed due to error in driver layer (%08X).", err2);
 		goto driverError;
+	}
 	deviceCount = 0;
-	if (SceGpuEs4User_4447D217(gxmGlobals.gpuDevice, &deviceCount, devices) != 0 ||
-	    deviceCount == 0 || devices[0] != 7 ||
-	    SceGpuEs4User_70800B46(gxmGlobals.gpuDevice, devices[2], &gxmGlobals.top) != 0)
+	err2 = SceGpuEs4User_4447D217(gxmGlobals.gpuDevice, &deviceCount, devices);
+	if (err2 != 0) {
+		GXM_DBG_ERROR(87, "Failed due to error in driver layer (%08X).", err2);
 		goto driverError;
+	}
+	if (deviceCount == 0 || devices[0] != 7) {
+		GXM_DBG_ERROR(96, "Failed to find SGX device during initialisation.");
+		goto driverError;
+	}
+	err2 = SceGpuEs4User_70800B46(gxmGlobals.gpuDevice, devices[2], &gxmGlobals.top);
+	if (err2 != 0) {
+		GXM_DBG_ERROR(108, "Failed due to error in driver layer (%08X).", err2);
+		goto driverError;
+	}
 	sceClibMemset(gxmGlobals.top.driverState, 0, sizeof(gxmGlobals.top.driverState));
-	if (SceGpuEs4User_B000CA65(&gxmGlobals.top, gxmGlobals.top.driverState) != 0)
+	err2 = SceGpuEs4User_B000CA65(&gxmGlobals.top, gxmGlobals.top.driverState);
+	if (err2 != 0) {
+		GXM_DBG_ERROR(114, "Failed due to error in driver layer (%08X).", err2);
 		goto driverError;
+	}
 	if (gxmInitCallbacksMagic == GXM_CALLBACKS_MAGIC)
 		gxmInitCallbacks.initialize();
 
@@ -177,9 +268,11 @@ registered:
 	contextParams.ui32MaxSACount = 0x80;
 	gxmGlobals.parameterBufferSize = pbSize;
 	contextParams.ui32PBSizeLimit = contextParams.ui32PBSize;
-	if (SceGpuEs4User_8A997DBB(&gxmGlobals.top, &contextParams, &gxmGlobals.top.renderContext,
-				   contextOut) != 0) {
+	err2 = SceGpuEs4User_8A997DBB(&gxmGlobals.top, &contextParams, &gxmGlobals.top.renderContext,
+				      contextOut);
+	if (err2 != 0) {
 		err = SCE_GXM_ERROR_DRIVER;
+		GXM_DBG_ERROR(306, "Failed due to error in driver layer (%08X).", err2);
 		goto destroyMemContext;
 	}
 	if (gxmInitCallbacksMagic == GXM_CALLBACKS_MAGIC)
@@ -187,9 +280,11 @@ registered:
 
 	transferParams[0] = gxmGlobals.top.memContext;
 	transferParams[1] = gxmGlobals.top.hMemBlockProcRef;
-	if (SceGpuEs4User_BDE2B9E1(&gxmGlobals.top, 0, transferParams,
-				   &gxmGlobals.top.transferQueue) != 0) {
+	err2 = SceGpuEs4User_BDE2B9E1(&gxmGlobals.top, 0, transferParams,
+				      &gxmGlobals.top.transferQueue);
+	if (err2 != 0) {
 		err = SCE_GXM_ERROR_DRIVER;
+		GXM_DBG_ERROR(361, "Failed due to error in driver layer (%08X).", err2);
 		goto destroyRenderContext;
 	}
 	err = gxmSlotTableCreate(&gxmGlobals.top.contexts);
@@ -274,13 +369,21 @@ freeNotifications:
 destroySlots:
 	gxmSlotTableDestroy(&gxmGlobals.top.contexts);
 destroyTransferQueue:
-	if (gxmGlobals.top.transferQueue != 0 &&
-	    SceGpuEs4User_8ED7D698(&gxmGlobals.top, gxmGlobals.top.transferQueue, 0) == 0)
-		gxmGlobals.top.transferQueue = 0;
+	if (gxmGlobals.top.transferQueue != 0) {
+		err2 = SceGpuEs4User_8ED7D698(&gxmGlobals.top, gxmGlobals.top.transferQueue, 0);
+		if (err2 != 0)
+			GXM_DBG_ERROR(379, "Failed due to error in driver layer (%08X).", err2);
+		else
+			gxmGlobals.top.transferQueue = 0;
+	}
 destroyRenderContext:
-	SceGpuEs4User_0BFE1685(&gxmGlobals.top, gxmGlobals.top.renderContext, 0, 0);
+	err2 = SceGpuEs4User_0BFE1685(&gxmGlobals.top, gxmGlobals.top.renderContext, 0, 0);
+	if (err2 != 0)
+		GXM_DBG_ERROR(343, "Failed due to error in driver layer (%08X).", err2);
 destroyMemContext:
-	SceGpuEs4User_B9178277(&gxmGlobals.top, gxmGlobals.top.memContext);
+	err2 = SceGpuEs4User_B9178277(&gxmGlobals.top, gxmGlobals.top.memContext);
+	if (err2 != 0)
+		GXM_DBG_ERROR(222, "Failed due to error in driver layer (%08X).", err2);
 unregisterMemory:
 	if (!(gxmGlobals.initFlags & SCE_GXM_INITIALIZE_FLAG_SHAREDPB_OPEN))
 		SceGpuEs4User_156A6B70(&gxmGlobals.top, gxmGlobals.top.parameterBufferBlock);
@@ -293,9 +396,7 @@ freeDriverMemory:
 closeDevice:
 	if (gxmInitCallbacksMagic == GXM_CALLBACKS_MAGIC)
 		gxmInitCallbacks.terminate();
-	if (SceGpuEs4User_5273D097(&gxmGlobals.top, gxmGlobals.top.driverState) == 0 &&
-	    SceGpuEs4User_F4735A47(gxmGlobals.gpuDevice, &gxmGlobals.deviceInfo) == 0)
-		SceGpuEs4User_A5B14369(gxmGlobals.gpuDevice);
+	gxmCloseDevice();
 	gxmSceneStateTerm();
 	goto out;
 driverError:
@@ -309,15 +410,31 @@ out:
 
 int sceGxmInitialize(const SceGxmInitializeParams *params)
 {
-	if (gxmGlobals.initialized)
+	if (gxmGlobals.initialized) {
+		GXM_DBG_ERROR(1323, "Function sceGxmInitialize has been called while the library is "
+			      "already initialized.");
 		return SCE_GXM_ERROR_ALREADY_INITIALIZED;
-	if (params == NULL)
+	}
+	if (params == NULL) {
+		GXM_DBG_ERROR_NULL(1329, sceGxmInitialize, params);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (((params->flags & ~SCE_GXM_INITIALIZE_FLAG_DISPLAY_QUEUE_CPU_1) != 0 &&
-	     params->flags != SCE_GXM_INITIALIZE_FLAG_DISPLAY_QUEUE_CPU_2) ||
-	    (params->parameterBufferSize & 0x3ffff) != 0 ||
-	    params->displayQueueMaxPendingCount * params->displayQueueCallbackDataSize > 0x200)
+	}
+	if ((params->flags & ~SCE_GXM_INITIALIZE_FLAG_DISPLAY_QUEUE_CPU_1) != 0 &&
+	    params->flags != SCE_GXM_INITIALIZE_FLAG_DISPLAY_QUEUE_CPU_2) {
+		GXM_DBG_ERROR(1335, "Parameter params->flags to function sceGxmInitialize has "
+			      "unexpected bits set.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if ((params->parameterBufferSize & 0x3ffff) != 0) {
+		GXM_DBG_ERROR(1340, "Parameter params->parameterBufferSize to function sceGxmInitialize "
+			      "is not aligned to %d bytes.", 0x40000);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (params->displayQueueMaxPendingCount * params->displayQueueCallbackDataSize > 0x200) {
+		GXM_DBG_ERROR(1345, "The total display queue storage in function sceGxmInitialize must "
+			      "not exceed %d bytes.", 0x200);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	return gxmInitialize(params);
 }
 
@@ -325,21 +442,45 @@ int sceGxmVshInitialize(const SceGxmInitializeParams *params)
 {
 	SceUInt32 shared = SCE_GXM_INITIALIZE_FLAG_SHAREDPB_CREATE | SCE_GXM_INITIALIZE_FLAG_SHAREDPB_OPEN;
 
-	if (gxmGlobals.initialized)
+	if (gxmGlobals.initialized) {
+		GXM_DBG_ERROR(1357, "Function sceGxmInitializeInternal has been called while the "
+			      "library is already initialized.");
 		return SCE_GXM_ERROR_ALREADY_INITIALIZED;
-	if (params == NULL)
+	}
+	if (params == NULL) {
+		GXM_DBG_ERROR_NULL(1363, sceGxmInitializeInternal, params);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if ((params->flags & ~0x1f) != 0 || (params->flags & shared) == shared ||
-	    (params->parameterBufferSize & 0x3ffff) != 0 ||
-	    params->displayQueueMaxPendingCount * params->displayQueueCallbackDataSize > 0x200)
+	}
+	if ((params->flags & ~0x1f) != 0) {
+		GXM_DBG_ERROR(1372, "Parameter params->flags to function sceGxmInitializeInternal has "
+			      "unexpected bits set.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if ((params->flags & shared) == shared) {
+		GXM_DBG_ERROR(1376, "Parameter params->flags to function sceGxmInitializeInternal has "
+			      "unexpected SHAREDPB bits set.");
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if ((params->parameterBufferSize & 0x3ffff) != 0) {
+		GXM_DBG_ERROR(1381, "Parameter params->parameterBufferSize to function "
+			      "sceGxmInitializeInternal is not aligned to %d bytes.", 0x40000);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (params->displayQueueMaxPendingCount * params->displayQueueCallbackDataSize > 0x200) {
+		GXM_DBG_ERROR(1386, "The total display queue storage in function "
+			      "sceGxmInitializeInternal must not exceed %d bytes.", 0x200);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	return gxmInitialize(params);
 }
 
 int sceGxmTerminate(void)
 {
-	if (!gxmGlobals.initialized)
+	if (!gxmGlobals.initialized) {
+		GXM_DBG_ERROR(1398, "Function sceGxmTerminate has been called while the library is "
+			      "uninitialized.");
 		return SCE_GXM_ERROR_UNINITIALIZED;
+	}
 	if (gxmRazorMagic == GXM_CALLBACKS_MAGIC)
 		gxmRazorCallbacks.terminate();
 	if (gxmGlobals.displayQueue != NULL) {
@@ -350,9 +491,7 @@ int sceGxmTerminate(void)
 	gxmFreeGpuBlock(gxmGlobals.top.fenceBlock);
 	gxmFreeGpuBlock((PVRSRV_CLIENT_MEM_INFO *)gxmGlobals.top.notifications);
 	gxmSlotTableDestroy(&gxmGlobals.top.contexts);
-	if (SceGpuEs4User_5273D097(&gxmGlobals.top, gxmGlobals.top.driverState) == 0 &&
-	    SceGpuEs4User_F4735A47(gxmGlobals.gpuDevice, &gxmGlobals.deviceInfo) == 0)
-		SceGpuEs4User_A5B14369(gxmGlobals.gpuDevice);
+	gxmCloseDevice();
 	gxmGlobals.top.hMemBlockProcRef = 0;
 	if (!(gxmGlobals.initFlags & SCE_GXM_INITIALIZE_FLAG_SHAREDPB_OPEN))
 		sceKernelFreeMemBlock(gxmGlobals.top.parameterBufferBlock);
@@ -380,14 +519,23 @@ SceUInt8 sceGxmIsInitializationInternal(void)
 
 int sceGxmSetWarningEnabled(SceUInt32 warning, SceBool enable)
 {
-	if (!gxmGlobals.initialized)
+	if (!gxmGlobals.initialized) {
+		GXM_DBG_ERROR(1451, "Function sceGxmSetWarningEnabled has been called while the "
+			      "library is uninitialized.");
 		return SCE_GXM_ERROR_UNINITIALIZED;
+	}
+#if SCE_DBG_ASSERTS_ENABLED
+	if (enable)
+		gxmGlobals.warningMask |= 1 << warning;
+	else
+		gxmGlobals.warningMask &= ~(1 << warning);
+#endif
 	return 0;
 }
 
 SceBool sceGxmIsDebugVersion(void)
 {
-	return 0;
+	return SCE_DBG_ASSERTS_ENABLED;
 }
 
 /*
@@ -472,105 +620,8 @@ GXM_NOINLINE void gxmChunkBufferInitFixed(GxmChunkBuffer *buffer, void *memory, 
 	buffer->end = (SceUInt32)memory + size;
 	buffer->gpuEnd = size + gpuOffset;
 	buffer->cur = (SceUInt32)memory;
+#if SCE_DBG_ASSERTS_ENABLED
+	buffer->reserved = (SceUInt32)memory;
+#endif
 	buffer->refill = gxmChunkBufferNoRefill;
-}
-
-/* a VDM block that runs a USSE program through the PDS */
-int gxmWriteProgramBlock(GxmChunkBuffer *buffer, const GxmCodeRef *program, GxmCommandBlock *block)
-{
-	SceUInt32 *words = gxmChunkBufferReserve(buffer, 0x18, 0x10);
-
-	if (words == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
-	block->dataSize = 0x10;
-	block->data = words;
-	block->size = 0x18;
-	words[0] = program->address;
-	words[2] = 0;
-	words[3] = 0;
-	words[1] = program->taskControl;
-	words[4] = gxmPdsDataWord(5, 0, 3);
-	words[5] = 0xaf000000;
-	buffer->cur = (SceUInt32)(words + 6);
-	return 0;
-}
-
-/* the program that writes the fence word */
-int gxmBuildFenceProgram(GxmChunkBuffer *buffer, GxmCodeRef *program, SceUInt32 fenceAddress)
-{
-	SceUInt32 *code = gxmChunkBufferReserve(buffer, GXM_FENCE_PROGRAM_SIZE, 0x10);
-	SceUInt32 offset;
-
-	if (code == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
-	offset = buffer->cur + buffer->gpuEnd - buffer->end;
-	code[0] = 0x00000000;
-	code[1] = 0xfa440700;
-	code[2] = 0x00000070;
-	code[3] = 0xfd200000;
-	code[4] = 0x2011405f;
-	code[5] = 0xfea10000;
-	code[6] = 0x00000000;
-	code[7] = 0xf9200000;
-	code[8] = 0xa0000081;
-	code[9] = 0xa8830080;
-	code[10] = 0x2011405f;
-	code[11] = 0xfea90000;
-	code[12] = 0x20078010;
-	code[13] = 0x48890281;
-	code[14] = 0x00000010;
-	code[15] = 0xf9000040;
-	code[16] = 0xa0010102;
-	code[17] = 0xfeab0000;
-	code[18] = 0x00200000;
-	code[19] = 0xfca01000;
-	code[20] = 0x2000004b;
-	code[21] = 0xfea10000;
-	code[22] = 0x00000000;
-	code[23] = 0xf9200000;
-	code[24] = 0x000c0001;
-	code[25] = 0x48880181;
-	code[26] = 0x000ffffd;
-	code[27] = 0xf9000040;
-	code[28] = 0x200000cd;
-	code[29] = 0xfea90000;
-	code[30] = 0xa0010104;
-	code[31] = 0xfeab0000;
-	code[32] = 0x00200080;
-	code[33] = 0xfca00000;
-	code[34] = 0x20000046;
-	code[35] = 0xfea10000;
-	code[36] = 0x00000000;
-	code[37] = 0xf9200000;
-	code[38] = 0x000c0001;
-	code[39] = 0x48880181;
-	code[40] = 0x000ffffd;
-	code[41] = 0xf9000040;
-	code[42] = 0x200000c5;
-	code[43] = 0xfea90000;
-	code[44] = 0xa011405f;
-	code[45] = 0xfeab0000;
-	code[46] = 0x2011405f;
-	code[47] = 0xfea10000;
-	code[48] = 0x00000000;
-	code[49] = 0xf9200000;
-	code[50] = 0x00000071;
-	code[51] = 0xfd200000;
-	code[52] = fenceAddress & 0x1fffff;
-	code[53] = ((fenceAddress >> 17) & 0x1f0) | (fenceAddress >> 26) << 12 | 0xfca00000;
-	code[54] = 0xa0000001;
-	code[55] = 0xf0a30020;
-	code[56] = 0x00000000;
-	code[57] = 0xf8a00000;
-	code[58] = 0x00000000;
-	code[59] = 0xf9200000;
-	code[60] = 0xa00840e4;
-	code[61] = 0xfeab0000;
-	code[62] = 0x00000000;
-	code[63] = 0xf8040140;
-	buffer->cur = (SceUInt32)(code + 64);
-	program->address = 0;
-	program->taskControl = 0;
-	gxmCodeRefSetAddress(program, offset);
-	return 0;
 }

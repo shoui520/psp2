@@ -27,6 +27,7 @@ set(GXM_DBG_SOURCES
 	../globals.c
 	../heap.c
 	../init.c
+	../memexport.c
 	../libc.c
 	../memory.c
 	../mte.c

@@ -783,7 +783,10 @@ static inline SceUInt32 gxmChunkBufferOffset(const GxmChunkBuffer *buffer)
 
 void gxmCodeRefSetAddress(GxmCodeRef *ref, SceUInt32 offset);
 SceUInt32 gxmPdsDataWord(SceUInt32 a, SceUInt32 b, SceUInt32 c);
-int gxmWriteProgramBlock(GxmChunkBuffer *buffer, const GxmCodeRef *program, GxmCommandBlock *block);
+/* memexport.c: the fence program writes the fence word, GXM_FENCE_PROGRAM_SIZE bytes of code */
+#define GXM_FENCE_PROGRAM_SIZE	0x180
+int gxmWriteProgramBlock(GxmChunkBuffer *buffer, const GxmCodeRef *usseProgram,
+			 GxmCommandBlock *pdsProgram);
 int gxmBuildFenceProgram(GxmChunkBuffer *buffer, GxmCodeRef *program, SceUInt32 fenceAddress);
 SceSize gxmMteGetCopyProgramsSize(void);
 int gxmMteBuildCopyPrograms(GxmCodeRef *programs, GxmChunkBuffer *buffer);
