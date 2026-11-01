@@ -22,6 +22,12 @@ int sceKernelIsGameBudget(void);
 
 /* a function Sony's build kept out of line although it could be inlined */
 #define GXM_NOINLINE	__attribute__((noinline))
+/* one Sony's debug build kept out of line, its release build inlined */
+#if SCE_DBG_ASSERTS_ENABLED
+#define GXM_DBG_NOINLINE	__attribute__((noinline))
+#else
+#define GXM_DBG_NOINLINE
+#endif
 
 /* the release build's layout (the debug build's chunk buffers are a word longer) */
 #if SCE_DBG_ASSERTS_ENABLED
@@ -45,12 +51,12 @@ int sceKernelIsGameBudget(void);
 #include <libdbg.h>
 
 #if SCE_DBG_ASSERTS_ENABLED
-#define GXM_DBG_ASSERT_AT(file, line, test)						\
+#define GXM_DBG_CHECK(file, line, test, text)						\
 	_SCE_MACRO_BEGIN								\
 		if (SCE_UNLIKELY(!(test))) {						\
 			if (sceDbgAssertionHandler(file, line, true,			\
 					SCE_DBG_ASSERT_COMPONENT,			\
-					"Assertion failed: %s\n", #test))		\
+					"Assertion failed: %s\n", text))		\
 				SCE_BREAK();						\
 		}									\
 	_SCE_MACRO_END
@@ -58,11 +64,16 @@ int sceKernelIsGameBudget(void);
 	sceDbgLoggingHandler(file, line, SCE_DBG_LOG_LEVEL_ERROR, SCE_DBG_LOG_COMPONENT,	\
 			     "[SceGxmDbg]:" format, ##__VA_ARGS__)
 #else
-#define GXM_DBG_ASSERT_AT(file, line, test)		_SCE_MACRO_BEGIN { (void)sizeof((test)); } _SCE_MACRO_END
+#define GXM_DBG_CHECK(file, line, test, text)	_SCE_MACRO_BEGIN { (void)sizeof((test)); } _SCE_MACRO_END
 #define GXM_DBG_ERROR_AT(file, line, format, ...)	((void)0)
 #endif
-#define GXM_DBG_ASSERT(line, test)		GXM_DBG_ASSERT_AT(__FILE_NAME__, line, test)
+/* the message is the test as written, before macro expansion (SCE_DBG_ASSERT's #test) */
+#define GXM_DBG_ASSERT(line, test)		GXM_DBG_CHECK(__FILE_NAME__, line, test, #test)
+#define GXM_DBG_ASSERT_AT(file, line, test)	GXM_DBG_CHECK(file, line, test, #test)
 #define GXM_DBG_ERROR(line, format, ...)	GXM_DBG_ERROR_AT(__FILE_NAME__, line, format, ##__VA_ARGS__)
+
+/* the size of one USSE instruction (Sony's SGX headers) */
+#define EURASIA_USE_INSTRUCTION_SIZE	8
 
 /* --- error codes --- */
 

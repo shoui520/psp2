@@ -76,15 +76,17 @@ static inline SceUInt32 gxmBlendSwappedSource(SceUInt32 operand)
 
 SceUInt32 *gxmBlendCodeU8(SceUInt32 *code, SceUInt32 reg, const SceGxmBlendInfo *blendInfo)
 {
+	SceUInt32 isBlendActive = gxmBlendInfoIsActive(blendInfo);
 	const SceUInt8 *bytes = (const SceUInt8 *)blendInfo;
 	SceUInt32 colorMask = blendInfo->colorMask;
-	SceUInt32 masked = colorMask != SCE_GXM_COLOR_MASK_ALL;
+	SceUInt32 isColorMasked = colorMask != SCE_GXM_COLOR_MASK_ALL;
 	SceUInt32 funcs = bytes[1];
 	SceUInt32 colorFunc, alphaFunc, colorSrc, colorDst, alphaSrc, alphaDst, src, dst;
 	SceUInt32 operand, word0, head, swapped, write;
 
-	if (funcs == 0) {
-		if (!masked)
+	GXM_DBG_ASSERT(409, isBlendActive || isColorMasked);
+	if (!isBlendActive) {
+		if (!isColorMasked)
 			return code;
 		write = reg | 0xa0000000 | reg << 7;
 		goto mask;
@@ -153,17 +155,18 @@ SceUInt32 *gxmBlendCodeU8(SceUInt32 *code, SceUInt32 reg, const SceGxmBlendInfo 
 		word0 = 0x10000000 | (alphaFunc == SCE_GXM_BLEND_FUNC_REVERSE_SUBTRACT) << 14;
 		head = operand;
 	}
-	code[1] = (masked ^ 1) | 0x80800000 | gxmBlendColorSrcBits[colorSrc] |
+	code[1] = (isColorMasked ^ 1) | 0x80800000 | gxmBlendColorSrcBits[colorSrc] |
 		  gxmBlendColorDstBits[colorDst] | gxmBlendAlphaSrcBits[alphaSrc] |
 		  gxmBlendAlphaDstBits[alphaDst];
 	code[0] = gxmBlendAlphaOpBits[alphaFunc] | gxmBlendColorOpBits[colorFunc] | head | word0;
 	code += 2;
-	if (!masked)
+	if (!isColorMasked)
 		return code;
 	write = 0;
 	colorMask = blendInfo->colorMask;
 
 mask:
+	GXM_DBG_ASSERT(381, colorMask != SCE_GXM_COLOR_MASK_ALL);
 	code[0] = write;
 	code[1] = colorMask << 11 | 0x90b00601;
 	return code + 2;

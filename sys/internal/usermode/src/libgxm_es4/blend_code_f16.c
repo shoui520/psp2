@@ -85,9 +85,12 @@ static inline GxmBlendInstr *gxmBlendFactor(GxmBlendInstr *instr, SceUInt32 dst,
 }
 
 /* o0 = func(r0, r1); the slot is used even for an unknown function */
-static inline GxmBlendInstr *gxmBlendFunc(GxmBlendInstr *instr, SceUInt32 func, SceUInt32 mask)
+static inline GXM_DBG_NOINLINE GxmBlendInstr *gxmBlendFunc(GxmBlendInstr *instr, SceUInt32 mask, SceUInt32 func)
 {
 	switch (func) {
+	case SCE_GXM_BLEND_FUNC_NONE:
+		GXM_DBG_ASSERT(235, !"Unsupported blend mode");
+		break;
 	case SCE_GXM_BLEND_FUNC_ADD:
 		gxmBlendEmit(instr, GXM_BLEND_OP_ADD, GXM_BLEND_REG_O0, GXM_BLEND_REG_R0,
 			     GXM_BLEND_REG_R1, mask, 0, 0, 0);
@@ -195,9 +198,9 @@ static GXM_NOINLINE SceUInt32 gxmBlendBuildList(SceBool optimize, GxmBlendInstr 
 	separate = alphaFunc != colorFunc && (blend.colorMask & SCE_GXM_COLOR_MASK_A);
 	mask = separate ? blend.colorMask & ~SCE_GXM_COLOR_MASK_A : blend.colorMask;
 	if (mask)
-		instr = gxmBlendFunc(instr, colorFunc, mask);
+		instr = gxmBlendFunc(instr, mask, colorFunc);
 	if (separate)
-		instr = gxmBlendFunc(instr, alphaFunc, SCE_GXM_COLOR_MASK_A);
+		instr = gxmBlendFunc(instr, SCE_GXM_COLOR_MASK_A, alphaFunc);
 
 	instr->op = GXM_BLEND_OP_NOP;
 	instr->dst = GXM_BLEND_REG_NONE;
@@ -217,15 +220,17 @@ static GXM_NOINLINE SceUInt32 gxmBlendBuildList(SceBool optimize, GxmBlendInstr 
 
 /* write the blend program for an output in register reg; returns its size in bytes */
 SceSize gxmBlendCodeF16(SceBool optimize, const SceGxmBlendInfo *blendInfo, SceUInt32 reg,
-			SceUInt32 *code, SceSize codeSize)
+			SceUInt32 *code, SceSize instructionBufferSize)
 {
 	GxmBlendInstr list[GXM_BLEND_MAX_INSTRS];
-	SceUInt32 count, i;
+	SceUInt32 instructionCount, i;
 
-	count = gxmBlendBuildList(optimize, list, *blendInfo);
-	for (i = 0; i < count; i++) {
+	instructionCount = gxmBlendBuildList(optimize, list, *blendInfo);
+	GXM_DBG_ASSERT(442, instructionBufferSize >=
+			    (EURASIA_USE_INSTRUCTION_SIZE * instructionCount));
+	for (i = 0; i < instructionCount; i++) {
 		gxmBlendAssemble(&list[i], code, reg);
 		code += 2;
 	}
-	return count * 8;
+	return instructionCount * EURASIA_USE_INSTRUCTION_SIZE;
 }

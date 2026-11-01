@@ -51,6 +51,13 @@ typedef struct SceGxmBlendInfo {
 #define SCE_GXM_BLEND_FACTOR_SRC_ALPHA_SATURATE		10
 #define SCE_GXM_BLEND_FACTOR_DST_ALPHA_SATURATE		11
 
+/* whether a blend function is set (colour or alpha) */
+static inline SceUInt32 gxmBlendInfoIsActive(const SceGxmBlendInfo *blendInfo)
+{
+	GXM_DBG_ASSERT_AT("blending_private.h", 58, blendInfo);
+	return ((const SceUInt8 *)blendInfo)[1] != 0;
+}
+
 /* the declared output register types the blend code handles */
 #define GXM_OUTPUT_TYPE_F16		1	/* half4: float16 program */
 #define GXM_OUTPUT_TYPE_U8		7	/* uchar4: fixed-function blend */
