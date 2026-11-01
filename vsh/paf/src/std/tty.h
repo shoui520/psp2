@@ -21,6 +21,9 @@ public:
 extern "C" {
 int write_to_stdout(const void *buf, SceSize nbyte);
 int read_char_from_stdin(void);
+/* the extra TTY, where the auto test's messages go */
+int write_to_extratty(const void *buf, SceSize nbyte);
+bool extratty_is_open(void);
 }
 
 #endif

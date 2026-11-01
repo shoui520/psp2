@@ -46,3 +46,20 @@ int read_char_from_stdin(void)
 		ch = '\r';
 	return ch;
 }
+
+#if !defined(FW_TYPE_CEX)
+/* only the development kits' auto test writes to the extra TTY */
+int write_to_extratty(const void *buf, SceSize nbyte)
+{
+	int result = s_tty.m_extra_tty;
+
+	if (result != -1)
+		result = sceIoWrite(result, buf, nbyte);
+	return result;
+}
+
+bool extratty_is_open(void)
+{
+	return s_tty.m_extra_tty != -1;
+}
+#endif
