@@ -15,7 +15,7 @@ namespace paf {
 
 int32_t HttpFile::OpenArg::ParseUrl(Url *url)
 {
-	if (url == NULL || !ScePafMisc_0E846E5C(url))
+	if (url == NULL || !url->IsParsed())
 		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
 	scheme = url->GetSchemeString();
 	host = url->GetHostString();

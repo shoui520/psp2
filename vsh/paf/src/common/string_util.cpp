@@ -2,6 +2,7 @@
  * paf::common::String: an empty UTF-8 half means the string lives in the UTF-16
  * half, and the other is converted from it on request.
  */
+#define PAF_COMMON_STRING_UTIL_CPP
 #include <common/string_util.h>
 #include <std/stdio.h>
 #include <stdarg.h>

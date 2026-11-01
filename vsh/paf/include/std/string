@@ -207,6 +207,32 @@ public:
 		return npos;
 	}
 
+	size_type find(const _Elem *str, size_type pos = 0) const
+	{
+		size_type len = _Traits::length(str);
+
+		if (len == 0)
+			return pos <= count ? pos : npos;
+
+		size_type left = count - pos;
+
+		if (pos < count && len <= left) {
+			const _Elem *at = ptr + pos;
+
+			do {
+				const _Elem *found = _Traits::find(at, *str);
+
+				if (found == NULL)
+					break;
+				if (_Traits::compare(found, str, len) == 0)
+					return found - ptr;
+				left -= found - at + 1;
+				at = found + 1;
+			} while (left != 0);
+		}
+		return npos;
+	}
+
 	size_type find(_Elem ch, size_type pos = 0) const
 	{
 		return find(&ch, pos, 1);

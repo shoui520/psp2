@@ -16,6 +16,11 @@ namespace common {
 
 class String {
 public:
+	/*
+	 * The exported members are defined in string_util.cpp, which inlines
+	 * them; every other unit calls them.
+	 */
+#ifdef PAF_COMMON_STRING_UTIL_CPP
 	__declspec(dllexport) String() : m_string(""), m_wstring(L"")
 	{
 	}
@@ -33,10 +38,6 @@ public:
 	}
 
 	__declspec(dllexport) String(const wstring &str) : m_string(""), m_wstring(str)
-	{
-	}
-
-	String(const String &src) : m_string(src.m_string), m_wstring(src.m_wstring)
 	{
 	}
 
@@ -60,6 +61,20 @@ public:
 		if (result.length() == 0 && m_string.length() != 0)
 			Utf8ToUtf16(m_string, &result, 0);
 		return result;
+	}
+#else
+	String();
+	String(const char *str);
+	String(const wchar_t *str);
+	String(const string &str);
+	String(const wstring &str);
+	~String();
+	string GetString() const;
+	wstring GetWString() const;
+#endif
+
+	String(const String &src) : m_string(src.m_string), m_wstring(src.m_wstring)
+	{
 	}
 
 	String &operator=(const String &src)

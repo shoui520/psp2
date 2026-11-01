@@ -269,7 +269,7 @@ ScePaf:
         - _ZN3paf11inputdevice11touchscreen4LockEj: 0x0D4B4B67
         - _ZN3paf5image6filter5PasteEPNS0_11ImageBufferEPKS2_S5_iiiNS0_11ImageExtentES6_9ImageModeNS0_11ImageFormatERKNS0_10ImagePointE: 0x0DE3F659
         - _ZN3paf6memory14RangeAllocatorC1EPvjPKcPKNS1_6OptionE: 0x0E353BB3
-        - ScePafMisc_0E846E5C: 0x0E846E5C
+        - _ZN3paf3Url8IsParsedEv: 0x0E846E5C
         - _ZN3paf5cache10CacheImageC2EPNS0_16CacheManagerImplEPKNS1_6OptionE: 0x0EB2C9D6
         - _ZN3paf5image5Image19SetDecodeCancelFuncEPFbPvES2_: 0x0EB94344
         - ScePafMisc_0ED06370: 0x0ED06370
@@ -558,7 +558,7 @@ ScePaf:
         - _ZN3paf5image5Image16CreateFromBufferENS_6common9SharedPtrINS_6BufferEEES5_jRKNS0_11ImageExtentE9ImageModePNS_6memory13HeapAllocatorE: 0x51D5DDA3
         - ScePafMisc_51E1E267: 0x51E1E267
         - _ZN3paf5Timer4CbrtEf: 0x51E31BC8
-        - ScePafMisc_529F328C: 0x529F328C
+        - _ZN3paf3Url8FinalizeEv: 0x529F328C
         - _ZNK3paf3Url13GetUrlWStringEv: 0x52C507C3
         - _ZN3paf5cache12CacheManager17GetQueuedJobCountEv: 0x52C7998E
         - ScePafMisc_53948F03: 0x53948F03

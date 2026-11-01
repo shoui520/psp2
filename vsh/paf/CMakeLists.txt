@@ -122,6 +122,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/timer/timerlistener.cpp
 	src/timer/timerlistenerlist.cpp
 	src/timer/timerqueue.cpp
+	src/timer/get_time.cpp
+	src/url/url.cpp
 	src/std/math.c
 	src/common/view.c
 	src/plugin.c
@@ -251,3 +253,4 @@ set_source_files_properties(src/timer/timer.cpp PROPERTIES COMPILE_OPTIONS -Xaut
 set_source_files_properties(src/timer/timerlistener.cpp src/timer/timerlistenerlist.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/timer/timerqueue.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)
+set_source_files_properties(src/timer/get_time.cpp src/url/url.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
