@@ -66,28 +66,7 @@ class LayoutFunctionEntry;
 
 class Plugin;
 
-/*
- * A template's widgets made ahead for TemplateOpen (fast_open="1"): the plugin
- * keeps one per template ID (class and method names ours; 0x81192a24, 0x81192312).
- */
-class TemplateCache {
-public:
-	TemplateCache() : m_created(false)
-	{
-	}
-
-	~TemplateCache()
-	{
-		Clear();
-	}
-
-	/* makes the template's widgets; 0 when done */
-	int32_t Create(Plugin *plugin, const IDParam &id);
-	void Clear();
-
-	bool m_created;
-	list<void *> m_items;
-};
+class TemplateCache;
 
 class Plugin {
 public:
@@ -282,7 +261,7 @@ public:
 	public:
 		TemplateOpenParam();
 
-		InitEventFunctionEntry *event_handler_table;
+		InitEventFunctionEntry2 *event_handler_table;
 		ui::Widget *sibling;
 	};
 
@@ -322,6 +301,8 @@ public:
 	int32_t Exit();
 	void PageCloseAll();
 	int32_t TemplateOpen(ui::Widget *parent, const IDParam &id, const TemplateOpenParam &param);
+	void InstantiateWidget(const cxml::Element &elm, ui::Widget *parent, bool is_template,
+			       InitEventFunctionEntry2 *event_handler_table, ui::Widget *sibling);
 	ui::Widget *CreateWidget(ui::Widget *parent, const char *type, const IDParam &id,
 				 const IDParam &style);
 
@@ -440,6 +421,31 @@ public:
 	/* the text style (SystemParam's, the InitParam's or the InitParam2's) */
 	char m_graphics_flag;
 	bool m_unloading;
+};
+
+/*
+ * A template's widgets made ahead for TemplateOpen (fast_open="1"): the plugin
+ * keeps one per template ID (class and method names ours; 0x81192a24, 0x81192312).
+ */
+class TemplateCache {
+public:
+	TemplateCache() : m_created(false)
+	{
+	}
+
+	~TemplateCache()
+	{
+		Clear();
+	}
+
+	/* makes the template's widgets; 0 when done */
+	int32_t Create(Plugin *plugin, const IDParam &id);
+	void Clear();
+	/* opens the template from the widgets made ahead (0x8119311a, name ours) */
+	int32_t Open(Plugin *plugin, ui::Widget *parent, const Plugin::TemplateOpenParam &param);
+
+	bool m_created;
+	list<void *> m_items;
 };
 
 /*

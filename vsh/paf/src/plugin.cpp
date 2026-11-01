@@ -1584,6 +1584,59 @@ ui::Widget *Plugin::CreateWidgetWithStyleType(ui::Widget *parent, const char *ty
 	return widget;
 }
 
+ui::Widget *Plugin::CreateWidget(ui::Widget *parent, const char *type, const IDParam &id,
+				 const IDParam &style)
+{
+	char style_type[32] = "style_";
+	size_t len = sce_paf_strlen(type) + 1;
+
+	if (len > sizeof(style_type) - sizeof("style_") + 1)
+		len = sizeof(style_type) - sizeof("style_");
+	sce_paf_strncat(style_type, type, len);
+	return CreateWidgetWithStyleType(parent, type, id, style_type, style);
+}
+
+int32_t Plugin::TemplateOpen(ui::Widget *parent, const IDParam &id,
+			     const TemplateOpenParam &param)
+{
+	map<uint32_t, TemplateCache *>::iterator it = m_template_table.find(id.m_idhash);
+
+	if (it != m_template_table.end() && it->second != NULL)
+		return it->second->Open(this, parent, param);
+
+	if (m_rscobj != NULL) {
+		cxml::Element table = m_rscobj->GetTableElement(resource::TableType_Template);
+
+		if (table.doc != NULL && table.offset >= 0) {
+			cxml::Element node =
+				cxml::util::FindChildElement(table, "template", "id", id.m_idhash);
+
+			if (node.doc != NULL && node.offset >= 0) {
+				cxml::Element child;
+
+				for (child = node.GetFirstChild(); child.doc != NULL && child.offset >= 0;
+				     child = child.GetNextSibling())
+					InstantiateWidget(child, parent, true, param.event_handler_table,
+							  param.sibling);
+				return 0;
+			}
+		}
+	}
+	if (sce_paf_strncmp(m_name.c_str(), "__system__common_resource", 26) != 0) {
+		Plugin *common = Framework::framework->m_common_resource_plugin;
+
+		if (common != NULL)
+			return common->TemplateOpen(parent, id, param);
+	}
+	return -1;
+}
+
+Plugin::TemplateOpenParam::TemplateOpenParam()
+{
+	sibling = NULL;
+	event_handler_table = NULL;
+}
+
 Plugin::InitParam2::InitParam2()
 {
 	draw_priority = 150;
