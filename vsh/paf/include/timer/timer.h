@@ -125,6 +125,17 @@ public:
 		m_mapped_x = 0.0f;
 	}
 
+	Timer(float total, int func = FUNC_LINEAR, int repeat = REPEAT_NONE, int repeat_count = -1,
+	      const float *param = NULL)
+	{
+		m_is_2d = false;
+		m_is_3d = false;
+		m_param_x_num = 0;
+		m_param_x = NULL;
+		m_mapped_x = 0.0f;
+		InitTimer(total, func, repeat, repeat_count, param);
+	}
+
 	virtual ~Timer();
 
 	static void InitTickUnit(float tick_unit);
@@ -238,6 +249,17 @@ private:
 
 class Timer2D : public Timer {
 public:
+	Timer2D(float total, int func_x, int func_y, int repeat, int repeat_count,
+		const float *param_x, const float *param_y)
+		: Timer(total, func_x, repeat, repeat_count, param_x)
+	{
+		m_is_2d = true;
+		m_param_y_num = 0;
+		m_param_y = NULL;
+		m_mapped_y = 0.0f;
+		SetFuncY(func_y, param_y);
+	}
+
 	virtual ~Timer2D();
 
 	float DoTick();
@@ -257,6 +279,17 @@ public:
 
 class Timer3D : public Timer2D {
 public:
+	Timer3D(float total, int func_x, int func_y, int func_z, int repeat, int repeat_count,
+		const float *param_x, const float *param_y, const float *param_z)
+		: Timer2D(total, func_x, func_y, repeat, repeat_count, param_x, param_y)
+	{
+		m_is_3d = true;
+		m_param_z_num = 0;
+		m_param_z = NULL;
+		m_mapped_z = 0.0f;
+		SetFuncZ(func_z, param_z);
+	}
+
 	virtual ~Timer3D();
 
 	float DoTick();

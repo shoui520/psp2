@@ -1,0 +1,224 @@
+/*
+ * paf::ui::Widget, as far as converted C++ uses it: a node of the widget tree,
+ * with its position, size and rotation, the animations that move them and the
+ * objects it draws.
+ *
+ * Names after ScePaf-RE (restored from Sony's DWARF), the virtual functions in
+ * its order, which is the order of Widget's vtable; the functions after
+ * GetDrawObj are not declared yet. Where no name is known the name says what
+ * the function does (namecheck lists them).
+ */
+#ifndef PAF_WIDGET_CORE_WIDGET_H
+#define PAF_WIDGET_CORE_WIDGET_H
+
+#include <stdint.h>
+#include <std/list>
+#include <std/memory>
+#include <std/string>
+#include <math/ngp/v4.h>
+#include <math/ngp/quaternion.h>
+#include <versatileparam/idparam.h>
+#include <widget/core/handler.h>
+
+namespace paf {
+
+class Timer;
+
+namespace graph {
+class DrawInfo;
+class DrawObj;
+class Surface;
+}
+
+namespace ui {
+
+class Environment;
+class Scene;
+class Camera;
+class AnimListener;
+class AnimQueue;
+
+typedef void (*AnimCB)(Timer *t, AnimListener *listener, void *data1, void *data2,
+		       void *data3);
+
+/* a position, size or rotation for one screen resolution */
+class ResolutionData {
+public:
+	uint32_t m_id;
+	float m_value[3];
+};
+
+class Widget : public Handler {
+public:
+	enum {
+		ALIGN_CENTER = 0,
+		ALIGN_MINUS = 1,
+		ALIGN_PLUS = 2,
+		ALIGN_LEFT = 1,
+		ALIGN_RIGHT = 2,
+		ALIGN_BOTTOM = 1,
+		ALIGN_TOP = 2
+	};
+
+	enum {
+		ANCHOR_CENTER = 0,
+		ANCHOR_MINUS = 1,
+		ANCHOR_PLUS = 2,
+		ANCHOR_LEFT = 1,
+		ANCHOR_RIGHT = 2,
+		ANCHOR_BOTTOM = 1,
+		ANCHOR_TOP = 2
+	};
+
+	enum {
+		ANIM_MOVE = 0x10000,
+		ANIM_COLOR = 0x10001,
+		ANIM_SHOW_ALPHA = 0x10002,
+		ANIM_META_ALPHA = 0x10003,
+		ANIM_SIZE = 0x10004,
+		ANIM_SCALE = 0x10005,
+		ANIM_ROT = 0x10006,
+		ANIM_QUAT = 0x10007,
+		ANIM_ALIGN = 0x10008,
+		ANIM_ORIGIN = 0x10009,
+		ANIM_ANCHOR = 0x1000A
+	};
+
+	enum {
+		GET_CURRENT = 0,
+		GET_ANIMTARGET = 1,
+		GET_ANIMNEXT = 2
+	};
+
+	virtual ~Widget();
+
+	virtual bool IsInherit(const char *type) const;
+	virtual char *GetTypeName() const;
+	virtual void DestroyWidget();
+	virtual uint32_t CheckState();
+	virtual uint32_t ChangeState(uint32_t state, int32_t ev_type);
+	virtual int32_t SetEnvironment(Environment *env);
+	virtual int32_t SetScene_core(Scene *scene);
+	virtual bool RemoveChild(Widget *obj);
+	virtual void RegisterChild(Widget *obj, Widget *sibling);
+	virtual bool ReorderChild(Widget *obj, Widget *sibling);
+	virtual Widget *GetInternalWidget();
+	virtual int32_t DoTransition_core(float parameter, uint32_t type, bool set);
+	virtual int32_t DoTransitionReverse_core(float parameter, uint32_t type, bool set);
+	virtual int32_t SetColor_core(const math::v4 &v);
+	virtual int32_t SetSize_core_force(const math::v4 &v, uint32_t notify_layout,
+					   bool force);
+	virtual void UpdateSize();
+	/* Text keeps the flag only while it fits in its scene */
+	virtual void SetFitToScene(bool on_off);
+	virtual void Update();
+	virtual void UpdateAfterChildren();
+	virtual void UpdatePost();
+	virtual int32_t OnDraw(graph::DrawInfo &info);
+	/* Button hands its draw object the widget's state */
+	virtual int32_t ApplyDrawObjState(int32_t arg);
+	virtual void UpdateContent();
+	virtual void UpdateGesture();
+	virtual math::v4 calc_align_offset(const math::v4 &size, const math::v4 &aoffs,
+					   uint32_t ax, uint32_t ay, uint32_t az);
+	virtual int32_t SetOrigin(uint32_t ax, uint32_t ay, uint32_t az, Timer *t);
+	virtual void GetOrigin(uint32_t &ax, uint32_t &ay, uint32_t &az);
+	virtual math::v4 calc_origin_offset(const math::v4 &size, const math::v4 &offs,
+					    uint32_t ax, uint32_t ay, uint32_t az);
+	virtual int32_t SetAnchor(uint32_t ax, uint32_t ay, uint32_t az, Timer *t);
+	virtual void GetAnchor(uint32_t &ax, uint32_t &ay, uint32_t &az);
+	virtual math::v4 calc_anchor_offset(const math::v4 &size, const math::v4 &offs,
+					    uint32_t ax, uint32_t ay, uint32_t az);
+	/* the hit region at 0x210, made on first use */
+	virtual void *GetHitRegion();
+	virtual int32_t SetHitRegion(const math::v4 &region);
+	virtual void UpdateLayoutAttribute();
+	virtual void UpdateAdjustSize();
+	virtual void UpdateAdjustChildSize(Widget *child);
+	/* gives the surface to draw and returns the one drawn before (Plane, Canvas) */
+	virtual intrusive_ptr<graph::Surface> SetSurface(const intrusive_ptr<graph::Surface> &surf,
+							 int32_t obj);
+	virtual graph::DrawObj *GetDrawObj(int32_t obj);
+
+	math::v4 *GetSize(int32_t opt);
+	math::v4 GetPos(int32_t opt, Widget *ref, const math::v4 &off_pos);
+	math::v4 GetPosCenter(int32_t opt, Widget *ref, const math::v4 &off_pos);
+	math::v4 GetAlignOffsetToCenter(int32_t opt);
+	Camera *GetCamera() const;
+
+	int32_t SetPos(const math::v4 &pos, Timer *t = NULL, int32_t id = ANIM_MOVE,
+		       int32_t opt = 0, float delay = 0.0f, AnimCB cb_fin = NULL,
+		       void *usrdata = NULL);
+	int32_t SetScale(const math::v4 &scale, Timer *t = NULL, int32_t id = ANIM_SCALE,
+			 int32_t opt = 0, float delay = 0.0f, AnimCB cb_fin = NULL,
+			 void *usrdata = NULL);
+	int32_t SetQuat(const math::quaternion &quat, Timer *t = NULL, int32_t id = ANIM_QUAT,
+			int32_t opt = 0, float delay = 0.0f, AnimCB cb_fin = NULL,
+			void *usrdata = NULL);
+	int32_t SetMetaAlpha(float alpha, Timer *t = NULL, int32_t id = ANIM_META_ALPHA,
+			     int32_t opt = 0, float delay = 0.0f, AnimCB cb_fin = NULL,
+			     void *usrdata = NULL);
+	int32_t SetAlignOffset(const math::v4 &offs, Timer *t, int32_t id, int32_t opt,
+			       float delay, AnimCB cb_fin, void *usrdata);
+	int32_t SetAlign(uint32_t ax, uint32_t ay, uint32_t az, Timer *t);
+	int32_t SetPosCenter(const math::v4 &v);
+
+	AnimQueue *FindAnim(int32_t id);
+	int32_t KillAnimType(int32_t type);
+
+	ResolutionData *get_resolution_data(ResolutionData *array, uint32_t num, uint32_t id);
+
+	math::v4 m_pos;
+	math::v4 m_scale;
+	math::v4 m_size;
+	math::v4 m_rot;
+	uint8_t reserved[0x90];
+	math::v4 m_align_offs;
+	math::v4 m_anchor_offs;
+	math::v4 m_origin_offs;
+	uint8_t reserved2[0x18];
+	IDParam m_name;
+	uint32_t m_state;
+	void *m_user_data[2];
+	void *m_user_data2[2];
+	Environment *m_env;
+	Widget *m_parent;
+	Scene *m_scene;
+	list<Widget *> m_children;
+	uint8_t reserved3[0x3c];
+	Timer *m_resolution_timer;
+	Timer *m_resolution_timer_next;
+	ResolutionData *m_pos_array;
+	ResolutionData *m_size_array;
+	ResolutionData *m_rot_array;
+	uint8_t m_resolution_id;
+	uint8_t m_resolution_id_pre;
+	uint8_t reserved4;
+	/* the entries of m_pos_array */
+	uint8_t m_pos_num;
+	uint8_t reserved5[0x2c];
+	uint32_t m_align_x : 4;
+	uint32_t m_align_y : 4;
+	uint32_t m_align_z : 4;
+	uint32_t m_origin_x : 4;
+	uint32_t m_origin_y : 4;
+	uint32_t m_origin_z : 4;
+	uint32_t reserved6 : 8;
+	uint8_t reserved7[0x7c];
+};
+
+}
+}
+
+extern "C" {
+/* puts the widget into its transition: auto_delete deletes it once the time ends */
+int32_t ScePafWidget_8AF26B1F(paf::ui::Widget *widget, bool auto_delete, float time);
+/* the widget's transition ends after the time */
+int32_t ScePafWidget_AC0C81D5(paf::ui::Widget *widget, float time);
+/* the widget's transition ends after the time, and the widget is deleted */
+int32_t ScePafWidget_5A9793B0(paf::ui::Widget *widget, float time);
+/* adds to the count kept in bits 24 to 27 of the widget's flags */
+int32_t ScePafWidget_A96A0B4A(paf::ui::Widget *widget, int32_t add);
+}
+
+#endif

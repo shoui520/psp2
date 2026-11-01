@@ -41,6 +41,11 @@ public:
 		return vgetq_lane_f32(_impl.get128(), 3);
 	}
 
+	void set_x(float value)
+	{
+		_impl.setX(value);
+	}
+
 	void set_y(float value)
 	{
 		_impl.setY(value);
@@ -51,9 +56,19 @@ public:
 		_impl.setZ(value);
 	}
 
+	v4 operator+(v4 rhs) const
+	{
+		return v4(_impl + rhs._impl);
+	}
+
 	v4 operator-(v4 rhs) const
 	{
 		return v4(_impl - rhs._impl);
+	}
+
+	v4 operator*(float rhs) const
+	{
+		return v4(_impl * rhs);
 	}
 
 	bool operator==(v4 rhs) const
