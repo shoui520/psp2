@@ -75,6 +75,29 @@ void sceGxmSetFragmentProgram(SceGxmContext *context, const SceGxmFragmentProgra
 	}
 }
 
+/*
+ * The debug build reports, after a reservation in a deferred context, memory a chunk
+ * callback returned that GXM cannot use.
+ */
+static inline int gxmContextCheckCallbacks(SceGxmContext *context)
+{
+#if SCE_DBG_ASSERTS_ENABLED
+	int ret;
+
+	if (context->type != SCE_GXM_CONTEXT_TYPE_DEFERRED)
+		return 0;
+	ret = gxmDeferredBufferCheckCallback(&context->vdmSource, "VDM");
+	if (ret != 0)
+		return ret;
+	ret = gxmDeferredBufferCheckCallback(&context->vertexSource, "vertex");
+	if (ret != 0)
+		return ret;
+	return gxmDeferredBufferCheckCallback(&context->fragmentSource, "fragment");
+#else
+	return 0;
+#endif
+}
+
 int sceGxmReserveVertexDefaultUniformBuffer(SceGxmContext *context, void **uniformBuffer)
 {
 	const SceGxmProgram *program;
@@ -82,21 +105,33 @@ int sceGxmReserveVertexDefaultUniformBuffer(SceGxmContext *context, void **unifo
 	SceUInt32 mode;
 	void *buffer;
 
-	if (context == NULL || uniformBuffer == NULL)
+	if (context == NULL || uniformBuffer == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(171, sceGxmReserveVertexDefaultUniformBuffer, context);
+		else
+			GXM_DBG_ERROR_NULL(175, sceGxmReserveVertexDefaultUniformBuffer, uniformBuffer);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	if (!context->insideScene) {
+		GXM_DBG_ERROR_OUTSIDE_SCENE(182, sceGxmReserveVertexDefaultUniformBuffer, context);
 		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
 			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
 	}
-	if (context->vertexProgram == NULL)
+	if (context->vertexProgram == NULL) {
+		GXM_DBG_ERROR(188, "Function sceGxmReserveVertexDefaultUniformBuffer has been called when the current vertex program is NULL.");
 		return SCE_GXM_ERROR_NULL_PROGRAM;
+	}
+	if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED &&
+	    gxmWarningIsEnabled(SCE_GXM_WARNING_VERTEX_DEFAULT_UNIFORM_BUFFER_RECYCLED))
+		GXM_DBG_WARNING(194, "The previous vertex default uniform buffer reservation has not been "
+				"used by any draw calls and has been recycled.");
 	program = context->vertexProgram->program;
 	size = program->defaultUniformBufferCount * 4;
 	if (size == 0) {
 		*uniformBuffer = NULL;
 		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_NONE;
-		return 0;
+		return gxmContextCheckCallbacks(context);
 	}
 	mode = program->bufferFlags >> 28;
 	if (mode & 3) {
@@ -108,13 +143,22 @@ int sceGxmReserveVertexDefaultUniformBuffer(SceGxmContext *context, void **unifo
 	buffer = gxmChunkBufferReserve(&context->vertexBuffer, size, 4);
 	if (buffer == NULL) {
 		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_NONE;
+		GXM_DBG_ERROR(232, "Function sceGxmReserveVertexDefaultUniformBuffer failed to reserve %d bytes.", size);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
 	}
 	context->vertexUniformBuffers[14] = buffer;
 	context->vertexDefaultUniformBuffer = buffer;
 	*uniformBuffer = buffer;
+#if SCE_DBG_ASSERTS_ENABLED
+	if ((SceUInt32)buffer + size < context->vertexBuffer.end) {
+		context->vertexOverrunCheckAddress = (SceUInt32 *)((SceUInt32)buffer + size);
+		context->vertexOverrunCheckValue = *context->vertexOverrunCheckAddress;
+	} else {
+		context->vertexOverrunCheckAddress = NULL;
+	}
+#endif
 	context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_RESERVED;
-	return 0;
+	return gxmContextCheckCallbacks(context);
 }
 
 int sceGxmReserveFragmentDefaultUniformBuffer(SceGxmContext *context, void **uniformBuffer)
@@ -124,21 +168,33 @@ int sceGxmReserveFragmentDefaultUniformBuffer(SceGxmContext *context, void **uni
 	SceUInt32 mode;
 	void *buffer;
 
-	if (context == NULL || uniformBuffer == NULL)
+	if (context == NULL || uniformBuffer == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(283, sceGxmReserveFragmentDefaultUniformBuffer, context);
+		else
+			GXM_DBG_ERROR_NULL(287, sceGxmReserveFragmentDefaultUniformBuffer, uniformBuffer);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	if (!context->insideScene) {
+		GXM_DBG_ERROR_OUTSIDE_SCENE(294, sceGxmReserveFragmentDefaultUniformBuffer, context);
 		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
 			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
 	}
-	if (context->fragmentProgram == NULL)
+	if (context->fragmentProgram == NULL) {
+		GXM_DBG_ERROR(300, "Function sceGxmReserveFragmentDefaultUniformBuffer has been called when the current fragment program is NULL.");
 		return SCE_GXM_ERROR_NULL_PROGRAM;
+	}
+	if (context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED &&
+	    gxmWarningIsEnabled(SCE_GXM_WARNING_FRAGMENT_DEFAULT_UNIFORM_BUFFER_RECYCLED))
+		GXM_DBG_WARNING(306, "The previous fragment default uniform buffer reservation has not been "
+				"used by any draw calls and has been recycled.");
 	program = context->fragmentProgram->program;
 	size = program->defaultUniformBufferCount * 4;
 	if (size == 0) {
 		*uniformBuffer = NULL;
 		context->fragmentDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_NONE;
-		return 0;
+		return gxmContextCheckCallbacks(context);
 	}
 	mode = program->bufferFlags >> 28;
 	if (mode & 3) {
@@ -150,13 +206,22 @@ int sceGxmReserveFragmentDefaultUniformBuffer(SceGxmContext *context, void **uni
 	buffer = gxmChunkBufferReserve(&context->fragmentBuffer, size, 4);
 	if (buffer == NULL) {
 		context->fragmentDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_NONE;
+		GXM_DBG_ERROR(344, "Function sceGxmReserveFragmentDefaultUniformBuffer failed to reserve %d bytes.", size);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
 	}
 	context->fragmentUniformBuffers[14] = buffer;
 	context->fragmentDefaultUniformBuffer = buffer;
 	*uniformBuffer = buffer;
+#if SCE_DBG_ASSERTS_ENABLED
+	if ((SceUInt32)buffer + size < context->fragmentBuffer.end) {
+		context->fragmentOverrunCheckAddress = (SceUInt32 *)((SceUInt32)buffer + size);
+		context->fragmentOverrunCheckValue = *context->fragmentOverrunCheckAddress;
+	} else {
+		context->fragmentOverrunCheckAddress = NULL;
+	}
+#endif
 	context->fragmentDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_RESERVED;
-	return 0;
+	return gxmContextCheckCallbacks(context);
 }
 
 int sceGxmSetVertexDefaultUniformBuffer(SceGxmContext *context, const void *uniformBuffer)
