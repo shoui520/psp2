@@ -1433,6 +1433,72 @@ void Plugin::InstantiateWidget_Focus(const cxml::Element &elm, ui::Widget *widge
 	delete param;
 }
 
+/* Sony's build calls this vector's push_back rather than inlining it. */
+template<>
+inline __attribute__((noinline)) int
+vector<WidgetResourceInfo::LayoutData>::push_back(const WidgetResourceInfo::LayoutData &val)
+{
+	int result;
+
+	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
+		new (&ptr[count]) WidgetResourceInfo::LayoutData(val);
+		result = ++count;
+	}
+	return result;
+}
+
+/* called whole by InstantiateWidget_Layout */
+__attribute__((noinline)) VersatileParam *Plugin::CallFactoryLayout(const char *name)
+{
+	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
+
+	if (it != s_factory_table.end())
+		return it->second.m_factory_layout();
+	return NULL;
+}
+
+void Plugin::InstantiateWidget_Layout(const cxml::Element &elm, ui::Widget *widget,
+				      WidgetResourceInfo *info)
+{
+	cxml::Element layout;
+
+	for (cxml::Element child = elm.GetFirstChild(); child.doc != NULL && child.offset >= 0;
+	     child = child.GetNextSibling()) {
+		const char *name = child.GetName();
+
+		if (name[0] != 'l' || sce_paf_strncmp("layout_", name, 7) != 0)
+			continue;
+		if (layout.doc == NULL || layout.offset < 0)
+			layout = child;
+
+		uint32_t idhash;
+
+		if (scePafResourceGetAttributeStyleId(&child, "id", &idhash) == 0) {
+			WidgetResourceInfo::LayoutData data = { IDParam(s_empty_id, idhash), child,
+								NULL };
+
+			info->m_list_layout.push_back(data);
+		}
+	}
+	if (layout.doc == NULL || layout.offset < 0)
+		return;
+
+	ui::WidgetLayoutParam *param =
+		static_cast<ui::WidgetLayoutParam *>(CallFactoryLayout(elm.GetName()));
+
+	if (param == NULL)
+		return;
+	param->InitResolution(layout.GetNumChild());
+	param->Create(1);
+	param->m_widget = widget;
+	param->Read(&layout);
+	param->GetEach(widget);
+	param->Set();
+	param->m_widget = NULL;
+	param->Destroy(1);
+	delete param;
+}
+
 Plugin::InitParam2::InitParam2()
 {
 	draw_priority = 150;

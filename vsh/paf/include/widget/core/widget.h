@@ -54,6 +54,18 @@ public:
 class WidgetParam : public VersatileParam {
 };
 
+/* a widget type's layout, read from the "layout_" children of its element */
+class WidgetLayoutParam : public VersatileParam {
+public:
+	/* makes room for num resolutions */
+	int32_t InitResolution(int32_t num);
+	/* takes the widget's position, size and rotation arrays (0x81064afc, name ours) */
+	int32_t GetEach(Widget *widget);
+
+	/* the widget it is read for (name ours) */
+	Widget *m_widget;
+};
+
 /* the sounds of a widget type, read from the resource's "sound_<type>" parameter (names after
    ScePaf-RE) */
 class WidgetSoundParam : public VersatileParam {

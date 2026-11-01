@@ -42,8 +42,9 @@ class ResourceObj;
 namespace ui {
 class Scene;
 class EnvironmentParam;
-class WidgetLayoutParam;
 }
+
+class WidgetResourceInfo;
 
 /* a plugin's init event handler, by the ID of the widget it is for */
 class InitEventFunctionEntry {
@@ -306,6 +307,7 @@ public:
 
 	static VersatileParam *CallFactoryStyle(const char *name);
 	static VersatileParam *CallFactoryFocus(const char *name);
+	static VersatileParam *CallFactoryLayout(const char *name);
 	ui::Scene *PageOpen(const cxml::Element &node, const PageOpenParam &param);
 	void PageActivate(const cxml::Element &node);
 	void PageActivateActually();
@@ -363,6 +365,9 @@ public:
 	ui::HandlerCB GetInitEventHandler(const IDParam &id) const;
 	void InstantiateWidget_InitEventHandler(const IDParam &id, ui::Widget *widget,
 						InitEventFunctionEntry2 *event_handler_table);
+	/* reads the element's "layout_" children into the widget's layouts and its type's layout */
+	void InstantiateWidget_Layout(const cxml::Element &elm, ui::Widget *widget,
+				      WidgetResourceInfo *info);
 	/* reads the element's first "focus_" child into its type's FocusParam for the widget */
 	void InstantiateWidget_Focus(const cxml::Element &elm, ui::Widget *widget);
 
@@ -448,8 +453,10 @@ public:
 	Plugin *m_plugin;
 	ui::WidgetParam *m_wparam;
 	cxml::Element m_node;
-	vector<LayoutData> m_list_layout;
 	IDParam m_style_id;
+	/* the ID of its sound parameter, its style's or its parameter's (name ours) */
+	IDParam m_sound_id;
+	vector<LayoutData> m_list_layout;
 };
 
 }
