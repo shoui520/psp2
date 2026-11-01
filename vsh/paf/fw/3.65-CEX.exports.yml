@@ -1345,7 +1345,7 @@ ScePaf:
         - ScePafCommon_0DC3E4F3: 0x0DC3E4F3
         - _ZN3paf6common8CallListC2Ev: 0x150AA6CE
         - ScePafCommon_168104A7: 0x168104A7
-        - ScePafCommon_17280204: 0x17280204
+        - _ZN3paf4ViewD1Ev: 0x17280204
         - ScePafCommon_19056E57: 0x19056E57
         - _ZN3paf6common6String5SplitEc: 0x1AADB48A
         - ScePafCommon_1F1C3F8D: 0x1F1C3F8D
@@ -1386,7 +1386,7 @@ ScePaf:
         - _ZN3paf6common6RefObj7ReleaseEv: 0x5221EB33
         - _ZN3paf6common10FromStringIiEET_PKcj: 0x5383A280
         - _ZN3paf6common12JobCallQueueC2ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPNS_3job8JobQueueE: 0x543B37D2
-        - ScePafCommon_547491A7: 0x547491A7
+        - _ZN3paf4ViewC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEES8_PNS_14ViewControllerE: 0x547491A7
         - ScePafCommon_559CDA63: 0x559CDA63
         - _ZN3paf6common13property_list12PropertyList8SetValueERKNS_7IDParamENS1_13PropertyValueE: 0x56A4FDAC
         - ScePafCommon_59FD41F2: 0x59FD41F2
@@ -1396,7 +1396,7 @@ ScePaf:
         - _ZN3paf6common6StringC1EPKw: 0x5DF278C9
         - ScePafCommon_5EEAEBAE: 0x5EEAEBAE
         - _ZN3paf6common11Utf16ToUtf8EPKwPNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEi: 0x5FAAAE1C
-        - ScePafCommon_633D1A29: 0x633D1A29
+        - _ZN3paf14ViewController12PluginOnInitEPNS_6PluginE: 0x633D1A29
         - _ZNK3paf6common13property_list15PropertyElement11GetTypeNameEv: 0x6586ECDE
         - _ZN3paf6common6StringpLERKS1_: 0x6597DD75
         - _ZNK3paf6common13property_list12PropertyList10HasElementERKNS_7IDParamE: 0x6607DB18
@@ -1418,19 +1418,19 @@ ScePaf:
         - _ZN3paf15common_internal14printf_enabledEv: 0x7DD63E0E
         - ScePafCommon_802ADD92: 0x802ADD92
         - ScePafCommon_8199CAE6: 0x8199CAE6
-        - ScePafCommon_82307117: 0x82307117
+        - _ZN3paf14ViewController12PluginOnStopEPNS_6PluginE: 0x82307117
         - ScePafCommon_83FFAFCA: 0x83FFAFCA
         - _ZN3paf6common12FormatStringEPKcz: 0x87D6E910
         - ScePafCommon_880AA4A5: 0x880AA4A5
         - ScePafCommon_886EC6BE: 0x886EC6BE
         - ScePafCommon_8AA97D29: 0x8AA97D29
-        - ScePafCommon_8BC826E1: 0x8BC826E1
+        - _ZN3paf4ViewD2Ev: 0x8BC826E1
         - ScePafCommon_8D3DC5B5: 0x8D3DC5B5
         - _ZN3paf6common6StringplERKS1_: 0x8D8C1EE3
         - _ZN3paf6common11Utf16ToUtf8EPKwPNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x8E009780
         - ScePafCommon_8F824A3E: 0x8F824A3E
         - _ZN3paf6common11string_util7mappingERNS_3mapINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEES8_NS_4lessIS8_EENS6_IS8_EEEERKS8_jcc: 0x9067966F
-        - ScePafCommon_9109458C: 0x9109458C
+        - _ZN3paf4ViewC2ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEES8_PNS_14ViewControllerE: 0x9109458C
         - _ZN3paf6common12JobCallQueueC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPNS_3job8JobQueueE: 0x91CD88B3
         - _ZNK3paf6common13property_list12PropertyList8GetValueERKNS_7IDParamE: 0x91CDF7D0
         - _ZN3paf6common11string_util8tokenizeERNS_4listINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEENS6_IS8_EEEERKS8_jc: 0x9272D6E6
@@ -1488,7 +1488,7 @@ ScePaf:
         - _ZN3paf6common6RmatchERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEES8_: 0xDAC99BB6
         - _ZN3paf6common6StringC2EPKw: 0xDB4B2313
         - ScePafCommon_DE5322EB: 0xDE5322EB
-        - ScePafCommon_DEC45734: 0xDEC45734
+        - _ZN3paf14ViewController13PluginOnStartEPNS_6PluginE: 0xDEC45734
         - ScePafCommon_E19DFE47: 0xE19DFE47
         - ScePafCommon_E234DA6E: 0xE234DA6E
         - _ZN3paf6common6StringC2EPKc: 0xE23D7BA7
@@ -1499,13 +1499,13 @@ ScePaf:
         - _ZN3paf6common13property_list15PropertyElement8TypeNameEv: 0xE77305EF
         - _ZNK3paf6common13property_list12PropertyList8GetValueEj: 0xEA03EA22
         - _ZNK3paf6common13property_list15PropertyElement9IsInheritEPKc: 0xED0D1711
-        - ScePafCommon_ED9652F0: 0xED9652F0
+        - _ZN3paf4ViewD0Ev: 0xED9652F0
         - ScePafCommon_F1E2CBF8: 0xF1E2CBF8
         - _ZNK3paf6common13property_list14WStringElement11GetTypeNameEv: 0xF4296E47
         - ScePafCommon_F5E73158: 0xF5E73158
         - _ZN3paf6common14FormatBytesizeEji: 0xF7FEB001
         - ScePafCommon_F820A54B: 0xF820A54B
-        - ScePafCommon_F88BA3DC: 0xF88BA3DC
+        - _ZN3paf14ViewController12PluginOnExitEPNS_6PluginE: 0xF88BA3DC
         - ScePafCommon_F98D9F4F: 0xF98D9F4F
         - _ZNK3paf6common13property_list12PropertyList8HasValueERKNS_7IDParamE: 0xFC447ECC
         - _ZN3paf6common12JobCallQueue7EnqueueEPKcPFvPvES4_: 0xFDD1CBBD

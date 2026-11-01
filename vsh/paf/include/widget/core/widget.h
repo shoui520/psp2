@@ -18,6 +18,7 @@
 #include <math/ngp/v4.h>
 #include <math/ngp/quaternion.h>
 #include <versatileparam/idparam.h>
+#include <versatileparam/versatileparam.h>
 #include <widget/core/handler.h>
 
 namespace paf {
@@ -48,8 +49,24 @@ public:
 	float m_value[3];
 };
 
+/* a widget's parameters as its resource gives them */
+class WidgetParam : public VersatileParam {
+};
+
 class Widget : public Handler {
 public:
+	/* what a widget keeps for its owner (m_user_data2), deleted with it */
+	class UserData {
+	public:
+		UserData()
+		{
+		}
+
+		virtual ~UserData()
+		{
+		}
+	};
+
 	enum {
 		ALIGN_CENTER = 0,
 		ALIGN_MINUS = 1,
@@ -180,7 +197,7 @@ public:
 	IDParam m_name;
 	uint32_t m_state;
 	void *m_user_data[2];
-	void *m_user_data2[2];
+	UserData *m_user_data2[2];
 	Environment *m_env;
 	Widget *m_parent;
 	Scene *m_scene;

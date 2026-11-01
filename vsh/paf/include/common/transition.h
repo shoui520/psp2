@@ -3,7 +3,7 @@
  * type, and the time each takes by default.
  *
  * Exported by NID only, so the functions are C functions under their link
- * names; VDSuite's names are given with each.
+ * names; ScePaf-RE's names (which hash to no NID) are given with each.
  */
 #ifndef PAF_COMMON_TRANSITION_H
 #define PAF_COMMON_TRANSITION_H
@@ -55,13 +55,13 @@ enum Type {
 extern "C" {
 /* GetDefaultDelayReverse(Type, ui::Widget *) */
 float ScePafCommon_C85E4F3A(paf::common::transition::Type type, paf::ui::Widget *widget);
-/* DoReverse(float parameter, ui::Widget *, Type, bool auto_delete, bool ignore_default_delay) */
+/* Do(float parameter, ui::Widget *, Type, bool auto_delete, bool ignore_default_delay): shows */
 float ScePafCommon_6CF3A3C8(float parameter, paf::ui::Widget *widget,
 			    paf::common::transition::Type effect, bool auto_delete,
 			    bool ignore_default_delay);
 /* GetDefaultDelay(Type) */
 float ScePafCommon_DE5322EB(paf::common::transition::Type type);
-/* Do(float parameter, ui::Widget *, Type, bool auto_delete, bool ignore_default_delay) */
+/* DoReverse(float parameter, ui::Widget *, Type, bool auto_delete, bool ignore_default_delay): hides */
 float ScePafCommon_B48C9BDC(float parameter, paf::ui::Widget *widget,
 			    paf::common::transition::Type effect, bool auto_delete,
 			    bool ignore_default_delay);

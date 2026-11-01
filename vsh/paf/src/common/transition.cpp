@@ -1,6 +1,7 @@
 /*
- * paf::common::transition: the animations that show a widget (Do) and hide it
- * (DoReverse), and the time each type takes by default.
+ * paf::common::transition: the animations that show a widget (Do, which
+ * Widget::Show calls) and hide it (DoReverse, from Widget::Hide), and the time
+ * each type takes by default.
  */
 #include <stdint.h>
 #include <math/ngp/v4.h>
@@ -340,7 +341,7 @@ static void Slide3D(ui::Widget *widget, int32_t from, int32_t to, bool animate,
 }
 
 /*
- * DoReverse: shows the widget again by the effect, after the parameter's time.
+ * Do: shows the widget by the effect, after the parameter's time.
  * The widget is put in place at once when the default delay is ignored and no
  * transition was started; otherwise its animations are started from where the
  * running ones are, or from the effect's start. Returns when it ends.
@@ -713,7 +714,7 @@ float ScePafCommon_DE5322EB(Type type)
 }
 
 /*
- * Do: hides the widget by the effect, after the parameter's time. The widget
+ * DoReverse: hides the widget by the effect, after the parameter's time. The widget
  * is put in its end state at once when the default delay is ignored and the
  * parameter is no time; otherwise its animations start after the parameter.
  * With auto_delete the widget is deleted when they end. Returns when they end.

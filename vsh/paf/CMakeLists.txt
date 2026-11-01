@@ -129,7 +129,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/url/url.cpp
 	src/misc/autotest_tty.cpp
 	src/std/math.c
-	src/common/view.c
+	src/common/view.cpp
 	src/plugin.c
 	src/cxml/cxml.c
 	src/cxml/document.c
