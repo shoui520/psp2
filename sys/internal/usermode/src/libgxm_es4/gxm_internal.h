@@ -541,6 +541,11 @@ typedef struct GxmDeferredBuffer {
 	GxmDeferredBufferCallback *callback;
 	void *userData;
 	SceUInt8 linked;		/* chunks end in a link to the next one */
+#if SCE_DBG_ASSERTS_ENABLED
+	SceUInt8 invalidCallback;	/* the callback returned memory GXM cannot use */
+	void *invalidAddress;		/* what it returned */
+	SceSize invalidSize;
+#endif
 } GxmDeferredBuffer;
 
 /* a linked chunk keeps this much at its end for the link */
@@ -554,7 +559,7 @@ struct GxmChunkBuffer {
 	SceUInt32 gpuEnd;		/* the GPU offset of end */
 	void (*refill)(GxmChunkBuffer *buffer, SceSize size, SceSize alignment);
 	union {
-	GxmDeferredBuffer *source;	/* a deferred context's */
+	GxmDeferredBuffer *cookie;	/* a deferred context's */
 	struct GxmRingBuffer *ring;	/* an immediate context's */
 	};
 #if SCE_DBG_ASSERTS_ENABLED
@@ -564,11 +569,16 @@ struct GxmChunkBuffer {
 
 void *gxmChunkBufferReserveSlow(GxmChunkBuffer *buffer, SceSize size, SceSize alignment);
 void gxmChunkBufferInitFixed(GxmChunkBuffer *buffer, void *memory, SceUInt32 gpuOffset, SceSize size);
-void gxmChunkBufferInitDeferred(GxmDeferredBuffer *source, GxmChunkBuffer *buffer, void *memory,
-				SceSize size, GxmDeferredBufferCallback *callback, void *userData,
-				SceUInt8 linked);
-void gxmChunkBufferReset(const GxmDeferredBuffer *source, GxmChunkBuffer *buffer, void *memory,
-			 SceSize size);
+void gxmChunkBufferInitDeferred(GxmDeferredBuffer *chunkBuffer, GxmChunkBuffer *writeBuffer,
+				void *memory, SceSize size, GxmDeferredBufferCallback *callback,
+				void *userData, SceUInt8 linked);
+void gxmChunkBufferReset(const GxmDeferredBuffer *chunkBuffer, GxmChunkBuffer *writeBuffer,
+			 void *memory, SceSize size);
+#if SCE_DBG_ASSERTS_ENABLED
+int gxmDeferredBufferCheckCallback(GxmDeferredBuffer *chunkBuffer, const char *bufferName);
+/* memory.c: SCE_OK when [address, address + size) is memory the GPU can use */
+int gxmMemoryCheckCallbackRegion(const void *address, SceSize size, const char *callbackType);
+#endif
 
 /* aligned space for size bytes; the caller advances cur past what it writes */
 static inline void *gxmChunkBufferReserve(GxmChunkBuffer *buffer, SceSize size, SceSize alignment)
