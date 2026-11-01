@@ -77,25 +77,25 @@ typedef struct GxmBlendCode {
 #define GXM_BLEND_OP_MAX	4
 #define GXM_BLEND_OP_ADD	5	/* dst = src1 + src2 */
 
-/* operands, gxmBlendRegisters[] */
-#define GXM_BLEND_REG_NONE	0
-#define GXM_BLEND_REG_O0	1	/* the colour in the output buffer */
-#define GXM_BLEND_REG_P0	2	/* the fragment program's output */
-#define GXM_BLEND_REG_GPI0	3
-#define GXM_BLEND_REG_GPI1	4
-#define GXM_BLEND_REG_GPI2	5
-#define GXM_BLEND_REG_R0	6	/* temporaries */
-#define GXM_BLEND_REG_R1	7
-#define GXM_BLEND_REG_ZERO	8	/* constants */
-#define GXM_BLEND_REG_ONE	9
+/* operands, s_registerDescriptions[] */
+#define REG_NONE	0
+#define REG_O0	1	/* the colour in the output buffer */
+#define REG_P0	2	/* the fragment program's output */
+#define REG_GPI0	3
+#define REG_GPI1	4
+#define REG_GPI2	5
+#define REG_R0	6	/* temporaries */
+#define REG_R1	7
+#define REG_ZERO	8	/* constants */
+#define REG_ONE	9
 
 typedef struct GxmBlendInstr {
 	SceUInt32 op;			/* GXM_BLEND_OP_* */
-	SceUInt32 dst;			/* GXM_BLEND_REG_* */
+	SceUInt32 dst;			/* REG_* */
 	SceUInt32 src0;
 	SceUInt32 src1;
 	SceUInt32 src2;
-	SceUInt32 mask;			/* SCE_GXM_COLOR_MASK_* written */
+	SceUInt32 wmask;		/* SCE_GXM_COLOR_MASK_* written */
 	SceUInt8 negate;		/* negate src1 */
 	SceUInt8 src0Alpha;		/* read the alpha component only */
 	SceUInt8 src1Alpha;

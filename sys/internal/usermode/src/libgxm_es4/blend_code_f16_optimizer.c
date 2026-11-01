@@ -59,7 +59,7 @@ static inline SceBool gxmBlendTouches(const SceUInt32 *state, SceUInt32 mask)
 /* the components an operand reads */
 static inline SceUInt32 gxmBlendReadMask(const GxmBlendInstr *instr, SceUInt8 alpha)
 {
-	return alpha ? SCE_GXM_COLOR_MASK_A : instr->mask;
+	return alpha ? SCE_GXM_COLOR_MASK_A : instr->wmask;
 }
 
 /* the operand reg is read entirely from the followed result */
@@ -81,7 +81,7 @@ static inline SceBool gxmBlendClobbers(const GxmBlendInstr *instr, const GxmBlen
 				       SceUInt32 operand, SceUInt8 alpha)
 {
 	return instr->dst == operand &&
-	       ((alpha && (instr->mask & SCE_GXM_COLOR_MASK_A)) || (instr->mask & reader->mask));
+	       ((alpha && (instr->wmask & SCE_GXM_COLOR_MASK_A)) || (instr->wmask & reader->wmask));
 }
 
 static inline void gxmBlendRemove(GxmBlendInstr *instr, GxmBlendInstr *end)
@@ -98,23 +98,23 @@ static inline SceBool gxmBlendIsCopy(const GxmBlendInstr *instr, SceUInt32 *valu
 	switch (instr->op) {
 	case GXM_BLEND_OP_NOP:
 	case GXM_BLEND_OP_MAD:
-		if (instr->src1 != GXM_BLEND_REG_ZERO)
+		if (instr->src1 != REG_ZERO)
 			return SCE_FALSE;
-		*value = instr->op == GXM_BLEND_OP_MAD ? instr->src2 : GXM_BLEND_REG_NONE;
+		*value = instr->op == GXM_BLEND_OP_MAD ? instr->src2 : REG_NONE;
 		return SCE_TRUE;
 	case GXM_BLEND_OP_MUL:
-		if (instr->src2 == GXM_BLEND_REG_ZERO || instr->src1 == GXM_BLEND_REG_ZERO) {
-			*value = GXM_BLEND_REG_ZERO;
+		if (instr->src2 == REG_ZERO || instr->src1 == REG_ZERO) {
+			*value = REG_ZERO;
 			return SCE_TRUE;
 		}
-		if (instr->src2 == GXM_BLEND_REG_ONE || instr->src1 == GXM_BLEND_REG_ONE) {
-			*value = instr->src1 != GXM_BLEND_REG_ONE ? instr->src1 : instr->src2;
+		if (instr->src2 == REG_ONE || instr->src1 == REG_ONE) {
+			*value = instr->src1 != REG_ONE ? instr->src1 : instr->src2;
 			return SCE_TRUE;
 		}
 		return SCE_FALSE;
 	case GXM_BLEND_OP_ADD:
-		if (instr->src2 == GXM_BLEND_REG_ZERO || instr->src1 == GXM_BLEND_REG_ZERO) {
-			*value = instr->src1 != GXM_BLEND_REG_ZERO ? instr->src1 : instr->src2;
+		if (instr->src2 == REG_ZERO || instr->src1 == REG_ZERO) {
+			*value = instr->src1 != REG_ZERO ? instr->src1 : instr->src2;
 			return SCE_TRUE;
 		}
 		return SCE_FALSE;
@@ -128,12 +128,12 @@ static inline void gxmBlendSubstitute(GxmBlendInstr *user, SceUInt32 reg, SceUIn
 {
 	switch (user->op) {
 	case GXM_BLEND_OP_MAD:
-		if (value == GXM_BLEND_REG_ZERO) {
+		if (value == REG_ZERO) {
 			if (reg == user->src0 || reg == user->src1) {
 				/* 0 * x + src2 */
 				user->op = GXM_BLEND_OP_ADD;
-				user->src0 = GXM_BLEND_REG_NONE;
-				user->src1 = GXM_BLEND_REG_ZERO;
+				user->src0 = REG_NONE;
+				user->src1 = REG_ZERO;
 				user->negate = 0;
 				user->src0Alpha = 0;
 				user->src1Alpha = 0;
@@ -142,24 +142,24 @@ static inline void gxmBlendSubstitute(GxmBlendInstr *user, SceUInt32 reg, SceUIn
 				user->op = GXM_BLEND_OP_MUL;
 				user->src2 = user->src0;
 				user->src2Alpha = user->src0Alpha;
-				user->src0 = GXM_BLEND_REG_NONE;
+				user->src0 = REG_NONE;
 				user->src0Alpha = 0;
 			}
-		} else if (value == GXM_BLEND_REG_ONE) {
+		} else if (value == REG_ONE) {
 			if (reg == user->src0) {
 				/* 1 * src1 + src2 */
 				user->op = GXM_BLEND_OP_ADD;
-				user->src0 = GXM_BLEND_REG_NONE;
+				user->src0 = REG_NONE;
 				user->src0Alpha = 0;
 			} else if (reg == user->src1) {
 				/* src0 * 1 + src2 */
 				user->op = GXM_BLEND_OP_ADD;
 				user->src1 = user->src0;
 				user->src1Alpha = user->src0Alpha;
-				user->src0 = GXM_BLEND_REG_NONE;
+				user->src0 = REG_NONE;
 				user->src0Alpha = 0;
 			} else {
-				user->src2 = GXM_BLEND_REG_ONE;
+				user->src2 = REG_ONE;
 			}
 		} else {
 			*kept = SCE_TRUE;
@@ -173,10 +173,10 @@ static inline void gxmBlendSubstitute(GxmBlendInstr *user, SceUInt32 reg, SceUIn
 			user->src1 = value;
 		if (user->src2 == reg)
 			user->src2 = value;
-		if (user->op == GXM_BLEND_OP_MUL && reg == GXM_BLEND_REG_ZERO) {
+		if (user->op == GXM_BLEND_OP_MUL && reg == REG_ZERO) {
 			user->op = GXM_BLEND_OP_ADD;
-			user->src1 = GXM_BLEND_REG_ZERO;
-			user->src2 = GXM_BLEND_REG_ZERO;
+			user->src1 = REG_ZERO;
+			user->src2 = REG_ZERO;
 		}
 		break;
 	}
@@ -188,19 +188,19 @@ static inline void gxmBlendSetMad(GxmBlendInstr *instr, SceUInt32 op,
 				  SceUInt32 src1, SceUInt8 src1Alpha,
 				  SceUInt32 src2, SceUInt8 src2Alpha, SceUInt8 negate)
 {
-	if (src0 == GXM_BLEND_REG_ZERO || src1 == GXM_BLEND_REG_ZERO) {
+	if (src0 == REG_ZERO || src1 == REG_ZERO) {
 		op = GXM_BLEND_OP_ADD;
-		src0 = GXM_BLEND_REG_NONE;
+		src0 = REG_NONE;
 		src0Alpha = 0;
-		src1 = GXM_BLEND_REG_ZERO;
+		src1 = REG_ZERO;
 		negate = 0;
-	} else if (src1 == GXM_BLEND_REG_ONE || src0 == GXM_BLEND_REG_ONE) {
-		if (src1 == GXM_BLEND_REG_ONE) {
+	} else if (src1 == REG_ONE || src0 == REG_ONE) {
+		if (src1 == REG_ONE) {
 			src1 = src0;
 			src1Alpha = src0Alpha;
 		}
 		op = GXM_BLEND_OP_MUL;
-		src0 = GXM_BLEND_REG_NONE;
+		src0 = REG_NONE;
 		src0Alpha = 0;
 	}
 	instr->op = op;
@@ -235,13 +235,13 @@ static inline SceBool gxmBlendFoldMultiply(GxmBlendInstr *user, const GxmBlendIn
 	alpha1 = user->src1Alpha | mul->src1Alpha;
 	alpha2 = user->src2Alpha | mul->src2Alpha;
 
-	if (other == GXM_BLEND_REG_ZERO)
-		gxmBlendSetMad(user, GXM_BLEND_OP_MUL, GXM_BLEND_REG_NONE, alpha1,
+	if (other == REG_ZERO)
+		gxmBlendSetMad(user, GXM_BLEND_OP_MUL, REG_NONE, alpha1,
 			       mul->src2, alpha2, mul->src1, alpha1, negate);
-	else if (mul->src1 != GXM_BLEND_REG_O0)
+	else if (mul->src1 != REG_O0)
 		gxmBlendSetMad(user, GXM_BLEND_OP_MAD, mul->src1, alpha1,
 			       mul->src2, alpha2, other, otherAlpha, negate);
-	else if (mul->src2 != GXM_BLEND_REG_O0)
+	else if (mul->src2 != REG_O0)
 		gxmBlendSetMad(user, GXM_BLEND_OP_MAD, mul->src2, alpha2,
 			       mul->src1, alpha1, other, otherAlpha, negate);
 	else
@@ -264,8 +264,8 @@ GxmBlendInstr *gxmBlendOptimize(GxmBlendInstr *first, GxmBlendInstr *end)
 			continue;
 		}
 		reg = instr->dst;
-		kept = reg == GXM_BLEND_REG_O0;
-		gxmBlendStateInit(state, instr->mask);
+		kept = reg == REG_O0;
+		gxmBlendStateInit(state, instr->wmask);
 		for (user = instr + 1; user < end; user++) {
 			if (gxmBlendReadsAll(user, user->src0, user->src0Alpha, reg, state) ||
 			    gxmBlendReadsAll(user, user->src1, user->src1Alpha, reg, state) ||
@@ -278,24 +278,24 @@ GxmBlendInstr *gxmBlendOptimize(GxmBlendInstr *first, GxmBlendInstr *end)
 			    gxmBlendReadsAny(user, user->src2, user->src2Alpha, reg, state))
 				kept = SCE_TRUE;
 			if (user->dst == reg)
-				gxmBlendStateSet(state, user->mask, GXM_BLEND_OVERWRITTEN);
+				gxmBlendStateSet(state, user->wmask, GXM_BLEND_OVERWRITTEN);
 		}
 		if (!kept) {
 			gxmBlendRemove(instr, end);
 			end = last--;
 			continue;
 		}
-		if ((reg != GXM_BLEND_REG_O0 && value == GXM_BLEND_REG_O0) || instr->negate) {
+		if ((reg != REG_O0 && value == REG_O0) || instr->negate) {
 			instr++;
 			continue;
 		}
 
 		/* let the operations computing value write reg directly */
-		gxmBlendStateInit(state, instr->mask);
+		gxmBlendStateInit(state, instr->wmask);
 		for (prev = instr - 1; prev >= first; prev--) {
-			if (prev->dst == value && gxmBlendCovers(state, prev->mask)) {
+			if (prev->dst == value && gxmBlendCovers(state, prev->wmask)) {
 				prev->dst = reg;
-				gxmBlendStateSet(state, prev->mask, GXM_BLEND_OVERWRITTEN);
+				gxmBlendStateSet(state, prev->wmask, GXM_BLEND_OVERWRITTEN);
 			}
 			reads = 0;
 			if (prev->src0 == reg)
@@ -317,7 +317,7 @@ GxmBlendInstr *gxmBlendOptimize(GxmBlendInstr *first, GxmBlendInstr *end)
 		       ((state[2] & GXM_BLEND_PENDING) ? 4 : 0) |
 		       ((state[3] & GXM_BLEND_PENDING) ? 8 : 0);
 		if (mask) {
-			instr->mask = mask;
+			instr->wmask = mask;
 			instr++;
 			continue;
 		}
@@ -330,11 +330,11 @@ GxmBlendInstr *gxmBlendOptimize(GxmBlendInstr *first, GxmBlendInstr *end)
 	while (instr < last) {
 		reg = instr->dst;
 		if (instr->op != GXM_BLEND_OP_MUL || reg == instr->src1 || reg == instr->src2 ||
-		    reg == GXM_BLEND_REG_O0) {
+		    reg == REG_O0) {
 			instr++;
 			continue;
 		}
-		gxmBlendStateInit(state, instr->mask);
+		gxmBlendStateInit(state, instr->wmask);
 		used = SCE_FALSE;
 		clobbered = SCE_FALSE;
 		for (user = instr + 1; user < end; user++) {
@@ -345,7 +345,7 @@ GxmBlendInstr *gxmBlendOptimize(GxmBlendInstr *first, GxmBlendInstr *end)
 							   state);
 				viaSrc2 = gxmBlendReadsAll(user, user->src2, user->src2Alpha, reg,
 							   state) && !user->negate;
-				if (!(user->mask == 0xc || user->mask == 0xf || user->mask == 3) ||
+				if (!(user->wmask == 0xc || user->wmask == 0xf || user->wmask == 3) ||
 				    !(viaSrc1 || viaSrc2) ||
 				    !gxmBlendFoldMultiply(user, instr, viaSrc1))
 					used = SCE_TRUE;
@@ -359,7 +359,7 @@ GxmBlendInstr *gxmBlendOptimize(GxmBlendInstr *first, GxmBlendInstr *end)
 				clobbered = SCE_TRUE;
 			}
 			if (user->dst == reg)
-				gxmBlendStateSet(state, user->mask, GXM_BLEND_OVERWRITTEN);
+				gxmBlendStateSet(state, user->wmask, GXM_BLEND_OVERWRITTEN);
 		}
 		if (used) {
 			instr++;
@@ -373,21 +373,21 @@ GxmBlendInstr *gxmBlendOptimize(GxmBlendInstr *first, GxmBlendInstr *end)
 	usesR0 = SCE_FALSE;
 	usesR1 = SCE_FALSE;
 	for (instr = first; instr < end; instr++) {
-		usesR0 |= instr->dst == GXM_BLEND_REG_R0 || instr->src0 == GXM_BLEND_REG_R0 ||
-			  instr->src1 == GXM_BLEND_REG_R0 || instr->src2 == GXM_BLEND_REG_R0;
-		usesR1 |= instr->dst == GXM_BLEND_REG_R1 || instr->src0 == GXM_BLEND_REG_R1 ||
-			  instr->src1 == GXM_BLEND_REG_R1 || instr->src2 == GXM_BLEND_REG_R1;
+		usesR0 |= instr->dst == REG_R0 || instr->src0 == REG_R0 ||
+			  instr->src1 == REG_R0 || instr->src2 == REG_R0;
+		usesR1 |= instr->dst == REG_R1 || instr->src0 == REG_R1 ||
+			  instr->src1 == REG_R1 || instr->src2 == REG_R1;
 	}
 	if (usesR1 && !usesR0) {
 		for (instr = first; instr < end; instr++) {
-			if (instr->dst == GXM_BLEND_REG_R1)
-				instr->dst = GXM_BLEND_REG_R0;
-			if (instr->src0 == GXM_BLEND_REG_R1)
-				instr->src0 = GXM_BLEND_REG_R0;
-			if (instr->src1 == GXM_BLEND_REG_R1)
-				instr->src1 = GXM_BLEND_REG_R0;
-			if (instr->src2 == GXM_BLEND_REG_R1)
-				instr->src2 = GXM_BLEND_REG_R0;
+			if (instr->dst == REG_R1)
+				instr->dst = REG_R0;
+			if (instr->src0 == REG_R1)
+				instr->src0 = REG_R0;
+			if (instr->src1 == REG_R1)
+				instr->src1 = REG_R0;
+			if (instr->src2 == REG_R1)
+				instr->src2 = REG_R0;
 		}
 	}
 	return end;
