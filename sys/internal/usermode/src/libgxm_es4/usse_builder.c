@@ -90,7 +90,7 @@ int gxmFragmentBuildInit(GxmFragmentBuild *build, const SceGxmProgram *program,
 	if (blendInfo != NULL) {
 		if ((program->flags & GXM_PROGRAM_NATIVE_COLOR) || !gxmBlendInfoIsValid(blendInfo))
 			return SCE_GXM_ERROR_INVALID_VALUE;
-		if ((type != GXM_OUTPUT_TYPE_U8 && type != GXM_OUTPUT_TYPE_F16) ||
+		if ((type != SCE_GXM_PARAMETER_TYPE_U8 && type != SCE_GXM_PARAMETER_TYPE_F16) ||
 		    componentCount != 4)
 			return SCE_GXM_ERROR_UNSUPPORTED;
 		blendCount = gxmBlendGetInstructionCount(gxmProgramGetVaryings(program)->fragment.outputRegister,

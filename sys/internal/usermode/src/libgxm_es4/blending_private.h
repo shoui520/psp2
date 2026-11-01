@@ -58,10 +58,6 @@ static inline SceUInt32 gxmBlendInfoIsActive(const SceGxmBlendInfo *blendInfo)
 	return ((const SceUInt8 *)blendInfo)[1] != 0;
 }
 
-/* the declared output register types the blend code handles */
-#define GXM_OUTPUT_TYPE_F16		1	/* half4: float16 program */
-#define GXM_OUTPUT_TYPE_U8		7	/* uchar4: fixed-function blend */
-
 /* the float16 blend program, cached between building and writing */
 typedef struct GxmBlendCode {
 	SceSize size;			/* bytes of code */
@@ -131,8 +127,8 @@ SceSize gxmFragmentBuildGetCodeSize(const GxmFragmentBuild *build);
 int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, GxmCodeRef *ref);
 
 SceUInt32 gxmBlendGetInstructionCount(SceUInt32 reg, const SceGxmBlendInfo *blendInfo,
-				      SceUInt32 type, GxmBlendCode *cache);
+				      SceUInt32 resultType, GxmBlendCode *cache);
 SceUInt32 *gxmBlendWriteCode(SceUInt32 *code, SceUInt32 reg, const SceGxmBlendInfo *blendInfo,
-			     SceUInt32 type, const GxmBlendCode *cache);
+			     SceUInt32 resultType, const GxmBlendCode *cache);
 
 #endif

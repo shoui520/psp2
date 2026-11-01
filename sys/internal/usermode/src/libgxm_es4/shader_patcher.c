@@ -1245,7 +1245,7 @@ int sceGxmShaderPatcherCreateMaskUpdateFragmentProgram(SceGxmShaderPatcher *shad
 						  (char *)&created->program.varyingsOffset;
 		created->program.reserved2 = 0;
 		varyings = (GxmProgramVaryings *)created->varyings;
-		varyings->fragment.outputRegisterType = GXM_OUTPUT_TYPE_U8;
+		varyings->fragment.outputRegisterType = SCE_GXM_PARAMETER_TYPE_U8;
 		varyings->fragment.outputComponentCount = 4;
 		created->fragment.pdsFlags = 0x838;
 		created->fragment.ispFlags = 0x06200000;
