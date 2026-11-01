@@ -158,7 +158,8 @@ typedef struct HttpConnection {
 	int reserved4c;
 	int resolveState;			/* _sceHttpRequestResolve's */
 	SceUID sema;
-	int reserved58[3];
+	SceBool reused;				/* a kept-alive connection a request sends on again */
+	int reserved5c[2];
 	HttpTemplate tmpl;
 	SceUShort16 port;
 	SceUShort16 reserved14a;
@@ -167,7 +168,8 @@ typedef struct HttpConnection {
 	SceSize recvPos;			/* the next unread byte of recvBuffer */
 	SceSize recvLen;			/* the bytes in it */
 	SceBool recvEof;			/* the peer closed */
-	int reserved160[10];
+	int sslError;				/* the SSL failure (0x80435xxx) behind SCE_HTTP_ERROR_SSL */
+	int reserved164[9];
 	SceBool aborted;			/* sceNetSocketAbort was called on sock */
 	int reserved18c;
 } HttpConnection;
@@ -214,7 +216,7 @@ typedef struct HttpRequest {
 	SceUInt32 redirectCount;
 	int authRetries;
 	SceULong64 contentLength;
-	int reserved30[2];
+	SceULong64 sentLength;			/* of the body, against contentLength */
 	SceULong64 receivedLength;		/* of the body, against response.contentLength */
 	SceBool followOnly303;			/* only a 303 is followed (nothing here sets it) */
 	SceBool aborted;			/* sceHttpAbortRequest was called */
@@ -240,7 +242,9 @@ typedef struct HttpRequest {
 	char password[SCE_HTTP_PASSWORD_MAX_SIZE];
 	struct HttpAuthCacheEntry *authCache;
 	struct HttpAuthCacheEntry *proxyAuthCache;
-	int reserved3cc[3];
+	const void *postData;			/* sceHttpSendRequest's, being sent */
+	SceSize postSize;
+	SceSize postSent;
 	SceSize chunkRemaining;			/* of the chunk being read */
 	SceSize requestHeaderSize;		/* with its NUL */
 	SceSize requestHeaderSent;
@@ -671,6 +675,9 @@ int _sceHttpRequestSend(HttpRequest *req, HttpConnection *conn, const void *msg,
 int _sceHttpRequestCompleteEx(HttpRequest *req, SceBool close, SceBool end, SceBool main,
 			      SceBool failed);
 int _sceHttpRequestComplete(HttpRequest *req, SceBool close, SceBool end);
+int _sceHttpRequestProxyConnect(HttpRequest *req, int sock);
+int _sceHttpsConnect(HttpRequest *req, int sock);
+int _sceHttpsHandshake(HttpRequest *req);
 SceBool _sceHttpStrHasLineBreak(const char *s);
 
 /* redirect.c */
