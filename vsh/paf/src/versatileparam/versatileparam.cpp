@@ -1693,5 +1693,130 @@ void WidgetHandlerParam::delete_cb(Widget *widget, void *param)
 	static_cast<WidgetHandlerParam *>(param)->AttachWidget(NULL);
 }
 
+
+/* Sony's copy of the handler parameter's name */
+const char WidgetSoundParam::m_param_name[] = "handler";
+
+const char *WidgetSoundParam::GetParamName() const
+{
+	return m_param_name;
+}
+
+const char *WidgetSoundParam::ParamName()
+{
+	return m_param_name;
+}
+
+WidgetSoundParam::WidgetSoundParam()
+{
+	m_widget_list.clear();
+	m_sound_list.clear();
+}
+
+int32_t WidgetSoundParam::Init()
+{
+	for (vector<Sound>::iterator it = m_sound_list.begin(); it != m_sound_list.end(); ++it)
+		it->m_handle = -1;
+	return 0;
+}
+
+/* each widget takes the sounds */
+int32_t WidgetSoundParam::Set()
+{
+	if (m_widget_list.size() == 0)
+		return -1;
+	for (list<Widget *>::iterator it = m_widget_list.begin(); it != m_widget_list.end(); ++it) {
+		Widget *widget = *it;
+
+		if (widget != NULL) {
+			widget->m_sound_num = m_sound_list.size();
+			widget->m_sounds = m_sound_list.ptr;
+		}
+	}
+	return 0;
+}
+
+int32_t WidgetSoundParam::Create(int32_t mode)
+{
+	VersatileParam::Create(mode);
+	for (vector<Sound>::iterator it = m_sound_list.begin(); it != m_sound_list.end(); ++it) {
+		if (m_serial != NULL)
+			m_serial->AddParam(it->m_name, &it->m_id, ResourceParam::SEMANTIC_SOUNDENTRYREF);
+	}
+	return 0;
+}
+
+/* the sounds with an ID take their waveforms from the plugin's sound table */
+int32_t WidgetSoundParam::Read(const cxml::Element *elem)
+{
+	int32_t ret = -1;
+
+	if (m_serial != NULL) {
+		resource::ResourceObj *rscobj = NULL;
+
+		if (m_plugin != NULL)
+			rscobj = m_plugin->m_rscobj;
+		if (m_serial->Read(*elem, rscobj, ResourceParam::READTYPE_FROM_PARAMLIST))
+			ret = 0;
+	}
+	if (m_plugin == NULL)
+		return -1;
+	for (vector<Sound>::iterator it = m_sound_list.begin(); it != m_sound_list.end(); ++it) {
+		if (it->m_id.m_idhash == 0)
+			continue;
+
+		const char *buffer1;
+		uint32_t size1;
+		const char *buffer2;
+		uint32_t size2;
+		int32_t samplerate;
+		uint32_t type;
+
+		if (ScePafToplevel_CA3E606F(m_plugin, it->m_id, &buffer1, &size1, &buffer2, &size2,
+					    &samplerate, &type) == 0) {
+			it->m_handle = -1;
+			it->m_buffer1 = buffer1;
+			it->m_size1 = size1;
+			it->m_buffer2 = buffer2;
+			it->m_size2 = size2;
+			it->m_samplerate = samplerate;
+			it->m_type = type;
+		}
+	}
+	return ret;
+}
+
+int32_t WidgetSoundParam::AddWidget(Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+	for (list<Widget *>::iterator it = m_widget_list.begin(); it != m_widget_list.end(); ++it) {
+		if (*it == widget)
+			return 0;
+	}
+	m_widget_list.push_back(widget);
+	widget->AddDeleteCB(delete_cb, this);
+	return 0;
+}
+
+/* delete_cb calls it whole */
+__attribute__((noinline)) int32_t WidgetSoundParam::DelWidget(Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+	for (list<Widget *>::iterator it = m_widget_list.begin(); it != m_widget_list.end(); ++it) {
+		if (*it == widget) {
+			m_widget_list.erase(it);
+			return 0;
+		}
+	}
+	return -1;
+}
+
+void WidgetSoundParam::delete_cb(Widget *widget, void *param)
+{
+	static_cast<WidgetSoundParam *>(param)->DelWidget(widget);
+}
+
 }
 }

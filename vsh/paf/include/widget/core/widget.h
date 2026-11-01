@@ -246,20 +246,49 @@ public:
 	int32_t m_base_resolution_id;
 };
 
-/* the sounds of a widget type, read from the resource's "sound_<type>" parameter (names after
-   ScePaf-RE) */
+/*
+ * A widget type's sounds, read from the resource's "sound_<type>" parameter: the
+ * widgets that have them and, for each sound, its ID and what the plugin's
+ * sound table gives for it (members' names ours).
+ */
 class WidgetSoundParam : public VersatileParam {
 public:
-	/* a sound of the parameter (names ours) */
-	class Sound;
+	/* a sound of the parameter: its element, its ID and its waveforms (names ours) */
+	class Sound {
+	public:
+		const char *m_name;
+		uint32_t reserved;
+		IDParam m_id;
+		/* -1 until played */
+		int32_t m_handle;
+		uint32_t reserved2;
+		const char *m_buffer1;
+		uint32_t m_size1;
+		const char *m_buffer2;
+		uint32_t m_size2;
+		int32_t m_samplerate;
+		uint32_t m_type;
+	};
 
+	static const char m_param_name[];
+	static const char *ParamName();
+
+	WidgetSoundParam();
+	virtual const char *GetParamName() const;
+	/* each widget forgets this parameter's delete callback (below Widget) */
+	virtual ~WidgetSoundParam();
+	virtual int32_t Set();
+	virtual int32_t Create(int32_t mode);
+	virtual int32_t Read(const cxml::Element *elem);
+
+	int32_t Init();
 	int32_t AddWidget(Widget *widget);
+	int32_t DelWidget(Widget *widget);
+	static void delete_cb(Widget *widget, void *param);
 
-	/* the widgets it gave its sounds (names ours) */
+	/* the widgets it gave its sounds */
 	list<Widget *> m_widget_list;
-	Sound *m_sounds;
-	uint32_t m_sound_num;
-	uint32_t m_sound_capacity;
+	vector<Sound> m_sound_list;
 };
 
 /*
@@ -728,6 +757,12 @@ public:
 	uint8_t m_sound_num;
 	WidgetSoundParam::Sound *m_sounds;
 };
+
+inline WidgetSoundParam::~WidgetSoundParam()
+{
+	for (list<Widget *>::iterator it = m_widget_list.begin(); it != m_widget_list.end(); ++it)
+		(*it)->RemoveDeleteCB(delete_cb, this);
+}
 
 inline WidgetHandlerParam::~WidgetHandlerParam()
 {

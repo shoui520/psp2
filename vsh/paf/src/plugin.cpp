@@ -1374,8 +1374,8 @@ void ScePafToplevel_2E1F0393(Plugin *plugin, const cxml::Element &elm, ui::Widge
 	}
 	if (param != NULL) {
 		param->AddWidget(widget);
-		widget->m_sound_num = param->m_sound_num;
-		widget->m_sounds = param->m_sounds;
+		widget->m_sound_num = param->m_sound_list.size();
+		widget->m_sounds = param->m_sound_list.ptr;
 	}
 }
 
@@ -3313,8 +3313,8 @@ int32_t ScePafToplevel_DA3D4AF0(Plugin *plugin, const IDParam &id,
 		*num = 0;
 		return -1;
 	}
-	*sounds = param->m_sounds;
-	*num = param->m_sound_num;
+	*sounds = param->m_sound_list.ptr;
+	*num = param->m_sound_list.size();
 	return 0;
 }
 

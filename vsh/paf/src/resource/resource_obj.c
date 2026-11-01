@@ -22,36 +22,6 @@ extern void ScePafStdc_5C468294(void *ptr);
 static const char s_default_string[] = "";
 static const char s_buffer_filename[] = "";
 
-int _ZN3paf2ui16WidgetSoundParam9DelWidgetEPNS0_6WidgetE(uint32_t *self, uint32_t target)
-{
-	uint32_t *node = NULL;
-	uint32_t *root;
-
-	if (!target)
-		return -1;
-	root = (uint32_t *)self[8];
-	if (root)
-		node = (uint32_t *)root[1];
-	if (node == root)
-		goto not_found;
-again:
-	if (node[2] == target) {
-		uint32_t previous = *node;
-
-		*(uint32_t *)node[1] = previous;
-		*(uint32_t *)(previous + 4) = node[1];
-		PafDelete(node);
-		--self[9];
-		return 0;
-	}
-	if (node)
-		node = (uint32_t *)node[1];
-	if (node != root)
-		goto again;
-not_found:
-	return -1;
-}
-
 static inline __attribute__((always_inline))
 HeapAllocator *ReleaseResourceBuffer(uint8_t *self, HeapAllocator *allocator,
 				     size_t bufferOffset, size_t arrayOffset,
@@ -91,36 +61,6 @@ HeapAllocator *ScePafResource_C240421A(uint8_t *self,
 				       HeapAllocator *allocator)
 {
 	return ReleaseResourceBuffer(self, allocator, 40, 52, 64);
-}
-
-int _ZN3paf2ui16WidgetSoundParam3SetEv(uint32_t *self)
-{
-	uint32_t node = 0;
-	uint32_t root;
-	uint32_t next;
-
-	if (!self[9])
-		return -1;
-	root = self[8];
-	if (root)
-		node = *(uint32_t *)(root + 4);
-	next = node;
-	while (next != root) {
-		uint32_t object = *(uint32_t *)(next + 8);
-
-		if (object) {
-			uint32_t value = self[11];
-
-			next = node;
-			*(uint8_t *)(object + 631) = (uint8_t)self[12];
-			*(uint32_t *)(object + 632) = value;
-		}
-		if (next) {
-			node = *(uint32_t *)(next + 4);
-			next = node;
-		}
-	}
-	return 0;
 }
 
 char *ResourceObjGetFileName(const ResourceObj *self)

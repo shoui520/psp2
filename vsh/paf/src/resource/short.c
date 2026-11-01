@@ -3,33 +3,11 @@
 #include "../compiler.h"
 #include "../std/new.h"
 
-extern int _ZN3paf2ui16WidgetSoundParam9DelWidgetEPNS0_6WidgetE(uint32_t *self, uint32_t target);
-
-int _ZN3paf2ui16WidgetSoundParam9delete_cbEPNS0_6WidgetEPv(uint32_t target, uint32_t *self)
-{
-	return _ZN3paf2ui16WidgetSoundParam9DelWidgetEPNS0_6WidgetE(self, target);
-}
-
 int ScePafResource_CEED7338(const void *const *self)
 {
 	void *object = *(void *const *)self;
 	if (object)
 		return ((int (**)(void *))*(void **)object)[5](object);
-	return 0;
-}
-
-int _ZN3paf2ui16WidgetSoundParam4InitEv(const uint8_t *self)
-{
-	uint8_t *current = *(uint8_t *const *)(self + 44);
-	uint8_t *end = current + 56 * *(const uint32_t *)(self + 48);
-
-	if (current != end) {
-		do {
-			*(uint32_t *)(current + 24) = (uint32_t)-1;
-			if (current)
-				current += 56;
-		} while (current != end);
-	}
 	return 0;
 }
 
