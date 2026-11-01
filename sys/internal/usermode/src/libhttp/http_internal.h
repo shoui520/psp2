@@ -61,6 +61,19 @@ typedef struct HttpObject {
 	struct HttpObject *prev;
 } HttpObject;
 
+/* a kind's ids: the last one given and how many objects there are */
+typedef struct HttpObjectIds {
+	int lastId;
+	int num;
+} HttpObjectIds;
+
+/* an allocation in a list, with the function that frees it (_sceHttpFreeList) */
+typedef struct HttpAllocation {
+	void *ptr;
+	void (*free)(void *ptr);
+	struct HttpAllocation *next;
+} HttpAllocation;
+
 /* a header line of a template or request, in a list */
 typedef struct HttpHeader {
 	char *name;
@@ -211,7 +224,7 @@ typedef struct HttpRequest {
 	char *path;
 	char *query;
 	char *fragment;
-	void *reserved1b8;
+	char *requestHeader;			/* _sceHttpRequestCreateHeader's */
 	char *responseHeader;
 	char *allResponseHeaders;		/* sceHttpGetAllResponseHeaders' copy */
 	char username[SCE_HTTP_USERNAME_MAX_SIZE];
@@ -227,9 +240,9 @@ typedef struct HttpRequest {
 	int icmSock;			/* "SceLibHttpIcm" */
 	int icmOption;
 	SceKernelLwMutexWork lock;
-	void *reserved418;
+	void *inflateBuffer;
 	int reserved41c[4];
-	void *reserved42c;
+	struct z_stream_s *inflateStream;	/* a gzip body's */
 	int reserved430[2];
 	int responseHeaderState;		/* where the reader is in the CR LF CR LF */
 	SceSize responseHeaderPos;
@@ -536,10 +549,14 @@ int _sceHttpTemplateCopy(const HttpTemplate *tmpl, HttpTemplate *copy);
 int _sceHttpTemplateClear(HttpTemplate *tmpl);
 
 /* the objects (object.c) */
-int _sceHttpObjectRegister(HttpObject *object, int type);
+int _sceHttpObjectRegister(HttpObject *object, SceUInt32 type);
+int _sceHttpFindObject(HttpObject **object, int id, SceUInt32 type, SceBool remove);
+int _sceHttpGetObjectByIndex(HttpObject **object, int index, SceUInt32 type);
+int _sceHttpTakeFirstObject(HttpObject **object, SceUInt32 type, int *id);
+int _sceHttpRequestReleaseEx(HttpRequest *req, SceBool *freed);
 int _sceHttpTakeObject(HttpObject **object, int id, int type);
 int _sceHttpGetObjectType(int id);
-int _sceHttpGetObjectList(HttpObject **list, int *num, int type);
+int _sceHttpGetObjectList(HttpObject **list, int *num, SceUInt32 type);
 int _sceHttpGetTemplate(HttpTemplate **tmpl, int id);
 int _sceHttpGetConnection(HttpConnection **conn, int id);
 int _sceHttpGetRequest(HttpRequest **req, int id);
@@ -599,7 +616,17 @@ int _sceHttpCreateLock(void);
 int _sceHttpDeleteLock(void);
 int _sceHttpPoolCreate(SceSize size);
 int _sceHttpPoolDestroy(void);
-int _sceHttpPoolGetStats(void *pool, SceHttpMemoryPoolStats *stats);
+typedef int (*HttpPoolStatsFunc)(SceSize *poolSize, SceSize *maxInuseSize, SceSize *currentInuseSize);
+int _sceHttpPoolGetStats(HttpPoolStatsFunc func, SceHttpMemoryPoolStats *stats);
+int _sceHttpDefaultGetStats(SceSize *poolSize, SceSize *maxInuseSize, SceSize *currentInuseSize);
+void *_sceHttpDefaultRealloc(void *ptr, SceSize size);
+void *_sceHttpRealloc(void *(*func)(void *ptr, SceSize size), void *ptr, SceSize size);
+int _sceHttpFreeList(HttpAllocation *list);
+void *_sceHttpZalloc(void *opaque, unsigned int items, unsigned int size);
+void _sceHttpZfree(void *opaque, void *ptr);
+int _sceHttpConnectionAbort(HttpConnection *conn);
+struct z_stream_s;
+int inflateEnd(struct z_stream_s *strm);
 int _sceHttpObjectInit(void);
 int _sceHttpObjectTerm(void);
 int _sceHttpEpollInit(void);
