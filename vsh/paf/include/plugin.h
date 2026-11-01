@@ -299,6 +299,9 @@ public:
 	/* the debug mode's focus callback and the debug GUI's draw of its params */
 	static void PageDebugFocusCB(ui::Widget *focus, ui::Widget *prev, void *userdata);
 	static void DrawVisualParams(void *userdata);
+	static void OnAnimPageHideFin(Timer *t, ui::AnimListener *anim, void *data1, void *data2,
+				      void *data3);
+	static void WidgetDebugDeleteCb(ui::Widget *widget, void *userdata);
 	static void RegistFactoryTable(const char *name, ui::FactoryFuncTable table);
 	static void RemoveFactoryTable(const char *name);
 	static void RegistFactoryDrawObj(const char *name, ui::FactoryFuncDrawObj table);

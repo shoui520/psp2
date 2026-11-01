@@ -2987,6 +2987,56 @@ void ScePafToplevel_4D79D4E2(Plugin *plugin)
 
 namespace paf {
 
+/* a hidden page's widget is destroyed when its hide animation ends */
+void Plugin::OnAnimPageHideFin(Timer *t, ui::AnimListener *anim, void *data1, void *data2,
+			       void *data3)
+{
+	ui::Widget *widget = (ui::Widget *)data1;
+
+	if (widget != NULL && !widget->m_destroy_protected)
+		widget->DestroyWidget();
+}
+
+/* the debugged widget is deleted: the debug params go with it */
+void Plugin::WidgetDebugDeleteCb(ui::Widget *widget, void *userdata)
+{
+	if (s_debug_layout_param != NULL) {
+		s_debug_layout_param->Destroy(2);
+		delete s_debug_layout_param;
+		s_debug_layout_param = NULL;
+	}
+	if (s_debug_style_param != NULL) {
+		s_debug_style_param->Destroy(2);
+		s_debug_style_param = NULL;
+	}
+	if (s_debug_widget_param != NULL) {
+		s_debug_widget_param->Destroy(2);
+		s_debug_widget_param = NULL;
+	}
+}
+
+void Plugin::Init()
+{
+}
+
+void Plugin::End()
+{
+	gutil::debug::RemoveDebugGuiFuncs(DrawVisualParams);
+	if (s_debug_layout_param != NULL) {
+		s_debug_layout_param->Destroy(2);
+		delete s_debug_layout_param;
+		s_debug_layout_param = NULL;
+	}
+	if (s_debug_style_param != NULL) {
+		s_debug_style_param->Destroy(2);
+		s_debug_style_param = NULL;
+	}
+	if (s_debug_widget_param != NULL) {
+		s_debug_widget_param->Destroy(2);
+		s_debug_widget_param = NULL;
+	}
+}
+
 Plugin::Argument::operator int32_t() const
 {
 	switch (type) {
