@@ -53,6 +53,13 @@ void SetFrameBufferMode(FrameBufferMode mode);
 /* initializes GXM, or waits for the shell's when the frame buffer is given */
 int32_t InitGxm(const DevInitParam &param);
 
+namespace debug {
+/* the functions the debug GUI draws with each frame, each with its userdata */
+void AddDebugGuiFunc(void (*func)(void *), void *userdata);
+void RemoveDebugGuiFunc(void (*func)(void *), void *userdata);
+void RemoveDebugGuiFuncs(void (*func)(void *));
+}
+
 }
 }
 

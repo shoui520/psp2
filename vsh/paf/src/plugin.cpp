@@ -32,10 +32,14 @@ extern "C" int sceAppMgrConvertVs0UserDrivePath(const char *path, char *out, int
 
 namespace paf {
 
-/* the widget factories and the draw object factories, by their type's name */
 const char s_empty_name[] = "";
+/* the widget factories and the draw object factories, by their type's name */
 static map<string, ui::FactoryFuncTable> s_factory_table;
 static map<string, ui::FactoryFuncDrawObj> s_factory_drawobj_table;
+/* the params of the widget the page debug mode focuses: its layout, style and widget params (names ours) */
+static VersatileParam *s_debug_layout_param;
+static VersatileParam *s_debug_style_param;
+static VersatileParam *s_debug_widget_param;
 
 /*
  * Sony's map::operator[] and erase(iterator) are inlined in this file and nowhere
@@ -1153,6 +1157,72 @@ Plugin::~Plugin()
 		delete m_env_param;
 }
 
+void Plugin::PageActivateActually()
+{
+	GetNodeEntity_Widget(*m_last_active_page_node);
+}
+
+void Plugin::PageActivate(const cxml::Element &node)
+{
+	if (!m_initialized)
+		return;
+
+	ui::Widget *page = GetNodeEntity_Widget(node);
+
+	if (page == NULL)
+		return;
+	m_last_active_page_node = &node;
+	GetNodeEntity_Widget(node);
+	if (m_monitoring_callback_pageactivate != NULL) {
+		cxml::Element activated = node;
+
+		m_monitoring_callback_pageactivate(this, &activated);
+	}
+}
+
+}
+
+using namespace paf;
+
+int32_t ScePafToplevel_68607CDE(Plugin *plugin, ui::Scene *page, int32_t mode, bool enable)
+{
+	if (page == NULL || page->GetTypeName() != ui::Scene::TypeName())
+		return -1;
+
+	switch (mode) {
+	case 0:
+	case 1:
+		if (enable) {
+			if (mode == 0)
+				page->SetDebugMode(ui::Scene::DEBUG_AUTH_PARAMVIEW);
+			else if (mode == 1)
+				page->SetDebugMode(ui::Scene::DEBUG_AUTH_LAYOUT);
+			page->m_debug_focus_func = Plugin::PageDebugFocusCB;
+			gutil::debug::AddDebugGuiFunc(Plugin::DrawVisualParams, plugin);
+		} else {
+			gutil::debug::RemoveDebugGuiFunc(Plugin::DrawVisualParams, plugin);
+			if (s_debug_layout_param != NULL) {
+				s_debug_layout_param->Destroy(2);
+				delete s_debug_layout_param;
+				s_debug_layout_param = NULL;
+			}
+			if (s_debug_style_param != NULL) {
+				s_debug_style_param->Destroy(2);
+				s_debug_style_param = NULL;
+			}
+			if (s_debug_widget_param != NULL) {
+				s_debug_widget_param->Destroy(2);
+				s_debug_widget_param = NULL;
+			}
+			page->m_debug_focus_func = NULL;
+			page->SetDebugMode(ui::Scene::DEBUG_OFF);
+		}
+		break;
+	case 2:
+		page->SetDebugMode(enable ? ui::Scene::DEBUG_AUTH_HIDEALL : ui::Scene::DEBUG_OFF);
+		break;
+	}
+	return 0;
 }
 
 namespace paf {

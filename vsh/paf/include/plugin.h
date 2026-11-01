@@ -277,6 +277,9 @@ public:
 
 	static void Init();
 	static void End();
+	/* the debug mode's focus callback and the debug GUI's draw of its params */
+	static void PageDebugFocusCB(ui::Widget *focus, ui::Widget *prev, void *userdata);
+	static void DrawVisualParams(void *userdata);
 	static void RegistFactoryTable(const char *name, ui::FactoryFuncTable table);
 	static void RemoveFactoryTable(const char *name);
 	static void RegistFactoryDrawObj(const char *name, ui::FactoryFuncDrawObj table);
@@ -291,6 +294,7 @@ public:
 	static VersatileParam *CallFactoryStyle(const char *name);
 	ui::Scene *PageOpen(const cxml::Element &node, const PageOpenParam &param);
 	void PageActivate(const cxml::Element &node);
+	void PageActivateActually();
 
 	void Start();
 	void Stop();
@@ -386,7 +390,7 @@ public:
 	list<NotifyCallback> m_notify_callback_list;
 	list<UnloadCallback> m_unload_callback_list;
 	void *m_param;
-	cxml::Element *m_last_active_page_node;
+	const cxml::Element *m_last_active_page_node;
 	int32_t m_draw_priority;
 	/* the Locale */
 	int32_t m_locale;
@@ -430,6 +434,9 @@ public:
 
 /* Exports with no name found for their NIDs. */
 extern "C" {
+/* puts the page into a debug mode (0 param view, 1 layout, 2 hide all) or out of it */
+int32_t ScePafToplevel_68607CDE(paf::Plugin *plugin, paf::ui::Scene *page, int32_t mode,
+				bool enable);
 /* the ID's name from the resource's debug symbols, and from the common resource's */
 void ScePafToplevel_3B003F16(paf::Plugin *plugin, paf::string *id, uint32_t idhash,
 			     bool with_common);

@@ -36,8 +36,25 @@ public:
 
 class Scene : public Widget {
 public:
+	/* the debug modes (names after ScePaf-RE) */
+	enum {
+		DEBUG_OFF = 0,
+		DEBUG_AUTH_HIDEALL = 1,
+		DEBUG_AUTH_LAYOUT = 2,
+		DEBUG_AUTH_PARAMVIEW = 3,
+		DEBUG_AUTH_PARAMVIEW_INPUT = 4,
+		DEBUG_AUTH_5 = 5,
+		DEBUG_AUTH_LAYOUT_RULER = 6
+	};
+
+	/* called with the widget the debug mode focuses */
+	typedef void (*DebugFocusCB)(Widget *focus, Widget *prev, void *userdata);
+
+	static const char *TypeName();
+
 	/* the screen margins, turned with the camera's roll */
 	math::v4 GetRolledMargin();
+	void SetDebugMode(uint32_t mode);
 
 	/* whether the camera's roll turns the margins */
 	int32_t m_use_camera;
@@ -45,6 +62,23 @@ public:
 	uint8_t reserved[0xd0];
 	/* the resolutions it lays out for */
 	EnvironmentParam *m_env_param;
+	uint8_t reserved2[0x28];
+	/* the debug mode and its state (names after ScePaf-RE) */
+	uint32_t m_debug_mode;
+	Widget *m_debug_focus;
+	Widget *m_debug_cube;
+	Widget *m_debug_cube_child;
+	uint32_t m_debug_grab_restore;
+	uint32_t m_debug_drag_restore;
+	uint32_t m_debug_hitfind_restore;
+	uint32_t m_debug_quant_x;
+	uint32_t m_debug_quant_y;
+	uint32_t m_debug_quant_z;
+	uint32_t m_debug_quant_x_restore;
+	uint32_t m_debug_quant_y_restore;
+	uint32_t m_debug_quant_z_restore;
+	float m_debug_showalpha_restore;
+	DebugFocusCB m_debug_focus_func;
 };
 
 }
