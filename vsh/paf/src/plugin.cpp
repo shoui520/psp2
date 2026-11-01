@@ -36,6 +36,16 @@ extern "C" int sceAppMgrConvertVs0UserDrivePath(const char *path, char *out, int
 namespace paf {
 
 const char s_empty_name[] = "";
+/*
+ * Two 32s nothing reads: Sony's files that draw (plugin, the graphics, camera and screen
+ * files) each define this object, so it comes from a header of theirs we have not
+ * identified; its name and header are ours until then.
+ */
+static struct DrawDefaultPair {
+	int32_t first;
+	int32_t second;
+	__attribute__((always_inline)) DrawDefaultPair() : first(32), second(32) {}
+} s_draw_default_pair;
 /* the widget factories and the draw object factories, by their type's name */
 static map<string, ui::FactoryFuncTable> s_factory_table;
 static map<string, ui::FactoryFuncDrawObj> s_factory_drawobj_table;
