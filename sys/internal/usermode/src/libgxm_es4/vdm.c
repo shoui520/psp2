@@ -7,41 +7,6 @@
 
 #include "gxm_internal.h"
 
-#define SCE_GXM_ATTRIBUTE_FORMAT_U8	0
-#define SCE_GXM_ATTRIBUTE_FORMAT_S8	1
-#define SCE_GXM_ATTRIBUTE_FORMAT_U16	2
-#define SCE_GXM_ATTRIBUTE_FORMAT_S16	3
-#define SCE_GXM_ATTRIBUTE_FORMAT_U8N	4
-#define SCE_GXM_ATTRIBUTE_FORMAT_S8N	5
-#define SCE_GXM_ATTRIBUTE_FORMAT_U16N	6
-#define SCE_GXM_ATTRIBUTE_FORMAT_S16N	7
-#define SCE_GXM_ATTRIBUTE_FORMAT_F16	8
-#define SCE_GXM_ATTRIBUTE_FORMAT_F32	9
-#define SCE_GXM_ATTRIBUTE_FORMAT_UNTYPED	10
-
-/* bytes per component */
-uint32_t gxmAttributeFormatGetSize(SceUInt8 format)
-{
-	switch (format) {
-	case SCE_GXM_ATTRIBUTE_FORMAT_U8:
-	case SCE_GXM_ATTRIBUTE_FORMAT_S8:
-	case SCE_GXM_ATTRIBUTE_FORMAT_U8N:
-	case SCE_GXM_ATTRIBUTE_FORMAT_S8N:
-		return 1;
-	case SCE_GXM_ATTRIBUTE_FORMAT_U16:
-	case SCE_GXM_ATTRIBUTE_FORMAT_S16:
-	case SCE_GXM_ATTRIBUTE_FORMAT_U16N:
-	case SCE_GXM_ATTRIBUTE_FORMAT_S16N:
-	case SCE_GXM_ATTRIBUTE_FORMAT_F16:
-		return 2;
-	case SCE_GXM_ATTRIBUTE_FORMAT_F32:
-	case SCE_GXM_ATTRIBUTE_FORMAT_UNTYPED:
-		return 4;
-	default:
-		return 0;
-	}
-}
-
 #define GXM_VDM_STATE		0x40000000
 #define GXM_VDM_FENCE		0x60000000
 #define GXM_VDM_PRIMITIVE	0x81c00000
@@ -53,33 +18,43 @@ static inline SceUInt32 gxmVdmBlockSize(const GxmCommandBlock *block)
 	return (SceUInt32)(block->dataSize >> 4) << 27;
 }
 
-int gxmVdmWriteFragmentState(GxmChunkBuffer *buffer, SceSize size, const GxmCommandBlock *block,
-			     SceBool secondary)
+int gxmVdmWriteFragmentState(GxmChunkBuffer *buffer, SceSize size,
+			     const GxmCommandBlock *statePdsProgram, SceBool secondary)
 {
-	SceUInt32 address = (SceUInt32)block->data;
-	SceUInt32 *words = gxmChunkBufferReserve(buffer, 8, 4);
+	SceUInt32 address, *words;
 
-	if (words == NULL)
+	GXM_DBG_ASSERT(20, buffer);
+	GXM_DBG_ASSERT(21, statePdsProgram);
+	GXM_DBG_ASSERT(22, statePdsProgram->data);
+	address = (SceUInt32)statePdsProgram->data;
+	words = gxmChunkBufferReserve(buffer, 8, 4);
+	if (words == NULL) {
+		GXM_DBG_ERROR(38, "Could not reserve %d bytes.", 8);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
 	words[0] = address >> 4 | GXM_VDM_STATE;
-	words[1] = gxmVdmBlockSize(block) | 0x02022200 | (size + 3) >> 2 |
+	words[1] = gxmVdmBlockSize(statePdsProgram) | 0x02022200 | (size + 3) >> 2 |
 		   (secondary ? GXM_VDM_SECONDARY : 0);
-	buffer->current = (SceUInt32)(words + 2);
+	gxmChunkBufferCommit(buffer, words + 2);
 	return 0;
 }
 
-int gxmVdmWriteVertexState(GxmChunkBuffer *buffer, const GxmCommandBlock *block, SceSize size,
-			   SceBool secondary)
+int gxmVdmWriteVertexState(GxmChunkBuffer *buffer, const GxmCommandBlock *secondaryPdsProgram,
+			   SceSize size, SceBool secondary)
 {
-	SceUInt32 address = (SceUInt32)block->data;
-	SceUInt32 *words = gxmChunkBufferReserve(buffer, 8, 4);
+	SceUInt32 address, *words;
 
-	if (words == NULL)
+	GXM_DBG_ASSERT(69, secondaryPdsProgram->data);
+	address = (SceUInt32)secondaryPdsProgram->data;
+	words = gxmChunkBufferReserve(buffer, 8, 4);
+	if (words == NULL) {
+		GXM_DBG_ERROR(82, "Could not reserve %d bytes.", 8);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	words[1] = gxmVdmBlockSize(block) | 0xe100 | (size + 3) >> 2 |
+	}
+	words[1] = gxmVdmBlockSize(secondaryPdsProgram) | 0xe100 | (size + 3) >> 2 |
 		   (secondary ? GXM_VDM_SECONDARY : 0);
 	words[0] = address >> 4 | GXM_VDM_STATE;
-	buffer->current = (SceUInt32)(words + 2);
+	gxmChunkBufferCommit(buffer, words + 2);
 	return 0;
 }
 
@@ -89,57 +64,75 @@ int gxmVdmWritePrimitive(GxmChunkBuffer *buffer, const GxmCommandBlock *block,
 {
 	SceUInt32 *words = gxmChunkBufferReserve(buffer, 0x18, 4);
 
-	if (words == NULL)
+	if (words == NULL) {
+		GXM_DBG_ERROR(131, "Could not reserve %d bytes.", 0x18);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
 	words[0] = primitive | GXM_VDM_PRIMITIVE | flags;
 	words[1] = wordBits | count;
 	words[2] = indexWord | (programInfo[0] - 1) << 28;
 	words[3] = indexAddress & 0x3fffff;
 	words[4] = (SceUInt32)block->data >> 4 | (programInfo[1] - 1) << 28;
 	words[5] = *(const SceUInt32 *)(programInfo + 4) | 0x100 | (block->dataSize >> 4);
-	buffer->current = (SceUInt32)(words + 6);
+	gxmChunkBufferCommit(buffer, words + 6);
 	return 0;
 }
 
-int gxmVdmWriteFence(GxmChunkBuffer *buffer, const GxmCommandBlock *block)
+int gxmVdmWriteFence(GxmChunkBuffer *buffer, const GxmCommandBlock *statePdsProgram)
 {
-	SceUInt32 address = (SceUInt32)block->data;
-	SceUInt32 *words = gxmChunkBufferReserve(buffer, 0xc, 4);
+	SceUInt32 address, *words;
 
-	if (words == NULL)
+	GXM_DBG_ASSERT(181, statePdsProgram->data);
+	address = (SceUInt32)statePdsProgram->data;
+	words = gxmChunkBufferReserve(buffer, 0xc, 4);
+	if (words == NULL) {
+		GXM_DBG_ERROR(194, "Could not reserve %d bytes.", 0xc);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
 	words[0] = address >> 4 | GXM_VDM_FENCE;
-	words[1] = gxmVdmBlockSize(block) | 0x02022201;
+	words[1] = gxmVdmBlockSize(statePdsProgram) | 0x02022201;
 	words[2] = 0xc0000000;
-	buffer->current = (SceUInt32)(words + 3);
+	gxmChunkBufferCommit(buffer, words + 3);
 	return 0;
 }
 
-int gxmVdmWriteTerminate(GxmChunkBuffer *buffer, const GxmCommandBlock *block)
+int gxmVdmWriteTerminate(GxmChunkBuffer *buffer, const GxmCommandBlock *vdmFencePdsProg)
 {
-	SceUInt32 *words = gxmChunkBufferReserve(buffer, 8, 4);
+	SceUInt32 *words;
 
-	if (words == NULL)
+	GXM_DBG_ASSERT(227, buffer);
+	GXM_DBG_ASSERT(228, vdmFencePdsProg);
+	GXM_DBG_ASSERT(229, vdmFencePdsProg->data);
+	words = gxmChunkBufferReserve(buffer, 8, 4);
+	if (words == NULL) {
+		GXM_DBG_ERROR(239, "Could not reserve %d bytes.", 8);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	words[0] = (SceUInt32)block->data >> 4 | GXM_VDM_STATE;
-	words[1] = gxmVdmBlockSize(block) | 0x0204e001;
-	buffer->current = (SceUInt32)(words + 2);
+	}
+	words[0] = (SceUInt32)vdmFencePdsProg->data >> 4 | GXM_VDM_STATE;
+	words[1] = gxmVdmBlockSize(vdmFencePdsProg) | 0x0204e001;
+	gxmChunkBufferCommit(buffer, words + 2);
 	return 0;
 }
 
 /* a jump to another VDM stream, with the words it returns with */
-int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 address, const SceUInt32 *returnWords)
+int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 targetGpuAddr, const SceUInt32 *returnWords)
 {
-	SceSize size = returnWords == NULL ? 4 : 0xc;
-	SceUInt32 *words = gxmChunkBufferReserve(buffer, size, 4);
+	SceSize size;
+	SceUInt32 *words;
 
-	if (words == NULL)
+	GXM_DBG_ASSERT(263, buffer);
+	GXM_DBG_ASSERT(264, targetGpuAddr);
+	size = returnWords == NULL ? 4 : 0xc;
+	words = gxmChunkBufferReserve(buffer, size, 4);
+	if (words == NULL) {
+		GXM_DBG_ERROR(279, "Could not reserve %d bytes.", size);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	words[0] = address >> 2;
+	}
+	words[0] = targetGpuAddr >> 2;
 	if (returnWords != NULL) {
 		words[1] = returnWords[0];
 		words[2] = returnWords[1];
 	}
-	buffer->current = (SceUInt32)words + size;
+	gxmChunkBufferCommit(buffer, (SceUInt8 *)words + size);
 	return 0;
 }

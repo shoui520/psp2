@@ -9,11 +9,6 @@
 
 #include "gxm_internal.h"
 
-#define SCE_GXM_ATTRIBUTE_FORMAT_U8N	4
-#define SCE_GXM_ATTRIBUTE_FORMAT_F16	8
-#define SCE_GXM_ATTRIBUTE_FORMAT_F32	9
-#define SCE_GXM_ATTRIBUTE_FORMAT_UNTYPED	10
-
 /* the unpack instruction's source type, by attribute format */
 static const SceUInt32 gxmUnpackTypes[9] = {
 	1, 3, 4, 0, 1, 3, 4, 5, 6,	/* S8 .. F32; U8 is 0 */

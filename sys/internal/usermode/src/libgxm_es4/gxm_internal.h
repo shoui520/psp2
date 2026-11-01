@@ -67,6 +67,17 @@ int sceKernelIsGameBudget(void);
 #define GXM_DBG_CHECK(file, line, test, text)	_SCE_MACRO_BEGIN { (void)sizeof((test)); } _SCE_MACRO_END
 #define GXM_DBG_ERROR_AT(file, line, format, ...)	((void)0)
 #endif
+#if SCE_DBG_ASSERTS_ENABLED
+/* an assertion that always fails, with its own message */
+#define GXM_DBG_FAIL(line, message)							\
+	_SCE_MACRO_BEGIN								\
+		if (sceDbgAssertionHandler(__FILE_NAME__, line, true,			\
+				SCE_DBG_ASSERT_COMPONENT, message))			\
+			SCE_BREAK();							\
+	_SCE_MACRO_END
+#else
+#define GXM_DBG_FAIL(line, message)	((void)0)
+#endif
 /* the message is the test as written, before macro expansion (SCE_DBG_ASSERT's #test) */
 #define GXM_DBG_ASSERT(line, test)		GXM_DBG_CHECK(__FILE_NAME__, line, test, #test)
 #define GXM_DBG_ASSERT_AT(file, line, test)	GXM_DBG_CHECK(file, line, test, #test)
@@ -937,6 +948,17 @@ int gxmVertexUnpackBuild(GxmChunkBuffer *buffer, const SceGxmProgram *program,
 
 /* --- program code --- */
 
+#define SCE_GXM_ATTRIBUTE_FORMAT_U8	0
+#define SCE_GXM_ATTRIBUTE_FORMAT_S8	1
+#define SCE_GXM_ATTRIBUTE_FORMAT_U16	2
+#define SCE_GXM_ATTRIBUTE_FORMAT_S16	3
+#define SCE_GXM_ATTRIBUTE_FORMAT_U8N	4
+#define SCE_GXM_ATTRIBUTE_FORMAT_S8N	5
+#define SCE_GXM_ATTRIBUTE_FORMAT_U16N	6
+#define SCE_GXM_ATTRIBUTE_FORMAT_S16N	7
+#define SCE_GXM_ATTRIBUTE_FORMAT_F16	8
+#define SCE_GXM_ATTRIBUTE_FORMAT_F32	9
+#define SCE_GXM_ATTRIBUTE_FORMAT_UNTYPED	10
 #define SCE_GXM_ATTRIBUTE_FORMAT_UNTYPED_REG	10
 
 SceUInt32 gxmProgramGetFragmentDms(const SceGxmProgram *program, SceBool phased, SceUInt32 samples);
@@ -1007,16 +1029,16 @@ static inline SceUInt32 *gxmProgramWriteDmaBlock(SceUInt32 *data, GxmCommandBloc
 
 /* --- VDM commands --- */
 
-int gxmVdmWriteFragmentState(GxmChunkBuffer *buffer, SceSize size, const GxmCommandBlock *block,
-			     SceBool secondary);
-int gxmVdmWriteVertexState(GxmChunkBuffer *buffer, const GxmCommandBlock *block, SceSize size,
-			   SceBool secondary);
+int gxmVdmWriteFragmentState(GxmChunkBuffer *buffer, SceSize size,
+			     const GxmCommandBlock *statePdsProgram, SceBool secondary);
+int gxmVdmWriteVertexState(GxmChunkBuffer *buffer, const GxmCommandBlock *secondaryPdsProgram,
+			   SceSize size, SceBool secondary);
 int gxmVdmWritePrimitive(GxmChunkBuffer *buffer, const GxmCommandBlock *block,
 			 const SceUInt8 *programInfo, SceUInt32 primitive, SceUInt32 indexWord,
 			 SceUInt32 count, SceUInt32 flags, SceUInt32 indexAddress, SceUInt8 wordBits);
-int gxmVdmWriteFence(GxmChunkBuffer *buffer, const GxmCommandBlock *block);
-int gxmVdmWriteTerminate(GxmChunkBuffer *buffer, const GxmCommandBlock *block);
-int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 address, const SceUInt32 *returnWords);
+int gxmVdmWriteFence(GxmChunkBuffer *buffer, const GxmCommandBlock *statePdsProgram);
+int gxmVdmWriteTerminate(GxmChunkBuffer *buffer, const GxmCommandBlock *vdmFencePdsProg);
+int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 targetGpuAddr, const SceUInt32 *returnWords);
 
 /* --- contexts --- */
 

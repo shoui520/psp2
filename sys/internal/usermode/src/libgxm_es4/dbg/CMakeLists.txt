@@ -49,6 +49,7 @@ set(GXM_DBG_SOURCES
 	../uniforms.c
 	../usse.c
 	../usse_builder.c
+	../util.c
 	../vdm.c
 	../vertex_program.c
 	../vertex_unpack.c
