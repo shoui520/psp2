@@ -27,6 +27,12 @@ extern SceUInt32 SceThreadmgr_47F6DE49(void);
 #define isspace(c)	(sceClibLookCtypeTable(c) & SCE_CLIB_CTYPE_SPACE)
 #define isdigit(c)	(sceClibLookCtypeTable(c) & SCE_CLIB_CTYPE_DIGIT)
 
+/* a header's name and value, as sceHttpRequestGetAllHeaders lists them */
+typedef struct HttpHeaderPair {
+	const char *name;
+	const char *value;
+} HttpHeaderPair;
+
 /* the memory functions an object allocates with; NULL takes the library's pool */
 typedef struct HttpAllocator {
 	void *(*malloc)(SceSize size);
@@ -494,6 +500,11 @@ void SceHttp_0B0D8E7A(void);
 int SceHttp_54847CFE(int connId, HttpConnectionSockInfo *info);
 int SceHttp_80E6013D(int reqId, HttpRequestSockInfo *info);
 int _sceHttpDbgInit(void);
+/* request.c */
+int _sceHttpRequestAddCookieHeader(HttpRequest *req);
+int _sceHttpMakeUserAgent(char *buf, const char *name, SceSize *size);
+int _sceHttpRequestGetAllHeaders(int reqId, HttpHeaderPair *headers, SceUInt32 *num,
+				 char *contentLength, SceSize *contentLengthSize);
 /* headers */
 int _sceHttpHeaderCreate(const HttpAllocator *allocator, HttpHeader **header, const char *name,
 			 const char *value);
@@ -533,6 +544,7 @@ int _sceHttpLock(int which);
 int _sceHttpUnlock(int which);
 int _sceHttpGetSdkVersion(void);
 SceULong64 _sceHttpStrToULong64(const char *s);
+void _sceHttpGetSwVersion(char *version);
 
 /* the library's pool */
 void *_sceHttpDefaultMalloc(SceSize size);
