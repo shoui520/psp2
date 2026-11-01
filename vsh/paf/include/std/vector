@@ -133,7 +133,7 @@ public:
 	}
 
 	bool reserve(size_type size);
-	void resize(size_type size, const _Ty &val = _Ty());
+	void resize(size_type size, _Ty val = _Ty());
 
 	void clear()
 	{
@@ -273,7 +273,7 @@ vector<_Ty, _Ax>::reserve(size_type size)
 /* Shrinking gives back ten elements whenever twenty are spare; growing adds tens. */
 template<class _Ty, class _Ax>
 void
-vector<_Ty, _Ax>::resize(size_type size, const _Ty &val)
+vector<_Ty, _Ax>::resize(size_type size, _Ty val)
 {
 	if (size < count) {
 		int newlimit = limit;

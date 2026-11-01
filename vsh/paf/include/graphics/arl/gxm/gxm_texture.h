@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <gxm.h>
 #include <common/shared_ptr.h>
+#include <std/string>
 #include <graphics/arl/arl_defines.h>
 #include <image/image_types.h>
 
@@ -209,6 +210,9 @@ bool ScePafGraphics_C4BD3558(paf::graph::arl::Texture2D *texture, int32_t width,
 /* copies an image into a mip level of a texture whose surface is set up */
 int ScePafGraphics_309D2902(paf::graph::arl::Texture2D *texture, int32_t level, int32_t width,
 			    int32_t height, ImageMode format, uint32_t levels, const void *data);
+/* loads an image file into a 2D texture, its levels from the image's array */
+bool ScePafGraphics_7C53C58A(paf::common::SharedPtr<paf::graph::arl::Texture2D> texture,
+			     const paf::string &filename, paf::graph::arl::SurfaceFlags flags);
 /* a square texture of one channel, its value the distance from the centre (1 at the edges) */
 paf::common::SharedPtr<paf::graph::arl::Texture2D>
 ScePafGraphics_27C5476A(paf::common::SharedPtr<paf::graph::arl::VramAllocator> allocator,
