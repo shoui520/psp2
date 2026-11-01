@@ -18,7 +18,7 @@ set(GXM_SOURCES
 	device_mem.c
 	display_queue.c
 	dms.c
-	format.c
+	features.c
 	fragment_program.c
 	globals.c
 	heap.c

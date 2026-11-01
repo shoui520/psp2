@@ -220,6 +220,7 @@ typedef SceUInt32 SceGxmTextureFormat;
 #define GXM_FORMAT_FLAG_YUV_PLANAR	0x0008	/* planar YUV */
 #define GXM_FORMAT_FLAG_PALETTE		0x0010	/* palettized */
 #define GXM_FORMAT_FLAG_24BIT		0x0020	/* three bytes per texel */
+#define GXM_FORMAT_FLAG_SAMPLE_COEFFICIENTS	0x0040	/* shadow map and gather4 queries return its sample coefficients */
 
 _Bool gxmTextureFormatIsSupported(SceGxmTextureFormat format);
 _Bool gxmTextureFormatIsGammaCapable(SceGxmTextureFormat format);
@@ -234,7 +235,7 @@ SceUInt8 gxmTextureFormatGetBitsPerPixel(SceGxmTextureFormat format);
 SceUInt8 gxmTextureFormatGetBytesPerPixel(SceGxmTextureFormat format);
 SceUInt32 gxmTextureFormatGetSwizzleComponents(SceGxmTextureFormat format);
 #if SCE_DBG_ASSERTS_ENABLED
-/* format.c, the debug build's: the names its messages print, and the texture query checks */
+/* features.c, the debug build's: the names its messages print, and the texture query checks */
 const char *gxmTextureFormatGetName(SceGxmTextureFormat format);
 const char *gxmTextureFormatGetSwizzleName(SceGxmTextureFormat format);
 _Bool gxmTextureFormatIsQueryPrecisionSupported(SceGxmTextureFormat format, SceUInt32 precisions);
@@ -270,6 +271,9 @@ SceUInt8 gxmTransferFormatGetBitsPerPixel(SceGxmTransferFormat format);
 _Bool gxmTransferFormatIsColor(SceGxmTransferFormat format);
 _Bool gxmTransferFormatIsRaw(SceGxmTransferFormat format);
 _Bool gxmTransferFormatIsYuv(SceGxmTransferFormat format);
+#if SCE_DBG_ASSERTS_ENABLED
+const char *gxmTransferFormatGetName(SceGxmTransferFormat format);
+#endif
 
 /* --- textures --- */
 
