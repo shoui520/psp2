@@ -69,7 +69,7 @@ SceInt32 sceHttpInit(SceSize poolSize)
 	ret = _sceHttpAuthCacheInit();
 	if (ret < 0)
 		return ret;
-	ret = _sceHttpEpollInit();
+	ret = _sceHttpRedirectCacheInit();
 	if (ret < 0)
 		return ret;
 	ret = SceHttp_E0825488(_sceHttpDefaultMalloc, _sceHttpDefaultFree);
@@ -107,7 +107,7 @@ SceInt32 sceHttpTerm(void)
 	ret = _sceHttpCookieTerm();
 	if (ret < 0)
 		return ret;
-	ret = _sceHttpEpollTerm();
+	ret = _sceHttpRedirectCacheTerm();
 	if (ret < 0)
 		return ret;
 	ret = _sceHttpAuthCacheTerm();

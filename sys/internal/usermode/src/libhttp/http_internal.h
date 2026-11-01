@@ -117,7 +117,8 @@ typedef struct HttpTemplate {
 	char *password;
 	SceHttpAuthInfoCallback authInfoCallback;
 	void *authInfoUserArg;
-	int reserved88[2];
+	SceHttpRedirectCallback redirectCallback;
+	void *redirectUserArg;
 	SceHttpCookieSendCallback cookieSendCallback;
 	void *cookieSendUserArg;
 	SceHttpCookieRecvCallback cookieRecvCallback;
@@ -210,16 +211,18 @@ typedef struct HttpRequest {
 	int state;
 	int method;
 	int lastError;				/* the error that ended it (state 19) */
-	int reserved20;
+	SceUInt32 redirectCount;
 	int authRetries;
 	SceULong64 contentLength;
-	int reserved30[5];
+	int reserved30[4];
+	SceBool followOnly303;			/* only a 303 is followed (nothing here sets it) */
 	SceBool aborted;			/* sceHttpAbortRequest was called */
 	struct HttpRequestExtra *extra;	/* method 8's name, ... */
 	HttpTemplate tmpl;
 	HttpConnection *connection;
 	HttpConnection *childConnections;
-	int reserved138[2];
+	int reserved138;
+	char *redirectLocation;			/* _sceHttpRequestCheckRedirect's */
 	HttpResponse response;
 	const char *connectionValue;		/* the [Proxy-]Connection header's value */
 	SceSize connectionValueLen;
@@ -287,6 +290,24 @@ _Static_assert(sizeof(HttpEpoll) == 0x58, "HttpEpoll");
 #define HTTP_EPOLL_CONNECTION	3		/* a connection's socket, for the connection itself */
 #define HTTP_EPOLL_ICM_EVENTS	0x40000		/* the events of an ICM socket (no SDK name) */
 #define HTTP_SO_ICM_OPTION	0x10000		/* sceHttpSetIcmOption's bit 0 (no SDK name) */
+
+/* a 301 the redirect cache remembers (0x44 bytes) */
+typedef struct HttpRedirectCacheEntry {
+	SceUInt32 hits;
+	int refCount;
+	SceUChar8 urlDigest[SCE_MD5_DIGEST_SIZE];	/* of url */
+	char *url;
+	int method;
+	SceUChar8 key[16];			/* compared when a lookup gives one */
+	char *location;				/* where url moved to */
+	SceBool removed;			/* freed when the last reference goes */
+	struct HttpRedirectCacheEntry *prev;	/* in the list, the most recently used first */
+	struct HttpRedirectCacheEntry *next;
+	struct HttpRedirectCacheEntry *nextFree;
+} HttpRedirectCacheEntry;
+_Static_assert(sizeof(HttpRedirectCacheEntry) == 0x44, "HttpRedirectCacheEntry");
+
+#define HTTP_REDIRECT_CACHE_ENTRIES	16
 
 /* a connection's sockets, for SceHttp_54847CFE */
 typedef struct HttpConnectionSockInfo {
@@ -632,8 +653,26 @@ int _sceHttpRequestIcmAbort(HttpRequest *req);
 int _sceHttpRequestIcmClose(HttpRequest *req);
 int _sceHttpTemplateGetProxyConfig(HttpRequest *req, HttpTemplate *tmpl);
 int _sceHttpEpollFind(SceHttpEpollHandle eh, int id, HttpEpollEntry **entry);
+int _sceHttpEpollWait(SceHttpEpollHandle eh, SceNetEpollEvent *events, int maxevents, int timeout,
+		      SceBool cb);
+int _sceHttpEpollAbort(SceHttpEpollHandle eh);
 int _sceHttpEpollModify(void *object, SceUInt32 kind, SceUInt32 events);
 void _sceHttpUriNormalize(const HttpAllocator *allocator, char *url);
+int _sceHttpSchemeGetType(const char *scheme);
+SceBool _sceHttpStrNotEmpty(const char *s);
+char *_sceHttpRequestGetUrl(HttpRequest *req);
+
+/* redirect.c */
+int _sceHttpRequestCheckRedirect(HttpRequest *req);
+int _sceHttpRequestRedirect(HttpRequest *req, const char *location);
+int _sceHttpRequestFollowRedirect(HttpRequest *req);
+int _sceHttpRequestRedirectFromCache(HttpRequest *req);
+HttpRedirectCacheEntry *_sceHttpRedirectCacheSearch(const char *url, int method, const void *key);
+int _sceHttpRedirectCacheLookupRequest(HttpRequest *req, HttpRedirectCacheEntry **entry);
+int _sceHttpRedirectCacheLookup(const char *url, int method, const void *key,
+				HttpRedirectCacheEntry **entry);
+int _sceHttpRedirectCacheAdd(const char *url, int method, const void *key, const char *location);
+int _sceHttpRedirectCacheRelease(HttpRedirectCacheEntry *entry);
 int _sceHttpTemplateSetProxyServer(HttpTemplate *tmpl, const char *server, SceSize len);
 /* SceNetInternal's: an address from its text form; an ICM socket started */
 int SceNetInternal_916EA798(int af, const char *src, void *dst);
@@ -700,8 +739,8 @@ struct z_stream_s;
 int inflateEnd(struct z_stream_s *strm);
 int _sceHttpObjectInit(void);
 int _sceHttpObjectTerm(void);
-int _sceHttpEpollInit(void);
-int _sceHttpEpollTerm(void);
+int _sceHttpRedirectCacheInit(void);
+int _sceHttpRedirectCacheTerm(void);
 int SceHttp_E0825488(void *(*mallocFunc)(SceSize size), void (*freeFunc)(void *ptr));
 int SceHttp_11C9BCE8(void);
 void _sceHttpsInit(void);

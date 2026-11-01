@@ -925,8 +925,9 @@ int _sceHttpTemplateGetProxyConfig(HttpRequest *req, HttpTemplate *tmpl)
 	return ret;
 }
 
-int _sceHttpWaitRequest(SceHttpEpollHandle eh, SceHttpNBEvent *nbev, int maxevents, int timeout,
-			SceBool cb)
+/* waits on the handle's epoll, unless sceHttpAbortWaitRequest was called */
+int _sceHttpEpollWait(SceHttpEpollHandle eh, SceNetEpollEvent *events, int maxevents, int timeout,
+		      SceBool cb)
 {
 	HttpEpoll *ep = eh;
 	SceNetId eid;
@@ -941,8 +942,8 @@ int _sceHttpWaitRequest(SceHttpEpollHandle eh, SceHttpNBEvent *nbev, int maxeven
 		if (ret < 0)
 			return ret;
 		if (cb != 0)
-			return sceNetEpollWaitCB(eid, (SceNetEpollEvent *)nbev, maxevents, timeout);
-		return sceNetEpollWait(eid, (SceNetEpollEvent *)nbev, maxevents, timeout);
+			return sceNetEpollWaitCB(eid, events, maxevents, timeout);
+		return sceNetEpollWait(eid, events, maxevents, timeout);
 	}
 	ret = SCE_HTTP_ERROR_ABORTED;
 	r = sceKernelUnlockLwMutex(&ep->lock, 1);
@@ -951,7 +952,7 @@ int _sceHttpWaitRequest(SceHttpEpollHandle eh, SceHttpNBEvent *nbev, int maxeven
 	return ret;
 }
 
-int _sceHttpAbortWaitRequest(SceHttpEpollHandle eh)
+int _sceHttpEpollAbort(SceHttpEpollHandle eh)
 {
 	HttpEpoll *ep = eh;
 	int ret, r;
