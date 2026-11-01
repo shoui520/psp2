@@ -273,50 +273,6 @@ int _ZN3paf5graph8PlaneObj13SetScaleValueERKNS_4math2v3E(uint8_t *self, const fl
 	return (int)(uintptr_t)self;
 }
 
-/* Copy the native 128-byte state record, retaining its last shared owner. */
-uint32_t *ScePafGraphics_B609BD86(uint32_t *result, const uint32_t *source)
-{
-	uint16_t *targetHalfwords = (uint16_t *)result;
-	const uint16_t *sourceHalfwords = (const uint16_t *)(source + 9);
-	int32_t remaining = 12;
-
-	do {
-		targetHalfwords[0] = sourceHalfwords[0];
-		targetHalfwords[1] = sourceHalfwords[1];
-		--remaining;
-		((volatile uint8_t *)targetHalfwords)[4] =
-			((const volatile uint8_t *)sourceHalfwords)[4];
-		((volatile uint8_t *)targetHalfwords)[5] =
-			((const volatile uint8_t *)sourceHalfwords)[5];
-		targetHalfwords[3] = sourceHalfwords[3];
-		targetHalfwords += 4;
-		sourceHalfwords += 4;
-	} while (remaining);
-	result[24] = source[33];
-	targetHalfwords = (uint16_t *)(result + 25);
-	sourceHalfwords = (const uint16_t *)(source + 34);
-	remaining = 2;
-	do {
-		targetHalfwords[0] = sourceHalfwords[0];
-		--remaining;
-		targetHalfwords[1] = sourceHalfwords[1];
-		targetHalfwords[2] = sourceHalfwords[2];
-		targetHalfwords[3] = sourceHalfwords[3];
-		targetHalfwords += 4;
-		sourceHalfwords += 4;
-	} while (remaining);
-	uint32_t active = source[39];
-	uint32_t reference = source[40];
-
-	result[30] = active;
-	result[29] = source[38];
-	result[31] = reference;
-	if (active)
-		return (uint32_t *)(uintptr_t)((uint32_t)sceAtomicIncrement32AcqRel(
-			(volatile int32_t *)(uintptr_t)(reference + 4)) + 1);
-	return result;
-}
-
 /* Forward resource field queries through the active graphics view. */
 int _ZN3paf5graph7TextObj11GetCharInfoEjRNS0_18TextLayoutCharInfoE(const uint8_t *self, uint32_t index,
 			     uint8_t *output)
@@ -501,23 +457,6 @@ void *ScePafGraphics_12BDEBFF(void)
 	return result;
 }
 
-int _ZN3paf5graph3arl20VertCreateDependency13createProgramERP19SceGxmVertexProgram(const SceGxmVertexAttribute *attributes,
-			    SceGxmVertexProgram **vertexProgram)
-{
-	const uint8_t *source = (const uint8_t *)attributes;
-	const uint8_t *registered = *(const uint8_t *const *)(source + 120);
-	SceGxmShaderPatcher *patcher =
-		**(SceGxmShaderPatcher *const *const *)(registered + 44);
-	SceGxmShaderPatcherId programId =
-		*(const SceGxmShaderPatcherId *)(registered + 28);
-
-	return sceGxmShaderPatcherCreateVertexProgram(
-		patcher, programId, attributes,
-		*(const uint32_t *)(source + 96),
-		(const SceGxmVertexStream *)(source + 100),
-		*(const uint32_t *)(source + 116), vertexProgram);
-}
-
 static inline __attribute__((always_inline))
 void GraphicsSetPointLineWidth(uint32_t *self, uint32_t flags, float width)
 {
@@ -567,33 +506,6 @@ void *_ZN3paf5gutil5debug17CallDebugGuiFuncsEv(void)
 		end = entries + sce_paf_graphics_callback_list_1208.count;
 	}
 	return end;
-}
-
-static const SceGxmProgramParameter *GraphicsFindNamedProgramParameter(
-		const uint8_t *self, const char *name)
-{
-	SceGxmShaderPatcherId programId =
-		*(SceGxmShaderPatcherId const *)(self + 28);
-	const SceGxmProgram *program =
-		sceGxmShaderPatcherGetProgramFromId(programId);
-	const SceGxmProgramParameter *parameter =
-		sceGxmProgramFindParameterByName(program, name);
-
-	if (parameter)
-		sceGxmProgramParameterGetCategory(parameter);
-	return parameter;
-}
-
-const SceGxmProgramParameter *_ZN3paf5graph3arl13ShaderProgram15getUniformParamEPKc(
-		const uint8_t *self, const char *name)
-{
-	return GraphicsFindNamedProgramParameter(self, name);
-}
-
-const SceGxmProgramParameter *_ZN3paf5graph3arl13ShaderProgram15getSamplerParamEPKc(
-		const uint8_t *self, const char *name)
-{
-	return GraphicsFindNamedProgramParameter(self, name);
 }
 
 void *ScePafGraphics_C4ED1731(const uint8_t *self, void *const *source)
@@ -670,80 +582,7 @@ void *ScePafGraphics_E69349E0(const uint8_t *self)
 	return result;
 }
 
-uint32_t _ZN3paf5graph3arl13ShaderProgram20getSamplerParamIndexEPKc(const uint8_t *self, const char *name)
-{
-	SceGxmShaderPatcherId id =
-		*(SceGxmShaderPatcherId const *)(self + 28);
-	const SceGxmProgram *program = sceGxmShaderPatcherGetProgramFromId(id);
-	const SceGxmProgramParameter *parameter =
-		sceGxmProgramFindParameterByName(program, name);
-
-	if (!parameter)
-		return UINT32_MAX;
-	sceGxmProgramParameterGetCategory(parameter);
-	return sceGxmProgramParameterGetResourceIndex(parameter);
-}
-
-uint32_t ScePafGraphics_222995DF(const uint8_t *self, const char *name)
-{
-	SceGxmShaderPatcherId id =
-		*(SceGxmShaderPatcherId const *)(self + 28);
-	const SceGxmProgram *program = sceGxmShaderPatcherGetProgramFromId(id);
-	const SceGxmProgramParameter *parameter =
-		sceGxmProgramFindParameterByName(program, name);
-
-	if (!parameter)
-		return UINT32_MAX;
-	sceGxmProgramParameterGetCategory(parameter);
-	return sceGxmProgramParameterGetResourceIndex(parameter);
-}
-
 static inline __attribute__((always_inline))
-uint32_t GraphicsNamedParameterResourceWithFlag(
-		const uint8_t *self, const char *name, uint8_t flag)
-{
-	SceGxmShaderPatcherId id =
-		*(SceGxmShaderPatcherId const *)(self + 28);
-	const SceGxmProgram *program = sceGxmShaderPatcherGetProgramFromId(id);
-	const SceGxmProgramParameter *parameter =
-		sceGxmProgramFindParameterByName(program, name);
-	const SceGxmProgramParameter *checked = NULL;
-
-	if (parameter || flag) {
-		sceGxmProgramParameterGetCategory(parameter);
-		checked = parameter;
-	}
-	if (checked || flag)
-		return sceGxmProgramParameterGetResourceIndex(checked);
-	return UINT32_MAX;
-}
-
-uint32_t ScePafGraphics_267BDBF8(const uint8_t *self,
-				   const char *name, uint8_t flag)
-{
-	return GraphicsNamedParameterResourceWithFlag(self, name, flag);
-}
-
-uint32_t _ZN3paf5graph3arl13ShaderProgram15get_param_indexEPKc23SceGxmParameterCategoryb(const uint8_t *self,
-				   const char *name, int unused, uint8_t flag)
-{
-	return GraphicsNamedParameterResourceWithFlag(self, name, flag);
-}
-
-const SceGxmProgramParameter *_ZN3paf5graph3arl13ShaderProgram9get_paramEPKc23SceGxmParameterCategoryb(
-		const uint8_t *self, const char *name, int unused, uint8_t flag)
-{
-	SceGxmShaderPatcherId id =
-		*(SceGxmShaderPatcherId const *)(self + 28);
-	const SceGxmProgram *program = sceGxmShaderPatcherGetProgramFromId(id);
-	const SceGxmProgramParameter *parameter =
-		sceGxmProgramFindParameterByName(program, name);
-
-	if (parameter || flag)
-		sceGxmProgramParameterGetCategory(parameter);
-	return parameter;
-}
-
 __attribute__((noinline))
 uint8_t *_ZN3paf5graph7Surface4SwapEv(uint8_t *self)
 {
@@ -805,25 +644,6 @@ uint8_t *_ZN3paf5graph8PlaneObj8SetAlignENS1_9AlignModeES2_(uint8_t *self, uint3
 		}
 		self[80] |= 4;
 	}
-	return self;
-}
-
-uint8_t *_ZN3paf5graph3arl20FragCreateDependencyC1Ev(uint8_t *self)
-{
-	uint8_t nibbleA;
-	uint8_t nibbleB;
-	int8_t oldMode = *(volatile int8_t *)(self + 9);
-
-	*(uint32_t *)(self + 12) = 1;
-	*(uint32_t *)(self + 4) = 0;
-	nibbleA = (self[10] & 0xf0) | 1;
-	*(uint32_t *)(self + 16) = 0;
-	*(uint32_t *)(self + 20) = 0;
-	nibbleB = (self[11] & 0xf0) | 1;
-	self[8] = 15;
-	self[9] = (uint8_t)((oldMode & ~0x0f) & ~0xf0);
-	self[10] = nibbleA & 0x0f;
-	self[11] = nibbleB & 0x0f;
 	return self;
 }
 
@@ -1229,22 +1049,6 @@ int _ZN3paf5graph14DisplaySurface13GetOutputPortEv(const uint8_t *self)
 	return result;
 }
 
-const SceGxmProgramParameter *_ZN3paf5graph3arl13ShaderProgram23findParameterBySemanticE23SceGxmParameterSemanticjb(
-	const uint8_t *self, SceGxmParameterSemantic semantic,
-	unsigned int index, uint8_t flag)
-{
-	SceGxmShaderPatcherId programId =
-		*(SceGxmShaderPatcherId const *)(self + 28);
-	const SceGxmProgram *program =
-		sceGxmShaderPatcherGetProgramFromId(programId);
-	const SceGxmProgramParameter *result =
-		sceGxmProgramFindParameterBySemantic(program, semantic, index);
-
-	if (!result && !flag)
-		return 0;
-	return result;
-}
-
 int _ZN3paf5graph8PlaneObj17SetDivBorderScaleEf(uint8_t *self, float value)
 {
 	if (value != *(float *)(self + 188)) {
@@ -1410,25 +1214,6 @@ uint32_t _ZN3paf5graph13ScreenSurface13SetRawContextEP13SceGxmContext(uint32_t v
 }
 
 static inline __attribute__((always_inline))
-uint32_t *InitializeGraphicsState(uint32_t *self)
-{
-	self[24] = 0;
-	self[29] = 0;
-	self[31] = 0;
-	self[30] = 0;
-	return self;
-}
-
-uint32_t *_ZN3paf5graph3arl20VertCreateDependencyC2Ev(uint32_t *self)
-{
-	return InitializeGraphicsState(self);
-}
-
-uint32_t *_ZN3paf5graph3arl20VertCreateDependencyC1Ev(uint32_t *self)
-{
-	return InitializeGraphicsState(self);
-}
-
 __attribute__((noinline))
 int _ZN3paf5graph10TextLayout17GetSelectionRangeERjS2_(const uint8_t *self,
 			     uint32_t *first, uint32_t *second)
@@ -1985,31 +1770,6 @@ uint8_t *_ZN3paf5graph7Surface4LockEi(uint8_t *self, int index)
 	return result;
 }
 
-uint32_t *ScePafGraphics_E2687C25(uint8_t *self, const uint8_t *source)
-{
-	uint32_t references;
-	uint32_t *counter;
-
-	*(uint32_t *)self = *(const uint32_t *)(source + 36);
-	*(uint32_t *)(self + 4) = *(const uint32_t *)(source + 40);
-	self[8] = source[44];
-	self[9] = source[45];
-	self[10] = source[46];
-	self[11] = source[47];
-	*(uint32_t *)(self + 12) = *(const uint32_t *)(source + 48);
-	references = *(const uint32_t *)(source + 52);
-	*(uint32_t *)(self + 16) = references;
-	counter = *(uint32_t *const *)(source + 56);
-	*(uint32_t **)(self + 20) = counter;
-	if (references) {
-		uint32_t *count = counter + 1;
-
-		sceAtomicIncrement32AcqRel((volatile int32_t *)count);
-		return count;
-	}
-	return counter;
-}
-
 void ScePafGraphics_B63D3B14(uint8_t *self)
 {
 	int mode = *(int32_t *)(self + 368);
@@ -2201,15 +1961,6 @@ uint8_t *_ZN3paf5graph13ScreenSurface18GetRawColorSurfaceEi(const uint8_t *self,
 	return *(uint8_t *const *)(self + 148) + index * 48;
 }
 
-uint32_t *_ZN3paf5graph3arl19ShaderParameterBaseC1ERNS1_24ShaderParameterSetupDataE(uint32_t *self, uint32_t value)
-{
-	self[2] = value;
-	self[0] = 0;
-	self[1] = 0;
-	self[3] = (uint32_t)-2;
-	return self;
-}
-
 int ScePafGraphics_83ABDFF5(const uint8_t *self, uint8_t argument)
 {
 	void *object = *(void *const *)(self + 4);
@@ -2228,15 +1979,6 @@ uint8_t *_ZNK3paf5graph7Surface10GetPagePtrEi(const uint8_t *self, int32_t index
 	if (base)
 		return base + *(const int32_t *)(self + 56) * index;
 	return 0;
-}
-
-uint32_t *_ZN3paf5graph3arl19ShaderParameterBaseC2ERNS1_24ShaderParameterSetupDataE(uint32_t *self, uint32_t value)
-{
-	self[2] = value;
-	self[0] = 0;
-	self[1] = 0;
-	self[3] = (uint32_t)-2;
-	return self;
 }
 
 static inline __attribute__((always_inline))

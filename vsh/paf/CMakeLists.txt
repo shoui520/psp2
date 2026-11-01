@@ -145,6 +145,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/arl/gxm/gxm_texture_gen.cpp
 	src/graphics/arl/gxm/gxm_texture_load.cpp
 	src/graphics/arl/gxm/gxm_arl_frontend.cpp
+	src/graphics/arl/gxm/gxm_shader.cpp
 	src/graphics/arl/gxm/gxm_scene_stack.cpp
 	src/graphics/arl/gxm/gxm_surface.cpp
 	src/graphics/arl/gxm/gxm_texture.cpp
@@ -273,6 +274,10 @@ set_source_files_properties(src/timer/get_time.cpp src/url/url.cpp src/rtc/rtc.c
 	src/graphics/arl/gxm/gxm_texture.cpp src/graphics/arl/gxm/gxm_texture_gen.cpp
 	src/graphics/arl/gxm/gxm_texture_load.cpp src/graphics/arl/gxm/gxm_arl_frontend.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+
+# The shader objects keep vector<uint8_t>'s copy constructor out of line in the binary
+# loaders, which 30 inlines (2026-11-01).
+set_source_files_properties(src/graphics/arl/gxm/gxm_shader.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=24)
 
 # PropertyList inlines the value map's operator[] and StringElement::GetString but keeps the
 # element map's operator[] out of line: budget 24 does since map's const find is defined out of

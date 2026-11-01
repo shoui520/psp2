@@ -13,6 +13,7 @@
 #include <common/shared_ptr.h>
 #include <graphics/arl/arl_defines.h>
 #include <graphics/arl/gxm/gxm_render_target_pool.h>
+#include <graphics/arl/gxm/gxm_shader.h>
 #include <graphics/arl/gxm/gxm_texture.h>
 #include <graphics/graphmem/graphmem.h>
 #include <math/ngp/matrix.h>
@@ -33,18 +34,6 @@ class ClearProgram;
 class CopyProgram;
 class IndexBuffer;
 class ArlInstance;
-
-/* the shader objects, laid out when their files are converted: the program bound last
-   is unbound when a scene ends (names ours) */
-class VertShaderObject {
-public:
-	static void UnbindCurrent();
-};
-
-class FragShaderObject {
-public:
-	static void UnbindCurrent();
-};
 
 /* a rectangle in pixels by two corners, the first the smaller (names ours) */
 class Rect {
@@ -176,27 +165,11 @@ public:
 	{
 		m_dirty_vertex = 0;
 		m_dirty_fragment = 0;
-		m_reserved0 = 0;
-		m_reserved1 = 0;
-		m_flags = 0;
 	}
 
 	common::SharedPtr<TextureObject> m_bindings[MAX_BINDINGS];
 	uint32_t m_dirty_vertex;
 	uint32_t m_dirty_fragment;
-	uint32_t m_reserved0;
-	uint32_t m_reserved1;
-	uint32_t m_flags;
-};
-
-/* the GXM shader patcher, shared by the shader objects */
-class ShaderPatcher {
-public:
-	ShaderPatcher(SceGxmShaderPatcher *patcher) : m_patcher(patcher)
-	{
-	}
-
-	SceGxmShaderPatcher *m_patcher;
 };
 
 /* the frame buffer object or surface a scene draws into, and the part of it drawn */
@@ -384,7 +357,7 @@ public:
 	int32_t m_value;
 };
 
-class ArlInstance : public TransformState, public ShaderState {
+class ArlInstance : public TransformState, public ShaderState, public ProgramState {
 public:
 	ArlInstance();
 	~ArlInstance();
@@ -419,7 +392,6 @@ public:
 		return m_context;
 	}
 
-	common::SharedPtr<ShaderPatcher> m_patcher;
 	DefaultTextures m_default_textures;
 	SceneDataStack m_scene_stack;
 	SceGxmContextParams m_context_params;

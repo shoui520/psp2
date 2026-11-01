@@ -1635,9 +1635,9 @@ ScePaf:
         - ScePafGraphics_212605A1: 0x212605A1
         - ScePafGraphics_213B8332: 0x213B8332
         - _ZN3paf5graph13ScreenSurfaceC2Eii9ImageMode10ImageOrderiS2_S3_PvNS0_7Surface11SurfaceTypeE: 0x2153375D
-        - ScePafGraphics_222995DF: 0x222995DF
+        - _ZN3paf5graph3arl13ShaderProgram20getUniformParamIndexEPKc: 0x222995DF
         - _ZNK3paf5graph11SurfaceBase13PixelsToBytesEi: 0x22AB24A0
-        - ScePafGraphics_22D7B1C0: 0x22D7B1C0
+        - _ZN3paf5graph3arl16FragShaderObject23setOutputRegisterFormatE26SceGxmOutputRegisterFormat: 0x22D7B1C0
         - ScePafGraphics_23095DE2: 0x23095DE2
         - ScePafGraphics_23182D99: 0x23182D99
         - _ZN3paf5graph13PlaneObjParamD0Ev: 0x2387B935
@@ -1650,7 +1650,7 @@ ScePaf:
         - ScePafGraphics_25927C8B: 0x25927C8B
         - _ZN3paf5graph7DrawObj11DrawObjTypeEv: 0x263AE4D2
         - ScePafGraphics_2665FBAA: 0x2665FBAA
-        - ScePafGraphics_267BDBF8: 0x267BDBF8
+        - _ZN3paf5graph3arl13ShaderProgram22getAttributeParamIndexEPKcb: 0x267BDBF8
         - _ZN3paf5graph8PlaneObj8SetWrapSENS0_11TextureWrapEj: 0x26D2C953
         - ScePafGraphics_27416D74: 0x27416D74
         - ScePafGraphics_27C5476A: 0x27C5476A
@@ -1817,7 +1817,7 @@ ScePaf:
         - ScePafGraphics_66FC7819: 0x66FC7819
         - _ZN3paf5graph7TextObj15GetStringBufferERPKwRj: 0x67094D42
         - ScePafGraphics_67C25F27: 0x67C25F27
-        - ScePafGraphics_67C41D07: 0x67C41D07
+        - _ZN3paf5graph3arl16FragShaderObject4initERNS1_11ArlInstanceE: 0x67C41D07
         - ScePafGraphics_67FF6CF1: 0x67FF6CF1
         - _ZNK3paf5graph13PlaneObjParam12GetParamNameEv: 0x6857E41B
         - _ZN3paf5graph3arl13ShaderProgram15getUniformParamEPKc: 0x689ED3F2
@@ -2034,7 +2034,7 @@ ScePaf:
         - _ZN3paf5graph16AttributedString17SetStyleAttributeENS0_18TextStyleAttributeEjjRKNS_4math2v4E: 0xB3FE7D0A
         - _ZN3paf8GraphMem18GraphHeapAllocatorD0Ev: 0xB49C9FCE
         - _ZN3paf5graph7Surface12SetSymmetryUEb: 0xB54C77D3
-        - ScePafGraphics_B609BD86: 0xB609BD86
+        - _ZN3paf5graph3arl16VertShaderObject13GetDependencyEv: 0xB609BD86
         - ScePafGraphics_B63D3B14: 0xB63D3B14
         - _ZN3paf5graph16AttributedString8SetStyleEjjRKNS0_9TextStyleE: 0xB69434E6
         - ScePafGraphics_B7EB9246: 0xB7EB9246
@@ -2062,7 +2062,7 @@ ScePaf:
         - ScePafGraphics_C0487D0A: 0xC0487D0A
         - _ZN3paf5graph10TextLayout10InvalidateEv: 0xC16D98B4
         - _ZN3paf5graph14DisplaySurface18SetFrameBufferModeENS_5gutil15FrameBufferModeE: 0xC34E1F2C
-        - ScePafGraphics_C398E016: 0xC398E016
+        - _ZN3paf5graph3arl16FragShaderObject18setMultisampleModeE21SceGxmMultisampleMode: 0xC398E016
         - _ZN3paf5graph9TextStyle13EqualFontTypeERKS1_: 0xC44935BE
         - ScePafGraphics_C4BD3558: 0xC4BD3558
         - ScePafGraphics_C4ED1731: 0xC4ED1731
@@ -2135,7 +2135,7 @@ ScePaf:
         - _ZN3paf5graph7Surface8SetWrapSENS0_11TextureWrapE: 0xDFE83DCA
         - _ZN3paf5graph7DrawObjC2ERKNS0_9DrawStyleE: 0xE0782D6E
         - ScePafGraphics_E0F9A1E6: 0xE0F9A1E6
-        - ScePafGraphics_E2687C25: 0xE2687C25
+        - _ZN3paf5graph3arl16FragShaderObject13GetDependencyEv: 0xE2687C25
         - _ZN3paf5graph13ScreenSurface21GetColorSurfaceFormatEv: 0xE27A477D
         - _ZN3paf5graph3arl15VertexArraySpec10attribInfoENS2_10PredefinedEt: 0xE3833A11
         - _ZN3paf5graph14DisplaySurfaceD2Ev: 0xE389214A
@@ -2198,7 +2198,7 @@ ScePaf:
         - ScePafGraphics_F897407F: 0xF897407F
         - _ZN3paf5graph3arl9Texture2DC1ENS_6common9SharedPtrINS1_13VramAllocatorEEE: 0xF8B2AFCF
         - ScePafGraphics_F8D9F263: 0xF8D9F263
-        - ScePafGraphics_F917356F: 0xF917356F
+        - _ZN3paf5graph3arl16VertShaderObject4initERNS1_11ArlInstanceENS_6common9SharedPtrINS1_15VertexArraySpecEEES8_S8_S8_: 0xF917356F
         - ScePafGraphics_F91FD777: 0xF91FD777
         - _ZN3paf5graph11SurfaceCLUTC2EPNS0_11SurfacePoolE9ImageModei: 0xF956A4D5
         - _ZN3paf5graph10TextLayoutD1Ev: 0xF9888760
