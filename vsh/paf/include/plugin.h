@@ -308,6 +308,8 @@ public:
 	static VersatileParam *CallFactoryStyle(const char *name);
 	static VersatileParam *CallFactoryFocus(const char *name);
 	static VersatileParam *CallFactoryLayout(const char *name);
+	static ui::WidgetParam *CallFactoryWidgetParam(const char *name);
+	static ui::Widget *CallFactoryWidget(const char *name, ui::Widget *parent);
 	ui::Scene *PageOpen(const cxml::Element &node, const PageOpenParam &param);
 	void PageActivate(const cxml::Element &node);
 	void PageActivateActually();

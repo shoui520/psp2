@@ -1499,6 +1499,24 @@ void Plugin::InstantiateWidget_Layout(const cxml::Element &elm, ui::Widget *widg
 	delete param;
 }
 
+ui::WidgetParam *Plugin::CallFactoryWidgetParam(const char *name)
+{
+	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
+
+	if (it != s_factory_table.end())
+		return it->second.m_factory_param();
+	return NULL;
+}
+
+ui::Widget *Plugin::CallFactoryWidget(const char *name, ui::Widget *parent)
+{
+	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
+
+	if (it != s_factory_table.end())
+		return it->second.m_factory_widget(parent);
+	return NULL;
+}
+
 Plugin::InitParam2::InitParam2()
 {
 	draw_priority = 150;
