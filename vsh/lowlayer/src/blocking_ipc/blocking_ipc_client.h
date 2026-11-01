@@ -39,7 +39,8 @@ enum MethodId {
 class Client {
 public:
 	struct Config {
-		char name[32];
+		char name[28];
+		SceUInt32 reserved;	/* 16 from the constructor; nothing reads it */
 		SceUInt32 syncCallCount;
 		SceSize maxSyncCallInSize;
 		SceSize maxSyncCallOutSize;
@@ -57,6 +58,29 @@ public:
 		} msgQueue[32];
 		SceUInt32 slotCount;
 		int budget;
+
+		Config()
+		{
+			name[0] = '\0';
+			reserved = 16;
+			syncCallCount = 1;
+			maxSyncCallInSize = 0xF00;
+			maxSyncCallOutSize = 0xF00;
+			asyncCallCount = 0;
+			maxAsyncCallInSize = 0xF00;
+			maxAsyncCallOutSize = 0xF00;
+			blockingIpcCount = 1;
+			maxBlockingInSize = 0xF00;
+			maxBlockingOutSize = 0xF00;
+			eventFlagCount = 0;
+			msgQueueCount = 1;
+			budget = 0;
+			for (int i = 0; i < 32; i++) {
+				msgQueue[i].msgSize = 256;
+				msgQueue[i].msgCount = 8;
+			}
+			slotCount = 0;
+		}
 	};
 
 	/* Where the server signals the end of a blocking call: an event flag and its bits. */

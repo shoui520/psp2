@@ -42,6 +42,26 @@ public:
 			SceUInt32 msgCount;
 		} msgQueue[32];
 		int budget;
+
+		Config()
+		{
+			syncCallCount = 1;
+			maxSyncCallInSize = 0xF00;
+			maxSyncCallOutSize = 0xF00;
+			asyncCallCount = 1;
+			maxAsyncCallInSize = 0xF00;
+			maxAsyncCallOutSize = 0xF00;
+			callbackCount = 64;
+			msgQueueCount = 1;
+			for (int i = 0; i < 32; i++) {
+				msgQueue[i].msgSize = 0;
+				msgQueue[i].msgCount = 0;
+			}
+			msgQueue[0].msgSize = 256;
+			msgQueue[0].msgCount = 8;
+			budget = 0;
+			name[0] = '\0';
+		}
 	};
 
 	/* What checkCallback runs once the server has set the callback's bit. */
