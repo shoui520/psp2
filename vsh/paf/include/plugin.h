@@ -16,6 +16,7 @@
 #include <cxml/cxml.h>
 #include <versatileparam/idparam.h>
 #include <widget/core/widget.h>
+#include <widget/factory.h>
 
 namespace paf {
 
@@ -126,10 +127,14 @@ public:
 	static void Init();
 	static void End();
 	static Plugin *Find(const char *name);
+	static void RegistFactoryTable(const char *name, ui::FactoryFuncTable table);
+	static void RegistFactoryDrawObj(const char *name, ui::FactoryFuncDrawObj table);
 	static void LoadAsync(const InitParam &param, LoadFinishCallback finish, int32_t option);
 
 	void Stop();
 	void PageCloseAll();
+	ui::Widget *CreateWidget(ui::Widget *parent, const char *type, const IDParam &id,
+				 const IDParam &style);
 
 	const char *GetName() const
 	{

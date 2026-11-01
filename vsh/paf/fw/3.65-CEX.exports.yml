@@ -3224,7 +3224,7 @@ ScePaf:
         - ScePafWidget_1E0A2904: 0x1E0A2904
         - _ZN3paf2ui11ScrollBar2d16SetVisibleAmountERKNS_4math2v2E: 0x1E0AD6C9
         - ScePafWidget_1E206D8C: 0x1E206D8C
-        - ScePafWidget_1E20DB78: 0x1E20DB78
+        - _ZN3paf2ui5wutil5debug7DevInitEjj: 0x1E20DB78
         - _ZN3paf2ui13SlideBarParam9ParamNameEv: 0x1E557106
         - ScePafWidget_1E6F658F: 0x1E6F658F
         - _ZN3paf2ui5PlaneC2EPNS0_6WidgetEPNS2_11CreateParamE: 0x1E708E16
@@ -4705,7 +4705,7 @@ ScePaf:
         - ScePafWidget_BA6EB0C6: 0xBA6EB0C6
         - _ZN3paf2ui3BoxD0Ev: 0xBA7ACC3E
         - _ZN3paf2ui5wutil5debug11vec4_printfEPcRKNS_4math2v4E: 0xBA8234E9
-        - ScePafWidget_BA8FA91D: 0xBA8FA91D
+        - _ZN3paf2ui5wutil7DevInitERKNS_5gutil12DevInitParamE: 0xBA8FA91D
         - _ZN3paf2ui8filelist16CellListAccessor6InsertEij: 0xBAB0CAA3
         - _ZN3paf2ui11ImageButtonC2EPNS0_6WidgetEPNS2_11CreateParamE: 0xBB2570E1
         - _ZN3paf2ui8RadioBox13DestroyWidgetEv: 0xBB3890B3
