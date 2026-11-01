@@ -1008,54 +1008,67 @@ int sceGxmEndScene(SceGxmContext *context, const SceGxmNotification *vertexNotif
 
 #define GXM_USER_MARKER_TAG_SIZE	64
 
-static inline int gxmContextWriteUserMarker(SceGxmContext *context, SceUInt32 marker)
+/*
+ * Write a user marker word into the VDM stream. A deferred context's tagged markers carry
+ * the tag after the word; an immediate context's take takenMarker when the capture tool's
+ * userMarker callback takes the tag (or there is none).
+ */
+static inline int gxmContextWriteUserMarker(SceGxmContext *context, const char *tag,
+					    SceUInt32 marker, SceUInt32 takenMarker)
 {
-	SceUInt32 *block = gxmChunkBufferReserve(&context->vdmBuffer, 8, 4);
-
-	if (block == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
-	block[1] = marker;
-	block[0] = (SceUInt32)&block[2] >> 2;
-	context->vdmBuffer.cur = (SceUInt32)&block[2];
-	return 0;
-}
-
-static inline int gxmContextWriteUserMarkerTag(SceGxmContext *context, SceUInt32 marker,
-					       const char *tag)
-{
-	SceUInt32 *block = gxmChunkBufferReserve(&context->vdmBuffer,
-						 8 + GXM_USER_MARKER_TAG_SIZE, 4);
+	SceBool tagged = (marker & ~2) == GXM_USER_MARKER_PUSH_TAG;
+	SceUInt32 *block;
+	SceSize size;
 	char *start, *end, *dst;
 	char c;
-	SceUInt32 next;
 
-	if (block == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
-	start = (char *)&block[2];
-	end = start + GXM_USER_MARKER_TAG_SIZE - 1;
-	dst = start;
-	c = *tag++;
-	if (c != '\0') {
-		do {
-			*dst++ = c;
-			if (dst >= end)
-				break;
-			c = *tag++;
-		} while (c != '\0');
+	if (tagged) {
+		size = 8 + GXM_USER_MARKER_TAG_SIZE;
+	} else {
+		size = 8;
+		if (tag == NULL || gxmInitCallbacks.userMarker(context, tag))
+			marker = takenMarker;
 	}
-	*dst = '\0';
+	block = gxmChunkBufferReserve(&context->vdmBuffer, size, 4);
+	if (block == NULL) {
+		GXM_DBG_ERROR(1863, "Could not reserve %d bytes.", size);
+		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
+	if (tagged) {
+		start = (char *)&block[2];
+		end = start + GXM_USER_MARKER_TAG_SIZE - 1;
+		dst = start;
+		if (tag != NULL) {
+			c = *tag++;
+			if (c != '\0') {
+				do {
+					*dst++ = c;
+					if (dst >= end)
+						break;
+					c = *tag++;
+				} while (c != '\0');
+			}
+		}
+		*dst = '\0';
+		size = ((dst + 1 - start + 3) & ~3) + 8;
+	}
 	block[1] = marker;
-	next = (SceUInt32)block + ((dst + 1 - start + 3) & ~3) + 8;
-	block[0] = next >> 2;
-	context->vdmBuffer.cur = next;
+	block[0] = ((SceUInt32)block + size) >> 2;
+	gxmChunkBufferCommit(&context->vdmBuffer, (char *)block + size);
 	return 0;
 }
 
 int sceGxmPushUserMarker(SceGxmContext *context, const char *tag)
 {
-	if (context == NULL || tag == NULL)
+	if (context == NULL || tag == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(1908, sceGxmPushUserMarker, context);
+		else
+			GXM_DBG_ERROR_NULL(1912, sceGxmPushUserMarker, tag);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	if (!context->insideScene) {
+		GXM_DBG_ERROR_OUTSIDE_SCENE(1919, sceGxmPushUserMarker, context);
 		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
 			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
@@ -1063,20 +1076,23 @@ int sceGxmPushUserMarker(SceGxmContext *context, const char *tag)
 	if (context->type == SCE_GXM_CONTEXT_TYPE_IMMEDIATE) {
 		if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC || !gxmInitCallbacks.isCapturing())
 			return 0;
-		return gxmContextWriteUserMarker(context,
-				gxmInitCallbacks.userMarker(context, tag) ?
-				GXM_USER_MARKER_PUSH_TAKEN : GXM_USER_MARKER_PUSH);
+		return gxmContextWriteUserMarker(context, tag, GXM_USER_MARKER_PUSH,
+						 GXM_USER_MARKER_PUSH_TAKEN);
 	}
 	if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC)
 		return 0;
-	return gxmContextWriteUserMarkerTag(context, GXM_USER_MARKER_PUSH_TAG, tag);
+	return gxmContextWriteUserMarker(context, tag, GXM_USER_MARKER_PUSH_TAG,
+					 GXM_USER_MARKER_PUSH_TAG);
 }
 
 int sceGxmPopUserMarker(SceGxmContext *context)
 {
-	if (context == NULL)
+	if (context == NULL) {
+		GXM_DBG_ERROR_NULL(1940, sceGxmPopUserMarker, context);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	if (!context->insideScene) {
+		GXM_DBG_ERROR_OUTSIDE_SCENE(1947, sceGxmPopUserMarker, context);
 		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
 			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
@@ -1084,18 +1100,26 @@ int sceGxmPopUserMarker(SceGxmContext *context)
 	if (context->type == SCE_GXM_CONTEXT_TYPE_IMMEDIATE) {
 		if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC || !gxmInitCallbacks.isCapturing())
 			return 0;
-		return gxmContextWriteUserMarker(context, GXM_USER_MARKER_POP);
+		return gxmContextWriteUserMarker(context, NULL, GXM_USER_MARKER_POP,
+						 GXM_USER_MARKER_POP);
 	}
 	if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC)
 		return 0;
-	return gxmContextWriteUserMarker(context, GXM_USER_MARKER_POP_DEFERRED);
+	return gxmContextWriteUserMarker(context, NULL, GXM_USER_MARKER_POP_DEFERRED,
+					 GXM_USER_MARKER_POP_DEFERRED);
 }
 
 int sceGxmSetUserMarker(SceGxmContext *context, const char *tag)
 {
-	if (context == NULL || tag == NULL)
+	if (context == NULL || tag == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(1966, sceGxmSetUserMarker, context);
+		else
+			GXM_DBG_ERROR_NULL(1970, sceGxmSetUserMarker, tag);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	if (!context->insideScene) {
+		GXM_DBG_ERROR_OUTSIDE_SCENE(1977, sceGxmSetUserMarker, context);
 		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
 			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
@@ -1103,13 +1127,13 @@ int sceGxmSetUserMarker(SceGxmContext *context, const char *tag)
 	if (context->type == SCE_GXM_CONTEXT_TYPE_IMMEDIATE) {
 		if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC || !gxmInitCallbacks.isCapturing())
 			return 0;
-		return gxmContextWriteUserMarker(context,
-				gxmInitCallbacks.userMarker(context, tag) ?
-				GXM_USER_MARKER_SET_TAKEN : GXM_USER_MARKER_SET);
+		return gxmContextWriteUserMarker(context, tag, GXM_USER_MARKER_SET,
+						 GXM_USER_MARKER_SET_TAKEN);
 	}
 	if (gxmInitCallbacksMagic != GXM_CALLBACKS_MAGIC)
 		return 0;
-	return gxmContextWriteUserMarkerTag(context, GXM_USER_MARKER_SET_TAG, tag);
+	return gxmContextWriteUserMarker(context, tag, GXM_USER_MARKER_SET_TAG,
+					 GXM_USER_MARKER_SET_TAG);
 }
 
 int sceGxmVertexFence(SceGxmContext *context)
