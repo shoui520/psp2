@@ -96,15 +96,15 @@ typedef struct HttpTemplate {
 	SceBool basicAuthEnabled;
 	SceBool digestAuthEnabled;
 	SceBool proxyAuthEnabled;
-	int reserved34;
+	SceBool tcpNoDelay;			/* TCP_NODELAY on its sockets */
 	int autoProxyConf;
 	SceBool legacySdk;
 	SceBool nonblock;
 	int resolveRetry;
 	SceUInt32 resolveTimeout;
 	SceUInt32 connectTimeout;
-	SceUInt32 sendTimeout;
 	SceUInt32 recvTimeout;
+	SceUInt32 sendTimeout;
 	int maxRedirects;
 	int maxAuthRetries;
 	SceSize responseHeaderMaxSize;
@@ -130,7 +130,8 @@ typedef struct HttpTemplate {
 	int reservedC4;
 	SceHttpEpollHandle epoll;		/* sceHttpSetEpoll's */
 	SceUShort16 proxyPort;
-	SceUShort16 reservedCe;
+	SceUInt8 sockFlags;			/* SceHttp_F30073EC's; bit 0: HTTP_SO_PRIVATE_FLAGS 8 */
+	SceUInt8 reservedCf;
 	SceBool acceptEncodingGzipEnabled;
 	int reservedD4;
 	SceBool inflateGzipEnabled;
@@ -161,7 +162,9 @@ typedef struct HttpConnection {
 	SceUShort16 reserved14a;
 	void *recvBuffer;
 	SceSize recvBufferSize;
-	int reserved154[3];
+	SceSize recvPos;			/* the next unread byte of recvBuffer */
+	SceSize recvLen;			/* the bytes in it */
+	SceBool recvEof;			/* the peer closed */
 	int reserved160[10];
 	SceBool aborted;			/* sceNetSocketAbort was called on sock */
 	int reserved18c;
@@ -231,7 +234,8 @@ typedef struct HttpRequest {
 	char password[SCE_HTTP_PASSWORD_MAX_SIZE];
 	struct HttpAuthCacheEntry *authCache;
 	struct HttpAuthCacheEntry *proxyAuthCache;
-	int reserved3cc[4];
+	int reserved3cc[3];
+	SceSize chunkRemaining;			/* of the chunk being read */
 	SceSize requestHeaderSize;		/* with its NUL */
 	SceSize requestHeaderSent;
 	SceSize responseHeaderSize;		/* of the responseHeader buffer */
@@ -246,7 +250,12 @@ typedef struct HttpRequest {
 	int reserved430[2];
 	int responseHeaderState;		/* where the reader is in the CR LF CR LF */
 	SceSize responseHeaderPos;
-	int reserved440[8];
+	SceUInt32 chunkState;			/* _sceHttpRequestReadChunked's */
+	char chunkHex[12];			/* a chunk's size line */
+	int chunkHexLen;
+	int lineState;				/* _sceHttpRequestSkipLine's */
+	SceSize lineLen;
+	int reserved45c;
 } HttpRequest;
 _Static_assert(sizeof(HttpRequest) == 0x460, "HttpRequest");
 
@@ -580,10 +589,24 @@ int _sceHttpSocketSetSendTimeout(int sock, const SceNetSockaddrIn *addr, SceUInt
 int _sceHttpSocketRestoreSendTimeout(int sock, int saved);
 int _sceHttpSocketConnect(int sock, const SceNetSockaddrIn *addr, SceUInt32 timeout, int arg);
 void _sceHttpConnectionClose(HttpConnection *conn);
+int _sceHttpRequestRecvBuffered(HttpRequest *req, char *buf, SceSize len, int flags, SceBool peek,
+				SceBool direct);
+int _sceHttpRecvDirect(HttpRequest *req, void *buf, SceSize len, int flags);
 int _sceHttpRecv(HttpRequest *req, void *buf, SceSize len, int flags);
+int _sceHttpRequestReadChunked(HttpRequest *req, char *buf, SceSize len, int flags, SceBool *end,
+			       SceSize *chunkSize);
+int _sceHttpSocketSetOptions(int sock, const HttpTemplate *tmpl);
+int _sceHttpSocketPeek(int sock, void *buf, SceSize len);
+int _sceHttpConnectionSend(HttpConnection *conn, const void *msg, SceSize len, int flags,
+			   SceBool nonblock, SceBool noDelay);
+int _sceHttpRequestSkipLine(HttpRequest *req, int flags);
+void _sceHttpsClose(HttpConnection *conn);
+int _sceHttpsRecv(HttpConnection *conn, void *buf, SceSize len);
+int _sceHttpsSend(HttpConnection *conn, const void *buf, SceSize len);
+#define HTTP_SO_PRIVATE_FLAGS	0x40000		/* a socket option no SDK header names */
 int _sceHttpPeek(HttpRequest *req, void *buf, SceSize len, int flags);
 SceBool _sceHttpConnectionIsConnected(HttpConnection *conn);
-void _sceHttpEpollRemoveConnection(HttpConnection *conn);
+int _sceHttpConnectionShutdown(HttpConnection *conn);
 int _sceHttpEpollWait(HttpRequest *req, int arg, int events);
 
 /* requests */

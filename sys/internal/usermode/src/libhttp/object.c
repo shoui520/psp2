@@ -349,7 +349,7 @@ int _sceHttpRequestReleaseEx(HttpRequest *req, SceBool *freed)
 		}
 		if ((SceUInt32)_sceHttpGetSdkVersion() < 0x3200000 && req->state != 19 &&
 		    req->state != 18)
-			_sceHttpEpollRemoveConnection(_sceHttpRequestGetConnection(req));
+			_sceHttpConnectionShutdown(_sceHttpRequestGetConnection(req));
 		for (child = req->childConnections; child != NULL; child = next) {
 			freeObject = child->tmpl.freeObject;
 			next = (HttpConnection *)child->object.next;

@@ -227,7 +227,7 @@ void _sceHttpConnectionDestroy(HttpConnection *conn)
 
 	_sceHttpTemplateClear(&conn->tmpl);
 	_sceHttpConnectionClose(conn);
-	_sceHttpEpollRemoveConnection(conn);
+	_sceHttpConnectionShutdown(conn);
 	if (conn->recvBuffer != NULL) {
 		_sceHttpFree(freeObject, conn->recvBuffer);
 		conn->recvBuffer = NULL;
