@@ -112,7 +112,7 @@ typedef struct HttpTemplate {
 	SceSize responseHeaderMaxSize;
 	SceSize recvBufferSize;
 	int reserved68[2];
-	int reserved70;
+	SceUInt32 sslFlags;			/* sceHttpsEnableOption2's (option 13) */
 	char *proxyServer;
 	char *username;
 	char *password;
@@ -126,17 +126,17 @@ typedef struct HttpTemplate {
 	void *cookieRecvUserArg;
 	int reservedA0[2];
 	struct HttpHeader *headers;
-	void *reservedAc;
+	HttpAllocation *allocations;		/* freed with the template (_sceHttpFreeList) */
 	HttpAllocator allocator;
 	void (*freeObject)(void *ptr);
-	int reservedC0;
-	int reservedC4;
+	SceNetId epollId;			/* sceHttpSetEpollId's (option 8) */
+	void *epollIdUserArg;
 	SceHttpEpollHandle epoll;		/* sceHttpSetEpoll's */
 	SceUShort16 proxyPort;
 	SceUInt8 sockFlags;			/* SceHttp_F30073EC's; bit 0: HTTP_SO_PRIVATE_FLAGS 8 */
 	SceUInt8 reservedCf;
 	SceBool acceptEncodingGzipEnabled;
-	int reservedD4;
+	int sslVersion;				/* sceHttpsSetSslVersion's */
 	SceBool inflateGzipEnabled;
 	int reservedDc;
 	int reservedE0;
@@ -775,7 +775,7 @@ int _sceHttpRedirectCacheTerm(void);
 int SceHttp_E0825488(void *(*mallocFunc)(SceSize size), void (*freeFunc)(void *ptr));
 int SceHttp_11C9BCE8(void);
 void _sceHttpsInit(void);
-int _sceHttpCreateTemplate(HttpTemplate *tmpl, const char *userAgent, int httpVer,
+int _sceHttpCreateTemplate(const HttpAllocator *allocator, const char *userAgent, int httpVer,
 			   SceBool autoProxyConf);
 int _sceHttpDeleteTemplate(int tmplId);
 int _sceHttpDeleteConnection(int connId);
@@ -792,6 +792,7 @@ int _sceHttpRequestWaitResponse(HttpRequest *req);
 int _sceHttpRemoveHeaderField(HttpRequest *req, const char *header, SceSize headerSize,
 			      const char *name, SceSize nameLen, char **out, SceSize *outSize);
 int _sceHttpSetOption(int id, int option, const void *value, SceSize size, void *arg);
+int _sceHttpGetDefaultOption(int option, void *value, SceSize size, void *arg, SceSize argSize);
 int _sceHttpGetOption(int id, int option, void *value, SceSize size, void *arg, SceSize argSize);
 int _sceHttpSetDefaultOption(int option, const void *value, SceSize size, void *arg,
 			     SceSize argSize);
