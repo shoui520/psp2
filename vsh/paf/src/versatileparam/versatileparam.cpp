@@ -22,6 +22,30 @@
 
 namespace paf {
 
+/*
+ * The ranges a debug view gives a widget's position, size and rotation, which the release
+ * build never reads (names ours).
+ */
+static inline __attribute__((always_inline)) math::v3 Range3(float x, float y, float z)
+{
+	return math::v3(x, y, z);
+}
+
+static inline __attribute__((always_inline)) math::v4 Range4(float x, float y, float z, float w)
+{
+	return math::v4(x, y, z, w);
+}
+
+static const math::v3 s_pos_min = Range3(-500.0f, -500.0f, -500.0f);
+static const math::v3 s_pos_max = Range3(500.0f, 500.0f, 500.0f);
+static const math::v3 s_size_min = Range3(20.0f, 20.0f, 0.0f);
+static const math::v3 s_size_max = Range3(1000.0f, 1000.0f, 1000.0f);
+static const math::v4 s_size_max4 = Range4(20.0f, 20.0f, 1000.0f, 1000.0f);
+static const math::v3 s_rot_min = Range3(-3.14159265f, -3.14159265f, -3.14159265f);
+static const math::v3 s_rot_max = Range3(3.14159265f, 3.14159265f, 3.14159265f);
+static const math::v4 s_rect_min = Range4(-500.0f, -500.0f, 0.0f, 0.0f);
+static const math::v4 s_rect_max = Range4(500.0f, 500.0f, 1000.0f, 1000.0f);
+
 const char VersatileParam::m_param_name[] = "resource_base";
 
 const char *VersatileParam::GetParamName() const
