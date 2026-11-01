@@ -100,7 +100,12 @@ static inline SceBool gxmBlendIsCopy(const GxmBlendInstr *instr, SceUInt32 *valu
 	case GXM_BLEND_OP_MAD:
 		if (instr->src1 != REG_ZERO)
 			return SCE_FALSE;
-		*value = instr->op == GXM_BLEND_OP_MAD ? instr->src2 : REG_NONE;
+		if (instr->op == GXM_BLEND_OP_MAD) {
+			*value = instr->src2;
+		} else {
+			GXM_DBG_ASSERT(529, !"Not a foldable operation!");
+			*value = REG_NONE;
+		}
 		return SCE_TRUE;
 	case GXM_BLEND_OP_MUL:
 		if (instr->src2 == REG_ZERO || instr->src1 == REG_ZERO) {
@@ -118,50 +123,56 @@ static inline SceBool gxmBlendIsCopy(const GxmBlendInstr *instr, SceUInt32 *valu
 			return SCE_TRUE;
 		}
 		return SCE_FALSE;
+	case GXM_BLEND_OP_ILLEGAL:
+		GXM_DBG_ASSERT(557, !"illegal operation");
+		break;
 	}
 	return SCE_FALSE;
 }
 
-/* user reads reg, which holds value: read value instead */
-static inline void gxmBlendSubstitute(GxmBlendInstr *user, SceUInt32 reg, SceUInt32 value,
-				      SceBool *kept)
+/* current reads candidateReg, which holds value: read value instead */
+static inline void gxmBlendSubstitute(GxmBlendInstr *current, SceUInt32 candidateReg,
+				      SceUInt32 value, SceBool *kept)
 {
-	switch (user->op) {
+	switch (current->op) {
 	case GXM_BLEND_OP_MAD:
 		if (value == REG_ZERO) {
-			if (reg == user->src0 || reg == user->src1) {
+			if (candidateReg == current->src0 || candidateReg == current->src1) {
 				/* 0 * x + src2 */
-				user->op = GXM_BLEND_OP_ADD;
-				user->src0 = REG_NONE;
-				user->src1 = REG_ZERO;
-				user->negate = 0;
-				user->src0Alpha = 0;
-				user->src1Alpha = 0;
+				current->op = GXM_BLEND_OP_ADD;
+				current->src0 = REG_NONE;
+				current->src1 = REG_ZERO;
+				current->negate = 0;
+				current->src0Alpha = 0;
+				current->src1Alpha = 0;
 			} else {
 				/* src0 * src1 + 0 */
-				user->op = GXM_BLEND_OP_MUL;
-				user->src2 = user->src0;
-				user->src2Alpha = user->src0Alpha;
-				user->src0 = REG_NONE;
-				user->src0Alpha = 0;
+				GXM_DBG_ASSERT(232, candidateReg == current->src2);
+				current->op = GXM_BLEND_OP_MUL;
+				current->src2 = current->src0;
+				current->src2Alpha = current->src0Alpha;
+				current->src0 = REG_NONE;
+				current->src0Alpha = 0;
 			}
 		} else if (value == REG_ONE) {
-			if (reg == user->src0) {
+			if (candidateReg == current->src0) {
 				/* 1 * src1 + src2 */
-				user->op = GXM_BLEND_OP_ADD;
-				user->src0 = REG_NONE;
-				user->src0Alpha = 0;
-			} else if (reg == user->src1) {
+				current->op = GXM_BLEND_OP_ADD;
+				current->src0 = REG_NONE;
+				current->src0Alpha = 0;
+			} else if (candidateReg == current->src1) {
 				/* src0 * 1 + src2 */
-				user->op = GXM_BLEND_OP_ADD;
-				user->src1 = user->src0;
-				user->src1Alpha = user->src0Alpha;
-				user->src0 = REG_NONE;
-				user->src0Alpha = 0;
+				current->op = GXM_BLEND_OP_ADD;
+				current->src1 = current->src0;
+				current->src1Alpha = current->src0Alpha;
+				current->src0 = REG_NONE;
+				current->src0Alpha = 0;
 			} else {
-				user->src2 = REG_ONE;
+				GXM_DBG_ASSERT(282, candidateReg == current->src2);
+				current->src2 = REG_ONE;
 			}
 		} else {
+			GXM_DBG_ASSERT(305, !"Unsupported operation");
 			*kept = SCE_TRUE;
 		}
 		break;
@@ -169,15 +180,18 @@ static inline void gxmBlendSubstitute(GxmBlendInstr *user, SceUInt32 reg, SceUIn
 	case GXM_BLEND_OP_MIN:
 	case GXM_BLEND_OP_MAX:
 	case GXM_BLEND_OP_ADD:
-		if (user->src1 == reg)
-			user->src1 = value;
-		if (user->src2 == reg)
-			user->src2 = value;
-		if (user->op == GXM_BLEND_OP_MUL && reg == REG_ZERO) {
-			user->op = GXM_BLEND_OP_ADD;
-			user->src1 = REG_ZERO;
-			user->src2 = REG_ZERO;
+		if (current->src1 == candidateReg)
+			current->src1 = value;
+		if (current->src2 == candidateReg)
+			current->src2 = value;
+		if (current->op == GXM_BLEND_OP_MUL && candidateReg == REG_ZERO) {
+			current->op = GXM_BLEND_OP_ADD;
+			current->src1 = REG_ZERO;
+			current->src2 = REG_ZERO;
 		}
+		break;
+	case GXM_BLEND_OP_ILLEGAL:
+		GXM_DBG_ASSERT(379, !"illegal operation");
 		break;
 	}
 }

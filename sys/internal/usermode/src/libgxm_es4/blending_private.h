@@ -76,6 +76,7 @@ typedef struct GxmBlendCode {
 #define GXM_BLEND_OP_MIN	3
 #define GXM_BLEND_OP_MAX	4
 #define GXM_BLEND_OP_ADD	5	/* dst = src1 + src2 */
+#define GXM_BLEND_OP_ILLEGAL	6	/* the debug build's checks: "illegal operation" */
 
 /* operands, s_registerDescriptions[] */
 #define REG_NONE	0
