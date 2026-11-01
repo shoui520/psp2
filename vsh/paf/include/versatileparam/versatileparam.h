@@ -10,11 +10,13 @@
 #include <std/memory>
 #include <common/shared_ptr.h>
 #include <cxml/cxml.h>
+#include <versatileparam/idparam.h>
 
 namespace paf {
 
 class File;
 class Plugin;
+class ResourceParam;
 
 class VersatileParam {
 public:
@@ -29,6 +31,17 @@ public:
 	virtual int32_t AttachPlugin(Plugin *plugin);
 	virtual int32_t Read(cxml::Element *elem);
 	virtual int32_t Write(common::SharedPtr<File> fp, uint32_t type, uint32_t indent);
+
+	ResourceParam *m_serial;
+	Plugin *m_plugin;
+	IDParam m_id;
+	cxml::Element *m_node;
+};
+
+/* the parameters read from a resource, by their tag and ID */
+class VersatileParamManager {
+public:
+	void AddParam(const char *tag, const IDParam &id, VersatileParam *param);
 };
 
 }

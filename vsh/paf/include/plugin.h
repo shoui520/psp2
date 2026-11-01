@@ -1,8 +1,7 @@
 /*
  * paf::Plugin: a plugin of the application, with its resource, the widgets and
- * pages made from it, its heaps and its callbacks. The functions are still C
- * (src/plugin.c, src/plugin.h's struct); this is the layout of 0x13c bytes and
- * what converted C++ calls. Names after ScePaf-RE.
+ * pages made from it, its heaps and its callbacks: 0x13c bytes. Names after
+ * ScePaf-RE.
  */
 #ifndef PAF_PLUGIN_H_CXX
 #define PAF_PLUGIN_H_CXX
@@ -22,6 +21,8 @@
 namespace paf {
 
 class Module;
+class Timer;
+class VersatileParam;
 class VersatileParamManager;
 
 namespace memory {
@@ -44,11 +45,38 @@ class WidgetLayoutParam;
 }
 
 class InitEventFunctionEntry;
+class InitEventFunctionEntry2;
 class EventFunctionEntry;
 class LayoutFunctionEntry;
 
 class Plugin {
 public:
+	/* InitParam::option */
+	enum Option {
+		Option_None = 0,
+		Option_AutoOpen = 1,
+		Option_AutoActivate = 2,
+		Option_RememberSurface = 4,
+		Option_MakeSurfaceFirst = 8,
+		Option_WaitWidgetActuallyDestroyed = 16,
+		Option_ResourceLoadWithDebugSymbol = 32,
+		Option_Default = 28
+	};
+
+	enum TransitionType {
+		TransitionType_None = 0,
+		TransitionType_SlideFromTop = 1,
+		TransitionType_SlideFromBottom = 2,
+		TransitionType_SlideFromLeft = 3,
+		TransitionType_SlideFromRight = 4
+	};
+
+	/* PageOpenParam::option */
+	enum PageOption {
+		PageOption_None = 0,
+		PageOption_Create = 1
+	};
+
 	/* the option bits of loads and unloads */
 	enum LoadUnloadOption {
 		LoadUnloadOption_None = 0,
@@ -79,6 +107,23 @@ public:
 
 	class Argument {
 	public:
+		Argument(int32_t value) : type(ArgumentType_Int), i(value)
+		{
+		}
+
+		/* copies the value both as an int and as a float */
+		Argument(const Argument &src)
+		{
+			type = src.type;
+			i = src.i;
+			f = src.f;
+			str = src.str;
+		}
+
+		operator int32_t() const;
+		operator float() const;
+		operator string() const;
+
 		ArgumentType type;
 		union {
 			int32_t i;
@@ -97,6 +142,17 @@ public:
 		ui::Scene *page;
 		int32_t view_priority;
 		int32_t page_priority;
+	};
+
+	/* what a plugin's set_param_func may change before the plugin is made */
+	class InitParam2 {
+	public:
+		InitParam2();
+
+		int32_t draw_priority;
+		uint32_t surface_pool_size;
+		int32_t texture_load_filter;
+		int32_t graphics_flag;
 	};
 
 	class InitParam {
@@ -133,6 +189,23 @@ public:
 		int32_t graphics_flag;
 	};
 
+	class PageOpenParam {
+	public:
+		PageOpenParam();
+
+		int32_t draw_layer;
+		int32_t draw_mask;
+		int32_t overwrite_draw_priority;
+		int32_t option;
+		InitEventFunctionEntry2 *event_handler_table;
+		bool fade;
+		float fade_time_ms;
+		TransitionType transition_type;
+		Timer *timer;
+		ui::EnvironmentParam *env_param;
+		int32_t graphics_flag;
+	};
+
 	/* what TemplateOpen adds the template's widgets with */
 	class TemplateOpenParam {
 	public:
@@ -147,12 +220,20 @@ public:
 
 	static void Init();
 	static void End();
-	static Plugin *Find(const char *name);
 	static void RegistFactoryTable(const char *name, ui::FactoryFuncTable table);
+	static void RemoveFactoryTable(const char *name);
 	static void RegistFactoryDrawObj(const char *name, ui::FactoryFuncDrawObj table);
+	static void RemoveFactoryDrawObj(const char *name);
+	static map<string, ui::FactoryFuncTable> *GetWFactoryTable();
+	static void LoadSync(const InitParam &param, LoadFinishCallback finish, int32_t option);
 	static void LoadAsync(const InitParam &param, LoadFinishCallback finish, int32_t option);
 	static void UnloadAsync(Plugin *plugin, UnloadFinishCallback finish, int32_t option);
-	static void LoadSync(const InitParam &param, LoadFinishCallback finish, int32_t option);
+	static void UnloadAsync(const char *name, UnloadFinishCallback finish, int32_t option);
+	static Plugin *Find(const char *name);
+
+	VersatileParam *CallFactoryStyle(const char *name);
+	ui::Scene *PageOpen(const cxml::Element &node, const PageOpenParam &param);
+	void PageActivate(const cxml::Element &node);
 
 	void Start();
 	void Stop();
@@ -166,6 +247,9 @@ public:
 	{
 		return m_name.c_str();
 	}
+
+	Argument GetArg(const char *key, bool *exist) const;
+	void Notify(int32_t status) const;
 
 	const wchar_t *GetString(const IDParam &id) const;
 	intrusive_ptr<graph::Surface> GetTexture(const IDParam &id);
@@ -255,6 +339,13 @@ public:
 
 /* Exports with no name found for their NIDs. */
 extern "C" {
+/* the ID's name from the resource's debug symbols, and from the common resource's */
+void ScePafToplevel_3B003F16(paf::Plugin *plugin, paf::string *id, uint32_t idhash,
+			     bool with_common);
+/* the sound parameter factory of a widget type */
+paf::VersatileParam *ScePafToplevel_417B0721(const char *name);
+/* reads the file table's parameters into the third parameter manager */
+void ScePafToplevel_C1BE28B4(paf::Plugin *plugin);
 /* a sound of the plugin's resource, else of the common resource's */
 int32_t ScePafToplevel_CA3E606F(paf::Plugin *plugin, const paf::IDParam &id,
 				const char **buffer1, uint32_t *size1, const char **buffer2,

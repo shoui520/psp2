@@ -112,6 +112,16 @@ public:
 		return iterator(head);
 	}
 
+	iterator begin() const
+	{
+		return iterator(head != NULL ? head->next : NULL);
+	}
+
+	iterator end() const
+	{
+		return iterator(head);
+	}
+
 	_Ty &front()
 	{
 		return head->next->value;

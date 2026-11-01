@@ -258,6 +258,8 @@ private:
 						    void *data);
 	friend int32_t (::ScePafToplevel_1EEFAECD)(Framework *framework, bool **done);
 	friend void (::ScePafToplevel_C9C02705)(void *userdata);
+	friend void (::ScePafToplevel_3B003F16)(Plugin *plugin, string *id, uint32_t idhash,
+						 bool with_common);
 	friend int32_t (::ScePafToplevel_95CF05AC)(Framework *framework, const IDParam &id,
 						    const char **buffer1, uint32_t *size1,
 						    const char **buffer2, uint32_t *size2,

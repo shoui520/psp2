@@ -59,6 +59,8 @@ public:
 	};
 
 	cxml::Element GetTableElement(TableType type) const;
+	/* the "id:", "src:" or "type:" (kind 0, 1, 2) of an ID's debug symbol; -1 without one */
+	int32_t GetDebugSymbol(uint32_t idhash, int32_t kind, string *symbol) const;
 
 	/* the layout of the C struct, up to what C++ reads; the id map and default string follow */
 	common::SharedPtr<File> m_rscfp;

@@ -130,7 +130,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/autotest_tty.cpp
 	src/std/math.c
 	src/common/view.cpp
-	src/plugin.c
+	src/plugin.cpp
 	src/cxml/cxml.c
 	src/cxml/document.c
 	src/cxml/attribute.c
@@ -256,7 +256,7 @@ set_source_files_properties(src/timer/timerlistener.cpp src/timer/timerlistenerl
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/timer/timerqueue.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)
 set_source_files_properties(src/timer/get_time.cpp src/url/url.cpp src/rtc/rtc.cpp src/misc/autotest_tty.cpp
-	src/framework.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+	src/framework.cpp src/plugin.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # PropertyList inlines the value map's operator[] and StringElement::GetString but keeps the
 # element map's operator[] out of line: budget 16 does, 8 and 30 do not (2026-11-01).
