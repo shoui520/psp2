@@ -305,6 +305,7 @@ public:
 	static Plugin *Find(const char *name);
 
 	static VersatileParam *CallFactoryStyle(const char *name);
+	static VersatileParam *CallFactoryFocus(const char *name);
 	ui::Scene *PageOpen(const cxml::Element &node, const PageOpenParam &param);
 	void PageActivate(const cxml::Element &node);
 	void PageActivateActually();
@@ -362,6 +363,8 @@ public:
 	ui::HandlerCB GetInitEventHandler(const IDParam &id) const;
 	void InstantiateWidget_InitEventHandler(const IDParam &id, ui::Widget *widget,
 						InitEventFunctionEntry2 *event_handler_table);
+	/* reads the element's first "focus_" child into its type's FocusParam for the widget */
+	void InstantiateWidget_Focus(const cxml::Element &elm, ui::Widget *widget);
 
 	/*
 	 * A texture element's surface: the one made before, else loaded from the resource's

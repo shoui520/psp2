@@ -26,7 +26,7 @@ public:
 	Widget *(*m_factory_widget)(Widget *parent);
 	WidgetParam *(*m_factory_param)();
 	VersatileParam *(*m_factory_layout)();
-	/* a parameter of ScePafResource's (made by its 880B1C31) */
+	/* the type's FocusParam (made by ScePafResource's 880B1C31) */
 	VersatileParam *(*m_factory_resource_param)();
 	VersatileParam *(*m_factory_style)();
 	VersatileParam *(*m_factory_handler)();

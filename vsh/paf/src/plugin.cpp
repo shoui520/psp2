@@ -1393,6 +1393,46 @@ void Plugin::InstantiateWidget_InitEventHandler(const IDParam &id, ui::Widget *w
 	widget->AddEventCallback(ui::Handler::CB_STATE_INIT, GetInitEventHandler(id));
 }
 
+/* called whole by InstantiateWidget_Focus */
+__attribute__((noinline)) VersatileParam *Plugin::CallFactoryFocus(const char *name)
+{
+	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
+
+	if (it != s_factory_table.end())
+		return it->second.m_factory_resource_param();
+	return NULL;
+}
+
+void Plugin::InstantiateWidget_Focus(const cxml::Element &elm, ui::Widget *widget)
+{
+	cxml::Element focus;
+
+	for (cxml::Element child = elm.GetFirstChild(); child.doc != NULL && child.offset >= 0;
+	     child = child.GetNextSibling()) {
+		const char *name = child.GetName();
+
+		if (name[0] == 'f' && sce_paf_strncmp("focus_", name, 6) == 0 &&
+		    (focus.doc == NULL || focus.offset < 0))
+			focus = child;
+	}
+	if (focus.doc == NULL || focus.offset < 0)
+		return;
+
+	ui::FocusParam *param = static_cast<ui::FocusParam *>(CallFactoryFocus(elm.GetName()));
+
+	if (param == NULL)
+		return;
+	param->Alloc(focus.GetNumChild());
+	param->Create(1);
+	param->m_widget = widget;
+	param->m_plugin = this;
+	param->Read(&focus);
+	param->Set();
+	param->m_widget = NULL;
+	param->Destroy(1);
+	delete param;
+}
+
 Plugin::InitParam2::InitParam2()
 {
 	draw_priority = 150;

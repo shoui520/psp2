@@ -70,6 +70,19 @@ public:
 	uint32_t m_sound_capacity;
 };
 
+/*
+ * A widget's key focus, read from the "focus_" children of its element (names ours; its
+ * functions are ScePafResource's, not converted yet).
+ */
+class FocusParam : public VersatileParam {
+public:
+	/* makes room for num entries of each focus array (0x8106693e) */
+	int32_t Alloc(int32_t num);
+
+	/* the widget it is read for */
+	Widget *m_widget;
+};
+
 class Widget : public Handler {
 public:
 	/* what a widget keeps for its owner (m_user_data2), deleted with it */
