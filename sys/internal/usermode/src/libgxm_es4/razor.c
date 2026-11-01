@@ -25,8 +25,10 @@ void *sceGxmGetTopContextInternal(void)
 
 void sceGxmSetInitializeParamInternal(SceUInt32 magic, const GxmInitCallbacks *callbacks)
 {
+	SceBool valid = callbacks != NULL && magic == GXM_CALLBACKS_MAGIC;
+
 	gxmInitCallbacksMagic = 0;
-	if (magic != GXM_CALLBACKS_MAGIC || callbacks == NULL)
+	if (!valid)
 		return;
 	sceClibMemcpy_safe(&gxmInitCallbacks, callbacks, sizeof(gxmInitCallbacks));
 	gxmInitCallbacksMagic = GXM_CALLBACKS_MAGIC;
@@ -34,8 +36,10 @@ void sceGxmSetInitializeParamInternal(SceUInt32 magic, const GxmInitCallbacks *c
 
 void sceGxmSetCallbackInternal(SceUInt32 magic, const GxmRazorCallbacks *callbacks)
 {
+	SceBool valid = callbacks != NULL && magic == GXM_CALLBACKS_MAGIC;
+
 	gxmRazorMagic = 0;
-	if (magic != GXM_CALLBACKS_MAGIC || callbacks == NULL)
+	if (!valid)
 		return;
 	gxmRazorMagic = GXM_CALLBACKS_MAGIC;
 	gxmRazorCallbacks = *callbacks;
@@ -48,9 +52,11 @@ int sceGxmGetReplayRenderTargetMemSize(SceGxmContext *context, SceSize size, voi
 
 	*memory = NULL;
 	block = gxmChunkBufferReserve(&context->vdmBuffer, size, 4);
-	if (block == NULL)
+	if (block == NULL) {
+		GXM_DBG_ERROR(106, "Could not reserve %d bytes.", size);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	context->vdmBuffer.cur = (SceUInt32)block + size;
+	}
+	gxmChunkBufferCommit(&context->vdmBuffer, (SceUInt8 *)block + size);
 	*memory = block;
 	return 0;
 }
