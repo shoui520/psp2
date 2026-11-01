@@ -194,7 +194,7 @@ int SceHttp_802E3C30(const void *data, SceSize size)
 }
 
 /* the index'th CA certificate: copied when buf holds it, its size to *outSize */
-int _sceHttpsCertGetCa(int unused, int index, void *buf, SceSize size, int unused2,
+int _sceHttpsCertGetCa(int unused, int index, void *buf, SceSize size, void *unused2,
 		       SceSize *outSize)
 {
 	int ret = 0;

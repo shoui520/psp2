@@ -887,7 +887,7 @@ int SceHttp_802E3C30(const void *data, SceSize size);
 int SceHttp_A9A39BA1(void *sslCtx, void *arg);
 int SceHttp_A4CF892E(void *sslCtx, void *arg);
 SceBool _sceHttpsCertIsInitialized(void);
-int _sceHttpsCertGetCa(int unused, int index, void *buf, SceSize size, int unused2,
+int _sceHttpsCertGetCa(int unused, int index, void *buf, SceSize size, void *unused2,
 		       SceSize *outSize);
 int _sceHttpsCertGetClientCert(void *buf, SceSize size, SceSize *outSize);
 int _sceHttpsCertGetPrivateKey(void *buf, SceSize size, SceSize *outSize);
@@ -896,11 +896,9 @@ int _sceHttpsCertGetCaList(SceSslCert ***caCerts, SceInt32 *caNum,
 int _sceHttpsCertFreeCaList(SceSslCert **caCerts, SceInt32 caNum,
 			    HttpsSslContext *context);
 
-/* the SSL glue (not written yet) */
-int _sceHttpsSslCallback(void *sslCtx, void *data, int arg2, int arg3, int *result);
-int _sceHttpsSslGetCaList(SceSslCert ***caCerts, SceInt32 *caNum,
-			  HttpsSslContext *context);
-int _sceHttpsSslFreeCaList(SceSslCert **caCerts, SceInt32 caNum,
-			   HttpsSslContext *context);
+/* ssl.c: the server certificate's checks, and the CA list (the loaded CAs, then the system's) */
+int _sceHttpsSslCallback(void *ssl, void **certs, int certNum, void *arg, int *verifyResult);
+int _sceHttpsSslGetCaList(SceSslCert ***caCerts, SceInt32 *caNum, HttpsSslContext *context);
+int _sceHttpsSslFreeCaList(SceSslCert **caCerts, SceInt32 caNum, HttpsSslContext *context);
 
 #endif /* HTTP_INTERNAL_H */

@@ -18,12 +18,21 @@
 #define SSL_INTERNAL_ERROR_SYSCALL	5
 #define SSL_INTERNAL_ERROR_ZERO_RETURN	6
 
+/* what the calls report when the object has no such item */
+#define SSL_INTERNAL_ERROR_NOT_FOUND	10008
+
+/* SceSslInternal_24C6257F's values of a connection */
+#define SSL_INTERNAL_VALUE_LIBRARY	1
+#define SSL_INTERNAL_VALUE_CERT_LIBRARY	5
+#define SSL_INTERNAL_VALUE_KEY_LIBRARY	6
+
 /* the libraries SceSslInternal_461C5990 reports for */
 #define SSL_INTERNAL_LIBRARY_SSL	0
 #define SSL_INTERNAL_LIBRARY_HTTP	1
 
-/* the callback libhttp installs on an SSL context */
-typedef int (*SceSslInternalCallback)(void *ctx, void *data, int arg2, int arg3, int *result);
+/* the server certificate check libhttp installs on an SSL context: its chain, certNum long */
+typedef int (*SceSslInternalCallback)(void *ssl, void **certs, int certNum, void *arg,
+				      int *verifyResult);
 /* a connection's client certificate and key, on the server's request */
 typedef int (*SceSslInternalClientCertCallback)(void *ssl, void **cert, void **key);
 /* the handshake's progress */
@@ -31,11 +40,14 @@ typedef void (*SceSslInternalInfoCallback)(void *ssl, int where, int ret);
 typedef void (*SceSslInternalMessageCallback)(void);
 
 int sceSslInternalIsInitalized(void);
+int sceSslInternalGetCertificateAuthority(int store, int index, const char ***pem, void *buf,
+					  SceSize size, SceSize *outSize);
 int sceSslInternalWrite(void *ssl, const void *buf, int len);
 
 /* the library, its client method, contexts and their settings */
 int SceSslInternal_2185BB05(void **lib);
 void *SceSslInternal_A374CD7B(void);
+void *SceSslInternal_AC1DBE40(void);
 void *SceSslInternal_E746465E(void *lib, void *method);
 void SceSslInternal_EF9EBAC7(void *ctx);
 int SceSslInternal_67FB1CD3(void *ctx, const void *seed, SceSize size);
@@ -76,5 +88,19 @@ int SceSslInternal_D68D8421(void *cert, void *key);
 int SceSslInternal_81FA5DBE(void *cert, int which, void **name);
 int SceSslInternal_568F0E80(void *a, void *b);
 void SceSslInternal_CE37B69E(void *name);
+int SceSslInternal_08179EBD(void *cert, int which, void **name);
+int SceSslInternal_91C2531C(void *name, int what, void *value);
+int SceSslInternal_B5A099D2(void *ava, int what, void *part);
+int SceSslInternal_17BF2367(void *ava);
+int SceSslInternal_4D80D3F7(void *oid, int arg1, const void *data, SceSize len);
+int SceSslInternal_3DE4F3DB(void *oid, int arg1, SceSize size, char *buf);
+
+/* certificate extensions and the system's CA store */
+int SceSslInternal_BF99D664(void *lib, int arg1, void **ext);
+int SceSslInternal_64BDF1BB(void *cert, int item, void *ext);
+int SceSslInternal_93EAE08A(void *ext, int item, void *data);
+void SceSslInternal_F030A0DE(void *ext);
+int SceSslInternal_3746501F(void *store, const char ***pem, void *buf, SceSize size,
+			    SceSize *outSize, SceBool systemOnly);
 
 #endif /* _LIBSSL_SSLINTERNAL_H */
