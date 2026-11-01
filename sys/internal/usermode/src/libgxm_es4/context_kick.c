@@ -23,14 +23,18 @@ static inline SceUInt32 gxmMemInfoDevAddr(const PVRSRV_CLIENT_MEM_INFO *block,
 	return (SceUInt32)address + block->sDevVAddr - (SceUInt32)block->pvLinAddr;
 }
 
-/* the bytes written into a ring since the last kick */
-static inline SceSize gxmRingBufferUsed(const GxmRingBuffer *ring, const GxmChunkBuffer *buffer)
+/* the bytes written into a ring since the last kick (Sony's ring_buffer_private.h) */
+static inline SceSize gxmRingBufferUsed(const GxmRingBuffer *ringBuffer,
+					const GxmChunkBuffer *writeBuffer)
 {
-	SceUInt32 offset = buffer->cur - ring->memory;
+	SceUInt32 offset;
 
-	if (ring->lastOffset <= offset)
-		return offset - ring->lastOffset;
-	return ring->size - ring->lastOffset + offset;
+	GXM_DBG_CHECK("ring_buffer_private.h", 123, writeBuffer->ring == ringBuffer,
+		      "writeBuffer->cookie == ringBuffer");
+	offset = writeBuffer->cur - ringBuffer->memory;
+	if (ringBuffer->lastOffset <= offset)
+		return offset - ringBuffer->lastOffset;
+	return ringBuffer->size - ringBuffer->lastOffset + offset;
 }
 
 /* the background object's programs, rebuilt after a scene's first kick of the fragment part */
@@ -88,12 +92,20 @@ static inline void gxmContextWriteKickFence(SceGxmContext *context)
 
 int sceGxmFinish(SceGxmContext *context)
 {
-	if (context == NULL)
+	if (context == NULL) {
+		GXM_DBG_ERROR_NULL(872, sceGxmFinish, context);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+	}
+	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE) {
+		GXM_DBG_ERROR(876, "Parameter context to function sceGxmFinish is not an immediate "
+			      "context.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (gxmDisplayQueueIsCurrentThread())
+	}
+	if (gxmDisplayQueueIsCurrentThread()) {
+		GXM_DBG_ERROR(881, "The function sceGxmFinish cannot be called from the display "
+			      "queue thread.");
 		return SCE_GXM_ERROR_INVALID_THREAD;
+	}
 
 	gxmRazorMarker(0x13000000, gxmGlobals.frameIndex);
 	gxmWaitForValue(gxmGlobals.top.contexts.block, context->vdmRing.readOffset,
@@ -120,16 +132,20 @@ int gxmContextKick(SceGxmContext *context, SceUInt32 flags,
 	SceUInt32 ispMisc;
 	SceUInt32 sceneFlags;
 	SceUInt32 kickFlags;
-	SceUInt32 vdmStart;
+	SceUInt32 vdmAddr;
 	SceUInt32 surfaceSync;
 	const SceUInt32 *csc0;
 	const SceUInt32 *csc1;
 	SGX_KICKTA_OUTPUT output;
+	int err;
 
 	gxmRazorMarker(0x1d000000 | (gxmGlobals.sceneIndex & 0xff) << 16,
 		       gxmGlobals.frameIndex & 0xffff);
-	if (gxmDisplayQueueIsCurrentThread())
+	if (gxmDisplayQueueIsCurrentThread()) {
+		GXM_DBG_ERROR(368, "The GPU has been kicked from the display queue thread, this can "
+			      "cause deadlocks.");
 		return SCE_GXM_ERROR_INVALID_THREAD;
+	}
 	if (vertexNotification != NULL) {
 		int ret = gxmNotificationCheckAddress(vertexNotification->address);
 
@@ -163,7 +179,8 @@ int gxmContextKick(SceGxmContext *context, SceUInt32 flags,
 				       gxmRingBufferUsed(&context->fragmentUsseRing,
 							 &context->fragmentUsseBuffer));
 
-	vdmStart = context->vdmRing.memory + context->vdmRing.lastOffset;
+	vdmAddr = context->vdmRing.memory + context->vdmRing.lastOffset;
+	GXM_DBG_ASSERT(521, (vdmAddr & 0x3) == 0);
 	gxmRingBufferKicked(&context->vdmRing, &context->vdmBuffer);
 	gxmRingBufferKicked(&context->vertexRing, &context->vertexBuffer);
 	if (fragment) {
@@ -227,7 +244,7 @@ int gxmContextKick(SceGxmContext *context, SceUInt32 flags,
 	common->ui32VisTestCount = context->scene.settings.visibilityStride >> 2;
 	common->ui32USEStoreRange = 0;
 	common->ui32USELoadRedirect = 0;
-	common->sTABufferCtlStreamBase = vdmStart;
+	common->sTABufferCtlStreamBase = vdmAddr;
 	common->ui32MTECtrl = (context->scene.tuning.nearClipMode & 0x80) | 0x22;
 
 	/* the GPU writes each ring's kicked offset where gxmRingBufferRefill waits for it */
@@ -304,7 +321,7 @@ int gxmContextKick(SceGxmContext *context, SceUInt32 flags,
 			info.context = context;
 			info.frame = frame;
 			info.fragment = fragment;
-			info.vdmStart = vdmStart;
+			info.vdmStart = vdmAddr;
 			info.reserved = 0;
 			info.kick = &gxmKick;
 			memset(info.usseBases, 0, sizeof(info.usseBases));
@@ -323,8 +340,11 @@ int gxmContextKick(SceGxmContext *context, SceUInt32 flags,
 		}
 	}
 
-	if (SceGpuEs4User_F0CCE9DB(&gxmGlobals.top, &gxmKick, &output) != 0)
+	err = SceGpuEs4User_F0CCE9DB(&gxmGlobals.top, &gxmKick, &output);
+	if (err != 0) {
+		GXM_DBG_ERROR(736, "Failed due to error in driver layer (%08X).", err);
 		return SCE_GXM_ERROR_DRIVER;
+	}
 
 	if (gxmInitCallbacksMagic == GXM_CALLBACKS_MAGIC) {
 		if (gxmInitCallbacks.isCapturing()) {
@@ -348,18 +368,44 @@ int gxmContextKick(SceGxmContext *context, SceUInt32 flags,
 	return 0;
 }
 
+/* a ring's writes passed its high-water mark (Sony's ring_buffer_private.h) */
+static inline SceBool gxmRingBufferIsFull(const GxmRingBuffer *ringBuffer,
+					  const GxmChunkBuffer *writeBuffer)
+{
+	GXM_DBG_CHECK("ring_buffer_private.h", 89, writeBuffer->ring == ringBuffer,
+		      "writeBuffer->cookie == ringBuffer");
+	return ringBuffer->threshold <= writeBuffer->cur;
+}
+
 int gxmContextKickIfFull(SceGxmContext *context)
 {
-	SceBool vdmFull = context->vdmRing.threshold <= context->vdmBuffer.cur;
-	SceBool vertexFull = context->vertexRing.threshold <= context->vertexBuffer.cur;
-	SceBool fragmentFull = context->fragmentRing.threshold <= context->fragmentBuffer.cur;
-	SceBool usseFull = context->fragmentUsseRing.threshold <= context->fragmentUsseBuffer.cur;
+	SceBool vdmFull = gxmRingBufferIsFull(&context->vdmRing, &context->vdmBuffer);
+	SceBool vertexFull = gxmRingBufferIsFull(&context->vertexRing, &context->vertexBuffer);
+	SceBool fragmentFull = gxmRingBufferIsFull(&context->fragmentRing, &context->fragmentBuffer);
+	SceBool usseFull = gxmRingBufferIsFull(&context->fragmentUsseRing,
+					       &context->fragmentUsseBuffer);
 	SceBool vertexStageFull = vdmFull | vertexFull;
 	SceBool fragmentStageFull = fragmentFull | usseFull;
 	SceUInt32 flags;
 
 	if (!vertexStageFull && !fragmentStageFull)
 		return 0;
+	if (vdmFull && gxmWarningIsEnabled(SCE_GXM_WARNING_SCENE_SPLIT))
+		GXM_DBG_WARNING(82, "The VDM ring buffer high-water mark has been passed, the scene "
+				"is being split into multiple jobs.  Consider making this ring buffer "
+				"larger.");
+	if (vertexFull && gxmWarningIsEnabled(SCE_GXM_WARNING_SCENE_SPLIT))
+		GXM_DBG_WARNING(83, "The vertex ring buffer high-water mark has been passed, the "
+				"scene is being split into multiple jobs.  Consider making this ring "
+				"buffer larger.");
+	if (fragmentFull && gxmWarningIsEnabled(SCE_GXM_WARNING_SCENE_SPLIT))
+		GXM_DBG_WARNING(84, "The fragment ring buffer high-water mark has been passed, the "
+				"scene is being split into multiple jobs and rendered multiple times.  "
+				"Consider making this ring buffer larger.");
+	if (usseFull && gxmWarningIsEnabled(SCE_GXM_WARNING_SCENE_SPLIT))
+		GXM_DBG_WARNING(85, "The fragment USSE ring buffer high-water mark has been passed, "
+				"the scene is being split into multiple jobs and rendered multiple "
+				"times.  Consider making this ring buffer larger.");
 	if (gxmRazorMagic == GXM_CALLBACKS_MAGIC)
 		gxmRazorCallbacks.kickIfFull(vdmFull, vertexFull, fragmentFull, usseFull);
 
