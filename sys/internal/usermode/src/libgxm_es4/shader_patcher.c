@@ -906,28 +906,60 @@ static _Bool gxmVertexLayoutValid(const SceGxmVertexAttribute *attributes, SceUI
 {
 	SceUInt32 i, components;
 
-	if (streamCount > GXM_MAX_STREAMS)
+	if (streamCount > GXM_MAX_STREAMS) {
+		GXM_DBG_ERROR(1017, "Parameter streamCount to function sceGxmShaderPatcherCreateVertexProgram is %d, which is "
+			      "greater than the maximum value of %d.", streamCount, GXM_MAX_STREAMS);
 		return 0;
-	for (i = 0; i < streamCount; i++) {
-		if (streams[i].indexSource > SCE_GXM_INDEX_SOURCE_MAX)
-			return 0;
 	}
-	if (attributeCount > GXM_MAX_ATTRIBUTES)
-		return 0;
-	for (i = 0; i < attributeCount; i++) {
-		if (attributes[i].streamIndex >= streamCount ||
-		    attributes[i].format > SCE_GXM_ATTRIBUTE_FORMAT_UNTYPED_REG)
-			return 0;
-		components = attributes[i].componentCount - 1;
-		if (attributes[i].format == SCE_GXM_ATTRIBUTE_FORMAT_UNTYPED_REG) {
-			if (components > 63)
-				return 0;
-		} else if (components > 3) {
+	for (i = 0; i < streamCount; i++) {
+		if (streams[i].indexSource > SCE_GXM_INDEX_SOURCE_MAX) {
+			GXM_DBG_ERROR(1029, "Parameter streams[%d].indexSource to function sceGxmShaderPatcherCreateVertexProgram is "
+				      "%d, which is not valid.", i, streams[i].indexSource);
 			return 0;
 		}
-		if (attributes[i].regIndex > 63 ||
-		    attributes[i].regIndex + attributes[i].componentCount > 64)
+	}
+	if (attributeCount > GXM_MAX_ATTRIBUTES) {
+		GXM_DBG_ERROR(1038, "Parameter attributeCount to function sceGxmShaderPatcherCreateVertexProgram is %d, which is "
+			      "greater than the maximum value of %d.", attributeCount,
+			      GXM_MAX_ATTRIBUTES);
+		return 0;
+	}
+	for (i = 0; i < attributeCount; i++) {
+		if (attributes[i].streamIndex >= streamCount) {
+			GXM_DBG_ERROR(1051, "Parameter attributes[%d].streamIndex is %d, which is not "
+				      "less than the stream count of %d.", i, attributes[i].streamIndex,
+				      streamCount);
 			return 0;
+		}
+		if (attributes[i].format > SCE_GXM_ATTRIBUTE_FORMAT_UNTYPED_REG) {
+			GXM_DBG_ERROR(1059, "Parameter attributes[%d].format is %d, which is not valid.",
+				      i, attributes[i].format);
+			return 0;
+		}
+		components = attributes[i].componentCount - 1;
+		if (attributes[i].format == SCE_GXM_ATTRIBUTE_FORMAT_UNTYPED_REG) {
+			if (components > 63) {
+				GXM_DBG_ERROR(1069, "Parameter attributes[%d].componentCount has value "
+					      "%d, which is not in the range [1, 64].", i,
+					      attributes[i].componentCount);
+				return 0;
+			}
+		} else if (components > 3) {
+			GXM_DBG_ERROR(1077, "Parameter attributes[%d].componentCount has value %d, "
+				      "which is not in the range [1, 4].", i,
+				      attributes[i].componentCount);
+			return 0;
+		}
+		if (attributes[i].regIndex > 63) {
+			GXM_DBG_ERROR(1086, "Parameter attributes[%d].regIndex has value %d, which is "
+				      "not in the range [0, 63].", i, attributes[i].regIndex);
+			return 0;
+		}
+		if (attributes[i].regIndex + attributes[i].componentCount > 64) {
+			GXM_DBG_ERROR(1091, "Parameter attributes[%d] would write to registers outside "
+				      "of the range [0, 63].", i);
+			return 0;
+		}
 	}
 	return 1;
 }
@@ -980,34 +1012,65 @@ int sceGxmShaderPatcherCreateVertexProgram(SceGxmShaderPatcher *shaderPatcher,
 	GxmPdsAttributePatch *patches;
 	SceUInt32 instanced, indexed, usseOffset, mask, bank, i;
 	SceSize pdsSize, hostSize, codeSize, usseSize;
-	void *usseMem;
+	void *usseMem, *mem;
 	int err;
 
-	if (shaderPatcher == NULL || programId == NULL || vertexProgram == NULL)
+	if (shaderPatcher == NULL || programId == NULL || vertexProgram == NULL) {
+		if (shaderPatcher == NULL)
+			GXM_DBG_ERROR_NULL(958, sceGxmShaderPatcherCreateVertexProgram, shaderPatcher);
+		else if (programId == NULL)
+			GXM_DBG_ERROR_NULL(962, sceGxmShaderPatcherCreateVertexProgram, programId);
+		else
+			GXM_DBG_ERROR_NULL(966, sceGxmShaderPatcherCreateVertexProgram, vertexProgram);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (shaderPatcher != programId->patcher)
-		return SCE_GXM_ERROR_INVALID_VALUE;
-	program = programId->programHeader;
-	if (program->programFlags & GXM_PROGRAM_FRAGMENT)
-		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (attributeCount == 0) {
-		if (streamCount != 0)
-			return SCE_GXM_ERROR_INVALID_VALUE;
-	} else {
-		if (attributes == NULL)
-			return SCE_GXM_ERROR_INVALID_POINTER;
-		if (streamCount == 0)
-			return SCE_GXM_ERROR_INVALID_VALUE;
-		if (streams == NULL)
-			return SCE_GXM_ERROR_INVALID_POINTER;
-		if (!(gxmGlobals.compatFlags & GXM_COMPAT_VERTEX_LAYOUT_ANY) &&
-		    !gxmVertexLayoutValid(attributes, attributeCount, streams, streamCount))
-			return SCE_GXM_ERROR_INVALID_VALUE;
 	}
+	if (shaderPatcher != programId->patcher) {
+		GXM_DBG_ERROR_NOT_CREATED(971, sceGxmShaderPatcherCreateVertexProgram, programId);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (programId->programHeader->programFlags & GXM_PROGRAM_FRAGMENT) {
+		GXM_DBG_ERROR(975, "Parameter programId to function sceGxmShaderPatcherCreateVertexProgram is not an ID for a "
+			      "vertex program.");
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (attributeCount == 0) {
+		if (attributes != NULL &&
+		    gxmWarningIsEnabled(SCE_GXM_WARNING_ATTRIBUTES_PROVIDED_WITH_ZERO_COUNT))
+			GXM_DBG_WARNING(986, "Parameter attributes to function sceGxmShaderPatcherCreateVertexProgram is non-NULL, "
+					"but attributeCount is 0.");
+		if (streamCount != 0) {
+			GXM_DBG_ERROR(991, "Parameter attributeCount to function sceGxmShaderPatcherCreateVertexProgram is 0, but "
+				      "streamCount is %d.", streamCount);
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+	} else if (attributes == NULL) {
+		GXM_DBG_ERROR(981, "Parameter attributes to function sceGxmShaderPatcherCreateVertexProgram is NULL, but parameter "
+			      "attributeCount is %d.", attributeCount);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (streamCount == 0) {
+		if (streams != NULL &&
+		    gxmWarningIsEnabled(SCE_GXM_WARNING_STREAMS_PROVIDED_WITH_ZERO_COUNT))
+			GXM_DBG_WARNING(1003, "Parameter streams to function sceGxmShaderPatcherCreateVertexProgram is non-NULL, but "
+					"streamCount is 0.");
+		if (attributeCount != 0) {
+			GXM_DBG_ERROR(1008, "Parameter streamCount to function sceGxmShaderPatcherCreateVertexProgram is 0, but "
+				      "attributeCount is %d.", attributeCount);
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+	} else if (streams == NULL) {
+		GXM_DBG_ERROR(998, "Parameter streams to function sceGxmShaderPatcherCreateVertexProgram is NULL, when parameter "
+			      "streamCount is %d.", streamCount);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (!(gxmGlobals.compatFlags & GXM_COMPAT_VERTEX_LAYOUT_ANY) &&
+	    !gxmVertexLayoutValid(attributes, attributeCount, streams, streamCount))
+		return SCE_GXM_ERROR_INVALID_VALUE;
 
 	created = gxmFindVertexProgram(programId, attributes, attributeCount, streams, streamCount);
 	if (created != NULL)
 		goto done;
+	program = programId->programHeader;
 
 	/* one host block: the program, the layout copies and the PDS program */
 	instanced = (program->programFlags & GXM_PROGRAM_INSTANCED) >> 17;
@@ -1015,18 +1078,15 @@ int sceGxmShaderPatcherCreateVertexProgram(SceGxmShaderPatcher *shaderPatcher,
 	pdsSize = gxmPdsVertexProgramSize(attributeCount, streams, streamCount, NULL, instanced,
 					  indexed) + 15;
 	hostSize = pdsSize + (streamCount + 30 + attributeCount * 4) * 4;
-	created = shaderPatcher->hostAlloc(shaderPatcher->userData, hostSize);
-	if (created == NULL)
-		return SCE_GXM_ERROR_OUT_OF_HOST_MEMORY;
-	if (gxmPatcherMisaligned(created)) {
-		shaderPatcher->hostFree(shaderPatcher->userData, created);
-		return SCE_GXM_ERROR_INVALID_ALIGNMENT;
-	}
+	err = gxmPatcherHostAlloc(shaderPatcher, hostSize, &mem);
+	if (err != 0)
+		return err;
+	created = mem;
 	created->attributes = (SceGxmVertexAttribute *)(created + 1);
 	created->streams = (SceGxmVertexStream *)(created->attributes + attributeCount);
 	patches = (GxmPdsAttributePatch *)(created->streams + streamCount);
 	gxmChunkBufferInitFixed(&pdsBuffer, patches + attributeCount, 0, pdsSize);
-	varyings = gxmProgramGetVaryings(program);
+	varyings = gxmProgramGetVertexVaryings(program);
 
 	/* the USSE code */
 	codeSize = gxmProgramGetVertexCodeSize(program, attributes, attributeCount);
@@ -1037,17 +1097,23 @@ int sceGxmShaderPatcherCreateVertexProgram(SceGxmShaderPatcher *shaderPatcher,
 						 &usseOffset);
 	if (usseMem == NULL) {
 		err = SCE_GXM_ERROR_OUT_OF_VERTEX_USSE_MEMORY;
+		GXM_DBG_ERROR(125, "Shader patcher vertex USSE memory allocation returned NULL for "
+			      "allocation of size %d", usseSize);
 		goto freeHost;
 	}
 	if (!(gxmGlobals.compatFlags & GXM_COMPAT_PATCHER_UNALIGNED) && ((SceUInt32)usseMem & 0xf)) {
 		err = SCE_GXM_ERROR_INVALID_ALIGNMENT;
 		shaderPatcher->vertexUsseFree(shaderPatcher->vertexUsseUserData, usseMem);
+		GXM_DBG_ERROR(138, "Shader patcher vertex USSE memory allocation of size %d returned "
+			      "%p, which is not aligned to %d", usseSize, usseMem, 16);
 		goto freeHost;
 	}
 	bank = usseOffset >> 24;
 	if (bank != 8 && bank > 3) {
 		err = SCE_GXM_ERROR_INVALID_POINTER;
 		shaderPatcher->vertexUsseFree(shaderPatcher->vertexUsseUserData, usseMem);
+		GXM_DBG_ERROR(149, "Shader patcher vertex USSE memory allocation returned an invalid "
+			      "vertex USSE offset.");
 		goto freeHost;
 	}
 	created->usseMem = usseMem;
@@ -1125,7 +1191,7 @@ static inline void gxmTexCoordRemap(SceUInt8 *remap, const SceGxmProgram *vertex
 			remap[i] = i;
 		return;
 	}
-	outputs = gxmProgramGetVaryings(vertexProgram)->vertex.texCoordOutputs;
+	outputs = gxmProgramGetVertexVaryings(vertexProgram)->vertex.texCoordOutputs;
 	next = 0;
 	if (gxmGlobals.compatFlags & GXM_COMPAT_TEXCOORD_PACKED) {
 		for (i = 0; i < 10; i++) {
@@ -1142,6 +1208,73 @@ static inline void gxmTexCoordRemap(SceUInt8 *remap, const SceGxmProgram *vertex
 		}
 	}
 }
+
+#if SCE_DBG_ASSERTS_ENABLED
+static const char *const gxmInterpolantNames[] = {
+	"FOG", "COLOR0", "COLOR1",
+	"TEXCOORD0", "TEXCOORD1", "TEXCOORD2", "TEXCOORD3", "TEXCOORD4",
+	"TEXCOORD5", "TEXCOORD6", "TEXCOORD7", "TEXCOORD8", "TEXCOORD9",
+};
+
+/* an interpolant's bit in gxmInterpolantNames' order, by a fragment input's selector */
+static inline SceUInt32 gxmInterpolantBit(SceUInt32 selector)
+{
+	switch (selector) {
+	case 0xa:
+		return 1 << 1;		/* COLOR0 */
+	case 0xb:
+		return 1 << 2;		/* COLOR1 */
+	case 0xc:
+		return 1 << 0;		/* FOG */
+	default:
+		return selector < 10 ? 1 << (3 + selector) : 0;
+	}
+}
+
+/* the debug build warns about interpolants the vertex program does not write */
+static inline void gxmCheckInterpolants(const SceGxmProgram *program,
+					const SceGxmProgram *vertexProgram)
+{
+	const GxmProgramVaryings *varyings;
+	const GxmProgramFragmentInput *input, *end;
+	SceUInt32 written, used, word, i;
+
+	varyings = gxmProgramGetVaryings(vertexProgram);
+	written = 0;
+	if (varyings->vertex.outputs & 0x200)
+		written |= 1 << 0;
+	if (varyings->vertex.outputs & 0x800)
+		written |= 1 << 1;
+	if (varyings->vertex.outputs & 0x400)
+		written |= 1 << 2;
+	for (i = 0; i < 10; i++) {
+		if ((varyings->vertex.texCoordOutputs >> (i * 3)) & 7)
+			written |= 1 << (3 + i);
+	}
+
+	varyings = gxmProgramGetVaryings(program);
+	input = GXM_RELATIVE(varyings->fragment.inputsOffset);
+	end = input + varyings->fragment.inputCount;
+	used = 0;
+	for (; input != end; input++) {
+		word = input->word;
+		if ((word & 0xf) != 0xf && !(word & 0x400))
+			used |= gxmInterpolantBit(word & 0xf);
+		if ((word & 0xf000) != 0xf000 && !(word & 0x40000000))
+			used |= gxmInterpolantBit((word & 0xf000) >> 12);
+	}
+
+	if (used == written)
+		return;
+	for (i = 0; i < 13; i++) {
+		if (((used >> i) & 1) && !((written >> i) & 1) &&
+		    gxmWarningIsEnabled(SCE_GXM_WARNING_USING_INTERPOLANT_NOT_WRITTEN_BY_VERTEX_PROGRAM))
+			GXM_DBG_WARNING(1407, "Fragment program at %p is using interpolant %s, but "
+					"vertex program at %p is not writing it.", program,
+					gxmInterpolantNames[i], vertexProgram);
+	}
+}
+#endif
 
 /* blending that changes nothing: the output written as it is */
 static inline SceBool gxmBlendIsPassThrough(const SceGxmBlendInfo *blendInfo)
@@ -1251,30 +1384,67 @@ int gxmCreateFragmentProgram(SceGxmShaderPatcher *shaderPatcher, SceGxmShaderPat
 	void *usseMem, *tail;
 	int err;
 
-	if (shaderPatcher == NULL || programId == NULL || fragmentProgram == NULL)
+	if (shaderPatcher == NULL || programId == NULL || fragmentProgram == NULL) {
+		if (shaderPatcher == NULL)
+			GXM_DBG_ERROR_NULL(1457, sceGxmShaderPatcherCreateFragmentProgram, shaderPatcher);
+		else if (programId == NULL)
+			GXM_DBG_ERROR_NULL(1461, sceGxmShaderPatcherCreateFragmentProgram, programId);
+		else
+			GXM_DBG_ERROR_NULL(1465, sceGxmShaderPatcherCreateFragmentProgram, fragmentProgram);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (shaderPatcher != programId->patcher)
+	}
+	if (shaderPatcher != programId->patcher) {
+		GXM_DBG_ERROR_NOT_CREATED(1470, sceGxmShaderPatcherCreateFragmentProgram, programId);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	program = programId->programHeader;
 	flags = program->programFlags;
-	if (!(flags & GXM_PROGRAM_FRAGMENT))
+	if (!(flags & GXM_PROGRAM_FRAGMENT)) {
+		GXM_DBG_ERROR(1474, "Parameter programId to function sceGxmShaderPatcherCreateFragmentProgram is not an ID for a "
+			      "fragment program.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (!(gxmGlobals.compatFlags & GXM_COMPAT_SURFACE_ANY) &&
-	    (outputFormat > 8 || multisampleMode > SCE_GXM_MULTISAMPLE_4X))
-		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (!(gxmGlobals.compatFlags & GXM_COMPAT_SURFACE_ANY)) {
+		if (outputFormat > 8) {
+			GXM_DBG_ERROR(1489, "Parameter outputFormat to function sceGxmShaderPatcherCreateFragmentProgram is not valid.");
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+		if (multisampleMode > SCE_GXM_MULTISAMPLE_4X) {
+			GXM_DBG_ERROR(1496, "Parameter multisampleMode to function sceGxmShaderPatcherCreateFragmentProgram is not valid.");
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+	}
 
 	/* how the program writes its output */
 	if (flags & GXM_PROGRAM_NATIVE_COLOR) {
+		if (blendInfo != NULL &&
+		    gxmWarningIsEnabled(SCE_GXM_WARNING_BLEND_INFO_IGNORED_FOR_NATIVECOLOR)) {
+			GXM_DBG_WARNING(1515, "Ignoring non-NULL SceGxmBlendInfo for fragment program "
+					"that uses __nativecolor.");
+			flags = program->programFlags;
+		}
 		if (flags & GXM_PROGRAM_FRAG_COLOR) {
 			if (multisampleMode == SCE_GXM_MULTISAMPLE_2X) {
-				if (!(flags & (GXM_PROGRAM_MSAA_2X | GXM_PROGRAM_MSAA_4X)))
+				if (!(flags & (GXM_PROGRAM_MSAA_2X | GXM_PROGRAM_MSAA_4X))) {
+					GXM_DBG_ERROR(1539, "Cannot create 2xMSAA fragment program from "
+						      "program compiled with non-MSAA programmable "
+						      "blending.");
 					return SCE_GXM_ERROR_INVALID_VALUE;
+				}
 			} else if (multisampleMode == SCE_GXM_MULTISAMPLE_NONE) {
-				if (flags & (GXM_PROGRAM_MSAA_2X | GXM_PROGRAM_MSAA_4X))
+				if (flags & (GXM_PROGRAM_MSAA_2X | GXM_PROGRAM_MSAA_4X)) {
+					GXM_DBG_ERROR(1531, "Cannot create non-MSAA fragment program from "
+						      "program compiled with MSAA programmable "
+						      "blending.");
 					return SCE_GXM_ERROR_INVALID_VALUE;
+				}
 			} else if (multisampleMode == SCE_GXM_MULTISAMPLE_4X) {
-				if (!(flags & GXM_PROGRAM_MSAA_4X))
+				if (!(flags & GXM_PROGRAM_MSAA_4X)) {
+					GXM_DBG_ERROR(1547, "Cannot create 4xMSAA fragment program from "
+						      "program compiled with non-MSAA or 2xMSAA "
+						      "programmable blending.");
 					return SCE_GXM_ERROR_INVALID_VALUE;
+				}
 			}
 		} else if (flags & GXM_PROGRAM_UNK2000) {
 			blendInfo = NULL;
@@ -1323,11 +1493,19 @@ int gxmCreateFragmentProgram(SceGxmShaderPatcher *shaderPatcher, SceGxmShaderPat
 setup:
 	if (texCoordMap == NULL) {
 		gxmTexCoordRemap(remap, vertexProgram);
+#if SCE_DBG_ASSERTS_ENABLED
+		if (vertexProgram != NULL)
+			gxmCheckInterpolants(program, vertexProgram);
+#endif
 	} else {
 		gxmTexCoordRemap(vertexRemap, vertexProgram);
 		for (i = 0; i < 10; i++) {
-			if (texCoordMap[i] >= 10)
+			if (texCoordMap[i] >= 10) {
+				GXM_DBG_ERROR(1380, "Fragment program texture coordinate %d is remapped "
+					      "to index %d, which is not in the range [0, %d].", i,
+					      texCoordMap[i], 9);
 				return SCE_GXM_ERROR_INVALID_VALUE;
+			}
 			remap[i] = vertexRemap[texCoordMap[i]];
 		}
 	}
@@ -1341,18 +1519,15 @@ setup:
 		goto done;
 
 	/* one host block: the program, the texture indices, the blend info, the PDS program */
-	varyings = gxmProgramGetVaryings(program);
+	varyings = gxmProgramGetFragmentVaryings(program);
 	inputs = GXM_RELATIVE(varyings->fragment.inputsOffset);
 	pdsSize = gxmPdsFragmentProgramSize(inputs, varyings->fragment.inputCount, 0) + 15;
 	hostSize = pdsSize + (varyings->fragment.textureIndexCount + 32) * 4 +
 		   (blendInfo != NULL ? 4 : 0);
-	created = shaderPatcher->hostAlloc(shaderPatcher->userData, hostSize);
-	if (created == NULL)
-		return SCE_GXM_ERROR_OUT_OF_HOST_MEMORY;
-	if (gxmPatcherMisaligned(created)) {
-		shaderPatcher->hostFree(shaderPatcher->userData, created);
-		return SCE_GXM_ERROR_INVALID_ALIGNMENT;
-	}
+	err = gxmPatcherHostAlloc(shaderPatcher, hostSize, &tail);
+	if (err != 0)
+		return err;
+	created = tail;
 	tail = (SceUInt32 *)created + varyings->fragment.textureIndexCount + 32;
 	if (blendInfo == NULL) {
 		created->blendInfo = NULL;
@@ -1375,17 +1550,23 @@ setup:
 						   &usseOffset);
 	if (usseMem == NULL) {
 		err = SCE_GXM_ERROR_OUT_OF_FRAGMENT_USSE_MEMORY;
+		GXM_DBG_ERROR(176, "Shader patcher fragment USSE memory allocation returned NULL for "
+			      "allocation of size %d", usseSize);
 		goto freeHost;
 	}
 	if (!(gxmGlobals.compatFlags & GXM_COMPAT_PATCHER_UNALIGNED) && ((SceUInt32)usseMem & 0xf)) {
 		err = SCE_GXM_ERROR_INVALID_ALIGNMENT;
 		shaderPatcher->fragmentUsseFree(shaderPatcher->fragmentUsseUserData, usseMem);
+		GXM_DBG_ERROR(189, "Shader patcher fragment USSE memory allocation of size %d "
+			      "returned %p, which is not aligned to %d", usseSize, usseMem, 16);
 		goto freeHost;
 	}
 	bank = usseOffset >> 24;
 	if (bank != 9 && bank - 4 > 3) {
 		err = SCE_GXM_ERROR_INVALID_POINTER;
 		shaderPatcher->fragmentUsseFree(shaderPatcher->fragmentUsseUserData, usseMem);
+		GXM_DBG_ERROR(200, "Shader patcher fragment USSE memory allocation returned an "
+			      "invalid fragment USSE offset.");
 		goto freeHost;
 	}
 	created->usseMem = usseMem;
