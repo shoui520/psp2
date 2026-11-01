@@ -32,6 +32,7 @@ extern "C" int sceAppMgrConvertVs0UserDrivePath(const char *path, char *out, int
 namespace paf {
 
 /* the widget factories and the draw object factories, by their type's name */
+const char s_empty_name[] = "";
 static map<string, ui::FactoryFuncTable> s_factory_table;
 static map<string, ui::FactoryFuncDrawObj> s_factory_drawobj_table;
 
@@ -878,6 +879,59 @@ Plugin::PageCloseParam::PageCloseParam()
 	timer = NULL;
 	fade_time_ms = 200.0f;
 	transition_type = TransitionType_None;
+}
+
+void Plugin::SetNodeEntity_Widget(const IDParam &id, ui::Widget *widget)
+{
+	typedef map<uint32_t, ui::Widget *> Table;
+
+	uint32_t idhash = id.m_idhash;
+
+	if (widget != NULL) {
+		/* map::operator[], inlined */
+		m_widget_table._Insert(Table::value_type(idhash, NULL), NULL)->value.second = widget;
+		return;
+	}
+	m_widget_table.erase(idhash);
+}
+
+void Plugin::SetNodeEntity_Widget(const cxml::Element &node, ui::Widget *widget)
+{
+	IDParam id(s_empty_name, 0);
+	uint32_t idhash;
+
+	if (scePafResourceGetAttributeIdIntLpb(&node, "id", &idhash) == 0)
+		id.m_idhash = idhash;
+	SetNodeEntity_Widget(id, widget);
+}
+
+void Plugin::ClearNodeEntity_ForEachWidget(const cxml::Element &node)
+{
+	IDParam id(s_empty_name, 0);
+	uint32_t idhash;
+
+	if (scePafResourceGetAttributeIdIntLpb(&node, "id", &idhash) == 0)
+		id.m_idhash = idhash;
+	SetNodeEntity_Widget(id, NULL);
+}
+
+ui::Widget *Plugin::GetNodeEntity_Widget(const IDParam &id) const
+{
+	map<uint32_t, ui::Widget *>::iterator it = m_widget_table.find(id.m_idhash);
+
+	if (it == m_widget_table.end())
+		return NULL;
+	return it->second;
+}
+
+ui::Widget *Plugin::GetNodeEntity_Widget(const cxml::Element &node) const
+{
+	IDParam id(s_empty_name, 0);
+	uint32_t idhash;
+
+	if (scePafResourceGetAttributeIdIntLpb(&node, "id", &idhash) == 0)
+		id.m_idhash = idhash;
+	return GetNodeEntity_Widget(id);
 }
 
 }

@@ -318,6 +318,11 @@ public:
 	void SetNodeEntity_Surface(const cxml::Element &node, graph::Surface *surface);
 	graph::Surface *GetNodeEntity_Surface(const IDParam &id) const;
 	graph::Surface *GetNodeEntity_Surface(const cxml::Element &node) const;
+	void SetNodeEntity_Widget(const IDParam &id, ui::Widget *widget);
+	void SetNodeEntity_Widget(const cxml::Element &node, ui::Widget *widget);
+	void ClearNodeEntity_ForEachWidget(const cxml::Element &node);
+	ui::Widget *GetNodeEntity_Widget(const IDParam &id) const;
+	ui::Widget *GetNodeEntity_Widget(const cxml::Element &node) const;
 
 	/*
 	 * A texture element's surface: the one made before, else loaded from the resource's
