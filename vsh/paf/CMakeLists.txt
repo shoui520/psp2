@@ -90,7 +90,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/char_encoding.cpp
 	src/common/string_util.cpp
 	src/common/transition.cpp
-	src/common/string_fields.c
 	src/url/uri.c
 	src/common/resource_hooks.c
 	src/common/frame_count.c
@@ -100,6 +99,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/job_slots.cpp
 	src/common/path.c
 	src/common/property_list.cpp
+	src/common/ref_obj.cpp
 	src/common/shared_string.cpp
 	src/common/shared_ptr.c
 	src/job/job.cpp
