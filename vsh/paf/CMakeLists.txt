@@ -259,8 +259,9 @@ set_source_files_properties(src/timer/get_time.cpp src/url/url.cpp src/rtc/rtc.c
 	src/framework.cpp src/plugin.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # PropertyList inlines the value map's operator[] and StringElement::GetString but keeps the
-# element map's operator[] out of line: budget 16 does, 8 and 30 do not (2026-11-01).
-set_source_files_properties(src/common/property_list.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)
+# element map's operator[] out of line: budget 24 does since map's const find is defined out of
+# the class (16 did before; 8 and 30 do not) (2026-11-01).
+set_source_files_properties(src/common/property_list.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=24)
 # FormatString and SetFormattedString inline vector<char>'s destructor from budget 12;
 # 30 also inlines string_util::mapping's callees, which Sony calls (2026-11-01).
 set_source_files_properties(src/common/string_util.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=12)

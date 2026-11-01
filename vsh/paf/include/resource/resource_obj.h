@@ -77,6 +77,8 @@ public:
 
 	int32_t GetLoadStatus() const;
 	cxml::Element GetTableElement(TableType type) const;
+	/* the page element of an ID; 0 when found */
+	int32_t GetPage(uint32_t idhash, cxml::Element &elm) const;
 	/* the "id:", "src:" or "type:" (kind 0, 1, 2) of an ID's debug symbol; -1 without one */
 	int32_t GetDebugSymbol(uint32_t idhash, int32_t kind, string *symbol) const;
 	const char *GetFileName() const;

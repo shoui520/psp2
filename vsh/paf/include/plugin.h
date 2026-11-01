@@ -16,6 +16,7 @@
 #include <versatileparam/idparam.h>
 #include <widget/core/widget.h>
 #include <widget/factory.h>
+#include <timer/timer.h>
 #include <src/paf_types.h>
 
 namespace paf {
@@ -167,9 +168,13 @@ public:
 		ExitFunction exit_func;
 	};
 
+	/* a texture AddResourceTexture added from a file (field names ours) */
 	class AddTextureInfo {
 	public:
-		char reserved[32];
+		IDParam id;
+		string path;
+		/* the image type the file's extension gave */
+		int32_t type;
 	};
 
 	class DrawOrderElement {
@@ -245,6 +250,12 @@ public:
 	class PageCloseParam {
 	public:
 		PageCloseParam();
+
+		~PageCloseParam()
+		{
+			if (timer != NULL)
+				delete timer;
+		}
 
 		bool fade;
 		float fade_time_ms;
@@ -324,6 +335,10 @@ public:
 	void SetDrawOrder_Remove(ui::Scene *page);
 	ui::Widget *GetNodeEntity_Widget(const IDParam &id) const;
 	ui::Widget *GetNodeEntity_Widget(const cxml::Element &node) const;
+	void PageClose(const cxml::Element &node, const PageCloseParam &param);
+	void SetNodeEntity_CreatePage(const IDParam &id, ui::Widget *page);
+	ui::Widget *GetNodeEntity_CreatePage(const IDParam &id) const;
+	void PageClose(const IDParam &id, const PageCloseParam &param);
 
 	/*
 	 * A texture element's surface: the one made before, else loaded from the resource's

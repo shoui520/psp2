@@ -23,6 +23,10 @@ public:
 			SetID(string(id));
 	}
 
+	IDParam(const string &id) : m_id(id), m_idhash(ID2IDHash(id))
+	{
+	}
+
 	IDParam(const char *id, uint32_t idhash) : m_id(id), m_idhash(idhash)
 	{
 	}

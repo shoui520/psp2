@@ -882,7 +882,7 @@ Plugin::PageCloseParam::PageCloseParam()
 	transition_type = TransitionType_None;
 }
 
-void Plugin::SetNodeEntity_Widget(const IDParam &id, ui::Widget *widget)
+__attribute__((noinline)) void Plugin::SetNodeEntity_Widget(const IDParam &id, ui::Widget *widget)
 {
 	typedef map<uint32_t, ui::Widget *> Table;
 
@@ -978,7 +978,7 @@ void ScePafToplevel_340EE53C(Plugin *plugin, ui::Widget *page,
 
 namespace paf {
 
-void Plugin::SetDrawOrder_Remove(ui::Scene *page)
+__attribute__((noinline)) void Plugin::SetDrawOrder_Remove(ui::Scene *page)
 {
 	for (vector<DrawOrderElement>::iterator it = m_draw_order.begin();
 	     it != m_draw_order.end(); ++it) {
@@ -1006,6 +1006,151 @@ ui::Widget *Plugin::GetNodeEntity_Widget(const cxml::Element &node) const
 	if (scePafResourceGetAttributeIdIntLpb(&node, "id", &idhash) == 0)
 		id.m_idhash = idhash;
 	return GetNodeEntity_Widget(id);
+}
+
+__attribute__((noinline)) void Plugin::PageClose(const cxml::Element &node,
+						 const PageCloseParam &param)
+{
+	if (!m_initialized || !cxml::util::CheckElementName(node, "page"))
+		return;
+
+	ui::Widget *page = GetNodeEntity_Widget(node);
+
+	if (page == NULL)
+		return;
+	SetDrawOrder_Remove(static_cast<ui::Scene *>(page));
+	ScePafToplevel_340EE53C(this, page, param);
+	SetNodeEntity_Widget(node, NULL);
+	if (m_last_active_page_node == &node)
+		m_last_active_page_node = NULL;
+	if (m_monitoring_callback_pageclose != NULL) {
+		cxml::Element closed = node;
+
+		m_monitoring_callback_pageclose(this, &closed);
+	}
+}
+
+__attribute__((noinline)) void Plugin::SetNodeEntity_CreatePage(const IDParam &id,
+								ui::Widget *page)
+{
+	typedef map<string, ui::Widget *> Table;
+
+	const char *name = id.m_id.c_str();
+
+	if (page != NULL) {
+		string key(name);
+
+		/* map::operator[], inlined */
+		m_create_page_table._Insert(Table::value_type(key, NULL), NULL)->value.second =
+			page;
+	} else {
+		m_create_page_table.erase(string(name));
+	}
+}
+
+__attribute__((noinline)) ui::Widget *Plugin::GetNodeEntity_CreatePage(const IDParam &id) const
+{
+	map<string, ui::Widget *>::iterator it = m_create_page_table.find(string(id.m_id.c_str()));
+
+	if (it == m_create_page_table.end())
+		return NULL;
+	return it->second;
+}
+
+void Plugin::PageClose(const IDParam &id, const PageCloseParam &param)
+{
+	ui::Widget *page = GetNodeEntity_CreatePage(id);
+
+	if (page != NULL) {
+		SetDrawOrder_Remove(static_cast<ui::Scene *>(page));
+		ScePafToplevel_340EE53C(this, page, param);
+		SetNodeEntity_Widget(id, NULL);
+		SetNodeEntity_CreatePage(id, NULL);
+	} else if (m_rscobj != NULL) {
+		cxml::Element node;
+
+		if (m_rscobj->GetPage(id.m_idhash, node) == 0)
+			PageClose(node, param);
+	}
+}
+
+void Plugin::PageCloseAll()
+{
+	if (m_rscobj != NULL) {
+		cxml::Element pages = m_rscobj->GetTableElement(resource::TableType_Page);
+
+		if (pages.doc != NULL && pages.offset >= 0) {
+			cxml::Element node;
+
+			for (node = pages.GetFirstChild(); node.doc != NULL && node.offset >= 0;
+			     node = node.GetNextSibling())
+				PageClose(node, PageCloseParam());
+		}
+	}
+	while (m_create_page_table.size() != 0) {
+		IDParam id(m_create_page_table.begin()->first);
+
+		PageClose(id, PageCloseParam());
+	}
+}
+
+Plugin::~Plugin()
+{
+	if (m_rscobj != NULL) {
+		PageCloseAll();
+		UnloadResourceTable_Template();
+
+		cxml::Element textures = m_rscobj->GetTableElement(resource::TableType_Texture);
+
+		if (textures.doc != NULL && textures.offset >= 0) {
+			cxml::Element node;
+
+			for (node = textures.GetFirstChild(); node.doc != NULL && node.offset >= 0;
+			     node = node.GetNextSibling()) {
+				uint32_t idhash = 0;
+
+				scePafResourceGetAttributeIdIntLpb(&node, "id", &idhash);
+
+				graph::Surface *surface =
+					GetNodeEntity_Surface(IDParam(s_empty_id, idhash));
+
+				if (surface != NULL)
+					surface->Release();
+			}
+		}
+		if (m_resource_data == NULL)
+			ScePafResource_556665FC(m_rscobj, 0, Framework::framework->GetMode() == 1,
+						m_surface_pool != NULL && m_surface_pool->m_type !=
+							graph::SurfacePool::MemoryType_Normal);
+		if (m_rscobj != NULL)
+			delete m_rscobj;
+	}
+	if (m_surface_pool_addr != NULL) {
+		if (m_surface_pool != NULL)
+			delete m_surface_pool;
+		if (Framework::framework->GetMode() == 5)
+			ScePafGraphics_E4B3B1D2(graph::arl::Gl());
+		GraphMem::FreeOSMemory(GraphMem::DeviceType_SystemMemory, m_surface_pool_addr);
+	}
+	if (m_sound_param_manager != NULL)
+		delete m_sound_param_manager;
+	if (m_obj_param_manager != NULL)
+		delete m_obj_param_manager;
+	if (m_style_param_manager != NULL)
+		delete m_style_param_manager;
+	if (m_module != NULL)
+		delete m_module;
+	if (m_decode_heap_created && m_decode_heap != NULL)
+		delete m_decode_heap;
+	if (m_private_heap_created && m_private_heap != NULL)
+		delete m_private_heap;
+	for (list<UnloadCallback>::iterator it = m_unload_callback_list.begin();
+	     it != m_unload_callback_list.end(); ++it) {
+		if (*it != NULL)
+			(*it)(m_param);
+	}
+	if (m_env_param_created && m_env_param != NULL)
+		delete m_env_param;
 }
 
 }

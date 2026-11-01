@@ -183,10 +183,7 @@ public:
 	_Node *_Insert(const value_type &val, bool *inserted);
 	iterator find(const key_type &key);
 
-	iterator find(const key_type &key) const
-	{
-		return iterator(_Find(key));
-	}
+	iterator find(const key_type &key) const;
 	void erase(const key_type &key);
 	void erase(iterator first, iterator last);
 	void _Tidy();
@@ -427,6 +424,13 @@ typename _Tree<_Traits>::_Node *_Tree<_Traits>::_Insert(const value_type &val, b
 
 template<class _Traits>
 typename _Tree<_Traits>::iterator _Tree<_Traits>::find(const key_type &key)
+{
+	return iterator(_Find(key));
+}
+
+/* Out of the class, so a string map's const find stays out of line as in Sony's build. */
+template<class _Traits>
+typename _Tree<_Traits>::iterator _Tree<_Traits>::find(const key_type &key) const
 {
 	return iterator(_Find(key));
 }

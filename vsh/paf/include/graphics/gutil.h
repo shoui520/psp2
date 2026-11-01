@@ -11,6 +11,11 @@ namespace paf {
 
 namespace graph {
 class SurfacePool;
+
+namespace arl {
+/* the GXM state (src/graphics/state.c, still C) */
+void *Gl();
+}
 }
 
 namespace gutil {
@@ -49,6 +54,11 @@ void SetFrameBufferMode(FrameBufferMode mode);
 int32_t InitGxm(const DevInitParam &param);
 
 }
+}
+
+extern "C" {
+/* waits for the GXM context of a Gl state to finish (sceGxmFinish) */
+void ScePafGraphics_E4B3B1D2(void *gl);
 }
 
 #endif
