@@ -112,6 +112,12 @@ public:
 	};
 
 	/* the debug views of a page (ScePafToplevel_68607CDE's modes; names after ScePaf-RE) */
+	/* names after ScePaf-RE */
+	enum ResolutionDebugMode {
+		ResolutionDebugMode_Off = 0,
+		ResolutionDebugMode_Add2 = 1
+	};
+
 	enum PageDebugMode {
 		PageDebugMode_PageVisual = 0,
 		PageDebugMode_PageVisualEdit = 1,
@@ -297,11 +303,12 @@ public:
 	static void Init();
 	static void End();
 	/* the debug mode's focus callback and the debug GUI's draw of its params */
-	static void PageDebugFocusCB(ui::Widget *focus, ui::Widget *prev, void *userdata);
+	static int32_t PageDebugFocusCB(ui::Widget *focus, ui::Widget *prev, void *userdata);
 	static void DrawVisualParams(void *userdata);
 	static void OnAnimPageHideFin(Timer *t, ui::AnimListener *anim, void *data1, void *data2,
 				      void *data3);
 	static void WidgetDebugDeleteCb(ui::Widget *widget, void *userdata);
+	static void DebugAddResolution(ui::Widget *widget, ResolutionDebugMode mode);
 	static void RegistFactoryTable(const char *name, ui::FactoryFuncTable table);
 	static void RemoveFactoryTable(const char *name);
 	static void RegistFactoryDrawObj(const char *name, ui::FactoryFuncDrawObj table);
@@ -510,7 +517,8 @@ public:
 	PageCloseCallback m_monitoring_callback_pageclose;
 	uint8_t *m_resource_data;
 	uint32_t m_resource_data_size;
-	uint32_t m_page_debug_focus_enabled;
+	/* a ResolutionDebugMode: the debug focus adds resolutions to widgets without them */
+	uint32_t m_resolution_debug_mode;
 	int32_t m_page_debug_mode;
 	ui::EnvironmentParam *m_env_param;
 	bool m_env_param_created;

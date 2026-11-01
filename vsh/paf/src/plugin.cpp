@@ -40,7 +40,7 @@ const char s_empty_name[] = "";
 static map<string, ui::FactoryFuncTable> s_factory_table;
 static map<string, ui::FactoryFuncDrawObj> s_factory_drawobj_table;
 /* the params of the widget the page debug mode focuses: its layout, style and widget params (names ours) */
-static VersatileParam *s_debug_layout_param;
+static ui::WidgetLayoutParam *s_debug_layout_param;
 static VersatileParam *s_debug_style_param;
 static VersatileParam *s_debug_widget_param;
 
@@ -608,7 +608,7 @@ Plugin::Plugin(const InitParam *param)
 	  m_texture_table_loaded(false), m_tex_load_filter(0),
 	  m_monitoring_callback_pageopen(NULL), m_monitoring_callback_pageactivate(NULL),
 	  m_monitoring_callback_pageclose(NULL), m_resource_data(param->resource_data),
-	  m_resource_data_size(param->resource_data_size), m_page_debug_focus_enabled(0),
+	  m_resource_data_size(param->resource_data_size), m_resolution_debug_mode(0),
 	  m_page_debug_mode(0), m_env_param(NULL), m_env_param_created(false),
 	  m_graphics_flag(system::SystemParam::GetTextStyle()), m_unloading(false)
 {
@@ -3012,6 +3012,124 @@ void Plugin::WidgetDebugDeleteCb(ui::Widget *widget, void *userdata)
 	if (s_debug_widget_param != NULL) {
 		s_debug_widget_param->Destroy(2);
 		s_debug_widget_param = NULL;
+	}
+}
+
+/* gives the widget its current position, size and rotation for resolutions 15 and 16 */
+void Plugin::DebugAddResolution(ui::Widget *widget, ResolutionDebugMode mode)
+{
+	math::v4 pos = widget->GetPos(ui::Widget::GET_CURRENT, NULL,
+				      math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v4 size = *widget->GetSize(ui::Widget::GET_CURRENT);
+	math::v4 rot = widget->GetRot(ui::Widget::GET_CURRENT, NULL,
+				      math::v4(0.0f, 0.0f, 0.0f, 0.0f), 0);
+	uint32_t reso[2] = { 15, 16 };
+	ui::ResolutionData pos_data[2];
+	ui::ResolutionData size_data[2];
+	ui::ResolutionData rot_data[2];
+
+	for (int32_t i = 0; i < 2; i++) {
+		pos_data[i].m_id = reso[i];
+		pos_data[i].m_value[0] = pos.extract_x();
+		pos_data[i].m_value[1] = pos.extract_y();
+		pos_data[i].m_value[2] = pos.extract_z();
+		size_data[i].m_id = reso[i];
+		size_data[i].m_value[0] = size.extract_x();
+		size_data[i].m_value[1] = size.extract_y();
+		size_data[i].m_value[2] = size.extract_z();
+		rot_data[i].m_id = reso[i];
+		rot_data[i].m_value[0] = rot.extract_x();
+		rot_data[i].m_value[1] = rot.extract_y();
+		rot_data[i].m_value[2] = rot.extract_z();
+	}
+	widget->SetPos(pos_data, 2, NULL, ui::Widget::ANIM_MOVE, 0, 0.0f, NULL, NULL);
+	widget->SetSize(size_data, 2, NULL, ui::Widget::ANIM_SIZE, 0, 0.0f, NULL, NULL);
+	widget->SetRot(rot_data, 2, 0, NULL, ui::Widget::ANIM_ROT, 0, 0.0f, NULL, NULL);
+}
+
+/*
+ * The debug mode's focus moved: the newly focused widget gets the debug params of its
+ * layout, its style and its own parameter (the old ones are destroyed), and the delete
+ * callback that drops them moves from the previous widget to it.
+ */
+int32_t Plugin::PageDebugFocusCB(ui::Widget *focus, ui::Widget *prev, void *userdata)
+{
+	if (focus == NULL)
+		return 0;
+
+	if (prev != NULL)
+		prev->RemoveDeleteCB(WidgetDebugDeleteCb, NULL);
+	if (focus != NULL)
+		focus->AddDeleteCB(WidgetDebugDeleteCb, NULL);
+
+	const char *type = focus->GetTypeName();
+
+	if (s_debug_layout_param != NULL) {
+		s_debug_layout_param->Destroy(2);
+		delete s_debug_layout_param;
+		s_debug_layout_param = NULL;
+	}
+
+	uint32_t reso_num = focus->m_pos_num;
+	WidgetResourceInfo *info = (WidgetResourceInfo *)focus->m_user_data2[0];
+
+	if (info != NULL && info->m_plugin->m_resolution_debug_mode != ResolutionDebugMode_Off &&
+	    reso_num == 0) {
+		DebugAddResolution(focus,
+				   (ResolutionDebugMode)info->m_plugin->m_resolution_debug_mode);
+		reso_num = focus->m_pos_num;
+	}
+	s_debug_layout_param = (ui::WidgetLayoutParam *)CallFactoryLayout(type);
+	if (s_debug_layout_param != NULL) {
+		s_debug_layout_param->Attach(focus);
+		if (reso_num != 0)
+			s_debug_layout_param->InitResolution(reso_num);
+		s_debug_layout_param->Create(2);
+		s_debug_layout_param->Get();
+	}
+
+	if (s_debug_style_param != NULL) {
+		s_debug_style_param->Destroy(2);
+		s_debug_style_param = NULL;
+	}
+	if (info != NULL) {
+		char tag[32] = "style_";
+		uint32_t len = sce_paf_strlen(type) + 1;
+
+		if (len > 26)
+			len = 25;
+		sce_paf_strncat(tag, type, len);
+		s_debug_style_param = info->m_plugin->m_style_param_manager->FindParam(tag,
+										     info->m_style_id);
+		if (s_debug_style_param != NULL)
+			s_debug_style_param->Create(2);
+	}
+
+	if (s_debug_widget_param != NULL) {
+		s_debug_widget_param->Destroy(2);
+		s_debug_widget_param = NULL;
+	}
+	if (info != NULL) {
+		s_debug_widget_param = info->m_wparam;
+		s_debug_widget_param->Create(2);
+	}
+	return 0;
+}
+
+/* the debug GUI's frame: the debug params update and draw */
+void Plugin::DrawVisualParams(void *userdata)
+{
+	if (s_debug_layout_param != NULL) {
+		s_debug_layout_param->OnUpdate();
+		s_debug_layout_param->OnDraw();
+	}
+	if (s_debug_style_param != NULL) {
+		s_debug_style_param->OnUpdate();
+		s_debug_style_param->OnDraw();
+	}
+	if (s_debug_widget_param != NULL) {
+		s_debug_widget_param->OnUpdate();
+		s_debug_widget_param->OnDraw();
 	}
 }
 

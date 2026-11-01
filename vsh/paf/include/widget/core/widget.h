@@ -15,6 +15,7 @@
 #include <std/list>
 #include <std/memory>
 #include <std/string>
+#include <std/vector>
 #include <math/ngp/v4.h>
 #include <math/ngp/quaternion.h>
 #include <versatileparam/idparam.h>
@@ -125,6 +126,19 @@ public:
 
 class Widget : public Handler {
 public:
+	typedef void (*DeleteCB)(Widget *widget, void *data);
+
+	/* a delete callback and its data (names after DrawObj's, Sony's DWARF) */
+	class DeleteCBInfo {
+	public:
+		DeleteCBInfo(DeleteCB func, void *data) : func(func), data(data)
+		{
+		}
+
+		DeleteCB func;
+		void *data;
+	};
+
 	/* what a widget keeps for its owner (m_user_data2), deleted with it */
 	class UserData {
 	public:
@@ -264,12 +278,20 @@ public:
 	math::v4 *GetSize(int32_t opt);
 	math::v4 GetPos(int32_t opt, Widget *ref, const math::v4 &off_pos);
 	math::v4 GetPosCenter(int32_t opt, Widget *ref, const math::v4 &off_pos);
+	math::v4 GetRot(int32_t opt, Widget *ref, const math::v4 &off_rot, int32_t option);
 	math::v4 GetAlignOffsetToCenter(int32_t opt);
 	Camera *GetCamera() const;
 
 	int32_t SetPos(const math::v4 &pos, Timer *t = NULL, int32_t id = ANIM_MOVE,
 		       int32_t opt = 0, float delay = 0.0f, AnimCB cb_fin = NULL,
 		       void *usrdata = NULL);
+	/* the values for each resolution, in the array */
+	int32_t SetPos(const ResolutionData *pos, uint32_t num, Timer *t, int32_t id, int32_t opt,
+		       float delay, AnimCB cb_fin, void *usrdata);
+	int32_t SetSize(const ResolutionData *size, uint32_t num, Timer *t, int32_t id,
+			int32_t opt, float delay, AnimCB cb_fin, void *usrdata);
+	int32_t SetRot(const ResolutionData *rot, uint32_t num, int32_t option, Timer *t,
+		       int32_t id, int32_t opt, float delay, AnimCB cb_fin, void *usrdata);
 	int32_t SetScale(const math::v4 &scale, Timer *t = NULL, int32_t id = ANIM_SCALE,
 			 int32_t opt = 0, float delay = 0.0f, AnimCB cb_fin = NULL,
 			 void *usrdata = NULL);
@@ -294,6 +316,29 @@ public:
 		if (m_layouter != NULL)
 			m_layouter->BindWidget(this);
 		return 0;
+	}
+
+	/* registers a delete callback (inline in Sony's callers; name ours) */
+	void AddDeleteCB(DeleteCB func, void *data)
+	{
+		if (m_list_delete_cb.size() == 0 && m_list_delete_cb.capacity() < 1)
+			m_list_delete_cb.reserve(1);
+		m_list_delete_cb.push_back(DeleteCBInfo(func, data));
+	}
+
+	/* drops the first delete callback with the function and data (inline in Sony's callers; name ours) */
+	void RemoveDeleteCB(DeleteCB func, void *data)
+	{
+		for (vector<DeleteCBInfo>::iterator it = m_list_delete_cb.begin();
+		     it != m_list_delete_cb.end(); ++it) {
+			if (it->func == func && it->data == data) {
+				vector<DeleteCBInfo>::iterator first = it;
+				vector<DeleteCBInfo>::iterator last = it + 1;
+
+				m_list_delete_cb.erase(first, last);
+				break;
+			}
+		}
 	}
 
 	/* the descendant with the ID */
@@ -374,7 +419,10 @@ public:
 	uint8_t reserved7[0x14];
 	/* lays the widget out each update (name after ScePaf-RE) */
 	Layouter *m_layouter;
-	uint8_t reserved7a[0x5f];
+	uint8_t reserved7a[0x44];
+	/* what is called when it is deleted (names after DrawObj's, Sony's DWARF) */
+	vector<DeleteCBInfo> m_list_delete_cb;
+	uint8_t reserved7b[0xb];
 	/* the sounds of its sound parameter (names ours) */
 	uint8_t m_sound_num;
 	WidgetSoundParam::Sound *m_sounds;

@@ -185,6 +185,11 @@ public:
 		return erase(where, where + 1);
 	}
 
+	size_type capacity() const
+	{
+		return limit;
+	}
+
 	size_type size() const
 	{
 		return count;

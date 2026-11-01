@@ -48,7 +48,7 @@ public:
 	};
 
 	/* called with the widget the debug mode focuses */
-	typedef void (*DebugFocusCB)(Widget *focus, Widget *prev, void *userdata);
+	typedef int32_t (*DebugFocusCB)(Widget *focus, Widget *prev, void *userdata);
 
 	/* a page in the environment, drawn at the priority (export 0xECB1A10D) */
 	Scene(Environment *env, int32_t priority, CreateParam *param, EnvironmentParam *env_param,
