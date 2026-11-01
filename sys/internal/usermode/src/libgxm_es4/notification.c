@@ -50,26 +50,30 @@ int gxmNotificationCheckAddress(const volatile SceUInt32 *address)
 
 	SceUInt32 base = (SceUInt32)block->pvLinAddr;
 
-	if (((SceUInt32)address < base) | ((SceUInt32)address >= base + block->uAllocSize))
+	if (((SceUInt32)address < base) | ((SceUInt32)address >= base + block->uAllocSize)) {
+		GXM_DBG_ERROR(154, "Notification address %p is not within the notification region.",
+			      address);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	return 0;
 }
 
 int sceGxmNotificationWait(const SceGxmNotification *notification)
 {
-	const PVRSRV_CLIENT_MEM_INFO *block;
 	volatile SceUInt32 *address;
 	SceUInt32 value;
 
 	/* the display queue thread must not block on the GPU here */
-	if (gxmDisplayQueueIsCurrentThread())
+	if (gxmDisplayQueueIsCurrentThread()) {
+		GXM_DBG_ERROR(164, "The function sceGxmNotificationWait cannot be called from the "
+			      "display queue thread.");
 		return SCE_GXM_ERROR_INVALID_THREAD;
-	if (notification == NULL)
+	}
+	if (notification == NULL) {
+		GXM_DBG_ERROR_NULL(168, sceGxmNotificationWait, notification);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	block = gxmGlobals.top.notifications;
-	address = notification->address;
-	if (((SceUInt32)address >= (SceUInt32)block->pvLinAddr + block->uAllocSize) |
-	    ((SceUInt32)address < (SceUInt32)block->pvLinAddr))
+	}
+	if (gxmNotificationCheckAddress(notification->address) != 0)
 		return SCE_GXM_ERROR_INVALID_VALUE;
 	gxmRazorMarker(0x1b000000, gxmGlobals.frameIndex);
 	address = notification->address;
