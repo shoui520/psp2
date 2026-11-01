@@ -43,6 +43,17 @@ SNC_DEFINES = ('-DSCE_DEPRECATED(n)=n', '-DSCE_DEPRECATED_EX(n,c)=n',
 	       '-D__builtin_return_address(x)=__builtin_return_address()')
 
 
+# a source Sony built with GCC 4.8 inside a module it built with SNC (an SDK library it links:
+# libSceBase64, libSceMd5): the build defines this for that source, and the SNC launcher,
+# build_sony.py and the agent's match.py compile it with GCC 4.8
+GCC48_SOURCE = '-DPSP2_COMPILER_GCC48'
+
+
+def source_compiler(defines, kind):
+	"""The compiler of one source: GCC 4.8 where its defines say so, else the module's."""
+	return 'gcc48' if GCC48_SOURCE in defines else kind
+
+
 def win(p):
 	"""A path as psp2snc.exe sees it on this host."""
 	return host.windows_path(p)
@@ -132,15 +143,20 @@ def snc(argv):
 	options = buildrecipe.compile_options(argv)
 	src = Path(argv[argv.index('-c') + 1])
 	out = Path(argv[argv.index('-o') + 1])
-	if not compile_one(src, out, 'snc', options['defines'], options['includes'], options['opt'],
-			   extra=options['extra']):
+	kind = source_compiler(options['defines'], 'snc')
+	if kind == 'gcc48':
+		# CMake's paths are relative to the build folder; GCC 4.8 runs from the project's root
+		src = Path(os.path.relpath(src.resolve(), ROOT))
+		out = out.resolve()
+	if not compile_one(src, out, kind, options['defines'], options['includes'], options['opt'],
+			   extra=options['extra'], mode=options['mode'] if kind == 'gcc48' else 'thumb'):
 		return 1
 	data = out.read_bytes()
 	if any(h['type'] == 4 for h in elfsections.Sections(data).headers):
 		out.write_bytes(elfsections.object_rela_to_rel(data))
 	if '-MF' in argv:
 		# SNC's own dependency output is not used: the object depends on its source
-		Path(argv[argv.index('-MF') + 1]).write_text(f'{out}: {src}\n')
+		Path(argv[argv.index('-MF') + 1]).write_text(f'{out}: {ROOT / src if kind == "gcc48" else src}\n')
 	return 0
 
 

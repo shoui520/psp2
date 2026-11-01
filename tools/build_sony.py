@@ -78,7 +78,7 @@ def main():
         options = compile_options(recipe)
         defines, includes = options['defines'], options['includes']
         opt, extra = options['opt'], options['extra']
-        source_kind = source_compilers.pop(source, kind)
+        source_kind = source_compilers.pop(source, sonycc.source_compiler(defines, kind))
         print(f'{source_kind} {opt} {source.relative_to(ROOT)}', flush=True)
         if not sonycc.compile_one(source, candidate, source_kind, defines, includes, opt,
                                  extra=extra, mode=options['mode']):
