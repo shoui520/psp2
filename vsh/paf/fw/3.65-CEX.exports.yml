@@ -724,7 +724,7 @@ ScePaf:
         - _ZN3paf11inputdevice3pad11GetIdleTimeEv: 0x7C9C7E59
         - _ZN3paf11inputdevice25ReleaseOwnershipImmediateEj: 0x7CC037DE
         - _ZN3paf6memory13PoolAllocatorC2EPvjjPKcPKNS1_6OptionE: 0x7CE97FC7
-        - ScePafMisc_7CF66185: 0x7CF66185
+        - _ZN3paf5Timer11ForceFinishEv: 0x7CF66185
         - _ZNK3paf9LocalFile11GetFileTypeEv: 0x7D13C35B
         - _ZN3paf4http6ClientD1Ev: 0x7D7C31A2
         - _ZN3paf5image14ImageAttribute11CalcMemSizeEjjtt9ImageModeNS0_11ImageFormatE: 0x7D7CFB2F

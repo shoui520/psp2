@@ -41,6 +41,16 @@ public:
 		return vgetq_lane_f32(_impl.get128(), 3);
 	}
 
+	void set_y(float value)
+	{
+		_impl.setY(value);
+	}
+
+	void set_z(float value)
+	{
+		_impl.setZ(value);
+	}
+
 	v4 operator-(v4 rhs) const
 	{
 		return v4(_impl - rhs._impl);

@@ -6,9 +6,7 @@
 
 uint32_t sce_paf_misc_counter_c224;
 uint32_t sce_paf_misc_value_1078;
-float sce_paf_misc_float_1178;
 uint32_t sce_paf_misc_shared_f3c8;
-uint64_t sce_paf_misc_pair_1170;
 
 uint32_t sce_paf_misc_mode_d570;
 extern uint32_t sce_paf_misc_counters_d200[7];
@@ -75,12 +73,6 @@ int ScePafMisc_862C8916(void)
 	return sce_paf_misc_value_1078 != 0;
 }
 
-float *ScePafMisc_F8D63B8E(float value)
-{
-	sce_paf_misc_float_1178 = value;
-	return &sce_paf_misc_float_1178;
-}
-
 void *ScePafMisc_405C4F0A(uint32_t *object, uint32_t first)
 {
 	volatile uint32_t *words = (volatile uint32_t *)object;
@@ -105,12 +97,6 @@ void *ScePafMisc_7616DF6C(uint32_t *object, uint32_t first)
 	words[4] = 0x3f;
 	words[5] = (uint32_t)(uintptr_t)&sce_paf_misc_shared_f3c8;
 	return object;
-}
-
-uint32_t ScePafMisc_A08B8D8A(uint32_t value)
-{
-	sce_paf_misc_pair_1170 = value;
-	return value;
 }
 
 uint32_t ScePafMisc_2FBC2819(uint32_t mask)

@@ -119,7 +119,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/system/capability.cpp
 	src/system/model.cpp
 	src/timer/timer.c
-	src/timer/curves.c
+	src/timer/timer.cpp
 	src/std/math.c
 	src/common/view.c
 	src/plugin.c
@@ -240,3 +240,7 @@ set_source_files_properties(src/module/module.cpp PROPERTIES COMPILE_OPTIONS -Xa
 
 # paf::system::SystemParam's constructor inlines ReadParamFlags (2026-10-31).
 set_source_files_properties(src/system/system_param.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+
+# paf::Timer's InitTimer inlines ResetTimer, the custom elastic curves their "in"
+# curve but not the parabolic ones theirs (2026-10-31).
+set_source_files_properties(src/timer/timer.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=29)
