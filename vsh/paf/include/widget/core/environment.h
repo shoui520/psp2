@@ -139,6 +139,8 @@ void ScePafWidget_B4A4660B(paf::ui::Environment *env, int32_t enable, int32_t po
 bool ScePafWidget_A6B659BB(paf::ui::Environment *env, int32_t port);
 /* updates the input devices */
 int32_t ScePafWidget_909850C4(void);
+/* sets the focus frame texture no (below 9); with none, reads all of them from the common resource */
+void ScePafWidget_B6C64486(const paf::intrusive_ptr<paf::graph::Surface> &texture, int32_t no);
 /* begins a frame on the root surface */
 void ScePafWidget_9D4A5A0E(paf::ui::Environment *env);
 void ScePafWidget_DC1B19DB(paf::ui::Environment *env);

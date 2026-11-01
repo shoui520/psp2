@@ -49,6 +49,13 @@ class LayoutFunctionEntry;
 
 class Plugin {
 public:
+	/* the option bits of loads and unloads */
+	enum LoadUnloadOption {
+		LoadUnloadOption_None = 0,
+		LoadUnloadOption_DontLockInputDevice = 1,
+		LoadUnloadOption_Default = 0
+	};
+
 	enum ArgumentType {
 		ArgumentType_Int = 0,
 		ArgumentType_Float = 1,
@@ -126,6 +133,18 @@ public:
 		int32_t graphics_flag;
 	};
 
+	/* what TemplateOpen adds the template's widgets with */
+	class TemplateOpenParam {
+	public:
+		TemplateOpenParam();
+
+		InitEventFunctionEntry *event_handler_table;
+		ui::Widget *sibling;
+	};
+
+	Plugin(const InitParam *param);
+	~Plugin();
+
 	static void Init();
 	static void End();
 	static Plugin *Find(const char *name);
@@ -135,8 +154,11 @@ public:
 	static void UnloadAsync(Plugin *plugin, UnloadFinishCallback finish, int32_t option);
 	static void LoadSync(const InitParam &param, LoadFinishCallback finish, int32_t option);
 
+	void Start();
 	void Stop();
+	int32_t Exit();
 	void PageCloseAll();
+	int32_t TemplateOpen(ui::Widget *parent, const IDParam &id, const TemplateOpenParam &param);
 	ui::Widget *CreateWidget(ui::Widget *parent, const char *type, const IDParam &id,
 				 const IDParam &style);
 

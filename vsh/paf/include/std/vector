@@ -310,7 +310,7 @@ vector<_Ty, _Ax>::erase(const iterator &first, const iterator &last)
 }
 
 template<class _Ty, class _Ax>
-int
+inline int
 vector<_Ty, _Ax>::push_back(const _Ty &val)
 {
 	int result;

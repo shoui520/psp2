@@ -16,8 +16,12 @@
 #include <graphics/surface/surface_pool.h>
 #include <graphics/text/text_init.h>
 #include <image/image_types.h>
+#include <common/common_internal.h>
+#include <common/resource_hooks.h>
+#include <inputdevice/inputdevice.h>
 #include <inputdevice/pad/pad.h>
 #include <job/job.h>
+#include <resource/resource_obj.h>
 #include <std/stdio.h>
 #include <std/stdlib.h>
 #include <system/system.h>
@@ -1051,6 +1055,353 @@ int32_t ScePafToplevel_1AEDE4E0(int32_t language)
 
 namespace paf {
 
+/* the input devices a load or unload locks */
+enum {
+	INPUT_DEVICE_ALL = (1 << inputdevice::DEVICE_NUM) - 1
+};
+
+/* runs a plugin load on the default job queue: the plugin is made there, started here */
+class PluginLoadJob : public job::JobItem {
+public:
+	PluginLoadJob(const char *name, Framework::ConstructPluginData *data)
+		: job::JobItem(name, NULL), m_data(data)
+	{
+	}
+
+	virtual ~PluginLoadJob()
+	{
+	}
+
+	virtual int Run()
+	{
+		m_data->framework->LoadRunAction(m_data);
+		return 0;
+	}
+
+	virtual void Finish(int result)
+	{
+		m_data->framework->LoadFinishedAction(m_data);
+	}
+
+	Framework::ConstructPluginData *m_data;
+};
+
+/* runs a plugin unload on the default job queue */
+class PluginUnloadJob : public job::JobItem {
+public:
+	PluginUnloadJob(const char *name, Framework::DestructPluginData *data)
+		: job::JobItem(name, NULL), m_data(data)
+	{
+	}
+
+	virtual ~PluginUnloadJob()
+	{
+	}
+
+	virtual int Run()
+	{
+		m_data->framework->UnloadRunAction(m_data);
+		return 0;
+	}
+
+	virtual void Finish(int result)
+	{
+		m_data->framework->UnloadFinishedAction(m_data);
+	}
+
+	Framework::DestructPluginData *m_data;
+};
+
+void Framework::LoadFinishedAction(ConstructPluginData *data)
+{
+	if (data->plugin != NULL) {
+		m_list_lock->WriterLock();
+		data->framework->m_plugin_list.push_back(data->plugin);
+		m_list_lock->WriterUnlock();
+		data->plugin->Start();
+	}
+	if (data->finish_callback != NULL)
+		data->finish_callback(data->plugin);
+	--m_loading_plugin_count;
+	if ((data->option & Plugin::LoadUnloadOption_DontLockInputDevice) == 0)
+		inputdevice::Unlock(INPUT_DEVICE_ALL);
+	delete data->init_param;
+	delete data;
+}
+
+inline void Framework::LoadRunAction(ConstructPluginData *data)
+{
+	data->plugin = new Plugin(data->init_param);
+}
+
+inline void Framework::LoadInitAction(int32_t option)
+{
+	++m_loading_plugin_count;
+	if ((option & Plugin::LoadUnloadOption_DontLockInputDevice) == 0)
+		inputdevice::Lock(INPUT_DEVICE_ALL);
+}
+
+void Framework::LoadPluginSync(const Plugin::InitParam &param, Plugin::LoadFinishCallback finish,
+			       int32_t option)
+{
+	LoadInitAction(option);
+
+	ConstructPluginData *data = new ConstructPluginData;
+
+	data->framework = this;
+	data->plugin = NULL;
+	data->init_param = new Plugin::InitParam(param);
+	data->finish_callback = finish;
+	data->option = option;
+	LoadRunAction(data);
+	LoadFinishedAction(data);
+}
+
+void Framework::RequestLoadPlugin(const Plugin::InitParam &param, Plugin::LoadFinishCallback finish,
+				  int32_t option)
+{
+	LoadInitAction(option);
+
+	ConstructPluginData *data = new ConstructPluginData;
+
+	data->framework = this;
+	data->plugin = NULL;
+	data->init_param = new Plugin::InitParam(param);
+	data->finish_callback = finish;
+	data->option = option;
+
+	common::SharedPtr<PluginLoadJob> item(new PluginLoadJob("Job_PluginLoad", data));
+
+	job::JobQueue::default_queue->Enqueue(
+		reinterpret_cast<common::SharedPtr<job::JobItem> &>(item));
+}
+
+Plugin *Framework::FindPlugin(const char *name, bool include_unloading)
+{
+	Plugin *plugin = NULL;
+
+	m_list_lock->ReaderLock();
+	for (vector<Plugin *>::iterator it = m_plugin_list.begin(); it != m_plugin_list.end(); ++it) {
+		if (name == (*it)->m_name) {
+			plugin = *it;
+			break;
+		}
+	}
+	m_list_lock->ReaderUnlock();
+
+	if (!include_unloading && plugin != NULL && plugin->m_unloading)
+		return NULL;
+	return plugin;
+}
+
+inline void Framework::UnloadInitAction(Plugin *plugin, const char *name, int32_t option)
+{
+	if ((option & Plugin::LoadUnloadOption_DontLockInputDevice) == 0)
+		inputdevice::Lock(INPUT_DEVICE_ALL);
+	if (plugin != NULL) {
+		plugin->m_unloading = true;
+	} else if (name != NULL) {
+		plugin = FindPlugin(name, false);
+		if (plugin != NULL)
+			plugin->m_unloading = true;
+	}
+}
+
+Plugin *Framework::FindPlugin(Plugin *plugin, bool include_unloading)
+{
+	m_list_lock->ReaderLock();
+
+	vector<Plugin *>::iterator it = m_plugin_list.begin();
+	vector<Plugin *>::iterator end = m_plugin_list.end();
+
+	for (; it != end; ++it) {
+		if (*it == plugin)
+			break;
+	}
+	m_list_lock->ReaderUnlock();
+
+	if (it == m_plugin_list.end())
+		return NULL;
+	if (include_unloading || !(*it)->m_unloading)
+		return *it;
+	return NULL;
+}
+
+int32_t Framework::RequestUnloadPlugin(Plugin *plugin, const char *name,
+				       Plugin::UnloadFinishCallback finish, int32_t option)
+{
+	if ((plugin == NULL && name == NULL) || (plugin != NULL && name != NULL)) {
+		common_internal::on_error();
+		return SCE_PAF_ERROR_TOPLEVEL_ARGUMENT;
+	}
+	if (plugin != NULL && FindPlugin(plugin, false) == NULL) {
+		common_internal::on_error();
+		return SCE_PAF_ERROR_NOT_FOUND;
+	}
+
+	UnloadInitAction(plugin, name, option);
+
+	DestructPluginData *data = new DestructPluginData;
+
+	data->framework = this;
+	data->plugin = plugin;
+	data->name = name;
+	data->option = option;
+	data->finish_callback = finish;
+
+	common::SharedPtr<PluginUnloadJob> item(new PluginUnloadJob("Job_PluginUnLoad", data));
+
+	return job::JobQueue::default_queue->Enqueue(
+		reinterpret_cast<common::SharedPtr<job::JobItem> &>(item));
+}
+
+void Framework::SetLocaleAllPlugin(Locale locale)
+{
+	thread::RWLock *lock = m_list_lock;
+
+	lock->ReaderLock();
+	for (vector<Plugin *>::iterator it = m_plugin_list.begin(); it != m_plugin_list.end(); ++it)
+		(*it)->SetLocale(locale);
+	lock->ReaderUnlock();
+}
+
+void Framework::UnloadRunAction(DestructPluginData *data)
+{
+	Framework *framework = data->framework;
+
+	if (data->plugin == NULL)
+		data->plugin = framework->FindPlugin(data->name.c_str(), true);
+	else
+		data->plugin = framework->FindPlugin(data->plugin, true);
+
+	Plugin *plugin = data->plugin;
+
+	if (plugin == NULL)
+		return;
+	plugin->m_unloading = true;
+	if (plugin->m_rscobj != NULL && plugin->m_rscobj->m_num_sounds != 0 &&
+	    m_sound_output != NULL)
+		m_sound_output->WaitSoundStopped();
+
+	thread::SyncCall *synccall = &thread::SyncCall::main_thread_synccall;
+
+	if (synccall == NULL)
+		common_internal::on_error();
+	synccall->Call(UnloadPreactionCall, data);
+	data->plugin->Exit();
+}
+
+void Framework::UnloadFinishedAction(DestructPluginData *data)
+{
+	if ((data->option & Plugin::LoadUnloadOption_DontLockInputDevice) == 0)
+		inputdevice::Unlock(INPUT_DEVICE_ALL);
+
+	string name;
+
+	if (data->name.size() != 0)
+		name = data->name;
+	if (data->plugin != NULL) {
+		if (data->finish_callback != NULL)
+			name = data->plugin->m_name;
+		delete data->plugin;
+	}
+	if (data->finish_callback != NULL)
+		data->finish_callback(name.c_str());
+	delete data;
+}
+
+}
+
+bool ScePafToplevel_CFF44F67(uint32_t value)
+{
+	return value != 0 && value <= 1;
+}
+
+namespace paf {
+
+void Framework::CRLoadFinishCallback(Plugin *plugin)
+{
+	framework->m_common_resource_plugin = plugin;
+	framework->InitCommonSE();
+	if (framework->m_load_finish_callback != NULL)
+		framework->m_load_finish_callback();
+	SetCommonTemplateOpenFunction(CommonTemplateOpen);
+	SetCommonStringFunction(CommonString);
+	SetCommonTextureFunction(CommonTexture);
+	ScePafWidget_B6C64486(intrusive_ptr<graph::Surface>(), 0);
+}
+
+}
+
+void ScePafToplevel_C9C02705(void *userdata)
+{
+	paf::Framework::framework->m_common_resource_plugin = NULL;
+
+	paf::Framework *framework = paf::Framework::framework;
+
+	if (framework->m_surface_pool != NULL) {
+		if (framework->m_surface_pool_addr != NULL) {
+			if (framework->m_surface_pool->m_type ==
+			    paf::graph::SurfacePool::MemoryType_SharedClient)
+				paf::GraphMem::FreeOSMemory(paf::GraphMem::DeviceType_SharedMemory,
+							    framework->m_surface_pool_addr);
+			else
+				paf::GraphMem::FreeOSMemory(paf::GraphMem::DeviceType_VideoMemory,
+							    framework->m_surface_pool_addr);
+			framework->m_surface_pool_addr = NULL;
+		}
+		delete framework->m_surface_pool;
+		framework->m_surface_pool = NULL;
+	}
+	if (paf::Framework::framework->m_unload_finish_callback != NULL)
+		paf::Framework::framework->m_unload_finish_callback();
+}
+
+namespace paf {
+
+Framework *Framework::Instance()
+{
+	return framework;
+}
+
+/* the common resource's hooks: its templates, strings and textures */
+int32_t Framework::CommonTemplateOpen(ui::Widget *parent, const IDParam &id)
+{
+	Plugin *plugin = framework->m_common_resource_plugin;
+
+	if (plugin == NULL)
+		return -1;
+	return plugin->TemplateOpen(parent, id, Plugin::TemplateOpenParam());
+}
+
+const wchar_t *Framework::CommonString(const IDParam &id)
+{
+	Plugin *plugin = framework->m_common_resource_plugin;
+
+	if (plugin == NULL)
+		return L"";
+	return plugin->GetString(id);
+}
+
+intrusive_ptr<graph::Surface> Framework::CommonTexture(const IDParam &id)
+{
+	Plugin *plugin = framework->m_common_resource_plugin;
+
+	if (plugin == NULL)
+		return intrusive_ptr<graph::Surface>();
+	return plugin->GetTexture(id);
+}
+
+ui::Environment *Framework::GetEnvironmentInstance()
+{
+	return m_env;
+}
+
+sound::Output *Framework::GetSoundInstance()
+{
+	return m_sound_output;
+}
+
 }
 
 using namespace paf;
@@ -1167,6 +1518,15 @@ Framework::CommonResourceInitParam::CommonResourceInitParam()
 	private_heap = NULL;
 	surface_pool = NULL;
 	draw_priority = -1;
+}
+
+
+/* UnloadRunAction's step on the main thread */
+int32_t Framework::UnloadPreactionCall(void *data)
+{
+	DestructPluginData *unload = (DestructPluginData *)data;
+
+	return unload->framework->UnloadPreaction(unload->plugin);
 }
 
 }

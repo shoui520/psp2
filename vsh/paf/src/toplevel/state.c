@@ -11,7 +11,6 @@ extern HeapAllocator *ScePafResource_D60FF214(uint8_t *self,
 					      HeapAllocator *allocator);
 
 
-uint32_t sce_paf_toplevel_value_1194;
 volatile int32_t sce_paf_toplevel_pending_4694;
 
 static inline __attribute__((always_inline))
@@ -179,11 +178,6 @@ uint8_t *_ZNK3paf6Plugin24GetNodeEntity_AddTextureERKNS_7IDParamE(const uint8_t 
 	return node == root ? 0 : (uint8_t *)node + 16;
 }
 
-uint32_t _ZN3paf9Framework8InstanceEv(void)
-{
-	return sce_paf_toplevel_value_1194;
-}
-
 typedef struct PafTopLevelTransition {
 	uint8_t active;
 	uint8_t reserved[3];
@@ -213,11 +207,6 @@ PafTopLevelTransition *_ZN3paf6Plugin14PageCloseParamC1Ev(PafTopLevelTransition 
 PafTopLevelTransition *_ZN3paf6Plugin14PageCloseParamC2Ev(PafTopLevelTransition *self)
 {
 	return InitTopLevelTransition(self);
-}
-
-int ScePafToplevel_CFF44F67(uint32_t value)
-{
-	return value != 0 && value <= 1;
 }
 
 int ScePafToplevel_9A4B0DC4(uint8_t *self)

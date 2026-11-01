@@ -49,6 +49,8 @@ int32_t ScePafToplevel_C04E8309(paf::Framework *framework, const paf::IDParam &i
 				uint32_t *value1, uint32_t *value2);
 /* the Locale for a system language */
 int32_t ScePafToplevel_1AEDE4E0(int32_t language);
+/* true for 1 only */
+bool ScePafToplevel_CFF44F67(uint32_t value);
 }
 
 namespace paf {
@@ -200,6 +202,50 @@ public:
 	int32_t SetMode(uint32_t mode);
 	int32_t GetMode_ApplicationC();
 
+	/* what a plugin load job carries from its request to its finish */
+	class ConstructPluginData {
+	public:
+		Framework *framework;
+		Plugin *plugin;
+		Plugin::InitParam *init_param;
+		Plugin::LoadFinishCallback finish_callback;
+		int32_t option;
+	};
+
+	/* what a plugin unload job carries: the plugin, or its name */
+	class DestructPluginData {
+	public:
+		Framework *framework;
+		Plugin *plugin;
+		string name;
+		Plugin::UnloadFinishCallback finish_callback;
+		int32_t option;
+	};
+
+	void LoadFinishedAction(ConstructPluginData *data);
+	__declspec(dllexport) void LoadRunAction(ConstructPluginData *data);
+	__declspec(dllexport) void LoadInitAction(int32_t option);
+	/* Plugin::LoadSync: the load job's steps on the calling thread */
+	void LoadPluginSync(const Plugin::InitParam &param, Plugin::LoadFinishCallback finish,
+			    int32_t option);
+	void RequestLoadPlugin(const Plugin::InitParam &param, Plugin::LoadFinishCallback finish,
+			       int32_t option);
+	/* NULL also for a plugin being unloaded, unless include_unloading */
+	Plugin *FindPlugin(const char *name, bool include_unloading);
+	__declspec(dllexport) void UnloadInitAction(Plugin *plugin, const char *name, int32_t option);
+	/* plugin when it is in the list */
+	Plugin *FindPlugin(Plugin *plugin, bool include_unloading);
+	/* either the plugin or its name */
+	int32_t RequestUnloadPlugin(Plugin *plugin, const char *name,
+				    Plugin::UnloadFinishCallback finish, int32_t option);
+	void SetLocaleAllPlugin(Locale locale);
+	void UnloadRunAction(DestructPluginData *data);
+	void UnloadFinishedAction(DestructPluginData *data);
+
+	static Framework *Instance();
+	ui::Environment *GetEnvironmentInstance();
+	sound::Output *GetSoundInstance();
+
 	/* the common resource's load finish: its sounds, and the common hooks */
 	static void CRLoadFinishCallback(Plugin *plugin);
 
@@ -223,6 +269,13 @@ private:
 						     void *data);
 
 	static void JobInit();
+
+	/* the common resource's hooks: its templates, strings and textures */
+	static int32_t CommonTemplateOpen(ui::Widget *parent, const IDParam &id);
+	static const wchar_t *CommonString(const IDParam &id);
+	static intrusive_ptr<graph::Surface> CommonTexture(const IDParam &id);
+	/* UnloadRunAction's step on the main thread */
+	static int32_t UnloadPreactionCall(void *data);
 
 	int32_t UnloadPreaction(Plugin *plugin);
 	/* the common resource's surface pool, in shared memory or video memory */
