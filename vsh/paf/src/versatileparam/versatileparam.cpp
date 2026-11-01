@@ -8,8 +8,12 @@
 #include <file/file.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <graphics/surface/surface.h>
+#include <widget/core/environment.h>
 #include <widget/core/widget.h>
+#include <widget/w_scene.h>
 #include <plugin.h>
+#include <std/string.h>
+#include <timer/timer.h>
 #include <versatileparam/idparam.h>
 #include <versatileparam/resourceparam.h>
 #include <versatileparam/versatileparam.h>
@@ -415,4 +419,460 @@ int32_t ScePafResource_190E99A6(paf::ui::WidgetParam *param, paf::ui::Widget *wi
 void ScePafResource_2B873BCD(paf::ui::Widget *widget, void *param)
 {
 	ScePafResource_190E99A6(static_cast<paf::ui::WidgetParam *>(param), NULL);
+}
+
+namespace paf {
+namespace ui {
+
+const char WidgetLayoutParam::m_param_name[] = "layout_hint";
+
+const char *WidgetLayoutParam::s_names[] = {
+	"pos",
+	"size",
+	"rot",
+	"alpha",
+	"align",
+	"adjust",
+	"origin",
+	"anchor",
+};
+
+const char *WidgetLayoutParam::GetParamName() const
+{
+	return m_param_name;
+}
+
+const char *WidgetLayoutParam::ParamName()
+{
+	return m_param_name;
+}
+
+int32_t WidgetLayoutParam::Init()
+{
+	m_pos = math::v3(0.0f, 0.0f, 0.0f);
+	m_size = math::v3(0.0f, 0.0f, 0.0f);
+	m_rot = math::v3(0.0f, 0.0f, 0.0f);
+	m_alpha = 1.0f;
+	m_align[0] = 0;
+	m_align[1] = 0;
+	m_align[2] = 0;
+	m_adjust[0] = 0;
+	m_adjust[1] = 0;
+	m_adjust[2] = 0;
+	m_origin[0] = 0;
+	m_origin[1] = 0;
+	m_origin[2] = 0;
+	m_anchor[0] = 4;
+	m_anchor[1] = 4;
+	m_anchor[2] = 4;
+	delete m_timer;
+	m_timer = NULL;
+	if (m_pos_array != NULL)
+		delete[] m_pos_array;
+	if (m_size_array != NULL)
+		delete[] m_size_array;
+	if (m_rot_array != NULL)
+		delete[] m_rot_array;
+	m_pos_array = NULL;
+	m_size_array = NULL;
+	m_rot_array = NULL;
+	m_resolution_num = 0;
+	m_resolution_id = 255;
+	m_base_resolution_id = -1;
+	return 0;
+}
+
+WidgetLayoutParam::~WidgetLayoutParam()
+{
+	if (m_pos_array != NULL)
+		delete[] m_pos_array;
+	if (m_size_array != NULL)
+		delete[] m_size_array;
+	if (m_rot_array != NULL)
+		delete[] m_rot_array;
+	delete m_timer;
+	if (m_widget != NULL)
+		m_widget->RemoveDeleteCB(delete_cb, this);
+}
+
+int32_t WidgetLayoutParam::Set()
+{
+	if (m_widget == NULL)
+		return -1;
+
+	if (m_resolution_num == 0) {
+		ResolutionData data;
+
+		data.m_id = -1;
+		data.m_value[0] = m_pos.extract_x();
+		data.m_value[1] = m_pos.extract_y();
+		data.m_value[2] = m_pos.extract_z();
+		m_widget->SetPos(&data, 1, m_timer != NULL ? new Timer(*m_timer) : NULL,
+				 Widget::ANIM_MOVE, 0, 0.0f, NULL, NULL);
+		data.m_value[0] = m_size.extract_x();
+		data.m_value[1] = m_size.extract_y();
+		data.m_value[2] = m_size.extract_z();
+		m_widget->SetSize(&data, 1, m_timer != NULL ? new Timer(*m_timer) : NULL,
+				  Widget::ANIM_SIZE, 0, 0.0f, NULL, NULL);
+		data.m_value[0] = m_rot.extract_x();
+		data.m_value[1] = m_rot.extract_y();
+		data.m_value[2] = m_rot.extract_z();
+		m_widget->SetRot(&data, 1, 0, m_timer != NULL ? new Timer(*m_timer) : NULL,
+				 Widget::ANIM_ROT, 0, 0.0f, NULL, NULL);
+	} else {
+		uint32_t num = m_resolution_num + 1;
+		ResolutionData *data = new ResolutionData[num];
+
+		data[0].m_id = -1;
+		math::v3 pos = m_pos;
+
+		if (m_pos_array != NULL) {
+			data[0].m_value[0] = pos.extract_x();
+			data[0].m_value[1] = pos.extract_y();
+			data[0].m_value[2] = pos.extract_z();
+			sce_paf_memcpy(data + 1, m_pos_array, m_resolution_num * sizeof(ResolutionData));
+			m_widget->SetPos(data, num, m_timer != NULL ? new Timer(*m_timer) : NULL,
+					 Widget::ANIM_MOVE, 0, 0.0f, NULL, NULL);
+		} else {
+			m_widget->SetPos(math::v4(sce::Vectormath::Simd::Aos::Vector4(pos.getImpl(), 0.0f)),
+					 m_timer != NULL ? new Timer(*m_timer) : NULL, Widget::ANIM_MOVE, 0,
+					 0.0f, NULL, NULL);
+		}
+		math::v3 size = m_size;
+
+		if (m_size_array != NULL) {
+			data[0].m_value[0] = size.extract_x();
+			data[0].m_value[1] = size.extract_y();
+			data[0].m_value[2] = size.extract_z();
+			sce_paf_memcpy(data + 1, m_size_array, m_resolution_num * sizeof(ResolutionData));
+			m_widget->SetSize(data, num, m_timer != NULL ? new Timer(*m_timer) : NULL,
+					  Widget::ANIM_SIZE, 0, 0.0f, NULL, NULL);
+		} else {
+			m_widget->SetSize(math::v4(sce::Vectormath::Simd::Aos::Vector4(size.getImpl(), 0.0f)),
+					  m_timer != NULL ? new Timer(*m_timer) : NULL, Widget::ANIM_SIZE, 0,
+					  0.0f, NULL, NULL);
+		}
+		math::v3 rot = m_rot;
+
+		if (m_rot_array != NULL) {
+			data[0].m_value[0] = rot.extract_x();
+			data[0].m_value[1] = rot.extract_y();
+			data[0].m_value[2] = rot.extract_z();
+			sce_paf_memcpy(data + 1, m_rot_array, m_resolution_num * sizeof(ResolutionData));
+			m_widget->SetRot(data, num, 0, m_timer != NULL ? new Timer(*m_timer) : NULL,
+					 Widget::ANIM_ROT, 0, 0.0f, NULL, NULL);
+		} else {
+			m_widget->SetRot(math::v4(sce::Vectormath::Simd::Aos::Vector4(rot.getImpl(), 0.0f)), 0,
+					 m_timer != NULL ? new Timer(*m_timer) : NULL, Widget::ANIM_ROT, 0,
+					 0.0f, NULL, NULL);
+		}
+		delete[] data;
+	}
+	m_widget->SetMetaAlpha(m_alpha, m_timer != NULL ? new Timer(*m_timer) : NULL,
+			       Widget::ANIM_META_ALPHA, 0, 0.0f, NULL, NULL);
+	m_widget->SetAlign(m_align[0], m_align[1], m_align[2], NULL);
+	m_widget->SetAdjust(m_adjust[0], m_adjust[1], m_adjust[2]);
+	m_widget->SetOrigin(m_origin[0], m_origin[1], m_origin[2], NULL);
+	m_widget->SetAnchor(m_anchor[0], m_anchor[1], m_anchor[2], NULL);
+	return 0;
+}
+
+int32_t WidgetLayoutParam::GetEach(Widget *widget)
+{
+	if (widget == NULL || m_resolution_num <= 0)
+		return 0;
+	if (m_resolution_num >= widget->m_pos_num)
+		sce_paf_memcpy(m_pos_array, widget->m_pos_array,
+			       widget->m_pos_num * sizeof(ResolutionData));
+	if (m_resolution_num >= widget->m_size_num)
+		sce_paf_memcpy(m_size_array, widget->m_size_array,
+			       widget->m_size_num * sizeof(ResolutionData));
+	if (m_resolution_num >= widget->m_rot_num)
+		sce_paf_memcpy(m_rot_array, widget->m_rot_array,
+			       widget->m_rot_num * sizeof(ResolutionData));
+	uint32_t resolution_id = widget->m_resolution_id;
+	Scene *scene = m_widget->m_scene;
+
+	m_resolution_id = resolution_id;
+	if (scene != NULL) {
+		SceneResolution *resolution =
+			ScePafWidget_CDC90BA2(scene->m_env_param, resolution_id);
+
+		if (resolution != NULL)
+			m_base_resolution_id = resolution->m_base_id;
+		else
+			m_base_resolution_id = -1;
+	}
+	return 0;
+}
+
+int32_t WidgetLayoutParam::Get()
+{
+	if (m_widget == NULL)
+		return -1;
+
+	m_pos = math::v3(m_widget->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f))
+				 .getImpl().getXYZ());
+	m_size = math::v3(m_widget->GetSize(0)->getImpl().getXYZ());
+	m_rot = math::v3(m_widget->GetRot(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f), 0)
+				 .getImpl().getXYZ());
+	m_alpha = m_widget->m_meta_alpha;
+
+	uint32_t x, y, z;
+
+	x = m_widget->m_align_x;
+	y = m_widget->m_align_y;
+	z = m_widget->m_align_z;
+	m_align[0] = x;
+	m_align[1] = y;
+	m_align[2] = z;
+	x = m_widget->m_adjust_x;
+	y = m_widget->m_adjust_y;
+	z = m_widget->m_adjust_z;
+	m_adjust[0] = x;
+	m_adjust[1] = y;
+	m_adjust[2] = z;
+	m_widget->GetOrigin(x, y, z);
+	m_origin[0] = x;
+	m_origin[1] = y;
+	m_origin[2] = z;
+	m_widget->GetAnchor(x, y, z);
+	m_anchor[0] = x;
+	m_anchor[1] = y;
+	m_anchor[2] = z;
+	GetEach(m_widget);
+	return 0;
+}
+
+int32_t WidgetLayoutParam::Create(int32_t mode)
+{
+	VersatileParam::Create(mode);
+	if ((mode & 1) || m_resolution_num == 0) {
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[0], &m_pos, ResourceParam::SEMANTIC_VEC3);
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[1], &m_size, ResourceParam::SEMANTIC_VEC3);
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[2], &m_rot, ResourceParam::SEMANTIC_VEC3);
+	}
+	if (m_resolution_num > 0) {
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[0], m_pos_array, ResourceParam::SEMANTIC_RESOARRAY);
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[1], m_size_array, ResourceParam::SEMANTIC_RESOARRAY);
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[2], m_rot_array, ResourceParam::SEMANTIC_RESOARRAY);
+	}
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[3], &m_alpha, ResourceParam::SEMANTIC_FLOAT);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[4], m_align, ResourceParam::SEMANTIC_INT3);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[5], m_adjust, ResourceParam::SEMANTIC_INT3);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[6], m_origin, ResourceParam::SEMANTIC_INT3);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[7], m_anchor, ResourceParam::SEMANTIC_INT3);
+	return 0;
+}
+
+/*
+ * After the attributes, turns the resolution hashes of the "resolution"
+ * children into resolution IDs: an entry without one takes the ID its
+ * position's, then its rotation's hash found; an array with no entry is freed.
+ */
+int32_t WidgetLayoutParam::Read(const cxml::Element *elem)
+{
+	if (m_serial != NULL)
+		m_serial->Read(*elem, m_plugin != NULL ? m_plugin->m_rscobj : NULL,
+			       ResourceParam::READTYPE_FROM_PARAMLIST);
+	if (m_resolution_num <= 0 || m_widget == NULL)
+		return 0;
+
+	Scene *scene = m_widget->m_scene;
+
+	if (scene == NULL)
+		return 0;
+
+	int32_t rot_empty = 0;
+	int32_t pos_empty = 0;
+	int32_t size_empty = 0;
+
+	for (int32_t i = 0; i < m_resolution_num; i++) {
+		IDParam id(s_empty_id, m_pos_array[i].m_id);
+		int32_t resolution_id;
+
+		if (m_pos_array[i].m_id != 0) {
+			resolution_id = ScePafWidget_36505C86(scene->m_env_param, id);
+			m_pos_array[i].m_id = resolution_id < 0 ? -1 : resolution_id;
+		} else {
+			resolution_id = -1;
+			m_pos_array[i].m_id = -1;
+			m_pos_array[i].m_value[0] = 0.0f;
+			m_pos_array[i].m_value[1] = 0.0f;
+			m_pos_array[i].m_value[2] = 0.0f;
+			pos_empty++;
+		}
+		if (m_rot_array[i].m_id != 0) {
+			if (m_pos_array[i].m_id == (uint32_t)-1) {
+				id.m_idhash = m_rot_array[i].m_id;
+				resolution_id = ScePafWidget_36505C86(scene->m_env_param, id);
+			}
+			m_rot_array[i].m_id = resolution_id < 0 ? -1 : resolution_id;
+		} else {
+			m_rot_array[i].m_id = -1;
+			m_rot_array[i].m_value[0] = 0.0f;
+			m_rot_array[i].m_value[1] = 0.0f;
+			m_rot_array[i].m_value[2] = 0.0f;
+			rot_empty++;
+		}
+		if (m_size_array[i].m_id != 0) {
+			if (m_pos_array[i].m_id == (uint32_t)-1 && m_rot_array[i].m_id == (uint32_t)-1) {
+				id.m_idhash = m_size_array[i].m_id;
+				resolution_id = ScePafWidget_36505C86(scene->m_env_param, id);
+			}
+			m_size_array[i].m_id = resolution_id < 0 ? -1 : resolution_id;
+		} else {
+			m_size_array[i].m_id = -1;
+			m_size_array[i].m_value[0] = 0.0f;
+			m_size_array[i].m_value[1] = 0.0f;
+			m_size_array[i].m_value[2] = 0.0f;
+			size_empty++;
+		}
+	}
+	if (pos_empty == m_resolution_num) {
+		delete[] m_pos_array;
+		m_pos_array = NULL;
+	}
+	if (rot_empty == m_resolution_num) {
+		delete[] m_rot_array;
+		m_rot_array = NULL;
+	}
+	if (size_empty == m_resolution_num) {
+		delete[] m_size_array;
+		m_size_array = NULL;
+	}
+	return 0;
+}
+
+/*
+ * With resolutions: the element's opening tag with its alpha, align, adjust,
+ * origin and anchor, a "resolution" child for each resolution with its
+ * position, size and rotation, then the closing tag.
+ */
+int32_t WidgetLayoutParam::Write(common::SharedPtr<File> fp, uint32_t type, uint32_t indent)
+{
+	if (m_resolution_num == 0) {
+		if (fp.get() != NULL)
+			return ScePafResource_441E989F(m_serial, fp, 0, indent, false);
+		return ScePafResource_441E989F(m_serial, fp, 0, indent, true);
+	}
+
+	int32_t ret = 0;
+	ResourceParam *param = new ResourceParam();
+
+	if (param != NULL) {
+		param->SetTagName(GetParamName());
+		param->SetIDName(m_id.m_id.c_str());
+		param->AddParam(s_names[3], &m_alpha, ResourceParam::SEMANTIC_FLOAT);
+		param->AddParam(s_names[4], m_align, ResourceParam::SEMANTIC_INT3);
+		param->AddParam(s_names[5], m_adjust, ResourceParam::SEMANTIC_INT3);
+		param->AddParam(s_names[6], m_origin, ResourceParam::SEMANTIC_INT3);
+		param->AddParam(s_names[7], m_anchor, ResourceParam::SEMANTIC_INT3);
+		if (fp.get() != NULL)
+			ScePafResource_441E989F(param, fp, 1, indent, false);
+		else
+			ScePafResource_441E989F(param, fp, 1, indent, true);
+		delete param;
+	}
+	for (int32_t i = 0; i < m_resolution_num; i++) {
+		if (m_pos_array[i].m_id == (uint32_t)-1)
+			continue;
+
+		Scene *scene = m_widget->m_scene;
+
+		if (scene == NULL)
+			continue;
+
+		ResolutionResource resource =
+			ScePafWidget_E963EAEE(scene->m_env_param, m_pos_array[i].m_id);
+		ResourceParam *child = new ResourceParam();
+
+		if (child != NULL) {
+			child->SetTagName("resolution");
+			child->SetIDName(resource.m_name.c_str());
+			child->AddParam(s_names[0], &m_pos_array[i], ResourceParam::SEMANTIC_RESOARRAY);
+			child->AddParam(s_names[1], &m_size_array[i], ResourceParam::SEMANTIC_RESOARRAY);
+			child->AddParam(s_names[2], &m_rot_array[i], ResourceParam::SEMANTIC_RESOARRAY);
+			if (fp.get() != NULL)
+				ScePafResource_441E989F(child, fp, 0, indent + 1, false);
+			else
+				ScePafResource_441E989F(child, fp, 0, indent + 1, true);
+			delete child;
+		}
+	}
+
+	int32_t res;
+
+	if (fp.get() != NULL)
+		res = ScePafResource_441E989F(m_serial, fp, 2, indent, false);
+	else
+		res = ScePafResource_441E989F(m_serial, fp, 2, indent, true);
+	if (res != 0)
+		ret = res;
+	return ret;
+}
+
+int32_t WidgetLayoutParam::InitResolution(int32_t num)
+{
+	if (m_pos_array != NULL)
+		delete[] m_pos_array;
+	if (m_size_array != NULL)
+		delete[] m_size_array;
+	if (m_rot_array != NULL)
+		delete[] m_rot_array;
+	m_pos_array = NULL;
+	m_size_array = NULL;
+	m_rot_array = NULL;
+	m_resolution_num = 0;
+	if (num > 0) {
+		m_pos_array = new ResolutionData[num];
+		m_size_array = new ResolutionData[num];
+		m_rot_array = new ResolutionData[num];
+		sce_paf_memset(m_pos_array, 0, num * sizeof(ResolutionData));
+		sce_paf_memset(m_size_array, 0, num * sizeof(ResolutionData));
+		sce_paf_memset(m_rot_array, 0, num * sizeof(ResolutionData));
+		m_resolution_num = num;
+		m_resolution_id = 255;
+		m_base_resolution_id = -1;
+	}
+	return 0;
+}
+
+int32_t WidgetLayoutParam::SetTimer(Timer *timer)
+{
+	delete m_timer;
+	m_timer = timer != NULL ? new Timer(*timer) : NULL;
+	return 0;
+}
+
+int32_t WidgetLayoutParam::Attach(Widget *widget)
+{
+	if (m_widget == widget)
+		return 0;
+	if (m_widget != NULL)
+		m_widget->RemoveDeleteCB(delete_cb, this);
+	Init();
+	m_widget = widget;
+	if (widget != NULL)
+		widget->AddDeleteCB(delete_cb, this);
+	return Get();
+}
+
+void WidgetLayoutParam::delete_cb(Widget *widget, void *param)
+{
+	static_cast<WidgetLayoutParam *>(param)->Attach(NULL);
+}
+
+}
 }

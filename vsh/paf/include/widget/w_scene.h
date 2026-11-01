@@ -91,6 +91,11 @@ public:
 }
 }
 
+/* the ID of the resolution whose resource variant, or its base's, has the ID's hash; -1 without
+   one */
+extern "C" int32_t ScePafWidget_36505C86(const paf::ui::EnvironmentParam *param,
+					 const paf::IDParam &id);
+
 /* the resolution of the list with the ID, or NULL */
 extern "C" paf::ui::SceneResolution *ScePafWidget_CDC90BA2(const paf::ui::EnvironmentParam *param,
 							   uint32_t id);

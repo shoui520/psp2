@@ -16,6 +16,7 @@
 #include <std/memory>
 #include <std/string>
 #include <std/vector>
+#include <math/ngp/v3.h>
 #include <math/ngp/v4.h>
 #include <math/ngp/quaternion.h>
 #include <versatileparam/idparam.h>
@@ -109,9 +110,34 @@ public:
 	int32_t AttachWidget(Widget *widget);
 };
 
-/* a widget type's layout, read from the "layout_" children of its element */
+/*
+ * A widget type's layout, read from the "layout_" children of its element: its
+ * position, size and rotation, for each resolution the scene lays out for when
+ * the element has "resolution" children, and its alpha, align, adjust, origin
+ * and anchor (members' names after the attributes).
+ */
 class WidgetLayoutParam : public VersatileParam {
 public:
+	static const char m_param_name[];
+	static const char *s_names[];
+	static const char *ParamName();
+
+	WidgetLayoutParam()
+		: m_widget(NULL), m_timer(NULL), m_pos_array(NULL), m_size_array(NULL),
+		  m_rot_array(NULL)
+	{
+		Init();
+	}
+
+	virtual const char *GetParamName() const;
+	virtual ~WidgetLayoutParam();
+	virtual int32_t Set();
+	virtual int32_t Get();
+	virtual int32_t Create(int32_t mode);
+	virtual int32_t Read(const cxml::Element *elem);
+	virtual int32_t Write(common::SharedPtr<File> fp, uint32_t type, uint32_t indent);
+
+	int32_t Init();
 	/* makes room for num resolutions */
 	int32_t InitResolution(int32_t num);
 	/* takes the widget's position, size and rotation arrays (0x81064afc, name ours) */
@@ -120,9 +146,27 @@ public:
 	int32_t Attach(Widget *widget);
 	/* the timer its Set animates with; NULL sets at once */
 	int32_t SetTimer(Timer *timer);
+	static void delete_cb(Widget *widget, void *param);
 
 	/* the widget it is read for (name ours) */
 	Widget *m_widget;
+	Timer *m_timer;
+	math::v3 m_pos;
+	math::v3 m_size;
+	math::v3 m_rot;
+	float m_alpha;
+	int32_t m_align[3];
+	int32_t m_adjust[3];
+	int32_t m_origin[3];
+	int32_t m_anchor[3];
+	/* the values of each resolution, m_resolution_num entries each (names ours) */
+	ResolutionData *m_pos_array;
+	ResolutionData *m_size_array;
+	ResolutionData *m_rot_array;
+	int32_t m_resolution_num;
+	/* the widget's resolution and its base resolution (names ours) */
+	uint32_t m_resolution_id;
+	int32_t m_base_resolution_id;
 };
 
 /* the sounds of a widget type, read from the resource's "sound_<type>" parameter (names after
@@ -318,8 +362,13 @@ public:
 	/* the values for each resolution, in the array */
 	int32_t SetPos(const ResolutionData *pos, uint32_t num, Timer *t, int32_t id, int32_t opt,
 		       float delay, AnimCB cb_fin, void *usrdata);
+	int32_t SetSize(const math::v4 &size, Timer *t = NULL, int32_t id = ANIM_SIZE,
+			int32_t opt = 0, float delay = 0.0f, AnimCB cb_fin = NULL,
+			void *usrdata = NULL);
 	int32_t SetSize(const ResolutionData *size, uint32_t num, Timer *t, int32_t id,
 			int32_t opt, float delay, AnimCB cb_fin, void *usrdata);
+	int32_t SetRot(const math::v4 &rot, int32_t option, Timer *t, int32_t id, int32_t opt,
+		       float delay, AnimCB cb_fin, void *usrdata);
 	int32_t SetRot(const ResolutionData *rot, uint32_t num, int32_t option, Timer *t,
 		       int32_t id, int32_t opt, float delay, AnimCB cb_fin, void *usrdata);
 	int32_t SetScale(const math::v4 &scale, Timer *t = NULL, int32_t id = ANIM_SCALE,
@@ -334,6 +383,7 @@ public:
 	int32_t SetAlignOffset(const math::v4 &offs, Timer *t, int32_t id, int32_t opt,
 			       float delay, AnimCB cb_fin, void *usrdata);
 	int32_t SetAlign(uint32_t ax, uint32_t ay, uint32_t az, Timer *t);
+	int32_t SetAdjust(uint32_t ax, uint32_t ay, uint32_t az);
 	int32_t SetPosCenter(const math::v4 &v);
 	/* puts the widget behind the other in its parent's draw order */
 	int32_t SetBehind(Widget *w);
