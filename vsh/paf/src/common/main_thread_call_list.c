@@ -53,7 +53,7 @@ CallListListener *CallListListenerConstruct(CallListListener *self)
 	self->m_is_calling = 0;
 	TimerListenerList *list = s_default_list;
 	ListenerParam param;
-	ScePafMisc_C565FD29(list,
+	TimerListenerListRegister(list,
 		ListenerParamConstruct(&param, &self->base, 1, NULL, NULL));
 	return self;
 }
@@ -99,7 +99,7 @@ TimerListener *CallListListenerDestroy(TimerListener *base)
 	CallListListener *self = (CallListListener *)base;
 
 	base->vtable = &callListListenerClass.methods;
-	ScePafMisc_A4554B25(s_default_list, base);
+	TimerListenerListUnregister(s_default_list, base);
 	_ZN3paf6thread6RMutexD1Ev(&self->m_list.m_item_mtx);
 	CallItemNode *root = self->m_list.m_list.root_node;
 	if (root) {

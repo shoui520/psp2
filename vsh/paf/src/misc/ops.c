@@ -77,17 +77,6 @@ void ScePafMisc_42A76852(float *object, const float *delta)
 	object[1] += y;
 }
 
-void ScePafMisc_3C2E7C36(uint8_t *object, uint32_t first, uint32_t flag,
-			uint32_t second, uint32_t third)
-{
-	int32_t old_flags = (int8_t)object[12];
-
-	*(uint32_t *)(object + 0) = first;
-	*(uint32_t *)(object + 4) = second;
-	*(uint32_t *)(object + 8) = third;
-	object[12] = (uint8_t)((old_flags & ~1) | (flag & 1));
-}
-
 int ScePafMisc_D88EEBD8(const uint8_t *object)
 {
 	const uint32_t *words = (const uint32_t *)object;

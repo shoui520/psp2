@@ -1,47 +1,5 @@
-/* Object-chain checks and indexed tree traversal. */
+/* Indexed tree traversal. */
 #include <stdint.h>
-
-typedef struct PafChainClass {
-	uint32_t reserved[4];
-	uint32_t flags;
-} PafChainClass;
-
-typedef struct PafChainPayload {
-	uint32_t reserved;
-	PafChainClass *type;
-} PafChainPayload;
-
-typedef struct PafChainNode {
-	struct PafChainNode *previous;
-	struct PafChainNode *next;
-	PafChainPayload *payload;
-} PafChainNode;
-
-typedef struct PafChain {
-	uint32_t reserved;
-	PafChainNode *head;
-} PafChain;
-
-int ScePafMisc_07A5D381(const PafChain *chain)
-{
-	PafChainNode *head = chain->head;
-	PafChainNode *node = head ? head->next : 0;
-
-	while (node != head) {
-		PafChainPayload *payload = node->payload;
-
-		if (payload && payload->type) {
-			uint32_t flags = payload->type->flags;
-			uint32_t kind = flags & 0xf000U;
-
-			if (kind != 0x3000U &&
-			    !(kind == 0x2000U && (flags & 0xf00U) == 0))
-				return 0;
-		}
-		node = node->next;
-	}
-	return 1;
-}
 
 typedef struct PafSearchNode {
 	struct PafSearchNode *parent;

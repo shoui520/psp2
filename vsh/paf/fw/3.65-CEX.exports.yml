@@ -696,7 +696,7 @@ ScePaf:
         - _ZN3paf11inputdevice20InputGestureListener15OnUpdateGestureEPKNS0_4DataEb: 0x77039A6F
         - ScePafMisc_7709D1B2: 0x7709D1B2
         - _ZN3paf12BufferedFile5IsEofEv: 0x772634EA
-        - ScePafMisc_7731B37D: 0x7731B37D
+        - _ZN3paf13TimerListenerD1Ev: 0x7731B37D
         - _ZN3paf4math4rect10set_bottomEf: 0x77865CCC
         - _ZN3paf7MemFile4OpenENS_6common9SharedPtrINS_6BufferEEEPi: 0x77B378EC
         - _ZN3paf4math10quaternion18FromEulerAnglesXYZENS0_2v3E: 0x78190BD6
@@ -903,7 +903,7 @@ ScePaf:
         - ScePafMisc_A8133C0A: 0xA8133C0A
         - ScePafMisc_A857C48F: 0xA857C48F
         - ScePafMisc_A86A5D0E: 0xA86A5D0E
-        - ScePafMisc_A8DFBD8D: 0xA8DFBD8D
+        - _ZN3paf13TimerListenerD0Ev: 0xA8DFBD8D
         - _ZN3paf8HttpFile4OpenEPKcPij: 0xA9958563
         - _ZN3paf5Timer15DoFuncCirqInOutEf: 0xA9A54EAB
         - _ZN3paf6memory13HeapAllocator26sce_paf_check_memoryboundsEv: 0xA9D10F39
@@ -1067,7 +1067,7 @@ ScePaf:
         - _ZN3paf5Timer13DoFuncBackOutEf: 0xCDCE62BB
         - _ZN3paf8HttpFile10CloseAsyncEv: 0xCE4DFAD1
         - _ZN3paf9LocalFile9SeekAsyncExi: 0xCE5848E1
-        - ScePafMisc_CE6EB459: 0xCE6EB459
+        - _ZN3paf13TimerListenerD2Ev: 0xCE6EB459
         - ScePafMisc_CE859024: 0xCE859024
         - _ZN3paf4math4rect5_0000Ev: 0xCE8FA30A
         - _ZN3paf6memory13HeapAllocator12sce_paf_freeEPv: 0xCE97B579
@@ -1315,7 +1315,7 @@ ScePaf:
         - _ZTVN3paf5cache9CacheBaseE: 0xC5F63AF6
         - _ZTVN3paf8HttpFileE: 0xC65A180F
         - _ZTVN3paf14SubConstBufferE: 0xC817C2F9
-        - ScePafMisc_CBA79C25: 0xCBA79C25
+        - _ZTVN3paf13TimerListenerE: 0xCBA79C25
         - _ZTVN3paf6memory13HeapAllocatorE: 0xCDB2EFB6
         - ScePafMisc_D20A15AF: 0xD20A15AF
         - _ZN3paf5cache16CacheManagerImpl8m_rmutexE: 0xDC169B6B

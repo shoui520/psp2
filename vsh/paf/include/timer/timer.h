@@ -138,6 +138,24 @@ public:
 	math::v4 GetValueV4();
 	float DoFunc(float rate, int func, float pre, float *param) const;
 
+	bool IsFinished() const
+	{
+		return m_state == State_Finished;
+	}
+
+	/* held, or finished with no repeat left */
+	bool IsAllFinished() const
+	{
+		if (m_state == State_Hold)
+			return true;
+		return IsFinished() && m_repeat == REPEAT_NONE;
+	}
+
+	float GetTotalTime() const
+	{
+		return m_total * 1000.0f;
+	}
+
 	static float Cbrt(float input);
 
 	static float DoFuncLinear(float rate);

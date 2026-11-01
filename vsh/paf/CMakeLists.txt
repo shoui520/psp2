@@ -118,8 +118,10 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/system/system_param.cpp
 	src/system/capability.cpp
 	src/system/model.cpp
-	src/timer/timer.c
 	src/timer/timer.cpp
+	src/timer/timerlistener.cpp
+	src/timer/timerlistenerlist.cpp
+	src/timer/timerqueue.cpp
 	src/std/math.c
 	src/common/view.c
 	src/plugin.c
@@ -170,7 +172,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/string_variant.c
 	src/misc/lock.c
 	src/misc/rect_contains.c
-	src/misc/list.c
 	src/misc/search.c
 	src/misc/state.c
 	src/misc/containment.c
@@ -244,3 +245,9 @@ set_source_files_properties(src/system/system_param.cpp PROPERTIES COMPILE_OPTIO
 # paf::Timer's InitTimer inlines ResetTimer, the custom elastic curves their "in"
 # curve but not the parabolic ones theirs (2026-10-31).
 set_source_files_properties(src/timer/timer.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=29)
+
+# The timer listeners inline list erase, the destructor into D0 and D2, and the list
+# constructor and destructor into Init and Exit (2026-11-01).
+set_source_files_properties(src/timer/timerlistener.cpp src/timer/timerlistenerlist.cpp
+	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+set_source_files_properties(src/timer/timerqueue.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)

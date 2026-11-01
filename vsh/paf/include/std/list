@@ -143,7 +143,7 @@ public:
 
 	void pop_back()
 	{
-		if (count != 0 && head != NULL) {
+		if (head != NULL) {
 			_Node *node = head->prev;
 
 			node->next->prev = node->prev;
@@ -151,6 +151,24 @@ public:
 			destroy(&node->value);
 			operator delete(node);
 			--count;
+		}
+	}
+
+	void clear()
+	{
+		if (head != NULL) {
+			_Node *node = head->next;
+
+			while (node != head) {
+				_Node *next = node->next;
+
+				destroy(&node->value);
+				operator delete(node);
+				node = next;
+			}
+			head->prev = head;
+			head->next = head;
+			count = 0;
 		}
 	}
 
