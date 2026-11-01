@@ -20,7 +20,7 @@ int gxmWriteProgramBlock(GxmChunkBuffer *buffer, const GxmCodeRef *usseProgram,
 	}
 	pdsProgram->dataSize = 0x10;
 	pdsProgram->data = words;
-	pdsProgram->size = 0x18;
+	pdsProgram->totalSize = 0x18;
 	words[0] = usseProgram->address;
 	words[1] = usseProgram->taskControl;
 	words[2] = 0;

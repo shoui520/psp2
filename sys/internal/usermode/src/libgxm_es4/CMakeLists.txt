@@ -27,6 +27,7 @@ set(GXM_SOURCES
 	libc.c
 	memory.c
 	mte.c
+	slot_table.c
 	notification.c
 	output_format.c
 	pds_sce.c

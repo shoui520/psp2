@@ -774,7 +774,7 @@ typedef struct GxmCodeRef {
 typedef struct GxmCommandBlock {
 	void *data;
 	SceUInt16 dataSize;		/* the PDS data, in bytes */
-	SceUInt16 size;
+	SceUInt16 totalSize;		/* the whole block, in bytes */
 } GxmCommandBlock;
 
 /* code offset of the chunk buffer's write position */
@@ -978,7 +978,7 @@ static inline SceUInt32 *gxmProgramWriteDmaBlock(SceUInt32 *data, GxmCommandBloc
 	controlOffset = ((count * 2 + 3) & ~3) + 4;
 	dmaBlock->dataSize = controlOffset * 4;
 	control = data + controlOffset;
-	dmaBlock->size = (count + 2 + controlOffset) * 4;
+	dmaBlock->totalSize = (count + 2 + controlOffset) * 4;
 	for (i = 0; i < count; i++) {
 		data[0] = (SceUInt32)uniformBuffers[entries[i].bufferIndex] + entries[i].offset * 4;
 		data[1] = (entries[i].size - 1) | entries[i].destination << 8;
@@ -1229,15 +1229,15 @@ typedef struct GxmMteState {
 
 #define GXM_VERTEX_OUTPUT_PSIZE		0x00000100
 
-void gxmMteStateInvalidate(GxmMteState *state);
-void gxmMteStateInit(GxmMteState *state);
+void gxmMteStateInvalidate(GxmMteState *mteState);
+void gxmMteStateInit(GxmMteState *mteState);
 int gxmMteWriteStateWords(GxmChunkBuffer *buffer, const GxmMteState *state, SceUInt32 **words,
 			  SceUInt32 *count);
-int gxmMteWriteUpdateBlock(GxmChunkBuffer *buffer, SceUInt32 stateWords, SceUInt32 count,
+int gxmMteWriteUpdateBlock(GxmChunkBuffer *buffer, SceUInt32 mteDataGpuAddr, SceUInt32 wordCount,
 			   const GxmCodeRef *copyProgram, GxmCommandBlock *block);
-const GxmCodeRef *gxmMteGetCopyProgram(const GxmCodeRef *programs, SceUInt32 count);
+const GxmCodeRef *gxmMteGetCopyProgram(const GxmCodeRef *programs, SceUInt32 wordCount);
 int gxmMteWriteRegionBlock(GxmChunkBuffer *buffer, const GxmCodeRef *program, SceUInt32 xMin,
-			   SceUInt32 yMin, SceUInt32 xMax, SceUInt32 yMax, GxmCommandBlock *block);
+			   SceUInt32 yMin, SceUInt32 xMax, SceUInt32 yMax, GxmCommandBlock *statePdsProgram);
 
 
 /*

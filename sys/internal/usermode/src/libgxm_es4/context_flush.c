@@ -242,7 +242,7 @@ static inline int gxmContextWriteDmaBlock(GxmChunkBuffer *buffer, GxmCommandBloc
 static inline int gxmContextWriteTextureStateBlock(SceGxmContext *context,
 						   const SceGxmFragmentProgram *fragmentProgram)
 {
-	SceSize size = fragmentProgram->pds.size;
+	SceSize size = fragmentProgram->pds.totalSize;
 	SceGxmTexture *block;
 	void *data;
 	SceUInt32 i;
@@ -253,7 +253,7 @@ static inline int gxmContextWriteTextureStateBlock(SceGxmContext *context,
 		return ret;
 	block = data;
 	context->fragmentTextureStateBlock.data = block;
-	context->fragmentTextureStateBlock.size = size;
+	context->fragmentTextureStateBlock.totalSize = size;
 	context->fragmentTextureStateBlock.dataSize = fragmentProgram->pds.dataSize;
 	for (i = 0; i < fragmentProgram->textureIndexCount; i++)
 		block[i] = context->fragmentTextures[fragmentProgram->textureIndices[i]];

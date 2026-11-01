@@ -334,7 +334,7 @@ SceSize sceGxmGetPrecomputedFragmentStateSize(const SceGxmFragmentProgram *fragm
 {
 	const SceGxmProgram *program = fragmentProgram->program;
 
-	return ((fragmentProgram->pds.size + 15) & ~15) + fragmentProgram->secondaryPdsSize +
+	return ((fragmentProgram->pds.totalSize + 15) & ~15) + fragmentProgram->secondaryPdsSize +
 	       (program->dataBufferCount + program->textureBufferCount) * 4;
 }
 
@@ -363,7 +363,7 @@ int sceGxmPrecomputedFragmentStateInit(SceGxmPrecomputedFragmentState *precomput
 
 	/* the PDS program with the textures, the DMA list, the constant and texture blocks */
 	program = fragmentProgram->program;
-	textureStateSize = (fragmentProgram->pds.size + 15) & ~15;
+	textureStateSize = (fragmentProgram->pds.totalSize + 15) & ~15;
 	offset = textureStateSize + fragmentProgram->secondaryPdsSize;
 	constantBlock = NULL;
 	if (program->dataBufferCount != 0) {
@@ -529,7 +529,7 @@ int sceGxmPrecomputedFragmentStateSetUniformBuffer(SceGxmPrecomputedFragmentStat
 
 SceSize sceGxmGetPrecomputedDrawSize(const SceGxmVertexProgram *vertexProgram)
 {
-	return vertexProgram->pds.size;
+	return vertexProgram->pds.totalSize;
 }
 
 int sceGxmPrecomputedDrawInit(SceGxmPrecomputedDraw *precomputedDraw,
@@ -545,7 +545,7 @@ int sceGxmPrecomputedDrawInit(SceGxmPrecomputedDraw *precomputedDraw,
 		return SCE_GXM_ERROR_INVALID_ALIGNMENT;
 
 	precomputedDraw->vertexProgram = vertexProgram;
-	gxmChunkBufferInitFixed(&buffer, memBlock, 0, vertexProgram->pds.size);
+	gxmChunkBufferInitFixed(&buffer, memBlock, 0, vertexProgram->pds.totalSize);
 	gxmCommandBlockCopy(&buffer, &vertexProgram->pds, &precomputedDraw->streamBlock);
 	if (!(gxmGlobals.compatFlags & GXM_COMPAT_DRAW_STREAMS_UNSET)) {
 		for (i = 0; i < 16; i++)

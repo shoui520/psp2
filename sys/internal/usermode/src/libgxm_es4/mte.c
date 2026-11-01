@@ -13,40 +13,105 @@
 #define GXM_MTE_UPDATE_WORD9	0x07040b25
 #define GXM_MTE_UPDATE_WORD10	0xaf000000
 
-int gxmMteWriteUpdateBlock(GxmChunkBuffer *buffer, SceUInt32 stateWords, SceUInt32 count,
+/* the most state words one update writes: the copy programs come in this many sizes */
+#define SCE_GXM_MAX_MTE_STATE_DWORD_COUNT	25
+
+/* the words an update with this dirty mask writes, the mask included (debug checks only) */
+static inline GXM_DBG_NOINLINE SceUInt32 sceGxmGetMteStateUpdateDwordCount(SceUInt32 header)
+{
+	return 1 +
+	       (header & 1) +			/* GXM_DIRTY_FRONT_ISP */
+	       (header >> 1 & 1) +		/* GXM_DIRTY_FRONT_BIAS */
+	       (header >> 2 & 1) +		/* GXM_DIRTY_FRONT_STENCIL */
+	       (header >> 3 & 1) +		/* GXM_DIRTY_BACK_ISP */
+	       (header >> 4 & 1) +		/* GXM_DIRTY_BACK_BIAS */
+	       (header >> 5 & 1) +		/* GXM_DIRTY_BACK_STENCIL */
+	       (header >> 6 & 1) * 3 +		/* GXM_DIRTY_PDS_STATE */
+	       (header >> 7 & 1) * 2 +		/* GXM_DIRTY_REGION_CLIP */
+	       (header >> 8 & 1) * 6 +		/* GXM_DIRTY_VIEWPORT */
+	       (header >> 9 & 1) +		/* GXM_DIRTY_RESERVED0 */
+	       (header >> 10 & 1) +		/* GXM_DIRTY_VERTEX_OUTPUTS */
+	       (header >> 11 & 1) +		/* GXM_DIRTY_W_CLAMP_VALUE */
+	       (header >> 12 & 1) +		/* GXM_DIRTY_CULL */
+	       (header >> 13 & 1) +		/* GXM_DIRTY_RESERVED1 */
+	       (header >> 14 & 1) +		/* GXM_DIRTY_TEXCOORD_OUTPUTS */
+	       (header >> 15 & 1);		/* GXM_DIRTY_VERTEX_OUTPUTS2 */
+}
+
+/* the copy program for count registers, at most 16 per instruction */
+static inline GXM_DBG_NOINLINE int gxmMteBuildCopyProgram(GxmChunkBuffer *buffer, SceUInt32 count,
+							  GxmCodeRef *program)
+{
+	SceSize size = (((count + 15) >> 4) + 6) * 8;
+	SceUInt32 *code, *out, done, step;
+	SceUInt32 offset;
+
+	code = gxmChunkBufferReserve(buffer, size, 0x10);
+	if (code == NULL) {
+		GXM_DBG_ERROR(97, "Could not reserve %d bytes.", size);
+		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
+	offset = buffer->cur + buffer->gpuEnd - buffer->end;
+	code[0] = 0;
+	code[1] = 0xfa440700;
+	out = gxmUsseWriteHeader(code + 2);
+	done = 0;
+	while (done < count) {
+		step = count - done < 16 ? count - done : 16;
+		out[0] = done << 21 | done << 7 | 0xa0000000;
+		out[1] = (step - 1) << 12 | 0x50a10009;
+		out += 2;
+		done += step;
+	}
+	out[0] = 0xa0200000;
+	out[1] = 0xfb274000;
+	gxmChunkBufferCommit(buffer, out + 2);
+	program->address = 0;
+	program->taskControl = 0;
+	gxmCodeRefSetAddress(program, offset);
+	return 0;
+}
+
+int gxmMteWriteUpdateBlock(GxmChunkBuffer *buffer, SceUInt32 mteDataGpuAddr, SceUInt32 wordCount,
 			   const GxmCodeRef *copyProgram, GxmCommandBlock *block)
 {
-	SceUInt32 *words = gxmChunkBufferReserve(buffer, 0x2c, 0x10);
+	SceUInt32 *words;
 
-	if (words == NULL)
+	GXM_DBG_ASSERT(192, wordCount != 0);
+	GXM_DBG_ASSERT(193, mteDataGpuAddr);
+	words = gxmChunkBufferReserve(buffer, 0x2c, 0x10);
+	if (words == NULL) {
+		GXM_DBG_ERROR(216, "Could not reserve %d bytes.", 0x2c);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	buffer->cur = (SceUInt32)(words + 11);
+	}
+	gxmChunkBufferCommit(buffer, words + 11);
 	block->dataSize = 0x20;
+	block->totalSize = 0x2c;
 	block->data = words;
-	block->size = 0x2c;
-	words[0] = stateWords;
-	words[1] = count - 1;
+	words[0] = mteDataGpuAddr;
+	words[1] = wordCount - 1;
 	words[8] = GXM_MTE_UPDATE_WORD8;
 	words[9] = GXM_MTE_UPDATE_WORD9;
 	words[2] = copyProgram->address;
+	words[3] = copyProgram->taskControl;
 	words[4] = 0;
 	words[10] = GXM_MTE_UPDATE_WORD10;
-	words[3] = copyProgram->taskControl;
 	return 0;
 }
 
 typedef struct GxmPdsParams {
 	SceUInt32 address;		/* out: the aligned program address */
-	SceUInt16 dataSize;		/* out: the PDS data, in bytes */
-	SceUInt16 reserved;		/* out: the size's upper half */
+	SceUInt32 dataSize;		/* out: the PDS data, in bytes */
 	GxmCodeRef program;
 	SceUInt32 dataWord2;		/* the program's data word 2; always 0 */
 	SceUInt32 tiles;		/* 32-pixel tile rectangle */
 } GxmPdsParams;
 
 int gxmMteWriteRegionBlock(GxmChunkBuffer *buffer, const GxmCodeRef *program, SceUInt32 xMin,
-			   SceUInt32 yMin, SceUInt32 xMax, SceUInt32 yMax, GxmCommandBlock *block)
+			   SceUInt32 yMin, SceUInt32 xMax, SceUInt32 yMax,
+			   GxmCommandBlock *statePdsProgram)
 {
+	const SceSize reserveSize = 0x80;
 	GxmPdsParams params;
 	void *code;
 	SceUInt32 end;
@@ -54,14 +119,17 @@ int gxmMteWriteRegionBlock(GxmChunkBuffer *buffer, const GxmCodeRef *program, Sc
 	params.program = *program;
 	params.tiles = yMax >> 5 | (yMin >> 5) << 8 | (xMax >> 5) << 16 | (xMin >> 5) << 24;
 	params.dataWord2 = 0;
-	code = gxmChunkBufferReserve(buffer, 0x80, 0x10);
-	if (code == NULL)
+	code = gxmChunkBufferReserve(buffer, reserveSize, 0x10);
+	if (code == NULL) {
+		GXM_DBG_ERROR(308, "Could not reserve %d bytes.", reserveSize);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	block->data = code;
+	}
+	statePdsProgram->data = code;
 	end = SceGpuEs4User_A5E331FA(&params, code);
-	block->size = end - (SceUInt32)block->data;
-	block->dataSize = params.dataSize;
-	buffer->cur = end;
+	statePdsProgram->totalSize = end - (SceUInt32)statePdsProgram->data;
+	statePdsProgram->dataSize = params.dataSize;
+	GXM_DBG_ASSERT(317, statePdsProgram->totalSize <= reserveSize);
+	gxmChunkBufferCommit(buffer, (void *)end);
 	return 0;
 }
 
@@ -70,35 +138,37 @@ int gxmMteWriteStateWords(GxmChunkBuffer *buffer, const GxmMteState *state, SceU
 			  SceUInt32 *count)
 {
 	SceUInt32 *start = gxmChunkBufferReserve(buffer, 100, 4);
-	SceUInt32 *out, dirty;
+	SceUInt32 *out, header, writtenCount;
 
-	if (start == NULL)
+	if (start == NULL) {
+		GXM_DBG_ERROR(341, "Could not reserve %d bytes.", 100);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	dirty = state->dirty;
-	start[0] = dirty;
+	}
+	header = state->dirty;
+	start[0] = header;
 	out = start + 1;
-	if (dirty & GXM_DIRTY_FRONT_ISP)
+	if (header & GXM_DIRTY_FRONT_ISP)
 		*out++ = state->frontIsp;
-	if (dirty & GXM_DIRTY_FRONT_BIAS)
+	if (header & GXM_DIRTY_FRONT_BIAS)
 		*out++ = state->frontBias;
-	if (dirty & GXM_DIRTY_FRONT_STENCIL)
+	if (header & GXM_DIRTY_FRONT_STENCIL)
 		*out++ = state->frontStencil;
-	if (dirty & GXM_DIRTY_BACK_ISP)
+	if (header & GXM_DIRTY_BACK_ISP)
 		*out++ = state->backIsp;
-	if (dirty & GXM_DIRTY_BACK_BIAS)
+	if (header & GXM_DIRTY_BACK_BIAS)
 		*out++ = state->backBias;
-	if (dirty & GXM_DIRTY_BACK_STENCIL)
+	if (header & GXM_DIRTY_BACK_STENCIL)
 		*out++ = state->backStencil;
-	if (dirty & GXM_DIRTY_PDS_STATE) {
+	if (header & GXM_DIRTY_PDS_STATE) {
 		*out++ = state->pdsState[0];
 		*out++ = state->pdsState[1];
 		*out++ = state->pdsState[2];
 	}
-	if (dirty & GXM_DIRTY_REGION_CLIP) {
+	if (header & GXM_DIRTY_REGION_CLIP) {
 		*out++ = state->regionClip[0];
 		*out++ = state->regionClip[1];
 	}
-	if (dirty & GXM_DIRTY_VIEWPORT) {
+	if (header & GXM_DIRTY_VIEWPORT) {
 		*out++ = state->viewport[0];
 		*out++ = state->viewport[1];
 		*out++ = state->viewport[2];
@@ -106,176 +176,84 @@ int gxmMteWriteStateWords(GxmChunkBuffer *buffer, const GxmMteState *state, SceU
 		*out++ = state->viewport[4];
 		*out++ = state->viewport[5];
 	}
-	if (dirty & GXM_DIRTY_RESERVED0)
+	if (header & GXM_DIRTY_RESERVED0)
 		*out++ = state->reserved0;
-	if (dirty & GXM_DIRTY_VERTEX_OUTPUTS)
+	if (header & GXM_DIRTY_VERTEX_OUTPUTS)
 		*out++ = state->vertexOutputs;
-	if (dirty & GXM_DIRTY_W_CLAMP_VALUE)
+	if (header & GXM_DIRTY_W_CLAMP_VALUE)
 		*out++ = state->wClampValue;
-	if (dirty & GXM_DIRTY_CULL)
+	if (header & GXM_DIRTY_CULL)
 		*out++ = state->cull;
-	if (dirty & GXM_DIRTY_RESERVED1)
+	if (header & GXM_DIRTY_RESERVED1)
 		*out++ = state->reserved1;
-	if (dirty & GXM_DIRTY_TEXCOORD_OUTPUTS)
+	if (header & GXM_DIRTY_TEXCOORD_OUTPUTS)
 		*out++ = state->texCoordOutputs;
-	if (dirty & GXM_DIRTY_VERTEX_OUTPUTS2)
+	if (header & GXM_DIRTY_VERTEX_OUTPUTS2)
 		*out++ = state->vertexOutputs2;
-	buffer->cur = (SceUInt32)out;
+	writtenCount = out - start;
+	gxmChunkBufferCommit(buffer, out);
+	GXM_DBG_ASSERT(436, sceGxmGetMteStateUpdateDwordCount(header) == writtenCount);
 	*words = start;
-	*count = out - start;
+	*count = writtenCount;
 	return 0;
 }
-
-#define GXM_COPY_PROGRAM_COUNT	25
 
 SceSize gxmMteGetCopyProgramsSize(void)
 {
 	return 0x640;
 }
 
-/* program n copies n registers, at most 16 per instruction */
+/* program n copies n registers */
 int gxmMteBuildCopyPrograms(GxmCodeRef *programs, GxmChunkBuffer *buffer)
 {
-	SceUInt32 *code, *out, count, done, step;
-	SceUInt32 offset;
+	SceUInt32 count = 0;
+	int err;
 
-	count = 0;
 	do {
-		code = gxmChunkBufferReserve(buffer, (((count + 16) >> 4) + 6) * 8, 0x10);
-		count++;
-		if (code == NULL)
-			return SCE_GXM_ERROR_RESERVE_FAILED;
-		offset = buffer->cur + buffer->gpuEnd - buffer->end;
-		code[0] = 0;
-		code[1] = 0xfa440700;
-		out = gxmUsseWriteHeader(code + 2);
-		done = 0;
-		do {
-			step = count - done;
-			if (step >= 16)
-				step = 16;
-			out[0] = done << 7 | done << 21 | 0xa0000000;
-			out[1] = (step - 1) << 12 | 0x50a10009;
-			out += 2;
-			done += step;
-		} while (done < count);
-		out[0] = 0xa0200000;
-		out[1] = 0xfb274000;
-		buffer->cur = (SceUInt32)(out + 2);
-		programs->address = 0;
-		programs->taskControl = 0;
-		gxmCodeRefSetAddress(programs, offset);
+		err = gxmMteBuildCopyProgram(buffer, ++count, programs);
 		programs++;
-	} while (count != GXM_COPY_PROGRAM_COUNT);
+		if (err != 0)
+			return err;
+	} while (count != SCE_GXM_MAX_MTE_STATE_DWORD_COUNT);
 	return 0;
 }
 
-const GxmCodeRef *gxmMteGetCopyProgram(const GxmCodeRef *programs, SceUInt32 count)
+const GxmCodeRef *gxmMteGetCopyProgram(const GxmCodeRef *programs, SceUInt32 wordCount)
 {
-	return &programs[count - 1];
+	GXM_DBG_ASSERT(478, 1 <= wordCount && wordCount <= SCE_GXM_MAX_MTE_STATE_DWORD_COUNT);
+	return &programs[wordCount - 1];
 }
 
 #define GXM_DIRTY_ALL		0x0000dfff
 
-void gxmMteStateInvalidate(GxmMteState *state)
+void gxmMteStateInvalidate(GxmMteState *mteState)
 {
-	state->dirty = GXM_DIRTY_ALL;
+	GXM_DBG_ASSERT(485, mteState);
+	mteState->dirty = GXM_DIRTY_ALL;
 }
 
-void gxmMteStateInit(GxmMteState *state)
+void gxmMteStateInit(GxmMteState *mteState)
 {
-	state->dirty = GXM_DIRTY_ALL;
-	state->wClampValue = 0x3727c5ac;		/* 1e-5f */
-	state->cull = GXM_CULL_W_CLAMP;
-	state->frontIsp = 0x00c00200;
-	state->backIsp = 0x00c00200;
-	state->frontBias = 0;
-	state->backBias = 0;
-	state->regionClip[0] = 0;
-	state->regionClip[1] = 0;
-	state->viewport[0] = 0;
-	state->viewport[1] = 0;
-	state->viewport[2] = 0;
-	state->viewport[3] = 0;
-	state->viewport[4] = 0;
-	state->viewport[5] = 0;
-	state->reserved0 = 0;
-	state->vertexOutputs = 0;
-	state->texCoordOutputs = 0;
-	state->vertexOutputs2 = 0;
-	state->frontStencil = 0x0e000000;
-	state->backStencil = 0x0e000000;
-}
-
-#define GXM_SLOT_RECORD_SIZE	0x10
-
-int gxmSlotTableCreate(GxmSlotTable *table)
-{
-	PVRSRV_CLIENT_MEM_INFO *block;
-
-	if (SceGpuEs4User_071E62F0(&gxmGlobals.top, gxmGlobals.top.slotHeap, 0x40000f, 0x400, 4,
-				   gxmGlobals.top.hMemBlockProcRef, &block) != 0)
-		return SCE_GXM_ERROR_DRIVER;
-	if (gxmInitCallbacksMagic == GXM_CALLBACKS_MAGIC)
-		gxmInitCallbacks.memoryMapped(0, block->pvLinAddr, block->sDevVAddr, block->uAllocSize);
-	table->used[0] = 0;
-	table->used[1] = 0;
-	table->block = block;
-	return 0;
-}
-
-void *gxmSlotTableAdd(GxmSlotTable *table, void *item)
-{
-	SceUInt32 slot, bit;
-
-	for (slot = 0; slot < 64; slot++) {
-		bit = 1 << (slot & 31);
-		if (!(table->used[slot >> 5] & bit)) {
-			table->used[slot >> 5] |= bit;
-			table->items[slot] = item;
-			return (char *)table->block->pvLinAddr + slot * GXM_SLOT_RECORD_SIZE;
-		}
-	}
-	return NULL;
-}
-
-void gxmSlotTableRemove(GxmSlotTable *table, void *record)
-{
-	SceUInt32 position = (SceUInt32)record - (SceUInt32)table->block->pvLinAddr;
-	SceUInt32 slot = position >> 4;
-
-	if (slot > 63)
-		return;
-	table->used[position >> 9] &= ~(1 << (slot & 31));
-}
-
-void gxmSlotTableForEach(GxmSlotTable *table, void (*callback)(void *item))
-{
-	SceUInt32 slot;
-
-	for (slot = 0; slot < 64; slot++) {
-		if (table->used[slot >> 5] & (1 << (slot & 31)))
-			callback(table->items[slot]);
-	}
-}
-
-int gxmSlotTableDestroy(GxmSlotTable *table)
-{
-	PVRSRV_CLIENT_MEM_INFO *block = table->block;
-
-	if (gxmInitCallbacksMagic == GXM_CALLBACKS_MAGIC)
-		gxmInitCallbacks.memoryUnmapped(0, block->pvLinAddr);
-	if (SceGpuEs4User_B6CFD213(&gxmGlobals.top, block) != 0)
-		return SCE_GXM_ERROR_DRIVER;
-	return 0;
-}
-
-/* sleep on the GPU signal until the word holds the value */
-void gxmWaitForValue(const PVRSRV_CLIENT_MEM_INFO *block, const volatile SceUInt32 *address,
-		     SceUInt32 value)
-{
-	while (*address != value) {
-		sceKernelGetTLSAddr(0x44);
-		sceGpuSignalWait(sceKernelGetTLSAddr(0x44), 100000);
-	}
+	GXM_DBG_ASSERT(507, mteState);
+	gxmMteStateInvalidate(mteState);
+	mteState->wClampValue = 0x3727c5ac;		/* 1e-5f */
+	mteState->cull = GXM_CULL_W_CLAMP;
+	mteState->frontIsp = 0x00c00200;
+	mteState->backIsp = 0x00c00200;
+	mteState->frontBias = 0;
+	mteState->backBias = 0;
+	mteState->regionClip[0] = 0;
+	mteState->regionClip[1] = 0;
+	mteState->viewport[0] = 0;
+	mteState->viewport[1] = 0;
+	mteState->viewport[2] = 0;
+	mteState->viewport[3] = 0;
+	mteState->viewport[4] = 0;
+	mteState->viewport[5] = 0;
+	mteState->reserved0 = 0;
+	mteState->vertexOutputs = 0;
+	mteState->texCoordOutputs = 0;
+	mteState->vertexOutputs2 = 0;
+	mteState->frontStencil = 0x0e000000;
+	mteState->backStencil = 0x0e000000;
 }

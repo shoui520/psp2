@@ -193,7 +193,7 @@ void gxmPdsWriteStateWords(SceUInt32 *words, const GxmCommandBlock *vertex, SceU
 /* copy a command block into the chunk buffer */
 int gxmCommandBlockCopy(GxmChunkBuffer *buffer, const GxmCommandBlock *source, GxmCommandBlock *copy)
 {
-	SceSize size = source->size;
+	SceSize size = source->totalSize;
 	SceUInt32 *data = gxmChunkBufferReserve(buffer, size, 0x10);
 
 	if (data == NULL)
@@ -201,7 +201,7 @@ int gxmCommandBlockCopy(GxmChunkBuffer *buffer, const GxmCommandBlock *source, G
 	buffer->cur = (SceUInt32)data + size;
 	copy->data = data;
 	copy->dataSize = source->dataSize;
-	copy->size = size;
+	copy->totalSize = size;
 	gxmCopyWords(data, source->data, size);
 	return 0;
 }

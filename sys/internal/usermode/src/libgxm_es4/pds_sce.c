@@ -88,7 +88,7 @@ int gxmPdsBuildVertexProgram(GxmChunkBuffer *buffer, const SceGxmVertexAttribute
 		return SCE_GXM_ERROR_RESERVE_FAILED;
 	buffer->cur = (SceUInt32)data + (size & ~3);
 	block->data = data;
-	block->size = size;
+	block->totalSize = size;
 	block->dataSize = dataSize;
 	code = (SceUInt32 *)((SceUInt32)data + (dataSize & ~3));
 
@@ -316,7 +316,7 @@ int gxmPdsBuildFragmentProgram(GxmChunkBuffer *buffer, const SceGxmTexture *text
 	buffer->cur = (SceUInt32)data + size;
 	block->data = data;
 	block->dataSize = dataSize;
-	block->size = size;
+	block->totalSize = size;
 	code = (SceUInt32 *)((SceUInt32)data + dataSize);
 
 	if (inputCount == 0) {
@@ -420,7 +420,7 @@ int gxmPdsBuildSimpleProgram(GxmChunkBuffer *buffer, SceUInt32 value, SceUInt32 
 	code = data + dataWords;
 	block->data = data;
 	block->dataSize = dataWords << 2;
-	block->size = words * 4;
+	block->totalSize = words * 4;
 	if (extra) {
 		code++;
 		data[dataWords] = 0x07000103;
@@ -531,7 +531,7 @@ int gxmPdsBuildPixelProgram(GxmChunkBuffer *buffer, SceUInt32 samples, SceUInt32
 	end = SceGpuEs4User_E98914E4(&params, code, samples != 1 && mode == 0,
 				     mode == 1 && samples == 1, count);
 	block->dataSize = params.dataSize;
-	block->size = end - (SceUInt32)block->data;
+	block->totalSize = end - (SceUInt32)block->data;
 	buffer->cur = end;
 	state->code = block->data;
 	state->dataSize = block->dataSize >> 4;
