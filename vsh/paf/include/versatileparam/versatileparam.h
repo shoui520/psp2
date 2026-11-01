@@ -31,7 +31,7 @@ public:
 	virtual int32_t OnUpdate();
 	virtual void OnDraw();
 	virtual int32_t AttachPlugin(Plugin *plugin);
-	virtual int32_t Read(cxml::Element *elem);
+	virtual int32_t Read(const cxml::Element *elem);
 	virtual int32_t Write(common::SharedPtr<File> fp, uint32_t type, uint32_t indent);
 
 	ResourceParam *m_serial;

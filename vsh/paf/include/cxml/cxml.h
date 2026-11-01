@@ -111,6 +111,9 @@ int32_t scePafResourceGetAttribute(const paf::cxml::Element *elm, const char *na
 int32_t scePafResourceGetInteger(const paf::cxml::Attribute *attr, int32_t *value);
 int32_t scePafResourceGetAttributeIdIntLpb(const paf::cxml::Element *elm, const char *attrname,
 					   uint32_t *value);
+/* the ID hash of an attribute, and the element it refers to */
+int32_t scePafResourceGetAttributeIdInt(const paf::cxml::Element *elm, const char *attrname,
+					uint32_t *value, paf::cxml::Element *entity);
 int32_t scePafResourceGetAttributeInteger(const paf::cxml::Element *elm, const char *attrname,
 					  int32_t *value);
 int32_t scePafResourceGetAttributeString(const paf::cxml::Element *elm, const char *attrname,

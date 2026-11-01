@@ -267,7 +267,16 @@ public:
 	uint8_t reserved3[8];
 	/* 0xff before a reverse transition (name after ScePaf-RE) */
 	uint8_t m_transition;
-	uint8_t reserved3a[0x10];
+	uint8_t reserved3a[0xf];
+	bool reserved3q : 1;
+	/* made by a template (TemplateOpen); WriteWidget leaves it out (name ours) */
+	bool m_template : 1;
+	bool reserved3r : 1;
+	bool reserved3s : 1;
+	bool reserved3t : 1;
+	bool reserved3u : 1;
+	bool reserved3v : 1;
+	bool reserved3w : 1;
 	bool reserved3b : 1;
 	bool reserved3c : 1;
 	bool reserved3d : 1;

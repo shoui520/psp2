@@ -1637,6 +1637,95 @@ Plugin::TemplateOpenParam::TemplateOpenParam()
 	event_handler_table = NULL;
 }
 
+void Plugin::InstantiateWidget(const cxml::Element &elm, ui::Widget *parent, bool is_template,
+			       InitEventFunctionEntry2 *event_handler_table, ui::Widget *sibling)
+{
+	const char *name = elm.GetName();
+
+	if (name == NULL || parent == NULL || sce_paf_strncmp(name, "layout_", 7) == 0 ||
+	    sce_paf_strncmp(name, "focus_", 6) == 0)
+		return;
+
+	if (sce_paf_strncmp(name, "template_ref", 12) == 0) {
+		cxml::Element node = m_rscobj->GetOverrideElement(elm);
+		cxml::Element entity;
+		uint32_t idhash;
+
+		if (scePafResourceGetAttributeIdInt(&node, "template", &idhash, &entity) == 0) {
+			TemplateOpenParam param;
+
+			param.event_handler_table = event_handler_table;
+			TemplateOpen(parent, IDParam(s_empty_id, idhash), param);
+		}
+		return;
+	}
+
+	cxml::Element style_entity;
+	uint32_t style_idhash;
+
+	if (scePafResourceGetAttributeIdInt(&elm, "style", &style_idhash, &style_entity) != 0)
+		style_idhash = 0;
+
+	IDParam style(s_empty_id, style_idhash);
+
+	ScePafToplevel_3B003F16(this, &style.m_id, style_idhash, true);
+
+	uint32_t idhash = 0;
+
+	scePafResourceGetAttributeStyleId(&elm, "id", &idhash);
+
+	IDParam id(s_empty_id, idhash);
+
+	ScePafToplevel_3B003F16(this, &id.m_id, idhash, true);
+
+	char style_type[32] = "style_";
+	size_t len = sce_paf_strlen(name) + 1;
+
+	if (len > sizeof(style_type) - sizeof("style_") + 1)
+		len = sizeof(style_type) - sizeof("style_");
+	sce_paf_strncat(style_type, name, len);
+
+	ui::Widget *widget = CreateWidgetWithStyleType(parent, name, id, style_type, style);
+
+	if (widget == NULL)
+		return;
+	if (is_template)
+		widget->m_template = true;
+
+	WidgetResourceInfo *info = static_cast<WidgetResourceInfo *>(widget->m_user_data2[0]);
+
+	if (info != NULL) {
+		info->m_node = elm;
+		InstantiateWidget_Layout(elm, widget, info);
+	}
+	InstantiateWidget_Focus(elm, widget);
+	InstantiateWidget_InitEventHandler(id, widget, event_handler_table);
+
+	cxml::Element child;
+
+	for (child = elm.GetFirstChild(); child.doc != NULL && child.offset >= 0;
+	     child = child.GetNextSibling())
+		InstantiateWidget(child, widget->GetInternalWidget(), is_template, event_handler_table,
+				  NULL);
+
+	if (info != NULL && info->m_wparam != NULL) {
+		ui::WidgetParam *wparam = info->m_wparam;
+
+		wparam->Create(1);
+		wparam->Read(&elm);
+		wparam->Set();
+		wparam->Destroy(1);
+		if (wparam->m_sound_id.m_idhash != 0) {
+			ScePafToplevel_3B003F16(this, &wparam->m_sound_id.m_id,
+						wparam->m_sound_id.m_idhash, true);
+			info->m_sound_id = wparam->m_sound_id;
+		}
+		ScePafToplevel_2E1F0393(this, elm, widget, info->m_sound_id);
+	}
+	if (sibling != NULL)
+		widget->SetBehind(sibling);
+}
+
 Plugin::InitParam2::InitParam2()
 {
 	draw_priority = 150;
