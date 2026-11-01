@@ -450,7 +450,7 @@ int sceGxmTextureValidate(const SceGxmTexture *texture);
 #define GXM_PROGRAM_UNK2000		0x00002000
 #define GXM_PROGRAM_UNK4000		0x00004000
 #define GXM_PROGRAM_UNK8000		0x00008000	/* phases run even when blending keeps the colour */
-#define GXM_PROGRAM_UNK10000		0x00010000	/* output written as declared */
+#define SCE_GXM_PROGRAM_FLAG_OUTPUT_UNDEFINED	0x00010000	/* output written as declared */
 #define GXM_PROGRAM_UNK80000		0x00080000
 
 typedef struct SceGxmProgram {
@@ -633,6 +633,14 @@ static inline const GxmProgramVaryings *gxmProgramGetVertexVaryings(const SceGxm
 {
 	GXM_DBG_ASSERT_AT("program_private.h", 32,
 			  (program->programFlags & SCE_GXM_FRAGMENT_PROGRAM) == 0);
+	return gxmProgramGetVaryings(program);
+}
+
+/* a fragment program's varyings */
+static inline const GxmProgramVaryings *gxmProgramGetFragmentVaryings(const SceGxmProgram *program)
+{
+	GXM_DBG_ASSERT_AT("program_private.h", 42,
+			  (program->programFlags & SCE_GXM_FRAGMENT_PROGRAM) != 0);
 	return gxmProgramGetVaryings(program);
 }
 

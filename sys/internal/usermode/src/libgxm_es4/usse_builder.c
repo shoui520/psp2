@@ -13,22 +13,61 @@
 
 static inline SceBool gxmBlendInfoIsValid(const SceGxmBlendInfo *blendInfo)
 {
-	return (blendInfo->colorMask & ~SCE_GXM_COLOR_MASK_ALL) == 0 &&
-	       blendInfo->colorFunc <= SCE_GXM_BLEND_FUNC_MAX &&
-	       blendInfo->alphaFunc <= SCE_GXM_BLEND_FUNC_MAX &&
-	       blendInfo->colorSrc <= SCE_GXM_BLEND_FACTOR_DST_ALPHA_SATURATE &&
-	       blendInfo->colorDst <= SCE_GXM_BLEND_FACTOR_DST_ALPHA_SATURATE &&
-	       blendInfo->alphaSrc <= SCE_GXM_BLEND_FACTOR_DST_ALPHA_SATURATE &&
-	       blendInfo->alphaDst <= SCE_GXM_BLEND_FACTOR_DST_ALPHA_SATURATE &&
-	       /* min and max take factors of one */
-	       ((blendInfo->colorFunc != SCE_GXM_BLEND_FUNC_MIN &&
-		 blendInfo->colorFunc != SCE_GXM_BLEND_FUNC_MAX) ||
-		(blendInfo->colorSrc == SCE_GXM_BLEND_FACTOR_ONE &&
-		 blendInfo->colorDst == SCE_GXM_BLEND_FACTOR_ONE)) &&
-	       ((blendInfo->alphaFunc != SCE_GXM_BLEND_FUNC_MIN &&
-		 blendInfo->alphaFunc != SCE_GXM_BLEND_FUNC_MAX) ||
-		(blendInfo->alphaSrc == SCE_GXM_BLEND_FACTOR_ONE &&
-		 blendInfo->alphaDst == SCE_GXM_BLEND_FACTOR_ONE));
+	if (blendInfo->colorMask & ~SCE_GXM_COLOR_MASK_ALL) {
+		GXM_DBG_ERROR(59, "SceGxmBlendInfo.colorMask has value 0x%x, which is invalid.",
+			      blendInfo->colorMask);
+		return SCE_FALSE;
+	}
+	if (blendInfo->colorFunc > SCE_GXM_BLEND_FUNC_MAX) {
+		GXM_DBG_ERROR(64, "SceGxmBlendInfo.colorFunc has value %d, which is invalid.",
+			      blendInfo->colorFunc);
+		return SCE_FALSE;
+	}
+	if (blendInfo->alphaFunc > SCE_GXM_BLEND_FUNC_MAX) {
+		GXM_DBG_ERROR(69, "SceGxmBlendInfo.alphaFunc has value %d, which is invalid.",
+			      blendInfo->alphaFunc);
+		return SCE_FALSE;
+	}
+	if (blendInfo->colorSrc > SCE_GXM_BLEND_FACTOR_DST_ALPHA_SATURATE) {
+		GXM_DBG_ERROR(74, "SceGxmBlendInfo.colorSrc has value %d, which is invalid.",
+			      blendInfo->colorSrc);
+		return SCE_FALSE;
+	}
+	if (blendInfo->colorDst > SCE_GXM_BLEND_FACTOR_DST_ALPHA_SATURATE) {
+		GXM_DBG_ERROR(79, "SceGxmBlendInfo.colorDst has value %d, which is invalid.",
+			      blendInfo->colorDst);
+		return SCE_FALSE;
+	}
+	if (blendInfo->alphaSrc > SCE_GXM_BLEND_FACTOR_DST_ALPHA_SATURATE) {
+		GXM_DBG_ERROR(84, "SceGxmBlendInfo.alphaSrc has value %d, which is invalid.",
+			      blendInfo->alphaSrc);
+		return SCE_FALSE;
+	}
+	if (blendInfo->alphaDst > SCE_GXM_BLEND_FACTOR_DST_ALPHA_SATURATE) {
+		GXM_DBG_ERROR(89, "SceGxmBlendInfo.alphaDst has value %d, which is invalid.",
+			      blendInfo->alphaDst);
+		return SCE_FALSE;
+	}
+	/* min and max take factors of one */
+	if (!((blendInfo->colorFunc != SCE_GXM_BLEND_FUNC_MIN &&
+	       blendInfo->colorFunc != SCE_GXM_BLEND_FUNC_MAX) ||
+	      (blendInfo->colorSrc == SCE_GXM_BLEND_FACTOR_ONE &&
+	       blendInfo->colorDst == SCE_GXM_BLEND_FACTOR_ONE))) {
+		GXM_DBG_ERROR(96, "Color blend functions of SCE_GXM_BLEND_FUNC_MIN and "
+			      "SCE_GXM_BLEND_FUNC_MAX require that color blend factors are "
+			      "SCE_GXM_BLEND_FACTOR_ONE.");
+		return SCE_FALSE;
+	}
+	if (!((blendInfo->alphaFunc != SCE_GXM_BLEND_FUNC_MIN &&
+	       blendInfo->alphaFunc != SCE_GXM_BLEND_FUNC_MAX) ||
+	      (blendInfo->alphaSrc == SCE_GXM_BLEND_FACTOR_ONE &&
+	       blendInfo->alphaDst == SCE_GXM_BLEND_FACTOR_ONE))) {
+		GXM_DBG_ERROR(103, "Alpha blend functions of SCE_GXM_BLEND_FUNC_MIN and "
+			      "SCE_GXM_BLEND_FUNC_MAX require that alpha blend factors are "
+			      "SCE_GXM_BLEND_FACTOR_ONE.");
+		return SCE_FALSE;
+	}
+	return SCE_TRUE;
 }
 
 /* the result depends on the colour already in the output buffer */
@@ -78,7 +117,7 @@ int gxmFragmentBuildInit(GxmFragmentBuild *build, const SceGxmProgram *program,
 	int err;
 
 	/* the instructions that write the output */
-	if ((program->programFlags & (GXM_PROGRAM_NATIVE_COLOR | GXM_PROGRAM_UNK10000)) == 0) {
+	if ((program->programFlags & (GXM_PROGRAM_NATIVE_COLOR | SCE_GXM_PROGRAM_FLAG_OUTPUT_UNDEFINED)) == 0) {
 		outputCount = 0;
 		err = gxmOutputFormatResolve(outputFormat, &type, &componentCount, &outputCount);
 		if (err != 0)
@@ -88,12 +127,25 @@ int gxmFragmentBuildInit(GxmFragmentBuild *build, const SceGxmProgram *program,
 	}
 
 	if (blendInfo != NULL) {
-		if ((program->programFlags & GXM_PROGRAM_NATIVE_COLOR) || !gxmBlendInfoIsValid(blendInfo))
+		if (program->programFlags & GXM_PROGRAM_NATIVE_COLOR) {
+			GXM_DBG_ERROR(49, "SceGxmBlendInfo cannot be provided when a program writes "
+				      "outputs directly.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
-		if ((type != SCE_GXM_PARAMETER_TYPE_U8 && type != SCE_GXM_PARAMETER_TYPE_F16) ||
-		    componentCount != 4)
+		}
+		GXM_DBG_ASSERT(52, (program->programFlags & SCE_GXM_PROGRAM_FLAG_OUTPUT_UNDEFINED) == 0);
+		if (!gxmBlendInfoIsValid(blendInfo))
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		if (type != SCE_GXM_PARAMETER_TYPE_U8 && type != SCE_GXM_PARAMETER_TYPE_F16) {
+			GXM_DBG_ERROR(110, "Blending may only be used with output register formats of "
+				      "half or unsigned char precision.");
 			return SCE_GXM_ERROR_UNSUPPORTED;
-		blendCount = gxmBlendGetInstructionCount(gxmProgramGetVaryings(program)->fragment.outputRegister,
+		}
+		if (componentCount != 4) {
+			GXM_DBG_ERROR(114, "Blending may only be used with output register formats "
+				      "that have 4 components.");
+			return SCE_GXM_ERROR_UNSUPPORTED;
+		}
+		blendCount = gxmBlendGetInstructionCount(gxmProgramGetFragmentVaryings(program)->fragment.outputRegister,
 							 blendInfo, type, &build->blend);
 		if (gxmBlendReadsDestination(blendInfo) && multisampleMode != 0) {
 			/* a phase of its own, after the output write's phase */
@@ -134,11 +186,13 @@ int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, 
 	SceBool keepsDestination, stop;
 
 	code = gxmChunkBufferReserve(buffer, build->instructionCount * 8, gxmUsseAlignment());
-	if (code == NULL)
+	if (code == NULL) {
+		GXM_DBG_ERROR(187, "Could not reserve %d bytes.", build->instructionCount * 8);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
 	program = build->program;
 	offset = buffer->current + buffer->gpuEnd - buffer->end;
-	varyings = gxmProgramGetVaryings(program);
+	varyings = gxmProgramGetFragmentVaryings(program);
 
 	/* the program, then its output in the requested format */
 	body = code + program->primaryInstructionCount * 2;
@@ -147,7 +201,7 @@ int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, 
 	type = gxmProgramGetVaryings(program)->fragment.outputRegisterType;
 	componentCount = gxmProgramGetVaryings(program)->fragment.outputComponentCount;
 	out = body;
-	if ((program->programFlags & (GXM_PROGRAM_NATIVE_COLOR | GXM_PROGRAM_UNK10000)) == 0)
+	if ((program->programFlags & (GXM_PROGRAM_NATIVE_COLOR | SCE_GXM_PROGRAM_FLAG_OUTPUT_UNDEFINED)) == 0)
 		out = gxmOutputFormatWriteConversion(body, varyings->fragment.outputRegister,
 						     build->outputFormat, &type, &componentCount,
 						     build->blendInfo != NULL);
@@ -216,7 +270,7 @@ int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, 
 		out[1] = *(const SceUInt32 *)build->blendInfo;
 		out[3] = GXM_PROGRAM_TRAILER_BLEND;
 	}
-	buffer->current = (SceUInt32)(out + 4);
+	gxmChunkBufferCommit(buffer, out + 4);
 
 	ref->address = 0;
 	flags = program->programFlags;

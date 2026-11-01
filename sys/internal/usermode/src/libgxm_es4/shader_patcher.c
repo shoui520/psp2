@@ -1011,7 +1011,7 @@ int gxmCreateFragmentProgram(SceGxmShaderPatcher *shaderPatcher, SceGxmShaderPat
 			depthOnly = !(flags & (GXM_PROGRAM_DISCARD | GXM_PROGRAM_DEPTH_REPLACE |
 					       GXM_PROGRAM_UNK4000));
 		}
-	} else if (flags & GXM_PROGRAM_UNK10000) {
+	} else if (flags & SCE_GXM_PROGRAM_FLAG_OUTPUT_UNDEFINED) {
 		colorUnchanged = SCE_TRUE;
 		depthOnly = !(flags & (GXM_PROGRAM_DISCARD | GXM_PROGRAM_DEPTH_REPLACE |
 				       GXM_PROGRAM_UNK4000));
