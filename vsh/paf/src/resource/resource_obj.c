@@ -27,38 +27,6 @@ int _ZN3paf2ui11WidgetParam3GetEv(const ResourceObj *self)
 	return self->string_buffer ? 0 : -1;
 }
 
-int _ZN3paf5graph12DrawObjParam4InitEv(uint8_t *self)
-{
-	*(uint32_t *)(self + 72) = 1;
-	*(int8_t *)(self + 76) = -1;
-	*(int8_t *)(self + 77) = -1;
-	*(float32x4_t *)(self + 56) = vdupq_n_f32(1.0f);
-	return 0;
-}
-
-int _ZN3paf5graph12DrawObjParam7GetEachEPNS0_7DrawObjE(uint8_t *self, const uint8_t *value)
-{
-	uint32_t packed;
-	uint32_t attributes;
-	uint8x8_t bytes;
-	uint16x8_t components;
-	float32x4_t converted;
-
-	if (!value)
-		return -1;
-	packed = *(const uint32_t *)(value + 44);
-	bytes = vreinterpret_u8_s32(vdup_n_s32((int32_t)packed));
-	components = vmovl_u8(bytes);
-	converted = vcvtq_f32_u32(vmovl_u16(vget_low_u16(components)));
-	*(float32x4_t *)(self + 56) =
-		vmulq_f32(converted, vdupq_n_f32(1.0f / 255.0f));
-	attributes = *(const uint32_t *)(value + 48);
-	*(uint32_t *)(self + 72) = attributes & 0xF;
-	self[76] = (uint8_t)(attributes >> 15) & 1;
-	self[77] = (uint8_t)(attributes >> 16) & 1;
-	return 0;
-}
-
 int _ZN3paf2ui18WidgetHandlerParam4InitEv(uint8_t *self)
 {
 	uint32_t *root = *(uint32_t **)(self + 40);
@@ -102,30 +70,6 @@ int _ZN3paf2ui16WidgetStyleParam3SetEv(uint32_t *self)
 		node = *(uint32_t *)(root + 4);
 	next = node;
 	while (next != self[8]) {
-		((void (*)(uint32_t *, uint32_t))(*(void ***)self)[12])(
-			self, *(uint32_t *)(next + 8));
-		next = node;
-		if (node) {
-			node = *(uint32_t *)(node + 4);
-			next = node;
-		}
-	}
-	return 0;
-}
-
-int _ZN3paf5graph12DrawObjParam3SetEv(uint32_t *self)
-{
-	uint32_t node = 0;
-	uint32_t root;
-	uint32_t next;
-
-	if (!self[11])
-		return -1;
-	root = self[10];
-	if (root)
-		node = *(uint32_t *)(root + 4);
-	next = node;
-	while (next != self[10]) {
 		((void (*)(uint32_t *, uint32_t))(*(void ***)self)[12])(
 			self, *(uint32_t *)(next + 8));
 		next = node;
