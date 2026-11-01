@@ -30,6 +30,16 @@ struct MspaceStats {
 
 void sceClibAbort(void);
 
+/* sceClibLookCtypeTable's class bits: the BSD ctype bits of SceSysclib's table (sysmem/ctype.h) */
+#define SCE_CLIB_CTYPE_UPPER	0x01
+#define SCE_CLIB_CTYPE_LOWER	0x02
+#define SCE_CLIB_CTYPE_DIGIT	0x04
+#define SCE_CLIB_CTYPE_SPACE	0x08
+#define SCE_CLIB_CTYPE_PUNCT	0x10
+#define SCE_CLIB_CTYPE_CNTRL	0x20
+#define SCE_CLIB_CTYPE_XDIGIT	0x40
+#define SCE_CLIB_CTYPE_BLANK	0x80
+
 int sceClibLookCtypeTable(int value);
 int sceClibTolower(int value);
 int sceClibToupper(int value);
