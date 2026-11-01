@@ -379,13 +379,6 @@ int sceGxmExecuteCommandList(SceGxmContext *immediateContext, SceGxmCommandList 
 		return 0;								\
 	_SCE_MACRO_END
 
-#if SCE_DBG_ASSERTS_ENABLED
-#define GXM_DBG_CHECK_MEMORY(mem, size, parameter, function)				\
-	gxmMemoryCheckParameter(mem, size, parameter, function)
-#else
-#define GXM_DBG_CHECK_MEMORY(mem, size, parameter, function)	0
-#endif
-
 #define GXM_SET_DEFERRED_BUFFER(function, source, buffer, line)				\
 	_SCE_MACRO_BEGIN								\
 		int err = 0;								\

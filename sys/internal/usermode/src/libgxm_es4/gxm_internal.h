@@ -703,6 +703,13 @@ int gxmMemoryCheckParameter(const void *address, SceSize size, const char *param
 int gxmMemoryCheckCachedParameter(const void *address, SceSize size, const char *parameter,
 				  const char *function);
 #endif
+/* the debug build's check of memory a parameter points at; SCE_OK in the release build */
+#if SCE_DBG_ASSERTS_ENABLED
+#define GXM_DBG_CHECK_MEMORY(mem, size, parameter, function)				\
+	gxmMemoryCheckParameter(mem, size, parameter, function)
+#else
+#define GXM_DBG_CHECK_MEMORY(mem, size, parameter, function)	0
+#endif
 
 /* aligned space for size bytes; the caller advances cur past what it writes */
 static inline void *gxmChunkBufferReserve(GxmChunkBuffer *buffer, SceSize size, SceSize alignment)
