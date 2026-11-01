@@ -718,34 +718,6 @@ void *ScePafGraphics_E69349E0(const uint8_t *self)
 	return result;
 }
 
-int _ZN3paf5graph3arl13TextureObject8setWrapTENS1_11TextureWrapE(const uint8_t *self,
-			     SceGxmTextureAddrMode mode)
-{
-	const uint8_t *descriptor = *(const uint8_t *const *)(self + 4);
-	int limited = (*(const uint32_t *)(descriptor + 12) & 0x80) == 0;
-	SceGxmTexture *texture = *(SceGxmTexture *const *)(self + 124);
-
-	if ((mode == SCE_GXM_TEXTURE_ADDR_CLAMP_FULL_BORDER ||
-	     mode == SCE_GXM_TEXTURE_ADDR_CLAMP_HALF_BORDER) &&
-	    limited)
-		mode = SCE_GXM_TEXTURE_ADDR_CLAMP;
-	return sceGxmTextureSetVAddrMode(texture, mode);
-}
-
-int _ZN3paf5graph3arl13TextureObject8setWrapSENS1_11TextureWrapE(const uint8_t *self,
-			     SceGxmTextureAddrMode mode)
-{
-	const uint8_t *descriptor = *(const uint8_t *const *)(self + 4);
-	int limited = (*(const uint32_t *)(descriptor + 12) & 0x80) == 0;
-	SceGxmTexture *texture = *(SceGxmTexture *const *)(self + 124);
-
-	if ((mode == SCE_GXM_TEXTURE_ADDR_CLAMP_FULL_BORDER ||
-	     mode == SCE_GXM_TEXTURE_ADDR_CLAMP_HALF_BORDER) &&
-	    limited)
-		mode = SCE_GXM_TEXTURE_ADDR_CLAMP;
-	return sceGxmTextureSetUAddrMode(texture, mode);
-}
-
 uint32_t _ZN3paf5graph3arl13ShaderProgram20getSamplerParamIndexEPKc(const uint8_t *self, const char *name)
 {
 	SceGxmShaderPatcherId id =
@@ -1958,26 +1930,6 @@ void *_ZN3paf5graph11SurfacePool8FindPoolEPKc(const char *name)
 not_found:
 	MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
 	return NULL;
-}
-
-int ScePafGraphics_309D2902(const uint8_t *self, int index,
-			      int arg3, int arg4, int arg5, int arg6,
-			      const void *source)
-{
-	const uint8_t *resource;
-	uint8_t *destination;
-	uint32_t offset;
-	uint32_t length;
-
-	if (!*(const uint32_t *)(self + 136) ||
-	    !*(const uint32_t *)(self + 140))
-		return 0;
-	resource = *(const uint8_t *const *)(self + 4);
-	destination = **(uint8_t ***)(resource + 20);
-	offset = *(const uint32_t *)(resource + 16 * index + 36);
-	length = *(const uint32_t *)(resource + 16 * index + 40);
-	sce_paf_memcpy(destination + offset, source, length);
-	return 1;
 }
 
 int ScePafGraphics_BB119805(const uint8_t *self)

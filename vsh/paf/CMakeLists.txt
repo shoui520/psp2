@@ -142,6 +142,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/cxml/file.c
 	src/resource/resource_obj.cpp
 	src/resource/resource_obj_table.cpp
+	src/graphics/arl/gxm/gxm_surface.cpp
+	src/graphics/arl/gxm/gxm_texture.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
 	src/widget/core/widget.cpp
@@ -263,6 +265,7 @@ set_source_files_properties(src/timer/get_time.cpp src/url/url.cpp src/rtc/rtc.c
 	src/framework.cpp src/plugin.cpp src/versatileparam/resourceparam.cpp
 	src/versatileparam/versatileparam.cpp src/versatileparam/visualparam.cpp
 	src/resource/resource_obj.cpp src/resource/resource_obj_table.cpp
+	src/graphics/arl/gxm/gxm_surface.cpp src/graphics/arl/gxm/gxm_texture.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # PropertyList inlines the value map's operator[] and StringElement::GetString but keeps the
