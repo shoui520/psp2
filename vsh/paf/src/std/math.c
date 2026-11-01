@@ -411,3 +411,31 @@ float sce_paf_powf(float base, float exponent)
 		return 0.0f;
 	return sce_paf_expf(exponent * sce_paf_logf(base));
 }
+
+/*
+ * The remainder by repeated subtraction of y, halved when it is greater than
+ * what is left. Sony's code also copies an exponent between two stack doubles
+ * it never stores, reads or returns: the step stays y.
+ */
+double sce_paf_fmod(double x, double y)
+{
+	double remainder, step;
+	double sign = 1.0;
+
+	if (y == 0.0)
+		return 0.0;
+	remainder = x;
+	if (remainder < 0.0) {
+		sign = -1.0;
+		remainder = -remainder;
+	}
+	if (y < 0.0)
+		y = -y;
+	while (remainder >= y) {
+		step = y;
+		if (step > remainder)
+			step *= 0.5;
+		remainder -= step;
+	}
+	return sign * remainder;
+}

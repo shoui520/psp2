@@ -52,6 +52,7 @@ float sce_paf_floorf(float x);
 float sce_paf_ceilf(float x);
 float sce_paf_roundf(float x);
 double sce_paf_floor(double x);
+double sce_paf_fmod(double x, double y);
 
 #ifdef __cplusplus
 }
