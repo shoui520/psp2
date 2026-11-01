@@ -52,6 +52,8 @@ public:
 	{
 	}
 
+	const char *GetName() const;
+
 	Document *doc;
 	int32_t element_offset;
 	int32_t offset;
@@ -96,6 +98,8 @@ namespace util {
 
 bool CheckElementName(const Element &elm, const char *name);
 Element FindChildElement(const Element &parent, const char *name);
+Element FindChildElement(const Element &parent, const char *name, const char *idname,
+			 const char *idvalue);
 Element FindChildElement(const Element &parent, const char *name, const char *idhashname,
 			 uint32_t idhashvalue);
 
@@ -116,6 +120,11 @@ int32_t scePafResourceGetAttributeIdInt(const paf::cxml::Element *elm, const cha
 					uint32_t *value, paf::cxml::Element *entity);
 int32_t scePafResourceGetAttributeInteger(const paf::cxml::Element *elm, const char *attrname,
 					  int32_t *value);
+int32_t scePafResourceGetAttributeFloat(const paf::cxml::Element *elm, const char *attrname,
+					float *value);
+/* the ID string of an attribute, and the element it refers to */
+int32_t scePafResourceGetAttributeIdStr(const paf::cxml::Element *elm, const char *attrname,
+					const char **value, paf::cxml::Element *entity);
 /* the wide string of an attribute */
 int32_t scePafResourceGetAttributeChar(const paf::cxml::Element *elm, const char *attrname,
 				       const wchar_t **value, uint32_t *len);

@@ -56,6 +56,11 @@ public:
 		_impl.setZ(value);
 	}
 
+	void set_w(float value)
+	{
+		_impl.setW(value);
+	}
+
 	v4 operator+(v4 rhs) const
 	{
 		return v4(_impl + rhs._impl);

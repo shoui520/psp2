@@ -1,7 +1,6 @@
 /*
- * paf::ResourceParam, as far as converted C++ uses it: the parameters of one
- * resource element, by name, read from or written as its attributes. Names
- * after ScePaf-RE; the class is not converted yet (0x81061598..0x81063130).
+ * paf::ResourceParam: the parameters of one resource element, by name, read from
+ * or written as its attributes. Names after ScePaf-RE.
  */
 #ifndef PAF_VERSATILEPARAM_RESOURCEPARAM_H
 #define PAF_VERSATILEPARAM_RESOURCEPARAM_H
@@ -41,7 +40,12 @@ public:
 		SEMANTIC_STYLEREF = 16,
 		SEMANTIC_LABELREF = 17,
 		SEMANTIC_TEXTUREREF = 18,
-		SEMANTIC_RESOARRAY = 19
+		/* WidgetParam's "sound" (name ours) */
+		SEMANTIC_SOUNDREF = 19,
+		/* the entries of a WidgetSoundParam (name ours) */
+		SEMANTIC_SOUNDENTRYREF = 20,
+		/* one ResolutionData per child element: its "id" and the attribute's floats */
+		SEMANTIC_RESOARRAY = 21
 	};
 
 	enum ReadType {
@@ -51,6 +55,11 @@ public:
 
 	class SemanticParam {
 	public:
+		SemanticParam(const char *name, void *addr, Semantic type)
+			: param_name(name), param_addr(addr), param_type(type)
+		{
+		}
+
 		const char *param_name;
 		void *param_addr;
 		Semantic param_type;
@@ -75,20 +84,32 @@ public:
 }
 
 extern "C" {
+/* reads the parameter from the element's attribute of its name (Sony's name not found) */
+void ScePafResource_CB5A3D7C(paf::ResourceParam *param, const paf::cxml::Element &elm,
+			     paf::vector<paf::ResourceParam::SemanticParam>::iterator it,
+			     paf::resource::ResourceObj *rscobj);
+/*
+ * Writes the parameter as an attribute line at the indent; with print, to the TTY instead
+ * (Sony's name not found).
+ */
+int32_t ScePafResource_0FF0516E(paf::ResourceParam *param,
+				paf::common::SharedPtr<paf::File> fp,
+				paf::vector<paf::ResourceParam::SemanticParam>::iterator it,
+				uint32_t indent, int32_t print);
 /*
  * Writes the parameters' element to the file at the indent: part 0 the whole element, 1 its
  * opening tag, 2 its closing tag; with print, to the TTY instead (Sony's name not found).
  */
 int32_t ScePafResource_441E989F(paf::ResourceParam *param,
 				paf::common::SharedPtr<paf::File> fp, int32_t part, int32_t indent,
-				bool print);
+				int32_t print);
 /*
  * Writes a resource document's fixed tag at the indent: the XML header and <body>, a table's
  * opening or closing tag (0 header, 1 </body>, 2/3 pagetable, 4/5 styletable,
  * 6/7 texturetable, 8/9 templatetable); with print, to the TTY instead (Sony's name not found).
  */
 int32_t ScePafResource_D74427E6(paf::common::SharedPtr<paf::File> fp, int32_t tag,
-				int32_t indent, bool print);
+				int32_t indent, int32_t print);
 }
 
 #endif

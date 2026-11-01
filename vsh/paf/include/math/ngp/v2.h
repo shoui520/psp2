@@ -31,6 +31,16 @@ public:
 		return vget_lane_f32(_impl.get64(), 1);
 	}
 
+	void set_x(float value)
+	{
+		_impl.setX(value);
+	}
+
+	void set_y(float value)
+	{
+		_impl.setY(value);
+	}
+
 	v2 operator-(v2 rhs) const
 	{
 		return v2(_impl - rhs._impl);

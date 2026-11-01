@@ -46,6 +46,21 @@ public:
 		return vgetq_lane_f32(_impl.get128(), 2);
 	}
 
+	void set_x(float value)
+	{
+		_impl.setX(value);
+	}
+
+	void set_y(float value)
+	{
+		_impl.setY(value);
+	}
+
+	void set_z(float value)
+	{
+		_impl.setZ(value);
+	}
+
 	const sce::Vectormath::Simd::Aos::Vector3 &getImpl() const
 	{
 		return _impl;

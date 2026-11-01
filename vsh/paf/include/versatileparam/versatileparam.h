@@ -1,7 +1,6 @@
 /*
- * paf::VersatileParam, as far as converted C++ uses it: a parameter object
- * read from a resource element. Names after ScePaf-RE, the virtual functions
- * in its order.
+ * paf::VersatileParam: a parameter object read from a resource element. Names after
+ * ScePaf-RE, the virtual functions in its order.
  */
 #ifndef PAF_VERSATILEPARAM_VERSATILEPARAM_H
 #define PAF_VERSATILEPARAM_VERSATILEPARAM_H
@@ -22,15 +21,34 @@ class ResourceParam;
 
 class VersatileParam {
 public:
+	VersatileParam();
+
+	/* the element name of the parameter's type */
+	static const char m_param_name[];
+	static const char *ParamName();
+
 	virtual const char *GetParamName() const;
 	virtual ~VersatileParam();
-	virtual int32_t Set();
-	virtual int32_t Get();
+	virtual int32_t Set()
+	{
+		return 0;
+	}
+
+	virtual int32_t Get()
+	{
+		return 0;
+	}
+
 	virtual int32_t Create(int32_t mode);
 	virtual int32_t Destroy(int32_t mode);
 	virtual int32_t OnUpdate();
 	virtual void OnDraw();
-	virtual int32_t AttachPlugin(Plugin *plugin);
+	virtual int32_t AttachPlugin(Plugin *plugin)
+	{
+		m_plugin = plugin;
+		return 0;
+	}
+
 	virtual int32_t Read(const cxml::Element *elem);
 	virtual int32_t Write(common::SharedPtr<File> fp, uint32_t type, uint32_t indent);
 

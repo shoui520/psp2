@@ -3,66 +3,6 @@
 #include "../compiler.h"
 #include "../std/new.h"
 
-__attribute__((noinline)) int _ZN3paf13ResourceParam8GetDirtyEv(const uint8_t *self)
-{
-	return self[12];
-}
-
-__attribute__((noinline))
-uint8_t *_ZN3paf13ResourceParam8SetDirtyEb(uint8_t *self, uint8_t value)
-{
-	self[12] = value;
-	return self;
-}
-
-int _ZN3paf14VersatileParam8OnUpdateEv(uint8_t *self)
-{
-	void *resource = *(void **)(self + 4);
-
-	if (resource) {
-		if (_ZN3paf13ResourceParam8GetDirtyEv(resource))
-			((void (*)(void *))(*(void ***)self)[3])(self);
-		_ZN3paf13ResourceParam8SetDirtyEb(*(uint8_t **)(self + 4), 0);
-	}
-	return 0;
-}
-
-/* Resource handle destruction: release the owned allocation and invalidate
- * the native three-word reference state. */
-static inline __attribute__((always_inline))
-uint32_t *DestroyResourceHandle(uint32_t *self)
-{
-	void *owned = (void *)(uintptr_t)self[4];
-
-#if defined(FW_TYPE_CEX)
-	self[0] = 0x812e1f58U;
-#else
-	self[0] = 0x812e2c10U;
-#endif
-	if (owned)
-		PafDelete(owned);
-	self[4] = UINT32_MAX;
-	self[5] = UINT32_MAX;
-	self[6] = UINT32_MAX;
-	return self;
-}
-
-uint32_t *_ZN3paf13ResourceParamD1Ev(uint32_t *self)
-{
-	return DestroyResourceHandle(self);
-}
-
-uint32_t *_ZN3paf13ResourceParamD2Ev(uint32_t *self)
-{
-	return DestroyResourceHandle(self);
-}
-
-void _ZN3paf13ResourceParamD0Ev(uint32_t *self)
-{
-	DestroyResourceHandle(self);
-	PafDelete(self);
-}
-
 extern int _ZN3paf2ui16WidgetSoundParam9DelWidgetEPNS0_6WidgetE(uint32_t *self, uint32_t target);
 
 int _ZN3paf2ui16WidgetSoundParam9delete_cbEPNS0_6WidgetEPv(uint32_t target, uint32_t *self)
@@ -84,17 +24,6 @@ int _ZN3paf2ui18WidgetHandlerParam3GetEv(const uint8_t *self)
 	    *(const uint32_t *)(self + 8))
 		return 0;
 	return -1;
-}
-
-int _ZN3paf14VersatileParam7DestroyEi(uint8_t *self, uint8_t flags)
-{
-	if (flags & 1) {
-		void *object = *(void **)(self + 4);
-		if (object)
-			((void (**)(void *))*(void **)object)[1](object);
-		*(void **)(self + 4) = 0;
-	}
-	return 0;
 }
 
 void *_ZN3paf2ui16WidgetStyleParam15GetDrawObjParamEi(const uint8_t *self, uint32_t id)
