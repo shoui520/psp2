@@ -7,6 +7,8 @@
 #include <cxml/cxml.h>
 #include <file/file.h>
 #include <graphics/drawobj/draw_obj.h>
+#include <graphics/surface/surface.h>
+#include <widget/core/widget.h>
 #include <plugin.h>
 #include <versatileparam/idparam.h>
 #include <versatileparam/resourceparam.h>
@@ -271,4 +273,146 @@ void DrawObjParam::delete_cb(DrawObj *obj, void *param)
 
 }
 
+
+namespace ui {
+
+const char WidgetParam::m_param_name[] = "widget_base";
+
+const char *WidgetParam::s_names[] = {
+	"style",
+	"texture",
+	"sound",
+};
+
+const char *WidgetParam::GetParamName() const
+{
+	return m_param_name;
+}
+
+const char *WidgetParam::ParamName()
+{
+	return m_param_name;
+}
+
+int32_t WidgetParam::Init()
+{
+	m_style_id.m_idhash = 0;
+	m_texture_id.m_idhash = 0;
+	m_sound_id.m_idhash = 0;
+	for (list<IndexedRef>::iterator it = m_texture_list.begin(); it != m_texture_list.end(); ++it)
+		it->id.m_idhash = 0;
+	for (list<IndexedRef>::iterator it = m_string_list.begin(); it != m_string_list.end(); ++it)
+		it->id.m_idhash = 0;
+	for (list<IndexedRef>::iterator it = m_alias_string_list.begin();
+	     it != m_alias_string_list.end(); ++it)
+		it->id.m_idhash = 0;
+	return 0;
+}
+
+const wchar_t *WidgetParam::GetString(const IDParam &id)
+{
+	if (m_plugin == NULL)
+		return NULL;
+	return m_plugin->GetString(IDParam(s_empty_id, id.m_idhash));
+}
+
+}
+}
+
+/* the texture of the ID from the parameter's plugin, NULL without one; Set calls it whole */
+__attribute__((noinline)) paf::intrusive_ptr<paf::graph::Surface> ScePafResource_31C3B828(paf::ui::WidgetParam *param,
+								 const paf::IDParam &id)
+{
+	if (param->m_plugin == NULL)
+		return paf::intrusive_ptr<paf::graph::Surface>();
+	return param->m_plugin->GetTexture(paf::IDParam(paf::s_empty_id, id.m_idhash));
+}
+
+namespace paf {
+namespace ui {
+
+int32_t WidgetParam::Set()
+{
+	Widget *widget = m_widget;
+
+	if (widget == NULL)
+		return -1;
+	if (m_texture_id.m_idhash != 0)
+		widget->SetTexture(ScePafResource_31C3B828(this, m_texture_id));
+	for (list<IndexedRef>::iterator it = m_texture_list.begin(); it != m_texture_list.end(); ++it) {
+		if (it->id.m_idhash != 0)
+			m_widget->SetTexture(ScePafResource_31C3B828(this, it->id), it->index, 0);
+	}
+	for (list<IndexedRef>::iterator it = m_string_list.begin(); it != m_string_list.end(); ++it) {
+		if (it->id.m_idhash != 0)
+			m_widget->SetString(wstring(GetString(it->id)), it->index);
+	}
+	for (list<IndexedRef>::iterator it = m_alias_string_list.begin();
+	     it != m_alias_string_list.end(); ++it) {
+		if (it->id.m_idhash != 0)
+			m_widget->SetString(wstring(m_plugin != NULL ?
+						    ScePafToplevel_D8801CA4(m_plugin, it->id) : NULL),
+					    it->index);
+	}
+	return 0;
+}
+
+int32_t WidgetParam::Get()
+{
+	return m_widget != NULL ? 0 : -1;
+}
+
+int32_t WidgetParam::Create(int32_t mode)
+{
+	VersatileParam::Create(mode);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[0], &m_style_id, ResourceParam::SEMANTIC_STYLEREF);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[1], &m_texture_id, ResourceParam::SEMANTIC_TEXTUREREF);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[2], &m_sound_id, ResourceParam::SEMANTIC_SOUNDREF);
+	for (list<IndexedRef>::iterator it = m_texture_list.begin(); it != m_texture_list.end(); ++it) {
+		if (m_serial != NULL)
+			m_serial->AddParam(it->name, &it->id, ResourceParam::SEMANTIC_TEXTUREREF);
+	}
+	for (list<IndexedRef>::iterator it = m_string_list.begin(); it != m_string_list.end(); ++it) {
+		if (m_serial != NULL)
+			m_serial->AddParam(it->name, &it->id, ResourceParam::SEMANTIC_LABELREF);
+	}
+	for (list<IndexedRef>::iterator it = m_alias_string_list.begin();
+	     it != m_alias_string_list.end(); ++it) {
+		if (m_serial != NULL)
+			m_serial->AddParam(it->name, &it->id, ResourceParam::SEMANTIC_LABELREF);
+	}
+	return 0;
+}
+
+int32_t WidgetParam::Write(common::SharedPtr<File> fp, uint32_t type, uint32_t indent)
+{
+	if (m_widget == NULL)
+		return -1;
+	if (m_serial != NULL)
+		m_serial->SetTagName(m_widget->GetTypeName());
+	return VersatileParam::Write(fp, type, indent);
+}
+
+}
+
+}
+
+/* attaches the parameter to the widget, dropping its delete callback from the old one */
+int32_t ScePafResource_190E99A6(paf::ui::WidgetParam *param, paf::ui::Widget *widget)
+{
+	if (param->m_widget == widget)
+		return 0;
+	if (param->m_widget != NULL)
+		param->m_widget->RemoveDeleteCB(ScePafResource_2B873BCD, param);
+	param->m_widget = widget;
+	return 0;
+}
+
+/* the old widget's delete callback: the parameter forgets it */
+void ScePafResource_2B873BCD(paf::ui::Widget *widget, void *param)
+{
+	ScePafResource_190E99A6(static_cast<paf::ui::WidgetParam *>(param), NULL);
 }

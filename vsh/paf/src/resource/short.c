@@ -120,39 +120,6 @@ int _ZN3paf2ui16WidgetStyleParam12AttachPluginEPNS_6PluginE(uint8_t *self, uint3
 }
 
 /* Reset the three resource lists' per-entry transient state. */
-int _ZN3paf2ui11WidgetParam4InitEv(uint32_t *self)
-{
-	uint32_t *firstRoot = (uint32_t *)(uintptr_t)self[21];
-	uint32_t *secondRoot;
-	uint32_t *thirdRoot;
-	uint32_t *node;
-
-	self[12] = 0;
-	self[16] = 0;
-	self[20] = 0;
-	secondRoot = (uint32_t *)(uintptr_t)self[24];
-	thirdRoot = (uint32_t *)(uintptr_t)self[27];
-	node = firstRoot ? (uint32_t *)(uintptr_t)firstRoot[1] : 0;
-	while (node != firstRoot) {
-		node[7] = 0;
-		if (node)
-			node = (uint32_t *)(uintptr_t)node[1];
-	}
-	node = secondRoot ? (uint32_t *)(uintptr_t)secondRoot[1] : 0;
-	while (node != secondRoot) {
-		node[7] = 0;
-		if (node)
-			node = (uint32_t *)(uintptr_t)node[1];
-	}
-	node = thirdRoot ? (uint32_t *)(uintptr_t)thirdRoot[1] : 0;
-	while (node != thirdRoot) {
-		node[7] = 0;
-		if (node)
-			node = (uint32_t *)(uintptr_t)node[1];
-	}
-	return 0;
-}
-
 /* Propagate a resource mode to its children before optional owner release. */
 int _ZN3paf2ui16WidgetStyleParam7DestroyEi(uint32_t *self, int mode)
 {

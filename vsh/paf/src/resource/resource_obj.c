@@ -22,11 +22,6 @@ extern void ScePafStdc_5C468294(void *ptr);
 static const char s_default_string[] = "";
 static const char s_buffer_filename[] = "";
 
-int _ZN3paf2ui11WidgetParam3GetEv(const ResourceObj *self)
-{
-	return self->string_buffer ? 0 : -1;
-}
-
 int _ZN3paf2ui18WidgetHandlerParam4InitEv(uint8_t *self)
 {
 	uint32_t *root = *(uint32_t **)(self + 40);

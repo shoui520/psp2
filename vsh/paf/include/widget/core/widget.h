@@ -51,14 +51,44 @@ public:
 	float m_value[3];
 };
 
-/* a widget's parameters as its resource gives them */
+/*
+ * A widget's parameters as its resource gives them: its style, texture and
+ * sound, and the textures and strings of its draw objects, which the widget
+ * types' parameters add to the lists (members' names ours).
+ */
 class WidgetParam : public VersatileParam {
 public:
-	uint8_t reserved[4];
-	/* its widget's style and sound parameter IDs (names ours) */
+	/* a texture or string ID of the widget's draw object index (names ours) */
+	class IndexedRef {
+	public:
+		const char *name;
+		int32_t index;
+		IDParam id;
+	};
+
+	static const char m_param_name[];
+	static const char *s_names[];
+	static const char *ParamName();
+
+	virtual const char *GetParamName() const;
+	/* below Widget: the widget forgets this parameter's delete callback */
+	virtual ~WidgetParam();
+	virtual int32_t Set();
+	virtual int32_t Get();
+	virtual int32_t Create(int32_t mode);
+	virtual int32_t Write(common::SharedPtr<File> fp, uint32_t type, uint32_t indent);
+
+	int32_t Init();
+	const wchar_t *GetString(const IDParam &id);
+
+	Widget *m_widget;
 	IDParam m_style_id;
-	uint8_t reserved2[0x10];
+	IDParam m_texture_id;
 	IDParam m_sound_id;
+	list<IndexedRef> m_texture_list;
+	list<IndexedRef> m_string_list;
+	/* strings by their alias (ScePafToplevel_D8801CA4) */
+	list<IndexedRef> m_alias_string_list;
 };
 
 /* a widget type's style, read from the resource's "style_<type>" parameter */
@@ -397,7 +427,10 @@ public:
 	bool reserved3o : 1;
 	/* cleared before a reverse transition (name after ScePaf-RE) */
 	bool m_transition_complete : 1;
-	uint8_t reserved3p[0x21];
+	uint8_t reserved3p[0xd];
+	/* the alpha SetMetaAlpha sets (name ours) */
+	float m_meta_alpha;
+	uint8_t reserved3q[0x10];
 	Timer *m_resolution_timer;
 	Timer *m_resolution_timer_next;
 	ResolutionData *m_pos_array;
@@ -408,7 +441,10 @@ public:
 	uint8_t reserved4;
 	/* the entries of m_pos_array */
 	uint8_t m_pos_num;
-	uint8_t reserved5[0x2c];
+	/* the entries of m_size_array and m_rot_array (names ours) */
+	uint8_t m_size_num;
+	uint8_t m_rot_num;
+	uint8_t reserved5[0x2a];
 	uint32_t m_align_x : 4;
 	uint32_t m_align_y : 4;
 	uint32_t m_align_z : 4;
@@ -416,7 +452,13 @@ public:
 	uint32_t m_origin_y : 4;
 	uint32_t m_origin_z : 4;
 	uint32_t reserved6 : 8;
-	uint8_t reserved7[0x14];
+	uint32_t reserved6a : 16;
+	/* what SetAdjust sets (names after the resource's adjust_x and adjust_y) */
+	uint32_t m_adjust_x : 4;
+	uint32_t m_adjust_y : 4;
+	uint32_t m_adjust_z : 4;
+	uint32_t reserved6b : 4;
+	uint8_t reserved7[0x10];
 	/* lays the widget out each update (name after ScePaf-RE) */
 	Layouter *m_layouter;
 	uint8_t reserved7a[0x44];
@@ -432,8 +474,28 @@ public:
 }
 
 extern "C" {
-/* gives the widget parameter its widget (the widget deletes it with itself) */
+/* gives the widget parameter its widget, dropping its delete callback from the old one */
 int32_t ScePafResource_190E99A6(paf::ui::WidgetParam *param, paf::ui::Widget *widget);
+/* the delete callback of a widget parameter's widget: the parameter forgets it */
+void ScePafResource_2B873BCD(paf::ui::Widget *widget, void *param);
+/* the texture of the ID from the widget parameter's plugin, NULL without a plugin */
+paf::intrusive_ptr<paf::graph::Surface> ScePafResource_31C3B828(paf::ui::WidgetParam *param,
+								 const paf::IDParam &id);
+}
+
+namespace paf {
+namespace ui {
+
+inline WidgetParam::~WidgetParam()
+{
+	if (m_widget != NULL)
+		m_widget->RemoveDeleteCB(ScePafResource_2B873BCD, this);
+}
+
+}
+}
+
+extern "C" {
 /* puts the widget into its transition: auto_delete deletes it once the time ends */
 int32_t ScePafWidget_8AF26B1F(paf::ui::Widget *widget, bool auto_delete, float time);
 /* Hide(Timer *, int32_t opt, float delay, AnimCB): hides the widget, over the timer's time */
