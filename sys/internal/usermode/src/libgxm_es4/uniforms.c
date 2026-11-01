@@ -27,11 +27,26 @@ int sceGxmSetUniformDataF(void *uniformBuffer, const SceGxmProgramParameter *par
 	vectorSize = (info & GXM_PARAMETER_COMPONENT_COUNT) >> 8;
 	type = (info & GXM_PARAMETER_TYPE) >> 4;
 	maxComponentCount = parameter->arraySize * vectorSize;
-	if (uniformBuffer == NULL || sourceData == NULL)
+	if (uniformBuffer == NULL) {
+		GXM_DBG_ERROR_NULL(78, sceGxmSetUniformDataF, uniformBuffer);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if ((info & GXM_PARAMETER_CATEGORY) != SCE_GXM_PARAMETER_CATEGORY_UNIFORM ||
-	    componentOffset + componentCount > maxComponentCount)
+	}
+	if (sourceData == NULL) {
+		GXM_DBG_ERROR_NULL(86, sceGxmSetUniformDataF, sourceData);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if ((info & GXM_PARAMETER_CATEGORY) != SCE_GXM_PARAMETER_CATEGORY_UNIFORM) {
+		GXM_DBG_ERROR(90, "Parameter parameter to function sceGxmSetUniformDataF is not of "
+			      "category UNIFORM.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (componentOffset + componentCount > maxComponentCount) {
+		GXM_DBG_ERROR(97, "Parameters componentOffset (%u) and componentCount (%u) to "
+			      "function sceGxmSetUniformDataF result in a value greater than the "
+			      "total number of components for the parameter (%u).",
+			      componentOffset, componentCount, maxComponentCount);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 
 	switch (type) {
 	case SCE_GXM_PARAMETER_TYPE_F32: {
@@ -81,6 +96,7 @@ int sceGxmSetUniformDataF(void *uniformBuffer, const SceGxmProgramParameter *par
 		break;
 	}
 	case SCE_GXM_PARAMETER_TYPE_C10:
+		GXM_DBG_ERROR(145, "C10 parameters are not yet supported by sceGxmSetUniformDataF.");
 		return SCE_GXM_ERROR_UNSUPPORTED;
 	case SCE_GXM_PARAMETER_TYPE_U32: {
 		SceUInt32 *data = (SceUInt32 *)uniformBuffer + parameter->resourceIndex;
@@ -201,6 +217,7 @@ int sceGxmSetUniformDataF(void *uniformBuffer, const SceGxmProgramParameter *par
 		break;
 	}
 	default:
+		GXM_DBG_ERROR(278, "Parameter is of unknown type.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
 	}
 	return 0;

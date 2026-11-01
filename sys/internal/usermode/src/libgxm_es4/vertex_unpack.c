@@ -10,20 +10,52 @@
 #include "gxm_internal.h"
 
 /* the unpack instruction's source type, by attribute format */
-static const SceUInt32 gxmUnpackTypes[9] = {
-	1, 3, 4, 0, 1, 3, 4, 5, 6,	/* S8 .. F32; U8 is 0 */
-};
-
-/* the program reads this primary attribute register */
-static inline _Bool gxmRegisterUsed(const GxmProgramVaryings *varyings, SceUInt32 reg)
+static inline SceUInt32 gxmVertexUnpackType(SceUInt32 format)
 {
-	return (varyings->vertex.inputMask[reg >> 5] & (1 << (reg & 0x1f))) != 0;
+	switch (format) {
+	case SCE_GXM_ATTRIBUTE_FORMAT_U8:
+	case SCE_GXM_ATTRIBUTE_FORMAT_U8N:
+		return 0;
+	case SCE_GXM_ATTRIBUTE_FORMAT_S8:
+	case SCE_GXM_ATTRIBUTE_FORMAT_S8N:
+		return 1;
+	case SCE_GXM_ATTRIBUTE_FORMAT_U16:
+	case SCE_GXM_ATTRIBUTE_FORMAT_U16N:
+		return 3;
+	case SCE_GXM_ATTRIBUTE_FORMAT_S16:
+	case SCE_GXM_ATTRIBUTE_FORMAT_S16N:
+		return 4;
+	case SCE_GXM_ATTRIBUTE_FORMAT_F16:
+		return 5;
+	case SCE_GXM_ATTRIBUTE_FORMAT_F32:
+		return 6;
+	default:
+		GXM_DBG_FAIL(31, "unrecognised vertex attribute format");
+		return 0;
+	}
 }
 
-static inline SceUInt32 gxmRegisterMask(const GxmProgramVaryings *varyings, SceUInt32 reg)
+/*
+ * The program reads this primary attribute register (Sony's program_private.h). The debug
+ * build reads the varyings again after each check; the release build once per attribute.
+ */
+static inline SceBool gxmRegisterUsed(const SceGxmProgram *program,
+				      const GxmProgramVaryings *varyings, SceUInt32 regIndex)
 {
-	return (gxmRegisterUsed(varyings, reg) ? 1 : 0) | (gxmRegisterUsed(varyings, reg + 1) ? 2 : 0) |
-	       (gxmRegisterUsed(varyings, reg + 2) ? 4 : 0) | (gxmRegisterUsed(varyings, reg + 3) ? 8 : 0);
+	GXM_DBG_ASSERT_AT("program_private.h", 171, regIndex < 4*SCE_GXM_MAX_VERTEX_ATTRIBUTES);
+#if SCE_DBG_ASSERTS_ENABLED
+	varyings = gxmProgramGetVertexVaryings(program);
+#endif
+	return (varyings->vertex.inputMask[regIndex >> 5] & (1 << (regIndex & 0x1f))) != 0;
+}
+
+static inline SceUInt32 gxmRegisterMask(const SceGxmProgram *program,
+					const GxmProgramVaryings *varyings, SceUInt32 reg)
+{
+	return (gxmRegisterUsed(program, varyings, reg) ? 1 : 0) |
+	       (gxmRegisterUsed(program, varyings, reg + 1) ? 2 : 0) |
+	       (gxmRegisterUsed(program, varyings, reg + 2) ? 4 : 0) |
+	       (gxmRegisterUsed(program, varyings, reg + 3) ? 8 : 0);
 }
 
 /* the instruction pairs the unpack code takes, with its header */
@@ -43,20 +75,23 @@ SceUInt32 gxmVertexUnpackSize(const SceGxmProgram *program, const SceGxmVertexAt
 				continue;
 			components = attributes[i].componentCount;
 			reg = attributes[i].regIndex;
+			GXM_DBG_ASSERT_MSG(57, components - 1 <= 3,
+					   "invalid attribute component count %u (attrib %u)",
+					   components, i);
 			varyings = gxmProgramGetVaryings(program);
-			mask = gxmRegisterMask(varyings, reg);
-			if (format < 9) {
-				if ((1 << format) & 0xef) {
-					for (k = reg; k < reg + components; k++) {
-						if (gxmRegisterUsed(varyings, k))
-							count++;
-					}
-				} else if ((1 << format) & 0x110) {
-					if (components > 2 && (mask >> 2) != 0)
-						count++;
-					if ((mask & 3) != 0)
+			mask = gxmRegisterMask(program, varyings, reg);
+			if (format < 9 && ((1 << format) & 0xef)) {
+				for (k = reg; k < reg + components; k++) {
+					if (gxmRegisterUsed(program, varyings, k))
 						count++;
 				}
+			} else if (format < 9 && ((1 << format) & 0x110)) {
+				if (components > 2 && (mask >> 2) != 0)
+					count++;
+				if ((mask & 3) != 0)
+					count++;
+			} else if (format != SCE_GXM_ATTRIBUTE_FORMAT_F32) {
+				GXM_DBG_ASSERT(99, 0 && "unrecognised attribute format");
 			}
 			/* defaults for the components the stream lacks */
 			mask &= 0xf << components;
@@ -91,8 +126,10 @@ int gxmVertexUnpackBuild(GxmChunkBuffer *buffer, const SceGxmProgram *program,
 		return 0;
 	}
 	code = gxmChunkBufferReserve(buffer, pairs * 8, gxmUsseAlignment());
-	if (code == NULL)
+	if (code == NULL) {
+		GXM_DBG_ERROR(181, "Could not reserve %d bytes.", pairs * 8);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
 	*offset = buffer->current + buffer->gpuEnd - buffer->end;
 	*codeOut = code;
 	code[0] = 0;
@@ -103,7 +140,6 @@ int gxmVertexUnpackBuild(GxmChunkBuffer *buffer, const SceGxmProgram *program,
 		start = gxmUsseWriteOldHeader(code + 2);
 
 	out = start;
-	type = 0;
 	for (i = 0; i < attributeCount; i++) {
 		format = attributes[i].format;
 		if (format == SCE_GXM_ATTRIBUTE_FORMAT_UNTYPED)
@@ -111,12 +147,9 @@ int gxmVertexUnpackBuild(GxmChunkBuffer *buffer, const SceGxmProgram *program,
 		components = attributes[i].componentCount;
 		reg = attributes[i].regIndex;
 		size = gxmAttributeFormatGetSize(format);
-		if (format - 1 < 9)
-			type = gxmUnpackTypes[format - 1];
-		else
-			type = 0;
+		type = gxmVertexUnpackType(format);
 		varyings = gxmProgramGetVaryings(program);
-		mask = gxmRegisterMask(varyings, reg);
+		mask = gxmRegisterMask(program, varyings, reg);
 		low = mask & 3;
 
 		switch (format) {
@@ -148,7 +181,10 @@ unpack:
 				*out++ = type << 9 | 0x40a00182 | low << 2;
 			}
 			goto defaults;
+		case SCE_GXM_ATTRIBUTE_FORMAT_F32:
+			goto defaults;
 		default:
+			GXM_DBG_ASSERT(367, 0 && "unrecognised attribute format");
 			goto defaults;
 		}
 
@@ -160,7 +196,7 @@ convert:
 			if ((format & ~4) - 2 < 2) {
 				for (k = components; k-- > 0; position -= size) {
 					odd = k & 1;
-					if (gxmRegisterUsed(gxmProgramGetVaryings(program), reg + k)) {
+					if (gxmRegisterUsed(program, gxmProgramGetVaryings(program), reg + k)) {
 						*out++ = odd | 0xa0000000 | odd << 16 | odd << 14 | odd << 19 |
 							 (reg + k) << 21 | normalize |
 							 (reg + (position >> 2)) << 7;
@@ -169,7 +205,7 @@ convert:
 				}
 			} else {
 				for (k = components; k-- > 0; position -= size) {
-					if (gxmRegisterUsed(gxmProgramGetVaryings(program), reg + k)) {
+					if (gxmRegisterUsed(program, gxmProgramGetVaryings(program), reg + k)) {
 						*out++ = k | 0xa0000000 | k << 19 | k << 14 | k << 16 |
 							 (reg + k) << 21 | normalize |
 							 (reg + (position >> 2)) << 7;
@@ -203,6 +239,6 @@ defaults:
 		end = 0xf8040140;
 	}
 	out[-1] = end;
-	buffer->current = (SceUInt32)out;
+	gxmChunkBufferCommit(buffer, out);
 	return 0;
 }

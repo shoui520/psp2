@@ -78,6 +78,19 @@ int sceKernelIsGameBudget(void);
 #else
 #define GXM_DBG_FAIL(line, message)	((void)0)
 #endif
+#if SCE_DBG_ASSERTS_ENABLED
+/* an assertion with a message of its own */
+#define GXM_DBG_ASSERT_MSG(line, test, format, ...)					\
+	_SCE_MACRO_BEGIN								\
+		if (SCE_UNLIKELY(!(test))) {						\
+			if (sceDbgAssertionHandler(__FILE_NAME__, line, true,		\
+					SCE_DBG_ASSERT_COMPONENT, format, ##__VA_ARGS__)) \
+				SCE_BREAK();						\
+		}									\
+	_SCE_MACRO_END
+#else
+#define GXM_DBG_ASSERT_MSG(line, test, format, ...)	_SCE_MACRO_BEGIN { (void)sizeof((test)); } _SCE_MACRO_END
+#endif
 /* the message is the test as written, before macro expansion (SCE_DBG_ASSERT's #test) */
 #define GXM_DBG_ASSERT(line, test)		GXM_DBG_CHECK(__FILE_NAME__, line, test, #test)
 #define GXM_DBG_ASSERT_AT(file, line, test)	GXM_DBG_CHECK(file, line, test, #test)
@@ -312,6 +325,7 @@ SceUInt32 sceGxmTextureGetGammaMode(const SceGxmTexture *texture);
 #define SCE_GXM_TEXTURE_GAMMA_NONE		0x00000000
 
 #define SCE_GXM_MAX_TEXTURE_UNITS	16
+#define SCE_GXM_MAX_VERTEX_ATTRIBUTES	16
 
 /*
  * A texture query, as a program samples a texture unit (the program's
