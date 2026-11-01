@@ -1205,7 +1205,6 @@ int sceGxmShaderPatcherCreateFragmentProgramForGles(SceGxmShaderPatcher *shaderP
 typedef struct GxmMaskUpdateProgram {
 	SceGxmFragmentProgram fragment;
 	SceGxmProgram program;		/* 0x80 */
-	SceUInt32 pad;
 	SceUInt8 varyings[0x14];	/* 0x11c: the program's fragment varyings */
 } GxmMaskUpdateProgram;
 
@@ -1238,8 +1237,7 @@ int sceGxmShaderPatcherCreateMaskUpdateFragmentProgram(SceGxmShaderPatcher *shad
 		created->program.majorVersion = 1;
 		created->program.minorVersion = 5;
 		created->program.sdkVersion = FW_VERSION >> 16;
-		created->program.size = sizeof(created->program) + sizeof(created->pad) +
-					sizeof(created->varyings);
+		created->program.size = sizeof(created->program) + sizeof(created->varyings);
 		created->fragment.program = &created->program;
 		created->program.varyingsOffset = (char *)created->varyings -
 						  (char *)&created->program.varyingsOffset;

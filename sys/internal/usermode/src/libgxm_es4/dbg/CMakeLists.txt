@@ -12,6 +12,7 @@ set(GXM_DBG_SOURCES
 	../blending.c
 	../chunk_buffer.c
 	../context.c
+	../context_debug.c
 	../context_deferred.c
 	../context_flush.c
 	../context_init.c

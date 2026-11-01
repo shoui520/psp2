@@ -226,6 +226,13 @@ SceUInt16 gxmTextureFormatGetAlignment(SceGxmTextureFormat format);
 SceUInt8 gxmTextureFormatGetBitsPerPixel(SceGxmTextureFormat format);
 SceUInt8 gxmTextureFormatGetBytesPerPixel(SceGxmTextureFormat format);
 SceUInt32 gxmTextureFormatGetSwizzleComponents(SceGxmTextureFormat format);
+#if SCE_DBG_ASSERTS_ENABLED
+/* format.c, the debug build's: the names its messages print, and the texture query checks */
+const char *gxmTextureFormatGetName(SceGxmTextureFormat format);
+const char *gxmTextureFormatGetSwizzleName(SceGxmTextureFormat format);
+_Bool gxmTextureFormatIsQueryPrecisionSupported(SceGxmTextureFormat format, SceUInt32 precisions);
+_Bool gxmTextureFormatSupportsSampleCoefficients(SceGxmTextureFormat format);
+#endif
 
 typedef SceUInt32 SceGxmColorFormat;
 
@@ -242,6 +249,10 @@ int gxmColorFormatGetFloatMode4(SceGxmColorFormat format, SceUInt32 outputRegist
 				SceUInt32 *mode);
 int gxmColorFormatGetFloatMode14(SceGxmColorFormat format, SceUInt32 outputRegisterSize,
 				 SceUInt32 *mode);
+#if SCE_DBG_ASSERTS_ENABLED
+const char *gxmColorFormatGetName(SceGxmColorFormat format);
+const char *gxmColorFormatGetSwizzleName(SceGxmColorFormat format);
+#endif
 
 typedef SceUInt32 SceGxmTransferFormat;
 
@@ -260,6 +271,33 @@ typedef struct SceGxmTexture {
 } SceGxmTexture;
 
 SceGxmTextureFormat sceGxmTextureGetFormat(const SceGxmTexture *texture);
+SceUInt32 sceGxmTextureGetType(const SceGxmTexture *texture);
+SceUInt32 sceGxmTextureGetMinFilter(const SceGxmTexture *texture);
+SceUInt32 sceGxmTextureGetMagFilter(const SceGxmTexture *texture);
+SceUInt32 sceGxmTextureGetMipFilter(const SceGxmTexture *texture);
+SceUInt32 sceGxmTextureGetGammaMode(const SceGxmTexture *texture);
+
+/* SceGxmTextureFilter, SceGxmTextureMipFilter, SceGxmTextureGammaMode (Sony gxm/constants.h) */
+#define SCE_GXM_TEXTURE_FILTER_POINT		0x00000000
+#define SCE_GXM_TEXTURE_FILTER_LINEAR		0x00000001
+#define SCE_GXM_TEXTURE_MIP_FILTER_DISABLED	0x00000000
+#define SCE_GXM_TEXTURE_MIP_FILTER_ENABLED	0x00000200
+#define SCE_GXM_TEXTURE_GAMMA_NONE		0x00000000
+
+#define SCE_GXM_MAX_TEXTURE_UNITS	16
+
+/*
+ * A texture query, as a program samples a texture unit (the program's
+ * textureQueries, or its sampler parameter): what the debug build checks
+ * the bound texture against.
+ */
+#define GXM_TEXTURE_QUERY_PRECISIONS		0x000000ff	/* f32, f16, s8, u8, s16, u16, s32, u32 */
+#define GXM_TEXTURE_QUERY_COMPONENT_COUNT_SHIFT	8
+#define GXM_TEXTURE_QUERY_COMPONENT_COUNT	0x00000300	/* components minus one */
+#define GXM_TEXTURE_QUERY_SAMPLE_INFO		0x00000400
+#define GXM_TEXTURE_QUERY_CUBE			0x00000800
+#define GXM_TEXTURE_QUERY_GATHER4		0x00001000	/* shadow map or gather4 */
+#define GXM_TEXTURE_QUERY_SAMPLE_COEFFICIENTS	0x00002000
 
 /* control word 0 as bound to a context: bits 29 and 30 are left out */
 #define GXM_TEX0_BOUND_MASK	0x9fffffff
@@ -422,6 +460,7 @@ typedef struct SceGxmProgram {
 	SceInt32 textureRefsOffset;
 	SceUInt32 secondaryPdsDataCount;	/* 0x90: GxmProgramDmaEntry */
 	SceInt32 secondaryPdsDataOffset;
+	SceInt32 textureQueriesOffset;		/* 0x98, version 1.5: SceUInt16[SCE_GXM_MAX_TEXTURE_UNITS] */
 } SceGxmProgram;
 
 static inline SceUInt32 sceGxmProgramGetProgramType(const SceGxmProgram *program)
@@ -430,6 +469,18 @@ static inline SceUInt32 sceGxmProgramGetProgramType(const SceGxmProgram *program
 }
 
 GXM_ASSERT_OFFSET(SceGxmProgram, secondaryPdsDataOffset, 0x94);
+GXM_ASSERT_SIZE(SceGxmProgram, 0x9c);
+
+/* the texture unit's 4 bits of texUnitFlags (1: sampled only by non-dependent reads) */
+static inline SceUInt32 gxmProgramGetTextureUnitFlags(const SceGxmProgram *program,
+						      SceUInt32 textureIndex)
+{
+	SceUInt32 bit;
+
+	GXM_DBG_ASSERT_AT("program_private.h", 330, textureIndex < SCE_GXM_MAX_TEXTURE_UNITS);
+	bit = textureIndex * 4;
+	return (program->texUnitFlags[bit >> 5] >> (bit & 31)) & 0xf;
+}
 
 /*
  * The tables a program's state blocks are written from. The constant block
@@ -480,6 +531,7 @@ typedef struct GxmProgramDmaEntry {
 
 #define SCE_GXM_PARAMETER_CATEGORY_ATTRIBUTE	0
 #define SCE_GXM_PARAMETER_CATEGORY_UNIFORM	1
+#define SCE_GXM_PARAMETER_CATEGORY_SAMPLER	2
 
 /* SceGxmParameterType */
 #define SCE_GXM_PARAMETER_TYPE_F32		0
@@ -549,6 +601,23 @@ static inline SceUInt32 gxmParameterGetSemantic(const SceGxmProgramParameter *pa
 {
 	return (parameter->info & GXM_PARAMETER_SEMANTIC) >> 16;
 }
+
+/* a version 1.4 program's texture query: its sampler parameter's (semantic: the precisions) */
+static inline SceUInt32 gxmParameterGetTextureQuery(const SceGxmProgramParameter *parameter)
+{
+	SceUInt32 precisions = 0;
+
+	if (gxmParameterGetCategory(parameter) == SCE_GXM_PARAMETER_CATEGORY_SAMPLER)
+		precisions = gxmParameterGetSemantic(parameter);
+	return ((parameter->info & GXM_PARAMETER_COMPONENT_COUNT) - (1 << 8)) |
+	       (((parameter->info >> 28) & 1) << 11) | precisions;
+}
+
+SceUInt32 sceGxmProgramGetParameterCount(const SceGxmProgram *program);
+const SceGxmProgramParameter *sceGxmProgramGetParameter(const SceGxmProgram *program,
+							SceUInt32 index);
+SceUInt32 sceGxmProgramParameterGetResourceIndex(const SceGxmProgramParameter *parameter);
+SceBool sceGxmProgramIsSpriteCoordUsed(const SceGxmProgram *program);
 
 static inline SceUInt32 gxmParameterGetSemanticIndex(const SceGxmProgramParameter *parameter)
 {
@@ -897,6 +966,32 @@ int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 address, const SceUInt32 *
 #define SCE_GXM_CONTEXT_TYPE_IMMEDIATE	0
 #define SCE_GXM_CONTEXT_TYPE_DEFERRED	1
 
+/* SceGxmPrimitiveType, SceGxmPolygonMode, SceGxmPassType (Sony gxm/constants.h) */
+#define SCE_GXM_PRIMITIVE_TRIANGLES		0x00000000
+#define SCE_GXM_PRIMITIVE_LINES			0x04000000
+#define SCE_GXM_PRIMITIVE_POINTS		0x08000000
+#define SCE_GXM_PRIMITIVE_TRIANGLE_STRIP	0x0c000000
+#define SCE_GXM_PRIMITIVE_TRIANGLE_FAN		0x10000000
+#define SCE_GXM_PRIMITIVE_TRIANGLE_EDGES	0x14000000
+
+#define SCE_GXM_POLYGON_MODE_TRIANGLE_FILL	0x00000000
+#define SCE_GXM_POLYGON_MODE_LINE		0x00008000
+#define SCE_GXM_POLYGON_MODE_POINT_10UV		0x00010000
+#define SCE_GXM_POLYGON_MODE_POINT		0x00018000
+#define SCE_GXM_POLYGON_MODE_POINT_01UV		0x00020000
+#define SCE_GXM_POLYGON_MODE_TRIANGLE_LINE	0x00028000
+#define SCE_GXM_POLYGON_MODE_TRIANGLE_POINT	0x00030000
+
+#define SCE_GXM_PASS_TYPE_OPAQUE		0x00000000
+#define SCE_GXM_PASS_TYPE_TRANSLUCENT		0x02000000
+#define SCE_GXM_PASS_TYPE_DISCARD		0x04000000
+#define SCE_GXM_PASS_TYPE_MASK_UPDATE		0x06000000
+#define SCE_GXM_PASS_TYPE_DEPTH_REPLACE		0x0a000000
+
+/* SceGxmVisibilityTestOp: the ISP word's GXM_ISP_VISIBILITY_OP */
+#define SCE_GXM_VISIBILITY_TEST_OP_INCREMENT	0x00000000
+#define SCE_GXM_VISIBILITY_TEST_OP_SET		0x00040000
+
 typedef enum SceGxmYuvProfile {
 	SCE_GXM_YUV_PROFILE_BT601_STANDARD,
 	SCE_GXM_YUV_PROFILE_BT709_STANDARD,
@@ -986,6 +1081,14 @@ typedef enum SceGxmYuvProfile {
 struct SceGxmShaderPatcher;
 struct SceGxmRegisteredProgram;
 
+/* how the shader patcher built a fragment program (passFlags) */
+#define GXM_PASS_OUTPUT_32BIT		0x00000001	/* 32-bit output registers */
+#define GXM_PASS_OUTPUT_64BIT		0x00000002
+#define GXM_PASS_MSAA_NONE		0x00000004	/* translucency phases, one sample per pixel */
+#define GXM_PASS_MSAA_2X		0x00000008
+#define GXM_PASS_MSAA_4X		0x00000010
+#define GXM_PASS_COLOR_UNCHANGED	0x00000020	/* writes no color */
+
 typedef struct SceGxmFragmentProgram {
 	const SceGxmProgram *program;
 	GxmCodeRef code;		/* 0x04: the program with output and blending */
@@ -1002,7 +1105,7 @@ typedef struct SceGxmFragmentProgram {
 	void *literals;			/* 0x3c: the registered program's buffers */
 	void *scratch;
 	void *thread;
-	SceUInt32 passFlags;		/* 0x48 */
+	SceUInt32 passFlags;		/* 0x48: GXM_PASS_* */
 	SceSize hostSize;		/* 0x4c */
 	void *usseMem;
 	SceSize usseSize;
@@ -1069,13 +1172,15 @@ typedef struct GxmMteState {
 	SceUInt32 regionClip[2];
 	SceUInt32 viewport[6];		/* x/y/z offset and scale, float bits */
 	SceUInt32 reserved0;		/* GXM_DIRTY_RESERVED0: only ever cleared */
-	SceUInt32 vertexOutputs;
+	SceUInt32 vertexOutputs;	/* GXM_VERTEX_OUTPUT_* */
 	SceUInt32 wClampValue;		/* float bits */
 	SceUInt32 cull;
 	SceUInt32 reserved1;		/* GXM_DIRTY_RESERVED1: never set */
 	SceUInt32 texCoordOutputs;
 	SceUInt32 vertexOutputs2;
 } GxmMteState;
+
+#define GXM_VERTEX_OUTPUT_PSIZE		0x00000100
 
 void gxmMteStateInvalidate(GxmMteState *state);
 void gxmMteStateInit(GxmMteState *state);
@@ -1368,6 +1473,11 @@ typedef struct SceGxmContext {
 	SceUInt32 *listStart;		/* 0x400: the command list's first VDM word */
 	SceUInt32 listDepthStencilUsage;	/* GXM_LIST_USES_*, from the draws' depth/stencil modes */
 	SceUInt32 listTileYMax;		/* 0x408: the lowest tile row a region clip reached */
+#if SCE_DBG_ASSERTS_ENABLED
+	SceInt32 listFrontVisibilityIndexMax;	/* the command list's, see SceGxmCommandList */
+	SceInt32 listBackVisibilityIndexMax;
+	SceUInt32 listFragmentPassFlags;
+#endif
 	SceUInt32 listSerial;		/* 0x40c: gxmCounterIncrement() at creation */
 	};
 	};
@@ -1402,6 +1512,9 @@ GXM_ASSERT_OFFSET(SceGxmContext, listSerial, 0x40c);
 #define GXM_LIST_USES_STENCIL_BACK	0x00000008
 #define GXM_LIST_USES_MASK		0x00000010
 #define GXM_LIST_USES_ALL		0x0000001f
+/* the debug build's: the command list set a viewport, a region clip (kept from list to list) */
+#define GXM_LIST_VIEWPORT_SET		0x00000020
+#define GXM_LIST_REGION_CLIP_SET	0x00000040
 
 /* the scene's ZLS control (depthStencil.zlsControl) */
 /* SceGxmDepthStencilForceLoadMode / ForceStoreMode (Sony's names, from the debug messages) */
@@ -1483,7 +1596,14 @@ typedef struct SceGxmCommandList {
 	SceUInt32 *returnLink;		/* the last block: patched with the address to return to */
 	SceUInt32 depthStencilUsage;	/* GXM_LIST_USES_* */
 	SceUInt32 tileYMax;		/* the scene's valid region must reach this tile row */
-	SceUInt32 reserved[3];
+	union {
+	SceUInt32 reserved[3];		/* the release build's: 0 */
+	struct {			/* the debug build's, for gxmDebugCheckCommandList */
+	SceInt32 frontVisibilityIndexMax;	/* -1: no draw tested visibility */
+	SceInt32 backVisibilityIndexMax;
+	SceUInt32 fragmentPassFlags;	/* GXM_PASS_* of the draws' fragment programs */
+	};
+	};
 	SceUInt32 serial;		/* the deferred context's listSerial */
 } SceGxmCommandList;
 
@@ -1510,9 +1630,16 @@ void sceGxmSetDefaultRegionClipAndViewport(SceGxmContext *context, SceUInt32 xMa
 
 #if SCE_DBG_ASSERTS_ENABLED
 /* context_debug.c: the debug build's checks of a draw's state, and the error report */
-int gxmDebugCheckDraw(const SceGxmContext *context, SceUInt32 primType, SceUInt32 indexCount,
-		      SceUInt32 indexWrap);
 void gxmDebugReportError(int error, const char *function);
+int gxmDebugCheckTextureQuery(SceUInt32 query, SceUInt32 unitFlags, SceUInt32 textureIndex,
+			      const SceGxmTexture *texture, const char *stage);
+int gxmDebugCheckTexture(const SceGxmProgram *program, const SceGxmTexture *texture,
+			 SceUInt32 textureIndex, const char *stage);
+int gxmDebugCheckTextures(const SceGxmProgram *program, const SceGxmTexture *textures,
+			  const char *stage);
+int gxmDebugCheckDraw(SceGxmContext *context, SceUInt32 primType, SceUInt32 indexCount,
+		      SceUInt32 indexWrap);
+int gxmDebugCheckCommandList(const SceGxmContext *context, const SceGxmCommandList *list);
 #endif
 
 /* context_flush.c */
