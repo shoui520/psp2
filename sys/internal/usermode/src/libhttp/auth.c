@@ -869,11 +869,11 @@ parsed:
 		goto out;
 	if (challenge.type == SCE_HTTP_AUTH_BASIC || challenge.type == SCE_HTTP_AUTH_RESERVED0) {
 		if (challenge.type != SCE_HTTP_AUTH_BASIC) {
-			ret = _sceHttpRequestSetBasicAuth(req, username, password);
+			ret = _sceHttpRequestSetBasicAuth(req, username, password, 1);
 			sceClibMemset(username, 0, SCE_HTTP_USERNAME_MAX_SIZE);
 			sceClibMemset(password, 0, SCE_HTTP_PASSWORD_MAX_SIZE);
 		} else {
-			ret = _sceHttpRequestSetBasicAuth(req, username, password);
+			ret = _sceHttpRequestSetBasicAuth(req, username, password, 0);
 		}
 		if (ret < 0) {
 			if (ret != SCE_HTTP_ERROR_OUT_OF_MEMORY)

@@ -556,7 +556,8 @@ int _sceHttpAddRequestHeader(int id, const char *name, const char *value, int mo
 int _sceHttpAddRequestHeaderRaw(int id, const char *header, int mode);
 int _sceHttpRequestRemoveAuthHeaders(HttpRequest *req, SceBool remove, SceBool proxy,
 				     SceBool www);
-int _sceHttpRequestSetBasicAuth(HttpRequest *req, const char *username, const char *password);
+int _sceHttpRequestSetBasicAuth(HttpRequest *req, const char *username, const char *password,
+				SceBool proxy);
 int _sceHttpRequestSetDigestAuth(HttpRequest *req, const char *username, const char *password,
 				 const void *entity, SceSize entitySize,
 				 const HttpAuthDigest *digest, SceBool proxy);
