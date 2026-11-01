@@ -706,7 +706,7 @@ int sceGxmShaderPatcherCreateVertexProgram(SceGxmShaderPatcher *shaderPatcher,
 	if (shaderPatcher != programId->patcher)
 		return SCE_GXM_ERROR_INVALID_VALUE;
 	program = programId->programHeader;
-	if (program->flags & GXM_PROGRAM_FRAGMENT)
+	if (program->programFlags & GXM_PROGRAM_FRAGMENT)
 		return SCE_GXM_ERROR_INVALID_VALUE;
 	if (attributeCount == 0) {
 		if (streamCount != 0)
@@ -728,8 +728,8 @@ int sceGxmShaderPatcherCreateVertexProgram(SceGxmShaderPatcher *shaderPatcher,
 		goto done;
 
 	/* one host block: the program, the layout copies and the PDS program */
-	instanced = (program->flags & GXM_PROGRAM_INSTANCED) >> 17;
-	indexed = (program->flags & GXM_PROGRAM_INDEXED) >> 18;
+	instanced = (program->programFlags & GXM_PROGRAM_INSTANCED) >> 17;
+	indexed = (program->programFlags & GXM_PROGRAM_INDEXED) >> 18;
 	pdsSize = gxmPdsVertexProgramSize(attributeCount, streams, streamCount, NULL, instanced,
 					  indexed) + 15;
 	hostSize = pdsSize + (streamCount + 30 + attributeCount * 4) * 4;
@@ -802,7 +802,7 @@ int sceGxmShaderPatcherCreateVertexProgram(SceGxmShaderPatcher *shaderPatcher,
 	created->scratch = programId->scratch;
 	created->thread = programId->thread;
 	gxmDmsVertexInfo(program->primaryRegCount, program->secondaryRegCount, program->tempRegCount,
-			 varyings->vertex.outputs >> 24, (program->flags & GXM_PROGRAM_PHASED) >> 20,
+			 varyings->vertex.outputs >> 24, (program->programFlags & GXM_PROGRAM_PHASED) >> 20,
 			 &created->dms);
 	created->attributeCount = attributeCount;
 	created->streamCount = streamCount;
@@ -974,7 +974,7 @@ int gxmCreateFragmentProgram(SceGxmShaderPatcher *shaderPatcher, SceGxmShaderPat
 	if (shaderPatcher != programId->patcher)
 		return SCE_GXM_ERROR_INVALID_VALUE;
 	program = programId->programHeader;
-	flags = program->flags;
+	flags = program->programFlags;
 	if (!(flags & GXM_PROGRAM_FRAGMENT))
 		return SCE_GXM_ERROR_INVALID_VALUE;
 	if (!(gxmGlobals.compatFlags & GXM_COMPAT_SURFACE_ANY) &&
@@ -1233,7 +1233,7 @@ int sceGxmShaderPatcherCreateMaskUpdateFragmentProgram(SceGxmShaderPatcher *shad
 		}
 		sceClibMemset(created, 0, sizeof(*created));
 		created->program.magic = GXM_PROGRAM_MAGIC;
-		created->program.flags = GXM_PROGRAM_FRAGMENT | GXM_PROGRAM_UNK80000;
+		created->program.programFlags = GXM_PROGRAM_FRAGMENT | GXM_PROGRAM_UNK80000;
 		created->program.majorVersion = 1;
 		created->program.minorVersion = 5;
 		created->program.sdkVersion = FW_VERSION >> 16;

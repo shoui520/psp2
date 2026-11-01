@@ -78,7 +78,7 @@ int gxmFragmentBuildInit(GxmFragmentBuild *build, const SceGxmProgram *program,
 	int err;
 
 	/* the instructions that write the output */
-	if ((program->flags & (GXM_PROGRAM_NATIVE_COLOR | GXM_PROGRAM_UNK10000)) == 0) {
+	if ((program->programFlags & (GXM_PROGRAM_NATIVE_COLOR | GXM_PROGRAM_UNK10000)) == 0) {
 		outputCount = 0;
 		err = gxmOutputFormatResolve(outputFormat, &type, &componentCount, &outputCount);
 		if (err != 0)
@@ -88,7 +88,7 @@ int gxmFragmentBuildInit(GxmFragmentBuild *build, const SceGxmProgram *program,
 	}
 
 	if (blendInfo != NULL) {
-		if ((program->flags & GXM_PROGRAM_NATIVE_COLOR) || !gxmBlendInfoIsValid(blendInfo))
+		if ((program->programFlags & GXM_PROGRAM_NATIVE_COLOR) || !gxmBlendInfoIsValid(blendInfo))
 			return SCE_GXM_ERROR_INVALID_VALUE;
 		if ((type != SCE_GXM_PARAMETER_TYPE_U8 && type != SCE_GXM_PARAMETER_TYPE_F16) ||
 		    componentCount != 4)
@@ -105,7 +105,7 @@ int gxmFragmentBuildInit(GxmFragmentBuild *build, const SceGxmProgram *program,
 		}
 	}
 	if (outputCount == 0)
-		outputCount = (program->flags & GXM_PROGRAM_UNK4) ? 1 : 0;
+		outputCount = (program->programFlags & GXM_PROGRAM_UNK4) ? 1 : 0;
 	headerCount = (gxmGlobals.compatFlags & GXM_COMPAT_USSE_OLD_HEADER) ? 2 : 6;
 
 	build->program = program;
@@ -147,7 +147,7 @@ int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, 
 	type = gxmProgramGetVaryings(program)->fragment.outputRegisterType;
 	componentCount = gxmProgramGetVaryings(program)->fragment.outputComponentCount;
 	out = body;
-	if ((program->flags & (GXM_PROGRAM_NATIVE_COLOR | GXM_PROGRAM_UNK10000)) == 0)
+	if ((program->programFlags & (GXM_PROGRAM_NATIVE_COLOR | GXM_PROGRAM_UNK10000)) == 0)
 		out = gxmOutputFormatWriteConversion(body, varyings->fragment.outputRegister,
 						     build->outputFormat, &type, &componentCount,
 						     build->blendInfo != NULL);
@@ -158,7 +158,7 @@ int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, 
 		keepsDestination = SCE_FALSE;
 	else
 		keepsDestination = gxmBlendKeepsColor(blendInfo) && gxmBlendKeepsAlpha(blendInfo) &&
-				   !(program->flags & GXM_PROGRAM_UNK8000);
+				   !(program->programFlags & GXM_PROGRAM_UNK8000);
 
 	/* chain the phases */
 	phases = GXM_RELATIVE(program->entryOffset);
@@ -178,9 +178,9 @@ int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, 
 		if (build->multisampleMode != 0 && gxmBlendReadsDestination(blendInfo)) {
 			/* the last phase runs the output write as a phase of its own */
 			instr[0] = 0;
-			instr[1] = ((program->flags >> 1) & 1) << 13 | 0xfa440800;
+			instr[1] = ((program->programFlags >> 1) & 1) << 13 | 0xfa440800;
 			end = out;
-			if ((program->flags & GXM_PROGRAM_UNK4) && out == body) {
+			if ((program->programFlags & GXM_PROGRAM_UNK4) && out == body) {
 				out[0] = 0;
 				out[1] = 0xf8000140;
 				end = out + 2;
@@ -200,7 +200,7 @@ int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, 
 	}
 
 	/* the last instruction ends the program */
-	if ((program->flags & GXM_PROGRAM_UNK4) && out == body) {
+	if ((program->programFlags & GXM_PROGRAM_UNK4) && out == body) {
 		out[0] = 0;
 		out[1] = 0xf8000140;
 		out += 2;
@@ -219,7 +219,7 @@ int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, 
 	buffer->cur = (SceUInt32)(out + 4);
 
 	ref->address = 0;
-	flags = program->flags;
+	flags = program->programFlags;
 	kind = (flags & GXM_PROGRAM_UNK2) ? 3 : 2;
 	if (flags & GXM_PROGRAM_UNK800)
 		kind = (flags & GXM_PROGRAM_UNK2) ? 0xb : 0xa;

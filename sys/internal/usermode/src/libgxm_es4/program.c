@@ -38,8 +38,8 @@ SceBool sceGxmProgramIsEquivalent(const SceGxmProgram *programA, const SceGxmPro
 	if (programA->magic != programB->magic || programA->version != programB->version ||
 	    programA->size != programB->size)
 		return 0;
-	return sceClibMemcmp(&programA->flags, &programB->flags,
-			     programA->size - offsetof(SceGxmProgram, flags)) == 0;
+	return sceClibMemcmp(&programA->programFlags, &programB->programFlags,
+			     programA->size - offsetof(SceGxmProgram, programFlags)) == 0;
 }
 
 SceUInt32 sceGxmProgramGetSize(const SceGxmProgram *program)
@@ -49,32 +49,32 @@ SceUInt32 sceGxmProgramGetSize(const SceGxmProgram *program)
 
 SceUInt32 sceGxmProgramGetType(const SceGxmProgram *program)
 {
-	return program->flags & GXM_PROGRAM_FRAGMENT;
+	return program->programFlags & GXM_PROGRAM_FRAGMENT;
 }
 
 SceBool sceGxmProgramIsDiscardUsed(const SceGxmProgram *program)
 {
-	return (program->flags & GXM_PROGRAM_DISCARD) >> 3;
+	return (program->programFlags & GXM_PROGRAM_DISCARD) >> 3;
 }
 
 SceBool sceGxmProgramIsDepthReplaceUsed(const SceGxmProgram *program)
 {
-	return (program->flags & GXM_PROGRAM_DEPTH_REPLACE) >> 4;
+	return (program->programFlags & GXM_PROGRAM_DEPTH_REPLACE) >> 4;
 }
 
 SceBool sceGxmProgramIsSpriteCoordUsed(const SceGxmProgram *program)
 {
-	return (program->flags & GXM_PROGRAM_SPRITE_COORD) >> 5;
+	return (program->programFlags & GXM_PROGRAM_SPRITE_COORD) >> 5;
 }
 
 SceBool sceGxmProgramIsNativeColorUsed(const SceGxmProgram *program)
 {
-	return (program->flags & GXM_PROGRAM_NATIVE_COLOR) >> 6;
+	return (program->programFlags & GXM_PROGRAM_NATIVE_COLOR) >> 6;
 }
 
 SceBool sceGxmProgramIsFragColorUsed(const SceGxmProgram *program)
 {
-	return (program->flags & GXM_PROGRAM_FRAG_COLOR) >> 7;
+	return (program->programFlags & GXM_PROGRAM_FRAG_COLOR) >> 7;
 }
 
 int sceGxmProgramGetOutputRegisterFormat(const SceGxmProgram *program, SceUInt32 *type,
@@ -84,7 +84,7 @@ int sceGxmProgramGetOutputRegisterFormat(const SceGxmProgram *program, SceUInt32
 
 	if (program == NULL || type == NULL || componentCount == NULL)
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (!(program->flags & GXM_PROGRAM_FRAGMENT))
+	if (!(program->programFlags & GXM_PROGRAM_FRAGMENT))
 		return SCE_GXM_ERROR_INVALID_VALUE;
 	varyings = gxmProgramGetVaryings(program);
 	*type = varyings->fragment.outputRegisterType;
@@ -97,7 +97,7 @@ SceUInt32 sceGxmProgramGetVertexProgramOutputs(const SceGxmProgram *program)
 	const GxmProgramVaryings *varyings;
 	SceUInt32 flags, texCoords, outputs;
 
-	if (program->flags & GXM_PROGRAM_FRAGMENT)
+	if (program->programFlags & GXM_PROGRAM_FRAGMENT)
 		return 0;
 	varyings = gxmProgramGetVaryings(program);
 	flags = varyings->vertex.outputs;
@@ -163,7 +163,7 @@ SceUInt32 sceGxmProgramGetFragmentProgramInputs(const SceGxmProgram *program)
 	const GxmProgramFragmentInput *input, *end;
 	SceUInt32 inputs, word;
 
-	if (!(program->flags & GXM_PROGRAM_FRAGMENT))
+	if (!(program->programFlags & GXM_PROGRAM_FRAGMENT))
 		return 0;
 	varyings = gxmProgramGetVaryings(program);
 	input = GXM_RELATIVE(varyings->fragment.inputsOffset);
@@ -411,7 +411,7 @@ SceBool sceGxmProgramParameterIsRegFormat(const SceGxmProgram *program,
 	const GxmProgramVaryings *varyings;
 	SceUInt32 index;
 
-	if (program->flags & GXM_PROGRAM_FRAGMENT)
+	if (program->programFlags & GXM_PROGRAM_FRAGMENT)
 		return 0;
 	if (gxmParameterGetCategory(parameter) != SCE_GXM_PARAMETER_CATEGORY_ATTRIBUTE)
 		return 0;
@@ -438,14 +438,14 @@ SceUInt32 gxmProgramGetFragmentDms(const SceGxmProgram *program, SceBool phased,
 		outputs = 4;
 		perSample = 1;
 	}
-	if (program->flags & GXM_PROGRAM_NATIVE_COLOR)
+	if (program->programFlags & GXM_PROGRAM_NATIVE_COLOR)
 		outputs = ((program->tempRegCount2 + 1) & ~1) * perSample;
 	else if (!phased)
 		outputs = 0;
 	if (outputs < temps)
 		outputs = temps;
 	gxmDmsFragmentInfo(program->primaryRegCount, program->secondaryRegCount, outputs,
-			 (program->flags >> 20) & 1, &word);
+			 (program->programFlags >> 20) & 1, &word);
 	return word;
 }
 
@@ -589,7 +589,7 @@ int gxmProgramBuildVertexCode(GxmChunkBuffer *buffer, const SceGxmProgram *progr
 	entryField = GXM_RELATIVE(program->entryOffset);
 	entry = offset + *entryField * 8;
 	ref->address = 0;
-	ref->taskControl = (program->flags >> 1) & 1;
+	ref->taskControl = (program->programFlags >> 1) & 1;
 	if (unpackCode == NULL) {
 		gxmCodeRefSetAddress(ref, entry);
 		return 0;

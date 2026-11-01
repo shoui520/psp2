@@ -428,7 +428,7 @@ typedef struct SceGxmProgram {
 	SceUInt32 size;
 	SceUInt32 binaryGuid;
 	SceUInt32 sourceGuid;
-	SceUInt32 flags;			/* 0x14 GXM_PROGRAM_* */
+	SceUInt32 programFlags;		/* 0x14 GXM_PROGRAM_* */
 	SceUInt32 bufferFlags;
 	SceUInt32 texUnitFlags[2];
 	SceUInt32 parameterCount;		/* 0x24 */
@@ -468,7 +468,7 @@ typedef struct SceGxmProgram {
 
 static inline SceUInt32 sceGxmProgramGetProgramType(const SceGxmProgram *program)
 {
-	return program->flags & GXM_PROGRAM_FRAGMENT;
+	return program->programFlags & GXM_PROGRAM_FRAGMENT;
 }
 
 GXM_ASSERT_OFFSET(SceGxmProgram, secondaryPdsDataOffset, 0x94);
@@ -588,6 +588,14 @@ typedef struct GxmProgramVaryings {
 static inline const GxmProgramVaryings *gxmProgramGetVaryings(const SceGxmProgram *program)
 {
 	return GXM_RELATIVE(program->varyingsOffset);
+}
+
+/* a vertex program's varyings (Sony's program_private.h checks the type) */
+static inline const GxmProgramVaryings *gxmProgramGetVertexVaryings(const SceGxmProgram *program)
+{
+	GXM_DBG_ASSERT_AT("program_private.h", 32,
+			  (program->programFlags & SCE_GXM_FRAGMENT_PROGRAM) == 0);
+	return gxmProgramGetVaryings(program);
 }
 
 static inline const SceGxmProgramParameter *gxmProgramGetParameters(const SceGxmProgram *program)

@@ -7,6 +7,17 @@
 
 #include "gxm_internal.h"
 
+/* the debug build notes which states a command list sets (draw calls warn when one is missing) */
+#if SCE_DBG_ASSERTS_ENABLED
+#define GXM_LIST_STATE_SET(context, bit)					\
+	do {									\
+		if ((context)->type == SCE_GXM_CONTEXT_TYPE_DEFERRED)		\
+			(context)->listDepthStencilUsage |= (bit);		\
+	} while (0)
+#else
+#define GXM_LIST_STATE_SET(context, bit)	do { } while (0)
+#endif
+
 #define GXM_SET_STATE(context, word, mask, value, dirtyBit)			\
 	do {									\
 		SceUInt32 _new = (value) | ((context)->word & ~(mask));	\
@@ -18,7 +29,7 @@
 
 void gxmContextUpdateVertexOutputs(SceGxmContext *context, const SceGxmVertexProgram *program)
 {
-	const GxmProgramVaryings *varyings = gxmProgramGetVaryings(program->program);
+	const GxmProgramVaryings *varyings = gxmProgramGetVertexVaryings(program->program);
 	SceUInt32 dirty;
 
 	if (context->state.reserved0) {
@@ -146,12 +157,14 @@ void sceGxmSetBackStencilRef(SceGxmContext *context, SceUInt32 sref)
 
 void sceGxmSetFrontPointLineWidth(SceGxmContext *context, SceUInt32 width)
 {
+	GXM_DBG_ASSERT(176, 1 <= width && width <= 16);
 	GXM_SET_STATE(context, state.frontIsp, GXM_ISP_POINT_LINE_WIDTH,
 		      (width - 1) << GXM_ISP_POINT_LINE_WIDTH_SHIFT, GXM_DIRTY_FRONT_ISP);
 }
 
 void sceGxmSetBackPointLineWidth(SceGxmContext *context, SceUInt32 width)
 {
+	GXM_DBG_ASSERT(187, 1 <= width && width <= 16);
 	GXM_SET_STATE(context, state.backIsp, GXM_ISP_POINT_LINE_WIDTH,
 		      (width - 1) << GXM_ISP_POINT_LINE_WIDTH_SHIFT, GXM_DIRTY_BACK_ISP);
 }
@@ -222,6 +235,8 @@ void sceGxmSetBackStencilFunc(SceGxmContext *context, SceUInt32 func, SceUInt32 
 
 void sceGxmSetFrontDepthBias(SceGxmContext *context, SceInt32 factor, SceInt32 units)
 {
+	GXM_DBG_ASSERT(294, -16 <= factor && factor <= 15);
+	GXM_DBG_ASSERT(295, -16 <= units && units <= 15);
 	GXM_SET_STATE(context, state.frontBias, GXM_BIAS_MASK,
 		      ((factor << GXM_BIAS_SLOPE_SHIFT) & 0x03e00000) |
 		      ((units << GXM_BIAS_UNITS_SHIFT) & 0x001f0000),
@@ -230,6 +245,8 @@ void sceGxmSetFrontDepthBias(SceGxmContext *context, SceInt32 factor, SceInt32 u
 
 void sceGxmSetBackDepthBias(SceGxmContext *context, SceInt32 factor, SceInt32 units)
 {
+	GXM_DBG_ASSERT(311, -16 <= factor && factor <= 15);
+	GXM_DBG_ASSERT(312, -16 <= units && units <= 15);
 	GXM_SET_STATE(context, state.backBias, GXM_BIAS_MASK,
 		      ((factor << GXM_BIAS_SLOPE_SHIFT) & 0x03e00000) |
 		      ((units << GXM_BIAS_UNITS_SHIFT) & 0x001f0000),
@@ -258,17 +275,18 @@ GXM_VFP void sceGxmSetViewport(SceGxmContext *context, float xOffset, float xSca
 		gxmFloatBits(zOffset), gxmFloatBits(zScale),
 	};
 
-	if (context->state.viewport[0] == viewport[0] && context->state.viewport[1] == viewport[1] &&
-	    context->state.viewport[2] == viewport[2] && context->state.viewport[3] == viewport[3] &&
-	    context->state.viewport[4] == viewport[4] && context->state.viewport[5] == viewport[5])
-		return;
-	context->state.viewport[0] = viewport[0];
-	context->state.viewport[1] = viewport[1];
-	context->state.viewport[2] = viewport[2];
-	context->state.viewport[3] = viewport[3];
-	context->state.viewport[4] = viewport[4];
-	context->state.viewport[5] = viewport[5];
-	context->state.dirty |= GXM_DIRTY_VIEWPORT;
+	if (context->state.viewport[0] != viewport[0] || context->state.viewport[1] != viewport[1] ||
+	    context->state.viewport[2] != viewport[2] || context->state.viewport[3] != viewport[3] ||
+	    context->state.viewport[4] != viewport[4] || context->state.viewport[5] != viewport[5]) {
+		context->state.viewport[0] = viewport[0];
+		context->state.viewport[1] = viewport[1];
+		context->state.viewport[2] = viewport[2];
+		context->state.viewport[3] = viewport[3];
+		context->state.viewport[4] = viewport[4];
+		context->state.viewport[5] = viewport[5];
+		context->state.dirty |= GXM_DIRTY_VIEWPORT;
+	}
+	GXM_LIST_STATE_SET(context, GXM_LIST_VIEWPORT_SET);
 }
 
 GXM_VFP void sceGxmSetWClampValue(SceGxmContext *context, float clampValue)
@@ -299,11 +317,12 @@ void sceGxmSetRegionClip(SceGxmContext *context, SceUInt32 clipMode, SceUInt32 x
 	}
 	clip0 = (tileXMax & 0xff) | clipMode | ((tileXMin << 16) & 0xff0000);
 	clip1 = (tileYMax & 0xff) | ((tileYMin << 16) & 0xff0000);
-	if (context->state.regionClip[0] == clip0 && context->state.regionClip[1] == clip1)
-		return;
-	context->state.regionClip[0] = clip0;
-	context->state.regionClip[1] = clip1;
-	context->state.dirty |= GXM_DIRTY_REGION_CLIP;
+	if (context->state.regionClip[0] != clip0 || context->state.regionClip[1] != clip1) {
+		context->state.regionClip[0] = clip0;
+		context->state.regionClip[1] = clip1;
+		context->state.dirty |= GXM_DIRTY_REGION_CLIP;
+	}
+	GXM_LIST_STATE_SET(context, GXM_LIST_REGION_CLIP_SET);
 }
 
 void sceGxmSetCullMode(SceGxmContext *context, SceUInt32 mode)
@@ -381,22 +400,24 @@ void sceGxmSetDefaultRegionClipAndViewport(SceGxmContext *context, SceUInt32 xMa
 		context->state.regionClip[0] = clip0;
 		context->state.dirty |= GXM_DIRTY_REGION_CLIP;
 	}
+	GXM_LIST_STATE_SET(context, GXM_LIST_REGION_CLIP_SET);
 
 	halfWidth = (float)(xMax + 1) * 0.5f;
 	halfHeight = (float)(yMax + 1) * 0.5f;
 	negHalfHeight = (float)(yMax + 1) * -0.5f;
-	if (context->state.viewport[0] == gxmFloatBits(halfWidth) &&
-	    context->state.viewport[1] == gxmFloatBits(halfWidth) &&
-	    context->state.viewport[2] == gxmFloatBits(halfHeight) &&
-	    context->state.viewport[3] == gxmFloatBits(negHalfHeight) &&
-	    context->state.viewport[4] == gxmFloatBits(0.5f) &&
-	    context->state.viewport[5] == gxmFloatBits(0.5f))
-		return;
-	context->state.viewport[0] = gxmFloatBits(halfWidth);
-	context->state.viewport[1] = gxmFloatBits(halfWidth);
-	context->state.viewport[2] = gxmFloatBits(halfHeight);
-	context->state.viewport[3] = gxmFloatBits(negHalfHeight);
-	context->state.dirty |= GXM_DIRTY_VIEWPORT;
-	context->state.viewport[4] = gxmFloatBits(0.5f);
-	context->state.viewport[5] = gxmFloatBits(0.5f);
+	if (context->state.viewport[0] != gxmFloatBits(halfWidth) ||
+	    context->state.viewport[1] != gxmFloatBits(halfWidth) ||
+	    context->state.viewport[2] != gxmFloatBits(halfHeight) ||
+	    context->state.viewport[3] != gxmFloatBits(negHalfHeight) ||
+	    context->state.viewport[4] != gxmFloatBits(0.5f) ||
+	    context->state.viewport[5] != gxmFloatBits(0.5f)) {
+		context->state.viewport[0] = gxmFloatBits(halfWidth);
+		context->state.viewport[1] = gxmFloatBits(halfWidth);
+		context->state.viewport[2] = gxmFloatBits(halfHeight);
+		context->state.viewport[3] = gxmFloatBits(negHalfHeight);
+		context->state.dirty |= GXM_DIRTY_VIEWPORT;
+		context->state.viewport[4] = gxmFloatBits(0.5f);
+		context->state.viewport[5] = gxmFloatBits(0.5f);
+	}
+	GXM_LIST_STATE_SET(context, GXM_LIST_VIEWPORT_SET);
 }

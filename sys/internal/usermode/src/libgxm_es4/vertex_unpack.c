@@ -101,7 +101,7 @@ int gxmVertexUnpackBuild(GxmChunkBuffer *buffer, const SceGxmProgram *program,
 	*offset = buffer->cur + buffer->gpuEnd - buffer->end;
 	*codeOut = code;
 	code[0] = 0;
-	code[1] = ((program->flags >> 1) & 1) << 13 | 0xfa440000;
+	code[1] = ((program->programFlags >> 1) & 1) << 13 | 0xfa440000;
 	if (!(gxmGlobals.compatFlags & GXM_COMPAT_USSE_OLD_HEADER))
 		start = gxmUsseWriteHeader(code + 2);
 	else
