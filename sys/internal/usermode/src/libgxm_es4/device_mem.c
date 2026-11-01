@@ -20,31 +20,52 @@ typedef struct GxmDeviceMem {
 	SceUInt32 type;
 } GxmDeviceMem;
 
-int SceGxmInternalForTest_D412F27B(SceUInt32 type, SceUInt32 attr, SceSize size,
-				   SceSize alignment, GxmDeviceMem **memory)
+/* Sony's sceGxmAllocDeviceMemLinux (its debug messages name it) */
+int SceGxmInternalForTest_D412F27B(SceUInt32 heapId, SceUInt32 flags, SceSize size,
+				   SceSize alignment, GxmDeviceMem **memInfo)
 {
 	GxmDeviceMem *block;
 	SceSize allocSize;
 	int err;
 
-	if (type > GXM_DEVICE_MEM_FRAGMENT_USSE || (attr & ~3) != 0 || attr == 0)
+	if (heapId > GXM_DEVICE_MEM_FRAGMENT_USSE) {
+		GXM_DBG_ERROR(43, "Parameter heapId to function sceGxmAllocDeviceMemLinux has value "
+			      "%d, which is not allowed.", heapId);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if ((alignment & (alignment - 1)) != 0 || alignment == 0)
+	}
+	if ((flags & ~3) != 0) {
+		GXM_DBG_ERROR(48, "Parameter flags to function sceGxmAllocDeviceMemLinux has value "
+			      "0x%x, which contains reserved bits.", flags);
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if (flags == 0) {
+		GXM_DBG_ERROR(52, "Parameter flags to function sceGxmAllocDeviceMemLinux marks memory "
+			      "as neither readable nor writeable.");
+		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
+	if ((alignment & (alignment - 1)) != 0 || alignment == 0) {
+		GXM_DBG_ERROR(57, "Parameter alignment to function sceGxmAllocDeviceMemLinux has value "
+			      "%d, which is not a power of 2.", alignment);
 		return SCE_GXM_ERROR_INVALID_ALIGNMENT;
-	if (memory == NULL)
+	}
+	if (memInfo == NULL) {
+		GXM_DBG_ERROR(61, "Parameter memInfo to function sceGxmAllocDeviceMemLinux is NULL.");
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 
 	/* CDRAM comes in 256 KiB units, the rest in pages */
-	if (type == GXM_DEVICE_MEM_CDRAM)
+	if (heapId == GXM_DEVICE_MEM_CDRAM)
 		allocSize = (size + 0x3ffff) & ~0x3ffff;
 	else
 		allocSize = (size + 0xfff) & ~0xfff;
 	block = SceGpuEs4User_7AF40138(sizeof(*block));
-	if (block == NULL)
+	if (block == NULL) {
+		GXM_DBG_ERROR(71, "Failed to allocate host memory for client mem info.");
 		return SCE_GXM_ERROR_OUT_OF_MEMORY;
+	}
 	block->size = size;
 	block->uid = sceKernelAllocMemBlock("devicemem",
-					    type == GXM_DEVICE_MEM_CDRAM ?
+					    heapId == GXM_DEVICE_MEM_CDRAM ?
 					    SCE_KERNEL_MEMBLOCK_TYPE_USER_CDRAM_RW :
 					    SCE_KERNEL_MEMBLOCK_TYPE_USER_RW_UNCACHE,
 					    allocSize, NULL);
@@ -53,16 +74,16 @@ int SceGxmInternalForTest_D412F27B(SceUInt32 type, SceUInt32 attr, SceSize size,
 	err = sceKernelGetMemBlockBase(block->uid, &block->base);
 	if (err != 0)
 		return err;
-	block->type = type;
-	if (type == GXM_DEVICE_MEM_VERTEX_USSE)
+	block->type = heapId;
+	if (heapId == GXM_DEVICE_MEM_VERTEX_USSE)
 		err = sceGxmMapVertexUsseMemory(block->base, allocSize, &block->usseOffset);
-	else if (type == GXM_DEVICE_MEM_FRAGMENT_USSE)
+	else if (heapId == GXM_DEVICE_MEM_FRAGMENT_USSE)
 		err = sceGxmMapFragmentUsseMemory(block->base, allocSize, &block->usseOffset);
 	else
-		err = sceGxmMapMemory(block->base, allocSize, attr);
+		err = sceGxmMapMemory(block->base, allocSize, flags);
 	if (err != 0)
 		return err;
-	*memory = block;
+	*memInfo = block;
 	return 0;
 }
 
