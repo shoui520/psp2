@@ -214,7 +214,8 @@ typedef struct HttpRequest {
 	SceUInt32 redirectCount;
 	int authRetries;
 	SceULong64 contentLength;
-	int reserved30[4];
+	int reserved30[2];
+	SceULong64 receivedLength;		/* of the body, against response.contentLength */
 	SceBool followOnly303;			/* only a 303 is followed (nothing here sets it) */
 	SceBool aborted;			/* sceHttpAbortRequest was called */
 	struct HttpRequestExtra *extra;	/* method 8's name, ... */
@@ -252,7 +253,8 @@ typedef struct HttpRequest {
 	void *inflateBuffer;
 	int reserved41c[4];
 	struct z_stream_s *inflateStream;	/* a gzip body's */
-	int reserved430[2];
+	SceBool inflateEnd;			/* the gzip stream is at its end */
+	int reserved434;
 	int responseHeaderState;		/* where the reader is in the CR LF CR LF */
 	SceSize responseHeaderPos;
 	SceUInt32 chunkState;			/* _sceHttpRequestReadChunked's */
@@ -661,6 +663,15 @@ void _sceHttpUriNormalize(const HttpAllocator *allocator, char *url);
 int _sceHttpSchemeGetType(const char *scheme);
 SceBool _sceHttpStrNotEmpty(const char *s);
 char *_sceHttpRequestGetUrl(HttpRequest *req);
+int _sceHttpRequestCreate(HttpConnection *conn, int method, const char *path, const char *query,
+			  const char *fragment, const char *username, const char *password,
+			  SceULong64 contentLength);
+int _sceHttpRequestSend(HttpRequest *req, HttpConnection *conn, const void *msg, SceSize len,
+			int flags, SceBool nonblock, SceBool noDelay);
+int _sceHttpRequestCompleteEx(HttpRequest *req, SceBool close, SceBool end, SceBool main,
+			      SceBool failed);
+int _sceHttpRequestComplete(HttpRequest *req, SceBool close, SceBool end);
+SceBool _sceHttpStrHasLineBreak(const char *s);
 
 /* redirect.c */
 int _sceHttpRequestCheckRedirect(HttpRequest *req);
