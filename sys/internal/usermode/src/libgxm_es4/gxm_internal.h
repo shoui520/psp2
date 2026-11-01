@@ -88,6 +88,9 @@ int sceKernelIsGameBudget(void);
 	GXM_DBG_ERROR(line, "Function " #function " has been called outside of a %s.",	\
 		      (context)->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE ? "command list" : "scene")
 
+/* Sony's alignment test (sceGxmExecuteCommandList's assertion names it) */
+#define SCE_GXM_IS_ALIGNED(value, alignment)	(((value) & ((alignment) - 1)) == 0)
+
 /* the size of one USSE instruction (Sony's SGX headers) */
 #define EURASIA_USE_INSTRUCTION_SIZE	8
 
@@ -675,6 +678,9 @@ int gxmMemoryCheckCallbackRegion(const void *address, SceSize size, const char *
 /* memory.c: SCE_OK when size bytes at address are mapped GPU memory; reports the parameter */
 int gxmMemoryCheckParameter(const void *address, SceSize size, const char *parameter,
 			    const char *function);
+/* memory.c: SCE_OK when size bytes at address are mapped; warns when they are uncached */
+int gxmMemoryCheckCachedParameter(const void *address, SceSize size, const char *parameter,
+				  const char *function);
 #endif
 
 /* aligned space for size bytes; the caller advances cur past what it writes */
@@ -1503,7 +1509,7 @@ GXM_ASSERT_OFFSET(SceGxmContext, listStart, 0x400);
 GXM_ASSERT_OFFSET(SceGxmContext, listSerial, 0x40c);
 
 /* a deferred context uses only the memory up to its own fields */
-#define GXM_DEFERRED_CONTEXT_SIZE	0x410
+#define GXM_DEFERRED_CONTEXT_SIZE	(offsetof(SceGxmContext, listSerial) + sizeof(SceUInt32))
 
 /* the depth/stencil state a command list's draws use (listDepthStencilUsage) */
 #define GXM_LIST_USES_DEPTH_FRONT	0x00000001
