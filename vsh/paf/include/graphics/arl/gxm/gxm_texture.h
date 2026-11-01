@@ -179,20 +179,63 @@ public:
 	bool init(const common::SharedPtr<TextureObject> &other);
 };
 
+/* a 2D texture of one format over the memory an allocator gives, filled from data when given */
+template<ImageMode FORMAT>
+common::SharedPtr<Texture2D> CreateTexture(common::SharedPtr<VramAllocator> allocator,
+					   SurfaceSize size, const void *data, SurfaceFlags flags,
+					   uint32_t levels);
+
+/* textures made from nothing: noise, one colour, a checkerboard (names ours) */
+common::SharedPtr<Texture2D> CreateNoiseTexture(common::SharedPtr<VramAllocator> allocator,
+						SurfaceSize size, SurfaceFlags flags);
+common::SharedPtr<Texture2D> CreateSolidTexture(common::SharedPtr<VramAllocator> allocator,
+						uint32_t color, SurfaceSize size,
+						SurfaceFlags flags);
+common::SharedPtr<Texture2D> CreateCheckerTexture(common::SharedPtr<VramAllocator> allocator,
+						  SurfaceSize size, SurfaceSize cell,
+						  SurfaceFlags flags);
+
 }
 }
 }
 
 extern "C" {
 /* requests the texture's mip levels be generated: nothing to do on GXM */
-void ScePafGraphics_FF97623F(paf::graph::arl::TextureObject *texture);
+void ScePafGraphics_FF97623F(paf::graph::arl::TextureObject *texture, float quality);
 /* sets up a 2D texture's surface for the size, format and levels given */
 bool ScePafGraphics_C4BD3558(paf::graph::arl::Texture2D *texture, int32_t width,
 			     int32_t height, ImageMode format, uint32_t levels,
 			     paf::graph::arl::SurfaceFlags flags);
 /* copies an image into a mip level of a texture whose surface is set up */
-int ScePafGraphics_309D2902(paf::graph::arl::Texture2D *texture, int32_t level, int32_t x,
-			    int32_t y, int32_t width, int32_t height, const void *data);
+int ScePafGraphics_309D2902(paf::graph::arl::Texture2D *texture, int32_t level, int32_t width,
+			    int32_t height, ImageMode format, uint32_t levels, const void *data);
+/* a square texture of one channel, its value the distance from the centre (1 at the edges) */
+paf::common::SharedPtr<paf::graph::arl::Texture2D>
+ScePafGraphics_27C5476A(paf::common::SharedPtr<paf::graph::arl::VramAllocator> allocator,
+			uint32_t size, paf::graph::arl::SurfaceFlags flags, bool mipmap,
+			bool generate_mipmaps);
+}
+
+namespace paf {
+namespace graph {
+namespace arl {
+
+template<ImageMode FORMAT>
+__attribute__((noinline)) common::SharedPtr<Texture2D>
+CreateTexture(common::SharedPtr<VramAllocator> allocator, SurfaceSize size, const void *data,
+	      SurfaceFlags flags, uint32_t levels)
+{
+	common::SharedPtr<Texture2D> texture(new Texture2D(allocator));
+
+	ScePafGraphics_C4BD3558(texture.get(), size.m_width, size.m_height, FORMAT, levels, flags);
+	if (data != NULL)
+		ScePafGraphics_309D2902(texture.get(), 0, size.m_width, size.m_height, FORMAT, levels,
+					data);
+	return texture;
+}
+
+}
+}
 }
 
 #endif

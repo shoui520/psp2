@@ -53,10 +53,10 @@ enum TextureWrap {
 	TEXTURE_WRAP_CLAMP_HALF_BORDER = SCE_GXM_TEXTURE_ADDR_CLAMP_HALF_BORDER
 };
 
-/* the size of GXM's tiles, which every arl file has its copy of (names ours) */
-class TileSize {
+/* a surface's width and height, passed by value (names ours) */
+class SurfaceSize {
 public:
-	__attribute__((always_inline)) TileSize(int32_t width, int32_t height)
+	__attribute__((always_inline)) SurfaceSize(int32_t width, int32_t height)
 		: m_width(width), m_height(height)
 	{
 	}
@@ -65,7 +65,8 @@ public:
 	int32_t m_height;
 };
 
-static const TileSize s_tile_size(32, 32);
+/* the size of GXM's tiles, which every arl file has its copy of (name ours) */
+static const SurfaceSize s_tile_size(32, 32);
 
 }
 }

@@ -82,7 +82,7 @@ int TextureObject::setWrapT(TextureWrap wrap)
 using namespace paf;
 using namespace paf::graph::arl;
 
-void ScePafGraphics_FF97623F(TextureObject *texture)
+void ScePafGraphics_FF97623F(TextureObject *texture, float quality)
 {
 }
 
@@ -158,8 +158,8 @@ bool Texture2D::init(const common::SharedPtr<TextureObject> &other)
 }
 }
 
-int ScePafGraphics_309D2902(Texture2D *texture, int32_t level, int32_t x, int32_t y,
-			    int32_t width, int32_t height, const void *data)
+int ScePafGraphics_309D2902(Texture2D *texture, int32_t level, int32_t width, int32_t height,
+			    ImageMode format, uint32_t levels, const void *data)
 {
 	if (texture->m_desc.m_width == 0 || texture->m_desc.m_height == 0)
 		return 0;
