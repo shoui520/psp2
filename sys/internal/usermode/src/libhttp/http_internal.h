@@ -126,7 +126,8 @@ typedef struct HttpTemplate {
 	void *cookieSendUserArg;
 	SceHttpCookieRecvCallback cookieRecvCallback;
 	void *cookieRecvUserArg;
-	int reservedA0[2];
+	SceHttpsCallback sslCallback;		/* sceHttpsSetSslCallback's */
+	void *sslCallbackUserArg;
 	struct HttpHeader *headers;
 	HttpAllocation *allocations;		/* freed with the template (_sceHttpFreeList) */
 	HttpAllocator allocator;
@@ -156,13 +157,15 @@ typedef struct HttpConnection {
 	int savedSendTimeout;
 	int resolverId;
 	SceNetSockaddrIn addr;
-	int reserved40[2];
+	void *ssl;				/* the SSL connection (SceSslInternal) */
+	void *sslCtx;				/* its context */
 	char *hostname;
 	int reserved4c;
 	int resolveState;			/* _sceHttpRequestResolve's */
 	SceUID sema;
 	SceBool reused;				/* a kept-alive connection a request sends on again */
-	int reserved5c[2];
+	int reserved5c;
+	struct HttpsSslContext *sslContext;	/* what the SSL callback is given */
 	HttpTemplate tmpl;
 	SceUShort16 port;
 	SceUShort16 reserved14a;
@@ -172,7 +175,8 @@ typedef struct HttpConnection {
 	SceSize recvLen;			/* the bytes in it */
 	SceBool recvEof;			/* the peer closed */
 	int sslError;				/* the SSL failure (0x80435xxx) behind SCE_HTTP_ERROR_SSL */
-	int reserved164[9];
+	SceUInt32 sslErrorDetail;		/* the errno behind SCE_HTTPS_ERROR_IO */
+	int reserved168[8];
 	SceBool aborted;			/* sceNetSocketAbort was called on sock */
 	int reserved18c;
 } HttpConnection;
@@ -721,7 +725,7 @@ int _sceHttpSocketPeek(int sock, void *buf, SceSize len);
 int _sceHttpConnectionSend(HttpConnection *conn, const void *msg, SceSize len, int flags,
 			   SceBool nonblock, SceBool noDelay);
 int _sceHttpRequestSkipLine(HttpRequest *req, int flags);
-void _sceHttpsClose(HttpConnection *conn);
+int _sceHttpsClose(HttpConnection *conn);
 int _sceHttpsRecv(HttpConnection *conn, void *buf, SceSize len);
 int _sceHttpsSend(HttpConnection *conn, const void *buf, SceSize len);
 #define HTTP_SO_PRIVATE_FLAGS	0x40000		/* a socket option no SDK header names */
@@ -846,8 +850,32 @@ int SceHttp_855D5254(int value);
 /* cert.c: the loaded CA certificates and the client certificate with its private key */
 #define HTTPS_SSL_ERROR_INVALID_VALUE	-2143070207	/* 0x80435801 */
 #define HTTPS_SSL_ERROR_INVALID_ID	-2143070206	/* 0x80435802 */
+#define HTTPS_SSL_ERROR_OUT_OF_SIZE	-2143070205	/* 0x80435803 */
+#define HTTPS_SSL_ERROR_OUT_OF_MEMORY	-2143070204	/* 0x80435804 */
+#define HTTPS_SSL_ERROR_SSL		-2143070203	/* 0x80435805 */
+#define HTTPS_SSL_ERROR_CERT		-2143070202	/* 0x80435806 */
+#define HTTPS_SSL_ERROR_INTERNAL	-2143070201	/* 0x80435807 */
 
-struct HttpsCaListContext;
+/*
+ * What libhttp's SSL callback is given: a connection's (_sceHttpsConnect, with the lock
+ * functions when option 22 is set) or the CA list's (_sceHttpsGetCaList, no lock).
+ */
+typedef struct HttpsSslContext {
+	SceUInt32 sslFlags;			/* SCE_HTTPS_FLAG_*, HTTPS_SSL_CONTEXT_LOCKED */
+	const char *hostname;
+	int *sslError;				/* the connection's sslError */
+	SceUInt32 *sslErrorDetail;		/* and sslErrorDetail */
+	SceHttpsCallback callback;
+	void *userArg;
+	void *(*malloc)(void *arg, SceSize size);
+	void *(*realloc)(void *arg, void *ptr, SceSize size);
+	void (*free)(void *arg, void *ptr);
+	void *allocatorArg;			/* the connection's template, or NULL */
+	int (*lock)(void *arg);
+	int (*unlock)(void *arg);
+} HttpsSslContext;
+#define HTTPS_SSL_CONTEXT_LOCKED	0x40000000	/* lock and unlock are set */
+#define HTTPS_SSL_CONTEXT_SIZE		offsetof(HttpsSslContext, lock)	/* without them */
 
 int SceHttp_E0825488(void *(*mallocFunc)(SceSize size), void (*freeFunc)(void *ptr));
 int SceHttp_42108FBE(void);
@@ -856,23 +884,23 @@ int SceHttp_11C9BCE8(void);
 int SceHttp_F8885CFD(const void *data, SceSize size);
 int SceHttp_031EBD2A(const void *data, SceSize size);
 int SceHttp_802E3C30(const void *data, SceSize size);
-int SceHttp_A9A39BA1(int sslCtx, void *arg);
-int SceHttp_A4CF892E(void);
+int SceHttp_A9A39BA1(void *sslCtx, void *arg);
+int SceHttp_A4CF892E(void *sslCtx, void *arg);
 SceBool _sceHttpsCertIsInitialized(void);
 int _sceHttpsCertGetCa(int unused, int index, void *buf, SceSize size, int unused2,
 		       SceSize *outSize);
 int _sceHttpsCertGetClientCert(void *buf, SceSize size, SceSize *outSize);
 int _sceHttpsCertGetPrivateKey(void *buf, SceSize size, SceSize *outSize);
 int _sceHttpsCertGetCaList(SceSslCert ***caCerts, SceInt32 *caNum,
-			   struct HttpsCaListContext *context);
+			   HttpsSslContext *context);
 int _sceHttpsCertFreeCaList(SceSslCert **caCerts, SceInt32 caNum,
-			    struct HttpsCaListContext *context);
+			    HttpsSslContext *context);
 
 /* the SSL glue (not written yet) */
-int _sceHttpsSslCallback(int sslCtx, void *data, int arg2, int arg3, int *result);
+int _sceHttpsSslCallback(void *sslCtx, void *data, int arg2, int arg3, int *result);
 int _sceHttpsSslGetCaList(SceSslCert ***caCerts, SceInt32 *caNum,
-			  struct HttpsCaListContext *context);
+			  HttpsSslContext *context);
 int _sceHttpsSslFreeCaList(SceSslCert **caCerts, SceInt32 caNum,
-			   struct HttpsCaListContext *context);
+			   HttpsSslContext *context);
 
 #endif /* HTTP_INTERNAL_H */

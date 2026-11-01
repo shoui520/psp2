@@ -1,6 +1,8 @@
 /*
  * SceSslInternal: libssl's library for the system's own users (libhttp), the exports this
- * tree calls so far.
+ * tree calls so far. libssl is RSA BSAFE SSL-C, whose interface follows SSLeay's: a library
+ * handle, a context made from a method, a connection made from the context, and the
+ * certificate, key and BIO objects around them.
  */
 
 #ifndef _LIBSSL_SSLINTERNAL_H
@@ -8,10 +10,71 @@
 
 #include <scetypes.h>
 
-/* the callback libhttp installs on an SSL context */
-typedef int (*SceSslInternalCallback)(int ctx, void *data, int arg2, int arg3, int *result);
+/* what SceSslInternal_2F0FC3CD makes of an I/O call's result */
+#define SSL_INTERNAL_ERROR_NONE		0
+#define SSL_INTERNAL_ERROR_SSL		1
+#define SSL_INTERNAL_ERROR_WANT_READ	2
+#define SSL_INTERNAL_ERROR_WANT_WRITE	3
+#define SSL_INTERNAL_ERROR_SYSCALL	5
+#define SSL_INTERNAL_ERROR_ZERO_RETURN	6
 
-int SceSslInternal_260F5A85(int ctx, int value);
-int SceSslInternal_AF50B945(int ctx, SceSslInternalCallback callback, void *arg);
+/* the libraries SceSslInternal_461C5990 reports for */
+#define SSL_INTERNAL_LIBRARY_SSL	0
+#define SSL_INTERNAL_LIBRARY_HTTP	1
+
+/* the callback libhttp installs on an SSL context */
+typedef int (*SceSslInternalCallback)(void *ctx, void *data, int arg2, int arg3, int *result);
+/* a connection's client certificate and key, on the server's request */
+typedef int (*SceSslInternalClientCertCallback)(void *ssl, void **cert, void **key);
+/* the handshake's progress */
+typedef void (*SceSslInternalInfoCallback)(void *ssl, int where, int ret);
+typedef void (*SceSslInternalMessageCallback)(void);
+
+int sceSslInternalIsInitalized(void);
+int sceSslInternalWrite(void *ssl, const void *buf, int len);
+
+/* the library, its client method, contexts and their settings */
+int SceSslInternal_2185BB05(void **lib);
+void *SceSslInternal_A374CD7B(void);
+void *SceSslInternal_E746465E(void *lib, void *method);
+void SceSslInternal_EF9EBAC7(void *ctx);
+int SceSslInternal_67FB1CD3(void *ctx, const void *seed, SceSize size);
+void SceSslInternal_FBEB1FD7(void *ctx, SceUInt32 options);
+void SceSslInternal_9E38815D(void *ctx, SceSslInternalClientCertCallback callback);
+int SceSslInternal_CC7F4211(void *ctx, int cmd, int larg, void *parg);
+int SceSslInternal_260F5A85(void *ctx, int value);
+int SceSslInternal_AF50B945(void *ctx, SceSslInternalCallback callback, void *arg);
+int SceSslInternal_461C5990(int library, int error);
+
+/* connections */
+void *SceSslInternal_D28834E6(void *ctx);
+void SceSslInternal_19B2BB58(void *ssl);
+void SceSslInternal_EC9FAF42(void *ssl);
+void SceSslInternal_0DB6C206(void *ssl, SceUInt32 mode);
+void SceSslInternal_4A1557A7(void *ssl, void *rbio, void *wbio);
+void SceSslInternal_F2C9B744(void *ssl, SceSslInternalInfoCallback callback);
+void SceSslInternal_F71DB06F(void *ssl, SceSslInternalMessageCallback callback, void *arg);
+void SceSslInternal_CEE46B33(void *ssl);
+int SceSslInternal_E5EDD91B(void *ssl);
+int SceSslInternal_2F0FC3CD(void *ssl, int ret);
+int SceSslInternal_4F781BB6(void *ssl, void *buf, int len);
+int SceSslInternal_24C6257F(void *ssl, int what, void **value);
+int SceSslInternal_A4EA9DE0(void *ssl);
+int SceSslInternal_243DE290(void *ssl, int index, void **name);
+
+/* BIOs, certificates, keys and names */
+void *SceSslInternal_FFE2ED51(int sock, int closeFlag);
+void *SceSslInternal_B8E6E249(void);
+int SceSslInternal_33AC7A16(void *bio, const void *buf, int len);
+void SceSslInternal_C4D984C2(void *bio);
+int SceSslInternal_29AAC768(void *lib, int arg1, int format, SceSize size, const void *data,
+			    void **end, void **cert);
+void SceSslInternal_144FA354(void *cert);
+int SceSslInternal_7D30F0A6(void *bio, void *lib, void **key, int type, int format);
+void SceSslInternal_46358909(void *key);
+int SceSslInternal_D68D8421(void *cert, void *key);
+int SceSslInternal_81FA5DBE(void *cert, int which, void **name);
+int SceSslInternal_568F0E80(void *a, void *b);
+void SceSslInternal_CE37B69E(void *name);
 
 #endif /* _LIBSSL_SSLINTERNAL_H */

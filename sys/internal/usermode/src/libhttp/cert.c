@@ -255,24 +255,24 @@ int _sceHttpsCertGetPrivateKey(void *buf, SceSize size, SceSize *outSize)
 }
 
 /* puts libhttp's callback on an SSL context */
-int SceHttp_A9A39BA1(int sslCtx, void *arg)
+int SceHttp_A9A39BA1(void *sslCtx, void *arg)
 {
 	int ret = 0;
 
-	if (sslCtx == 0 || arg == NULL)
+	if (sslCtx == NULL || arg == NULL)
 		return HTTPS_SSL_ERROR_INVALID_VALUE;
 	SceSslInternal_260F5A85(sslCtx, 1);
 	SceSslInternal_AF50B945(sslCtx, _sceHttpsSslCallback, arg);
 	return ret;
 }
 
-int SceHttp_A4CF892E(void)
+int SceHttp_A4CF892E(void *sslCtx, void *arg)
 {
 	return 0;
 }
 
 int _sceHttpsCertGetCaList(SceSslCert ***caCerts, SceInt32 *caNum,
-			   struct HttpsCaListContext *context)
+			   HttpsSslContext *context)
 {
 	int ret = HTTPS_SSL_ERROR_INVALID_VALUE;
 
@@ -282,7 +282,7 @@ int _sceHttpsCertGetCaList(SceSslCert ***caCerts, SceInt32 *caNum,
 }
 
 int _sceHttpsCertFreeCaList(SceSslCert **caCerts, SceInt32 caNum,
-			    struct HttpsCaListContext *context)
+			    HttpsSslContext *context)
 {
 	int ret = HTTPS_SSL_ERROR_INVALID_VALUE;
 
