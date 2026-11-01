@@ -13,6 +13,8 @@ namespace ui {
 
 class Camera : public Widget {
 public:
+	Camera(Widget *parent, CreateParam *param);
+
 	float GetRollScreen(int32_t opt);
 
 	uint8_t reserved[0x18];

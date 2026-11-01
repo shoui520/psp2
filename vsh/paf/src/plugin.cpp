@@ -12,6 +12,9 @@
 #include <timer/timer.h>
 #include <graphics/surface/surface.h>
 #include <graphics/surface/surface_pool.h>
+#include <graphics/surface/surface_display.h>
+#include <widget/w_scene.h>
+#include <widget/w_camera.h>
 #include <file/localfile.h>
 #include <compress/compress.h>
 #include <memory/heap_allocator.h>
@@ -1726,6 +1729,100 @@ void Plugin::InstantiateWidget(const cxml::Element &elm, ui::Widget *parent, boo
 		widget->SetBehind(sibling);
 }
 
+ui::Scene *Plugin::PageOpen(const cxml::Element &node, const PageOpenParam &param)
+{
+	if (!m_initialized || !cxml::util::CheckElementName(node, "page"))
+		return NULL;
+
+	ui::Widget *opened = GetNodeEntity_Widget(node);
+
+	if (opened != NULL)
+		return static_cast<ui::Scene *>(opened);
+
+	uint32_t idhash = 0;
+
+	scePafResourceGetAttributeIdIntLpb(&node, "id", &idhash);
+
+	IDParam id(s_empty_id, idhash);
+
+	ScePafToplevel_3B003F16(this, &id.m_id, idhash, false);
+
+	ui::EnvironmentParam *env_param = m_env_param;
+	int32_t graphics_flag = m_graphics_flag;
+
+	if (param.env_param != NULL)
+		env_param = param.env_param;
+	if (param.graphics_flag != 128)
+		graphics_flag = param.graphics_flag;
+	ui::Scene *page = new ui::Scene(Framework::framework->m_env,
+					param.overwrite_draw_priority >= 0 ?
+						param.overwrite_draw_priority : m_draw_priority,
+					NULL, env_param, graphics_flag);
+
+	InstantiateWidget_InitEventHandler(id, page, param.event_handler_table);
+	SetNodeEntity_Widget(node, page);
+	if (id.m_idhash != 0)
+		page->m_name = id;
+
+	IDParam plugin_id(m_name);
+
+	page->m_plugin_id = plugin_id.m_idhash;
+
+	ui::Widget::CreateParam camera_param;
+
+	camera_param.m_parent_protected = true;
+	new ui::Camera(page, &camera_param);
+
+	const int32_t *origin;
+	uint32_t num;
+
+	if (scePafResourceGetAttributeIntegerArray(&node, "origin", &origin, &num) == 0) {
+		uint32_t ax = num != 0 ? origin[0] : 0;
+		uint32_t ay = --num != 0 ? origin[1] : 0;
+		uint32_t az = --num != 0 ? origin[2] : 0;
+
+		if ((ax | ay | az) != 0)
+			page->SetOrigin(ax, ay, az, NULL);
+	}
+
+	cxml::Element entity;
+	uint32_t template_id;
+
+	if (scePafResourceGetAttributeIdInt(&node, "template", &template_id, &entity) == 0) {
+		TemplateOpenParam template_param;
+
+		template_param.event_handler_table = param.event_handler_table;
+		TemplateOpen(page, IDParam(s_empty_id, template_id), template_param);
+	}
+
+	cxml::Element child;
+
+	for (child = node.GetFirstChild(); child.doc != NULL && child.offset >= 0;
+	     child = child.GetNextSibling())
+		InstantiateWidget(child, page->GetInternalWidget(), false, param.event_handler_table,
+				  NULL);
+	AdjustPageDrawOrder(page, id, param.overwrite_draw_priority);
+	ScePafToplevel_995AE4B6(this, page, param);
+	if (m_monitoring_callback_pageopen != NULL) {
+		cxml::Element opened_node = node;
+
+		m_monitoring_callback_pageopen(this, &opened_node);
+	}
+	switch (m_page_debug_mode) {
+	case 1:
+		ScePafToplevel_68607CDE(this, page, 0, true);
+		break;
+	case 2:
+		ScePafToplevel_68607CDE(this, page, 1, true);
+		break;
+	case 3:
+		ScePafToplevel_68607CDE(this, page, 2, true);
+		break;
+	}
+	graph::s_page_opened = true;
+	return page;
+}
+
 Plugin::InitParam2::InitParam2()
 {
 	draw_priority = 150;
@@ -1778,6 +1875,16 @@ void Plugin::Stop()
 		m_stop_func(this);
 }
 
+void Plugin::Exit()
+{
+	if (m_option & Option_WaitWidgetActuallyDestroyed) {
+		while (ui::Widget::s_destroying_count > 0)
+			thread::Sleep(17);
+	}
+	if (m_exit_func != NULL)
+		m_exit_func(this);
+}
+
 Plugin::Argument Plugin::GetArg(const char *key, bool *exist) const
 {
 	map<string, Argument>::iterator it = m_arguments.find(string(key));
@@ -1790,6 +1897,99 @@ Plugin::Argument Plugin::GetArg(const char *key, bool *exist) const
 	if (exist != NULL)
 		*exist = true;
 	return it->second;
+}
+
+ui::Scene *Plugin::PageOpen(const IDParam &id, const PageOpenParam &param)
+{
+	if (param.option & PageOption_Create) {
+		if (m_rscobj != NULL && m_rscobj->IsRegisteredID(id.m_idhash) == true)
+			return NULL;
+		if (GetNodeEntity_Widget(id) != NULL)
+			return NULL;
+
+		ui::EnvironmentParam *env_param = m_env_param;
+		int32_t graphics_flag = m_graphics_flag;
+
+		if (param.env_param != NULL)
+			env_param = param.env_param;
+		if (param.graphics_flag != 128)
+			graphics_flag = param.graphics_flag;
+		ui::Scene *page = new ui::Scene(Framework::framework->m_env,
+						param.overwrite_draw_priority >= 0 ?
+							param.overwrite_draw_priority : m_draw_priority,
+						NULL, env_param, graphics_flag);
+
+		SetNodeEntity_Widget(id, page);
+		SetNodeEntity_CreatePage(id, page);
+		page->m_name = id;
+
+		IDParam plugin_id(m_name);
+
+		page->m_plugin_id = plugin_id.m_idhash;
+
+		ui::Widget::CreateParam camera_param;
+
+		camera_param.m_parent_protected = true;
+		new ui::Camera(page, &camera_param);
+		AdjustPageDrawOrder(page, id, param.overwrite_draw_priority);
+		ScePafToplevel_995AE4B6(this, page, param);
+		graph::s_page_opened = true;
+		return page;
+	}
+	if (m_rscobj == NULL)
+		return NULL;
+
+	cxml::Element node;
+
+	if (m_rscobj->GetPage(id.m_idhash, node) != 0)
+		return NULL;
+	return PageOpen(node, param);
+}
+
+void Plugin::PageActivate(const IDParam &id)
+{
+	if (m_rscobj == NULL)
+		return;
+
+	cxml::Element node;
+
+	if (m_rscobj->GetPage(id.m_idhash, node) == 0)
+		PageActivate(node);
+}
+
+void Plugin::PageInactivateActually()
+{
+	GetNodeEntity_Widget(*m_last_active_page_node);
+}
+
+/* called whole by PageInactivate(IDParam) */
+__attribute__((noinline)) void Plugin::PageInactivate(const cxml::Element &node)
+{
+	if (!m_initialized || m_last_active_page_node != &node)
+		return;
+	GetNodeEntity_Widget(node);
+	m_last_active_page_node = NULL;
+}
+
+void Plugin::PageInactivate(const IDParam &id)
+{
+	if (m_rscobj == NULL)
+		return;
+
+	cxml::Element node;
+
+	if (m_rscobj->GetPage(id.m_idhash, node) == 0)
+		PageInactivate(node);
+}
+
+ui::Scene *Plugin::PageRoot(const IDParam &id) const
+{
+	return static_cast<ui::Scene *>(GetNodeEntity_Widget(id));
+}
+
+ui::Scene *Plugin::PageRoot(const cxml::Element &node) const
+{
+	return static_cast<ui::Scene *>(GetNodeEntity_Widget(node));
 }
 
 void Plugin::Notify(int32_t status) const

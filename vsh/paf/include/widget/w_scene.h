@@ -50,6 +50,10 @@ public:
 	/* called with the widget the debug mode focuses */
 	typedef void (*DebugFocusCB)(Widget *focus, Widget *prev, void *userdata);
 
+	/* a page in the environment, drawn at the priority (export 0xECB1A10D) */
+	Scene(Environment *env, int32_t priority, CreateParam *param, EnvironmentParam *env_param,
+	      int32_t graphics_flag);
+
 	static const char *TypeName();
 
 	/* the screen margins, turned with the camera's roll */
@@ -59,7 +63,10 @@ public:
 	/* whether the camera's roll turns the margins */
 	int32_t m_use_camera;
 	Camera *m_camera;
-	uint8_t reserved[0xd0];
+	uint8_t reserved[8];
+	/* the ID hash of the plugin that opened the page */
+	uint32_t m_plugin_id;
+	uint8_t reserved1[0xc4];
 	/* the resolutions it lays out for */
 	EnvironmentParam *m_env_param;
 	uint8_t reserved2[0x28];

@@ -76,6 +76,8 @@ public:
 	~ResourceObj();
 
 	int32_t GetLoadStatus() const;
+	/* whether the resource's document holds the ID */
+	bool IsRegisteredID(uint32_t idhash) const;
 	cxml::Element GetTableElement(TableType type) const;
 	/* the page element of an ID; 0 when found */
 	int32_t GetPage(uint32_t idhash, cxml::Element &elm) const;

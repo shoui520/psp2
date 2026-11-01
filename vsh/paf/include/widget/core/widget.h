@@ -167,6 +167,24 @@ public:
 		GET_ANIMNEXT = 2
 	};
 
+	/* how a widget is made (names after ScePaf-RE) */
+	class CreateParam {
+	public:
+		CreateParam()
+			: m_create_drawobj(true), m_parent_protected(false), m_under_template(false),
+			  reserved(0)
+		{
+		}
+
+		bool m_create_drawobj : 1;
+		bool m_parent_protected : 1;
+		bool m_under_template : 1;
+		uint32_t reserved : 29;
+	};
+
+	/* the widgets being destroyed; Plugin::Exit waits for them */
+	static int32_t s_destroying_count;
+
 	virtual ~Widget();
 
 	virtual bool IsInherit(const char *type) const;

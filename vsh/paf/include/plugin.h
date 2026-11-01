@@ -293,12 +293,19 @@ public:
 	ui::Widget *CreateWidgetWithStyleType(ui::Widget *parent, const char *type, const IDParam &id,
 					      const char *style_type, const IDParam &style_id);
 	ui::Scene *PageOpen(const cxml::Element &node, const PageOpenParam &param);
+	ui::Scene *PageOpen(const IDParam &id, const PageOpenParam &param);
 	void PageActivate(const cxml::Element &node);
+	void PageActivate(const IDParam &id);
 	void PageActivateActually();
+	void PageInactivateActually();
+	void PageInactivate(const cxml::Element &node);
+	void PageInactivate(const IDParam &id);
+	ui::Scene *PageRoot(const IDParam &id) const;
+	ui::Scene *PageRoot(const cxml::Element &node) const;
 
 	void Start();
 	void Stop();
-	int32_t Exit();
+	void Exit();
 	void PageCloseAll();
 	int32_t TemplateOpen(ui::Widget *parent, const IDParam &id, const TemplateOpenParam &param);
 	void InstantiateWidget(const cxml::Element &elm, ui::Widget *parent, bool is_template,

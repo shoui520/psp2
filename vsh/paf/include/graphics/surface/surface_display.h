@@ -26,6 +26,18 @@ public:
 }
 }
 
+namespace paf {
+namespace graph {
+
+/*
+ * Set when a page opens; the shared frame buffer's begin reads it
+ * (0x813122d4, name ours).
+ */
+extern bool s_page_opened;
+
+}
+}
+
 /* Exports with no name found for their NIDs. */
 extern "C" {
 /* the frame buffer the caller gives for the next frame (FrameBufferMode_Given) */
