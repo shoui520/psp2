@@ -2099,6 +2099,8 @@ int SceGpuEs4User_56893E98(GxmTopContext *top, SceUInt32 memContext, SceUInt32 h
 			   SceUInt32 *gpuAddress);			/* map memory */
 int SceGpuEs4User_AD20D1A0(GxmTopContext *top, void *base, SceUInt32 heap,
 			   SceUInt32 flags);				/* unmap memory */
+int SceGpuEs4User_9A4A5DAE(GxmTopContext *top, const void *address,
+			   GpuMappedMemoryInfo *info);			/* mapped memory info */
 int SceGpuEs4UserForVsh_3DC96093(GxmTopContext *top, SceUInt32 memContext, SceUInt32 a,
 				 SceUInt32 b, SceUInt32 c);
 int SceGpuEs4User_071E62F0(GxmTopContext *top, SceUInt32 heap, SceUInt32 attr, SceSize size,

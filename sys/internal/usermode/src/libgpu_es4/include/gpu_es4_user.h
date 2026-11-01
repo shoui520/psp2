@@ -143,13 +143,6 @@ typedef struct GpuRTDataSet {
 	const GpuSpmCounters *spm;
 } GpuRTDataSet;
 
-/* PVRSRVGetMappedMemoryInfo's answer */
-typedef struct GpuMappedMemoryInfo {
-	void *cpuAddress;
-	SceSize size;
-	SceUInt32 mmuFlags;
-} GpuMappedMemoryInfo;
-
 /* PDS program descriptor of SceGpuEs4User_E98914E4 / _A5E331FA */
 typedef struct GpuPdsProgram {
 	SceUInt32 program;		/* out: 16-byte aligned program address */

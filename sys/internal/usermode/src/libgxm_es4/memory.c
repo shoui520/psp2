@@ -270,3 +270,77 @@ int sceGxmRemoveRazorGpuCaptureBuffer(void *base)
 	}
 	return 0;
 }
+
+#if SCE_DBG_ASSERTS_ENABLED
+/* PVRSRV_MEM_CACHED: the GPU mapping is cached by the CPU */
+#define GXM_MAPPED_MEMORY_CACHED	0x00000004
+
+int gxmMemoryCheckCachedParameter(const void *address, SceSize size, const char *parameter,
+				  const char *function)
+{
+	SceKernelMemBlockInfo info;
+	int err;
+
+	info.size = sizeof(info);
+	err = sceKernelGetMemBlockInfoByAddr((void *)address, &info);
+	if (err != 0) {
+		GXM_DBG_ERROR(568, "Parameter %s to function %s is invalid.", parameter, function);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if ((SceUInt32)address < (SceUInt32)info.mappedBase ||
+	    (SceUInt32)address + size > (SceUInt32)info.mappedBase + info.mappedSize) {
+		GXM_DBG_ERROR(588, "Parameter %s to function %s with size of %d bytes falls outside "
+			      "of valid memory area.", parameter, function, size);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (info.memoryType != SCE_KERNEL_MEMORY_TYPE_NORMAL) {
+		if (gxmWarningIsEnabled(SCE_GXM_WARNING_USING_INAPPROPRIATE_MEMORY_CACHE_CONFIGURATION))
+			GXM_DBG_WARNING(579, "Parameter %s to function %s refers to uncached memory. "
+					"CPU performance may be adversely affected.", parameter, function);
+		return 0;
+	}
+	return err;
+}
+
+int gxmMemoryCheckParameter(const void *address, SceSize size, const char *parameter,
+			    const char *function)
+{
+	GpuMappedMemoryInfo info;
+
+	if (SceGpuEs4User_9A4A5DAE(&gxmGlobals.top, address, &info) != 0) {
+		GXM_DBG_ERROR(602, "Parameter %s to function %s is invalid.", parameter, function);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if ((SceUInt32)address < (SceUInt32)info.cpuAddress ||
+	    (SceUInt32)address + size > (SceUInt32)info.cpuAddress + info.size) {
+		GXM_DBG_ERROR(623, "Parameter %s to function %s with size of %d bytes falls outside "
+			      "of valid memory area.", parameter, function, size);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (info.mmuFlags & GXM_MAPPED_MEMORY_CACHED) {
+		if (gxmWarningIsEnabled(SCE_GXM_WARNING_USING_INAPPROPRIATE_MEMORY_CACHE_CONFIGURATION))
+			GXM_DBG_WARNING(613, "Parameter %s to function %s refers to cached memory. "
+					"GPU performance may be adversely affected.", parameter, function);
+		return 0;
+	}
+	return 0;
+}
+
+int gxmMemoryCheckCallbackRegion(const void *address, SceSize size, const char *callbackType)
+{
+	GpuMappedMemoryInfo info;
+
+	if (SceGpuEs4User_9A4A5DAE(&gxmGlobals.top, address, &info) != 0 ||
+	    (SceUInt32)address < (SceUInt32)info.cpuAddress ||
+	    (SceUInt32)address + size > (SceUInt32)info.cpuAddress + info.size)
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	if (info.mmuFlags & GXM_MAPPED_MEMORY_CACHED) {
+		if (gxmWarningIsEnabled(SCE_GXM_WARNING_USING_INAPPROPRIATE_MEMORY_CACHE_CONFIGURATION))
+			GXM_DBG_WARNING(645, "A callback of type %s returned an address that refers to "
+					"cached memory. GPU performance may be adversely affected.",
+					callbackType);
+		return 0;
+	}
+	return 0;
+}
+#endif

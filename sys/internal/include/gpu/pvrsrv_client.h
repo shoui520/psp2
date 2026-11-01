@@ -24,6 +24,13 @@ typedef struct PVRSRV_CLIENT_MEM_INFO {
 
 _Static_assert(sizeof(PVRSRV_CLIENT_MEM_INFO) == 0x1c, "PVRSRV_CLIENT_MEM_INFO size");
 
+/* PVRSRVGetMappedMemoryInfo's answer */
+typedef struct GpuMappedMemoryInfo {
+	void *cpuAddress;
+	SceSize size;
+	SceUInt32 mmuFlags;		/* PVRSRV_MEM_*: 4 is a CPU-cached mapping */
+} GpuMappedMemoryInfo;
+
 /* a device memory heap of a memory context (PVRSRVCreateDeviceMemContext) */
 typedef struct PVRSRV_HEAP_INFO {
 	SceUInt32 ui32HeapID;
