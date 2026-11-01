@@ -3,9 +3,13 @@
 #define PAF_AVOUT_SOUND_H
 
 #include <stddef.h>
+#include <stdint.h>
 #include "wave.h"
 
 namespace paf {
+
+class Framework;
+
 namespace sound {
 
 class Output {
@@ -18,16 +22,7 @@ public:
 
 	Output(int mode);
 	~Output();
-	__declspec(dllexport) void Update()
-	{
-		if (!m_is_init)
-			return;
-
-		for (int i = 0; i < 8; ++i) {
-			if (m_sounds[i].state != Sound::State_Default && !WaveIsPlaying(i))
-				m_sounds[i].state = Sound::State_Default;
-		}
-	}
+	__declspec(dllexport) void Update();
 
 	bool EnableSound(bool enable);
 	void StopSound(const char *buffer);
@@ -59,8 +54,24 @@ private:
 
 	void Init(int mode);
 
-	/* Retained common-SE storage; these builds use the shared wave engine. */
-	char m_common_se[0x528];
+	friend class paf::Framework;
+
+	/* a common sound effect as the common resource gives it (Framework::InitCommonSE) */
+	struct CommonSE {
+		uint32_t type;
+		int32_t samplerate;
+		const char *buffer1;
+		uint32_t size1;
+		/* the second channel, or NULL */
+		const char *buffer2;
+		uint32_t size2;
+	};
+
+	enum {
+		COMMON_SE_NUM = 55
+	};
+
+	CommonSE m_common_se[COMMON_SE_NUM];
 	int m_is_init;
 	int m_disable_count;
 	bool m_enabled;

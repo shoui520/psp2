@@ -18,7 +18,7 @@ char SystemParam::GetTextStyle()
 	return s_system_param.text_style;
 }
 
-void SystemParam::SetParamFlags(char flags)
+void SystemParam::SetParamFlags(int32_t flags)
 {
 	s_system_param.param_flags = flags;
 }

@@ -10,66 +10,9 @@
 extern HeapAllocator *ScePafResource_D60FF214(uint8_t *self,
 					      HeapAllocator *allocator);
 
-extern uint32_t _ZN3paf5graph7Surface6AddRefEv(uint8_t *self);
-extern uint32_t _ZN3paf5graph7Surface7ReleaseEv(uint8_t *self);
-extern int _ZN3paf5graph14DisplaySurface18SetFrameBufferModeENS_5gutil15FrameBufferModeE(uint8_t *self, int32_t mode);
 
 uint32_t sce_paf_toplevel_value_1194;
 volatile int32_t sce_paf_toplevel_pending_4694;
-
-int ScePafToplevel_1AEDE4E0(int value)
-{
-	switch (value) {
-	case 0: case 1: case 2: case 3: case 4:
-	case 5: case 6: case 7: case 8: case 9:
-	case 10: case 11: case 12: case 13: case 14:
-	case 15: case 16: case 17: case 18: case 19:
-		return value;
-	default:
-		return 18;
-	}
-}
-
-int _ZN3paf9Framework20GetMode_ApplicationCEv(const uint8_t *self)
-{
-	uint8_t *graphics;
-	uint8_t *frame;
-
-	if (*(const uint32_t *)(self + 84) != 4)
-		return -1;
-	graphics = *(uint8_t *const *)(self + 76);
-	graphics = *(uint8_t **)(graphics + 812);
-	if (!graphics)
-		return -1;
-	frame = *(uint8_t **)(graphics + 64);
-	if (!frame)
-		return 2;
-	_ZN3paf5graph7Surface6AddRefEv(frame);
-	_ZN3paf5graph7Surface7ReleaseEv(frame);
-	return *(uint32_t *)(frame + 368) == 2 ? 2 : 3;
-}
-
-int _ZN3paf9Framework7SetModeEj(const uint8_t *self, int32_t requestedMode)
-{
-	uint8_t *graphics;
-	uint8_t *frame;
-	int32_t mode;
-
-	if (*(const uint32_t *)(self + 84) != 4)
-		return -1;
-	graphics = *(uint8_t *const *)(self + 76);
-	graphics = *(uint8_t **)(graphics + 812);
-	if (!graphics)
-		return -1;
-	frame = *(uint8_t **)(graphics + 64);
-	if (!frame)
-		return -1;
-	_ZN3paf5graph7Surface6AddRefEv(*(uint8_t **)(graphics + 64));
-	_ZN3paf5graph7Surface7ReleaseEv(frame);
-	mode = requestedMode == 3 ? 3 : 2;
-	_ZN3paf5graph14DisplaySurface18SetFrameBufferModeENS_5gutil15FrameBufferModeE(frame, mode);
-	return 0;
-}
 
 static inline __attribute__((always_inline))
 int RemoveTopLevelListKey(uint8_t *self, size_t listOffset, int32_t key)
@@ -275,39 +218,6 @@ PafTopLevelTransition *_ZN3paf6Plugin14PageCloseParamC2Ev(PafTopLevelTransition 
 int ScePafToplevel_CFF44F67(uint32_t value)
 {
 	return value != 0 && value <= 1;
-}
-
-int32_t _ZNK3paf9Framework23GetCommonResourceLocaleEv(const uint8_t *self)
-{
-	const uint8_t *nested = *(const uint8_t *const *)(self + 28);
-
-	if (nested)
-		return *(const int32_t *)(nested + 268);
-	return *(const int32_t *)(self + 92);
-}
-
-static inline __attribute__((always_inline))
-uint32_t *InitTopLevelRequest(uint32_t *self)
-{
-	self[0] = (uint32_t)(uintptr_t)&PafStringEmpty;
-	self[1] = 0;
-	self[3] = 0;
-	self[4] = 0;
-	self[5] = 0;
-	self[6] = 0;
-	self[8] = (uint32_t)-1;
-	self[7] = 0;
-	return self;
-}
-
-uint32_t *_ZN3paf9Framework23CommonResourceInitParamC1Ev(uint32_t *self)
-{
-	return InitTopLevelRequest(self);
-}
-
-uint32_t *_ZN3paf9Framework23CommonResourceInitParamC2Ev(uint32_t *self)
-{
-	return InitTopLevelRequest(self);
 }
 
 int ScePafToplevel_9A4B0DC4(uint8_t *self)

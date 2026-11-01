@@ -123,7 +123,7 @@ public:
 
 	static void SetTextStyle(char style);
 	static char GetTextStyle();
-	static void SetParamFlags(char flags);
+	static void SetParamFlags(int32_t flags);
 	static int32_t ReadParamFlags();
 
 	char text_style;

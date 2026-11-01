@@ -50,6 +50,13 @@ public:
 			return *this;
 		}
 
+		iterator &operator--()
+		{
+			if (m_ptr != NULL)
+				--m_ptr;
+			return *this;
+		}
+
 		iterator operator+(difference_type off) const
 		{
 			iterator result(m_ptr);

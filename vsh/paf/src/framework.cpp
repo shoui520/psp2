@@ -6,10 +6,14 @@
 #include <power.h>
 #include <kernel/threadmgr.h>
 #include <sysmem/memblock.h>
+#include <sysmem/sysmem.h>
+#include <cache/cache_manager.h>
 #include <datetime/datetime.h>
 #include <file/localfile.h>
+#include <graphics/graphmem/graphmem.h>
 #include <graphics/gutil.h>
 #include <graphics/surface/surface_display.h>
+#include <graphics/surface/surface_pool.h>
 #include <graphics/text/text_init.h>
 #include <image/image_types.h>
 #include <inputdevice/pad/pad.h>
@@ -17,6 +21,7 @@
 #include <std/stdio.h>
 #include <std/stdlib.h>
 #include <system/system.h>
+#include <system_param.h>
 #include <timer/timerlistenerlist.h>
 #include <widget/core/environment.h>
 #include <widget/factory.h>
@@ -497,6 +502,126 @@ Framework::~Framework()
 	framework = NULL;
 }
 
+}
+
+/*
+ * The frames: the timers, the jobs, the calls posted to the main thread, the
+ * widgets' update, their events and the drawing, until the framework may end.
+ * Called again from inside one of these steps, it goes on from the step after
+ * it, and returns once the outer call's step is reached again with the
+ * framework ending or the outer frame finished (through *done).
+ */
+int32_t ScePafToplevel_1EEFAECD(paf::Framework *framework, bool **done)
+{
+	using namespace paf;
+
+	bool finished = false;
+	int32_t phase = s_update_phase;
+	bool resume = true;
+
+	s_update_phase = 0;
+	*done = &finished;
+
+	while (!framework->IsShutdownDone()) {
+		if (resume) {
+			resume = false;
+			switch (phase) {
+			case 2:
+				goto job;
+			case 3:
+				goto sync_call;
+			case 4:
+				goto call_queue;
+			case 5:
+				goto event_loop;
+			}
+		}
+
+		if (framework->m_option & Framework::Option_OneFrameMode) {
+			framework->m_update_mutex->Lock();
+			framework->m_update_cond->Notify();
+			framework->m_update_cond->Wait(0);
+			framework->m_update_mutex->Unlock();
+		}
+		if (!(framework->m_option & Framework::Option_DisableInternalCallbackChecks))
+			sceKernelCheckCallback();
+		TimerListenerList::s_default_list->Update();
+		if (phase == 2 && (finished || framework->m_shutdown_requested))
+			break;
+
+job:
+		s_update_phase = 2;
+		job::JobQueue::CheckAllQueues();
+		s_update_phase = 0;
+		cache::CacheManager::Touch();
+		if (phase == 3 && (finished || framework->m_shutdown_requested))
+			break;
+
+sync_call:
+		s_update_phase = 3;
+		thread::SyncCall::main_thread_synccall.Check();
+		s_update_phase = 0;
+		if (phase == 4 && (finished || framework->m_shutdown_requested))
+			break;
+
+call_queue:
+		s_update_phase = 4;
+		thread::CallQueue::main_thread_callqueue.Check();
+		s_update_phase = 0;
+		if (framework->m_sound_output != NULL)
+			framework->m_sound_output->Update();
+		framework->m_env->OnUpdatePre();
+		if (framework->m_shutdown_requested && phase == 1 &&
+		    framework->m_loading_plugin_count == 0) {
+			thread::RWLock *lock = framework->m_list_lock;
+
+			lock->ReaderLock();
+			vector<Plugin *>::iterator it = framework->m_plugin_list.end();
+			while (it != framework->m_plugin_list.begin()) {
+				--it;
+				if (!(*it)->m_unloading)
+					Plugin::UnloadAsync(*it, NULL, 0);
+			}
+			lock->ReaderUnlock();
+		}
+		if (framework->m_mode == Framework::Mode_Normal ||
+		    framework->m_mode == Framework::Mode_Shell ||
+		    framework->m_mode == Framework::Mode_CommonDialog) {
+			ScePafWidget_909850C4();
+			ScePafWidget_9D4A5A0E(framework->m_env);
+		} else {
+			ScePafWidget_9D4A5A0E(framework->m_env);
+			ScePafWidget_909850C4();
+		}
+		if (phase == 5 && (finished || framework->m_shutdown_requested))
+			break;
+
+event_loop:
+		s_update_phase = 5;
+		framework->m_env->EventLoop();
+		s_update_phase = 0;
+		framework->m_env->OnUpdatePost();
+		ScePafWidget_DC1B19DB(framework->m_env);
+		ScePafWidget_851911CB(framework->m_env);
+		thread::RMutex::main_thread_mutex.Unlock();
+		int32_t result = ScePafWidget_F67517A0(framework->m_env);
+		thread::RMutex::main_thread_mutex.Lock();
+		ScePafWidget_8E61FE0C(framework->m_env);
+		if (result < 0 || ScePafWidget_998F8F48() != 0)
+			framework->RequestShutdown();
+		if (framework->m_shutdown_requested && phase == 1 &&
+		    framework->m_loading_plugin_count == 0 && framework->m_plugin_list.size() == 0 &&
+		    !framework->m_env->m_term_requested)
+			framework->m_env->RequestTerm();
+	}
+
+	s_update_phase = phase;
+	*done = NULL;
+	return 0;
+}
+
+namespace paf {
+
 int32_t Framework::Run()
 {
 	bool *done;
@@ -521,10 +646,410 @@ int32_t Framework::Run()
 	return 0;
 }
 
+void Framework::Update(void *param)
+{
+	if (m_option & Option_OneFrameMode) {
+		m_update_mutex->Lock();
+		if (m_env->m_screen != NULL && ui::Screen::s_root_surface != NULL)
+			ScePafGraphics_F897407F(ui::Screen::s_root_surface, param);
+		if (m_run_loop_count != 0) {
+			m_update_cond->Notify();
+			m_update_cond->Wait(0);
+		}
+		m_update_mutex->Unlock();
+	}
+}
+
 graph::SurfacePool *Framework::GetSurfacePool() const
 {
 	return gutil::GetDefaultSurfacePool();
 }
+
+void Framework::SetLocale(Locale locale)
+{
+	m_locale = locale;
+	graph::SetTextLocale(locale);
+}
+
+}
+
+bool ScePafToplevel_072EE507(void)
+{
+	bool changed = false;
+	int32_t flags = paf::system::SystemParam::ReadParamFlags();
+
+	if (flags != ScePafMisc_C51EF81D()) {
+		paf::graph::StopTextThreads();
+		paf::system::SystemParam::SetParamFlags(flags);
+		paf::graph::StartTextThreads();
+		changed = true;
+	}
+	return changed;
+}
+
+int32_t ScePafToplevel_397DD062(paf::Framework *framework, const char *dir, uint32_t effects)
+{
+	if (dir != NULL)
+		return ScePafWidget_BA6EB0C6(effects, paf::string(dir));
+	return ScePafWidget_BA6EB0C6(effects, paf::string("vs0:data/effects"));
+}
+
+namespace paf {
+
+/* the common resource's surface pool */
+#define CR_SURFACE_POOL_SIZE	0xc0000
+
+void Framework::CreateCommonResourceSurfacePool()
+{
+	graph::SurfacePool::MemoryType type = graph::SurfacePool::MemoryType_SharedClient;
+
+	if (m_mode != Mode_Shell)
+		m_surface_pool_addr = GraphMem::AllocOSMemory(GraphMem::DeviceType_SharedMemory,
+							      CR_SURFACE_POOL_SIZE,
+							      "ScePafCRSurfacePool", NULL);
+	if (m_surface_pool_addr == NULL) {
+		MemBlockUserOpt memblock_opt;
+		GraphMem::Option opt;
+
+		sce_paf_memset(&memblock_opt, 0, sizeof(memblock_opt));
+		memblock_opt.size = sizeof(memblock_opt);
+		memblock_opt.attr = ALLOC_ATTR_CLIENT_INFO | ALLOC_ATTR_HAS_CLIENT_INFO;
+		memblock_opt.openFlags = MEMBLOCK_OPEN_RW;
+		for (int i = 0; i < 8; i++)
+			memblock_opt.capabilities[i] = 0;
+		opt.memblock_option = &memblock_opt;
+		m_surface_pool_addr = GraphMem::AllocOSMemory(GraphMem::DeviceType_VideoMemory,
+							      CR_SURFACE_POOL_SIZE,
+							      "ScePafCRSurfacePool", &opt);
+		type = graph::SurfacePool::MemoryType_SharedHost;
+	}
+	if (m_surface_pool_addr != NULL)
+		m_surface_pool = new graph::SurfacePool(m_surface_pool_addr, CR_SURFACE_POOL_SIZE,
+							"ScePafCRSurfacePool", NULL, type);
+}
+
+void Framework::LoadCommonResourceSync(LoadCRFinishCallback callback)
+{
+	m_load_finish_callback = callback;
+
+	Plugin::InitParam param;
+
+	param.name = "__system__common_resource";
+	param.resource_file = "vs0:data/external/common/common_resource.rco";
+	param.caller_name = "__system__";
+	param.unload_callback = ScePafToplevel_C9C02705;
+	CreateCommonResourceSurfacePool();
+	param.surface_pool = m_surface_pool;
+	Plugin::LoadSync(param, CRLoadFinishCallback, 0);
+}
+
+void Framework::LoadCommonResourceAsync(LoadCRFinishCallback callback)
+{
+	m_load_finish_callback = callback;
+
+	Plugin::InitParam param;
+
+	param.name = "__system__common_resource";
+	param.resource_file = "vs0:data/external/common/common_resource.rco";
+	param.caller_name = "__system__";
+	param.unload_callback = ScePafToplevel_C9C02705;
+	CreateCommonResourceSurfacePool();
+	param.surface_pool = m_surface_pool;
+	Plugin::LoadAsync(param, CRLoadFinishCallback, 0);
+}
+
+void Framework::LoadCommonResourceSync(CommonResourceInitParam &cr_param,
+				       LoadCRFinishCallback callback)
+{
+	m_load_finish_callback = callback;
+
+	Plugin::InitParam param;
+
+	param.name = "__system__common_resource";
+	param.resource_file = cr_param.resource_file;
+	param.caller_name = "__system__";
+	param.unload_callback = ScePafToplevel_C9C02705;
+	param.resource_data = cr_param.resource_data;
+	param.resource_data_size = cr_param.resource_data_size;
+	param.private_heap_size = cr_param.private_heap_size;
+	param.private_heap = cr_param.private_heap;
+	param.surface_pool = cr_param.surface_pool;
+	param.draw_priority = cr_param.draw_priority;
+	Plugin::LoadSync(param, CRLoadFinishCallback, 0);
+}
+
+void Framework::LoadCommonResourceAsync(CommonResourceInitParam &cr_param,
+					LoadCRFinishCallback callback)
+{
+	m_load_finish_callback = callback;
+
+	Plugin::InitParam param;
+
+	param.name = "__system__common_resource";
+	param.resource_file = cr_param.resource_file;
+	param.caller_name = "__system__";
+	param.unload_callback = ScePafToplevel_C9C02705;
+	param.resource_data = cr_param.resource_data;
+	param.resource_data_size = cr_param.resource_data_size;
+	param.private_heap_size = cr_param.private_heap_size;
+	param.private_heap = cr_param.private_heap;
+	param.surface_pool = cr_param.surface_pool;
+	param.draw_priority = cr_param.draw_priority;
+	Plugin::LoadAsync(param, CRLoadFinishCallback, 0);
+}
+
+void Framework::UnLoadCommonResourceAsync(UnloadCRFinishCallback callback)
+{
+	m_unload_finish_callback = callback;
+	if (!m_common_resource_plugin->m_unloading)
+		Plugin::UnloadAsync(m_common_resource_plugin, NULL, 0);
+}
+
+const wchar_t *Framework::GetCommonString(const IDParam &id) const
+{
+	if (m_common_resource_plugin != NULL)
+		return m_common_resource_plugin->GetString(id);
+	return L"";
+}
+
+intrusive_ptr<graph::Surface> Framework::GetCommonTexture(const IDParam &id)
+{
+	if (m_common_resource_plugin != NULL)
+		return m_common_resource_plugin->GetTexture(id);
+	return intrusive_ptr<graph::Surface>();
+}
+
+}
+
+int32_t ScePafToplevel_95CF05AC(paf::Framework *framework, const paf::IDParam &id,
+				const char **buffer1, uint32_t *size1, const char **buffer2,
+				uint32_t *size2, int32_t *samplerate, uint32_t *type)
+{
+	paf::Plugin *plugin = framework->m_common_resource_plugin;
+
+	if (plugin != NULL)
+		return ScePafToplevel_CA3E606F(plugin, id, buffer1, size1, buffer2, size2,
+					       samplerate, type);
+	return -1;
+}
+
+int32_t ScePafToplevel_C04E8309(paf::Framework *framework, const paf::IDParam &id,
+				uint32_t *value1, uint32_t *value2)
+{
+	if (framework->m_common_resource_plugin != NULL)
+		return ScePafToplevel_DA3D4AF0(framework->m_common_resource_plugin, id, value1,
+					       value2);
+	return -1;
+}
+
+namespace paf {
+
+int32_t Framework::GetCommonResourceStyles(const char *name, vector<string> *styles)
+{
+	if (m_common_resource_plugin != NULL)
+		return m_common_resource_plugin->GetResourceStyles(name, styles);
+	return -1;
+}
+
+int32_t Framework::GetCommonResourceTextures(vector<string> *textures)
+{
+	if (m_common_resource_plugin != NULL)
+		return m_common_resource_plugin->GetResourceTextures(textures);
+	return -1;
+}
+
+int32_t Framework::GetCommonResourceLocale() const
+{
+	if (m_common_resource_plugin != NULL)
+		return m_common_resource_plugin->m_locale;
+	return m_locale;
+}
+
+int32_t Framework::SetCommonResourceLocale(Locale locale)
+{
+	if (m_common_resource_plugin == NULL)
+		return -1;
+	m_common_resource_plugin->SetLocale(locale);
+	return 0;
+}
+
+/* the common sounds' resource ids, by number less one; numbers without one have none */
+int32_t Framework::InitCommonSE()
+{
+	const char *se_id[sound::Output::COMMON_SE_NUM] = {
+		"_common_snd01", "_common_snd02", "_common_snd03", "_common_snd04", NULL, NULL,
+		"_common_snd07", "_common_snd08", NULL, NULL, NULL, "_common_snd12",
+		"_common_snd13", NULL, "_common_snd15", "_common_snd16", "_common_snd17",
+		"_common_snd18", "_common_snd19", "_common_snd20", "_common_snd21",
+		"_common_snd22", "_common_snd23", "_common_snd24", NULL, NULL, "_common_snd27",
+		"_common_snd28", NULL, "_common_snd30", "_common_snd31", "_common_snd32",
+		"_common_snd33", "_common_snd34", "_common_snd35", "_common_snd36",
+		"_common_snd37", "_common_snd38", "_common_snd39", "_common_snd40",
+		"_common_snd41", "_common_snd42", "_common_snd43", "_common_snd44",
+		"_common_snd45", "_common_snd46", "_common_snd47", "_common_snd48",
+		"_common_snd49", "_common_snd50", "_common_snd51", NULL, NULL, "_common_snd54",
+		"_common_snd55"
+	};
+
+	if (m_sound_output == NULL)
+		return -1;
+
+	sce_paf_memset(m_sound_output->m_common_se, 0, sizeof(m_sound_output->m_common_se));
+	for (uint32_t i = 0; i < sound::Output::COMMON_SE_NUM; i++) {
+		if (se_id[i] == NULL)
+			continue;
+
+		IDParam id(se_id[i]);
+		sound::Output::CommonSE *se = &m_sound_output->m_common_se[i];
+
+		if (m_common_resource_plugin != NULL)
+			ScePafToplevel_CA3E606F(m_common_resource_plugin, id, &se->buffer1, &se->size1,
+						&se->buffer2, &se->size2, &se->samplerate,
+						&se->type);
+	}
+	return 0;
+}
+
+int32_t Framework::PlayCommonSE(int32_t no, float vol, bool ignore_init)
+{
+	sound::Output *output = m_sound_output;
+
+	if (output == NULL)
+		return -1;
+	if (no <= 0 || no > sound::Output::COMMON_SE_NUM)
+		return -1;
+
+	sound::Output::CommonSE *se = &output->m_common_se[no - 1];
+
+	if (se->buffer1 == NULL)
+		return -1;
+	if (se->buffer2 != NULL)
+		output->PlaySound(se->buffer1, se->size1, se->buffer2, se->size2, se->samplerate,
+				  vol, ignore_init);
+	else
+		output->PlaySound(se->buffer1, se->size1, se->samplerate, vol, ignore_init);
+	return 0;
+}
+
+int32_t Framework::StopCommonSE(int32_t no)
+{
+	if (m_sound_output == NULL)
+		return -1;
+	if (no <= 0 || no > sound::Output::COMMON_SE_NUM)
+		return -1;
+
+	const char *buffer1 = m_sound_output->m_common_se[no - 1].buffer1;
+
+	if (buffer1 == NULL)
+		return -1;
+	if (m_sound_output->m_common_se[no - 1].buffer2 != NULL) {
+		m_sound_output->StopSound(buffer1);
+		m_sound_output->StopSound(m_sound_output->m_common_se[no - 1].buffer2);
+	} else {
+		m_sound_output->StopSound(buffer1);
+	}
+	return 0;
+}
+
+int32_t Framework::SetMode(uint32_t mode)
+{
+	if (m_mode != Mode_ApplicationC)
+		return -1;
+
+	ui::Screen *screen = m_env->m_screen;
+
+	if (screen == NULL)
+		return -1;
+
+	graph::DisplaySurface *surface =
+		static_cast<graph::DisplaySurface *>(screen->GetSurface().get());
+
+	if (surface == NULL)
+		return -1;
+
+	gutil::FrameBufferMode frame_buffer_mode;
+
+	if (mode == gutil::FrameBuffer_Shared_Share)
+		frame_buffer_mode = gutil::FrameBuffer_Shared_Share;
+	else if (mode == gutil::FrameBuffer_Shared_OffScreen)
+		frame_buffer_mode = gutil::FrameBuffer_Shared_OffScreen;
+	else
+		frame_buffer_mode = gutil::FrameBuffer_Shared_Share;
+	surface->SetFrameBufferMode(frame_buffer_mode);
+	return 0;
+}
+
+int32_t Framework::GetMode_ApplicationC()
+{
+	if (m_mode != Mode_ApplicationC)
+		return -1;
+
+	ui::Screen *screen = m_env->m_screen;
+
+	if (screen == NULL)
+		return -1;
+
+	graph::DisplaySurface *surface =
+		static_cast<graph::DisplaySurface *>(screen->GetSurface().get());
+
+	if (surface == NULL)
+		return gutil::FrameBuffer_Shared_Share;
+	if (surface->m_frame_buffer_mode == gutil::FrameBuffer_Shared_Share)
+		return gutil::FrameBuffer_Shared_Share;
+	return gutil::FrameBuffer_Shared_OffScreen;
+}
+
+}
+
+int32_t ScePafToplevel_1AEDE4E0(int32_t language)
+{
+	switch (language) {
+	case SCE_SYSTEM_PARAM_LANG_JAPANESE:
+		return SCE_SYSTEM_PARAM_LANG_JAPANESE;
+	case SCE_SYSTEM_PARAM_LANG_ENGLISH_US:
+		return SCE_SYSTEM_PARAM_LANG_ENGLISH_US;
+	case SCE_SYSTEM_PARAM_LANG_FRENCH:
+		return SCE_SYSTEM_PARAM_LANG_FRENCH;
+	case SCE_SYSTEM_PARAM_LANG_SPANISH:
+		return SCE_SYSTEM_PARAM_LANG_SPANISH;
+	case SCE_SYSTEM_PARAM_LANG_GERMAN:
+		return SCE_SYSTEM_PARAM_LANG_GERMAN;
+	case SCE_SYSTEM_PARAM_LANG_ITALIAN:
+		return SCE_SYSTEM_PARAM_LANG_ITALIAN;
+	case SCE_SYSTEM_PARAM_LANG_DUTCH:
+		return SCE_SYSTEM_PARAM_LANG_DUTCH;
+	case SCE_SYSTEM_PARAM_LANG_PORTUGUESE_PT:
+		return SCE_SYSTEM_PARAM_LANG_PORTUGUESE_PT;
+	case SCE_SYSTEM_PARAM_LANG_RUSSIAN:
+		return SCE_SYSTEM_PARAM_LANG_RUSSIAN;
+	case SCE_SYSTEM_PARAM_LANG_KOREAN:
+		return SCE_SYSTEM_PARAM_LANG_KOREAN;
+	case SCE_SYSTEM_PARAM_LANG_CHINESE_T:
+		return SCE_SYSTEM_PARAM_LANG_CHINESE_T;
+	case SCE_SYSTEM_PARAM_LANG_CHINESE_S:
+		return SCE_SYSTEM_PARAM_LANG_CHINESE_S;
+	case SCE_SYSTEM_PARAM_LANG_FINNISH:
+		return SCE_SYSTEM_PARAM_LANG_FINNISH;
+	case SCE_SYSTEM_PARAM_LANG_SWEDISH:
+		return SCE_SYSTEM_PARAM_LANG_SWEDISH;
+	case SCE_SYSTEM_PARAM_LANG_DANISH:
+		return SCE_SYSTEM_PARAM_LANG_DANISH;
+	case SCE_SYSTEM_PARAM_LANG_NORWEGIAN:
+		return SCE_SYSTEM_PARAM_LANG_NORWEGIAN;
+	case SCE_SYSTEM_PARAM_LANG_POLISH:
+		return SCE_SYSTEM_PARAM_LANG_POLISH;
+	case SCE_SYSTEM_PARAM_LANG_PORTUGUESE_BR:
+		return SCE_SYSTEM_PARAM_LANG_PORTUGUESE_BR;
+	case SCE_SYSTEM_PARAM_LANG_ENGLISH_GB:
+		return SCE_SYSTEM_PARAM_LANG_ENGLISH_GB;
+	case SCE_SYSTEM_PARAM_LANG_TURKISH:
+		return SCE_SYSTEM_PARAM_LANG_TURKISH;
+	default:
+		return SCE_SYSTEM_PARAM_LANG_ENGLISH_GB;
+	}
+}
+
+namespace paf {
 
 }
 
@@ -632,6 +1157,16 @@ Framework::InitParam::InitParam()
 		else
 			enter_button_assign = assign <= 1;
 	}
+}
+
+Framework::CommonResourceInitParam::CommonResourceInitParam()
+{
+	resource_data = NULL;
+	resource_data_size = 0;
+	private_heap_size = 0;
+	private_heap = NULL;
+	surface_pool = NULL;
+	draw_priority = -1;
 }
 
 }

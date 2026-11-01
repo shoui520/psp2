@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <std/memory>
+#include <std/string>
 #include <math/ngp/v4.h>
 #include <math/rect.h>
 #include <versatileparam/idparam.h>
@@ -33,6 +34,11 @@ public:
 	static Screen *GetRootScreen()
 	{
 		return s_root_screen;
+	}
+
+	intrusive_ptr<graph::Surface> GetSurface()
+	{
+		return m_surface;
 	}
 
 	int32_t padding;
@@ -85,11 +91,20 @@ public:
 
 	/* whether nothing the widgets still run keeps the framework from ending */
 	bool IsTermAvailable();
+	/* lets the widgets end: m_term_requested once nothing keeps them */
+	int32_t RequestTerm();
+	/* a frame's steps, in the order the Framework runs them */
+	void OnUpdatePre();
+	void EventLoop();
+	void OnUpdatePost();
 	void ShowFocus(int32_t port);
 	/* the display area scale from the system settings, once */
 	void ApplyDisplayAreaSettings();
 
-	uint8_t reserved[0xd4];
+	uint8_t reserved[0xd1];
+	/* set by RequestTerm */
+	bool m_term_requested;
+	uint8_t reserved1[2];
 	/* the Framework's InitParam::env_option */
 	bool m_env_option;
 	uint8_t reserved2[3];
@@ -100,10 +115,13 @@ public:
 	uint8_t reserved3[0x68];
 	/* set before the focus is first shown */
 	int32_t m_focus_mode;
-	uint8_t reserved4[0x2c12];
+	uint8_t reserved4[0x1d4];
+	/* the screen SetScreen gives */
+	Screen *m_screen;
+	uint8_t reserved5[0x2a3a];
 	/* each frame waits for the GPU once it is drawn (Framework::Option_4) */
 	bool m_finish_after_draw;
-	uint8_t reserved5[0x35];
+	uint8_t reserved6[0x35];
 };
 
 }
@@ -119,6 +137,20 @@ void ScePafWidget_75FB31F1(paf::ui::Environment *env, bool enable);
 void ScePafWidget_B4A4660B(paf::ui::Environment *env, int32_t enable, int32_t port, int32_t mode);
 /* whether the port's focus may be shown */
 bool ScePafWidget_A6B659BB(paf::ui::Environment *env, int32_t port);
+/* updates the input devices */
+int32_t ScePafWidget_909850C4(void);
+/* begins a frame on the root surface */
+void ScePafWidget_9D4A5A0E(paf::ui::Environment *env);
+void ScePafWidget_DC1B19DB(paf::ui::Environment *env);
+/* ends the frame on the root surface */
+void ScePafWidget_851911CB(paf::ui::Environment *env);
+/* shows the frame drawn; below 0 on failure */
+int32_t ScePafWidget_F67517A0(paf::ui::Environment *env);
+void ScePafWidget_8E61FE0C(paf::ui::Environment *env);
+/* always 0 */
+int32_t ScePafWidget_998F8F48(void);
+/* loads the effects whose bits are set from the folder */
+int32_t ScePafWidget_BA6EB0C6(uint32_t effects, const paf::string &dir);
 }
 
 #endif

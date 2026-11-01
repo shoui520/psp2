@@ -38,6 +38,11 @@ public:
 };
 
 int32_t InitText(const TextInitParam &param);
+/* the threads that lay out text: stopped while the text settings change */
+void StopTextThreads();
+int32_t StartTextThreads();
+/* the Locale the text is laid out for, set with the text threads stopped */
+void SetTextLocale(int32_t locale);
 
 }
 }

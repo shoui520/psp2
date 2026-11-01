@@ -12,8 +12,10 @@
 #include <thread/thread.h>
 #include <memory/heap_allocator.h>
 #include <widget/core/environment.h>
+#include <src/paf_types.h>
 
 namespace paf {
+class Framework;
 class IDParam;
 namespace ui {
 class Widget;
@@ -22,6 +24,8 @@ class Widget;
 
 /* Exports with no name found for their NIDs. */
 extern "C" {
+/* runs the frames until the framework may end; nested, it goes on from the step it was called in */
+int32_t ScePafToplevel_1EEFAECD(paf::Framework *framework, bool **done);
 /* plays a sound through the framework's Output for the widgets (the Environment's callback) */
 int32_t ScePafToplevel_85EF6EC0(const char *buffer1, uint32_t size1, const char *buffer2,
 				uint32_t size2, int32_t samplerate, float vol, bool ignore_init,
@@ -30,6 +34,19 @@ int32_t ScePafToplevel_85EF6EC0(const char *buffer1, uint32_t size1, const char 
 paf::ui::Widget *ScePafToplevel_E37EC9D8(paf::ui::Widget *parent, const char *type,
 					 const paf::IDParam &id, const paf::IDParam &style,
 					 void *data);
+/* reads the system parameters SystemParam keeps again; true when they changed */
+bool ScePafToplevel_072EE507(void);
+/* loads the effects whose bits are set, from dir or vs0:data/effects */
+int32_t ScePafToplevel_397DD062(paf::Framework *framework, const char *dir, uint32_t effects);
+/* the common resource's unload callback: frees its surface pool */
+void ScePafToplevel_C9C02705(void *userdata);
+/* a sound of the common resource; -1 without one */
+int32_t ScePafToplevel_95CF05AC(paf::Framework *framework, const paf::IDParam &id,
+				const char **buffer1, uint32_t *size1, const char **buffer2,
+				uint32_t *size2, int32_t *samplerate, uint32_t *type);
+/* a sound parameter of the common resource's; -1 without one */
+int32_t ScePafToplevel_C04E8309(paf::Framework *framework, const paf::IDParam &id,
+				uint32_t *value1, uint32_t *value2);
 /* the Locale for a system language */
 int32_t ScePafToplevel_1AEDE4E0(int32_t language);
 }
@@ -137,6 +154,20 @@ public:
 		TEXT_STYLE_UNSET = 0x80
 	};
 
+	/* the common resource, when it is not vs0:data/external/common/common_resource.rco */
+	class CommonResourceInitParam {
+	public:
+		CommonResourceInitParam();
+
+		string resource_file;
+		uint8_t *resource_data;
+		uint32_t resource_data_size;
+		uint32_t private_heap_size;
+		memory::HeapAllocator *private_heap;
+		graph::SurfacePool *surface_pool;
+		int32_t draw_priority;
+	};
+
 	Framework(const InitParam &init_param);
 
 	static void SampleInit(InitParam *init_param);
@@ -148,7 +179,29 @@ public:
 	int32_t Run();
 	void Update(void *param);
 	graph::SurfacePool *GetSurfacePool() const;
-	void SetLocale(int32_t locale);
+	void SetLocale(Locale locale);
+	void LoadCommonResourceSync(LoadCRFinishCallback callback);
+	void LoadCommonResourceAsync(LoadCRFinishCallback callback);
+	void LoadCommonResourceSync(CommonResourceInitParam &param, LoadCRFinishCallback callback);
+	void LoadCommonResourceAsync(CommonResourceInitParam &param, LoadCRFinishCallback callback);
+	void UnLoadCommonResourceAsync(UnloadCRFinishCallback callback);
+	/* L"" without the common resource */
+	const wchar_t *GetCommonString(const IDParam &id) const;
+	intrusive_ptr<graph::Surface> GetCommonTexture(const IDParam &id);
+	int32_t GetCommonResourceStyles(const char *name, vector<string> *styles);
+	int32_t GetCommonResourceTextures(vector<string> *textures);
+	int32_t GetCommonResourceLocale() const;
+	int32_t SetCommonResourceLocale(Locale locale);
+	/* the common sounds, numbered from 1 */
+	int32_t InitCommonSE();
+	int32_t PlayCommonSE(int32_t no, float vol, bool ignore_init);
+	int32_t StopCommonSE(int32_t no);
+	/* Mode_ApplicationC only: the frame buffer shared or off screen */
+	int32_t SetMode(uint32_t mode);
+	int32_t GetMode_ApplicationC();
+
+	/* the common resource's load finish: its sounds, and the common hooks */
+	static void CRLoadFinishCallback(Plugin *plugin);
 
 	static Framework *framework;
 
@@ -157,6 +210,14 @@ private:
 						    const char *buffer2, uint32_t size2,
 						    int32_t samplerate, float vol, bool ignore_init,
 						    void *data);
+	friend int32_t (::ScePafToplevel_1EEFAECD)(Framework *framework, bool **done);
+	friend void (::ScePafToplevel_C9C02705)(void *userdata);
+	friend int32_t (::ScePafToplevel_95CF05AC)(Framework *framework, const IDParam &id,
+						    const char **buffer1, uint32_t *size1,
+						    const char **buffer2, uint32_t *size2,
+						    int32_t *samplerate, uint32_t *type);
+	friend int32_t (::ScePafToplevel_C04E8309)(Framework *framework, const IDParam &id,
+						    uint32_t *value1, uint32_t *value2);
 	friend ui::Widget *(::ScePafToplevel_E37EC9D8)(ui::Widget *parent, const char *type,
 						     const IDParam &id, const IDParam &style,
 						     void *data);
@@ -164,6 +225,8 @@ private:
 	static void JobInit();
 
 	int32_t UnloadPreaction(Plugin *plugin);
+	/* the common resource's surface pool, in shared memory or video memory */
+	void CreateCommonResourceSurfacePool();
 
 	uint32_t m_run_loop_count;
 	vector<Plugin *> m_plugin_list;
@@ -195,11 +258,6 @@ private:
 	ui::EnvironmentParam *m_env_param;
 };
 
-}
-
-/* Exports with no name found for their NIDs. */
-extern "C" {
-void ScePafToplevel_1EEFAECD(paf::Framework *framework, bool **done);
 }
 
 #endif

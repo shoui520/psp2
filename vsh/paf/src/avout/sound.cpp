@@ -51,6 +51,17 @@ Output::~Output()
 	}
 }
 
+inline void Output::Update()
+{
+	if (!m_is_init)
+		return;
+
+	for (int i = 0; i < 8; ++i) {
+		if (m_sounds[i].state != Sound::State_Default && !WaveIsPlaying(i))
+			m_sounds[i].state = Sound::State_Default;
+	}
+}
+
 bool Output::EnableSound(bool enable)
 {
 	int count = m_disable_count;

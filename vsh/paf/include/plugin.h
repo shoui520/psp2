@@ -17,6 +17,7 @@
 #include <versatileparam/idparam.h>
 #include <widget/core/widget.h>
 #include <widget/factory.h>
+#include <src/paf_types.h>
 
 namespace paf {
 
@@ -67,6 +68,7 @@ public:
 	typedef void (*NotifyCallback)(int32_t event, void *userdata);
 	typedef void (*UnloadCallback)(void *userdata);
 	typedef void (*LoadFinishCallback)(Plugin *plugin);
+	typedef void (*UnloadFinishCallback)(const char *name);
 
 	class Argument {
 	public:
@@ -130,6 +132,8 @@ public:
 	static void RegistFactoryTable(const char *name, ui::FactoryFuncTable table);
 	static void RegistFactoryDrawObj(const char *name, ui::FactoryFuncDrawObj table);
 	static void LoadAsync(const InitParam &param, LoadFinishCallback finish, int32_t option);
+	static void UnloadAsync(Plugin *plugin, UnloadFinishCallback finish, int32_t option);
+	static void LoadSync(const InitParam &param, LoadFinishCallback finish, int32_t option);
 
 	void Stop();
 	void PageCloseAll();
@@ -140,6 +144,12 @@ public:
 	{
 		return m_name.c_str();
 	}
+
+	const wchar_t *GetString(const IDParam &id) const;
+	intrusive_ptr<graph::Surface> GetTexture(const IDParam &id);
+	int32_t GetResourceStyles(const char *name, vector<string> *styles);
+	int32_t GetResourceTextures(vector<string> *textures);
+	void SetLocale(Locale locale);
 
 	/* The resource's texture id: the plugin's surface, its texture table, the common ones. */
 	intrusive_ptr<graph::Surface> GetTexture(const IDParam &id, graph::SurfacePool *pool);
@@ -219,6 +229,17 @@ public:
 	IDParam m_style_id;
 };
 
+}
+
+/* Exports with no name found for their NIDs. */
+extern "C" {
+/* a sound of the plugin's resource, else of the common resource's */
+int32_t ScePafToplevel_CA3E606F(paf::Plugin *plugin, const paf::IDParam &id,
+				const char **buffer1, uint32_t *size1, const char **buffer2,
+				uint32_t *size2, int32_t *samplerate, uint32_t *type);
+/* a sound parameter of the plugin's, else of the common resource's; -1 without one */
+int32_t ScePafToplevel_DA3D4AF0(paf::Plugin *plugin, const paf::IDParam &id, uint32_t *value1,
+				uint32_t *value2);
 }
 
 #endif
