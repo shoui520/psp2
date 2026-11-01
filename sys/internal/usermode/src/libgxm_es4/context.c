@@ -595,10 +595,10 @@ static inline int gxmContextCheckDefaultUniformBufferOverrun(const SceGxmContext
 }
 
 /*
- * A reserved default uniform buffer is used by a draw or a kick: keep it in the chunk buffer.
- * Each program is read only when its buffer is reserved.
+ * A reserved default uniform buffer is used by a draw, a fence or a kick: keep it in the chunk
+ * buffer. The program is read only when its buffer is reserved.
  */
-static inline void gxmContextCommitDefaultUniformBuffers(SceGxmContext *context)
+static inline void gxmContextCommitVertexDefaultUniformBuffer(SceGxmContext *context)
 {
 	if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
 		const void *buffer = context->vertexDefaultUniformBuffer;
@@ -608,6 +608,10 @@ static inline void gxmContextCommitDefaultUniformBuffers(SceGxmContext *context)
 		gxmChunkBufferCommit(&context->vertexBuffer, (void *)((SceUInt32)buffer + count * 4));
 		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
 	}
+}
+
+static inline void gxmContextCommitFragmentDefaultUniformBuffer(SceGxmContext *context)
+{
 	if (context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
 		const void *buffer = context->fragmentDefaultUniformBuffer;
 		SceUInt32 count = context->fragmentProgram->program->defaultUniformBufferCount;
@@ -617,6 +621,12 @@ static inline void gxmContextCommitDefaultUniformBuffers(SceGxmContext *context)
 				     (void *)((SceUInt32)buffer + count * 4));
 		context->fragmentDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
 	}
+}
+
+static inline void gxmContextCommitDefaultUniformBuffers(SceGxmContext *context)
+{
+	gxmContextCommitVertexDefaultUniformBuffer(context);
+	gxmContextCommitFragmentDefaultUniformBuffer(context);
 }
 
 /*
@@ -1078,14 +1088,22 @@ int _sceGxmMidSceneFlush(SceGxmContext *context, SceUInt32 flags,
 {
 	int ret;
 
-	if (context == NULL)
+	if (context == NULL) {
+		GXM_DBG_ERROR(1710, "Parameter immediateContext to function sceGxmMidSceneFlush is NULL.");
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+	}
+	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE) {
+		GXM_DBG_ERROR(1714, "Parameter immediateContext to function sceGxmMidSceneFlush is not an immediate context.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (vertexSyncObject != NULL)
+	}
+	if (vertexSyncObject != NULL) {
+		GXM_DBG_ERROR(1722, "Parameter vertexSyncObject to function sceGxmMidSceneFlush is not NULL.");
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (!context->insideScene)
+	}
+	if (!context->insideScene) {
+		GXM_DBG_ERROR(1730, "Function sceGxmMidSceneFlush has been called without a previous call to sceGxmBeginScene.");
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
+	}
 	gxmContextCommitDefaultUniformBuffers(context);
 	ret = gxmContextKick(context,
 			     (flags & SCE_GXM_MIDSCENE_PRESERVE_DEFAULT_UNIFORM_BUFFERS) |
@@ -1103,15 +1121,26 @@ int sceGxmMidSceneFlush(SceGxmContext *context, SceUInt32 flags,
 {
 	int ret;
 
-	if (context == NULL)
+	if (context == NULL) {
+		GXM_DBG_ERROR(1710, "Parameter immediateContext to function sceGxmMidSceneFlush is NULL.");
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE ||
-	    (flags & ~SCE_GXM_MIDSCENE_PRESERVE_DEFAULT_UNIFORM_BUFFERS) != 0)
+	    (flags & ~SCE_GXM_MIDSCENE_PRESERVE_DEFAULT_UNIFORM_BUFFERS) != 0) {
+		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+			GXM_DBG_ERROR(1714, "Parameter immediateContext to function sceGxmMidSceneFlush is not an immediate context.");
+		else
+			GXM_DBG_ERROR(1718, "Parameter flags to function sceGxmMidSceneFlush has unexpected bits set.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (vertexSyncObject != NULL)
+	}
+	if (vertexSyncObject != NULL) {
+		GXM_DBG_ERROR(1722, "Parameter vertexSyncObject to function sceGxmMidSceneFlush is not NULL.");
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (!context->insideScene)
+	}
+	if (!context->insideScene) {
+		GXM_DBG_ERROR(1730, "Function sceGxmMidSceneFlush has been called without a previous call to sceGxmBeginScene.");
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
+	}
 	gxmContextCommitDefaultUniformBuffers(context);
 	ret = gxmContextKick(context, flags | GXM_KICK_MID_SCENE, vertexNotification, NULL);
 	if (ret != 0)
@@ -1126,12 +1155,18 @@ int sceGxmEndScene(SceGxmContext *context, const SceGxmNotification *vertexNotif
 {
 	int ret;
 
-	if (context == NULL)
+	if (context == NULL) {
+		GXM_DBG_ERROR(1769, "Parameter immediateContext to function sceGxmEndScene is NULL.");
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+	}
+	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE) {
+		GXM_DBG_ERROR(1773, "Parameter immediateContext to function sceGxmEndScene is not an immediate context.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (!context->insideScene)
+	}
+	if (!context->insideScene) {
+		GXM_DBG_ERROR(1781, "Function sceGxmEndScene has been called without a previous call to sceGxmBeginScene.");
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
+	}
 	gxmContextCommitDefaultUniformBuffers(context);
 	ret = gxmContextKick(context, GXM_KICK_FRAGMENT, vertexNotification, fragmentNotification);
 	if (ret != 0)
@@ -1290,20 +1325,17 @@ int sceGxmVertexFence(SceGxmContext *context)
 	GxmCommandBlock block;
 	int ret;
 
-	if (context == NULL)
+	if (context == NULL) {
+		GXM_DBG_ERROR_NULL(1995, sceGxmVertexFence, context);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	if (!context->insideScene) {
+		GXM_DBG_ERROR_OUTSIDE_SCENE(2002, sceGxmVertexFence, context);
 		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
 			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
 	}
-	if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
-		SceUInt32 buffer = (SceUInt32)context->vertexDefaultUniformBuffer;
-		SceUInt32 count = context->vertexProgram->program->defaultUniformBufferCount;
-
-		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
-		context->vertexBuffer.cur = buffer + count * 4;
-	}
+	gxmContextCommitVertexDefaultUniformBuffer(context);
 	ret = gxmWriteProgramBlock(&context->vertexBuffer, &gxmGlobals.top.fenceProgram, &block);
 	if (ret != 0)
 		return ret;
