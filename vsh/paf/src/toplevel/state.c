@@ -10,9 +10,9 @@
 extern HeapAllocator *ScePafResource_D60FF214(uint8_t *self,
 					      HeapAllocator *allocator);
 
-extern uint32_t ScePafGraphics_29FC820B(uint8_t *self);
-extern uint32_t ScePafGraphics_9FAF51CF(uint8_t *self);
-extern int ScePafGraphics_C34E1F2C(uint8_t *self, int32_t mode);
+extern uint32_t _ZN3paf5graph7Surface6AddRefEv(uint8_t *self);
+extern uint32_t _ZN3paf5graph7Surface7ReleaseEv(uint8_t *self);
+extern int _ZN3paf5graph14DisplaySurface18SetFrameBufferModeENS_5gutil15FrameBufferModeE(uint8_t *self, int32_t mode);
 
 uint32_t sce_paf_toplevel_value_1194;
 volatile int32_t sce_paf_toplevel_pending_4694;
@@ -30,7 +30,7 @@ int ScePafToplevel_1AEDE4E0(int value)
 	}
 }
 
-int ScePafToplevel_8299E7E4(const uint8_t *self)
+int _ZN3paf9Framework20GetMode_ApplicationCEv(const uint8_t *self)
 {
 	uint8_t *graphics;
 	uint8_t *frame;
@@ -44,12 +44,12 @@ int ScePafToplevel_8299E7E4(const uint8_t *self)
 	frame = *(uint8_t **)(graphics + 64);
 	if (!frame)
 		return 2;
-	ScePafGraphics_29FC820B(frame);
-	ScePafGraphics_9FAF51CF(frame);
+	_ZN3paf5graph7Surface6AddRefEv(frame);
+	_ZN3paf5graph7Surface7ReleaseEv(frame);
 	return *(uint32_t *)(frame + 368) == 2 ? 2 : 3;
 }
 
-int ScePafToplevel_C722E0C5(const uint8_t *self, int32_t requestedMode)
+int _ZN3paf9Framework7SetModeEj(const uint8_t *self, int32_t requestedMode)
 {
 	uint8_t *graphics;
 	uint8_t *frame;
@@ -64,10 +64,10 @@ int ScePafToplevel_C722E0C5(const uint8_t *self, int32_t requestedMode)
 	frame = *(uint8_t **)(graphics + 64);
 	if (!frame)
 		return -1;
-	ScePafGraphics_29FC820B(*(uint8_t **)(graphics + 64));
-	ScePafGraphics_9FAF51CF(frame);
+	_ZN3paf5graph7Surface6AddRefEv(*(uint8_t **)(graphics + 64));
+	_ZN3paf5graph7Surface7ReleaseEv(frame);
 	mode = requestedMode == 3 ? 3 : 2;
-	ScePafGraphics_C34E1F2C(frame, mode);
+	_ZN3paf5graph14DisplaySurface18SetFrameBufferModeENS_5gutil15FrameBufferModeE(frame, mode);
 	return 0;
 }
 
@@ -103,17 +103,17 @@ int RemoveTopLevelListKey(uint8_t *self, size_t listOffset, int32_t key)
 	return result;
 }
 
-int ScePafToplevel_D198980D(uint8_t *self, int32_t key)
+int _ZN3paf6Plugin20RemoveUnloadCallbackEPFvPvE(uint8_t *self, int32_t key)
 {
 	return RemoveTopLevelListKey(self, 244, key);
 }
 
-int ScePafToplevel_E3F5A4B9(uint8_t *self, int32_t key)
+int _ZN3paf6Plugin20RemoveNotifyCallbackEPFviPvE(uint8_t *self, int32_t key)
 {
 	return RemoveTopLevelListKey(self, 232, key);
 }
 
-int ScePafToplevel_1F15D1D7(uint8_t *self)
+int _ZN3paf6Plugin4ExitEv(uint8_t *self)
 {
 	int result = *(const uint32_t *)(self + 228) & 0x10;
 	int (*callback)(void *);
@@ -130,7 +130,7 @@ int ScePafToplevel_1F15D1D7(uint8_t *self)
 	return result;
 }
 
-int32_t ScePafToplevel_1DF2C6FD(const uint8_t *self, int32_t value)
+int32_t _ZNK3paf6Plugin12GetInterfaceEi(const uint8_t *self, int32_t value)
 {
 	int32_t *root = *(int32_t *const *)(self + 88);
 	int32_t *node;
@@ -195,17 +195,17 @@ int32_t LookupTopLevelValue(const uint8_t *self, size_t treeOffset,
 	return node == root ? 0 : node[4];
 }
 
-int32_t ScePafToplevel_9EA96CE0(const uint8_t *self, const uint8_t *key)
+int32_t _ZNK3paf6Plugin21GetNodeEntity_SurfaceERKNS_7IDParamE(const uint8_t *self, const uint8_t *key)
 {
 	return LookupTopLevelValue(self, 124, key);
 }
 
-int32_t ScePafToplevel_E1DC7DF5(const uint8_t *self, const uint8_t *key)
+int32_t _ZNK3paf6Plugin20GetNodeEntity_WidgetERKNS_7IDParamE(const uint8_t *self, const uint8_t *key)
 {
 	return LookupTopLevelValue(self, 100, key);
 }
 
-uint8_t *ScePafToplevel_820E3DBD(const uint8_t *self, const uint8_t *key)
+uint8_t *_ZNK3paf6Plugin24GetNodeEntity_AddTextureERKNS_7IDParamE(const uint8_t *self, const uint8_t *key)
 {
 	uint32_t *root = *(uint32_t *const *)(self + 136);
 	uint32_t *node;
@@ -236,7 +236,7 @@ uint8_t *ScePafToplevel_820E3DBD(const uint8_t *self, const uint8_t *key)
 	return node == root ? 0 : (uint8_t *)node + 16;
 }
 
-uint32_t ScePafToplevel_F72FC59E(void)
+uint32_t _ZN3paf9Framework8InstanceEv(void)
 {
 	return sce_paf_toplevel_value_1194;
 }
@@ -262,12 +262,12 @@ PafTopLevelTransition *InitTopLevelTransition(PafTopLevelTransition *self)
 	return self;
 }
 
-PafTopLevelTransition *ScePafToplevel_185EC9F9(PafTopLevelTransition *self)
+PafTopLevelTransition *_ZN3paf6Plugin14PageCloseParamC1Ev(PafTopLevelTransition *self)
 {
 	return InitTopLevelTransition(self);
 }
 
-PafTopLevelTransition *ScePafToplevel_4CBEB06F(PafTopLevelTransition *self)
+PafTopLevelTransition *_ZN3paf6Plugin14PageCloseParamC2Ev(PafTopLevelTransition *self)
 {
 	return InitTopLevelTransition(self);
 }
@@ -277,7 +277,7 @@ int ScePafToplevel_CFF44F67(uint32_t value)
 	return value != 0 && value <= 1;
 }
 
-int32_t ScePafToplevel_CE0BFCFE(const uint8_t *self)
+int32_t _ZNK3paf9Framework23GetCommonResourceLocaleEv(const uint8_t *self)
 {
 	const uint8_t *nested = *(const uint8_t *const *)(self + 28);
 
@@ -300,12 +300,12 @@ uint32_t *InitTopLevelRequest(uint32_t *self)
 	return self;
 }
 
-uint32_t *ScePafToplevel_7C8CF5E8(uint32_t *self)
+uint32_t *_ZN3paf9Framework23CommonResourceInitParamC1Ev(uint32_t *self)
 {
 	return InitTopLevelRequest(self);
 }
 
-uint32_t *ScePafToplevel_99DD7850(uint32_t *self)
+uint32_t *_ZN3paf9Framework23CommonResourceInitParamC2Ev(uint32_t *self)
 {
 	return InitTopLevelRequest(self);
 }
@@ -323,7 +323,7 @@ int ScePafToplevel_9A4B0DC4(uint8_t *self)
 	return 1;
 }
 
-int ScePafToplevel_9974EC7E(void *unused0, void *unused1,
+int _ZN3paf6Plugin17OnAnimPageHideFinEPNS_5TimerEPNS_2ui12AnimListenerEPvS6_S6_(void *unused0, void *unused1,
 			      uint8_t *object)
 {
 	if (object && !(object[405] & 8))
@@ -332,7 +332,7 @@ int ScePafToplevel_9974EC7E(void *unused0, void *unused1,
 }
 
 /* Find a page's indexed object by its native tree key. */
-int ScePafToplevel_869CF80C(const uint8_t *self, const uint8_t *key)
+int _ZNK3paf6Plugin19GetInitEventHandlerERKNS_7IDParamE(const uint8_t *self, const uint8_t *key)
 {
 	uint32_t wanted = *(const uint32_t *)(key + 12);
 	uint32_t *root = *(uint32_t *const *)(self + 60);
@@ -367,7 +367,7 @@ int ScePafToplevel_869CF80C(const uint8_t *self, const uint8_t *key)
 }
 
 /* Release the page's resource buffer once its pending-state flag clears. */
-int ScePafToplevel_D046C077(uint8_t *self)
+int _ZN3paf6Plugin27UnloadResourceTable_TextureEv(uint8_t *self)
 {
 	int status = *(const int32_t *)(self + 292);
 

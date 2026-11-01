@@ -5,12 +5,12 @@
 #include <sce_atomic.h>
 #include <stdint.h>
 
-uint32_t ScePafCommon_6ED1BC31(uint32_t *self)
+uint32_t _ZN3paf6common6RefObj6AddRefEv(uint32_t *self)
 {
 	return (uint32_t)sceAtomicIncrement32AcqRel((volatile int32_t *)&self[1]) + 1;
 }
 
-int ScePafCommon_DAC99BB6(const PafString *text, const PafString *suffix)
+int _ZN3paf6common6RmatchERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEES8_(const PafString *text, const PafString *suffix)
 {
 	int length = (int)text->count;
 	int matched = 0;
@@ -38,7 +38,7 @@ typedef struct PafCommonReference {
 	volatile int32_t count;
 } PafCommonReference;
 
-uint32_t ScePafCommon_5221EB33(PafCommonReference *self)
+uint32_t _ZN3paf6common6RefObj7ReleaseEv(PafCommonReference *self)
 {
 	uint32_t remaining = (uint32_t)sceAtomicDecrement32AcqRel(&self->count) - 1;
 
@@ -90,12 +90,12 @@ uint32_t *ConstructCommonTagPair(uint32_t *self)
 	return self;
 }
 
-uint32_t *ScePafCommon_2CDB40AC(uint32_t *self)
+uint32_t *_ZN3paf6common6RefObjC2Ev(uint32_t *self)
 {
 	return ConstructCommonTagPair(self);
 }
 
-uint32_t *ScePafCommon_97C2B0FE(uint32_t *self)
+uint32_t *_ZN3paf6common6RefObjC1Ev(uint32_t *self)
 {
 	return ConstructCommonTagPair(self);
 }

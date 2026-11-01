@@ -9,6 +9,6 @@ int SharedPtrInitialize(void)
 	extern void *__dso_handle;
 
 	MutexConstruct(&sharedPtrMutex, "ScePafSharedPtr", MutexOption_None);
-	return ScePafStdc_C95732BB(&sharedPtrMutex,
+	return __aeabi_atexit(&sharedPtrMutex,
 				(void (*)(void *))MutexDestroy, &__dso_handle);
 }

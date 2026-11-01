@@ -20,13 +20,6 @@ enum PafFileStatus {
 	PAF_FILE_STATUS_EOF = 2
 };
 
-#define sce_paf_feof sce_paf_feof
-#define sce_paf_ferror sce_paf_ferror
-#define sce_paf_fileno sce_paf_fileno
-#define sce_paf_clearerr sce_paf_clearerr
-#define sce_paf_ungetc sce_paf_ungetc
-#define sce_paf_fflush sce_paf_fflush
-#define sce_paf_fdopen sce_paf_fdopen
 #define _stdinit_stdio sce_paf_private_fflush
 
 int sce_paf_feof(sce_paf_FILE *stream);

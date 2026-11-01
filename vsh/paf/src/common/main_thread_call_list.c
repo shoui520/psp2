@@ -12,7 +12,7 @@ typedef char CallListListenerSizeCheck[sizeof(CallListListener) == 80 ? 1 : -1];
 
 extern void *ScePafStdc_FC5CD359(size_t size);
 extern void ScePafStdc_1B77082E(void *ptr);
-extern int ScePafStdc_C95732BB(void *object, void (*destroy)(void *), void *dso);
+extern int __aeabi_atexit(void *object, void (*destroy)(void *), void *dso);
 extern void *__dso_handle;
 
 static Mutex s_giant_lock;
@@ -146,6 +146,6 @@ void CallListListenerOnFinish(TimerListener *base, void *data1, void *data2)
 int CallListListenerInitialize(void)
 {
 	_ZN3paf6thread5MutexC1EPKci(&s_giant_lock, "ScePafCallListListener", 0);
-	return ScePafStdc_C95732BB(&s_giant_lock,
+	return __aeabi_atexit(&s_giant_lock,
 		(void (*)(void *))_ZN3paf6thread5MutexD1Ev, &__dso_handle);
 }

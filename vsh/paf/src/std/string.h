@@ -37,11 +37,11 @@ size_t sce_paf_strspn(const char *str, const char *accept);
 size_t sce_paf_strcspn(const char *str, const char *reject);
 char *sce_paf_strpbrk(const char *str, const char *accept);
 char *sce_paf_private_strtok(const char *haystack, const char *needle);
-uint16_t *ScePafStdc_3AD58D65(const uint16_t *haystack, const uint16_t *needle);
-uint16_t *ScePafStdc_E4A8A732(uint16_t *str, const uint16_t *delimiters,
+uint16_t *sce_paf_wcsstr(const uint16_t *haystack, const uint16_t *needle);
+uint16_t *sce_paf_wcstok(uint16_t *str, const uint16_t *delimiters,
 			       uint16_t **save);
 char *sce_paf_strtok_r(char *str, const char *delimiters, char **save);
-char *ScePafStdc_766D2A69(char *str, const char *delimiters);
+char *sce_paf_strtok(char *str, const char *delimiters);
 size_t sce_paf_strlcpy(char *destination, const char *source, size_t size);
 size_t sce_paf_strlcat(char *destination, const char *source, size_t size);
 
@@ -79,7 +79,7 @@ extern char PafStringEmpty;
 extern uint16_t PafWStringEmpty;
 
 void *sce_paf_memset(void *dst, int ch, size_t len);
-void *ScePafStdc_8A58EE24(void *dst, uint32_t pattern, uint32_t count);
+void *sce_paf_memset32(void *dst, uint32_t pattern, uint32_t count);
 void *sce_paf_memchr(const void *ptr, int ch, size_t count);
 void *sce_paf_memcpy(void *dst, const void *src, size_t count);
 void *sce_paf_wmemcpy(void *destination, const void *source, size_t count);
@@ -93,14 +93,13 @@ void *sce_paf_memmove(void *dst, const void *src, size_t count);
 void *sce_paf_bcopy(const void *src, void *dst, size_t count);
 void *sce_paf_bzero(void *dst, size_t count);
 /* Sony: memset forwarding export. */
-void *ScePafStdc_75ECC54E(void *dst, int ch, size_t count);
+void *memset(void *dst, int ch, size_t count);
 /* Native memcpy forwarding export. */
-void *ScePafStdc_5883A6E3(void *dst, const void *src, size_t count);
+void *memcpy(void *dst, const void *src, size_t count);
 size_t sce_paf_strlen(const char *str);
 size_t sce_paf_wcslen(const uint16_t *str);
 uint16_t *sce_paf_wmemchr(const uint16_t *ptr, uint16_t ch, size_t count);
 int sce_paf_swprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format, ...);
-#define sce_paf_vswprintf sce_paf_vswprintf
 int sce_paf_vswprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format,
 		     va_list args);
 PafString *PafStringConstruct(PafString *self, const void *allocator);

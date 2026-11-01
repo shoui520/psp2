@@ -431,7 +431,7 @@ char *sce_paf_private_strtok(const char *haystack, const char *needle)
 }
 
 /* The anonymous wide export implements the same substring search on 16-bit units. */
-uint16_t *ScePafStdc_3AD58D65(const uint16_t *haystack,
+uint16_t *sce_paf_wcsstr(const uint16_t *haystack,
 			      const uint16_t *needle)
 {
 	const volatile uint16_t *pattern = (const volatile uint16_t *)needle;
@@ -465,7 +465,7 @@ uint16_t *ScePafStdc_3AD58D65(const uint16_t *haystack,
 }
 
 /* Sony's reentrant tokenizer for 16-bit code units. */
-uint16_t *ScePafStdc_E4A8A732(uint16_t *str, const uint16_t *delimiters,
+uint16_t *sce_paf_wcstok(uint16_t *str, const uint16_t *delimiters,
 			       uint16_t **save)
 {
 	volatile uint16_t *cursor = (volatile uint16_t *)str;
@@ -589,7 +589,7 @@ char *sce_paf_strtok_r(char *str, const char *delimiters, char **save)
 
 static char *paf_private_strtok_save;
 
-char *ScePafStdc_766D2A69(char *str, const char *delimiters)
+char *sce_paf_strtok(char *str, const char *delimiters)
 {
 	return sce_paf_strtok_r(str, delimiters, &paf_private_strtok_save);
 }
@@ -933,12 +933,12 @@ char *sce_paf_strncpy(char *destination, const char *source, size_t num)
 	return result;
 }
 
-void *ScePafStdc_5883A6E3(void *dst, const void *src, size_t count)
+void *memcpy(void *dst, const void *src, size_t count)
 {
 	return sce_paf_memcpy(dst, src, count);
 }
 
-void *ScePafStdc_75ECC54E(void *dst, int ch, size_t count)
+void *memset(void *dst, int ch, size_t count)
 {
 	return sce_paf_memset(dst, ch, count);
 }
@@ -1009,7 +1009,7 @@ PafWString *PafWStringDestruct(PafWString *self)
 size_t sce_paf_strlen(const char *str)
 {
 	if (!str)
-		ScePafStdc_D41FD265();
+		sce_paf_printf_dummy();
 	return sceClibStrnlen(str, (size_t)-1);
 }
 

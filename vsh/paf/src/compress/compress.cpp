@@ -11,7 +11,6 @@
 #include <std/string.h>
 #include <zlib.h>
 
-#define sceZlibDecompress ScePafLowlayer_D7DAA151
 extern "C" {
 #include <deflt.h>
 }

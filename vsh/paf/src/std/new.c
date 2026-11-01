@@ -5,7 +5,7 @@
 extern int sceClibPrintf(const char *fmt, ...);
 
 /* Sony exports this as __cxa_deleted_virtual (NID 0x25A6D9BB). */
-int ScePafStdc_25A6D9BB(void)
+int __cxa_deleted_virtual(void)
 {
 	int result = sceClibPrintf(
 		"[PAF C++ Runtime] __cxa_deleted_virtual() is called\n");
@@ -15,7 +15,7 @@ int ScePafStdc_25A6D9BB(void)
 
 int ScePafStdc_D608246A(void)
 {
-	ScePafStdc_D41FD265();
+	sce_paf_printf_dummy();
 	__breakpoint(0);
 	return -1;
 }

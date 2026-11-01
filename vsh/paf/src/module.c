@@ -23,7 +23,7 @@ void sce_paf_private_atexit(void *dso)
 void sce_paf_private_exit(int status)
 {
 	sceKernelCallModuleExit(1);
-	ScePafStdc_F36BABE3(paf_private_exit_dso ?
+	__cxa_finalize(paf_private_exit_dso ?
 		paf_private_exit_dso : __dso_handle);
 	sceKernelExitProcess(status);
 }
@@ -61,6 +61,6 @@ int module_start(SceSize argSize, const void *argp)
 
 int module_stop(SceSize argSize, const void *argp)
 {
-	ScePafStdc_F36BABE3(&__dso_handle);
+	__cxa_finalize(&__dso_handle);
 	return 0;
 }

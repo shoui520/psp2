@@ -4,7 +4,7 @@
 #include "../std/new.h"
 #include "../std/string.h"
 
-int32x4_t *ScePafWidget_73875C21(int32x4_t *result)
+int32x4_t *_ZN3paf2ui8filelist10CellSource13GetVisualSizeEv(int32x4_t *result)
 {
 	*result = vdupq_n_s32(0x42800000);
 	return result;
@@ -22,52 +22,52 @@ uint32_t *InitializeWidgetRecord(uint32_t *self, uint32_t payload)
 	return self;
 }
 
-uint32_t *ScePafWidget_348741A7(uint32_t *self, uint32_t payload)
+uint32_t *_ZN3paf2ui8listview8CellListC2EPNS1_7SegmentE(uint32_t *self, uint32_t payload)
 {
 	return InitializeWidgetRecord(self, payload);
 }
 
-uint32_t *ScePafWidget_2C5E7C87(uint32_t *self, uint32_t payload)
+uint32_t *_ZN3paf2ui8listview7CellMapC2EPNS0_8ListViewE(uint32_t *self, uint32_t payload)
 {
 	return InitializeWidgetRecord(self, payload);
 }
 
-uint32_t *ScePafWidget_E0F8DBA7(uint32_t *self, uint32_t payload)
+uint32_t *_ZN3paf2ui8listview11SegmentListC1EPNS0_8ListViewE(uint32_t *self, uint32_t payload)
 {
 	return InitializeWidgetRecord(self, payload);
 }
 
-uint32_t *ScePafWidget_E2F44822(uint32_t *self, uint32_t payload)
+uint32_t *_ZN3paf2ui8listview8CellListC1EPNS1_7SegmentE(uint32_t *self, uint32_t payload)
 {
 	return InitializeWidgetRecord(self, payload);
 }
 
-uint32_t *ScePafWidget_E983D809(uint32_t *self, uint32_t payload)
+uint32_t *_ZN3paf2ui8listview7CellMapC1EPNS0_8ListViewE(uint32_t *self, uint32_t payload)
 {
 	return InitializeWidgetRecord(self, payload);
 }
 
-uint32_t *ScePafWidget_647784E1(uint32_t *self)
+uint32_t *_ZN3paf2ui8filelist14CellFocusParamC1Ev(uint32_t *self)
 {
 	self[0] = UINT32_MAX;
 	self[3] = 0;
 	return self;
 }
 
-uint32_t *ScePafWidget_688E163E(uint32_t *self)
+uint32_t *_ZN3paf2ui8filelist14CellFocusParamC2Ev(uint32_t *self)
 {
 	self[0] = UINT32_MAX;
 	self[3] = 0;
 	return self;
 }
 
-uint8_t *ScePafWidget_434B1CB8(uint8_t *self)
+uint8_t *_ZN3paf2ui8ListView9BlockSyncEv(uint8_t *self)
 {
 	++*(uint32_t *)(self + 1056);
 	return self;
 }
 
-uint8_t *ScePafWidget_4A3F4C93(uint8_t *self)
+uint8_t *_ZN3paf2ui14ScrollViewBase19BlockUpdateViewPortEv(uint8_t *self)
 {
 	++*(uint32_t *)(self + 924);
 	return self;
@@ -110,17 +110,17 @@ uint32_t ScePafWidget_1EE9D37E(void)
 	return sce_paf_widget_state_19a8;
 }
 
-uint32_t ScePafWidget_BFF4C5A2(void)
+uint32_t _ZN3paf2ui5wutil15GetEditListenerEv(void)
 {
 	return sce_paf_widget_state_19ac;
 }
 
-uint32_t ScePafWidget_4AAE618E(void)
+uint32_t _ZN3paf2ui5wutil18GetWebEditListenerEv(void)
 {
 	return sce_paf_widget_state_19b0;
 }
 
-uint32_t ScePafWidget_74F3EF0E(void)
+uint32_t _ZN3paf2ui5wutil24GetMessageDialogListenerEv(void)
 {
 	return sce_paf_widget_state_19b4;
 }
@@ -130,7 +130,7 @@ uint32_t ScePafWidget_A55215E5(void)
 	return sce_paf_widget_state_19b8;
 }
 
-uint32_t ScePafWidget_02E8CF46(void)
+uint32_t _ZN3paf2ui5wutil18GetWebViewListenerEv(void)
 {
 	return sce_paf_widget_state_19bc;
 }
@@ -140,77 +140,77 @@ uint32_t ScePafWidget_E638AA1F(void)
 	return sce_paf_widget_state_19c0;
 }
 
-uint32_t ScePafWidget_03EC4830(void)
+uint32_t _ZN3paf2ui6Widget19GetBaseDestroyCountEv(void)
 {
 	return sce_paf_widget_state_1ce8;
 }
 
-uint32_t ScePafWidget_66EEB261(uint32_t value)
+uint32_t _ZN3paf2ui6Widget19SetBaseDestroyCountEi(uint32_t value)
 {
 	sce_paf_widget_state_1ce8 = value;
 	return value;
 }
 
-uint32_t ScePafWidget_887EF5E5(uint32_t value)
+uint32_t _ZN3paf2ui5wutil6SetEnvEPNS0_11EnvironmentE(uint32_t value)
 {
 	sce_paf_widget_state_199c = value;
 	return value;
 }
 
-uint32_t *ScePafWidget_88BB79F0(void)
+uint32_t *_ZN3paf2ui8Layouter6FinishEv(void)
 {
 	sce_paf_widget_state_142d4 = 0;
 	return &sce_paf_widget_state_142d4;
 }
 
-uint32_t *ScePafWidget_37FBE9CE(void)
+uint32_t *_ZN3paf2ui8Layouter5EnterEv(void)
 {
 	sce_paf_widget_state_142d4 = 1;
 	return &sce_paf_widget_state_142d4;
 }
 
-int ScePafWidget_59CA8E05(void)
+int _ZN3paf2ui8Layouter7IsEnterEv(void)
 {
 	return sce_paf_widget_state_142d4 != 0;
 }
 
-int ScePafWidget_295F20D1(void)
+int _ZN3paf2ui8Animator7IsEnterEv(void)
 {
 	return sce_paf_widget_state_142d8 != 0;
 }
 
-int ScePafWidget_01EF18C7(const uint8_t *self, uint8_t *output)
+int _ZN3paf2ui4Text16GetSelectionModeERb(const uint8_t *self, uint8_t *output)
 {
 	*output = self[648] & 1;
 	return 0;
 }
 
-int ScePafWidget_027F9135(void *self, uint32_t *attributes)
+int _ZN3paf2ui6Dialog16HandleTouchEventEPNS0_5EventE(void *self, uint32_t *attributes)
 {
 	attributes[1] = (attributes[1] & 0xF0FFFFFFU) | 0x01000000U;
 	return 0;
 }
 
-int ScePafWidget_BF3DEACA(const uint8_t *self)
+int _ZN3paf2ui8ListItem12GetCellIndexEv(const uint8_t *self)
 {
 	const uint8_t *value = *(const uint8_t *const *)(self + 636);
 
 	return value ? *(const int32_t *)(value + 4) : -1;
 }
 
-int ScePafWidget_CEFCBAA6(const uint8_t *self)
+int _ZNK3paf2ui6Widget9GetCameraEv(const uint8_t *self)
 {
 	const uint8_t *value = *(const uint8_t *const *)(self + 364);
 
 	return value ? *(const int32_t *)(value + 640) : 0;
 }
 
-int ScePafWidget_7B4B305A(const uint8_t *self)
+int _ZN3paf2ui7TextBox9IsEditingEv(const uint8_t *self)
 {
 	return (self[649] & 4) != 0;
 }
 
-int ScePafWidget_CEA84D74(uint8_t *self, uint8_t value)
+int _ZN3paf2ui7TextBox25SetEditAutoTransitionModeEb(uint8_t *self, uint8_t value)
 {
 	if (self[772] != value)
 		self[772] = value;
@@ -258,7 +258,7 @@ int ScePafWidget_B86ADE3E(const uint8_t *self, uint32_t *result,
 	return 0;
 }
 
-int ScePafWidget_C14E8BB4(uint8_t *self, int32_t index)
+int _ZN3paf2ui16ProgressBarTouch18SetLabelSliderModeENS0_11ProgressBar9LabelModeE(uint8_t *self, int32_t index)
 {
 	if (index < 0 || index > 2)
 		return -2136014706;
@@ -273,13 +273,13 @@ int ScePafWidget_CEBDCDB3(const uint8_t *self, const uint8_t *other)
 		(uint8_t)*(const uint32_t *)(other + 8);
 }
 
-int ScePafWidget_B4A711BB(const uint8_t *self)
+int _ZN3paf2ui11Environment15IsTermAvailableEv(const uint8_t *self)
 {
 	return !*(const uint32_t *)(self + 44) &&
 		!*(const uint32_t *)(self + 56) && self[213] != 0;
 }
 
-int ScePafWidget_439A6529(uint8_t *self, uint32_t value)
+int _ZN3paf2ui11ProgressBar17AttachLabelWidgetEPNS0_6WidgetE(uint8_t *self, uint32_t value)
 {
 	if (!value)
 		return -2136014706;
@@ -288,7 +288,7 @@ int ScePafWidget_439A6529(uint8_t *self, uint32_t value)
 	return 0;
 }
 
-uint32_t ScePafWidget_C003A59B(const uint8_t *self, int32_t index)
+uint32_t _ZN3paf2ui8RichText13GetItemWidgetEi(const uint8_t *self, int32_t index)
 {
 	if (index < 0 || index >= *(const int32_t *)(self + 1064))
 		return 0;
@@ -297,7 +297,7 @@ uint32_t ScePafWidget_C003A59B(const uint8_t *self, int32_t index)
 		+ 12);
 }
 
-int ScePafWidget_75420B80(const uint8_t *self, int32_t index)
+int _ZNK3paf2ui8RichText11GetItemTypeEi(const uint8_t *self, int32_t index)
 {
 	uint32_t type;
 
@@ -315,7 +315,7 @@ int ScePafWidget_222D55C7(const uint8_t *self, uint8_t *output)
 	return 0;
 }
 
-int ScePafWidget_CF11ECB0(const uint8_t *self, uint8_t *output)
+int _ZN3paf2ui7TextBox11GetEditModeERb(const uint8_t *self, uint8_t *output)
 {
 	*output = (self[648] & 8) != 0;
 	return 0;
@@ -359,7 +359,7 @@ uint32_t ScePafWidget_3546C104(const uint8_t *self, uint8_t filter)
 	return flags;
 }
 
-uint32_t ScePafWidget_7DA29D35(const uint8_t *self)
+uint32_t _ZN3paf2ui4Text10CheckStateEv(const uint8_t *self)
 {
 	uint32_t result = *(const uint32_t *)(self + 336);
 	const uint8_t *state = *(const uint8_t *const *)(self + 640);
@@ -389,7 +389,7 @@ void *ScePafWidget_C6559467(uint64_t *destination, const uint8_t *self)
 	return destination;
 }
 
-int ScePafWidget_074187EF(uint8_t *self, int32_t index)
+int _ZN3paf2ui11ProgressBar12SetLabelModeENS1_9LabelModeE(uint8_t *self, int32_t index)
 {
 	uint32_t flags;
 
@@ -401,7 +401,7 @@ int ScePafWidget_074187EF(uint8_t *self, int32_t index)
 	return 0;
 }
 
-int ScePafWidget_316164E1(uint8_t *self, int32_t index)
+int _ZN3paf2ui16ProgressBarTouch21SetLabelSliderPosModeENS0_11ProgressBar12LabelPosModeE(uint8_t *self, int32_t index)
 {
 	uint32_t flags;
 
@@ -413,7 +413,7 @@ int ScePafWidget_316164E1(uint8_t *self, int32_t index)
 	return 0;
 }
 
-int ScePafWidget_7621796A(uint8_t *self, int32_t index)
+int _ZN3paf2ui11ProgressBar15SetLabelPosModeENS1_12LabelPosModeE(uint8_t *self, int32_t index)
 {
 	uint32_t flags;
 
@@ -466,17 +466,17 @@ uint32_t *ResetWidgetTransform(uint32_t *result)
 	return result;
 }
 
-uint32_t *ScePafWidget_AB05B0A4(uint32_t *result)
+uint32_t *_ZN3paf2ui5wutil9InitParamC2Ev(uint32_t *result)
 {
 	return ResetWidgetTransform(result);
 }
 
-uint32_t *ScePafWidget_ECB0651E(uint32_t *result)
+uint32_t *_ZN3paf2ui5wutil9InitParamC1Ev(uint32_t *result)
 {
 	return ResetWidgetTransform(result);
 }
 
-int ScePafWidget_D2BF4CC7(uint8_t *self, const uint8_t *source)
+int _ZN3paf2ui7TextBox11SetImeParamERKNS1_8ImeParamE(uint8_t *self, const uint8_t *source)
 {
 	uint8_t value;
 
@@ -491,7 +491,7 @@ int ScePafWidget_D2BF4CC7(uint8_t *self, const uint8_t *source)
 	return 0;
 }
 
-int ScePafWidget_FFC580E3(const uint8_t *self, uint8_t *result)
+int _ZN3paf2ui7TextBox11GetImeParamERNS1_8ImeParamE(const uint8_t *self, uint8_t *result)
 {
 	uint8_t value;
 	uint32_t tail, extra;
@@ -508,7 +508,7 @@ int ScePafWidget_FFC580E3(const uint8_t *self, uint8_t *result)
 	return 0;
 }
 
-uint8_t *ScePafWidget_F09837F9(uint8_t *self, uint32_t value)
+uint8_t *_ZN3paf2ui10ButtonBase13SetButtonModeEj(uint8_t *self, uint32_t value)
 {
 	if (*(uint32_t *)(self + 644) != value) {
 		*(uint32_t *)(self + 644) = value;
@@ -521,7 +521,7 @@ uint8_t *ScePafWidget_F09837F9(uint8_t *self, uint32_t value)
 	return self;
 }
 
-uint8_t *ScePafWidget_2BACA6A8(uint8_t *self, const uint8_t *value)
+uint8_t *_ZN3paf2ui14ScrollViewBase14OnDestroyTimerEPNS0_15ScrollViewTimerE(uint8_t *self, const uint8_t *value)
 {
 	if (*(const uint8_t **)(self + 920) == value) {
 		uint32_t state = value[36];
@@ -536,7 +536,7 @@ uint8_t *ScePafWidget_2BACA6A8(uint8_t *self, const uint8_t *value)
 	return self;
 }
 
-uint8_t *ScePafWidget_76BA63C3(uint8_t *self, uint8_t *value, int32_t mode)
+uint8_t *_ZN3paf2ui6Widget9FindChildEPS1_i(uint8_t *self, uint8_t *value, int32_t mode)
 {
 	uint8_t *node;
 
@@ -556,7 +556,7 @@ uint8_t *ScePafWidget_76BA63C3(uint8_t *self, uint8_t *value, int32_t mode)
 	return value;
 }
 
-uint8_t *ScePafWidget_0BEBC84F(uint8_t *self, uint8_t *item)
+uint8_t *_ZN3paf2ui3Box18AddToExclusiveListEPNS0_6WidgetE(uint8_t *self, uint8_t *item)
 {
 	int8_t flags = *(int8_t *)(item + 404);
 
@@ -569,7 +569,7 @@ uint8_t *ScePafWidget_0BEBC84F(uint8_t *self, uint8_t *item)
 	return self;
 }
 
-uint8_t *ScePafWidget_9C553208(uint8_t *self, uint8_t *item)
+uint8_t *_ZN3paf2ui3Box23DeleteFromExclusiveListEPNS0_6WidgetE(uint8_t *self, uint8_t *item)
 {
 	int8_t flags = *(int8_t *)(item + 404);
 
@@ -582,7 +582,7 @@ uint8_t *ScePafWidget_9C553208(uint8_t *self, uint8_t *item)
 	return self;
 }
 
-uint8_t *ScePafWidget_32053276(uint8_t *self, uint16_t mask)
+uint8_t *_ZN3paf2ui6Widget19NotifyAnimatorDirtyEj(uint8_t *self, uint16_t mask)
 {
 	uint16_t flags = *(uint16_t *)(self + 574);
 
@@ -594,7 +594,7 @@ uint8_t *ScePafWidget_32053276(uint8_t *self, uint16_t mask)
 	return self;
 }
 
-int ScePafWidget_939005A0(const uint8_t *self, uint32_t value)
+int _ZN3paf2ui10ScrollView9IsIgnoredEPNS0_6WidgetE(const uint8_t *self, uint32_t value)
 {
 	uint32_t count = *(const uint32_t *)(self + 1036);
 	const uint32_t *cursor = *(const uint32_t *const *)(self + 1032);
@@ -609,7 +609,7 @@ int ScePafWidget_939005A0(const uint8_t *self, uint32_t value)
 	return cursor != end;
 }
 
-uint8_t *ScePafWidget_7E86AC9D(const uint32_t *self, uint32_t value)
+uint8_t *_ZN3paf2ui8listview7CellMap4FindEPNS0_8ListItemE(const uint32_t *self, uint32_t value)
 {
 	const uint8_t *const *cursor = (const uint8_t *const *)self[0];
 	const uint8_t *const *end = cursor + self[1];
@@ -623,73 +623,73 @@ uint8_t *ScePafWidget_7E86AC9D(const uint32_t *self, uint32_t value)
 	return 0;
 }
 
-uint32_t *ScePafWidget_4DDDFF68(uint32_t *self, uint32_t payload)
+uint32_t *_ZN3paf2ui8listview11SegmentListC2EPNS0_8ListViewE(uint32_t *self, uint32_t payload)
 {
 	return InitializeWidgetRecord(self, payload);
 }
 
-int ScePafWidget_A8C5CE9E(void *self, uint32_t *attributes)
+int _ZN3paf2ui6Dialog16HandlePointEventEPNS0_5EventE(void *self, uint32_t *attributes)
 {
 	attributes[1] = (attributes[1] & 0xF0FFFFFFU) | 0x01000000U;
 	return 0;
 }
 
-uint32_t ScePafWidget_7B788425(int32_t index)
+uint32_t _ZN3paf2ui8filelist7Manager11GetJobQueueENS2_9QueueTypeE(int32_t index)
 {
 	return ((const uint32_t *)sce_paf_widget_state_155c)[index];
 }
 
-uint32_t ScePafWidget_3F295AA9(void)
+uint32_t _ZN3paf2ui8filelist7Manager14GetStoragePathEv(void)
 {
 	return sce_paf_widget_state_155c + 36;
 }
 
 /* Resource readiness is exposed through several widget compatibility aliases. */
-extern int ScePafResource_598D91C1(const void *resource);
+extern int _ZN3paf2ui11WidgetParam3GetEv(const void *resource);
 
 static inline __attribute__((always_inline))
 int WidgetResourceReady(const void *resource)
 {
-	int result = ScePafResource_598D91C1(resource);
+	int result = _ZN3paf2ui11WidgetParam3GetEv(resource);
 
 	if (result >= 0)
 		return 0;
 	return result;
 }
 
-int ScePafWidget_890AF221(const void *resource)
+int _ZN3paf2ui18BusyIndicatorParam3GetEv(const void *resource)
 {
 	return WidgetResourceReady(resource);
 }
 
-int ScePafWidget_CEC4F335(const void *resource)
+int _ZN3paf2ui16AppIconBaseParam3GetEv(const void *resource)
 {
 	return WidgetResourceReady(resource);
 }
 
-int ScePafWidget_FC3C881A(const void *resource)
+int _ZN3paf2ui18SlidingDrawerParam3GetEv(const void *resource)
 {
 	return WidgetResourceReady(resource);
 }
 
-int ScePafWidget_13CF9C4E(const void *self, const char *tag)
+int _ZNK3paf2ui8filelist10CellSource9IsInheritEPKc(const void *self, const char *tag)
 {
 	return tag == "cell_source";
 }
 
-void ScePafWidget_0A87E13F(uint32_t *self)
+void _ZN3paf2ui8listview11ItemFactoryD0Ev(uint32_t *self)
 {
 	*self = (uint32_t)-2127612860;
 	PafDelete(self);
 }
 
-void ScePafWidget_346AE909(uint32_t *self)
+void _ZN3paf2ui19TextBoxEditListenerD0Ev(uint32_t *self)
 {
 	*self = (uint32_t)-2127593716;
 	PafDelete(self);
 }
 
-int ScePafWidget_4BDA4BAA(void *self, uint32_t value)
+int _ZN3paf2ui7Handler17HandleSystemEventEPNS0_5EventE(void *self, uint32_t value)
 {
 	void *const *methods = *(void *const *const *)self;
 
@@ -698,7 +698,7 @@ int ScePafWidget_4BDA4BAA(void *self, uint32_t value)
 	return 0;
 }
 
-int ScePafWidget_FDB59013(void *self, const uint8_t *argument)
+int _ZN3paf2ui7Handler16HandleTimerEventEPNS0_5EventE(void *self, const uint8_t *argument)
 {
 	void *const *methods = *(void *const *const *)self;
 
@@ -707,15 +707,15 @@ int ScePafWidget_FDB59013(void *self, const uint8_t *argument)
 	return 0;
 }
 
-extern uint8_t *ScePafGraphics_A05227FA(void);
+extern uint8_t *_ZN3paf5graph7DrawObj11EnterSafetyEv(void);
 
-uint8_t *ScePafWidget_62D63539(void)
+uint8_t *_ZN3paf2ui8Animator5EnterEv(void)
 {
 	sce_paf_widget_state_142d8 = 1;
-	return ScePafGraphics_A05227FA();
+	return _ZN3paf5graph7DrawObj11EnterSafetyEv();
 }
 
-int ScePafWidget_1D442DC0(void *self, uint32_t value)
+int _ZN3paf2ui7Handler18HandleCommandEventEPNS0_5EventE(void *self, uint32_t value)
 {
 	void *const *methods = *(void *const *const *)self;
 
@@ -733,7 +733,7 @@ int ScePafWidget_66D4EAE7(void *self, uint32_t value)
 	return 0;
 }
 
-int ScePafWidget_722CAC54(void *self, void *other)
+int _ZN3paf2ui8RadioBox16CBDestroyCheckedEPNS0_6WidgetEPv(void *self, void *other)
 {
 	void *const *methods = *(void *const *const *)other;
 
@@ -766,7 +766,7 @@ int ScePafWidget_A8F7D4C1(void *self, uint32_t value)
 		self, value, 1, 0);
 }
 
-int ScePafWidget_E38C03C5(void *self)
+int _ZN3paf2ui16ProgressBarTouch16OnDragMoveSliderEPNS0_5EventE(void *self)
 {
 	void *const *methods = *(void *const *const *)self;
 
@@ -792,96 +792,96 @@ uint64_t *ScePafWidget_6206FB7E(uint64_t *result, const uint8_t *self)
 	return result;
 }
 
-extern int ScePafGraphics_A1B995E7(const uint8_t *self, uint32_t *output);
-extern int ScePafGraphics_4EF76BA1(const uint8_t *self, uint32_t index,
+extern int _ZN3paf5graph7TextObj12GetLineCountERj(const uint8_t *self, uint32_t *output);
+extern int _ZN3paf5graph7TextObj11GetCharInfoEjRNS0_18TextLayoutCharInfoE(const uint8_t *self, uint32_t index,
 					   uint8_t *output);
-extern int ScePafGraphics_830D5848(const uint8_t *self, uint32_t index,
+extern int _ZN3paf5graph7TextObj15GetNextRightHitEjRj(const uint8_t *self, uint32_t index,
 					   uint32_t *output);
-extern int ScePafGraphics_D48AB212(const uint8_t *self, uint32_t *first,
+extern int _ZN3paf5graph7TextObj17GetSelectionRangeERjS2_(const uint8_t *self, uint32_t *first,
 					   uint32_t *second);
 
-int ScePafWidget_68CE5A20(const uint8_t *self, uint32_t *output)
+int _ZN3paf2ui4Text12GetLineCountERj(const uint8_t *self, uint32_t *output)
 {
 	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
 
 	if (graphics)
-		return ScePafGraphics_A1B995E7(graphics, output);
+		return _ZN3paf5graph7TextObj12GetLineCountERj(graphics, output);
 	return -2136014814;
 }
 
-int ScePafWidget_7F6181F1(const uint8_t *self, uint32_t index,
+int _ZN3paf2ui4Text11GetCharInfoEjRNS_5graph18TextLayoutCharInfoE(const uint8_t *self, uint32_t index,
 			   uint8_t *output)
 {
 	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
 
 	if (graphics)
-		return ScePafGraphics_4EF76BA1(graphics, index, output);
+		return _ZN3paf5graph7TextObj11GetCharInfoEjRNS0_18TextLayoutCharInfoE(graphics, index, output);
 	return -2136014814;
 }
 
-int ScePafWidget_8403FC5B(const uint8_t *self, uint32_t index,
+int _ZN3paf2ui4Text15GetNextRightHitEjRj(const uint8_t *self, uint32_t index,
 			   uint32_t *output)
 {
 	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
 
 	if (graphics)
-		return ScePafGraphics_830D5848(graphics, index, output);
+		return _ZN3paf5graph7TextObj15GetNextRightHitEjRj(graphics, index, output);
 	return -2136014814;
 }
 
-int ScePafWidget_85421D01(const uint8_t *self, uint32_t *first,
+int _ZN3paf2ui4Text17GetSelectionRangeERjS2_(const uint8_t *self, uint32_t *first,
 			   uint32_t *second)
 {
 	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
 
 	if (graphics)
-		return ScePafGraphics_D48AB212(graphics, first, second);
+		return _ZN3paf5graph7TextObj17GetSelectionRangeERjS2_(graphics, first, second);
 	return -2136014814;
 }
 
-extern int ScePafGraphics_BE22EED6(const uint8_t *self, int index,
+extern int _ZN3paf5graph7TextObj18GetLayoutAttributeENS0_19TextLayoutAttributeERNS_4math2v2E(const uint8_t *self, int index,
 					   uint64_t *output);
-extern int ScePafGraphics_E73E0E33(const uint8_t *self, uint64_t *output);
-extern int ScePafGraphics_5AF2E479(const uint8_t *self, int index,
+extern int _ZN3paf5graph7TextObj9GetBoundsERNS_4math2v2E(const uint8_t *self, uint64_t *output);
+extern int _ZN3paf5graph7TextObj18GetLayoutAttributeENS0_19TextLayoutAttributeERi(const uint8_t *self, int index,
 					   uint32_t *output);
-extern uint8_t *ScePafGraphics_4C4593FF(void);
+extern uint8_t *_ZN3paf5graph7DrawObj12FinishSafetyEv(void);
 
-int ScePafWidget_09B7286A(const uint8_t *self, int index, uint64_t *output)
+int _ZN3paf2ui4Text18GetLayoutAttributeENS_5graph19TextLayoutAttributeERNS_4math2v2E(const uint8_t *self, int index, uint64_t *output)
 {
 	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
 
 	if (graphics)
-		return ScePafGraphics_BE22EED6(graphics, index, output);
+		return _ZN3paf5graph7TextObj18GetLayoutAttributeENS0_19TextLayoutAttributeERNS_4math2v2E(graphics, index, output);
 	return -2136014814;
 }
 
-int ScePafWidget_4CABAAE0(const uint8_t *self, uint64_t *output)
+int _ZN3paf2ui4Text9GetBoundsERNS_4math2v2E(const uint8_t *self, uint64_t *output)
 {
 	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
 
 	if (graphics)
-		return ScePafGraphics_E73E0E33(graphics, output);
+		return _ZN3paf5graph7TextObj9GetBoundsERNS_4math2v2E(graphics, output);
 	return -2136014814;
 }
 
-int ScePafWidget_B3BC5EE1(const uint8_t *self, int index,
+int _ZN3paf2ui4Text18GetLayoutAttributeENS_5graph19TextLayoutAttributeERi(const uint8_t *self, int index,
 			   uint32_t *output)
 {
 	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
 
 	if (graphics)
-		return ScePafGraphics_5AF2E479(graphics, index, output);
+		return _ZN3paf5graph7TextObj18GetLayoutAttributeENS0_19TextLayoutAttributeERi(graphics, index, output);
 	return -2136014814;
 }
 
-uint32_t *ScePafWidget_AE0C4046(void)
+uint32_t *_ZN3paf2ui8Animator6FinishEv(void)
 {
-	ScePafGraphics_4C4593FF();
+	_ZN3paf5graph7DrawObj12FinishSafetyEv();
 	sce_paf_widget_state_142d8 = 0;
 	return &sce_paf_widget_state_142d8;
 }
 
-int ScePafWidget_85A01D8F(void *self, unsigned int value)
+int _ZN3paf2ui3Box15anchor_to_orignEj(void *self, unsigned int value)
 {
 	if (value <= 1) {
 		if (value)
@@ -892,7 +892,7 @@ int ScePafWidget_85A01D8F(void *self, unsigned int value)
 	return 0;
 }
 
-int ScePafWidget_2385B189(uint8_t *self, unsigned int index, int value)
+int _ZN3paf2ui11Environment25RegisterTouchDeviceRegionEjPNS0_6WidgetE(uint8_t *self, unsigned int index, int value)
 {
 	if (index >= 6)
 		return -2135998193;
@@ -918,7 +918,7 @@ uint8_t *ScePafWidget_730AA895(uint8_t *self, uint32_t value,
 	return self;
 }
 
-uint32_t ScePafWidget_27278DC0(const uint32_t *self)
+uint32_t _ZN3paf2ui8listview8CellList7GetLastEv(const uint32_t *self)
 {
 	uint32_t index = self[1];
 
@@ -927,17 +927,17 @@ uint32_t ScePafWidget_27278DC0(const uint32_t *self)
 	return *(const uint32_t *)((const uint8_t *)self[0] + 8 * (index - 1));
 }
 
-__attribute__((noinline)) int ScePafWidget_8EDFDE19(const void *self, const char *tag)
+__attribute__((noinline)) int _ZNK3paf2ui6Widget9IsInheritEPKc(const void *self, const char *tag)
 {
 	return tag == "widget_base";
 }
 
-int ScePafWidget_9B80FB29(const void *self, const char *tag)
+int _ZNK3paf2ui8filelist13SegmentSource9IsInheritEPKc(const void *self, const char *tag)
 {
 	return tag == "segment_source";
 }
 
-int ScePafWidget_FC6F4E29(const void *self, const char *tag)
+int _ZNK3paf2ui8filelist10Visualizer9IsInheritEPKc(const void *self, const char *tag)
 {
 	return tag == "visualizer";
 }
@@ -948,7 +948,7 @@ void ScePafWidget_D3AFE81E(uint32_t *self)
 	PafDelete(self);
 }
 
-int ScePafWidget_F0D05847(uint32_t *self, uint32_t value)
+int _ZN3paf2ui13SlidingDrawer19SetMovableDirectionEj(uint32_t *self, uint32_t value)
 {
 	uint8_t *vtable = (uint8_t *)self[0];
 
@@ -956,18 +956,18 @@ int ScePafWidget_F0D05847(uint32_t *self, uint32_t value)
 	return ((int (*)(uint32_t *))*(void **)(vtable + 572))(self);
 }
 
-int ScePafWidget_0521777F(const void *self, const char *tag)
+int _ZNK3paf2ui11ScrollBar2d9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "scrollbar2d")
 		return 1;
-	return ScePafWidget_8EDFDE19(self, tag);
+	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
-int ScePafWidget_11F157B4(const void *self, const char *tag)
+int _ZNK3paf2ui5Group9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "group")
 		return 1;
-	return ScePafWidget_8EDFDE19(self, tag);
+	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
 int ScePafWidget_A4E53390(uint8_t *self)
@@ -978,7 +978,7 @@ int ScePafWidget_A4E53390(uint8_t *self)
 	return ((int (*)(uint8_t *))*(void **)(vtable + 560))(self);
 }
 
-int ScePafWidget_CBB4D949(int a1, int a2, int a3, uint8_t *self)
+int _ZN3paf2ui14ScrollViewBase18CBScrollBarChangedEiPNS0_7HandlerEPNS0_5EventEPv(int a1, int a2, int a3, uint8_t *self)
 {
 	uint8_t *vtable = *(uint8_t **)self;
 
@@ -986,98 +986,135 @@ int ScePafWidget_CBB4D949(int a1, int a2, int a3, uint8_t *self)
 		self, a1, a2, a3);
 }
 
-int ScePafWidget_1AC6007B(const void *self, const char *tag)
+int _ZNK3paf2ui6Camera9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "camera")
 		return 1;
-	return ScePafWidget_8EDFDE19(self, tag);
+	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
-__attribute__((noinline)) int ScePafWidget_31C1301C(const void *self, const char *tag)
+__attribute__((noinline)) int _ZNK3paf2ui12PageTurnBase9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "pageturn_base")
 		return 1;
-	return ScePafWidget_8EDFDE19(self, tag);
+	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
-int ScePafWidget_61D34238(const void *self, const char *tag)
+int _ZNK3paf2ui13AppIconSimple9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "app_icon_simple")
 		return 1;
-	return ScePafWidget_8EDFDE19(self, tag);
+	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
-__attribute__((noinline)) int ScePafWidget_743F6B5A(const void *self, const char *tag)
+__attribute__((noinline)) int _ZNK3paf2ui8SpinBase9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "spin_base")
 		return 1;
-	return ScePafWidget_8EDFDE19(self, tag);
+	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
-int ScePafWidget_766B09F4(const void *self, const char *tag)
+int _ZNK3paf2ui16ScrollViewParent9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "scroll_view_parent")
 		return 1;
-	return ScePafWidget_8EDFDE19(self, tag);
+	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
-__attribute__((noinline)) int ScePafWidget_7BBA6B10(const void *self, const char *tag)
+__attribute__((noinline)) int _ZNK3paf2ui4Text9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "text")
 		return 1;
-	return ScePafWidget_8EDFDE19(self, tag);
+	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
 /* Type tags are compared by pointer identity in the native widget hierarchy. */
 #define DEFINE_WIDGET_TYPE(name, tag, parent) \
-__attribute__((noinline)) int ScePafWidget_##name(const void *self, const char *type) \
+__attribute__((noinline)) int name(const void *self, const char *type) \
 { \
 	if (type == tag) \
 		return 1; \
-	return ScePafWidget_##parent(self, type); \
+	return parent(self, type); \
 }
 
-DEFINE_WIDGET_TYPE(824BA45C, "button_base", 8EDFDE19)
-DEFINE_WIDGET_TYPE(F0408EDF, "state_button_base", 824BA45C)
-DEFINE_WIDGET_TYPE(D48B7AF1, "scrollbar", 8EDFDE19)
-DEFINE_WIDGET_TYPE(E83DA42E, "scroll_view_base", 8EDFDE19)
-DEFINE_WIDGET_TYPE(8097275D, "list_view", E83DA42E)
-DEFINE_WIDGET_TYPE(4E7DAB19, "app_icon_base", 8EDFDE19)
-DEFINE_WIDGET_TYPE(B4A0700B, "progressbar", 8EDFDE19)
-DEFINE_WIDGET_TYPE(02B20FBB, "button", 824BA45C)
-DEFINE_WIDGET_TYPE(1459FA05, "composite_button", 824BA45C)
-DEFINE_WIDGET_TYPE(315650EC, "check_box", F0408EDF)
-DEFINE_WIDGET_TYPE(42E04324, "image_button", 02B20FBB)
-DEFINE_WIDGET_TYPE(0354FA10, "num_spin", 743F6B5A)
-DEFINE_WIDGET_TYPE(483E2C1D, "item_spin", 743F6B5A)
-DEFINE_WIDGET_TYPE(3AAD3226, "scrollbar_touch", D48B7AF1)
-DEFINE_WIDGET_TYPE(43B03F9F, "scroll_view", E83DA42E)
-DEFINE_WIDGET_TYPE(4C462EB0, "file_list", 8097275D)
-DEFINE_WIDGET_TYPE(6436B60C, "app_icon_2d", 4E7DAB19)
-DEFINE_WIDGET_TYPE(7D0C8076, "progressbar_touch", B4A0700B)
-DEFINE_WIDGET_TYPE(87ECDABA, "list_item", 8EDFDE19)
-DEFINE_WIDGET_TYPE(8E3BBEA4, "directbar", 8EDFDE19)
-DEFINE_WIDGET_TYPE(9074BCF9, "plane_button", 824BA45C)
-DEFINE_WIDGET_TYPE(915460AF, "radio_box", 8EDFDE19)
-DEFINE_WIDGET_TYPE(941FE103, "sliding_drawer", E83DA42E)
-DEFINE_WIDGET_TYPE(B7F6DF9C, "plane", 8EDFDE19)
-DEFINE_WIDGET_TYPE(8F603B76, "box", B7F6DF9C)
-DEFINE_WIDGET_TYPE(B954B379, "busyindicator", 8EDFDE19)
-DEFINE_WIDGET_TYPE(C7D6AD89, "pageturn", 31C1301C)
-DEFINE_WIDGET_TYPE(CC24A689, "rich_text", E83DA42E)
-DEFINE_WIDGET_TYPE(CCB1364A, "image_slidebar", 8EDFDE19)
-DEFINE_WIDGET_TYPE(D123A71C, "slidebar", 8EDFDE19)
-DEFINE_WIDGET_TYPE(D24DB0D6, "corner_button", 02B20FBB)
-DEFINE_WIDGET_TYPE(E07625DE, "dialog", 8F603B76)
-DEFINE_WIDGET_TYPE(E972265A, "text_box", 7BBA6B10)
-DEFINE_WIDGET_TYPE(F11BB524, "composite_drawer", 8EDFDE19)
-DEFINE_WIDGET_TYPE(FA0BFE83, "supplier", B7F6DF9C)
-DEFINE_WIDGET_TYPE(FA17CA06, "page", 8EDFDE19)
-DEFINE_WIDGET_TYPE(FE7FF370, "radio_button", F0408EDF)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui10ButtonBase9IsInheritEPKc, "button_base",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui15StateButtonBase9IsInheritEPKc, "state_button_base",
+		   _ZNK3paf2ui10ButtonBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui9ScrollBar9IsInheritEPKc, "scrollbar",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui14ScrollViewBase9IsInheritEPKc, "scroll_view_base",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ListView9IsInheritEPKc, "list_view",
+		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui11AppIconBase9IsInheritEPKc, "app_icon_base",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui11ProgressBar9IsInheritEPKc, "progressbar",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui6Button9IsInheritEPKc, "button",
+		   _ZNK3paf2ui10ButtonBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui15CompositeButton9IsInheritEPKc, "composite_button",
+		   _ZNK3paf2ui10ButtonBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui8CheckBox9IsInheritEPKc, "check_box",
+		   _ZNK3paf2ui15StateButtonBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui11ImageButton9IsInheritEPKc, "image_button",
+		   _ZNK3paf2ui6Button9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui7NumSpin9IsInheritEPKc, "num_spin",
+		   _ZNK3paf2ui8SpinBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ItemSpin9IsInheritEPKc, "item_spin",
+		   _ZNK3paf2ui8SpinBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui14ScrollBarTouch9IsInheritEPKc, "scrollbar_touch",
+		   _ZNK3paf2ui9ScrollBar9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui10ScrollView9IsInheritEPKc, "scroll_view",
+		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui8FileList9IsInheritEPKc, "file_list",
+		   _ZNK3paf2ui8ListView9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui9AppIcon2d9IsInheritEPKc, "app_icon_2d",
+		   _ZNK3paf2ui11AppIconBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui16ProgressBarTouch9IsInheritEPKc, "progressbar_touch",
+		   _ZNK3paf2ui11ProgressBar9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ListItem9IsInheritEPKc, "list_item",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui9DirectBar9IsInheritEPKc, "directbar",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui11PlaneButton9IsInheritEPKc, "plane_button",
+		   _ZNK3paf2ui10ButtonBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RadioBox9IsInheritEPKc, "radio_box",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui13SlidingDrawer9IsInheritEPKc, "sliding_drawer",
+		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui5Plane9IsInheritEPKc, "plane",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui3Box9IsInheritEPKc, "box",
+		   _ZNK3paf2ui5Plane9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui13BusyIndicator9IsInheritEPKc, "busyindicator",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui8PageTurn9IsInheritEPKc, "pageturn",
+		   _ZNK3paf2ui12PageTurnBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RichText9IsInheritEPKc, "rich_text",
+		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui13ImageSlideBar9IsInheritEPKc, "image_slidebar",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui8SlideBar9IsInheritEPKc, "slidebar",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui12CornerButton9IsInheritEPKc, "corner_button",
+		   _ZNK3paf2ui6Button9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui6Dialog9IsInheritEPKc, "dialog",
+		   _ZNK3paf2ui3Box9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui7TextBox9IsInheritEPKc, "text_box",
+		   _ZNK3paf2ui4Text9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui15CompositeDrawer9IsInheritEPKc, "composite_drawer",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui8Supplier9IsInheritEPKc, "supplier",
+		   _ZNK3paf2ui5Plane9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui5Scene9IsInheritEPKc, "page",
+		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+DEFINE_WIDGET_TYPE(_ZNK3paf2ui11RadioButton9IsInheritEPKc, "radio_button",
+		   _ZNK3paf2ui15StateButtonBase9IsInheritEPKc)
 
 #undef DEFINE_WIDGET_TYPE
 
-int ScePafWidget_9BE8F98D(uint32_t *self)
+int _ZN3paf2ui14ScrollViewBase19UpdateAfterChildrenEv(uint32_t *self)
 {
 	uint8_t *vtable = (uint8_t *)self[0];
 
@@ -1089,7 +1126,7 @@ int ScePafWidget_9BE8F98D(uint32_t *self)
 /* The native delete callback marks the dispatch scope in a shared word. */
 uint32_t sce_paf_widget_dispatch_guard_142d4;
 
-int ScePafWidget_0C7FE13F(uint32_t *self)
+int _ZN3paf2ui8Layouter8OnUpdateEv(uint32_t *self)
 {
 	uint8_t *vtable = (uint8_t *)self[0];
 
@@ -1133,19 +1170,19 @@ uint32_t *InitializeWidgetStatusRecord(uint32_t *self)
 	return self;
 }
 
-uint32_t *ScePafWidget_69498B64(uint32_t *self)
+uint32_t *_ZN3paf2ui5EventC1Ev(uint32_t *self)
 {
 	return InitializeWidgetStatusRecord(self);
 }
 
-uint32_t *ScePafWidget_A48FBB8E(uint32_t *self)
+uint32_t *_ZN3paf2ui5EventC2Ev(uint32_t *self)
 {
 	return InitializeWidgetStatusRecord(self);
 }
 
 uint32_t sce_paf_widget_token_counter_13cd8;
 
-uint32_t *ScePafWidget_AEC1B38D(uint32_t *self, const uint64_t *value)
+uint32_t *_ZN3paf2ui14ScrollViewBase4SnapC1ERKNS0_19ScrollViewSnapPointE(uint32_t *self, const uint64_t *value)
 {
 	uint32_t previous = sce_paf_widget_token_counter_13cd8;
 
@@ -1163,7 +1200,7 @@ int WidgetInvokeSlot(void *self, uint32_t offset)
 	return ((int (*)(void *))*(void *const *)(vtable + offset))(self);
 }
 
-int ScePafWidget_001CA5F6(void *self)
+int _ZN3paf2ui11PlaneButton16UpdateAdjustSizeEv(void *self)
 {
 	return WidgetInvokeSlot(self, 448);
 }
@@ -1173,22 +1210,22 @@ int ScePafWidget_17BFAECF(void *self)
 	return WidgetInvokeSlot(self, 468);
 }
 
-int ScePafWidget_33B0385F(void *self)
+int _ZN3paf2ui10ScrollView13GetViewParentEv(void *self)
 {
 	return WidgetInvokeSlot(self, 140);
 }
 
-int ScePafWidget_37133F0F(void *self)
+int _ZN3paf2ui11ScrollBar2d16OnDragMoveSliderEPNS0_5EventE(void *self)
 {
 	return WidgetInvokeSlot(self, 416);
 }
 
-int ScePafWidget_3EFA0B3A(void *self)
+int _ZN3paf2ui14ScrollBarTouch16OnDragMoveSliderEPNS0_5EventE(void *self)
 {
 	return WidgetInvokeSlot(self, 484);
 }
 
-int ScePafWidget_6E59DBBC(void *self)
+int _ZN3paf2ui6Button16UpdateAdjustSizeEv(void *self)
 {
 	return WidgetInvokeSlot(self, 448);
 }
@@ -1234,7 +1271,7 @@ uint8_t *ScePafWidget_6CC95725(const uint8_t *self, const uint64_t *value)
 	return target;
 }
 
-int ScePafWidget_8552BF82(void *self, const uint8_t *argument)
+int _ZN3paf2ui8listview11ItemFactory7DisposeERNS2_12DisposeParamE(void *self, const uint8_t *argument)
 {
 	void *target = *(void *const *)(argument + 12);
 	const uint8_t *vtable = *(const uint8_t *const *)target;
@@ -1251,19 +1288,19 @@ int ScePafWidget_6B4F7595(void *unused0, void *unused1,
 	return 0;
 }
 
-uint32_t *ScePafWidget_006A5DE6(uint32_t *self)
+uint32_t *_ZN3paf2ui19TextBoxEditListenerD2Ev(uint32_t *self)
 {
 	*self = (uint32_t)-2127593716;
 	return self;
 }
 
-uint32_t *ScePafWidget_36F89F9C(uint32_t *self)
+uint32_t *_ZN3paf2ui19TextBoxEditListenerC1Ev(uint32_t *self)
 {
 	*self = (uint32_t)-2127593716;
 	return self;
 }
 
-uint32_t *ScePafWidget_61FC862B(uint32_t *self)
+uint32_t *_ZN3paf2ui19TextBoxEditListenerD1Ev(uint32_t *self)
 {
 	*self = (uint32_t)-2127593716;
 	return self;
@@ -1275,13 +1312,13 @@ uint32_t *ScePafWidget_4F5ED653(uint32_t *self)
 	return self;
 }
 
-uint32_t *ScePafWidget_76C04679(uint32_t *self)
+uint32_t *_ZN3paf2ui8listview11ItemFactoryD1Ev(uint32_t *self)
 {
 	*self = (uint32_t)-2127612860;
 	return self;
 }
 
-uint32_t *ScePafWidget_9224D27B(uint32_t *self)
+uint32_t *_ZN3paf2ui8listview11ItemFactoryD2Ev(uint32_t *self)
 {
 	*self = (uint32_t)-2127612860;
 	return self;
@@ -1293,7 +1330,7 @@ uint32_t *ScePafWidget_9FBE52BB(uint32_t *self)
 	return self;
 }
 
-uint32_t *ScePafWidget_B8CF2A93(uint32_t *self)
+uint32_t *_ZN3paf2ui19TextBoxEditListenerC2Ev(uint32_t *self)
 {
 	*self = (uint32_t)-2127593716;
 	return self;
@@ -1310,7 +1347,7 @@ int ScePafWidget_B5DACB0A(void *unused, const uint8_t *argument)
 	return 0;
 }
 
-int ScePafWidget_A3EBC15F(const uint8_t *self)
+int _ZN3paf2ui12AnimListener12PropColorSetEPS1_NS_4math2v4E(const uint8_t *self)
 {
 	void *target = *(void *const *)(self + 12);
 	const uint8_t *vtable = *(const uint8_t *const *)target;
@@ -1327,7 +1364,7 @@ void *ScePafWidget_1D7D7860(uint8_t *self)
 	return self;
 }
 
-int ScePafWidget_036BCE96(uint8_t *self, float value)
+int _ZN3paf2ui16ProgressBarTouch20SetLabelSliderMarginEf(uint8_t *self, float value)
 {
 	uint32_t flags = *(const uint32_t *)(self + 724);
 
@@ -1336,7 +1373,7 @@ int ScePafWidget_036BCE96(uint8_t *self, float value)
 	return 0;
 }
 
-int ScePafWidget_734468C9(uint8_t *self, float value)
+int _ZN3paf2ui11ProgressBar14SetLabelMarginEf(uint8_t *self, float value)
 {
 	uint32_t flags = *(const uint32_t *)(self + 724);
 
@@ -1380,7 +1417,7 @@ int ScePafWidget_C3D53C98(void *self, int first, int second)
 
 uint32_t sce_paf_widget_serial_13cd8;
 
-void *ScePafWidget_CFA20521(uint8_t *result, const uint64_t *payload)
+void *_ZN3paf2ui14ScrollViewBase4SnapC2ERKNS0_19ScrollViewSnapPointE(uint8_t *result, const uint64_t *payload)
 {
 	uint32_t previous = sce_paf_widget_serial_13cd8;
 
@@ -1390,7 +1427,7 @@ void *ScePafWidget_CFA20521(uint8_t *result, const uint64_t *payload)
 	return result;
 }
 
-int ScePafWidget_F130F006(uint8_t *self, uint32_t value)
+int _ZN3paf2ui14ScrollBarTouch17SetPageScrollModeENS1_14PageScrollModeE(uint8_t *self, uint32_t value)
 {
 	if ((int32_t)value < 0 || (int32_t)value > 2)
 		return -2136014706;
@@ -1412,17 +1449,17 @@ void *DestroyWidgetResourceHandle(uint8_t *self)
 	return self;
 }
 
-void *ScePafWidget_42D6C09C(uint8_t *self)
+void *_ZN3paf2ui8filelist14CellFocusParamD2Ev(uint8_t *self)
 {
 	return DestroyWidgetResourceHandle(self);
 }
 
-void *ScePafWidget_4C70D824(uint8_t *self)
+void *_ZN3paf2ui8filelist14CellFocusParamD1Ev(uint8_t *self)
 {
 	return DestroyWidgetResourceHandle(self);
 }
 
-int ScePafWidget_46E5C1ED(void *self)
+int _ZN3paf2ui11RadioButton14OnButtonDecideEv(void *self)
 {
 	const uint8_t *vtable = *(const uint8_t *const *)self;
 
@@ -1439,7 +1476,7 @@ float ScePafWidget_4983B3FC(uint8_t *self)
 	return (float)*(const int32_t *)(self + 644);
 }
 
-const char *ScePafWidget_F3A13905(void)
+const char *_ZN3paf2ui20ScrollViewStyleParam9ParamNameEv(void)
 {
 	return "style_scroll_view";
 }
@@ -1460,7 +1497,7 @@ int ScePafWidget_3E4AABD3(uint8_t *self, void *replacement)
 	return 0;
 }
 
-int ScePafWidget_3F5AFF90(const uint8_t *self, int32_t index)
+int _ZN3paf2ui8listview11SegmentList10GetSegmentEi(const uint8_t *self, int32_t index)
 {
 	int32_t count;
 
@@ -1475,7 +1512,7 @@ int ScePafWidget_3F5AFF90(const uint8_t *self, int32_t index)
 				  8 * (uint32_t)index);
 }
 
-int ScePafWidget_4CB11B2D(const uint8_t *self, int32_t requested)
+int _ZN3paf2ui17EventListenerList4FindEPNS0_13EventListenerE(const uint8_t *self, int32_t requested)
 {
 	const uint8_t *root = *(const uint8_t *const *)(self + 4);
 	const uint8_t *node = root ? *(const uint8_t *const *)(root + 4) : NULL;
@@ -1489,7 +1526,7 @@ int ScePafWidget_4CB11B2D(const uint8_t *self, int32_t requested)
 	return 0;
 }
 
-int ScePafWidget_94C76F94(uint8_t *self, void *replacement)
+int _ZN3paf2ui14ScrollViewBase22SetScrollBarControllerEPNS0_29ScrollViewScrollBarControllerE(uint8_t *self, void *replacement)
 {
 	void *previous = *(void **)(self + 660);
 	const uint8_t *vtable;
@@ -1506,7 +1543,7 @@ int ScePafWidget_94C76F94(uint8_t *self, void *replacement)
 	return ((int (*)(void *))*(void *const *)(vtable + 560))(self);
 }
 
-void *ScePafWidget_A18278A9(uint8_t *self, int32_t index)
+void *_ZN3paf2ui8ListView22GetSegmentPropertyListEi(uint8_t *self, int32_t index)
 {
 	uint32_t *list = *(uint32_t **)(self + 1064);
 	void *fallback = self + 1080;
@@ -1541,7 +1578,7 @@ void *ScePafWidget_55D83675(uint8_t *self, uint32_t *replacement)
 	return ((void *(*)(void *))*(void *const *)(vtable + 160))(self);
 }
 
-void *ScePafWidget_DBD8EC0D(const uint8_t *self)
+void *_ZN3paf2ui8ListItem11GetListItemEPNS0_6WidgetE(const uint8_t *self)
 {
 	uint8_t *parent;
 
@@ -1574,7 +1611,7 @@ int ScePafWidget_7B743729(uint8_t *self, int32_t value)
 	return 0;
 }
 
-int ScePafWidget_2DDBB8E3(uint8_t *self, uint32_t first,
+int _ZN3paf2ui8filelist16CellListAccessor8SetFocusEiNS0_8ListView14FocusAlignTypeEPNS_5TimerE(uint8_t *self, uint32_t first,
 			     uint32_t second, uint32_t third)
 {
 	uint32_t *record = *(uint32_t **)(self + 12);
@@ -1593,7 +1630,7 @@ int ScePafWidget_2DDBB8E3(uint8_t *self, uint32_t first,
 	return result;
 }
 
-float ScePafWidget_53456E51(uint8_t *self, int32_t index)
+float _ZN3paf2ui11ProgressBar8GetValueENS1_5BarIdE(uint8_t *self, int32_t index)
 {
 	union {
 		uint32_t bits;
@@ -1623,7 +1660,7 @@ int ScePafWidget_ECC76080(uint8_t *self, float *output, int32_t index)
 	return 0;
 }
 
-uint32x4_t *ScePafWidget_60E4E162(uint32x4_t *result,
+uint32x4_t *_ZN3paf2ui15AnimListenerObj13PropObjRotGetEPNS0_12AnimListenerE(uint32x4_t *result,
 					  const uint8_t *self)
 {
 	const uint8_t *value = *(const uint8_t *const *)(self + 80);
@@ -1641,7 +1678,7 @@ uint8_t *ScePafWidget_0DCB8EA5(uint8_t *self, float seconds)
 	return self;
 }
 
-uint8_t *ScePafWidget_D7D7712F(uint8_t *self, float value)
+uint8_t *_ZN3paf2ui13BusyIndicator11SetBallSizeEf(uint8_t *self, float value)
 {
 	if (value > 0.0f) {
 		*(float *)(self + 672) = value;
@@ -1650,7 +1687,7 @@ uint8_t *ScePafWidget_D7D7712F(uint8_t *self, float value)
 	return self;
 }
 
-int ScePafWidget_2CAFDB70(uint8_t *self, uint32_t value, uint8_t flag)
+int _ZN3paf2ui13ImageSlideBar8SetValueEib(uint8_t *self, uint32_t value, uint8_t flag)
 {
 	const uint8_t *vtable = *(const uint8_t *const *)self;
 
@@ -1676,7 +1713,7 @@ int ScePafWidget_A38D5EAB(uint8_t *self, uint32_t value, uint8_t flag)
 	return 0;
 }
 
-int ScePafWidget_686BD68A(uint8_t *self, uint8_t execute)
+int _ZN3paf2ui14ScrollViewBase19OnViewLayoutUpdatedEb(uint8_t *self, uint8_t execute)
 {
 	const uint8_t *vtable;
 
@@ -1689,7 +1726,7 @@ int ScePafWidget_686BD68A(uint8_t *self, uint8_t execute)
 	return ((int (*)(uint8_t *))*(void *const *)(vtable + 560))(self);
 }
 
-uint8_t *ScePafWidget_31892C5A(uint8_t *self, float value)
+uint8_t *_ZN3paf2ui14ScrollViewBase12SetSnapPowerEf(uint8_t *self, float value)
 {
 	*(float *)(self + 960) = value > 0.0f ? value : 0.0f;
 	return self;
@@ -1713,7 +1750,7 @@ int ScePafWidget_B9F2249C(uint8_t *self, const uint64_t *value)
 	return 0;
 }
 
-uint8_t *ScePafWidget_2B4B4266(uint8_t *self, const uint8_t *flags)
+uint8_t *_ZN3paf2ui6Widget15InitCreateParamEPKNS1_11CreateParamE(uint8_t *self, const uint8_t *flags)
 {
 	if (flags) {
 		uint8_t value = (self[404] & 0xfe) | ((flags[0] & 2) != 0);
@@ -1724,7 +1761,7 @@ uint8_t *ScePafWidget_2B4B4266(uint8_t *self, const uint8_t *flags)
 	return self;
 }
 
-uint8_t *ScePafWidget_C0033104(uint8_t *self, uint16_t flags)
+uint8_t *_ZN3paf2ui6Widget17NotifyLayoutDirtyEj(uint8_t *self, uint16_t flags)
 {
 	uint8_t *result = self;
 
@@ -1767,7 +1804,7 @@ uint32_t *ScePafWidget_D0D78958(uint32_t *self, uint32_t *first,
 	return self;
 }
 
-uint8_t *ScePafWidget_73D27A1B(uint8_t *self)
+uint8_t *_ZN3paf2ui13BusyIndicator4StopEv(uint8_t *self)
 {
 	uint32_t state = *(uint32_t *)(self + 636);
 
@@ -1783,9 +1820,9 @@ uint8_t *ScePafWidget_73D27A1B(uint8_t *self)
 	return self;
 }
 
-int ScePafWidget_4ADABE36(uint32_t *self)
+int _ZN3paf2ui18ImageSlideBarParam3GetEv(uint32_t *self)
 {
-	int result = ScePafResource_598D91C1(self);
+	int result = _ZN3paf2ui11WidgetParam3GetEv(self);
 
 	if (result >= 0) {
 		const uint8_t *state = (const uint8_t *)self[8];
@@ -1800,7 +1837,7 @@ int ScePafWidget_4ADABE36(uint32_t *self)
 
 int ScePafWidget_670B0492(uint8_t *self)
 {
-	int result = ScePafResource_598D91C1(self);
+	int result = _ZN3paf2ui11WidgetParam3GetEv(self);
 
 	if (result >= 0) {
 		const uint8_t *state = *(const uint8_t *const *)(self + 32);
@@ -1816,7 +1853,7 @@ int ScePafWidget_670B0492(uint8_t *self)
 
 int ScePafWidget_F9BDDCE4(uint8_t *self)
 {
-	int result = ScePafResource_598D91C1(self);
+	int result = _ZN3paf2ui11WidgetParam3GetEv(self);
 
 	if (result >= 0) {
 		const uint8_t *state = *(const uint8_t *const *)(self + 32);
@@ -1835,9 +1872,9 @@ int ScePafWidget_F9BDDCE4(uint8_t *self)
 	return result;
 }
 
-int ScePafWidget_448CE9C9(uint8_t *self)
+int _ZN3paf2ui13RadioBoxParam3GetEv(uint8_t *self)
 {
-	int result = ScePafResource_598D91C1(self);
+	int result = _ZN3paf2ui11WidgetParam3GetEv(self);
 
 	if (result >= 0) {
 		const uint8_t *state = *(const uint8_t *const *)(self + 32);

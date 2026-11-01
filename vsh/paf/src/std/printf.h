@@ -18,7 +18,7 @@ enum PafFormatFlags {
 	PAF_FORMAT_HEX_PREFIX = 64
 };
 
-int ScePafStdc_AE0F3820(PafFormatOutput output, void *context,
+int prnt(PafFormatOutput output, void *context,
 		      const char *format, va_list args);
 int PafFormatBody(PafFormatOutput output, void *context,
 		  const char *format, va_list args, char *buffer);
@@ -27,7 +27,7 @@ int sce_paf_snprintf(char *buffer, size_t bufsz, const char *format, ...);
 int sce_paf_vsprintf(char *buffer, const char *format, va_list args);
 int sce_paf_vsnprintf(char *buffer, size_t bufsz, const char *format, va_list args);
 
-int ScePafStdc_AFB23563(PafWideFormatOutput output, void *context,
+int wprnt(PafWideFormatOutput output, void *context,
 		      const uint16_t *format, va_list args);
 int PafWideFormatBody(PafWideFormatOutput output, void *context,
 		      const uint16_t *format, va_list args, uint16_t *buffer);

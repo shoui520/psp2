@@ -507,7 +507,7 @@ long sce_paf_atol(const char *str)
 	return sce_paf_strtol(str, NULL, 10);
 }
 
-char *ScePafStdc_7E1B96F3(const char *str, int *value)
+char *sce_paf_atob(const char *str, int *value)
 {
 	char *endptr;
 	int parsed = (int)sce_paf_strtol(str, &endptr, 10);
@@ -530,28 +530,28 @@ int sce_paf_abs(int value)
 
 /* The native failure trap invokes this export out-of-line. */
 __attribute__((noinline))
-int ScePafStdc_D41FD265(void)
+int sce_paf_printf_dummy(void)
 {
 	return 0;
 }
 
-void ScePafStdc_19BB4B73(void)
+void abort(void)
 {
-	ScePafStdc_D41FD265();
+	sce_paf_printf_dummy();
 	__breakpoint(0);
 }
 
-int ScePafStdc_323FC518(void)
+int sce_paf_wprintf_dummy(void)
 {
 	return 0;
 }
 
-int ScePafStdc_34A63B24(void)
+int sce_paf_vprintf_dummy(void)
 {
 	return 0;
 }
 
-int ScePafStdc_4E9F0E23(void)
+int _fflush_readbuff(void)
 {
 	return 0;
 }

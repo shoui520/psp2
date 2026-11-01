@@ -14,7 +14,7 @@ int StdioInitialize(void)
 	extern void *__dso_handle;
 
 	MutexConstruct(&stdioMutex, "ScePafStdio", MutexOption_None);
-	return ScePafStdc_C95732BB(&stdioMutex,
+	return __aeabi_atexit(&stdioMutex,
 				(void (*)(void *))MutexDestroy, &__dso_handle);
 }
 

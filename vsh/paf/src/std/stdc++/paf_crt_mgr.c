@@ -34,7 +34,7 @@ PafCrtManager *PafCrtManagerConstruct(PafCrtManager *self)
 		sceClibPrintf(crtAssertion, crtSourceFile, 36);
 		__breakpoint(0);
 	}
-	ScePafStdc_5883A6E3(name, "ScePafCrtMutex0", sizeof(name));
+	memcpy(name, "ScePafCrtMutex0", sizeof(name));
 	for (unsigned int i = 0; i < 2; i++) {
 		if (sceKernelCreateLwMutex(&self->mutex[i], name,
 					 SCE_KERNEL_LW_MUTEX_ATTR_TH_PRIO |
@@ -98,6 +98,6 @@ int PafCrtManagerInitialize(void)
 	extern void *__dso_handle;
 
 	PafCrtManagerConstruct(&crtManagerStorage);
-	return ScePafStdc_C95732BB(&crtManagerStorage,
+	return __aeabi_atexit(&crtManagerStorage,
 			(void (*)(void *))PafCrtManagerDestruct, &__dso_handle);
 }

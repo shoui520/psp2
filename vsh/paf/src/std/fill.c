@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-void *ScePafStdc_8A58EE24(void *destination, uint32_t pattern, size_t words)
+void *sce_paf_memset32(void *destination, uint32_t pattern, size_t words)
 {
 	uint8_t *out = (uint8_t *)destination;
 	size_t i;

@@ -22,12 +22,12 @@ extern void ScePafStdc_5C468294(void *ptr);
 static const char s_default_string[] = "";
 static const char s_buffer_filename[] = "";
 
-int ScePafResource_598D91C1(const ResourceObj *self)
+int _ZN3paf2ui11WidgetParam3GetEv(const ResourceObj *self)
 {
 	return self->string_buffer ? 0 : -1;
 }
 
-int ScePafResource_0C1A596E(uint8_t *self)
+int _ZN3paf5graph12DrawObjParam4InitEv(uint8_t *self)
 {
 	*(uint32_t *)(self + 72) = 1;
 	*(int8_t *)(self + 76) = -1;
@@ -36,7 +36,7 @@ int ScePafResource_0C1A596E(uint8_t *self)
 	return 0;
 }
 
-int ScePafResource_4FC016F9(uint8_t *self, const uint8_t *value)
+int _ZN3paf5graph12DrawObjParam7GetEachEPNS0_7DrawObjE(uint8_t *self, const uint8_t *value)
 {
 	uint32_t packed;
 	uint32_t attributes;
@@ -59,7 +59,7 @@ int ScePafResource_4FC016F9(uint8_t *self, const uint8_t *value)
 	return 0;
 }
 
-int ScePafResource_2B6B99EF(uint8_t *self)
+int _ZN3paf2ui18WidgetHandlerParam4InitEv(uint8_t *self)
 {
 	uint32_t *root = *(uint32_t **)(self + 40);
 	uint32_t *node;
@@ -74,7 +74,7 @@ int ScePafResource_2B6B99EF(uint8_t *self)
 	return 0;
 }
 
-int ScePafResource_AC088A9C(uint32_t *self)
+int _ZN3paf2ui16WidgetStyleParam3GetEv(uint32_t *self)
 {
 	uint32_t item = 0;
 	uint32_t node;
@@ -89,7 +89,7 @@ int ScePafResource_AC088A9C(uint32_t *self)
 	return 0;
 }
 
-int ScePafResource_0E854333(uint32_t *self)
+int _ZN3paf2ui16WidgetStyleParam3SetEv(uint32_t *self)
 {
 	uint32_t node = 0;
 	uint32_t root;
@@ -113,7 +113,7 @@ int ScePafResource_0E854333(uint32_t *self)
 	return 0;
 }
 
-int ScePafResource_9637E38B(uint32_t *self)
+int _ZN3paf5graph12DrawObjParam3SetEv(uint32_t *self)
 {
 	uint32_t node = 0;
 	uint32_t root;
@@ -137,7 +137,7 @@ int ScePafResource_9637E38B(uint32_t *self)
 	return 0;
 }
 
-int ScePafResource_3B89338E(uint32_t *self, uint32_t target)
+int _ZN3paf2ui16WidgetSoundParam9DelWidgetEPNS0_6WidgetE(uint32_t *self, uint32_t target)
 {
 	uint32_t *node = NULL;
 	uint32_t *root;
@@ -167,7 +167,7 @@ not_found:
 	return -1;
 }
 
-uint32_t *ScePafResource_4F62CBB4(uint8_t *self)
+uint32_t *_ZN3paf2ui16WidgetStyleParam6OnDrawEv(uint8_t *self)
 {
 	/* The firmware stores this virtual callback as a two-word member pointer. */
 	static const volatile struct {
@@ -238,7 +238,7 @@ HeapAllocator *ScePafResource_C240421A(uint8_t *self,
 	return ReleaseResourceBuffer(self, allocator, 40, 52, 64);
 }
 
-int ScePafResource_378D6AE0(uint32_t *self)
+int _ZN3paf2ui16WidgetSoundParam3SetEv(uint32_t *self)
 {
 	uint32_t node = 0;
 	uint32_t root;

@@ -136,7 +136,7 @@ int GlobalHeapInitialize(void)
 	extern void *__dso_handle;
 
 	GlobalHeapConstruct(&s_heap_storage);
-	return ScePafStdc_C95732BB(&s_heap_storage,
+	return __aeabi_atexit(&s_heap_storage,
 			(void (*)(void *))GlobalHeapDestruct, &__dso_handle);
 }
 

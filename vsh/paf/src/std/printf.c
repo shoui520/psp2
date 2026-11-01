@@ -56,7 +56,7 @@ int sce_paf_sprintf(char *buffer, const char *format, ...)
 	int result;
 
 	va_start(args, format);
-	result = ScePafStdc_AE0F3820(PafStringOutput, &next, format, args);
+	result = prnt(PafStringOutput, &next, format, args);
 	va_end(args);
 	return result;
 }
@@ -73,7 +73,7 @@ int sce_paf_snprintf(char *buffer, size_t bufsz, const char *format, ...)
 	int result;
 
 	va_start(args, format);
-	result = ScePafStdc_AE0F3820(output, &state, format, args);
+	result = prnt(output, &state, format, args);
 	va_end(args);
 	return result;
 }
@@ -82,7 +82,7 @@ int sce_paf_vsprintf(char *buffer, const char *format, va_list args)
 {
 	char *next = buffer;
 
-	return ScePafStdc_AE0F3820(PafStringOutput, &next, format, args);
+	return prnt(PafStringOutput, &next, format, args);
 }
 
 int sce_paf_vsnprintf(char *buffer, size_t bufsz, const char *format, va_list args)
@@ -94,5 +94,5 @@ int sce_paf_vsnprintf(char *buffer, size_t bufsz, const char *format, va_list ar
 	};
 	PafFormatOutput output = bufsz ? PafBufferOutput : PafCountOutput;
 
-	return ScePafStdc_AE0F3820(output, &state, format, args);
+	return prnt(output, &state, format, args);
 }

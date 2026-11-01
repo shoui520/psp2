@@ -194,8 +194,6 @@ target_include_directories(vs0_sys_external_libpaf PRIVATE
 	"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt"
 	"${paf_zlib_INCLUDE}"
 	"${CMAKE_SOURCE_DIR}/contrib/squish-1.11")
-set_source_files_properties("../../sys/sdk/target/src/deflt/zlibhdr.c" PROPERTIES
-	COMPILE_DEFINITIONS "sceZlibDecompress=ScePafLowlayer_D7DAA151")
 
 # paf::thread's and paf::job's constructors and destructors have full C2/D2 copies where 8 makes
 # them call C1/D1, and CallQueue::Enqueue calls string::assign out of line; budgets 29 to 31 do

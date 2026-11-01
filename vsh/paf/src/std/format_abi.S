@@ -8,10 +8,10 @@
 	.fpu	neon
 	.text
 
-	.global	ScePafStdc_AE0F3820
-	.type	ScePafStdc_AE0F3820, %function
+	.global	prnt
+	.type	prnt, %function
 	.thumb_func
-ScePafStdc_AE0F3820:
+prnt:
 	.fnstart
 	.save	{r4-r11, lr}
 	push.w	{r4-r11, lr}
@@ -38,4 +38,4 @@ ScePafStdc_AE0F3820:
 .LformatStackFail:
 	bl	__stack_chk_fail
 	.fnend
-	.size	ScePafStdc_AE0F3820, . - ScePafStdc_AE0F3820
+	.size	prnt, . - prnt

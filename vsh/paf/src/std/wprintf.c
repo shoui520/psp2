@@ -51,7 +51,7 @@ int sce_paf_swprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format, ...
 	int result;
 
 	va_start(args, format);
-	result = ScePafStdc_AFB23563(output, &state, format, args);
+	result = wprnt(output, &state, format, args);
 	va_end(args);
 	return result;
 }
@@ -66,5 +66,5 @@ int sce_paf_vswprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format,
 	};
 	PafWideFormatOutput output = bufsz ? PafWideBufferOutput : PafWideCountOutput;
 
-	return ScePafStdc_AFB23563(output, &state, format, args);
+	return wprnt(output, &state, format, args);
 }

@@ -3,26 +3,26 @@
 #include "../compiler.h"
 #include "../std/new.h"
 
-__attribute__((noinline)) int ScePafResource_D58CCBBB(const uint8_t *self)
+__attribute__((noinline)) int _ZN3paf13ResourceParam8GetDirtyEv(const uint8_t *self)
 {
 	return self[12];
 }
 
 __attribute__((noinline))
-uint8_t *ScePafResource_120CECA8(uint8_t *self, uint8_t value)
+uint8_t *_ZN3paf13ResourceParam8SetDirtyEb(uint8_t *self, uint8_t value)
 {
 	self[12] = value;
 	return self;
 }
 
-int ScePafResource_AB07D1DC(uint8_t *self)
+int _ZN3paf14VersatileParam8OnUpdateEv(uint8_t *self)
 {
 	void *resource = *(void **)(self + 4);
 
 	if (resource) {
-		if (ScePafResource_D58CCBBB(resource))
+		if (_ZN3paf13ResourceParam8GetDirtyEv(resource))
 			((void (*)(void *))(*(void ***)self)[3])(self);
-		ScePafResource_120CECA8(*(uint8_t **)(self + 4), 0);
+		_ZN3paf13ResourceParam8SetDirtyEb(*(uint8_t **)(self + 4), 0);
 	}
 	return 0;
 }
@@ -47,27 +47,27 @@ uint32_t *DestroyResourceHandle(uint32_t *self)
 	return self;
 }
 
-uint32_t *ScePafResource_71049596(uint32_t *self)
+uint32_t *_ZN3paf13ResourceParamD1Ev(uint32_t *self)
 {
 	return DestroyResourceHandle(self);
 }
 
-uint32_t *ScePafResource_22CE8E13(uint32_t *self)
+uint32_t *_ZN3paf13ResourceParamD2Ev(uint32_t *self)
 {
 	return DestroyResourceHandle(self);
 }
 
-void ScePafResource_0A3E0BBF(uint32_t *self)
+void _ZN3paf13ResourceParamD0Ev(uint32_t *self)
 {
 	DestroyResourceHandle(self);
 	PafDelete(self);
 }
 
-extern int ScePafResource_3B89338E(uint32_t *self, uint32_t target);
+extern int _ZN3paf2ui16WidgetSoundParam9DelWidgetEPNS0_6WidgetE(uint32_t *self, uint32_t target);
 
-int ScePafResource_BFC7537A(uint32_t target, uint32_t *self)
+int _ZN3paf2ui16WidgetSoundParam9delete_cbEPNS0_6WidgetEPv(uint32_t target, uint32_t *self)
 {
-	return ScePafResource_3B89338E(self, target);
+	return _ZN3paf2ui16WidgetSoundParam9DelWidgetEPNS0_6WidgetE(self, target);
 }
 
 int ScePafResource_CEED7338(const void *const *self)
@@ -78,7 +78,7 @@ int ScePafResource_CEED7338(const void *const *self)
 	return 0;
 }
 
-int ScePafResource_459C4ED3(const uint8_t *self)
+int _ZN3paf2ui18WidgetHandlerParam3GetEv(const uint8_t *self)
 {
 	if (*(const uint32_t *)(self + 32) &&
 	    *(const uint32_t *)(self + 8))
@@ -86,7 +86,7 @@ int ScePafResource_459C4ED3(const uint8_t *self)
 	return -1;
 }
 
-int ScePafResource_205D3029(uint8_t *self, uint8_t flags)
+int _ZN3paf14VersatileParam7DestroyEi(uint8_t *self, uint8_t flags)
 {
 	if (flags & 1) {
 		void *object = *(void **)(self + 4);
@@ -97,7 +97,7 @@ int ScePafResource_205D3029(uint8_t *self, uint8_t flags)
 	return 0;
 }
 
-void *ScePafResource_06803F97(const uint8_t *self, uint32_t id)
+void *_ZN3paf2ui16WidgetStyleParam15GetDrawObjParamEi(const uint8_t *self, uint32_t id)
 {
 	uint8_t **current = *(uint8_t ***)(self + 44);
 	uint8_t **end = current + *(const uint32_t *)(self + 48);
@@ -111,7 +111,7 @@ void *ScePafResource_06803F97(const uint8_t *self, uint32_t id)
 	return current != end ? *current : 0;
 }
 
-int ScePafResource_28783E2B(const uint8_t *self)
+int _ZN3paf2ui16WidgetSoundParam4InitEv(const uint8_t *self)
 {
 	uint8_t *current = *(uint8_t *const *)(self + 44);
 	uint8_t *end = current + 56 * *(const uint32_t *)(self + 48);
@@ -164,7 +164,7 @@ uint32_t **ScePafResource_E2CA0FC4(uint32_t **result,
 	return result;
 }
 
-int ScePafResource_946E41E9(uint8_t *self, uint32_t argument)
+int _ZN3paf2ui16WidgetStyleParam12AttachPluginEPNS_6PluginE(uint8_t *self, uint32_t argument)
 {
 	uint32_t *begin = *(uint32_t **)(self + 44);
 	uint32_t *current = begin;
@@ -191,7 +191,7 @@ int ScePafResource_946E41E9(uint8_t *self, uint32_t argument)
 }
 
 /* Reset the three resource lists' per-entry transient state. */
-int ScePafResource_BED256D0(uint32_t *self)
+int _ZN3paf2ui11WidgetParam4InitEv(uint32_t *self)
 {
 	uint32_t *firstRoot = (uint32_t *)(uintptr_t)self[21];
 	uint32_t *secondRoot;
@@ -225,7 +225,7 @@ int ScePafResource_BED256D0(uint32_t *self)
 }
 
 /* Propagate a resource mode to its children before optional owner release. */
-int ScePafResource_B62F6AFA(uint32_t *self, int mode)
+int _ZN3paf2ui16WidgetStyleParam7DestroyEi(uint32_t *self, int mode)
 {
 	uint32_t *begin = (uint32_t *)(uintptr_t)self[11];
 	uint32_t *current = begin;

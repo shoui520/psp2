@@ -15,7 +15,7 @@ typedef char PafAtexitEntrySizeCheck[sizeof(PafAtexitEntry) == 16 ? 1 : -1];
 static PafAtexitEntry atexitEntries[8];
 static PafAtexitEntry *atexitList;
 
-int ScePafStdc_AD9500EF(void (*func)(void *), void *arg, void *dso)
+int __cxa_atexit(void (*func)(void *), void *arg, void *dso)
 {
 	PafAtexitEntry *entry = NULL;
 	void *handle;
@@ -52,12 +52,12 @@ int ScePafStdc_AD9500EF(void (*func)(void *), void *arg, void *dso)
 	return 0;
 }
 
-int ScePafStdc_C95732BB(void *object, void (*destroy)(void *), void *dso)
+int __aeabi_atexit(void *object, void (*destroy)(void *), void *dso)
 {
-	return ScePafStdc_AD9500EF(destroy, object, dso);
+	return __cxa_atexit(destroy, object, dso);
 }
 
-int ScePafStdc_F36BABE3(void *dso)
+int __cxa_finalize(void *dso)
 {
 	PafCrtManager *manager;
 	PafAtexitEntry *head, *lastHead, *previous = NULL, *entry;

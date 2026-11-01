@@ -1,7 +1,7 @@
 #include "guard.h"
 #include "paf_crt_mgr.h"
 
-int ScePafStdc_CB26B866(uint32_t *guard)
+int __cxa_guard_acquire(uint32_t *guard)
 {
 	if (PafCrtManagerGet())
 		PafCrtManagerLock(PafCrtManagerGet(), 0);
@@ -18,7 +18,7 @@ int ScePafStdc_CB26B866(uint32_t *guard)
 	return 1;
 }
 
-int ScePafStdc_6AB297BE(uint32_t *guard)
+int __cxa_guard_release(uint32_t *guard)
 {
 	*guard = 1;
 	if (PafCrtManagerGet())
@@ -27,7 +27,7 @@ int ScePafStdc_6AB297BE(uint32_t *guard)
 	return 0;
 }
 
-int ScePafStdc_DDD8FFEA(uint32_t *guard)
+int __cxa_guard_abort(uint32_t *guard)
 {
 	*guard = 0;
 	if (PafCrtManagerGet())

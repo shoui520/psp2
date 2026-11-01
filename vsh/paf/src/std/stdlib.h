@@ -13,7 +13,7 @@ double sce_paf_atof(const char *str);
 double sce_paf_strtod(const char *str, char **endptr);
 int sce_paf_atoi(const char *str);
 long sce_paf_atol(const char *str);
-char *ScePafStdc_7E1B96F3(const char *str, int *value);
+char *sce_paf_atob(const char *str, int *value);
 long long sce_paf_atoll(const char *str);
 void *sce_paf_bsearch(const void *key, const void *base, size_t count,
 		      size_t element_size,
@@ -26,19 +26,10 @@ void sce_paf_qsort(void *base, size_t count, size_t element_size,
 void sce_paf_srand(unsigned int seed);
 int sce_paf_rand(void);
 
-#define sce_paf_realloc sce_paf_realloc
-#define GetGlobalHeapAllocator GetGlobalHeapAllocator
-#define sce_paf_calloc sce_paf_calloc
-#define sce_paf_mtrim sce_paf_mtrim
-#define sce_paf_musable_size sce_paf_musable_size
-#define sce_paf_dump_heap_info sce_paf_dump_heap_info
-#define sce_paf_dump_heap_status sce_paf_dump_heap_status
-#define sce_paf_report_memoryblocks sce_paf_report_memoryblocks
-#define sce_paf_check_memorybounds sce_paf_check_memorybounds
 
 void *GetGlobalHeapAllocator(void);
-int ScePafStdc_D41FD265(void);
-void ScePafStdc_19BB4B73(void);
+int sce_paf_printf_dummy(void);
+void abort(void);
 int ScePafStdc_D608246A(void);
 
 void *sce_paf_realloc(void *ptr, size_t size);

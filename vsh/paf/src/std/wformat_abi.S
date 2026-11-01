@@ -8,10 +8,10 @@
 	.fpu	neon
 	.text
 
-	.global	ScePafStdc_AFB23563
-	.type	ScePafStdc_AFB23563, %function
+	.global	wprnt
+	.type	wprnt, %function
 	.thumb_func
-ScePafStdc_AFB23563:
+wprnt:
 	.fnstart
 	.save	{r4-r11, lr}
 	push.w	{r4-r11, lr}
@@ -38,4 +38,4 @@ ScePafStdc_AFB23563:
 .LwideFormatStackFail:
 	bl	__stack_chk_fail
 	.fnend
-	.size	ScePafStdc_AFB23563, . - ScePafStdc_AFB23563
+	.size	wprnt, . - wprnt
