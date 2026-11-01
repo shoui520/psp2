@@ -2620,7 +2620,7 @@ ScePaf:
         - _ZN3paf2ui17WidgetLayoutParam6CreateEi: 0xC9477338
         - _ZN3paf14VersatileParam4ReadEPKNS_4cxml7ElementE: 0xCAE8BABB
         - ScePafResource_CB5A3D7C: 0xCB5A3D7C
-        - ScePafResource_CCA19F0F: 0xCCA19F0F
+        - _ZN3paf2ui16WidgetStyleParam15SetDrawObjParamEPKcPNS_5graph12DrawObjParamEi: 0xCCA19F0F
         - _ZN3paf2ui11WidgetParam3SetEv: 0xCE7D66D8
         - _ZN3paf11VisualParam15SetTextureParamEPvRKNS_7IDParamE: 0xCED99343
         - ScePafResource_CEED7338: 0xCEED7338
@@ -2644,7 +2644,7 @@ ScePaf:
         - scePafResourceGetFloat: 0xDE684F4B
         - _ZN3paf2ui16WidgetStyleParam8OnUpdateEv: 0xE07D06B4
         - scePafResourceGetString: 0xE2801CFE
-        - ScePafResource_E2CA0FC4: 0xE2CA0FC4
+        - _ZN3paf2ui16WidgetStyleParam16FindDrawObjParamEi: 0xE2CA0FC4
         - _ZNK3paf4cxml9Attribute7GetTypeEv: 0xE32AD3C0
         - _ZNK3paf8resource11ResourceObj13GetCreateTypeEv: 0xE3349545
         - scePafResourceGetAttributeInteger: 0xE59C9265

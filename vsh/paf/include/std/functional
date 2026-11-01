@@ -1,4 +1,7 @@
-/* paf::less: the default ordering of paf::map; paf::greater its reverse. */
+/*
+ * paf::less: the default ordering of paf::map; paf::greater its reverse;
+ * paf::mem_fun: a member function as a function of the object's pointer.
+ */
 #ifndef PAF_STD_FUNCTIONAL
 #define PAF_STD_FUNCTIONAL
 
@@ -19,6 +22,28 @@ struct greater {
 		return left > right;
 	}
 };
+
+template<class _Result, class _Ty>
+class mem_fun_t {
+public:
+	explicit mem_fun_t(_Result (_Ty::*_Pm)()) : _Pmemfun(_Pm)
+	{
+	}
+
+	_Result operator()(_Ty *_Pleft) const
+	{
+		return (_Pleft->*_Pmemfun)();
+	}
+
+private:
+	_Result (_Ty::*_Pmemfun)();
+};
+
+template<class _Result, class _Ty>
+inline mem_fun_t<_Result, _Ty> mem_fun(_Result (_Ty::*_Pm)())
+{
+	return mem_fun_t<_Result, _Ty>(_Pm);
+}
 
 }
 

@@ -12,6 +12,8 @@
 #include <widget/core/widget.h>
 #include <widget/w_scene.h>
 #include <plugin.h>
+#include <std/algorithm>
+#include <std/functional>
 #include <std/string.h>
 #include <timer/timer.h>
 #include <versatileparam/idparam.h>
@@ -1297,6 +1299,282 @@ int32_t WidgetFocusParam::Attach(Widget *widget)
 void WidgetFocusParam::delete_cb(Widget *widget, void *param)
 {
 	static_cast<WidgetFocusParam *>(param)->Attach(NULL);
+}
+
+
+const char WidgetStyleParam::m_param_name[] = "style_widget";
+
+const char *const WidgetStyleParam::s_names[] = {
+	"color",
+	"sound",
+};
+
+const char *WidgetStyleParam::GetParamName() const
+{
+	return m_param_name;
+}
+
+const char *WidgetStyleParam::ParamName()
+{
+	return m_param_name;
+}
+
+/* inline in the constructor */
+__attribute__((always_inline)) int32_t WidgetStyleParam::Init()
+{
+	for (vector<graph::DrawObjParam *>::iterator it = m_drawobj_param_list.begin();
+	     it != m_drawobj_param_list.end(); ++it)
+		(*it)->Init();
+	m_color = math::v4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_sound_id.m_idhash = 0;
+	return 0;
+}
+
+WidgetStyleParam::WidgetStyleParam() : m_sound_id(s_empty_name, 0)
+{
+	m_widget_list.clear();
+	m_drawobj_param_list.clear();
+	Init();
+}
+
+int32_t WidgetStyleParam::Set()
+{
+	if (m_widget_list.size() == 0)
+		return -1;
+	for (list<Widget *>::iterator it = m_widget_list.begin(); it != m_widget_list.end(); ++it)
+		SetEach(*it);
+	return 0;
+}
+
+/* from the first widget that has the style */
+int32_t WidgetStyleParam::Get()
+{
+	if (m_widget_list.size() == 0)
+		return -1;
+	GetEach(*m_widget_list.begin());
+	return 0;
+}
+
+int32_t WidgetStyleParam::Create(int32_t mode)
+{
+	VersatileParam::Create(mode);
+	if (m_serial != NULL) {
+		m_serial->AddParam(s_names[0], &m_color, ResourceParam::SEMANTIC_VEC4);
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[1], &m_sound_id, ResourceParam::SEMANTIC_SOUNDREF);
+	}
+	for (vector<graph::DrawObjParam *>::iterator it = m_drawobj_param_list.begin();
+	     it != m_drawobj_param_list.end(); ++it) {
+		(*it)->Create(mode);
+		if (m_serial != NULL)
+			m_serial->AddParam((*it)->m_name, *it, ResourceParam::SEMANTIC_HASHREF);
+	}
+	return 0;
+}
+
+/* each draw object's parameter goes to the widget's draw object, then the color */
+int32_t WidgetStyleParam::SetEach(Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+	for (vector<graph::DrawObjParam *>::iterator it = m_drawobj_param_list.begin();
+	     it != m_drawobj_param_list.end(); ++it) {
+		if (m_plugin != NULL)
+			(*it)->AttachPlugin(m_plugin);
+
+		graph::DrawObjParam *param = *it;
+
+		param->SetEach(widget->GetDrawObj(param->m_index));
+	}
+	widget->SetColor(m_color);
+	return 0;
+}
+
+int32_t WidgetStyleParam::GetEach(Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+	for (vector<graph::DrawObjParam *>::iterator it = m_drawobj_param_list.begin();
+	     it != m_drawobj_param_list.end(); ++it) {
+		graph::DrawObjParam *param = *it;
+
+		param->GetEach(widget->GetDrawObj(param->m_index));
+	}
+	m_color = widget->GetColor();
+	return 0;
+}
+
+int32_t WidgetStyleParam::Read(const cxml::Element *elem)
+{
+	if (m_serial != NULL) {
+		resource::ResourceObj *rscobj = NULL;
+
+		if (m_plugin != NULL)
+			rscobj = m_plugin->m_rscobj;
+		m_serial->Read(*elem, rscobj, ResourceParam::READTYPE_FROM_PARAMLIST);
+	}
+	for (vector<graph::DrawObjParam *>::iterator it = m_drawobj_param_list.begin();
+	     it != m_drawobj_param_list.end(); ++it)
+		(*it)->Read((*it)->m_node);
+	return 0;
+}
+
+/*
+ * With draw object parameters: the element's opening tag, each parameter's
+ * element one level in, then the closing tag.
+ */
+int32_t WidgetStyleParam::Write(common::SharedPtr<File> fp, uint32_t type, uint32_t indent)
+{
+	if (m_drawobj_param_list.size() == 0) {
+		if (fp.get() != NULL)
+			return ScePafResource_441E989F(m_serial, fp, 0, indent, false);
+		return ScePafResource_441E989F(m_serial, fp, 0, indent, true);
+	}
+
+	int32_t ret;
+
+	if (fp.get() != NULL)
+		ret = ScePafResource_441E989F(m_serial, fp, 1, indent, false);
+	else
+		ret = ScePafResource_441E989F(m_serial, fp, 1, indent, true);
+	if (ret != 0)
+		return ret;
+	for (vector<graph::DrawObjParam *>::iterator it = m_drawobj_param_list.begin();
+	     it != m_drawobj_param_list.end(); ++it) {
+		ret = (*it)->Write(fp, type, indent + 1);
+		if (ret != 0)
+			return ret;
+	}
+	if (fp.get() != NULL)
+		ret = ScePafResource_441E989F(m_serial, fp, 2, indent, false);
+	else
+		ret = ScePafResource_441E989F(m_serial, fp, 2, indent, true);
+	if (ret != 0)
+		return ret;
+	return 0;
+}
+
+int32_t WidgetStyleParam::Destroy(int32_t mode)
+{
+	for (vector<graph::DrawObjParam *>::iterator it = m_drawobj_param_list.begin();
+	     it != m_drawobj_param_list.end(); ++it)
+		(*it)->Destroy(mode);
+	if (mode & 1) {
+		delete m_serial;
+		m_serial = NULL;
+	}
+	return 0;
+}
+
+int32_t WidgetStyleParam::OnUpdate()
+{
+	if (m_serial != NULL) {
+		if (m_serial->GetDirty())
+			Set();
+		m_serial->SetDirty(false);
+	}
+	for (vector<graph::DrawObjParam *>::iterator it = m_drawobj_param_list.begin();
+	     it != m_drawobj_param_list.end(); ++it) {
+		int32_t ret = (*it)->OnUpdate();
+
+		if (ret != 0)
+			return ret;
+	}
+	return 0;
+}
+
+void WidgetStyleParam::OnDraw()
+{
+	for_each(m_drawobj_param_list.begin(), m_drawobj_param_list.end(),
+		 mem_fun(&graph::DrawObjParam::OnDraw));
+}
+
+int32_t WidgetStyleParam::AttachPlugin(Plugin *plugin)
+{
+	int32_t ret = 0;
+
+	m_plugin = plugin;
+	for (vector<graph::DrawObjParam *>::iterator it = m_drawobj_param_list.begin();
+	     it != m_drawobj_param_list.end(); ++it) {
+		ret = (*it)->AttachPlugin(plugin);
+		if (ret != 0)
+			break;
+	}
+	return ret;
+}
+
+vector<graph::DrawObjParam *>::iterator WidgetStyleParam::FindDrawObjParam(int32_t index)
+{
+	vector<graph::DrawObjParam *>::iterator it = m_drawobj_param_list.begin();
+
+	for (; it != m_drawobj_param_list.end(); ++it) {
+		if ((*it)->m_index == index)
+			break;
+	}
+	return it;
+}
+
+graph::DrawObjParam *WidgetStyleParam::GetDrawObjParam(int32_t index)
+{
+	vector<graph::DrawObjParam *>::iterator it = FindDrawObjParam(index);
+
+	if (it != m_drawobj_param_list.end())
+		return *it;
+	return NULL;
+}
+
+void WidgetStyleParam::SetDrawObjParam(const char *name, graph::DrawObjParam *param,
+				       int32_t index)
+{
+	vector<graph::DrawObjParam *>::iterator it = FindDrawObjParam(index);
+
+	if (it != m_drawobj_param_list.end()) {
+		param->m_name = name;
+		param->Init();
+		param->m_index = index;
+		*it = param;
+	}
+}
+
+/* each draw object's parameter takes the widget's draw object */
+int32_t WidgetStyleParam::AddWidget(Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+	for (list<Widget *>::iterator it = m_widget_list.begin(); it != m_widget_list.end(); ++it) {
+		if (*it == widget)
+			return 0;
+	}
+	m_widget_list.push_back(widget);
+	if (widget != NULL)
+		widget->AddDeleteCB(delete_cb, this);
+	for (uint32_t i = 0; i < m_drawobj_param_list.size(); i++) {
+		int32_t ret = m_drawobj_param_list[i]->AddDrawObj(widget->GetDrawObj(i));
+
+		if (ret != 0)
+			return ret;
+	}
+	return 0;
+}
+
+int32_t WidgetStyleParam::DelWidget(Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+	for (uint32_t i = 0; i < m_drawobj_param_list.size(); i++)
+		m_drawobj_param_list[i]->DelDrawObj(widget->GetDrawObj(i));
+	for (list<Widget *>::iterator it = m_widget_list.begin(); it != m_widget_list.end(); ++it) {
+		if (*it == widget) {
+			m_widget_list.erase(it);
+			return 0;
+		}
+	}
+	return -1;
+}
+
+void WidgetStyleParam::delete_cb(Widget *widget, void *param)
+{
+	static_cast<WidgetStyleParam *>(param)->DelWidget(widget);
 }
 
 }

@@ -26,20 +26,6 @@ int _ZN3paf2ui18WidgetHandlerParam3GetEv(const uint8_t *self)
 	return -1;
 }
 
-void *_ZN3paf2ui16WidgetStyleParam15GetDrawObjParamEi(const uint8_t *self, uint32_t id)
-{
-	uint8_t **current = *(uint8_t ***)(self + 44);
-	uint8_t **end = current + *(const uint32_t *)(self + 48);
-
-	while (current != end) {
-		if (*(const uint32_t *)(*current + 36) == id)
-			break;
-		if (current)
-			++current;
-	}
-	return current != end ? *current : 0;
-}
-
 int _ZN3paf2ui16WidgetSoundParam4InitEv(const uint8_t *self)
 {
 	uint8_t *current = *(uint8_t *const *)(self + 44);
@@ -72,76 +58,3 @@ uint32_t *ScePafResource_8689B24D(const uint8_t *self)
 	return current;
 }
 
-uint32_t **ScePafResource_E2CA0FC4(uint32_t **result,
-				     const uint8_t *self, uint32_t id)
-{
-	uint32_t *current = *(uint32_t *const *)(self + 44);
-	uint32_t *end = current + *(const uint32_t *)(self + 48);
-	uint32_t *cursor = current;
-
-	*result = current;
-	while (cursor != end) {
-		if (*(const uint32_t *)(*(uint8_t *const *)cursor + 36) == id)
-			break;
-		cursor = current;
-		if (current) {
-			cursor = current + 1;
-			*result = cursor;
-			current += 1;
-		}
-	}
-	return result;
-}
-
-int _ZN3paf2ui16WidgetStyleParam12AttachPluginEPNS_6PluginE(uint8_t *self, uint32_t argument)
-{
-	uint32_t *begin = *(uint32_t **)(self + 44);
-	uint32_t *current = begin;
-	uint32_t count = *(uint32_t *)(self + 48);
-	int result = 0;
-
-	*(uint32_t *)(self + 8) = argument;
-	if (begin != begin + count) {
-		do {
-			void *object = (void *)(uintptr_t)*current;
-			result = ((int (**)(void *, uint32_t))*(void **)object)[9](
-				object, argument);
-			if (result)
-				break;
-			current = begin;
-			if (begin) {
-				++begin;
-				++current;
-			}
-		} while (current != *(uint32_t **)(self + 44) +
-				 *(uint32_t *)(self + 48));
-	}
-	return result;
-}
-
-/* Reset the three resource lists' per-entry transient state. */
-/* Propagate a resource mode to its children before optional owner release. */
-int _ZN3paf2ui16WidgetStyleParam7DestroyEi(uint32_t *self, int mode)
-{
-	uint32_t *begin = (uint32_t *)(uintptr_t)self[11];
-	uint32_t *current = begin;
-
-	if (begin != begin + self[12]) {
-		do {
-			void *object = (void *)(uintptr_t)*current;
-			((void (*)(void *, int))(*(void ***)object)[6])(object, mode);
-			current = begin;
-			if (begin) {
-				++begin;
-				++current;
-			}
-		} while (current != (uint32_t *)(uintptr_t)self[11] + self[12]);
-	}
-	if (mode & 1) {
-		void *owner = (void *)(uintptr_t)self[1];
-		if (owner)
-			((void (*)(void *))(*(void ***)owner)[1])(owner);
-		self[1] = 0;
-	}
-	return 0;
-}

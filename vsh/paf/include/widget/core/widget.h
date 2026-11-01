@@ -12,6 +12,7 @@
 #define PAF_WIDGET_CORE_WIDGET_H
 
 #include <stdint.h>
+#include <arm_neon.h>
 #include <std/list>
 #include <std/memory>
 #include <std/string>
@@ -33,6 +34,7 @@ class Timer;
 namespace graph {
 class DrawInfo;
 class DrawObj;
+class DrawObjParam;
 class Surface;
 }
 
@@ -94,15 +96,49 @@ public:
 	list<IndexedRef> m_alias_string_list;
 };
 
-/* a widget type's style, read from the resource's "style_<type>" parameter */
+/*
+ * A widget type's style, read from the resource's "style_<type>" parameter:
+ * the widgets that have it, the parameters of their draw objects, their color
+ * and their sound (members' names ours).
+ */
 class WidgetStyleParam : public VersatileParam {
 public:
+	static const char m_param_name[];
+	static const char *const s_names[];
+	static const char *ParamName();
+
+	WidgetStyleParam();
+	virtual const char *GetParamName() const;
+
+	/* each widget forgets this style's delete callback (below Widget) */
+	virtual ~WidgetStyleParam();
+
+	virtual int32_t Set();
+	virtual int32_t Get();
+	virtual int32_t Create(int32_t mode);
+	virtual int32_t Destroy(int32_t mode);
+	virtual int32_t OnUpdate();
+	virtual void OnDraw();
+	virtual int32_t AttachPlugin(Plugin *plugin);
+	virtual int32_t Read(const cxml::Element *elem);
+	virtual int32_t Write(common::SharedPtr<File> fp, uint32_t type, uint32_t indent);
 	virtual int32_t SetEach(Widget *widget);
+	virtual int32_t GetEach(Widget *widget);
+	virtual graph::DrawObjParam *GetDrawObjParam(int32_t index);
+	/* the parameter, initialised, replaces the one of the draw object index (name ours) */
+	virtual void SetDrawObjParam(const char *name, graph::DrawObjParam *param, int32_t index);
 
+	int32_t Init();
+	/* the parameter of the draw object index, or the end (name ours) */
+	vector<graph::DrawObjParam *>::iterator FindDrawObjParam(int32_t index);
 	int32_t AddWidget(Widget *widget);
+	int32_t DelWidget(Widget *widget);
+	static void delete_cb(Widget *widget, void *param);
 
-	uint8_t reserved[0x30];
-	/* the ID of the style's sound parameter (name ours) */
+	list<Widget *> m_widget_list;
+	vector<graph::DrawObjParam *> m_drawobj_param_list;
+	math::v4 m_color;
+	/* the ID of the style's sound parameter */
 	IDParam m_sound_id;
 };
 
@@ -486,6 +522,9 @@ public:
 	int32_t SetMetaAlpha(float alpha, Timer *t = NULL, int32_t id = ANIM_META_ALPHA,
 			     int32_t opt = 0, float delay = 0.0f, AnimCB cb_fin = NULL,
 			     void *usrdata = NULL);
+	int32_t SetColor(const math::v4 &color, Timer *t = NULL, int32_t id = ANIM_COLOR,
+			 int32_t opt = 0, float delay = 0.0f, AnimCB cb_fin = NULL,
+			 void *usrdata = NULL);
 	int32_t SetAlignOffset(const math::v4 &offs, Timer *t, int32_t id, int32_t opt,
 			       float delay, AnimCB cb_fin, void *usrdata);
 	int32_t SetAlign(uint32_t ax, uint32_t ay, uint32_t az, Timer *t);
@@ -502,6 +541,18 @@ public:
 		if (m_layouter != NULL)
 			m_layouter->BindWidget(this);
 		return 0;
+	}
+
+	/* its color: the RGB of its bytes and its alpha (inline in Sony's callers; name ours) */
+	math::v4 GetColor() const
+	{
+		uint16x8_t rgba = vmovl_u8(vreinterpret_u8_u32(vdup_n_u32(m_color)));
+		math::v4 color(sce::Vectormath::Simd::Aos::Vector4(
+			vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(rgba))),
+				  vdupq_n_f32(1.0f / 255.0f))));
+
+		color.set_w(m_color_alpha);
+		return color;
 	}
 
 	/* registers a delete callback (inline in Sony's callers; name ours) */
@@ -589,7 +640,11 @@ public:
 	uint8_t reserved3p[0xd];
 	/* the alpha SetMetaAlpha sets (name ours) */
 	float m_meta_alpha;
-	uint8_t reserved3q[0x10];
+	uint8_t reserved3q[4];
+	/* its color: the alpha as SetColor_core gave it, and the RGBA bytes (names ours) */
+	float m_color_alpha;
+	uint32_t m_color;
+	uint8_t reserved3y[4];
 	Timer *m_resolution_timer;
 	Timer *m_resolution_timer_next;
 	ResolutionData *m_pos_array;
@@ -634,6 +689,12 @@ public:
 	uint8_t m_sound_num;
 	WidgetSoundParam::Sound *m_sounds;
 };
+
+inline WidgetStyleParam::~WidgetStyleParam()
+{
+	for (list<Widget *>::iterator it = m_widget_list.begin(); it != m_widget_list.end(); ++it)
+		(*it)->RemoveDeleteCB(delete_cb, this);
+}
 
 }
 }

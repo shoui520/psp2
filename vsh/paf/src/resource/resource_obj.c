@@ -37,45 +37,6 @@ int _ZN3paf2ui18WidgetHandlerParam4InitEv(uint8_t *self)
 	return 0;
 }
 
-int _ZN3paf2ui16WidgetStyleParam3GetEv(uint32_t *self)
-{
-	uint32_t item = 0;
-	uint32_t node;
-
-	if (!self[9])
-		return -1;
-	node = self[8];
-	if (node)
-		item = *(uint32_t *)(node + 4);
-	((void (*)(uint32_t *, uint32_t))(*(void ***)self)[13])(
-		self, *(uint32_t *)(item + 8));
-	return 0;
-}
-
-int _ZN3paf2ui16WidgetStyleParam3SetEv(uint32_t *self)
-{
-	uint32_t node = 0;
-	uint32_t root;
-	uint32_t next;
-
-	if (!self[9])
-		return -1;
-	root = self[8];
-	if (root)
-		node = *(uint32_t *)(root + 4);
-	next = node;
-	while (next != self[8]) {
-		((void (*)(uint32_t *, uint32_t))(*(void ***)self)[12])(
-			self, *(uint32_t *)(next + 8));
-		next = node;
-		if (node) {
-			node = *(uint32_t *)(node + 4);
-			next = node;
-		}
-	}
-	return 0;
-}
-
 int _ZN3paf2ui16WidgetSoundParam9DelWidgetEPNS0_6WidgetE(uint32_t *self, uint32_t target)
 {
 	uint32_t *node = NULL;
@@ -104,36 +65,6 @@ again:
 		goto again;
 not_found:
 	return -1;
-}
-
-uint32_t *_ZN3paf2ui16WidgetStyleParam6OnDrawEv(uint8_t *self)
-{
-	/* The firmware stores this virtual callback as a two-word member pointer. */
-	static const volatile struct {
-		int32_t offset;
-		int32_t adjustment;
-	} callback = {32, 1};
-	uint32_t *node = *(uint32_t **)(self + 44);
-	uint32_t *end = node + *(uint32_t *)(self + 48);
-	int32_t slot = callback.offset;
-	int32_t adjust = callback.adjustment;
-	int32_t baseOffset = adjust >> 1;
-	uint32_t indirect = (uint32_t)adjust & 1;
-
-	while (node != end) {
-		uint32_t object = *node;
-		uint32_t target = (uint32_t)slot;
-		uint32_t adjustedObject = object + baseOffset;
-
-		if (indirect) {
-			uint32_t methods = *(uint32_t *)(object + baseOffset);
-			target = *(uint32_t *)(methods + slot);
-		}
-		((void (*)(uint32_t))target)(adjustedObject);
-		if (node)
-			++node;
-	}
-	return end;
 }
 
 static inline __attribute__((always_inline))

@@ -123,7 +123,9 @@ public:
 	int32_t DelDrawObj(DrawObj *obj);
 	static void delete_cb(DrawObj *obj, void *param);
 
-	uint32_t reserved[2];
+	/* the style's element of the draw object and the draw object's index in its widget (names ours) */
+	const char *m_name;
+	int32_t m_index;
 	list<DrawObj *> m_drawobj_list;
 	math::v4 m_color;
 	int32_t m_blend;
