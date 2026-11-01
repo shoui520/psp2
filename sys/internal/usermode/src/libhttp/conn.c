@@ -362,7 +362,7 @@ int _sceHttpConnectionConnect(HttpRequest *req)
 				    conn->savedSendTimeout);
 	if (ret < 0) {
 		if (ret == SCE_HTTP_ERROR_EAGAIN && req->tmpl.nonblock == 1 && conn->state == 3) {
-			int r = _sceHttpEpollWait(req, 0, 2);
+			int r = _sceHttpRequestEpollAdd(req, HTTP_EPOLL_SOCKET, SCE_NET_EPOLLOUT);
 
 			if (r >= 0)
 				conn->state = 4;

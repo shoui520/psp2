@@ -15,6 +15,7 @@
 #include <libbase64.h>
 #include <net/socket.h>
 #include <net/in.h>
+#include <net/epoll.h>
 
 /* SceAppMgr */
 int sceAppMgrIsGameProgram(void);
@@ -154,7 +155,7 @@ typedef struct HttpConnection {
 	int reserved40[2];
 	char *hostname;
 	int reserved4c;
-	int reserved50;
+	int resolveState;			/* _sceHttpRequestResolve's */
 	SceUID sema;
 	int reserved58[3];
 	HttpTemplate tmpl;
@@ -212,7 +213,8 @@ typedef struct HttpRequest {
 	int reserved20;
 	int authRetries;
 	SceULong64 contentLength;
-	int reserved30[6];
+	int reserved30[5];
+	SceBool aborted;			/* sceHttpAbortRequest was called */
 	struct HttpRequestExtra *extra;	/* method 8's name, ... */
 	HttpTemplate tmpl;
 	HttpConnection *connection;
@@ -258,6 +260,33 @@ typedef struct HttpRequest {
 	int reserved45c;
 } HttpRequest;
 _Static_assert(sizeof(HttpRequest) == 0x460, "HttpRequest");
+
+/* a request on an epoll handle (sceHttpSetEpoll) */
+typedef struct HttpEpollEntry {
+	int id;
+	void *userArg;
+	struct HttpEpollEntry *next;
+} HttpEpollEntry;
+
+/* what an SceHttpEpollHandle points to (0x58 bytes) */
+typedef struct HttpEpoll {
+	int reserved0[2];
+	SceNetId epollId;
+	HttpEpollEntry *entries;
+	SceKernelLwMutexWork listLock;		/* "SceLibHttpEhList", over entries */
+	SceBool aborted;			/* sceHttpAbortWaitRequest was called */
+	int reserved34;
+	SceKernelLwMutexWork lock;		/* "SceLibHttpEh" */
+} HttpEpoll;
+_Static_assert(sizeof(HttpEpoll) == 0x58, "HttpEpoll");
+
+/* what a request puts on its epoll handle */
+#define HTTP_EPOLL_SOCKET	0		/* its connection's socket */
+#define HTTP_EPOLL_RESOLVER	1		/* its connection's resolver */
+#define HTTP_EPOLL_ICM		2		/* its "SceLibHttpIcm" socket */
+#define HTTP_EPOLL_CONNECTION	3		/* a connection's socket, for the connection itself */
+#define HTTP_EPOLL_ICM_EVENTS	0x40000		/* the events of an ICM socket (no SDK name) */
+#define HTTP_SO_ICM_OPTION	0x10000		/* sceHttpSetIcmOption's bit 0 (no SDK name) */
 
 /* a connection's sockets, for SceHttp_54847CFE */
 typedef struct HttpConnectionSockInfo {
@@ -588,7 +617,27 @@ int _sceHttpSocketSetSendTimeout(int sock, const SceNetSockaddrIn *addr, SceUInt
 				 int *saved);
 int _sceHttpSocketRestoreSendTimeout(int sock, int saved);
 int _sceHttpSocketConnect(int sock, const SceNetSockaddrIn *addr, SceUInt32 timeout, int arg);
-void _sceHttpConnectionClose(HttpConnection *conn);
+void *_sceHttpResolverAllocate(SceSize size, SceNetId rid, const char *name, void *user);
+void _sceHttpResolverFree(void *ptr, SceNetId rid, const char *name, void *user);
+int _sceHttpRequestEpollRemove(HttpRequest *req, SceUInt32 kind);
+int _sceHttpResolverGetError(SceNetId rid);
+int _sceHttpRequestResolverDestroy(HttpRequest *req);
+int _sceHttpRequestEpollAdd(HttpRequest *req, SceUInt32 kind, SceUInt32 events);
+int _sceHttpRequestResolve(HttpRequest *req);
+int _sceHttpRequestResolverAbort(HttpRequest *req);
+int _sceHttpConnectionClose(HttpConnection *conn);
+int _sceHttpConnectionOpenSocket(HttpConnection *conn);
+int _sceHttpRequestIcmOpen(HttpRequest *req);
+int _sceHttpRequestIcmAbort(HttpRequest *req);
+int _sceHttpRequestIcmClose(HttpRequest *req);
+int _sceHttpTemplateGetProxyConfig(HttpRequest *req, HttpTemplate *tmpl);
+int _sceHttpEpollFind(SceHttpEpollHandle eh, int id, HttpEpollEntry **entry);
+int _sceHttpEpollModify(void *object, SceUInt32 kind, SceUInt32 events);
+void _sceHttpUriNormalize(const HttpAllocator *allocator, char *url);
+int _sceHttpTemplateSetProxyServer(HttpTemplate *tmpl, const char *server, SceSize len);
+/* SceNetInternal's: an address from its text form; an ICM socket started */
+int SceNetInternal_916EA798(int af, const char *src, void *dst);
+int SceNetInternal_93F2FF08(SceNetId s, int flags);
 int _sceHttpRequestRecvBuffered(HttpRequest *req, char *buf, SceSize len, int flags, SceBool peek,
 				SceBool direct);
 int _sceHttpRecvDirect(HttpRequest *req, void *buf, SceSize len, int flags);
@@ -607,7 +656,6 @@ int _sceHttpsSend(HttpConnection *conn, const void *buf, SceSize len);
 int _sceHttpPeek(HttpRequest *req, void *buf, SceSize len, int flags);
 SceBool _sceHttpConnectionIsConnected(HttpConnection *conn);
 int _sceHttpConnectionShutdown(HttpConnection *conn);
-int _sceHttpEpollWait(HttpRequest *req, int arg, int events);
 
 /* requests */
 int _sceHttpAddRequestHeader(int id, const char *name, const char *value, int mode);
