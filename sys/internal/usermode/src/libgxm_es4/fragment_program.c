@@ -6,7 +6,7 @@
 
 const SceGxmProgram *sceGxmFragmentProgramGetProgram(const SceGxmFragmentProgram *fragmentProgram)
 {
-	return fragmentProgram->programHeader;
+	return fragmentProgram->program;
 }
 
 SceUInt32 sceGxmFragmentProgramGetPassType(const SceGxmFragmentProgram *fragmentProgram)

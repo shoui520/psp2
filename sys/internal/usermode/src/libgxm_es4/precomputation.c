@@ -120,7 +120,7 @@ static inline int gxmPrecomputedCheckTextures(const SceGxmProgram *program,
 
 SceSize sceGxmGetPrecomputedVertexStateSize(const SceGxmVertexProgram *vertexProgram)
 {
-	const SceGxmProgram *program = vertexProgram->programHeader;
+	const SceGxmProgram *program = vertexProgram->program;
 
 	return vertexProgram->secondaryPdsSize +
 	       (program->dataBufferCount + program->textureBufferCount) * 4;
@@ -145,7 +145,7 @@ int sceGxmPrecomputedVertexStateInit(SceGxmPrecomputedVertexState *precomputedSt
 		return SCE_GXM_ERROR_INVALID_ALIGNMENT;
 
 	/* the DMA list, then the constant block, then the texture block */
-	program = vertexProgram->programHeader;
+	program = vertexProgram->program;
 	offset = vertexProgram->secondaryPdsSize;
 	constantBlock = NULL;
 	if (program->dataBufferCount != 0) {
@@ -198,7 +198,7 @@ int sceGxmPrecomputedVertexStateSetDefaultUniformBuffer(SceGxmPrecomputedVertexS
 	if (precomputedState == NULL || defaultBuffer == NULL)
 		return SCE_GXM_ERROR_INVALID_POINTER;
 	precomputedState->defaultUniformBuffer = defaultBuffer;
-	program = precomputedState->program->programHeader;
+	program = precomputedState->program->program;
 	gxmPrecomputedSetDmaBuffer(precomputedState->dmaBlock, program, 14, defaultBuffer);
 	gxmPrecomputedSetConstantBuffer(precomputedState->constantBlock, program, 14, defaultBuffer);
 	return 0;
@@ -218,7 +218,7 @@ int SceGxm_1625D348(SceGxmPrecomputedVertexState *precomputedState, SceUInt32 te
 	if (texture == NULL)
 		return SCE_GXM_ERROR_INVALID_POINTER;
 
-	program = precomputedState->program->programHeader;
+	program = precomputedState->program->program;
 	words[0] = texture->controlWords[0] & GXM_TEX0_BOUND_MASK;
 	words[1] = texture->controlWords[1];
 	words[2] = texture->controlWords[2];
@@ -247,7 +247,7 @@ int sceGxmPrecomputedVertexStateSetTexture(SceGxmPrecomputedVertexState *precomp
 	if (gxmTextureFormatIsYuv(format) || gxmTextureFormatIsPalettized(format))
 		return SCE_GXM_ERROR_UNSUPPORTED;
 
-	program = precomputedState->program->programHeader;
+	program = precomputedState->program->program;
 	words[0] = texture->controlWords[0] & GXM_TEX0_BOUND_MASK;
 	words[1] = texture->controlWords[1];
 	words[2] = texture->controlWords[2];
@@ -268,7 +268,7 @@ int SceGxm_8FF68274(SceGxmPrecomputedVertexState *precomputedState, const SceGxm
 
 	if (precomputedState == NULL || textures == NULL)
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	program = precomputedState->program->programHeader;
+	program = precomputedState->program->program;
 	gxmPrecomputedSetAllTextureWords(precomputedState->constantBlock,
 					 GXM_RELATIVE(program->constantTexturesOffset),
 					 program->constantTextureCount, textures);
@@ -286,7 +286,7 @@ int sceGxmPrecomputedVertexStateSetAllTextures(SceGxmPrecomputedVertexState *pre
 
 	if (precomputedState == NULL || textures == NULL)
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	program = precomputedState->program->programHeader;
+	program = precomputedState->program->program;
 	ret = gxmPrecomputedCheckTextures(program, textures);
 	if (ret != 0)
 		return ret;
@@ -306,7 +306,7 @@ int sceGxmPrecomputedVertexStateSetAllUniformBuffers(SceGxmPrecomputedVertexStat
 
 	if (precomputedState == NULL || bufferDataArray == NULL)
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	program = precomputedState->program->programHeader;
+	program = precomputedState->program->program;
 	gxmPrecomputedSetAllDmaBuffers(precomputedState->dmaBlock, program, bufferDataArray);
 	gxmPrecomputedSetAllConstantBuffers(precomputedState->constantBlock, program, bufferDataArray);
 	return 0;
@@ -323,7 +323,7 @@ int sceGxmPrecomputedVertexStateSetUniformBuffer(SceGxmPrecomputedVertexState *p
 		return SCE_GXM_ERROR_INVALID_VALUE;
 	if (bufferData == NULL)
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	program = precomputedState->program->programHeader;
+	program = precomputedState->program->program;
 	gxmPrecomputedSetDmaBuffer(precomputedState->dmaBlock, program, bufferIndex, bufferData);
 	gxmPrecomputedSetConstantBuffer(precomputedState->constantBlock, program, bufferIndex,
 					bufferData);
@@ -332,7 +332,7 @@ int sceGxmPrecomputedVertexStateSetUniformBuffer(SceGxmPrecomputedVertexState *p
 
 SceSize sceGxmGetPrecomputedFragmentStateSize(const SceGxmFragmentProgram *fragmentProgram)
 {
-	const SceGxmProgram *program = fragmentProgram->programHeader;
+	const SceGxmProgram *program = fragmentProgram->program;
 
 	return ((fragmentProgram->pds.size + 15) & ~15) + fragmentProgram->secondaryPdsSize +
 	       (program->dataBufferCount + program->textureBufferCount) * 4;
@@ -362,7 +362,7 @@ int sceGxmPrecomputedFragmentStateInit(SceGxmPrecomputedFragmentState *precomput
 		return SCE_GXM_ERROR_INVALID_ALIGNMENT;
 
 	/* the PDS program with the textures, the DMA list, the constant and texture blocks */
-	program = fragmentProgram->programHeader;
+	program = fragmentProgram->program;
 	textureStateSize = (fragmentProgram->pds.size + 15) & ~15;
 	offset = textureStateSize + fragmentProgram->secondaryPdsSize;
 	constantBlock = NULL;
@@ -414,7 +414,7 @@ int sceGxmPrecomputedFragmentStateSetDefaultUniformBuffer(SceGxmPrecomputedFragm
 	if (precomputedState == NULL || defaultBuffer == NULL)
 		return SCE_GXM_ERROR_INVALID_POINTER;
 	precomputedState->defaultUniformBuffer = defaultBuffer;
-	program = precomputedState->program->programHeader;
+	program = precomputedState->program->program;
 	gxmPrecomputedSetDmaBuffer(precomputedState->dmaBlock, program, 14, defaultBuffer);
 	gxmPrecomputedSetConstantBuffer(precomputedState->constantBlock, program, 14, defaultBuffer);
 	return 0;
@@ -441,7 +441,7 @@ int sceGxmPrecomputedFragmentStateSetAllTextures(SceGxmPrecomputedFragmentState 
 	fragmentProgram = precomputedState->program;
 	entries = precomputedState->textureStateBlock;
 	count = fragmentProgram->textureIndexCount;
-	program = fragmentProgram->programHeader;
+	program = fragmentProgram->program;
 	indices = fragmentProgram->textureIndices;
 	for (i = 0; i < count; i++) {
 		const SceGxmTexture *texture = &textureArray[indices[i]];
@@ -480,7 +480,7 @@ int sceGxmPrecomputedFragmentStateSetTexture(SceGxmPrecomputedFragmentState *pre
 	bound.controlWords[0] &= GXM_TEX0_BOUND_MASK;
 	fragmentProgram = precomputedState->program;
 	count = fragmentProgram->textureIndexCount;
-	program = fragmentProgram->programHeader;
+	program = fragmentProgram->program;
 	indices = fragmentProgram->textureIndices;
 	entry = precomputedState->textureStateBlock;
 	for (i = 0; i < count; i++, entry++) {
@@ -503,7 +503,7 @@ int sceGxmPrecomputedFragmentStateSetAllUniformBuffers(SceGxmPrecomputedFragment
 
 	if (precomputedState == NULL || bufferDataArray == NULL)
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	program = precomputedState->program->programHeader;
+	program = precomputedState->program->program;
 	gxmPrecomputedSetAllDmaBuffers(precomputedState->dmaBlock, program, bufferDataArray);
 	gxmPrecomputedSetAllConstantBuffers(precomputedState->constantBlock, program, bufferDataArray);
 	return 0;
@@ -520,7 +520,7 @@ int sceGxmPrecomputedFragmentStateSetUniformBuffer(SceGxmPrecomputedFragmentStat
 		return SCE_GXM_ERROR_INVALID_VALUE;
 	if (bufferData == NULL)
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	program = precomputedState->program->programHeader;
+	program = precomputedState->program->program;
 	gxmPrecomputedSetDmaBuffer(precomputedState->dmaBlock, program, bufferIndex, bufferData);
 	gxmPrecomputedSetConstantBuffer(precomputedState->constantBlock, program, bufferIndex,
 					bufferData);

@@ -6,5 +6,5 @@
 
 const SceGxmProgram *sceGxmVertexProgramGetProgram(const SceGxmVertexProgram *vertexProgram)
 {
-	return vertexProgram->programHeader;
+	return vertexProgram->program;
 }

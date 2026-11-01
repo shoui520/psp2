@@ -196,7 +196,7 @@ static inline int gxmContextWriteTextureStateBlock(SceGxmContext *context,
 static inline int gxmContextWriteFragmentState(SceGxmContext *context)
 {
 	const SceGxmFragmentProgram *fragmentProgram = context->fragmentProgram;
-	const SceGxmProgram *program = fragmentProgram->programHeader;
+	const SceGxmProgram *program = fragmentProgram->program;
 	SceUInt32 flags = context->flags;
 	int ret;
 
@@ -248,14 +248,14 @@ static inline int gxmContextWriteFragmentState(SceGxmContext *context)
 static inline int gxmContextWriteVertexState(SceGxmContext *context)
 {
 	const SceGxmVertexProgram *vertexProgram = context->vertexProgram;
-	const SceGxmProgram *program = vertexProgram->programHeader;
+	const SceGxmProgram *program = vertexProgram->program;
 	SceUInt32 flags = context->flags;
 	int ret;
 
 	if (flags & GXM_CONTEXT_FLAG_VERTEX_PROGRAM) {
 		if (flags & GXM_CONTEXT_FLAG_VERTEX_DATA) {
 			if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_NONE &&
-			    context->vertexProgram->programHeader->defaultUniformBufferCount != 0)
+			    context->vertexProgram->program->defaultUniformBufferCount != 0)
 				return SCE_GXM_ERROR_UNIFORM_BUFFER_NOT_RESERVED;
 			if (flags & GXM_CONTEXT_FLAG_VERTEX_TEXTURES) {
 				ret = gxmContextWriteTextureBlock(&context->vertexBuffer,
@@ -406,7 +406,7 @@ void gxmContextResetState(SceGxmContext *context, SceBool vertexOnly,
 		if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_USED) {
 			const void *copy = gxmContextCopyUniformBuffer(&context->vertexBuffer,
 					context->vertexDefaultUniformBuffer,
-					vertexProgram->programHeader);
+					vertexProgram->program);
 
 			context->vertexUniformBuffers[14] = copy;
 			context->vertexDefaultUniformBuffer = copy;
@@ -428,7 +428,7 @@ void gxmContextResetState(SceGxmContext *context, SceBool vertexOnly,
 		if (context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_USED) {
 			const void *copy = gxmContextCopyUniformBuffer(&context->fragmentBuffer,
 					context->fragmentDefaultUniformBuffer,
-					fragmentProgram->programHeader);
+					fragmentProgram->program);
 
 			context->fragmentUniformBuffers[14] = copy;
 			context->fragmentDefaultUniformBuffer = copy;

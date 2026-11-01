@@ -9,17 +9,26 @@
 
 int sceGxmGetContextType(const SceGxmContext *context, SceUInt32 *type)
 {
-	if (context == NULL || type == NULL)
+	if (context == NULL || type == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(62, sceGxmGetContextType, context);
+		else
+			GXM_DBG_ERROR_NULL(66, sceGxmGetContextType, type);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	*type = context->type;
 	return 0;
 }
 
 void sceGxmSetVertexProgram(SceGxmContext *context, const SceGxmVertexProgram *vertexProgram)
 {
+	GXM_DBG_ASSERT(75, context);
 	if (context->vertexProgram != vertexProgram) {
 		context->vertexProgram = vertexProgram;
 		if (vertexProgram != NULL) {
+			GXM_DBG_ASSERT(85, vertexProgram->program);
+			GXM_DBG_ASSERT(86, sceGxmProgramGetProgramType(vertexProgram->program) ==
+					   SCE_GXM_VERTEX_PROGRAM);
 			gxmContextUpdateVertexOutputs(context, vertexProgram);
 			context->vertexProgramWords[0] = (SceUInt32)vertexProgram->literals;
 			context->vertexProgramWords[1] = (SceUInt32)vertexProgram->scratch;
@@ -29,15 +38,24 @@ void sceGxmSetVertexProgram(SceGxmContext *context, const SceGxmVertexProgram *v
 					 vertexProgram->pdsFlags;
 		}
 	}
-	if (context->vertexDefaultUniformBufferMode != GXM_DEFAULT_UNIFORM_BUFFER_SET)
+	if (context->vertexDefaultUniformBufferMode != GXM_DEFAULT_UNIFORM_BUFFER_SET) {
+		if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED &&
+		    gxmWarningIsEnabled(SCE_GXM_WARNING_VERTEX_DEFAULT_UNIFORM_BUFFER_RECYCLED))
+			GXM_DBG_WARNING(110, "The previous vertex default uniform buffer reservation "
+					"has not been used by any draw calls and has been recycled.");
 		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_NONE;
+	}
 }
 
 void sceGxmSetFragmentProgram(SceGxmContext *context, const SceGxmFragmentProgram *fragmentProgram)
 {
+	GXM_DBG_ASSERT(119, context);
 	if (context->fragmentProgram != fragmentProgram) {
 		context->fragmentProgram = fragmentProgram;
 		if (fragmentProgram != NULL) {
+			GXM_DBG_ASSERT(129, fragmentProgram->program);
+			GXM_DBG_ASSERT(130, sceGxmProgramGetProgramType(fragmentProgram->program) ==
+					    SCE_GXM_FRAGMENT_PROGRAM);
 			gxmContextUpdateFrontFragmentProgram(context, fragmentProgram);
 			if (context->state.frontIsp & GXM_ISP_TWO_SIDED)
 				gxmContextUpdateBackFragmentProgram(context, fragmentProgram);
@@ -48,8 +66,13 @@ void sceGxmSetFragmentProgram(SceGxmContext *context, const SceGxmFragmentProgra
 					 fragmentProgram->pdsFlags;
 		}
 	}
-	if (context->fragmentDefaultUniformBufferMode != GXM_DEFAULT_UNIFORM_BUFFER_SET)
+	if (context->fragmentDefaultUniformBufferMode != GXM_DEFAULT_UNIFORM_BUFFER_SET) {
+		if (context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED &&
+		    gxmWarningIsEnabled(SCE_GXM_WARNING_FRAGMENT_DEFAULT_UNIFORM_BUFFER_RECYCLED))
+			GXM_DBG_WARNING(158, "The previous fragment default uniform buffer reservation "
+					"has not been used by any draw calls and has been recycled.");
 		context->fragmentDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_NONE;
+	}
 }
 
 int sceGxmReserveVertexDefaultUniformBuffer(SceGxmContext *context, void **uniformBuffer)
@@ -68,7 +91,7 @@ int sceGxmReserveVertexDefaultUniformBuffer(SceGxmContext *context, void **unifo
 	}
 	if (context->vertexProgram == NULL)
 		return SCE_GXM_ERROR_NULL_PROGRAM;
-	program = context->vertexProgram->programHeader;
+	program = context->vertexProgram->program;
 	size = program->defaultUniformBufferCount * 4;
 	if (size == 0) {
 		*uniformBuffer = NULL;
@@ -110,7 +133,7 @@ int sceGxmReserveFragmentDefaultUniformBuffer(SceGxmContext *context, void **uni
 	}
 	if (context->fragmentProgram == NULL)
 		return SCE_GXM_ERROR_NULL_PROGRAM;
-	program = context->fragmentProgram->programHeader;
+	program = context->fragmentProgram->program;
 	size = program->defaultUniformBufferCount * 4;
 	if (size == 0) {
 		*uniformBuffer = NULL;
@@ -146,7 +169,7 @@ int sceGxmSetVertexDefaultUniformBuffer(SceGxmContext *context, const void *unif
 		context->vertexUniformBuffers[14] = uniformBuffer;
 		context->vertexDefaultUniformBuffer = uniformBuffer;
 		if (program != NULL) {
-			SceUInt32 mode = program->programHeader->bufferFlags >> 28;
+			SceUInt32 mode = program->program->bufferFlags >> 28;
 
 			if (mode & 3) {
 				if (mode & 2)
@@ -170,7 +193,7 @@ int sceGxmSetFragmentDefaultUniformBuffer(SceGxmContext *context, const void *un
 		context->fragmentUniformBuffers[14] = uniformBuffer;
 		context->fragmentDefaultUniformBuffer = uniformBuffer;
 		if (program != NULL) {
-			SceUInt32 mode = program->programHeader->bufferFlags >> 28;
+			SceUInt32 mode = program->program->bufferFlags >> 28;
 
 			if (mode & 3) {
 				if (mode & 2)
@@ -230,7 +253,7 @@ int _sceGxmSetVertexTexture(SceGxmContext *context, SceUInt32 textureIndex,
 		bound->controlWords[3] = word3;
 		if (context->vertexProgram != NULL) {
 			SceUInt32 bit = textureIndex * 4;
-			SceUInt32 use = context->vertexProgram->programHeader->texUnitFlags[bit >> 5] >> (bit & 31);
+			SceUInt32 use = context->vertexProgram->program->texUnitFlags[bit >> 5] >> (bit & 31);
 
 			if (use & 0xf) {
 				if (use & 4)
@@ -274,7 +297,7 @@ int sceGxmSetVertexTexture(SceGxmContext *context, SceUInt32 textureIndex,
 		bound->controlWords[3] = word3;
 		if (context->vertexProgram != NULL) {
 			SceUInt32 bit = textureIndex * 4;
-			SceUInt32 use = context->vertexProgram->programHeader->texUnitFlags[bit >> 5] >> (bit & 31);
+			SceUInt32 use = context->vertexProgram->program->texUnitFlags[bit >> 5] >> (bit & 31);
 
 			if (use & 0xf) {
 				if (use & 4)
@@ -314,7 +337,7 @@ int sceGxmSetFragmentTexture(SceGxmContext *context, SceUInt32 textureIndex,
 		bound->controlWords[3] = word3;
 		if (context->fragmentProgram != NULL) {
 			SceUInt32 bit = textureIndex * 4;
-			SceUInt32 use = context->fragmentProgram->programHeader->texUnitFlags[bit >> 5] >> (bit & 31);
+			SceUInt32 use = context->fragmentProgram->program->texUnitFlags[bit >> 5] >> (bit & 31);
 
 			if (use & 0xf) {
 				SceUInt32 flags;
@@ -346,7 +369,7 @@ int sceGxmSetVertexUniformBuffer(SceGxmContext *context, SceUInt32 bufferIndex,
 	if (context->vertexUniformBuffers[bufferIndex] != bufferData) {
 		context->vertexUniformBuffers[bufferIndex] = bufferData;
 		if (context->vertexProgram != NULL) {
-			SceUInt32 mode = context->vertexProgram->programHeader->bufferFlags >>
+			SceUInt32 mode = context->vertexProgram->program->bufferFlags >>
 					 (bufferIndex * 2);
 
 			if (mode & 3) {
@@ -370,7 +393,7 @@ int sceGxmSetFragmentUniformBuffer(SceGxmContext *context, SceUInt32 bufferIndex
 	if (context->fragmentUniformBuffers[bufferIndex] != bufferData) {
 		context->fragmentUniformBuffers[bufferIndex] = bufferData;
 		if (context->fragmentProgram != NULL) {
-			SceUInt32 mode = context->fragmentProgram->programHeader->bufferFlags >>
+			SceUInt32 mode = context->fragmentProgram->program->bufferFlags >>
 					 (bufferIndex * 2);
 
 			if (mode & 3) {
@@ -419,14 +442,14 @@ static inline void gxmContextCommitDefaultUniformBuffers(SceGxmContext *context,
 {
 	if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
 		SceUInt32 buffer = (SceUInt32)context->vertexDefaultUniformBuffer;
-		SceUInt32 count = vertexProgram->programHeader->defaultUniformBufferCount;
+		SceUInt32 count = vertexProgram->program->defaultUniformBufferCount;
 
 		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
 		context->vertexBuffer.cur = buffer + count * 4;
 	}
 	if (context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
 		SceUInt32 buffer = (SceUInt32)context->fragmentDefaultUniformBuffer;
-		SceUInt32 count = fragmentProgram->programHeader->defaultUniformBufferCount;
+		SceUInt32 count = fragmentProgram->program->defaultUniformBufferCount;
 
 		context->fragmentDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
 		context->fragmentBuffer.cur = buffer + count * 4;
@@ -438,14 +461,14 @@ static inline void gxmContextCommitReservedUniformBuffers(SceGxmContext *context
 {
 	if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
 		SceUInt32 buffer = (SceUInt32)context->vertexDefaultUniformBuffer;
-		SceUInt32 count = context->vertexProgram->programHeader->defaultUniformBufferCount;
+		SceUInt32 count = context->vertexProgram->program->defaultUniformBufferCount;
 
 		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
 		context->vertexBuffer.cur = buffer + count * 4;
 	}
 	if (context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
 		SceUInt32 buffer = (SceUInt32)context->fragmentDefaultUniformBuffer;
-		SceUInt32 count = context->fragmentProgram->programHeader->defaultUniformBufferCount;
+		SceUInt32 count = context->fragmentProgram->program->defaultUniformBufferCount;
 
 		context->fragmentDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
 		context->fragmentBuffer.cur = buffer + count * 4;
@@ -967,7 +990,7 @@ int sceGxmVertexFence(SceGxmContext *context)
 	}
 	if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
 		SceUInt32 buffer = (SceUInt32)context->vertexDefaultUniformBuffer;
-		SceUInt32 count = context->vertexProgram->programHeader->defaultUniformBufferCount;
+		SceUInt32 count = context->vertexProgram->program->defaultUniformBufferCount;
 
 		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
 		context->vertexBuffer.cur = buffer + count * 4;

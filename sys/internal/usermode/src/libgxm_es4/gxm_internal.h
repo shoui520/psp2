@@ -71,6 +71,19 @@ int sceKernelIsGameBudget(void);
 #define GXM_DBG_ASSERT(line, test)		GXM_DBG_CHECK(__FILE_NAME__, line, test, #test)
 #define GXM_DBG_ASSERT_AT(file, line, test)	GXM_DBG_CHECK(file, line, test, #test)
 #define GXM_DBG_ERROR(line, format, ...)	GXM_DBG_ERROR_AT(__FILE_NAME__, line, format, ##__VA_ARGS__)
+#if SCE_DBG_ASSERTS_ENABLED
+#define GXM_DBG_WARNING(line, format, ...)						\
+	sceDbgLoggingHandler(__FILE_NAME__, line, SCE_DBG_LOG_LEVEL_WARNING,		\
+			     SCE_DBG_LOG_COMPONENT, "[SceGxmDbg]:" format, ##__VA_ARGS__)
+#else
+#define GXM_DBG_WARNING(line, format, ...)	((void)0)
+#endif
+/* the debug build's messages for a function's parameter and scene checks */
+#define GXM_DBG_ERROR_NULL(line, function, parameter)				\
+	GXM_DBG_ERROR(line, "Parameter " #parameter " to function " #function " is NULL.")
+#define GXM_DBG_ERROR_OUTSIDE_SCENE(line, function, context)			\
+	GXM_DBG_ERROR(line, "Function " #function " has been called outside of a %s.",	\
+		      (context)->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE ? "command list" : "scene")
 
 /* the size of one USSE instruction (Sony's SGX headers) */
 #define EURASIA_USE_INSTRUCTION_SIZE	8
@@ -336,6 +349,10 @@ int sceGxmTextureValidate(const SceGxmTexture *texture);
 #define GXM_RELATIVE(field)	((field) ? (const void *)((const char *)&(field) + (field)) : NULL)
 
 #define GXM_PROGRAM_FRAGMENT		0x00000001
+
+/* SceGxmProgramType */
+#define SCE_GXM_VERTEX_PROGRAM		0
+#define SCE_GXM_FRAGMENT_PROGRAM	1
 #define GXM_PROGRAM_DISCARD		0x00000008
 #define GXM_PROGRAM_DEPTH_REPLACE	0x00000010
 #define GXM_PROGRAM_SPRITE_COORD	0x00000020
@@ -403,6 +420,11 @@ typedef struct SceGxmProgram {
 	SceUInt32 secondaryPdsDataCount;	/* 0x90: GxmProgramDmaEntry */
 	SceInt32 secondaryPdsDataOffset;
 } SceGxmProgram;
+
+static inline SceUInt32 sceGxmProgramGetProgramType(const SceGxmProgram *program)
+{
+	return program->flags & GXM_PROGRAM_FRAGMENT;
+}
 
 GXM_ASSERT_OFFSET(SceGxmProgram, secondaryPdsDataOffset, 0x94);
 
@@ -942,7 +964,7 @@ struct SceGxmShaderPatcher;
 struct SceGxmRegisteredProgram;
 
 typedef struct SceGxmFragmentProgram {
-	const SceGxmProgram *programHeader;
+	const SceGxmProgram *program;
 	GxmCodeRef code;		/* 0x04: the program with output and blending */
 	SceUInt32 reserved0;
 	GxmCodeRef secondaryCode;	/* 0x10 */
@@ -978,7 +1000,7 @@ GXM_ASSERT_SIZE(SceGxmFragmentProgram, 0x80);
 SceUInt32 sceGxmFragmentProgramGetPassType(const SceGxmFragmentProgram *fragmentProgram);
 
 typedef struct SceGxmVertexProgram {
-	const SceGxmProgram *programHeader;
+	const SceGxmProgram *program;
 	GxmCodeRef code;		/* 0x04: unpack code, then the program */
 	SceUInt32 reserved0;
 	GxmCodeRef secondaryCode;	/* 0x10 */
@@ -1264,6 +1286,11 @@ typedef struct SceGxmContext {
 	GxmCommandBlock fragmentTextureStateBlock;
 	SceUInt32 frontFragmentProgramMode;
 	SceUInt32 backFragmentProgramMode;
+#if SCE_DBG_ASSERTS_ENABLED
+	/* the word after the reserved default uniform buffer and what it held, NULL when none */
+	SceUInt32 *fragmentOverrunCheckAddress;
+	SceUInt32 fragmentOverrunCheckValue;
+#endif
 	GxmMteState state;		/* 0x1c0 */
 
 	/* the vertex stage */
@@ -1280,6 +1307,10 @@ typedef struct SceGxmContext {
 	const struct SceGxmPrecomputedVertexState *appliedVertexState;
 	GxmCommandBlock vertexDmaBlock;	/* 0x3c8 */
 	GxmCommandBlock vertexStreamBlock;	/* 0x3d0: the streams' descriptors */
+#if SCE_DBG_ASSERTS_ENABLED
+	SceUInt32 *vertexOverrunCheckAddress;
+	SceUInt32 vertexOverrunCheckValue;
+#endif
 
 	SceUInt8 insideScene;		/* 0x3d8: in a scene, or (deferred) in a command list */
 	union {
@@ -1689,7 +1720,7 @@ typedef struct GxmGlobals {
 	SceUInt32 compatFlags;		/* GXM_COMPAT_* */
 	SceUInt32 parameterBufferSize;	/* 0x3a4 */
 	SceUInt32 formatLevel;		/* highest format table level available */
-	SceUInt32 reserved1;
+	SceUInt32 warningMask;		/* sceGxmSetWarningEnabled: 1 << SCE_GXM_WARNING_* (debug build) */
 	SceUInt32 frameIndex;		/* 0x3b0, 24 bits, tags capture markers */
 	SceUInt32 sceneIndex;		/* 0x3b4: scenes this frame, tags capture markers */
 	volatile SceUInt32 counter;	/* 0x3b8 */
@@ -1697,6 +1728,30 @@ typedef struct GxmGlobals {
 } GxmGlobals;
 
 extern GxmGlobals gxmGlobals;
+
+/* SceGxmWarning (the SDK's gxm/init.h): the debug build's warnings, sceGxmSetWarningEnabled */
+#define SCE_GXM_WARNING_SCENE_SPLIT					0
+#define SCE_GXM_WARNING_VERTEX_DEFAULT_UNIFORM_BUFFER_RECYCLED		1
+#define SCE_GXM_WARNING_FRAGMENT_DEFAULT_UNIFORM_BUFFER_RECYCLED	2
+#define SCE_GXM_WARNING_STREAMS_PROVIDED_WITH_ZERO_COUNT		3
+#define SCE_GXM_WARNING_ATTRIBUTES_PROVIDED_WITH_ZERO_COUNT		4
+#define SCE_GXM_WARNING_PROGRAM_REGISTERED_WITH_SHADER_PATCHER		5
+#define SCE_GXM_WARNING_BLEND_INFO_IGNORED_FOR_NATIVECOLOR		6
+#define SCE_GXM_WARNING_USING_INTERPOLANT_NOT_WRITTEN_BY_VERTEX_PROGRAM	7
+#define SCE_GXM_WARNING_DEPTH_STENCIL_SURFACE_SETTING_IGNORED		8
+#define SCE_GXM_WARNING_DEFERRED_CONTEXT_MISSING_VIEWPORT		9
+#define SCE_GXM_WARNING_DEFERRED_CONTEXT_MISSING_REGION_CLIP		10
+#define SCE_GXM_WARNING_USING_INAPPROPRIATE_MEMORY_CACHE_CONFIGURATION	11
+#define SCE_GXM_WARNING_PRECOMPUTING_DISABLED_FRAGMENT_STATE		12
+
+static inline SceBool gxmWarningIsEnabled(SceUInt32 warning)
+{
+#if SCE_DBG_ASSERTS_ENABLED
+	return (gxmGlobals.warningMask & (1 << warning)) != 0;
+#else
+	return SCE_FALSE;
+#endif
+}
 
 /* USSE programs are 16-byte aligned, 8 for older SDKs */
 static inline SceSize gxmUsseAlignment(void)

@@ -772,7 +772,7 @@ int sceGxmShaderPatcherCreateVertexProgram(SceGxmShaderPatcher *shaderPatcher,
 	gxmChunkBufferInitFixed(&codeBuffer, usseMem, usseOffset, usseSize);
 	created->usseSize = usseSize;
 	created->hostSize = hostSize;
-	created->programHeader = program;
+	created->program = program;
 	err = gxmProgramBuildVertexCode(&codeBuffer, program, attributes, attributeCount,
 					&created->code);
 	if (err != 0)
@@ -1110,7 +1110,7 @@ setup:
 	gxmChunkBufferInitFixed(&codeBuffer, usseMem, usseOffset, usseSize);
 	created->hostSize = hostSize;
 	created->usseSize = usseSize;
-	created->programHeader = program;
+	created->program = program;
 	err = gxmFragmentBuildCode(&build, &codeBuffer, &created->code);
 	if (err != 0)
 		goto freeUsse;
@@ -1240,7 +1240,7 @@ int sceGxmShaderPatcherCreateMaskUpdateFragmentProgram(SceGxmShaderPatcher *shad
 		created->program.sdkVersion = FW_VERSION >> 16;
 		created->program.size = sizeof(created->program) + sizeof(created->pad) +
 					sizeof(created->varyings);
-		created->fragment.programHeader = &created->program;
+		created->fragment.program = &created->program;
 		created->program.varyingsOffset = (char *)created->varyings -
 						  (char *)&created->program.varyingsOffset;
 		created->program.reserved2 = 0;

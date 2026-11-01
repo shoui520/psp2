@@ -18,7 +18,7 @@
 
 void gxmContextUpdateVertexOutputs(SceGxmContext *context, const SceGxmVertexProgram *program)
 {
-	const GxmProgramVaryings *varyings = gxmProgramGetVaryings(program->programHeader);
+	const GxmProgramVaryings *varyings = gxmProgramGetVaryings(program->program);
 	SceUInt32 dirty;
 
 	if (context->state.reserved0) {

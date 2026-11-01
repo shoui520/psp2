@@ -10,9 +10,6 @@
 
 #define GXM_PROGRAM_MAGIC		0x00505847	/* "GXP\0" */
 
-#define SCE_GXM_VERTEX_PROGRAM		0
-#define SCE_GXM_FRAGMENT_PROGRAM	1
-
 /* vertex program outputs, fragment program inputs */
 #define GXM_VARYING_POSITION		0x00000001
 #define GXM_VARYING_FOG			0x00000002
