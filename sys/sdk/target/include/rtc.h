@@ -66,7 +66,6 @@ int sceRtcTickAddYears(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
 int sceRtcFormatRFC3339(char *pszDateTime, const SceRtcTick *pUtc, int iTimeZoneMinutes);
 int sceRtcFormatRFC3339LocalTime(char *pszDateTime, const SceRtcTick *pUtc);
 int sceRtcParseRFC3339(SceRtcTick *pUtc, const char *pszDateTime);
-int sceRtcFormatRFC3339LocalTime(char *pszDateTime, const SceRtcTick *pUtc);
 int sceRtcParseDateTime(SceRtcTick *pUtc, const char *pszDateTime);
 
 #if defined(_LANGUAGE_C_PLUS_PLUS)||defined(__cplusplus)||defined(c_plusplus)
