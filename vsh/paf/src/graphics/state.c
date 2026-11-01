@@ -317,29 +317,6 @@ uint32_t *ScePafGraphics_B609BD86(uint32_t *result, const uint32_t *source)
 	return result;
 }
 
-/* Update four packed graphics modes if any nibble changed. */
-uint8_t *_ZN3paf5graph3arl11ArlInstance9BlendFuncENS1_14BlendingFactorES3_S3_S3_(
-		uint8_t *self, int mode0, int mode1, int mode2, int mode3)
-{
-	int first = ((const volatile int8_t *)self)[1932];
-	int second;
-
-	if ((first & 15) != mode0 ||
-	    ((second = ((const volatile int8_t *)self)[1933]) & 15) != mode2 ||
-	    (((uint32_t)first >> 4) & 15) != mode1 ||
-	    (((uint32_t)second >> 4) & 15) != mode3) {
-		int priorFirst = first & ~15;
-		int priorSecond = ((const volatile int8_t *)self)[1933] & ~15;
-		int newFirst = priorFirst | (mode0 & 15);
-		int newSecond = priorSecond | (mode2 & 15);
-
-		self[1928] = 1;
-		self[1932] = (newFirst & 15) | ((mode1 & 15) << 4);
-		self[1933] = (newSecond & 15) | ((mode3 & 15) << 4);
-	}
-	return self;
-}
-
 /* Forward resource field queries through the active graphics view. */
 int _ZN3paf5graph7TextObj11GetCharInfoEjRNS0_18TextLayoutCharInfoE(const uint8_t *self, uint32_t index,
 			     uint8_t *output)
@@ -500,21 +477,6 @@ void *ScePafGraphics_5AF8179A(const uint8_t *self, const uint64_t *value)
 	return target;
 }
 
-void *_ZN3paf5graph3arl11ArlInstance13BlendEquationENS1_17BlendEquationEnumES3_(uint8_t *self, int first, int second)
-{
-	int8_t value = *(int8_t *)(self + 1931);
-
-	if ((value & 15) != first ||
-	    (((uint32_t)value >> 4) & 15) != second) {
-		uint32_t updated = ((uint32_t)value & ~15U) | (first & 15);
-
-		self[1928] = 1;
-		self[1931] = (uint8_t)((updated & ~0xf0U) |
-					  ((second & 15) << 4));
-	}
-	return self;
-}
-
 void *ScePafGraphics_12BDEBFF(void)
 {
 	uint32_t *state = *(uint32_t *volatile *)
@@ -571,16 +533,6 @@ void GraphicsSetPointLineWidth(uint32_t *self, uint32_t flags, float width)
 		sceGxmSetBackPointLineWidth((SceGxmContext *)self[419],
 					    integerWidth);
 	}
-}
-
-void _ZN3paf5graph3arl11ArlInstance9PointSizeEfNS1_8FaceEnumE(uint32_t *self, uint32_t flags, float width)
-{
-	GraphicsSetPointLineWidth(self, flags, width);
-}
-
-void _ZN3paf5graph3arl11ArlInstance9LineWidthEfNS1_8FaceEnumE(uint32_t *self, uint32_t flags, float width)
-{
-	GraphicsSetPointLineWidth(self, flags, width);
 }
 
 typedef struct PafGraphicsCallbackEntry {
@@ -875,49 +827,6 @@ uint8_t *_ZN3paf5graph3arl20FragCreateDependencyC1Ev(uint8_t *self)
 	return self;
 }
 
-void _ZN3paf5graph3arl11ArlInstance9DepthMaskEbNS1_8FaceEnumE(uint8_t *self, uint8_t enabled,
-			      uint8_t sides)
-{
-	if (sides & 1) {
-		SceGxmDepthWriteMode mode = SCE_GXM_DEPTH_WRITE_DISABLED;
-		SceGxmContext *context;
-
-		self[1892] = enabled;
-		context = *(SceGxmContext **)(self + 1676);
-		if (enabled)
-			mode = SCE_GXM_DEPTH_WRITE_ENABLED;
-		sceGxmSetFrontDepthWriteEnable(context, mode);
-	}
-	if (sides & 2) {
-		SceGxmDepthWriteMode mode = SCE_GXM_DEPTH_WRITE_DISABLED;
-
-		self[1893] = enabled;
-		if (enabled)
-			mode = SCE_GXM_DEPTH_WRITE_ENABLED;
-		sceGxmSetBackDepthWriteEnable(
-			*(SceGxmContext **)(self + 1676), mode);
-	}
-}
-
-void _ZN3paf5graph3arl11ArlInstance9DepthFuncENS1_13DepthFuncEnumENS1_8FaceEnumE(uint8_t *self, SceGxmDepthFunc depthFunc,
-			      uint8_t sides)
-{
-	if (sides & 1) {
-		int enabled = self[1938];
-		*(uint32_t *)(self + 1884) = depthFunc;
-		if (enabled)
-			sceGxmSetFrontDepthFunc(
-				*(SceGxmContext **)(self + 1676), depthFunc);
-	}
-	if (sides & 2) {
-		int enabled = self[1938];
-		*(uint32_t *)(self + 1888) = depthFunc;
-		if (enabled)
-			sceGxmSetFrontDepthFunc(
-				*(SceGxmContext **)(self + 1676), depthFunc);
-	}
-}
-
 int _ZN3paf5graph9TextStyle13EqualFontTypeERKS1_(const uint8_t *first,
 			     const uint8_t *second)
 {
@@ -1093,18 +1002,6 @@ int _ZN3paf5graph10TextLayout9GetBoundsERNS_4math2v2E(const uint8_t *self, uint6
 		return -2136005885;
 	*output = *(const uint64_t *)(self + 104);
 	return 0;
-}
-
-uint32_t *ScePafGraphics_56C831A9(uint8_t *self, const uint32_t *values)
-{
-	uint32_t count = *(const uint32_t *)(self + 196);
-	uint32_t *result = (uint32_t *)(self + 32 * (count - 1));
-
-	result[54] = values[0];
-	result[55] = values[1];
-	result[56] = values[2];
-	result[57] = values[3];
-	return result;
 }
 
 uint32_t _ZN3paf5graph8PlaneObj6UpdateEv(uint8_t *self)
@@ -1320,19 +1217,6 @@ int _ZN3paf5graph8PlaneObj12SetMagFilterENS0_13TextureFilterEj(const uint8_t *se
 	return -1;
 }
 
-int ScePafGraphics_96173730(const uint8_t *self)
-{
-	uint8_t *object = *(uint8_t *const *)(self + 1684);
-	int result;
-
-	if (object)
-		_ZN3paf5graph7Surface6AddRefEv(object);
-	result = *(int *)(object + 4);
-	if (object)
-		_ZN3paf5graph7Surface7ReleaseEv(object);
-	return result;
-}
-
 int _ZN3paf5graph14DisplaySurface13GetOutputPortEv(const uint8_t *self)
 {
 	int result = 0;
@@ -1469,11 +1353,6 @@ int ScePafGraphics_D1081027(uint8_t *self, int32_t index,
 	return 0;
 }
 
-__attribute__((noinline)) uint32_t _ZN3paf5graph3arl2GlEv(void)
-{
-	return sce_paf_graphics_state_11e0;
-}
-
 uint32_t _ZN3paf5graph13ScreenSurface13GetRawContextEv(void)
 {
 	uint32_t result = sce_paf_graphics_state_12b0;
@@ -1565,16 +1444,6 @@ void *ScePafGraphics_AEBC68E5(const uint8_t *self, const uint64_t *value)
 
 	*(uint64_t *)(target + 48) = *value;
 	return target;
-}
-
-void ScePafGraphics_6E7B77AC(const uint8_t *self, float value)
-{
-	sceGxmSetWClampValue(*(SceGxmContext *const *)(self + 1676), value);
-}
-
-void ScePafGraphics_E4B3B1D2(const uint8_t *self)
-{
-	sceGxmFinish(*(SceGxmContext *const *)(self + 1676));
 }
 
 int32_t _ZN3paf5gutil16GetDefaultShaderEv(void)
@@ -1932,27 +1801,6 @@ not_found:
 	return NULL;
 }
 
-int ScePafGraphics_BB119805(const uint8_t *self)
-{
-	uint8_t *object = *(uint8_t *const *)(self + 1684);
-	uint32_t mode;
-
-	if (object)
-		_ZN3paf5graph7Surface6AddRefEv(object);
-	mode = *(const uint32_t *)(object + 32);
-	if (object)
-		_ZN3paf5graph7Surface7ReleaseEv(object);
-	if (mode > 1) {
-		if (mode <= 2)
-			return 12800;
-		if (mode <= 3)
-			return 10752;
-	} else if (mode > 0) {
-		return 9728;
-	}
-	return 9728;
-}
-
 int ScePafGraphics_A842275A(const uint8_t *self,
 			     SceGxmRenderTarget *target)
 {
@@ -2022,25 +1870,6 @@ int _ZN3paf5graph7Surface12GetPageIndexENS0_15FrameBufferTypeEPi(const uint8_t *
 		*result = *(const int16_t *)(self + 102);
 	}
 	return 0;
-}
-
-void _ZN3paf5graph3arl11ArlInstance11PolygonModeENS1_15PolygonModeEnumENS1_8FaceEnumE(uint8_t *self, SceGxmPolygonMode mode,
-			     unsigned int flags)
-{
-	if (flags & 1) {
-		SceGxmContext *context =
-			*(SceGxmContext **)(self + 1676);
-
-		*(uint32_t *)(self + 1876) = mode;
-		sceGxmSetFrontPolygonMode(context, mode);
-	}
-	if (flags & 2) {
-		SceGxmContext *context =
-			*(SceGxmContext **)(self + 1676);
-
-		*(uint32_t *)(self + 1872) = mode;
-		sceGxmSetBackPolygonMode(context, mode);
-	}
 }
 
 uint32_t _ZN3paf5graph11SurfaceCLUT7ReleaseEv(uint32_t *self)
@@ -2154,21 +1983,6 @@ uint8_t *_ZN3paf5graph7Surface4LockEi(uint8_t *self, int index)
 		result = buffer + *(const uint32_t *)(self + 56) * index;
 	MutexUnlock(&sce_paf_graphics_flag_mutex_1250);
 	return result;
-}
-
-uint8_t *_ZN3paf5graph3arl11ArlInstance9ColorMaskEbbbb(uint8_t *self, int first,
-				   uint8_t second, uint8_t third, int fourth)
-{
-	uint8_t packed = (first ? 2 : 0) |
-		(second ? 4 : 0) |
-		(third ? 8 : 0) |
-		(fourth ? 1 : 0);
-
-	if (self[1930] != packed) {
-		self[1930] = packed;
-		self[1928] = 1;
-	}
-	return self;
 }
 
 uint32_t *ScePafGraphics_E2687C25(uint8_t *self, const uint8_t *source)
@@ -2353,31 +2167,6 @@ uint32_t _ZN3paf5graph7Surface9FloorLog2Ei(int32_t value)
 			 (int32_t)(step8 + step4 + step2) + 14);
 }
 
-uint32_t ScePafGraphics_641E3FAE(int32_t *result,
-				 const uint8_t *self)
-{
-	uint8_t *first = *(uint8_t *const *)(self + 1684);
-	uint8_t *second = first;
-	uint32_t last = (uint32_t)(uintptr_t)result;
-	int32_t width;
-	int32_t height;
-
-	if (first)
-		last = _ZN3paf5graph7Surface6AddRefEv(first);
-	second = *(uint8_t *const *)(self + 1684);
-	width = *(int16_t *)(first + 28);
-	if (second)
-		last = _ZN3paf5graph7Surface6AddRefEv(second);
-	height = *(int16_t *)(second + 30);
-	if (second)
-		last = _ZN3paf5graph7Surface7ReleaseEv(second);
-	if (first)
-		last = _ZN3paf5graph7Surface7ReleaseEv(first);
-	result[0] = width;
-	result[1] = height;
-	return last;
-}
-
 int _ZN3paf5graph16AttributedString15GetStringBufferERPKwRj(const uint8_t *self,
 			     uint32_t *first, uint32_t *second)
 {
@@ -2393,11 +2182,6 @@ uint8_t ScePafGraphics_505CD74E(uint8_t value)
 {
 	sce_paf_graphics_display_06f8[1432] = value;
 	return value;
-}
-
-uint32_t *_ZN3paf5graph3arl11ArlInstance19GetNotificationAddrEj(const void *self, uint32_t index)
-{
-	return sce_paf_graphics_buffer_11e4 + index;
 }
 
 int _ZN3paf5graph16AttributedString9GetStringERNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEE(const uint8_t *self, PafWString *result)
@@ -2549,14 +2333,6 @@ int _ZN3paf5graph7TextObj12DrawCallbackERKNS0_7DrawObj15DrawCallbackArgE(const u
 int _ZN3paf5graph8PlaneObj12DrawCallbackERKNS0_7DrawObj15DrawCallbackArgE(const uint32_t *self)
 {
 	return GraphicsInvokeOffset20(self);
-}
-
-void _ZN3paf5graph3arl11ArlInstance8CullModeENS1_12CullModeEnumE(uint8_t *self, SceGxmCullMode mode)
-{
-	SceGxmContext *context =
-		*(SceGxmContext *const *)(self + 1676);
-	*(SceGxmCullMode *)(self + 1896) = mode;
-	sceGxmSetCullMode(context, mode);
 }
 
 __attribute__((noinline))

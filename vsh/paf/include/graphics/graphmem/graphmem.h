@@ -7,6 +7,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <common/shared_ptr.h>
+#include <memory/heap_allocator.h>
 
 namespace paf {
 namespace GraphMem {
@@ -57,6 +59,16 @@ public:
 
 void *AllocOSMemory(DeviceType device_type, uint32_t size, const char *name, Option *option);
 void FreeOSMemory(DeviceType device_type, void *p);
+
+/* a heap over memory the GPU maps */
+class GraphHeapAllocator : public memory::HeapAllocator {
+public:
+	GraphHeapAllocator(void *membase, size_t size, const char *name);
+	virtual ~GraphHeapAllocator();
+};
+
+common::WeakPtr<GraphHeapAllocator> SystemMemoryHeap();
+common::WeakPtr<GraphHeapAllocator> VideoMemoryHeap();
 
 }
 }

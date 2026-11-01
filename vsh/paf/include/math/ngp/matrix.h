@@ -38,6 +38,11 @@ public:
 		return matrix(sce::Vectormath::Simd::Aos::Matrix4::zero());
 	}
 
+	static matrix Identity()
+	{
+		return matrix(sce::Vectormath::Simd::Aos::Matrix4::identity());
+	}
+
 	matrix(quaternion quat);
 
 	matrix inverse3() const;

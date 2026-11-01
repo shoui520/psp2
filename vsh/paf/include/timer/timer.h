@@ -16,6 +16,9 @@
 
 namespace paf {
 
+/* the process's time in microseconds since it was first asked */
+SceUInt64 get_time_internal();
+
 class Timer {
 public:
 	enum State {

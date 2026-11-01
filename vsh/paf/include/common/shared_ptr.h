@@ -15,6 +15,9 @@ namespace paf {
 namespace common {
 
 template<class T>
+class WeakPtr;
+
+template<class T>
 class SharedPtr {
 public:
 	struct RefCounter {
@@ -60,6 +63,18 @@ public:
 	{
 		if (m_ptr != NULL)
 			sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+	}
+
+	/* What a weak pointer holds while a strong reference remains, else nothing. */
+	SharedPtr(const WeakPtr<T> &src) : m_ref_counter(src.m_ref_counter)
+	{
+		if (m_ref_counter != NULL && m_ref_counter->m_counter != 0) {
+			m_ptr = m_ref_counter->m_ptr;
+			if (m_ptr != NULL)
+				sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+		} else {
+			m_ptr = NULL;
+		}
 	}
 
 	~SharedPtr()
@@ -139,6 +154,36 @@ private:
 				delete m_ref_counter;
 		}
 	}
+};
+
+/* a reference to a SharedPtr's counter block that keeps the block, not the object */
+template<class T>
+class WeakPtr {
+public:
+	WeakPtr() : m_ref_counter(NULL)
+	{
+	}
+
+	WeakPtr(const SharedPtr<T> &src) : m_ref_counter(src.m_ref_counter)
+	{
+		if (m_ref_counter != NULL)
+			sceAtomicIncrement32AcqRel(&m_ref_counter->m_weak_counter);
+	}
+
+	WeakPtr(const WeakPtr &src) : m_ref_counter(src.m_ref_counter)
+	{
+		if (m_ref_counter != NULL)
+			sceAtomicIncrement32AcqRel(&m_ref_counter->m_weak_counter);
+	}
+
+	~WeakPtr()
+	{
+		if (m_ref_counter != NULL &&
+		    sceAtomicDecrement32AcqRel(&m_ref_counter->m_weak_counter) == 1)
+			delete m_ref_counter;
+	}
+
+	typename SharedPtr<T>::RefCounter *m_ref_counter;
 };
 
 }

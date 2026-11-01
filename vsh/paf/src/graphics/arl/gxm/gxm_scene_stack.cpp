@@ -16,7 +16,7 @@ SceneDataStack::SceneDataStack() : m_depth(1)
 	m_scene[0] = NULL;
 }
 
-SceneDataStack::~SceneDataStack()
+void SceneDataStack::Unused()
 {
 }
 

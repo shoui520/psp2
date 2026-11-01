@@ -57,7 +57,8 @@ public:
 	~RenderTargetPool();
 
 	void Clear();
-	SceGxmRenderTarget *GetRenderTarget(Key key);
+	/* the file asking, which the release build does not print */
+	SceGxmRenderTarget *GetRenderTarget(Key key, const char *file);
 	void AddScenes(Key key, int32_t scenes);
 
 	uint32_t m_reserved;

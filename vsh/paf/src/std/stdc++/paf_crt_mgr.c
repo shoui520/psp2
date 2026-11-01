@@ -3,6 +3,7 @@
 #include "../string.h"
 #include <libkernel/libkernel.h>
 #include <stddef.h>
+#include <paf_build.h>
 
 static PafCrtManager *crtManager;
 static PafCrtManager crtManagerStorage;
@@ -10,16 +11,7 @@ static PafCrtManager crtManagerStorage;
 static const char crtAssertion[] =
 	"[PAF C/C++ Runtime Mgr] %s:%u: INTERNAL ASSERION FAILURE\n";
 
-#if defined(FW_TYPE_CEX)
-#define PAF_CRT_BUILD "J01509657"
-#elif defined(FW_TYPE_TOOL)
-#define PAF_CRT_BUILD "J01509658"
-#else
-#define PAF_CRT_BUILD "J01508051"
-#endif
-
-static const char crtSourceFile[] =
-	"W:\\Build\\" PAF_CRT_BUILD "\\vsh\\paf\\src\\std\\stdc++\\paf_crt_mgr.cpp";
+static const char crtSourceFile[] = PAF_BUILD_ROOT "src\\std\\stdc++\\paf_crt_mgr.cpp";
 
 PafCrtManager *PafCrtManagerGet(void)
 {

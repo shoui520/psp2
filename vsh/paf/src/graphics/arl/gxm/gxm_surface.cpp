@@ -52,7 +52,7 @@ RenderTargetPool::~RenderTargetPool()
 }
 
 /* a target for the size that is free in this frame, else a new one */
-SceGxmRenderTarget *RenderTargetPool::GetRenderTarget(Key size)
+SceGxmRenderTarget *RenderTargetPool::GetRenderTarget(Key size, const char *file)
 {
 	Key key = size;
 
@@ -115,33 +115,6 @@ void RenderTargetPool::AddScenes(Key size, int32_t scenes)
 		m_scenes.insert(map<Key, int32_t>::value_type(key, scenes));
 	else
 		it->second += scenes;
-}
-
-/* the bytes of a pixel of each format a surface takes */
-static inline uint32_t BytesPerPixel(ImageMode format)
-{
-	switch (format) {
-	case ImageMode_ABGR8888:
-	case ImageMode_RGBA8888:
-	case ImageMode_ARGB8888:
-	case ImageMode_BGRA8888:
-		return 4;
-	case ImageMode_A8:
-	case ImageMode_L8:
-		return 1;
-	case ImageMode_depth16:
-	case ImageMode_A16FP:
-		return 2;
-	case ImageMode_depth32:
-	case ImageMode_A32FP:
-		return 4;
-	case ImageMode_WZYX16FP:
-		return 8;
-	case ImageMode_WZYX32FP:
-		return 16;
-	default:
-		return 0;
-	}
 }
 
 SurfaceStorage::SurfaceStorage(common::SharedPtr<VramAllocator> allocator)

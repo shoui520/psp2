@@ -13,6 +13,7 @@
 #include <common/shared_ptr.h>
 #include <image/image.h>
 #include <math/ngp/v2.h>
+#include <math/ngp/v4.h>
 
 namespace paf {
 
@@ -42,6 +43,12 @@ class SurfaceListNode {
 public:
 	SurfaceListNode *m_prev;
 	SurfaceListNode *m_next;
+};
+
+/* which page GetPageIndex gives: the one shown, or the one drawn into (names ours) */
+enum FrameBufferType {
+	FrameBufferType_Front = 0,
+	FrameBufferType_Back = 1
 };
 
 class Surface : public SurfaceBase, protected SurfaceListNode {
@@ -122,6 +129,19 @@ public:
 	Surface(SurfacePool *pool, int32_t width, int32_t height, ImageMode format,
 		ImageOrder order, int32_t num_page, int32_t num_level, bool reserved);
 	virtual ~Surface();
+	/* nothing; 0 */
+	virtual void Unused2();
+	virtual int32_t Unused3();
+	/* clears the page drawn into: ScePafGraphics_439D4357 */
+	virtual void ClearPage(const math::v4 &color, uint32_t clear_mask);
+	virtual void Swap();
+	virtual void BeginScene();
+	virtual void EndScene();
+	/* the page's memory for the CPU, and back */
+	virtual int32_t Lock(int32_t page);
+	virtual void Unlock();
+	virtual int32_t Resize(int32_t width, int32_t height);
+	virtual void GenTexture();
 
 	static void *operator new(size_t size);
 	static void operator delete(void *ptr);
@@ -144,6 +164,35 @@ public:
 	int32_t GetRefCount() const
 	{
 		return m_ref_count;
+	}
+
+	/* 0x80AF2206 without somewhere to put the page */
+	int32_t GetPageIndex(FrameBufferType type, int32_t *page);
+
+	int16_t GetWidth() const
+	{
+		return m_width;
+	}
+
+	int16_t GetHeight() const
+	{
+		return m_height;
+	}
+
+	ImageOrder GetOrder() const
+	{
+		return m_order;
+	}
+
+	int32_t GetStride() const
+	{
+		return m_stride;
+	}
+
+	/* the page drawn into */
+	int16_t GetPageCounter() const
+	{
+		return m_page_counter;
 	}
 
 	/* The pages' memory from the pool; NULL when the pool had none. */

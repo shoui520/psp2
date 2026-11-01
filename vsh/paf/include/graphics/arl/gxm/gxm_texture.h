@@ -21,11 +21,40 @@ namespace arl {
 
 class SurfaceMemory;
 
+/* the bytes of a pixel of each format a surface takes */
+inline uint32_t BytesPerPixel(ImageMode format)
+{
+	switch (format) {
+	case ImageMode_ABGR8888:
+	case ImageMode_RGBA8888:
+	case ImageMode_ARGB8888:
+	case ImageMode_BGRA8888:
+		return 4;
+	case ImageMode_A8:
+	case ImageMode_L8:
+		return 1;
+	case ImageMode_depth16:
+		return 2;
+	case ImageMode_depth32:
+		return 4;
+	case ImageMode_WZYX16FP:
+		return 8;
+	case ImageMode_WZYX32FP:
+		return 16;
+	case ImageMode_A16FP:
+		return 2;
+	case ImageMode_A32FP:
+		return 4;
+	default:
+		return 0;
+	}
+}
+
 /* gives surfaces their video memory */
 class VramAllocator {
 public:
 	virtual ~VramAllocator();
-	virtual int32_t Alloc(SurfaceMemory *memory, uint32_t size) = 0;
+	virtual void Alloc(SurfaceMemory *memory, uint32_t size) = 0;
 	virtual void Free(SurfaceMemory *memory) = 0;
 };
 
@@ -33,7 +62,7 @@ public:
 class SurfaceMemory {
 public:
 	SurfaceMemory(const common::SharedPtr<VramAllocator> &allocator)
-		: m_addr(NULL), m_handle(0), m_size(0), m_allocator(allocator)
+		: m_addr(NULL), m_alloc_size(0), m_size(0), m_allocator(allocator)
 	{
 	}
 
@@ -44,7 +73,8 @@ public:
 	}
 
 	void *m_addr;
-	uint32_t m_handle;
+	/* what the allocator gave, which it takes back on Free */
+	uint32_t m_alloc_size;
 	uint32_t m_size;
 	common::SharedPtr<VramAllocator> m_allocator;
 };
@@ -118,13 +148,8 @@ public:
 	bool m_owned;
 };
 
-/* what a texture's other pointers hold, which no converted code reads yet (names ours) */
+/* what a texture's data pointer holds, which no converted code reads yet (name ours) */
 class TextureData;
-
-class TextureView {
-public:
-	uint32_t m_reserved;
-};
 
 /* a texture's size, format and mip level count, which a copy takes whole */
 class TextureDesc {
@@ -147,7 +172,7 @@ public:
 class TextureObject {
 public:
 	enum {
-		MAX_VIEWS = 12
+		MAX_LEVELS = 12
 	};
 
 	TextureObject(common::SharedPtr<VramAllocator> allocator, int32_t type);
@@ -162,10 +187,52 @@ public:
 	int setWrapT(TextureWrap wrap);
 	bool alloc(TextureDesc desc, int32_t depth, int32_t samples, SurfaceFlags flags);
 
+	/* makes the colour surface over the level the first time a scene draws into it */
+	void PrepareColorSurface(uint32_t level)
+	{
+		OwnedPtr<SceGxmColorSurface> &surface = m_color_surfaces[level];
+
+		if (surface.get() == NULL) {
+			SurfaceFlags flags = m_storage->m_flags;
+
+			if (m_storage->m_flags.IsSet(TEXTURE_LINEAR))
+				flags.Set(COLOR_SURFACE_LINEAR);
+			if (m_storage->m_flags.IsSet(TEXTURE_TILED))
+				flags.Set(COLOR_SURFACE_TILED);
+			if (m_storage->m_flags.IsSet(TEXTURE_SWIZZLED))
+				flags.Set(COLOR_SURFACE_SWIZZLED);
+
+			common::SharedPtr<SurfaceStorage> storage = m_storage;
+			ImageMode format = m_desc.m_format;
+
+			surface.reset(new SceGxmColorSurface());
+			storage->InitColorSurface(surface.get(), format, flags, level);
+		}
+	}
+
+	/* makes the depth and stencil surface over the texture the first time a scene uses it */
+	void PrepareDepthStencilSurface()
+	{
+		if (m_depth_stencil_surface.get() == NULL) {
+			SurfaceFlags flags = m_storage->m_flags;
+
+			if (m_storage->m_flags.IsSet(TEXTURE_LINEAR))
+				flags.Set(STENCILDEPTH_SURFACE_LINEAR);
+			if (m_storage->m_flags.IsSet(TEXTURE_TILED))
+				flags.Set(STENCILDEPTH_SURFACE_TILED);
+
+			common::SharedPtr<SurfaceStorage> storage = m_storage;
+			ImageMode format = m_desc.m_format;
+
+			m_depth_stencil_surface.reset(new SceGxmDepthStencilSurface());
+			storage->InitDepthStencilSurface(m_depth_stencil_surface.get(), format, flags);
+		}
+	}
+
 	common::SharedPtr<SurfaceStorage> m_storage;
 	common::SharedPtr<TextureData> m_data;
-	OwnedPtr<TextureView> m_view[MAX_VIEWS];
-	OwnedPtr<TextureView> m_palette;
+	OwnedPtr<SceGxmColorSurface> m_color_surfaces[MAX_LEVELS];
+	OwnedPtr<SceGxmDepthStencilSurface> m_depth_stencil_surface;
 	OwnedPtr<SceGxmTexture> m_texture;
 	int32_t m_type;
 	TextureDesc m_desc;

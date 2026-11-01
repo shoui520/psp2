@@ -41,6 +41,11 @@ public:
 		_impl.setY(value);
 	}
 
+	v2 operator+(v2 rhs) const
+	{
+		return v2(_impl + rhs._impl);
+	}
+
 	v2 operator-(v2 rhs) const
 	{
 		return v2(_impl - rhs._impl);
@@ -49,6 +54,11 @@ public:
 	v2 operator*(v2 rhs) const
 	{
 		return v2(mulPerElem(_impl, rhs._impl));
+	}
+
+	v2 operator/(float rhs) const
+	{
+		return v2(_impl / rhs);
 	}
 
 	bool operator==(v2 rhs) const
