@@ -13,33 +13,25 @@
 
 /* One scan result as SceNetCtl_1A254169 reports it (0x60 bytes). */
 typedef struct NetCtlScanInfo {
-	char unk00[0x10];
+	char reserved[0x10];
 	char bssid[6];
-	char unk16[2];
+	char padding[2];
 	char ssid[NETCTL_SSID_SIZE];
-	char unk39[3];
-	int unk3C;
-	int unk40;
-	int unk44;
-	int unk48;
-	int unk4C;
-	SceUInt64 unk50;
-	char unk58[8];
+	char padding2[3];
+	int params[5];			/* copied to the table unread */
+	SceUInt64 key;			/* copied to the table unread */
+	char reserved2[8];
 } NetCtlScanInfo;
 
 /* One entry of the periodical scan table (0x70 bytes). */
 typedef struct NetCtlScanResult {
-	SceUInt64 unk00;
+	SceUInt64 key;
 	char bssid[6];
-	char unk0E[2];
+	char padding[2];
 	char ssid[NETCTL_SSID_SIZE];
-	char unk31[3];
-	int unk34;
-	int unk38;
-	int unk3C;
-	int unk40;
-	int unk44;
-	char unk48[0x28];
+	char padding2[3];
+	int params[5];
+	char reserved[0x28];
 } NetCtlScanResult;
 
 static SceUInt32 g_scanResultCount;
@@ -186,14 +178,14 @@ static int netCtlScanThread(SceSize args, void *argp)
 					for (i = 0; i < (SceUInt32)count; i++) {
 						if (SceNetCtl_1A254169(bssids[i], &info, NULL, NULL) < 0)
 							continue;
-						result->unk00 = info.unk50;
+						result->key = info.key;
 						sceClibMemcpy_safe(result->bssid, info.bssid, sizeof(result->bssid));
 						sceClibMemcpy_safe(result->ssid, info.ssid, sizeof(result->ssid));
-						result->unk34 = info.unk3C;
-						result->unk38 = info.unk40;
-						result->unk3C = info.unk44;
-						result->unk40 = info.unk48;
-						result->unk44 = info.unk4C;
+						result->params[0] = info.params[0];
+						result->params[1] = info.params[1];
+						result->params[2] = info.params[2];
+						result->params[3] = info.params[3];
+						result->params[4] = info.params[4];
 						found++;
 						result++;
 					}
@@ -210,7 +202,7 @@ static int netCtlScanThread(SceSize args, void *argp)
 		}
 		outBits = bits;
 		ret = sceKernelWaitEventFlag(g_scanEventFlag, NETCTL_SCAN_EVENT_STOP,
-					     SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &outBits, &timeout);
+					     SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &outBits, &timeout);
 	} while (ret != 0 && ret == (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT);
 	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;

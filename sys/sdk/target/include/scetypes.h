@@ -42,8 +42,8 @@ typedef unsigned char		SceByte8;
 typedef unsigned short		SceWChar16;
 typedef unsigned int		SceWChar32;
 
-#if defined(__cplusplus) && __cplusplus < 201103L && !defined(_Static_assert)
-/* C++03 (SNC) has no static_assert: the C11 checks of the shared headers */
+#if ((defined(__cplusplus) && __cplusplus < 201103L) || defined(__SNC__)) && !defined(_Static_assert)
+/* SNC (C99, C++03) has no static_assert: the C11 checks of the shared headers */
 #define _Static_assert(expr, msg)	extern char _StaticAssert[(expr) ? 1 : -1]
 #endif
 

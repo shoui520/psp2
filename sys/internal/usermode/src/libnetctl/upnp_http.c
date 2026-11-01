@@ -288,7 +288,7 @@ connected:
 		if (ret > 0 && (SceSize)ret < bodyLen)
 			return SCE_NET_ERROR_EINTR;
 	} else {
-		sceClibMemcpy(buf + len, body, bodyLen);
+		sceClibMemcpy_safe(buf + len, body, bodyLen);
 		ret = sceNetSend(sock, buf, total, 0);
 		if (ret < 0)
 			return ret;

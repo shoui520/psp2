@@ -1,20 +1,47 @@
 #ifndef NETCTL_INTERNAL_H
 #define NETCTL_INTERNAL_H
 
+#include <stddef.h>
 #include <stdint.h>
-#include <psp2/types.h>
-#include <psp2/kernel/threadmgr.h>
-#include <psp2/kernel/error.h>
-#include <psp2/kernel/clib.h>
-#include <psp2/net/net.h>
+#include <scetypes.h>
+#include <kernel/error.h>
+#include <kernel/threadmgr.h>
+#include <kernel/processmgr.h>
+#include <libkernel/libkernel.h>
+#include <net.h>
+#include <rtc.h>
 #include <libnetctl.h>
 
+/* the imports SceNetCtl takes from libraries the tree has no header of yet */
+extern int SceShellSvc_1FAB9A1E(int eventId);
+extern int SceShellSvc_7CBF442B(int eventId);
+extern int SceShellSvc_D943CE15(int eventId, void (*handler)(int eventId), void *arg);
+extern int SceShellSvc_FB03FBC9(int eventId);
+extern int sceAppMgrGetSystemDataFile(int id, void *buf, SceSize size);
+extern int SceNetInternal_0DFC23D6(SceUID pid, int a1, int a2);
+extern int SceNetInternal_333F9CB3(int sock, unsigned int request, void *arg);
+extern void *SceNetInternal_A2C2BC5F(SceSize size, int a1);
+extern void SceNetInternal_E62A2FAA(void *ptr);
+extern int SceLibKernel_C8082804(void);
+extern int SceLibKernel_211BEDE8(void *context, void *output);
+extern int SceLibKernel_DEAD6277(void *context, const void *input, void *output);
+extern int SceLibKernel_104D802F(void *context, const void *input, void *output);
+extern int SceLibKernel_65126005(void *context, const void *input, void *output);
+extern int SceLibKernel_4AC7EFC9(void *context, const void *input);
+extern int SceLibKernel_AC57B6A4(const void *context, void *key, void *sendKey, void *receiveKey);
+extern int sceAppMgrSendNotificationRequest(void *request, int flags);
+/* vitasdk: sceKernelGetSystemTimeLow */
+extern SceUInt32 SceThreadmgr_47F6DE49(void);
+extern int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
+extern int sceRegMgrUtilityGetBin(unsigned int id, void *buf, SceSize size);
+extern int sceRegMgrUtilityGetStr(unsigned int id, char *buf, SceSize size);
+
 /* Error codes the SDK headers do not name (names unknown). */
-#define NETCTL_ERROR_UNK_80412190	0x80412190	/* empty or over-long SSID */
-#define NETCTL_ERROR_UNK_80412191	0x80412191	/* too many SSIDs */
-#define NETCTL_ERROR_UNK_8041219E	0x8041219e	/* scan parameter size mismatch */
-#define NETCTL_ERROR_UNK_804121CD	0x804121cd	/* reserved fields not zero */
-#define NETCTL_ERROR_UNK_804121CE	0x804121ce	/* reserved flag bits set */
+#define NETCTL_ERROR_INVALID_SSID	0x80412190	/* empty or over-long SSID */
+#define NETCTL_ERROR_TOO_MANY_SSIDS	0x80412191	/* too many SSIDs */
+#define NETCTL_ERROR_INVALID_SCAN_PARAM	0x8041219e	/* scan parameter size mismatch */
+#define NETCTL_ERROR_RESTRICTED_FIELD	0x804121cd	/* reserved fields not zero */
+#define NETCTL_ERROR_RESERVED_FLAGS	0x804121ce	/* reserved flag bits set */
 
 /*
  * ShellSvc client object (SceShellSvc_B31E7F1C).  Requests go through the
@@ -31,15 +58,11 @@ typedef struct NetCtlSvcInBuffer {
 typedef struct NetCtlSvcOutBuffer {
 	void *address;
 	SceSize size;
-	SceSize unk08;
+	SceSize reserved;
 } NetCtlSvcOutBuffer;
 
 typedef struct NetCtlSvcVtable {
-	void *unk00;
-	void *unk04;
-	void *unk08;
-	void *unk0C;
-	void *unk10;
+	void *reserved[5];		/* slots this library never calls */
 	int (*request)(struct NetCtlSvc *svc, SceUInt32 command,
 		       const NetCtlSvcInBuffer *in, SceUInt32 inCount, int *result,
 		       NetCtlSvcOutBuffer *out, SceUInt32 outCount);
@@ -89,25 +112,25 @@ typedef struct NetCtlHandlers {
 	int (*handler_8B2FEFAA)(int a0, int a1);				/* 0x5C */
 } NetCtlHandlers;
 
-/* Network configuration handed to the service (0x608 bytes; layout mostly unknown). */
+/*
+ * Network configuration handed to the service (0x608 bytes). The library reads only the
+ * fields SceNetCtl_EA423A96 requires to be zero ("restricted") and the two buffers it
+ * passes on; the rest goes to the service unread.
+ */
 typedef struct NetCtlNetConfig {
-	char unk000[0x71];
-	unsigned char unk71;
-	char unk072[0x420 - 0x72];
-	char unk420[0x62];
-	char unk482[0x62];
-	char unk4E4[0x62];
-	char unk546[0x62];
-	int unk5A8;
-	int unk5AC;
-	char unk5B0[8];
-	char unk5B8[16];
+	char settings[0x71];
+	unsigned char restrictedFlag;
+	char settings2[0x420 - 0x72];
+	char restrictedText[4][0x62];
+	int restrictedValue[2];
+	char restrictedBytes[8];
+	char restrictedBytes2[16];
 	const void *data1;
 	SceSize size1;
 	const void *data2;
 	SceSize size2;
-	int unk5D8;
-	char unk5DC[0x2c];
+	int restrictedValue2;
+	char restrictedTail[0x2c];
 } NetCtlNetConfig;
 
 #define NETCTL_SSID_SIZE		33
@@ -128,7 +151,7 @@ typedef struct NetCtlScanParam {
 
 typedef struct NetCtlEntry {
 	int id;
-	char unk004[0x474];
+	char data[0x474];
 } NetCtlEntry;
 
 /* value reported when the phone link gives no limit: 20 MiB */
@@ -144,7 +167,7 @@ typedef struct NetCtlAdhocPeerRecord {
 	SceUInt8 swVersion[8];		/* big endian */
 	char swVersionString[NETCTL_PEER_VERSION_STRING_SIZE];
 	SceUInt8 appVersion[4];		/* big endian */
-	char unk4E[0xb2];
+	char reserved[0xb2];
 } NetCtlAdhocPeerRecord;
 
 int netCtlAdhocInfoPack(NetCtlAdhocPeerRecord *record);

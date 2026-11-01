@@ -18,6 +18,8 @@ typedef struct NetCtlSwVersion {
 	SceUInt64 version;
 } NetCtlSwVersion;
 
+int sceKernelGetSystemSwVersion(NetCtlSwVersion *info);
+
 /*
  * Builds the peer information record: format and revision bytes, the user's
  * name (online id when signed in, else the local user name), the system

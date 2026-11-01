@@ -7,9 +7,10 @@
  * a small streaming XML parser.  Names are descriptive (no debug records).
  */
 
-#include <psp2/types.h>
-#include <psp2/net/net.h>
-#include <psp2/kernel/clib.h>
+#include <stddef.h>
+#include <scetypes.h>
+#include <net.h>
+#include <libkernel/libkernel.h>
 
 extern long long sceClibStrtoll(const char *str, char **end, int base);
 
@@ -164,7 +165,7 @@ typedef struct UpnpSoap {
 	int service;			/* 0x354 */
 	SceUInt8 attrSeen[8];		/* 0x358 */
 	int *errorCode;			/* 0x360 */
-	int unk364;			/* 0x364 always 0 */
+	int reserved;			/* 0x364 always 0, never read */
 	char *result;			/* 0x368 */
 	SceSize resultSize;		/* 0x36C */
 } UpnpSoap;
@@ -198,10 +199,10 @@ typedef struct NetCtlUpnp {
 	char path[UPNP_PATH_SIZE];		/* 0x080C description path, then SOAP prefix */
 	UpnpDescription desc;			/* 0x088C */
 	UpnpSoap soap;				/* 0x0F30 */
-	int unk12A0;				/* 0x12A0 */
+	int reserved;				/* 0x12A0 cleared before discovery, never read */
 	SceNetInAddr gateway;			/* 0x12A4 */
 	SceUInt16 port;				/* 0x12A8 */
-	SceUInt16 unk12AA;			/* 0x12AA */
+	SceUInt16 padding;			/* 0x12AA */
 	char urlBase[UPNP_BUFFER_SIZE];		/* 0x12AC */
 	int service;				/* 0x16AC */
 	SceUInt32 services;			/* 0x16B0 bit per found service */

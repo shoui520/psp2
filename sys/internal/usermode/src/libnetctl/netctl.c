@@ -6,7 +6,6 @@
  * library turns them into calls of the callbacks registered by the process.
  */
 
-#include <psp2/rtc.h>
 #include "netctl_internal.h"
 
 /* service event ids: one id per notification, odd ids first, then even ids */
@@ -33,7 +32,7 @@ int SceNetCtl_15BEEEF5(void);
 int netCtlAdhocAuthInit(void);
 int netCtlAdhocAuthTerm(void);
 int netCtlAdhocAuthDisconnect(void);
-int netCtlAdhocAuthGetPeerList(unsigned int *peerInfoNum, void *peerInfo);
+int netCtlAdhocAuthGetPeerList(SceSize *peerInfoNum, SceNetCtlAdhocPeerInfo *peerInfo);
 int netCtlScanSetMutex(SceKernelLwMutexWork *mutex);
 void netCtlScanClearMutex(void);
 static void netCtlEventHandlerOdd(int eventId);
@@ -536,18 +535,18 @@ int SceNetCtl_EA423A96(const NetCtlNetConfig *config)
 	sceClibMemset(zero8, 0, sizeof(zero8));
 	sceClibMemset(zero16, 0, sizeof(zero16));
 	sceClibMemset(zero44, 0, sizeof(zero44));
-	if (config->unk71 != 0
-	    || sceClibMemcmp(config->unk420, zero98, sizeof(zero98)) != 0
-	    || sceClibMemcmp(config->unk482, zero98, sizeof(zero98)) != 0
-	    || sceClibMemcmp(config->unk4E4, zero98, sizeof(zero98)) != 0
-	    || sceClibMemcmp(config->unk546, zero98, sizeof(zero98)) != 0
-	    || config->unk5A8 != 0
-	    || config->unk5AC != 0
-	    || sceClibMemcmp(config->unk5B0, zero8, sizeof(zero8)) != 0
-	    || sceClibMemcmp(config->unk5B8, zero16, sizeof(zero16)) != 0
-	    || config->unk5D8 != 0
-	    || sceClibMemcmp(config->unk5DC, zero44, sizeof(zero44)) != 0)
-		return NETCTL_ERROR_UNK_804121CD;
+	if (config->restrictedFlag != 0
+	    || sceClibMemcmp(config->restrictedText[0], zero98, sizeof(zero98)) != 0
+	    || sceClibMemcmp(config->restrictedText[1], zero98, sizeof(zero98)) != 0
+	    || sceClibMemcmp(config->restrictedText[2], zero98, sizeof(zero98)) != 0
+	    || sceClibMemcmp(config->restrictedText[3], zero98, sizeof(zero98)) != 0
+	    || config->restrictedValue[0] != 0
+	    || config->restrictedValue[1] != 0
+	    || sceClibMemcmp(config->restrictedBytes, zero8, sizeof(zero8)) != 0
+	    || sceClibMemcmp(config->restrictedBytes2, zero16, sizeof(zero16)) != 0
+	    || config->restrictedValue2 != 0
+	    || sceClibMemcmp(config->restrictedTail, zero44, sizeof(zero44)) != 0)
+		return NETCTL_ERROR_RESTRICTED_FIELD;
 	return SceNetCtl_17FB44C4(config);
 }
 
@@ -765,12 +764,12 @@ int SceNetCtl_6A56FC3A(const char **ssids, SceUInt32 count, const NetCtlScanPara
 	if (ssids == NULL && count != 0)
 		return SCE_NET_CTL_ERROR_INVALID_ADDR;
 	if (count > NETCTL_SCAN_SSID_MAX)
-		return NETCTL_ERROR_UNK_80412191;
+		return NETCTL_ERROR_TOO_MANY_SSIDS;
 	if (count != 0) {
 		for (i = 0; i < count; i++) {
 			if (sceClibStrnlen(ssids[i], NETCTL_SSID_SIZE) == 0
 			    || sceClibStrnlen(ssids[i], NETCTL_SSID_SIZE) >= NETCTL_SSID_SIZE)
-				return NETCTL_ERROR_UNK_80412190;
+				return NETCTL_ERROR_INVALID_SSID;
 		}
 	}
 	name = names[0];
@@ -784,7 +783,7 @@ int SceNetCtl_6A56FC3A(const char **ssids, SceUInt32 count, const NetCtlScanPara
 	if (param != NULL) {
 		sceClibMemcpy_safe(&scanParam, param, sizeof(scanParam));
 		if (scanParam.size != sizeof(scanParam))
-			return NETCTL_ERROR_UNK_8041219E;
+			return NETCTL_ERROR_INVALID_SCAN_PARAM;
 	}
 	if (g_netCtlHandlers == NULL || g_netCtlHandlers->handler_6A56FC3A == NULL)
 		return netCtlIpc20010(SceShellSvc_B31E7F1C(), names, count, &scanParam,
@@ -802,16 +801,16 @@ int SceNetCtl_BB163832(const char *ssid, const NetCtlScanParam *param)
 	if (!g_netCtlIsInitialized)
 		return SCE_NET_CTL_ERROR_NOT_INITIALIZED;
 	if (ssid == NULL)
-		return NETCTL_ERROR_UNK_80412190;
+		return NETCTL_ERROR_INVALID_SSID;
 	ssids[0] = ssid;
 	sceClibMemset(zero32, 0, sizeof(zero32));
 	sceClibMemset(zero8, 0, sizeof(zero8));
 	if (param != NULL) {
 		if ((param->flags & ~3) != 0)
-			return NETCTL_ERROR_UNK_804121CE;
+			return NETCTL_ERROR_RESERVED_FLAGS;
 		if (sceClibMemcmp(param->reserved08, zero32, sizeof(zero32)) != 0
 		    || sceClibMemcmp(param->reserved30, zero8, sizeof(zero8)) != 0)
-			return NETCTL_ERROR_UNK_804121CD;
+			return NETCTL_ERROR_RESTRICTED_FIELD;
 	}
 	return SceNetCtl_6A56FC3A(ssids, 1, param);
 }
@@ -988,7 +987,7 @@ int SceNetCtl_CCF30B92(int a0)
 	return g_netCtlHandlers->handler_CCF30B92(a0);
 }
 
-int sceNetCtlAdhocGetPeerList(unsigned int *peerInfoNum, void *peerInfo)
+int sceNetCtlAdhocGetPeerList(SceSize *peerInfoNum, SceNetCtlAdhocPeerInfo *peerInfo)
 {
 	if (peerInfoNum == NULL)
 		return SCE_NET_CTL_ERROR_INVALID_ADDR;

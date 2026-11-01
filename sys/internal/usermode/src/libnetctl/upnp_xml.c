@@ -300,7 +300,7 @@ value_end:
 				/* rest of a character split between two calls */
 				if (need <= n)
 					n = need;
-				sceClibMemcpy(parser->pending + parser->pendingLen, cur, n);
+				sceClibMemcpy_safe(parser->pending + parser->pendingLen, cur, n);
 				parser->pendingLen += n;
 				parser->pendingNeed -= n;
 				if (parser->pendingNeed != 0) {
@@ -319,7 +319,7 @@ value_end:
 				}
 				if (ret < 0) {
 					outLen = consumed = 1;
-					sceClibMemcpy(decoded, parser->pending, 1);
+					sceClibMemcpy_safe(decoded, parser->pending, 1);
 				} else {
 					parser->pendingLen = 0;
 					parser->pendingNeed = 0;
@@ -330,7 +330,7 @@ value_end:
 				ret = netCtlUpnpXmlDecodeChar((char *)decoded, sizeof(decoded), cur, n,
 							      &outLen, &consumed);
 				if (ret == UPNP_XML_ERROR_NO_SPACE) {
-					sceClibMemcpy(parser->pending, cur, n);
+					sceClibMemcpy_safe(parser->pending, cur, n);
 					parser->pendingLen = n;
 					parser->pendingNeed = consumed - n;
 					cur += n;
@@ -339,7 +339,7 @@ value_end:
 				}
 				if (ret < 0) {
 					outLen = consumed = 1;
-					sceClibMemcpy(decoded, cur, 1);
+					sceClibMemcpy_safe(decoded, cur, 1);
 					n = 1;
 				} else {
 					n = consumed;
@@ -359,7 +359,7 @@ value_end:
 				pos = (const char *)cur - data;
 				break;
 			}
-			sceClibMemcpy(parser->value + len, decoded, outLen);
+			sceClibMemcpy_safe(parser->value + len, decoded, outLen);
 			cur += n;
 			pos = (const char *)cur - data;
 			parser->len += outLen;
@@ -548,7 +548,7 @@ decode:
 	if (ret < 0)
 		return ret;
 	if (write)
-		sceClibMemcpy(out, decoded, len);
+		sceClibMemcpy_safe(out, decoded, len);
 out:
 	if (outLen != NULL)
 		*outLen = len;

@@ -9,7 +9,6 @@
  * are checked element by element against the schema tables below.
  */
 
-#include <psp2/net/netctl.h>
 #include "netctl_internal.h"
 #include "upnp.h"
 
@@ -118,55 +117,6 @@ static const UpnpXmlSchema g_soapSchema = { g_soapLevels, 6, 0 };
 #define SOAP_LEVEL3_DETAIL		4
 #define SOAP_LEVEL2_FAULT		4
 
-/* device description schema */
-static const UpnpXmlElement g_deviceLevel0[] = {
-	{ "root", 0, 0 },
-	{ "", 1, 0 },
-};
-
-static const UpnpXmlElement g_deviceLevel1[] = {
-	{ "URLBase", 1, 0 },
-	{ "device", 0, 0 },
-	{ "", 1, 0 },
-};
-
-static const UpnpXmlElement g_deviceLevel2[] = {
-	{ "modelName", 1, 0 },
-	{ "friendlyName", 1, 0 },
-	{ "deviceList", 0, 0 },
-	{ "", 1, 0 },
-};
-
-static const UpnpXmlElement g_deviceLevel3[] = {
-	{ "modelName", 1, 0 },
-	{ "friendlyName", 1, 0 },
-	{ "", 1, 0 },
-};
-
-static const UpnpXmlElement *const g_deviceLevels[] = {
-	g_deviceLevel0, g_deviceLevel1, g_deviceLevel2, g_deviceLevel3,
-};
-
-static const UpnpXmlSchema g_deviceSchema = { g_deviceLevels, 4, 0 };
-
-/* service list: every <service> element at any depth */
-static const UpnpXmlElement g_serviceLevel0[] = {
-	{ "service", 0, 0 },
-	{ "", 1, 0 },
-};
-
-static const UpnpXmlElement g_serviceLevel1[] = {
-	{ "serviceType", 1, 0 },
-	{ "controlURL", 1, 0 },
-	{ "", 1, 0 },
-};
-
-static const UpnpXmlElement *const g_serviceLevels[] = {
-	g_serviceLevel0, g_serviceLevel1,
-};
-
-static const UpnpXmlSchema g_serviceSchema = { g_serviceLevels, 2, 0 };
-
 int netCtlUpnpInit(NetCtlUpnp *upnp);
 void netCtlUpnpTerm(NetCtlUpnp *upnp);
 int netCtlUpnpAbort(NetCtlUpnp *upnp);
@@ -179,7 +129,7 @@ int netCtlUpnpParseUrl(char *url, const SceNetInAddr *gateway, SceUInt16 *port, 
 		       SceSize pathSize);
 int netCtlUpnpDescInit(NetCtlUpnp *upnp, char *controlUrl, SceSize controlUrlSize);
 int netCtlUpnpDescResult(NetCtlUpnp *upnp);
-int netCtlUpnpSoapInit(NetCtlUpnp *upnp, int action, int service, int *errorCode, int unk,
+int netCtlUpnpSoapInit(NetCtlUpnp *upnp, int action, int service, int *errorCode, int reserved,
 		       char *result, SceSize resultSize);
 int netCtlUpnpSoapResult(NetCtlUpnp *upnp);
 int netCtlUpnpBuildAddPortMapping(char *buf, int size, const char *client, int service,
@@ -308,7 +258,7 @@ int netCtlUpnpAction(NetCtlUpnp *upnp, int service, int action, SceUInt16 extern
 
 	switch (action) {
 	case UPNP_ACTION_ADD_PORT_MAPPING:
-		ret = SceNetCtl_C33D7374(SCE_NETCTL_INFO_GET_IP_ADDRESS, &info);
+		ret = SceNetCtl_C33D7374(SCE_NET_CTL_INFO_IP_ADDRESS, &info);
 		if (ret < 0)
 			return ret;
 		bodyLen = netCtlUpnpBuildAddPortMapping(body, UPNP_BUFFER_SIZE, info.ip_address,
@@ -346,9 +296,10 @@ int netCtlUpnpAction(NetCtlUpnp *upnp, int service, int action, SceUInt16 extern
 		break;
 	}
 
+	/* a socket that cannot be made returns the SOAP setup's result, as Sony's does */
 	upnp->sock = sceNetSocket("SceUpnp", SCE_NET_AF_INET, SCE_NET_SOCK_STREAM, 0);
 	if (upnp->sock < 0)
-		return upnp->sock;
+		return ret;
 	if (timeout != 0) {
 		sceNetSetsockopt(upnp->sock, SCE_NET_SOL_SOCKET, SCE_NET_SO_SNDTIMEO, &timeout,
 				 sizeof(timeout));
@@ -432,7 +383,7 @@ int netCtlUpnpDiscover(NetCtlUpnp *upnp, char *controlUrl, SceSize controlUrlSiz
 	SceNetSockaddrIn addr;
 	int ret = 0;
 
-	sceClibMemset(&upnp->unk12A0, 0, sizeof(upnp->unk12A0));
+	sceClibMemset(&upnp->reserved, 0, sizeof(upnp->reserved));
 	upnp->port = 0;
 	sceClibMemset(upnp->urlBase, 0, sizeof(upnp->urlBase));
 	upnp->services = 0;
@@ -496,7 +447,7 @@ int netCtlUpnpRequest(NetCtlUpnp *upnp, int action, int protocol, SceUInt16 inte
 		ret = UPNP_ERROR_NOT_CONNECTED;
 		goto out;
 	}
-	ret = SceNetCtl_C33D7374(SCE_NETCTL_INFO_GET_DEFAULT_ROUTE, &info);
+	ret = SceNetCtl_C33D7374(SCE_NET_CTL_INFO_DEFAULT_ROUTE, &info);
 	if (ret < 0)
 		goto out;
 	sceNetInetPton(SCE_NET_AF_INET, info.default_route, &upnp->gateway);
@@ -749,11 +700,10 @@ int netCtlUpnpSearch(int sock, char *buf, int size, const SceNetInAddr *gateway,
 			ret = sceNetEpollControl(epoll, SCE_NET_EPOLL_CTL_ADD, sock, &event);
 			if (ret < 0)
 				goto fail;
+			/* a failed wait returns the control's result, as Sony's does */
 			n = sceNetEpollWait(epoll, &result, 1, deadline - now);
-			if (n < 0) {
-				ret = n;
+			if (n < 0)
 				goto fail;
-			}
 			sceNetEpollDestroy(epoll);
 			if (n == 0)
 				break;
@@ -996,14 +946,14 @@ int netCtlUpnpSoapCallback(UpnpXmlParser *parser, int event, int depth, int inde
 			   const char *text, const char *value, void *arg);
 
 __attribute__((noinline))
-int netCtlUpnpSoapInit(NetCtlUpnp *upnp, int action, int service, int *errorCode, int unk,
+int netCtlUpnpSoapInit(NetCtlUpnp *upnp, int action, int service, int *errorCode, int reserved,
 		       char *result, SceSize resultSize)
 {
 	sceClibMemset(&upnp->soap, 0, sizeof(upnp->soap));
 	upnp->soap.action = action;
 	upnp->soap.service = service;
 	upnp->soap.errorCode = errorCode;
-	upnp->soap.unk364 = unk;
+	upnp->soap.reserved = reserved;
 	upnp->soap.result = result;
 	upnp->soap.resultSize = resultSize;
 	return netCtlUpnpXmlInit(&upnp->soap.parser, &g_soapSchema, netCtlUpnpSoapCallback, upnp);
@@ -1161,8 +1111,8 @@ int netCtlUpnpSoapSetPrefix(NetCtlUpnp *upnp, const char *tag, const char *name)
 	const char *colon;
 	int n;
 
-	if (sceClibStrnlen(tag, UPNP_XML_VALUE_SIZE) >
-	    sceClibStrnlen(name, UPNP_XML_VALUE_SIZE) + UPNP_PATH_SIZE)
+	if (sceClibStrnlen(name, UPNP_XML_VALUE_SIZE) + UPNP_PATH_SIZE <
+	    sceClibStrnlen(tag, UPNP_XML_VALUE_SIZE))
 		return UPNP_ERROR_TAG_TOO_LONG;
 	colon = sceClibStrchr(tag, ':');
 	if (colon == NULL)
@@ -1237,7 +1187,7 @@ int netCtlUpnpSoapCallback(UpnpXmlParser *parser, int event, int depth, int inde
 			return ret;
 	}
 	if (event == UPNP_XML_EVENT_TEXT && depth == 3 && index == SOAP_LEVEL3_EXTERNAL_IP &&
-	    parser->index[depth - 1] == UPNP_ACTION_GET_EXTERNAL_IP_ADDRESS) {
+	    parser->index[2] == UPNP_ACTION_GET_EXTERNAL_IP_ADDRESS) {
 		upnp->soap.flags |= UPNP_SOAP_EXTERNAL_IP;
 		if (upnp->soap.result != NULL && (size = upnp->soap.resultSize) != 0) {
 			if (*text == '\0') {
@@ -1263,40 +1213,40 @@ int netCtlUpnpSoapCallback(UpnpXmlParser *parser, int event, int depth, int inde
 			return ret;
 	}
 	if (event == UPNP_XML_EVENT_TEXT && depth == 3 && index == SOAP_LEVEL3_FAULT_CODE &&
-	    parser->index[depth - 1] == SOAP_LEVEL2_FAULT) {
+	    parser->index[2] == SOAP_LEVEL2_FAULT) {
 		upnp->soap.flags |= UPNP_SOAP_FAULT_CODE;
 		ret = netCtlUpnpSoapCheckPrefix(upnp->path, text, "Client");
 		if (ret < 0)
 			return ret;
 	}
 	if (event == UPNP_XML_EVENT_TEXT && depth == 3 && index == SOAP_LEVEL3_FAULT_STRING &&
-	    parser->index[depth - 1] == SOAP_LEVEL2_FAULT) {
+	    parser->index[2] == SOAP_LEVEL2_FAULT) {
 		upnp->soap.flags |= UPNP_SOAP_FAULT_STRING;
 		if (sceClibStrncmp("UPnPError", text, 10) != 0)
 			return UPNP_ERROR_NOT_UPNP_ERROR;
 	}
 	if (event == UPNP_XML_EVENT_START && depth == 3 && index == SOAP_LEVEL3_DETAIL &&
-	    parser->index[depth - 1] == SOAP_LEVEL2_FAULT)
+	    parser->index[2] == SOAP_LEVEL2_FAULT)
 		upnp->soap.flags |= UPNP_SOAP_DETAIL;
 	if (event == UPNP_XML_EVENT_START && depth == 4 && index == 0 &&
-	    parser->index[depth - 2] == SOAP_LEVEL2_FAULT && parser->index[depth - 1] == SOAP_LEVEL3_DETAIL) {
+	    parser->index[2] == SOAP_LEVEL2_FAULT && parser->index[3] == SOAP_LEVEL3_DETAIL) {
 		upnp->soap.flags |= UPNP_SOAP_UPNP_ERROR;
 		netCtlUpnpSoapClearAttributes(upnp, g_soapUpnpErrorAttributes);
 	}
 	if (event == UPNP_XML_EVENT_ATTRIBUTE && depth == 4 && index == 0 &&
-	    parser->index[depth - 2] == SOAP_LEVEL2_FAULT && parser->index[depth - 1] == SOAP_LEVEL3_DETAIL) {
+	    parser->index[2] == SOAP_LEVEL2_FAULT && parser->index[3] == SOAP_LEVEL3_DETAIL) {
 		ret = netCtlUpnpSoapMatchAttribute(upnp, g_soapUpnpErrorAttributes, text, value,
 						   NULL, NULL);
 		if (ret < 0)
 			return ret;
 	}
 	if (event == UPNP_XML_EVENT_TEXT && depth == 5 && index == 0 &&
-	    parser->index[depth - 3] == SOAP_LEVEL2_FAULT && parser->index[depth - 2] == SOAP_LEVEL3_DETAIL) {
+	    parser->index[2] == SOAP_LEVEL2_FAULT && parser->index[3] == SOAP_LEVEL3_DETAIL) {
 		upnp->soap.flags |= UPNP_SOAP_ERROR_CODE;
 		*upnp->soap.errorCode = sceClibStrtoll(text, NULL, 10);
 	}
 	if (event == UPNP_XML_EVENT_END && depth == 4 && index == 0 &&
-	    parser->index[depth - 2] == SOAP_LEVEL2_FAULT && parser->index[depth - 1] == SOAP_LEVEL3_DETAIL) {
+	    parser->index[2] == SOAP_LEVEL2_FAULT && parser->index[3] == SOAP_LEVEL3_DETAIL) {
 		ret = netCtlUpnpSoapCheckAttributes(upnp, g_soapUpnpErrorAttributes);
 		if (ret < 0)
 			return ret;
@@ -1307,171 +1257,6 @@ int netCtlUpnpSoapCallback(UpnpXmlParser *parser, int event, int depth, int inde
 		if (ret < 0)
 			return ret;
 		upnp->soap.flags |= UPNP_SOAP_ENVELOPE_END;
-	}
-	return 0;
-}
-
-int netCtlUpnpDeviceCallback(UpnpXmlParser *parser, int event, int depth, int index,
-			     const char *text, const char *value, void *arg);
-int netCtlUpnpServiceCallback(UpnpXmlParser *parser, int event, int depth, int index,
-			      const char *text, const char *value, void *arg);
-
-__attribute__((noinline))
-int netCtlUpnpDescInit(NetCtlUpnp *upnp, char *controlUrl, SceSize controlUrlSize)
-{
-	int ret;
-
-	upnp->services = 0;
-	sceClibMemset(&upnp->desc, 0, sizeof(upnp->desc));
-	upnp->desc.controlUrl = controlUrl;
-	upnp->desc.controlUrlSize = controlUrlSize;
-	ret = netCtlUpnpXmlInit(&upnp->desc.device, &g_deviceSchema, netCtlUpnpDeviceCallback,
-				upnp);
-	if (ret < 0)
-		return ret;
-	return netCtlUpnpXmlInit(&upnp->desc.service, &g_serviceSchema,
-				 netCtlUpnpServiceCallback, upnp);
-}
-
-__attribute__((noinline))
-int netCtlUpnpDescParse(NetCtlUpnp *upnp, const char *data, SceSize size, int last)
-{
-	int ret;
-
-	ret = netCtlUpnpXmlParse(&upnp->desc.device, data, size);
-	if (ret < 0)
-		return ret;
-	return netCtlUpnpXmlParse(&upnp->desc.service, data, size);
-}
-
-__attribute__((noinline))
-int netCtlUpnpDescResult(NetCtlUpnp *upnp)
-{
-	int ret = 0;
-
-	if ((upnp->desc.flags & UPNP_DESC_DONE) == 0)
-		ret = UPNP_ERROR_INCOMPLETE_XML;
-	else if (upnp->services == 0)
-		ret = UPNP_ERROR_NO_SERVICE;
-	return ret;
-}
-
-/* No usable URLBase: the base is the directory of the description path. */
-static inline __attribute__((always_inline)) int netCtlUpnpSetUrlBase(NetCtlUpnp *upnp)
-{
-	char *end;
-
-	if (sceClibStrnlen(upnp->path, UPNP_BUFFER_SIZE) >= UPNP_BUFFER_SIZE)
-		return UPNP_ERROR_BUFFER_TOO_SMALL;
-	sceClibStrncpy(upnp->urlBase, upnp->path, UPNP_BUFFER_SIZE);
-	end = upnp->urlBase + sceClibStrnlen(upnp->urlBase, UPNP_BUFFER_SIZE);
-	while (upnp->urlBase < end && end[-1] != '/')
-		*--end = '\0';
-	return 0;
-}
-
-__attribute__((noinline))
-int netCtlUpnpDeviceCallback(UpnpXmlParser *parser, int event, int depth, int index,
-			     const char *text, const char *value, void *arg)
-{
-	NetCtlUpnp *upnp = arg;
-	int ret;
-
-	if (event == UPNP_XML_EVENT_TEXT && depth == 1 && index == 0) {
-		upnp->desc.flags |= UPNP_DESC_URL_BASE;
-		ret = 0;
-		if (text == NULL || netCtlUpnpParseUrl((char *)text, &upnp->gateway, &upnp->port,
-						       upnp->urlBase, UPNP_BUFFER_SIZE) < 0)
-			ret = netCtlUpnpSetUrlBase(upnp);
-		if (ret < 0)
-			return ret;
-	}
-	if (event == UPNP_XML_EVENT_TEXT && depth == 2 && index == 0 &&
-	    parser->index[depth - 2] == 0 && parser->index[depth - 1] == 1) {
-		sceClibStrncpy(upnp->modelName, text, sizeof(upnp->modelName));
-		upnp->modelName[sizeof(upnp->modelName) - 1] = '\0';
-	}
-	if (event == UPNP_XML_EVENT_TEXT && depth == 2 && index == 1 &&
-	    parser->index[depth - 2] == 0 && parser->index[depth - 1] == 1) {
-		sceClibStrncpy(upnp->friendlyName, text, sizeof(upnp->friendlyName));
-		upnp->friendlyName[sizeof(upnp->friendlyName) - 1] = '\0';
-	}
-	if (event == UPNP_XML_EVENT_END && depth == 0 && index == 0) {
-		if ((upnp->desc.flags & UPNP_DESC_URL_BASE) == 0) {
-			ret = netCtlUpnpSetUrlBase(upnp);
-			if (ret < 0)
-				return ret;
-		}
-		upnp->desc.flags |= UPNP_DESC_DONE;
-	}
-	return 0;
-}
-
-/* Makes the control URL absolute (path on the gateway). */
-static inline __attribute__((always_inline))
-int netCtlUpnpSetControlUrl(NetCtlUpnp *upnp, char *url, char *dest)
-{
-	SceUInt16 port;
-
-	if (netCtlUpnpParseUrl(url, &upnp->gateway, &port, upnp->buf, UPNP_BUFFER_SIZE) >= 0) {
-		upnp->port = port;
-		if (sceClibStrnlen(upnp->buf, UPNP_BUFFER_SIZE) >= UPNP_BUFFER_SIZE)
-			return UPNP_ERROR_BUFFER_TOO_SMALL;
-		sceClibStrncpy(dest, upnp->buf, UPNP_BUFFER_SIZE);
-		return 0;
-	}
-	if (*url == '/') {
-		if (sceClibStrnlen(url, UPNP_BUFFER_SIZE) >= UPNP_BUFFER_SIZE)
-			return UPNP_ERROR_BUFFER_TOO_SMALL;
-		sceClibStrncpy(dest, url, UPNP_BUFFER_SIZE);
-		return 0;
-	}
-	if (sceClibSnprintf(dest, UPNP_BUFFER_SIZE, "%s%s", upnp->urlBase, url) < UPNP_BUFFER_SIZE)
-		return 0;
-	return UPNP_ERROR_BUFFER_TOO_SMALL;
-}
-
-__attribute__((noinline))
-int netCtlUpnpServiceCallback(UpnpXmlParser *parser, int event, int depth, int index,
-			      const char *text, const char *value, void *arg)
-{
-	NetCtlUpnp *upnp = arg;
-	int ret;
-
-	if (event == UPNP_XML_EVENT_START && depth == 0 && index == 0)
-		upnp->desc.flags &= ~(UPNP_DESC_SERVICE_TYPE | UPNP_DESC_WAN_IP |
-				      UPNP_DESC_WAN_PPP | UPNP_DESC_CONTROL_URL);
-	if (event == UPNP_XML_EVENT_TEXT && depth == 1 && index == 0) {
-		upnp->desc.flags |= UPNP_DESC_SERVICE_TYPE;
-		if (sceClibStrncmp(g_upnpServiceTypes[UPNP_SERVICE_WAN_IP], text,
-				   UPNP_XML_VALUE_SIZE) == 0)
-			upnp->desc.flags |= UPNP_DESC_WAN_IP;
-		else if (sceClibStrncmp(g_upnpServiceTypes[UPNP_SERVICE_WAN_PPP], text,
-					UPNP_XML_VALUE_SIZE) == 0)
-			upnp->desc.flags |= UPNP_DESC_WAN_PPP;
-	}
-	if (event == UPNP_XML_EVENT_TEXT && depth == 1 && index == 1) {
-		upnp->desc.flags |= UPNP_DESC_CONTROL_URL;
-		sceClibStrncpy(upnp->desc.controlUrl, text, upnp->desc.controlUrlSize);
-		upnp->desc.controlUrl[upnp->desc.controlUrlSize - 1] = '\0';
-	}
-	if (event == UPNP_XML_EVENT_END && depth == 0 && index == 0) {
-		if (upnp->desc.flags & UPNP_DESC_WAN_IP) {
-			if ((upnp->services & (1 << UPNP_SERVICE_WAN_IP)) == 0) {
-				ret = netCtlUpnpSetControlUrl(upnp, upnp->desc.controlUrl,
-							      upnp->controlUrl[UPNP_SERVICE_WAN_IP]);
-				if (ret < 0)
-					return ret;
-				upnp->services |= 1 << UPNP_SERVICE_WAN_IP;
-			}
-		} else if ((upnp->desc.flags & UPNP_DESC_WAN_PPP) &&
-			   (upnp->services & (1 << UPNP_SERVICE_WAN_PPP)) == 0) {
-			ret = netCtlUpnpSetControlUrl(upnp, upnp->desc.controlUrl,
-						      upnp->controlUrl[UPNP_SERVICE_WAN_PPP]);
-			if (ret < 0)
-				return ret;
-			upnp->services |= 1 << UPNP_SERVICE_WAN_PPP;
-		}
 	}
 	return 0;
 }
