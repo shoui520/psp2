@@ -45,8 +45,21 @@ class EnvironmentParam;
 class WidgetLayoutParam;
 }
 
-class InitEventFunctionEntry;
-class InitEventFunctionEntry2;
+/* a plugin's init event handler, by the ID of the widget it is for */
+class InitEventFunctionEntry {
+public:
+	IDParam id;
+	ui::HandlerCB func;
+};
+
+/* a page's own init event handler, with its data; the table ends with a zero ID */
+class InitEventFunctionEntry2 {
+public:
+	IDParam id;
+	ui::HandlerCB func;
+	void *userdata;
+};
+
 class EventFunctionEntry;
 class LayoutFunctionEntry;
 
@@ -346,6 +359,9 @@ public:
 	void SetNodeEntity_CreatePage(const IDParam &id, ui::Widget *page);
 	ui::Widget *GetNodeEntity_CreatePage(const IDParam &id) const;
 	void PageClose(const IDParam &id, const PageCloseParam &param);
+	ui::HandlerCB GetInitEventHandler(const IDParam &id) const;
+	void InstantiateWidget_InitEventHandler(const IDParam &id, ui::Widget *widget,
+						InitEventFunctionEntry2 *event_handler_table);
 
 	/*
 	 * A texture element's surface: the one made before, else loaded from the resource's

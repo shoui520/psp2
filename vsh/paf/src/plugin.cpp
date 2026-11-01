@@ -1368,6 +1368,31 @@ void ScePafToplevel_2E1F0393(Plugin *plugin, const cxml::Element &elm, ui::Widge
 
 namespace paf {
 
+ui::HandlerCB Plugin::GetInitEventHandler(const IDParam &id) const
+{
+	map<uint32_t, int32_t>::iterator it = m_event_handler_name_table.find(id.m_idhash);
+
+	if (it == m_event_handler_name_table.end())
+		return NULL;
+	return m_init_event_handler_table[it->second].func;
+}
+
+void Plugin::InstantiateWidget_InitEventHandler(const IDParam &id, ui::Widget *widget,
+						InitEventFunctionEntry2 *event_handler_table)
+{
+	if (event_handler_table != NULL) {
+		for (int32_t i = 0; event_handler_table[i].id.m_idhash != 0; i++) {
+			if (id.m_idhash == event_handler_table[i].id.m_idhash) {
+				widget->AddEventCallback(ui::Handler::CB_STATE_INIT,
+							 event_handler_table[i].func,
+							 event_handler_table[i].userdata);
+				return;
+			}
+		}
+	}
+	widget->AddEventCallback(ui::Handler::CB_STATE_INIT, GetInitEventHandler(id));
+}
+
 Plugin::InitParam2::InitParam2()
 {
 	draw_priority = 150;
