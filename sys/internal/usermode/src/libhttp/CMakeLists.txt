@@ -7,6 +7,7 @@ psp2_module(vs0_sys_external_libhttp KIND user COMPILER snc PARTIAL SOURCES
 	cookie.c debug.c header.c request.c https.c http.c object.c pool.c sock.c parse.c redirect.c req.c template.c uri.c util.c cert.c ssl.c
 	${libhttp_zlib}/inflate.c ${libhttp_zlib}/inffast.c ${libhttp_zlib}/inftrees.c
 	zlib/checksum.c zlib/checksum_neon.S
+	../../../../sdk/target/src/libsnc/unwind_pr0.c
 	../../../../sdk/target/src/base64/base64.c
 	../../../../sdk/target/src/md5/libmd5.c ../../../../sdk/target/src/md5/md5.S
 	libhttp.c
