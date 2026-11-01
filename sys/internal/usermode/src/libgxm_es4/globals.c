@@ -16,8 +16,10 @@ int gxmSceneStateInit(void)
 int gxmSceneBegin(void)
 {
 	do {
-		if (gxmLoadExclusive(&gxmGlobals.sceneActive) != 0)
+		if (gxmLoadExclusive(&gxmGlobals.sceneActive) != 0) {
+			GXM_DBG_ERROR(25, "Failed to lock the scene, another scene is still in progress.");
 			return SCE_GXM_ERROR_WITHIN_SCENE;
+		}
 	} while (gxmStoreExclusive(&gxmGlobals.sceneActive, 1) != 0);
 	return 0;
 }
@@ -25,8 +27,10 @@ int gxmSceneBegin(void)
 int gxmSceneEnd(void)
 {
 	do {
-		if (gxmLoadExclusive(&gxmGlobals.sceneActive) != 1)
+		if (gxmLoadExclusive(&gxmGlobals.sceneActive) != 1) {
+			GXM_DBG_ERROR(34, "Failed to unlock the scene.");
 			return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
+		}
 	} while (gxmStoreExclusive(&gxmGlobals.sceneActive, 0) != 0);
 	return 0;
 }
