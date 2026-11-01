@@ -172,8 +172,8 @@ int gxmContextKick(SceGxmContext *context, SceUInt32 flags,
 	}
 
 	gxmKick.hRenderContext = gxmGlobals.top.renderContext;
-	common->ui16MaxDrawCallsPerCore = context->scene.tuning.count;
-	common->ui16PrimitiveSplitThreshold = context->scene.tuning.limit;
+	common->ui16MaxDrawCallsPerCore = context->scene.tuning.maxDrawCallsPerCore;
+	common->ui16PrimitiveSplitThreshold = context->scene.tuning.primitiveSplitThreshold;
 	common->aui32SpecObject[0] = context->backgroundState[0];
 	common->aui32SpecObject[1] = context->backgroundState[1];
 	common->aui32SpecObject[2] = context->backgroundState[2];
@@ -203,8 +203,8 @@ int gxmContextKick(SceGxmContext *context, SceUInt32 flags,
 	common->ui32ISPCullValue = 0x1e3ce508;
 	common->ui32TAScreenXMax = context->tileLimitX;
 	common->ui32TAScreenYMax = context->tileLimitY;
-	common->ui32ISPDBias = context->scene.settings.offsets;
-	common->bPerQuadrantPixelSplit = context->scene.settings.mode == 1;
+	common->ui32ISPDBias = context->scene.settings.depthBiasAdjust;
+	common->bPerQuadrantPixelSplit = context->scene.settings.secondaryMode == 1;
 	common->ui32ISPValidId = 0;
 	common->ui32PixelBE = 0;
 	csc0 = gxmYuvProfileCoefficients[context->scene.settings.yuvProfile[0]];
@@ -222,13 +222,13 @@ int gxmContextKick(SceGxmContext *context, SceUInt32 flags,
 	common->ui32CSC1Coeff89 = csc1[4];
 	common->ui32CSC1Coeff1011 = csc1[5];
 	common->ui32DoublePixelPartitions = context->colorSurface.outputRegisterSize;
-	common->ui32TriangleSplitPixelThreshold = context->scene.settings.modeValue;
+	common->ui32TriangleSplitPixelThreshold = context->scene.settings.pixelSplitThreshold;
 	common->sVisTestResultMem = (SceUInt32)context->scene.settings.visibilityBuffer;
 	common->ui32VisTestCount = context->scene.settings.visibilityStride >> 2;
 	common->ui32USEStoreRange = 0;
 	common->ui32USELoadRedirect = 0;
 	common->sTABufferCtlStreamBase = vdmStart;
-	common->ui32MTECtrl = (context->scene.tuning.option & 0x80) | 0x22;
+	common->ui32MTECtrl = (context->scene.tuning.nearClipMode & 0x80) | 0x22;
 
 	/* the GPU writes each ring's kicked offset where gxmRingBufferRefill waits for it */
 	block = gxmGlobals.top.contexts.block;

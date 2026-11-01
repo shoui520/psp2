@@ -154,14 +154,14 @@ int sceGxmCreateContext(const SceGxmContextParams *params, SceGxmContext **conte
 	gxmRingBufferInit(&created->fragmentUsseRing, &created->fragmentUsseBuffer,
 			  params->fragmentUsseRingBufferMem, params->fragmentUsseRingBufferOffset,
 			  params->fragmentUsseRingBufferMemSize, 0, &created->slot[3]);
-	created->nextScene.settings.mode = 1;
-	created->nextScene.settings.modeValue = 0;
+	created->nextScene.settings.secondaryMode = 1;
+	created->nextScene.settings.pixelSplitThreshold = 0;
 	created->nextScene.settings.yuvProfile[0] = 0;
 	created->nextScene.settings.yuvProfile[1] = 1;
-	created->nextScene.tuning.count = 0;
-	created->nextScene.tuning.option = 0x80;
-	created->nextScene.tuning.limit = 1000;
-	created->nextScene.settings.offsets = 0xe9;
+	created->nextScene.tuning.maxDrawCallsPerCore = 0;
+	created->nextScene.tuning.nearClipMode = 0x80;
+	created->nextScene.tuning.primitiveSplitThreshold = 1000;
+	created->nextScene.settings.depthBiasAdjust = 0xe9;
 	gxmMteStateInit(&created->state);
 	created->flags = GXM_CONTEXT_FLAG_BACKGROUND;
 	*context = created;

@@ -1340,18 +1340,19 @@ typedef struct GxmSceneDepthStencil {
 /*
  * Scene parameters the context's setters store between scenes and
  * sceGxmBeginScene takes over, in two parts it copies separately. The
- * SceGxmInternalForTest setters (unnamed exports) set most of them.
+ * SceGxmInternalForTest setters (exports without a name; the debug build's
+ * messages name them and their parameters) set most of them.
  */
 typedef struct GxmSceneTuning {
-	SceUInt32 option;		/* C65CED80: 0 or 0x80 */
-	SceUInt16 limit;		/* 65FF05BC: 1..0x7fff */
-	SceUInt16 count;		/* 65FF05BC: 0..16 */
+	SceUInt32 nearClipMode;		/* sceGxmSetVertexJobNearClipMode: 0 or 0x80 */
+	SceUInt16 primitiveSplitThreshold; /* sceGxmSetVertexJobSplitThreshold: 1..0x7fff */
+	SceUInt16 maxDrawCallsPerCore;	/* sceGxmSetVertexJobSplitThreshold: 0..16 */
 } GxmSceneTuning;
 
 typedef struct GxmSceneSettings {
-	SceUInt32 offsets;		/* 46D6C306: two signed bytes */
-	SceUInt32 mode;			/* D352F90A */
-	SceUInt32 modeValue;
+	SceUInt32 depthBiasAdjust;	/* sceGxmSetFragmentJobDepthBiasAdjust: factor << 8 | units */
+	SceUInt32 secondaryMode;	/* sceGxmSetFragmentJobSplitThreshold */
+	SceUInt32 pixelSplitThreshold;
 	void *visibilityBuffer;		/* sceGxmSetVisibilityBuffer */
 	SceUInt32 visibilityStride;	/* per core */
 	SceUInt32 yuvProfile[2];	/* sceGxmSetYuvProfile */
