@@ -90,6 +90,8 @@ int sceKernelIsGameBudget(void);
 
 /* Sony's alignment test (sceGxmExecuteCommandList's assertion names it) */
 #define SCE_GXM_IS_ALIGNED(value, alignment)	(((value) & ((alignment) - 1)) == 0)
+/* Sony's power of two test (sceGxmDisplayQueueCreate's assertion names it) */
+#define SCE_GXM_IS_POW2(value)			(((value) & ((value) - 1)) == 0)
 
 /* the size of one USSE instruction (Sony's SGX headers) */
 #define EURASIA_USE_INSTRUCTION_SIZE	8
@@ -1840,8 +1842,9 @@ typedef struct GxmDisplayQueue {
 	GxmDisplayQueueEntry storage[];	/* then the callback data */
 } GxmDisplayQueue;
 
-int gxmDisplayQueueCreate(SceUInt32 maxPending, SceGxmDisplayQueueCallback *callback,
-			  SceSize callbackDataSize, GxmDisplayQueue **queue, SceUInt32 cpuAffinity);
+int gxmDisplayQueueCreate(SceUInt32 maxPendingCount, SceGxmDisplayQueueCallback *callback,
+			  SceSize callbackDataSize, GxmDisplayQueue **displayQueue,
+			  SceUInt32 cpuAffinity);
 int gxmDisplayQueueDestroy(GxmDisplayQueue *queue);
 SceUInt32 gxmDisplayQueueGetMaxPending(const GxmDisplayQueue *queue);
 SceBool gxmDisplayQueueIsCurrentThread(void);
