@@ -20,6 +20,7 @@
 #include <versatileparam/idparam.h>
 #include <versatileparam/versatileparam.h>
 #include <widget/core/handler.h>
+#include <widget/core/layouter.h>
 
 namespace paf {
 
@@ -39,7 +40,6 @@ class Scene;
 class Camera;
 class AnimListener;
 class AnimQueue;
-
 typedef void (*AnimCB)(Timer *t, AnimListener *listener, void *data1, void *data2,
 		       void *data3);
 
@@ -79,6 +79,10 @@ public:
 	int32_t InitResolution(int32_t num);
 	/* takes the widget's position, size and rotation arrays (0x81064afc, name ours) */
 	int32_t GetEach(Widget *widget);
+	/* reads it for the widget */
+	int32_t Attach(Widget *widget);
+	/* the timer its Set animates with; NULL sets at once */
+	int32_t SetTimer(Timer *timer);
 
 	/* the widget it is read for (name ours) */
 	Widget *m_widget;
@@ -260,6 +264,8 @@ public:
 	/* puts the widget behind the other in its parent's draw order */
 	int32_t SetBehind(Widget *w);
 
+	/* the descendant with the ID */
+	Widget *FindChild(const IDParam &id, int32_t option);
 	AnimQueue *FindAnim(int32_t id);
 	int32_t KillAnimType(int32_t type);
 
@@ -286,9 +292,10 @@ public:
 	/* 0xff before a reverse transition (name after ScePaf-RE) */
 	uint8_t m_transition;
 	uint8_t reserved3a[0xf];
-	bool reserved3q : 1;
-	/* made by a template (TemplateOpen); WriteWidget leaves it out (name ours) */
-	bool m_template : 1;
+	/* its parent writes it: WriteWidget writes only its children (names after ScePaf-RE) */
+	bool m_parent_protected : 1;
+	/* made by a template (TemplateOpen); WriteWidget leaves it out */
+	bool m_under_template : 1;
 	bool reserved3r : 1;
 	bool reserved3s : 1;
 	bool reserved3t : 1;

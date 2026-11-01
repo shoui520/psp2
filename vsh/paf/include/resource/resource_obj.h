@@ -77,11 +77,17 @@ public:
 
 	int32_t GetLoadStatus() const;
 	/* whether the resource's document holds the ID */
-	bool IsRegisteredID(uint32_t idhash) const;
+	bool IsRegisteredID(uint32_t idhash);
+	bool IsRegisteredID(const char *id, uint32_t mode);
 	cxml::Element GetTableElement(TableType type) const;
 	/* the page element of an ID; 0 when found */
 	int32_t GetPage(uint32_t idhash, cxml::Element &elm) const;
+	int32_t GetPage(const char *id, cxml::Element &elm) const;
+	/* the string of an ID; 0 when found */
+	int32_t GetString(uint32_t idhash, const wchar_t **str, uint32_t *length) const;
 	/* the "id:", "src:" or "type:" (kind 0, 1, 2) of an ID's debug symbol; -1 without one */
+	/* the ID the alias table gives the ID, for this model's entry first; empty without one (name ours) */
+	IDParam GetAliasID(const IDParam &id) const;
 	int32_t GetDebugSymbol(uint32_t idhash, int32_t kind, string *symbol) const;
 	const char *GetFileName() const;
 	int32_t GetTextureFromBuffer(const cxml::Element &elm, void **addr, uint32_t *size,
@@ -140,6 +146,10 @@ int32_t ScePafResource_CEED7338(paf::resource::ResourceObj *rscobj);
 /* the cxml allocator of a resource on the heap of its userdata (0x8106ead8, name ours) */
 void ResourceObjCxmlAllocator(paf::cxml::AllocationType type, void *userdata, void *old_addr,
 			      size_t required_size, void **addr, size_t *size);
+/* a sound of the resource by ID hash; 0 when found */
+int32_t ScePafResource_ADDC0711(const paf::resource::ResourceObj *rscobj, uint32_t idhash,
+				const char **addr1, uint32_t *size1, const char **addr2,
+				uint32_t *size2, int32_t *samplerate, uint32_t *type);
 int32_t ScePafResource_B72D030D(paf::resource::ResourceObj *rscobj, uint32_t flag,
 				paf::memory::HeapAllocator *heap);
 paf::memory::HeapAllocator *ScePafResource_D60FF214(paf::resource::ResourceObj *rscobj,

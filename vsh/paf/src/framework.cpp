@@ -838,11 +838,11 @@ int32_t ScePafToplevel_95CF05AC(paf::Framework *framework, const paf::IDParam &i
 }
 
 int32_t ScePafToplevel_C04E8309(paf::Framework *framework, const paf::IDParam &id,
-				uint32_t *value1, uint32_t *value2)
+				paf::ui::WidgetSoundParam::Sound **sounds, uint32_t *num)
 {
 	if (framework->m_common_resource_plugin != NULL)
-		return ScePafToplevel_DA3D4AF0(framework->m_common_resource_plugin, id, value1,
-					       value2);
+		return ScePafToplevel_DA3D4AF0(framework->m_common_resource_plugin, id, sounds,
+					       num);
 	return -1;
 }
 

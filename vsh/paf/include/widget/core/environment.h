@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <std/memory>
 #include <std/string>
+#include <std/list>
 #include <math/ngp/v4.h>
 #include <math/rect.h>
 #include <versatileparam/idparam.h>
@@ -133,7 +134,9 @@ public:
 	uint8_t reserved3[0x68];
 	/* set before the focus is first shown */
 	int32_t m_focus_mode;
-	uint8_t reserved4[0x1d4];
+	uint8_t reserved4[0x1c8];
+	/* the scenes, updated each frame (name after ScePaf-RE) */
+	list<Widget *> m_scenes_onupdate;
 	/* the screen SetScreen gives */
 	Screen *m_screen;
 	uint8_t reserved5[0x2a3a];

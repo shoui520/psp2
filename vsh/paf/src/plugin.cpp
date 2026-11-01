@@ -9,11 +9,11 @@
 #include <cxml/cxml.h>
 #include <resource/resource_obj.h>
 #include <versatileparam/versatileparam.h>
+#include <versatileparam/resourceparam.h>
 #include <timer/timer.h>
 #include <graphics/surface/surface.h>
 #include <graphics/surface/surface_pool.h>
 #include <graphics/surface/surface_display.h>
-#include <widget/w_scene.h>
 #include <widget/w_camera.h>
 #include <file/localfile.h>
 #include <compress/compress.h>
@@ -1693,7 +1693,7 @@ void Plugin::InstantiateWidget(const cxml::Element &elm, ui::Widget *parent, boo
 	if (widget == NULL)
 		return;
 	if (is_template)
-		widget->m_template = true;
+		widget->m_under_template = true;
 
 	WidgetResourceInfo *info = static_cast<WidgetResourceInfo *>(widget->m_user_data2[0]);
 
@@ -1992,6 +1992,64 @@ ui::Scene *Plugin::PageRoot(const cxml::Element &node) const
 	return static_cast<ui::Scene *>(GetNodeEntity_Widget(node));
 }
 
+void Plugin::SetLocale(Locale locale)
+{
+	if (m_rscobj == NULL)
+		return;
+	if (locale < 0)
+		locale = static_cast<Locale>(Framework::framework->m_locale);
+	m_locale = locale;
+	ScePafResource_42E4E566(m_rscobj, locale, m_decode_heap);
+}
+
+void Plugin::SetLocaleAll(Locale locale)
+{
+	Framework::framework->SetLocaleAllPlugin(locale);
+}
+
+const wchar_t *Plugin::GetString(const IDParam &id) const
+{
+	const wchar_t *str;
+	uint32_t length;
+
+	if (m_rscobj != NULL && m_rscobj->GetString(id.m_idhash, &str, &length) == 0)
+		return str;
+	if (sce_paf_strncmp(m_name.c_str(), "__system__common_resource", 26) != 0)
+		return Framework::framework->GetCommonString(id);
+	return L"";
+}
+
+intrusive_ptr<graph::Surface> Plugin::GetTexture(const IDParam &id, graph::SurfacePool *pool)
+{
+	graph::Surface *surface = GetNodeEntity_Surface(id);
+
+	if (surface != NULL) {
+		intrusive_ptr<graph::Surface> texture(surface);
+
+		return texture;
+	}
+	if (m_rscobj != NULL) {
+		cxml::Element table = m_rscobj->GetTableElement(resource::TableType_Texture);
+
+		if (table.doc != NULL && table.offset >= 0) {
+			cxml::Element node;
+
+			node = cxml::util::FindChildElement(table, "texture", "id", id.m_idhash);
+
+			if (node.doc != NULL && node.offset >= 0)
+				return GetTexture(node, pool);
+		}
+	}
+	if (sce_paf_strncmp(m_name.c_str(), "__system__common_resource", 26) != 0)
+		return Framework::framework->GetCommonTexture(id);
+	return intrusive_ptr<graph::Surface>();
+}
+
+intrusive_ptr<graph::Surface> Plugin::GetTexture(const IDParam &id)
+{
+	return GetTexture(id, m_surface_pool);
+}
+
 void Plugin::Notify(int32_t status) const
 {
 	for (list<NotifyCallback>::iterator it = m_notify_callback_list.begin();
@@ -1999,6 +2057,848 @@ void Plugin::Notify(int32_t status) const
 		if (*it != NULL)
 			(*it)(status, m_param);
 	}
+}
+
+void Plugin::SetInitEventHandler(const InitEventFunctionEntry *table)
+{
+	typedef map<uint32_t, int32_t> Table;
+
+	m_init_event_handler_table = table;
+	for (int32_t i = 0; m_init_event_handler_table[i].id.m_idhash != 0; i++)
+		m_event_handler_name_table._Insert(
+			Table::value_type(m_init_event_handler_table[i].id.m_idhash, 0), NULL)
+			->value.second = i;
+}
+
+void Plugin::SetEventHandler(const EventFunctionEntry *table)
+{
+	typedef map<uint32_t, int32_t> Table;
+
+	m_event_handler_table = table;
+	for (int32_t i = 0; m_event_handler_table[i].name != NULL; i++) {
+		IDParam id(m_event_handler_table[i].name);
+
+		m_event_handler_name_table._Insert(Table::value_type(id.m_idhash, 0), NULL)
+			->value.second = i;
+	}
+}
+
+void Plugin::SetLayoutHandler(const LayoutFunctionEntry *table)
+{
+	typedef map<string, int32_t> Table;
+
+	m_layout_handler_table = table;
+	for (int32_t i = 0; m_layout_handler_table[i].name != NULL; i++) {
+		string name(m_layout_handler_table[i].name);
+		int32_t &index =
+			m_layout_handler_name_table._Insert(Table::value_type(name, 0), NULL)->value.second;
+
+		index = i;
+	}
+}
+
+void Plugin::SetInterface(int32_t id, void *iface)
+{
+	typedef map<int32_t, void *> Table;
+
+	m_interface_table._Insert(Table::value_type(id, NULL), NULL)->value.second = iface;
+}
+
+void *Plugin::GetInterface(int32_t id) const
+{
+	map<int32_t, void *>::iterator it = m_interface_table.find(id);
+
+	if (it == m_interface_table.end())
+		return NULL;
+	return it->second;
+}
+
+void Plugin::AppendNotifyCallback(NotifyCallback cb)
+{
+	if (cb != NULL)
+		m_notify_callback_list.push_back(cb);
+}
+
+void Plugin::RemoveNotifyCallback(NotifyCallback cb)
+{
+	for (list<NotifyCallback>::iterator it = m_notify_callback_list.begin();
+	     it != m_notify_callback_list.end(); ++it) {
+		if (*it == cb)
+			m_notify_callback_list.erase(it);
+	}
+}
+
+void Plugin::AppendUnloadCallback(UnloadCallback cb)
+{
+	if (cb != NULL)
+		m_unload_callback_list.push_back(cb);
+}
+
+void Plugin::RemoveUnloadCallback(UnloadCallback cb)
+{
+	for (list<UnloadCallback>::iterator it = m_unload_callback_list.begin();
+	     it != m_unload_callback_list.end(); ++it) {
+		if (*it == cb)
+			m_unload_callback_list.erase(it);
+	}
+}
+
+int32_t Plugin::CreateStyle(const char *type, const IDParam &id)
+{
+	if (type == NULL)
+		return -1;
+
+	int32_t ret = 0;
+	VersatileParam *param = CallFactoryStyle(type);
+
+	if (param != NULL) {
+		char name[32] = "style_";
+		size_t len = sce_paf_strlen(type) + 1;
+
+		if (len > sizeof(name) - sizeof("style_") + 1)
+			len = sizeof(name) - sizeof("style_");
+		sce_paf_strncat(name, type, len);
+		param->m_id = id;
+		param->AttachPlugin(this);
+		m_style_param_manager->AddParam(name, id, param);
+	} else {
+		ret = -1;
+	}
+	return ret;
+}
+
+int32_t Plugin::MorphWidgetLayout(ui::Widget *widget, const cxml::Element &elm, Timer *timer)
+{
+	if (widget == NULL)
+		return -1;
+
+	WidgetResourceInfo *info = static_cast<WidgetResourceInfo *>(widget->m_user_data2[0]);
+
+	if (info == NULL)
+		return -1;
+	if (info->m_node.doc != NULL && info->m_node.offset >= 0 && elm.doc != NULL &&
+	    elm.offset >= 0) {
+		cxml::Element node = info->m_node;
+		ui::WidgetLayoutParam *param =
+			static_cast<ui::WidgetLayoutParam *>(CallFactoryLayout(node.GetName()));
+
+		if (param != NULL) {
+			param->Attach(widget);
+			param->Create(1);
+			param->Read(&elm);
+			param->SetTimer(timer);
+			param->Set();
+			param->Destroy(1);
+			delete param;
+		}
+	}
+	return 0;
+}
+
+int32_t Plugin::MorphWidgetLayout(ui::Widget *widget, uint32_t index, Timer *timer)
+{
+	if (widget == NULL)
+		return -1;
+
+	WidgetResourceInfo *info = static_cast<WidgetResourceInfo *>(widget->m_user_data2[0]);
+
+	if (info == NULL || info->m_list_layout.size() < index)
+		return -1;
+
+	WidgetResourceInfo::LayoutData &data = info->m_list_layout[index];
+
+	if (data.m_param != NULL) {
+		data.m_param->SetTimer(timer);
+		data.m_param->Set();
+	} else if (data.m_node.doc != NULL && data.m_node.offset >= 0) {
+		MorphWidgetLayout(widget, data.m_node, timer);
+	}
+	return 0;
+}
+
+int32_t Plugin::MorphWidgetLayout(ui::Widget *widget, const IDParam &id, Timer *timer)
+{
+	if (widget == NULL)
+		return -1;
+
+	WidgetResourceInfo *info = static_cast<WidgetResourceInfo *>(widget->m_user_data2[0]);
+
+	if (info == NULL)
+		return -1;
+
+	vector<WidgetResourceInfo::LayoutData>::iterator it;
+
+	for (it = info->m_list_layout.begin(); it != info->m_list_layout.end(); ++it) {
+		if (it->m_id.m_idhash != id.m_idhash)
+			continue;
+		if (it->m_param != NULL) {
+			it->m_param->SetTimer(timer);
+			it->m_param->Set();
+		} else if (it->m_node.doc != NULL && it->m_node.offset >= 0) {
+			MorphWidgetLayout(widget, it->m_node, timer);
+		}
+		return 0;
+	}
+	return -1;
+}
+
+int32_t Plugin::SetPageDebugMode(const IDParam &id, PageDebugMode mode, bool enable)
+{
+	ui::Widget *page = GetNodeEntity_Widget(id);
+
+	if (page == NULL)
+		return -1;
+	return ScePafToplevel_68607CDE(this, static_cast<ui::Scene *>(page), mode, enable);
+}
+
+Plugin::AddTextureInfo *Plugin::GetNodeEntity_AddTexture(const IDParam &id) const
+{
+	map<uint32_t, AddTextureInfo>::iterator it = m_add_texture_table.find(id.m_idhash);
+
+	if (it == m_add_texture_table.end())
+		return NULL;
+	return &it->second;
+}
+
+int32_t Plugin::WriteTextureTable(common::SharedPtr<File> fp, bool table)
+{
+	int32_t indent = 0;
+	int32_t ret = 0;
+
+	if (m_surface_table.begin() == m_surface_table.end())
+		return 0;
+	if (table) {
+		if (ScePafResource_D74427E6(fp, 6, 1, false) != 0)
+			return -1;
+		indent = 1;
+	}
+	for (map<uint32_t, graph::Surface *>::iterator it = m_surface_table.begin();
+	     it != m_surface_table.end(); ++it) {
+		if (it->second == NULL)
+			continue;
+
+		string id;
+		string src;
+		string type;
+		AddTextureInfo *info = GetNodeEntity_AddTexture(IDParam(s_empty_id, it->first));
+
+		if (info != NULL) {
+			id = info->id.m_id;
+			src = info->path;
+			switch (info->type) {
+			case 0:
+				type = "texture/png";
+				break;
+			case 1:
+				type = "texture/jpg";
+				break;
+			case 2:
+				type = "texture/tif";
+				break;
+			case 3:
+				type = "texture/gif";
+				break;
+			case 4:
+				type = "texture/bmp";
+				break;
+			case 5:
+				type = "texture/gim";
+				break;
+			case 6:
+				type = "texture/dds";
+				break;
+			case 7:
+				type = "texture/gxt";
+				break;
+			default:
+				type = "";
+				break;
+			}
+		} else if (m_rscobj != NULL) {
+			if (m_rscobj->GetDebugSymbol(it->first, 0, &id) != 0) {
+				ScePafResource_D74427E6(fp, 7, indent + 1, false);
+				return -1;
+			}
+			if (m_rscobj->GetDebugSymbol(it->first, 1, &src) != 0) {
+				ScePafResource_D74427E6(fp, 7, indent + 1, false);
+				return -1;
+			}
+			ret = m_rscobj->GetDebugSymbol(it->first, 2, &type);
+			if (ret != 0) {
+				ScePafResource_D74427E6(fp, 7, indent + 1, false);
+				return -1;
+			}
+		}
+
+		const char *src_name = src.c_str();
+		const char *type_name = type.c_str();
+		ResourceParam param;
+
+		param.SetTagName("texture");
+		param.SetIDName(id.c_str());
+		param.AddParam("src", &src_name, ResourceParam::SEMANTIC_STRING);
+		param.AddParam("type", &type_name, ResourceParam::SEMANTIC_STRING);
+		ScePafResource_441E989F(&param, fp, 0, indent + 1, false);
+	}
+	if (table && ScePafResource_D74427E6(fp, 7, 1, false) != 0)
+		return -1;
+	return ret;
+}
+
+int32_t Plugin::WriteStyleTable(common::SharedPtr<File> fp, bool table)
+{
+	int32_t indent = 0;
+	int32_t ret = 0;
+
+	if (m_style_param_manager->m_param_table.begin() ==
+	    m_style_param_manager->m_param_table.end())
+		return 0;
+	if (table) {
+		if (ScePafResource_D74427E6(fp, 4, 1, false) != 0)
+			return -1;
+		indent = 1;
+	}
+	for (VersatileParamManager::iterator it = m_style_param_manager->begin();
+	     it != m_style_param_manager->end(); ++it) {
+		VersatileParam *param = m_style_param_manager->FindParam(it.GetTag().c_str(),
+									 it.GetID());
+		string id;
+
+		param->Create(1);
+		ret = m_rscobj->GetDebugSymbol(param->m_id.m_idhash, 0, &id);
+		if (ret == 0) {
+			param->m_id.m_id = string(id.c_str());
+			param->m_serial->SetIDName(id.c_str());
+		}
+		param->Write(fp, 0, indent + 1);
+		param->Destroy(1);
+	}
+	if (table && ScePafResource_D74427E6(fp, 5, 1, false) != 0)
+		return -1;
+	return ret;
+}
+
+int32_t Plugin::WriteWidget(ui::Widget *widget, common::SharedPtr<File> fp, uint32_t indent,
+			    bool print)
+{
+	if (widget == NULL)
+		return -1;
+	if (!print && widget->m_under_template)
+		return 1;
+
+	const char *type = widget->GetTypeName();
+
+	if (widget->m_parent_protected) {
+		if (widget->m_children.size() != 0) {
+			for (list<ui::Widget *>::iterator it = widget->m_children.begin();
+			     it != widget->m_children.end(); ++it)
+				WriteWidget(*it, fp, indent, print);
+		}
+		return 0;
+	}
+
+	WidgetResourceInfo *info = (WidgetResourceInfo *)widget->m_user_data2[0];
+
+	if (info == NULL || info->m_wparam == NULL)
+		return -1;
+	info->m_wparam->Create(1);
+	{
+		IDParam id = widget->m_name;
+
+		info->m_wparam->m_id = id;
+		if (info->m_wparam->m_serial != NULL)
+			info->m_wparam->m_serial->SetIDName(info->m_wparam->m_id.m_id.c_str());
+		info->m_wparam->Write(fp, 1, indent);
+
+		uint8_t pos_num = widget->m_pos_num;
+		ui::WidgetLayoutParam *layout = (ui::WidgetLayoutParam *)CallFactoryLayout(type);
+
+		if (layout != NULL) {
+			layout->Attach(widget);
+			layout->m_id.SetID(string("type1"));
+			if (pos_num != 0)
+				layout->InitResolution(pos_num);
+			layout->Create(1);
+			layout->Get();
+			layout->Write(fp, 0, indent + 1);
+			layout->Destroy(1);
+			delete layout;
+		}
+		for (list<ui::Widget *>::iterator it = widget->m_children.begin();
+		     it != widget->m_children.end(); ++it)
+			WriteWidget(*it, fp, indent + 1, print);
+		if (info->m_wparam->Write(fp, 2, indent) != 0)
+			return -1;
+	}
+	info->m_wparam->Destroy(1);
+	return 0;
+}
+
+int32_t Plugin::WritePageTable(common::SharedPtr<File> fp, bool table, bool print)
+{
+	int32_t indent = 0;
+	int32_t ret = 0;
+	int32_t err;
+
+	if (m_widget_table.begin() == m_widget_table.end())
+		return 0;
+	/* without a file, to the TTY */
+	if (table) {
+		if (fp.get() != NULL)
+			err = ScePafResource_D74427E6(fp, 2, 1, false);
+		else
+			err = ScePafResource_D74427E6(fp, 2, 1, true);
+		if (err != 0)
+			return -1;
+		indent = 1;
+	}
+
+	list<ui::Widget *> &scenes = Framework::framework->m_env->m_scenes_onupdate;
+
+	for (list<ui::Widget *>::iterator it = scenes.begin(), end = scenes.end(); it != end;
+	     ++it) {
+		IDParam plugin_id(m_name);
+
+		if (((ui::Scene *)*it)->m_plugin_id != plugin_id.m_idhash)
+			continue;
+
+		const char *name = (*it)->m_name.m_id.c_str();
+		ResourceParam param;
+
+		param.SetTagName("page");
+		param.SetIDName(name);
+
+		cxml::Element elm;
+		string template_id(s_empty_name);
+		uint32_t template_idhash = 0;
+
+		if (m_rscobj != NULL && m_rscobj->GetPage(name, elm) == 0) {
+			cxml::Element entity;
+
+			if (scePafResourceGetAttributeIdInt(&elm, "template", &template_idhash,
+							    &entity) == 0) {
+				string symbol;
+
+				ret = m_rscobj->GetDebugSymbol(template_idhash, 0, &symbol);
+				if (ret == 0)
+					template_id = string(symbol.c_str());
+				param.AddParam("template", &template_id,
+					       ResourceParam::SEMANTIC_IDHASHREF);
+			}
+		}
+		if ((int32_t)(*it)->m_children.size() - 1 <= 0) {
+			if (fp.get() != NULL)
+				err = ScePafResource_441E989F(&param, fp, 0, indent + 1, false);
+			else
+				err = ScePafResource_441E989F(&param, fp, 0, indent + 1, true);
+			if (err != 0)
+				return -1;
+		} else {
+			if (fp.get() != NULL)
+				err = ScePafResource_441E989F(&param, fp, 1, indent + 1, false);
+			else
+				err = ScePafResource_441E989F(&param, fp, 1, indent + 1, true);
+			if (err != 0)
+				return -1;
+			for (list<ui::Widget *>::iterator child = (*it)->m_children.begin();
+			     child != (*it)->m_children.end(); ++child)
+				WriteWidget(*child, fp, indent + 2, print);
+			if (fp.get() != NULL)
+				err = ScePafResource_441E989F(&param, fp, 2, indent + 1, false);
+			else
+				err = ScePafResource_441E989F(&param, fp, 2, indent + 1, true);
+			if (err != 0)
+				return -1;
+		}
+	}
+	if (table) {
+		if (fp.get() != NULL)
+			err = ScePafResource_D74427E6(fp, 3, 1, false);
+		else
+			err = ScePafResource_D74427E6(fp, 3, 1, true);
+		if (err != 0)
+			return -1;
+	}
+	return ret;
+}
+
+int32_t Plugin::WriteResourceAll(common::SharedPtr<File> fp)
+{
+	if (ScePafResource_D74427E6(fp, 0, 0, false) != 0)
+		return -1;
+	WritePageTable(fp, true, false);
+	WriteStyleTable(fp, true);
+	WriteTextureTable(fp, true);
+	if (ScePafResource_D74427E6(fp, 1, 0, false) != 0)
+		return -1;
+	return 0;
+}
+
+int32_t Plugin::WriteResourcePageTable(common::SharedPtr<File> fp, bool table)
+{
+	if (ScePafResource_D74427E6(fp, 0, 0, false) != 0)
+		return -1;
+	WritePageTable(fp, table, false);
+	if (ScePafResource_D74427E6(fp, 1, 0, false) != 0)
+		return -1;
+	return 0;
+}
+
+int32_t Plugin::WriteResourceStyleTable(common::SharedPtr<File> fp, bool table)
+{
+	if (ScePafResource_D74427E6(fp, 0, 0, false) != 0)
+		return -1;
+	WriteStyleTable(fp, table);
+	if (ScePafResource_D74427E6(fp, 1, 0, false) != 0)
+		return -1;
+	return 0;
+}
+
+int32_t Plugin::WriteResourceTextureTable(common::SharedPtr<File> fp, bool table)
+{
+	if (ScePafResource_D74427E6(fp, 0, 0, false) != 0)
+		return -1;
+	WriteTextureTable(fp, table);
+	if (ScePafResource_D74427E6(fp, 1, 0, false) != 0)
+		return -1;
+	return 0;
+}
+
+int32_t Plugin::GetResourcePages(vector<string> *pages)
+{
+	int32_t ret = 0;
+
+	if (pages == NULL)
+		return -1;
+	if (m_rscobj != NULL) {
+		cxml::Element table = m_rscobj->GetTableElement(resource::TableType_Page);
+
+		if (table.doc != NULL && table.offset >= 0) {
+			cxml::Element node;
+
+			for (node = table.GetFirstChild(); node.doc != NULL && node.offset >= 0;
+			     node = node.GetNextSibling()) {
+				uint32_t idhash;
+
+				ret = scePafResourceGetAttributeIdIntLpb(&node, "id", &idhash);
+				if (ret == 0 && m_rscobj != NULL) {
+					string id;
+
+					ret = m_rscobj->GetDebugSymbol(idhash, 0, &id);
+					if (ret == 0)
+						pages->push_back(id);
+				}
+			}
+		}
+	}
+	for (map<string, ui::Widget *>::iterator it = m_create_page_table.begin();
+	     it != m_create_page_table.end(); ++it) {
+		if (it->second != NULL)
+			pages->push_back(it->first);
+	}
+	return ret;
+}
+
+int32_t Plugin::GetOpenedPages(vector<string> *pages)
+{
+	int32_t ret = 0;
+
+	if (pages == NULL)
+		return -1;
+
+	list<ui::Widget *> &scenes = Framework::framework->m_env->m_scenes_onupdate;
+
+	for (list<ui::Widget *>::iterator it = scenes.begin(), end = scenes.end(); it != end;
+	     ++it) {
+		IDParam plugin_id(m_name);
+		ui::Scene *scene = (ui::Scene *)*it;
+
+		if (scene->m_plugin_id != plugin_id.m_idhash)
+			continue;
+		if (m_rscobj != NULL) {
+			string id;
+
+			ret = m_rscobj->GetDebugSymbol(scene->m_name.m_idhash, 0, &id);
+			if (ret == 0)
+				pages->push_back(id);
+		}
+	}
+	for (map<string, ui::Widget *>::iterator it = m_create_page_table.begin();
+	     it != m_create_page_table.end(); ++it) {
+		if (it->second != NULL)
+			pages->push_back(it->first);
+	}
+	return ret;
+}
+
+int32_t Plugin::GetResourceStyles(const char *type, vector<string> *styles)
+{
+	int32_t ret = 0;
+
+	if (styles == NULL)
+		return -1;
+	for (VersatileParamManager::iterator it = m_style_param_manager->begin();
+	     it != m_style_param_manager->end(); ++it) {
+		if (type != NULL) {
+			char tag[32] = "style_";
+			size_t len = sce_paf_strlen(type) + 1;
+
+			if (len > 26)
+				len = 25;
+			sce_paf_strncat(tag, type, len);
+			if (m_style_param_manager->FindParam(tag, it.GetID()) == NULL)
+				continue;
+		}
+		if (m_rscobj != NULL) {
+			string id;
+
+			ret = m_rscobj->GetDebugSymbol(it.GetID().m_idhash, 0, &id);
+			if (ret == 0)
+				styles->push_back(id);
+		}
+	}
+	return ret;
+}
+
+int32_t Plugin::GetResourceTextures(vector<string> *textures)
+{
+	int32_t ret = 0;
+
+	if (textures == NULL)
+		return -1;
+	for (map<uint32_t, graph::Surface *>::iterator it = m_surface_table.begin();
+	     it != m_surface_table.end(); ++it) {
+		if (it->second == NULL)
+			continue;
+
+		AddTextureInfo *info = GetNodeEntity_AddTexture(IDParam(s_empty_id, it->first));
+
+		if (info != NULL) {
+			textures->push_back(info->id.m_id);
+		} else if (m_rscobj != NULL) {
+			string id;
+
+			ret = m_rscobj->GetDebugSymbol(it->first, 0, &id);
+			if (ret == 0)
+				textures->push_back(id);
+		}
+	}
+	return ret;
+}
+
+bool Plugin::IsRegisteredID(const IDParam &id)
+{
+	if (m_rscobj != NULL && m_rscobj->IsRegisteredID(id.m_id.c_str(), 0) == true)
+		return true;
+	if (m_rscobj != NULL && m_rscobj->IsRegisteredID(id.m_idhash) == true)
+		return true;
+	for (map<uint32_t, ui::Widget *>::iterator it = m_widget_table.begin();
+	     it != m_widget_table.end(); ++it) {
+		ui::Widget *page = it->second;
+
+		if (page != NULL) {
+			if (id.m_idhash == page->m_name.m_idhash)
+				return true;
+			if (page->FindChild(id, 0) != NULL)
+				return true;
+		}
+	}
+	return m_style_param_manager->FindParam(id) != NULL || GetNodeEntity_AddTexture(id) != NULL;
+}
+
+void Plugin::SetNodeEntity_AddTexture(const IDParam &id, AddTextureInfo &info)
+{
+	uint32_t idhash = id.m_idhash;
+
+	m_add_texture_table[idhash] = info;
+}
+
+}
+
+/* a texture loaded from the buffer into the plugin's surface pool */
+intrusive_ptr<graph::Surface> ScePafToplevel_F13D2937(Plugin *plugin, void *buf, uint32_t size,
+						      uint32_t type, bool compressed,
+						      uint32_t origsize)
+{
+	return plugin->LoadTexture(plugin->m_surface_pool, buf, size, type, compressed, origsize);
+}
+
+namespace paf {
+
+int32_t Plugin::AddResourceTexture(const IDParam &id, const char *filename, const char *src)
+{
+	int32_t ret;
+	void *buf = NULL;
+	uint32_t read = 0;
+	int32_t type;
+
+	if (filename == NULL || src == NULL)
+		return -1;
+
+	const char *ext = sce_paf_strrchr(filename, '.');
+
+	if (ext == NULL)
+		return -1;
+	if (sce_paf_strncasecmp(ext, ".gim", 4) == 0)
+		type = 5;
+	else if (sce_paf_strncasecmp(ext, ".png", 4) == 0)
+		type = 0;
+	else if (sce_paf_strncasecmp(ext, ".jpg", 4) == 0)
+		type = 1;
+	else if (sce_paf_strncasecmp(ext, ".tif", 4) == 0)
+		type = 2;
+	else if (sce_paf_strncasecmp(ext, ".gif", 4) == 0)
+		type = 3;
+	else if (sce_paf_strncasecmp(ext, ".bmp", 4) == 0)
+		type = 4;
+	else if (sce_paf_strncasecmp(ext, ".dds", 4) == 0)
+		type = 6;
+	else if (sce_paf_strncasecmp(ext, ".gxt", 4) == 0)
+		type = 7;
+	else
+		return -1;
+
+	int32_t error;
+
+	ret = 0;
+
+	common::SharedPtr<File> fp = LocalFile::Open(filename, SCE_O_RDONLY, 0, &error);
+
+	if (fp.get() == NULL)
+		return -1;
+
+	uint32_t size = fp->GetFileSize();
+
+	if (size != 0) {
+		if (m_private_heap != NULL)
+			buf = m_private_heap->sce_paf_malloc(size);
+		else
+			buf = sce_paf_malloc(size);
+		if (buf != NULL)
+			read = fp->Read(buf, size);
+	} else {
+		ret = -1;
+	}
+	fp->Close();
+	if (read != 0 && read == size) {
+		intrusive_ptr<graph::Surface> surface = LoadTexture(m_surface_pool, buf, size, type,
+								    false, 0);
+
+		if (surface.get() != NULL) {
+			typedef map<uint32_t, graph::Surface *> Table;
+
+			m_surface_table._Insert(Table::value_type(id.m_idhash, NULL), NULL)->value.second =
+				surface.get();
+			surface->AddRef();
+
+			AddTextureInfo info;
+
+			info.id = id;
+			info.path = src;
+			info.type = type;
+			m_add_texture_table[id.m_idhash] = info;
+		} else {
+			ret = -1;
+		}
+	}
+	if (buf != NULL) {
+		if (m_private_heap != NULL)
+			m_private_heap->sce_paf_free(buf);
+		else
+			sce_paf_free(buf);
+	}
+	return ret;
+}
+
+}
+
+int32_t ScePafToplevel_1AB2DB65(Plugin *plugin, const IDParam &id, IDParam *alias)
+{
+	if (plugin->m_rscobj != NULL) {
+		*alias = plugin->m_rscobj->GetAliasID(id);
+		if (alias->m_idhash != 0)
+			return 0;
+	}
+	if (sce_paf_strncmp(plugin->m_name.c_str(), "__system__common_resource", 26) != 0)
+		return ScePafToplevel_1AB2DB65(Framework::Instance()->m_common_resource_plugin, id,
+					       alias);
+	*alias = id;
+	return 0x80AF0601;	/* no name found */
+}
+
+const wchar_t *ScePafToplevel_D8801CA4(Plugin *plugin, const IDParam &id)
+{
+	IDParam alias(s_empty_name, 0);
+	const wchar_t *str;
+	uint32_t length;
+
+	ScePafToplevel_1AB2DB65(plugin, id, &alias);
+	if (plugin->m_rscobj != NULL &&
+	    plugin->m_rscobj->GetString(alias.m_idhash, &str, &length) == 0)
+		return str;
+	if (sce_paf_strncmp(plugin->m_name.c_str(), "__system__common_resource", 26) != 0)
+		return Framework::framework->GetCommonString(alias);
+	return L"";
+}
+
+namespace paf {
+
+VersatileParam *Plugin::CallFactoryHandler(const char *name)
+{
+	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
+
+	if (it != s_factory_table.end())
+		return it->second.m_factory_handler();
+	return NULL;
+}
+
+graph::DrawObj *Plugin::CallFactoryDrawObj(const char *name)
+{
+	map<string, ui::FactoryFuncDrawObj>::iterator it =
+		s_factory_drawobj_table.find(string(name));
+
+	if (it != s_factory_drawobj_table.end())
+		return it->second.m_factory_drawobj();
+	return NULL;
+}
+
+VersatileParam *Plugin::CallFactoryDrawObjParam(const char *name)
+{
+	map<string, ui::FactoryFuncDrawObj>::iterator it =
+		s_factory_drawobj_table.find(string(name));
+
+	if (it != s_factory_drawobj_table.end())
+		return it->second.m_factory_param();
+	return NULL;
+}
+
+ui::HandlerCB Plugin::GetEventHandler(const char *name) const
+{
+	IDParam id(name);
+	map<uint32_t, int32_t>::iterator it = m_event_handler_name_table.find(id.m_idhash);
+
+	if (it == m_event_handler_name_table.end())
+		return NULL;
+	return m_event_handler_table[it->second].func;
+}
+
+void Plugin::InstantiateWidget_EventHandler(const cxml::Element &node, ui::Widget *widget,
+					    const char *attr, int32_t type)
+{
+	const char *name;
+	uint32_t len;
+
+	if (scePafResourceGetAttributeString(&node, attr, &name, &len) == 0)
+		widget->AddEventCallback(type, GetEventHandler(name));
+}
+
+ui::LayoutCB Plugin::GetLayoutHandler(const char *name) const
+{
+	map<string, int32_t>::iterator it = m_layout_handler_name_table.find(string(name));
+
+	if (it == m_layout_handler_name_table.end())
+		return NULL;
+	return m_layout_handler_table[it->second].func;
 }
 
 Plugin::Argument::operator int32_t() const
@@ -2066,4 +2966,92 @@ Plugin::InitParam::InitParam()
 	graphics_flag = 128;
 }
 
+}
+
+int32_t ScePafToplevel_CA3E606F(Plugin *plugin, const IDParam &id, const char **buffer1,
+				uint32_t *size1, const char **buffer2, uint32_t *size2,
+				int32_t *samplerate, uint32_t *type)
+{
+	int32_t ret = -1;
+
+	if (plugin->m_rscobj != NULL) {
+		ret = ScePafResource_ADDC0711(plugin->m_rscobj, id.m_idhash, buffer1, size1, buffer2,
+					      size2, samplerate, type);
+		if (ret == 0)
+			return ret;
+	}
+	if (sce_paf_strncmp(plugin->m_name.c_str(), "__system__common_resource", 26) != 0)
+		ret = ScePafToplevel_95CF05AC(Framework::framework, id, buffer1, size1, buffer2,
+					      size2, samplerate, type);
+	return ret;
+}
+
+int32_t ScePafToplevel_DA3D4AF0(Plugin *plugin, const IDParam &id,
+				ui::WidgetSoundParam::Sound **sounds, uint32_t *num)
+{
+	ui::WidgetSoundParam *param =
+		static_cast<ui::WidgetSoundParam *>(plugin->m_sound_param_manager->FindParam(id));
+
+	if (param == NULL) {
+		Plugin *common = Framework::framework->m_common_resource_plugin;
+
+		if (common != NULL)
+			param = static_cast<ui::WidgetSoundParam *>(
+				common->m_sound_param_manager->FindParam(id));
+	}
+	if (param == NULL) {
+		*sounds = NULL;
+		*num = 0;
+		return -1;
+	}
+	*sounds = param->m_sounds;
+	*num = param->m_sound_num;
+	return 0;
+}
+
+int32_t ScePafToplevel_DD14F248(Plugin *plugin, int32_t mode)
+{
+	if (plugin->m_page_debug_mode == mode)
+		return 0;
+	if (plugin->m_rscobj == NULL)
+		return -1;
+
+	cxml::Element pages = plugin->m_rscobj->GetTableElement(resource::TableType_Page);
+
+	if (pages.doc == NULL || pages.offset < 0)
+		return -1;
+
+	cxml::Element node;
+
+	for (node = pages.GetFirstChild(); node.doc != NULL && node.offset >= 0;
+	     node = node.GetNextSibling()) {
+		ui::Scene *page = static_cast<ui::Scene *>(plugin->GetNodeEntity_Widget(node));
+
+		if (page == NULL)
+			continue;
+		switch (plugin->m_page_debug_mode) {
+		case 1:
+			ScePafToplevel_68607CDE(plugin, page, 0, false);
+			break;
+		case 2:
+			ScePafToplevel_68607CDE(plugin, page, 1, false);
+			break;
+		case 3:
+			ScePafToplevel_68607CDE(plugin, page, 2, false);
+			break;
+		}
+		switch (mode) {
+		case 1:
+			ScePafToplevel_68607CDE(plugin, page, 0, true);
+			break;
+		case 2:
+			ScePafToplevel_68607CDE(plugin, page, 1, true);
+			break;
+		case 3:
+			ScePafToplevel_68607CDE(plugin, page, 2, true);
+			break;
+		}
+	}
+	plugin->m_page_debug_mode = mode;
+	return 0;
 }

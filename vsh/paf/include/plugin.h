@@ -17,10 +17,12 @@
 #include <widget/core/widget.h>
 #include <widget/factory.h>
 #include <timer/timer.h>
+#include <common/shared_ptr.h>
 #include <src/paf_types.h>
 
 namespace paf {
 
+class File;
 class Module;
 class Timer;
 class VersatileParam;
@@ -61,8 +63,21 @@ public:
 	void *userdata;
 };
 
-class EventFunctionEntry;
-class LayoutFunctionEntry;
+/* a plugin's event handler, by the name an element's event attribute gives */
+class EventFunctionEntry {
+public:
+	const char *name;
+	ui::HandlerCB func;
+	/* nothing in libpaf reads it */
+	void *reserved;
+};
+
+/* a plugin's layout handler, by the name an element's layout attribute gives */
+class LayoutFunctionEntry {
+public:
+	const char *name;
+	ui::LayoutCB func;
+};
 
 class Plugin;
 
@@ -94,6 +109,13 @@ public:
 	enum PageOption {
 		PageOption_None = 0,
 		PageOption_Create = 1
+	};
+
+	/* the debug views of a page (ScePafToplevel_68607CDE's modes; names after ScePaf-RE) */
+	enum PageDebugMode {
+		PageDebugMode_PageVisual = 0,
+		PageDebugMode_PageVisualEdit = 1,
+		PageDebugMode_PageHide = 2
 	};
 
 	/* the option bits of loads and unloads */
@@ -164,6 +186,10 @@ public:
 	/* a texture AddResourceTexture added from a file (field names ours) */
 	class AddTextureInfo {
 	public:
+		AddTextureInfo() : id(s_empty_name, 0)
+		{
+		}
+
 		IDParam id;
 		string path;
 		/* the image type the file's extension gave */
@@ -323,9 +349,58 @@ public:
 
 	const wchar_t *GetString(const IDParam &id) const;
 	intrusive_ptr<graph::Surface> GetTexture(const IDParam &id);
-	int32_t GetResourceStyles(const char *name, vector<string> *styles);
-	int32_t GetResourceTextures(vector<string> *textures);
 	void SetLocale(Locale locale);
+	static void SetLocaleAll(Locale locale);
+	void SetInitEventHandler(const InitEventFunctionEntry *table);
+	void SetEventHandler(const EventFunctionEntry *table);
+	void SetLayoutHandler(const LayoutFunctionEntry *table);
+	void SetInterface(int32_t id, void *iface);
+	void *GetInterface(int32_t id) const;
+	void AppendNotifyCallback(NotifyCallback cb);
+	void RemoveNotifyCallback(NotifyCallback cb);
+	void AppendUnloadCallback(UnloadCallback cb);
+	void RemoveUnloadCallback(UnloadCallback cb);
+	/* a style parameter of the type, added to the plugin's styles as the ID */
+	int32_t CreateStyle(const char *type, const IDParam &id);
+	/* sets a widget's layout from an element, one of its layouts by index, or by ID */
+	int32_t MorphWidgetLayout(ui::Widget *widget, const cxml::Element &elm, Timer *timer);
+	int32_t MorphWidgetLayout(ui::Widget *widget, uint32_t index, Timer *timer);
+	int32_t MorphWidgetLayout(ui::Widget *widget, const IDParam &id, Timer *timer);
+	/* turns a debug view of an opened page on or off */
+	int32_t SetPageDebugMode(const IDParam &id, PageDebugMode mode, bool enable);
+	AddTextureInfo *GetNodeEntity_AddTexture(const IDParam &id) const;
+	/* the debug writers: the plugin's tables as resource XML, within the table tags with table */
+	int32_t WriteTextureTable(common::SharedPtr<File> fp, bool table);
+	int32_t WriteStyleTable(common::SharedPtr<File> fp, bool table);
+	/* the widget, its layout and its children, at the indent; with print, also those made by templates */
+	int32_t WriteWidget(ui::Widget *widget, common::SharedPtr<File> fp, uint32_t indent, bool print);
+	/* its opened pages and their widgets; to the TTY without a file */
+	int32_t WritePageTable(common::SharedPtr<File> fp, bool table, bool print);
+	/* a whole resource document: its pages, styles and textures, or one of the tables */
+	int32_t WriteResourceAll(common::SharedPtr<File> fp);
+	int32_t WriteResourcePageTable(common::SharedPtr<File> fp, bool table);
+	int32_t WriteResourceStyleTable(common::SharedPtr<File> fp, bool table);
+	int32_t WriteResourceTextureTable(common::SharedPtr<File> fp, bool table);
+	/* the debug IDs of the resource's pages, or of the opened ones, then the created pages */
+	int32_t GetResourcePages(vector<string> *pages);
+	int32_t GetOpenedPages(vector<string> *pages);
+	/* the debug IDs of the styles (of a widget type's, with type) and of the textures */
+	int32_t GetResourceStyles(const char *type, vector<string> *styles);
+	int32_t GetResourceTextures(vector<string> *textures);
+	/* whether the ID is the resource's, an opened page's or its widget's, a style's or an added texture's */
+	bool IsRegisteredID(const IDParam &id);
+	void SetNodeEntity_AddTexture(const IDParam &id, AddTextureInfo &info);
+	/* loads the file's texture under the ID; src is its path in written resources */
+	int32_t AddResourceTexture(const IDParam &id, const char *filename, const char *src);
+	static VersatileParam *CallFactoryHandler(const char *name);
+	static graph::DrawObj *CallFactoryDrawObj(const char *name);
+	static VersatileParam *CallFactoryDrawObjParam(const char *name);
+	/* the event handler of the plugin's table with the name; NULL without one */
+	ui::HandlerCB GetEventHandler(const char *name) const;
+	/* the element's attribute names an event handler: its listener for the event type */
+	void InstantiateWidget_EventHandler(const cxml::Element &node, ui::Widget *widget,
+					    const char *attr, int32_t type);
+	ui::LayoutCB GetLayoutHandler(const char *name) const;
 
 	/* The resource's texture id: the plugin's surface, its texture table, the common ones. */
 	intrusive_ptr<graph::Surface> GetTexture(const IDParam &id, graph::SurfacePool *pool);
@@ -383,10 +458,10 @@ public:
 	StopFunction m_stop_func;
 	ExitFunction m_exit_func;
 	Module *m_module;
-	InitEventFunctionEntry *m_init_event_handler_table;
-	EventFunctionEntry *m_event_handler_table;
+	const InitEventFunctionEntry *m_init_event_handler_table;
+	const EventFunctionEntry *m_event_handler_table;
 	map<uint32_t, int32_t> m_event_handler_name_table;
-	LayoutFunctionEntry *m_layout_handler_table;
+	const LayoutFunctionEntry *m_layout_handler_table;
 	map<string, int32_t> m_layout_handler_name_table;
 	map<int32_t, void *> m_interface_table;
 	map<uint32_t, ui::Widget *> m_widget_table;
@@ -519,13 +594,28 @@ void ScePafToplevel_E87AD3F3(paf::Plugin *plugin);
 /* closes a page: fades it out and slides it away as the parameter says, else destroys it */
 void ScePafToplevel_340EE53C(paf::Plugin *plugin, paf::ui::Widget *page,
 			     const paf::Plugin::PageCloseParam &param);
+/*
+ * Sets the debug view of every opened page of the resource (m_page_debug_mode: 0 none,
+ * else the PageDebugMode + 1); -1 without a page table.
+ */
+int32_t ScePafToplevel_DD14F248(paf::Plugin *plugin, int32_t mode);
 /* a sound of the plugin's resource, else of the common resource's */
 int32_t ScePafToplevel_CA3E606F(paf::Plugin *plugin, const paf::IDParam &id,
 				const char **buffer1, uint32_t *size1, const char **buffer2,
 				uint32_t *size2, int32_t *samplerate, uint32_t *type);
-/* a sound parameter of the plugin's, else of the common resource's; -1 without one */
-int32_t ScePafToplevel_DA3D4AF0(paf::Plugin *plugin, const paf::IDParam &id, uint32_t *value1,
-				uint32_t *value2);
+/* the sounds of a sound parameter of the plugin's, else of the common resource's; -1 without one */
+int32_t ScePafToplevel_DA3D4AF0(paf::Plugin *plugin, const paf::IDParam &id,
+				paf::ui::WidgetSoundParam::Sound **sounds, uint32_t *num);
+/*
+ * The ID the plugin's resource aliases the ID to (for this model), else the common
+ * resource's; the ID itself and 0x80AF0601 without one.
+ */
+int32_t ScePafToplevel_1AB2DB65(paf::Plugin *plugin, const paf::IDParam &id, paf::IDParam *alias);
+/* the string of the ID's alias, as Plugin::GetString */
+const wchar_t *ScePafToplevel_D8801CA4(paf::Plugin *plugin, const paf::IDParam &id);
+paf::intrusive_ptr<paf::graph::Surface> ScePafToplevel_F13D2937(paf::Plugin *plugin, void *buf,
+								uint32_t size, uint32_t type,
+								bool compressed, uint32_t origsize);
 }
 
 #endif

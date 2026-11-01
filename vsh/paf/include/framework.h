@@ -46,7 +46,7 @@ int32_t ScePafToplevel_95CF05AC(paf::Framework *framework, const paf::IDParam &i
 				uint32_t *size2, int32_t *samplerate, uint32_t *type);
 /* a sound parameter of the common resource's; -1 without one */
 int32_t ScePafToplevel_C04E8309(paf::Framework *framework, const paf::IDParam &id,
-				uint32_t *value1, uint32_t *value2);
+				paf::ui::WidgetSoundParam::Sound **sounds, uint32_t *num);
 /* the Locale for a system language */
 int32_t ScePafToplevel_1AEDE4E0(int32_t language);
 /* true for 1 only */
@@ -259,6 +259,10 @@ private:
 						    void *data);
 	friend int32_t (::ScePafToplevel_1EEFAECD)(Framework *framework, bool **done);
 	friend void (::ScePafToplevel_C9C02705)(void *userdata);
+	friend int32_t (::ScePafToplevel_1AB2DB65)(Plugin *plugin, const IDParam &id, IDParam *alias);
+	friend int32_t (::ScePafToplevel_DA3D4AF0)(Plugin *plugin, const IDParam &id,
+						    ui::WidgetSoundParam::Sound **sounds,
+						    uint32_t *num);
 	friend void (::ScePafToplevel_2E1F0393)(Plugin *plugin, const cxml::Element &elm,
 						 ui::Widget *widget, const IDParam &id);
 	friend void (::ScePafToplevel_3B003F16)(Plugin *plugin, string *id, uint32_t idhash,
@@ -268,7 +272,8 @@ private:
 						    const char **buffer2, uint32_t *size2,
 						    int32_t *samplerate, uint32_t *type);
 	friend int32_t (::ScePafToplevel_C04E8309)(Framework *framework, const IDParam &id,
-						    uint32_t *value1, uint32_t *value2);
+						    ui::WidgetSoundParam::Sound **sounds,
+						    uint32_t *num);
 	friend ui::Widget *(::ScePafToplevel_E37EC9D8)(ui::Widget *parent, const char *type,
 						     const IDParam &id, const IDParam &style,
 						     void *data);
