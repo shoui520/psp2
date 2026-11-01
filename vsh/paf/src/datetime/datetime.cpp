@@ -4,6 +4,7 @@
  * msg_mmdd_*, by the registry's date format) through the framework's common
  * string hook. The clock reads and the tick arithmetic go to SceRtc.
  */
+#define PAF_DATETIME_DATETIME_CPP
 #include <datetime/datetime.h>
 #include <common/char_encoding.h>
 #include <common/resource_hooks.h>

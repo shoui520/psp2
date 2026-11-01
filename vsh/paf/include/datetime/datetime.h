@@ -39,7 +39,12 @@ public:
 
 	~DateTime();
 
+	/* defined in datetime.cpp, which inlines it and exports a copy */
+#ifdef PAF_DATETIME_DATETIME_CPP
+	__declspec(dllexport) static int32_t DayOfWeek(uint16_t year, uint16_t month, uint16_t day);
+#else
 	static int32_t DayOfWeek(uint16_t year, uint16_t month, uint16_t day);
+#endif
 
 	size_t Format(wchar_t *buf, size_t maxLen, const wchar_t *format, bool localtime) const;
 	size_t FormatMsg(wchar_t *buf, size_t maxLen, const wchar_t *format) const;

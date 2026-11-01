@@ -1,6 +1,7 @@
 /*
  * paf::common::String keeps a string in UTF-8 or UTF-16, whichever it was given,
- * and converts on request. string_util splits strings into tokens.
+ * and converts on request. string_util splits strings into tokens. The free
+ * functions format and parse numbers and cut paths and strings apart.
  */
 #ifndef PAF_COMMON_STRING_UTIL_H
 #define PAF_COMMON_STRING_UTIL_H
@@ -100,6 +101,20 @@ public:
 };
 
 string FormatString(const char *format, ...);
+string FormatBytesize(size_t size, int unit);
+string ToString(float value, bool suffix, bool trim, bool special);
+string StripFilename(const string &path, const string &parts);
+bool Rmatch(const string &str, const string &suffix);
+string Subst(const string &str, const string &from, const string &to, size_t pos);
+
+template<class _Ty>
+_Ty FromString(const char *str, size_t len);
+
+template<>
+int FromString<int>(const char *str, size_t len);
+
+template<>
+float FromString<float>(const char *str, size_t len);
 
 namespace string_util {
 

@@ -10,29 +10,6 @@ uint32_t _ZN3paf6common6RefObj6AddRefEv(uint32_t *self)
 	return (uint32_t)sceAtomicIncrement32AcqRel((volatile int32_t *)&self[1]) + 1;
 }
 
-int _ZN3paf6common6RmatchERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEES8_(const PafString *text, const PafString *suffix)
-{
-	int length = (int)text->count;
-	int matched = 0;
-	int suffixLength;
-	int offset;
-
-	if (!length)
-		return 0;
-	suffixLength = (int)suffix->count;
-	offset = length - suffixLength;
-	if (suffixLength <= 0)
-		return 1;
-	while (offset >= 0 && offset < length &&
-	       text->ptr[offset] == suffix->ptr[matched]) {
-		++matched;
-		++offset;
-		if (matched >= suffixLength)
-			return 1;
-	}
-	return 0;
-}
-
 typedef struct PafCommonReference {
 	void **methods;
 	volatile int32_t count;

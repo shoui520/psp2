@@ -108,6 +108,13 @@ public:
 		assign(src);
 	}
 
+	basic_string(const _Myt &src, size_type pos, size_type len)
+	{
+		ptr = &empty_string;
+		count = 0;
+		assign(src, pos, len);
+	}
+
 	~basic_string()
 	{
 		if (ptr != &empty_string)
@@ -189,12 +196,15 @@ public:
 
 	size_type find(const _Elem *str, size_type pos, size_type len) const
 	{
+		if (len == 0 && pos <= count)
+			return pos;
+
 		size_type left = count - pos;
 
-		if (pos < count && left != 0) {
+		if (pos < count && len <= left) {
 			const _Elem *at = ptr + pos;
 
-			do {
+			while (left != 0) {
 				const _Elem *found = _Traits::find(at, *str);
 
 				if (found == NULL)
@@ -203,7 +213,7 @@ public:
 					return found - ptr;
 				left -= found - at + 1;
 				at = found + 1;
-			} while (left != 0);
+			}
 		}
 		return npos;
 	}
@@ -575,6 +585,15 @@ operator+(const basic_string<_Elem, _Traits, _Ax> &left, const basic_string<_Ele
 template<class _Elem, class _Traits, class _Ax>
 inline basic_string<_Elem, _Traits, _Ax>
 operator+(const basic_string<_Elem, _Traits, _Ax> &left, const _Elem *right)
+{
+	basic_string<_Elem, _Traits, _Ax> result(left);
+
+	return result.append(right);
+}
+
+template<class _Elem, class _Traits, class _Ax>
+inline basic_string<_Elem, _Traits, _Ax>
+operator+(const _Elem *left, const basic_string<_Elem, _Traits, _Ax> &right)
 {
 	basic_string<_Elem, _Traits, _Ax> result(left);
 
