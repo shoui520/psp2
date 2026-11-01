@@ -80,7 +80,7 @@ typedef struct HttpTemplate {
 	SceUInt32 recvTimeout;
 	int maxRedirects;
 	int maxAuthRetries;
-	int reserved60;
+	SceSize responseHeaderMaxSize;
 	SceSize recvBufferSize;
 	int reserved68[2];
 	int reserved70;
@@ -140,6 +140,32 @@ typedef struct HttpConnection {
 } HttpConnection;
 _Static_assert(sizeof(HttpConnection) == 0x190, "HttpConnection");
 
+/* a response's status line and the headers libhttp reads (0x58 bytes) */
+typedef struct HttpResponse {
+	SceULong64 contentLength;
+	SceBool contentLengthKnown;
+	SceBool chunked;
+	SceBool close;				/* the server closes the connection after it */
+	int httpMajorVer;
+	int httpMinorVer;
+	int statusCode;
+	const char *reasonPhrase;
+	SceSize reasonPhraseLen;
+	const char *etag;
+	SceSize etagLen;
+	const char *server;
+	SceSize serverLen;
+	const char *date;
+	SceSize dateLen;
+	const char *lastModified;
+	SceSize lastModifiedLen;
+	const char *location;
+	SceSize locationLen;
+	const char *wwwAuthenticate;
+	SceSize wwwAuthenticateLen;
+} HttpResponse;
+_Static_assert(sizeof(HttpResponse) == 0x58, "HttpResponse");
+
 /* what sceHttpCreateRequest2 and sceHttpCreateRequestWithURL2 add to a request (0x20 bytes) */
 typedef struct HttpRequestExtra {
 	char *method;
@@ -159,9 +185,12 @@ typedef struct HttpRequest {
 	HttpTemplate tmpl;
 	HttpConnection *connection;
 	HttpConnection *childConnections;
-	int reserved138[9];
-	int statusCode;
-	int reserved160[18];
+	int reserved138[2];
+	HttpResponse response;
+	const char *connectionValue;		/* the [Proxy-]Connection header's value */
+	SceSize connectionValueLen;
+	SceBool gzipEncoded;			/* Content-Encoding: gzip */
+	int reserved1a4;
 	char *url;
 	char *path;
 	char *query;
@@ -173,8 +202,10 @@ typedef struct HttpRequest {
 	char password[SCE_HTTP_PASSWORD_MAX_SIZE];
 	struct HttpAuthCacheEntry *authCache;
 	struct HttpAuthCacheEntry *proxyAuthCache;
-	int reserved3cc[6];
-	SceSize recvBufferSize;
+	int reserved3cc[4];
+	SceSize requestHeaderSize;		/* with its NUL */
+	SceSize requestHeaderSent;
+	SceSize responseHeaderSize;		/* of the responseHeader buffer */
 	SceSize responseHeaderLen;
 	int reserved3ec;
 	int icmSock;			/* "SceLibHttpIcm" */
@@ -184,8 +215,8 @@ typedef struct HttpRequest {
 	int reserved41c[4];
 	void *reserved42c;
 	int reserved430[2];
-	int reserved438;
-	int reserved43c;
+	int responseHeaderState;		/* where the reader is in the CR LF CR LF */
+	SceSize responseHeaderPos;
 	int reserved440[8];
 } HttpRequest;
 _Static_assert(sizeof(HttpRequest) == 0x460, "HttpRequest");
@@ -466,6 +497,9 @@ void _sceHttpHeaderFree(HttpHeader *header);
 int _sceHttpHeaderCopy(const HttpAllocator *allocator, HttpHeader **copy, const HttpHeader *list);
 int _sceHttpHeaderRemove(HttpHeader **list, const char *name);
 SceSize _sceHttpRequestMakeHeader(HttpRequest *req, char *buf, SceSize size, SceBool countOnly);
+int _sceHttpRequestCreateHeader(char **header, HttpRequest *req);
+int _sceHttpRequestFreeHeader(HttpRequest *req, char **header);
+int _sceHttpReadResponseHeader(HttpRequest *req);
 int _sceHttpMakeHostHeader(const HttpAllocator *allocator, char **header, SceBool https,
 			   const char *hostname, SceUShort16 port);
 
@@ -499,6 +533,8 @@ int _sceHttpSocketSetSendTimeout(int sock, const SceNetSockaddrIn *addr, SceUInt
 int _sceHttpSocketRestoreSendTimeout(int sock, int saved);
 int _sceHttpSocketConnect(int sock, const SceNetSockaddrIn *addr, SceUInt32 timeout, int arg);
 void _sceHttpConnectionClose(HttpConnection *conn);
+int _sceHttpRecv(HttpRequest *req, void *buf, SceSize len, int flags);
+int _sceHttpPeek(HttpRequest *req, void *buf, SceSize len, int flags);
 SceBool _sceHttpConnectionIsConnected(HttpConnection *conn);
 void _sceHttpEpollRemoveConnection(HttpConnection *conn);
 int _sceHttpEpollWait(HttpRequest *req, int arg, int events);

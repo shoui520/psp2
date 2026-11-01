@@ -679,14 +679,14 @@ int _sceHttpAuthCheckResponse(HttpRequest *req)
 
 	if (req->state < 15 && req->state != 6)
 		return 0;
-	status = req->statusCode;
+	status = req->response.statusCode;
 	if (status != 407) {
 		if (req->proxyAuthCache != NULL) {
 			_sceHttpAuthCacheConfirm(req->proxyAuthCache);
 			_sceHttpAuthCacheRelease(req->proxyAuthCache);
 			req->proxyAuthCache = NULL;
 			req->authRetries = 0;
-			status = req->statusCode;
+			status = req->response.statusCode;
 		}
 		if (status != 401) {
 			if (req->authCache != NULL) {
@@ -733,7 +733,7 @@ parsed:
 		return 0;
 	}
 	sdkVersion = _sceHttpGetSdkVersion();
-	status = req->statusCode;
+	status = req->response.statusCode;
 	if (sdkVersion >= 0x2500000 && ret == SCE_HTTP_ERROR_UNKNOWN_AUTH_TYPE)
 		return 0;
 	if (ret < 0)
