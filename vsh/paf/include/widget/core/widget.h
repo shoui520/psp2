@@ -142,10 +142,49 @@ public:
 	IDParam m_sound_id;
 };
 
-/* a widget type's handlers, read from its element (the factory table's handler factory) */
+/*
+ * A widget type's handlers, read from its element (the factory table's handler
+ * factory): the names of its layout handler and of its event handlers, which
+ * the plugin's handler tables turn into functions (members' names ours).
+ */
 class WidgetHandlerParam : public VersatileParam {
 public:
+	/* an event a handler can be named for (names after ScePaf-RE) */
+	class EventList {
+	public:
+		const char *name;
+		int32_t type;
+	};
+
+	/* the event and the name of its handler */
+	class EventEntry {
+	public:
+		const char *m_name;
+		int32_t m_type;
+		const char *m_handler;
+	};
+
+	static const char m_param_name[];
+	static const EventList c_eventList[];
+	static const char *ParamName();
+
+	WidgetHandlerParam();
+	virtual const char *GetParamName() const;
+	/* the widget forgets this parameter's delete callback (below Widget) */
+	virtual ~WidgetHandlerParam();
+	virtual int32_t Set();
+	virtual int32_t Get();
+	virtual int32_t Create(int32_t mode);
+
+	int32_t Init();
+	HandlerCB GetHandler(const char *name);
+	int32_t SetHandler(int32_t type, const char *name);
 	int32_t AttachWidget(Widget *widget);
+	static void delete_cb(Widget *widget, void *param);
+
+	Widget *m_widget;
+	const char *m_layouter;
+	list<EventEntry> m_event_list;
 };
 
 /*
@@ -689,6 +728,12 @@ public:
 	uint8_t m_sound_num;
 	WidgetSoundParam::Sound *m_sounds;
 };
+
+inline WidgetHandlerParam::~WidgetHandlerParam()
+{
+	if (m_widget != NULL)
+		m_widget->RemoveDeleteCB(delete_cb, this);
+}
 
 inline WidgetStyleParam::~WidgetStyleParam()
 {

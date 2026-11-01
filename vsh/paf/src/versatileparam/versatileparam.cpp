@@ -1577,5 +1577,121 @@ void WidgetStyleParam::delete_cb(Widget *widget, void *param)
 	static_cast<WidgetStyleParam *>(param)->DelWidget(widget);
 }
 
+
+const char WidgetHandlerParam::m_param_name[] = "handler";
+
+const WidgetHandlerParam::EventList WidgetHandlerParam::c_eventList[] = {
+	{ "on_init", 0x100001 },
+	{ "on_prepare", 0x100003 },
+	{ "on_ready", 0x100004 },
+};
+
+const char *WidgetHandlerParam::GetParamName() const
+{
+	return m_param_name;
+}
+
+const char *WidgetHandlerParam::ParamName()
+{
+	return m_param_name;
+}
+
+WidgetHandlerParam::WidgetHandlerParam() : m_widget(NULL), m_layouter(NULL)
+{
+	m_event_list.clear();
+	for (uint32_t i = 0; i < sizeof(c_eventList) / sizeof(c_eventList[0]); i++) {
+		EventEntry entry = { c_eventList[i].name, c_eventList[i].type, NULL };
+
+		m_event_list.push_back(entry);
+	}
+}
+
+int32_t WidgetHandlerParam::Init()
+{
+	m_layouter = NULL;
+	for (list<EventEntry>::iterator it = m_event_list.begin(); it != m_event_list.end(); ++it)
+		it->m_handler = NULL;
+	return 0;
+}
+
+HandlerCB WidgetHandlerParam::GetHandler(const char *name)
+{
+	if (m_plugin != NULL)
+		return m_plugin->GetEventHandler(name);
+	return NULL;
+}
+
+/* the widget listens to the event with the plugin's handler of the name */
+int32_t WidgetHandlerParam::SetHandler(int32_t type, const char *name)
+{
+	if (name == NULL)
+		return -1;
+
+	Widget *widget = m_widget;
+
+	if (widget == NULL)
+		return -1;
+	if (m_plugin == NULL)
+		return -1;
+
+	HandlerCB func = m_plugin->GetEventHandler(name);
+
+	widget->AddEventListener(type, new EventCBListener(func, NULL), false);
+	return 0;
+}
+
+/* the widget takes the layout handler and the event handlers that are named */
+int32_t WidgetHandlerParam::Set()
+{
+	if (m_widget == NULL)
+		return -1;
+	if (m_plugin == NULL)
+		return -1;
+	if (m_layouter != NULL) {
+		LayoutCB cb = m_plugin->GetLayoutHandler(m_layouter);
+
+		m_widget->SetLayouter(new Layouter(cb, NULL));
+	}
+	for (list<EventEntry>::iterator it = m_event_list.begin(); it != m_event_list.end(); ++it)
+		SetHandler(it->m_type, it->m_handler);
+	return 0;
+}
+
+int32_t WidgetHandlerParam::Get()
+{
+	if (m_widget == NULL || m_plugin == NULL)
+		return -1;
+	return 0;
+}
+
+int32_t WidgetHandlerParam::Create(int32_t mode)
+{
+	VersatileParam::Create(mode);
+	if (m_serial != NULL)
+		m_serial->AddParam("layouter", &m_layouter, ResourceParam::SEMANTIC_STRING);
+	for (list<EventEntry>::iterator it = m_event_list.begin(); it != m_event_list.end(); ++it) {
+		if (m_serial != NULL)
+			m_serial->AddParam(it->m_name, &it->m_handler, ResourceParam::SEMANTIC_STRING);
+	}
+	return 0;
+}
+
+int32_t WidgetHandlerParam::AttachWidget(Widget *widget)
+{
+	if (m_widget != widget) {
+		if (m_widget != NULL)
+			m_widget->RemoveDeleteCB(delete_cb, this);
+		m_widget = widget;
+		if (widget != NULL)
+			widget->AddDeleteCB(delete_cb, this);
+	}
+	return 0;
+}
+
+void WidgetHandlerParam::delete_cb(Widget *widget, void *param)
+{
+	static_cast<WidgetHandlerParam *>(param)->AttachWidget(NULL);
+}
+
 }
 }

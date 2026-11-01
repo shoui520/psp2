@@ -18,14 +18,6 @@ int ScePafResource_CEED7338(const void *const *self)
 	return 0;
 }
 
-int _ZN3paf2ui18WidgetHandlerParam3GetEv(const uint8_t *self)
-{
-	if (*(const uint32_t *)(self + 32) &&
-	    *(const uint32_t *)(self + 8))
-		return 0;
-	return -1;
-}
-
 int _ZN3paf2ui16WidgetSoundParam4InitEv(const uint8_t *self)
 {
 	uint8_t *current = *(uint8_t *const *)(self + 44);

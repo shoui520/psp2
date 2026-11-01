@@ -22,21 +22,6 @@ extern void ScePafStdc_5C468294(void *ptr);
 static const char s_default_string[] = "";
 static const char s_buffer_filename[] = "";
 
-int _ZN3paf2ui18WidgetHandlerParam4InitEv(uint8_t *self)
-{
-	uint32_t *root = *(uint32_t **)(self + 40);
-	uint32_t *node;
-
-	*(uint32_t *)(self + 36) = 0;
-	node = root ? (uint32_t *)root[1] : NULL;
-	while (node != root) {
-		node[4] = 0;
-		if (node)
-			node = (uint32_t *)node[1];
-	}
-	return 0;
-}
-
 int _ZN3paf2ui16WidgetSoundParam9DelWidgetEPNS0_6WidgetE(uint32_t *self, uint32_t target)
 {
 	uint32_t *node = NULL;
