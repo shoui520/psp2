@@ -134,6 +134,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/versatileparam/idparam.cpp
 	src/versatileparam/resourceparam.cpp
 	src/versatileparam/versatileparam.cpp
+	src/versatileparam/visualparam.cpp
 	src/cxml/cxml.c
 	src/cxml/document.c
 	src/cxml/attribute.c
@@ -260,7 +261,8 @@ set_source_files_properties(src/timer/timerlistener.cpp src/timer/timerlistenerl
 set_source_files_properties(src/timer/timerqueue.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)
 set_source_files_properties(src/timer/get_time.cpp src/url/url.cpp src/rtc/rtc.cpp src/misc/autotest_tty.cpp
 	src/framework.cpp src/plugin.cpp src/versatileparam/resourceparam.cpp
-	src/versatileparam/versatileparam.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+	src/versatileparam/versatileparam.cpp src/versatileparam/visualparam.cpp
+	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # PropertyList inlines the value map's operator[] and StringElement::GetString but keeps the
 # element map's operator[] out of line: budget 24 does since map's const find is defined out of

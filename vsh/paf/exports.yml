@@ -2414,7 +2414,7 @@ ScePaf:
         - _ZN3paf2ui11WidgetParam5WriteENS_6common9SharedPtrINS_4FileEEEjj: 0x1039B782
         - _ZNK3paf8resource11ResourceObj7GetFileERKNS_4cxml7ElementEPjPPKcPNS_6memory13HeapAllocatorESC_: 0x10E92A4E
         - _ZNK3paf8resource11ResourceObj17GetStringDocumentEv: 0x1172424E
-        - ScePafResource_1190EBA9: 0x1190EBA9
+        - _ZN3paf11VisualParam15ResolutionParamC2EPS0_PKcPNS_2ui14ResolutionDataEiPKjS9_RKNS_4math2v3ESD_: 0x1190EBA9
         - _ZN3paf13ResourceParam8SetDirtyEb: 0x120CECA8
         - _ZNK3paf2ui17WidgetLayoutParam12GetParamNameEv: 0x122101EC
         - _ZNK3paf2ui16WidgetSoundParam12GetParamNameEv: 0x1352E518
@@ -2451,7 +2451,7 @@ ScePaf:
         - ScePafResource_2B873BCD: 0x2B873BCD
         - _ZN3paf2ui17WidgetLayoutParam9delete_cbEPNS0_6WidgetEPv: 0x2D6C0F9B
         - _ZN3paf4cxml4util16FindChildElementERKNS0_7ElementEPKcS6_j: 0x2E541C63
-        - ScePafResource_3105D9D5: 0x3105D9D5
+        - _ZN3paf11VisualParam15ResolutionParam7IsDirtyEv: 0x3105D9D5
         - _ZN3paf11VisualParam9Vec4Param4DrawEv: 0x31126122
         - ScePafResource_31C3B828: 0x31C3B828
         - scePafResourceGetIdStrLpb: 0x346E532C
@@ -2490,7 +2490,7 @@ ScePaf:
         - _ZNK3paf8resource11ResourceObj9GetStringEPKcPPKwPj: 0x50CD574F
         - _ZN3paf5graph12DrawObjParam10AddDrawObjEPNS0_7DrawObjE: 0x5136961B
         - _ZN3paf2ui17WidgetLayoutParam8SetTimerEPNS_5TimerE: 0x5206205F
-        - ScePafResource_532A9E1E: 0x532A9E1E
+        - _ZN3paf11VisualParam8AddParamEPKcPNS_2ui14ResolutionDataEiPKjS7_RKNS_4math2v3ESB_: 0x532A9E1E
         - _ZN3paf2ui17WidgetLayoutParamD2Ev: 0x5453FB74
         - ScePafResource_556665FC: 0x556665FC
         - _ZN3paf4cxml4util18FindEmptyAttributeERKNS0_7ElementEPNS0_9AttributeE: 0x55AB01CC
@@ -2536,7 +2536,7 @@ ScePaf:
         - _ZN3paf13ResourceParam9SetIDNameEPKc: 0x824D4AD7
         - _ZN3paf11VisualParam9Vec2Param4DrawEv: 0x82FB5204
         - _ZNK3paf8resource11ResourceObj20GetTextureFromBufferERKNS_4cxml7ElementEPPvPjS8_: 0x862D4A5F
-        - ScePafResource_8689B24D: 0x8689B24D
+        - _ZN3paf11VisualParam15ResolutionParam8FindDataEv: 0x8689B24D
         - scePafResourceGetData: 0x86C66229
         - _ZNK3paf5graph12DrawObjParam12GetParamNameEv: 0x87DB69C5
         - _ZN3paf2ui16WidgetFocusParamC1Ev: 0x880B1C31
@@ -2664,7 +2664,7 @@ ScePaf:
         - _ZN3paf2ui16WidgetStyleParam7GetEachEPNS0_6WidgetE: 0xF9132788
         - _ZN3paf11VisualParam10FloatParam4DrawEv: 0xF9FF06B5
         - _ZNK3paf8resource11ResourceObj11GetFileNameEv: 0xFA00F835
-        - ScePafResource_FB1FE972: 0xFB1FE972
+        - _ZN3paf11VisualParam15ResolutionParamC1EPS0_PKcPNS_2ui14ResolutionDataEiPKjS9_RKNS_4math2v3ESD_: 0xFB1FE972
         - _ZN3paf5graph12DrawObjParam6CreateEi: 0xFBABCDFF
         - _ZN3paf11VisualParam8AddParamEPKcPiiii: 0xFDDA1E50
         - scePafResourceGetIntegerArray: 0xFDF977B9
