@@ -843,4 +843,36 @@ int SceHttp_53B722F2(int id, SceBool enable, int mode, const char *server, SceUS
 int SceHttp_C498765A(int id, int value);
 int SceHttp_855D5254(int value);
 
+/* cert.c: the loaded CA certificates and the client certificate with its private key */
+#define HTTPS_SSL_ERROR_INVALID_VALUE	-2143070207	/* 0x80435801 */
+#define HTTPS_SSL_ERROR_INVALID_ID	-2143070206	/* 0x80435802 */
+
+struct HttpsCaListContext;
+
+int SceHttp_E0825488(void *(*mallocFunc)(SceSize size), void (*freeFunc)(void *ptr));
+int SceHttp_42108FBE(void);
+int SceHttp_0CC59EF6(void);
+int SceHttp_11C9BCE8(void);
+int SceHttp_F8885CFD(const void *data, SceSize size);
+int SceHttp_031EBD2A(const void *data, SceSize size);
+int SceHttp_802E3C30(const void *data, SceSize size);
+int SceHttp_A9A39BA1(int sslCtx, void *arg);
+int SceHttp_A4CF892E(void);
+SceBool _sceHttpsCertIsInitialized(void);
+int _sceHttpsCertGetCa(int unused, int index, void *buf, SceSize size, int unused2,
+		       SceSize *outSize);
+int _sceHttpsCertGetClientCert(void *buf, SceSize size, SceSize *outSize);
+int _sceHttpsCertGetPrivateKey(void *buf, SceSize size, SceSize *outSize);
+int _sceHttpsCertGetCaList(SceSslCert ***caCerts, SceInt32 *caNum,
+			   struct HttpsCaListContext *context);
+int _sceHttpsCertFreeCaList(SceSslCert **caCerts, SceInt32 caNum,
+			    struct HttpsCaListContext *context);
+
+/* the SSL glue (not written yet) */
+int _sceHttpsSslCallback(int sslCtx, void *data, int arg2, int arg3, int *result);
+int _sceHttpsSslGetCaList(SceSslCert ***caCerts, SceInt32 *caNum,
+			  struct HttpsCaListContext *context);
+int _sceHttpsSslFreeCaList(SceSslCert **caCerts, SceInt32 caNum,
+			   struct HttpsCaListContext *context);
+
 #endif /* HTTP_INTERNAL_H */
