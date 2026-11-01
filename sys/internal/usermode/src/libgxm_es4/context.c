@@ -1197,8 +1197,8 @@ int sceGxmEndScene(SceGxmContext *context, const SceGxmNotification *vertexNotif
  * the tag after the word; an immediate context's take takenMarker when the capture tool's
  * userMarker callback takes the tag (or there is none).
  */
-static inline int gxmContextWriteUserMarker(SceGxmContext *context, const char *tag,
-					    SceUInt32 marker, SceUInt32 takenMarker)
+static inline GXM_DBG_NOINLINE int gxmContextWriteUserMarker(SceGxmContext *context, const char *tag,
+						     SceUInt32 marker, SceUInt32 takenMarker)
 {
 	SceBool tagged = (marker & ~2) == GXM_USER_MARKER_PUSH_TAG;
 	SceUInt32 *block;

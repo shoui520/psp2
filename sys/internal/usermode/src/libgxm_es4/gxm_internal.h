@@ -1227,6 +1227,7 @@ typedef struct SceGxmFragmentProgram {
 
 GXM_ASSERT_SIZE(SceGxmFragmentProgram, 0x80);
 
+SceBool sceGxmFragmentProgramIsEnabled(const SceGxmFragmentProgram *fragmentProgram);
 SceUInt32 sceGxmFragmentProgramGetPassType(const SceGxmFragmentProgram *fragmentProgram);
 
 typedef struct SceGxmVertexProgram {
