@@ -21,19 +21,33 @@
 
 int sceGxmProgramCheck(const SceGxmProgram *program)
 {
-	if (program == NULL)
+	if (program == NULL) {
+		GXM_DBG_ERROR(30, "Parameter program to sceGxmProgramCheck is NULL.");
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (((SceUInt32)program & 3) != 0)
+	}
+	if (((SceUInt32)program & 3) != 0) {
+		GXM_DBG_ERROR(36, "The alignment of the program is incorrect.");
 		return SCE_GXM_ERROR_INVALID_ALIGNMENT;
-	if (program->magic != GXM_PROGRAM_MAGIC || program->majorVersion != 1)
+	}
+	if (program->magic != GXM_PROGRAM_MAGIC) {
+		GXM_DBG_ERROR(42, "The check bytes in the program header did not match the expect "
+			      "values, the data is corrupt.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if ((SceUInt32)(program->minorVersion - 4) >= 2)
+	}
+	if (program->majorVersion != 1 || (SceUInt32)(program->minorVersion - 4) >= 2) {
+		GXM_DBG_ERROR(56, "The program header version is incorrect: version %d.%d was found, "
+			      "but version should be within the range %d.%d to %d.%d.  Please "
+			      "recompile the shader with the latest compiler.",
+			      program->majorVersion, program->minorVersion, 1, 4, 1, 5);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	return 0;
 }
 
 SceBool sceGxmProgramIsEquivalent(const SceGxmProgram *programA, const SceGxmProgram *programB)
 {
+	GXM_DBG_ASSERT(66, programA);
+	GXM_DBG_ASSERT(67, programB);
 	/* the GUIDs may differ */
 	if (programA->magic != programB->magic || programA->version != programB->version ||
 	    programA->size != programB->size)
@@ -44,36 +58,43 @@ SceBool sceGxmProgramIsEquivalent(const SceGxmProgram *programA, const SceGxmPro
 
 SceUInt32 sceGxmProgramGetSize(const SceGxmProgram *program)
 {
+	GXM_DBG_ASSERT(87, program);
 	return program->size;
 }
 
 SceUInt32 sceGxmProgramGetType(const SceGxmProgram *program)
 {
+	GXM_DBG_ASSERT(94, program);
 	return program->programFlags & GXM_PROGRAM_FRAGMENT;
 }
 
 SceBool sceGxmProgramIsDiscardUsed(const SceGxmProgram *program)
 {
+	GXM_DBG_ASSERT(101, program);
 	return (program->programFlags & GXM_PROGRAM_DISCARD) >> 3;
 }
 
 SceBool sceGxmProgramIsDepthReplaceUsed(const SceGxmProgram *program)
 {
+	GXM_DBG_ASSERT(108, program);
 	return (program->programFlags & GXM_PROGRAM_DEPTH_REPLACE) >> 4;
 }
 
 SceBool sceGxmProgramIsSpriteCoordUsed(const SceGxmProgram *program)
 {
+	GXM_DBG_ASSERT(115, program);
 	return (program->programFlags & GXM_PROGRAM_SPRITE_COORD) >> 5;
 }
 
 SceBool sceGxmProgramIsNativeColorUsed(const SceGxmProgram *program)
 {
+	GXM_DBG_ASSERT(122, program);
 	return (program->programFlags & GXM_PROGRAM_NATIVE_COLOR) >> 6;
 }
 
 SceBool sceGxmProgramIsFragColorUsed(const SceGxmProgram *program)
 {
+	GXM_DBG_ASSERT(129, program);
 	return (program->programFlags & GXM_PROGRAM_FRAG_COLOR) >> 7;
 }
 
@@ -82,10 +103,23 @@ int sceGxmProgramGetOutputRegisterFormat(const SceGxmProgram *program, SceUInt32
 {
 	const GxmProgramVaryings *varyings;
 
-	if (program == NULL || type == NULL || componentCount == NULL)
+	if (program == NULL) {
+		GXM_DBG_ERROR_NULL(142, sceGxmProgramGetOutputRegisterFormat, program);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (!(program->programFlags & GXM_PROGRAM_FRAGMENT))
+	}
+	if (type == NULL) {
+		GXM_DBG_ERROR_NULL(146, sceGxmProgramGetOutputRegisterFormat, type);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (componentCount == NULL) {
+		GXM_DBG_ERROR_NULL(150, sceGxmProgramGetOutputRegisterFormat, componentCount);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (!(program->programFlags & GXM_PROGRAM_FRAGMENT)) {
+		GXM_DBG_ERROR(154, "Parameter program to function sceGxmProgramGetOutputRegisterFormat "
+			      "is not a fragment program.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	varyings = gxmProgramGetVaryings(program);
 	*type = varyings->fragment.outputRegisterType;
 	*componentCount = varyings->fragment.outputComponentCount;
@@ -97,6 +131,7 @@ SceUInt32 sceGxmProgramGetVertexProgramOutputs(const SceGxmProgram *program)
 	const GxmProgramVaryings *varyings;
 	SceUInt32 flags, texCoords, outputs;
 
+	GXM_DBG_ASSERT(164, program);
 	if (program->programFlags & GXM_PROGRAM_FRAGMENT)
 		return 0;
 	varyings = gxmProgramGetVaryings(program);
@@ -163,6 +198,7 @@ SceUInt32 sceGxmProgramGetFragmentProgramInputs(const SceGxmProgram *program)
 	const GxmProgramFragmentInput *input, *end;
 	SceUInt32 inputs, word;
 
+	GXM_DBG_ASSERT(175, program);
 	if (!(program->programFlags & GXM_PROGRAM_FRAGMENT))
 		return 0;
 	varyings = gxmProgramGetVaryings(program);
@@ -269,19 +305,23 @@ SceUInt32 sceGxmProgramGetFragmentProgramInputs(const SceGxmProgram *program)
 
 SceUInt32 sceGxmProgramGetDefaultUniformBufferSize(const SceGxmProgram *program)
 {
+	GXM_DBG_ASSERT(186, program);
 	return program->defaultUniformBufferCount << 2;
 }
 
 SceUInt32 sceGxmProgramGetParameterCount(const SceGxmProgram *program)
 {
+	GXM_DBG_ASSERT(193, program);
 	return program->parameterCount;
 }
 
 const SceGxmProgramParameter *sceGxmProgramGetParameter(const SceGxmProgram *program,
 							SceUInt32 index)
 {
-	const SceGxmProgramParameter *parameters = gxmProgramGetParameters(program);
+	const SceGxmProgramParameter *parameters;
 
+	GXM_DBG_ASSERT(201, program);
+	parameters = gxmProgramGetParameters(program);
 	if (index >= program->parameterCount)
 		return NULL;
 	return &parameters[index];
@@ -294,6 +334,7 @@ const SceGxmProgramParameter *sceGxmProgramFindParameterByName(const SceGxmProgr
 	const char *parameterName;
 	SceUInt32 count, i;
 
+	GXM_DBG_ASSERT(213, program);
 	if (name == NULL)
 		return NULL;
 	parameter = gxmProgramGetParameters(program);
@@ -310,9 +351,12 @@ const SceGxmProgramParameter *_sceGxmProgramFindParameterBySemantic(const SceGxm
 								    SceUInt32 semantic,
 								    SceUInt32 index)
 {
-	const SceGxmProgramParameter *parameter = gxmProgramGetParameters(program);
-	SceUInt32 count = program->parameterCount, i;
+	const SceGxmProgramParameter *parameter;
+	SceUInt32 count, i;
 
+	GXM_DBG_ASSERT(238, program);
+	parameter = gxmProgramGetParameters(program);
+	count = program->parameterCount;
 	for (i = 0; i < count; i++, parameter++) {
 		if (semantic == gxmParameterGetSemantic(parameter) &&
 		    index == gxmParameterGetSemanticIndex(parameter))
@@ -329,6 +373,7 @@ const SceGxmProgramParameter *sceGxmProgramFindParameterBySemantic(const SceGxmP
 	const SceGxmProgramParameter *parameter;
 	SceUInt32 i;
 
+	GXM_DBG_ASSERT(259, program);
 	if (semantic == 0)
 		return NULL;
 	parameter = gxmProgramGetParameters(program);
@@ -344,26 +389,32 @@ const SceGxmProgramParameter *sceGxmProgramFindParameterBySemantic(const SceGxmP
 SceUInt32 sceGxmProgramParameterGetIndex(const SceGxmProgram *program,
 					 const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(283, program);
+	GXM_DBG_ASSERT(284, parameter);
 	return parameter - gxmProgramGetParameters(program);
 }
 
 SceUInt32 sceGxmProgramParameterGetCategory(const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(292, parameter);
 	return gxmParameterGetCategory(parameter);
 }
 
 const char *sceGxmProgramParameterGetName(const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(299, parameter);
 	return GXM_RELATIVE(parameter->nameOffset);
 }
 
 SceUInt8 _sceGxmProgramParameterGetSemantic(const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(307, parameter);
 	return ((const SceUInt8 *)&parameter->info)[2];
 }
 
 SceUInt32 sceGxmProgramParameterGetSemantic(const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(314, parameter);
 	if (gxmParameterGetCategory(parameter) != SCE_GXM_PARAMETER_CATEGORY_ATTRIBUTE)
 		return 0;
 	return gxmParameterGetSemantic(parameter);
@@ -371,36 +422,43 @@ SceUInt32 sceGxmProgramParameterGetSemantic(const SceGxmProgramParameter *parame
 
 SceUInt32 sceGxmProgramParameterGetSemanticIndex(const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(321, parameter);
 	return ((const SceUInt8 *)&parameter->info)[3] & 0xf;
 }
 
 SceUInt32 sceGxmProgramParameterGetType(const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(328, parameter);
 	return (parameter->info & GXM_PARAMETER_TYPE) >> 4;
 }
 
 SceUInt32 sceGxmProgramParameterGetComponentCount(const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(335, parameter);
 	return (parameter->info & GXM_PARAMETER_COMPONENT_COUNT) >> 8;
 }
 
 SceUInt32 sceGxmProgramParameterGetArraySize(const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(342, parameter);
 	return parameter->arraySize;
 }
 
 SceUInt32 sceGxmProgramParameterGetResourceIndex(const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(349, parameter);
 	return parameter->resourceIndex;
 }
 
 SceUInt32 sceGxmProgramParameterGetContainerIndex(const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(356, parameter);
 	return (parameter->info & GXM_PARAMETER_CONTAINER_INDEX) >> 12;
 }
 
 SceBool sceGxmProgramParameterIsSamplerCube(const SceGxmProgramParameter *parameter)
 {
+	GXM_DBG_ASSERT(363, parameter);
 	return (parameter->info & GXM_PARAMETER_SAMPLER_CUBE) >> 28;
 }
 
@@ -411,6 +469,8 @@ SceBool sceGxmProgramParameterIsRegFormat(const SceGxmProgram *program,
 	const GxmProgramVaryings *varyings;
 	SceUInt32 index;
 
+	GXM_DBG_ASSERT(371, program);
+	GXM_DBG_ASSERT(372, parameter);
 	if (program->programFlags & GXM_PROGRAM_FRAGMENT)
 		return 0;
 	if (gxmParameterGetCategory(parameter) != SCE_GXM_PARAMETER_CATEGORY_ATTRIBUTE)
@@ -481,23 +541,28 @@ SceSize gxmProgramGetSecondaryCodeSize(const SceGxmProgram *program)
 int gxmProgramBuildSecondaryCode(GxmChunkBuffer *buffer, const SceGxmProgram *program,
 				 GxmCodeRef *ref)
 {
-	SceUInt32 count = program->secondaryInstructionCount, size, offset;
+	SceUInt32 count = program->secondaryInstructionCount, headerCount, size, offset;
+	SceSize alignment;
 	const SceUInt32 *source;
 	SceUInt32 *code, *out;
 
 	if (count == 0)
 		return gxmUsseBuildEmptyProgram(buffer, ref);
+	headerCount = (gxmGlobals.compatFlags & GXM_COMPAT_USSE_OLD_HEADER) ? 4 : 9;
+	alignment = gxmUsseAlignment();
 	source = GXM_RELATIVE(program->secondaryProgramOffset);
 	size = count;
 	if (gxmUsseIsPhase(source))
 		size--;
-	size = (size + ((gxmGlobals.compatFlags & GXM_COMPAT_USSE_OLD_HEADER) ? 4 : 9)) * 8;
-	code = gxmChunkBufferReserve(buffer, size, gxmUsseAlignment());
-	if (code == NULL)
+	size = (size + headerCount) * 8;
+	code = gxmChunkBufferReserve(buffer, size, alignment);
+	if (code == NULL) {
+		GXM_DBG_ERROR(510, "Could not reserve %d bytes.", size);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
+	offset = buffer->cur + buffer->gpuEnd - buffer->end;
 	code[1] = 0xfa440700;
 	code[0] = 0;
-	offset = buffer->cur + buffer->gpuEnd - buffer->end;
 	if (!(gxmGlobals.compatFlags & GXM_COMPAT_USSE_OLD_HEADER))
 		out = gxmUsseWriteHeader(code + 2);
 	else
@@ -508,7 +573,7 @@ int gxmProgramBuildSecondaryCode(GxmChunkBuffer *buffer, const SceGxmProgram *pr
 		source += 2;
 	}
 	sceClibMemcpy_safe(out, source, count * 8);
-	buffer->cur = (SceUInt32)(out + count * 2);
+	gxmChunkBufferCommit(buffer, out + count * 2);
 	ref->address = 0;
 	ref->taskControl = 2;
 	gxmCodeRefSetAddress(ref, offset);
@@ -520,7 +585,7 @@ int gxmProgramBuildVertexCode(GxmChunkBuffer *buffer, const SceGxmProgram *progr
 			      const SceGxmVertexAttribute *attributes, SceUInt32 attributeCount,
 			      GxmCodeRef *ref)
 {
-	const GxmProgramVaryings *varyings = gxmProgramGetVaryings(program);
+	const GxmProgramVaryings *varyings = gxmProgramGetVertexVaryings(program);
 	SceUInt32 claimed[2], missing[2], unpackOffset, *unpackCode, bit, reg, last, i;
 	SceUInt32 *code, *trailer, offset, entry;
 	const SceInt32 *entryField;
@@ -539,21 +604,33 @@ int gxmProgramBuildVertexCode(GxmChunkBuffer *buffer, const SceGxmProgram *progr
 				last = reg + attributes[i].componentCount;
 				for (; reg < last; reg++) {
 					bit = 1 << (reg & 0x1f);
-					if (claimed[reg >> 5] & bit)
+					if (claimed[reg >> 5] & bit) {
+						GXM_DBG_ERROR(577, "PA register %d is written from "
+							      "multiple vertex attributes", reg);
 						return SCE_GXM_ERROR_INVALID_VALUE;
+					}
 					claimed[reg >> 5] |= bit;
-					if (!(varyings->vertex.regFormatMask[reg >> 5] & bit))
+					if (!(varyings->vertex.regFormatMask[reg >> 5] & bit)) {
+						GXM_DBG_ERROR(585, "PA register %d expects typed data",
+							      reg);
 						return SCE_GXM_ERROR_INVALID_VALUE;
+					}
 				}
 			} else {
 				last = reg + 4;
 				for (; reg < last; reg++) {
 					bit = 1 << (reg & 0x1f);
-					if (claimed[reg >> 5] & bit)
+					if (claimed[reg >> 5] & bit) {
+						GXM_DBG_ERROR(601, "PA register %d is written from "
+							      "multiple vertex attributes", reg);
 						return SCE_GXM_ERROR_INVALID_VALUE;
+					}
 					claimed[reg >> 5] |= bit;
-					if (varyings->vertex.regFormatMask[reg >> 5] & bit)
+					if (varyings->vertex.regFormatMask[reg >> 5] & bit) {
+						GXM_DBG_ERROR(609, "PA register %d expects untyped data",
+							      reg);
 						return SCE_GXM_ERROR_INVALID_VALUE;
+					}
 				}
 			}
 		}
@@ -561,8 +638,10 @@ int gxmProgramBuildVertexCode(GxmChunkBuffer *buffer, const SceGxmProgram *progr
 		missing[1] = ~claimed[1];
 	}
 	if ((missing[0] & varyings->vertex.inputMask[0]) != 0 ||
-	    (missing[1] & varyings->vertex.inputMask[1]) != 0)
+	    (missing[1] & varyings->vertex.inputMask[1]) != 0) {
+		GXM_DBG_ERROR(623, "Vertex attributes do not completely provide vertex program inputs");
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 
 	unpackOffset = 0;
 	unpackCode = NULL;
@@ -574,8 +653,11 @@ int gxmProgramBuildVertexCode(GxmChunkBuffer *buffer, const SceGxmProgram *progr
 	/* the program itself, then a trailer naming it */
 	code = gxmChunkBufferReserve(buffer, (program->primaryInstructionCount + 2) * 8,
 				     gxmUsseAlignment());
-	if (code == NULL)
+	if (code == NULL) {
+		GXM_DBG_ERROR(675, "Could not reserve %d bytes.",
+			      (program->primaryInstructionCount + 2) * 8);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
+	}
 	offset = buffer->cur + buffer->gpuEnd - buffer->end;
 	sceClibMemcpy_safe(code, GXM_RELATIVE(program->primaryProgramOffset),
 		      program->primaryInstructionCount << 3);
@@ -584,7 +666,7 @@ int gxmProgramBuildVertexCode(GxmChunkBuffer *buffer, const SceGxmProgram *progr
 	trailer[1] = (SceUInt32)program;
 	trailer[2] = (SceUInt32)program;
 	trailer[3] = GXM_PROGRAM_TRAILER_VERTEX;
-	buffer->cur = (SceUInt32)(trailer + 4);
+	gxmChunkBufferCommit(buffer, trailer + 4);
 
 	entryField = GXM_RELATIVE(program->entryOffset);
 	entry = offset + *entryField * 8;
