@@ -1259,17 +1259,17 @@ typedef struct GxmRingBuffer {
 	SceUInt32 gpuOffset;
 	SceSize size;
 	SceSize usableSize;		/* size less GXM_CHUNK_LINK_RESERVE when linked */
-	SceSize halfSize;		/* half the usable size */
+	SceSize commitLimit;		/* half the usable size */
 	SceUInt8 linked;
-	SceUInt32 threshold;		/* memory + halfSize at first; the refill moves it */
+	SceUInt32 threshold;		/* memory + commitLimit at first; the refill moves it */
 	volatile SceUInt32 *readOffset;	/* the GPU's position, in the context's slot */
 	SceUInt32 lastOffset;		/* the refill measures from it; 0 at first */
 } GxmRingBuffer;
 
-void gxmRingBufferInit(GxmRingBuffer *ring, GxmChunkBuffer *buffer, void *memory,
-		       SceUInt32 gpuOffset, SceSize size, SceUInt8 linked,
+void gxmRingBufferInit(GxmRingBuffer *ringBuffer, GxmChunkBuffer *writeBuffer, void *memory,
+		       SceUInt32 gpuOffset, SceSize allocSize, SceUInt8 linked,
 		       volatile SceUInt32 *readOffset);
-void gxmRingBufferKicked(GxmRingBuffer *ring, GxmChunkBuffer *buffer);
+void gxmRingBufferKicked(GxmRingBuffer *ringBuffer, GxmChunkBuffer *writeBuffer);
 
 /* --- surfaces --- */
 
