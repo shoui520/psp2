@@ -1381,7 +1381,7 @@ void _sceHttpCookieNop(void)
 {
 }
 
-int _sceHttpCookieInit(void)
+int _sceHttpCookieInit(void *reserved0, void *reserved1)
 {
 	int ret;
 

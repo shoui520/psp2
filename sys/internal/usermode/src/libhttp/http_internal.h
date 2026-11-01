@@ -20,6 +20,10 @@
 int sceAppMgrIsGameProgram(void);
 int sceAppMgrIsNonGameProgram(void);
 
+/* SceModulemgr, SceRegMgrForGame */
+int sceKernelIsCalledFromSysModule(const void *addr);
+int sceRegMgrSystemParamGetInt(int id, int *value);
+
 /* vitasdk: sceKernelGetSystemTimeLow */
 extern SceUInt32 SceThreadmgr_47F6DE49(void);
 
@@ -110,7 +114,8 @@ typedef struct HttpTemplate {
 	HttpAllocator allocator;
 	void (*freeObject)(void *ptr);
 	int reservedC0;
-	int reservedC4[2];
+	int reservedC4;
+	SceHttpEpollHandle epoll;		/* sceHttpSetEpoll's */
 	SceUShort16 proxyPort;
 	SceUShort16 reservedCe;
 	SceBool acceptEncodingGzipEnabled;
@@ -187,7 +192,8 @@ typedef struct HttpRequest {
 	HttpObject object;
 	int state;
 	int method;
-	int reserved1c[2];
+	int lastError;				/* the error that ended it (state 19) */
+	int reserved20;
 	int authRetries;
 	SceULong64 contentLength;
 	int reserved30[6];
@@ -207,7 +213,7 @@ typedef struct HttpRequest {
 	char *fragment;
 	void *reserved1b8;
 	char *responseHeader;
-	void *reserved1c0;
+	char *allResponseHeaders;		/* sceHttpGetAllResponseHeaders' copy */
 	char username[SCE_HTTP_USERNAME_MAX_SIZE];
 	char password[SCE_HTTP_PASSWORD_MAX_SIZE];
 	struct HttpAuthCacheEntry *authCache;
@@ -217,7 +223,7 @@ typedef struct HttpRequest {
 	SceSize requestHeaderSent;
 	SceSize responseHeaderSize;		/* of the responseHeader buffer */
 	SceSize responseHeaderLen;
-	int reserved3ec;
+	SceSize allResponseHeadersSize;
 	int icmSock;			/* "SceLibHttpIcm" */
 	int icmOption;
 	SceKernelLwMutexWork lock;
@@ -466,7 +472,7 @@ int _sceHttpCookieFind(HttpCookieMatch **match, char *host, const char *path, co
 int _sceHttpCookieGet(const char *url, char *cookie, SceSize prepared, SceSize *required);
 int _sceHttpCookieFlush(void);
 void _sceHttpCookieNop(void);
-int _sceHttpCookieInit(void);
+int _sceHttpCookieInit(void *reserved0, void *reserved1);
 int _sceHttpCookieTerm(void);
 int _sceHttpCookieParseAttrs(const char *header, SceSize headerLen, HttpCookieAttr **attrs,
 	SceBool *secure, SceBool *discard, int type);
@@ -579,5 +585,90 @@ HttpConnection *_sceHttpRequestGetConnection(HttpRequest *req);
 /* URIs */
 int _sceHttpUriElementCopy(SceHttpUriElement *dst, const SceHttpUriElement *src, char *buf,
 			   SceSize size, SceSize *require);
+
+/* http.c: what the exports call */
+#define HTTP_METHOD_EXTRA	8		/* a method of its own name */
+#define HTTPS_FLAGS_ALL		0x3f		/* the SCE_HTTPS_FLAG_* */
+#define HTTPS_FLAGS_PRIVATE	0x1ff		/* and the system's own */
+#define HTTPS_FLAGS_SERVER_CHECKS	(SCE_HTTPS_FLAG_SERVER_VERIFY | SCE_HTTPS_FLAG_CN_CHECK | \
+					 SCE_HTTPS_FLAG_KNOWN_CA_CHECK)
+#define HTTPS_FLAGS_SET		0x80000000	/* a template's flags were set */
+#define HTTPS_ERROR_DISABLE_OPTION_NOT_ALLOWED	-2143072149	/* 0x8043506B */
+#define HTTP_REGMGR_SSL_VERIFY_DISABLE	0x563bfe	/* the system parameter DisableOption needs */
+int _sceHttpCreateLock(void);
+int _sceHttpDeleteLock(void);
+int _sceHttpPoolCreate(SceSize size);
+int _sceHttpPoolDestroy(void);
+int _sceHttpPoolGetStats(void *pool, SceHttpMemoryPoolStats *stats);
+int _sceHttpObjectInit(void);
+int _sceHttpObjectTerm(void);
+int _sceHttpEpollInit(void);
+int _sceHttpEpollTerm(void);
+int SceHttp_E0825488(void *(*mallocFunc)(SceSize size), void (*freeFunc)(void *ptr));
+int SceHttp_11C9BCE8(void);
+void _sceHttpsInit(void);
+int _sceHttpCreateTemplate(HttpTemplate *tmpl, const char *userAgent, int httpVer,
+			   SceBool autoProxyConf);
+int _sceHttpDeleteTemplate(int tmplId);
+int _sceHttpDeleteConnection(int connId);
+int _sceHttpCreateRequestWithURL(int connId, int method, const char *url,
+				 SceULong64 contentLength);
+int _sceHttpCreateRequest(int connId, int method, const char *path, SceULong64 contentLength);
+int _sceHttpDeleteRequest(int reqId);
+int _sceHttpAbortRequest(int reqId, SceBool force);
+int _sceHttpSendRequest(int reqId, const void *postData, SceSize size);
+int _sceHttpReadData(int reqId, void *data, SceSize size);
+int _sceHttpGetLastErrno(int reqId, int *errNum);
+int _sceHttpRequestSetMethod(int reqId, const char *method);
+int _sceHttpRequestWaitResponse(HttpRequest *req);
+int _sceHttpRemoveHeaderField(HttpRequest *req, const char *header, SceSize headerSize,
+			      const char *name, SceSize nameLen, char **out, SceSize *outSize);
+int _sceHttpSetOption(int id, int option, const void *value, SceSize size, void *arg);
+int _sceHttpGetOption(int id, int option, void *value, SceSize size, void *arg, SceSize argSize);
+int _sceHttpSetDefaultOption(int option, const void *value, SceSize size, void *arg,
+			     SceSize argSize);
+int _sceHttpWaitRequest(SceHttpEpollHandle eh, SceHttpNBEvent *nbev, int maxevents, int timeout,
+			SceBool cb);
+int _sceHttpAbortWaitRequest(SceHttpEpollHandle eh);
+int _sceHttpCreateEpoll(SceHttpEpollHandle *eh);
+int _sceHttpEpollAdd(SceHttpEpollHandle eh, int id, void *userArg);
+int _sceHttpEpollRemove(SceHttpEpollHandle eh, int id);
+int _sceHttpDestroyEpoll(SceHttpEpollHandle eh);
+int _sceHttpRequestAbortNonblock(HttpRequest *req);
+int _sceHttpRedirectCacheFlush(void);
+int _sceHttpsLoadCert(int caCertNum, const SceHttpsData **caList, const SceHttpsData *cert,
+		      const SceHttpsData *privKey);
+int _sceHttpsUnloadCert(void);
+int _sceHttpsEnableOption(SceUInt32 sslFlags);
+int _sceHttpsDisableOption(SceUInt32 sslFlags);
+int _sceHttpsSetSslCallback(int id, SceHttpsCallback cbfunc, void *userArg);
+int _sceHttpsSetSslVersion(int id, int version, SceBool set);
+int _sceHttpsGetSslError(int id, int *errNum, SceUInt32 *detail);
+int _sceHttpsGetCaList(SceSslCert ***caCerts, SceInt32 *caNum);
+int _sceHttpsFreeCaList(SceSslCert **caCerts, SceInt32 caNum);
+int _sceHttpSslIsCtxCreated(int id, SceBool *created);
+
+/* the exports no SDK header declares */
+int sceHttpAbortRequestForce(int reqId);
+int sceHttpAddRequestHeaderRaw(int id, const char *header, int mode);
+int sceHttpSetEpollId(int id, int epollId, void *userArg);
+int sceHttpGetEpollId(int id, int *epollId, void **userArg);
+int sceHttpsEnableOptionPrivate(int id, SceUInt32 sslFlags);
+int sceHttpsDisableOptionPrivate(int id, SceUInt32 sslFlags);
+int sceHttpSetIcmOption(int id, int option);
+int sceHttpGetIcmOption(int id, int *option);
+int sceHttpRequestGetAllHeaders(int reqId, HttpHeaderPair *headers, SceUInt32 *num,
+				char *contentLength, SceSize *contentLengthSize);
+int sceHttpSslIsCtxCreated(int id, SceBool *created);
+int sceHttpSetAcceptEncodingGZIPEnabled(int id, SceBool enable);
+int sceHttpGetAcceptEncodingGZIPEnabled(int id, SceBool *enable);
+int sceHttpSetDefaultAcceptEncodingGZIPEnabled(SceBool enable);
+int SceHttp_43A7CC70(int id, int value);
+int SceHttp_175685B8(int id, int version);
+int SceHttp_F30073EC(int id, SceUInt8 value);
+int SceHttp_30F5D11F(int id, int *value);
+int SceHttp_53B722F2(int id, SceBool enable, int mode, const char *server, SceUShort16 port);
+int SceHttp_C498765A(int id, int value);
+int SceHttp_855D5254(int value);
 
 #endif /* HTTP_INTERNAL_H */
