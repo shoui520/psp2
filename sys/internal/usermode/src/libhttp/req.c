@@ -3,6 +3,8 @@
  * connection and ending a response.
  */
 
+#include <zlib.h>
+
 #include "http_internal.h"
 
 /* the connection a request talks on: its child connection (a proxy's tunnel) if it has one */
@@ -443,7 +445,7 @@ int _sceHttpRequestCompleteEx(HttpRequest *req, SceBool close, SceBool end, SceB
 
 	if ((req->response.contentLengthKnown == 1 && req->gzipEncoded == 0 &&
 	     req->receivedLength == req->response.contentLength) ||
-	    (req->gzipEncoded == 1 && req->inflateEnd == 1) || close == 1 || end == 1) {
+	    (req->gzipEncoded == 1 && req->inflateFinished == 1) || close == 1 || end == 1) {
 		req->response.chunked = 0;
 		state = failed != 0 ? 19 : 18;
 		req->state = state;
@@ -860,5 +862,476 @@ out:
 			sceKernelUnlockLwMutex(&req->lock, 1);
 		_sceHttpRequestRelease(req);
 	}
+	return ret;
+}
+
+/* SCE_HTTP_ERROR_BEFORE_SEND until the response header is checked, then the error, if any */
+int _sceHttpRequestWaitResponse(HttpRequest *req)
+{
+	if (req->state < 15)
+		return SCE_HTTP_ERROR_BEFORE_SEND;
+	if (req->state == 19)
+		return req->lastError;
+	return 0;
+}
+
+/*
+ * Waits on eh and turns what its sockets and resolvers report into events of the requests
+ * on it. A kept-alive connection's socket that reports is closed: an error, the server
+ * closing it, or data nobody asked for.
+ */
+int _sceHttpWaitRequest(SceHttpEpollHandle eh, SceHttpNBEvent *nbev, int maxevents, int timeout,
+			SceBool cb)
+{
+	SceNetEpollEvent events[maxevents];
+	HttpRequest *req = NULL;
+	HttpConnection *idle = NULL;
+	HttpEpollEntry *entry;
+	HttpConnection *conn;
+	SceNetEpollEvent *ev;
+	SceHttpNBEvent *nb;
+	SceUInt64 start;
+	SceUInt32 detail;
+	SceNetSocklen_t optlen;
+	int elapsed;
+	int i, n, num;
+	int state;
+	int optval;
+	int error;
+	int ret, r;
+	char c;
+
+	for (;;) {
+		start = sceKernelGetSystemTimeWide();
+		ret = _sceHttpEpollWait(eh, events, maxevents, timeout, cb);
+		if (ret <= 0)
+			break;
+		elapsed = sceKernelGetSystemTimeWide() - start;
+		if (timeout > 0)
+			timeout = timeout > elapsed ? timeout - elapsed : 0;
+		n = ret;
+		num = 0;
+		nb = nbev;
+		for (i = 0, ev = events; i < n; i++, ev++) {
+			nb->id = ev->data.ext.u32;
+			if (_sceHttpEpollFind(eh, nb->id, &entry) < 0) {
+				if (ev->events & SCE_NET_EPOLLERR) {
+					idle = NULL;
+					if (_sceHttpGetConnection(&idle, ev->data.ext.u32) >= 0) {
+						_sceHttpConnectionShutdown(idle);
+						_sceHttpConnectionRelease(idle);
+						idle = NULL;
+					}
+				} else if (ev->events & SCE_NET_EPOLLIN) {
+					idle = NULL;
+					if (_sceHttpGetConnection(&idle, ev->data.ext.u32) >= 0) {
+						optlen = 4;
+						if (sceNetGetsockopt(ev->data.fd, SCE_NET_SOL_SOCKET,
+								     SCE_NET_SO_ERROR, &optval, &optlen) < 0) {
+							_sceHttpConnectionShutdown(idle);
+						} else if (optval != 0) {
+							_sceHttpConnectionShutdown(idle);
+						} else {
+							r = _sceHttpSocketPeek(ev->data.fd, &c, 1);
+							if (r < 0)
+								_sceHttpConnectionShutdown(idle);
+							if (r == 0)
+								_sceHttpConnectionShutdown(idle);
+							else
+								_sceHttpConnectionShutdown(idle);
+						}
+						_sceHttpConnectionRelease(idle);
+						idle = NULL;
+					}
+				}
+				continue;
+			}
+			nb->userArg = entry->userArg;
+			ret = _sceHttpGetRequest(&req, nb->id);
+			if (ret < 0)
+				goto out;
+			ret = sceKernelLockLwMutex(&req->lock, 1, NULL);
+			if (ret < 0)
+				goto out;
+			state = req->state;
+			if (state < 17)
+				detail = HTTP_NB_DETAIL_SENDING;
+			else if (state == 17 || state == 18)
+				detail = HTTP_NB_DETAIL_RESPONSE;
+			else
+				detail = 0;
+			if (state < 18 && (req->response.chunked == 1 ||
+					   (req->response.contentLengthKnown == 1 &&
+					    req->response.contentLength != 0)))
+				detail |= HTTP_NB_DETAIL_BODY;
+			else if (state == 18 && (req->response.chunked == 1 ||
+						 (req->response.contentLengthKnown == 1 &&
+						  req->response.contentLength != 0)))
+				detail |= HTTP_NB_DETAIL_BODY_DONE;
+			if (state == 19)
+				detail |= HTTP_NB_DETAIL_ERROR;
+			nb->eventDetail = detail;
+			conn = _sceHttpRequestGetConnection(req);
+			nb->events = 0;
+			if (ev->events & SCE_NET_EPOLLOUT) {
+				if (conn->state > 2 && conn->state <= 4)
+					conn->state = 5;
+				nb->events = SCE_HTTP_NB_EVENT_OUT;
+			}
+			if (ev->events & SCE_NET_EPOLLIN)
+				nb->events |= SCE_HTTP_NB_EVENT_IN;
+			if (ev->events & SCE_NET_EPOLLHUP) {
+				req->state = 18;
+				nb->events |= SCE_HTTP_NB_EVENT_HUP;
+			} else if (ev->events & SCE_NET_EPOLLDESCID) {
+				r = sceNetResolverGetError(conn->resolverId, &error);
+				if (r < 0 || error != 0) {
+					req->lastError = r >= 0 ? error : r;
+					nb->events |= SCE_HTTP_NB_EVENT_RESOLVER_ERR;
+					ret = _sceHttpLock(0);
+					if (ret < 0)
+						goto out;
+					conn->resolveState = 4;
+					_sceHttpUnlock(0);
+				} else {
+					ret = _sceHttpLock(0);
+					if (ret < 0)
+						goto out;
+					conn->resolveState = 3;
+					_sceHttpUnlock(0);
+					nb->events |= SCE_HTTP_NB_EVENT_RESOLVED;
+				}
+			}
+			if (ev->events & SCE_NET_EPOLLERR) {
+				optlen = 4;
+				r = sceNetGetsockopt(req->state >= 2 ? conn->sock : req->icmSock,
+						     SCE_NET_SOL_SOCKET, SCE_NET_SO_ERROR_EX,
+						     &req->lastError, &optlen);
+				if (r < 0)
+					req->lastError = r;
+				req->state = 19;
+				nb->events |= SCE_HTTP_NB_EVENT_SOCK_ERR;
+			}
+			if (ev->events & HTTP_EPOLL_ICM_EVENTS) {
+				if (req->state < 2)
+					req->state = 2;
+				nb->events |= SCE_HTTP_NB_EVENT_ICM | SCE_HTTP_NB_EVENT_OUT;
+			}
+			ret = sceKernelUnlockLwMutex(&req->lock, 1);
+			if (ret < 0)
+				goto out;
+			ret = _sceHttpRequestRelease(req);
+			if (ret < 0)
+				goto out;
+			req = NULL;
+			nb++;
+			num++;
+		}
+		if (num != 0 || timeout == 0) {
+			ret = num;
+			break;
+		}
+	}
+out:
+	if (req != NULL)
+		_sceHttpRequestRelease(req);
+	if (idle != NULL)
+		_sceHttpConnectionRelease(idle);
+	return ret;
+}
+
+/* Sony's sets aborted first, so _sceHttpEpollAbort finds it set and aborts nothing */
+int _sceHttpAbortWaitRequest(SceHttpEpollHandle eh)
+{
+	HttpEpoll *ep = eh;
+	int ret;
+
+	sceKernelLockLwMutex(&ep->lock, 1, NULL);
+	ep->aborted = 1;
+	ret = _sceHttpEpollAbort(eh);
+	sceKernelUnlockLwMutex(&ep->lock, 1);
+	return ret;
+}
+
+/*
+ * Reads up to len bytes of the body into buf, by chunks or as it comes, never past
+ * Content-Length; closed is set when the server closed, end at the last chunk.
+ */
+int _sceHttpRequestReadBody(HttpRequest *req, char *buf, SceSize len, SceBool *closed,
+			    SceBool *end)
+{
+	SceSize total = 0;
+	SceSize n;
+	int ret;
+
+	*closed = 0;
+	*end = 0;
+	while (*closed == 0 && total < len && *end != 1) {
+		if (req->response.contentLengthKnown != 0 &&
+		    req->receivedLength >= req->response.contentLength)
+			return total;
+		n = len - total;
+		if (req->response.contentLengthKnown == 1 &&
+		    n > req->response.contentLength - req->receivedLength)
+			n = req->response.contentLength - req->receivedLength;
+		if (req->response.chunked == 1) {
+			ret = _sceHttpRequestReadChunked(req, buf + total, n, 0, end, NULL);
+			if (ret == 0 && *end == 0)
+				*closed = 1;
+		} else {
+			ret = _sceHttpRecvDirect(req, buf + total, n, 0);
+			if (ret == 0)
+				*closed = 1;
+		}
+		if (ret < 0) {
+			if (ret == SCE_HTTP_ERROR_EAGAIN && total != 0)
+				return total;
+			return ret;
+		}
+		req->receivedLength += ret;
+		total += ret;
+	}
+	return total;
+}
+
+/* frees a gzip body's input buffer and inflate stream */
+#define HTTP_INFLATE_FREE(req)							\
+	do {									\
+		if ((req)->inflateBuffer != NULL) {				\
+			_sceHttpFree((req)->tmpl.allocator.free, (req)->inflateBuffer); \
+			(req)->inflateBuffer = NULL;				\
+			(req)->inflateBufferSize = 0;				\
+			(req)->inflateBufferLen = 0;				\
+		}								\
+		if ((req)->inflateStream != NULL) {				\
+			inflateEnd((req)->inflateStream);			\
+			_sceHttpFree((req)->tmpl.allocator.free, (req)->inflateStream); \
+			(req)->inflateStream = NULL;				\
+		}								\
+	} while (0)
+
+/*
+ * Reads the response body into data: as it comes, or inflated when it is gzip encoded and
+ * the template inflates it. Returns the bytes read; the request ends with its body.
+ */
+int _sceHttpReadData(int reqId, void *data, SceSize size)
+{
+	HttpRequest *req = NULL;
+	SceBool closed = 0;
+	SceBool end = 0;
+	z_stream *strm;
+	SceSize total;
+	void *buf;
+	int ret, r, z;
+
+	ret = _sceHttpGetRequest(&req, reqId);
+	if (ret < 0)
+		goto out;
+	ret = sceKernelLockLwMutex(&req->lock, 1, NULL);
+	if (ret < 0) {
+		_sceHttpRequestCompleteEx(req, 1, 1, 0, 1);
+		_sceHttpRequestRelease(req);
+		return ret;
+	}
+	if (req->state < 17) {
+		ret = SCE_HTTP_ERROR_BEFORE_SEND;
+		goto out;
+	}
+	if (req->state == 19) {
+		ret = req->lastError;
+		goto out;
+	}
+	if (req->method == SCE_HTTP_METHOD_HEAD) {
+		ret = SCE_HTTP_ERROR_READ_BY_HEAD_METHOD;
+		goto out;
+	}
+	if (req->state == 18) {
+		ret = 0;
+		goto out;
+	}
+	ret = _sceHttpLock(0);
+	if (ret < 0)
+		goto out;
+	if (req->aborted == 1)
+		ret = SCE_HTTP_ERROR_ABORTED;
+	_sceHttpUnlock(0);
+	if (ret < 0)
+		goto out;
+
+	if (req->gzipEncoded == 1 && req->tmpl.inflateGzipEnabled != 0) {
+		if (req->inflateFinished == 1) {
+			HTTP_INFLATE_FREE(req);
+			total = 0;
+			closed = req->bodyClosed;
+			end = req->bodyEnd;
+			goto complete;
+		}
+		if (req->inflateStream == NULL) {
+			req->inflateStream = _sceHttpMalloc(req->tmpl.allocator.malloc, sizeof(z_stream));
+			strm = req->inflateStream;
+			if (strm == NULL) {
+				ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+				goto out;
+			}
+			strm->zalloc = _sceHttpZalloc;
+			req->inflateStream->zfree = _sceHttpZfree;
+			req->inflateStream->opaque = req;
+			req->inflateStream->next_in = NULL;
+			req->inflateStream->avail_in = 0;
+			req->inflateTotalOut = 0;
+			if (inflateInit2(req->inflateStream, 15 + 32) != Z_OK) {
+				_sceHttpFree(req->tmpl.allocator.free, req->inflateStream);
+				ret = SCE_HTTP_ERROR_UNKNOWN;
+				req->inflateStream = NULL;
+				goto out;
+			}
+			req->inflateFinished = 0;
+		}
+		total = 0;
+		if (size != 0) {
+			while (req->inflateFinished == 0) {
+				strm = req->inflateStream;
+				if (strm->avail_in == 0) {
+					buf = req->inflateBuffer;
+					req->bodyClosed = 0;
+					req->bodyEnd = 0;
+					if (buf == NULL) {
+						buf = _sceHttpMalloc(req->tmpl.allocator.malloc,
+								     req->tmpl.recvBufferSize);
+						req->inflateBuffer = buf;
+						if (buf == NULL) {
+							r = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+							goto read;
+						}
+						req->inflateBufferSize = req->tmpl.recvBufferSize;
+					}
+					req->inflateBufferLen = 0;
+					r = _sceHttpRequestReadBody(req, buf, req->inflateBufferSize,
+								    &req->bodyClosed, &req->bodyEnd);
+					if (r >= 0)
+						req->inflateBufferLen += r;
+read:
+					ret = r;
+					if (r < 0) {
+						if (r == SCE_HTTP_ERROR_EAGAIN && total != 0)
+							goto partial;
+						goto out;
+					}
+					req->inflateStream->next_in = req->inflateBuffer;
+					strm = req->inflateStream;
+					strm->avail_in = req->inflateBufferLen;
+				}
+				strm->next_out = (Bytef *)data + total;
+				req->inflateStream->avail_out = size - total;
+				z = inflate(req->inflateStream, Z_SYNC_FLUSH);
+				strm = req->inflateStream;
+				if (z == Z_STREAM_END ||
+				    (strm->avail_in == 0 && (req->bodyClosed == 1 || req->bodyEnd == 1))) {
+					req->inflateFinished = 1;
+				} else if (z != Z_OK) {
+					HTTP_INFLATE_FREE(req);
+					switch (z) {
+					case Z_STREAM_ERROR:
+						ret = SCE_HTTP_ERROR_UNKNOWN;
+						break;
+					case Z_MEM_ERROR:
+						ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+						break;
+					default:
+						ret = SCE_HTTP_ERROR_BAD_RESPONSE;
+						break;
+					}
+					goto out;
+				}
+				total += strm->total_out - req->inflateTotalOut;
+				req->inflateTotalOut = strm->total_out;
+				if (total >= size)
+					break;
+			}
+		}
+		if (req->inflateFinished == 1)
+			HTTP_INFLATE_FREE(req);
+	} else {
+		ret = _sceHttpRequestReadBody(req, data, size, &closed, &end);
+		if (ret < 0)
+			goto out;
+		total = ret;
+	}
+complete:
+	ret = _sceHttpRequestCompleteEx(req, closed, end, 0, 0);
+	if (ret < 0)
+		goto out;
+partial:
+	ret = total;
+out:
+	if (req != NULL) {
+		if (ret < 0 && ret != SCE_HTTP_ERROR_EAGAIN)
+			_sceHttpRequestCompleteEx(req, 1, 1, 0, 1);
+		sceKernelUnlockLwMutex(&req->lock, 1);
+		_sceHttpRequestRelease(req);
+	}
+	return ret;
+}
+
+int _sceHttpGetLastErrno(int reqId, int *errNum)
+{
+	HttpRequest *req = NULL;
+	int ret;
+
+	ret = _sceHttpGetRequest(&req, reqId);
+	if (ret >= 0) {
+		ret = sceKernelLockLwMutex(&req->lock, 1, NULL);
+		if (ret >= 0) {
+			if (errNum != NULL)
+				*errNum = req->lastError;
+			sceKernelUnlockLwMutex(&req->lock, 1);
+		}
+	}
+	if (req != NULL)
+		_sceHttpRequestRelease(req);
+	return ret;
+}
+
+/*
+ * A method of its own name for the request (HTTP_METHOD_EXTRA). Sony's leaves the request
+ * locked when the extra cannot be allocated, and does not free a name set before.
+ */
+int _sceHttpRequestSetMethod(int reqId, const char *method)
+{
+	HttpRequest *req = NULL;
+	char *name = NULL;
+	SceSize len;
+	int ret;
+
+	len = sceClibStrnlen(method, 0xffffffff);
+	if (len == 0) {
+		ret = SCE_HTTP_ERROR_INVALID_VALUE;
+		goto out;
+	}
+	ret = _sceHttpGetRequest(&req, reqId);
+	if (ret < 0)
+		goto out;
+	name = _sceHttpMalloc(req->tmpl.allocator.malloc, len + 1);
+	if (name == NULL) {
+		ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+		goto out;
+	}
+	sceClibStrncpy(name, method, len + 1);
+	ret = sceKernelLockLwMutex(&req->lock, 1, NULL);
+	if (ret < 0)
+		goto out;
+	if (req->extra == NULL)
+		req->extra = _sceHttpMalloc(req->tmpl.allocator.malloc, sizeof(*req->extra));
+	if (req->extra == NULL) {
+		ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+		goto out;
+	}
+	req->extra->method = name;
+	sceKernelUnlockLwMutex(&req->lock, 1);
+out:
+	if (req != NULL)
+		_sceHttpRequestRelease(req);
+	if (ret < 0 && name != NULL)
+		_sceHttpFree(req->tmpl.allocator.free, name);
 	return ret;
 }

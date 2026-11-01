@@ -27,6 +27,7 @@ int sceRegMgrSystemParamGetInt(int id, int *value);
 
 /* vitasdk: sceKernelGetSystemTimeLow */
 extern SceUInt32 SceThreadmgr_47F6DE49(void);
+SceUInt64 sceKernelGetSystemTimeWide(void);
 
 /* sceClib's character classes */
 #define isspace(c)	(sceClibLookCtypeTable(c) & SCE_CLIB_CTYPE_SPACE)
@@ -254,11 +255,14 @@ typedef struct HttpRequest {
 	int icmSock;			/* "SceLibHttpIcm" */
 	int icmOption;
 	SceKernelLwMutexWork lock;
-	void *inflateBuffer;
-	int reserved41c[4];
+	void *inflateBuffer;			/* a gzip body's input, as received */
+	SceSize inflateBufferSize;
+	SceSize inflateBufferLen;
+	SceBool bodyClosed;			/* the server closed before the body ended */
+	SceBool bodyEnd;			/* the last chunk was read */
 	struct z_stream_s *inflateStream;	/* a gzip body's */
-	SceBool inflateEnd;			/* the gzip stream is at its end */
-	int reserved434;
+	SceBool inflateFinished;		/* the gzip stream is at its end */
+	SceSize inflateTotalOut;		/* inflateStream's total_out, as counted */
 	int responseHeaderState;		/* where the reader is in the CR LF CR LF */
 	SceSize responseHeaderPos;
 	SceUInt32 chunkState;			/* _sceHttpRequestReadChunked's */
@@ -296,6 +300,13 @@ _Static_assert(sizeof(HttpEpoll) == 0x58, "HttpEpoll");
 #define HTTP_EPOLL_CONNECTION	3		/* a connection's socket, for the connection itself */
 #define HTTP_EPOLL_ICM_EVENTS	0x40000		/* the events of an ICM socket (no SDK name) */
 #define HTTP_SO_ICM_OPTION	0x10000		/* sceHttpSetIcmOption's bit 0 (no SDK name) */
+
+/* an SceHttpNBEvent's eventDetail: where the request is (the SDK calls it reserved) */
+#define HTTP_NB_DETAIL_SENDING		0x00000001	/* before its response header */
+#define HTTP_NB_DETAIL_RESPONSE		0x00000002	/* its response header is in */
+#define HTTP_NB_DETAIL_BODY		0x00000004	/* a body to read, still coming */
+#define HTTP_NB_DETAIL_BODY_DONE	0x00000008	/* a body, all received */
+#define HTTP_NB_DETAIL_ERROR		0x80000000	/* it failed (state 19) */
 
 /* a 301 the redirect cache remembers (0x44 bytes) */
 typedef struct HttpRedirectCacheEntry {
@@ -679,6 +690,8 @@ int _sceHttpRequestProxyConnect(HttpRequest *req, int sock);
 int _sceHttpsConnect(HttpRequest *req, int sock);
 int _sceHttpsHandshake(HttpRequest *req);
 SceBool _sceHttpStrHasLineBreak(const char *s);
+int _sceHttpRequestReadBody(HttpRequest *req, char *buf, SceSize len, SceBool *closed,
+			    SceBool *end);
 
 /* redirect.c */
 int _sceHttpRequestCheckRedirect(HttpRequest *req);
