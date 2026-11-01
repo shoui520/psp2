@@ -386,6 +386,7 @@ public:
 	int32_t WriteWidget(ui::Widget *widget, common::SharedPtr<File> fp, uint32_t indent, bool print);
 	/* its opened pages and their widgets; to the TTY without a file */
 	int32_t WritePageTable(common::SharedPtr<File> fp, bool table, bool print);
+	int32_t WritePage(common::SharedPtr<File> fp, const IDParam &id);
 	/* a whole resource document: its pages, styles and textures, or one of the tables */
 	int32_t WriteResourceAll(common::SharedPtr<File> fp);
 	int32_t WriteResourcePageTable(common::SharedPtr<File> fp, bool table);

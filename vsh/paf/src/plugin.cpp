@@ -3133,6 +3133,51 @@ void Plugin::DrawVisualParams(void *userdata)
 	}
 }
 
+/* writes the opened page with the ID and its widgets (to the TTY without a file) */
+int32_t Plugin::WritePage(common::SharedPtr<File> fp, const IDParam &id)
+{
+	int32_t err;
+
+	if (m_widget_table.begin() == m_widget_table.end())
+		return 0;
+
+	ui::Widget *page = GetNodeEntity_Widget(id);
+
+	if (page == NULL)
+		return 0;
+
+	const char *name = page->m_name.m_id.c_str();
+	ResourceParam param;
+
+	param.SetTagName("page");
+	param.SetIDName(name);
+	if ((int32_t)page->m_children.size() - 1 > 0) {
+		if (fp.get() != NULL)
+			err = ScePafResource_441E989F(&param, fp, 1, 1, false);
+		else
+			err = ScePafResource_441E989F(&param, fp, 1, 1, true);
+		if (err != 0)
+			return -1;
+		for (list<ui::Widget *>::iterator child = page->m_children.begin();
+		     child != page->m_children.end(); ++child)
+			WriteWidget(*child, fp, 2, true);
+		if (fp.get() != NULL)
+			err = ScePafResource_441E989F(&param, fp, 2, 1, false);
+		else
+			err = ScePafResource_441E989F(&param, fp, 2, 1, true);
+		if (err != 0)
+			return -1;
+	} else {
+		if (fp.get() != NULL)
+			err = ScePafResource_441E989F(&param, fp, 0, 1, false);
+		else
+			err = ScePafResource_441E989F(&param, fp, 0, 1, true);
+		if (err != 0)
+			return -1;
+	}
+	return 0;
+}
+
 void Plugin::Init()
 {
 }
