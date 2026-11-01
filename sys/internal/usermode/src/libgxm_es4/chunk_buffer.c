@@ -13,13 +13,13 @@ void *gxmChunkBufferReserveSlow(GxmChunkBuffer *buffer, SceSize size, SceSize al
 	SceUInt32 block;
 
 	buffer->refill(buffer, size, alignment);
-	block = (buffer->cur - 1 + alignment) & -alignment;
+	block = (buffer->current - 1 + alignment) & -alignment;
 	if (buffer->end < block + size)
 		return NULL;
 #if SCE_DBG_ASSERTS_ENABLED
 	buffer->reserved = block + size;
 #endif
-	buffer->cur = block;
+	buffer->current = block;
 	return (void *)block;
 }
 
@@ -49,11 +49,11 @@ static void gxmDeferredBufferRefill(GxmChunkBuffer *buffer, SceSize size, SceSiz
 	reserve = 0;
 	if (chunkBuf->linked) {
 		/* the old chunk ends in a jump to the new one */
-		if (buffer->cur != 0)
-			*(SceUInt32 *)buffer->cur = block >> 2;
+		if (buffer->current != 0)
+			*(SceUInt32 *)buffer->current = block >> 2;
 		reserve = GXM_CHUNK_LINK_RESERVE;
 	}
-	buffer->cur = block;
+	buffer->current = block;
 #if SCE_DBG_ASSERTS_ENABLED
 	buffer->reserved = block;
 #endif
@@ -82,7 +82,7 @@ void gxmChunkBufferInitDeferred(GxmDeferredBuffer *chunkBuffer, GxmChunkBuffer *
 	chunkBuffer->invalidAddress = NULL;
 	chunkBuffer->invalidSize = 0;
 #endif
-	writeBuffer->cur = (SceUInt32)memory;
+	writeBuffer->current = (SceUInt32)memory;
 	writeBuffer->end = (SceUInt32)memory + size;
 	writeBuffer->cookie = chunkBuffer;
 #if SCE_DBG_ASSERTS_ENABLED
@@ -108,7 +108,7 @@ void gxmChunkBufferReset(const GxmDeferredBuffer *chunkBuffer, GxmChunkBuffer *w
 #if SCE_DBG_ASSERTS_ENABLED
 	writeBuffer->reserved = (SceUInt32)memory;
 #endif
-	writeBuffer->cur = (SceUInt32)memory;
+	writeBuffer->current = (SceUInt32)memory;
 	writeBuffer->end = (SceUInt32)memory + size;
 }
 

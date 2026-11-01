@@ -672,7 +672,7 @@ typedef struct GxmDeferredBuffer {
 typedef struct GxmChunkBuffer GxmChunkBuffer;
 
 struct GxmChunkBuffer {
-	SceUInt32 cur;
+	SceUInt32 current;
 	SceUInt32 end;
 	SceUInt32 gpuEnd;		/* the GPU offset of end */
 	void (*refill)(GxmChunkBuffer *buffer, SceSize size, SceSize alignment);
@@ -714,14 +714,14 @@ int gxmMemoryCheckCachedParameter(const void *address, SceSize size, const char 
 /* aligned space for size bytes; the caller advances cur past what it writes */
 static inline void *gxmChunkBufferReserve(GxmChunkBuffer *buffer, SceSize size, SceSize alignment)
 {
-	SceUInt32 block = (buffer->cur + alignment - 1) & ~(alignment - 1);
+	SceUInt32 block = (buffer->current + alignment - 1) & ~(alignment - 1);
 
 	if (buffer->end < block + size)
 		return gxmChunkBufferReserveSlow(buffer, size, alignment);
 #if SCE_DBG_ASSERTS_ENABLED
 	buffer->reserved = block + size;
 #endif
-	buffer->cur = block;
+	buffer->current = block;
 	return (void *)block;
 }
 
@@ -732,7 +732,7 @@ static inline void gxmChunkBufferCommit(GxmChunkBuffer *buffer, void *current)
 	GXM_DBG_ASSERT_AT("buffer_private.h", 94,
 			  (uintptr_t)current <= (uintptr_t)buffer->reserved);
 #endif
-	buffer->cur = (SceUInt32)current;
+	buffer->current = (SceUInt32)current;
 }
 
 /* gxmChunkBufferReserve, reporting a failure in the debug build */
@@ -769,7 +769,7 @@ static inline int gxmChunkBufferAlloc(GxmChunkBuffer *buffer, SceSize size, SceS
 /* the write position, as Sony's debug checks name it */
 static inline void *sceGxmBufferGet(const GxmChunkBuffer *buffer)
 {
-	return (void *)buffer->cur;
+	return (void *)buffer->current;
 }
 
 /* --- GPU memory, code and command blocks --- */
@@ -790,7 +790,7 @@ typedef struct GxmCommandBlock {
 /* code offset of the chunk buffer's write position */
 static inline SceUInt32 gxmChunkBufferOffset(const GxmChunkBuffer *buffer)
 {
-	return buffer->cur + buffer->gpuEnd - buffer->end;
+	return buffer->current + buffer->gpuEnd - buffer->end;
 }
 
 void gxmCodeRefSetAddress(GxmCodeRef *ref, SceUInt32 offset);
@@ -802,7 +802,7 @@ int gxmWriteProgramBlock(GxmChunkBuffer *buffer, const GxmCodeRef *usseProgram,
 int gxmBuildFenceProgram(GxmChunkBuffer *buffer, GxmCodeRef *program, SceUInt32 fenceAddress);
 SceSize gxmMteGetCopyProgramsSize(void);
 int gxmMteBuildCopyPrograms(GxmCodeRef *programs, GxmChunkBuffer *buffer);
-SceUInt32 *gxmUsseWriteHeader(SceUInt32 *code);
+SceUInt32 *gxmUsseWriteHeader(SceUInt32 *usseCode);
 SceUInt32 *gxmUsseWriteOldHeader(SceUInt32 *code);
 SceSize gxmUsseGetEmptyProgramSize(void);
 

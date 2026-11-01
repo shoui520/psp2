@@ -619,7 +619,7 @@ GXM_NOINLINE void gxmChunkBufferInitFixed(GxmChunkBuffer *buffer, void *memory, 
 {
 	buffer->end = (SceUInt32)memory + size;
 	buffer->gpuEnd = size + gpuOffset;
-	buffer->cur = (SceUInt32)memory;
+	buffer->current = (SceUInt32)memory;
 #if SCE_DBG_ASSERTS_ENABLED
 	buffer->reserved = (SceUInt32)memory;
 #endif

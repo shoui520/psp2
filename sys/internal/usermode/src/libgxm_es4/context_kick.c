@@ -31,7 +31,7 @@ static inline SceSize gxmRingBufferUsed(const GxmRingBuffer *ringBuffer,
 
 	GXM_DBG_CHECK("ring_buffer_private.h", 123, writeBuffer->ring == ringBuffer,
 		      "writeBuffer->cookie == ringBuffer");
-	offset = writeBuffer->cur - ringBuffer->memory;
+	offset = writeBuffer->current - ringBuffer->memory;
 	if (ringBuffer->lastOffset <= offset)
 		return offset - ringBuffer->lastOffset;
 	return ringBuffer->size - ringBuffer->lastOffset + offset;
@@ -374,7 +374,7 @@ static inline SceBool gxmRingBufferIsFull(const GxmRingBuffer *ringBuffer,
 {
 	GXM_DBG_CHECK("ring_buffer_private.h", 89, writeBuffer->ring == ringBuffer,
 		      "writeBuffer->cookie == ringBuffer");
-	return ringBuffer->threshold <= writeBuffer->cur;
+	return ringBuffer->threshold <= writeBuffer->current;
 }
 
 int gxmContextKickIfFull(SceGxmContext *context)

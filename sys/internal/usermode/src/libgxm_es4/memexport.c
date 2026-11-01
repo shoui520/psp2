@@ -41,7 +41,7 @@ int gxmBuildFenceProgram(GxmChunkBuffer *buffer, GxmCodeRef *program, SceUInt32 
 		GXM_DBG_ERROR(109, "Could not reserve %d bytes.", GXM_FENCE_PROGRAM_SIZE);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
 	}
-	offset = buffer->cur + buffer->gpuEnd - buffer->end;
+	offset = buffer->current + buffer->gpuEnd - buffer->end;
 	code[0] = 0x00000000;
 	code[1] = 0xfa440700;
 	code[2] = 0x00000070;

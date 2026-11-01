@@ -241,8 +241,8 @@ int sceGxmEndCommandList(SceGxmContext *deferredContext, SceGxmCommandList *comm
 
 	/* the terminator goes in the space kept for a link */
 	end = deferredContext->vdmBuffer.end;
-	block = (SceUInt32 *)((deferredContext->vdmBuffer.cur + 3) & ~3);
-	deferredContext->vdmBuffer.cur = (SceUInt32)&block[2];
+	block = (SceUInt32 *)((deferredContext->vdmBuffer.current + 3) & ~3);
+	deferredContext->vdmBuffer.current = (SceUInt32)&block[2];
 #if SCE_DBG_ASSERTS_ENABLED
 	deferredContext->vdmBuffer.reserved = (SceUInt32)&block[2];
 #endif
@@ -337,7 +337,7 @@ int sceGxmExecuteCommandList(SceGxmContext *immediateContext, SceGxmCommandList 
 	ret = gxmVdmWriteLink(&immediateContext->vdmBuffer, (SceUInt32)commandList->start, marker);
 	if (ret != 0)
 		return ret;
-	jumpTarget = immediateContext->vdmBuffer.cur;
+	jumpTarget = immediateContext->vdmBuffer.current;
 	GXM_DBG_ASSERT(518, SCE_GXM_IS_ALIGNED(jumpTarget, 4));
 	*commandList->returnLink = jumpTarget >> 2;
 	gxmMteStateInvalidate(&immediateContext->state);
@@ -375,7 +375,7 @@ int sceGxmExecuteCommandList(SceGxmContext *immediateContext, SceGxmCommandList 
 				      "from within a command list.");			\
 			return SCE_GXM_ERROR_WITHIN_COMMAND_LIST;			\
 		}									\
-		*mem = (void *)deferredContext->buffer.cur;				\
+		*mem = (void *)deferredContext->buffer.current;				\
 		return 0;								\
 	_SCE_MACRO_END
 

@@ -137,7 +137,7 @@ int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, 
 	if (code == NULL)
 		return SCE_GXM_ERROR_RESERVE_FAILED;
 	program = build->program;
-	offset = buffer->cur + buffer->gpuEnd - buffer->end;
+	offset = buffer->current + buffer->gpuEnd - buffer->end;
 	varyings = gxmProgramGetVaryings(program);
 
 	/* the program, then its output in the requested format */
@@ -216,7 +216,7 @@ int gxmFragmentBuildCode(const GxmFragmentBuild *build, GxmChunkBuffer *buffer, 
 		out[1] = *(const SceUInt32 *)build->blendInfo;
 		out[3] = GXM_PROGRAM_TRAILER_BLEND;
 	}
-	buffer->cur = (SceUInt32)(out + 4);
+	buffer->current = (SceUInt32)(out + 4);
 
 	ref->address = 0;
 	flags = program->programFlags;

@@ -98,7 +98,7 @@ int gxmVertexUnpackBuild(GxmChunkBuffer *buffer, const SceGxmProgram *program,
 	code = gxmChunkBufferReserve(buffer, pairs * 8, gxmUsseAlignment());
 	if (code == NULL)
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	*offset = buffer->cur + buffer->gpuEnd - buffer->end;
+	*offset = buffer->current + buffer->gpuEnd - buffer->end;
 	*codeOut = code;
 	code[0] = 0;
 	code[1] = ((program->programFlags >> 1) & 1) << 13 | 0xfa440000;
@@ -208,6 +208,6 @@ defaults:
 		end = 0xf8040140;
 	}
 	out[-1] = end;
-	buffer->cur = (SceUInt32)out;
+	buffer->current = (SceUInt32)out;
 	return 0;
 }

@@ -26,17 +26,18 @@ SceUInt32 *gxmUsseWriteOldHeader(SceUInt32 *code)
 }
 
 /* the start of a program: a phase instruction, then the same three pairs */
-SceUInt32 *gxmUsseWriteHeader(SceUInt32 *code)
+SceUInt32 *gxmUsseWriteHeader(SceUInt32 *usseCode)
 {
-	code[0] = 0x00000000;
-	code[1] = 0xf8000940;
-	code[2] = 0xa00c0000;
-	code[3] = 0x48830282;
-	code[4] = 0xa0000000;
-	code[5] = 0xe9833084;
-	code[6] = 0x00000000;
-	code[7] = 0xf9200000;
-	return code + 8;
+	GXM_DBG_ASSERT(98, ((uintptr_t)usseCode & 0xf) == 0x8);
+	usseCode[0] = 0x00000000;
+	usseCode[1] = 0xf8000940;
+	usseCode[2] = 0xa00c0000;
+	usseCode[3] = 0x48830282;
+	usseCode[4] = 0xa0000000;
+	usseCode[5] = 0xe9833084;
+	usseCode[6] = 0x00000000;
+	usseCode[7] = 0xf9200000;
+	return usseCode + 8;
 }
 
 SceSize gxmUsseGetEmptyProgramSize(void)
@@ -55,33 +56,20 @@ int gxmUsseBuildEmptyProgram(GxmChunkBuffer *buffer, GxmCodeRef *program)
 	SceUInt32 *code, *out, offset;
 
 	code = gxmChunkBufferReserve(buffer, size, alignment);
-	if (code == NULL)
+	if (code == NULL) {
+		GXM_DBG_ERROR(148, "Could not reserve %d bytes.", size);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	offset = buffer->cur + buffer->gpuEnd - buffer->end;
+	}
+	offset = buffer->current + buffer->gpuEnd - buffer->end;
 	code[1] = 0xfa440700;
 	code[0] = 0;
-	if (!(gxmGlobals.compatFlags & GXM_COMPAT_USSE_OLD_HEADER)) {
-		out = code + 10;
-		code[2] = 0x00000000;
-		code[3] = 0xf8000940;
-		code[4] = 0xa00c0000;
-		code[5] = 0x48830282;
-		code[6] = 0xa0000000;
-		code[7] = 0xe9833084;
-		code[8] = 0x00000000;
-		code[9] = 0xf9200000;
-	} else {
-		out = code + 8;
-		code[2] = 0xa00c0000;
-		code[3] = 0x48830282;
-		code[4] = 0xa0000000;
-		code[5] = 0xe9833084;
-		code[6] = 0x00000000;
-		code[7] = 0xf9200000;
-	}
+	if (!(gxmGlobals.compatFlags & GXM_COMPAT_USSE_OLD_HEADER))
+		out = gxmUsseWriteHeader(code + 2);
+	else
+		out = gxmUsseWriteOldHeader(code + 2);
 	out[1] = 0xf8040140;
 	out[0] = 0;
-	buffer->cur = (SceUInt32)(out + 2);
+	gxmChunkBufferCommit(buffer, out + 2);
 	program->address = offset >> 24 | ((offset << 9) >> 12) << 4;
 	program->taskControl = 2;
 	return 0;

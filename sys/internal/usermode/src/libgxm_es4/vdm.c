@@ -64,7 +64,7 @@ int gxmVdmWriteFragmentState(GxmChunkBuffer *buffer, SceSize size, const GxmComm
 	words[0] = address >> 4 | GXM_VDM_STATE;
 	words[1] = gxmVdmBlockSize(block) | 0x02022200 | (size + 3) >> 2 |
 		   (secondary ? GXM_VDM_SECONDARY : 0);
-	buffer->cur = (SceUInt32)(words + 2);
+	buffer->current = (SceUInt32)(words + 2);
 	return 0;
 }
 
@@ -79,7 +79,7 @@ int gxmVdmWriteVertexState(GxmChunkBuffer *buffer, const GxmCommandBlock *block,
 	words[1] = gxmVdmBlockSize(block) | 0xe100 | (size + 3) >> 2 |
 		   (secondary ? GXM_VDM_SECONDARY : 0);
 	words[0] = address >> 4 | GXM_VDM_STATE;
-	buffer->cur = (SceUInt32)(words + 2);
+	buffer->current = (SceUInt32)(words + 2);
 	return 0;
 }
 
@@ -97,7 +97,7 @@ int gxmVdmWritePrimitive(GxmChunkBuffer *buffer, const GxmCommandBlock *block,
 	words[3] = indexAddress & 0x3fffff;
 	words[4] = (SceUInt32)block->data >> 4 | (programInfo[1] - 1) << 28;
 	words[5] = *(const SceUInt32 *)(programInfo + 4) | 0x100 | (block->dataSize >> 4);
-	buffer->cur = (SceUInt32)(words + 6);
+	buffer->current = (SceUInt32)(words + 6);
 	return 0;
 }
 
@@ -111,7 +111,7 @@ int gxmVdmWriteFence(GxmChunkBuffer *buffer, const GxmCommandBlock *block)
 	words[0] = address >> 4 | GXM_VDM_FENCE;
 	words[1] = gxmVdmBlockSize(block) | 0x02022201;
 	words[2] = 0xc0000000;
-	buffer->cur = (SceUInt32)(words + 3);
+	buffer->current = (SceUInt32)(words + 3);
 	return 0;
 }
 
@@ -123,7 +123,7 @@ int gxmVdmWriteTerminate(GxmChunkBuffer *buffer, const GxmCommandBlock *block)
 		return SCE_GXM_ERROR_RESERVE_FAILED;
 	words[0] = (SceUInt32)block->data >> 4 | GXM_VDM_STATE;
 	words[1] = gxmVdmBlockSize(block) | 0x0204e001;
-	buffer->cur = (SceUInt32)(words + 2);
+	buffer->current = (SceUInt32)(words + 2);
 	return 0;
 }
 
@@ -140,6 +140,6 @@ int gxmVdmWriteLink(GxmChunkBuffer *buffer, SceUInt32 address, const SceUInt32 *
 		words[1] = returnWords[0];
 		words[2] = returnWords[1];
 	}
-	buffer->cur = (SceUInt32)words + size;
+	buffer->current = (SceUInt32)words + size;
 	return 0;
 }

@@ -560,7 +560,7 @@ int gxmProgramBuildSecondaryCode(GxmChunkBuffer *buffer, const SceGxmProgram *pr
 		GXM_DBG_ERROR(510, "Could not reserve %d bytes.", size);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
 	}
-	offset = buffer->cur + buffer->gpuEnd - buffer->end;
+	offset = buffer->current + buffer->gpuEnd - buffer->end;
 	code[1] = 0xfa440700;
 	code[0] = 0;
 	if (!(gxmGlobals.compatFlags & GXM_COMPAT_USSE_OLD_HEADER))
@@ -658,7 +658,7 @@ int gxmProgramBuildVertexCode(GxmChunkBuffer *buffer, const SceGxmProgram *progr
 			      (program->primaryInstructionCount + 2) * 8);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
 	}
-	offset = buffer->cur + buffer->gpuEnd - buffer->end;
+	offset = buffer->current + buffer->gpuEnd - buffer->end;
 	sceClibMemcpy_safe(code, GXM_RELATIVE(program->primaryProgramOffset),
 		      program->primaryInstructionCount << 3);
 	trailer = code + program->primaryInstructionCount * 2;

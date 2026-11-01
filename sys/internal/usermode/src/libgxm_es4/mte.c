@@ -51,7 +51,7 @@ static inline GXM_DBG_NOINLINE int gxmMteBuildCopyProgram(GxmChunkBuffer *buffer
 		GXM_DBG_ERROR(97, "Could not reserve %d bytes.", size);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
 	}
-	offset = buffer->cur + buffer->gpuEnd - buffer->end;
+	offset = buffer->current + buffer->gpuEnd - buffer->end;
 	code[0] = 0;
 	code[1] = 0xfa440700;
 	out = gxmUsseWriteHeader(code + 2);

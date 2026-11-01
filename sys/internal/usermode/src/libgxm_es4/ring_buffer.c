@@ -18,7 +18,7 @@ static void gxmRingBufferRefill(GxmChunkBuffer *writeBuffer, SceSize size, SceSi
 	for (;;) {
 		SceBool wait;
 
-		cur = writeBuffer->cur;
+		cur = writeBuffer->current;
 		end = writeBuffer->end;
 		do {
 			SceUInt32 read = *ringBuffer->readOffset;
@@ -36,8 +36,8 @@ static void gxmRingBufferRefill(GxmChunkBuffer *writeBuffer, SceSize size, SceSi
 				} else if (endOffset == ringBuffer->usableSize) {
 					/* back to the start, behind the GPU */
 					if (ringBuffer->linked) {
-						GXM_DBG_ASSERT(62, (writeBuffer->cur & 0x3) == 0);
-						*(SceUInt32 *)writeBuffer->cur = ringBuffer->memory >> 2;
+						GXM_DBG_ASSERT(62, ((uintptr_t)writeBuffer->current & 0x3) == 0);
+						*(SceUInt32 *)writeBuffer->current = ringBuffer->memory >> 2;
 					}
 					curOffset = 0;
 					wait = SCE_TRUE;
@@ -50,7 +50,7 @@ static void gxmRingBufferRefill(GxmChunkBuffer *writeBuffer, SceSize size, SceSi
 				}
 			}
 			cur = ringBuffer->memory + curOffset;
-			writeBuffer->cur = cur;
+			writeBuffer->current = cur;
 			aligned = (cur + alignment - 1) & -alignment;
 			end = ringBuffer->memory + available;
 			writeBuffer->end = end;
@@ -69,7 +69,7 @@ found:
 	if (used < ringBuffer->commitLimit)
 		cur += ringBuffer->commitLimit - used;
 	ringBuffer->threshold = cur;
-	writeBuffer->cur = aligned;
+	writeBuffer->current = aligned;
 }
 
 void gxmRingBufferInit(GxmRingBuffer *ringBuffer, GxmChunkBuffer *writeBuffer, void *memory,
@@ -92,7 +92,7 @@ void gxmRingBufferInit(GxmRingBuffer *ringBuffer, GxmChunkBuffer *writeBuffer, v
 	ringBuffer->lastOffset = 0;
 	writeBuffer->end = (SceUInt32)memory + usableSize;
 	writeBuffer->gpuEnd = usableSize + gpuOffset;
-	writeBuffer->cur = (SceUInt32)memory;
+	writeBuffer->current = (SceUInt32)memory;
 	writeBuffer->ring = ringBuffer;
 #if SCE_DBG_ASSERTS_ENABLED
 	writeBuffer->reserved = (SceUInt32)memory;
@@ -108,7 +108,7 @@ void gxmRingBufferKicked(GxmRingBuffer *ringBuffer, GxmChunkBuffer *writeBuffer)
 	SceUInt32 offset;
 
 	GXM_DBG_ASSERT(186, writeBuffer->ring == ringBuffer);
-	cur = writeBuffer->cur;
+	cur = writeBuffer->current;
 	offset = cur - ringBuffer->memory;
 
 	/* at the end of the ringBuffer: wait for the GPU to leave the start */
@@ -132,7 +132,7 @@ void gxmRingBufferKicked(GxmRingBuffer *ringBuffer, GxmChunkBuffer *writeBuffer)
 						wait = SCE_TRUE;
 					} else if (endOffset == ringBuffer->usableSize) {
 						if (ringBuffer->linked) {
-							GXM_DBG_ASSERT(62, (cur & 0x3) == 0);
+							GXM_DBG_ASSERT(62, ((uintptr_t)writeBuffer->current & 0x3) == 0);
 							*(SceUInt32 *)cur = ringBuffer->memory >> 2;
 						}
 						curOffset = 0;
@@ -146,7 +146,7 @@ void gxmRingBufferKicked(GxmRingBuffer *ringBuffer, GxmChunkBuffer *writeBuffer)
 					}
 				}
 				cur = ringBuffer->memory + curOffset;
-				writeBuffer->cur = cur;
+				writeBuffer->current = cur;
 				end = ringBuffer->memory + available;
 				writeBuffer->end = end;
 				writeBuffer->gpuEnd = available + ringBuffer->gpuOffset;
@@ -155,7 +155,7 @@ void gxmRingBufferKicked(GxmRingBuffer *ringBuffer, GxmChunkBuffer *writeBuffer)
 					goto done;
 			} while (!wait);
 			sceGxmWaitEvent();
-			cur = writeBuffer->cur;
+			cur = writeBuffer->current;
 			offset = cur - ringBuffer->memory;
 		}
 	}
