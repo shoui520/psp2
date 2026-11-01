@@ -96,80 +96,170 @@ int sceGxmShaderPatcherCreate(const SceGxmShaderPatcherParams *params,
 	SceUInt32 bufferMem, vertexMem, fragmentMem;
 	SceSize bufferSize, vertexSize, fragmentSize;
 
-	if (params == NULL || shaderPatcher == NULL || params->hostAllocCallback == NULL ||
-	    params->hostFreeCallback == NULL)
+	if (params == NULL) {
+		GXM_DBG_ERROR_NULL(562, sceGxmShaderPatcherCreate, params);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(566, sceGxmShaderPatcherCreate, shaderPatcher);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (params->hostAllocCallback == NULL) {
+		GXM_DBG_ERROR_NULL(572, sceGxmShaderPatcherCreate, params->hostAllocCallback);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (params->hostFreeCallback == NULL) {
+		GXM_DBG_ERROR_NULL(576, sceGxmShaderPatcherCreate, params->hostFreeCallback);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 
 	/* each kind of memory comes from callbacks or from a fixed region, not both */
 	if (params->bufferAllocCallback == NULL) {
-		if (params->bufferFreeCallback != NULL)
+		if (params->bufferFreeCallback != NULL) {
+			GXM_DBG_ERROR(596, "Parameter params->bufferFreeCallback to function sceGxmShaderPatcherCreate "
+				      "must be NULL if params->bufferAllocCallback is NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		bufferMem = (SceUInt32)params->bufferMem;
-		if (bufferMem == 0)
+		if (bufferMem == 0) {
+			GXM_DBG_ERROR(600, "Parameter params->bufferMem to function sceGxmShaderPatcherCreate "
+				      "must be non-NULL if params->bufferAllocCallback is NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		bufferSize = params->bufferMemSize;
-		if (bufferSize == 0)
+		if (bufferSize == 0) {
+			GXM_DBG_ERROR(604, "Parameter params->bufferMemSize to function sceGxmShaderPatcherCreate "
+				      "must be non-zero if params->bufferAllocCallback is NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 	} else {
-		if (params->bufferFreeCallback == NULL || params->bufferMem != NULL ||
-		    params->bufferMemSize != 0)
+		if (params->bufferFreeCallback == NULL) {
+			GXM_DBG_ERROR(583, "Parameter params->bufferFreeCallback to function sceGxmShaderPatcherCreate "
+				      "must be non-NULL if params->bufferAllocCallback is non-NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+		if (params->bufferMem != NULL) {
+			GXM_DBG_ERROR(587, "Parameter params->bufferMem to function sceGxmShaderPatcherCreate "
+				      "must be NULL if params->bufferAllocCallback is non-NULL.");
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+		if (params->bufferMemSize != 0) {
+			GXM_DBG_ERROR(591, "Parameter params->bufferMemSize to function sceGxmShaderPatcherCreate "
+				      "must be zero if params->bufferAllocCallback is non-NULL.");
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		bufferMem = 0;
 		bufferSize = 0;
 	}
 	if (params->vertexUsseAllocCallback == NULL) {
-		if (params->vertexUsseFreeCallback != NULL)
+		if (params->vertexUsseFreeCallback != NULL) {
+			GXM_DBG_ERROR(625, "Parameter params->vertexUsseFreeCallback to function sceGxmShaderPatcherCreate "
+				      "must be NULL if params->vertexUsseAllocCallback is NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		vertexMem = (SceUInt32)params->vertexUsseMem;
-		if (vertexMem == 0)
+		if (vertexMem == 0) {
+			GXM_DBG_ERROR(629, "Parameter params->vertexUsseMem to function sceGxmShaderPatcherCreate "
+				      "must be non-NULL if params->vertexUsseAllocCallback is NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		vertexSize = params->vertexUsseMemSize;
-		if (vertexSize == 0)
+		if (vertexSize == 0) {
+			GXM_DBG_ERROR(633, "Parameter params->vertexUsseMemSize to function sceGxmShaderPatcherCreate "
+				      "must be non-zero if params->vertexUsseAllocCallback is NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 	} else {
-		if (params->vertexUsseFreeCallback == NULL || params->vertexUsseMem != NULL ||
-		    params->vertexUsseMemSize != 0)
+		if (params->vertexUsseFreeCallback == NULL) {
+			GXM_DBG_ERROR(612, "Parameter params->vertexUsseFreeCallback to function sceGxmShaderPatcherCreate "
+				      "must be non-NULL if params->vertexUsseAllocCallback is non-NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+		if (params->vertexUsseMem != NULL) {
+			GXM_DBG_ERROR(616, "Parameter params->vertexUsseMem to function sceGxmShaderPatcherCreate "
+				      "must be NULL if params->vertexUsseAllocCallback is non-NULL.");
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+		if (params->vertexUsseMemSize != 0) {
+			GXM_DBG_ERROR(620, "Parameter params->vertexUsseMemSize to function sceGxmShaderPatcherCreate "
+				      "must be zero if params->vertexUsseAllocCallback is non-NULL.");
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		vertexMem = 0;
 		vertexSize = 0;
 	}
 	if (params->fragmentUsseAllocCallback == NULL) {
-		if (params->fragmentUsseFreeCallback != NULL)
+		if (params->fragmentUsseFreeCallback != NULL) {
+			GXM_DBG_ERROR(654, "Parameter params->fragmentUsseFreeCallback to function sceGxmShaderPatcherCreate "
+				      "must be NULL if params->fragmentUsseAllocCallback is NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		fragmentMem = (SceUInt32)params->fragmentUsseMem;
-		if (fragmentMem == 0)
+		if (fragmentMem == 0) {
+			GXM_DBG_ERROR(658, "Parameter params->fragmentUsseMem to function sceGxmShaderPatcherCreate "
+				      "must be non-NULL if params->fragmentUsseAllocCallback is NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		fragmentSize = params->fragmentUsseMemSize;
-		if (fragmentSize == 0)
+		if (fragmentSize == 0) {
+			GXM_DBG_ERROR(662, "Parameter params->fragmentUsseMemSize to function sceGxmShaderPatcherCreate "
+				      "must be non-zero if params->fragmentUsseAllocCallback is NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 	} else {
-		if (params->fragmentUsseFreeCallback == NULL || params->fragmentUsseMem != NULL ||
-		    params->fragmentUsseMemSize != 0)
+		if (params->fragmentUsseFreeCallback == NULL) {
+			GXM_DBG_ERROR(641, "Parameter params->fragmentUsseFreeCallback to function sceGxmShaderPatcherCreate "
+				      "must be non-NULL if params->fragmentUsseAllocCallback is non-NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+		if (params->fragmentUsseMem != NULL) {
+			GXM_DBG_ERROR(645, "Parameter params->fragmentUsseMem to function sceGxmShaderPatcherCreate "
+				      "must be NULL if params->fragmentUsseAllocCallback is non-NULL.");
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+		if (params->fragmentUsseMemSize != 0) {
+			GXM_DBG_ERROR(649, "Parameter params->fragmentUsseMemSize to function sceGxmShaderPatcherCreate "
+				      "must be zero if params->fragmentUsseAllocCallback is non-NULL.");
+			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		fragmentMem = 0;
 		fragmentSize = 0;
 	}
 
 	/* the regions may not overlap, except a vertex and fragment heap that are the same */
 	if (bufferMem != 0) {
-		if (vertexMem != 0 && gxmRangesOverlap(bufferMem, bufferSize, vertexMem, vertexSize))
+		if (vertexMem != 0 && gxmRangesOverlap(bufferMem, bufferSize, vertexMem, vertexSize)) {
+			GXM_DBG_ERROR(675, "The buffer memory and vertex USSE memory are overlapping.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		if (fragmentMem != 0 &&
-		    gxmRangesOverlap(bufferMem, bufferSize, fragmentMem, fragmentSize))
+		    gxmRangesOverlap(bufferMem, bufferSize, fragmentMem, fragmentSize)) {
+			GXM_DBG_ERROR(686, "The buffer memory and fragment USSE memory are overlapping.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 	}
 	if (vertexMem != 0 && fragmentMem != 0) {
 		if (fragmentMem == vertexMem) {
-			if (fragmentSize != vertexSize)
+			if (fragmentSize != vertexSize) {
+				GXM_DBG_ERROR(697, "The vertex USSE memory size and fragment USSE memory "
+					      "size must match when using the same memory area for vertex "
+					      "and fragment USSE code.");
 				return SCE_GXM_ERROR_INVALID_VALUE;
+			}
 		} else if (gxmRangesOverlap(vertexMem, vertexSize, fragmentMem, fragmentSize)) {
+			GXM_DBG_ERROR(707, "The vertex USSE memory and fragment USSE memory must not "
+				      "overlap when not using the same memory area for vertex and fragment "
+				      "USSE code.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
 		}
 	}
 
 	patcher = params->hostAllocCallback(params->userData, sizeof(*patcher));
-	if (patcher == NULL)
+	if (patcher == NULL) {
+		GXM_DBG_ERROR(718, "Shader patcher host memory allocation returned NULL for allocation "
+			      "of size %u.", sizeof(*patcher));
 		return SCE_GXM_ERROR_OUT_OF_HOST_MEMORY;
+	}
 	patcher->userData = params->userData;
 	patcher->hostAlloc = params->hostAllocCallback;
 	patcher->hostFree = params->hostFreeCallback;
@@ -236,8 +326,10 @@ int sceGxmShaderPatcherCreate(const SceGxmShaderPatcherParams *params,
 
 int sceGxmShaderPatcherSetUserData(SceGxmShaderPatcher *shaderPatcher, void *userData)
 {
-	if (shaderPatcher == NULL)
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(748, sceGxmShaderPatcherSetUserData, shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	shaderPatcher->userData = userData;
 	/* the callbacks of the patcher's own heaps keep the patcher */
 	if (shaderPatcher->bufferMem == NULL)
@@ -262,10 +354,29 @@ static inline SceSize gxmProgramBufferWords(const SceGxmProgram *program)
 	return program->scratchBufferCount + program->literalBufferCount + program->threadBufferCount;
 }
 
-static inline void gxmPatcherFreeRegistered(SceGxmShaderPatcher *patcher,
-					    SceGxmRegisteredProgram *registered)
+/* the debug build reports these failures out of line */
+static GXM_DBG_NOINLINE int
+gxmPatcherVertexProgramsInUse(const SceGxmRegisteredProgram *registered)
 {
-	SceGxmRegisteredProgram *prev = registered->prev, *next = registered->next;
+	GXM_DBG_ERROR(405, "Registered program with value %p still has vertex programs in use.",
+		      registered);
+	return SCE_GXM_ERROR_PROGRAM_IN_USE;
+}
+
+static inline int gxmPatcherFreeRegistered(SceGxmShaderPatcher *patcher,
+					   SceGxmRegisteredProgram *registered)
+{
+	SceGxmRegisteredProgram *prev, *next;
+
+	if (registered->vertexPrograms != NULL)
+		return gxmPatcherVertexProgramsInUse(registered);
+	if (registered->fragmentPrograms != NULL) {
+		GXM_DBG_ERROR(410, "Registered program with value %p still has fragment programs in use.",
+			      registered);
+		return SCE_GXM_ERROR_PROGRAM_IN_USE;
+	}
+	prev = registered->prev;
+	next = registered->next;
 
 	prev->next = next;
 	next->prev = prev;
@@ -284,19 +395,23 @@ static inline void gxmPatcherFreeRegistered(SceGxmShaderPatcher *patcher,
 	}
 	patcher->hostFree(patcher->userData, registered);
 	patcher->hostMemAllocated -= sizeof(*registered);
+	return 0;
 }
 
 int sceGxmShaderPatcherDestroy(SceGxmShaderPatcher *shaderPatcher)
 {
 	SceGxmRegisteredProgram *list, *registered;
+	int err;
 
-	if (shaderPatcher == NULL)
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(773, sceGxmShaderPatcherDestroy, shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	list = shaderPatcher->programs;
 	for (registered = list->prev; registered != list; registered = list->prev) {
-		if (registered->vertexPrograms != NULL || registered->fragmentPrograms != NULL)
-			return SCE_GXM_ERROR_PROGRAM_IN_USE;
-		gxmPatcherFreeRegistered(shaderPatcher, registered);
+		err = gxmPatcherFreeRegistered(shaderPatcher, registered);
+		if (err != 0)
+			return err;
 	}
 	gxmHeapClear(&shaderPatcher->fragmentUsseHeap);
 	gxmHeapClear(&shaderPatcher->vertexUsseHeap);
@@ -311,6 +426,55 @@ static inline _Bool gxmPatcherMisaligned(const void *mem)
 	return !(gxmGlobals.compatFlags & GXM_COMPAT_PATCHER_UNALIGNED) && ((SceUInt32)mem & 3) != 0;
 }
 
+static GXM_DBG_NOINLINE int gxmPatcherHostAllocFailed(SceSize size)
+{
+	GXM_DBG_ERROR(50, "Shader patcher host memory allocation returned NULL for allocation of "
+		      "size %d", size);
+	return SCE_GXM_ERROR_OUT_OF_HOST_MEMORY;
+}
+
+static GXM_DBG_NOINLINE int gxmPatcherBufferAllocFailed(SceSize size)
+{
+	GXM_DBG_ERROR(86, "Shader patcher buffer memory allocation returned NULL for allocation of "
+		      "size %d", size);
+	return SCE_GXM_ERROR_OUT_OF_BUFFER_MEMORY;
+}
+
+/* host memory for the patcher's own records */
+static inline int gxmPatcherHostAlloc(SceGxmShaderPatcher *patcher, SceSize size, void **mem)
+{
+	void *allocated = patcher->hostAlloc(patcher->userData, size);
+
+	if (allocated == NULL)
+		return gxmPatcherHostAllocFailed(size);
+	if (gxmPatcherMisaligned(allocated)) {
+		patcher->hostFree(patcher->userData, allocated);
+		GXM_DBG_ERROR(62, "Shader patcher host memory allocation of size %d returned %p, "
+			      "which is not aligned to 4", size, allocated);
+		return SCE_GXM_ERROR_INVALID_ALIGNMENT;
+	}
+	*mem = allocated;
+	return 0;
+}
+
+/* buffer memory for a registered program's literals, scratch and thread buffers */
+static inline int gxmPatcherBufferAllocChecked(SceGxmShaderPatcher *patcher, SceSize size,
+					       void **mem)
+{
+	void *allocated = patcher->bufferAlloc(patcher->bufferUserData, size);
+
+	if (allocated == NULL)
+		return gxmPatcherBufferAllocFailed(size);
+	if (gxmPatcherMisaligned(allocated)) {
+		patcher->bufferFree(patcher->bufferUserData, allocated);
+		GXM_DBG_ERROR(98, "Shader patcher buffer memory allocation of size %d returned %p, "
+			      "which is not aligned to 4", size, allocated);
+		return SCE_GXM_ERROR_INVALID_ALIGNMENT;
+	}
+	*mem = allocated;
+	return 0;
+}
+
 int sceGxmShaderPatcherRegisterProgram(SceGxmShaderPatcher *shaderPatcher,
 				       const SceGxmProgram *programHeader,
 				       SceGxmShaderPatcherId *programId)
@@ -320,18 +484,40 @@ int sceGxmShaderPatcherRegisterProgram(SceGxmShaderPatcher *shaderPatcher,
 	void *mem;
 	int err;
 
-	if (shaderPatcher == NULL || programHeader == NULL || programId == NULL)
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(797, sceGxmShaderPatcherRegisterProgram, shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (programHeader == NULL) {
+		GXM_DBG_ERROR(801, "Parameter program to function sceGxmShaderPatcherRegisterProgram "
+			      "is NULL.");
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (programId == NULL) {
+		GXM_DBG_ERROR_NULL(805, sceGxmShaderPatcherRegisterProgram, programId);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	err = sceGxmProgramCheck(programHeader);
 	if (err != 0)
 		return err;
-	registered = shaderPatcher->hostAlloc(shaderPatcher->userData, sizeof(*registered));
-	if (registered == NULL)
-		return SCE_GXM_ERROR_OUT_OF_HOST_MEMORY;
-	if (gxmPatcherMisaligned(registered)) {
-		shaderPatcher->hostFree(shaderPatcher->userData, registered);
-		return SCE_GXM_ERROR_INVALID_ALIGNMENT;
+#if SCE_DBG_ASSERTS_ENABLED
+	/* a program registered twice gets two IDs whose programs cannot be shared */
+	list = shaderPatcher->programs;
+	for (registered = list->prev; registered != list; registered = registered->prev) {
+		if (registered->programHeader == programHeader) {
+			if (gxmWarningIsEnabled(SCE_GXM_WARNING_PROGRAM_REGISTERED_WITH_SHADER_PATCHER))
+				GXM_DBG_WARNING(822, "The program at %p is being registered multiple "
+						"times with the shader patcher.  Vertex and fragment "
+						"programs cannot be shared between these separate IDs.",
+						programHeader);
+			break;
+		}
 	}
+#endif
+	err = gxmPatcherHostAlloc(shaderPatcher, sizeof(*registered), &mem);
+	if (err != 0)
+		return err;
+	registered = mem;
 	registered->programHeader = programHeader;
 
 	/* the literals, copied from the program */
@@ -339,18 +525,11 @@ int sceGxmShaderPatcherRegisterProgram(SceGxmShaderPatcher *shaderPatcher,
 		registered->literals = NULL;
 	} else {
 		size = programHeader->literalBufferCount << 2;
-		mem = shaderPatcher->bufferAlloc(shaderPatcher->bufferUserData, size);
-		if (mem == NULL) {
-			err = SCE_GXM_ERROR_OUT_OF_BUFFER_MEMORY;
+		err = gxmPatcherBufferAllocChecked(shaderPatcher, size, &registered->literals);
+		if (err != 0)
 			goto freeRegistered;
-		}
-		if (gxmPatcherMisaligned(mem)) {
-			shaderPatcher->bufferFree(shaderPatcher->bufferUserData, mem);
-			err = SCE_GXM_ERROR_INVALID_ALIGNMENT;
-			goto freeRegistered;
-		}
-		registered->literals = mem;
-		sceClibMemcpy_safe(mem, GXM_RELATIVE(programHeader->literalBufferOffset), size);
+		sceClibMemcpy_safe(registered->literals,
+				   GXM_RELATIVE(programHeader->literalBufferOffset), size);
 		SceGxmInternalForTest_631E95AA(registered->literals, size, 0, 0, "Literal buffer");
 	}
 
@@ -358,34 +537,20 @@ int sceGxmShaderPatcherRegisterProgram(SceGxmShaderPatcher *shaderPatcher,
 	if (programHeader->scratchBufferCount == 0) {
 		registered->scratch = NULL;
 	} else {
-		mem = shaderPatcher->bufferAlloc(shaderPatcher->bufferUserData,
-						 programHeader->scratchBufferCount << 2);
-		if (mem == NULL) {
-			err = SCE_GXM_ERROR_OUT_OF_BUFFER_MEMORY;
+		err = gxmPatcherBufferAllocChecked(shaderPatcher,
+						   programHeader->scratchBufferCount << 2,
+						   &registered->scratch);
+		if (err != 0)
 			goto freeLiterals;
-		}
-		if (gxmPatcherMisaligned(mem)) {
-			err = SCE_GXM_ERROR_INVALID_ALIGNMENT;
-			shaderPatcher->bufferFree(shaderPatcher->bufferUserData, mem);
-			goto freeLiterals;
-		}
-		registered->scratch = mem;
 	}
 	if (programHeader->threadBufferCount == 0) {
 		registered->thread = NULL;
 	} else {
-		mem = shaderPatcher->bufferAlloc(shaderPatcher->bufferUserData,
-						 programHeader->threadBufferCount << 2);
-		if (mem == NULL) {
-			err = SCE_GXM_ERROR_OUT_OF_BUFFER_MEMORY;
+		err = gxmPatcherBufferAllocChecked(shaderPatcher,
+						   programHeader->threadBufferCount << 2,
+						   &registered->thread);
+		if (err != 0)
 			goto freeScratch;
-		}
-		if (gxmPatcherMisaligned(mem)) {
-			err = SCE_GXM_ERROR_INVALID_ALIGNMENT;
-			shaderPatcher->bufferFree(shaderPatcher->bufferUserData, mem);
-			goto freeScratch;
-		}
-		registered->thread = mem;
 	}
 
 	shaderPatcher->bufferMemAllocated += gxmProgramBufferWords(programHeader) * 4;
@@ -416,14 +581,19 @@ freeRegistered:
 int sceGxmShaderPatcherUnregisterProgram(SceGxmShaderPatcher *shaderPatcher,
 					 SceGxmShaderPatcherId programId)
 {
-	if (shaderPatcher == NULL || programId == NULL)
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(876, sceGxmShaderPatcherUnregisterProgram, shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (shaderPatcher != programId->patcher)
+	}
+	if (programId == NULL) {
+		GXM_DBG_ERROR_NULL(880, sceGxmShaderPatcherUnregisterProgram, programId);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (shaderPatcher != programId->patcher) {
+		GXM_DBG_ERROR_NOT_CREATED(885, sceGxmShaderPatcherUnregisterProgram, programId);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (programId->vertexPrograms != NULL || programId->fragmentPrograms != NULL)
-		return SCE_GXM_ERROR_PROGRAM_IN_USE;
-	gxmPatcherFreeRegistered(shaderPatcher, programId);
-	return 0;
+	}
+	return gxmPatcherFreeRegistered(shaderPatcher, programId);
 }
 
 /* release every program made from it first */
@@ -433,14 +603,26 @@ int sceGxmShaderPatcherForceUnregisterProgram(SceGxmShaderPatcher *shaderPatcher
 	SceGxmVertexProgram *vertexProgram;
 	SceGxmFragmentProgram *fragmentProgram;
 
-	if (shaderPatcher == NULL || programId == NULL)
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(901, sceGxmShaderPatcherForceUnregisterProgram, shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (shaderPatcher != programId->patcher)
+	}
+	if (programId == NULL) {
+		GXM_DBG_ERROR_NULL(905, sceGxmShaderPatcherForceUnregisterProgram, programId);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (shaderPatcher != programId->patcher) {
+		GXM_DBG_ERROR_NOT_CREATED(910, sceGxmShaderPatcherForceUnregisterProgram, programId);
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 	while ((vertexProgram = programId->vertexPrograms) != NULL) {
 		programId->vertexPrograms = vertexProgram->next;
 		shaderPatcher->hostMemAllocated -= vertexProgram->hostSize;
 		shaderPatcher->vertexUsseMemAllocated -= vertexProgram->usseSize;
+#if SCE_DBG_ASSERTS_ENABLED
+		vertexProgram->program = NULL;
+		vertexProgram->registered = NULL;
+#endif
 		shaderPatcher->vertexUsseFree(shaderPatcher->vertexUsseUserData,
 					      vertexProgram->usseMem);
 		shaderPatcher->hostFree(shaderPatcher->userData, vertexProgram);
@@ -451,17 +633,18 @@ int sceGxmShaderPatcherForceUnregisterProgram(SceGxmShaderPatcher *shaderPatcher
 			programId->fragmentPrograms = fragmentProgram->next;
 			shaderPatcher->hostMemAllocated -= fragmentProgram->hostSize;
 			shaderPatcher->fragmentUsseMemAllocated -= fragmentProgram->usseSize;
+#if SCE_DBG_ASSERTS_ENABLED
+			fragmentProgram->program = NULL;
+			fragmentProgram->registered = NULL;
+#endif
 			if (fragmentProgram->usseMem != NULL)
 				shaderPatcher->fragmentUsseFree(shaderPatcher->fragmentUsseUserData,
 								fragmentProgram->usseMem);
 			shaderPatcher->hostFree(shaderPatcher->userData, fragmentProgram);
 			fragmentProgram = programId->fragmentPrograms;
 		} while (fragmentProgram != NULL);
-		if (programId->vertexPrograms != NULL)
-			return SCE_GXM_ERROR_PROGRAM_IN_USE;
 	}
-	gxmPatcherFreeRegistered(shaderPatcher, programId);
-	return 0;
+	return gxmPatcherFreeRegistered(shaderPatcher, programId);
 }
 
 const SceGxmProgram *sceGxmShaderPatcherGetProgramFromId(SceGxmShaderPatcherId programId)
@@ -472,115 +655,214 @@ const SceGxmProgram *sceGxmShaderPatcherGetProgramFromId(SceGxmShaderPatcherId p
 }
 
 int sceGxmShaderPatcherAddRefVertexProgram(SceGxmShaderPatcher *shaderPatcher,
-					   SceGxmVertexProgram *vertexProgram)
+                                           SceGxmVertexProgram *vertexProgram)
 {
-	if (shaderPatcher == NULL || vertexProgram == NULL)
+	SceGxmVertexProgram *cachedVertexProgram = vertexProgram;
+
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(1893, sceGxmShaderPatcherAddRefVertexProgram, shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (shaderPatcher != vertexProgram->patcher)
+	}
+	if (vertexProgram == NULL) {
+		GXM_DBG_ERROR_NULL(1897, sceGxmShaderPatcherAddRefVertexProgram, vertexProgram);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	GXM_DBG_ASSERT(1899, vertexProgram->program);
+	GXM_DBG_ASSERT(1900, sceGxmProgramGetProgramType(vertexProgram->program) == SCE_GXM_VERTEX_PROGRAM);
+	if (shaderPatcher != vertexProgram->patcher) {
+		GXM_DBG_ERROR_NOT_CREATED(1907, sceGxmShaderPatcherAddRefVertexProgram, vertexProgram);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	vertexProgram->refCount++;
+	}
+	GXM_DBG_ASSERT(1909, cachedVertexProgram->refCount != 0);
+	cachedVertexProgram->refCount++;
 	return 0;
 }
 
 int sceGxmShaderPatcherAddRefFragmentProgram(SceGxmShaderPatcher *shaderPatcher,
-					     SceGxmFragmentProgram *fragmentProgram)
+                                             SceGxmFragmentProgram *fragmentProgram)
 {
-	if (shaderPatcher == NULL || fragmentProgram == NULL)
+	SceGxmFragmentProgram *cachedFragmentProgram = fragmentProgram;
+
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(1921, sceGxmShaderPatcherAddRefFragmentProgram, shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (shaderPatcher != fragmentProgram->patcher)
+	}
+	if (fragmentProgram == NULL) {
+		GXM_DBG_ERROR_NULL(1925, sceGxmShaderPatcherAddRefFragmentProgram, fragmentProgram);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	GXM_DBG_ASSERT(1927, fragmentProgram->program);
+	GXM_DBG_ASSERT(1928, sceGxmProgramGetProgramType(fragmentProgram->program) == SCE_GXM_FRAGMENT_PROGRAM);
+	if (shaderPatcher != fragmentProgram->patcher) {
+		GXM_DBG_ERROR_NOT_CREATED(1935, sceGxmShaderPatcherAddRefFragmentProgram, fragmentProgram);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	fragmentProgram->refCount++;
+	}
+	GXM_DBG_ASSERT(1937, cachedFragmentProgram->refCount != 0);
+	cachedFragmentProgram->refCount++;
 	return 0;
 }
 
 int sceGxmShaderPatcherReleaseVertexProgram(SceGxmShaderPatcher *shaderPatcher,
-					    SceGxmVertexProgram *vertexProgram)
+                                            SceGxmVertexProgram *vertexProgram)
 {
+	SceGxmVertexProgram *cachedVertexProgram = vertexProgram;
 	SceGxmVertexProgram *prev, *cur;
 
-	if (shaderPatcher == NULL || vertexProgram == NULL)
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(1949, sceGxmShaderPatcherReleaseVertexProgram, shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (shaderPatcher != vertexProgram->patcher)
+	}
+	if (vertexProgram == NULL) {
+		GXM_DBG_ERROR_NULL(1953, sceGxmShaderPatcherReleaseVertexProgram, vertexProgram);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	GXM_DBG_ASSERT(1955, vertexProgram->program);
+	GXM_DBG_ASSERT(1956, sceGxmProgramGetProgramType(vertexProgram->program) == SCE_GXM_VERTEX_PROGRAM);
+	if (shaderPatcher != vertexProgram->patcher) {
+		GXM_DBG_ERROR_NOT_CREATED(1963, sceGxmShaderPatcherReleaseVertexProgram, vertexProgram);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (--vertexProgram->refCount != 0)
+	}
+	GXM_DBG_ASSERT_MSG(1966, cachedVertexProgram->registered != NULL,
+			   "vertex program has already been destroyed");
+	GXM_DBG_ASSERT(1969, cachedVertexProgram->refCount > 0);
+	if (--cachedVertexProgram->refCount != 0)
 		return 0;
 
 	/* unlink it from its registered program */
-	prev = vertexProgram->registered->vertexPrograms;
-	if (vertexProgram == prev) {
-		vertexProgram->registered->vertexPrograms = vertexProgram->next;
+	prev = cachedVertexProgram->registered->vertexPrograms;
+	if (cachedVertexProgram == prev) {
+		cachedVertexProgram->registered->vertexPrograms = cachedVertexProgram->next;
 	} else {
-		if (prev == NULL)
+		if (prev == NULL) {
+			GXM_DBG_FAIL(1982, "tried to remove cached vertex program from empty list");
 			return SCE_GXM_ERROR_INVALID_VALUE;
-		for (cur = prev->next; vertexProgram != cur; cur = cur->next) {
-			if (cur == NULL)
+		}
+		for (cur = prev->next; cachedVertexProgram != cur; cur = cur->next) {
+			if (cur == NULL) {
+				GXM_DBG_FAIL(1988, "cached vertex program not found in list");
 				return SCE_GXM_ERROR_INVALID_VALUE;
+			}
 			prev = cur;
 		}
-		prev->next = vertexProgram->next;
+		prev->next = cachedVertexProgram->next;
 	}
-	shaderPatcher->hostMemAllocated -= vertexProgram->hostSize;
-	shaderPatcher->vertexUsseMemAllocated -= vertexProgram->usseSize;
-	shaderPatcher->vertexUsseFree(shaderPatcher->vertexUsseUserData, vertexProgram->usseMem);
-	shaderPatcher->hostFree(shaderPatcher->userData, vertexProgram);
+	shaderPatcher->hostMemAllocated -= cachedVertexProgram->hostSize;
+	shaderPatcher->vertexUsseMemAllocated -= cachedVertexProgram->usseSize;
+#if SCE_DBG_ASSERTS_ENABLED
+	cachedVertexProgram->program = NULL;
+	cachedVertexProgram->registered = NULL;
+#endif
+	shaderPatcher->vertexUsseFree(shaderPatcher->vertexUsseUserData, cachedVertexProgram->usseMem);
+	shaderPatcher->hostFree(shaderPatcher->userData, cachedVertexProgram);
 	return 0;
 }
 
 int sceGxmShaderPatcherReleaseFragmentProgram(SceGxmShaderPatcher *shaderPatcher,
-					      SceGxmFragmentProgram *fragmentProgram)
+                                              SceGxmFragmentProgram *fragmentProgram)
 {
+	SceGxmFragmentProgram *cachedFragmentProgram = fragmentProgram;
 	SceGxmFragmentProgram *prev, *cur;
 
-	if (shaderPatcher == NULL || fragmentProgram == NULL)
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(2011, sceGxmShaderPatcherReleaseFragmentProgram, shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (shaderPatcher != fragmentProgram->patcher)
+	}
+	if (fragmentProgram == NULL) {
+		GXM_DBG_ERROR_NULL(2015, sceGxmShaderPatcherReleaseFragmentProgram, fragmentProgram);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	GXM_DBG_ASSERT(2017, fragmentProgram->program);
+	GXM_DBG_ASSERT(2018, sceGxmProgramGetProgramType(fragmentProgram->program) == SCE_GXM_FRAGMENT_PROGRAM);
+	if (shaderPatcher != fragmentProgram->patcher) {
+		GXM_DBG_ERROR_NOT_CREATED(2025, sceGxmShaderPatcherReleaseFragmentProgram, fragmentProgram);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (--fragmentProgram->refCount != 0)
+	}
+	GXM_DBG_ASSERT_MSG(2028, cachedFragmentProgram->registered != NULL,
+			   "fragment program has already been destroyed");
+	GXM_DBG_ASSERT(2031, cachedFragmentProgram->refCount > 0);
+	if (--cachedFragmentProgram->refCount != 0)
 		return 0;
 
-	prev = fragmentProgram->registered->fragmentPrograms;
-	if (fragmentProgram == prev) {
-		fragmentProgram->registered->fragmentPrograms = fragmentProgram->next;
+	/* unlink it from its registered program */
+	prev = cachedFragmentProgram->registered->fragmentPrograms;
+	if (cachedFragmentProgram == prev) {
+		cachedFragmentProgram->registered->fragmentPrograms = cachedFragmentProgram->next;
 	} else {
-		if (prev == NULL)
+		if (prev == NULL) {
+			GXM_DBG_FAIL(2044, "tried to remove cached fragment program from empty list");
 			return SCE_GXM_ERROR_INVALID_VALUE;
-		for (cur = prev->next; fragmentProgram != cur; cur = cur->next) {
-			if (cur == NULL)
+		}
+		for (cur = prev->next; cachedFragmentProgram != cur; cur = cur->next) {
+			if (cur == NULL) {
+				GXM_DBG_FAIL(2050, "cached fragment program not found in list");
 				return SCE_GXM_ERROR_INVALID_VALUE;
+			}
 			prev = cur;
 		}
-		prev->next = fragmentProgram->next;
+		prev->next = cachedFragmentProgram->next;
 	}
-	shaderPatcher->hostMemAllocated -= fragmentProgram->hostSize;
-	shaderPatcher->fragmentUsseMemAllocated -= fragmentProgram->usseSize;
-	if (fragmentProgram->usseMem != NULL)
+	shaderPatcher->hostMemAllocated -= cachedFragmentProgram->hostSize;
+	shaderPatcher->fragmentUsseMemAllocated -= cachedFragmentProgram->usseSize;
+#if SCE_DBG_ASSERTS_ENABLED
+	cachedFragmentProgram->program = NULL;
+	cachedFragmentProgram->registered = NULL;
+#endif
+	if (cachedFragmentProgram->usseMem != NULL)
 		shaderPatcher->fragmentUsseFree(shaderPatcher->fragmentUsseUserData,
-						fragmentProgram->usseMem);
-	shaderPatcher->hostFree(shaderPatcher->userData, fragmentProgram);
+						cachedFragmentProgram->usseMem);
+	shaderPatcher->hostFree(shaderPatcher->userData, cachedFragmentProgram);
 	return 0;
 }
 
 int sceGxmShaderPatcherGetVertexProgramRefCount(const SceGxmShaderPatcher *shaderPatcher,
-						const SceGxmVertexProgram *vertexProgram,
-						SceUInt32 *count)
+                                                const SceGxmVertexProgram *vertexProgram,
+                                                SceUInt32 *refCount)
 {
-	if (shaderPatcher == NULL || vertexProgram == NULL || count == NULL)
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(2074, sceGxmShaderPatcherGetVertexProgramRefCount, shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (shaderPatcher != vertexProgram->patcher)
+	}
+	if (vertexProgram == NULL) {
+		GXM_DBG_ERROR_NULL(2078, sceGxmShaderPatcherGetVertexProgramRefCount, vertexProgram);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (refCount == NULL) {
+		GXM_DBG_ERROR_NULL(2082, sceGxmShaderPatcherGetVertexProgramRefCount, refCount);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	GXM_DBG_ASSERT(2084, vertexProgram->program);
+	GXM_DBG_ASSERT(2085, sceGxmProgramGetProgramType(vertexProgram->program) == SCE_GXM_VERTEX_PROGRAM);
+	if (shaderPatcher != vertexProgram->patcher) {
+		GXM_DBG_ERROR_NOT_CREATED(2092, sceGxmShaderPatcherGetVertexProgramRefCount, vertexProgram);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	*count = vertexProgram->refCount;
+	}
+	*refCount = vertexProgram->refCount;
 	return 0;
 }
 
 int sceGxmShaderPatcherGetFragmentProgramRefCount(const SceGxmShaderPatcher *shaderPatcher,
-						  const SceGxmFragmentProgram *fragmentProgram,
-						  SceUInt32 *count)
+                                                  const SceGxmFragmentProgram *fragmentProgram,
+                                                  SceUInt32 *refCount)
 {
-	if (shaderPatcher == NULL || fragmentProgram == NULL || count == NULL)
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(2109, sceGxmShaderPatcherGetFragmentProgramRefCount, shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (shaderPatcher != fragmentProgram->patcher)
+	}
+	if (fragmentProgram == NULL) {
+		GXM_DBG_ERROR_NULL(2113, sceGxmShaderPatcherGetFragmentProgramRefCount, fragmentProgram);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (refCount == NULL) {
+		GXM_DBG_ERROR_NULL(2117, sceGxmShaderPatcherGetFragmentProgramRefCount, refCount);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	GXM_DBG_ASSERT(2119, fragmentProgram->program);
+	GXM_DBG_ASSERT(2120, sceGxmProgramGetProgramType(fragmentProgram->program) == SCE_GXM_FRAGMENT_PROGRAM);
+	if (shaderPatcher != fragmentProgram->patcher) {
+		GXM_DBG_ERROR_NOT_CREATED(2127, sceGxmShaderPatcherGetFragmentProgramRefCount, fragmentProgram);
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	*count = fragmentProgram->refCount;
+	}
+	*refCount = fragmentProgram->refCount;
 	return 0;
 }
 
@@ -1218,19 +1500,26 @@ int sceGxmShaderPatcherCreateMaskUpdateFragmentProgram(SceGxmShaderPatcher *shad
 	SceGxmRegisteredProgram *registered;
 	GxmMaskUpdateProgram *created;
 	GxmProgramVaryings *varyings;
+	void *mem;
+	int err;
 
-	if (shaderPatcher == NULL || fragmentProgram == NULL)
+	if (shaderPatcher == NULL) {
+		GXM_DBG_ERROR_NULL(2168, sceGxmShaderPatcherCreateMaskUpdateFragmentProgram,
+				   shaderPatcher);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
+	if (fragmentProgram == NULL) {
+		GXM_DBG_ERROR_NULL(2172, sceGxmShaderPatcherCreateMaskUpdateFragmentProgram,
+				   fragmentProgram);
+		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	registered = shaderPatcher->programs;
 	created = (GxmMaskUpdateProgram *)registered->fragmentPrograms;
 	if (created == NULL) {
-		created = shaderPatcher->hostAlloc(shaderPatcher->userData, sizeof(*created));
-		if (created == NULL)
-			return SCE_GXM_ERROR_OUT_OF_HOST_MEMORY;
-		if (gxmPatcherMisaligned(created)) {
-			shaderPatcher->hostFree(shaderPatcher->userData, created);
-			return SCE_GXM_ERROR_INVALID_ALIGNMENT;
-		}
+		err = gxmPatcherHostAlloc(shaderPatcher, sizeof(*created), &mem);
+		if (err != 0)
+			return err;
+		created = mem;
 		sceClibMemset(created, 0, sizeof(*created));
 		created->program.magic = GXM_PROGRAM_MAGIC;
 		created->program.programFlags = GXM_PROGRAM_FRAGMENT | GXM_PROGRAM_UNK80000;
