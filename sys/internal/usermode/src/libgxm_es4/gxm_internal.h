@@ -26,6 +26,36 @@ int sceKernelIsGameBudget(void);
 #define GXM_ASSERT_OFFSET(type, field, offset) \
 	_Static_assert(offsetof(type, field) == (offset), #type "." #field)
 
+/*
+ * SceGxmDbg (vs0:sys/external/libgxm_dbg_es4) is the debug build of these sources, built with
+ * SCE_DBG_ASSERTS_ENABLED: Sony's SCE_DBG_ASSERT and SCE_DBG_LOG_ERROR checks, as the release
+ * build leaves them out. They report the file and line of Sony's source, which ours do not
+ * keep, so each check names its line (and, in a header's code, Sony's header).
+ */
+#define SCE_DBG_ASSERT_COMPONENT	"SceGxmDbg"
+#define SCE_DBG_LOG_COMPONENT		"SceGxmDbg"
+#include <libdbg.h>
+
+#if SCE_DBG_ASSERTS_ENABLED
+#define GXM_DBG_ASSERT_AT(file, line, test)						\
+	_SCE_MACRO_BEGIN								\
+		if (SCE_UNLIKELY(!(test))) {						\
+			if (sceDbgAssertionHandler(file, line, true,			\
+					SCE_DBG_ASSERT_COMPONENT,			\
+					"Assertion failed: %s\n", #test))		\
+				SCE_BREAK();						\
+		}									\
+	_SCE_MACRO_END
+#define GXM_DBG_ERROR_AT(file, line, format, ...)					\
+	sceDbgLoggingHandler(file, line, SCE_DBG_LOG_LEVEL_ERROR, SCE_DBG_LOG_COMPONENT,	\
+			     "[SceGxmDbg]:" format, ##__VA_ARGS__)
+#else
+#define GXM_DBG_ASSERT_AT(file, line, test)		_SCE_MACRO_BEGIN { (void)sizeof((test)); } _SCE_MACRO_END
+#define GXM_DBG_ERROR_AT(file, line, format, ...)	((void)0)
+#endif
+#define GXM_DBG_ASSERT(line, test)		GXM_DBG_ASSERT_AT(__FILE_NAME__, line, test)
+#define GXM_DBG_ERROR(line, format, ...)	GXM_DBG_ERROR_AT(__FILE_NAME__, line, format, ##__VA_ARGS__)
+
 /* --- error codes --- */
 
 /* error codes (Sony gxm/error.h) */
