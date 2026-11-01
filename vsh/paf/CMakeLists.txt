@@ -143,6 +143,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/resource/short.c
 	src/toplevel/state.c
 	src/graphics/state.c
+	src/widget/core/widget.cpp
 	src/widget/state.c
 	src/hash/sha1.c
 	src/std/new.c

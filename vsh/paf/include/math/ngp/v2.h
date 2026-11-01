@@ -51,6 +51,11 @@ public:
 		return v2(mulPerElem(_impl, rhs._impl));
 	}
 
+	bool operator==(v2 rhs) const
+	{
+		return sce::Vectormath::Simd::Aos::allElemEqual(_impl, rhs._impl).getAsBool();
+	}
+
 	const sce::Vectormath::Simd::Aos::Vector2 &getImpl() const
 	{
 		return _impl;

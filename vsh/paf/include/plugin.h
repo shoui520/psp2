@@ -458,7 +458,7 @@ public:
 	/* reads the element's "layout_" children into the widget's layouts and its type's layout */
 	void InstantiateWidget_Layout(const cxml::Element &elm, ui::Widget *widget,
 				      WidgetResourceInfo *info);
-	/* reads the element's first "focus_" child into its type's FocusParam for the widget */
+	/* reads the element's first "focus_" child into its type's WidgetFocusParam for the widget */
 	void InstantiateWidget_Focus(const cxml::Element &elm, ui::Widget *widget);
 
 	/*

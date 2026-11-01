@@ -874,5 +874,430 @@ void WidgetLayoutParam::delete_cb(Widget *widget, void *param)
 	static_cast<WidgetLayoutParam *>(param)->Attach(NULL);
 }
 
+
+const char *WidgetFocusParam::s_names[] = {
+	"enable",
+	"init",
+	"direct_key",
+	"up_id",
+	"down_id",
+	"left_id",
+	"right_id",
+	"focus_shape",
+	"focus_offset",
+	"focus_size",
+	"focus_rot",
+	"focus_texture",
+	"search_rect",
+};
+
+const char *WidgetFocusParam::GetParamName() const
+{
+	return "focus_hint";
+}
+
+int32_t WidgetFocusParam::Init()
+{
+	m_enable = true;
+	m_init = false;
+	m_direct_key = 0;
+	m_up_id.m_idhash = 0;
+	m_down_id.m_idhash = 0;
+	m_left_id.m_idhash = 0;
+	m_right_id.m_idhash = 0;
+	m_focus_shape = 0;
+	m_focus_offset = math::v3(0.0f, 0.0f, 0.0f);
+	m_focus_size = math::v2(0.0f, 0.0f);
+	m_focus_rot = math::v3(0.0f, 0.0f, 0.0f);
+	m_focus_texture.m_idhash = 0;
+	m_search_rect = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	if (m_offset_array != NULL)
+		delete[] m_offset_array;
+	if (m_size_array != NULL)
+		delete[] m_size_array;
+	if (m_rot_array != NULL)
+		delete[] m_rot_array;
+	m_offset_array = NULL;
+	m_size_array = NULL;
+	m_rot_array = NULL;
+	m_resolution_num = 0;
+	m_resolution_id = 255;
+	m_base_resolution_id = -1;
+	return 0;
+}
+
+WidgetFocusParam::WidgetFocusParam()
+	: m_widget(NULL), m_up_id(s_empty_name, 0), m_down_id(s_empty_name, 0),
+	  m_left_id(s_empty_name, 0), m_right_id(s_empty_name, 0),
+	  m_focus_texture(s_empty_name, 0), m_offset_array(NULL), m_size_array(NULL),
+	  m_rot_array(NULL)
+{
+	Init();
+}
+
+WidgetFocusParam::~WidgetFocusParam()
+{
+	if (m_offset_array != NULL)
+		delete[] m_offset_array;
+	if (m_size_array != NULL)
+		delete[] m_size_array;
+	if (m_rot_array != NULL)
+		delete[] m_rot_array;
+	if (m_widget != NULL)
+		m_widget->RemoveDeleteCB(delete_cb, this);
+}
+
+/* the x, y and z, and the x and y, of a focus value as a resolution entry holds them */
+struct FocusValue3 {
+	float value[3];
+};
+
+struct FocusValue2 {
+	float value[2];
+};
+
+/* the widget's array of a focus value: the entries of data replace its old ones */
+static inline void SetFocusArray(vector<ResolutionData> &array, const ResolutionData *data,
+				 uint32_t num)
+{
+	if (num == 0)
+		return;
+	array.clear();
+	for (uint32_t i = 0; i < num; i++)
+		array.push_back(data[i]);
+}
+
+/*
+ * The widget's focus cursor takes the shape, and the offset, size and rotation
+ * that are not all zero; with resolutions, each array that was read is the
+ * value followed by its resolutions' entries.
+ */
+int32_t WidgetFocusParam::Set()
+{
+	if (m_enable)
+		m_widget->EnableFocusEvent(true);
+	else
+		m_widget->EnableFocusEvent(false);
+	if (m_direct_key != 0)
+		ScePafWidget_21125870(m_widget, m_direct_key);
+	if (m_up_id.m_idhash != 0)
+		m_widget->SetFocusDirection(0, m_up_id);
+	if (m_down_id.m_idhash != 0)
+		m_widget->SetFocusDirection(1, m_down_id);
+	if (m_left_id.m_idhash != 0)
+		m_widget->SetFocusDirection(2, m_left_id);
+	if (m_right_id.m_idhash != 0)
+		m_widget->SetFocusDirection(3, m_right_id);
+
+	FocusShape local;
+	FocusShape *shape = m_widget->m_focus_shape;
+
+	if (shape == NULL)
+		shape = &local;
+	if (m_focus_shape != 0)
+		shape->m_shape = m_focus_shape;
+	if (m_focus_offset == math::v3(0.0f, 0.0f, 0.0f))
+		;
+	else
+		shape->m_offset = m_focus_offset;
+	if (m_focus_size == math::v2(0.0f, 0.0f))
+		;
+	else
+		shape->m_size = m_focus_size;
+	if (m_focus_rot == math::v3(0.0f, 0.0f, 0.0f))
+		;
+	else
+		shape->m_rot = m_focus_rot;
+	if (m_plugin != NULL && m_focus_texture.m_idhash != 0)
+		shape->m_texture = m_plugin->GetTexture(IDParam(s_empty_id, m_focus_texture.m_idhash));
+	if (!(m_search_rect == math::v4(0.0f, 0.0f, 0.0f, 0.0f))) {
+		math::v2 center(sce::Vectormath::Simd::Aos::Vector2(
+			vget_low_f32(m_search_rect.getImpl().get128())));
+		math::v2 size(sce::Vectormath::Simd::Aos::Vector2(
+			vget_high_f32(m_search_rect.getImpl().get128())));
+
+		m_widget->SetFocusSearchRect(math::rect(center, size));
+	}
+	if (m_resolution_num == 0) {
+		ResolutionData data;
+
+		data.m_id = -1;
+		*reinterpret_cast<FocusValue3 *>(data.m_value) =
+			*reinterpret_cast<const FocusValue3 *>(&m_focus_offset);
+		SetFocusArray(shape->m_offset_array, &data, 1);
+		*reinterpret_cast<FocusValue2 *>(data.m_value) =
+			*reinterpret_cast<const FocusValue2 *>(&m_focus_size);
+		data.m_value[2] = 0.0f;
+		SetFocusArray(shape->m_size_array, &data, 1);
+		*reinterpret_cast<FocusValue3 *>(data.m_value) =
+			*reinterpret_cast<const FocusValue3 *>(&m_focus_rot);
+		SetFocusArray(shape->m_rot_array, &data, 1);
+	} else {
+		uint32_t num = m_resolution_num + 1;
+		ResolutionData *data = new ResolutionData[num];
+
+		data[0].m_id = -1;
+		if (m_offset_array != NULL) {
+			*reinterpret_cast<FocusValue3 *>(data[0].m_value) =
+				*reinterpret_cast<const FocusValue3 *>(&m_focus_offset);
+			sce_paf_memcpy(data + 1, m_offset_array, m_resolution_num * sizeof(ResolutionData));
+			SetFocusArray(shape->m_offset_array, data, num);
+		}
+		if (m_size_array != NULL) {
+			*reinterpret_cast<FocusValue2 *>(data[0].m_value) =
+				*reinterpret_cast<const FocusValue2 *>(&m_focus_size);
+			data[0].m_value[2] = 0.0f;
+			sce_paf_memcpy(data + 1, m_size_array, m_resolution_num * sizeof(ResolutionData));
+			SetFocusArray(shape->m_size_array, data, num);
+		}
+		if (m_rot_array != NULL) {
+			*reinterpret_cast<FocusValue3 *>(data[0].m_value) =
+				*reinterpret_cast<const FocusValue3 *>(&m_focus_rot);
+			sce_paf_memcpy(data + 1, m_rot_array, m_resolution_num * sizeof(ResolutionData));
+			SetFocusArray(shape->m_rot_array, data, num);
+		}
+		delete[] data;
+	}
+	ScePafWidget_13B246E0(m_widget, shape);
+	return 0;
+}
+
+/*
+ * Each of the widget's focus arrays that has room in ours replaces it. Sony's
+ * test for the rotation array looks at m_rot_array and frees m_size_array.
+ */
+int32_t WidgetFocusParam::GetEach(Widget *widget)
+{
+	if (widget == NULL || widget->m_focus_shape == NULL || m_resolution_num <= 0)
+		return 0;
+
+	const ResolutionData *src = widget->m_focus_shape->m_offset_array.ptr;
+	int32_t num = widget->m_focus_shape->m_offset_array.count;
+
+	if (src != NULL && m_resolution_num >= num) {
+		size_t size = num * sizeof(ResolutionData);
+
+		if (m_offset_array != NULL)
+			delete[] m_offset_array;
+		m_offset_array = new ResolutionData[num];
+		sce_paf_memcpy(m_offset_array, src, size);
+	}
+	src = widget->m_focus_shape->m_size_array.ptr;
+	num = widget->m_focus_shape->m_size_array.count;
+	if (src != NULL && m_resolution_num >= num) {
+		size_t size = num * sizeof(ResolutionData);
+
+		if (m_size_array != NULL)
+			delete[] m_size_array;
+		m_size_array = new ResolutionData[num];
+		sce_paf_memcpy(m_size_array, src, size);
+	}
+	src = widget->m_focus_shape->m_rot_array.ptr;
+	num = widget->m_focus_shape->m_rot_array.count;
+	if (src != NULL && m_resolution_num >= num) {
+		size_t size = num * sizeof(ResolutionData);
+
+		if (m_rot_array != NULL)
+			delete[] m_size_array;
+		m_rot_array = new ResolutionData[num];
+		sce_paf_memcpy(m_rot_array, src, size);
+	}
+	return 0;
+}
+
+int32_t WidgetFocusParam::Get()
+{
+	if (m_widget == NULL)
+		return -1;
+
+	m_enable = (m_widget->m_event_enable & 0x400) != 0;
+	m_init = m_widget->IsInitFocus();
+
+	Widget *widget = m_widget;
+	Focuser *focuser = widget->m_focuser;
+	FocusShape *shape = widget->m_focus_shape;
+
+	for (int32_t key = 1; key <= 0x8000; key <<= 1) {
+		if (widget->m_bound_keycode && (widget->m_keycode & key) != 0)
+			m_direct_key |= key;
+	}
+	if (shape != NULL) {
+		m_focus_shape = shape->m_shape;
+		m_focus_offset = shape->m_offset;
+		m_focus_size = shape->m_size;
+		m_focus_rot = shape->m_rot;
+	}
+
+	math::rect rect = focuser == NULL ? math::rect() :
+		focuser->m_hint == NULL ? math::rect() : math::rect(focuser->m_hint->m_search_rect);
+
+	m_search_rect = rect.get_xywh();
+	GetEach(m_widget);
+	return 0;
+}
+
+int32_t WidgetFocusParam::Create(int32_t mode)
+{
+	VersatileParam::Create(mode);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[0], &m_enable, ResourceParam::SEMANTIC_BOOL);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[1], &m_init, ResourceParam::SEMANTIC_BOOL);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[2], &m_direct_key, ResourceParam::SEMANTIC_INT);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[3], &m_up_id, ResourceParam::SEMANTIC_WIDGETREF);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[4], &m_down_id, ResourceParam::SEMANTIC_WIDGETREF);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[5], &m_left_id, ResourceParam::SEMANTIC_WIDGETREF);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[6], &m_right_id, ResourceParam::SEMANTIC_WIDGETREF);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[7], &m_focus_shape, ResourceParam::SEMANTIC_INT);
+	if (m_resolution_num == 0) {
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[8], &m_focus_offset, ResourceParam::SEMANTIC_VEC3);
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[9], &m_focus_size, ResourceParam::SEMANTIC_VEC2);
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[10], &m_focus_rot, ResourceParam::SEMANTIC_VEC3);
+	}
+	if (m_resolution_num > 0) {
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[8], m_offset_array, ResourceParam::SEMANTIC_RESOARRAY);
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[9], m_size_array, ResourceParam::SEMANTIC_RESOARRAY);
+		if (m_serial != NULL)
+			m_serial->AddParam(s_names[10], m_rot_array, ResourceParam::SEMANTIC_RESOARRAY);
+	}
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[11], &m_focus_texture, ResourceParam::SEMANTIC_TEXTUREREF);
+	if (m_serial != NULL)
+		m_serial->AddParam(s_names[12], &m_search_rect, ResourceParam::SEMANTIC_VEC4);
+	return 0;
+}
+
+/*
+ * As WidgetLayoutParam::Read, for the focus offset, rotation and size.
+ */
+int32_t WidgetFocusParam::Read(const cxml::Element *elem)
+{
+	if (m_serial != NULL)
+		m_serial->Read(*elem, m_plugin != NULL ? m_plugin->m_rscobj : NULL,
+			       ResourceParam::READTYPE_FROM_PARAMLIST);
+	if (m_resolution_num <= 0 || m_widget == NULL)
+		return 0;
+
+	Scene *scene = m_widget->m_scene;
+
+	if (scene == NULL)
+		return 0;
+
+	int32_t rot_empty = 0;
+	int32_t offset_empty = 0;
+	int32_t size_empty = 0;
+
+	for (int32_t i = 0; i < m_resolution_num; i++) {
+		IDParam id(s_empty_id, m_offset_array[i].m_id);
+		int32_t resolution_id;
+
+		if (m_offset_array[i].m_id != 0) {
+			resolution_id = ScePafWidget_36505C86(scene->m_env_param, id);
+			m_offset_array[i].m_id = resolution_id < 0 ? -1 : resolution_id;
+		} else {
+			resolution_id = -1;
+			m_offset_array[i].m_id = -1;
+			m_offset_array[i].m_value[0] = 0.0f;
+			m_offset_array[i].m_value[1] = 0.0f;
+			m_offset_array[i].m_value[2] = 0.0f;
+			offset_empty++;
+		}
+		if (m_rot_array[i].m_id != 0) {
+			if (m_offset_array[i].m_id == (uint32_t)-1) {
+				id.m_idhash = m_rot_array[i].m_id;
+				resolution_id = ScePafWidget_36505C86(scene->m_env_param, id);
+			}
+			m_rot_array[i].m_id = resolution_id < 0 ? -1 : resolution_id;
+		} else {
+			m_rot_array[i].m_id = -1;
+			m_rot_array[i].m_value[0] = 0.0f;
+			m_rot_array[i].m_value[1] = 0.0f;
+			m_rot_array[i].m_value[2] = 0.0f;
+			rot_empty++;
+		}
+		if (m_size_array[i].m_id != 0) {
+			if (m_offset_array[i].m_id == (uint32_t)-1 && m_rot_array[i].m_id == (uint32_t)-1) {
+				id.m_idhash = m_size_array[i].m_id;
+				resolution_id = ScePafWidget_36505C86(scene->m_env_param, id);
+			}
+			m_size_array[i].m_id = resolution_id < 0 ? -1 : resolution_id;
+		} else {
+			m_size_array[i].m_id = -1;
+			m_size_array[i].m_value[0] = 0.0f;
+			m_size_array[i].m_value[1] = 0.0f;
+			m_size_array[i].m_value[2] = 0.0f;
+			size_empty++;
+		}
+	}
+	if (offset_empty == m_resolution_num) {
+		delete[] m_offset_array;
+		m_offset_array = NULL;
+	}
+	if (rot_empty == m_resolution_num) {
+		delete[] m_rot_array;
+		m_rot_array = NULL;
+	}
+	if (size_empty == m_resolution_num) {
+		delete[] m_size_array;
+		m_size_array = NULL;
+	}
+	return 0;
+}
+
+int32_t WidgetFocusParam::InitResolution(int32_t num)
+{
+	if (m_offset_array != NULL)
+		delete[] m_offset_array;
+	if (m_size_array != NULL)
+		delete[] m_size_array;
+	if (m_rot_array != NULL)
+		delete[] m_rot_array;
+	m_offset_array = NULL;
+	m_size_array = NULL;
+	m_rot_array = NULL;
+	m_resolution_num = 0;
+	if (num > 0) {
+		m_offset_array = new ResolutionData[num];
+		m_size_array = new ResolutionData[num];
+		m_rot_array = new ResolutionData[num];
+		sce_paf_memset(m_offset_array, 0, num * sizeof(ResolutionData));
+		sce_paf_memset(m_size_array, 0, num * sizeof(ResolutionData));
+		sce_paf_memset(m_rot_array, 0, num * sizeof(ResolutionData));
+		m_resolution_num = num;
+		m_resolution_id = 255;
+		m_base_resolution_id = -1;
+	}
+	return 0;
+}
+
+int32_t WidgetFocusParam::Attach(Widget *widget)
+{
+	if (m_widget == widget)
+		return 0;
+	if (m_widget != NULL)
+		m_widget->RemoveDeleteCB(delete_cb, this);
+	Init();
+	m_widget = widget;
+	if (widget != NULL)
+		widget->AddDeleteCB(delete_cb, this);
+	return Get();
+}
+
+void WidgetFocusParam::delete_cb(Widget *widget, void *param)
+{
+	static_cast<WidgetFocusParam *>(param)->Attach(NULL);
+}
+
 }
 }

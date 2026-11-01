@@ -2428,7 +2428,7 @@ ScePaf:
         - ScePafResource_190E99A6: 0x190E99A6
         - ScePafResource_1AF165BD: 0x1AF165BD
         - _ZN3paf2ui17WidgetLayoutParam3SetEv: 0x1B46E3BC
-        - ScePafResource_1C419868: 0x1C419868
+        - _ZN3paf2ui16WidgetFocusParam3SetEv: 0x1C419868
         - _ZNK3paf4cxml4File7GetAddrEv: 0x1CBB0615
         - _ZN3paf13ResourceParam4ReadERKNS_4cxml7ElementEPNS_8resource11ResourceObjENS0_8ReadTypeE: 0x1D62B757
         - _ZN3paf2ui16WidgetStyleParamC1Ev: 0x1D7AEF68
@@ -2456,7 +2456,7 @@ ScePaf:
         - ScePafResource_31C3B828: 0x31C3B828
         - scePafResourceGetIdStrLpb: 0x346E532C
         - _ZN3paf4cxml8DocumentC2Ev: 0x34A10103
-        - ScePafResource_35489879: 0x35489879
+        - _ZN3paf2ui16WidgetFocusParam9delete_cbEPNS0_6WidgetEPv: 0x35489879
         - _ZN3paf2ui16WidgetSoundParamC1Ev: 0x357CBC6F
         - scePafResourceGetAttributeData: 0x37720983
         - _ZN3paf2ui16WidgetSoundParam3SetEv: 0x378D6AE0
@@ -2478,7 +2478,7 @@ ScePaf:
         - _ZN3paf5graph12DrawObjParam9delete_cbEPNS0_7DrawObjEPv: 0x4653BFB2
         - _ZNK3paf8resource11ResourceObj9GetStringERKNS_4cxml7ElementEPPKwPj: 0x47A0AC77
         - _ZN3paf2ui16WidgetSoundParam6CreateEi: 0x47E4A22F
-        - ScePafResource_487E6396: 0x487E6396
+        - _ZN3paf2ui16WidgetFocusParam4InitEv: 0x487E6396
         - _ZN3paf11VisualParam8AddParamEPKcPfffi: 0x4A67FDC3
         - _ZN3paf2ui17WidgetLayoutParamC2Ev: 0x4C8794CC
         - _ZN3paf11VisualParam15SetIdParamParamEPvRKNS_7IDParamE: 0x4E06A25A
@@ -2539,7 +2539,7 @@ ScePaf:
         - ScePafResource_8689B24D: 0x8689B24D
         - scePafResourceGetData: 0x86C66229
         - _ZNK3paf5graph12DrawObjParam12GetParamNameEv: 0x87DB69C5
-        - ScePafResource_880B1C31: 0x880B1C31
+        - _ZN3paf2ui16WidgetFocusParamC1Ev: 0x880B1C31
         - _ZNK3paf8resource11ResourceObj8GetStyleEPKcRNS_4cxml7ElementE: 0x8A444C50
         - scePafResourceGetInteger: 0x8A684E61
         - _ZNK3paf4cxml7Element7GetNameEv: 0x8A71B732
@@ -2547,7 +2547,7 @@ ScePaf:
         - _ZN3paf11VisualParam8IntParam4DrawEv: 0x8DA4B05D
         - _ZN3paf14VersatileParam6CreateEi: 0x90403D69
         - _ZN3paf2ui16WidgetSoundParam9AddWidgetEPNS0_6WidgetE: 0x907B8221
-        - ScePafResource_9215168A: 0x9215168A
+        - _ZN3paf2ui16WidgetFocusParam6AttachEPNS0_6WidgetE: 0x9215168A
         - _ZN3paf8resource11ResourceObj14IsRegisteredIDEPKcj: 0x9228A0D1
         - _ZNK3paf8resource11ResourceObj7GetFileERKNS_4cxml7ElementEPvPjPPKcPNS_6memory13HeapAllocatorE: 0x9265619A
         - ScePafResource_933C078B: 0x933C078B
@@ -2578,7 +2578,7 @@ ScePaf:
         - _ZNK3paf4cxml7Element18GetPreviousSiblingEv: 0xAE24B68F
         - _ZN3paf21VersatileParamManager10AddFactoryEPKcPFPNS_14VersatileParamEvE: 0xAF2F6375
         - _ZN3paf2ui16WidgetSoundParamC2Ev: 0xB0BD64B8
-        - ScePafResource_B193904E: 0xB193904E
+        - _ZN3paf2ui16WidgetFocusParamD0Ev: 0xB193904E
         - _ZN3paf21VersatileParamManager9FindParamEPKcRKNS_7IDParamE: 0xB1981598
         - scePafResourceGetIdInt: 0xB43C8D9F
         - ScePafResource_B4714AEA: 0xB4714AEA
@@ -2616,7 +2616,7 @@ ScePaf:
         - _ZNK3paf8resource11ResourceObj8GetStyleEjRNS_4cxml7ElementE: 0xC860A953
         - _ZN3paf2ui16WidgetStyleParam9delete_cbEPNS0_6WidgetEPv: 0xC86A9DDB
         - _ZNK3paf8resource11ResourceObj16GetModelFromFileERKNS_4cxml7ElementEPNS2_4FileEPjS8_: 0xC88E6968
-        - ScePafResource_C8CB72B0: 0xC8CB72B0
+        - _ZNK3paf2ui16WidgetFocusParam12GetParamNameEv: 0xC8CB72B0
         - _ZN3paf2ui17WidgetLayoutParam6CreateEi: 0xC9477338
         - _ZN3paf14VersatileParam4ReadEPKNS_4cxml7ElementE: 0xCAE8BABB
         - ScePafResource_CB5A3D7C: 0xCB5A3D7C
@@ -2624,12 +2624,12 @@ ScePaf:
         - _ZN3paf2ui11WidgetParam3SetEv: 0xCE7D66D8
         - _ZN3paf11VisualParam15SetTextureParamEPvRKNS_7IDParamE: 0xCED99343
         - ScePafResource_CEED7338: 0xCEED7338
-        - ScePafResource_CF99966E: 0xCF99966E
+        - _ZN3paf2ui16WidgetFocusParam6CreateEi: 0xCF99966E
         - scePafResourceGetAttributeIntegerArray: 0xD09CE709
         - _ZNK3paf4cxml8Document14GetHeaderMagicEPc: 0xD2022BA2
         - scePafResourceGetAttributeString: 0xD2438FA7
         - _ZN3paf11VisualParam8AddParamEPKcPNS_4math2v4ERKS4_S7_i: 0xD331367C
-        - ScePafResource_D3A1C758: 0xD3A1C758
+        - _ZN3paf2ui16WidgetFocusParam3GetEv: 0xD3A1C758
         - _ZN3paf13ResourceParam8GetDirtyEv: 0xD58CCBBB
         - ScePafResource_D60FF214: 0xD60FF214
         - ScePafResource_D74427E6: 0xD74427E6
@@ -2652,7 +2652,7 @@ ScePaf:
         - _ZN3paf8resource11ResourceObjD2Ev: 0xE617D3AE
         - _ZN3paf8resource11ResourceObjC2EPvjPKNS1_6OptionE: 0xE629FBF7
         - _ZN3paf2ui18WidgetHandlerParam10SetHandlerEiPKc: 0xE6777B9E
-        - ScePafResource_E9983D49: 0xE9983D49
+        - _ZN3paf2ui16WidgetFocusParamD1Ev: 0xE9983D49
         - ScePafResource_EA11BD0B: 0xEA11BD0B
         - _ZNK3paf4cxml7Element12GetLastChildEv: 0xEB3CB910
         - _ZN3paf8resource11ResourceObjD1Ev: 0xF194FC6D

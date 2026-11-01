@@ -16,7 +16,9 @@
 #include <std/memory>
 #include <std/string>
 #include <std/vector>
+#include <math/ngp/v2.h>
 #include <math/ngp/v3.h>
+#include <math/rect.h>
 #include <math/ngp/v4.h>
 #include <math/ngp/quaternion.h>
 #include <versatileparam/idparam.h>
@@ -186,16 +188,106 @@ public:
 };
 
 /*
- * A widget's key focus, read from the "focus_" children of its element (names ours; its
- * functions are ScePafResource's, not converted yet).
+ * The focus cursor of a widget: its shape, the offset, size and rotation it
+ * takes, for each resolution in the arrays, and its texture (names ours).
  */
-class FocusParam : public VersatileParam {
+class FocusShape {
 public:
-	/* makes room for num entries of each focus array (0x8106693e) */
-	int32_t Alloc(int32_t num);
+	FocusShape()
+		: m_shape(0), m_offset(0.0f, 0.0f, 0.0f), m_size(0.0f, 0.0f), m_rot(0.0f, 0.0f, 0.0f),
+		  reserved_a(false), reserved_b(true)
+	{
+	}
 
-	/* the widget it is read for */
+	vector<ResolutionData> m_offset_array;
+	vector<ResolutionData> m_size_array;
+	vector<ResolutionData> m_rot_array;
+	int32_t m_shape;
+	math::v3 m_offset;
+	math::v2 m_size;
+	math::v3 m_rot;
+	intrusive_ptr<graph::Surface> m_texture;
+	/* made false and true; their readers are not converted */
+	bool reserved_a;
+	bool reserved_b;
+};
+
+/* where the focus moves from a widget, and the rectangle it searches (names ours) */
+class FocusHint {
+public:
+	/* up, down, left and right */
+	IDParam m_direction_id[4];
+	math::rect m_search_rect;
+	bool reserved;
+};
+
+/* a widget's focus state; only the hint is converted (names ours) */
+class Focuser {
+public:
+	uint8_t reserved[0xc];
+	FocusHint *m_hint;
+};
+
+/* the focus of the widgets under one that holds it (names ours) */
+class FocusRoot {
+public:
+	/* what SetFocusRootState sets */
+	uint32_t m_state;
+	/* the widget that takes the focus first */
+	Widget *m_init_focus;
+};
+
+/*
+ * A widget's key focus, read from the "focus_" children of its element: whether
+ * it takes focus and first, its direct keys, the widgets up, down, left and
+ * right, its focus cursor and the rectangle it searches (members' names after
+ * the attributes).
+ */
+class WidgetFocusParam : public VersatileParam {
+public:
+	static const char *s_names[];
+
+	WidgetFocusParam();
+
+	virtual const char *GetParamName() const;
+	virtual ~WidgetFocusParam();
+	virtual int32_t Set();
+	virtual int32_t Get();
+	virtual int32_t Create(int32_t mode);
+	virtual int32_t Read(const cxml::Element *elem);
+
+	int32_t Init();
+	/* makes room for num resolutions (0x8106693e, name after WidgetLayoutParam's) */
+	int32_t InitResolution(int32_t num);
+	/* takes the widget's focus arrays (0x810663bc, name after WidgetLayoutParam's) */
+	int32_t GetEach(Widget *widget);
+	/* reads it for the widget */
+	int32_t Attach(Widget *widget);
+	static void delete_cb(Widget *widget, void *param);
+
+	/* the widget it is read for (name ours) */
 	Widget *m_widget;
+	bool m_enable;
+	bool m_init;
+	uint32_t m_direct_key;
+	IDParam m_up_id;
+	IDParam m_down_id;
+	IDParam m_left_id;
+	IDParam m_right_id;
+	int32_t m_focus_shape;
+	math::v3 m_focus_offset;
+	math::v2 m_focus_size;
+	math::v3 m_focus_rot;
+	IDParam m_focus_texture;
+	math::v4 m_search_rect;
+	/* the values of each resolution, m_resolution_num entries each (names ours) */
+	ResolutionData *m_offset_array;
+	ResolutionData *m_size_array;
+	ResolutionData *m_rot_array;
+	int32_t m_resolution_num;
+	/* the widget's resolution and its base resolution (names ours) */
+	uint32_t m_resolution_id;
+	int32_t m_base_resolution_id;
 };
 
 class Widget : public Handler {
@@ -348,6 +440,20 @@ public:
 	virtual void *GetDrawObjMaskBit(int32_t obj);
 	virtual int32_t SetString(const wstring &str, int32_t obj);
 	virtual int32_t SetString(const wstring &str);
+	virtual int32_t GetString(wstring &str, int32_t obj);
+	virtual int32_t GetString(wstring &str);
+	/* the sound of its sound parameter with the ID (names ours, the slots to SetFocusDirection) */
+	virtual WidgetSoundParam::Sound *GetSound(int32_t id);
+	virtual void DoNothing();
+	virtual void SetFocusRootState(uint32_t state);
+	virtual int32_t SetFocus(const void *param);
+	/* the widget the focus moves to in the direction (0 up, 1 down, 2 left, 3 right) */
+	virtual void SetFocusDirection(int32_t dir, IDParam id);
+	virtual void SetFocusDirectionWidget(int32_t dir, Widget *widget);
+	virtual void SetFocusSearchRect(const math::rect &rect);
+
+	/* whether it is the widget its focus root focuses first (0x8114fd64, name ours) */
+	bool IsInitFocus();
 
 	math::v4 *GetSize(int32_t opt);
 	math::v4 GetPos(int32_t opt, Widget *ref, const math::v4 &off_pos);
@@ -448,7 +554,10 @@ public:
 	uint8_t reserved3[8];
 	/* 0xff before a reverse transition (name after ScePaf-RE) */
 	uint8_t m_transition;
-	uint8_t reserved3a[0xf];
+	uint8_t reserved3a[3];
+	/* the keys bound to it while m_bound_keycode (names after ScePaf-RE) */
+	uint32_t m_keycode;
+	uint8_t reserved3x[8];
 	/* its parent writes it: WriteWidget writes only its children (names after ScePaf-RE) */
 	bool m_parent_protected : 1;
 	/* made by a template (TemplateOpen); WriteWidget leaves it out */
@@ -472,7 +581,7 @@ public:
 	bool reserved3j : 1;
 	bool reserved3k : 1;
 	bool reserved3l : 1;
-	bool reserved3m : 1;
+	bool m_bound_keycode : 1;
 	bool reserved3n : 1;
 	bool reserved3o : 1;
 	/* cleared before a reverse transition (name after ScePaf-RE) */
@@ -511,7 +620,13 @@ public:
 	uint8_t reserved7[0x10];
 	/* lays the widget out each update (name after ScePaf-RE) */
 	Layouter *m_layouter;
-	uint8_t reserved7a[0x44];
+	uint8_t reserved7a[4];
+	/* its focus state, its focus cursor and the focus of its children (names ours) */
+	Focuser *m_focuser;
+	FocusShape *m_focus_shape;
+	uint8_t reserved7c[0x10];
+	FocusRoot *m_focus_root;
+	uint8_t reserved7d[0x24];
 	/* what is called when it is deleted (names after DrawObj's, Sony's DWARF) */
 	vector<DeleteCBInfo> m_list_delete_cb;
 	uint8_t reserved7b[0xb];
@@ -548,6 +663,11 @@ inline WidgetParam::~WidgetParam()
 extern "C" {
 /* puts the widget into its transition: auto_delete deletes it once the time ends */
 int32_t ScePafWidget_8AF26B1F(paf::ui::Widget *widget, bool auto_delete, float time);
+/* binds the keys of the mask to the widget (SetKeycode after ScePaf-RE) */
+int32_t ScePafWidget_21125870(paf::ui::Widget *widget, uint32_t keycode);
+/* gives the widget its focus cursor: a copy of the shape, its offset, size and rotation
+   taken from the widget's own where the shape has none */
+void ScePafWidget_13B246E0(paf::ui::Widget *widget, paf::ui::FocusShape *shape);
 /* Hide(Timer *, int32_t opt, float delay, AnimCB): hides the widget, over the timer's time */
 int32_t ScePafWidget_4588699E(paf::ui::Widget *widget, paf::Timer *t, int32_t opt, float delay,
 			      paf::ui::AnimCB cb_fin);

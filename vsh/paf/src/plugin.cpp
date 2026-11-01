@@ -1431,11 +1431,11 @@ void Plugin::InstantiateWidget_Focus(const cxml::Element &elm, ui::Widget *widge
 	if (focus.doc == NULL || focus.offset < 0)
 		return;
 
-	ui::FocusParam *param = static_cast<ui::FocusParam *>(CallFactoryFocus(elm.GetName()));
+	ui::WidgetFocusParam *param = static_cast<ui::WidgetFocusParam *>(CallFactoryFocus(elm.GetName()));
 
 	if (param == NULL)
 		return;
-	param->Alloc(focus.GetNumChild());
+	param->InitResolution(focus.GetNumChild());
 	param->Create(1);
 	param->m_widget = widget;
 	param->m_plugin = this;
