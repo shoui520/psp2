@@ -571,103 +571,163 @@ void sceGxmSetPrecomputedVertexState(SceGxmContext *context,
 	}
 }
 
-/* a reserved default uniform buffer is used by the draw: keep it in the chunk buffer */
-static inline void gxmContextCommitDefaultUniformBuffers(SceGxmContext *context,
-		const SceGxmVertexProgram *vertexProgram,
-		const SceGxmFragmentProgram *fragmentProgram)
+/*
+ * The debug build reports a reserved default uniform buffer the application wrote past: the
+ * word after it no longer holds what it held at the reservation.
+ */
+static inline int gxmContextCheckDefaultUniformBufferOverrun(const SceGxmContext *context)
+{
+#if SCE_DBG_ASSERTS_ENABLED
+	if (SCE_UNLIKELY(context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED &&
+			 context->vertexOverrunCheckAddress != NULL &&
+			 *context->vertexOverrunCheckAddress != context->vertexOverrunCheckValue)) {
+		GXM_DBG_ERROR(399, "Vertex default uniform buffer overrun check failed");
+		return SCE_GXM_ERROR_BUFFER_OVERRUN;
+	}
+	if (SCE_UNLIKELY(context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED &&
+			 context->fragmentOverrunCheckAddress != NULL &&
+			 *context->fragmentOverrunCheckAddress != context->fragmentOverrunCheckValue)) {
+		GXM_DBG_ERROR(407, "Fragment default uniform buffer overrun check failed");
+		return SCE_GXM_ERROR_BUFFER_OVERRUN;
+	}
+#endif
+	return 0;
+}
+
+/*
+ * A reserved default uniform buffer is used by a draw or a kick: keep it in the chunk buffer.
+ * Each program is read only when its buffer is reserved.
+ */
+static inline void gxmContextCommitDefaultUniformBuffers(SceGxmContext *context)
 {
 	if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
-		SceUInt32 buffer = (SceUInt32)context->vertexDefaultUniformBuffer;
-		SceUInt32 count = vertexProgram->program->defaultUniformBufferCount;
+		const void *buffer = context->vertexDefaultUniformBuffer;
+		SceUInt32 count = context->vertexProgram->program->defaultUniformBufferCount;
 
+		GXM_DBG_ASSERT(422, sceGxmBufferGet(SCE_GXM_CTX_TA_BUFFER(context)) == buffer);
+		gxmChunkBufferCommit(&context->vertexBuffer, (void *)((SceUInt32)buffer + count * 4));
 		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
-		context->vertexBuffer.cur = buffer + count * 4;
 	}
 	if (context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
-		SceUInt32 buffer = (SceUInt32)context->fragmentDefaultUniformBuffer;
-		SceUInt32 count = fragmentProgram->program->defaultUniformBufferCount;
+		const void *buffer = context->fragmentDefaultUniformBuffer;
+		SceUInt32 count = context->fragmentProgram->program->defaultUniformBufferCount;
 
+		GXM_DBG_ASSERT(441, sceGxmBufferGet(SCE_GXM_CTX_RENDER_BUFFER(context)) == buffer);
+		gxmChunkBufferCommit(&context->fragmentBuffer,
+				     (void *)((SceUInt32)buffer + count * 4));
 		context->fragmentDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
-		context->fragmentBuffer.cur = buffer + count * 4;
 	}
 }
 
-/* the same, at a kick: each program is read only when its buffer is reserved */
-static inline void gxmContextCommitReservedUniformBuffers(SceGxmContext *context)
+/*
+ * The end of a draw: an immediate context kicks when a ring is full; the debug build checks a
+ * deferred context's callbacks and reports the error a check found, which the draw returns.
+ */
+static inline int gxmContextEndDraw(SceGxmContext *context, int error, const char *function)
 {
-	if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
-		SceUInt32 buffer = (SceUInt32)context->vertexDefaultUniformBuffer;
-		SceUInt32 count = context->vertexProgram->program->defaultUniformBufferCount;
+	int ret;
 
-		context->vertexDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
-		context->vertexBuffer.cur = buffer + count * 4;
+	if (context->type == SCE_GXM_CONTEXT_TYPE_IMMEDIATE) {
+		ret = gxmContextKickIfFull(context);
+		if (ret != 0)
+			return ret;
 	}
-	if (context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_RESERVED) {
-		SceUInt32 buffer = (SceUInt32)context->fragmentDefaultUniformBuffer;
-		SceUInt32 count = context->fragmentProgram->program->defaultUniformBufferCount;
-
-		context->fragmentDefaultUniformBufferMode = GXM_DEFAULT_UNIFORM_BUFFER_USED;
-		context->fragmentBuffer.cur = buffer + count * 4;
-	}
+#if SCE_DBG_ASSERTS_ENABLED
+	if (context->type == SCE_GXM_CONTEXT_TYPE_DEFERRED && error == 0)
+		error = gxmContextCheckCallbacks(context);
+	gxmDebugReportError(error, function);
+	return error;
+#else
+	return 0;
+#endif
 }
 
 int sceGxmDrawPrecomputed(SceGxmContext *context, const SceGxmPrecomputedDraw *precomputedDraw)
 {
-	const SceGxmVertexProgram *vertexProgram;
-	const SceGxmFragmentProgram *fragmentProgram;
 	GxmVdmPrimitive *primitive;
+	int error = 0;
 	int ret;
 
-	if (context == NULL)
+	if (context == NULL) {
+		GXM_DBG_ERROR_NULL(985, sceGxmDrawPrecomputed, context);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	if (!context->insideScene) {
+		GXM_DBG_ERROR_OUTSIDE_SCENE(992, sceGxmDrawPrecomputed, context);
 		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
 			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
 	}
-	if (precomputedDraw == NULL)
+	if (precomputedDraw == NULL) {
+		GXM_DBG_ERROR_NULL(998, sceGxmDrawPrecomputed, precomputedDraw);
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	vertexProgram = context->vertexProgram;
-	if (vertexProgram == NULL)
+	}
+	if (context->vertexProgram == NULL) {
+		GXM_DBG_ERROR(1004, "Function sceGxmDrawPrecomputed has been called when the current vertex program is NULL.");
 		return SCE_GXM_ERROR_NULL_PROGRAM;
-	fragmentProgram = context->fragmentProgram;
-	if (fragmentProgram == NULL)
+	}
+	if (context->fragmentProgram == NULL) {
+		GXM_DBG_ERROR(1008, "Function sceGxmDrawPrecomputed has been called when the current fragment program is NULL.");
 		return SCE_GXM_ERROR_NULL_PROGRAM;
-	gxmContextCommitDefaultUniformBuffers(context, vertexProgram, fragmentProgram);
+	}
+#if SCE_DBG_ASSERTS_ENABLED
+	error = gxmDebugCheckDraw(context, precomputedDraw->primitive.words[0] & 0x3c000000,
+				  precomputedDraw->primitive.words[0] & 0x3fffff,
+				  precomputedDraw->primitive.words[3] & 0x3fffff);
+	if (error == 0) {
+		if (precomputedDraw->vertexProgram != context->vertexProgram) {
+			error = SCE_GXM_ERROR_INVALID_PRECOMPUTED_DRAW;
+			GXM_DBG_ERROR(1025, "Precomputed draw call program does not match current vertex program.");
+		} else {
+			error = gxmContextCheckDefaultUniformBufferOverrun(context);
+		}
+	}
+#endif
+	gxmContextCommitDefaultUniformBuffers(context);
 	ret = gxmContextWriteState(context);
 	if (ret != 0)
 		return ret;
-	primitive = gxmChunkBufferReserve(&context->vdmBuffer, sizeof(*primitive), 4);
+	primitive = gxmChunkBufferReserveChecked(&context->vdmBuffer, sizeof(*primitive), 4);
 	if (primitive == NULL)
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	context->vdmBuffer.cur = (SceUInt32)(primitive + 1);
+	gxmChunkBufferCommit(&context->vdmBuffer, primitive + 1);
 	*primitive = precomputedDraw->primitive;
-	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
-		return 0;
-	return gxmContextKickIfFull(context);
+	return gxmContextEndDraw(context, error, "sceGxmDrawPrecomputed");
 }
 
 int sceGxmDraw(SceGxmContext *context, SceUInt32 primType, SceUInt32 indexType,
 		const void *indexData, SceUInt32 indexCount)
 {
-	const SceGxmVertexProgram *vertexProgram;
-	const SceGxmFragmentProgram *fragmentProgram;
+	int error = 0;
 	int ret;
 
-	if (context == NULL || indexData == NULL)
+	if (context == NULL || indexData == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(1086, sceGxmDraw, context);
+		else
+			GXM_DBG_ERROR_NULL(1090, sceGxmDraw, indexData);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	if (!context->insideScene) {
+		GXM_DBG_ERROR_OUTSIDE_SCENE(1097, sceGxmDraw, context);
 		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
 			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
 	}
-	vertexProgram = context->vertexProgram;
-	if (vertexProgram == NULL)
+	if (context->vertexProgram == NULL) {
+		GXM_DBG_ERROR(1103, "Function sceGxmDraw has been called when the current vertex program is NULL.");
 		return SCE_GXM_ERROR_NULL_PROGRAM;
-	fragmentProgram = context->fragmentProgram;
-	if (fragmentProgram == NULL)
+	}
+	if (context->fragmentProgram == NULL) {
+		GXM_DBG_ERROR(1107, "Function sceGxmDraw has been called when the current fragment program is NULL.");
 		return SCE_GXM_ERROR_NULL_PROGRAM;
-	gxmContextCommitDefaultUniformBuffers(context, vertexProgram, fragmentProgram);
+	}
+#if SCE_DBG_ASSERTS_ENABLED
+	error = gxmDebugCheckDraw(context, primType, indexCount, 0);
+	if (error == 0)
+		error = gxmContextCheckDefaultUniformBufferOverrun(context);
+#endif
+	gxmContextCommitDefaultUniformBuffers(context);
 	ret = gxmContextWriteState(context);
 	if (ret != 0)
 		return ret;
@@ -677,33 +737,45 @@ int sceGxmDraw(SceGxmContext *context, SceUInt32 primType, SceUInt32 indexType,
 	ret = gxmVdmWritePrimitive(&context->vdmBuffer, &context->vertexStreamBlock,
 				   (const SceUInt8 *)&context->vertexProgram->dms, primType, indexType,
 				   (SceUInt32)indexData, indexCount, 0, 0);
-	if (ret != 0 || context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+	if (ret != 0)
 		return ret;
-	return gxmContextKickIfFull(context);
+	return gxmContextEndDraw(context, error, "sceGxmDraw");
 }
 
 int sceGxmDrawInstanced(SceGxmContext *context, SceUInt32 primType,
 		SceUInt32 indexType, const void *indexData, SceUInt32 indexCount,
 		SceUInt32 indexWrap)
 {
-	const SceGxmVertexProgram *vertexProgram;
-	const SceGxmFragmentProgram *fragmentProgram;
+	int error = 0;
 	int ret;
 
-	if (context == NULL || indexData == NULL)
+	if (context == NULL || indexData == NULL) {
+		if (context == NULL)
+			GXM_DBG_ERROR_NULL(1182, sceGxmDrawInstanced, context);
+		else
+			GXM_DBG_ERROR_NULL(1186, sceGxmDrawInstanced, indexData);
 		return SCE_GXM_ERROR_INVALID_POINTER;
+	}
 	if (!context->insideScene) {
+		GXM_DBG_ERROR_OUTSIDE_SCENE(1193, sceGxmDrawInstanced, context);
 		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
 			return SCE_GXM_ERROR_NOT_WITHIN_COMMAND_LIST;
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
 	}
-	vertexProgram = context->vertexProgram;
-	if (vertexProgram == NULL)
+	if (context->vertexProgram == NULL) {
+		GXM_DBG_ERROR(1199, "Function sceGxmDrawInstanced has been called when the current vertex program is NULL.");
 		return SCE_GXM_ERROR_NULL_PROGRAM;
-	fragmentProgram = context->fragmentProgram;
-	if (fragmentProgram == NULL)
+	}
+	if (context->fragmentProgram == NULL) {
+		GXM_DBG_ERROR(1203, "Function sceGxmDrawInstanced has been called when the current fragment program is NULL.");
 		return SCE_GXM_ERROR_NULL_PROGRAM;
-	gxmContextCommitDefaultUniformBuffers(context, vertexProgram, fragmentProgram);
+	}
+#if SCE_DBG_ASSERTS_ENABLED
+	error = gxmDebugCheckDraw(context, primType, indexCount, indexWrap);
+	if (error == 0)
+		error = gxmContextCheckDefaultUniformBufferOverrun(context);
+#endif
+	gxmContextCommitDefaultUniformBuffers(context);
 	ret = gxmContextWriteState(context);
 	if (ret != 0)
 		return ret;
@@ -713,9 +785,9 @@ int sceGxmDrawInstanced(SceGxmContext *context, SceUInt32 primType,
 	ret = gxmVdmWritePrimitive(&context->vdmBuffer, &context->vertexStreamBlock,
 				   (const SceUInt8 *)&context->vertexProgram->dms, primType, indexType,
 				   (SceUInt32)indexData, indexCount, indexWrap, 0);
-	if (ret != 0 || context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+	if (ret != 0)
 		return ret;
-	return gxmContextKickIfFull(context);
+	return gxmContextEndDraw(context, error, "sceGxmDrawInstanced");
 }
 
 /* depth/stencil surface contents: the load bits, then the store bits */
@@ -937,7 +1009,7 @@ int _sceGxmMidSceneFlush(SceGxmContext *context, SceUInt32 flags,
 		return SCE_GXM_ERROR_INVALID_POINTER;
 	if (!context->insideScene)
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
-	gxmContextCommitReservedUniformBuffers(context);
+	gxmContextCommitDefaultUniformBuffers(context);
 	ret = gxmContextKick(context,
 			     (flags & SCE_GXM_MIDSCENE_PRESERVE_DEFAULT_UNIFORM_BUFFERS) |
 			     GXM_KICK_MID_SCENE, vertexNotification, NULL);
@@ -963,7 +1035,7 @@ int sceGxmMidSceneFlush(SceGxmContext *context, SceUInt32 flags,
 		return SCE_GXM_ERROR_INVALID_POINTER;
 	if (!context->insideScene)
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
-	gxmContextCommitReservedUniformBuffers(context);
+	gxmContextCommitDefaultUniformBuffers(context);
 	ret = gxmContextKick(context, flags | GXM_KICK_MID_SCENE, vertexNotification, NULL);
 	if (ret != 0)
 		return ret;
@@ -983,7 +1055,7 @@ int sceGxmEndScene(SceGxmContext *context, const SceGxmNotification *vertexNotif
 		return SCE_GXM_ERROR_INVALID_VALUE;
 	if (!context->insideScene)
 		return SCE_GXM_ERROR_NOT_WITHIN_SCENE;
-	gxmContextCommitReservedUniformBuffers(context);
+	gxmContextCommitDefaultUniformBuffers(context);
 	ret = gxmContextKick(context, GXM_KICK_FRAGMENT, vertexNotification, fragmentNotification);
 	if (ret != 0)
 		return ret;

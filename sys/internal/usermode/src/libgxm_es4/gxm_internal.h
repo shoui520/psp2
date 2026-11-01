@@ -629,6 +629,23 @@ static inline void gxmChunkBufferCommit(GxmChunkBuffer *buffer, void *current)
 	buffer->cur = (SceUInt32)current;
 }
 
+/* gxmChunkBufferReserve, reporting a failure in the debug build */
+static inline void *gxmChunkBufferReserveChecked(GxmChunkBuffer *buffer, SceSize size,
+						 SceSize alignment)
+{
+	void *block = gxmChunkBufferReserve(buffer, size, alignment);
+
+	if (block == NULL)
+		GXM_DBG_ERROR_AT("buffer_private.h", 174, "Could not reserve %d bytes.", size);
+	return block;
+}
+
+/* the write position, as Sony's debug checks name it */
+static inline void *sceGxmBufferGet(const GxmChunkBuffer *buffer)
+{
+	return (void *)buffer->cur;
+}
+
 /* --- GPU memory, code and command blocks --- */
 
 /* where a block of USSE code or a command block sits */
@@ -1479,6 +1496,17 @@ void gxmContextUpdateBackFragmentProgram(SceGxmContext *context,
 					 const SceGxmFragmentProgram *program);
 
 void sceGxmSetDefaultRegionClipAndViewport(SceGxmContext *context, SceUInt32 xMax, SceUInt32 yMax);
+
+/* the context's chunk buffers, as Sony's debug checks name them */
+#define SCE_GXM_CTX_TA_BUFFER(context)		(&(context)->vertexBuffer)
+#define SCE_GXM_CTX_RENDER_BUFFER(context)	(&(context)->fragmentBuffer)
+
+#if SCE_DBG_ASSERTS_ENABLED
+/* context_debug.c: the debug build's checks of a draw's state, and the error report */
+int gxmDebugCheckDraw(const SceGxmContext *context, SceUInt32 primType, SceUInt32 indexCount,
+		      SceUInt32 indexWrap);
+void gxmDebugReportError(int error, const char *function);
+#endif
 
 /* context_flush.c */
 int gxmContextCheckCommandList(const SceGxmContext *context, const SceGxmCommandList *list);
