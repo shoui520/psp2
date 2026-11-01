@@ -1,5 +1,6 @@
 # 3.630.011-DEBUGGER: vs0:sys/external/np_common.suprx (generated)
 set(MODULE_NID 0xB203AB12)
+set(MODULE_AUTH_ID 0x280000000002805D)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03630011)

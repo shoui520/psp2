@@ -16,9 +16,7 @@ typedef struct NetCtlSwVersion {
 	SceSize size;
 	char versionString[28];
 	SceUInt64 version;
-} NetCtlSwVersion;
-
-int sceKernelGetSystemSwVersion(NetCtlSwVersion *info);
+} NetCtlSwVersion;	/* SceKernelSystemSwVersion with its version words read as one */
 
 /*
  * Builds the peer information record: format and revision bytes, the user's
@@ -65,7 +63,7 @@ int netCtlAdhocInfoPack(NetCtlAdhocPeerRecord *record)
 	}
 	p += NETCTL_PEER_NAME_SIZE;
 	version.size = sizeof(version);
-	ret = sceKernelGetSystemSwVersion(&version);
+	ret = sceKernelGetSystemSwVersion((SceKernelSystemSwVersion *)&version);
 	if (ret < 0)
 		return ret;
 	version.version = sceNetHtonll(version.version);

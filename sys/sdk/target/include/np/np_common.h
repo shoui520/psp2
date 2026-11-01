@@ -16,4 +16,24 @@ typedef struct SceNpCommunicationId {
 	char dummy;
 } SceNpCommunicationId;
 
+typedef SceInt32 SceNpPlatformType;
+#define SCE_NP_PLATFORM_TYPE_NONE		0
+#define SCE_NP_PLATFORM_TYPE_PS3		1
+#define SCE_NP_PLATFORM_TYPE_VITA		2
+#define SCE_NP_PLATFORM_TYPE_PS4		3
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int sceNpCmpNpId(const SceNpId *npid1, const SceNpId *npid2);
+int sceNpCmpNpIdInOrder(const SceNpId *npid1, const SceNpId *npid2, int *order);
+int sceNpCmpOnlineId(const SceNpId *npid1, const SceNpId *npid2);
+int sceNpGetPlatformType(const SceNpId *npId);
+int sceNpSetPlatformType(SceNpId *npId, SceNpPlatformType platformType);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* _SCE_NP_NP_COMMON_H_ */

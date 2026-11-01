@@ -1,5 +1,6 @@
 # 3.650.011-TOOL: vs0:sys/external/np_common.suprx (generated)
 set(MODULE_NID 0x81E67889)
+set(MODULE_AUTH_ID 0x280000000002805D)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
