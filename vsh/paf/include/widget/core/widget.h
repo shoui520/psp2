@@ -34,6 +34,7 @@ class Surface;
 namespace ui {
 
 class Environment;
+class Widget;
 class Scene;
 class Camera;
 class AnimListener;
@@ -51,6 +52,22 @@ public:
 
 /* a widget's parameters as its resource gives them */
 class WidgetParam : public VersatileParam {
+};
+
+/* the sounds of a widget type, read from the resource's "sound_<type>" parameter (names after
+   ScePaf-RE) */
+class WidgetSoundParam : public VersatileParam {
+public:
+	/* a sound of the parameter (names ours) */
+	class Sound;
+
+	int32_t AddWidget(Widget *widget);
+
+	/* the widgets it gave its sounds (names ours) */
+	list<Widget *> m_widget_list;
+	Sound *m_sounds;
+	uint32_t m_sound_num;
+	uint32_t m_sound_capacity;
 };
 
 class Widget : public Handler {
@@ -245,7 +262,10 @@ public:
 	uint32_t m_origin_y : 4;
 	uint32_t m_origin_z : 4;
 	uint32_t reserved6 : 8;
-	uint8_t reserved7[0x7c];
+	uint8_t reserved7[0x77];
+	/* the sounds of its sound parameter (names ours) */
+	uint8_t m_sound_num;
+	WidgetSoundParam::Sound *m_sounds;
 };
 
 }

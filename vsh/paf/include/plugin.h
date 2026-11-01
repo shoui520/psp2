@@ -440,6 +440,10 @@ extern "C" {
 /* starts an opened page's fade-in and slide (the open counterpart of 340EE53C) */
 void ScePafToplevel_995AE4B6(paf::Plugin *plugin, paf::ui::Widget *page,
 			     const paf::Plugin::PageOpenParam &param);
+/* gives a new widget the sounds of its type's sound parameter ("sound_<type>"), the plugin's
+   or the common resource's */
+void ScePafToplevel_2E1F0393(paf::Plugin *plugin, const paf::cxml::Element &elm,
+			     paf::ui::Widget *widget, const paf::IDParam &id);
 /* puts the page into a debug mode (0 param view, 1 layout, 2 hide all) or out of it */
 int32_t ScePafToplevel_68607CDE(paf::Plugin *plugin, paf::ui::Scene *page, int32_t mode,
 				bool enable);

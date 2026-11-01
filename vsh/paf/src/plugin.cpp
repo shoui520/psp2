@@ -1331,6 +1331,43 @@ void Plugin::AdjustPageDrawOrder(ui::Scene *page, const IDParam &id, int32_t vie
 	SetDrawOrder_Insert(page, view_priority, page_priority);
 }
 
+}
+
+using namespace paf;
+
+void ScePafToplevel_2E1F0393(Plugin *plugin, const cxml::Element &elm, ui::Widget *widget,
+			     const IDParam &id)
+{
+	if (widget == NULL || id.m_idhash == 0)
+		return;
+
+	const char *type = widget->GetTypeName();
+	char name[32] = "sound_";
+	size_t len = sce_paf_strlen(type) + 1;
+
+	if (len > sizeof(name) - sizeof("sound_") + 1)
+		len = sizeof(name) - sizeof("sound_");
+	sce_paf_strncat(name, type, len);
+
+	ui::WidgetSoundParam *param =
+		static_cast<ui::WidgetSoundParam *>(plugin->m_sound_param_manager->FindParam(name, id));
+
+	if (param == NULL) {
+		Plugin *common = Framework::framework->m_common_resource_plugin;
+
+		if (common != NULL)
+			param = static_cast<ui::WidgetSoundParam *>(
+				common->m_sound_param_manager->FindParam(name, id));
+	}
+	if (param != NULL) {
+		param->AddWidget(widget);
+		widget->m_sound_num = param->m_sound_num;
+		widget->m_sounds = param->m_sounds;
+	}
+}
+
+namespace paf {
+
 Plugin::InitParam2::InitParam2()
 {
 	draw_priority = 150;
