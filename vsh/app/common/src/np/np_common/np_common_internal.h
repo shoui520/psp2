@@ -22,6 +22,8 @@ extern int sceSblQafMgrIsAllowNpFullTest(void);
 extern int sceSblQafMgrIsAllowNpTest(void);
 extern SceUInt32 vshSblAimgrIsCEX(void);
 extern SceUInt32 vshSblUtMgrHasStoreFlag(void);
+extern int SceShellSvc_D943CE15(int event, int (*callback)(int event, void *arg), void *arg);
+extern int SceShellSvc_7CBF442B(int event);
 
 /* Error codes the SDK headers do not name (names unknown). */
 #define NP_COMMON_ERROR_NOT_INITIALIZED		-2141880319	/* 0x80558001 */
@@ -66,6 +68,58 @@ typedef struct NpCalloutContext {
 	int stop;			/* 0x10 */
 	NpCallout *list;		/* 0x14 */
 } NpCalloutContext;
+
+/* an element of an XML schema level; a level ends with an empty name */
+typedef struct NpXmlElement {
+	const char *name;
+	int hasText;			/* 1: the element's text is reported */
+} NpXmlElement;
+
+/* the elements the parser reports, level by level */
+typedef struct NpXmlSchema {
+	const NpXmlElement *const *levels;
+	SceUInt32 levelCount;
+} NpXmlSchema;
+
+#define NP_XML_EVENT_START		1	/* name: the element */
+#define NP_XML_EVENT_END		2
+#define NP_XML_EVENT_TEXT		3	/* the element ends; value: its text */
+#define NP_XML_EVENT_ATTRIBUTE		4	/* name, value: the attribute */
+
+#define NP_XML_STATE_TEXT_OUTSIDE	0
+#define NP_XML_STATE_TAG		1
+#define NP_XML_STATE_ATTRIBUTES		2
+#define NP_XML_STATE_TEXT		3
+#define NP_XML_STATE_END_TAG		4
+#define NP_XML_STATE_ATTRIBUTE_NAME	5
+#define NP_XML_STATE_ATTRIBUTE_VALUE	6
+
+/* the flags of an attribute value */
+#define NP_XML_FLAG_STARTED		0x1
+#define NP_XML_FLAG_QUOTED		0x2
+
+struct NpXmlParser;
+
+typedef int (*NpXmlCallback)(struct NpXmlParser *parser, int event, SceUInt32 depth,
+			     SceUInt32 index, const char *name, const char *value, void *arg);
+
+/* a streaming XML parser, its state kept between the pieces of a document */
+typedef struct NpXmlParser {
+	const NpXmlSchema *schema;	/* 0x000 */
+	char name[256];			/* 0x004: the element or attribute name */
+	char value[256];		/* 0x104: the attribute value or element text */
+	char pending[8];		/* 0x204: a character split between two pieces */
+	SceSize pendingLength;		/* 0x20C */
+	SceSize pendingNeeded;		/* 0x210: the bytes it still needs */
+	SceUInt32 depth;		/* 0x214 */
+	SceUInt32 index[6];		/* 0x218: the schema element at each level */
+	SceUInt32 state;		/* 0x230: NP_XML_STATE_* */
+	SceUInt32 flags;		/* 0x234: in a name, 1 once it ended; NP_XML_FLAG_* in a value */
+	SceSize length;			/* 0x238: of name or value */
+	int closed;			/* 0x23C: the element ends in this tag */
+	NpXmlCallback callback;		/* 0x240 */
+	void *arg;			/* 0x244 */
+} NpXmlParser;
 
 /* util.c */
 int SceNpCommon_619FB198(SceSize size, void *memblock);

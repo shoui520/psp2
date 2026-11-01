@@ -20,10 +20,6 @@
 #define NP_TICKET_FIELD_DATE		0x3011
 #define NP_TICKET_FIELD_EXTRA_DATA	0x3012	/* 4.0 */
 
-/* entitlement record flags */
-#define NP_TICKET_ENTITLEMENT_TYPE_MASK		0x3
-#define NP_TICKET_ENTITLEMENT_HAS_EXPIRE_DATE	0x4
-
 /* a ticket being read */
 typedef struct NpTicketReader {
 	const SceUInt8 *ticket;
@@ -57,7 +53,9 @@ typedef struct NpTicketBlockV4 {
 
 /* an entitlement record's first byte */
 typedef struct NpTicketEntitlementHeader {
-	SceUInt8 flags;
+	SceUInt8 type : 2;		/* SCE_NP_ENTITLEMENT_TYPE_* */
+	SceUInt8 hasExpireDate : 1;
+	SceUInt8 reserved : 5;
 	SceUInt8 idLength;
 } NpTicketEntitlementHeader;
 
@@ -668,6 +666,7 @@ static int ticketGetEntitlementIdListV2(NpTicketReader *reader, SceNpEntitlement
 	}
 }
 
+__attribute__((noinline))
 static int ticketReadEntitlementHeaderV3(NpTicketBlockV3 *block, NpTicketEntitlementHeader *header)
 {
 	SceUInt8 byte;
@@ -676,13 +675,16 @@ static int ticketReadEntitlementHeaderV3(NpTicketBlockV3 *block, NpTicketEntitle
 		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	sceClibMemcpy_safe(&byte, block->data + block->offset, 1);
 	block->offset++;
-	header->flags = ((byte >> 6) & 3) | (((byte >> 5) & 1) << 2);
+	header->type = (byte >> 6) & 3;
+	header->hasExpireDate = (byte >> 5) & 1;
+	header->reserved = 0;
 	header->idLength = byte & 0x1f;
 	if ((byte & 0x1f) == 0)
 		header->idLength = 32;
 	return 0;
 }
 
+__attribute__((noinline))
 static int ticketReadEntitlementHeaderV4(NpTicketBlockV4 *block, NpTicketEntitlementHeader *header)
 {
 	SceUInt8 byte;
@@ -691,7 +693,9 @@ static int ticketReadEntitlementHeaderV4(NpTicketBlockV4 *block, NpTicketEntitle
 		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	sceClibMemcpy_safe(&byte, block->data + block->offset, 1);
 	block->offset++;
-	header->flags = ((byte >> 6) & 3) | (((byte >> 5) & 1) << 2);
+	header->type = (byte >> 6) & 3;
+	header->hasExpireDate = (byte >> 5) & 1;
+	header->reserved = 0;
 	header->idLength = byte & 0x1f;
 	if ((byte & 0x1f) == 0)
 		header->idLength = 32;
@@ -782,12 +786,12 @@ static int ticketReadEntitlementV3(NpTicketBlockV3 *block, const NpTicketEntitle
 	SceUInt32 u32;
 	int ret;
 
-	ent->type = header->flags & NP_TICKET_ENTITLEMENT_TYPE_MASK;
+	ent->type = header->type;
 	ret = ticketBlockReadV3(block, &u64, 8);
 	if (ret < 0)
 		return ret;
 	ent->createdDate = ticketSwap64(u64);
-	if (header->flags & NP_TICKET_ENTITLEMENT_HAS_EXPIRE_DATE) {
+	if (header->hasExpireDate) {
 		ret = ticketBlockReadV3(block, &u64, 8);
 		if (ret < 0)
 			return ret;
@@ -795,7 +799,7 @@ static int ticketReadEntitlementV3(NpTicketBlockV3 *block, const NpTicketEntitle
 	} else {
 		ent->expireDate = 0;
 	}
-	if ((header->flags & NP_TICKET_ENTITLEMENT_TYPE_MASK) == SCE_NP_ENTITLEMENT_TYPE_CONSUMABLE) {
+	if ((header->type) == SCE_NP_ENTITLEMENT_TYPE_CONSUMABLE) {
 		ret = ticketBlockReadV3(block, &u32, 4);
 		if (ret < 0)
 			return ret;
@@ -818,12 +822,12 @@ static int ticketReadEntitlementV4(NpTicketBlockV4 *block, const NpTicketEntitle
 	SceUInt32 u32;
 	int ret;
 
-	ent->type = header->flags & NP_TICKET_ENTITLEMENT_TYPE_MASK;
+	ent->type = header->type;
 	ret = ticketBlockReadV4(block, &u64, 8);
 	if (ret < 0)
 		return ret;
 	ent->createdDate = ticketSwap64(u64);
-	if (header->flags & NP_TICKET_ENTITLEMENT_HAS_EXPIRE_DATE) {
+	if (header->hasExpireDate) {
 		ret = ticketBlockReadV4(block, &u64, 8);
 		if (ret < 0)
 			return ret;
@@ -831,7 +835,7 @@ static int ticketReadEntitlementV4(NpTicketBlockV4 *block, const NpTicketEntitle
 	} else {
 		ent->expireDate = 0;
 	}
-	if ((header->flags & NP_TICKET_ENTITLEMENT_TYPE_MASK) == SCE_NP_ENTITLEMENT_TYPE_CONSUMABLE) {
+	if ((header->type) == SCE_NP_ENTITLEMENT_TYPE_CONSUMABLE) {
 		ret = ticketBlockReadV4(block, &u32, 4);
 		if (ret < 0)
 			return ret;
@@ -852,9 +856,9 @@ static inline SceSize ticketEntitlementSize(const NpTicketEntitlementHeader *hea
 {
 	SceSize size = 8;
 
-	if (header->flags & NP_TICKET_ENTITLEMENT_HAS_EXPIRE_DATE)
+	if (header->hasExpireDate)
 		size = 16;
-	if ((header->flags & NP_TICKET_ENTITLEMENT_TYPE_MASK) == SCE_NP_ENTITLEMENT_TYPE_CONSUMABLE)
+	if ((header->type) == SCE_NP_ENTITLEMENT_TYPE_CONSUMABLE)
 		size += 8;
 	return size;
 }
