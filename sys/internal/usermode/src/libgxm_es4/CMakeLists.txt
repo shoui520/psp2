@@ -1,7 +1,7 @@
 # SceGxm: ARM code built at -O3 (prefetching loops, SLP-vectorized stores),
 # without strict aliasing.
 set(GXM_SOURCES
-	background.c
+	background_object.c
 	blend_code_f16.c
 	blend_code_f16_assembler.c
 	blend_code_f16_optimizer.c
@@ -29,7 +29,7 @@ set(GXM_SOURCES
 	notification.c
 	output_format.c
 	pds_sce.c
-	precomputed.c
+	precomputation.c
 	program.c
 	razor.c
 	render_target.c

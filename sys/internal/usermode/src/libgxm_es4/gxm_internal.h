@@ -1017,7 +1017,7 @@ typedef struct SceGxmDepthStencilSurface {
 SceBool sceGxmColorSurfaceIsEnabled(const SceGxmColorSurface *surface);
 SceGxmColorFormat sceGxmColorSurfaceGetFormat(const SceGxmColorSurface *surface);
 
-/* the background object's programs (background.c) */
+/* the background object's programs (background_object.c) */
 int gxmBackgroundBuildProgram(GxmChunkBuffer *buffer, const SceGxmColorSurface *surface,
 			      SceUInt32 samples, GxmCodeRef *program, SceUInt32 *dms);
 int gxmBackgroundBuildTextureProgram(GxmChunkBuffer *buffer, const SceGxmColorSurface *surface,
