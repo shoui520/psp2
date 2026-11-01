@@ -310,6 +310,9 @@ public:
 	static VersatileParam *CallFactoryLayout(const char *name);
 	static ui::WidgetParam *CallFactoryWidgetParam(const char *name);
 	static ui::Widget *CallFactoryWidget(const char *name, ui::Widget *parent);
+	/* a widget of the type with the style's parameter (its type's default style without one) */
+	ui::Widget *CreateWidgetWithStyleType(ui::Widget *parent, const char *type, const IDParam &id,
+					      const char *style_type, const IDParam &style_id);
 	ui::Scene *PageOpen(const cxml::Element &node, const PageOpenParam &param);
 	void PageActivate(const cxml::Element &node);
 	void PageActivateActually();
@@ -445,6 +448,19 @@ public:
  */
 class WidgetResourceInfo : public ui::Widget::UserData {
 public:
+	WidgetResourceInfo(Plugin *plugin)
+		: m_plugin(plugin), m_wparam(NULL), m_style_id(s_empty_name, 0),
+		  m_sound_id(s_empty_name, 0)
+	{
+		m_node = cxml::Element();
+	}
+
+	virtual ~WidgetResourceInfo()
+	{
+		if (m_wparam != NULL)
+			delete m_wparam;
+	}
+
 	class LayoutData {
 	public:
 		IDParam m_id;

@@ -52,6 +52,24 @@ public:
 
 /* a widget's parameters as its resource gives them */
 class WidgetParam : public VersatileParam {
+public:
+	uint8_t reserved[4];
+	/* its widget's style and sound parameter IDs (names ours) */
+	IDParam m_style_id;
+	uint8_t reserved2[0x10];
+	IDParam m_sound_id;
+};
+
+/* a widget type's style, read from the resource's "style_<type>" parameter */
+class WidgetStyleParam : public VersatileParam {
+public:
+	virtual int32_t SetEach(Widget *widget);
+
+	int32_t AddWidget(Widget *widget);
+
+	uint8_t reserved[0x30];
+	/* the ID of the style's sound parameter (name ours) */
+	IDParam m_sound_id;
 };
 
 /* a widget type's layout, read from the "layout_" children of its element */
@@ -297,6 +315,8 @@ public:
 }
 
 extern "C" {
+/* gives the widget parameter its widget (the widget deletes it with itself) */
+int32_t ScePafResource_190E99A6(paf::ui::WidgetParam *param, paf::ui::Widget *widget);
 /* puts the widget into its transition: auto_delete deletes it once the time ends */
 int32_t ScePafWidget_8AF26B1F(paf::ui::Widget *widget, bool auto_delete, float time);
 /* Hide(Timer *, int32_t opt, float delay, AnimCB): hides the widget, over the timer's time */

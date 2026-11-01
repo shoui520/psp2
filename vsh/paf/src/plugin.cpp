@@ -1499,7 +1499,8 @@ void Plugin::InstantiateWidget_Layout(const cxml::Element &elm, ui::Widget *widg
 	delete param;
 }
 
-ui::WidgetParam *Plugin::CallFactoryWidgetParam(const char *name)
+/* called whole by CreateWidgetWithStyleType */
+__attribute__((noinline)) ui::WidgetParam *Plugin::CallFactoryWidgetParam(const char *name)
 {
 	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
 
@@ -1508,13 +1509,79 @@ ui::WidgetParam *Plugin::CallFactoryWidgetParam(const char *name)
 	return NULL;
 }
 
-ui::Widget *Plugin::CallFactoryWidget(const char *name, ui::Widget *parent)
+/* called whole by CreateWidgetWithStyleType */
+__attribute__((noinline)) ui::Widget *Plugin::CallFactoryWidget(const char *name,
+								ui::Widget *parent)
 {
 	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
 
 	if (it != s_factory_table.end())
 		return it->second.m_factory_widget(parent);
 	return NULL;
+}
+
+ui::Widget *Plugin::CreateWidgetWithStyleType(ui::Widget *parent, const char *type,
+					      const IDParam &id, const char *style_type,
+					      const IDParam &style_id)
+{
+	if (parent == NULL)
+		return NULL;
+
+	IDParam style(style_id);
+
+	if (style.m_idhash == 0) {
+		char name[48] = "_common_default_";
+
+		sce_paf_strncat(name, style_type, 31);
+		style.SetID(string(name));
+	}
+
+	ui::WidgetStyleParam *style_param = static_cast<ui::WidgetStyleParam *>(
+		m_style_param_manager->FindParam(style_type, style));
+
+	if (style_param == NULL) {
+		Plugin *common = Framework::framework->m_common_resource_plugin;
+
+		if (common != NULL)
+			style_param = static_cast<ui::WidgetStyleParam *>(
+				common->m_style_param_manager->FindParam(style_type, style));
+		if (style_param == NULL && style_id.m_idhash != 0)
+			return NULL;
+	}
+
+	ui::Widget *widget = CallFactoryWidget(type, parent);
+
+	if (widget == NULL)
+		return NULL;
+	widget->m_name = id;
+	if (style_param != NULL) {
+		style_param->AddWidget(widget);
+		style_param->SetEach(widget);
+	}
+
+	WidgetResourceInfo *info = new WidgetResourceInfo(this);
+
+	if (info == NULL) {
+		widget->DestroyWidget();
+		return NULL;
+	}
+	info->m_style_id = style;
+	if (widget->m_user_data2[0] != NULL)
+		delete widget->m_user_data2[0];
+	widget->m_user_data2[0] = info;
+
+	ui::WidgetParam *wparam = CallFactoryWidgetParam(type);
+
+	if (wparam != NULL) {
+		wparam->m_id = id;
+		wparam->AttachPlugin(this);
+		ScePafResource_190E99A6(wparam, widget);
+		wparam->m_style_id = style;
+		info->m_wparam = wparam;
+		if (style_param != NULL)
+			info->m_sound_id = style_param->m_sound_id;
+	}
+	return widget;
 }
 
 Plugin::InitParam2::InitParam2()
