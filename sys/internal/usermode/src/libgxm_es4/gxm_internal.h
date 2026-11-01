@@ -95,6 +95,8 @@ int sceKernelIsGameBudget(void);
 
 /* the size of one USSE instruction (Sony's SGX headers) */
 #define EURASIA_USE_INSTRUCTION_SIZE	8
+/* the PDS allocates attribute registers in chunks of this many (dms.c's assertion names it) */
+#define EURASIA_PDS_CHUNK_SIZE		32
 
 /* --- error codes --- */
 
@@ -803,8 +805,8 @@ void gxmWaitForValue(const PVRSRV_CLIENT_MEM_INFO *block, const volatile SceUInt
 		     SceUInt32 value);
 
 typedef struct GxmDmsInfo {
-	SceUInt8 tasks;
-	SceUInt8 outputTasks;
+	SceUInt8 maxInstancesPerTask;
+	SceUInt8 maxVerticesPerPartition;
 	SceUInt8 padding[2];
 	SceUInt32 word;
 } GxmDmsInfo;
@@ -902,7 +904,7 @@ int gxmPdsBuildPixelProgram(GxmChunkBuffer *buffer, SceUInt32 samples, SceUInt32
 /* --- USSE register budgets --- */
 
 void gxmDmsVertexInfo(SceUInt32 primaryRegs, SceUInt32 secondaryRegs, SceUInt32 tempRegs,
-			SceUInt32 outputRegs, SceUInt8 phased, GxmDmsInfo *info);
+			SceUInt32 outputRegCount, SceUInt8 phased, GxmDmsInfo *info);
 void gxmDmsFragmentInfo(SceUInt32 primaryRegs, SceUInt32 secondaryRegs, SceUInt32 tempRegs,
 		      SceBool phased, SceUInt32 *word);
 
