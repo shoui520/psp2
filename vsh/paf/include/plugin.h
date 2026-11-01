@@ -19,7 +19,12 @@ class SurfacePool;
 
 class Plugin {
 public:
+	static void Init();
+	static void End();
 	static Plugin *Find(const char *name);
+
+	void Stop();
+	void PageCloseAll();
 
 	const char *GetName() const
 	{

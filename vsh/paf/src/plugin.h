@@ -231,7 +231,7 @@ typedef char PluginInitParamSizeCheck[sizeof(PluginInitParam) == 148 ? 1 : -1];
 #define PluginInitParamConstruct ScePafToplevel_400F84CE
 #define PluginInitParamConstructBase ScePafToplevel_58C1A580
 #define PluginLoadAsync ScePafToplevel_F702E40A
-#define PluginStop ScePafToplevel_2645FC81
+#define PluginStop _ZN3paf6Plugin4StopEv
 #define PluginStart ScePafToplevel_3451A886
 #define PluginPageOpenParamConstruct ScePafToplevel_34FE1331
 #define PluginPageOpenParamConstructBase ScePafToplevel_814052CF

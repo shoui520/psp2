@@ -31,6 +31,11 @@ public:
 	{
 		operator delete(ptr);
 	}
+
+	void construct(pointer ptr, const _Ty &val)
+	{
+		new ((void *)ptr) _Ty(val);
+	}
 };
 
 }

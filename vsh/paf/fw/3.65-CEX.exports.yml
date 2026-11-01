@@ -2858,7 +2858,7 @@ ScePaf:
         - _ZN3paf6Plugin23LoadResourceTable_StyleEv: 0x9DDAF2C9
         - _ZN3paf9Framework23LoadCommonResourceAsyncERNS0_23CommonResourceInitParamEPFvvE: 0x9E5E0C9C
         - _ZNK3paf6Plugin21GetNodeEntity_SurfaceERKNS_7IDParamE: 0x9EA96CE0
-        - ScePafToplevel_A0896F7F: 0xA0896F7F
+        - _ZNK3paf9Framework14GetSurfacePoolEv: 0xA0896F7F
         - _ZN3paf6Plugin20SetNodeEntity_WidgetERKNS_7IDParamEPNS_2ui6WidgetE: 0xA28DEC89
         - _ZN3paf6Plugin17TemplateOpenParamC2Ev: 0xA49F8DE5
         - _ZN3paf9Framework9InitParamC1Ev: 0xA5560E60
@@ -2917,7 +2917,7 @@ ScePaf:
         - _ZN3paf6Plugin14PageInactivateERKNS_4cxml7ElementE: 0xEDA7E799
         - _ZN3paf6Plugin31InstantiateWidget_LayoutHandlerERKNS_4cxml7ElementEPNS_2ui6WidgetEPKc: 0xF103ED35
         - ScePafToplevel_F13D2937: 0xF13D2937
-        - ScePafToplevel_F2C5035A: 0xF2C5035A
+        - _ZN3paf9Framework12StopCommonSEEi: 0xF2C5035A
         - _ZN3paf6Plugin24SetNodeEntity_AddTextureERKNS_7IDParamERNS0_14AddTextureInfoE: 0xF4CD3BFA
         - _ZN3paf6Plugin12SetInterfaceEiPv: 0xF5354FEF
         - _ZN3paf6Plugin20RemoveFactoryDrawObjEPKc: 0xF658A6B4

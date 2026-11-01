@@ -16,8 +16,66 @@ class vector {
 public:
 	typedef vector<_Ty, _Ax> _Myt;
 	typedef size_t size_type;
-	typedef _Ty *iterator;
-	typedef const _Ty *const_iterator;
+	typedef ptrdiff_t difference_type;
+
+	/* moves only while it points somewhere */
+	class iterator {
+	public:
+		iterator() : m_ptr(NULL)
+		{
+		}
+
+		iterator(_Ty *ptr) : m_ptr(ptr)
+		{
+		}
+
+		iterator(const iterator &right) : m_ptr(right.m_ptr)
+		{
+		}
+
+		_Ty &operator*() const
+		{
+			return *m_ptr;
+		}
+
+		_Ty *operator->() const
+		{
+			return m_ptr;
+		}
+
+		iterator &operator++()
+		{
+			if (m_ptr != NULL)
+				++m_ptr;
+			return *this;
+		}
+
+		iterator operator+(difference_type off) const
+		{
+			iterator result(m_ptr);
+
+			if (m_ptr != NULL)
+				result.m_ptr += off;
+			return result;
+		}
+
+		difference_type operator-(const iterator &right) const
+		{
+			return m_ptr - right.m_ptr;
+		}
+
+		bool operator==(const iterator &right) const
+		{
+			return m_ptr == right.m_ptr;
+		}
+
+		bool operator!=(const iterator &right) const
+		{
+			return m_ptr != right.m_ptr;
+		}
+
+		_Ty *m_ptr;
+	};
 
 	vector()
 	{
@@ -95,12 +153,19 @@ public:
 
 	iterator begin()
 	{
-		return ptr;
+		return iterator(ptr);
 	}
 
 	iterator end()
 	{
-		return ptr + count;
+		return iterator(ptr + count);
+	}
+
+	iterator erase(const iterator &first, const iterator &last);
+
+	iterator erase(iterator where)
+	{
+		return erase(where, where + 1);
 	}
 
 	size_type size() const
@@ -174,13 +239,30 @@ vector<_Ty, _Ax>::reserve(size_type size)
 		return false;
 	}
 	for (size_type i = 0; i < count; ++i)
-		new (&dst[i]) _Ty(ptr[i]);
+		alloc.construct(&dst[i], ptr[i]);
 	for (size_type i = 0; i < count; ++i)
 		ptr[i].~_Ty();
 	alloc.deallocate(ptr, limit);
 	ptr = dst;
 	limit = size;
 	return true;
+}
+
+/* The elements after last move down; the array shrinks by ten once twenty are spare. */
+template<class _Ty, class _Ax>
+typename vector<_Ty, _Ax>::iterator
+vector<_Ty, _Ax>::erase(const iterator &first, const iterator &last)
+{
+	difference_type off = first - begin();
+	size_type src = last - begin();
+	size_type erased = src - off;
+
+	for (size_type dst = off; src < count; ++src, ++dst)
+		ptr[dst] = ptr[src];
+	count -= erased;
+	if (count < limit - 20)
+		reserve(limit - 10);
+	return begin() + off;
 }
 
 template<class _Ty, class _Ax>

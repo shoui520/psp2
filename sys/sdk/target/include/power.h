@@ -52,6 +52,20 @@
 #define SCE_POWER_CONFIGURATION_MODE_B	0x00000800U	/* ARM normal, GPU fast, no WLAN/COM */
 #define SCE_POWER_CONFIGURATION_MODE_C	0x00010880U	/* ARM normal, GPU fast, WLAN/COM usable, with limits */
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+/* Register power service notification callback */
+SceInt32 scePowerRegisterCallback(SceUID cbid);
+
+/* Cancel registration of power service notification callback */
+SceInt32 scePowerUnregisterCallback(SceUID cbid);
+
+#if defined(__cplusplus)
+}
+#endif
+
 #endif /* !_LANGUAGE_ASSEMBLY */
 
 #endif /* _SCE_POWER_H */

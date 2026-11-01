@@ -83,6 +83,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/thread/synccall.cpp
 	src/thread/thread.cpp
 	src/thread/thread_id_cache.cpp
+	src/framework.cpp
 	src/common/call_list.c
 	src/common/main_thread_call_list.c
 	src/common/main_thread_call.c
@@ -254,4 +255,5 @@ set_source_files_properties(src/timer/timer.cpp PROPERTIES COMPILE_OPTIONS -Xaut
 set_source_files_properties(src/timer/timerlistener.cpp src/timer/timerlistenerlist.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/timer/timerqueue.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)
-set_source_files_properties(src/timer/get_time.cpp src/url/url.cpp src/rtc/rtc.cpp src/misc/autotest_tty.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+set_source_files_properties(src/timer/get_time.cpp src/url/url.cpp src/rtc/rtc.cpp src/misc/autotest_tty.cpp
+	src/framework.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
