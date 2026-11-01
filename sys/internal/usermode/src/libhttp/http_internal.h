@@ -32,6 +32,8 @@ SceUInt64 sceKernelGetSystemTimeWide(void);
 /* sceClib's character classes */
 #define isspace(c)	(sceClibLookCtypeTable(c) & SCE_CLIB_CTYPE_SPACE)
 #define isdigit(c)	(sceClibLookCtypeTable(c) & SCE_CLIB_CTYPE_DIGIT)
+#define isalnum(c)	(sceClibLookCtypeTable(c) & \
+			 (SCE_CLIB_CTYPE_UPPER | SCE_CLIB_CTYPE_LOWER | SCE_CLIB_CTYPE_DIGIT))
 
 /* a header's name and value, as sceHttpRequestGetAllHeaders lists them */
 typedef struct HttpHeaderPair {

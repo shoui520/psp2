@@ -6,17 +6,10 @@
 
 #include <skeleton.h>
 
-
 STUB(SceHttp_031EBD2A)
 STUB(SceHttp_0CC59EF6)
 STUB(SceHttp_11C9BCE8)
-STUB(sceHttpUriUnescape)
-STUB(sceHttpUriParse)
-STUB(sceHttpUriEscape)
 STUB(SceHttp_42108FBE)
-STUB(sceHttpUriBuild)
-STUB(sceHttpUriSweepPath)
-STUB(sceHttpUriMerge)
 STUB(SceHttp_802E3C30)
 STUB(SceHttp_A4CF892E)
 STUB(SceHttp_A9A39BA1)
