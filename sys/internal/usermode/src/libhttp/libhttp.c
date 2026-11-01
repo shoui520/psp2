@@ -8,11 +8,9 @@
 
 
 STUB(SceHttp_031EBD2A)
-STUB(sceHttpParseResponseHeader)
 STUB(SceHttp_0CC59EF6)
 STUB(SceHttp_11C9BCE8)
 STUB(sceHttpUriUnescape)
-STUB(sceHttpParseStatusLine)
 STUB(sceHttpUriParse)
 STUB(sceHttpUriEscape)
 STUB(SceHttp_42108FBE)
