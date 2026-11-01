@@ -158,19 +158,19 @@ __attribute__((noinline))
 void _sceHttpAuthHex(const SceUChar8 *digest, char *hex)
 {
 	SceUShort16 i = 0;
-	SceUChar8 c;
+	int c;
 
 	do {
-		c = digest[i] >> 4;
-		if (c > 9)
-			hex[2 * i] = c + 'a' - 10;
-		else
+		c = (digest[i] >> 4) & 0xf;
+		if (c <= 9)
 			hex[2 * i] = c + '0';
-		c = digest[i] & 0xf;
-		if (c > 9)
-			hex[2 * i + 1] = c + 'a' - 10;
 		else
+			hex[2 * i] = c + 'a' - 10;
+		c = digest[i] & 0xf;
+		if (c <= 9)
 			hex[2 * i + 1] = c + '0';
+		else
+			hex[2 * i + 1] = c + 'a' - 10;
 		i++;
 	} while (i < SCE_MD5_DIGEST_SIZE);
 	hex[2 * SCE_MD5_DIGEST_SIZE] = '\0';

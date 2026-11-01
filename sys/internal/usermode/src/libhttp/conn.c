@@ -334,8 +334,8 @@ __attribute__((noinline))
 int _sceHttpConnectionConnect(HttpRequest *req)
 {
 	HttpConnection *conn = _sceHttpRequestGetConnection(req);
-	unsigned int optlen;
 	int optval;
+	unsigned int optlen;
 	int ret;
 
 	if (conn->state <= 2) {
