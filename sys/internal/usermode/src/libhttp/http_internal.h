@@ -120,7 +120,7 @@ typedef struct HttpConnection {
 	int owner;
 	int sock;
 	int savedSendTimeout;
-	int reserved2c;
+	int resolverId;
 	SceNetSockaddrIn addr;
 	int reserved40[2];
 	char *hostname;
@@ -135,7 +135,7 @@ typedef struct HttpConnection {
 	SceSize recvBufferSize;
 	int reserved154[3];
 	int reserved160[10];
-	int reserved188;
+	SceBool aborted;			/* sceNetSocketAbort was called on sock */
 	int reserved18c;
 } HttpConnection;
 _Static_assert(sizeof(HttpConnection) == 0x190, "HttpConnection");
@@ -171,7 +171,7 @@ typedef struct HttpRequest {
 	SceSize recvBufferSize;
 	SceSize responseHeaderLen;
 	int reserved3ec;
-	int reserved3f0;
+	int icmSock;			/* "SceLibHttpIcm" */
 	int reserved3f4;
 	SceKernelLwMutexWork lock;
 	void *reserved418;
@@ -183,6 +183,21 @@ typedef struct HttpRequest {
 	int reserved440[8];
 } HttpRequest;
 _Static_assert(sizeof(HttpRequest) == 0x460, "HttpRequest");
+
+/* a connection's sockets, for SceHttp_54847CFE */
+typedef struct HttpConnectionSockInfo {
+	SceBool connected;
+	SceBool aborted;
+	int sock;
+	int resolverId;
+} HttpConnectionSockInfo;
+
+/* a request's sockets, for SceHttp_80E6013D */
+typedef struct HttpRequestSockInfo {
+	int sock;
+	int icmSock;
+	int resolverId;
+} HttpRequestSockInfo;
 
 /* a challenge of a WWW-Authenticate or Proxy-Authenticate header (0x38 bytes) */
 typedef struct HttpAuthChallenge {
@@ -429,6 +444,15 @@ int _sceHttpCookieGetStats(SceHttpCookieStats *stats);
 void _sceHttpCookieNop2(void);
 void _sceHttpCookieNop3(void);
 
+/* debug.c */
+int SceHttp_5B6A0ACE(void);
+void SceHttp_FE60380A(void);
+void SceHttp_B0E41827(void);
+void SceHttp_88116DB8(void);
+void SceHttp_0B0D8E7A(void);
+int SceHttp_54847CFE(int connId, HttpConnectionSockInfo *info);
+int SceHttp_80E6013D(int reqId, HttpRequestSockInfo *info);
+int _sceHttpDbgInit(void);
 /* headers */
 int _sceHttpHeaderCreate(const HttpAllocator *allocator, HttpHeader **header, const char *name,
 			 const char *value);
@@ -446,6 +470,7 @@ int _sceHttpTemplateClear(HttpTemplate *tmpl);
 int _sceHttpObjectRegister(HttpObject *object, int type);
 int _sceHttpTakeObject(HttpObject **object, int id, int type);
 int _sceHttpGetObjectType(int id);
+int _sceHttpGetObjectList(HttpObject **list, int *num, int type);
 int _sceHttpGetTemplate(HttpTemplate **tmpl, int id);
 int _sceHttpGetConnection(HttpConnection **conn, int id);
 int _sceHttpGetRequest(HttpRequest **req, int id);
@@ -467,6 +492,7 @@ int _sceHttpSocketSetSendTimeout(int sock, const SceNetSockaddrIn *addr, SceUInt
 int _sceHttpSocketRestoreSendTimeout(int sock, int saved);
 int _sceHttpSocketConnect(int sock, const SceNetSockaddrIn *addr, SceUInt32 timeout, int arg);
 void _sceHttpConnectionClose(HttpConnection *conn);
+SceBool _sceHttpConnectionIsConnected(HttpConnection *conn);
 void _sceHttpEpollRemoveConnection(HttpConnection *conn);
 int _sceHttpEpollWait(HttpRequest *req, int arg, int events);
 

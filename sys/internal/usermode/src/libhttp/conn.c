@@ -100,9 +100,9 @@ int _sceHttpConnectionCreate(HttpTemplate *tmpl, const char *hostname, const cha
 		_sceHttpFree(tmpl->allocator.free, conn->tmpl.password);
 	conn->tmpl.password = pass;
 	conn->sema = sema;
-	conn->reserved2c = -1;
+	conn->resolverId = -1;
 	conn->sock = -1;
-	conn->reserved188 = 0;
+	conn->aborted = 0;
 	host = NULL;
 	user = NULL;
 	pass = NULL;
