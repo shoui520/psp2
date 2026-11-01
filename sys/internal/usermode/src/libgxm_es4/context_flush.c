@@ -9,16 +9,50 @@ int gxmContextCheckCommandList(const SceGxmContext *context, const SceGxmCommand
 {
 	SceUInt32 zls = context->depthStencil.zlsControl;
 
-	if (!(zls & GXM_ZLS_STORE_DEPTH) &&
-	    (list->depthStencilUsage & (GXM_LIST_USES_DEPTH_FRONT | GXM_LIST_USES_DEPTH_BACK)))
-		return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
-	if (!(zls & GXM_ZLS_STORE_STENCIL) &&
-	    (list->depthStencilUsage & (GXM_LIST_USES_STENCIL_FRONT | GXM_LIST_USES_STENCIL_BACK)))
-		return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
+	if (!(zls & GXM_ZLS_STORE_DEPTH)) {
+		if (list->depthStencilUsage & GXM_LIST_USES_DEPTH_FRONT) {
+			GXM_DBG_ERROR(135, "During the construction of parameter commandList a depth "
+				      "comparison function for front-facing primitives was specified "
+				      "that was not SCE_GXM_DEPTH_FUNC_NEVER or SCE_GXM_DEPTH_FUNC_ALWAYS "
+				      "when depth/stencil surface is not enabled, or depth/stencil "
+				      "format does not use depth.");
+			return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
+		}
+		if (list->depthStencilUsage & GXM_LIST_USES_DEPTH_BACK) {
+			GXM_DBG_ERROR(140, "During the construction of parameter commandList a depth "
+				      "comparison function for back-facing primitives was specified "
+				      "that was not SCE_GXM_DEPTH_FUNC_NEVER or SCE_GXM_DEPTH_FUNC_ALWAYS "
+				      "when depth/stencil surface is not enabled, or depth/stencil "
+				      "format does not use depth.");
+			return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
+		}
+	}
+	if (!(zls & GXM_ZLS_STORE_STENCIL)) {
+		if (list->depthStencilUsage & GXM_LIST_USES_STENCIL_FRONT) {
+			GXM_DBG_ERROR(147, "During the construction of parameter commandList a stencil "
+				      "comparison function for front-facing primitives was specified "
+				      "that was not SCE_GXM_STENCIL_FUNC_NEVER or "
+				      "SCE_GXM_STENCIL_FUNC_ALWAYS when depth/stencil surface is not "
+				      "enabled, or depth/stencil format does not use stencil.");
+			return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
+		}
+		if (list->depthStencilUsage & GXM_LIST_USES_STENCIL_BACK) {
+			GXM_DBG_ERROR(152, "During the construction of parameter commandList a stencil "
+				      "comparison function for back-facing primitives was specified "
+				      "that was not SCE_GXM_STENCIL_FUNC_NEVER or "
+				      "SCE_GXM_STENCIL_FUNC_ALWAYS when depth/stencil surface is not "
+				      "enabled, or depth/stencil format does not use stencil.");
+			return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
+		}
+	}
 	if (zls & GXM_ZLS_STORE_MASK)
 		return 0;
-	if (list->depthStencilUsage & GXM_LIST_USES_MASK)
+	if (list->depthStencilUsage & GXM_LIST_USES_MASK) {
+		GXM_DBG_ERROR(159, "During the construction of parameter commandList a mask update "
+			      "fragment program was used when the depth/stencil surface is not "
+			      "enabled, or the depth/stencil format does not contain the mask bit.");
 		return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
+	}
 	return 0;
 }
 
@@ -80,21 +114,45 @@ static inline int gxmContextCheckDepthStencil(SceGxmContext *context)
 		SceUInt32 zls = context->depthStencil.zlsControl;
 
 		if (!(zls & GXM_ZLS_STORE_DEPTH)) {
-			if (gxmIspReadsDepth(isp))
+			if (gxmIspReadsDepth(isp)) {
+				GXM_DBG_ERROR(44, "Depth comparison function for front-facing "
+					      "primitives must be SCE_GXM_DEPTH_FUNC_NEVER or "
+					      "SCE_GXM_DEPTH_FUNC_ALWAYS when depth/stencil surface is "
+					      "not enabled, or depth/stencil format does not use depth.");
 				return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
-			if ((isp & GXM_ISP_TWO_SIDED) && gxmIspReadsDepth(context->state.backIsp))
+			}
+			if ((isp & GXM_ISP_TWO_SIDED) && gxmIspReadsDepth(context->state.backIsp)) {
+				GXM_DBG_ERROR(51, "Depth comparison function for back-facing "
+					      "primitives must be SCE_GXM_DEPTH_FUNC_NEVER or "
+					      "SCE_GXM_DEPTH_FUNC_ALWAYS when depth/stencil surface is "
+					      "not enabled, or depth/stencil format does not use depth.");
 				return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
+			}
 		}
 		if (!(zls & GXM_ZLS_STORE_STENCIL)) {
-			if (gxmStencilReadsStencil(context->state.frontStencil))
+			if (gxmStencilReadsStencil(context->state.frontStencil)) {
+				GXM_DBG_ERROR(60, "Stencil comparison function for front-facing "
+					      "primitives must be SCE_GXM_STENCIL_FUNC_NEVER or "
+					      "SCE_GXM_STENCIL_FUNC_ALWAYS when depth/stencil surface is "
+					      "not enabled, or depth/stencil format does not use stencil.");
 				return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
+			}
 			if ((isp & GXM_ISP_TWO_SIDED) &&
-			    gxmStencilReadsStencil(context->state.backStencil))
+			    gxmStencilReadsStencil(context->state.backStencil)) {
+				GXM_DBG_ERROR(67, "Stencil comparison function for back-facing "
+					      "primitives must be SCE_GXM_STENCIL_FUNC_NEVER or "
+					      "SCE_GXM_STENCIL_FUNC_ALWAYS when depth/stencil surface is "
+					      "not enabled, or depth/stencil format does not use stencil.");
 				return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
+			}
 		}
 		if (!(zls & GXM_ZLS_STORE_MASK) &&
-		    (isp & GXM_ISP_PASS_TYPE) == GXM_ISP_PASS_TYPE_MASK_UPDATE)
+		    (isp & GXM_ISP_PASS_TYPE) == GXM_ISP_PASS_TYPE_MASK_UPDATE) {
+			GXM_DBG_ERROR(76, "The mask update fragment program cannot be used when the "
+				      "depth/stencil surface is not enabled, or the depth/stencil format "
+				      "does not contain the mask bit.");
 			return SCE_GXM_ERROR_INVALID_DEPTH_STENCIL_CONFIGURATION;
+		}
 	}
 	return 0;
 }
@@ -111,15 +169,17 @@ static inline void gxmProgramWriteTextureWords(SceUInt32 *block, const GxmProgra
 
 static inline int gxmContextWriteTextureBlock(GxmChunkBuffer *buffer, void **textureBlock,
 					      const SceGxmProgram *program,
-					      const SceGxmTexture *textures)
+					      const SceGxmTexture *textures, int line)
 {
-	SceSize size = program->textureBufferCount * 4;
-	SceUInt32 *block = gxmChunkBufferReserve(buffer, size, 4);
+	SceUInt32 textureBufferRegCount = program->textureBufferCount;
+	void *block;
+	int ret;
 
-	if (block == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
+	GXM_DBG_CHECK(__FILE_NAME__, line, textureBufferRegCount, "textureBufferRegCount");
+	ret = gxmChunkBufferAlloc(buffer, textureBufferRegCount * 4, 4, &block);
+	if (ret != 0)
+		return ret;
 	*textureBlock = block;
-	buffer->cur = (SceUInt32)block + size;
 	gxmProgramWriteTextureWords(block, GXM_RELATIVE(program->textureRefsOffset),
 				    program->textureRefCount, (const SceUInt32 *)textures);
 	return 0;
@@ -129,17 +189,22 @@ static inline int gxmContextWriteTextureBlock(GxmChunkBuffer *buffer, void **tex
 static inline int gxmContextWriteConstantBlock(GxmChunkBuffer *buffer, void **constantBlock,
 					       const SceGxmProgram *program,
 					       const void *const *uniformBuffers,
-					       const SceGxmTexture *textures)
+					       const SceGxmTexture *textures, int line,
+					       const char *countText)
 {
-	SceSize size = program->dataBufferCount * 4;
-	SceUInt32 *block = gxmChunkBufferReserve(buffer, size, 4);
+	SceUInt32 dataBufferRegCount = program->dataBufferCount;
+	SceUInt32 *block;
+	void *data;
 	const GxmProgramBufferRef *ref, *refsEnd;
 	const GxmProgramLiteral *literal, *literalsEnd;
+	int ret;
 
-	if (block == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
+	GXM_DBG_CHECK(__FILE_NAME__, line, dataBufferRegCount, countText);
+	ret = gxmChunkBufferAlloc(buffer, dataBufferRegCount * 4, 4, &data);
+	if (ret != 0)
+		return ret;
+	block = data;
 	*constantBlock = block;
-	buffer->cur = (SceUInt32)block + size;
 	ref = GXM_RELATIVE(program->bufferRefsOffset);
 	refsEnd = ref + program->bufferRefCount;
 	for (; ref != refsEnd; ref++)
@@ -160,14 +225,16 @@ static inline int gxmContextWriteConstantBlock(GxmChunkBuffer *buffer, void **co
 static inline int gxmContextWriteDmaBlock(GxmChunkBuffer *buffer, GxmCommandBlock *dmaBlock,
 					  const SceGxmProgram *program,
 					  const void *const *uniformBuffers, SceSize size,
-					  const GxmCodeRef *secondaryCode)
+					  const GxmCodeRef *secondaryCode, int line)
 {
 	SceUInt32 *data = gxmChunkBufferReserve(buffer, size, 16);
 
-	if (data == NULL)
+	if (data == NULL) {
+		GXM_DBG_ERROR(line, "Could not reserve %d bytes.", size);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	buffer->cur = (SceUInt32)gxmProgramWriteDmaBlock(data, dmaBlock, program, uniformBuffers,
-							 secondaryCode);
+	}
+	gxmChunkBufferCommit(buffer, gxmProgramWriteDmaBlock(data, dmaBlock, program,
+							     uniformBuffers, secondaryCode));
 	return 0;
 }
 
@@ -176,12 +243,15 @@ static inline int gxmContextWriteTextureStateBlock(SceGxmContext *context,
 						   const SceGxmFragmentProgram *fragmentProgram)
 {
 	SceSize size = fragmentProgram->pds.size;
-	SceGxmTexture *block = gxmChunkBufferReserve(&context->fragmentBuffer, size, 16);
+	SceGxmTexture *block;
+	void *data;
 	SceUInt32 i;
+	int ret;
 
-	if (block == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
-	context->fragmentBuffer.cur = (SceUInt32)block + size;
+	ret = gxmChunkBufferAlloc(&context->fragmentBuffer, size, 16, &data);
+	if (ret != 0)
+		return ret;
+	block = data;
 	context->fragmentTextureStateBlock.data = block;
 	context->fragmentTextureStateBlock.size = size;
 	context->fragmentTextureStateBlock.dataSize = fragmentProgram->pds.dataSize;
@@ -203,12 +273,15 @@ static inline int gxmContextWriteFragmentState(SceGxmContext *context)
 	if (flags & GXM_CONTEXT_FLAG_FRAGMENT_PROGRAM) {
 		if (flags & GXM_CONTEXT_FLAG_FRAGMENT_DATA) {
 			if (context->fragmentDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_NONE &&
-			    program->defaultUniformBufferCount != 0)
+			    program->defaultUniformBufferCount != 0) {
+				GXM_DBG_ERROR(325, "The fragment default uniform buffer has not been "
+					      "reserved");
 				return SCE_GXM_ERROR_UNIFORM_BUFFER_NOT_RESERVED;
+			}
 			if (flags & GXM_CONTEXT_FLAG_FRAGMENT_TEXTURES) {
 				ret = gxmContextWriteTextureBlock(&context->fragmentBuffer,
 								  &context->fragmentTextureBlock,
-								  program, context->fragmentTextures);
+								  program, context->fragmentTextures, 173);
 				if (ret != 0)
 					return ret;
 				flags = context->flags;
@@ -217,7 +290,8 @@ static inline int gxmContextWriteFragmentState(SceGxmContext *context)
 				ret = gxmContextWriteConstantBlock(&context->fragmentBuffer,
 								   &context->fragmentConstantBlock,
 								   program, context->fragmentUniformBuffers,
-								   context->fragmentTextures);
+								   context->fragmentTextures, 206,
+								   "dataBufferRegCount");
 				if (ret != 0)
 					return ret;
 			}
@@ -225,7 +299,7 @@ static inline int gxmContextWriteFragmentState(SceGxmContext *context)
 						      &context->fragmentDmaBlock, program,
 						      context->fragmentUniformBuffers,
 						      fragmentProgram->secondaryPdsSize,
-						      &fragmentProgram->secondaryCode);
+						      &fragmentProgram->secondaryCode, 249);
 			if (ret != 0)
 				return ret;
 			flags = context->flags;
@@ -255,12 +329,15 @@ static inline int gxmContextWriteVertexState(SceGxmContext *context)
 	if (flags & GXM_CONTEXT_FLAG_VERTEX_PROGRAM) {
 		if (flags & GXM_CONTEXT_FLAG_VERTEX_DATA) {
 			if (context->vertexDefaultUniformBufferMode == GXM_DEFAULT_UNIFORM_BUFFER_NONE &&
-			    context->vertexProgram->program->defaultUniformBufferCount != 0)
+			    context->vertexProgram->program->defaultUniformBufferCount != 0) {
+				GXM_DBG_ERROR(556, "The vertex default uniform buffer has not been "
+					      "reserved");
 				return SCE_GXM_ERROR_UNIFORM_BUFFER_NOT_RESERVED;
+			}
 			if (flags & GXM_CONTEXT_FLAG_VERTEX_TEXTURES) {
 				ret = gxmContextWriteTextureBlock(&context->vertexBuffer,
 								  &context->vertexTextureBlock,
-								  program, context->vertexTextures);
+								  program, context->vertexTextures, 437);
 				if (ret != 0)
 					return ret;
 				flags = context->flags;
@@ -269,14 +346,15 @@ static inline int gxmContextWriteVertexState(SceGxmContext *context)
 				ret = gxmContextWriteConstantBlock(&context->vertexBuffer,
 								   &context->vertexConstantBlock,
 								   program, context->vertexUniformBuffers,
-								   context->vertexTextures);
+								   context->vertexTextures, 470,
+								   "program->dataBufferRegCount");
 				if (ret != 0)
 					return ret;
 			}
 			ret = gxmContextWriteDmaBlock(&context->vertexBuffer, &context->vertexDmaBlock,
 						      program, context->vertexUniformBuffers,
 						      vertexProgram->secondaryPdsSize,
-						      &vertexProgram->secondaryCode);
+						      &vertexProgram->secondaryCode, 514);
 			if (ret != 0)
 				return ret;
 		}
@@ -366,12 +444,12 @@ int gxmContextWriteState(SceGxmContext *context)
 	if (vertexState == NULL)
 		return gxmContextWriteVertexState(context);
 	if (vertexState != context->appliedVertexState) {
-		GxmVdmState *command = gxmChunkBufferReserve(&context->vdmBuffer, sizeof(*command), 4);
+		void *command;
 
-		if (command == NULL)
-			return SCE_GXM_ERROR_RESERVE_FAILED;
-		context->vdmBuffer.cur = (SceUInt32)(command + 1);
-		*command = vertexState->vdmState;
+		ret = gxmChunkBufferAlloc(&context->vdmBuffer, sizeof(GxmVdmState), 4, &command);
+		if (ret != 0)
+			return ret;
+		*(GxmVdmState *)command = vertexState->vdmState;
 		context->appliedVertexState = vertexState;
 	}
 	return 0;
@@ -382,10 +460,9 @@ static inline const void *gxmContextCopyUniformBuffer(GxmChunkBuffer *buffer, co
 						     const SceGxmProgram *program)
 {
 	SceSize size = program->defaultUniformBufferCount * 4;
-	void *copy = gxmChunkBufferReserve(buffer, size, 4);
+	void *copy;
 
-	if (copy != NULL)
-		buffer->cur = (SceUInt32)copy + size;
+	gxmChunkBufferAlloc(buffer, size, 4, &copy);
 	sceClibMemcpy_safe(copy, source, size);
 	return copy;
 }

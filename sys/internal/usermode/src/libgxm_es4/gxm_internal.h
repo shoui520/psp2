@@ -718,6 +718,26 @@ static inline void *gxmChunkBufferReserveChecked(GxmChunkBuffer *buffer, SceSize
 	return block;
 }
 
+/*
+ * size bytes reserved and written at once; the debug build reports a failure
+ * (Sony's buffer_private.h, line 174)
+ */
+static inline GXM_DBG_NOINLINE int gxmChunkBufferReserveFailed(SceSize size)
+{
+	GXM_DBG_ERROR_AT("buffer_private.h", 174, "Could not reserve %d bytes.", size);
+	return SCE_GXM_ERROR_RESERVE_FAILED;
+}
+
+static inline int gxmChunkBufferAlloc(GxmChunkBuffer *buffer, SceSize size, SceSize alignment,
+				      void **block)
+{
+	*block = gxmChunkBufferReserve(buffer, size, alignment);
+	if (*block == NULL)
+		return gxmChunkBufferReserveFailed(size);
+	gxmChunkBufferCommit(buffer, (SceUInt8 *)*block + size);
+	return 0;
+}
+
 /* the write position, as Sony's debug checks name it */
 static inline void *sceGxmBufferGet(const GxmChunkBuffer *buffer)
 {
