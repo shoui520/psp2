@@ -3,7 +3,7 @@ psp2_module(vs0_sys_external_libhttp KIND user COMPILER snc PARTIAL SOURCES
 	auth.c
 	authcache.c
 	conn.c
-	cookie.c debug.c header.c request.c http.c object.c pool.c sock.c parse.c redirect.c req.c template.c uri.c
+	cookie.c debug.c header.c request.c http.c object.c pool.c sock.c parse.c redirect.c req.c template.c uri.c util.c
 	libhttp.c
 )
 # zlib 1.2.5's inflate, for gzip bodies (req.c)

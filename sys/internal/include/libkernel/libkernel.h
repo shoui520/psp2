@@ -109,6 +109,7 @@ SceUID sceKernelOpenModule(const char *path, SceSize size, void *argument, SceUI
 			   const SceKernelLoadModuleOpt *option, int *status);
 int sceKernelCloseModule(SceUID id, SceSize size, void *argument, SceUInt flags,
 			 const SceKernelUnloadModuleOpt *option, int *status);
+int sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *info);
 
 /* sceKernelCreateMsgPipe with the caller's address, which the kernel records */
 SceUID sceKernelCreateMsgPipeWithLR(const char *name, SceUInt32 type, SceUInt32 attributes,

@@ -132,8 +132,8 @@ typedef struct HttpTemplate {
 	HttpAllocator allocator;
 	void (*freeObject)(void *ptr);
 	SceNetId epollId;			/* sceHttpSetEpollId's (option 8) */
-	void *epollIdUserArg;
-	SceHttpEpollHandle epoll;		/* sceHttpSetEpoll's */
+	void *epollUserArg;			/* sceHttpSetEpoll's user argument (option 9) */
+	SceHttpEpollHandle epoll;		/* sceHttpSetEpoll's (option 9) */
 	SceUShort16 proxyPort;
 	SceUInt8 sockFlags;			/* SceHttp_F30073EC's; bit 0: HTTP_SO_PRIVATE_FLAGS 8 */
 	SceUInt8 reservedCf;
@@ -270,7 +270,7 @@ typedef struct HttpRequest {
 	SceUInt32 chunkState;			/* _sceHttpRequestReadChunked's */
 	char chunkHex[12];			/* a chunk's size line */
 	int chunkHexLen;
-	int lineState;				/* _sceHttpRequestSkipLine's */
+	SceUInt32 lineState;			/* _sceHttpRequestSkipLine's */
 	SceSize lineLen;
 	int reserved45c;
 } HttpRequest;
@@ -793,7 +793,8 @@ int _sceHttpRequestSetMethod(int reqId, const char *method);
 int _sceHttpRequestWaitResponse(HttpRequest *req);
 int _sceHttpRemoveHeaderField(HttpRequest *req, const char *header, SceSize headerSize,
 			      const char *name, SceSize nameLen, char **out, SceSize *outSize);
-int _sceHttpSetOption(int id, int option, const void *value, SceSize size, void *arg);
+int _sceHttpSetOption(int id, int option, const void *value, SceSize size, void *arg,
+		      SceSize argSize);
 int _sceHttpGetDefaultOption(int option, void *value, SceSize size, void *arg, SceSize argSize);
 int _sceHttpGetOption(int id, int option, void *value, SceSize size, void *arg, SceSize argSize);
 int _sceHttpSetDefaultOption(int option, const void *value, SceSize size, void *arg,

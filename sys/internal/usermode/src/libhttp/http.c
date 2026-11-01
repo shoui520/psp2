@@ -612,7 +612,7 @@ SceInt32 sceHttpSetRedirectCallback(SceInt32 id, SceHttpRedirectCallback cbfunc,
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 1, cbfunc, 4, userArg);
+	return _sceHttpSetOption(id, 1, cbfunc, 4, userArg, 4);
 }
 
 SceInt32 sceHttpSetAutoRedirect(SceInt32 id, SceBool enable)
@@ -622,7 +622,7 @@ SceInt32 sceHttpSetAutoRedirect(SceInt32 id, SceBool enable)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 0, &enable, 4, NULL);
+	return _sceHttpSetOption(id, 0, &enable, 4, NULL, 0);
 }
 
 SceInt32 sceHttpGetAutoRedirect(SceInt32 id, SceBool *enable)
@@ -644,7 +644,7 @@ SceInt32 sceHttpSetResolveTimeOut(SceInt32 id, SceUInt32 usec)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 3, (const void *)usec, 4, NULL);
+	return _sceHttpSetOption(id, 3, (const void *)usec, 4, NULL, 0);
 }
 
 SceInt32 sceHttpSetResolveRetry(SceInt32 id, SceInt32 retry)
@@ -656,7 +656,7 @@ SceInt32 sceHttpSetResolveRetry(SceInt32 id, SceInt32 retry)
 		return ret;
 	if (retry < 0)
 		return SCE_HTTP_ERROR_INVALID_VALUE;
-	return _sceHttpSetOption(id, 2, (const void *)retry, 4, NULL);
+	return _sceHttpSetOption(id, 2, (const void *)retry, 4, NULL, 0);
 }
 
 SceInt32 sceHttpSetConnectTimeOut(SceInt32 id, SceUInt32 usec)
@@ -666,7 +666,7 @@ SceInt32 sceHttpSetConnectTimeOut(SceInt32 id, SceUInt32 usec)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 4, (const void *)usec, 4, NULL);
+	return _sceHttpSetOption(id, 4, (const void *)usec, 4, NULL, 0);
 }
 
 SceInt32 sceHttpSetSendTimeOut(SceInt32 id, SceUInt32 usec)
@@ -676,7 +676,7 @@ SceInt32 sceHttpSetSendTimeOut(SceInt32 id, SceUInt32 usec)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 5, (const void *)usec, 4, NULL);
+	return _sceHttpSetOption(id, 5, (const void *)usec, 4, NULL, 0);
 }
 
 SceInt32 sceHttpSetRecvTimeOut(SceInt32 id, SceUInt32 usec)
@@ -686,7 +686,7 @@ SceInt32 sceHttpSetRecvTimeOut(SceInt32 id, SceUInt32 usec)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 6, (const void *)usec, 4, NULL);
+	return _sceHttpSetOption(id, 6, (const void *)usec, 4, NULL, 0);
 }
 
 SceInt32 sceHttpSetNonblock(SceInt32 id, SceBool enable)
@@ -696,7 +696,7 @@ SceInt32 sceHttpSetNonblock(SceInt32 id, SceBool enable)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 7, &enable, 4, NULL);
+	return _sceHttpSetOption(id, 7, &enable, 4, NULL, 0);
 }
 
 int SceHttp_43A7CC70(int id, int value)
@@ -706,7 +706,7 @@ int SceHttp_43A7CC70(int id, int value)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 19, &value, 4, NULL);
+	return _sceHttpSetOption(id, 19, &value, 4, NULL, 0);
 }
 
 SceInt32 sceHttpGetNonblock(SceInt32 id, SceBool *enable)
@@ -728,7 +728,7 @@ int sceHttpSetEpollId(int id, int epollId, void *userArg)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 8, &epollId, 4, userArg);
+	return _sceHttpSetOption(id, 8, &epollId, 4, userArg, 4);
 }
 
 int sceHttpGetEpollId(int id, int *epollId, void **userArg)
@@ -791,7 +791,7 @@ SceInt32 sceHttpSetEpoll(SceInt32 id, SceHttpEpollHandle eh, void *userArg)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	ret = _sceHttpSetOption(id, 9, &eh, 4, userArg);
+	ret = _sceHttpSetOption(id, 9, &eh, 4, userArg, 4);
 	if (ret >= 0)
 		ret = _sceHttpEpollAdd(eh, id, userArg);
 	return ret;
@@ -817,7 +817,7 @@ SceInt32 sceHttpUnsetEpoll(SceInt32 id)
 	ret = _sceHttpEpollRemove(req->tmpl.epoll, id);
 	if (ret >= 0) {
 		eh = NULL;
-		ret = _sceHttpSetOption(id, 9, &eh, 4, NULL);
+		ret = _sceHttpSetOption(id, 9, &eh, 4, NULL, 0);
 	}
 
 	if (req != NULL)
@@ -868,7 +868,7 @@ SceInt32 sceHttpSetCookieEnabled(SceInt32 id, SceBool enable)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 10, &enable, 4, NULL);
+	return _sceHttpSetOption(id, 10, &enable, 4, NULL, 0);
 }
 
 SceInt32 sceHttpGetCookieEnabled(SceInt32 id, SceBool *enable)
@@ -903,7 +903,7 @@ SceInt32 sceHttpSetCookieRecvCallback(SceInt32 id, SceHttpCookieRecvCallback cbf
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 12, cbfunc, 4, userArg);
+	return _sceHttpSetOption(id, 12, cbfunc, 4, userArg, 4);
 }
 
 SceInt32 sceHttpSetCookieSendCallback(SceInt32 id, SceHttpCookieSendCallback cbfunc, void *userArg)
@@ -913,7 +913,7 @@ SceInt32 sceHttpSetCookieSendCallback(SceInt32 id, SceHttpCookieSendCallback cbf
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 11, cbfunc, 4, userArg);
+	return _sceHttpSetOption(id, 11, cbfunc, 4, userArg, 4);
 }
 
 SceInt32 sceHttpCookieExport(void *buffer, SceSize bufferSize, SceSize *exportSize)
@@ -1080,7 +1080,7 @@ SceInt32 sceHttpsEnableOption2(SceInt32 id, SceUInt32 sslFlags)
 	if (ret < 0)
 		return ret;
 	flags |= sslFlags | HTTPS_FLAGS_SET;
-	return _sceHttpSetOption(id, 13, &flags, 4, NULL);
+	return _sceHttpSetOption(id, 13, &flags, 4, NULL, 0);
 }
 
 SceInt32 sceHttpsDisableOption2(SceInt32 id, SceUInt32 sslFlags)
@@ -1099,7 +1099,7 @@ SceInt32 sceHttpsDisableOption2(SceInt32 id, SceUInt32 sslFlags)
 	if (ret < 0)
 		return ret;
 	flags = (flags & ~sslFlags) | HTTPS_FLAGS_SET;
-	return _sceHttpSetOption(id, 13, &flags, 4, NULL);
+	return _sceHttpSetOption(id, 13, &flags, 4, NULL, 0);
 }
 
 int sceHttpsEnableOptionPrivate(int id, SceUInt32 sslFlags)
@@ -1116,7 +1116,7 @@ int sceHttpsEnableOptionPrivate(int id, SceUInt32 sslFlags)
 	if (ret < 0)
 		return ret;
 	flags |= sslFlags | HTTPS_FLAGS_SET;
-	return _sceHttpSetOption(id, 13, &flags, 4, NULL);
+	return _sceHttpSetOption(id, 13, &flags, 4, NULL, 0);
 }
 
 int sceHttpsDisableOptionPrivate(int id, SceUInt32 sslFlags)
@@ -1135,7 +1135,7 @@ int sceHttpsDisableOptionPrivate(int id, SceUInt32 sslFlags)
 	if (ret < 0)
 		return ret;
 	flags = (flags & ~sslFlags) | HTTPS_FLAGS_SET;
-	return _sceHttpSetOption(id, 13, &flags, 4, NULL);
+	return _sceHttpSetOption(id, 13, &flags, 4, NULL, 0);
 }
 
 SceInt32 sceHttpsSetSslCallback(SceInt32 id, SceHttpsCallback cbfunc, void *userArg)
@@ -1231,7 +1231,7 @@ int SceHttp_F30073EC(int id, SceUInt8 value)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 14, buf, 1, NULL);
+	return _sceHttpSetOption(id, 14, buf, 1, NULL, 0);
 }
 
 int SceHttp_30F5D11F(int id, int *value)
@@ -1253,7 +1253,7 @@ int sceHttpSetIcmOption(int id, int option)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 15, &option, 4, NULL);
+	return _sceHttpSetOption(id, 15, &option, 4, NULL, 0);
 }
 
 int sceHttpGetIcmOption(int id, int *option)
@@ -1300,7 +1300,7 @@ int sceHttpSetAcceptEncodingGZIPEnabled(int id, SceBool enable)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 16, &enable, 4, NULL);
+	return _sceHttpSetOption(id, 16, &enable, 4, NULL, 0);
 }
 
 int sceHttpGetAcceptEncodingGZIPEnabled(int id, SceBool *enable)
@@ -1335,10 +1335,10 @@ int SceHttp_53B722F2(int id, SceBool enable, int mode, const char *server, SceUS
 		return ret;
 	if (server == NULL)
 		return SCE_HTTP_ERROR_INVALID_VALUE;
-	ret = _sceHttpSetOption(id, 17, &enable, 4, &mode);
+	ret = _sceHttpSetOption(id, 17, &enable, 4, &mode, 4);
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 18, server, sceClibStrnlen(server, 0xffffffff), &port);
+	return _sceHttpSetOption(id, 18, server, sceClibStrnlen(server, 0xffffffff), &port, 2);
 }
 
 SceInt32 sceHttpSetResponseHeaderMaxSize(SceInt32 id, SceSize headerSize)
@@ -1348,7 +1348,7 @@ SceInt32 sceHttpSetResponseHeaderMaxSize(SceInt32 id, SceSize headerSize)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 20, &headerSize, 4, NULL);
+	return _sceHttpSetOption(id, 20, &headerSize, 4, NULL, 0);
 }
 
 int SceHttp_C498765A(int id, int value)
@@ -1358,7 +1358,7 @@ int SceHttp_C498765A(int id, int value)
 	ret = _sceHttpCheckInit();
 	if (ret < 0)
 		return ret;
-	return _sceHttpSetOption(id, 21, &value, 4, NULL);
+	return _sceHttpSetOption(id, 21, &value, 4, NULL, 0);
 }
 
 SceInt32 sceHttpSetInflateGZIPEnabled(SceInt32 id, SceBool isEnable)
@@ -1370,7 +1370,7 @@ SceInt32 sceHttpSetInflateGZIPEnabled(SceInt32 id, SceBool isEnable)
 		return ret;
 	if (g_httpInitialized == 0)
 		return SCE_HTTP_ERROR_BEFORE_INIT;
-	return _sceHttpSetOption(id, 23, &isEnable, 4, NULL);
+	return _sceHttpSetOption(id, 23, &isEnable, 4, NULL, 0);
 }
 
 int SceHttp_855D5254(int value)

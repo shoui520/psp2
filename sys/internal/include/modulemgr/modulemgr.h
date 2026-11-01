@@ -20,18 +20,6 @@ extern "C" {
 
 typedef struct ProcessImageInfo ProcessImageInfo;	/* processmgr/process.h */
 
-/* sceKernelGetSystemSwVersion's output */
-typedef struct SceKernelSystemSwVersion {
-	SceSize size;			/* 0x28 */
-	char versionString[0x1c];	/* "%d.%02d" */
-	SceUInt version;		/* SceSysrootForDriver_67AAB627 */
-	SceUInt versionExtra;		/* 0 */
-} SceKernelSystemSwVersion;
-
-#ifndef __cplusplus
-_Static_assert(sizeof(SceKernelSystemSwVersion) == 0x28, "SceKernelSystemSwVersion size");
-#endif
-
 int sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *info);
 
 /* vitasdk: ksceKernelStopUnloadSharedModuleForPid */

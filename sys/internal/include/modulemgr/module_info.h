@@ -1,6 +1,7 @@
 /*
- * SceKernelModulemgr: the record its sceKernelGetModuleInfo syscall fills, and the syscalls user
- * code finds its modules with (LibKernel calls them). The state names are ours.
+ * SceKernelModulemgr: the records its sceKernelGetModuleInfo and sceKernelGetSystemSwVersion
+ * syscalls fill, and the syscalls user code finds its modules with (LibKernel calls them). The
+ * state names are ours.
  */
 
 #pragma once
@@ -52,6 +53,18 @@ typedef struct SceKernelModuleInfo {
 #ifndef __cplusplus
 _Static_assert(sizeof(SceKernelSegmentInfo) == 0x18, "SceKernelSegmentInfo size");
 _Static_assert(sizeof(SceKernelModuleInfo) == 0x1b8, "SceKernelModuleInfo size");
+#endif
+
+/* sceKernelGetSystemSwVersion's output */
+typedef struct SceKernelSystemSwVersion {
+	SceSize size;			/* 0x28 */
+	char versionString[0x1c];	/* "%d.%02d" */
+	SceUInt version;		/* SceSysrootForDriver_67AAB627 */
+	SceUInt versionExtra;		/* 0 */
+} SceKernelSystemSwVersion;
+
+#ifndef __cplusplus
+_Static_assert(sizeof(SceKernelSystemSwVersion) == 0x28, "SceKernelSystemSwVersion size");
 #endif
 
 #ifdef __cplusplus
