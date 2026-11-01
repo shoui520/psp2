@@ -3,9 +3,9 @@
 
 #include "../std/string.h"
 
-#define PathSplit ScePafCommon_09B0ACB5
-#define PathSplitExt ScePafCommon_B504F2E1
-#define PathJoin ScePafCommon_92A62443
+#define PathSplit _ZN3paf6common4path5SplitERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEERS7_SA_
+#define PathSplitExt _ZN3paf6common4path8SplitExtERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEERS7_SA_
+#define PathJoin _ZN3paf6common4path4JoinERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEES9_
 #define PathNormalize ScePafCommon_19056E57
 
 void PathSplit(const PafString *path, PafString *base, PafString *file);

@@ -26,15 +26,15 @@ void sce_paf_qsort(void *base, size_t count, size_t element_size,
 void sce_paf_srand(unsigned int seed);
 int sce_paf_rand(void);
 
-#define sce_paf_realloc ScePafStdc_0ADEA3AD
-#define GetGlobalHeapAllocator ScePafStdc_261CAF72
-#define sce_paf_calloc ScePafStdc_C9532982
-#define sce_paf_mtrim ScePafStdc_5FBF2BA6
-#define sce_paf_musable_size ScePafStdc_F74EEC17
-#define sce_paf_dump_heap_info ScePafStdc_FA862AE4
-#define sce_paf_dump_heap_status ScePafStdc_5A8F4CA9
-#define sce_paf_report_memoryblocks ScePafStdc_B8FFD92C
-#define sce_paf_check_memorybounds ScePafStdc_BE6601A7
+#define sce_paf_realloc sce_paf_realloc
+#define GetGlobalHeapAllocator GetGlobalHeapAllocator
+#define sce_paf_calloc sce_paf_calloc
+#define sce_paf_mtrim sce_paf_mtrim
+#define sce_paf_musable_size sce_paf_musable_size
+#define sce_paf_dump_heap_info sce_paf_dump_heap_info
+#define sce_paf_dump_heap_status sce_paf_dump_heap_status
+#define sce_paf_report_memoryblocks sce_paf_report_memoryblocks
+#define sce_paf_check_memorybounds sce_paf_check_memorybounds
 
 void *GetGlobalHeapAllocator(void);
 int ScePafStdc_D41FD265(void);

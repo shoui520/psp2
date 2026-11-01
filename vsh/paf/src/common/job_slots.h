@@ -43,8 +43,10 @@ typedef char SlotJobItemSizeCheck[sizeof(SlotJobItem) == 32 ? 1 : -1];
 #define JobSlotsEnqueue ScePafCommon_215536F3
 #define JobSlotsCancelAll ScePafCommon_59FD41F2
 #define JobSlotsContains ScePafCommon_50675CDC
+#define JobSlotsSize ScePafCommon_E62FE5E5
 #define JobSlotsFreeIndex ScePafCommon_880AA4A5
 #define JobSlotsFindShared ScePafCommon_203EF891
+#define JobSlotsSetRemovedFunction ScePafCommon_B4CCA1FD
 #define JobSlotsConstruct ScePafCommon_3BCCE98B
 #define JobSlotsConstructBase ScePafCommon_8199CAE6
 #define JobSlotsDestroy ScePafCommon_F5E73158
@@ -63,8 +65,10 @@ JobSlots *JobSlotsCancel(JobSlots *self, size_t index);
 int JobSlotsEnqueue(JobSlots *self, size_t index, JobQueue *queue, JobItemSharedPtr *item);
 void JobSlotsCancelAll(JobSlots *self);
 int JobSlotsContains(JobSlots *self, size_t index);
+size_t JobSlotsSize(const JobSlots *self);
 size_t JobSlotsFreeIndex(JobSlots *self);
 int JobSlotsFindShared(JobSlots *self, const JobItemSharedPtr *item);
+void JobSlotsSetRemovedFunction(JobSlots *self, JobSlotRemovedFunction function, void *userdata);
 JobSlots *JobSlotsConstruct(JobSlots *self);
 JobSlots *JobSlotsConstructBase(JobSlots *self);
 JobSlots *JobSlotsDestroy(JobSlots *self);

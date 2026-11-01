@@ -14,14 +14,14 @@ typedef struct JobCallQueue {
 typedef char JobCallQueueSizeCheck[sizeof(JobCallQueue) == 56 ? 1 : -1];
 typedef char JobCallQueueBodyOffsetCheck[offsetof(JobCallQueue, m_call_queue) == 48 ? 1 : -1];
 
-#define JobCallQueueCheck ScePafCommon_C16C2378
-#define JobCallQueueEnqueue ScePafCommon_FDD1CBBD
-#define JobCallQueueNumItems ScePafCommon_B01BE5EF
-#define JobCallQueueWaitEmpty ScePafCommon_354C389A
-#define JobCallQueueConstruct ScePafCommon_91CD88B3
-#define JobCallQueueConstructBase ScePafCommon_543B37D2
-#define JobCallQueueDestroy ScePafCommon_BCD1863A
-#define JobCallQueueDestroyBase ScePafCommon_03E15726
+#define JobCallQueueCheck _ZN3paf6common12JobCallQueue5CheckEv
+#define JobCallQueueEnqueue _ZN3paf6common12JobCallQueue7EnqueueEPKcPFvPvES4_
+#define JobCallQueueNumItems _ZN3paf6common12JobCallQueue8NumItemsEv
+#define JobCallQueueWaitEmpty _ZN3paf6common12JobCallQueue9WaitEmptyEv
+#define JobCallQueueConstruct _ZN3paf6common12JobCallQueueC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPNS_3job8JobQueueE
+#define JobCallQueueConstructBase _ZN3paf6common12JobCallQueueC2ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPNS_3job8JobQueueE
+#define JobCallQueueDestroy _ZN3paf6common12JobCallQueueD1Ev
+#define JobCallQueueDestroyBase _ZN3paf6common12JobCallQueueD2Ev
 
 void JobCallQueueCheck(JobCallQueue *self);
 void JobCallQueueEnqueue(JobCallQueue *self, const char *name,

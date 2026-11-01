@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 
-#define IncrFrameCount ScePafCommon_2700B0E2
-#define ResetFrameCount ScePafCommon_23B36031
-#define FrameCount ScePafCommon_D0D82903
+#define IncrFrameCount _ZN3paf6common8internal14IncrFrameCountEv
+#define ResetFrameCount _ZN3paf6common8internal15ResetFrameCountEv
+#define FrameCount _ZN3paf6common10FrameCountEv
 
 void IncrFrameCount(void);
 void ResetFrameCount(void);

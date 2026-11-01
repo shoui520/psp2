@@ -3,8 +3,8 @@
 
 #include "../std/string.h"
 
-#define StringElementEmptyString ScePafCommon_F3FEA96C
-#define WStringElementEmptyString ScePafCommon_00AD39F1
+#define StringElementEmptyString _ZN3paf6common13property_list13StringElement14s_empty_stringE
+#define WStringElementEmptyString _ZN3paf6common13property_list14WStringElement14s_empty_stringE
 
 extern PafString StringElementEmptyString;
 extern PafWString WStringElementEmptyString;

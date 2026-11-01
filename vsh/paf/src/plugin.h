@@ -223,22 +223,22 @@ typedef char PluginArgumentMapSizeCheck[sizeof(PluginArgumentMap) == 12 ? 1 : -1
 typedef char PluginInitParam2SizeCheck[sizeof(PluginInitParam2) == 16 ? 1 : -1];
 typedef char PluginInitParamSizeCheck[sizeof(PluginInitParam) == 148 ? 1 : -1];
 
-#define PluginInitParam2Construct ScePafToplevel_EA5FFA2A
-#define PluginArgumentToInt ScePafToplevel_15B7D17E
-#define PluginArgumentToFloat ScePafToplevel_CA9CA34D
-#define PluginArgumentToString ScePafToplevel_1A287262
-#define PluginInitParam2ConstructBase ScePafToplevel_5498F7B7
-#define PluginInitParamConstruct ScePafToplevel_400F84CE
-#define PluginInitParamConstructBase ScePafToplevel_58C1A580
-#define PluginLoadAsync ScePafToplevel_F702E40A
+#define PluginInitParam2Construct _ZN3paf6Plugin10InitParam2C1Ev
+#define PluginArgumentToInt _ZNK3paf6Plugin8ArgumentcviEv
+#define PluginArgumentToFloat _ZNK3paf6Plugin8ArgumentcvfEv
+#define PluginArgumentToString _ZNK3paf6Plugin8ArgumentcvNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEEv
+#define PluginInitParam2ConstructBase _ZN3paf6Plugin10InitParam2C2Ev
+#define PluginInitParamConstruct _ZN3paf6Plugin9InitParamC1Ev
+#define PluginInitParamConstructBase _ZN3paf6Plugin9InitParamC2Ev
+#define PluginLoadAsync _ZN3paf6Plugin9LoadAsyncERKNS0_9InitParamEPFvPS0_Ei
 #define PluginStop _ZN3paf6Plugin4StopEv
-#define PluginStart ScePafToplevel_3451A886
-#define PluginPageOpenParamConstruct ScePafToplevel_34FE1331
-#define PluginPageOpenParamConstructBase ScePafToplevel_814052CF
-#define PluginPageOpen ScePafToplevel_4B5FE871
-#define PluginPageActivate ScePafToplevel_856092B5
-#define PluginGetArg ScePafToplevel_20D1E49B
-#define PluginNotify ScePafToplevel_CC31A095
+#define PluginStart _ZN3paf6Plugin5StartEv
+#define PluginPageOpenParamConstruct _ZN3paf6Plugin13PageOpenParamC1Ev
+#define PluginPageOpenParamConstructBase _ZN3paf6Plugin13PageOpenParamC2Ev
+#define PluginPageOpen _ZN3paf6Plugin8PageOpenERKNS_4cxml7ElementERKNS0_13PageOpenParamE
+#define PluginPageActivate _ZN3paf6Plugin12PageActivateERKNS_4cxml7ElementE
+#define PluginGetArg _ZNK3paf6Plugin6GetArgEPKcPb
+#define PluginNotify _ZNK3paf6Plugin6NotifyEi
 
 PluginInitParam2 *PluginInitParam2Construct(PluginInitParam2 *self);
 int32_t PluginArgumentToInt(const PluginArgument *self);

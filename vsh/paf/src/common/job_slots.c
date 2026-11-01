@@ -205,6 +205,11 @@ int JobSlotsContains(JobSlots *self, size_t index)
 	return index < self->m_items._size && self->m_items._data[index].m_ptr != NULL;
 }
 
+size_t JobSlotsSize(const JobSlots *self)
+{
+	return self->m_items._size;
+}
+
 size_t JobSlotsFreeIndex(JobSlots *self)
 {
 	size_t size = self->m_items._size;
@@ -238,6 +243,12 @@ int JobSlotsFindShared(JobSlots *self, const JobItemSharedPtr *item)
 			return index;
 	}
 	return -1;
+}
+
+void JobSlotsSetRemovedFunction(JobSlots *self, JobSlotRemovedFunction function, void *userdata)
+{
+	self->m_on_removed = function;
+	self->m_userdata = userdata;
 }
 
 JobSlots *JobSlotsConstruct(JobSlots *self)

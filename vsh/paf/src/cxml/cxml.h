@@ -162,10 +162,10 @@ typedef char CxmlAttributeSizeCheck[sizeof(CxmlAttribute) == 12 ? 1 : -1];
 typedef char CxmlFileSizeCheck[sizeof(CxmlFile) == 12 ? 1 : -1];
 typedef char IDHashBinSizeCheck[sizeof(IDHashBin) == 8 ? 1 : -1];
 
-#define CxmlElementGetAttributeByIndex ScePafResource_46123EF6
+#define CxmlElementGetAttributeByIndex _ZNK3paf4cxml7Element12GetAttributeEiPNS0_9AttributeE
 #define CxmlElementGetAttributeByName scePafResourceGetAttribute
-#define CxmlAttributeGetName ScePafResource_1412AC17
-#define CxmlAttributeGetType ScePafResource_E32AD3C0
+#define CxmlAttributeGetName _ZNK3paf4cxml9Attribute7GetNameEv
+#define CxmlAttributeGetType _ZNK3paf4cxml9Attribute7GetTypeEv
 #define CxmlAttributeGetInt scePafResourceGetInteger
 #define CxmlAttributeGetFloat scePafResourceGetFloat
 #define CxmlAttributeGetString scePafResourceGetString
@@ -178,8 +178,8 @@ typedef char IDHashBinSizeCheck[sizeof(IDHashBin) == 8 ? 1 : -1];
 #define CxmlAttributeGetIDRef scePafResourceGetIdStr
 #define CxmlAttributeGetIDHash scePafResourceGetIdIntLpb
 #define CxmlAttributeGetIDHashRef scePafResourceGetIdInt
-#define CxmlFileGetAddr ScePafResource_1CBB0615
-#define CxmlFileLoad ScePafResource_5B2EB699
+#define CxmlFileGetAddr _ZNK3paf4cxml4File7GetAddrEv
+#define CxmlFileLoad _ZNK3paf4cxml4File4LoadENS_6common9SharedPtrINS_4FileEEEPvj
 
 int32_t CxmlElementGetAttributeByIndex(const CxmlElement *self, int32_t index,
 				      CxmlAttribute *attr);
@@ -214,28 +214,28 @@ typedef char CxmlHeaderSizeCheck[sizeof(CxmlHeader) == 80 ? 1 : -1];
 typedef char CxmlDocumentSizeCheck[sizeof(CxmlDocument) == 164 ? 1 : -1];
 typedef char ElementBinSizeCheck[sizeof(ElementBin) == 28 ? 1 : -1];
 
-#define CxmlElementGetFirstChild ScePafResource_B673D5D7
-#define CxmlHeaderConstruct ScePafResource_6877BAE5
-#define CxmlHeaderConstructBase ScePafResource_776D12E0
-#define CxmlDocumentConstruct ScePafResource_43B08061
-#define CxmlDocumentConstructBase ScePafResource_34A10103
-#define CxmlDefaultAllocator ScePafResource_23B99133
-#define CxmlElementGetParent ScePafResource_5FF23A7F
-#define CxmlElementGetPreviousSibling ScePafResource_AE24B68F
-#define CxmlElementGetNextSibling ScePafResource_B7C0081F
-#define CxmlElementGetLastChild ScePafResource_EB3CB910
-#define CxmlElementGetName ScePafResource_8A71B732
-#define CxmlElementGetNumChild ScePafResource_262EE6C0
-#define CxmlElementNumAttribute ScePafResource_59755449
-#define CxmlDocumentClear ScePafResource_1461674C
-#define CxmlDocumentGetDocumentElement ScePafResource_93A5860F
-#define CxmlDocumentGetHeaderMagic ScePafResource_D2022BA2
-#define CxmlDocumentDestroy ScePafResource_2387124F
-#define CxmlDocumentDestroyBase ScePafResource_71407B32
-#define CxmlDocumentCreateFromBuffer ScePafResource_FFC4FA5F
-#define CxmlDocumentCreateFromFile ScePafResource_75E15063
-#define CxmlDocumentIsRegisteredID ScePafResource_189FB821
-#define CxmlDocumentIsRegisteredIDHash ScePafResource_C69F3D1D
+#define CxmlElementGetFirstChild _ZNK3paf4cxml7Element13GetFirstChildEv
+#define CxmlHeaderConstruct _ZN3paf4cxml6HeaderC1Ev
+#define CxmlHeaderConstructBase _ZN3paf4cxml6HeaderC2Ev
+#define CxmlDocumentConstruct _ZN3paf4cxml8DocumentC1Ev
+#define CxmlDocumentConstructBase _ZN3paf4cxml8DocumentC2Ev
+#define CxmlDefaultAllocator _ZN3paf4cxml16DefaultAllocatorENS0_14AllocationTypeEPvS2_jPS2_Pj
+#define CxmlElementGetParent _ZNK3paf4cxml7Element9GetParentEv
+#define CxmlElementGetPreviousSibling _ZNK3paf4cxml7Element18GetPreviousSiblingEv
+#define CxmlElementGetNextSibling _ZNK3paf4cxml7Element14GetNextSiblingEv
+#define CxmlElementGetLastChild _ZNK3paf4cxml7Element12GetLastChildEv
+#define CxmlElementGetName _ZNK3paf4cxml7Element7GetNameEv
+#define CxmlElementGetNumChild _ZNK3paf4cxml7Element11GetNumChildEv
+#define CxmlElementNumAttribute _ZNK3paf4cxml7Element12NumAttributeEv
+#define CxmlDocumentClear _ZN3paf4cxml8Document5ClearEv
+#define CxmlDocumentGetDocumentElement _ZN3paf4cxml8Document18GetDocumentElementEv
+#define CxmlDocumentGetHeaderMagic _ZNK3paf4cxml8Document14GetHeaderMagicEPc
+#define CxmlDocumentDestroy _ZN3paf4cxml8DocumentD1Ev
+#define CxmlDocumentDestroyBase _ZN3paf4cxml8DocumentD2Ev
+#define CxmlDocumentCreateFromBuffer _ZN3paf4cxml8Document16CreateFromBufferEPKvjb
+#define CxmlDocumentCreateFromFile _ZN3paf4cxml8Document14CreateFromFileENS_6common9SharedPtrINS_4FileEEEb
+#define CxmlDocumentIsRegisteredID _ZN3paf4cxml8Document14IsRegisteredIDEPKc
+#define CxmlDocumentIsRegisteredIDHash _ZN3paf4cxml8Document18IsRegisteredIDHashEj
 
 CxmlHeader *CxmlHeaderConstruct(CxmlHeader *self);
 CxmlHeader *CxmlHeaderConstructBase(CxmlHeader *self);

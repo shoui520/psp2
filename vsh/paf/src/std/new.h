@@ -4,15 +4,14 @@
 #include <stddef.h>
 
 #define PafPlacementNew _ZnwjPv
-#define __cxa_pure_virtual ScePafStdc_2730262C
-#define PafNew ScePafStdc_FC5CD359
-#define PafNewArray ScePafStdc_D8CC1AFE
-#define PafAlignedNew ScePafStdc_6AF4A8C8
-#define PafAlignedNewArray ScePafStdc_FFAB5F8E
-#define PafDelete ScePafStdc_1B77082E
-#define PafDeleteArray ScePafStdc_5C468294
-#define PafAlignedDelete ScePafStdc_47CC57A5
-#define PafAlignedDeleteArray ScePafStdc_EDC2DA6C
+#define PafNew _Znwj
+#define PafNewArray _Znaj
+#define PafAlignedNew _Znwjj
+#define PafAlignedNewArray _Znajj
+#define PafDelete _ZdlPv
+#define PafDeleteArray _ZdaPv
+#define PafAlignedDelete _ZdlPvjj
+#define PafAlignedDeleteArray _ZdaPvjj
 
 void *PafPlacementNew(size_t size, void *where);
 void __cxa_pure_virtual(void);

@@ -3,6 +3,22 @@
 
 extern void ScePafStdc_1B77082E(void *ptr);
 
+/* paf::ui::MessageDialogListener, as far as a starting plugin uses it */
+typedef struct MessageDialogListener MessageDialogListener;
+
+typedef struct MessageDialogListenerVTable {
+	MessageDialogListener *(*Destroy)(MessageDialogListener *self);
+	void (*Delete)(MessageDialogListener *self);
+	void (*PluginOnStart)(MessageDialogListener *self, Plugin *plugin);
+} MessageDialogListenerVTable;
+
+struct MessageDialogListener {
+	const MessageDialogListenerVTable *vtable;
+};
+
+#define WutilGetMessageDialogListener _ZN3paf2ui5wutil24GetMessageDialogListenerEv
+MessageDialogListener *WutilGetMessageDialogListener(void);
+
 static const struct {
 	int offset_to_top;
 	const void *type_info;
@@ -103,6 +119,20 @@ void ViewPluginOnInit(Plugin *plugin)
 
 		if (controller)
 			controller->vtable->PluginOnInit(controller, plugin);
+	}
+}
+
+void ViewPluginOnStart(Plugin *plugin)
+{
+	MessageDialogListener *listener = WutilGetMessageDialogListener();
+
+	if (listener)
+		listener->vtable->PluginOnStart(listener, plugin);
+	if (plugin) {
+		ViewController *controller = plugin->param;
+
+		if (controller)
+			controller->vtable->PluginOnStart(controller, plugin);
 	}
 }
 

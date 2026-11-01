@@ -10,7 +10,7 @@ typedef struct IDParam {
 
 typedef char IDParamSizeCheck[sizeof(IDParam) == 16 ? 1 : -1];
 
-#define IDParamID2IDHash ScePafResource_5F05DE68
+#define IDParamID2IDHash _ZN3paf7IDParam9ID2IDHashERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE
 
 uint32_t IDParamID2IDHash(IDParam *self, const PafString *id);
 
