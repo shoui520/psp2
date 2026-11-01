@@ -70,6 +70,10 @@ class SceneResolutionList;
  */
 class ResolutionResource {
 public:
+	ResolutionResource() : m_name(s_empty_name), m_value(0)
+	{
+	}
+
 	string m_name;
 	uint32_t m_value;
 };

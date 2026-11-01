@@ -161,8 +161,9 @@ public:
 	 * align, and the number of entries (name ours)
 	 */
 	size_t GetTableBufferSize(TableType type, uint32_t align, int32_t *num) const;
-	int32_t SetTextureTable(uint32_t flag);
-	int32_t SetSoundTable(uint32_t flag);
+	/* the texture and sound tables of a resource read from memory, pointing into it */
+	int32_t SetTextureTable(uint32_t align);
+	int32_t SetSoundTable(uint32_t align);
 
 	/* the type of a texture, model or sound by its MIME name; -1 for an unknown one (names ours) */
 	uint32_t GetTextureType(const char *type) const;
@@ -202,14 +203,14 @@ public:
 }
 }
 
-/* the texture table's loads (not converted yet; the names are their NIDs) */
+/* ResourceObj's exports without a Sony name (named by their NIDs) */
 extern "C" {
 /* reads the string table for the locale */
 int32_t ScePafResource_42E4E566(paf::resource::ResourceObj *rscobj, int32_t locale,
 				paf::memory::HeapAllocator *heap);
 /* lets the sound table's buffers go */
-int32_t ScePafResource_556665FC(paf::resource::ResourceObj *rscobj, int32_t arg, bool mode,
-				bool pool);
+void ScePafResource_556665FC(paf::resource::ResourceObj *rscobj,
+			     paf::memory::HeapAllocator *heap, bool create, bool shared);
 /* closes the resource's file */
 int32_t ScePafResource_CEED7338(paf::resource::ResourceObj *rscobj);
 /* the cxml allocator of a resource on the heap of its userdata (0x8106ead8, name ours) */
@@ -240,12 +241,19 @@ int32_t ScePafResource_DD1FF94F(const paf::resource::ResourceObj *rscobj, const 
 int32_t ScePafResource_65C0FDF9(const paf::resource::ResourceObj *rscobj,
 				const paf::cxml::Element &elm, void **addr1, uint32_t *size1,
 				void **addr2, uint32_t *size2, int32_t *samplerate, uint32_t *type);
-int32_t ScePafResource_B72D030D(paf::resource::ResourceObj *rscobj, uint32_t flag,
+/* reads the texture and model tables' files into a buffer on heap, and lets them go */
+int32_t ScePafResource_B72D030D(paf::resource::ResourceObj *rscobj, uint32_t align,
 				paf::memory::HeapAllocator *heap);
-paf::memory::HeapAllocator *ScePafResource_D60FF214(paf::resource::ResourceObj *rscobj,
-						    paf::memory::HeapAllocator *heap);
-int32_t ScePafResource_EA11BD0B(paf::resource::ResourceObj *rscobj, uint32_t flag, int32_t arg,
-				bool mode, bool pool);
+void ScePafResource_D60FF214(paf::resource::ResourceObj *rscobj, paf::memory::HeapAllocator *heap);
+int32_t ScePafResource_933C078B(paf::resource::ResourceObj *rscobj, uint32_t align,
+				paf::memory::HeapAllocator *heap);
+void ScePafResource_C240421A(paf::resource::ResourceObj *rscobj, paf::memory::HeapAllocator *heap);
+/*
+ * reads the sound table's files, into the common resource's shared storage when shared (made
+ * when create, else opened), else on heap
+ */
+int32_t ScePafResource_EA11BD0B(paf::resource::ResourceObj *rscobj, uint32_t align,
+				paf::memory::HeapAllocator *heap, bool create, bool shared);
 }
 
 #endif
