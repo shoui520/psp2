@@ -401,6 +401,17 @@ public:
 	void InstantiateWidget_EventHandler(const cxml::Element &node, ui::Widget *widget,
 					    const char *attr, int32_t type);
 	ui::LayoutCB GetLayoutHandler(const char *name) const;
+	/* the element's attribute names a layout handler: the widget's Layouter calls it */
+	void InstantiateWidget_LayoutHandler(const cxml::Element &node, ui::Widget *widget,
+					     const char *attr);
+	/* the texture the element's attribute refers to, else the common one, else def */
+	void InstantiateWidget_Texture(const cxml::Element &node, ui::Widget *widget, int32_t obj,
+				       const char *attr, const intrusive_ptr<graph::Surface> &def);
+	/* the handler parameter of the element's type, read from it and set on the widget */
+	void InstantiateWidget_HandlerAll(const cxml::Element &node, ui::Widget *widget);
+	/* the string the element's attribute refers to, else the common one */
+	void InstantiateWidget_String(const cxml::Element &node, const char *attr,
+				      ui::Widget *widget);
 
 	/* The resource's texture id: the plugin's surface, its texture table, the common ones. */
 	intrusive_ptr<graph::Surface> GetTexture(const IDParam &id, graph::SurfacePool *pool);
@@ -613,6 +624,7 @@ int32_t ScePafToplevel_DA3D4AF0(paf::Plugin *plugin, const paf::IDParam &id,
 int32_t ScePafToplevel_1AB2DB65(paf::Plugin *plugin, const paf::IDParam &id, paf::IDParam *alias);
 /* the string of the ID's alias, as Plugin::GetString */
 const wchar_t *ScePafToplevel_D8801CA4(paf::Plugin *plugin, const paf::IDParam &id);
+void ScePafToplevel_4D79D4E2(paf::Plugin *plugin);
 paf::intrusive_ptr<paf::graph::Surface> ScePafToplevel_F13D2937(paf::Plugin *plugin, void *buf,
 								uint32_t size, uint32_t type,
 								bool compressed, uint32_t origsize);

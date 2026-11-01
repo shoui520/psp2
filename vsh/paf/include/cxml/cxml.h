@@ -116,6 +116,9 @@ int32_t scePafResourceGetAttributeIdInt(const paf::cxml::Element *elm, const cha
 					uint32_t *value, paf::cxml::Element *entity);
 int32_t scePafResourceGetAttributeInteger(const paf::cxml::Element *elm, const char *attrname,
 					  int32_t *value);
+/* the wide string of an attribute */
+int32_t scePafResourceGetAttributeChar(const paf::cxml::Element *elm, const char *attrname,
+				       const wchar_t **value, uint32_t *len);
 int32_t scePafResourceGetAttributeString(const paf::cxml::Element *elm, const char *attrname,
 					 const char **value, uint32_t *len);
 int32_t scePafResourceGetAttributeStyleId(const paf::cxml::Element *elm, const char *attrname,

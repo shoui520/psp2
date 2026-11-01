@@ -2843,7 +2843,7 @@ const wchar_t *ScePafToplevel_D8801CA4(Plugin *plugin, const IDParam &id)
 
 namespace paf {
 
-VersatileParam *Plugin::CallFactoryHandler(const char *name)
+__attribute__((noinline)) VersatileParam *Plugin::CallFactoryHandler(const char *name)
 {
 	map<string, ui::FactoryFuncTable>::iterator it = s_factory_table.find(string(name));
 
@@ -2892,7 +2892,7 @@ void Plugin::InstantiateWidget_EventHandler(const cxml::Element &node, ui::Widge
 		widget->AddEventCallback(type, GetEventHandler(name));
 }
 
-ui::LayoutCB Plugin::GetLayoutHandler(const char *name) const
+__attribute__((noinline)) ui::LayoutCB Plugin::GetLayoutHandler(const char *name) const
 {
 	map<string, int32_t>::iterator it = m_layout_handler_name_table.find(string(name));
 
@@ -2900,6 +2900,92 @@ ui::LayoutCB Plugin::GetLayoutHandler(const char *name) const
 		return NULL;
 	return m_layout_handler_table[it->second].func;
 }
+
+void Plugin::InstantiateWidget_LayoutHandler(const cxml::Element &node, ui::Widget *widget,
+					     const char *attr)
+{
+	const char *name;
+	uint32_t len;
+
+	if (scePafResourceGetAttributeString(&node, attr, &name, &len) == 0) {
+		ui::LayoutCB cb = GetLayoutHandler(name);
+
+		widget->SetLayouter(new ui::Layouter(cb, NULL));
+	}
+}
+
+void Plugin::InstantiateWidget_Texture(const cxml::Element &node, ui::Widget *widget, int32_t obj,
+				       const char *attr,
+				       const intrusive_ptr<graph::Surface> &def)
+{
+	uint32_t idhash;
+	cxml::Element entity;
+
+	scePafResourceGetAttributeIdInt(&node, attr, &idhash, &entity);
+	if (entity.doc != NULL && entity.offset >= 0) {
+		intrusive_ptr<graph::Surface> texture = GetTexture(entity, m_surface_pool);
+
+		if (texture.get() != NULL)
+			widget->SetTexture(texture, obj, 0);
+		return;
+	}
+
+	intrusive_ptr<graph::Surface> texture =
+		Framework::framework->GetCommonTexture(IDParam(s_empty_id, idhash));
+
+	if (texture.get() != NULL)
+		widget->SetTexture(texture, obj, 0);
+	else
+		widget->SetTexture(def, obj, 0);
+}
+
+void Plugin::InstantiateWidget_String(const cxml::Element &node, const char *attr,
+				      ui::Widget *widget)
+{
+	uint32_t idhash;
+	cxml::Element entity;
+
+	if (m_rscobj->GetStringIDRef(node, attr, &idhash, &entity) == 0) {
+		const wchar_t *str;
+		uint32_t len;
+
+		if (scePafResourceGetAttributeChar(&entity, "src", &str, &len) == 0)
+			widget->SetString(wstring(str));
+	} else if (scePafResourceGetAttributeIdInt(&node, attr, &idhash, &entity) == 0) {
+		widget->SetString(wstring(Framework::framework->GetCommonString(
+			IDParam(s_empty_id, idhash))));
+	}
+}
+
+void Plugin::InstantiateWidget_HandlerAll(const cxml::Element &node, ui::Widget *widget)
+{
+	if (node.doc == NULL || node.offset < 0)
+		return;
+
+	ui::WidgetHandlerParam *param = (ui::WidgetHandlerParam *)CallFactoryHandler(node.GetName());
+
+	if (param == NULL)
+		return;
+	param->AttachPlugin(this);
+	param->AttachWidget(widget);
+	param->Create(1);
+	param->Read(&node);
+	param->Set();
+	param->Destroy(1);
+	delete param;
+}
+
+}
+
+/* the draw order's debug print, compiled out */
+void ScePafToplevel_4D79D4E2(Plugin *plugin)
+{
+	for (vector<Plugin::DrawOrderElement>::iterator it = plugin->m_draw_order.begin();
+	     it != plugin->m_draw_order.end(); ++it)
+		sce_paf_printf_dummy();
+}
+
+namespace paf {
 
 Plugin::Argument::operator int32_t() const
 {

@@ -88,6 +88,9 @@ public:
 	/* the "id:", "src:" or "type:" (kind 0, 1, 2) of an ID's debug symbol; -1 without one */
 	/* the ID the alias table gives the ID, for this model's entry first; empty without one (name ours) */
 	IDParam GetAliasID(const IDParam &id) const;
+	/* the ID hash of a string attribute, and its string element */
+	int32_t GetStringIDRef(const cxml::Element &elm, const char *attrname, uint32_t *value,
+			       cxml::Element *entity) const;
 	int32_t GetDebugSymbol(uint32_t idhash, int32_t kind, string *symbol) const;
 	const char *GetFileName() const;
 	int32_t GetTextureFromBuffer(const cxml::Element &elm, void **addr, uint32_t *size,

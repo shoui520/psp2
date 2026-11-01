@@ -72,6 +72,12 @@ public:
 	IDParam m_sound_id;
 };
 
+/* a widget type's handlers, read from its element (the factory table's handler factory) */
+class WidgetHandlerParam : public VersatileParam {
+public:
+	int32_t AttachWidget(Widget *widget);
+};
+
 /* a widget type's layout, read from the "layout_" children of its element */
 class WidgetLayoutParam : public VersatileParam {
 public:
@@ -238,6 +244,22 @@ public:
 	virtual intrusive_ptr<graph::Surface> SetSurface(const intrusive_ptr<graph::Surface> &surf,
 							 int32_t obj);
 	virtual graph::DrawObj *GetDrawObj(int32_t obj);
+	/* the texture of the draw object (name after ScePaf-RE) */
+	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,
+				   uint32_t index);
+	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf);
+	virtual int32_t GetTexture(intrusive_ptr<graph::Surface> &surf, int32_t obj, uint32_t index);
+	virtual int32_t GetTexture(intrusive_ptr<graph::Surface> &surf);
+	/*
+	 * Three slots no source names (ScePafWidget C3D53C98, AC3B6830, FD48BD49): they set
+	 * and read a bit of a draw object's 4-bit mask through the draw manager. Not
+	 * converted; declared for the slots after them.
+	 */
+	virtual int32_t SetDrawObjMaskBit(const void *param, int32_t obj);
+	virtual int32_t SetDrawObjMaskBit(const void *param, int32_t obj, uint32_t bit);
+	virtual void *GetDrawObjMaskBit(int32_t obj);
+	virtual int32_t SetString(const wstring &str, int32_t obj);
+	virtual int32_t SetString(const wstring &str);
 
 	math::v4 *GetSize(int32_t opt);
 	math::v4 GetPos(int32_t opt, Widget *ref, const math::v4 &off_pos);
@@ -263,6 +285,16 @@ public:
 	int32_t SetPosCenter(const math::v4 &v);
 	/* puts the widget behind the other in its parent's draw order */
 	int32_t SetBehind(Widget *w);
+
+	/* deletes the widget's Layouter and binds this one (name after ScePaf-RE) */
+	int32_t SetLayouter(Layouter *layouter)
+	{
+		delete m_layouter;
+		m_layouter = layouter;
+		if (m_layouter != NULL)
+			m_layouter->BindWidget(this);
+		return 0;
+	}
 
 	/* the descendant with the ID */
 	Widget *FindChild(const IDParam &id, int32_t option);
@@ -339,7 +371,10 @@ public:
 	uint32_t m_origin_y : 4;
 	uint32_t m_origin_z : 4;
 	uint32_t reserved6 : 8;
-	uint8_t reserved7[0x77];
+	uint8_t reserved7[0x14];
+	/* lays the widget out each update (name after ScePaf-RE) */
+	Layouter *m_layouter;
+	uint8_t reserved7a[0x5f];
 	/* the sounds of its sound parameter (names ours) */
 	uint8_t m_sound_num;
 	WidgetSoundParam::Sound *m_sounds;
