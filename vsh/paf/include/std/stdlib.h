@@ -11,6 +11,7 @@ extern "C" {
 void *sce_paf_malloc(size_t size);
 void *sce_paf_memalign(size_t align, size_t size);
 void sce_paf_free(void *ptr);
+void *sce_paf_realloc(void *ptr, size_t size);
 /* vitasdk: sce_paf_realloc */
 void *ScePafStdc_0ADEA3AD(void *ptr, size_t size);
 /* vitasdk: sce_paf_calloc */

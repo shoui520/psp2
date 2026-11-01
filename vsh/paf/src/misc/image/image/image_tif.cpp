@@ -1135,7 +1135,7 @@ static tdata_t ReallocProc(void *allocator, tdata_t ptr, tsize_t size)
 {
 	if (allocator != NULL)
 		return ((HeapAllocator *)allocator)->sce_paf_realloc(ptr, size);
-	return ScePafStdc_0ADEA3AD(ptr, size);
+	return sce_paf_realloc(ptr, size);
 }
 
 static void FreeProc(void *allocator, tdata_t ptr)

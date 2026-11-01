@@ -45,6 +45,87 @@ typedef void (*AllocatorFunction)(AllocationType type, void *userdata, void *old
 void DefaultAllocator(AllocationType type, void *userdata, void *old_addr, size_t required_size,
 		      void **addr, size_t *size);
 
+/* how a document's tables are held */
+enum AccessMode {
+	AccessMode_ReadWrite = 0,
+	AccessMode_ReadOnly_File = 1,
+	AccessMode_ReadOnly_Memory = 2
+};
+
+/* the header of a document's binary form */
+class Header {
+public:
+	char magic[4];
+	int32_t version;
+	int32_t tree_offset;
+	int32_t tree_size;
+	int32_t idtable_offset;
+	int32_t idtable_size;
+	int32_t idhashtable_offset;
+	int32_t idhashtable_size;
+	int32_t stringtable_offset;
+	int32_t stringtable_size;
+	int32_t wstringtable_offset;
+	int32_t wstringtable_size;
+	int32_t hashtable_offset;
+	int32_t hashtable_size;
+	int32_t intarraytable_offset;
+	int32_t intarraytable_size;
+	int32_t floatarraytable_offset;
+	int32_t floatarraytable_size;
+	int32_t filetable_offset;
+	int32_t filetable_size;
+};
+
+class Element;
+
+/* a document: its tree and the tables the tree's attributes refer to */
+class Document {
+public:
+	typedef AllocatorFunction Allocator;
+
+	Document();
+	~Document();
+
+	int32_t CreateFromBuffer(const void *buf, size_t bufsize, bool copy = false);
+	int32_t CreateFromFile(common::SharedPtr<paf::File> fp, bool copy_filetable = false);
+	int32_t Clear();
+	Element GetDocumentElement();
+	void GetHeaderMagic(char buf[4]) const;
+
+	void SetAllocator(Allocator _allocator, void *_userdata)
+	{
+		allocator = _allocator;
+		allocator_userdata = _userdata;
+	}
+
+	bool IsRegisteredID(const char *id);
+	bool IsRegisteredIDHash(uint32_t idhash);
+
+	AccessMode access_mode;
+	Header header;
+	char *tree;
+	uint32_t tree_capacity;
+	char *idtable;
+	uint32_t idtable_capacity;
+	char *idhashtable;
+	uint32_t idhashtable_capacity;
+	char *stringtable;
+	uint32_t stringtable_capacity;
+	char *wstringtable;
+	uint32_t wstringtable_capacity;
+	char *hashtable;
+	uint32_t hashtable_capacity;
+	int *intarraytable;
+	uint32_t intarraytable_capacity;
+	float *floatarraytable;
+	uint32_t floatarraytable_capacity;
+	char *filetable;
+	uint32_t filetable_capacity;
+	Allocator allocator;
+	void *allocator_userdata;
+};
+
 /* an attribute of an element */
 class Attribute {
 public:
@@ -63,6 +144,16 @@ class Element {
 public:
 	Element() : doc(NULL), offset(-1)
 	{
+	}
+
+	~Element()
+	{
+	}
+
+	/* whether the element is one of a document */
+	operator bool() const
+	{
+		return doc != 0 && offset >= 0;
 	}
 
 	Element GetParent() const;
@@ -135,6 +226,8 @@ int32_t scePafResourceGetAttributeStyleId(const paf::cxml::Element *elm, const c
 int32_t scePafResourceGetAttributeIntegerArray(const paf::cxml::Element *elm,
 					       const char *attrname, const int32_t **addr,
 					       uint32_t *num);
+int32_t scePafResourceGetAttributeData(const paf::cxml::Element *elm, const char *attrname,
+				       paf::cxml::File *file);
 int32_t scePafResourceGetAttributeFloatArray(const paf::cxml::Element *elm, const char *attrname,
 					     const float **addr, uint32_t *num);
 }

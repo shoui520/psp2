@@ -583,7 +583,7 @@ static void *GifRealloc(void *heap, void *ptr, size_t size)
 {
 	if (heap != NULL)
 		return ((HeapAllocator *)heap)->sce_paf_realloc(ptr, size);
-	return ScePafStdc_0ADEA3AD(ptr, size);
+	return sce_paf_realloc(ptr, size);
 }
 
 static void *GifCalloc(void *heap, size_t nitems, size_t size)

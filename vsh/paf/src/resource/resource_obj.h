@@ -170,7 +170,8 @@ ResourceObj *ResourceObjConstructFromFile(ResourceObj *self, const char *name,
 					const ResourceObjOption *option);
 ResourceObj *ResourceObjConstructFromFileBase(ResourceObj *self, const char *name,
 					    const ResourceObjOption *option);
-int32_t ResourceObjLoadResourceDescription(ResourceObj *self, const char *name);
+/* ResourceObj::LoadResourceDescription, in resource_obj.cpp */
+int32_t _ZN3paf8resource11ResourceObj23LoadResourceDescriptionEPKc(ResourceObj *self, const char *name);
 ResourceObj *ResourceObjDestroy(ResourceObj *self);
 ResourceObj *ResourceObjDestroyBase(ResourceObj *self);
 ResourceIDMap *ResourceIDMapClear(ResourceIDMap *self);

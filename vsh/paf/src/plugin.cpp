@@ -3284,8 +3284,8 @@ int32_t ScePafToplevel_CA3E606F(Plugin *plugin, const IDParam &id, const char **
 	int32_t ret = -1;
 
 	if (plugin->m_rscobj != NULL) {
-		ret = ScePafResource_ADDC0711(plugin->m_rscobj, id.m_idhash, buffer1, size1, buffer2,
-					      size2, samplerate, type);
+		ret = ScePafResource_ADDC0711(plugin->m_rscobj, id.m_idhash, (void **)buffer1, size1,
+					      (void **)buffer2, size2, samplerate, type);
 		if (ret == 0)
 			return ret;
 	}
