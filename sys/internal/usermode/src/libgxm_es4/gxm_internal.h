@@ -100,6 +100,8 @@ int sceKernelIsGameBudget(void);
 #define EURASIA_USE_INSTRUCTION_SIZE	8
 /* the PDS allocates attribute registers in chunks of this many (dms.c's assertion names it) */
 #define EURASIA_PDS_CHUNK_SIZE		32
+/* the most dwords one PDS DOUTD fetch moves (pds_sce.c's assertion names it) */
+#define EURASIA_PDS_DOUTD1_BSIZE_MAX	256
 
 /* --- error codes --- */
 

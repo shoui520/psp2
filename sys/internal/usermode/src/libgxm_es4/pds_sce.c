@@ -11,12 +11,16 @@
 
 #define SCE_GXM_PDS_ALIGNMENT	16
 
-/* DOUTD control words, by register bank and data size */
+/* the MOVS destinations a data word may not name */
+#define EURASIA_PDS_MOVS_DEST_DOUTI	2
+#define EURASIA_PDS_MOVS_DEST_DOUTT	4
+
+/* DOUTD control words, by register bank and word count - 1 */
 static const SceUInt32 gxmPdsDoutWords[4][4] = {
-	{ 0x00000000, 0x07000000, 0x07000100, 0x07000180 },
-	{ 0x070001b0, 0x07000550, 0x07000650, 0x070006d0 },
-	{ 0x00000000, 0x07000aa0, 0x07000ba0, 0x07000b20 },
-	{ 0x07000b10, 0x07000ff0, 0x07000cf0, 0x07000c70 },
+	{ 0x07000000, 0x07000100, 0x07000180, 0x070001b0 },
+	{ 0x07000550, 0x07000650, 0x070006d0, 0x00000000 },
+	{ 0x07000aa0, 0x07000ba0, 0x07000b20, 0x07000b10 },
+	{ 0x07000ff0, 0x07000cf0, 0x07000c70, 0x00000000 },
 };
 
 /*
@@ -147,24 +151,29 @@ int gxmPdsBuildVertexProgram(GxmChunkBuffer *buffer, const SceGxmVertexAttribute
 			     SceUInt8 instanced, SceUInt8 indexed, SceUInt32 instanceData,
 			     SceUInt32 indexData)
 {
-	SceUInt32 *data, *code, *next, size, dataSize, stream, dataIndex, i, odd, high;
-	SceUInt32 dataOffset, programOffset, nextOffset, word, term, bank, flag, last;
+	SceUInt32 *constBase, *instr, *next, reserveSize, dataSize, stream, dataIndex, i, odd, high;
+	SceUInt32 dataOffset, programOffset, nextOffset, word, term, bank, flag, last, dmaSize;
 	const SceGxmVertexAttribute *attribute;
 
 	for (i = 0; i < attributeCount; i++) {
-		if (attributes[i].streamIndex >= streamCount)
+		if (attributes[i].streamIndex >= streamCount) {
+			GXM_DBG_ERROR(225, "Attribute %u has a streamIndex of %u, which is out of bounds.",
+				      i, attributes[i].streamIndex);
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 	}
-	size = gxmPdsVertexProgramSize(attributeCount, streams, streamCount, &dataSize, instanced,
-				       indexed);
-	data = gxmChunkBufferReserve(buffer, size, 0x10);
-	if (data == NULL)
+	reserveSize = gxmPdsVertexProgramSize(attributeCount, streams, streamCount, &dataSize,
+					      instanced, indexed);
+	constBase = gxmChunkBufferReserve(buffer, reserveSize, 0x10);
+	if (constBase == NULL) {
+		GXM_DBG_ERROR(240, "Could not reserve %d bytes.", reserveSize);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	buffer->cur = (SceUInt32)data + (size & ~3);
-	block->data = data;
-	block->totalSize = size;
+	}
+	instr = (SceUInt32 *)((SceUInt32)constBase + (dataSize & ~3));
+	gxmChunkBufferCommit(buffer, (SceUInt8 *)constBase + (reserveSize & ~3));
 	block->dataSize = dataSize;
-	code = (SceUInt32 *)((SceUInt32)data + (dataSize & ~3));
+	block->data = constBase;
+	block->totalSize = reserveSize;
 
 	last = streamCount;
 	if (streamCount == 0) {
@@ -185,57 +194,43 @@ int gxmPdsBuildVertexProgram(GxmChunkBuffer *buffer, const SceGxmVertexAttribute
 	for (stream = 0; stream < streamCount; stream++, streams++) {
 		/* fetch the stream's index (and divide it for instancing) */
 		flag = streams->indexSource;
-		next = code + 1;
+		next = instr + 1;
 		if (!(flag & 2)) {
-			*code = stream << 9 | GXM_PDS_FETCH_STREAM;
+			*instr = stream << 9 | GXM_PDS_FETCH_STREAM;
 			if (flag & 1) {
 				flag = 0x10000;
 				goto divide;
 			}
 		} else {
-			*code = stream << 9 | GXM_PDS_FETCH_STREAM_INDEXED;
+			*instr = stream << 9 | GXM_PDS_FETCH_STREAM_INDEXED;
 			if (flag & 1) {
 				flag = 0x30000;
 divide:
-				next = code + 4;
-				code[3] = 0x47606070;
-				code[2] = 0xf7301030;
-				code[1] = stream << 9 | flag | 0x67800030;
+				next = instr + 4;
+				instr[3] = 0x47606070;
+				instr[2] = 0xf7301030;
+				instr[1] = stream << 9 | flag | 0x67800030;
 			}
 		}
-		data[gxmPdsDataSlot(stream)] = streams->stride;
-		code = next;
+		constBase[gxmPdsDataSlot(stream)] = streams->stride;
+		instr = next;
 
 		/* then every attribute in it */
-		if (attributeCount == 0)
-			continue;
-		if (patches == NULL) {
-			for (i = 0, attribute = attributes; i < attributeCount; i++, attribute++) {
-				if (attribute->streamIndex != stream)
-					continue;
-				size = attribute->componentCount *
-				       gxmAttributeFormatGetSize(attribute->format);
-				*code++ = (dataIndex >> 1) << 18 | GXM_PDS_FETCH_ATTRIBUTE;
-				word = (((size + 3) >> 2) - 1) | attribute->regIndex << 8;
-				data[dataIndex * 2] = attribute->offset;
-				data[dataIndex * 2 + 1] = word;
-				dataIndex += 2;
-			}
-		} else {
-			for (i = 0, attribute = attributes; i < attributeCount; i++, attribute++) {
-				if (attribute->streamIndex != stream)
-					continue;
-				size = attribute->componentCount *
-				       gxmAttributeFormatGetSize(attribute->format);
-				*code++ = (dataIndex >> 1) << 18 | GXM_PDS_FETCH_ATTRIBUTE;
-				word = (((size + 3) >> 2) - 1) | attribute->regIndex << 8;
+		for (i = 0, attribute = attributes; i < attributeCount; i++, attribute++) {
+			if (attribute->streamIndex != stream)
+				continue;
+			dmaSize = (attribute->componentCount *
+				   gxmAttributeFormatGetSize(attribute->format) + 3) >> 2;
+			GXM_DBG_ASSERT(322, 0 < dmaSize && dmaSize <= EURASIA_PDS_DOUTD1_BSIZE_MAX);
+			*instr++ = (dataIndex >> 1) << 18 | GXM_PDS_FETCH_ATTRIBUTE;
+			if (patches != NULL) {
 				patches[i].streamIndex = stream;
 				patches[i].offset = attribute->offset;
 				patches[i].dataWord = dataIndex << 1;
-				data[dataIndex * 2] = attribute->offset;
-				data[dataIndex * 2 + 1] = word;
-				dataIndex += 2;
 			}
+			constBase[dataIndex * 2] = attribute->offset;
+			constBase[dataIndex * 2 + 1] = (dmaSize - 1) | attribute->regIndex << 8;
+			dataIndex += 2;
 		}
 	}
 	odd = streamCount & 1;
@@ -258,8 +253,8 @@ instance:
 	last = streamCount + 1;
 	word = high | 0x07800006 | bank | word;
 	odd = last & 1;
-	*code++ = word;
-	data[nextOffset / 4] = instanceData << 8;
+	*instr++ = word;
+	constBase[nextOffset / 4] = instanceData << 8;
 	nextOffset = gxmPdsDataSlot(last) << 2;
 	high = (last >> 1) << 12;
 
@@ -268,23 +263,24 @@ finish:
 		last++;
 		word = high | 0x07840006 | (odd == 0 ? 0x200 : 0x300) | (odd == 0 ? 0x20 : 0x30);
 		odd = last & 1;
-		*code++ = word;
+		*instr++ = word;
 		high = (last >> 1) << 12;
-		data[nextOffset / 4] = indexData << 8;
+		constBase[nextOffset / 4] = indexData << 8;
 		nextOffset = gxmPdsDataSlot(last) << 2;
-		code[0] = word;
-		code[1] = word;
-		code += 2;
+		instr[0] = word;
+		instr[1] = word;
+		instr += 2;
 	} else if (instanced) {
-		code[0] = word;
-		code[1] = word;
-		code += 2;
+		instr[0] = word;
+		instr[1] = word;
+		instr += 2;
 	}
-	*code = high | term | (odd == 0 ? 0x80 : 0xc0) | (odd == 0 ? 0x20 : 0x30);
-	data[dataOffset / 4] = program->address;
-	data[programOffset / 4] = program->taskControl;
-	data[nextOffset / 4] = 0;
-	code[1] = GXM_PDS_END;
+	*instr++ = high | term | (odd == 0 ? 0x80 : 0xc0) | (odd == 0 ? 0x20 : 0x30);
+	constBase[dataOffset / 4] = program->address;
+	constBase[programOffset / 4] = program->taskControl;
+	constBase[nextOffset / 4] = 0;
+	*instr++ = GXM_PDS_END;
+	GXM_DBG_ASSERT(439, instr == constBase + reserveSize/4);
 	return 0;
 }
 
@@ -349,10 +345,16 @@ SceSize gxmPdsFragmentProgramSize(const GxmProgramFragmentInput *inputs, SceUInt
 	return size;
 }
 
-SceUInt32 gxmPdsDataWord(SceUInt32 base, SceUInt32 slot, SceUInt32 size)
+SceUInt32 gxmPdsDataWord(SceUInt32 dst, SceUInt32 slot, SceUInt32 count)
 {
-	return gxmPdsDoutWords[slot & 3][size] | base | (slot >> 2) << 12 |
-	       ((slot >> 2) + ((slot >> 1) & 1)) << 18;
+	SceUInt32 instr;
+
+	GXM_DBG_ASSERT(639, dst != EURASIA_PDS_MOVS_DEST_DOUTI);
+	GXM_DBG_ASSERT(640, dst != EURASIA_PDS_MOVS_DEST_DOUTT);
+	GXM_DBG_ASSERT(641, (count > 0) && (count <= 4));
+	instr = gxmPdsDoutWords[slot & 3][count - 1];
+	GXM_DBG_ASSERT(690, instr != 0);
+	return instr | dst | (slot >> 2) << 12 | ((slot >> 2) + ((slot >> 1) & 1)) << 18;
 }
 
 int gxmPdsBuildFragmentProgram(GxmChunkBuffer *buffer, const SceGxmTexture *textures,
@@ -360,42 +362,25 @@ int gxmPdsBuildFragmentProgram(GxmChunkBuffer *buffer, const SceGxmTexture *text
 			       const SceUInt8 *texCoordRemap, const GxmCodeRef *program,
 			       GxmCommandBlock *block, SceUInt32 *textureIndices)
 {
-	SceUInt32 *data, *code, size, dataSize, words, iterator, slot, word, coord, uv, i, sampler;
-	SceUInt32 dataOffset, programOffset, endOffset, high, low;
+	SceUInt32 *constBase, *instr, reserveSize, dataSize, iterator, slot, word, coord, uv, i;
+	SceUInt32 dataOffset, programOffset, endOffset, high, low, sampler;
 	const GxmProgramFragmentInput *input;
 	const SceGxmTexture *texture;
 
-	if (inputCount == 0) {
-		size = 0x18;
-		dataSize = 0x10;
-	} else {
-		dataSize = 3;
-		words = 2;
-		for (i = 0; i < inputCount; i++) {
-			if ((inputs[i].word & 0xf) == 0xf) {
-				words += 1;
-				dataSize += 1;
-			} else {
-				words += 2;
-				dataSize += 5;
-			}
-		}
-		dataSize = (dataSize + 3) & ~3;
-		size = (dataSize + words) * 4;
-		dataSize <<= 2;
-	}
-	data = gxmChunkBufferReserve(buffer, size, 0x10);
-	if (data == NULL)
+	reserveSize = gxmPdsFragmentProgramSize(inputs, inputCount, &dataSize);
+	constBase = gxmChunkBufferReserve(buffer, reserveSize, 0x10);
+	if (constBase == NULL) {
+		GXM_DBG_ERROR(727, "Could not reserve %d bytes.", reserveSize);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	buffer->cur = (SceUInt32)data + size;
-	block->data = data;
+	}
+	instr = (SceUInt32 *)((SceUInt32)constBase + dataSize);
+	gxmChunkBufferCommit(buffer, (SceUInt8 *)constBase + reserveSize);
+	block->data = constBase;
 	block->dataSize = dataSize;
-	block->totalSize = size;
-	code = (SceUInt32 *)((SceUInt32)data + dataSize);
+	block->totalSize = reserveSize;
 
 	if (inputCount == 0) {
-		slot = 3;
-		word = 0x07000185;
+		slot = 0;
 		endOffset = 8;
 		programOffset = 4;
 		dataOffset = 0;
@@ -412,23 +397,22 @@ int gxmPdsBuildFragmentProgram(GxmChunkBuffer *buffer, const SceGxmTexture *text
 				if ((inputs[i].word & 0xf) == 0xf)
 					continue;
 				texture = &textures[inputs[i].textureIndex];
-				data[slot + 0] = texture->controlWords[0];
-				data[slot + 1] = texture->controlWords[1];
-				data[slot + 2] = texture->controlWords[2];
-				data[slot + 3] = texture->controlWords[3];
+				constBase[slot + 0] = texture->controlWords[0];
+				constBase[slot + 1] = texture->controlWords[1];
+				constBase[slot + 2] = texture->controlWords[2];
+				constBase[slot + 3] = texture->controlWords[3];
 				slot += 4;
 			}
 		}
 		dataOffset = slot * 4;
-		word = (slot >> 2) << 12 | (slot >> 2) << 18 | 0x07000185;
-		slot += 3;
 		programOffset = dataOffset + 4;
 		endOffset = dataOffset + 8;
 	}
-	*code++ = word;
-	data[dataOffset / 4] = program->address;
-	data[programOffset / 4] = program->taskControl;
-	data[endOffset / 4] = 0;
+	*instr++ = gxmPdsDataWord(5, slot, 3);
+	slot += 3;
+	constBase[dataOffset / 4] = program->address;
+	constBase[programOffset / 4] = program->taskControl;
+	constBase[endOffset / 4] = 0;
 
 	sampler = 0;
 	for (i = 0, input = inputs; i < inputCount; i++, input++) {
@@ -453,19 +437,20 @@ int gxmPdsBuildFragmentProgram(GxmChunkBuffer *buffer, const SceGxmTexture *text
 			low = (slot & 1) ? 0xf02 : 0xa02;
 			word = high << 12 | low | 0x07000000 | (high + 1) << 18;
 		}
-		*code++ = word | input->iteratorBits;
+		*instr++ = word | input->iteratorBits;
 		slot++;
-		data[slot - 1] = iterator;
+		constBase[slot - 1] = iterator;
 		if ((iterator & 0xf) == 0xf)
 			continue;
 		/* and the texture fetch */
-		*code++ = input->samplerBits | 0x07000004 | (sampler & 0x3fffffff) << 18 |
+		*instr++ = input->samplerBits | 0x07000004 | (sampler & 0x3fffffff) << 18 |
 			  (sampler & 0x3fffffff) << 12;
 		sampler++;
 		if (textureIndices != NULL)
 			*textureIndices++ = input->textureIndex;
 	}
-	*code = GXM_PDS_END;
+	*instr++ = GXM_PDS_END;
+	GXM_DBG_ASSERT(817, instr == constBase + reserveSize/4);
 	return 0;
 }
 
@@ -485,130 +470,39 @@ int gxmPdsBuildSimpleProgram(GxmChunkBuffer *buffer, SceUInt32 value, SceUInt32 
 	_Bool extra = value != 0;
 	SceUInt32 dataWords = extra ? 8 : 4;
 	SceUInt32 words = extra + 2 + dataWords;
-	SceUInt32 *data, *code, programOffset, taskControlOffset, endOffset, high;
+	SceUInt32 reserveSize = words * 4;
+	SceUInt32 dataSize = dataWords << 2;
+	SceUInt32 *constBase, *instr, programOffset, taskControlOffset, endOffset, slot;
 
-	data = gxmChunkBufferReserve(buffer, words * 4, 0x10);
-	if (data == NULL)
+	constBase = gxmChunkBufferReserve(buffer, reserveSize, 0x10);
+	if (constBase == NULL) {
+		GXM_DBG_ERROR(875, "Could not reserve %d bytes.", reserveSize);
 		return SCE_GXM_ERROR_RESERVE_FAILED;
-	buffer->cur = (SceUInt32)(data + words);
-	code = data + dataWords;
-	block->data = data;
-	block->dataSize = dataWords << 2;
-	block->totalSize = words * 4;
+	}
+	instr = (SceUInt32 *)((SceUInt8 *)constBase + dataSize);
+	gxmChunkBufferCommit(buffer, constBase + reserveSize / 4);
+	block->data = constBase;
+	block->dataSize = dataSize;
+	block->totalSize = reserveSize;
 	if (extra) {
-		code++;
-		data[dataWords] = 0x07000103;
-		high = 0x40000;
-		data[0] = value;
-		data[1] = count - 1;
+		*instr++ = 0x07000103;
+		constBase[0] = value;
+		constBase[1] = count - 1;
+		slot = 2;
 		endOffset = 0x10;
 		taskControlOffset = 0xc;
 		programOffset = 8;
 	} else {
+		slot = 0;
 		endOffset = 8;
 		taskControlOffset = 4;
 		programOffset = 0;
-		high = 0;
 	}
-	code[0] = gxmPdsDoutWords[extra ? 2 : 0][3] | 5 | high;
-	data[programOffset / 4] = program->address;
-	data[taskControlOffset / 4] = program->taskControl;
-	data[endOffset / 4] = 0;
-	code[1] = GXM_PDS_END;
-	return 0;
-}
-
-int gxmPdsBuildDoutProgram(GxmChunkBuffer *buffer, const SceGxmColorSurface *surface,
-			   GxmCodeRef *program)
-{
-	SceUInt32 words[6], offset;
-	void *code = gxmChunkBufferReserve(buffer, 0x40, 0x10);
-
-	if (code == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
-	words[0] = surface->format;
-	words[1] = surface->data;
-	words[2] = surface->stride;
-	words[3] = surface->reserved;
-	offset = gxmChunkBufferOffset(buffer);
-	words[4] = surface->clipMin;
-	words[5] = surface->clipMax;
-	buffer->cur = SceGpuEs4User_53CACDAB(code, words, surface->control);
-	program->address = 0;
-	program->taskControl = 0;
-	gxmCodeRefSetAddress(program, offset);
-	return 0;
-}
-
-int gxmPdsBuildNopProgram(GxmChunkBuffer *buffer, GxmCodeRef *program)
-{
-	void *code = gxmChunkBufferReserve(buffer, 8, 0x10);
-	SceUInt32 offset;
-
-	if (code == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
-	offset = gxmChunkBufferOffset(buffer);
-	buffer->cur = SceGpuEs4User_1A575DFD(code);
-	program->address = 0;
-	program->taskControl = 0;
-	gxmCodeRefSetAddress(program, offset);
-	return 0;
-}
-
-int gxmPdsBuildKickProgram(GxmChunkBuffer *buffer, GxmCodeRef *program)
-{
-	void *code = gxmChunkBufferReserve(buffer, 0x20, 0x10);
-	SceUInt32 offset;
-
-	if (code == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
-	offset = gxmChunkBufferOffset(buffer);
-	buffer->cur = SceGpuEs4User_86FC3202(code);
-	program->address = 0;
-	program->taskControl = 0;
-	gxmCodeRefSetAddress(program, offset);
-	return 0;
-}
-
-typedef struct GxmPdsPixelParams {
-	SceUInt32 program;		/* out: the aligned program address */
-	SceUInt32 dataSize;		/* out */
-	GxmCodeRef first;
-	SceUInt32 firstFlags;
-	GxmCodeRef second;
-	SceUInt32 secondFlags;
-	GxmCodeRef third;
-	SceUInt32 thirdFlags;
-} GxmPdsPixelParams;
-
-int gxmPdsBuildPixelProgram(GxmChunkBuffer *buffer, SceUInt32 samples, SceUInt32 mode,
-			    const GxmCodeRef *first, const GxmCodeRef *second, const GxmCodeRef *third,
-			    GxmCommandBlock *block, GxmPdsState *state)
-{
-	GxmPdsPixelParams params;
-	SceUInt32 end, count;
-	void *code;
-
-	params.second = *second;
-	params.first = *first;
-	params.third = *third;
-	params.program = 0;
-	params.dataSize = 0;
-	params.secondFlags = 0;
-	params.firstFlags = 0x20000;
-	params.thirdFlags = 0x30000;
-	code = gxmChunkBufferReserve(buffer, 0x90, 0x10);
-	if (code == NULL)
-		return SCE_GXM_ERROR_RESERVE_FAILED;
-	block->data = code;
-	count = (mode == 1 && samples == 1) ? 4 : samples;
-	end = SceGpuEs4User_E98914E4(&params, code, samples != 1 && mode == 0,
-				     mode == 1 && samples == 1, count);
-	block->dataSize = params.dataSize;
-	block->totalSize = end - (SceUInt32)block->data;
-	buffer->cur = end;
-	state->code = block->data;
-	state->dataSize = block->dataSize >> 4;
-	state->flags = 0x4000;
+	*instr++ = gxmPdsDataWord(5, slot, 3);
+	constBase[programOffset / 4] = program->address;
+	constBase[taskControlOffset / 4] = program->taskControl;
+	constBase[endOffset / 4] = 0;
+	*instr++ = GXM_PDS_END;
+	GXM_DBG_ASSERT(910, instr == constBase + reserveSize/4);
 	return 0;
 }

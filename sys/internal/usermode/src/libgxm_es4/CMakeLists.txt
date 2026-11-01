@@ -31,6 +31,7 @@ set(GXM_SOURCES
 	notification.c
 	output_format.c
 	pds_sce.c
+	pixel_event.c
 	precomputation.c
 	program.c
 	razor.c
