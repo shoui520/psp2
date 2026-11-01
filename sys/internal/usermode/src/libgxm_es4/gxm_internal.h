@@ -603,6 +603,9 @@ void gxmChunkBufferReset(const GxmDeferredBuffer *chunkBuffer, GxmChunkBuffer *w
 int gxmDeferredBufferCheckCallback(GxmDeferredBuffer *chunkBuffer, const char *bufferName);
 /* memory.c: SCE_OK when [address, address + size) is memory the GPU can use */
 int gxmMemoryCheckCallbackRegion(const void *address, SceSize size, const char *callbackType);
+/* memory.c: SCE_OK when size bytes at address are mapped GPU memory; reports the parameter */
+int gxmMemoryCheckParameter(const void *address, SceSize size, const char *parameter,
+			    const char *function);
 #endif
 
 /* aligned space for size bytes; the caller advances cur past what it writes */
@@ -1401,6 +1404,10 @@ GXM_ASSERT_OFFSET(SceGxmContext, listSerial, 0x40c);
 #define GXM_LIST_USES_ALL		0x0000001f
 
 /* the scene's ZLS control (depthStencil.zlsControl) */
+/* SceGxmDepthStencilForceLoadMode / ForceStoreMode (Sony's names, from the debug messages) */
+#define SCE_GXM_DEPTH_STENCIL_FORCE_LOAD_DISABLED	0x00000000
+#define SCE_GXM_DEPTH_STENCIL_FORCE_LOAD_ENABLED	0x00000002
+#define SCE_GXM_DEPTH_STENCIL_FORCE_STORE_ENABLED	0x00000004
 #define GXM_ZLS_LOAD_STENCIL		0x00002000
 #define GXM_ZLS_LOAD_DEPTH		0x00004000
 #define GXM_ZLS_LOAD_MASK		0x00008000
@@ -1752,6 +1759,9 @@ typedef struct GxmGlobals {
 	SceUInt32 parameterBufferSize;	/* 0x3a4 */
 	SceUInt32 formatLevel;		/* highest format table level available */
 	SceUInt32 warningMask;		/* sceGxmSetWarningEnabled: 1 << SCE_GXM_WARNING_* (debug build) */
+#if SCE_DBG_ASSERTS_ENABLED
+	SceUInt64 errorNotificationTime;	/* gxmDebugReportError: the last notification sent */
+#endif
 	SceUInt32 frameIndex;		/* 0x3b0, 24 bits, tags capture markers */
 	SceUInt32 sceneIndex;		/* 0x3b4: scenes this frame, tags capture markers */
 	volatile SceUInt32 counter;	/* 0x3b8 */

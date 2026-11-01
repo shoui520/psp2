@@ -808,21 +808,37 @@ static inline int gxmBeginScene(SceGxmContext *context, SceUInt32 flags,
 	SceUInt32 stride, xMax, yMax, width, height;
 	int ret;
 
-	if (context == NULL)
+	if (context == NULL) {
+		GXM_DBG_ERROR(1356, "Parameter immediateContext to function sceGxmBeginScene[Ex] is NULL.");
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE || (flags & ~GXM_SCENE_FLAGS) != 0)
+	}
+	if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE || (flags & ~GXM_SCENE_FLAGS) != 0) {
+		if (context->type != SCE_GXM_CONTEXT_TYPE_IMMEDIATE)
+			GXM_DBG_ERROR(1360, "Parameter immediateContext to function sceGxmBeginScene[Ex] is not an immediate context.");
+		else
+			GXM_DBG_ERROR(1368, "Parameter flags to function sceGxmBeginScene[Ex] has unexpected bits set.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
-	if (renderTarget == NULL || vertexSyncObject != NULL)
+	}
+	if (renderTarget == NULL || vertexSyncObject != NULL) {
+		if (renderTarget == NULL)
+			GXM_DBG_ERROR(1372, "Parameter renderTarget to function sceGxmBeginScene[Ex] is NULL.");
+		else
+			GXM_DBG_ERROR(1376, "Parameter vertexSyncObject to function sceGxmBeginScene[Ex] is not NULL.");
 		return SCE_GXM_ERROR_INVALID_POINTER;
-	if (context->insideScene)
+	}
+	if (context->insideScene) {
+		GXM_DBG_ERROR(1384, "Function sceGxmBeginScene[Ex] has been called from within a scene.");
 		return SCE_GXM_ERROR_WITHIN_SCENE;
+	}
 
 	if (colorSurface != NULL) {
 		context->colorSurface = *colorSurface;
 		colorEnabled = sceGxmColorSurfaceIsEnabled(colorSurface);
 		if (!(gxmGlobals.compatFlags & GXM_COMPAT_COLOR_ENABLE_DATA) && colorEnabled &&
-		    sceGxmColorSurfaceGetData(colorSurface) == NULL)
+		    sceGxmColorSurfaceGetData(colorSurface) == NULL) {
+			GXM_DBG_ERROR(1398, "Parameter colorSurface to function sceGxmBeginScene[Ex] is an enabled color surface that has a surface data address of NULL.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 	} else {
 		sceGxmColorSurfaceInitDisabled(&context->colorSurface);
 		colorEnabled = SCE_FALSE;
@@ -830,22 +846,45 @@ static inline int gxmBeginScene(SceGxmContext *context, SceUInt32 flags,
 
 	loadEnabled = loadDepthStencil != NULL && sceGxmDepthStencilSurfaceIsEnabled(loadDepthStencil);
 	if (storeDepthStencil != NULL && sceGxmDepthStencilSurfaceIsEnabled(storeDepthStencil)) {
-		SceUInt32 load, store;
+		SceUInt32 load, store, storeStride;
 
-		if (!loadEnabled)
+		if (!loadEnabled) {
+			GXM_DBG_ERROR(1486, "Function sceGxmBeginScene[Ex] has been called with only the store depth/stencil surface enabled.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		/* what the load surface holds, the store surface must hold too */
 		load = loadDepthStencil->zlsControl;
 		store = storeDepthStencil->zlsControl;
-		if ((load & GXM_ZLS_LOAD_DEPTH) && !(store & GXM_ZLS_STORE_DEPTH))
+		if ((load & GXM_ZLS_LOAD_DEPTH) && !(store & GXM_ZLS_STORE_DEPTH)) {
+			GXM_DBG_ERROR(1422, "Function sceGxmBeginSceneEx has been called with depth data in the load depth/stencil surface format but not the store depth/stencil surface format.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
-		if (!(store & GXM_ZLS_STORE_STENCIL) && (load & GXM_ZLS_LOAD_STENCIL))
+		}
+		if (!(store & GXM_ZLS_STORE_STENCIL) && (load & GXM_ZLS_LOAD_STENCIL)) {
+			GXM_DBG_ERROR(1426, "Function sceGxmBeginSceneEx has been called with stencil data in the load depth/stencil surface format but not the store depth/stencil surface format.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
-		if (!(store & GXM_ZLS_STORE_MASK) && (load & GXM_ZLS_LOAD_MASK))
+		}
+		if (!(store & GXM_ZLS_STORE_MASK) && (load & GXM_ZLS_LOAD_MASK)) {
+			GXM_DBG_ERROR(1430, "Function sceGxmBeginSceneEx has been called with mask data in the load depth/stencil surface format but not the store depth/stencil surface format.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		stride = sceGxmDepthStencilSurfaceGetStrideInSamples(loadDepthStencil);
-		if (stride != sceGxmDepthStencilSurfaceGetStrideInSamples(storeDepthStencil))
+		storeStride = sceGxmDepthStencilSurfaceGetStrideInSamples(storeDepthStencil);
+		if (stride != storeStride) {
+			GXM_DBG_ERROR(1440, "Function sceGxmBeginSceneEx has been called with mismatching load and store depth/stencil surface strides (load stride %d samples, store stride %d samples).",
+				      stride, storeStride);
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
+		if (loadDepthStencil != storeDepthStencil) {
+			if ((loadDepthStencil->zlsControl & SCE_GXM_DEPTH_STENCIL_FORCE_STORE_ENABLED) &&
+			    gxmWarningIsEnabled(SCE_GXM_WARNING_DEPTH_STENCIL_SURFACE_SETTING_IGNORED))
+				GXM_DBG_WARNING(1448, "The load depth/stencil surface provided to sceGxmBeginSceneEx has a force store mode of SCE_GXM_DEPTH_STENCIL_FORCE_STORE_ENABLED, which will be ignored.");
+			if (!(loadDepthStencil->zlsControl & SCE_GXM_DEPTH_STENCIL_FORCE_LOAD_ENABLED) &&
+			    gxmWarningIsEnabled(SCE_GXM_WARNING_DEPTH_STENCIL_SURFACE_SETTING_IGNORED))
+				GXM_DBG_WARNING(1453, "The load depth/stencil surface provided to sceGxmBeginSceneEx has a force load mode of SCE_GXM_DEPTH_STENCIL_FORCE_LOAD_DISABLED, so will be ignored.");
+			if ((storeDepthStencil->zlsControl & SCE_GXM_DEPTH_STENCIL_FORCE_LOAD_ENABLED) &&
+			    gxmWarningIsEnabled(SCE_GXM_WARNING_DEPTH_STENCIL_SURFACE_SETTING_IGNORED))
+				GXM_DBG_WARNING(1458, "The store depth/stencil surface provided to sceGxmBeginSceneEx has a force load mode of SCE_GXM_DEPTH_STENCIL_FORCE_LOAD_ENABLED, which will be ignored.");
+		}
 		context->depthStencil.zlsControl = (storeDepthStencil->zlsControl & GXM_ZLS_STORE_CONTROL) |
 						   (loadDepthStencil->zlsControl & GXM_ZLS_LOAD_CONTROL);
 		context->depthStencil.loadDepthData = loadDepthStencil->depthData;
@@ -855,8 +894,10 @@ static inline int gxmBeginScene(SceGxmContext *context, SceUInt32 flags,
 		context->depthStencil.backgroundDepth = loadDepthStencil->backgroundDepth;
 		context->depthStencil.backgroundControl = loadDepthStencil->backgroundControl;
 	} else {
-		if (loadEnabled)
+		if (loadEnabled) {
+			GXM_DBG_ERROR(1482, "Function sceGxmBeginScene[Ex] has been called with only the load depth/stencil surface enabled.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		context->depthStencil.zlsControl = 0;
 		context->depthStencil.loadDepthData = NULL;
 		context->depthStencil.loadStencilData = NULL;
@@ -865,23 +906,36 @@ static inline int gxmBeginScene(SceGxmContext *context, SceUInt32 flags,
 		context->depthStencil.backgroundDepth = 1.0f;
 		context->depthStencil.backgroundControl = 0x300;
 		/* a scene draws to color, depth/stencil or both */
-		if (!colorEnabled)
+		if (!colorEnabled) {
+			GXM_DBG_ERROR(1502, "Function sceGxmBeginScene[Ex] has been called with both the color and depth/stencil surfaces disabled.");
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		stride = 0;
 	}
 
-	if (SceGpuEs4User_83D972DF(&gxmGlobals.top, renderTarget, &info) != 0)
+	ret = SceGpuEs4User_83D972DF(&gxmGlobals.top, renderTarget, &info);
+	if (ret != 0) {
+		GXM_DBG_ERROR(1507, "Failed due to error in driver layer (%08X).", ret);
 		return SCE_GXM_ERROR_DRIVER;
+	}
 	if (colorEnabled && info.samplesX == 1 && info.samplesY == 2 &&
-	    sceGxmColorSurfaceGetScaleMode(colorSurface) != SCE_GXM_COLOR_SURFACE_SCALE_MSAA_DOWNSCALE)
+	    sceGxmColorSurfaceGetScaleMode(colorSurface) != SCE_GXM_COLOR_SURFACE_SCALE_MSAA_DOWNSCALE) {
+		GXM_DBG_ERROR(1515, "Parameter colorSurface to function sceGxmBeginScene[Ex] does not use MSAA downscale, but renderTarget uses 2xMSAA.");
 		return SCE_GXM_ERROR_UNSUPPORTED;
+	}
 	if (validRegion != NULL) {
 		xMax = validRegion->xMax;
-		if (xMax >= info.width)
+		if (xMax >= info.width) {
+			GXM_DBG_ERROR(1525, "Parameter validRegion->xMax (%d) is not less than the render target width (%d) in function sceGxmBeginScene[Ex].",
+				      xMax, info.width);
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 		yMax = validRegion->yMax;
-		if (yMax >= info.height)
+		if (yMax >= info.height) {
+			GXM_DBG_ERROR(1531, "Parameter validRegion->yMax (%d) is not less than the render target height (%d) in function sceGxmBeginScene[Ex].",
+				      yMax, info.height);
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 	} else {
 		xMax = info.width - 1;
 		yMax = info.height - 1;
@@ -890,6 +944,17 @@ static inline int gxmBeginScene(SceGxmContext *context, SceUInt32 flags,
 	if (colorEnabled) {
 		SceUInt32 scaleMode;
 
+#if SCE_DBG_ASSERTS_ENABLED
+		ret = gxmMemoryCheckParameter(sceGxmColorSurfaceGetData(colorSurface), 4,
+					      "colorSurface", "sceGxmBeginScene[Ex]");
+		if (ret != 0)
+			return ret;
+		ret = sceGxmTextureValidate(&colorSurface->backgroundTex);
+		if (ret != 0) {
+			GXM_DBG_ERROR(1557, "Parameter colorSurface->backgroundTex defines an invalid texture in function sceGxmBeginScene[Ex].\n");
+			return ret;
+		}
+#endif
 		width = sceGxmTextureGetWidth(&colorSurface->backgroundTex);
 		height = sceGxmTextureGetHeight(&colorSurface->backgroundTex);
 		scaleMode = sceGxmColorSurfaceGetScaleMode(colorSurface);
@@ -902,8 +967,15 @@ static inline int gxmBeginScene(SceGxmContext *context, SceUInt32 flags,
 			width *= 2;
 			height *= 2;
 		}
-		if (xMax + 1 > width || yMax + 1 > height)
+		if (xMax + 1 > width || yMax + 1 > height) {
+			if (xMax + 1 > width)
+				GXM_DBG_ERROR(1588, "Parameter colorSurface to function sceGxmBeginScene[Ex] covers a width of %d pixels, which is less than the valid region width of %d pixels.",
+					      width, xMax + 1);
+			else
+				GXM_DBG_ERROR(1594, "Parameter colorSurface to function sceGxmBeginScene[Ex] covers a height of %d pixels, which is less than the valid region height of %d pixels.",
+					      height, yMax + 1);
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 	} else {
 		width = 0;
 		height = 0;
@@ -915,11 +987,16 @@ static inline int gxmBeginScene(SceGxmContext *context, SceUInt32 flags,
 			rowSamples = xMax + 1;
 		else
 			rowSamples = (xMax + 32) & ~31;
-		if (stride < info.samplesX * rowSamples)
+		if (stride < info.samplesX * rowSamples) {
+			GXM_DBG_ERROR(1613, "The depth stencil surface stride provided to function sceGxmBeginScene[Ex] is %d samples, which is less than the aligned valid region width of %d samples.",
+				      stride, info.samplesX * rowSamples);
 			return SCE_GXM_ERROR_INVALID_VALUE;
+		}
 	}
-	if (info.wholeRegion && (xMax != info.width - 1 || yMax != info.height - 1))
+	if (info.wholeRegion && (xMax != info.width - 1 || yMax != info.height - 1)) {
+		GXM_DBG_ERROR(1622, "The valid region must be the whole render target when using macrotile synchronisation.");
 		return SCE_GXM_ERROR_INVALID_VALUE;
+	}
 
 	ret = gxmSceneBegin();
 	if (ret != 0)
