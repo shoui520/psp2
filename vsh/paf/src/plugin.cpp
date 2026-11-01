@@ -16,8 +16,18 @@
 #include <compress/compress.h>
 #include <memory/heap_allocator.h>
 #include <std/string.h>
+#include <std/stdio.h>
 #include <std/stdlib.h>
 #include <kernel/iofilemgr.h>
+#include <module/module.h>
+#include <thread/thread.h>
+#include <system/system.h>
+#include <graphics/graphmem/graphmem.h>
+#include <graphics/gutil.h>
+#include <widget/core/environment.h>
+#include <widget/w_scene.h>
+
+extern "C" int sceAppMgrConvertVs0UserDrivePath(const char *path, char *out, int out_size);
 
 namespace paf {
 
@@ -100,6 +110,49 @@ Plugin *Plugin::Find(const char *name)
 	return Framework::framework->FindPlugin(name, false);
 }
 
+void Plugin::LoadResourceTable_Template()
+{
+	cxml::Element templates = m_rscobj->GetTableElement(resource::TableType_Template);
+
+	if (templates.doc == NULL || templates.offset < 0)
+		return;
+
+	cxml::Element node;
+
+	for (node = templates.GetFirstChild(); node.doc != NULL && node.offset >= 0;
+	     node = node.GetNextSibling()) {
+		cxml::Attribute attr;
+
+		if (scePafResourceGetAttribute(&node, "fast_open", &attr) != 0)
+			continue;
+
+		int32_t value = 0;
+		uint32_t idhash;
+
+		if (scePafResourceGetInteger(&attr, &value) != 0 || value == 0 ||
+		    scePafResourceGetAttributeIdIntLpb(&node, "id", &idhash) != 0)
+			continue;
+		/* the const find, which Sony's build inlines here */
+		const map<uint32_t, TemplateCache *> &table = m_template_table;
+
+		if (table.find(idhash) != table.end())
+			continue;
+
+		TemplateCache *cache = new TemplateCache();
+
+		if (cache == NULL)
+			continue;
+		if (cache->Create(this, IDParam(s_empty_id, idhash)) == 0) {
+			typedef map<uint32_t, TemplateCache *> Table;
+
+			m_template_table._Insert(Table::value_type(idhash, NULL), NULL)->value.second =
+				cache;
+		} else {
+			delete cache;
+		}
+	}
+}
+
 }
 
 using namespace paf;
@@ -134,7 +187,7 @@ __attribute__((noinline)) VersatileParam *ScePafToplevel_417B0721(const char *na
 
 void ScePafToplevel_C1BE28B4(Plugin *plugin)
 {
-	cxml::Element table = plugin->m_rscobj->GetTableElement(resource::TableType_File);
+	cxml::Element table = plugin->m_rscobj->GetTableElement(resource::TableType_SoundIndex);
 
 	if (table.doc == NULL || table.offset < 0)
 		return;
@@ -529,6 +582,304 @@ void ScePafToplevel_1230A05F(Plugin *plugin)
 	if (plugin->m_surface_pool != NULL)
 		pool = plugin->m_surface_pool->m_type != graph::SurfacePool::MemoryType_Normal;
 	ScePafResource_EA11BD0B(plugin->m_rscobj, 64, 0, mode == 1, pool);
+}
+
+namespace paf {
+
+Plugin::Plugin(const InitParam *param)
+	: m_initialized(false), m_name(param->name), m_caller_name(param->caller_name),
+	  m_set_param_func(param->set_param_func), m_init_func(param->init_func),
+	  m_start_func(param->start_func), m_stop_func(param->stop_func),
+	  m_exit_func(param->exit_func), m_module(NULL), m_event_handler_table(NULL),
+	  m_layout_handler_table(NULL), m_rscobj(NULL), m_private_heap(NULL),
+	  m_private_heap_created(false), m_decode_heap(NULL), m_decode_heap_created(false),
+	  m_surface_pool_addr(NULL), m_surface_pool(NULL), m_arguments(param->arguments),
+	  m_option(param->option), m_param(param->param), m_last_active_page_node(NULL),
+	  m_draw_priority(param->draw_priority), m_locale(param->locale),
+	  m_texture_table_loaded(false), m_tex_load_filter(0),
+	  m_monitoring_callback_pageopen(NULL), m_monitoring_callback_pageactivate(NULL),
+	  m_monitoring_callback_pageclose(NULL), m_resource_data(param->resource_data),
+	  m_resource_data_size(param->resource_data_size), m_page_debug_focus_enabled(0),
+	  m_page_debug_mode(0), m_env_param(NULL), m_env_param_created(false),
+	  m_graphics_flag(system::SystemParam::GetTextStyle()), m_unloading(false)
+{
+	m_style_param_manager = new VersatileParamManager();
+	m_obj_param_manager = new VersatileParamManager();
+	m_sound_param_manager = new VersatileParamManager();
+
+	if (param->module_file.size() != 0) {
+		char path[256];
+
+		sceAppMgrConvertVs0UserDrivePath(param->module_file.c_str(), path, sizeof(path));
+
+		int32_t option = param->module_option;
+
+		if (Framework::framework->GetMode() == Framework::Mode_CommonDialog)
+			option |= Module::Option_LoadTypeCdlg;
+		for (uint32_t i = 0; i < 100; i++) {
+			m_module = new Module(path, NULL, option, NULL);
+			if (m_module == NULL || m_module->GetStatus() == 0)
+				break;
+			delete m_module;
+			m_module = NULL;
+			thread::Sleep(100);
+		}
+	}
+	if (m_module != NULL && (param->module_option & Module::Option_UseInterface)) {
+		const ModuleInterface *iface = static_cast<const ModuleInterface *>(
+			m_module->GetInterface(param->module_interface_version));
+
+		m_set_param_func = iface->set_param_func;
+		m_init_func = iface->init_func;
+		m_start_func = iface->start_func;
+		m_stop_func = iface->stop_func;
+		m_exit_func = iface->exit_func;
+	}
+
+	InitParam2 param2;
+
+	if (m_set_param_func != NULL) {
+		m_set_param_func(&param2);
+		m_tex_load_filter = param2.texture_load_filter;
+	}
+	if (m_draw_priority < 0)
+		m_draw_priority = param2.draw_priority;
+	if (param->notify_callback != NULL)
+		m_notify_callback_list.push_back(param->notify_callback);
+	if (param->unload_callback != NULL)
+		m_unload_callback_list.push_back(param->unload_callback);
+
+	if (param->private_heap_size != 0) {
+		char name[32];
+		memory::HeapAllocator::Option heap_option;
+
+		sce_paf_snprintf(name, sizeof(name), "ScePafPrivateHeap(%s)", m_name.c_str());
+		heap_option.entry_max = 0;
+		heap_option.warning_size = 0;
+		heap_option.disable_dbgprint = false;
+		heap_option.disable_assert_on_alloc_failure = true;
+		heap_option.memblk_type = memory::AllocationBlockType_User;
+		heap_option.alignment = 0;
+		if (Framework::framework->GetMode() == Framework::Mode_CommonDialog)
+			heap_option.memblk_type = memory::AllocationBlockType_User_Cdlg;
+		m_private_heap = new memory::HeapAllocator(NULL, param->private_heap_size, name,
+							   &heap_option);
+		m_private_heap_created = true;
+	} else if (param->private_heap != NULL) {
+		m_private_heap = param->private_heap;
+	} else {
+		m_private_heap = NULL;
+	}
+
+	if (param->decode_heap_size != 0) {
+		char name[32];
+		memory::HeapAllocator::Option heap_option;
+
+		sce_paf_snprintf(name, sizeof(name), "ScePafDecodeHeap(%s)", m_name.c_str());
+		heap_option.entry_max = 0;
+		heap_option.warning_size = 0;
+		heap_option.disable_dbgprint = false;
+		heap_option.disable_assert_on_alloc_failure = true;
+		heap_option.memblk_type = memory::AllocationBlockType_User;
+		heap_option.alignment = 0;
+		if (Framework::framework->GetMode() == Framework::Mode_CommonDialog)
+			heap_option.memblk_type = memory::AllocationBlockType_User_Cdlg;
+		m_decode_heap = new memory::HeapAllocator(NULL, param->decode_heap_size, name,
+							  &heap_option);
+		m_decode_heap_created = true;
+	} else if (param->decode_heap != NULL) {
+		m_decode_heap = param->decode_heap;
+	} else {
+		m_decode_heap = Framework::framework->m_decode_heap;
+		if (m_decode_heap == NULL) {
+			if (m_private_heap != NULL)
+				m_decode_heap = m_private_heap;
+			else
+				m_decode_heap = NULL;
+		}
+	}
+
+	if (param->surface_pool != NULL) {
+		m_surface_pool = param->surface_pool;
+	} else if (param2.surface_pool_size != 0) {
+		char name[64];
+
+		sce_paf_snprintf(name, sizeof(name), "ScePafSurfacePool(%s)", m_name.c_str());
+		m_surface_pool_addr = GraphMem::AllocOSMemory(GraphMem::DeviceType_SystemMemory,
+							      param2.surface_pool_size, name, NULL);
+		m_surface_pool = new graph::SurfacePool(m_surface_pool_addr,
+							param2.surface_pool_size, name, NULL,
+							graph::SurfacePool::MemoryType_Normal);
+	} else {
+		m_surface_pool = gutil::GetDefaultSurfacePool();
+	}
+
+	if (m_locale < 0)
+		m_locale = Framework::framework->m_locale;
+
+	if (param->resource_file.size() != 0 || m_resource_data != NULL) {
+		resource::ResourceObj::Option option;
+
+		if (m_private_heap != NULL)
+			option.allocator = m_private_heap;
+		else
+			option.allocator = Framework::framework->m_plugin_heap;
+		option.cxml_allocator_func = ResourceObjCxmlAllocator;
+		if (m_option & Option_ResourceLoadWithDebugSymbol)
+			option.load_type = 4;
+		if (m_resource_data != NULL) {
+			m_rscobj = new resource::ResourceObj(m_resource_data, m_resource_data_size,
+							     &option);
+		} else {
+			char path[256];
+
+			sceAppMgrConvertVs0UserDrivePath(param->resource_file.c_str(), path,
+							 sizeof(path));
+			m_rscobj = new resource::ResourceObj(path, &option);
+		}
+		if (m_rscobj != NULL && m_rscobj->GetLoadStatus() != 0) {
+			delete m_rscobj;
+			m_rscobj = NULL;
+		}
+	}
+
+	ui::Environment *env = Framework::framework->m_env;
+
+	if (env != NULL) {
+		m_env_param = env->m_env_param;
+		if (param->env_param != NULL && param->env_param != m_env_param) {
+			m_env_param = param->env_param->Clone();
+			m_env_param_created = true;
+		}
+		if (m_rscobj != NULL) {
+			graph::Surface *surface = env->m_screen->m_surface.get();
+			uint32_t id = m_env_param->GetResolutionIdHD(surface->m_width,
+								     surface->m_height,
+								     env->m_screen_orientation_mode);
+
+			if (id == 255) {
+				surface = env->m_screen->m_surface.get();
+				id = m_env_param->GetResolutionIdHD(surface->m_width,
+								    surface->m_height, 0);
+			}
+
+			ui::SceneResolution *resolution = ScePafWidget_CDC90BA2(m_env_param, id);
+
+			if (resolution != NULL) {
+				ui::ResolutionResource resource =
+					ScePafWidget_E963EAEE(m_env_param, resolution->m_base_id);
+
+				m_rscobj->SetResolutionResource(resource);
+			}
+		}
+	}
+
+	if (param->graphics_flag != 128)
+		m_graphics_flag = param->graphics_flag;
+	else if (param2.graphics_flag != 128)
+		m_graphics_flag = param2.graphics_flag;
+
+	if (m_rscobj != NULL) {
+		ScePafResource_42E4E566(m_rscobj, m_locale, m_decode_heap);
+		if (m_rscobj != NULL) {
+			if (m_resource_data != NULL) {
+				m_rscobj->SetSoundTable(64);
+			} else {
+				bool pool = false;
+				int32_t mode = Framework::framework->GetMode();
+
+				if (m_surface_pool != NULL)
+					pool = m_surface_pool->m_type !=
+					       graph::SurfacePool::MemoryType_Normal;
+				ScePafResource_EA11BD0B(m_rscobj, 64, 0, mode == 1, pool);
+			}
+			if (m_rscobj != NULL) {
+				if ((m_option & Option_MakeSurfaceFirst) &&
+				    (m_option & Option_RememberSurface)) {
+					if (m_resource_data != NULL)
+						m_rscobj->SetTextureTable(64);
+					else if (ScePafResource_B72D030D(m_rscobj, 64, m_decode_heap) == 0)
+						m_texture_table_loaded = true;
+
+					cxml::Element table =
+						m_rscobj->GetTableElement(resource::TableType_Texture);
+
+					if (table.doc != NULL && table.offset >= 0) {
+						cxml::Element node;
+
+						for (node = table.GetFirstChild();
+						     node.doc != NULL && node.offset >= 0;
+						     node = node.GetNextSibling()) {
+							cxml::Element elm = m_rscobj->GetOverrideElement(node);
+							const char *value;
+							uint32_t len;
+
+							if (scePafResourceGetAttributeString(
+								    &elm, "ignore_make_surface_first",
+								    &value, &len) != 0 ||
+							    sce_paf_strncmp(value, "on", 2) != 0 || len != 2)
+								GetTexture(node, m_surface_pool);
+						}
+					}
+					UnloadResourceTable_Texture();
+				}
+				if (m_rscobj != NULL) {
+					LoadResourceTable_Style();
+					if (m_rscobj != NULL) {
+						ScePafToplevel_C1BE28B4(this);
+						if (m_rscobj != NULL) {
+							LoadResourceTable_Template();
+							if (m_rscobj != NULL && m_resource_data == NULL)
+								ScePafResource_CEED7338(m_rscobj);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (m_init_func != NULL)
+		m_init_func(this);
+	m_initialized = true;
+}
+
+}
+
+using namespace paf;
+
+void ScePafToplevel_E87AD3F3(Plugin *plugin)
+{
+	if (plugin->m_resource_data != NULL)
+		return;
+
+	bool pool = false;
+	int32_t mode = Framework::framework->GetMode();
+
+	if (plugin->m_surface_pool != NULL)
+		pool = plugin->m_surface_pool->m_type != graph::SurfacePool::MemoryType_Normal;
+	ScePafResource_556665FC(plugin->m_rscobj, 0, mode == 1, pool);
+}
+
+namespace paf {
+
+void Plugin::UnloadResourceTable_Template()
+{
+	for (map<uint32_t, TemplateCache *>::iterator it = m_template_table.begin();
+	     it != m_template_table.end(); ++it) {
+		if (it->second != NULL)
+			delete it->second;
+	}
+	m_template_table._Tidy();
+}
+
+Plugin::PageCloseParam::PageCloseParam()
+{
+	fade = false;
+	timer = NULL;
+	fade_time_ms = 200.0f;
+	transition_type = TransitionType_None;
+}
+
 }
 
 namespace paf {

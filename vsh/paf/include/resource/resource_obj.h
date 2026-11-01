@@ -10,6 +10,7 @@
 #include <cxml/cxml.h>
 #include <std/string>
 #include <common/shared_ptr.h>
+#include <widget/core/environment.h>
 
 namespace paf {
 
@@ -29,14 +30,26 @@ enum TableType {
 	TableType_Texture = 3,
 	TableType_Model = 4,
 	TableType_Sound = 5,
-	TableType_File = 6,
-	TableType_Anim = 7,
-	TableType_Shader = 8,
-	TableType_Template = 9
+	TableType_SoundIndex = 6,
+	TableType_File = 7,
+	TableType_Template = 8,
+	TableType_Alias = 9
 };
 
 class ResourceObj {
 public:
+	/* how the resource is read and what its documents are allocated with */
+	class Option {
+	public:
+		Option() : load_type(0), allocator(NULL), cxml_allocator_func(cxml::DefaultAllocator)
+		{
+		}
+
+		uint32_t load_type;
+		memory::HeapAllocator *allocator;
+		cxml::AllocatorFunction cxml_allocator_func;
+	};
+
 	/* a texture or model of the resource */
 	class BufferEntry {
 	public:
@@ -58,6 +71,11 @@ public:
 		uint32_t type;
 	};
 
+	ResourceObj(void *addr, uint32_t size, const Option *option);
+	ResourceObj(const char *name, const Option *option);
+	~ResourceObj();
+
+	int32_t GetLoadStatus() const;
 	cxml::Element GetTableElement(TableType type) const;
 	/* the "id:", "src:" or "type:" (kind 0, 1, 2) of an ID's debug symbol; -1 without one */
 	int32_t GetDebugSymbol(uint32_t idhash, int32_t kind, string *symbol) const;
@@ -74,7 +92,12 @@ public:
 	int32_t SetTextureTable(uint32_t flag);
 	int32_t SetSoundTable(uint32_t flag);
 
-	/* the layout of the C struct, up to what C++ reads; the id map and default string follow */
+	void SetResolutionResource(ui::ResolutionResource resource)
+	{
+		m_resolution_resource = resource;
+	}
+
+	/* the layout of the C struct */
 	common::SharedPtr<File> m_rscfp;
 	string m_filename;
 	cxml::Document *m_document;
@@ -92,6 +115,9 @@ public:
 	uint32_t m_num_sounds;
 	int32_t m_load_status;
 	uint32_t m_create_type;
+	/* the debug symbols' map, not read from C++ yet */
+	uint8_t m_id_map[12];
+	ui::ResolutionResource m_resolution_resource;
 };
 
 }
@@ -99,6 +125,17 @@ public:
 
 /* the texture table's loads (not converted yet; the names are their NIDs) */
 extern "C" {
+/* reads the string table for the locale */
+int32_t ScePafResource_42E4E566(paf::resource::ResourceObj *rscobj, int32_t locale,
+				paf::memory::HeapAllocator *heap);
+/* lets the sound table's buffers go */
+int32_t ScePafResource_556665FC(paf::resource::ResourceObj *rscobj, int32_t arg, bool mode,
+				bool pool);
+/* closes the resource's file */
+int32_t ScePafResource_CEED7338(paf::resource::ResourceObj *rscobj);
+/* the cxml allocator of a resource on the heap of its userdata (0x8106ead8, name ours) */
+void ResourceObjCxmlAllocator(paf::cxml::AllocationType type, void *userdata, void *old_addr,
+			      size_t required_size, void **addr, size_t *size);
 int32_t ScePafResource_B72D030D(paf::resource::ResourceObj *rscobj, uint32_t flag,
 				paf::memory::HeapAllocator *heap);
 paf::memory::HeapAllocator *ScePafResource_D60FF214(paf::resource::ResourceObj *rscobj,

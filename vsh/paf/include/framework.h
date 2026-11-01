@@ -252,6 +252,7 @@ public:
 	static Framework *framework;
 
 private:
+	friend class Plugin;
 	friend int32_t (::ScePafToplevel_85EF6EC0)(const char *buffer1, uint32_t size1,
 						    const char *buffer2, uint32_t size2,
 						    int32_t samplerate, float vol, bool ignore_init,

@@ -178,37 +178,6 @@ uint8_t *_ZNK3paf6Plugin24GetNodeEntity_AddTextureERKNS_7IDParamE(const uint8_t 
 	return node == root ? 0 : (uint8_t *)node + 16;
 }
 
-typedef struct PafTopLevelTransition {
-	uint8_t active;
-	uint8_t reserved[3];
-	float duration;
-	uint32_t phase;
-	uint32_t timer;
-} PafTopLevelTransition;
-
-_Static_assert(sizeof(PafTopLevelTransition) == 16,
-	       "toplevel transition size");
-
-static inline __attribute__((always_inline))
-PafTopLevelTransition *InitTopLevelTransition(PafTopLevelTransition *self)
-{
-	self->active = 0;
-	self->timer = 0;
-	self->duration = 200.0f;
-	self->phase = 0;
-	return self;
-}
-
-PafTopLevelTransition *_ZN3paf6Plugin14PageCloseParamC1Ev(PafTopLevelTransition *self)
-{
-	return InitTopLevelTransition(self);
-}
-
-PafTopLevelTransition *_ZN3paf6Plugin14PageCloseParamC2Ev(PafTopLevelTransition *self)
-{
-	return InitTopLevelTransition(self);
-}
-
 int ScePafToplevel_9A4B0DC4(uint8_t *self)
 {
 	if (!self[112]) {

@@ -49,6 +49,31 @@ class InitEventFunctionEntry2;
 class EventFunctionEntry;
 class LayoutFunctionEntry;
 
+class Plugin;
+
+/*
+ * A template's widgets made ahead for TemplateOpen (fast_open="1"): the plugin
+ * keeps one per template ID (class and method names ours; 0x81192a24, 0x81192312).
+ */
+class TemplateCache {
+public:
+	TemplateCache() : m_created(false)
+	{
+	}
+
+	~TemplateCache()
+	{
+		Clear();
+	}
+
+	/* makes the template's widgets; 0 when done */
+	int32_t Create(Plugin *plugin, const IDParam &id);
+	void Clear();
+
+	bool m_created;
+	list<void *> m_items;
+};
+
 class Plugin {
 public:
 	/* InitParam::option */
@@ -132,6 +157,16 @@ public:
 		string str;
 	};
 
+	/* what a plugin's module gives through Module::GetInterface (name ours) */
+	class ModuleInterface {
+	public:
+		SetParamFunction set_param_func;
+		InitFunction init_func;
+		StartFunction start_func;
+		StopFunction stop_func;
+		ExitFunction exit_func;
+	};
+
 	class AddTextureInfo {
 	public:
 		char reserved[32];
@@ -206,6 +241,17 @@ public:
 		int32_t graphics_flag;
 	};
 
+	/* how PageClose closes the page */
+	class PageCloseParam {
+	public:
+		PageCloseParam();
+
+		bool fade;
+		float fade_time_ms;
+		TransitionType transition_type;
+		Timer *timer;
+	};
+
 	/* what TemplateOpen adds the template's widgets with */
 	class TemplateOpenParam {
 	public:
@@ -262,6 +308,9 @@ public:
 	intrusive_ptr<graph::Surface> GetTexture(const cxml::Element &node);
 
 	void LoadResourceTable_Style();
+	/* the templates with fast_open, made ahead, and their release (names ours) */
+	void LoadResourceTable_Template();
+	void UnloadResourceTable_Template();
 	void LoadResourceTable_Texture();
 	void UnloadResourceTable_Texture();
 	void SetResourceTable_Texture();
@@ -299,7 +348,7 @@ public:
 	map<string, ui::Widget *> m_create_page_table;
 	map<uint32_t, graph::Surface *> m_surface_table;
 	map<uint32_t, AddTextureInfo> m_add_texture_table;
-	map<uint32_t, void *> m_template_table;
+	map<uint32_t, TemplateCache *> m_template_table;
 	vector<DrawOrderElement> m_draw_order;
 	resource::ResourceObj *m_rscobj;
 	VersatileParamManager *m_style_param_manager;
@@ -331,7 +380,8 @@ public:
 	int32_t m_page_debug_mode;
 	ui::EnvironmentParam *m_env_param;
 	bool m_env_param_created;
-	bool m_graphics_flag;
+	/* the text style (SystemParam's, the InitParam's or the InitParam2's) */
+	char m_graphics_flag;
 	bool m_unloading;
 };
 
@@ -364,11 +414,13 @@ void ScePafToplevel_3B003F16(paf::Plugin *plugin, paf::string *id, uint32_t idha
 			     bool with_common);
 /* the sound parameter factory of a widget type */
 paf::VersatileParam *ScePafToplevel_417B0721(const char *name);
-/* reads the file table's parameters into the third parameter manager */
+/* reads the sound index table's parameters into the sound parameter manager */
 void ScePafToplevel_C1BE28B4(paf::Plugin *plugin);
 /* the plugin's sound table, from its resource's file and as loaded (Sony's names not found) */
 void ScePafToplevel_952CD3CF(paf::Plugin *plugin);
 void ScePafToplevel_1230A05F(paf::Plugin *plugin);
+/* lets the resource's sound table go (Sony's name not found) */
+void ScePafToplevel_E87AD3F3(paf::Plugin *plugin);
 /* a sound of the plugin's resource, else of the common resource's */
 int32_t ScePafToplevel_CA3E606F(paf::Plugin *plugin, const paf::IDParam &id,
 				const char **buffer1, uint32_t *size1, const char **buffer2,

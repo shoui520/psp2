@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <math/ngp/v4.h>
 #include <widget/core/widget.h>
+#include <widget/core/environment.h>
 
 namespace paf {
 namespace ui {
@@ -19,7 +20,10 @@ class SceneResolution {
 public:
 	uint32_t m_id;
 	uint32_t m_base_id;
-	uint8_t reserved[0x30];
+	/* the resource variants of m_id and of m_base_id */
+	ResolutionResource m_resource;
+	ResolutionResource m_base_resource;
+	uint8_t reserved[0x10];
 	int32_t m_width;
 	uint8_t reserved2[4];
 };
@@ -28,13 +32,6 @@ class SceneResolutionList {
 public:
 	SceneResolution *m_data;
 	uint32_t m_num;
-};
-
-/* the resolutions a scene lays out for */
-class SceneResolutionSet {
-public:
-	uint32_t reserved;
-	SceneResolutionList *m_list;
 };
 
 class Scene : public Widget {
@@ -46,14 +43,15 @@ public:
 	int32_t m_use_camera;
 	Camera *m_camera;
 	uint8_t reserved[0xd0];
-	SceneResolutionSet *m_resolution_set;
+	/* the resolutions it lays out for */
+	EnvironmentParam *m_env_param;
 };
 
 }
 }
 
 /* the resolution of the list with the ID, or NULL */
-extern "C" paf::ui::SceneResolution *ScePafWidget_CDC90BA2(paf::ui::SceneResolutionSet *set,
+extern "C" paf::ui::SceneResolution *ScePafWidget_CDC90BA2(const paf::ui::EnvironmentParam *param,
 							   uint32_t id);
 
 #endif

@@ -61,11 +61,22 @@ public:
 };
 
 class Widget;
+class SceneResolutionList;
+
+/*
+ * What the resource of a resolution is read with: the name of its strings' and
+ * textures' variant and its value (names ours).
+ */
+class ResolutionResource {
+public:
+	string m_name;
+	uint32_t m_value;
+};
 
 /* the screen resolutions the layouts are made for, and the one to use */
 class EnvironmentParam {
 public:
-	EnvironmentParam(void *resolution_table = NULL);
+	EnvironmentParam(SceneResolutionList *resolution_table = NULL);
 	virtual ~EnvironmentParam();
 	/* the layout resolution for a screen of 1920x1088 or more */
 	virtual uint32_t GetResolutionIdHD(uint32_t width, uint32_t height, int32_t orientation);
@@ -76,7 +87,8 @@ public:
 	/* the largest resolution the display fits */
 	void GetScreenSize(uint32_t *width, uint32_t *height);
 
-	uint8_t reserved[0x10];
+	SceneResolutionList *m_resolution_list;
+	uint8_t reserved[0xc];
 };
 
 class Environment {
@@ -102,7 +114,12 @@ public:
 	/* the display area scale from the system settings, once */
 	void ApplyDisplayAreaSettings();
 
-	uint8_t reserved[0xd1];
+	uint8_t reserved[0xb0];
+	/* the Framework's InitParam::screen_orientation_mode and env_param */
+	int32_t m_screen_orientation_mode;
+	uint8_t reserved0[4];
+	EnvironmentParam *m_env_param;
+	uint8_t reserved7[0x15];
 	/* set by RequestTerm */
 	bool m_term_requested;
 	uint8_t reserved1[2];
@@ -130,6 +147,9 @@ public:
 
 /* Exports with no name found for their NIDs. */
 extern "C" {
+/* the resource variant of the parameter's resolution with the ID, or the empty one */
+paf::ui::ResolutionResource ScePafWidget_E963EAEE(const paf::ui::EnvironmentParam *param,
+						  uint32_t id);
 /* constructs the Environment at mem */
 paf::ui::Environment *ScePafWidget_393F0EF0(void *mem, paf::ui::EnvironmentParam *param,
 					    int32_t screen_orientation_mode);

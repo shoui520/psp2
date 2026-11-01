@@ -8,6 +8,8 @@
 
 #include <stdint.h>
 #include <std/memory>
+#include <std/map>
+#include <std/string>
 #include <common/shared_ptr.h>
 #include <cxml/cxml.h>
 #include <versatileparam/idparam.h>
@@ -39,9 +41,25 @@ public:
 };
 
 /* the parameters read from a resource, by their tag and ID */
+/* the parameters of a resource's table by their tag and ID, and their factories by type */
 class VersatileParamManager {
 public:
+	typedef VersatileParam *(*FactoryFunction)();
+
+	VersatileParamManager()
+	{
+	}
+
+	~VersatileParamManager();
+
+	void AddFactory(const char *name, FactoryFunction factory);
 	void AddParam(const char *tag, const IDParam &id, VersatileParam *param);
+	VersatileParam *FindParam(const char *tag, const IDParam &id);
+	VersatileParam *FindParam(const IDParam &id);
+
+	/* names ours */
+	map<string, FactoryFunction> m_factory_table;
+	map<string, map<IDParam, VersatileParam *> > m_param_table;
 };
 
 }

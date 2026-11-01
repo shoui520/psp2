@@ -293,7 +293,7 @@ static void Slide3D(ui::Widget *widget, int32_t from, int32_t to, bool animate,
 {
 	float half_width = 0.0f;
 	ui::SceneResolution *resolution = ScePafWidget_CDC90BA2(
-		widget->m_scene->m_resolution_set, widget->m_scene->m_resolution_id);
+		widget->m_scene->m_env_param, widget->m_scene->m_resolution_id);
 
 	if (resolution != NULL)
 		half_width = resolution->m_width * 0.5f;

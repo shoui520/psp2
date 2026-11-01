@@ -17,6 +17,34 @@ namespace cxml {
 
 class Document;
 
+/* what a document allocates */
+enum AllocationType {
+	AllocationType_Alloc_Tree = 0,
+	AllocationType_Alloc_IDTable,
+	AllocationType_Alloc_IDHashTable,
+	AllocationType_Alloc_StringTable,
+	AllocationType_Alloc_WStringTable,
+	AllocationType_Alloc_HashTable,
+	AllocationType_Alloc_IntArrayTable,
+	AllocationType_Alloc_FloatArrayTable,
+	AllocationType_Alloc_FileTable,
+	AllocationType_Free_Tree,
+	AllocationType_Free_IDTable,
+	AllocationType_Free_IDHashTable,
+	AllocationType_Free_StringTable,
+	AllocationType_Free_WStringTable,
+	AllocationType_Free_HashTable,
+	AllocationType_Free_IntArrayTable,
+	AllocationType_Free_FloatArrayTable,
+	AllocationType_Free_FileTable
+};
+
+typedef void (*AllocatorFunction)(AllocationType type, void *userdata, void *old_addr,
+				  size_t required_size, void **addr, size_t *size);
+
+void DefaultAllocator(AllocationType type, void *userdata, void *old_addr, size_t required_size,
+		      void **addr, size_t *size);
+
 /* an attribute of an element */
 class Attribute {
 public:
