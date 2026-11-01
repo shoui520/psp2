@@ -453,7 +453,7 @@ ScePaf:
         - ScePafMisc_3C879D5F: 0x3C879D5F
         - _ZN3paf5image5Image5PasteENS_6common9SharedPtrIS1_EERKNS0_10ImagePointE: 0x3CA35598
         - _ZN3paf5image6filter6ResizeEPNS0_11ImageBufferEPKS2_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatES6_NS0_15ImageResizeTypeEPNS_6memory13HeapAllocatorE: 0x3CF78947
-        - ScePafMisc_3D21E902: 0x3D21E902
+        - _ZN3paf3rtc14GetDaysInMonthEtt: 0x3D21E902
         - _ZNK3paf4math4rect8get_TLBREv: 0x3D34B4D1
         - _ZN3paf5image10ImageArrayD1Ev: 0x3D747A33
         - _ZN3paf12BufferedFile5CloseEv: 0x3D960AD2
@@ -577,7 +577,7 @@ ScePaf:
         - ScePafMisc_57080F75: 0x57080F75
         - _ZN3paf11inputdevice6UnlockEj: 0x57258920
         - _ZN3paf5image5Image12DetectFormatEPKcxj: 0x57AD1093
-        - ScePafMisc_581735E6: 0x581735E6
+        - _ZN3paf3rtc20FormatSQLiteDateTimeEPcjPKyc: 0x581735E6
         - _ZN3paf8HttpFile4OpenEPKwPij: 0x5888F3EC
         - _ZN3paf8datetime8DateTime3UTCEv: 0x59979922
         - _ZN3paf5image6filter14TransparentizeEPNS0_11ImageBufferEPKS2_iiNS0_11ImageExtentE9ImageModeNS0_11ImageFormatEf: 0x59F22C2E

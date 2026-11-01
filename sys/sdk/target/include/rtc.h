@@ -44,9 +44,16 @@ extern "C" {
 #endif	/* defined(_LANGUAGE_C_PLUS_PLUS)||defined(__cplusplus)||defined(c_plusplus) */
 
 /* SceRtcUser */
+int sceRtcGetCurrentTick(SceRtcTick *pTick);
 int sceRtcGetCurrentClock(SceDateTime *pTime, int iTimeZone);
 int sceRtcGetCurrentClockLocalTime(SceDateTime *pTime);
 int sceRtcGetCurrentNetworkTick(SceRtcTick *pTick);
+int sceRtcConvertUtcToLocalTime(const SceRtcTick *pUtc, SceRtcTick *pLocalTime);
+int sceRtcConvertLocalTimeToUtc(const SceRtcTick *pLocalTime, SceRtcTick *pUtc);
+int sceRtcIsLeapYear(int year);
+int sceRtcGetDaysInMonth(int year, int month);
+int sceRtcGetDayOfWeek(int year, int month, int day);
+int sceRtcCheckValid(const SceDateTime *pTime);
 int sceRtcSetTick(SceDateTime *pTime, const SceRtcTick *pTick);
 int sceRtcGetTick(const SceDateTime *pTime, SceRtcTick *pTick);
 int sceRtcTickAddMicroseconds(SceRtcTick *pTick0, const SceRtcTick *pTick1, SceLong64 lAdd);
@@ -56,6 +63,11 @@ int sceRtcTickAddHours(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
 int sceRtcTickAddDays(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
 int sceRtcTickAddMonths(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
 int sceRtcTickAddYears(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
+int sceRtcFormatRFC3339(char *pszDateTime, const SceRtcTick *pUtc, int iTimeZoneMinutes);
+int sceRtcFormatRFC3339LocalTime(char *pszDateTime, const SceRtcTick *pUtc);
+int sceRtcParseRFC3339(SceRtcTick *pUtc, const char *pszDateTime);
+int sceRtcFormatRFC3339LocalTime(char *pszDateTime, const SceRtcTick *pUtc);
+int sceRtcParseDateTime(SceRtcTick *pUtc, const char *pszDateTime);
 
 #if defined(_LANGUAGE_C_PLUS_PLUS)||defined(__cplusplus)||defined(c_plusplus)
 }
