@@ -34,8 +34,20 @@ public:
 
 class FrameBufferObject {
 public:
+	/* the attachments' indices (names ours) */
+	enum {
+		COLOR,
+		DEPTH,
+		STENCIL,
+		NUM_ATTACHMENTS
+	};
+
 	class Attachment {
 	public:
+		Attachment() : m_level(0), m_width(0), m_height(0)
+		{
+		}
+
 		/* the level drawn into, and the texture's size at level 0 */
 		uint32_t m_level;
 		int32_t m_width;
@@ -43,6 +55,26 @@ public:
 		common::SharedPtr<TextureObject> m_texture;
 		common::SharedPtr<RenderBuffer> m_buffer;
 	};
+
+	FrameBufferObject() : m_size_source(NULL)
+	{
+	}
+
+	/* a texture's level drawn into as the colour, the render target sized by it (name
+	   ours) */
+	void AttachColor(const common::SharedPtr<TextureObject> &texture, uint32_t level)
+	{
+		m_attachments[COLOR].m_level = level;
+
+		int32_t width = texture->m_desc.m_width;
+		int32_t height = texture->m_desc.m_height;
+
+		m_attachments[COLOR].m_width = width;
+		m_attachments[COLOR].m_height = height;
+		m_attachments[COLOR].m_texture = texture;
+		m_attachments[COLOR].m_buffer.reset();
+		m_size_source = &m_attachments[COLOR];
+	}
 
 	/* the size of the level drawn into, nothing without an attachment to take it from */
 	SurfaceSize GetSize()
@@ -69,35 +101,36 @@ public:
 
 	SceGxmColorSurface *GetColorSurface()
 	{
-		if (m_color.m_buffer.get() != NULL)
-			return m_color.m_buffer->m_color_surface;
-		if (m_color.m_texture.get() == NULL)
+		if (m_attachments[COLOR].m_buffer.get() != NULL)
+			return m_attachments[COLOR].m_buffer->m_color_surface;
+		if (m_attachments[COLOR].m_texture.get() == NULL)
 			return NULL;
-		m_color.m_texture->PrepareColorSurface(m_color.m_level);
-		return m_color.m_texture->m_color_surfaces[m_color.m_level].get();
+		m_attachments[COLOR].m_texture->PrepareColorSurface(m_attachments[COLOR].m_level);
+		return m_attachments[COLOR]
+			.m_texture->m_color_surfaces[m_attachments[COLOR].m_level]
+			.get();
 	}
 
 	/* Sony's build keeps this one out of line */
 	__attribute__((noinline)) SceGxmDepthStencilSurface *GetDepthStencilSurface()
 	{
-		if (m_depth.m_buffer.get() != NULL)
-			return m_depth.m_buffer->m_depth_stencil_surface;
-		if (m_depth.m_texture.get() != NULL) {
-			m_depth.m_texture->PrepareDepthStencilSurface();
-			return m_depth.m_texture->m_depth_stencil_surface.get();
+		if (m_attachments[DEPTH].m_buffer.get() != NULL)
+			return m_attachments[DEPTH].m_buffer->m_depth_stencil_surface;
+		if (m_attachments[DEPTH].m_texture.get() != NULL) {
+			m_attachments[DEPTH].m_texture->PrepareDepthStencilSurface();
+			return m_attachments[DEPTH].m_texture->m_depth_stencil_surface.get();
 		}
-		if (m_stencil.m_buffer.get() != NULL)
-			return m_stencil.m_buffer->m_depth_stencil_surface;
-		if (m_stencil.m_texture.get() != NULL) {
-			m_stencil.m_texture->PrepareDepthStencilSurface();
-			return m_stencil.m_texture->m_depth_stencil_surface.get();
+		if (m_attachments[STENCIL].m_buffer.get() != NULL)
+			return m_attachments[STENCIL].m_buffer->m_depth_stencil_surface;
+		if (m_attachments[STENCIL].m_texture.get() != NULL) {
+			m_attachments[STENCIL].m_texture->PrepareDepthStencilSurface();
+			return m_attachments[STENCIL].m_texture->m_depth_stencil_surface.get();
 		}
 		return NULL;
 	}
 
-	Attachment m_color;
-	Attachment m_depth;
-	Attachment m_stencil;
+	/* Sony's deleter destroys them as one array */
+	Attachment m_attachments[NUM_ATTACHMENTS];
 	/* the attachment the render target takes its size from */
 	Attachment *m_size_source;
 };

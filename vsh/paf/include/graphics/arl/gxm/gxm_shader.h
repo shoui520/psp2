@@ -373,7 +373,8 @@ public:
 
 	/* the value kept, and written at once while a shader object is begun whose
 	   SetupUniforms did not write it */
-	void Set(const T &value)
+	template<class U>
+	void Set(const U &value)
 	{
 		if (m_param == NULL)
 			return;

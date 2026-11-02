@@ -10,6 +10,7 @@
 #include <graphics/arl/arl_defines.h>
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
 #include <graphics/arl/gxm/gxm_clear.h>
+#include <graphics/arl/gxm/gxm_framebuffer_copy.h>
 #include <graphics/arl/gxm/gxm_texture.h>
 #include <graphics/color.h>
 #include <graphics/surface/surface_screen.h>
@@ -219,7 +220,7 @@ void ArlInstance::SetSceneData(intrusive_ptr<Surface> surface)
 
 	m_next_scene.m_surface = screen;
 	if (screen == NULL) {
-		m_next_scene.m_page = 0;
+		m_next_scene.m_memory = NULL;
 	} else {
 		m_next_scene.m_bounds = Rect(screen->m_bounds_x0, screen->m_bounds_y0,
 					     screen->m_bounds_x1, screen->m_bounds_y1);
@@ -229,7 +230,7 @@ void ArlInstance::SetSceneData(intrusive_ptr<Surface> surface)
 		int32_t page;
 
 		screen->GetPageIndex(FrameBufferType_Back, &page);
-		m_next_scene.m_page = screen->Lock(page);
+		m_next_scene.m_memory = screen->Lock(page);
 		screen->Unlock();
 		m_next_scene.m_scale_mode = screen->m_scale_mode;
 		m_next_scene.m_full_size = screen->m_full_size;
@@ -647,12 +648,12 @@ namespace arl {
 void ArlInstance::CopyTexImage2D(common::SharedPtr<Texture2D> texture, int32_t level, int32_t x,
 				 int32_t y, size_t width, size_t height)
 {
-	m_copy->Copy(*this, texture, texture->m_type, level, x, y, width, height);
+	m_copy->CopyTexImage2D(*this, texture, texture->m_type, level, x, y, width, height);
 }
 
-void ArlInstance::DrawCopy(int32_t mode)
+common::SharedPtr<Texture2D> *ArlInstance::GetCopyTexture(uint32_t flags)
 {
-	m_copy->Draw(*this, mode);
+	return m_copy->GetTexture(*this, flags);
 }
 
 volatile uint32_t *ArlInstance::GetNotificationAddr(size_t index)

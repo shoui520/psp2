@@ -15,6 +15,8 @@
 #include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
 
+struct SceGxmTexture;
+
 namespace paf {
 
 class File;
@@ -138,7 +140,7 @@ public:
 	virtual void BeginScene();
 	virtual void EndScene();
 	/* the page's memory for the CPU, and back */
-	virtual int32_t Lock(int32_t page);
+	virtual void *Lock(int32_t page);
 	virtual void Unlock();
 	virtual int32_t Resize(int32_t width, int32_t height);
 	virtual void GenTexture();
@@ -156,6 +158,17 @@ public:
 
 	int32_t AddRef();
 	int32_t Release();
+
+	/* the surface made a GXM texture, mapped as given */
+	int32_t Texturize(uint32_t map_type, float offset_u, float offset_v, float scale_u,
+			  float scale_v);
+
+	int32_t Texturize()
+	{
+		return Texturize(0, 0.0f, 0.0f, 1.0f, 1.0f);
+	}
+
+	SceGxmTexture *GetRawTexture();
 
 	/* how the surface is cut for drawing (3x3, 3x1, ...), and the stretching parts' ratio */
 	void SetDivideMode(uint32_t mode);

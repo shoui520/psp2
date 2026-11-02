@@ -32,7 +32,7 @@ namespace arl {
 
 class FrameBufferObject;
 class ClearBase;
-class CopyProgram;
+class FrameBufferCopy;
 class IndexBuffer;
 class ArlInstance;
 
@@ -133,6 +133,22 @@ public:
 		return m_stack[m_depth - 1];
 	}
 
+	/* the top entry pushed again, while there is room */
+	void Push()
+	{
+		if (m_depth < MAX_DEPTH) {
+			m_stack[m_depth] = m_stack[m_depth - 1];
+			++m_depth;
+		}
+	}
+
+	/* the bottom entry stays */
+	void Pop()
+	{
+		if (m_depth > 1)
+			--m_depth;
+	}
+
 	uint32_t m_depth;
 	Entry m_stack[MAX_DEPTH];
 };
@@ -180,22 +196,22 @@ public:
 class SceneData {
 public:
 	SceneData()
-		: m_fbo(NULL), m_surface(NULL), m_page(0), m_extent_width(0), m_extent_height(0)
+		: m_fbo(NULL), m_surface(NULL), m_memory(NULL), m_extent_width(0), m_extent_height(0)
 	{
 	}
 
 	bool operator!=(const SceneData &other) const
 	{
-		return m_fbo != other.m_fbo || m_page != other.m_page ||
-		       (m_page == other.m_page &&
+		return m_fbo != other.m_fbo || m_memory != other.m_memory ||
+		       (m_memory == other.m_memory &&
 			(m_bounds.m_x0 != other.m_bounds.m_x0 ||
 			 m_bounds.m_y0 != other.m_bounds.m_y0 ||
 			 m_bounds.m_x1 != other.m_bounds.m_x1 ||
 			 m_bounds.m_y1 != other.m_bounds.m_y1)) ||
-		       (m_page == other.m_page &&
+		       (m_memory == other.m_memory &&
 			(m_extent_width != other.m_extent_width ||
 			 m_extent_height != other.m_extent_height)) ||
-		       (m_page == other.m_page &&
+		       (m_memory == other.m_memory &&
 			(m_scale_mode != other.m_scale_mode || m_full_size != other.m_full_size));
 	}
 
@@ -207,7 +223,8 @@ public:
 	FrameBufferObject *m_fbo;
 	Surface *m_surface;
 	Rect m_bounds;
-	int32_t m_page;
+	/* the memory of the surface's page drawn into */
+	void *m_memory;
 	/* copied from the screen surface, which clears them when a frame buffer is given */
 	int32_t m_extent_width;
 	int32_t m_extent_height;
@@ -269,9 +286,12 @@ public:
 	{
 		common::SharedPtr<GraphMem::GraphHeapAllocator> heap(m_heap);
 
-		if (heap.get() != NULL)
-			memory->m_addr = common::SharedPtr<GraphMem::GraphHeapAllocator>(m_heap)
-						 ->sce_paf_malloc(size);
+		if (heap.get() != NULL) {
+			GraphMem::GraphHeapAllocator *allocator =
+				common::SharedPtr<GraphMem::GraphHeapAllocator>(m_heap).get();
+
+			memory->m_addr = allocator->sce_paf_malloc(size);
+		}
 		memory->m_alloc_size = size;
 		m_used += size;
 	}
@@ -283,9 +303,12 @@ public:
 
 			common::SharedPtr<GraphMem::GraphHeapAllocator> heap(m_heap);
 
-			if (heap.get() != NULL)
-				common::SharedPtr<GraphMem::GraphHeapAllocator>(m_heap)->sce_paf_free(
-					memory->m_addr);
+			if (heap.get() != NULL) {
+				GraphMem::GraphHeapAllocator *allocator =
+					common::SharedPtr<GraphMem::GraphHeapAllocator>(m_heap).get();
+
+				allocator->sce_paf_free(memory->m_addr);
+			}
 			memory->m_addr = NULL;
 			memory->m_alloc_size = 0;
 		}
@@ -336,14 +359,6 @@ public:
 	common::SharedPtr<Texture2D> m_noise;
 };
 
-/* the program that copies into a texture, laid out when its file is converted */
-class CopyProgram {
-public:
-	void Copy(ArlInstance &gl, common::SharedPtr<TextureObject> texture, int32_t type,
-		  int32_t level, int32_t x, int32_t y, size_t width, size_t height);
-	void Draw(ArlInstance &gl, int32_t mode);
-};
-
 /* the flag GetTemporaryInitCheckFlag returns: 2 while the front end is set up */
 class InitCheckFlag {
 public:
@@ -354,7 +369,8 @@ public:
 	int32_t m_value;
 };
 
-class ArlInstance : public TransformState, public ShaderState, public ProgramState {
+class ArlInstance : public TransformState, public ShaderState, public ProgramState,
+		    public DefaultTextures, public SceneDataStack {
 public:
 	ArlInstance();
 	~ArlInstance();
@@ -379,9 +395,9 @@ public:
 	void DepthFunc(DepthFuncEnum func, FaceEnum face);
 	void ColorMask(bool r, bool g, bool b, bool a);
 	void DepthMask(bool write_enabled, FaceEnum face);
-	/* the copy program drawn in the mode given, and the scenes a frame draws into the
-	   render targets of a size (names ours) */
-	void DrawCopy(int32_t mode);
+	/* the texture the screen was last copied into, the other one with the flag 1, and the
+	   scenes a frame draws into the render targets of a size (names ours) */
+	common::SharedPtr<Texture2D> *GetCopyTexture(uint32_t flags);
 	void AddScenes(RenderTargetPool::Key key, int32_t scenes);
 
 	SceGxmContext *GetRawContext()
@@ -407,8 +423,6 @@ public:
 		}
 	}
 
-	DefaultTextures m_default_textures;
-	SceneDataStack m_scene_stack;
 	SceGxmContextParams m_context_params;
 	SceGxmContext *m_context;
 	SceneData m_next_scene;
@@ -420,7 +434,7 @@ public:
 	bool m_scene_requested;
 	bool m_in_scene;
 	ClearBase *m_clear;
-	CopyProgram *m_copy;
+	FrameBufferCopy *m_copy;
 	RenderTargetPool *m_render_target_pool;
 	IndexBuffer *m_quad_indices;
 	/* 1 to 64, set by the constructor; nothing in the front end reads them */

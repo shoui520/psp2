@@ -53,7 +53,10 @@ inline uint32_t BytesPerPixel(ImageMode format)
 /* gives surfaces their video memory */
 class VramAllocator {
 public:
-	virtual ~VramAllocator();
+	virtual ~VramAllocator()
+	{
+	}
+
 	virtual void Alloc(SurfaceMemory *memory, uint32_t size) = 0;
 	virtual void Free(SurfaceMemory *memory) = 0;
 };
