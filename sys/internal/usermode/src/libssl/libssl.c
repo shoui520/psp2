@@ -1,7 +1,5 @@
 /*
- * SceLibSsl skeleton: export stubs.
- *
- * Generated (T2). Every body is a placeholder.
+ * SceLibSsl exports. Most bodies remain placeholders.
  */
 
 #include <skeleton.h>
@@ -42,7 +40,10 @@ STUB(SceSslInternal_29AAC768)
 STUB(SceSslInternal_2B90012E)
 STUB(SceSslInternal_2F0FC3CD)
 STUB(SceSslInternal_306E2A22)
-STUB(SceSslInternal_33737FDC)
+int SceSslInternal_33737FDC(void)
+{
+	return 0;
+}
 STUB(SceSslInternal_33AC7A16)
 STUB(SceSslInternal_349B0E73)
 STUB(SceSslInternal_3746501F)
@@ -58,7 +59,9 @@ STUB(sceSslInternalIsInitalized)
 STUB(SceSslInternal_4D80D3F7)
 STUB(SceSslInternal_4F781BB6)
 STUB(SceSslInternal_568F0E80)
-STUB(SceSslInternal_56FE376A)
+void SceSslInternal_56FE376A(void)
+{
+}
 STUB(SceSslInternal_5E50CB55)
 STUB(SceSslInternal_6046C1F3)
 STUB(SceSslInternal_64BDF1BB)
@@ -83,7 +86,9 @@ STUB(SceSslInternal_B1745DAD)
 STUB(SceSslInternal_B5A099D2)
 STUB(SceSslInternal_B8E6E249)
 STUB(SceSslInternal_BF99D664)
-STUB(SceSslInternal_C0B135F0)
+void SceSslInternal_C0B135F0(void)
+{
+}
 STUB(SceSslInternal_C1299FB6)
 STUB(SceSslInternal_C4D984C2)
 STUB(SceSslInternal_CB83EA07)
