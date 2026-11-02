@@ -170,6 +170,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/surface/surface_screen.cpp
 	src/graphics/text/attributed_string.cpp
 	src/graphics/text/text_init.cpp
+	src/graphics/text/text_graphics.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
@@ -268,6 +269,10 @@ set_source_files_properties(src/graphics/text/attributed_string.cpp PROPERTIES C
 # InitText inlines both rasterizer factories (the emoji one too): budget 30 does that, 20 calls
 # CreateEmojiFontRasterizer, 40 inlines StopTextThreads (2026-11-02).
 set_source_files_properties(src/graphics/text/text_init.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+
+# TextGraphics: budget 16 and up inline the list's erase into UpdateChars and the vector's
+# destructor into the destructors; 12 and below call them (2026-11-02).
+set_source_files_properties(src/graphics/text/text_graphics.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=20)
 
 # The file units (HttpFile, LocalFile, MemFile, OpenUrl) were written and matched at the C++
 # units' budget, 30 (2026-10-31): LocalFile's constructors inline CreateImpl, its destructor Close and DeleteImpl.

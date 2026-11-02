@@ -9,9 +9,9 @@
  * HitTestChar by NID) and ScePaf-RE's header (restored from Sony's DWARF); the layout
  * attributes after the names the text object parameters read them under ("max_line_count",
  * "enlarge_line_pitch", ...), which 3.6x numbers one higher than the DWARF from max_line_count
- * on. TextGraphics, TextQueue and their methods are named by us after the mutexes Sony names
- * ScePafTextGraphicsMutex, ScePafTextLayoutMutex and ScePafTextQueueMutex, and after the
- * layout states (TextLayoutState_InvalidGraphics, ...).
+ * on. TextQueue and its methods are named by us after the mutexes Sony names
+ * ScePafTextLayoutMutex and ScePafTextQueueMutex, and after the layout states
+ * (TextLayoutState_InvalidGraphics, ...); TextGraphics is in text_graphics.h.
  */
 #ifndef PAF_GRAPHICS_TEXT_TEXT_LAYOUT_H
 #define PAF_GRAPHICS_TEXT_TEXT_LAYOUT_H
@@ -70,28 +70,9 @@ enum TextLayoutState {
 	TextLayoutState_Abort = 1024
 };
 
+class TextGraphics;
 class TextLayoutCharInfo;
 class TextLayoutLineInfo;
-
-/* the glyphs a layout draws, with its caret and selection: Update makes them again, Draw
-   draws them under a world matrix in a color with a shader */
-class TextGraphics {
-public:
-	TextGraphics(thread::RMutex *mutex);
-
-	virtual ~TextGraphics();
-	virtual void Update();
-	virtual void Draw(const math::matrix &world, const math::v4 &color, Shader *shader);
-
-	int32_t SetCaretVisible(bool visible);
-	int32_t GetCaretVisible(bool &visible);
-	int32_t SetCaretColor(const math::v4 &color);
-	int32_t GetCaretColor(math::v4 &color);
-	int32_t SetSelectionColor(const math::v4 &color);
-	int32_t GetSelectionColor(math::v4 &color);
-
-	uint8_t m_data[0x94];
-};
 
 class TextLayout {
 public:

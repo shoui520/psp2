@@ -1,15 +1,30 @@
 /*
  * paf::graph::TextSurfaceCache: the surfaces the text threads draw glyphs into, kept for
  * reuse in a surface pool of its own (Sony's name, from TextLayout::Update's mangled name; its
- * methods ours). Not in C yet: its members are left as bytes until it is.
+ * methods ours), and the surfaces it keeps. Not in C yet: its members are left as bytes until
+ * it is.
  */
 #ifndef PAF_GRAPHICS_TEXT_TEXT_SURFACE_CACHE_H
 #define PAF_GRAPHICS_TEXT_TEXT_SURFACE_CACHE_H
 
 #include <stdint.h>
+#include <graphics/surface/surface.h>
 
 namespace paf {
 namespace graph {
+
+/* a surface the cache keeps a glyph in (names ours) */
+class TextSurface : public Surface {
+public:
+	virtual ~TextSurface();
+	/* told before the glyph is drawn: nothing */
+	virtual int32_t Prepare();
+
+	/* a font's glyph, drawn in the text's color; else an image's (the emoji), drawn as it is */
+	bool IsAlphaMask();
+
+	bool m_alpha_mask;
+};
 
 class TextSurfaceCache {
 public:

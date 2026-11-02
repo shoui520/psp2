@@ -111,6 +111,25 @@ public:
 
 	~list();
 
+	_Myt &operator=(const _Myt &src)
+	{
+		_Myt(src).swap(*this);
+		return *this;
+	}
+
+	void swap(_Myt &other)
+	{
+		_Node *old_head = head;
+
+		head = other.head;
+		other.head = old_head;
+
+		size_type old_count = count;
+
+		count = other.count;
+		other.count = old_count;
+	}
+
 	iterator begin()
 	{
 		return iterator(head != NULL ? head->next : NULL);
@@ -220,12 +239,12 @@ list<_Ty, _Ax>::list(const list &other)
 		while (src != other.head) {
 			_Node *copy = (_Node *)operator new(sizeof(_Node));
 
-			if (copy != NULL) {
-				new (&copy->value) _Ty(src->value);
-			} else {
+			if (copy == NULL)
 				ScePafStdc_D608246A();
+			if (copy != NULL)
+				new (&copy->value) _Ty(src->value);
+			else
 				copy = head;
-			}
 			if (copy == head)
 				break;
 			copy->prev = tail;

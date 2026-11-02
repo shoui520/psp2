@@ -34,19 +34,27 @@ class IndexArray;
    m_instances and the reserved words ours, 1 and 0 here) */
 class PlaneObjDrawParams {
 public:
+	/* how the text graphics draw a glyph (names ours) */
+	enum Effect {
+		Effect_None = 0,
+		Effect_Shadow = 2,
+		Effect_Emboss = 3,
+		Effect_ShadowEmboss = 4
+	};
+
 	PlaneObjDrawParams(intrusive_ptr<Surface> *textures, math::v4 *tex_region)
-		: m_reserved(0), m_vertices(NULL), m_indices(NULL), m_count(0), m_instances(0),
-		  m_textures(textures), m_num_textures(4), m_tex_region(tex_region)
+		: m_effect(Effect_None), m_vertices(NULL), m_indices(NULL), m_count(0),
+		  m_instances(0), m_textures(textures), m_num_textures(4), m_tex_region(tex_region)
 	{
-		m_reserved2[0] = 0;
-		m_reserved2[1] = 0;
+		m_effect_color = NULL;
+		m_effect_color_valid = 0;
 	}
 
 	virtual ~PlaneObjDrawParams()
 	{
 	}
 
-	uint32_t m_reserved;
+	uint32_t m_effect;
 	arl::VertexArray *m_vertices;
 	/* NULL: the vertices drawn in order */
 	arl::IndexArray *m_indices;
@@ -56,7 +64,9 @@ public:
 	uint32_t m_num_textures;
 	/* NULL: the whole texture */
 	math::v4 *m_tex_region;
-	uint32_t m_reserved2[2];
+	/* the shadow's color, with whether it is set */
+	math::v4 *m_effect_color;
+	uint32_t m_effect_color_valid;
 };
 
 /* what draws a draw object (slot 2 named ours) */

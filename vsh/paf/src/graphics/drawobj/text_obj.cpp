@@ -9,6 +9,7 @@
 #include <graphics/arl/arl_defines.h>
 #include <graphics/drawobj/text_obj.h>
 #include <graphics/drawobj/draw_env.h>
+#include <graphics/text/text_graphics.h>
 #include <math/ngp/matrix.h>
 #include <math/ngp/quaternion.h>
 #include <system/system.h>
@@ -42,7 +43,7 @@ const char *TextObj::DrawObjType()
 /* the system's text style 4 deepens the colors */
 TextObj::TextObj(const DrawStyle &style)
 	: DrawObj(style),
-	  m_layout(new TextLayout(new TextGraphics(GetTextGraphicsMutex()), GetTextLayoutMutex()))
+	  m_layout(new TextLayout(new TextGraphicsImpl(GetTextGraphicsMutex()), GetTextLayoutMutex()))
 {
 	if (system::SystemParam::GetTextStyle() & 4)
 		m_draw_style.deepen_color = 1;

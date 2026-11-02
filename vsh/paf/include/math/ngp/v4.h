@@ -125,6 +125,11 @@ public:
 		return _impl;
 	}
 
+	sce::Vectormath::Simd::Aos::Vector4 &getImpl()
+	{
+		return _impl;
+	}
+
 private:
 	sce::Vectormath::Simd::Aos::Vector4 _impl;
 };
