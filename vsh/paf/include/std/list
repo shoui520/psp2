@@ -160,6 +160,8 @@ public:
 		return head->prev->value;
 	}
 
+	void push_front(const _Ty &val);
+
 	void push_back(const _Ty &val);
 
 	iterator insert(iterator where, const _Ty &val);
@@ -168,18 +170,7 @@ public:
 
 	void remove(const _Ty &val);
 
-	void pop_front()
-	{
-		_Node *node = head->next;
-
-		if (head != NULL) {
-			node->next->prev = node->prev;
-			node->prev->next = node->next;
-			destroy(&node->value);
-			operator delete(node);
-			--count;
-		}
-	}
+	void pop_front();
 
 	void pop_back()
 	{
@@ -278,6 +269,45 @@ list<_Ty, _Ax>::~list()
 	}
 	head = (_Node *)-1;
 	count = (size_type)-1;
+}
+
+template<class _Ty, class _Ax>
+void
+list<_Ty, _Ax>::pop_front()
+{
+	if (count != 0 && head != NULL) {
+		_Node *node = head->next;
+
+		node->next->prev = node->prev;
+		node->prev->next = node->next;
+		destroy(&node->value);
+		operator delete(node);
+		--count;
+	}
+}
+
+template<class _Ty, class _Ax>
+void
+list<_Ty, _Ax>::push_front(const _Ty &val)
+{
+	if (head == NULL)
+		return;
+
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node != NULL) {
+		new (&node->value) _Ty(val);
+	} else {
+		ScePafStdc_D608246A();
+		node = head;
+	}
+	if (node != head) {
+		node->prev = head;
+		node->next = head->next;
+		head->next->prev = node;
+		head->next = node;
+		++count;
+	}
 }
 
 template<class _Ty, class _Ax>

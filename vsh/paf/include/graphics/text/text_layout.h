@@ -24,6 +24,8 @@
 #include <math/ngp/matrix.h>
 #include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
+#include <thread/thread.h>
+#include <std/list>
 #include <std/string>
 #include <std/vector>
 
@@ -395,11 +397,14 @@ public:
 	int32_t Request(common::SharedPtr<TextLayout> &layout);
 	/* takes a queued layout off the queue */
 	int32_t Cancel(common::SharedPtr<TextLayout> &layout);
-	/* the queue emptied and the text threads waiting on it woken */
+	/* the next layout, waited for while there is none; ABORTED for the empty one Abort queues */
+	int32_t Pop(common::SharedPtr<TextLayout> &layout);
+	/* an empty layout queued first and every text thread woken, to end them */
 	int32_t Abort();
 
-	/* not in C yet: left as bytes until it is */
-	uint8_t m_data[0x44];
+	thread::Mutex m_mutex;
+	thread::Cond m_cond;
+	list<common::SharedPtr<TextLayout> > m_queue;
 };
 
 /* the mutexes the text graphics and layouts lock, and the text queue (names ours) */
