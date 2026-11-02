@@ -221,21 +221,9 @@ inline math::quaternion ParamInterpolate(const ParamTransition *transition,
 template<class T>
 class ParamKeys {
 public:
-	__attribute__((noinline)) ParamKeys(const char *name, T value, T min, T max, uint32_t flags)
-		: m_name(name), m_flags(flags)
-	{
-		for (int32_t i = 0; i < PARAM_KEY_NUM; i++)
-			m_key[i] = value;
-		m_key[PARAM_KEY_MIN] = min;
-		m_key[PARAM_KEY_MAX] = max;
-		m_flags |= PARAM_FLAG_RANGED;
-		if ((m_flags & PARAM_FLAG_BOOL) != 0) {
-			m_key[PARAM_KEY_MIN] = ParamSplat<T>(0.0f);
-			m_key[PARAM_KEY_MAX] = ParamSplat<T>(1.0f);
-		}
-	}
+	ParamKeys(const char *name, T value, T min, T max, uint32_t flags);
 
-	__attribute__((noinline)) ParamKeys(const char *name, T value, uint32_t flags)
+	ParamKeys(const char *name, T value, uint32_t flags)
 		: m_name(name), m_flags(flags)
 	{
 		for (int32_t i = 0; i < PARAM_KEY_NUM; i++)
@@ -267,16 +255,7 @@ public:
 	}
 
 	/* the current key moved from the start key to the target */
-	__attribute__((noinline)) void Update(const ParamTransition *transition, int32_t mode, float x)
-	{
-		if (!(m_key[PARAM_KEY_TARGET] == m_key[PARAM_KEY_CURRENT])) {
-			ParamTransitionKeys<T> keys = { m_key[PARAM_KEY_CURRENT], m_key[PARAM_KEY_START],
-							m_key[PARAM_KEY_TARGET] };
-
-			Set(ParamInterpolate(transition, keys, mode, (m_flags & PARAM_FLAG_ANGLE) != 0,
-					     (m_flags & PARAM_FLAG_ANGLE_DEGREES) != 0, x));
-		}
-	}
+	void Update(const ParamTransition *transition, int32_t mode, float x);
 
 	/* the edited key made a valid value */
 	void Normalize();
@@ -285,6 +264,77 @@ public:
 	uint32_t m_flags;
 	T m_key[PARAM_KEY_NUM];
 };
+
+/* Sony keeps a rotation's out of line */
+template<>
+inline __attribute__((noinline))
+ParamKeys<math::quaternion>::ParamKeys(const char *name, math::quaternion value, uint32_t flags)
+	: m_name(name), m_flags(flags)
+{
+	for (int32_t i = 0; i < PARAM_KEY_NUM; i++)
+		m_key[i] = value;
+	if ((flags & PARAM_FLAG_CURVE) == 0 && (flags & PARAM_FLAG_PROFILE) == 0)
+		flags |= PARAM_FLAG_UNRANGED;
+	m_flags = flags & ~PARAM_FLAG_RANGED;
+}
+
+/* Sony keeps these out of line, but for a float's */
+template<typename T>
+__attribute__((noinline)) ParamKeys<T>::ParamKeys(const char *name, T value, T min, T max,
+						   uint32_t flags)
+	: m_name(name), m_flags(flags)
+{
+	for (int32_t i = 0; i < PARAM_KEY_NUM; i++)
+		m_key[i] = value;
+	m_key[PARAM_KEY_MIN] = min;
+	m_key[PARAM_KEY_MAX] = max;
+	m_flags |= PARAM_FLAG_RANGED;
+	if ((m_flags & PARAM_FLAG_BOOL) != 0) {
+		m_key[PARAM_KEY_MIN] = ParamSplat<T>(0.0f);
+		m_key[PARAM_KEY_MAX] = ParamSplat<T>(1.0f);
+	}
+}
+
+template<>
+inline ParamKeys<float>::ParamKeys(const char *name, float value, float min, float max,
+				   uint32_t flags)
+	: m_name(name), m_flags(flags)
+{
+	for (int32_t i = 0; i < PARAM_KEY_NUM; i++)
+		m_key[i] = value;
+	m_key[PARAM_KEY_MIN] = min;
+	m_key[PARAM_KEY_MAX] = max;
+	m_flags |= PARAM_FLAG_RANGED;
+	if ((m_flags & PARAM_FLAG_BOOL) != 0) {
+		m_key[PARAM_KEY_MIN] = ParamSplat<float>(0.0f);
+		m_key[PARAM_KEY_MAX] = ParamSplat<float>(1.0f);
+	}
+}
+
+template<typename T>
+__attribute__((noinline)) void ParamKeys<T>::Update(const ParamTransition *transition, int32_t mode,
+						     float x)
+{
+	if (!(m_key[PARAM_KEY_TARGET] == m_key[PARAM_KEY_CURRENT])) {
+		ParamTransitionKeys<T> keys = { m_key[PARAM_KEY_CURRENT], m_key[PARAM_KEY_START],
+						m_key[PARAM_KEY_TARGET] };
+
+		Set(ParamInterpolate(transition, keys, mode, (m_flags & PARAM_FLAG_ANGLE) != 0,
+				     (m_flags & PARAM_FLAG_ANGLE_DEGREES) != 0, x));
+	}
+}
+
+template<>
+inline void ParamKeys<float>::Update(const ParamTransition *transition, int32_t mode, float x)
+{
+	if (!(m_key[PARAM_KEY_TARGET] == m_key[PARAM_KEY_CURRENT])) {
+		ParamTransitionKeys<float> keys = { m_key[PARAM_KEY_CURRENT], m_key[PARAM_KEY_START],
+						m_key[PARAM_KEY_TARGET] };
+
+		Set(ParamInterpolate(transition, keys, mode, (m_flags & PARAM_FLAG_ANGLE) != 0,
+				     (m_flags & PARAM_FLAG_ANGLE_DEGREES) != 0, x));
+	}
+}
 
 template<typename T>
 __attribute__((noinline)) void ParamKeys<T>::Set(T value)
@@ -409,6 +459,17 @@ inline vector<graph::ParamBase *, allocator<graph::ParamBase *> >::~vector()
 	ptr = (graph::ParamBase **)-1;
 	count = -1;
 	limit = -1;
+}
+
+namespace graph {
+class ParamSet;
+}
+
+/* a key's set by its variant: Sony's sets find it inline */
+template<>
+inline graph::ParamSet *&map<string, graph::ParamSet *>::operator[](const string &key)
+{
+	return this->_Insert(value_type(key, mapped_type()), NULL)->value.second;
 }
 
 namespace graph {

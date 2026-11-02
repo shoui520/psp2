@@ -29,7 +29,7 @@ namespace graph {
  * add is set, the values copied into another set of its kind, and the values of a key set
  * through the saved key so the others keep theirs.
  */
-#define WAVE_PARAM_SET(Set, name)							\
+#define WAVE_PARAM_SET_KEYED(Set, name, key_attr)						\
 public:											\
 	static const char *TypeName()							\
 	{										\
@@ -50,7 +50,7 @@ public:											\
 		static_cast<Set *>(dst)->m_values = m_values;				\
 	}										\
 											\
-	__attribute__((noinline)) void SetKey(int32_t key, const Values &values)	\
+	key_attr void SetKey(int32_t key, const Values &values)				\
 	{										\
 		if (key != PARAM_KEY_CURRENT) {						\
 			CopyKey(PARAM_KEY_SAVED, PARAM_KEY_CURRENT);		\
@@ -63,6 +63,9 @@ public:											\
 	}										\
 											\
 	Values m_values
+
+/* Sony keeps every set's SetKey out of line but the sky's */
+#define WAVE_PARAM_SET(Set, name)	WAVE_PARAM_SET_KEYED(Set, name, __attribute__((noinline)))
 
 /* a material's light response */
 class MaterialParamSet : public ParamSet, public ParamLink {
@@ -228,7 +231,7 @@ public:
 		Param<float> m_horizon_distortion_scale;
 	};
 
-	WAVE_PARAM_SET(SkyParamSet, "Sky");
+	WAVE_PARAM_SET_KEYED(SkyParamSet, "Sky", inline);
 };
 
 /* the FFT waves' spectrum, from the defaults of the file that makes the set */
@@ -295,6 +298,27 @@ public:
 			  m_decay(set, "decay", 0.5f, 0.0f, 1.0f, 0),
 			  m_shadow_nor_blend(set, "shadow_nor_blend", 0.4f, 0.0f, 1.0f, 0)
 		{
+		}
+
+		/* every value set as the parameter's own set would; Sony inlines it */
+		__attribute__((always_inline)) Values &operator=(const Values &other)
+		{
+			m_distortion_scale = other.m_distortion_scale;
+			m_translation = other.m_translation;
+			m_rotation = other.m_rotation;
+			m_scale = other.m_scale;
+			m_global_scale = other.m_global_scale;
+			m_uv_scale = other.m_uv_scale;
+			m_uv_rotate = other.m_uv_rotate;
+			m_center_color = other.m_center_color;
+			m_center_power = other.m_center_power;
+			m_edge_color = other.m_edge_color;
+			m_edge_power = other.m_edge_power;
+			m_cross_section = other.m_cross_section;
+			m_cross_section_flat = other.m_cross_section_flat;
+			m_decay = other.m_decay;
+			m_shadow_nor_blend = other.m_shadow_nor_blend;
+			return *this;
 		}
 
 		Param<float> m_distortion_scale;
@@ -391,9 +415,29 @@ public:
 		manager.Add(&m_keys);
 	}
 
+	~ParamSetInstance()
+	{
+	}
+
 	ParamSetKeys<S> m_keys;
 	S m_set;
 };
+
+/* Sony keeps these three out of line */
+template<>
+inline __attribute__((noinline)) ParamSetInstance<SkyParamSet>::~ParamSetInstance()
+{
+}
+
+template<>
+inline __attribute__((noinline)) ParamSetInstance<WaveInstanceParamSet>::~ParamSetInstance()
+{
+}
+
+template<>
+inline __attribute__((noinline)) ParamSetInstance<WaveRendererParamSet>::~ParamSetInstance()
+{
+}
 
 }
 }
