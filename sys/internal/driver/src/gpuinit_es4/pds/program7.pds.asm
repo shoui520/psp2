@@ -1,3 +1,4 @@
+/* Loopback program (EmitLoopBack): to TAHandler, SPM, ThreeDHandler or TwoDHandler. */
 data dword DMA0;
 data dword MASK0;
 data dword MASK1;

@@ -1,3 +1,6 @@
+/* Master: timer task: lockup detection, host cleanup and power requests. */
+
+/* Reads a run of signature registers into temporaries. */
 	.align2
 ReadSignatureRegisters:
 	ldr r7, r3, drc0
@@ -12,6 +15,7 @@ ReadSignatureRegisters:
 	nop
 	lapc
 
+/* Lockup if the TA signatures did not change since the last tick. */
 CheckTALockup:
 	mov r8, pclink
 	mov r0, #0x00000000
@@ -90,6 +94,7 @@ CheckTALockup_4:
 	wdf drc1
 	lapc
 
+/* Lockup if the 3D signatures did not change since the last tick. */
 Check3DLockup:
 	mov r8, pclink
 	mov r0, #0x00000000
@@ -152,6 +157,7 @@ Check3DLockup_3:
 	wdf drc1
 	lapc
 
+/* Lockup if the 2D signatures did not change since the last tick. */
 Check2DLockup:
 	mov r8, pclink
 	mov r0, #0x00000000
@@ -176,7 +182,7 @@ Check2DLockup_1:
 	mov r0, #0x00000002
 	ba.savelink Lockup
 Check2DLockup_2:
-	ldr r3, #769, drc0
+	ldr r3, #769, drc0	/* EUR_CR_BIF_INT_STAT */
 	wdf drc0
 	and.testtaz.chan0 !c0, p0, r3, #16
 	p0 ba Check2DLockup_3
@@ -188,6 +194,7 @@ Check2DLockup_3:
 	wdf drc1
 	lapc
 
+/* Records the locked-up core (sa8-sa10), signals the host, waits for reset. */
 Lockup:
 	and.testtanz.chan0 !c0, p0, r0, #2
 	p0 ba Lockup_3
@@ -274,7 +281,7 @@ Lockup_6:
 	idf drc0, bif
 	wdf drc0
 	mov r0, #0x00004000
-	str #75, r0
+	str #75, r0	/* EUR_CR_EVENT_STATUS */
 	ba WaitForReset
 Lockup_7:
 	idf drc0, bif
@@ -282,6 +289,7 @@ Lockup_7:
 Lockup_8:
 	lapc
 
+/* Frees a render context: completes its scenes, frees its parameter memory. */
 RenderContextCleanup:
 	ldad.bpcache r1, [r0,+#18], drc0
 	ldad.bpcache r2, [r0,+#20], drc0
@@ -387,6 +395,7 @@ RenderContextCleanup_6:
 RenderContextCleanup_7:
 	lapc
 
+/* Frees a transfer context. */
 TransferContextCleanup:
 	ldad.bpcache r1, [r0,+#5], drc0
 	wdf drc0
@@ -410,6 +419,7 @@ TransferContextCleanup:
 TransferContextCleanup_1:
 	lapc
 
+/* Frees a 2D context. */
 TwoDContextCleanup:
 	ldad.bpcache r1, [r0,+#5], drc0
 	wdf drc0
@@ -433,6 +443,7 @@ TwoDContextCleanup:
 TwoDContextCleanup_1:
 	lapc
 
+/* Frees a render target and its scenes. */
 RenderTargetCleanup:
 	mov r1, #0x00000018
 	imae.u r14, r1.low, #1.low, r0, u32
@@ -558,6 +569,7 @@ RenderTargetCleanup_8:
 RenderTargetCleanup_9:
 	lapc
 
+/* Frees a shared parameter buffer descriptor. */
 SharedPBDescCleanup:
 	ldad.bpcache r1, [sa0,+#77], drc0
 	ldad.bpcache r2, [sa0,+#78], drc0
@@ -577,6 +589,7 @@ SharedPBDescCleanup:
 	wdf drc0
 	lapc
 
+/* Timer task: lockup checks, host cleanup and power requests. */
 Timer:
 	or r0, sa9, #0x00000000
 	and.testtanz.chan0 !c0, p0, r0, #1
@@ -663,12 +676,13 @@ Timer_4:
 	idf drc0, bif
 	wdf drc0
 	mov r0, #0x00004000
-	str #75, r0
+	str #75, r0	/* EUR_CR_EVENT_STATUS */
 Timer_5:
 	ba.savelink CheckHostPowerRequest
 	mov pclink, r15
 	lapc
 
+/* Dispatches the host cleanup request by kind. */
 CheckHostCleanupRequest:
 	or r3, sa11, #0x00000000
 	and.testtaz.chan0 !c0, p0, r3, #92
@@ -690,6 +704,7 @@ CheckHostCleanupRequest:
 CheckHostCleanupRequest_1:
 	lapc
 
+/* Power down when idle: saves TA/3D PB, DPM context and secondaries. */
 CheckHostPowerRequest:
 	or r6, sa11, #0x00000000
 	and.testtanz.chan0 !c0, p0, r6, #3
@@ -722,7 +737,7 @@ CheckHostPowerRequest_3:
 CheckHostPowerRequest_4:
 	xor.testtaz.chan0 !c0, p0, r1, #1
 	p0 ba CheckHostPowerRequest_20
-	ldr r1, #708, drc0
+	ldr r1, #708, drc0	/* EUR_CR_USE0_SERV_EVENT */
 	mov r2, #0x00010000
 	wdf drc0
 	and.testtanz.chan0 !c0, p0, r1, r2
@@ -730,7 +745,7 @@ CheckHostPowerRequest_4:
 	nop
 	ba CheckHostPowerRequest_20
 CheckHostPowerRequest_5:
-	str #8883, #0
+	str #8883, #0	/* register 0x8ACC */
 	or r0, r0, #0x00000004
 	and.testtanz.chan0 !c0, p0, r6, #1
 	!p0 ba CheckHostPowerRequest_18
@@ -888,6 +903,7 @@ CheckHostPowerRequest_19:
 CheckHostPowerRequest_20:
 	lapc
 
+/* Saves the secondary attributes to memory. */
 StoreSecondaries:
 	mov r3, #0x0000002B
 	mov r1, #0x00000000

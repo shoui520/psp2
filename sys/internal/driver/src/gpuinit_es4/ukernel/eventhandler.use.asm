@@ -1,3 +1,15 @@
+/*
+ * SGX543 microkernel, master core. CMakeLists.txt lists the files of each program.
+ * Names are Imagination's; USEClkGateOn/USEClkGateAuto are Sony's.
+ *
+ * Registers: r temporaries, pa task inputs (from the PDS program), sa shared state
+ * (sa0-sa2: bases of the host's control structures), o output buffer, p0-p3 predicates.
+ * ldr/str #n: GPU register at dword n (named in the comment). ldad/stad: memory.
+ * wdf drcN: wait for loads; idf drc0, bif: wait for stores. ba.savelink/lapc: call/return.
+ * .testtaz/.testtanz: set the predicate if the result is zero/nonzero.
+ */
+
+/* Reset vector: marks sa1[14] = 0xAD002600 and parks the core. */
 ZeroPC:
 	mov r16, #0xAD002600
 	stad.bpcache [sa1,+#14], r16
@@ -6,6 +18,7 @@ ZeroPC:
 	ba WaitForReset
 	nop
 
+/* Event task: turns the event bits in pa0/pa1 into loopback requests. */
 EventHandler:
 	smlsi #0, #0, #0, #1, incrementmode, incrementmode, incrementmode, incrementmode, #0, #0, #0
 	mov r15, #0x00000000
@@ -61,7 +74,7 @@ EventHandler_5:
 	and r0, pa0, #0x00000010
 	and.testtanz.chan0 !c0, p0, r0, r0
 	!p0 ba EventHandler_6
-	ldr r10, #457, drc0
+	ldr r10, #457, drc0	/* EUR_CR_DPM_PAGE_STATUS */
 	wdf drc0
 	and r10, r10, #0xFFFF0000
 	shr r10, r10, #0x00000010
@@ -130,15 +143,15 @@ EventHandler_12:
 	and.testtanz.chan0 !c0, p0, r5, #8
 	!p0 ba EventHandler_14
 	lock #7
-	str #516, #1
+	str #516, #1	/* EUR_CR_DCU_ICTRL */
 EventHandler_13:
-	ldr r2, #70, drc0
+	ldr r2, #70, drc0	/* EUR_CR_EVENT_STATUS2 */
 	wdf drc0
 	shl.testpat.chan0 !c0, p0, r2, #24
 	p0 ba EventHandler_13
 	mov r2, #0x00000080
-	str #69, r2
-	ldr r0, #8927, drc0
+	str #69, r2	/* EUR_CR_EVENT_HOST_CLEAR2 */
+	ldr r0, #8927, drc0	/* register 0x8B7C */
 	wdf drc0
 	release #7
 EventHandler_14:
@@ -153,10 +166,12 @@ EventHandler_15:
 	phas #0, #0, pixel, end, parallel
 	or.end r0, r0, #0x00000000
 
+/* Host kick: flush the MMU page directory cache. */
 HostKickFlushPDCache:
 	phas #0, #0, pixel, end, parallel
 	or.end r0, r0, #0x00000000
 
+/* Host kick: power request. */
 HostKickPower:
 	xor.testtaz.chan0 !c0, p0, r7, #3
 	!p0 ba HostKickPower_1
@@ -185,6 +200,7 @@ HostKickPower_3:
 	nop
 	ba HostKickProcessed
 
+/* Host kick: suspend/resume a render context. */
 HostKickContextSuspend:
 	or r0, r6, #0x00000000
 	ldad.bpcache r1, [r0,+#0], drc0
@@ -222,6 +238,7 @@ HostKickContextSuspend_2:
 HostKickContextSuspend_3:
 	ba HostKickProcessed
 
+/* Host kick: queue a 2D command. */
 HostKick2D:
 	or r1, r7, #0x00000000
 	ldad.bpcache r2, [r1,+#5], drc0
@@ -253,6 +270,7 @@ HostKick2D_1:
 HostKick2D_2:
 	ba HostKickProcessed
 
+/* Host kick: queue a transfer command. */
 HostKickTransfer:
 	or r1, r7, #0x00000000
 	ldad.bpcache r2, [r1,+#5], drc0
@@ -283,6 +301,7 @@ HostKickTransfer_2:
 	wdf drc0
 	ba HostKickProcessed
 
+/* Host kick: queue a TA command. */
 HostKickTA:
 	or r1, r7, #0x00000000
 	ldad.bpcache r2, [r1,+#5], drc0
@@ -316,6 +335,7 @@ HostKickTA_2:
 	wdf drc0
 	ba HostKickProcessed
 
+/* Host kick: free a context or render target. */
 HostKickCleanup:
 	or r1, sa11, #0x00000000
 	xor.testtaz.chan0 !c0, p0, r6, #1
@@ -352,9 +372,11 @@ HostKickCleanup_5:
 	ba HostKickProcessed
 	nop
 
+/* Host kick: recheck the queues. */
 HostKickProcess_Queues:
 	ba HostKickProcessed
 
+/* Host kick: change the performance counter setup. */
 HostKickSetHWPerfStatus:
 	ldad.bpcache r0, [sa0,+#74], drc0
 	mov r1, #0xFFFFFFFF
@@ -368,6 +390,7 @@ HostKickSetHWPerfStatus_1:
 	ba.savelink UpdateHWPerfRegs
 	ba HostKickProcessed
 
+/* Acknowledge a host kick, then start queued TA/3D/2D work. */
 HostKickProcessed:
 	mov sa12, #0x00000000
 	mov sa13, #0x00000007
@@ -376,7 +399,7 @@ HostKickProcessed:
 	p0 ba HostKickProcessed_1
 	and r0, r0, ~#0x00000040
 	or sa9, r0, #0x00000000
-	str #423, #1
+	str #423, #1	/* EUR_CR_DPM_OUTOFMEM */
 	idf drc0, bif
 	wdf drc0
 HostKickProcessed_1:
@@ -393,10 +416,11 @@ HostKickProcessed_1:
 	phas #0, #0, pixel, end, parallel
 	or.end r0, r0, #0x00000000
 
+/* Host kick: report core ID, revision and features. */
 HostKickGetMiscInfo:
 	or r2, r7, #0x00000000
-	ldr r1, #9, drc0
-	ldr r3, #8, drc0
+	ldr r1, #9, drc0	/* EUR_CR_CORE_REVISION */
+	ldr r3, #8, drc0	/* EUR_CR_CORE_ID */
 	wdf drc0
 	stad.bpcache [r2,+#1], r1
 	stad.bpcache [r2,+#2], r3
@@ -457,6 +481,7 @@ HostKickGetMiscInfo_1:
 	wdf drc0
 	ba HostKickProcessed
 
+/* Host kick: program data breakpoint n (r6): regs 0x3D1 + 3n, 0x13BA + 3n. */
 HostKickDataBreakpoint:
 	mov r1, #0x000003D1
 	imae.u r1, r6.low, #3.low, r1, u32

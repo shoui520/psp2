@@ -1,3 +1,6 @@
+/* SGX543 microkernel, slave cores: event handler and supervisor entry. */
+
+/* Slave event task: just ends. */
 SlaveEventHandler:
 	smlsi #0, #0, #0, #1, incrementmode, incrementmode, incrementmode, incrementmode, #0, #0, #0
 	mov r15, #0x00000000
@@ -5,6 +8,7 @@ SlaveEventHandler:
 	phas #0, #0, pixel, end, parallel
 	or.end r0, r0, #0x00000000
 
+/* Calls the slave supervisor program (sprvv), keeping pclink. */
 JumpToSlaveSupervisor:
 	mov r31, pclink
 	shl r31, r31, #0x00000004

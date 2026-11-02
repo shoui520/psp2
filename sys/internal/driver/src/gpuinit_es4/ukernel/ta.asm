@@ -1,3 +1,6 @@
+/* Master: TA (geometry) events, queue and kick. */
+
+/* TA event task: TA terminate, then TAFinished. */
 TAEventHandler:
 	smlsi #0, #0, #0, #1, incrementmode, incrementmode, incrementmode, incrementmode, #0, #0, #0
 	mov r15, #0x00000000
@@ -5,12 +8,12 @@ TAEventHandler:
 	and r0, pa0, #0x00000010
 	and.testtanz.chan0 !c0, p0, r0, r0
 	!p0 br TAEventHandler_1
-	ldr r10, #457, drc0
+	ldr r10, #457, drc0	/* EUR_CR_DPM_PAGE_STATUS */
 	wdf drc0
 	and r10, r10, #0xFFFF0000
 	shr r10, r10, #0x00000010
 	mov r0, #0x00002000
-	str #77, r0
+	str #77, r0	/* EUR_CR_EVENT_HOST_CLEAR */
 	mov r15, #0x000006BE
 	ba TAFinished
 TAEventHandler_1:
@@ -19,6 +22,7 @@ TAEventHandler_1:
 	ba.savelink CommonProgramEnd
 	mov pclink, r23
 
+/* TA loopback task: TAFinished, FindTA or InitPBLoopback. */
 TAHandler:
 	smlsi #0, #0, #0, #1, incrementmode, incrementmode, incrementmode, incrementmode, #0, #0, #0
 	mov r15, #0x00000000
@@ -32,7 +36,7 @@ TAHandler:
 	and.testtanz.chan0 !c0, p0, r0, r0
 	!p0 ba TAHandler_1
 	mov r0, #0x00002000
-	str #77, r0
+	str #77, r0	/* EUR_CR_EVENT_HOST_CLEAR */
 	mov r15, #0x000006D1
 	ba TAFinished
 TAHandler_1:
@@ -53,6 +57,7 @@ TAHandler_3:
 	ba.savelink CommonProgramEnd
 	mov pclink, r23
 
+/* TA command done: flush TE/MTE/SLC, update DPM and scene, notify host. */
 TAFinished:
 	mov sa12, #0x00000000
 	mov sa13, #0x00000007
@@ -90,28 +95,28 @@ TAFinished_2:
 	stad.bpcache [r14,+#32], r2
 	idf drc0, bif
 	wdf drc0
-	str #224, #1
-	str #421, #2
-	str #422, #2
-	str #147, #1
+	str #224, #1	/* EUR_CR_TE_RGNHDR_INIT */
+	str #421, #2	/* EUR_CR_DPM_TASK_STATE */
+	str #422, #2	/* EUR_CR_DPM_TASK_CONTROL */
+	str #147, #1	/* EUR_CR_MTE_OTPM_OP */
 	mov r2, #0x40000000
-	str #137, r2
+	str #137, r2	/* EUR_CR_TE_TPCCONTROL */
 	mov r3, #0x00100640
 TAFinished_3:
-	ldr r2, #75, drc0
+	ldr r2, #75, drc0	/* EUR_CR_EVENT_STATUS */
 	wdf drc0
 	and r2, r2, r3
 	xor.testtanz.chan0 !c0, p0, r2, r3
 	p0 ba TAFinished_3
 	mov r3, #0x00100640
-	str #77, r3
+	str #77, r3	/* EUR_CR_EVENT_HOST_CLEAR */
 TAFinished_4:
-	ldr r2, #70, drc0
+	ldr r2, #70, drc0	/* EUR_CR_EVENT_STATUS2 */
 	wdf drc0
 	shl.testpat.chan0 !c0, p0, r2, #26
 	p0 ba TAFinished_4
 	mov r3, #0x00000020
-	str #69, r3
+	str #69, r3	/* EUR_CR_EVENT_HOST_CLEAR2 */
 	mov r16, #0x00000000
 	mov r23, pclink
 	ba.savelink SwitchEDMBIFBank
@@ -155,13 +160,13 @@ TAFinished_6:
 	shl.testpat.chan0 !c0, p1, r0, #22
 	p1 ba TAFinished_7
 	ldad.bpcache r1, [sa0,+#63], drc0
-	ldr r2, #393, drc0
+	ldr r2, #393, drc0	/* EUR_CR_DPM_ZLS_PAGE_THRESHOLD */
 	wdf drc0
 	ima16.s r2, r2, #1, r1.neg, u16, u16
-	str #393, r2
+	str #393, r2	/* EUR_CR_DPM_ZLS_PAGE_THRESHOLD */
 	ldad.bpcache r2, [sa0,+#62], drc0
 	wdf drc0
-	str #394, r2
+	str #394, r2	/* EUR_CR_DPM_TA_GLOBAL_LIST */
 	mov r23, pclink
 	ba.savelink DPMReloadFreeList
 	mov pclink, r23
@@ -173,7 +178,7 @@ TAFinished_7:
 	wdf drc0
 	mov r2, #0x00000100
 	ima16.s r3, r3, #1, r2.neg, u16, u16
-	str #393, r3
+	str #393, r3	/* EUR_CR_DPM_ZLS_PAGE_THRESHOLD */
 	mov r2, #0xBFFFFFFF
 	and r0, r0, r2
 	or sa9, r0, #0x00000000
@@ -227,7 +232,7 @@ TAFinished_10:
 	ldad.bpcache r6, [sa0,+#51], drc0
 	wdf drc0
 	ldad r2, [r0,+#11], drc0
-	ldr r4, #457, drc1
+	ldr r4, #457, drc1	/* EUR_CR_DPM_PAGE_STATUS */
 	wdf drc1
 	and r4, r4, #0xFFFF0000
 	shr r4, r4, #0x00000010
@@ -239,13 +244,13 @@ TAFinished_10:
 	mov r3, #0x10000000
 	and.testtaz.chan0 !c0, p1, r2, r3
 	p1 ba TAFinished_12
-	str #4939, #32
+	str #4939, #32	/* EUR_CR_MASTER_SLC_CTRL_FLUSH */
 TAFinished_11:
-	ldr r2, #4932, drc0
+	ldr r2, #4932, drc0	/* EUR_CR_MASTER_SLC_EVENT_STATUS */
 	wdf drc0
 	and.testtaz.chan0 !c0, p1, r2, #2
 	p1 ba TAFinished_11
-	str #4933, #2
+	str #4933, #2	/* EUR_CR_MASTER_SLC_EVENT_CLEAR */
 TAFinished_12:
 	ldad r1, [r0,+#23], drc0
 	wdf drc0
@@ -263,7 +268,7 @@ TAFinished_13:
 	p0 ba TAFinished_13
 TAFinished_14:
 	mov r2, #0x00004000
-	str #75, r2
+	str #75, r2	/* EUR_CR_EVENT_STATUS */
 	ldad.bpcache r14, [sa0,+#50], drc0
 	ldad r1, [r0,+#1], drc1
 	wdf drc0
@@ -273,7 +278,7 @@ TAFinished_14:
 	!p0 mov r7, #0x07C00000
 	!p0 and.testtanz.chan0 !c0, p0, r1, r7
 	p0 ba TAFinished_15
-	ldr r7, #4297, drc1
+	ldr r7, #4297, drc1	/* EUR_CR_MASTER_VDM_BATCH_NUM_STATUS */
 	wdf drc1
 	or r7, r7, #0x40000000
 	mov r30, #0x08001008
@@ -282,10 +287,10 @@ TAFinished_14:
 	stad [r31,+#0], #0
 	idf drc1, bif
 	wdf drc1
-	str #4296, #1
-	str #4296, #0
-	str #200, #1
-	str #200, #0
+	str #4296, #1	/* EUR_CR_MASTER_VDM_BATCH_NUM */
+	str #4296, #0	/* EUR_CR_MASTER_VDM_BATCH_NUM */
+	str #200, #1	/* EUR_CR_VDM_BATCH_NUM */
+	str #200, #0	/* EUR_CR_VDM_BATCH_NUM */
 TAFinished_15:
 	ldad r7, [r0,+#8], drc1
 	and.testtaz.chan0 !c0, p0, r1, #5
@@ -300,14 +305,14 @@ TAFinished_15:
 	stad.bpcache [sa0,+#50], #0
 	idf drc0, bif
 	mov r2, #0x40000000
-	str #137, r2
+	str #137, r2	/* EUR_CR_TE_TPCCONTROL */
 TAFinished_16:
-	ldr r2, #75, drc1
+	ldr r2, #75, drc1	/* EUR_CR_EVENT_STATUS */
 	wdf drc1
 	shl.testpat.chan0 !c0, p3, r2, #21
 	p3 ba TAFinished_16
 	mov r2, #0x00000400
-	str #77, r2
+	str #77, r2	/* EUR_CR_EVENT_HOST_CLEAR */
 	wdf drc0
 TAFinished_17:
 	ldad.bpcache r0, [sa0,+#52], drc0
@@ -509,6 +514,7 @@ TAFinished_32:
 	nop
 	lapc
 
+/* Picks the next runnable TA command: KickTA, or DummyProcessTA if empty. */
 FindTA:
 	or r1, sa9, #0x00000000
 	and.testtanz.chan0 !c0, p0, r1, #4
@@ -725,6 +731,7 @@ FindTA_21:
 FindTA_22:
 	lapc
 
+/* Updates the render details from the TA command. */
 RenderDetailsUpdate:
 	ldad r1, [r0,+#16], drc0
 	ldad r2, [r0,+#8], drc1
@@ -814,6 +821,7 @@ RenderDetailsUpdate_7:
 	wdf drc1
 	lapc
 
+/* Advances the TA command buffer read offset. */
 AdvanceTACCBROff:
 	ldad.bpcache r2, [r0,+#4], drc0
 	wdf drc0
@@ -832,6 +840,7 @@ AdvanceTACCBROff:
 	wdf drc0
 	lapc
 
+/* Completes a TA command without running the TA. */
 DummyProcessTA:
 	mov sa5, #0x00000002
 	ldad.bpcache r2, [r14,+#32], drc0
@@ -932,7 +941,7 @@ DummyProcessTA_6:
 	p0 ba DummyProcessTA_6
 DummyProcessTA_7:
 	mov r2, #0x00004000
-	str #75, r2
+	str #75, r2	/* EUR_CR_EVENT_STATUS */
 	ldad r2, [r1,+#1], drc1
 	ldad r3, [r1,+#8], drc1
 	ldad.bpcache r4, [r14,+#32], drc0
@@ -1046,6 +1055,7 @@ DummyProcessTA_14:
 	mov pclink, r23
 	lapc
 
+/* Starts a TA command: DPM state, PB, page directory, TE/MTE/VDM registers. */
 KickTA:
 	mov sa5, #0x00000002
 	stad.bpcache [sa0,+#52], r0
@@ -1086,7 +1096,7 @@ KickTA:
 	!p0 ba KickTA_1
 	ba KickTA_2
 KickTA_1:
-	ldr r4, #396, drc0
+	ldr r4, #396, drc0	/* EUR_CR_DPM_STATE_CONTEXT_ID */
 	wdf drc0
 	and r4, r4, #0x00000004
 	shr r11, r4, #0x00000002
@@ -1202,14 +1212,14 @@ KickTA_7:
 	imae.u r2, r2.low, #1.low, r1, u32
 	ldad.fetch8 r3, [r2,#0++], drc0
 	wdf drc0
-	str #129, r3
-	str #130, r4
-	str #131, r5
-	str #132, r6
-	str #133, r7
-	str #134, r8
-	str #142, r9
-	str #143, r10
+	str #129, r3	/* EUR_CR_TE_AA */
+	str #130, r4	/* EUR_CR_TE_MTILE1 */
+	str #131, r5	/* EUR_CR_TE_MTILE2 */
+	str #132, r6	/* EUR_CR_TE_SCREEN */
+	str #133, r7	/* EUR_CR_TE_MTILE */
+	str #134, r8	/* EUR_CR_TE_PSG */
+	str #142, r9	/* EUR_CR_VDM_CTRL_STREAM_BASE */
+	str #143, r10	/* EUR_CR_MTE_CTRL */
 	mov r3, #0x00002087
 	or r4, sa38, #0x00000000
 KickTA_8:
@@ -1244,23 +1254,23 @@ KickTA_11:
 	imae.u r2, r3.low, #4.low, r2, u32
 	ldad.fetch7 r3, [r2,#0++], drc0
 	wdf drc0
-	str #144, r3
-	str #145, r4
-	str #146, r5
-	str #641, r6
-	str #680, r7
-	str #804, r8
-	str #226, r9
+	str #144, r3	/* EUR_CR_MTE_WCOMPARE */
+	str #145, r4	/* EUR_CR_MTE_WCLAMP */
+	str #146, r5	/* EUR_CR_MTE_SCREEN */
+	str #641, r6	/* EUR_CR_USE_LD_REDIRECT */
+	str #680, r7	/* EUR_CR_USE_ST_RANGE */
+	str #804, r8	/* EUR_CR_BIF_TA_REQ_BASE */
+	str #226, r9	/* EUR_CR_MTE_FIXED_POINT */
 	ldad r3, [r2,#1++], drc0
 	wdf drc0
-	str #148, r3
+	str #148, r3	/* EUR_CR_MTE_MULTISAMPLECTL */
 	ldad r3, [r2,#1++], drc0
 	wdf drc0
-	str #4177, r3
+	str #4177, r3	/* EUR_CR_MASTER_MP_PRIMITIVE */
 	mov r23, pclink
 	ba.savelink USEClkGateOn
 	mov pclink, r23
-	ldr r4, #669, drc0
+	ldr r4, #669, drc0	/* EUR_CR_DMS_CTRL */
 	ldad r5, [r1,+#6], drc1
 	wdf drc1
 	ldad r6, [r1,+#7], drc1
@@ -1272,10 +1282,10 @@ KickTA_11:
 	mov r7, #0x20000000
 	and.testtaz.chan0 !c0, p3, r2, r7
 	p3 ba KickTA_12
-	ldr r3, #457, drc0
+	ldr r3, #457, drc0	/* EUR_CR_DPM_PAGE_STATUS */
 	wdf drc0
 	shr r3, r3, #0x00000010
-	ldr r2, #393, drc0
+	ldr r2, #393, drc0	/* EUR_CR_DPM_ZLS_PAGE_THRESHOLD */
 	wdf drc0
 	isub16.testnat.chan0 !c0, p3, r3, r2
 	p3 ba KickTA_13
@@ -1285,7 +1295,7 @@ KickTA_13:
 	wdf drc0
 	and r4, r4, ~#0x3C000000
 	or r4, r4, r5
-	str #669, r4
+	str #669, r4	/* EUR_CR_DMS_CTRL */
 	or r16, r0, #0x00000000
 	mov r17, #0x00000000
 	mov r23, pclink
@@ -1299,43 +1309,43 @@ KickTA_13:
 	wdf drc0
 	and.testtaz.chan0 !c0, p0, r2, r4
 	p0 ba KickTA_16
-	str #516, #1
+	str #516, #1	/* EUR_CR_DCU_ICTRL */
 	mov r5, #0x00000080
 KickTA_14:
-	ldr r4, #70, drc0
+	ldr r4, #70, drc0	/* EUR_CR_EVENT_STATUS2 */
 	wdf drc0
 	and.testtaz.chan0 !c0, p0, r4, r5
 	p0 ba KickTA_14
 	mov r5, #0x00000080
-	str #69, r5
-	str #514, #1
+	str #69, r5	/* EUR_CR_EVENT_HOST_CLEAR2 */
+	str #514, #1	/* EUR_CR_TCU_ICTRL */
 	mov r5, #0x04000000
 KickTA_15:
-	ldr r4, #75, drc0
+	ldr r4, #75, drc0	/* EUR_CR_EVENT_STATUS */
 	wdf drc0
 	and.testtaz.chan0 !c0, p0, r4, r5
 	p0 ba KickTA_15
 	mov r5, #0x04000000
-	str #77, r5
+	str #77, r5	/* EUR_CR_EVENT_HOST_CLEAR */
 KickTA_16:
 	mov r4, #0x00000020
 	and.testtaz.chan0 !c0, p0, r2, r4
 	p0 ba KickTA_18
-	str #692, #1
-	str #696, #1
+	str #692, #1	/* EUR_CR_PDS_INV0 */
+	str #696, #1	/* EUR_CR_PDS_INV_CSC */
 KickTA_17:
-	ldr r4, #78, drc0
+	ldr r4, #78, drc0	/* EUR_CR_PDS_CACHE_STATUS */
 	wdf drc0
 	and r4, r4, #0x00000003
 	xor.testtanz.chan0 !c0, p0, r4, #3
 	p0 ba KickTA_17
-	str #80, #3
+	str #80, #3	/* EUR_CR_PDS_CACHE_HOST_CLEAR */
 KickTA_18:
 	and.testtaz.chan0 !c0, p0, r2, #16
 	p0 ba KickTA_19
 	and.testtanz.chan0 !c0, p0, r22, #64
 	p0 ba KickTA_19
-	str #642, #1
+	str #642, #1	/* EUR_CR_USE_CACHE */
 	or r22, r22, #0x00000040
 KickTA_19:
 	mov r16, #0x00000001
@@ -1360,7 +1370,7 @@ KickTA_19:
 	p1 mov r5, #0x00000004
 	p1 or r3, r4, #0x00000000
 	p1 ba KickTA_20
-	ldr r5, #396, drc0
+	ldr r5, #396, drc0	/* EUR_CR_DPM_STATE_CONTEXT_ID */
 	wdf drc0
 	and r5, r5, #0x00000002
 	shr r5, r5, #0x00000001
@@ -1375,11 +1385,11 @@ KickTA_20:
 	stad.bpcache [sa0,+#50], r14
 	idf drc0, bif
 	wdf drc0
-	ldr r2, #396, drc0
+	ldr r2, #396, drc0	/* EUR_CR_DPM_STATE_CONTEXT_ID */
 	wdf drc0
 	and r2, r2, ~#0x00000004
 	or r2, r2, r5
-	str #396, r2
+	str #396, r2	/* EUR_CR_DPM_STATE_CONTEXT_ID */
 	shr r5, r5, #0x00000002
 	and.testtaz.chan0 !c0, p1, r3, r3
 	!p1 xor.testtaz.chan0 !c0, p1, r3, r14
@@ -1438,36 +1448,36 @@ KickTA_22:
 	str r2, #1
 	mov r2, #0x000010DA
 	str r2, #1
-	str #224, #1
-	ldr r2, #396, drc0
+	str #224, #1	/* EUR_CR_TE_RGNHDR_INIT */
+	ldr r2, #396, drc0	/* EUR_CR_DPM_STATE_CONTEXT_ID */
 	wdf drc0
 	and r2, r2, ~#0x00000001
 	or r2, r2, #0x00000008
 	or r2, r2, r5
-	str #396, r2
-	str #421, #2
+	str #396, r2	/* EUR_CR_DPM_STATE_CONTEXT_ID */
+	str #421, #2	/* EUR_CR_DPM_TASK_STATE */
 	mov r3, #0x00000240
-	str #422, #2
-	str #147, #1
+	str #422, #2	/* EUR_CR_DPM_TASK_CONTROL */
+	str #147, #1	/* EUR_CR_MTE_OTPM_OP */
 	or r3, r3, #0x00100000
 KickTA_23:
-	ldr r2, #75, drc0
+	ldr r2, #75, drc0	/* EUR_CR_EVENT_STATUS */
 	wdf drc0
 	and r2, r2, r3
 	xor.testtanz.chan0 !c0, p0, r2, r3
 	p0 ba KickTA_23
-	str #77, r3
+	str #77, r3	/* EUR_CR_EVENT_HOST_CLEAR */
 	mov r3, #0x00000000
 	mov r4, #0x00000000
 	or r3, r3, #0x00000020
 	or r4, r4, #0x00000020
 KickTA_24:
-	ldr r2, #70, drc0
+	ldr r2, #70, drc0	/* EUR_CR_EVENT_STATUS2 */
 	wdf drc0
 	and r2, r2, r3
 	xor.testtanz.chan0 !c0, p0, r2, r3
 	p0 ba KickTA_24
-	str #69, r4
+	str #69, r4	/* EUR_CR_EVENT_HOST_CLEAR2 */
 	mov r4, #0x000010D8
 KickTA_25:
 	ldr r2, r4, drc0
@@ -1485,7 +1495,7 @@ KickTA_26:
 	mov r3, #0x00001208
 	ldr r3, r3, drc0
 	wdf drc0
-	str #468, r3
+	str #468, r3	/* EUR_CR_DPM_MTILE_ABORTED */
 KickTA_27:
 	ldad.bpcache r2, [sa0,+#51], drc0
 	mov r4, #0x00000144
@@ -1508,12 +1518,12 @@ KickTA_29:
 	ima16.s r4, r4, #1, r5.neg, u16, u16
 	imae.u r3, r4.low, #4.low, r3, u32
 	ldad.bpcache r3, [r14,+#32], drc0
-	ldr r4, #134, drc0
+	ldr r4, #134, drc0	/* EUR_CR_TE_PSG */
 	wdf drc0
 	or r4, r4, #0x01000000
 	shl.testnat.chan0 !c0, p0, r3, #22
 	p0 or r4, r4, #0x00200000
-	str #134, r4
+	str #134, r4	/* EUR_CR_TE_PSG */
 	stad.bpcache [sa0,+#87], #0
 	ldad.bpcache r3, [sa0,+#86], drc0
 	wdf drc0
@@ -1588,7 +1598,7 @@ KickTA_35:
 	mov r9, pclink
 	ba.savelink RenderDetailsUpdate
 	mov pclink, r9
-	ldr r10, #457, drc0
+	ldr r10, #457, drc0	/* EUR_CR_DPM_PAGE_STATUS */
 	wdf drc0
 	and r10, r10, #0xFFFF0000
 	shr r10, r10, #0x00000010
@@ -1613,7 +1623,7 @@ KickTA_35:
 	idf drc0, bif
 	wdf drc0
 KickTA_36:
-	str #128, #1
+	str #128, #1	/* EUR_CR_VDM_START */
 	ldad.bpcache r3, [sa0,+#66], drc0
 	wdf drc0
 	or r3, r3, #0x10000000

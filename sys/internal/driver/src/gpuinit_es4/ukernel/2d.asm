@@ -1,3 +1,6 @@
+/* Master: 2D (PTLA) events, queue and kick. */
+
+/* 2D event task: TwoDComplete. */
 	.align2
 TwoDEventHandler:
 	smlsi #0, #0, #0, #1, incrementmode, incrementmode, incrementmode, incrementmode, #0, #0, #0
@@ -7,7 +10,7 @@ TwoDEventHandler:
 	and.testtanz.chan0 !c0, p0, r0, r0
 	!p0 br TwoDEventHandler_1
 	mov r0, #0x08000000
-	str #4173, r0
+	str #4173, r0	/* EUR_CR_MASTER_EVENT_HOST_CLEAR */
 	mov r15, #0x00001DA8
 	ba TwoDComplete
 TwoDEventHandler_1:
@@ -16,6 +19,7 @@ TwoDEventHandler_1:
 	ba.savelink CommonProgramEnd
 	mov pclink, r23
 
+/* 2D loopback task: TwoDComplete or Find2D. */
 TwoDHandler:
 	smlsi #0, #0, #0, #1, incrementmode, incrementmode, incrementmode, incrementmode, #0, #0, #0
 	mov r15, #0x00000000
@@ -29,7 +33,7 @@ TwoDHandler:
 	and.testtanz.chan0 !c0, p0, r0, r0
 	!p0 ba TwoDHandler_1
 	mov r0, #0x08000000
-	str #4173, r0
+	str #4173, r0	/* EUR_CR_MASTER_EVENT_HOST_CLEAR */
 	mov r15, #0x00001DBB
 	ba TwoDComplete
 TwoDHandler_1:
@@ -43,20 +47,21 @@ TwoDHandler_2:
 	ba.savelink CommonProgramEnd
 	mov pclink, r23
 
+/* 2D command done: surface op counts, command buffer, notify host. */
 TwoDComplete:
 	or r0, sa8, #0x00000000
 	and r0, r0, ~#0x00000001
 	or sa8, r0, #0x00000000
-	ldr r3, #4104, drc0
+	ldr r3, #4104, drc0	/* EUR_CR_MASTER_CLKGATECTL2 */
 	wdf drc0
 	and r3, r3, ~#0x00000300
 	or r3, r3, #0x00000200
-	str #4104, r3
+	str #4104, r3	/* EUR_CR_MASTER_CLKGATECTL2 */
 	ldad.bpcache r1, [sa0,+#47], drc0
 	wdf drc0
 	ba.savelink Update2DSurfaceOps
 	mov r0, #0x00004000
-	str #75, r0
+	str #75, r0	/* EUR_CR_EVENT_STATUS */
 	ldad.bpcache r0, [sa0,+#48], drc0
 	wdf drc0
 	ba.savelink Advance2DCCBROff
@@ -106,6 +111,7 @@ TwoDComplete_3:
 	mov pclink, r15
 	lapc
 
+/* Picks the next runnable 2D command: Kick2D or DummyProcess2D. */
 Find2D:
 	or r1, sa11, #0x00000000
 	or r0, sa8, #0x00000000
@@ -234,6 +240,7 @@ Find2D_15:
 Find2D_16:
 	lapc
 
+/* Starts a 2D command on the PTLA. */
 Kick2D:
 	mov sa5, #0x00000002
 	stad.bpcache [sa0,+#48], r0
@@ -266,11 +273,11 @@ Kick2D:
 	ba.savelink SetupRequestor
 	mov pclink, r23
 	ldad r2, [r1,+#3], drc1
-	ldr r3, #4104, drc0
+	ldr r3, #4104, drc0	/* EUR_CR_MASTER_CLKGATECTL2 */
 	wdf drc0
 	and r3, r3, ~#0x00000300
 	or r3, r3, #0x00000100
-	str #4104, r3
+	str #4104, r3	/* EUR_CR_MASTER_CLKGATECTL2 */
 	mov r3, #0x00000010
 	imae.u r3, r3.low, #1.low, r1, u32
 	ldad r4, [r3,#1++], drc0
@@ -278,7 +285,7 @@ Kick2D:
 Kick2D_1:
 	isub16.testtaz.chan0 r2, p0, r2, #1
 	wdf drc0
-	str #4192, r4
+	str #4192, r4	/* EUR_CR_MASTER_PTLA_SLAVE_CMD_0 */
 	!p0 ldad r4, [r3,#1++], drc0
 	!p0 ba Kick2D_1
 	stad.bpcache [sa0,+#91], #0
@@ -332,6 +339,7 @@ Kick2D_4:
 	wdf drc0
 	lapc
 
+/* Advances the 2D command buffer read offset. */
 Advance2DCCBROff:
 	ldad.bpcache r2, [r0,+#4], drc0
 	wdf drc0
@@ -350,6 +358,7 @@ Advance2DCCBROff:
 	wdf drc0
 	lapc
 
+/* Updates the op counts of a 2D command's surfaces. */
 Update2DSurfaceOps:
 	mov sa12, #0x00000000
 	mov sa13, #0x00000007
@@ -416,7 +425,7 @@ Update2DSurfaceOps_7:
 	p0 ba Update2DSurfaceOps_8
 	and r2, r2, ~#0x00000040
 	or sa9, r2, #0x00000000
-	ldr r2, #456, drc0
+	ldr r2, #456, drc0	/* EUR_CR_DPM_ABORT_STATUS_MTILE */
 	wdf drc0
 	and r2, r2, #0x000000E0
 	shr r2, r2, #0x00000005
@@ -424,11 +433,12 @@ Update2DSurfaceOps_7:
 	shl r3, r3, #0x0000000C
 	or r3, r3, #0x000001A7
 	str r3, #1
-	str #423, #1
+	str #423, #1	/* EUR_CR_DPM_OUTOFMEM */
 	wdf drc0
 Update2DSurfaceOps_8:
 	lapc
 
+/* Completes a 2D command without running it. */
 DummyProcess2D:
 	mov sa5, #0x00000002
 	mov r7, pclink
@@ -438,7 +448,7 @@ DummyProcess2D:
 	mov pclink, r7
 	and.testtanz.chan0 !c0, p1, r2, r2
 	mov r2, #0x00004000
-	str #75, r2
+	str #75, r2	/* EUR_CR_EVENT_STATUS */
 	ldad.bpcache r1, [r0,+#1], drc0
 	wdf drc0
 	ldad.bpcache r4, [r0,+#7], drc0

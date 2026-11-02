@@ -1,3 +1,4 @@
+/* Clear clip workaround, middle program: as program9, the USE kick predicated on if0. */
 data dword USE0;
 data dword USE1;
 data dword DMA0_0;

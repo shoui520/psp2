@@ -1,3 +1,4 @@
+/* Event program: TA, 3D, 2D and SPM events to their *EventHandler, the rest to EventHandler. */
 data dword DMA0;
 data dword DMA1;
 data dword USE1;

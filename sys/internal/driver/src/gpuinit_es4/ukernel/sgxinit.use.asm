@@ -1,3 +1,6 @@
+/* Master: initialisation and hardware recovery. */
+
+/* First init task: emits the PDS tasks that run the rest of init. */
 InituKernelPrimary1:
 	mov r0, #0xDEADBEEF
 	nop
@@ -17,6 +20,7 @@ InituKernelPrimary1:
 	phas #0, #0, pixel, end, parallel
 	nop.end
 
+/* Init secondary program: loads the attribute registers from memory. */
 InituKernelSecondary:
 	nop
 	phas #0, #0, pixel, end, parallel
@@ -26,15 +30,16 @@ InituKernelSecondary:
 	wdf drc0
 	nop.end
 
+/* Main init: TE/MTE/DMS setup, config and perf registers, recovery, timer. */
 InituKernelPrimary2:
 	smlsi #0, #0, #0, #1, incrementmode, incrementmode, incrementmode, incrementmode, #0, #0, #0
 	mov r15, #0x00000000
 	mov r22, #0x00000000
 	nop
 	mov r0, #0xDEADBEEF
-	str #8858, r0
+	str #8858, r0	/* register 0x8A68 */
 	mov r0, #0xDEADBEEF
-	str #8859, r0
+	str #8859, r0	/* register 0x8A6C */
 	mov r0, #0x00001000
 	ldr r0, r0, drc0
 	wdf drc0
@@ -48,7 +53,7 @@ InituKernelPrimary2:
 	and.testtanz.chan0 !c0, p0, r0, #1
 	p0 ba.savelink HWRecovery
 	or r9, sa38, #0x00000000
-	ldr r0, #798, drc0
+	ldr r0, #798, drc0	/* EUR_CR_BIF_BANK0 */
 	wdf drc0
 	or r4, r0, #0x00000000
 	and r5, r4, #0x0000000F
@@ -61,13 +66,13 @@ InituKernelPrimary2:
 	mov r23, pclink
 	ba.savelink JumpToSupervisor
 	mov pclink, r23
-	ldr r1, #4177, drc0
+	ldr r1, #4177, drc0	/* EUR_CR_MASTER_MP_PRIMITIVE */
 	wdf drc0
 	mov r4, #0x00000001
 	mov r5, #0x00010000
 	or r4, r4, r5
-	str #4177, r4
-	ldr r2, #8849, drc0
+	str #4177, r4	/* EUR_CR_MASTER_MP_PRIMITIVE */
+	ldr r2, #8849, drc0	/* register 0x8A44 */
 	wdf drc0
 	mov r4, #0x00000000
 	shl r4, r4, #0x0000001A
@@ -88,27 +93,27 @@ InituKernelPrimary2_1:
 	isub16.testtanz.chan0 r5, p0, r5, #1
 	p0 ba InituKernelPrimary2_1
 	mov r4, #0x00000000
-	str #129, r4
+	str #129, r4	/* EUR_CR_TE_AA */
 	mov r4, #0x10010010
-	str #130, r4
-	str #131, r4
+	str #130, r4	/* EUR_CR_TE_MTILE1 */
+	str #131, r4	/* EUR_CR_TE_MTILE2 */
 	mov r4, #0x0001F01F
-	str #146, r4
+	str #146, r4	/* EUR_CR_MTE_SCREEN */
 	mov r4, #0x00001001
-	str #132, r4
+	str #132, r4	/* EUR_CR_TE_SCREEN */
 	mov r4, #0x00000100
-	str #133, r4
+	str #133, r4	/* EUR_CR_TE_MTILE */
 	mov r4, #0x00400000
-	str #134, r4
-	ldr r4, #669, drc0
+	str #134, r4	/* EUR_CR_TE_PSG */
+	ldr r4, #669, drc0	/* EUR_CR_DMS_CTRL */
 	mov r5, #0x11000000
 	wdf drc0
 	or r4, r4, r5
-	str #669, r4
-	ldr r4, #143, drc0
+	str #669, r4	/* EUR_CR_DMS_CTRL */
+	ldr r4, #143, drc0	/* EUR_CR_MTE_CTRL */
 	wdf drc0
 	or r4, r4, #0x00000002
-	str #143, r4
+	str #143, r4	/* EUR_CR_MTE_CTRL */
 	mov r4, #0xDEADBEEF
 	or r5, r9, #0x00000000
 	mov r6, #0x00002087
@@ -121,21 +126,21 @@ InituKernelPrimary2_2:
 	isub16.testtanz.chan0 r5, p0, r5, #1
 	p0 ba InituKernelPrimary2_2
 	mov r4, #0x00000001
-	str #224, r4
+	str #224, r4	/* EUR_CR_TE_RGNHDR_INIT */
 InituKernelPrimary2_3:
-	ldr r4, #70, drc0
+	ldr r4, #70, drc0	/* EUR_CR_EVENT_STATUS2 */
 	wdf drc0
 	shl.testpat.chan0 !c0, p0, r4, #26
 	p0 ba InituKernelPrimary2_3
 	mov r4, #0x00000020
-	str #69, r4
+	str #69, r4	/* EUR_CR_EVENT_HOST_CLEAR2 */
 	mov r24, #0x00000001
 	mov r25, #0x0000031E
 	or r26, r0, #0x00000000
 	mov r23, pclink
 	ba.savelink JumpToSupervisor
 	mov pclink, r23
-	str #4177, r1
+	str #4177, r1	/* EUR_CR_MASTER_MP_PRIMITIVE */
 	mov r6, #0x00002291
 	or r5, r9, #0x00000000
 	mov r7, #0x00001000
@@ -158,6 +163,7 @@ InituKernelPrimary2_4:
 	phas #0, #0, pixel, end, parallel
 	nop.end
 
+/* Writes 1 to unnamed register 0x8310 of each of the sa38 cores (0x4000 apart). */
 InitConfigRegisters:
 	mov r0, #0x000020C4
 	mov r1, #0x00000000
@@ -173,18 +179,19 @@ InitConfigRegisters_1:
 	lapc
 	nop
 
+/* Programs the performance counters from the host settings. */
 UpdateHWPerfRegs:
 	!p0 ba UpdateHWPerfRegs_1
 	mov r1, #0x000000FF
-	str #16, r1
-	str #928, #1
-	str #928, #0
+	str #16, r1	/* EUR_CR_PERF */
+	str #928, #1	/* EUR_CR_EMU_CYCLE_COUNT */
+	str #928, #0	/* EUR_CR_EMU_CYCLE_COUNT */
 UpdateHWPerfRegs_1:
 	or r0, sa39, #0x00000000
 	and.testtaz.chan0 !c0, p0, r0, r0
 	p0 mov r1, #0x00000000
 	!p0 mov r1, #0x00000001
-	str #30, r1
+	str #30, r1	/* EUR_CR_PERF_DEBUG_CTRL */
 	p0 ba UpdateHWPerfRegs_2
 	ldad.bpcache.fetch2 r0, [sa1,+#14], drc0
 	ldad.bpcache.fetch2 r2, [sa1,+#22], drc1
@@ -197,7 +204,7 @@ UpdateHWPerfRegs_1:
 	shl r3, r3, #0x00000018
 	or r0, r0, r2
 	or r0, r0, r3
-	str #36, r0
+	str #36, r0	/* EUR_CR_PERF0 */
 	ldad.bpcache.fetch2 r0, [sa1,+#16], drc0
 	ldad.bpcache.fetch2 r2, [sa1,+#24], drc1
 	wdf drc0
@@ -209,7 +216,7 @@ UpdateHWPerfRegs_1:
 	shl r3, r3, #0x00000018
 	or r0, r0, r2
 	or r0, r0, r3
-	str #37, r0
+	str #37, r0	/* EUR_CR_PERF1 */
 	ldad.bpcache.fetch2 r0, [sa1,+#18], drc0
 	ldad.bpcache.fetch2 r2, [sa1,+#26], drc1
 	wdf drc0
@@ -221,7 +228,7 @@ UpdateHWPerfRegs_1:
 	shl r3, r3, #0x00000018
 	or r0, r0, r2
 	or r0, r0, r3
-	str #38, r0
+	str #38, r0	/* EUR_CR_PERF2 */
 	ldad.bpcache.fetch2 r0, [sa1,+#20], drc0
 	ldad.bpcache.fetch2 r2, [sa1,+#28], drc1
 	wdf drc0
@@ -233,18 +240,20 @@ UpdateHWPerfRegs_1:
 	shl r3, r3, #0x00000018
 	or r0, r0, r2
 	or r0, r0, r3
-	str #39, r0
-	str #16, #0
+	str #39, r0	/* EUR_CR_PERF3 */
+	str #16, #0	/* EUR_CR_PERF */
 UpdateHWPerfRegs_2:
 	lapc
 
+/* Starts the timer: sa1[6] | 0x01000000 to register 0x8ACC. */
 StartTimer:
 	ldad.bpcache r0, [sa1,+#6], drc0
 	wdf drc0
 	or r0, r0, #0x01000000
-	str #8883, r0
+	str #8883, r0	/* register 0x8ACC */
 	lapc
 
+/* After a GPU reset: rebuilds the queue links from the pending command records (sa2). */
 HWRecovery:
 	ldad.bpcache r0, [sa2,+#0], drc0
 	ldad.bpcache r1, [sa2,+#1], drc1

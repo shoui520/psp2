@@ -1,3 +1,4 @@
+/* Init: DMAs the TA/3D control block if ir0 == 0, then runs InituKernelSecondary. */
 data dword DMA0;
 data dword DMA1;
 data dword USE0;

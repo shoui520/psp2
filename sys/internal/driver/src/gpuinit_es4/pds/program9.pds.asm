@@ -1,3 +1,4 @@
+/* Clear clip workaround, first and third program: optional DMAs, then its clearclipwa task. */
 data dword USE0;
 data dword USE1;
 data dword DMA0_0;

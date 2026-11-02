@@ -1,3 +1,4 @@
+/* Init: runs InituKernelPrimary2. */
 data dword USE0;
 data dword USE1;
 data dword USE2;

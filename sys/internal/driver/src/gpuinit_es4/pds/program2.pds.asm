@@ -1,3 +1,4 @@
+/* Pixel event program (pixelPDSExec): DMAs, then the USE task in USE0-2 (sgxinit.c doutu[]). */
 data dword DMA0;
 data dword DMA1;
 data dword DMA2;
