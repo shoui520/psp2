@@ -46,6 +46,18 @@ public:
 		return *this;
 	}
 
+	intrusive_ptr &operator=(T *ptr)
+	{
+		if (ptr != m_ptr) {
+			if (m_ptr != NULL)
+				m_ptr->Release();
+			m_ptr = ptr;
+			if (ptr != NULL)
+				ptr->AddRef();
+		}
+		return *this;
+	}
+
 	void clear()
 	{
 		if (m_ptr != NULL) {

@@ -96,15 +96,15 @@ public:
 	{
 		m_draw_list = 0;
 		m_dirty = 1;
-		m_prepare = 0;
-		m_visible = 1;
+		m_prepare = false;
+		m_visible = true;
 	}
 
 	/* 0: drawn into the scene's draw lists, which the scene keeps in two globals */
 	uint32_t m_draw_list : 2;
 	uint32_t m_dirty : 2;
-	char m_prepare : 1;
-	char m_visible : 1;
+	bool m_prepare : 1;
+	bool m_visible : 1;
 };
 
 class DrawObj {
@@ -126,8 +126,9 @@ public:
 	virtual const char *GetDrawObjType() const;
 	virtual ~DrawObj();
 
-	/* Draw queues a draw call whose callback calls Render (names ours) */
-	virtual void Draw()
+	/* Draw queues a draw call whose callback calls Render, under the parent's world matrix
+	   with a color and alpha to modulate by (ScePafGraphics_B7EB9246; names ours) */
+	virtual void Draw(const math::matrix &parent, uint32_t color, float alpha)
 	{
 	}
 

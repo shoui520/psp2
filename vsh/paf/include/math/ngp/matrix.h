@@ -99,6 +99,11 @@ public:
 		return v4(_impl.getCol3());
 	}
 
+	void set_w(v4 col)
+	{
+		_impl.setCol3(col.getImpl());
+	}
+
 	const sce::Vectormath::Simd::Aos::Matrix4 &getImpl() const
 	{
 		return _impl;

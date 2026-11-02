@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <common/shared_ptr.h>
+#include <math/ngp/v4.h>
 
 namespace paf {
 namespace graph {
@@ -45,13 +46,43 @@ public:
 	bool m_ended;
 };
 
+/* the camera the panels are seen by: its fourth virtual gives the eye's position (names ours) */
+class Camera {
+public:
+	virtual void reserved0();
+	virtual void reserved1();
+	virtual void reserved2();
+	virtual math::v4 GetEyePos() const;
+};
+
+/* draws the panel and bubble objects (Sony's name: the string its constructor 0x810bc564
+   names it by); 0x1478 bytes */
+class PanelRenderer {
+public:
+	uint8_t reserved[0x1420];
+	Camera *m_camera;
+	uint8_t reserved2[0x54];
+};
+
+class DrawObj;
+
+/* the panel objects alive, by kind (0 and 2, 1), and the draws queued for the frame (0x810d5f88..;
+   names ours) */
+void RegisterPanelObj(DrawObj *obj, int32_t kind);
+void UnregisterPanelObj(DrawObj *obj);
+void DrawPanelObj(DrawObj *obj, int32_t kind, int32_t flags);
+
 /* draws a DrawEnv's draw calls */
 class Renderer {
 public:
 	Renderer(common::SharedPtr<DrawEnv> draw_calls);
 	~Renderer();
 
-	uint8_t reserved[0x598];
+	/* made at the first call that asks for it (0x8109dbaa) */
+	common::SharedPtr<PanelRenderer> &GetPanelRenderer(bool create);
+
+	common::SharedPtr<PanelRenderer> m_panel_renderer;
+	uint8_t reserved[0x590];
 	/* the flag ScePafGraphics_505CD74E sets; nothing in libpaf reads it by this offset */
 	bool m_flag_505CD74E;
 	uint8_t reserved2[0x27];

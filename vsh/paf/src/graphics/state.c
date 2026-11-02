@@ -40,24 +40,6 @@ uint8_t *ScePafGraphics_7120023D(uint8_t *self, const float32x4_t *input)
 	return self;
 }
 
-uint8_t *ScePafGraphics_9998DD07(uint8_t *self, const float32x4_t *input)
-{
-	uint8_t *mirror = *(uint8_t **)(self + 80);
-
-	*(float32x4_t *)(self + 24) =
-		vmaxq_f32(vdupq_n_f32(0.0f), *input);
-	if (!sce_paf_graphics_flag_06e8) {
-		uint32_t value = *(uint32_t *)(self + 52);
-		*(uint32_t *)(self + 52) =
-			(value & ~0xCu) |
-			(4u * (sce_paf_graphics_state_11fc & 3u));
-	}
-	if (mirror)
-		*(float32x4_t *)(mirror + 32) =
-			vdupq_n_f32(vgetq_lane_f32(*input, 0));
-	return self;
-}
-
 uint8_t *_ZN3paf5graph8PlaneObj7SetSizeENS_4math2v3E(uint8_t *self, const float32x4_t *input)
 {
 	uint32x4_t equal = vceqq_f32(*input, *(float32x4_t *)(self + 24));
@@ -412,20 +394,6 @@ int _ZN3paf5graph7Surface13SetDivideModeEj(uint8_t *self, int32_t mode)
 	return (int)(uintptr_t)self;
 }
 
-void *ScePafGraphics_5AF8179A(const uint8_t *self, const uint64_t *value)
-{
-	uint8_t *target = *(uint8_t *const *)(self + 80);
-	uint64x2_t pair;
-
-	if (target) {
-		pair = *(const uint64x2_t *)value;
-		target[85] |= 4;
-		*(uint64_t *)(target + 120) = vgetq_lane_u64(pair, 0);
-		*(uint64_t *)(target + 128) = vgetq_lane_u64(pair, 1);
-	}
-	return target;
-}
-
 void *ScePafGraphics_12BDEBFF(void)
 {
 	uint32_t *state = *(uint32_t *volatile *)
@@ -730,30 +698,6 @@ int ScePafGraphics_D5E30C64(const uint8_t *self,
 				    fragmentNotification);
 	if (result >= 0)
 		return 0;
-	return result;
-}
-
-void *ScePafGraphics_771E7F81(uint8_t *self, void **destination,
-			     int skip)
-{
-	void *result = self;
-	uint8_t *owner = *(uint8_t **)(self + 80);
-
-	if (owner && !skip) {
-		void *next;
-
-		result = *destination;
-		next = *(void **)(owner + 80);
-		if (next != *destination) {
-			if (result)
-				result = (void *)(uintptr_t)
-					_ZN3paf5graph7Surface7ReleaseEv(result);
-			*destination = next;
-			if (next)
-				return (void *)(uintptr_t)
-					_ZN3paf5graph7Surface6AddRefEv(next);
-		}
-	}
 	return result;
 }
 
@@ -2066,13 +2010,6 @@ __attribute__((noinline))
 int _ZNK3paf5graph7DrawObj9IsInheritEPKc(const void *self, const char *tag)
 {
 	return tag == "DrawObj";
-}
-
-int ScePafGraphics_D3A10EAF(const void *self, const char *tag)
-{
-	if (tag == "BubbleObj")
-		return 1;
-	return _ZNK3paf5graph7DrawObj9IsInheritEPKc(self, tag);
 }
 
 uint8_t *sce_paf_graphics_indicator_3070;
