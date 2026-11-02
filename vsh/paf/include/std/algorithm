@@ -1,8 +1,16 @@
-/* paf::for_each, paf::min and paf::max (Dinkumware's <algorithm>). */
+/* paf::copy, paf::for_each, paf::min and paf::max (Dinkumware's <algorithm>). */
 #ifndef PAF_STD_ALGORITHM
 #define PAF_STD_ALGORITHM
 
 namespace paf {
+
+template<class _InIt, class _OutIt>
+inline _OutIt copy(_InIt _First, _InIt _Last, _OutIt _Dest)
+{
+	for (; _First != _Last; ++_Dest, ++_First)
+		*_Dest = *_First;
+	return _Dest;
+}
 
 template<class _InIt, class _Fn1>
 inline _Fn1 for_each(_InIt _First, _InIt _Last, _Fn1 _Func)

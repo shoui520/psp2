@@ -182,6 +182,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/camera.cpp
 	src/graphics/renderer.cpp
 	src/graphics/effects/fft_wave.cpp
+	src/graphics/effects/fft_wave_surface.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/toplevel/state.c
 	src/graphics/state.c

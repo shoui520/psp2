@@ -12,6 +12,7 @@
 #include <common/shared_ptr.h>
 #include <graphics/camera.h>
 #include <graphics/effects/background.h>
+#include <graphics/effects/fft_wave_surface.h>
 #include <graphics/effects/param.h>
 #include <graphics/effects/post_effects.h>
 #include <graphics/surface/surface.h>
@@ -146,16 +147,6 @@ public:
 	uint8_t reserved3[4];
 };
 
-/* the heights of the waves, computed by FFT (names ours) */
-class FFTWaveSurface {
-public:
-	/* 0x810a03ae: the waves moved on unless paused, and computed again; the second flag is
-	   not read */
-	void Update(bool paused, bool unused);
-
-	uint8_t reserved[0x510];
-};
-
 /* the waves' surface computed by FFT (its parameters' set is named "FFTWave"); nothing in
    libpaf makes one */
 class FFTWave {
@@ -164,6 +155,7 @@ public:
 	void Update();
 
 	FFTWaveSurface m_surface;
+	uint8_t reserved4[0x438];
 	/* the frame of the last update */
 	int32_t m_frame;
 	uint32_t m_reserved_word;
