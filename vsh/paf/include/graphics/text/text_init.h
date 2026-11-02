@@ -6,6 +6,7 @@
 #define PAF_GRAPHICS_TEXT_TEXT_INIT_H
 
 #include <stdint.h>
+#include <graphics/text/font_rasterizer.h>
 
 namespace paf {
 namespace graph {
@@ -31,8 +32,9 @@ public:
 	char *path_pvf_latin;
 	/* handed to the font library with the fields before them */
 	uint32_t pvf_param[5];
-	char *path_pvf_hangul;
-	char *path_pvf_chinese;
+	/* the emoji font already in memory, in place of path_emoji_font */
+	void *mem_emoji_font_addr;
+	uint32_t mem_emoji_font_size;
 	/* the emoji font, vs0:data/external/font/emoji/imagefont.bin when NULL */
 	char *path_emoji_font;
 };
@@ -45,6 +47,10 @@ void StopTextThreads();
 int32_t StartTextThreads();
 /* the Locale the text is laid out for, set with the text threads stopped */
 void SetTextLocale(int32_t locale);
+/* a text thread's rasterizers, also made by a layout updated without them (names ours) */
+FontRasterizer *CreateFontRasterizer();
+/* NULL for no emoji font */
+FontRasterizer *CreateEmojiFontRasterizer();
 
 }
 }

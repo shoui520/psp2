@@ -116,8 +116,9 @@ public:
 		uint32_t mem_pvf_chinese_size;
 		char *path_pvf_japanese;
 		char *path_pvf_latin;
-		char *path_pvf_hangul;
-		char *path_pvf_chinese;
+		/* the emoji font already in memory, the text system's in place of its file (names ours) */
+		void *mem_emoji_font_addr;
+		uint32_t mem_emoji_font_size;
 		uint32_t pvf_option;
 		uint32_t pvf_heap_size;
 		uint32_t decode_heap_size;

@@ -218,8 +218,8 @@ Framework::Framework(const InitParam &init_param)
 	text_param.mem_pvf_chinese_size = init_param.mem_pvf_chinese_size;
 	text_param.path_pvf_japanese = init_param.path_pvf_japanese;
 	text_param.path_pvf_latin = init_param.path_pvf_latin;
-	text_param.path_pvf_hangul = init_param.path_pvf_hangul;
-	text_param.path_pvf_chinese = init_param.path_pvf_chinese;
+	text_param.mem_emoji_font_addr = init_param.mem_emoji_font_addr;
+	text_param.mem_emoji_font_size = init_param.mem_emoji_font_size;
 	text_param.pvf_heap_size = init_param.pvf_heap_size;
 	text_param.pvf_option = init_param.pvf_option;
 	text_param.locale = init_param.locale;
@@ -1470,8 +1470,8 @@ Framework::InitParam::InitParam()
 	mem_pvf_chinese_size = 0;
 	path_pvf_japanese = NULL;
 	path_pvf_latin = NULL;
-	path_pvf_hangul = NULL;
-	path_pvf_chinese = NULL;
+	mem_emoji_font_addr = NULL;
+	mem_emoji_font_size = 0;
 	pvf_option = 0;
 	pvf_heap_size = 0;
 	decode_heap_size = 0;

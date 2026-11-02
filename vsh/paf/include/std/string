@@ -80,7 +80,7 @@ public:
 		count = 0;
 	}
 
-	basic_string(const _Elem *src)
+	basic_string(const _Elem *src, const _Ax &al = _Ax())
 	{
 		ptr = &empty_string;
 		count = 0;
@@ -687,6 +687,11 @@ inline bool operator==(const wstring &left, const wstring &right)
 }
 
 inline bool operator!=(const string &left, const string &right)
+{
+	return !(left == right);
+}
+
+inline bool operator!=(const string &left, const char *right)
 {
 	return !(left == right);
 }

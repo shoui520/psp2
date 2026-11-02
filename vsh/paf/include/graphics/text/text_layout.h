@@ -170,10 +170,18 @@ public:
 /* the layouts waiting for the text threads (names ours) */
 class TextQueue {
 public:
+	TextQueue();
+	virtual ~TextQueue();
+
 	/* queues a layout that is invalid and not being remade or queued */
 	int32_t Request(common::SharedPtr<TextLayout> &layout);
 	/* takes a queued layout off the queue */
 	int32_t Cancel(common::SharedPtr<TextLayout> &layout);
+	/* the queue emptied and the text threads waiting on it woken */
+	int32_t Abort();
+
+	/* not in C yet: left as bytes until it is */
+	uint8_t m_data[0x44];
 };
 
 /* the mutexes the text graphics and layouts lock, and the text queue (names ours) */

@@ -169,6 +169,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/surface/surface_texture.cpp
 	src/graphics/surface/surface_screen.cpp
 	src/graphics/text/attributed_string.cpp
+	src/graphics/text/text_init.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
@@ -260,9 +261,13 @@ set_source_files_properties(src/cache/cache_image.cpp PROPERTIES COMPILE_OPTIONS
 set_source_files_properties(src/graphics/surface/surface_screen.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=12)
 
 # AttributedString inlines the list's erase and destructor and its destructor's body into D0 and
-# D2, and calls ClearStyleRuns and its attribute templates: budget 20 does that, 12 calls erase,
-# 30 inlines ClearStyleRuns (2026-11-02).
+# D2, and calls ClearStyleRuns, its attribute templates and the list's insert: budget 30 with
+# those three noinline does that; 20 keeps D1 out of D0 and D2, 12 calls erase (2026-11-02).
 set_source_files_properties(src/graphics/text/attributed_string.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+
+# InitText inlines both rasterizer factories (the emoji one too): budget 30 does that, 20 calls
+# CreateEmojiFontRasterizer, 40 inlines StopTextThreads (2026-11-02).
+set_source_files_properties(src/graphics/text/text_init.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # The file units (HttpFile, LocalFile, MemFile, OpenUrl) were written and matched at the C++
 # units' budget, 30 (2026-10-31): LocalFile's constructors inline CreateImpl, its destructor Close and DeleteImpl.
