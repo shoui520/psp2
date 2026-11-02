@@ -1,7 +1,7 @@
 /*
  * The text threads: each takes the layouts off the text queue and lays them out with its font
  * rasterizers into the text surface cache (names ours, after Sony's thread name
- * ScePafTextThread%d). Not in C yet.
+ * ScePafTextThread%d).
  */
 #ifndef PAF_GRAPHICS_TEXT_TEXT_THREAD_H
 #define PAF_GRAPHICS_TEXT_TEXT_THREAD_H
