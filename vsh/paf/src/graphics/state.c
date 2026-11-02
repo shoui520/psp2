@@ -384,7 +384,7 @@ int _ZN3paf5graph10TextLayout12GetLineCountERj(const uint8_t *self, uint32_t *ou
 	return 0;
 }
 
-int ScePafGraphics_D1081027(uint8_t *self, int32_t index,
+int _ZN3paf5graph9TextStyle17SetStyleAttributeENS0_18TextStyleAttributeERKNS_4math2v2E(uint8_t *self, int32_t index,
 			     const uint64_t *value)
 {
 	if (index != 1)
@@ -427,18 +427,6 @@ int _ZN3paf5graph10TextLayout8SetStateEi(uint8_t *self, uint16_t bits)
 int _ZN3paf5graph10TextLayout10ClearStateEi(uint8_t *self, uint16_t bits)
 {
 	*(uint16_t *)(self + 112) &= (uint16_t)~bits;
-	return 0;
-}
-
-int _ZN3paf5graph16AttributedString12GetStyleRunsERNS_14_list_iteratorIPNS0_12TextStyleRunENS_9allocatorIS4_EEEES8_(const uint8_t *self,
-			     uint32_t *first, uint32_t *second)
-{
-	const uint8_t *item = *(uint8_t *const *)(self + 16);
-	uint32_t value = 0;
-	if (item)
-		value = *(const uint32_t *)(item + 4);
-	*first = value;
-	*second = (uint32_t)(uintptr_t)item;
 	return 0;
 }
 
@@ -606,21 +594,6 @@ int _ZN3paf5graph10TextLayout18GetLayoutAttributeENS0_19TextLayoutAttributeERi(c
 		*result = (int32_t)(int8_t)self[12];
 	else
 		*result = (int32_t)(int8_t)self[13];
-	return 0;
-}
-
-int _ZN3paf5graph16AttributedString15GetStringBufferERPKwRj(const uint8_t *self,
-			     uint32_t *first, uint32_t *second)
-{
-	*first = *(const uint32_t *)(self + 4);
-	*second = *(const uint32_t *)(self + 8);
-	return 0;
-}
-
-int32_t *sce_paf_graphics_buffer_11e4;
-int _ZN3paf5graph16AttributedString9GetStringERNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEE(const uint8_t *self, PafWString *result)
-{
-	PafWStringCopy(result, (const PafWString *)(self + 4));
 	return 0;
 }
 

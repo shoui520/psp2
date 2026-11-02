@@ -40,6 +40,12 @@
 #define SCE_PAF_ERROR_GRAPHICS_NO_ENTRY (-2136006138) /* 0x80AF2206 */
 /* a file over LoadOption's max_size_kb (name ours) */
 #define SCE_PAF_ERROR_GRAPHICS_TOO_LARGE (-2136006136) /* 0x80AF2208 */
+/* a text style run that cannot be made (name ours) */
+#define SCE_PAF_ERROR_TEXT_NO_MEMORY (-2136005887) /* 0x80AF2301 */
+/* a position or range beyond the string, an attribute a style does not have (name ours) */
+#define SCE_PAF_ERROR_TEXT_INVALID_ARGUMENT (-2136005886) /* 0x80AF2302 */
+/* nothing to change: the string or style is already so (name ours) */
+#define SCE_PAF_ERROR_TEXT_UNCHANGED (-2136005883) /* 0x80AF2305 */
 #define SCE_PAF_ERROR_FILE_INVALID_OFFSET (-2135994367) /* 0x80AF5001 */
 #define SCE_PAF_ERROR_FILE_INVALID_ARGUMENT (-2135994366) /* 0x80AF5002 */
 #define SCE_PAF_ERROR_FILE_NO_MEMORY (-2135994365) /* 0x80AF5003 */

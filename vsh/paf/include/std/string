@@ -174,6 +174,8 @@ public:
 
 	_Myt &erase(size_type pos, size_type len);
 
+	_Myt &insert(size_type pos, const _Elem *src, size_type len);
+
 	void resize(size_type len, _Elem ch)
 	{
 		if (len < count)
@@ -536,6 +538,32 @@ basic_string<_Elem, _Traits, _Ax>::erase(size_type pos, size_type len)
 			alloc.deallocate(ptr, count + 1);
 		ptr = dst;
 		count = size - len;
+	}
+	return *this;
+}
+
+template<class _Elem, class _Traits, class _Ax>
+basic_string<_Elem, _Traits, _Ax> &
+basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, const _Elem *src, size_type len)
+{
+	if (pos > count)
+		ScePafStdc_D608246A();
+
+	_Elem *dst = alloc.allocate(count + len + 1);
+
+	if (dst != NULL) {
+		size_type size = count + len;
+
+		_Traits::copy(dst, ptr, pos);
+		_Traits::copy(dst + pos, src, len);
+		_Traits::copy(dst + pos + len, ptr + pos, count - pos);
+		dst[count + len] = 0;
+		if (ptr != &empty_string)
+			alloc.deallocate(ptr, count + 1);
+		ptr = dst;
+		count = size;
+	} else {
+		ScePafStdc_D608246A();
 	}
 	return *this;
 }

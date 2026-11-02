@@ -168,6 +168,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/surface/surface_display.cpp
 	src/graphics/surface/surface_texture.cpp
 	src/graphics/surface/surface_screen.cpp
+	src/graphics/text/attributed_string.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
@@ -257,6 +258,11 @@ set_source_files_properties(src/cache/cache_image.cpp PROPERTIES COMPILE_OPTIONS
 # CreateRenderTarget and its complete destructor: budgets 12 to 20 do that, 24 and 30 inline
 # them (2026-11-02).
 set_source_files_properties(src/graphics/surface/surface_screen.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=12)
+
+# AttributedString inlines the list's erase and destructor and its destructor's body into D0 and
+# D2, and calls ClearStyleRuns and its attribute templates: budget 20 does that, 12 calls erase,
+# 30 inlines ClearStyleRuns (2026-11-02).
+set_source_files_properties(src/graphics/text/attributed_string.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # The file units (HttpFile, LocalFile, MemFile, OpenUrl) were written and matched at the C++
 # units' budget, 30 (2026-10-31): LocalFile's constructors inline CreateImpl, its destructor Close and DeleteImpl.

@@ -1,6 +1,7 @@
 /*
  * paf::list: a doubly linked ring of nodes on the paf heap around a head node
- * that holds no value.
+ * that holds no value. Its iterator is paf::_list_iterator (the exports that take one name
+ * it: AttributedString::GetStyleRuns, ui::Environment::GetSceneTop).
  */
 #ifndef PAF_STD_LIST
 #define PAF_STD_LIST
@@ -11,71 +12,79 @@
 
 namespace paf {
 
+/* a node of the ring: the head node's value is never constructed */
+template<class _Ty>
+struct _list_node {
+	_list_node *prev;
+	_list_node *next;
+	_Ty value;
+};
+
+template<class _Ty, class _Ax = allocator<_Ty> >
+class _list_iterator {
+public:
+	typedef _list_node<_Ty> _Node;
+
+	_list_iterator(_Node *where) : node(where)
+	{
+	}
+
+	_list_iterator(const _list_iterator &other) : node(other.node)
+	{
+	}
+
+	_list_iterator &operator=(const _list_iterator &other)
+	{
+		node = other.node;
+		return *this;
+	}
+
+	_Ty &operator*() const
+	{
+		return node->value;
+	}
+
+	_Ty *operator->() const
+	{
+		return &node->value;
+	}
+
+	_list_iterator &operator++()
+	{
+		if (node != NULL)
+			node = node->next;
+		return *this;
+	}
+
+	_list_iterator operator++(int)
+	{
+		_list_iterator tmp = *this;
+
+		++*this;
+		return tmp;
+	}
+
+	bool operator==(const _list_iterator &other) const
+	{
+		return node == other.node;
+	}
+
+	bool operator!=(const _list_iterator &other) const
+	{
+		return node != other.node;
+	}
+
+	_Node *node;
+};
+
 template<class _Ty, class _Ax = allocator<_Ty> >
 class list {
 public:
 	typedef list<_Ty, _Ax> _Myt;
 	typedef size_t size_type;
 
-	struct _Node {
-		_Node *prev;
-		_Node *next;
-		_Ty value;
-	};
-
-	class iterator {
-	public:
-		iterator(_Node *where) : node(where)
-		{
-		}
-
-		iterator(const iterator &other) : node(other.node)
-		{
-		}
-
-		iterator &operator=(const iterator &other)
-		{
-			node = other.node;
-			return *this;
-		}
-
-		_Ty &operator*() const
-		{
-			return node->value;
-		}
-
-		_Ty *operator->() const
-		{
-			return &node->value;
-		}
-
-		iterator &operator++()
-		{
-			if (node != NULL)
-				node = node->next;
-			return *this;
-		}
-
-		iterator operator++(int)
-		{
-			iterator tmp = *this;
-
-			++*this;
-			return tmp;
-		}
-
-		bool operator==(const iterator &other) const
-		{
-			return node == other.node;
-		}
-
-		bool operator!=(const iterator &other) const
-		{
-			return node != other.node;
-		}
-
-		_Node *node;
-	};
+	typedef _list_node<_Ty> _Node;
+	typedef _list_iterator<_Ty, _Ax> iterator;
 
 	/* through a pointer, so a polymorphic value is destroyed virtually */
 	static void destroy(_Ty *ptr)
@@ -133,6 +142,8 @@ public:
 	}
 
 	void push_back(const _Ty &val);
+
+	iterator insert(iterator where, const _Ty &val);
 
 	iterator erase(iterator where);
 
@@ -272,6 +283,30 @@ list<_Ty, _Ax>::push_back(const _Ty &val)
 		head->prev = node;
 		++count;
 	}
+}
+
+/* Sony's build calls insert rather than inlining it. */
+template<class _Ty, class _Ax>
+__attribute__((noinline)) typename list<_Ty, _Ax>::iterator
+list<_Ty, _Ax>::insert(iterator where, const _Ty &val)
+{
+	_Node *next = where.node;
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node != NULL) {
+		new (&node->value) _Ty(val);
+	} else {
+		ScePafStdc_D608246A();
+		node = head;
+	}
+	if (node != head) {
+		node->prev = next->prev;
+		node->next = next;
+		next->prev->next = node;
+		next->prev = node;
+		++count;
+	}
+	return iterator(node);
 }
 
 template<class _Ty, class _Ax>

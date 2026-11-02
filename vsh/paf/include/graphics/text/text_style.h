@@ -48,10 +48,12 @@ public:
 
 	int32_t SetStyleAttribute(TextStyleAttribute attr, int32_t val);
 	int32_t SetStyleAttribute(TextStyleAttribute attr, float val);
+	int32_t SetStyleAttribute(TextStyleAttribute attr, const math::v2 &val);
 	int32_t SetStyleAttribute(TextStyleAttribute attr, const math::v4 &val);
 	int32_t SetStyleAttribute(TextStyleAttribute attr, bool val);
 	int32_t GetStyleAttribute(TextStyleAttribute attr, int32_t &val) const;
 	int32_t GetStyleAttribute(TextStyleAttribute attr, float &val) const;
+	int32_t GetStyleAttribute(TextStyleAttribute attr, math::v2 &val) const;
 	int32_t GetStyleAttribute(TextStyleAttribute attr, math::v4 &val) const;
 	int32_t GetStyleAttribute(TextStyleAttribute attr, bool &val) const;
 

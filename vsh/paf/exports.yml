@@ -1669,7 +1669,7 @@ ScePaf:
         - ScePafGraphics_2B9FB1E5: 0x2B9FB1E5
         - _ZN3paf5graph7TextObj15GetCaretVisibleERb: 0x2C19C408
         - _ZN3paf5graph7TextObj17SetStyleAttributeENS0_18TextStyleAttributeEjjb: 0x2C21F568
-        - ScePafGraphics_2C28E3A4: 0x2C28E3A4
+        - _ZN3paf5graph16AttributedString17SetStyleAttributeENS0_18TextStyleAttributeEjjRKNS_4math2v2E: 0x2C28E3A4
         - _ZN3paf5graph16PageTurnObjParamD0Ev: 0x2D248780
         - _ZN3paf5graph9TextStyleeqERKS1_: 0x2D4CEF1B
         - _ZN3paf5graph11PageTurnObj6OnDrawERKNS_4math6matrixEjfRNS0_8DrawInfoE: 0x2E2C4E1A
@@ -1926,7 +1926,7 @@ ScePaf:
         - _ZN3paf5graph13PlaneObjParamD2Ev: 0x910C8186
         - _ZN3paf5graph7TextObjD2Ev: 0x919B8983
         - _ZN3paf5graph3arl16FragShaderObjectD0Ev: 0x9244710F
-        - ScePafGraphics_92E9C7E6: 0x92E9C7E6
+        - _ZNK3paf5graph9TextStyle17GetStyleAttributeENS0_18TextStyleAttributeERNS_4math2v2E: 0x92E9C7E6
         - _ZNK3paf5graph7TextObj9IsInheritEPKc: 0x930F72BF
         - _ZN3paf5graph3arl20FragCreateDependencyC1Ev: 0x93A32E5C
         - _ZN3paf5graph7TextObj4DrawERKNS_4math6matrixEjf: 0x93ABBE0B
@@ -1977,7 +1977,7 @@ ScePaf:
         - _ZN3paf5graph14DisplaySurface8SetDirtyEb: 0xA03915B8
         - _ZN3paf5graph7DrawObj11EnterSafetyEv: 0xA05227FA
         - ScePafGraphics_A078C447: 0xA078C447
-        - ScePafGraphics_A156E8BE: 0xA156E8BE
+        - _ZN3paf5graph16AttributedString17GetStyleAttributeENS0_18TextStyleAttributeEjRNS_4math2v2E: 0xA156E8BE
         - _ZN3paf5graph7TextObj12GetLineCountERj: 0xA1B995E7
         - _ZNK3paf5graph9TextStyle17GetStyleAttributeENS0_18TextStyleAttributeERi: 0xA1BB7F6C
         - _ZN3paf5graph3arl16VertShaderObject5beginEv: 0xA2753DE3
@@ -2094,7 +2094,7 @@ ScePaf:
         - _ZN3paf5graph7Surface10GenTextureEPNS1_7TextureEPv: 0xD075A824
         - _ZN3paf5graph10TextLayout9GetBoundsERNS_4math2v2E: 0xD08F1491
         - _ZN3paf8GraphMem18GraphHeapAllocatorC2EPvjPKc: 0xD101415C
-        - ScePafGraphics_D1081027: 0xD1081027
+        - _ZN3paf5graph9TextStyle17SetStyleAttributeENS0_18TextStyleAttributeERKNS_4math2v2E: 0xD1081027
         - _ZN3paf5graph7Surface8SetWrapTENS0_11TextureWrapE: 0xD193CA56
         - _ZN3paf5graph7SurfacedlEPv: 0xD1978190
         - _ZN3paf5graph11SurfaceCLUTdlEPv: 0xD1ED3E25
