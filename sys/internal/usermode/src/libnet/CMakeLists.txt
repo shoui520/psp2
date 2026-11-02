@@ -1,7 +1,7 @@
 # SceNet (vs0:sys/external/libnet.suprx), built by Sony with GCC: the SDK's SHA-1 and
 # SFMT-19937 libraries and libgcc's division routines are linked in with it.
-# PARTIAL: libnet's own C is being written.
-psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
+# Every source is C (the resolver included).
+psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 SOURCES
 	../../../../sdk/target/src/sha1/libsha1.c
 	../../../../../toolchains/libgcc/udiv.S
 	../../../../../toolchains/libgcc/idiv.S
@@ -23,9 +23,10 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	inet.c
 	printf.c
 	port.c
+	resolver.c
 	../../../kernel/src/sysmem/sha1_transform.S
 	../../../../sdk/target/src/sfmt19937/sfmt19937.c
-	../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/bpabi.c
+	../../../../../toolchains/libgcc/uldivmod64.c
 	../../../../../toolchains/libgcc/udiv64.c
 )
 

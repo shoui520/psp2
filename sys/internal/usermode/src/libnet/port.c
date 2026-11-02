@@ -48,7 +48,7 @@ static SceInt32 libnet_thread_entry(SceSize argSize, void *pArgBlock)
 
 	param->entry(param->argument);
 	if (param->flags & 1)
-		sceKernelExitThread(0);
+		SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 
@@ -121,7 +121,7 @@ int libnet_thread_join(SceUID thread)
 
 int libnet_thread_exit(void)
 {
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	sceClibPrintf("[LIBNET] sceKernelExitThread -> return");
 	return SceNetInternal_694F8996("[LIBNET] sceKernelExitThread -> return");
 }

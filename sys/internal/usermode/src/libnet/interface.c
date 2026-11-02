@@ -45,9 +45,17 @@ int libnet_get_if_info(unsigned int ifIndex, SceNetPsInterfaceInfo *info, int co
 	entry = list;
 	i = 0;
 	for (;;) {
-		i++;
-		if (sceClibStrncmp(libnet_if_name(ifIndex), entry->name, sizeof(entry->name)) == 0)
-			break;
+		if (ifIndex <= LIBNET_IF_COUNT - 1) {
+			i++;
+			if (sceClibStrncmp(libnet_if_names[ifIndex], entry->name,
+					   sizeof(entry->name)) == 0)
+				break;
+		} else {
+			*libnet_errno_loc() = SCE_NET_EINVAL;
+			i++;
+			if (sceClibStrncmp("", entry->name, sizeof(entry->name)) == 0)
+				break;
+		}
 		entry++;
 		if (i == ret) {
 			libnet_free(list);

@@ -1021,7 +1021,7 @@ SceUInt32 sceNetHtonl(SceUInt32 host32)
 
 SceUShort16 sceNetHtons(SceUShort16 host16)
 {
-	return (host16 & 0xff) << 8 | host16 >> 8;
+	return ((unsigned int)host16 >> 8) | (((unsigned int)host16 << 8) & 0xFFFF);
 }
 
 SceUInt64 sceNetNtohll(SceUInt64 net64)
@@ -1036,7 +1036,7 @@ SceUInt32 sceNetNtohl(SceUInt32 net32)
 
 SceUShort16 sceNetNtohs(SceUShort16 net16)
 {
-	return net16 << 8 | net16 >> 8;
+	return ((unsigned int)net16 >> 8) | (((unsigned int)net16 << 8) & 0xFFFF);
 }
 
 SceNetId sceNetResolverCreate(const char *name, SceNetResolverParam *param, int flags)

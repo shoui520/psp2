@@ -73,6 +73,9 @@ typedef struct LibnetGlobals {
 } LibnetGlobals;
 
 extern LibnetGlobals libnet;
+
+/* SceThreadmgrCoredumpTime's export, under its link name */
+extern int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 void libnet_set_errno(int error);
 int SceNetInternal_694F8996(const char *format, ...);
 
@@ -227,7 +230,7 @@ int libnet_sysctl(const int *name, unsigned int namelen, void *oldp, unsigned in
 /* memory.c: the pool the library allocates from, sceNetInit's memory */
 int libnet_memory_free_size(int minimum);
 void *libnet_malloc(int size, int flags);
-void libnet_free(void *ptr);
+int libnet_free(void *ptr);
 int libnet_memory_init(void *pool, int size, int reserve);
 int libnet_memory_term(void);
 

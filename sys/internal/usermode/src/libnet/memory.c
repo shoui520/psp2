@@ -122,13 +122,13 @@ fail:
 	return NULL;
 }
 
-void libnet_free(void *ptr)
+int libnet_free(void *ptr)
 {
 	LibnetBlock *block, *scan, *next, *prev;
 	int size, length;
 
 	if (ptr == NULL)
-		return;
+		return 0;
 	block = (LibnetBlock *)ptr - 1;
 	if (block->size > 0)
 		sceClibMemset(ptr, LIBNET_FREE_FILL, block->size);
@@ -192,6 +192,7 @@ void libnet_free(void *ptr)
 			libnet_memory.freeTail = block;
 	}
 	libnet_sync_signal(&libnet_memory.sync, 1);
+	return 0;
 }
 
 int libnet_memory_init(void *pool, int size, int reserve)
