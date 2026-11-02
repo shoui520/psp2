@@ -202,6 +202,22 @@ public:
 			*index++ = i;
 	}
 
+	/* count indices copied in, when there are any (PlaneObj's meshes) */
+	IndexArray(common::SharedPtr<VramAllocator> allocator, const uint16_t *indices,
+		   uint32_t count)
+		: m_memory(new IndexMemory(allocator)), m_format(SCE_GXM_INDEX_FORMAT_U16)
+	{
+		uint32_t size = count * sizeof(uint16_t);
+		SurfaceMemory *memory = m_memory->m_memory.get();
+
+		if (memory->m_addr == NULL) {
+			memory->m_allocator->Alloc(memory, size);
+			memory->m_size = size;
+		}
+		if (indices != NULL)
+			sce_paf_memcpy(m_memory->m_memory->m_addr, indices, size);
+	}
+
 	void draw(ArlInstance &gl, Primitive primitive, uint32_t count);
 
 	common::SharedPtr<IndexMemory> m_memory;

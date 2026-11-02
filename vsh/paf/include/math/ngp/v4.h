@@ -46,6 +46,12 @@ public:
 		return vgetq_lane_f32(_impl.get128(), 3);
 	}
 
+	/* the element idx, 0 to 3 */
+	float extract(int idx) const
+	{
+		return sce_vectormath_extract_f4(_impl.get128(), idx);
+	}
+
 	void set_x(float value)
 	{
 		_impl.setX(value);

@@ -176,8 +176,7 @@ void DrawObj::CalcWorldMatrix(math::matrix &world_mat, const math::matrix &paren
 	}
 }
 
-/* the style bound with the default marker: what it already is is not bound again */
-static void BindDrawStyle(DrawStyle style)
+void BindDrawStyle(DrawStyle style)
 {
 	ArlInstance &gl = *Gl();
 

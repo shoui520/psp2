@@ -23,28 +23,6 @@ extern uint32_t sce_paf_graphics_state_11fc;
 extern uint8_t sce_paf_graphics_flag_06e8;
 extern int32_t *sce_paf_graphics_active_surface_2e94;
 
-uint8_t *_ZN3paf5graph8PlaneObj7SetSizeENS_4math2v3E(uint8_t *self, const float32x4_t *input)
-{
-	uint32x4_t equal = vceqq_f32(*input, *(float32x4_t *)(self + 24));
-	uint32_t allEqual = vgetq_lane_u32(equal, 0) &
-		vgetq_lane_u32(equal, 1) &
-		vgetq_lane_u32(equal, 2) &
-		vgetq_lane_u32(equal, 3);
-
-	if (!allEqual) {
-		*(float32x4_t *)(self + 24) =
-			vmaxq_f32(vdupq_n_f32(0.0f), *input);
-		if (!sce_paf_graphics_flag_06e8) {
-			uint32_t value = *(uint32_t *)(self + 52);
-			*(uint32_t *)(self + 52) =
-				(value & ~0xCu) |
-				(4u * (sce_paf_graphics_state_11fc & 3u));
-		}
-		self[80] |= 0xCu;
-	}
-	return self;
-}
-
 /* Initialize a graphics descriptor, preserving the native field-copy order. */
 uint8_t *_ZN3paf5graph9TextStyleC1ERKS1_(uint8_t *self, const uint8_t *source)
 {
@@ -184,51 +162,6 @@ int _ZN3paf5graph10TextLayout15GetNextRightHitEjRj(const uint8_t *self, uint32_t
 		}
 	}
 	return result;
-}
-
-static inline __attribute__((always_inline))
-int GraphicsFourFloatsEqual(const float32x4_t *left, const float32x4_t *right)
-{
-	float32x4_t a = *(const volatile float32x4_t *)left;
-	float32x4_t b = *(const volatile float32x4_t *)right;
-	uint32x4_t equal = vceqq_f32(a, b);
-
-	return vgetq_lane_u32(equal, 0) & vgetq_lane_u32(equal, 1) &
-	       vgetq_lane_u32(equal, 2) & vgetq_lane_u32(equal, 3);
-}
-
-int _ZN3paf5graph8PlaneObj6SetPosENS_4math2v3E(uint8_t *self, const float32x4_t *values)
-{
-	float32x4_t *current = (float32x4_t *)(self + 8);
-
-	if (!GraphicsFourFloatsEqual(values, current)) {
-		*current = *values;
-		if (!sce_paf_graphics_flag_06e8) {
-			uint32_t *flags = (uint32_t *)(self + 52);
-
-			*flags = (*flags & 0xfffffff3U) |
-				 (4 * (sce_paf_graphics_state_11fc & 3));
-		}
-		self[80] |= 4;
-	}
-	return (int)(uintptr_t)self;
-}
-
-int _ZN3paf5graph8PlaneObj13SetScaleValueERKNS_4math2v3E(uint8_t *self, const float32x4_t *values)
-{
-	float32x4_t *current = (float32x4_t *)(self + 136);
-
-	if (!GraphicsFourFloatsEqual(values, current)) {
-		*current = *values;
-		if (!sce_paf_graphics_flag_06e8) {
-			uint32_t *flags = (uint32_t *)(self + 52);
-
-			*flags = (*flags & 0xfffffff3U) |
-				 (4 * (sce_paf_graphics_state_11fc & 3));
-		}
-		self[80] |= 0xC;
-	}
-	return (int)(uintptr_t)self;
 }
 
 /* Forward resource field queries through the active graphics view. */
@@ -495,42 +428,6 @@ uint8_t *_ZN3paf5graph14DisplaySurface4SwapEv(uint8_t *self)
 	return self;
 }
 
-uint8_t *_ZN3paf5graph8PlaneObj12SetScaleModeENS1_9ScaleModeES2_(uint8_t *self, uint32_t first,
-				  uint32_t second)
-{
-	if (*(uint32_t *)(self + 92) != first ||
-	    *(uint32_t *)(self + 96) != second) {
-		*(uint32_t *)(self + 92) = first;
-		*(uint32_t *)(self + 96) = second;
-		if (!sce_paf_graphics_flag_06e8) {
-			uint32_t value = *(uint32_t *)(self + 52);
-			*(uint32_t *)(self + 52) =
-				(value & ~0x0cu) |
-				(4u * (sce_paf_graphics_state_11fc & 3u));
-		}
-		self[80] |= 0x0c;
-	}
-	return self;
-}
-
-uint8_t *_ZN3paf5graph8PlaneObj8SetAlignENS1_9AlignModeES2_(uint8_t *self, uint32_t first,
-				  uint32_t second)
-{
-	if (*(uint32_t *)(self + 84) != first ||
-	    *(uint32_t *)(self + 88) != second) {
-		*(uint32_t *)(self + 84) = first;
-		*(uint32_t *)(self + 88) = second;
-		if (!sce_paf_graphics_flag_06e8) {
-			uint32_t value = *(uint32_t *)(self + 52);
-			*(uint32_t *)(self + 52) =
-				(value & ~0x0cu) |
-				(4u * (sce_paf_graphics_state_11fc & 3u));
-		}
-		self[80] |= 4;
-	}
-	return self;
-}
-
 int _ZN3paf5graph9TextStyle13EqualFontTypeERKS1_(const uint8_t *first,
 			     const uint8_t *second)
 {
@@ -551,28 +448,6 @@ void _ZN3paf5graph11SurfacePool4FreeEPv(uint8_t *self, int value)
 		((void (**)(uint8_t *, int))*(void **)object)[3](object, value);
 	--*(int32_t *)(self + 32);
 	MutexUnlock(lock);
-}
-
-void *_ZN3paf5graph8PlaneObj10GetTextureERNS_13intrusive_ptrINS0_7SurfaceEEEj(uint32_t *self, void **destination,
-			      uint32_t index)
-{
-	void *result = self;
-
-	if (index < 4) {
-		void *next;
-		result = *destination;
-		next = (void *)(uintptr_t)self[49 + index];
-		if (next != *destination) {
-			if (result)
-				result = (void *)(uintptr_t)
-					_ZN3paf5graph7Surface7ReleaseEv(result);
-			*destination = next;
-			if (next)
-				return (void *)(uintptr_t)
-					_ZN3paf5graph7Surface6AddRefEv(next);
-		}
-	}
-	return result;
 }
 
 /* A global graphics pointer uses the SDK's acquire/release atomic counter. */
@@ -682,18 +557,6 @@ int _ZN3paf5graph10TextLayout9GetBoundsERNS_4math2v2E(const uint8_t *self, uint6
 		return -2136005885;
 	*output = *(const uint64_t *)(self + 104);
 	return 0;
-}
-
-uint32_t _ZN3paf5graph8PlaneObj6UpdateEv(uint8_t *self)
-{
-	uint32_t result = self[80] & 4;
-
-	if (result) {
-		((void (**)(void *))*(void **)self)[18](self);
-		result = (uint32_t)((int8_t)self[80] & ~4);
-		self[80] = (uint8_t)result;
-	}
-	return result;
 }
 
 __attribute__((noinline))
@@ -853,50 +716,6 @@ int _ZN3paf5graph7Surface12SetMagFilterENS0_13TextureFilterE(uint8_t *self, int 
 	return 0;
 }
 
-int _ZN3paf5graph8PlaneObj8SetWrapTENS0_11TextureWrapEj(const uint8_t *self, int mode,
-			     uint32_t index)
-{
-	if (index < 4) {
-		uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
-		if (item)
-			return _ZN3paf5graph7Surface8SetWrapTENS0_11TextureWrapE(item, mode);
-	}
-	return -1;
-}
-
-int _ZN3paf5graph8PlaneObj8SetWrapSENS0_11TextureWrapEj(const uint8_t *self, int mode,
-			     uint32_t index)
-{
-	if (index < 4) {
-		uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
-		if (item)
-			return _ZN3paf5graph7Surface8SetWrapSENS0_11TextureWrapE(item, mode);
-	}
-	return -1;
-}
-
-int _ZN3paf5graph8PlaneObj12SetMinFilterENS0_13TextureFilterEj(const uint8_t *self, int mode,
-			     uint32_t index)
-{
-	if (index < 4) {
-		uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
-		if (item)
-			return _ZN3paf5graph7Surface12SetMinFilterENS0_13TextureFilterE(item, mode);
-	}
-	return -1;
-}
-
-int _ZN3paf5graph8PlaneObj12SetMagFilterENS0_13TextureFilterEj(const uint8_t *self, int mode,
-			     uint32_t index)
-{
-	if (index < 4) {
-		uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
-		if (item)
-			return _ZN3paf5graph7Surface12SetMagFilterENS0_13TextureFilterE(item, mode);
-	}
-	return -1;
-}
-
 int _ZN3paf5graph14DisplaySurface13GetOutputPortEv(const uint8_t *self)
 {
 	int result = 0;
@@ -907,26 +726,6 @@ int _ZN3paf5graph14DisplaySurface13GetOutputPortEv(const uint8_t *self)
 			return 0;
 	}
 	return result;
-}
-
-int _ZN3paf5graph8PlaneObj17SetDivBorderScaleEf(uint8_t *self, float value)
-{
-	if (value != *(float *)(self + 188)) {
-		uint8_t flag = self[80];
-		*(float *)(self + 188) = value;
-		self[80] = flag | 8;
-	}
-	return (int)(uintptr_t)self;
-}
-
-int ScePafGraphics_6FD7F728(uint8_t *self, float value)
-{
-	if (value != *(float *)(self + 192)) {
-		uint8_t flag = self[80];
-		*(float *)(self + 192) = value;
-		self[80] = flag | 8;
-	}
-	return (int)(uintptr_t)self;
 }
 
 static inline __attribute__((always_inline))
@@ -1098,26 +897,6 @@ int _ZN3paf5graph10TextLayout10ClearStateEi(uint8_t *self, uint16_t bits)
 {
 	*(uint16_t *)(self + 112) &= (uint16_t)~bits;
 	return 0;
-}
-
-int32_t _ZN3paf5graph8PlaneObj8GetWrapSEj(const uint8_t *self, uint32_t index)
-{
-	if (index < 4) {
-		const uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
-		if (item)
-			return *(const int32_t *)(item + 84);
-	}
-	return -1;
-}
-
-int32_t _ZN3paf5graph8PlaneObj8GetWrapTEj(const uint8_t *self, uint32_t index)
-{
-	if (index < 4) {
-		const uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
-		if (item)
-			return *(const int32_t *)(item + 88);
-	}
-	return -1;
 }
 
 int _ZN3paf5graph16AttributedString12GetStyleRunsERNS_14_list_iteratorIPNS0_12TextStyleRunENS_9allocatorIS4_EEEES8_(const uint8_t *self,
@@ -1916,11 +1695,6 @@ int _ZN3paf5graph7TextObj12DrawCallbackERKNS0_7DrawObj15DrawCallbackArgE(const u
 	return GraphicsInvokeOffset20(self);
 }
 
-int _ZN3paf5graph8PlaneObj12DrawCallbackERKNS0_7DrawObj15DrawCallbackArgE(const uint32_t *self)
-{
-	return GraphicsInvokeOffset20(self);
-}
-
 __attribute__((noinline))
 int _ZNK3paf5graph7DrawObj9IsInheritEPKc(const void *self, const char *tag)
 {
@@ -1967,34 +1741,6 @@ int _ZN3paf5graph9TextStyle17SetStyleAttributeENS0_18TextStyleAttributeEi(uint8_
 		return -2136005886;
 	self[4] = value;
 	return 0;
-}
-
-static inline __attribute__((always_inline))
-int GraphicsIndexedValue(const uint8_t *self, uint32_t index)
-{
-	if (index < 4) {
-		uint8_t *item = *(uint8_t *const *)(self + 196 + 4 * index);
-		if (item)
-			return *(const int32_t *)(item + 72);
-	}
-	return -1;
-}
-
-int _ZN3paf5graph8PlaneObj12GetMinFilterEj(const uint8_t *self, uint32_t index)
-{
-	return GraphicsIndexedValue(self, index);
-}
-
-int _ZN3paf5graph8PlaneObj12GetMagFilterEj(const uint8_t *self, uint32_t index)
-{
-	return GraphicsIndexedValue(self, index);
-}
-
-int _ZNK3paf5graph8PlaneObj9IsInheritEPKc(const void *self, const char *tag)
-{
-	if (tag == "PlaneObj")
-		return 1;
-	return _ZNK3paf5graph7DrawObj9IsInheritEPKc(self, tag);
 }
 
 int _ZNK3paf5graph7TextObj9IsInheritEPKc(const void *self, const char *tag)

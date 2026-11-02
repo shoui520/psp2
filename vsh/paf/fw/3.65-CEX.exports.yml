@@ -1840,7 +1840,7 @@ ScePaf:
         - _ZN3paf5graph7SurfacenwEj: 0x6EA3E8FF
         - _ZNK3paf5graph9TextStyle17GetStyleAttributeENS0_18TextStyleAttributeERNS_4math2v4E: 0x6EF37383
         - _ZN3paf5graph9BubbleObj6OnDrawERKNS_4math6matrixEjfRNS0_8DrawInfoE: 0x6F7C5986
-        - ScePafGraphics_6FD7F728: 0x6FD7F728
+        - _ZN3paf5graph8PlaneObj15SetDivCenterPosEf: 0x6FD7F728
         - _ZN3paf5graph10TextLayout17SetSelectionRangeEjj: 0x701BDA4C
         - _ZN3paf5graph3arl20VertCreateDependency15setVertexFormatENS_6common9SharedPtrINS1_15VertexArraySpecEEES6_S6_S6_: 0x704AAC74
         - _ZN3paf5graph7Surface10BeginSceneEv: 0x7086C6A9
@@ -1856,7 +1856,7 @@ ScePaf:
         - _ZN3paf5graph16AttributedString17SetStyleAttributeENS0_18TextStyleAttributeEjjf: 0x73ED1F54
         - ScePafGraphics_74475AD2: 0x74475AD2
         - _ZN3paf5graph10TextLayout10ClearStateEi: 0x74E0DEAA
-        - ScePafGraphics_74EF9976: 0x74EF9976
+        - _ZN3paf5graph8PlaneObj6OnDrawERKNS_4math6matrixEjfRNS0_8DrawInfoE: 0x74EF9976
         - ScePafGraphics_751FC8E6: 0x751FC8E6
         - _ZN3paf5graph8PanelObjD2Ev: 0x762C1ED3
         - _ZN3paf5graph7SurfaceD1Ev: 0x767D7A4D
@@ -1946,7 +1946,7 @@ ScePaf:
         - _ZN3paf5graph10TextLayout17GetStyleAttributeENS0_18TextStyleAttributeEjRb: 0x97B2BD25
         - _ZN3paf5graph7TextObj18SetLayoutAttributeENS0_19TextLayoutAttributeEi: 0x983F37A1
         - _ZN3paf5graph8PlaneObjC1ERKNS0_9DrawStyleE: 0x98518319
-        - ScePafGraphics_98918600: 0x98918600
+        - _ZN3paf5graph8PlaneObj4DrawERKNS_4math6matrixEjf: 0x98918600
         - _ZN3paf5graph16AttributedString17GetStyleAttributeENS0_18TextStyleAttributeEjRf: 0x99250638
         - _ZN3paf5graph11SurfaceCLUT21DeactivateSurfacePoolEPNS0_11SurfacePoolE: 0x9989498E
         - _ZN3paf5graph9BubbleObj7SetSizeENS_4math2v3E: 0x9998DD07
@@ -2203,7 +2203,7 @@ ScePaf:
         - _ZN3paf5graph11SurfaceCLUTC2EPNS0_11SurfacePoolE9ImageModei: 0xF956A4D5
         - _ZN3paf5graph10TextLayoutD1Ev: 0xF9888760
         - _ZN3paf5graph3arl16VertShaderObjectD2Ev: 0xF9AB1CC7
-        - ScePafGraphics_F9B86D31: 0xF9B86D31
+        - _ZN3paf5graph8PlaneObj15CalcWorldMatrixERNS_4math6matrixERKS3_b: 0xF9B86D31
         - _ZN3paf5graph7TextObjD1Ev: 0xFA7B17C2
         - _ZN3paf5gutil5debug7DevInitEiiPv: 0xFA81A18E
         - _ZN3paf5graph7TextObj17GetStyleAttributeENS0_18TextStyleAttributeEjRi: 0xFAAAC287

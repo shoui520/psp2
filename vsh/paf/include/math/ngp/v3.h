@@ -61,6 +61,17 @@ public:
 		_impl.setZ(value);
 	}
 
+	/* the element idx, 0 to 2 */
+	float extract(int idx) const
+	{
+		return sce_vectormath_extract_f4(_impl.get128(), idx);
+	}
+
+	void set(int idx, float value)
+	{
+		_impl.setElem(idx, value);
+	}
+
 	bool operator==(v3 rhs) const
 	{
 		return sce::Vectormath::Simd::Aos::allElemEqual(_impl, rhs._impl).getAsBool();

@@ -31,6 +31,12 @@ public:
 		return vget_lane_f32(_impl.get64(), 1);
 	}
 
+	/* the element idx, 0 or 1 */
+	float extract(int idx) const
+	{
+		return sce_vectormath_extract_f2(_impl.get64(), idx);
+	}
+
 	void set_x(float value)
 	{
 		_impl.setX(value);
@@ -54,6 +60,11 @@ public:
 	v2 operator*(v2 rhs) const
 	{
 		return v2(mulPerElem(_impl, rhs._impl));
+	}
+
+	v2 operator*(float rhs) const
+	{
+		return v2(_impl * rhs);
 	}
 
 	v2 operator/(float rhs) const

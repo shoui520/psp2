@@ -47,6 +47,29 @@ public:
 	SurfaceListNode *m_next;
 };
 
+/* how a texture is filtered and addressed (names ScePaf-RE's) */
+enum TextureFilter {
+	NEAREST = 0,
+	LINEAR = 1,
+	NEAREST_MIPMAP_NEAREST = 2,
+	LINEAR_MIPMAP_NEAREST = 3,
+	NEAREST_MIPMAP_LINEAR = 4,
+	LINEAR_MIPMAP_LINEAR = 5
+};
+
+enum TextureWrap {
+	CLAMP = 0,
+	REPEAT = 1,
+	CLAMP_TO_EDGE = 2,
+	MIRRORED_REPEAT = 3,
+	MIRROR = 4,
+	MIRROR_CLAMP = 5,
+	REPEAT_IGNORE_BORDER = 6,
+	CLAMP_IGNORE_BORDER = 7,
+	CLAMP_FULL_BORDER = 8,
+	CLAMP_HALF_BORDER = 9
+};
+
 /* which page GetPageIndex gives: the one shown, or the one drawn into (names ours) */
 enum FrameBufferType {
 	FrameBufferType_Front = 0,
@@ -176,6 +199,53 @@ public:
 	void SetDivideMode(uint32_t mode);
 	void SetDivideStretchRatio(math::v2 ratio);
 
+	uint16_t GetDivideMode() const
+	{
+		return m_divide_mode;
+	}
+
+	/* the texture's sampling (src/graphics/state.c, still C) */
+	int32_t SetMagFilter(TextureFilter value);
+	int32_t SetMinFilter(TextureFilter value);
+	int32_t SetWrapS(TextureWrap value);
+	int32_t SetWrapT(TextureWrap value);
+
+	int32_t GetMagFilter() const
+	{
+		return m_texture_param.mag_filter;
+	}
+
+	int32_t GetWrapS() const
+	{
+		return m_texture_param.wrap_s;
+	}
+
+	int32_t GetWrapT() const
+	{
+		return m_texture_param.wrap_t;
+	}
+
+	/* the margins ahead of the division (left, bottom, right, top) */
+	uint16_t GetMarginLeft() const
+	{
+		return m_margin_left;
+	}
+
+	uint16_t GetMarginBottom() const
+	{
+		return m_margin_bottom;
+	}
+
+	uint16_t GetMarginRight() const
+	{
+		return m_margin_right;
+	}
+
+	uint16_t GetMarginTop() const
+	{
+		return m_margin_top;
+	}
+
 	int32_t GetRefCount() const
 	{
 		return m_ref_count;
@@ -266,23 +336,30 @@ protected:
 	intrusive_ptr<Surface> m_depth;
 	intrusive_ptr<SurfaceCLUT> m_clut;
 	SurfacePool *m_pool;
-	int16_t m_reserved1;
+	/* SetDivideMode's */
+	uint16_t m_divide_mode;
 	uint8_t m_reserved2;
 	uint8_t m_reserved3;
 	int32_t m_reserved4;
 	/* the texture element's margin_h and margin_v (Plugin's texture loader) */
-	int16_t m_margin_left;
-	int16_t m_margin_bottom;
-	int16_t m_margin_right;
-	int16_t m_margin_top;
+	uint16_t m_margin_left;
+	uint16_t m_margin_bottom;
+	uint16_t m_margin_right;
+	uint16_t m_margin_top;
 };
 
 }
 }
 
-/* the division's ratios across and down (Sony's name not found) */
-extern "C" void ScePafGraphics_36960B24(paf::graph::Surface *surface, paf::math::v2 ratio_h,
-					paf::math::v2 ratio_v);
+/* the division's ratios across and down, set and read, and the stretching part's ratio read
+   (Sony's names not found) */
+extern "C" {
+void ScePafGraphics_36960B24(paf::graph::Surface *surface, paf::math::v2 ratio_h,
+			     paf::math::v2 ratio_v);
+void ScePafGraphics_AFAE7807(paf::graph::Surface *surface, paf::math::v2 *ratio_h,
+			     paf::math::v2 *ratio_v);
+void ScePafGraphics_111C68BE(paf::graph::Surface *surface, paf::math::v2 *ratio);
+}
 
 /* A surface pool export Sony's exports do not name yet: the pool's virtual 7 with flag. */
 extern "C" int ScePafGraphics_83ABDFF5(paf::graph::SurfacePool *pool, uint8_t flag);

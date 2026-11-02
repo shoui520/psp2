@@ -15,6 +15,11 @@ extern const char s_empty_name[];
 
 class IDParam {
 public:
+	/* no ID: the empty name, hash 0 */
+	IDParam() : m_id(s_empty_name), m_idhash(0)
+	{
+	}
+
 	IDParam(const char *id)
 	{
 		if (id == NULL)

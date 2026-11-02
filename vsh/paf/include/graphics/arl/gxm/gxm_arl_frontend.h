@@ -102,6 +102,17 @@ public:
 		m_depth++;
 	}
 
+	/* the top matrix replaced, its inverse to be worked out again (name ours) */
+	void Load(const math::matrix &matrix)
+	{
+		Entry &top = m_stack[m_depth - 1];
+
+		top.m_matrix = matrix;
+		top.m_identity = false;
+		top.m_revision = m_depth - 1;
+		top.m_inverse_valid = false;
+	}
+
 	vector<Entry> m_stack;
 	uint32_t m_depth;
 	string m_name;

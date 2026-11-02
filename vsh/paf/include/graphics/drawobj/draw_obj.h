@@ -244,7 +244,7 @@ public:
 	common::SharedPtr<Shader> m_shader;
 	DeleteCBInfo m_delete_cb[2];
 
-private:
+protected:
 	/* the frames drawn after a change, outside a safety section */
 	void UpdateDirty()
 	{
@@ -252,6 +252,9 @@ private:
 			m_flags.m_dirty = s_dirty_count;
 	}
 };
+
+/* the style bound with the default marker: what it already is is not bound again */
+void BindDrawStyle(DrawStyle style);
 
 /* the draw calls the renderer draws */
 common::SharedPtr<DrawEnv> &DrawCalls();
