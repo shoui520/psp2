@@ -79,7 +79,7 @@ public:
 	virtual bool IsInherit(const char *type) const;
 	virtual const char *GetDrawObjType() const;
 	virtual ~BubbleObj();
-	virtual void Draw(const math::matrix &parent, uint32_t color, float alpha);
+	virtual void OnDraw(const math::matrix &parent, uint32_t color, float alpha, DrawInfo &info);
 	virtual void SetTexture(const intrusive_ptr<Surface> &texture, uint32_t index = 0);
 	virtual void GetTexture(intrusive_ptr<Surface> &texture, uint32_t index = 0);
 	virtual void SetSize(math::v3 size);

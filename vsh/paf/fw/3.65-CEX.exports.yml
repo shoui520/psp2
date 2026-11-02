@@ -1839,7 +1839,7 @@ ScePaf:
         - ScePafGraphics_6EA0C6D7: 0x6EA0C6D7
         - _ZN3paf5graph7SurfacenwEj: 0x6EA3E8FF
         - _ZNK3paf5graph9TextStyle17GetStyleAttributeENS0_18TextStyleAttributeERNS_4math2v4E: 0x6EF37383
-        - _ZN3paf5graph9BubbleObj4DrawERKNS_4math6matrixEjf: 0x6F7C5986
+        - _ZN3paf5graph9BubbleObj6OnDrawERKNS_4math6matrixEjfRNS0_8DrawInfoE: 0x6F7C5986
         - ScePafGraphics_6FD7F728: 0x6FD7F728
         - _ZN3paf5graph10TextLayout17SetSelectionRangeEjj: 0x701BDA4C
         - _ZN3paf5graph3arl20VertCreateDependency15setVertexFormatENS_6common9SharedPtrINS1_15VertexArraySpecEEES6_S6_S6_: 0x704AAC74

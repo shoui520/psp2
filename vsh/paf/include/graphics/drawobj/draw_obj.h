@@ -26,6 +26,7 @@ namespace paf {
 namespace graph {
 
 class DrawEnv;
+class DrawInfo;
 class DrawObj;
 class Shader;
 class Surface;
@@ -126,13 +127,13 @@ public:
 	virtual const char *GetDrawObjType() const;
 	virtual ~DrawObj();
 
-	/* Draw queues a draw call whose callback calls Render, under the parent's world matrix
-	   with a color and alpha to modulate by (ScePafGraphics_B7EB9246; names ours) */
-	virtual void Draw(const math::matrix &parent, uint32_t color, float alpha)
+	/* OnDraw queues the object for the frame under the parent's world matrix, with a color and
+	   alpha to modulate by (ScePafGraphics_B7EB9246); Draw draws it (Sony's names, by NID) */
+	virtual void OnDraw(const math::matrix &parent, uint32_t color, float alpha, DrawInfo &info)
 	{
 	}
 
-	virtual void Render()
+	virtual void Draw(const math::matrix &world, uint32_t color, float alpha)
 	{
 	}
 

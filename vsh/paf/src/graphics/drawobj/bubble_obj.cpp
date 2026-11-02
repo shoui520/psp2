@@ -50,7 +50,7 @@ BubbleObj::~BubbleObj()
 
 /* the screen is 480 by 272, seen through a 25-degree half angle; a bubble off the eye's
    depth is moved as the panels' perspective would move it */
-void BubbleObj::Draw(const math::matrix &parent, uint32_t color, float alpha)
+void BubbleObj::OnDraw(const math::matrix &parent, uint32_t color, float alpha, DrawInfo &info)
 {
 	if (!m_flags.m_visible || m_param == NULL)
 		return;
