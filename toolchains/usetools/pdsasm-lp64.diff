@@ -1,0 +1,10 @@
+--- a/host/pdsasm/pdsasm.h
++++ b/host/pdsasm/pdsasm.h
+@@ -223,6 +223,6 @@
+ IMG_BOOL PDSDisassembleInstruction	(IMG_CHAR* achInstruction, IMG_UINT32	dwInstruction, IMG_PUINT32 pdwMaxJumpDest);
+ 
+ /* define PDSASM_UNDEF as -1 */
+-#define PDSASM_UNDEF	(~0UL)
++#define PDSASM_UNDEF	(~0U)
+ 
+ #endif /* __PDSASM_H_ */

@@ -129,6 +129,13 @@ def toolchain(folder):
 	for program in PROGRAMS:
 		path = host.linux_wrapper(bindir / f'arm-none-eabi-{program}', folder / f'arm-none-eabi-{program}')
 		lines.append(f'set(PSP2_GCC48_{program.upper().replace("+", "X")} "{path.as_posix()}")')
+	# the SGX543's assemblers (toolchains/build-usetools.sh), for the GPU programs gpuinit_es4
+	# builds; a module that needs them stops the configure when they are not built
+	for program in ('useasm', 'pdsasm'):
+		built = TOOLCHAINS / 'usetools' / 'bin' / program
+		if built.exists():
+			path = host.linux_wrapper(built, folder / program)
+			lines.append(f'set(PSP2_{program.upper()} "{path.as_posix()}")')
 	lines += [f'set(PSP2_GCC48_TARGET "{" ".join(GCC48_TARGET)}")',
 		  f'set(PSP2_GCC48_FLAGS "{" ".join(("-fstack-protector-strong", *GCC48_CODE, *GCC48_FREESTANDING))}")']
 	(folder / 'flags.cmake').write_text('\n'.join(lines) + '\n')
