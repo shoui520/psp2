@@ -15,8 +15,9 @@ Archive SHA-256:
 `814dfddbf48b71582761926d06f75d557a8b6f81317025961b26258550fead98`.
 
 Kept unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h`,
-`crypto/stack/stack.c`, `crypto/stack/stack.h` and `crypto/ex_data.c`, plus the
-upstream copyright file. The libssl LHASH, STACK and ex-data translation units
+`crypto/stack/stack.c`, `crypto/stack/stack.h`, `crypto/ex_data.c`,
+`crypto/bio/bio_lib.c` and `crypto/bio/bio.h`, plus the upstream copyright file.
+The libssl LHASH, STACK, ex-data and BIO translation units
 read these files. The rest of the distribution is omitted.
 
 The baseline was selected by compiling historical releases with Sony SNC and
@@ -56,3 +57,25 @@ setter indices to zero. The consuming wrapper binds the original allocator and
 error interface and its measured error constants. It disables the optional
 upstream memory-debug hooks, which the original functions do not call. Original
 callback record layout agrees with the unmodified upstream header.
+
+The BIO adaptation changes the header through `bio/bio_sce.patch` and the
+implementation through `bio/bio_lib_sce.patch`. SSL-C uses a separately allocated
+eight-byte ex-data object and a60-byte accessed BIO layout, but its allocator
+still receives64 for a new BIO; the extra allocation bytes are left untouched.
+The patch preserves method-creation failure cleanup, SSL-C error values,
+write auto-flush, error/return instead of abort on bad references, and backward
+link clearing before freeing a chain. Control dispatch captures the method and
+reloads it only after a successful pre-callback: a rejecting callback must not
+cause a subsequent dereference of a possibly invalidated BIO. The wrapper binds
+reference locking to the original source filename and line190. Retry flags are
+separate SSL-C helpers, including null handling and its extra retry bit0x40.
+
+The full upstream BIO file is retained. Seven emitted upstream helpers currently
+have no established original identity: `BIO_find_type`, `BIO_get_ex_data`,
+`BIO_get_ex_new_index`, `BIO_get_retry_BIO`, `BIO_ptr_ctrl`, `BIO_puts` and
+`BIO_set_ex_data`. They are not counted as reconstructed original functions;
+their presence in upstream does not establish that SSL-C retained those APIs or
+used their behavior unchanged. Their native counterparts, if any, remain an
+identification task. Do not use an unverified helper as a substitute for an
+observed native operation. In particular, SSL-C's socket pointer getter has
+different failure behavior from upstream `BIO_ptr_ctrl`.

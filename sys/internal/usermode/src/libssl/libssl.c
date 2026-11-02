@@ -44,7 +44,6 @@ int SceSslInternal_33737FDC(void)
 {
 	return 0;
 }
-STUB(SceSslInternal_33AC7A16)
 STUB(SceSslInternal_349B0E73)
 STUB(SceSslInternal_3746501F)
 STUB(SceSslInternal_3DE4F3DB)
@@ -89,7 +88,6 @@ STUB(SceSslInternal_BF99D664)
 void SceSslInternal_C0B135F0(void)
 {
 }
-STUB(SceSslInternal_C4D984C2)
 STUB(SceSslInternal_CB83EA07)
 STUB(SceSslInternal_CBEC7D13)
 STUB(SceSslInternal_CC7F4211)
