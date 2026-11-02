@@ -105,7 +105,8 @@ enum FaceEnum {
 	FRONT_AND_BACK = 3
 };
 
-/* the caps from 12 on are paf's debug colouring (names ours) */
+/* the caps from 12 on are paf's debug caps: two colour the drawing, one goes to the surface
+   with each draw (names ours) */
 enum EnableCap {
 	BLEND = 0,
 	DITHER = 1,
@@ -120,7 +121,7 @@ enum EnableCap {
 	TWO_SIDED = 10,
 	DEBUG_COLOR_SHIFT = 12,
 	DEBUG_ALPHA_DOUBLE = 13,
-	DEBUG_RESERVED = 14
+	DEBUG_SURFACE_DRAW = 14
 };
 
 /* a surface's width and height, passed by value (names ours) */

@@ -90,8 +90,59 @@ public:
 	common::SharedPtr<VertexBuffer> m_buffer;
 };
 
+/* the video memory an index array's indices are in (name ours) */
+class IndexMemory {
+public:
+	IndexMemory(const common::SharedPtr<VramAllocator> &allocator)
+		: m_memory(new SurfaceMemory(allocator))
+	{
+	}
+
+	common::SharedPtr<SurfaceMemory> m_memory;
+};
+
+/* indices in video memory; the front end's is the 16-bit indices 0 to 65535, which
+   VertexArray::DrawArrays draws a range of vertices with */
+class IndexArray {
+public:
+	enum {
+		SIZE = 0x20000
+	};
+
+	IndexArray(common::SharedPtr<VramAllocator> allocator)
+		: m_memory(new IndexMemory(allocator)), m_format(SCE_GXM_INDEX_FORMAT_U16)
+	{
+		SurfaceMemory *memory = m_memory->m_memory.get();
+
+		if (memory->m_addr == NULL) {
+			memory->m_allocator->Alloc(memory, SIZE);
+			memory->m_size = SIZE;
+		}
+
+		uint16_t *index = (uint16_t *)m_memory->m_memory->m_addr;
+
+		for (uint32_t i = 0; i < 0x10000; i++)
+			*index++ = i;
+	}
+
+	void draw(ArlInstance &gl, Primitive primitive, uint32_t count);
+
+	common::SharedPtr<IndexMemory> m_memory;
+	SceGxmIndexFormat m_format;
+};
+
 }
 }
+}
+
+/* the instanced draws, the index array repeated every wrap indices (names of the parameters
+   ours) */
+extern "C" {
+void ScePafGraphics_72FB29E9(paf::graph::arl::ArlInstance *gl,
+			     paf::graph::arl::Primitive primitive, uint32_t count, uint32_t wrap);
+void ScePafGraphics_AE5BBA4B(paf::graph::arl::IndexArray *indices,
+			     paf::graph::arl::ArlInstance *gl,
+			     paf::graph::arl::Primitive primitive, uint32_t count, uint32_t wrap);
 }
 
 #endif

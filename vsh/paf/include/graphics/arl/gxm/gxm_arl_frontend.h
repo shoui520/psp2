@@ -33,7 +33,6 @@ namespace arl {
 class FrameBufferObject;
 class ClearBase;
 class FrameBufferCopy;
-class IndexBuffer;
 class ArlInstance;
 
 /* a rectangle in pixels by two corners, the first the smaller (names ours) */
@@ -232,43 +231,6 @@ public:
 	bool m_full_size;
 };
 
-/* the 16-bit indices 0 to 65535 a quad list draws with (names ours) */
-class IndexMemory {
-public:
-	IndexMemory(const common::SharedPtr<VramAllocator> &allocator)
-		: m_memory(new SurfaceMemory(allocator))
-	{
-	}
-
-	common::SharedPtr<SurfaceMemory> m_memory;
-};
-
-class IndexBuffer {
-public:
-	enum {
-		SIZE = 0x20000
-	};
-
-	IndexBuffer(common::SharedPtr<VramAllocator> allocator)
-		: m_memory(new IndexMemory(allocator)), m_reserved(0)
-	{
-		SurfaceMemory *memory = m_memory->m_memory.get();
-
-		if (memory->m_addr == NULL) {
-			memory->m_allocator->Alloc(memory, SIZE);
-			memory->m_size = SIZE;
-		}
-
-		uint16_t *index = (uint16_t *)m_memory->m_memory->m_addr;
-
-		for (uint32_t i = 0; i < 0x10000; i++)
-			*index++ = i;
-	}
-
-	common::SharedPtr<IndexMemory> m_memory;
-	uint32_t m_reserved;
-};
-
 /* a VramAllocator over one of GraphMem's heaps, counting what it gave (names ours) */
 class HeapVramAllocator : public VramAllocator {
 public:
@@ -437,7 +399,7 @@ public:
 	ClearBase *m_clear;
 	FrameBufferCopy *m_copy;
 	RenderTargetPool *m_render_target_pool;
-	IndexBuffer *m_quad_indices;
+	IndexArray *m_quad_indices;
 	/* 1 to 64, set by the constructor; nothing in the front end reads them */
 	uint8_t m_sequence[64];
 	bool m_reserved_flag;
@@ -461,10 +423,11 @@ public:
 	SceGxmBlendInfo m_blend_info;
 	SceGxmBlendInfo m_default_blend_info;
 	bool m_depth_test_enabled;
-	/* the debug colour caps: the colour pushed off grey, the alpha doubled, and one unread */
+	/* the debug colour caps: the colour pushed off grey, the alpha doubled, and one each draw
+	   hands the surface */
 	bool m_debug_color_shift;
 	bool m_debug_alpha_double;
-	bool m_debug_reserved;
+	bool m_debug_surface_draw;
 	uint64_t m_frame_start;
 	float m_frame_time;
 	/* the markers of what the GPU is doing, innermost last */

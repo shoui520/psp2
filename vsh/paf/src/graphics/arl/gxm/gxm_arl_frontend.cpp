@@ -173,7 +173,7 @@ extern "C" void ScePafGraphics_9AA25028(ArlInstance *gl, const InitParam &param)
 	gl->m_debug_allocator =
 		common::SharedPtr<VramAllocator>(new HeapVramAllocator("debug", s_heap));
 	gl->m_clear = new ClearBase();
-	gl->m_quad_indices = new IndexBuffer(gl->m_default_allocator);
+	gl->m_quad_indices = new IndexArray(gl->m_default_allocator);
 	gl->m_render_target_pool = new RenderTargetPool();
 	gl->m_copy = new FrameBufferCopy();
 	s_init_check_flag.m_value |= 2;
@@ -266,7 +266,7 @@ ArlInstance::ArlInstance()
 	m_default_blend_info.alphaSrc = SCE_GXM_BLEND_FACTOR_ONE;
 	m_default_blend_info.alphaDst = SCE_GXM_BLEND_FACTOR_ZERO;
 	m_debug_alpha_double = false;
-	m_debug_reserved = false;
+	m_debug_surface_draw = false;
 	m_default_blend_info.colorFunc = SCE_GXM_BLEND_FUNC_NONE;
 	m_default_blend_info.alphaFunc = SCE_GXM_BLEND_FUNC_NONE;
 	m_frame_start = get_time_internal();
@@ -543,8 +543,8 @@ void ArlInstance::Enable(EnableCap cap)
 	case DEBUG_ALPHA_DOUBLE:
 		m_debug_alpha_double = true;
 		break;
-	case DEBUG_RESERVED:
-		m_debug_reserved = true;
+	case DEBUG_SURFACE_DRAW:
+		m_debug_surface_draw = true;
 		break;
 	}
 }
@@ -583,8 +583,8 @@ void ArlInstance::Disable(EnableCap cap)
 	case DEBUG_ALPHA_DOUBLE:
 		m_debug_alpha_double = false;
 		break;
-	case DEBUG_RESERVED:
-		m_debug_reserved = false;
+	case DEBUG_SURFACE_DRAW:
+		m_debug_surface_draw = false;
 		break;
 	}
 }

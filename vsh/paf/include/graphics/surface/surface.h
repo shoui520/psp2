@@ -131,8 +131,10 @@ public:
 	Surface(SurfacePool *pool, int32_t width, int32_t height, ImageMode format,
 		ImageOrder order, int32_t num_page, int32_t num_level, bool reserved);
 	virtual ~Surface();
-	/* nothing; 0 */
-	virtual void Unused2();
+	/* told of each draw into the surface, with the front end's third debug cap: nothing (name
+	   ours) */
+	virtual void OnDraw(bool debug);
+	/* 0 */
 	virtual int32_t Unused3();
 	/* clears the page drawn into: ScePafGraphics_439D4357 */
 	virtual void ClearPage(const math::v4 &color, uint32_t clear_mask);
