@@ -14,6 +14,7 @@ extern "C" {
 }
 #include <common/common_internal.h>
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
+#include <graphics/frame_clock.h>
 #include <graphics/graphmem/graphmem.h>
 #include <graphics/gutil.h>
 #include <graphics/surface/surface.h>
@@ -54,16 +55,6 @@ static inline DisplaySurface::UpdateInfo *GetUpdate()
 {
 	return (DisplaySurface::UpdateInfo *)s_fb_info.update;
 }
-
-/* when the frame began (names ours) */
-class FrameClock {
-public:
-	FrameClock() : m_start(get_time_internal())
-	{
-	}
-
-	SceUInt64 m_start;
-};
 
 intrusive_ptr<Surface> DisplaySurface::s_offscreen(NULL, true);
 bool s_page_opened;

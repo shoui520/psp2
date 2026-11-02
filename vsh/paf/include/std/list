@@ -25,6 +25,10 @@ class _list_iterator {
 public:
 	typedef _list_node<_Ty> _Node;
 
+	_list_iterator() : node(NULL)
+	{
+	}
+
 	_list_iterator(_Node *where) : node(where)
 	{
 	}
@@ -53,6 +57,13 @@ public:
 	{
 		if (node != NULL)
 			node = node->next;
+		return *this;
+	}
+
+	_list_iterator &operator--()
+	{
+		if (node != NULL)
+			node = node->prev;
 		return *this;
 	}
 

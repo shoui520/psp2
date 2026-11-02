@@ -18,6 +18,7 @@ void *ScePafStdc_0ADEA3AD(void *ptr, size_t size);
 void *ScePafStdc_C9532982(size_t nitems, size_t size);
 int sce_paf_abs(int value);
 int sce_paf_printf_dummy(void);
+int sce_paf_wprintf_dummy(void);
 unsigned long sce_paf_strtoul(const char *str, char **endptr, int base);
 /* name unknown: reports a failed allocation in the paf templates and breaks */
 int ScePafStdc_D608246A(void);

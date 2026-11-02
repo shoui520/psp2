@@ -188,6 +188,11 @@ public:
 	void erase(iterator first, iterator last);
 	void _Tidy();
 
+	void clear()
+	{
+		_Tidy();
+	}
+
 	void erase(iterator where);
 
 	_Node *head;
