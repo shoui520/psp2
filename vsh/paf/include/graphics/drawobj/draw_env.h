@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <common/common_internal.h>
 #include <common/shared_ptr.h>
+#include <graphics/camera.h>
 #include <math/ngp/matrix.h>
 #include <math/ngp/v4.h>
 #include <std/memory>
@@ -50,51 +51,6 @@ public:
 	uint32_t m_begin;
 	uint32_t m_end;
 	bool m_ended;
-};
-
-/* the camera the panels are seen by: its fourth virtual gives the eye's position. Its code
-   (0x8109b314..) is not converted; the names are ours. */
-class Camera {
-public:
-	/* a perspective projection from the field of view along an axis (1 the vertical, else
-	   the horizontal) and the aspect */
-	class Projection {
-	public:
-		math::matrix m_matrix;
-		float m_near;
-		float m_far;
-		float m_left;
-		float m_right;
-		float m_bottom;
-		float m_top;
-		float m_fov;
-		int32_t m_fov_axis;
-		float m_aspect;
-		/* both cleared whenever the projection is made from the field of view; while
-		   m_fixed is set it is not made again for a new aspect */
-		bool m_changed;
-		bool m_fixed;
-	};
-
-	virtual void reserved0();
-	virtual void reserved1();
-	virtual void reserved2();
-	virtual math::v4 GetEyePos() const;
-
-	/* the projection set for the 2D (flag 2) or the 3D view in an aspect, and the eye placed */
-	void Reset(float aspect);
-	/* the eye placed at a position, looking at the origin */
-	void SetPosition(const math::v4 &position);
-
-	/* the world matrix Reset kept */
-	math::matrix m_reset_world;
-	math::v4 m_position;
-	math::v4 m_rotation;
-	math::matrix m_world;
-	math::matrix m_world_inverse;
-	Projection m_projection;
-	/* 2: the 2D view */
-	uint32_t m_flags;
 };
 
 /* draws the panel and bubble objects (Sony's name: the string its constructor 0x810bc564

@@ -203,64 +203,6 @@ void DevTerm()
 	}
 }
 
-/* the projection made again from the camera's field of view for an aspect, unless it is
-   fixed */
-static inline __attribute__((always_inline)) void SetCameraAspect(graph::Camera *camera,
-								   float aspect)
-{
-	graph::Camera::Projection &projection = camera->m_projection;
-
-	if (projection.m_fixed)
-		return;
-
-	float fov = projection.m_fov;
-	float near_z = projection.m_near;
-	int32_t fov_axis = projection.m_fov_axis;
-	float far_z = projection.m_far;
-	float t = sce_paf_tanf(fov * 0.5f);
-	float left;
-	float right;
-	float bottom;
-	float top;
-
-	if (fov_axis == 1) {
-		top = near_z * t;
-		bottom = -(near_z * t);
-		right = top * aspect;
-		left = -(top * aspect);
-	} else {
-		right = near_z * t;
-		left = -(near_z * t);
-		top = right / aspect;
-		bottom = -top;
-	}
-
-	math::matrix matrix = math::matrix::Frustum(left, right, bottom, top, near_z, far_z);
-
-	projection.m_matrix = matrix;
-	projection.m_near = near_z;
-	projection.m_far = far_z;
-	projection.m_left = left;
-	projection.m_right = right;
-	projection.m_bottom = bottom;
-	projection.m_top = top;
-	projection.m_fov = fov;
-	projection.m_fov_axis = fov_axis;
-	projection.m_aspect = aspect;
-	projection.m_changed = false;
-	projection.m_fixed = false;
-}
-
-/* the horizontal field of view */
-static inline __attribute__((always_inline)) float GetCameraFovX(graph::Camera *camera)
-{
-	graph::Camera::Projection &projection = camera->m_projection;
-
-	if (projection.m_fov_axis != 0)
-		return sce_paf_atanf(sce_paf_tanf(projection.m_fov * 0.5f) * projection.m_aspect) * 2.0f;
-	return projection.m_fov;
-}
-
 int32_t Init(const InitParam &param)
 {
 	graph::arl::ArlInstance *gl = graph::arl::Gl();
@@ -280,14 +222,14 @@ int32_t Init(const InitParam &param)
 	float aspect = width / height;
 	float half_width = width * 0.5f;
 
-	SetCameraAspect(ScePafGraphics_4E038C05()->m_ptr->m_camera.get(), aspect);
-	SetCameraAspect(ScePafGraphics_4E038C05()->m_ptr->m_camera_2d.get(), aspect);
+	ScePafGraphics_4E038C05()->m_ptr->m_camera->m_projection.SetAspect(aspect);
+	ScePafGraphics_4E038C05()->m_ptr->m_camera_2d->m_projection.SetAspect(aspect);
 
-	float fov_x = GetCameraFovX(ScePafGraphics_4E038C05()->m_ptr->m_camera.get());
+	float fov_x = ScePafGraphics_4E038C05()->m_ptr->m_camera->m_projection.GetFovX();
 	math::v4 eye = math::v4(sce::Vectormath::Simd::Aos::Vector4::zAxis()) * half_width;
 
 	ScePafGraphics_4E038C05()->m_ptr->m_camera->SetPosition(eye / sce_paf_tanf(fov_x * 0.5f));
-	fov_x = GetCameraFovX(ScePafGraphics_4E038C05()->m_ptr->m_camera_2d.get());
+	fov_x = ScePafGraphics_4E038C05()->m_ptr->m_camera_2d->m_projection.GetFovX();
 	ScePafGraphics_4E038C05()->m_ptr->m_camera_2d->SetPosition(eye / sce_paf_tanf(fov_x * 0.5f));
 
 	if (param.surf_def_pool_size != 0)

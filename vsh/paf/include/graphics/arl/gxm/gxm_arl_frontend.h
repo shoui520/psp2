@@ -102,6 +102,42 @@ public:
 		m_depth++;
 	}
 
+	/* the top entry pushed again; the first one the identity (name ours) */
+	void PushTop()
+	{
+		if (m_depth == 0) {
+			m_depth++;
+			LoadIdentity();
+		} else {
+			Entry &below = m_stack[m_depth - 1];
+			Entry &top = m_stack[m_depth];
+
+			top.m_matrix = below.m_matrix;
+			top.m_identity = below.m_identity;
+			top.m_revision = below.m_revision;
+			top.m_inverse_valid = below.m_inverse_valid;
+			m_depth++;
+		}
+	}
+
+	void Pop()
+	{
+		--m_depth;
+	}
+
+	/* the top matrix the identity, its own inverse (name ours; Sony's build keeps it out of
+	   line) */
+	__attribute__((noinline)) void LoadIdentity()
+	{
+		Entry &top = m_stack[m_depth - 1];
+
+		top.m_matrix = math::matrix::Identity();
+		top.m_inverse = math::matrix::Identity();
+		top.m_revision = m_depth - 1;
+		top.m_inverse_valid = true;
+		top.m_identity = true;
+	}
+
 	/* the top matrix replaced, its inverse to be worked out again (name ours) */
 	void Load(const math::matrix &matrix)
 	{
@@ -111,6 +147,17 @@ public:
 		top.m_identity = false;
 		top.m_revision = m_depth - 1;
 		top.m_inverse_valid = false;
+	}
+
+	/* the top matrix replaced, the inverse flag kept as it was (name ours) */
+	void LoadKeepInverse(const math::matrix &matrix)
+	{
+		Entry &top = m_stack[m_depth - 1];
+
+		top.m_matrix = matrix;
+		top.m_identity = false;
+		top.m_revision = m_depth - 1;
+		top.m_inverse_valid &= true;
 	}
 
 	vector<Entry> m_stack;
@@ -177,7 +224,11 @@ public:
 	MatrixStack m_view;
 	MatrixStack m_texture;
 	/* nothing in the front end reads or writes them */
-	uint8_t m_reserved[0x44];
+	uint8_t m_reserved[0x40];
+	/* set by a camera that loads the view or the projection stack */
+	bool m_view_changed;
+	bool m_projection_changed;
+	uint8_t m_reserved2[2];
 	ViewportStack m_viewport;
 };
 
