@@ -164,75 +164,6 @@ int _ZN3paf5graph10TextLayout15GetNextRightHitEjRj(const uint8_t *self, uint32_t
 	return result;
 }
 
-/* Forward resource field queries through the active graphics view. */
-int _ZN3paf5graph7TextObj11GetCharInfoEjRNS0_18TextLayoutCharInfoE(const uint8_t *self, uint32_t index,
-			     uint8_t *output)
-{
-	const uint8_t *active = *(const uint8_t *const *)(self + 80);
-
-	if (active)
-		return _ZN3paf5graph10TextLayout11GetCharInfoEjRNS0_18TextLayoutCharInfoE(active, index, output);
-	return -2136014814;
-}
-
-int _ZN3paf5graph7TextObj18GetLayoutAttributeENS0_19TextLayoutAttributeERi(const uint8_t *self, int index,
-			     uint32_t *output)
-{
-	const uint8_t *active = *(const uint8_t *const *)(self + 80);
-
-	if (active)
-		return _ZN3paf5graph10TextLayout18GetLayoutAttributeENS0_19TextLayoutAttributeERi(active, index, output);
-	return -2136014814;
-}
-
-int _ZN3paf5graph7TextObj15GetNextRightHitEjRj(const uint8_t *self, uint32_t index,
-			     uint32_t *output)
-{
-	const uint8_t *active = *(const uint8_t *const *)(self + 80);
-
-	if (active)
-		return _ZN3paf5graph10TextLayout15GetNextRightHitEjRj(active, index, output);
-	return -2136014814;
-}
-
-int _ZN3paf5graph7TextObj12GetLineCountERj(const uint8_t *self, uint32_t *output)
-{
-	const uint8_t *active = *(const uint8_t *const *)(self + 80);
-
-	if (active)
-		return _ZN3paf5graph10TextLayout12GetLineCountERj(active, output);
-	return -2136014814;
-}
-
-int _ZN3paf5graph7TextObj18GetLayoutAttributeENS0_19TextLayoutAttributeERNS_4math2v2E(const uint8_t *self, int index,
-			     uint64_t *output)
-{
-	const uint8_t *active = *(const uint8_t *const *)(self + 80);
-
-	if (active)
-		return _ZN3paf5graph10TextLayout18GetLayoutAttributeENS0_19TextLayoutAttributeERNS_4math2v2E(active, index, output);
-	return -2136014814;
-}
-
-int _ZN3paf5graph7TextObj17GetSelectionRangeERjS2_(const uint8_t *self, uint32_t *first,
-			     uint32_t *second)
-{
-	const uint8_t *active = *(const uint8_t *const *)(self + 80);
-
-	if (active)
-		return _ZN3paf5graph10TextLayout17GetSelectionRangeERjS2_(active, first, second);
-	return -2136014814;
-}
-
-int _ZN3paf5graph7TextObj9GetBoundsERNS_4math2v2E(const uint8_t *self, uint64_t *output)
-{
-	const uint8_t *active = *(const uint8_t *const *)(self + 80);
-
-	if (active)
-		return _ZN3paf5graph10TextLayout9GetBoundsERNS_4math2v2E(active, output);
-	return -2136014814;
-}
-
 int32_t _ZN3paf5graph10TextLayout11GetCharInfoEjRNS0_18TextLayoutCharInfoE(const uint8_t *self, uint32_t index,
 				uint8_t *output)
 {
@@ -860,12 +791,6 @@ uint32_t ScePafGraphics_52C45E43(uint32_t value)
 	return value;
 }
 
-uint32_t _ZN3paf5graph7DrawObj13SetDirtyCountEj(uint32_t value)
-{
-	sce_paf_graphics_state_11fc = value;
-	return value;
-}
-
 uint32_t _ZN3paf5graph13ScreenSurface13SetRawContextEP13SceGxmContext(uint32_t value)
 {
 	sce_paf_graphics_state_12b0 = value;
@@ -995,18 +920,6 @@ int32_t _ZNK3paf5graph7Surface8GetScoreEv(const uint8_t *self)
 {
 	return *(const int32_t *)(self + 56) *
 		(3 - *(const int32_t *)(self + 32));
-}
-
-uint8_t *_ZN3paf5graph7DrawObj12FinishSafetyEv(void)
-{
-	sce_paf_graphics_flag_06e8 = 0;
-	return &sce_paf_graphics_flag_06e8;
-}
-
-uint8_t *_ZN3paf5graph7DrawObj11EnterSafetyEv(void)
-{
-	sce_paf_graphics_flag_06e8 = 1;
-	return &sce_paf_graphics_flag_06e8;
 }
 
 int32_t *_ZN3paf5graph9TextStyleD1Ev(int32_t *result)
@@ -1690,17 +1603,6 @@ int GraphicsInvokeOffset20(const uint32_t *self)
 		*(void **)object)[5](object, self[1], self[2], self[3]);
 }
 
-int _ZN3paf5graph7TextObj12DrawCallbackERKNS0_7DrawObj15DrawCallbackArgE(const uint32_t *self)
-{
-	return GraphicsInvokeOffset20(self);
-}
-
-__attribute__((noinline))
-int _ZNK3paf5graph7DrawObj9IsInheritEPKc(const void *self, const char *tag)
-{
-	return tag == "DrawObj";
-}
-
 uint8_t *sce_paf_graphics_indicator_3070;
 
 int _ZN3paf5graph7Surface10SetLodBiasEj(uint8_t *self, uint32_t value)
@@ -1741,13 +1643,6 @@ int _ZN3paf5graph9TextStyle17SetStyleAttributeENS0_18TextStyleAttributeEi(uint8_
 		return -2136005886;
 	self[4] = value;
 	return 0;
-}
-
-int _ZNK3paf5graph7TextObj9IsInheritEPKc(const void *self, const char *tag)
-{
-	if (tag == "TextObj")
-		return 1;
-	return _ZNK3paf5graph7DrawObj9IsInheritEPKc(self, tag);
 }
 
 /* Advance through the native mip-chain layout for a selected buffer. */

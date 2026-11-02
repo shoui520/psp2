@@ -71,10 +71,12 @@ public:
 	void *data;
 };
 
-/* what slot 17 sets the surface_draw bit from: only the bool is read (names ours) */
+/* what slot 17 sets the surface_draw bit from; a text object also takes its font flags from
+   m_font_flags (1: enlarge_font_size, 2: force_bold, 4: deepen_color; 128: leave them as they
+   are) (names ours) */
 class SurfaceDrawParam {
 public:
-	int32_t m_reserved;
+	int32_t m_font_flags;
 	bool m_surface_draw;
 };
 

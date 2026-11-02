@@ -158,6 +158,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/drawobj/page_turn_obj.cpp
 	src/graphics/drawobj/panel_obj.cpp
 	src/graphics/drawobj/plane_obj.cpp
+	src/graphics/drawobj/text_obj.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
@@ -289,6 +290,7 @@ set_source_files_properties(src/timer/get_time.cpp src/url/url.cpp src/rtc/rtc.c
 	src/graphics/drawobj/bubble_obj.cpp src/graphics/drawobj/page_turn_obj.cpp
 	src/graphics/drawobj/panel_obj.cpp
 	src/graphics/drawobj/plane_obj.cpp
+	src/graphics/drawobj/text_obj.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # The shader objects keep vector<uint8_t>'s copy constructor out of line in the binary
