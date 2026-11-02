@@ -352,6 +352,16 @@ public:
 		return ptr;
 	}
 
+	_Elem &operator[](size_type pos)
+	{
+		return ptr[pos];
+	}
+
+	const _Elem &operator[](size_type pos) const
+	{
+		return ptr[pos];
+	}
+
 	size_type size() const
 	{
 		return count;

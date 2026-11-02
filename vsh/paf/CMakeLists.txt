@@ -178,6 +178,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/text/text_surface_cache.cpp
 	src/graphics/text/text_thread.cpp
 	src/graphics/text/text_util.cpp
+	src/graphics/effects/param.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
