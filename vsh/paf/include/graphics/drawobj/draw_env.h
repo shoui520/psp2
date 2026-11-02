@@ -12,6 +12,7 @@
 #include <common/shared_ptr.h>
 #include <graphics/camera.h>
 #include <graphics/effects/background.h>
+#include <graphics/effects/param.h>
 #include <graphics/effects/post_effects.h>
 #include <graphics/surface/surface.h>
 #include <inputdevice/inputlistener.h>
@@ -145,6 +146,16 @@ public:
 	uint8_t reserved3[4];
 };
 
+/* the heights of the waves, computed by FFT (names ours) */
+class FFTWaveSurface {
+public:
+	/* 0x810a03ae: the waves moved on unless paused, and computed again; the second flag is
+	   not read */
+	void Update(bool paused, bool unused);
+
+	uint8_t reserved[0x510];
+};
+
 /* the waves' surface computed by FFT (its parameters' set is named "FFTWave"); nothing in
    libpaf makes one */
 class FFTWave {
@@ -152,10 +163,24 @@ public:
 	/* 0x8109f3e0 */
 	void Update();
 
-	uint8_t reserved[0x578];
+	FFTWaveSurface m_surface;
+	/* the frame of the last update */
+	int32_t m_frame;
+	uint32_t m_reserved_word;
+	/* the time the waves are at, back to 0 past the period over 2 pi */
+	float m_time;
+	float m_period;
+	uint8_t reserved[9];
+	bool m_paused;
+	uint8_t reserved2[10];
+	/* the parameters' keys, moved on by the frame time */
+	ParamSetKeysManager m_param_keys;
 	/* the panels' matrices, set every frame */
 	math::matrix m_view;
 	math::matrix m_projection;
+	uint8_t reserved3[0x30c];
+	/* how fast the time goes, times the frame time */
+	float m_speed;
 };
 
 /* a renderer made by a function the renderer is given: its seventh virtual returns an object
