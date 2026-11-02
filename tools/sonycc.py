@@ -93,6 +93,10 @@ def compile_one(src, out, kind, defines, includes, opt, gcc=None, extra=(), mode
 	name = [] if any(d.startswith('-D__FILE_NAME__=') for d in defines) else \
 		[f'-D__FILE_NAME__="{file_name(src)}"']
 	if kind == 'gcc48':
+		# a GCC 4.8 source in a module Sony built with SNC: the module's SNC options (-X...) are not
+		# GCC's
+		extra = [e for e in extra if not e.startswith('-X') or
+			 e in ('-Xassembler', '-Xlinker', '-Xpreprocessor')]
 		cmd = host.linux_command([str(gcc or GCC48), '-m' + mode, *GCC48_TARGET, opt, '-std=gnu11',
 					  '-fstack-protector-strong' if gcc is None else '-fstack-protector',
 					  *GCC48_CODE, *GCC48_FREESTANDING, *extra, '-w', *name, *defines,

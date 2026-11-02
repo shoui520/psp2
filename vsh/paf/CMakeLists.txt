@@ -217,8 +217,14 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	../../sys/sdk/target/src/deflt/zlibhdr.c
 	../../sys/sdk/target/src/deflt/deflate.c
 	../../sys/sdk/target/src/deflt/deflate_common.c
+	../../sys/sdk/target/src/libSceVshBridge_stub/vshbridge_stub.c
 	libpaf.c
 )
+
+# the SceVshBridge stub library's wrapper, which Sony built with GCC 4.8 and without a stack
+# guard, like the SDK's libraries in libhttp (2026-11-02)
+set_source_files_properties(../../sys/sdk/target/src/libSceVshBridge_stub/vshbridge_stub.c
+	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48 COMPILE_OPTIONS -fno-stack-protector)
 
 target_include_directories(vs0_sys_external_libpaf PRIVATE
 	"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt"
