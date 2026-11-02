@@ -1,4 +1,4 @@
-# Audio implementation; remaining exports are compiled as placeholders.
+# PARTIAL until the SrcMix DSP programs (srcmix.c audioSrcMixProgram, audioSrcMixSecondaryProgram) are rebuilt from source.
 psp2_module(os0_kd_bootimage_audio KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	audio_work.c
 	biquad.c

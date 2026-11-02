@@ -40,10 +40,9 @@ typedef struct AddressSpaceGlobals {
 } AddressSpaceGlobals;
 
 static uintptr_t s_userIOPABase;
-/* PLACEHOLDER: set by the unconverted module start */
 static AddressSpaceObject *s_kernelAddressSpace;
 static SceSize s_userIOPASize;
-/* PLACEHOLDER: where the class pointer and the ASID heap are kept; set by the unconverted module start */
+/* where the class pointer and the ASID heap are kept */
 static AddressSpaceGlobals *s_addressSpaceGlobals;
 
 #if !SYSMEM_NSKBL
