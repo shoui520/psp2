@@ -348,7 +348,8 @@ public:
 	int32_t m_memory_mode;
 };
 
-/* the textures drawn when none is bound: white, black and noise (names ours) */
+/* the textures drawn when none is bound: 16x16 of 0xFFFFFFFF and of 0x000000FF, 64x64 of noise
+   (names ours) */
 class DefaultTextures {
 public:
 	void Init(common::SharedPtr<VramAllocator> allocator);
