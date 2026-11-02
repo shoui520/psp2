@@ -105,6 +105,8 @@ SceInt32 sceDbgLoggingHandler(const char *pFile, int line, int severity, const c
 	SCE_DBG_ASSERT_PRIVATE(test, true, SCE_BREAK(), "Assertion failed: %s\n", #test)
 
 #if SCE_DBG_ASSERTS_ENABLED
+#define SCE_DBG_SIMPLE_ASSERT(test)	\
+	_SCE_MACRO_BEGIN if (SCE_UNLIKELY(!(test))) { SCE_BREAK(); } _SCE_MACRO_END
 #define SCE_DBG_ASSERT(test)	\
 	SCE_DBG_ASSERT_PRIVATE(test, true, SCE_BREAK(), "Assertion failed: %s\n", #test)
 #define SCE_DBG_ASSERT_MSG(test, msg, ...)	\
@@ -112,6 +114,7 @@ SceInt32 sceDbgLoggingHandler(const char *pFile, int line, int severity, const c
 #define SCE_DBG_VERIFY(test)	\
 	SCE_DBG_ASSERT_PRIVATE(test, true, SCE_BREAK(), "Assertion failed: %s\n", #test)
 #else
+#define SCE_DBG_SIMPLE_ASSERT(test)		_SCE_MACRO_BEGIN { (void)sizeof((test)); } _SCE_MACRO_END
 #define SCE_DBG_ASSERT(test)			_SCE_MACRO_BEGIN { (void)sizeof((test)); } _SCE_MACRO_END
 #define SCE_DBG_ASSERT_MSG(test, msg, ...)	_SCE_MACRO_BEGIN { (void)sizeof((test)); } _SCE_MACRO_END
 #define SCE_DBG_VERIFY(test)			((void)(test))
