@@ -175,8 +175,9 @@ public:
 class ShaderState {
 public:
 	enum {
+		/* one for each VertexArraySpec::Predefined layout */
 		MAX_SLOTS = 36,
-		/* the four layouts ScePafGraphics_4D1E289A makes a slot's spec in */
+		/* a spec for each GXM index source, kept 16-bit index, instance, then 32-bit */
 		MAX_SPEC_MODES = 4
 	};
 
@@ -472,9 +473,11 @@ void ScePafGraphics_93CBC733(paf::graph::arl::ArlInstance *gl,
 void ScePafGraphics_4581906A(paf::graph::arl::ArlInstance *gl,
 			     SceGxmNotification *notification);
 void ScePafGraphics_E7B32741(paf::graph::arl::ArlInstance *gl);
-/* the spec of a predefined slot in one of four layouts, made the first time it is asked for */
+/* the spec of a predefined layout for an index source, made the first time it is asked for */
 paf::common::SharedPtr<paf::graph::arl::VertexArraySpec>
-ScePafGraphics_4D1E289A(paf::graph::arl::ShaderState *state, int32_t slot, int32_t mode);
+ScePafGraphics_4D1E289A(paf::graph::arl::ShaderState *state,
+			paf::graph::arl::VertexArraySpec::Predefined predefined,
+			SceGxmIndexSource index_source);
 /* the scene begun with GXM's scene flags; a scene asked for, and done with */
 void ScePafGraphics_01CA92B7(paf::graph::arl::ArlInstance *gl, uint32_t flags);
 void ScePafGraphics_199BD5F2(paf::graph::arl::ArlInstance *gl, uint32_t flags);

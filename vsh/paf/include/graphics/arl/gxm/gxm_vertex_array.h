@@ -20,8 +20,45 @@ namespace arl {
 
 class VertexArraySpec {
 public:
-	/* the attribute slots attribInfo knows, laid out when its file is converted */
+	/* the vertex layouts attribInfo makes: each attribute by its slot (ATTRIBn) and its
+	   components (Fn floats, H4 four halves), interleaved in this order (names ours) */
 	enum Predefined {
+		ATTRIB0_F2 = 0,
+		ATTRIB0_F3 = 1,
+		ATTRIB0_F4 = 2,
+		ATTRIB0_H4 = 3,
+		ATTRIB3_F2 = 4,
+		ATTRIB3_F3 = 5,
+		ATTRIB3_F4 = 6,
+		ATTRIB4_F2 = 7,
+		ATTRIB4_F3 = 8,
+		ATTRIB4_F4 = 9,
+		ATTRIB2_F2 = 10,
+		ATTRIB2_F3 = 11,
+		ATTRIB2_F4 = 12,
+		ATTRIB1_F3 = 13,
+		ATTRIB0_F4_ATTRIB2_F4 = 14,
+		ATTRIB0_F3_ATTRIB1_F3 = 15,
+		ATTRIB0_F4_ATTRIB1_F4 = 16,
+		ATTRIB0_F2_ATTRIB3_F2 = 17,
+		ATTRIB0_F2_ATTRIB3_F3 = 18,
+		ATTRIB0_F2_ATTRIB3_F4 = 19,
+		ATTRIB0_F3_ATTRIB3_F2 = 20,
+		ATTRIB0_F3_ATTRIB3_F4 = 21,
+		ATTRIB0_F3_ATTRIB3_F4_ATTRIB4_F2 = 22,
+		ATTRIB0_F3_ATTRIB3_F2_ATTRIB1_F3 = 23,
+		ATTRIB0_F3_ATTRIB3_F2_ATTRIB2_F4 = 24,
+		ATTRIB0_F4_ATTRIB3_F4 = 25,
+		ATTRIB0_F4_ATTRIB5_F4 = 26,
+		ATTRIB0_F4_ATTRIB3_F4_ATTRIB4_F4 = 27,
+		ATTRIB0_F4_ATTRIB4_F4 = 28,
+		ATTRIB0_F4_ATTRIB1_F4_ATTRIB3_F4 = 29,
+		ATTRIB0_F4_ATTRIB2_F4_ATTRIB3_F4 = 30,
+		ATTRIB0_F4_ATTRIB2_F4_ATTRIB4_F4 = 31,
+		ATTRIB0_F4_ATTRIB2_F4_ATTRIB3_F4_ATTRIB4_F4 = 32,
+		ATTRIB3_F4_ATTRIB4_F4 = 33,
+		ATTRIB3_F4_ATTRIB4_F4_ATTRIB5_F4 = 34,
+		ATTRIB3_F4_ATTRIB4_F4_ATTRIB5_F4_ATTRIB6_F4 = 35
 	};
 
 	enum {
@@ -34,17 +71,57 @@ public:
 		int32_t m_slot;
 		uint32_t m_components;
 		SceGxmAttributeFormat m_format;
-		uint32_t m_size;
+		/* the stream's stride, which the first attribute added gives the spec */
+		uint32_t m_stride;
 		uint16_t m_offset;
 	};
 
-	void attribInfo(Predefined slot, unsigned short offset);
+	VertexArraySpec(SceGxmIndexSource index_source)
+	{
+		for (int32_t i = 0; i < MAX_ATTRIBUTES; i++) {
+			m_attributes[i].m_slot = -1;
+			m_attributes[i].m_components = 0;
+			m_attributes[i].m_format = SCE_GXM_ATTRIBUTE_FORMAT_F32;
+			m_attributes[i].m_stride = 0;
+			m_attributes[i].m_offset = 0;
+		}
+		m_count = 0;
+		m_stride = 0;
+		m_index_source = index_source;
+		m_kinds = 0;
+		s_count++;
+	}
+
+	~VertexArraySpec()
+	{
+		s_count--;
+	}
+
+	void AddAttribute(int32_t slot, uint32_t components, SceGxmAttributeFormat format,
+			  uint32_t stride, uint16_t offset)
+	{
+		Attribute &attribute = m_attributes[m_count++];
+
+		attribute.m_slot = slot;
+		attribute.m_components = components;
+		attribute.m_format = format;
+		attribute.m_stride = stride;
+		attribute.m_offset = offset;
+		if (m_stride == 0)
+			m_stride = stride;
+		m_kinds |= 1 << slot;
+	}
+
+	void attribInfo(Predefined predefined, unsigned short offset);
+
+	/* the specs alive (name ours) */
+	static int32_t s_count;
 
 	Attribute m_attributes[MAX_ATTRIBUTES];
 	uint32_t m_count;
 	uint32_t m_stride;
 	uint32_t m_index_source;
-	/* a bit for each kind of attribute added */
+	/* a bit for each slot added */
 	uint32_t m_kinds;
 };
 

@@ -51,7 +51,9 @@ void FrameBufferCopy::init(ArlInstance &gl)
 		1.0f, -1.0f,
 	};
 
-	m_quad = VertexArray(gl.m_default_allocator, ScePafGraphics_4D1E289A(&gl, 0, 0),
+	m_quad = VertexArray(gl.m_default_allocator,
+			     ScePafGraphics_4D1E289A(&gl, VertexArraySpec::ATTRIB0_F2,
+						     SCE_GXM_INDEX_SOURCE_INDEX_16BIT),
 			     vertices, 4);
 
 	common::SharedPtr<VertexArraySpec> spec = m_quad.m_spec;
