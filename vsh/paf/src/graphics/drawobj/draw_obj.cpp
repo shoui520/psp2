@@ -310,5 +310,5 @@ void ScePafGraphics_0B4F6C24()
 
 void ScePafGraphics_505CD74E(bool flag)
 {
-	s_renderer.m_ptr->m_flag_505CD74E = flag;
+	s_renderer.m_ptr->m_filter.m_flag_505CD74E = flag;
 }

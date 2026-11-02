@@ -32,6 +32,11 @@ public:
 	{
 	}
 
+	TextureSource(const common::SharedPtr<TextureObject> &texture)
+	{
+		*this = texture;
+	}
+
 	TextureSource &operator=(const common::SharedPtr<TextureObject> &texture)
 	{
 		m_texture = texture;

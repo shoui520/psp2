@@ -103,10 +103,13 @@ public:
 	{
 		count = 0;
 		limit = 0;
-		ptr = alloc.allocate(size);
-		if (ptr == NULL)
+
+		_Ty *buffer = alloc.allocate(size);
+
+		if (buffer == NULL)
 			ScePafStdc_D608246A();
-		if (ptr != NULL) {
+		ptr = buffer;
+		if (buffer != NULL) {
 			count = size;
 			limit = size;
 			for (size_type i = 0; i < count; ++i)
