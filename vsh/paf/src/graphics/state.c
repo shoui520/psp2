@@ -22,23 +22,6 @@ extern uint32_t sce_paf_graphics_state_12b0;
 extern uint32_t sce_paf_graphics_state_11fc;
 extern uint8_t sce_paf_graphics_flag_06e8;
 extern int32_t *sce_paf_graphics_active_surface_2e94;
-/* Update the native four-lane graphics parameter and its mirrored state. */
-uint8_t *ScePafGraphics_7120023D(uint8_t *self, const float32x4_t *input)
-{
-	uint8_t *mirror = *(uint8_t **)(self + 80);
-
-	*(float32x4_t *)(self + 24) =
-		vmaxq_f32(vdupq_n_f32(0.0f), *input);
-	if (!sce_paf_graphics_flag_06e8) {
-		uint32_t value = *(uint32_t *)(self + 52);
-		*(uint32_t *)(self + 52) =
-			(value & ~0xCu) |
-			(4u * (sce_paf_graphics_state_11fc & 3u));
-	}
-	if (mirror)
-		*(float32x4_t *)(mirror + 32) = *input;
-	return self;
-}
 
 uint8_t *_ZN3paf5graph8PlaneObj7SetSizeENS_4math2v3E(uint8_t *self, const float32x4_t *input)
 {
@@ -344,19 +327,6 @@ int32_t _ZN3paf5graph10TextLayout11GetCharInfoEjRNS0_18TextLayoutCharInfoE(const
 		}
 	}
 	return result;
-}
-
-int ScePafGraphics_70ED91E6(uint8_t *self, const uint32_t *values)
-{
-	float32x2_t pair;
-	uint8_t *target;
-
-	pair = *(const volatile float32x2_t *)values;
-	target = *(uint8_t **)(self + 80);
-	*(float *)(target + 88) = vget_lane_f32(pair, 0);
-	pair = *(const volatile float32x2_t *)values;
-	*(float *)(target + 84) = vget_lane_f32(pair, 1);
-	return (int)(uintptr_t)target;
 }
 
 int _ZN3paf5graph7Surface13SetDivideModeEj(uint8_t *self, int32_t mode)
@@ -1111,14 +1081,6 @@ int _ZN3paf5graph10TextLayout17GetSelectionRangeERjS2_(const uint8_t *self,
 	*first = *(const uint32_t *)(self + 96);
 	*second = *(const uint32_t *)(self + 100);
 	return 0;
-}
-
-void *ScePafGraphics_AEBC68E5(const uint8_t *self, const uint64_t *value)
-{
-	uint8_t *target = *(uint8_t *const *)(self + 80);
-
-	*(uint64_t *)(target + 48) = *value;
-	return target;
 }
 
 int32_t _ZN3paf5gutil16GetDefaultShaderEv(void)
@@ -2035,27 +1997,11 @@ int _ZNK3paf5graph8PlaneObj9IsInheritEPKc(const void *self, const char *tag)
 	return _ZNK3paf5graph7DrawObj9IsInheritEPKc(self, tag);
 }
 
-int ScePafGraphics_88561C1B(const void *self, const char *tag)
-{
-	if (tag == "PanelObj")
-		return 1;
-	return _ZNK3paf5graph7DrawObj9IsInheritEPKc(self, tag);
-}
-
 int _ZNK3paf5graph7TextObj9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "TextObj")
 		return 1;
 	return _ZNK3paf5graph7DrawObj9IsInheritEPKc(self, tag);
-}
-
-void *ScePafGraphics_0C968320(const uint8_t *self, const uint64_t *data)
-{
-	uint64_t second = data[1];
-	uint8_t *target = *(uint8_t *const *)(self + 80);
-	*(uint64_t *)(target + 92) = data[0];
-	*(uint64_t *)(target + 100) = second;
-	return target;
 }
 
 /* Advance through the native mip-chain layout for a selected buffer. */
