@@ -16,9 +16,10 @@ public:
 	{
 	}
 
-	intrusive_ptr(T *ptr) : m_ptr(ptr)
+	/* add_ref false: the pointer's reference is taken over */
+	intrusive_ptr(T *ptr, bool add_ref = true) : m_ptr(ptr)
 	{
-		if (m_ptr != NULL)
+		if (add_ref && m_ptr != NULL)
 			m_ptr->AddRef();
 	}
 

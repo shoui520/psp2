@@ -655,7 +655,7 @@ void Framework::Update(void *param)
 	if (m_option & Option_OneFrameMode) {
 		m_update_mutex->Lock();
 		if (m_env->m_screen != NULL && ui::Screen::s_root_surface != NULL)
-			ScePafGraphics_F897407F(ui::Screen::s_root_surface, param);
+			ui::Screen::s_root_surface->SetFrameBuffer(param);
 		if (m_run_loop_count != 0) {
 			m_update_cond->Notify();
 			m_update_cond->Wait(0);

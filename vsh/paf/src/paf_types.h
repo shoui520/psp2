@@ -31,6 +31,8 @@
 #define SCE_PAF_ERROR_GRAPHICS_INVALID_PARAMETER (-2136006142) /* 0x80AF2202 */
 /* a surface locked, or of another format or size (name ours) */
 #define SCE_PAF_ERROR_GRAPHICS_INVALID_SURFACE (-2136006141) /* 0x80AF2203 */
+/* no GXM context to draw with, or nowhere to put the answer (name ours) */
+#define SCE_PAF_ERROR_GRAPHICS_INVALID_POINTER (-2136006139) /* 0x80AF2205 */
 /* nothing to load a surface from (name ours) */
 #define SCE_PAF_ERROR_GRAPHICS_NO_ENTRY (-2136006138) /* 0x80AF2206 */
 /* a file over LoadOption's max_size_kb (name ours) */

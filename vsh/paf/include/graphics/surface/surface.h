@@ -159,8 +159,11 @@ enum FrameBufferType {
 
 class Surface : public SurfaceBase, protected SurfaceListNode {
 public:
+	/* a texture, a surface GXM draws into, or the display's (the last two names ours) */
 	enum SurfaceType {
-		TypeTexture = 0
+		TypeTexture = 0,
+		TypeRenderTarget = 1,
+		TypeDisplay = 2
 	};
 
 	enum MemClass {

@@ -267,19 +267,6 @@ uint8_t *_ZN3paf5graph7Surface4SwapEv(uint8_t *self)
 	return self;
 }
 
-uint8_t *_ZN3paf5graph14DisplaySurface4SwapEv(uint8_t *self)
-{
-	int32_t mode = *(int32_t *)(self + 368);
-
-	if (mode > 1) {
-		if (mode <= 3)
-			return _ZN3paf5graph7Surface4SwapEv(self);
-	} else if (mode >= 0 && self[292]) {
-		return _ZN3paf5graph7Surface4SwapEv(self);
-	}
-	return self;
-}
-
 int _ZN3paf5graph9TextStyle13EqualFontTypeERKS1_(const uint8_t *first,
 			     const uint8_t *second)
 {
@@ -340,7 +327,6 @@ uint8_t *ScePafGraphics_906BE45C(void)
 
 uint8_t sce_paf_graphics_flag_306c;
 uint32_t sce_paf_graphics_state_11e0;
-uint32_t sce_paf_graphics_state_12ac;
 uint32_t sce_paf_graphics_state_11fc;
 uint32_t sce_paf_graphics_state_12b0;
 uint8_t sce_paf_graphics_flag_06e8;
@@ -496,18 +482,6 @@ int _ZN3paf5graph7Surface12SetMagFilterENS0_13TextureFilterE(uint8_t *self, int 
 	return 0;
 }
 
-int _ZN3paf5graph14DisplaySurface13GetOutputPortEv(const uint8_t *self)
-{
-	int result = 0;
-
-	if (*(const uint32_t *)(self + 368) == 1) {
-		result = sceSharedFbGetShellRenderPort();
-		if (result < 0)
-			return 0;
-	}
-	return result;
-}
-
 static inline __attribute__((always_inline))
 uint32_t *InitGraphicsRefParameter(uint32_t *result,
 				   const uint32_t *source, uint32_t value)
@@ -532,14 +506,6 @@ uint32_t *ScePafGraphics_A078C447(uint32_t *result,
 				   const uint32_t *source, uint32_t value)
 {
 	return InitGraphicsRefParameter(result, source, value);
-}
-
-int _ZN3paf5graph14DisplaySurface18SetFrameBufferModeENS_5gutil15FrameBufferModeE(uint8_t *self, int32_t mode)
-{
-	if (mode != 2 && mode != 3)
-		return -2136006138;
-	*(int32_t *)(self + 368) = mode;
-	return 0;
 }
 
 __attribute__((noinline))
@@ -576,11 +542,6 @@ void *InitGraphicsHeapSlot(uint8_t *self)
 	self[4] = 1;
 	*(void **)self = PafNew(16);
 	return self;
-}
-
-uint32_t _ZN3paf5graph14DisplaySurface7GetFbIdEv(void)
-{
-	return sce_paf_graphics_state_12ac;
 }
 
 uint32_t ScePafGraphics_52C45E43(uint32_t value)
@@ -863,28 +824,6 @@ uint8_t *_ZN3paf5graph9TextStyleaSERKS1_(uint8_t *self, const uint8_t *source)
 	return self;
 }
 
-void ScePafGraphics_B63D3B14(uint8_t *self)
-{
-	int mode = *(int32_t *)(self + 368);
-
-	if (mode > 1) {
-		if (mode > 3)
-			return;
-		sceDisplayWaitVblankStart();
-		return;
-	}
-	if (mode < 0)
-		return;
-	if (!self[293]) {
-		sceDisplayWaitVblankStart();
-		return;
-	}
-	MutexLock((Mutex *)(self + 296));
-	if (self[293])
-		_ZN3paf6thread4Cond4WaitEi(self + 328, 0);
-	MutexUnlock((Mutex *)(self + 296));
-}
-
 __attribute__((noinline))
 int _ZN3paf5graph10TextLayout18GetLayoutAttributeENS0_19TextLayoutAttributeERNS_4math2v2E(const uint8_t *self, int index,
 			     uint64_t *result)
@@ -1037,17 +976,6 @@ void _ZN3paf5graph9TextStyleD0Ev(int32_t *self)
 {
 	*self = -2127676444;
 	PafDelete(self);
-}
-
-uint32_t *ScePafGraphics_570E7907(uint32_t *self, uint32_t second,
-				    uint32_t third, uint32_t fourth,
-				    uint32_t fifth)
-{
-	self[88] = third;
-	self[89] = second;
-	self[90] = fourth;
-	self[91] = fifth;
-	return self;
 }
 
 int _ZN3paf5graph9TextStyle17SetStyleAttributeENS0_18TextStyleAttributeEi(uint8_t *self, int mode, uint8_t value)

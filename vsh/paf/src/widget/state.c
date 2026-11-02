@@ -327,11 +327,12 @@ int ScePafWidget_E0D414F7(const uint8_t *self, uint8_t *output)
 	return 0;
 }
 
-uint32_t sce_paf_widget_global_counter_112dc;
+/* paf::graph::s_wait_vblank_count (surface_display.cpp) */
+extern uint32_t _ZN3paf5graph19s_wait_vblank_countE;
 
 uint32_t *ScePafWidget_10BEC7CF(uint32_t *self)
 {
-	++sce_paf_widget_global_counter_112dc;
+	++_ZN3paf5graph19s_wait_vblank_countE;
 	++*self;
 	return self;
 }
@@ -341,8 +342,8 @@ uint32_t *ScePafWidget_DB993F51(uint32_t *self)
 	uint32_t count = *self;
 
 	if (count) {
-		if (sce_paf_widget_global_counter_112dc) {
-			--sce_paf_widget_global_counter_112dc;
+		if (_ZN3paf5graph19s_wait_vblank_countE) {
+			--_ZN3paf5graph19s_wait_vblank_countE;
 			count = *self;
 		}
 		*self = count - 1;
