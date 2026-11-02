@@ -12,6 +12,7 @@
 #include <graphics/color.h>
 #include <graphics/effects/fft_wave.h>
 #include <graphics/effects/param.h>
+#include <math/ngp/matrix.h>
 #include <math/ngp/quaternion.h>
 #include <math/ngp/v2.h>
 #include <math/ngp/v3.h>
@@ -98,6 +99,19 @@ public:
 		Param<float> m_refraction_coeff;
 		Param<float> m_refraction_amount;
 		Param<float> m_second_reflection;
+
+		/* the values packed for the lighting program's MaterialPack (name ours) */
+		math::matrix GetPack() const
+		{
+			return math::matrix(m_color.m_value,
+					    math::v4(m_diffuse_coeff.m_value, m_specular_coeff.m_value,
+						     m_specular_power.m_value, 0.0f),
+					    math::v4(m_fresnel_front.m_value, m_fresnel_control.m_value,
+						     m_fresnel_coeff.m_value, 0.0f),
+					    math::v4(m_refraction_coeff.m_value, 0.0f,
+						     m_refraction_amount.m_value,
+						     m_second_reflection.m_value));
+		}
 	};
 
 	WAVE_PARAM_SET(MaterialParamSet, "Material");
@@ -131,6 +145,19 @@ public:
 		Param<math::v3> m_ambient_color;
 		Param<math::v3> m_diffuse_color;
 		Param<float> m_fade;
+
+		/* the light's place, from its angles and distance, and its attenuation, for the
+		   lighting program's PointLightPack1 (0x812040d0, name ours) */
+		__attribute__((noinline)) math::matrix GetPack1() const;
+
+		/* its colours and fade, for PointLightPack2 (name ours) */
+		math::matrix GetPack2() const
+		{
+			return math::matrix(math::v4(m_ambient_color.m_value, 1.0f),
+					    math::v4(0.0f, 0.0f, 0.0f, 0.0f),
+					    math::v4(m_diffuse_color.m_value, 1.0f),
+					    math::v4(sce::Vectormath::Simd::Aos::Vector4(m_fade.m_value)));
+		}
 	};
 
 	WAVE_PARAM_SET(PointLightSphereParamSet, "PointLightSphere");
@@ -160,6 +187,10 @@ public:
 		Param<math::v4> m_light_color;
 		Param<float> m_d_scale;
 		Param<float> m_d_offset;
+
+		/* the colours, density and distances packed for the lighting program's FogPack
+		   (0x8120419c, name ours) */
+		__attribute__((noinline)) math::matrix GetPack() const;
 	};
 
 	WAVE_PARAM_SET(FogParamSet, "Fog");
@@ -251,6 +282,21 @@ public:
 			  m_time_step(set, "time_step", s_fft_wave_param.m_time_step, 0.0f, 0.1f,
 				      PARAM_FLAG_FINE)
 		{
+		}
+
+		/* the spectrum the values give, the height scale the default's (name ours) */
+		FFTWaveParam GetParam() const
+		{
+			FFTWaveParam param;
+
+			param.m_gravity = m_gravity.m_value;
+			param.m_a = m_a.m_value;
+			param.m_log_a = m_log_a.m_value;
+			param.m_patch_size = m_patch_size.m_value;
+			param.m_wind_speed = m_wind_speed.m_value;
+			param.m_wind_dir = m_wind_dir.m_value;
+			param.m_time_step = m_time_step.m_value;
+			return param;
 		}
 
 		Param<float> m_gravity;

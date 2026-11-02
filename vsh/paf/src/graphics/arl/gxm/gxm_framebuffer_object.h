@@ -60,6 +60,13 @@ public:
 	{
 	}
 
+	/* 0x81194264: drawn into from here on: the texture's level as the attachment, the
+	   viewport and scissor its size, the scene pushed (names ours) */
+	void Bind(const common::SharedPtr<TextureObject> &texture, uint32_t level,
+		  uint32_t attachment);
+	/* 0x8119446c: the scene, viewport and scissor before the last Bind */
+	static void Unbind();
+
 	/* a texture's level drawn into as the colour, the render target sized by it (name
 	   ours) */
 	void AttachColor(const common::SharedPtr<TextureObject> &texture, uint32_t level)

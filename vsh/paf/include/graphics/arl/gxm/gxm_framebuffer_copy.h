@@ -32,10 +32,8 @@ public:
 	{
 	}
 
-	TextureSource(const common::SharedPtr<TextureObject> &texture)
-	{
-		*this = texture;
-	}
+	/* Sony's build keeps this one out of line */
+	__attribute__((noinline)) TextureSource(const common::SharedPtr<TextureObject> &texture);
 
 	TextureSource &operator=(const common::SharedPtr<TextureObject> &texture)
 	{
@@ -47,6 +45,11 @@ public:
 	common::SharedPtr<TextureObject> m_texture;
 	intrusive_ptr<Surface> m_surface;
 };
+
+inline __attribute__((noinline)) TextureSource::TextureSource(const common::SharedPtr<TextureObject> &texture)
+{
+	*this = texture;
+}
 
 /* binds the texture to the unit for the program's kind, vertex or fragment */
 template<>

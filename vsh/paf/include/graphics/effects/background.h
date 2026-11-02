@@ -219,7 +219,7 @@ public:
 	virtual void SetState(int32_t state);
 
 	/* 0x810cdc3a */
-	void SetPostEffects(common::SharedPtr<PostEffects> post_effects);
+	void SetTextureOps(common::SharedPtr<TextureOps> texture_ops);
 	/* 0x810cdd1e */
 	void captureReflections();
 	/* 0x810ce9e8 */

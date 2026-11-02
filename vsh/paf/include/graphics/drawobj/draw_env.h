@@ -180,7 +180,7 @@ public:
 	virtual void Update(float frame_time);
 	virtual void Init(common::SharedPtr<Camera> camera, common::SharedPtr<Background> background,
 			  common::SharedPtr<DrawEnv> draw_env,
-			  common::SharedPtr<PostEffects> post_effects);
+			  common::SharedPtr<TextureOps> texture_ops);
 };
 
 class DrawObj;
@@ -478,7 +478,7 @@ public:
 	common::SharedPtr<Camera> m_camera_2d;
 	common::SharedPtr<MotionListener> m_listener;
 	common::SharedPtr<SharedTexture> m_shared_texture;
-	common::SharedPtr<PostEffects> m_post_effects;
+	common::SharedPtr<TextureOps> m_texture_ops;
 	Blur m_blur;
 	/* how much of the blur is drawn (0 when it is made; nothing in the renderer sets it) */
 	float m_blur_amount;

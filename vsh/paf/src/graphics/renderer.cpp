@@ -67,8 +67,8 @@ Renderer::Renderer(common::SharedPtr<DrawEnv> draw_env)
 
 	m_camera = common::SharedPtr<Camera>(new Camera(Camera::FLAG_2D));
 	m_camera_2d = common::SharedPtr<Camera>(new Camera(*m_camera));
-	m_post_effects = common::SharedPtr<PostEffects>(new PostEffects());
-	m_blur.SetPostEffects(m_post_effects);
+	m_texture_ops = common::SharedPtr<TextureOps>(new TextureOps());
+	m_blur.SetTextureOps(m_texture_ops);
 	m_shared_texture = common::SharedPtr<SharedTexture>(new SharedTexture());
 
 	m_backgrounds = common::SharedPtr<BackgroundList>(new BackgroundList());
@@ -81,7 +81,7 @@ Renderer::Renderer(common::SharedPtr<DrawEnv> draw_env)
 
 	m_env = common::SharedPtr<EnvAuto>(new EnvAuto());
 	m_env->Init(m_camera_2d, m_shared_texture);
-	m_env->SetPostEffects(m_post_effects);
+	m_env->SetTextureOps(m_texture_ops);
 	m_env->Load(ResourcePath(m_resource_path));
 	m_background = m_env;
 
@@ -130,7 +130,7 @@ common::SharedPtr<WaveRenderer> &Renderer::GetWaveRenderer(bool create)
 {
 	if (m_wave_renderer.get() == NULL && create) {
 		m_wave_renderer = common::SharedPtr<WaveRenderer>(new WaveRenderer());
-		m_wave_renderer->Init(m_camera_2d, m_background, m_draw_env, m_post_effects,
+		m_wave_renderer->Init(m_camera_2d, m_background, m_draw_env, m_texture_ops,
 				      m_listener);
 		m_wave_renderer->Load(ResourcePath(m_resource_path), 1);
 	}
@@ -172,7 +172,7 @@ common::SharedPtr<EffectRenderer> &ScePafGraphics_71E2CB77(Renderer *renderer, b
 		renderer->m_effect_renderer =
 			common::SharedPtr<EffectRenderer>(renderer->m_effect_renderer_factory());
 		renderer->m_effect_renderer->Init(renderer->m_camera, renderer->m_background,
-						  renderer->m_draw_env, renderer->m_post_effects);
+						  renderer->m_draw_env, renderer->m_texture_ops);
 		renderer->m_effect_renderer->Load(ResourcePath(renderer->m_resource_path));
 	}
 	return renderer->m_effect_renderer;

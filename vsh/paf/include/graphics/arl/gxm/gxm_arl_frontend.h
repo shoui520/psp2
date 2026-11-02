@@ -60,12 +60,14 @@ public:
 	class Entry {
 	public:
 		math::matrix m_matrix;
-		/* not taken over by a push */
+		/* not taken over by a push: a pushed entry's inverse is the one of the entry
+		   m_inverse_entry names (names ours) */
 		math::matrix m_inverse;
-		/* the three set by an identity entry and taken over by a push */
-		bool m_identity;
-		int32_t m_revision;
+		/* the inverse worked out */
 		bool m_inverse_valid;
+		int32_t m_inverse_entry;
+		/* a rotation and translation only, inverted by inverse1 */
+		bool m_rigid;
 	};
 
 	/* Sony's build keeps the constructor out of line */
@@ -88,16 +90,16 @@ public:
 		if (m_depth == 0) {
 			top.m_matrix = math::matrix::Identity();
 			top.m_inverse = math::matrix::Identity();
-			top.m_revision = 0;
+			top.m_inverse_entry = 0;
+			top.m_rigid = true;
 			top.m_inverse_valid = true;
-			top.m_identity = true;
 		} else {
 			Entry &below = m_stack[m_depth - 1];
 
 			top.m_matrix = below.m_matrix;
-			top.m_identity = below.m_identity;
-			top.m_revision = below.m_revision;
 			top.m_inverse_valid = below.m_inverse_valid;
+			top.m_inverse_entry = below.m_inverse_entry;
+			top.m_rigid = below.m_rigid;
 		}
 		m_depth++;
 	}
@@ -113,9 +115,9 @@ public:
 			Entry &top = m_stack[m_depth];
 
 			top.m_matrix = below.m_matrix;
-			top.m_identity = below.m_identity;
-			top.m_revision = below.m_revision;
 			top.m_inverse_valid = below.m_inverse_valid;
+			top.m_inverse_entry = below.m_inverse_entry;
+			top.m_rigid = below.m_rigid;
 			m_depth++;
 		}
 	}
@@ -133,9 +135,9 @@ public:
 
 		top.m_matrix = math::matrix::Identity();
 		top.m_inverse = math::matrix::Identity();
-		top.m_revision = m_depth - 1;
+		top.m_inverse_entry = m_depth - 1;
+		top.m_rigid = true;
 		top.m_inverse_valid = true;
-		top.m_identity = true;
 	}
 
 	/* the top matrix replaced, its inverse to be worked out again (name ours) */
@@ -144,9 +146,9 @@ public:
 		Entry &top = m_stack[m_depth - 1];
 
 		top.m_matrix = matrix;
-		top.m_identity = false;
-		top.m_revision = m_depth - 1;
 		top.m_inverse_valid = false;
+		top.m_inverse_entry = m_depth - 1;
+		top.m_rigid = false;
 	}
 
 	/* the top matrix replaced, the inverse flag kept as it was (name ours) */
@@ -155,15 +157,49 @@ public:
 		Entry &top = m_stack[m_depth - 1];
 
 		top.m_matrix = matrix;
-		top.m_identity = false;
-		top.m_revision = m_depth - 1;
-		top.m_inverse_valid &= true;
+		top.m_inverse_valid = false;
+		top.m_inverse_entry = m_depth - 1;
+		top.m_rigid &= true;
 	}
+
+	Entry &Top()
+	{
+		return m_stack[m_depth - 1];
+	}
+
+	/* the top matrix's inverse, worked out the first time it is asked for (name ours) */
+	const math::matrix &GetInverse()
+	{
+		Entry &top = m_stack[m_depth - 1];
+
+		if (!top.m_inverse_valid) {
+			top.m_inverse_valid = true;
+			top.m_inverse_entry = m_depth - 1;
+			if (top.m_rigid)
+				top.m_inverse = top.m_matrix.inverse1();
+			else
+				top.m_inverse = top.m_matrix.inverse();
+		}
+		return m_stack[top.m_inverse_entry].m_inverse;
+	}
+
+	/* the top matrix multiplied by another on its right (name ours) */
+	__attribute__((noinline)) void MultMatrix(const math::matrix &matrix);
 
 	vector<Entry> m_stack;
 	uint32_t m_depth;
 	string m_name;
 };
+
+inline __attribute__((noinline)) void MatrixStack::MultMatrix(const math::matrix &matrix)
+{
+	Entry &top = m_stack[m_depth - 1];
+
+	top.m_matrix = top.m_matrix * matrix;
+	top.m_inverse_valid = false;
+	top.m_inverse_entry = m_depth - 1;
+	top.m_rigid &= true;
+}
 
 /* the viewport and scissor rectangles, saved and restored as a pair */
 class ViewportStack {

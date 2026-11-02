@@ -546,6 +546,11 @@ public:
 		SetValue(value);
 	}
 
+	/* a copy has the value alone, without keys */
+	Param(const Param &other) : m_value(other.m_value), m_keys(NULL)
+	{
+	}
+
 	virtual ~Param()
 	{
 		if (m_keys != NULL)
@@ -763,9 +768,8 @@ public:
 template<class S>
 class ParamSetKeys : public ParamSetKeysBase {
 public:
-	ParamSetKeys(const string &variant) : ParamSetKeysBase(S::TypeName(), variant), m_default(true)
-	{
-	}
+	/* out of line, one for each set (0x812020a4 for the material's) */
+	__attribute__((noinline)) ParamSetKeys(const string &variant);
 
 	virtual ParamSet *get_key(const string &variant, bool create)
 	{
@@ -844,6 +848,12 @@ public:
 	S m_default;
 	ParamList m_sets;
 };
+
+template<class S>
+inline __attribute__((noinline)) ParamSetKeys<S>::ParamSetKeys(const string &variant)
+	: ParamSetKeysBase(S::TypeName(), variant), m_default(true)
+{
+}
 
 /* the effect's ParamSetKeysBase, edited together (names ours) */
 class ParamSetKeysManager {
