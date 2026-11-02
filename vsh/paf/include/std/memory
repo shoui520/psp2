@@ -36,12 +36,14 @@ public:
 
 	intrusive_ptr &operator=(const intrusive_ptr &src)
 	{
-		if (src.m_ptr != m_ptr) {
+		T *ptr = src.m_ptr;
+
+		if (ptr != m_ptr) {
 			if (m_ptr != NULL)
 				m_ptr->Release();
-			m_ptr = src.m_ptr;
-			if (m_ptr != NULL)
-				m_ptr->AddRef();
+			m_ptr = ptr;
+			if (ptr != NULL)
+				ptr->AddRef();
 		}
 		return *this;
 	}

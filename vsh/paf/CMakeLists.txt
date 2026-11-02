@@ -161,6 +161,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/drawobj/text_obj.cpp
 	src/graphics/graphmem/graphmem.cpp
 	src/graphics/gutil.cpp
+	src/graphics/surface/surface.cpp
+	src/graphics/surface/surface_base.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
@@ -203,9 +205,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/lock.c
 	src/misc/rect_contains.c
 	src/misc/search.c
-	src/misc/state.c
 	src/misc/containment.c
-	src/misc/global_vector.c
 	src/misc/global_state.c
 	../../sys/sdk/target/src/libsnc/i32ops.c
 	../../sys/sdk/target/src/libsnc/i64ops.c
@@ -295,6 +295,7 @@ set_source_files_properties(src/timer/get_time.cpp src/url/url.cpp src/rtc/rtc.c
 	src/graphics/drawobj/text_obj.cpp
 	src/graphics/graphmem/graphmem.cpp
 	src/graphics/gutil.cpp
+	src/graphics/surface/surface.cpp src/graphics/surface/surface_base.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # The shader objects keep vector<uint8_t>'s copy constructor out of line in the binary

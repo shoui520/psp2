@@ -25,6 +25,16 @@
 /* the common resource's sound storage another process has not made yet (name ours) */
 #define SCE_PAF_ERROR_RESOURCE_NO_SOUND_STORAGE (-2136013306) /* 0x80AF0606 */
 #define SCE_PAF_ERROR_GRAPHICS_NO_SPACE (-2136006144) /* 0x80AF2200 */
+/* a format or order the surface cannot do (name ours) */
+#define SCE_PAF_ERROR_GRAPHICS_NOT_SUPPORTED (-2136006143) /* 0x80AF2201 */
+/* a page, level or source out of range (name ours) */
+#define SCE_PAF_ERROR_GRAPHICS_INVALID_PARAMETER (-2136006142) /* 0x80AF2202 */
+/* a surface locked, or of another format or size (name ours) */
+#define SCE_PAF_ERROR_GRAPHICS_INVALID_SURFACE (-2136006141) /* 0x80AF2203 */
+/* nothing to load a surface from (name ours) */
+#define SCE_PAF_ERROR_GRAPHICS_NO_ENTRY (-2136006138) /* 0x80AF2206 */
+/* a file over LoadOption's max_size_kb (name ours) */
+#define SCE_PAF_ERROR_GRAPHICS_TOO_LARGE (-2136006136) /* 0x80AF2208 */
 #define SCE_PAF_ERROR_FILE_INVALID_OFFSET (-2135994367) /* 0x80AF5001 */
 #define SCE_PAF_ERROR_FILE_INVALID_ARGUMENT (-2135994366) /* 0x80AF5002 */
 #define SCE_PAF_ERROR_FILE_NO_MEMORY (-2135994365) /* 0x80AF5003 */

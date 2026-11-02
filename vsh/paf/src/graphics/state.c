@@ -193,41 +193,6 @@ int32_t _ZN3paf5graph10TextLayout11GetCharInfoEjRNS0_18TextLayoutCharInfoE(const
 	return result;
 }
 
-int _ZN3paf5graph7Surface13SetDivideModeEj(uint8_t *self, int32_t mode)
-{
-	volatile uint8_t *flags = self;
-	if (*(uint16_t *)(self + 132) != mode) {
-		*(uint16_t *)(self + 132) = (uint16_t)mode;
-		switch ((uint16_t)mode) {
-		case 0:
-			flags[135] = 0;
-			flags[134] = 0;
-			break;
-		case 1:
-			flags[134] = 0;
-			flags[135] = 1;
-			break;
-		case 2:
-			flags[134] = 1;
-			flags[135] = 0;
-			break;
-		case 3:
-		case 4:
-		case 5:
-		case 6:
-		case 7:
-		case 8:
-		case 9:
-			flags[135] = 1;
-			flags[134] = 1;
-			break;
-		default:
-			break;
-		}
-	}
-	return (int)(uintptr_t)self;
-}
-
 void *ScePafGraphics_12BDEBFF(void)
 {
 	uint32_t *state = *(uint32_t *volatile *)
@@ -286,16 +251,6 @@ uint8_t *DestroyGraphicsOwnedPointer(uint8_t *self)
 	return self;
 }
 
-uint8_t *_ZN3paf5graph7Surface7TextureD2Ev(uint8_t *self)
-{
-	return DestroyGraphicsOwnedPointer(self);
-}
-
-uint8_t *_ZN3paf5graph7Surface7TextureD1Ev(uint8_t *self)
-{
-	return DestroyGraphicsOwnedPointer(self);
-}
-
 static inline __attribute__((always_inline))
 __attribute__((noinline))
 uint8_t *_ZN3paf5graph7Surface4SwapEv(uint8_t *self)
@@ -349,21 +304,6 @@ void _ZN3paf5graph11SurfacePool4FreeEPv(uint8_t *self, int value)
 
 /* A global graphics pointer uses the SDK's acquire/release atomic counter. */
 uint32_t *sce_paf_graphics_shared_reference_0f84;
-
-uint8_t *_ZN3paf5graph7Surface10DetachCLUTEv(uint8_t *self)
-{
-	uint8_t *result = *(uint8_t **)(self + 124);
-
-	if (result) {
-		int32_t previous = sceAtomicDecrement32AcqRel(
-			(volatile int32_t *)(result + 24));
-		if (previous == 1)
-			((void (**)(void *))*(void **)result)[1](result);
-		*(void **)(self + 124) = NULL;
-		return NULL;
-	}
-	return result;
-}
 
 int ScePafGraphics_D5E30C64(const uint8_t *self,
 			     SceGxmNotification *vertexNotification,
@@ -440,37 +380,6 @@ int _ZN3paf5graph10TextLayout9GetBoundsERNS_4math2v2E(const uint8_t *self, uint6
 	if (*(const uint16_t *)(self + 112) & 0x22)
 		return -2136005885;
 	*output = *(const uint64_t *)(self + 104);
-	return 0;
-}
-
-__attribute__((noinline))
-uint32_t _ZN3paf5graph7Surface6AddRefEv(uint8_t *self)
-{
-	volatile int32_t *count = (volatile int32_t *)(self + 24);
-
-	sceAtomicIncrement32AcqRel(count);
-	return (uint32_t)*count;
-}
-
-__attribute__((noinline))
-uint32_t _ZN3paf5graph11SurfaceCLUT6AddRefEv(uint8_t *self)
-{
-	volatile int32_t *count = (volatile int32_t *)(self + 24);
-
-	sceAtomicIncrement32AcqRel(count);
-	return (uint32_t)*count;
-}
-
-__attribute__((noinline))
-uint32_t _ZN3paf5graph7Surface7ReleaseEv(uint8_t *self)
-{
-	volatile int32_t *count = (volatile int32_t *)(self + 24);
-	int32_t oldCount = sceAtomicDecrement32AcqRel(count);
-
-	if (oldCount != 1)
-		return (uint32_t)*count;
-	if (self)
-		((void (**)(void *))*(void **)self)[1](self);
 	return 0;
 }
 
@@ -638,32 +547,11 @@ uint32_t *ScePafGraphics_A078C447(uint32_t *result,
 	return InitGraphicsRefParameter(result, source, value);
 }
 
-int _ZN3paf5graph7Surface12SetSymmetryUEb(uint8_t *self, uint8_t enabled)
-{
-	uint8_t old = self[64];
-
-	self[64] = (uint8_t)((old & 0xFB) | (4 * (enabled & 1)));
-	return (old & 4) != 0;
-}
-
 int _ZN3paf5graph14DisplaySurface18SetFrameBufferModeENS_5gutil15FrameBufferModeE(uint8_t *self, int32_t mode)
 {
 	if (mode != 2 && mode != 3)
 		return -2136006138;
 	*(int32_t *)(self + 368) = mode;
-	return 0;
-}
-
-int _ZN3paf5graph7Surface4GetNEj(uint32_t flags)
-{
-	uint32_t mask = 0x80000000U;
-	int index;
-
-	for (index = 31; index != 0; --index) {
-		if (flags & mask)
-			return index;
-		mask >>= 1;
-	}
 	return 0;
 }
 
@@ -701,16 +589,6 @@ void *InitGraphicsHeapSlot(uint8_t *self)
 	self[4] = 1;
 	*(void **)self = PafNew(16);
 	return self;
-}
-
-void *_ZN3paf5graph7Surface7TextureC2Ev(uint8_t *self)
-{
-	return InitGraphicsHeapSlot(self);
-}
-
-void *_ZN3paf5graph7Surface7TextureC1Ev(uint8_t *self)
-{
-	return InitGraphicsHeapSlot(self);
 }
 
 uint32_t _ZN3paf5graph14DisplaySurface7GetFbIdEv(void)
@@ -797,25 +675,6 @@ int32_t _ZN3paf5graph7Surface13GetCopyHeightEii(const uint8_t *self,
 	return result;
 }
 
-int ScePafGraphics_111C68BE(const uint8_t *self, uint64_t *output)
-{
-	const uint8_t *item = *(uint8_t *const *)(self + 136);
-	uint64_t value = 0;
-
-	if (item)
-		value = *(const uint64_t *)(item + 16);
-	*output = value;
-	return (int)(uintptr_t)item;
-}
-
-int _ZN3paf5graph7Surface12SetSymmetryVEb(uint8_t *self, uint8_t enabled)
-{
-	uint8_t old = self[64];
-
-	self[64] = (uint8_t)((old & 0xF7) | (8 * (enabled & 1)));
-	return (old & 8) != 0;
-}
-
 int _ZNK3paf5graph9TextStyle17GetStyleAttributeENS0_18TextStyleAttributeERi(const uint8_t *self,
 			    int32_t index, int32_t *output)
 {
@@ -837,11 +696,6 @@ int _ZN3paf5graph10TextLayout10InvalidateEv(uint8_t *self)
 	if (mutex)
 		_ZN3paf6thread6RMutex6UnlockEv(mutex);
 	return 7;
-}
-
-int32_t _ZNK3paf5graph11SurfaceBase13PixelsToBytesEi(const uint8_t *self, int32_t value)
-{
-	return ((value << *(const uint32_t *)(self + 12)) + 7) >> 3;
 }
 
 int32_t _ZNK3paf5graph7Surface8GetScoreEv(const uint8_t *self)
@@ -903,21 +757,6 @@ void *ScePafGraphics_04F03872(void)
 RMutex sce_paf_graphics_rmutex_1230;
 void *sce_paf_graphics_selected_object_12a4;
 
-void _ZN3paf5graph7Surface10FreeMemoryEv(uint8_t *self)
-{
-	void *object;
-
-	_ZN3paf6thread6RMutex4LockEv(&sce_paf_graphics_rmutex_1230);
-	object = *(void **)(self + 128);
-	if (object && *(uint32_t *)(self + 108)) {
-		(*(void (**)(void *))(*(uint8_t **)object + 12))(object);
-		*(uint32_t *)(self + 108) = 0;
-	}
-	if (sce_paf_graphics_selected_object_12a4 == self)
-		sce_paf_graphics_selected_object_12a4 = NULL;
-	_ZN3paf6thread6RMutex6UnlockEv(&sce_paf_graphics_rmutex_1230);
-}
-
 typedef struct PafGraphicsRegistryAnchor {
 	void *previous;
 	void *next;
@@ -925,27 +764,6 @@ typedef struct PafGraphicsRegistryAnchor {
 
 PafGraphicsRegistryAnchor sce_paf_graphics_registry_1270;
 Mutex sce_paf_graphics_registry_mutex_1278;
-
-void _ZN3paf5graph11SurfaceCLUT21DeactivateSurfacePoolEPNS0_11SurfacePoolE(void *target)
-{
-	uint8_t *link;
-	uint8_t *sentinel = (uint8_t *)&sce_paf_graphics_registry_1270;
-
-	MutexLock(&sce_paf_graphics_registry_mutex_1278);
-	link = sce_paf_graphics_registry_1270.next;
-	while (link != sentinel) {
-		uint8_t *node = NULL;
-
-		if (link)
-			node = link - 16;
-		if (*(void **)(node + 32) == target) {
-			*(void **)(node + 32) = NULL;
-			*(void **)(node + 36) = NULL;
-		}
-		link = *(uint8_t **)(link + 4);
-	}
-	MutexUnlock(&sce_paf_graphics_registry_mutex_1278);
-}
 
 typedef struct PafGraphicsItemNode {
 	struct PafGraphicsItemNode *previous;
@@ -1074,59 +892,9 @@ int ScePafGraphics_A842275A(const uint8_t *self,
 	return result;
 }
 
-int ScePafGraphics_F4986A3A(const uint8_t *self, const void *source)
-{
-	void *destination = *(void *const *)(self + 36);
-
-	if (!destination)
-		return -2136006144;
-	sce_paf_memcpy(destination, source,
-		((*(const int16_t *)(self + 28) <<
-		  *(const uint32_t *)(self + 12)) + 7) >> 3);
-	return 0;
-}
-
 Mutex sce_paf_graphics_flag_mutex_1250;
 
-void _ZN3paf5graph7Surface6UnlockEv(uint8_t *self)
-{
-	MutexLock(&sce_paf_graphics_flag_mutex_1250);
-	if (self[64] & 1)
-		self[64] &= (uint8_t)~1;
-	MutexUnlock(&sce_paf_graphics_flag_mutex_1250);
-}
-
 uint32_t *sce_paf_graphics_current_ref_0f7c;
-
-int _ZN3paf5graph7Surface12GetPageIndexENS0_15FrameBufferTypeEPi(const uint8_t *self, int selector,
-			     int32_t *result)
-{
-	if (!result)
-		return -2136006138;
-	if (selector == 0) {
-		int value = *(const int16_t *)(self + 102) - 1;
-
-		if (value < 0)
-			value = *(const int16_t *)(self + 100) - 1;
-		*result = value;
-	} else if (selector == 1) {
-		*result = *(const int16_t *)(self + 102);
-	}
-	return 0;
-}
-
-uint32_t _ZN3paf5graph11SurfaceCLUT7ReleaseEv(uint32_t *self)
-{
-	uint32_t remaining =
-		(uint32_t)sceAtomicDecrement32AcqRel(
-			(volatile int32_t *)&self[6]) - 1;
-
-	if (remaining != 0)
-		return self[6];
-	if (self)
-		((void (*)(uint32_t *))(*(void ***)(self))[1])(self);
-	return 0;
-}
 
 static const int32_t graphicsFormatMap[4] = {
 	4, 0,
@@ -1210,24 +978,6 @@ uint8_t *_ZN3paf5graph9TextStyleaSERKS1_(uint8_t *self, const uint8_t *source)
 	return self;
 }
 
-uint8_t *_ZN3paf5graph7Surface4LockEi(uint8_t *self, int index)
-{
-	uint8_t *buffer;
-	uint8_t *result = 0;
-
-	MutexLock(&sce_paf_graphics_flag_mutex_1250);
-	if (self[64] & 1) {
-		MutexUnlock(&sce_paf_graphics_flag_mutex_1250);
-		return 0;
-	}
-	buffer = *(uint8_t **)(self + 108);
-	self[64] |= 1;
-	if (buffer)
-		result = buffer + *(const uint32_t *)(self + 56) * index;
-	MutexUnlock(&sce_paf_graphics_flag_mutex_1250);
-	return result;
-}
-
 void ScePafGraphics_B63D3B14(uint8_t *self)
 {
 	int mode = *(int32_t *)(self + 368);
@@ -1280,20 +1030,6 @@ int _ZN3paf5graph10TextLayout18GetLayoutAttributeENS0_19TextLayoutAttributeERNS_
 	*(double *)result = *(const double *)(self + 28);
 done:
 	return status;
-}
-
-int ScePafGraphics_823F7FC5(uint8_t *self)
-{
-	_ZN3paf6thread6RMutex4LockEv(&sce_paf_graphics_rmutex_1230);
-	if (*(uint32_t *)(self + 36)) {
-		int result = ((int (*)(uint8_t *))
-			(*(void ***)self)[15])(self);
-
-		_ZN3paf6thread6RMutex6UnlockEv(&sce_paf_graphics_rmutex_1230);
-		return result;
-	}
-	_ZN3paf6thread6RMutex6UnlockEv(&sce_paf_graphics_rmutex_1230);
-	return -2136006143;
 }
 
 __attribute__((noinline))
@@ -1362,29 +1098,6 @@ int _ZN3paf5graph13ScreenSurface21GetColorSurfaceFormatEv(const uint8_t *self)
 	return -1;
 }
 
-uint32_t _ZN3paf5graph7Surface9FloorLog2Ei(int32_t value)
-{
-	uint32_t current;
-	uint32_t step8;
-	uint32_t step4;
-	uint32_t step2;
-	int32_t high;
-
-	if (value <= 0)
-		return 1;
-	if (((value - 1) & value) == 0)
-		return (uint32_t)value;
-	step8 = (((int32_t)((uint32_t)value - 0x100) >> 16) & 8);
-	current = (uint32_t)value << step8;
-	step4 = (((int32_t)(current - 0x1000) >> 16) & 4);
-	current <<= step4;
-	step2 = (((int32_t)(current - 0x4000) >> 16) & 2);
-	current <<= step2;
-	high = (int32_t)current >> 14;
-	return 1U << ((high & ~(high >> 1)) -
-			 (int32_t)(step8 + step4 + step2) + 14);
-}
-
 int _ZN3paf5graph16AttributedString15GetStringBufferERPKwRj(const uint8_t *self,
 			     uint32_t *first, uint32_t *second)
 {
@@ -1421,16 +1134,6 @@ int ScePafGraphics_83ABDFF5(const uint8_t *self, uint8_t argument)
 	return 0;
 }
 
-__attribute__((noinline))
-uint8_t *_ZNK3paf5graph7Surface10GetPagePtrEi(const uint8_t *self, int32_t index)
-{
-	uint8_t *base = *(uint8_t *const *)(self + 108);
-
-	if (base)
-		return base + *(const int32_t *)(self + 56) * index;
-	return 0;
-}
-
 int32_t _ZN3paf5graph7Surface10SetPaletteEPNS1_7TextureEPKv(void *self, SceGxmTexture **texture,
 			       void *palette)
 {
@@ -1445,14 +1148,6 @@ int _ZNK3paf5graph11SurfacePool11GetFreeSizeEv(const uint8_t *self)
 	if (object)
 		return ((int (**)(void *))*(void **)object)[4](object);
 	return 0;
-}
-
-int ScePafGraphics_B000FA14(const uint8_t *self)
-{
-	int result = *(const int16_t *)(self + 102) - 1;
-	if (result < 0)
-		return *(const int16_t *)(self + 100) - 1;
-	return result;
 }
 
 int ScePafGraphics_404AC3D7(const uint8_t *self)
@@ -1473,14 +1168,6 @@ int GraphicsInvokeOffset20(const uint32_t *self)
 }
 
 uint8_t *sce_paf_graphics_indicator_3070;
-
-int _ZN3paf5graph7Surface10SetLodBiasEj(uint8_t *self, uint32_t value)
-{
-	if (value > 0x3f)
-		return -1;
-	*(uint32_t *)(self + 92) = value;
-	return 0;
-}
 
 int ScePafGraphics_DD2002B4(void)
 {

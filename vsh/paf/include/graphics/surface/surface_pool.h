@@ -30,6 +30,8 @@ public:
 		    const memory::HeapAllocator::Option *option = NULL,
 		    MemoryType type = MemoryType_Normal);
 	virtual ~SurfacePool();
+	virtual void *Allocate(int32_t align, int32_t size);
+	virtual void Free(void *ptr);
 
 	SurfacePoolAllocator *m_allocator;
 	void *m_addr;

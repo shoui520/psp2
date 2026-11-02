@@ -138,6 +138,7 @@ public:
 
 /* what Clear clears, bits: ClearBase clears the colour alone (names ours) */
 enum ClearBit {
+	DEPTH_BUFFER_BIT = 1,
 	COLOR_BUFFER_BIT = 4
 };
 

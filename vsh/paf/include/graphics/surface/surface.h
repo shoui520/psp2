@@ -14,6 +14,7 @@
 #include <image/image.h>
 #include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
+#include <thread/thread.h>
 
 struct SceGxmTexture;
 
@@ -28,23 +29,103 @@ class HeapAllocator;
 
 namespace graph {
 
+class Surface;
 class SurfacePool;
 class SurfaceCLUT;
+
+}
+}
+
+/* the division's ratios across and down, set (clamped to 0..1) and read (Sony's names not
+   found) */
+extern "C" {
+int32_t ScePafGraphics_36960B24(paf::graph::Surface *surface, paf::math::v2 ratio_h,
+				paf::math::v2 ratio_v);
+void ScePafGraphics_AFAE7807(paf::graph::Surface *surface, paf::math::v2 *ratio_h,
+			     paf::math::v2 *ratio_v);
+}
+
+namespace paf {
+namespace graph {
 
 class SurfaceBase {
 public:
 	SurfaceBase(ImageMode format, bool reserved);
 	virtual ~SurfaceBase();
 
+	/* log2 of a format's bits per pixel (name ours) */
+	static int32_t GetPixelBits(ImageMode format);
+
+	int32_t PixelsToBytes(int32_t pixels) const;
+
 	ImageMode m_format;
 	bool m_reserved;
+	/* log2 of the bits per pixel */
 	int32_t m_pixel_bits;
 };
 
 class SurfaceListNode {
 public:
+	/* alone, in no list */
+	SurfaceListNode()
+	{
+		m_prev = this;
+		m_next = this;
+	}
+
+	/* out of its list (names ours) */
+	void Unlink()
+	{
+		m_prev->m_next = m_next;
+		m_next->m_prev = m_prev;
+	}
+
+	/* into a list after prev */
+	void InsertAfter(SurfaceListNode *prev)
+	{
+		m_prev = prev;
+
+		SurfaceListNode *next = prev->m_next;
+
+		m_next = next;
+		next->m_prev = this;
+		prev->m_next = this;
+	}
+
 	SurfaceListNode *m_prev;
 	SurfaceListNode *m_next;
+};
+
+/* a colour table the indexed formats look up, in pool memory or the caller's */
+class SurfaceCLUT : public SurfaceBase, protected SurfaceListNode {
+public:
+	static void DeactivateSurfacePool(SurfacePool *pool);
+
+	SurfaceCLUT(SurfacePool *pool, ImageMode format, int32_t num_entry);
+	SurfaceCLUT(ImageMode format, void *clut, int32_t num_entry);
+	virtual ~SurfaceCLUT();
+
+	int32_t ActivateCLUT();
+	int32_t AddRef();
+	int32_t Release();
+	int32_t GetCLUTSize() const;
+
+	void *GetCLUT() const
+	{
+		return m_clut;
+	}
+
+	static void *operator new(size_t size);
+	static void operator delete(void *ptr);
+
+	static SurfaceListNode m_clut_list;
+	static thread::Mutex m_clut_mutex;
+
+	int32_t m_ref_count;
+	int16_t m_num_entry;
+	int16_t m_clut_size;
+	SurfacePool *m_pool;
+	void *m_clut;
 };
 
 /* how a texture is filtered and addressed (names ScePaf-RE's) */
@@ -88,7 +169,16 @@ public:
 		Unallocated = 2
 	};
 
-	class Texture;
+	/* a page's GXM texture, owned unless the page's memory is the caller's */
+	class Texture {
+	public:
+		Texture();
+		~Texture();
+
+		SceGxmTexture *texture;
+		/* the texture is deleted with the page (name ours) */
+		bool m_owned;
+	};
 
 	/* How Load decodes an image into a surface; the callbacks get their userdata. */
 	class LoadOption {
@@ -104,26 +194,28 @@ public:
 		typedef bool (*CancelFunc)(void *userdata);
 
 		LoadOption()
-			: decode_heap(NULL), data_load_heap(NULL), reserved0(0), error(0),
-			  data_buff(NULL), size(0), reserved1(0), alloc_heap(NULL),
+			: decode_heap(NULL), data_load_heap(NULL), align_bytes(0), error(0),
+			  data_buff(NULL), size(0), clut_pool(NULL), alloc_heap(NULL),
 			  alloc_heap_userdata(NULL), free_heap(NULL), free_heap_userdata(NULL),
 			  alloc_surface(NULL), alloc_surface_userdata(NULL), check_image(NULL),
 			  check_image_userdata(NULL), max_size_kb(0), cancel(NULL),
-			  cancel_userdata(NULL), reserved2(true),
+			  cancel_userdata(NULL), keep_aspect(true),
 			  resize_type(image::ImageResizeType_NearestNeighbor), read_size(0),
 			  read_offset(0), direct_load(false), rotate_type(0), flip_type(0),
-			  image_order(ImageOrder_NONE), image_order_param(0), reserved3(0), reserved4(0),
+			  image_order(ImageOrder_NONE), image_order_param(0), extlines(0), surface_order(0),
 			  reserved5(false)
 		{
 		}
 
 		memory::HeapAllocator *decode_heap;
 		memory::HeapAllocator *data_load_heap;
-		int32_t reserved0;
+		/* the pages' alignment (name ours) */
+		int32_t align_bytes;
 		int32_t error;
 		void *data_buff;
 		int64_t size;
-		int32_t reserved1;
+		/* the pool of an indexed image's colour table, else the surface's (name ours) */
+		SurfacePool *clut_pool;
 		AllocHeapFunc alloc_heap;
 		void *alloc_heap_userdata;
 		FreeHeapFunc free_heap;
@@ -137,7 +229,8 @@ public:
 		void *cancel_userdata;
 		image::ImageRect sub_rect;
 		image::ImageExtent scale;
-		bool reserved2;
+		/* scale shrunk to the image's aspect (name ours) */
+		bool keep_aspect;
 		image::ImageResizeType resize_type;
 		size_t read_size;
 		size_t read_offset;
@@ -146,13 +239,28 @@ public:
 		int32_t flip_type;
 		ImageOrder image_order;
 		int32_t image_order_param;
-		int32_t reserved3;
-		int32_t reserved4;
+		/* the edge lines CopyWithEdge adds (name ours) */
+		uint32_t extlines;
+		/* ImageOrder_Tiled: a linear image tiled in the surface (name ours) */
+		int32_t surface_order;
 		bool reserved5;
 	};
 
 	Surface(SurfacePool *pool, int32_t width, int32_t height, ImageMode format,
 		ImageOrder order, int32_t num_page, int32_t num_level, bool reserved);
+	Surface(int32_t width, int32_t height, ImageMode format, ImageOrder order, int32_t num_page,
+		void *bp, int32_t line_bytes, int32_t num_level, bool reserved);
+	Surface(SurfacePool *pool, int32_t width, int32_t height, ImageMode format,
+		ImageOrder order, int32_t num_page, int32_t align_bytes, int32_t line_bytes,
+		int32_t num_level, bool reserved);
+	Surface(int32_t width, int32_t height, ImageMode format, ImageOrder order,
+		SurfaceType surf_type, int32_t num_page, void *bp, int32_t line_bytes,
+		int32_t num_level, bool reserved);
+	Surface(SurfacePool *pool, int32_t width, int32_t height, ImageMode format,
+		ImageOrder order, SurfaceType surf_type, int32_t num_page, int32_t num_level,
+		bool reserved);
+	/* a one-page surface over a GXM texture someone else owns (Canvas's) */
+	Surface(SceGxmTexture *texture, int32_t width, int32_t height);
 	virtual ~Surface();
 	/* told of each draw into the surface, with the front end's third debug cap: nothing (name
 	   ours) */
@@ -162,13 +270,13 @@ public:
 	/* clears the page drawn into: ScePafGraphics_439D4357 */
 	virtual void ClearPage(const math::v4 &color, uint32_t clear_mask);
 	virtual void Swap();
-	virtual void BeginScene();
-	virtual void EndScene();
+	virtual int32_t BeginScene();
+	virtual int32_t EndScene();
 	/* the page's memory for the CPU, and back */
 	virtual void *Lock(int32_t page);
 	virtual void Unlock();
 	virtual int32_t Resize(int32_t width, int32_t height);
-	virtual void GenTexture();
+	virtual int32_t GenTexture();
 
 	static void *operator new(size_t size);
 	static void operator delete(void *ptr);
@@ -179,10 +287,68 @@ public:
 					   LoadOption *option);
 
 	/* SCE_PAF_ERROR_GRAPHICS_NO_SPACE while pool cannot hold a width x height surface. */
-	static int32_t IsAllocatableSurfacePool(SurfacePool *pool, uint32_t width, uint32_t height);
+	/* SCE_PAF_ERROR_GRAPHICS_NO_SPACE while pool cannot give size bytes aligned to align */
+	static int32_t IsAllocatableSurfacePool(SurfacePool *pool, uint32_t size, uint32_t align);
+	/* the surfaces in pool forget it and their memory from it */
+	static void DeactivateSurfacePool(SurfacePool *pool);
+	/* value rounded down to a power of two; 1 for none above 0 */
+	static int32_t FloorLog2(int32_t value);
+
+	static int32_t DecodeImage(SurfacePool *pool, LoadOption *option, intrusive_ptr<Surface> &surf,
+				   common::SharedPtr<image::Image> image);
+	static int32_t DecodeImage(SurfacePool *pool, LoadOption *option, intrusive_ptr<Surface> &surf,
+				   void *buf, size_t size);
+	static int32_t SetDecodeImageOption(SurfacePool *pool, LoadOption *option,
+					    intrusive_ptr<Surface> &surf,
+					    common::SharedPtr<image::Image> image);
+	static int16_t GetAdjustHeight(SurfacePool *pool, int32_t height);
+	static int16_t GetAdjustWidth(SurfacePool *pool, int32_t width);
+	static uint32_t GetN(uint32_t value);
 
 	int32_t AddRef();
 	int32_t Release();
+
+	int32_t AttachCLUT(const intrusive_ptr<SurfaceCLUT> &clut);
+	void DetachCLUT();
+	int32_t FillPadding(int32_t page, const void *color, int32_t level);
+	int32_t Copy(int32_t page, const void *src, ImageOrder src_order, int32_t line_bytes,
+		     int32_t level);
+	int32_t Copy_(int32_t page, const void *src, ImageOrder src_order, int32_t line_bytes,
+		      int32_t level);
+	int32_t Copy_YUV420PX(int32_t page, const void *src, ImageOrder src_order,
+			      int32_t line_bytes, int32_t level);
+	void GenTextureAll();
+	int32_t GenTexture(Texture *tex, void *addr);
+	int32_t SetPalette(Texture *tex, const void *palette);
+	int32_t Initialize(SurfacePool *pool, int32_t width, int32_t height, ImageMode format,
+			   ImageOrder order, SurfaceType surf_type, int32_t num_page, int32_t num_level);
+	int32_t Initialize(int32_t width, int32_t height, ImageMode format, ImageOrder order,
+			   SurfaceType surf_type, int32_t num_page, void *bp, int32_t line_bytes,
+			   int32_t num_level);
+	int32_t Initialize(SurfacePool *pool, int32_t width, int32_t height, ImageMode format,
+			   ImageOrder order, SurfaceType surf_type, int32_t num_page,
+			   int32_t align_bytes, int32_t size_byte, int32_t line_bytes,
+			   int32_t num_level);
+	void InitObj(int32_t line_bytes);
+	/* every member back to nothing before Initialize (name ours) */
+	void InitMember();
+	void SetMemParam(int32_t line_bytes, int16_t adj_width, int16_t adj_height);
+	void SetMemAttr();
+	int32_t CreateMipmap();
+	int32_t GetCopyHeight(int32_t pixel_align, int32_t level);
+	int32_t GetStride(int32_t level) const;
+	int32_t GetScore() const;
+	uint8_t *GetPagePtr(int32_t page) const;
+	uint8_t *GetPagePtr(int32_t page, int32_t level) const;
+	void FastMemcpy(void *dst, const void *src, int32_t n);
+	void ConvertTiledFormat(void *dst, const void *src, int32_t width, int32_t height);
+	int32_t ConvertSwizzleFormat(void *dst, const void *src, int32_t width, int32_t height);
+
+	static SurfaceListNode m_active_mark;
+	static int32_t m_initialized;
+	static SurfaceListNode m_surface_list;
+	static thread::RMutex m_list_cs;
+	static thread::Mutex m_lock_mutex;
 
 	/* the surface made a GXM texture, mapped as given */
 	int32_t Texturize(uint32_t map_type, float offset_u, float offset_v, float scale_u,
@@ -193,11 +359,37 @@ public:
 		return Texturize(0, 0.0f, 0.0f, 1.0f, 1.0f);
 	}
 
+	int32_t ActivateTexture(uint32_t map_type, float offset_u, float offset_v, float scale_u,
+				float scale_v);
+	int32_t DeleteTexture();
+	int32_t ActivatePage(int32_t page);
+	int32_t Copy(int32_t page, const intrusive_ptr<Surface> &src, int32_t src_page);
+	void FreeMemory();
+	/* nothing */
+	void DelayedRelease();
+	/* the surface moved in the list ahead of the first with no higher score */
+	void Reorder();
+	uint32_t GetLodBias();
+	int32_t SetLodBias(uint32_t lod_bias);
+	/* the old setting */
+	bool SetSymmetryU(bool symmetry);
+	bool SetSymmetryV(bool symmetry);
+
 	SceGxmTexture *GetRawTexture();
 
 	/* how the surface is cut for drawing (3x3, 3x1, ...), and the stretching parts' ratio */
 	void SetDivideMode(uint32_t mode);
-	void SetDivideStretchRatio(math::v2 ratio);
+	int32_t SetDivideStretchRatio(math::v2 ratio);
+	void GetDivideStretchRatio(math::v2 &ratio) const;
+
+	/* a division ratio's preset: none, 1/3, 0.49, 1/2, or m_div_ratio's (names ours) */
+	enum DivideRatio {
+		DivideRatio_None = 0,
+		DivideRatio_Third = 1,
+		DivideRatio_049 = 2,
+		DivideRatio_Half = 3,
+		DivideRatio_Other = 4
+	};
 
 	uint16_t GetDivideMode() const
 	{
@@ -280,6 +472,12 @@ public:
 		return m_page_counter;
 	}
 
+	/* the pages (name ours) */
+	int16_t GetNumPage() const
+	{
+		return m_num_page;
+	}
+
 	/* The pages' memory from the pool; NULL when the pool had none. */
 	void *GetMemory() const
 	{
@@ -288,6 +486,10 @@ public:
 
 	/* the texture loader sets the margins */
 	friend class ::paf::Plugin;
+	friend int32_t (::ScePafGraphics_36960B24)(Surface *surface, math::v2 ratio_h,
+						   math::v2 ratio_v);
+	friend void (::ScePafGraphics_AFAE7807)(Surface *surface, math::v2 *ratio_h,
+						math::v2 *ratio_v);
 
 protected:
 	class TexParam {
@@ -323,7 +525,8 @@ protected:
 	uint8_t m_texturized : 1;
 	uint8_t m_symmetry_u : 1;
 	uint8_t m_symmetry_v : 1;
-	uint8_t m_reserved_flag : 1;
+	/* ClearPage cleared the page drawn into; Swap forgets it (name ours) */
+	uint8_t m_cleared : 1;
 	Texture *m_tex_pages;
 	TexParam m_texture_param;
 	bool m_texture_param_changed;
@@ -338,9 +541,13 @@ protected:
 	SurfacePool *m_pool;
 	/* SetDivideMode's */
 	uint16_t m_divide_mode;
-	uint8_t m_reserved2;
-	uint8_t m_reserved3;
-	int32_t m_reserved4;
+	/* the division's ratios across and down, as DivideRatio presets; the texture element's
+	   div_ratio_h and div_ratio_v (names ours) */
+	uint8_t m_div_ratio_h;
+	uint8_t m_div_ratio_v;
+	/* x and y of the ratios across and down that are no preset, then of the stretching part's
+	   (div_ratio_stretch) (name ours) */
+	float *m_div_ratio;
 	/* the texture element's margin_h and margin_v (Plugin's texture loader) */
 	uint16_t m_margin_left;
 	uint16_t m_margin_bottom;
@@ -349,16 +556,6 @@ protected:
 };
 
 }
-}
-
-/* the division's ratios across and down, set and read, and the stretching part's ratio read
-   (Sony's names not found) */
-extern "C" {
-void ScePafGraphics_36960B24(paf::graph::Surface *surface, paf::math::v2 ratio_h,
-			     paf::math::v2 ratio_v);
-void ScePafGraphics_AFAE7807(paf::graph::Surface *surface, paf::math::v2 *ratio_h,
-			     paf::math::v2 *ratio_v);
-void ScePafGraphics_111C68BE(paf::graph::Surface *surface, paf::math::v2 *ratio);
 }
 
 /* A surface pool export Sony's exports do not name yet: the pool's virtual 7 with flag. */
@@ -371,5 +568,19 @@ ScePafGraphics_AD93FF1B(paf::graph::SurfacePool *pool, paf::common::SharedPtr<pa
 extern "C" paf::intrusive_ptr<paf::graph::Surface>
 ScePafGraphics_476AB004(paf::graph::SurfacePool *pool, void *buf, int64_t size,
 			paf::graph::Surface::LoadOption *option);
+
+/* the page before the one drawn into, the last after the first (Sony's name not found) */
+extern "C" int32_t ScePafGraphics_B000FA14(paf::graph::Surface *surface);
+
+/* the colour table's entries copied in (Sony's name not found) */
+extern "C" int32_t ScePafGraphics_F4986A3A(paf::graph::SurfaceCLUT *clut, const void *src);
+
+/* Copy for the DXT formats (Sony's name not found) */
+extern "C" int32_t ScePafGraphics_D811125C(paf::graph::Surface *surface, int32_t page,
+					   const void *src, ImageOrder src_order,
+					   int32_t line_bytes, int32_t level);
+
+/* whether the pool reports its allocation failures (Sony's name not found) */
+extern "C" int32_t ScePafGraphics_404AC3D7(paf::graph::SurfacePool *pool);
 
 #endif

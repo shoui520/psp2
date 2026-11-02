@@ -109,22 +109,3 @@ static PafIndexedNode *NextIndexedNode(PafIndexedNode *node)
 	}
 	return next;
 }
-
-int ScePafMisc_CB4DB658(PafTreeGroups *groups, uint32_t group,
-			uint32_t category)
-{
-	PafIndexedNode *sentinel, *node;
-
-	if (group >= 8)
-		return -1;
-	sentinel = groups->slots[group].sentinel;
-	if (!sentinel)
-		return 0;
-	node = sentinel->left;
-	while (node != sentinel) {
-		if (!category || node->payload->category == category)
-			node->marked = 1;
-		node = NextIndexedNode(node);
-	}
-	return 0;
-}

@@ -1584,7 +1584,7 @@ ScePaf:
         - _ZN3paf5graph11SurfaceCLUTnwEj: 0x105DE194
         - _ZN3paf5graph3arl11ArlInstanceD1Ev: 0x10881577
         - ScePafGraphics_10BBFDEA: 0x10BBFDEA
-        - ScePafGraphics_111C68BE: 0x111C68BE
+        - _ZNK3paf5graph7Surface21GetDivideStretchRatioERNS_4math2v2E: 0x111C68BE
         - _ZN3paf5graph3arl16FragShaderObjectD1Ev: 0x113A640A
         - ScePafGraphics_113D1633: 0x113D1633
         - ScePafGraphics_11A133FB: 0x11A133FB
@@ -1724,7 +1724,7 @@ ScePaf:
         - _ZN3paf5graph16AttributedString17SetStyleAttributeENS0_18TextStyleAttributeEjjb: 0x419355FA
         - _ZN3paf5graph3arl20FragCreateDependency13createProgramERP21SceGxmFragmentProgram: 0x41C600D0
         - _ZN3paf5graph10TextLayout17GetSelectionRangeERjS2_: 0x428855D1
-        - ScePafGraphics_439D4357: 0x439D4357
+        - _ZN3paf5graph7Surface9ClearPageERKNS_4math2v4Ej: 0x439D4357
         - _ZN3paf5graph7TextObj12DrawCallbackERKNS0_7DrawObj15DrawCallbackArgE: 0x4423922B
         - ScePafGraphics_4581906A: 0x4581906A
         - _ZN3paf5graph7TextObj17GetStyleAttributeENS0_18TextStyleAttributeEjRNS_4math2v4E: 0x45898174
@@ -1872,7 +1872,7 @@ ScePaf:
         - ScePafGraphics_7A31826A: 0x7A31826A
         - _ZN3paf5graph10TextLayout8GetStyleEjRNS0_9TextStyleE: 0x7A686007
         - _ZN3paf5graph10TextLayout15GetNextRightHitEjRj: 0x7B6D79FB
-        - ScePafGraphics_7B7E9D17: 0x7B7E9D17
+        - _ZN3paf5graph14DisplaySurface10StartFrameEv: 0x7B7E9D17
         - _ZN3paf5graph7TextObj11HitTestCharERKNS_4math2v2EbRj: 0x7BAB1286
         - _ZN3paf5graph7Surface12SetMinFilterENS0_13TextureFilterE: 0x7BF244E7
         - _ZN3paf5graph8PlaneObj12DrawCallbackERKNS0_7DrawObj15DrawCallbackArgE: 0x7C402472
@@ -1889,7 +1889,7 @@ ScePaf:
         - _ZN3paf5graph7DrawObjD1Ev: 0x7FEFFD24
         - _ZN3paf5graph7TextObjD0Ev: 0x8021A2B3
         - _ZN3paf5graph7Surface15ActivateTextureEjffff: 0x804E92B1
-        - ScePafGraphics_823F7FC5: 0x823F7FC5
+        - _ZN3paf5graph14DisplaySurface8EndFrameEv: 0x823F7FC5
         - _ZN3paf5graph7TextObj15GetNextRightHitEjRj: 0x830D5848
         - ScePafGraphics_83ABDFF5: 0x83ABDFF5
         - ScePafGraphics_8454D7FB: 0x8454D7FB

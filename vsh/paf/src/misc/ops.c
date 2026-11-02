@@ -88,13 +88,6 @@ int ScePafMisc_D88EEBD8(const uint8_t *object)
 	return words[4] == 1;
 }
 
-/* Native ordering comparator on the strings held by two key records. */
-int ScePafMisc_37897945(void *unused, const char *const *left,
-			const char *const *right)
-{
-	return sce_paf_strcasecmp(*left, *right) > 0;
-}
-
 int ScePafMisc_78C1E8AD(const int32_t *object)
 {
 	return object[4] <= 1;

@@ -438,7 +438,7 @@ void PlaneObj::CheckTextureDivide(const intrusive_ptr<Surface> &current,
 		ratio_v = math::v2(0.0f, 0.0f);
 		stretch = math::v2(0.0f, 0.0f);
 		ScePafGraphics_AFAE7807(current.get(), &ratio_h, &ratio_v);
-		ScePafGraphics_111C68BE(current.get(), &stretch);
+		current->GetDivideStretchRatio(stretch);
 	} else {
 		ratio_h = math::v2(0.0f, 0.0f);
 		mode = 0;
@@ -454,7 +454,7 @@ void PlaneObj::CheckTextureDivide(const intrusive_ptr<Surface> &current,
 	if (texture.get() != NULL) {
 		new_mode = texture->GetDivideMode();
 		ScePafGraphics_AFAE7807(texture.get(), &new_ratio_h, &new_ratio_v);
-		ScePafGraphics_111C68BE(texture.get(), &new_stretch);
+		texture->GetDivideStretchRatio(new_stretch);
 	}
 
 	if (mode != new_mode)
@@ -936,7 +936,7 @@ void PlaneObj::UpdateDivVerticesPosition()
 		if (m_divide != NULL) {
 			stretch = m_divide->m_div_ratio_stretch;
 		} else if (m_tex_surface[0].get() != NULL) {
-			ScePafGraphics_111C68BE(m_tex_surface[0].get(), &stretch);
+			m_tex_surface[0]->GetDivideStretchRatio(stretch);
 		} else {
 			stretch = math::v2(0.0f, 0.0f);
 		}
@@ -1149,7 +1149,7 @@ void PlaneObj::UpdateDivVerticesTexcoord()
 		if (m_divide != NULL) {
 			stretch = m_divide->m_div_ratio_stretch;
 		} else if (m_tex_surface[0].get() != NULL) {
-			ScePafGraphics_111C68BE(m_tex_surface[0].get(), &stretch);
+			m_tex_surface[0]->GetDivideStretchRatio(stretch);
 		} else {
 			stretch = math::v2(0.0f, 0.0f);
 		}
