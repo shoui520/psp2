@@ -4,7 +4,9 @@
  * Sony's (TextLayout::Update's mangled name); FontRasterizerPvf after Sony's
  * ScePafFontRasterizerPvfHeap and ScePafFontRasterizerPvfMutex, FontRasterizerImage after the
  * emoji font's file imagefont.bin, their params and the methods no export names are ours.
- * The rasterizers are not in C yet: their members are left as bytes until they are.
+ * FontMetrics, CharMetrics and the methods TextLayout calls through the vtable (GetFontMetrics,
+ * GetCharMetrics, Rasterize) are named by us. The rasterizers are not in C yet: their members
+ * are left as bytes until they are.
  */
 #ifndef PAF_GRAPHICS_TEXT_FONT_RASTERIZER_H
 #define PAF_GRAPHICS_TEXT_FONT_RASTERIZER_H
@@ -12,10 +14,49 @@
 #include <stdint.h>
 #include <common/shared_ptr.h>
 #include <graphics/text/text_style.h>
+#include <std/memory>
 #include <std/string>
 
 namespace paf {
 namespace graph {
+
+class Surface;
+class TextSurfaceCache;
+
+/* the font of the style set: its line height and ascender at the scale it is drawn at (names
+   ours) */
+class FontMetrics {
+public:
+	FontMetrics() : height(0.0f), ascender(0.0f), scale(1.0f)
+	{
+	}
+
+	virtual ~FontMetrics()
+	{
+	}
+
+	float height;
+	float ascender;
+	float scale;
+};
+
+/* a character's glyph: where its ink starts and ends and how far it advances, in its font
+   (names ours) */
+class CharMetrics {
+public:
+	CharMetrics() : left(0.0f), right(0.0f), advance(0.0f)
+	{
+	}
+
+	virtual ~CharMetrics()
+	{
+	}
+
+	float left;
+	float right;
+	float advance;
+	FontMetrics font;
+};
 
 class FontRasterizer {
 public:
@@ -26,6 +67,13 @@ public:
 	virtual int32_t SetStyle(const common::SharedPtr<TextStyle> &style);
 	/* the style let go, back to the default one */
 	virtual int32_t ResetStyle();
+	virtual int32_t GetFontMetrics(FontMetrics &metrics);
+	virtual int32_t GetCharMetrics(wchar_t c, CharMetrics &metrics);
+	/* the len characters drawn into a surface of the cache, width by height, found again
+	   by the string's hash */
+	virtual int32_t Rasterize(TextSurfaceCache *cache, uint16_t width, uint16_t height,
+				  const wchar_t *str, uint32_t len, uint32_t hash,
+				  intrusive_ptr<Surface> &surface);
 };
 
 class FontRasterizerPvf : public FontRasterizer {

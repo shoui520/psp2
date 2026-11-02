@@ -38,6 +38,9 @@ public:
 	uint8_t m_data[0x20];
 };
 
+/* the hash a string's glyph surface is kept under (name ours) */
+uint32_t HashString(const wchar_t *str, uint32_t len);
+
 }
 }
 

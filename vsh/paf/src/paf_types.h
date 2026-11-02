@@ -40,12 +40,22 @@
 #define SCE_PAF_ERROR_GRAPHICS_NO_ENTRY (-2136006138) /* 0x80AF2206 */
 /* a file over LoadOption's max_size_kb (name ours) */
 #define SCE_PAF_ERROR_GRAPHICS_TOO_LARGE (-2136006136) /* 0x80AF2208 */
+/* a text layout released while it was laid out (name ours) */
+#define SCE_PAF_ERROR_TEXT_ABORTED (-2136005888) /* 0x80AF2300 */
 /* a text style run that cannot be made (name ours) */
 #define SCE_PAF_ERROR_TEXT_NO_MEMORY (-2136005887) /* 0x80AF2301 */
 /* a position or range beyond the string, an attribute a style does not have (name ours) */
 #define SCE_PAF_ERROR_TEXT_INVALID_ARGUMENT (-2136005886) /* 0x80AF2302 */
+/* a text layout's lines or geometry being made again (name ours) */
+#define SCE_PAF_ERROR_TEXT_BUSY (-2136005885) /* 0x80AF2303 */
+/* a text layout update ended by its release (name ours) */
+#define SCE_PAF_ERROR_TEXT_CANCELED (-2136005884) /* 0x80AF2304 */
 /* nothing to change: the string or style is already so (name ours) */
 #define SCE_PAF_ERROR_TEXT_UNCHANGED (-2136005883) /* 0x80AF2305 */
+/* no character at a position (name ours) */
+#define SCE_PAF_ERROR_TEXT_NOT_FOUND (-2136005882) /* 0x80AF2306 */
+/* the layout's last line reached: the rest left out (name ours) */
+#define SCE_PAF_ERROR_TEXT_LINE_LIMIT (-2136005760) /* 0x80AF2380 */
 #define SCE_PAF_ERROR_FILE_INVALID_OFFSET (-2135994367) /* 0x80AF5001 */
 #define SCE_PAF_ERROR_FILE_INVALID_ARGUMENT (-2135994366) /* 0x80AF5002 */
 #define SCE_PAF_ERROR_FILE_NO_MEMORY (-2135994365) /* 0x80AF5003 */

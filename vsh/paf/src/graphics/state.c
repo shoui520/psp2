@@ -108,90 +108,6 @@ int _ZN3paf5graph9TextStyleneERKS1_(const uint8_t *left, const uint8_t *right)
 	return !GraphicsDescriptorEqual(left, right);
 }
 
-/* Advance an indexed graphics entry across the native grouped ranges. */
-int _ZN3paf5graph10TextLayout15GetNextRightHitEjRj(const uint8_t *self, uint32_t index,
-			     uint32_t *output)
-{
-	int result = -2136005885;
-
-	if (!(*(const uint16_t *)(self + 112) & 0x22)) {
-		result = -2136005886;
-		if (index < *(const uint32_t *)(self + 120)) {
-			uint32_t count = *(const uint32_t *)(self + 128);
-			const uint8_t *entry =
-				*(const uint8_t *const *)(self + 116) + index * 12;
-			uint32_t groupIndex = *(const uint32_t *)(entry + 8);
-
-			if (groupIndex < count) {
-				const uint32_t *groups =
-					*(const uint32_t *const *)(self + 124);
-				const uint8_t *group =
-					(const uint8_t *)(uintptr_t)groups[groupIndex];
-				uint32_t size = *(const uint32_t *)(group + 32);
-				uint32_t last = UINT32_MAX;
-
-				if (size) {
-					const uint32_t *children = *(const uint32_t *const *)(group + 28);
-					const uint8_t *child =
-						(const uint8_t *)(uintptr_t)children[size - 1];
-					last = *(const uint32_t *)(child + 28) +
-						*(const uint32_t *)(child + 32) - 1;
-				}
-				if (index >= last) {
-					if (groupIndex >= count - 1) {
-						*output = index;
-					} else {
-						const uint8_t *next =
-							(const uint8_t *)(uintptr_t)groups[groupIndex + 1];
-						uint32_t first = 0;
-						if (*(const uint32_t *)(next + 32)) {
-							const uint32_t *children =
-								*(const uint32_t *const *)(next + 28);
-							const uint8_t *child =
-								(const uint8_t *)(uintptr_t)children[0];
-							first = *(const uint32_t *)(child + 28);
-						}
-						*output = first;
-					}
-				} else {
-					*output = index + 1;
-				}
-				return 0;
-			}
-		}
-	}
-	return result;
-}
-
-int32_t _ZN3paf5graph10TextLayout11GetCharInfoEjRNS0_18TextLayoutCharInfoE(const uint8_t *self, uint32_t index,
-				uint8_t *output)
-{
-	const uint8_t *entry;
-	const uint8_t *const *lookup;
-	uint32_t entryIndex;
-	int32_t result = -2136005885;
-
-	if (!(*(const int16_t *)(self + 112) & 0x22)) {
-		result = -2136005886;
-		if (index < *(const uint32_t *)(self + 120)) {
-			entry = *(const uint8_t *const *)(self + 116) + 12 * index;
-			entryIndex = *(const uint32_t *)(entry + 8);
-			if (entryIndex < *(const uint32_t *)(self + 128)) {
-				float32x4_t values;
-
-				lookup = *(const uint8_t *const *const *)(self + 124);
-				values = *(const volatile float32x4_t *)(lookup[entryIndex] + 8);
-				result = 0;
-				*(uint32_t *)(output + 8) = entryIndex;
-				*(float *)(output + 4) =
-					vgetq_lane_f32(values, 0) +
-					*(const float *)(entry + 4);
-			}
-		}
-	}
-	return result;
-}
-
 void *ScePafGraphics_12BDEBFF(void)
 {
 	uint32_t *state = *(uint32_t *volatile *)
@@ -319,13 +235,6 @@ char *ScePafGraphics_0EC5770E(void)
 }
 
 __attribute__((noinline))
-int _ZN3paf5graph10TextLayout9GetBoundsERNS_4math2v2E(const uint8_t *self, uint64_t *output)
-{
-	if (*(const uint16_t *)(self + 112) & 0x22)
-		return -2136005885;
-	*output = *(const uint64_t *)(self + 104);
-	return 0;
-}
 
 static inline __attribute__((always_inline))
 uint32_t *DestroyGraphicsRefPair(uint32_t *self)
@@ -376,13 +285,6 @@ uint32_t *ScePafGraphics_A078C447(uint32_t *result,
 }
 
 __attribute__((noinline))
-int _ZN3paf5graph10TextLayout12GetLineCountERj(const uint8_t *self, uint32_t *output)
-{
-	if (*(const uint16_t *)(self + 112) & 0x11)
-		return -2136005885;
-	*output = *(const uint32_t *)(self + 128);
-	return 0;
-}
 
 int _ZN3paf5graph9TextStyle17SetStyleAttributeENS0_18TextStyleAttributeERKNS_4math2v2E(uint8_t *self, int32_t index,
 			     const uint64_t *value)
@@ -410,25 +312,6 @@ uint32_t ScePafGraphics_52C45E43(uint32_t value)
 
 static inline __attribute__((always_inline))
 __attribute__((noinline))
-int _ZN3paf5graph10TextLayout17GetSelectionRangeERjS2_(const uint8_t *self,
-			     uint32_t *first, uint32_t *second)
-{
-	*first = *(const uint32_t *)(self + 96);
-	*second = *(const uint32_t *)(self + 100);
-	return 0;
-}
-
-int _ZN3paf5graph10TextLayout8SetStateEi(uint8_t *self, uint16_t bits)
-{
-	*(uint16_t *)(self + 112) |= bits;
-	return 0;
-}
-
-int _ZN3paf5graph10TextLayout10ClearStateEi(uint8_t *self, uint16_t bits)
-{
-	*(uint16_t *)(self + 112) &= (uint16_t)~bits;
-	return 0;
-}
 
 int _ZNK3paf5graph9TextStyle17GetStyleAttributeENS0_18TextStyleAttributeERi(const uint8_t *self,
 			    int32_t index, int32_t *output)
@@ -437,20 +320,6 @@ int _ZNK3paf5graph9TextStyle17GetStyleAttributeENS0_18TextStyleAttributeERi(cons
 		return -2136005886;
 	*output = (int8_t)self[4];
 	return 0;
-}
-
-int _ZN3paf5graph10TextLayout10InvalidateEv(uint8_t *self)
-{
-	RMutex *mutex = *(RMutex **)(self + 140);
-
-	if (mutex) {
-		_ZN3paf6thread6RMutex4LockEv(mutex);
-		mutex = *(RMutex **)(self + 140);
-	}
-	*(uint16_t *)(self + 112) |= 7;
-	if (mutex)
-		_ZN3paf6thread6RMutex6UnlockEv(mutex);
-	return 7;
 }
 
 int32_t *_ZN3paf5graph9TextStyleD1Ev(int32_t *result)
@@ -542,60 +411,8 @@ uint8_t *_ZN3paf5graph9TextStyleaSERKS1_(uint8_t *self, const uint8_t *source)
 }
 
 __attribute__((noinline))
-int _ZN3paf5graph10TextLayout18GetLayoutAttributeENS0_19TextLayoutAttributeERNS_4math2v2E(const uint8_t *self, int index,
-			     uint64_t *result)
-{
-	int status = 0;
-
-	if (index > 6) {
-		if (index <= 7) {
-			const volatile double *values =
-				(const volatile double *)(self + 40);
-			double first = values[0];
-
-			(void)values[1];
-			*(double *)result = first;
-			goto done;
-		}
-		if (index <= 8) {
-			*(double *)result = *(const double *)(self + 48);
-			goto done;
-		}
-		status = -2136005886;
-		goto done;
-	}
-	if (index <= 5) {
-		status = -2136005886;
-		goto done;
-	}
-	*(double *)result = *(const double *)(self + 28);
-done:
-	return status;
-}
 
 __attribute__((noinline))
-int _ZN3paf5graph10TextLayout18GetLayoutAttributeENS0_19TextLayoutAttributeERi(const uint8_t *self, int index,
-			    uint32_t *result)
-{
-	if (index > 1) {
-		if (index <= 2) {
-			*result = (int32_t)(int8_t)self[14];
-			return 0;
-		}
-		if (index <= 3) {
-			*result = *(const uint16_t *)(self + 18);
-			return 0;
-		}
-		return -2136005886;
-	}
-	if (index < 0)
-		return -2136005886;
-	if (index == 0)
-		*result = (int32_t)(int8_t)self[12];
-	else
-		*result = (int32_t)(int8_t)self[13];
-	return 0;
-}
 
 static inline __attribute__((always_inline))
 int GraphicsInvokeOffset20(const uint32_t *self)
