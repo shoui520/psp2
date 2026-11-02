@@ -5,6 +5,9 @@
 #define SCE_PAF_ERROR_NOT_FOUND (-2136014811) /* 0x80AF0025 */
 #define SCE_PAF_ERROR_INVALID_ARGUMENT (-2136014705) /* 0x80AF008F */
 #define SCE_PAF_ERROR_TOPLEVEL_ARGUMENT (-2136014717) /* 0x80AF0083 */
+/* an operation the object does not allow: a screen surface resized over a render target
+   someone else keeps (name ours) */
+#define SCE_PAF_ERROR_NOT_PERMITTED (-2136014713) /* 0x80AF0087 */
 #define SCE_PAF_ERROR_CXML_CANT_READ (-2136013567) /* 0x80AF0501 */
 #define SCE_PAF_ERROR_CXML_CANT_SEEK (-2136013565) /* 0x80AF0503 */
 #define SCE_PAF_ERROR_CXML_CANT_ALLOC (-2136013564) /* 0x80AF0504 */

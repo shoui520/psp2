@@ -618,6 +618,8 @@ namespace graph {
 
 /* the GXM texture format of a surface's mode (0x8119a53e, another file; name ours) */
 SceGxmTextureFormat GetTextureFormat(const SurfaceBase *surface);
+/* the same of a mode and SurfaceBase's reserved flag (0x8119a4f8; name ours) */
+SceGxmTextureFormat GetTextureFormat(ImageMode format, bool reserved);
 
 }
 }

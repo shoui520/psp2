@@ -167,6 +167,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/surface/surface_pool_allocator.cpp
 	src/graphics/surface/surface_display.cpp
 	src/graphics/surface/surface_texture.cpp
+	src/graphics/surface/surface_screen.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
@@ -245,6 +246,11 @@ set_source_files_properties("${paf_dlmalloc_source}" PROPERTIES COMPILE_OPTIONS 
 # CacheImage's destructor stays out of line in its subclass's and its own deleting destructors,
 # while IsResourcePath is inlined: budget 16 does both, 12 and 20 do not (2026-10-31).
 set_source_files_properties(src/cache/cache_image.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)
+
+# ScreenSurface inlines its table lookups and GetRawContext but calls InitDepthSurface,
+# CreateRenderTarget and its complete destructor: budgets 12 to 20 do that, 24 and 30 inline
+# them (2026-11-02).
+set_source_files_properties(src/graphics/surface/surface_screen.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=12)
 
 # The file units (HttpFile, LocalFile, MemFile, OpenUrl) were written and matched at the C++
 # units' budget, 30 (2026-10-31): LocalFile's constructors inline CreateImpl, its destructor Close and DeleteImpl.

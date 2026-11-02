@@ -138,8 +138,6 @@ public:
 
 	static intrusive_ptr<Surface> s_offscreen;
 
-	/* reserved: nothing reads or writes them */
-	uint8_t m_reserved[16];
 	SceGxmSyncObject **m_sync_objects;
 	/* per page: drawn since it was last shown */
 	bool *m_page_dirty;
@@ -194,15 +192,6 @@ int32_t GetGpuClockLevel();
 int32_t SetGpuClockLevel(int32_t level);
 int32_t SaveGpuClock();
 
-}
-
-/* Exports with no name found for their NIDs. */
-extern "C" {
-/* a scene with the surface's render target, into a page's colour surface */
-int32_t ScePafGraphics_751FC8E6(paf::graph::ScreenSurface *surface,
-				const SceGxmRenderTarget *render_target,
-				SceGxmSyncObject *sync_object, SceGxmColorSurface *color_surface,
-				const SceGxmDepthStencilSurface *depth_stencil, uint32_t flags);
 }
 
 #endif

@@ -216,7 +216,7 @@ int32_t DisplaySurface::Begin(uint32_t flags)
 	if (GetRawContext() == NULL)
 		return SCE_PAF_ERROR_GRAPHICS_INVALID_POINTER;
 
-	int32_t ret = ScePafGraphics_751FC8E6(this, m_render_target,
+	int32_t ret = Begin_(m_render_target,
 					      m_sync_objects[m_page_counter],
 					      &m_color_surfaces[m_page_counter],
 					      m_depth_stencil_surface, flags);
@@ -464,7 +464,7 @@ int32_t DisplaySurface::SetFrameBuffer(const void *frame_buffer)
 		update->format = buffer->format;
 		m_given_surface_type = buffer->surface_type;
 		m_full_size = false;
-		m_reserved0 = 0;
+		m_output_register_size = SCE_GXM_OUTPUT_REGISTER_SIZE_32BIT;
 		m_sync_objects[m_page_counter] = buffer->sync_object;
 		Update(update);
 	} else {

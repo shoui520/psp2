@@ -18,7 +18,6 @@ extern const SceGxmProgramParameter *sceGxmProgramFindParameterBySemantic(
 uint32_t _ZN3paf5graph7Surface6AddRefEv(uint8_t *self);
 uint32_t _ZN3paf5graph7Surface7ReleaseEv(uint8_t *self);
 uint32_t _ZN3paf5graph3arl2GlEv(void);
-extern uint32_t sce_paf_graphics_state_12b0;
 extern uint32_t sce_paf_graphics_state_11fc;
 extern uint8_t sce_paf_graphics_flag_06e8;
 extern int32_t *sce_paf_graphics_active_surface_2e94;
@@ -271,25 +270,6 @@ int _ZN3paf5graph9TextStyle13EqualFontTypeERKS1_(const uint8_t *first,
 /* A global graphics pointer uses the SDK's acquire/release atomic counter. */
 uint32_t *sce_paf_graphics_shared_reference_0f84;
 
-int _ZN3paf5graph13ScreenSurface3EndEPK18SceGxmNotificationS4_(const uint8_t *self,
-			     SceGxmNotification *vertexNotification,
-			     SceGxmNotification *fragmentNotification)
-{
-	SceGxmContext *context =
-		(SceGxmContext *)(uintptr_t)sce_paf_graphics_state_12b0;
-
-	if (!context)
-		context = *(SceGxmContext **)(uintptr_t)
-			(_ZN3paf5graph3arl2GlEv() + 1676);
-	if (!context)
-		return -2136006139;
-	int result = sceGxmEndScene(context, vertexNotification,
-				    fragmentNotification);
-	if (result >= 0)
-		return 0;
-	return result;
-}
-
 extern uint8_t *sce_paf_graphics_indicator_3070;
 uint8_t sce_paf_graphics_reset_flag_3074;
 uint8_t sce_paf_graphics_reset_gate_3075;
@@ -320,7 +300,6 @@ uint8_t *ScePafGraphics_906BE45C(void)
 uint8_t sce_paf_graphics_flag_306c;
 uint32_t sce_paf_graphics_state_11e0;
 uint32_t sce_paf_graphics_state_11fc;
-uint32_t sce_paf_graphics_state_12b0;
 uint8_t sce_paf_graphics_flag_06e8;
 int32_t *sce_paf_graphics_active_surface_2e94;
 uint8_t sce_paf_graphics_flag_3518;
@@ -414,15 +393,6 @@ int ScePafGraphics_D1081027(uint8_t *self, int32_t index,
 	return 0;
 }
 
-uint32_t _ZN3paf5graph13ScreenSurface13GetRawContextEv(void)
-{
-	uint32_t result = sce_paf_graphics_state_12b0;
-
-	if (!result)
-		return *(uint32_t *)(uintptr_t)(_ZN3paf5graph3arl2GlEv() + 1676);
-	return result;
-}
-
 static inline __attribute__((always_inline))
 void *InitGraphicsHeapSlot(uint8_t *self)
 {
@@ -435,12 +405,6 @@ void *InitGraphicsHeapSlot(uint8_t *self)
 uint32_t ScePafGraphics_52C45E43(uint32_t value)
 {
 	sce_paf_graphics_flag_306c = value;
-	return value;
-}
-
-uint32_t _ZN3paf5graph13ScreenSurface13SetRawContextEP13SceGxmContext(uint32_t value)
-{
-	sce_paf_graphics_state_12b0 = value;
 	return value;
 }
 
@@ -565,65 +529,9 @@ typedef struct PafGraphicsItemNode {
 PafGraphicsItemNode *sce_paf_graphics_items_12a0;
 Mutex sce_paf_graphics_items_mutex_12b0;
 
-int ScePafGraphics_A842275A(const uint8_t *self,
-			     SceGxmRenderTarget *target)
-{
-	SceUID driverMemBlock;
-	int result;
-
-	if (!target)
-		return -2136006139;
-	if (!self[160])
-		return 0;
-	sceGxmRenderTargetGetDriverMemBlock(target, &driverMemBlock);
-	result = sceGxmDestroyRenderTarget(target);
-	sceKernelFreeMemBlock(driverMemBlock);
-	return result;
-}
-
 Mutex sce_paf_graphics_flag_mutex_1250;
 
 uint32_t *sce_paf_graphics_current_ref_0f7c;
-
-static const int32_t graphicsFormatMap[4] = {
-	4, 0,
-	-1, -1
-};
-
-static const int32_t graphicsUsageMap[8] = {
-	1, 0,
-	2, 0x08000000,
-	3, 0x04000000,
-	0, -1
-};
-
-static const int32_t graphicsMemoryMap[6] = {
-	100, 0x02444000,
-	101, 0x00044000,
-	-1, -1
-};
-
-int _ZN3paf5graph13ScreenSurface18ConvertDepthFormatE9ImageMode(int value)
-{
-	int i;
-
-	for (i = 0; i < 3; ++i)
-		if (graphicsMemoryMap[2 * i] == value)
-			return graphicsMemoryMap[2 * i + 1];
-	return -1;
-}
-
-int _ZN3paf5graph13ScreenSurface14GetDepthFormatEv(const uint8_t *self)
-{
-	int i;
-	const uint8_t *resource = *(const uint8_t *const *)(self + 120);
-	int value = *(const int32_t *)(resource + 4);
-
-	for (i = 0; i < 3; ++i)
-		if (graphicsMemoryMap[2 * i] == value)
-			return graphicsMemoryMap[2 * i + 1];
-	return -1;
-}
 
 uint8_t *_ZN3paf5graph9TextStyleaSERKS1_(uint8_t *self, const uint8_t *source)
 {
@@ -701,48 +609,6 @@ int _ZN3paf5graph10TextLayout18GetLayoutAttributeENS0_19TextLayoutAttributeERi(c
 	return 0;
 }
 
-int _ZN3paf5graph13ScreenSurface24ConvertColorSurfaceOrderE10ImageOrder(const uint8_t *self, int value)
-{
-	int i;
-
-	for (i = 0; i < 4; ++i)
-		if (graphicsUsageMap[2 * i] == value)
-			return graphicsUsageMap[2 * i + 1];
-	return -1;
-}
-
-int _ZN3paf5graph13ScreenSurface20GetColorSurfaceOrderEv(const uint8_t *self)
-{
-	int i;
-	int value = *(const int32_t *)(self + 32);
-
-	for (i = 0; i < 4; ++i)
-		if (graphicsUsageMap[2 * i] == value)
-			return graphicsUsageMap[2 * i + 1];
-	return -1;
-}
-
-int _ZN3paf5graph13ScreenSurface25ConvertColorSurfaceFormatE9ImageMode(const uint8_t *self, int value)
-{
-	int i;
-
-	for (i = 0; i < 2; ++i)
-		if (graphicsFormatMap[2 * i] == value)
-			return graphicsFormatMap[2 * i + 1];
-	return -1;
-}
-
-int _ZN3paf5graph13ScreenSurface21GetColorSurfaceFormatEv(const uint8_t *self)
-{
-	int i;
-	int value = *(const int32_t *)(self + 4);
-
-	for (i = 0; i < 2; ++i)
-		if (graphicsFormatMap[2 * i] == value)
-			return graphicsFormatMap[2 * i + 1];
-	return -1;
-}
-
 int _ZN3paf5graph16AttributedString15GetStringBufferERPKwRj(const uint8_t *self,
 			     uint32_t *first, uint32_t *second)
 {
@@ -756,11 +622,6 @@ int _ZN3paf5graph16AttributedString9GetStringERNS_12basic_stringIwNS_11char_trai
 {
 	PafWStringCopy(result, (const PafWString *)(self + 4));
 	return 0;
-}
-
-uint8_t *_ZN3paf5graph13ScreenSurface18GetRawColorSurfaceEi(const uint8_t *self, uint32_t index)
-{
-	return *(uint8_t *const *)(self + 148) + index * 48;
 }
 
 static inline __attribute__((always_inline))

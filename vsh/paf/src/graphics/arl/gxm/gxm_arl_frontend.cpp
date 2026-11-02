@@ -401,10 +401,10 @@ void ArlInstance::SetSceneData(intrusive_ptr<Surface> surface)
 	if (screen == NULL) {
 		m_next_scene.m_memory = NULL;
 	} else {
-		m_next_scene.m_bounds = Rect(screen->m_bounds_x0, screen->m_bounds_y0,
-					     screen->m_bounds_x1, screen->m_bounds_y1);
-		m_next_scene.m_extent_width = screen->m_extent_width;
-		m_next_scene.m_extent_height = screen->m_extent_height;
+		m_next_scene.m_bounds = Rect(screen->m_scissor_x0, screen->m_scissor_y0,
+					     screen->m_scissor_x1, screen->m_scissor_y1);
+		m_next_scene.m_yuv_csc_index = screen->m_yuv_csc_index;
+		m_next_scene.m_yuv_profile = screen->m_yuv_profile;
 
 		int32_t page;
 

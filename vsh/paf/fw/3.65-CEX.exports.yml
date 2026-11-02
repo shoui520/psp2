@@ -1627,7 +1627,7 @@ ScePaf:
         - _ZN3paf5graph7Surface13SetDivideModeEj: 0x1D522F83
         - _ZN3paf5graph8PlaneObj12GetMinFilterEj: 0x1D53BDC2
         - _ZN3paf5graph13ScreenSurface16InitColorSurfaceEv: 0x1D542B4F
-        - ScePafGraphics_1DE68EC6: 0x1DE68EC6
+        - _ZN3paf5graph13ScreenSurfaceC2EP18SceGxmRenderTargetPNS0_11SurfacePoolEii9ImageMode10ImageOrderiS6_S7_: 0x1DE68EC6
         - _ZN3paf5graph7Surface10InitializeEPNS0_11SurfacePoolEii9ImageMode10ImageOrderNS1_11SurfaceTypeEii: 0x1E900257
         - _ZN3paf5graph3arl16FragShaderObjectC1EPNS1_19ShaderInterfaceBaseE: 0x1ED9D581
         - _ZN3paf5graph3arl13ShaderProgram18unregister_programEv: 0x1F7F5DBB
@@ -1857,7 +1857,7 @@ ScePaf:
         - _ZN3paf5graph7TextObj17SetStyleAttributeENS0_18TextStyleAttributeEjjRKNS_4math2v2E: 0x74475AD2
         - _ZN3paf5graph10TextLayout10ClearStateEi: 0x74E0DEAA
         - _ZN3paf5graph8PlaneObj6OnDrawERKNS_4math6matrixEjfRNS0_8DrawInfoE: 0x74EF9976
-        - ScePafGraphics_751FC8E6: 0x751FC8E6
+        - _ZN3paf5graph13ScreenSurface6Begin_EP18SceGxmRenderTargetP16SceGxmSyncObjectP18SceGxmColorSurfaceP25SceGxmDepthStencilSurfacej: 0x751FC8E6
         - _ZN3paf5graph8PanelObjD2Ev: 0x762C1ED3
         - _ZN3paf5graph7SurfaceD1Ev: 0x767D7A4D
         - _ZN3paf5graph16AttributedString17GetStyleAttributeENS0_18TextStyleAttributeEjRNS_4math2v4E: 0x76B9E1AA
@@ -1868,7 +1868,7 @@ ScePaf:
         - _ZN3paf5gutil5debug14WaitDummyVSyncEv: 0x7888845B
         - _ZN3paf5graph12TextObjParam7SetEachEPNS0_7DrawObjE: 0x78928567
         - _ZNK3paf5graph9BubbleObj14GetDrawObjTypeEv: 0x792219B3
-        - ScePafGraphics_792E020F: 0x792E020F
+        - _ZN3paf5graph13ScreenSurface10SetScissorEffffb: 0x792E020F
         - ScePafGraphics_7A31826A: 0x7A31826A
         - _ZN3paf5graph10TextLayout8GetStyleEjRNS0_9TextStyleE: 0x7A686007
         - _ZN3paf5graph10TextLayout15GetNextRightHitEjRj: 0x7B6D79FB
@@ -1995,7 +1995,7 @@ ScePaf:
         - _ZN3paf5graph7TextObj14GetNextDownHitEjRj: 0xA688172A
         - _ZN3paf5graph10TextLayout18SetLayoutAttributeENS0_19TextLayoutAttributeERKNS_4math2v2E: 0xA6D25C8F
         - _ZN3paf5graph12TextObjParamC1Ev: 0xA797A7D4
-        - ScePafGraphics_A842275A: 0xA842275A
+        - _ZN3paf5graph13ScreenSurface19DestroyRenderTargetEP18SceGxmRenderTarget: 0xA842275A
         - _ZN3paf5graph13ScreenSurface20GetColorSurfaceOrderEv: 0xA9057335
         - _ZN3paf5graph9TextStyleC1Ev: 0xA9266007
         - _ZN3paf5graph7Surface11DecodeImageEPNS0_11SurfacePoolEPNS1_10LoadOptionERNS_13intrusive_ptrIS1_EENS_6common9SharedPtrINS_5image5ImageEEE: 0xA97584EB
@@ -2173,7 +2173,7 @@ ScePaf:
         - _ZN3paf5graph11SurfacePoolC1EPviPKcPKNS_6memory13HeapAllocator6OptionENS1_10MemoryTypeE: 0xEEC40427
         - _ZN3paf5graph11PageTurnObjD2Ev: 0xEED3660C
         - _ZN3paf5graph7Surface13GetCopyHeightEii: 0xEF7B7032
-        - ScePafGraphics_EFA88332: 0xEFA88332
+        - _ZN3paf5graph13ScreenSurfaceC1EP18SceGxmRenderTargetPNS0_11SurfacePoolEii9ImageMode10ImageOrderiS6_S7_: 0xEFA88332
         - _ZN3paf5graph16AttributedString17GetStyleAttributeENS0_18TextStyleAttributeEjRi: 0xEFF58844
         - ScePafGraphics_F1789719: 0xF1789719
         - _ZN3paf5graph7SurfaceD2Ev: 0xF1EE942C
@@ -2199,7 +2199,7 @@ ScePaf:
         - _ZN3paf5graph3arl9Texture2DC1ENS_6common9SharedPtrINS1_13VramAllocatorEEE: 0xF8B2AFCF
         - ScePafGraphics_F8D9F263: 0xF8D9F263
         - _ZN3paf5graph3arl16VertShaderObject4initERNS1_11ArlInstanceENS_6common9SharedPtrINS1_15VertexArraySpecEEES8_S8_S8_: 0xF917356F
-        - ScePafGraphics_F91FD777: 0xF91FD777
+        - _ZN3paf5graph13ScreenSurface7SetClipEffffb: 0xF91FD777
         - _ZN3paf5graph11SurfaceCLUTC2EPNS0_11SurfacePoolE9ImageModei: 0xF956A4D5
         - _ZN3paf5graph10TextLayoutD1Ev: 0xF9888760
         - _ZN3paf5graph3arl16VertShaderObjectD2Ev: 0xF9AB1CC7

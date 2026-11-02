@@ -207,7 +207,8 @@ public:
 class SceneData {
 public:
 	SceneData()
-		: m_fbo(NULL), m_surface(NULL), m_memory(NULL), m_extent_width(0), m_extent_height(0)
+		: m_fbo(NULL), m_surface(NULL), m_memory(NULL), m_yuv_csc_index(0),
+		  m_yuv_profile(SCE_GXM_YUV_PROFILE_BT601_STANDARD)
 	{
 	}
 
@@ -220,8 +221,8 @@ public:
 			 m_bounds.m_x1 != other.m_bounds.m_x1 ||
 			 m_bounds.m_y1 != other.m_bounds.m_y1)) ||
 		       (m_memory == other.m_memory &&
-			(m_extent_width != other.m_extent_width ||
-			 m_extent_height != other.m_extent_height)) ||
+			(m_yuv_csc_index != other.m_yuv_csc_index ||
+			 m_yuv_profile != other.m_yuv_profile)) ||
 		       (m_memory == other.m_memory &&
 			(m_scale_mode != other.m_scale_mode || m_full_size != other.m_full_size));
 	}
@@ -236,9 +237,9 @@ public:
 	Rect m_bounds;
 	/* the memory of the surface's page drawn into */
 	void *m_memory;
-	/* copied from the screen surface, which clears them when a frame buffer is given */
-	int32_t m_extent_width;
-	int32_t m_extent_height;
+	/* the screen surface's YUV profile */
+	uint32_t m_yuv_csc_index;
+	SceGxmYuvProfile m_yuv_profile;
 	int32_t m_scale_mode;
 	bool m_full_size;
 };
