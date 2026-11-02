@@ -3,6 +3,7 @@
 #define PAF_MATH_NGP_V4_H
 
 #include <vectormath.h>
+#include <math/ngp/v3.h>
 
 namespace paf {
 namespace math {
@@ -18,6 +19,10 @@ public:
 	}
 
 	v4(sce::Vectormath::Simd::Aos::Vector4 value) : _impl(value)
+	{
+	}
+
+	v4(v3 xyz, float w) : _impl(xyz.getImpl(), w)
 	{
 	}
 

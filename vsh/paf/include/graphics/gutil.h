@@ -6,10 +6,12 @@
 #define PAF_GRAPHICS_GUTIL_H
 
 #include <stdint.h>
+#include <common/shared_ptr.h>
 
 namespace paf {
 
 namespace graph {
+class Shader;
 class SurfacePool;
 
 namespace arl {
@@ -50,6 +52,8 @@ public:
 	uint32_t display_list_size;
 };
 
+/* the shader draw objects draw with when they are given none */
+common::SharedPtr<graph::Shader> *GetDefaultShader();
 graph::SurfacePool *GetDefaultSurfacePool();
 void SetFrameBufferMode(FrameBufferMode mode);
 /* initializes GXM, or waits for the shell's when the frame buffer is given */
@@ -67,7 +71,7 @@ void RemoveDebugGuiFuncs(void (*func)(void *));
 
 extern "C" {
 /* waits for the GXM context of a Gl state to finish (sceGxmFinish) */
-void ScePafGraphics_E4B3B1D2(void *gl);
+void ScePafGraphics_E4B3B1D2(paf::graph::arl::ArlInstance *gl);
 }
 
 #endif

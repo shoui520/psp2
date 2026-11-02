@@ -59,6 +59,26 @@ public:
 	v3 extractEulerAnglesZXY() const;
 	v3 extractEulerAnglesZYX() const;
 
+	/* the product: each column the left's columns weighted by the right column's lanes */
+	__attribute__((always_inline)) matrix operator*(const matrix &rhs) const
+	{
+		return matrix(v4(Transform(rhs._impl.getCol0())), v4(Transform(rhs._impl.getCol1())),
+			      v4(Transform(rhs._impl.getCol2())), v4(Transform(rhs._impl.getCol3())));
+	}
+
+	__attribute__((always_inline)) sce::Vectormath::Simd::Aos::Vector4
+	Transform(sce::Vectormath::Simd::Aos::Vector4 v) const
+	{
+		float32x4_t lanes = v.get128();
+		float32x4_t r = vmulq_f32(_impl.getCol0().get128(),
+					  vdupq_lane_f32(vget_low_f32(lanes), 0));
+
+		r = vmlaq_f32(r, _impl.getCol1().get128(), vdupq_lane_f32(vget_low_f32(lanes), 1));
+		r = vmlaq_f32(r, _impl.getCol2().get128(), vdupq_lane_f32(vget_high_f32(lanes), 0));
+		r = vmlaq_f32(r, _impl.getCol3().get128(), vdupq_lane_f32(vget_high_f32(lanes), 1));
+		return sce::Vectormath::Simd::Aos::Vector4(r);
+	}
+
 	v4 x() const
 	{
 		return v4(_impl.getCol0());

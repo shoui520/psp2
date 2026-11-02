@@ -22,13 +22,6 @@ extern uint32_t sce_paf_graphics_state_12b0;
 extern uint32_t sce_paf_graphics_state_11fc;
 extern uint8_t sce_paf_graphics_flag_06e8;
 extern int32_t *sce_paf_graphics_active_surface_2e94;
-uint32_t sce_paf_graphics_core_06f8;
-
-uint32_t *ScePafGraphics_4E038C05(void)
-{
-	return &sce_paf_graphics_core_06f8;
-}
-
 /* Update the native four-lane graphics parameter and its mirrored state. */
 uint8_t *ScePafGraphics_7120023D(uint8_t *self, const float32x4_t *input)
 {
@@ -1936,14 +1929,6 @@ int _ZN3paf5graph16AttributedString15GetStringBufferERPKwRj(const uint8_t *self,
 }
 
 int32_t *sce_paf_graphics_buffer_11e4;
-uint8_t *sce_paf_graphics_display_06f8;
-
-uint8_t ScePafGraphics_505CD74E(uint8_t value)
-{
-	sce_paf_graphics_display_06f8[1432] = value;
-	return value;
-}
-
 int _ZN3paf5graph16AttributedString9GetStringERNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEE(const uint8_t *self, PafWString *result)
 {
 	PafWStringCopy(result, (const PafWString *)(self + 4));

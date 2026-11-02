@@ -1,14 +1,13 @@
 /*
- * paf::graph::DrawObj, as far as converted C++ uses it: what a widget draws,
- * with its color and the draw style that says how (BindDrawStyle reads it at
- * 0x30), and the two callbacks it calls when it is deleted; and
- * paf::graph::DrawObjParam, the draw parameters a resource gives a set of
- * draw objects.
+ * paf::graph::DrawObj: what a widget draws, at a position, size and rotation, in a color and a
+ * draw style that says how (blending, depth test, culling and paf's debug caps), with the shader
+ * it draws with and the two callbacks it calls when it is deleted; and paf::graph::DrawObjParam,
+ * the draw parameters a resource gives a set of draw objects.
  *
- * Names after ScePaf-RE (restored from Sony's DWARF); the fields before the
- * color are not converted yet. DrawStyle's deepen_color and
- * reduce_transparency bits and DeleteCBInfo's fields are named after the
- * DrawObjParam attributes and functions that set them (ours).
+ * Names after ScePaf-RE (restored from Sony's DWARF) where it has one. DrawStyle's
+ * deepen_color, reduce_transparency and surface_draw bits, DeleteCBInfo's fields, the
+ * virtuals ScePaf-RE leaves unnamed and m_draw_list are ours: the first from the DrawObjParam
+ * attributes and the caps they bind, the virtuals from what their bodies do.
  */
 #ifndef PAF_GRAPHICS_DRAWOBJ_DRAW_OBJ_H
 #define PAF_GRAPHICS_DRAWOBJ_DRAW_OBJ_H
@@ -16,24 +15,52 @@
 #include <stdint.h>
 #include <arm_neon.h>
 #include <std/list>
+#include <std/memory>
+#include <common/shared_ptr.h>
+#include <math/ngp/matrix.h>
+#include <math/ngp/v3.h>
 #include <math/ngp/v4.h>
 #include <versatileparam/versatileparam.h>
 
 namespace paf {
 namespace graph {
 
+class DrawEnv;
 class DrawObj;
+class Shader;
+class Surface;
 
+/* how a draw object is drawn: the blend, compare and cull values are ScePaf-RE's BlendType,
+   CompareType and CullFaceType; the word is compared and copied whole */
 class DrawStyle {
 public:
-	uint32_t blend : 4;
-	uint32_t depth : 4;
-	uint32_t lighting : 4;
-	uint32_t face_cull : 2;
-	uint32_t scissor : 1;
-	uint32_t deepen_color : 1;
-	uint32_t reduce_transparency : 1;
-	uint32_t reserved1 : 15;
+	DrawStyle()
+	{
+	}
+
+	DrawStyle(uint32_t value) : m_value(value)
+	{
+	}
+
+	bool operator!=(const DrawStyle &rhs) const
+	{
+		return m_value != rhs.m_value;
+	}
+
+	union {
+		struct {
+			uint32_t blend : 4;
+			uint32_t depth : 4;
+			uint32_t lighting : 4;
+			uint32_t face_cull : 2;
+			uint32_t scissor : 1;
+			uint32_t deepen_color : 1;
+			uint32_t reduce_transparency : 1;
+			uint32_t surface_draw : 1;
+			uint32_t reserved1 : 14;
+		};
+		uint32_t m_value;
+	};
 };
 
 /* a callback a draw object calls with its data when it is deleted */
@@ -43,26 +70,144 @@ public:
 	void *data;
 };
 
+/* what slot 17 sets the surface_draw bit from: only the bool is read (names ours) */
+class SurfaceDrawParam {
+public:
+	int32_t m_reserved;
+	bool m_surface_draw;
+};
+
+/* the two corners of a draw object's box (names ours) */
+class DrawObjBounds {
+public:
+	DrawObjBounds(math::v3 min, math::v3 max) : m_min(min), m_max(max)
+	{
+	}
+
+	math::v3 m_min;
+	math::v3 m_max;
+};
+
+/* a draw object's state: made dirty for a while by each change, and visible (names ScePaf-RE's,
+   m_draw_list and the class's ours) */
+class DrawObjFlags {
+public:
+	DrawObjFlags()
+	{
+		m_draw_list = 0;
+		m_dirty = 1;
+		m_prepare = 0;
+		m_visible = 1;
+	}
+
+	/* 0: drawn into the scene's draw lists, which the scene keeps in two globals */
+	uint32_t m_draw_list : 2;
+	uint32_t m_dirty : 2;
+	char m_prepare : 1;
+	char m_visible : 1;
+};
+
 class DrawObj {
 public:
+	static const char *DrawObjType();
+
+	static bool IsSafety()
+	{
+		return s_safety;
+	}
+
+	static void EnterSafety();
+	static void FinishSafety();
+	static void SetDirtyCount(uint32_t count);
+
+	DrawObj(const DrawStyle &style);
+
 	virtual bool IsInherit(const char *type) const;
 	virtual const char *GetDrawObjType() const;
 	virtual ~DrawObj();
-	/*
-	 * Only SetColor is called from converted code: the other slots are
-	 * declared without their arguments, which are not converted yet.
-	 * Draw queues a draw call whose callback calls Render; GetBounds gives
-	 * the corners pos -/+ size/2 (names ours).
-	 */
-	virtual void Draw();
-	virtual void Render();
-	virtual int32_t ReleaseAll();
-	virtual void GetBounds();
-	virtual void SetTexture();
-	virtual void GetTexture();
-	virtual void SetPos();
-	virtual void SetSize();
-	virtual void SetColor(math::v4 color);
+
+	/* Draw queues a draw call whose callback calls Render (names ours) */
+	virtual void Draw()
+	{
+	}
+
+	virtual void Render()
+	{
+	}
+
+	virtual void ReleaseAll()
+	{
+	}
+
+	/* the corners pos -/+ size/2 */
+	virtual DrawObjBounds GetBounds() const
+	{
+		sce::Vectormath::Simd::Aos::Vector3 half = m_size.getImpl() * 0.5f;
+		sce::Vectormath::Simd::Aos::Vector3 pos = m_pos.getImpl();
+
+		return DrawObjBounds(math::v3(pos - half), math::v3(pos + half));
+	}
+
+	virtual void SetTexture(const intrusive_ptr<Surface> &texture, uint32_t index = 0)
+	{
+	}
+
+	virtual void GetTexture(intrusive_ptr<Surface> &texture, uint32_t index = 0)
+	{
+	}
+
+	virtual void SetPos(math::v3 pos)
+	{
+		m_pos = pos;
+		UpdateDirty();
+	}
+
+	virtual void SetSize(math::v3 size)
+	{
+		m_size = math::v3(sce::Vectormath::Simd::Aos::maxPerElem(
+			sce::Vectormath::Simd::Aos::Vector3(0.0f), size.getImpl()));
+		UpdateDirty();
+	}
+
+	/* the color as RGBA bytes, each saturated */
+	virtual void SetColor(math::v4 color)
+	{
+		uint16x4_t rgba = vqmovn_u32(vcvtq_u32_f32(
+			vmulq_f32(color.getImpl().get128(), vdupq_n_f32(255.0f))));
+
+		m_color = vget_lane_u32(vreinterpret_u32_u8(vqmovn_u16(vcombine_u16(rgba, rgba))), 0);
+	}
+
+	virtual void SetRot(math::v3 rot);
+
+	virtual void Update()
+	{
+	}
+
+	/* a drawn frame counts the dirty frames down */
+	virtual void UpdatePost(const math::matrix &world_mat)
+	{
+		if (m_flags.m_dirty > 0)
+			m_flags.m_dirty--;
+	}
+
+	/* the parent's matrix times this object's: its position, rotation and, unless unscaled,
+	   its size (name ours) */
+	virtual void CalcWorldMatrix(math::matrix &world_mat, const math::matrix &parent,
+				     bool unscaled);
+
+	virtual void SetSurfaceDraw(const SurfaceDrawParam &param)
+	{
+		m_draw_style.surface_draw = param.m_surface_draw;
+	}
+
+	void BindDrawStyle();
+	void SetShader(const common::SharedPtr<Shader> &shader);
+
+	bool IsDirty()
+	{
+		return m_flags.m_dirty != 0;
+	}
 
 	/* the RGBA bytes of m_color as four floats from 0 to 1 */
 	math::v4 GetColor() const
@@ -74,12 +219,30 @@ public:
 				  vdupq_n_f32(1.0f / 255.0f))));
 	}
 
-	uint8_t reserved[0x28];
+	static uint32_t s_dirty_count;
+	static bool s_safety;
+	static const char m_drawobj_type[];
+
+	math::v3 m_pos;
+	math::v3 m_size;
+	math::v3 *m_rot;
 	uint32_t m_color;
 	DrawStyle m_draw_style;
-	uint8_t reserved2[0xc];
+	DrawObjFlags m_flags;
+	common::SharedPtr<Shader> m_shader;
 	DeleteCBInfo m_delete_cb[2];
+
+private:
+	/* the frames drawn after a change, outside a safety section */
+	void UpdateDirty()
+	{
+		if (!s_safety)
+			m_flags.m_dirty = s_dirty_count;
+	}
 };
+
+/* the draw calls the renderer draws */
+common::SharedPtr<DrawEnv> &DrawCalls();
 
 class DrawObjParam : public VersatileParam {
 public:
@@ -135,6 +298,11 @@ public:
 };
 
 }
+}
+
+extern "C" {
+/* a color modulated by a draw object's color, its alpha into the alpha (names ours) */
+void ScePafGraphics_B7EB9246(const paf::graph::DrawObj *obj, uint32_t *color, float *alpha);
 }
 
 #endif
