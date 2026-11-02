@@ -191,8 +191,7 @@ int libnet_free(void *ptr)
 		else
 			libnet_memory.freeTail = block;
 	}
-	libnet_sync_signal(&libnet_memory.sync, 1);
-	return 0;
+	return libnet_sync_signal(&libnet_memory.sync, 1);
 }
 
 int libnet_memory_init(void *pool, int size, int reserve)

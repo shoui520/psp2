@@ -21,6 +21,8 @@ int libnet_ether_strton(const char *str, SceNetEtherAddr *n)
 	SceUChar8 *to;
 	const char *end;
 	char digits[3];
+	unsigned char first, second;
+	char high, low;
 
 	if (str == NULL || n == NULL)
 		return SCE_NET_ERROR_EINVAL;
@@ -28,9 +30,33 @@ int libnet_ether_strton(const char *str, SceNetEtherAddr *n)
 	end = str + 18;
 	do {
 		sceClibMemcpy_safe(digits, str, 2);
+		first = str[0];
 		digits[2] = '\0';
-		*++to = (libnet_hex_digit(str[0]) << 4) + libnet_hex_digit(str[1]);
+		if ((unsigned int)(first - 48) <= 9)
+			high = 16 * (first - 48);
+		else if ((unsigned int)(first - 65) > 25) {
+			if ((unsigned int)(first - 97) > 25)
+				high = -16;
+			else
+				high = 16 * (first - 87);
+		} else {
+			high = 16 * (first - 55);
+		}
+		second = str[1];
+		if ((unsigned int)(second - 48) > 9) {
+			if ((unsigned int)(second - 65) > 25) {
+				if ((unsigned int)(second - 97) > 25)
+					low = 127;
+				else
+					low = second - 87;
+			} else {
+				low = second - 55;
+			}
+		} else {
+			low = second - 48;
+		}
 		str += 3;
+		*++to = low + high;
 	} while (str != end);
 	return 0;
 }

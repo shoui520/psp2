@@ -80,20 +80,20 @@ static char *libnet_show_sock_address(char *text, const SceNetInAddr *address)
 }
 
 /* a route's address, with the prefix length of MASK, as a column of the route listing */
-static void libnet_show_route_address(char *line, SceSize *left, const SceNetSockaddr *sa,
-				      const SceNetSockaddr *mask)
+static int libnet_show_route_address(char *line, SceSize *left, const SceNetSockaddr *sa,
+				     const SceNetSockaddr *mask)
 {
 	const LibnetSockaddrDl *dl;
 	const SceUChar8 *bytes;
 	char text[32];
 	unsigned int address;
-	int bits, length, limit, width, i;
+	int bits, length, limit, width, i, result;
 
 	if (sa->sa_len <= 1)
-		return;
+		return (int)line;
 	if (mask != NULL) {
 		if (sa->sa_family != SCE_NET_AF_INET)
-			return;
+			return (int)line;
 		bytes = (const SceUChar8 *)mask + 4;
 		limit = mask->sa_len - 4;
 		bits = 0;
@@ -103,8 +103,10 @@ static void libnet_show_route_address(char *line, SceSize *left, const SceNetSoc
 				i++;
 				bits += 8;
 				if (i >= limit)
-					goto print;
+					goto address;
 			}
+			if (i >= limit)
+				goto address;
 			switch (bytes[i]) {
 			case 0xfe:
 				bits++;
@@ -132,7 +134,7 @@ static void libnet_show_route_address(char *line, SceSize *left, const SceNetSoc
 			/* a mask that is not contiguous has no column */
 			for (; i < limit; i++)
 				if (bytes[i] != 0)
-					return;
+					return (int)line;
 		}
 	} else if (sa->sa_family != SCE_NET_AF_INET) {
 		if (sa->sa_family == LIBNET_AF_LINK) {
@@ -157,34 +159,43 @@ static void libnet_show_route_address(char *line, SceSize *left, const SceNetSoc
 	} else {
 		bits = 0;
 	}
-print:
+address:
 	address = __builtin_bswap32(((const SceNetSockaddrIn *)sa)->sin_addr.s_addr);
 	if (address == 0 && bits == 0) {
-		length = libnet_show_append(line, left, "default");
+		result = libnet_show_append(line, left, "default");
 	} else {
 		sceClibSnprintf(text, sizeof(text), "%u", address >> 24);
-		length = libnet_show_append(line, left, text);
+		result = libnet_show_append(line, left, text);
 		if ((unsigned int)(bits - 1) > 7) {
 			sceClibSnprintf(text, sizeof(text), ".%u", (address >> 16) & 0xff);
-			length += libnet_show_append(line, left, text);
+			result += libnet_show_append(line, left, text);
 			if ((unsigned int)(bits - 1) > 15) {
-				sceClibSnprintf(text, sizeof(text), ".%u", (address >> 8) & 0xff);
-				length += libnet_show_append(line, left, text);
+				sceClibSnprintf(text, sizeof(text), ".%u",
+						(address >> 8) & 0xff);
+				result += libnet_show_append(line, left, text);
 				if ((unsigned int)(bits - 1) > 23) {
-					sceClibSnprintf(text, sizeof(text), ".%u", address & 0xff);
-					length += libnet_show_append(line, left, text);
+					sceClibSnprintf(text, sizeof(text), ".%u",
+							address & 0xff);
+					result += libnet_show_append(line, left, text);
 				}
 			}
 		}
 	}
-	width = LIBNET_ROUTE_WIDTH - length;
+	width = LIBNET_ROUTE_WIDTH - result;
 	if (bits != 0) {
 		sceClibSnprintf(text, 8, "/%d", bits);
-		width -= libnet_show_append(line, left, text);
+		result = libnet_show_append(line, left, text);
+		width -= result;
 	}
 pad:
-	while (width-- > 0)
-		libnet_show_append(line, left, " ");
+	i = width - 1;
+	if (width > 0) {
+		do {
+			i--;
+			result = libnet_show_append(line, left, " ");
+		} while (i != -1);
+	}
+	return result;
 }
 
 int libnet_show_ifconfig(void)

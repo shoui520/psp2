@@ -113,7 +113,8 @@ SceInt32 sceSfmt19937FillArray64(SceSfmt19937Context *pCtx, SceUInt64 array[], S
  * Sony's do: when SIZE is at most twice the state, the last loop's first operand goes on from
  * where the first two loops left it, past the state, where upstream reads array[i - N].
  */
-static SceInt32 _sceSfmt19937FillArrayCore(SceSfmt19937Context *pCtx, SceUInt32 *array, int size)
+static __attribute__((noinline, noclone))
+SceInt32 _sceSfmt19937FillArrayCore(SceSfmt19937Context *pCtx, SceUInt32 *array, int size)
 {
 	const uint32x4_t mask = vld1q_u32(_sceSfmt19937Mask);
 	SceUInt32 *state, *a, *b, *out;
