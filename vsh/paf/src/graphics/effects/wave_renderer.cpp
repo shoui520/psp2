@@ -33,9 +33,6 @@ public:
 	virtual WaveVertex operator()(const math::v2 &uv) const;
 };
 
-/* the lit texture's size is a multiple of this */
-static arl::SurfaceSize s_lit_texture_align(32, 32);
-
 /* the layout of the waves' vertices, made the first time it is asked for */
 static common::SharedPtr<arl::VertexArraySpec> s_wave_vertex_spec;
 
@@ -154,10 +151,10 @@ void WaveRenderer::MakeLitTexture()
 						     (float)(viewport.m_y1 - viewport.m_y0)) *
 					     m_lit_scale)
 						    .get64()));
-	int32_t width = (int32_t)(float)size.getX() / s_lit_texture_align.m_width *
-			s_lit_texture_align.m_width;
-	int32_t height = (int32_t)(float)size.getY() / s_lit_texture_align.m_height *
-			 s_lit_texture_align.m_height;
+	int32_t width = (int32_t)(float)size.getX() / arl::s_tile_size.m_width *
+			arl::s_tile_size.m_width;
+	int32_t height = (int32_t)(float)size.getY() / arl::s_tile_size.m_height *
+			 arl::s_tile_size.m_height;
 
 	m_lit_texture = common::SharedPtr<arl::Texture2D>(new arl::Texture2D(gl->m_default_allocator));
 	ScePafGraphics_C4BD3558(m_lit_texture.get(), width, height, ScePafGraphics_96173730(gl), 0,
@@ -429,7 +426,9 @@ void WaveRenderer::draw_color(WaveInstance *instance)
 
 	Vector4 eye = gl->m_view.GetInverse().w().getImpl() / floatInVec(m_camera->GetUnit());
 	math::matrix light = m_point_light.m_set.m_values.GetPack1();
-	FogParamSet::Values fog = GetFog();
+
+	/* the fog is worked out and not used: Sony's build destroys it at once */
+	GetFog();
 
 	instance->m_textures[2]->setMinFilter(SCE_GXM_TEXTURE_FILTER_LINEAR, false);
 	instance->m_textures[2]->setMagFilter(SCE_GXM_TEXTURE_FILTER_LINEAR);

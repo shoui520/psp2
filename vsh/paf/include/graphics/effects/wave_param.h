@@ -316,7 +316,8 @@ class WaveInstanceParamSet : public ParamSet, public ParamLink {
 public:
 	class Values {
 	public:
-		Values(ParamSet *set)
+		/* Sony's wave instance constructs its parameters out of line */
+		__attribute__((noinline)) Values(ParamSet *set)
 			: m_distortion_scale(set, "distortion_scale", 0.11f, 0.0f, 1.0f,
 					     PARAM_FLAG_FINE),
 			  m_translation(set, "translation", math::v3(0.0f), PARAM_FLAG_RAW),
@@ -346,8 +347,8 @@ public:
 		{
 		}
 
-		/* every value set as the parameter's own set would; Sony inlines it */
-		__attribute__((always_inline)) Values &operator=(const Values &other)
+		/* every value set as the parameter's own set would */
+		Values &operator=(const Values &other)
 		{
 			m_distortion_scale = other.m_distortion_scale;
 			m_translation = other.m_translation;
