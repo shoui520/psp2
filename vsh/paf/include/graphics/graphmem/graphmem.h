@@ -20,6 +20,12 @@ enum DeviceType {
 	DeviceType_SharedMemory = 2
 };
 
+/* ModeType_CommonDialog: the system memory is taken from the common dialog's budget */
+enum ModeType {
+	ModeType_Normal = 0,
+	ModeType_CommonDialog = 1
+};
+
 class Option {
 public:
 	enum MemoryType {
@@ -57,8 +63,13 @@ public:
 	bool report_error;
 };
 
+/* the mode AllocOSMemory allocates the system memory in (name ours) */
+void SetMode(ModeType mode);
 void *AllocOSMemory(DeviceType device_type, uint32_t size, const char *name, Option *option);
+/* the system and video memory heaps made, of the sizes given (0: none; name ours) */
+void Init(uint32_t system_heap_size, uint32_t video_heap_size);
 void FreeOSMemory(DeviceType device_type, void *p);
+void Exit();
 
 /* a heap over memory the GPU maps */
 class GraphHeapAllocator : public memory::HeapAllocator {

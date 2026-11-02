@@ -384,18 +384,6 @@ void _ZN3paf5graph11SurfacePool4FreeEPv(uint8_t *self, int value)
 /* A global graphics pointer uses the SDK's acquire/release atomic counter. */
 uint32_t *sce_paf_graphics_shared_reference_0f84;
 
-uint32_t *_ZN3paf8GraphMem15VideoMemoryHeapEv(uint32_t **output)
-{
-	uint32_t *result = sce_paf_graphics_shared_reference_0f84;
-
-	*output = result;
-	if (result) {
-		result += 2;
-		sceAtomicIncrement32AcqRel((volatile int32_t *)result);
-	}
-	return result;
-}
-
 uint8_t *_ZN3paf5graph7Surface10DetachCLUTEv(uint8_t *self)
 {
 	uint8_t *result = *(uint8_t **)(self + 124);
@@ -1169,20 +1157,6 @@ void _ZN3paf5graph7Surface6UnlockEv(uint8_t *self)
 }
 
 uint32_t *sce_paf_graphics_current_ref_0f7c;
-
-uint32_t *_ZN3paf8GraphMem16SystemMemoryHeapEv(uint32_t *result)
-{
-	uint32_t *current = sce_paf_graphics_current_ref_0f7c;
-
-	*result = (uint32_t)current;
-	if (current) {
-		uint32_t *count = current + 2;
-
-		sceAtomicIncrement32AcqRel((volatile int32_t *)count);
-		return count;
-	}
-	return current;
-}
 
 int _ZN3paf5graph7Surface12GetPageIndexENS0_15FrameBufferTypeEPi(const uint8_t *self, int selector,
 			     int32_t *result)

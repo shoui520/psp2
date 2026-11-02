@@ -43,6 +43,23 @@ public:
 	SceKernelLwMutexWork m_mutex;
 };
 
+/* Holds a Mutex for its scope. */
+class MutexLock {
+public:
+	MutexLock(Mutex *mutex) : m_mutex(mutex)
+	{
+		m_mutex->Lock();
+	}
+
+	~MutexLock()
+	{
+		m_mutex->Unlock();
+	}
+
+private:
+	Mutex *m_mutex;
+};
+
 /* Holds an RMutex for its scope. */
 class RMutexLock {
 public:
