@@ -69,6 +69,17 @@ public:
 	virtual void Draw(PlaneObjDrawParams &params) = 0;
 };
 
+/* the shader gutil::Init makes the default (constructed by 0x81195248, its code not converted;
+   name ours); 0x28 bytes */
+class DefaultShader : public Shader {
+public:
+	DefaultShader();
+	virtual ~DefaultShader();
+	virtual void Draw(PlaneObjDrawParams &params);
+
+	uint32_t m_data[9];
+};
+
 /* a division of a plane by its surface's divide mode: how it is cut, the borders' ratios across
    and down, and for the modes 4 and 5 the stretching part's (the surface's when the plane has
    none; the class name ours, the fields after 0.990's plane parameters div_mode,

@@ -1,18 +1,22 @@
 /*
- * paf::gutil, as far as converted C++ uses it: the graphics utilities, which
- * set up GXM and the display for the Framework.
+ * paf::gutil: the graphics utilities, which set up GXM, the graphics memory and the renderer
+ * for the Framework, and keep the default surface pool and shader. Names from the mangled
+ * export names (the InitParam and DevInitParam constructors, InitParam::Free, Init and
+ * LoadResource by NID); the InitParam fields after ui::wutil::InitParam's.
  */
 #ifndef PAF_GRAPHICS_GUTIL_H
 #define PAF_GRAPHICS_GUTIL_H
 
 #include <stdint.h>
 #include <common/shared_ptr.h>
+#include <std/string>
 
 namespace paf {
 
 namespace graph {
 class Shader;
 class SurfacePool;
+class TextInitParam;
 
 namespace arl {
 class ArlInstance;
@@ -41,9 +45,30 @@ public:
 	void *callback;
 };
 
+/* what Init sets the screen, the camera and the default surface pool up with */
+class InitParam {
+public:
+	InitParam();
+
+	/* the memory debug::Init allocated given back */
+	void Free();
+
+	void *surf_dev_mem_addr;
+	uint32_t surf_dev_mem_size;
+	void *surf_def_pool_addr;
+	uint32_t surf_def_pool_size;
+	int32_t screen_width;
+	int32_t screen_height;
+	float fov;
+	/* the text set up with it when not NULL */
+	const graph::TextInitParam *text_param;
+};
+
 /* what GXM is initialized with */
 class DevInitParam {
 public:
+	DevInitParam();
+
 	uint32_t parameter_buffer_size;
 	uint32_t parameter_buffer_location;
 	WinHandle whandle;
@@ -52,18 +77,63 @@ public:
 	uint32_t display_list_size;
 };
 
+int32_t Init(const InitParam &param);
+void Term();
+/* the renderers the flags name made (1 the wave, 2 the panel, 4 the page turn renderer), with
+   the folder their resources are loaded from */
+int32_t LoadResource(uint32_t flags, const string &path);
+int32_t DevInit(const DevInitParam &param);
+void DevTerm();
+int32_t Swap(WinHandle whandle);
+
 /* the shader draw objects draw with when they are given none */
 common::SharedPtr<graph::Shader> *GetDefaultShader();
 graph::SurfacePool *GetDefaultSurfacePool();
 void SetFrameBufferMode(FrameBufferMode mode);
+/* the mode SetFrameBufferMode set (name ours) */
+FrameBufferMode GetFrameBufferMode();
 /* initializes GXM, or waits for the shell's when the frame buffer is given */
 int32_t InitGxm(const DevInitParam &param);
 
 namespace debug {
+/* a heap and a default surface pool for a program that runs without the Framework */
+InitParam Init(int32_t width, int32_t height);
+void Term(InitParam &param);
+WinHandle InitWindow(int32_t width, int32_t height, void *callback);
+DevInitParam DevInit(int32_t width, int32_t height, void *window);
+void DevTerm();
+void WaitDummyVSync();
+
 /* the functions the debug GUI draws with each frame, each with its userdata */
 void AddDebugGuiFunc(void (*func)(void *), void *userdata);
 void RemoveDebugGuiFunc(void (*func)(void *), void *userdata);
 void RemoveDebugGuiFuncs(void (*func)(void *));
+void CallDebugGuiFuncs();
+
+/* the mouse and keyboard of a devkit's host, read once a frame (0x81191822..; their code is
+   not converted, names ours) */
+class Mouse {
+public:
+	static Mouse *GetInstance();
+
+	/* the buttons and the pointer's positions read for the frame */
+	void Update();
+
+	/* the three buttons' states and the pointer's position and motion */
+	uint8_t m_state[0x60];
+	/* the size of the viewport the pointer moves in */
+	int32_t m_screen_width;
+	int32_t m_screen_height;
+};
+
+class Keyboard {
+public:
+	static Keyboard *GetInstance();
+
+	void Read();
+	/* the 256 keys' states counted on */
+	void Update();
+};
 }
 
 }
@@ -72,6 +142,11 @@ void RemoveDebugGuiFuncs(void (*func)(void *));
 extern "C" {
 /* waits for the GXM context of a Gl state to finish (sceGxmFinish) */
 void ScePafGraphics_E4B3B1D2(paf::graph::arl::ArlInstance *gl);
+/* returns 0 */
+int32_t ScePafGraphics_C5504119(void);
+/* the frame counted and timed, and once a frame the debug mouse and keyboard read, the mouse
+   given the viewport's size */
+int32_t ScePafGraphics_27416D74(paf::gutil::WinHandle whandle);
 }
 
 #endif

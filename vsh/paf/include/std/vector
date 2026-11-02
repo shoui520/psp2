@@ -91,6 +91,14 @@ public:
 		limit = 0;
 	}
 
+	/* how a vector kept in a global is made: the allocator is not kept */
+	explicit vector(const _Ax &al)
+	{
+		ptr = NULL;
+		limit = 0;
+		count = 0;
+	}
+
 	explicit vector(size_type size)
 	{
 		count = 0;

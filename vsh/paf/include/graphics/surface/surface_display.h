@@ -14,6 +14,9 @@ namespace graph {
 
 class DisplaySurface : public Surface {
 public:
+	/* GXM's display queue callback, given the data of the frame to show */
+	static void displayCallback(const void *callback_data);
+
 	/* FrameBuffer_Shared_Share or FrameBuffer_Shared_OffScreen only */
 	int32_t SetFrameBufferMode(gutil::FrameBufferMode mode);
 	/* whether the display shows the frame buffer in the display area the system sets */

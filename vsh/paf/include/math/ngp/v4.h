@@ -87,6 +87,11 @@ public:
 		return v4(_impl * rhs);
 	}
 
+	v4 operator/(float rhs) const
+	{
+		return v4(_impl / rhs);
+	}
+
 	bool operator==(v4 rhs) const
 	{
 		return sce::Vectormath::Simd::Aos::allElemEqual(_impl, rhs._impl).getAsBool();

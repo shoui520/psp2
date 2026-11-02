@@ -269,40 +269,6 @@ void GraphicsSetPointLineWidth(uint32_t *self, uint32_t flags, float width)
 	}
 }
 
-typedef struct PafGraphicsCallbackEntry {
-	void (*callback)(void *argument);
-	void *argument;
-} PafGraphicsCallbackEntry;
-
-typedef struct PafGraphicsCallbackList {
-	PafGraphicsCallbackEntry *entries;
-	uint32_t count;
-} PafGraphicsCallbackList;
-
-PafGraphicsCallbackList sce_paf_graphics_callback_list_1208;
-
-void *_ZN3paf5gutil5debug17CallDebugGuiFuncsEv(void)
-{
-	PafGraphicsCallbackEntry *cursor =
-		sce_paf_graphics_callback_list_1208.entries;
-	PafGraphicsCallbackEntry *end =
-		cursor + sce_paf_graphics_callback_list_1208.count;
-
-	while (cursor != end) {
-		void (*callback)(void *, uintptr_t, void *) =
-			(void (*)(void *, uintptr_t, void *))cursor->callback;
-
-		callback(cursor->argument, (uintptr_t)callback, cursor);
-		PafGraphicsCallbackEntry *entries =
-			sce_paf_graphics_callback_list_1208.entries;
-
-		if (entries)
-			cursor++;
-		end = entries + sce_paf_graphics_callback_list_1208.count;
-	}
-	return end;
-}
-
 int ScePafGraphics_6EA0C6D7(uint8_t *self, int value)
 {
 	int result = value % *(int16_t *)(self + 100);
@@ -448,7 +414,6 @@ uint8_t *ScePafGraphics_906BE45C(void)
 uint8_t sce_paf_graphics_flag_306c;
 uint32_t sce_paf_graphics_state_11e0;
 uint32_t sce_paf_graphics_state_12ac;
-uint32_t sce_paf_graphics_state_10fe4;
 uint32_t sce_paf_graphics_state_11fc;
 uint32_t sce_paf_graphics_state_12b0;
 uint8_t sce_paf_graphics_flag_06e8;
@@ -702,21 +667,6 @@ int _ZN3paf5graph7Surface4GetNEj(uint32_t flags)
 	return 0;
 }
 
-uint32_t *_ZN3paf5gutil5debug7DevInitEiiPv(uint32_t *result,
-				  uint32_t unused1, uint32_t unused2,
-				  uint32_t value)
-{
-	result[0] = 0x200000;
-	result[1] = 0;
-	result[5] = 0x100000;
-	result[2] = value;
-	result[3] = value;
-	result[4] = value;
-	result[6] = 0;
-	result[7] = 0x100000;
-	return result;
-}
-
 __attribute__((noinline))
 int _ZN3paf5graph10TextLayout12GetLineCountERj(const uint8_t *self, uint32_t *output)
 {
@@ -768,11 +718,6 @@ uint32_t _ZN3paf5graph14DisplaySurface7GetFbIdEv(void)
 	return sce_paf_graphics_state_12ac;
 }
 
-uint32_t _ZN3paf5gutil21GetDefaultSurfacePoolEv(void)
-{
-	return sce_paf_graphics_state_10fe4;
-}
-
 uint32_t ScePafGraphics_52C45E43(uint32_t value)
 {
 	sce_paf_graphics_flag_306c = value;
@@ -793,11 +738,6 @@ int _ZN3paf5graph10TextLayout17GetSelectionRangeERjS2_(const uint8_t *self,
 	*first = *(const uint32_t *)(self + 96);
 	*second = *(const uint32_t *)(self + 100);
 	return 0;
-}
-
-int32_t _ZN3paf5gutil16GetDefaultShaderEv(void)
-{
-	return -2127491096;
 }
 
 int _ZN3paf5graph10TextLayout8SetStateEi(uint8_t *self, uint16_t bits)
@@ -1491,27 +1431,6 @@ uint8_t *_ZNK3paf5graph7Surface10GetPagePtrEi(const uint8_t *self, int32_t index
 	return 0;
 }
 
-static inline __attribute__((always_inline))
-uint32_t *InitializeGraphicsFlags(uint32_t *self)
-{
-	self[0] = 0;
-	self[1] = 0;
-	self[5] = 0x100000;
-	self[7] = 0;
-	self[6] = 0;
-	return self;
-}
-
-uint32_t *ScePafGraphics_212605A1(uint32_t *self)
-{
-	return InitializeGraphicsFlags(self);
-}
-
-uint32_t *ScePafGraphics_2F46C2B9(uint32_t *self)
-{
-	return InitializeGraphicsFlags(self);
-}
-
 int32_t _ZN3paf5graph7Surface10SetPaletteEPNS1_7TextureEPKv(void *self, SceGxmTexture **texture,
 			       void *palette)
 {
@@ -1534,30 +1453,6 @@ int ScePafGraphics_B000FA14(const uint8_t *self)
 	if (result < 0)
 		return *(const int16_t *)(self + 100) - 1;
 	return result;
-}
-
-static inline __attribute__((always_inline))
-uint32_t *InitializeGraphicsZeros(uint32_t *self)
-{
-	self[0] = 0;
-	self[1] = 0;
-	self[2] = 0;
-	self[3] = 0;
-	self[4] = 0;
-	self[5] = 0;
-	self[7] = 0;
-	self[6] = 0;
-	return self;
-}
-
-uint32_t *ScePafGraphics_19163245(uint32_t *self)
-{
-	return InitializeGraphicsZeros(self);
-}
-
-uint32_t *ScePafGraphics_BF863FEE(uint32_t *self)
-{
-	return InitializeGraphicsZeros(self);
 }
 
 int ScePafGraphics_404AC3D7(const uint8_t *self)

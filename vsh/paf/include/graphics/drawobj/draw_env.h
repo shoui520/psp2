@@ -10,9 +10,11 @@
 #include <stdint.h>
 #include <common/common_internal.h>
 #include <common/shared_ptr.h>
+#include <math/ngp/matrix.h>
 #include <math/ngp/v4.h>
 #include <std/memory>
 #include <std/new>
+#include <std/string>
 #include <std/vector>
 
 namespace paf {
@@ -50,13 +52,49 @@ public:
 	bool m_ended;
 };
 
-/* the camera the panels are seen by: its fourth virtual gives the eye's position (names ours) */
+/* the camera the panels are seen by: its fourth virtual gives the eye's position. Its code
+   (0x8109b314..) is not converted; the names are ours. */
 class Camera {
 public:
+	/* a perspective projection from the field of view along an axis (1 the vertical, else
+	   the horizontal) and the aspect */
+	class Projection {
+	public:
+		math::matrix m_matrix;
+		float m_near;
+		float m_far;
+		float m_left;
+		float m_right;
+		float m_bottom;
+		float m_top;
+		float m_fov;
+		int32_t m_fov_axis;
+		float m_aspect;
+		/* both cleared whenever the projection is made from the field of view; while
+		   m_fixed is set it is not made again for a new aspect */
+		bool m_changed;
+		bool m_fixed;
+	};
+
 	virtual void reserved0();
 	virtual void reserved1();
 	virtual void reserved2();
 	virtual math::v4 GetEyePos() const;
+
+	/* the projection set for the 2D (flag 2) or the 3D view in an aspect, and the eye placed */
+	void Reset(float aspect);
+	/* the eye placed at a position, looking at the origin */
+	void SetPosition(const math::v4 &position);
+
+	/* the world matrix Reset kept */
+	math::matrix m_reset_world;
+	math::v4 m_position;
+	math::v4 m_rotation;
+	math::matrix m_world;
+	math::matrix m_world_inverse;
+	Projection m_projection;
+	/* 2: the 2D view */
+	uint32_t m_flags;
 };
 
 /* draws the panel and bubble objects (Sony's name: the string its constructor 0x810bc564
@@ -66,6 +104,29 @@ public:
 	uint8_t reserved[0x1420];
 	Camera *m_camera;
 	uint8_t reserved2[0x54];
+};
+
+/* the renderer of the waves (the name its constructor 0x810a54c2 gives it); 0x2090 bytes */
+class WaveRenderer;
+
+/* a renderer made by a function the renderer is given: its seventh virtual returns an object
+   whose third switches it (names ours) */
+class CustomRendererOption {
+public:
+	virtual void reserved0();
+	virtual void reserved1();
+	virtual void SetEnabled(bool enabled);
+};
+
+class CustomRenderer {
+public:
+	virtual void reserved0();
+	virtual void reserved1();
+	virtual void reserved2();
+	virtual void reserved3();
+	virtual void reserved4();
+	virtual void reserved5();
+	virtual CustomRendererOption *GetOption();
 };
 
 class DrawObj;
@@ -197,10 +258,26 @@ public:
 	/* made at the first call that asks for it (0x8109e532) */
 	common::SharedPtr<PageTurnRenderer> &GetPageTurnRenderer(bool create);
 
+	/* made at the first call that asks for it (0x8109defe) */
+	common::SharedPtr<WaveRenderer> &GetWaveRenderer(bool create);
+
+	/* made at the first call that asks for it, by the function the renderer is given
+	   (0x8109e2ce) */
+	common::SharedPtr<CustomRenderer> &GetCustomRenderer(bool create);
+
 	common::SharedPtr<PanelRenderer> m_panel_renderer;
-	uint8_t reserved[0x18];
+	uint8_t reserved[8];
+	common::SharedPtr<WaveRenderer> m_wave_renderer;
+	common::SharedPtr<CustomRenderer> m_custom_renderer;
 	common::SharedPtr<PageTurnRenderer> m_page_turn_renderer;
-	uint8_t reserved1[0x570];
+	uint8_t reserved1[0x18];
+	/* the folder the renderers' resources are loaded from (gutil::LoadResource) */
+	string m_resource_path;
+	uint8_t reserved3[0x44];
+	/* the cameras of the 3D and the 2D view, set up by gutil::Init */
+	common::SharedPtr<Camera> m_camera;
+	common::SharedPtr<Camera> m_camera_2d;
+	uint8_t reserved4[0x4f8];
 	/* the flag ScePafGraphics_505CD74E sets; nothing in libpaf reads it by this offset */
 	bool m_flag_505CD74E;
 	uint8_t reserved2[0x27];
@@ -231,6 +308,8 @@ paf::graph::GlobalPtr<paf::graph::Renderer> *ScePafGraphics_4E038C05();
 void ScePafGraphics_1C294786();
 void ScePafGraphics_0B4F6C24();
 void ScePafGraphics_505CD74E(bool flag);
+/* the renderer made with the flag 8 of gutil::LoadResource */
+void ScePafGraphics_71E2CB77(paf::graph::Renderer *renderer, bool create);
 }
 
 #endif

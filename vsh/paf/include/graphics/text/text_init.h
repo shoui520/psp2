@@ -38,6 +38,8 @@ public:
 };
 
 int32_t InitText(const TextInitParam &param);
+/* the text system torn down (0x81092608, name ours) */
+void TermText();
 /* the threads that lay out text: stopped while the text settings change */
 void StopTextThreads();
 int32_t StartTextThreads();
