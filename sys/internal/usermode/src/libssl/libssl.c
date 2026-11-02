@@ -89,7 +89,6 @@ STUB(SceSslInternal_BF99D664)
 void SceSslInternal_C0B135F0(void)
 {
 }
-STUB(SceSslInternal_C1299FB6)
 STUB(SceSslInternal_C4D984C2)
 STUB(SceSslInternal_CB83EA07)
 STUB(SceSslInternal_CBEC7D13)
