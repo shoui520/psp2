@@ -1,0 +1,32 @@
+--- a/ex_data.c
++++ b/ex_data.c
+@@ -58,10 +58,7 @@
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+-#include "buffer.h"
+-#include "bio.h"
+-#include "lhash.h"
+-#include "cryptlib.h"
++#include "crypto.h"
+ 
+ int CRYPTO_get_ex_new_index(idx,skp,argl,argp,new_func,dup_func,free_func)
+ int idx;
+@@ -107,7 +104,7 @@
+ 	ret=idx;
+ err:
+ 	MemCheck_on();
+-	return(idx);
++	return(ret); /* SCE: report registration failure rather than the input index. */
+ 	}
+ 
+ int CRYPTO_set_ex_data(ad,idx,val)
+@@ -126,6 +123,8 @@
+ 			}
+ 		}
+ 	i=sk_num(ad->sk);
++	/* SCE: setters clamp negative indices to the first slot. */
++	if (idx < 0) idx=0;
+ 
+ 	while (i <= idx)
+ 		{

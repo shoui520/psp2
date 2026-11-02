@@ -14,9 +14,10 @@ Archive: https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/SSLeay_0_9
 Archive SHA-256:
 `814dfddbf48b71582761926d06f75d557a8b6f81317025961b26258550fead98`.
 
-Kept unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h`
-and `crypto/stack/stack.h`, plus the upstream copyright file. The libssl LHASH
-translation unit reads these files. The rest of the distribution is omitted.
+Kept unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h`,
+`crypto/stack/stack.c`, `crypto/stack/stack.h` and `crypto/ex_data.c`, plus the
+upstream copyright file. The libssl LHASH, STACK and ex-data translation units
+read these files. The rest of the distribution is omitted.
 
 The baseline was selected by compiling historical releases with Sony SNC and
 checking the original firmware in IDA. Before the SSL-C adaptations, seven of
@@ -38,3 +39,20 @@ bucket; stop insertion on expansion failure; pass the old allocation size to
 the allocator when expanding or contracting. The adapter binds allocation and
 string comparison to the module's original interfaces. No upstream file here
 contains these changes.
+
+`stack/stack_sce.patch` records the SSL-C stack changes: forty initial slots,
+allocator adaptation (including zero old-size on duplicate resize), cleanup on
+failed duplication, corrected insertion shift with retained count, retained
+search comparator, signed byte-distance indexing, reverse element cleanup and
+slot clearing before free. The upstream `sk_delete_ptr` body is omitted because
+the original stack translation unit does not contain it. Four additional SSL-C
+operations and the binary-search adapter live in the consuming translation unit;
+their descriptive names are explicitly ours. The upstream version banner is
+absent from the original and removed by the patch.
+
+`ex_data_sce.patch` removes unused private-header dependencies, returns the
+registration result rather than the input index on failure, and clamps negative
+setter indices to zero. The consuming wrapper binds the original allocator and
+error interface and its measured error constants. It disables the optional
+upstream memory-debug hooks, which the original functions do not call. Original
+callback record layout agrees with the unmodified upstream header.

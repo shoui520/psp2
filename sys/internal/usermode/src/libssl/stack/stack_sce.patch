@@ -1,0 +1,128 @@
+--- a/stack.c
++++ b/stack.c
+@@ -66,13 +66,12 @@
+  * 1.0 eay - First version 29/07/92
+  */
+ #include <stdio.h>
+-#include "cryptlib.h"
++#include "crypto.h"
+ #include "stack.h"
+ 
+ #undef MIN_NODES
+-#define MIN_NODES	4
++#define MIN_NODES	40
+ 
+-char *STACK_version="STACK part of SSLeay 0.9.1a 06-Jul-1998";
+ 
+ #ifndef NOPROTO
+ #define	FP_ICC	(int (*)(const void *,const void *))
+@@ -99,7 +98,8 @@
+ 
+ 	if ((ret=sk_new(sk->comp)) == NULL) goto err;
+ 	s=(char **)Realloc((char *)ret->data,
+-		(unsigned int)sizeof(char *)*sk->num_alloc);
++		(unsigned int)sizeof(char *)*sk->num_alloc,
++		0); /* SCE: this call supplies zero as the old-size argument. */
+ 	if (s == NULL) goto err;
+ 	ret->data=s;
+ 
+@@ -110,6 +110,8 @@
+ 	ret->comp=sk->comp;
+ 	return(ret);
+ err:
++	/* SCE: release a duplicate after a failed resize. */
++	if (ret != NULL) sk_free(ret);
+ 	return(NULL);
+ 	}
+ 
+@@ -142,27 +144,31 @@
+ int loc;
+ 	{
+ 	char **s;
++	int count;
+ 
+ 	if (st->num_alloc <= st->num+1)
+ 		{
+ 		s=(char **)Realloc((char *)st->data,
+-			(unsigned int)sizeof(char *)*st->num_alloc*2);
++			(unsigned int)sizeof(char *)*st->num_alloc*2,
++			(unsigned int)sizeof(char *)*st->num_alloc);
+ 		if (s == NULL)
+ 			return(0);
+ 		st->data=s;
+ 		st->num_alloc*=2;
+ 		}
+-	if ((loc >= (int)st->num) || (loc < 0))
+-		st->data[st->num]=data;
++	/* SCE: retain the count across moves that may alias the stack. */
++	count=st->num;
++	if ((loc >= count) || (loc < 0))
++		st->data[count]=data;
+ 	else
+ 		{
+ 		int i;
+-		char **f,**t;
++		char **f;
+ 
+ 		f=(char **)st->data;
+-		t=(char **)&(st->data[1]);
+-		for (i=st->num; i>loc; i--)
+-			t[i]=f[i];
++		/* SCE: shift the last occupied slot, not one beyond it. */
++		for (i=count; i>loc; i--)
++			f[i]=f[i-1];
+ 			
+ #ifdef undef /* no memmove on sunos :-( */
+ 		memmove( (char *)&(st->data[loc+1]),
+@@ -171,23 +177,11 @@
+ #endif
+ 		st->data[loc]=data;
+ 		}
+-	st->num++;
++	st->num=count+1;
+ 	st->sorted=0;
+ 	return(st->num);
+ 	}
+ 
+-char *sk_delete_ptr(st,p)
+-STACK *st;
+-char *p;
+-	{
+-	int i;
+-
+-	for (i=0; i<st->num; i++)
+-		if (st->data[i] == p)
+-			return(sk_delete(st,i));
+-	return(NULL);
+-	}
+-
+ char *sk_delete(st,loc)
+ STACK *st;
+ int loc;
+@@ -238,9 +232,11 @@
+ 	r=(char **)bsearch(&data,(char *)st->data,
+ 		st->num,sizeof(char *),FP_ICC comp_func);
+ 	if (r == NULL) return(-1);
+-	i=(int)(r-st->data);
++	/* SCE: signed byte distance divided with truncation toward zero. */
++	i=(int)((unsigned long)r-(unsigned long)st->data)/(int)sizeof(char *);
+ 	for ( ; i>0; i--)
+-		if ((*st->comp)(&(st->data[i-1]),&data) < 0)
++		/* SCE: retain the comparator captured before sorting. */
++		if ((*comp_func)(&(st->data[i-1]),&data) < 0)
+ 			break;
+ 	return(i);
+ 	}
+@@ -291,9 +287,11 @@
+ 	int i;
+ 
+ 	if (st == NULL) return;
+-	for (i=0; i<st->num; i++)
++	/* SCE: reverse callbacks, then clear occupied slots before freeing. */
++	for (i=st->num-1; i>=0; i--)
+ 		if (st->data[i] != NULL)
+ 			func(st->data[i]);
++	sk_zero(st);
+ 	sk_free(st);
+ 	}
+ 
