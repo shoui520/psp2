@@ -19,6 +19,13 @@ static inline float ClampUnit(float value)
 	return value < 1.0f ? value : 1.0f;
 }
 
+/* the angle a turned toward b by t of the way between them, the shortest way round, in each
+   component (names ours; 0x81185298, 0x8118535e, 0x811853b2, 0x8118543c) */
+float LerpAngle(float a, float b, float t);
+v2 LerpAngle(v2 a, v2 b, v2 t);
+v3 LerpAngle(v3 a, v3 b, v3 t);
+v4 LerpAngle(v4 a, v4 b, v4 t);
+
 }
 }
 

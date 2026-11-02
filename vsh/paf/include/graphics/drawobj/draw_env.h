@@ -117,35 +117,7 @@ public:
 	uint8_t reserved2[0x54];
 };
 
-class MotionListener;
-
-/* the renderer of the waves (the name its constructor 0x810a54c2 gives it); 0x2090 bytes */
-class WaveRenderer {
-public:
-	/* 0x810a54c2 */
-	WaveRenderer();
-	/* 0x811fe8e8: implicit, emitted with the renderer's code; declared until its members are */
-	~WaveRenderer();
-
-	/* 0x810a5ee2 */
-	void Init(common::SharedPtr<Camera> camera, common::SharedPtr<Background> background,
-		  common::SharedPtr<DrawEnv> draw_env, common::SharedPtr<PostEffects> post_effects,
-		  common::SharedPtr<MotionListener> listener);
-	/* 0x810a61c6 */
-	void Load(const string &dir, int32_t mode);
-	/* 0x810a76a0: the world of the 2D camera tilted with the waves, from the one it was reset
-	   to */
-	math::matrix GetTiltedWorld(const math::matrix &reset_world);
-
-	uint8_t reserved[0x2078];
-	/* the 2D camera follows the waves */
-	bool m_tilt;
-	uint8_t reserved2[0xb];
-	/* what the custom renderer is given each frame */
-	float m_wave_x;
-	float m_wave_y;
-	uint8_t reserved3[4];
-};
+class WaveRenderer;
 
 /* the waves' surface computed by FFT (its parameters' set is named "FFTWave"); nothing in
    libpaf makes one */

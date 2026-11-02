@@ -24,6 +24,11 @@ public:
 
 	quaternion(const matrix &mat);
 
+	/* the identity */
+	quaternion() : _impl(sce::Vectormath::Simd::Aos::Quat::identity())
+	{
+	}
+
 	static quaternion Identity()
 	{
 		return quaternion(sce::Vectormath::Simd::Aos::Quat::identity());
@@ -36,6 +41,14 @@ public:
 
 	quaternion(sce::Vectormath::Simd::Aos::Quat value) : _impl(value)
 	{
+	}
+
+	bool operator==(quaternion rhs) const
+	{
+		return sce::Vectormath::Simd::Aos::allElemEqual(
+			       sce::Vectormath::Simd::Aos::Vector4(_impl),
+			       sce::Vectormath::Simd::Aos::Vector4(rhs._impl))
+			.getAsBool();
 	}
 
 	void toAxisAngle(v3 &axis, float &angle);

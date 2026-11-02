@@ -17,6 +17,11 @@ public:
 	{
 	}
 
+	/* every element value */
+	explicit v3(float value) : _impl(value)
+	{
+	}
+
 	v3(sce::Vectormath::Simd::Aos::Vector3 value) : _impl(value)
 	{
 	}
@@ -72,12 +77,32 @@ public:
 		_impl.setElem(idx, value);
 	}
 
+	v3 operator+(v3 rhs) const
+	{
+		return v3(_impl + rhs._impl);
+	}
+
+	v3 operator-(v3 rhs) const
+	{
+		return v3(_impl - rhs._impl);
+	}
+
+	v3 operator*(float rhs) const
+	{
+		return v3(_impl * rhs);
+	}
+
 	bool operator==(v3 rhs) const
 	{
 		return sce::Vectormath::Simd::Aos::allElemEqual(_impl, rhs._impl).getAsBool();
 	}
 
 	const sce::Vectormath::Simd::Aos::Vector3 &getImpl() const
+	{
+		return _impl;
+	}
+
+	sce::Vectormath::Simd::Aos::Vector3 &getImpl()
 	{
 		return _impl;
 	}

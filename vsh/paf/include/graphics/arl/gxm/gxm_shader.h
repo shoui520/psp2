@@ -12,6 +12,9 @@
 #include <stdint.h>
 #include <gxm.h>
 #include <common/shared_ptr.h>
+#include <math/ngp/matrix.h>
+#include <math/ngp/v2.h>
+#include <math/ngp/v3.h>
 #include <math/ngp/v4.h>
 #include <graphics/arl/gxm/gxm_vertex_array.h>
 #include <std/map>
@@ -387,12 +390,51 @@ public:
 };
 
 template<>
+inline void ShaderParameter<float>::Apply()
+{
+	if (m_param == NULL)
+		m_missing++;
+	else
+		sceGxmSetUniformDataF(m_setup->m_uniform_buffer, m_param, 0, 1, &m_value);
+}
+
+template<>
+inline void ShaderParameter<math::v2>::Apply()
+{
+	if (m_param == NULL)
+		m_missing++;
+	else
+		sceGxmSetUniformDataF(m_setup->m_uniform_buffer, m_param, 0, 2,
+				      (const float *)&m_value);
+}
+
+template<>
+inline void ShaderParameter<math::v3>::Apply()
+{
+	if (m_param == NULL)
+		m_missing++;
+	else
+		sceGxmSetUniformDataF(m_setup->m_uniform_buffer, m_param, 0, 3,
+				      (const float *)&m_value);
+}
+
+template<>
 inline void ShaderParameter<math::v4>::Apply()
 {
 	if (m_param == NULL)
 		m_missing++;
 	else
 		sceGxmSetUniformDataF(m_setup->m_uniform_buffer, m_param, 0, 4,
+				      (const float *)&m_value);
+}
+
+template<>
+inline void ShaderParameter<math::matrix>::Apply()
+{
+	if (m_param == NULL)
+		m_missing++;
+	else
+		sceGxmSetUniformDataF(m_setup->m_uniform_buffer, m_param, 0, 16,
 				      (const float *)&m_value);
 }
 

@@ -186,6 +186,11 @@ public:
 		SIZE = 0x20000
 	};
 
+	/* nothing, its format unset */
+	IndexArray()
+	{
+	}
+
 	IndexArray(common::SharedPtr<VramAllocator> allocator)
 		: m_memory(new IndexMemory(allocator)), m_format(SCE_GXM_INDEX_FORMAT_U16)
 	{

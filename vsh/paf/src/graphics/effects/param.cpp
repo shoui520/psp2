@@ -19,10 +19,6 @@
 namespace paf {
 namespace graph {
 
-/* radians to degrees and back: an angle edited in degrees keeps their precision */
-#define PARAM_DEGREES_PER_RADIAN	57.29578f
-#define PARAM_RADIANS_PER_DEGREE	0.017453292f
-
 string ParamSet::GetLocalName(const string &name)
 {
 	size_t pos = name.rfind(':');
