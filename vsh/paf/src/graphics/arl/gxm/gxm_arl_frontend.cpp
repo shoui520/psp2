@@ -13,10 +13,13 @@
 #include <graphics/arl/gxm/gxm_framebuffer_copy.h>
 #include <graphics/arl/gxm/gxm_texture.h>
 #include <graphics/color.h>
+#include <graphics/graphmem/graphmem.h>
 #include <graphics/surface/surface_screen.h>
 #include <system/system.h>
 #include <timer/timer.h>
 #include <src/common/frame_count.h>
+#include <std/stdlib.h>
+#include <std/string.h>
 #include "gxm_framebuffer_object.h"
 
 using namespace sce::Vectormath::Simd::Aos;
@@ -38,6 +41,12 @@ static int32_t s_memory_mode;
 static ArlInstance *s_instance;
 static volatile uint32_t *s_notification_region;
 
+/* the shader patcher's buffer and each of its USSE memories (names ours) */
+enum {
+	PATCHER_BUFFER_SIZE = 0x40000,
+	PATCHER_USSE_SIZE = 0x10000
+};
+
 /* the heap the ring buffers come from, and the one the allocators take (names ours) */
 static common::SharedPtr<GraphMem::GraphHeapAllocator> s_ring_heap;
 static common::SharedPtr<GraphMem::GraphHeapAllocator> s_heap;
@@ -46,6 +55,176 @@ static InitCheckFlag s_init_check_flag;
 int32_t *GetTemporaryInitCheckFlag()
 {
 	return &s_init_check_flag.m_value;
+}
+
+static void *PatcherHostAlloc(void *user_data, uint32_t size);
+static void PatcherHostFree(void *user_data, void *mem);
+
+extern "C" void ScePafGraphics_9AA25028(ArlInstance *gl, const InitParam &param)
+{
+	GraphMem::Option ring_option;
+
+	ring_option.gpu_map_attrib = SCE_GXM_MEMORY_ATTRIB_READ;
+	s_ring_buffer = GraphMem::AllocOSMemory(GraphMem::DeviceType_SystemMemory,
+						param.m_ring_buffer_size, "ScePafGxmRingBuffer",
+						&ring_option);
+	s_ring_heap = common::SharedPtr<GraphMem::GraphHeapAllocator>(new GraphMem::GraphHeapAllocator(
+		s_ring_buffer, param.m_ring_buffer_size, "ScePafGxmRingBuffer"));
+
+	/* a quarter of the ring buffer for the fragments, the rest but the VDM's and the
+	   fragment USSE's for the vertices */
+	int32_t quarter = (int32_t)param.m_ring_buffer_size / 4;
+	uint32_t vertex_size = (quarter * 3 - (SCE_GXM_DEFAULT_VDM_RING_BUFFER_SIZE +
+					       SCE_GXM_DEFAULT_FRAGMENT_USSE_RING_BUFFER_SIZE)) &
+			       ~0xfff;
+	uint32_t fragment_size = quarter & ~0xfff;
+
+	s_vdm_ring_buffer = s_ring_heap->sce_paf_malloc(SCE_GXM_DEFAULT_VDM_RING_BUFFER_SIZE);
+	s_vertex_ring_buffer = s_ring_heap->sce_paf_malloc(vertex_size);
+	s_fragment_ring_buffer = s_ring_heap->sce_paf_malloc(fragment_size);
+
+	GraphMem::Option usse_option;
+
+	usse_option.gpu_map_type = GraphMem::Option::GpuMapType_FragmentUsse;
+	s_fragment_usse_ring_buffer = GraphMem::AllocOSMemory(
+		GraphMem::DeviceType_SystemMemory, SCE_GXM_DEFAULT_FRAGMENT_USSE_RING_BUFFER_SIZE,
+		"ScePafGxmRingFragUsse", &usse_option);
+
+	SceGxmContextParams context_params;
+
+	sce_paf_memset(&context_params, 0, sizeof(context_params));
+	context_params.hostMem = sce_paf_malloc(SCE_GXM_MINIMUM_CONTEXT_HOST_MEM_SIZE);
+	context_params.hostMemSize = SCE_GXM_MINIMUM_CONTEXT_HOST_MEM_SIZE;
+	context_params.vdmRingBufferMem = s_vdm_ring_buffer;
+	context_params.vdmRingBufferMemSize = SCE_GXM_DEFAULT_VDM_RING_BUFFER_SIZE;
+	context_params.vertexRingBufferMem = s_vertex_ring_buffer;
+	context_params.vertexRingBufferMemSize = vertex_size;
+	context_params.fragmentRingBufferMem = s_fragment_ring_buffer;
+	context_params.fragmentRingBufferMemSize = fragment_size;
+	context_params.fragmentUsseRingBufferMem = s_fragment_usse_ring_buffer;
+	context_params.fragmentUsseRingBufferMemSize =
+		SCE_GXM_DEFAULT_FRAGMENT_USSE_RING_BUFFER_SIZE;
+	context_params.fragmentUsseRingBufferOffset = usse_option.gpu_usse_offset;
+	gl->m_context_params = context_params;
+	gl->m_context = NULL;
+	sceGxmCreateContext(&gl->m_context_params, &gl->m_context);
+
+	/* Sony's build names the patcher's buffer as the fragment USSE ring buffer */
+	s_patcher_buffer = GraphMem::AllocOSMemory(GraphMem::DeviceType_SystemMemory,
+						   PATCHER_BUFFER_SIZE, "ScePafGxmRingFragUsse",
+						   NULL);
+
+	GraphMem::Option vertex_usse_option;
+
+	vertex_usse_option.gpu_map_type = GraphMem::Option::GpuMapType_VertexUsse;
+	s_patcher_vertex_usse = GraphMem::AllocOSMemory(
+		GraphMem::DeviceType_SystemMemory, PATCHER_USSE_SIZE,
+		"ScePafGxmShaderPatcherVertUsse", &vertex_usse_option);
+
+	GraphMem::Option fragment_usse_option;
+
+	fragment_usse_option.gpu_map_type = GraphMem::Option::GpuMapType_FragmentUsse;
+	s_patcher_fragment_usse = GraphMem::AllocOSMemory(
+		GraphMem::DeviceType_SystemMemory, PATCHER_USSE_SIZE,
+		"ScePafGxmShaderPatcherFragUsse", &fragment_usse_option);
+
+	SceGxmShaderPatcherParams patcher_params;
+
+	sce_paf_memset(&patcher_params, 0, sizeof(patcher_params));
+	patcher_params.userData = NULL;
+	patcher_params.hostAllocCallback = PatcherHostAlloc;
+	patcher_params.hostFreeCallback = PatcherHostFree;
+	patcher_params.bufferAllocCallback = NULL;
+	patcher_params.bufferFreeCallback = NULL;
+	patcher_params.bufferMem = s_patcher_buffer;
+	patcher_params.bufferMemSize = PATCHER_BUFFER_SIZE;
+	patcher_params.vertexUsseAllocCallback = NULL;
+	patcher_params.vertexUsseFreeCallback = NULL;
+	patcher_params.vertexUsseMem = s_patcher_vertex_usse;
+	patcher_params.vertexUsseMemSize = PATCHER_USSE_SIZE;
+	patcher_params.vertexUsseOffset = vertex_usse_option.gpu_usse_offset;
+	patcher_params.fragmentUsseAllocCallback = NULL;
+	patcher_params.fragmentUsseFreeCallback = NULL;
+	patcher_params.fragmentUsseMem = s_patcher_fragment_usse;
+	patcher_params.fragmentUsseMemSize = PATCHER_USSE_SIZE;
+	patcher_params.fragmentUsseOffset = fragment_usse_option.gpu_usse_offset;
+
+	SceGxmShaderPatcher *patcher = NULL;
+
+	sceGxmShaderPatcherCreate(&patcher_params, &patcher);
+	gl->m_patcher = common::SharedPtr<ShaderPatcher>(new ShaderPatcher(patcher));
+
+	s_memory_mode = param.m_memory_mode;
+	if (s_memory_mode != 4) {
+		if (common::SharedPtr<GraphMem::GraphHeapAllocator>(GraphMem::SystemMemoryHeap())
+			    .get() != NULL)
+			s_heap = common::SharedPtr<GraphMem::GraphHeapAllocator>(
+				GraphMem::SystemMemoryHeap());
+		else
+			s_heap = common::SharedPtr<GraphMem::GraphHeapAllocator>(
+				GraphMem::VideoMemoryHeap());
+	} else {
+		s_heap = common::SharedPtr<GraphMem::GraphHeapAllocator>(
+			GraphMem::SystemMemoryHeap());
+	}
+
+	gl->m_default_allocator =
+		common::SharedPtr<VramAllocator>(new HeapVramAllocator("default", s_heap));
+	gl->m_debug_allocator =
+		common::SharedPtr<VramAllocator>(new HeapVramAllocator("debug", s_heap));
+	gl->m_clear = new ClearBase();
+	gl->m_quad_indices = new IndexBuffer(gl->m_default_allocator);
+	gl->m_render_target_pool = new RenderTargetPool();
+	gl->m_copy = new FrameBufferCopy();
+	s_init_check_flag.m_value |= 2;
+	gl->DefaultTextures::Init(gl->m_default_allocator);
+	s_notification_region = sceGxmGetNotificationRegion();
+}
+
+extern "C" void ScePafGraphics_38161BF3(ArlInstance *gl)
+{
+	sceGxmFinish(gl->m_context);
+	gl->m_next_scene = SceneData();
+	gl->m_scene = SceneData();
+	gl->DefaultTextures::Term();
+	s_init_check_flag.m_value &= ~2;
+	if (gl->m_render_target_pool != NULL) {
+		delete gl->m_render_target_pool;
+		gl->m_render_target_pool = NULL;
+	}
+	if (gl->m_quad_indices != NULL) {
+		delete gl->m_quad_indices;
+		gl->m_quad_indices = NULL;
+	}
+	if (gl->m_clear != NULL) {
+		delete gl->m_clear;
+		gl->m_clear = NULL;
+	}
+	if (gl->m_copy != NULL) {
+		delete gl->m_copy;
+		gl->m_copy = NULL;
+	}
+	gl->m_default_allocator.reset();
+	gl->m_debug_allocator.reset();
+	s_heap.reset();
+	s_memory_mode = -1;
+	sceGxmShaderPatcherDestroy(gl->m_patcher->m_patcher);
+	gl->m_patcher.reset();
+	GraphMem::FreeOSMemory(GraphMem::DeviceType_SystemMemory, s_patcher_fragment_usse);
+	GraphMem::FreeOSMemory(GraphMem::DeviceType_SystemMemory, s_patcher_vertex_usse);
+	GraphMem::FreeOSMemory(GraphMem::DeviceType_SystemMemory, s_patcher_buffer);
+	sceGxmDestroyContext(gl->m_context);
+	gl->m_context = NULL;
+	sce_paf_free(gl->m_context_params.hostMem);
+	GraphMem::FreeOSMemory(GraphMem::DeviceType_SystemMemory, s_fragment_usse_ring_buffer);
+	if (s_fragment_ring_buffer != NULL)
+		s_ring_heap->sce_paf_free(s_fragment_ring_buffer);
+	if (s_vertex_ring_buffer != NULL)
+		s_ring_heap->sce_paf_free(s_vertex_ring_buffer);
+	if (s_vdm_ring_buffer != NULL)
+		s_ring_heap->sce_paf_free(s_vdm_ring_buffer);
+	s_ring_heap.reset();
+	GraphMem::FreeOSMemory(GraphMem::DeviceType_SystemMemory, s_ring_buffer);
 }
 
 ArlInstance::ArlInstance()
@@ -664,6 +843,16 @@ volatile uint32_t *ArlInstance::GetNotificationAddr(size_t index)
 void ArlInstance::AddScenes(RenderTargetPool::Key key, int32_t scenes)
 {
 	m_render_target_pool->AddScenes(key, scenes);
+}
+
+static void *PatcherHostAlloc(void *user_data, uint32_t size)
+{
+	return sce_paf_malloc(size);
+}
+
+static void PatcherHostFree(void *user_data, void *mem)
+{
+	sce_paf_free(mem);
 }
 
 }

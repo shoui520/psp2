@@ -73,7 +73,7 @@ inline void ShaderParameter<TextureSource>::Apply()
 class FixedVramAllocator : public HeapVramAllocator {
 public:
 	FixedVramAllocator(void *memory)
-		: HeapVramAllocator("", common::SharedPtr<GraphMem::GraphHeapAllocator>()),
+		: HeapVramAllocator("", common::WeakPtr<GraphMem::GraphHeapAllocator>()),
 		  m_memory(memory), m_count(0)
 	{
 	}

@@ -249,7 +249,7 @@ public:
 		SIZE = 0x20000
 	};
 
-	IndexBuffer(const common::SharedPtr<VramAllocator> &allocator)
+	IndexBuffer(common::SharedPtr<VramAllocator> allocator)
 		: m_memory(new IndexMemory(allocator)), m_reserved(0)
 	{
 		SurfaceMemory *memory = m_memory->m_memory.get();
@@ -273,7 +273,7 @@ public:
 class HeapVramAllocator : public VramAllocator {
 public:
 	HeapVramAllocator(const char *name,
-			  const common::SharedPtr<GraphMem::GraphHeapAllocator> &heap)
+			  const common::WeakPtr<GraphMem::GraphHeapAllocator> &heap)
 		: m_used(0), m_name(name), m_heap(heap)
 	{
 	}
