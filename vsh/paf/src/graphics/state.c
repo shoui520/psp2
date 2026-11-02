@@ -469,40 +469,6 @@ void *_ZN3paf5gutil5debug17CallDebugGuiFuncsEv(void)
 	return end;
 }
 
-void *ScePafGraphics_C4ED1731(const uint8_t *self, void *const *source)
-{
-	void **slot = *(void ***)(self + 112);
-	void *previous = *slot;
-	void *next = *source;
-	void *result = previous;
-
-	if (previous != next) {
-		if (previous)
-			result = (void *)(uintptr_t)_ZN3paf5graph7Surface7ReleaseEv(previous);
-		*slot = next;
-		if (next)
-			return (void *)(uintptr_t)_ZN3paf5graph7Surface6AddRefEv(next);
-	}
-	return result;
-}
-
-void *ScePafGraphics_CA9687DF(const uint8_t *self, void **destination)
-{
-	void **slot = *(void ***)(self + 112);
-	void *previous = *destination;
-	void *next = *slot;
-	void *result = previous;
-
-	if (previous != next) {
-		if (previous)
-			result = (void *)(uintptr_t)_ZN3paf5graph7Surface7ReleaseEv(previous);
-		*destination = next;
-		if (next)
-			return (void *)(uintptr_t)_ZN3paf5graph7Surface6AddRefEv(next);
-	}
-	return result;
-}
-
 int ScePafGraphics_6EA0C6D7(uint8_t *self, int value)
 {
 	int result = value % *(int16_t *)(self + 100);
@@ -528,19 +494,6 @@ uint8_t *_ZN3paf5graph7Surface7TextureD2Ev(uint8_t *self)
 uint8_t *_ZN3paf5graph7Surface7TextureD1Ev(uint8_t *self)
 {
 	return DestroyGraphicsOwnedPointer(self);
-}
-
-void *ScePafGraphics_E69349E0(const uint8_t *self)
-{
-	void **slot = *(void ***)(self + 112);
-	void *result = *slot;
-
-	if (result) {
-		_ZN3paf5graph7Surface7ReleaseEv(result);
-		*slot = NULL;
-		return NULL;
-	}
-	return result;
 }
 
 static inline __attribute__((always_inline))
@@ -2035,11 +1988,6 @@ void _ZN3paf5graph9TextStyleD0Ev(int32_t *self)
 	PafDelete(self);
 }
 
-int ScePafGraphics_FBC9302A(const uint32_t *self)
-{
-	return GraphicsInvokeOffset20(self);
-}
-
 uint32_t *ScePafGraphics_570E7907(uint32_t *self, uint32_t second,
 				    uint32_t third, uint32_t fourth,
 				    uint32_t fifth)
@@ -2090,13 +2038,6 @@ int _ZNK3paf5graph8PlaneObj9IsInheritEPKc(const void *self, const char *tag)
 int ScePafGraphics_88561C1B(const void *self, const char *tag)
 {
 	if (tag == "PanelObj")
-		return 1;
-	return _ZNK3paf5graph7DrawObj9IsInheritEPKc(self, tag);
-}
-
-int ScePafGraphics_8D9E23C2(const void *self, const char *tag)
-{
-	if (tag == "PageTurnObj")
 		return 1;
 	return _ZNK3paf5graph7DrawObj9IsInheritEPKc(self, tag);
 }

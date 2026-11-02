@@ -110,6 +110,16 @@ public:
 
 class DrawObj {
 public:
+	/* what a queued draw calls the object's Draw with (Sony's name; self, world_mat and color
+	   after ScePaf-RE, alpha ours) */
+	class DrawCallbackArg {
+	public:
+		DrawObj *self;
+		const math::matrix *world_mat;
+		uint32_t color;
+		float alpha;
+	};
+
 	static const char *DrawObjType();
 
 	static bool IsSafety()
