@@ -9,14 +9,13 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <gxm.h>
 #include <std/memory>
 #include <common/shared_ptr.h>
 #include <image/image.h>
 #include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
 #include <thread/thread.h>
-
-struct SceGxmTexture;
 
 namespace paf {
 
@@ -47,6 +46,18 @@ void ScePafGraphics_AFAE7807(paf::graph::Surface *surface, paf::math::v2 *ratio_
 
 namespace paf {
 namespace graph {
+
+/* a size at a mipmap level: halved per level, never below 1 (name ours) */
+static inline int32_t LevelSize(int32_t size, int32_t level)
+{
+	for (;;) {
+		if (level-- <= 0)
+			break;
+		if (size > 1)
+			size >>= 1;
+	}
+	return size;
+}
 
 class SurfaceBase {
 public:
@@ -306,6 +317,9 @@ public:
 	static int16_t GetAdjustHeight(SurfacePool *pool, int32_t height);
 	static int16_t GetAdjustWidth(SurfacePool *pool, int32_t width);
 	static uint32_t GetN(uint32_t value);
+	/* the bytes a page of a texture so made takes */
+	static int32_t GetPageSize(int32_t width, int32_t height, ImageMode format, ImageOrder order,
+				   int32_t num_level, int32_t line_bytes, int32_t align, int32_t num_page);
 
 	int32_t AddRef();
 	int32_t Release();
@@ -319,6 +333,9 @@ public:
 		      int32_t level);
 	int32_t Copy_YUV420PX(int32_t page, const void *src, ImageOrder src_order,
 			      int32_t line_bytes, int32_t level);
+	/* not supported */
+	int32_t Copy(void *dst, const void *src, ImageOrder src_order, int32_t line_bytes);
+	int32_t DuplicateBoundary(uint8_t *buf);
 	void GenTextureAll();
 	int32_t GenTexture(Texture *tex, void *addr);
 	int32_t SetPalette(Texture *tex, const void *palette);
@@ -363,7 +380,9 @@ public:
 
 	int32_t ActivateTexture(uint32_t map_type, float offset_u, float offset_v, float scale_u,
 				float scale_v);
-	int32_t DeleteTexture();
+	/* nothing: the textures go with the pages */
+	void DeleteTexture();
+	void TexFlush();
 	int32_t ActivatePage(int32_t page);
 	int32_t Copy(int32_t page, const intrusive_ptr<Surface> &src, int32_t src_page);
 	void FreeMemory();
@@ -377,7 +396,11 @@ public:
 	bool SetSymmetryU(bool symmetry);
 	bool SetSymmetryV(bool symmetry);
 
+	/* the texture of the page drawn into, the page offset added */
 	SceGxmTexture *GetRawTexture();
+	SceGxmTextureFormat GetRawTextureFormat();
+	/* the page shown is the one drawn into plus offset (of the pages) */
+	void SetPageOffset(int32_t offset);
 
 	/* how the surface is cut for drawing (3x3, 3x1, ...), and the stretching parts' ratio */
 	void SetDivideMode(uint32_t mode);
@@ -398,7 +421,7 @@ public:
 		return m_divide_mode;
 	}
 
-	/* the texture's sampling (src/graphics/state.c, still C) */
+	/* the texture's sampling */
 	int32_t SetMagFilter(TextureFilter value);
 	int32_t SetMinFilter(TextureFilter value);
 	int32_t SetWrapS(TextureWrap value);
@@ -535,7 +558,8 @@ protected:
 	int16_t m_num_level;
 	int16_t m_num_page;
 	int16_t m_page_counter;
-	int16_t m_reserved0;
+	/* SetPageOffset's: the pages from the one drawn into to the one textured (name ours) */
+	int16_t m_page_offset;
 	SysMemory m_mem;
 	int32_t m_score;
 	intrusive_ptr<Surface> m_depth;
@@ -573,6 +597,30 @@ extern "C" int32_t ScePafGraphics_B000FA14(paf::graph::Surface *surface);
 
 /* the colour table's entries copied in (Sony's name not found) */
 extern "C" int32_t ScePafGraphics_F4986A3A(paf::graph::SurfaceCLUT *clut, const void *src);
+
+/*
+ * A surface's adjusted size, line bytes, alignment and page size for its format and order, as
+ * SetMemParam sets them; a size or alignment given is kept (Sony's name not found).
+ */
+extern "C" void ScePafGraphics_6CCB24AE(int16_t width, int16_t height, ImageMode format,
+					ImageOrder order, int32_t pixel_bits, int32_t num_level,
+					int32_t line_bytes, paf::graph::Surface::SurfaceType surf_type,
+					int16_t num_page, int16_t *adj_width, int16_t *adj_height,
+					int32_t *stride, int16_t *align, int32_t *size);
+/* GetPageSize for a surface type (Sony's name not found) */
+extern "C" int32_t ScePafGraphics_48FBF58D(paf::graph::Surface::SurfaceType surf_type, int32_t width,
+					   int32_t height, ImageMode format, ImageOrder order,
+					   int32_t num_level, int32_t line_bytes, int32_t align,
+					   int32_t num_page);
+
+namespace paf {
+namespace graph {
+
+/* the GXM texture format of a surface's mode (0x8119a53e, another file; name ours) */
+SceGxmTextureFormat GetTextureFormat(const SurfaceBase *surface);
+
+}
+}
 
 /* Copy for the DXT formats (Sony's name not found) */
 extern "C" int32_t ScePafGraphics_D811125C(paf::graph::Surface *surface, int32_t page,

@@ -234,14 +234,6 @@ void GraphicsSetPointLineWidth(uint32_t *self, uint32_t flags, float width)
 	}
 }
 
-int ScePafGraphics_6EA0C6D7(uint8_t *self, int value)
-{
-	int result = value % *(int16_t *)(self + 100);
-
-	*(int16_t *)(self + 104) = (int16_t)result;
-	return result;
-}
-
 static inline __attribute__((always_inline))
 uint8_t *DestroyGraphicsOwnedPointer(uint8_t *self)
 {
@@ -379,110 +371,6 @@ uint32_t *ScePafGraphics_9E20360C(uint32_t *self)
 }
 
 static inline __attribute__((always_inline))
-int GraphicsSetSamplerMode(uint8_t *self, uint32_t fieldOffset, int mode)
-{
-	int mapped = 2;
-
-	if (mode) {
-		int selected = 0;
-		if (mode != 1) {
-			if (mode != 2) {
-				mapped = 1;
-				if (mode != 4) {
-					mapped = 3;
-					if (mode != 5) {
-						mapped = 4;
-						if (mode != 6) {
-							mapped = 6;
-							if (mode != 7) {
-								mapped = 5;
-								if (mode != 8) {
-									mapped = -1;
-									if (mode == 9)
-										mapped = 7;
-								}
-							}
-						}
-					}
-				}
-			}
-			selected = mapped;
-		}
-		mapped = selected;
-		if (selected == -1)
-			return -2136006142;
-	}
-	if (mapped != *(int32_t *)(self + fieldOffset)) {
-		*(int32_t *)(self + fieldOffset) = mapped;
-		self[96] = 1;
-	}
-	return 0;
-}
-
-int _ZN3paf5graph7Surface8SetWrapSENS0_11TextureWrapE(uint8_t *self, int mode)
-{
-	return GraphicsSetSamplerMode(self, 84, mode);
-}
-
-int _ZN3paf5graph7Surface8SetWrapTENS0_11TextureWrapE(uint8_t *self, int mode)
-{
-	return GraphicsSetSamplerMode(self, 88, mode);
-}
-
-__attribute__((noinline))
-int _ZN3paf5graph7Surface12SetMinFilterENS0_13TextureFilterE(uint8_t *self, int mode)
-{
-	int filter;
-	int wrapping;
-
-	switch (mode) {
-	case 0:
-	case 2:
-		filter = 0;
-		wrapping = 0;
-		break;
-	case 1:
-	case 3:
-		filter = 1;
-		wrapping = 0;
-		break;
-	case 4:
-		filter = 0;
-		wrapping = 512;
-		break;
-	case 5:
-		filter = 1;
-		wrapping = 512;
-		break;
-	default:
-		return -2136006142;
-	}
-	if (filter != *(int32_t *)(self + 76) ||
-	    wrapping != *(int32_t *)(self + 80)) {
-		*(int32_t *)(self + 76) = filter;
-		*(int32_t *)(self + 80) = wrapping;
-		self[96] = 1;
-	}
-	return 0;
-}
-
-__attribute__((noinline))
-int _ZN3paf5graph7Surface12SetMagFilterENS0_13TextureFilterE(uint8_t *self, int mode)
-{
-	int mapped = 0;
-
-	if (mode)
-		mapped = mode == 1 ? 1 : -1;
-	if (mapped != *(int32_t *)(self + 72)) {
-		if (mapped == -1)
-			return -2136006142;
-		*(int32_t *)(self + 72) = mapped;
-		self[96] = 1;
-	}
-	return 0;
-}
-
-static inline __attribute__((always_inline))
 uint32_t *InitGraphicsRefParameter(uint32_t *result,
 				   const uint32_t *source, uint32_t value)
 {
@@ -590,39 +478,6 @@ int _ZN3paf5graph16AttributedString12GetStyleRunsERNS_14_list_iteratorIPNS0_12Te
 	return 0;
 }
 
-int32_t _ZNK3paf5graph7Surface9GetStrideEi(const uint8_t *self, int32_t shiftCount)
-{
-	int32_t result = *(const int32_t *)(self + 60);
-	int32_t iteration;
-
-	for (iteration = shiftCount - 1; ; --iteration) {
-		int32_t oldCount = shiftCount;
-		shiftCount = iteration;
-		if (oldCount <= 0)
-			break;
-		if (result > 1)
-			result >>= 1;
-	}
-	return result;
-}
-
-int32_t _ZN3paf5graph7Surface13GetCopyHeightEii(const uint8_t *self,
-				 int32_t unused, int32_t shiftCount)
-{
-	int32_t result = *(const int16_t *)(self + 30);
-	int32_t iteration;
-
-	for (iteration = shiftCount - 1; ; --iteration) {
-		int32_t oldCount = shiftCount;
-		shiftCount = iteration;
-		if (oldCount <= 0)
-			break;
-		if (result > 1)
-			result >>= 1;
-	}
-	return result;
-}
-
 int _ZNK3paf5graph9TextStyle17GetStyleAttributeENS0_18TextStyleAttributeERi(const uint8_t *self,
 			    int32_t index, int32_t *output)
 {
@@ -646,12 +501,6 @@ int _ZN3paf5graph10TextLayout10InvalidateEv(uint8_t *self)
 	return 7;
 }
 
-int32_t _ZNK3paf5graph7Surface8GetScoreEv(const uint8_t *self)
-{
-	return *(const int32_t *)(self + 56) *
-		(3 - *(const int32_t *)(self + 32));
-}
-
 int32_t *_ZN3paf5graph9TextStyleD1Ev(int32_t *result)
 {
 	*result = -2127676444;
@@ -662,12 +511,6 @@ int32_t *_ZN3paf5graph9TextStyleD2Ev(int32_t *result)
 {
 	*result = -2127676444;
 	return result;
-}
-
-void *_ZN3paf5graph7Surface10FastMemcpyEPvPKvi(void *self, void *destination,
-			      const void *source, uint32_t count)
-{
-	return sce_paf_memcpy(destination, source, count);
 }
 
 int32_t ScePafGraphics_BEF37718(void)
@@ -780,28 +623,6 @@ int _ZN3paf5graph13ScreenSurface14GetDepthFormatEv(const uint8_t *self)
 		if (graphicsMemoryMap[2 * i] == value)
 			return graphicsMemoryMap[2 * i + 1];
 	return -1;
-}
-
-uint32_t _ZN3paf5graph7Surface13GetRawTextureEv(const uint8_t *self)
-{
-	const uint8_t *items = *(const uint8_t *const *)(self + 68);
-	int index;
-	int offset;
-
-	if (!items)
-		return 0;
-	index = *(const int16_t *)(self + 102);
-	offset = *(const int16_t *)(self + 104);
-	if (offset) {
-		int total = *(const int16_t *)(self + 100);
-
-		index += offset;
-		if (index < 0)
-			index = total - 1;
-		else if (total < index)
-			index = 0;
-	}
-	return *(const uint32_t *)(items + 8 * index);
 }
 
 uint8_t *_ZN3paf5graph9TextStyleaSERKS1_(uint8_t *self, const uint8_t *source)
@@ -937,22 +758,9 @@ int _ZN3paf5graph16AttributedString9GetStringERNS_12basic_stringIwNS_11char_trai
 	return 0;
 }
 
-int32_t _ZNK3paf5graph11SurfaceCLUT11GetCLUTSizeEv(const uint8_t *self)
-{
-	return ((*(const int16_t *)(self + 28) <<
-		  *(const uint32_t *)(self + 12)) + 7) >> 3;
-}
-
 uint8_t *_ZN3paf5graph13ScreenSurface18GetRawColorSurfaceEi(const uint8_t *self, uint32_t index)
 {
 	return *(uint8_t *const *)(self + 148) + index * 48;
-}
-
-int32_t _ZN3paf5graph7Surface10SetPaletteEPNS1_7TextureEPKv(void *self, SceGxmTexture **texture,
-			       void *palette)
-{
-	int32_t result = sceGxmTextureSetPalette(*texture, palette);
-	return result >= 0 ? 0 : result;
 }
 
 static inline __attribute__((always_inline))
@@ -984,35 +792,4 @@ int _ZN3paf5graph9TextStyle17SetStyleAttributeENS0_18TextStyleAttributeEi(uint8_
 		return -2136005886;
 	self[4] = value;
 	return 0;
-}
-
-/* Advance through the native mip-chain layout for a selected buffer. */
-uint8_t *_ZNK3paf5graph7Surface10GetPagePtrEii(const uint8_t *self, int32_t index,
-				 int32_t levels)
-{
-	uint8_t *result = _ZNK3paf5graph7Surface10GetPagePtrEi(self, index);
-
-	if (!result)
-		return 0;
-	if (levels > 0) {
-		int32_t stride = *(const int32_t *)(self + 60);
-		int32_t height = *(const int16_t *)(self + 46);
-		int32_t count = levels - 1;
-		int32_t next = levels - 2;
-		int32_t offset;
-
-		for (offset = stride * height; ; offset += stride * height) {
-			int32_t check = count;
-			count = next;
-			if (check <= 0)
-				break;
-			--next;
-			if (stride > 1)
-				stride >>= 1;
-			if (height > 1)
-				height >>= 1;
-		}
-		result += offset;
-	}
-	return result;
 }

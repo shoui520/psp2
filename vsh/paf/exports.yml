@@ -1836,7 +1836,7 @@ ScePaf:
         - _ZN3paf5graph10TextLayout18SetLayoutAttributeENS0_19TextLayoutAttributeEb: 0x6E3709BC
         - _ZN3paf5gutil5debug18RemoveDebugGuiFuncEPFvPvES2_: 0x6E793E22
         - ScePafGraphics_6E7B77AC: 0x6E7B77AC
-        - ScePafGraphics_6EA0C6D7: 0x6EA0C6D7
+        - _ZN3paf5graph7Surface13SetPageOffsetEi: 0x6EA0C6D7
         - _ZN3paf5graph7SurfacenwEj: 0x6EA3E8FF
         - _ZNK3paf5graph9TextStyle17GetStyleAttributeENS0_18TextStyleAttributeERNS_4math2v4E: 0x6EF37383
         - _ZN3paf5graph9BubbleObj6OnDrawERKNS_4math6matrixEjfRNS0_8DrawInfoE: 0x6F7C5986
@@ -2001,7 +2001,7 @@ ScePaf:
         - _ZN3paf5graph7Surface11DecodeImageEPNS0_11SurfacePoolEPNS1_10LoadOptionERNS_13intrusive_ptrIS1_EENS_6common9SharedPtrINS_5image5ImageEEE: 0xA97584EB
         - _ZN3paf5graph7Surface17DuplicateBoundaryEPh: 0xA99BC6BE
         - _ZN3paf5graph8PlaneObj8GetWrapSEj: 0xA9D60F9B
-        - ScePafGraphics_AA26679B: 0xAA26679B
+        - _ZN3paf5graph7Surface11GetPageSizeEii9ImageMode10ImageOrderiiii: 0xAA26679B
         - ScePafGraphics_AA7B8DB5: 0xAA7B8DB5
         - _ZN3paf5graph7TextObj7SetSizeENS_4math2v3E: 0xAA87E2FF
         - _ZN3paf5graph9TextStyleD2Ev: 0xAAB453CB

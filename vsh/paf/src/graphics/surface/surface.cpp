@@ -22,16 +22,6 @@
 namespace paf {
 namespace graph {
 
-/* a size at a mipmap level: halved per level, never below 1 */
-static inline int32_t LevelSize(int32_t size, int32_t level)
-{
-	while (level-- > 0) {
-		if (size > 1)
-			size >>= 1;
-	}
-	return size;
-}
-
 int32_t Surface::AddRef()
 {
 	sceAtomicIncrement32AcqRel(&m_ref_count);
@@ -396,7 +386,7 @@ void Surface::InitMember()
 	m_margin_top = 0;
 	m_margin_bottom = 0;
 	m_page_counter = 0;
-	m_reserved0 = 0;
+	m_page_offset = 0;
 	m_page_size = 0;
 	m_depth = NULL;
 }
@@ -1611,13 +1601,6 @@ SurfaceCLUT::~SurfaceCLUT()
 	Unlink();
 	m_clut_mutex.Unlock();
 }
-
-/* the value both of these start with (name ours) */
-static const float s_unused_init = 32.0f;
-
-/* two values set when the module starts and never read (names ours) */
-static int32_t s_unused0 = (int32_t)s_unused_init;
-static int32_t s_unused1 = (int32_t)s_unused_init;
 
 SurfaceListNode Surface::m_surface_list;
 SurfaceListNode Surface::m_active_mark;

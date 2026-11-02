@@ -65,19 +65,6 @@ public:
 	SceUInt64 m_start;
 };
 
-/* 32 by 32; nothing reads it (names ours) */
-class DefaultExtent {
-public:
-	DefaultExtent() : width(32), height(32)
-	{
-	}
-
-	int32_t width;
-	int32_t height;
-};
-
-static DefaultExtent s_default_extent;
-
 intrusive_ptr<Surface> DisplaySurface::s_offscreen(NULL, true);
 bool s_page_opened;
 uint32_t s_frame_time;
@@ -509,8 +496,8 @@ void *DisplaySurface::AllocFrameBuffer(gutil::FrameBufferMode mode, Param *param
 	switch (mode) {
 	case gutil::FrameBuffer_Normal:
 	case gutil::FrameBuffer_Shared_Create: {
-		uint32_t size = ScePafGraphics_48FBF58D(2, width, height, format, order, 1, NULL, 0,
-							num_page) *
+		uint32_t size = ScePafGraphics_48FBF58D(TypeDisplay, width, height, format, order, 1,
+							0, 0, num_page) *
 				num_page;
 
 		if (ConvertDepthFormat(depth_format) != -1)

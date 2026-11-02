@@ -203,9 +203,6 @@ int32_t ScePafGraphics_751FC8E6(paf::graph::ScreenSurface *surface,
 				const SceGxmRenderTarget *render_target,
 				SceGxmSyncObject *sync_object, SceGxmColorSurface *color_surface,
 				const SceGxmDepthStencilSurface *depth_stencil, uint32_t flags);
-int32_t ScePafGraphics_48FBF58D(int32_t mem_class, int32_t width, int32_t height,
-				ImageMode format, ImageOrder order, int32_t num_level, void *bp,
-				int32_t line_bytes, int32_t num_page);
 }
 
 #endif
