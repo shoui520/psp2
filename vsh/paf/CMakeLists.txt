@@ -173,6 +173,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/text/text_graphics.cpp
 	src/graphics/text/text_layout.cpp
 	src/graphics/text/text_queue.cpp
+	src/graphics/text/text_style.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
@@ -281,6 +282,7 @@ set_source_files_properties(src/graphics/text/text_graphics.cpp PROPERTIES COMPI
 # destructors, 30 inlines too much into the hit tests (2026-11-02).
 set_source_files_properties(src/graphics/text/text_layout.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=24)
 set_source_files_properties(src/graphics/text/text_queue.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=20)
+set_source_files_properties(src/graphics/text/text_style.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=32)
 
 # The file units (HttpFile, LocalFile, MemFile, OpenUrl) were written and matched at the C++
 # units' budget, 30 (2026-10-31): LocalFile's constructors inline CreateImpl, its destructor Close and DeleteImpl.

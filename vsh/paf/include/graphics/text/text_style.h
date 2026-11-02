@@ -31,11 +31,28 @@ enum TextStyleAttribute {
 	TextStyleAttribute_Shadow = 12,
 	TextStyleAttribute_Emboss = 13,
 	TextStyleAttribute_EnlargeFontSize = 14,
-	TextStyleAttribute_ForceBold = 15
+	TextStyleAttribute_ForceBold = 15,
+	/* the point and the boldness as drawn, after the system's text style (names ours, as
+	   TextLayoutAttribute_DrawLinePitch) */
+	TextStyleAttribute_DrawPoint = 16,
+	TextStyleAttribute_DrawBold = 17
 };
 
 class TextStyle {
 public:
+	/* m_flag's bits, one per bool attribute from Bold on (names ours) */
+	enum {
+		Flag_Bold = 0x001,
+		Flag_Oblique = 0x002,
+		Flag_Underline = 0x004,
+		Flag_Strike = 0x008,
+		Flag_Mask = 0x010,
+		Flag_Shadow = 0x020,
+		Flag_Emboss = 0x040,
+		Flag_EnlargeFontSize = 0x080,
+		Flag_ForceBold = 0x100
+	};
+
 	TextStyle();
 	TextStyle(const TextStyle &style);
 	virtual ~TextStyle();

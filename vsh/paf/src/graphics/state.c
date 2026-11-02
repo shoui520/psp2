@@ -22,92 +22,6 @@ extern uint32_t sce_paf_graphics_state_11fc;
 extern uint8_t sce_paf_graphics_flag_06e8;
 extern int32_t *sce_paf_graphics_active_surface_2e94;
 
-/* Initialize a graphics descriptor, preserving the native field-copy order. */
-uint8_t *_ZN3paf5graph9TextStyleC1ERKS1_(uint8_t *self, const uint8_t *source)
-{
-	uint64_t packed;
-	uint32_t value;
-	uint16_t flags;
-
-	*(uint32_t *)(self + 0) = (uint32_t)-2127676444;
-	*(uint64_t *)(self + 8) = 0;
-	self[4] = 0;
-	*(uint16_t *)(self + 6) = 0;
-	*(uint32_t *)(self + 16) = UINT32_MAX;
-	*(uint32_t *)(self + 20) = 1711276032u;
-	*(uint32_t *)(self + 24) = 0;
-	*(uint32_t *)(self + 28) = 0;
-	*(uint32_t *)(self + 32) = 0;
-
-	self[4] = source[4];
-	packed = *(const uint64_t *)(source + 8);
-	*(uint32_t *)(self + 16) = *(const uint32_t *)(source + 16);
-	value = *(const uint32_t *)(source + 20);
-	*(uint64_t *)(self + 8) = packed;
-	*(uint32_t *)(self + 20) = value;
-	flags = *(const uint16_t *)(source + 6);
-	*(uint32_t *)(self + 24) = *(const uint32_t *)(source + 24);
-	*(uint16_t *)(self + 6) = flags;
-	*(uint32_t *)(self + 28) = *(const uint32_t *)(source + 28);
-	*(uint32_t *)(self + 32) = *(const uint32_t *)(source + 32);
-	return self;
-}
-
-int _ZN3paf5graph9TextStyle14EqualFontStyleERKS1_(const uint8_t *left, const uint8_t *right)
-{
-	float32x2_t first, second;
-	uint32x2_t lowEqual, highEqual;
-	int result = 0;
-
-	if (*(const int8_t *)(left + 4) == *(const int8_t *)(right + 4) &&
-	    !((*(const int16_t *)(left + 6) ^
-	       *(const int16_t *)(right + 6)) & 0x1A3)) {
-		first = *(const volatile float32x2_t *)(right + 8);
-		second = *(const volatile float32x2_t *)(left + 8);
-		lowEqual = vceq_f32(vdup_lane_f32(first, 0),
-				    vdup_lane_f32(second, 0));
-		highEqual = vceq_f32(vdup_lane_f32(first, 1),
-				     vdup_lane_f32(second, 1));
-		if (vget_lane_u32(vand_u32(lowEqual, highEqual), 0))
-			result = 1;
-	}
-	return result;
-}
-
-/* Compare the native packed graphics descriptor, including IEEE float lanes. */
-static inline __attribute__((always_inline))
-int GraphicsDescriptorEqual(const uint8_t *left, const uint8_t *right)
-{
-	float32x2_t lvalues, rvalues;
-	uint32x2_t equality;
-
-	if (*(const int8_t *)(left + 4) != *(const int8_t *)(right + 4) ||
-	    *(const int16_t *)(left + 6) != *(const int16_t *)(right + 6))
-		return 0;
-	rvalues = *(const volatile float32x2_t *)(right + 8);
-	lvalues = *(const volatile float32x2_t *)(left + 8);
-	equality = vand_u32(
-		vceq_f32(vdup_lane_f32(rvalues, 0), vdup_lane_f32(lvalues, 0)),
-		vceq_f32(vdup_lane_f32(rvalues, 1), vdup_lane_f32(lvalues, 1)));
-	if (!vget_lane_u32(equality, 0))
-		return 0;
-	return *(const uint32_t *)(left + 16) == *(const uint32_t *)(right + 16) &&
-	       *(const uint32_t *)(left + 20) == *(const uint32_t *)(right + 20) &&
-	       *(const uint32_t *)(left + 24) == *(const uint32_t *)(right + 24) &&
-	       *(const uint32_t *)(left + 28) == *(const uint32_t *)(right + 28) &&
-	       *(const uint32_t *)(left + 32) == *(const uint32_t *)(right + 32);
-}
-
-int _ZN3paf5graph9TextStyleeqERKS1_(const uint8_t *left, const uint8_t *right)
-{
-	return GraphicsDescriptorEqual(left, right);
-}
-
-int _ZN3paf5graph9TextStyleneERKS1_(const uint8_t *left, const uint8_t *right)
-{
-	return !GraphicsDescriptorEqual(left, right);
-}
-
 void *ScePafGraphics_12BDEBFF(void)
 {
 	uint32_t *state = *(uint32_t *volatile *)
@@ -172,15 +86,6 @@ uint8_t *_ZN3paf5graph7Surface4SwapEv(uint8_t *self)
 		*(int16_t *)(self + 102) = 0;
 	self[64] = flags & ~0x10;
 	return self;
-}
-
-int _ZN3paf5graph9TextStyle13EqualFontTypeERKS1_(const uint8_t *first,
-			     const uint8_t *second)
-{
-	if (first[4] != second[4])
-		return 0;
-	return ((*(const int16_t *)(first + 6) ^
-		  *(const int16_t *)(second + 6)) & 0x123) == 0;
 }
 
 /* A global graphics pointer uses the SDK's acquire/release atomic counter. */
@@ -284,17 +189,6 @@ uint32_t *ScePafGraphics_A078C447(uint32_t *result,
 	return InitGraphicsRefParameter(result, source, value);
 }
 
-__attribute__((noinline))
-
-int _ZN3paf5graph9TextStyle17SetStyleAttributeENS0_18TextStyleAttributeERKNS_4math2v2E(uint8_t *self, int32_t index,
-			     const uint64_t *value)
-{
-	if (index != 1)
-		return -2136005886;
-	*(uint64_t *)(self + 8) = *value;
-	return 0;
-}
-
 static inline __attribute__((always_inline))
 void *InitGraphicsHeapSlot(uint8_t *self)
 {
@@ -308,30 +202,6 @@ uint32_t ScePafGraphics_52C45E43(uint32_t value)
 {
 	sce_paf_graphics_flag_306c = value;
 	return value;
-}
-
-static inline __attribute__((always_inline))
-__attribute__((noinline))
-
-int _ZNK3paf5graph9TextStyle17GetStyleAttributeENS0_18TextStyleAttributeERi(const uint8_t *self,
-			    int32_t index, int32_t *output)
-{
-	if (index)
-		return -2136005886;
-	*output = (int8_t)self[4];
-	return 0;
-}
-
-int32_t *_ZN3paf5graph9TextStyleD1Ev(int32_t *result)
-{
-	*result = -2127676444;
-	return result;
-}
-
-int32_t *_ZN3paf5graph9TextStyleD2Ev(int32_t *result)
-{
-	*result = -2127676444;
-	return result;
 }
 
 int32_t ScePafGraphics_BEF37718(void)
@@ -390,26 +260,6 @@ Mutex sce_paf_graphics_flag_mutex_1250;
 
 uint32_t *sce_paf_graphics_current_ref_0f7c;
 
-uint8_t *_ZN3paf5graph9TextStyleaSERKS1_(uint8_t *self, const uint8_t *source)
-{
-	uint64_t values;
-	uint32_t value20;
-	uint16_t value6;
-
-	self[4] = source[4];
-	values = *(const uint64_t *)(source + 8);
-	*(uint32_t *)(self + 16) = *(const uint32_t *)(source + 16);
-	value20 = *(const uint32_t *)(source + 20);
-	*(uint64_t *)(self + 8) = values;
-	*(uint32_t *)(self + 20) = value20;
-	value6 = *(const uint16_t *)(source + 6);
-	*(uint32_t *)(self + 24) = *(const uint32_t *)(source + 24);
-	*(uint16_t *)(self + 6) = value6;
-	*(uint32_t *)(self + 28) = *(const uint32_t *)(source + 28);
-	*(uint32_t *)(self + 32) = *(const uint32_t *)(source + 32);
-	return self;
-}
-
 __attribute__((noinline))
 
 __attribute__((noinline))
@@ -428,19 +278,5 @@ int ScePafGraphics_DD2002B4(void)
 {
 	if (sce_paf_graphics_indicator_3070)
 		return *sce_paf_graphics_indicator_3070;
-	return 0;
-}
-
-void _ZN3paf5graph9TextStyleD0Ev(int32_t *self)
-{
-	*self = -2127676444;
-	PafDelete(self);
-}
-
-int _ZN3paf5graph9TextStyle17SetStyleAttributeENS0_18TextStyleAttributeEi(uint8_t *self, int mode, uint8_t value)
-{
-	if (mode != 0)
-		return -2136005886;
-	self[4] = value;
 	return 0;
 }
