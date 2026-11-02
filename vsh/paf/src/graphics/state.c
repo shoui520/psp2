@@ -292,7 +292,7 @@ int _ZN3paf5graph9TextStyle13EqualFontTypeERKS1_(const uint8_t *first,
 /* A global graphics pointer uses the SDK's acquire/release atomic counter. */
 uint32_t *sce_paf_graphics_shared_reference_0f84;
 
-int ScePafGraphics_D5E30C64(const uint8_t *self,
+int _ZN3paf5graph13ScreenSurface3EndEPK18SceGxmNotificationS4_(const uint8_t *self,
 			     SceGxmNotification *vertexNotification,
 			     SceGxmNotification *fragmentNotification)
 {

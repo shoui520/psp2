@@ -22,7 +22,7 @@ static inline void DrawDone(ArlInstance &gl)
 
 	state->m_dirty_uniforms |= ProgramState::DIRTY_FRAGMENT_UNIFORMS |
 				   ProgramState::DIRTY_VERTEX_UNIFORMS;
-	intrusive_ptr<Surface>(gl.m_next_scene.m_surface)->OnDraw(gl.m_debug_surface_draw);
+	intrusive_ptr<Surface>(gl.m_next_scene.m_surface)->SetDirty(gl.m_debug_surface_draw);
 }
 
 void VertexArray::DrawArrays(ArlInstance &gl, Primitive primitive, int32_t first,

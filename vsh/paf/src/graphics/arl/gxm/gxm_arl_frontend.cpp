@@ -371,7 +371,7 @@ void ScePafGraphics_4581906A(ArlInstance *gl, SceGxmNotification *notification)
 			sceGxmEndScene(gl->m_context, vertex_notification, fragment_notification);
 		else if (gl->m_scene.m_surface != NULL)
 			static_cast<ScreenSurface *>(gl->m_scene.m_surface)
-				->EndGxmScene(vertex_notification, fragment_notification);
+				->End(vertex_notification, fragment_notification);
 		gl->m_marker = NULL;
 		gl->m_markers.clear();
 		gl->m_marker_depth = 0;
@@ -459,7 +459,7 @@ void ScePafGraphics_01CA92B7(ArlInstance *gl, uint32_t flags)
 			ScePafGraphics_EA8C8FA0(gl, SurfaceSize((int32_t)size.getX(),
 								(int32_t)size.getY()),
 						surface);
-			if (screen->BeginGxmScene(flags) == SCE_OK)
+			if (screen->Begin(flags) == SCE_OK)
 				gl->m_in_scene = true;
 		} else {
 			gl->m_surface_width = 0;

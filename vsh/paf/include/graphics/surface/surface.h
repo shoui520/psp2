@@ -262,13 +262,12 @@ public:
 	/* a one-page surface over a GXM texture someone else owns (Canvas's) */
 	Surface(SceGxmTexture *texture, int32_t width, int32_t height);
 	virtual ~Surface();
-	/* told of each draw into the surface, with the front end's third debug cap: nothing (name
-	   ours) */
-	virtual void OnDraw(bool debug);
-	/* 0 */
-	virtual int32_t Unused3();
-	/* clears the page drawn into: ScePafGraphics_439D4357 */
-	virtual void ClearPage(const math::v4 &color, uint32_t clear_mask);
+	/* told of each draw into the surface, with the front end's third debug cap: nothing */
+	virtual void SetDirty(bool dirty) {}
+	/* whether the page drawn into has been drawn to: a plain surface never says so */
+	virtual bool IsDirty() { return false; }
+	/* clears the page drawn into */
+	virtual void Clear(const math::v4 &color, uint32_t clear_mask);
 	virtual void Swap();
 	virtual int32_t BeginScene();
 	virtual int32_t EndScene();
@@ -525,7 +524,7 @@ protected:
 	uint8_t m_texturized : 1;
 	uint8_t m_symmetry_u : 1;
 	uint8_t m_symmetry_v : 1;
-	/* ClearPage cleared the page drawn into; Swap forgets it (name ours) */
+	/* Clear cleared the page drawn into; Swap forgets it (name ours) */
 	uint8_t m_cleared : 1;
 	Texture *m_tex_pages;
 	TexParam m_texture_param;

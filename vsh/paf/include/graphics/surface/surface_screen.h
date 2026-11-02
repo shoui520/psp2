@@ -15,10 +15,10 @@ namespace graph {
 
 class ScreenSurface : public Surface {
 public:
-	/* a scene into the page drawn: ScePafGraphics_67FF6CF1 and ScePafGraphics_D5E30C64 */
-	virtual int32_t BeginGxmScene(uint32_t flags);
-	virtual int32_t EndGxmScene(SceGxmNotification *vertex_notification,
-				    SceGxmNotification *fragment_notification);
+	/* a scene into the page drawn */
+	virtual int32_t Begin(uint32_t flags);
+	virtual int32_t End(const SceGxmNotification *vertex_notification,
+			    const SceGxmNotification *fragment_notification);
 
 	SceGxmColorSurface *GetRawColorSurface(int32_t page);
 

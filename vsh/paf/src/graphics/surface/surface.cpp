@@ -1102,7 +1102,7 @@ int32_t ScePafGraphics_B000FA14(Surface *surface)
 namespace paf {
 namespace graph {
 
-void Surface::ClearPage(const math::v4 &color, uint32_t clear_mask)
+void Surface::Clear(const math::v4 &color, uint32_t clear_mask)
 {
 	if (m_cleared)
 		return;
