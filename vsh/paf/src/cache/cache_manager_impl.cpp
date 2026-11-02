@@ -3,6 +3,7 @@
 #include <cache/cache_job_runner.h>
 #include <common/shared_ptr.h>
 #include <graphics/surface/surface.h>
+#include <graphics/surface/surface_pool.h>
 #include <job/job.h>
 #include <memory/heap_allocator.h>
 #include <std/new>
@@ -38,7 +39,7 @@ CacheManagerImpl::CacheManagerImpl(const CacheManager::Params *param)
 	if (param->cache_instance_heap != NULL)
 		param->cache_instance_heap->SetDisableAssertOnAllocFailure(true);
 	if (m_surface_pool != NULL)
-		ScePafGraphics_83ABDFF5(m_surface_pool, 1);
+		m_surface_pool->SetDisableAssertOnAllocFailure(true);
 }
 
 /* Cancels every job, waits for them to end, then drops every cache. */

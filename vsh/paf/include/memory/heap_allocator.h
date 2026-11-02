@@ -72,6 +72,12 @@ public:
 		m_heap_disable_assert_on_alloc_failure = disable;
 	}
 
+	/* Whether the heap prints its messages (a name of ours). */
+	bool IsDbgPrintEnabled() const
+	{
+		return !m_heap_disable_dbgprint;
+	}
+
 private:
 	void *m_heap_id;
 	void *m_heap_addr;

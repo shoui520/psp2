@@ -42,6 +42,18 @@ public:
 	void DumpInfo(int sort_policy);
 	int CheckMemoryLeaks();
 
+	/* A failed allocation returns 0 without the assert (a name of ours). */
+	void SetDisableAssertOnAllocFailure(bool disable)
+	{
+		m_range_disable_assert_on_alloc_failure = disable;
+	}
+
+	/* Whether the allocator prints its messages (a name of ours). */
+	bool IsDbgPrintEnabled() const
+	{
+		return !m_range_disable_dbgprint;
+	}
+
 private:
 	enum {
 		CHUNK_USED = 1

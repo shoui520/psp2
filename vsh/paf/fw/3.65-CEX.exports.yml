@@ -1891,7 +1891,7 @@ ScePaf:
         - _ZN3paf5graph7Surface15ActivateTextureEjffff: 0x804E92B1
         - _ZN3paf5graph14DisplaySurface8EndFrameEv: 0x823F7FC5
         - _ZN3paf5graph7TextObj15GetNextRightHitEjRj: 0x830D5848
-        - ScePafGraphics_83ABDFF5: 0x83ABDFF5
+        - _ZN3paf5graph11SurfacePool30SetDisableAssertOnAllocFailureEb: 0x83ABDFF5
         - ScePafGraphics_8454D7FB: 0x8454D7FB
         - _ZN3paf5graph3arl11ArlInstance11PolygonModeENS1_15PolygonModeEnumENS1_8FaceEnumE: 0x84619C66
         - ScePafGraphics_84C3D8B9: 0x84C3D8B9

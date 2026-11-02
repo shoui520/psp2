@@ -289,19 +289,6 @@ int _ZN3paf5graph9TextStyle13EqualFontTypeERKS1_(const uint8_t *first,
 		  *(const int16_t *)(second + 6)) & 0x123) == 0;
 }
 
-void _ZN3paf5graph11SurfacePool4FreeEPv(uint8_t *self, int value)
-{
-	Mutex *lock = (Mutex *)(self + 40);
-	uint8_t *object;
-
-	MutexLock(lock);
-	object = *(uint8_t **)(self + 4);
-	if (object)
-		((void (**)(uint8_t *, int))*(void **)object)[3](object, value);
-	--*(int32_t *)(self + 32);
-	MutexUnlock(lock);
-}
-
 /* A global graphics pointer uses the SDK's acquire/release atomic counter. */
 uint32_t *sce_paf_graphics_shared_reference_0f84;
 
@@ -774,108 +761,6 @@ typedef struct PafGraphicsItemNode {
 PafGraphicsItemNode *sce_paf_graphics_items_12a0;
 Mutex sce_paf_graphics_items_mutex_12b0;
 
-void *_ZN3paf5graph11SurfacePool7GetPoolEi(int32_t index)
-{
-	PafGraphicsItemNode *head;
-	PafGraphicsItemNode *node = NULL;
-	void *value;
-
-	MutexLock(&sce_paf_graphics_items_mutex_12b0);
-	head = sce_paf_graphics_items_12a0;
-	if (head)
-		node = head->next;
-	if (node != head) {
-		if (index <= 0)
-			goto found;
-	advance:
-		--index;
-		if (node)
-			node = node->next;
-		if (node == head)
-			goto empty;
-		if (index > 0)
-			goto advance;
-	found:
-		value = node->value;
-		MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
-		return value;
-	}
-	empty:
-	MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
-	return NULL;
-}
-
-int32_t _ZN3paf5graph11SurfacePool8GetIndexEPS1_(void *target)
-{
-	PafGraphicsItemNode *head;
-	PafGraphicsItemNode *node = NULL;
-	int32_t index = 0;
-
-	MutexLock(&sce_paf_graphics_items_mutex_12b0);
-	head = sce_paf_graphics_items_12a0;
-	if (head)
-		node = head->next;
-	if (node != head) {
-	scan:
-		if (node->value == target)
-			goto found;
-		++index;
-		if (node)
-			node = node->next;
-		if (node != head)
-			goto scan;
-		goto not_found;
-	found:
-		MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
-		return index;
-	}
-not_found:
-	MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
-	return -1;
-}
-
-void *_ZN3paf5graph11SurfacePool8FindPoolEPKc(const char *name)
-{
-	PafGraphicsItemNode *head;
-	PafGraphicsItemNode *node = NULL;
-	PafGraphicsItemNode *cursor;
-	void *result;
-
-	MutexLock(&sce_paf_graphics_items_mutex_12b0);
-	head = sce_paf_graphics_items_12a0;
-	if (head)
-		node = head->next;
-	cursor = node;
-	if (node == head)
-		goto not_found;
-	scan:
-		const char *entryName =
-			*(const char **)((uint8_t *)cursor->value + 16);
-
-		if (entryName) {
-			int comparison = sce_paf_strcmp(entryName, name);
-
-			head = sce_paf_graphics_items_12a0;
-			cursor = node;
-			if (!comparison)
-				goto found;
-		}
-		if (cursor) {
-			node = cursor->next;
-			cursor = node;
-		}
-		if (cursor != head)
-			goto scan;
-		goto not_found;
-	found:
-	result = node->value;
-	MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
-	return result;
-not_found:
-	MutexUnlock(&sce_paf_graphics_items_mutex_12b0);
-	return NULL;
-}
-
 int ScePafGraphics_A842275A(const uint8_t *self,
 			     SceGxmRenderTarget *target)
 {
@@ -1124,39 +1009,11 @@ uint8_t *_ZN3paf5graph13ScreenSurface18GetRawColorSurfaceEi(const uint8_t *self,
 	return *(uint8_t *const *)(self + 148) + index * 48;
 }
 
-int ScePafGraphics_83ABDFF5(const uint8_t *self, uint8_t argument)
-{
-	void *object = *(void *const *)(self + 4);
-
-	if (object)
-		return ((int (**)(void *, uint8_t))*(void **)object)[7](
-			object, argument);
-	return 0;
-}
-
 int32_t _ZN3paf5graph7Surface10SetPaletteEPNS1_7TextureEPKv(void *self, SceGxmTexture **texture,
 			       void *palette)
 {
 	int32_t result = sceGxmTextureSetPalette(*texture, palette);
 	return result >= 0 ? 0 : result;
-}
-
-int _ZNK3paf5graph11SurfacePool11GetFreeSizeEv(const uint8_t *self)
-{
-	void *object = *(void *const *)(self + 4);
-
-	if (object)
-		return ((int (**)(void *))*(void **)object)[4](object);
-	return 0;
-}
-
-int ScePafGraphics_404AC3D7(const uint8_t *self)
-{
-	void *object = *(void *const *)(self + 4);
-
-	if (object)
-		return ((int (**)(void *))*(void **)object)[8](object);
-	return 1;
 }
 
 static inline __attribute__((always_inline))

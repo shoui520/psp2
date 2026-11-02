@@ -558,9 +558,6 @@ protected:
 }
 }
 
-/* A surface pool export Sony's exports do not name yet: the pool's virtual 7 with flag. */
-extern "C" int ScePafGraphics_83ABDFF5(paf::graph::SurfacePool *pool, uint8_t flag);
-
 /* Surface loads Sony's exports do not name yet: the file and memory Load for an image_order. */
 extern "C" paf::intrusive_ptr<paf::graph::Surface>
 ScePafGraphics_AD93FF1B(paf::graph::SurfacePool *pool, paf::common::SharedPtr<paf::File> fp,
@@ -579,8 +576,5 @@ extern "C" int32_t ScePafGraphics_F4986A3A(paf::graph::SurfaceCLUT *clut, const 
 extern "C" int32_t ScePafGraphics_D811125C(paf::graph::Surface *surface, int32_t page,
 					   const void *src, ImageOrder src_order,
 					   int32_t line_bytes, int32_t level);
-
-/* whether the pool reports its allocation failures (Sony's name not found) */
-extern "C" int32_t ScePafGraphics_404AC3D7(paf::graph::SurfacePool *pool);
 
 #endif
