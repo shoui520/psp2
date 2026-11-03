@@ -22,8 +22,3 @@ BSAFE SSL-C 2.8.1 with RCOM 2.3.0. SSLeay 0.9.1b was selected as the source
 baseline by comparing historical releases against the firmware, particularly
 LHASH. Shared code with early OpenSSL prevents identifying RSA's exact source
 drop from these components alone.
-
-Sony's and SSL-C's changes stay outside this directory, in the consuming
-module's patches under `sys/internal/usermode/src/libssl/`. These select the
-required upstream routines and adapt native object layouts, allocation,
-callbacks and platform interfaces.
