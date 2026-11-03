@@ -2865,6 +2865,10 @@ int NpDrmEbootSigGenerateMultiDisc(const char *ebootPath, const void *discInfo,
 		return result;
 	}
 	sceIoClose(fd);
+	result = SceSblGcAuthMgrDrmBBForDriver_4B506BE7(dataDigest,
+		(const char *)discInfo + 144, 1000);
+	if (result < 0)
+		return result;
 	memcpy(block.magic, "MULTISIG", 8);
 	block.version = 1;
 	block.type = 4;
@@ -3129,9 +3133,8 @@ int NpDrmEbootSigVerify(const char *ebootPath, const void *signature,
 			psp->headSignature, 0);
 		if (result < 0)
 			return result;
-		result = SceSblGcAuthMgrDrmBBForDriver_4B506BE7((char *)&stat + 16,
-			psp->dataSignature, 0);
-		return result & (result >> 31);
+		return SceSblGcAuthMgrDrmBBForDriver_4B506BE7(
+			(char *)&stat + 16, psp->dataSignature, 0);
 	}
 	if (signatureSize != 512)
 		return (int)0x80870001;

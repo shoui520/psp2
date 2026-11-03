@@ -1,5 +1,12 @@
-/* Shared ECC implementation; the original source filename is unavailable. */
+/* Shared ECC implementation; the original source filename is unavailable.
+ * The npdrm build of this file takes a 160-bit verify (5 words, 20-byte digest); the
+ * msif build takes the 224-bit one (7 words, 28 bytes), with the same core. */
 #include "msif_ecdsa.h"
+
+#ifndef MSIF_ECDSA_VERIFY_WORDS
+#define MSIF_ECDSA_VERIFY_WORDS 7
+#define MSIF_ECDSA_VERIFY_BYTES 28
+#endif
 
 int MsifEcdsaVerifyCore(const struct MsifEcdsaSignature *signature,
 	const uint8_t *digest, const struct MsifEcdsaPoint *publicKey,
@@ -55,7 +62,8 @@ int MsifEcdsaVerify224(const struct MsifEcdsaSignature *signature,
 	const uint8_t *digest, const struct MsifEcdsaPoint *publicKey,
 	const struct MsifEcdsaCurve *curve)
 {
-	return MsifEcdsaVerifyCore(signature, digest, publicKey, curve, 7, 28);
+	return MsifEcdsaVerifyCore(signature, digest, publicKey, curve,
+				   MSIF_ECDSA_VERIFY_WORDS, MSIF_ECDSA_VERIFY_BYTES);
 }
 
 __attribute__((noinline)) int MsifIntegerInverse(uint32_t *destination, const uint32_t *value,
