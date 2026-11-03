@@ -192,10 +192,28 @@ their descriptive names and the bound/capacity names are ours, without a claim
 about the buffers' original purpose. The consuming header asserts the complete
 size and the key record, alert, digest and temporary-state offsets.
 
-`ssl/s3_lib_sce.patch` selects `ssl3_new` and `ssl3_pending`. Allocation failure
+`ssl/s3_lib_sce.patch` selects `ssl3_new`, `ssl3_pending`, `ssl3_free` and
+`ssl3_clear`, with SSL-C's additional handshake cleanup. Allocation failure
 records SSL-C error20/147/33, and pending returns0 while the record body is being
-read. All other operations in that pristine file, including protocol tables,
-clear and free, remain unselected and are not counted as implemented.
+read. Free destroys digest handles and buffers, wipes owned temporary storage,
+then wipes and frees the state. Clear retains the I/O buffers, capacities and
+digest handles, clears the read buffer, releases temporary state and removes
+the buffering BIO. A null pop result does not replace the write BIO. Cleanup
+reloads the connection's state after callbacks; temporary algorithm pointers
+are left unchanged after destruction until the enclosing state clear. The
+additional helper's descriptive name is ours. Remaining operations in that
+pristine file, including protocol tables, remain unselected and are not
+counted as implemented.
+
+The CRYPTOCME algorithm-destroy and MES name-destroy dispatchers are implemented
+separately from this donor. No open-source origin has been established for those
+dispatchers. Their source folders follow recovered CRYPTOCME and MES component
+paths; filenames and descriptive private names are ours. The algorithm object
+is56 bytes. Common object and crypto-lifecycle types describe the polymorphic
+interface prefixes used by destruction; they do not claim reconstruction of
+the complete crypto method table or each concrete certificate object. The name
+dispatcher returns the native integer status, including null-object and missing
+operation errors, and intentionally has no null-method-table guard.
 
 `ssl/s3_both_sce.patch` selects buffer setup: allocate or enlarge the read buffer,
 preserve the current packet's32-bit relative address, retain capacities, and

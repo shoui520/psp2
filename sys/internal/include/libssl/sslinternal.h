@@ -9,6 +9,7 @@
 #define _LIBSSL_SSLINTERNAL_H
 
 #include <scetypes.h>
+#include <libssl/name.h>
 
 /* what SceSslInternal_2F0FC3CD makes of an I/O call's result */
 #define SSL_INTERNAL_ERROR_NONE		0
@@ -93,7 +94,6 @@ void SceSslInternal_46358909(void *key);
 int SceSslInternal_D68D8421(void *cert, void *key);
 int SceSslInternal_81FA5DBE(void *cert, int which, void **name);
 int SceSslInternal_568F0E80(void *a, void *b);
-void SceSslInternal_CE37B69E(void *name);
 int SceSslInternal_08179EBD(void *cert, int which, void **name);
 int SceSslInternal_91C2531C(void *name, int what, void *value);
 int SceSslInternal_B5A099D2(void *ava, int what, void *part);

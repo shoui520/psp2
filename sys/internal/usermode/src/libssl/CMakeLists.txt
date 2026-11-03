@@ -66,6 +66,7 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	bio/bss_mem.c
 	bio/b_print.c
 	bio/b_dump.c
+	MES/common/cert/src/name_api.c
 	asn1interpreter.c
 	ex_data.c
 	ssl/ssl_stat.c
@@ -79,6 +80,7 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	format.c
 	lhash/lhash.c
 	stack/stack.c
+	CRYPTOCME/common/module/crypto/cry_api.c
 	runtime.c
 	memory.c
 	libssl.c

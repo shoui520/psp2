@@ -76,6 +76,9 @@ typedef void (*SslInfoCallback)(SSL *ssl, int where, int result);
 
 int ssl3_pending(SSL *ssl);
 int ssl3_new(SSL *ssl);
+void ssl3CleanupHandshake(SSL *ssl); /* Descriptive name is ours. */
+void ssl3_free(SSL *ssl);
+void ssl3_clear(SSL *ssl);
 int ssl3ResizeReadBuffer(SSL *ssl, int length);
 int ssl3_setup_buffers(SSL *ssl);
 

@@ -26,7 +26,7 @@
  	return(s->s3->rrec.length);
  	}
  
-@@ -450,9 +454,12 @@
+@@ -450,59 +454,130 @@
  	s->method->ssl_clear(s);
  	return(1);
  err:
@@ -34,12 +34,172 @@
  	return(0);
  	}
  
-+#if 0
+-void ssl3_free(s)
+-SSL *s;
+-	{
+-	ssl3_cleanup_key_block(s);
+-	if (s->s3->rbuf.buf != NULL)
++/* SCE: additional handshake cleanup; descriptive function name is ours. */
++void ssl3CleanupHandshake(SSL *s)
++{
++	if (s->s3->tmp.key_block != NULL) {
++		memset(s->s3->tmp.key_block, 0, s->s3->tmp.key_block_length);
++		Free(s->s3->tmp.key_block);
++		s->s3->tmp.key_block = NULL;
++	}
++	s->s3->tmp.key_block_length = 0;
++	if (s->s3->tmp.new_sym_enc != NULL)
++		sslDestroyAlgorithm(s->s3->tmp.new_sym_enc);
++	if (s->s3->tmp.new_hash != NULL)
++		sslDestroyAlgorithm(s->s3->tmp.new_hash);
++	if (s->s3->tmp.ca_names != NULL) {
++		/* SSL-C's generic stack cleanup discards the integer status. */
++		sk_pop_free(s->s3->tmp.ca_names, (void (*)())SceSslInternal_CE37B69E);
++		s->s3->tmp.ca_names = NULL;
++	}
++}
 +
- void ssl3_free(s)
++void ssl3_free(SSL *s)
++{
++	SSL3_CTX *s3;
++
++	if (s == NULL || s->s3 == NULL)
++		return;
++	if (s->s3->finish_dgst1 != NULL) {
++		sslDestroyAlgorithm(s->s3->finish_dgst1);
++		s->s3->finish_dgst1 = NULL;
++	}
++	if (s->s3->finish_dgst2 != NULL) {
++		sslDestroyAlgorithm(s->s3->finish_dgst2);
++		s->s3->finish_dgst2 = NULL;
++	}
++	if (s->s3->rbuf.buf != NULL) {
+ 		Free(s->s3->rbuf.buf);
+-	if (s->s3->wbuf.buf != NULL)
++		s->s3->rbuf.buf = NULL;
++	}
++	if (s->s3->wbuf.buf != NULL) {
+ 		Free(s->s3->wbuf.buf);
+-	if (s->s3->rrec.comp != NULL)
++		s->s3->wbuf.buf = NULL;
++	}
++	if (s->s3->rrec.comp != NULL) {
+ 		Free(s->s3->rrec.comp);
+-#ifndef NO_DH
+-	if (s->s3->tmp.dh != NULL)
+-		DH_free(s->s3->tmp.dh);
+-#endif
+-	if (s->s3->tmp.ca_names != NULL)
+-		sk_pop_free(s->s3->tmp.ca_names,X509_NAME_free);
+-	memset(s->s3,0,sizeof(SSL3_CTX));
+-	Free(s->s3);
+-	s->s3=NULL;
++		s->s3->rrec.comp = NULL;
+ 	}
++	if (s->s3->clearable_buffers[0] != NULL) {
++		memset(s->s3->clearable_buffers[0], 0, s->s3->clearable_buffer_size);
++		Free(s->s3->clearable_buffers[0]);
++		s->s3->clearable_buffers[0] = NULL;
++	}
++	if (s->s3->clearable_buffers[1] != NULL) {
++		memset(s->s3->clearable_buffers[1], 0, s->s3->clearable_buffer_size);
++		Free(s->s3->clearable_buffers[1]);
++		s->s3->clearable_buffers[1] = NULL;
++	}
++	s->s3->clearable_buffer_size = 0;
++	ssl3CleanupHandshake(s);
++	s3 = s->s3;
++	memset(s3, 0, sizeof(SSL3_CTX));
++	Free(s3);
++	s->s3 = NULL;
++}
++
++void ssl3_clear(SSL *s)
++{
++	unsigned char *rp = s->s3->rbuf.buf;
++	unsigned int rcapacity = s->s3->rbuf.capacity;
++	unsigned char *wp = s->s3->wbuf.buf;
++	unsigned int wcapacity = s->s3->wbuf.capacity;
++	void *digest1 = s->s3->finish_dgst1;
++	void *digest2 = s->s3->finish_dgst2;
++	SSL3_CTX *s3;
+ 
+-void ssl3_clear(s)
+-SSL *s;
+-	{
+-	unsigned char *rp,*wp;
+-
+-	ssl3_cleanup_key_block(s);
+-	if (s->s3->tmp.ca_names != NULL)
+-		sk_pop_free(s->s3->tmp.ca_names,X509_NAME_free);
+-
+-	rp=s->s3->rbuf.buf;
+-	wp=s->s3->wbuf.buf;
+-
+-	memset(s->s3,0,sizeof(SSL3_CTX));
+-	if (rp != NULL) s->s3->rbuf.buf=rp;
+-	if (wp != NULL) s->s3->wbuf.buf=wp;
+-
+-	if (s->s3->rrec.comp != NULL)
+-		{
++	if (s->s3->rrec.comp != NULL) {
+ 		Free(s->s3->rrec.comp);
+-		s->s3->rrec.comp=NULL;
++		s->s3->rrec.comp = NULL;
++	}
++	if (s->s3->clearable_buffers[0] != NULL) {
++		memset(s->s3->clearable_buffers[0], 0, s->s3->clearable_buffer_size);
++		Free(s->s3->clearable_buffers[0]);
++		s->s3->clearable_buffers[0] = NULL;
++	}
++	if (s->s3->clearable_buffers[1] != NULL) {
++		memset(s->s3->clearable_buffers[1], 0, s->s3->clearable_buffer_size);
++		Free(s->s3->clearable_buffers[1]);
++		s->s3->clearable_buffers[1] = NULL;
++	}
++	s->s3->clearable_buffer_size = 0;
++	ssl3CleanupHandshake(s);
++	s3 = s->s3;
++	memset(s3, 0, sizeof(SSL3_CTX));
++	s3->rbuf.buf = rp;
++	s3->rbuf.capacity = rcapacity;
++	s3->wbuf.buf = wp;
++	s3->wbuf.capacity = wcapacity;
++	s3->finish_dgst1 = digest1;
++	s3->finish_dgst2 = digest2;
++	if (rp != NULL)
++		memset(rp, 0, rcapacity);
++	if (s->bbio != NULL) {
++		if (s->bbio == s->wbio) {
++			BIO *next = BIO_pop(s->wbio);
++			if (next != NULL)
++				s->wbio = next;
+ 		}
+-
+-	s->packet_length=0;
+-	s->s3->renegotiate=0;
+-	s->s3->total_renegotiations=0;
+-	s->s3->num_renegotiations=0;
+-	s->s3->in_read_app_data=0;
+-	s->version=SSL3_VERSION;
++		BIO_free(s->bbio);
++		s->bbio = NULL;
+ 	}
++	s->packet_length = 0;
++	s->s3->renegotiate = 0;
++	s->s3->total_renegotiations = 0;
++	s->s3->num_renegotiations = 0;
++	s->s3->in_read_app_data = 0;
++	s->version = SSL3_VERSION;
++	s->s3->rrec.length = 0;
++	s->s3->rrec.off = 0;
++}
++
++#if 0
+ 
+ long ssl3_ctrl(s,cmd,larg,parg)
  SSL *s;
- 	{
-@@ -984,4 +991,4 @@
+@@ -984,4 +1059,4 @@
  	return(ret);
  	}
  
