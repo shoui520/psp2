@@ -13,24 +13,29 @@
  char *SSL_version_str="SSLeay 0.9.1a 06-Jul-1998";
  
  static STACK *ssl_meth=NULL;
-@@ -289,6 +288,44 @@
- 	s->wbio=wbio;
- 	}
+@@ -77,30 +76,72 @@
+ 	ssl_undefined_function,
+ 	};
  
+-void SSL_clear(s)
 +#endif
 +
 +/* SCE: emit this adapted helper before connection operations, as in SSL-C. */
 +void ssl_clear_cipher_ctx(s)
-+SSL *s;
-+	{
+ SSL *s;
+ 	{
+-	int state;
 +	/* SCE: the two record states own algorithms and key handles separately. */
 +	SslRecordCrypto *states[2] = { &s->read_crypto, &s->write_crypto };
 +	int i;
-+
+ 
+-	if (s->method == NULL) return;
 +	for (i = 0; i < 2; i++)
 +		{
 +		SslRecordCrypto *state = states[i];
-+
+ 
+-	s->error=0;
+-	s->hit=0;
 +		if (state->cipher_algorithm != NULL)
 +			{
 +			sslDestroyAlgorithm(state->cipher_algorithm);
@@ -54,11 +59,105 @@
 +			}
 +		}
 +	}
+ 
+-	/* This is set if we are doing dynamic renegotiation so keep
+-	 * the old cipher.  It is sort of a SSL_clear_lite :-) */
+-	if (s->new_session) return;
++/* SCE: this session helper is linked into the native ssl_lib.c unit. */
++#include "ssl_sess_bad_sce.inc"
+ 
+-	state=s->state; /* Keep to check if we throw away the session-id */
+-	s->type=0;
++/* SCE: descriptive two-argument helper name is ours. */
++int sslClearConnection(s, keep_method)
++SSL *s;
++int keep_method;
++	{
++	SSL_METHOD *method;
++	int ret=1;
+ 
+-	s->version=s->method->version;
++	if (s->method == NULL)
++		{
++		SSLerr(SSL_F_SSL_CLEAR,SSL_R_NO_METHOD_SPECIFIED);
++		return(0);
++		}
++	if (ssl_clear_bad_session(s))
++		{
++		SSL_SESSION_free(s->session);
++		s->session=NULL;
++		}
++	s->error=0;
++	s->hit=0;
++	s->shutdown=0;
++	s->type=0;
++	s->state=(s->server ? SSL_ST_ACCEPT : SSL_ST_CONNECT)|SSL_ST_BEFORE;
+ 	s->rwstate=SSL_NOTHING;
+-	s->state=SSL_ST_BEFORE;
+ 	s->rstate=SSL_ST_READ_HEADER;
+-	s->read_ahead=s->ctx->default_read_ahead;
+-
+-/*	s->shutdown=(SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN); */
+ 
+ 	if (s->init_buf != NULL)
+ 		{
+@@ -109,19 +150,40 @@
+ 		}
+ 
+ 	ssl_clear_cipher_ctx(s);
++	s->first_packet=0;
+ 
+-	if (ssl_clear_bad_session(s))
++	if (!keep_method &&
++		(s->session == NULL || s->handshake_func == SSL_accept))
+ 		{
+-		SSL_SESSION_free(s->session);
+-		s->session=NULL;
++		method=s->initial_method;
++		if (method == NULL)
++			method=((SslContextHeader *)s->ctx)->method;
++		if (s->method != method)
++			{
++			if (s->method->version == method->version)
++				s->method=method;
++			else
++				{
++				s->method->ssl_free(s);
++				s->method=method;
++				ret=method->ssl_new(s);
++				}
++			}
+ 		}
+ 
+-	s->shutdown=(SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
+-	s->first_packet=0;
+-
+ 	s->method->ssl_clear(s);
++	if (!ret) return(0);
++	s->version=s->method->version;
++	s->client_version=s->version;
++	return(1);
+ 	}
+ 
++int SSL_clear(s)
++SSL *s;
++	{ return(sslClearConnection(s,0)); }
++
++#if 0
++
+ /* Used to change an SSL_CTXs default SSL method type */
+ int SSL_CTX_set_ssl_version(ctx,meth)
+ SSL_CTX *ctx;
+@@ -289,6 +351,8 @@
+ 	s->wbio=wbio;
+ 	}
+ 
++#endif
 +
  BIO *SSL_get_rbio(s)
  SSL *s;
  	{ return(s->rbio); }
-@@ -297,6 +334,7 @@
+@@ -297,6 +361,7 @@
  SSL *s;
  	{ return(s->wbio); }
  
@@ -66,7 +165,7 @@
  int SSL_get_fd(s)
  SSL *s;
  	{
-@@ -431,12 +469,16 @@
+@@ -431,12 +496,16 @@
  	return(s->read_ahead);
  	}
  
@@ -83,7 +182,32 @@
  X509 *SSL_get_peer_certificate(s)
  SSL *s;
  	{
-@@ -559,9 +601,11 @@
+@@ -541,27 +610,36 @@
+ 		ssl->cert->key->privatekey));
+ 	}
+ 
++#endif
++
+ int SSL_accept(s)
+ SSL *s;
+ 	{
++	if (!SSL_in_init(s) || SSL_in_before(s))
++		sslClearConnection(s,0);
+ 	return(s->method->ssl_accept(s));
+ 	}
+ 
+ int SSL_connect(s)
+ SSL *s;
+ 	{
++	if (!SSL_in_init(s) || SSL_in_before(s))
++		sslClearConnection(s,0);
+ 	return(s->method->ssl_connect(s));
+ 	}
+ 
++#if 0
+ long SSL_get_default_timeout(s)
+ SSL *s;
+ 	{
  	return(s->method->get_timeout());
  	}
  
@@ -96,7 +220,7 @@
  int num;
  	{
  	if (s->shutdown & SSL_RECEIVED_SHUTDOWN)
-@@ -574,7 +618,7 @@
+@@ -574,7 +652,7 @@
  
  int SSL_peek(s,buf,num)
  SSL *s;
@@ -105,7 +229,7 @@
  int num;
  	{
  	if (s->shutdown & SSL_RECEIVED_SHUTDOWN)
-@@ -586,7 +630,7 @@
+@@ -586,7 +664,7 @@
  
  int SSL_write(s,buf,num)
  SSL *s;
@@ -114,7 +238,7 @@
  int num;
  	{
  	if (s->shutdown & SSL_SENT_SHUTDOWN)
-@@ -601,12 +645,16 @@
+@@ -601,12 +679,16 @@
  int SSL_shutdown(s)
  SSL *s;
  	{
@@ -133,7 +257,7 @@
  int SSL_renegotiate(s)
  SSL *s;
  	{
-@@ -1247,12 +1295,15 @@
+@@ -1247,12 +1329,15 @@
  		}
  	}
  
@@ -149,7 +273,7 @@
  int SSL_set_ssl_method(s,meth)
  SSL *s;
  SSL_METHOD *meth;
-@@ -1282,17 +1333,21 @@
+@@ -1282,17 +1367,21 @@
  	return(ret);
  	}
  
@@ -173,7 +297,7 @@
  
  	if ((i < 0) && SSL_want_read(s))
  		{
-@@ -1306,6 +1361,8 @@
+@@ -1306,6 +1395,8 @@
  			reason=BIO_get_retry_reason(bio);
  			if (reason == BIO_RR_CONNECT)
  				return(SSL_ERROR_WANT_CONNECT);
@@ -182,7 +306,7 @@
  			else
  				return(SSL_ERROR_SYSCALL); /* unknown */
  			}
-@@ -1332,19 +1389,16 @@
+@@ -1332,19 +1423,16 @@
  		return(SSL_ERROR_WANT_X509_LOOKUP);
  		}
  
@@ -209,16 +333,43 @@
  		}
  	return(SSL_ERROR_SYSCALL);
  	}
-@@ -1369,6 +1423,8 @@
- 	return(ret);
+@@ -1371,26 +1459,23 @@
+ 
+ /* For the next 2 functions, SSL_clear() sets shutdown and so
+  * one of these calls will reset it */
+-void SSL_set_accept_state(s)
++int SSL_set_accept_state(s)
+ SSL *s;
+ 	{
+-	s->shutdown=0;
+-	s->state=SSL_ST_ACCEPT|SSL_ST_BEFORE;
+-	s->handshake_func=s->method->ssl_accept;
+-	/* clear the current cipher */
+-	ssl_clear_cipher_ctx(s);
++	s->handshake_func=SSL_accept;
++	s->server=1;
++	return(sslClearConnection(s,0));
+ 	}
+ 
+-void SSL_set_connect_state(s)
++int SSL_set_connect_state(s)
+ SSL *s;
+ 	{
+-	s->shutdown=0;
+-	s->state=SSL_ST_CONNECT|SSL_ST_BEFORE;
+-	s->handshake_func=s->method->ssl_connect;
+-	/* clear the current cipher */
+-	ssl_clear_cipher_ctx(s);
++	s->handshake_func=SSL_connect;
++	s->server=0;
++	return(sslClearConnection(s,0));
  	}
  
 +#if 0
-+
- /* For the next 2 functions, SSL_clear() sets shutdown and so
-  * one of these calls will reset it */
- void SSL_set_accept_state(s)
-@@ -1405,19 +1461,22 @@
+ int ssl_undefined_function(s)
+ SSL *s;
+ 	{
+@@ -1405,19 +1490,22 @@
  	return(NULL);
  	}
  
@@ -244,7 +395,7 @@
  SSL *SSL_dup(s)
  SSL *s;
          {
-@@ -1610,6 +1669,8 @@
+@@ -1610,6 +1698,8 @@
  	return(s->quiet_shutdown);
  	}
  
@@ -253,7 +404,7 @@
  void SSL_set_shutdown(s,mode)
  SSL *s;
  int mode;
-@@ -1635,6 +1696,7 @@
+@@ -1635,6 +1725,7 @@
  	return(ssl->ctx);
  	}
  
@@ -261,7 +412,7 @@
  #ifndef NO_STDIO
  int SSL_CTX_set_default_verify_paths(ctx)
  SSL_CTX *ctx;
-@@ -1658,10 +1720,12 @@
+@@ -1658,10 +1749,12 @@
  	ssl->info_callback=cb;
  	}
  
@@ -276,7 +427,7 @@
  	}
  
  int SSL_state(ssl)
-@@ -1670,6 +1734,7 @@
+@@ -1670,6 +1763,7 @@
  	return(ssl->state);
  	}
  
@@ -284,7 +435,7 @@
  void SSL_set_verify_result(ssl,arg)
  SSL *ssl;
  long arg;
-@@ -1746,4 +1811,5 @@
+@@ -1746,4 +1840,5 @@
  #if defined(_WINDLL) && defined(WIN16)
  #include "../crypto/bio/bss_file.c"
  #endif

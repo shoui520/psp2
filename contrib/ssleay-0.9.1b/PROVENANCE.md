@@ -312,3 +312,23 @@ Error classification preserves SSL-C's system-error library mapping, distinct
 read/write special-retry handling, extension-wait condition for SSL3 through
 TLS1.1 servers, and close-alert test. The additional retry/error names are ours;
 they are not assigned newer OpenSSL meanings based only on their numeric values.
+
+The connection selection also adapts reset, accept/connect dispatch and the two
+handshake-state setters. SSL-C's reset has an additional method-retention input;
+its descriptive `sslClearConnection` name is ours, with the one-argument
+`SSL_clear` entry retained separately. Bad sessions are invalidated before their
+release and before resetting connection state. Method replacement compares
+versions, calls free/new only for a version change, and invokes the selected
+method's clear callback even when new failed. Version fields are published only
+on success. Handshake dispatch ignores a reset failure and still invokes its
+method callback, as in the original.
+
+`ssl_sess_bad_sce.patch` selects the bad-session helper from the pristine session
+donor, but includes it in the native `ssl_lib.c` unit before reset. SSL-C marks
+the captured session nonresumable, then conditionally invokes cache operation2
+with the address of that captured pointer. Empty IDs, disabled client/server
+cache modes and a missing callback suppress the call. The private context header
+describes only its leading interface fields; it is not a complete context
+allocation. The added context-prefix/cache callback names and operation name
+are ours. Remaining context storage, allocation, backend lifetimes and cache
+operations are still outside this selection.

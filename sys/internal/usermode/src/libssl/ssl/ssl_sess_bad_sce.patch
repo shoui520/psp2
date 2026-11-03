@@ -1,0 +1,62 @@
+--- a/ssl_sess.c
++++ b/ssl_sess.c
+@@ -56,11 +56,9 @@
+  * [including the GNU Public Licence.]
+  */
+ 
+-#include <stdio.h>
+-#include "lhash.h"
+-#include "rand.h"
+-#include "ssl_locl.h"
++/* SCE: included within ssl_lib.c, whose wrapper supplies the interfaces. */
+ 
++#if 0 /* SCE: select only the native bad-session helper in this unit. */
+ #ifndef NOPROTO
+ static void SSL_SESSION_list_remove(SSL_CTX *ctx, SSL_SESSION *s);
+ static void SSL_SESSION_list_add(SSL_CTX *ctx,SSL_SESSION *s);
+@@ -507,20 +505,38 @@
+ 	CRYPTO_w_unlock(CRYPTO_LOCK_SSL_CTX);
+ 	}
+ 
++#endif
++
+ int ssl_clear_bad_session(s)
+ SSL *s;
+ 	{
++	SSL_SESSION *session=s->session;
++	int mode=SSL_SESS_CACHE_SERVER;
++	SslContextHeader *ctx;
++
+ 	if (	(s->session != NULL) &&
+ 		!(s->shutdown & SSL_SENT_SHUTDOWN) &&
+-		!(SSL_in_init(s) || SSL_in_before(s)))
++		((s->state & SSL_ST_INIT) != s->state) &&
++		!SSL_in_before(s) && s->state != SSL_ST_OK)
+ 		{
+-		SSL_CTX_remove_session(s->ctx,s->session);
++		session->not_resumable=1;
++		if (!s->server) mode=SSL_SESS_CACHE_CLIENT;
++		if (session->session_id_length != 0)
++			{
++			ctx=(SslContextHeader *)s->ctx;
++			if (ctx->session_cache_callback != NULL &&
++				(ctx->session_cache_mode & SSL_SESS_CACHE_BOTH & mode))
++				ctx->session_cache_callback(s->ctx,
++					SCE_SSL_SESSION_CACHE_REMOVE,&session,
++					ctx->session_cache_arg);
++			}
+ 		return(1);
+ 		}
+ 	else
+ 		return(0);
+ 	}
+ 
++#if 0
+ /* locked by SSL_CTX in the calling function */
+ static void SSL_SESSION_list_remove(ctx,s)
+ SSL_CTX *ctx;
+@@ -580,3 +596,4 @@
+ 		}
+ 	}
+ 
++#endif /* unselected session operations */

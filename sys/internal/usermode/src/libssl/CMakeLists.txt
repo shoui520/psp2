@@ -46,6 +46,9 @@ libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_sess.c
 libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_sess.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_sess_sm_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/ssl_sess_sm_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_sess.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_sess_bad_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/ssl_sess_bad_sce.inc)
 libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_cert.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_cert_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/ssl_cert_sce.inc)

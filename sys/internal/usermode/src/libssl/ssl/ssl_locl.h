@@ -79,6 +79,13 @@ typedef void (*SslInfoCallback)(SSL *ssl, int where, int result);
 #define SCE_SSL3_WRITE_OVERHEAD 101
 
 int ssl3_pending(SSL *ssl);
+int SSL_accept(SSL *ssl);
+int SceSslInternal_92560B8D(SSL *ssl);
+int SSL_clear(SSL *ssl);
+int sslClearConnection(SSL *ssl, int keep_method); /* Descriptive name ours. */
+int SSL_set_accept_state(SSL *ssl);
+int SceSslInternal_CEE46B33(SSL *ssl);
+int ssl_clear_bad_session(SSL *ssl);
 int ssl3_new(SSL *ssl);
 void ssl3CleanupHandshake(SSL *ssl); /* Descriptive name is ours. */
 void ssl3_free(SSL *ssl);
