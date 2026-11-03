@@ -9,7 +9,7 @@
 #define PFS_HASH_LIST_SIZE		0x3f8	/* name unknown: bytes the icvs of a 0x400 byte page use */
 
 
-void pfsHashListAttach(ScePfsHashList *list, void *data)
+__attribute__((noinline)) void pfsHashListAttach(ScePfsHashList *list, void *data)
 {
 	list->data = data;
 	pfsHashArrayAttach(&list->hashes, data);

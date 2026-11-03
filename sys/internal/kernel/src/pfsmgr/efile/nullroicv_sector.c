@@ -56,8 +56,7 @@ static int pfsUnicvTree3HashBlock(ScePfsCrypt *ctx, ScePfsHash *icv, SceUInt32 i
 
 	icv_set_hmac_sw(&key, &ctx->key, &index, sizeof(index));
 	icv_set_hmac(icv, &key, data, len);
-	icv_clear(icv);
-	return 0;
+	return (int)icv_clear(icv);
 }
 
 

@@ -154,17 +154,16 @@ int scePfsMount2(const char *path, const char *name, const void *klicensee, SceU
 	} else {
 bad_mode:
 		ret = SCE_PFS_ERROR_BAD_MODE;
-		pfsPmiDestroy(pmi);
-		goto out;
+		goto destroy;
 	}
 
+	param.data = pmi;
 	param.rootPath = pmi->rootPath;
 	param.blockdevName = pmi->path;
+	param.misc = &pmi->mountData;
 	param.fsType = SCE_VFS_FS_TYPE_PFS;
 	param.opt = 0;
 	param.mntFlags = SCE_VFS_MOUNT_TYPE_PFS;
-	param.data = pmi;
-	param.misc = &pmi->mountData;
 	param.vops = NULL;
 	if (mode == 20 || (unsigned int)(mode - 12) <= 1 || mode == 2)
 		param.mntFlags = SCE_VFS_MOUNT_TYPE_PFS | SCE_VFS_MOUNT_FLAG_RDONLY;
@@ -180,15 +179,16 @@ bad_mode:
 		umountParam.flag = 0;
 		vfsUmountForPFS(&umountParam, 0, 0);
 		ret = SCE_PFS_ERROR_NOT_IN_LIST;
-destroy:
-		pfsPmiDestroy(pmi);
-		goto out;
+		goto destroy;
 	}
 	pmi->link.next = first;
 	pmi->link.prev = first->prev;
 	first->prev = &pmi->link;
 	pmi->link.prev->next = &pmi->link;
 	ret = 0;
+	goto out;
+destroy:
+	pfsPmiDestroy(pmi);
 out:
 	sceKernelUnlockMutex(g_pfsPmiListMutex, 1);
 	return ret;

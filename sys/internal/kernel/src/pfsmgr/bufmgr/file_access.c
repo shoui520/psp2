@@ -158,6 +158,9 @@ int file_access_close_force(ScePfsLowerFile *lf)
 	return 0;
 }
 
+#if FW_VERSION >= 0x04000000
+/* 4.00 kept this out of line; the 3.6x builds inline the same body into
+ * file_access_close/file_access_close_force, which pfsCoreClose calls there. */
 int pfsLowerCloseLocked(ScePfsLowerFile *lf)
 {
 	vfsLockVnode(lf->vp);
@@ -169,6 +172,7 @@ int pfsLowerCloseLocked(ScePfsLowerFile *lf)
 	vfsUnlockVnode(lf->vp);
 	return 0;
 }
+#endif
 
 
 int file_access_cleanup(ScePfsLowerFile *lf, SceUInt32 a2, SceUInt32 a3)

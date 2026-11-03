@@ -988,7 +988,7 @@ int filesdb_fix_storage_use(ScePfsPmi *pmi, void *buf, SceSize len);
 
 /* the integrity layer (names unknown) */
 void icv_copy(void *dst, const void *src);
-void icv_clear(ScePfsHash *hash);
+void *icv_clear(ScePfsHash *hash);
 int icv_set_sha1(ScePfsHash *digest, const void *data, SceSize len);
 int icv_set_hmac_sw(ScePfsHash *digest, const ScePfsHash *key, const void *data, SceSize len);
 int icv_set_hmac(ScePfsHash *digest, const ScePfsHash *key, const void *data, SceSize len);

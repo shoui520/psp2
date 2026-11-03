@@ -120,7 +120,7 @@ int pfsHashArrayPop(ScePfsHashArray *array)
 
 
 /* the leaves of a node of size bytes */
-SceUInt32 pfsHashNodeFanout(SceSize size)
+__attribute__((noinline)) SceUInt32 pfsHashNodeFanout(SceSize size)
 {
 	SceUInt32 n = ((size - sizeof(ScePfsHashArrayHeader)) / PFS_HASH_SIZE + 1) / 2;
 
@@ -130,7 +130,7 @@ SceUInt32 pfsHashNodeFanout(SceSize size)
 }
 
 
-void pfsHashNodeViewAttach(ScePfsHashNodeView *view, void *data)
+__attribute__((noinline)) void pfsHashNodeViewAttach(ScePfsHashNodeView *view, void *data)
 {
 	view->level = data;
 	pfsHashArrayAttach(&view->hashes, (char *)data + PFS_HASH_NODE_DATA);
@@ -209,7 +209,7 @@ int pfsHashNodeViewRemoveLast(ScePfsHashNodeView *view, const ScePfsHash *key)
 }
 
 
-int pfsHashNodePageCheck(ScePfsHashNodePage *page)
+__attribute__((noinline)) int pfsHashNodePageCheck(ScePfsHashNodePage *page)
 {
 	if (page->view.hashes.header->itemSize == PFS_HASH_SIZE &&
 	    page->view.hashes.header->size ==

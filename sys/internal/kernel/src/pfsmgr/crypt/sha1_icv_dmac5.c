@@ -33,9 +33,9 @@ void icv_copy(void *dst, const void *src)
 	*(ScePfsHash *)dst = *(const ScePfsHash *)src;
 }
 
-void icv_clear(ScePfsHash *hash)
+void *icv_clear(ScePfsHash *hash)
 {
-	memset(hash, 0, sizeof(*hash));
+	return memset(hash, 0, sizeof(*hash));
 }
 
 int icv_equal(const void *a, const void *b)

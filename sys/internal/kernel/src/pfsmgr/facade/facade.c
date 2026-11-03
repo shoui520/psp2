@@ -36,7 +36,7 @@ int pfsThreadMappingInit(void)
 }
 
 
-int pfsThreadMappingTerm(void)
+__attribute__((noinline)) int pfsThreadMappingTerm(void)
 {
 	if (g_pfsThreadMappingKey != -1)
 		return sceKernelUnregisterKTLS(g_pfsThreadMappingKey);
