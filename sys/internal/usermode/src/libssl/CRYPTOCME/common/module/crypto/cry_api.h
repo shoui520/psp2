@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include "../../object.h"
 #include "../../property.h"
+#include "../../library/lib_ctx.h"
 
 typedef struct SslCryptoAlgorithm SslCryptoAlgorithm;
 
@@ -71,6 +72,7 @@ _Static_assert(offsetof(SslCryptoLifecycleMethods, DestroyAlgorithm) == 16,
 	       "DestroyAlgorithm");
 
 int sslDestroyAlgorithm(SslCryptoAlgorithm *algorithm);
+int sslCreateCryptoContext(SslLibrary *library, int mode, void **result);
 int sslDestroyCryptoContext(void *context);
 int sslFreeAlgorithm(SslCryptoAlgorithm *algorithm);
 int sslCopyAlgorithm(SslCryptoAlgorithm *algorithm, SslCryptoAlgorithm **result);
@@ -90,6 +92,7 @@ int sslSetImplementationInfo(SslCryptoAlgorithm *algorithm, int selector,
 #define SSL_CRYPTO_INFO_FLAGS 21
 
 #define SSL_CRYPTO_LOCK 38
+#define SSL_CRYPTO_MODULE_TYPE 6
 #define SSL_CRYPTO_ALGORITHM_DESTROYING 0x1000
 #define SSL_CRYPTO_ALGORITHM_OWNS_PROPERTIES 8
 

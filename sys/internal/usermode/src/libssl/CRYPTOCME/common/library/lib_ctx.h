@@ -18,6 +18,15 @@ typedef struct SslLibraryMethods SslLibraryMethods;
 typedef struct SslLibraryModule SslLibraryModule;
 typedef struct SslLibrary SslLibrary;
 
+/* Shared method-table prefix. Further library operations follow these slots. */
+struct SslLibraryMethods {
+	int (*GetMethod)(SslLibrary *library, int type, int selector,
+			 SceUInt32 flags, int parameter, int request, void *result);
+	int (*CreateObject)(SslLibrary *library, int type, int selector,
+			    SceUInt32 flags, int parameter, void *result);
+	int (*GetModuleData)(SslLibrary *library, int type, void **result);
+};
+
 struct SslLibraryModule {
 	int type;
 	int selector;
@@ -62,5 +71,32 @@ SslLibrary *sslGetDefaultLibrary(void);
 int SceSslInternal_09657E15(SslLibraryModule *table, int unused,
 			  SslLibrary **result);
 int sslGetLibraryInfo(SslLibrary *library, int selector, void *result);
+int sslFindLibraryModule(SslLibraryModule *table, int type, int selector,
+			SceUInt32 flags, int parameter, SslLibraryModule **result,
+			SslLibraryModule **next);
+int sslLookupLibraryMethod(SslLibrary *library, int type, int selector,
+			   SceUInt32 flags, int parameter, int request,
+			   SceUIntPtr *result);
+int sslGetLibraryMethod(SslLibrary *library, int type, int selector,
+			SceUInt32 flags, int parameter, int request, void *result);
+int sslCreateLibraryObject(SslLibrary *library, int type, int selector,
+			   SceUInt32 flags, int parameter, void *result);
+int sslGetLibraryData(SslLibrary *library, int type, void **result);
+int sslConstructLibraryObject(SslLibrary *library, int type, int selector,
+			      SceUInt32 flags, int parameter,
+			      SslObjectHeader **result);
+
+/* Descriptive request and matching names are ours. */
+#define SSL_LIBRARY_ANY_TYPE (-2)
+#define SSL_LIBRARY_ANY_SELECTOR (-1)
+#define SSL_LIBRARY_ANY_PARAMETER (-1)
+#define SSL_LIBRARY_ANY_FLAGS ((SceUInt32)-1)
+#define SSL_LIBRARY_GET_IMPLEMENTATION_FACTORY 1
+#define SSL_LIBRARY_GET_METHOD_FACTORY 2
+#define SSL_LIBRARY_GET_IMPLEMENTATION 5
+#define SSL_LIBRARY_GET_METHODS 6
+
+_Static_assert(offsetof(SslLibraryMethods, CreateObject) == 4, "CreateObject");
+_Static_assert(offsetof(SslLibraryMethods, GetModuleData) == 8, "GetModuleData");
 
 #endif

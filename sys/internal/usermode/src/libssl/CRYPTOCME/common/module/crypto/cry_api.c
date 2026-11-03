@@ -1,6 +1,32 @@
 /* Filename and helper name are ours; recovered CRYPTOCME dispatch behavior. */
 #include "cry_api.h"
 
+int sslCreateCryptoContext(SslLibrary *library, int mode, void **result)
+{
+	SceUIntPtr factory = 0;
+	void *data;
+	const SslCryptoLifecycleMethods *methods;
+	const SslCryptoLifecycleMethods *(*getMethods)(void *data);
+	int status;
+
+	if (library == NULL || result == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	status = sslGetLibraryMethod(library, SSL_CRYPTO_MODULE_TYPE, 0, 0,
+				     mode, SSL_LIBRARY_GET_METHOD_FACTORY, &factory);
+	if (status != 0)
+		return status;
+	if (factory == 0)
+		return SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+	getMethods = (const SslCryptoLifecycleMethods *(*)(void *))factory;
+	status = sslGetLibraryData(library, SSL_CRYPTO_MODULE_TYPE, &data);
+	if (status != 0)
+		return status;
+	methods = getMethods(data);
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+	return methods->CreateContext(library, mode, result);
+}
+
 int sslDestroyCryptoContext(void *context)
 {
 	SslObjectHeader *object = context;
