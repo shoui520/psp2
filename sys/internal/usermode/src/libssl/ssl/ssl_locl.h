@@ -12,7 +12,6 @@
 #include "../buffer/buffer.h"
 
 typedef struct ssl_ctx_st SSL_CTX;
-typedef struct ssl_session_st SSL_SESSION;
 
 typedef struct SslRecordCrypto {
 	int mac_size;
@@ -82,6 +81,14 @@ void ssl3_clear(SSL *ssl);
 int ssl3ResizeReadBuffer(SSL *ssl, int length);
 int ssl3_setup_buffers(SSL *ssl);
 void ssl_clear_cipher_ctx(SSL *ssl);
+SSL_SESSION *SSL_get_session(SSL *ssl);
+SSL_SESSION *SSL_SESSION_new(void);
+long SSL_SESSION_get_timeout(SSL_SESSION *session);
+/* Descriptive helper names are ours, not recovered Sony names. */
+int sslSessionAddReference(SSL_SESSION *session);
+struct SslTime *sslSessionCopyTime(SSL_SESSION *session, struct SslTime *result);
+unsigned int sslSessionGetIdLength(SSL_SESSION *session);
+int sslSessionMarkNotResumable(SSL_SESSION *session);
 
 /* Descriptive names for SSL-C's extra states are ours, not Sony spellings. */
 #define SSL3_ST_CR_HELLO_REQ_A (0x101 | SSL_ST_CONNECT)
@@ -91,6 +98,19 @@ _Static_assert(sizeof(SslRecordCrypto) == 28, "SslRecordCrypto");
 _Static_assert(sizeof(SslExtensionList) == 8, "SslExtensionList");
 _Static_assert(sizeof(SSL) == 352, "SSL");
 _Static_assert(sizeof(SSL_METHOD) == 88, "SSL_METHOD");
+_Static_assert(sizeof(SSL_SESSION) == 196, "SSL_SESSION");
+_Static_assert(offsetof(SSL_SESSION, master_key_length) == 16, "master_key_length");
+_Static_assert(offsetof(SSL_SESSION, master_key) == 20, "master_key");
+_Static_assert(offsetof(SSL_SESSION, session_id_length) == 68, "session_id_length");
+_Static_assert(offsetof(SSL_SESSION, sid_ctx_length) == 104, "sid_ctx_length");
+_Static_assert(offsetof(SSL_SESSION, not_resumable) == 140, "not_resumable");
+_Static_assert(offsetof(SSL_SESSION, references) == 152, "references");
+_Static_assert(offsetof(SSL_SESSION, time) == 160, "time");
+_Static_assert(offsetof(SSL_SESSION, cipher) == 164, "cipher");
+_Static_assert(offsetof(SSL_SESSION, extensions) == 184, "extensions");
+_Static_assert(offsetof(SSL_SESSION, verify_result) == 188, "verify_result");
+_Static_assert(offsetof(SSL_SESSION, verification_state) == 192,
+	       "verification_state");
 _Static_assert(sizeof(SSL3_CTX) == 580, "SSL3_CTX");
 _Static_assert(sizeof(SSL3_BUFFER) == 24, "SSL3_BUFFER");
 _Static_assert(sizeof(SSL3_RECORD) == 24, "SSL3_RECORD");

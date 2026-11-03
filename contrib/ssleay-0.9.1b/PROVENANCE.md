@@ -20,7 +20,7 @@ Kept unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h
 `crypto/bio/b_dump.c`, `crypto/bio/bss_mem.c`, `crypto/bio/bio.h`,
 `crypto/buffer/buffer.c`, `crypto/buffer/buffer.h`, `ssl/ssl_stat.c`,
 `ssl/ssl3.h`, `ssl/ssl.h`, `ssl/ssl23.h`, `ssl/ssl_lib.c`, `ssl/s3_lib.c`,
-`ssl/s3_both.c`, `crypto/cryptlib.c`
+`ssl/s3_both.c`, `ssl/ssl_sess.c`, `crypto/cryptlib.c`
 and `crypto/mem.c`, plus the upstream copyright file.
 The libssl LHASH, STACK, ex-data, BIO, buffer, SSL and runtime translation units
 read these files. The rest of the distribution is omitted.
@@ -246,6 +246,25 @@ Absent optional callbacks return null/zero. Free still invokes the configured
 memory destructor, including for null. The platform clock/codec implementations
 and the unsigned-seconds getter are not selected by this batch; these interface
 bodies do not establish complete session-expiry implementation.
+
+The same explicit SSL header patch now adapts the complete196-byte session
+layout. The donor's legacy key-argument/master-key/session-ID arrays remain;
+SSL-C adds session-ID context, an extension list and verification metadata.
+The session's time member is a pointer to its owned12-byte time object, rather
+than the donor's scalar time. The added verification-state name is ours: its
+independently observed access clears it on entry to peer verification, and no
+broader meaning is assigned. Certificate, cipher and extension pointees keep
+their separate interfaces; this layout does not implement their lifetimes.
+
+Pristine `ssl/ssl_sess.c` is selected through `ssl_sess_sce.patch` for session
+lookup, timeout retrieval and allocation. Allocation zeroes196 bytes, sets
+references1/timeout304, then creates a time object. Time creation failure frees
+the session before recording the native allocation error. The time pointer is
+stored only on success, preserving callback-visible state on failure. Four
+additional SSL-C helpers increment the reference count, copy the time object,
+read session-ID length and mark a session nonresumable; their descriptive names
+are ours. Function order follows native addresses. Session release, caching and
+the remaining donor operations are unselected and are not counted as implemented.
 
 `ssl/s3_both_sce.patch` selects buffer setup: allocate or enlarge the read buffer,
 preserve the current packet's32-bit relative address, retain capacities, and

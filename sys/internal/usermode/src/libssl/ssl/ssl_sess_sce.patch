@@ -1,0 +1,112 @@
+--- a/ssl_sess.c
++++ b/ssl_sess.c
+@@ -57,10 +57,9 @@
+  */
+ 
+ #include <stdio.h>
+-#include "lhash.h"
+-#include "rand.h"
+-#include "ssl_locl.h"
++/* SCE: interfaces are supplied by the consuming wrapper. */
+ 
++#if 0 /* SCE: session cache operations are reconstructed separately. */
+ #ifndef NOPROTO
+ static void SSL_SESSION_list_remove(SSL_CTX *ctx, SSL_SESSION *s);
+ static void SSL_SESSION_list_add(SSL_CTX *ctx,SSL_SESSION *s);
+@@ -72,12 +71,15 @@
+ static int ssl_session_num=0;
+ static STACK *ssl_session_meth=NULL;
+ 
++#endif
++
+ SSL_SESSION *SSL_get_session(ssl)
+ SSL *ssl;
+ 	{
+ 	return(ssl->session);
+ 	}
+ 
++#if 0
+ int SSL_SESSION_get_ex_new_index(argl,argp,new_func,dup_func,free_func)
+ long argl;
+ char *argp;
+@@ -106,9 +108,51 @@
+ 	return(CRYPTO_get_ex_data(&s->ex_data,idx));
+ 	}
+ 
++#endif
++
++/* SCE: the following descriptive helper names are ours. */
++int sslSessionAddReference(SSL_SESSION *session)
++	{
++	return(sslAddReference(&session->references,1,CRYPTO_LOCK_SSL_SESSION,
++		"S:\\work\\MES\\sslc\\ssl/ssl_sess.c",1295));
++	}
++
++/* SCE: moved before allocation to retain native function order. */
++long SSL_SESSION_get_timeout(s)
++SSL_SESSION *s;
++	{
++	if (s == NULL) return(0);
++	return(s->timeout);
++	}
++
++struct SslTime *sslSessionCopyTime(SSL_SESSION *session, struct SslTime *result)
++	{
++	struct SslTime *source;
++	SceUInt32 size;
++
++	if (session == NULL || result == NULL)
++		return(NULL);
++	source=session->time;
++	size=sslGetTimeSize();
++	sslCopyMemory(result,source,size);
++	return(result);
++	}
++
++unsigned int sslSessionGetIdLength(SSL_SESSION *session)
++	{
++	return(session->session_id_length);
++	}
++
++int sslSessionMarkNotResumable(SSL_SESSION *session)
++	{
++	session->not_resumable=1;
++	return(1);
++	}
++
+ SSL_SESSION *SSL_SESSION_new()
+ 	{
+ 	SSL_SESSION *ss;
++	struct SslTime *created_time;
+ 
+ 	ss=(SSL_SESSION *)Malloc(sizeof(SSL_SESSION));
+ 	if (ss == NULL)
+@@ -120,13 +164,18 @@
+ 
+ 	ss->references=1;
+ 	ss->timeout=60*5+4; /* 5 minute timeout by default */
+-	ss->time=time(NULL);
+-	ss->prev=NULL;
+-	ss->next=NULL;
+-	CRYPTO_new_ex_data(ssl_session_meth,(char *)ss,&ss->ex_data);
++	created_time=sslCreateTime();
++	if (created_time == NULL)
++		{
++		Free(ss);
++		SSLerr(SSL_F_SSL_SESSION_NEW,ERR_R_MALLOC_FAILURE);
++		return(NULL);
++		}
++	ss->time=created_time;
+ 	return(ss);
+ 	}
+ 
++#if 0
+ int ssl_get_new_session(s, session)
+ SSL *s;
+ int session;
+@@ -580,3 +629,5 @@
+ 		}
+ 	}
+ 
++#endif /* unselected session cache operations */
++
