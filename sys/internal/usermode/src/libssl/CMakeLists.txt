@@ -43,6 +43,15 @@ libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_lib.c
 libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_sess.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_sess_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/ssl_sess_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_sess.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_sess_sm_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/ssl_sess_sm_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_cert.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_cert_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/ssl_cert_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_locl.h
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_cert_layout_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/ssl_cert_layout_sce.h)
 libssl_prepare_patched(${libssl_ssleay}/ssl/s3_lib.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/s3_lib_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/s3_lib_sce.inc)
@@ -69,14 +78,18 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	bio/bss_mem.c
 	bio/b_print.c
 	bio/b_dump.c
+	MES/common/cert/src/cert_api.c
 	MES/common/cert/src/name_api.c
 	asn1interpreter.c
 	ex_data.c
 	ssl/ssl_stat.c
 	ssl/s3_both.c
+	ssl/ssl_cert.c
+	ssl/ssl_sess_sm.c
 	ssl/ssl_lib.c
 	ssl/ssl_sess.c
 	ssl/s3_lib.c
+	ssl/ssl_ext.c
 	err/err.c
 	buffer/buffer.c
 	bio/bio_flags.c
@@ -84,6 +97,7 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	format.c
 	lhash/lhash.c
 	stack/stack.c
+	CRYPTOCME/common/key/pkey_api.c
 	CRYPTOCME/common/key/key_api.c
 	CRYPTOCME/common/module/crypto/cry_api.c
 	CRYPTOCME/common/module/crypto/cry_info.c

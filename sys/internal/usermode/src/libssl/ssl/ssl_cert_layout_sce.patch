@@ -1,0 +1,73 @@
+--- a/ssl_locl.h
++++ b/ssl_locl.h
+@@ -58,6 +58,7 @@
+ 
+ #ifndef HEADER_SSL_LOCL_H
+ #define HEADER_SSL_LOCL_H
++#if 0 /* SCE: only the certificate container layout is selected. */
+ #include <stdlib.h>
+ #include <time.h>
+ #include <string.h>
+@@ -211,6 +212,8 @@
+ 				SSL_MAC_MASK|SSL_EXP_MASK)
+ 
+ /* Mostly for SSLv3 */
++#endif
++
+ #define SSL_PKEY_RSA_ENC	0
+ #define SSL_PKEY_RSA_SIGN	1
+ #define SSL_PKEY_DSA_SIGN	2
+@@ -234,9 +237,11 @@
+ 
+ typedef struct cert_pkey_st
+ 	{
+-	X509 *x509;
++	void *x509;
+ /*	EVP_PKEY *publickey; *//* when extracted */
+-	EVP_PKEY *privatekey;
++	void *privatekey;
++	/* SCE: descriptive algorithm field name is ours. */
++	SslCryptoAlgorithm *algorithm;
+ 	} CERT_PKEY;
+ 
+ typedef struct cert_st
+@@ -262,10 +267,11 @@
+ 	unsigned long mask;
+ 	unsigned long export_mask;
+ 
+-	RSA *rsa_tmp;
+-	DH *dh_tmp;
+-	RSA *(*rsa_tmp_cb)();
+-	DH *(*dh_tmp_cb)();
++	/* SCE: three owned temporary key handles; individual families have not
++	 * been established, so the descriptive array name is ours.
++	 */
++	void *temporary_keys[3];
++	void *(*rsa_tmp_cb)();
+ 	CERT_PKEY pkeys[SSL_PKEY_NUM];
+ 
+ 	STACK *cert_chain;
+@@ -273,6 +279,7 @@
+ 	int references;
+ 	} CERT;
+ 
++#if 0 /* SCE: remaining internal interfaces are reconstructed separately. */
+ /*#define MAC_DEBUG	*/
+ 
+ /*#define ERR_DEBUG	*/
+@@ -565,7 +572,8 @@
+ 
+ #endif
+ 
+-#endif
++#endif /* unselected internal interfaces */
++#if 0
+ int ssl3_cert_verify_mac();
+ int ssl3_alert_code();
+ int tls1_new();
+@@ -582,3 +590,5 @@
+ int tls1_generate_master_secret();
+ int tls1_alert_code();
+ int ssl_ok();
++#endif
++#endif /* HEADER_SSL_LOCL_H */

@@ -20,7 +20,8 @@ Kept unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h
 `crypto/bio/b_dump.c`, `crypto/bio/bss_mem.c`, `crypto/bio/bio.h`,
 `crypto/buffer/buffer.c`, `crypto/buffer/buffer.h`, `ssl/ssl_stat.c`,
 `ssl/ssl3.h`, `ssl/ssl.h`, `ssl/ssl23.h`, `ssl/ssl_lib.c`, `ssl/s3_lib.c`,
-`ssl/s3_both.c`, `ssl/ssl_sess.c`, `crypto/cryptlib.c`
+`ssl/s3_both.c`, `ssl/ssl_sess.c`, `ssl/ssl_cert.c`, `ssl/ssl_locl.h`,
+`crypto/cryptlib.c`
 and `crypto/mem.c`, plus the upstream copyright file.
 The libssl LHASH, STACK, ex-data, BIO, buffer, SSL and runtime translation units
 read these files. The rest of the distribution is omitted.
@@ -263,8 +264,42 @@ the session before recording the native allocation error. The time pointer is
 stored only on success, preserving callback-visible state on failure. Four
 additional SSL-C helpers increment the reference count, copy the time object,
 read session-ID length and mark a session nonresumable; their descriptive names
-are ours. Function order follows native addresses. Session release, caching and
-the remaining donor operations are unselected and are not counted as implemented.
+are ours. Function order follows native addresses. Session release is selected
+separately as described below; caching and remaining donor operations are
+unselected and are not counted as implemented.
+
+`ssl/ssl_cert_layout_sce.patch` selects the donor's certificate-container types
+from pristine `ssl_locl.h`. SSL-C's container is104 bytes, with five12-byte
+certificate/key/algorithm slots and a reference count. Three temporary key
+handles retain their native order; their individual families are not assigned
+without evidence. The callback word at32 is live in the native certificate-mask
+routine and retains the upstream `rsa_tmp_cb` name. The added algorithm and
+temporary-key array names are ours. `ssl_cert_sce.patch` selects allocation and
+release, adapting temporary-key, certificate, algorithm and chain destruction
+to the native interfaces. Reference count greater than zero preserves ownership;
+nonpositive results release the contents. Cleanup does not clear these pointers.
+
+`ssl/ssl_sess_sm_sce.patch` separately selects session release from the same
+pristine session source. The consuming `ssl_sess_sm.c` filename is recovered
+from the native reference-count record. It releases the owned time, certificate
+container, peer certificate, cipher stack and extension list, then zeroes/frees
+the196-byte session. The extension-list pointer is captured before callbacks.
+The extension cleanup helper's descriptive name is ours: it frees data only
+when length is nonzero, clears data/length after the call, then frees the entry.
+The complete48-byte extension layout follows native allocation/get/set/copy
+operations; its two callback records retain opaque parameter words until their
+full handler contracts are reconstructed. These words are not padding.
+
+Peer-certificate and key-object destruction dispatchers retain their Sony NID
+link names and native integer statuses. Peer deletion uses a direct object
+method prefix; key deletion uses object -> context -> module. Their different
+null guards and method offsets are preserved. These interface prefixes do not
+claim complete concrete RI certificate/key storage or backend destructors.
+The key-module prefix retains its name and two uninterpreted identification
+words, followed by the observed context/key operations; no meaning is assigned
+to those identification values. No open-source donor has been identified for
+these backend interfaces or extension cleanup. Added filenames/private names
+are ours, under recovered MES/cert and CRYPTOCME/key component paths.
 
 `ssl/s3_both_sce.patch` selects buffer setup: allocate or enlarge the read buffer,
 preserve the current packet's32-bit relative address, retain capacities, and

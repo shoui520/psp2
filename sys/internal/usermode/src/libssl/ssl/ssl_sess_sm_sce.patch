@@ -1,0 +1,58 @@
+--- a/ssl_sess.c
++++ b/ssl_sess.c
+@@ -56,11 +56,9 @@
+  * [including the GNU Public Licence.]
+  */
+ 
+-#include <stdio.h>
+-#include "lhash.h"
+-#include "rand.h"
+-#include "ssl_locl.h"
++/* SCE: the consuming wrapper supplies the selected interfaces. */
+ 
++#if 0 /* SCE: this native translation unit contains session release. */
+ #ifndef NOPROTO
+ static void SSL_SESSION_list_remove(SSL_CTX *ctx, SSL_SESSION *s);
+ static void SSL_SESSION_list_add(SSL_CTX *ctx,SSL_SESSION *s);
+@@ -358,6 +356,8 @@
+ 	return(ret);
+ 	}
+ 
++#endif
++
+ void SSL_SESSION_free(ss)
+ SSL_SESSION *ss;
+ 	{
+@@ -376,18 +376,21 @@
+ 		}
+ #endif
+ 
+-	CRYPTO_free_ex_data(ssl_session_meth,(char *)ss,&ss->ex_data);
+-
+-	memset(ss->key_arg,0,SSL_MAX_KEY_ARG_LENGTH);
+-	memset(ss->master_key,0,SSL_MAX_MASTER_KEY_LENGTH);
+-	memset(ss->session_id,0,SSL_MAX_SSL_SESSION_ID_LENGTH);
++	if (ss->time != NULL) sslFreeTime(ss->time);
+ 	if (ss->cert != NULL) ssl_cert_free(ss->cert);
+ 	if (ss->peer != NULL) X509_free(ss->peer);
+ 	if (ss->ciphers != NULL) sk_free(ss->ciphers);
++	if (ss->extensions != NULL)
++		{
++		SslExtensionList *extensions=ss->extensions;
++		sk_pop_free(extensions->entries,(void (*)())sslExtensionFree);
++		Free(extensions);
++		}
+ 	memset(ss,0,sizeof(*ss));
+ 	Free(ss);
+ 	}
+ 
++#if 0
+ int SSL_set_session(s, session)
+ SSL *s;
+ SSL_SESSION *session;
+@@ -580,3 +583,5 @@
+ 		}
+ 	}
+ 
++#endif /* unselected session operations */
++

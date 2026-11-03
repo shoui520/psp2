@@ -10,7 +10,6 @@
 #define memset sslFillMemory
 #define SSL_F_SSL_SESSION_NEW 189
 #define ERR_R_MALLOC_FAILURE 33
-#define CRYPTO_LOCK_SSL_SESSION 14
 #define SSLerr(function, reason) sslPushError(20, function, reason, NULL, 0)
 
 #include "ssl_sess_sce.inc"

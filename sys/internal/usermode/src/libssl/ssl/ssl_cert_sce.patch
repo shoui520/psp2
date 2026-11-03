@@ -1,0 +1,70 @@
+--- a/ssl_cert.c
++++ b/ssl_cert.c
+@@ -57,11 +57,9 @@
+  */
+ 
+ #include <stdio.h>
+-#include "objects.h"
+-#include "bio.h"
+-#include "pem.h"
+-#include "ssl_locl.h"
++/* SCE: the consuming wrapper supplies the selected interfaces. */
+ 
++#if 0
+ int SSL_get_ex_data_X509_STORE_CTX_idx()
+ 	{
+ 	static int ssl_x509_store_ctx_idx= -1;
+@@ -74,6 +72,8 @@
+ 	return(ssl_x509_store_ctx_idx);
+ 	}
+ 
++#endif
++
+ CERT *ssl_cert_new()
+ 	{
+ 	CERT *ret;
+@@ -118,12 +118,10 @@
+ 		}
+ #endif
+ 
+-#ifndef NO_RSA
+-	if (c->rsa_tmp) RSA_free(c->rsa_tmp);
+-#endif
+-#ifndef NO_DH
+-	if (c->dh_tmp) DH_free(c->dh_tmp);
+-#endif
++	/* SCE: native temporary key ownership, before the five certificate slots. */
++	for (i=0; i<3; i++)
++		if (c->temporary_keys[i] != NULL)
++			EVP_PKEY_free(c->temporary_keys[i]);
+ 
+ 	for (i=0; i<SSL_PKEY_NUM; i++)
+ 		{
+@@ -131,16 +129,20 @@
+ 			X509_free(c->pkeys[i].x509);
+ 		if (c->pkeys[i].privatekey != NULL)
+ 			EVP_PKEY_free(c->pkeys[i].privatekey);
++		if (c->pkeys[i].algorithm != NULL)
++			sslDestroyAlgorithm(c->pkeys[i].algorithm);
+ #if 0
+ 		if (c->pkeys[i].publickey != NULL)
+ 			EVP_PKEY_free(c->pkeys[i].publickey);
+ #endif
+ 		}
+ 	if (c->cert_chain != NULL)
+-		sk_pop_free(c->cert_chain,X509_free);
++		/* SCE: the generic cleanup callback discards the integer status. */
++		sk_pop_free(c->cert_chain,(void (*)())X509_free);
+ 	Free(c);
+ 	}
+ 
++#if 0
+ int ssl_set_cert_type(c, type)
+ CERT *c;
+ int type;
+@@ -347,4 +349,5 @@
+ 	return(ret);
+ 	}
+ #endif
++#endif /* unselected certificate operations */
+ 

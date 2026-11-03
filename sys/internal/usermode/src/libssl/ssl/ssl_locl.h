@@ -10,6 +10,7 @@
 #include <scetypes.h>
 #include "../bio/bio.h"
 #include "../buffer/buffer.h"
+#include "../CRYPTOCME/common/module/crypto/cry_api.h"
 
 typedef struct ssl_ctx_st SSL_CTX;
 
@@ -30,6 +31,7 @@ typedef struct SslExtensionList {
 
 #include "ssl_sce.h"
 #include "ssl23_upstream.h"
+#include "ssl_cert_layout_sce.h"
 
 /* Descriptive callback typedef is ours; the upstream member name is retained. */
 typedef void (*SslInfoCallback)(SSL *ssl, int where, int result);
@@ -44,6 +46,9 @@ typedef void (*SslInfoCallback)(SSL *ssl, int where, int result);
 
 /* SSL-C option name is ours; the native shutdown dispatcher tests this bit. */
 #define SSL_OP_SHUTDOWN_IN_INIT 0x00040000UL
+
+/* Retained upstream lock index, shared by the session translation units. */
+#define CRYPTO_LOCK_SSL_SESSION 14
 
 #define SSL_in_init(s) ((s)->state & SSL_ST_INIT)
 #define SSL_in_before(s) ((s)->state & SSL_ST_BEFORE)
@@ -83,6 +88,9 @@ int ssl3_setup_buffers(SSL *ssl);
 void ssl_clear_cipher_ctx(SSL *ssl);
 SSL_SESSION *SSL_get_session(SSL *ssl);
 SSL_SESSION *SSL_SESSION_new(void);
+void SSL_SESSION_free(SSL_SESSION *session);
+CERT *ssl_cert_new(void);
+void ssl_cert_free(CERT *certificate);
 long SSL_SESSION_get_timeout(SSL_SESSION *session);
 /* Descriptive helper names are ours, not recovered Sony names. */
 int sslSessionAddReference(SSL_SESSION *session);
@@ -99,6 +107,11 @@ _Static_assert(sizeof(SslExtensionList) == 8, "SslExtensionList");
 _Static_assert(sizeof(SSL) == 352, "SSL");
 _Static_assert(sizeof(SSL_METHOD) == 88, "SSL_METHOD");
 _Static_assert(sizeof(SSL_SESSION) == 196, "SSL_SESSION");
+_Static_assert(sizeof(CERT) == 104, "CERT");
+_Static_assert(sizeof(CERT_PKEY) == 12, "CERT_PKEY");
+_Static_assert(offsetof(CERT, pkeys) == 36, "pkeys");
+_Static_assert(offsetof(CERT, rsa_tmp_cb) == 32, "rsa_tmp_cb");
+_Static_assert(offsetof(CERT, references) == 100, "references");
 _Static_assert(offsetof(SSL_SESSION, master_key_length) == 16, "master_key_length");
 _Static_assert(offsetof(SSL_SESSION, master_key) == 20, "master_key");
 _Static_assert(offsetof(SSL_SESSION, session_id_length) == 68, "session_id_length");
