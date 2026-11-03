@@ -38,7 +38,6 @@ STUB(SceSslInternal_260F5A85)
 STUB(SceSslInternal_26CBEEB6)
 STUB(SceSslInternal_29AAC768)
 STUB(SceSslInternal_2B90012E)
-STUB(SceSslInternal_2F0FC3CD)
 STUB(SceSslInternal_306E2A22)
 int SceSslInternal_33737FDC(void)
 {

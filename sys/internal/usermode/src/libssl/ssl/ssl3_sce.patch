@@ -4,9 +4,10 @@
  #ifndef HEADER_SSL3_H 
  #define HEADER_SSL3_H 
  
+-#include "buffer.h"
 +#ifndef SCE_SSL3_ALERTS_ONLY
 +#ifndef SCE_SSL3_CONSTANTS_ONLY
- #include "buffer.h"
++/* SCE: the consuming wrapper supplies buffer and stack interfaces. */
  
  #ifdef  __cplusplus
  extern "C" {
@@ -29,19 +30,86 @@
  #define SSL3_AD_ILLEGAL_PARAMETER	47	/* fatal */
  
 +#ifndef SCE_SSL3_ALERTS_ONLY
-+#ifndef SCE_SSL3_CONSTANTS_ONLY
++#if !defined(SCE_SSL3_CONSTANTS_ONLY) || defined(SCE_SSL3_OBJECTS)
  typedef struct ssl3_record_st
  	{
  /*r */	int type;		/* type of record */
-@@ -349,6 +356,7 @@
+@@ -218,6 +225,7 @@
+ /*rw*/	int left;		/* how many bytes left */
+ /*rw*/	int offset;		/* where to 'copy from' */
+ /*rw*/	unsigned char *buf;	/* SSL3_RT_MAX_PACKET_SIZE bytes */
++	unsigned int capacity; /* SCE: descriptive member name is ours. */
+ 	} SSL3_BUFFER;
+ 
+ #define SSL3_CT_RSA_SIGN			1
+@@ -267,12 +275,15 @@
+ 	int delay_buf_pop_ret;
+ 
+ 	unsigned char read_sequence[8];
+-	unsigned char read_mac_secret[EVP_MAX_MD_SIZE];
++	unsigned char read_mac_secret[SCE_SSL3_MAX_MD_SIZE];
+ 	unsigned char write_sequence[8];
+-	unsigned char write_mac_secret[EVP_MAX_MD_SIZE];
++	unsigned char write_mac_secret[SCE_SSL3_MAX_MD_SIZE];
+ 
+ 	unsigned char server_random[SSL3_RANDOM_SIZE];
+ 	unsigned char client_random[SSL3_RANDOM_SIZE];
++	/* SCE: only wipe/free accesses observed; descriptive names are ours. */
++	unsigned char *clearable_buffers[2];
++	unsigned int clearable_buffer_size;
+ 
+ 	SSL3_BUFFER rbuf;	/* read IO goes into here */
+ 	SSL3_BUFFER wbuf;	/* write IO goes into here */
+@@ -289,8 +300,8 @@
+ 	char *wpend_buf;
+ 
+ 	/* used during startup, digest all incoming/outgoing packets */
+-	EVP_MD_CTX finish_dgst1;
+-	EVP_MD_CTX finish_dgst2;
++	void *finish_dgst1;
++	void *finish_dgst2;
+ 
+ 	/* this is set whenerver we see a change_cipher_spec message
+ 	 * come in when we are not looking for one */
+@@ -313,14 +324,13 @@
+ 
+ 	struct	{
+ 		/* Actually only needs to be 16+20 for SSLv3 and 12 for TLS */
+-		unsigned char finish_md[EVP_MAX_MD_SIZE*2];
++		unsigned char finish_md[SCE_SSL3_MAX_MD_SIZE*2];
+ 		
+ 		unsigned long message_size;
+ 		int message_type;
+ 
+ 		/* used to hold the new cipher we are going to use */
+-		SSL_CIPHER *new_cipher;
+-		DH *dh;
++		struct ssl_cipher_st *new_cipher;
+ 
+ 		/* used when SSL_ST_FLUSH_DATA is entered */
+ 		int next_state;			
+@@ -338,17 +348,13 @@
+ 		int key_block_length;
+ 		unsigned char *key_block;
+ 
+-		EVP_CIPHER *new_sym_enc;
+-		EVP_MD *new_hash;
+-#ifdef HEADER_COMP_H
+-		COMP_METHOD *new_compression;
+-#else
+-		char *new_compression;
+-#endif
++		void *new_sym_enc;
++		void *new_hash;
+ 		int cert_request;
  		} tmp;
  	} SSL3_CTX;
  
-+#endif /* SSL3 object layouts are reconstructed separately */
++#endif /* selected SSL3 object layouts */
  /* SSLv3 */
  /*client */
  /* extra state */
-@@ -448,8 +456,11 @@
+@@ -448,8 +454,11 @@
  #define SSL3_CHANGE_CIPHER_CLIENT_READ	(SSL3_CC_CLIENT|SSL3_CC_READ)
  #define SSL3_CHANGE_CIPHER_SERVER_WRITE	(SSL3_CC_SERVER|SSL3_CC_WRITE)
  

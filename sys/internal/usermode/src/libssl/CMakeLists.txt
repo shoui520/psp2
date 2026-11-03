@@ -40,6 +40,12 @@ libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_stat.c
 libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_lib.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_lib_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/ssl_lib_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/s3_lib.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/s3_lib_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/s3_lib_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/s3_both.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/s3_both_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/s3_both_sce.inc)
 libssl_prepare_patched(${libssl_ssleay}/ssl/ssl3.h
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl3_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/ssl3_sce.h)
@@ -63,7 +69,9 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	asn1interpreter.c
 	ex_data.c
 	ssl/ssl_stat.c
+	ssl/s3_both.c
 	ssl/ssl_lib.c
+	ssl/s3_lib.c
 	err/err.c
 	buffer/buffer.c
 	bio/bio_flags.c

@@ -19,7 +19,8 @@ Kept unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h
 `crypto/bio/bio_lib.c`, `crypto/bio/bss_sock.c`, `crypto/bio/b_print.c`,
 `crypto/bio/b_dump.c`, `crypto/bio/bss_mem.c`, `crypto/bio/bio.h`,
 `crypto/buffer/buffer.c`, `crypto/buffer/buffer.h`, `ssl/ssl_stat.c`,
-`ssl/ssl3.h`, `ssl/ssl.h`, `ssl/ssl23.h`, `ssl/ssl_lib.c`, `crypto/cryptlib.c`
+`ssl/ssl3.h`, `ssl/ssl.h`, `ssl/ssl23.h`, `ssl/ssl_lib.c`, `ssl/s3_lib.c`,
+`ssl/s3_both.c`, `crypto/cryptlib.c`
 and `crypto/mem.c`, plus the upstream copyright file.
 The libssl LHASH, STACK, ex-data, BIO, buffer, SSL and runtime translation units
 read these files. The rest of the distribution is omitted.
@@ -161,10 +162,10 @@ limits and algorithm/key handles follow native readers and writers. The reserved
 word has no independently observed access. Opaque pointees remain incomplete;
 this layout does not claim implementation of their allocation or behavior.
 
-`ssl/ssl_lib_sce.patch` selects sixteen original connection operations: BIO and
+`ssl/ssl_lib_sce.patch` selects seventeen original connection operations: BIO and
 method getters, textual/numeric version, context getter, shutdown setter/getter,
 information callback getter, state getter, pending, read, peek, write, shutdown,
-and handshake dispatch. The textual version includes the
+handshake dispatch, and error classification. The textual version includes the
 native TLS1.1 label `TLSv11` and excludes SSL2. The consuming wrapper retains
 Sony's NID export link names and separately compiles the original rwstate query,
 which is a macro in this upstream baseline. The remaining SSL library routines
@@ -181,3 +182,29 @@ SSL-C's error20/209/207 and returns-1. Handshake dispatch retains the native
 null-handler error20/180/144, renegotiation check, state reload and subsequent
 handshake callback. These dispatch bodies do not establish completion of the
 protocol callbacks they invoke.
+
+`ssl/ssl3_sce.patch` also adapts the complete580-byte SSL3 state,24-byte record
+and24-byte buffer types. SSL-C uses64-byte MAC-secret arrays, buffer capacities,
+pointer-based handshake digest contexts, and a temporary state without the
+donor's DH and compression pointers. The certificate-request flag remains the
+last member. Two additional buffers are only observed being wiped and freed;
+their descriptive names and the bound/capacity names are ours, without a claim
+about the buffers' original purpose. The consuming header asserts the complete
+size and the key record, alert, digest and temporary-state offsets.
+
+`ssl/s3_lib_sce.patch` selects `ssl3_new` and `ssl3_pending`. Allocation failure
+records SSL-C error20/147/33, and pending returns0 while the record body is being
+read. All other operations in that pristine file, including protocol tables,
+clear and free, remain unselected and are not counted as implemented.
+
+`ssl/s3_both_sce.patch` selects buffer setup: allocate or enlarge the read buffer,
+preserve the current packet's32-bit relative address, retain capacities, and
+allocate/zero the write buffer from the clamped fragment size plus101. The
+connection's send fragment resets to2048 before write allocation, including on
+failure. The read resize helper is an SSL-C addition; its descriptive name is
+ours. Other handshake operations in the donor are excluded.
+
+Error classification preserves SSL-C's system-error library mapping, distinct
+read/write special-retry handling, extension-wait condition for SSL3 through
+TLS1.1 servers, and close-alert test. The additional retry/error names are ours;
+they are not assigned newer OpenSSL meanings based only on their numeric values.

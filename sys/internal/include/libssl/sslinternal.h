@@ -74,7 +74,7 @@ void SceSslInternal_F2C9B744(void *ssl, SceSslInternalInfoCallback callback);
 void SceSslInternal_F71DB06F(void *ssl, SceSslInternalMessageCallback callback, void *arg);
 void SceSslInternal_CEE46B33(void *ssl);
 int SceSslInternal_E5EDD91B(struct ssl_st *ssl);
-int SceSslInternal_2F0FC3CD(void *ssl, int ret);
+int SceSslInternal_2F0FC3CD(struct ssl_st *ssl, int ret);
 int SceSslInternal_4F781BB6(struct ssl_st *ssl, void *buf, int len);
 int SceSslInternal_24C6257F(void *ssl, int what, void **value);
 int SceSslInternal_A4EA9DE0(void *ssl);

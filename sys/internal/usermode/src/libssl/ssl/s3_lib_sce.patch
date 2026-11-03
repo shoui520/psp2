@@ -1,0 +1,47 @@
+--- a/s3_lib.c
++++ b/s3_lib.c
+@@ -57,9 +57,9 @@
+  */
+ 
+ #include <stdio.h>
+-#include "objects.h"
+-#include "ssl_locl.h"
++/* SCE: the consuming wrapper supplies the identified SSL interfaces. */
+ 
++#if 0 /* SCE: cipher registry and remaining protocol operations are not selected. */
+ char *ssl3_version_str="SSLv3 part of SSLeay 0.9.1a 06-Jul-1998";
+ 
+ #define SSL3_NUM_CIPHERS	(sizeof(ssl3_ciphers)/sizeof(SSL_CIPHER))
+@@ -424,9 +424,13 @@
+ 	}
+ 
+ /* The problem is that it may not be the correct record type */
++#endif
++
+ int ssl3_pending(s)
+ SSL *s;
+ 	{
++	if (s->rstate == SSL_ST_READ_BODY)
++		return(0);
+ 	return(s->s3->rrec.length);
+ 	}
+ 
+@@ -450,9 +454,12 @@
+ 	s->method->ssl_clear(s);
+ 	return(1);
+ err:
++	SSLerr(SSL_F_SSL3_NEW,ERR_R_MALLOC_FAILURE);
+ 	return(0);
+ 	}
+ 
++#if 0
++
+ void ssl3_free(s)
+ SSL *s;
+ 	{
+@@ -984,4 +991,4 @@
+ 	return(ret);
+ 	}
+ 
+-
++#endif /* remaining SSL3 library operations */

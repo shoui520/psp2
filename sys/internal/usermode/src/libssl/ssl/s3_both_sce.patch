@@ -1,0 +1,62 @@
+--- a/s3_both.c
++++ b/s3_both.c
+@@ -57,13 +57,9 @@
+  */
+ 
+ #include <stdio.h>
+-#include "buffer.h"
+-#include "rand.h"
+-#include "objects.h"
+-#include "evp.h"
+-#include "x509.h"
+-#include "ssl_locl.h"
++/* SCE: the consuming wrapper supplies the identified SSL interfaces. */
+ 
++#if 0 /* SCE: remaining handshake operations are not selected. */
+ #define BREAK	break
+ 
+ /* SSL3err(SSL_F_SSL3_GET_FINISHED,SSL_R_EXCESSIVE_MESSAGE_SIZE);
+@@ -460,30 +456,34 @@
+ 	return(al);
+ 	}
+ 
++#endif
++
+ int ssl3_setup_buffers(s)
+ SSL *s;
+ 	{
+ 	unsigned char *p;
+-	unsigned int extra;
++	int fragment;
++	unsigned int capacity;
+ 
+ 	if (s->s3->rbuf.buf == NULL)
+ 		{
+-		if (s->options & SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER)
+-			extra=SSL3_RT_MAX_EXTRA;
+-		else
+-			extra=0;
+-		if ((p=(unsigned char *)Malloc(SSL3_RT_MAX_PACKET_SIZE+extra))
+-			== NULL)
++		if (!ssl3ResizeReadBuffer(s,s->read_buffer_size))
+ 			goto err;
+-		s->s3->rbuf.buf=p;
+ 		}
+ 
+ 	if (s->s3->wbuf.buf == NULL)
+ 		{
+-		if ((p=(unsigned char *)Malloc(SSL3_RT_MAX_PACKET_SIZE))
++		fragment=s->max_send_fragment;
++		if (fragment <= 0 || fragment > SSL3_RT_MAX_PLAIN_LENGTH)
++			fragment=SSL3_RT_MAX_PLAIN_LENGTH;
++		s->max_send_fragment=SCE_SSL3_INITIAL_SEND_FRAGMENT;
++		capacity=fragment+SCE_SSL3_WRITE_OVERHEAD;
++		if ((p=(unsigned char *)Malloc(capacity))
+ 			== NULL)
+ 			goto err;
++		memset(p,0,capacity);
+ 		s->s3->wbuf.buf=p;
++		s->s3->wbuf.capacity=capacity;
+ 		}
+ 	s->packet= &(s->s3->rbuf.buf[0]);
+ 	return(1);
