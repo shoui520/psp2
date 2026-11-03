@@ -85,6 +85,7 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	CRYPTOCME/common/module/crypto/cry_info.c
 	runtime.c
 	memory.c
+	time.c
 	libssl.c
 )
 target_include_directories(vs0_sys_external_libssl PRIVATE

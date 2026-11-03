@@ -233,6 +233,20 @@ method declarations cover only the shared prefixes used here. Additional
 descriptive helper, selector and interface names, and key_api/cry_info filenames,
 are ours. No open-source donor has been identified for these backend operations.
 
+The separate SSL-C time-object interface is reconstructed in the consuming
+module's `time.c` and `time.h`; those filenames and descriptive private names
+are ours. No open-source donor has been identified for this interface. Its native
+object is12 bytes, with high/low seconds and milliseconds. The selected operations
+cover creation, destruction, current-time/add/compare/encode/decode dispatch,
+callback registration and a four-byte big-endian seconds decoder. Creation uses
+the existing allocator and free callbacks, invokes the current-time callback
+after allocation and frees the original allocation on callback failure; success
+returns the callback's pointer. No callback is captured across allocation.
+Absent optional callbacks return null/zero. Free still invokes the configured
+memory destructor, including for null. The platform clock/codec implementations
+and the unsigned-seconds getter are not selected by this batch; these interface
+bodies do not establish complete session-expiry implementation.
+
 `ssl/s3_both_sce.patch` selects buffer setup: allocate or enlarge the read buffer,
 preserve the current packet's32-bit relative address, retain capacities, and
 allocate/zero the write buffer from the clamped fragment size plus101. The
