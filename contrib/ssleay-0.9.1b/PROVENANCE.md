@@ -16,8 +16,9 @@ Archive SHA-256:
 
 Kept unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h`,
 `crypto/stack/stack.c`, `crypto/stack/stack.h`, `crypto/ex_data.c`,
-`crypto/bio/bio_lib.c`, `crypto/bio/bss_sock.c` and `crypto/bio/bio.h`, plus the upstream copyright file.
-The libssl LHASH, STACK, ex-data and BIO translation units
+`crypto/bio/bio_lib.c`, `crypto/bio/bss_sock.c`, `crypto/bio/bio.h`,
+`crypto/cryptlib.c` and `crypto/mem.c`, plus the upstream copyright file.
+The libssl LHASH, STACK, ex-data, BIO and runtime translation units
 read these files. The rest of the distribution is omitted.
 
 The baseline was selected by compiling historical releases with Sony SNC and
@@ -97,3 +98,20 @@ inline the same source as the out-of-line public dispatcher, preserving native
 call structure without duplicating or hand-reimplementing the upstream body.
 The three additional retry flag helpers are SSL-C's separately compiled forms
 of upstream operations, with null handling and the extra retry bit retained.
+
+`cryptlib_sce.patch` selects the lock and thread-ID callback operations from
+`crypto/cryptlib.c`. SSL-C's setters return1, its lock callback returns a status,
+and its thread-ID callback takes an integer argument0 and defaults to ID0.
+Reference updates preserve32-bit wrapping, lock-failure returns and the callback
+reload after locking. The add-lock callback owns the update when installed.
+The upstream lock-name registry and platform entry points are excluded; their
+presence in the donor establishes no native identity or implemented coverage.
+The consuming runtime wrapper's descriptive bindings are ours.
+
+`mem_ctrl_sce.patch` selects only `CRYPTO_mem_ctrl` from `crypto/mem.c`, retaining
+its four state-bit operations with SSL-C's unsigned32-bit return and absence of
+locking calls. The remaining allocation and memory-debug machinery in that file
+is excluded, without a claim that those operations match the native library.
+SSL-C's error queue is implemented separately: its global sixteen-entry array of
+thread IDs and packed error codes differs from upstream's allocated per-thread
+error state, so the upstream error implementation is not substituted for it.

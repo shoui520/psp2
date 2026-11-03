@@ -1,0 +1,59 @@
+--- a/mem.c
++++ b/mem.c
+@@ -58,16 +58,10 @@
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+-#include "buffer.h"
+-#include "bio.h"
+-#include "lhash.h"
+-#include "cryptlib.h"
+-
+-#ifdef CRYPTO_MDEBUG
+-static int mh_mode=CRYPTO_MEM_CHECK_ON;
+-#else
+-static int mh_mode=CRYPTO_MEM_CHECK_OFF;
+-#endif
++/* SCE: runtime types are supplied by the consuming module. */
++
++static SceUInt32 mh_mode=CRYPTO_MEM_CHECK_OFF;
++#if 0 /* SCE: only the identified memory-control state is built from this file. */
+ static unsigned long order=0;
+ 
+ static LHASH *mh=NULL;
+@@ -80,13 +74,14 @@
+ 	int line;
+ 	unsigned long order;
+ 	} MEM;
++#endif
+ 
+-int CRYPTO_mem_ctrl(mode)
++SceUInt32 CRYPTO_mem_ctrl(mode)
+ int mode;
+ 	{
+-	int ret=mh_mode;
++	SceUInt32 ret=mh_mode;
+ 
+-	CRYPTO_w_lock(CRYPTO_LOCK_MALLOC);
++	/* SCE: the original performs no lock callbacks around this state update. */
+ 	switch (mode)
+ 		{
+ 	case CRYPTO_MEM_CHECK_ON:
+@@ -105,10 +100,10 @@
+ 	default:
+ 		break;
+ 		}
+-	CRYPTO_w_unlock(CRYPTO_LOCK_MALLOC);
+ 	return(ret);
+ 	}
+ 
++#if 0 /* SCE: remaining upstream allocator/debug helpers are not selected. */
+ static int mem_cmp(a,b)
+ MEM *a,*b;
+ 	{
+@@ -410,4 +405,5 @@
+ 	BIO_free(b);
+ 	}
+ #endif
++#endif /* unused upstream allocator/debug implementation */
+ 

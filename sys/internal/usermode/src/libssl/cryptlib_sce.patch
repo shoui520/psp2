@@ -1,0 +1,196 @@
+--- a/cryptlib.c
++++ b/cryptlib.c
+@@ -58,15 +58,14 @@
+ 
+ #include <stdio.h>
+ #include <string.h>
+-#include "cryptlib.h"
+-#include "crypto.h"
+-#include "date.h"
++/* SCE: runtime types are supplied by the consuming module. */
+ 
+ #if defined(WIN32) || defined(WIN16)
+ static double SSLeay_MSVC5_hack=0.0; /* and for VC1.5 */
+ #endif
+ 
+ /* real #defines in crypto.h, keep these upto date */
++#if 0 /* SCE: this unit builds the identified callback family, not lock registries. */
+ static char* lock_names[CRYPTO_NUM_LOCKS] =
+ 	{
+ 	"<<ERROR>>",
+@@ -93,19 +92,14 @@
+ 	};
+ 
+ static STACK *app_locks=NULL;
+-
+-#ifndef NOPROTO
+-static void (MS_FAR *locking_callback)(int mode,int type,
+-	char *file,int line)=NULL;
+-static int (MS_FAR *add_lock_callback)(int *pointer,int amount,
+-	int type,char *file,int line)=NULL;
+-static unsigned long (MS_FAR *id_callback)(void)=NULL;
+-#else
+-static void (MS_FAR *locking_callback)()=NULL;
+-static int (MS_FAR *add_lock_callback)()=NULL;
+-static unsigned long (MS_FAR *id_callback)()=NULL;
+ #endif
+ 
++/* SCE: locking callbacks return status; thread callbacks take a zero argument. */
++static SslLockCallback locking_callback=NULL;
++static SslAddLockCallback add_lock_callback=NULL;
++static SslThreadCallback id_callback=NULL;
++
++#if 0 /* SCE: dynamic lock registration is not consumed by this adaptation. */
+ int CRYPTO_get_new_lockid(name)
+ char *name;
+ 	{
+@@ -135,64 +129,57 @@
+ 	return(i);
+ 	}
+ 
+-void (*CRYPTO_get_locking_callback(P_V))(P_I_I_P_I)
++#endif
++
++SslLockCallback CRYPTO_get_locking_callback(void)
+ 	{
+ 	return(locking_callback);
+ 	}
+ 
+-int (*CRYPTO_get_add_lock_callback(P_V))(P_IP_I_I_P_I)
++SslAddLockCallback CRYPTO_get_add_lock_callback(void)
+ 	{
+ 	return(add_lock_callback);
+ 	}
+ 
+-void CRYPTO_set_locking_callback(func)
+-void (*func)(P_I_I_P_I);
++int CRYPTO_set_locking_callback(func)
++SslLockCallback func;
+ 	{
+ 	locking_callback=func;
++	return(1);
+ 	}
+ 
+-void CRYPTO_set_add_lock_callback(func)
+-int (*func)(P_IP_I_I_P_I);
++int CRYPTO_set_add_lock_callback(func)
++SslAddLockCallback func;
+ 	{
+ 	add_lock_callback=func;
++	return(1);
+ 	}
+ 
+-unsigned long (*CRYPTO_get_id_callback(P_V))(P_V)
++SslThreadCallback CRYPTO_get_id_callback(void)
+ 	{
+ 	return(id_callback);
+ 	}
+ 
+-void CRYPTO_set_id_callback(func)
+-unsigned long (*func)(P_V);
++int CRYPTO_set_id_callback(func)
++SslThreadCallback func;
+ 	{
+ 	id_callback=func;
++	return(1);
+ 	}
+ 
+-unsigned long CRYPTO_thread_id()
++SceUInt32 CRYPTO_thread_id()
+ 	{
+-	unsigned long ret=0;
++	SceUInt32 ret=0;
+ 
+-	if (id_callback == NULL)
+-		{
+-#ifdef WIN16
+-		ret=(unsigned long)GetCurrentTask();
+-#elif defined(WIN32)
+-		ret=(unsigned long)GetCurrentThreadId();
+-#elif defined(MSDOS)
+-		ret=1L;
+-#else
+-		ret=(unsigned long)getpid();
+-#endif
+-		}
+-	else
+-		ret=id_callback();
++	if (id_callback != NULL)
++		ret=id_callback(0);
+ 	return(ret);
+ 	}
+ 
+-void CRYPTO_lock(mode,type,file,line)
++int CRYPTO_lock(mode,type,file,line)
+ int mode;
+ int type;
+-char *file;
++const char *file;
+ int line;
+ 	{
+ #ifdef LOCK_DEBUG
+@@ -219,17 +206,19 @@
+ 		}
+ #endif
+ 	if (locking_callback != NULL)
+-		locking_callback(mode,type,file,line);
++		return(locking_callback(mode,type,file,line));
++	return(1);
+ 	}
+ 
+ int CRYPTO_add_lock(pointer,amount,type,file,line)
+ int *pointer;
+ int amount;
+ int type;
+-char *file;
++const char *file;
+ int line;
+ 	{
+ 	int ret;
++	SslLockCallback callback;
+ 
+ 	if (add_lock_callback != NULL)
+ 		{
+@@ -245,13 +234,18 @@
+ 			CRYPTO_get_lock_name(type),
+ 			file,line);
+ #endif
+-		*pointer=ret;
+ 		}
+ 	else
+ 		{
+-		CRYPTO_lock(CRYPTO_LOCK|CRYPTO_WRITE,type,file,line);
+-
+-		ret= *pointer+amount;
++		/* SCE: failures return-1; reload and retain the callback after locking. */
++		callback=locking_callback;
++		if (callback != NULL)
++			{
++			ret=callback(SSL_LOCK_REFERENCE,type,file,line);
++			callback=locking_callback;
++			if (!ret) return(-1);
++			}
++		ret=(SceInt32)((SceUInt32)*pointer+(SceUInt32)amount);
+ #ifdef LOCK_DEBUG
+ 		fprintf(stderr,"ladd:%08lx:%2d+%2d->%2d %-18s %s:%d\n",
+ 			CRYPTO_thread_id(),
+@@ -260,11 +254,13 @@
+ 			file,line);
+ #endif
+ 		*pointer=ret;
+-		CRYPTO_lock(CRYPTO_UNLOCK|CRYPTO_WRITE,type,file,line);
++		if (callback != NULL && !callback(SSL_UNLOCK_REFERENCE,type,file,line))
++			return(-1);
+ 		}
+ 	return(ret);
+ 	}
+ 
++#if 0 /* SCE: no original identity claimed for the remaining upstream helpers. */
+ char *CRYPTO_get_lock_name(type)
+ int type;
+ 	{
+@@ -306,3 +302,4 @@
+ #endif
+ 
+ #endif
++#endif /* unused upstream lock registry / DLL entry */

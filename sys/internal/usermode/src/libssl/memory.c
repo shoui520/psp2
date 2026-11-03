@@ -70,3 +70,8 @@ void *sslFillMemory(void *destination, int value, SceUInt32 size)
 {
 	return sceClibMemset(destination, value, size);
 }
+
+void *sslMoveMemory(void *destination, const void *source, SceUInt32 size)
+{
+	return sceClibMemmove(destination, source, size);
+}
