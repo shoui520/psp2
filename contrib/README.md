@@ -29,7 +29,7 @@ upstream. When a build needs another file, add it from the same release.
 | sqlite-3.6.23.1 | SQLite 3.6.23.1 amalgamation | `sqlite3.c`, `sqlite3.h` | libSceSqlite |
 | sqlite-3.7.6.3 | SQLite 3.7.6.3 source archive | what configure and the amalgamation build read | sqlite |
 | squish-1.11 | Simon Brown's libsquish 1.11 | the library sources and headers (`PROVENANCE.md`) | libpaf (`squish.h`, for the DXT filters) |
-| ssleay-0.9.1b | Eric Young's SSLeay 0.9.1b, retained in OpenSSL's historical repository | LHASH, STACK, ex-data, BIO core/socket, runtime callbacks, memory-control state and their headers (`PROVENANCE.md`) | libssl (with separate SSL-C adaptation patches) |
+| ssleay-0.9.1b | Eric Young's SSLeay 0.9.1b, retained in OpenSSL's historical repository | LHASH, STACK, ex-data, BIO core/socket/formatting, runtime callbacks, memory-control state and their headers (`PROVENANCE.md`) | libssl (with separate SSL-C adaptation patches) |
 | zlib-1.2.5 | zlib 1.2.5 | the library sources | post_ss_mgr (`post_ss_mgr/zlib`) |
 
 Upstream code that no module builds from yet is not vendored; it is added here when a

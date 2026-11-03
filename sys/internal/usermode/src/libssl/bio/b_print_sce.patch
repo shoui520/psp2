@@ -1,0 +1,39 @@
+--- a/b_print.c
++++ b/b_print.c
+@@ -61,8 +61,7 @@
+  */
+ 
+ #include <stdio.h>
+-#include "cryptlib.h"
+-#include "bio.h"
++/* SCE: the consuming wrapper provides BIO and its formatting adapter. */
+ 
+ int BIO_printf ( VAR_PLIST( BIO *, bio ) )
+ VAR_ALIST
+@@ -70,10 +69,15 @@
+ 	VAR_BDEFN(args, BIO *, bio);
+ 	char *format;
+ 	int ret;
+-	MS_STATIC char hugebuf[1024*2]; /* 10k in one chunk is the limit */
++	char hugebuf[1024];
+ 
+ 	VAR_INIT(args, BIO *, bio);
+ 	VAR_ARG(args, char *, format);
++	if (bio == NULL)
++		{
++		VAR_END(args);
++		return(0);
++		}
+ 
+ 	hugebuf[0]='\0';
+ 
+@@ -81,7 +85,8 @@
+ #if 0 && defined(sun) && !defined(VAR_ANSI) /**/
+ 	_doprnt(hugebuf,format,args);
+ #else /* !sun */
+-	vsprintf(hugebuf,format,args);
++	if (sslVFormatString(hugebuf,sizeof(hugebuf),format,args) == -1)
++		hugebuf[sizeof(hugebuf)-1]='\0';
+ #endif /* sun */
+ 
+ 	ret=BIO_write(bio,hugebuf,strlen(hugebuf));

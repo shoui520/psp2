@@ -10,6 +10,7 @@
 #define BIO_write SceSslInternal_33AC7A16
 #define BIO_free SceSslInternal_C4D984C2
 #define BIO_new_socket SceSslInternal_FFE2ED51
+#define BIO_printf SceSslInternal_CB83EA07
 #include "bio_sce.h"
 
 /* SSL-C turns these upstream macros into separately compiled helpers. */

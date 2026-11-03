@@ -19,6 +19,12 @@ libssl_prepare_patched(${libssl_ssleay}/crypto/bio/bio_lib.c
 libssl_prepare_patched(${libssl_ssleay}/crypto/bio/bss_sock.c
 	${CMAKE_CURRENT_SOURCE_DIR}/bio/bss_sock_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/bss_sock_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/crypto/bio/b_print.c
+	${CMAKE_CURRENT_SOURCE_DIR}/bio/b_print_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/b_print_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/crypto/bio/b_dump.c
+	${CMAKE_CURRENT_SOURCE_DIR}/bio/b_dump_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/b_dump_sce.inc)
 libssl_prepare_patched(${libssl_ssleay}/crypto/cryptlib.c
 	${CMAKE_CURRENT_SOURCE_DIR}/cryptlib_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/cryptlib_sce.inc)
@@ -29,11 +35,14 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	asn1.c
 	bio/bio_lib.c
 	bio/bss_sock.c
+	bio/b_print.c
+	bio/b_dump.c
 	asn1interpreter.c
 	ex_data.c
 	err/err.c
 	bio/bio_flags.c
 	string.c
+	format.c
 	lhash/lhash.c
 	stack/stack.c
 	runtime.c

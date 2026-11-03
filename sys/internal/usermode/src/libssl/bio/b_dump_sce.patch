@@ -1,0 +1,68 @@
+--- a/b_dump.c
++++ b/b_dump.c
+@@ -61,10 +61,9 @@
+  */
+ 
+ #include <stdio.h>
+-#include "cryptlib.h"
+-#include "bio.h"
++/* SCE: the consuming wrapper provides BIO and bounded string adapters. */
+ 
+-#define TRUNCATE
++/* SCE: trailing spaces and NULs are included in the dump. */
+ #define DUMP_WIDTH	16
+ 
+ int BIO_dump(bio,s,len)
+@@ -72,7 +71,7 @@
+ char *s;
+ int len;
+ {
+-  int ret=0;
++  int ret=1;
+   char buf[160+1],tmp[20];
+   int i,j,rows,trunc;
+   unsigned char ch;
+@@ -89,30 +88,33 @@
+     rows++;
+   for(i=0;i<rows;i++) {
+     buf[0]='\0';	/* start with empty string */
+-    sprintf(tmp,"%04x - ",i*DUMP_WIDTH);
+-    strcpy(buf,tmp);
++    sslFormatString(tmp,sizeof(tmp),"%04x - ",i*DUMP_WIDTH);
++    sslCopyString(buf,tmp,sizeof(buf));
+     for(j=0;j<DUMP_WIDTH;j++) {
+       if (((i*DUMP_WIDTH)+j)>=len) {
+-	strcat(buf,"   ");
++	sslAppendString(buf,"   ",sizeof(buf));
+       } else {
+         ch=((unsigned char)*((char *)(s)+i*DUMP_WIDTH+j)) & 0xff;
+-	sprintf(tmp,"%02x%c",ch,j==7?'-':' ');
+-        strcat(buf,tmp);
++	sslFormatString(tmp,sizeof(tmp),"%02x%c",ch,j==7?'-':' ');
++        sslAppendString(buf,tmp,sizeof(buf));
+       }
+     }
+-    strcat(buf,"  ");
++    sslAppendString(buf,"  ",sizeof(buf));
+     for(j=0;j<DUMP_WIDTH;j++) {
+       if (((i*DUMP_WIDTH)+j)>=len)
+ 	break;
+       ch=((unsigned char)*((char *)(s)+i*DUMP_WIDTH+j)) & 0xff;
+-      sprintf(tmp,"%c",((ch>=' ')&&(ch<='~'))?ch:'.');
+-      strcat(buf,tmp);
++      sslFormatString(tmp,sizeof(tmp),"%c",((ch>=' ')&&(ch<='~'))?ch:'.');
++      sslAppendString(buf,tmp,sizeof(buf));
+     }
+-    strcat(buf,"\n");
++    sslAppendString(buf,"\n",sizeof(buf));
+     /* if this is the last call then update the ddt_dump thing so that
+      * we will move the selection point in the debug window 
+      */
+-    ret+=BIO_write(bio,(char *)buf,strlen(buf));
++    if (BIO_write(bio,(char *)buf,strlen(buf)) <= 0) {
++      ret=-1;
++      break;
++    }
+   }
+ #ifdef TRUNCATE
+   if (trunc > 0) {

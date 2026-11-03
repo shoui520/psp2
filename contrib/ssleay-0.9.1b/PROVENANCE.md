@@ -16,7 +16,8 @@ Archive SHA-256:
 
 Kept unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h`,
 `crypto/stack/stack.c`, `crypto/stack/stack.h`, `crypto/ex_data.c`,
-`crypto/bio/bio_lib.c`, `crypto/bio/bss_sock.c`, `crypto/bio/bio.h`,
+`crypto/bio/bio_lib.c`, `crypto/bio/bss_sock.c`, `crypto/bio/b_print.c`,
+`crypto/bio/b_dump.c`, `crypto/bio/bio.h`,
 `crypto/cryptlib.c` and `crypto/mem.c`, plus the upstream copyright file.
 The libssl LHASH, STACK, ex-data, BIO and runtime translation units
 read these files. The rest of the distribution is omitted.
@@ -115,3 +116,11 @@ is excluded, without a claim that those operations match the native library.
 SSL-C's error queue is implemented separately: its global sixteen-entry array of
 thread IDs and packed error codes differs from upstream's allocated per-thread
 error state, so the upstream error implementation is not substituted for it.
+
+`bio/b_print_sce.patch` retains the upstream varargs interface, with SSL-C's
+null-BIO return0,1024-byte buffer, bounded formatter and final-byte termination
+when formatting returns-1. `bio/b_dump_sce.patch` disables trailing-space/NUL
+truncation, binds bounded formatting/copy/append operations and returns1 after
+successful rows or-1 on the first nonpositive write. Its row formats,16-byte
+width and ASCII range follow upstream. The string and formatter adapter names
+are ours; they wrap the original Sony LibKernel imports.
