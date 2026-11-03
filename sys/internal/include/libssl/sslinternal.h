@@ -42,7 +42,8 @@ typedef void (*SceSslInternalMessageCallback)(void);
 int sceSslInternalIsInitalized(void);
 int sceSslInternalGetCertificateAuthority(int store, int index, const char ***pem, void *buf,
 					  SceSize size, SceSize *outSize);
-int sceSslInternalWrite(void *ssl, const void *buf, int len);
+struct ssl_st;
+int sceSslInternalWrite(struct ssl_st *ssl, const void *buf, int len);
 
 /* the library, its client method, contexts and their settings */
 int SceSslInternal_2185BB05(void **lib);
@@ -59,22 +60,22 @@ int SceSslInternal_AF50B945(void *ctx, SceSslInternalCallback callback, void *ar
 int SceSslInternal_461C5990(int library, int error);
 
 /* connections */
-struct ssl_st;
 int SceSslInternal_3EF42454(struct ssl_st *ssl);
 int SceSslInternal_6F3B9809(struct ssl_st *ssl);
 int SceSslInternal_B1745DAD(struct ssl_st *ssl);
 int SceSslInternal_D6D32A2F(struct ssl_st *ssl);
 void *SceSslInternal_D28834E6(void *ctx);
 void SceSslInternal_19B2BB58(void *ssl);
-void SceSslInternal_EC9FAF42(void *ssl);
+int SceSslInternal_EC9FAF42(struct ssl_st *ssl);
+int SceSslInternal_D776E2F8(struct ssl_st *ssl);
 void SceSslInternal_0DB6C206(void *ssl, SceUInt32 mode);
 void SceSslInternal_4A1557A7(void *ssl, void *rbio, void *wbio);
 void SceSslInternal_F2C9B744(void *ssl, SceSslInternalInfoCallback callback);
 void SceSslInternal_F71DB06F(void *ssl, SceSslInternalMessageCallback callback, void *arg);
 void SceSslInternal_CEE46B33(void *ssl);
-int SceSslInternal_E5EDD91B(void *ssl);
+int SceSslInternal_E5EDD91B(struct ssl_st *ssl);
 int SceSslInternal_2F0FC3CD(void *ssl, int ret);
-int SceSslInternal_4F781BB6(void *ssl, void *buf, int len);
+int SceSslInternal_4F781BB6(struct ssl_st *ssl, void *buf, int len);
 int SceSslInternal_24C6257F(void *ssl, int what, void **value);
 int SceSslInternal_A4EA9DE0(void *ssl);
 int SceSslInternal_243DE290(void *ssl, int index, void **name);

@@ -101,6 +101,9 @@ inline the same source as the out-of-line public dispatcher, preserving native
 call structure without duplicating or hand-reimplementing the upstream body.
 The three additional retry flag helpers are SSL-C's separately compiled forms
 of upstream operations, with null handling and the extra retry bit retained.
+The read/write/special query functions also compile the pristine upstream macros,
+adding the native null-input return of-1. Function declarations preserve these
+macros for other call sites that inline them in the original.
 
 `cryptlib_sce.patch` selects the lock and thread-ID callback operations from
 `crypto/cryptlib.c`. SSL-C's setters return1, its lock callback returns a status,
@@ -158,10 +161,23 @@ limits and algorithm/key handles follow native readers and writers. The reserved
 word has no independently observed access. Opaque pointees remain incomplete;
 this layout does not claim implementation of their allocation or behavior.
 
-`ssl/ssl_lib_sce.patch` selects ten original connection operations: BIO and
+`ssl/ssl_lib_sce.patch` selects sixteen original connection operations: BIO and
 method getters, textual/numeric version, context getter, shutdown setter/getter,
-information callback getter, and state getter. The textual version includes the
+information callback getter, state getter, pending, read, peek, write, shutdown,
+and handshake dispatch. The textual version includes the
 native TLS1.1 label `TLSv11` and excludes SSL2. The consuming wrapper retains
 Sony's NID export link names and separately compiles the original rwstate query,
 which is a macro in this upstream baseline. The remaining SSL library routines
 are excluded and are not counted as reconstructed functions.
+
+The complete88-byte `SSL_METHOD` layout follows the upstream header and the
+native protocol tables; selected I/O callbacks have explicit prototypes. Other
+callback declarations retain the upstream parameter declarations until their
+implementations are reconstructed. Shutdown returns1 for null, dispatches when
+initialization is clear or option0x40000 is set, and otherwise returns-1. The
+option's descriptive name is ours. Read and peek retain their distinct handling
+of received shutdown: only read resets rwstate. Write after sent shutdown records
+SSL-C's error20/209/207 and returns-1. Handshake dispatch retains the native
+null-handler error20/180/144, renegotiation check, state reload and subsequent
+handshake callback. These dispatch bodies do not establish completion of the
+protocol callbacks they invoke.

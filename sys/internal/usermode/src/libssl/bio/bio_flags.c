@@ -37,3 +37,25 @@ BIO *BIO_set_retry_write(BIO *bio)
 		bio->flags |= BIO_FLAGS_WRITE | BIO_FLAGS_SHOULD_RETRY;
 	return bio;
 }
+
+/* SSL-C also emits these upstream macros as null-safe query functions. */
+int (BIO_should_read)(BIO *bio)
+{
+	if (bio == NULL)
+		return -1;
+	return BIO_should_read(bio);
+}
+
+int (BIO_should_write)(BIO *bio)
+{
+	if (bio == NULL)
+		return -1;
+	return BIO_should_write(bio);
+}
+
+int (BIO_should_io_special)(BIO *bio)
+{
+	if (bio == NULL)
+		return -1;
+	return BIO_should_io_special(bio);
+}

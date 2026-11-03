@@ -8,7 +8,53 @@
  #ifdef  __cplusplus
  extern "C" {
  #endif
-@@ -452,122 +453,84 @@
+@@ -165,6 +166,11 @@
+ 	unsigned long mask;		/* used for matching */
+ 	} SSL_CIPHER;
+ 
++#endif
++
++struct ssl_st;
++struct ssl_cipher_st;
++
+ /* Used to hold functions for SSLv2 or SSLv3/TLSv1 functions */
+ typedef struct ssl_method_st
+ 	{
+@@ -174,24 +180,26 @@
+ 	void (*ssl_free)();
+ 	int (*ssl_accept)();
+ 	int (*ssl_connect)();
+-	int (*ssl_read)();
+-	int (*ssl_peek)();
+-	int (*ssl_write)();
+-	int (*ssl_shutdown)();
++	int (*ssl_read)(struct ssl_st *ssl, void *buf, int num);
++	int (*ssl_peek)(struct ssl_st *ssl, void *buf, int num);
++	int (*ssl_write)(struct ssl_st *ssl, const void *buf, int num);
++	int (*ssl_shutdown)(struct ssl_st *ssl);
+ 	int (*ssl_renegotiate)();
+ 	int (*ssl_renegotiate_check)();
+ 	long (*ssl_ctrl)();
+ 	long (*ssl_ctx_ctrl)();
+-	SSL_CIPHER *(*get_cipher_by_char)();
++	struct ssl_cipher_st *(*get_cipher_by_char)();
+ 	int (*put_cipher_by_char)();
+-	int (*ssl_pending)();
++	int (*ssl_pending)(struct ssl_st *ssl);
+ 	int (*num_ciphers)();
+-	SSL_CIPHER *(*get_cipher)();
++	struct ssl_cipher_st *(*get_cipher)();
+ 	struct ssl_method_st *(*get_ssl_method)();
+ 	long (*get_timeout)();
+ 	struct ssl3_enc_method *ssl3_enc; /* Extra SSLv3/TLS stuff */
+ 	} SSL_METHOD;
+ 
++#if 0
++
+ /* Lets make this into an ASN.1 type structure as follows
+  * SSL_SESSION_ID ::= SEQUENCE {
+  *	version 		INTEGER,	-- structure version number
+@@ -452,122 +460,84 @@
  #define SSL_want_write(s)	((s)->rwstate == SSL_WRITING)
  #define SSL_want_x509_lookup(s)	((s)->rwstate == SSL_X509_LOOKUP)
  
@@ -198,7 +244,7 @@
  #include "ssl2.h"
  #include "ssl3.h"
  #include "tls1.h" /* This is mostly sslv3 with a few tweaks */
-@@ -588,6 +551,8 @@
+@@ -588,6 +558,8 @@
   * It can also be useful to work out where you were when the connection
   * failed */
  
@@ -207,7 +253,7 @@
  #define SSL_ST_CONNECT			0x1000
  #define SSL_ST_ACCEPT			0x2000
  #define SSL_ST_MASK			0x0FFF
-@@ -624,6 +589,7 @@
+@@ -624,6 +596,7 @@
  #define SSL_ST_READ_BODY			0xF1
  #define SSL_ST_READ_DONE			0xF2
  
@@ -215,7 +261,7 @@
  /* use either SSL_VERIFY_NONE or SSL_VERIFY_PEER, the last 2 options
   * are 'ored' with SSL_VERIFY_PEER if they are desired */
  #define SSL_VERIFY_NONE			0x00
-@@ -1492,5 +1458,6 @@
+@@ -1492,5 +1465,6 @@
  #ifdef  __cplusplus
  }
  #endif

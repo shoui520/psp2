@@ -30,7 +30,74 @@
  int SSL_get_fd(s)
  SSL *s;
  	{
-@@ -1247,12 +1249,15 @@
+@@ -431,12 +433,16 @@
+ 	return(s->read_ahead);
+ 	}
+ 
++#endif
++
+ int SSL_pending(s)
+ SSL *s;
+ 	{
+ 	return(s->method->ssl_pending(s));
+ 	}
+ 
++#if 0
++
+ X509 *SSL_get_peer_certificate(s)
+ SSL *s;
+ 	{
+@@ -559,9 +565,11 @@
+ 	return(s->method->get_timeout());
+ 	}
+ 
++#endif
++
+ int SSL_read(s,buf,num)
+ SSL *s;
+-char *buf;
++void *buf;
+ int num;
+ 	{
+ 	if (s->shutdown & SSL_RECEIVED_SHUTDOWN)
+@@ -574,7 +582,7 @@
+ 
+ int SSL_peek(s,buf,num)
+ SSL *s;
+-char *buf;
++void *buf;
+ int num;
+ 	{
+ 	if (s->shutdown & SSL_RECEIVED_SHUTDOWN)
+@@ -586,7 +594,7 @@
+ 
+ int SSL_write(s,buf,num)
+ SSL *s;
+-char *buf;
++const void *buf;
+ int num;
+ 	{
+ 	if (s->shutdown & SSL_SENT_SHUTDOWN)
+@@ -601,12 +609,16 @@
+ int SSL_shutdown(s)
+ SSL *s;
+ 	{
+-	if ((s != NULL) && !SSL_in_init(s))
++	if (s == NULL)
++		return(1);
++	if (!SSL_in_init(s) || (s->options & SSL_OP_SHUTDOWN_IN_INIT))
+ 		return(s->method->ssl_shutdown(s));
+ 	else
+-		return(1);
++		return(-1);
+ 	}
+ 
++#if 0
++
+ int SSL_renegotiate(s)
+ SSL *s;
+ 	{
+@@ -1247,12 +1259,15 @@
  		}
  	}
  
@@ -46,7 +113,25 @@
  int SSL_set_ssl_method(s,meth)
  SSL *s;
  SSL_METHOD *meth;
-@@ -1405,19 +1410,22 @@
+@@ -1349,6 +1364,8 @@
+ 	return(SSL_ERROR_SYSCALL);
+ 	}
+ 
++#endif
++
+ int SSL_do_handshake(s)
+ SSL *s;
+ 	{
+@@ -1369,6 +1386,8 @@
+ 	return(ret);
+ 	}
+ 
++#if 0
++
+ /* For the next 2 functions, SSL_clear() sets shutdown and so
+  * one of these calls will reset it */
+ void SSL_set_accept_state(s)
+@@ -1405,19 +1424,22 @@
  	return(NULL);
  	}
  
@@ -72,7 +157,7 @@
  SSL *SSL_dup(s)
  SSL *s;
          {
-@@ -1610,6 +1618,8 @@
+@@ -1610,6 +1632,8 @@
  	return(s->quiet_shutdown);
  	}
  
@@ -81,7 +166,7 @@
  void SSL_set_shutdown(s,mode)
  SSL *s;
  int mode;
-@@ -1635,6 +1645,7 @@
+@@ -1635,6 +1659,7 @@
  	return(ssl->ctx);
  	}
  
@@ -89,7 +174,7 @@
  #ifndef NO_STDIO
  int SSL_CTX_set_default_verify_paths(ctx)
  SSL_CTX *ctx;
-@@ -1658,10 +1669,12 @@
+@@ -1658,10 +1683,12 @@
  	ssl->info_callback=cb;
  	}
  
@@ -104,7 +189,7 @@
  	}
  
  int SSL_state(ssl)
-@@ -1670,6 +1683,7 @@
+@@ -1670,6 +1697,7 @@
  	return(ssl->state);
  	}
  
@@ -112,7 +197,7 @@
  void SSL_set_verify_result(ssl,arg)
  SSL *ssl;
  long arg;
-@@ -1746,4 +1760,5 @@
+@@ -1746,4 +1774,5 @@
  #if defined(_WINDLL) && defined(WIN16)
  #include "../crypto/bio/bss_file.c"
  #endif

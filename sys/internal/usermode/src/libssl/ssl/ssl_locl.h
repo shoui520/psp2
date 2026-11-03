@@ -11,7 +11,6 @@
 #include "../bio/bio.h"
 #include "../buffer/buffer.h"
 
-typedef struct ssl_method_st SSL_METHOD;
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_session_st SSL_SESSION;
 
@@ -40,6 +39,12 @@ typedef void (*SslInfoCallback)(SSL *ssl, int where, int result);
 #include "ssl3_sce.h"
 #undef SCE_SSL3_CONSTANTS_ONLY
 
+/* SSL-C option name is ours; the native shutdown dispatcher tests this bit. */
+#define SSL_OP_SHUTDOWN_IN_INIT 0x00040000UL
+
+#define SSL_in_init(s) ((s)->state & SSL_ST_INIT)
+#define SSL_in_before(s) ((s)->state & SSL_ST_BEFORE)
+
 /* Descriptive names for SSL-C's extra states are ours, not Sony spellings. */
 #define SSL3_ST_CR_HELLO_REQ_A (0x101 | SSL_ST_CONNECT)
 #define SSL3_ST_SR_CLNT_HELLO_RENEGOTIATE (0x113 | SSL_ST_ACCEPT)
@@ -47,6 +52,10 @@ typedef void (*SslInfoCallback)(SSL *ssl, int where, int result);
 _Static_assert(sizeof(SslRecordCrypto) == 28, "SslRecordCrypto");
 _Static_assert(sizeof(SslExtensionList) == 8, "SslExtensionList");
 _Static_assert(sizeof(SSL) == 352, "SSL");
+_Static_assert(sizeof(SSL_METHOD) == 88, "SSL_METHOD");
+_Static_assert(offsetof(SSL_METHOD, ssl_read) == 24, "ssl_read");
+_Static_assert(offsetof(SSL_METHOD, ssl_shutdown) == 36, "ssl_shutdown");
+_Static_assert(offsetof(SSL_METHOD, ssl_pending) == 64, "ssl_pending");
 _Static_assert(offsetof(SSL, state) == 48, "state");
 _Static_assert(offsetof(SSL, rstate) == 56, "rstate");
 _Static_assert(offsetof(SSL, read_crypto) == 104, "read_crypto");

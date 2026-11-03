@@ -24,6 +24,10 @@ int BIO_get_retry_flags(BIO *bio);
 BIO *BIO_clear_retry_flags(BIO *bio);
 BIO *BIO_set_retry_read(BIO *bio);
 BIO *BIO_set_retry_write(BIO *bio);
+/* Parentheses preserve the upstream macros for native inline uses. */
+int (BIO_should_read)(BIO *bio);
+int (BIO_should_write)(BIO *bio);
+int (BIO_should_io_special)(BIO *bio);
 #undef BIO_set_fd
 #undef BIO_get_fd
 long BIO_set_fd(BIO *bio, int fd, long closeFlag);
