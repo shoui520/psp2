@@ -7,6 +7,7 @@
 #include <graphics/drawobj/effect_path.h>
 #include <graphics/drawobj/bubble_obj.h>
 #include <graphics/drawobj/draw_env.h>
+#include <graphics/effects/panel_renderer.h>
 #include <graphics/arl/arl_defines.h>
 #include <math/ngp/matrix.h>
 #include <graphics/surface/surface.h>
@@ -67,7 +68,7 @@ void BubbleObj::OnDraw(const math::matrix &parent, uint32_t color, float alpha, 
 	bubble_color.set_w(alpha);
 	m_param->m_color = bubble_color.getImpl().get128();
 
-	Camera *camera = ScePafGraphics_4E038C05()->m_ptr->GetPanelRenderer(false)->m_camera;
+	Camera *camera = ScePafGraphics_4E038C05()->m_ptr->GetPanelRenderer(false)->m_camera.m_ptr;
 	math::v4 eye = camera->GetEyePos();
 	math::matrix world;
 
@@ -120,9 +121,9 @@ void BubbleObj::SetTexture(const intrusive_ptr<Surface> &texture, uint32_t index
 
 	surface = texture.get();
 
-	if (param->m_texture_cache.get() != NULL)
-		param->m_texture_cache.reset();
-	param->m_texture = surface;
+	if (param->m_texture.m_texture.get() != NULL)
+		param->m_texture.m_texture.reset();
+	param->m_texture.m_surface = surface;
 }
 
 void BubbleObj::GetTexture(intrusive_ptr<Surface> &texture, uint32_t index)
@@ -131,7 +132,7 @@ void BubbleObj::GetTexture(intrusive_ptr<Surface> &texture, uint32_t index)
 
 	if (param == NULL || index != 0)
 		return;
-	texture = param->m_texture.get();
+	texture = param->m_texture.m_surface.get();
 }
 
 /* the bubble's size across is the object's width */
@@ -172,16 +173,16 @@ void ScePafGraphics_5E94DC78(BubbleObj *obj, int32_t preset)
 	}
 }
 
-void ScePafGraphics_5AF8179A(BubbleObj *obj, const math::v4 &color)
+void ScePafGraphics_5AF8179A(BubbleObj *obj, const math::v4 &pos)
 {
 	BubbleParam *param = obj->m_param;
 
 	if (param == NULL)
 		return;
-	float32x4_t tint = color.getImpl().get128();
+	float32x4_t light = pos.getImpl().get128();
 
-	param->m_tint = true;
-	param->m_tint_color = tint;
+	param->m_fixed_light = true;
+	param->m_fixed_light_pos = light;
 }
 
 void ScePafGraphics_8454D7FB(BubbleObj *obj, bool enable, const math::v4 &pos, float range)

@@ -91,8 +91,9 @@ public:
 		limit = 0;
 	}
 
-	/* how a vector kept in a global is made: the allocator is not kept */
-	explicit vector(const _Ax &al)
+	/* how a vector kept in a global is made: the allocator is not kept; Sony's build calls
+	   it out of line wherever it is used */
+	explicit __attribute__((noinline)) vector(const _Ax &al)
 	{
 		ptr = NULL;
 		limit = 0;

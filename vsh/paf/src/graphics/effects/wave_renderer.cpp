@@ -244,32 +244,12 @@ void WaveRenderer::draw_pos(WaveInstance *instance)
 
 inline __attribute__((noinline)) math::matrix PointLightSphereParamSet::Values::GetPack1() const
 {
-	float theta = m_theta_phi.m_value.extract_x();
-	float phi = m_theta_phi.m_value.extract_y();
-	float sin_theta = sce_paf_sinf(theta);
-	float z = sin_theta * sce_paf_cosf(phi);
-	float x = sin_theta * sce_paf_sinf(phi);
-	float y = sce_paf_cosf(theta);
-	math::v3 attn = m_attn.m_value;
-
-	if (attn == math::v3::_000())
-		attn = math::v3(1.0f, 0.0f, 0.0f);
-	return math::matrix(math::v4(math::v3(x, y, z) * m_distance.m_value, 1.0f),
-			    math::v4(attn, 0.0f), math::v4(0.0f, 0.0f, 0.0f, 0.0f),
-			    math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	return MakePack1();
 }
 
 inline __attribute__((noinline)) math::matrix FogParamSet::Values::GetPack() const
 {
-	Vector3 color = m_color.m_value.getImpl();
-	Vector4 density = m_density.m_value.getImpl();
-	Vector4 light = m_light_color.m_value.getImpl();
-	Vector3 lit = color + (light.getXYZ() - color) * light.getW();
-
-	return math::matrix(math::v4(Vector4(color, 1.0f)),
-			    math::v4(Vector4((density * density.getW()).getXYZ(), 1.0f)),
-			    math::v4(Vector4(lit, 1.0f)),
-			    math::v4(m_d_scale.m_value, m_d_offset.m_value, 0.0f, 0.0f));
+	return MakePack();
 }
 
 void WaveRenderer::DrawPositions()

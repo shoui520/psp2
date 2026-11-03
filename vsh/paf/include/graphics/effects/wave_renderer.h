@@ -376,8 +376,6 @@ public:
 	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/skydome.fp", 0xcc);
 };
 
-#undef WAVE_SHADER_BINARY
-
 /* a vertex of the waves' grid: where it is and its normal (names ours); 0x20 bytes */
 class WaveVertex {
 public:

@@ -14,6 +14,7 @@
 #include <common/shared_ptr.h>
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
 #include <graphics/drawobj/draw_env.h>
+#include <graphics/effects/panel_renderer.h>
 #include <graphics/drawobj/plane_obj.h>
 #include <graphics/graphmem/graphmem.h>
 #include <graphics/gutil.h>

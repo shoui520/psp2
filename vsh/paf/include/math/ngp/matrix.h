@@ -99,6 +99,15 @@ public:
 		return v4(_impl.getCol3());
 	}
 
+	/* the columns copied one by one (name ours) */
+	void assign(const matrix &rhs)
+	{
+		_impl.setCol0(rhs._impl.getCol0());
+		_impl.setCol1(rhs._impl.getCol1());
+		_impl.setCol2(rhs._impl.getCol2());
+		_impl.setCol3(rhs._impl.getCol3());
+	}
+
 	void set_w(v4 col)
 	{
 		_impl.setCol3(col.getImpl());

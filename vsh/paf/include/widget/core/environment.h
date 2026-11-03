@@ -31,12 +31,17 @@ namespace ui {
 class Screen {
 public:
 	Screen();
+	Screen(intrusive_ptr<graph::Surface> surface);
 	virtual ~Screen();
 
 	static Screen *GetRootScreen()
 	{
 		return s_root_screen;
 	}
+
+	/* the surface made the target of the draws that follow, and the draws finished */
+	void OnTarget();
+	void OnFinish();
 
 	intrusive_ptr<graph::Surface> GetSurface()
 	{

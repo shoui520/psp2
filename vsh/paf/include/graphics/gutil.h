@@ -112,6 +112,34 @@ void CallDebugGuiFuncs();
 
 /* the mouse and keyboard of a devkit's host, read once a frame (0x81191822..; their code is
    not converted, names ours) */
+/* a button, counted a frame at a time */
+class MouseButton {
+public:
+	bool m_down;
+	/* cleared by the constructor and read nowhere */
+	bool m_unread_flag;
+	/* m_down of the frame before */
+	bool m_last_down;
+	/* the frames it has been down, or up */
+	int32_t m_down_frames;
+	int32_t m_up_frames;
+	/* down in this frame and the one before; down in this one only; up in this one only */
+	bool m_held;
+	bool m_pressed;
+	bool m_released;
+};
+
+/* a pointer: where it was the frame before, where it is, and how far it moved */
+class MousePointer {
+public:
+	int32_t m_last_x;
+	int32_t m_last_y;
+	int32_t m_x;
+	int32_t m_y;
+	int32_t m_move_x;
+	int32_t m_move_y;
+};
+
 class Mouse {
 public:
 	static Mouse *GetInstance();
@@ -119,8 +147,10 @@ public:
 	/* the buttons and the pointer's positions read for the frame */
 	void Update();
 
-	/* the three buttons' states and the pointer's position and motion */
-	uint8_t m_state[0x60];
+	/* the three buttons (the first down while the screen is touched, the third while a second
+	   finger is), and the pointers of the first two touches */
+	MouseButton m_buttons[3];
+	MousePointer m_pointers[2];
 	/* the size of the viewport the pointer moves in */
 	int32_t m_screen_width;
 	int32_t m_screen_height;

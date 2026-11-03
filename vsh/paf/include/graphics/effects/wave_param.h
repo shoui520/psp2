@@ -17,6 +17,7 @@
 #include <math/ngp/v2.h>
 #include <math/ngp/v3.h>
 #include <math/ngp/v4.h>
+#include <src/std/math.h>
 
 namespace paf {
 namespace graph {
@@ -147,8 +148,34 @@ public:
 		Param<float> m_fade;
 
 		/* the light's place, from its angles and distance, and its attenuation, for the
-		   lighting program's PointLightPack1 (0x812040d0, name ours) */
+		   lighting program's PointLightPack1: out of line in the wave renderer (0x812040d0),
+		   inlined in the panel renderer (names ours) */
 		__attribute__((noinline)) math::matrix GetPack1() const;
+
+		math::matrix MakePack1() const
+		{
+			math::v3 position = GetPosition();
+			math::v3 attn = m_attn.m_value;
+
+			if (attn == math::v3::_000())
+				attn = math::v3(1.0f, 0.0f, 0.0f);
+			return math::matrix(math::v4(position, 1.0f), math::v4(attn, 0.0f),
+					    math::v4(0.0f, 0.0f, 0.0f, 0.0f),
+					    math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		}
+
+		/* where the light is, from its angles and distance */
+		math::v3 GetPosition() const
+		{
+			float theta = m_theta_phi.m_value.extract_x();
+			float phi = m_theta_phi.m_value.extract_y();
+			float sin_theta = sce_paf_sinf(theta);
+			float z = sin_theta * sce_paf_cosf(phi);
+			float x = sin_theta * sce_paf_sinf(phi);
+			float y = sce_paf_cosf(theta);
+
+			return math::v3(x, y, z) * m_distance.m_value;
+		}
 
 		/* its colours and fade, for PointLightPack2 (name ours) */
 		math::matrix GetPack2() const
@@ -188,9 +215,26 @@ public:
 		Param<float> m_d_scale;
 		Param<float> m_d_offset;
 
-		/* the colours, density and distances packed for the lighting program's FogPack
-		   (0x8120419c, name ours) */
+		/* the colours, density and distances packed for the lighting program's FogPack:
+		   out of line in the wave renderer (0x8120419c), inlined in the panel renderer
+		   (names ours) */
 		__attribute__((noinline)) math::matrix GetPack() const;
+
+		math::matrix MakePack() const
+		{
+			sce::Vectormath::Simd::Aos::Vector3 color = m_color.m_value.getImpl();
+			sce::Vectormath::Simd::Aos::Vector4 density = m_density.m_value.getImpl();
+			sce::Vectormath::Simd::Aos::Vector4 light = m_light_color.m_value.getImpl();
+			sce::Vectormath::Simd::Aos::Vector3 lit =
+				color + (light.getXYZ() - color) * light.getW();
+
+			return math::matrix(
+				math::v4(sce::Vectormath::Simd::Aos::Vector4(color, 1.0f)),
+				math::v4(sce::Vectormath::Simd::Aos::Vector4(
+					(density * density.getW()).getXYZ(), 1.0f)),
+				math::v4(sce::Vectormath::Simd::Aos::Vector4(lit, 1.0f)),
+				math::v4(m_d_scale.m_value, m_d_offset.m_value, 0.0f, 0.0f));
+		}
 	};
 
 	WAVE_PARAM_SET(FogParamSet, "Fog");

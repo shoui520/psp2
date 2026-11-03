@@ -10,6 +10,7 @@
 #include <graphics/camera.h>
 #include <graphics/drawobj/draw_env.h>
 #include <graphics/effects/background.h>
+#include <graphics/effects/panel_renderer.h>
 #include <graphics/effects/post_effects.h>
 #include <graphics/effects/wave_renderer.h>
 #include <graphics/effects/fft_wave.h>
@@ -214,8 +215,8 @@ void Renderer::Update()
 		m_effect_renderer->Update(gl->m_frame_time);
 	if (m_fft_wave.get() != NULL) {
 		m_fft_wave->Update();
-		m_fft_wave->m_view = GetPanelRenderer(false)->GetViewMatrix();
-		m_fft_wave->m_projection = GetPanelRenderer(false)->GetProjectionMatrix();
+		m_fft_wave->m_point_light_pack1 = GetPanelRenderer(false)->GetPointLightPack1();
+		m_fft_wave->m_point_light_pack2 = GetPanelRenderer(false)->GetPointLightPack2();
 	}
 }
 

@@ -92,30 +92,7 @@ public:
 	bool m_ended;
 };
 
-/* draws the panel and bubble objects (Sony's name: the string its constructor 0x810bc564
-   names it by); 0x1478 bytes */
-class PanelRenderer {
-public:
-	/* 0x810bc564 */
-	PanelRenderer();
-	/* 0x810bcd6e */
-	~PanelRenderer();
-
-	/* 0x810bdca8: the cameras of the 3D and 2D views, the background and the draw calls */
-	void Init(common::SharedPtr<Camera> camera, common::SharedPtr<Camera> camera_2d,
-		  common::SharedPtr<Background> background, common::SharedPtr<DrawEnv> draw_env);
-	/* 0x810bdef0 */
-	void Update();
-	/* 0x810bec18, 0x810becee: the matrices the panels are drawn with */
-	math::matrix GetViewMatrix();
-	math::matrix GetProjectionMatrix();
-	/* 0x810bf36c: its resources loaded from the folder */
-	void Load(const string &dir);
-
-	uint8_t reserved[0x1420];
-	Camera *m_camera;
-	uint8_t reserved2[0x54];
-};
+class PanelRenderer;
 
 class WaveRenderer;
 
@@ -139,9 +116,10 @@ public:
 	uint8_t reserved2[10];
 	/* the parameters' keys, moved on by the frame time */
 	ParamSetKeysManager m_param_keys;
-	/* the panels' matrices, set every frame */
-	math::matrix m_view;
-	math::matrix m_projection;
+	/* the panels' bubble light, packed as the lighting programs take it, set every frame
+	   (names ours) */
+	math::matrix m_point_light_pack1;
+	math::matrix m_point_light_pack2;
 	uint8_t reserved3[0x30c];
 	/* how fast the time goes, times the frame time */
 	float m_speed;
@@ -270,9 +248,87 @@ public:
 	T *m_object;
 };
 
+/* calls a member function of the object it keeps with one argument, kept by value (names ours) */
+template<class T, class A1>
+class DrawLayerMemberCall1 : public DrawLayerCall {
+public:
+	DrawLayerMemberCall1(void (T::*func)(const A1 &), T *object, const A1 &arg1)
+		: m_func(func), m_object(object), m_arg1(arg1)
+	{
+	}
+
+	virtual void Exec()
+	{
+		(m_object->*m_func)(m_arg1);
+	}
+
+	void (T::*m_func)(const A1 &);
+	T *m_object;
+	A1 m_arg1;
+};
+
+/* the same, with two arguments (names ours) */
+template<class T, class A1, class A2>
+class DrawLayerMemberCall2 : public DrawLayerCall {
+public:
+	DrawLayerMemberCall2(void (T::*func)(const A1 &, const A2 &), T *object, const A1 &arg1,
+			     const A2 &arg2)
+		: m_func(func), m_object(object), m_arg1(arg1), m_arg2(arg2)
+	{
+	}
+
+	virtual void Exec()
+	{
+		(m_object->*m_func)(m_arg1, m_arg2);
+	}
+
+	void (T::*m_func)(const A1 &, const A2 &);
+	T *m_object;
+	A1 m_arg1;
+	A2 m_arg2;
+};
+
+/* the same, with three arguments (names ours) */
+template<class T, class A1, class A2, class A3>
+class DrawLayerMemberCall3 : public DrawLayerCall {
+public:
+	DrawLayerMemberCall3(void (T::*func)(const A1 &, const A2 &, const A3 &), T *object,
+			     const A1 &arg1, const A2 &arg2, const A3 &arg3)
+		: m_func(func), m_object(object), m_arg1(arg1), m_arg2(arg2), m_arg3(arg3)
+	{
+	}
+
+	virtual void Exec()
+	{
+		(m_object->*m_func)(m_arg1, m_arg2, m_arg3);
+	}
+
+	void (T::*m_func)(const A1 &, const A2 &, const A3 &);
+	T *m_object;
+	A1 m_arg1;
+	A2 m_arg2;
+	A3 m_arg3;
+};
+
 /* the draws of a frame: each is built in the layer's buffer and sorted by its key (names ours) */
 class DrawLayer : public DrawCallList {
 public:
+	/* a key of two words, as the entries are sorted by */
+	class Key {
+	public:
+		Key(uint32_t kind, uint32_t word) : m_kind(kind), m_word(word)
+		{
+		}
+
+		bool operator==(const Key &other) const
+		{
+			return m_kind == other.m_kind && m_word == other.m_word;
+		}
+
+		uint32_t m_kind;
+		uint32_t m_word;
+	};
+
 	class Entry {
 	public:
 		Entry(uint32_t key, DrawLayerCall *call) : m_kind(0x40000000), m_call(call)
@@ -301,7 +357,7 @@ public:
 		: DrawCallList(NULL, NULL), m_reserved_word(0), m_reserved_word2(0), m_reserved_flag(false),
 		  m_name(name), m_index(-1), m_priority(0), m_state(0), m_reserved_value(1),
 		  m_buffer(buffer_size), m_used(0), m_first(-1), m_last(-1), m_mode(mode),
-		  m_reserved_word3(0), m_reserved_word4(0), m_reserved_word5(0)
+		  m_key_count(0), m_reserved_word4(0), m_reserved_word5(0)
 	{
 	}
 
@@ -339,6 +395,69 @@ public:
 		m_used += sizeof(DrawLayerMemberCall<T>);
 	}
 
+	template<class T, class A1>
+	void Push(uint32_t kind, uint32_t word, void (T::*func)(const A1 &), T *const &object,
+		  const A1 &arg1)
+	{
+		if (m_state != 1 && m_state != 0)
+			return;
+		if (m_used + sizeof(DrawLayerMemberCall1<T, A1>) > m_buffer.size())
+			common_internal::on_error();
+
+		DrawLayerMemberCall1<T, A1> *call =
+			new (&m_buffer[m_used]) DrawLayerMemberCall1<T, A1>(func, object, arg1);
+
+		call->m_queued = true;
+		m_entries.push_back(Entry(kind, word, call));
+		m_used += sizeof(DrawLayerMemberCall1<T, A1>);
+	}
+
+	template<class T, class A1, class A2>
+	void Push(uint32_t kind, uint32_t word, void (T::*func)(const A1 &, const A2 &),
+		  T *const &object, const A1 &arg1, const A2 &arg2)
+	{
+		if (m_state != 1 && m_state != 0)
+			return;
+		if (m_used + sizeof(DrawLayerMemberCall2<T, A1, A2>) > m_buffer.size())
+			common_internal::on_error();
+
+		DrawLayerMemberCall2<T, A1, A2> *call = new (&m_buffer[m_used])
+			DrawLayerMemberCall2<T, A1, A2>(func, object, arg1, arg2);
+
+		call->m_queued = true;
+		m_entries.push_back(Entry(kind, word, call));
+		m_used += sizeof(DrawLayerMemberCall2<T, A1, A2>);
+	}
+
+	template<class T, class A1, class A2, class A3>
+	void Push(uint32_t kind, uint32_t word, void (T::*func)(const A1 &, const A2 &, const A3 &),
+		  T *const &object, const A1 &arg1, const A2 &arg2, const A3 &arg3)
+	{
+		if (m_state != 1 && m_state != 0)
+			return;
+		if (m_used + sizeof(DrawLayerMemberCall3<T, A1, A2, A3>) > m_buffer.size())
+			common_internal::on_error();
+
+		DrawLayerMemberCall3<T, A1, A2, A3> *call = new (&m_buffer[m_used])
+			DrawLayerMemberCall3<T, A1, A2, A3>(func, object, arg1, arg2, arg3);
+
+		call->m_queued = true;
+		m_entries.push_back(Entry(kind, word, call));
+		m_used += sizeof(DrawLayerMemberCall3<T, A1, A2, A3>);
+	}
+
+	/* the key added to those queued this frame, unless it is there: whether it was not */
+	bool AddKey(const Key &key)
+	{
+		for (uint32_t i = 0; i < m_key_count; i++)
+			if (m_keys[i] == key)
+				return false;
+		if (m_keys.size() == (int)m_key_count)
+			m_keys.push_back(key);
+		m_keys[m_key_count++] = key;
+		return true;
+	}
+
 	uint32_t m_reserved_word;
 	uint32_t m_reserved_word2;
 	bool m_reserved_flag;
@@ -355,8 +474,9 @@ public:
 	int32_t m_first;
 	int32_t m_last;
 	int32_t m_mode;
-	vector<uint32_t> m_reserved_list;
-	uint32_t m_reserved_word3;
+	/* the keys of the state changes queued this frame, each queued once, and how many are */
+	vector<Key> m_keys;
+	uint32_t m_key_count;
 	uint32_t m_reserved_word4;
 	uint32_t m_reserved_word5;
 };

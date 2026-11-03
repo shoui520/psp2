@@ -438,6 +438,18 @@ inline void ShaderParameter<math::matrix>::Apply()
 				      (const float *)&m_value);
 }
 
+/* a matrix is kept column by column */
+template<>
+template<>
+inline void ShaderParameter<math::matrix>::Set(const math::matrix &value)
+{
+	if (m_param == NULL)
+		return;
+	m_value.assign(value);
+	if (m_setup->m_object != NULL && !m_setup->m_object->SetupUniforms())
+		Apply();
+}
+
 /* a vertex or fragment shader object: the programs it made, by GXM program, and the one bound */
 template<class Program>
 class ShaderObject : public ShaderObjectBase {

@@ -35,6 +35,7 @@ namespace graph {
 #define PARAM_FLAG_BOOL		0x00080	/* 0 or 1 */
 #define PARAM_FLAG_INDEX	0x00100	/* a whole number, an index */
 #define PARAM_FLAG_COLOR	0x00400	/* a colour; nothing in libpaf reads it */
+#define PARAM_FLAG_COLOR_ALPHA	0x00800	/* a colour with alpha; nothing in libpaf reads it */
 #define PARAM_FLAG_DEGREES	0x01000	/* an angle, edited in degrees */
 #define PARAM_FLAG_ANGLE	0x02000	/* an angle, moved the shortest way round */
 #define PARAM_FLAG_ANGLE_DEGREES 0x04000	/* an angle in degrees, moved the shortest way round */
@@ -612,6 +613,15 @@ public:
 	{
 		SetValue(other.m_value);
 		return *this;
+	}
+
+	/* the keys' range (name ours) */
+	void SetRange(T min, T max)
+	{
+		if (m_keys != NULL) {
+			m_keys->m_key[PARAM_KEY_MIN] = min;
+			m_keys->m_key[PARAM_KEY_MAX] = max;
+		}
 	}
 
 	/* the value, through the keys' range when there are keys */
