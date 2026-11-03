@@ -245,9 +245,11 @@ int _sendParam(const char *name, const AppmgrParamQueueEntry *entry,
 #if FW_DEBUG
 				sceAppMgrDump();
 				dumpBgmState();
-				SCE_DBG_ASSERT_PRINTF_FUNC(0, 50, "utilSendEvent",
-					"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
-					result, result, 0, 0);
+				if (sceKernelGetAssertLevel() > 0)
+					SceDebugForDriver_821A2D59(1, 0, &utilSendEventInfo,
+						__builtin_return_address(0),
+						"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+						result, result, 0, 0);
 				sceAppMgrDump();
 				dumpBgmState();
 				SCE_DBG_ASSERT_PRINTF(0, 98,

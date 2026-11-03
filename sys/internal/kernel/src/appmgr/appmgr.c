@@ -293,3 +293,9 @@ int appmgrReturnSuccess(void)
 {
 	return 0;
 }
+
+#if FW_DEBUG
+/* Sony's link kept these records of a terminate function its image dropped. */
+SCE_DBGINFO_DEFINE_ORPHAN(sceAppMgrTermRecord339, 339, "sceAppMgrTerm");
+SCE_DBGINFO_DEFINE_ORPHAN(sceAppMgrTermRecord345, 345, "sceAppMgrTerm");
+#endif

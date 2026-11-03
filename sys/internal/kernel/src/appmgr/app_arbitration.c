@@ -262,6 +262,69 @@ int _onlaunchCallback(int notifyId, int notifyCount, int notifyArg, void *userDa
 } while (0)
 #endif
 
+/* Records of the file the app-list helper checkFds lives in: Sony inlines it from
+ * appmgr_applist.h, so its debug records name that header and not this file. */
+static const SceKernelDebugInfo checkFdsOwnerInfo = {
+	.fileHash = 0x0e75f9f5, .lineHash = 0xde4386b4, .funcHash = 0x317879b6,
+#if FW_DEBUG
+	.file = "appmgr_applist.h", .line = 516, .func = "checkFds",
+#endif
+};
+static const SceKernelDebugInfo checkFdsFdInfo = {
+	.fileHash = 0x0e75f9f5, .lineHash = 0xd628a65a, .funcHash = 0x317879b6,
+#if FW_DEBUG
+	.file = "appmgr_applist.h", .line = 532, .func = "checkFds",
+#endif
+};
+static const SceKernelDebugInfo checkFdsDirInfo = {
+	.fileHash = 0x0e75f9f5, .lineHash = 0x9b28346f, .funcHash = 0x317879b6,
+#if FW_DEBUG
+	.file = "appmgr_applist.h", .line = 533, .func = "checkFds",
+#endif
+};
+static const SceKernelDebugInfo checkFdsPrimaryInfo = {
+	.fileHash = 0x0e75f9f5, .lineHash = 0x535f92e8, .funcHash = 0x317879b6,
+#if FW_DEBUG
+	.file = "appmgr_applist.h", .line = 534, .func = "checkFds",
+#endif
+};
+static const SceKernelDebugInfo checkFdsSecondaryInfo = {
+	.fileHash = 0x0e75f9f5, .lineHash = 0x60e17053, .funcHash = 0x317879b6,
+#if FW_DEBUG
+	.file = "appmgr_applist.h", .line = 535, .func = "checkFds",
+#endif
+};
+
+#if FW_DEBUG
+/* the DELETE_APP checks, with the record of the file the helper belongs to */
+#define DELETE_APP_FAILURE_INFO(_value, _expected, _info) do { \
+	sceAppMgrDump(); \
+	dumpBgmState(); \
+	if (sceKernelGetAssertLevel() > 0) \
+		SceDebugForDriver_821A2D59(1, 0, (_info), __builtin_return_address(0), \
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n", \
+			_value, _value, _expected, _expected); \
+} while (0)
+#define DELETE_APP_ASSERT_INFO(_cond, _info) do { \
+	if (!(_cond)) { \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		if (sceKernelGetAssertLevel() > 0) \
+			SceDebugForDriver_FD753E7A(1, 0, (_info), __builtin_return_address(0)); \
+	} \
+} while (0)
+#define DELETE_APP_CHECK_INFO(_value, _expected, _info) do { \
+	if ((_value) != (_expected)) \
+		DELETE_APP_FAILURE_INFO(_value, _expected, _info); \
+} while (0)
+#else
+#define DELETE_APP_FAILURE_INFO(_value, _expected, _info) \
+	DELETE_APP_ASSERT((_value) == (_expected), 0, 0)
+#define DELETE_APP_ASSERT_INFO(_cond, _info) DELETE_APP_ASSERT(_cond, 0, 0)
+#define DELETE_APP_CHECK_INFO(_value, _expected, _info) \
+	DELETE_APP_CHECK(_value, _expected, 0, 0)
+#endif
+
 /* Copies a NULL-terminated user argv into one buffer of 1024 bytes; returns its size. */
 #if FW_DEBUG
 int copyArgv(char *destination, const char *const *userArgv)
@@ -310,7 +373,8 @@ static inline __attribute__((always_inline)) void checkFds(void)
 	int secondary = g_appmgrAvailableSecondaryResourceQuota;
 	int maxFD, directoryFds;
 
-	DELETE_APP_ASSERT(g_appmgrMainMutexOwner == sceKernelGetThreadId(), 516, "checkFds");
+	DELETE_APP_ASSERT_INFO(g_appmgrMainMutexOwner == sceKernelGetThreadId(),
+				&checkFdsOwnerInfo);
 	for (app = g_appmgrAppStates; app != &g_appmgrAppStates[20]; ++app) {
 		if (app->launchInfo.budgetType == 0 && app->process.budgetId > 0) {
 			maxFD = app->process.maxFD;
@@ -321,10 +385,10 @@ static inline __attribute__((always_inline)) void checkFds(void)
 			secondary += app->process.secondaryResourceQuota;
 		}
 	}
-	DELETE_APP_CHECK(fd, 92, 532, "checkFds");
-	DELETE_APP_CHECK(dir, 552, 533, "checkFds");
-	DELETE_APP_CHECK(primary, 16, 534, "checkFds");
-	DELETE_APP_CHECK(secondary, 12, 535, "checkFds");
+	DELETE_APP_CHECK_INFO(fd, 92, &checkFdsFdInfo);
+	DELETE_APP_CHECK_INFO(dir, 552, &checkFdsDirInfo);
+	DELETE_APP_CHECK_INFO(primary, 16, &checkFdsPrimaryInfo);
+	DELETE_APP_CHECK_INFO(secondary, 12, &checkFdsSecondaryInfo);
 }
 
 /* the application is unloaded: gives its resources back and frees its slot */
@@ -2906,7 +2970,7 @@ static inline __attribute__((always_inline)) int utilSendEvent(struct AppState *
 	event.systemEvent = type;
 	__builtin_memcpy(event.data.reserved, &argument, sizeof(argument));
 	result = _appListPushEvent(app, &event);
-	DELETE_APP_CHECK(result, 0, 50, "utilSendEvent");
+	DELETE_APP_CHECK_INFO(result, 0, &utilSendEventInfo);
 	return result;
 }
 

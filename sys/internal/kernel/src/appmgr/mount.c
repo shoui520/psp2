@@ -5541,6 +5541,170 @@ int appmgrMountSystemDirectory(SceUID pid, unsigned int mountId, ScePfsRndDriveI
 	return appmgrMountByIdBody(pid, mountId, NULL, NULL, mountPoint);
 }
 
+#if !FW_SINCE(0x04000000)
+/* The fixed drive IDs a media mount uses instead of a random one. */
+static const ScePfsRndDriveId g_appmgrGiftDrive = {{ 'g', 'i', 'f', 't', '0', ':' }};
+static const ScePfsRndDriveId g_appmgrMusicDrive = {{ 'm', 'u', 's', 'i', 'c', '0', ':' }};
+static const ScePfsRndDriveId g_appmgrVideoDrive = {{ 'v', 'i', 'd', 'e', 'o', '0', ':' }};
+
+/* SceAppMgrForDriver 5E311F71: mounts an application data directory by its mount ID:
+ * gift data (104, XXXXNNNNN_NN), music (105), the PSM ro/rw directories (106, 107),
+ * the calendar (108), video (109) and the application metadata (110, a title ID). */
+int sceAppMgrAppDataMountById(unsigned int mountId, const char *id,
+				ScePfsRndDriveId *mountPoint)
+{
+	SceUInt32 syscallState;
+	char titleId[16] = { 0 };
+	char buffer[64];
+	struct AppState *app;
+	const ScePfsRndDriveId *drive = NULL;
+	const char *path = buffer;
+	SceUInt32 flags;
+	int result;
+
+	if ((unsigned int)(mountId - 104) > 6 || ((1u << (mountId - 104)) & 0x4d) == 0)
+		return 0x80800001;
+	syscallState = sceSyscallEnter();
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	result = 0x80800009;
+	if (!appmgrIsMountIdAllowed(mountId))
+		goto unlock;
+	if (mountPoint == NULL)
+		goto invalid;
+
+	switch (mountId) {
+	case 104:
+		if (id == NULL || !APPMGR_IS_UPPER(id[0]) || !APPMGR_IS_UPPER(id[1]) ||
+		    !APPMGR_IS_UPPER(id[2]) || !APPMGR_IS_UPPER(id[3]) ||
+		    !APPMGR_IS_DIGIT(id[4]) || !APPMGR_IS_DIGIT(id[5]) ||
+		    !APPMGR_IS_DIGIT(id[6]) || !APPMGR_IS_DIGIT(id[7]) ||
+		    !APPMGR_IS_DIGIT(id[8]) || id[9] != '_' ||
+		    !APPMGR_IS_DIGIT(id[10]) || !APPMGR_IS_DIGIT(id[11]) ||
+		    id[12] != '\0')
+			goto invalid;
+		break;
+	case 106:
+	case 107:
+		if (id == NULL || !APPMGR_IS_UPPER(id[0]) || !APPMGR_IS_UPPER(id[1]) ||
+		    !APPMGR_IS_UPPER(id[2]) || !APPMGR_IS_UPPER(id[3]) ||
+		    !APPMGR_IS_DIGIT(id[4]) || !APPMGR_IS_DIGIT(id[5]) ||
+		    !APPMGR_IS_DIGIT(id[6]) || !APPMGR_IS_DIGIT(id[7]) ||
+		    !APPMGR_IS_DIGIT(id[8]) || id[9] != '\0')
+			goto invalid;
+		break;
+	case 110:
+		if (id == NULL)
+			goto invalid;
+		break;
+	}
+
+	{
+		int i;
+
+		for (i = 0; i < (int)sizeof(g_appmgrMountByIdRoot); i++)
+			g_appmgrMountByIdRoot[i] = 0;
+		for (i = 0; i < (int)sizeof(g_appmgrMountByIdComponent); i++)
+			g_appmgrMountByIdComponent[i] = 0;
+	}
+	result = 0;
+	switch (mountId) {
+	case 104:
+		result = appmgrMakeAccountPath(buffer, encodedGiftReceived, id,
+					       "%s/%s/%s/%s");
+		drive = &g_appmgrGiftDrive;
+		break;
+	case 105:
+		result = appmgrDecodeString64(encodedMusic, buffer);
+		drive = &g_appmgrMusicDrive;
+		break;
+	case 106:
+		snprintf(g_appmgrPsmPath, sizeof(g_appmgrPsmPath), "ux0:psm/%s/RO", id);
+		path = g_appmgrPsmPath;
+		break;
+	case 107:
+		snprintf(g_appmgrPsmPath, sizeof(g_appmgrPsmPath), "ux0:psm/%s/RW", id);
+		path = g_appmgrPsmPath;
+		break;
+	case 108:
+		result = appmgrDecodeString64(encodedCalendar, buffer);
+		break;
+	case 109:
+		result = appmgrDecodeString64(encodedVideo, buffer);
+		drive = &g_appmgrVideoDrive;
+		break;
+	default:
+		result = appmgrDecodeString32(encodedAppMeta, g_appmgrMountByIdRoot);
+		if (result < 0)
+			break;
+		if ((unsigned int)snprintf(buffer, sizeof(buffer), "%s/%s",
+					   g_appmgrMountByIdRoot, id) > 63)
+			goto invalid;
+		break;
+	}
+	if (result < 0)
+		goto unlock;
+
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+	strncpy(titleId, app->process.appName, 10);
+	flags = app->process.content.contentFlags;
+	if ((flags & 0x30) != 0) {
+		if (mountId == 105) {
+			if ((flags & 0x04000000) == 0 &&
+			    (flags & 0x0a000000) == 0x0a000000)
+				goto mediaMounted;
+		} else if (mountId == 109) {
+			if ((flags & 0x08000000) == 0 &&
+			    (flags & 0x06000000) == 0x06000000)
+				goto mediaMounted;
+		}
+	}
+
+	if (mountId == 110) {
+		result = appmgrCreatePfsDirectory(110, path, NULL);
+		if (result != 0)
+			goto unlock;
+		goto mount;
+	}
+	if ((flags & 0x10) != 0 && (mountId & 0xfffffffb) == 0x69) {
+		result = 0x80010013;
+		if (appmgrGetFakeNoMemoryCard() != 0)
+			goto unlock;
+	}
+	result = appmgrCreateDirectories(path, 1);
+	if (result != 0)
+		goto unlock;
+
+mount:
+	result = appmgrMount(sceKernelGetProcessId(), &app->process.mounts, mountId,
+			     titleId, path, drive, NULL, mountPoint);
+	if (result == 0) {
+		flags = app->process.content.contentFlags;
+		if ((flags & 0x30) != 0) {
+			if (mountId == 105)
+				app->process.content.contentFlags = flags | 0x04000000;
+			else if (mountId == 109)
+				app->process.content.contentFlags = flags | 0x08000000;
+		}
+	}
+	goto unlock;
+mediaMounted:
+	result = 0x80800048;
+	goto unlock;
+invalid:
+	result = 0x80800001;
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+#else
 /* SceAppMgrForDriver 5E311F71: mounts an application data directory by its mount ID. */
 int sceAppMgrAppDataMountById(unsigned int mountId, const char *id,
 				ScePfsRndDriveId *mountPoint)
@@ -5555,6 +5719,7 @@ int sceAppMgrAppDataMountById(unsigned int mountId, const char *id,
 		return 0x80800001;
 	}
 }
+#endif
 
 #if !FW_SINCE(0x04000000)
 /* Mounts a trophy set's directory, or its backup. */

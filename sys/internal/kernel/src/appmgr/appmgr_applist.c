@@ -1394,3 +1394,17 @@ int _appListUnlockApp(struct AppState *app)
 		APP_LIST_MUTEX_ERROR(result, 928);
 	return result;
 }
+
+#if FW_DEBUG
+/* Sony's link kept these records of app-list functions its image dropped. */
+SCE_DBGINFO_DEFINE_ORPHAN(appListSetWaiterExistentFlagRecord498, 498,
+			  "_appListSetWaiterExistentFlag");
+SCE_DBGINFO_DEFINE_ORPHAN(appListFindAndLockAppByRunStateRecord833, 833,
+			  "_appListFindAndLockAppByRunState");
+SCE_DBGINFO_DEFINE_ORPHAN(appListFindAndLockAppByRunStateRecord853, 853,
+			  "_appListFindAndLockAppByRunState");
+SCE_DBGINFO_DEFINE_ORPHAN(appListFindAndLockAppByRunStateRecord863, 863,
+			  "_appListFindAndLockAppByRunState");
+SCE_DBGINFO_DEFINE_ORPHAN(appListFindAndLockAppByRunStateRecord867, 867,
+			  "_appListFindAndLockAppByRunState");
+#endif
