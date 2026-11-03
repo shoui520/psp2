@@ -1,0 +1,34 @@
+--- a/ssl3.h
++++ b/ssl3.h
+@@ -59,6 +59,7 @@
+ #ifndef HEADER_SSL3_H 
+ #define HEADER_SSL3_H 
+ 
++#ifndef SCE_SSL3_ALERTS_ONLY
+ #include "buffer.h"
+ 
+ #ifdef  __cplusplus
+@@ -184,6 +185,8 @@
+ #define SSL3_RT_HANDSHAKE		22
+ #define SSL3_RT_APPLICATION_DATA	23
+ 
++#endif /* only the identified alert constants are needed by this consumer */
++
+ #define SSL3_AL_WARNING			1
+ #define SSL3_AL_FATAL			2
+ 
+@@ -200,6 +203,7 @@
+ #define SSL3_AD_CERTIFICATE_UNKNOWN	46
+ #define SSL3_AD_ILLEGAL_PARAMETER	47	/* fatal */
+ 
++#ifndef SCE_SSL3_ALERTS_ONLY
+ typedef struct ssl3_record_st
+ 	{
+ /*r */	int type;		/* type of record */
+@@ -451,5 +455,6 @@
+ #ifdef  __cplusplus
+ }
+ #endif
++#endif /* non-alert SSL3 declarations */
+ #endif
+ 

@@ -28,6 +28,7 @@ BIO *BIO_set_retry_write(BIO *bio);
 #undef BIO_get_fd
 long BIO_set_fd(BIO *bio, int fd, long closeFlag);
 int BIO_get_fd(BIO *bio, int *fd);
+BIO *SceSslInternal_B8E6E249(void);
 
 /* Descriptive name for SSL-C's extra retry bit is ours. */
 #define SCE_BIO_RETRY_EXTENSION 0x40

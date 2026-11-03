@@ -17,9 +17,10 @@ Archive SHA-256:
 Kept unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h`,
 `crypto/stack/stack.c`, `crypto/stack/stack.h`, `crypto/ex_data.c`,
 `crypto/bio/bio_lib.c`, `crypto/bio/bss_sock.c`, `crypto/bio/b_print.c`,
-`crypto/bio/b_dump.c`, `crypto/bio/bio.h`,
-`crypto/cryptlib.c` and `crypto/mem.c`, plus the upstream copyright file.
-The libssl LHASH, STACK, ex-data, BIO and runtime translation units
+`crypto/bio/b_dump.c`, `crypto/bio/bss_mem.c`, `crypto/bio/bio.h`,
+`crypto/buffer/buffer.c`, `crypto/buffer/buffer.h`, `ssl/ssl_stat.c`,
+`ssl/ssl3.h`, `crypto/cryptlib.c` and `crypto/mem.c`, plus the upstream copyright file.
+The libssl LHASH, STACK, ex-data, BIO, buffer, alert and runtime translation units
 read these files. The rest of the distribution is omitted.
 
 The baseline was selected by compiling historical releases with Sony SNC and
@@ -124,3 +125,26 @@ truncation, binds bounded formatting/copy/append operations and returns1 after
 successful rows or-1 on the first nonpositive write. Its row formats,16-byte
 width and ASCII range follow upstream. The string and formatter adapter names
 are ours; they wrap the original Sony LibKernel imports.
+
+`buffer/buffer_sce.patch` preserves SSL-C's null-safe destruction, absence of
+allocation-error queue calls, growth by requested length plus16, and old capacity
+passed to reallocation. The twelve-byte `BUF_MEM` layout and its field names
+agree with upstream. `BUF_strdup` is not selected: its native identity has not
+been established. A declaration hook lets the memory BIO use the same adapted
+buffer bodies for operations inlined in the original.
+
+`bio/bss_mem_sce.patch` removes the null-write error-queue call, retains one-bit
+close flags and makes the original32-bit length wrapping explicit. Its read
+path retains the upstream overlapping byte-copy loop, empty-read return setting
+and retry behavior. Gets scans for a newline, limits the read, and terminates
+only a positive result. The wrapper shares buffer and length implementations
+with their out-of-line counterparts. The method table and its seven callbacks
+are identified in the original, as is Sony's empty-memory-BIO factory export.
+
+`ssl/ssl_stat_sce.patch` currently selects the four identified alert-string
+operations. SSL-C adds the TLS no-renegotiation description and corrects the
+upstream spellings of unexpected-message and certificate-unknown text. The
+`ssl/ssl3_sce.patch` header selection supplies the original alert constants.
+State and read-state string operations remain unselected pending reconstruction
+of the full SSL object: the native state/read-state fields differ from the
+baseline layout. Their presence in the pristine donor is not completed coverage.

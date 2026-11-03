@@ -1,0 +1,66 @@
+--- a/ssl_stat.c
++++ b/ssl_stat.c
+@@ -57,8 +57,9 @@
+  */
+ 
+ #include <stdio.h>
+-#include "ssl_locl.h"
++/* SCE: the consuming wrapper supplies the selected interfaces. */
+ 
++#ifndef SCE_SSL_STAT_ALERTS_ONLY
+ char *SSL_state_string_long(s)
+ SSL *s;
+ 	{
+@@ -346,6 +347,8 @@
+ 	return(str);
+ 	}
+ 
++#endif /* state strings require the reconstructed SSL object layout */
++
+ char *SSL_alert_type_string_long(value)
+ int value;
+ 	{
+@@ -389,6 +392,7 @@
+ 	case SSL3_AD_CERTIFICATE_EXPIRED:	str="CE"; break;
+ 	case SSL3_AD_CERTIFICATE_UNKNOWN:	str="CU"; break;
+ 	case SSL3_AD_ILLEGAL_PARAMETER:		str="IP"; break;
++	case TLS1_AD_NO_RENEGOTIATION:		str="NR"; break;
+ 	default:				str="UK"; break;
+ 		}
+ 	return(str);
+@@ -405,7 +409,7 @@
+ 		str="close notify";
+ 		break;
+ 	case SSL3_AD_UNEXPECTED_MESSAGE:
+-		str="unexected_message";
++		str="unexpected_message";
+ 		break;
+ 	case SSL3_AD_BAD_RECORD_MAC:
+ 		str="bad record mac";
+@@ -432,16 +436,20 @@
+ 		str="certificate expired";
+ 		break;
+ 	case SSL3_AD_CERTIFICATE_UNKNOWN:
+-		str="certifcate unknown";
++		str="certificate unknown";
+ 		break;
+ 	case SSL3_AD_ILLEGAL_PARAMETER:
+ 		str="illegal parameter";
+ 		break;
++	case TLS1_AD_NO_RENEGOTIATION:
++		str="no renegotiation";
++		break;
+ 	default: str="unknown"; break;
+ 		}
+ 	return(str);
+ 	}
+ 
++#ifndef SCE_SSL_STAT_ALERTS_ONLY
+ char *SSL_rstate_string(s)
+ SSL *s;
+ 	{
+@@ -456,3 +464,4 @@
+ 		}
+ 	return(str);
+ 	}
++#endif

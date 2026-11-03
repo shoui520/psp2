@@ -1,0 +1,56 @@
+--- a/bss_mem.c
++++ b/bss_mem.c
+@@ -57,9 +57,7 @@
+  */
+ 
+ #include <stdio.h>
+-#include <errno.h>
+-#include "cryptlib.h"
+-#include "bio.h"
++/* SCE: the consuming wrapper supplies BIO, buffers and memory operations. */
+ 
+ #ifndef NOPROTO
+ static int mem_write(BIO *h,char *buf,int num);
+@@ -173,13 +171,13 @@
+ 	bm=(BUF_MEM *)b->ptr;
+ 	if (in == NULL)
+ 		{
+-		BIOerr(BIO_F_MEM_WRITE,BIO_R_NULL_PARAMETER);
+ 		goto end;
+ 		}
+ 
+ 	BIO_clear_retry_flags(b);
+ 	blen=bm->length;
+-	if (BUF_MEM_grow(bm,blen+inl) != (blen+inl))
++	if (BUF_MEM_grow(bm,(int)((unsigned int)blen+(unsigned int)inl)) !=
++		(int)((unsigned int)blen+(unsigned int)inl))
+ 		goto end;
+ 	memcpy(&(bm->data[blen]),in,inl);
+ 	ret=inl;
+@@ -221,7 +219,7 @@
+ 		break;
+ 	case BIO_C_SET_BUF_MEM:
+ 		mem_free(b);
+-		b->shutdown=(int)num;
++		b->shutdown=(int)(num & 1);
+ 		b->ptr=ptr;
+ 		break;
+ 	case BIO_C_GET_BUF_MEM_PTR:
+@@ -235,7 +233,7 @@
+ 		ret=(long)b->shutdown;
+ 		break;
+ 	case BIO_CTRL_SET_CLOSE:
+-		b->shutdown=(int)num;
++		b->shutdown=(int)(num & 1);
+ 		break;
+ 
+ 	case BIO_CTRL_WPENDING:
+@@ -283,7 +281,7 @@
+ 	else
+ 		i++;
+ 	/* i is the max to copy */
+-	if ((size-1) < i) i=size-1;
++	if ((int)((unsigned int)size-1) < i) i=(int)((unsigned int)size-1);
+ 	i=mem_read(bp,buf,i);
+ 	if (i > 0) buf[i]='\0';
+ 	ret=i;

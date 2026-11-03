@@ -19,6 +19,9 @@ libssl_prepare_patched(${libssl_ssleay}/crypto/bio/bio_lib.c
 libssl_prepare_patched(${libssl_ssleay}/crypto/bio/bss_sock.c
 	${CMAKE_CURRENT_SOURCE_DIR}/bio/bss_sock_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/bss_sock_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/crypto/bio/bss_mem.c
+	${CMAKE_CURRENT_SOURCE_DIR}/bio/bss_mem_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/bss_mem_sce.inc)
 libssl_prepare_patched(${libssl_ssleay}/crypto/bio/b_print.c
 	${CMAKE_CURRENT_SOURCE_DIR}/bio/b_print_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/b_print_sce.inc)
@@ -31,15 +34,29 @@ libssl_prepare_patched(${libssl_ssleay}/crypto/cryptlib.c
 libssl_prepare_patched(${libssl_ssleay}/crypto/mem.c
 	${CMAKE_CURRENT_SOURCE_DIR}/mem_ctrl_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/mem_ctrl_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_stat.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_stat_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/ssl_stat_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/ssl3.h
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl3_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/ssl3_sce.h)
+libssl_prepare_patched(${libssl_ssleay}/crypto/buffer/buffer.c
+	${CMAKE_CURRENT_SOURCE_DIR}/buffer/buffer_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/buffer_sce.inc)
+configure_file(${libssl_ssleay}/crypto/buffer/buffer.h
+	${CMAKE_CURRENT_BINARY_DIR}/buffer_upstream.h COPYONLY)
 psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	asn1.c
 	bio/bio_lib.c
 	bio/bss_sock.c
+	bio/bss_mem.c
 	bio/b_print.c
 	bio/b_dump.c
 	asn1interpreter.c
 	ex_data.c
+	ssl/ssl_stat.c
 	err/err.c
+	buffer/buffer.c
 	bio/bio_flags.c
 	string.c
 	format.c

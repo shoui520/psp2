@@ -1,15 +1,12 @@
 /* Filename and private descriptive name are ours, not recovered Sony names. */
 #include "memory.h"
 #include "format.h"
+#include "string_inline.h"
 #include <libkernel/libkernel.h>
 
 SceUInt32 sslStringLength(const char *string)
 {
-	SceUInt32 length = 0;
-
-	while (*string++)
-		length++;
-	return length;
+	return sslStringLengthInline(string);
 }
 
 char *sslCopyString(char *destination, const char *source, SceUInt32 size)
