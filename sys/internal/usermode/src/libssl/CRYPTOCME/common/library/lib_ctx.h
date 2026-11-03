@@ -85,6 +85,12 @@ int sslGetLibraryData(SslLibrary *library, int type, void **result);
 int sslConstructLibraryObject(SslLibrary *library, int type, int selector,
 			      SceUInt32 flags, int parameter,
 			      SslObjectHeader **result);
+int sslGetCachedLibraryObject(SslLibrary *library, int type, int selector,
+			      SceUInt32 flags, int parameter,
+			      SslObjectHeader **result);
+int sslInitCachedLibraryObject(SslLibrary *library, int type, int selector,
+			       SceUInt32 flags, int parameter,
+			       SslObjectHeader **result);
 
 /* Descriptive request and matching names are ours. */
 #define SSL_LIBRARY_ANY_TYPE (-2)

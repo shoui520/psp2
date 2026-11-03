@@ -18,6 +18,7 @@ typedef struct SslObjectHeader {
 
 /* Descriptive names for the native CRYPTOCME status values are ours. */
 #define SSL_CRYPTO_ERROR_NULL_ARGUMENT 10017
+#define SSL_CRYPTO_ERROR_NULL_OUTPUT 10018
 #define SSL_CRYPTO_ERROR_NO_METHODS 10015
 #define SSL_CRYPTO_ERROR_NO_OPERATION 10011
 #define SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD 10009

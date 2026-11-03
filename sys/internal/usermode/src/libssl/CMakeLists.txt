@@ -108,9 +108,11 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	CRYPTOCME/common/library/lib_getm.c
 	CRYPTOCME/common/library/lib_api.c
 	CRYPTOCME/common/key/pkey_ctx.c
+	CRYPTOCME/common/module/crypto/cry_meth.c
 	CRYPTOCME/common/module/crypto/cry_api.c
 	CRYPTOCME/common/module/crypto/cry_init.c
 	CRYPTOCME/common/module/crypto/cry_info.c
+	CRYPTOCME/common/module/crypto/ctx_info.c
 	runtime.c
 	memory.c
 	time.c

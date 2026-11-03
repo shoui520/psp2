@@ -45,6 +45,39 @@ typedef struct SslCryptoImplementationMethods {
 		       SceUIntPtr value);
 } SslCryptoImplementationMethods;
 
+/* Complete algorithm descriptor; the names are ours. */
+typedef struct SslCryptoAlgorithmDescriptor {
+	int family;
+	int algorithm;
+	SceUInt32 mode;
+	const SslCryptoImplementationMethods *(*GetMethods)(void);
+	void *data;
+} SslCryptoAlgorithmDescriptor;
+
+/* Only the shared context interface is declared here. Concrete context storage
+ * extends this prefix; no size for that allocation is implied by this type.
+ */
+typedef struct SslCryptoContextHeader {
+	const SslCryptoLifecycleMethods *methods;
+	SslLibrary *library;
+	const SslCryptoAlgorithmDescriptor *algorithms;
+} SslCryptoContextHeader;
+
+/* The mapping's second and third values select families 3 and 6 respectively
+ * in the native caller. These descriptive names are ours.
+ */
+typedef struct SslCryptoMacAlgorithmMapping {
+	int algorithm;
+	int digestAlgorithm;
+	int macAlgorithm;
+} SslCryptoMacAlgorithmMapping;
+
+_Static_assert(sizeof(SslCryptoAlgorithmDescriptor) == 20,
+	       "SslCryptoAlgorithmDescriptor");
+_Static_assert(sizeof(SslCryptoMacAlgorithmMapping) == 12,
+	       "SslCryptoMacAlgorithmMapping");
+_Static_assert(offsetof(SslCryptoContextHeader, algorithms) == 8, "algorithms");
+
 struct SslCryptoAlgorithm {
 	void *state;
 	void *context;
@@ -75,6 +108,20 @@ int sslDestroyAlgorithm(SslCryptoAlgorithm *algorithm);
 int sslCreateCryptoContext(SslLibrary *library, int mode, void **result);
 int sslDestroyCryptoContext(void *context);
 int sslFreeAlgorithm(SslCryptoAlgorithm *algorithm);
+int sslFindAlgorithmDescriptor(const SslCryptoAlgorithmDescriptor *table,
+			       int family, int algorithm, SceUInt32 mode,
+			       const SslCryptoAlgorithmDescriptor **result);
+int sslGetAlgorithmDescriptor(SslCryptoAlgorithm *algorithm,
+			      const SslCryptoAlgorithmDescriptor *table,
+			      const SslCryptoAlgorithmDescriptor **result);
+int sslBindAlgorithm(SslCryptoAlgorithm **result);
+int sslCloneAlgorithm(SslCryptoAlgorithm *algorithm, SslCryptoAlgorithm **result);
+int sslQueryAlgorithmSupport(SslCryptoContextHeader *context, int family,
+			     int algorithm, SceUInt32 mode, int *result);
+int sslMapMacAlgorithms(SslLibrary *library, int *algorithm,
+			int *digestAlgorithm, int *macAlgorithm);
+int sslGetMacAlgorithms(SslCryptoContextHeader *context, int algorithm,
+			int *digestAlgorithm, int *macAlgorithm);
 int sslCopyAlgorithm(SslCryptoAlgorithm *algorithm, SslCryptoAlgorithm **result);
 int sslGetAlgorithmInfo(SslCryptoAlgorithm *algorithm, int selector, void *result);
 int sslSetAlgorithmInfo(SslCryptoAlgorithm *algorithm, int selector,
@@ -93,6 +140,9 @@ int sslSetImplementationInfo(SslCryptoAlgorithm *algorithm, int selector,
 
 #define SSL_CRYPTO_LOCK 38
 #define SSL_CRYPTO_MODULE_TYPE 6
+#define SSL_CRYPTO_MAC_MAPPING_FLAGS 6
+#define SSL_CRYPTO_ALGORITHM_SUPPORTED 2
+#define SSL_CRYPTO_MODE_COPY 0x100
 #define SSL_CRYPTO_ALGORITHM_DESTROYING 0x1000
 #define SSL_CRYPTO_ALGORITHM_OWNS_PROPERTIES 8
 
