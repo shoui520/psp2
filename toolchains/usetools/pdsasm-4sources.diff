@@ -1,0 +1,31 @@
+--- a/host/pdsasm/main.c
++++ b/host/pdsasm/main.c
+@@ -465,7 +465,7 @@
+ 		*/
+ 		if (psInst->eOpcode == PDSASM_OPCODE_MOVS)
+ 		{
+-			if (psInst->uArgCount != 3 && psInst->uArgCount != 4)
++			if (psInst->uArgCount < 3 || psInst->uArgCount > 5)
+ 			{
+ 				Error(psInst, "Command type doutu needs either 2 or 3 sources.");
+ 				return IMG_FALSE;
+@@ -582,9 +582,17 @@
+ 		}
+ 
+ 		/*
+-			Check the command type.
++			Check the command type. A movs may also give DOUTA four sources
++			(a qword of the first bank and two more dwords), the form the
++			PSP2's own state program uses.
+ 		*/
+-		if (psInst->uArgCount != (uMovsArgCount + 1))
++		if (psInst->uArgCount != (uMovsArgCount + 1) &&
++			!(
++				psInst->eOpcode == PDSASM_OPCODE_MOVS &&
++				psInst->psArgs[0].u.eSpecialRegister == PDSASM_SPECIAL_REGISTER_DOUTA &&
++				psInst->uArgCount == 5
++			 )
++		   )
+ 		{
+ 			Error(psInst, "Wrong number of arguments for this command type (was %d but should have been %d).",
+ 				  psInst->uArgCount,

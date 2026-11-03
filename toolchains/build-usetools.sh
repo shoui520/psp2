@@ -23,7 +23,8 @@ echo "$SHA  $D/$A" | sha256sum -c --quiet
 
 rm -rf $W && mkdir -p $W && tar -xzf $D/$A -C $W
 S=$W/PVR_PSP2-$C
-(cd $S/host/pdsasm && patch -s -p3 < $R/toolchains/usetools/pdsasm-lp64.diff)
+(cd $S/host/pdsasm && patch -s -p3 < $R/toolchains/usetools/pdsasm-lp64.diff &&
+	patch -s -p3 < $R/toolchains/usetools/pdsasm-4sources.diff)
 
 U=$S/tools/intern/useasm
 CC="${CC:-cc} -O2 -w -std=gnu89"
