@@ -1,14 +1,21 @@
 --- a/ssl3.h
 +++ b/ssl3.h
-@@ -59,6 +59,7 @@
+@@ -59,11 +59,14 @@
  #ifndef HEADER_SSL3_H 
  #define HEADER_SSL3_H 
  
 +#ifndef SCE_SSL3_ALERTS_ONLY
++#ifndef SCE_SSL3_CONSTANTS_ONLY
  #include "buffer.h"
  
  #ifdef  __cplusplus
-@@ -184,6 +185,8 @@
+ extern "C" {
+ #endif
++#endif
+ 
+ #define SSL3_CK_RSA_NULL_MD5			0x03000001
+ #define SSL3_CK_RSA_NULL_SHA			0x03000002
+@@ -184,6 +187,8 @@
  #define SSL3_RT_HANDSHAKE		22
  #define SSL3_RT_APPLICATION_DATA	23
  
@@ -17,18 +24,32 @@
  #define SSL3_AL_WARNING			1
  #define SSL3_AL_FATAL			2
  
-@@ -200,6 +203,7 @@
+@@ -200,6 +205,8 @@
  #define SSL3_AD_CERTIFICATE_UNKNOWN	46
  #define SSL3_AD_ILLEGAL_PARAMETER	47	/* fatal */
  
 +#ifndef SCE_SSL3_ALERTS_ONLY
++#ifndef SCE_SSL3_CONSTANTS_ONLY
  typedef struct ssl3_record_st
  	{
  /*r */	int type;		/* type of record */
-@@ -451,5 +455,6 @@
+@@ -349,6 +356,7 @@
+ 		} tmp;
+ 	} SSL3_CTX;
+ 
++#endif /* SSL3 object layouts are reconstructed separately */
+ /* SSLv3 */
+ /*client */
+ /* extra state */
+@@ -448,8 +456,11 @@
+ #define SSL3_CHANGE_CIPHER_CLIENT_READ	(SSL3_CC_CLIENT|SSL3_CC_READ)
+ #define SSL3_CHANGE_CIPHER_SERVER_WRITE	(SSL3_CC_SERVER|SSL3_CC_WRITE)
+ 
++#ifndef SCE_SSL3_CONSTANTS_ONLY
  #ifdef  __cplusplus
  }
  #endif
-+#endif /* non-alert SSL3 declarations */
  #endif
++#endif /* non-alert SSL3 declarations */
++#endif
  

@@ -59,6 +59,11 @@ int SceSslInternal_AF50B945(void *ctx, SceSslInternalCallback callback, void *ar
 int SceSslInternal_461C5990(int library, int error);
 
 /* connections */
+struct ssl_st;
+int SceSslInternal_3EF42454(struct ssl_st *ssl);
+int SceSslInternal_6F3B9809(struct ssl_st *ssl);
+int SceSslInternal_B1745DAD(struct ssl_st *ssl);
+int SceSslInternal_D6D32A2F(struct ssl_st *ssl);
 void *SceSslInternal_D28834E6(void *ctx);
 void SceSslInternal_19B2BB58(void *ssl);
 void SceSslInternal_EC9FAF42(void *ssl);

@@ -19,8 +19,9 @@ Kept unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h
 `crypto/bio/bio_lib.c`, `crypto/bio/bss_sock.c`, `crypto/bio/b_print.c`,
 `crypto/bio/b_dump.c`, `crypto/bio/bss_mem.c`, `crypto/bio/bio.h`,
 `crypto/buffer/buffer.c`, `crypto/buffer/buffer.h`, `ssl/ssl_stat.c`,
-`ssl/ssl3.h`, `crypto/cryptlib.c` and `crypto/mem.c`, plus the upstream copyright file.
-The libssl LHASH, STACK, ex-data, BIO, buffer, alert and runtime translation units
+`ssl/ssl3.h`, `ssl/ssl.h`, `ssl/ssl23.h`, `ssl/ssl_lib.c`, `crypto/cryptlib.c`
+and `crypto/mem.c`, plus the upstream copyright file.
+The libssl LHASH, STACK, ex-data, BIO, buffer, SSL and runtime translation units
 read these files. The rest of the distribution is omitted.
 
 The baseline was selected by compiling historical releases with Sony SNC and
@@ -141,10 +142,26 @@ only a positive result. The wrapper shares buffer and length implementations
 with their out-of-line counterparts. The method table and its seven callbacks
 are identified in the original, as is Sony's empty-memory-BIO factory export.
 
-`ssl/ssl_stat_sce.patch` currently selects the four identified alert-string
-operations. SSL-C adds the TLS no-renegotiation description and corrects the
-upstream spellings of unexpected-message and certificate-unknown text. The
-`ssl/ssl3_sce.patch` header selection supplies the original alert constants.
-State and read-state string operations remain unselected pending reconstruction
-of the full SSL object: the native state/read-state fields differ from the
-baseline layout. Their presence in the pristine donor is not completed coverage.
+`ssl/ssl_stat_sce.patch` selects all eight identified state, read-state and
+alert-string operations. SSL-C adds the TLS no-renegotiation description,
+corrects upstream message spellings, and adds server-hello-request and
+client-hello-renegotiation states. Long state strings retain SSL23 negotiation
+labels while short state strings omit them. The `ssl/ssl3_sce.patch` header
+selection supplies the original protocol, state and alert constants.
+
+`ssl/ssl_sce.patch` adapts the complete connection structure to SSL-C's352-byte
+layout. It retains upstream member names where identified; additional descriptive
+names, the record-crypto and extension-list types, and the callback typedef are
+ours, not recovered Sony spellings. Embedded read/write crypto records replace
+the donor's context pointers. Callback arguments, extension indexing, message
+limits and algorithm/key handles follow native readers and writers. The reserved
+word has no independently observed access. Opaque pointees remain incomplete;
+this layout does not claim implementation of their allocation or behavior.
+
+`ssl/ssl_lib_sce.patch` selects ten original connection operations: BIO and
+method getters, textual/numeric version, context getter, shutdown setter/getter,
+information callback getter, and state getter. The textual version includes the
+native TLS1.1 label `TLSv11` and excludes SSL2. The consuming wrapper retains
+Sony's NID export link names and separately compiles the original rwstate query,
+which is a macro in this upstream baseline. The remaining SSL library routines
+are excluded and are not counted as reconstructed functions.

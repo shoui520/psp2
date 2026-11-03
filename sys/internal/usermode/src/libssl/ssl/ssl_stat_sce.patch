@@ -11,7 +11,72 @@
  char *SSL_state_string_long(s)
  SSL *s;
  	{
-@@ -346,6 +347,8 @@
+@@ -66,15 +67,15 @@
+ 
+ 	switch (s->state)
+ 		{
+-case SSL_ST_BEFORE: str="before SSL initalisation"; break;
+-case SSL_ST_ACCEPT: str="before accept initalisation"; break;
+-case SSL_ST_CONNECT: str="before connect initalisation"; break;
++case SSL_ST_BEFORE: str="before SSL initialization"; break;
++case SSL_ST_ACCEPT: str="before accept initialization"; break;
++case SSL_ST_CONNECT: str="before connect initialization"; break;
+ case SSL_ST_OK: str="SSL negotiation finished successfully"; break;
+ case SSL_ST_RENEGOTIATE:	str="SSL renegotiate ciphers"; break;
+-case SSL_ST_BEFORE|SSL_ST_CONNECT: str="before/connect initalisation"; break;
+-case SSL_ST_OK|SSL_ST_CONNECT: str="ok/connect SSL initalisation"; break;
+-case SSL_ST_BEFORE|SSL_ST_ACCEPT: str="before/accept initalisation"; break;
+-case SSL_ST_OK|SSL_ST_ACCEPT: str="ok/accept SSL initalisation"; break;
++case SSL_ST_BEFORE|SSL_ST_CONNECT: str="before/connect initialization"; break;
++case SSL_ST_OK|SSL_ST_CONNECT: str="ok/connect SSL initialization"; break;
++case SSL_ST_BEFORE|SSL_ST_ACCEPT: str="before/accept initialization"; break;
++case SSL_ST_OK|SSL_ST_ACCEPT: str="ok/accept SSL initialization"; break;
+ #ifndef NO_SSL2
+ case SSL2_ST_CLIENT_START_ENCRYPTION: str="SSLv2 client start encryption"; break;
+ case SSL2_ST_SERVER_START_ENCRYPTION: str="SSLv2 server start encryption"; break;
+@@ -122,6 +123,7 @@
+ case SSL3_ST_CW_CLNT_HELLO_B:	str="SSLv3 write client hello B"; break;
+ case SSL3_ST_CR_SRVR_HELLO_A:	str="SSLv3 read server hello A"; break;
+ case SSL3_ST_CR_SRVR_HELLO_B:	str="SSLv3 read server hello B"; break;
++case SSL3_ST_CR_HELLO_REQ_A:	str="SSLv3 read server hello request A"; break;
+ case SSL3_ST_CR_CERT_A:		str="SSLv3 read server certificate A"; break;
+ case SSL3_ST_CR_CERT_B:		str="SSLv3 read server certificate B"; break;
+ case SSL3_ST_CR_KEY_EXCH_A:	str="SSLv3 read server key exchange A"; break;
+@@ -160,6 +162,8 @@
+ case SSL3_ST_SR_CLNT_HELLO_A:	str="SSLv3 read client hello A"; break;
+ case SSL3_ST_SR_CLNT_HELLO_B:	str="SSLv3 read client hello B"; break;
+ case SSL3_ST_SR_CLNT_HELLO_C:	str="SSLv3 read client hello C"; break;
++case SSL3_ST_SR_CLNT_HELLO_RENEGOTIATE:
++	str="SSLv3 read client hello renegotiating"; break;
+ case SSL3_ST_SW_HELLO_REQ_A:	str="SSLv3 write hello request A"; break;
+ case SSL3_ST_SW_HELLO_REQ_B:	str="SSLv3 write hello request B"; break;
+ case SSL3_ST_SW_HELLO_REQ_C:	str="SSLv3 write hello request C"; break;
+@@ -181,7 +185,7 @@
+ case SSL3_ST_SR_CERT_VRFY_B:	str="SSLv3 read certificate verify B"; break;
+ #endif
+ 
+-#if !defined(NO_SSL2) && !defined(NO_SSL3)
++#if !defined(NO_SSL3) /* SCE: long names retain SSL2/3 negotiation states. */
+ /* SSLv2/v3 compatablitity states */
+ /* client */
+ case SSL23_ST_CW_CLNT_HELLO_A:	str="SSLv2/v3 write client hello A"; break;
+@@ -273,6 +277,7 @@
+ case SSL3_ST_CW_CLNT_HELLO_B:			str="3WCH_B"; break;
+ case SSL3_ST_CR_SRVR_HELLO_A:			str="3RSH_A"; break;
+ case SSL3_ST_CR_SRVR_HELLO_B:			str="3RSH_B"; break;
++case SSL3_ST_CR_HELLO_REQ_A:			str="3RSHRA"; break;
+ case SSL3_ST_CR_CERT_A:				str="3RSC_A"; break;
+ case SSL3_ST_CR_CERT_B:				str="3RSC_B"; break;
+ case SSL3_ST_CR_KEY_EXCH_A:			str="3RSKEA"; break;
+@@ -311,6 +316,7 @@
+ case SSL3_ST_SR_CLNT_HELLO_A:			str="3RCH_A"; break;
+ case SSL3_ST_SR_CLNT_HELLO_B:			str="3RCH_B"; break;
+ case SSL3_ST_SR_CLNT_HELLO_C:			str="3RCH_C"; break;
++case SSL3_ST_SR_CLNT_HELLO_RENEGOTIATE:		str="3RCH_R"; break;
+ case SSL3_ST_SW_SRVR_HELLO_A:			str="3WSH_A"; break;
+ case SSL3_ST_SW_SRVR_HELLO_B:			str="3WSH_B"; break;
+ case SSL3_ST_SW_CERT_A:				str="3WSC_A"; break;
+@@ -346,6 +352,8 @@
  	return(str);
  	}
  
@@ -20,7 +85,7 @@
  char *SSL_alert_type_string_long(value)
  int value;
  	{
-@@ -389,6 +392,7 @@
+@@ -389,6 +397,7 @@
  	case SSL3_AD_CERTIFICATE_EXPIRED:	str="CE"; break;
  	case SSL3_AD_CERTIFICATE_UNKNOWN:	str="CU"; break;
  	case SSL3_AD_ILLEGAL_PARAMETER:		str="IP"; break;
@@ -28,7 +93,7 @@
  	default:				str="UK"; break;
  		}
  	return(str);
-@@ -405,7 +409,7 @@
+@@ -405,7 +414,7 @@
  		str="close notify";
  		break;
  	case SSL3_AD_UNEXPECTED_MESSAGE:
@@ -37,7 +102,7 @@
  		break;
  	case SSL3_AD_BAD_RECORD_MAC:
  		str="bad record mac";
-@@ -432,16 +436,20 @@
+@@ -432,16 +441,20 @@
  		str="certificate expired";
  		break;
  	case SSL3_AD_CERTIFICATE_UNKNOWN:
@@ -59,7 +124,7 @@
  char *SSL_rstate_string(s)
  SSL *s;
  	{
-@@ -456,3 +464,4 @@
+@@ -456,3 +469,4 @@
  		}
  	return(str);
  	}

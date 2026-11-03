@@ -37,9 +37,17 @@ libssl_prepare_patched(${libssl_ssleay}/crypto/mem.c
 libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_stat.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_stat_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/ssl_stat_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_lib.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_lib_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/ssl_lib_sce.inc)
 libssl_prepare_patched(${libssl_ssleay}/ssl/ssl3.h
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl3_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/ssl3_sce.h)
+libssl_prepare_patched(${libssl_ssleay}/ssl/ssl.h
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/ssl_sce.h)
+configure_file(${libssl_ssleay}/ssl/ssl23.h
+	${CMAKE_CURRENT_BINARY_DIR}/ssl23_upstream.h COPYONLY)
 libssl_prepare_patched(${libssl_ssleay}/crypto/buffer/buffer.c
 	${CMAKE_CURRENT_SOURCE_DIR}/buffer/buffer_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/buffer_sce.inc)
@@ -55,6 +63,7 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	asn1interpreter.c
 	ex_data.c
 	ssl/ssl_stat.c
+	ssl/ssl_lib.c
 	err/err.c
 	buffer/buffer.c
 	bio/bio_flags.c

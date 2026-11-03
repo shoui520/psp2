@@ -1,0 +1,224 @@
+--- a/ssl.h
++++ b/ssl.h
+@@ -59,6 +59,7 @@
+ #ifndef HEADER_SSL_H 
+ #define HEADER_SSL_H 
+ 
++#if 0 /* SCE: other upstream interfaces are not selected by this layout adapter. */
+ #ifdef  __cplusplus
+ extern "C" {
+ #endif
+@@ -452,122 +453,84 @@
+ #define SSL_want_write(s)	((s)->rwstate == SSL_WRITING)
+ #define SSL_want_x509_lookup(s)	((s)->rwstate == SSL_X509_LOOKUP)
+ 
+-typedef struct ssl_st
+-	{
+-	/* procol version
+-	 * 2 for SSLv2
+-	 * 3 for SSLv3
+-	 * -3 for SSLv3 but accept SSLv2 */
+-	int version;
+-	int type; /* SSL_ST_CONNECT or SSL_ST_ACCEPT */
+-
+-	SSL_METHOD *method; /* SSLv3 */
+-
+-	/* There are 2 BIO's even though they are normally both the
+-	 * same.  This is so data can be read and written to different
+-	 * handlers */
++#endif
+ 
+-#ifdef HEADER_BIO_H
+-	BIO *rbio; /* used by SSL_read */
+-	BIO *wbio; /* used by SSL_write */
+-	BIO *bbio; /* used during session-id reuse to concatinate
+-		    * messages */
+-#else
+-	char *rbio; /* used by SSL_read */
+-	char *wbio; /* used by SSL_write */
+-	char *bbio;
+-#endif
+-	/* This holds a variable that indicates what we were doing
+-	 * when a 0 or -1 is returned.  This is needed for
+-	 * non-blocking IO so we know what request needs re-doing when
+-	 * in SSL_accept or SSL_connect */
++/* SCE: full connection layout. Added descriptive field names are documented
++ * in the consuming ssl_locl.h; opaque handles retain their measured width.
++ */
++typedef struct ssl_st {
++	int version;
++	int type;
++	SSL_METHOD *method;
++	BIO *rbio;
++	BIO *wbio;
++	BIO *bbio;
+ 	int rwstate;
+-
+-	/* true when we are actually in SSL_accept() or SSL_connect() */
+ 	int in_handshake;
+-	int (*handshake_func)();
+-
+-/*	int server;*/	/* are we the server side? */
+-
+-	int new_session;/* 1 if we are to use a new session */
+-	int quiet_shutdown;/* don't send shutdown packets */
+-	int shutdown;	/* we have shut things down, 0x01 sent, 0x02
+-			 * for received */
+-	int state;	/* where we are */
+-	int rstate;	/* where we are when reading */
+-
+-	BUF_MEM *init_buf;	/* buffer used during init */
+-	int init_num;		/* amount read/written */
+-	int init_off;		/* amount read/written */
+-
+-	/* used internally to point at a raw packet */
++	int (*handshake_func)(struct ssl_st *ssl);
++	int server;
++	int quiet_shutdown;
++	int shutdown;
++	int state;
++	unsigned int reserved;
++	int rstate;
++	BUF_MEM *init_buf;
++	int init_num;
++	int init_off;
+ 	unsigned char *packet;
+ 	unsigned int packet_length;
+-
+-	struct ssl2_ctx_st *s2;	/* SSLv2 variables */
+-	struct ssl3_ctx_st *s3;	/* SSLv3 variables */
+-
+-	int read_ahead;		/* Read as many input bytes as possible */
+-	int hit;		/* reusing a previous session */
+-
+-	/* crypto */
+-	STACK /* SSL_CIPHER */ *cipher_list;
+-	STACK /* SSL_CIPHER */ *cipher_list_by_id;
+-
+-	/* These are the ones being used, the ones is SSL_SESSION are
+-	 * the ones to be 'copied' into these ones */
+-
+-	EVP_CIPHER_CTX *enc_read_ctx;		/* cryptographic state */
+-	EVP_MD *read_hash;			/* used for mac generation */
+-#ifdef HEADER_COMP_H
+-	COMP_CTX *expand;			/* uncompress */
+-#else
+-	char *expand;
+-#endif
+-
+-	EVP_CIPHER_CTX *enc_write_ctx;		/* cryptographic state */
+-	EVP_MD *write_hash;			/* used for mac generation */
+-#ifdef HEADER_COMP_H
+-	COMP_CTX *compress;			/* compression */
+-#else
+-	char *compress;	
+-#endif
+-
+-	/* session info */
+-
+-	/* client cert? */
+-	/* This is used to hold the server certificate used */
+-	struct cert_st /* CERT */ *cert;
+-
+-	/* This can also be in the session once a session is established */
++	struct ssl2_ctx_st *s2;
++	struct ssl3_ctx_st *s3;
++	int read_ahead;
++	int hit;
++	STACK *cipher_list;
++	STACK *cipher_list_by_id;
++	SslRecordCrypto read_crypto;
++	SslRecordCrypto write_crypto;
++	int (*destroy_mac_algorithm)(void *algorithm);
++	struct cert_st *cert;
++	STACK *cert_chain;
++	unsigned int sid_ctx_length;
++	unsigned char sid_ctx[32];
+ 	SSL_SESSION *session;
+-
+-	/* Used in SSL2 and SSL3 */
+-	int verify_mode;	/* 0 don't care about verify failure.
+-				 * 1 fail if verify fails */
+-	int (*verify_callback)(); /* fail if callback returns 0 */
+-	void (*info_callback)(); /* optional informational callback */
+-
+-	int error;		/* error bytes to be written */
+-	int error_code;		/* actual code */
+-
++	int verify_mode;
++	int verify_depth;
++	unsigned int verify_flags;
++	int (*verify_callback)(struct ssl_st *ssl, void *cert, int event, int *result);
++	void (*info_callback)(struct ssl_st *ssl, int where, int result);
++	void (*info_callback_ex)(struct ssl_st *ssl, int where, int result, void *arg);
++	void *info_callback_arg;
++	void (*io_callback)(struct ssl_st *ssl, int where, void *arg);
++	void *io_callback_arg;
++	int error;
++	int error_code;
+ 	SSL_CTX *ctx;
+-	/* set this flag to 1 and a sleep(1) is put into all SSL_read()
+-	 * and SSL_write() calls, good for nbio debuging :-) */
+-	int debug;	
+-
+-	/* extra application data */
+-	long verify_result;
+-	CRYPTO_EX_DATA ex_data;
+-
+-	/* for server side, keep the list of CA_dn we can use */
+-	STACK /* X509_NAME */ *client_CA;
+-
++	int debug;
++	STACK *ex_data;
++	STACK *client_CA;
+ 	int references;
+ 	unsigned long options;
++	unsigned long extended_options;
+ 	int first_packet;
+-	} SSL;
++	int client_version;
++	int max_send_fragment;
++	int read_buffer_size;
++	int client_message_limit;
++	int server_message_limit;
++	int rsa_key_option;
++	void *library;
++	unsigned int max_rsa_modulus_bits;
++	unsigned int max_rsa_exponent_bits;
++	SSL_METHOD *initial_method;
++	void *md5_algorithm;
++	void *sha1_algorithm;
++	void *md5_key;
++	void *sha1_key;
++	SslExtensionList *extensions;
++	unsigned long mode;
++} SSL;
+ 
++#if 0 /* SCE: protocol headers are selected by the consuming wrapper. */
+ #include "ssl2.h"
+ #include "ssl3.h"
+ #include "tls1.h" /* This is mostly sslv3 with a few tweaks */
+@@ -588,6 +551,8 @@
+  * It can also be useful to work out where you were when the connection
+  * failed */
+ 
++#endif
++
+ #define SSL_ST_CONNECT			0x1000
+ #define SSL_ST_ACCEPT			0x2000
+ #define SSL_ST_MASK			0x0FFF
+@@ -624,6 +589,7 @@
+ #define SSL_ST_READ_BODY			0xF1
+ #define SSL_ST_READ_DONE			0xF2
+ 
++#if 0 /* SCE: remaining upstream APIs are outside this layout selection. */
+ /* use either SSL_VERIFY_NONE or SSL_VERIFY_PEER, the last 2 options
+  * are 'ored' with SSL_VERIFY_PEER if they are desired */
+ #define SSL_VERIFY_NONE			0x00
+@@ -1492,5 +1458,6 @@
+ #ifdef  __cplusplus
+ }
+ #endif
++#endif /* unselected upstream APIs */
+ #endif
+ 

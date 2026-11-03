@@ -1,0 +1,120 @@
+--- a/ssl_lib.c
++++ b/ssl_lib.c
+@@ -57,10 +57,9 @@
+  */
+ 
+ #include <stdio.h>
+-#include "objects.h"
+-#include "lhash.h"
+-#include "ssl_locl.h"
++/* SCE: the consuming wrapper supplies the identified connection interfaces. */
+ 
++#if 0 /* SCE: remaining SSL library operations are reconstructed separately. */
+ char *SSL_version_str="SSLeay 0.9.1a 06-Jul-1998";
+ 
+ static STACK *ssl_meth=NULL;
+@@ -289,6 +288,8 @@
+ 	s->wbio=wbio;
+ 	}
+ 
++#endif
++
+ BIO *SSL_get_rbio(s)
+ SSL *s;
+ 	{ return(s->rbio); }
+@@ -297,6 +298,7 @@
+ SSL *s;
+ 	{ return(s->wbio); }
+ 
++#if 0
+ int SSL_get_fd(s)
+ SSL *s;
+ 	{
+@@ -1247,12 +1249,15 @@
+ 		}
+ 	}
+ 
++#endif
++
+ SSL_METHOD *SSL_get_ssl_method(s)
+ SSL *s;
+ 	{
+ 	return(s->method);
+ 	}
+ 
++#if 0
+ int SSL_set_ssl_method(s,meth)
+ SSL *s;
+ SSL_METHOD *meth;
+@@ -1405,19 +1410,22 @@
+ 	return(NULL);
+ 	}
+ 
++#endif
++
+ char *SSL_get_version(s)
+ SSL *s;
+ 	{
+-	if (s->version == TLS1_VERSION)
++	if (s->version == TLS1_1_VERSION)
++		return("TLSv11");
++	else if (s->version == TLS1_VERSION)
+ 		return("TLSv1");
+ 	else if (s->version == SSL3_VERSION)
+ 		return("SSLv3");
+-	else if (s->version == SSL2_VERSION)
+-		return("SSLv2");
+ 	else
+ 		return("unknown");
+ 	}
+ 
++#if 0
+ SSL *SSL_dup(s)
+ SSL *s;
+         {
+@@ -1610,6 +1618,8 @@
+ 	return(s->quiet_shutdown);
+ 	}
+ 
++#endif
++
+ void SSL_set_shutdown(s,mode)
+ SSL *s;
+ int mode;
+@@ -1635,6 +1645,7 @@
+ 	return(ssl->ctx);
+ 	}
+ 
++#if 0
+ #ifndef NO_STDIO
+ int SSL_CTX_set_default_verify_paths(ctx)
+ SSL_CTX *ctx;
+@@ -1658,10 +1669,12 @@
+ 	ssl->info_callback=cb;
+ 	}
+ 
+-void (*SSL_get_info_callback(ssl))()
++#endif
++
++SslInfoCallback SSL_get_info_callback(ssl)
+ SSL *ssl;
+ 	{
+-	return((void (*)())ssl->info_callback);
++	return(ssl->info_callback);
+ 	}
+ 
+ int SSL_state(ssl)
+@@ -1670,6 +1683,7 @@
+ 	return(ssl->state);
+ 	}
+ 
++#if 0
+ void SSL_set_verify_result(ssl,arg)
+ SSL *ssl;
+ long arg;
+@@ -1746,4 +1760,5 @@
+ #if defined(_WINDLL) && defined(WIN16)
+ #include "../crypto/bio/bss_file.c"
+ #endif
++#endif /* remaining SSL library operations */
+ 
