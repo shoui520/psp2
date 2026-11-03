@@ -1,0 +1,163 @@
+--- a/bss_sock.c
++++ b/bss_sock.c
+@@ -61,14 +61,14 @@
+ #include <stdio.h>
+ #include <errno.h>
+ #define USE_SOCKETS
+-#include "cryptlib.h"
+-#include "bio.h"
++#include "bio_sce.h"
+ 
+ #ifndef BIO_FD
+ #ifndef NOPROTO
+ static int sock_write(BIO *h,char *buf,int num);
+ static int sock_read(BIO *h,char *buf,int size);
+ static int sock_puts(BIO *h,char *str);
++static int sock_gets(BIO *h,char *str,int size);
+ static long sock_ctrl(BIO *h,int cmd,long arg1,char *arg2);
+ static int sock_new(BIO *h);
+ static int sock_free(BIO *data);
+@@ -112,7 +112,7 @@
+ 	sock_write,
+ 	sock_read,
+ 	sock_puts,
+-	NULL, /* sock_gets, */
++	sock_gets,
+ 	sock_ctrl,
+ 	sock_new,
+ 	sock_free,
+@@ -169,7 +169,7 @@
+ BIO *bi;
+ 	{
+ 	bi->init=0;
+-	bi->num=0;
++	bi->socketDescriptor=0;
+ 	bi->ptr=NULL;
+ 	bi->flags=0;
+ 	return(1);
+@@ -188,8 +188,8 @@
+ 		if (a->init)
+ 			{
+ #ifndef BIO_FD
+-			shutdown(a->num,2);
+-			closesocket(a->num);
++			shutdown(a->socketDescriptor,2);
++			closesocket(a->socketDescriptor);
+ #else			/* BIO_FD */
+ 			close(a->num);
+ #endif
+@@ -216,17 +216,16 @@
+ 		{
+ #ifndef BIO_FD
+ 		clear_socket_error();
+-		ret=readsocket(b->num,out,outl);
++		ret=readsocket(b->socketDescriptor,out,outl);
+ #else
+ 		clear_sys_error();
+ 		ret=read(b->num,out,outl);
+ #endif
+ 		BIO_clear_retry_flags(b);
+-		if (ret <= 0)
++		/* SCE: every negative read result sets retry, regardless of errno. */
++		if (ret < 0)
+ 			{
+-#ifndef BIO_FD
+-			if (BIO_sock_should_retry(ret))
+-#else
++#ifdef BIO_FD
+ 			if (BIO_fd_should_retry(ret))
+ #endif
+ 				BIO_set_retry_read(b);
+@@ -248,17 +247,16 @@
+ 	
+ #ifndef BIO_FD
+ 	clear_socket_error();
+-	ret=writesocket(b->num,in,inl);
++	ret=writesocket(b->socketDescriptor,in,inl);
+ #else
+ 	clear_sys_error();
+ 	ret=write(b->num,in,inl);
+ #endif
+ 	BIO_clear_retry_flags(b);
+-	if (ret <= 0)
++	/* SCE: a zero write result sets retry; a negative result does not. */
++	if (ret == 0)
+ 		{
+-#ifndef BIO_FD
+-		if (BIO_sock_should_retry(ret))
+-#else
++#ifdef BIO_FD
+ 		if (BIO_fd_should_retry(ret))
+ #endif
+ 			BIO_set_retry_write(b);
+@@ -282,12 +280,14 @@
+ 	switch (cmd)
+ 		{
+ 	case BIO_CTRL_RESET:
+-		num=0;
++		/* SCE socket reset succeeds without a seek or other operation. */
++		ret=1;
++		break;
+ 	case BIO_C_FILE_SEEK:
+ #ifdef BIO_FD
+ 		ret=(long)lseek(b->num,num,0);
+ #else
+-		ret=0;
++		ret=1; /* SCE: socket seek is an acknowledged no-op. */
+ #endif
+ 		break;
+ 	case BIO_C_FILE_TELL:
+@@ -304,16 +304,17 @@
+ #else
+ 		fd_free(b);
+ #endif
+-		b->num= *((int *)ptr);
+-		b->shutdown=(int)num;
++		if (ptr == NULL) return(-1);
++		b->socketDescriptor= *((int *)ptr);
++		b->shutdown=(int)num & 1;
+ 		b->init=1;
+ 		break;
+ 	case BIO_C_GET_FD:
+ 		if (b->init)
+ 			{
+ 			ip=(int *)ptr;
+-			if (ip != NULL) *ip=b->num;
+-			ret=b->num;
++			if (ip != NULL) *ip=b->socketDescriptor;
++			ret=b->socketDescriptor;
+ 			}
+ 		else
+ 			ret= -1;
+@@ -322,7 +323,7 @@
+ 		ret=b->shutdown;
+ 		break;
+ 	case BIO_CTRL_SET_CLOSE:
+-		b->shutdown=(int)num;
++		b->shutdown=(int)num & 1;
+ 		break;
+ 	case BIO_CTRL_PENDING:
+ 	case BIO_CTRL_WPENDING:
+@@ -339,7 +340,7 @@
+ 	return(ret);
+ 	}
+ 
+-#ifdef undef
++#ifndef BIO_FD
+ static int sock_gets(bp,buf,size)
+ BIO *bp;
+ char *buf;
+@@ -368,6 +369,8 @@
+ 	return(ret);
+ 	}
+ 
++/* SCE: native retry rules above do not use the upstream errno classifiers. */
++#if 0
+ #ifndef BIO_FD
+ int BIO_sock_should_retry(i)
+ #else
+@@ -463,3 +466,4 @@
+ 	return(0);
+ 	}
+ #endif
++#endif /* upstream errno classifiers */

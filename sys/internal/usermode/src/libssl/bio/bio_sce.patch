@@ -1,16 +1,18 @@
 --- a/bio.h
 +++ b/bio.h
-@@ -250,7 +250,8 @@
+@@ -250,7 +250,10 @@
  	unsigned long num_read;
  	unsigned long num_write;
  
 -	CRYPTO_EX_DATA ex_data;
 +	/* SCE: separately allocated ex-data. */
 +	CRYPTO_EX_DATA *ex_data;
++	/* SCE: socket-specific descriptor; descriptive field name is ours. */
++	int socketDescriptor;
  	} BIO;
  
  typedef struct bio_f_buffer_ctx_struct
-@@ -668,17 +669,17 @@
+@@ -668,17 +671,17 @@
  #define BIO_F_ACPT_STATE				 100
  #define BIO_F_BIO_ACCEPT				 101
  #define BIO_F_BIO_BER_GET_HEADER			 102
@@ -34,7 +36,7 @@
  #define BIO_F_BUFFER_CTRL				 114
  #define BIO_F_CONN_STATE				 115
  #define BIO_F_FILE_CTRL					 116
-@@ -711,8 +712,8 @@
+@@ -711,8 +714,8 @@
  #define BIO_R_UNABLE_TO_BIND_SOCKET			 121
  #define BIO_R_UNABLE_TO_CREATE_SOCKET			 122
  #define BIO_R_UNABLE_TO_LISTEN_SOCKET			 123

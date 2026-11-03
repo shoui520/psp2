@@ -18,7 +18,6 @@
 /* Descriptive names for SSL-C values not named upstream are ours. */
 #define SCE_BIO_AUTO_FLUSH 16
 #define SCE_BIO_BAD_REFERENCE_COUNT 42
-#define SCE_BIO_ALLOCATION_SIZE 64
 
 #include "bio_lib_sce.inc"
 

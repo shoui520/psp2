@@ -13,6 +13,8 @@ void *sslReallocate(void *ptr, SceUInt32 size, SceUInt32 oldSize);
 void sslFree(void *ptr);
 void *sslCopyMemory(void *destination, const void *source, SceUInt32 size);
 void *sslFillMemory(void *destination, int value, SceUInt32 size);
+void *sslMoveMemory(void *destination, const void *source, SceUInt32 size);
+SceUInt32 sslStringLength(const char *string);
 void *sslGetMemoryCallbacks(SslAllocCallback *alloc, SslReallocCallback *realloc,
 			   SslFreeCallback *freeCallback);
 

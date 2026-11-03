@@ -9,6 +9,7 @@
 /* Sony export link names; source API names are SSLeay's. */
 #define BIO_write SceSslInternal_33AC7A16
 #define BIO_free SceSslInternal_C4D984C2
+#define BIO_new_socket SceSslInternal_FFE2ED51
 #include "bio_sce.h"
 
 /* SSL-C turns these upstream macros into separately compiled helpers. */
@@ -16,11 +17,22 @@
 #undef BIO_get_retry_flags
 BIO *BIO_set_flags(BIO *bio, int flags);
 int BIO_get_retry_flags(BIO *bio);
+#undef BIO_clear_retry_flags
+#undef BIO_set_retry_read
+#undef BIO_set_retry_write
+BIO *BIO_clear_retry_flags(BIO *bio);
+BIO *BIO_set_retry_read(BIO *bio);
+BIO *BIO_set_retry_write(BIO *bio);
+#undef BIO_set_fd
+#undef BIO_get_fd
+long BIO_set_fd(BIO *bio, int fd, long closeFlag);
+int BIO_get_fd(BIO *bio, int *fd);
 
 /* Descriptive name for SSL-C's extra retry bit is ours. */
 #define SCE_BIO_RETRY_EXTENSION 0x40
 
-_Static_assert(sizeof(BIO) == 60, "BIO");
+_Static_assert(sizeof(BIO) == 64, "BIO");
+_Static_assert(offsetof(BIO, socketDescriptor) == 60, "socketDescriptor");
 _Static_assert(offsetof(BIO_METHOD, ctrl) == 24, "ctrl");
 _Static_assert(offsetof(BIO, references) == 44, "references");
 _Static_assert(offsetof(BIO, num_write) == 52, "num_write");

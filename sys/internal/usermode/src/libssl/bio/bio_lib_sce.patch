@@ -1,6 +1,6 @@
 --- a/bio_lib.c
 +++ b/bio_lib.c
-@@ -59,8 +59,7 @@
+@@ -59,10 +59,10 @@
  #include <stdio.h>
  #include <errno.h>
  #include "crypto.h"
@@ -9,17 +9,10 @@
 +#include "bio_sce.h"
  #include "stack.h"
  
++#ifndef SCE_BIO_CTRL_ONLY
  static STACK *bio_meth=NULL;
-@@ -71,7 +70,8 @@
- 	{
- 	BIO *ret=NULL;
+ static int bio_meth_num=0;
  
--	ret=(BIO *)Malloc(sizeof(BIO));
-+	/* SCE: native allocation retains64 bytes, including an untouched tail. */
-+	ret=(BIO *)Malloc(SCE_BIO_ALLOCATION_SIZE);
- 	if (ret == NULL)
- 		{
- 		BIOerr(BIO_F_BIO_NEW,ERR_R_MALLOC_FAILURE);
 @@ -103,17 +103,24 @@
  	bio->references=1;
  	bio->num_read=0L;
@@ -85,7 +78,22 @@
  	if (cb != NULL) /* && (b->references >= 1)) */
  		i=(int)cb(b,BIO_CB_WRITE|BIO_CB_RETURN,in,inl,
  			0L,(long)i);
-@@ -320,10 +337,12 @@
+@@ -312,7 +329,13 @@
+ 		return(p);
+ 	}
+ 
+-long BIO_ctrl(b,cmd,larg,parg)
++#endif /* !SCE_BIO_CTRL_ONLY */
++
++/* SCE: allow other BIO units to inline this same upstream dispatch body. */
++#ifndef SCE_BIO_CTRL_DECL
++#define SCE_BIO_CTRL_DECL
++#endif
++SCE_BIO_CTRL_DECL long BIO_ctrl(b,cmd,larg,parg)
+ BIO *b;
+ int cmd;
+ long larg;
+@@ -320,10 +343,12 @@
  	{
  	long ret;
  	long (*cb)();
@@ -99,7 +107,7 @@
  		{
  		BIOerr(BIO_F_BIO_CTRL,BIO_R_UNSUPPORTED_METHOD);
  		return(-2);
-@@ -331,11 +350,14 @@
+@@ -331,11 +356,14 @@
  
  	cb=b->callback;
  
@@ -119,7 +127,15 @@
  
  	if (cb != NULL)
  		ret=cb(b,BIO_CB_CTRL|BIO_CB_RETURN,parg,cmd,
-@@ -440,6 +462,8 @@
+@@ -344,6 +372,7 @@
+ 	}
+ 
+ /* put the 'bio' on the end of b's list of operators */
++#ifndef SCE_BIO_CTRL_ONLY
+ BIO *BIO_push(b,bio)
+ BIO *b,*bio;
+ 	{
+@@ -440,6 +469,8 @@
  		b=bio;
  		ref=b->references;
  		bio=bio->next_bio;
@@ -128,7 +144,7 @@
  		BIO_free(b);
  		/* Since ref count > 1, don't free anyone else. */
  		if (ref > 1) break;
-@@ -470,7 +494,7 @@
+@@ -470,7 +501,7 @@
  			}
  
  	        /* copy app data */
@@ -137,7 +153,7 @@
  	                goto err;
  
  		if (ret == NULL)
-@@ -515,13 +539,13 @@
+@@ -515,13 +546,15 @@
  int idx;
  char *data;
  	{
@@ -153,3 +169,5 @@
 +	return(CRYPTO_get_ex_data(bio->ex_data,idx));
  	}
  
++#endif /* !SCE_BIO_CTRL_ONLY */
++

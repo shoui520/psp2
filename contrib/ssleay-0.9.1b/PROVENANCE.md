@@ -16,7 +16,7 @@ Archive SHA-256:
 
 Kept unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h`,
 `crypto/stack/stack.c`, `crypto/stack/stack.h`, `crypto/ex_data.c`,
-`crypto/bio/bio_lib.c` and `crypto/bio/bio.h`, plus the upstream copyright file.
+`crypto/bio/bio_lib.c`, `crypto/bio/bss_sock.c` and `crypto/bio/bio.h`, plus the upstream copyright file.
 The libssl LHASH, STACK, ex-data and BIO translation units
 read these files. The rest of the distribution is omitted.
 
@@ -60,8 +60,10 @@ callback record layout agrees with the unmodified upstream header.
 
 The BIO adaptation changes the header through `bio/bio_sce.patch` and the
 implementation through `bio/bio_lib_sce.patch`. SSL-C uses a separately allocated
-eight-byte ex-data object and a60-byte accessed BIO layout, but its allocator
-still receives64 for a new BIO; the extra allocation bytes are left untouched.
+eight-byte ex-data object. Its BIO structure is64 bytes: the first60 hold the
+adapted upstream fields and its socket method uses an additional descriptor at
+offset60. The socket descriptor field's descriptive name is ours. Generic BIO
+initialization leaves this field for the method constructor to initialize.
 The patch preserves method-creation failure cleanup, SSL-C error values,
 write auto-flush, error/return instead of abort on bad references, and backward
 link clearing before freeing a chain. Control dispatch captures the method and
@@ -79,3 +81,19 @@ used their behavior unchanged. Their native counterparts, if any, remain an
 identification task. Do not use an unverified helper as a substitute for an
 observed native operation. In particular, SSL-C's socket pointer getter has
 different failure behavior from upstream `BIO_ptr_ctrl`.
+
+`bio/bss_sock_sce.patch` adapts the socket method to Sony's network imports and
+the additional descriptor field. It preserves SSL-C's unconditional retry on
+negative receive results, retry on zero send results, reset/seek success,
+one-bit close flags, null-descriptor-pointer rejection after old-socket cleanup,
+and a gets method returning-1. The upstream errno retry classifiers are unused
+under those measured rules and excluded from this build. Socket descriptor
+set/get wrappers retain native callback behavior; the getter returns its output
+slot regardless of control success, including the original local-slot behavior.
+
+`bio/bio_dispatch.h` selects the adapted upstream control body through the
+`SCE_BIO_CTRL_ONLY`/`SCE_BIO_CTRL_DECL` patch hooks. This lets the socket wrappers
+inline the same source as the out-of-line public dispatcher, preserving native
+call structure without duplicating or hand-reimplementing the upstream body.
+The three additional retry flag helpers are SSL-C's separately compiled forms
+of upstream operations, with null handling and the extra retry bit retained.
