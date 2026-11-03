@@ -1,6 +1,20 @@
 /* Filename and helper name are ours; recovered CRYPTOCME dispatch behavior. */
 #include "cry_api.h"
 
+int sslCopyAlgorithm(SslCryptoAlgorithm *algorithm, SslCryptoAlgorithm **result)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->CopyAlgorithm == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->CopyAlgorithm(algorithm, result);
+}
+
 int sslDestroyAlgorithm(SslCryptoAlgorithm *algorithm)
 {
 	const SslCryptoLifecycleMethods *methods;
@@ -13,4 +27,61 @@ int sslDestroyAlgorithm(SslCryptoAlgorithm *algorithm)
 	if (methods->DestroyAlgorithm == NULL)
 		return SSL_CRYPTO_ERROR_NO_OPERATION;
 	return methods->DestroyAlgorithm(algorithm);
+}
+
+int sslGetAlgorithmInfo(SslCryptoAlgorithm *algorithm, int selector, void *result)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->GetAlgorithmInfo == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+
+	switch (selector) {
+	case SSL_CRYPTO_INFO_APPLICATION_DATA:
+		*(void **)result = algorithm->applicationData;
+		break;
+	case SSL_CRYPTO_INFO_FAMILY:
+		*(int *)result = algorithm->family;
+		break;
+	case SSL_CRYPTO_INFO_ALGORITHM:
+		*(int *)result = algorithm->algorithm;
+		break;
+	case SSL_CRYPTO_INFO_MODE:
+		*(SceUInt32 *)result = algorithm->mode;
+		break;
+	case SSL_CRYPTO_INFO_FLAGS:
+		*(SceUInt32 *)result = algorithm->flags;
+		break;
+	default:
+		return methods->GetAlgorithmInfo(algorithm, selector, result);
+	}
+	return 0;
+}
+
+int sslSetAlgorithmInfo(SslCryptoAlgorithm *algorithm, int selector,
+			SceUIntPtr value)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->SetAlgorithmInfo == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	if (selector == SSL_CRYPTO_INFO_APPLICATION_DATA) {
+		algorithm->applicationData = (void *)value;
+		return 0;
+	}
+	if (selector == SSL_CRYPTO_INFO_FLAGS) {
+		algorithm->flags = value;
+		return 0;
+	}
+	return methods->SetAlgorithmInfo(algorithm, selector, value);
 }

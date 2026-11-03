@@ -1,6 +1,8 @@
 /* Identified SSLeay connection operations, adapted in ssl_lib_sce.patch. */
 #include "ssl_locl.h"
 #include "../err/err.h"
+#include "../CRYPTOCME/common/key/key_api.h"
+#include "../CRYPTOCME/common/module/crypto/cry_api.h"
 
 #define TLS1_VERSION 0x0301
 #define TLS1_1_VERSION 0x0302

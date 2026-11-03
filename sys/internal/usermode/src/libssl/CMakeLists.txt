@@ -80,7 +80,9 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	format.c
 	lhash/lhash.c
 	stack/stack.c
+	CRYPTOCME/common/key/key_api.c
 	CRYPTOCME/common/module/crypto/cry_api.c
+	CRYPTOCME/common/module/crypto/cry_info.c
 	runtime.c
 	memory.c
 	libssl.c

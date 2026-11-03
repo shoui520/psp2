@@ -162,10 +162,10 @@ limits and algorithm/key handles follow native readers and writers. The reserved
 word has no independently observed access. Opaque pointees remain incomplete;
 this layout does not claim implementation of their allocation or behavior.
 
-`ssl/ssl_lib_sce.patch` selects seventeen original connection operations: BIO and
+`ssl/ssl_lib_sce.patch` selects eighteen original connection operations: BIO and
 method getters, textual/numeric version, context getter, shutdown setter/getter,
 information callback getter, state getter, pending, read, peek, write, shutdown,
-handshake dispatch, and error classification. The textual version includes the
+handshake dispatch, error classification and record-crypto cleanup. The textual version includes the
 native TLS1.1 label `TLSv11` and excludes SSL2. The consuming wrapper retains
 Sony's NID export link names and separately compiles the original rwstate query,
 which is a macro in this upstream baseline. The remaining SSL library routines
@@ -205,7 +205,13 @@ additional helper's descriptive name is ours. Remaining operations in that
 pristine file, including protocol tables, remain unselected and are not
 counted as implemented.
 
-The CRYPTOCME algorithm-destroy and MES name-destroy dispatchers are implemented
+Record-crypto cleanup retains the upstream helper's role but replaces the donor's
+EVP contexts with SSL-C's embedded read/write states. Each state releases its
+cipher algorithm, invokes the connection's MAC destructor, then releases cipher
+and MAC key handles. Pointers are cleared after their callbacks. MAC size is
+cleared only when a MAC algorithm was present; block and secret sizes remain.
+
+The CRYPTOCME algorithm/key and MES name-destroy dispatchers are implemented
 separately from this donor. No open-source origin has been established for those
 dispatchers. Their source folders follow recovered CRYPTOCME and MES component
 paths; filenames and descriptive private names are ours. The algorithm object
@@ -214,6 +220,18 @@ interface prefixes used by destruction; they do not claim reconstruction of
 the complete crypto method table or each concrete certificate object. The name
 dispatcher returns the native integer status, including null-object and missing
 operation errors, and intentionally has no null-method-table guard.
+The key-destroy dispatcher instead succeeds on null and returns10009 for a
+missing destructor, also without a null-method-table guard. Algorithm copying
+forwards its output pointer without checking it. Algorithm information queries
+require the module callback even for the five locally handled selectors;
+application data, family, algorithm, mode and flags read their native fields.
+Only application data and flags are handled locally by the setter. Other
+selectors forward unchanged. Backend information callbacks separately require
+a nonnull result/value and return10009 for an absent implementation operation.
+The native algorithm object remains56 bytes; its module and implementation
+method declarations cover only the shared prefixes used here. Additional
+descriptive helper, selector and interface names, and key_api/cry_info filenames,
+are ours. No open-source donor has been identified for these backend operations.
 
 `ssl/s3_both_sce.patch` selects buffer setup: allocate or enlarge the read buffer,
 preserve the current packet's32-bit relative address, retain capacities, and

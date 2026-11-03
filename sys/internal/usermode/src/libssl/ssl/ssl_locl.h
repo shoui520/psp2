@@ -81,6 +81,7 @@ void ssl3_free(SSL *ssl);
 void ssl3_clear(SSL *ssl);
 int ssl3ResizeReadBuffer(SSL *ssl, int length);
 int ssl3_setup_buffers(SSL *ssl);
+void ssl_clear_cipher_ctx(SSL *ssl);
 
 /* Descriptive names for SSL-C's extra states are ours, not Sony spellings. */
 #define SSL3_ST_CR_HELLO_REQ_A (0x101 | SSL_ST_CONNECT)
