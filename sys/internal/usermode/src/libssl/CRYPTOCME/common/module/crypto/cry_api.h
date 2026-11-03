@@ -6,6 +6,7 @@
 
 #include <stddef.h>
 #include "../../object.h"
+#include "../../property.h"
 
 typedef struct SslCryptoAlgorithm SslCryptoAlgorithm;
 
@@ -53,7 +54,7 @@ struct SslCryptoAlgorithm {
 	const SslCryptoLifecycleMethods *methods;
 	void *applicationData;
 	SceUInt32 flags;
-	void *properties;
+	SslPropertyList *properties;
 	const SslCryptoImplementationMethods *implementationMethods;
 	void *implementationData;
 	SceUInt32 reservedBeforeReferences;
@@ -70,6 +71,8 @@ _Static_assert(offsetof(SslCryptoLifecycleMethods, DestroyAlgorithm) == 16,
 	       "DestroyAlgorithm");
 
 int sslDestroyAlgorithm(SslCryptoAlgorithm *algorithm);
+int sslDestroyCryptoContext(void *context);
+int sslFreeAlgorithm(SslCryptoAlgorithm *algorithm);
 int sslCopyAlgorithm(SslCryptoAlgorithm *algorithm, SslCryptoAlgorithm **result);
 int sslGetAlgorithmInfo(SslCryptoAlgorithm *algorithm, int selector, void *result);
 int sslSetAlgorithmInfo(SslCryptoAlgorithm *algorithm, int selector,
@@ -85,6 +88,10 @@ int sslSetImplementationInfo(SslCryptoAlgorithm *algorithm, int selector,
 #define SSL_CRYPTO_INFO_ALGORITHM 18
 #define SSL_CRYPTO_INFO_MODE 19
 #define SSL_CRYPTO_INFO_FLAGS 21
+
+#define SSL_CRYPTO_LOCK 38
+#define SSL_CRYPTO_ALGORITHM_DESTROYING 0x1000
+#define SSL_CRYPTO_ALGORITHM_OWNS_PROPERTIES 8
 
 _Static_assert(offsetof(SslCryptoLifecycleMethods, GetAlgorithmInfo) == 24,
 	       "GetAlgorithmInfo");

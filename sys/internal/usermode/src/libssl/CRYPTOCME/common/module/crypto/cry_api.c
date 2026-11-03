@@ -1,6 +1,19 @@
 /* Filename and helper name are ours; recovered CRYPTOCME dispatch behavior. */
 #include "cry_api.h"
 
+int sslDestroyCryptoContext(void *context)
+{
+	SslObjectHeader *object = context;
+
+	if (object == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (object->methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (object->methods->Destroy == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return object->methods->Destroy(context);
+}
+
 int sslCopyAlgorithm(SslCryptoAlgorithm *algorithm, SslCryptoAlgorithm **result)
 {
 	const SslCryptoLifecycleMethods *methods;
