@@ -1,7 +1,27 @@
 /* Filename and descriptive private names are ours. The component folder
  * follows the recovered common/module/crypto/ctx_init.c path.
  */
-#include "cry_api.h"
+#include "ctx.h"
+
+int sslSetCryptoContextInfo(SslCryptoContext *context, int selector,
+			    SceUIntPtr value)
+{
+	if (context == NULL || value == 0)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	switch (selector) {
+	case SSL_CRYPTO_CONTEXT_RANDOM_ALGORITHM:
+		if (context->randomAlgorithm != NULL)
+			sslDestroyAlgorithm(context->randomAlgorithm);
+		context->randomAlgorithm = (SslCryptoAlgorithm *)value;
+		break;
+	case SSL_CRYPTO_CONTEXT_ENTROPY_SOURCE:
+		context->entropySource = (void *)value;
+		break;
+	default:
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	}
+	return 0;
+}
 
 int sslQueryAlgorithmSupport(SslCryptoContextHeader *context, int family,
 			     int algorithm, SceUInt32 mode, int *result)

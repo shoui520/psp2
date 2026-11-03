@@ -1,11 +1,27 @@
 /* Descriptive helper name is ours; source filename is recovered. */
-#include "cry_api.h"
+#include "ctx.h"
 #include "../../property.h"
 #include "../../../../memory.h"
 #include "../../../../runtime.h"
 
 static const char algorithmSource[] =
 	"S:\\work\\CRYPTOCME\\common\\module/crypto/cry_init.c";
+
+int sslRetainCryptoContext(void *object)
+{
+	SslCryptoContext *context = object;
+	SslCryptoAlgorithm *random;
+
+	if (context == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	sslAddReference(&context->references, 1, SSL_CRYPTO_LOCK,
+			algorithmSource, 55);
+	random = context->randomAlgorithm;
+	if (random != NULL)
+		sslAddReference(&random->references, 1, SSL_CRYPTO_LOCK,
+				algorithmSource, 58);
+	return 0;
+}
 
 int sslFreeAlgorithm(SslCryptoAlgorithm *algorithm)
 {
@@ -75,6 +91,41 @@ int sslBindAlgorithm(SslCryptoAlgorithm **result)
 	methods = algorithm->implementationMethods;
 	if (methods->Initialize != NULL)
 		status = methods->Initialize(algorithm);
+	return status;
+}
+
+int sslNewAlgorithm(void *object, int family, int identifier, SceUInt32 mode,
+		     SslCryptoAlgorithm **result)
+{
+	SslCryptoContext *context = object;
+	SslCryptoAlgorithm *algorithm = NULL;
+	int status;
+
+	if (context == NULL || result == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	mode &= ~SSL_CRYPTO_MODE_COPY;
+	if (mode & SSL_CRYPTO_MODE_UNSUPPORTED)
+		return SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+	algorithm = sslAllocate(sizeof(*algorithm));
+	if (algorithm == NULL)
+		return SSL_LIBRARY_ERROR_ALLOCATION;
+	sslFillMemory(algorithm, 0, sizeof(*algorithm));
+	algorithm->references = 1;
+	algorithm->state = NULL;
+	algorithm->methods = context->interface.methods;
+	algorithm->family = family;
+	algorithm->algorithm = identifier;
+	algorithm->mode = mode;
+	algorithm->flags = 0;
+	algorithm->applicationData = NULL;
+	sslRetainCryptoContext(context);
+	algorithm->context = context;
+	algorithm->backendState = NULL;
+	status = sslBindAlgorithm(&algorithm);
+	if (status == 0)
+		*result = algorithm;
+	else if (algorithm != NULL)
+		sslFreeAlgorithm(algorithm);
 	return status;
 }
 

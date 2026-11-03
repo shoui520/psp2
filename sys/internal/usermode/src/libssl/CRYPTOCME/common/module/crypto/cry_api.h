@@ -91,12 +91,12 @@ struct SslCryptoAlgorithm {
 	SslPropertyList *properties;
 	const SslCryptoImplementationMethods *implementationMethods;
 	void *implementationData;
-	SceUInt32 reservedBeforeReferences;
+	void *backendState;
 	int references;
 };
 
-/* Reserved words have only initialization accesses in the recovered generic
- * constructor. They are not substitutes for live fields with unknown roles.
+/* Concrete implementations own backendState independently of the descriptor's
+ * implementationData. The generic constructor initializes both to zero.
  */
 _Static_assert(sizeof(SslCryptoAlgorithm) == 56, "SslCryptoAlgorithm");
 _Static_assert(offsetof(SslCryptoAlgorithm, methods) == 24, "methods");
