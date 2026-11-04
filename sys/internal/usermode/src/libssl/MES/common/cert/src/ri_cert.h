@@ -185,6 +185,8 @@ int sslDecodeCertificateName(SslCertificateContext *context, int mode, SceUInt32
 int sslDecodeCertificateNameProperties(SslPropertyList *properties,
 				       const SceUInt8 *data, SceUInt32 length,
 				       SceUInt32 *consumed);
+int sslEncodeCertificateNameProperties(SslPropertyList *properties, SceUInt8 *data,
+				       SceUInt32 *length, SceUInt32 capacity);
 int sslFreeCertificateName(void *object);
 int sslCacheCertificatePublicKey(SslCertificate *certificate, int mode, void *source);
 int sslClearCertificateCache(SslCertificate *certificate, int selector);

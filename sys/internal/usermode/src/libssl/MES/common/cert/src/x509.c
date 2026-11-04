@@ -210,6 +210,9 @@ static const SceUInt32 sslX509ExtensionDecodingSchema[] = {
 
 #undef SSL_X509_COMMAND
 
+static const char sslX509RsaEncryptionOid[] =
+	"\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01";
+
 int sslSerializeX509Certificate(SslCertificate *certificate, SceUInt32 capacity,
 			       void *data, SceUInt32 *length)
 {
@@ -416,6 +419,142 @@ int sslGetX509SignatureAlgorithm(SslCertificate *certificate)
 	return algorithm;
 }
 
+int sslEncodeX509PublicKey(void *unused, void *key, void **data,
+			  SceUInt32 *length, SceUInt32 capacity)
+{
+	SslX509KeyExport export;
+	SslPropertyList *properties;
+	SceUInt8 *parameters = NULL, *encoded = NULL;
+	SceUInt32 encodedLength, oidLength;
+	int algorithm, status;
+
+	(void)unused;
+	if (key == NULL || length == NULL)
+		return 10017;
+	properties = sslNewPropertyList();
+	if (properties == NULL)
+		return 10005;
+	export.properties = properties;
+	algorithm = sslGetPublicKeyAlgorithm(key);
+	export.algorithm = algorithm;
+	status = sslEnumerateKeyComponents(key, sslCollectX509KeyComponent, &export);
+	if (status != 0)
+		goto out;
+	if (algorithm != 6) {
+		status = 10011;
+		goto out;
+	}
+	parameters = sslAllocate(2);
+	if (parameters == NULL) {
+		status = 10005;
+		goto out;
+	}
+	parameters[1] = 0;
+	parameters[0] = 5;
+	status = sslEncodeRsaPublicKeyProperties(properties, NULL, &encodedLength, 0);
+	if (status != 0)
+		goto out;
+	encoded = sslAllocate(encodedLength);
+	if (encoded == NULL) {
+		status = 10005;
+		goto out;
+	}
+	status = sslEncodeRsaPublicKeyProperties(properties, encoded, &encodedLength,
+						encodedLength);
+	if (status != 0)
+		goto out;
+	if (sslAddPropertyValue(properties, 48, 2, 16, parameters, 2,
+				SSL_PROPERTY_COPY_DATA) != 0 ||
+	    sslAddPropertyValue(properties, 48, 3, 3, encoded, encodedLength,
+				SSL_PROPERTY_COPY_DATA) != 0) {
+		status = 10001;
+		goto out;
+	}
+	oidLength = sslStringLength(sslX509RsaEncryptionOid);
+	if (sslAddPropertyValue(properties, 48, 1, 6, sslX509RsaEncryptionOid, oidLength,
+				SSL_PROPERTY_COPY_DATA) != 0) {
+		status = 10001;
+		goto out;
+	}
+	status = sslEncodeSubjectPublicKeyInfoProperties(properties, data != NULL ? *data : NULL,
+							length, capacity);
+out:
+	if (encoded != NULL)
+		sslFree(encoded);
+	if (parameters != NULL)
+		sslFree(parameters);
+	sslFreePropertyList(properties);
+	return status;
+}
+
+int sslUpdateX509Properties(SslCertificate *certificate, SslPropertyList *properties)
+{
+	SslCertificateName *name;
+	SslCertificateKeyCache *cache;
+	void *key, *buffer;
+	SceUInt32 length;
+	int index, status;
+
+	for (index = 0; index < 2; index++) {
+		name = index == 0 ? certificate->issuer : certificate->subject;
+		if (name == NULL || !(name->flags & 1))
+			continue;
+		status = sslEncodeCertificateNameProperties(name->properties, NULL, &length, 0);
+		if (status != 0)
+			return status;
+		buffer = sslAllocate(length);
+		if (buffer == NULL)
+			return 10005;
+		status = sslEncodeCertificateNameProperties(name->properties, buffer, &length, length);
+		if (status == 0 && sslAddPropertyValue(properties, 96, index == 0 ? 4 : 7, 0,
+						      buffer, length,
+						      SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0)
+			status = 10001;
+		sslFree(buffer);
+		if (status != 0)
+			return status;
+	}
+	cache = certificate->publicKey;
+	if (cache == NULL || !(cache->flags & 1))
+		return 0;
+	key = cache->key;
+	status = sslEncodeX509PublicKey(NULL, key, NULL, &length, 0);
+	if (status != 0)
+		return status;
+	buffer = sslAllocate(length);
+	if (buffer == NULL)
+		return 10005;
+	status = sslEncodeX509PublicKey(NULL, key, &buffer, &length, length);
+	if (status == 0 && sslAddPropertyValue(properties, 96, 9, 0, buffer, length,
+					      SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0)
+		status = 10001;
+	sslFree(buffer);
+	return status;
+}
+
+int sslExportX509Properties(SslCertificate *certificate, SslPropertyList *properties)
+{
+	void *buffer;
+	SceUInt32 length;
+	int status;
+
+	status = sslUpdateX509Properties(certificate, properties);
+	if (status != 0)
+		return status;
+	status = sslEncodeX509BodyProperties(properties, NULL, &length, 0);
+	if (status != 0)
+		return status;
+	buffer = sslAllocate(length);
+	if (buffer == NULL)
+		return 10005;
+	status = sslEncodeX509BodyProperties(properties, buffer, &length, length);
+	if (status == 0 && sslAddPropertyValue(properties, 96, 64, 0, buffer, length,
+					      SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0)
+		status = 10001;
+	sslFree(buffer);
+	return status;
+}
+
 int sslImportX509Properties(SslCertificate *certificate, SslPropertyList *properties)
 {
 	SslProperty *property;
@@ -435,6 +574,18 @@ int sslImportX509Properties(SslCertificate *certificate, SslPropertyList *proper
 	certificate->properties = properties;
 	certificate->encodedSize = length;
 	return sslFinalizeX509Certificate(certificate);
+}
+
+int sslCollectX509KeyComponent(void *arg, int id, const SslKeyComponent *component)
+{
+	SslX509KeyExport *export = arg;
+
+	if (export->algorithm != 6)
+		return 10021;
+	if (sslAddPropertyValue(export->properties, 16, id, 0, component->data,
+				component->length, SSL_PROPERTY_COPY_DATA) != 0)
+		return 10001;
+	return 0;
 }
 
 int sslDecodeX509CertificateProperties(SslPropertyList *properties, const SceUInt8 *data,

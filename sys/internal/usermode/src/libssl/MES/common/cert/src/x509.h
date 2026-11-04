@@ -3,13 +3,26 @@
 #define LIBSSL_X509_H
 
 #include "ri_cert.h"
+#include "../../../../CRYPTOCME/common/key/pkey_ctx.h"
 
 typedef struct SslX509SignatureEncoding {
 	SceUInt32 length;
 	const void *data;
 } SslX509SignatureEncoding;
 
+typedef struct SslX509KeyExport {
+	int algorithm;
+	SslPropertyList *properties;
+} SslX509KeyExport;
+
 _Static_assert(sizeof(SslX509SignatureEncoding) == 8, "SslX509SignatureEncoding");
+_Static_assert(sizeof(SslX509KeyExport) == 8, "SslX509KeyExport");
+
+int sslEncodeX509PublicKey(void *unused, void *key, void **data,
+			  SceUInt32 *length, SceUInt32 capacity);
+int sslUpdateX509Properties(SslCertificate *certificate, SslPropertyList *properties);
+int sslExportX509Properties(SslCertificate *certificate, SslPropertyList *properties);
+int sslCollectX509KeyComponent(void *arg, int id, const SslKeyComponent *component);
 
 int sslSerializeX509Certificate(SslCertificate *certificate, SceUInt32 capacity,
 			       void *data, SceUInt32 *length);

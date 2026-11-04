@@ -72,6 +72,17 @@ int sslCopyPublicKey(void *source, void *destination, int mode)
 	return object->context->module->CopyKey(source, destination, mode);
 }
 
+int sslEnumerateKeyComponents(void *key, SslKeyComponentCallback callback, void *arg)
+{
+	SslPublicKeyHeader *object = key;
+
+	if (callback == NULL || object == NULL || object->context->module == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (object->context->module->EnumerateComponents == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return object->context->module->EnumerateComponents(key, callback, arg);
+}
+
 int sslCreateKeyContext(SslLibrary *library, int parameter, SceUInt32 flags,
 			void **result)
 {

@@ -5,6 +5,14 @@
 #include <stddef.h>
 #include "../library/lib_ctx.h"
 
+typedef struct SslKeyComponent {
+	SceUInt32 length;
+	const void *data;
+} SslKeyComponent;
+
+typedef int (*SslKeyComponentCallback)(void *arg, int id,
+				       const SslKeyComponent *component);
+
 /* Shared module interface prefix. Further key operations follow these slots. */
 typedef struct SslKeyModule {
 	const char *name;
@@ -18,6 +26,8 @@ typedef struct SslKeyModule {
 	int (*GetKeyInfo)(void *key, int selector, void *result);
 	int (*SetKeyInfo)(void *key, int selector, void *value);
 	int (*CopyKey)(void *source, void *destination, int mode);
+	SceUIntPtr opaqueKeyOperations[5];
+	int (*EnumerateComponents)(void *key, SslKeyComponentCallback callback, void *arg);
 } SslKeyModule;
 
 typedef const SslKeyModule *(*SslKeyModuleFactory)(void *data);
@@ -52,11 +62,14 @@ _Static_assert(offsetof(SslKeyContext, references) == 20, "references");
 _Static_assert(offsetof(SslKeyModule, DestroyKey) == 32, "DestroyKey");
 _Static_assert(offsetof(SslKeyModule, GetKeyInfo) == 36, "GetKeyInfo");
 _Static_assert(offsetof(SslKeyModule, CopyKey) == 44, "CopyKey");
+_Static_assert(offsetof(SslKeyModule, EnumerateComponents) == 68, "EnumerateComponents");
+_Static_assert(sizeof(SslKeyComponent) == 8, "SslKeyComponent");
 
 int sslCreateKeyContext(SslLibrary *library, int parameter, SceUInt32 flags,
 			void **result);
 int sslCreatePublicKey(void *context, int algorithm, void **result);
 int sslCopyPublicKey(void *source, void *destination, int mode);
+int sslEnumerateKeyComponents(void *key, SslKeyComponentCallback callback, void *arg);
 int sslGetPublicKeyInfo(void *key, int selector, void *result);
 int sslGetPublicKeyAlgorithm(void *key);
 int sslDestroyKeyContext(void *context);
