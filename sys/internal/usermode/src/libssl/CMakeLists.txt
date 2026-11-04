@@ -1,6 +1,15 @@
 # SceLibSsl, built by Sony with SNC 3.57; implementation in progress.
 set(libssl_ssleay ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/ssleay-0.9.1b)
 include(vendor_patch.cmake)
+libssl_prepare_patched(${libssl_ssleay}/crypto/asn1/asn1.h
+	${CMAKE_CURRENT_SOURCE_DIR}/objects/asn1_object_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/asn1_object_sce.h)
+libssl_prepare_patched(${libssl_ssleay}/crypto/objects/objects.h
+	${CMAKE_CURRENT_SOURCE_DIR}/objects/objects_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/objects_sce.h)
+libssl_prepare_patched(${libssl_ssleay}/crypto/objects/obj_dat.h
+	${CMAKE_CURRENT_SOURCE_DIR}/objects/obj_dat_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/obj_dat_sce.inc)
 libssl_prepare_patched(${libssl_ssleay}/crypto/lhash/lhash.c
 	${CMAKE_CURRENT_SOURCE_DIR}/lhash/lhash_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/lhash_sce.inc)
@@ -76,6 +85,7 @@ configure_file(${libssl_ssleay}/crypto/buffer/buffer.h
 	${CMAKE_CURRENT_BINARY_DIR}/buffer_upstream.h COPYONLY)
 psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	asn1.c
+	objects/obj_dat.c
 	bio/bio_lib.c
 	bio/bss_sock.c
 	bio/bss_mem.c

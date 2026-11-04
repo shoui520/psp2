@@ -1,0 +1,35 @@
+--- a/asn1.h
++++ b/asn1.h
+@@ -59,6 +59,8 @@
+ #ifndef HEADER_ASN1_H
+ #define HEADER_ASN1_H
+ 
++#if 0 /* SSL-C: only the upstream object interface is selected here. */
++
+ #ifdef  __cplusplus
+ extern "C" {
+ #endif
+@@ -139,6 +141,8 @@
+ 
+ /* These are used internally in the ASN1_OBJECT to keep track of
+  * whether the names and data need to be free()ed */
++#endif
++
+ #define ASN1_OBJECT_FLAG_DYNAMIC	 0x01	/* internal use */
+ #define ASN1_OBJECT_FLAG_CRITICAL	 0x02	/* critical x509v3 object id */
+ #define ASN1_OBJECT_FLAG_DYNAMIC_STRINGS 0x04	/* internal use */
+@@ -151,6 +155,8 @@
+ 	unsigned char *data;
+ 	int flags;	/* Should we free this one */
+ 	} ASN1_OBJECT;
++
++#if 0
+ 
+ #define ASN1_STRING_FLAG_BITS_LEFT 0x08 /* Set if 0x07 has bits left value */
+ /* This is the base type that holds just about everything :-) */
+@@ -799,3 +805,5 @@
+ #endif
+ #endif
+ 
++#endif
++

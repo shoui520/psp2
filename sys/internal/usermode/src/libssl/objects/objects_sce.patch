@@ -1,0 +1,19 @@
+--- a/objects.h
++++ b/objects.h
+@@ -665,6 +665,7 @@
+ #define NID_zlib_compression		125
+ #define OBJ_zlib_compression		1L,1L,1L,1L,666L.2L
+ 
++#if 0 /* SSL-C: the registry uses the upstream identifiers only. */
+ #include "bio.h"
+ #include "asn1.h"
+ 
+@@ -761,6 +762,8 @@
+ #define OBJ_R_MALLOC_FAILURE				 100
+ #define OBJ_R_UNKNOWN_NID				 101
+  
++#endif
++
+ #ifdef  __cplusplus
+ }
+ #endif
