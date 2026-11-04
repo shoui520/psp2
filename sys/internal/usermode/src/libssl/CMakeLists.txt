@@ -84,6 +84,7 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	MES/common/cert/src/cert_api.c
 	MES/common/cert/src/name_api.c
 	MES/common/cert/src/extension_api.c
+	MES/common/cert/src/x509.c
 	MES/common/cert/src/ri_cert.c
 	asn1interpreter.c
 	ex_data.c
