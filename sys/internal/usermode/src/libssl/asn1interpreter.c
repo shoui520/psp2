@@ -7,6 +7,24 @@
 static SceUInt32 sslAsn1True = 0xff;
 static SceUInt32 sslAsn1False;
 
+static const SslAsn1Operation sslAsn1DecodeOperations[16] = {
+	sslAsn1Configure, sslAsn1Navigate, sslAsn1Label, sslAsn1UnsupportedOperation,
+	sslAsn1InvokeCallback, sslAsn1InspectElement, sslAsn1TestElement, sslAsn1Branch,
+	sslAsn1Arithmetic, sslAsn1LoadConstant,
+	sslAsn1UnsupportedOperation, sslAsn1UnsupportedOperation,
+	sslAsn1UnsupportedOperation, sslAsn1UnsupportedOperation,
+	sslAsn1UnsupportedOperation, sslAsn1UnsupportedOperation
+};
+
+/* The shared rejection entry ignores every argument. */
+static const SslAsn1TreeMethods sslAsn1DecodeMethods = {
+	sslAsn1CreateTree, sslAsn1InitTree, sslAsn1DestroyTree,
+	(int (*)(SslAsn1Element *, SceUInt8 *, SceUInt32 *, SceUInt32))
+		sslAsn1UnsupportedOperation,
+	sslAsn1UnsupportedOperation, sslAsn1DecodeTree, sslAsn1UnsupportedOperation,
+	sslAsn1MeasureTree, sslAsn1ElementCount, sslAsn1ElementAt
+};
+
 int sslAsn1ResetNavigator(SslAsn1Navigator *navigator)
 {
 	int index;
@@ -194,6 +212,29 @@ int sslAsn1DecodeSchema(SslAsn1Navigator *navigator, const SceUInt32 *schema,
 		return status == 5 ? 10005 : 10001;
 	status = sslAsn1RunSchema(navigator, arg);
 	return status == 5 ? 10005 : status;
+}
+
+int sslAsn1InitDecoder(SslAsn1Navigator *navigator)
+{
+	return sslAsn1InitNavigator(navigator, &sslAsn1DecodeMethods, sslAsn1DecodeOperations);
+}
+
+int sslAsn1DecodeProperties(const SceUInt32 *schema, SslPropertyList *list,
+			    const SceUInt8 *data, SceUInt32 size,
+			    SceUInt32 *consumed)
+{
+	SslAsn1Navigator navigator;
+	int status;
+
+	status = sslAsn1InitDecoder(&navigator);
+	if (status != 0)
+		return status;
+	navigator.callback = sslAsn1PropertyCallback;
+	if (list != NULL && list->count == 0)
+		navigator.flags |= 16;
+	status = sslAsn1DecodeSchema(&navigator, schema, list, data, size, consumed);
+	sslAsn1DestroyNavigator(&navigator);
+	return status;
 }
 
 SslAsn1Tree *sslAsn1CreateTree(void)
@@ -467,6 +508,50 @@ int sslAsn1InspectElement(SslAsn1Navigator *navigator, int command, int first,
 	return 10011;
 }
 
+int sslAsn1TestElement(SslAsn1Navigator *navigator, int command, int first,
+		      int second, int third)
+{
+	SslAsn1Element *element;
+	SceUInt32 tagBit, mismatch = 0;
+	int encoding = command & 3;
+	unsigned int shift;
+
+	if (navigator->currentIndex < 0)
+		return 10008;
+	element = navigator->tree->elements + navigator->currentIndex;
+	if (first & 0x80)
+		first = navigator->registers[first & 15];
+	if (second & 0x80)
+		second = navigator->registers[second & 15];
+	if (third & 0x80)
+		third = navigator->registers[third & 15];
+	if (!(command & 4) || encoding == 1) {
+		if (command & 4)
+			encoding = 2;
+		if ((element->encoding & 0xc0) != (encoding << 6))
+			mismatch |= 1;
+		if (element->tag != (SceUInt32)first)
+			mismatch |= 2;
+		if ((element->encoding & 0x3f & (unsigned char)third) != second)
+			mismatch |= 4;
+	} else if (encoding == 0) {
+		if ((element->encoding & 0xc0) != first)
+			mismatch |= 1;
+		shift = element->tag & 255;
+		tagBit = shift < 32 ? 1u << shift : 0;
+		if (((SceUInt32)second & tagBit) != tagBit)
+			mismatch |= 2;
+	} else if (encoding == 2) {
+		if (element->tag != (SceUInt32)first || !(element->encoding & 2))
+			mismatch = 1;
+	}
+	if (command & 8) {
+		navigator->registers[0] = (int)mismatch;
+		return 0;
+	}
+	return mismatch != 0 ? 10001 : 0;
+}
+
 int sslAsn1Configure(SslAsn1Navigator *navigator, int command, int first,
 		     int second, int third)
 {
@@ -537,6 +622,54 @@ int sslAsn1Branch(SslAsn1Navigator *navigator, int command, int first,
 	return 0;
 }
 
+int sslAsn1Arithmetic(SslAsn1Navigator *navigator, int command, int first,
+		     int second, int third)
+{
+	SceUInt32 result;
+
+	if (!(first & 0x80))
+		return 10018;
+	if (second & 0x80)
+		second = navigator->registers[second & 15];
+	if (third & 0x80)
+		third = navigator->registers[third & 15];
+	switch (command) {
+	case 0:
+		result = (SceUInt32)second + (SceUInt32)third;
+		break;
+	case 1:
+		result = (SceUInt32)second - (SceUInt32)third;
+		break;
+	case 2:
+		result = (SceUInt32)second * (SceUInt32)third;
+		break;
+	case 3:
+	case 4:
+		if (third == 0)
+			return 10018;
+		if ((SceUInt32)second == 0x80000000u && third == -1)
+			result = command == 3 ? 0x80000000u : 0;
+		else if (command == 3)
+			result = second / third;
+		else
+			result = second % third;
+		break;
+	case 5:
+		result = (SceUInt32)second | (SceUInt32)third;
+		break;
+	case 6:
+		result = (SceUInt32)second & (SceUInt32)third;
+		break;
+	case 7:
+		result = (SceUInt32)second ^ (SceUInt32)third;
+		break;
+	default:
+		return 10011;
+	}
+	navigator->registers[first & 15] = (int)result;
+	return 0;
+}
+
 int sslAsn1LoadConstant(SslAsn1Navigator *navigator, int command, int first,
 			int second, int third)
 {
@@ -570,4 +703,114 @@ int sslAsn1UnsupportedOperation(SslAsn1Navigator *navigator, int command,
 			       int first, int second, int third)
 {
 	return 10011;
+}
+
+int sslAsn1PropertyCallback(SslAsn1Navigator *navigator, void *arg,
+			  SceInt32 *value, int command, int type, int id)
+{
+	SslPropertyList *list = arg;
+	SslAsn1Element *element = navigator->currentElement;
+	SslProperty *property, *append;
+	const unsigned char *data = NULL;
+	SceUInt32 length = 0;
+	void *old, *storage;
+
+	if (element != NULL) {
+		length = element->length;
+		data = element->data;
+	}
+	if (command == -1)
+		return 0;
+	if (command < 32) {
+		if (element == NULL)
+			return 10001;
+		if (sslFindProperty(list, type, id, NULL, &property, 0) != 0)
+			return 10008;
+		sslAsn1SetValue(element, 0, (SceUInt32)command, property->data,
+				property->length, 0, 0);
+		return 0;
+	}
+	switch (command) {
+	case 64:
+	case 72:
+		sslFindProperty(list, type, id, NULL, &property, 0);
+		*value = property != NULL;
+		return 0;
+	case 65:
+		if (element == NULL)
+			return 10001;
+		if (sslFindProperty(list, type, id, NULL, &property, 0) != 0)
+			return 10008;
+		sslAsn1SetValue(element, 0, property->value, property->data,
+				property->length, 0, 0);
+		return 0;
+	case 66:
+	case 70:
+		if (element == NULL)
+			return 10001;
+		if (command == 70) {
+			data = (const unsigned char *)((SceUInt32)data - element->headerLength);
+			length += element->headerLength;
+		}
+		return sslAddPropertyValue(list, type, id, element->tag, data, length,
+					   SSL_PROPERTY_REPLACE) != 0 ? 10005 : 0;
+	case 67:
+		return sslAddPropertyValue(list, type, id, 2, NULL, (SceUInt32)*value,
+					   SSL_PROPERTY_REPLACE) != 0 ? 10005 : 0;
+	case 68:
+		if (sslFindProperty(list, type, id, NULL, &property, 0) != 0)
+			return 10008;
+		*value = (SceInt32)property->length;
+		return 0;
+	case 69:
+		if (element == NULL)
+			return 10001;
+		if (sslFindProperty(list, type, id, NULL, &property, 0) != 0)
+			return 10008;
+		sslAsn1SetData(element, property->data, property->length);
+		element->encoding = 8;
+		return 0;
+	case 71:
+		if (element == NULL)
+			return 10001;
+		length = element->length;
+		if (sslFindProperty(list, type, id, NULL, &append, 0) != 0) {
+			if (element->encoding & 2)
+				length -= 2;
+			return sslAddPropertyValue(list, type, id, element->tag,
+						   element->data, length,
+						   SSL_PROPERTY_REPLACE) != 0 ? 10005 : 0;
+		}
+		if (append->flags & SSL_PROPERTY_OWNS_DATA) {
+			old = append->data;
+			storage = sslReallocate(old, append->length + length, append->length);
+			append->data = storage;
+			if (append->data == NULL) {
+				append->data = old;
+				return 10005;
+			}
+		} else {
+			storage = sslAllocate(append->length + length);
+			if (storage == NULL)
+				return 10005;
+			sslCopyMemory(storage, append->data, append->length);
+			append->data = storage;
+			append->flags |= SSL_PROPERTY_OWNS_DATA;
+		}
+		sslCopyMemory((unsigned char *)append->data + append->length, element->data, length);
+		append->length += length;
+		return 0;
+	case 73:
+	case 74:
+		if (element == NULL)
+			return 10001;
+		if (command == 73)
+			element->encoding = 8;
+		if (sslFindProperty(list, type, id, NULL, &property, 0) != 0)
+			return 10008;
+		sslAsn1SetData(element, property->data, property->length);
+		return 0;
+	default:
+		return 10011;
+	}
 }

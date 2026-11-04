@@ -4,6 +4,82 @@
 #include "../../../../memory.h"
 #include "../../../../asn1.h"
 
+static const char *const sslCertificateExtensionNames[SSL_CERT_EXTENSION_COUNT] = {
+	"X509v3 Subject Key Identifier",
+	"X509v3 Key Usage",
+	"X509v3 Private Key Usage Period",
+	"X509v3 Subject Alternative Name",
+	"X509v3 Issuer Alternative Name",
+	"X509v3 Basic Constraints",
+	"X509v3 CRL Number",
+	"X509v3 CRL Reason Code",
+	"X509v3 CRL Instruction Code",
+	"X509v3 CRL Invalidity Date",
+	"X509v3 Delta CRL Indicator",
+	"X509v3 CRL Issuing Distribution Point",
+	"X509v3 CRL Certificate Issuer",
+	"X509v3 CRL Name Constraints",
+	"X509v3 CRL Distribution Points",
+	"X509v3 Certificate Policies",
+	"X509v3 Authority Key Identifier",
+	"X509v3 Extended Key Usage",
+	"OCSP nonce",
+	"OCSP CRL",
+	"OCSP No Check",
+	"X509v3 Authority Info Access",
+	"Netscape Comment",
+	"Netscape Certificate Extension",
+	"OCSP response",
+};
+
+/* A schema instruction contains an opcode and three byte operands. */
+#define SSL_ASN1_COMMAND(opcode, first, second, third) \
+	((SceUInt32)(opcode) | ((SceUInt32)(first) << 8) | \
+	 ((SceUInt32)(second) << 16) | ((SceUInt32)(third) << 24))
+
+static const SceUInt32 sslAuthorityKeyIdentifierSchema[] = {
+	/* Outer SEQUENCE. */
+	SSL_ASN1_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_ASN1_COMMAND(0x18, 0x0, 0x1, 0x0),
+	/* Optional context tag 0: key identifier. */
+	SSL_ASN1_COMMAND(0x6d, 0x0, 0x0, 0x20),
+	SSL_ASN1_COMMAND(0x71, 0x80, 0x1, 0x0),
+	SSL_ASN1_COMMAND(0x40, 0x42, 0x62, 0x1),
+	SSL_ASN1_COMMAND(0x20, 0x0, 0x1, 0x0),
+	SSL_ASN1_COMMAND(0x1a, 0x84, 0x1, 0x0),
+	SSL_ASN1_COMMAND(0x70, 0x84, 0x2, 0x0),
+	/* Context tag 1: authority certificate issuer. */
+	SSL_ASN1_COMMAND(0x65, 0x1, 0x20, 0x20),
+	SSL_ASN1_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_ASN1_COMMAND(0x80, 0x85, 0x0, 0x0),
+	/* An optional SET wraps the directory name. */
+	SSL_ASN1_COMMAND(0x68, 0x11, 0x0, 0x0),
+	SSL_ASN1_COMMAND(0x71, 0x80, 0x3, 0x0),
+	SSL_ASN1_COMMAND(0x80, 0x85, 0x1, 0x0),
+	SSL_ASN1_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_ASN1_COMMAND(0x20, 0x0, 0x3, 0x0),
+	/* Context tag 4: directory name. */
+	SSL_ASN1_COMMAND(0x65, 0x4, 0x20, 0x20),
+	SSL_ASN1_COMMAND(0x18, 0x0, 0x1, 0x0),
+	/* Store the complete encoded issuer name. */
+	SSL_ASN1_COMMAND(0x40, 0x46, 0x62, 0x2),
+	SSL_ASN1_COMMAND(0x19, 0x0, 0x1, 0x0),
+	SSL_ASN1_COMMAND(0x19, 0x0, 0x1, 0x0),
+	SSL_ASN1_COMMAND(0x70, 0x85, 0x4, 0x0),
+	SSL_ASN1_COMMAND(0x19, 0x0, 0x1, 0x0),
+	SSL_ASN1_COMMAND(0x20, 0x0, 0x4, 0x0),
+	SSL_ASN1_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	/* Context tag 2: authority certificate serial number. */
+	SSL_ASN1_COMMAND(0x65, 0x2, 0x0, 0x20),
+	SSL_ASN1_COMMAND(0x40, 0x42, 0x62, 0x3),
+	SSL_ASN1_COMMAND(0x20, 0x0, 0x2, 0x0),
+	SSL_ASN1_COMMAND(0x19, 0x0, 0x1, 0x0),
+	SSL_ASN1_COMMAND(0x1, 0x0, 0x0, 0x0),
+	0
+};
+
+#undef SSL_ASN1_COMMAND
+
 /* OCSP basic response, 1.3.6.1.5.5.7.48.1.1. */
 static const struct {
 	SceUInt32 length;
@@ -320,6 +396,35 @@ int sslGetCertificateGeneralName(SslCertificateExtension *extension,
 	return 10022;
 }
 
+int sslGetCertificateAuthorityKeyIdentifier(SslCertificateExtension *extension,
+					  int selector,
+					  SslCertificateExtensionData *result)
+{
+	SslProperty *property;
+	SceUInt32 consumed;
+	int status;
+
+	if (extension == NULL || result == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (extension->properties == NULL) {
+		extension->properties = sslNewPropertyList();
+		if (extension->properties == NULL)
+			return 10005;
+		status = sslDecodeAuthorityKeyIdentifier(extension->properties,
+						 extension->value.data,
+						 extension->value.length, &consumed);
+		if (status != 0)
+			return status;
+	}
+	if (selector < 1 || selector > 3)
+		return 10008;
+	if (sslFindProperty(extension->properties, 98, selector, NULL, &property, 0) != 0)
+		return 10008;
+	result->data = property->data;
+	result->length = property->length;
+	return 0;
+}
+
 int sslGetCertificateBasicConstraint(SslCertificateExtension *extension,
 				     int selector, int *result)
 {
@@ -403,6 +508,83 @@ int sslGetCertificateKeyUsage(SslCertificateExtension *extension, int *result)
 	return 0;
 }
 
+int SceSslInternal_93EAE08A(SslCertificateExtension *extension, int selector, void *result)
+{
+	SslCertificateExtensionData *buffer = result;
+	int *integer = result;
+	SslAsn1Element element;
+	SceUInt32 index;
+
+	if (extension == NULL || result == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (selector >= 1 && selector <= 3)
+		return extension->type == 0x4010 ?
+			sslGetCertificateAuthorityKeyIdentifier(extension, selector, buffer) : 10018;
+	if (selector >= 0x4200 && selector <= 0x4208)
+		return extension->type == 0x4003 ?
+			sslGetCertificateGeneralName(extension, selector, 0x4200, buffer) : 10018;
+	if (selector >= 0x4400 && selector <= 0x4408)
+		return extension->type == 0x4004 ?
+			sslGetCertificateGeneralName(extension, selector, 0x4400, buffer) : 10018;
+	switch (selector) {
+	case 0x4001:
+		return sslGetCertificateKeyUsage(extension, integer);
+	case 0x8001:
+		*integer = extension->critical;
+		return 0;
+	case 0x8002:
+		buffer->data = extension->value.data;
+		buffer->length = extension->value.length;
+		return 0;
+	case 0x8003:
+		if (extension->type == SSL_CERT_EXTENSION_CUSTOM) {
+			if (extension->oid.data == NULL)
+				return 10008;
+			buffer->data = extension->oid.data;
+			buffer->length = extension->oid.length;
+			return 0;
+		}
+		index = (SceUInt32)extension->type - SSL_CERT_EXTENSION_FIRST;
+		if (index >= SSL_CERT_EXTENSION_COUNT)
+			return 10008;
+		buffer->data = (void *)sslCertificateExtensionOids[index];
+		buffer->length = sslStringLength(sslCertificateExtensionOids[index]);
+		return 0;
+	case 0x8004:
+		*integer = extension->type;
+		return 0;
+	case 0x8005:
+		index = (SceUInt32)extension->type - SSL_CERT_EXTENSION_FIRST;
+		if (index >= SSL_CERT_EXTENSION_COUNT)
+			return 10008;
+		*(const char **)result = sslCertificateExtensionNames[index];
+		return 0;
+	case 0x8006:
+		*integer = extension->index;
+		return 0;
+	case 0x8007:
+	case 0x8008:
+		return extension->type == 0x4005 ?
+			sslGetCertificateBasicConstraint(extension, selector, integer) : 10018;
+	case 0x8009:
+		if (extension->type != 0x4000)
+			return 10018;
+		if (sslAsn1DecodeHeader(&element, extension->value.data, extension->value.length) != 0 ||
+		    element.tag != 4 || element.headerLength + element.length != extension->value.length)
+			return 10022;
+		buffer->length = element.length;
+		buffer->data = (void *)element.data;
+		return 0;
+	case 0x800a:
+		return extension->type == 0x4018 ?
+			sslGetOcspAcceptableResponses(extension, result) : 10018;
+	case 0x800b:
+		return sslGetCertificateExtensionReason(extension, integer);
+	default:
+		return 10018;
+	}
+}
+
 int SceSslInternal_BF99D664(const SslObjectMethods *methods, int unused,
 			  SslCertificateExtension **result)
 {
@@ -419,4 +601,10 @@ int SceSslInternal_BF99D664(const SslObjectMethods *methods, int unused,
 	extension->flags = 1;
 	extension->type = SSL_CERT_EXTENSION_CUSTOM;
 	return 0;
+}
+
+int sslDecodeAuthorityKeyIdentifier(SslPropertyList *list, const unsigned char *data,
+				    SceUInt32 size, SceUInt32 *consumed)
+{
+	return sslAsn1DecodeProperties(sslAuthorityKeyIdentifierSchema, list, data, size, consumed);
 }

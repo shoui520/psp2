@@ -4,6 +4,7 @@
 
 #include <scetypes.h>
 #include <stddef.h>
+#include "CRYPTOCME/common/property.h"
 
 typedef struct SslAsn1Element SslAsn1Element;
 
@@ -140,5 +141,15 @@ int sslAsn1LoadConstant(SslAsn1Navigator *navigator, int command, int first,
 			int second, int third);
 int sslAsn1UnsupportedOperation(SslAsn1Navigator *navigator, int command,
 			       int first, int second, int third);
+int sslAsn1TestElement(SslAsn1Navigator *navigator, int command, int first,
+		      int second, int third);
+int sslAsn1Arithmetic(SslAsn1Navigator *navigator, int command, int first,
+		     int second, int third);
+int sslAsn1PropertyCallback(SslAsn1Navigator *navigator, void *arg,
+			  SceInt32 *value, int command, int type, int id);
+int sslAsn1InitDecoder(SslAsn1Navigator *navigator);
+int sslAsn1DecodeProperties(const SceUInt32 *schema, SslPropertyList *list,
+			    const SceUInt8 *data, SceUInt32 size,
+			    SceUInt32 *consumed);
 
 #endif

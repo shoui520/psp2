@@ -45,6 +45,12 @@ int sslGetCertificateKeyUsage(SslCertificateExtension *extension, int *result);
 int sslSetCertificateExtensionInfo(SslCertificateExtension *extension,
 				   int selector, const void *value);
 int sslGetCertificateExtensionReason(SslCertificateExtension *extension, int *result);
+int sslGetCertificateAuthorityKeyIdentifier(SslCertificateExtension *extension,
+					  int selector,
+					  SslCertificateExtensionData *result);
+int sslDecodeAuthorityKeyIdentifier(SslPropertyList *list, const unsigned char *data,
+				    SceUInt32 size, SceUInt32 *consumed);
+int SceSslInternal_93EAE08A(SslCertificateExtension *extension, int selector, void *result);
 int sslGetCertificateGeneralName(SslCertificateExtension *extension,
 				 int selector, int base,
 				 SslCertificateExtensionData *result);
