@@ -3,6 +3,53 @@
 #include "../../../../CRYPTOCME/common/object.h"
 #include <libssl/name.h>
 #include "ri_cert.h"
+#include "../../../../asn1.h"
+
+#define SSL_ASN1_NAME_COMMAND(opcode, first, second, third) \
+	((SceUInt32)(opcode) | ((SceUInt32)(first) << 8) | \
+	 ((SceUInt32)(second) << 16) | ((SceUInt32)(third) << 24))
+
+static const SceUInt32 sslCertificateNameSchema[] = {
+	/* Name SEQUENCE and the initial property indices. */
+	SSL_ASN1_NAME_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x80, 0x85, 0x2, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x80, 0x86, 0x0, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x18, 0x80, 0x1, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x70, 0x80, 0x2, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x20, 0x0, 0x1, 0x0),
+	/* Each relative distinguished name is a SET of attribute SEQUENCEs. */
+	SSL_ASN1_NAME_COMMAND(0x60, 0x11, 0x0, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x20, 0x0, 0x3, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x18, 0x0, 0x1, 0x0),
+	/* Attribute OID and value become consecutive properties. */
+	SSL_ASN1_NAME_COMMAND(0x60, 0x6, 0x0, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x92, 0x88, 0x0, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x10, 0x0, 0x0, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x80, 0x87, 0x86, 0x88),
+	SSL_ASN1_NAME_COMMAND(0x40, 0x42, 0x68, 0x87),
+	SSL_ASN1_NAME_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x92, 0x88, 0x0, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x11, 0x0, 0x0, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x80, 0x87, 0x86, 0x88),
+	SSL_ASN1_NAME_COMMAND(0x40, 0x42, 0x68, 0x87),
+	SSL_ASN1_NAME_COMMAND(0x19, 0x0, 0x1, 0x0),
+	/* Advance through attributes and relative distinguished names. */
+	SSL_ASN1_NAME_COMMAND(0x1a, 0x84, 0x1, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x71, 0x84, 0x3, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x19, 0x0, 0x1, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x80, 0x86, 0x86, 0x85),
+	SSL_ASN1_NAME_COMMAND(0x1a, 0x84, 0x1, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x71, 0x84, 0x1, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x20, 0x0, 0x2, 0x0),
+	SSL_ASN1_NAME_COMMAND(0x83, 0x80, 0x86, 0x85),
+	SSL_ASN1_NAME_COMMAND(0x40, 0x43, 0x68, 0xf),
+	SSL_ASN1_NAME_COMMAND(0x1, 0x0, 0x0, 0x0),
+	0
+};
+
+#undef SSL_ASN1_NAME_COMMAND
 
 int SceSslInternal_CE37B69E(void *name)
 {
@@ -47,4 +94,31 @@ int SceSslInternal_81FA5DBE(void *certificate, int mode, void **result)
 int SceSslInternal_08179EBD(void *certificate, int mode, void **result)
 {
 	return sslGetCertificateName(certificate, 7, mode, result);
+}
+
+int sslDecodeCertificateName(SslCertificateContext *context, int mode, SceUInt32 length,
+			     const void *data, SceUInt32 *consumed, void **result)
+{
+	SslCertificateName *name;
+	int status;
+
+	status = sslNewCertificateName(context, &name);
+	if (status != 0)
+		return status;
+	status = sslDecodeCertificateNameProperties(name->properties, data, length, consumed);
+	if (status == 0 && mode == 0 && sslPackProperties(name->properties, 0) != 0)
+		status = 10001;
+	if (status == 0)
+		*result = name;
+	else if (name != NULL)
+		sslFreeCertificateName(name);
+	return status;
+}
+
+int sslDecodeCertificateNameProperties(SslPropertyList *properties,
+				       const SceUInt8 *data, SceUInt32 length,
+				       SceUInt32 *consumed)
+{
+	return sslAsn1DecodeProperties(sslCertificateNameSchema, properties, data, length,
+				       consumed);
 }

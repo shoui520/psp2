@@ -178,6 +178,13 @@ int sslGetCertificateName(SslCertificate *certificate, int selector, int mode,
 			  void **result);
 int sslGetCertificatePublicKey(SslCertificate *certificate, int mode, void **result);
 int sslGetCertificateInfo(SslCertificate *certificate, int selector, void *result);
+int sslSetCertificateInfo(SslCertificate *certificate, int selector, void *value);
+int sslNewCertificateName(SslCertificateContext *context, SslCertificateName **result);
+int sslDecodeCertificateName(SslCertificateContext *context, int mode, SceUInt32 length,
+			     const void *data, SceUInt32 *consumed, void **result);
+int sslDecodeCertificateNameProperties(SslPropertyList *properties,
+				       const SceUInt8 *data, SceUInt32 length,
+				       SceUInt32 *consumed);
 int sslFreeCertificateName(void *object);
 int sslCacheCertificatePublicKey(SslCertificate *certificate, int mode, void *source);
 int sslClearCertificateCache(SslCertificate *certificate, int selector);

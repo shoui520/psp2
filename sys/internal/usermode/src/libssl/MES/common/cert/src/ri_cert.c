@@ -967,6 +967,110 @@ int sslSetCertificateVersion(SslCertificate *certificate, int version)
 	return 0;
 }
 
+int sslSetCertificateInfo(SslCertificate *certificate, int selector, void *value)
+{
+	SslCertificatePropertyValue *encoded = value;
+	SslCertificateExtensionData *buffer = value;
+	SslCertificateIndexedData *indexed = value;
+	SslCertificateInfoRequest *requests;
+	SslCertificateIndexedData probe;
+	SslCertificateExtension *extension = NULL;
+	const SslObjectMethods *methods;
+	SceUInt32 count;
+	int id = selector, status;
+
+	if (selector == 0x4701)
+		id = *(int *)value;
+	if (certificate->references != 1)
+		return 10025;
+	if (selector >= 0x4700 && selector <= 0x480f && selector != 0x4701)
+		return sslSetCertificateEncodedProperty(certificate, selector, 0,
+						 buffer->data, buffer->length);
+	switch (selector) {
+	case 1:
+		return sslSetCertificateVersion(certificate, *(int *)value);
+	case 2:
+	case 18:
+	case 23:
+		return sslSetCertificateEncodedProperty(certificate, selector, 0,
+						 buffer->data, buffer->length);
+	case 25:
+	case 0x8013:
+		return sslSetCertificateEncodedProperty(certificate, selector, 0,
+						 NULL, *(SceUInt32 *)value);
+	case 0x4701:
+		if (sslDeleteProperty(certificate->properties, 96, id) != 0)
+			return 10001;
+		if (id < 0x4700 || id > 0x480f)
+			sslInvalidateCertificateProperties(certificate);
+		return 0;
+	case 0x8001:
+		status = sslStoreCertificateExtension(&certificate->attributes, 0, value);
+		if (status == 0)
+			certificate->flags |= 1;
+		return status;
+	case 0x8005:
+		certificate->context = value;
+		return 0;
+	case 0x8009:
+		return sslSetCertificatePublicKey(certificate, 0, value);
+	case 0x800a:
+		return sslSetCertificateIssuer(certificate, 0, value);
+	case 0x800b:
+		return sslSetCertificateSubject(certificate, 0, value);
+	case 0x800c:
+		requests = value;
+		while (requests->selector != 0) {
+			status = sslSetCertificateInfo(certificate, requests->selector, requests->result);
+			if (status != 0)
+				return status;
+			requests++;
+		}
+		return 0;
+	case 0x8010:
+		status = sslGetCertificateMethods(certificate, &methods);
+		if (status != 0)
+			return status;
+		status = SceSslInternal_BF99D664(methods, 0, &extension);
+		if (status != 0)
+			return status;
+		status = sslSetCertificateExtensionInfo(extension, 0x4001, value);
+		if (status == 0) {
+			status = sslSetCertificateInfo(certificate, 0x8001, extension);
+			certificate->flags |= 1;
+		}
+		SceSslInternal_F030A0DE(extension);
+		return status;
+	case 0x8012:
+		count = 0;
+		sslGetCertificateProperty(certificate, 0x8011, &count);
+		if (indexed->index == (SceUInt32)-1) {
+			count++;
+		} else {
+			probe.index = indexed->index;
+			if (sslGetCertificateProperty(certificate, 0x8012, &probe) != 0)
+				count++;
+		}
+		if (sslAddPropertyValue(certificate->properties, 114,
+					(int)(indexed->index + 0x100u), 0,
+					indexed->data, indexed->length,
+					SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0)
+			return 10001;
+		if (sslAddPropertyValue(certificate->properties, 114, 1, 0, NULL,
+					count, SSL_PROPERTY_REPLACE) != 0)
+			return 10001;
+		return 0;
+	case 0x8014:
+		certificate->flags = *(SceUInt32 *)value;
+		return 0;
+	default:
+		if (value == NULL)
+			return 10017;
+		return sslSetCertificateEncodedProperty(certificate, selector, encoded->value,
+						 encoded->data, encoded->length);
+	}
+}
+
 int sslNewCertificateContext(SslLibrary *library, int unused, SceUInt32 types,
 			     void **result)
 {
@@ -1081,4 +1185,26 @@ int sslSerializeCertificate(SslCertificate *certificate, SceUInt32 capacity,
 		return SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
 	return certificate->backendMethods->Serialize(certificate, capacity, data,
 						       length);
+}
+
+int sslNewCertificateName(SslCertificateContext *context, SslCertificateName **result)
+{
+	SslCertificateName *name;
+
+	name = sslAllocate(sizeof(*name));
+	if (name == NULL)
+		return 10005;
+	sslFillMemory(name, 0, sizeof(*name));
+	name->properties = sslNewPropertyList();
+	if (name->properties == NULL) {
+		sslFreeCertificateName(name);
+		return 10005;
+	}
+	sslRetainCertificateContext(context);
+	name->context = context;
+	name->backendMethods = context->backendMethods;
+	if (context->methods != NULL)
+		name->methods = (const SslObjectMethods *)context->methods->nameMethods;
+	*result = name;
+	return 0;
 }
