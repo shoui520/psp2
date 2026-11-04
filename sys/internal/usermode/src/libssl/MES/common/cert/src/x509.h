@@ -28,6 +28,7 @@ int sslParseX509PublicKey(void *unused, void *context, void **result,
 int sslDecodeX509PublicKey(SslCertificate *certificate, SslProperty *property,
 			   int mode, void **result);
 int sslNewX509CertificateContext(SslLibrary *library, int unused, void **result);
+int sslDecodeX509Date(void *unused, const SslCertificatePropertyValue *value, void *date);
 
 int sslSerializeX509Certificate(SslCertificate *certificate, SceUInt32 capacity,
 			       void *data, SceUInt32 *length);

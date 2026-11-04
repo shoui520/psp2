@@ -121,6 +121,7 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	runtime.c
 	memory.c
 	time.c
+	date.c
 	libssl.c
 )
 target_include_directories(vs0_sys_external_libssl PRIVATE

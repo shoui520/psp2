@@ -2,6 +2,7 @@
 #include "x509.h"
 #include "../../../../asn1.h"
 #include "../../../../memory.h"
+#include "../../../../date.h"
 #include "../../../../CRYPTOCME/common/asn1_props.h"
 
 #define SSL_X509_COMMAND(opcode, first, second, third) \
@@ -696,6 +697,26 @@ int sslImportX509Properties(SslCertificate *certificate, SslPropertyList *proper
 	certificate->properties = properties;
 	certificate->encodedSize = length;
 	return sslFinalizeX509Certificate(certificate);
+}
+
+int sslDecodeX509Date(void *unused, const SslCertificatePropertyValue *value, void *date)
+{
+	int format;
+
+	switch (value->value) {
+	case 2:
+		format = SSL_TIME_FORMAT_SECONDS;
+		break;
+	case 23:
+		format = 1;
+		break;
+	case 24:
+		format = 2;
+		break;
+	default:
+		return 10022;
+	}
+	return SceSslInternal_88391E03(date, format, value->data, value->length);
 }
 
 int sslCollectX509KeyComponent(void *arg, int id, const SslKeyComponent *component)
