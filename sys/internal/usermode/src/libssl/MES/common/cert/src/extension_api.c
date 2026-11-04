@@ -89,6 +89,38 @@ static const struct {
 	{ 9, (const unsigned char *)"\x2b\x06\x01\x05\x05\x07\x30\x01\x01", 1 }
 };
 
+#define SSL_MATCH_CERTIFICATE_OID(encoded, size, propertyType) \
+	do { \
+		if (sslCompareMemory(oid, (encoded), (size)) == 0) { \
+			*result = (propertyType); \
+			return 0; \
+		} \
+	} while (0)
+
+int sslFindCertificateExtensionPropertyType(const void *oid, SceUInt32 length,
+					  int *result)
+{
+	if (length == 3) {
+		SSL_MATCH_CERTIFICATE_OID(sslCertificateExtensionOids[0], 3, 82);
+		SSL_MATCH_CERTIFICATE_OID(sslCertificateExtensionOids[1], 3, 83);
+		SSL_MATCH_CERTIFICATE_OID(sslCertificateExtensionOids[2], 3, 84);
+		SSL_MATCH_CERTIFICATE_OID(sslCertificateExtensionOids[3], 3, 85);
+		SSL_MATCH_CERTIFICATE_OID(sslCertificateExtensionOids[4], 3, 86);
+		SSL_MATCH_CERTIFICATE_OID(sslCertificateExtensionOids[5], 3, 87);
+		SSL_MATCH_CERTIFICATE_OID(sslCertificateExtensionOids[13], 3, 177);
+		SSL_MATCH_CERTIFICATE_OID(sslCertificateExtensionOids[14], 3, 103);
+		SSL_MATCH_CERTIFICATE_OID(sslCertificateExtensionOids[15], 3, 89);
+		SSL_MATCH_CERTIFICATE_OID(sslCertificateExtensionOids[16], 3, 90);
+		SSL_MATCH_CERTIFICATE_OID(sslCertificateExtensionOids[17], 3, 126);
+	} else if (length == 8) {
+		SSL_MATCH_CERTIFICATE_OID("\x2b\x06\x01\x05\x05\x07\x30\x01", 8, 207);
+		SSL_MATCH_CERTIFICATE_OID("\x2b\x06\x01\x05\x05\x07\x30\x02", 8, 208);
+	}
+	return 10008;
+}
+
+#undef SSL_MATCH_CERTIFICATE_OID
+
 int SceSslInternal_F030A0DE(void *object)
 {
 	SslCertificateExtension *extension = object;

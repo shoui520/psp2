@@ -60,6 +60,8 @@ int SceSslInternal_BF99D664(const SslObjectMethods *methods, int unused,
 			  SslCertificateExtension **result);
 
 int sslFindCertificateExtensionType(const void *oid, SceUInt32 length, int *result);
+int sslFindCertificateExtensionPropertyType(const void *oid, SceUInt32 length,
+					  int *result);
 int sslGetCertificateExtensionOid(int type, const char **oid, SceUInt32 *length);
 int sslSetCertificateExtensionData(SslCertificateExtension *extension,
 				   int selector, int mode,

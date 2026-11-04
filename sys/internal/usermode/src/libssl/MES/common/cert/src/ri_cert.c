@@ -1,5 +1,6 @@
 /* Source path recovered from the firmware; descriptive private names are ours. */
 #include <libssl/object.h>
+#include <libssl/name.h>
 #include "ri_cert.h"
 #include "extension.h"
 #include "../../../../memory.h"
@@ -11,6 +12,50 @@ static const char certificateSource[] =
 	"S:\\work\\MES\\common\\cert/src/ri_cert.c";
 
 static const unsigned char extensionCritical = 0xff;
+
+int sslValidateCriticalCertificateExtensions(SslCertificate *certificate)
+{
+	SslCertificateContext *context = NULL;
+	const SslObjectMethods *methods = NULL;
+	SslCertificateExtension *extension = NULL;
+	SslCertificateExtensionData oid;
+	SceUInt32 index = 0;
+	int critical = 0, propertyType, status;
+
+	status = certificate->methods->GetCertificateInfo(certificate, 0x8005, &context);
+	if (status != 0)
+		return status;
+	status = context->methods->GetContextInfo(context, 0, &methods);
+	if (status != 0)
+		return status;
+	status = SceSslInternal_BF99D664(methods, 0, &extension);
+	if (status == 0) {
+		status = sslSetCertificateExtensionInfo(extension, 0x8006, &index);
+		while (status == 0) {
+			if (certificate->methods->GetCertificateInfo(certificate, 0x8001, extension) != 0)
+				break;
+			status = SceSslInternal_93EAE08A(extension, 0x8001, &critical);
+			if (status != 0)
+				break;
+			if (critical == 1) {
+				status = SceSslInternal_93EAE08A(extension, 0x8003, &oid);
+				if (status != 0)
+					break;
+				if (sslFindCertificateExtensionPropertyType(oid.data, oid.length,
+								   &propertyType) == 10008) {
+					status = 10001;
+					break;
+				}
+			}
+			critical = 0;
+			index++;
+			status = sslSetCertificateExtensionInfo(extension, 0x8006, &index);
+		}
+	}
+	if (extension != NULL)
+		SceSslInternal_F030A0DE(extension);
+	return status;
+}
 
 int sslGetCertificateExtension(SslPropertyList *list, int mode,
 			       SslCertificateExtension *extension)
@@ -204,6 +249,138 @@ int sslCanonicalizeCertificate(SslCertificate *certificate)
 	return status;
 }
 
+int sslGetCertificateProperty(SslCertificate *certificate, SceUInt32 selector,
+			       void *result)
+{
+	SslCertificatePropertyValue *value = result;
+	SslCertificateExtensionData *buffer = result;
+	SslCertificateIndexedData *indexed = result;
+	SslProperty *property;
+	int dirty = 0, allowMissing = 0, scalar = 0, status;
+
+	if (selector >= 0x4700 && selector <= 0x480f)
+		goto getBuffer;
+	switch (selector) {
+	case 2:
+	case 18:
+	case 23:
+		goto getBuffer;
+	case 4:
+		dirty = certificate->issuer != NULL && (certificate->issuer->flags & 1);
+		break;
+	case 7:
+		dirty = certificate->subject != NULL && (certificate->subject->flags & 1);
+		break;
+	case 9:
+		dirty = certificate->publicKey != NULL && (certificate->publicKey->flags & 1);
+		break;
+	case 10:
+	case 11:
+		dirty = certificate->propertyCaches[selector - 10] != NULL &&
+			(certificate->propertyCaches[selector - 10]->flags & 1);
+		allowMissing = 1;
+		break;
+	case 12:
+	case 16:
+		allowMissing = 1;
+		break;
+	case 14:
+	case 64:
+	case 65:
+	case 127:
+		dirty = certificate->flags & 1;
+		break;
+	case 5:
+	case 6:
+	case 17:
+	case 19:
+	case 20:
+	case 0x8009:
+		break;
+	case 25:
+		*(SceUInt32 *)result = 64;
+		allowMissing = 1;
+		goto getScalar;
+	case 0x4000:
+	case 0x4001:
+	case 0x4003:
+	case 0x4004:
+	case 0x4005:
+	case 0x4010:
+	case 0x4011:
+	case 0x4015:
+	case 0x8010:
+		return sslFindCertificateExtensionByType(&certificate->attributes,
+							 (int)selector, 1, result);
+	case 0x8004:
+	case 0x800e:
+		*(int *)result = certificate->type;
+		return 0;
+	case 0x8005:
+		*(SslCertificateContext **)result = certificate->context;
+		return 0;
+	case 0x800d:
+		*(const SslCertificateMethods **)result = certificate->methods;
+		return 0;
+	case 0x8011:
+		if (sslFindProperty(certificate->properties, 114, 1, NULL, &property, 0) != 0)
+			return 10008;
+		*(SceUInt32 *)result = property->length;
+		return 0;
+	case 0x8012:
+		if (sslFindProperty(certificate->properties, 114,
+				     (int)(indexed->index + 0x100u), NULL, &property, 0) == 0) {
+			indexed->data = property->data;
+			indexed->length = property->length;
+			return 0;
+		}
+		break;
+	case 0x8013:
+		goto getScalar;
+	default:
+		return 10021;
+	}
+	if (dirty && certificate->type != 10) {
+		status = sslCanonicalizeCertificate(certificate);
+		if (status != 0)
+			return status;
+	}
+	property = NULL;
+	status = 10008;
+	if (sslFindProperty(certificate->properties, 96, (int)selector, NULL, &property, 0) == 0) {
+		value->value = property->value;
+		value->data = property->data;
+		value->length = property->length;
+		status = 0;
+	}
+	goto finish;
+getBuffer:
+	property = NULL;
+	if (sslFindProperty(certificate->properties, 96, (int)selector, NULL, &property, 0) != 0)
+		return 10008;
+	buffer->data = property->data;
+	buffer->length = property->length;
+	return 0;
+getScalar:
+	property = NULL;
+	status = 10008;
+	if (sslFindProperty(certificate->properties, 96, (int)selector, NULL, &property, 0) == 0) {
+		*(SceUInt32 *)result = property->length;
+		status = 0;
+	}
+	scalar = 1;
+finish:
+	if (allowMissing && status == 10008) {
+		if (!scalar) {
+			value->value = 0;
+			value->length = 0;
+			value->data = NULL;
+		}
+		status = 0;
+	}
+	return status;
+}
+
 int sslCacheCertificatePublicKey(SslCertificate *certificate, int mode, void *source)
 {
 	void *replacement = NULL;
@@ -240,6 +417,147 @@ int sslCacheCertificatePublicKey(SslCertificate *certificate, int mode, void *so
 	certificate->publicKey->algorithm = algorithm;
 	certificate->publicKey->key = replacement;
 	return 0;
+}
+
+int sslGetCertificatePublicKey(SslCertificate *certificate, int mode, void **result)
+{
+	SslCertificateKeyCache *cache = certificate->publicKey;
+	SslProperty *property;
+	void *decoded = NULL, *key = NULL, *context, *source;
+	int algorithm, status;
+
+	if (cache != NULL && cache->key != NULL) {
+		source = cache->key;
+		algorithm = cache->algorithm;
+		status = sslGetPublicKeyInfo(source, SSL_KEY_INFO_CONTEXT, &context);
+		if (status == 0) {
+			status = sslCreatePublicKey(context, algorithm, &key);
+			if (status == 0) {
+				status = sslCopyPublicKey(source, key, mode == 1);
+				if (status != 0)
+					SceSslInternal_46358909(key);
+				else
+					decoded = key;
+			}
+		}
+	} else if (sslFindProperty(certificate->properties, 96, 9, NULL, &property, 0) != 0) {
+		status = 10008;
+	} else {
+		status = 10009;
+		if (certificate->backendMethods->DecodePublicKey != NULL)
+			status = certificate->backendMethods->DecodePublicKey(certificate, property,
+									 mode, &decoded);
+		if (status == 0 && certificate->references == 1)
+			status = sslCacheCertificatePublicKey(certificate, mode, decoded);
+	}
+	if (status == 0)
+		*result = decoded;
+	else if (decoded != NULL)
+		SceSslInternal_46358909(decoded);
+	return status;
+}
+
+int sslGetCertificateInfo(SslCertificate *certificate, int selector, void *result)
+{
+	SslCertificateExtension *extension = NULL;
+	const SslObjectMethods *methods = NULL;
+	SslCertificateExtension probe;
+	SslCertificateInfoRequest *requests;
+	SslProperty *property;
+	SceUInt32 count, encodedVersion = 0;
+	int index, present = 0, status, value;
+
+	switch (selector) {
+	case 1:
+		property = NULL;
+		if (sslFindProperty(certificate->properties, 96, 1, NULL, &property, 0) == 0) {
+			present = 1;
+			encodedVersion = property->length;
+		}
+		if (certificate->backendMethods->DecodeVersion == NULL)
+			return 10009;
+		return certificate->backendMethods->DecodeVersion(certificate, present,
+								 encodedVersion, result);
+	case 0x4201:
+	case 0x4202:
+	case 0x4207:
+	case 0x4401:
+	case 0x4402:
+	case 0x4407:
+		count = 0;
+		sslFillMemory(&probe, 0, sizeof(probe));
+		status = sslGetCertificateExtensionCount(&certificate->attributes, &count);
+		if (status != 0)
+			return status;
+		for (index = 0; index < (int)count; index++) {
+			sslSetCertificateExtensionInfo(&probe, 0x8006, &index);
+			if (sslGetCertificateExtension(&certificate->attributes, 1, &probe) == 0 &&
+			    SceSslInternal_93EAE08A(&probe, selector, result) == 0)
+				return 0;
+		}
+		return 10008;
+	case 0x8000:
+		return sslGetCertificateExtensionCount(&certificate->attributes, result);
+	case 0x8001:
+		return sslGetCertificateExtension(&certificate->attributes, 1, result);
+	case 0x8002:
+		return sslFindCertificateExtension(&certificate->attributes, 1, result);
+	case 0x8006:
+		if (certificate->backendMethods->QueryNonzeroValue == NULL)
+			return 10009;
+		value = certificate->backendMethods->QueryNonzeroValue(certificate);
+		*(int *)result = value;
+		return value != 0 ? 0 : 10001;
+	case 0x8007:
+		if (certificate->backendMethods->GetSignatureAlgorithm == NULL)
+			return 10009;
+		value = certificate->backendMethods->GetSignatureAlgorithm(certificate);
+		*(int *)result = value;
+		return value != -1 ? 0 : 10001;
+	case 0x8008:
+		if (certificate->backendMethods->QuerySignedValue == NULL)
+			return 10009;
+		value = certificate->backendMethods->QuerySignedValue(certificate);
+		*(int *)result = value;
+		return value != -1 ? 0 : 10001;
+	case 0x8009:
+		return sslGetCertificatePublicKey(certificate, 1, result);
+	case 0x800a:
+		return SceSslInternal_81FA5DBE(certificate, 1, result);
+	case 0x800b:
+		return SceSslInternal_08179EBD(certificate, 1, result);
+	case 0x800c:
+		requests = result;
+		while (requests->selector != 0) {
+			status = sslGetCertificateInfo(certificate, requests->selector, requests->result);
+			if (status != 0)
+				return status;
+			requests++;
+		}
+		return 0;
+	case 0x8010:
+		status = sslGetCertificateMethods(certificate, &methods);
+		if (status != 0)
+			return status;
+		status = SceSslInternal_BF99D664(methods, 0, &extension);
+		if (status != 0)
+			return status;
+		sslFindCertificateExtensionByType(&certificate->attributes, 0x4001, 1, extension);
+		status = sslFindCertificateExtension(&certificate->attributes, 1, extension);
+		if (status == 0)
+			status = SceSslInternal_93EAE08A(extension, 0x4001, result);
+		SceSslInternal_F030A0DE(extension);
+		return status;
+	case 0x8014:
+		*(SceUInt32 *)result = certificate->flags;
+		return 0;
+	case 0x8015:
+		if (certificate->backendMethods->GetSignatureAlgorithmEncoding == NULL)
+			return 10009;
+		return certificate->backendMethods->GetSignatureAlgorithmEncoding(certificate, result);
+	default:
+		return sslGetCertificateProperty(certificate, (SceUInt32)selector, result);
+	}
 }
 
 int sslFreeCertificateContext(void *object)

@@ -5,6 +5,17 @@
 #include <libssl/object.h>
 #include "ri_cert.h"
 
+int sslGetCertificateMethods(SslCertificate *certificate, void *result)
+{
+	SslCertificateContext *context;
+	int status;
+
+	status = certificate->methods->GetCertificateInfo(certificate, 0x8005, &context);
+	if (status == 0)
+		status = context->methods->GetContextInfo(context, 0, result);
+	return status;
+}
+
 int SceSslInternal_144FA354(void *certificate)
 {
 	SslCertificateHeader *object = certificate;
