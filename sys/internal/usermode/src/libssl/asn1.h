@@ -27,29 +27,57 @@ typedef struct SslAsn1Tree {
 	SceUInt32 flags;
 } SslAsn1Tree;
 
-/* This view contains the fields used by the tree navigation method. */
+/* Interpreter interface names are ours. */
 typedef struct SslAsn1Navigator SslAsn1Navigator;
+typedef int (*SslAsn1Operation)(SslAsn1Navigator *navigator, int command,
+				int first, int second, int third);
 typedef int (*SslAsn1Callback)(SslAsn1Navigator *navigator, void *arg, SceInt32 *registers,
 			       int first, int second, int third);
 
+typedef struct SslAsn1TreeMethods {
+	SslAsn1Tree *(*Create)(void);
+	SslAsn1Tree *(*Init)(SslAsn1Tree *, SslAsn1Element *, SceUInt32, SceUInt32);
+	void (*Destroy)(SslAsn1Tree *);
+	int (*Encode)(SslAsn1Element *, SceUInt8 *, SceUInt32 *, SceUInt32);
+	int (*opaqueOperation)();
+	int (*Decode)(SslAsn1Tree *, const SceUInt8 *, SceUInt32, SceUInt32 *);
+	int (*opaqueTransform)();
+	int (*Measure)(SslAsn1Element *);
+	SceUInt32 (*Count)(const SslAsn1Tree *);
+	SslAsn1Element *(*At)(const SslAsn1Tree *, SceUInt32);
+} SslAsn1TreeMethods;
+
 struct SslAsn1Navigator {
-	void *methods;
-	void *schema;
+	const SslAsn1TreeMethods *methods;
+	const SslAsn1Operation *operations;
 	SslAsn1Tree *tree;
-	SceUInt8 reserved[36];
+	int instructionCount;
+	const SceUInt32 *schema;
+	int programCounter;
+	int savedIndexCount;
+	int labelCount;
+	SceUInt32 opaqueState;
+	SceUInt32 executionState;
+	SceUInt32 opaqueConfig;
+	void *ownedStorage;
 	SceInt32 *savedIndices;
-	SceUInt8 reservedBeforeRegisters[4];
+	SceInt32 *labels;
 	SceInt32 registers[16];
 	SslAsn1Callback callback;
 	void *callbackArg;
 	SceInt32 currentIndex;
-	SceUInt8 reservedBeforeMode[4];
+	SceUInt32 opaqueTraversal;
 	SceInt32 mode;
 	SslAsn1Element *currentElement;
+	SceUInt32 flags;
 };
 
 _Static_assert(sizeof(SslAsn1Element) == 28, "SslAsn1Element");
 _Static_assert(sizeof(SslAsn1Tree) == 16, "SslAsn1Tree");
+_Static_assert(sizeof(SslAsn1TreeMethods) == 40, "SslAsn1TreeMethods");
+_Static_assert(sizeof(SslAsn1Navigator) == 148, "SslAsn1Navigator");
+_Static_assert(offsetof(SslAsn1Navigator, savedIndices) == 48, "savedIndices");
+_Static_assert(offsetof(SslAsn1Navigator, registers) == 56, "registers");
 _Static_assert(offsetof(SslAsn1Navigator, currentIndex) == 128, "currentIndex");
 _Static_assert(offsetof(SslAsn1Navigator, mode) == 136, "mode");
 
@@ -90,5 +118,27 @@ int sslAsn1InvokeCallback(SslAsn1Navigator *navigator, int skipFirst, int first,
 			 int second, int third);
 int sslAsn1InspectElement(SslAsn1Navigator *navigator, int command, int first,
 			  int second, int third);
+int sslAsn1ResetNavigator(SslAsn1Navigator *navigator);
+int sslAsn1InitNavigator(SslAsn1Navigator *navigator,
+			 const SslAsn1TreeMethods *methods,
+			 const SslAsn1Operation *operations);
+void sslAsn1DestroyNavigator(SslAsn1Navigator *navigator);
+int sslAsn1DecodeNavigator(SslAsn1Navigator *navigator, const SceUInt8 *data,
+			   SceUInt32 size, SceUInt32 *consumed);
+int sslAsn1RunSchema(SslAsn1Navigator *navigator, void *arg);
+int sslAsn1LoadSchema(SslAsn1Navigator *navigator, const SceUInt32 *schema);
+int sslAsn1DecodeSchema(SslAsn1Navigator *navigator, const SceUInt32 *schema,
+			void *arg, const SceUInt8 *data, SceUInt32 size,
+			SceUInt32 *consumed);
+int sslAsn1Configure(SslAsn1Navigator *navigator, int command, int first,
+		     int second, int third);
+int sslAsn1Label(SslAsn1Navigator *navigator, int command, int first,
+		 int second, int third);
+int sslAsn1Branch(SslAsn1Navigator *navigator, int command, int first,
+		  int second, int third);
+int sslAsn1LoadConstant(SslAsn1Navigator *navigator, int command, int first,
+			int second, int third);
+int sslAsn1UnsupportedOperation(SslAsn1Navigator *navigator, int command,
+			       int first, int second, int third);
 
 #endif
