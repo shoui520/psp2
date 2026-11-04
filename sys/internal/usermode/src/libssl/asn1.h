@@ -58,9 +58,9 @@ struct SslAsn1Navigator {
 	int savedIndexCount;
 	int labelCount;
 	SceUInt32 opaqueState;
-	SceUInt32 executionState;
-	SceUInt32 opaqueConfig;
-	void *ownedStorage;
+	SceInt32 stackCount;
+	SceInt32 stackCapacity;
+	SceInt32 *stack;
 	SceInt32 *savedIndices;
 	SceInt32 *labels;
 	SceInt32 registers[16];
@@ -78,6 +78,9 @@ _Static_assert(sizeof(SslAsn1Tree) == 16, "SslAsn1Tree");
 _Static_assert(sizeof(SslAsn1TreeMethods) == 40, "SslAsn1TreeMethods");
 _Static_assert(sizeof(SslAsn1Navigator) == 148, "SslAsn1Navigator");
 _Static_assert(offsetof(SslAsn1Navigator, savedIndices) == 48, "savedIndices");
+_Static_assert(offsetof(SslAsn1Navigator, stackCount) == 36, "stackCount");
+_Static_assert(offsetof(SslAsn1Navigator, stackCapacity) == 40, "stackCapacity");
+_Static_assert(offsetof(SslAsn1Navigator, stack) == 44, "stack");
 _Static_assert(offsetof(SslAsn1Navigator, registers) == 56, "registers");
 _Static_assert(offsetof(SslAsn1Navigator, currentIndex) == 128, "currentIndex");
 _Static_assert(offsetof(SslAsn1Navigator, mode) == 136, "mode");
@@ -126,6 +129,8 @@ int sslAsn1InitNavigator(SslAsn1Navigator *navigator,
 void sslAsn1DestroyNavigator(SslAsn1Navigator *navigator);
 int sslAsn1DecodeNavigator(SslAsn1Navigator *navigator, const SceUInt8 *data,
 			   SceUInt32 size, SceUInt32 *consumed);
+int sslAsn1EncodeNavigator(SslAsn1Navigator *navigator, SceUInt8 *data,
+			   SceUInt32 *length, SceUInt32 capacity);
 int sslAsn1RunSchema(SslAsn1Navigator *navigator, void *arg);
 int sslAsn1LoadSchema(SslAsn1Navigator *navigator, const SceUInt32 *schema);
 int sslAsn1DecodeSchema(SslAsn1Navigator *navigator, const SceUInt32 *schema,
@@ -148,6 +153,14 @@ int sslAsn1Arithmetic(SslAsn1Navigator *navigator, int command, int first,
 int sslAsn1PropertyCallback(SslAsn1Navigator *navigator, void *arg,
 			  SceInt32 *value, int command, int type, int id);
 int sslAsn1InitDecoder(SslAsn1Navigator *navigator);
+int sslAsn1InitEncoder(SslAsn1Navigator *navigator);
+int sslAsn1StackOperation(SslAsn1Navigator *navigator, int command, int first,
+			  int second, int third);
+int sslAsn1EncodeSchema(SslAsn1Navigator *navigator, const SceUInt32 *schema,
+			void *arg, SceUInt8 *data, SceUInt32 *length,
+			SceUInt32 capacity);
+int sslAsn1EncodeProperties(const SceUInt32 *schema, SslPropertyList *list,
+			    SceUInt8 *data, SceUInt32 *length, SceUInt32 capacity);
 int sslAsn1DecodeProperties(const SceUInt32 *schema, SslPropertyList *list,
 			    const SceUInt8 *data, SceUInt32 size,
 			    SceUInt32 *consumed);

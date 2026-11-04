@@ -25,6 +25,21 @@ static const SslAsn1TreeMethods sslAsn1DecodeMethods = {
 	sslAsn1MeasureTree, sslAsn1ElementCount, sslAsn1ElementAt
 };
 
+static const SslAsn1Operation sslAsn1EncodeOperations[16] = {
+	sslAsn1Configure, sslAsn1Navigate, sslAsn1Label, sslAsn1BuildElement,
+	sslAsn1InvokeCallback, sslAsn1InspectElement, sslAsn1TestElement, sslAsn1Branch,
+	sslAsn1Arithmetic, sslAsn1LoadConstant, sslAsn1StackOperation,
+	sslAsn1UnsupportedOperation, sslAsn1UnsupportedOperation,
+	sslAsn1UnsupportedOperation, sslAsn1UnsupportedOperation,
+	sslAsn1UnsupportedOperation
+};
+
+static const SslAsn1TreeMethods sslAsn1EncodeMethods = {
+	sslAsn1CreateTree, sslAsn1InitTree, sslAsn1DestroyTree, sslAsn1EncodeTree,
+	sslAsn1UnsupportedOperation, sslAsn1DecodeTree, sslAsn1UnsupportedOperation,
+	sslAsn1MeasureTree, sslAsn1ElementCount, sslAsn1ElementAt
+};
+
 int sslAsn1ResetNavigator(SslAsn1Navigator *navigator)
 {
 	int index;
@@ -33,7 +48,7 @@ int sslAsn1ResetNavigator(SslAsn1Navigator *navigator)
 		navigator->methods->Destroy(navigator->tree);
 	navigator->tree = navigator->methods->Create();
 	navigator->programCounter = 0;
-	navigator->executionState = 0;
+	navigator->stackCount = 0;
 	for (index = 0; index < 16; index++)
 		navigator->registers[index] = 0;
 	return 0;
@@ -58,10 +73,26 @@ void sslAsn1DestroyNavigator(SslAsn1Navigator *navigator)
 		sslFree(navigator->savedIndices);
 	if (navigator->labels != NULL)
 		sslFree(navigator->labels);
-	if (navigator->ownedStorage != NULL)
-		sslFree(navigator->ownedStorage);
+	if (navigator->stack != NULL)
+		sslFree(navigator->stack);
 	if (navigator->flags & 1)
 		sslFree(navigator);
+}
+
+int sslAsn1EncodeNavigator(SslAsn1Navigator *navigator, SceUInt8 *data,
+			   SceUInt32 *length, SceUInt32 capacity)
+{
+	SslAsn1Element *element;
+	SceUInt32 measured;
+
+	element = navigator->methods->At(navigator->tree, 0);
+	measured = navigator->methods->Measure(element);
+	if (length != NULL)
+		*length = measured;
+	if (data == NULL)
+		return 0;
+	element = navigator->methods->At(navigator->tree, 0);
+	return navigator->methods->Encode(element, data, length, capacity);
 }
 
 int sslAsn1DecodeNavigator(SslAsn1Navigator *navigator, const SceUInt8 *data,
@@ -235,6 +266,11 @@ int sslAsn1DecodeProperties(const SceUInt32 *schema, SslPropertyList *list,
 	status = sslAsn1DecodeSchema(&navigator, schema, list, data, size, consumed);
 	sslAsn1DestroyNavigator(&navigator);
 	return status;
+}
+
+int sslAsn1InitEncoder(SslAsn1Navigator *navigator)
+{
+	return sslAsn1InitNavigator(navigator, &sslAsn1EncodeMethods, sslAsn1EncodeOperations);
 }
 
 SslAsn1Tree *sslAsn1CreateTree(void)
@@ -552,6 +588,50 @@ int sslAsn1TestElement(SslAsn1Navigator *navigator, int command, int first,
 	return mismatch != 0 ? 10001 : 0;
 }
 
+int sslAsn1StackOperation(SslAsn1Navigator *navigator, int command, int first,
+			  int second, int third)
+{
+	int operands[3] = { first, second, third };
+	SceInt32 *replacement, value;
+	SceUInt32 oldSize;
+	int index, count;
+
+	if (command == 0) {
+		if ((SceInt32)((SceUInt32)navigator->stackCount + 3u) >=
+		    navigator->stackCapacity) {
+			oldSize = (SceUInt32)navigator->stackCapacity * sizeof(*navigator->stack);
+			/* Capacity grows by six words; the allocator gets six extra bytes. */
+			replacement = sslReallocate(navigator->stack, oldSize + 6u, oldSize);
+			if (replacement == NULL)
+				return 10005;
+			navigator->stack = replacement;
+			navigator->stackCapacity = (SceInt32)((SceUInt32)navigator->stackCapacity + 6u);
+		}
+		for (index = 2; index >= 0; index--) {
+			if (!(operands[index] & 0x80))
+				continue;
+			count = navigator->stackCount;
+			value = navigator->registers[operands[index] & 15];
+			navigator->stackCount = (SceInt32)((SceUInt32)count + 1u);
+			navigator->stack[count] = value;
+		}
+		return 0;
+	}
+	if (command != 1)
+		return 10011;
+	if (navigator->stackCount == 0)
+		return 10012;
+	for (index = 0; index < 3; index++) {
+		if (!(operands[index] & 0x80))
+			continue;
+		count = (SceInt32)((SceUInt32)navigator->stackCount - 1u);
+		value = navigator->stack[count];
+		navigator->stackCount = count;
+		navigator->registers[operands[index] & 15] = value;
+	}
+	return 0;
+}
+
 int sslAsn1Configure(SslAsn1Navigator *navigator, int command, int first,
 		     int second, int third)
 {
@@ -703,6 +783,53 @@ int sslAsn1UnsupportedOperation(SslAsn1Navigator *navigator, int command,
 			       int first, int second, int third)
 {
 	return 10011;
+}
+
+int sslAsn1EncodeSchema(SslAsn1Navigator *navigator, const SceUInt32 *schema,
+			void *arg, SceUInt8 *data, SceUInt32 *length,
+			SceUInt32 capacity)
+{
+	SslAsn1Element *element;
+	SceUInt32 encoded, measured;
+	int status;
+
+	sslAsn1ResetNavigator(navigator);
+	if (schema != NULL) {
+		status = sslAsn1LoadSchema(navigator, schema);
+		if (status != 0)
+			return status == 5 ? 10005 : status;
+	}
+	status = sslAsn1RunSchema(navigator, arg);
+	if (status != 0)
+		return status == 5 ? 10005 : status;
+	if (length != NULL)
+		encoded = *length;
+	element = navigator->methods->At(navigator->tree, 0);
+	measured = navigator->methods->Measure(element);
+	if (data != NULL) {
+		encoded = measured;
+		element = navigator->methods->At(navigator->tree, 0);
+		status = navigator->methods->Encode(element, data, &encoded, capacity);
+		measured = encoded;
+	}
+	if (length != NULL)
+		*length = measured;
+	return status == 5 ? 10005 : status != 0 ? 10001 : 0;
+}
+
+int sslAsn1EncodeProperties(const SceUInt32 *schema, SslPropertyList *list,
+			    SceUInt8 *data, SceUInt32 *length, SceUInt32 capacity)
+{
+	SslAsn1Navigator navigator;
+	int status;
+
+	status = sslAsn1InitEncoder(&navigator);
+	if (status != 0)
+		return status;
+	navigator.callback = sslAsn1PropertyCallback;
+	status = sslAsn1EncodeSchema(&navigator, schema, list, data, length, capacity);
+	sslAsn1DestroyNavigator(&navigator);
+	return status;
 }
 
 int sslAsn1PropertyCallback(SslAsn1Navigator *navigator, void *arg,
