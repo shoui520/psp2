@@ -6,6 +6,33 @@
 #include "../../../../CRYPTOCME/common/property.h"
 #include "../../../../CRYPTOCME/common/library/lib_ctx.h"
 
+typedef struct SslCertificate SslCertificate;
+
+/* Backend interface prefix. Uninterpreted extension words are retained without
+ * assigning them operations; this declaration does not describe the whole table.
+ */
+typedef struct SslCertificateBackendMethods {
+	SceUIntPtr opaqueHeader[4];
+	int (*ExportProperties)(SslCertificate *certificate, SslPropertyList *properties);
+	int (*ImportProperties)(SslCertificate *certificate, SslPropertyList *properties);
+	int (*DecodePublicKey)(SslCertificate *certificate, SslProperty *property,
+			       int mode, void **result);
+	int (*GetSignatureAlgorithm)(SslCertificate *certificate);
+	int (*GetSignatureAlgorithmEncoding)(SslCertificate *certificate, void *result);
+	SceUIntPtr opaqueQuery;
+	int (*DecodeVersion)(SslCertificate *certificate, int present,
+			     SceUInt32 encodedVersion, int *result);
+	int (*EncodeVersion)(SslCertificate *certificate, int version,
+			     SceUInt32 *encodedVersion, SceUInt32 *tag);
+	SceUIntPtr opaqueQueries[3];
+	int (*Parse)(SslCertificate *certificate, SceUInt32 flags, SceUInt32 length,
+		     const void *data, SceUInt32 *consumed);
+	int (*Serialize)(SslCertificate *certificate, SceUInt32 capacity,
+			 void *data, SceUInt32 *length);
+	int (*Finalize)(SslCertificate *certificate);
+	int (*Prepare)(SslCertificate *certificate);
+} SslCertificateBackendMethods;
+
 /* Shared method prefix; implementations extend this interface. */
 typedef struct SslCertificateMethods {
 	int (*CreateContext)(void *library, int flags, void **result);
@@ -29,7 +56,7 @@ typedef struct SslCertificateContext {
 	SceUInt32 flags;
 	SceUInt32 supportedTypes;
 	SceUInt32 opaqueConfiguration;
-	const void *backendMethods;
+	const SslCertificateBackendMethods *backendMethods;
 	int references;
 } SslCertificateContext;
 
@@ -38,7 +65,7 @@ typedef struct SslCertificateName {
 	SslCertificateContext *context;
 	SslPropertyList *properties;
 	SceUInt32 flags;
-	const void *backendMethods;
+	const SslCertificateBackendMethods *backendMethods;
 } SslCertificateName;
 
 typedef struct SslCertificateKeyCache {
@@ -47,15 +74,16 @@ typedef struct SslCertificateKeyCache {
 	void *key;
 } SslCertificateKeyCache;
 
-/* Only the property-list prefix is needed by cache destruction. */
+/* Shared cache prefix used by cleanup and dirty-state tracking. */
 typedef struct SslCertificatePropertyCache {
 	SslPropertyList *properties;
+	SceUInt32 flags;
 } SslCertificatePropertyCache;
 
-typedef struct SslCertificate {
+struct SslCertificate {
 	const SslCertificateMethods *methods;
 	SslCertificateContext *context;
-	const void *backendMethods;
+	const SslCertificateBackendMethods *backendMethods;
 	SceUInt32 flags;
 	int references;
 	SslPropertyList *properties;
@@ -68,7 +96,18 @@ typedef struct SslCertificate {
 	SceUInt32 opaqueConfiguration;
 	SslPropertyList attributes;
 	SceUInt32 opaqueTail;
-} SslCertificate;
+};
+
+_Static_assert(offsetof(SslCertificateBackendMethods, ExportProperties) == 16,
+	       "ExportProperties");
+_Static_assert(offsetof(SslCertificateBackendMethods, ImportProperties) == 20,
+	       "ImportProperties");
+_Static_assert(offsetof(SslCertificateBackendMethods, EncodeVersion) == 44,
+	       "EncodeVersion");
+_Static_assert(offsetof(SslCertificateBackendMethods, Parse) == 60, "Parse");
+_Static_assert(offsetof(SslCertificateBackendMethods, Serialize) == 64, "Serialize");
+_Static_assert(offsetof(SslCertificateBackendMethods, Prepare) == 72, "Prepare");
+_Static_assert(offsetof(SslCertificatePropertyCache, flags) == 4, "flags");
 
 _Static_assert(offsetof(SslCertificateMethods, DestroyCertificate) == 20,
 	       "DestroyCertificate");
@@ -81,6 +120,9 @@ _Static_assert(offsetof(SslCertificate, publicKey) == 36, "publicKey");
 _Static_assert(offsetof(SslCertificate, attributes) == 56, "attributes");
 
 int sslFreeCertificateContext(void *object);
+int sslApplyCertificateProperties(SslCertificate *certificate,
+				 SslPropertyList *properties);
+int sslCanonicalizeCertificate(SslCertificate *certificate);
 int sslFreeCertificateName(void *object);
 int sslCacheCertificatePublicKey(SslCertificate *certificate, int mode, void *source);
 int sslClearCertificateCache(SslCertificate *certificate, int selector);
@@ -90,6 +132,10 @@ int sslSetCertificateProperty(SslCertificate *certificate, int id,
 int sslFreeCertificate(void *object);
 int sslRetainCertificateContext(void *object);
 int sslNewCertificate(void *object, int type, void **result);
+int sslNewCertificateFromData(void *context, int mode, int type, SceUInt32 length,
+			      const void *data, SceUInt32 *consumed, void **result);
+int sslResetCertificate(SslCertificate *certificate, int mode, const void *data,
+			SceUInt32 length);
 int sslCopyCertificateName(SslCertificateName *source, int mode,
 			   SslCertificateName **result);
 int sslSetCertificateSubject(SslCertificate *certificate, int mode,
@@ -97,9 +143,13 @@ int sslSetCertificateSubject(SslCertificate *certificate, int mode,
 int sslSetCertificateIssuer(SslCertificate *certificate, int mode,
 			    SslCertificateName *source);
 int sslSetCertificatePublicKey(SslCertificate *certificate, int mode, void *source);
+int sslSetCertificateVersion(SslCertificate *certificate, int version);
 int sslNewCertificateContext(SslLibrary *library, int unused, SceUInt32 types,
 			     void **result);
 int sslGetCertificateContextInfo(void *object, int selector, void *result);
 int sslSetCertificateContextInfo(void *object, int selector, void *value);
+int sslRetainCertificate(SslCertificate *certificate, int mode);
+int sslSerializeCertificate(SslCertificate *certificate, SceUInt32 capacity,
+			    void *data, SceUInt32 *length);
 
 #endif

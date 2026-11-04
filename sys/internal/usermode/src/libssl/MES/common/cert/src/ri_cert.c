@@ -9,6 +9,68 @@
 static const char certificateSource[] =
 	"S:\\work\\MES\\common\\cert/src/ri_cert.c";
 
+int sslApplyCertificateProperties(SslCertificate *certificate,
+				 SslPropertyList *properties)
+{
+	SslCertificateName *issuer, *subject;
+	SslCertificateKeyCache *key;
+	SslCertificatePropertyCache *first, *second;
+	int status = SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+
+	if (certificate->references != 1)
+		return 10025;
+	if (sslPackProperties(properties, 0) != 0)
+		return 10005;
+	if (certificate->backendMethods->ImportProperties != NULL)
+		status = certificate->backendMethods->ImportProperties(certificate,
+							      properties);
+	if (status != 0)
+		return status;
+	certificate->flags &= ~1u;
+	issuer = certificate->issuer;
+	subject = certificate->subject;
+	key = certificate->publicKey;
+	first = certificate->propertyCaches[0];
+	second = certificate->propertyCaches[1];
+	if (issuer != NULL)
+		issuer->flags &= ~1u;
+	if (subject != NULL)
+		subject->flags &= ~1u;
+	if (key != NULL)
+		key->flags &= ~1u;
+	if (first != NULL)
+		first->flags &= ~1u;
+	if (second != NULL)
+		second->flags &= ~1u;
+	return 0;
+}
+
+int sslCanonicalizeCertificate(SslCertificate *certificate)
+{
+	SslPropertyList *properties;
+	int status = 0;
+
+	if (!(certificate->flags & 1))
+		return 0;
+	if (certificate->backendMethods->Prepare != NULL)
+		status = certificate->backendMethods->Prepare(certificate);
+	if (status != 0 && status != 10010)
+		return status;
+	properties = sslCopyPropertyList(NULL, certificate->properties,
+					 SSL_PROPERTY_COPY_DATA);
+	if (properties == NULL)
+		return 10005;
+	status = SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+	if (certificate->backendMethods->ExportProperties != NULL)
+		status = certificate->backendMethods->ExportProperties(certificate,
+							      properties);
+	if (status == 0)
+		status = sslApplyCertificateProperties(certificate, properties);
+	if (status != 0)
+		sslFreePropertyList(properties);
+	return status;
+}
+
 int sslCacheCertificatePublicKey(SslCertificate *certificate, int mode, void *source)
 {
 	void *replacement = NULL;
@@ -212,6 +274,84 @@ int sslNewCertificate(void *object, int type, void **result)
 	return 0;
 }
 
+int sslNewCertificateFromData(void *context, int mode, int type, SceUInt32 length,
+			      const void *data, SceUInt32 *consumed, void **result)
+{
+	void *object = NULL;
+	SslCertificate *certificate;
+	int status;
+
+	status = sslNewCertificate(context, type, &object);
+	if (status != 0)
+		return status;
+	certificate = object;
+	status = SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+	if (certificate->backendMethods->Parse != NULL)
+		status = certificate->backendMethods->Parse(certificate,
+				mode == 0 ? SSL_PROPERTY_COPY_DATA : 0,
+				length, data, consumed);
+	if (status == 0) {
+		if (certificate->backendMethods->Finalize != NULL)
+			status = certificate->backendMethods->Finalize(certificate);
+		if (status == 10010)
+			status = 0;
+	}
+	if (status != 0) {
+		sslFreeCertificate(certificate);
+		return status;
+	}
+	*result = certificate;
+	return 0;
+}
+
+int sslResetCertificate(SslCertificate *certificate, int mode, const void *data,
+			SceUInt32 length)
+{
+	void *object = NULL;
+	SslCertificate *replacement;
+	SslProperty *property;
+	SceUInt32 consumed;
+	int cursor = 0;
+	int status;
+
+	sslClearCertificateCache(certificate, 4);
+	sslClearCertificateCache(certificate, 7);
+	sslClearCertificateCache(certificate, 9);
+	sslClearCertificateCache(certificate, 10);
+	sslClearCertificateCache(certificate, 11);
+	if (data == NULL) {
+		sslFreePropertyList(certificate->properties);
+		certificate->properties = sslNewPropertyList();
+		if (certificate->properties == NULL)
+			return 10005;
+		sslInitPropertyList(&certificate->attributes);
+		return 0;
+	}
+	status = sslNewCertificateFromData(certificate->context, mode,
+					    certificate->type, length, data,
+					    &consumed, &object);
+	if (status != 0)
+		return status;
+	replacement = object;
+	while (sslNextProperty(certificate->properties, &cursor, &property) == 0) {
+		if (property->id >= 0x4700 && property->id <= 0x480f &&
+		    sslAddProperty(replacement->properties, property,
+				   SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0) {
+			status = 10001;
+			goto out;
+		}
+	}
+	sslFreePropertyList(certificate->properties);
+	certificate->properties = replacement->properties;
+	replacement->properties = NULL;
+	sslFreePropertyList(&certificate->attributes);
+	certificate->attributes = replacement->attributes;
+	replacement->attributes = (SslPropertyList){0};
+out:
+	sslFreeCertificate(replacement);
+	return status;
+}
+
 int sslCopyCertificateName(SslCertificateName *source, int mode,
 			   SslCertificateName **result)
 {
@@ -282,6 +422,27 @@ int sslSetCertificatePublicKey(SslCertificate *certificate, int mode, void *sour
 		sslInvalidateCertificateProperties(certificate);
 	}
 	return status;
+}
+
+int sslSetCertificateVersion(SslCertificate *certificate, int version)
+{
+	SceUInt32 encodedVersion, tag;
+	int status = SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+
+	if (certificate->references != 1)
+		return 10025;
+	if (certificate->backendMethods->EncodeVersion != NULL)
+		status = certificate->backendMethods->EncodeVersion(certificate,
+						version, &encodedVersion, &tag);
+	if (status != 0)
+		return status;
+	certificate->flags |= 1;
+	if (sslAddPropertyValue(certificate->properties, 96, 1, tag, NULL,
+				encodedVersion,
+				SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0)
+		return 10001;
+	sslInvalidateCertificateProperties(certificate);
+	return 0;
 }
 
 int sslNewCertificateContext(SslLibrary *library, int unused, SceUInt32 types,
@@ -366,4 +527,36 @@ int sslSetCertificateContextInfo(void *object, int selector, void *value)
 		return 10018;
 	}
 	return 0;
+}
+
+int sslRetainCertificate(SslCertificate *certificate, int mode)
+{
+	int status = 0;
+
+	if (mode != 1)
+		return 10018;
+	if (certificate->type != 10)
+		status = sslCanonicalizeCertificate(certificate);
+	if (status == 0)
+		sslAddReference(&certificate->references, 1, 28, certificateSource, 784);
+	return status;
+}
+
+int sslSerializeCertificate(SslCertificate *certificate, SceUInt32 capacity,
+			    void *data, SceUInt32 *length)
+{
+	int status = sslCanonicalizeCertificate(certificate);
+
+	if (status != 0)
+		return status;
+	if (data == NULL) {
+		*length = certificate->encodedSize;
+		return 0;
+	}
+	if (certificate->encodedSize > capacity)
+		return 10016;
+	if (certificate->backendMethods->Serialize == NULL)
+		return SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+	return certificate->backendMethods->Serialize(certificate, capacity, data,
+						       length);
 }
