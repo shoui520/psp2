@@ -9,6 +9,11 @@ SceUInt32 sslStringLength(const char *string)
 	return sslStringLengthInline(string);
 }
 
+int sslToUpper(int character)
+{
+	return sceClibToupper(character);
+}
+
 char *sslCopyString(char *destination, const char *source, SceUInt32 size)
 {
 	return sceClibStrncpy(destination, source, size);

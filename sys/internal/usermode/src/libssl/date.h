@@ -18,6 +18,7 @@ typedef struct SslDateMethods {
 	int (*EncodeDate)(void *date, int format, void *data,
 			  SceUInt32 *length, SceUInt32 capacity);
 	int (*DecodeDate)(void *date, int format, const void *data, SceUInt32 length);
+	SceUIntPtr opaqueTail;
 } SslDateMethods;
 
 typedef const SslDateMethods *(*SslDateModuleFactory)(void *data);
@@ -46,6 +47,7 @@ _Static_assert(sizeof(SslDateContext) == 12, "SslDateContext");
 _Static_assert(sizeof(SslDateObject) == 20, "SslDateObject");
 _Static_assert(offsetof(SslDateObject, value) == 8, "value");
 _Static_assert(offsetof(SslDateMethods, DecodeDate) == 32, "DecodeDate");
+_Static_assert(sizeof(SslDateMethods) == 40, "SslDateMethods");
 
 int SceSslInternal_D3C049B9(SslLibrary *library, int parameter, void **result);
 int SceSslInternal_D4ADF069(void *context);
@@ -64,5 +66,11 @@ int sslAddDateValue(void *result, const void *source, int seconds);
 int sslNewDateContext(SslLibrary *library, int parameter, void **result);
 int sslFreeDateContext(void *context);
 int sslCompareDateValues(const void *left, const void *right, int *result);
+int sslEncodeDateValue(void *date, int format, void *data,
+			SceUInt32 *length, SceUInt32 capacity);
+int sslDecodeDateValue(void *date, int format, const void *data, SceUInt32 length);
+int sslRetainDateValue(void *date);
+const SslDateMethods *sslGetDateMethods(void *data);
+const SslDateValue *sslGetDateEpoch(void);
 
 #endif
