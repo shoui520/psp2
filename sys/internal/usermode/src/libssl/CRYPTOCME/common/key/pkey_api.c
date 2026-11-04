@@ -6,6 +6,17 @@
 #include "../object.h"
 #include "pkey_ctx.h"
 
+int sslGetPublicKeyInfo(void *key, int selector, void *result)
+{
+	SslPublicKeyHeader *object = key;
+
+	if (result == NULL || object == NULL || object->context->module == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (object->context->module->GetKeyInfo == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return object->context->module->GetKeyInfo(key, selector, result);
+}
+
 int SceSslInternal_46358909(void *key)
 {
 	SslPublicKeyHeader *object = key;
@@ -19,6 +30,15 @@ int SceSslInternal_46358909(void *key)
 	return object->context->module->DestroyKey(key);
 }
 
+int sslGetPublicKeyAlgorithm(void *key)
+{
+	int algorithm;
+
+	if (sslGetPublicKeyInfo(key, SSL_KEY_INFO_ALGORITHM, &algorithm) != 0)
+		return -1;
+	return algorithm;
+}
+
 int sslDestroyKeyContext(void *context)
 {
 	SslKeyContext *keyContext = context;
@@ -28,4 +48,51 @@ int sslDestroyKeyContext(void *context)
 	if (keyContext->module->DestroyContext == NULL)
 		return SSL_CRYPTO_ERROR_NO_OPERATION;
 	return keyContext->module->DestroyContext(context);
+}
+
+int sslCreatePublicKey(void *context, int algorithm, void **result)
+{
+	SslKeyContext *keyContext = context;
+
+	if (result == NULL || keyContext == NULL || keyContext->module == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (keyContext->module->CreateKey == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return keyContext->module->CreateKey(context, algorithm, result);
+}
+
+int sslCopyPublicKey(void *source, void *destination, int mode)
+{
+	SslPublicKeyHeader *object = source;
+
+	if (destination == NULL || object == NULL || object->context->module == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (object->context->module->CopyKey == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return object->context->module->CopyKey(source, destination, mode);
+}
+
+int sslCreateKeyContext(SslLibrary *library, int parameter, SceUInt32 flags,
+			void **result)
+{
+	SslKeyModuleFactory factory;
+	SslKeyModuleFactory getMethods;
+	const SslKeyModule *module;
+	void *data = NULL;
+	int status;
+
+	if (library == NULL || result == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	status = sslGetLibraryMethod(library, SSL_KEY_MODULE_TYPE, 0, flags,
+				     parameter, SSL_LIBRARY_GET_METHOD_FACTORY, &factory);
+	if (status != 0)
+		return status;
+	getMethods = factory;
+	status = sslGetLibraryData(library, SSL_KEY_MODULE_TYPE, &data);
+	if (status != 0)
+		return status;
+	module = getMethods(data);
+	if (module == NULL)
+		return SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+	return module->CreateContext(library, parameter, flags, result);
 }

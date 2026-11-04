@@ -15,7 +15,12 @@ typedef struct SslKeyModule {
 	int (*SetContextInfo)(void *context, int selector, void *value);
 	int (*CreateKey)(void *context, int type, void **result);
 	int (*DestroyKey)(void *key);
+	int (*GetKeyInfo)(void *key, int selector, void *result);
+	int (*SetKeyInfo)(void *key, int selector, void *value);
+	int (*CopyKey)(void *source, void *destination, int mode);
 } SslKeyModule;
+
+typedef const SslKeyModule *(*SslKeyModuleFactory)(void *data);
 
 typedef struct SslKeyContext {
 	const SslKeyModule *module;
@@ -38,11 +43,22 @@ typedef struct SslPublicKeyHeader {
 #define SSL_KEY_CONTEXT_INFO_BACKEND 3
 #define SSL_KEY_CONTEXT_INFO_FLAGS 4
 #define SSL_KEY_CONTEXT_INFO_APPLICATION_DATA 5
+#define SSL_KEY_MODULE_TYPE 16
+#define SSL_KEY_INFO_CONTEXT 2001
+#define SSL_KEY_INFO_ALGORITHM 2006
 
 _Static_assert(sizeof(SslKeyContext) == 24, "SslKeyContext");
 _Static_assert(offsetof(SslKeyContext, references) == 20, "references");
 _Static_assert(offsetof(SslKeyModule, DestroyKey) == 32, "DestroyKey");
+_Static_assert(offsetof(SslKeyModule, GetKeyInfo) == 36, "GetKeyInfo");
+_Static_assert(offsetof(SslKeyModule, CopyKey) == 44, "CopyKey");
 
+int sslCreateKeyContext(SslLibrary *library, int parameter, SceUInt32 flags,
+			void **result);
+int sslCreatePublicKey(void *context, int algorithm, void **result);
+int sslCopyPublicKey(void *source, void *destination, int mode);
+int sslGetPublicKeyInfo(void *key, int selector, void *result);
+int sslGetPublicKeyAlgorithm(void *key);
 int sslDestroyKeyContext(void *context);
 int sslFreeKeyContext(void *context);
 int sslGetKeyContextInfo(void *context, int selector, void *result);

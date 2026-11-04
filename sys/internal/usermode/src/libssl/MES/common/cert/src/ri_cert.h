@@ -38,7 +38,7 @@ typedef struct SslCertificateName {
 	SslCertificateContext *context;
 	SslPropertyList *properties;
 	SceUInt32 flags;
-	SceUInt32 opaqueData;
+	const void *backendMethods;
 } SslCertificateName;
 
 typedef struct SslCertificateKeyCache {
@@ -82,6 +82,7 @@ _Static_assert(offsetof(SslCertificate, attributes) == 56, "attributes");
 
 int sslFreeCertificateContext(void *object);
 int sslFreeCertificateName(void *object);
+int sslCacheCertificatePublicKey(SslCertificate *certificate, int mode, void *source);
 int sslClearCertificateCache(SslCertificate *certificate, int selector);
 int sslInvalidateCertificateProperties(SslCertificate *certificate);
 int sslSetCertificateProperty(SslCertificate *certificate, int id,
@@ -89,7 +90,15 @@ int sslSetCertificateProperty(SslCertificate *certificate, int id,
 int sslFreeCertificate(void *object);
 int sslRetainCertificateContext(void *object);
 int sslNewCertificate(void *object, int type, void **result);
-int sslCopyCertificateName(SslCertificateName *source, int mode, void **result);
+int sslCopyCertificateName(SslCertificateName *source, int mode,
+			   SslCertificateName **result);
+int sslSetCertificateSubject(SslCertificate *certificate, int mode,
+			     SslCertificateName *source);
+int sslSetCertificateIssuer(SslCertificate *certificate, int mode,
+			    SslCertificateName *source);
+int sslSetCertificatePublicKey(SslCertificate *certificate, int mode, void *source);
+int sslNewCertificateContext(SslLibrary *library, int unused, SceUInt32 types,
+			     void **result);
 int sslGetCertificateContextInfo(void *object, int selector, void *result);
 int sslSetCertificateContextInfo(void *object, int selector, void *value);
 

@@ -9,6 +9,44 @@
 static const char certificateSource[] =
 	"S:\\work\\MES\\common\\cert/src/ri_cert.c";
 
+int sslCacheCertificatePublicKey(SslCertificate *certificate, int mode, void *source)
+{
+	void *replacement = NULL;
+	void *key = NULL;
+	void *context;
+	int algorithm = sslGetPublicKeyAlgorithm(source);
+	int status;
+
+	status = sslGetPublicKeyInfo(source, SSL_KEY_INFO_CONTEXT, &context);
+	if (status == 0) {
+		status = sslCreatePublicKey(context, algorithm, &key);
+		if (status == 0) {
+			status = sslCopyPublicKey(source, key, mode == 1);
+			if (status != 0)
+				SceSslInternal_46358909(key);
+			else
+				replacement = key;
+		}
+	}
+	if (status != 0)
+		return status;
+	if (certificate->publicKey != NULL) {
+		if (certificate->publicKey->key != NULL)
+			SceSslInternal_46358909(certificate->publicKey->key);
+	} else {
+		certificate->publicKey = sslAllocate(sizeof(*certificate->publicKey));
+		if (certificate->publicKey == NULL) {
+			if (replacement != NULL)
+				SceSslInternal_46358909(replacement);
+			return 10005;
+		}
+		certificate->publicKey->flags = 0;
+	}
+	certificate->publicKey->algorithm = algorithm;
+	certificate->publicKey->key = replacement;
+	return 0;
+}
+
 int sslFreeCertificateContext(void *object)
 {
 	SslCertificateContext *context = object;
@@ -174,7 +212,8 @@ int sslNewCertificate(void *object, int type, void **result)
 	return 0;
 }
 
-int sslCopyCertificateName(SslCertificateName *source, int mode, void **result)
+int sslCopyCertificateName(SslCertificateName *source, int mode,
+			   SslCertificateName **result)
 {
 	SslCertificateName *name;
 	unsigned int flags = SSL_PROPERTY_COPY_DATA;
@@ -194,9 +233,88 @@ int sslCopyCertificateName(SslCertificateName *source, int mode, void **result)
 	name->context = source->context;
 	name->methods = source->methods;
 	name->flags = source->flags;
-	name->opaqueData = source->opaqueData;
+	name->backendMethods = source->backendMethods;
 	*result = name;
 	return 0;
+}
+
+int sslSetCertificateSubject(SslCertificate *certificate, int mode,
+			     SslCertificateName *source)
+{
+	SslCertificateName *name;
+	int status;
+
+	status = sslCopyCertificateName(source, mode, &name);
+	if (status != 0)
+		return status;
+	sslClearCertificateCache(certificate, 7);
+	certificate->subject = name;
+	name->flags |= 1;
+	certificate->flags |= 1;
+	sslInvalidateCertificateProperties(certificate);
+	return 0;
+}
+
+int sslSetCertificateIssuer(SslCertificate *certificate, int mode,
+			    SslCertificateName *source)
+{
+	SslCertificateName *name;
+	int status;
+
+	status = sslCopyCertificateName(source, mode, &name);
+	if (status != 0)
+		return status;
+	sslClearCertificateCache(certificate, 4);
+	certificate->issuer = name;
+	name->flags |= 1;
+	certificate->flags |= 1;
+	sslInvalidateCertificateProperties(certificate);
+	return 0;
+}
+
+int sslSetCertificatePublicKey(SslCertificate *certificate, int mode, void *source)
+{
+	int status = sslCacheCertificatePublicKey(certificate, mode, source);
+
+	if (status == 0) {
+		certificate->publicKey->flags |= 1;
+		certificate->flags |= 1;
+		sslInvalidateCertificateProperties(certificate);
+	}
+	return status;
+}
+
+int sslNewCertificateContext(SslLibrary *library, int unused, SceUInt32 types,
+			     void **result)
+{
+	SslCertificateContext *context;
+	int status;
+
+	(void)unused;
+	context = sslAllocate(sizeof(*context));
+	if (context == NULL)
+		return 10005;
+	sslFillMemory(context, 0, sizeof(*context));
+	context->references = 1;
+	status = sslLibraryAddReference(library);
+	if (status != 0)
+		goto fail;
+	context->supportedTypes = types;
+	context->library = library;
+	context->cryptoOwnership = 0;
+	if (sslGetCachedLibraryObject(library, SSL_CRYPTO_MODULE_TYPE, 0, 0, 0,
+				     (SslObjectHeader **)&context->cryptoContext) != 0) {
+		sslCreateCryptoContext(library, 0, &context->cryptoContext);
+		context->cryptoOwnership = 2;
+	}
+	status = sslCreateKeyContext(library, 0, 6, &context->keyContext);
+	if (status != 0)
+		goto fail;
+	*result = context;
+	return 0;
+fail:
+	sslFreeCertificateContext(context);
+	return status;
 }
 
 int sslGetCertificateContextInfo(void *object, int selector, void *result)
