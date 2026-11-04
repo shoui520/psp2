@@ -38,6 +38,21 @@ _Static_assert(offsetof(SslCertificateExtension, properties) == 36, "properties"
 
 extern const char *const sslCertificateExtensionOids[SSL_CERT_EXTENSION_COUNT];
 
+int sslSetOcspAcceptableResponses(SslCertificateExtension *extension, int formats);
+int sslGetOcspAcceptableResponses(SslCertificateExtension *extension, SceUInt32 *result);
+int sslSetCertificateKeyUsage(SslCertificateExtension *extension, int usage);
+int sslGetCertificateKeyUsage(SslCertificateExtension *extension, int *result);
+int sslSetCertificateExtensionInfo(SslCertificateExtension *extension,
+				   int selector, const void *value);
+int sslGetCertificateExtensionReason(SslCertificateExtension *extension, int *result);
+int sslGetCertificateGeneralName(SslCertificateExtension *extension,
+				 int selector, int base,
+				 SslCertificateExtensionData *result);
+int sslGetCertificateBasicConstraint(SslCertificateExtension *extension,
+				     int selector, int *result);
+int SceSslInternal_BF99D664(const SslObjectMethods *methods, int unused,
+			  SslCertificateExtension **result);
+
 int sslFindCertificateExtensionType(const void *oid, SceUInt32 length, int *result);
 int sslGetCertificateExtensionOid(int type, const char **oid, SceUInt32 *length);
 int sslSetCertificateExtensionData(SslCertificateExtension *extension,

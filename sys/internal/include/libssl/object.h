@@ -4,5 +4,6 @@
 
 int SceSslInternal_144FA354(void *certificate);
 int SceSslInternal_46358909(void *key);
+int SceSslInternal_F030A0DE(void *extension);
 
 #endif
