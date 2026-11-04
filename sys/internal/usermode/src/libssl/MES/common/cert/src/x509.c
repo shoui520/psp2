@@ -1,10 +1,115 @@
 /* Filename and private names are ours; component follows MES/common/cert/src. */
 #include "x509.h"
 #include "../../../../asn1.h"
+#include "../../../../memory.h"
+#include "../../../../CRYPTOCME/common/asn1_props.h"
 
 #define SSL_X509_COMMAND(opcode, first, second, third) \
 	((SceUInt32)(opcode) | ((SceUInt32)(first) << 8) | \
 	 ((SceUInt32)(second) << 16) | ((SceUInt32)(third) << 24))
+
+static const SceUInt32 sslX509CertificateDecodingSchema[] = {
+	/* Outer certificate and certificate-body SEQUENCEs. */
+	SSL_X509_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_X509_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_X509_COMMAND(0x40, 0x46, 0x60, 0x40),
+	SSL_X509_COMMAND(0x18, 0x0, 0x1, 0x0),
+	/* Optional explicit version. */
+	SSL_X509_COMMAND(0x6d, 0x0, 0x20, 0x20),
+	SSL_X509_COMMAND(0x71, 0x80, 0x1, 0x0),
+	SSL_X509_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_X509_COMMAND(0x51, 0x80, 0x0, 0x0),
+	SSL_X509_COMMAND(0x40, 0x43, 0x60, 0x1),
+	SSL_X509_COMMAND(0x19, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x20, 0x0, 0x1, 0x0),
+	/* Serial number, signature algorithm and issuer. */
+	SSL_X509_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_X509_COMMAND(0x40, 0x42, 0x60, 0x2),
+	SSL_X509_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x40, 0x46, 0x60, 0x3),
+	SSL_X509_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x40, 0x46, 0x60, 0x4),
+	SSL_X509_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	/* Validity accepts UTCTime or GeneralizedTime. */
+	SSL_X509_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_X509_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x68, 0x17, 0x0, 0x0),
+	SSL_X509_COMMAND(0x70, 0x80, 0x2, 0x0),
+	SSL_X509_COMMAND(0x68, 0x18, 0x0, 0x0),
+	SSL_X509_COMMAND(0x70, 0x80, 0x2, 0x0),
+	SSL_X509_COMMAND(0x1, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x20, 0x0, 0x2, 0x0),
+	SSL_X509_COMMAND(0x40, 0x42, 0x60, 0x5),
+	SSL_X509_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x68, 0x17, 0x0, 0x0),
+	SSL_X509_COMMAND(0x70, 0x80, 0x3, 0x0),
+	SSL_X509_COMMAND(0x68, 0x18, 0x0, 0x0),
+	SSL_X509_COMMAND(0x70, 0x80, 0x3, 0x0),
+	SSL_X509_COMMAND(0x1, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x20, 0x0, 0x3, 0x0),
+	/* Subject and SubjectPublicKeyInfo. */
+	SSL_X509_COMMAND(0x40, 0x42, 0x60, 0x6),
+	SSL_X509_COMMAND(0x19, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x40, 0x46, 0x60, 0x7),
+	SSL_X509_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_X509_COMMAND(0x40, 0x46, 0x60, 0x9),
+	SSL_X509_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_X509_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x60, 0x6, 0x0, 0x0),
+	SSL_X509_COMMAND(0x40, 0x42, 0x30, 0x1),
+	SSL_X509_COMMAND(0x19, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x19, 0x0, 0x1, 0x0),
+	/* Optional issuer and subject identifiers, then extensions. */
+	SSL_X509_COMMAND(0x1a, 0x84, 0x1, 0x0),
+	SSL_X509_COMMAND(0x70, 0x84, 0x4, 0x0),
+	SSL_X509_COMMAND(0x6d, 0x1, 0x0, 0x0),
+	SSL_X509_COMMAND(0x71, 0x80, 0x5, 0x0),
+	SSL_X509_COMMAND(0x40, 0x42, 0x60, 0xa),
+	SSL_X509_COMMAND(0x1a, 0x84, 0x1, 0x0),
+	SSL_X509_COMMAND(0x70, 0x84, 0x4, 0x0),
+	SSL_X509_COMMAND(0x20, 0x0, 0x5, 0x0),
+	SSL_X509_COMMAND(0x6d, 0x2, 0x0, 0x0),
+	SSL_X509_COMMAND(0x71, 0x80, 0x6, 0x0),
+	SSL_X509_COMMAND(0x40, 0x42, 0x60, 0xb),
+	SSL_X509_COMMAND(0x1a, 0x84, 0x1, 0x0),
+	SSL_X509_COMMAND(0x70, 0x84, 0x4, 0x0),
+	SSL_X509_COMMAND(0x20, 0x0, 0x6, 0x0),
+	SSL_X509_COMMAND(0x6d, 0x3, 0x20, 0x20),
+	SSL_X509_COMMAND(0x71, 0x80, 0x7, 0x0),
+	SSL_X509_COMMAND(0x40, 0x42, 0x60, 0xc),
+	SSL_X509_COMMAND(0x20, 0x0, 0x7, 0x0),
+	/* Finish the body and retain the signature algorithm encoding. */
+	SSL_X509_COMMAND(0x70, 0x80, 0x4, 0x0),
+	SSL_X509_COMMAND(0x1, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x20, 0x0, 0x4, 0x0),
+	SSL_X509_COMMAND(0x19, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	/* Signature algorithm OID and optional NULL parameters. */
+	SSL_X509_COMMAND(0x40, 0x46, 0x60, 0xd),
+	SSL_X509_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_X509_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x60, 0x6, 0x0, 0x0),
+	SSL_X509_COMMAND(0x40, 0x42, 0x13, 0x15),
+	SSL_X509_COMMAND(0x1a, 0x84, 0x1, 0x0),
+	SSL_X509_COMMAND(0x70, 0x84, 0x8, 0x0),
+	SSL_X509_COMMAND(0x60, 0x5, 0x0, 0x0),
+	SSL_X509_COMMAND(0x20, 0x0, 0x8, 0x0),
+	SSL_X509_COMMAND(0x19, 0x0, 0x1, 0x0),
+	/* Signature BIT STRING, retained both as encoded and decoded properties. */
+	SSL_X509_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x60, 0x3, 0x0, 0x0),
+	SSL_X509_COMMAND(0x41, 0x42, 0x60, 0xe),
+	SSL_X509_COMMAND(0x41, 0x42, 0x13, 0x10),
+	SSL_X509_COMMAND(0x19, 0x0, 0x1, 0x0),
+	SSL_X509_COMMAND(0x1, 0x0, 0x0, 0x0),
+	0
+};
 
 static const SceUInt32 sslX509CertificateEncodingSchema[] = {
 	/* The outer SEQUENCE contains the encoded body and signature properties. */
@@ -118,6 +223,55 @@ int sslSerializeX509Certificate(SslCertificate *certificate, SceUInt32 capacity,
 	return status;
 }
 
+int sslParseX509Certificate(SslCertificate *certificate, SceUInt32 flags,
+			    SceUInt32 length, const void *data, SceUInt32 *consumed)
+{
+	const void *encoding = data;
+	SslProperty *original, *signature, *algorithm;
+	SslAsn1Element element = {0};
+	SceUInt32 decoded = 0, total;
+	SceUInt8 *buffer, *tail;
+	int header, status;
+
+	if (sslAddPropertyValue(certificate->properties, 96, 127, 0, data, length,
+				flags) != 0)
+		return 10005;
+	if (flags & SSL_PROPERTY_COPY_DATA) {
+		if (sslFindProperty(certificate->properties, 96, 127, NULL, &original, 0) != 0)
+			return 10008;
+		encoding = original->data;
+	}
+	status = sslDecodeX509CertificateProperties(certificate->properties, encoding,
+						   length, &decoded);
+	if (status != 0)
+		return status;
+	if (consumed != NULL)
+		*consumed = decoded;
+	certificate->encodedSize = decoded;
+	if (sslFindProperty(certificate->properties, 19, 16, NULL, &signature, 0) != 0)
+		return 10001;
+	if (sslFindProperty(certificate->properties, 96, 13, NULL, &algorithm, 0) != 0)
+		return 10001;
+	element.data = signature->data;
+	element.tag = 3;
+	element.length = signature->length + 1u;
+	element.flags = 8;
+	header = sslAsn1HeaderSize(&element);
+	total = algorithm->length + (SceUInt32)header + signature->length + 1u;
+	buffer = sslAllocate(total);
+	if (buffer == NULL)
+		return 10005;
+	sslCopyMemory(buffer, algorithm->data, algorithm->length);
+	tail = buffer + algorithm->length;
+	header = sslAsn1EncodeHeader(&element, tail);
+	tail[header] = 0;
+	sslCopyMemory(tail + header + 1, signature->data, signature->length);
+	status = sslAddPropertyValue(certificate->properties, 96, 65, 0, buffer, total,
+				     SSL_PROPERTY_COPY_DATA) == 0 ? 0 : 10005;
+	sslFree(buffer);
+	return status;
+}
+
 int sslDecodeX509Extensions(SslPropertyList **properties, int mode, SceUInt32 length,
 			    const void *data, SceUInt32 *consumed)
 {
@@ -185,6 +339,83 @@ int sslEncodeX509Version(SslCertificate *certificate, int version,
 	return 0;
 }
 
+int sslGetX509SignatureEncoding(SslCertificate *certificate, void *result)
+{
+	SslX509SignatureEncoding *encoding = result;
+	SslProperty *property;
+	SslPropertyList temporary;
+	SceUInt32 consumed = 0;
+	const void *data;
+	int status;
+
+	if (sslFindProperty(certificate->properties, 19, 21, NULL, &property, 0) != 0) {
+		if (sslFindProperty(certificate->properties, 96, 65, NULL, &property, 0) != 0)
+			return 10008;
+		sslInitPropertyList(&temporary);
+		status = sslDecodeSignatureProperties(&temporary, property->data,
+						      property->length, &consumed);
+		if (status == 0 && sslFindProperty(&temporary, 19, 21, NULL, &property, 0) != 0)
+			status = 10008;
+		sslFreePropertyList(&temporary);
+		if (status != 0)
+			return status;
+	}
+	/* The native fallback inspects the selected property after list cleanup. */
+	data = property->data;
+	encoding->length = property->length;
+	encoding->data = data;
+	return 0;
+}
+
+#define SSL_MATCH_SIGNATURE_OID(encoded, size, algorithm) \
+	do { \
+		if (length == (size) && sslCompareMemory(oid, (encoded), (size)) == 0) { \
+			*result = (algorithm); \
+			return 0; \
+		} \
+	} while (0)
+
+int sslMapX509SignatureAlgorithm(const void *oid, SceUInt32 length, int *result)
+{
+	SSL_MATCH_SIGNATURE_OID("\x2a\x86\x48\x86\xf7\x0d\x01\x01\x02", 9, 7);
+	SSL_MATCH_SIGNATURE_OID("\x2a\x86\x48\x86\xf7\x0d\x01\x01\x04", 9, 8);
+	SSL_MATCH_SIGNATURE_OID("\x2b\x0e\x03\x02\x03", 5, 8);
+	SSL_MATCH_SIGNATURE_OID("\x2b\x0e\x03\x02\x0f", 5, 65);
+	SSL_MATCH_SIGNATURE_OID("\x2a\x86\x48\x86\xf7\x0d\x01\x01\x05", 9, 65);
+	SSL_MATCH_SIGNATURE_OID("\x2b\x0e\x03\x02\x1d", 5, 65);
+	SSL_MATCH_SIGNATURE_OID("\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0e", 9, 133);
+	SSL_MATCH_SIGNATURE_OID("\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0b", 9, 130);
+	SSL_MATCH_SIGNATURE_OID("\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0c", 9, 131);
+	SSL_MATCH_SIGNATURE_OID("\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0d", 9, 132);
+	*result = -1;
+	return 0;
+}
+
+#undef SSL_MATCH_SIGNATURE_OID
+
+int sslGetX509SignatureAlgorithm(SslCertificate *certificate)
+{
+	SslProperty *property;
+	SslPropertyList temporary;
+	SceUInt32 consumed = 0;
+	int algorithm = -1, status;
+
+	if (sslFindProperty(certificate->properties, 19, 21, NULL, &property, 0) != 0) {
+		if (sslFindProperty(certificate->properties, 96, 65, NULL, &property, 0) != 0)
+			return algorithm;
+		sslInitPropertyList(&temporary);
+		status = sslDecodeSignatureProperties(&temporary, property->data,
+						      property->length, &consumed);
+		if (status == 0 && sslFindProperty(&temporary, 19, 21, NULL, &property, 0) != 0)
+			status = 10008;
+		sslFreePropertyList(&temporary);
+		if (status != 0)
+			return algorithm;
+	}
+	sslMapX509SignatureAlgorithm(property->data, property->length, &algorithm);
+	return algorithm;
+}
+
 int sslImportX509Properties(SslCertificate *certificate, SslPropertyList *properties)
 {
 	SslProperty *property;
@@ -204,6 +435,13 @@ int sslImportX509Properties(SslCertificate *certificate, SslPropertyList *proper
 	certificate->properties = properties;
 	certificate->encodedSize = length;
 	return sslFinalizeX509Certificate(certificate);
+}
+
+int sslDecodeX509CertificateProperties(SslPropertyList *properties, const SceUInt8 *data,
+				       SceUInt32 length, SceUInt32 *consumed)
+{
+	return sslAsn1DecodeProperties(sslX509CertificateDecodingSchema, properties,
+				       data, length, consumed);
 }
 
 int sslEncodeX509CertificateProperties(SslPropertyList *properties, SceUInt8 *data,
