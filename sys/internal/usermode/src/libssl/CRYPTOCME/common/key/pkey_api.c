@@ -39,6 +39,28 @@ int sslGetPublicKeyAlgorithm(void *key)
 	return algorithm;
 }
 
+int sslSetPublicKeyInfo(void *key, int selector, void *value)
+{
+	SslPublicKeyHeader *object = key;
+
+	if (object == NULL || object->context->module == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (object->context->module->SetKeyInfo == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return object->context->module->SetKeyInfo(key, selector, value);
+}
+
+int sslRetainKeyContext(void *context)
+{
+	SslKeyContext *keyContext = context;
+
+	if (keyContext == NULL || keyContext->module == NULL)
+		return 0;
+	if (keyContext->module->RetainContext == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return keyContext->module->RetainContext(context);
+}
+
 int sslDestroyKeyContext(void *context)
 {
 	SslKeyContext *keyContext = context;

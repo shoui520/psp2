@@ -23,6 +23,11 @@ int sslEncodeX509PublicKey(void *unused, void *key, void **data,
 int sslUpdateX509Properties(SslCertificate *certificate, SslPropertyList *properties);
 int sslExportX509Properties(SslCertificate *certificate, SslPropertyList *properties);
 int sslCollectX509KeyComponent(void *arg, int id, const SslKeyComponent *component);
+int sslParseX509PublicKey(void *unused, void *context, void **result,
+			  const void *data, SceUInt32 length, int algorithm, int mode);
+int sslDecodeX509PublicKey(SslCertificate *certificate, SslProperty *property,
+			   int mode, void **result);
+int sslNewX509CertificateContext(SslLibrary *library, int unused, void **result);
 
 int sslSerializeX509Certificate(SslCertificate *certificate, SceUInt32 capacity,
 			       void *data, SceUInt32 *length);

@@ -28,6 +28,8 @@ typedef struct SslKeyModule {
 	int (*CopyKey)(void *source, void *destination, int mode);
 	SceUIntPtr opaqueKeyOperations[5];
 	int (*EnumerateComponents)(void *key, SslKeyComponentCallback callback, void *arg);
+	SceUIntPtr opaqueContextOperations[5];
+	int (*RetainContext)(void *context);
 } SslKeyModule;
 
 typedef const SslKeyModule *(*SslKeyModuleFactory)(void *data);
@@ -63,6 +65,7 @@ _Static_assert(offsetof(SslKeyModule, DestroyKey) == 32, "DestroyKey");
 _Static_assert(offsetof(SslKeyModule, GetKeyInfo) == 36, "GetKeyInfo");
 _Static_assert(offsetof(SslKeyModule, CopyKey) == 44, "CopyKey");
 _Static_assert(offsetof(SslKeyModule, EnumerateComponents) == 68, "EnumerateComponents");
+_Static_assert(offsetof(SslKeyModule, RetainContext) == 92, "RetainContext");
 _Static_assert(sizeof(SslKeyComponent) == 8, "SslKeyComponent");
 
 int sslCreateKeyContext(SslLibrary *library, int parameter, SceUInt32 flags,
@@ -71,6 +74,8 @@ int sslCreatePublicKey(void *context, int algorithm, void **result);
 int sslCopyPublicKey(void *source, void *destination, int mode);
 int sslEnumerateKeyComponents(void *key, SslKeyComponentCallback callback, void *arg);
 int sslGetPublicKeyInfo(void *key, int selector, void *result);
+int sslSetPublicKeyInfo(void *key, int selector, void *value);
+int sslRetainKeyContext(void *context);
 int sslGetPublicKeyAlgorithm(void *key);
 int sslDestroyKeyContext(void *context);
 int sslFreeKeyContext(void *context);

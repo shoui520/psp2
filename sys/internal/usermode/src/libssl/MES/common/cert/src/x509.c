@@ -532,6 +532,128 @@ int sslUpdateX509Properties(SslCertificate *certificate, SslPropertyList *proper
 	return status;
 }
 
+int sslParseX509PublicKey(void *unused, void *context, void **result,
+			  const void *data, SceUInt32 length, int algorithm, int mode)
+{
+	SslPropertyList *properties = NULL;
+	SslPropertyList *components = NULL;
+	SslProperty *keyBits, *oid;
+	SslKeyComponent component;
+	SceUInt32 consumed = 0;
+	void *key = *result;
+	int status, i;
+
+	if (key == NULL) {
+		status = sslCreatePublicKey(context, algorithm, &key);
+		if (status != 0)
+			goto failed;
+	}
+	properties = sslNewPropertyList();
+	if (properties == NULL) {
+		status = 10005;
+		goto failed;
+	}
+	status = sslDecodeSubjectPublicKeyInfoProperties(properties, data, length, &consumed);
+	if (status != 0)
+		goto failed;
+	if (mode == 0 && sslPackProperties(properties, 0) != 0) {
+		status = 10005;
+		goto failed;
+	}
+	if (sslFindProperty(properties, 48, 3, NULL, &keyBits, 0) != 0 ||
+	    sslFindProperty(properties, 48, 1, NULL, &oid, 0) != 0) {
+		status = 10008;
+		goto failed;
+	}
+	components = sslNewPropertyList();
+	if (components == NULL) {
+		status = 10005;
+		goto failed;
+	}
+	if (oid->length != 9 || sslCompareMemory(oid->data, sslX509RsaEncryptionOid, 9) != 0) {
+		status = SSL_CRYPTO_ERROR_NO_OPERATION;
+		goto failed;
+	}
+	status = sslDecodeRsaPublicKeyProperties(components, (SceUInt8 *)keyBits->data + 1,
+					       keyBits->length - 1, &consumed);
+	if (status != 0)
+		goto failed;
+	for (i = 0; i < components->count; i++) {
+		keyBits = components->entries[i];
+		component.length = keyBits->length;
+		component.data = keyBits->data;
+		status = sslSetPublicKeyInfo(key, keyBits->id, &component);
+		if (status != 0)
+			goto failed;
+	}
+	if (*result == NULL)
+		*result = key;
+	goto out;
+
+failed:
+	if (key != NULL) {
+		SceSslInternal_46358909(key);
+		*result = NULL;
+	}
+out:
+	if (properties != NULL)
+		sslFreePropertyList(properties);
+	if (components != NULL)
+		sslFreePropertyList(components);
+	return status;
+}
+
+int sslDecodeX509PublicKey(SslCertificate *certificate, SslProperty *property,
+			   int mode, void **result)
+{
+	SslPropertyList properties;
+	SslProperty *oid;
+	void *context = NULL;
+	int status;
+
+	sslInitPropertyList(&properties);
+	status = sslDecodeSubjectPublicKeyInfoProperties(&properties, property->data,
+							property->length, NULL);
+	if (status == 0) {
+		if (sslFindProperty(&properties, 48, 1, NULL, &oid, 0) != 0 ||
+		    oid->length != 9 ||
+		    sslCompareMemory(oid->data, sslX509RsaEncryptionOid, 9) != 0) {
+			status = 10001;
+		} else {
+			context = certificate->context->keyContext;
+			sslRetainKeyContext(context);
+			status = sslParseX509PublicKey(certificate, context, result,
+						      property->data, property->length, 6, mode);
+		}
+	}
+	sslDestroyKeyContext(context);
+	sslFreePropertyList(&properties);
+	return status;
+}
+
+static const SslCertificateBackendMethods sslX509BackendMethods = {
+	.ExportProperties = sslExportX509Properties,
+	.ImportProperties = sslImportX509Properties,
+	.DecodePublicKey = sslDecodeX509PublicKey,
+	.GetSignatureAlgorithm = sslGetX509SignatureAlgorithm,
+	.GetSignatureAlgorithmEncoding = sslGetX509SignatureEncoding,
+	.DecodeVersion = sslDecodeX509Version,
+	.EncodeVersion = sslEncodeX509Version,
+	.Parse = sslParseX509Certificate,
+	.Serialize = sslSerializeX509Certificate,
+	.Finalize = sslFinalizeX509Certificate
+};
+
+int sslNewX509CertificateContext(SslLibrary *library, int unused, void **result)
+{
+	int status;
+
+	status = sslNewCertificateContext(library, unused, 1, result);
+	if (status == 0)
+		((SslCertificateContext *)*result)->backendMethods = &sslX509BackendMethods;
+	return status;
+}
+
 int sslExportX509Properties(SslCertificate *certificate, SslPropertyList *properties)
 {
 	void *buffer;

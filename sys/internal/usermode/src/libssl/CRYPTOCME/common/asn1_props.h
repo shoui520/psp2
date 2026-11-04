@@ -4,6 +4,12 @@
 
 #include "property.h"
 
+int sslDecodeRsaPublicKeyProperties(SslPropertyList *properties, const SceUInt8 *data,
+				    SceUInt32 length, SceUInt32 *consumed);
+int sslDecodeSubjectPublicKeyInfoProperties(SslPropertyList *properties,
+					   const SceUInt8 *data, SceUInt32 length,
+					   SceUInt32 *consumed);
+
 int sslEncodeRsaPublicKeyProperties(SslPropertyList *properties, SceUInt8 *data,
 				    SceUInt32 *length, SceUInt32 capacity);
 int sslEncodeSubjectPublicKeyInfoProperties(SslPropertyList *properties, SceUInt8 *data,
