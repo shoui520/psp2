@@ -136,6 +136,9 @@ int sslNewCertificateFromData(void *context, int mode, int type, SceUInt32 lengt
 			      const void *data, SceUInt32 *consumed, void **result);
 int sslResetCertificate(SslCertificate *certificate, int mode, const void *data,
 			SceUInt32 length);
+int sslSetCertificateEncodedProperty(SslCertificate *certificate, int id,
+				     SceUInt32 value, const void *data,
+				     SceUInt32 length);
 int sslCopyCertificateName(SslCertificateName *source, int mode,
 			   SslCertificateName **result);
 int sslSetCertificateSubject(SslCertificate *certificate, int mode,

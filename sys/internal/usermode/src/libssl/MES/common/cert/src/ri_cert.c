@@ -1,6 +1,7 @@
 /* Source path recovered from the firmware; descriptive private names are ours. */
 #include <libssl/object.h>
 #include "ri_cert.h"
+#include "extension.h"
 #include "../../../../memory.h"
 #include "../../../../runtime.h"
 #include "../../../../CRYPTOCME/common/key/pkey_ctx.h"
@@ -8,6 +9,138 @@
 
 static const char certificateSource[] =
 	"S:\\work\\MES\\common\\cert/src/ri_cert.c";
+
+static const unsigned char extensionCritical = 0xff;
+
+int sslGetCertificateExtension(SslPropertyList *list, int mode,
+			       SslCertificateExtension *extension)
+{
+	SslProperty *property;
+	SslCertificateExtensionData value, oid;
+	SceUInt32 base = 3u * (SceUInt32)extension->index;
+	int status;
+
+	if (sslFindProperty(list, 108, (int)(base + 4u), NULL, &property, 0) != 0)
+		return 10008;
+	value.length = property->length;
+	value.data = property->data;
+	base = 3u * (SceUInt32)extension->index;
+	if (sslFindProperty(list, 108, (int)(base + 2u), NULL, &property, 0) != 0)
+		return 10008;
+	oid.length = property->length;
+	oid.data = property->data;
+	status = sslSetCertificateExtensionData(extension, SSL_CERT_EXTENSION_OID,
+					      mode, &oid);
+	if (status != 0)
+		return status;
+	status = sslSetCertificateExtensionData(extension, SSL_CERT_EXTENSION_VALUE,
+					      mode, &value);
+	if (status != 0)
+		return status;
+	base = 3u * (SceUInt32)extension->index;
+	extension->critical =
+		sslFindProperty(list, 108, (int)(base + 3u), NULL, &property, 0) == 0 &&
+		(property->length != 1 || *(unsigned char *)property->data != 0);
+	return 0;
+}
+
+int sslGetCertificateExtensionCount(SslPropertyList *list, SceUInt32 *result)
+{
+	SslProperty *property;
+
+	if (sslFindProperty(list, 108, 1, NULL, &property, 0) != 0)
+		return 10008;
+	*result = property->length;
+	return 0;
+}
+
+int sslFindCertificateExtension(SslPropertyList *list, int mode,
+				SslCertificateExtension *extension)
+{
+	const char *oid;
+	SceUInt32 length;
+	SslProperty *property;
+	int index, relative;
+
+	if (extension->type == SSL_CERT_EXTENSION_CUSTOM) {
+		oid = extension->oid.data;
+		if (oid == NULL || extension->oid.length == 0)
+			return 10008;
+		length = extension->oid.length;
+	} else {
+		if (sslGetCertificateExtensionOid(extension->type, &oid, &length) != 0)
+			return 10008;
+	}
+	for (index = 0; index < list->count; index++) {
+		property = list->entries[index];
+		relative = (int)((SceUInt32)property->id - 2u);
+		if (relative % 3 != 0 || property->length != length)
+			continue;
+		if (sslCompareMemory(property->data, oid, length) != 0)
+			continue;
+		property = list->entries[index];
+		extension->index = (int)((SceUInt32)property->id - 2u) / 3;
+		return sslGetCertificateExtension(list, mode, extension);
+	}
+	return 10008;
+}
+
+int sslFindCertificateExtensionByType(SslPropertyList *list, int type, int mode,
+				      SslCertificateExtension *extension)
+{
+	if (extension == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	extension->type = type;
+	return sslFindCertificateExtension(list, mode, extension);
+}
+
+int sslStoreCertificateExtension(SslPropertyList *list, int mode,
+				 SslCertificateExtension *extension)
+{
+	SslCertificateExtension probe = {0};
+	SslProperty *property;
+	SceUInt32 count = 0, base, length;
+	unsigned int flags = SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE;
+	const char *oid;
+	int newCount = 1;
+
+	if (extension == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	probe.type = extension->type;
+	if (sslFindCertificateExtension(list, 1, &probe) == 0) {
+		base = 3u * (SceUInt32)probe.index;
+		newCount = -1;
+	} else {
+		if (sslFindProperty(list, 108, 1, NULL, &property, 0) == 0) {
+			count = property->length;
+			newCount = (int)(count + 1u);
+		}
+		base = 3u * count;
+	}
+	if (mode == 1)
+		flags = SSL_PROPERTY_BORROW_ENTRY | SSL_PROPERTY_REPLACE;
+	if (sslAddPropertyValue(list, 108, (int)(base + 4u), 0,
+				extension->value.data, extension->value.length, flags) != 0)
+		return 10005;
+	length = extension->oid.length;
+	oid = extension->oid.data;
+	if (extension->type != SSL_CERT_EXTENSION_CUSTOM)
+		sslGetCertificateExtensionOid(extension->type, &oid, &length);
+	if (sslAddPropertyValue(list, 108, (int)(base + 2u), 0,
+				oid, length, flags) != 0)
+		return 10005;
+	if (extension->critical != 0) {
+		if (sslAddPropertyValue(list, 108, (int)(base + 3u), 0,
+					&extensionCritical, 1, flags) != 0)
+			return 10005;
+	} else {
+		sslDeleteProperty(list, 108, (int)(base + 3u));
+	}
+	if (newCount > 0 && sslAddPropertyValue(list, 108, 1, 0, NULL,
+					       newCount, flags) != 0)
+		return 10005;
+	return 0;
+}
 
 int sslApplyCertificateProperties(SslCertificate *certificate,
 				 SslPropertyList *properties)
@@ -349,6 +482,77 @@ int sslResetCertificate(SslCertificate *certificate, int mode, const void *data,
 	replacement->attributes = (SslPropertyList){0};
 out:
 	sslFreeCertificate(replacement);
+	return status;
+}
+
+int sslSetCertificateEncodedProperty(SslCertificate *certificate, int id,
+				     SceUInt32 value, const void *data,
+				     SceUInt32 length)
+{
+	SslPropertyList list;
+	int status = 0;
+
+	sslInitPropertyList(&list);
+	if (id >= 0x4700 && id <= 0x480f) {
+		value = 0;
+	} else {
+		switch (id) {
+		case 0x800e:
+			if (value != certificate->type)
+				status = 10021;
+			goto out;
+		case 2:
+		case 18:
+			value = 2;
+			certificate->flags |= 1;
+			break;
+		case 23:
+			value = 3;
+			certificate->flags |= 1;
+			break;
+		case 25:
+			value = 6;
+			certificate->flags |= 1;
+			break;
+		case 0x8013:
+			value = 10;
+			certificate->flags |= 1;
+			break;
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+		case 9:
+		case 10:
+		case 11:
+		case 12:
+		case 16:
+		case 17:
+		case 19:
+		case 20:
+		case 127:
+			certificate->flags |= 1;
+			break;
+		case 14:
+		case 64:
+		case 65:
+			break;
+		default:
+			status = 10021;
+			goto out;
+		}
+	}
+	if (id == 127)
+		status = sslResetCertificate(certificate, (int)value, data, length);
+	else
+		status = sslSetCertificateProperty(certificate, id, value, data, length);
+	if (status != 0)
+		goto out;
+	if (id == 12 && certificate->backendMethods->Finalize != NULL)
+		certificate->backendMethods->Finalize(certificate);
+	status = sslClearCertificateCache(certificate, id);
+out:
+	sslFreePropertyList(&list);
 	return status;
 }
 
