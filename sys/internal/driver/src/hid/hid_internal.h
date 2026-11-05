@@ -5,7 +5,7 @@
 #include <bt/bt_hid.h>
 #include <bt/bt_event.h>
 #include <bt/bt_registered.h>
-#include "hid.h"
+#include <hid/hid.h>
 #include <sysmem/list.h>
 #include <sysmem/cpu.h>
 

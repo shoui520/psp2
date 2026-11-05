@@ -388,12 +388,12 @@ static SceInt32 ReadHintCallback(SceUID notifyId, SceInt32 notifyCount, SceInt32
 
 			if (first)
 				newer = report[j].timestamp > device->report.timestamp;
-			if (report[j].reserved != 0 || !newer)
+			if (report[j].error != 0 || !newer)
 				continue;
 
 			s_data_read.Clear();
 			s_data_released = prev;
-			device->report.reserved = report[j].reserved;
+			device->report.error = report[j].error;
 			device->report.modifiers[0] = report[j].modifiers[0];
 			device->report.modifiers[1] = report[j].modifiers[1];
 			device->report.timestamp = report[j].timestamp;
