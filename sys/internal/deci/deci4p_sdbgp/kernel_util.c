@@ -91,7 +91,7 @@ typedef struct SdbgpLogCtx {
 
 _Static_assert(sizeof(SdbgpLogCtx) == 44, "SdbgpLogCtx size");
 
-typedef struct SdbgpNameHeapLogEntry {
+typedef struct __attribute__((may_alias)) SdbgpNameHeapLogEntry {
 	uint32_t gen;
 	uint32_t op;
 	uint32_t core;
@@ -228,7 +228,7 @@ static const SdbgpFixedHeapLeakDesc s_guidEntryHeapLeakDesc = {
 	GUIDEntryHeapShowLog,
 };
 
-static const SdbgpKShowGroup s_kshowGroups[14] = {
+static SdbgpKShowGroup s_kshowGroups[14] = {
 	{ 0x0000, "show help messages" },
 	{ 0x1000, "show status for" },
 	{ 0x2100, "start leak chcek for" },
@@ -245,7 +245,7 @@ static const SdbgpKShowGroup s_kshowGroups[14] = {
 	{ 0x3400, "save log for " },
 };
 
-static const SdbgpKShowTarget s_kshowTargets[24] = {
+static SdbgpKShowTarget s_kshowTargets[24] = {
 	{ 0x10, "GUID Entry Heap", 0x10003, 0, 0x0 },
 	{ 0x21, "kernel fixed heap 16B", 0x10033, 0, 0x10 },
 	{ 0x22, "kernel fixed heap 32B", 0x10035, 1, 0x20 },
@@ -276,20 +276,25 @@ static const uint32_t s_smbSizes[9] = {
 	0x1000, 0x2000, 0x4000, 0x8000, 0x10000, 0x20000, 0x40000, 0x80000, 0x100000,
 };
 
-static SdbgpLogCtx s_nameHeapLogCtx = {
-	0,
-	"SceKernelNameHeapLog",
-	0x800000,
-	0x27627,
-	-1,
-	0,
-	NULL,
-	sizeof(SdbgpNameHeapLogEntry),
-	NameHeapLogIsValid,
-	NameHeapLogShowHead,
-	NameHeapLogShowLog,
+static struct {
+	SdbgpLogCtx log;
+	void *hooks[4];
+} s_nameHeapLogCtx = {
+	{
+		0,
+		"SceKernelNameHeapLog",
+		0x800000,
+		0x27627,
+		-1,
+		0,
+		NULL,
+		sizeof(SdbgpNameHeapLogEntry),
+		NameHeapLogIsValid,
+		NameHeapLogShowHead,
+		NameHeapLogShowLog,
+	},
+	{ NULL, NULL, NULL, NULL },
 };
-static void *s_nameHeapHooks[4];
 
 static SceUID s_kdataMemblock = -1;
 
@@ -430,7 +435,7 @@ static int NameHeapLogIsValid(const void *entry)
 static int NameHeapLogShow(int cmd)
 {
 	(void)cmd;
-	return LogShowCommon(&s_nameHeapLogCtx);
+	return LogShowCommon(&s_nameHeapLogCtx.log);
 }
 
 /* 0x81006d90 */
@@ -685,12 +690,11 @@ static int GUIDEntryHeapShowHead(void)
 
 static inline const char *findGroupDesc(int prefix)
 {
-	const SdbgpKShowGroup *g = s_kshowGroups;
 	uint32_t i;
 
-	for (i = 0; i < 14; i++, g++) {
-		if (g->prefix == prefix)
-			return g->desc;
+	for (i = 0; i < 14; i++) {
+		if (s_kshowGroups[i].prefix == prefix)
+			return s_kshowGroups[i].desc;
 	}
 	return "NOOP";
 }
@@ -702,32 +706,32 @@ static inline int findTarget(int id, const SdbgpKShowTarget **out)
 
 	for (i = 0; i < 24; i++, t++) {
 		if (t->id == id) {
-			if (out != NULL)
-				*out = t;
+			*out = t;
 			return 0;
 		}
 	}
+	*out = NULL;
 	return SCE_KERNEL_ERROR_ERROR;
 }
 
 /* 0x81007208 */
 static int help(int cmd)
 {
-	extern const SdbgpKShowCmd s_kshowCmds[53];
-	const SdbgpKShowCmd *c = s_kshowCmds;
+	extern SdbgpKShowCmd s_kshowCmds[53];
 	uint32_t i;
 
 	(void)cmd;
 	SCE_PRINTF_WITH_INFO(0, 3756, "kshow help message\n");
-	for (i = 0; i < 53; i++, c++) {
-		SCE_PRINTF_WITH_INFO(0, 3760, "\t0x%04X: ", c->cmd);
-		if (c->type == 1) {
-			SCE_PRINTF_WITH_INFO(0, 3763, "%s\n", findGroupDesc(c->cmd & 0xff00));
-		} else if (c->type == 2) {
-			const char *g = findGroupDesc(c->cmd & 0xff00);
-			const SdbgpKShowTarget *t = NULL;
+	for (i = 0; i < 53; i++) {
+		SCE_PRINTF_WITH_INFO(0, 3760, "\t0x%04X: ", s_kshowCmds[i].cmd);
+		if (s_kshowCmds[i].type == 1) {
+			SCE_PRINTF_WITH_INFO(0, 3763, "%s\n",
+				findGroupDesc(s_kshowCmds[i].cmd & 0xff00));
+		} else if (s_kshowCmds[i].type == 2) {
+			const char *g = findGroupDesc(s_kshowCmds[i].cmd & 0xff00);
+			const SdbgpKShowTarget *t;
 
-			findTarget((uint8_t)c->cmd, &t);
+			findTarget((uint8_t)s_kshowCmds[i].cmd, &t);
 			SCE_PRINTF_WITH_INFO(0, 3766, "%s %s\n", g, t->name);
 		}
 	}
@@ -1018,10 +1022,9 @@ static int FixedHeapCommonLeakCheckStart(const SdbgpFixedHeapLeakDesc *desc,
 {
 	SdbgpFixedHeapLeakCtx *ctx;
 	SceUID mb;
-	void *base;
-	SdbgpFixedHeapLogEntry *e;
+	SdbgpFixedHeapLogEntry *base;
 	uint32_t max;
-	int i;
+	uint32_t i;
 
 	ctx = sceKernelAllocHeapMemory(0x1002b, sizeof(*ctx));
 	if (ctx == NULL)
@@ -1037,15 +1040,14 @@ static int FixedHeapCommonLeakCheckStart(const SdbgpFixedHeapLeakDesc *desc,
 		SCE_DBG_ASSERT_FAIL(1354);
 		return mb;
 	}
-	sceKernelGetMemBlockBase(mb, &base);
+	sceKernelGetMemBlockBase(mb, (void **)&base);
 	ctx->memblock = mb;
 	max = ctx->desc->blockSize >> 4;
 	ctx->gen = 0;
 	ctx->entries = base;
-	e = base;
 	ctx->max = max;
-	for (i = 0; i < max; i++, e++)
-		e->obj = NULL;
+	for (i = 0; i < max; i++, base++)
+		base->obj = NULL;
 	ctx->lock = 0;
 	*out = ctx;
 	return 0;
@@ -1106,19 +1108,19 @@ static int NameHeapLogStart(int cmd)
 	uint32_t i;
 
 	(void)cmd;
-	res = LogStartPhase1(&s_nameHeapLogCtx);
+	res = LogStartPhase1(&s_nameHeapLogCtx.log);
 	if (res >= 0) {
-		SdbgpNameHeapLogEntry *entries = s_nameHeapLogCtx.entries;
+		SdbgpNameHeapLogEntry *entries = s_nameHeapLogCtx.log.entries;
 
-		for (i = 0; i < s_nameHeapLogCtx.max; i++, entries++)
+		for (i = 0; i < s_nameHeapLogCtx.log.max; i++, entries++)
 			entries->op = (uint32_t)-1;
-		s_nameHeapLogCtx.gen++;
-		s_nameHeapHooks[0] = NameHeapLogHook1;
-		s_nameHeapHooks[1] = NameHeapLogHook4;
-		s_nameHeapHooks[2] = NameHeapLogHook2;
-		s_nameHeapHooks[3] = NameHeapLogHook3;
-		s_nameHeapLogCtx.lock = 0;
-		SceSysmemForKernel_6DBDA03B(s_nameHeapHooks);
+		s_nameHeapLogCtx.log.gen++;
+		s_nameHeapLogCtx.hooks[0] = NameHeapLogHook1;
+		s_nameHeapLogCtx.hooks[1] = NameHeapLogHook4;
+		s_nameHeapLogCtx.hooks[2] = NameHeapLogHook2;
+		s_nameHeapLogCtx.hooks[3] = NameHeapLogHook3;
+		s_nameHeapLogCtx.log.lock = 0;
+		SceSysmemForKernel_6DBDA03B(s_nameHeapLogCtx.hooks);
 		return 0;
 	}
 	return res;
@@ -1219,9 +1221,9 @@ static int NameHeapLogAdd(int32_t op, const char *name, uint32_t flags, uintptr_
 	uint32_t i;
 	int res;
 
-	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_nameHeapLogCtx.lock);
-	e = s_nameHeapLogCtx.entries;
-	for (i = 0; i < s_nameHeapLogCtx.max; i++, e++) {
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_nameHeapLogCtx.log.lock);
+	e = s_nameHeapLogCtx.log.entries;
+	for (i = 0; i < s_nameHeapLogCtx.log.max; i++, e++) {
 		if (e->op == -1) {
 			uint32_t core;
 
@@ -1239,7 +1241,7 @@ static int NameHeapLogAdd(int32_t op, const char *name, uint32_t flags, uintptr_
 	SCE_DBG_PRINTF_LEVEL(1, 11, 2438, "OVERFLOW: stop hook\n");
 	SceSysmemForKernel_6DBDA03B(NULL);
 out:
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_nameHeapLogCtx.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_nameHeapLogCtx.log.lock, intr);
 	return res;
 }
 
@@ -1271,8 +1273,9 @@ static int NameHeapLogHook1(const char *name, uint32_t flags, uintptr_t lr)
 static int LeakCheckFilterCmd(int cmd)
 {
 	uint8_t lo = (uint8_t)cmd;
+	const SdbgpKShowTarget *t;
 
-	if (findTarget(lo, NULL) < 0)
+	if (findTarget(lo, &t) < 0)
 		return SCE_KERNEL_ERROR_ERROR;
 	if (lo == 0x91)
 		LeakCheckHeapFilerAdd("SceKernelThreadMgrCBHeap");
@@ -1424,12 +1427,13 @@ static int GUIDEntryHeapLeakCheckStart(int cmd)
 /* 0x81008070 */
 static int ProcFixedHeapLeakCheckStart(int cmd)
 {
+	const SdbgpKShowTarget *t;
 	SdbgpKData *kdata;
 	SdbgpFixedHeapLeakCtx *ctx;
 	int res, i;
 	void *targetHeap;
 
-	if (findTarget((uint8_t)cmd, NULL) < 0)
+	if (findTarget((uint8_t)cmd, &t) < 0)
 		return SCE_KERNEL_ERROR_ERROR;
 	kdata = GetKData();
 	if (kdata == NULL || kdata->procFixedHeapLeak != NULL)
@@ -1582,8 +1586,9 @@ static int ObjectHeapGetFixedHeapInfoAll(ObjectHeapInfo *objInfo,
 	SCE_PRINTF_WITH_INFO_FUNC(0, 908, "ObjectHeapGetFixedHeapInfoAll",
 		"\tObjectSize, tHeapCount / tItemCount  FreeCount-  UsedMax---\n");
 	for (i = 0; i < objInfo->count; i++) {
-		if (objInfo->sizeClasses[i].size == 0 ||
-		    objInfo->sizeClasses[i].size == (SceSize)-1)
+		SceSize size = objInfo->sizeClasses[i].size;
+
+		if (size == 0 || size == (SceSize)-1)
 			continue;
 		fixedInfo->size = sizeof(*fixedInfo);
 		res = sceKernelGetFixedHeapInfoByPointer(objInfo->sizeClasses[i].heap, fixedInfo);
@@ -1849,7 +1854,7 @@ static int CpuMaskShow(int cmd)
 	if (sdbgpCpuMaskLog.shown != 0) {
 		sdbgpCpuMaskLog.shown++;
 		if (sdbgpCpuMaskLog.count != 0) {
-			SdbgpCpuMaskEntry *entries = sdbgpCpuMaskLog.entries;
+			SdbgpCpuMaskEntry *e = sdbgpCpuMaskLog.entries;
 			SceSize i;
 
 			SCE_PRINTF_WITH_INFO(0, 2762, "\n");
@@ -1857,8 +1862,8 @@ static int CpuMaskShow(int cmd)
 				sdbgpCpuMaskLog.shown);
 			SCE_PRINTF_WITH_INFO(0, 2764,
 				"\tusec----  C  Suspend LR  Resume LR-  Module+offset\n");
-			for (i = 0; i < sdbgpCpuMaskLog.count; i++) {
-				SdbgpCpuMaskEntry *e = &entries[i];
+			for (i = 0; i < sdbgpCpuMaskLog.count; i++, e++) {
+				SdbgpCpuMaskEntry *other;
 				SceSize j;
 				uintptr_t textBase;
 				char modName[28];
@@ -1866,9 +1871,8 @@ static int CpuMaskShow(int cmd)
 
 				if (e->duration == 0)
 					continue;
-				for (j = i + 1; j < sdbgpCpuMaskLog.count; j++) {
-					SdbgpCpuMaskEntry *other = &entries[j];
-
+				other = &sdbgpCpuMaskLog.entries[i + 1];
+				for (j = i + 1; j < sdbgpCpuMaskLog.count; j++, other++) {
 					if (other->duration != 0 &&
 					    other->lockedCaller == e->lockedCaller &&
 					    e->resumeCaller == other->resumeCaller) {
@@ -1911,13 +1915,13 @@ next_entry:
 static int NameHeapLogStop(int cmd)
 {
 	(void)cmd;
-	if (s_nameHeapLogCtx.gen == 0)
+	if (s_nameHeapLogCtx.log.gen == 0)
 		return SCE_KERNEL_ERROR_ERROR;
-	s_nameHeapLogCtx.entries = NULL;
+	s_nameHeapLogCtx.log.entries = NULL;
 	SceSysmemForKernel_6DBDA03B(NULL);
-	sceKernelFreeMemBlock(s_nameHeapLogCtx.memblock);
-	s_nameHeapLogCtx.entries = NULL;
-	s_nameHeapLogCtx.gen = 0;
+	sceKernelFreeMemBlock(s_nameHeapLogCtx.log.memblock);
+	s_nameHeapLogCtx.log.entries = NULL;
+	s_nameHeapLogCtx.log.gen = 0;
 	return 0;
 }
 
@@ -2065,32 +2069,32 @@ static inline int ObjectHeapUserProcess(SdbgpKData *kdata, SceKernelProcessInfo 
 static int ObjectHeapShowStatus(int cmd)
 {
 	SdbgpKData *kdata;
+	SceKernelProcessInfo *proc;
 	int i, res;
 
 	(void)cmd;
 	kdata = GetKData();
-	kdata->processCount = SceProcessmgrForDriver_BA0A06A4(5, kdata->process,
+	proc = kdata->process;
+	kdata->processCount = SceProcessmgrForDriver_BA0A06A4(5, proc,
 							      sizeof(kdata->process),
 							      (SceSize *)&kdata->processCount);
 	for (i = 0; i < kdata->processCount; i++) {
-		SceKernelProcessInfo *proc = &kdata->process[i];
-
-		if (proc->pid == 0)
-			continue;
-		if (strncmp("SceKernelProcess", proc->name, 16) == 0) {
-			SCE_DBG_PRINTF_LEVEL(1, 11, 1023, "Skip SceKernelProcess\n");
-			continue;
-		}
-		if (strncmp("SceShell", proc->name, 8) == 0) {
-			SCE_DBG_PRINTF_LEVEL(1, 11, 1025, "SceShell\n");
-			continue;
-		}
-		SCE_PRINTF_WITH_INFO(0, 1027, "0x%08x: [%-32s]\n", proc->pid, proc->name);
-		res = ObjectHeapUserProcess(kdata, proc);
-		if (res < 0) {
-			SCE_DBG_PRINTF_LEVEL(1, 11, 1030,
-				"ObjectHeapUserProcess failed 0x%08x\n", res);
-			return res;
+		if (proc->pid != 0) {
+			if (strncmp("SceKernelProcess", proc->name, 16) == 0) {
+				SCE_DBG_PRINTF_LEVEL(1, 11, 1023, "Skip SceKernelProcess\n");
+			} else if (strncmp("SceShell", proc->name, 8) == 0) {
+				SCE_DBG_PRINTF_LEVEL(1, 11, 1025, "SceShell\n");
+			} else {
+				SCE_PRINTF_WITH_INFO(0, 1027, "0x%08x: [%-32s]\n",
+					proc->pid, proc->name);
+				res = ObjectHeapUserProcess(kdata, proc);
+				if (res < 0) {
+					SCE_DBG_PRINTF_LEVEL(1, 11, 1030,
+						"ObjectHeapUserProcess failed 0x%08x\n", res);
+					return res;
+				}
+			}
+			proc++;
 		}
 	}
 	return 0;
@@ -2143,30 +2147,36 @@ int NameHeapLogSaveCore(void)
 	SceUID fd;
 	int intr;
 	uint32_t i;
-	const char *lines[10];
+	const char *lines1[] = {
+		"#include <kernel.h>\n",
+		"#include <deci4p_sdbgp_test.h>\n",
+		"typedef struct NameHeapLogSave {\n",
+		"    SceUInt32  op;\n",
+		"    SceUInt32  core;\n",
+		"    const char *name;\n",
+		"    SceUInt32  flags;\n",
+		"} NameHeapLogSave;\n",
+		"NameHeapLogSave gNameHeapLogSave[] = {\n",
+		NULL,
+	};
+	const char *lines2[] = {
+		"    { .op=SCE_TEST_LOG_OP_FREE, .name=SCE_NULL, .flags=0x0 }\n",
+		"};\n",
+		NULL,
+	};
 
-	if (s_nameHeapLogCtx.gen == 0)
+	if (s_nameHeapLogCtx.log.gen == 0)
 		return SCE_KERNEL_ERROR_ERROR;
 	SCE_DBG_PRINTF_LEVEL(1, 6, 2593, "->sceIoOpen()\n");
 	fd = sceIoOpen("host0:SceNameHeapLog.c", 0x603, 0600);
-	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_nameHeapLogCtx.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_nameHeapLogCtx.log.lock);
 	SceSysmemForKernel_6DBDA03B(NULL);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_nameHeapLogCtx.lock, intr);
-	lines[0] = "#include <kernel.h>\n";
-	lines[1] = "#include <deci4p_sdbgp_test.h>\n";
-	lines[2] = "typedef struct NameHeapLogSave {\n";
-	lines[3] = "    SceUInt32  op;\n";
-	lines[4] = "    SceUInt32  core;\n";
-	lines[5] = "    const char *name;\n";
-	lines[6] = "    SceUInt32  flags;\n";
-	lines[7] = "} NameHeapLogSave;\n";
-	lines[8] = "NameHeapLogSave gNameHeapLogSave[] = {\n";
-	lines[9] = NULL;
-	NameHeapLogWriteLines(fd, lines);
-	if (s_nameHeapLogCtx.entries != NULL && s_nameHeapLogCtx.max != 0) {
-		const SdbgpNameHeapLogEntry *e = s_nameHeapLogCtx.entries;
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_nameHeapLogCtx.log.lock, intr);
+	NameHeapLogWriteLines(fd, lines1);
+	if (s_nameHeapLogCtx.log.entries != NULL && s_nameHeapLogCtx.log.max != 0) {
+		const SdbgpNameHeapLogEntry *e = s_nameHeapLogCtx.log.entries;
 
-		for (i = 0; i < s_nameHeapLogCtx.max; i++, e++) {
+		for (i = 0; i < s_nameHeapLogCtx.log.max; i++, e++) {
 			if (e->op != -1) {
 				int len = snprintf(s_nameHeapSaveBuf, sizeof(s_nameHeapSaveBuf),
 					"    { .op = 0x%08x, .core=0x%08x, .name=\"%s\", .flags=0x%08x },\n",
@@ -2176,15 +2186,12 @@ int NameHeapLogSaveCore(void)
 			}
 		}
 	}
-	lines[0] = "    { .op=SCE_TEST_LOG_OP_FREE, .name=SCE_NULL, .flags=0x0 }\n";
-	lines[1] = "};\n";
-	lines[2] = NULL;
-	NameHeapLogWriteLines(fd, lines);
+	NameHeapLogWriteLines(fd, lines2);
 	SCE_DBG_PRINTF_LEVEL(1, 11, 2614, "->SceIoClose\n");
 	sceIoClose(fd);
-	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_nameHeapLogCtx.lock);
-	SceSysmemForKernel_6DBDA03B(s_nameHeapHooks);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_nameHeapLogCtx.lock, intr);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_nameHeapLogCtx.log.lock);
+	SceSysmemForKernel_6DBDA03B(s_nameHeapLogCtx.hooks);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_nameHeapLogCtx.log.lock, intr);
 	SCE_DBG_PRINTF_LEVEL(1, 11, 2621, "<-SCE_OK\n");
 	return 0;
 }
@@ -2295,7 +2302,7 @@ int KernelUtilsFixedHeapLeakCheck(void *ctx)
 	return FixedHeapCommonLeakCheck((SdbgpFixedHeapLeakCtx *)ctx);
 }
 
-const SdbgpKShowCmd s_kshowCmds[53] = {
+SdbgpKShowCmd s_kshowCmds[53] = {
 	{ 1, 0x0000, help },
 	{ 2, 0x1010, GUIDEntryHeapShowStatus },
 	{ 2, 0x1022, FixedHeapShowStatus },
