@@ -60,6 +60,18 @@ void rw_destroy(krwlock_t *rwlp)
 	rwlp->writeSema = -1;
 }
 
+#if FW_DEBUG
+/*
+ * Sony's file also has _rw_downgrade, _rw_try_upgrade, rw_tryenter, rw_downgrade,
+ * rw_write_held and rw_iswriter: nothing calls them, their code is left out of
+ * Sony's link, and their assert records stay
+ */
+SCE_DBGINFO_DEFINE_ORPHAN(rwDowngradeRecord193, 193, "_rw_downgrade");
+SCE_DBGINFO_DEFINE_ORPHAN(rwDowngradeRecord194, 194, "_rw_downgrade");
+SCE_DBGINFO_DEFINE_ORPHAN(rwTryUpgradeRecord207, 207, "_rw_try_upgrade");
+SCE_DBGINFO_DEFINE_ORPHAN(rwTryUpgradeRecord209, 209, "_rw_try_upgrade");
+#endif
+
 void rw_enter(krwlock_t *rwlp, krw_t enter_type)
 {
 	SCE_DBG_ASSERT(rwlp != NULL, 229);
@@ -121,3 +133,11 @@ void rw_exit(krwlock_t *rwlp)
 		SCE_DBG_ASSERT(0, 250);
 	}
 }
+
+#if FW_DEBUG
+SCE_DBGINFO_DEFINE_ORPHAN(rwTryEnterRecord269, 269, "rw_tryenter");
+SCE_DBGINFO_DEFINE_ORPHAN(rwDowngradeRecord279, 279, "rw_downgrade");
+SCE_DBGINFO_DEFINE_ORPHAN(rwDowngradeRecord280, 280, "rw_downgrade");
+SCE_DBGINFO_DEFINE_ORPHAN(rwWriteHeldRecord319, 319, "rw_write_held");
+SCE_DBGINFO_DEFINE_ORPHAN(rwIsWriterRecord356, 356, "rw_iswriter");
+#endif

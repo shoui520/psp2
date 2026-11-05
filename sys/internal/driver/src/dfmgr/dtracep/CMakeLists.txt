@@ -101,6 +101,18 @@ psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 SOURCES
 # default null pointer check deletion (no NULL test of a pointer already dereferenced)
 target_compile_options(os0_kd_deci4p_dtracep PRIVATE -fsigned-char -O3 -fbuiltin -fdelete-null-pointer-checks)
 target_compile_definitions(os0_kd_deci4p_dtracep PRIVATE __SCE__ KERNEL DTRACE_KERNEL)
+# Sony's link leaves out the functions nothing calls (list_insert_*, list_move_tail,
+# taskq_suspend/resume, ...) and their debug records: a section per function and per
+# record, and a link with --gc-sections. Records Sony's link kept without their code
+# are orphans (solaris_rwlock.c).
+target_compile_options(os0_kd_deci4p_dtracep PRIVATE -ffunction-sections)
+target_compile_definitions(os0_kd_deci4p_dtracep PRIVATE SCE_DBGINFO_GC)
+get_target_property(dtracep_type os0_kd_deci4p_dtracep TYPE)
+if(dtracep_type STREQUAL "EXECUTABLE")
+	# the map gives tools/dbginfo.py the objects of records whose strings were discarded
+	target_link_options(os0_kd_deci4p_dtracep PRIVATE -Wl,--gc-sections
+		-Wl,-Map=$<TARGET_FILE:os0_kd_deci4p_dtracep>.map)
+endif()
 # the release firmwares are DTrace's release build: no DIF/DOF error reports, no command names
 if(NOT FW_DEBUG)
 	target_compile_definitions(os0_kd_deci4p_dtracep PRIVATE DTRACE_RELEASE_VERSION=1)
