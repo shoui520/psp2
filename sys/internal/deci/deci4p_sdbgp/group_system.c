@@ -4,6 +4,7 @@
  * breakpoints/watchpoints, and system break/continue/step control.
  */
 
+#include <fw.h>
 #include <scetypes.h>
 #include <sysmem/cpu.h>
 #include <sysmem/dipsw.h>
@@ -1063,7 +1064,7 @@ sdbgpCmd10_00(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 	reply[10] = 6;
 	reply[11] = 0;
 	reply[12] = 1;
-	reply[14] = 0x04000000;
+	reply[14] = FW_VERSION;
 	reply[16] = SceDipswForDriver_B2AD48BE(3);
 	reply[17] = (uint32_t)(uintptr_t)sceKernelSysrootGetSysroot();
 	reply[18] = SceSysrootForKernel_EEB867C0();
