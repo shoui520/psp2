@@ -56,6 +56,9 @@ _Static_assert(offsetof(struct RtlAdapter, mutex) == 0xf0, "mutex offset");
 extern struct RtlAdapter rtlAdapter;
 /* name unknown: transfer completion and register-access helpers. */
 void rtlControlDone(int result, int count, void *context);
+void txDone(int result, int count, void *context);
+void rxDone(int result, int count, void *context);
+int rtlWakeFeature(struct RtlAdapter *a);
 int rtlReadRegister(struct RtlAdapter *a, unsigned short reg, unsigned short mask,
 		    unsigned short length, unsigned int *value);
 int rtlWriteRegister(struct RtlAdapter *a, unsigned short reg, unsigned short mask,

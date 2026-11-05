@@ -12,340 +12,6 @@
 /* power.c's definition takes a third argument, passed back to the callback; Sony's USB
  * Ethernet drivers call it with two and leave that one unset */
 int ScePowerForDriver_B24263F0(int kind, void (*handler)(int event, int value));
-
-static unsigned int readValue __attribute__((aligned(64)));
-static unsigned int writeValue __attribute__((aligned(64)));
-static unsigned int wakeValue __attribute__((aligned(64)));
-static unsigned char plaReadData[64] __attribute__((aligned(64)));
-static unsigned char plaWriteData[512] __attribute__((aligned(64)));
-static unsigned char usbReadData[32] __attribute__((aligned(64)));
-static unsigned char usbWriteData[32] __attribute__((aligned(64)));
-static SceUsbdDeviceRequest readRequest __attribute__((aligned(64)));
-static SceUsbdDeviceRequest writeRequest __attribute__((aligned(64)));
-static SceUsbdDeviceRequest wakeRequest __attribute__((aligned(64)));
-static SceUsbdDeviceRequest plaReadRequest __attribute__((aligned(64)));
-static SceUsbdDeviceRequest plaWriteRequest __attribute__((aligned(64)));
-static SceUsbdDeviceRequest usbReadRequest __attribute__((aligned(64)));
-static SceUsbdDeviceRequest usbWriteRequest __attribute__((aligned(64)));
-
-void rtlControlDone(int result, int count, void *context)
-{
-	struct RtlAdapter *a = context;
-
-	(void)count;
-	sceKernelSetEventFlag(a->controlEvent, result < 0 ? 1 : 2);
-}
-
-/* name unknown */
-static inline __attribute__((always_inline)) int transfer(struct RtlAdapter *a, SceUsbdDeviceRequest *request, void *data)
-{
-	unsigned int bits;
-	int ret;
-
-	ret = SceUsbdForDriver_2E05660F(a->controlPipe, request, data, rtlControlDone, a);
-	if (ret < 0)
-		return ret;
-	ret = sceKernelWaitEventFlag(a->controlEvent, 3,
-				      SCE_KERNEL_EVF_WAITMODE_OR |
-				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
-	if (ret >= 0 && (bits & 1))
-		return RTL_ERROR(4);
-	return ret;
-}
-
-/* name unknown */
-static void request(SceUsbdDeviceRequest *r, int direction, unsigned short reg,
-		    unsigned short mask, unsigned short length)
-{
-	r->bmRequestType = direction;
-	r->bRequest = 5;
-	r->wValue = reg;
-	r->wIndex = mask;
-	r->wLength = length;
-}
-
-static __attribute__((noinline, noclone)) int rtlWakeFeature(struct RtlAdapter *a)
-{
-	wakeValue = 0;
-	wakeRequest.bmRequestType = 0;
-	wakeRequest.bRequest = 3;
-	wakeRequest.wValue = 1;
-	wakeRequest.wIndex = 0;
-	wakeRequest.wLength = 0;
-	return transfer(a, &wakeRequest, &wakeValue);
-}
-
-int rtlReadRegister(struct RtlAdapter *a, unsigned short reg, unsigned short mask,
-		    unsigned short length, unsigned int *value)
-{
-	int ret;
-
-	readValue = 0;
-	request(&readRequest, 0xc0, reg, mask, length);
-	ret = transfer(a, &readRequest, &readValue);
-	if (ret >= 0)
-		*value = readValue;
-	return ret;
-}
-
-int rtlWriteRegister(struct RtlAdapter *a, unsigned short reg, unsigned short mask,
-		     unsigned short length, unsigned int value)
-{
-	writeValue = value;
-	request(&writeRequest, 0x40, reg, mask, length);
-	return transfer(a, &writeRequest, &writeValue);
-}
-
-int rtlReadPla(struct RtlAdapter *a, unsigned int reg, unsigned int length, void *data)
-{
-	unsigned int offset = 0, remaining = length;
-	int ret;
-
-	if ((length & 3) || !length || (reg & 3) || reg + length >= 0x10000)
-		return RTL_ERROR(1);
-	while ((int)remaining > 64) {
-		request(&plaReadRequest, 0xc0, reg + offset, 0x100, 64);
-		ret = transfer(a, &plaReadRequest, plaReadData);
-		if (ret < 0)
-			return ret;
-		/* Sony uses inline word stores for the complete chunks. */
-		for (unsigned int i = 0; i < 64; i += 4)
-			*(unsigned int *)((unsigned char *)data + offset + i) =
-				*(unsigned int *)(plaReadData + i);
-		offset = (offset + 64) & 0xffff;
-		remaining = length - offset;
-	}
-	request(&plaReadRequest, 0xc0, reg + offset, 0x100, remaining);
-	ret = transfer(a, &plaReadRequest, plaReadData);
-	if (ret >= 0)
-		memcpy((unsigned char *)data + offset, plaReadData, remaining & 0xffff);
-	return ret;
-}
-
-int rtlReadPla8(struct RtlAdapter *a, unsigned int reg, unsigned char *value)
-{
-	unsigned char data[4];
-	int ret = rtlReadPla(a, reg & 0xfffc, 4, data);
-
-	if (ret >= 0)
-		*value = data[reg & 3];
-	return ret;
-}
-
-int rtlReadPla16(struct RtlAdapter *a, unsigned int reg, unsigned short *value)
-{
-	unsigned char data[8];
-	int ret = rtlReadPla(a, reg & 0xfffc, 8, data);
-
-	if (ret >= 0)
-		*value = *(unsigned short *)(data + (reg & 3));
-	return ret;
-}
-
-int rtlReadPla32(struct RtlAdapter *a, unsigned int reg, unsigned int *value)
-{
-	unsigned char data[8];
-	int ret = rtlReadPla(a, reg & 0xfffc, 8, data);
-
-	if (ret >= 0)
-		*value = *(unsigned int *)(data + (reg & 3));
-	return ret;
-}
-
-int rtlWritePla(struct RtlAdapter *a, unsigned int reg, unsigned int mask,
-		 unsigned int length, const void *data)
-{
-	unsigned int offset = 4, remaining;
-	int ret;
-
-	if ((length & 3) || !length || (reg & 3) || reg + length >= 0x10000)
-		return RTL_ERROR(1);
-	*(unsigned int *)plaWriteData = *(const unsigned int *)data;
-	request(&plaWriteRequest, 0x40, reg, 0x100 | (mask & 15) * 17, 4);
-	ret = transfer(a, &plaWriteRequest, plaWriteData);
-	if (ret < 0 || length == 4)
-		return ret;
-	remaining = length - offset;
-	while ((int)remaining > 512) {
-		request(&plaWriteRequest, 0x40, reg + offset, 0x1ff, 512);
-		memcpy(plaWriteData, (const unsigned char *)data + offset, 512);
-		ret = transfer(a, &plaWriteRequest, plaWriteData);
-		if (ret < 0)
-			return ret;
-		offset = (offset + 512) & 0xffff;
-		remaining = length - offset;
-	}
-	request(&plaWriteRequest, 0x40, reg + offset, 0x1ff, remaining);
-	memcpy(plaWriteData, (const unsigned char *)data + offset, remaining & 0xffff);
-	ret = transfer(a, &plaWriteRequest, plaWriteData);
-	if (ret < 0)
-		return ret;
-	request(&plaWriteRequest, 0x40, reg + offset,
-		0x100 | (mask & 0xf0) | ((mask & 0xf0) >> 4), 4);
-	/* Sony repeats the first word of the final chunk at this address. */
-	*(unsigned int *)plaWriteData =
-		*(const unsigned int *)((const unsigned char *)data + offset);
-	return transfer(a, &plaWriteRequest, plaWriteData);
-}
-
-int rtlWritePla8(struct RtlAdapter *a, unsigned int reg, unsigned char value)
-{
-	unsigned int data = 0, mask = (0x11 << (reg & 3)) & 15;
-
-	*((unsigned char *)&data + (reg & 3)) = value;
-	if ((reg & 0xfffc) == 0xfffc)
-		return RTL_ERROR(1);
-	*(unsigned int *)plaWriteData = data;
-	request(&plaWriteRequest, 0x40, reg & 0xfffc, 0x100 | mask * 17, 4);
-	return transfer(a, &plaWriteRequest, plaWriteData);
-}
-
-int rtlWritePla16(struct RtlAdapter *a, unsigned int reg, unsigned short value)
-{
-	unsigned int data[2] = { 0, 0 };
-	unsigned int offset = reg & 3, mask, length;
-
-	if (offset == 2) {
-		mask = 0xcc;
-		length = 4;
-	} else if (offset == 3) {
-		mask = 0x81;
-		length = 8;
-	} else {
-		mask = offset == 1 ? 0x66 : 0x33;
-		length = 4;
-	}
-	*(unsigned short *)((unsigned char *)data + offset) = value;
-	return rtlWritePla(a, reg & 0xfffc, mask, length, data);
-}
-
-int rtlWritePla32(struct RtlAdapter *a, unsigned int reg, unsigned int value)
-{
-	unsigned int data[2] = { 0, 0 };
-	unsigned int offset = reg & 3, mask, length;
-
-	switch (offset) {
-	case 1:
-		mask = 0x1e;
-		length = 8;
-		break;
-	case 2:
-		mask = 0x3c;
-		length = 8;
-		break;
-	case 3:
-		mask = 0x78;
-		length = 8;
-		break;
-	default:
-		mask = 0xff;
-		length = 4;
-		break;
-	}
-	*(unsigned int *)((unsigned char *)data + offset) = value;
-	return rtlWritePla(a, reg & 0xfffc, mask, length, data);
-}
-
-int rtlReadUsb(struct RtlAdapter *a, unsigned short reg, unsigned int length, void *data)
-{
-	int ret;
-
-	if (length > 32)
-		return RTL_ERROR(1);
-	request(&usbReadRequest, 0xc0, reg, 0, length);
-	ret = transfer(a, &usbReadRequest, usbReadData);
-	if (ret >= 0)
-		memcpy(data, usbReadData, length);
-	return ret;
-}
-
-int rtlReadUsb8(struct RtlAdapter *a, unsigned int reg, unsigned char *value)
-{
-	unsigned int data;
-	int ret;
-
-	request(&usbReadRequest, 0xc0, reg & 0xfffc, 0, 4);
-	ret = transfer(a, &usbReadRequest, usbReadData);
-	if (ret >= 0) {
-		data = *(unsigned int *)usbReadData;
-		*value = *((unsigned char *)&data + (reg & 3));
-	}
-	return ret;
-}
-
-int rtlWriteUsb(struct RtlAdapter *a, unsigned short reg, unsigned short mask,
-		 unsigned int length, const void *data)
-{
-	if (length > 32)
-		return RTL_ERROR(1);
-	request(&usbWriteRequest, 0x40, reg, mask, length);
-	memcpy(usbWriteData, data, length);
-	return transfer(a, &usbWriteRequest, usbWriteData);
-}
-
-int rtlWriteUsb8(struct RtlAdapter *a, unsigned int reg, unsigned char value)
-{
-	unsigned int data = 0;
-
-	*((unsigned char *)&data + (reg & 3)) = value;
-	*(unsigned int *)usbWriteData = data;
-	request(&usbWriteRequest, 0x40, reg & 0xfffc, 0x11 << (reg & 3), 4);
-	return transfer(a, &usbWriteRequest, usbWriteData);
-}
-
-int rtlWriteUsb16(struct RtlAdapter *a, unsigned int reg, unsigned short value)
-{
-	unsigned int data[2] = { 0, 0 };
-	unsigned int offset = reg & 3, mask, length;
-
-	if (offset == 2) {
-		mask = 0x0c;
-		length = 4;
-	} else if (offset == 3) {
-		mask = 0x81;
-		length = 8;
-	} else {
-		mask = offset == 1 ? 0x66 : 0x33;
-		length = 4;
-	}
-
-	*(unsigned short *)((unsigned char *)data + offset) = value;
-	request(&usbWriteRequest, 0x40, reg & 0xfffc, mask, length);
-	memcpy(usbWriteData, data, length);
-	return transfer(a, &usbWriteRequest, usbWriteData);
-}
-
-int rtlWriteUsb32(struct RtlAdapter *a, unsigned int reg, unsigned int value)
-{
-	unsigned int data[2] = { 0, 0 };
-	unsigned int offset = reg & 3, mask, length;
-
-	switch (offset) {
-	case 1:
-		mask = 0x1e;
-		length = 8;
-		break;
-	case 2:
-		mask = 0x3c;
-		length = 8;
-		break;
-	case 3:
-		mask = 0x78;
-		length = 8;
-		break;
-	default:
-		mask = 0xff;
-		length = 4;
-		break;
-	}
-
-	*(unsigned int *)((unsigned char *)data + offset) = value;
-	request(&usbWriteRequest, 0x40, reg & 0xfffc, mask, length);
-	memcpy(usbWriteData, data, length);
-	return transfer(a, &usbWriteRequest, usbWriteData);
-}
-
-
 struct RtlAdapter rtlAdapter;
 static unsigned int suspendRequested, suspending;
 static SceUsbdDriver usbDriver;
@@ -376,10 +42,9 @@ int rtlEnableReceive(struct RtlAdapter *a)
 	ret = rtlReadPla32(a, 0xc010, &control);
 	if (ret < 0)
 		goto out;
+	control |= 10;
 	if (a->macControl & 1)
-		control |= 11;
-	else
-		control |= 10;
+		control |= 1;
 	ret = rtlWritePla32(a, 0xc010, control);
 out:
 	sceKernelUnlockFastMutex(&a->mutex);
@@ -397,7 +62,7 @@ static int kickTx(struct NetDriver *driver, int argument)
 	if (!a->active)
 		return RTL_ERROR(4);
 	sceKernelAtomicAddAndGet32(&a->references, 1);
-	old = __atomic_fetch_add(&a->pendingTx, 1, __ATOMIC_SEQ_CST);
+	old = __atomic_fetch_add(&a->pendingTx, 1, __ATOMIC_RELEASE);
 	if (!old)
 		sceKernelSetEventFlag(a->workerEvent, 8);
 	sceKernelAtomicSubAndGet32(&a->references, 1);
@@ -506,12 +171,17 @@ int rtlProcessEvent(int event, int type, void *parameter, void *context)
 	return 0;
 }
 
+#define CRC32_BE_BIT(crc, c, bit) \
+	((crc) = (((c) >> (bit)) & 1) != (crc) >> 31 ? \
+		 (((crc) << 1) ^ 0x04c11db6) | 1 : (crc) << 1)
+
 /* name unknown */
 static int multicast(struct NetDriver *driver, const unsigned char *addresses,
 		     unsigned int length)
 {
 	struct RtlAdapter *a = driver->private;
 	unsigned int value, hash[2];
+	const unsigned char *bytes;
 	int ret;
 
 	if (!a->active)
@@ -546,23 +216,32 @@ static int multicast(struct NetDriver *driver, const unsigned char *addresses,
 	for (unsigned int n = 0; n < length / 6; n++) {
 		unsigned int crc = ~0U;
 
-		/* Sony repeatedly hashes the first address in the supplied list. */
+		/*
+		 * The big-endian Ethernet CRC (NetBSD's ether_crc32_be), one bit
+		 * at a time, written out per byte as Sony's code is. Sony hashes
+		 * the first address in the list for every entry.
+		 */
 		for (unsigned int i = 0; i < 6; i++) {
-			for (unsigned int bit = 0; bit < 8; bit++) {
-				unsigned int different = (crc >> 31) ^ ((addresses[i] >> bit) & 1);
+			unsigned int c = addresses[i];
 
-				crc <<= 1;
-				if (different)
-					crc ^= 0x04c11db7;
-			}
+			CRC32_BE_BIT(crc, c, 0);
+			CRC32_BE_BIT(crc, c, 1);
+			CRC32_BE_BIT(crc, c, 2);
+			CRC32_BE_BIT(crc, c, 3);
+			CRC32_BE_BIT(crc, c, 4);
+			CRC32_BE_BIT(crc, c, 5);
+			CRC32_BE_BIT(crc, c, 6);
+			CRC32_BE_BIT(crc, c, 7);
 		}
 		hash[crc >> 31] |= 1U << ((crc >> 26) & 31);
 	}
-	value = __builtin_bswap32(hash[1]);
+	bytes = (const unsigned char *)&hash[1];
+	value = bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3];
 	ret = rtlWriteRegister(a, 0xcd00, 0x10f, 4, value);
 	if (ret < 0)
 		goto out;
-	value = __builtin_bswap32(hash[0]);
+	bytes = (const unsigned char *)&hash[0];
+	value = bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3];
 	ret = rtlWriteRegister(a, 0xcd04, 0x10f, 4, value);
 out:
 	sceKernelUnlockFastMutex(&a->mutex);
@@ -674,7 +353,7 @@ static int setLink(struct RtlAdapter *a, unsigned int mode)
 	ret = pollPhy(a, &value, 1);
 	if (ret < 0)
 		return ret;
-	value = (value & 0xffff) | 0x80008000;
+	value = 0x80000000 | (unsigned short)(value | 0x8000);
 	ret = rtlWriteRegister(a, 0xde00, 0x10f, 4, value);
 	if (ret < 0)
 		return ret;
@@ -731,8 +410,8 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 				control |= 1;
 				reg |= 1;
 			} else {
-				control &= ~1;
-				reg &= ~1;
+				control &= ~1U;
+				reg &= ~1U;
 			}
 			a->macControl = control;
 			ret = rtlWriteRegister(a, 0xc010, 0x10f, 4, reg);
@@ -836,16 +515,18 @@ static int writeOtpWord(unsigned int index, unsigned int word)
 	unsigned int value, bit = index & 31;
 	int ret;
 
-	ret = rtlWriteRegister(a, 0xe81c, 0x101, 4, 0xc0);
+	value = 0xc0;
+	ret = rtlWriteRegister(a, 0xe81c, 0x101, 4, value);
 	if (ret < 0)
 		return ret;
-	ret = rtlWriteRegister(a, 0xe858, 0x108, 4, 0xc4000000);
+	value = 0xc4000000;
+	ret = rtlWriteRegister(a, 0xe858, 0x108, 4, value);
 	if (ret < 0)
 		return ret;
 	if (bit > 16)
 		bit = 32 - bit;
-	value = ((word >> bit) & ((1U << (16 - bit)) - 1)) << (bit + 1);
-	value |= word & ((1U << bit) - 1);
+	value = ((word >> bit) & ~(~0U << (16 - bit))) << (bit + 1);
+	value |= word & ~(~0U << bit);
 	value = (value & 0xffff) | (index | 0x4000 | ((value & 0x10000) >> 9)) << 16;
 	ret = rtlWriteRegister(a, 0xdd00, 0x10f, 4, value);
 	if (ret < 0)
@@ -855,9 +536,12 @@ static int writeOtpWord(unsigned int index, unsigned int word)
 		if (ret < 0)
 			return ret;
 	} while (value & 0x40000000);
-	ret = rtlWriteRegister(a, 0xe858, 0x108, 4, 0);
-	if (ret >= 0)
-		ret = rtlWriteRegister(a, 0xe81c, 0x101, 4, 0);
+	value = 0;
+	ret = rtlWriteRegister(a, 0xe858, 0x108, 4, value);
+	if (ret >= 0) {
+		value = 0;
+		ret = rtlWriteRegister(a, 0xe81c, 0x101, 4, value);
+	}
 	return ret;
 }
 
@@ -983,28 +667,24 @@ static __attribute__((noinline, noclone)) void rxComplete(struct RtlAdapter *a, 
 }
 
 /* name unknown */
-static void txDone(int result, int count, void *context)
+void txDone(int result, int count, void *context)
 {
 	(void)count;
 	txComplete(context, result);
 }
 
 /* name unknown */
-static void rxDone(int result, int count, void *context)
+void rxDone(int result, int count, void *context)
 {
 	rxComplete(context, result, count);
 }
 
-/* name unknown */
-int rtlSendBuffer(struct RtlAdapter *a, void *data, unsigned int length)
+void rtlControlDone(int result, int count, void *context)
 {
-	return SceUsbdForDriver_470D5289(a->txPipe, data, length, txDone, a);
-}
+	struct RtlAdapter *a = context;
 
-/* name unknown */
-int rtlReceiveBuffer(struct RtlAdapter *a, void *data, unsigned int length)
-{
-	return SceUsbdForDriver_470D5289(a->rxPipe, data, length, rxDone, a);
+	(void)count;
+	sceKernelSetEventFlag(a->controlEvent, result < 0 ? 1 : 2);
 }
 
 /* name unknown */
@@ -1016,14 +696,14 @@ static __attribute__((noinline, noclone)) struct RtlAdapter *getAdapter(void)
 /* name unknown */
 static __attribute__((noinline, noclone)) int attachAdapter(struct RtlAdapter *a)
 {
-	__atomic_fetch_or(&a->flags, 1, __ATOMIC_SEQ_CST);
+	__atomic_fetch_or(&a->flags, 1, __ATOMIC_RELEASE);
 	return sceKernelSetEventFlag(a->workerEvent, 1);
 }
 
 /* name unknown */
 static __attribute__((noinline, noclone)) int detachAdapter(struct RtlAdapter *a)
 {
-	__atomic_fetch_and(&a->flags, ~1U, __ATOMIC_SEQ_CST);
+	__atomic_fetch_and(&a->flags, ~1U, __ATOMIC_RELEASE);
 	sceKernelSetEventFlag(a->workerEvent, 0x20);
 	a->link = 0;
 	return 0;
@@ -1349,7 +1029,7 @@ static void suspendAdapter(struct RtlAdapter *a)
 			SceUsbServForDriver_6D738018();
 		}
 	}
-	__atomic_fetch_and(&a->flags, ~12U, __ATOMIC_SEQ_CST);
+	__atomic_fetch_and(&a->flags, ~12U, __ATOMIC_RELEASE);
 }
 
 /* name unknown */
@@ -1583,7 +1263,7 @@ static int initializeAdapter(struct RtlAdapter *a)
 		ret = SceNetPsForDriver_1ABF937D(&a->driver);
 		if (ret < 0)
 			return 0;
-		__atomic_fetch_or(&a->flags, 2, __ATOMIC_SEQ_CST);
+		__atomic_fetch_or(&a->flags, 2, __ATOMIC_RELEASE);
 		ret = allocateBuffer("SceNetDrvEtherTx", a->txBufferSize, &base);
 		if (ret < 0 || !base)
 			return 0;
@@ -1614,7 +1294,7 @@ static int initializeAdapter(struct RtlAdapter *a)
 		rtlWritePla8(a, 0xe84f, byte & ~0x80);
 out:
 	sceKernelUnlockFastMutex(&a->mutex);
-	__atomic_fetch_or(&a->flags, 4, __ATOMIC_SEQ_CST);
+	__atomic_fetch_or(&a->flags, 4, __ATOMIC_RELEASE);
 	a->state |= 1;
 	ScePowerForDriver_B24263F0(2, rtlPowerEvent);
 	for (int count = 30; count; count--) {
@@ -1657,7 +1337,7 @@ static void startReceive(struct RtlAdapter *a, int *retries)
 		a->driver.notify(&a->driver,
 			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
 					 NET_DRIVER_STATUS_STARTED), NULL, 0);
-		__atomic_fetch_or(&a->flags, 8, __ATOMIC_SEQ_CST);
+		__atomic_fetch_or(&a->flags, 8, __ATOMIC_RELEASE);
 		*retries = 0;
 	} else if (*retries == 10) {
 		ret = RTL_ERROR(3);
@@ -1692,7 +1372,7 @@ static void stopReceive(struct RtlAdapter *a)
 					 NET_DRIVER_STATUS_STOPPED), NULL, 0);
 		return;
 	}
-	__atomic_fetch_and(&a->flags, ~8U, __ATOMIC_SEQ_CST);
+	__atomic_fetch_and(&a->flags, ~8U, __ATOMIC_RELEASE);
 	lockFastMutex(&a->mutex);
 	ret = rtlReadRegister(a, 0xe810, 0x100, 4, &value);
 	if (ret >= 0)
@@ -1739,7 +1419,7 @@ static void transmit(struct RtlAdapter *a)
 	struct NetDriverPacket *packet;
 	int ret;
 
-	__atomic_exchange_n(&a->pendingTx, 1, __ATOMIC_SEQ_CST);
+	__atomic_exchange_n(&a->pendingTx, 1, __ATOMIC_RELEASE);
 	while (prefix + 1514 <= remaining) {
 		unsigned int length;
 		unsigned char *payload;
@@ -1785,7 +1465,7 @@ static void transmit(struct RtlAdapter *a)
 		}
 		a->driver.txErrors += packets;
 	}
-	ret = __atomic_fetch_sub(&a->pendingTx, 1, __ATOMIC_SEQ_CST);
+	ret = __atomic_fetch_sub(&a->pendingTx, 1, __ATOMIC_RELEASE);
 	if (ret > 1)
 		sceKernelSetEventFlag(a->workerEvent, 8);
 }
@@ -1890,7 +1570,7 @@ int workerEntry(SceSize length, void *arg)
 		if (bits & 0x20) {
 			drainReferences(a);
 			if (a->flags & 4)
-				__atomic_fetch_and(&a->flags, ~12U, __ATOMIC_SEQ_CST);
+				__atomic_fetch_and(&a->flags, ~12U, __ATOMIC_RELEASE);
 			retries = 0;
 		}
 		if (bits & 0x40) {

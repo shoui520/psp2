@@ -1,3 +1,3 @@
 psp2_module(os0_kd_bootimage_usb_ether_rtl KIND kernel COMPILER gcc48
-	SOURCES usb_ether_rtl.c
+	SOURCES usb_ether_rtl.c rtl_register.c
 	IMPORTS sceKernelDeleteEventFlag SceUsbdForDriver_216F108D)
