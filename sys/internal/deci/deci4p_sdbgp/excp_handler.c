@@ -48,7 +48,7 @@ void _excpGetStopReason(int cause, uint32_t *stopReason)
 
 int irqHandler(void)
 {
-	SceDeci4pSDfMgrForKernel_EDFBA012();
+	sceSDfMgrBreakSystem();
 	return 0;
 }
 
@@ -174,7 +174,7 @@ int dataAbortHandler(SceExcpmgrContext *ctx, uintptr_t pc, uint32_t cpsr)
 	_saveExcpContext(state, info.context, info.processId, info.threadId,
 			 info.pc, info.stopReason);
 	cpu->stoppedTid = info.threadId;
-	SceDeci4pSDfMgrForKernel_EDFBA012();
+	sceSDfMgrBreakSystem();
 	if (excpGetExcpStopReason(cpu, &detail, info.stopReason) < 0)
 		return 3;
 	if (!cpu->hostMode)
@@ -238,7 +238,7 @@ int prefetchAbortHandler(SceExcpmgrContext *ctx, uintptr_t pc, uint32_t cpsr)
 	if (sdbgpGetStatus(cpu, 0x400)) {
 		SceDeci4pSDfMgrForKernel_682D0EFB();
 	} else if (!sdbgpGetStatus(cpu, 0x100)) {
-		SceDeci4pSDfMgrForKernel_EDFBA012();
+		sceSDfMgrBreakSystem();
 	}
 	excpGetExcpStopReason(cpu, &detail, info.stopReason);
 	status100 = sdbgpGetStatus(cpu, 0x100);
@@ -267,7 +267,7 @@ int prefetchAbortHandler(SceExcpmgrContext *ctx, uintptr_t pc, uint32_t cpsr)
 		cpu->stoppedTid = 0;
 		if (sdbgpGetFlags(state, 0x10))
 			swbkptWriteBkpt(&state->stepSwbkpt);
-		SceDeci4pSDfMgrForKernel_9A653F19();
+		sceSDfMgrContinueSystem();
 		return 0;
 	}
 	if (sdbgpGetFlags(state, 0x10)) {
@@ -283,7 +283,7 @@ int prefetchAbortHandler(SceExcpmgrContext *ctx, uintptr_t pc, uint32_t cpsr)
 			state->stoppedTid[2] = 0;
 			state->stoppedTid[3] = 0;
 			cpu->stoppedTid = 0;
-			SceDeci4pSDfMgrForKernel_9A653F19();
+			sceSDfMgrContinueSystem();
 			return 0;
 		}
 		if (info.pc == state->stepSwbkpt.address) {
@@ -391,7 +391,7 @@ int undefinedHandler(SceExcpmgrContext *ctx, uintptr_t pc, uint32_t cpsr)
 	_saveExcpContext(state, info.context, info.processId, info.threadId,
 			 info.pc, info.stopReason);
 	cpu->stoppedTid = info.threadId;
-	SceDeci4pSDfMgrForKernel_EDFBA012();
+	sceSDfMgrBreakSystem();
 	if (excpGetExcpStopReason(cpu, &detail, info.stopReason) < 0)
 		return 3;
 	if (!cpu->hostMode)

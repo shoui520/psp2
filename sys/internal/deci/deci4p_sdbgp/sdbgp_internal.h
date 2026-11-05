@@ -835,6 +835,11 @@ int sceKernelPhysicalMemWriteForDebugger(uintptr_t pdest, const void *src, SceSi
 int sdbgpInitPhysicalAccess(int unused);
 
 /* kernel_util.c */
+struct SysrootProfiler {
+	int (*reset)(void);
+	int (*start)(uint32_t idx);
+	int (*stop)(uint32_t idx);
+};
 extern struct SysrootProfiler s_sdbgpProfiler;
 void sdbgpInitProfiler(struct SysrootProfiler *profiler);
 int KernelUtilsFixedHeapLeakCheckStart(SceUID uid, void **ctx);

@@ -1,5 +1,4 @@
-# Debugger conversion: the files after sdbgp.c remain to be written.
-psp2_module(os0_kd_deci4p_sdbgp KIND kernel COMPILER gcc48 PARTIAL SOURCES
+psp2_module(os0_kd_deci4p_sdbgp KIND kernel COMPILER gcc48 SOURCES
 	cpu_regs.S
 	sdbgp.c
 	check.c
@@ -8,6 +7,7 @@ psp2_module(os0_kd_deci4p_sdbgp KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	leakcheck.c
 	phymem.c
 	bg_check.c
+	kernel_util.c
 	sysmem_address_space.c
 	sysmem_partition.c
 	cpu_mmu.c

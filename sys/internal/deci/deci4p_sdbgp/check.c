@@ -361,6 +361,15 @@ int isIllegalSysFd(SceUID fd, SceIofileInfo *info)
 	return 0;
 }
 
+int sdbgpIsNotification(uint8_t group, uint8_t command)
+{
+	if (group != SDBGP_GROUP_SYSTEM)
+		return 0;
+	if (command == SDBGP_NOTIFY_EXCEPTION || command == SDBGP_NOTIFY_BREAK)
+		return 1;
+	return command == SDBGP_NOTIFY_CONTINUE;
+}
+
 /* Why a prefetch abort stopped the core: a break point, a BKPT, or no debug event. */
 int checkSdbgpTargetAddrStopCausePabt(SdbgpExcpInfo info, int mode)
 {
