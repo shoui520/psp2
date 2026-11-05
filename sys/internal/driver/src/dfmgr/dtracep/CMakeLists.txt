@@ -19,7 +19,32 @@ foreach(src IN LISTS dtrace_cddl_sources)
 	set_property(SOURCE "${src}" APPEND PROPERTY COMPILE_DEFINITIONS "__FILE_NAME__=\"${name}\"")
 endforeach()
 
-psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 PARTIAL SOURCES
+# xnu's blist.c and qsort.c (contrib/xnu-1456.1.26), with Sony's changes as patches in
+# dtrace/bsd/: DTrace's heap and the kernel's panic. The patched copies are made at
+# configure time.
+set(dtrace_xnu "${PSP2_SRC}/contrib/xnu-1456.1.26")
+function(dtrace_prepare_patched upstream patch output)
+	configure_file("${upstream}" "${output}" COPYONLY)
+	execute_process(COMMAND patch -s "${output}" "${patch}"
+		RESULT_VARIABLE result ERROR_VARIABLE error)
+	if(NOT result EQUAL 0)
+		message(FATAL_ERROR "DTrace adaptation of ${upstream} failed: ${error}")
+	endif()
+	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${upstream}" "${patch}")
+endfunction()
+set(dtrace_bsd_out "${CMAKE_CURRENT_BINARY_DIR}/dtrace/bsd")
+dtrace_prepare_patched("${dtrace_xnu}/bsd/dev/dtrace/blist.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/dtrace/bsd/blist.patch" "${dtrace_bsd_out}/blist.c")
+dtrace_prepare_patched("${dtrace_xnu}/bsd/kern/qsort.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/dtrace/bsd/qsort.patch" "${dtrace_bsd_out}/qsort.c")
+set(dtrace_bsd_sources "${dtrace_bsd_out}/blist.c" "${dtrace_bsd_out}/qsort.c")
+foreach(src IN LISTS dtrace_bsd_sources)
+	get_filename_component(name "${src}" NAME)
+	set_property(SOURCE "${src}" APPEND PROPERTY COMPILE_DEFINITIONS
+		"__FILE_NAME__=\"dtrace/bsd/${name}\"")
+endforeach()
+
+psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 SOURCES
 	dtrace_change_stack.S
 	dtrace_client.c
 	dtrace_client_list.c
@@ -29,6 +54,7 @@ psp2_module(os0_kd_deci4p_dtracep KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	dtracep_packet_queue.c
 	dtracep_syscalls.c
 	dtracep_pmep.c
+	${dtrace_bsd_sources}
 	${dtrace_cddl_sources}
 	dtrace/sce/dtrace_backtrace.c
 	dtrace/sce/dtrace_bookmark.c

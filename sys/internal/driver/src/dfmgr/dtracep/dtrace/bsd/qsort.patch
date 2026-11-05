@@ -1,0 +1,22 @@
+Sony's changes to xnu-1456.1.26's bsd/kern/qsort.c (Sony's dtrace/bsd/qsort.c), read
+from deci4p_dtracep: built as a plain function of the module, declared in
+dtrace/bsd/qsort.h.
+
+--- a/qsort.c
++++ b/qsort.c
+@@ -63,8 +63,15 @@
+  */
+ 
+ 
++#if defined(__SCE__)
++/* PlayStation(R)Vita: fasttrap.c's sort, a plain function of the module */
++#include <dtrace/bsd/qsort.h>
++
++#define __private_extern__
++#else
+ #include <sys/types.h>
+ //#include <stdlib.h>
++#endif
+ 
+ __private_extern__
+ void

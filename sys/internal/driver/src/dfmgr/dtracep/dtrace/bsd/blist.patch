@@ -1,0 +1,116 @@
+Sony's changes to xnu-1456.1.26's bsd/dev/dtrace/blist.c (Sony's dtrace/bsd/blist.c),
+read from deci4p_dtracep: memory from DTrace's heap, the kernel's panic in place of
+panic() (Sony's debug records give the panics' lines, which this file keeps), and an
+unsigned index in blst_copy's leaf loop. BLIST_BMAP_RADIX is an int in Sony's
+dtrace/bsd/blist.h (sys/internal/include/dtrace/bsd/blist.h).
+
+--- a/blist.c
++++ b/blist.c
+@@ -62,7 +62,34 @@
+  * $FreeBSD: src/sys/kern/subr_blist.c,v 1.5.2.1 2000/03/17 10:47:29 ps Exp $
+  */
+ 
+-#if !defined(__APPLE__)
++#if defined(__SCE__)
++/*
++ * PlayStation(R)Vita: the bitmap block lists behind DTrace's ID arenas
++ * (dtrace/sce/solaris_vmem.c). Memory comes from DTrace's own heap, and
++ * panic() is the kernel's.
++ *
++ * Sony's debug records give the panics' lines in its file: 486, 531, 604
++ * and 628. What Sony wrote in this block is not known beyond what the
++ * code needs; it is as long as Sony's, and the note in blst_leaf_free
++ * stands for the five lines Sony's file has there, so the records come
++ * out the same.
++ */
++/*
++ * the kernel build, as xnu's: no blist_print, no BLIST_DEBUG test program
++ */
++#ifndef _KERNEL
++#define _KERNEL
++#endif
++
++#include <dtrace/sce/solaris_types.h>
++#include <dtrace/heap.h>
++#include <sysmem/debug.h>
++#include <dtrace/bsd/blist.h>
++
++#define malloc(a, b, c)	dtrace_heap_alloc(a)
++#define free(a, b)	dtrace_heap_free(a)
++
++#elif !defined(__APPLE__)
+ #ifdef _KERNEL
+ 
+ #include <sys/param.h>
+@@ -144,7 +171,7 @@
+ 					daddr_t radix, int skip, int tab);
+ #endif
+ 
+-#if !defined(__APPLE__)
++#if !defined(__APPLE__) && !defined(__SCE__)
+ #ifdef _KERNEL
+ static MALLOC_DEFINE(M_SWAP, "SWAP", "Swap space");
+ #endif
+@@ -455,7 +482,11 @@
+ 			 * count does not fit in object even if it were
+ 			 * complete free.
+ 			 */
++#if defined(__SCE__)
++			SCE_PANIC();
++#else
+ 			panic("blist_meta_alloc: allocation too large");
++#endif
+ 		}
+ 		blk += radix;
+ 	}
+@@ -490,8 +521,17 @@
+ 	mask = ((u_daddr_t)-1 << n) &
+ 	    ((u_daddr_t)-1 >> (BLIST_BMAP_RADIX - count - n));
+ 
++	/*
++	 * SCE: Sony's file has five lines more before this panic (its record
++	 * is at line 531); what they held is not known, and the code is the
++	 * same without them.
++	 */
+ 	if (scan->u.bmu_bitmap & mask)
++#if defined(__SCE__)
++		SCE_PANIC();
++#else
+ 		panic("blst_radix_free: freeing free block");
++#endif
+ 	scan->u.bmu_bitmap |= mask;
+ 
+ 	/*
+@@ -560,7 +600,11 @@
+ 	if (scan->u.bmu_avail == radix)
+ 		return;
+ 	if (scan->u.bmu_avail > radix)
++#if defined(__SCE__)
++		SCE_PANIC();
++#else
+ 		panic("blst_meta_free: freeing already free blocks (%d) %d/%d", count, scan->u.bmu_avail, radix);
++#endif
+ 
+ 	/*
+ 	 * Break the free down into its components
+@@ -580,7 +624,11 @@
+ 			v = count;
+ 
+ 		if (scan->bm_bighint == (daddr_t)-1)
++#if defined(__SCE__)
++			SCE_PANIC();
++#else
+ 			panic("blst_meta_free: freeing unexpected range");
++#endif
+ 
+ 		if (next_skip == 1)
+ 			blst_leaf_free(&scan[i], freeBlk, v);
+@@ -620,7 +668,7 @@
+ 			blist_free(dest, blk, count);
+ 		} else if (v != 0) {
+ #if !defined(__APPLE__)
+-			int i;
++			u_daddr_t i;
+ 
+ 			for (i = 0; i < BLIST_BMAP_RADIX && i < count; ++i)
+ 				if (v & (1 << i))

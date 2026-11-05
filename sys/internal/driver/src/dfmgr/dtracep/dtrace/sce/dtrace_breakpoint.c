@@ -168,7 +168,7 @@ void dtrace_action_sysbreak_sce(dtrace_ecb_t *ecb)
 }
 
 /* add a breakpoint behind the list's head */
-static inline void addElement(Element *element)
+static inline void _addElement(Element *element)
 {
 	SceKernelIntrStatus intr;
 	Element *next;
@@ -252,7 +252,7 @@ void dtrace_do_breakpoint(void)
 			element->addr = pc;
 			element->isThumb = 1;
 			element->insn = insn;
-			addElement(element);
+			_addElement(element);
 		}
 	} else {
 		bkpt.arm = BKPT_ARM;
@@ -267,7 +267,7 @@ void dtrace_do_breakpoint(void)
 			element->addr = pc;
 			element->isThumb = isThumb;
 			element->insn = insn;
-			addElement(element);
+			_addElement(element);
 		}
 	}
 	sceKernelL1IcacheInvalidateEntireAllCore();

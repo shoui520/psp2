@@ -7,9 +7,22 @@
 #include <stdint.h>
 
 typedef int32_t daddr_t;
-typedef uint32_t u_daddr_t;
+typedef unsigned int u_daddr_t;
 
 #define SWAPBLK_NONE	((daddr_t)-1)
+
+/*
+ * xnu's blist.h, with LOG2(16) and LOG2(32) as its LOG2() macro computes them.
+ * Sony's BLIST_BMAP_RADIX is an int (xnu's is sizeof(u_daddr_t) * 8): its
+ * blst_leaf_alloc compares count with it signed and knows 32 - count is not
+ * negative.
+ */
+#define BLIST_META_RADIX	16
+#define BLIST_META_RADIX_SHIFT	4
+#define BLIST_BMAP_RADIX	32
+#define BLIST_BMAP_RADIX_SHIFT	5
+
+#define BLIST_MAX_ALLOC		BLIST_BMAP_RADIX
 
 typedef struct blmeta {
 	union {
