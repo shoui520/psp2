@@ -2,6 +2,9 @@
  * SceDisplay: frame buffers of compatibility applications (PSP emulation,
  * titles that render below the native resolution). Included by display.c.
  */
+#pragma push_macro("__FILE_NAME__")
+#undef __FILE_NAME__
+#define __FILE_NAME__ "forcompat.c"
 
 /* Sony's name (debug record forcompat.c:64). */
 int setIftuFrameBufAddr(SceIftuPlaneState *state, SceUInt32 pitch, SceUInt32 width,
@@ -174,3 +177,5 @@ static int isHighResolutionTitle(void) /* name unknown */
 		return 1;
 	return strncmp(titleId, "PCSH00059", sizeof(titleId)) == 0;
 }
+
+#pragma pop_macro("__FILE_NAME__")

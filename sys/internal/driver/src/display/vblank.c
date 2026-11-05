@@ -79,7 +79,7 @@ static int sgiHandler(int intr_code, void *userCtx) /* name unknown */
 }
 
 /* Wait until count vblanks (or frame buffer changes) have passed on a head. */
-static __attribute__((noinline)) int waitVblank(SceUInt32 head, SceUInt32 count, SceUInt32 flags) /* name unknown */
+static inline __attribute__((always_inline)) int waitVblankInline(SceUInt32 head, SceUInt32 count, SceUInt32 flags) /* name unknown */
 {
 	DisplayVblankWait *wait;
 	DisplayProcessLocal *pls;
@@ -164,6 +164,11 @@ done:
 	return ret;
 }
 
+static __attribute__((noinline)) int waitVblank(SceUInt32 head, SceUInt32 count, SceUInt32 flags) /* name unknown */
+{
+	return waitVblankInline(head, count, flags);
+}
+
 /* Vblank subinterrupt of a DSI head. */
 static int vblankSubIntrHandler(void *subintrArg, void *userCtx, unsigned char priority) /* name unknown */
 {
@@ -204,6 +209,26 @@ static void vblankTimerHandler(SceSysTimerId timer, void *pUserData) /* name unk
 		*devStatus = (heads[1].vcount & ~0xff000000) | 0x11000000;
 	if (bits & (1 << startupHead))
 		sceKernelGenerateSoftIntr(8, 2, 0);
+}
+
+static __attribute__((noinline)) int waitVblankStart(SceUInt32 head, SceUInt32 count) /* name unknown */
+{
+	return waitVblankInline(head, count, 0);
+}
+
+static __attribute__((noinline)) int waitVblankStartCB(SceUInt32 head, SceUInt32 count) /* name unknown */
+{
+	return waitVblankInline(head, count, 1);
+}
+
+static __attribute__((noinline)) int waitSetFrameBuf(SceUInt32 head, SceUInt32 count) /* name unknown */
+{
+	return waitVblankInline(head, count, 2);
+}
+
+static __attribute__((noinline)) int waitSetFrameBufCB(SceUInt32 head, SceUInt32 count) /* name unknown */
+{
+	return waitVblankInline(head, count, 3);
 }
 
 static int sgiDisable(int intr_code, int subintr_code) /* name unknown */
@@ -385,62 +410,62 @@ int sceDisplayGetVcountInternalForUser(SceUInt32 head)
 
 int sceDisplayWaitVblankStartInternal(int head)
 {
-	return waitVblank(head, 1, 0);
+	return waitVblankStart(head, 1);
 }
 
 int SceDisplayForDriver_8F3C0E19(int head)
 {
-	return waitVblank(head, 1, 1);
+	return waitVblankStartCB(head, 1);
 }
 
 int SceDisplayForDriver_32287576(int head, unsigned int vcount)
 {
-	return waitVblank(head, vcount, 0);
+	return waitVblankStart(head, vcount);
 }
 
 int SceDisplayForDriver_61421AAF(int head, unsigned int vcount)
 {
-	return waitVblank(head, vcount, 1);
+	return waitVblankStartCB(head, vcount);
 }
 
 int sceDisplayWaitVblankStart(void)
 {
-	return waitVblank(primaryHead, 1, 0);
+	return waitVblankStart(primaryHead, 1);
 }
 
 int sceDisplayWaitVblankStartCB(void)
 {
-	return waitVblank(primaryHead, 1, 1);
+	return waitVblankStartCB(primaryHead, 1);
 }
 
 int sceDisplayWaitVblankStartForUser(void)
 {
-	return waitVblank(primaryHead, 1, 0);
+	return waitVblankStart(primaryHead, 1);
 }
 
 int sceDisplayWaitVblankStartCBForUser(void)
 {
-	return waitVblank(primaryHead, 1, 1);
+	return waitVblankStartCB(primaryHead, 1);
 }
 
 int sceDisplayWaitVblankStartMulti(unsigned int vcount)
 {
-	return waitVblank(primaryHead, vcount, 0);
+	return waitVblankStart(primaryHead, vcount);
 }
 
 int sceDisplayWaitVblankStartMultiCB(unsigned int vcount)
 {
-	return waitVblank(primaryHead, vcount, 1);
+	return waitVblankStartCB(primaryHead, vcount);
 }
 
 int sceDisplayWaitVblankStartMultiForUser(SceUInt32 vcount)
 {
-	return waitVblank(primaryHead, vcount, 0);
+	return waitVblankStart(primaryHead, vcount);
 }
 
 int sceDisplayWaitVblankStartMultiCBForUser(SceUInt32 vcount)
 {
-	return waitVblank(primaryHead, vcount, 1);
+	return waitVblankStartCB(primaryHead, vcount);
 }
 
 int SceDisplayForDriver_12A77662(SceUInt32 head, SceUInt32 plane)
@@ -465,42 +490,42 @@ int SceDisplayForDriver_6DC8F0F5(SceUInt32 head, SceUInt32 plane, SceUInt32 vcou
 
 int sceDisplayWaitSetFrameBuf(void)
 {
-	return waitVblank(primaryHead, 1, 2);
+	return waitSetFrameBuf(primaryHead, 1);
 }
 
 int sceDisplayWaitSetFrameBufCB(void)
 {
-	return waitVblank(primaryHead, 1, 3);
+	return waitSetFrameBufCB(primaryHead, 1);
 }
 
 int sceDisplayWaitSetFrameBufForUser(void)
 {
-	return waitVblank(primaryHead, 1, 2);
+	return waitSetFrameBuf(primaryHead, 1);
 }
 
 int sceDisplayWaitSetFrameBufCBForUser(void)
 {
-	return waitVblank(primaryHead, 1, 3);
+	return waitSetFrameBufCB(primaryHead, 1);
 }
 
 int sceDisplayWaitSetFrameBufMulti(unsigned int vcount)
 {
-	return waitVblank(primaryHead, vcount, 2);
+	return waitSetFrameBuf(primaryHead, vcount);
 }
 
 int sceDisplayWaitSetFrameBufMultiCB(unsigned int vcount)
 {
-	return waitVblank(primaryHead, vcount, 3);
+	return waitSetFrameBufCB(primaryHead, vcount);
 }
 
 int sceDisplayWaitSetFrameBufMultiForUser(SceUInt32 vcount)
 {
-	return waitVblank(primaryHead, vcount, 2);
+	return waitSetFrameBuf(primaryHead, vcount);
 }
 
 int sceDisplayWaitSetFrameBufMultiCBForUser(SceUInt32 vcount)
 {
-	return waitVblank(primaryHead, vcount, 3);
+	return waitSetFrameBufCB(primaryHead, vcount);
 }
 
 int SceDisplayForDriver_4AE2A2B1(int head, SceUID uid)
