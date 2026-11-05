@@ -74,16 +74,6 @@ _Static_assert(sizeof(SceUIDTimerObject) == 0x80, "SceUIDTimerObject size");
 #define UID_TIMER_FROM_PROCESS_LINK(link) \
 	((SceUIDTimerObject *)((uintptr_t)(link) - offsetof(SceUIDTimerObject, processLink)))
 
-/* SceThreadmgrForDriver_4A038803 (0x38) */
-typedef struct ThreadmgrAlarmInfo {
-	SceSize size;
-	SceUID alarmId;
-	char name[32];
-	uint64_t expiry;			/* 0x28 */
-	ThreadmgrAlarmHandler handler;		/* 0x30 */
-	void *arg;
-} ThreadmgrAlarmInfo;
-
 /* sceKernelGetTimerInfo, ksceKernelGetTimerInfo (0x60) */
 _Static_assert(sizeof(ThreadmgrAlarmInfo) == 0x38 && sizeof(SceKernelTimerInfo) == 0x60,
 	       "timer info sizes");

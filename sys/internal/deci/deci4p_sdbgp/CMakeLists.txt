@@ -20,6 +20,9 @@ psp2_module(os0_kd_deci4p_sdbgp KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	group_file.c
 	group_kernel.c
 	group_net.c
+	process.c
+	thread.c
+	sync.c
 	excp_info.c
 	testapi.c
 )
