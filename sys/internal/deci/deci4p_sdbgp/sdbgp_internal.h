@@ -185,7 +185,8 @@ typedef struct SdbgpSwbkptSetRequest {
 	SdbgpRequest header;
 	uint32_t reserved0;			/* 0x14 */
 	SceUID processId;			/* 0x18 */
-	uint32_t reserved1[2];			/* 0x1c */
+	uint32_t reserved1;			/* 0x1c */
+	SceUID threadId;			/* 0x20 */
 	uintptr_t address;			/* 0x24 */
 	uint32_t thumb;				/* 0x28 */
 	uint32_t attr;				/* 0x2c */
@@ -841,7 +842,10 @@ int KernelUtilsFixedHeapLeakCheck(void *ctx);
 int kernelUtility(int id);
 int NameHeapLogSaveCore(void);
 
-/* thread.c, sync.c */
+/* process.c, thread.c, sync.c */
+int sdbgpGetProcessStopInfo(SdbgpCpuState *cpu, uint32_t *out, SceUID pid);
+int sdbgpGetProcessStateFlags(SdbgpCpuState *cpu, SceUID pid, uint32_t *flags);
+int sdbgpResumeProcessThreads(SceUID pid, void *work);
 int sdbgpGetKernelWorkQueueInfo(SdbgpCpuState *cpu, void *reply,
 				ThreadmgrWorkQueueInfoFull *work, SceSize size, int kernelOnly);
 int sdbgpGetProcessWorkQueueInfo(SdbgpCpuState *cpu, void *reply,
@@ -895,6 +899,12 @@ int excpGetExcpStopReason(SdbgpCpuState *cpu, SdbgpExcpDetail *detail, uint32_t 
 
 /* trace.c */
 int traceInit(void);
+int sdbgpReadVfpSystemReg(uint32_t code, uint32_t *val, uintptr_t vfpCtx);
+int sdbgpReadDebugReg(uint32_t code, uint32_t *val, uintptr_t cpuCtx, SceUID pid);
+int sdbgpWriteVfpSystemReg(uint32_t code, uint32_t val, uintptr_t vfpCtx);
+int sdbgpWriteDebugReg(uint32_t code, uint32_t val, uintptr_t cpuCtx, SceUID pid);
+int sdbgpReadCp15Reg(uint32_t code, uint32_t *val, const uint32_t *cpuCtx, uint32_t excTtbr0);
+int sdbgpWriteCp15Reg(uint32_t code, uint32_t val, uint32_t *cpuCtx);
 
 /* the probe loads and stores (probe.S) the exception manager resumes */
 extern const char sdbgpProbeStart[], sdbgpProbeEnd[];
