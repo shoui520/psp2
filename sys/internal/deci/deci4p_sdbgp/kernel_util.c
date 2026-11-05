@@ -738,7 +738,7 @@ static int help(int cmd)
 	return 0;
 }
 
-static inline int FixedHeapCommonShow(SdbgpFixedHeapLeakCtx *ctx)
+static int FixedHeapCommonShow(SdbgpFixedHeapLeakCtx *ctx)
 {
 	uint32_t gen;
 
@@ -761,15 +761,16 @@ static inline int FixedHeapCommonShow(SdbgpFixedHeapLeakCtx *ctx)
 			}
 		}
 	}
-	ctx->gen++;
 	return 0;
 }
 
 /* 0x81007330 */
-static __attribute__((noinline)) int FixedHeapCommonLeakCheck(SdbgpFixedHeapLeakCtx *ctx)
+static int FixedHeapCommonLeakCheck(SdbgpFixedHeapLeakCtx *ctx)
 {
 	SCE_DBG_PRINTF_LEVEL(1, 11, 1386, "()\n");
-	return FixedHeapCommonShow(ctx);
+	FixedHeapCommonShow(ctx);
+	ctx->gen++;
+	return 0;
 }
 
 /* 0x810073c8 */
