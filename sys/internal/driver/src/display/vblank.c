@@ -97,9 +97,9 @@ static inline __attribute__((always_inline)) int waitVblankInline(SceUInt32 head
 		sceSyscallLeave(t);
 		return ret;
 	}
-	if (devStatus != NULL && head == primaryHead && sceKernelGetProcessId() == devOwnerPid) {
+	if (devStatus != 0 && head == primaryHead && sceKernelGetProcessId() == devOwnerPid) {
 		status = (flags & 3) << 16 | count;
-		*devStatus = status | 0x12000000;
+		*(SceUInt32 *)devStatus = status | 0x12000000;
 	} else {
 		status = 0;
 	}
@@ -121,8 +121,8 @@ static inline __attribute__((always_inline)) int waitVblankInline(SceUInt32 head
 		start = pls->frameBuf[head][(flags & 4) ? 1 : 0].vcountShown;
 		count--;
 		if (vcount + 1 != start && ((vcount - start) & 0xffff) >= count) {
-			if (devStatus != NULL && head == primaryHead && sceKernelGetProcessId() == devOwnerPid)
-				*devStatus = status | 0x13000000;
+			if (devStatus != 0 && head == primaryHead && sceKernelGetProcessId() == devOwnerPid)
+				*(SceUInt32 *)devStatus = status | 0x13000000;
 			sceSyscallLeave(t);
 			return 0;
 		}
@@ -131,35 +131,28 @@ static inline __attribute__((always_inline)) int waitVblankInline(SceUInt32 head
 	}
 
 	bits = (1 << head) | 8;
-	if (!(flags & 1)) {
+	if (flags & 1) {
 		do {
-			ret = sceKernelWaitEvent(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
+			ret = sceKernelWaitEventCB(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
 			if (ret < 0)
-				goto error;
+				break;
 			vcount = heads[head].vcount;
 		} while (((vcount - start) & 0xffff) < count);
 	} else {
 		do {
-			ret = sceKernelWaitEventCB(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
+			ret = sceKernelWaitEvent(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
 			if (ret < 0)
-				goto error;
+				break;
 			vcount = heads[head].vcount;
 		} while (((vcount - start) & 0xffff) < count);
 	}
-	if (!(flags & 2))
-		goto pop;
-	goto done;
-
-error:
 	if (!(flags & 2) && ret != SCE_KERNEL_ERROR_THREAD_SUSPENDED) {
-pop:
 		depth = --wait->depth;
 		if (depth < 7)
 			wait->vcount[depth][head] = vcount - base;
 	}
-done:
-	if (devStatus != NULL && head == primaryHead && sceKernelGetProcessId() == devOwnerPid)
-		*devStatus = status | 0x13000000;
+	if (devStatus != 0 && head == primaryHead && sceKernelGetProcessId() == devOwnerPid)
+		*(SceUInt32 *)devStatus = status | 0x13000000;
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -177,15 +170,15 @@ static int vblankSubIntrHandler(void *subintrArg, void *userCtx, unsigned char p
 
 	h->vcount++;
 	sceKernelPulseEventWithNotifyCallback(h->vblankEvent, bits, 0, 0);
-	if (devStatus != NULL && bits == 1)
-		*devStatus = (h->vcount & ~0xff000000) | 0x11000000;
+	if (devStatus != 0 && bits == 1)
+		*(SceUInt32 *)devStatus = (h->vcount & ~0xff000000) | 0x11000000;
 	if ((1 << startupHead) & bits)
 		sceKernelGenerateSoftIntr(8, 2, 0);
 	return -1;
 }
 
 /* System timer standing in for the vblank of heads without a running DSI link. */
-static void vblankTimerHandler(SceSysTimerId timer, void *pUserData) /* name unknown */
+static int vblankTimerHandler(SceSysTimerId timer, void *pUserData) /* name unknown */
 {
 	SceUInt32 bits = 8;
 
@@ -196,8 +189,8 @@ static void vblankTimerHandler(SceSysTimerId timer, void *pUserData) /* name unk
 		sceKernelPulseEventWithNotifyCallback(heads[0].vblankEvent, b, 0, 0);
 		bits = b | 8;
 	}
-	if (devStatus != NULL && primaryHead == 0)
-		*devStatus = (heads[0].vcount & ~0xff000000) | 0x11000000;
+	if (devStatus != 0 && primaryHead == 0)
+		*(SceUInt32 *)devStatus = (heads[0].vcount & ~0xff000000) | 0x11000000;
 	if (!heads[1].dsiEnabled) {
 		SceUInt32 b = heads[1].eventBits;
 
@@ -205,10 +198,11 @@ static void vblankTimerHandler(SceSysTimerId timer, void *pUserData) /* name unk
 		sceKernelPulseEventWithNotifyCallback(heads[1].vblankEvent, b, 0, 0);
 		bits |= b;
 	}
-	if (devStatus != NULL && primaryHead == 1)
-		*devStatus = (heads[1].vcount & ~0xff000000) | 0x11000000;
+	if (devStatus != 0 && primaryHead == 1)
+		*(SceUInt32 *)devStatus = (heads[1].vcount & ~0xff000000) | 0x11000000;
 	if (bits & (1 << startupHead))
 		sceKernelGenerateSoftIntr(8, 2, 0);
+	return 0;
 }
 
 static __attribute__((noinline)) int waitVblankStart(SceUInt32 head, SceUInt32 count) /* name unknown */
@@ -279,7 +273,7 @@ static inline __attribute__((always_inline)) void startVblankTimer(void) /* name
 	SceSysTimerId timer;
 
 	timer = sceKernelSysTimerAlloc(2);
-	if (timer < 0 || SceSystimerForDriver_CCCD1EE3(timer, vblankTimerHandler, 0xf, NULL) < 0
+	if (timer < 0 || SceSystimerForDriver_CCCD1EE3(timer, (SceSysTimerCallback)vblankTimerHandler, 0xf, NULL) < 0
 	    || SceSystimerForDriver_0450933B(timer, 0x10, 0) < 0
 	    || SceSystimerForDriver_A73351C1(timer, 0x6df92) < 0
 	    || SceSystimerForDriver_59EBD22D(timer) < 0)
@@ -367,13 +361,14 @@ int sceDisplayGetVcountInternal(int head)
 
 int sceDisplayGetVcount(void)
 {
-	SceUInt32 head = primaryHead;
 	DisplayProcessLocal *pls;
+	SceUInt32 head;
 	SceUInt32 vcount;
 	SceUInt32 t;
 	int ret;
 
 	t = sceSyscallEnter();
+	head = primaryHead;
 	if (head < 3) {
 		vcount = heads[head].vcount;
 		if (sceKernelIsUserModeThread() != 0

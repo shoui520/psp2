@@ -53,7 +53,7 @@ static inline __attribute__((always_inline)) int hdmiProbe(void) /* name unknown
 	return 1;
 }
 
-int _sceDisplaySetupHdmiTx(SceUInt32 vic, SceUInt32 pixelformat, SceUInt32 pixelSize) /* Sony's name (0.990 messages) */
+int _sceDisplaySetupHdmiTx(int vic, SceUInt32 pixelformat, int pixelSize) /* Sony's name (0.990 messages) */
 {
 	SceHdmiOutputMode mode;
 	int ret;

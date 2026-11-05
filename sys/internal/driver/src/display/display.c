@@ -36,7 +36,7 @@
 DisplayHead heads[DISPLAY_HEAD_COUNT];
 int hdmiOnly;				/* no main panel: head 0 drives HDMI */
 SceUID devOwnerPid;
-SceUInt32 *devStatus;
+SceUIntPtr devStatus;
 int primaryHead;
 int startupHead;
 int bootLogoShown;
@@ -543,7 +543,7 @@ static inline __attribute__((always_inline)) void releaseProcess(SceUID pid) /* 
 		}
 	}
 	if (devOwnerPid == pid) {
-		devStatus = NULL;
+		devStatus = 0;
 		devOwnerPid = -1;
 	}
 	if (pls != NULL && pls->frameEvent > 0) {
@@ -604,12 +604,11 @@ static int disableHead(SceUInt32 head) /* name unknown */
 		if (h->dsiEnabled) {
 			for (plane = 0; plane < DISPLAY_PLANE_COUNT; plane++)
 				clearPlane(head, plane);
-			ret = sceDsiStopDisplay(bus);
-			if (ret >= 0) {
+			if (sceDsiStopDisplay(bus) >= 0) {
 				sceKernelDelayThread(42000);
-				ret = sceDsiStopMaster(bus);
-				if (ret >= 0 && (ret = scePervasiveIftuDsiClkGateDisable(bus, 0xf)) >= 0
-				    && (ret = scePervasiveIftuDsiResetEnable(bus, 7)) >= 0) {
+				if (sceDsiStopMaster(bus) >= 0
+				    && scePervasiveIftuDsiClkGateDisable(bus, 0xf) >= 0
+				    && scePervasiveIftuDsiResetEnable(bus, 7) >= 0) {
 					ScePervasiveForDriver_91C80C41(bus, 0);
 					h->dsiEnabled = 0;
 				}
@@ -617,7 +616,7 @@ static int disableHead(SceUInt32 head) /* name unknown */
 		}
 	}
 	h->enabled = 0;
-	return ret;
+	return 0;
 }
 
 /* Power a head up and put the planes' owners' frame buffers back on it. */
@@ -864,7 +863,7 @@ int displayInit(void) /* name unknown */
 
 	memset(heads, 0, sizeof(heads));
 	autoOwner = 1;
-	devStatus = NULL;
+	devStatus = 0;
 	devOwnerPid = -1;
 	SceSysrootForDriver_46E72428(hardwareFlags);
 	hdmiOnly = 0;
@@ -1175,12 +1174,11 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 {
 	DisplayProcessLocal *pls;
 	DisplayFrameBufRecord *rec;
-	SceIftuPlaneState state;
-	SceIftuFrameBuf dst;
+	SceIftuPlaneState state, dst;
 	SceIftuConvParams conv;
 	SceUIntPtr paddr, dstPaddr, base;
 	SceUInt32 pitch, pixelformat, width, height, resolution, size, iftuFormat;
-	SceUInt32 vcount, flags;
+	SceUInt32 vcount, flags, maxShift;
 	int head, shift, ret;
 	SceUInt32 t;
 
@@ -1223,21 +1221,19 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 			goto unlock;
 		}
 		if (pixelformat == 0) {
+			maxShift = 11;
 			shift = 2;
 			iftuFormat = 0x10;
-			if ((pitch - width) >> 11) {
-				ret = SCE_DISPLAY_ERROR_INVALID_PITCH;
-				goto unlock;
-			}
 		} else if (pixelformat == 0x50000000) {
+			maxShift = 12;
 			shift = 1;
 			iftuFormat = 4;
-			if ((pitch - width) >> 12) {
-				ret = SCE_DISPLAY_ERROR_INVALID_PITCH;
-				goto unlock;
-			}
 		} else {
 			ret = SCE_DISPLAY_ERROR_INVALID_PIXELFORMAT;
+			goto unlock;
+		}
+		if ((pitch - width) >> maxShift) {
+			ret = SCE_DISPLAY_ERROR_INVALID_PITCH;
 			goto unlock;
 		}
 		size = (pitch * ((height + 7) & ~7)) << shift;
@@ -1245,7 +1241,7 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 			ret = SCE_DISPLAY_ERROR_INVALID_VALUE;
 			goto unlock;
 		}
-		ret = framebufPaddr(base, size, 0x8000000, &paddr);
+		ret = framebufPaddr(base, size, 0x20000000, &paddr);
 		if (ret < 0)
 			goto unlock;
 	}
@@ -1272,7 +1268,8 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 				rec->frameBuf = *pParam;
 				rec->resolution = resolution;
 			} else {
-				memcpy(rec, pParam, DISPLAY_FRAMEBUF_PARAM_SIZE);
+				rec->frameBuf = *pParam;
+				rec->resolution = ((const DisplayFrameBufParam *)pParam)->resolution;
 			}
 		}
 		rec->cropHeight = cropHeight - 1;
@@ -1300,19 +1297,19 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 			ret = SCE_DISPLAY_ERROR_INVALID_VALUE;
 			goto unlockRange;
 		}
-		ret = framebufPaddr((SceUIntPtr)convDst->base, size, 0x8000000, &dstPaddr);
+		ret = framebufPaddr((SceUIntPtr)convDst->base, size, 0x20000000, &dstPaddr);
 		if (ret < 0)
 			goto unlockRange;
 		sceKernelDcacheCleanInvalidateRange(convDst->base, size);
-		memset(&dst, 0, sizeof(dst));
-		dst.pixelformat = 0x10;
-		dst.width = convDst->width;
-		dst.height = convDst->height;
-		dst.leftover_stride = (convDst->pitch - convDst->width) * 4;
-		dst.paddr0 = dstPaddr;
-		memset(&conv, 0, sizeof(conv));
+		dst.fb.pixelformat = 0x10;
+		dst.fb.width = convDst->width;
+		dst.fb.height = convDst->height;
+		dst.fb.leftover_stride = (convDst->pitch - convDst->width) * 4;
+		dst.fb.paddr0 = dstPaddr;
+		dst.sourceConfig[0] = 0;
+		__builtin_memset(&conv, 0, sizeof(conv));
 		conv.filterMode = (resolution >> 20) & 1;
-		ret = sceIftuConvert(&dst, &state, &conv);
+		ret = sceIftuConvert(&dst.fb, &state, &conv);
 		sceKernelDcacheInvalidateRange(convDst->base, size);
 		sceKernelUnlockRangeWithMode(0x30, convDst->base, size);
 		sceKernelUnlockFastMutex(&mutex);
@@ -1754,7 +1751,7 @@ void SceDisplayForDriver_086DEFB6(SceUInt32 *status, SceUID pid)
 		return;
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	devStatus = status;
+	devStatus = (SceUIntPtr)status;
 	devOwnerPid = pid;
 }
 
@@ -1984,8 +1981,8 @@ notify:
 	sceKernelUnlockFastMutex(&mutex);
 	if (pls->frameEvent > 0)
 		sceKernelPulseEvent(pls->frameEvent, h->eventBits, 0);
-	if (devStatus != NULL && head == primaryHead && sceKernelGetProcessId() == devOwnerPid)
-		*devStatus = sync == 1 ? 0x10800000 : 0x10000000;
+	if (devStatus != 0 && head == primaryHead && sceKernelGetProcessId() == devOwnerPid)
+		*(SceUInt32 *)devStatus = sync == 1 ? 0x10800000 : 0x10000000;
 	if (pParam != NULL && rec->notified == 0) {
 		callback = h->frameBufCallback;
 		rec->notified = 1;
@@ -2169,8 +2166,7 @@ static inline __attribute__((always_inline)) int captureFrameBufIftu(SceUID pid,
 {
 	DisplayProcessLocal *pls;
 	DisplayFrameBufRecord *rec;
-	SceIftuPlaneState src;
-	SceIftuFrameBuf dst;
+	SceIftuPlaneState src, dst;
 	SceUIntPtr base, paddr;
 	SceUInt32 iftuFormat, size, mode, pitch, width, height, alignedWidth, alignedHeight;
 	int ret;
@@ -2226,11 +2222,12 @@ static inline __attribute__((always_inline)) int captureFrameBufIftu(SceUID pid,
 	ret = framebufPaddr(base, size, 0x20000000, &paddr);
 	if (ret < 0)
 		goto unlockRange;
-	dst.pixelformat = iftuFormat;
-	dst.width = fb->width;
-	dst.height = fb->height;
-	dst.leftover_stride = (fb->pitch - fb->width) * 4;
-	dst.paddr0 = paddr;
+	dst.fb.pixelformat = iftuFormat;
+	dst.fb.width = fb->width;
+	dst.fb.height = fb->height;
+	dst.fb.leftover_stride = (fb->pitch - fb->width) * 4;
+	dst.fb.paddr0 = paddr;
+	dst.sourceConfig[0] = 0;
 	sceKernelDcacheInvalidateRange(fb->base, size);
 	ret = sceGUIDReferObject(pid, NULL);
 	if (ret < 0)
@@ -2290,7 +2287,7 @@ static inline __attribute__((always_inline)) int captureFrameBufIftu(SceUID pid,
 	}
 	src.sampleX = 0;
 	src.sampleY = 0;
-	ret = sceIftuConvert(&dst, &src, NULL);
+	ret = sceIftuConvert(&dst.fb, &src, NULL);
 	if (ret < 0)
 		goto release;
 	sceGUIDReleaseObject(pid);

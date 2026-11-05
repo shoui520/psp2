@@ -145,7 +145,7 @@ typedef struct DisplayHdmiState {
 extern DisplayHead heads[DISPLAY_HEAD_COUNT];
 extern int hdmiOnly;
 extern SceUID devOwnerPid;
-extern SceUInt32 *devStatus;
+extern SceUIntPtr devStatus;
 extern int primaryHead;
 extern int startupHead;
 extern int bootLogoShown;
@@ -186,5 +186,5 @@ int lcdSetColorSpaceMode(int mode);
 
 /* hdmi.c */
 int hdmiInit(void);
-int _sceDisplaySetupHdmiTx(SceUInt32 vic, SceUInt32 pixelformat, SceUInt32 pixelSize);
+int _sceDisplaySetupHdmiTx(int vic, SceUInt32 pixelformat, int pixelSize);
 int _sceDisplaySetHdmiTxMute(int mute);
