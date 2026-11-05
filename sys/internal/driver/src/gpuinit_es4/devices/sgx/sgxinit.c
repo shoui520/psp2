@@ -2,7 +2,7 @@
  * SceGpuEs4Init: the SGX init server. For each SGX device it allocates the
  * microkernel's control blocks and buffers, loads and links its programs,
  * builds the register scripts and hands everything to SceGpuEs4
- * (DevInitSGXPart2KM); then it finishes the services' initialisation.
+ * (DevInitSGXPart2KM). common/srvinit.c runs it for every SGX device.
  */
 
 #include <modulemgr/modulemgr.h>
@@ -68,8 +68,6 @@ typedef struct SgxInitHeaps {
 	PVRSRV_HEAP_INFO *perfmon;
 	PVRSRV_HEAP_INFO *pdsPixel;
 } SgxInitHeaps;
-
-static SceKernelModuleInfo moduleInfo __attribute__((aligned(16)));
 
 SGX_INIT_COMMAND *nextScriptCommand(SgxScriptBuild *script) /* name unknown */
 {
@@ -153,7 +151,6 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	SceKernelAllocMemBlockKernelOpt opt;
 	IMG_UINT32 *bookmark = NULL;
 	GpuHeap *gpuHeap;
-	GpuMmuContext *context;
 	unsigned perfmon;
 	SceUInt32 flags;
 	SceUID uid;
@@ -188,13 +185,12 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 		flags = 0;
 	}
 	gpuHeap = heap->hDevMemHeap;
-	context = &gpuHeap->memoryContext->mmu;
-	ret = sceGpuMmuMapMemory(context, SGX_PERFMON_USER_VADDR, perfmon, SGX_PERFMON_PAGE_SIZE, flags);
+	ret = sceGpuMmuMapMemory(&gpuHeap->memoryContext->mmu, SGX_PERFMON_USER_VADDR, perfmon, SGX_PERFMON_PAGE_SIZE, flags);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 5369, "%s: Failed to map user-land Perfmon registers with error %08x.\n", __func__, ret);
 		goto unmap;
 	}
-	ret = sceGpuMmuMapMemory(context, SGX_PERFMON_KERNEL_VADDR,
+	ret = sceGpuMmuMapMemory(&gpuHeap->memoryContext->mmu, SGX_PERFMON_KERNEL_VADDR,
 				  perfmon + SGX_PERFMON_PAGE_SIZE, SGX_PERFMON_PAGE_SIZE, flags | 0x10);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 5377, "%s: Failed to map kernel-land Perfmon registers with error %08x.\n", __func__, ret);
@@ -204,23 +200,22 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	flags = 0;
 	if (SceSblAIMgrForDriver_274663A0() && SceSblACMgrForDriver_E87D1777())
 		flags = 8;
-	ret = sceGpuMmuMapMemory(context, SGX_BOOKMARK_VADDR, (unsigned)bookmark, SGX_BOOKMARK_SIZE, flags);
+	ret = sceGpuMmuMapMemory(&gpuHeap->memoryContext->mmu, SGX_BOOKMARK_VADDR, (unsigned)bookmark, SGX_BOOKMARK_SIZE, flags);
 	if (ret >= 0)
 		return;
 	SCE_DBG_PRINTF(0, 5388, "%s: Failed to map 32K for GPU Bookmark emit workaround with error %08x.\n", __func__, ret);
 unmap:
-	sceGpuMmuUnmapMemory(context, SGX_PERFMON_USER_VADDR, SGX_PERFMON_PAGE_SIZE);
-	sceGpuMmuUnmapMemory(context, SGX_PERFMON_KERNEL_VADDR, SGX_PERFMON_PAGE_SIZE);
-	sceGpuMmuUnmapMemory(context, SGX_BOOKMARK_VADDR, SGX_BOOKMARK_SIZE);
+	sceGpuMmuUnmapMemory(&gpuHeap->memoryContext->mmu, SGX_PERFMON_USER_VADDR, SGX_PERFMON_PAGE_SIZE);
+	sceGpuMmuUnmapMemory(&gpuHeap->memoryContext->mmu, SGX_PERFMON_KERNEL_VADDR, SGX_PERFMON_PAGE_SIZE);
+	sceGpuMmuUnmapMemory(&gpuHeap->memoryContext->mmu, SGX_BOOKMARK_VADDR, SGX_BOOKMARK_SIZE);
 free:
 	sceKernelFreeMemBlock(uid);
 }
 
 PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
-								  const PVRSRV_DEVICE_IDENTIFIER *devId)
+				  const PVRSRV_DEVICE_IDENTIFIER *devId)
 {
-	static const IMG_UINT32 cores[] = {0, 2, 4, 6};
-	IMG_HANDLE device;
+	IMG_HANDLE device, codeHeap;
 	SgxInitHeaps heaps;
 	SGX_BRIDGE_INFO_FOR_SRVINIT *info;
 	SGX_BRIDGE_INIT_INFO *init;
@@ -235,7 +230,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 	IMG_UINT32 startUSE;			/* program6 */
 	IMG_UINT32 entryUSE[4];			/* program6, then program7 */
 	IMG_UINT32 *program, *data;
-	IMG_UINT32 pixelPDSExec, corePDSExec, coreMask, revision, i;
+	IMG_UINT32 pixelPDSExec, corePDSExec, coreMask, revision, address, i;
 	PVRSRV_ERROR ret;
 
 	ret = PVRSRVAcquireDeviceDataKM(devId->ui32DeviceIndex, PVRSRV_DEVICE_TYPE_UNKNOWN, &device);
@@ -362,16 +357,16 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 				    &init->hKernel3DSigBufferMemInfo);
 	if (ret != PVRSRV_OK)
 		goto freeInit;
-	data = init->hKernelTASigBufferMemInfo->pvLinAddrKM;
-	data[0] = 4;
-	data[1] = 0;
-	data[2] = 0x900;
-	data[3] = 0x904;
-	data[4] = 0x908;
-	data[5] = 0x90c;
+	program = init->hKernelTASigBufferMemInfo->pvLinAddrKM;
 	data = init->hKernel3DSigBufferMemInfo->pvLinAddrKM;
+	program[0] = 4;
+	program[1] = 0;
 	data[0] = 7;
 	data[1] = 0;
+	program[2] = 0x900;
+	program[3] = 0x904;
+	program[4] = 0x908;
+	program[5] = 0x90c;
 	data[2] = 0x910;
 	data[3] = 0x914;
 	data[4] = 0x918;
@@ -396,7 +391,8 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 	/* the microkernel and its PDS programs, in the kernel code heap */
 	startUSE = 0;
 	entryUSE[0] = entryUSE[1] = entryUSE[2] = entryUSE[3] = 0;
-	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+	codeHeap = heaps.kernelCode->hDevMemHeap;
+	if (_PVRSRVAllocDeviceMemKM(device, process, codeHeap, SGX_KERNEL_CODE_ATTRIBS,
 				   sizeof(program0), 8, 1, &microkernel) != PVRSRV_OK)
 		goto allocFail;
 	OSMemCopy(microkernel->pvLinAddrKM, program0, sizeof(program0));
@@ -421,19 +417,18 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 		goto allocFail;
 	mem = init->hKernelProgramMemInfo[2];
 	OSMemCopy(mem->pvLinAddrKM, program2, sizeof(program2));
-	data = mem->pvLinAddrKM;
-	data[8] = doutu[0];
-	data[9] = doutu[1];
-	data[2] = doutu[2];
-	data[0] = 0;
-	data[1] = 0x100;
-	data[4] = init->hKernelSGXTA3DCtlMemInfo->sDevVAddr.uiAddr;
-	data[5] = 0x200;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[8] = doutu[0];
+	((IMG_UINT32 *)mem->pvLinAddrKM)[9] = doutu[1];
+	((IMG_UINT32 *)mem->pvLinAddrKM)[2] = doutu[2];
+	((IMG_UINT32 *)mem->pvLinAddrKM)[0] = 0;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[1] = 0x100;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[4] = init->hKernelSGXTA3DCtlMemInfo->sDevVAddr.uiAddr;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[5] = 0x200;
 	pixelPDSExec = mem->sDevVAddr.uiAddr & 0xfffffff0;
 
 	/* a failure here does not stop the programs that follow */
 	eventUSE[0] = eventUSE[1] = eventUSE[2] = 0;
-	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, codeHeap, SGX_KERNEL_CODE_ATTRIBS,
 				   sizeof(program3), 0x10, 1, &init->hKernelProgramMemInfo[3]) == PVRSRV_OK) {
 		data = init->hKernelProgramMemInfo[3]->pvLinAddrKM;
 		OSMemCopy(data, program3, sizeof(program3));
@@ -442,7 +437,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 		data[0] = eventUSE[0] | 0x8000000;
 		data[1] = 1;
 		data[2] = 0;
-		if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+		if (_PVRSRVAllocDeviceMemKM(device, process, codeHeap, SGX_KERNEL_CODE_ATTRIBS,
 					   sizeof(program4), 0x10, 1, &init->hKernelProgramMemInfo[4]) == PVRSRV_OK) {
 			data = init->hKernelProgramMemInfo[4]->pvLinAddrKM;
 			OSMemCopy(data, program4, sizeof(program4));
@@ -453,7 +448,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 			data[4] = eventUSE[1];
 			data[5] = 1;
 			data[2] = 0;
-			if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap,
+			if (_PVRSRVAllocDeviceMemKM(device, process, codeHeap,
 						   SGX_KERNEL_CODE_ATTRIBS, sizeof(program5), 0x10, 1,
 						   &init->hKernelProgramMemInfo[5]) == PVRSRV_OK) {
 				data = init->hKernelProgramMemInfo[5]->pvLinAddrKM;
@@ -467,19 +462,18 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 		}
 	}
 
-	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, codeHeap, SGX_KERNEL_CODE_ATTRIBS,
 				   sizeof(program6), 0x10, 1, &init->hKernelProgramMemInfo[6]) != PVRSRV_OK)
 		goto allocFail;
 	mem = init->hKernelProgramMemInfo[6];
 	OSMemCopy(mem->pvLinAddrKM, program6, sizeof(program6));
 	setUSEExecutionAddress(&startUSE, microkernel->sDevVAddr.uiAddr + 0x30,
 			       heaps.kernelCode->sDevVAddrBase.uiAddr);
-	data = mem->pvLinAddrKM;
-	data[0] = 0;
-	data[1] = 0x100;
-	data[4] = 1;
-	data[5] = 0;
-	data[10] = startUSE | 0x8000000;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[0] = 0;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[1] = 0x100;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[4] = 1;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[5] = 0;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[10] = startUSE | 0x8000000;
 	setUSEExecutionAddress(&entryUSE[0], microkernel->sDevVAddr.uiAddr + 0x3580,
 			       heaps.kernelCode->sDevVAddrBase.uiAddr);
 	setUSEExecutionAddress(&entryUSE[1], microkernel->sDevVAddr.uiAddr + 0x8ff0,
@@ -488,10 +482,10 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 			       heaps.kernelCode->sDevVAddrBase.uiAddr);
 	setUSEExecutionAddress(&entryUSE[3], microkernel->sDevVAddr.uiAddr + 0xecf0,
 			       heaps.kernelCode->sDevVAddrBase.uiAddr);
-	data[6] = entryUSE[0] | 0x8000000;
-	data[7] = entryUSE[1] | 0x8000000;
-	data[3] = entryUSE[2] | 0x8000000;
-	data[2] = entryUSE[3] | 0x8000000;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[6] = entryUSE[0] | 0x8000000;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[7] = entryUSE[1] | 0x8000000;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[3] = entryUSE[2] | 0x8000000;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[2] = entryUSE[3] | 0x8000000;
 
 	entryUSE[0] = entryUSE[1] = entryUSE[2] = entryUSE[3] = 0;
 	setUSEExecutionAddress(&entryUSE[0], microkernel->sDevVAddr.uiAddr + 0x3610,
@@ -502,36 +496,43 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 			       heaps.kernelCode->sDevVAddrBase.uiAddr);
 	setUSEExecutionAddress(&entryUSE[3], microkernel->sDevVAddr.uiAddr + 0xed60,
 			       heaps.kernelCode->sDevVAddrBase.uiAddr);
-	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, codeHeap, SGX_KERNEL_CODE_ATTRIBS,
 				   sizeof(program7), 0x10, 1, &init->hKernelProgramMemInfo[7]) != PVRSRV_OK)
 		goto allocFail;
 	mem = init->hKernelProgramMemInfo[7];
 	OSMemCopy(mem->pvLinAddrKM, program7, sizeof(program7));
+	((IMG_UINT32 *)mem->pvLinAddrKM)[0] = 0;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[6] = 0x240100;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[3] = 0x8000f;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[4] = entryUSE[2] | 0x8000000;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[8] = entryUSE[0] | 0x8000000;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[16] = entryUSE[1] | 0x8000000;
 	data = mem->pvLinAddrKM;
-	data[0] = 0;
-	data[6] = 0x240100;
-	data[3] = 0x8000f;
-	data[4] = entryUSE[2] | 0x8000000;
-	data[8] = entryUSE[0] | 0x8000000;
-	data[16] = entryUSE[1] | 0x8000000;
-	data[5] = data[9] = data[13] = data[17] = 1;
-	data[2] = 0;
-	data[12] = entryUSE[3] | 0x8000000;
-	data[7] = 0x420000;
+	data[5] = 1;
+	data[9] = 1;
+	data[13] = 1;
+	data[17] = 1;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[2] = 0;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[12] = entryUSE[3] | 0x8000000;
+	((IMG_UINT32 *)mem->pvLinAddrKM)[7] = 0x420000;
 
 	/* link the microkernel to its PDS programs */
-	program = microkernel->pvLinAddrKM;
-	patchUSEImmediate(&program[0x79b8 / 4], 0x2800900);
-	patchUSEImmediate(&program[0x79d0 / 4], init->hKernelProgramMemInfo[7]->sDevVAddr.uiAddr >> 4);
-	patchUSEImmediate(&program[0x7500 / 4], 0x2800900);
-	patchUSEImmediate(&program[0x7510 / 4], init->hKernelProgramMemInfo[7]->sDevVAddr.uiAddr >> 4);
-	patchUSEImmediate(&program[0xd10 / 4], 0x1001000);
-	patchUSEImmediate(&program[0xd20 / 4], init->hKernelProgramMemInfo[4]->sDevVAddr.uiAddr >> 4);
-	patchUSEImmediate(&program[0xd28 / 4], init->hKernelSGXTA3DCtlMemInfo->sDevVAddr.uiAddr);
-	patchUSEImmediate(&program[0xd68 / 4], 0x800900);
-	patchUSEImmediate(&program[0xd70 / 4], init->hKernelProgramMemInfo[5]->sDevVAddr.uiAddr >> 4);
-	patchUSEImmediate(&program[0xdf0 / 4], init->hKernelProgramMemInfo[6]->sDevVAddr.uiAddr & 0xfffffff0);
-	patchUSEImmediate(&program[0xe00 / 4], 6);
+#define MICROKERNEL(offset)	((IMG_UINT32 *)microkernel->pvLinAddrKM + (offset) / 4)
+	address = mem->sDevVAddr.uiAddr;
+	patchUSEImmediate(MICROKERNEL(0x79b8), 0x2800900);
+	patchUSEImmediate(MICROKERNEL(0x79d0), address >> 4);
+	patchUSEImmediate(MICROKERNEL(0x7500), 0x2800900);
+	patchUSEImmediate(MICROKERNEL(0x7510), address >> 4);
+	address = init->hKernelProgramMemInfo[4]->sDevVAddr.uiAddr;
+	patchUSEImmediate(MICROKERNEL(0xd10), 0x1001000);
+	patchUSEImmediate(MICROKERNEL(0xd20), address >> 4);
+	patchUSEImmediate(MICROKERNEL(0xd28), init->hKernelSGXTA3DCtlMemInfo->sDevVAddr.uiAddr);
+	address = init->hKernelProgramMemInfo[5]->sDevVAddr.uiAddr;
+	patchUSEImmediate(MICROKERNEL(0xd68), 0x800900);
+	patchUSEImmediate(MICROKERNEL(0xd70), address >> 4);
+	patchUSEImmediate(MICROKERNEL(0xdf0), init->hKernelProgramMemInfo[6]->sDevVAddr.uiAddr & 0xfffffff0);
+	patchUSEImmediate(MICROKERNEL(0xe00), 6);
+#undef MICROKERNEL
 
 	/* the clear clip workaround (BRN31542); Sony ignores these failures */
 	allocKernelDataZeroed(device, process, heaps.kernelData, 0x80, 0x80,
@@ -557,18 +558,24 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 	allocKernelBufferZeroed(device, process, heaps.kernelData, 0xc000, 0x1000,
 				&init->hKernelClearClipWAPSGRgnHdrMemInfo);
 
-	data = init->hKernelClearClipWAVDMStreamMemInfo->pvLinAddrKM;
-	data[0] |= init->hKernelClearClipWAPDSMemInfo->sDevVAddr.uiAddr >> 4;
-	data[5] |= (init->hKernelClearClipWAPDSMemInfo->sDevVAddr.uiAddr + 0x50) >> 4;
-	data[7] |= (init->hKernelClearClipWAPDSMemInfo->sDevVAddr.uiAddr + 0xa0) >> 4;
-	data[3] |= init->hKernelClearClipWAIndexStreamMemInfo->sDevVAddr.uiAddr;
-	data = init->hKernelClearClipWAPDSMemInfo->pvLinAddrKM;
-	data[8] = (((init->hKernelClearClipWAUSEMemInfo->sDevVAddr.uiAddr >> 3) & 0xfffff) << 4) | 0x100000e;
-	data[28] = ((((init->hKernelClearClipWAUSEMemInfo->sDevVAddr.uiAddr + 0x80) >> 3) & 0xfffff) << 4) | 0x100000e;
-	data[48] = ((((init->hKernelClearClipWAUSEMemInfo->sDevVAddr.uiAddr + 0x118) >> 3) & 0xfffff) << 4) | 0x100000e;
-	program = init->hKernelProgramMemInfo[0]->pvLinAddrKM;
-	patchUSEImmediate(&program[0xf30 / 4], init->hKernelClearClipWAUSEMemInfo->sDevVAddr.uiAddr >> 23 << 23);
-	patchUSEImmediate(&program[0x1058 / 4], init->hKernelClearClipWAPSGRgnHdrMemInfo->sDevVAddr.uiAddr);
+#define VDM_STREAM(i)	((IMG_UINT32 *)init->hKernelClearClipWAVDMStreamMemInfo->pvLinAddrKM)[i]
+#define PDS(i)		((IMG_UINT32 *)init->hKernelClearClipWAPDSMemInfo->pvLinAddrKM)[i]
+#define PDS_DOUTU(offset) \
+	(((((init->hKernelClearClipWAUSEMemInfo->sDevVAddr.uiAddr + (offset)) >> 3) & 0xfffff) << 4) | 0x100000e)
+	VDM_STREAM(0) |= init->hKernelClearClipWAPDSMemInfo->sDevVAddr.uiAddr >> 4;
+	VDM_STREAM(5) |= (init->hKernelClearClipWAPDSMemInfo->sDevVAddr.uiAddr + 0x50) >> 4;
+	VDM_STREAM(7) |= (init->hKernelClearClipWAPDSMemInfo->sDevVAddr.uiAddr + 0xa0) >> 4;
+	VDM_STREAM(3) |= init->hKernelClearClipWAIndexStreamMemInfo->sDevVAddr.uiAddr;
+	PDS(8) = PDS_DOUTU(0);
+	PDS(28) = PDS_DOUTU(0x80);
+	PDS(48) = PDS_DOUTU(0x118);
+#undef PDS_DOUTU
+#undef PDS
+#undef VDM_STREAM
+	patchUSEImmediate((IMG_UINT32 *)init->hKernelProgramMemInfo[0]->pvLinAddrKM + 0xf30 / 4,
+			  init->hKernelClearClipWAUSEMemInfo->sDevVAddr.uiAddr >> 23 << 23);
+	patchUSEImmediate((IMG_UINT32 *)init->hKernelProgramMemInfo[0]->pvLinAddrKM + 0x1058 / 4,
+			  init->hKernelClearClipWAPSGRgnHdrMemInfo->sDevVAddr.uiAddr);
 
 	corePDSExec = init->hKernelProgramMemInfo[3]->sDevVAddr.uiAddr & 0xfffffff0;
 	revision = ScePervasiveForDriver_714EEFB7();
@@ -579,9 +586,13 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 	/* part 1: enable the cores and their clocks */
 	scriptWriteSGXReg(&part1, EUR_CR_MASTER_CORE, 3);
 	scriptWriteSGXReg(&part1, 0x4020, 0x2a9);
-	coreMask = 0;
-	for (i = 0; i < 4; i++)
-		coreMask |= 2 << cores[i];
+	{
+		IMG_UINT32 cores[] = {0, 2, 4, 6};
+
+		coreMask = 0;
+		for (i = 0; i < 4; i++)
+			coreMask |= 2 << cores[i];
+	}
 	scriptWriteSGXReg(&part1, 0x4004, coreMask);
 	command = nextScriptCommand(&part1);
 	if (!command)
@@ -676,59 +687,4 @@ freeInit:
 freeInfo:
 	OSFreeMem(info);
 	return ret;
-}
-
-int module_start(SceSize args, void *argp)
-{
-	static const char fallbackName[] = "SceGpuInit";
-	PVRSRV_DEVICE_IDENTIFIER devId;
-	PVRSRV_PER_PROCESS_DATA *process;
-	IMG_UINT32 count, pid, i;
-	PVRSRV_ERROR ret, final;
-
-	if (SceModulemgrForDriver_1D9E0F7E((SceUInt32)&moduleInfo, &moduleInfo) < 0) {
-		for (i = 0; i < sizeof(fallbackName); i++)
-			moduleInfo.module_name[i] = fallbackName[i];
-	}
-	if (!OSProcHasPrivSrvInit() ||
-	    PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_RUNNING) ||
-	    PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_RAN))
-		return PVRSRV_ERROR_INIT_FAILURE;
-
-	pid = OSGetCurrentProcessIDKM();
-	ret = PVRSRVPerProcessDataConnect(pid, 0);
-	if (ret != PVRSRV_OK) {
-		SceDebugForDriver_391B74B7("%s: Error %08x with %s\n", "SrvInit", ret, "PVRSRVPerProcessDataConnect");
-		return SCE_KERNEL_START_NO_RESIDENT;
-	}
-	process = PVRSRVPerProcessData(pid);
-	if (!process) {
-		SceDebugForDriver_391B74B7("%s: Failed to get process data\n", "SrvInit");
-		ret = PVRSRV_ERROR_INVALID_PERPROC;
-	} else {
-		process->bInitProcess = IMG_TRUE;
-		ret = PVRSRVEnumerateDevicesKM(&count, &devId);
-		if (ret != PVRSRV_OK) {
-			PVRSRVPerProcessDataDisconnect(pid);
-			SceDebugForDriver_391B74B7("%s: Error %08x with %s\n", "SrvInit", ret, "PVRSRVEnumerateDevicesKM");
-		} else {
-			for (i = 0; i < count; i++) {
-				const PVRSRV_DEVICE_IDENTIFIER *dev = &devId + i;
-
-				if (dev->eDeviceClass != PVRSRV_DEVICE_CLASS_3D ||
-				    dev->eDeviceType != PVRSRV_DEVICE_TYPE_SGX)
-					continue;
-				ret = SGXInitialisePart2KM(process, dev);
-				if (ret != PVRSRV_OK)
-					break;
-			}
-		}
-	}
-	/* Sony clears it even when there is no process data */
-	process->bInitProcess = IMG_FALSE;
-	PVRSRVSetInitServerState(PVRSRV_INIT_SERVER_RUNNING, IMG_FALSE);
-	PVRSRVSetInitServerState(PVRSRV_INIT_SERVER_RAN, IMG_TRUE);
-	final = PVRSRVFinaliseSystem(ret == PVRSRV_OK);
-	PVRSRVSetInitServerState(PVRSRV_INIT_SERVER_SUCCESSFUL, final == PVRSRV_OK && ret == PVRSRV_OK);
-	return final != PVRSRV_OK ? SCE_KERNEL_START_FAILED : SCE_KERNEL_START_NO_RESIDENT;
 }

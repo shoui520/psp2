@@ -13,3 +13,10 @@
 #include <gpu/sgxinit_sce.h>
 #include <lowio/pervasive.h>
 #include <modulemgr/modulemgr.h>
+
+/* the module's own name, for messages (common/srvinit.c) */
+extern SceKernelModuleInfo moduleInfo;
+
+/* devices/sgx/sgxinit.c */
+PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
+				  const PVRSRV_DEVICE_IDENTIFIER *devId);

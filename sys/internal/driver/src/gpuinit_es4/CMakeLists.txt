@@ -1,4 +1,5 @@
 psp2_module(os0_kd_bootimage_gpuinit_es4 KIND kernel COMPILER gcc48 SOURCES
+	common/srvinit.c
 	devices/sgx/sgxinit.c
 	programs.S
 )
@@ -60,3 +61,4 @@ set_source_files_properties(programs.S PROPERTIES
 set_source_files_properties(devices/sgx/sgxinit.c PROPERTIES
 	OBJECT_DEPENDS "${programs}/program2.inc;${programs}/program3.inc;${programs}/program4.inc;${programs}/program5.inc;${programs}/program6.inc;${programs}/program7.inc")
 target_include_directories(os0_kd_bootimage_gpuinit_es4 PRIVATE "${programs}")
+
