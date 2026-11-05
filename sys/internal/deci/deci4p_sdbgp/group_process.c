@@ -245,8 +245,8 @@ int sdbgpPackProcessInfo(SdbgpCpuState *cpu, uint32_t *out,
 int sdbgpCmd20_00(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 {
 	SceUID pids[16];
-	int count = 0;
 	SceSize entrySize = 0;
+	int count = 0;
 	SceKernelProcessInfo *work;
 	uint32_t *reply;
 	uint8_t *dst;
@@ -449,7 +449,8 @@ int sdbgpCmd20_22(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 	info.size = sizeof(info);
 	if (sceKernelGetProcessInfo(pid, &info) < 0 ||
 	    sdbgpResumeProcessThreads(pid, work) < 0 ||
-	    sceKernelProcessDebugResume(pid, info.status & 0xff) < 0)
+	    (info.status &= 0xff,
+	     sceKernelProcessDebugResume(pid, info.status) < 0))
 		return SDBGP_ERROR_INVALID_ARGUMENT;
 	reply = sdbgpAllocSendBuf(cpu, 36);
 	if (!reply)
@@ -736,7 +737,6 @@ send_err:
 /* 0x54: heap information (_getHeapInfoAll) */
 int _getHeapInfoAll(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 {
-	HeapInfo stackInfo;
 	SceSize count;
 	SceSize entrySize;
 	SceUID uid;
@@ -754,6 +754,8 @@ int _getHeapInfoAll(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 	}
 	uid = *(const SceUID *)((const uint8_t *)packet + 24);
 	if (uid != -1) {
+		HeapInfo stackInfo;
+
 		stackInfo.size = sizeof(stackInfo);
 		stackInfo.maxBlocks = 0;
 		stackInfo.blockList = NULL;

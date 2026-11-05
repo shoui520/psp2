@@ -272,8 +272,9 @@ int sdbgpCmdF0_20(SdbgpCpuState *cpu, SdbgpHeader *packet)
 {
 	uint32_t mode;
 	uint32_t *reply;
-	SceSize count, dataSize, sendSize;
+	SceSize count;
 	uint32_t generation;
+	SceSize dataSize, sendSize;
 	int ret;
 
 	if (sdbgpGetRecvSize(cpu) <= 0x23) {
