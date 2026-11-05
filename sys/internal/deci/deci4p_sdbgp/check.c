@@ -450,7 +450,7 @@ int checkSdbgpTargetAddrStopCauseDabt(uint32_t dfar, SdbgpExcpInfo info, int mod
 	    !sceKernelCheckDipsw(SDBGP_DIPSW_HW_DEBUG) ||
 	    (readDbgdscrExt() & 0x1c) != DBGDSCR_MOE_WATCHPOINT)
 		return SDBGP_STOP_DABT;
-	result = hwwtptCheckStop(info.threadId, dfar, mode);
+	result = hwwtptCheckStop(info.processId, dfar, mode);
 	if (result <= 0)
 		return SDBGP_STOP_DABT;
 	return result;

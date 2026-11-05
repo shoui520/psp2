@@ -45,7 +45,7 @@ int L1PageTableGetAllInfo(L1PageTable *l1pt, SceKernelMMUL1AllInfo *info)
 {
 	SceKernelIntrStatus intr;
 	uint32_t entry;
-	unsigned int i;
+	int i;
 
 	intr = SceCpuForDriver_EC53D007(&l1pt->lock);
 	info->split = l1pt->split;

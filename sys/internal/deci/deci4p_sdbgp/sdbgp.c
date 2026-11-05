@@ -209,7 +209,8 @@ int SDbgpModuleBoot(SceSize args, const void *argp)
 		return 0;
 	hwwtptClear(SDBGP_HWWATCH_MAX);
 	hwbkptClear(SDBGP_HWBKPT_MAX);
-	sdbgpInitPhysicalAccess(swbkptClear(SDBGP_SWBKPT_MAX));
+	swbkptClear(SDBGP_SWBKPT_MAX);
+	sdbgpInitPhysicalAccess();
 	SceExcpmgrForKernel_44CE04B8((uintptr_t)sdbgpProbeStart, (uintptr_t)sdbgpProbeEnd);
 	SceKernelSuspendForDriver_CE7A2207(SDBGP_SUSPEND_INDEX, sdbgpSuspend, NULL);
 	SceKernelSuspendForDriver_105C5752(SDBGP_SUSPEND_INDEX, sdbgpResume, NULL);
@@ -368,8 +369,8 @@ int sdbgpSendNotification(SdbgpCpuState *cpu, SceUID pid, SceUID tid, uint32_t p
 }
 
 /* Reply with an error header alone. */
-int sdbgpSendError(SdbgpCpuState *cpu, uint8_t group, uint8_t command, uint8_t tag,
-		   uint32_t result)
+void sdbgpSendError(SdbgpCpuState *cpu, uint8_t group, uint8_t command, uint8_t tag,
+		    uint32_t result)
 {
 	void *buf = sdbgpAllocSendBuf(cpu, sizeof(SdbgpHeader));
 	int ret;
@@ -379,7 +380,7 @@ int sdbgpSendError(SdbgpCpuState *cpu, uint8_t group, uint8_t command, uint8_t t
 			_sdbgpFreeSendBuf(cpu);
 		buf = sdbgpAllocSendBuf(cpu, sizeof(SdbgpHeader));
 		if (!buf)
-			return 0;
+			return;
 	}
 	SceDeci4pSDfMgrForKernel_8A3B06F2(buf, 0, sizeof(SdbgpHeader));
 	cpu->sendSize = sizeof(SdbgpHeader);
@@ -388,11 +389,10 @@ int sdbgpSendError(SdbgpCpuState *cpu, uint8_t group, uint8_t command, uint8_t t
 	sdbgpUpdateStatus(cpu, SDBGP_STATUS_SENDING, 1);
 	ret = sceSDfMgrExReqSend(cpu->handle);
 	if (ret >= 0 || ret == SDFMGR_ERROR_ALREADY_REQUESTED)
-		return ret;
+		return;
 	if (cpu->sendStatus & SDBGP_BUF_LOCKED)
 		_sdbgpFreeSendBuf(cpu);
 	sdbgpUpdateStatus(cpu, SDBGP_STATUS_SENDING, 0);
-	return ret;
 }
 
 /* Answer a command no handler takes. */

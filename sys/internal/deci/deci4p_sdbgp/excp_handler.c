@@ -66,7 +66,7 @@ void _getExcpInfo(uint32_t cpsr, SdbgpExcpInfo *info)
 		sceKernelGetThreadContextInfo(&thread);
 		info->processId = thread.processId;
 		if (thread.processId == SDBGP_KERNEL_PROCESS_ID ||
-		    (cpsr & PSR_MODE_MASK) != PSR_MODE_SYS)
+		    (cpsr & PSR_MODE_MASK) == PSR_MODE_SYS)
 			info->addressSpace = 16;
 		else
 			info->addressSpace = 32;

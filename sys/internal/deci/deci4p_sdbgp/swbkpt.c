@@ -19,11 +19,12 @@ int swbkptTypeOpcode(uint32_t opcode, int thumb, uint32_t cpsr)
 	if (thumb == 1) {
 		if ((opcode & 0xff00) != SWBKPT_THUMB_BKPT)
 			return SDBGP_STOP_PABT;
-		if ((uint8_t)opcode > 0xdf)
+		opcode &= 0xff;
+		if (opcode > 0xdf)
 			return SDBGP_STOP_BKPT_E0;
-		if ((uint8_t)opcode > 0xbf)
+		if (opcode > 0xbf)
 			return SDBGP_STOP_BKPT_C0;
-		if ((uint8_t)opcode > 0x7f)
+		if (opcode > 0x7f)
 			return SDBGP_STOP_SWBKPT;
 	} else {
 		if ((opcode & 0xfff000f0) != SWBKPT_ARM_BKPT)
@@ -54,30 +55,27 @@ int swbkptFindByAddress(SceUID pid, uintptr_t address)
 }
 
 /* Clear one entry, or the whole table for SDBGP_SWBKPT_MAX. */
-int swbkptClear(int index)
+void swbkptClear(int index)
 {
 	SdbgpState *state = sdbgpGetState();
 
-	if (index == SDBGP_SWBKPT_MAX) {
+	if (index == SDBGP_SWBKPT_MAX)
 		SceDeci4pSDfMgrForKernel_8A3B06F2(state->swbkpt, 0, sizeof(state->swbkpt));
-		return 0;
-	}
-	SceDeci4pSDfMgrForKernel_8A3B06F2(&state->swbkpt[index], 0, sizeof(SdbgpSwbkpt));
-	return 0;
+	else
+		SceDeci4pSDfMgrForKernel_8A3B06F2(&state->swbkpt[index], 0, sizeof(SdbgpSwbkpt));
 }
 
 /* Put the kernel's code back over its break point. */
 int _swbkptRemoveKernel(SdbgpState *state, int index)
 {
-	SdbgpSwbkpt *bkpt = &state->swbkpt[index];
-	void *address = (void *)bkpt->address;
-	SceSize size = (bkpt->thumb & 1) ? 2 : 4;
+	void *address = (void *)state->swbkpt[index].address;
+	SceSize size = (state->swbkpt[index].thumb & 1) ? 2 : 4;
 	uint32_t dacr;
 	uintptr_t start;
 
 	dacr = readDacr();
 	writeDacr(0xffff0000);
-	start = (uintptr_t)memcpy(address, bkpt->opcode, size);
+	start = (uintptr_t)memcpy(address, state->swbkpt[index].opcode, size);
 	sceKernelDcacheCleanRangeForL1WBWA((void *)(start & ~0x1f),
 		((start + size + 31) & ~0x1f) - (start & ~0x1f));
 	writeDacr(dacr);
@@ -118,26 +116,24 @@ int swbkptCount(void)
 int swbkptGetList(SdbgpSwbkptListReply *reply, uint32_t id)
 {
 	SdbgpState *state = sdbgpGetState();
-	SdbgpSwbkptInfo *info;
 	int num = 0;
 	int i;
 
 	for (i = 0; i < SDBGP_SWBKPT_MAX; i++) {
 		if (!state->swbkpt[i].used)
 			continue;
-		info = &reply->info[num];
 		if (id != (uint32_t)-1 && state->swbkpt[i].id != id)
 			continue;
-		info->size = sizeof(*info);
+		reply->info[num].size = sizeof(SdbgpSwbkptInfo);
+		reply->info[num].id = state->swbkpt[i].id;
+		reply->info[num].processId = state->swbkpt[i].processId;
+		reply->info[num].threadId = state->swbkpt[i].threadId;
+		reply->info[num].address = state->swbkpt[i].address;
+		reply->info[num].thumb = state->swbkpt[i].thumb;
+		reply->info[num].reserved = 0;
+		reply->info[num].attr = state->swbkpt[i].attr;
+		reply->info[num].kind = 8;
 		num++;
-		info->id = state->swbkpt[i].id;
-		info->processId = state->swbkpt[i].processId;
-		info->threadId = state->swbkpt[i].threadId;
-		info->address = state->swbkpt[i].address;
-		info->thumb = state->swbkpt[i].thumb;
-		info->reserved = 0;
-		info->attr = state->swbkpt[i].attr;
-		info->kind = 8;
 		if (id != (uint32_t)-1) {
 			reply->num = 1;
 			return 0;
@@ -151,6 +147,7 @@ int swbkptGetList(SdbgpSwbkptListReply *reply, uint32_t id)
 int swbkptSetKernel(const SdbgpSwbkptSetRequest *request, SdbgpSwbkptSetReply *reply)
 {
 	uint32_t armBkpt = SWBKPT_ARM_BKPT_DEBUGGER;
+	uint16_t thumbBkpt = SWBKPT_THUMB_BKPT_DEBUGGER;
 	SdbgpState *state = sdbgpGetState();
 	uintptr_t address = request->address;
 	uint32_t thumb = request->thumb;
@@ -181,7 +178,7 @@ int swbkptSetKernel(const SdbgpSwbkptSetRequest *request, SdbgpSwbkptSetReply *r
 		SceDeci4pSDfMgrForKernel_5996E2DB(bkpt->opcode, code, 2);
 		dacr = readDacr();
 		writeDacr(0xffff0000);
-		*(volatile uint16_t *)address = SWBKPT_THUMB_BKPT_DEBUGGER;
+		*(volatile uint16_t *)address = thumbBkpt;
 		sceKernelDcacheCleanRangeForL1WBWA((void *)(address & ~0x1f),
 			((address + 33) & ~0x1f) - (address & ~0x1f));
 		writeDacr(dacr);

@@ -521,8 +521,8 @@ int sdbgpSendNotification(SdbgpCpuState *cpu, SceUID pid, SceUID tid, uint32_t p
 			  uint32_t cpsr, const SdbgpExcpDetail *detail);
 void sdbgpControl(int id);
 void _sdbgpRecvData(int event, void *arg, void *context);
-int sdbgpSendError(SdbgpCpuState *cpu, uint8_t group, uint8_t command, uint8_t tag,
-		   uint32_t result);
+void sdbgpSendError(SdbgpCpuState *cpu, uint8_t group, uint8_t command, uint8_t tag,
+		    uint32_t result);
 void sdbgpSetSendSize(SdbgpCpuState *cpu, SceSize size);
 void *sdbgpAllocWorkBuf(SdbgpCpuState *cpu, SceSize size);
 int sdbgpReadMemory(SceUID pid, const void *addr, SceSize size, void *out);
@@ -685,7 +685,7 @@ int swbkptMakeEntry(SceUID pid, SceUID tid, uintptr_t address, uint32_t cpsr,
 		    int readImmediate, SdbgpSwbkpt *bkpt);
 int swbkptIsBkpt(SceUID pid, uintptr_t address, uint32_t cpsr, int *isBkpt);
 int swbkptHideInBuffer(SceUID pid, uintptr_t start, SceSize size, uint8_t *buf);
-int swbkptClear(int index);
+void swbkptClear(int index);
 
 /* leakcheck.c */
 #define LEAKCHECK_PROCESS_MAX		16
@@ -834,7 +834,7 @@ void hwwtptEnable(SdbgpCpuState *cpu);
 int sceKernelPhysicalMemReadForDebugger(void *dest, uintptr_t psrc, SceSize size, SceSize width);
 int sceKernelPhysicalMemWriteForDebugger(uintptr_t pdest, const void *src, SceSize size,
 					 SceSize width);
-int sdbgpInitPhysicalAccess(int unused);
+int sdbgpInitPhysicalAccess(void);
 
 /* kernel_util.c */
 struct SysrootProfiler {

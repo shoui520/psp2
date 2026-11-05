@@ -203,18 +203,16 @@ int sceKernelPhysicalMemReadForDebugger(void *dest, uintptr_t psrc, SceSize size
 	else
 		pteAttr = 0x453;
 	intr = sceKernelCpuSuspendIntr();
-	result = size;
 	window = s_phyAccessWindow[sceKernelCpuId()];
 	pte = s_phyAccessPte[sceKernelCpuId()];
-	if (size != 0) {
+	{
 		uintptr_t vsrc = 0;
 		uintptr_t mapped = 1;
 		uintptr_t paddr = psrc;
-		uintptr_t end = psrc + size;
 		SceSize done = 0;
 
-		for (; paddr < end; paddr += width) {
-			uintptr_t page = (paddr >> 12) << 12;
+		for (; size != 0; size -= width, paddr += width, vsrc += width) {
+			uintptr_t page = paddr & ~0xfffu;
 			void *vdest = (uint8_t *)dest + (paddr - psrc);
 
 			if (page != mapped) {
@@ -262,7 +260,6 @@ int sceKernelPhysicalMemReadForDebugger(void *dest, uintptr_t psrc, SceSize size
 				}
 				break;
 			}
-			vsrc += width;
 		}
 		result = done;
 	}
@@ -306,18 +303,16 @@ int sceKernelPhysicalMemWriteForDebugger(uintptr_t pdest, const void *src, SceSi
 	if (result < 0)
 		return result;
 	intr = sceKernelCpuSuspendIntr();
-	result = size;
 	window = s_phyAccessWindow[sceKernelCpuId()];
 	pte = s_phyAccessPte[sceKernelCpuId()];
-	if (size != 0) {
+	{
 		uintptr_t vdest = 0;
 		uintptr_t mapped = 1;
 		uintptr_t paddr = pdest;
-		uintptr_t end = pdest + size;
 		SceSize done = 0;
 
-		for (; paddr < end; paddr += width) {
-			uintptr_t page = (paddr >> 12) << 12;
+		for (; size != 0; size -= width, paddr += width, vdest += width) {
+			uintptr_t page = paddr & ~0xfffu;
 			const void *vsrc = (const uint8_t *)src + (paddr - pdest);
 
 			if (page != mapped) {
@@ -365,7 +360,6 @@ int sceKernelPhysicalMemWriteForDebugger(uintptr_t pdest, const void *src, SceSi
 				}
 				break;
 			}
-			vdest += width;
 		}
 		result = done;
 	}
@@ -386,7 +380,7 @@ out:
 	return result;
 }
 
-int sdbgpInitPhysicalAccess(int unused)
+int sdbgpInitPhysicalAccess(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	AddressSpaceObject *as;
