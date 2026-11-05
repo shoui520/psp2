@@ -218,5 +218,11 @@ int sslSetCertificateContextInfo(void *object, int selector, void *value);
 int sslRetainCertificate(SslCertificate *certificate, int mode);
 int sslSerializeCertificate(SslCertificate *certificate, SceUInt32 capacity,
 			    void *data, SceUInt32 *length);
+int sslGetCertificateNameLabel(const void *oid, SceUInt32 length,
+			       const char **result);
+int sslFormatCertificateHex(const SslCertificatePropertyValue *value,
+			    SceUInt32 capacity, int mode, char *data);
+int sslFormatCertificateString(const SslCertificatePropertyValue *value,
+			       SceUInt32 capacity, int mode, char *data);
 
 #endif
