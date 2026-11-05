@@ -1204,7 +1204,17 @@ int sslNewCertificateName(SslCertificateContext *context, SslCertificateName **r
 	name->context = context;
 	name->backendMethods = context->backendMethods;
 	if (context->methods != NULL)
-		name->methods = (const SslObjectMethods *)context->methods->nameMethods;
+		name->methods = context->methods->nameMethods;
 	*result = name;
+	return 0;
+}
+
+int sslFreeCertificateNameComponent(SslCertificateNameComponent *component)
+{
+	sslFreeProperty(component->oid);
+	sslFreeProperty(component->value);
+	if (component->context != NULL)
+		sslFreeCertificateContext(component->context);
+	sslFree(component);
 	return 0;
 }

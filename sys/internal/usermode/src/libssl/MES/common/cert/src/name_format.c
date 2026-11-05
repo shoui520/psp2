@@ -2,6 +2,7 @@
 #include "ri_cert.h"
 #include "../../../../asn1.h"
 #include "../../../../memory.h"
+#include "../../../../objects/objects.h"
 
 static const char *const sslCertificateNameLabels[][2] = {
 	{ "\x55\x04\x03", "CN" },
@@ -159,6 +160,166 @@ int sslFormatCertificateString(const SslCertificatePropertyValue *value,
 		return 10016;
 	data[position] = '\0';
 	return 0;
+}
+
+int sslFormatCertificateAttribute(SslCertificateNameComponent *component, int mode,
+				  SslCertificateNameLabelLookup lookup,
+				  SceUInt32 capacity, char *data)
+{
+	SslCertificatePropertyValue oid, value;
+	const char *label;
+	SceUInt32 usable, length, tag;
+	int status;
+
+	sslFillMemory(data, 0, capacity);
+	usable = capacity - 1;
+	status = component->methods->GetComponentInfo(component, 1, &oid);
+	if (status != 0)
+		return status;
+	status = component->methods->GetComponentInfo(component, 2, &value);
+	if (status != 0)
+		return status;
+	status = lookup(oid.data, oid.length, &label);
+	if (status == 10008) {
+		if (mode == 1)
+			status = sslFormatObjectIdentifier(oid.data, oid.length, usable, data);
+		else
+			status = sslFormatCertificateHex(&oid, usable, mode, data);
+		if (status != 0)
+			return status;
+		length = sslStringLength(data);
+	} else {
+		if (status != 0)
+			return status;
+		length = sslStringLength(label);
+		if (length > usable)
+			return 10016;
+		sslCopyMemory(data, label, length);
+	}
+	if (usable - length < 1)
+		return 10016;
+	tag = value.value;
+	data[length++] = '=';
+	switch (tag) {
+	case 12:
+	case 18:
+	case 19:
+	case 20:
+	case 22:
+	case 23:
+	case 24:
+	case 26:
+	case 28:
+	case 30:
+		status = sslFormatCertificateString(&value, usable - length, mode,
+					     data + length);
+		break;
+	default:
+		status = sslFormatCertificateHex(&value, usable - length, mode,
+					  data + length);
+		break;
+	}
+	if (status == 0)
+		sslStringLength(data);
+	return status;
+}
+
+int sslFormatCertificateNameForward(SslCertificateName *name, int mode,
+				    SceUInt32 capacity, char *data)
+{
+	SslCertificateNameComponentRequest request;
+	SslCertificateNameComponent *component;
+	SceUInt32 used = 0;
+	int count, index, status;
+
+	status = name->methods->GetInfo(name, 10, &count);
+	if (status != 0)
+		return status;
+	for (index = 0; index < count; index++) {
+		request.index = index;
+		status = name->methods->GetInfo(name, 11, &request);
+		component = NULL;
+		if (status != 0)
+			goto fail;
+		component = request.component;
+		if (component == NULL) {
+			status = 10001;
+			goto fail;
+		}
+		status = sslFormatCertificateAttribute(component, 2,
+						sslGetCertificateNameLabel,
+						capacity - used, data + used);
+		if (status != 0)
+			goto fail;
+		used = sslStringLength(data);
+		data[used++] = ';';
+		sslFreeCertificateNameComponent(component);
+	}
+	if (capacity <= used)
+		return 10016;
+	if (used != 0)
+		used--;
+	data[used] = '\0';
+	return status;
+fail:
+	if (component != NULL)
+		sslFreeCertificateNameComponent(component);
+	return status;
+}
+
+int sslFormatCertificateName(SslCertificateName *name, int mode,
+			    SceUInt32 capacity, char *data)
+{
+	SslCertificateNameComponentRequest request;
+	SslCertificateNameComponent *component;
+	SceUInt32 used = 0;
+	SceInt32 count, index, previous = -1, savedPrevious;
+	int status;
+	char separator;
+
+	if (mode == 2)
+		return sslFormatCertificateNameForward(name, mode, capacity, data);
+	status = name->methods->GetInfo(name, 10, &count);
+	if (status != 0)
+		return status;
+	index = (SceInt32)((SceUInt32)count - 1);
+	while (index >= 0) {
+		request.index = index;
+		status = name->methods->GetInfo(name, 11, &request);
+		component = NULL;
+		if (status != 0)
+			goto fail;
+		component = request.component;
+		if (component == NULL) {
+			status = 10001;
+			goto fail;
+		}
+		savedPrevious = previous;
+		previous = index;
+		if (index < (SceInt32)((SceUInt32)count - 1)) {
+			separator = index == savedPrevious ? '+' : ',';
+			if (capacity <= used) {
+				status = 10016;
+				goto fail;
+			}
+			data[used++] = separator;
+		}
+		status = sslFormatCertificateAttribute(component, 1, sslGetObjectShortName,
+						capacity - used, data + used);
+		if (status != 0)
+			goto fail;
+		used = sslStringLength(data);
+		sslFreeCertificateNameComponent(component);
+		index = (SceInt32)((SceUInt32)index - 1);
+	}
+	if (capacity <= used)
+		return 10016;
+	data[used] = '\0';
+	return status;
+fail:
+	if (component != NULL)
+		sslFreeCertificateNameComponent(component);
+	return status;
 }
 
 int sslGetCertificateNameLabel(const void *oid, SceUInt32 length,

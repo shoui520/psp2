@@ -7,6 +7,9 @@
 #include "../../../../CRYPTOCME/common/library/lib_ctx.h"
 
 typedef struct SslCertificate SslCertificate;
+typedef struct SslCertificateName SslCertificateName;
+typedef struct SslCertificateNameComponent SslCertificateNameComponent;
+typedef struct SslCertificatePropertyValue SslCertificatePropertyValue;
 
 /* Backend interface prefix. Uninterpreted extension words are retained without
  * assigning them operations; this declaration does not describe the whole table.
@@ -37,9 +40,18 @@ typedef struct SslCertificateBackendMethods {
 typedef struct SslCertificateNameMethods {
 	int (*Create)();
 	int (*Destroy)(void *name);
-	SceUIntPtr opaqueQueries[4];
+	int (*Copy)(SslCertificateName *source, int mode, SslCertificateName **result);
+	SceUIntPtr opaqueOperation;
+	int (*Format)(SslCertificateName *name, int mode, SceUInt32 capacity, char *data);
+	SceUIntPtr opaqueQuery;
 	int (*Decode)(void *context, int mode, SceUInt32 length, const void *data,
 		      SceUInt32 *consumed, void **result);
+	SceUIntPtr opaqueEncoding;
+	int (*GetInfo)(SslCertificateName *name, int selector, void *result);
+	SceUIntPtr opaqueSetters[2];
+	int (*DestroyComponent)(SslCertificateNameComponent *component);
+	int (*GetComponentInfo)(SslCertificateNameComponent *component, int selector,
+				SslCertificatePropertyValue *result);
 } SslCertificateNameMethods;
 
 /* Shared method prefix; implementations extend this interface. */
@@ -62,11 +74,11 @@ typedef struct SslCertificateMethods {
 	const SslCertificateNameMethods *nameMethods;
 } SslCertificateMethods;
 
-typedef struct SslCertificatePropertyValue {
+struct SslCertificatePropertyValue {
 	SceUInt32 value;
 	SceUInt32 length;
 	void *data;
-} SslCertificatePropertyValue;
+};
 
 typedef struct SslCertificateIndexedData {
 	SceUInt32 index;
@@ -96,13 +108,29 @@ typedef struct SslCertificateContext {
 	int references;
 } SslCertificateContext;
 
-typedef struct SslCertificateName {
-	const SslObjectMethods *methods;
+struct SslCertificateName {
+	const SslCertificateNameMethods *methods;
 	SslCertificateContext *context;
 	SslPropertyList *properties;
 	SceUInt32 flags;
 	const SslCertificateBackendMethods *backendMethods;
-} SslCertificateName;
+};
+
+/* Component storage used by the name interface. Private type names are ours. */
+struct SslCertificateNameComponent {
+	const SslCertificateNameMethods *methods;
+	SslCertificateContext *context;
+	SslProperty *oid;
+	SslProperty *value;
+};
+
+typedef struct SslCertificateNameComponentRequest {
+	SceInt32 index;
+	SslCertificateNameComponent *component;
+} SslCertificateNameComponentRequest;
+
+typedef int (*SslCertificateNameLabelLookup)(const void *oid, SceUInt32 length,
+					   const char **result);
 
 typedef struct SslCertificateKeyCache {
 	SceUInt32 flags;
@@ -151,6 +179,12 @@ _Static_assert(offsetof(SslCertificateMethods, GetCertificateInfo) == 36,
 	       "GetCertificateInfo");
 _Static_assert(offsetof(SslCertificateMethods, nameMethods) == 80, "nameMethods");
 _Static_assert(offsetof(SslCertificateNameMethods, Decode) == 24, "Decode");
+_Static_assert(offsetof(SslCertificateNameMethods, GetInfo) == 32, "GetInfo");
+_Static_assert(offsetof(SslCertificateNameMethods, GetComponentInfo) == 48,
+	       "GetComponentInfo");
+_Static_assert(offsetof(SslCertificateNameComponent, value) == 12, "value");
+_Static_assert(sizeof(SslCertificateNameComponentRequest) == 8,
+	       "SslCertificateNameComponentRequest");
 _Static_assert(offsetof(SslCertificateBackendMethods, QuerySignedValue) == 36,
 	       "QuerySignedValue");
 _Static_assert(offsetof(SslCertificateBackendMethods, QueryNonzeroValue) == 48,
@@ -224,5 +258,13 @@ int sslFormatCertificateHex(const SslCertificatePropertyValue *value,
 			    SceUInt32 capacity, int mode, char *data);
 int sslFormatCertificateString(const SslCertificatePropertyValue *value,
 			       SceUInt32 capacity, int mode, char *data);
+int sslFormatCertificateAttribute(SslCertificateNameComponent *component, int mode,
+				  SslCertificateNameLabelLookup lookup,
+				  SceUInt32 capacity, char *data);
+int sslFormatCertificateNameForward(SslCertificateName *name, int mode,
+				    SceUInt32 capacity, char *data);
+int sslFormatCertificateName(SslCertificateName *name, int mode,
+			    SceUInt32 capacity, char *data);
+int sslFreeCertificateNameComponent(SslCertificateNameComponent *component);
 
 #endif
