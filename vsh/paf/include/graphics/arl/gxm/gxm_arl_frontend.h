@@ -186,6 +186,18 @@ public:
 	/* the top matrix multiplied by another on its right (name ours) */
 	__attribute__((noinline)) void MultMatrix(const math::matrix &matrix);
 
+	/* the top matrix scaled on its right (name ours) */
+	__attribute__((noinline)) void Scale(const math::v3 &scale)
+	{
+		Entry &top = m_stack[m_depth - 1];
+
+		top.m_matrix = top.m_matrix *
+			       math::matrix(sce::Vectormath::Simd::Aos::Matrix4::scale(scale.getImpl()));
+		top.m_rigid = false;
+		top.m_inverse_valid = false;
+		top.m_inverse_entry = m_depth - 1;
+	}
+
 	vector<Entry> m_stack;
 	uint32_t m_depth;
 	string m_name;
@@ -255,12 +267,24 @@ public:
 	{
 	}
 
+	/* the projection and the model view multiplied, worked out again when either changed
+	   (names ours) */
+	math::matrix GetModelViewProjection()
+	{
+		if (m_projection_changed || m_view_changed) {
+			m_view_changed = false;
+			m_view_projection = m_projection.Top().m_matrix * m_view.Top().m_matrix;
+			m_projection_changed = false;
+		}
+		return m_view_projection * m_model.Top().m_matrix;
+	}
+
 	MatrixStack m_projection;
 	MatrixStack m_model;
 	MatrixStack m_view;
 	MatrixStack m_texture;
-	/* nothing in the front end reads or writes them */
-	uint8_t m_reserved[0x40];
+	/* the projection times the view, as GetModelViewProjection last worked it out */
+	math::matrix m_view_projection;
 	/* set by a camera that loads the view or the projection stack */
 	bool m_view_changed;
 	bool m_projection_changed;

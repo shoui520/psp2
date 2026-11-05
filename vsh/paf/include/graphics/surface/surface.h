@@ -497,6 +497,12 @@ public:
 		return m_page_counter;
 	}
 
+	/* how much of its texture the surface covers, across and down (name ours) */
+	math::v2 GetFactor() const
+	{
+		return math::v2(m_factor_u, m_factor_v);
+	}
+
 	/* the pages (name ours) */
 	int16_t GetNumPage() const
 	{

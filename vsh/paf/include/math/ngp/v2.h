@@ -72,6 +72,13 @@ public:
 		return v2(_impl / rhs);
 	}
 
+	/* divided by the scalar, the result also returned by value */
+	__attribute__((noinline)) v2 operator/=(sce::Vectormath::Simd::floatInVec rhs)
+	{
+		_impl /= rhs;
+		return *this;
+	}
+
 	bool operator==(v2 rhs) const
 	{
 		return sce::Vectormath::Simd::Aos::allElemEqual(_impl, rhs._impl).getAsBool();

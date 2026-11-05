@@ -166,27 +166,7 @@ class Surface;
 class PageTurnParam;
 class PageTurnMesh;
 
-/* turns a page with a texture on each side (Sony's name, the identifier PageTurnRenderer; its
-   code is not converted: 0x810c89fc builds it); 0xa58 bytes */
-class PageTurnRenderer {
-public:
-	/* 0x810c89fc: its resources loaded from the folder */
-	PageTurnRenderer(const string &dir);
-	/* 0x810ca076 */
-	~PageTurnRenderer();
-
-	/* 0x810cade8: draws the page from its parameters and mesh */
-	void Draw(PageTurnParam *param, PageTurnMesh *mesh);
-	/* 0x810cc0f6: lets go of the textures its shaders hold */
-	void ReleaseTextures();
-	/* 0x810cc42a */
-	void Update();
-
-	uint8_t reserved[0xa50];
-	/* the back of the page (PageTurnObj::SetBgTexture) */
-	intrusive_ptr<Surface> m_bg_texture;
-	uint8_t reserved2[4];
-};
+class PageTurnRenderer;
 
 /* where a widget's draw objects queue their draws: the order counted up per draw, under the
    widget's layer and sub-layer (names ours) */

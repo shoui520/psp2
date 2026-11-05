@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <common/shared_ptr.h>
+#include <graphics/arl/gxm/gxm_vertex_array.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <math/ngp/matrix.h>
 #include <math/ngp/quaternion.h>
@@ -57,39 +58,39 @@ public:
 	bool m_curl_changed;
 };
 
-/* a strip of the mesh: the indices and their count */
+/* a fan of the mesh: its first vertex and the vertices in it */
 class PageTurnStrip {
 public:
-	const uint16_t *m_indices;
+	int32_t m_first;
 	uint32_t m_count;
 };
 
-namespace arl {
-class VertexArraySpec;
-}
+class PageTurnFold;
 
-class PageTurnVertices;
-
-/* the page's mesh, which the renderer builds (0x810c7cd0) and draws (0x48 bytes); the words
-   not named are not read in this file, only by the renderer, which is not converted */
+/* the page's mesh, which the renderer builds and draws (0x48 bytes) */
 class PageTurnMesh {
 public:
-	PageTurnMesh() : m_division(0), m_reserved1(0.0f, 0.0f)
+	PageTurnMesh() : m_division(0), m_curl(0.0f, 0.0f)
 	{
-		m_reserved2 = 0;
+		m_offset = 0;
 	}
 
-	/* the renderer sets 200 when it builds the mesh */
+	/* 0x810c7cd0: the fans of the page cut along the fold, in front of it in bands of a
+	   hundredth and behind it in sixteen bands, into the half of the vertices not drawn
+	   last (name ours) */
+	void Build(const PageTurnFold &fold, math::v2 curl);
+
+	/* the vertices a half holds, 200 once the mesh is built */
 	int32_t m_division;
-	common::SharedPtr<arl::VertexArraySpec> m_spec;
-	common::SharedPtr<PageTurnVertices> m_vertices;
-	uint32_t m_reserved0;
-	math::v2 m_reserved1;
-	uint32_t m_reserved2;
-	/* drawn as triangle strips, the front and the back of the page */
+	arl::VertexArray m_vertices;
+	/* compared with the curl, which builds the mesh again when it differs; nothing sets
+	   it after the constructor */
+	math::v2 m_curl;
+	/* the half the fans were last built into, 0 or m_division */
+	uint32_t m_offset;
+	/* drawn as triangle fans, the part in front of the fold and the part behind it */
 	vector<PageTurnStrip> m_front_strips;
 	vector<PageTurnStrip> m_back_strips;
-	uint32_t m_reserved3;
 };
 
 class PageTurnObj : public DrawObj {

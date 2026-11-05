@@ -160,6 +160,20 @@ public:
 		sce_paf_memcpy(m_buffer->m_memory->m_addr, vertices, size);
 	}
 
+	/* room for count vertices, put in later (the page-turn meshes') */
+	VertexArray(common::SharedPtr<VramAllocator> allocator,
+		    common::SharedPtr<VertexArraySpec> spec, uint32_t count)
+		: m_spec(spec), m_buffer(new VertexBuffer(allocator))
+	{
+		uint32_t size = count * spec->m_stride;
+		SurfaceMemory *memory = m_buffer->m_memory.get();
+
+		if (memory->m_addr == NULL) {
+			memory->m_allocator->Alloc(memory, size);
+			memory->m_size = size;
+		}
+	}
+
 	/* a buffer the vertices are put in later (the wave meshes') */
 	VertexArray(common::SharedPtr<VertexArraySpec> spec, common::SharedPtr<VertexBuffer> buffer)
 		: m_spec(spec), m_buffer(buffer)

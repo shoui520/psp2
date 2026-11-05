@@ -10,6 +10,7 @@
 #include <graphics/camera.h>
 #include <graphics/drawobj/draw_env.h>
 #include <graphics/effects/background.h>
+#include <graphics/effects/page_turn_renderer.h>
 #include <graphics/effects/panel_renderer.h>
 #include <graphics/effects/post_effects.h>
 #include <graphics/effects/wave_renderer.h>

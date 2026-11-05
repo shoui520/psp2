@@ -35,6 +35,16 @@ public:
 	/* Sony's build keeps this one out of line */
 	__attribute__((noinline)) TextureSource(const common::SharedPtr<TextureObject> &texture);
 
+	/* the surface's texture (Sony's build keeps it out of line) */
+	__attribute__((noinline)) TextureSource(const intrusive_ptr<Surface> &surface)
+	{
+		m_surface = surface;
+	}
+
+	/* the image file loaded as a surface's texture, or else as a texture of its own
+	   (0x8107422a, name ours) */
+	void Load(const string &filename, bool as_surface);
+
 	TextureSource &operator=(const common::SharedPtr<TextureObject> &texture)
 	{
 		m_texture = texture;

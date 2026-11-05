@@ -11,6 +11,7 @@
 #include <graphics/color.h>
 #include <graphics/drawobj/page_turn_obj.h>
 #include <graphics/drawobj/draw_env.h>
+#include <graphics/effects/page_turn_renderer.h>
 #include <graphics/surface/surface.h>
 #include <math/ngp/matrix.h>
 #include <math/ngp/quaternion.h>
@@ -53,7 +54,7 @@ PageTurnObj::PageTurnObj(const DrawStyle &style)
 	s_renderer_made = true;
 
 	if (s_bg_texture.get() != NULL)
-		ScePafGraphics_4E038C05()->m_ptr->GetPageTurnRenderer(false)->m_bg_texture = s_bg_texture.get();
+		ScePafGraphics_4E038C05()->m_ptr->GetPageTurnRenderer(false)->m_background.m_surface = s_bg_texture.get();
 
 	m_param->m_renderer_param = math::v2(0.0f, 0.0f);
 	s_count++;
@@ -67,7 +68,7 @@ PageTurnObj::~PageTurnObj()
 	m_mesh = NULL;
 
 	if (--s_count == 0) {
-		ScePafGraphics_4E038C05()->m_ptr->GetPageTurnRenderer(false)->m_bg_texture.clear();
+		ScePafGraphics_4E038C05()->m_ptr->GetPageTurnRenderer(false)->m_background.m_surface.clear();
 		ScePafGraphics_4E038C05()->m_ptr->GetPageTurnRenderer(false)->ReleaseTextures();
 		s_count = 0;
 	}
@@ -92,7 +93,7 @@ namespace graph {
 void PageTurnObj::SetBgTexture(intrusive_ptr<Surface> texture)
 {
 	s_bg_texture = texture.get();
-	ScePafGraphics_4E038C05()->m_ptr->GetPageTurnRenderer(false)->m_bg_texture = s_bg_texture.get();
+	ScePafGraphics_4E038C05()->m_ptr->GetPageTurnRenderer(false)->m_background.m_surface = s_bg_texture.get();
 }
 
 /* the page is the object's size less its margin on each side; when the turn changed, its curl
