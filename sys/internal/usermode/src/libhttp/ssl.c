@@ -8,6 +8,7 @@
 #include <sceerror.h>
 #include <libssl.h>
 #include <libssl/sslinternal.h>
+#include <libssl/object.h>
 
 #include "http_internal.h"
 

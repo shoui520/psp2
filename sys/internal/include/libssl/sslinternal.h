@@ -105,7 +105,6 @@ int SceSslInternal_3DE4F3DB(void *oid, int arg1, SceSize size, char *buf);
 int SceSslInternal_BF99D664(void *lib, int arg1, void **ext);
 int SceSslInternal_64BDF1BB(void *cert, int item, void *ext);
 int SceSslInternal_93EAE08A(void *ext, int item, void *data);
-void SceSslInternal_F030A0DE(void *ext);
 int SceSslInternal_3746501F(void *store, const char ***pem, void *buf, SceSize size,
 			    SceSize *outSize, SceBool systemOnly);
 
