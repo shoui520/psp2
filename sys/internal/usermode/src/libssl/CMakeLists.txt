@@ -133,8 +133,62 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	memory.c
 	time.c
 	date.c
+	../../../../sdk/target/src/sha224/libsha224.c
+	../../../../sdk/target/src/sha384/libsha384.c
+	../../../../sdk/target/src/sha512/libsha512.c
+	../../../../../toolchains/libgcc/udiv.S
+	../../../../../toolchains/libgcc/idiv.S
+	../../../../../toolchains/libgcc/umod.S
+	../../../../../toolchains/libgcc/mod.S
+	../../../../../toolchains/libgcc/dvmd_tls.S
+	../../../../../toolchains/libgcc/ashldi3.S
 	libssl.c
+	../../../../sdk/target/src/sha224/sha224.S
+	../../../../sdk/target/src/sha256/libsha256.c
+	../../../../sdk/target/src/sha256/sha256.S
+	../../../../sdk/target/src/sha384/sha384.S
+	../../../../sdk/target/src/sha512/sha512.S
+	../../../../sdk/target/src/aes/libaes.c
+	../../../../sdk/target/src/aes/aes.S
+	../../../../../toolchains/libgcc/div64.c
+	../../../../../toolchains/libgcc/mod64.c
+	../../../../../toolchains/libgcc/udiv64.c
 )
 target_include_directories(vs0_sys_external_libssl PRIVATE
 	${libssl_ssleay}/crypto ${libssl_ssleay}/crypto/stack
-	${libssl_ssleay}/crypto/lhash ${CMAKE_CURRENT_BINARY_DIR})
+	${libssl_ssleay}/crypto/lhash ${CMAKE_CURRENT_BINARY_DIR}
+	../../../../../toolchains/libgcc
+	../../../../../toolchains/libgcc/target
+	../../../../../contrib/gcc-4.8-2014.05/gcc
+	../../../../../contrib/gcc-4.8-2014.05/gcc/ginclude
+	../../../../../contrib/gcc-4.8-2014.05/libgcc
+	../../../../../contrib/gcc-4.8-2014.05/include)
+include(../../../../../toolchains/libgcc/lib1funcs.cmake)
+gcc48_use_lib1funcs(vs0_sys_external_libssl)
+set_source_files_properties(
+	../../../../sdk/target/src/sha224/sha224.S
+	../../../../sdk/target/src/sha256/sha256.S
+	../../../../sdk/target/src/sha384/sha384.S
+	../../../../sdk/target/src/sha512/sha512.S
+	../../../../sdk/target/src/aes/aes.S
+	../../../../../toolchains/libgcc/udiv.S
+	../../../../../toolchains/libgcc/idiv.S
+	../../../../../toolchains/libgcc/umod.S
+	../../../../../toolchains/libgcc/mod.S
+	../../../../../toolchains/libgcc/dvmd_tls.S
+	../../../../../toolchains/libgcc/ashldi3.S
+	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
+set_source_files_properties(
+	../../../../sdk/target/src/sha224/libsha224.c
+	../../../../sdk/target/src/sha256/libsha256.c
+	../../../../sdk/target/src/sha384/libsha384.c
+	../../../../sdk/target/src/sha512/libsha512.c
+	../../../../sdk/target/src/aes/libaes.c
+	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
+	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder")
+set_source_files_properties(
+	../../../../../toolchains/libgcc/div64.c
+	../../../../../toolchains/libgcc/mod64.c
+	../../../../../toolchains/libgcc/udiv64.c
+	PROPERTIES COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;IN_LIBGCC2"
+	COMPILE_OPTIONS "-fno-stack-protector;-fbuilding-libgcc")
