@@ -191,15 +191,6 @@ int _getStubInfo(SdbgpStubInfo *out, SceUID pid, const SceUID *stubids,
 			out->modid = scePUIDtoGUID(pid, info.modid);
 		else
 			out->modid = info.modid;
-		out->libPid = info.libPid;
-		if (info.libModid & 0x40000000)
-			out->libModid = scePUIDtoGUID(info.libPid, info.libModid);
-		else
-			out->libModid = info.libModid;
-		if (info.libid & 0x40000000)
-			out->libid = scePUIDtoGUID(info.libPid, info.libid);
-		else
-			out->libid = info.libid;
 		out->attr = info.attr;
 		out->reserved[0] = 0;
 		out->reserved[1] = 0;
@@ -209,6 +200,15 @@ int _getStubInfo(SdbgpStubInfo *out, SceUID pid, const SceUID *stubids,
 		out->nvar = info.nvar;
 		out->pid = pid;
 		out->reserved[4] = 0;
+		out->libPid = info.libPid;
+		if (info.libModid & 0x40000000)
+			out->libModid = scePUIDtoGUID(info.libPid, info.libModid);
+		else
+			out->libModid = info.libModid;
+		if (info.libid & 0x40000000)
+			out->libid = scePUIDtoGUID(info.libPid, info.libid);
+		else
+			out->libid = info.libid;
 		SceDeci4pSDfMgrForKernel_5996E2DB(out->libname, info.libname,
 						  sizeof(out->libname));
 		entryNum = info.nfunc + info.nvar;
@@ -238,8 +238,8 @@ int _getLibraryInfo(SdbgpLibraryInfo *out, SceUID pid, const SceUID *libids,
 	int count;
 
 	SceDeci4pSDfMgrForKernel_8A3B06F2(&info, 0, sizeof(info));
-	info.size = sizeof(info);
 	*size = 0;
+	info.size = sizeof(info);
 	if (num == 0)
 		return 0;
 	count = 0;
@@ -431,8 +431,7 @@ int sdbgpCmd40_12(SdbgpCpuState *cpu, SdbgpHeader *packet)
 	SdbgpModuleReply *reply;
 	SceKernelLostLibraryEntry *work;
 	SceUID pid;
-	SceSize procCount = 0;
-	SceSize oneSize = 0, num, size;
+	SceSize size, oneSize, num, procCount = 0;
 	int total = 0;
 	int err, ret;
 
@@ -471,6 +470,7 @@ int sdbgpCmd40_12(SdbgpCpuState *cpu, SdbgpHeader *packet)
 					       packet->tag, ret);
 				return SDBGP_ERROR_INVALID_ARGUMENT;
 			}
+			curPid = pids[i];
 			num = ret;
 			ret = sceKernelGetLostLibraryList(curPid, work, &num);
 			if (ret < 0) {
@@ -478,7 +478,7 @@ int sdbgpCmd40_12(SdbgpCpuState *cpu, SdbgpHeader *packet)
 					       packet->tag, ret);
 				return SDBGP_ERROR_INVALID_ARGUMENT;
 			}
-			ret = _getLostLibraryInfo((SdbgpLostLibraryInfo *)dst, curPid,
+			ret = _getLostLibraryInfo((SdbgpLostLibraryInfo *)dst, pids[i],
 						  work, num, &oneSize);
 			if (ret < 0) {
 				sdbgpSendError(cpu, packet->group, packet->command + 1,

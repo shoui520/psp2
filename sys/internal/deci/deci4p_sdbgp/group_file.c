@@ -384,6 +384,7 @@ int sdbgpCmd60_14(SdbgpCpuState *cpu, SdbgpHeader *packet)
 	VfsMountListEntry *work;
 	SdbgpMountListReply *reply;
 	SceSize sendSize;
+	int count;
 	int num;
 	int ret;
 	int i;
@@ -401,15 +402,15 @@ int sdbgpCmd60_14(SdbgpCpuState *cpu, SdbgpHeader *packet)
 		sdbgpSendError(cpu, packet->group, packet->command + 1, packet->tag, ret);
 		return SDBGP_ERROR_INVALID_ARGUMENT;
 	}
-	num = ret;
-	SceDeci4pSDfMgrForKernel_8A3B06F2(work, 0, sizeof(VfsMountListEntry) * num);
-	sendSize = sizeof(SdbgpMountListEntry) * num + sizeof(SdbgpMountListReply);
+	count = ret;
+	SceDeci4pSDfMgrForKernel_8A3B06F2(work, 0, sizeof(VfsMountListEntry) * count);
+	sendSize = sizeof(SdbgpMountListEntry) * count + sizeof(SdbgpMountListReply);
 	if (sendSize > SDBGP_PACKET_MAX) {
 		sdbgpSendError(cpu, packet->group, packet->command + 1, packet->tag,
 			       SDBGP_RESULT_PACKET_TOO_LARGE);
 		return SDBGP_ERROR_PACKET_SIZE;
 	}
-	ret = vfsGetMntList(work, SDBGP_PACKET_MAX, &num);
+	ret = vfsGetMntList(work, SDBGP_PACKET_MAX, &count);
 	if (ret < 0) {
 		sdbgpSendError(cpu, packet->group, packet->command + 1, packet->tag, ret);
 		return SDBGP_ERROR_INVALID_ARGUMENT;
@@ -419,6 +420,7 @@ int sdbgpCmd60_14(SdbgpCpuState *cpu, SdbgpHeader *packet)
 		return SDBGP_ERROR_OUT_OF_MEMORY;
 	SceDeci4pSDfMgrForKernel_8A3B06F2(reply, 0, sendSize);
 	sdbgpSetSendSize(cpu, sendSize);
+	num = count;
 	reply->count = num;
 	for (i = 0; i < num; i++) {
 		reply->entries[i].size = sizeof(SdbgpMountListEntry);
@@ -573,7 +575,7 @@ int sdbgpCmd60_18(SdbgpCpuState *cpu, SdbgpHeader *packet)
 		if (isIllegalMountNum(num) != 0 ||
 		    isIllegalMountList(request->mounts, num,
 				       (VfsMountListEntry *)work) != 0 ||
-		    isIllegalMountAccess(request->mounts, num, work) != 0) {
+		    isIllegalMountAccess(request->mounts, request->count, work) != 0) {
 			sdbgpSendError(cpu, packet->group, packet->command + 1,
 				       packet->tag, SDBGP_RESULT_ILLEGAL_VALUE);
 			return SDBGP_ERROR_INVALID_ARGUMENT;
@@ -721,8 +723,8 @@ int sdbgpCmd60_1a(SdbgpCpuState *cpu, SdbgpHeader *packet)
 	SceDeci4pSDfMgrForKernel_8A3B06F2(reply, 0, sendSize);
 	reply->count = count;
 	for (i = 0; i < count; i++) {
-		reply->entries[i].size = sizeof(SdbgpKplsEntry);
 		reply->entries[i].pid = pids[i];
+		reply->entries[i].size = sizeof(SdbgpKplsEntry);
 		SceDeci4pSDfMgrForKernel_5996E2DB(reply->entries[i].data,
 						  kplsBuf + 0x20 * i,
 						  sizeof(reply->entries[i].data));
