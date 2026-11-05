@@ -2366,8 +2366,8 @@ public:
 						    2000.0f, 0),
 			  m_transparency_fade_len(set, "transparency_fade_len", 200.0f, 0.0f, 2000.0f,
 						  0),
-			  m_color(set, "color", math::v4(0.0f, 0.0f, 1.0f, 0.0f),
-				  math::v4(0.0f, 0.0f, 0.0f, 0.0f), math::v4(1.0f, 1.0f, 1.0f, 1.0f),
+			  m_color(set, "color", math::v3(0.0f, 0.0f, 1.0f),
+				  math::v3(0.0f, 0.0f, 0.0f), math::v3(1.0f, 1.0f, 1.0f),
 				  PARAM_FLAG_COLOR_ALPHA),
 			  m_plane_z(set, "plane_z", 0.04f, 0.0f, 0.5f, 0),
 			  m_back_color_begin(set, "back_color_begin", 0.05f, 0.0f, 1.0f,
@@ -2382,7 +2382,7 @@ public:
 		Param<float> m_transparency;
 		Param<float> m_transparency_fade_start;
 		Param<float> m_transparency_fade_len;
-		Param<math::v4> m_color;
+		Param<math::v3> m_color;
 		Param<float> m_plane_z;
 		Param<float> m_back_color_begin;
 		Param<float> m_back_color_end;
@@ -2461,11 +2461,6 @@ public:
 /* points held elsewhere, and how many (names ours) */
 class PointArray {
 public:
-	PointArray(const math::v2 *points, uint32_t count, uint32_t limit)
-		: m_points(points), m_count(count), m_limit(limit)
-	{
-	}
-
 	const math::v2 *m_points;
 	uint32_t m_count;
 	uint32_t m_limit;
@@ -2487,9 +2482,11 @@ public:
 	void Init(PointArray points, int32_t columns, uint32_t flags);
 
 	/* 0x8120aaa4 */
-	void Init(const vector<math::v2> &points, int32_t columns, uint32_t flags)
+	__attribute__((noinline)) void Init(const vector<math::v2> &points, int32_t columns, uint32_t flags)
 	{
-		Init(PointArray(points.ptr, points.size(), points.size()), columns, flags);
+		PointArray array = { points.ptr, points.size(), points.size() };
+
+		Init(array, columns, flags);
 	}
 
 	WaveMesh<ProfileVertex> m_mesh;
@@ -2628,15 +2625,18 @@ public:
 	}
 
 	/* the light of a kind of panel */
-	PointLightSphereParamSet::Values *GetLight(uint32_t material)
+	PointLightSphereParamSet *GetLight(const uint32_t &material)
 	{
 		switch (material) {
 		case 0:
-			return &m_bubble_light.m_set.m_values;
+			return &m_bubble_light.m_set;
+		case 1:
+		case 2:
+			return &m_panel_light.m_set;
 		case 3:
-			return &m_color_chip_light.m_set.m_values;
+			return &m_color_chip_light.m_set;
 		default:
-			return &m_panel_light.m_set.m_values;
+			return &m_panel_light.m_set;
 		}
 	}
 

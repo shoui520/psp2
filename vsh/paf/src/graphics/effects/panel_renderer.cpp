@@ -322,8 +322,8 @@ void PanelRenderer::DrawSolid3x3Panel(const int32_t &kind, const uint32_t &mater
 	vert.m_params->SetWorldScaleHack(1.0f);
 	vert.m_params->SetEyePos(m_camera->GetEyePos());
 	vert.m_params->SetMaterialPack(GetMaterial(material)->m_values.GetPack());
-	vert.m_params->SetPointLightPack2(GetLight(material)->GetPack2());
-	vert.m_params->SetPointLightPack1(GetLight(material)->MakePack1());
+	vert.m_params->SetPointLightPack2(GetLight(material)->m_values.GetPack2());
+	vert.m_params->SetPointLightPack1(GetLight(material)->m_values.MakePack1());
 	vert.m_params->SetBackgroundSize(GetTextureSize(*m_background->GetSharedTexture()));
 	vert.m_params->SetBackgroundRatio(GetTextureRatio(*m_background->GetSharedTexture()));
 	vert.m_params->SetView(m_camera->m_transform.m_inverse);
@@ -332,8 +332,8 @@ void PanelRenderer::DrawSolid3x3Panel(const int32_t &kind, const uint32_t &mater
 
 	frag.m_params->SetEyePos(m_camera->GetEyePos());
 	frag.m_params->SetMaterialPack(GetMaterial(material)->m_values.GetPack());
-	frag.m_params->SetPointLightPack2(GetLight(material)->GetPack2());
-	frag.m_params->SetPointLightPack1(GetLight(material)->MakePack1());
+	frag.m_params->SetPointLightPack2(GetLight(material)->m_values.GetPack2());
+	frag.m_params->SetPointLightPack1(GetLight(material)->m_values.MakePack1());
 	frag.m_params->SetEnvMapDetail(m_background->GetReflectionTexture());
 	{
 		arl::DefaultTextures *textures = gl;
@@ -482,14 +482,14 @@ void PanelRenderer::DrawRevolutionPanel(const uint32_t &material)
 	if (m_wireframe)
 		gl->PolygonMode(arl::POLYGON_MODE_LINE, arl::FRONT_AND_BACK);
 
-	BubbleOpaqueVertShader &vert = m_shaders->m_bubble_opaque_vert.m_interface;
+	BubbleVertShaderParams &vert = m_shaders->m_bubble_opaque_vert.m_interface;
 	const ShadowParamSet::Values &shadow = m_shadow.m_set.m_values;
 
 	vert.SetMVP(m_camera->GetViewProjection());
 	vert.SetEyePos(m_camera->GetEyePos());
 	vert.SetMaterialPack(GetMaterial(material)->m_values.GetPack());
-	vert.SetDiffuseColor(math::v4(GetLight(material)->m_diffuse_color.m_value, 1.0f));
-	vert.SetLightPos(GetLight(material)->GetPosition());
+	vert.SetDiffuseColor(math::v4(GetLight(material)->m_values.m_diffuse_color.m_value, 1.0f));
+	vert.SetLightPos(GetLight(material)->m_values.GetPosition());
 	vert.SetView(m_camera->m_transform.m_inverse);
 	vert.SetBackColorZRange(math::v2(shadow.m_back_color_begin.m_value,
 					 1.0f / (shadow.m_back_color_end.m_value -
