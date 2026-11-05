@@ -328,7 +328,7 @@ int swbkptDisableSWBP(SdbgpSwbkpt bkpt)
 				  (bkpt.thumb & 1) ? 2 : 4, bkpt.opcode);
 	if (result >= 0)
 		return 0;
-	SCE_DBG_PRINTF_WITH_INFO(0, 568, "sdbgpCopyToUserTextDomain failed 0x%08x\n", result);
+	SCE_PRINTF_WITH_INFO(0, 568, "sdbgpCopyToUserTextDomain failed 0x%08x\n", result);
 	return result;
 }
 
@@ -380,8 +380,8 @@ int swbkptEnableSysSWBP(void)
 	result = sdbgpWriteMemory(state->sysSwbkpt.processId,
 				  (void *)state->sysSwbkpt.address, size, code);
 	if (result < 0) {
-		SCE_DBG_PRINTF_WITH_INFO(0, 632, "sdbgpCopyToUserTextDomain failed 0x%08x\n",
-					 result);
+		SCE_PRINTF_WITH_INFO(0, 632, "sdbgpCopyToUserTextDomain failed 0x%08x\n",
+				     result);
 		return result;
 	}
 	return 0;
