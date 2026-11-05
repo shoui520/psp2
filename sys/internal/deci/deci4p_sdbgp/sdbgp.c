@@ -43,6 +43,9 @@ int sdbgpSuspend(int value, void *args)
 	return 0;
 }
 
+#if !FW_DEBUG
+static inline
+#endif
 int _sdbgpSendData(int handle, const void *buf, SceSize size)
 {
 	SceSize left;
@@ -52,7 +55,7 @@ int _sdbgpSendData(int handle, const void *buf, SceSize size)
 		result = sceSDfMgrExSend(handle, buf, left);
 		buf = (const char *)buf + result;
 		if (result < 0) {
-			SceDeci4pSDfMgrForKernel_501CE61D(15, SCE_DBGINFO(750),
+			SCE_SDFMGR_DBG_PRINTF(15, 750,
 				"sceSDfMgrExSend() failed (0x%08X)\n", result);
 			return result;
 		}
@@ -152,8 +155,10 @@ int SDbgpModuleStart(SceSize args, const void *argp)
 	SceSysrootForKernel_21F5790B(SceDeci4pSDfMgrForKernel_98AEC60E);
 	SceDebugForKernel_A465A31A(0);
 	sdbgpInitProfiler(&s_sdbgpProfiler);
+#if FW_DEBUG
 	if (sceKernelCheckDipsw(SDBGP_DIPSW_BACKGROUND_CHECK))
 		bgCheckStart();
+#endif
 	SceSysrootForKernel_14D81797(&s_sdbgpProfiler);
 	if (sceKernelCheckDipsw(SDBGP_DIPSW_NO_TRACE))
 		return SCE_KERNEL_START_SUCCESS;
@@ -619,7 +624,7 @@ void _sdbgpRecvData(int event, void *arg, void *context)
 				result = sceSDfMgrExRecv(cpu->handle, p, left);
 				p += result;
 				if (result < 0) {
-					SceDeci4pSDfMgrForKernel_501CE61D(15, SCE_DBGINFO(728),
+					SCE_SDFMGR_DBG_PRINTF(15, 728,
 						"sceSDfMgrExRecv() failed (0x%08X)\n", result);
 					hwwtptEnable(cpu);
 					return;

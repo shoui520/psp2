@@ -1718,8 +1718,8 @@ int _leakcheckUID(LeakCheckUIDRecord *out, uint32_t *generation, SceSize *count,
 	}
 	result = sceGUIDGetEntryInfoAll(7, 3, entries, max * sizeof(*entries), &num);
 	if (result < 0) {
-		SceDeci4pSDfMgrForKernel_501CE61D(0, SCE_DBGINFO(3084),
-						  "sceGUIDGetEntryInfoAll failed 0x%08x\n", result);
+		SCE_SDFMGR_DBG_PRINTF(0, 3084,
+				      "sceGUIDGetEntryInfoAll failed 0x%08x\n", result);
 	} else if (leakCheck->generation == 0) {
 		leakCheck->base.num = max;
 	} else {

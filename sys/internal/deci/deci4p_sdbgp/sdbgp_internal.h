@@ -504,7 +504,9 @@ SdbgpState *sdbgpGetState(void);
 SdbgpCpuState *sdbgpGetCpuState(void);
 int sdbgpSuspend(int value, void *args);
 int sdbgpResume(int value, void *args);
+#if FW_DEBUG
 int _sdbgpSendData(int handle, const void *buf, SceSize size);
+#endif
 int sdbgpUpdateBufStatus(uint32_t *status, uint32_t bits, int set);
 int _sdbgpFreeSendBuf(SdbgpCpuState *cpu);
 int sdbgpSendErrorHeader(SdbgpCpuState *cpu, uint8_t group, uint8_t command,

@@ -10,6 +10,8 @@
 #include <threadmgr/threadmgr.h>
 #include "sdbgp_internal.h"
 
+#if FW_DEBUG
+
 static const SceUID s_fixedHeapUids[8] = {
 	0x10033, 0x10035, 0x10037, 0x10039,
 	0x1003b, 0x1003d, 0x1003f, 0x10041,
@@ -271,3 +273,5 @@ int bgCheckStart(void)
 	}
 	return gWQ;
 }
+
+#endif /* FW_DEBUG */

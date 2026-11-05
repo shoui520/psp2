@@ -45,8 +45,14 @@ int sceSDfMgrOpen(SceSDfMgrHandler handler, const SceSDfMgrProtocol *protocol,
 void SceDeci4pSDfMgrForKernel_8A3B06F2(void *dst, int c, SceSize size);			/* memset */
 SceSize SceDeci4pSDfMgrForKernel_68903C1D(const SceDeci4pHeader *hdr);			/* get size */
 void SceDeci4pSDfMgrForKernel_FFC95B63(SceDeci4pHeader *hdr, SceSize size);		/* set size */
+#if FW_DEBUG
 int SceDeci4pSDfMgrForKernel_501CE61D(SceUInt32 level, const SceKernelDebugInfo *info,
 				       const char *fmt, ...);				/* printf */
+#define SCE_SDFMGR_DBG_PRINTF(_level, _line, _fmt, ...)			\
+	SceDeci4pSDfMgrForKernel_501CE61D((_level), SCE_DBGINFO(_line), _fmt, ##__VA_ARGS__)
+#else
+#define SCE_SDFMGR_DBG_PRINTF(_level, _line, _fmt, ...)	do { } while (0)
+#endif
 int sceSDfMgrClose(int handle);					/* close */
 int SceDeci4pSDfMgrForKernel_B22B42FB(void (*hook)(void));				/* RegisterBreakHook */
 int SceDeci4pSDfMgrForKernel_E53400AE(void (*hook)(void));				/* UnregisterBreakHook */

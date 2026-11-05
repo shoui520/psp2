@@ -2290,6 +2290,7 @@ static int ShowResCount(int cmd)
 	return 0;
 }
 
+#if FW_DEBUG
 /* 0x810099e8 */
 int KernelUtilsFixedHeapLeakCheckStart(SceUID uid, void **ctx)
 {
@@ -2301,6 +2302,7 @@ int KernelUtilsFixedHeapLeakCheck(void *ctx)
 {
 	return FixedHeapCommonLeakCheck((SdbgpFixedHeapLeakCtx *)ctx);
 }
+#endif
 
 SdbgpKShowCmd s_kshowCmds[53] = {
 	{ 1, 0x0000, help },

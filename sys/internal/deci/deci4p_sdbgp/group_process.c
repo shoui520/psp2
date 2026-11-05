@@ -1037,7 +1037,7 @@ int _getFixedHeapInfo(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 		work->size = sizeof(*work);
 		res = sceKernelGetFixedHeapInfo(uid, work);
 		if (res < 0) {
-			SceDeci4pSDfMgrForKernel_501CE61D(15, SCE_DBGINFO(2458),
+			SCE_SDFMGR_DBG_PRINTF(15, 2458,
 				"sceKernelGetFixedHeapInfo failed 0x%08x\n",
 				res);
 			continue;
@@ -1110,8 +1110,7 @@ int _getFixedHeapInfo(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 				out[0] = n + 1;
 				res = sceKernelIsAccessibleRange(1, node, 4);
 				if (res < 0) {
-					SceDeci4pSDfMgrForKernel_501CE61D(15,
-						SCE_DBGINFO(2527),
+					SCE_SDFMGR_DBG_PRINTF(15, 2527,
 						"sceKernelIsAccessibleRange failed 0x%08x:%p\n",
 						res, node);
 					listWords = out[0] + 1;
@@ -1143,8 +1142,7 @@ int _getFixedHeapInfo(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 									 node,
 									 4);
 					if (res < 0) {
-						SceDeci4pSDfMgrForKernel_501CE61D(15,
-							SCE_DBGINFO(2552),
+						SCE_SDFMGR_DBG_PRINTF(15, 2552,
 							"sceKernelIsAccessibleRange failed 0x%08x:%p\n",
 							res, node);
 						words = out[0] + 1;
