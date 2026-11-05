@@ -72,7 +72,7 @@ typedef struct SdfMgrCpuState {
 	uint32_t flags;
 	uint32_t lastSendIndex;
 	uint32_t reserved;			/* passed to the print handler; never set */
-	SdfMgrHook indexedHooks[4];
+	void *indexedHooks[4];			/* exception hooks: SdfMgrExceptionHook, SdfMgrBusErrorHook */
 	SdfMgrHook breakHooks[4];
 	SdfMgrControl controlComponents[2];
 	void *printContext;

@@ -509,7 +509,7 @@ SceUInt32 SceDeci4pSDfMgrForKernel_35238B8A(void)
 	       SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_GAME_RW;
 }
 
-int SceDeci4pSDfMgrForKernel_6BF5553C(SdfMgrHook hook, unsigned index)
+int SceDeci4pSDfMgrForKernel_6BF5553C(void *hook, unsigned index)
 {
 	SdfMgrCpuState *cpu;
 
@@ -522,7 +522,7 @@ int SceDeci4pSDfMgrForKernel_6BF5553C(SdfMgrHook hook, unsigned index)
 	return 0;
 }
 
-int SceDeci4pSDfMgrForKernel_B050A0D5(SdfMgrHook hook, unsigned index)
+int SceDeci4pSDfMgrForKernel_B050A0D5(void *hook, unsigned index)
 {
 	SdfMgrCpuState *cpu;
 
