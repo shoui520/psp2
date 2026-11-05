@@ -1126,9 +1126,9 @@ sdbgpCmd10_1a(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 	}
 
 	sdbgpSendErrorHeader(cpu, packet->group, 0x1b, 0, 0);
+	reply[9] = req[7];
 	reply[7] = ids[0];
 	reply[8] = ids[1];
-	reply[9] = req[7];
 	return 0;
 }
 
@@ -1179,9 +1179,9 @@ sdbgpCmd10_1c(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 	}
 
 	sdbgpSendErrorHeader(cpu, packet->group, 0x1d, 0, 0);
+	reply[9] = req[7];
 	reply[7] = ids[0];
 	reply[8] = ids[1];
-	reply[9] = req[7];
 	return 0;
 }
 
@@ -1236,9 +1236,14 @@ sdbgpCmd10_08(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 			sdfbzero(l1Info, sizeof(*l1Info));
 			l1Info->size = sizeof(*l1Info);
 			sceKernelAddressSpaceGetMMUL1AllInfo(asid, l1Info);
-			reply[8] = sizeof(*l1Info);
-			reply[9] = l1Info->split;
-			reply[10] = l1Info->l2Count;
+			{
+				uint32_t split = l1Info->split;
+				uint32_t l2Count = l1Info->l2Count;
+
+				reply[8] = sizeof(*l1Info);
+				reply[9] = split;
+				reply[10] = l2Count;
+			}
 			sdfbcopy(&reply[11], l1Info->table, 0x4000);
 			sdbgpSendErrorHeader(cpu, packet->group, 0x09, 0, 0);
 			reply[7] = pid;
@@ -2700,8 +2705,13 @@ sdbgpCmd10_90(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 		((uint8_t *)reply)[36 + i] = work[i];
 
 	sdbgpSendErrorHeader(cpu, packet->group, 0x91, 0, 0);
-	reply[7] = req[6];
-	reply[8] = req[5];
+	{
+		uintptr_t p = req[5];
+		SceSize s = req[6];
+
+		reply[7] = s;
+		reply[8] = p;
+	}
 	return 0;
 }
 
@@ -2761,9 +2771,15 @@ sdbgpCmd10_98(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 		((uint8_t *)reply)[40 + i] = work[i];
 
 	sdbgpSendErrorHeader(cpu, packet->group, 0x99, 0, 0);
-	reply[7] = req[6];
-	reply[8] = req[5];
-	reply[9] = req[7];
+	{
+		uint32_t p = req[5];
+		uint32_t w = req[7];
+		uint32_t s = req[6];
+
+		reply[7] = s;
+		reply[8] = p;
+		reply[9] = w;
+	}
 	return 0;
 }
 
@@ -2843,8 +2859,13 @@ sdbgpCmd10_9a(SdbgpCpuState *cpu, SdbgpHeader *packet, uint8_t command)
 	}
 
 	sdbgpSendErrorHeader(cpu, packet->group, 0x9b, 0, 0);
-	reply[7] = req[6];
-	reply[8] = req[7];
+	{
+		uint32_t s = req[6];
+		uint32_t w = req[7];
+
+		reply[7] = s;
+		reply[8] = w;
+	}
 	return 0;
 }
 
@@ -2923,9 +2944,10 @@ sdbgpCheckStepOverCall(SdbgpState *state, SceUID pid, uintptr_t pc, uint32_t cps
 	*isCall = 1;
 	if (state->debugCpu != NULL) {
 		uintptr_t stopPc = state->debugCpu[sceKernelCpuId()].pc;
+		SdfMgrDebugCpuState *dbgCpu = state->debugCpu;
 		uintptr_t nextPc = (masked == 0x4780U) ? (stopPc + 2) : (stopPc + 4);
 
-		state->debugCpu[sceKernelCpuId()].stepAddress = nextPc;
+		dbgCpu[sceKernelCpuId()].stepAddress = nextPc;
 	}
 	return 0;
 }
