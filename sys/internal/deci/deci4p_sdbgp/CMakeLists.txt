@@ -25,5 +25,6 @@ psp2_module(os0_kd_deci4p_sdbgp KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	sync.c
 	cpu_reg.c
 	excp_info.c
+	trace.c
 	testapi.c
 )

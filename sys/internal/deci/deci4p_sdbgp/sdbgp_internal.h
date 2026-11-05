@@ -897,7 +897,7 @@ int sceKernelMMUL1GetInfo(const uint32_t *table, uintptr_t va, SceKernelMMUL1Inf
 int excpHandlerInit(SdbgpCpuState *cpu);
 int excpGetExcpStopReason(SdbgpCpuState *cpu, SdbgpExcpDetail *detail, uint32_t stopReason);
 
-/* trace.c */
+/* trace.c, cpu_reg.c */
 int traceInit(void);
 int sdbgpReadVfpSystemReg(uint32_t code, uint32_t *val, uintptr_t vfpCtx);
 int sdbgpReadDebugReg(uint32_t code, uint32_t *val, uintptr_t cpuCtx, SceUID pid);
