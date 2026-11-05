@@ -29,7 +29,7 @@ int audioStartTransmitDma(struct AudioDmaState *state,
 	SceSrcMixRegisters *registers);
 int audioSetHardwareVolume(int channel, int left, int right);
 
-/* Programs must be rebuilt for the SrcMix processor before this module links. */
+/* The SrcMix program (srcmix.asm, in two parts: srcmix_program.S) and its coefficients. */
 extern const uint32_t audioSrcMixProgram[256];
 extern const uint32_t audioSrcMixSecondaryProgram[1414];
 extern const uint32_t audioSrcMixCoefficients[1024];
