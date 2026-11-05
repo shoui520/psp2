@@ -19,7 +19,7 @@ int PartitionGetMMUL2AllInfo(Partition *part, uintptr_t va,
 		return 1;
 	l2 = SceSysmemForKernel_456ECB54(part, va);
 	if (!l2) {
-		SCE_DBG_PRINTF_FUNC(0xb, 82, "PartitionGetMMUL2Info",
+		SCE_DBG_PRINTF_FUNC(0xb, 82, "PartitionGetMMUL2AllInfo",
 				    "not found l2pagetable for %p\n", (void *)va);
 		return SCE_KERNEL_ERROR_PARTITION_ERROR;
 	}
