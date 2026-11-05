@@ -273,7 +273,11 @@ typedef struct SdbgpHwwtptSetReply {
 
 /* the stop details an exception notification carries (excp_handler.c) */
 typedef struct SdbgpExcpDetail {
-	uint32_t value[5];
+	SceSize size;
+	uint32_t stopReason;
+	uint32_t id;
+	uint32_t reserved0;
+	uint32_t reserved1;
 } SdbgpExcpDetail;
 
 /* SDBGP_NOTIFY_EXCEPTION */

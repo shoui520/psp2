@@ -381,13 +381,11 @@ int sdbgpCmd30_50(SdbgpCpuState *cpu, SdbgpHeader *packet)
 	const SdbgpWaypointTraceRequest *req = (const SdbgpWaypointTraceRequest *)packet;
 	SdbgpWaypointTraceReply *reply;
 	void *work;
+	SceSize count = 0;
+	SceSize size = 0;
 	SceUID pid;
-	SceSize count;
-	SceSize size;
 	int ret;
 
-	count = 0;
-	size = 0;
 	if (sdbgpGetRecvSize(cpu) <= 0x33) {
 		sdbgpSendError(cpu, packet->group, packet->command + 1, packet->tag,
 			       SDBGP_RESULT_PACKET_TOO_SHORT);

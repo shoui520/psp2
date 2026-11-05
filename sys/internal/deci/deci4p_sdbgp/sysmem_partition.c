@@ -44,13 +44,17 @@ int L1PageTableGetInfo(L1PageTable *l1pt, uintptr_t va, SceKernelMMUL1Info *info
 int L1PageTableGetAllInfo(L1PageTable *l1pt, SceKernelMMUL1AllInfo *info)
 {
 	SceKernelIntrStatus intr;
+	const uint32_t *table;
+	uintptr_t split;
 	uint32_t entry;
-	int i;
+	unsigned int i;
 
 	intr = SceCpuForDriver_EC53D007(&l1pt->lock);
-	info->split = l1pt->split;
+	split = l1pt->split;
+	info->split = split;
 	for (i = 0; i < 4096; i++) {
-		entry = (i << 20) < l1pt->split ? l1pt->low[i] : l1pt->high[i];
+		table = (i << 20) < split ? l1pt->low : l1pt->high;
+		entry = table[i];
 		info->table[i] = entry;
 		if ((entry & 3) == 1)
 			info->l2Count++;

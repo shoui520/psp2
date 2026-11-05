@@ -103,7 +103,7 @@ int sdbgpGetProcessStopInfo(SdbgpCpuState *cpu, uint32_t *out, SceUID pid)
 	}
 
 	out[1] = state->stopReason[i];
-	if (out[1] != 0x20004)
+	if (out[1] == 0x20004)
 		return 0;
 
 find_swbkpt:
