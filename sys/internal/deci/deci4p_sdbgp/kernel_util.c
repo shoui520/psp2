@@ -766,7 +766,7 @@ static inline int FixedHeapCommonShow(SdbgpFixedHeapLeakCtx *ctx)
 }
 
 /* 0x81007330 */
-static int FixedHeapCommonLeakCheck(SdbgpFixedHeapLeakCtx *ctx)
+static __attribute__((noinline)) int FixedHeapCommonLeakCheck(SdbgpFixedHeapLeakCtx *ctx)
 {
 	SCE_DBG_PRINTF_LEVEL(1, 11, 1386, "()\n");
 	return FixedHeapCommonShow(ctx);
@@ -1057,7 +1057,8 @@ static int FixedHeapFreeHook(SdbgpFixedHeapLeakCtx *ctx, void *heap, void *obj);
 static int GUIDEntryHeapFreeHook(SdbgpFixedHeapLeakCtx *ctx, void *heap, void *obj);
 
 /* 0x81007960 */
-static int FixedHeapLeakCheckStartByUid(SceUID uid, SdbgpFixedHeapLeakCtx **out)
+static __attribute__((noinline)) int FixedHeapLeakCheckStartByUid(SceUID uid,
+								  SdbgpFixedHeapLeakCtx **out)
 {
 	SdbgpFixedHeapLeakCtx *ctx;
 	int res;
