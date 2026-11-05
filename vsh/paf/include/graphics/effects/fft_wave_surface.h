@@ -11,6 +11,7 @@
 #include <common/shared_ptr.h>
 #include <graphics/arl/arl_defines.h>
 #include <graphics/arl/gxm/gxm_texture.h>
+#include <graphics/effects/fft.h>
 #include <math/ngp/v2.h>
 #include <std/string>
 #include <std/vector>
@@ -99,12 +100,6 @@ public:
 
 	uint16_t m_bits;
 };
-
-/* 0x811944c0: the 2D FFT of src into dst, inverse when asked */
-void FFT2D(int32_t width, int32_t height, bool inverse, const vector<math::v2> &src,
-	   vector<math::v2> &dst);
-/* 0x811949ea: the inverse 2D FFT of 32 by 32 */
-void FFT2D32x32(const vector<math::v2> &src, vector<math::v2> &dst);
 
 /* 0xd8 bytes */
 class FFTWaveSurface {
