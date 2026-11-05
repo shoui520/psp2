@@ -1,0 +1,17 @@
+The PlayStation(R)Vita build's dtrace.c (contrib/sce-dtrace-cddl-2015.01, as Sony published it) with
+one change of ours, not Sony's: dtrace_dof_copyin is noinline. Sony's GCC keeps it whole in every
+build (3.6x 0x81008180, 4.00 0x81009da8; called by dtrace_ioctl and dtrace_ioctl_helper), ours
+inlines it into both callers once ASSERT is compiled out. The change stays on its line, so the
+debug records keep Sony's line numbers.
+
+--- a/dtrace/cddl/dtrace.c
++++ b/dtrace/cddl/dtrace.c
+@@ -14795,7 +14795,7 @@
+ 	return (dof);
+ }
+ 
+-static dof_hdr_t *
++static __attribute__((noinline)) dof_hdr_t *
+ #if !defined(__APPLE__)
+ dtrace_dof_copyin(uintptr_t uarg, int *errp)
+ #else

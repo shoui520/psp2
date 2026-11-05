@@ -4,7 +4,7 @@
 set(dtrace_cddl "${PSP2_SRC}/contrib/sce-dtrace-cddl-2015.01")
 set(dtrace_cddl_sources
 	"${dtrace_cddl}/driver/src/dfmgr/dtracep/dtracep_syscalls_cddl.c"
-	"${dtrace_cddl}/driver/src/dfmgr/dtracep/dtrace/cddl/dtrace.c"
+	"${CMAKE_CURRENT_BINARY_DIR}/dtrace/cddl/dtrace.c"
 	"${dtrace_cddl}/driver/src/dfmgr/dtracep/dtrace/cddl/dtrace_subr.c"
 	"${dtrace_cddl}/driver/src/dfmgr/dtracep/dtrace/cddl/fasttrap.c"
 	"${dtrace_cddl}/driver/src/dfmgr/dtracep/dtrace/cddl/fasttrap_isa.c"
@@ -15,7 +15,8 @@ set(dtrace_cddl_sources
 	"${dtrace_cddl}/driver/src/dfmgr/dtracep/dtrace/cddl/systrace.c"
 	"${dtrace_cddl}/driver/src/dfmgr/dtracep/dtrace/cddl/taskq.c")
 foreach(src IN LISTS dtrace_cddl_sources)
-	string(REGEX REPLACE ".*/driver/src/dfmgr/dtracep/" "" name "${src}")
+	string(REPLACE "${CMAKE_CURRENT_BINARY_DIR}/" "" name "${src}")
+	string(REGEX REPLACE ".*/driver/src/dfmgr/dtracep/" "" name "${name}")
 	set_property(SOURCE "${src}" APPEND PROPERTY COMPILE_DEFINITIONS "__FILE_NAME__=\"${name}\"")
 endforeach()
 
@@ -32,6 +33,9 @@ function(dtrace_prepare_patched upstream patch output)
 	endif()
 	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${upstream}" "${patch}")
 endfunction()
+# dtrace.c with one change of ours (dtrace/cddl/dtrace.patch: a function Sony's GCC kept whole)
+dtrace_prepare_patched("${dtrace_cddl}/driver/src/dfmgr/dtracep/dtrace/cddl/dtrace.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/dtrace/cddl/dtrace.patch" "${CMAKE_CURRENT_BINARY_DIR}/dtrace/cddl/dtrace.c")
 set(dtrace_bsd_out "${CMAKE_CURRENT_BINARY_DIR}/dtrace/bsd")
 dtrace_prepare_patched("${dtrace_xnu}/bsd/dev/dtrace/blist.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/dtrace/bsd/blist.patch" "${dtrace_bsd_out}/blist.c")
