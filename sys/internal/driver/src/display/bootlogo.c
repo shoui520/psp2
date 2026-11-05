@@ -62,7 +62,7 @@ int showBootLogo(SceUInt32 head) /* name unknown */
 	return 0;
 }
 
-void freeBootLogo(SceUInt32 head) /* name unknown */
+int freeBootLogo(SceUInt32 head) /* name unknown */
 {
 	SceUID block;
 
@@ -72,4 +72,5 @@ void freeBootLogo(SceUInt32 head) /* name unknown */
 		SceDisplayForDriver_B54962A1(head, 0, -1);
 		sceKernelFreeMemBlock(block);
 	}
+	return 0;
 }

@@ -15,8 +15,8 @@
 #define DTRACE_CHECK(ret, what)	((void)(ret))
 #endif
 
-void (*vblankProbeHook)(const void *probe);
-int vblankProbeEnabled;
+static void (*vblankProbeHook)(const void *probe);
+static int vblankProbeEnabled;
 static int vblankProbeHandler(void *subintrArg, void *userCtx, unsigned char priority);
 
 /* Sony's name (__func__). */
@@ -67,27 +67,31 @@ static void vblankProbeDestroy(void)
 	DTRACE_CHECK(ret, "failed to release interrupt");
 }
 
-static const SceDtraceProbe vblankProbe;
-
 /* Subinterrupt: hand the probe to DTrace. */
-static int vblankProbeHandler(void *subintrArg, void *userCtx, unsigned char priority) /* name unknown */
+static __attribute__((used)) int vblankProbeHandler(void *subintrArg, void *userCtx, unsigned char priority) /* name unknown */
 {
+	__label__ pc;
+pc:;
+	static const SceDtraceProbe vblankProbe asm("__dtrace_probe$0___interrupt____vblank") __attribute__((used)) = {
+		.enabled = &vblankProbeEnabled,
+		.provider = "__interrupt_",
+		.name = "vblank",
+		.address = (void *)&&pc,
+		.hook = &vblankProbeHook,
+		.create = vblankProbeCreate,
+		.enable = vblankProbeEnable,
+		.disable = vblankProbeDisable,
+		.destroy = vblankProbeDestroy,
+	};
+	asm volatile(
+		".type  __dtrace_probe$0___interrupt____vblank, %%object\n\t"
+		".globl __dtrace_probe$0___interrupt____vblank\n\t"
+		"# " : : );
+
 	if (vblankProbeHook != NULL)
 		vblankProbeHook(&vblankProbe);
 	return -1;
 }
 
-static const SceDtraceProbe vblankProbe = {
-	.enabled = &vblankProbeEnabled,
-	.provider = "__interrupt_",
-	.name = "vblank",
-	.address = vblankProbeHandler,	/* Sony's has no Thumb bit (0x81007a34) */
-	.hook = &vblankProbeHook,
-	.create = vblankProbeCreate,
-	.enable = vblankProbeEnable,
-	.disable = vblankProbeDisable,
-	.destroy = vblankProbeDestroy,
-};
-
-/* DTrace finds the module's probes through this list. */
+extern const SceDtraceProbe vblankProbe asm("__dtrace_probe$0___interrupt____vblank");
 static const SceDtraceProbe *const vblankProbes[] __attribute__((used)) = { &vblankProbe };

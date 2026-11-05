@@ -120,11 +120,13 @@ int _sceDisplaySetFrameBufInternal(SceUInt32 head, SceUInt32 plane, const SceDis
 {
 	DisplaySetFrameBufInternalArgs args;
 	SceDisplayFrameBuf *frameBuf;
+	SceUInt32 sync;
 	int ret;
 
 	ret = sceKernelCopyFromUser(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
+	sync = args.sync;
 	frameBuf = NULL;
 	if (pParam != NULL) {
 		if (args.size > SYSCALL_COPY_MAX)
@@ -134,7 +136,7 @@ int _sceDisplaySetFrameBufInternal(SceUInt32 head, SceUInt32 plane, const SceDis
 		if (ret < 0)
 			return ret;
 	}
-	return syscallSetFrameBufInternal(head, plane, frameBuf, args.sync);
+	return syscallSetFrameBufInternal(head, plane, frameBuf, sync);
 }
 
 typedef struct DisplaySetFrameBufForCompatArgs {
@@ -150,31 +152,35 @@ int _sceDisplaySetFrameBufForCompat(int x, int y, int cropWidth,
 				    const DisplaySetFrameBufForCompatArgs *pArgs)
 {
 	DisplaySetFrameBufForCompatArgs args;
+	const SceDisplayFrameBuf *pParam, *pConvDst;
 	SceDisplayFrameBuf *frameBuf, *convDst;
-	int ret;
+	int cropHeight, ret;
 
 	ret = sceKernelCopyFromUser(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
+	cropHeight = args.cropHeight;
+	pParam = args.pParam;
+	pConvDst = args.convDst;
 	frameBuf = NULL;
-	if (args.pParam != NULL) {
+	if (pParam != NULL) {
 		if (args.paramSize > SYSCALL_COPY_MAX)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
-		ret = sceKernelCopyFromUser(frameBuf, args.pParam, args.paramSize);
+		ret = sceKernelCopyFromUser(frameBuf, pParam, args.paramSize);
 		if (ret < 0)
 			return ret;
 	}
 	convDst = NULL;
-	if (args.convDst != NULL) {
+	if (pConvDst != NULL) {
 		if (args.convDstSize > sizeof(SceDisplayFrameBuf))
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		convDst = __builtin_alloca(sizeof(SceDisplayFrameBuf));
-		ret = sceKernelCopyFromUser(convDst, args.convDst, args.convDstSize);
+		ret = sceKernelCopyFromUser(convDst, pConvDst, args.convDstSize);
 		if (ret < 0)
 			return ret;
 	}
-	return setFrameBufForCompat(x, y, cropWidth, args.cropHeight, frameBuf, convDst);
+	return setFrameBufForCompat(x, y, cropWidth, cropHeight, frameBuf, convDst);
 }
 
 typedef struct DisplayGetFrameBufInternalArgs {
@@ -188,21 +194,23 @@ int _sceDisplayGetFrameBufInternal(SceUInt32 head, SceUInt32 plane, SceDisplayFr
 {
 	DisplayGetFrameBufInternalArgs args;
 	SceDisplayFrameBuf *frameBuf;
+	SceUInt32 sync;
 	int ret, res;
 
 	ret = sceKernelCopyFromUser(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
+	sync = args.sync;
 	if (pParam == NULL)
-		return syscallGetFrameBufInternal(head, plane, NULL, args.sync);
+		return syscallGetFrameBufInternal(head, plane, NULL, sync);
 	if (args.size > SYSCALL_COPY_MAX)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
-	memset(frameBuf, 0, SYSCALL_COPY_MAX);
+	__builtin_memset(frameBuf, 0, SYSCALL_COPY_MAX);
 	ret = sceKernelCopyFromUser(frameBuf, pParam, args.size);
 	if (ret < 0)
 		return ret;
-	ret = syscallGetFrameBufInternal(head, plane, frameBuf, args.sync);
+	ret = syscallGetFrameBufInternal(head, plane, frameBuf, sync);
 	res = sceKernelCopyToUser(pParam, frameBuf, args.size);
 	return res < 0 ? res : ret;
 }
@@ -247,7 +255,7 @@ int _sceDisplayGetFrameBuf(SceDisplayFrameBuf *pParam, SceUInt32 sync, const Dis
 	if (args.size > SYSCALL_COPY_MAX)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
-	memset(frameBuf, 0, SYSCALL_COPY_MAX);
+	__builtin_memset(frameBuf, 0, SYSCALL_COPY_MAX);
 	ret = sceKernelCopyFromUser(frameBuf, pParam, args.size);
 	if (ret < 0)
 		return ret;
@@ -271,7 +279,7 @@ int _sceDisplayGetResolutionInfoInternal(SceUInt32 head, SceDisplayResolutionInf
 	if (args.size > SYSCALL_COPY_MAX)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(SYSCALL_COPY_MAX);
-	memset(info, 0, SYSCALL_COPY_MAX);
+	__builtin_memset(info, 0, SYSCALL_COPY_MAX);
 	ret = sceKernelCopyFromUser(info, pInfo, args.size);
 	if (ret < 0)
 		return ret;

@@ -161,7 +161,7 @@ int vblankResume(void);
 
 /* bootlogo.c */
 int showBootLogo(SceUInt32 head);
-void freeBootLogo(SceUInt32 head);
+int freeBootLogo(SceUInt32 head);
 
 /* oled.c */
 int oledInit(void);
