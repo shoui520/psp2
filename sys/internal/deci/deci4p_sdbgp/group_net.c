@@ -188,8 +188,8 @@ int sdbgpCmd70_06(SdbgpCpuState *cpu, SdbgpHeader *packet)
 	return 0;
 }
 
-static void sdbgpCopyNetSockInfo(SdbgpNetSockInfoReply *reply, const void *src,
-				 SceSize size)
+static __attribute__((noinline)) void sdbgpCopyNetSockInfo(SdbgpNetSockInfoReply *reply,
+							   const void *src, SceSize size)
 {
 	SceSize left = size - sizeof(SceNetPsDebugSockInfo);
 	uint8_t *dst = (uint8_t *)reply->info.sockets;

@@ -933,7 +933,7 @@ static __attribute__((noinline)) void LeakCheckHeapAlloc(SceUID heap, void *ptr,
 }
 
 /* The counters a UID entry heap and a fixed heap share. */
-static inline int LeakCheckShowHeapCount(const SceKernelUIDEntryHeapInfo *old,
+static __attribute__((noinline)) int LeakCheckShowHeapCount(const SceKernelUIDEntryHeapInfo *old,
 				  const SceKernelUIDEntryHeapInfo *new)
 {
 	SceDebugForDriver_391B74B7("\t%s: 0x%08x  0x%08x  0x%08x  0x%08x  0x%08x\n", "OLD",
