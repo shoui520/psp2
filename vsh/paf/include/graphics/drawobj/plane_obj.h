@@ -28,7 +28,22 @@ namespace graph {
 namespace arl {
 class VertexArray;
 class IndexArray;
+class VertShaderObject;
+class FragShaderObject;
+template<class Interface, class Object>
+class ShaderInstance;
 }
+
+/* the default shader's programs, paf/cg/drawobj/basic_*.vp and .fp (default_shader.cpp) */
+class BasicRectVertShader;
+class BasicLineVertShader;
+class BasicImageVertShader;
+class BasicRectFragShader;
+class BasicImageFragShader;
+class BasicImageCopyFragShader;
+class BasicDualImageFragShader;
+class BasicShadowFragShader;
+class BasicEmbossFragShader;
 
 /* what a shader draws a plane with: the mesh, the textures and their region (0x2c bytes;
    m_instances and the reserved words ours, 1 and 0 here) */
@@ -37,6 +52,8 @@ public:
 	/* how the text graphics draw a glyph (names ours) */
 	enum Effect {
 		Effect_None = 0,
+		/* the mesh's edges, in the colour of the scene */
+		Effect_Line = 1,
 		Effect_Shadow = 2,
 		Effect_Emboss = 3,
 		Effect_ShadowEmboss = 4
@@ -76,18 +93,47 @@ public:
 	{
 	}
 
-	virtual void Draw(PlaneObjDrawParams &params) = 0;
+	virtual int32_t Draw(PlaneObjDrawParams &params) = 0;
 };
 
-/* the shader gutil::Init makes the default (constructed by 0x81195248, its code not converted;
-   name ours); 0x28 bytes */
+/* the shader gutil::Init makes the default: a rectangle in the colour of the scene, its edges,
+   one or two textures, and a texture with a shadow, embossed or both, each pair of programs made
+   the first time it draws (default_shader.cpp; the names ours); 0x28 bytes */
 class DefaultShader : public Shader {
 public:
 	DefaultShader();
 	virtual ~DefaultShader();
-	virtual void Draw(PlaneObjDrawParams &params);
+	virtual int32_t Draw(PlaneObjDrawParams &params);
 
-	uint32_t m_data[9];
+private:
+	typedef arl::ShaderInstance<BasicRectVertShader, arl::VertShaderObject> RectVert;
+	typedef arl::ShaderInstance<BasicLineVertShader, arl::VertShaderObject> LineVert;
+	typedef arl::ShaderInstance<BasicImageVertShader, arl::VertShaderObject> ImageVert;
+	typedef arl::ShaderInstance<BasicRectFragShader, arl::FragShaderObject> RectFrag;
+	typedef arl::ShaderInstance<BasicImageFragShader, arl::FragShaderObject> ImageFrag;
+	typedef arl::ShaderInstance<BasicImageCopyFragShader, arl::FragShaderObject> ImageCopyFrag;
+	typedef arl::ShaderInstance<BasicDualImageFragShader, arl::FragShaderObject> DualImageFrag;
+	typedef arl::ShaderInstance<BasicShadowFragShader, arl::FragShaderObject> ShadowFrag;
+	typedef arl::ShaderInstance<BasicEmbossFragShader, arl::FragShaderObject> EmbossFrag;
+
+	int32_t DrawShadowEmboss(PlaneObjDrawParams &params);
+	int32_t DrawEmboss(PlaneObjDrawParams &params);
+	int32_t DrawShadow(PlaneObjDrawParams &params);
+	int32_t DrawLine(PlaneObjDrawParams &params);
+	int32_t DrawRect(PlaneObjDrawParams &params);
+	int32_t DrawImage(PlaneObjDrawParams &params);
+	int32_t DrawDualImage(PlaneObjDrawParams &params);
+
+	RectVert *m_rect_vert;
+	LineVert *m_line_vert;
+	ImageVert *m_image_vert;
+	RectFrag *m_rect_frag;
+	ImageFrag *m_image_frag;
+	/* the texture alone, for the scene's colour white */
+	ImageCopyFrag *m_image_copy_frag;
+	DualImageFrag *m_dual_image_frag;
+	ShadowFrag *m_shadow_frag;
+	EmbossFrag *m_emboss_frag;
 };
 
 /* a division of a plane by its surface's divide mode: how it is cut, the borders' ratios across

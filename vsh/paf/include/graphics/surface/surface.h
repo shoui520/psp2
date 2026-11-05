@@ -481,6 +481,17 @@ public:
 		return m_height;
 	}
 
+	/* the size of the texture the surface is in, across and down (names ours) */
+	int16_t GetTexWidth() const
+	{
+		return m_tex_width;
+	}
+
+	int16_t GetTexHeight() const
+	{
+		return m_tex_height;
+	}
+
 	ImageOrder GetOrder() const
 	{
 		return m_order;
