@@ -331,7 +331,7 @@ int VSlotModuleStart(void)
 	return 0;
 }
 
-#if defined(SYSMEM_TZS) && FW_SINCE(0x04000000)
+#if defined(SYSMEM_TZS) && FW_IS_400
 /* 4.00's secure link keeps this record of vslot_module.h without the code */
 #pragma push_macro("__FILE_NAME__")
 #undef __FILE_NAME__

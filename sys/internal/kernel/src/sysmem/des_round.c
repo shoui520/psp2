@@ -1,7 +1,7 @@
 /* Firmware-specific DES round data, read by DesRound in des.S. */
 #include "des_internal.h"
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 const struct {
 	uint32_t alternatingBoxesMask;
 	uint32_t upperBoxesMask;

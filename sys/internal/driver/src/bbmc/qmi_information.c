@@ -300,7 +300,7 @@ int bbcmdReadInformationResponse(BbcmdRequest *request,
 						char shift = 4 * (count - 1);
 						char digits[4] = { 0 };
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 						__memcpy_chk(digits, value, count, sizeof(digits));
 #else
 						memcpy(digits, value, count);

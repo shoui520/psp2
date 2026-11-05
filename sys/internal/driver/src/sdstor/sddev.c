@@ -40,7 +40,7 @@ static SceSdstorSddev sddevTables[5];
  * The 3.6x builds declare the power helpers inline, so sddev_init, sddev_insert
  * and sddev_resume carry their bodies; the 4.00 build calls them.
  */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define SDDEV_POWER_INLINE
 #else
 #define SDDEV_POWER_INLINE inline

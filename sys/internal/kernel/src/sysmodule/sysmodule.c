@@ -279,7 +279,7 @@ static inline SceUInt32 sysmoduleLibAlt(SceUInt32 lib)
 
 /* the user PMU, for libperf (value: 1 on, 0 off) */
 /* the 3.6x build has these messages compiled out */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define PMON_PRINTF(_line, _fmt, _ret)	SCE_DBG_PRINTF(0, (_line), _fmt, (_ret))
 #else
 #define PMON_PRINTF(_line, _fmt, _ret)	((void)(_ret))
@@ -656,7 +656,7 @@ static inline void sysmoduleProcEnd(SceUID pid)
 	}
 }
 
-#if !FW_SINCE(0x04000000)
+#if !FW_IS_400
 static int procKillHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	sysmoduleProcEnd(pid);
@@ -677,7 +677,7 @@ static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, void *comm
 	return 0;
 }
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 static int procKillHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	sysmoduleProcEnd(pid);

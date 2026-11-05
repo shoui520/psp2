@@ -47,7 +47,7 @@ int setIftuFrameBufAddr(SceIftuPlaneState *state, SceUInt32 pitch, SceUInt32 wid
 			ratioX = ratioY;
 			break;
 		default:
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 			SCE_DBG_PRINTF(6, 64, "unsupported display mode: %x\n", vic);
 #endif
 			ratioY = 1.0f;

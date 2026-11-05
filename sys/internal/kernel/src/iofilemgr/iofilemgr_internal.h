@@ -1268,7 +1268,7 @@ int getFileSchedParam(SceUID fd, IofilemgrSchedInfo *info, int flag);
 
 /* sched_dispatcher.c */
 IoScheduler *sceIoSchedDispatcherGetIoScheduler(SchedDispatcher *dispatcher, int mntOpt);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 IoScheduler *sceIoSchedDispatcherGetIoSchedulerByEvent(SchedDispatcher *dispatcher,
 						      SceUInt32 bits);
 #endif

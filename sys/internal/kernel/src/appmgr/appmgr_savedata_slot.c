@@ -2230,7 +2230,7 @@ int SceAppMgrForDriver_E104C37E(SceAppMgrSaveDataQuota *quota)
 	if (strncmp(mountDevice, "host0:", 6) != 0) {
 		char partition[32] = {0};
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		__memcpy_chk(partition, mountDevice, strnlen(mountDevice, sizeof(mountDevice)) - 2,
 			     sizeof(partition));
 #else

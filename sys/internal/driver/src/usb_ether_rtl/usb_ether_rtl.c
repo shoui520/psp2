@@ -5,7 +5,7 @@
 #include <sysmem/sysevent_ids.h>
 
 /* Sony's 4.00 build is fortified */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #include <sysmem/fortify.h>
 #endif
 

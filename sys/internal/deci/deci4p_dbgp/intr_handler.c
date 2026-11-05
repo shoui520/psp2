@@ -251,7 +251,7 @@ int intrHandlerInit(DbgpCB *dbgp)
 
 /* intrHandlerTerm is left out of Sony's link; its records stay */
 SCE_DBGINFO_DEFINE_ORPHAN(intrHandlerTermRecord136, 136, "intrHandlerTerm");
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 SCE_DBGINFO_DEFINE_ORPHAN(intrHandlerTermRecord154, 154, "intrHandlerTerm");
 #else
 SCE_DBGINFO_DEFINE_ORPHAN(intrHandlerTermRecord145, 145, "intrHandlerTerm");

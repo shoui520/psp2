@@ -6,7 +6,7 @@
 
 SdifMmcContext gMmcContexts[2];
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 static const uint32_t mmcReadDelay[9] = {
 	1500, 1600, 1650, 1700, 2000, 2500, 3400, 6800, 13600,
 };
@@ -23,7 +23,7 @@ static const uint32_t mmcAccessTimeUnits[8] = {
 	1, 10, 100, 1000, 10000, 100000, 1000000, 10000000,
 };
 
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 static const uint32_t mmcReadDelay[9] = {
 	1500, 1600, 1650, 1700, 2000, 2500, 3400, 6800, 13600,
 };
@@ -31,7 +31,7 @@ static const uint32_t mmcReadDelay[9] = {
 static const uint8_t mmcClockValues[16] = {
 	0, 10, 12, 13, 15, 20, 26, 30, 35, 40, 45, 52, 55, 60, 70, 80,
 };
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 static const uint8_t mmcAccessTimeValues[16] = {
 	0, 10, 12, 13, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80,
 };

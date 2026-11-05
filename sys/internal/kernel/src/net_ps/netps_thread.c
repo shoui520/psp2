@@ -509,7 +509,7 @@ int sceNetPsNormalizeTimeout(int timeout)
 #define bnet_protosw_start	((const char *)&gNetPsOtherDumpCursor)
 #define bnet_protosw_end	((const char *)&gNetPsOtherDumpCursor + 0x105c)
 #define bnet_text_start		((const char *)sceNetPsCalloc)
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define bnet_text_base		0x810558e0
 #else
 #define bnet_text_base		0x810558a0

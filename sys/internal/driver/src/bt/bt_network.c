@@ -4,7 +4,7 @@
 #include <string.h>
 #include "bt_transport.h"
 
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 struct SceNetKernelGateway gBtNetworkGateway;
 #endif
 unsigned int gBtNetworkPortBase;
@@ -14,7 +14,7 @@ unsigned int gBtNetworkDnsServers[2];
 BtNetworkState gBtNetworkState;
 unsigned int gBtNetworkPortCount;
 struct SceNetKernelGateway *gBtNetworkGatewayPointer;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 struct SceNetKernelGateway gBtNetworkGateway;
 #endif
 
@@ -194,7 +194,7 @@ int BtForwardNetworkPacket(BtNetworkPacketContext *context, int protocol,
 		if (protocol == 17) {
 			udp = (NetUdpHeader *)transport;
 			if (length > 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				__builtin___memcpy_chk(udp + 1, packet, length,
 					sizeof(gBtNetworkPacketBuffer.bytes) -
 					sizeof(frame->ethernet) - sizeof(*ip) - sizeof(*udp));
@@ -214,7 +214,7 @@ int BtForwardNetworkPacket(BtNetworkPacketContext *context, int protocol,
 			if (length > 0)
 				memcpy(transport + headerLength, packet, length);
 			transportLength = (unsigned int)length + headerLength;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			__builtin___memcpy_chk(tcp, header, headerLength,
 				sizeof(gBtNetworkPacketBuffer.bytes) -
 				sizeof(frame->ethernet) - sizeof(*ip));
@@ -303,7 +303,7 @@ mapped:
 	transport = (uint8_t *)(ip + 1);
 	if (protocol == 17) {
 		udp = (NetUdpHeader *)transport;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		__builtin___memcpy_chk(udp + 1, packet, length,
 			sizeof(gBtNetworkPacketBuffer.bytes) - sizeof(*ip) - sizeof(*udp));
 #else
@@ -318,7 +318,7 @@ mapped:
 		if (length > 0)
 			memcpy(transport + headerLength, packet, length);
 		transportLength = (unsigned int)length + headerLength;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		__builtin___memcpy_chk(tcp, header, headerLength,
 			sizeof(gBtNetworkPacketBuffer.bytes) - sizeof(*ip));
 #else

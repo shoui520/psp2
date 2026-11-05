@@ -988,7 +988,7 @@ int dfmgrStopProtocol(SceUInt32 protocol)
 }
 
 /* name unknown: report the protocols of a link that came up */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 static void dfmgrSendStatusProtocols(SceUInt32 linkIndex) __attribute__((noinline));
 #endif
 static void dfmgrSendStatusProtocols(SceUInt32 linkIndex)

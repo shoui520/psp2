@@ -1155,7 +1155,7 @@ static uint8_t s_pmSnvsKey1[32];
 static uint8_t s_pmSnvsKey2[32];
 static uint8_t s_pmSnvsKey3[32];
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 /* 0x8187c0: 4096-byte ENC IS work buffer (BSS on 4.00, stack on 3.63/3.65) */
 static uint8_t s_updEncIsWorkBuf[0x1000];
 #endif
@@ -3438,7 +3438,7 @@ int updVerifyEncIsPackage(UpdEncPackageVerifier *v, const void *nonceBuf,
 {
 	uint32_t bmCtrl[2];
 	uint8_t hashBuf[32];
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	uint8_t s_updEncIsWorkBuf[0x1000];
 #endif
 

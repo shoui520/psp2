@@ -12,7 +12,7 @@ static const uint32_t sdioClockFrequencies[3] __attribute__((aligned(16))) = {
 	400000, 25000000, 50000000,
 };
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 static const uint32_t sdioClockUnits[8] __attribute__((aligned(16))) = {
 	10000, 100000, 1000000, 10000000, 0, 0, 0, 0,
 };
@@ -22,7 +22,7 @@ static const uint32_t sdioClockValues[16] __attribute__((aligned(16))) = {
 	0, 10, 12, 13, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80,
 };
 
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 static const uint32_t sdioClockUnits[8] __attribute__((aligned(16))) = {
 	10000, 100000, 1000000, 10000000, 0, 0, 0, 0,
 };

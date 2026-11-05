@@ -430,7 +430,7 @@ int sceSblSmSchedReadArm2CryMonitorCall(SceUInt32 id, int mailbox, unsigned int 
 	if (ret < 0)
 		return ret;
 	if (areaSize < sizeof(*area)) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		SCE_DBG_ASSERT_FAIL(1053);
 #endif
 		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
@@ -454,7 +454,7 @@ int sceSblSmSchedReadCry2ArmMonitorCall(SceUInt32 id, int mailbox, unsigned int 
 	if (ret < 0)
 		return ret;
 	if (areaSize < sizeof(*area)) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		SCE_DBG_ASSERT_FAIL(1114);
 #endif
 		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
@@ -1366,7 +1366,7 @@ int sceSblSmSchedInvokeMonitorCall(SceUInt32 priority, uintptr_t selfPA, SceUInt
 	if (ret < 0)
 		return ret;
 	if (areaSize < sizeof(*area)) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		SCE_DBG_ASSERT_FAIL(860);
 #endif
 		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
@@ -1715,7 +1715,7 @@ int sceSblSmSchedWaitMonitorCall(SceUInt32 id, unsigned int index)
 	if (ret < 0)
 		return ret;
 	if (areaSize < sizeof(*area)) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		SCE_DBG_ASSERT_FAIL(923);
 #endif
 		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
@@ -1761,7 +1761,7 @@ int sceSblSmSchedGetStatusMonitorCall(SceUInt32 id, unsigned int index)
 	if (ret < 0)
 		return ret;
 	if (areaSize < sizeof(*area)) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		SCE_DBG_ASSERT_FAIL(963);
 #endif
 		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;

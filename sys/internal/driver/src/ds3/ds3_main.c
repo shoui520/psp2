@@ -1939,7 +1939,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 		if (result < 0)
 			goto checkTimeouts;
 		result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (result < 0)
 			SCE_DBG_ASSERT_FAIL(552);
 #endif
@@ -2299,7 +2299,7 @@ int _sceDs3BtCb(int notifyId, int notifyCount, int notifyArg, void *userData)
 	int result, count, eventIndex, index, item;
 
 	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (result < 0)
 		SCE_DBG_ASSERT_FAIL(745);
 #endif

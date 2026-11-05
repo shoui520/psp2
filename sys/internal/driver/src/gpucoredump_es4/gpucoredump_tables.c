@@ -981,7 +981,7 @@ const GpuCoreDumpSegment gpuCoreDumpSegments[GPU_COREDUMP_SEGMENTS] = {
 };
 
 /* the GPU driver build the dump comes from (name unknown); it follows the release */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 const SceUInt32 gpuCoreDumpBuild = 0x179d6;
 #elif FW_SINCE(0x03650000)
 const SceUInt32 gpuCoreDumpBuild = 0x179e9;

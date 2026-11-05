@@ -18,7 +18,7 @@ _Static_assert(offsetof(struct CmacContext, result) == 0x200, "CMAC result offse
 _Static_assert(offsetof(struct CmacContext, buffer) == 0x280, "CMAC input buffer offset");
 
 /* Only the debug original fortifies the stack block copies. */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define CmacCopyBlock(dst, src, size) __memcpy_chk(dst, src, size, 32)
 #else
 #define CmacCopyBlock(dst, src, size) memcpy(dst, src, size)

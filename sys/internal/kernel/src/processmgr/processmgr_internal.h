@@ -55,8 +55,8 @@
 
 #define PROCESS_THREAD_VECTOR_MAX	192
 
-/* the line of a debug record in Sony's processmgr.c: the source before 4.00 is shorter */
-#define FW_LINE(_line, _lineBefore400)	((_line) - ((_line) - (_lineBefore400)) * FW_BEFORE(0x04000000))
+/* the line of a debug record in Sony's processmgr.c: the 3.6x builds' source is shorter */
+#define FW_LINE(_line, _line36x)	((_line) - ((_line) - (_line36x)) * !FW_IS_400)
 
 _Static_assert(sizeof(ProcessBudget) == 0x74, "ProcessBudget size");
 

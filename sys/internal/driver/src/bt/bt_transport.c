@@ -5,7 +5,7 @@
 #include "bt_transport.h"
 #include <sysmem/sysclib.h>
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define TRANSPORT_COPY(destination, source, length) \
 	__memcpy_chk(destination, source, length, 2044)
 #else

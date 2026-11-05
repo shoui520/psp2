@@ -494,7 +494,7 @@ int sceNetPsInitializePlatform(int (*initialize)(SceUID, void *, int,
 	gNetPsThreadEventHooks = threadHooks;
 	if (threadId < 0)
 		goto unregisterSystem;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	memset(&handler, 0, sizeof(handler));
 #endif
 	handler.size = sizeof(handler);

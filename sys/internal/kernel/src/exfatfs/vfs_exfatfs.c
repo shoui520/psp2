@@ -37,7 +37,7 @@ int exfatfs_vop_ioctl(SceVopIoctlArgs *argp)
 }
 
 /* The release compiler inlines this into mount cleanup and finalization. */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int _close_device_file(SceExfatfsDeviceFileInfo *info, int force)
 {
 	int result, error, locked;
@@ -118,7 +118,7 @@ closed:
 }
 #endif
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 static int get_new_vnode(SceVfsMount *mount, SceVfsVnode **output)
 {
 	SceVfsVnode *vnode = NULL;
@@ -340,7 +340,7 @@ void _cleanup_after_umount(SceExfatfsDrive *drive)
 		return;
 	SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1070, "_sceExfatfsClearDeviceVnode",
 		"%s: drive[%p], flag(%d)\n", "_sceExfatfsClearDeviceVnode", drive, 1);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	_close_device_file(&drive->deviceInfo, 1);
 #else
 	if (drive->deviceInfo.device_fd != -1) {
@@ -376,7 +376,7 @@ void _cleanup_after_umount(SceExfatfsDrive *drive)
 }
 
 /* Release callers inline the same mounted-drive lock and recheck. */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int _lock_drive_information(SceVfsMount *mount, const char *function)
 {
 	SceExfatfsDrive *drive = mount->pData;
@@ -448,7 +448,7 @@ int exfatfs_vfs_umount(SceVfsOpUmountArgs *argp)
 	result = _lock_drive_information(mount, "exfatfs_vfs_umount");
 	if (result < 0)
 		return result;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	drive = mount->pData;
 #endif
 	result = sceExfatfsVopUmount(drive, mode);
@@ -630,7 +630,7 @@ int _exfatfs_rename(SceVfsVnode *vnode, SceExfatfsFnode *parent,
 }
 
 /* Release whiteout/lookup callers inline this rollback. */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 void _exfatfs_lookup_rollback(SceVfsVnode *vnode, SceExfatfsFnode *fnode)
 #else
 static inline void _exfatfs_lookup_rollback(SceVfsVnode *vnode, SceExfatfsFnode *fnode)
@@ -767,7 +767,7 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 	}
 	fileAttribute = attribute;
 	vnode->core.size = 0;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	vnode->core.mnt = parent->core.mnt;
 	vnode->core.dd = parent;
 	vnode->core.nodeData = fnode;
@@ -958,14 +958,14 @@ int exfatfs_vop_rename(SceVopRenameArgs *argp)
 		}
 		return result;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	vnode->core.mnt = parent->core.mnt;
 #endif
 	vnode->core.dd = parent;
 	vnode->core.state = 1;
 	vnode->core.type = oldVnode->core.type;
 	vnode->core.nodeData = fnode;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	vnode->core.mnt = parent->core.mnt;
 #endif
 	vnode->core.size = oldVnode->core.size;
@@ -1083,7 +1083,7 @@ int exfatfs_vop_lookup(SceVopLookupArgs *argp)
 	}
 	attribute = stat.st_attr;
 	if ((stat.st_mode & 0xf000) == 0x1000) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		vnode->core.type = 2;
 		vnode->core.dd = parent;
 		vnode->core.nodeData = fnode;
@@ -1098,7 +1098,7 @@ int exfatfs_vop_lookup(SceVopLookupArgs *argp)
 #endif
 	} else {
 		vnode->core.dd = parent;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		vnode->core.type = 1;
 		vnode->core.nodeData = fnode;
 		vnode->core.state = 1;
@@ -1125,7 +1125,7 @@ failed:
 }
 
 /* Both release stat operations inline this common access and locking path. */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int _exfatfs_getstat_common(SceVfsVnode *vnode, SceIoStat *stat, const char *function)
 #else
 static inline int _exfatfs_getstat_common(SceVfsVnode *vnode, SceIoStat *stat, const char *function)
@@ -1393,7 +1393,7 @@ int exfatfs_vop_remove(SceVopRemoveArgs *argp)
 	SceVfsVnode *vnode = argp->vp;
 	SceVfsMount *mount = vnode->core.mnt;
 	SceExfatfsDrive *drive;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	SceExfatfsDrive *lockedDrive = mount->pData;
 #endif
 	int result, error, locked;
@@ -1409,14 +1409,14 @@ int exfatfs_vop_remove(SceVopRemoveArgs *argp)
 		result = sceExfatfsVopRemove(NULL, vnode->core.nodeData);
 	else if (locked)
 		result = sceExfatfsVopRemove(parent->core.nodeData, vnode->core.nodeData);
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	else {
 		drive = lockedDrive;
 		goto unlock;
 	}
 #endif
 	drive = mount->pData;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 unlock:
 #endif
 	if (drive) {
@@ -1700,7 +1700,7 @@ int exfatfs_vop_link(SceVopLinkArgs *argp)
 
 /* Full Sony _lock_drive_information variant; mounted-only callers use the
  * specialized two-argument body above. Release callers inline this variant. */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int lockDriveInformationAllowUnmount(SceVfsMount *mount, int allowUnmount, const char *function)
 {
 	SceExfatfsDrive *drive = mount->pData;
@@ -1774,7 +1774,7 @@ int exfatfs_vop_cleanup(SceVopCleanupArgs *argp)
 	int result, error;
 
 	result = lockDriveInformationAllowUnmount(mount, 1, "exfatfs_vop_cleanup");
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (result == (int)0x80010013) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4599, "%s: NULL mnt->pData, after force umount?\n",
 			"exfatfs_vop_cleanup");
@@ -1819,7 +1819,7 @@ int exfatfs_vop_sync(SceVopSyncArgs *argp)
 	int result, error;
 
 	result = lockDriveInformationAllowUnmount(mount, 1, "exfatfs_vop_sync");
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (result == (int)0x80010013) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4568, "%s: NULL mnt->pData, after force umount?\n",
 			"exfatfs_vop_sync");
@@ -1864,11 +1864,11 @@ int exfatfs_vfs_sync(SceVfsOpSyncArgs *argp)
 	SceExfatfsDrive *drive;
 	int result, error;
 
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	drive = mount->pData;
 #endif
 	result = lockDriveInformationAllowUnmount(mount, 1, "exfatfs_vfs_sync");
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (result == (int)0x80010013) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4625, "%s: NULL mnt->pData, after force umount?\n",
 			"exfatfs_vfs_sync");
@@ -2302,7 +2302,7 @@ opened:
 			drive = mount->pData;
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1070, "_sceExfatfsClearDeviceVnode",
 				"%s: drive[%p], flag(%d)\n", "_sceExfatfsClearDeviceVnode", drive, 1);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			_close_device_file(&drive->deviceInfo, 1);
 #else
 			if (drive->deviceInfo.device_fd != -1) {
@@ -2360,7 +2360,7 @@ int exfatfs_vop_close(SceVopCloseArgs *argp)
 
 	result = lockDriveInformationAllowUnmount(mount, 1, "exfatfs_vop_close");
 	SCE_DBG_PRINTF_LEVEL(2, 15, 3202, "called CLOSE vp = %p\n", vnode);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (result != (int)0x80010013 && result < 0)
 #else
 	if (result < 0 && result != (int)0x80010013)
@@ -2415,7 +2415,7 @@ int exfatfs_vop_inactive(SceVopInactiveArgs *argp)
 
 	result = lockDriveInformationAllowUnmount(vnode->core.mnt, 1, "exfatfs_vop_inactive");
 	SCE_DBG_PRINTF_LEVEL(2, 15, 2795, "called INACTIVE vp = %p\n", vnode);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (result != (int)0x80010013 && result < 0)
 #else
 	if (result < 0 && result != (int)0x80010013)

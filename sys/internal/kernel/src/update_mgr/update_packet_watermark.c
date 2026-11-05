@@ -69,7 +69,7 @@ int UpdateUtilCreatePacketPayloadPupWM(UpdateDigestPacketPayload **packetOut,
 		goto freeVector;
 	}
 	packet->descriptorFormat = 1;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	__builtin___memcpy_chk(packet->descriptors, vectorVector->pRanges,
 			8 * vectorVector->total, sizeof(packet->descriptors));
 #else

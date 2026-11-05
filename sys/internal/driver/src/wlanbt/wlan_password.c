@@ -6,7 +6,7 @@
 #include <sysmem/utils.h>
 
 /* Sony's 4.00 password copies use the checked object-size interface. */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #include <sysmem/fortify.h>
 #endif
 

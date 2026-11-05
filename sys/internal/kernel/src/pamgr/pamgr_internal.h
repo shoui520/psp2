@@ -170,7 +170,7 @@ struct PamgrState {
 	struct PamgrCoreSightMapping pmu[4];
 	struct PamgrGpuTraceConfig gpuTraceConfig;
 	struct PamgrPtmMapping ptm[4];
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	uint32_t savedTraceSampleControls[3];
 	uint32_t savedTraceSampleControl3;
 	uint32_t savedTraceBuffer1Size;
@@ -201,7 +201,7 @@ struct PamgrState {
 	uint32_t savedPmuControl;
 #endif
 	volatile struct PamgrPrimaryTraceConfig primaryTraceConfig;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	uint32_t savedBuffer1SampleControls[3];
 	uint32_t savedTraceBuffer1Base;
 	struct PamgrCoreSightMapping funnel;

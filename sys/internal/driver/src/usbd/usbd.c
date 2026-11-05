@@ -101,7 +101,7 @@ static __always_inline int usbdWaitDeviceResponse(void)
 
 static __always_inline void usbdSignalDeviceResponse(void)
 {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	int result = sceKernelSignalSema(s_usbd.enumerationSemaId, 1);
 
 	if (result < 0) {

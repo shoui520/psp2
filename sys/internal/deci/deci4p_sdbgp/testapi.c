@@ -21,7 +21,7 @@
 #include <threadmgr/threadmgr.h>
 #include "sdbgp_internal.h"
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 static const char s_buildDate[] = "2017-02-23 19:46:03+0900";
 static volatile const uint32_t s_svnRevision = 96726;
 #elif FW_VERSION >= 0x03650000

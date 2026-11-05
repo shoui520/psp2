@@ -17,7 +17,7 @@
 static inline int _getEdidManager(void)
 {
 	if (_sceHdmiLockMutex() != 0) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		SCE_DBG_ASSERT_PRINTF(0, 49, "err _sceHdmiLockMutex()\n");
 #endif
 		return 7;
@@ -27,7 +27,7 @@ static inline int _getEdidManager(void)
 
 static inline void _releaseEdidManager(void)
 {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	if (_sceHdmiUnlockMutex() != 0)
 		SCE_DBG_ASSERT_PRINTF(0, 60, "err _sceHdmiUnlockMutex()\n");
 #else

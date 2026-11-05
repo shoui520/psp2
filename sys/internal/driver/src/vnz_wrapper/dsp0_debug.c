@@ -7318,7 +7318,7 @@ const VeneziaVipCaptureImageLayout g_veneziaVipCaptureImageLayouts[3] = {
 	{ 0x700000, 0x2cd000, 0x433000 },
 };
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define VIP_CAPTURE_SYMBOL(debug, release) debug
 #else
 #define VIP_CAPTURE_SYMBOL(debug, release) release
@@ -7541,7 +7541,7 @@ typedef struct VeneziaVipCaptureSnapshot {
 	SceSize captureLength;
 } VeneziaVipCaptureSnapshot;
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define VIP_RESULT_SYMBOL(debug, release) debug
 #else
 #define VIP_RESULT_SYMBOL(debug, release) release
@@ -8045,7 +8045,7 @@ int getVeneziaVipMultiCaptureStorageSize(const VeneziaDebugImageGeometry *geomet
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define VIP_CAPTURE_SYMBOL(debug, release) debug
 #else
 #define VIP_CAPTURE_SYMBOL(debug, release) release

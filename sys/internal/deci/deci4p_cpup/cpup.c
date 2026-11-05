@@ -65,7 +65,7 @@ typedef struct CpupLink {
 	CpupRequest *req;
 } CpupLink;
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 static SceUInt16 s_cpupSequence;
 #endif
 static SceUID s_cpupMemBlock;
@@ -75,7 +75,7 @@ static CpupLink s_cpupLink;
 static SceUID s_cpupBufferSemaphore;
 static SceUID s_cpupRequestSemaphore;
 static SceUID s_cpupMutex;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 static SceUInt16 s_cpupSequence;
 #endif
 

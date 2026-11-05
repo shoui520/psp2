@@ -17,6 +17,13 @@ FW_VERSION_3.650.011-TOOL := 0x03650011
 FW_VERSION_3.630.011-DEBUGGER := 0x03630011
 FW_VERSION_3.65-CEX := 0x03650000
 
+# the 4.00 build (most debug info, most likely a 3.65 debug build): selected by FW_IS_400,
+# never by comparing FW_VERSION
+FW_IS_400_4.00-DEBUGGER := 1
+FW_IS_400_3.650.011-TOOL := 0
+FW_IS_400_3.630.011-DEBUGGER := 0
+FW_IS_400_3.65-CEX := 0
+
 DATA_BASE_4.00-DEBUGGER := 0x8860508c
 DATA_BASE_3.650.011-TOOL := 0x8860508c
 DATA_BASE_3.630.011-DEBUGGER := 0x88605074
@@ -25,8 +32,8 @@ DATA_BASE_3.65-CEX := 0x8860508c
 CFLAGS	:= -O2 -G0 -march=allegrex -ffreestanding -fno-builtin -fno-common \
 	   -fno-pic -mno-abicalls -Wall -Wno-unused-parameter -Iinclude \
 	   -I$(PSPDEV)/psp/sdk/include \
-	   -DFW_ID=\"$(FW)\" -DFW_VERSION=$(FW_VERSION_$(FW))
-ASFLAGS	:= -G0 -march=allegrex -Iinclude -DFW_VERSION=$(FW_VERSION_$(FW))
+	   -DFW_ID=\"$(FW)\" -DFW_VERSION=$(FW_VERSION_$(FW)) -DFW_IS_400=$(FW_IS_400_$(FW))
+ASFLAGS	:= -G0 -march=allegrex -Iinclude -DFW_VERSION=$(FW_VERSION_$(FW)) -DFW_IS_400=$(FW_IS_400_$(FW))
 SCRAMBLE_SEED_4.00-DEBUGGER := scramble_seed_debug.inc
 SCRAMBLE_SEED_3.630.011-DEBUGGER := scramble_seed_debug.inc
 SCRAMBLE_SEED_3.650.011-TOOL := scramble_seed_365.inc

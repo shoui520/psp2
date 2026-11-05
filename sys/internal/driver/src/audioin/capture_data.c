@@ -10,7 +10,7 @@ const unsigned char g_audioInAlternateAecControl[16] = {
 	63, 31, 31, 31, 31, 63, 127, 255
 };
 const int16_t g_audioInSilenceSamples[768] = { 0 };
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 const unsigned char g_audioInExternalAecControl[16] = {
 	255, 255, 255, 255, 255, 255, 255, 255,
 	255, 255, 255, 255, 255, 255, 255, 255
@@ -24,7 +24,7 @@ const char g_audioInAecRequestEventName[] = "SceAudioInReq2";
 const char g_audioInRequestEventName[] = "SceAudioInReq";
 const char g_audioInMutexName[] = "SceAudioInLock";
 const char g_audioInProcessNameFormat[] = "SceAudioInProc%08x";
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 const unsigned char g_audioInExternalAecControl[16] = {
 	255, 255, 255, 255, 255, 255, 255, 255,
 	255, 255, 255, 255, 255, 255, 255, 255
@@ -87,7 +87,7 @@ int16_t g_audioInSecondary48Samples[1536] = { 0 };
 int16_t g_audioInPrimary48Samples[1536] = { 0 };
 int g_audioInStartupSilenceFrames = 0;
 void (*g_audioInPortClosed)(int pid) = NULL;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 void (*g_audioInPortOpened)(int pid) = NULL;
 unsigned int g_audioInLegacyCaptureControl = 0;
 #else

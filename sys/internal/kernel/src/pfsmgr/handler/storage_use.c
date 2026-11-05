@@ -12,7 +12,7 @@
 #define PFS_LOOKUP_FLAGS	0xfffff	/* name unknown */
 #define SCE_PFS_ERROR_NAME_TOO_LONG	0x8014011d	/* name unknown */
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #endif
 
 

@@ -27,7 +27,7 @@
 #define FWLOADER_STATE_UNLOCKED	2
 
 /* 4.00 is built with _FORTIFY_SOURCE */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define fwLoaderStrncpyChk(dst, src, n, size)	__builtin___strncpy_chk(dst, src, n, size)
 #else
 #define fwLoaderStrncpyChk(dst, src, n, size)	strncpy(dst, src, n)

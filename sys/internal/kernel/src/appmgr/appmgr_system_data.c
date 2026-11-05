@@ -769,7 +769,7 @@ static __attribute__((noinline, noclone)) int appmgrRemoveDirectoryFiles(const c
 			}
 			used = strnlen(path, 512);
 			if (used != 512) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 				__strncat_chk(filePath, "/", 512 - used, 513);
 				used = strnlen(path, 512);
 				if (used != 512)

@@ -70,7 +70,7 @@ void _check_parent_directory_data(SceExfatfsFnode *fnode,
 				goto search_error;
 		}
 	}
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	size = (SceUInt64)parent->Stat.Size;
 #endif
 	if (fnode->DirCluster != parent->Stat.StartCluster) {
@@ -86,7 +86,7 @@ void _check_parent_directory_data(SceExfatfsFnode *fnode,
 			parent->Stat.generalSecondaryFlags);
 		fnode->dirGeneralSecondaryFlags = parent->Stat.generalSecondaryFlags;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	size = (SceUInt64)parent->Stat.Size;
 #endif
 	if ((SceUInt64)fnode->dirSize != size) {

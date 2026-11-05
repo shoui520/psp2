@@ -101,7 +101,7 @@ int SmcCall(SceUInt32 r0, SceUInt32 r1, SceUInt32 r2, SceUInt32 r3, SceUInt32 co
  * builds start it at 1 and increment it after.
  */
 SceUID s_heap;
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 volatile SceUID s_lastId;
 #else
 SceUID s_lastId = 1;
@@ -454,7 +454,7 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 	}
 	s = &s_session[i];
 	s->used = 1;
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	newId = ++s_lastId;
 #else
 	newId = s_lastId++;

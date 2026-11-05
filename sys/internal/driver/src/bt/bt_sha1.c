@@ -3,7 +3,7 @@
 #include <string.h>
 #include <sysmem/sysclib.h>
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define SHA1_COPY(destination, source, length) \
 	__memcpy_chk(destination, source, length, 64)
 #else

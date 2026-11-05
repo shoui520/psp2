@@ -7,7 +7,7 @@
 
 extern void *CopyMemoryForward(void *destination, const void *source, size_t size);
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 void *memcpy(void *destination, const void *source, size_t size)
 {
 	const void *caller = __builtin_return_address(0);

@@ -75,7 +75,7 @@ _Static_assert(sizeof(DbgpModuleUnloadNotification) == 0x2c, "module unload noti
 static SceKernelSpinlock s_moduleInfoLock;
 
 /* a function of its own in 4.00; the 3.6x builds inline it into both callers */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 static void
 #else
 static inline __attribute__((always_inline)) void

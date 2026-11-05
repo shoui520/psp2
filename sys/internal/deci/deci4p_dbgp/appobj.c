@@ -158,7 +158,7 @@ static const int s_ultSyncObjInfoTypes[] = {
  * What the counters are handed: SceUlobjMgr's param in 4.00, its entry count
  * in the 3.6x builds
  */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 typedef UlobjInfoArrayParam UlobjCountParam;
 #define ULOBJ_COUNT_PARAM(param)	(param)
 #define ULOBJ_COUNT_NUM_ENTRIES(count)	((count)->numEntries)
@@ -626,7 +626,7 @@ int fillFiberStackInfo(SceUID pid, SceUIntPtr address,
  * The stack records of a ULT runtime's fibers; their number. The 3.6x builds
  * inline fillFiberStackInfo here.
  */
-#if !FW_SINCE(0x04000000)
+#if !FW_IS_400
 __attribute__((flatten))
 #endif
 int fillFiberStackInfoFromUltRuntime(SceUID pid, SceUIntPtr address,

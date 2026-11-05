@@ -2222,7 +2222,7 @@ void swdlFreeRequest(void)
 
 /* name unknown: open the five update files a file-set request names and add up
  * their sizes (the 3.6x builds inline it into _swdlSeqCarrierQmi) */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 int swdlOpenUpdateFiles(BbmcControl *control, const BbmcStringSet *request)
 #else
 static inline __attribute__((always_inline)) int
@@ -2999,7 +2999,7 @@ int _swdlSeqCarrierQmi(BbmcControl *control, BbmcMessage *message)
 				preference.preference.images[0].imageType = 0;
 				length = strnlen(information.name, 35);
 				preference.preference.images[0].buildIdLength = length;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				__memcpy_chk(preference.preference.images[0].buildId,
 					     information.name, length, sizeof(preference) -
 					     offsetof(QmiSetFirmwarePreference,
@@ -3018,7 +3018,7 @@ int _swdlSeqCarrierQmi(BbmcControl *control, BbmcMessage *message)
 				preference.preference.images[1].imageType = 1;
 				length = strnlen(information.name, 35);
 				preference.preference.images[1].buildIdLength = length;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				__memcpy_chk(preference.preference.images[1].buildId,
 					     information.name, length, sizeof(preference) -
 					     offsetof(QmiSetFirmwarePreference,

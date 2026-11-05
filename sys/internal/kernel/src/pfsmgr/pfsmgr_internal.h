@@ -133,7 +133,7 @@ typedef struct ScePfsUnicv {
 #define PFS_DMA_ALIGNED(buf)	((void *)(((SceUIntPtr)(buf) + PFS_DMA_ALIGN - 1) & ~(PFS_DMA_ALIGN - 1)))
 
 /* a memcpy() into an object of known size: 4.00 checks it (_FORTIFY_SOURCE), 3.65 does not */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define pfsMemcpyChecked(dst, src, len, size)	__memcpy_chk(dst, src, len, size)
 #else
 #define pfsMemcpyChecked(dst, src, len, size)	memcpy(dst, src, len)
@@ -712,7 +712,7 @@ int file_access_create(ScePfsNode *node, int mode);
 int file_access_open(ScePfsLowerFile *lf, ScePfsNode *node, SceUInt32 cookie, int flags);
 int file_access_close(ScePfsLowerFile *lf);
 int file_access_close_force(ScePfsLowerFile *lf);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int pfsLowerCloseLocked(ScePfsLowerFile *lf);
 #endif
 int file_access_cleanup(ScePfsLowerFile *lf, SceUInt32 a2, SceUInt32 a3);

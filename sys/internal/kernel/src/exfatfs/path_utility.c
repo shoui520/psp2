@@ -291,7 +291,7 @@ int sceFatfsParsePath(int unused, SceFatfsNameset *nameset, SceUInt16 *path)
 		++consumed;
 	} while (consumed != 261);
 	if (nameLength > 255) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 15, 439, "file name is too long");
 #endif
 		goto invalidPath;
@@ -458,7 +458,7 @@ int sceFatfsPrepareNameset(int unused, const unsigned char *path,
 		}
 	}
 	if (utf16Length(expanded) >= 260) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 15, 701, "_expandPath", "path is too long");
 #endif
 		result = 0x80010016;
@@ -467,7 +467,7 @@ int sceFatfsPrepareNameset(int unused, const unsigned char *path,
 	utf16Copy(decoded, expanded);
 	freeHeapBuffer(unused, expanded);
 	if ((unsigned int)utf16Length(decoded) >= 260) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 15, 112, "path is too long\n");
 #endif
 		result = 0x80010016;

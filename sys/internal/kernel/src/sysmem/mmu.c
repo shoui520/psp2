@@ -366,7 +366,7 @@ void AlignCheck(uintptr_t address, SceSize size)
 {
 	SCE_DBG_PRINTF(0xb, 179, "align ? addr 0x%08x size 0x%08x\n", address, size);
 }
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 /* 4.00 shifts the low bits out instead of masking them */
 #define MMU_ALIGN_CHECK(_address, _size, _mask) do {			\
 	if (((_address) | (_size)) << __builtin_clz(_mask))		\
@@ -558,7 +558,7 @@ int sceKernelMMUL1Init(uint32_t *l1)
 	int flags;
 
 /* an L1 table must be 4 KiB aligned; 4.00 tests it as the low 12 bits shifted out */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define MMU_L1_MISALIGNED(l1)	((uintptr_t)(l1) << 20)
 #else
 #define MMU_L1_MISALIGNED(l1)	((uintptr_t)(l1) & 0xfff)

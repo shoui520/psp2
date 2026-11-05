@@ -1,8 +1,8 @@
 /*
  * The debug console's font: 8x16 glyphs, one per character code, 16 rows from the top. ROW
  * lists a row's pixels from left to right, X drawn in the foreground colour and o in the
- * background; the leftmost pixel is bit 0. Codes without a glyph are blank. Until 4.00 the
- * font has the 128 ASCII codes; 4.00 adds glyphs for 0x80 to 0xff.
+ * background; the leftmost pixel is bit 0. Codes without a glyph are blank. The 3.6x builds'
+ * font has the 128 ASCII codes; 4.00's also has glyphs for 0x80 to 0xff.
  */
 #pragma once
 
@@ -13,7 +13,7 @@
 #define ROW(p0, p1, p2, p3, p4, p5, p6, p7) \
 	((p0) | (p1) << 1 | (p2) << 2 | (p3) << 3 | (p4) << 4 | (p5) << 5 | (p6) << 6 | (p7) << 7)
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define DEBUG_CONSOLE_GLYPHS	256
 #else
 #define DEBUG_CONSOLE_GLYPHS	128
@@ -1712,7 +1712,7 @@ static const unsigned char g_appmgrDebugConsoleFont[DEBUG_CONSOLE_GLYPHS][16] = 
 		ROW(o,o,o,o,o,o,o,o),
 		ROW(o,o,o,o,o,o,o,o),
 	},
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	[0x80] = {
 		ROW(X,o,o,o,o,X,X,X),
 		ROW(X,o,X,X,o,X,o,o),

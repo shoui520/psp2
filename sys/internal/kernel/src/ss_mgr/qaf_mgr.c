@@ -30,7 +30,7 @@ static const char qafWorkaroundName[] = "qaf_workaround";
 #define SS_MGR_QAF(name) __attribute__((section(".ssMgrQaf." #name)))
 
 /* The 4.00 debug build calls this; the release builds inline it into its callers. */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 __attribute__((noinline))
 #else
 __attribute__((always_inline))

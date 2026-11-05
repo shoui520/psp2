@@ -22,7 +22,7 @@ struct ctrlStorage ctrlStorage = {
 
 void ctrlPublishSample(int port, struct ctrlNativeSample *sample, int source);
 int ctrlPublishCachedSample(void);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int _sceCtrlBdRMCForceReleaseCallback(SceUID pid);
 #else
 static inline __attribute__((always_inline))
@@ -1843,7 +1843,7 @@ unlock:
 	return result;
 }
 
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 static inline __attribute__((always_inline))
 #endif
 int _sceCtrlBdRMCForceReleaseCallback(SceUID pid)

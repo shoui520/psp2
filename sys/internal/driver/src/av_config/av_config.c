@@ -36,7 +36,7 @@
 
 int avConfigAvlsEnabled = 0;
 int avConfigDisplayStarted = 0;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int avConfigCtrlRegistration = 0;
 int avConfigHasCodec = 0;
 SceUInt32 avConfigSavedOutputDevices = 0;

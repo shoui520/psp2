@@ -3833,7 +3833,7 @@ int vfsIoctl(IofilemgrIoctlParam *param)
 				return vfs_change_file_attr(fd, VFS_FILE_ATTR_INTERNAL, 1);
 			if (cmd == VFS_IOCTL_CLEAR_INTERNAL)
 				return vfs_change_file_attr(fd, VFS_FILE_ATTR_INTERNAL, 0);
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 			if (cmd == VFS_IOCTL_IS_PFS) {
 				if (outdata == NULL || outlen != sizeof(SceUInt32))
 					return SCE_ERROR_ERRNO_EINVAL;

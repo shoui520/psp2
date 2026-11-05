@@ -138,7 +138,7 @@ _Static_assert(offsetof(AppmgrProcessContent, reservedTail) == 1276,
 	       "process content reservedTail");
 
 extern const char appmgrProgramCategories[6][4];
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int appmgrValidateSaveDataMount(SceUID pid, const char *path, int skipVerification,
 			      AppmgrProcessContent *content, SceUInt32 *maxSize);
 #endif

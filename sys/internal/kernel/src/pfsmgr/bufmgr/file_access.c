@@ -12,7 +12,7 @@
 #define PFS_LOOKUP_FLAGS	0xfffff	/* name unknown */
 #define SCE_PFS_ERROR_NAME_TOO_LONG	0x8014011d	/* name unknown */
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #endif
 
 
@@ -158,7 +158,7 @@ int file_access_close_force(ScePfsLowerFile *lf)
 	return 0;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 /* 4.00 kept this out of line; the 3.6x builds inline the same body into
  * file_access_close/file_access_close_force, which pfsCoreClose calls there. */
 int pfsLowerCloseLocked(ScePfsLowerFile *lf)

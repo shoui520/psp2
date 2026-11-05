@@ -98,8 +98,8 @@ int appmgrRemoveShellEventAtIndex(int index)
 	return 0;
 }
 
-/* 4.00 keeps it a function; before, Sony's compiler inlined it into both callers. */
-#if FW_SINCE(0x04000000)
+/* 4.00 keeps it a function; in the 3.6x builds Sony's compiler inlined it into both callers. */
+#if FW_IS_400
 static void
 #else
 static inline __attribute__((always_inline)) void

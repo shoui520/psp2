@@ -48,7 +48,7 @@ static inline int _repeatWriteToDest(Writer *writer, const void *data,
 	return 0;
 }
 
-#if FW_DEBUG && FW_SINCE(0x04000000)
+#if FW_DEBUG && FW_IS_400
 /* Native data retains this record without an executable reference. */
 SCE_DBGINFO_DEFINE(static, writerIsSetDestOffsetSupportedDebugInfo, 262,
 	"writerIsSetDestOffsetSupported");

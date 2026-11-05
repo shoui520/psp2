@@ -4,7 +4,7 @@
 #include "wlan_util.h"
 
 /* Sony's 4.00 BSS stack-buffer copies use the checked object-size interface. */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #include <sysmem/fortify.h>
 #endif
 
@@ -161,7 +161,7 @@ int wlanCollectScanRecords(const WlanScanRecord *record, unsigned int capacity,
 		if (count == capacity)
 			break;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (!count)
 		return 0;
 #endif

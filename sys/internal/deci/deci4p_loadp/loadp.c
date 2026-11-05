@@ -114,7 +114,7 @@
 #define LOADP_PROTECTED_TITLE			"NPXS19999"
 
 /* Sony's 4.00 build is fortified */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #include <sysmem/fortify.h>
 #endif
 
@@ -354,7 +354,7 @@ LoadpSendBuf *pdLoadpAllocSendBuf(void)
 }
 
 /* queue a packet; too many queued and the queue is dropped */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define LOADP_CONTEXT_ARG
 int pdLoadpReqSend(LoadpSendBuf *buf)
 {

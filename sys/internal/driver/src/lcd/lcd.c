@@ -16,7 +16,7 @@
 #include <sysmem/sysroot.h>
 #include <modulemgr/modulemgr.h>
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #include "data-4.00-DEBUGGER.h"
 #elif FW_VERSION >= 0x03650000
 #include "data-3.650.011-TOOL.h"

@@ -243,7 +243,7 @@ void UIDEntryDestructorRaw(UIDEntry *entry)
 {
 	const char *name = entry->name;
 	SceUInt32 uid;
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	SceUIntPtr pa;
 
 	if (SceCpuForKernel_14E0B0C4((uintptr_t)name, &pa) < 0) {
@@ -612,7 +612,7 @@ int GUIDSet(SceUID guid, SceClass *cls, const char *name, SceObjectBase *object)
 
 #if !SYSMEM_NSKBL
 /* a kernel address that is mapped; 3.6x keeps only GCC's split tail (IsSafe.part) */
-#if !FW_SINCE(0x04000000)
+#if !FW_IS_400
 static
 #endif
 int IsSafe(const void *address)
@@ -3591,7 +3591,7 @@ int UIDEntryHeapClassInit(UIDManager *manager)
 
 int sceUIDEntryHeapSetHook(SceUID guid, FixedHeapObjectHook *hook)
 {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	UIDEntryHeap *heap;
 	int ret;
 
@@ -3604,7 +3604,7 @@ int sceUIDEntryHeapSetHook(SceUID guid, FixedHeapObjectHook *hook)
 	}
 	return SceSysmemForKernel_811C452B(&heap->fixedHeap, hook);
 #else
-	/* no hooks before 4.00 */
+	/* no hooks in the 3.6x builds */
 	return 0;
 #endif
 }
@@ -3896,7 +3896,7 @@ int UIDStartPhase2(void)
 }
 #endif
 
-#if defined(SYSMEM_TZS) && FW_SINCE(0x04000000)
+#if defined(SYSMEM_TZS) && FW_IS_400
 /* 4.00's secure link keeps these records without the code */
 SCE_DBGINFO_DEFINE_ORPHAN(uidEntryFuncForGetInfoRecord1729, 1729, "UIDEntryFuncForGetInfo");
 SCE_DBGINFO_DEFINE_ORPHAN(uidEntryFuncForGetInfoRecord1751, 1751, "UIDEntryFuncForGetInfo");

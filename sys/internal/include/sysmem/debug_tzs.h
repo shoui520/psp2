@@ -16,7 +16,7 @@
 #include <sysmem/debug.h>
 
 /* Sony built the 3.6x secure kernel without its debug output */
-#if !FW_SINCE(0x04000000)
+#if !FW_IS_400
 #undef SCE_DBG_PRINTF
 #define SCE_DBG_PRINTF(...)		((void)0)
 #undef SCE_DBG_PRINTF_LEVEL

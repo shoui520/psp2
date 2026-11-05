@@ -9,7 +9,7 @@
 #define DTRACE_KERNEL_PROCESS	0x10005		/* the kernel's process ID */
 
 /* 3.6x gives a process its GUID name, at most 31 characters (4.00 the main module's file name) */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define DTRACE_PROCESS_NAME_LEN	256
 #else
 #define DTRACE_PROCESS_NAME_LEN	31

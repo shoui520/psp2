@@ -271,7 +271,7 @@ struct udcdState {
 	struct udcdControllerState controllers[3];
 	volatile ScePervasive2Registers *registers;
 	SceUID phyRegisterBlock;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	int processEventResult;
 	SceUdcdStringDescriptor languageDescriptors[3];
 	unsigned char controlResponse[2];
@@ -306,7 +306,7 @@ _Static_assert(offsetof(struct udcdState, operations) == 0x1224, "operations");
 _Static_assert(offsetof(struct udcdState, registers) == 0x1674, "registers");
 _Static_assert(offsetof(struct udcdState, controlResponse) == 0x1740,
 	       "control response");
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 _Static_assert(offsetof(struct udcdState, registeredDrivers) == 0x1748,
 	       "debug registered driver lists");
 _Static_assert(sizeof(struct udcdState) == 0x1758, "debug state");

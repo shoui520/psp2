@@ -41,7 +41,7 @@ int _utf16_to_utf8(unsigned char *destination, unsigned int remaining,
 		previous = source;
 		if (unicode <= 127) {
 			if (!remaining) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				SCE_DBG_PRINTF_LEVEL(1, 0, 2054,
 					"%s: buffer too small, len(%d), left(%d)\n",
 					"_utf16_to_utf8", output - destination, remaining);
@@ -53,7 +53,7 @@ int _utf16_to_utf8(unsigned char *destination, unsigned int remaining,
 			*output++ = unicode;
 		} else if (unicode <= 0x7ff) {
 			if (remaining <= 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				SCE_DBG_PRINTF_LEVEL(1, 0, 2059,
 					"%s: buffer too small, len(%d), left(%d) < 2\n",
 					"_utf16_to_utf8", output - destination, remaining);
@@ -68,7 +68,7 @@ int _utf16_to_utf8(unsigned char *destination, unsigned int remaining,
 		} else if ((unicode & 0xfc00) == 0xd800) {
 			low = source[1];
 			if ((low & 0xfc00) != 0xdc00) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				SCE_DBG_PRINTF_LEVEL(1, 0, 2071,
 					"%s: invalid code[%#x] after [%#x]\n",
 					"_utf16_to_utf8", low, unicode);
@@ -77,7 +77,7 @@ int _utf16_to_utf8(unsigned char *destination, unsigned int remaining,
 				goto finish;
 			}
 			if (remaining <= 3) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				SCE_DBG_PRINTF_LEVEL(1, 0, 2074,
 					"%s: buffer too small, len(%d), left(%d) < 4\n",
 					"_utf16_to_utf8", output - destination, remaining);
@@ -98,13 +98,13 @@ int _utf16_to_utf8(unsigned char *destination, unsigned int remaining,
 			result = 0;
 			if ((unicode & 0xfc00) == 0xdc00) {
 				result = -2;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				SCE_DBG_PRINTF_LEVEL(1, 0, 2086,
 					"%s: invalid code[%#x]\n", "_utf16_to_utf8", unicode);
 #endif
 			}
 			if (remaining <= 2) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				SCE_DBG_PRINTF_LEVEL(1, 0, 2090,
 					"%s: buffer too small, len(%d), left(%d) < 2\n",
 					"_utf16_to_utf8", output - destination, remaining);
@@ -132,7 +132,7 @@ finish:
 	} else {
 		if (!result)
 			result = -1;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2118,
 			"%s: buffer too small, len(%d), no space for NUL\n",
 			"_utf16_to_utf8", output - destination);
@@ -142,7 +142,7 @@ finish:
 }
 
 /* Sony's wrapper name is unknown; its mode helper was inlined. */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int _file_vnode_check(SceExfatfsFnode *fnode, const char *caller)
 {
 	SceUInt16 *path;
@@ -458,7 +458,7 @@ void exfatfsStatToIoStat(SceExfatfsDrive *drive,
 
 	destination->st_attr = attribute;
 	mode = sceFatfsACGetDirPermission(drive, attribute);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (mode < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 930,
 			"_sceFatfsWriteModeFromStat",
@@ -494,7 +494,7 @@ void exfatfsStatToIoStat(SceExfatfsDrive *drive,
 	destination->st_mtime.microsecond = 0;
 }
 
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 SceFatfsNameset *_temporal_nameset(int unused, SceExfatfsFnode *fnode,
 	const void *suffix, size_t suffixLength)
 {
@@ -538,7 +538,7 @@ int _exfat_lock_shared_resource(const char *caller)
 {
 	int result = lockFastMutex(&g_sharedResourceMutex);
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL(2, 0, 99,
 			"%s: sceKernelLockFastMutex failed[%#x]\n", caller, result);
@@ -550,7 +550,7 @@ int _exfat_unlock_shared_resource(const char *caller)
 {
 	int result = sceKernelUnlockFastMutex(&g_sharedResourceMutex);
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL(2, 0, 119,
 			"%s: sceKernelUnlockFastMutex failed[%#x]\n", caller, result);
@@ -563,7 +563,7 @@ void _print_fnode(SceExfatfsFnode *fnode, const char *caller)
 	SceUInt16 *path;
 	unsigned int character;
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	int refCount = fnode->refCount;
 	int fdCount = fnode->fdCount;
 
@@ -575,13 +575,13 @@ void _print_fnode(SceExfatfsFnode *fnode, const char *caller)
 	if (character) {
 		path = fnode->FilePath;
 		do {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 136, "%lc", character);
 #endif
 			character = *++path;
 		} while (character);
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SCE_DBG_PRINTF_LEVEL(1, 0, 139, "), FilePath[%p], FileName[%p]\n",
 		fnode->FilePath, fnode->FileName);
 #endif
@@ -595,7 +595,7 @@ int _deleted_entry(SceExfatfsFnode *fnode)
 	if (!fnode->FilePath[0]) {
 		SCE_DBG_ASSERT(fnode->DirCluster == (SceUInt32)-2, 233);
 		SCE_DBG_ASSERT(fnode->refCount, 234);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (!fnode->FileName)
 			SCE_DBG_PRINTF_LEVEL(2, 0, 238,
 				"%s: fnode[%p], refCount(%hd), fdCount(%hd), StartCluster[%#lx], FilePath[0]=[%#x], unexpected NULL FileName\n",
@@ -610,7 +610,7 @@ int _deleted_entry(SceExfatfsFnode *fnode)
 	if (fnode->fileSystem) {
 		if (fnode->Stat.st_type == 6 &&
 		    (root = _root_cluster(fnode->fileSystem)) == fnode->Stat.StartCluster) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			if (!fnode->FileName)
 				SCE_DBG_PRINTF_LEVEL(2, 0, 263,
 					"%s: root directory fnode[%p], refCount(%hd), fdCount(%hd), StartCluster[%#lx], FilePath[0]=[%#x], unexpected NULL FileName\n",
@@ -618,7 +618,7 @@ int _deleted_entry(SceExfatfsFnode *fnode)
 					root, fnode->FilePath[0]);
 #endif
 		} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			if (fnode->FileName)
 				SCE_DBG_PRINTF_LEVEL(2, 0, 268,
 					"%s: fnode[%p], refCount(%hd), fdCount(%hd), StartCluster[%#lx], FilePath[0]=[%#x], unexpected FileName[0]=[%#x], DirCluster[%#lx]\n",
@@ -666,7 +666,7 @@ void _initialize_cluster_cache_data(SceExfatfsFnode *fnode)
 		element = allocateCommonHeapMemory((int)fileSystem->drive, 512);
 		fnode->cluster_cache_array = element;
 		if (!element) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 529, "_setup_cluster_cache_data",
 				"%s: sceFatfsCreateHeapVl failed\n", "_setup_cluster_cache_data");
 #endif
@@ -783,7 +783,7 @@ int sceExfatfsInit(void)
 	result = sceKernelInitializeFastMutex(&g_sharedResourceMutex,
 		"SceExfatfsSharedResource", 0x2000, 0);
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 598,
 			"%s: sceKernelInitializeFastMutex for shared resource failed[%#x]\n",
 			"sceExfatfsInit", result);
@@ -792,7 +792,7 @@ int sceExfatfsInit(void)
 	}
 	result = sceFatfsInitializeHeap(0);
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 604,
 			"%s: sceFatfsInitializeHeap() failed[%#x]\n", "sceExfatfsInit", result);
 #endif
@@ -801,7 +801,7 @@ int sceExfatfsInit(void)
 	if (g_codepageTablesEnabled) {
 		result = sceFatfsCpInitTable();
 		if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(2, 15, 611,
 				"convertInitTable() failed (0x%08X)\n", result);
 #endif
@@ -814,7 +814,7 @@ int sceExfatfsInit(void)
 	}
 	result = UVFAT_Initialize(&g_sharedResource);
 	if (result) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 621,
 			"%s: UVFAT_Initialize failed(%d)\n", "sceExfatfsInit", result);
 #endif
@@ -823,7 +823,7 @@ int sceExfatfsInit(void)
 	return result;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int _check_free_count(SceExfatfsFnode *fnode, unsigned long long newSize)
 {
 	struct SceExfatfsFileSystem *fileSystem = fnode->fileSystem;
@@ -901,7 +901,7 @@ int _sceFatfsWriteModeFromStat(SceExfatfsDrive *drive, int attribute)
 	unsigned int fsAttribute = attribute & 0xff;
 	int mode = sceFatfsACGetDirPermission(drive, fsAttribute);
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (mode < 0)
 		SCE_DBG_PRINTF_LEVEL(2, 0, 930,
 			"%s: sceFatfsACGetDirPermission for attr[%#x] failed[%#x]\n",
@@ -940,7 +940,7 @@ checkSystemMount:
 	__builtin_memcpy(systemMount, "sa0:", 5);
 	if (!strncmp(assignName, systemMount, 5)) {
 		mountMode |= 0x200;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 374,
 			"%s: cache_all_fat_data for assignName(%s) is enabled\n",
 			"_cache_all_fat_data_drive", assignName);
@@ -950,7 +950,7 @@ checkSystemMount:
 	mountParam.mount_mode = mountMode;
 	result = UVFAT_Mount(&g_sharedResource, devname, 1, &mountParam);
 	if (result) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1111, "sceExfatfsOpMount",
 			"%s: UVFAT_Mount failed[%#x], devname(%s)\n",
 			"sceExfatfsOpMount", result, devname);
@@ -970,7 +970,7 @@ int _used_resource_count(SceVfsMount *mount)
 	int usedFiles = 0;
 	int usedFnodes = 0;
 	int result;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	int lockResult;
 #endif
 
@@ -1027,7 +1027,7 @@ int _used_resource_count(SceVfsMount *mount)
 		fileSystem = &g_sharedResource.fileSystems[mountIndex];
 	result = lockFastMutex(&g_sharedResourceMutex);
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 99, "_exfat_lock_shared_resource",
 			"%s: sceKernelLockFastMutex failed[%#x]\n", "_used_resource_count", result);
 #endif
@@ -1038,7 +1038,7 @@ int _used_resource_count(SceVfsMount *mount)
 		goto unlock;
 	}
 	fileCount = getInitializedFileCount(&g_sharedResource);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	lockResult = sceKernelTryLockFastMutex(&fileSystem->drive->fastmutex);
 	if (lockResult != (int)0x80028162) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1261, "_used_fd_count",
@@ -1062,7 +1062,7 @@ unlock:
 	{
 		int unlockResult = sceKernelUnlockFastMutex(&g_sharedResourceMutex);
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (unlockResult < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 119, "_exfat_unlock_shared_resource",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_used_resource_count", unlockResult);
@@ -1141,7 +1141,7 @@ void _free_all_cluster_cache(SceExfatfsDrive *drive)
 	fnodeCount = getInitializedFnodeCount(&g_sharedResource);
 	result = lockFastMutex(&g_sharedResourceMutex);
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 99, "_exfat_lock_shared_resource",
 			"%s: sceKernelLockFastMutex failed[%#x]\n", "_free_all_cluster_cache", result);
 		SCE_DBG_PRINTF_LEVEL(2, 0, 1521,
@@ -1161,7 +1161,7 @@ void _free_all_cluster_cache(SceExfatfsDrive *drive)
 		}
 	}
 	result = sceKernelUnlockFastMutex(&g_sharedResourceMutex);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 119, "_exfat_unlock_shared_resource",
 			"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_free_all_cluster_cache", result);
@@ -1182,7 +1182,7 @@ int _exfatfs_renamed_file(const SceExfatfsFnode *vnode, const SceExfatfsFnode *f
 	int result = 1;
 
 	if (vnode->Stat.st_type != file->Stat.st_type) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1715,
 			"%s: vnode->st_type(%d) != file->st_type(%d)\n",
 			"_exfatfs_renamed_file", vnode->Stat.st_type, file->Stat.st_type);
@@ -1190,7 +1190,7 @@ int _exfatfs_renamed_file(const SceExfatfsFnode *vnode, const SceExfatfsFnode *f
 		result = 0;
 	}
 	if (vnode->Stat.StartCluster != file->Stat.StartCluster) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1718,
 			"%s: vnode->StartCluster[%#lx] != file->StartCluster[%#lx]\n",
 			"_exfatfs_renamed_file", vnode->Stat.StartCluster, file->Stat.StartCluster);
@@ -1279,19 +1279,19 @@ int _sceExfatfsVopSetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 	unsigned char attribute = 0;
 	int result;
 	int mountIndex;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	char systemMount[8];
 #endif
 
 	result = sceFatfsACGetRootDirAttribute(drive, &attribute);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (*root)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2242, "%s: unexpected vnode_data[%p]\n",
 			"_sceExfatfsVopSetRoot", *root);
 #endif
 	*root = NULL;
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2246,
 			"%s: sceFatfsACGetRootDirAttribute for drive[%p] failed[%#x]\n",
 			"_sceExfatfsVopSetRoot", drive, result);
@@ -1346,7 +1346,7 @@ int _sceExfatfsVopSetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 		drive == g_sharedResource.fileSystems[14].drive)
 		mountIndex = 14;
 	else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 15, 2258, "%s(): Cannot get mountpoint\n",
 			"_sceExfatfsVopSetRoot");
 #endif
@@ -1360,7 +1360,7 @@ int _sceExfatfsVopSetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 	nameset = NULL;
 	result = sceFatfsPrepareNameset((int)drive, path, &nameset);
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2318,
 			"%s: sceFatfsPrepareNameset failed[%#x]\n",
 			"_sceExfatfsVopSetRoot", result);
@@ -1380,7 +1380,7 @@ int _sceExfatfsVopSetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 			element = allocateCommonHeapMemory((int)cacheFileSystem->drive, 512);
 			cacheFnode->cluster_cache_array = element;
 			if (!element) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 529, "_setup_cluster_cache_data",
 					"%s: sceFatfsCreateHeapVl failed\n", "_setup_cluster_cache_data");
 #endif
@@ -1403,7 +1403,7 @@ int _sceExfatfsVopSetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 		}
 	}
 	if (fnode->refCount == 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 2324,
 			"%s: fnode[%p], _root_cluster[%#lx], StartCluster[%#lx], Size[%#llx]\n",
 			"_sceExfatfsVopSetRoot", fnode, _root_cluster(fileSystem),
@@ -1411,26 +1411,26 @@ int _sceExfatfsVopSetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 #endif
 		_initialize_cluster_cache_data(fnode);
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2322, "%s: unexpected refCount(%d)\n",
 			"_sceExfatfsVopSetRoot", fnode->refCount);
 #endif
 	}
 	result = UVFAT_SearchFile(&g_sharedResource, nameset, fileSystem, fnode, 0);
 	if (result) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2366, "%s: UVFAT_Stat failed(%d)\n",
 			"_sceExfatfsVopSetRoot", result);
 #endif
 		result = exfatfsErrorToIoError(result);
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fnode->refCount != 1)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2370, "%s: unexpected refCount(%d)\n",
 			"_sceExfatfsVopSetRoot", fnode->refCount);
 #endif
 	if (fnode->refCount == 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 2376,
 			"%s: fnode[%p], _root_cluster[%#lx], StartCluster[%#lx], Size[%#llx]\n",
 			"_sceExfatfsVopSetRoot", fnode, _root_cluster(fileSystem),
@@ -1438,7 +1438,7 @@ int _sceExfatfsVopSetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 #endif
 		_set_root_cluster_and_cluster_count(fnode, _root_cluster(fileSystem), fnode->Stat.Size);
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2374, "%s: unexpected refCount(%d)\n",
 			"_sceExfatfsVopSetRoot", fnode->refCount);
 #endif
@@ -1446,7 +1446,7 @@ int _sceExfatfsVopSetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 	freeHeapBuffer((int)drive, nameset);
 	if (result < 0)
 		goto release;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fnode->fileSystem->fileSystemType != 2) {
 		__builtin_memcpy(systemMount, "ur0:", 5);
 		if (!strncmp(drive->assignName, systemMount, 5))
@@ -1517,14 +1517,14 @@ int _sceExfatfsVopGetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 		drive == g_sharedResource.fileSystems[14].drive)
 		mountIndex = 14;
 	else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 15, 2414, "%s(): Cannot get mountpoint\n",
 			"_sceExfatfsVopGetRoot");
 #endif
 		return (int)0x80010002;
 	}
 	fileSystem = &g_sharedResource.fileSystems[mountIndex];
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (*root)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2419, "%s: unexpected vnode_data[%p]\n",
 			"_sceExfatfsVopGetRoot", *root);
@@ -1532,13 +1532,13 @@ int _sceExfatfsVopGetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 	fnode = UVFAT_GetFnode(&g_sharedResource, fileSystem, rootPath);
 	*root = fnode;
 	if (!fnode) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2423, "%s: UVFAT_GetFnode failed\n",
 			"_sceExfatfsVopGetRoot");
 #endif
 		return (int)0x80010002;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fnode->refCount <= 1)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2431,
 			"%s: unexpected refCount(%d) of fnode[%p]\n",
@@ -1550,7 +1550,7 @@ int _sceExfatfsVopGetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 int sceExfatfsVopInactive(SceExfatfsFnode *fnode)
 {
 	int result;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SceUInt16 *path;
 	unsigned int character;
 	int refCount;
@@ -1595,7 +1595,7 @@ int sceExfatfsVopInactive(SceExfatfsFnode *fnode)
 #endif
 	result = UVFAT_ReleaseFnode(&g_sharedResource, fnode);
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2512,
 			"%s: UVFAT_ReleaseFnode for fnode[%p] failed[%#x]\n",
 			"sceExfatfsVopInactive", fnode, result);
@@ -1626,7 +1626,7 @@ int sceExfatfsVopDecodePathElem(SceExfatfsDrive *drive, const unsigned char *pat
 	*offset = 0;
 	*length = 0;
 	if (result) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2674,
 			"%s: sceFatfsPrepareNameset for path(%s), failed[%#x]\n",
 			"sceExfatfsVopDecodePathElem", path, result);
@@ -1636,14 +1636,14 @@ int sceExfatfsVopDecodePathElem(SceExfatfsDrive *drive, const unsigned char *pat
 	buffer = allocateHeapBuffer(drive);
 	if (!buffer) {
 		result = (int)0x8001000c;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2669, "%s: sceFatfsCreateHeap failed\n",
 			"sceExfatfsVopDecodePathElem");
 #endif
 		goto freeNameset;
 	}
 	converted = _utf16_to_utf8(buffer, 0x800, nameset->filePath);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (!converted)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2608, "%s: unexpected length(%d)\n",
 			"sceExfatfsVopDecodePathElem", converted);
@@ -1653,7 +1653,7 @@ int sceExfatfsVopDecodePathElem(SceExfatfsDrive *drive, const unsigned char *pat
 		goto free;
 	}
 	if (buffer[0] != '/') {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2618, "%s: unexpected start char_code[%#x]\n",
 			"sceExfatfsVopDecodePathElem", buffer[0]);
 #endif
@@ -1665,7 +1665,7 @@ int sceExfatfsVopDecodePathElem(SceExfatfsDrive *drive, const unsigned char *pat
 		*offset = input - path + 1;
 		++input;
 		if (!*input || *input == '/') {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 2629, "%s: no character\n",
 				"sceExfatfsVopDecodePathElem");
 #endif
@@ -1735,7 +1735,7 @@ int sceExfatfsVopDecodePathElem(SceExfatfsDrive *drive, const unsigned char *pat
 		drive == g_sharedResource.fileSystems[14].drive)
 		mountIndex = 14;
 	else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2543, "_set_case_insensitive_name",
 			"%s: NULL fileSystem, drive[%p]\n", "_set_case_insensitive_name", drive);
 #endif
@@ -1755,7 +1755,7 @@ int sceExfatfsVopDecodePathElem(SceExfatfsDrive *drive, const unsigned char *pat
 	*end = 0;
 	upperResult = UVFAT_ToUpperBuf(name, name, count, fileSystem);
 	if (upperResult < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2553, "_set_case_insensitive_name",
 			"%s: UVFAT_ToUpperBuf failed[%#x]\n", "_set_case_insensitive_name", upperResult);
 #endif
@@ -1771,7 +1771,7 @@ int sceExfatfsVopDecodePathElem(SceExfatfsDrive *drive, const unsigned char *pat
 		result = upperResult;
 	goto free;
 notMatch:
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SCE_DBG_PRINTF_LEVEL(1, 0, 2642, "%s: not match\n", "sceExfatfsVopDecodePathElem");
 #endif
 mismatch:
@@ -1794,7 +1794,7 @@ int _exfatfs_reference_count(SceExfatfsFnode *parent, const SceIoDirent *entry, 
 	size_t suffixLength;
 	int result;
 	int references = 0;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	unsigned char *path;
 	int drive;
 
@@ -1817,7 +1817,7 @@ int _exfatfs_reference_count(SceExfatfsFnode *parent, const SceIoDirent *entry, 
 #endif
 	fileSystem = parent->fileSystem;
 	suffixLength = strnlen(entry->d_name, 256);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	drive = (int)fileSystem->drive;
 	nameset = NULL;
 	path = _temporal_utf8_fullpath(drive, parent, entry->d_name, suffixLength);
@@ -1842,7 +1842,7 @@ int _exfatfs_reference_count(SceExfatfsFnode *parent, const SceIoDirent *entry, 
 	}
 	filePath = preparedNameset->filePath;
 	result = UVFAT_ToUpperBuf(filePath, filePath, 515, fileSystem);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2711, "%s: UVFAT_ToUpperBuf failed[%#x]\n",
 			"_exfatfs_reference_count", result);
@@ -1867,7 +1867,7 @@ int sceExfatfsVopLookup(SceExfatfsFnode *parent, const void *suffix,
 	int drive;
 	int result;
 	int released;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	const char *assignName;
 	SceExfatfsDrive *nodeDrive;
 	SceExfatfsFnode *alias;
@@ -1883,7 +1883,7 @@ int sceExfatfsVopLookup(SceExfatfsFnode *parent, const void *suffix,
 	int locked;
 #endif
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (_directory_vnode_check(parent, "sceExfatfsVopLookup") < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2746, "%s: parent_vnode_data[%p] isn't directory\n",
 			"sceExfatfsVopLookup", parent);
@@ -1906,7 +1906,7 @@ int sceExfatfsVopLookup(SceExfatfsFnode *parent, const void *suffix,
 	fileSystem = parent->fileSystem;
 	SCE_DBG_ASSERT(suffixLength > 0, 2759);
 	drive = (int)fileSystem->drive;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	path = _temporal_utf8_fullpath(drive, parent, suffix, suffixLength);
 	if (path) {
 		result = sceFatfsPrepareNameset(drive, path, &nameset);
@@ -1962,20 +1962,20 @@ freePath:
 		result = (int)0x8001000c;
 		goto freeNameset;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fnode->fileSystem != parent->fileSystem)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2819, "%s: FileSystem[%p] != expected[%p]\n",
 			"sceExfatfsVopLookup", fnode->fileSystem, parent->fileSystem);
 #endif
 	if (fnode->refCount == 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 2853,
 			"%s: fnode[%p], uninitialized StartCluster[%#lx], uninitialized Size[%#llx]\n",
 			"sceExfatfsVopLookup", fnode, fnode->Stat.StartCluster, fnode->Stat.Size);
 #endif
 		_initialize_cluster_cache_data(fnode);
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (output) {
 			nodeDrive = fnode->fileSystem->drive;
 			assignName = nodeDrive ? nodeDrive->assignName : NULL;
@@ -2012,7 +2012,7 @@ freePath:
 	result = UVFAT_SearchFileFromDir(&g_sharedResource, preparedNameset->fileName, fileSystem, fnode);
 	if (result < 0) {
 		released = UVFAT_ReleaseFnode(&g_sharedResource, fnode);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (released < 0)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 2866,
 				"%s: UVFAT_ReleaseFnode failed(%d) after error(%d) of UVFAT_SearchFileFromDir\n",
@@ -2023,7 +2023,7 @@ freePath:
 	}
 	if (!output) {
 		released = UVFAT_ReleaseFnode(&g_sharedResource, fnode);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (released)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 2900,
 				"%s: UVFAT_ReleaseFnode after exist check failed\n", "sceExfatfsVopLookup");
@@ -2031,7 +2031,7 @@ freePath:
 		goto freeNameset;
 	}
 	if (fnode->refCount - fnode->fdCount == 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 2882,
 			"%s: fnode[%p], StartCluster[%#lx], Size[%#llx]\n",
 			"sceExfatfsVopLookup", fnode, fnode->Stat.StartCluster, fnode->Stat.Size);
@@ -2104,7 +2104,7 @@ freePath:
 #endif
 		_set_start_cluster_and_cluster_count(fnode, fnode->Stat.StartCluster, fnode->Stat.Size);
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (!questionable) {
 			SCE_DBG_PRINTF_LEVEL(1, 0, 2876,
 				"%s: alias vnode will be created for fnode[%p], refCount(%hd), fdCount(%hd), StartCluster[%#lx], Size[%#llx]\n",
@@ -2138,13 +2138,13 @@ int probeWhiteoutDestination(SceExfatfsFnode *parent, const SceVfsPath *path)
 int sceExfatfsVopGetstat(SceExfatfsFnode *fnode, SceIoStat *stat)
 {
 	struct SceExfatfsFileSystem *fileSystem = fnode->fileSystem;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	int refCount;
 	int fdCount;
 #endif
 
 	memset(stat, 0, sizeof(*stat));
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (_deleted_entry(fnode)) {
 		fdCount = fnode->fdCount;
 		refCount = fnode->refCount;
@@ -2164,7 +2164,7 @@ int sceExfatfsVopGetstat(SceExfatfsFnode *fnode, SceIoStat *stat)
 
 static inline int _directory_fd_check(unsigned int fd, const char *caller);
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int sceExfatfsVopDclose(unsigned int fd)
 {
 	SceExfatfsFnode *fnode;
@@ -2230,12 +2230,12 @@ int sceExfatfsVopClose(unsigned int fd)
 	SceExfatfsFnode *flushFnode;
 	unsigned int mode;
 	int result;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	SceUInt16 *path;
 #endif
 
 	if (!fd || fd >= getInitializedFileCount(&g_sharedResource)) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1923, "_file_fd_check",
 			"%s: bad fd(%d)\n", "sceExfatfsVopClose", fd);
 #endif
@@ -2246,7 +2246,7 @@ int sceExfatfsVopClose(unsigned int fd)
 	file = &files[fd];
 	mode = file->mode;
 	if (mode != 6 && mode - 1 > 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1929, "_file_fd_check",
 			"%s: mode(%d) != expected(%d, %d or %d)\n",
 			"sceExfatfsVopClose", mode, 1, 2, 6);
@@ -2254,7 +2254,7 @@ int sceExfatfsVopClose(unsigned int fd)
 		result = -2;
 		goto error;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	result = _file_vnode_check(files[fd].fnode, "sceExfatfsVopClose");
 	if (result)
 		goto error;
@@ -2299,14 +2299,14 @@ int sceExfatfsVopClose(unsigned int fd)
 		flushFnode = files[fd].fnode;
 		result = UVFAT_FlushFdBuf(file, flushFnode->fileSystem);
 		if (result) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 3022, "_flush_file", "flush write buf Fail\n");
 #endif
 			flushFileSystemMetadata(flushFnode->fileSystem);
 		} else {
 			result = _exfatfs_flush_metadata(&g_sharedResource, flushFnode);
 			if (result) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 3015, "_flush_file", "Update meta data Fail\n");
 #endif
 			} else {
@@ -2327,7 +2327,7 @@ error:
 
 SceOff _exfatfs_vnode_size(SceExfatfsFnode *fnode)
 {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SceExfatfsFileSystem *fileSystem = fnode->fileSystem;
 
 	SCE_DBG_PRINTF_LEVEL(2, 0, 3078,
@@ -2341,7 +2341,7 @@ SceOff _exfatfs_vnode_size(SceExfatfsFnode *fnode)
 SceOff _exfatfs_file_size(unsigned int fd)
 {
 	SceExfatfsFile *files = g_sharedResource.files;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SceExfatfsFnode *fnode = files[fd].fnode;
 	SceExfatfsFileSystem *fileSystem = fnode->fileSystem;
 
@@ -2361,12 +2361,12 @@ int sceExfatfsVopLseek(unsigned int fd, SceOff offset, int whence, SceOff *posit
 	unsigned int mode;
 	SceOff nextPosition;
 	int result;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	SceUInt16 *path;
 #endif
 
 	if (!fd || fd >= getInitializedFileCount(&g_sharedResource)) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1923, "_file_fd_check",
 			"%s: bad fd(%d)\n", "sceExfatfsVopLseek", fd);
 #endif
@@ -2377,7 +2377,7 @@ int sceExfatfsVopLseek(unsigned int fd, SceOff offset, int whence, SceOff *posit
 	file = &files[fd];
 	mode = file->mode;
 	if (mode != 6 && mode - 1 > 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1929, "_file_fd_check",
 			"%s: mode(%d) != expected(%d, %d or %d)\n",
 			"sceExfatfsVopLseek", mode, 1, 2, 6);
@@ -2385,7 +2385,7 @@ int sceExfatfsVopLseek(unsigned int fd, SceOff offset, int whence, SceOff *posit
 		result = -2;
 		goto error;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	result = _file_vnode_check(files[fd].fnode, "sceExfatfsVopLseek");
 	if (result)
 		goto error;
@@ -2442,26 +2442,26 @@ error:
 static inline int _read_fd_check(unsigned int fd, const char *caller)
 {
 	unsigned int mode;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	SceExfatfsFnode *fnode;
 	SceUInt16 *path;
 #endif
 
 	if (!fd || fd >= getInitializedFileCount(&g_sharedResource)) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1883, "%s: bad fd(%d)\n", caller, fd);
 #endif
 		return -48;
 	}
 	mode = g_sharedResource.files[fd].mode;
 	if (mode != 6 && mode != 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1888, "%s: mode(%d) != expected(%d or %d)\n",
 			caller, mode, 1, 6);
 #endif
 		return -2;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	return _file_vnode_check(g_sharedResource.files[fd].fnode, caller);
 #else
 	fnode = g_sharedResource.files[fd].fnode;
@@ -2494,7 +2494,7 @@ int sceExfatfsVopPread(unsigned int fd, void *buffer, unsigned int size,
 	} else {
 		files = g_sharedResource.files;
 		file = &files[fd];
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (_deleted_entry(file->fnode)) {
 			fnode = files[fd].fnode;
 			SCE_DBG_PRINTF_LEVEL(1, 0, 3321,
@@ -2528,26 +2528,26 @@ int sceExfatfsVopPread(unsigned int fd, void *buffer, unsigned int size,
 static inline int _write_fd_check(unsigned int fd, const char *caller)
 {
 	unsigned int mode;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	SceExfatfsFnode *fnode;
 	SceUInt16 *path;
 #endif
 
 	if (!fd || fd >= getInitializedFileCount(&g_sharedResource)) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1903, "%s: bad fd(%d)\n", caller, fd);
 #endif
 		return -48;
 	}
 	mode = g_sharedResource.files[fd].mode;
 	if ((mode & ~4U) != 2) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1908, "%s: mode(%d) != expected(%d or %d)\n",
 			caller, mode, 2, 6);
 #endif
 		return -2;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	return _file_vnode_check(g_sharedResource.files[fd].fnode, caller);
 #else
 	fnode = g_sharedResource.files[fd].fnode;
@@ -2563,7 +2563,7 @@ static inline int _write_fd_check(unsigned int fd, const char *caller)
 #endif
 }
 
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 static inline int _check_free_count(SceExfatfsFnode *fnode, unsigned long long newSize)
 {
 	struct SceExfatfsFileSystem *fileSystem = fnode->fileSystem;
@@ -2618,7 +2618,7 @@ int sceExfatfsVopPwrite(unsigned int fd, const void *buffer, unsigned int size,
 	SceOff oldPosition;
 	int result;
 	int written;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SceUInt64 fileSize;
 	SceUInt64 nextPosition;
 #endif
@@ -2631,7 +2631,7 @@ int sceExfatfsVopPwrite(unsigned int fd, const void *buffer, unsigned int size,
 		files = g_sharedResource.files;
 		file = &files[fd];
 		oldPosition = file->Position;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (_deleted_entry(file->fnode)) {
 			fnode = files[fd].fnode;
 			SCE_DBG_PRINTF_LEVEL(1, 0, 3368,
@@ -2652,13 +2652,13 @@ int sceExfatfsVopPwrite(unsigned int fd, const void *buffer, unsigned int size,
 			if (written < 0) {
 				result = exfatfsErrorToIoError(written);
 			} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				nextPosition = file->Position;
 				fileSize = files[fd].fnode->Stat.Size;
 #endif
 				*writeSize = written;
 				result = 0;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				if (fileSize < nextPosition)
 					SCE_DBG_PRINTF_LEVEL(1, 0, 3392,
 						"%s: Position[%#llx] > size[%#llx], wsize(%ld)\n",
@@ -2677,13 +2677,13 @@ SceExfatfsFile *_exfatfs_open_common(SceExfatfsFnode *fnode, int mode,
 {
 	SceExfatfsFile *file;
 	int result;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	short fdCount;
 #else
 	unsigned short fdCount;
 #endif
 	short refCount;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	SceUInt16 *path;
 #endif
 
@@ -2691,7 +2691,7 @@ SceExfatfsFile *_exfatfs_open_common(SceExfatfsFnode *fnode, int mode,
 	switch (mode) {
 	case 1:
 	case 6:
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		_file_vnode_check(fnode, "_exfatfs_open_common(Open, after assign)");
 #else
 		if (fnode->Stat.st_type) {
@@ -2702,7 +2702,7 @@ SceExfatfsFile *_exfatfs_open_common(SceExfatfsFnode *fnode, int mode,
 #endif
 		break;
 	case 3:
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		_directory_vnode_check(fnode, "_exfatfs_open_common(OpenDir, after assign)");
 #else
 		if (fnode->Stat.st_type == 6)
@@ -2713,7 +2713,7 @@ SceExfatfsFile *_exfatfs_open_common(SceExfatfsFnode *fnode, int mode,
 #endif
 		break;
 	case 8:
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (!fnode->Stat.st_type)
 			_file_vnode_check(fnode, "_exfatfs_open_common(Chstat, after assign)");
 		else if (fnode->Stat.st_type == 6)
@@ -2731,7 +2731,7 @@ checkDirectoryCluster:
 #endif
 		break;
 	default:
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3422,
 			"%s: unsupported open_mode(%d)\n", "_exfatfs_open_common", mode);
 #endif
@@ -2748,7 +2748,7 @@ checkDirectoryCluster:
 		fnode->refCount = refCount;
 		fnode->fdCount = fdCount;
 		if (fdCount != 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(2, 0, 3433,
 				"%s: fnode[%p], refCount(%hd), fdCount(%hd)\n",
 				"_exfatfs_open_common", fnode, refCount, fdCount);
@@ -2759,7 +2759,7 @@ checkDirectoryCluster:
 		file->fnode = fnode;
 		result = _AllocateFdBuffer(file);
 		if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 3441,
 				"%s: _AllocateFdBuffer failed[%#x]\n", "_exfatfs_open_common", result);
 #endif
@@ -2775,26 +2775,26 @@ checkDirectoryCluster:
 static inline int _directory_fd_check(unsigned int fd, const char *caller)
 {
 	unsigned int mode;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	SceExfatfsFnode *fnode;
 	SceUInt16 *path;
 #endif
 
 	if (!fd || fd >= getInitializedFileCount(&g_sharedResource)) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1864, "%s: bad fd(%d)\n", caller, fd);
 #endif
 		return -48;
 	}
 	mode = g_sharedResource.files[fd].mode;
 	if (mode != 3) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1868, "%s: mode(%d) != expected(%d)\n",
 			caller, mode, 3);
 #endif
 		return -2;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	return _directory_vnode_check(g_sharedResource.files[fd].fnode, caller);
 #else
 	fnode = g_sharedResource.files[fd].fnode;
@@ -2817,19 +2817,19 @@ int sceExfatfsVopDopen(SceExfatfsFnode *fnode, unsigned int *fd)
 	SceExfatfsFile *file;
 	int descriptor;
 	int result;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	short fdCount;
 #else
 	unsigned short fdCount;
 #endif
 	short refCount;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SceUInt32 root;
 #else
 	SceUInt16 *path;
 #endif
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	descriptor = _directory_vnode_check(fnode, "sceExfatfsVopDopen");
 	if (descriptor)
 		goto assigned;
@@ -2862,7 +2862,7 @@ int sceExfatfsVopDopen(SceExfatfsFnode *fnode, unsigned int *fd)
 	if (!fnode->FileName)
 		return 0x80010002;
 	if (fnode->DirCluster == fnode->Stat.StartCluster) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3501,
 			"%s: fnode[%p], DirCluster[%#lx] == StartCluster[%#lx], DirOffset[%#llx], DirOffClust[%#lx]\n",
 			"sceExfatfsVopDopen", fnode, fnode->DirCluster, fnode->DirCluster,
@@ -2889,7 +2889,7 @@ assigned:
 	fnode->refCount = refCount;
 	file = &files[descriptor];
 	if (fdCount != 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 3513,
 			"%s: fnode[%p], refCount(%hd), fdCount(%hd)\n",
 			"sceExfatfsVopDopen", fnode, refCount, fdCount);
@@ -2901,14 +2901,14 @@ assigned:
 	result = _AllocateFdBuffer(file);
 	_directory_fd_check(descriptor, "sceExfatfsVopDopen(after allocate buffer)");
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3521,
 			"%s: _AllocateFdBuffer failed[%#x]\n", "sceExfatfsVopDopen", result);
 #endif
 		goto release;
 	}
 	if (fnode->DirCluster == (SceUInt32)-2) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		root = _root_cluster(fnode->fileSystem);
 		if (root == fnode->Stat.StartCluster)
 			SCE_DBG_PRINTF_LEVEL(2, 0, 3525,
@@ -2924,7 +2924,7 @@ assigned:
 	}
 	result = UVFAT_InitFd(&g_sharedResource, descriptor, fnode->fileSystem);
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3561,
 			"%s: UVFAT_InitFd failed[%#x]\n", "sceExfatfsVopDopen", result);
 #endif
@@ -2951,17 +2951,17 @@ int sceExfatfsVopOpen(SceExfatfsFnode *fnode, int flags, int *fd)
 	int descriptor;
 	int mode;
 	int result;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	short fdCount;
 #else
 	unsigned short fdCount;
 #endif
 	short refCount;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	SceUInt16 *path;
 #endif
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	descriptor = _file_vnode_check(fnode, "sceExfatfsVopOpen");
 	*fd = 0;
 	if (_deleted_entry(fnode)) {
@@ -2992,7 +2992,7 @@ int sceExfatfsVopOpen(SceExfatfsFnode *fnode, int flags, int *fd)
 	if (!descriptor) {
 		mode = 6;
 		if (((unsigned int)flags & 3) - 1 > 2) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 880, "_flag_convert",
 				"%s: unexpected open flag[%#x]\n", "_flag_convert", flags);
 #endif
@@ -3011,7 +3011,7 @@ int sceExfatfsVopOpen(SceExfatfsFnode *fnode, int flags, int *fd)
 	fnode->refCount = refCount;
 	file = &files[descriptor];
 	if (fdCount != 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 3674,
 			"%s: fnode[%p], refCount(%hd), fdCount(%hd)\n",
 			"sceExfatfsVopOpen", fnode, refCount, fdCount);
@@ -3021,7 +3021,7 @@ int sceExfatfsVopOpen(SceExfatfsFnode *fnode, int flags, int *fd)
 	files[descriptor].fnode = fnode;
 	result = _AllocateFdBuffer(file);
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3686,
 			"%s: _AllocateFdBuffer failed[%#x]\n", "sceExfatfsVopOpen", result);
 #endif
@@ -3030,14 +3030,14 @@ int sceExfatfsVopOpen(SceExfatfsFnode *fnode, int flags, int *fd)
 	}
 	fileSystem = fnode->fileSystem;
 	if (!fileSystem) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 3604, "_file_open_setup",
 			"%s: unexpected fileSystem == NULL\n", "_file_open_setup");
 #endif
 		for (;;)
 			;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fnode->DirCluster == (SceUInt32)-2)
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 3608, "_file_open_setup",
 			"%s: unexpected DirCluster[%#lx], fnode[%p]\n",
@@ -3071,7 +3071,7 @@ int sceExfatfsVopDread(unsigned int fd, SceIoDirent *dirent)
 	file = &g_sharedResource.files[fd];
 	fnode = file->fnode;
 	fileSystem = fnode->fileSystem;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (_deleted_entry(fnode))
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3914,
 			"%s: deleted fnode[%p], refCount(%hd), fdCount(%hd)\n",
@@ -3086,7 +3086,7 @@ int sceExfatfsVopDread(unsigned int fd, SceIoDirent *dirent)
 	filename = allocateHeapBuffer(fileSystem->drive);
 	memset(&stat, 0, sizeof(stat));
 	if (!filename) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3932,
 			"%s: sceFatfsCreateHeap for filename failed\n", "sceExfatfsVopDread");
 #endif
@@ -3095,7 +3095,7 @@ int sceExfatfsVopDread(unsigned int fd, SceIoDirent *dirent)
 	memset(filename, 0, 2048);
 	if (!fileSystem->file.mode && file->mode == 3) {
 		fileSystem->file.mode = 3;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (fileSystem->file.fnode->fileSystem != file->fnode->fileSystem)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 3870, "_setup_for_directory_search",
 				"%s: unexpected FileSystem[%p] != [%p]\n",
@@ -3108,7 +3108,7 @@ int sceExfatfsVopDread(unsigned int fd, SceIoDirent *dirent)
 		_copy_position_and_fd_cache(&fileSystem->file, file, 0);
 	}
 	if (fd >= getInitializedFileCount(&g_sharedResource)) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 3945, "bad fd[%d]\n", fd);
 #endif
 		readResult = -48;
@@ -3118,7 +3118,7 @@ int sceExfatfsVopDread(unsigned int fd, SceIoDirent *dirent)
 	if (fnode->fileSystem->fileSystemType == 2) {
 		temporary = allocateCommonHeapMemory((int)fileSystem->drive, sizeof(*temporary));
 		if (!temporary) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 3964,
 				"%s: sceFatfsCreateHeapVl failed\n", "sceExfatfsVopDread");
 #endif
@@ -3128,7 +3128,7 @@ int sceExfatfsVopDread(unsigned int fd, SceIoDirent *dirent)
 		}
 		temporary->cache_element_count = 0;
 		temporary->cluster_cache_array = NULL;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_ASSERT_FUNC(1, 554, "_invalidate_cluster_cache_data");
 		temporary->tailCluster = -2;
 		temporary->tailIndex = -2;
@@ -3196,7 +3196,7 @@ int sceExfatfsVopDread(unsigned int fd, SceIoDirent *dirent)
 	if (readResult) {
 read_error:
 		result = exfatfsErrorToIoError(readResult);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 3981,
 			"%s: UVFAT_ReadDir for fd(%d) failed[%#x->%#x]\n",
 			"sceExfatfsVopDread", fd, readResult, result);
@@ -3206,7 +3206,7 @@ read_error:
 	exfatfsStatToIoStat(fileSystem->drive, &stat, &dirent->d_stat);
 	result = sceFatfsACCheckRDirEntry(fileSystem->drive, dirent->d_stat.st_attr & 255);
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 3992,
 			"%s: ACCheckRDirEntry failed[%#x]\n", "sceExfatfsVopDread", result);
 #endif
@@ -3219,7 +3219,7 @@ read_error:
 		goto free_filename;
 	wname = allocateHeapBuffer(fileSystem->drive);
 	if (!wname) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4008,
 			"%s: sceFatfsCreateHeap for wname failed\n", "sceExfatfsVopDread");
 #endif
@@ -3264,7 +3264,7 @@ int _chstat_setup(SceExfatfsFnode *fnode, SceIoStat *stat, unsigned int bits)
 	int result;
 	int length;
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (!fnode->Stat.st_type) {
 		result = _file_vnode_check(fnode, "sceExfatfsVopChstat");
 	} else if (fnode->Stat.st_type == 6) {
@@ -3306,7 +3306,7 @@ int _chstat_setup(SceExfatfsFnode *fnode, SceIoStat *stat, unsigned int bits)
 		return 0x80010015;
 	drive = fileSystem->drive;
 	nameset = NULL;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	path = _temporal_utf8_fullpath((int)drive, fnode, NULL, 0);
 	if (path) {
 		result = sceFatfsPrepareNameset((int)drive, path, &nameset);
@@ -3337,7 +3337,7 @@ int _chstat_setup(SceExfatfsFnode *fnode, SceIoStat *stat, unsigned int bits)
 	oldAttribute = updatedStat.st_attr;
 	result = sceFatfsACCheckRDirEntry(drive, oldAttribute);
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4041,
 			"%s: sceFatfsACCheckRDirEntry failed[%#x]\n", "_chstat_setup", result);
 #endif
@@ -3351,7 +3351,7 @@ int _chstat_setup(SceExfatfsFnode *fnode, SceIoStat *stat, unsigned int bits)
 		newAttribute = (oldAttribute & ~7U) | attribute;
 		attribute = newAttribute;
 		if ((bits & 0x10000) && stat->st_attr != newAttribute) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4054,
 				"%s: st_attr[%#x] != attr[%#x] from mode[%o]\n",
 				"_chstat_setup", stat->st_attr, newAttribute, stat->st_mode);
@@ -3363,7 +3363,7 @@ int _chstat_setup(SceExfatfsFnode *fnode, SceIoStat *stat, unsigned int bits)
 	}
 	if (bits & 0x10000) {
 		if (stat->st_attr & 0xc8) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4067,
 				"%s: invalid attribute[%#x]\n", "_chstat_setup", stat->st_attr);
 #endif
@@ -3371,14 +3371,14 @@ int _chstat_setup(SceExfatfsFnode *fnode, SceIoStat *stat, unsigned int bits)
 			goto free_nameset;
 		}
 		if ((updatedStat.st_attr ^ stat->st_attr) & 0x10) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(2, 15, 4072, "file != dir\n");
 #endif
 			result = 0x80010016;
 			goto free_nameset;
 		}
 		if (sceFatfsACGetDirPermission(drive, stat->st_attr) < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4076,
 				"%s: invalid attribute[%#x]\n", "_chstat_setup", stat->st_attr);
 #endif
@@ -3470,7 +3470,7 @@ void _exfatfs_set_whiteout_directory(SceExfatfsFnode *fnode)
 {
 	struct SceExfatfsFileSystem *fileSystem = fnode->fileSystem;
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fileSystem->whiteout_directory)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4337,
 			"%s: unexpected whiteout_directory[%p] has been set\n",
@@ -3493,7 +3493,7 @@ void _clear_whiteout_directory(SceExfatfsFnode *fnode)
 	fileSystem->whiteout_directory = NULL;
 	result = UVFAT_ReleaseFnode(&g_sharedResource, whiteout);
 	if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4361,
 			"%s: UVFAT_ReleaseFnode failed[%#x]\n", "_clear_whiteout_directory", result);
 #endif
@@ -3552,7 +3552,7 @@ SceExfatfsFnode *getDriveWhiteoutDirectory(SceExfatfsDrive *drive)
 
 void _exfatfs_set_whiteout_bit(SceExfatfsFnode *fnode)
 {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fnode->flags & 1)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4422,
 			"%s: unexpected flags[%#x], fnode[%p]\n",
@@ -3568,7 +3568,7 @@ int _exfatfs_free_cluster_link(SceExfatfsFnode *fnode, SceUInt32 cluster)
 	SceUInt32 fileSystemType;
 	SceUInt16 statType;
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fnode->Stat.StartCluster != cluster)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4433,
 			"%s: unexpected startCluster[%#lx] != StartCluster[%#lx], fnode[%p]\n",
@@ -3588,7 +3588,7 @@ int _exfatfs_free_cluster_link(SceExfatfsFnode *fnode, SceUInt32 cluster)
 				fnode->Stat.generalSecondaryFlags &= ~2;
 		}
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4436,
 			"%s: NULL fileSystem, unmounted\n", "_exfatfs_free_cluster_link");
 #endif
@@ -3621,12 +3621,12 @@ int sceExfatfsVopRemove(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode)
 	SceUInt32 startCluster;
 	unsigned char *path;
 	int result;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	SceUInt16 *parentPath;
 	int length;
 #endif
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (_deleted_entry(fnode)) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4525,
 			"%s: deleted fnode[%p], refCount(%hd), fdCount(%hd)\n",
@@ -3644,14 +3644,14 @@ int sceExfatfsVopRemove(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode)
 	if (fnode->flags & 1) {
 		parent_fnode = fileSystem->whiteout_directory;
 	} else if (!parent_fnode) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4535,
 			"%s: NULL parent but fnode[%p] isn't whiteout entry\n",
 			"sceExfatfsVopRemove", fnode);
 #endif
 		return 0x80010016;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (_directory_vnode_check(parent_fnode, "sceExfatfsVopRemove") < 0)
 		return 0x80010014;
 #else
@@ -3666,7 +3666,7 @@ int sceExfatfsVopRemove(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode)
 		return 0x80010014;
 #endif
 	if (parent_fnode->fileSystem != fileSystem) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4547,
 			"%s: parent_fnode->FileSystem[%p] != fnode->FileSystem[%p]\n",
 			"sceExfatfsVopRemove", parent_fnode->fileSystem, fileSystem);
@@ -3681,7 +3681,7 @@ int sceExfatfsVopRemove(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode)
 		return 0x80010078;
 	drive = fileSystem->drive;
 	nameset = NULL;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	path = _temporal_utf8_fullpath((int)drive, fnode, NULL, 0);
 	if (path) {
 		result = sceFatfsPrepareNameset((int)drive, path, &nameset);
@@ -3720,7 +3720,7 @@ int sceExfatfsVopRemove(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode)
 			memset(fnode->FilePath, 0, sizeof(fnode->FilePath));
 			fnode->FileName = fnode->FilePath;
 		} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 190, "_invalidate_parent_entry",
 				"%s: unexpected refCount(%hd), fdCount(%hd), fnode[%p], DirCluster[%#lx], DirOffset[%#llx], DirOffClust[%#lx], StartCluster[%#lx]\n",
 				"_invalidate_parent_entry", 0, fnode->fdCount, fnode, fnode->DirCluster,
@@ -3745,12 +3745,12 @@ int _check_empty_directory(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode
 	SceExfatfsFatDirectoryEntry entry;
 	unsigned char *path;
 	int result;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	SceUInt16 *parentPath;
 	int length;
 #endif
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (_deleted_entry(fnode)) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 4639, "sceExfatfsVopRmdir",
 			"%s: deleted fnode[%p], refCount(%hd), fdCount(%hd)\n",
@@ -3767,7 +3767,7 @@ int _check_empty_directory(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode
 #endif
 	if (fnode->flags & 1)
 		parent_fnode = fileSystem->whiteout_directory;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (_directory_vnode_check(parent_fnode, "sceExfatfsVopRmdir") < 0)
 		return 0x80010014;
 #else
@@ -3783,7 +3783,7 @@ int _check_empty_directory(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode
 #endif
 	parentFileSystem = parent_fnode->fileSystem;
 	if (parentFileSystem != fileSystem) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 4658, "sceExfatfsVopRmdir",
 			"%s: parent_fnode->FileSystem[%p] != fnode->FileSystem[%p]\n",
 			"sceExfatfsVopRmdir", parentFileSystem, fileSystem);
@@ -3798,7 +3798,7 @@ int _check_empty_directory(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode
 		return 0x80010078;
 	directoryFileSystem = fnode->fileSystem;
 	startCluster = fnode->Stat.StartCluster;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (startCluster == (SceUInt32)-2) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4267,
 			"%s: unexpected StartCluster[%#lx], fnode[%p]\n",
@@ -3810,7 +3810,7 @@ int _check_empty_directory(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode
 		result = UVFAT_InitDirEntry_ex(&g_sharedResource, 0, startCluster,
 			directoryFileSystem, fnode->Stat.generalSecondaryFlags, fnode->Stat.Size);
 		if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4275,
 				"%s: UVFAT_InitDirEntry_ex failed(%d)\n", "_check_empty_directory", result);
 			SCE_DBG_ASSERT(0, 4276);
@@ -3819,7 +3819,7 @@ int _check_empty_directory(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode
 		}
 		result = UVFAT_SearchGetFile_ex(1, &g_sharedResource,
 			directoryFileSystem->fnode.FilePath, directoryFileSystem, NULL, 0);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (result && result != -7)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4285,
 				"%s: UVFAT_SearchGetFile_ex failed[%#x]\n", "_check_empty_directory", result);
@@ -3827,7 +3827,7 @@ int _check_empty_directory(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode
 	} else {
 		result = UVFAT_InitDirEntry(&g_sharedResource, 0, startCluster, directoryFileSystem);
 		if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4294,
 				"%s: UVFAT_InitDirEntry failed(%d)\n", "_check_empty_directory", result);
 			SCE_DBG_ASSERT(0, 4295);
@@ -3848,7 +3848,7 @@ checked:
 		return exfatfsErrorToIoError(result);
 	drive = parentFileSystem->drive;
 	nameset = NULL;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	path = _temporal_utf8_fullpath((int)drive, fnode, NULL, 0);
 	if (path) {
 		result = sceFatfsPrepareNameset((int)drive, path, &nameset);
@@ -3887,7 +3887,7 @@ checked:
 			memset(fnode->FilePath, 0, sizeof(fnode->FilePath));
 			fnode->FileName = fnode->FilePath;
 		} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 190, "_invalidate_parent_entry",
 				"%s: unexpected refCount(%hd), fdCount(%hd), fnode[%p], DirCluster[%#lx], DirOffset[%#llx], DirOffClust[%#lx], StartCluster[%#lx]\n",
 				"_invalidate_parent_entry", 0, fnode->fdCount, fnode, fnode->DirCluster,
@@ -3910,7 +3910,7 @@ int sceExfatfsVopMkdir(SceExfatfsFnode *parent, const void *suffix,
 	SceExfatfsFnode *fnode;
 	unsigned char *path;
 	int result;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SceUInt16 *printPath;
 	int codeUnit;
 #else
@@ -3919,7 +3919,7 @@ int sceExfatfsVopMkdir(SceExfatfsFnode *parent, const void *suffix,
 	int length;
 #endif
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	result = _directory_vnode_check(parent, "sceExfatfsVopMkdir");
 	if (result) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4768,
@@ -3943,7 +3943,7 @@ int sceExfatfsVopMkdir(SceExfatfsFnode *parent, const void *suffix,
 	drive = fileSystem->drive;
 	SCE_DBG_ASSERT(suffixLength > 0, 4817);
 	nameset = NULL;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	path = _temporal_utf8_fullpath((int)drive, parent, suffix, suffixLength);
 	if (path) {
 		result = sceFatfsPrepareNameset((int)drive, path, &nameset);
@@ -3988,7 +3988,7 @@ free_path:
 		return 0x8001000c;
 	fnode = UVFAT_GetFnode(&g_sharedResource, fileSystem, preparedNameset->filePath);
 	if (!fnode) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4892,
 			"%s: UVFAT_GetFnode failed\n", "sceExfatfsVopMkdir");
 #endif
@@ -3996,14 +3996,14 @@ free_path:
 		goto free_nameset;
 	}
 	if (fnode->refCount == 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 4829,
 			"%s: fnode[%p], uninitialized StartCluster[%#lx], uninitialized Size[%#llx]\n",
 			"sceExfatfsVopMkdir", fnode, fnode->Stat.StartCluster, fnode->Stat.Size);
 #endif
 		_initialize_cluster_cache_data(fnode);
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4823,
 			"%s: unexpected refCount(%hd), fdCount(%hd)\n",
 			"sceExfatfsVopMkdir", fnode->refCount, fnode->fdCount);
@@ -4025,7 +4025,7 @@ free_path:
 #endif
 	}
 	if ((fileSystem->mount_mode & 255) == 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4838,
 			"%s: isReadOnlyMntMode, fileSystem[%p]\n", "sceExfatfsVopMkdir", fileSystem);
 #endif
@@ -4034,7 +4034,7 @@ free_path:
 	}
 	result = UVFAT_MakeDir_vop(&g_sharedResource, parent, preparedNameset, mode, fnode);
 	if (result) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4849,
 			"%s: UVFAT_MakeDir failed(%d)\n", "sceExfatfsVopMkdir", result);
 #endif
@@ -4043,7 +4043,7 @@ free_path:
 	} else {
 		result = flushFileSystemMetadata(fileSystem);
 		if (result) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4855,
 				"%s: UVFAT_WriteManagementArea failed(%d)\n", "sceExfatfsVopMkdir", result);
 #endif
@@ -4053,7 +4053,7 @@ free_path:
 	}
 	if (result < 0)
 		goto release;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fnode->Stat.st_type != 6)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4877,
 			"%s: unexpected type(%d), fnode[%p], StartCluster[%#lx], Size[%#llx], mode[%#o]\n",
@@ -4078,7 +4078,7 @@ int sceExfatfsVopCreate(SceExfatfsFnode *parent, const void *suffix,
 	SceFatfsNameset *nameset, *preparedNameset;
 	SceExfatfsFnode *fnode;
 	int result;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	unsigned char *path;
 	SceUInt16 *printPath;
 	int codeUnit;
@@ -4086,7 +4086,7 @@ int sceExfatfsVopCreate(SceExfatfsFnode *parent, const void *suffix,
 	SceUInt16 *parentPath;
 #endif
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	result = _directory_vnode_check(parent, "sceExfatfsVopCreate");
 #else
 	if (parent->Stat.st_type != 6) {
@@ -4107,7 +4107,7 @@ int sceExfatfsVopCreate(SceExfatfsFnode *parent, const void *suffix,
 	if (!parent->FileName)
 		return 0x80010002;
 	if ((fileSystem->mount_mode & 255) == 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4979,
 			"%s: isReadOnlyMntMode, fileSystem[%p]\n", "sceExfatfsVopCreate", fileSystem);
 #endif
@@ -4115,7 +4115,7 @@ int sceExfatfsVopCreate(SceExfatfsFnode *parent, const void *suffix,
 	}
 	fnode = NULL;
 	SCE_DBG_ASSERT(suffixLength > 0, 4985);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	nameset = NULL;
 	path = _temporal_utf8_fullpath((int)drive, parent, suffix, suffixLength);
 	if (path) {
@@ -4145,7 +4145,7 @@ int sceExfatfsVopCreate(SceExfatfsFnode *parent, const void *suffix,
 		freeHeapBuffer((int)drive, preparedNameset);
 	}
 	if (fnode->refCount == 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 0, 5008,
 			"%s: fnode[%p], StartCluster[%#lx], Size[%#llx]\n",
 			"sceExfatfsVopCreate", fnode, fnode->Stat.StartCluster, fnode->Stat.Size);
@@ -4158,7 +4158,7 @@ int sceExfatfsVopCreate(SceExfatfsFnode *parent, const void *suffix,
 		_initialize_cluster_cache_data(fnode);
 		_set_start_cluster_and_cluster_count(fnode, fnode->Stat.StartCluster, 0);
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 5002,
 			"%s: unexpected refCount(%hd), fdCount(%hd)\n",
 			"sceExfatfsVopCreate", fnode->refCount, fnode->fdCount);
@@ -4188,7 +4188,7 @@ int sceExfatfsVopLink(SceExfatfsFnode *from, SceExfatfsFnode *to)
 {
 	int result;
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (!from->Stat.st_type)
 		result = _file_vnode_check(from, "sceExfatfsVopLink(from)");
 	else if (from->Stat.st_type == 6)
@@ -4238,7 +4238,7 @@ int sceExfatfsVopLink(SceExfatfsFnode *from, SceExfatfsFnode *to)
 	++from->refCount;
 	if (from != to)
 		++to->refCount;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	return result;
 finish:
 	return result < 0 ? exfatfsErrorToIoError(result) : result;
@@ -4259,13 +4259,13 @@ finish:
 int sceExfatfsVopUnlink(SceExfatfsFnode *from, SceExfatfsFnode *to)
 {
 	int result;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SceInt16 refCount;
 #else
 	SceUInt16 refCount;
 #endif
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (!from->Stat.st_type)
 		result = _file_vnode_check(from, "sceExfatfsVopUnlink(from)");
 	else if (from->Stat.st_type == 6)
@@ -4314,7 +4314,7 @@ int sceExfatfsVopUnlink(SceExfatfsFnode *from, SceExfatfsFnode *to)
 #endif
 	refCount = from->refCount;
 	if (refCount == 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (_deleted_entry(from))
 			SCE_DBG_PRINTF_LEVEL(1, 0, 5126,
 				"%s: deleted from_fnode[%p], refCount(%hd), fdCount(%hd)\n",
@@ -4331,7 +4331,7 @@ int sceExfatfsVopUnlink(SceExfatfsFnode *from, SceExfatfsFnode *to)
 	if (from != to) {
 		refCount = to->refCount;
 		if (refCount == 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			if (_deleted_entry(to))
 				SCE_DBG_PRINTF_LEVEL(1, 0, 5135,
 					"%s: deleted to_fnode[%p], refCount(%hd), fdCount(%hd)\n",
@@ -4350,7 +4350,7 @@ finish:
 	if (result < 0)
 		result = exfatfsErrorToIoError(result);
 	return result;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 unsupported:
 	result = -6;
 	goto finish;
@@ -4373,11 +4373,11 @@ int sceExfatfsVopRename(SceExfatfsFnode *oldFnode, SceExfatfsFnode *parent,
 	int result;
 	int error;
 	int length;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	SceUInt16 *parentPath;
 #endif
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	result = _directory_vnode_check(parent, "sceExfatfsVopRename");
 #else
 	if (parent->Stat.st_type != 6) {
@@ -4393,7 +4393,7 @@ int sceExfatfsVopRename(SceExfatfsFnode *oldFnode, SceExfatfsFnode *parent,
 	}
 #endif
 	*output = NULL;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (_deleted_entry(oldFnode)) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 5163,
 			"%s: deleted old_fnode[%p], refCount(%hd), fdCount(%hd)\n",
@@ -4425,7 +4425,7 @@ int sceExfatfsVopRename(SceExfatfsFnode *oldFnode, SceExfatfsFnode *parent,
 		return 0x80010002;
 	drive = (int)fileSystem->drive;
 	nameset = NULL;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	path = _temporal_utf8_fullpath(drive, oldFnode, NULL, 0);
 	if (path) {
 		result = sceFatfsPrepareNameset(drive, path, &nameset);
@@ -4452,7 +4452,7 @@ int sceExfatfsVopRename(SceExfatfsFnode *oldFnode, SceExfatfsFnode *parent,
 	oldNameset = nameset;
 	SCE_DBG_ASSERT(suffixLength > 0, 5214);
 	nameset = NULL;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	path = _temporal_utf8_fullpath(drive, parent, suffix, suffixLength);
 	if (path) {
 		result = sceFatfsPrepareNameset(drive, path, &nameset);
@@ -4483,7 +4483,7 @@ int sceExfatfsVopRename(SceExfatfsFnode *oldFnode, SceExfatfsFnode *parent,
 			"sceExfatfsVopRename", fnode, fnode->Stat.StartCluster, fnode->Stat.Size);
 		_initialize_cluster_cache_data(fnode);
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(1, 0, 5222, "%s: refCount(%hd), fdCount(%hd)\n",
 			"sceExfatfsVopRename", fnode->refCount, fnode->fdCount);
 		SCE_DBG_PRINTF_LEVEL(1, 0, 5223, "%s: fnode[%p]\n", "sceExfatfsVopRename", fnode);
@@ -4608,7 +4608,7 @@ int sceExfatfsVopSync(SceExfatfsFnode *fnode, SceUInt32 fd, int flags)
 	SceVfsVnode *deviceVnode;
 	SceVfsFile *deviceFile;
 	int result;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SceVfsMountData *mount;
 #endif
 
@@ -4618,7 +4618,7 @@ int sceExfatfsVopSync(SceExfatfsFnode *fnode, SceUInt32 fd, int flags)
 		goto finish;
 	}
 	fileSystem = fnode->fileSystem;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fileSystem) {
 		drive = fileSystem->drive;
 		if (drive && (drive->state & 0x4000))
@@ -4670,7 +4670,7 @@ int sceExfatfsVopSync(SceExfatfsFnode *fnode, SceUInt32 fd, int flags)
 	if (!deviceVnode || drive->deviceInfo.device_fd == -1) {
 		result = 0x80010013;
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		mount = drive->deviceInfo.mount_misc;
 #endif
 		vfsLockVnode(deviceVnode);
@@ -4709,7 +4709,7 @@ int sceExfatfsVopCleanup(SceExfatfsFnode *fnode, SceUInt32 fd)
 	SceExfatfsFileSystem *fileSystem;
 	SceExfatfsFile *file;
 	int result;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SceExfatfsDrive *drive;
 #endif
 
@@ -4718,7 +4718,7 @@ int sceExfatfsVopCleanup(SceExfatfsFnode *fnode, SceUInt32 fd)
 		return 0x80010016;
 	}
 	fileSystem = fnode->fileSystem;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fileSystem) {
 		drive = fileSystem->drive;
 		if (drive && (drive->state & 0x4000))
@@ -4856,7 +4856,7 @@ int _exfatfs_flush_all_data(SceExfatfsDrive *drive)
 	}
 	flushFileSystem = &g_sharedResource.fileSystems[index];
 	if ((flushFileSystem->mount_mode & 255) != 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		result = sceKernelTryLockFastMutex(&drive->fastmutex);
 		if (result != (int)0x80028162) {
 			SCE_DBG_PRINTF_LEVEL(1, 0, 6154, "%s: unexpected result[%#x]\n",
@@ -4939,7 +4939,7 @@ int sceExfatfsVopUmount(SceExfatfsDrive *drive, int mode)
 	fileSystem = &g_sharedResource.fileSystems[mountIndex];
 	if (!mode) {
 		fileCount = getInitializedFileCount(&g_sharedResource);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		result = sceKernelTryLockFastMutex(&fileSystem->drive->fastmutex);
 		if (result != (int)0x80028162) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1261, "_used_fd_count",
@@ -4999,7 +4999,7 @@ int sceExfatfsVopUmount(SceExfatfsDrive *drive, int mode)
 		return 0;
 	}
 	fileCount = getInitializedFileCount(&g_sharedResource);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	result = sceKernelTryLockFastMutex(&fileSystem->drive->fastmutex);
 	if (result != (int)0x80028162) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1400, "_disconnect_all_fd",

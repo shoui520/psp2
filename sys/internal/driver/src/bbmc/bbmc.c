@@ -581,7 +581,7 @@ finalize:
  * Sony's 4.00 build inlines these into bbmc.c's callers; its 3.6x builds, where the asserts
  * are compiled out, call them whole.
  */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define BBMC_CS_INLINE
 #else
 #define BBMC_CS_INLINE	__attribute__((noinline))

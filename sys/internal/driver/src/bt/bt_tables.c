@@ -7,13 +7,13 @@
 #include "bt_internal.h"
 
 BtStack gBtStack;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 BtInquiryResultForTest gBtTestInquiryResult;
 #endif
 BtRegisteredOutput gBtRegisteredInfo;
 SceUID gBtSysEventHandlerId;
 uint64_t gBtBusyDumpTime;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 BtInquiryResultForTest gBtTestInquiryResult;
 #endif
 
@@ -374,7 +374,7 @@ const uint32_t gBtCrc32Table[256] = {
 };
 
 /* Original 3.6x puts the key before the RFCOMM table; 4.00 puts it after. */
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 #include "bt_rng_key.h"
 #endif
 
@@ -398,6 +398,6 @@ const uint8_t gBtRfcommFcsTable[256] = {
 	0xb4, 0x25, 0x57, 0xc6, 0xb3, 0x22, 0x50, 0xc1, 0xba, 0x2b, 0x59, 0xc8, 0xbd, 0x2c, 0x5e, 0xcf,
 };
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #include "bt_rng_key.h"
 #endif

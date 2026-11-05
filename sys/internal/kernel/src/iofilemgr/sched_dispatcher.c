@@ -112,7 +112,7 @@ IoScheduler *sceIoSchedDispatcherGetIoScheduler(SchedDispatcher *dispatcher, int
 }
 
 /* name unknown: the scheduler a worker's event bits are for */
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 static inline __attribute__((always_inline))
 #endif
 IoScheduler *sceIoSchedDispatcherGetIoSchedulerByEvent(SchedDispatcher *dispatcher,

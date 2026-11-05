@@ -63,7 +63,7 @@ static int _sceHdmiSysEventHandler(int resume, int eventid, void *args, void *op
 		return 0;
 	ret = SceGpioForDriver_372022A4(0, 15, 0);
 	if (ret < 0) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		SCE_DBG_ASSERT_FAIL(96);
 #endif
 		return ret;
@@ -71,21 +71,21 @@ static int _sceHdmiSysEventHandler(int resume, int eventid, void *args, void *op
 	sceGpioPortClear(0, 15);
 	ret = SceI2cForDriver_76D277AB(0);
 	if (ret < 0) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		SCE_DBG_ASSERT_FAIL(108);
 #endif
 		return ret;
 	}
 	ret = sceHdmiDeviceResume();
 	if (ret < 0) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		SCE_DBG_ASSERT_FAIL(114);
 #endif
 		return ret;
 	}
 	ret = SceI2cForDriver_76D277AB(1);
 	if (ret < 0) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		SCE_DBG_ASSERT_FAIL(120);
 #endif
 		return ret;

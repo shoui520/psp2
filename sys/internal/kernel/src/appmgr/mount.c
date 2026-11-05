@@ -1906,7 +1906,7 @@ out:
 	return result;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int
 #else
 static inline __attribute__((always_inline)) int
@@ -2168,7 +2168,7 @@ int SceAppMgrForDriver_0B1BEEE0(const char *path)
 {
 	SceUID directory;
 	int result;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	int mounted = 0;
 #endif
 
@@ -2178,7 +2178,7 @@ int SceAppMgrForDriver_0B1BEEE0(const char *path)
 	result = sceIoDopen(path);
 	if (result >= 0) {
 		directory = result;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 		result = sceIoIoctl(directory, 0x1803, NULL, 0, &mounted, sizeof(mounted));
 		if (result == 0)
 			result = mounted;
@@ -2894,7 +2894,7 @@ int appmgrCreateSaveDataMetadata(SceUID pid, const char *path,
 	char *metadataPath;
 	SceUID fd;
 	int permission, result, count, mode, consoleType;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	int accountPermission;
 #endif
 
@@ -2990,7 +2990,7 @@ buildSfo:
 		result = (int)0x8080000a;
 		goto freePath;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	result = appmgrGetAccountIdentity(&accountId, &openPsId, &accountIndex);
 	if (result < 0)
 		goto freePath;
@@ -3106,7 +3106,7 @@ int appmgrCreateDirectories(const char *path, int create)
 		}
 		if (cursor == end)
 			return 0;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		__strncpy_chk(g_appmgrDirectoryPath, path, end,
 			      sizeof(g_appmgrDirectoryPath));
 #else
@@ -3657,7 +3657,7 @@ int appmgrMount(SceUID pid, AppmgrMountHolder *holder, unsigned int mountId,
 			goto failed;
 		break;
 	case 1000:
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	case 1001:
 #endif
 		if (appmgrIsPfsContent(pfsMount->appPath)) {
@@ -3667,7 +3667,7 @@ int appmgrMount(SceUID pid, AppmgrMountHolder *holder, unsigned int mountId,
 			mode = 20;
 		}
 		break;
-#if !FW_SINCE(0x04000000)
+#if !FW_IS_400
 	case 1001:
 		mode = 2;
 		key = *klicensee;
@@ -5541,7 +5541,7 @@ int appmgrMountSystemDirectory(SceUID pid, unsigned int mountId, ScePfsRndDriveI
 	return appmgrMountByIdBody(pid, mountId, NULL, NULL, mountPoint);
 }
 
-#if !FW_SINCE(0x04000000)
+#if !FW_IS_400
 /* The fixed drive IDs a media mount uses instead of a random one. */
 static const ScePfsRndDriveId g_appmgrGiftDrive = {{ 'g', 'i', 'f', 't', '0', ':' }};
 static const ScePfsRndDriveId g_appmgrMusicDrive = {{ 'm', 'u', 's', 'i', 'c', '0', ':' }};
@@ -5721,7 +5721,7 @@ int sceAppMgrAppDataMountById(unsigned int mountId, const char *id,
 }
 #endif
 
-#if !FW_SINCE(0x04000000)
+#if !FW_IS_400
 /* Mounts a trophy set's directory, or its backup. */
 int sceAppMgrTrophyMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint)
 {
@@ -5848,7 +5848,7 @@ int appmgrMountProcessContent(SceUID pid, SceUInt32 mountFlags, const char *path
 	SceUID owner;
 	int result, status, permission, development, hasKlicensee, ownerFlag, consoleType;
 	int index, saved;
-#if !FW_SINCE(0x04000000)
+#if !FW_IS_400
 	SceUInt64 programAuthorityId;
 #endif
 
@@ -5910,7 +5910,7 @@ int appmgrMountProcessContent(SceUID pid, SceUInt32 mountFlags, const char *path
 				     &appDrive);
 		if (result != 0)
 			goto failed;
-#if !FW_SINCE(0x04000000)
+#if !FW_IS_400
 		/* bind the application's PFS image to this program */
 		if (sceKernelGetProcessSelfAuthInfo(pid, &authInfo) >= 0) {
 			programAuthorityId = authInfo.programAuthorityId;
@@ -6506,7 +6506,7 @@ unlock:
 	return result;
 }
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 /* Mounts a trophy set's directory, or its backup, for the calling process. */
 int sceAppMgrTrophyMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint)
 {

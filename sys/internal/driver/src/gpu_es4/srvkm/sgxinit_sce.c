@@ -498,7 +498,7 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	PVRSRV_SGXDEV_INFO *psDevInfo = psDeviceNode->pvDevice;
 	SGX_DEVICE_MAP *psSGXDeviceMap;
 	PVRSRV_ERROR eError;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	static const SceKernelDebugInfo dbg_DevInitSGXPart2KM_L1047 = {
 		0xdeee73fd, 0x79c9f635, 0x5ec584fd,
 		"devices/sgx/sgxinit.c", 1047, "DevInitSGXPart2KM"
@@ -562,7 +562,7 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		return PVRSRV_ERROR_INIT_FAILURE;
 	if (psSGXDeviceMap->pvRegsCpuVBase != NULL)
 		psDevInfo->pvRegsBaseKM = psSGXDeviceMap->pvRegsCpuVBase;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	else
 		sceKernelAssert(0, &dbg_DevInitSGXPart2KM_L1047, __builtin_return_address(0));
 #endif

@@ -5,7 +5,7 @@
 
 #include <fw.h>
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 const char bootRevision[] = "r96726";
 const char bootBuildDate[] = "2017-02-23 19:47:57+0900";
 #elif FW_SINCE(0x03650000)

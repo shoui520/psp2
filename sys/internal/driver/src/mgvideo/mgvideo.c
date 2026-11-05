@@ -789,7 +789,7 @@ int SceMgVideoForMiniApp_CF0D2A06(int handle, const MagicGateFileIdentity *input
 	return status;
 }
 
-#if FW_VERSION >= 0x03650000 && FW_VERSION < 0x04000000
+#if FW_VERSION >= 0x03650000 && !FW_IS_400
 int SceMgVideo_E8617A7F(int type, int flags, int options)
 {
 	return SceMgVideo_C62CA5A7(type, flags, options);
@@ -816,7 +816,7 @@ int SceMgVideo_11FF1A1B(int handle)
 	return initializeUserVideoKeyring(handle);
 }
 
-#if FW_VERSION >= 0x03650000 && FW_VERSION < 0x04000000
+#if FW_VERSION >= 0x03650000 && !FW_IS_400
 int SceMgVideo_5ADD5F9B(int handle, MgVideoFileGroupInfo *output,
 		      unsigned int size)
 {
@@ -1068,7 +1068,7 @@ int SceMgVideo_A271BBED(int handle)
 	return resetUserVideoKeyring(handle);
 }
 
-#if FW_VERSION >= 0x03650000 && FW_VERSION < 0x04000000
+#if FW_VERSION >= 0x03650000 && !FW_IS_400
 int SceMgVideo_5B57B197(int handle, const MagicGateFileIdentity *input)
 {
 	return SceMgVideo_22D74C37(handle, input);
@@ -1301,7 +1301,7 @@ int SceMgVideo_03F7BC67(int handle, unsigned int index, int blockNumber,
 					 extensionInput);
 }
 
-#if FW_VERSION < 0x03650000 || FW_VERSION >= 0x04000000
+#if FW_VERSION < 0x03650000 || FW_IS_400
 int SceMgVideoDummy_29119904(void)
 {
 	return (int)0x8050c001;

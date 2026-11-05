@@ -2,7 +2,7 @@
 #include <sysmem/des.h>
 #include <fw.h>
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 /* the debug build counts the bits with NEON, in des.S */
 uint64_t DesAdjustKeyParity(uint64_t key);
 #else
@@ -51,7 +51,7 @@ int DesIsWeakKey(uint64_t key)
 {
 	unsigned int index;
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	/* The debug build folds the sixteen DES keys with their complements. */
 	static const uint32_t weakKeys[] = {
 		0x01010101, 0x1f1f0e0e, 0x01fe01fe, 0x1fe00ef1,

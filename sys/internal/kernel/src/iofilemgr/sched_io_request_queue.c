@@ -6,7 +6,7 @@
  * Names unknown: each holds the address of the PFS import its calls make, tested against
  * NULL before the call.
  */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 void *g_ioPfsPreadEnabled __attribute__((section(".data"))) = ScePfsFacadeForKernel_4238D2D2;
 void *g_ioPfsWriteEnabled __attribute__((section(".data"))) = ScePfsFacadeForKernel_CB622FFE;
 void *g_ioPfsPwriteEnabled __attribute__((section(".data"))) = ScePfsFacadeForKernel_58E643C5;

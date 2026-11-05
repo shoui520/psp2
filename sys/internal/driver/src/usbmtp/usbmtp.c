@@ -72,7 +72,7 @@ typedef struct __attribute__((packed)) MtpCancelRequest {
 
 static struct UsbMtp {
 	SceKernelSpinlock lock;
-#if !FW_SINCE(0x04000000)
+#if !FW_IS_400
 	/* the 3.6x builds order the descriptors first and the endpoints before phase */
 	unsigned ready;			/* between Start and Stop */
 	MtpOsStringDescriptor osString;
@@ -116,7 +116,7 @@ static struct UsbMtp {
 	uint8_t controlCode;		/* bRequest of the last control request */
 	uint8_t padding[3];
 	uint8_t serialNumber[128];
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	SceUdcdInterface interface;
 	MtpOsStringDescriptor osString;
 	uint16_t reserved1;
@@ -136,7 +136,7 @@ static struct UsbMtp {
 #endif
 } s_mtp;
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 _Static_assert(offsetof(struct UsbMtp, control) == 0xc4, "control request");
 _Static_assert(offsetof(struct UsbMtp, osString) == 0x294, "OS string");
 _Static_assert(offsetof(struct UsbMtp, phase) == 0x330, "phase");

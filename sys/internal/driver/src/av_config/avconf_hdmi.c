@@ -16,7 +16,7 @@ static int avConfigHdmiLastVic = -1;
 static int avConfigHdmiInitialOutput = 1;
 int avConfigHdmiAudioMode = 1;
 static SceKernelSpinlock avConfigHdmiMonitorLock = 0;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 static int avConfigHdmiMonitorValid = 0;
 static SceHdmiEdidInfo avConfigHdmiMonitor = {0};
 #else

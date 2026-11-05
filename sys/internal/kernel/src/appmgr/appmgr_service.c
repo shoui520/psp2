@@ -1457,7 +1457,7 @@ SceInt32 _sceAppMgrGetAppState(SceAppMgrAppState *appState, SceUInt32 sizeofSceA
 	struct AppState *app;
 	SceUInt32 count;
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	if (buildVersion > 0x4000000 || sizeofSceAppMgrAppState != sizeof(*appState))
 #else
 	if (buildVersion > 0x3650011 || sizeofSceAppMgrAppState != sizeof(*appState))

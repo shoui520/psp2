@@ -23,7 +23,7 @@ int sceFatfsInitializeHeap(int reuseHeap)
 		reuseHeap = 0;
 	} else {
 		if (g_commonHeapId != -1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 65, "%s: already has heapid[%#x]\n",
 					     "sceFatfsInitializeHeap", g_commonHeapId);
 #endif
@@ -32,7 +32,7 @@ int sceFatfsInitializeHeap(int reuseHeap)
 		heapId = sceKernelCreateHeap("SceExfatfsCommon", 0x7f000, &opt);
 		g_commonHeapId = heapId;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (heapId < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 15, 74, "sceKernelCreateHeap failed (0x%08X)\n",
 				     heapId);
@@ -48,7 +48,7 @@ int sceFatfsFinalizeHeap(int reuseHeap)
 
 	if (!reuseHeap) {
 		if (g_commonHeapId == -1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 107, "%s: not have heapid[%#x]\n",
 					     "sceFatfsFinalizeHeap", g_commonHeapId);
 #endif
@@ -56,7 +56,7 @@ int sceFatfsFinalizeHeap(int reuseHeap)
 		}
 		result = sceKernelDeleteHeap(g_commonHeapId);
 		if (result < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(1, 0, 112, "%s: sceKernelDeleteHeap failed[%#x]\n",
 					     "sceFatfsFinalizeHeap", result);
 #endif

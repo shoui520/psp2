@@ -7,7 +7,7 @@
 
 /* From 4.00 a failure is reported with Sony's file name and line number (__LINE__: the
  * blank lines keep each check on Sony's line). */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define DTRACE_CHECK(ret, what)	do { if ((ret) < 0)				\
 	SceDebugForDriver_391B74B7("[dtrace] ERROR:   %s - " what " (0x%x) [%s:%d]\n",	\
 			 __func__, (ret), "display_dtrace.c", __LINE__); } while (0)

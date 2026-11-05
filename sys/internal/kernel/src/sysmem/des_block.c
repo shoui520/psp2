@@ -13,7 +13,7 @@ uint64_t SceKernelUtilsForDriver_A0D45D25(const DesContext *context, uint64_t bl
 	left = block;
 	right = block >> 32;
 	do {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		uint32_t first = roundKey[0][0];
 		uint32_t second = roundKey[0][1];
 
@@ -43,13 +43,13 @@ uint64_t SceKernelUtilsForDriver_801D0ED4(const DesContext *context, uint64_t bl
 	left = block;
 	right = block >> 32;
 	do {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		uint32_t first;
 		uint32_t second;
 #endif
 
 		roundKey -= 2;
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		first = roundKey[1][0] ^ ((left >> 1) | (left << 31));
 		second = roundKey[1][1] ^ ((left >> 29) | (left << 3));
 

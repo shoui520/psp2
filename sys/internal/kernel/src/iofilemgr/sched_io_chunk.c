@@ -11,7 +11,7 @@ static inline __attribute__((always_inline)) int isIoChunkInPool(IoChunkPool *po
 	       address - base == ((address - base) / sizeof(*chunk)) * sizeof(*chunk);
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int sceIoChunkIsInPool(IoChunkPool *pool, IoChunk *chunk)
 {
 	return isIoChunkInPool(pool, chunk);

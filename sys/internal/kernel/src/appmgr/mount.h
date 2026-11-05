@@ -88,7 +88,7 @@ int appmgrGetAccountIdentity(SceUInt64 *accountId, SceKernelOpenPsId *openPsId,
 			    SceUInt32 *currentAccount);
 
 /* 4.00 builds with the fortified string functions */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define APPMGR_STRCAT(destination, source, capacity) \
 	__strcat_chk(destination, source, capacity)
 #define APPMGR_STRNCPY(destination, source, count, capacity) \

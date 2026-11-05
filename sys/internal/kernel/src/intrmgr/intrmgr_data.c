@@ -26,7 +26,7 @@ void *g_intrEnterSubIntr INTR_DATA;
 __asm__(".global g_intrStackGuard\n"
 	".set g_intrStackGuard, g_intrStacks + 64 * 0x2000");
 #else
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 void (*g_intrReleased)(unsigned int) INTR_DATA;
 SceUID g_intrHeap INTR_DATA;
 void (*g_intrRegistered)(unsigned int) INTR_DATA;

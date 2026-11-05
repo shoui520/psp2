@@ -165,7 +165,7 @@ int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDeb
  * A line of Sony's source that moved between the 3.6x sources (3.63, 3.65)
  * and the 4.00 ones; it matters for the records release builds keep too.
  */
-#define SCE_LINE(_line36x, _line400)	(FW_VERSION >= 0x04000000 ? (_line400) : (_line36x))
+#define SCE_LINE(_line36x, _line400)	(FW_IS_400 ? (_line400) : (_line36x))
 
 /* SceDebugForDriver_02B04343(level, ...): compiled in on every firmware */
 #define SCE_PRINTF_WITH_INFO(_level, _line, _fmt, ...)			\

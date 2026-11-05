@@ -995,7 +995,7 @@ int sceUsbstorVStorSetImgFilePath(const char *path)
 		result = VSTOR_ERROR_ARGUMENT;
 	} else {
 		memset(s.path, 0, 256);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		__strncpy_chk(s.path, copy, result, 256);
 #else
 		strncpy(s.path, copy, result);

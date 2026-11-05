@@ -58,16 +58,16 @@ struct virtualState {
 	int lock, plsId;
 	unsigned short generation, padding;
 };
-/* the 3.6x builds place the back panel's sample first, the older 4.00 build after the states */
+/* the 3.6x builds place the back panel's sample first, the 4.00 build after the states */
 struct touchStorage {
-#if !FW_SINCE(0x04000000)
+#if !FW_IS_400
 	struct touchSample back __attribute__((aligned(8)));
 #endif
 	struct touchSample front __attribute__((aligned(8)));
 	SceTouchData emulation[2];
 	struct physicalState physical;
 	struct virtualState virtual;
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	struct touchSample back __attribute__((aligned(8)));
 #endif
 };
@@ -76,7 +76,7 @@ extern struct touchStorage storage;
 #define touch storage.physical
 #define pad storage.virtual
 
-_Static_assert(offsetof(struct touchStorage, back) == (FW_SINCE(0x04000000) ? 0x560 : 0), "back buffer layout");
+_Static_assert(offsetof(struct touchStorage, back) == (FW_IS_400 ? 0x560 : 0), "back buffer layout");
 _Static_assert(sizeof(struct touchPort) == 0xf4, "port layout");
 _Static_assert(sizeof(struct physicalState) == 0x2a8, "physical state layout");
 _Static_assert(sizeof(struct virtualState) == 0xc4, "virtual state layout");

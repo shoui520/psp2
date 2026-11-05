@@ -14,7 +14,7 @@ uint64_t DesFinalPermutation(uint64_t block);
 /* a PC-2 selection: two bit indices of the key schedule */
 #define KEY_SELECTION(low, high)	(((high) << 8) | (low))
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 uint32_t DesRound(uint32_t first, uint32_t second);
 #else
 uint32_t DesRound(uint32_t block, const uint32_t roundKey[2]);

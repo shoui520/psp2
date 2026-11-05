@@ -14,7 +14,7 @@
 int sdifEnableSubIntr(int interrupt, int subInterrupt);
 int sdifDisableSubIntr(int interrupt, int subInterrupt);
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 static const uint32_t sdifRegisterAddresses[SDIF_PORTS] = {
 	SDIF_REG_BASE(0), SDIF_REG_BASE(1), SDIF_REG_BASE(2), SDIF_REG_BASE(3)
 };

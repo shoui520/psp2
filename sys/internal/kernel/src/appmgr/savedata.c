@@ -478,7 +478,7 @@ int appmgrCreateSaveDataDirectories(const char *path, SceMode mode)
 		separator = path;
 		while ((separator = strchr(separator + 1, '/')) != NULL) {
 			memset(parentPath, 0, sizeof(parentPath));
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			__strncpy_chk(parentPath, path, separator - path,
 				      sizeof(parentPath));
 #else
@@ -521,7 +521,7 @@ int appmgrRemoveSaveDataPath(const char *path, unsigned int missingPolicy,
 			break;
 		memset(childPath, 0, sizeof(childPath));
 		strncpy(childPath, path, sizeof(childPath));
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		__strcat_chk(childPath, "/", sizeof(childPath));
 		__strncat_chk(childPath, entry.d_name, 256, sizeof(childPath));
 #else
@@ -557,7 +557,7 @@ int appmgrGetSaveDataDeviceSpace(const char *mountPoint,
 	int result;
 
 	length = strnlen(mountPoint, sizeof(device));
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	__memcpy_chk(device, mountPoint, length - 2, sizeof(device));
 #else
 	memcpy(device, mountPoint, length - 2);
@@ -646,7 +646,7 @@ int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataDataSaveItem *userF
 				goto freeFilePath;
 			}
 			memset(prefix, 0, 292);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			__strncpy_chk(prefix, resolvedPath, index, 292);
 #else
 			strncpy(prefix, resolvedPath, index);

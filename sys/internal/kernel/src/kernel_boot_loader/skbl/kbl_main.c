@@ -79,8 +79,8 @@ extern const char compatSramImage[], compatSramResume[], compatSramResumeEnd[];
 #define SUSPEND_INFO_FIRST	0x40200000
 #define SUSPEND_INFO_RANGE	0x1fe00000
 #define RESUME_CONTEXT_SIZE	0x68
-/* the sizes of the two images: their bounds since 4.00, constants before */
-#if FW_SINCE(0x04000000)
+/* the sizes of the two images: their bounds in 4.00, constants in the 3.6x builds */
+#if FW_IS_400
 #define CORE_SYNC_IMAGE_SIZE	(compatSramResume - compatSramImage)
 #define RESUME_IMAGE_SIZE	(compatSramResumeEnd - compatSramResume)
 #else

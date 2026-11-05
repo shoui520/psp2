@@ -131,9 +131,8 @@ target_compile_options(os0_us_libkernel PRIVATE -fsigned-char)
 target_link_options(os0_us_libkernel PRIVATE
 	"-Wl,--defsym=memcpy=sceClibMemcpy_safe")
 
-# Before 4.00 the move, fill and compare cores are the exports themselves (clib_memory.c).
-math(EXPR libkernel_fw "${FW_VERSION}")
-if(libkernel_fw LESS 67108864)	# 0x04000000
+# In the 3.6x builds the move, fill and compare cores are the exports themselves (clib_memory.c).
+if(NOT FW_IS_400)
 	target_link_options(os0_us_libkernel PRIVATE
 		"-Wl,--defsym=sceClibMemmove=MoveMemoryCore"
 		"-Wl,--defsym=sceClibMemset=SetMemoryCore"

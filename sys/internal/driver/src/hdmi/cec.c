@@ -117,17 +117,17 @@ static SceUInt32 lastKey = CEC_KEY_NONE;
 static SceUInt8 logicalAddress = CEC_ADDR_BROADCAST;
 
 /* .bss */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 void (*txProbeHook)(const SceDtraceProbe *probe, ...);
 #endif
 static CecWork work;
 static CecStatistics statistics;
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 int txProbeEnabled;
 int rxProbeEnabled;
 #endif
 static int handlersReady;
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 void (*rxProbeHook)(const SceDtraceProbe *probe, ...);
 #endif
 static const CecOpcode *handlers[256];
@@ -257,12 +257,12 @@ static inline __attribute__((always_inline)) int _isAlreadyRecvUnrecognizedOpcod
 	return work.unrecognized[dest][opcode];
 }
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 static const SceDtraceProbe txProbe;
 #endif
 
-/* Sends one message. Sony's name. Inlined into every sender before 4.00's probe. */
-#if FW_SINCE(0x04000000)
+/* Sends one message. Sony's name. Inlined into every sender in the 3.6x builds, not in 4.00. */
+#if FW_IS_400
 int
 #else
 static inline __attribute__((always_inline)) int
@@ -291,7 +291,7 @@ _txOpecode(SceUInt8 dest, SceUInt8 opcode, const SceUInt8 *operand, SceUInt32 le
 	ret = cecDevTx(frame, length + 2);
 	if (ret < 0)
 		return ret;
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	if (ret == 1 || ret == 2)
 		return -1;
 	if (txProbeHook != NULL)
@@ -305,8 +305,8 @@ _txOpecode(SceUInt8 dest, SceUInt8 opcode, const SceUInt8 *operand, SceUInt32 le
 #endif
 }
 
-/* Before 4.00 the senders inline _txOpecode, and Sony's direct callers inline them whole. */
-#if FW_SINCE(0x04000000)
+/* In the 3.6x builds the senders inline _txOpecode, and Sony's direct callers inline them whole. */
+#if FW_IS_400
 #define CEC_SEND static inline
 #else
 #define CEC_SEND static inline __attribute__((always_inline))
@@ -385,7 +385,7 @@ CEC_SEND int cecSendTextViewOn(const CecParam *param)
 	return _txOpecode(param->data[0], CEC_TEXT_VIEW_ON, NULL, 0);
 }
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 CEC_SEND
 #else
 static __attribute__((noinline))
@@ -731,7 +731,7 @@ static int cecRecvSetStreamPath(const CecMessage *msg)
 	return cecSendMenuStatus(&param);
 }
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 static const SceDtraceProbe rxProbe;
 #endif
 
@@ -755,7 +755,7 @@ static int _execRecvAction(SceUInt8 id)
 	destination = frame[0] & 0xf;
 	initiator = frame[0] >> 4;
 	opcode = frame[1];
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	if (rxProbeHook != NULL)
 		rxProbeHook(&rxProbe, destination, initiator, opcode, frame[2], frame[3], frame[4],
 			    frame[5], frame[6], frame[7], frame[8]);
@@ -1261,7 +1261,7 @@ static const CecOpcode opcodes[] = {
 	{ 0xc5, 1, 0, 2, NULL, NULL },
 };
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 /* DTrace probes __hdmi__hdmi_cec_tx and __hdmi__hdmi_cec_rx. */
 static const SceDtraceProbe txProbe = {
 	.enabled = &txProbeEnabled,

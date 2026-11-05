@@ -125,7 +125,7 @@ int _sceGpuRegisterDumpGetContextPid(const SceGpuRegisterDump *dump,
 		return processUid;
 	if (context > 7)
 		return processUid;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	/* 3.6x numbers the master 5; device 0 has no lookup. */
 	switch (device) {
 	case 1:

@@ -150,7 +150,7 @@ int utMgrGetCurrentTime(SceUInt32 *now)	/* name unknown */
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int SceSblPostSsMgrForDriver_ABDD68CD(void *buffer)
 {
 	if (!g_utMgrTrilithiumBufferValid)
@@ -189,7 +189,7 @@ int utMgrFindRecord(const void *records, SceSize size, SceUInt32 type, void *rec
 	return SCE_SBL_ERROR_UT_NOT_FOUND;
 }
 
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 int SceSblPostSsMgrForDriver_ABDD68CD(void *buffer)
 {
 	if (!g_utMgrTrilithiumBufferValid)
@@ -199,7 +199,7 @@ int SceSblPostSsMgrForDriver_ABDD68CD(void *buffer)
 }
 #endif
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 /* whether the utoken lists a program authority id */
 int SceSblPostSsMgrForDriver_D8A2D465(SceUInt64 authId)
 {
@@ -308,7 +308,7 @@ int utMgrParseUtoken(const void *utoken, SceSize size)	/* name unknown */
 	return 0;
 }
 
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 /* whether the utoken lists a program authority id */
 int SceSblPostSsMgrForDriver_D8A2D465(SceUInt64 authId)
 {

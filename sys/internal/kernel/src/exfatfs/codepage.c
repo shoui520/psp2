@@ -290,7 +290,7 @@ void _jtou(int codepage, int firstByte, int secondByte,
 	} else {
 		unicode = jisToUnicode[row][column - 33];
 		if (!unicode) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF_LEVEL(2, 15, 355, "Unknown code found, u == 0\n");
 #endif
 			unicode = 0x25a0;
@@ -322,7 +322,7 @@ void _utoj(int codepage, unsigned int lowByte, int highByte,
 		return;
 	}
 	if (unicode == 0x25a0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 15, 386, "found unknown code (0x%04x)\n", unicode);
 #endif
 		goto unknownCharacter;
@@ -393,7 +393,7 @@ void _1chartou(int codepage, int firstByte, int secondByte,
 			unicode = 0x25a0;
 		*lowByte = unicode;
 		*highByte = unicode >> 8;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 15, 761, "unicode=0x%02x\n", unicode);
 #endif
 	}
@@ -411,7 +411,7 @@ int sceFatfsCpInitTable(void)
 	sceKernelCpuResumeIntr(intrState);
 	memBlock = sceKernelAllocMemBlockForKernel("SceFatfsCPTable", 0x1020d006, 0xc000, NULL);
 	if (memBlock < 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		SCE_DBG_PRINTF_LEVEL(2, 15, 193, "cannot create FPL (0x%x)\n", memBlock);
 #endif
 		return memBlock;

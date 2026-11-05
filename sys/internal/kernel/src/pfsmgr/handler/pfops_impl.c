@@ -831,7 +831,7 @@ closeLower:
 int pfsCoreClose(ScePfsFi *fi, ScePfsPmi *pmi)
 {
 	const ScePfsModeInfo *info = pfsModeInfo(pmi->mode);
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	int ret;
 
 	if (info->icvType != PFS_ICV_UNICV) {

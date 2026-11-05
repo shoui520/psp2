@@ -25,7 +25,7 @@
 #include <deci4p_dfmgr/deci4p.h>
 #include "deci4p_ctrlp.h"
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define error(line, fmt, ...) SceDebugForDriver_391B74B7("[CTRLP E2]::%d " fmt, line, ##__VA_ARGS__)
 #else
 #define error(line, fmt, ...) ((void)0)

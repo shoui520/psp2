@@ -66,7 +66,7 @@ int sceSha1BlockUpdate(SceSha1Context *ctx, const void *plain, SceSize len)
 				uint32_t consumed = sizeof(block) - pending;
 				int i;
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 				__builtin___memcpy_chk(block, ctx->buf, pending, sizeof(block));
 #else
 				memcpy(block, ctx->buf, pending);
@@ -116,7 +116,7 @@ int sceSha1BlockResult(SceSha1Context *ctx, void *result)
 			*word++ = 0;
 		} while (word != block + 16);
 		if (pending != 0) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 			__builtin___memcpy_chk(block, ctx->buf, pending, sizeof(block));
 #else
 			memcpy(block, ctx->buf, pending);
@@ -569,7 +569,7 @@ int HmacDigest(const void *key, SceSize keyLen, const void *plain, SceSize len,
 	if (blockSize < keyLen) {
 		algorithm->digest(key, keyLen, keybuf);
 	} else if (keyLen != 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		__builtin___memcpy_chk(keybuf, key, keyLen, sizeof(keybuf));
 #else
 		memcpy(keybuf, key, keyLen);

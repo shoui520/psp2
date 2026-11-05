@@ -41,7 +41,7 @@ _Static_assert(sizeof(SsPortabilityRequest) == 0x5c, "Portability request ABI");
 #define SS_NVS_TOOL_END			0xb40
 
 /* 4.00 is built with _FORTIFY_SOURCE: copies into stack buffers are checked */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define ssMemcpyChk(dst, src, n) \
 	__builtin___memcpy_chk(dst, src, n, __builtin_object_size(dst, 0))
 #else

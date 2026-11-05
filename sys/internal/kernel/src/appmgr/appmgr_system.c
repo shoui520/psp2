@@ -222,8 +222,8 @@ __attribute__((noinline)) _Noreturn void appmgrSystemMutexPanic(void)
 #define SYSTEM_MAIN_UNLOCK(_line, _func) \
 	SYSTEM_UNLOCK(g_appmgrMainMutex, g_appmgrMainMutexOwner, _line, _func)
 
-/* resume reads the attributes under a main lock it records from 4.00 on no more */
-#if FW_SINCE(0x04000000)
+/* resume reads the attributes under a main lock, which 4.00 does not record (3.6x does) */
+#if FW_IS_400
 #define SYSTEM_RESUME_MAIN_LOCK(_line, _func) SYSTEM_MAIN_LOCK_READ_CHECKED(_line, _func)
 #else
 #define SYSTEM_RESUME_MAIN_LOCK(_line, _func) SYSTEM_MAIN_LOCK(_line, _func)

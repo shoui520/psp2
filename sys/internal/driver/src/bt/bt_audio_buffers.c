@@ -400,7 +400,7 @@ int BtRecvAudio(BtStack *stack, uint64_t deviceAddress, void *buffer,
 				(receive->codec.allocation << 1) |
 				(((receive->codec.blocks >> 2) - 1) << 4);
 			frame->bitpool = 2;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			__builtin___memset_chk(frame->payload, 0, scaleBytes,
 				sizeof(gBtSbcSilenceFrame) - sizeof(*frame));
 #else

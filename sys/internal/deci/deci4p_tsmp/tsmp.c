@@ -23,7 +23,7 @@
 #define TSMP_MEMTYPE			SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW	/* kernel read/write */
 
 /* 4.00 is built with _FORTIFY_SOURCE: copies into fixed buffers are checked */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 /* called by name: the compiler would fold the builtin, the length being bounded */
 #define tsmpMemcpyChk(dst, src, n) \
 	__memcpy_chk(dst, src, n, sizeof(dst))	/* dst: an array */

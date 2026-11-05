@@ -438,7 +438,7 @@ SceUInt32 _root_cluster(SceExfatfsFileSystem *fileSystem)
 	return root;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 SceUInt32 _start_cluster(SceExfatfsFnode *fnode, int forDirectorySearch)
 {
 	SceUInt16 type = fnode->Stat.st_type;
@@ -680,7 +680,7 @@ void _set_start_cluster(SceExfatfsFnode *fnode, SceUInt32 cluster, int type)
 	}
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 void _append_cluster_chunk(SceExfatfsFnode *fnode, unsigned int appendIndex,
 	SceUInt32 start, unsigned int count, unsigned int flags)
 {
@@ -764,7 +764,7 @@ int _read_into_fd_cache(SceExfatfsFile *file, SceUInt32 readCluster)
 	return result;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int _valid_cluster(SceExfatfsFnode *fnode, SceUInt32 cluster)
 {
 	SceExfatfsFileSystem *fileSystem = fnode->fileSystem;
@@ -833,14 +833,14 @@ static inline void _update_current_tail(SceExfatfsFnode *fnode,
 	if (next)
 		_update_cached_index(fnode, fnode->tailIndex + 1, next,
 			sectorSize * clusterSectorCount,
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			0x101);
 #else
 			0);
 #endif
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 static inline
 #endif
 int _write_sectors(SceExfatfsFile *file, unsigned int flags,
@@ -891,7 +891,7 @@ int _write_sectors(SceExfatfsFile *file, unsigned int flags,
 		SceUInt64 sector = clusterToDeviceSector(cluster, fileSystem) +
 			offset / fileSystem->sectorSize;
 		SceUInt64 cacheIndex = file->cacheIndex;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		unsigned int expectedCacheSize = file->fnode->fileSystem->fileBufferSize;
 
 		if (bufferSize != expectedCacheSize)
@@ -916,7 +916,7 @@ int _write_sectors(SceExfatfsFile *file, unsigned int flags,
 						if (overlap < cacheSize) {
 							SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 5643, "_write_direct_from_current",
 								"%s: call _flush_fd_cache\n", "_write_direct_from_current");
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 							if (file->cacheFlags & 1) {
 								int error = UVFAT_FlushFdBuf(file, file->fnode->fileSystem);
 
@@ -950,12 +950,12 @@ int _write_sectors(SceExfatfsFile *file, unsigned int flags,
 		if (!fnode)
 			goto advancePosition;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (fnode) {
 #endif
 		getCurrentFatDateTime(&fnode->Stat.mtime);
 		fnode->flags |= 4;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		fnode = file->fnode;
 	}
 #endif
@@ -1006,7 +1006,7 @@ SceUInt32 _next_cluster(SceExfatfsFnode *fnode, SceUInt32 cluster)
 		_exfatfs_notify_broken_cluster_chain(fnode->fileSystem->drive, cluster, next);
 		_set_tail_cluster(fnode, cluster);
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (_valid_cluster(fnode, next)) {
 #else
 		if (next < fnode->fileSystem->clusterCount + 2) {
@@ -1030,7 +1030,7 @@ SceUInt32 _next_cluster(SceExfatfsFnode *fnode, SceUInt32 cluster)
 	return result;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 static inline
 #endif
 unsigned int _check_contiguous_clusters(SceExfatfsFile *file,
@@ -1044,7 +1044,7 @@ unsigned int _check_contiguous_clusters(SceExfatfsFile *file,
 	unsigned int clusterIndex, clusterSize, contiguous;
 	SceUInt64 end, lastIndex;
 	int noFatChain;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	unsigned int generalSecondaryFlags;
 #endif
 
@@ -1052,7 +1052,7 @@ unsigned int _check_contiguous_clusters(SceExfatfsFile *file,
 		SceExfatfsBootSector *boot = fileSystem->PBRBuf;
 		const unsigned char *rootEntries = (const unsigned char *)&boot->fat32.parameters.rootEntryCount;
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (position < (rootEntries[0] | ((unsigned int)rootEntries[1] << 8)) * 32) {
 			SCE_DBG_PRINTF_LEVEL(2, 0, 1507,
 				"%s: root_directory of FAT12/FAT16\n", "_check_contiguous_clusters");
@@ -1066,7 +1066,7 @@ unsigned int _check_contiguous_clusters(SceExfatfsFile *file,
 	clusterIndex = file->clusterIndex;
 	end = position + size;
 	if (flags & 1) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		generalSecondaryFlags = fnode->Stat.generalSecondaryFlags;
 		noFatChain = generalSecondaryFlags & 2;
 #else
@@ -1075,7 +1075,7 @@ unsigned int _check_contiguous_clusters(SceExfatfsFile *file,
 		if (noFatChain && fnode->Stat.Size < end)
 			end = fnode->Stat.Size;
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		generalSecondaryFlags = fnode->dirGeneralSecondaryFlags;
 		noFatChain = generalSecondaryFlags & 2;
 #else
@@ -1091,7 +1091,7 @@ unsigned int _check_contiguous_clusters(SceExfatfsFile *file,
 		return 0;
 	}
 	clusterSize = sectorSize * clusterSectorCount;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (!end) {
 		if (flags & 1)
 			SCE_DBG_PRINTF_LEVEL(2, 0, 1467,
@@ -1104,7 +1104,7 @@ unsigned int _check_contiguous_clusters(SceExfatfsFile *file,
 	}
 #endif
 	if (noFatChain) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (end)
 			SCE_DBG_ASSERT_FUNC(end != 0, 187, "_last_cluster_index");
 #endif
@@ -1115,7 +1115,7 @@ unsigned int _check_contiguous_clusters(SceExfatfsFile *file,
 			for (;;) {
 				SceUInt32 next;
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				SCE_DBG_PRINTF_LEVEL(2, 0, 1485,
 					"%s: fnode[%p], index[%#lx], temp[%#lx], checkedTailIndex[%#lx], checkedTail[%#lx], filep->index[%#lx], filep->Cluster[%#lx]\n",
 					"_check_contiguous_clusters", file->fnode, clusterIndex, cluster,
@@ -1124,7 +1124,7 @@ unsigned int _check_contiguous_clusters(SceExfatfsFile *file,
 #endif
 				if (fnode->tailIndex < clusterIndex && cluster) {
 					_update_cached_index(fnode, clusterIndex, cluster, clusterSize,
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 						flags);
 #else
 						0);
@@ -1145,7 +1145,7 @@ unsigned int _check_contiguous_clusters(SceExfatfsFile *file,
 			contiguous = clusterIndex;
 		}
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (contiguous >= clusterIndex) {
 		unsigned int count = contiguous + 1 - clusterIndex;
 
@@ -1241,7 +1241,7 @@ static inline void _get_cluster_from_array(SceExfatfsFile *file,
 	}
 	element = array + searchIndex / interval;
 	while (element >= fnode->cluster_cache_array) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		__builtin_prefetch((const unsigned char *)element - 36);
 #endif
 		if (!element->cluster) {
@@ -1272,7 +1272,7 @@ static inline void _get_cluster_from_array(SceExfatfsFile *file,
 	}
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 static inline
 #endif
 int _get_cached_index(SceExfatfsFile *file, SceUInt64 offset, int forDirectorySearch)
@@ -1369,7 +1369,7 @@ int _get_cached_index(SceExfatfsFile *file, SceUInt64 offset, int forDirectorySe
 		"_get_cached_index", file, offset, searchIndex, currentIndex,
 		file->fnode->cluster_cache_array, file->clusterIndex, file->Cluster);
 	if (searchIndex == file->clusterIndex) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (_valid_cluster(file->fnode, file->Cluster))
 #else
 		if (file->Cluster < fileSystem->clusterCount + 2)
@@ -1385,7 +1385,7 @@ static inline unsigned int _cluster_chain_length(SceExfatfsFnode *fnode,
 	unsigned int index = 0;
 
 	SCE_DBG_ASSERT(cluster != 0, 597);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	while (_valid_cluster(fnode, cluster)) {
 #else
 	while (cluster < fnode->fileSystem->clusterCount + 2) {
@@ -1425,7 +1425,7 @@ static inline int _is_directory(SceExfatfsFnode *fnode)
 	return type == 6;
 }
 
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 SceUInt64 clusterChainByteSize(SceExfatfsFnode *fnode, SceUInt32 cluster)
 {
 	SceExfatfsFileSystem *fileSystem = fnode->fileSystem;
@@ -1517,7 +1517,7 @@ static inline SceUInt64 _contiguous_block_size(SceExfatfsFnode *fnode,
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1053, "%s: unexpected cluster[%#lx]\n",
 			"_contiguous_block_size", cluster);
 	SCE_DBG_ASSERT(cluster != 0, 1055);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SCE_DBG_ASSERT(_valid_cluster(fnode, cluster), 1056);
 #endif
 	if (!cluster) {
@@ -1625,7 +1625,7 @@ int _set_position_and_cluster_index(SceExfatfsFile *file, SceUInt64 offset,
 			"_set_position_and_cluster_index", cluster);
 	SCE_DBG_ASSERT(cluster != 0, 1336);
 	for (;;) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (!_valid_cluster(file->fnode, cluster)) {
 #else
 		if (cluster >= file->fnode->fileSystem->clusterCount + 2) {
@@ -1793,7 +1793,7 @@ void _set_root_cluster_and_cluster_count(SceExfatfsFnode *fnode,
 	} else if (!cluster) {
 		boot = fnode->fileSystem->PBRBuf;
 		rootEntries = (const unsigned char *)&boot->fat32.parameters.rootEntryCount;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		size = 32 * (rootEntries[0] | ((unsigned int)rootEntries[1] << 8));
 #else
 		size = (SceUInt64)32 * (rootEntries[0] | ((unsigned int)rootEntries[1] << 8));
@@ -1904,7 +1904,7 @@ SceUInt32 UVFAT_NextCluster(SceExfatfsSharedResource *sharedResource,
 		boot = fileSystem->PBRBuf;
 		rootEntries = (const unsigned char *)&boot->fat32.parameters.rootEntryCount;
 		rootEntryCount = rootEntries[0] | ((unsigned int)rootEntries[1] << 8);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		rootEntryCount = (short)rootEntryCount;
 #endif
 		if (rootEntryCount)
@@ -2043,7 +2043,7 @@ notFound:
 	return fileSystem->fileSystemType == 2 ? (SceUInt32)-1 : 0x0fffffff;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int _assign_first_cluster_of_file(SceExfatfsFile *file,
 	SceExfatfsSharedResource *sharedResource);
 static inline
@@ -2066,7 +2066,7 @@ int _append_contiguous_clusters(SceExfatfsFile *file, SceUInt64 size,
 		"%s: Position[%#llx], size[%#llx], clusterCount[%#lx], tailIndex[%#lx], tailCluster[%#lx], currentIndex[%#lx], currentCluster[%#lx]\n",
 		"_append_contiguous_clusters", position, size, fnode->clusterCount,
 		fnode->tailIndex, fnode->tailCluster, file->clusterIndex, file->Cluster);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (position % clusterSize || !position) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1740,
 			"%s: unexpected Position[%#llx], clusterSize[%#lx]\n",
@@ -2156,7 +2156,7 @@ int _append_contiguous_clusters(SceExfatfsFile *file, SceUInt64 size,
 	oldCluster = file->Cluster;
 	if (flags & 1) {
 		if (!position) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			if (oldCluster != (SceUInt32)-2)
 				SCE_DBG_PRINTF_LEVEL(1, 0, 1776,
 					"%s: unexpected[%#lx] for size 0 file\n", "_append_contiguous_clusters", oldCluster);
@@ -2206,7 +2206,7 @@ int _append_contiguous_clusters(SceExfatfsFile *file, SceUInt64 size,
 			fnode = file->fnode;
 			clusterIndex = file->clusterIndex;
 		}
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 haveFirstCluster:
 #endif
 		generalSecondaryFlags = fnode->Stat.generalSecondaryFlags;
@@ -2343,7 +2343,7 @@ appended:
 	SCE_DBG_ASSERT_FUNC(file->Position != 0, 187, "_last_cluster_index");
 	file->clusterIndex = ((SceUInt64)file->Position - 1) / clusterSize;
 	if (firstCluster != (SceUInt32)-2) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (result)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 1989,
 				"%s: lastCluster[%#lx], newCluster[%#lx], count(%ld), error(%d)\n", "_append_contiguous_clusters", oldCluster, firstCluster, count, result);
@@ -2378,7 +2378,7 @@ appended:
 		}
 		file->Cluster = firstCluster;
 		file->clusterIndex = clusterIndex;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		end = (SceUInt64)(clusterIndex + count) * clusterSize;
 #endif
 	}
@@ -2390,7 +2390,7 @@ done:
 	return result;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int _assign_first_cluster_of_file(SceExfatfsFile *file,
 	SceExfatfsSharedResource *sharedResource)
 {
@@ -2689,7 +2689,7 @@ int UVFAT_InitDirEntry_ex(SceExfatfsSharedResource *sharedResource,
 		SCE_DBG_ASSERT(fileSystem->file.fnode->fileSystem->clusterCount + 2 > dirCluster, 6755);
 #endif
 		file = &fileSystem->file;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		_set_start_cluster_and_cluster_count(fileSystem->file.fnode, dirCluster, size);
 #else
 		/* The release initializer inlines this setup, retaining the byte-size helper. */
@@ -3710,7 +3710,7 @@ finished:
 #undef ACCUMULATE_ENTRY
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int readTemporalDirectoryEntry(SceExfatfsSharedResource *sharedResource,
 	void *primary, void *secondary, SceExfatfsFileSystem *fileSystem)
 {
@@ -3777,7 +3777,7 @@ int _SearchFileFromDir(SceExfatfsSharedResource *sharedResource,
 		return -10;
 	}
 	for (;;) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		result = readTemporalDirectoryEntry(sharedResource, entry, &record, fileSystem);
 #else
 		SceExfatfsFile *file = &fileSystem->file;
@@ -3965,7 +3965,7 @@ int _update_metadata(SceExfatfsSharedResource *sharedResource, int fd)
 	if (!fnode->fileSystem)
 		return 0;
 	flushFileSystemMetadata(fnode->fileSystem);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	if (!_has_parent_directory(fnode))
 		return 0;
 #else
@@ -4031,7 +4031,7 @@ int UVFAT_WriteData(SceExfatfsSharedResource *sharedResource,
 		SceUInt64 cacheIndex = file->cacheIndex;
 		unsigned int amount;
 		int allocated = 0;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 		SceUInt32 startCluster;
 #endif
 
@@ -4061,7 +4061,7 @@ int UVFAT_WriteData(SceExfatfsSharedResource *sharedResource,
 			}
 			fnode = file->fnode;
 			if ((flags & 1) && fnode->fileSystem) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				flushFileSystemMetadata(fnode->fileSystem);
 				if (!_has_parent_directory(fnode))
 					goto metadataDone;
@@ -4109,7 +4109,7 @@ metadataDone:
 		}
 		SCE_DBG_PRINTF_LEVEL(2, 0, 6462,
 			"%s: call _start_cluster, dirFlag[%#x]\n", "UVFAT_WriteData", flags);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (_start_cluster(file->fnode, flags & 2) == (SceUInt32)-1) {
 			result = _assign_first_cluster_of_file(file, sharedResource);
 			if (result) {
@@ -4171,7 +4171,7 @@ metadataDone:
 #endif
 		result = 0;
 		if (!contiguousCount) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			if (!file->Cluster && file->clusterIndex)
 				SCE_DBG_PRINTF_LEVEL(1, 0, 6490,
 					"%s: before _set_position_and_cluster_index, filep[%p], Position[%#llx], Cluster[%#lx], clusterIndex[%#lx], cacheIndex[%#llx]\n",
@@ -4186,7 +4186,7 @@ metadataDone:
 				SCE_DBG_PRINTF_LEVEL(2, 0, 6496,
 					"%s: _set_position_and_cluster_index finished(EOF), Position[%#llx], offset[%#llx], size[%#lx]\n",
 					"UVFAT_WriteData", file->Position, offset, remaining);
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				if ((SceUInt64)file->Position % clusterSize)
 					SCE_DBG_PRINTF_LEVEL(1, 0, 6499,
 						"%s: unexpected Position[%#llx]\n", "UVFAT_WriteData", file->Position);
@@ -4215,7 +4215,7 @@ metadataDone:
 					"%s: _set_position_and_cluster_index failed(%d)\n", "UVFAT_WriteData", result);
 				return result;
 			}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			{
 				SceUInt64 newOffset = (SceUInt64)file->Position % bufferSize;
 
@@ -4316,11 +4316,11 @@ copyCached:
 				"%s: unexpected dirSize[%#x] < Position[%#llx]\n", "UVFAT_WriteData", file->fnode->dirSize, position);
 		}
 		if (contiguousCount) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			position = file->Position;
 #endif
 			if (!(position % clusterSize)) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 				if (position != clusterSize + file->clusterIndex * clusterSize)
 					SCE_DBG_PRINTF_LEVEL(1, 0, 6648,
 						"%s: unexpected Position[%#llx], clusterIndex[%#lx], clusterSize[%#lx], contCnt(%ld)\n",
@@ -4338,7 +4338,7 @@ copyCached:
 	}
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int UVFAT_WriteDirEntry_ex(SceExfatfsSharedResource *sharedResource, int fd,
 	const void *primary, const void *secondary, int *writeResult,
 	SceExfatfsFileSystem *fileSystem)
@@ -4704,7 +4704,7 @@ int UVFAT_WriteStatDir_ex(SceExfatfsSharedResource *sharedResource,
 	return result;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int writeTemporalDirectoryEntry(SceExfatfsSharedResource *sharedResource,
 	const void *entry, unsigned int *writeResult, SceExfatfsFileSystem *fileSystem)
 {

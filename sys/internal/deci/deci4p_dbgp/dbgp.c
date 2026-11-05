@@ -650,7 +650,7 @@ int DbgpModuleStart(SceSize args, const void *argp)
 	int result;
 
 	if (sceKernelCheckDipsw(DIPSW_DECI) == 0) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		SCE_DBG_PRINTF_FUNC(11, 188, "DbgpModuleStart", "disabled by dipsw\n");
 #endif
 		return 1;

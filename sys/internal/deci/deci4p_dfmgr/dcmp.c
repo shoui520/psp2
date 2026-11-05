@@ -32,7 +32,7 @@ static const SceDfMgrProtocol s_dcmpProtocol[DFMGR_LINK_COUNT] = {
 };
 
 /* 4.00 is built with _FORTIFY_SOURCE: the copies into stack buffers are checked */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define dcmpMemsetChk(dst, c, n) \
 	__builtin___memset_chk(dst, c, n, __builtin_object_size(dst, 0))
 #define dcmpMemcpyChk(dst, src, n) \

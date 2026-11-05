@@ -2274,7 +2274,7 @@ int swdlWriteNvItem(SwdlContext *context, const void *data, SceSize size)
 	if (size > sizeof(record.data))
 		return (int)0x80330002;
 	record.header.magic = 0x4d49564e;	/* "NVIM" */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	__memcpy_chk(record.data, data, size, sizeof(record.data));
 #else
 	memcpy(record.data, data, size);

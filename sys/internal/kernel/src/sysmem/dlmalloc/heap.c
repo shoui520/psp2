@@ -1497,7 +1497,7 @@ int HeaplibImplementationStartPhase2(void)
 SCE_DBGINFO_DEFINE(static, createToolHeapRecord, 2089, "CreateToolHeap");
 #endif
 
-#if defined(SYSMEM_TZS) && FW_SINCE(0x04000000)
+#if defined(SYSMEM_TZS) && FW_IS_400
 /* 4.00's secure link keeps these records without the code */
 SCE_DBGINFO_DEFINE_ORPHAN(sceKernelPrintHeapSegmentListRecord947, 947, "sceKernelPrintHeapSegmentList");
 SCE_DBGINFO_DEFINE_ORPHAN(sceKernelShrinkHeapRecord966, 966, "sceKernelShrinkHeap");

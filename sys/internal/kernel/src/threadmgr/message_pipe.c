@@ -101,7 +101,7 @@ static int uidMsgPipe_Destructor(void *object)
 	SceObjectBase *pObject;
 	SceUID memBlockId, pid;
 	int intr, ret;
-#if FW_BEFORE(0x04000000)
+#if !FW_IS_400
 	volatile int delay;
 #endif
 
@@ -115,7 +115,7 @@ static int uidMsgPipe_Destructor(void *object)
 			if (sceKernelUnlockFastMutex(&((SceProcessObject *)pObject)->msgPipeLock) < 0) {
 				SCE_DBG_ASSERT_FAIL(4912);
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&pipe->event.lock, intr);
-#if FW_BEFORE(0x04000000)
+#if !FW_IS_400
 				for (delay = 10; delay != 0; delay--)
 					;
 #endif
@@ -124,7 +124,7 @@ static int uidMsgPipe_Destructor(void *object)
 			break;
 		}
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&pipe->event.lock, intr);
-#if FW_BEFORE(0x04000000)
+#if !FW_IS_400
 		/* 3.6x backs off before it tries the process's lock again */
 		for (delay = 10; delay != 0; delay--)
 			;

@@ -124,7 +124,7 @@ static inline __attribute__((always_inline)) int usb1Device(void)
 		DEBUG(6, 401, "usb1MacSelect", "# ERROR # sceUdcdInit() ret=%08x\n", ret);
 	return ret;
 }
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 static int __attribute__((noinline)) usb1MacSelectDevice(void)
 {
 	return usb1Device();
@@ -212,7 +212,7 @@ static int __attribute__((noinline, noclone)) usb2MacSelectHost(int action)
 {
 	return usb2Host(action);
 }
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define usb2MacSelectDevice usb2Device
 static int __attribute__((noinline, noclone)) usb2MacSelect(int mode, int action)
 #else
@@ -373,7 +373,7 @@ static int UsbServThread(unsigned arglen, void *arg)
 			} else if (s_hostActive) {
 				s_hostActive = 0;
 				devKitPower(0);
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 				usb2MacSelect(1, 1);
 #else
 				usb2MacSelectDevice();
@@ -415,7 +415,7 @@ static int UsbServThread(unsigned arglen, void *arg)
 			usb0MacSelect(1, 1);
 		if (SceModulemgrForDriver_BBE1771C("SceBbmc") >= 0) {
 			ScePervasiveForDriver_BB67EF58(1);
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 			usb1MacSelect(0, 2);
 #else
 			usb1Host(2);
@@ -654,8 +654,8 @@ static inline __attribute__((always_inline)) int is_ds(unsigned id)
 	if (!dev) { ERROR(1389, "is_ds"); return 0; }
 	return dev[4] == 0x54c && (dev[5] == 0x42f || dev[5] == 0x268 || dev[5] == 0x5c4);
 }
-/* The 3.6x source declares it inline; 4.00, an older build, does not. */
-#if FW_SINCE(0x04000000)
+/* The 3.6x builds' source declares it inline; 4.00's does not. */
+#if FW_IS_400
 static unsigned is_supported_device(unsigned id)
 #else
 static inline unsigned is_supported_device(unsigned id)

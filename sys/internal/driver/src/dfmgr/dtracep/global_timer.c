@@ -13,8 +13,8 @@
 #include <intrmgr/gic_regs.h>
 #include "global_timer.h"
 
-/* the error messages are new in 4.00 */
-#if FW_SINCE(0x04000000)
+/* the error messages are 4.00's only */
+#if FW_IS_400
 #define GLOBAL_TIMER_ERROR(_fmt, _ret, _line)					\
 	SceDebugForDriver_391B74B7("[dtrace] ERROR:   " _fmt " (0x%08x) [%s:%d]\n",		\
 			 (_ret), "global_timer.c", (_line))

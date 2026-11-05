@@ -1,7 +1,7 @@
 /*
  * Sony's hand-written DES for SceKernelUtils: the initial and final
  * permutations as five swap steps on the block halves (r0, r1), one Feistel
- * round function (DesRound) and the key schedule. 4.00 rewrote all of them:
+ * round function (DesRound) and the key schedule. 4.00's are all different:
  * its round looks up a combined S-box/P table (desRoundTable) and builds
  * the schedule from multiplied bit gathers, and the parity adjustment
  * (SceKernelUtilsForDriver_919C12E2) became NEON; 3.6x indexes the paired
@@ -17,7 +17,7 @@
 	.text
 
 	.balign	2
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	.global	DesInitialPermutation
 	.type	DesInitialPermutation, %function
 	.thumb_func

@@ -156,7 +156,7 @@ static int _getDestOffset(Writer *writer, SceOff *offset)
 	return (int)0x80010086;
 }
 
-#if FW_DEBUG && FW_SINCE(0x04000000)
+#if FW_DEBUG && FW_IS_400
 /* Native data retains this record without an executable reference. */
 SCE_DBGINFO_DEFINE(static, memoryWriterFinalDebugInfo, 191, "memoryWriterFinal");
 #endif

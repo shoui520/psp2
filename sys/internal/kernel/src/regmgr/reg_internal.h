@@ -15,7 +15,7 @@
 
 /* 4.00 builds the reg library with _FORTIFY_SOURCE=1: whole-object sizes (over regmgr's
  * _FORTIFY_SOURCE=2 ones where a file includes both) */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #undef strncpy
 #undef strncat
 #define memcpy(dst, src, len)	__builtin___memcpy_chk(dst, src, len, __builtin_object_size(dst, 0))

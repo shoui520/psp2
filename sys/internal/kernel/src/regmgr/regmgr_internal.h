@@ -21,7 +21,7 @@
 int regMgrLoadCache(void);
 
 /* 4.00 is built with _FORTIFY_SOURCE */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #define memcpy(dst, src, len)	__builtin___memcpy_chk(dst, src, len, __builtin_object_size(dst, 0))
 #define memset(dst, c, len)	__builtin___memset_chk(dst, c, len, __builtin_object_size(dst, 0))
 #define strncpy(dst, src, len)	__builtin___strncpy_chk(dst, src, len, __builtin_object_size(dst, 1))

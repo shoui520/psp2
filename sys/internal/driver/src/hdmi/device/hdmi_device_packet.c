@@ -17,14 +17,14 @@
 #define SCE_ERROR_INVALID_TYPE	0x80000021
 
 /* .bss: the DTrace hooks */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 void (*setPacketDirectProbeHook)(const SceDtraceProbe *probe, ...);
 int setPacketDirectProbeEnabled;
 void (*setPacketProbeHook)(const SceDtraceProbe *probe, ...);
 int setPacketProbeEnabled;
 #endif
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 static const SceDtraceProbe setPacketDirectProbe;
 static const SceDtraceProbe setPacketProbe;
 #endif
@@ -80,7 +80,7 @@ int hdmiDeviceSmSetPacketData(HdmiDevice *device, SceUInt32 type, const void *pa
 	default:
 		return SCE_ERROR_INVALID_TYPE;
 	}
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	if (setPacketDirectProbeHook != NULL)
 		setPacketDirectProbeHook(&setPacketDirectProbe, frame);
 #endif
@@ -93,7 +93,7 @@ int hdmiDeviceSmSetPacketCtrl(HdmiDevice *device)
 	SceUInt32 start, stop;
 	int ret;
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	if (setPacketProbeHook != NULL)
 		setPacketProbeHook(&setPacketProbe, device->packetCtrl);
 #endif
@@ -164,7 +164,7 @@ int hdmiDeviceSmSetPacketCtrl(HdmiDevice *device)
 	return ret;
 }
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 /* DTrace probes __hdmi__hdmi_set_packet_direct and __hdmi__hdmi_set_packet. */
 static const SceDtraceProbe setPacketDirectProbe = {
 	.enabled = &setPacketDirectProbeEnabled,

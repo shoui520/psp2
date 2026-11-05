@@ -2,7 +2,7 @@
 
 #include <sysmem/utils.h>
 #include <string.h>
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 #include <sysmem/fortify.h>
 #endif
 
@@ -45,14 +45,14 @@ int sceNetPsAesEncrypt(unsigned char *destination, const unsigned char *source,
 				break;
 			chain = block;
 		}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		chain = destination + fullLength - 16;
 #else
 		chain = block;
 #endif
 	}
 	if (tailLength != 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		unsigned char stream[16] = { 0 };
 #else
 		unsigned char stream[16];
@@ -88,7 +88,7 @@ int sceNetPsAesDecrypt(unsigned char *destination, const unsigned char *source,
 	if (result < 0)
 		return result;
 	if (tailLength != 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		unsigned char stream[16] = { 0 };
 #else
 		unsigned char stream[16];

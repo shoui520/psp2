@@ -135,7 +135,7 @@ close:
  * 4.00 keeps the commit out of line and inlines the flush into its callers; 3.6x inlines the
  * commit into the flush and calls that.
  */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #define COMMIT_STORAGE	static int __attribute__((noinline))
 #define FLUSH_STORAGE	int
 #else

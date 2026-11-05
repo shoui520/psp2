@@ -51,7 +51,7 @@ int BtSendDhcpReply(BtNetworkPacketContext *context,
 	*cursor++ = 255;
 	vendorLength = sizeof(reply->cookie) + (cursor - reply->options);
 	if (vendorLength < 64) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		__memset_chk(cursor, 0, 64 - vendorLength, 1750);
 #else
 		memset(cursor, 0, 64 - vendorLength);

@@ -217,7 +217,7 @@ int VARangeToPAVectorBySWCore(const SceKernelVARange *range, SceKernelPAVector *
 		case PAGE_KIND_SUPERSECTION:
 			mask = 0xffffff;
 			break;
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		case PAGE_KIND_FAULT:
 			return PAGE_KIND_FAULT;
 		case PAGE_KIND_NOT_MAPPED:

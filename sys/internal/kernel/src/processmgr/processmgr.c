@@ -648,7 +648,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 				goto out;
 			}
 		}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		if (process->toolMemory != NULL)
 			sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_TOOL_ID, process->toolMemory);
 #endif
@@ -1539,7 +1539,7 @@ static int CreateDummyProcessWithUID(SceUID pid, SceProcessObject *process,
 		SCE_DBG_ASSERT_LEVEL(0, 0, 9663);
 		return ret;
 	}
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 	process->authInfo = *authInfo;
 #else
 	memcpy(&process->authInfo, authInfo, sizeof(process->authInfo));
@@ -2103,7 +2103,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	}
 
 	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) != 0) {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		process->toolMemory = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_TOOL_ID, 0x80);
 		if (process->toolMemory == NULL) {
 			ret = SCE_KERNEL_ERROR_NO_MEMORY;
@@ -3523,7 +3523,7 @@ int sceKernelProcessDebugSuspend(SceUID pid, SceUInt32 state)
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
 	ret = sceKernelClearEventFlag(process->eventFlag, ~PROCESS_EVF_NOT_DEBUG_SUSPENDED);
 	if (ret < 0) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 #else
 		sceKernelSignalSema(process->lockSema, 1);

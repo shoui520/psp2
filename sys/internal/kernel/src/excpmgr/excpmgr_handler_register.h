@@ -72,7 +72,7 @@ int sceKernelRegisterDefaultExceptionHandler(SceExcpmgrHandler *handler)
 	end = &g_excpHandlers.first[0][SCE_EXCP_PRIORITY_MAX];
 	for (code = 0; code != SCE_EXCP_MAX; code++, end += SCE_EXCP_PRIORITY_MAX) {
 		entry = end;
-#if EXCPMGR_NSKBL && !FW_SINCE(0x04000000)
+#if EXCPMGR_NSKBL && !FW_IS_400
 		/* the 3.6x boot loader looks at slots 7 to 1 only */
 		for (i = 7; i != 0; i--) {
 			link = *--entry;

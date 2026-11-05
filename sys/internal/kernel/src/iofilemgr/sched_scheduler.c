@@ -811,7 +811,7 @@ free:
 	return NULL;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 /* name unknown: the operations that transfer file data. */
 int sceIoSchedulerIsDataIo(IoRequest *req)
 {

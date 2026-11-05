@@ -12,7 +12,7 @@
 #include "motion_dummy.h"
 
 /* 4.00 is built with _FORTIFY_SOURCE: memset into an object of known size is checked */
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 #undef memset
 #define memset(dst, c, n) __builtin___memset_chk(dst, c, n, __builtin_object_size(dst, 0))
 #endif

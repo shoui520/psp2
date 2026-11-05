@@ -81,7 +81,7 @@ int pfsDbTableReadInfo(ScePfsLowerFile *lf, SceUInt32 *type, SceUInt32 *keyParam
 {
 	char buf[sizeof(ScePfsDbSector) + PFS_DMA_ALIGN];
 	ScePfsDbSector *sector = PFS_DMA_ALIGNED(buf);
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	ScePfsDbHeader header;
 #endif
 	SceSize n;
@@ -92,7 +92,7 @@ int pfsDbTableReadInfo(ScePfsLowerFile *lf, SceUInt32 *type, SceUInt32 *keyParam
 		return ret;
 	if (n != sizeof(*sector))
 		return SCE_PFS_ERROR_DB_BROKEN;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	memcpy(&header, sector, sizeof(header));
 	*type = header.type;
 	*keyParam = header.keyParam;

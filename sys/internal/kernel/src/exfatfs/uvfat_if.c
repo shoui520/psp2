@@ -8,7 +8,7 @@ extern int g_codepageTablesEnabled;
 int g_uvfatInitialized;
 
 /* The release _ReserveUnusedFd contains this initializer inline. */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 SceExfatfsFile *_InitializeFp(SceExfatfsFile *file)
 {
 	SceExfatfsFile *result;
@@ -164,7 +164,7 @@ found:
 }
 
 /* Release firmware inlines this in UVFAT_ReleaseFnode and _ReleaseFp. */
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int _ReleaseFnode(SceExfatfsFnode *fnode)
 {
 	int lockResult = -1;
@@ -664,7 +664,7 @@ int UVFAT_Create(SceExfatfsSharedResource *sharedResource,
 	SceUInt32 startCluster, directorySize;
 	unsigned char generalSecondaryFlags;
 	int result;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	int lockResult;
 	unsigned short references;
 #endif
@@ -751,7 +751,7 @@ int UVFAT_Create(SceExfatfsSharedResource *sharedResource,
 	if (output) {
 		*output = fnode;
 	} else {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		_ReleaseFnode(fnode);
 #else
 		lockResult = -1;
@@ -769,7 +769,7 @@ int UVFAT_Create(SceExfatfsSharedResource *sharedResource,
 	return result;
 
 release_error:
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	_ReleaseFnode(fnode);
 #else
 	lockResult = -1;
@@ -915,7 +915,7 @@ SceExfatfsFnode *UVFAT_GetParentFnode(SceExfatfsSharedResource *sharedResource,
 int UVFAT_ReleaseFnode(SceExfatfsSharedResource *sharedResource,
 	SceExfatfsFnode *fnode)
 {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	return _ReleaseFnode(fnode);
 #else
 	unsigned short references;
@@ -1065,7 +1065,7 @@ void _ReleaseFp(SceExfatfsSharedResource *sharedResource, SceExfatfsFile *file)
 {
 	SceExfatfsFnode *fnode = file->fnode;
 	unsigned short fdCount;
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 	void *buffer = file->BufTop;
 	SceExfatfsFileSystem *fileSystem;
 	unsigned int size;
@@ -1101,11 +1101,11 @@ void _ReleaseFp(SceExfatfsSharedResource *sharedResource, SceExfatfsFile *file)
 				"%s: unexpected fdCount(%hd), refCount(%hd), fnode[%p]\n",
 				"_ReleaseFp", (unsigned short)fnode->fdCount, fnode->refCount, fnode);
 		}
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 		fileSystem = fnode->fileSystem;
 #endif
 		file->fnode = NULL;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 		_ReleaseFnode(fnode);
 #else
 		lockResult = -1;
@@ -1163,7 +1163,7 @@ unsigned int _ReserveUnusedFd(SceExfatfsSharedResource *sharedResource, int mode
 					goto extend;
 			} while (file->mode);
 		}
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 		file->Position = 0;
 		file->mode = mode;
 		file->clusterIndex = 0x0fffffff;
@@ -1188,7 +1188,7 @@ extend:
 	if (fd >= initialized)
 		goto unlock;
 	file = &sharedResource->files[fd];
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 initialize:
 	file->mode = mode;
 	_InitializeFp(file);

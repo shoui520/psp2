@@ -513,7 +513,7 @@ int BtSetAvrcpTitle(BtStack *stack, const void *title, unsigned int length)
 
 	if (gBtAvrcpTitleLength == length && !memcmp(gBtAvrcpTitle, title, length))
 		return 0;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	__builtin___memcpy_chk(gBtAvrcpTitle, title, length, sizeof(gBtAvrcpTitle));
 #else
 	memcpy(gBtAvrcpTitle, title, length);

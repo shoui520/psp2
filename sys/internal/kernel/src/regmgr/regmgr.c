@@ -2141,7 +2141,7 @@ int regMgrComApiPrologue(int *lock)
 	if (g_regMgrErrorMasquerade << 16) {
 		if (g_regMgrErrorCountdown > 0) {
 			g_regMgrErrorCountdown--;
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 			SCE_DBG_PRINTF(0, 1919, "[REGMGR] Count Down %d\n", g_regMgrErrorCountdown);
 #endif
 			if (g_regMgrErrorCountdown > 0)

@@ -152,7 +152,7 @@ PVRSRV_ERROR FreeDeviceMem(PVRSRV_KERNEL_MEM_INFO *psMemInfo)
 	GpuHeapAllocation allocation;
 	int ret;
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	SCE_DBG_ASSERT(psMemInfo->ui32RefCount != 0, 135);
 	if (--psMemInfo->ui32RefCount != 0)
 		return PVRSRV_OK;
@@ -171,7 +171,7 @@ PVRSRV_ERROR FreeDeviceMem(PVRSRV_KERNEL_MEM_INFO *psMemInfo)
 			ShareKernelMappingWithProcesses(allocation.releasedSpanBase,
 					allocation.releasedSpanSize);
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	FreeProcessGpuMemory(psMemInfo);
 	return PVRSRV_OK;
 #else
@@ -188,7 +188,7 @@ PVRSRV_ERROR FreeDeviceMemCallBack(IMG_VOID *pvParam, IMG_UINT32 ui32Param)
 
 	(void)ui32Param;
 	if (psMemInfo) {
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 		if (--psMemInfo->ui32RefCount == 0)
 #endif
 			FreeDeviceMem(psMemInfo);
@@ -291,7 +291,7 @@ PVRSRV_ERROR PVRSRVAllocSyncInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 /* SCE sync destruction uses its native descriptor lifetime and debug boundary. */
 PVRSRV_ERROR PVRSRVFreeSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo)
 {
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	int ret;
 
 	SCE_DBG_ASSERT(psSyncInfo->ui32RefCount == 0, 283);

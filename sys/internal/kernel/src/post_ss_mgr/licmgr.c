@@ -181,7 +181,7 @@ int licMgrReadFile(const char *path, void *data, SceSize size)	/* name unknown *
 	return 0;
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 /* whether any QA flag is set */
 int licMgrHasQaFlags(void)	/* name unknown */
 {
@@ -244,7 +244,7 @@ int licMgrLoad(void)	/* name unknown */
 	return ret;
 }
 
-#if FW_VERSION < 0x04000000
+#if !FW_IS_400
 /* whether any QA flag is set */
 int licMgrHasQaFlags(void)	/* name unknown */
 {
@@ -485,7 +485,7 @@ int sceSblLicMgrActivateDevkit(const char *path)
 	return licMgrActivate(path);
 }
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 int licMgrActivateFromFs(void *arg)	/* name unknown */
 #else
 int licMgrActivateFromFs(void)
@@ -494,7 +494,7 @@ int licMgrActivateFromFs(void)
 	char path[0x100];
 	int ret;
 
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	(void)arg;
 #endif
 	memset(path, 0, sizeof(path));
@@ -681,7 +681,7 @@ int sceSblLicMgrActivateFromFs(void)
 		sceSyscallLeave(state);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-#if FW_VERSION >= 0x04000000
+#if FW_IS_400
 	ret = SceThreadmgrForDriver_E54FD746(0x1000, licMgrActivateFromFs, NULL);
 #else
 	ret = licMgrActivateFromFs();

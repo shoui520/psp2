@@ -91,16 +91,16 @@ typedef struct HdmiSmServiceWork {
 
 /* .bss */
 static HdmiSmWork smWork;
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 void (*stateProbeHook)(const SceDtraceProbe *probe, ...);
 #endif
 static HdmiSmServiceWork serviceWork;
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 int stateProbeEnabled;
 #endif
 static HdmiEventCallback callbacks[HDMI_SM_CALLBACK_COUNT];
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 static const SceDtraceProbe stateProbe;
 #endif
 
@@ -774,7 +774,7 @@ static int smThread(SceSize args, void *argp)
 	int state;
 
 	for (;;) {
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 		if (stateProbeHook != NULL)
 			stateProbeHook(&stateProbe, pDevice.state);
 #endif
@@ -864,7 +864,7 @@ int _sceHdmiDeviceSmStartService(HdmiDevice *device)
 	return ret;
 }
 
-#if FW_SINCE(0x04000000)
+#if FW_IS_400
 /* DTrace probe __hdmi__hdmi_state. */
 static const SceDtraceProbe stateProbe = {
 	.enabled = &stateProbeEnabled,
