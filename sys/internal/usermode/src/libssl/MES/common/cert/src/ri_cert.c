@@ -1071,6 +1071,83 @@ int sslSetCertificateInfo(SslCertificate *certificate, int selector, void *value
 	}
 }
 
+int sslGetCertificateNameHash(SslCertificateName *name, int identifier,
+			       SceUInt32 *result)
+{
+	SslCryptoContextHeader *context = name->context->cryptoContext;
+	SslCryptoAlgorithm *algorithm = NULL;
+	SceUInt8 digest[64];
+	SceUInt32 digestLength = sizeof(digest), length;
+	void *data = NULL;
+	int status = 10001;
+
+	if (context == NULL)
+		goto out;
+	status = name->methods->Encode(name, 0, NULL, &length);
+	if (status != 0)
+		goto out;
+	data = sslAllocate(length);
+	if (data == NULL) {
+		status = 10005;
+		goto out;
+	}
+	status = name->methods->Encode(name, length, data, &length);
+	if (status != 0)
+		goto out;
+	status = sslCreateAlgorithm(context, 3, identifier, 0, &algorithm);
+	if (status != 0)
+		goto out;
+	status = sslDigestInit(algorithm);
+	if (status != 0)
+		goto out;
+	status = sslDigestUpdate(algorithm, data, length);
+	if (status != 0)
+		goto out;
+	status = sslDigestFinal(algorithm, digest, &digestLength);
+	if (status == 0)
+		*result = (SceUInt32)digest[0] | ((SceUInt32)digest[1] << 8) |
+			  ((SceUInt32)digest[2] << 16) | ((SceUInt32)digest[3] << 24);
+out:
+	if (algorithm != NULL)
+		sslDestroyAlgorithm(algorithm);
+	if (data != NULL)
+		sslFree(data);
+	return status;
+}
+
+int sslGetCertificateNameInfo(SslCertificateName *name, int selector, void *result)
+{
+	SslCertificateNameComponentRequest *request = result;
+	const SslCertificateBackendMethods *methods;
+
+	switch (selector) {
+	case 1:
+		*(SceUInt32 *)result = name->context->supportedTypes;
+		return 0;
+	case 2:
+		*(SslCertificateContext **)result = name->context;
+		return 0;
+	case 10:
+		methods = name->backendMethods;
+		if (methods->GetNameComponentCount == NULL)
+			return 10009;
+		return methods->GetNameComponentCount(name, result);
+	case 11:
+		methods = name->backendMethods;
+		if (methods->GetNameComponent == NULL)
+			return 10009;
+		return methods->GetNameComponent(name, (SceUInt32)request->index,
+						 &request->component);
+	case 80:
+	case 82:
+		return sslGetCertificateNameHash(name, 64, result);
+	case 83:
+		return sslGetCertificateNameHash(name, 4, result);
+	default:
+		return 10018;
+	}
+}
+
 int sslNewCertificateContext(SslLibrary *library, int unused, SceUInt32 types,
 			     void **result)
 {
@@ -1207,6 +1284,34 @@ int sslNewCertificateName(SslCertificateContext *context, SslCertificateName **r
 		name->methods = context->methods->nameMethods;
 	*result = name;
 	return 0;
+}
+
+int sslNewCertificateNameComponent(SslCertificateName *name,
+				   SslCertificateNameComponent **result)
+{
+	SslCertificateNameComponent *component;
+
+	component = sslAllocate(sizeof(*component));
+	if (component == NULL)
+		return 10005;
+	sslFillMemory(component, 0, sizeof(*component));
+	component->oid = sslNewProperty();
+	if (component->oid == NULL)
+		goto fail;
+	component->value = sslNewProperty();
+	if (component->value == NULL)
+		goto fail;
+	component->context = name->context;
+	sslRetainCertificateContext(component->context);
+	if (component->context->methods != NULL)
+		component->methods = component->context->methods->nameMethods;
+	*result = component;
+	return 0;
+fail:
+	if (component->oid != NULL)
+		sslFree(component->oid);
+	sslFree(component);
+	return 10005;
 }
 
 int sslFreeCertificateNameComponent(SslCertificateNameComponent *component)

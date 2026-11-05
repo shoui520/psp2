@@ -35,6 +35,9 @@ typedef struct SslCertificateBackendMethods {
 			 void *data, SceUInt32 *length);
 	int (*Finalize)(SslCertificate *certificate);
 	int (*Prepare)(SslCertificate *certificate);
+	int (*GetNameComponentCount)(SslCertificateName *name, SceUInt32 *result);
+	int (*GetNameComponent)(SslCertificateName *name, SceUInt32 index,
+				SslCertificateNameComponent **result);
 } SslCertificateBackendMethods;
 
 typedef struct SslCertificateNameMethods {
@@ -46,7 +49,8 @@ typedef struct SslCertificateNameMethods {
 	SceUIntPtr opaqueQuery;
 	int (*Decode)(void *context, int mode, SceUInt32 length, const void *data,
 		      SceUInt32 *consumed, void **result);
-	SceUIntPtr opaqueEncoding;
+	int (*Encode)(SslCertificateName *name, SceUInt32 capacity, void *data,
+		      SceUInt32 *length);
 	int (*GetInfo)(SslCertificateName *name, int selector, void *result);
 	SceUIntPtr opaqueSetters[2];
 	int (*DestroyComponent)(SslCertificateNameComponent *component);
@@ -122,6 +126,7 @@ struct SslCertificateNameComponent {
 	SslCertificateContext *context;
 	SslProperty *oid;
 	SslProperty *value;
+	SceUInt32 reserved;
 };
 
 typedef struct SslCertificateNameComponentRequest {
@@ -171,6 +176,8 @@ _Static_assert(offsetof(SslCertificateBackendMethods, EncodeVersion) == 44,
 _Static_assert(offsetof(SslCertificateBackendMethods, Parse) == 60, "Parse");
 _Static_assert(offsetof(SslCertificateBackendMethods, Serialize) == 64, "Serialize");
 _Static_assert(offsetof(SslCertificateBackendMethods, Prepare) == 72, "Prepare");
+_Static_assert(offsetof(SslCertificateBackendMethods, GetNameComponent) == 80,
+	       "GetNameComponent");
 _Static_assert(offsetof(SslCertificatePropertyCache, flags) == 4, "flags");
 
 _Static_assert(offsetof(SslCertificateMethods, DestroyCertificate) == 20,
@@ -180,9 +187,12 @@ _Static_assert(offsetof(SslCertificateMethods, GetCertificateInfo) == 36,
 _Static_assert(offsetof(SslCertificateMethods, nameMethods) == 80, "nameMethods");
 _Static_assert(offsetof(SslCertificateNameMethods, Decode) == 24, "Decode");
 _Static_assert(offsetof(SslCertificateNameMethods, GetInfo) == 32, "GetInfo");
+_Static_assert(offsetof(SslCertificateNameMethods, Encode) == 28, "Encode");
 _Static_assert(offsetof(SslCertificateNameMethods, GetComponentInfo) == 48,
 	       "GetComponentInfo");
 _Static_assert(offsetof(SslCertificateNameComponent, value) == 12, "value");
+_Static_assert(sizeof(SslCertificateNameComponent) == 20,
+	       "SslCertificateNameComponent");
 _Static_assert(sizeof(SslCertificateNameComponentRequest) == 8,
 	       "SslCertificateNameComponentRequest");
 _Static_assert(offsetof(SslCertificateBackendMethods, QuerySignedValue) == 36,
@@ -266,5 +276,12 @@ int sslFormatCertificateNameForward(SslCertificateName *name, int mode,
 int sslFormatCertificateName(SslCertificateName *name, int mode,
 			    SceUInt32 capacity, char *data);
 int sslFreeCertificateNameComponent(SslCertificateNameComponent *component);
+int sslNewCertificateNameComponent(SslCertificateName *name,
+				   SslCertificateNameComponent **result);
+int sslGetCertificateNameHash(SslCertificateName *name, int algorithm,
+			       SceUInt32 *result);
+int sslGetCertificateNameInfo(SslCertificateName *name, int selector, void *result);
+int sslEncodeCertificateName(SslCertificateName *name, SceUInt32 capacity,
+			     void *data, SceUInt32 *length);
 
 #endif

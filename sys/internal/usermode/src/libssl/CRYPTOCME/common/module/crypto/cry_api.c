@@ -40,6 +40,21 @@ int sslDestroyCryptoContext(void *context)
 	return object->methods->Destroy(context);
 }
 
+int sslCreateAlgorithm(SslCryptoContextHeader *context, int family, int algorithm,
+		       SceUInt32 mode, SslCryptoAlgorithm **result)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (context == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = context->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->CreateAlgorithm == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->CreateAlgorithm(context, family, algorithm, mode, result);
+}
+
 int sslCopyAlgorithm(SslCryptoAlgorithm *algorithm, SslCryptoAlgorithm **result)
 {
 	const SslCryptoLifecycleMethods *methods;
@@ -123,4 +138,46 @@ int sslSetAlgorithmInfo(SslCryptoAlgorithm *algorithm, int selector,
 		return 0;
 	}
 	return methods->SetAlgorithmInfo(algorithm, selector, value);
+}
+
+int sslDigestInit(SslCryptoAlgorithm *algorithm)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->DigestInit == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->DigestInit(algorithm);
+}
+
+int sslDigestUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->DigestUpdate == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->DigestUpdate(algorithm, data, length);
+}
+
+int sslDigestFinal(SslCryptoAlgorithm *algorithm, void *data, SceUInt32 *length)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->DigestFinal == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->DigestFinal(algorithm, data, length);
 }

@@ -136,6 +136,12 @@ int SceSslInternal_08179EBD(void *certificate, int mode, void **result)
 	return sslGetCertificateName(certificate, 7, mode, result);
 }
 
+int sslEncodeCertificateName(SslCertificateName *name, SceUInt32 capacity,
+			     void *data, SceUInt32 *length)
+{
+	return sslEncodeCertificateNameProperties(name->properties, data, length, capacity);
+}
+
 int sslDecodeCertificateName(SslCertificateContext *context, int mode, SceUInt32 length,
 			     const void *data, SceUInt32 *consumed, void **result)
 {

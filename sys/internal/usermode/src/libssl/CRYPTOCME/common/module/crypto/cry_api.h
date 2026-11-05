@@ -31,6 +31,12 @@ typedef struct SslCryptoLifecycleMethods {
 				void *result);
 	int (*SetAlgorithmInfo)(SslCryptoAlgorithm *algorithm, int selector,
 				SceUIntPtr value);
+	SceUIntPtr opaqueOperations[20];
+	int (*DigestInit)(SslCryptoAlgorithm *algorithm);
+	SceUIntPtr opaqueDigestOperation;
+	int (*DigestUpdate)(SslCryptoAlgorithm *algorithm, const void *data,
+			    SceUInt32 length);
+	int (*DigestFinal)(SslCryptoAlgorithm *algorithm, void *data, SceUInt32 *length);
 } SslCryptoLifecycleMethods;
 
 /* Shared implementation interface prefix; algorithm-specific operations follow.
@@ -105,6 +111,11 @@ _Static_assert(offsetof(SslCryptoLifecycleMethods, DestroyAlgorithm) == 16,
 	       "DestroyAlgorithm");
 
 int sslDestroyAlgorithm(SslCryptoAlgorithm *algorithm);
+int sslCreateAlgorithm(SslCryptoContextHeader *context, int family, int algorithm,
+		       SceUInt32 mode, SslCryptoAlgorithm **result);
+int sslDigestInit(SslCryptoAlgorithm *algorithm);
+int sslDigestUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length);
+int sslDigestFinal(SslCryptoAlgorithm *algorithm, void *data, SceUInt32 *length);
 int sslCreateCryptoContext(SslLibrary *library, int mode, void **result);
 int sslDestroyCryptoContext(void *context);
 int sslFreeAlgorithm(SslCryptoAlgorithm *algorithm);
@@ -150,6 +161,9 @@ _Static_assert(offsetof(SslCryptoLifecycleMethods, GetAlgorithmInfo) == 24,
 	       "GetAlgorithmInfo");
 _Static_assert(offsetof(SslCryptoLifecycleMethods, SetAlgorithmInfo) == 28,
 	       "SetAlgorithmInfo");
+_Static_assert(offsetof(SslCryptoLifecycleMethods, DigestInit) == 112, "DigestInit");
+_Static_assert(offsetof(SslCryptoLifecycleMethods, DigestUpdate) == 120, "DigestUpdate");
+_Static_assert(offsetof(SslCryptoLifecycleMethods, DigestFinal) == 124, "DigestFinal");
 _Static_assert(offsetof(SslCryptoImplementationMethods, GetInfo) == 12,
 	       "GetInfo");
 _Static_assert(offsetof(SslCryptoImplementationMethods, SetInfo) == 16,

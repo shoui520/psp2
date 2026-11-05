@@ -642,7 +642,9 @@ static const SslCertificateBackendMethods sslX509BackendMethods = {
 	.EncodeVersion = sslEncodeX509Version,
 	.Parse = sslParseX509Certificate,
 	.Serialize = sslSerializeX509Certificate,
-	.Finalize = sslFinalizeX509Certificate
+	.Finalize = sslFinalizeX509Certificate,
+	.GetNameComponentCount = sslGetX509NameComponentCount,
+	.GetNameComponent = sslGetX509NameComponent
 };
 
 int sslNewX509CertificateContext(SslLibrary *library, int unused, void **result)
@@ -717,6 +719,52 @@ int sslDecodeX509Date(void *unused, const SslCertificatePropertyValue *value, vo
 		return 10022;
 	}
 	return SceSslInternal_88391E03(date, format, value->data, value->length);
+}
+
+int sslGetX509NameComponentCount(SslCertificateName *name, SceUInt32 *result)
+{
+	SslProperty *property;
+	SceUInt32 count = 0;
+
+	if (sslFindProperty(name->properties, 104, 15, NULL, &property, 0) == 0)
+		count = property->length;
+	*result = count;
+	return 0;
+}
+
+int sslGetX509NameComponent(SslCertificateName *name, SceUInt32 index,
+			   SslCertificateNameComponent **result)
+{
+	SslCertificateNameComponent *component;
+	SslProperty *property;
+	SceUInt32 offset = index * 2;
+	int status;
+
+	if (sslFindProperty(name->properties, 104, (int)(offset + 16), NULL,
+			    &property, 0) != 0)
+		return 10008;
+	status = sslNewCertificateNameComponent(name, &component);
+	if (status != 0)
+		return status;
+	if (sslCloneProperty(component->oid, property, SSL_PROPERTY_COPY_DATA) == NULL) {
+		status = 10001;
+		goto out;
+	}
+	if (sslFindProperty(name->properties, 104, (int)(offset + 17), NULL,
+			    &property, 0) != 0) {
+		status = 10001;
+		goto out;
+	}
+	if (sslCloneProperty(component->value, property, SSL_PROPERTY_COPY_DATA) == NULL) {
+		status = 10001;
+		goto out;
+	}
+	*result = component;
+	return status;
+out:
+	if (component != NULL)
+		sslFreeCertificateNameComponent(component);
+	return status;
 }
 
 int sslCollectX509KeyComponent(void *arg, int id, const SslKeyComponent *component)
