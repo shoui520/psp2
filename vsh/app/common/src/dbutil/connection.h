@@ -23,6 +23,7 @@
 #define DBUTIL_ERROR_NO_MEMORY		0x80103102
 #define DBUTIL_ERROR_INVALID_STATE	0x80103103	/* not open, already open, no DCN client */
 #define DBUTIL_ERROR_NOT_FOUND		0x80103104
+#define DBUTIL_ERROR_INVALID_TYPE	0x80103108	/* an event's or a value's */
 #define DBUTIL_ERROR_SQLITE		0x80103200
 #define DBUTIL_ERROR_IO			0x80103D00	/* ORed with SQLITE_IOERR's extended code */
 #define DBUTIL_ERROR_LOCKED		0x80103D12
@@ -41,6 +42,11 @@
 #define DBUTIL_EVENT_DELETE		5
 #define DBUTIL_EVENT_OVERFLOW		6	/* the DCN server's queue filled and was flushed */
 #define DBUTIL_EVENT_CLOSE		7
+
+/* Connection::Begin */
+#define DBUTIL_TRANSACTION_DEFERRED	0
+#define DBUTIL_TRANSACTION_IMMEDIATE	1
+#define DBUTIL_TRANSACTION_EXCLUSIVE	2
 
 /* Connection::SetOption */
 #define DBUTIL_OPTION_WAIT_STATEMENTS	0	/* a rollback waits for the running statements */
@@ -174,6 +180,12 @@ public:
 
 class Connection {
 public:
+	/* told of every SQLite error (Connection::SetErrorHandler) */
+	struct ErrorHandler {
+		void (*callback)(void *arg, int result);
+		void *arg;
+	};
+
 	/* an attached database: its type and the raw path it was opened from */
 	struct Database {
 		Database(int type, const paf::string &path) : type(type), path(path)
@@ -209,6 +221,53 @@ public:
 		       const paf::string &columns, RefPtr<Record> *record);
 	int GetError();
 	const char *GetErrorMessage();
+	int Attach(const paf::string &path, const paf::string &name);
+	int Detach(const paf::string &name);
+	void Interrupt();
+	SceInt64 GetLastInsertRowid();
+	int GetChanges();
+	int GetTotalChanges();
+	int OpenBlob(const paf::string &database, const paf::string &table,
+		     const paf::string &column, SceInt64 rowid, int flags, sqlite3_blob **blob);
+	int CloseBlob(sqlite3_blob *blob);
+	int ReadBlob(sqlite3_blob *blob, void *buffer, int size, int offset);
+	int WriteBlob(sqlite3_blob *blob, const void *buffer, int size, int offset);
+	int GetBlobSize(sqlite3_blob *blob, int *size);
+	int Begin(int mode);
+	int Commit();
+	int Rollback();
+	int SetBusyTimeout(int milliseconds);
+	int SetBusyHandler(int (*handler)(void *arg, int count), void *arg);
+	int SetOption(int option, bool value);
+	bool FindDatabaseName(const paf::string &path, paf::string *name);
+
+	/* the raw path of the database attached under name, when there is one */
+	bool FindDatabasePath(const paf::string &name, paf::string *path)
+	{
+		bool found;
+
+		m_lock.Lock();
+		DatabaseMap::iterator it = m_databases.find(name);
+
+		found = it != m_databases.end();
+		if (found)
+			*path = it->second.path;
+		m_lock.Unlock();
+		return found;
+	}
+
+	int TranslateEvent(const Event *event, Event *translated);
+	bool UsesDatabase(const paf::string &paths);
+	int Deliver(const Event *event);
+	int RemoveListener(EventListener *listener);
+	int SetHandler(EventListener *handler);
+	paf::string GetDatabasePath(const paf::string &name);
+	paf::string GetDatabaseName(const paf::string &path);
+	int CollectDatabasePaths(paf::vector<paf::string> *paths);
+	int GetDatabasePaths(paf::vector<paf::string> *paths);
+	int SetErrorHandler(const ErrorHandler *handler);
+	int JoinFileDatabasePaths(const paf::string &separator, paf::string *paths);
+	int Dispatch(Event *event);
 
 	static void UpdateHook(void *arg, int operation, const char *database, const char *table,
 			       sqlite3_int64 rowid);
@@ -239,6 +298,8 @@ class DCNClient {
 public:
 	static int AddConnection(Connection *connection);
 	static int RemoveConnection(Connection *connection);
+	/* sends a connection's event to the DCN server, for every other process */
+	static int Post(const Event *event);
 };
 
 }
