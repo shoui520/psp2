@@ -230,6 +230,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/effects/effect_globals.cpp
 	src/graphics/effects/gate_blur.cpp
 	src/graphics/effects/wave_switch.cpp
+	src/graphics/drawobj/panel_obj_list.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/graphics/arl/gxm/gxm_framebuffer_object.cpp
 	src/graphics/effects/fft.cpp

@@ -769,7 +769,7 @@ void PanelRenderer::AddBubble(const BubbleParam &param, int32_t kind, uint32_t m
 	layer->Push(key.m_word, 0, &PanelRenderer::DrawBubble, self, kind, param);
 }
 
-void PanelRenderer::AddBubbleObj(BubbleParam *param, int32_t type, WaveRenderer *wave_renderer,
+void PanelRenderer::AddBubbleObj(BubbleParam *param, int32_t type, const common::SharedPtr<WaveRenderer> &wave_renderer,
 				 DrawLayer *layer)
 {
 	if (type == 0 || type == 1)

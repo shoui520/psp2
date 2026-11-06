@@ -2572,7 +2572,7 @@ public:
 		       DrawLayer *const &layer);
 	/* 0x810beba8: a bubble object queued as a bubble (0) or a folder (1), in the layer or
 	   else the opaque bubbles' (names ours) */
-	void AddBubbleObj(BubbleParam *param, int32_t type, WaveRenderer *wave_renderer,
+	void AddBubbleObj(BubbleParam *param, int32_t type, const common::SharedPtr<WaveRenderer> &wave_renderer,
 			  DrawLayer *layer);
 	/* 0x810bec18, 0x810becee: the bubbles' light, packed for the lighting programs'
 	   PointLightPack1 and PointLightPack2 (names ours) */

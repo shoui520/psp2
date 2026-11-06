@@ -154,20 +154,52 @@ public:
 	virtual void SetEnabled(bool enabled);
 };
 
+/* the points the custom renderer's trail went through, a ring of m_count: the last at m_last,
+   the next written at m_next (names ours) */
+class CustomTrailPoints {
+public:
+	math::v4 *m_points;
+	uint32_t m_reserved;
+	uint32_t m_count;
+	uint32_t m_last;
+	uint32_t m_next;
+};
+
+/* the renderer's class is the factory's (another module's); libpaf reads only these */
 class CustomRenderer {
 public:
 	virtual ~CustomRenderer();
 	virtual void Init(common::SharedPtr<Camera> camera, common::SharedPtr<DrawEnv> draw_env);
 	/* the folder twice, each with a size */
 	virtual void Load(const string &dir, int32_t size, const string &dir2, int32_t size2);
-	virtual void reserved4();
+	/* the frame's time on (ScePafGraphics_9409C495) */
+	virtual void Update(float frame_time);
 	virtual void reserved5();
 	virtual CustomRendererOption *GetOption();
+	/* the trail's switch (name ours) */
+	virtual CustomRendererOption *GetTrailOption();
 
-	uint8_t reserved[0x58];
+	/* the camera Init was given */
+	common::SharedPtr<Camera> m_camera;
+	uint8_t reserved[0x50];
 	/* the waves' values (WaveRenderer::m_wave_x, m_wave_y), 0 without waves */
 	float m_wave_x;
 	float m_wave_y;
+	uint8_t reserved2[4];
+	/* the presets, moved to "iboot" or "default" by ScePafGraphics_9569E74C, and the trail's */
+	ParamSetKeysManager m_manager;
+	uint8_t reserved3[0x173c - 0x68 - sizeof(ParamSetKeysManager)];
+	/* drawn by the scene while GetOption's switch is on, the trail's while the trail is on */
+	DrawLayer *m_rs_custom;
+	uint8_t reserved4[0x177c - 0x1740];
+	ParamSetKeysManager m_trail_manager;
+	uint8_t reserved6[0x2800 - 0x177c - sizeof(ParamSetKeysManager)];
+	CustomTrailPoints m_trail;
+	uint8_t reserved7[0x2c18 - 0x2814];
+	/* set by the renderer when it moved the trail itself this frame, cleared before the
+	   moves are run */
+	bool m_trail_moved;
+	DrawLayer *m_rs_trail;
 };
 
 /* a renderer made by the function ScePafWidget_1955B85D gives the renderer (names ours) */
@@ -526,6 +558,11 @@ inline DrawLayer *DrawEnv::AddLayer(const string &name, int32_t priority, int32_
 void RegisterPanelObj(DrawObj *obj, int32_t kind);
 void UnregisterPanelObj(DrawObj *obj);
 void DrawPanelObj(DrawObj *obj, int32_t kind, int32_t flags);
+/* the panel objects' layers set to be drawn this frame or not, and drawn (called by
+   ScePafWidget_DC1B19DB; names ours) */
+void UpdatePanelLayers();
+void FlushPanelLayers();
+void FlushPanelReflections();
 
 /* hands the motion sensor's data of every frame to the waves, with the sensor's rotation
    turned from its axes to the view's (names ours) */
