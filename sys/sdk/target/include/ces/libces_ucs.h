@@ -21,6 +21,15 @@ extern "C" {
 /* one character code check */
 int sceCesUcs2CheckCode(uint16_t ucs2);
 
+/* ===================== */
+/* for other CESs */
+/* ===================== */
+typedef union SceCesUcsProfileSheet {
+
+	void *systemUse[32];
+
+} SceCesUcsProfileSheet;
+
 #ifdef __cplusplus
 }
 #endif

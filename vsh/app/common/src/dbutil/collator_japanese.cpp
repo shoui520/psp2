@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include "collator.h"
-#include "reading_dictionary.h"
+#include <ces/libces_jis.h>
 
 /* the letter index of hiragana and katakana, U+3040-U+30FF */
 static const unsigned int s_kanaIndex[0xc0] = {
@@ -32,8 +32,9 @@ static const unsigned int s_latinIndex[26] = {
 const SceUInt8 CollatorJapanese::s_groupOrder[COLLATOR_CHAR_TYPE_COUNT] =
 	{ 3, 4, 2, 7, 1, 7, 6, 5, 7 };
 
-static HanReadingDictionary *s_dictionary;
-static HanReadingDictionary s_dictionaryStorage;
+/* code page 932, set up on the first Han character: Han characters sort by their Shift_JIS code */
+static SceCesSJisUcsProfile *s_sjisProfile;
+static SceCesUcsProfileSheet s_sjisProfileSheet;
 
 int CollatorJapanese::GetIndexOfLetter(unsigned int c)
 {
@@ -61,34 +62,34 @@ int CollatorJapanese::GetCharType(unsigned int c)
 	if (IsKana(c))
 		return COLLATOR_CHAR_KANA;
 	if (IsHan(c)) {
-		SceUInt8 reading[16];
-		int length;
+		uint8_t sjis[16];
+		uint32_t length;
 		int type = COLLATOR_CHAR_HAN;
 
-		if (s_dictionary == NULL)
-			s_dictionary = HanReadingDictionaryOpen(&s_dictionaryStorage);
-		if (HanReadingDictionaryLookup(c, s_dictionary, reading, sizeof(reading),
-					       &length) == 0 && length != 0)
+		if (s_sjisProfile == NULL)
+			s_sjisProfile = sceCesUcsProfileInitSJis1997Cp932(&s_sjisProfileSheet);
+		if (sceCesUtf32ToMbc(c, &s_sjisProfile->cesMbcsUcsPrf, sjis, sizeof(sjis),
+				     &length) == 0 && length != 0)
 			type = COLLATOR_CHAR_HAN_READING;
 		return type;
 	}
 	return COLLATOR_CHAR_OTHER;
 }
 
-/* a Han character by the first reading the dictionary gives */
+/* a Han character by its Shift_JIS code, which orders JIS X 0208's kanji by reading */
 unsigned int CollatorJapanese::GetHanReadingWeight(unsigned int c)
 {
-	SceUInt8 reading[16];
-	int length;
+	uint8_t sjis[16];
+	uint32_t length;
 
 	if (c >= 0xffff)
 		return 0;
-	if (s_dictionary == NULL)
-		s_dictionary = HanReadingDictionaryOpen(&s_dictionaryStorage);
-	if (HanReadingDictionaryLookup(c, s_dictionary, reading, sizeof(reading), &length) != 0 ||
+	if (s_sjisProfile == NULL)
+		s_sjisProfile = sceCesUcsProfileInitSJis1997Cp932(&s_sjisProfileSheet);
+	if (sceCesUtf32ToMbc(c, &s_sjisProfile->cesMbcsUcsPrf, sjis, sizeof(sjis), &length) != 0 ||
 	    length == 0)
 		return 0xffffffff;
-	return reading[0] << 8 | reading[1];
+	return sjis[0] << 8 | sjis[1];
 }
 
 CollatorJapanese::CollatorJapanese()
