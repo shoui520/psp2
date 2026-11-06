@@ -35,10 +35,15 @@ extern "C" {
 #define SCE_BXCE_ERROR_INVALID_HEXADECIMAL		-2138757885	/* 0x80852503 */
 #define SCE_BXCE_ERROR_XML_SYNTAX_ERROR			-2138759157	/* 0x8085200B */
 #define SCE_BXCE_ERROR_XML_END_TAG_MISMATCH		-2138759155	/* 0x8085200D */
+#define SCE_BXCE_ERROR_XML_UNEXPECTED_CHAR		-2138759151	/* 0x80852011 */
 #define SCE_BXCE_ERROR_XML_EXPECTED_CLOSING_ANGLE_BRACKET	-2138759149	/* 0x80852013 */
 #define SCE_BXCE_ERROR_XML_EXPECTED_EQUALITY_OPERATOR	-2138759148	/* 0x80852014 */
 #define SCE_BXCE_ERROR_XML_EXPECTED_SEMI_COLON		-2138759147	/* 0x80852015 */
 #define SCE_BXCE_ERROR_XML_EXPECTED_QUOTE		-2138759143	/* 0x80852019 */
+#define SCE_BXCE_ERROR_XML_END_OF_COMMENT_NOT_FOUND	-2138759146	/* 0x80852016 */
+#define SCE_BXCE_ERROR_XML_END_OF_CDSECT_NOT_FOUND	-2138759145	/* 0x80852017 */
+#define SCE_BXCE_ERROR_XML_INVALID_PI			-2138759131	/* 0x80852025 */
+#define SCE_BXCE_ERROR_XML_END_OF_DTD_NOT_FOUND		-2138759127	/* 0x80852029 */
 #define SCE_BXCE_ERROR_XML_NULL_HANDLER			-2138759132	/* 0x80852024 */
 #define SCE_BXCE_ERROR_XML_DOCUMENT_ELEMENT_NOT_FOUND	-2138759129	/* 0x80852027 */
 #define SCE_BXCE_ERROR_DOM_NOT_FOUND_ERROR		-2138758651	/* 0x80852205 */
@@ -290,6 +295,7 @@ enum {
 
 /* the states a chunk's end can leave the tokenizer in, where the next chunk resumes (values Sony's) */
 enum {
+	BXCE_STATE_DTD = 3,
 	BXCE_STATE_TAG_NAME = 5,
 	BXCE_STATE_ATTRIBUTES = 7,
 	BXCE_STATE_ATTR_NAME = 8,
@@ -297,9 +303,15 @@ enum {
 	BXCE_STATE_ATTR_QUOTE = 10,
 	BXCE_STATE_ATTR_VALUE = 12,
 	BXCE_STATE_ATTR_CLOSE = 13,
+	BXCE_STATE_TAG_CLOSE = 15,
 	BXCE_STATE_END_TAG_NAME = 18,
 	BXCE_STATE_END_TAG_CLOSE = 19,
-	BXCE_STATE_CONTENT = 29
+	BXCE_STATE_CHAR_DATA = 21,
+	BXCE_STATE_COMMENT = 23,
+	BXCE_STATE_PI = 25,
+	BXCE_STATE_CDATA = 27,
+	BXCE_STATE_CONTENT = 29,
+	BXCE_STATE_REFERENCE = 31
 };
 
 /* the token the tokenizer found (the SDK's TokenType values) */
@@ -308,10 +320,15 @@ enum {
 	BXCE_TOKEN_END_TAG = 2,
 	BXCE_TOKEN_CHAR_DATA = 3,
 	BXCE_TOKEN_DTD = 4,
+	BXCE_TOKEN_DTD_END = 5,
 	BXCE_TOKEN_PI = 6,
+	BXCE_TOKEN_PI_END = 7,
 	BXCE_TOKEN_CDATA = 8,
+	BXCE_TOKEN_CDATA_END = 9,
 	BXCE_TOKEN_COMMENT = 10,
+	BXCE_TOKEN_COMMENT_END = 11,
 	BXCE_TOKEN_UNEXPECTED = 12,
+	BXCE_TOKEN_EMPTY = 14,		/* the chunk ended between tokens */
 	BXCE_TOKEN_ENTITY = 15
 };
 
@@ -362,6 +379,26 @@ typedef struct BxceParser {
 	int consumed;
 } BxceParser;
 
+/*
+ * The SAX parser's handler: the SDK's sce::Xml::Sax::DocumentHandler, its strings passed as
+ * pointer and length, with one method more before fatalError and characters with the text's
+ * offset in the document after it.
+ */
+class BxceDocumentHandler {
+public:
+	virtual ~BxceDocumentHandler() = 0;
+	virtual int startDocument(void *userData) = 0;
+	virtual int startElement(void *userData, const char *name, int length, const BxceAttributeList *attrList) = 0;
+	virtual int characters(void *userData, const char *ch, int length) = 0;
+	virtual int endElement(void *userData, const char *name, int length) = 0;
+	virtual int endDocument(void *userData) = 0;
+	virtual int skippedText(void *userData, int tokenType, const char *text, int length) = 0;
+	virtual int entityData(void *userData, int entityType, const char *name, int length) = 0;
+	virtual int reserved(void *userData) = 0;	/* the parser never calls it */
+	virtual void fatalError(void *userData, int errCode) = 0;
+	virtual int charactersWithOffset(void *userData, const char *ch, int length, int offset) = 0;
+};
+
 /* a SAX parser's saved state: the tokenizer's fields that go on, the handler and its user data */
 typedef struct BxceParserState {
 	SceUInt8 skipIgnorableWhiteSpace;
@@ -392,12 +429,21 @@ typedef struct BxceParserState {
 	const char *skippedText;
 	int skippedTextLength;
 	const char *tokenStart;
-	void *handler;
+	BxceDocumentHandler *handler;
 	void *userData;
 	int reserved[5];
 	int consumed;
-	SceUInt8 extendedCharacters;	/* characters go to the handler's method after fatalError */
+	SceUInt8 characterOffsets;
 } BxceParserState;
+
+
+/* the SAX parser: the tokenizer, the user's data and handler */
+typedef struct BxceSaxParser {
+	BxceParser parser;
+	void *userData;
+	BxceDocumentHandler *handler;
+	SceUInt8 characterOffsets;	/* characters are reported with their offset in the document */
+} BxceSaxParser;
 
 /* the text of each predefined entity, by BXCE_REF_* */
 extern const char *g_bxceEntityText[5];
@@ -450,6 +496,15 @@ void ScebXCe_FF7CB737(BxceParser *parser, SceUInt8 resolve);	/* setResolveEntity
 void bxceParserSetResolveAttrEntity(BxceParser *parser, SceUInt8 resolve);
 int bxceParserStateRelease(BxceParserState *state);
 int bxceIsUtf8Bom(const char *s);
+
+/* the SAX parser */
+int bxceSaxParserParseChunk(BxceSaxParser *sax);
+int ScebXCe_C85586BD(BxceSaxParser *sax);		/* initialize */
+int ScebXCe_928189AB(BxceSaxParser *sax);		/* terminate */
+int ScebXCe_9E06C329(BxceSaxParser *sax);		/* reset */
+int ScebXCe_4E9A7061(BxceSaxParser *sax, const char *input, int size, SceUInt8 isFinal);	/* parse */
+int ScebXCe_3CAF2B78(BxceSaxParser *sax);		/* save the parse */
+int ScebXCe_A12B0F90(BxceSaxParser *sax, SceUInt8 slot);	/* restore a saved parse */
 
 /* a node list (the SDK's NodeList): its entries in a doubly linked list */
 typedef struct BxceNodeListEntry {
