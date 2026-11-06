@@ -9,6 +9,13 @@
 #include <std/allocator>
 #include <std/stdlib.h>
 
+/* libpaf's build makes the allocator constructor out of line, as Sony's does */
+#ifdef PAF_LIBRARY_BUILD
+#define PAF_VECTOR_NOINLINE	__attribute__((noinline))
+#else
+#define PAF_VECTOR_NOINLINE
+#endif
+
 namespace paf {
 
 template<class _Ty, class _Ax = allocator<_Ty> >
@@ -91,9 +98,9 @@ public:
 		limit = 0;
 	}
 
-	/* how a vector kept in a global is made: the allocator is not kept; Sony's build calls
-	   it out of line wherever it is used */
-	explicit __attribute__((noinline)) vector(const _Ax &al)
+	/* how a vector kept in a global is made; libpaf's build calls it out of line wherever
+	   it is used */
+	explicit PAF_VECTOR_NOINLINE vector(const _Ax &al) : alloc(al)
 	{
 		ptr = NULL;
 		limit = 0;
@@ -120,6 +127,7 @@ public:
 
 	/* Sony's build calls it out of line */
 	__attribute__((noinline)) vector(size_type size, const _Ty &val, const _Ax &al = _Ax())
+		: alloc(al)
 	{
 		count = 0;
 		limit = 0;
@@ -161,6 +169,11 @@ public:
 
 		limit = other.limit;
 		other.limit = old_limit;
+
+		_Ax old_alloc = alloc;
+
+		alloc = other.alloc;
+		other.alloc = old_alloc;
 	}
 
 	bool reserve(size_type size);
@@ -254,7 +267,7 @@ public:
 };
 
 template<class _Ty, class _Ax>
-vector<_Ty, _Ax>::vector(const _Myt &src)
+vector<_Ty, _Ax>::vector(const _Myt &src) : alloc(src.alloc)
 {
 	count = 0;
 	limit = 0;
