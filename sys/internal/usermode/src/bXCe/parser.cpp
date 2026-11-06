@@ -143,8 +143,8 @@ int bxceSaxParserParseChunk(BxceSaxParser *sax)
 	}
 	if (ret == 0) {
 		if (!parser->isFinal) {
-			parser->status = SCE_BXCE_ERROR_PARSE_SUSPENDED;
-			return SCE_BXCE_ERROR_PARSE_SUSPENDED;
+			parser->status = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
+			return SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 		}
 		if (bxceNameStackIsEmpty(parser->nameStack) == 0) {
 			sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_UNEXPECTED_EOF);
@@ -168,8 +168,8 @@ next:
 				parser->state = BXCE_STATE_TAG_NAME;
 			if (!bxceParserReadStartTag(parser, &parser->elementName, parser->attrList)) {
 				if (!parser->isFinal) {
-					parser->status = SCE_BXCE_ERROR_PARSE_SUSPENDED;
-					return SCE_BXCE_ERROR_PARSE_SUSPENDED;
+					parser->status = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
+					return SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 				}
 				status = parser->status;
 				if (status != 0) {
@@ -187,7 +187,7 @@ next:
 
 			bxceParserSkipSpace(parser);
 			if (parser->position >= parser->size) {
-				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 				if (parser->isFinal) {
 					sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_UNEXPECTED_EOF);
 					result = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
@@ -203,7 +203,7 @@ next:
 						result = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
 					} else {
 						parser->state = BXCE_STATE_TAG_CLOSE;
-						result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+						result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 					}
 					parser->status = result;
 					return result;
@@ -228,8 +228,8 @@ next:
 
 			if (sax->handler->startElement(sax->userData, parser->elementName.data,
 						       parser->elementName.length, parser->attrList) != 0) {
-				sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-				parser->status = SCE_BXCE_ERROR_HANDLER_ABORTED;
+				sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+				parser->status = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 				if (parser->elementName.data != NULL)
 					ScebXCe_EC560647(parser->elementName.data);
 				bxceParserResetBuffer(parser, &parser->elementName);
@@ -253,8 +253,8 @@ next:
 			} else {
 				if (sax->handler->endElement(sax->userData, parser->elementName.data,
 							     parser->elementName.length) != 0) {
-					sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-					parser->status = SCE_BXCE_ERROR_HANDLER_ABORTED;
+					sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+					parser->status = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 					if (parser->elementName.data != NULL)
 						ScebXCe_EC560647(parser->elementName.data);
 					bxceParserResetBuffer(parser, &parser->elementName);
@@ -274,7 +274,7 @@ next:
 			if (parser->state == BXCE_STATE_CONTENT)
 				parser->state = BXCE_STATE_END_TAG_NAME;
 			if (bxceParserReadEndTag(parser) == 0) {
-				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 				if (parser->isFinal) {
 					sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_UNEXPECTED_EOF);
 					result = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
@@ -291,8 +291,8 @@ next:
 			/* the name came from the name stack: its length is the buffer's capacity */
 			if (sax->handler->endElement(sax->userData, parser->elementName.data,
 						     parser->elementName.capacity) != 0) {
-				sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-				parser->status = SCE_BXCE_ERROR_HANDLER_ABORTED;
+				sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+				parser->status = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 			}
 			if (parser->elementName.data != NULL) {
 				ScebXCe_EC560647(parser->elementName.data);
@@ -324,10 +324,10 @@ next:
 				} else {
 					ret = sax->handler->skippedText(sax->userData, BXCE_TOKEN_DTD, parser->skippedText,
 									parser->skippedTextLength);
-					result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+					result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 					if (ret != 0) {
-						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-						result = SCE_BXCE_ERROR_HANDLER_ABORTED;
+						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+						result = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 					}
 				}
 				parser->status = result;
@@ -350,10 +350,10 @@ next:
 				} else {
 					ret = sax->handler->skippedText(sax->userData, BXCE_TOKEN_PI, parser->skippedText,
 									parser->skippedTextLength);
-					result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+					result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 					if (ret != 0) {
-						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-						result = SCE_BXCE_ERROR_HANDLER_ABORTED;
+						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+						result = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 					}
 				}
 				parser->status = result;
@@ -376,10 +376,10 @@ next:
 				} else {
 					ret = sax->handler->skippedText(sax->userData, BXCE_TOKEN_CDATA, parser->skippedText,
 									parser->skippedTextLength);
-					result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+					result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 					if (ret != 0) {
-						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-						result = SCE_BXCE_ERROR_HANDLER_ABORTED;
+						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+						result = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 					}
 				}
 				parser->status = result;
@@ -402,10 +402,10 @@ next:
 				} else {
 					ret = sax->handler->skippedText(sax->userData, BXCE_TOKEN_COMMENT, parser->skippedText,
 									parser->skippedTextLength);
-					result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+					result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 					if (ret != 0) {
-						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-						result = SCE_BXCE_ERROR_HANDLER_ABORTED;
+						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+						result = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 					}
 				}
 				parser->status = result;
@@ -416,8 +416,8 @@ next:
 			if (sax->handler->skippedText(sax->userData, BXCE_TOKEN_COMMENT_END, parser->skippedText,
 						      parser->skippedTextLength) != 0) {
 aborted:
-				sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-				parser->status = SCE_BXCE_ERROR_HANDLER_ABORTED;
+				sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+				parser->status = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 			}
 			break;
 
@@ -458,8 +458,8 @@ failed:
 					else
 						ret = sax->handler->characters(sax->userData, text, 1);
 					if (ret != 0) {
-						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-						parser->status = SCE_BXCE_ERROR_HANDLER_ABORTED;
+						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+						parser->status = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 					}
 					parser->characters.length = 0;
 				} else if (type == BXCE_REF_CHAR) {
@@ -470,21 +470,21 @@ failed:
 						ret = sax->handler->characters(sax->userData, parser->characters.data,
 									       parser->characters.length);
 					if (ret != 0) {
-						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-						parser->status = SCE_BXCE_ERROR_HANDLER_ABORTED;
+						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+						parser->status = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 					}
 					parser->characters.length = 0;
 				} else if (parser->characters.length != 0) {
 					if (sax->handler->entityData(sax->userData, type, parser->characters.data,
 								     parser->characters.length) != 0) {
-						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-						parser->status = SCE_BXCE_ERROR_HANDLER_ABORTED;
+						sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+						parser->status = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 					}
 					parser->characters.length = 0;
 				}
 				break;
 			}
-			result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+			result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 			if (parser->isFinal) {
 				sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_EXPECTED_SEMI_COLON);
 				result = SCE_BXCE_ERROR_XML_EXPECTED_SEMI_COLON;
@@ -509,7 +509,7 @@ failed:
 			parser->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
 		}
 	} else {
-		parser->status = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+		parser->status = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 		if (parser->state != BXCE_STATE_CONTENT)
 			parser->token = BXCE_TOKEN_EMPTY;
 	}
@@ -542,7 +542,7 @@ int ScebXCe_4E9A7061(BxceSaxParser *sax, const char *input, int size, SceUInt8 i
 	int result;
 
 	if (parser->status != 0) {
-		if (parser->status == SCE_BXCE_ERROR_PARSE_SUSPENDED) {
+		if (parser->status == SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS) {
 			parser->status = 0;
 		} else {
 			result = bxceParserReset(parser);
@@ -583,15 +583,15 @@ int ScebXCe_4E9A7061(BxceSaxParser *sax, const char *input, int size, SceUInt8 i
 		}
 		if (sax->handler->endDocument(sax->userData) != 0) {
 aborted:
-			sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_HANDLER_ABORTED);
-			result = SCE_BXCE_ERROR_HANDLER_ABORTED;
-			parser->status = SCE_BXCE_ERROR_HANDLER_ABORTED;
+			sax->handler->fatalError(sax->userData, SCE_BXCE_ERROR_XML_PARSE_ABORTED);
+			result = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
+			parser->status = SCE_BXCE_ERROR_XML_PARSE_ABORTED;
 			goto done;
 		}
 	}
 	result = parser->status;
 done:
-	if (result == SCE_BXCE_ERROR_PARSE_SUSPENDED)
+	if (result == SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS)
 		parser->consumed += parser->size;
 	return result;
 }
@@ -670,8 +670,8 @@ int bxceDocumentBuilderParseChunk(BxceDocumentBuilder *builder)
 	}
 	if (ret == 0) {
 		if (!parser->isFinal) {
-			parser->status = SCE_BXCE_ERROR_PARSE_SUSPENDED;
-			return SCE_BXCE_ERROR_PARSE_SUSPENDED;
+			parser->status = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
+			return SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 		}
 		if (bxceNameStackIsEmpty(parser->nameStack) == 0) {
 			builder->document->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
@@ -701,8 +701,8 @@ next:
 					parser->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
 					return SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
 				}
-				parser->status = SCE_BXCE_ERROR_PARSE_SUSPENDED;
-				return SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				parser->status = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
+				return SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 			}
 			result = parser->status;
 			if (result != 0) {
@@ -712,7 +712,7 @@ next:
 
 			bxceParserSkipSpace(parser);
 			if (parser->position >= parser->size) {
-				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 				if (parser->isFinal) {
 					result = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
 					builder->document->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
@@ -728,7 +728,7 @@ next:
 						builder->document->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
 					} else {
 						parser->state = BXCE_STATE_TAG_CLOSE;
-						result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+						result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 					}
 					parser->status = result;
 					return result;
@@ -789,7 +789,7 @@ next:
 			if (parser->state == BXCE_STATE_CONTENT)
 				parser->state = BXCE_STATE_END_TAG_NAME;
 			if (bxceParserReadEndTag(parser) == 0) {
-				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 				if (parser->isFinal) {
 					result = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
 					builder->document->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
@@ -834,7 +834,7 @@ next:
 			parser->state = BXCE_STATE_DTD;
 			if (bxceParserScanDoctype(parser, &parser->skippedText, &parser->skippedTextLength,
 						  &parser->terminator) == 0) {
-				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 				doc = builder->document;
 				if (parser->isFinal) {
 					result = SCE_BXCE_ERROR_XML_END_OF_DTD_NOT_FOUND;
@@ -881,7 +881,7 @@ next:
 			parser->state = BXCE_STATE_PI;
 			if (bxceParserScanUntil(parser, &parser->skippedText, &parser->skippedTextLength, piEnd,
 						&parser->terminatorMatched, 2) == 0) {
-				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 				if (parser->isFinal) {
 					result = SCE_BXCE_ERROR_XML_INVALID_PI;
 					builder->document->status = SCE_BXCE_ERROR_XML_INVALID_PI;
@@ -934,7 +934,7 @@ next:
 			parser->state = BXCE_STATE_CDATA;
 			if (bxceParserScanUntil(parser, &parser->skippedText, &parser->skippedTextLength, cdataEnd,
 						&parser->terminatorMatched, 3) == 0) {
-				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 				doc = builder->document;
 				if (parser->isFinal) {
 					result = SCE_BXCE_ERROR_XML_END_OF_CDSECT_NOT_FOUND;
@@ -998,7 +998,7 @@ next:
 			parser->state = BXCE_STATE_COMMENT;
 			if (bxceParserScanUntil(parser, &parser->skippedText, &parser->skippedTextLength, commentEnd,
 						&parser->terminatorMatched, 3) == 0) {
-				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				result = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 				doc = builder->document;
 				if (parser->isFinal) {
 					result = SCE_BXCE_ERROR_XML_END_OF_COMMENT_NOT_FOUND;
@@ -1040,8 +1040,8 @@ next:
 					parser->status = SCE_BXCE_ERROR_XML_EXPECTED_SEMI_COLON;
 					return SCE_BXCE_ERROR_XML_EXPECTED_SEMI_COLON;
 				}
-				parser->status = SCE_BXCE_ERROR_PARSE_SUSPENDED;
-				return SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				parser->status = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
+				return SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 			}
 			result = parser->status;
 			if (result != 0) {
@@ -1112,7 +1112,7 @@ next:
 			parser->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
 		}
 	} else {
-		parser->status = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+		parser->status = SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS;
 		if (parser->state != BXCE_STATE_CONTENT)
 			parser->token = BXCE_TOKEN_EMPTY;
 	}
@@ -1196,7 +1196,7 @@ int ScebXCe_BC0D9A6B(BxceDocumentBuilder *builder, const char *input, int size, 
 	int result;
 
 	if (parser->status != 0) {
-		if (parser->status == SCE_BXCE_ERROR_PARSE_SUSPENDED) {
+		if (parser->status == SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS) {
 			parser->status = 0;
 		} else {
 			result = bxceDocumentBuilderReset(builder);

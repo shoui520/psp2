@@ -28,8 +28,8 @@ extern "C" {
 #define SCE_BXCE_ERROR_XML_UNEXPECTED_EOF		-2138759158	/* 0x8085200A */
 #define SCE_BXCE_ERROR_XML_INVALID_DOCUMENT_ELEMENT	-2138759130	/* 0x80852026 */
 /* results the result-name table does not name (names ours) */
-#define SCE_BXCE_ERROR_PARSE_SUSPENDED			-2138758912	/* 0x80852100 */
-#define SCE_BXCE_ERROR_HANDLER_ABORTED			-2138758911	/* 0x80852101 */
+#define SCE_BXCE_ERROR_XML_PARSE_IN_PROGRESS			-2138758912	/* 0x80852100 */
+#define SCE_BXCE_ERROR_XML_PARSE_ABORTED			-2138758911	/* 0x80852101 */
 #define SCE_BXCE_ERROR_INVALID_CHARACTER		-2138757888	/* 0x80852500 */
 #define SCE_BXCE_ERROR_INVALID_DECIMAL			-2138757886	/* 0x80852502 */
 #define SCE_BXCE_ERROR_INVALID_HEXADECIMAL		-2138757885	/* 0x80852503 */
@@ -53,6 +53,9 @@ extern "C" {
 #define SCE_BXCE_ERROR_DOM_MAX_UNIQUE_ATTR_ERROR		-2138758643	/* 0x8085220D */
 #define SCE_BXCE_ERROR_DOM_ENITITY_ERROR		-2138758642	/* 0x8085220E */
 #define SCE_BXCE_ERROR_EXCEED_LIMIT			-2138758640	/* 0x80852210 */
+
+/* what the C++ interface returns: the table's values (bxceConvertResult) */
+#define SCE_BXCE_RESULT_NOT_INITIALIZED			-2138763263	/* 0x80851001 */
 
 /* the most attributes of a DOM element, the longest attribute name, the most unique names */
 #define BXCE_DOM_ATTR_MAX		128
@@ -657,8 +660,233 @@ SceUInt32 bxceDocumentAddSkipped(BxceDocument *doc, const char *text, SceUInt32 
 int bxceDocumentExtendText(BxceDocument *doc, SceUInt32 text, const char *more, SceUInt32 length);
 int bxceDocumentFlushAttributes(BxceDocument *doc);
 
+/* the library's reference count, the allocator its objects come from, the public results */
+int bxceLibraryAddRef(void);
+void bxceLibraryRelease(void);
+void *bxceAllocate(SceSize size);
+void bxceDeallocate(void *ptr);
+int bxceConvertResult(int result);
+
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef __cplusplus
+/*
+ * The C++ interface: the SDK's sce::Xml::Dom classes as interface objects over implementation
+ * objects (Document over DocumentImpl, ...), each with a virtual destructor. The
+ * implementation objects come from the library's allocator; the interface objects from paf's
+ * operator new. Class and method names are the SDK's where the methods line up with its
+ * headers, else ours.
+ */
+namespace bXCe {
+
+/* what the implementation objects derive from: their allocator */
+class Object {
+public:
+	virtual ~Object() {}
+
+	static void *operator new(size_t size) throw() { return bxceAllocate(size); }
+	static void operator delete(void *ptr) { bxceDeallocate(ptr); }
+};
+
+namespace Dom {
+
+class Document;
+class NodeList;
+
+class DocumentImpl : public Object {
+public:
+	DocumentImpl(int reserved);
+	DocumentImpl(const DocumentImpl &src);
+	DocumentImpl(const DocumentImpl *src);
+	DocumentImpl(BxceDocument *doc);
+	~DocumentImpl();
+
+	int initialize(const void *init, bool isDom);
+	int terminate();
+	BxceNodeId getDocRoot() const;
+	BxceNodeId getRoot() const;
+	BxceNodeId getFirstChild(BxceNodeId node) const;
+	BxceNodeId getSibling(BxceNodeId node) const;
+	const char *getNodeName(BxceNodeId node) const;
+	const char *getText(BxceNodeId node) const;
+	BxceNodeId getFirstAttr(BxceNodeId node) const;
+	const char *getAttrName(BxceNodeId node) const;
+	const char *getAttrValue(BxceNodeId attr) const;
+	BxceNodeId getNextAttr(BxceNodeId node) const;
+	BxceNodeId getParent(BxceNodeId node) const;
+	const char *getSkippedText(BxceNodeId node) const;
+	int getEntityType(BxceNodeId node) const;
+	const char *getEntityName(BxceNodeId node) const;
+	int getNodeType(BxceNodeId node) const;
+	NodeList *getElementsByTagName(BxceNodeId node, const char *name) const;
+	BxceNodeId addElementChild(BxceNodeId parent, const char *name,
+				   const BxceAttributeList *attrs, const char *text,
+				   SceUInt32 textLength);
+	BxceNodeId insertNode(BxceNodeId parent, BxceNodeId after, BxceNodeId child);
+	BxceNodeId createTextNode(const char *text, SceUInt32 length);
+	BxceNodeId removeChild(BxceNodeId child, BxceNodeId parent);
+	BxceNodeId importNode(BxceNodeId parent, BxceNodeId after, const BxceDocument *src,
+			      BxceNodeId node);
+	int setAttributeList(BxceNodeId node, const char *name, const char *value,
+			     SceUInt32 length);
+	BxceNodeList *getChildNodes(BxceNodeId node) const;
+	const char *getAttribute(BxceNodeId node, const char *name) const;
+
+	char reserved[0x460];		/* nothing reads or writes them, but a copy */
+	BxceDocument *document;
+	bool isReference;		/* another object owns the document */
+};
+
+class Document {
+public:
+	Document();
+	Document(const Document &src);
+	Document(const DocumentImpl *src);
+	virtual ~Document();
+
+	Document &operator=(const DocumentImpl *src);
+
+	int initialize(const void *init);
+	int terminate();
+	BxceNodeId getDocRoot() const;
+	BxceNodeId getRoot() const;
+	BxceNodeId getFirstChild(BxceNodeId node) const;
+	BxceNodeId getSibling(BxceNodeId node) const;
+	const char *getNodeName(BxceNodeId node) const;
+	const char *getText(BxceNodeId node) const;
+	BxceNodeId getFirstAttr(BxceNodeId node) const;
+	const char *getAttrName(BxceNodeId node) const;
+	const char *getAttrValue(BxceNodeId attr) const;
+	BxceNodeId getNextAttr(BxceNodeId node) const;
+	BxceNodeId getParent(BxceNodeId node) const;
+	const char *getSkippedText(BxceNodeId node) const;
+	int getEntityType(BxceNodeId node) const;
+	int getEntity() const;
+	int getXmlMeta() const;
+	int reserved1() const;
+	int reserved2() const;
+	int reserved3() const;
+	int reserved4() const;
+	const char *getEntityName(BxceNodeId node) const;
+	int reserved5() const;
+	int reserved6() const;
+	int reserved7() const;
+	int reserved8() const;
+	int getNodeType(BxceNodeId node) const;
+	NodeList *getElementsByTagName(BxceNodeId node, const char *name) const;
+	int getStatus() const;
+	void resetStatus();
+	int isReadOnly() const;
+	BxceNodeId addElementChild(BxceNodeId parent, const char *name,
+				   const BxceAttributeList *attrs, const char *text,
+				   SceUInt32 textLength);
+	int createElement();
+	BxceNodeId insertNode(BxceNodeId parent, BxceNodeId after, BxceNodeId child);
+	BxceNodeId createTextNode(const char *text, SceUInt32 length);
+	void recurseDelete();
+	BxceNodeId removeChild(BxceNodeId child, BxceNodeId parent);
+	int importParent();
+	BxceNodeId importNode(BxceNodeId parent, BxceNodeId after, const BxceDocument *src,
+			      BxceNodeId node);
+	int setText();
+	int setAttrValue();
+	int setAttribute();
+	int setAttributeList(BxceNodeId node, const char *name, const char *value,
+			     SceUInt32 length);
+	int removeAttribute();
+	int removeAttributes();
+	int reserved9();
+	BxceNodeList *getChildNodes(BxceNodeId node) const;
+	int getLastChild() const;
+	int hasChildNodes() const;
+	int hasAttributes() const;
+	const char *getAttribute(BxceNodeId node, const char *name) const;
+	int getAttributes() const;
+
+	char reserved[0x460];		/* nothing reads or writes them */
+	DocumentImpl *impl;
+};
+
+class DocumentBuilderImpl : public Object {
+public:
+	DocumentBuilderImpl(int reserved);
+	~DocumentBuilderImpl();
+
+	int initialize();
+	int terminate();
+	int parse(const char *input, int size, bool isFinal);
+	DocumentImpl *getDocument();
+	void setSkipIgnorableWhiteSpace(bool isSkipped);
+	void setResolveEntity(bool isResolved);
+	int setSkipIgnorableText(bool isSkipped);
+
+	BxceDocumentBuilder *builder;
+	DocumentImpl *document;		/* the document parsed, once asked for */
+};
+
+class DocumentBuilder {
+public:
+	DocumentBuilder();
+	virtual ~DocumentBuilder();
+
+	int initialize();
+	int terminate();
+	int parse(const char *input, int size, bool isFinal);
+	DocumentImpl *getDocument();
+	void setSkipIgnorableWhiteSpace(bool isSkipped);
+	void setResolveEntity(bool isResolved);
+	int setSkipIgnorableText(bool isSkipped);
+
+	DocumentBuilderImpl *impl;
+};
+
+class NodeListImpl : public Object {
+public:
+	NodeListImpl();
+	NodeListImpl(BxceNodeList *list);
+	~NodeListImpl();
+
+	int initialize(const Document *doc);
+	int terminate();
+	BxceNodeId insertFirst(BxceNodeId node);
+	BxceNodeId insertLast(BxceNodeId node);
+	BxceNodeId removeItem(BxceNodeId node);
+	BxceNodeId findItem(const char *name) const;
+	BxceNodeId findItem(BxceNodeId node) const;
+	int getLength() const;
+	BxceNodeId item(SceUInt32 index) const;
+
+	const Document *doc;		/* what clear() initializes the list for again */
+	int reserved[3];		/* nothing reads or writes them */
+	BxceNodeList *list;
+	bool isReference;		/* another object owns the list */
+};
+
+class NodeList {
+public:
+	NodeList();
+	NodeList(BxceNodeList *list);
+	virtual ~NodeList();
+
+	int initialize(const Document *doc);
+	int terminate();
+	void clear();
+	int getLength() const;
+	BxceNodeId insertFirst(BxceNodeId node);
+	BxceNodeId insertLast(BxceNodeId node);
+	BxceNodeId removeItem(BxceNodeId node);
+	BxceNodeId item(SceUInt32 index) const;
+	BxceNodeId operator[](SceUInt32 index) const;
+	BxceNodeId findItem(const char *name) const;
+	BxceNodeId findItem(BxceNodeId node) const;
+
+	NodeListImpl *impl;
+};
+
+} /* namespace Dom */
+} /* namespace bXCe */
 #endif
 
 #endif /* _BXCE_INTERNAL_H */
