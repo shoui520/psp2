@@ -249,8 +249,13 @@ typedef struct BxceNodeList {
 } BxceNodeList;
 
 BxceNodeList *bxceNodeListInitialize(BxceNodeList *list, const BxceDocument *doc);
-BxceNodeId bxceNodeListAppend(BxceNodeList *list, BxceNodeId node);
-int ScebXCe_1F59F0C4(BxceNodeList *list);
+void ScebXCe_1F59F0C4(BxceNodeList *list);			/* clear */
+BxceNodeId bxceNodeListInsertFirst(BxceNodeList *list, BxceNodeId node);
+BxceNodeId bxceNodeListInsertLast(BxceNodeList *list, BxceNodeId node);
+BxceNodeId bxceNodeListRemoveItem(BxceNodeList *list, BxceNodeId node);
+BxceNodeId bxceNodeListFindItemByName(const BxceNodeList *list, const char *name);
+BxceNodeId bxceNodeListFindItem(const BxceNodeList *list, BxceNodeId node);
+BxceNodeId ScebXCe_6C46D786(const BxceNodeList *list, SceUInt32 index);	/* item */
 
 /* the name hash tables */
 void *bxceNameHashInitialize(BxceNameHash *hash);

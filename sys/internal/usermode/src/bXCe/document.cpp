@@ -397,7 +397,7 @@ BxceNodeList *bxceGetElementsByTagName(const BxceDocument *doc, BxceNodeId node,
 		nodeName = ScebXCe_1189A2B1(doc, node);
 		if ((nodeName != NULL && bxceStrncmpTag(nodeName, name, BXCE_ATTR_STRING_MAX) == 0) ||
 		    bxceStrncmpTag(name, "*", BXCE_ATTR_STRING_MAX) == 0)
-			bxceNodeListAppend(list, node);
+			bxceNodeListInsertLast(list, node);
 	}
 
 	for (child = ScebXCe_FEA6E4A1(doc, node); child != 0;
@@ -2010,7 +2010,7 @@ BxceNodeList *ScebXCe_2B9B57AE(const BxceDocument *doc, BxceNodeId node)
 
 	bxceNodeListInitialize(list, doc);
 	for (child = ScebXCe_FEA6E4A1(doc, node); child != 0; child = ScebXCe_6FC9DC3F(doc, child))
-		bxceNodeListAppend(list, child);
+		bxceNodeListInsertLast(list, child);
 	return list;
 }
 
