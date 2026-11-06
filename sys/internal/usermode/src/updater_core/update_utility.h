@@ -1,4 +1,8 @@
-/* UpdateUtility (update_utility.cpp): the update mode, the device and power. The class name is ours. */
+/*
+ * UpdateUtility (Sony's update_utility.cpp): the console's information, the update mode and
+ * the result the update leaves for the next boot, power control, and the console checks the
+ * update makes before it starts. The class and method names are ours.
+ */
 #ifndef UPDATER_CORE_UPDATE_UTILITY_H
 #define UPDATER_CORE_UPDATE_UTILITY_H
 
@@ -18,6 +22,10 @@ public:
 	int UpdateModeGetLastError(int *error);
 	int PowerControl(int operation, int flags);
 	static int CheckDeviceStatus(void);
+
+private:
+	void getResultFilePath(char *path, SceSize size);
+	int convertErrorCodePowerControl(int operation, int error);
 };
 
 #endif

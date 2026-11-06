@@ -315,10 +315,10 @@ int PupController::IsApplicablePup(const char *fileName)
 		}
 	} else {
 		ret = utility.GetDeviceInfo(&deviceInfo);
-		if (ret == 0 && deviceInfo.deviceType == SCE_UPDATER_DEVICE_TYPE_CEX &&
-		    deviceInfo.qaPupOnly != 0) {
+		if (ret == 0 && deviceInfo.m_target == SCE_UPDATER_DEVICE_TYPE_CEX &&
+		    deviceInfo.m_qaf != 0) {
 			ret = GetPupInformation(fileName, &information);
-			if (ret == 0 && (SceUInt32)information.version < deviceInfo.systemVersion)
+			if (ret == 0 && (SceUInt32)information.version < deviceInfo.m_version)
 				ret = SCE_SBL_US_ERROR_BAD_VERSION;
 		}
 	}

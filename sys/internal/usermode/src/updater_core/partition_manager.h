@@ -9,6 +9,7 @@ public:
 
 	const char *GetWorkingDirectory(void);
 	int PartitionSetUp(void);
+	const char *GetUpdaterPath(void);
 	int CleanUp(void);
 	const char *GetPupPath(void);
 };

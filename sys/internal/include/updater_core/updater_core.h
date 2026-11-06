@@ -36,10 +36,14 @@ typedef struct SceUpdaterMemoryInfo {
 #define SCE_UPDATER_ERROR_CHANNEL_EMPTY		0x8018000c
 #define SCE_UPDATER_ERROR_LOG_OPEN		0x80180011
 #define SCE_UPDATER_ERROR_PUP_OPEN		0x80180012
+#define SCE_UPDATER_ERROR_RESULT_OPEN		0x80180013
 #define SCE_UPDATER_ERROR_LOG_CLOSE		0x80180021
 #define SCE_UPDATER_ERROR_PUP_CLOSE		0x80180022
+#define SCE_UPDATER_ERROR_RESULT_CLOSE		0x80180023
 #define SCE_UPDATER_ERROR_PUP_READ		0x80180032
+#define SCE_UPDATER_ERROR_RESULT_READ		0x80180033
 #define SCE_UPDATER_ERROR_LOG_WRITE		0x80180041
+#define SCE_UPDATER_ERROR_RESULT_WRITE		0x80180043
 #define SCE_UPDATER_ERROR_PUP_SEEK		0x80180052
 #define SCE_UPDATER_ERROR_PUP_NOT_FOUND		0x8018010a
 #define SCE_UPDATER_ERROR_PUP_AUTH		0x8018010d
@@ -110,11 +114,12 @@ typedef struct SceUpdaterPupInformation {
 #define SCE_UPDATER_DEVICE_TYPE_DEVELOPMENT	1
 #define SCE_UPDATER_DEVICE_TYPE_CEX		2
 
+/* Sony's field names (0.990's cui_updater prints them) */
 typedef struct SceUpdaterDeviceInfo {
-	SceUInt32 systemVersion;	/* the installed system's */
-	SceUInt32 reserved;
-	SceUInt32 qaPupOnly;		/* only a QA-approved PUP may be installed */
-	SceUInt32 deviceType;
+	SceUInt32 m_version;		/* the installed system's */
+	SceUInt32 m_buildno;		/* left 0 */
+	SceUInt32 m_qaf;		/* only a QA-approved PUP may be installed */
+	SceUInt32 m_target;		/* SCE_UPDATER_DEVICE_TYPE_* */
 } SceUpdaterDeviceInfo;
 
 /* the update's progress (0x40 bytes), which sceUpdaterSetProgressCallback's callback gets */

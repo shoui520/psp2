@@ -1,7 +1,7 @@
 /*
- * The segment analysis behind sceUpdaterIsSegmentAvailable (the file name is ours): each call
- * gets the next piece of a PUP being downloaded. The first piece holds the header; the
- * segment table's entries are read across pieces until the one of the segment waited for,
+ * The segment analysis behind sceUpdaterIsSegmentAvailable (Sony's segment_analysis.cpp):
+ * each call gets the next piece of a PUP being downloaded. The first piece holds the header;
+ * the segment table's entries are read across pieces until the one of the segment waited for,
  * and the segment is available once the bytes seen reach its end.
  */
 #include <stddef.h>

@@ -49,6 +49,11 @@ int PartitionManager::PartitionSetUp(void)
 	return 0;
 }
 
+const char *PartitionManager::GetUpdaterPath(void)
+{
+	return UPDATE_UPDATER_PATH;
+}
+
 const char *PartitionManager::GetPupPath(void)
 {
 	return UPDATE_PUP_PATH;

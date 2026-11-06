@@ -26,6 +26,7 @@ typedef struct SceSblUsSpkgInfo {
 
 /* the package types sceSblUsGetSpkgInfo takes (the name ours) */
 #define SCE_SBL_US_SPKG_TYPE_SYSTEM	1
+#define SCE_SBL_US_SPKG_TYPE_MANUFACTURING	23	/* the manufacturing image (cui_setupper's message) */
 
 /* the update service's errors (the names ours, after ss_mgr's for the same codes) */
 #define SCE_SBL_US_ERROR_NOT_PERMITTED		((int)0x800f0201)
@@ -53,12 +54,18 @@ int _sceSblUsVerifyPup(const char *path);
 int _sceSblUsVerifyPupHeader(const char *path);
 int _sceSblUsVerifyPupSegmentById(const char *path, SceUInt64 segmentId);
 int _sceSblUsGetSpkgInfo(int packageType, SceSblUsSpkgInfo *info);
+int _sceSblUsGetUpdateMode(SceUInt8 *mode);
+int _sceSblUsSetUpdateMode(SceUInt8 mode);
+int _sceSblUsPowerControl(int operation, int flags);
 
 /* the stub library's wrappers */
 int sceSblUsVerifyPup(const char *path);
 int sceSblUsVerifyPupHeader(const char *path);
 int sceSblUsVerifyPupSegmentById(const char *path, SceUInt64 segmentId);
 int sceSblUsGetSpkgInfo(int packageType, SceSblUsSpkgInfo *info);
+int sceSblUsGetUpdateMode(SceUInt8 *mode);
+int sceSblUsSetUpdateMode(SceUInt8 mode);
+int sceSblUsPowerControl(int operation, int flags);
 int sceSblUsInformUpdateStarted(int number1, int number2, const char *str, SceSize len);
 int sceSblUsInformUpdateOngoing(int number1, int number2);
 int sceSblUsInformUpdateFinished(int number, const char *str, SceSize len);
