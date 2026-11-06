@@ -30,6 +30,15 @@
 
 namespace dbutil {
 
+/* DCN_METHOD_POST_EVENT's first input; the database and table names follow it */
+struct DCNEventHeader {
+	SceUID processId;
+	SceBool local;
+	Connection *source;
+	int type;
+	SceInt64 rowid;
+};
+
 class DCNClient {
 public:
 	/* DCNClient::Initialize's parameters */

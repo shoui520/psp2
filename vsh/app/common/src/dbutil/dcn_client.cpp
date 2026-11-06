@@ -19,8 +19,8 @@ static __attribute__((noinline)) int PostEvent(IPMI::Client *client, SceUID proc
 static __attribute__((noinline)) int GetEvent(IPMI::Client *client, SceUID *processId,
 					      SceBool *local, Connection **source, int *type,
 					      SceInt64 *rowid, SceSize databaseSize,
-					      SceBool *hasDatabase, char *database,
-					      SceSize tableSize, SceBool *hasTable, char *table);
+					      SceSize *databaseLength, char *database,
+					      SceSize tableSize, SceSize *tableLength, char *table);
 static __attribute__((noinline)) int StopClient(IPMI::Client *client);
 
 DCNClient *DCNClient::s_instance;
@@ -223,17 +223,17 @@ void DCNClient::ClientThread::EntryFunction()
 			break;
 		if (pattern & DCN_EVENT_PENDING) {
 			Event event(0);
-			SceBool hasDatabase = 0;
-			SceBool hasTable = 0;
+			SceSize databaseLength = 0;
+			SceSize tableLength = 0;
 			char table[128];
 			char database[512];
 
 			if (GetEvent(s_instance->m_client, &event.processId, &event.local,
 				     &event.source, &event.type, &event.rowid, sizeof(database),
-				     &hasDatabase, database, sizeof(table), &hasTable, table) == 0) {
-				if (hasDatabase)
+				     &databaseLength, database, sizeof(table), &tableLength, table) == 0) {
+				if (databaseLength)
 					event.database = database;
-				if (hasTable)
+				if (tableLength)
 					event.table = table;
 				Broadcast(&event);
 			}
@@ -259,13 +259,7 @@ static inline SceSize StringSize(const char *str)
 static int PostEvent(IPMI::Client *client, SceUID processId, SceBool local, Connection *source,
 		     int type, SceInt64 rowid, const char *database, const char *table)
 {
-	struct {
-		SceUID processId;
-		SceBool local;
-		Connection *source;
-		int type;
-		SceInt64 rowid;
-	} header;
+	DCNEventHeader header;
 	IPMI::DataInfo in[3];
 	int result = 0;
 	int ret;
@@ -287,10 +281,10 @@ static int PostEvent(IPMI::Client *client, SceUID processId, SceBool local, Conn
 	return ret;
 }
 
-/* each field into its own buffer; the names only where their flags say */
+/* each field into its own buffer, each name with its size (0 for none) */
 static int GetEvent(IPMI::Client *client, SceUID *processId, SceBool *local,
 		    Connection **source, int *type, SceInt64 *rowid, SceSize databaseSize,
-		    SceBool *hasDatabase, char *database, SceSize tableSize, SceBool *hasTable,
+		    SceSize *databaseLength, char *database, SceSize tableSize, SceSize *tableLength,
 		    char *table)
 {
 	int result = 0;
@@ -312,13 +306,13 @@ static int GetEvent(IPMI::Client *client, SceUID *processId, SceBool *local,
 	out[4].pBuffer = rowid;
 	out[4].bufferSize = sizeof(*rowid);
 	sizes[0] = databaseSize;
-	out[5].pBuffer = hasDatabase;
-	out[5].bufferSize = sizeof(*hasDatabase);
+	out[5].pBuffer = databaseLength;
+	out[5].bufferSize = sizeof(*databaseLength);
 	out[6].pBuffer = database;
 	out[6].bufferSize = databaseSize;
 	sizes[1] = tableSize;
-	out[7].pBuffer = hasTable;
-	out[7].bufferSize = sizeof(*hasTable);
+	out[7].pBuffer = tableLength;
+	out[7].bufferSize = sizeof(*tableLength);
 	out[8].pBuffer = table;
 	out[8].bufferSize = tableSize;
 	ret = client->invokeSyncMethod(DCN_METHOD_GET_EVENT, &in, 1, &result, out, 9);
@@ -337,6 +331,30 @@ static int StopClient(IPMI::Client *client)
 	if (ret == 0)
 		ret = result;
 	return ret;
+}
+
+/* hands an event to the handler for its type */
+void EventListener::OnEvent(Event *event)
+{
+	switch (event->type) {
+	case DBUTIL_EVENT_COMMIT:
+		OnCommit(event);
+		break;
+	case DBUTIL_EVENT_ROLLBACK:
+		OnRollback(event);
+		break;
+	case DBUTIL_EVENT_UPDATE:
+	case DBUTIL_EVENT_INSERT:
+	case DBUTIL_EVENT_DELETE:
+		OnChange(event->type, &event->database, &event->table, event->rowid);
+		break;
+	case DBUTIL_EVENT_OVERFLOW:
+		OnOverflow(event);
+		break;
+	case DBUTIL_EVENT_CLOSE:
+		OnClose(event);
+		break;
+	}
 }
 
 }

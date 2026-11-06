@@ -32,6 +32,8 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	collator_turkish.cpp
 	connection.cpp
 	dcn_client.cpp
+	dcn_server.cpp
+	dcn_server_stub.cpp
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/contrib/sqlite-3.7.6.3" "${PSP2_SRC}/vsh/lowlayer/src")
@@ -39,3 +41,5 @@ target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include"
 # table map's find: the budget that gives both
 set_source_files_properties(connection.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(dcn_client.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
+set_source_files_properties(dcn_server.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
+set_source_files_properties(dcn_server_stub.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)

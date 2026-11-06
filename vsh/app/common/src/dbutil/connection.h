@@ -128,6 +128,13 @@ struct Event {
 	{
 	}
 
+	Event(SceUID processId, SceBool local, Connection *source, int type, const char *database,
+	      const char *table, SceInt64 rowid)
+		: processId(processId), local(local), source(source), type(type), database(database),
+		  table(table), rowid(rowid)
+	{
+	}
+
 	SceUID processId;		/* the process that posted it (the DCN client's) */
 	SceBool local;			/* no file database: only the source connection is told */
 	Connection *source;
