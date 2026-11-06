@@ -1048,3 +1048,192 @@ int bxceParserReadToken(BxceParser *parser)
 		return bxceParserReadToken(parser);
 	return 1;
 }
+
+/* the tokens content may hold */
+static inline int bxceIsContentToken(int token)
+{
+	switch (token) {
+	case BXCE_TOKEN_START_TAG:
+	case BXCE_TOKEN_CHAR_DATA:
+	case BXCE_TOKEN_PI:
+	case BXCE_TOKEN_CDATA:
+	case BXCE_TOKEN_COMMENT:
+	case BXCE_TOKEN_ENTITY:
+		return 1;
+	default:
+		return token == BXCE_TOKEN_END_TAG;
+	}
+}
+
+/* whether the token may follow the last one: the prolog before the document element, content in it */
+int bxceParserTokenAllowed(BxceParser *parser)
+{
+	int last = parser->lastToken;
+	int token;
+
+	if (parser->documentElementSeen) {
+		if (last == BXCE_TOKEN_START_TAG)
+			return bxceIsContentToken(parser->token);
+		if (last == BXCE_TOKEN_END_TAG) {
+			if (bxceNameStackIsEmpty(parser->nameStack)) {
+				if (parser->state != BXCE_STATE_CONTENT)
+					return 1;
+				token = parser->token;
+				return token == BXCE_TOKEN_PI || token == BXCE_TOKEN_COMMENT;
+			}
+			return bxceIsContentToken(parser->token);
+		}
+		if (bxceIsContentToken(last))
+			return bxceIsContentToken(parser->token);
+		return 0;
+	}
+
+	switch (last) {
+	case 0:
+		switch (parser->token) {
+		case BXCE_TOKEN_START_TAG:
+		case BXCE_TOKEN_DTD:
+		case BXCE_TOKEN_PI:
+		case BXCE_TOKEN_COMMENT:
+			return 1;
+		default:
+			return 0;
+		}
+	case BXCE_TOKEN_DTD:
+		token = parser->token;
+		return token == BXCE_TOKEN_COMMENT || token == BXCE_TOKEN_PI ||
+		       token == BXCE_TOKEN_START_TAG;
+	case BXCE_TOKEN_PI:
+	case BXCE_TOKEN_COMMENT:
+		switch (parser->token) {
+		case BXCE_TOKEN_START_TAG:
+		case BXCE_TOKEN_DTD:
+		case BXCE_TOKEN_PI:
+		case BXCE_TOKEN_COMMENT:
+			return 1;
+		default:
+			return 0;
+		}
+	default:
+		return 0;
+	}
+}
+
+/* a DOCTYPE's text up to its '>', an internal subset's "[...]" passed over: 1 when it ended, 0 at the chunk's end */
+int bxceParserScanDoctype(BxceParser *parser, const char **text, int *length, char *terminator)
+{
+	int start = parser->position;
+
+	*text = parser->input + start;
+	while (parser->position < parser->size) {
+		if (parser->input[parser->position] == '[')
+			*terminator = ']';
+		else if (parser->input[parser->position] == ']')
+			*terminator = '>';
+		if (parser->input[parser->position] == *terminator) {
+			parser->position++;
+			*length = parser->position - start;
+			return 1;
+		}
+		parser->position++;
+	}
+
+	*length = parser->position - start;
+	return 0;
+}
+
+/*
+ * Text up to and with a terminator ("-->", "?>", "]]>"), matched across chunks: matched counts
+ * its bytes seen, the terminator window keeps the bytes that may start it. 1 when it ended.
+ */
+int bxceParserScanUntil(BxceParser *parser, const char **text, int *length, const char *terminator,
+			int *matched, int terminatorLength)
+{
+	int position = parser->position;
+	int end = parser->size;
+	int start = position;
+
+	*text = parser->input + position;
+	if (position < end) {
+		do {
+			const char *input = parser->input;
+			char c = input[position];
+
+			if (c == terminator[*matched]) {
+				(*matched)++;
+				if (*matched == terminatorLength) {
+					position = parser->position + 1;
+					parser->position = position;
+					*length = position - start;
+					parser->terminatorWindow.length = 0;
+					return 1;
+				}
+				parser->terminatorWindow.data[parser->terminatorWindow.length] =
+					input[parser->position];
+				parser->terminatorWindow.length++;
+			} else {
+				int windowLength;
+
+				parser->terminatorWindow.data[parser->terminatorWindow.length] = c;
+				windowLength = ++parser->terminatorWindow.length;
+				if (*matched <= windowLength) {
+					char *tail = parser->terminatorWindow.data + windowLength - *matched;
+
+					if (bxceMemcmp(tail, terminator, *matched) == 0) {
+						/* Sony's code moves the whole window's length */
+						if (*matched != 0)
+							bxceMemmove(parser->terminatorWindow.data, tail,
+								    parser->terminatorWindow.length);
+						parser->terminatorWindow.length = *matched;
+					} else {
+						*matched = 0;
+					}
+				}
+			}
+			position = parser->position + 1;
+			parser->position = position;
+		} while (position < parser->size);
+	}
+
+	*length = position - start;
+	return 0;
+}
+
+/* an entity reference's name up to ';' into the buffer: 1 when it ended or out of memory, 0 at the chunk's end */
+int bxceParserReadReference(BxceParser *parser, BxceBuffer *name)
+{
+	int position = parser->position;
+
+	if (position >= parser->size)
+		return 0;
+
+	for (;;) {
+		const char *input = parser->input;
+		int length;
+
+		if (input[position] == ';') {
+			parser->position = position + 1;
+			name->data[name->length] = 0;
+			return 1;
+		}
+		length = name->length;
+		if (name->capacity <= length) {
+			int ret = bxceBufferGrow(&name->data, &name->capacity, 0);
+
+			input = parser->input;
+			position = parser->position;
+			length = name->length;
+			if (ret != 0)
+				break;
+		}
+		name->data[length] = input[position];
+		name->length++;
+		position = parser->position + 1;
+		parser->position = position;
+		if (position >= parser->size)
+			return 0;
+	}
+
+	parser->status = SCE_BXCE_ERROR_NO_MEMORY;
+	return 1;
+}

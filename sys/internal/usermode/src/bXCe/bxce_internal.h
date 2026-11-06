@@ -388,6 +388,11 @@ int bxceParserScanText(BxceParser *parser, const char **text, int *length);
 int bxceParserReadEndTag(BxceParser *parser);
 int bxceParserReadMarkup(BxceParser *parser);
 int bxceParserReadToken(BxceParser *parser);
+int bxceParserTokenAllowed(BxceParser *parser);
+int bxceParserScanDoctype(BxceParser *parser, const char **text, int *length, char *terminator);
+int bxceParserScanUntil(BxceParser *parser, const char **text, int *length, const char *terminator,
+			int *matched, int terminatorLength);
+int bxceParserReadReference(BxceParser *parser, BxceBuffer *name);
 
 /* a node list (the SDK's NodeList): its entries in a doubly linked list */
 typedef struct BxceNodeListEntry {
