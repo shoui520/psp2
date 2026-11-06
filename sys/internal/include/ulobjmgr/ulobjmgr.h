@@ -55,6 +55,12 @@ typedef struct UltFiberContext {
 	SceUInt32 reserved;
 } UltFiberContext;
 
+/* a stack's limits as a thread's TLS keeps them; {0xffffffff, 0} is none */
+typedef struct UltFiberStackLimit {
+	SceUIntPtr top;
+	SceUIntPtr bottom;
+} UltFiberStackLimit;
+
 typedef struct UltFiber {
 	SceUInt32 checksum;		/* XOR of words 2..31 */
 	SceUInt32 magic;
@@ -67,11 +73,22 @@ typedef struct UltFiber {
 	SceUIntPtr context;		/* UltFiberContext */
 	SceUInt32 threadId;		/* while running */
 	SceUInt32 flags;
-	SceUInt32 reserved[15];
+	SceUInt32 ulobjId;		/* XORed with ULT_FIBER_ULOBJ_ID_KEY; random if none */
+	UltFiberStackLimit stackLimit;	/* the thread's while the fiber runs */
+	SceUInt32 razorMarker[2];	/* the Razor user marker stack (libperf's) */
+	SceUInt32 randomFill[10];	/* random values: the checksum covers them */
 } UltFiber;
 
-/* UltFiber.flags: its context is filled to measure the stack used */
+/* UltFiber.flags: the internal option bits, and its context filled to measure the stack used */
+#define ULT_FIBER_FLAG_NO_ULOBJ			0x01	/* not in the user-level object table */
+#define ULT_FIBER_FLAG_NO_RAZOR			0x02	/* not traced to Razor */
 #define ULT_FIBER_FLAG_CONTEXT_SIZE_CHECK	0x10
+
+#define ULT_FIBER_MAGIC_FINALIZED	0xa5a5a5a5
+#define ULT_FIBER_ARG_KEY		0xa5369c5a	/* argOnInitialize */
+#define ULT_FIBER_ULOBJ_ID_KEY		0xa5694c5a
+#define ULT_FIBER_CONTEXT_FILL_WORD	0xeeeeeeee	/* an unused context area's words */
+#define ULT_FIBER_CONTEXT_FILL		0xeeeeeeeeeeeeeeeeULL
 
 typedef struct Ult {
 	char name[32];
@@ -234,6 +251,11 @@ _Static_assert(sizeof(UlobjUltRuntimeInfo) == 0x30, "UlobjUltRuntimeInfo");
 #define ULOBJ_INFO_QUEUE			0x52
 #define ULOBJ_INFO_RWLOCK			0x92
 #define ULOBJ_INFO_COND				0xa2
+
+/* the system calls libfiber makes its user-level object table with */
+int _sceUlobjMgrStartSupportingUserlevelObject(SceUInt32 numEntries, SceUInt32 sdkVersion,
+					       void **pUserBase);
+int _sceUlobjMgrStopSupportingUserlevelObject(void);
 
 int sceUlobjMgrRetainInfoArray(SceUID pid, UlobjInfoArray **pInfoArray,
 				  UlobjInfoArrayParam **pParam, UlobjProcCB **pProcCB);
