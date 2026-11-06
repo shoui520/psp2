@@ -49,7 +49,15 @@ static int32_t s_port = 0;
 static int32_t s_port_pre = 0;
 
 static InitParam s_init_param;
-static void (*s_device_handler)(Data *data);
+/* called with the keys each frame they change or are held; nothing in libpaf sets it, and
+   Sony's build reads it each time, so it is not internal to this file */
+namespace paf {
+namespace inputdevice {
+namespace hidkeyboard {
+void (*s_device_handler)(Data *data);
+}
+}
+}
 static SceUID s_enum_hint_cbid;
 static SceUID s_read_hint_cbid;
 static Device s_device[DEVICE_MAX];
