@@ -37,6 +37,12 @@ SceUInt32 sce_paf_global_heap_size = 0x1c00000;
 SceInt32 sce_paf_global_heap_reserved0 = 60000;
 SceInt32 sce_paf_global_heap_reserved1 = 0x40000;
 
+/* the process and its main thread (crt0's sceProcessParam): no preloaded module but libdbg */
+extern "C" const unsigned int sce_process_preload_disabled = 0x01fb0000;
+extern "C" const char sceUserMainThreadName[] = "SceCuiSetUpper";
+extern "C" const char sceProcessName[] = "SceCuiSetUpper";
+extern "C" const int sceUserMainThreadPriority = 160;
+
 static int s_progressCount;
 
 static void *CuiAlloc(SceSize size);

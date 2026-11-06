@@ -9,5 +9,6 @@ set(MODULE_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:C,CXX>:-Xautoinlinesize=12>)
 psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	cui_setupper.cpp
 	cui_view.c
+	${PSP2_SRC}/sys/sdk/target/src/crt0/crt0_main.c
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include")
