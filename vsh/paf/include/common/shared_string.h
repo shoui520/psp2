@@ -6,6 +6,8 @@
  *
  * No Sony name is known for any of them: their members are exported by NID
  * only (ScePafCommon), and those are written as C functions taking the object.
+ * libpaf (PAF_LIBRARY_BUILD) inlines AddRef and Release; a module that links
+ * libpaf calls them through the exports, as Sony's modules do (dbutil).
  */
 #ifndef PAF_COMMON_SHARED_STRING_H
 #define PAF_COMMON_SHARED_STRING_H
@@ -17,6 +19,17 @@
 #include <std/string.h>
 #include <std/memory>
 #include <std/set>
+
+namespace paf {
+namespace common {
+class SharedStringBody;
+}
+}
+
+extern "C" {
+int32_t ScePafCommon_A704EEE6(paf::common::SharedStringBody *self);
+int32_t ScePafCommon_3728D46C(paf::common::SharedStringBody *self);
+}
 
 namespace paf {
 namespace common {
@@ -33,6 +46,7 @@ public:
 		assign(str);
 	}
 
+#ifdef PAF_LIBRARY_BUILD
 	int32_t AddRef()
 	{
 		return sceAtomicIncrement32AcqRel(&m_ref_count) + 1;
@@ -46,6 +60,17 @@ public:
 			delete this;
 		return count;
 	}
+#else
+	int32_t AddRef()
+	{
+		return ScePafCommon_A704EEE6(this);
+	}
+
+	int32_t Release()
+	{
+		return ScePafCommon_3728D46C(this);
+	}
+#endif
 
 	int32_t m_ref_count;
 };
@@ -83,6 +108,30 @@ public:
 	pair<iterator, bool> Insert(const string &str)
 	{
 		return Insert(intrusive_ptr<SharedStringBody>(new SharedStringBody(str)));
+	}
+
+	/* The string str by the set's order (first character, then sce_paf_strcmp), else end(). */
+	iterator find(const char *const &str)
+	{
+		_Node *node = head->parent;
+
+		while (!node->isnil) {
+			if (Less(str, node->value.m_str))
+				node = node->left;
+			else if (!Less(node->value.m_str, str))
+				return iterator(node);
+			else
+				node = node->right;
+		}
+		return iterator(head);
+	}
+
+private:
+	static bool Less(const char *left, const char *right)
+	{
+		if ((unsigned char)left[0] < (unsigned char)right[0])
+			return true;
+		return sce_paf_strcmp(left, right) < 0;
 	}
 };
 
@@ -122,8 +171,6 @@ paf::common::SharedStringBody *ScePafCommon_6CD38929(paf::common::SharedStringBo
 						     size_t len, char ch);
 paf::common::SharedStringBody *ScePafCommon_74D8D5D7(paf::common::SharedStringBody *self,
 						     size_t len, char ch);
-int32_t ScePafCommon_A704EEE6(paf::common::SharedStringBody *self);
-int32_t ScePafCommon_3728D46C(paf::common::SharedStringBody *self);
 paf::pair<paf::common::SharedStringSet::iterator, bool>
 ScePafCommon_BD163724(paf::common::SharedStringSet *self, const char *str);
 paf::pair<paf::common::SharedStringSet::iterator, bool>

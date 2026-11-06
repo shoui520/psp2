@@ -300,6 +300,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	../../sys/sdk/target/src/libSceVshBridge_stub/vshbridge_stub.c
 	libpaf.c
 )
+# libpaf's own build of its headers (shared_string.h inlines what other modules import)
+target_compile_definitions(vs0_sys_external_libpaf PRIVATE PAF_LIBRARY_BUILD)
 
 # the SceVshBridge stub library's wrapper, which Sony built with GCC 4.8 and without a stack
 # guard, like the SDK's libraries in libhttp (2026-11-02)
