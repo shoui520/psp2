@@ -20,31 +20,6 @@ uint32_t _ZN3paf5graph7Surface7ReleaseEv(uint8_t *self);
 uint32_t _ZN3paf5graph3arl2GlEv(void);
 extern uint32_t sce_paf_graphics_state_11fc;
 extern uint8_t sce_paf_graphics_flag_06e8;
-extern int32_t *sce_paf_graphics_active_surface_2e94;
-
-void *ScePafGraphics_12BDEBFF(void)
-{
-	uint32_t *state = *(uint32_t *volatile *)
-		&sce_paf_graphics_active_surface_2e94;
-	void (*callback)(void *, uintptr_t, uintptr_t, uintptr_t) =
-		(void (*)(void *, uintptr_t, uintptr_t, uintptr_t))
-		(uintptr_t)state[7];
-	void *argument = (void *)(uintptr_t)state[8];
-
-	state[7] = 0;
-	state = *(uint32_t *volatile *)&sce_paf_graphics_active_surface_2e94;
-	state[8] = 0;
-	if (callback)
-		callback(argument, (uintptr_t)callback, (uintptr_t)state, 0);
-	state = *(uint32_t *volatile *)&sce_paf_graphics_active_surface_2e94;
-	state[7] = 0;
-	state[0] = 3;
-	uint32_t *result = *(uint32_t *volatile *)
-		&sce_paf_graphics_active_surface_2e94;
-	state[1] = 0;
-	result[8] = 0;
-	return result;
-}
 
 static inline __attribute__((always_inline))
 void GraphicsSetPointLineWidth(uint32_t *self, uint32_t flags, float width)
@@ -122,7 +97,6 @@ uint8_t sce_paf_graphics_flag_306c;
 uint32_t sce_paf_graphics_state_11e0;
 uint32_t sce_paf_graphics_state_11fc;
 uint8_t sce_paf_graphics_flag_06e8;
-int32_t *sce_paf_graphics_active_surface_2e94;
 uint8_t sce_paf_graphics_flag_3518;
 uint8_t sce_paf_graphics_flag_136c;
 uint8_t sce_paf_graphics_flag_351a;
@@ -202,38 +176,6 @@ uint32_t ScePafGraphics_52C45E43(uint32_t value)
 {
 	sce_paf_graphics_flag_306c = value;
 	return value;
-}
-
-int32_t ScePafGraphics_BEF37718(void)
-{
-	return *sce_paf_graphics_active_surface_2e94;
-}
-
-void *ScePafGraphics_04F03872(void)
-{
-	uint8_t *state = (uint8_t *)sce_paf_graphics_active_surface_2e94;
-
-	if (*(uint32_t *)state) {
-		void *callbackAddress = *(void **)(state + 28);
-		/* Preserve the native BLX register arguments in ordinary C. */
-		void (*callback)(void *, void *, void *, void *) = callbackAddress;
-		void *argument = *(void **)(state + 32);
-
-		*(void **)(state + 28) = NULL;
-		void *resetState = *(void *volatile *)&sce_paf_graphics_active_surface_2e94;
-		*(void **)((uint8_t *)resetState + 32) = NULL;
-		if (callback)
-			callback(argument, callbackAddress, resetState, NULL);
-		state = (uint8_t *)sce_paf_graphics_active_surface_2e94;
-		*(void **)(state + 28) = NULL;
-		*(uint32_t *)state = 0;
-		uint8_t *lastState =
-			*(uint8_t *volatile *)&sce_paf_graphics_active_surface_2e94;
-		*(uint32_t *)(state + 4) = 0;
-		*(uint32_t *)(lastState + 32) = 0;
-		return lastState;
-	}
-	return &sce_paf_graphics_active_surface_2e94;
 }
 
 RMutex sce_paf_graphics_rmutex_1230;

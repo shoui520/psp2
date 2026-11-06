@@ -151,13 +151,14 @@ public:
 		: m_spec(spec), m_buffer(new VertexBuffer(allocator))
 	{
 		uint32_t size = count * spec->m_stride;
-		SurfaceMemory *memory = m_buffer->m_memory.get();
+		VertexBuffer *buffer = m_buffer.get();
+		SurfaceMemory *memory = buffer->m_memory.get();
 
 		if (memory->m_addr == NULL) {
 			memory->m_allocator->Alloc(memory, size);
 			memory->m_size = size;
 		}
-		sce_paf_memcpy(m_buffer->m_memory->m_addr, vertices, size);
+		sce_paf_memcpy(buffer->m_memory->m_addr, vertices, size);
 	}
 
 	/* room for count vertices, put in later (the page-turn meshes') */
@@ -233,14 +234,15 @@ public:
 		: m_memory(new IndexMemory(allocator)), m_format(SCE_GXM_INDEX_FORMAT_U16)
 	{
 		uint32_t size = count * sizeof(uint16_t);
-		SurfaceMemory *memory = m_memory->m_memory.get();
+		IndexMemory *index_memory = m_memory.get();
+		SurfaceMemory *memory = index_memory->m_memory.get();
 
 		if (memory->m_addr == NULL) {
 			memory->m_allocator->Alloc(memory, size);
 			memory->m_size = size;
 		}
 		if (indices != NULL)
-			sce_paf_memcpy(m_memory->m_memory->m_addr, indices, size);
+			sce_paf_memcpy(index_memory->m_memory->m_addr, indices, size);
 	}
 
 	/* count 32-bit indices copied in, when there are any (the wave meshes past 65536
