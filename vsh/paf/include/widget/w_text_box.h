@@ -25,6 +25,26 @@ public:
 		CB_TEXT_END = 0x10000003
 	};
 
+	/* the text's animations (names after ScePaf-RE; 0x1000D, the auto scroll's fade back,
+	   ours) */
+	enum {
+		ANIM_AUTO_SCROLL = 0x1000C,
+		ANIM_AUTO_SCROLL_FADE = 0x1000D,
+		ANIM_CARET_SCROLL = 0x1000E,
+		ANIM_CARET_BLINK = 0x1000F
+	};
+
+	/* how StartAutoScroll scrolls: over and over, or (3 and 4, names ours) once, as long
+	   as a long press holds it */
+	enum ScrollType {
+		SCROLL_TYPE_HORIZONTAL = 1,
+		SCROLL_TYPE_VERTICAL = 2,
+		SCROLL_TYPE_HORIZONTAL_ONCE = 3,
+		SCROLL_TYPE_VERTICAL_ONCE = 4
+	};
+
+	static const char *TypeName();
+
 	/* sets the touch modes from its edit and selection state (0x8123aa94, name ours) */
 	virtual void UpdateTouchMode();
 	/* replaces len characters from index with the string (0x8113187e, name after
@@ -46,6 +66,8 @@ public:
 	int32_t GetCharInfo(uint32_t index, graph::TextLayoutCharInfo &info);
 	int32_t GetLineInfo(uint32_t line, graph::TextLayoutLineInfo &info);
 	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, math::v2 &val);
+	/* its auto scroll running, or its animation 2 (0x81132452, name ours) */
+	bool IsScrolling();
 	/* sends the event with the rectangle, as integers (0x8113262e, name ours) */
 	int32_t SendRectEvent(int32_t type, const math::v4 &rect);
 };

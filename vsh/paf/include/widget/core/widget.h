@@ -699,6 +699,10 @@ public:
 	Widget *FindChild(const IDParam &id, int32_t option);
 	AnimQueue *FindAnim(int32_t id);
 	int32_t KillAnimType(int32_t type);
+	/* the animation's listeners stopped where they are */
+	int32_t KillAnim(int32_t id);
+	/* the listener queued for the animation */
+	int32_t SetAnimListener(int32_t id, AnimListener *listener, int32_t slot);
 
 	ResolutionData *get_resolution_data(ResolutionData *array, uint32_t num, uint32_t id);
 

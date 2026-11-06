@@ -2,6 +2,8 @@
 #define PAF_TYPES_H
 
 #define SCE_PAF_OK 0
+/* the call failed: no widget, or nothing to work on (name ours) */
+#define SCE_PAF_ERROR_FAILED (-2136014847) /* 0x80AF0001 */
 /* nothing to act on: no text object, or no memory for the buffer (name ours) */
 #define SCE_PAF_ERROR_NO_OBJECT (-2136014814) /* 0x80AF0022 */
 #define SCE_PAF_ERROR_NOT_FOUND (-2136014811) /* 0x80AF0025 */

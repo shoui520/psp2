@@ -204,6 +204,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/drawobj/focus_shader.cpp
 	src/widget/canvas_painter.cpp
 	src/widget/text_box_edit_menu.cpp
+	src/widget/text_auto_scroll.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
 	src/widget/core/widget.cpp
@@ -347,6 +348,10 @@ set_source_files_properties(src/system/system_param.cpp PROPERTIES COMPILE_OPTIO
 # paf::Timer's InitTimer inlines ResetTimer, the custom elastic curves their "in"
 # curve but not the parabolic ones theirs (2026-10-31).
 set_source_files_properties(src/timer/timer.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=29)
+
+# TextAutoScroll's destructor inlines vector<IDParam>'s and Update inlines Stop; the
+# budgets 12 to 24 inline neither, 40 more than Sony (2026-11-06).
+set_source_files_properties(src/widget/text_auto_scroll.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # The timer listeners inline list erase, the destructor into D0 and D2, and the list
 # constructor and destructor into Init and Exit (2026-11-01).

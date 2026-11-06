@@ -77,6 +77,14 @@ public:
 
 class Handler {
 public:
+	/* the timer IDs of SetTimeoutEvent and SetIntervalEvent (names after ScePaf-RE) */
+	enum {
+		CB_TIMEOUT = 0x1000000,
+		CB_TIMEOUT_END = 0x100FFFF,
+		CB_INTERVAL = 0x2000000,
+		CB_INTERVAL_END = 0x200FFFF
+	};
+
 	enum {
 		CB_STATE = 0x100000,
 		CB_STATE_INIT = 0x100001,
@@ -125,6 +133,8 @@ public:
 	virtual int32_t DoEvent(int32_t type, Event *e);
 
 	int32_t AddEventListener(int32_t type, EventListener *listener, bool del_prev = false);
+	int32_t SetTimerListener(int32_t id, float timeout, EventListener *listener);
+	int32_t KillTimer(int32_t id);
 
 	int32_t AddEventCallback(int32_t type, HandlerCB func, void *data = NULL)
 	{
@@ -133,11 +143,24 @@ public:
 		return AddEventListener(type, listener, false);
 	}
 
+	int32_t SetIntervalEvent(int32_t id, float interval, HandlerCB func, void *data = NULL)
+	{
+		return SetTimerListener(CB_INTERVAL | (id & 0xFFFF), interval,
+					new EventCBListener(func, data));
+	}
+
+	int32_t KillIntervalEvent(int32_t id)
+	{
+		return KillTimer(CB_INTERVAL | (id & 0xFFFF));
+	}
+
 	EventQueue *m_event_queue;
 	uint32_t m_event_enable;
 	map<int32_t, EventListenerList *> m_map_e_listener;
 	map<int32_t, TimeoutListener *> m_map_t_listener;
-	int32_t reserved;
+	/* zero from the constructor; a text with it above zero is not scrolled with its friends
+	   (TextAutoScroll, name ours) */
+	int32_t m_hold_count;
 };
 
 }

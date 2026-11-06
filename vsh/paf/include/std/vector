@@ -386,7 +386,8 @@ vector<_Ty, _Ax>::insert(const iterator &where, const _Ty &val)
 	return begin() + off;
 }
 
-/* The elements after last move down; the array shrinks by ten once twenty are spare. */
+/* The elements after last move down and the ones left over at the end are destroyed; the array
+   shrinks by ten once twenty are spare. */
 template<class _Ty, class _Ax>
 typename vector<_Ty, _Ax>::iterator
 vector<_Ty, _Ax>::erase(const iterator &first, const iterator &last)
@@ -397,6 +398,8 @@ vector<_Ty, _Ax>::erase(const iterator &first, const iterator &last)
 
 	for (size_type dst = off; src < count; ++src, ++dst)
 		ptr[dst] = ptr[src];
+	for (size_type i = count - erased; i < count; ++i)
+		ptr[i].~_Ty();
 	count -= erased;
 	if (count < limit - 20)
 		reserve(limit - 10);
