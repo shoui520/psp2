@@ -922,6 +922,11 @@ const char *WidgetFocusParam::GetParamName() const
 	return "focus_hint";
 }
 
+const char *WidgetFocusParam::ParamName()
+{
+	return "focus_hint";
+}
+
 int32_t WidgetFocusParam::Init()
 {
 	m_enable = true;

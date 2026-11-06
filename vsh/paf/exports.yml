@@ -2426,7 +2426,7 @@ ScePaf:
         - _ZN3paf14VersatileParamC1Ev: 0x180EF1B4
         - _ZN3paf4cxml8Document14IsRegisteredIDEPKc: 0x189FB821
         - ScePafResource_190E99A6: 0x190E99A6
-        - ScePafResource_1AF165BD: 0x1AF165BD
+        - _ZN3paf2ui16WidgetFocusParamD2Ev: 0x1AF165BD
         - _ZN3paf2ui17WidgetLayoutParam3SetEv: 0x1B46E3BC
         - _ZN3paf2ui16WidgetFocusParam3SetEv: 0x1C419868
         - _ZNK3paf4cxml4File7GetAddrEv: 0x1CBB0615
@@ -2532,7 +2532,7 @@ ScePaf:
         - _ZN3paf2ui17WidgetLayoutParam6AttachEPNS0_6WidgetE: 0x7F59D154
         - _ZN3paf2ui18WidgetHandlerParamC2Ev: 0x7F703338
         - _ZNK3paf8resource11ResourceObj11GetDocumentEv: 0x80B84E6A
-        - ScePafResource_81A31840: 0x81A31840
+        - _ZN3paf2ui16WidgetFocusParam9ParamNameEv: 0x81A31840
         - _ZN3paf13ResourceParam9SetIDNameEPKc: 0x824D4AD7
         - _ZN3paf11VisualParam9Vec2Param4DrawEv: 0x82FB5204
         - _ZNK3paf8resource11ResourceObj20GetTextureFromBufferERKNS_4cxml7ElementEPPvPjS8_: 0x862D4A5F
@@ -2584,7 +2584,7 @@ ScePaf:
         - ScePafResource_B4714AEA: 0xB4714AEA
         - _ZN3paf2ui16WidgetStyleParam7DestroyEi: 0xB62F6AFA
         - _ZNK3paf4cxml7Element13GetFirstChildEv: 0xB673D5D7
-        - ScePafResource_B6D81DC8: 0xB6D81DC8
+        - _ZN3paf2ui16WidgetFocusParamC2Ev: 0xB6D81DC8
         - ScePafResource_B72D030D: 0xB72D030D
         - scePafResourceGetIdIntLpb: 0xB744416E
         - _ZN3paf14VersatileParam5WriteENS_6common9SharedPtrINS_4FileEEEjj: 0xB74DAB62

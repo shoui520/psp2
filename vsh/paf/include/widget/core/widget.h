@@ -355,6 +355,7 @@ public:
 
 	WidgetFocusParam();
 
+	static const char *ParamName();
 	virtual const char *GetParamName() const;
 	virtual ~WidgetFocusParam();
 	virtual int32_t Set();
