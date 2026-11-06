@@ -23,6 +23,8 @@
 #define DBUTIL_ERROR_NO_MEMORY		0x80103102
 #define DBUTIL_ERROR_INVALID_STATE	0x80103103	/* not open, already open, no DCN client */
 #define DBUTIL_ERROR_NOT_FOUND		0x80103104
+#define DBUTIL_ERROR_NO_ROWID_COLUMN	0x80103105	/* a statement selects no rowid */
+#define DBUTIL_ERROR_CANCELED		0x80103107	/* a refresh's callback stopped it */
 #define DBUTIL_ERROR_INVALID_TYPE	0x80103108	/* an event's or a value's */
 #define DBUTIL_ERROR_SQLITE		0x80103200
 #define DBUTIL_ERROR_IO			0x80103D00	/* ORed with SQLITE_IOERR's extended code */

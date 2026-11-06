@@ -12,6 +12,7 @@
 #include <std/string>
 #include <std/memory>
 #include <common/shared_string.h>
+#include <memory/heap_allocator.h>
 #include "statement.h"
 
 /* libpaf's heaps (ScePafMisc) */
@@ -19,6 +20,9 @@ extern "C" {
 void *scePafMallocWithContext(void *context, SceSize size);
 void scePafFreeWithContext(void *context, void *ptr);
 }
+
+/* paf's default heap (ScePafStdc) */
+extern "C" paf::memory::HeapAllocator *ScePafStdc_261CAF72(void);
 
 namespace dbutil {
 
@@ -37,6 +41,41 @@ static inline void Free(void *heap, void *ptr)
 	else
 		sce_paf_free(ptr);
 }
+
+/* a container allocator over one paf heap (the default heap unless given one) */
+template<class _Ty>
+class Allocator {
+public:
+	Allocator() : m_heap(ScePafStdc_261CAF72())
+	{
+	}
+
+	Allocator(const Allocator &other) : m_heap(other.m_heap)
+	{
+	}
+
+	_Ty *allocate(size_t count)
+	{
+		return (_Ty *)scePafMallocWithContext(m_heap, count * sizeof(_Ty));
+	}
+
+	void deallocate(_Ty *ptr, size_t)
+	{
+		scePafFreeWithContext(m_heap, ptr);
+	}
+
+	void construct(_Ty *ptr, const _Ty &val)
+	{
+		new ((void *)ptr) _Ty(val);
+	}
+
+	/* a failed allocation is not reported */
+	void report_failure()
+	{
+	}
+
+	paf::memory::HeapAllocator *m_heap;
+};
 
 /* a Value whose name, text and blob are its own copies, on its heap */
 class OwnedValue : public Value {
