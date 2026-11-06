@@ -18,6 +18,8 @@
 namespace paf {
 namespace graph {
 
+extern "C" const uint32_t ScePafGraphics_5C7E6693 = 0x41;
+
 /* what a text object returns without a layout (name ours) */
 static const int32_t TEXT_OBJ_ERROR_NO_LAYOUT = -2136014814;	/* 0x80AF2322 */
 

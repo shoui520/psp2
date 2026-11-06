@@ -23,6 +23,8 @@
 namespace paf {
 namespace graph {
 
+extern "C" const uint32_t ScePafGraphics_E5D2E9F9 = 0x41;
+
 using arl::ArlInstance;
 using arl::IndexArray;
 using arl::VertexArray;

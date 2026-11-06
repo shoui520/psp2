@@ -179,6 +179,16 @@ public:
 	int8_t m_force_bold;
 };
 
+/* the style texts are made with (blend 1, depth 4), exported as its word: a DrawStyle constant
+   would be constructed at load time, Sony's is in .rodata (no Sony name found) */
+extern "C" const uint32_t ScePafGraphics_5C7E6693;
+
+/* that style as a DrawStyle (name ours) */
+static inline __attribute__((always_inline)) const DrawStyle &TextObjStyle()
+{
+	return reinterpret_cast<const DrawStyle &>(ScePafGraphics_5C7E6693);
+}
+
 }
 }
 
