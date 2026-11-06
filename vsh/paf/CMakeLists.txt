@@ -206,6 +206,9 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/text_box_edit_menu.cpp
 	src/widget/text_auto_scroll.cpp
 	src/widget/text_box_ime_listener.cpp
+	src/widget/gesture_drag_ratio.cpp
+	src/widget/gesture_drag_ratio_touch.cpp
+	src/widget/gesture_drag.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
 	src/widget/core/widget.cpp
