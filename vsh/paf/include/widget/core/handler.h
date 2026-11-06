@@ -143,6 +143,19 @@ public:
 		return AddEventListener(type, listener, false);
 	}
 
+	int32_t DeleteEventCallback(int32_t type, HandlerCB func, void *data);
+
+	int32_t SetTimeoutEvent(int32_t id, float timeout, HandlerCB func, void *data = NULL)
+	{
+		return SetTimerListener(CB_TIMEOUT | (id & 0xFFFF), timeout,
+					new EventCBListener(func, data));
+	}
+
+	int32_t KillTimeoutEvent(int32_t id)
+	{
+		return KillTimer(CB_TIMEOUT | (id & 0xFFFF));
+	}
+
 	int32_t SetIntervalEvent(int32_t id, float interval, HandlerCB func, void *data = NULL)
 	{
 		return SetTimerListener(CB_INTERVAL | (id & 0xFFFF), interval,

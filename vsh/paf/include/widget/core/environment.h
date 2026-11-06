@@ -14,6 +14,7 @@
 #include <math/rect.h>
 #include <versatileparam/idparam.h>
 #include <graphics/surface/surface.h>
+#include <widget/core/event.h>
 
 namespace paf {
 namespace graph {
@@ -158,7 +159,11 @@ public:
 	uint8_t reserved3b[0x50];
 	/* set before the focus is first shown */
 	int32_t m_focus_mode;
-	uint8_t reserved4[0x1c8];
+	uint8_t reserved4[0x178];
+	/* the events passed on at the next frame (names after ScePaf-RE) */
+	EventQueue m_ev_queue;
+	list<Event> m_ev_subrouting;
+	list<Event> m_ev_doevent;
 	/* the scenes, updated each frame (name after ScePaf-RE) */
 	list<Widget *> m_scenes_onupdate;
 	/* the screen SetScreen gives */
@@ -185,6 +190,8 @@ void ScePafWidget_75FB31F1(paf::ui::Environment *env, bool enable);
 void ScePafWidget_B4A4660B(paf::ui::Environment *env, int32_t enable, int32_t port, int32_t mode);
 /* whether the port's focus may be shown */
 bool ScePafWidget_A6B659BB(paf::ui::Environment *env, int32_t port);
+/* bit 0 of the port's focus state; for a port below 0, whether any port has it */
+bool ScePafWidget_529FB877(paf::ui::Environment *env, int32_t port);
 /* updates the input devices */
 int32_t ScePafWidget_909850C4(void);
 /* sets the focus frame texture no (below 9); with none, reads all of them from the common resource */

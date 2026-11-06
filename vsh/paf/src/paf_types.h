@@ -6,6 +6,8 @@
 #define SCE_PAF_ERROR_FAILED (-2136014847) /* 0x80AF0001 */
 /* nothing to act on: no text object, or no memory for the buffer (name ours) */
 #define SCE_PAF_ERROR_NO_OBJECT (-2136014814) /* 0x80AF0022 */
+/* nothing there to act on: no preedit text to commit (name ours) */
+#define SCE_PAF_ERROR_NO_ENTRY (-2136014844) /* 0x80AF0004 */
 #define SCE_PAF_ERROR_NOT_FOUND (-2136014811) /* 0x80AF0025 */
 #define SCE_PAF_ERROR_INVALID_ARGUMENT (-2136014705) /* 0x80AF008F */
 #define SCE_PAF_ERROR_TOPLEVEL_ARGUMENT (-2136014717) /* 0x80AF0083 */

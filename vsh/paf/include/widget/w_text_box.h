@@ -13,6 +13,11 @@
 #include <math/ngp/v4.h>
 #include <std/string>
 
+/* an event of the system's IME (text_box_ime_listener.h) */
+extern "C" {
+struct SceImeVshEvent;
+}
+
 namespace paf {
 namespace ui {
 
@@ -59,6 +64,11 @@ public:
 	virtual int32_t SetCaretIndex(uint32_t index);
 	virtual int32_t SetSelectionRange(uint32_t index, uint32_t len);
 
+	int32_t SetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, uint32_t len,
+				  const math::v4 &val);
+	int32_t SetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, uint32_t len,
+				  bool val);
+	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, int32_t &val);
 	int32_t GetLength(uint32_t &len);
 	int32_t GetCaretIndex(uint32_t &index);
 	int32_t GetSelectionRange(uint32_t &index, uint32_t &len);
@@ -74,16 +84,73 @@ public:
 
 class TextBox : public Text {
 public:
-	/* what the text box's edit listener sends it as the editing begins and ends (names ours) */
+	/* what the text box's edit listener sends it as the editing begins and ends, and (0x10000009
+	   to 0x1000000B) about the IME (names ours, but CB_TEXT_BOX_ENTER_PRESSED's, ScePaf-RE's) */
 	enum {
 		CB_TEXT_BOX_ZOOM_IN = 0x10000004,
-		CB_TEXT_BOX_ZOOM_OUT = 0x10000005
+		CB_TEXT_BOX_ZOOM_OUT = 0x10000005,
+		CB_TEXT_BOX_IME_OPEN = 0x10000009,
+		CB_TEXT_BOX_IME_CHANGE_SIZE = 0x1000000A,
+		CB_TEXT_BOX_ENTER_PRESSED = 0x1000000B
+	};
+
+	/* how the IME edits the text box: its languages, type and options, as the SDK's SceImeParam
+	   names them (names after ScePaf-RE and the SDK's) */
+	class ImeParam {
+	public:
+		ImeParam()
+			: supportedLanguages(0), languagesForced(false), type(0), option(0),
+			  enterLabel(0), filter(NULL)
+		{
+		}
+
+		virtual ~ImeParam()
+		{
+		}
+
+		uint32_t supportedLanguages;
+		bool languagesForced;
+		int32_t type;
+		uint32_t option;
+		int32_t enterLabel;
+		int32_t (*filter)(wchar_t *out, uint32_t *out_len, const wchar_t *src,
+				  uint32_t src_len);
 	};
 
 	static const char *TypeName();
 
+	int32_t EndEdit();
 	int32_t GetPasswordMode(bool &mode);
 	int32_t GetEditMode(bool &mode);
+	int32_t GetEditAutoTransitionMode(bool &mode);
+	int32_t GetImeParam(ImeParam &param);
+	/* Text::ReplaceString, and the text box told its string changed (0x81135326, name ours) */
+	int32_t ReplaceStringNotify(uint32_t index, uint32_t len, const wstring &str);
+};
+
+/* what edits a text box: the object wutil::InitParam's edit_listener gives, by default the IME's
+   (name after the exports; the virtual functions after ScePaf-RE's where it has them, the others
+   ours) */
+class TextBoxEditListener {
+public:
+	TextBoxEditListener();
+
+	virtual ~TextBoxEditListener();
+
+	virtual TextBox *GetTextBox() = 0;
+	virtual int32_t SetPreeditBackColor(const math::v4 &color) = 0;
+	virtual int32_t GetPreeditBackColor(math::v4 &color) = 0;
+	virtual int32_t SetPreeditUnderlineColor(const math::v4 &color) = 0;
+	virtual int32_t GetPreeditUnderlineColor(math::v4 &color) = 0;
+	virtual int32_t BeginEdit(TextBox *text_box) = 0;
+	virtual int32_t EndEdit(TextBox *text_box) = 0;
+	virtual int32_t Update(TextBox *text_box) = 0;
+	virtual int32_t NotifyCaretMove(TextBox *text_box) = 0;
+	/* the preedit text made part of the string */
+	virtual int32_t Commit(TextBox *text_box) = 0;
+	/* the text box's password mode changed */
+	virtual int32_t NotifyPasswordMode(TextBox *text_box) = 0;
+	virtual int32_t HandleImeEvent(const SceImeVshEvent *e) = 0;
 };
 
 /* what a text box tells the edit menu about its editing: the object wutil::Init makes and export
