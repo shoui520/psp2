@@ -148,7 +148,8 @@ def toolchain(folder):
 def snc(argv):
 	"""The compiler launcher of a module Sony built with SNC (psp2_module COMPILER snc): argv is
 	the GCC command CMake made; SNC compiles its source with its defines, includes and options,
-	as build_sony.py does. GNU ld reads REL objects, so SNC's RELA object is converted."""
+	as build_sony.py does. GNU ld reads REL objects, so SNC's RELA object is converted, and its
+	COMDAT definitions are made weak (elfsections.object_comdat_weak)."""
 	import buildrecipe
 	import elfsections
 	options = buildrecipe.compile_options(argv)
@@ -162,9 +163,7 @@ def snc(argv):
 	if not compile_one(src, out, kind, options['defines'], options['includes'], options['opt'],
 			   extra=options['extra'], mode=options['mode'] if kind == 'gcc48' else 'thumb'):
 		return 1
-	data = out.read_bytes()
-	if any(h['type'] == 4 for h in elfsections.Sections(data).headers):
-		out.write_bytes(elfsections.object_rela_to_rel(data))
+	out.write_bytes(elfsections.object_for_ld(out.read_bytes()))
 	if '-MF' in argv:
 		# SNC's own dependency output is not used: the object depends on its source
 		Path(argv[argv.index('-MF') + 1]).write_text(f'{out}: {ROOT / src if kind == "gcc48" else src}\n')

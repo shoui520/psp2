@@ -128,3 +128,37 @@ def object_rela_to_rel(data):
 		struct.pack_into('<I', out, h['header_offset'] + 20, len(records))
 		struct.pack_into('<I', out, h['header_offset'] + 36, 8)
 	return bytes(out)
+
+
+def object_comdat_weak(data):
+	"""Make an SNC object's definitions in COMDAT groups weak, as GCC's are.
+
+	SNC defines what it may emit in several objects (a vtable of a class without a key
+	function, an inline function written out of line) as a global symbol in a COMDAT group.
+	Sony's linker keeps one copy of each group; GNU ld reports such a global defined in two
+	objects before it discards the second group. Only symbol bindings change.
+	"""
+	sections = Sections(data)
+	members = set()
+	for h in sections.headers:
+		if h['type'] == 17:  # SHT_GROUP
+			members.update(struct.unpack_from(f'<{h["size"] // 4}I', data, h['offset'])[1:])
+	out = bytearray(data)
+	for h in sections.headers:
+		if h['type'] != 2:  # SHT_SYMTAB
+			continue
+		for o in range(h['offset'], h['offset'] + h['size'], 16):
+			info = out[o + 12]
+			shndx, = struct.unpack_from('<H', out, o + 14)
+			if info >> 4 == 1 and shndx in members:  # STB_GLOBAL
+				out[o + 12] = 2 << 4 | info & 0xf  # STB_WEAK
+	return bytes(out)
+
+
+def object_for_ld(data):
+	"""An SNC object as GNU ld links it: REL relocations, weak COMDAT definitions."""
+	if any(h['type'] == 4 for h in Sections(data).headers):
+		data = object_rela_to_rel(data)
+	if any(h['type'] == 17 for h in Sections(data).headers):
+		data = object_comdat_weak(data)
+	return data

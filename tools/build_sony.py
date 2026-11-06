@@ -85,7 +85,7 @@ def main():
             raise SystemExit(1)
         if any(h['type'] == 4 for h in elfsections.Sections(candidate.read_bytes()).headers):
             converted = candidate.with_suffix('.rel.o')
-            converted.write_bytes(elfsections.object_rela_to_rel(candidate.read_bytes()))
+            converted.write_bytes(elfsections.object_for_ld(candidate.read_bytes()))
             candidate = converted
         link[index] = str(candidate)
     if source_compilers:
