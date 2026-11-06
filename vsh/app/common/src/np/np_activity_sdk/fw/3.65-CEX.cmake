@@ -1,5 +1,6 @@
 # 3.65-CEX: vs0:sys/external/np_activity_sdk.suprx (generated)
 set(MODULE_NID 0x82C08CE7)
+set(MODULE_AUTH_ID 0x280000000002805A)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
@@ -16,14 +17,4 @@ set(MODULE_IMPORT_NIDS
 	0xCAE9ACE6:F:0xAC595E68
 	0xCAE9ACE6:F:0xB54C0BE4
 	0xCAE9ACE6:V:0x93B8AA67
-)
-set(MODULE_IMPORT_FUNCS
-	SceShellSvc_B31E7F1C
-	__stack_chk_fail
-	sceClibMemset
-	sceClibStrnlen
-	sceClibStrncasecmp
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
 )
