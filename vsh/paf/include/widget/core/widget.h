@@ -21,11 +21,13 @@
 #include <math/ngp/v3.h>
 #include <math/rect.h>
 #include <math/ngp/v4.h>
+#include <math/ngp/matrix.h>
 #include <math/ngp/quaternion.h>
 #include <versatileparam/idparam.h>
 #include <versatileparam/versatileparam.h>
 #include <widget/core/handler.h>
 #include <widget/core/layouter.h>
+#include <common/transition.h>
 
 namespace paf {
 
@@ -555,11 +557,58 @@ public:
 	virtual void SetFocusDirection(int32_t dir, IDParam id);
 	virtual void SetFocusDirectionWidget(int32_t dir, Widget *widget);
 	virtual void SetFocusSearchRect(const math::rect &rect);
+	/* the flag kept with the focus directions and search rect (0x81222140; this slot to
+	   GetFocusShapeSize named ours) */
+	virtual void EnableFocusSearchRect(bool on_off);
+	/* SetFocus with an option (export F7F7F682) */
+	virtual int32_t SetFocusOption(const void *param, int32_t option);
+	/* 7, or 0 when bit 0 of the byte at 0x193 is set (0x81223cd8) */
+	virtual int32_t GetFocusDirectionMask();
+	/* 0 (0x81222254) */
+	virtual int32_t GetFocusPriority();
+	/* its position, the focus shape's offset added (0x81222258) */
+	virtual math::v4 GetFocusShapePos();
+	/* its world position, the focus shape's offset added (0x812222c4) */
+	virtual math::v4 GetFocusShapeWorldPos();
+	/* its size, or the focus shape's where that is set (0x8122230c) */
+	virtual math::v4 GetFocusShapeSize();
+	virtual int32_t EventExecDispatch(Event *e);
+	virtual int32_t EventExecBroadcast(Event *e);
+	virtual int32_t EventExecDirect(Event *e);
+	/* true (0x81222350; ui::Text's: whether it handles its text events, name ours) */
+	virtual bool IsTextEventEnabled();
 
 	/* whether it is the widget its focus root focuses first (0x8114fd64, name ours) */
 	bool IsInitFocus();
 
 	math::v4 *GetSize(int32_t opt);
+	math::v4 *GetScale(int32_t opt);
+	/* the world matrix made again from its position, scale and rotation and its parent's */
+	void UpdateMatrix();
+
+	/* the world matrix, made again first where m_update_flag asks for it (inline in Sony's
+	   callers, name ours) */
+	const math::matrix &GetWorldMatrix()
+	{
+		if ((m_update_flag & 7) != 0)
+			UpdateMatrix();
+		return m_world_matrix;
+	}
+
+	/* the hit box's mode, and its size and center offset unless both are zero (inline in
+	   Sony's callers, name ours) */
+	void SetHitBox(uint8_t mode, const math::v4 &size, const math::v4 &center)
+	{
+		m_hit_box_mode = mode;
+		/* only x, y and z count */
+		if (!(math::v3(size.getImpl().getXYZ()) == math::v3(0.0f, 0.0f, 0.0f)) ||
+		    !(math::v3(center.getImpl().getXYZ()) == math::v3(0.0f, 0.0f, 0.0f))) {
+			if (m_hit_box == NULL)
+				m_hit_box = new math::v4[2];
+			m_hit_box[1] = size;
+			m_hit_box[0] = center;
+		}
+	}
 	math::v4 GetPos(int32_t opt, Widget *ref, const math::v4 &off_pos);
 	math::v4 GetPosCenter(int32_t opt, Widget *ref, const math::v4 &off_pos);
 	math::v4 GetRot(int32_t opt, Widget *ref, const math::v4 &off_rot, int32_t option);
@@ -657,7 +706,9 @@ public:
 	math::v4 m_scale;
 	math::v4 m_size;
 	math::v4 m_rot;
-	uint8_t reserved[0x90];
+	uint8_t reserved[0x50];
+	/* its world matrix, as UpdateMatrix made it (name ours) */
+	math::matrix m_world_matrix;
 	math::v4 m_align_offs;
 	math::v4 m_anchor_offs;
 	math::v4 m_origin_offs;
@@ -670,13 +721,21 @@ public:
 	Widget *m_parent;
 	Scene *m_scene;
 	list<Widget *> m_children;
-	uint8_t reserved3[8];
+	uint8_t reserved3[7];
+	/* what UpdateMatrix still has to make again: bits 0 to 2 (name after ScePaf-RE) */
+	uint8_t m_update_flag;
 	/* 0xff before a reverse transition (name after ScePaf-RE) */
 	uint8_t m_transition;
 	uint8_t reserved3a[3];
 	/* the keys bound to it while m_bound_keycode (names after ScePaf-RE) */
 	uint32_t m_keycode;
-	uint8_t reserved3x[8];
+	uint32_t reserved3x : 16;
+	/* how it is modal (export 42C5A4D4): 0 or 1 as Environment::RegisterModalWidget's mode, 2
+	   not modal; and the option given with it (names ours) */
+	uint32_t m_modal_mode : 4;
+	uint32_t m_modal_option : 4;
+	uint32_t reserved3x1 : 8;
+	uint8_t reserved3x2[4];
 	/* its parent writes it: WriteWidget writes only its children (names after ScePaf-RE) */
 	bool m_parent_protected : 1;
 	/* made by a template (TemplateOpen); WriteWidget leaves it out */
@@ -726,7 +785,13 @@ public:
 	/* the entries of m_size_array and m_rot_array (names ours) */
 	uint8_t m_size_num;
 	uint8_t m_rot_num;
-	uint8_t reserved5[0x2a];
+	uint8_t reserved5[0x1a];
+	/* the hit box GetHitBoxSize and GetHitBoxCenter give (names ours): its center offset and
+	   its size, the size an addition to the widget's (mode 1), a scale of it (2) or itself (3);
+	   mode 0 is the widget's own size */
+	math::v4 *m_hit_box;
+	uint8_t m_hit_box_mode;
+	uint8_t reserved5a[0xb];
 	uint32_t m_align_x : 4;
 	uint32_t m_align_y : 4;
 	uint32_t m_align_z : 4;
@@ -821,6 +886,15 @@ int32_t ScePafWidget_AC0C81D5(paf::ui::Widget *widget, float time);
 int32_t ScePafWidget_5A9793B0(paf::ui::Widget *widget, float time);
 /* adds to the count kept in bits 24 to 27 of the widget's flags */
 int32_t ScePafWidget_A96A0B4A(paf::ui::Widget *widget, int32_t add);
+/* Show(common::transition::Type, float delay, HandlerCB, void *): shows the widget with the
+   transition (the NID's name, ScePaf-RE's NID list); returns the transition's time */
+float ScePafWidget_44B22ACA(paf::ui::Widget *widget, paf::common::transition::Type type,
+			    float delay, paf::ui::HandlerCB cb, void *data);
+/* Hide(common::transition::Type, float delay, HandlerCB, void *): hides it the same way */
+float ScePafWidget_F1176ACC(paf::ui::Widget *widget, paf::common::transition::Type type,
+			    float delay, paf::ui::HandlerCB cb, void *data);
+/* makes the widget modal in the mode (0, 1), or not (2), with the option */
+int32_t ScePafWidget_42C5A4D4(paf::ui::Widget *widget, int32_t mode, int32_t option);
 }
 
 #endif

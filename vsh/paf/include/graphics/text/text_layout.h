@@ -118,6 +118,7 @@ public:
 class TextLayoutLineInfo {
 public:
 	TextLayoutLineInfo()
+		: frame(0.0f, 0.0f, 0.0f, 0.0f), descender(0.0f), ascender(0.0f), index(0), len(0)
 	{
 	}
 

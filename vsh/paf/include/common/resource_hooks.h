@@ -27,6 +27,11 @@ typedef paf::intrusive_ptr<paf::graph::Surface> (*CommonTextureFunction)(const p
 CommonTemplateOpenFunction SetCommonTemplateOpenFunction(CommonTemplateOpenFunction func);
 CommonStringFunction SetCommonStringFunction(CommonStringFunction func);
 CommonTextureFunction SetCommonTextureFunction(CommonTextureFunction func);
+/* CommonTemplateOpen: the common resource's template with the ID opened under the parent by
+   the hook; -1 without one */
+int32_t ScePafCommon_CAAB7E61(paf::ui::Widget *parent, const paf::IDParam &id);
+/* CommonGetTexture: the common resource's texture with the ID, by the hook */
+paf::intrusive_ptr<paf::graph::Surface> ScePafCommon_F820A54B(const paf::IDParam &id);
 }
 
 namespace paf {

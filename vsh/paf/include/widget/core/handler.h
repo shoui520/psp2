@@ -87,6 +87,13 @@ public:
 		CB_COMMAND = 0x100006
 	};
 
+	/* what a modal widget is sent for a touch outside it (HandleStateEvent's for the state
+	   events 0x1009 and 0x100a; names ours) */
+	enum {
+		CB_MODAL_TOUCH_OUTSIDE = 0x20019,
+		CB_MODAL_RELEASE_OUTSIDE = 0x2001a
+	};
+
 	Handler(uint32_t enable);
 
 	virtual ~Handler();

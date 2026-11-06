@@ -101,6 +101,18 @@ public:
 	uint8_t reserved[0xc];
 };
 
+/* the modal widgets, 32 bytes each, sorted after one is added when one was removed (names ours) */
+class ModalWidgetList {
+public:
+	/* takes the widget out: -1 when it is not in the list (0x8113f74c) */
+	int32_t Remove(Widget *widget);
+
+	uint8_t reserved[4];
+	bool m_unsorted;
+	void *m_entries;
+	uint32_t m_count;
+};
+
 class Environment {
 public:
 	typedef int32_t (*SoundCallback)(const char *buffer1, uint32_t size1, const char *buffer2,
@@ -140,7 +152,10 @@ public:
 	void *m_sound_callback_data;
 	CreateWidgetCallback m_create_widget_callback;
 	void *m_create_widget_callback_data;
-	uint8_t reserved3[0x68];
+	uint8_t reserved3[8];
+	/* RegisterModalWidget's widgets (name ours) */
+	ModalWidgetList m_modal_widgets;
+	uint8_t reserved3b[0x50];
 	/* set before the focus is first shown */
 	int32_t m_focus_mode;
 	uint8_t reserved4[0x1c8];

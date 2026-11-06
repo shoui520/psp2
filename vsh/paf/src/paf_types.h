@@ -2,6 +2,8 @@
 #define PAF_TYPES_H
 
 #define SCE_PAF_OK 0
+/* nothing to act on: no text object, or no memory for the buffer (name ours) */
+#define SCE_PAF_ERROR_NO_OBJECT (-2136014814) /* 0x80AF0022 */
 #define SCE_PAF_ERROR_NOT_FOUND (-2136014811) /* 0x80AF0025 */
 #define SCE_PAF_ERROR_INVALID_ARGUMENT (-2136014705) /* 0x80AF008F */
 #define SCE_PAF_ERROR_TOPLEVEL_ARGUMENT (-2136014717) /* 0x80AF0083 */
