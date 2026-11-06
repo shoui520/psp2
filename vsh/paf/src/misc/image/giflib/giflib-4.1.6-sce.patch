@@ -264,6 +264,40 @@
              _GifError = D_GIF_ERR_READ_FAILED;
              return GIF_ERROR;
          }
+--- a/lib/gif_err.c
++++ b/lib/gif_err.c
+@@ -21,6 +21,7 @@
+ /*****************************************************************************
+  * Return the last GIF error (0 if none) and reset the error.             
+  ****************************************************************************/
++#if 0	/* SCE: not in libpaf */
+ int
+ GifLastError(void) {
+     int i = _GifError;
+@@ -29,13 +30,15 @@
+ 
+     return i;
+ }
+-#ifndef _GBA_NO_FILEIO
++#endif
++/* SCE: kept without files, and empty: nothing printed */
+ 
+ /*****************************************************************************
+  * Print the last GIF error to stderr.                         
+  ****************************************************************************/
+ void
+ PrintGifError(void) {
++#if 0	/* SCE: nothing printed */
+     char *Err;
+ 
+     switch (_GifError) {
+@@ -116,5 +119,5 @@
+         fprintf(stderr, "\nGIF-LIB error: %s.\n", Err);
+     else
+         fprintf(stderr, "\nGIF-LIB undefined error %d.\n", _GifError);
++#endif
+ }
+-#endif /* _GBA_NO_FILEIO */
 --- a/lib/gif_lib.h
 +++ b/lib/gif_lib.h
 @@ -16,6 +16,8 @@

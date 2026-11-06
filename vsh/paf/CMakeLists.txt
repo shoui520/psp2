@@ -28,6 +28,9 @@ psp2_libpng_sce(paf_png)
 # giflib 4.1.6 with Sony's changes (src/misc/image/giflib).
 include("${CMAKE_CURRENT_SOURCE_DIR}/src/misc/image/giflib/giflib.cmake")
 psp2_giflib_sce(paf_gif)
+# libtiff 3.9.5 with Sony's changes (src/misc/image/libtiff).
+include("${CMAKE_CURRENT_SOURCE_DIR}/src/misc/image/libtiff/libtiff.cmake")
+psp2_libtiff_sce(paf_tiff)
 enable_language(CXX)
 psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/module.c
@@ -80,6 +83,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	${paf_zlib_SOURCES}
 	${paf_zlib_CHECKSUM}
 	${paf_zlib_INFFAST}
+	${paf_tiff_CODECS}
 	src/inputdevice/hidkeyboard/hidkeyboard.cpp
 	src/inputdevice/inputdevice.cpp
 	src/file/httpfile.cpp
@@ -127,6 +131,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/math/math.cpp
 	src/cache/cache_job_runner.cpp
 	${paf_gif_SOURCES}
+	${paf_tiff_SOURCES}
 	src/cache/cache_base.cpp
 	src/cache/cache_image.cpp
 	src/cache/cache_manager.cpp
@@ -294,6 +299,7 @@ target_include_directories(vs0_sys_external_libpaf PRIVATE
 	${paf_jpeg_INCLUDE}
 	${paf_png_INCLUDE}
 	${paf_gif_INCLUDE}
+	${paf_tiff_INCLUDE}
 	"${CMAKE_SOURCE_DIR}/contrib/squish-1.11")
 
 # paf::thread's and paf::job's constructors and destructors have full C2/D2 copies where 8 makes
@@ -320,6 +326,9 @@ set_source_files_properties(${paf_png_SOURCES} PROPERTIES COMPILE_OPTIONS -Xauto
 # giflib too (_GBA_NO_FILEIO: no DGifOpenFileName, DGifOpenFileHandle or DGifSlurp).
 set_source_files_properties(${paf_gif_SOURCES} PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=32
 	COMPILE_DEFINITIONS _GBA_NO_FILEIO)
+# libtiff too, without its asserts.
+set_source_files_properties(${paf_tiff_SOURCES} ${paf_tiff_CODECS} PROPERTIES
+	COMPILE_OPTIONS -Xautoinlinesize=32 COMPILE_DEFINITIONS NDEBUG)
 # zlib too; zutil.c without its allocator (zalloc.c has paf's).
 set_source_files_properties(${paf_zlib_SOURCES} ${paf_zlib_INFFAST} ${PSP2_PAF_ZLIB_CHECKSUM}/checksum.c
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=32)

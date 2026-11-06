@@ -1,0 +1,2320 @@
+diff -ruN a/libtiff/tif_aux.c b/libtiff/tif_aux.c
+--- a/libtiff/tif_aux.c
++++ b/libtiff/tif_aux.c
+@@ -62,7 +62,7 @@
+ }
+ 
+ static int
+-TIFFDefaultTransferFunction(TIFFDirectory* td)
++TIFFDefaultTransferFunction(TIFFDirectory* td, TIFF* tif)	/* SCE: tif's memory functions */
+ {
+ 	uint16 **tf = td->td_transferfunction;
+ 	tsize_t i, n, nbytes;
+@@ -103,7 +103,7 @@
+ }
+ 
+ static int
+-TIFFDefaultRefBlackWhite(TIFFDirectory* td)
++TIFFDefaultRefBlackWhite(TIFFDirectory* td, TIFF* tif)	/* SCE: tif's memory functions */
+ {
+ 	int i;
+ 
+@@ -245,7 +245,7 @@
+ 		}
+ 	case TIFFTAG_TRANSFERFUNCTION:
+ 		if (!td->td_transferfunction[0] &&
+-		    !TIFFDefaultTransferFunction(td)) {
++		    !TIFFDefaultTransferFunction(td, tif)) {
+ 			TIFFErrorExt(tif->tif_clientdata, tif->tif_name, "No space for \"TransferFunction\" tag");
+ 			return (0);
+ 		}
+@@ -256,7 +256,7 @@
+ 		}
+ 		return (1);
+ 	case TIFFTAG_REFERENCEBLACKWHITE:
+-		if (!td->td_refblackwhite && !TIFFDefaultRefBlackWhite(td))
++		if (!td->td_refblackwhite && !TIFFDefaultRefBlackWhite(td, tif))
+ 			return (0);
+ 		*va_arg(ap, float **) = td->td_refblackwhite;
+ 		return (1);
+diff -ruN a/libtiff/tif_codec.c b/libtiff/tif_codec.c
+--- a/libtiff/tif_codec.c
++++ b/libtiff/tif_codec.c
+@@ -104,7 +104,7 @@
+ 	const TIFFCodec* c = TIFFFindCODEC(tif->tif_dir.td_compression);
+         char compression_code[20];
+         
+-        sprintf( compression_code, "%d", tif->tif_dir.td_compression );
++        snprintf( compression_code, sizeof(compression_code), "%d", tif->tif_dir.td_compression );
+ 	TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+                      "%s compression support is not configured", 
+                      c ? c->name : compression_code );
+@@ -134,6 +134,7 @@
+  * 0 will be returned.
+  */
+ 
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFIsCODECConfigured(uint16 scheme)
+ {
+@@ -150,6 +151,7 @@
+         }
+ 	return 0;
+ }
++#endif
+ 
+ /*
+  * Local Variables:
+diff -ruN a/libtiff/tif_compress.c b/libtiff/tif_compress.c
+--- a/libtiff/tif_compress.c
++++ b/libtiff/tif_compress.c
+@@ -173,7 +173,8 @@
+ 	struct _codec*	next;
+ 	TIFFCodec*	info;
+ } codec_t;
+-static	codec_t* registeredCODECS = NULL;
++/* SCE: not static (nothing in libpaf registers a codec, and the lookups still read it) */
++codec_t* registeredCODECS = NULL;
+ 
+ const TIFFCodec*
+ TIFFFindCODEC(uint16 scheme)
+@@ -190,6 +191,7 @@
+ 	return ((const TIFFCodec*) 0);
+ }
+ 
++#if 0	/* SCE: no codec registration in libpaf */
+ TIFFCodec*
+ TIFFRegisterCODEC(uint16 scheme, const char* name, TIFFInitMethod init)
+ {
+@@ -284,6 +286,7 @@
+ 
+         return codecs;
+ }
++#endif
+ 
+ /* vim: set ts=8 sts=8 sw=8 noet: */
+ /*
+diff -ruN a/libtiff/tif_dir.c b/libtiff/tif_dir.c
+--- a/libtiff/tif_dir.c
++++ b/libtiff/tif_dir.c
+@@ -41,7 +41,8 @@
+ #define DATATYPE_IEEEFP		3       /* !IEEE floating point data */
+ 
+ static void
+-setByteArray(void** vpp, void* vp, size_t nmemb, size_t elem_size)
++setByteArray(void** vpp, void* vp, size_t nmemb, size_t elem_size,
++    TIFF* tif)	/* SCE: whose memory functions it uses */
+ {
+ 	if (*vpp)
+ 		_TIFFfree(*vpp), *vpp = 0;
+@@ -53,26 +54,26 @@
+ 			_TIFFmemcpy(*vpp, vp, bytes);
+ 	}
+ }
+-void _TIFFsetByteArray(void** vpp, void* vp, uint32 n)
+-    { setByteArray(vpp, vp, n, 1); }
+-void _TIFFsetString(char** cpp, char* cp)
+-    { setByteArray((void**) cpp, (void*) cp, strlen(cp)+1, 1); }
+-void _TIFFsetNString(char** cpp, char* cp, uint32 n)
+-    { setByteArray((void**) cpp, (void*) cp, n, 1); }
+-void _TIFFsetShortArray(uint16** wpp, uint16* wp, uint32 n)
+-    { setByteArray((void**) wpp, (void*) wp, n, sizeof (uint16)); }
+-void _TIFFsetLongArray(uint32** lpp, uint32* lp, uint32 n)
+-    { setByteArray((void**) lpp, (void*) lp, n, sizeof (uint32)); }
+-void _TIFFsetFloatArray(float** fpp, float* fp, uint32 n)
+-    { setByteArray((void**) fpp, (void*) fp, n, sizeof (float)); }
+-void _TIFFsetDoubleArray(double** dpp, double* dp, uint32 n)
+-    { setByteArray((void**) dpp, (void*) dp, n, sizeof (double)); }
++void _TIFFsetByteArray(void** vpp, void* vp, uint32 n, TIFF* tif)
++    { setByteArray(vpp, vp, n, 1, tif); }
++void _TIFFsetString(char** cpp, char* cp, TIFF* tif)
++    { setByteArray((void**) cpp, (void*) cp, strlen(cp)+1, 1, tif); }
++static void _TIFFsetNString(char** cpp, char* cp, uint32 n, TIFF* tif)
++    { setByteArray((void**) cpp, (void*) cp, n, 1, tif); }
++static void _TIFFsetShortArray(uint16** wpp, uint16* wp, uint32 n, TIFF* tif)
++    { setByteArray((void**) wpp, (void*) wp, n, sizeof (uint16), tif); }
++static void _TIFFsetLongArray(uint32** lpp, uint32* lp, uint32 n, TIFF* tif)
++    { setByteArray((void**) lpp, (void*) lp, n, sizeof (uint32), tif); }
++static void _TIFFsetFloatArray(float** fpp, float* fp, uint32 n, TIFF* tif)
++    { setByteArray((void**) fpp, (void*) fp, n, sizeof (float), tif); }
++static void _TIFFsetDoubleArray(double** dpp, double* dp, uint32 n, TIFF* tif)
++    { setByteArray((void**) dpp, (void*) dp, n, sizeof (double), tif); }
+ 
+ /*
+  * Install extra samples information.
+  */
+ static int
+-setExtraSamples(TIFFDirectory* td, va_list ap, uint32* v)
++setExtraSamples(TIFFDirectory* td, va_list ap, uint32* v, TIFF* tif)
+ {
+ /* XXX: Unassociated alpha data == 999 is a known Corel Draw bug, see below */
+ #define EXTRASAMPLE_COREL_UNASSALPHA 999 
+@@ -101,7 +102,7 @@
+ 		}
+ 	}
+ 	td->td_extrasamples = (uint16) *v;
+-	_TIFFsetShortArray(&td->td_sampleinfo, va, td->td_extrasamples);
++	_TIFFsetShortArray(&td->td_sampleinfo, va, td->td_extrasamples, tif);
+ 	return 1;
+ 
+ #undef EXTRASAMPLE_COREL_UNASSALPHA
+@@ -280,19 +281,19 @@
+ 		break;
+ 	case TIFFTAG_COLORMAP:
+ 		v32 = (uint32)(1L<<td->td_bitspersample);
+-		_TIFFsetShortArray(&td->td_colormap[0], va_arg(ap, uint16*), v32);
+-		_TIFFsetShortArray(&td->td_colormap[1], va_arg(ap, uint16*), v32);
+-		_TIFFsetShortArray(&td->td_colormap[2], va_arg(ap, uint16*), v32);
++		_TIFFsetShortArray(&td->td_colormap[0], va_arg(ap, uint16*), v32, tif);
++		_TIFFsetShortArray(&td->td_colormap[1], va_arg(ap, uint16*), v32, tif);
++		_TIFFsetShortArray(&td->td_colormap[2], va_arg(ap, uint16*), v32, tif);
+ 		break;
+ 	case TIFFTAG_EXTRASAMPLES:
+-		if (!setExtraSamples(td, ap, &v))
++		if (!setExtraSamples(td, ap, &v, tif))
+ 			goto badvalue;
+ 		break;
+ 	case TIFFTAG_MATTEING:
+ 		td->td_extrasamples = (uint16) (va_arg(ap, int) != 0);
+ 		if (td->td_extrasamples) {
+ 			uint16 sv = EXTRASAMPLE_ASSOCALPHA;
+-			_TIFFsetShortArray(&td->td_sampleinfo, &sv, 1);
++			_TIFFsetShortArray(&td->td_sampleinfo, &sv, 1, tif);
+ 		}
+ 		break;
+ 	case TIFFTAG_TILEWIDTH:
+@@ -358,7 +359,7 @@
+ 		if ((tif->tif_flags & TIFF_INSUBIFD) == 0) {
+ 			td->td_nsubifd = (uint16) va_arg(ap, int);
+ 			_TIFFsetLongArray(&td->td_subifd, va_arg(ap, uint32*),
+-			    (long) td->td_nsubifd);
++			    (long) td->td_nsubifd, tif);
+ 		} else {
+ 			TIFFErrorExt(tif->tif_clientdata, module,
+ 				     "%s: Sorry, cannot nest SubIFDs",
+@@ -377,11 +378,11 @@
+ 		v = (td->td_samplesperpixel - td->td_extrasamples) > 1 ? 3 : 1;
+ 		for (i = 0; i < v; i++)
+ 			_TIFFsetShortArray(&td->td_transferfunction[i],
+-			    va_arg(ap, uint16*), 1L<<td->td_bitspersample);
++			    va_arg(ap, uint16*), 1L<<td->td_bitspersample, tif);
+ 		break;
+ 	case TIFFTAG_REFERENCEBLACKWHITE:
+ 		/* XXX should check for null range */
+-		_TIFFsetFloatArray(&td->td_refblackwhite, va_arg(ap, float*), 6);
++		_TIFFsetFloatArray(&td->td_refblackwhite, va_arg(ap, float*), 6, tif);
+ 		break;
+ 	case TIFFTAG_INKNAMES:
+ 		v = va_arg(ap, uint32);
+@@ -389,7 +390,7 @@
+ 		v = checkInkNamesString(tif, v, s);
+                 status = v > 0;
+ 		if( v > 0 ) {
+-			_TIFFsetNString(&td->td_inknames, s, v);
++			_TIFFsetNString(&td->td_inknames, s, v, tif);
+ 			td->td_inknameslen = v;
+ 		}
+ 		break;
+@@ -485,7 +486,7 @@
+             
+     
+ 	    if (fip->field_type == TIFF_ASCII)
+-		    _TIFFsetString((char **)&tv->value, va_arg(ap, char *));
++		    _TIFFsetString((char **)&tv->value, va_arg(ap, char *), tif);
+ 	    else {
+ 		tv->value = _TIFFCheckMalloc(tif, tv_size, tv->count,
+ 					     "Tag Value");
+@@ -494,31 +495,23 @@
+ 		    goto end;
+ 		}
+ 
+-		if ((fip->field_passcount
++		if (fip->field_tag == TIFFTAG_DOTRANGE
++		    && strcmp(fip->field_name,"DotRange") == 0) {
++			/* SCE: libtiff 4.0's DotRange case and single values */
++			uint16 v[2];
++			v[0] = (uint16)va_arg(ap, int);
++			v[1] = (uint16)va_arg(ap, int);
++			_TIFFmemcpy(tv->value, &v, 4);
++		} else if (fip->field_passcount
+ 		    || fip->field_writecount == TIFF_VARIABLE
+ 		    || fip->field_writecount == TIFF_VARIABLE2
+ 		    || fip->field_writecount == TIFF_SPP
+-		    || tv->count > 1)
+-		    && fip->field_tag != TIFFTAG_PAGENUMBER
+-		    && fip->field_tag != TIFFTAG_HALFTONEHINTS
+-		    && fip->field_tag != TIFFTAG_YCBCRSUBSAMPLING
+-		    && fip->field_tag != TIFFTAG_DOTRANGE) {
++		    || tv->count > 1) {
+                     _TIFFmemcpy(tv->value, va_arg(ap, void *),
+ 				tv->count * tv_size);
+ 		} else {
+-		    /*
+-		     * XXX: The following loop required to handle
+-		     * TIFFTAG_PAGENUMBER, TIFFTAG_HALFTONEHINTS,
+-		     * TIFFTAG_YCBCRSUBSAMPLING and TIFFTAG_DOTRANGE tags.
+-		     * These tags are actually arrays and should be passed as
+-		     * array pointers to TIFFSetField() function, but actually
+-		     * passed as a list of separate values. This behaviour
+-		     * must be changed in the future!
+-		     */
+-		    int i;
+ 		    char *val = (char *)tv->value;
+ 
+-		    for (i = 0; i < tv->count; i++, val += tv_size) {
+ 			    switch (fip->field_type) {
+ 				case TIFF_BYTE:
+ 				case TIFF_UNDEFINED:
+@@ -577,7 +570,6 @@
+ 				    status = 0;
+ 				    break;
+ 			    }
+-		    }
+ 		}
+ 	    }
+           }
+@@ -665,7 +657,7 @@
+  * for building higher-level interfaces on
+  * top of the library.
+  */
+-int
++static int
+ TIFFVSetField(TIFF* tif, ttag_t tag, va_list ap)
+ {
+ 	return OkToChangeTag(tif, tag) ?
+@@ -868,24 +860,23 @@
+ 				*va_arg(ap, uint16*) = (uint16)tv->count;
+ 			*va_arg(ap, void **) = tv->value;
+ 			ret_val = 1;
++		} else if (fip->field_tag == TIFFTAG_DOTRANGE
++			   && strcmp(fip->field_name,"DotRange") == 0) {
++			/* SCE: libtiff 4.0's DotRange case and single values */
++			*va_arg(ap, uint16*) = ((uint16 *)tv->value)[0];
++			*va_arg(ap, uint16*) = ((uint16 *)tv->value)[1];
++			ret_val = 1;
+                 } else {
+-			if ((fip->field_type == TIFF_ASCII
++			if (fip->field_type == TIFF_ASCII
+ 			    || fip->field_readcount == TIFF_VARIABLE
+ 			    || fip->field_readcount == TIFF_VARIABLE2
+ 			    || fip->field_readcount == TIFF_SPP
+-			    || tv->count > 1)
+-			    && fip->field_tag != TIFFTAG_PAGENUMBER
+-			    && fip->field_tag != TIFFTAG_HALFTONEHINTS
+-			    && fip->field_tag != TIFFTAG_YCBCRSUBSAMPLING
+-			    && fip->field_tag != TIFFTAG_DOTRANGE) {
++			    || tv->count > 1) {
+ 				*va_arg(ap, void **) = tv->value;
+ 				ret_val = 1;
+ 			} else {
+-			    int j;
+ 			    char *val = (char *)tv->value;
+ 
+-			    for (j = 0; j < tv->count;
+-				 j++, val += _TIFFDataSize(tv->info->field_type)) {
+ 				switch (fip->field_type) {
+ 					case TIFF_BYTE:
+ 					case TIFF_UNDEFINED:
+@@ -935,7 +926,6 @@
+ 						ret_val = 0;
+ 						break;
+ 				}
+-			    }
+ 			}
+                 }
+ 		break;
+@@ -1021,8 +1011,10 @@
+ /*
+  * Client Tag extension support (from Niles Ritter).
+  */
+-static TIFFExtendProc _TIFFextender = (TIFFExtendProc) NULL;
++/* SCE: not static (nothing in libpaf sets it, and TIFFDefaultDirectory still reads it) */
++TIFFExtendProc _TIFFextender = (TIFFExtendProc) NULL;
+ 
++#if 0	/* SCE: not in libpaf */
+ TIFFExtendProc
+ TIFFSetTagExtender(TIFFExtendProc extender)
+ {
+@@ -1030,6 +1022,7 @@
+ 	_TIFFextender = extender;
+ 	return (prev);
+ }
++#endif
+ 
+ /*
+  * Setup for a new directory.  Should we automatically call
+@@ -1118,6 +1111,7 @@
+ 	return (1);
+ }
+ 
++#if 0	/* SCE: not in libpaf */
+ static int
+ TIFFAdvanceDirectory(TIFF* tif, uint32* nextdir, toff_t* off)
+ {
+@@ -1175,10 +1169,12 @@
+ 		return (1);
+ 	}
+ }
++#endif
+ 
+ /*
+  * Count the number of directories in a file.
+  */
++#if 0	/* SCE: not in libpaf */
+ tdir_t
+ TIFFNumberOfDirectories(TIFF* tif)
+ {
+@@ -1189,11 +1185,13 @@
+         n++;
+     return (n);
+ }
++#endif
+ 
+ /*
+  * Set the n-th directory as the current directory.
+  * NB: Directories are numbered starting at 0.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFSetDirectory(TIFF* tif, tdir_t dirn)
+ {
+@@ -1218,6 +1216,7 @@
+ 	tif->tif_dirnumber = 0;
+ 	return (TIFFReadDirectory(tif));
+ }
++#endif
+ 
+ /*
+  * Set the current directory to be the directory
+@@ -1225,6 +1224,7 @@
+  * is used mainly to access directories linked with
+  * the SubIFD tag (e.g. thumbnail images).
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFSetSubDirectory(TIFF* tif, uint32 diroff)
+ {
+@@ -1236,29 +1236,35 @@
+ 	tif->tif_dirnumber = 0;
+ 	return (TIFFReadDirectory(tif));
+ }
++#endif
+ 
+ /*
+  * Return file offset of the current directory.
+  */
++#if 0	/* SCE: not in libpaf */
+ uint32
+ TIFFCurrentDirOffset(TIFF* tif)
+ {
+ 	return (tif->tif_diroff);
+ }
++#endif
+ 
+ /*
+  * Return an indication of whether or not we are
+  * at the last directory in the file.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFLastDirectory(TIFF* tif)
+ {
+ 	return (tif->tif_nextdiroff == 0);
+ }
++#endif
+ 
+ /*
+  * Unlink the specified directory from the directory chain.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFUnlinkDirectory(TIFF* tif, tdir_t dirn)
+ {
+@@ -1328,6 +1334,7 @@
+ 	tif->tif_curstrip = (tstrip_t) -1;
+ 	return (1);
+ }
++#endif
+ 
+ /*			[BFC]
+  *
+@@ -1339,6 +1346,7 @@
+  *
+  * FIXME: this is never used properly. Should be removed in the future.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFReassignTagToIgnore (enum TIFFIgnoreSense task, int TIFFtagID)
+ {
+@@ -1380,6 +1388,7 @@
+     
+     return (FALSE);
+ }
++#endif
+ 
+ /* vim: set ts=8 sts=8 sw=8 noet: */
+ /*
+diff -ruN a/libtiff/tif_dirinfo.c b/libtiff/tif_dirinfo.c
+--- a/libtiff/tif_dirinfo.c
++++ b/libtiff/tif_dirinfo.c
+@@ -522,8 +522,10 @@
+ const TIFFFieldInfo *
+ _TIFFGetExifFieldInfo(size_t *size)
+ {
++#if 0	/* SCE: Sony's is empty (no EXIF directory) */
+ 	*size = TIFFArrayCount(exifFieldInfo);
+ 	return exifFieldInfo;
++#endif
+ }
+ 
+ void
+@@ -565,6 +567,7 @@
+ 			0 : ((int)tb->field_type - (int)ta->field_type);
+ }
+ 
++#if 0	/* SCE: not in libpaf */
+ static int
+ tagNameCompare(const void* a, const void* b)
+ {
+@@ -578,15 +581,18 @@
+ 		return (ta->field_type == TIFF_ANY) ?
+ 			0 : ((int)tb->field_type - (int)ta->field_type);
+ }
++#endif
+ 
+ void
+ TIFFMergeFieldInfo(TIFF* tif, const TIFFFieldInfo info[], int n)
+ {
++#if 0	/* SCE: Sony's is empty */
+ 	if (_TIFFMergeFieldInfo(tif, info, n) < 0)
+ 	{
+ 		TIFFErrorExt(tif->tif_clientdata, "TIFFMergeFieldInfo",
+ 			     "Merging block of %d fields failed", n);
+ 	}
++#endif
+ }
+ 
+ int
+@@ -634,6 +640,7 @@
+ 	return n;
+ }
+ 
++#if 0	/* SCE: not in libpaf */
+ void
+ _TIFFPrintFieldInfo(TIFF* tif, FILE* fd)
+ {
+@@ -654,6 +661,7 @@
+ 		);
+ 	}
+ }
++#endif
+ 
+ /*
+  * Return size of TIFFDataType in bytes
+@@ -746,31 +754,37 @@
+ const TIFFFieldInfo*
+ _TIFFFindFieldInfo(TIFF* tif, ttag_t tag, TIFFDataType dt)
+ {
+-        TIFFFieldInfo key = {0, 0, 0, TIFF_NOTYPE, 0, 0, 0, 0};
+-	TIFFFieldInfo* pkey = &key;
+-	const TIFFFieldInfo **ret;
++	/* SCE: libtiff 3.8.2's, a linear search for TIFF_ANY */
++	int i, n;
+ 
+ 	if (tif->tif_foundfield && tif->tif_foundfield->field_tag == tag &&
+ 	    (dt == TIFF_ANY || dt == tif->tif_foundfield->field_type))
+-		return tif->tif_foundfield;
+-
+-	/* If we are invoked with no field information, then just return. */
+-	if ( !tif->tif_fieldinfo ) {
+-		return NULL;
+-	}
+-
++		return (tif->tif_foundfield);
+ 	/* NB: use sorted search (e.g. binary search) */
+-	key.field_tag = tag;
+-        key.field_type = dt;
+-
+-	ret = (const TIFFFieldInfo **) bsearch(&pkey,
+-					       tif->tif_fieldinfo, 
+-					       tif->tif_nfields,
+-					       sizeof(TIFFFieldInfo *), 
+-					       tagCompare);
+-	return tif->tif_foundfield = (ret ? *ret : NULL);
++	if(dt != TIFF_ANY) {
++            TIFFFieldInfo key = {0, 0, 0, TIFF_NOTYPE, 0, 0, 0, 0};
++	    TIFFFieldInfo* pkey = &key;
++	    const TIFFFieldInfo **ret;
++
++	    key.field_tag = tag;
++            key.field_type = dt;
++
++	    ret = (const TIFFFieldInfo **) bsearch(&pkey,
++						   tif->tif_fieldinfo, 
++						   tif->tif_nfields,
++						   sizeof(TIFFFieldInfo *), 
++						   tagCompare);
++	    return (ret) ? (*ret) : NULL;
++        } else for (i = 0, n = tif->tif_nfields; i < n; i++) {
++		const TIFFFieldInfo* fip = tif->tif_fieldinfo[i];
++		if (fip->field_tag == tag &&
++		    (dt == TIFF_ANY || fip->field_type == dt))
++			return (tif->tif_foundfield = fip);
++	}
++	return ((const TIFFFieldInfo *)0);
+ }
+ 
++#if 0	/* SCE: not in libpaf */
+ const TIFFFieldInfo*
+ _TIFFFindFieldInfoByName(TIFF* tif, const char *field_name, TIFFDataType dt)
+ {
+@@ -799,6 +813,7 @@
+ 					     tagNameCompare);
+ 	return tif->tif_foundfield = (ret ? *ret : NULL);
+ }
++#endif
+ 
+ const TIFFFieldInfo*
+ _TIFFFieldWithTag(TIFF* tif, ttag_t tag)
+@@ -812,6 +827,7 @@
+ 	return (fip);
+ }
+ 
++#if 0	/* SCE: not in libpaf */
+ const TIFFFieldInfo*
+ _TIFFFieldWithName(TIFF* tif, const char *field_name)
+ {
+@@ -823,7 +839,9 @@
+ 	}
+ 	return (fip);
+ }
++#endif
+ 
++#if 0	/* SCE: not in libpaf */
+ const TIFFFieldInfo*
+ _TIFFFindOrRegisterFieldInfo( TIFF *tif, ttag_t tag, TIFFDataType dt )
+ 
+@@ -840,6 +858,7 @@
+ 
+     return fld;
+ }
++#endif
+ 
+ TIFFFieldInfo*
+ _TIFFCreateAnonFieldInfo(TIFF *tif, ttag_t tag, TIFFDataType field_type)
+@@ -869,7 +888,7 @@
+ 	 * note that this name is a special sign to TIFFClose() and
+ 	 * _TIFFSetupFieldInfo() to free the field
+ 	 */
+-	sprintf(fld->field_name, "Tag %d", (int) tag);
++	snprintf(fld->field_name, 32, "Tag %d", (int) tag);
+ 
+ 	return fld;    
+ }
+diff -ruN a/libtiff/tif_dirread.c b/libtiff/tif_dirread.c
+--- a/libtiff/tif_dirread.c
++++ b/libtiff/tif_dirread.c
+@@ -845,7 +845,7 @@
+  * Read custom directory from the arbitarry offset.
+  * The code is very similar to TIFFReadDirectory().
+  */
+-int
++static int	/* SCE: static in libpaf */
+ TIFFReadCustomDirectory(TIFF* tif, toff_t diroff,
+ 			const TIFFFieldInfo info[], size_t n)
+ {
+@@ -967,7 +967,7 @@
+  * EXIF is important special case of custom IFD, so we have a special
+  * function to read it.
+  */
+-int
++static int	/* SCE: static in libpaf */
+ TIFFReadEXIFDirectory(TIFF* tif, toff_t diroff)
+ {
+ 	size_t exifFieldInfoCount;
+@@ -1133,6 +1133,8 @@
+  * nextdiroff variable has been specified, read it too. Function returns a
+  * number of fields in the directory or 0 if failed.
+  */
++/* SCE: called, not inlined (the EXIF reader that also called it is not in libpaf) */
++#pragma noinline(TIFFFetchDirectory)
+ static uint16
+ TIFFFetchDirectory(TIFF* tif, toff_t diroff, TIFFDirEntry **pdir,
+ 		   toff_t *nextdiroff)
+@@ -1643,6 +1645,8 @@
+ 	int ok = 0;
+ 	const TIFFFieldInfo* fip = _TIFFFieldWithTag(tif, dp->tdir_tag);
+ 
++	if (fip == NULL)	/* SCE */
++		return (0);
+ 	if (dp->tdir_count > 1) {		/* array of values */
+ 		char* cp = NULL;
+ 
+@@ -1677,8 +1681,8 @@
+ 			ok = cp && TIFFFetchFloatArray(tif, dp, (float*) cp);
+ 			break;
+ 		case TIFF_DOUBLE:
+-			cp = (char *)_TIFFCheckMalloc(tif,
+-			    dp->tdir_count, sizeof (double), mesg);
++			cp = (char *)_TIFFCheckMalloc(tif, dp->tdir_count,	/* SCE */
++			    TIFFDataWidth((TIFFDataType) dp->tdir_type), mesg);
+ 			ok = cp && TIFFFetchDoubleArray(tif, dp, (double*) cp);
+ 			break;
+ 		case TIFF_ASCII:
+@@ -1873,7 +1877,8 @@
+         double* v = buf;
+ 
+         if (dir->tdir_count > NITEMS(buf))
+-            v = (double*) _TIFFCheckMalloc(tif, dir->tdir_count, sizeof (double),
++            v = (double*) _TIFFCheckMalloc(tif, dir->tdir_count,	/* SCE */
++                                           TIFFDataWidth((TIFFDataType) dir->tdir_type),
+                                       "to fetch per-sample values");
+         if (v && TIFFFetchAnyArray(tif, dir, v)) {
+             uint16 i;
+diff -ruN a/libtiff/tif_dirwrite.c b/libtiff/tif_dirwrite.c
+--- a/libtiff/tif_dirwrite.c
++++ b/libtiff/tif_dirwrite.c
+@@ -427,6 +427,7 @@
+  * written again.  This will make a partially written TIFF file
+  * readable before it is successfully completed/closed.
+  */ 
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFCheckpointDirectory(TIFF* tif)
+ {
+@@ -438,7 +439,9 @@
+ 	(void) TIFFSetWriteOffset(tif, TIFFSeekFile(tif, 0, SEEK_END));
+ 	return rc;
+ }
++#endif
+ 
++#if 0	/* SCE: not in libpaf */
+ static int
+ _TIFFWriteCustomDirectory(TIFF* tif, toff_t *pdiroff)
+ {
+@@ -559,12 +562,15 @@
+ 	_TIFFfree(data);
+ 	return (0);
+ }
++#endif
+ 
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFWriteCustomDirectory(TIFF* tif, toff_t *pdiroff)
+ {
+ 	return _TIFFWriteCustomDirectory(tif, pdiroff);
+ }
++#endif
+ 
+ /*
+  * Process tags that are not special cased.
+@@ -863,7 +869,8 @@
+ 	int status;
+ 
+ 	if (samples > NITEMS(buf)) {
+-		w = (double*) _TIFFmalloc(samples * sizeof (double));
++		w = (double*) _TIFFmalloc(samples *	/* SCE */
++		    TIFFDataWidth((TIFFDataType) dir->tdir_type));
+ 		if (w == NULL) {
+ 			TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+ 			    "No space to write per-sample values");
+@@ -1080,7 +1087,8 @@
+ TIFFWriteAnyArray(TIFF* tif,
+     TIFFDataType type, ttag_t tag, TIFFDirEntry* dir, uint32 n, double* v)
+ {
+-	char buf[10 * sizeof(double)];
++	/* SCE: ten values of the entry's type (read before it is set) */
++	char buf[10 * TIFFDataWidth((TIFFDataType) dir->tdir_type)];
+ 	char* w = buf;
+ 	int i, status = 0;
+ 
+@@ -1264,6 +1272,7 @@
+  * previously used directory space. 
+  */ 
+ 
++#if 0	/* SCE: not in libpaf */
+ int 
+ TIFFRewriteDirectory( TIFF *tif )
+ {
+@@ -1336,6 +1345,7 @@
+ 
+     return TIFFWriteDirectory( tif );
+ }
++#endif
+ 
+ 
+ /*
+diff -ruN a/libtiff/tif_fax3.c b/libtiff/tif_fax3.c
+--- a/libtiff/tif_fax3.c
++++ b/libtiff/tif_fax3.c
+@@ -1194,13 +1194,13 @@
+ 		sp->recvparams = va_arg(ap, uint32);
+ 		break;
+ 	case TIFFTAG_FAXSUBADDRESS:
+-		_TIFFsetString(&sp->subaddress, va_arg(ap, char*));
++		_TIFFsetString(&sp->subaddress, va_arg(ap, char*), tif);
+ 		break;
+ 	case TIFFTAG_FAXRECVTIME:
+ 		sp->recvtime = va_arg(ap, uint32);
+ 		break;
+ 	case TIFFTAG_FAXDCS:
+-		_TIFFsetString(&sp->faxdcs, va_arg(ap, char*));
++		_TIFFsetString(&sp->faxdcs, va_arg(ap, char*), tif);
+ 		break;
+ 	default:
+ 		return (*sp->vsetparent)(tif, tag, ap);
+@@ -1263,6 +1263,7 @@
+ static void
+ Fax3PrintDir(TIFF* tif, FILE* fd, long flags)
+ {
++#if 0	/* SCE: nothing printed */
+ 	Fax3BaseState* sp = Fax3State(tif);
+ 
+ 	assert(sp != 0);
+@@ -1320,6 +1321,7 @@
+ 		    (unsigned long) sp->recvtime);
+ 	if (TIFFFieldSet(tif,FIELD_FAXDCS))
+ 		fprintf(fd, "  Fax DCS: %s\n", sp->faxdcs);
++#endif
+ }
+ 
+ static int
+diff -ruN a/libtiff/tif_flush.c b/libtiff/tif_flush.c
+--- a/libtiff/tif_flush.c
++++ b/libtiff/tif_flush.c
+@@ -52,7 +52,7 @@
+  * been writing isn't exactly a an error.  Hopefully this doesn't cause
+  * problems for other people. 
+  */
+-int
++static int
+ TIFFFlushData(TIFF* tif)
+ {
+ 	if ((tif->tif_flags & TIFF_BEENWRITING) == 0)
+diff -ruN a/libtiff/tif_getimage.c b/libtiff/tif_getimage.c
+--- a/libtiff/tif_getimage.c
++++ b/libtiff/tif_getimage.c
+@@ -76,7 +76,7 @@
+ 	int colorchannels;
+ 
+ 	if (!tif->tif_decodestatus) {
+-		sprintf(emsg, "Sorry, requested compression method is not configured");
++		snprintf(emsg, 1024, "Sorry, requested compression method is not configured");
+ 		return (0);
+ 	}
+ 	switch (td->td_bitspersample) {
+@@ -87,7 +87,7 @@
+ 		case 16:
+ 			break;
+ 		default:
+-			sprintf(emsg, "Sorry, can not handle images with %d-bit samples",
++			snprintf(emsg, 1024, "Sorry, can not handle images with %d-bit samples",
+ 			    td->td_bitspersample);
+ 			return (0);
+ 	}
+@@ -101,7 +101,7 @@
+ 				photometric = PHOTOMETRIC_RGB;
+ 				break;
+ 			default:
+-				sprintf(emsg, "Missing needed %s tag", photoTag);
++				snprintf(emsg, 1024, "Missing needed %s tag", photoTag);
+ 				return (0);
+ 		}
+ 	}
+@@ -112,7 +112,7 @@
+ 			if (td->td_planarconfig == PLANARCONFIG_CONTIG
+ 			    && td->td_samplesperpixel != 1
+ 			    && td->td_bitspersample < 8 ) {
+-				sprintf(emsg,
++				snprintf(emsg, 1024,
+ 				    "Sorry, can not handle contiguous data with %s=%d, "
+ 				    "and %s=%d and Bits/Sample=%d",
+ 				    photoTag, photometric,
+@@ -136,7 +136,7 @@
+ 			break;
+ 		case PHOTOMETRIC_RGB:
+ 			if (colorchannels < 3) {
+-				sprintf(emsg, "Sorry, can not handle RGB image with %s=%d",
++				snprintf(emsg, 1024, "Sorry, can not handle RGB image with %s=%d",
+ 				    "Color channels", colorchannels);
+ 				return (0);
+ 			}
+@@ -146,13 +146,13 @@
+ 				uint16 inkset;
+ 				TIFFGetFieldDefaulted(tif, TIFFTAG_INKSET, &inkset);
+ 				if (inkset != INKSET_CMYK) {
+-					sprintf(emsg,
++					snprintf(emsg, 1024,
+ 					    "Sorry, can not handle separated image with %s=%d",
+ 					    "InkSet", inkset);
+ 					return 0;
+ 				}
+ 				if (td->td_samplesperpixel < 4) {
+-					sprintf(emsg,
++					snprintf(emsg, 1024,
+ 					    "Sorry, can not handle separated image with %s=%d",
+ 					    "Samples/pixel", td->td_samplesperpixel);
+ 					return 0;
+@@ -161,7 +161,7 @@
+ 			}
+ 		case PHOTOMETRIC_LOGL:
+ 			if (td->td_compression != COMPRESSION_SGILOG) {
+-				sprintf(emsg, "Sorry, LogL data must have %s=%d",
++				snprintf(emsg, 1024, "Sorry, LogL data must have %s=%d",
+ 				    "Compression", COMPRESSION_SGILOG);
+ 				return (0);
+ 			}
+@@ -169,12 +169,12 @@
+ 		case PHOTOMETRIC_LOGLUV:
+ 			if (td->td_compression != COMPRESSION_SGILOG &&
+ 			    td->td_compression != COMPRESSION_SGILOG24) {
+-				sprintf(emsg, "Sorry, LogLuv data must have %s=%d or %d",
++				snprintf(emsg, 1024, "Sorry, LogLuv data must have %s=%d or %d",
+ 				    "Compression", COMPRESSION_SGILOG, COMPRESSION_SGILOG24);
+ 				return (0);
+ 			}
+ 			if (td->td_planarconfig != PLANARCONFIG_CONTIG) {
+-				sprintf(emsg, "Sorry, can not handle LogLuv images with %s=%d",
++				snprintf(emsg, 1024, "Sorry, can not handle LogLuv images with %s=%d",
+ 				    "Planarconfiguration", td->td_planarconfig);
+ 				return (0);
+ 			}
+@@ -182,7 +182,7 @@
+ 		case PHOTOMETRIC_CIELAB:
+ 			break;
+ 		default:
+-			sprintf(emsg, "Sorry, can not handle image with %s=%d",
++			snprintf(emsg, 1024, "Sorry, can not handle image with %s=%d",
+ 			    photoTag, photometric);
+ 			return (0);
+ 	}
+@@ -192,6 +192,7 @@
+ void
+ TIFFRGBAImageEnd(TIFFRGBAImage* img)
+ {
++#define	tif	(img->tif)	/* SCE: freed with the image's TIFF's allocator */
+ 	if (img->Map)
+ 		_TIFFfree(img->Map), img->Map = NULL;
+ 	if (img->BWmap)
+@@ -207,6 +208,7 @@
+ 		_TIFFfree( img->greencmap );
+ 		_TIFFfree( img->bluecmap );
+ 	}
++#undef	tif
+ }
+ 
+ static int
+@@ -250,7 +252,7 @@
+ 		case 16:
+ 			break;
+ 		default:
+-			sprintf(emsg, "Sorry, can not handle images with %d-bit samples",
++			snprintf(emsg, 1024, "Sorry, can not handle images with %d-bit samples",
+ 			    img->bitspersample);
+ 			return (0);
+ 	}
+@@ -300,7 +302,7 @@
+ 				img->photometric = PHOTOMETRIC_RGB;
+ 				break;
+ 			default:
+-				sprintf(emsg, "Missing needed %s tag", photoTag);
++				snprintf(emsg, 1024, "Missing needed %s tag", photoTag);
+ 				return (0);
+ 		}
+ 	}
+@@ -308,7 +310,7 @@
+ 		case PHOTOMETRIC_PALETTE:
+ 			if (!TIFFGetField(tif, TIFFTAG_COLORMAP,
+ 			    &red_orig, &green_orig, &blue_orig)) {
+-				sprintf(emsg, "Missing required \"Colormap\" tag");
++				snprintf(emsg, 1024, "Missing required \"Colormap\" tag");
+ 				return (0);
+ 			}
+ 
+@@ -318,7 +320,7 @@
+ 			img->greencmap = (uint16 *) _TIFFmalloc(sizeof(uint16)*n_color);
+ 			img->bluecmap = (uint16 *) _TIFFmalloc(sizeof(uint16)*n_color);
+ 			if( !img->redcmap || !img->greencmap || !img->bluecmap ) {
+-				sprintf(emsg, "Out of memory for colormap copy");
++				snprintf(emsg, 1024, "Out of memory for colormap copy");
+ 				return (0);
+ 			}
+ 
+@@ -332,7 +334,7 @@
+ 			if (planarconfig == PLANARCONFIG_CONTIG
+ 			    && img->samplesperpixel != 1
+ 			    && img->bitspersample < 8 ) {
+-				sprintf(emsg,
++				snprintf(emsg, 1024,
+ 				    "Sorry, can not handle contiguous data with %s=%d, "
+ 				    "and %s=%d and Bits/Sample=%d",
+ 				    photoTag, img->photometric,
+@@ -369,7 +371,7 @@
+ 			break;
+ 		case PHOTOMETRIC_RGB:
+ 			if (colorchannels < 3) {
+-				sprintf(emsg, "Sorry, can not handle RGB image with %s=%d",
++				snprintf(emsg, 1024, "Sorry, can not handle RGB image with %s=%d",
+ 				    "Color channels", colorchannels);
+ 				return (0);
+ 			}
+@@ -379,12 +381,12 @@
+ 				uint16 inkset;
+ 				TIFFGetFieldDefaulted(tif, TIFFTAG_INKSET, &inkset);
+ 				if (inkset != INKSET_CMYK) {
+-					sprintf(emsg, "Sorry, can not handle separated image with %s=%d",
++					snprintf(emsg, 1024, "Sorry, can not handle separated image with %s=%d",
+ 					    "InkSet", inkset);
+ 					return (0);
+ 				}
+ 				if (img->samplesperpixel < 4) {
+-					sprintf(emsg, "Sorry, can not handle separated image with %s=%d",
++					snprintf(emsg, 1024, "Sorry, can not handle separated image with %s=%d",
+ 					    "Samples/pixel", img->samplesperpixel);
+ 					return (0);
+ 				}
+@@ -392,7 +394,7 @@
+ 			break;
+ 		case PHOTOMETRIC_LOGL:
+ 			if (compress != COMPRESSION_SGILOG) {
+-				sprintf(emsg, "Sorry, LogL data must have %s=%d",
++				snprintf(emsg, 1024, "Sorry, LogL data must have %s=%d",
+ 				    "Compression", COMPRESSION_SGILOG);
+ 				return (0);
+ 			}
+@@ -402,12 +404,12 @@
+ 			break;
+ 		case PHOTOMETRIC_LOGLUV:
+ 			if (compress != COMPRESSION_SGILOG && compress != COMPRESSION_SGILOG24) {
+-				sprintf(emsg, "Sorry, LogLuv data must have %s=%d or %d",
++				snprintf(emsg, 1024, "Sorry, LogLuv data must have %s=%d or %d",
+ 				    "Compression", COMPRESSION_SGILOG, COMPRESSION_SGILOG24);
+ 				return (0);
+ 			}
+ 			if (planarconfig != PLANARCONFIG_CONTIG) {
+-				sprintf(emsg, "Sorry, can not handle LogLuv images with %s=%d",
++				snprintf(emsg, 1024, "Sorry, can not handle LogLuv images with %s=%d",
+ 				    "Planarconfiguration", planarconfig);
+ 				return (0);
+ 			}
+@@ -418,7 +420,7 @@
+ 		case PHOTOMETRIC_CIELAB:
+ 			break;
+ 		default:
+-			sprintf(emsg, "Sorry, can not handle image with %s=%d",
++			snprintf(emsg, 1024, "Sorry, can not handle image with %s=%d",
+ 			    photoTag, img->photometric);
+ 			return (0);
+ 	}
+@@ -434,19 +436,19 @@
+ 	    !(planarconfig == PLANARCONFIG_SEPARATE && colorchannels > 1);
+ 	if (img->isContig) {
+ 		if (!PickContigCase(img)) {
+-			sprintf(emsg, "Sorry, can not handle image");
++			snprintf(emsg, 1024, "Sorry, can not handle image");
+ 			return 0;
+ 		}
+ 	} else {
+ 		if (!PickSeparateCase(img)) {
+-			sprintf(emsg, "Sorry, can not handle image");
++			snprintf(emsg, 1024, "Sorry, can not handle image");
+ 			return 0;
+ 		}
+ 	}
+ 	return 1;
+ }
+ 
+-int
++static int	/* SCE: static in libpaf */
+ TIFFRGBAImageGet(TIFFRGBAImage* img, uint32* raster, uint32 w, uint32 h)
+ {
+     if (img->get == NULL) {
+@@ -465,6 +467,7 @@
+  * Read the specified image into an ABGR-format rastertaking in account
+  * specified orientation.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFReadRGBAImageOriented(TIFF* tif,
+ 			  uint32 rwidth, uint32 rheight, uint32* raster,
+@@ -486,11 +489,13 @@
+     }
+     return (ok);
+ }
++#endif
+ 
+ /*
+  * Read the specified image into an ABGR-format raster. Use bottom left
+  * origin for raster by default.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFReadRGBAImage(TIFF* tif,
+ 		  uint32 rwidth, uint32 rheight, uint32* raster, int stop)
+@@ -498,6 +503,7 @@
+ 	return TIFFReadRGBAImageOriented(tif, rwidth, rheight, raster,
+ 					 ORIENTATION_BOTLEFT, stop);
+ }
++#endif
+ 
+ static int 
+ setorientation(TIFFRGBAImage* img)
+@@ -673,18 +679,24 @@
+ 	unsigned char* p2;
+ 	unsigned char* pa;
+ 	tsize_t tilesize;
++	tsize_t bufsize;
+ 	int32 fromskew, toskew;
+ 	int alpha = img->alpha;
+ 	uint32 nrow;
+ 	int ret = 1, flip;
+ 
+ 	tilesize = TIFFTileSize(tif);
+-	buf = (unsigned char*) _TIFFmalloc((alpha?4:3)*tilesize);
++	bufsize = TIFFSafeMultiply(tsize_t,alpha?4:3,tilesize);	/* SCE: libtiff 3.9.7's overflow check */
++	if (bufsize == 0) {
++		TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif), "Integer overflow in %s", "gtTileSeparate");
++		return (0);
++	}
++	buf = (unsigned char*) _TIFFmalloc(bufsize);
+ 	if (buf == 0) {
+ 		TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif), "No space for tile buffer");
+ 		return (0);
+ 	}
+-	_TIFFmemset(buf, 0, (alpha?4:3)*tilesize);
++	_TIFFmemset(buf, 0, bufsize);
+ 	p0 = buf;
+ 	p1 = p0 + tilesize;
+ 	p2 = p1 + tilesize;
+@@ -880,17 +892,23 @@
+ 	uint32 rowsperstrip, offset_row;
+ 	uint32 imagewidth = img->width;
+ 	tsize_t stripsize;
++	tsize_t bufsize;
+ 	int32 fromskew, toskew;
+ 	int alpha = img->alpha;
+ 	int ret = 1, flip;
+ 
+ 	stripsize = TIFFStripSize(tif);
+-	p0 = buf = (unsigned char *)_TIFFmalloc((alpha?4:3)*stripsize);
++	bufsize = TIFFSafeMultiply(tsize_t,alpha?4:3,stripsize);	/* SCE: libtiff 3.9.7's overflow check */
++	if (bufsize == 0) {
++		TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif), "Integer overflow in %s", "gtStripSeparate");
++		return (0);
++	}
++	p0 = buf = (unsigned char *)_TIFFmalloc(bufsize);
+ 	if (buf == 0) {
+ 		TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif), "No space for tile buffer");
+ 		return (0);
+ 	}
+-	_TIFFmemset(buf, 0, (alpha?4:3)*stripsize);
++	_TIFFmemset(buf, 0, bufsize);
+ 	p1 = p0 + stripsize;
+ 	p2 = p1 + stripsize;
+ 	pa = (alpha?(p2+stripsize):NULL);
+@@ -2018,6 +2036,7 @@
+ static int
+ initYCbCrConversion(TIFFRGBAImage* img)
+ {
++#define	tif	(img->tif)	/* SCE: the image's TIFF's allocator */
+ 	static char module[] = "initYCbCrConversion";
+ 
+ 	float *luma, *refBlackWhite;
+@@ -2030,23 +2049,25 @@
+ 		    + 3*256*sizeof (int32)
+ 		    );
+ 		if (img->ycbcr == NULL) {
+-			TIFFErrorExt(img->tif->tif_clientdata, module,
++			TIFFErrorExt(tif->tif_clientdata, module,
+ 			    "No space for YCbCr->RGB conversion state");
+ 			return (0);
+ 		}
+ 	}
+ 
+-	TIFFGetFieldDefaulted(img->tif, TIFFTAG_YCBCRCOEFFICIENTS, &luma);
+-	TIFFGetFieldDefaulted(img->tif, TIFFTAG_REFERENCEBLACKWHITE,
++	TIFFGetFieldDefaulted(tif, TIFFTAG_YCBCRCOEFFICIENTS, &luma);
++	TIFFGetFieldDefaulted(tif, TIFFTAG_REFERENCEBLACKWHITE,
+ 	    &refBlackWhite);
+ 	if (TIFFYCbCrToRGBInit(img->ycbcr, luma, refBlackWhite) < 0)
+ 		return(0);
+ 	return (1);
++#undef	tif
+ }
+ 
+ static tileContigRoutine
+ initCIELabConversion(TIFFRGBAImage* img)
+ {
++#define	tif	(img->tif)	/* SCE: the image's TIFF's allocator */
+ 	static char module[] = "initCIELabConversion";
+ 
+ 	float   *whitePoint;
+@@ -2056,25 +2077,26 @@
+ 		img->cielab = (TIFFCIELabToRGB *)
+ 			_TIFFmalloc(sizeof(TIFFCIELabToRGB));
+ 		if (!img->cielab) {
+-			TIFFErrorExt(img->tif->tif_clientdata, module,
++			TIFFErrorExt(tif->tif_clientdata, module,
+ 			    "No space for CIE L*a*b*->RGB conversion state.");
+ 			return NULL;
+ 		}
+ 	}
+ 
+-	TIFFGetFieldDefaulted(img->tif, TIFFTAG_WHITEPOINT, &whitePoint);
++	TIFFGetFieldDefaulted(tif, TIFFTAG_WHITEPOINT, &whitePoint);
+ 	refWhite[1] = 100.0F;
+ 	refWhite[0] = whitePoint[0] / whitePoint[1] * refWhite[1];
+ 	refWhite[2] = (1.0F - whitePoint[0] - whitePoint[1])
+ 		      / whitePoint[1] * refWhite[1];
+ 	if (TIFFCIELabToRGBInit(img->cielab, &display_sRGB, refWhite) < 0) {
+-		TIFFErrorExt(img->tif->tif_clientdata, module,
++		TIFFErrorExt(tif->tif_clientdata, module,
+ 		    "Failed to initialize CIE L*a*b*->RGB conversion state.");
+ 		_TIFFfree(img->cielab);
+ 		return NULL;
+ 	}
+ 
+ 	return putcontig8bitCIELab;
++#undef	tif
+ }
+ 
+ /*
+@@ -2087,6 +2109,7 @@
+ static int
+ makebwmap(TIFFRGBAImage* img)
+ {
++#define	tif	(img->tif)	/* SCE: the image's TIFF's allocator */
+     TIFFRGBValue* Map = img->Map;
+     int bitspersample = img->bitspersample;
+     int nsamples = 8 / bitspersample;
+@@ -2099,7 +2122,7 @@
+     img->BWmap = (uint32**) _TIFFmalloc(
+ 	256*sizeof (uint32 *)+(256*nsamples*sizeof(uint32)));
+     if (img->BWmap == NULL) {
+-		TIFFErrorExt(img->tif->tif_clientdata, TIFFFileName(img->tif), "No space for B&W mapping table");
++		TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif), "No space for B&W mapping table");
+ 		return (0);
+     }
+     p = (uint32*)(img->BWmap + 256);
+@@ -2136,6 +2159,7 @@
+ #undef	GREY
+     }
+     return (1);
++#undef	tif
+ }
+ 
+ /*
+@@ -2146,6 +2170,7 @@
+ static int
+ setupMap(TIFFRGBAImage* img)
+ {
++#define	tif	(img->tif)	/* SCE: the image's TIFF's allocator */
+     int32 x, range;
+ 
+     range = (int32)((1L<<img->bitspersample)-1);
+@@ -2156,7 +2181,7 @@
+ 
+     img->Map = (TIFFRGBValue*) _TIFFmalloc((range+1) * sizeof (TIFFRGBValue));
+     if (img->Map == NULL) {
+-		TIFFErrorExt(img->tif->tif_clientdata, TIFFFileName(img->tif),
++		TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif),
+ 			"No space for photometric conversion table");
+ 		return (0);
+     }
+@@ -2180,6 +2205,7 @@
+ 	_TIFFfree(img->Map), img->Map = NULL;
+     }
+     return (1);
++#undef	tif
+ }
+ 
+ static int
+@@ -2223,6 +2249,7 @@
+ static int
+ makecmap(TIFFRGBAImage* img)
+ {
++#define	tif	(img->tif)	/* SCE: the image's TIFF's allocator */
+     int bitspersample = img->bitspersample;
+     int nsamples = 8 / bitspersample;
+     uint16* r = img->redcmap;
+@@ -2234,7 +2261,7 @@
+     img->PALmap = (uint32**) _TIFFmalloc(
+ 	256*sizeof (uint32 *)+(256*nsamples*sizeof(uint32)));
+     if (img->PALmap == NULL) {
+-		TIFFErrorExt(img->tif->tif_clientdata, TIFFFileName(img->tif), "No space for Palette mapping table");
++		TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif), "No space for Palette mapping table");
+ 		return (0);
+ 	}
+     p = (uint32*)(img->PALmap + 256);
+@@ -2270,6 +2297,7 @@
+ #undef CMAP
+     }
+     return (1);
++#undef	tif
+ }
+ 
+ /* 
+@@ -2543,7 +2571,7 @@
+ 		return (0);
+     }
+ 
+-    if (TIFFRGBAImageOK(tif, emsg) && TIFFRGBAImageBegin(&img, tif, 0, emsg)) {
++    if (TIFFRGBAImageOK(tif, emsg) && TIFFRGBAImageBegin(&img, tif, 1, emsg)) {	/* SCE: stop on error */
+ 
+         img.row_offset = row;
+         img.col_offset = 0;
+@@ -2608,7 +2636,7 @@
+      */
+     
+     if (!TIFFRGBAImageOK(tif, emsg) 
+-	|| !TIFFRGBAImageBegin(&img, tif, 0, emsg)) {
++	|| !TIFFRGBAImageBegin(&img, tif, 1, emsg)) {	/* SCE: stop on error */
+ 	    TIFFErrorExt(tif->tif_clientdata, TIFFFileName(tif), "%s", emsg);
+ 	    return( 0 );
+     }
+diff -ruN a/libtiff/tif_jpeg.c b/libtiff/tif_jpeg.c
+--- a/libtiff/tif_jpeg.c
++++ b/libtiff/tif_jpeg.c
+@@ -458,6 +458,7 @@
+ tables_empty_output_buffer(j_compress_ptr cinfo)
+ {
+ 	JPEGState* sp = (JPEGState*) cinfo;
++	TIFF* tif = sp->tif;	/* SCE */
+ 	void* newbuf;
+ 
+ 	/* the entire buffer has been filled; enlarge it by 1000 bytes */
+@@ -1654,7 +1655,7 @@
+ 			return (0);
+ 		}
+ 		_TIFFsetByteArray(&sp->jpegtables, va_arg(ap, void*),
+-		    (long) v32);
++		    (long) v32, tif);
+ 		sp->jpegtables_length = v32;
+ 		TIFFSetFieldBit(tif, FIELD_JPEGTABLES);
+ 		break;
+@@ -1683,13 +1684,13 @@
+ 		sp->recvparams = va_arg(ap, uint32);
+ 		break;
+ 	case TIFFTAG_FAXSUBADDRESS:
+-		_TIFFsetString(&sp->subaddress, va_arg(ap, char*));
++		_TIFFsetString(&sp->subaddress, va_arg(ap, char*), tif);
+ 		break;
+ 	case TIFFTAG_FAXRECVTIME:
+ 		sp->recvtime = va_arg(ap, uint32);
+ 		break;
+ 	case TIFFTAG_FAXDCS:
+-		_TIFFsetString(&sp->faxdcs, va_arg(ap, char*));
++		_TIFFsetString(&sp->faxdcs, va_arg(ap, char*), tif);
+ 		break;
+ 	default:
+ 		return (*sp->vsetparent)(tif, tag, ap);
+@@ -1825,6 +1826,7 @@
+ static void
+ JPEGPrintDir(TIFF* tif, FILE* fd, long flags)
+ {
++#if 0	/* SCE: nothing printed */
+ 	JPEGState* sp = JState(tif);
+ 
+ 	assert(sp != NULL);
+@@ -1843,6 +1845,7 @@
+                     (unsigned long) sp->recvtime);
+         if (TIFFFieldSet(tif,FIELD_FAXDCS))
+                 fprintf(fd, "  Fax DCS: %s\n", sp->faxdcs);
++#endif
+ }
+ 
+ static uint32
+@@ -1939,6 +1942,9 @@
+     else
+         decompress = 1;
+ 
++    /* SCE: libjpeg allocates from the TIFF's heap (jmem_paf) */
++    sp->cinfo.comm.client_data = tif->tif_memptr;
++
+     /*
+      * Initialize libjpeg.
+      */
+diff -ruN a/libtiff/tif_luv.c b/libtiff/tif_luv.c
+--- a/libtiff/tif_luv.c
++++ b/libtiff/tif_luv.c
+@@ -646,7 +646,7 @@
+ #if !LOGLUV_PUBLIC
+ static
+ #endif
+-double
++static double
+ LogL16toY(int p16)		/* compute luminance from 16-bit LogL */
+ {
+ 	int	Le = p16 & 0x7fff;
+@@ -728,7 +728,7 @@
+ #if !LOGLUV_PUBLIC
+ static
+ #endif
+-double
++static double
+ LogL10toY(int p10)		/* compute luminance from 10-bit LogL */
+ {
+ 	if (p10 == 0)
+@@ -1200,10 +1200,7 @@
+ 		    "No support for converting user data format to LogL");
+ 		return (0);
+ 	}
+-        if( isTiled(tif) )
+-            sp->tbuflen = multiply(td->td_tilewidth, td->td_tilelength);
+-        else
+-            sp->tbuflen = multiply(td->td_imagewidth, td->td_rowsperstrip);
++	sp->tbuflen = multiply(td->td_imagewidth, td->td_rowsperstrip);	/* SCE: strips only */
+ 	if (multiply(sp->tbuflen, sizeof (int16)) == 0 ||
+ 	    (sp->tbuf = (tidata_t*) _TIFFmalloc(sp->tbuflen * sizeof (int16))) == NULL) {
+ 		TIFFErrorExt(tif->tif_clientdata, module, "%s: No space for SGILog translation buffer",
+@@ -1301,10 +1298,7 @@
+ 		    "No support for converting user data format to LogLuv");
+ 		return (0);
+ 	}
+-        if( isTiled(tif) )
+-            sp->tbuflen = multiply(td->td_tilewidth, td->td_tilelength);
+-        else
+-            sp->tbuflen = multiply(td->td_imagewidth, td->td_rowsperstrip);
++	sp->tbuflen = multiply(td->td_imagewidth, td->td_rowsperstrip);	/* SCE: strips only */
+ 	if (multiply(sp->tbuflen, sizeof (uint32)) == 0 ||
+ 	    (sp->tbuf = (tidata_t*) _TIFFmalloc(sp->tbuflen * sizeof (uint32))) == NULL) {
+ 		TIFFErrorExt(tif->tif_clientdata, module, "%s: No space for SGILog translation buffer",
+diff -ruN a/libtiff/tif_lzw.c b/libtiff/tif_lzw.c
+--- a/libtiff/tif_lzw.c
++++ b/libtiff/tif_lzw.c
+@@ -428,7 +428,7 @@
+ 			NextCode(tif, sp, bp, code, GetNextCode);
+ 			if (code == CODE_EOI)
+ 				break;
+-			if (code == CODE_CLEAR) {
++			if (code >= CODE_CLEAR) {	/* SCE: libtiff 4.0's check */
+ 				TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+ 				"LZWDecode: Corrupted LZW table at scanline %d",
+ 					     tif->tif_row);
+@@ -592,6 +592,8 @@
+ 			} while (--residue > occ);
+ 			tp = op + occ;
+ 			do {
++				if ((tidata_t) tp < op0)	/* SCE: no write before the buffer */
++					return (0);
+ 				*--tp = codep->value;
+ 				codep = codep->next;
+ 			} while (--occ);
+@@ -603,6 +605,8 @@
+ 		op += residue, occ -= residue;
+ 		tp = op;
+ 		do {
++			if ((tidata_t) tp < op0)	/* SCE: no write before the buffer */
++				return (0);
+ 			*--tp = codep->value;
+ 			codep = codep->next;
+ 		} while (--residue);
+@@ -632,7 +636,7 @@
+ 			NextCode(tif, sp, bp, code, GetNextCodeCompat);
+ 			if (code == CODE_EOI)
+ 				break;
+-			if (code == CODE_CLEAR) {
++			if (code >= CODE_CLEAR) {	/* SCE: libtiff 4.0's check */
+ 				TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+ 				"LZWDecode: Corrupted LZW table at scanline %d",
+ 					     tif->tif_row);
+@@ -701,6 +705,8 @@
+ 				sp->dec_restart = occ;
+ 				tp = op + occ;
+ 				do  {
++					if ((tidata_t) tp < op0)	/* SCE: no write before the buffer */
++						return (0);
+ 					*--tp = codep->value;
+ 					codep = codep->next;
+ 				}  while (--occ);
+@@ -709,6 +715,8 @@
+ 			op += codep->length, occ -= codep->length;
+ 			tp = op;
+ 			do {
++				if ((tidata_t) tp < op0)	/* SCE: no write before the buffer */
++					return (0);
+ 				*--tp = codep->value;
+ 			} while( (codep = codep->next) != NULL && tp > op_orig);
+ 		} else
+diff -ruN a/libtiff/tif_ojpeg.c b/libtiff/tif_ojpeg.c
+--- a/libtiff/tif_ojpeg.c
++++ b/libtiff/tif_ojpeg.c
+@@ -576,6 +576,7 @@
+ static void
+ OJPEGPrintDir(TIFF* tif, FILE* fd, long flags)
+ {
++#if 0	/* SCE: nothing printed */
+ 	OJPEGState* sp=(OJPEGState*)tif->tif_data;
+ 	uint8 m;
+ 	(void)flags;
+@@ -609,6 +610,7 @@
+ 		fprintf(fd,"  JpegProc: %u\n",(unsigned int)sp->jpeg_proc);
+ 	if (TIFFFieldSet(tif,FIELD_OJPEG_JPEGRESTARTINTERVAL))
+ 		fprintf(fd,"  JpegRestartInterval: %u\n",(unsigned int)sp->restart_interval);
++#endif
+ }
+ 
+ static int
+diff -ruN a/libtiff/tif_open.c b/libtiff/tif_open.c
+--- a/libtiff/tif_open.c
++++ b/libtiff/tif_open.c
+@@ -113,7 +113,7 @@
+ 	}
+ }
+ 
+-int
++static int
+ _TIFFgetMode(const char* mode, const char* module)
+ {
+ 	int m = -1;
+@@ -147,7 +147,11 @@
+ 	TIFFCloseProc closeproc,
+ 	TIFFSizeProc sizeproc,
+ 	TIFFMapFileProc mapproc,
+-	TIFFUnmapFileProc unmapproc
++	TIFFUnmapFileProc unmapproc,
++	void* mem_ptr,			/* SCE: the memory functions and their context */
++	TIFFMallocProc mallocproc,
++	TIFFReallocProc reallocproc,
++	TIFFFreeProc freeproc
+ )
+ {
+ 	static const char module[] = "TIFFClientOpen";
+@@ -158,14 +162,14 @@
+ 	m = _TIFFgetMode(mode, module);
+ 	if (m == -1)
+ 		goto bad2;
+-	tif = (TIFF *)_TIFFmalloc(sizeof (TIFF) + strlen(name) + 1);
++	tif = (TIFF *)(*mallocproc)(mem_ptr, sizeof (TIFF) + strlen(name) + 1);	/* SCE */
+ 	if (tif == NULL) {
+ 		TIFFErrorExt(clientdata, module, "%s: Out of memory (TIFF structure)", name);
+ 		goto bad2;
+ 	}
+ 	_TIFFmemset(tif, 0, sizeof (*tif));
+ 	tif->tif_name = (char *)tif + sizeof (TIFF);
+-	strcpy(tif->tif_name, name);
++	strncpy(tif->tif_name, name, strlen(name));	/* SCE */
+ 	tif->tif_mode = m &~ (O_CREAT|O_TRUNC);
+ 	tif->tif_curdir = (tdir_t) -1;		/* non-existent directory */
+ 	tif->tif_curoff = 0;
+@@ -190,6 +194,10 @@
+ 		tif->tif_unmapproc = unmapproc;
+ 	else
+ 		tif->tif_unmapproc = _tiffDummyUnmapProc;
++	tif->tif_memptr = mem_ptr;	/* SCE */
++	tif->tif_mallocproc = mallocproc;
++	tif->tif_freeproc = freeproc;
++	tif->tif_reallocproc = reallocproc;
+ 	_TIFFSetDefaultCompressionState(tif);	/* setup default state */
+ 	/*
+ 	 * Default is to return data MSB2LSB and enable the
+@@ -475,23 +483,28 @@
+ const char *
+ TIFFSetFileName(TIFF* tif, const char *name)
+ {
++#if 0	/* SCE: Sony's tif_open.o has an empty function here, nameless; the accessor after TIFFFileName */
+ 	const char* old_name = tif->tif_name;
+ 	tif->tif_name = (char *)name;
+ 	return (old_name);
++#endif
+ }
+ 
+ /*
+  * Return open file's I/O descriptor.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFFileno(TIFF* tif)
+ {
+ 	return (tif->tif_fd);
+ }
++#endif
+ 
+ /*
+  * Set open file's I/O descriptor, and return previous value.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFSetFileno(TIFF* tif, int fd)
+ {
+@@ -499,19 +512,23 @@
+ 	tif->tif_fd = fd;
+ 	return old_fd;
+ }
++#endif
+ 
+ /*
+  * Return open file's clientdata.
+  */
++#if 0	/* SCE: not in libpaf */
+ thandle_t
+ TIFFClientdata(TIFF* tif)
+ {
+ 	return (tif->tif_clientdata);
+ }
++#endif
+ 
+ /*
+  * Set open file's clientdata, and return previous value.
+  */
++#if 0	/* SCE: not in libpaf */
+ thandle_t
+ TIFFSetClientdata(TIFF* tif, thandle_t newvalue)
+ {
+@@ -519,19 +536,23 @@
+ 	tif->tif_clientdata = newvalue;
+ 	return m;
+ }
++#endif
+ 
+ /*
+  * Return read/write mode.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFGetMode(TIFF* tif)
+ {
+ 	return (tif->tif_mode);
+ }
++#endif
+ 
+ /*
+  * Return read/write mode.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFSetMode(TIFF* tif, int mode)
+ {
+@@ -539,6 +560,7 @@
+ 	tif->tif_mode = mode;
+ 	return (old_mode);
+ }
++#endif
+ 
+ /*
+  * Return nonzero if file is organized in
+@@ -556,134 +578,164 @@
+ uint32
+ TIFFCurrentRow(TIFF* tif)
+ {
++#if 0	/* SCE: Sony's tif_open.o has an empty function here, nameless; the accessor after TIFFIsTiled */
+ 	return (tif->tif_row);
++#endif
+ }
+ 
+ /*
+  * Return index of the current directory.
+  */
++#if 0	/* SCE: not in libpaf */
+ tdir_t
+ TIFFCurrentDirectory(TIFF* tif)
+ {
+ 	return (tif->tif_curdir);
+ }
++#endif
+ 
+ /*
+  * Return current strip.
+  */
++#if 0	/* SCE: not in libpaf */
+ tstrip_t
+ TIFFCurrentStrip(TIFF* tif)
+ {
+ 	return (tif->tif_curstrip);
+ }
++#endif
+ 
+ /*
+  * Return current tile.
+  */
++#if 0	/* SCE: not in libpaf */
+ ttile_t
+ TIFFCurrentTile(TIFF* tif)
+ {
+ 	return (tif->tif_curtile);
+ }
++#endif
+ 
+ /*
+  * Return nonzero if the file has byte-swapped data.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFIsByteSwapped(TIFF* tif)
+ {
+ 	return ((tif->tif_flags & TIFF_SWAB) != 0);
+ }
++#endif
+ 
+ /*
+  * Return nonzero if the data is returned up-sampled.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFIsUpSampled(TIFF* tif)
+ {
+ 	return (isUpSampled(tif));
+ }
++#endif
+ 
+ /*
+  * Return nonzero if the data is returned in MSB-to-LSB bit order.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFIsMSB2LSB(TIFF* tif)
+ {
+ 	return (isFillOrder(tif, FILLORDER_MSB2LSB));
+ }
++#endif
+ 
+ /*
+  * Return nonzero if given file was written in big-endian order.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFIsBigEndian(TIFF* tif)
+ {
+ 	return (tif->tif_header.tiff_magic == TIFF_BIGENDIAN);
+ }
++#endif
+ 
+ /*
+  * Return pointer to file read method.
+  */
++#if 0	/* SCE: not in libpaf */
+ TIFFReadWriteProc
+ TIFFGetReadProc(TIFF* tif)
+ {
+ 	return (tif->tif_readproc);
+ }
++#endif
+ 
+ /*
+  * Return pointer to file write method.
+  */
++#if 0	/* SCE: not in libpaf */
+ TIFFReadWriteProc
+ TIFFGetWriteProc(TIFF* tif)
+ {
+ 	return (tif->tif_writeproc);
+ }
++#endif
+ 
+ /*
+  * Return pointer to file seek method.
+  */
++#if 0	/* SCE: not in libpaf */
+ TIFFSeekProc
+ TIFFGetSeekProc(TIFF* tif)
+ {
+ 	return (tif->tif_seekproc);
+ }
++#endif
+ 
+ /*
+  * Return pointer to file close method.
+  */
++#if 0	/* SCE: not in libpaf */
+ TIFFCloseProc
+ TIFFGetCloseProc(TIFF* tif)
+ {
+ 	return (tif->tif_closeproc);
+ }
++#endif
+ 
+ /*
+  * Return pointer to file size requesting method.
+  */
++#if 0	/* SCE: not in libpaf */
+ TIFFSizeProc
+ TIFFGetSizeProc(TIFF* tif)
+ {
+ 	return (tif->tif_sizeproc);
+ }
++#endif
+ 
+ /*
+  * Return pointer to memory mapping method.
+  */
++#if 0	/* SCE: not in libpaf */
+ TIFFMapFileProc
+ TIFFGetMapFileProc(TIFF* tif)
+ {
+ 	return (tif->tif_mapproc);
+ }
++#endif
+ 
+ /*
+  * Return pointer to memory unmapping method.
+  */
++#if 0	/* SCE: not in libpaf */
+ TIFFUnmapFileProc
+ TIFFGetUnmapFileProc(TIFF* tif)
+ {
+ 	return (tif->tif_unmapproc);
+ }
++#endif
+ 
+ /* vim: set ts=8 sts=8 sw=8 noet: */
+ /*
+diff -ruN a/libtiff/tif_pixarlog.c b/libtiff/tif_pixarlog.c
+--- a/libtiff/tif_pixarlog.c
++++ b/libtiff/tif_pixarlog.c
+@@ -474,7 +474,7 @@
+ } PixarLogState;
+ 
+ static int
+-PixarLogMakeTables(PixarLogState *sp)
++PixarLogMakeTables(PixarLogState *sp, TIFF* tif)
+ {
+ 
+ /*
+@@ -663,7 +663,7 @@
+ 				      td->td_rowsperstrip), sizeof(uint16));
+ 	if (tbuf_size == 0)
+ 		return (0);
+-	sp->tbuf = (uint16 *) _TIFFmalloc(tbuf_size);
++	sp->tbuf = (uint16 *) _TIFFmalloc(tbuf_size+sizeof(uint16)*sp->stride);	/* SCE: libtiff 4.0's */
+ 	if (sp->tbuf == NULL)
+ 		return (0);
+ 	if (sp->user_datafmt == PIXARLOGDATAFMT_UNKNOWN)
+@@ -1351,7 +1351,7 @@
+ 	/*
+ 	 * build the companding tables 
+ 	 */
+-	PixarLogMakeTables(sp);
++	PixarLogMakeTables(sp, tif);
+ 
+ 	return (1);
+ bad:
+diff -ruN a/libtiff/tif_predict.c b/libtiff/tif_predict.c
+--- a/libtiff/tif_predict.c
++++ b/libtiff/tif_predict.c
+@@ -653,6 +653,7 @@
+ static void
+ PredictorPrintDir(TIFF* tif, FILE* fd, long flags)
+ {
++#if 0	/* SCE: nothing printed */
+ 	TIFFPredictorState* sp = PredictorState(tif);
+ 
+ 	(void) flags;
+@@ -667,6 +668,7 @@
+ 	}
+ 	if (sp->printdir)
+ 		(*sp->printdir)(tif, fd, flags);
++#endif
+ }
+ 
+ int
+diff -ruN a/libtiff/tif_read.c b/libtiff/tif_read.c
+--- a/libtiff/tif_read.c
++++ b/libtiff/tif_read.c
+@@ -167,6 +167,8 @@
+ 		return ((tsize_t) -1);
+ }
+ 
++/* SCE: called, not inlined (TIFFReadRawStrip, which also called it, is not in libpaf) */
++#pragma noinline(TIFFReadRawStrip1)
+ static tsize_t
+ TIFFReadRawStrip1(TIFF* tif,
+     tstrip_t strip, tdata_t buf, tsize_t size, const char* module)
+@@ -214,6 +216,7 @@
+ /*
+  * Read a strip of data from the file.
+  */
++#if 0	/* SCE: not in libpaf */
+ tsize_t
+ TIFFReadRawStrip(TIFF* tif, tstrip_t strip, tdata_t buf, tsize_t size)
+ {
+@@ -253,6 +256,7 @@
+ 		bytecount = size;
+ 	return (TIFFReadRawStrip1(tif, strip, buf, bytecount, module));
+ }
++#endif
+ 
+ /*
+  * Read the specified strip and setup for decoding. The data buffer is
+@@ -406,6 +410,8 @@
+ 		return (-1);
+ }
+ 
++/* SCE: called, not inlined (TIFFReadRawTile, which also called it, is not in libpaf) */
++#pragma noinline(TIFFReadRawTile1)
+ static tsize_t
+ TIFFReadRawTile1(TIFF* tif,
+     ttile_t tile, tdata_t buf, tsize_t size, const char* module)
+@@ -456,6 +462,7 @@
+ /*
+  * Read a tile of data from the file.
+  */
++#if 0	/* SCE: not in libpaf */
+ tsize_t
+ TIFFReadRawTile(TIFF* tif, ttile_t tile, tdata_t buf, tsize_t size)
+ {
+@@ -488,6 +495,7 @@
+ 		bytecount = size;
+ 	return (TIFFReadRawTile1(tif, tile, buf, bytecount, module));
+ }
++#endif
+ 
+ /*
+  * Read the specified tile and setup for decoding. The data buffer is
+diff -ruN a/libtiff/tif_strip.c b/libtiff/tif_strip.c
+--- a/libtiff/tif_strip.c
++++ b/libtiff/tif_strip.c
+@@ -154,6 +154,7 @@
+ /*
+  * Compute the # bytes in a raw strip.
+  */
++#if 0	/* SCE: not in libpaf */
+ tsize_t
+ TIFFRawStripSize(TIFF* tif, tstrip_t strip)
+ {
+@@ -169,6 +170,7 @@
+ 
+ 	return bytecount;
+ }
++#endif
+ 
+ /*
+  * Compute the # bytes in a (row-aligned) strip.
+@@ -194,11 +196,13 @@
+  * request is <1 then we choose a strip size according
+  * to certain heuristics.
+  */
++#if 0	/* SCE: not in libpaf */
+ uint32
+ TIFFDefaultStripSize(TIFF* tif, uint32 request)
+ {
+ 	return (*tif->tif_defstripsize)(tif, request);
+ }
++#endif
+ 
+ uint32
+ _TIFFDefaultStripSize(TIFF* tif, uint32 s)
+@@ -338,6 +342,7 @@
+  * I/O size returned by TIFFScanlineSize which may be less
+  * if data is store as separate planes).
+  */
++#if 0	/* SCE: not in libpaf */
+ tsize_t
+ TIFFRasterScanlineSize(TIFF* tif)
+ {
+@@ -355,6 +360,7 @@
+ 					    td->td_samplesperpixel,
+ 					    "TIFFRasterScanlineSize"));
+ }
++#endif
+ 
+ /* vim: set ts=8 sts=8 sw=8 noet: */
+ /*
+diff -ruN a/libtiff/tif_swab.c b/libtiff/tif_swab.c
+--- a/libtiff/tif_swab.c
++++ b/libtiff/tif_swab.c
+@@ -104,6 +104,7 @@
+ #endif
+ 
+ #ifndef TIFFSwabDouble
++#if 0	/* SCE: not in libpaf */
+ void
+ TIFFSwabDouble(double *dp)
+ {
+@@ -114,6 +115,7 @@
+ 	t = lp[0]; lp[0] = lp[1]; lp[1] = t;
+ }
+ #endif
++#endif
+ 
+ #ifndef TIFFSwabArrayOfDouble
+ void
+diff -ruN a/libtiff/tif_tile.c b/libtiff/tif_tile.c
+--- a/libtiff/tif_tile.c
++++ b/libtiff/tif_tile.c
+@@ -249,11 +249,13 @@
+  * request is <1 then we choose a size according
+  * to certain heuristics.
+  */
++#if 0	/* SCE: not in libpaf */
+ void
+ TIFFDefaultTileSize(TIFF* tif, uint32* tw, uint32* th)
+ {
+ 	(*tif->tif_deftilesize)(tif, tw, th);
+ }
++#endif
+ 
+ void
+ _TIFFDefaultTileSize(TIFF* tif, uint32* tw, uint32* th)
+diff -ruN a/libtiff/tif_write.c b/libtiff/tif_write.c
+--- a/libtiff/tif_write.c
++++ b/libtiff/tif_write.c
+@@ -45,6 +45,7 @@
+ static	int TIFFGrowStrips(TIFF*, int, const char*);
+ static	int TIFFAppendToStrip(TIFF*, tstrip_t, tidata_t, tsize_t);
+ 
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFWriteScanline(TIFF* tif, tdata_t buf, uint32 row, tsample_t sample)
+ {
+@@ -171,6 +172,7 @@
+ 	tif->tif_row = row + 1;
+ 	return (status);
+ }
++#endif
+ 
+ /*
+  * Encode the supplied data and write it to the
+@@ -178,6 +180,7 @@
+  *
+  * NB: Image length must be setup before writing.
+  */
++#if 0	/* SCE: not in libpaf */
+ tsize_t
+ TIFFWriteEncodedStrip(TIFF* tif, tstrip_t strip, tdata_t data, tsize_t cc)
+ {
+@@ -254,12 +257,14 @@
+ 	tif->tif_rawcp = tif->tif_rawdata;
+ 	return (cc);
+ }
++#endif
+ 
+ /*
+  * Write the supplied data to the specified strip.
+  *
+  * NB: Image length must be setup before writing.
+  */
++#if 0	/* SCE: not in libpaf */
+ tsize_t
+ TIFFWriteRawStrip(TIFF* tif, tstrip_t strip, tdata_t data, tsize_t cc)
+ {
+@@ -299,11 +304,13 @@
+ 	return (TIFFAppendToStrip(tif, strip, (tidata_t) data, cc) ?
+ 	    cc : (tsize_t) -1);
+ }
++#endif
+ 
+ /*
+  * Write and compress a tile of data.  The
+  * tile is selected by the (x,y,z,s) coordinates.
+  */
++#if 0	/* SCE: not in libpaf */
+ tsize_t
+ TIFFWriteTile(TIFF* tif,
+     tdata_t buf, uint32 x, uint32 y, uint32 z, tsample_t s)
+@@ -319,6 +326,7 @@
+ 	return (TIFFWriteEncodedTile(tif,
+ 	    TIFFComputeTile(tif, x, y, z, s), buf, (tsize_t) -1));
+ }
++#endif
+ 
+ /*
+  * Encode the supplied data and write it to the
+@@ -332,6 +340,7 @@
+  *     interface does not support automatically growing
+  *     the image on each write (as TIFFWriteScanline does).
+  */
++#if 0	/* SCE: not in libpaf */
+ tsize_t
+ TIFFWriteEncodedTile(TIFF* tif, ttile_t tile, tdata_t data, tsize_t cc)
+ {
+@@ -409,6 +418,7 @@
+ 	tif->tif_rawcp = tif->tif_rawdata;
+ 	return (cc);
+ }
++#endif
+ 
+ /*
+  * Write the supplied data to the specified strip.
+@@ -419,6 +429,7 @@
+  *     interface does not support automatically growing
+  *     the image on each write (as TIFFWriteScanline does).
+  */
++#if 0	/* SCE: not in libpaf */
+ tsize_t
+ TIFFWriteRawTile(TIFF* tif, ttile_t tile, tdata_t data, tsize_t cc)
+ {
+@@ -435,10 +446,12 @@
+ 	return (TIFFAppendToStrip(tif, tile, (tidata_t) data, cc) ?
+ 	    cc : (tsize_t) -1);
+ }
++#endif
+ 
+ #define	isUnspecified(tif, f) \
+     (TIFFFieldSet(tif,f) && (tif)->tif_dir.td_imagelength == 0)
+ 
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFSetupStrips(TIFF* tif)
+ {
+@@ -471,6 +484,7 @@
+ 	TIFFSetFieldBit(tif, FIELD_STRIPBYTECOUNTS);
+ 	return (1);
+ }
++#endif
+ #undef isUnspecified
+ 
+ /*
+@@ -479,6 +493,7 @@
+  * we also "freeze" the state of the directory so
+  * that important information is not changed.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFWriteCheck(TIFF* tif, int tiles, const char* module)
+ {
+@@ -538,10 +553,12 @@
+ 	tif->tif_flags |= TIFF_BEENWRITING;
+ 	return (1);
+ }
++#endif
+ 
+ /*
+  * Setup the raw data buffer used for encoding.
+  */
++#if 0	/* SCE: not in libpaf */
+ int
+ TIFFWriteBufferSetup(TIFF* tif, tdata_t bp, tsize_t size)
+ {
+@@ -581,10 +598,12 @@
+ 	tif->tif_flags |= TIFF_BUFFERSETUP;
+ 	return (1);
+ }
++#endif
+ 
+ /*
+  * Grow the strip data structures by delta strips.
+  */
++#if 0	/* SCE: not in libpaf */
+ static int
+ TIFFGrowStrips(TIFF* tif, int delta, const char* module)
+ {
+@@ -615,10 +634,13 @@
+ 	td->td_nstrips += delta;
+ 	return (1);
+ }
++#endif
+ 
+ /*
+  * Append the data to the specified strip.
+  */
++/* SCE: called, not inlined (the writers, which also called it, is not in libpaf) */
++#pragma noinline(TIFFAppendToStrip)
+ static int
+ TIFFAppendToStrip(TIFF* tif, tstrip_t strip, tidata_t data, tsize_t cc)
+ {
+@@ -702,11 +724,13 @@
+  * (very carefully), or to 0 so that the next write gets
+  * appended to the end of the file.
+  */
++#if 0	/* SCE: not in libpaf */
+ void
+ TIFFSetWriteOffset(TIFF* tif, toff_t off)
+ {
+ 	tif->tif_curoff = off;
+ }
++#endif
+ 
+ /* vim: set ts=8 sts=8 sw=8 noet: */
+ /*
+diff -ruN a/libtiff/tif_zip.c b/libtiff/tif_zip.c
+--- a/libtiff/tif_zip.c
++++ b/libtiff/tif_zip.c
+@@ -339,6 +339,23 @@
+       TRUE,	FALSE,	"" },
+ };
+ 
++/* SCE: zlib's memory functions over the TIFF's allocator (names ours) */
++static voidpf
++ZIPAlloc(voidpf opaque, uInt items, uInt size)
++{
++	TIFF* tif = (TIFF*) opaque;
++
++	return (voidpf) _TIFFmalloc(items * size);
++}
++
++static void
++ZIPFree(voidpf opaque, voidpf address)
++{
++	TIFF* tif = (TIFF*) opaque;
++
++	_TIFFfree(address);
++}
++
+ int
+ TIFFInitZIP(TIFF* tif, int scheme)
+ {
+@@ -365,9 +382,9 @@
+ 	if (tif->tif_data == NULL)
+ 		goto bad;
+ 	sp = ZState(tif);
+-	sp->stream.zalloc = NULL;
+-	sp->stream.zfree = NULL;
+-	sp->stream.opaque = NULL;
++	sp->stream.zalloc = ZIPAlloc;	/* SCE: zlib allocates with the TIFF's allocator */
++	sp->stream.zfree = ZIPFree;
++	sp->stream.opaque = (voidpf) tif;
+ 	sp->stream.data_type = Z_BINARY;
+ 
+ 	/*
+diff -ruN a/libtiff/tiffio.h b/libtiff/tiffio.h
+--- a/libtiff/tiffio.h
++++ b/libtiff/tiffio.h
+@@ -267,6 +267,10 @@
+ typedef	int (*TIFFMapFileProc)(thandle_t, tdata_t*, toff_t*);
+ typedef	void (*TIFFUnmapFileProc)(thandle_t, tdata_t, toff_t);
+ typedef	void (*TIFFExtendProc)(TIFF*); 
++/* SCE: the client's memory functions, each given the client's context first */
++typedef	tdata_t (*TIFFMallocProc)(void*, tsize_t);
++typedef	tdata_t (*TIFFReallocProc)(void*, tdata_t, tsize_t);
++typedef	void (*TIFFFreeProc)(void*, tdata_t);
+ 
+ extern	const char* TIFFGetVersion(void);
+ 
+@@ -280,12 +284,10 @@
+  * Auxiliary functions.
+  */
+ 
+-extern	tdata_t _TIFFmalloc(tsize_t);
+-extern	tdata_t _TIFFrealloc(tdata_t, tsize_t);
++/* SCE: _TIFFmalloc, _TIFFrealloc and _TIFFfree use the TIFF's memory functions (tiffiop.h) */
+ extern	void _TIFFmemset(tdata_t, int, tsize_t);
+ extern	void _TIFFmemcpy(tdata_t, const tdata_t, tsize_t);
+ extern	int _TIFFmemcmp(const tdata_t, const tdata_t, tsize_t);
+-extern	void _TIFFfree(tdata_t);
+ 
+ /*
+ ** Stuff, related to tag handling and creating custom tags.
+@@ -341,15 +343,19 @@
+ extern	void TIFFCleanup(TIFF*);
+ extern	void TIFFClose(TIFF*);
+ extern	int TIFFFlush(TIFF*);
++#if 0	/* SCE: static in libpaf */
+ extern	int TIFFFlushData(TIFF*);
++#endif
+ extern	int TIFFGetField(TIFF*, ttag_t, ...);
+ extern	int TIFFVGetField(TIFF*, ttag_t, va_list);
+ extern	int TIFFGetFieldDefaulted(TIFF*, ttag_t, ...);
+ extern	int TIFFVGetFieldDefaulted(TIFF*, ttag_t, va_list);
+ extern	int TIFFReadDirectory(TIFF*);
++#if 0	/* SCE: static in libpaf */
+ extern	int TIFFReadCustomDirectory(TIFF*, toff_t, const TIFFFieldInfo[],
+ 				    size_t);
+ extern	int TIFFReadEXIFDirectory(TIFF*, toff_t);
++#endif
+ extern	tsize_t TIFFScanlineSize(TIFF*);
+ extern	tsize_t TIFFOldScanlineSize(TIFF*);
+ extern	tsize_t TIFFNewScanlineSize(TIFF*);
+@@ -397,7 +403,9 @@
+ extern	int TIFFSetSubDirectory(TIFF*, uint32);
+ extern	int TIFFUnlinkDirectory(TIFF*, tdir_t);
+ extern	int TIFFSetField(TIFF*, ttag_t, ...);
++#if 0	/* SCE: static in libpaf */
+ extern	int TIFFVSetField(TIFF*, ttag_t, va_list);
++#endif
+ extern	int TIFFWriteDirectory(TIFF *);
+ extern	int TIFFCheckpointDirectory(TIFF *);
+ extern	int TIFFRewriteDirectory(TIFF *);
+@@ -422,7 +430,9 @@
+ extern	int TIFFReadRGBATile(TIFF*, uint32, uint32, uint32 * );
+ extern	int TIFFRGBAImageOK(TIFF*, char [1024]);
+ extern	int TIFFRGBAImageBegin(TIFFRGBAImage*, TIFF*, int, char [1024]);
++#if 0	/* SCE: static in libpaf */
+ extern	int TIFFRGBAImageGet(TIFFRGBAImage*, uint32*, uint32, uint32);
++#endif
+ extern	void TIFFRGBAImageEnd(TIFFRGBAImage*);
+ extern	TIFF* TIFFOpen(const char*, const char*);
+ # ifdef __WIN32__
+@@ -434,7 +444,8 @@
+ 	    TIFFReadWriteProc, TIFFReadWriteProc,
+ 	    TIFFSeekProc, TIFFCloseProc,
+ 	    TIFFSizeProc,
+-	    TIFFMapFileProc, TIFFUnmapFileProc);
++	    TIFFMapFileProc, TIFFUnmapFileProc,
++	    void*, TIFFMallocProc, TIFFReallocProc, TIFFFreeProc);	/* SCE */
+ extern	const char* TIFFFileName(TIFF*);
+ extern	const char* TIFFSetFileName(TIFF*, const char *);
+ extern void TIFFError(const char*, const char*, ...) __attribute__((format (printf,2,3)));
+@@ -479,8 +490,10 @@
+ #define U_NEU		0.210526316
+ #define V_NEU		0.473684211
+ #define UVSCALE		410.
++#if 0	/* SCE: static in libpaf */
+ extern	double LogL16toY(int);
+ extern	double LogL10toY(int);
++#endif
+ extern	void XYZtoRGB24(float*, uint8*);
+ extern	int uv_decode(double*, double*, int);
+ extern	void LogLuv24toXYZ(uint32, float*);
+diff -ruN a/libtiff/tiffiop.h b/libtiff/tiffiop.h
+--- a/libtiff/tiffiop.h
++++ b/libtiff/tiffiop.h
+@@ -70,6 +70,15 @@
+ #include "tiffio.h"
+ #include "tif_dir.h"
+ 
++/* SCE: memory comes from the client's functions kept in the TIFF */
++#define	_TIFFmalloc(s)		((*tif->tif_mallocproc)(tif->tif_memptr, (s)))
++#define	_TIFFrealloc(p, s)	((*tif->tif_reallocproc)(tif->tif_memptr, (p), (s)))
++#define	_TIFFfree(p)		((*tif->tif_freeproc)(tif->tif_memptr, (p)))
++
++/* SCE: no error or warning messages; the module is still evaluated (TIFFFileName(tif)) */
++#define	TIFFErrorExt(fd, module, ...)	((void) (module))
++#define	TIFFWarningExt(fd, module, ...)	((void) (module))
++
+ #ifndef STRIP_SIZE_DEFAULT
+ # define STRIP_SIZE_DEFAULT 8192
+ #endif
+@@ -191,6 +200,11 @@
+ 	TIFFSeekProc	tif_seekproc;	/* lseek method */
+ 	TIFFCloseProc	tif_closeproc;	/* close method */
+ 	TIFFSizeProc	tif_sizeproc;	/* filesize method */
++/* SCE: the client's memory functions and their context */
++	void*		tif_memptr;
++	TIFFMallocProc	tif_mallocproc;
++	TIFFFreeProc	tif_freeproc;
++	TIFFReallocProc	tif_reallocproc;
+ /* post-decoding support */
+ 	TIFFPostMethod	tif_postdecode;	/* post decoding routine */
+ /* tag support */
+@@ -246,7 +260,8 @@
+ #define	TIFFroundup(x, y) (TIFFhowmany(x,y)*(y))
+ 
+ /* Safe multiply which returns zero if there is an integer overflow */
+-#define TIFFSafeMultiply(t,v,m) ((((t)m != (t)0) && (((t)((v*m)/m)) == (t)v)) ? (t)(v*m) : (t)0)
++/* SCE: libtiff 3.9.7's, with its arguments in parentheses */
++#define TIFFSafeMultiply(t,v,m) ((((t)(m) != (t)0) && (((t)(((v)*(m))/(m))) == (t)(v))) ? (t)((v)*(m)) : (t)0)
+ 
+ #define TIFFmax(A,B) ((A)>(B)?(A):(B))
+ #define TIFFmin(A,B) ((A)<(B)?(A):(B))
+@@ -256,7 +271,9 @@
+ #if defined(__cplusplus)
+ extern "C" {
+ #endif
++#if 0	/* SCE: static in libpaf */
+ extern	int _TIFFgetMode(const char*, const char*);
++#endif
+ extern	int _TIFFNoRowEncode(TIFF*, tidata_t, tsize_t, tsample_t);
+ extern	int _TIFFNoStripEncode(TIFF*, tidata_t, tsize_t, tsample_t);
+ extern	int _TIFFNoTileEncode(TIFF*, tidata_t, tsize_t, tsample_t);
+@@ -279,12 +296,15 @@
+ extern	void _TIFFDefaultTileSize(TIFF*, uint32*, uint32*);
+ extern	int _TIFFDataSize(TIFFDataType);
+ 
+-extern	void _TIFFsetByteArray(void**, void*, uint32);
+-extern	void _TIFFsetString(char**, char*);
+-extern	void _TIFFsetShortArray(uint16**, uint16*, uint32);
+-extern	void _TIFFsetLongArray(uint32**, uint32*, uint32);
+-extern	void _TIFFsetFloatArray(float**, float*, uint32);
+-extern	void _TIFFsetDoubleArray(double**, double*, uint32);
++/* SCE: the TIFF whose memory functions they use */
++extern	void _TIFFsetByteArray(void**, void*, uint32, TIFF*);
++extern	void _TIFFsetString(char**, char*, TIFF*);
++#if 0	/* SCE: static in libpaf */
++extern	void _TIFFsetShortArray(uint16**, uint16*, uint32, TIFF*);
++extern	void _TIFFsetLongArray(uint32**, uint32*, uint32, TIFF*);
++extern	void _TIFFsetFloatArray(float**, float*, uint32, TIFF*);
++extern	void _TIFFsetDoubleArray(double**, double*, uint32, TIFF*);
++#endif
+ 
+ extern	void _TIFFprintAscii(FILE*, const char*);
+ extern	void _TIFFprintAsciiTag(FILE*, const char*, const char*);

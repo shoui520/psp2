@@ -33,6 +33,7 @@ upstream. When a build needs another file, add it from the same release.
 | sqlite-3.7.6.3 | SQLite 3.7.6.3 source archive | what configure and the amalgamation build read | sqlite |
 | squish-1.11 | Simon Brown's libsquish 1.11 | the library sources and headers (`PROVENANCE.md`) | libpaf (`squish.h`, for the DXT filters) |
 | ssleay-0.9.1b | Eric Young's SSLeay 0.9.1b, retained in OpenSSL's historical repository | LHASH, STACK, ex-data, BIO core/socket/memory/formatting, buffer management, SSL state/alert diagnostics, connection access/I/O/error classification, SSL3 lifetime/buffer setup, session allocation/access, runtime callbacks, memory-control state and their headers (`PROVENANCE.md`) | libssl (with separate SSL-C adaptation patches) |
+| tiff-3.9.5 | LibTIFF 3.9.5 | the library sources libpaf links, headers, COPYRIGHT, README, VERSION (`PROVENANCE.md`) | libpaf (`vsh/paf/src/misc/image/libtiff`, with Sony's patch) |
 | xnu-1456.1.26 | Apple's xnu (Mac OS X 10.6), FreeBSD's blist and 4.4BSD's qsort | `bsd/dev/dtrace/blist.c`, `blist.h`, `bsd/kern/qsort.c` (`PROVENANCE.md`) | deci4p_dtracep (with patches in `dtrace/bsd/`) |
 | zlib-1.2.5 | zlib 1.2.5 | the library sources | post_ss_mgr (`post_ss_mgr/zlib`), libhttp, libpaf (`vsh/paf/src/misc/zlib`) |
 
