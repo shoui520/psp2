@@ -729,8 +729,8 @@ void WaveRenderer::Draw()
 		gl->Disable(arl::BLEND);
 
 		TextureOps::CopyArea area = {
-			{ math::v2(0.0f, 0.0f), math::v2(1.0f, 1.0f) },
-			{ math::v2(0.0f, 0.0f), math::v2(1.0f, 1.0f) },
+			QuadArea(math::v2(0.0f, 0.0f), math::v2(1.0f, 1.0f)),
+			QuadArea(math::v2(0.0f, 0.0f), math::v2(1.0f, 1.0f)),
 		};
 
 		m_texture_ops->pureCopy(common::SharedPtr<arl::Texture2D>(), GetLitTexture(), 0, area);

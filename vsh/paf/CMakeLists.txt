@@ -196,6 +196,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/text/font_rasterizer_pvf.cpp
 	src/graphics/text/glyph_metrics.cpp
 	src/graphics/text/fontcache.c
+	src/graphics/effects/blur.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
 	src/widget/core/widget.cpp
