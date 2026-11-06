@@ -967,6 +967,11 @@ int bxceParserReadToken(BxceParser *parser)
 	return 1;
 }
 
+/* an empty function nothing calls */
+void bxceParserNop(void)
+{
+}
+
 /* the tokens content may hold */
 static inline int bxceIsContentToken(int token)
 {
