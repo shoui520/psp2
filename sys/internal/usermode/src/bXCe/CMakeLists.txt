@@ -6,5 +6,6 @@ psp2_module(vs0_sys_external_bXCe KIND user COMPILER snc PARTIAL SOURCES
 	module.cpp
 	attribute_list.cpp
 	document.cpp
+	allocator.cpp
 	bXCe.c
 )

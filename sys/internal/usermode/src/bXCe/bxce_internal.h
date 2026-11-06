@@ -19,6 +19,9 @@ extern "C" {
  * values its code returns (NoMemory 0x80851000, returned as 0x80852000): the names are the
  * table's.
  */
+/* two positive results the result-name table does not name (names ours) */
+#define SCE_BXCE_INFO_GENERIC_MESSAGE			8724480		/* 0x00852000 */
+#define SCE_BXCE_INFO_RETRY				8724481		/* 0x00852001 */
 #define SCE_BXCE_ERROR_NO_MEMORY			-2138759168	/* 0x80852000 */
 #define SCE_BXCE_ERROR_INVALID_ARGUMENT			-2138759166	/* 0x80852002 */
 #define SCE_BXCE_ERROR_DUPLICATE_ATTRIBUTE_NAME		-2138759126	/* 0x8085202A */
@@ -146,9 +149,58 @@ void ScebXCe_EC560647(void *ptr);
 /* deletes the default allocator, if it made one */
 void bxceDeleteDefaultAllocator(void);
 
-/* the heap behind them, and its realloc */
-extern void *g_bxceHeap;
-void *bxceRealloc(void *heap, void *ptr, SceSize size);
+/*
+ * bXCe's heap: blocks with boundary tags carved from a small pool, and blocks of their own from
+ * the allocator below it. A block's header is its previous block's size when that one is free
+ * (0 when it is in use, 0x80000000 for a block of its own) and its own size (negative in use).
+ */
+typedef struct BxceHeapBlock {
+	int prevSize;
+	int size;
+	struct BxceHeapBlock *next;	/* a free block's list links */
+	struct BxceHeapBlock *prev;
+} BxceHeapBlock;
+
+#define BXCE_HEAP_OWN_BLOCK		((int)0x80000000)
+#define BXCE_HEAP_POOL_SIZE		0x80
+#define BXCE_HEAP_DEFAULT_SIZE		0x32000
+
+/* called when the pool is exhausted; SCE_BXCE_INFO_RETRY asks for another try */
+typedef int (*BxceHeapOutOfMemory)(SceSize size);
+
+typedef struct BxceHeap {
+	BxceHeapOutOfMemory outOfMemory;
+	BxceHeapBlock *freeList;	/* its sentinel, at the start of the pool */
+	void *memory;			/* what is freed with the heap: the heap itself */
+	SceUInt32 headerSize;
+	SceUInt32 overhead;		/* added to every request */
+	int reserved[4];		/* nothing reads or writes them */
+	SceUInt8 initialized;
+	SceUInt8 padding[7];
+	char pool[BXCE_HEAP_POOL_SIZE];
+} BxceHeap;
+
+/* the heap behind them, whether it was made, whether the application made it */
+extern SceUInt8 g_bxceHeapCreated;
+extern BxceHeap *g_bxceHeap;
+extern int g_bxceInitializeCount;
+extern SceUInt8 g_bxceHeapByApplication;
+
+int bxceHeapInitializePool(BxceHeap *heap, void *memory, SceUInt32 size);
+int bxceHeapCreate(SceSize size, BxceHeapOutOfMemory outOfMemory);
+int ScebXCe_EF4AF9F9(SceSize size, BxceHeapOutOfMemory outOfMemory);	/* create the heap */
+void bxceHeapDelete(void);
+void ScebXCe_2ECC8276(void);					/* delete the heap */
+void *bxceHeapAllocFromPool(BxceHeap *heap, SceSize size);
+void *bxceHeapAlloc(BxceHeap *heap, SceSize size);
+void bxceHeapFree(BxceHeap *heap, void *ptr);
+void *bxceHeapExtend(BxceHeap *heap, void *ptr, SceSize extra);
+
+/* the allocator under the heap */
+void *bxceMspaceMalloc(SceSize size);
+void bxceMspaceDestroy(void);
+void *bxceDefaultAllocate(SceSize size);
+void bxceDefaultDeallocate(void *ptr);
 
 /* the C library calls, each through a function of its own */
 void *bxceMemset(void *dst, int c, SceSize len);
