@@ -169,9 +169,8 @@ void Blur::draw_uniform_blur(float amount)
 Blur::Blur()
 	: m_levels(m_level_textures), m_num_levels(NUM_LEVELS), m_max_levels(NUM_LEVELS),
 	  m_level_offset(0), m_copy_first_level(true), m_strength(1.0f), m_bicubic_slow(false),
-	  m_bicubic(true), m_box_blur_passes(3), m_quarter_scale(2.0f), m_eighth_scale(2.0f),
-	  m_sixteenth_scale(2.0f), m_alpha_scale(1.0f), m_half_flag(false), m_initialized(false),
-	  m_capture_area(math::v2(0.0f, 0.0f), math::v2(1.0f, 1.0f)),
+	  m_bicubic(true), m_box_blur_passes(3), m_box_blur_step(1.0f), m_half_flag(false),
+	  m_initialized(false), m_capture_area(math::v2(0.0f, 0.0f), math::v2(1.0f, 1.0f)),
 	  m_source_area(math::v2(0.0f, 0.0f), math::v2(1.0f, 1.0f)), m_pow2(true)
 {
 }
@@ -294,7 +293,8 @@ void Blur::Capture(common::SharedPtr<arl::Texture2D> texture, arl::SurfaceSize s
 	}
 	for (uint32_t i = 0; i < m_box_blur_passes; i++)
 		m_texture_ops->boxBlur(m_levels[NUM_LEVELS - 1 - i],
-				       GetTemporary(m_levels[NUM_LEVELS - 1 - i]));
+				       GetTemporary(m_levels[NUM_LEVELS - 1 - i]), m_box_blur_radii.m_radius[i],
+				       m_box_blur_step);
 
 	uint32_t levels = m_capture->m_desc.m_levels;
 

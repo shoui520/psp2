@@ -131,10 +131,10 @@ public:
 		     const common::SharedPtr<arl::Texture2D> &source, uint32_t level);
 	void bicubicSlow(const common::SharedPtr<arl::Texture2D> &dest,
 			 const common::SharedPtr<arl::Texture2D> &source, uint32_t level);
-	/* 0x811a4dd6: the texture box blurred, through a temporary of its size (arguments'
-	   names ours) */
+	/* 0x811a4dd6: the texture box blurred by the radius, through a temporary of its size,
+	   its step scaled (arguments' names ours) */
 	void boxBlur(const common::SharedPtr<arl::Texture2D> &texture,
-		     const common::SharedPtr<arl::Texture2D> &temporary);
+		     const common::SharedPtr<arl::Texture2D> &temporary, float radius, float step);
 	/* 0x811a5afe: source drawn into the level of dest flipped (arguments' names ours) */
 	void fliptri(common::SharedPtr<arl::Texture2D> &dest, common::SharedPtr<arl::Texture2D> &source,
 		     uint32_t level);
@@ -315,11 +315,22 @@ public:
 	bool m_bicubic;
 	/* the box blur passes over the copies, the smallest first */
 	uint32_t m_box_blur_passes;
-	/* written by the constructor only, a value for each copy */
-	float m_quarter_scale;
-	float m_eighth_scale;
-	float m_sixteenth_scale;
-	float m_alpha_scale;
+	/* the radius of each box blur pass, the first pass's first, 2 each (names ours) */
+	class BoxBlurRadii {
+	public:
+		BoxBlurRadii()
+		{
+			m_radius[0] = 2.0f;
+			m_radius[1] = 2.0f;
+			m_radius[2] = 2.0f;
+		}
+
+		float m_radius[NUM_LEVELS];
+	};
+
+	BoxBlurRadii m_box_blur_radii;
+	/* the scale of the box blur's step (name ours) */
+	float m_box_blur_step;
 	/* passed to TextureOps::half, which does not read it */
 	bool m_half_flag;
 	bool m_initialized;
