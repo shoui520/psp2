@@ -1,5 +1,6 @@
 # 3.650.011-TOOL: vs0:sys/external/avcdec_for_player.suprx (generated)
 set(MODULE_NID 0x0834F978)
+set(MODULE_AUTH_ID 0x28000000000280AC)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
