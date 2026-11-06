@@ -2,8 +2,16 @@
  * The wave switch (DEBUGGER 0x810d5580..0x810d5a9e): the waves drawn while a switch is made and
  * on, and their presets moved from wave to wave. The preset names and
  * scePafGraphicsUpdateCurrentWave are Sony's; the class, the file's and the other names ours.
+ * The effects headers come first: Sony's file constructs their globals (the resource folders, the
+ * colours, the tile size, the FFT waves' defaults) in that order.
  */
 #include <stdint.h>
+#include <gxm.h>
+#include <vectormath.h>
+#include <graphics/drawobj/effect_path.h>
+#include <graphics/color.h>
+#include <graphics/arl/arl_defines.h>
+#include <graphics/effects/fft_wave.h>
 #include <graphics/drawobj/draw_env_flush.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <graphics/effects/wave_renderer.h>
@@ -203,4 +211,9 @@ int32_t ScePafGraphics_45A01FA1(const WavePreset *preset)
 	if (preset->m_index != WAVE_COUNT - 1)
 		return SCE_PAF_ERROR_WAVE_INVALID_PRESET;
 	return Waves(false)->SetPreset(s_wave_names[preset->m_index], *preset);
+}
+
+/* 0x810d5a9e: nothing, called by nothing (name ours) */
+void paf::graph::WaveSwitchNothing()
+{
 }

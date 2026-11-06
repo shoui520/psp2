@@ -40,6 +40,8 @@ extern const char *s_wave_names[WAVE_COUNT];
    ScePafWidget_DC1B19DB) */
 void ReleaseWaveHold();
 void SetWaveHold();
+/* an empty function after them (name ours) */
+void WaveSwitchNothing();
 
 }
 }
