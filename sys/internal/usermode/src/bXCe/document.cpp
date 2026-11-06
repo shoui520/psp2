@@ -65,8 +65,8 @@ BxceDocument *ScebXCe_63593407(BxceDocument *doc)
 	doc->elementNamesSize = 0;
 	doc->attrNamesSize = 0;
 	doc->pendingAttrCount = 0;
-	doc->field1112 = 0;
-	doc->field1120 = 0;
+	doc->alwaysZero = 0;
+	doc->alwaysZero2 = 0;
 	doc->domRoot = NULL;
 	return doc;
 }
@@ -414,7 +414,7 @@ BxceNodeList *bxceGetElementsByTagName(const BxceDocument *doc, BxceNodeId node,
 /* the tables a document builds in, each empty and owned by it; NoMemory frees what was made */
 int bxceDocumentAllocateTables(BxceDocument *doc)
 {
-	doc->field1112 = 0;
+	doc->alwaysZero = 0;
 
 	doc->elementNames = (char *)ScebXCe_B8DDE741(BXCE_NAMES_INITIAL_SIZE);
 	if (doc->elementNames == NULL) {
@@ -508,9 +508,9 @@ int bxceDocumentInitializeWriter(BxceDocument *doc)
 	doc->elementNamesSize = 0;
 	doc->attrNamesSize = 0;
 	doc->pendingAttrCount = 0;
-	doc->field1112 = 0;
+	doc->alwaysZero = 0;
 	doc->domRoot = NULL;
-	doc->field1120 = 0;
+	doc->alwaysZero2 = 0;
 
 	doc->nodes = (char *)ScebXCe_B8DDE741(BXCE_TABLE_INITIAL_SIZE);
 	if (doc->nodes == NULL) {
@@ -1562,10 +1562,10 @@ int ScebXCe_FAB50608(BxceDocument *doc, SceUInt8 isDom)
 		doc->elementNamesSize = 0;
 		doc->attrNamesSize = 0;
 		doc->pendingAttrCount = 0;
-		doc->field1112 = 0;
+		doc->alwaysZero = 0;
 		doc->domRoot = NULL;
 		doc->isBinary = 1;
-		doc->field1120 = 0;
+		doc->alwaysZero2 = 0;
 		return 0;
 	}
 
@@ -1586,10 +1586,10 @@ int ScebXCe_FAB50608(BxceDocument *doc, SceUInt8 isDom)
 	doc->elementNamesSize = 0;
 	doc->attrNamesSize = 0;
 	doc->pendingAttrCount = 0;
-	doc->field1112 = 0;
+	doc->alwaysZero = 0;
 	doc->domRoot = NULL;
 	doc->isBinary = 1;
-	doc->field1120 = 0;
+	doc->alwaysZero2 = 0;
 
 	doc->domRoot = (BxceDomNode *)ScebXCe_B8DDE741(sizeof(BxceDomNode));
 	if (doc->domRoot == NULL) {
@@ -1717,8 +1717,8 @@ int ScebXCe_B0891B13(BxceDocument *doc)
 		doc->domRoot = NULL;
 	}
 
-	if (doc->field1112 != 0)
-		doc->field1112 = 0;
+	if (doc->alwaysZero != 0)
+		doc->alwaysZero = 0;
 	return 0;
 }
 

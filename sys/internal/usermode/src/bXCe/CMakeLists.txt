@@ -1,10 +1,9 @@
 enable_language(CXX)
 # ScebXCe (vs0:sys/external/bXCe.suprx), built by Sony with SNC 3.57 in C++: the XML library with
-# the binary document form "bX". Being converted: the sources compile, nothing links yet; the
-# exports not written yet are still stubs in bXCe.c (2026-11-06)
+# the binary document form "bX". SNC's runtime adds its two unwind personality routines (libsnc)
 # Its paf imports (operator new and delete, __cxa_pure_virtual) take libpaf's link names
 set(MODULE_IMPORT_NAMES vsh/paf/fw/3.65-CEX.exports.yml)
-psp2_module(vs0_sys_external_bXCe KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(vs0_sys_external_bXCe KIND user COMPILER snc SOURCES
 	module.cpp
 	attribute_list.cpp
 	document.cpp
@@ -23,5 +22,14 @@ psp2_module(vs0_sys_external_bXCe KIND user COMPILER snc PARTIAL SOURCES
 	dom_node_list_impl.cpp
 	mem_allocator.cpp
 	result.cpp
-	bXCe.c
+	attr.cpp
+	attr_impl.cpp
+	attr_list.cpp
+	attr_list_impl.cpp
+	sax_parser.cpp
+	sax_parser_impl.cpp
+	attribute.cpp
+	stack.cpp
+	../../../../sdk/target/src/libsnc/unwind_pr0.c
+	../../../../sdk/target/src/libsnc/unwind_pr1.c
 )

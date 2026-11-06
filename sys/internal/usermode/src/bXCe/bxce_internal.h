@@ -57,7 +57,9 @@ extern "C" {
 #define SCE_BXCE_ERROR_EXCEED_LIMIT			-2138758640	/* 0x80852210 */
 
 /* what the C++ interface returns: the table's values (bxceConvertResult) */
+#define SCE_BXCE_RESULT_NO_MEMORY			-2138763264	/* 0x80851000 */
 #define SCE_BXCE_RESULT_NOT_INITIALIZED			-2138763263	/* 0x80851001 */
+#define SCE_BXCE_RESULT_INVALID_ARGUMENT		-2138763262	/* 0x80851002 */
 
 /* the most attributes of a DOM element, the longest attribute name, the most unique names */
 #define BXCE_DOM_ATTR_MAX		128
@@ -85,6 +87,9 @@ typedef struct BxceAttr {
 	struct BxceAttr *next;
 	int reserved;			/* zeroed by bxceAttrInitialize; nothing reads it */
 } BxceAttr;
+
+/* the size of a new attribute's name and value buffers */
+#define BXCE_ATTR_INITIAL_SIZE		128
 
 /* the attributes a list gave back, kept for reuse */
 #define BXCE_ATTR_POOL_SIZE		16
@@ -135,8 +140,8 @@ typedef struct BxceNameHash {
 /*
  * A document (1124 bytes). Its tables hold the bX form: the node tokens, the texts and the
  * element and attribute names, each string after its encoded length.
- * PLACEHOLDER: the fields named fieldNN are not read yet; they are named from their users as
- * the functions that use them are written.
+ * Nothing reads the reserved fields; the library only ever stores 0 in alwaysZero and
+ * alwaysZero2 (2026-11-06, every user written).
  */
 typedef struct BxceDocument {
 	int isExternal;			/* the tables are not the document's own */
@@ -145,9 +150,9 @@ typedef struct BxceDocument {
 	char *elementNames;
 	char *attrNames;
 	int status;			/* the last error */
-	int field24;
+	int reserved1;			/* nothing reads or writes it */
 	SceUInt8 isBinary;		/* the bX form, else the DOM form */
-	SceUInt8 padding29[3];
+	SceUInt8 padding[3];
 	SceUInt32 nodesCapacity;
 	SceUInt32 textsCapacity;
 	SceUInt32 elementNamesCapacity;
@@ -156,16 +161,16 @@ typedef struct BxceDocument {
 	SceUInt32 textsSize;
 	SceUInt32 elementNamesSize;
 	SceUInt32 attrNamesSize;
-	int field64;
+	int reserved2;			/* nothing reads or writes it */
 	SceUInt32 pendingAttr[2 * BXCE_PENDING_ATTR_MAX];
 	int pendingAttrCount;
 	int attrNode;			/* where the last attributes were written */
 	BxceNameHash *attrNameHash;
 	BxceNameHash *elementNameHash;
-	int field1108;
-	int field1112;
+	int reserved3;			/* nothing reads or writes it */
+	int alwaysZero;			/* cleared at init, allocate, reset and terminate; never set */
 	BxceDomNode *domRoot;		/* the DOM form's document node */
-	int field1120;
+	int alwaysZero2;		/* cleared like alwaysZero; never read */
 } BxceDocument;
 
 /* the allocator: bXCe's malloc and free over its mspace */
@@ -404,17 +409,27 @@ typedef struct BxceParser {
  */
 class BxceDocumentHandler {
 public:
-	virtual ~BxceDocumentHandler() = 0;
-	virtual int startDocument(void *userData) = 0;
-	virtual int startElement(void *userData, const char *name, int length, const BxceAttributeList *attrList) = 0;
-	virtual int characters(void *userData, const char *ch, int length) = 0;
-	virtual int endElement(void *userData, const char *name, int length) = 0;
-	virtual int endDocument(void *userData) = 0;
-	virtual int skippedText(void *userData, int tokenType, const char *text, int length) = 0;
-	virtual int entityData(void *userData, int entityType, const char *name, int length) = 0;
-	virtual int reserved(void *userData) = 0;	/* the parser never calls it */
-	virtual void fatalError(void *userData, int errCode) = 0;
-	virtual int charactersWithOffset(void *userData, const char *ch, int length, int offset) = 0;
+	virtual ~BxceDocumentHandler() {}
+	virtual int startDocument(void *userData) { return 0; }
+	virtual int startElement(void *userData, const char *name, int length,
+				 const BxceAttributeList *attrList) { return 0; }
+	virtual int characters(void *userData, const char *ch, int length) { return 0; }
+	virtual int endElement(void *userData, const char *name, int length) { return 0; }
+	virtual int endDocument(void *userData) { return 0; }
+	virtual int skippedText(void *userData, int tokenType, const char *text, int length)
+	{
+		return 0;
+	}
+	virtual int entityData(void *userData, int entityType, const char *name, int length)
+	{
+		return 0;
+	}
+	virtual int reserved(void *userData) { return 0; }	/* the parser never calls it */
+	virtual void fatalError(void *userData, int errCode) {}
+	virtual int charactersWithOffset(void *userData, const char *ch, int length, int offset)
+	{
+		return 0;
+	}
 };
 
 /* a SAX parser's saved state: the tokenizer's fields that go on, the handler and its user data */
@@ -518,17 +533,18 @@ int bxceIsUtf8Bom(const char *s);
 
 /* the open elements' parent nodes, their entries kept in a pool for reuse (0x81008f4e..0x81008fea) */
 typedef struct BxceNodeStackEntry {
-	BxceNodeId node;
-	struct BxceNodeStackEntry *next;
+	void *node;			/* a BxceNodeId */
+	void *next;			/* the BxceNodeStackEntry under it */
 } BxceNodeStackEntry;
 
+/* Sony's fields are untyped: their stores and loads may alias each other */
 typedef struct BxceNodeStack {
-	BxceNodeStackEntry *top;
-	BxceAttrPool *pool;
+	void *top;			/* a BxceNodeStackEntry */
+	void *pool;			/* a BxceAttrPool */
 } BxceNodeStack;
 
 int bxceNodeStackInitialize(BxceNodeStack *stack);
-int bxceNodeStackTerminate(BxceNodeStack *stack);
+void bxceNodeStackTerminate(BxceNodeStack *stack);
 int bxceNodeStackPush(BxceNodeStack *stack, BxceNodeId node);
 BxceNodeId bxceNodeStackPop(BxceNodeStack *stack);
 
@@ -738,6 +754,13 @@ public:
 extern MemAllocator *g_bxceDefaultAllocator;
 extern MemAllocator *g_bxceAllocator;
 
+/* the SDK's sce::Xml::InitParameter: the allocator to use and its user data */
+class InitParameter {
+public:
+	MemAllocator *allocator;
+	void *userData;
+};
+
 /* what the implementation objects derive from: their allocator */
 class Object {
 public:
@@ -746,6 +769,207 @@ public:
 	static void *operator new(size_t size) throw() { return bxceDefaultAllocate(size); }
 	static void operator delete(void *ptr) { bxceDefaultDeallocate(ptr); }
 };
+
+/* the SDK's sce::Xml::Attr: an attribute's name and value buffers */
+class AttrImpl : public Object {
+public:
+	AttrImpl();
+	~AttrImpl();
+
+	int initialize();
+	int terminate();
+	const char *getName() const;
+	const char *getValue() const;
+	int getNameLength() const;
+	int getValueLength() const;
+
+	int nameCapacity;
+	int valueCapacity;
+	int nameLength;
+	int valueLength;
+	char *name;
+	char *value;
+	AttrImpl *next;
+};
+
+/* its fields are a BxceAttr's, read only while it has no implementation */
+class Attr {
+public:
+	Attr();
+	~Attr();
+
+	int initialize();
+	int terminate();
+	const char *getName() const;
+	const char *getValue() const;
+	int getNameLength() const;
+	int getValueLength() const;
+
+	int nameCapacity;
+	int valueCapacity;
+	int nameLength;
+	int valueLength;
+	char *name;
+	char *value;
+	BxceAttr *next;
+	AttrImpl *impl;
+};
+
+/* the SDK's sce::Xml::AttributeList, over the library's list, its own or another object's */
+class AttributeListImpl : public Object {
+public:
+	AttributeListImpl();
+	AttributeListImpl(BxceAttributeList *list);
+	~AttributeListImpl();
+
+	int initialize();
+	int terminate();
+	const BxceAttr *getAttribute(const char *name, SceSize length) const;
+	const BxceAttr *getAttribute(SceSize index) const;
+	int getLength() const;
+	int addAttribute(const char *name, const char *value);
+	void clear();
+
+	BxceAttributeList *list;
+	bool isReference;		/* another object owns the list */
+};
+
+class AttributeList {
+public:
+	AttributeList();
+	AttributeList(BxceAttributeList *list);
+	virtual ~AttributeList();
+
+	int initialize();
+	int terminate();
+	const BxceAttr *getAttribute(const char *name, SceSize length) const;
+	const BxceAttr *getAttribute(SceSize index) const;
+	int getLength() const;
+	int addAttribute(const char *name, const char *value);
+	void clear();
+
+	AttributeListImpl *impl;
+};
+
+namespace Sax {
+
+/*
+ * The application's handler: BxceDocumentHandler's methods, its attributes as an AttributeList.
+ * Its slot order is the parser's handler's.
+ */
+class DocumentHandler {
+public:
+	virtual ~DocumentHandler() = 0;
+	virtual int startDocument(void *userData) = 0;
+	virtual int startElement(void *userData, const char *name, int length,
+				 const AttributeList *attrList) = 0;
+	virtual int characters(void *userData, const char *ch, int length) = 0;
+	virtual int endElement(void *userData, const char *name, int length) = 0;
+	virtual int endDocument(void *userData) = 0;
+	virtual int skippedText(void *userData, int tokenType, const char *text, int length) = 0;
+	virtual int entityData(void *userData, int entityType, const char *name, int length) = 0;
+	virtual int reserved(void *userData) = 0;
+	virtual void fatalError(void *userData, int errCode) = 0;
+	virtual int charactersWithOffset(void *userData, const char *ch, int length,
+					 int offset) = 0;
+};
+
+/* the parser's handler that passes each event on to the application's */
+class DocumentHandlerAdapter : public BxceDocumentHandler {
+public:
+	DocumentHandlerAdapter(DocumentHandler *handler) : handler(handler) {}
+	virtual ~DocumentHandlerAdapter() {}
+
+	virtual int startDocument(void *userData) { return handler->startDocument(userData); }
+
+	virtual int startElement(void *userData, const char *name, int length,
+				 const BxceAttributeList *attrList)
+	{
+		AttributeList list((BxceAttributeList *)attrList);
+
+		return handler->startElement(userData, name, length, &list);
+	}
+
+	virtual int characters(void *userData, const char *ch, int length)
+	{
+		return handler->characters(userData, ch, length);
+	}
+
+	virtual int charactersWithOffset(void *userData, const char *ch, int length, int offset)
+	{
+		return handler->charactersWithOffset(userData, ch, length, offset);
+	}
+
+	virtual int endElement(void *userData, const char *name, int length)
+	{
+		return handler->endElement(userData, name, length);
+	}
+
+	virtual int endDocument(void *userData) { return handler->endDocument(userData); }
+
+	virtual int skippedText(void *userData, int tokenType, const char *text, int length)
+	{
+		return handler->skippedText(userData, tokenType, text, length);
+	}
+
+	virtual int entityData(void *userData, int entityType, const char *name, int length)
+	{
+		return handler->entityData(userData, entityType, name, length);
+	}
+
+	virtual void fatalError(void *userData, int errCode)
+	{
+		handler->fatalError(userData, bxceConvertResult(errCode));
+	}
+
+	DocumentHandler *handler;
+};
+
+class ParserImpl : public Object {
+public:
+	ParserImpl();
+	~ParserImpl();
+
+	int initialize(const InitParameter *param);
+	int terminate();
+	int setDocumentHandler(DocumentHandler *handler);
+	int setDocumentHandlerWithOffset(DocumentHandler *handler);
+	void setUserData(void *data);
+	int parse(const char *input, int size, bool isFinal);
+	int reset();
+	int save();
+	int restore(int slot);
+	void setSkipIgnorableWhiteSpace(bool isSkipped);
+	void setResolveEntity(bool isResolved);
+	void setResolveAttributeEntity(bool isResolved);
+
+	BxceSaxParser *sax;
+	InitParameter param;		/* the initialize parameter, kept */
+	DocumentHandlerAdapter *handler;
+};
+
+class Parser {
+public:
+	Parser();
+	virtual ~Parser();
+
+	int initialize(const InitParameter *param);
+	int terminate();
+	int setDocumentHandler(DocumentHandler *handler);
+	int setDocumentHandlerWithOffset(DocumentHandler *handler);
+	void setUserData(void *data);
+	int parse(const char *input, int size, bool isFinal);
+	int reset();
+	int save();
+	int restore(int slot);
+	void setSkipIgnorableWhiteSpace(bool isSkipped);
+	void setResolveEntity(bool isResolved);
+	void setResolveAttributeEntity(bool isResolved);
+
+	ParserImpl *impl;
+};
+
+} /* namespace Sax */
 
 namespace Dom {
 

@@ -15,29 +15,29 @@ ScebXCe:
         - _ZN4bXCe3Dom8Document12setAttrValueEv: 0x014C52D8
         - _ZN4bXCe3Dom8Document10insertNodeEjjj: 0x018D749C
         - ScebXCe_01DC4E22: 0x01DC4E22
-        - ScebXCe_043CF429: 0x043CF429
+        - _ZN4bXCe4AttrD1Ev: 0x043CF429
         - _ZN4bXCe3Dom8NodeListD0Ev: 0x044EFB0B
-        - ScebXCe_056526F4: 0x056526F4
+        - _ZN4bXCe13AttributeListD0Ev: 0x056526F4
         - _ZN4bXCe3Dom15DocumentBuilderD2Ev: 0x0CE91BAE
         - ScebXCe_1189A2B1: 0x1189A2B1
         - ScebXCe_11D1FC0D: 0x11D1FC0D
-        - ScebXCe_123F0027: 0x123F0027
+        - _ZNK4bXCe13AttributeList12getAttributeEj: 0x123F0027
         - _ZNK4bXCe3Dom8Document7getTextEj: 0x12FFBF2D
         - ScebXCe_134F491C: 0x134F491C
-        - ScebXCe_1431C26E: 0x1431C26E
-        - ScebXCe_181EA0A6: 0x181EA0A6
+        - _ZNK4bXCe4Attr14getValueLengthEv: 0x1431C26E
+        - _ZN4bXCe3Sax6ParserC1Ev: 0x181EA0A6
         - _ZN4bXCe3Dom8NodeListC1EP12BxceNodeList: 0x1EE682EE
         - ScebXCe_1F59F0C4: 0x1F59F0C4
         - ScebXCe_1FA24DC0: 0x1FA24DC0
         - _ZN4bXCe3Dom8DocumentC2Ev: 0x20441C8E
         - _ZN4bXCe3Dom8NodeListC2Ev: 0x20949650
         - _ZNK4bXCe3Dom8Document9reserved2Ev: 0x20AFD256
-        - ScebXCe_21D8298E: 0x21D8298E
+        - _ZN4bXCe13AttributeList12addAttributeEPKcS2_: 0x21D8298E
         - _ZN4bXCe3Dom8Document15removeAttributeEv: 0x240BA578
         - _ZN4bXCe3Dom8DocumentD2Ev: 0x26083FE0
         - _ZN4bXCe3Dom8Document7setTextEv: 0x29A8DA82
         - ScebXCe_2AD8DA26: 0x2AD8DA26
-        - ScebXCe_2B74B19B: 0x2B74B19B
+        - _ZNK4bXCe4Attr8getValueEv: 0x2B74B19B
         - ScebXCe_2B9B57AE: 0x2B9B57AE
         - _ZN4bXCe3Dom8NodeListD1Ev: 0x2BE7C9B8
         - ScebXCe_2C2628BB: 0x2C2628BB
@@ -48,7 +48,7 @@ ScebXCe:
         - _ZN4bXCe3Dom15DocumentBuilderC1Ev: 0x30A74C46
         - ScebXCe_33825EFF: 0x33825EFF
         - _ZN4bXCe3Dom15DocumentBuilder11getDocumentEv: 0x33922C24
-        - ScebXCe_34D712AE: 0x34D712AE
+        - _ZN4bXCe3Sax6Parser5resetEv: 0x34D712AE
         - ScebXCe_35CDE77C: 0x35CDE77C
         - _ZN4bXCe3Dom15DocumentBuilderD1Ev: 0x362292CC
         - ScebXCe_3BF2F11B: 0x3BF2F11B
@@ -56,9 +56,9 @@ ScebXCe:
         - ScebXCe_3DD761CF: 0x3DD761CF
         - _ZNK4bXCe3Dom8Document9reserved4Ev: 0x3E2C032C
         - _ZN4bXCe3Dom8Document11resetStatusEv: 0x3F8ACA70
-        - ScebXCe_3F8EE3BB: 0x3F8EE3BB
-        - ScebXCe_400E254A: 0x400E254A
-        - ScebXCe_40FD6239: 0x40FD6239
+        - _ZN4bXCe3Sax6Parser7restoreEi: 0x3F8EE3BB
+        - _ZNK4bXCe13AttributeList12getAttributeEPKcj: 0x400E254A
+        - _ZN4bXCe13AttributeList5clearEv: 0x40FD6239
         - _ZN4bXCe3Dom15DocumentBuilderD0Ev: 0x41603409
         - _ZN4bXCe3Dom8Document13recurseDeleteEv: 0x47273E81
         - _ZNK4bXCe3Dom8NodeList8findItemEPKc: 0x479EC9E5
@@ -68,17 +68,17 @@ ScebXCe:
         - ScebXCe_4E9A7061: 0x4E9A7061
         - _ZN4bXCe3Dom8DocumentC1EPKNS0_12DocumentImplE: 0x5015EA3D
         - _ZNK4bXCe3Dom8Document7getRootEv: 0x515B242B
-        - ScebXCe_52375C95: 0x52375C95
+        - _ZN4bXCe13AttributeList10initializeEv: 0x52375C95
         - _ZN4bXCe3Dom8Document12setAttributeEv: 0x5316F2AF
         - _ZNK4bXCe3Dom8NodeListixEj: 0x561CF259
         - ScebXCe_568CE24D: 0x568CE24D
         - ScebXCe_578CC576: 0x578CC576
-        - ScebXCe_57CD3B4F: 0x57CD3B4F
+        - _ZN4bXCe3Sax6Parser18setDocumentHandlerEPNS0_15DocumentHandlerE: 0x57CD3B4F
         - _ZN4bXCe3Dom8NodeList5clearEv: 0x58AD98ED
         - _ZN4bXCe3Dom8Document16removeAttributesEv: 0x5BB515BB
-        - ScebXCe_5C6BC8E3: 0x5C6BC8E3
+        - _ZN4bXCe4Attr10initializeEv: 0x5C6BC8E3
         - _ZN4bXCe3Dom8DocumentC2EPKNS0_12DocumentImplE: 0x5E375272
-        - ScebXCe_5E4DEC29: 0x5E4DEC29
+        - _ZN4bXCe3Sax6Parser5parseEPKcib: 0x5E4DEC29
         - _ZN4bXCe3Dom8DocumentaSEPKNS0_12DocumentImplE: 0x60B51BB6
         - _ZN4bXCe3Dom8NodeList10removeItemEj: 0x60C98F5C
         - _ZN4bXCe3Dom8Document15addElementChildEjPKcPK17BxceAttributeListS3_j: 0x60DAF685
@@ -93,23 +93,23 @@ ScebXCe:
         - ScebXCe_6FC9DC3F: 0x6FC9DC3F
         - _ZN4bXCe3Dom8NodeList10initializeEPKNS0_8DocumentE: 0x717D8A57
         - _ZNK4bXCe3Dom8Document9reserved3Ev: 0x720B6480
-        - ScebXCe_752C98D4: 0x752C98D4
+        - _ZN4bXCe3Sax6ParserD0Ev: 0x752C98D4
         - ScebXCe_753D9382: 0x753D9382
         - _ZNK4bXCe3Dom8NodeList4itemEj: 0x75A92409
         - ScebXCe_75E1B095: 0x75E1B095
         - _ZNK4bXCe3Dom8Document11getNextAttrEj: 0x760AE1CE
-        - ScebXCe_771DC4DF: 0x771DC4DF
+        - _ZN4bXCe13AttributeListD1Ev: 0x771DC4DF
         - _ZN4bXCe3Dom8DocumentD0Ev: 0x77CB25DC
         - _ZNK4bXCe3Dom8Document9getParentEj: 0x78AEF8ED
         - _ZN4bXCe3Dom8DocumentC1ERKS1_: 0x78B86688
         - _ZNK4bXCe3Dom8Document11getAttrNameEj: 0x799C2049
-        - ScebXCe_7A9B3EBE: 0x7A9B3EBE
+        - _ZN4bXCe3Sax6Parser16setResolveEntityEb: 0x7A9B3EBE
         - _ZNK4bXCe3Dom8NodeList8findItemEj: 0x7FB2E062
-        - ScebXCe_80C6AC98: 0x80C6AC98
-        - ScebXCe_80E2FFD4: 0x80E2FFD4
-        - ScebXCe_8171656A: 0x8171656A
+        - _ZN4bXCe3Sax6Parser4saveEv: 0x80C6AC98
+        - _ZN4bXCe3Sax6Parser25setResolveAttributeEntityEb: 0x80E2FFD4
+        - _ZN4bXCe13AttributeListC1EP17BxceAttributeList: 0x8171656A
         - ScebXCe_84383D8E: 0x84383D8E
-        - ScebXCe_85183AE1: 0x85183AE1
+        - _ZNK4bXCe4Attr13getNameLengthEv: 0x85183AE1
         - _ZNK4bXCe3Dom8Document14getSkippedTextEj: 0x8680E1F3
         - _ZN4bXCe3Dom15DocumentBuilder20setSkipIgnorableTextEb: 0x8D3AB3B2
         - _ZN4bXCe3Dom8Document9reserved9Ev: 0x8E67A9B4
@@ -121,49 +121,49 @@ ScebXCe:
         - _ZNK4bXCe3Dom8Document9getStatusEv: 0x95BCAB68
         - _ZNK4bXCe3Dom8Document10getDocRootEv: 0x980489B0
         - ScebXCe_998552A5: 0x998552A5
-        - ScebXCe_99CCD21E: 0x99CCD21E
+        - _ZN4bXCe3Sax6Parser9terminateEv: 0x99CCD21E
         - _ZN4bXCe3Dom8Document10importNodeEjjPK12BxceDocumentj: 0x9B0915A6
         - ScebXCe_9C2F9897: 0x9C2F9897
-        - ScebXCe_9CBEC715: 0x9CBEC715
-        - ScebXCe_9DFE33BA: 0x9DFE33BA
+        - _ZN4bXCe4AttrD2Ev: 0x9CBEC715
+        - _ZN4bXCe13AttributeListC2Ev: 0x9DFE33BA
         - ScebXCe_9E06C329: 0x9E06C329
         - _ZNK4bXCe3Dom8NodeList9getLengthEv: 0xA0539F21
         - ScebXCe_A12B0F90: 0xA12B0F90
         - _ZN4bXCe3Dom8DocumentD1Ev: 0xA140704B
         - _ZN4bXCe3Dom8NodeListC2EP12BxceNodeList: 0xA18059B6
-        - ScebXCe_A2E5B665: 0xA2E5B665
+        - _ZN4bXCe3Sax6Parser11setUserDataEPv: 0xA2E5B665
         - ScebXCe_A40944DD: 0xA40944DD
         - _ZNK4bXCe3Dom8Document13hasAttributesEv: 0xA4B6F40D
         - _ZN4bXCe3Dom15DocumentBuilder9terminateEv: 0xA5D9C2F6
-        - ScebXCe_AA603C82: 0xAA603C82
+        - _ZN4bXCe13AttributeList9terminateEv: 0xAA603C82
         - ScebXCe_AC0E4F67: 0xAC0E4F67
         - _ZN4bXCe3Dom15DocumentBuilder5parseEPKcib: 0xAD06498F
         - _ZN4bXCe3Dom8NodeList10insertLastEj: 0xAD27E105
         - ScebXCe_AEB2CE13: 0xAEB2CE13
         - ScebXCe_B034C595: 0xB034C595
         - ScebXCe_B0891B13: 0xB0891B13
-        - ScebXCe_B0B4B2AE: 0xB0B4B2AE
+        - _ZNK4bXCe4Attr7getNameEv: 0xB0B4B2AE
         - ScebXCe_B367042F: 0xB367042F
         - _ZN4bXCe3Dom8NodeList11insertFirstEj: 0xB3A99490
         - ScebXCe_B4989A58: 0xB4989A58
-        - ScebXCe_B537FF02: 0xB537FF02
+        - _ZNK4bXCe13AttributeList9getLengthEv: 0xB537FF02
         - _ZN4bXCe3Dom8Document14createTextNodeEPKcj: 0xB65ED309
         - _ZN4bXCe3Dom8NodeList9terminateEv: 0xB6C0F282
         - ScebXCe_B8DDE741: 0xB8DDE741
         - _ZNK4bXCe3Dom8Document12getAttrValueEj: 0xBB030BD9
         - ScebXCe_BC0D9A6B: 0xBC0D9A6B
-        - ScebXCe_BCCFF387: 0xBCCFF387
+        - _ZN4bXCe4Attr9terminateEv: 0xBCCFF387
         - ScebXCe_BD9D727B: 0xBD9D727B
         - _ZNK4bXCe3Dom8Document10getSiblingEj: 0xBDB409E3
         - ScebXCe_BE1AD985: 0xBE1AD985
         - _ZN4bXCe3Dom8NodeListD2Ev: 0xBE2FFCF9
         - _ZN4bXCe3Dom8Document13createElementEv: 0xBF6BD784
-        - ScebXCe_C6706CAF: 0xC6706CAF
+        - _ZN4bXCe3Sax6ParserD1Ev: 0xC6706CAF
         - ScebXCe_C85586BD: 0xC85586BD
-        - ScebXCe_C8903303: 0xC8903303
+        - _ZN4bXCe13AttributeListC1Ev: 0xC8903303
         - _ZN4bXCe3Dom8Document11removeChildEjj: 0xC9255055
         - _ZNK4bXCe3Dom8Document10isReadOnlyEv: 0xC9B9F8C7
-        - ScebXCe_CACFBB2D: 0xCACFBB2D
+        - _ZN4bXCe3Sax6Parser26setSkipIgnorableWhiteSpaceEb: 0xCACFBB2D
         - ScebXCe_CC190FA8: 0xCC190FA8
         - _ZNK4bXCe3Dom8Document9reserved8Ev: 0xCDF0FB69
         - ScebXCe_CED6BECF: 0xCED6BECF
@@ -175,30 +175,30 @@ ScebXCe:
         - ScebXCe_D7FE96A2: 0xD7FE96A2
         - _ZNK4bXCe3Dom8Document13getAttributesEv: 0xDBC6D867
         - ScebXCe_DC8483D4: 0xDC8483D4
-        - ScebXCe_DE200527: 0xDE200527
+        - _ZN4bXCe3Sax6Parser10initializeEPKNS_13InitParameterE: 0xDE200527
         - ScebXCe_DFB92627: 0xDFB92627
         - _ZN4bXCe3Dom8DocumentC2ERKS1_: 0xE053CCD9
         - _ZNK4bXCe3Dom8Document13getFirstChildEj: 0xE1ED0CFC
         - _ZN4bXCe3Dom8Document9terminateEv: 0xE2293F00
         - _ZNK4bXCe3Dom8Document13getEntityTypeEj: 0xE2A85C52
-        - ScebXCe_E2CB33F5: 0xE2CB33F5
+        - _ZN4bXCe3Sax6ParserC2Ev: 0xE2CB33F5
         - _ZNK4bXCe3Dom8Document9reserved1Ev: 0xE63968BF
         - ScebXCe_E7C8B20D: 0xE7C8B20D
-        - ScebXCe_E85177B0: 0xE85177B0
+        - _ZN4bXCe4AttrC2Ev: 0xE85177B0
         - ScebXCe_EB4E6C8D: 0xEB4E6C8D
         - ScebXCe_EC560647: 0xEC560647
-        - ScebXCe_ECA84238: 0xECA84238
+        - _ZN4bXCe13AttributeListC2EP17BxceAttributeList: 0xECA84238
         - ScebXCe_EF4AF9F9: 0xEF4AF9F9
         - _ZNK4bXCe3Dom8Document12getAttributeEjPKc: 0xEFEB017D
-        - ScebXCe_F054FF1A: 0xF054FF1A
-        - ScebXCe_F17A1DE3: 0xF17A1DE3
+        - _ZN4bXCe13AttributeListD2Ev: 0xF054FF1A
+        - _ZN4bXCe3Sax6ParserD2Ev: 0xF17A1DE3
         - _ZNK4bXCe3Dom8Document13hasChildNodesEv: 0xF1A4AABF
         - _ZNK4bXCe3Dom8Document12getFirstAttrEj: 0xF1EB8EFB
         - _ZNK4bXCe3Dom8Document13getChildNodesEj: 0xF1F36DAF
         - _ZN4bXCe3Dom8NodeListC1Ev: 0xF3E775F5
-        - ScebXCe_F435FC74: 0xF435FC74
+        - _ZN4bXCe4AttrC1Ev: 0xF435FC74
         - _ZN4bXCe3Dom15DocumentBuilder10initializeEv: 0xF794DEE5
-        - ScebXCe_F8008102: 0xF8008102
+        - _ZN4bXCe3Sax6Parser28setDocumentHandlerWithOffsetEPNS0_15DocumentHandlerE: 0xF8008102
         - _ZNK4bXCe3Dom8Document9reserved7Ev: 0xF9FC12C5
         - ScebXCe_FA18A039: 0xFA18A039
         - ScebXCe_FAB50608: 0xFAB50608
@@ -207,7 +207,7 @@ ScebXCe:
         - _ZNK4bXCe3Dom8Document10getXmlMetaEv: 0xFED50873
         - ScebXCe_FF7CB737: 0xFF7CB737
       variables:
-        - ScebXCe_4254E847: 0x4254E847
-        - ScebXCe_917E189B: 0x917E189B
-        - ScebXCe_95D5D587: 0x95D5D587
-        - ScebXCe_D65233FF: 0xD65233FF
+        - _ZTVN4bXCe3Dom8DocumentE: 0x4254E847
+        - _ZTVN4bXCe13AttributeListE: 0x917E189B
+        - _ZTVN4bXCe3Dom15DocumentBuilderE: 0x95D5D587
+        - _ZTVN4bXCe3Dom8NodeListE: 0xD65233FF
