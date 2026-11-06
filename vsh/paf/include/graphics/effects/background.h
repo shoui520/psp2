@@ -2,8 +2,7 @@
  * The backgrounds the effects are drawn over: what each draws, the textures its reflections and
  * refractions sample, and the list the renderer keeps them in, which hands every call to the
  * background chosen. EnvAuto is Sony's name (its "EnvAuto::captureReflections" marker); the
- * interface, the other classes and every member name are ours. Only the list's code is
- * converted; the backgrounds' own is in 0x810cd0a8.. (EnvAuto), 0x810cf5e0.. and 0x810d151c..
+ * interface, the other classes and every member name are ours.
  */
 #ifndef PAF_GRAPHICS_EFFECTS_BACKGROUND_H
 #define PAF_GRAPHICS_EFFECTS_BACKGROUND_H
@@ -14,8 +13,12 @@
 #include <graphics/effects/post_effects.h>
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
 #include <graphics/arl/gxm/gxm_framebuffer_copy.h>
+#include "../../../src/graphics/arl/gxm/gxm_framebuffer_object.h"
+#include <graphics/arl/gxm/gxm_shader.h>
 #include <graphics/arl/gxm/gxm_texture.h>
 #include <math/ngp/matrix.h>
+#include <math/ngp/v2.h>
+#include <math/ngp/v4.h>
 #include <std/string>
 #include <std/vector>
 
@@ -202,7 +205,100 @@ public:
 	uint8_t reserved[0x20c];
 };
 
-/* the background that captures the scene into its reflections and copies the screen for the
+/* rect2env.vp: the quad's corners and texture coordinates, no parameters (the program's
+   path Sony's, the class name ours) */
+class Rect2EnvVertShader : public arl::ShaderInterfaceBase {
+public:
+	virtual void Init()
+	{
+	}
+
+	virtual void Apply()
+	{
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	virtual const char *GetName()
+	{
+		return "paf/cg/drawobj/rect2env.vp";
+	}
+
+	virtual const uint8_t *GetBinary()
+	{
+		return s_binary;
+	}
+
+	virtual uint32_t GetBinarySize()
+	{
+		return sizeof(s_binary);
+	}
+
+	/* rect2env.vp built by psp2cgc */
+	static const uint8_t s_binary[296];
+};
+
+/* rect2env.fp: the screen (Source) mapped onto the sphere through Rect2SphereMap and blended
+   with the previous capture (Previous, read PreviousOffset away, by PreviousBlend) */
+class Rect2EnvFragShader : public arl::ShaderInterfaceBase {
+public:
+	Rect2EnvFragShader()
+		: m_source(m_setup), m_rect2sphere_map(m_setup), m_previous(m_setup),
+		  m_previous_offset(m_setup), m_previous_blend(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_source.init("Source", 2, 0);
+		m_rect2sphere_map.init("Rect2SphereMap", 3, 0);
+		m_previous.init("Previous", 4, 0);
+		m_previous_offset.init("PreviousOffset", arl::ShaderParameterBase::UNIFORM, 0);
+		m_previous_blend.init("PreviousBlend", arl::ShaderParameterBase::UNIFORM, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_source.Apply();
+		m_rect2sphere_map.Apply();
+		m_previous.Apply();
+		m_previous_offset.Apply();
+		m_previous_blend.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	virtual const char *GetName()
+	{
+		return "paf/cg/drawobj/rect2env.fp";
+	}
+
+	virtual const uint8_t *GetBinary()
+	{
+		return s_binary;
+	}
+
+	virtual uint32_t GetBinarySize()
+	{
+		return sizeof(s_binary);
+	}
+
+	/* rect2env.fp built by psp2cgc */
+	static const uint8_t s_binary[504];
+
+	arl::ShaderParameter<arl::TextureSource> m_source;
+	arl::ShaderParameter<arl::TextureSource> m_rect2sphere_map;
+	arl::ShaderParameter<arl::TextureSource> m_previous;
+	arl::ShaderParameter<math::v2> m_previous_offset;
+	arl::ShaderParameter<math::v4> m_previous_blend;
+};
+
+/* the background that captures the screen into a sphere map each frame, blended with the
+   frame before, for the reflections, and copies the screen into the shared texture for the
    refractions; 0x268 bytes */
 class EnvAuto : public Background {
 public:
@@ -218,6 +314,11 @@ public:
 	virtual math::matrix GetUVTransform();
 	virtual void SetState(int32_t state);
 
+	/* 0x810cc918: the map from the screen to the sphere, made again when the angle changed
+	   (name ours) */
+	void UpdateSphereMap();
+	/* 0x810cce66: a texture of the size the capture is drawn into (name ours) */
+	void CreateCaptureTexture(common::SharedPtr<arl::Texture2D> &texture, arl::SurfaceSize size);
 	/* 0x810cdc3a */
 	void SetTextureOps(common::SharedPtr<TextureOps> texture_ops);
 	/* 0x810cdd1e */
@@ -225,7 +326,29 @@ public:
 	/* 0x810ce9e8 */
 	void CopyScreenForRefractions();
 
-	uint8_t reserved[0x264];
+	common::SharedPtr<Camera> m_camera;
+	common::SharedPtr<SharedTexture> m_shared_texture;
+	/* the capture of this frame, and of the frame before, which the next is blended with */
+	common::SharedPtr<arl::Texture2D> m_reflections;
+	common::SharedPtr<arl::Texture2D> m_previous;
+	/* what refractions sample: the first capture texture */
+	common::SharedPtr<arl::Texture2D> m_refractions;
+	arl::FrameBufferObject m_fbo;
+	common::SharedPtr<TextureOps> m_texture_ops;
+	/* 8-byte aligned in Sony's layout (0x90, after the texture ops at 0x84) */
+	arl::ShaderInstance<Rect2EnvVertShader, arl::VertShaderObject> m_vert
+		__attribute__((aligned(8)));
+	arl::ShaderInstance<Rect2EnvFragShader, arl::FragShaderObject> m_frag;
+	/* a texture nothing sets or reads */
+	common::SharedPtr<arl::Texture2D> m_spare_texture;
+	/* how much of the sphere the screen covers, and the angle the sphere map was made for */
+	float m_angle;
+	common::SharedPtr<arl::Texture2D> m_sphere_map;
+	float m_sphere_angle;
+	/* how much of the previous capture each capture keeps */
+	float m_blend;
+	/* no capture is made while set; nothing sets it */
+	bool m_disabled;
 };
 
 }
