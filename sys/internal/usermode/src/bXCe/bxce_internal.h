@@ -239,6 +239,9 @@ const char *bxceDocumentGetEntityText(const BxceDocument *doc, BxceNodeId node);
 void ScebXCe_2C2628BB(BxceDocument *doc, BxceNodeId node);		/* free DOM nodes */
 int ScebXCe_B0891B13(BxceDocument *doc);				/* terminate */
 BxceNodeList *ScebXCe_1FA24DC0(const BxceDocument *doc, BxceNodeId node, const char *name);
+BxceNodeId ScebXCe_AC0E4F67(BxceDocument *doc, BxceNodeId parent, const char *name,
+			    const BxceAttributeList *attrs, const char *text,
+			    SceUInt32 textLength);			/* appendElement */
 BxceNodeId bxceDocumentCreateElement(BxceDocument *doc, const char *name,
 				     const BxceAttributeList *attrs, const char *text,
 				     SceUInt32 textLength);
