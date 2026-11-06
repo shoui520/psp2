@@ -497,6 +497,18 @@ public:
 		return m_order;
 	}
 
+	/* a page's bytes (name ours) */
+	int32_t GetPageSize() const
+	{
+		return m_page_size;
+	}
+
+	/* the colour table an indexed surface looks up (name ours) */
+	const intrusive_ptr<SurfaceCLUT> &GetCLUT() const
+	{
+		return m_clut;
+	}
+
 	int32_t GetStride() const
 	{
 		return m_stride;
@@ -633,9 +645,9 @@ extern "C" int32_t ScePafGraphics_48FBF58D(paf::graph::Surface::SurfaceType surf
 namespace paf {
 namespace graph {
 
-/* the GXM texture format of a surface's mode (0x8119a53e, another file; name ours) */
+/* the GXM texture format of a surface's mode, -1 for none (name ours) */
 SceGxmTextureFormat GetTextureFormat(const SurfaceBase *surface);
-/* the same of a mode and SurfaceBase's reserved flag (0x8119a4f8; name ours) */
+/* the same of a mode and SurfaceBase's reserved flag (name ours) */
 SceGxmTextureFormat GetTextureFormat(ImageMode format, bool reserved);
 
 }

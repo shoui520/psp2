@@ -5,15 +5,17 @@
  * ScePafFontRasterizerPvfHeap and ScePafFontRasterizerPvfMutex, FontRasterizerImage after the
  * emoji font's file imagefont.bin, their params and the methods no export names are ours.
  * FontMetrics, CharMetrics and the methods TextLayout calls through the vtable (GetFontMetrics,
- * GetCharMetrics, Rasterize) are named by us. The rasterizers are not in C yet: their members
- * are left as bytes until they are.
+ * GetCharMetrics, Rasterize) are named by us. FontRasterizerPvf is not in C yet: its members
+ * are left as bytes until it is.
  */
 #ifndef PAF_GRAPHICS_TEXT_FONT_RASTERIZER_H
 #define PAF_GRAPHICS_TEXT_FONT_RASTERIZER_H
 
 #include <stdint.h>
 #include <common/shared_ptr.h>
+#include <file/file.h>
 #include <graphics/text/text_style.h>
+#include <std/map>
 #include <std/memory>
 #include <std/string>
 
@@ -63,17 +65,17 @@ public:
 	FontRasterizer();
 	virtual ~FontRasterizer();
 	/* the font made again for the style set */
-	virtual int32_t Update();
-	virtual int32_t SetStyle(const common::SharedPtr<TextStyle> &style);
+	virtual int32_t Update() = 0;
+	virtual int32_t SetStyle(const common::SharedPtr<TextStyle> &style) = 0;
 	/* the style let go, back to the default one */
-	virtual int32_t ResetStyle();
-	virtual int32_t GetFontMetrics(FontMetrics &metrics);
-	virtual int32_t GetCharMetrics(wchar_t c, CharMetrics &metrics);
+	virtual int32_t ResetStyle() = 0;
+	virtual int32_t GetFontMetrics(FontMetrics &metrics) = 0;
+	virtual int32_t GetCharMetrics(wchar_t c, CharMetrics &metrics) = 0;
 	/* the len characters drawn into a surface of the cache, width by height, found again
 	   by the string's hash */
-	virtual int32_t Rasterize(TextSurfaceCache *cache, uint16_t width, uint16_t height,
+	virtual int32_t Rasterize(TextSurfaceCache *cache, int32_t width, int32_t height,
 				  const wchar_t *str, uint32_t len, uint32_t hash,
-				  intrusive_ptr<Surface> &surface);
+				  intrusive_ptr<Surface> &surface) = 0;
 };
 
 class FontRasterizerPvf : public FontRasterizer {
@@ -120,6 +122,15 @@ public:
 	};
 
 	FontRasterizerPvf();
+	virtual ~FontRasterizerPvf();
+	virtual int32_t Update();
+	virtual int32_t SetStyle(const common::SharedPtr<TextStyle> &style);
+	virtual int32_t ResetStyle();
+	virtual int32_t GetFontMetrics(FontMetrics &metrics);
+	virtual int32_t GetCharMetrics(wchar_t c, CharMetrics &metrics);
+	virtual int32_t Rasterize(TextSurfaceCache *cache, int32_t width, int32_t height,
+				  const wchar_t *str, uint32_t len, uint32_t hash,
+				  intrusive_ptr<Surface> &surface);
 
 	/* the PVF library and its heap, set up once for every rasterizer */
 	static int32_t Init(const InitParam &param);
@@ -129,14 +140,69 @@ public:
 	uint8_t m_data[0x54];
 };
 
+/*
+ * The emoji font, imagefont.bin: an index of glyphs by character, each a zlib-compressed
+ * image of one or more frames of 8-bit colour indices with its colour table, drawn into an
+ * indexed text surface (an animated one for several frames). Only GetCharMetrics and
+ * Rasterize do anything.
+ */
 class FontRasterizerImage : public FontRasterizer {
 public:
-	/* the font read from its file; own_data: the font's memory is the rasterizer's */
+	/* the font read from its file; own_data: read whole into memory the rasterizer owns */
 	FontRasterizerImage(const string &path, bool own_data);
 	/* the font already in memory */
 	FontRasterizerImage(void *addr, uint32_t size);
+	virtual ~FontRasterizerImage();
+	virtual int32_t Update();
+	virtual int32_t SetStyle(const common::SharedPtr<TextStyle> &style);
+	virtual int32_t ResetStyle();
+	virtual int32_t GetFontMetrics(FontMetrics &metrics);
+	virtual int32_t GetCharMetrics(wchar_t c, CharMetrics &metrics);
+	virtual int32_t Rasterize(TextSurfaceCache *cache, int32_t width, int32_t height,
+				  const wchar_t *str, uint32_t len, uint32_t hash,
+				  intrusive_ptr<Surface> &surface);
 
-	uint8_t m_data[0x30];
+private:
+	/* the file's first bytes (names ours) */
+	class Header {
+	public:
+		/* 0x100 */
+		int16_t version;
+		int16_t num_glyphs;
+		/* where the glyph index starts */
+		int32_t index_offset;
+	};
+
+	/* a character's entry in the glyph index (names ours) */
+	class Glyph {
+	public:
+		/* the compressed image: where it is and its size */
+		int32_t offset;
+		int16_t size;
+		/* its size inflated */
+		int16_t image_size;
+		uint16_t code;
+		int16_t width;
+		int16_t height;
+		/* bit 0: the surface keeps alpha only */
+		int16_t flags;
+	};
+
+	typedef map<uint16_t, Glyph *> GlyphMap;
+
+	/* the file, or the memory it was read into, opened */
+	int32_t Open();
+	int32_t Close();
+	/* the glyph index read and mapped by character */
+	int32_t LoadIndex();
+
+	string m_path;
+	bool m_own_data;
+	void *m_data;
+	uint32_t m_size;
+	common::SharedPtr<File> m_file;
+	Glyph *m_glyphs;
+	GlyphMap m_glyph_map;
 };
 
 }

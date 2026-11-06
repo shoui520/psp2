@@ -56,6 +56,8 @@
 #define SCE_PAF_ERROR_TEXT_NOT_FOUND (-2136005882) /* 0x80AF2306 */
 /* the layout's last line reached: the rest left out (name ours) */
 #define SCE_PAF_ERROR_TEXT_LINE_LIMIT (-2136005760) /* 0x80AF2380 */
+/* what a font rasterizer does not do (name ours) */
+#define SCE_PAF_ERROR_TEXT_NOT_SUPPORTED (-2136005634) /* 0x80AF23FE */
 #define SCE_PAF_ERROR_FILE_INVALID_OFFSET (-2135994367) /* 0x80AF5001 */
 #define SCE_PAF_ERROR_FILE_INVALID_ARGUMENT (-2135994366) /* 0x80AF5002 */
 #define SCE_PAF_ERROR_FILE_NO_MEMORY (-2135994365) /* 0x80AF5003 */

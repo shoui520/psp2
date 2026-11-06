@@ -190,6 +190,9 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/arl/gxm/gxm_framebuffer_object.cpp
 	src/graphics/effects/fft.cpp
 	src/graphics/drawobj/default_shader.cpp
+	src/graphics/surface/texture_format.cpp
+	src/graphics/text/font_rasterizer_image.cpp
+	src/graphics/text/font_rasterizer.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
 	src/widget/core/widget.cpp
@@ -287,6 +290,8 @@ set_source_files_properties(src/graphics/text/attributed_string.cpp PROPERTIES C
 # InitText inlines both rasterizer factories (the emoji one too): budget 30 does that, 20 calls
 # CreateEmojiFontRasterizer, 40 inlines StopTextThreads (2026-11-02).
 set_source_files_properties(src/graphics/text/text_init.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+# FontRasterizerImage: the glyph map's find and operator[] inline, its frame helpers stay calls
+set_source_files_properties(src/graphics/text/font_rasterizer_image.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # TextGraphics: budget 16 and up inline the list's erase into UpdateChars and the vector's
 # destructor into the destructors; 12 and below call them (2026-11-02).
@@ -347,7 +352,8 @@ set_source_files_properties(src/timer/get_time.cpp src/url/url.cpp src/rtc/rtc.c
 	src/graphics/arl/gxm/gxm_clear.cpp src/graphics/arl/gxm/gxm_framebuffer_copy.cpp
 	src/graphics/arl/gxm/gxm_vertex_array.cpp src/graphics/arl/gxm/gxm_vertex_array_spec.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp src/graphics/arl/gxm/gxm_framebuffer_object.cpp src/graphics/effects/fft.cpp
-	src/graphics/drawobj/default_shader.cpp
+	src/graphics/drawobj/default_shader.cpp src/graphics/surface/texture_format.cpp
+	src/graphics/text/font_rasterizer.cpp
 	src/graphics/drawobj/draw_obj.cpp
 	src/graphics/drawobj/bubble_obj.cpp src/graphics/drawobj/page_turn_obj.cpp
 	src/graphics/drawobj/panel_obj.cpp
