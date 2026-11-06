@@ -83,7 +83,7 @@ def main():
         if not sonycc.compile_one(source, candidate, source_kind, defines, includes, opt,
                                  extra=extra, mode=options['mode']):
             raise SystemExit(1)
-        if any(h['type'] == 4 for h in elfsections.Sections(candidate.read_bytes()).headers):
+        if any(h['type'] in (4, 17) for h in elfsections.Sections(candidate.read_bytes()).headers):
             converted = candidate.with_suffix('.rel.o')
             converted.write_bytes(elfsections.object_for_ld(candidate.read_bytes()))
             candidate = converted
