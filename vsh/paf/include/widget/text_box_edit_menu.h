@@ -1,5 +1,5 @@
 /*
- * The text box edit listener the widget system makes for itself (wutil::Init): while a text box
+ * The text box edit menu the widget system makes for itself (wutil::Init): while a text box
  * is edited the camera zooms in on it and follows its caret, and a speech balloon menu over the
  * caret offers to cut, copy, paste, select and select all ("_common_template_speech_balloon_menu_*"
  * in the common resource). The template, texture and string IDs are Sony's (their strings); the
@@ -17,7 +17,7 @@ namespace paf {
 namespace ui {
 
 /* 0x38 bytes */
-class TextBoxEditMenu : public TextBoxEditListener {
+class TextBoxEditMenu : public TextBoxEditMenuListener {
 public:
 	/* the menu's items */
 	enum {

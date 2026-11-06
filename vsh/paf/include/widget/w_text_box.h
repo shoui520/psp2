@@ -64,12 +64,14 @@ public:
 	int32_t GetEditMode(bool &mode);
 };
 
-/* what a text box tells about its editing (wutil::InitParam's edit_listener) */
-class TextBoxEditListener {
+/* what a text box tells the edit menu about its editing: the object wutil::Init makes and export
+   1EE9D37E returns (name ours; the exported TextBoxEditListener, wutil::InitParam's edit_listener,
+   is another interface) */
+class TextBoxEditMenuListener {
 public:
-	TextBoxEditListener();
+	TextBoxEditMenuListener();
 
-	virtual ~TextBoxEditListener();
+	virtual ~TextBoxEditMenuListener();
 
 	virtual int32_t BeginEdit(TextBox *text_box) = 0;
 	virtual int32_t EndEdit(TextBox *text_box) = 0;
