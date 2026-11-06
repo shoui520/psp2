@@ -11,30 +11,9 @@
 #include "connection.h"
 #include "statement.h"
 #include "record.h"
-
-/* libpaf's heaps (ScePafMisc) */
-extern "C" {
-void *scePafMallocWithContext(void *context, SceSize size);
-void scePafFreeWithContext(void *context, void *ptr);
-}
+#include "value.h"
 
 namespace dbutil {
-
-/* from the record's heap, or paf's without one */
-static inline void *Allocate(void *heap, SceSize size)
-{
-	if (heap != NULL)
-		return scePafMallocWithContext(heap, size);
-	return sce_paf_malloc(size);
-}
-
-static inline void Free(void *heap, void *ptr)
-{
-	if (heap != NULL)
-		scePafFreeWithContext(heap, ptr);
-	else
-		sce_paf_free(ptr);
-}
 
 Record::Record()
 	: m_connection(NULL), m_columnCount(0), m_values(NULL), m_valid(false),

@@ -37,6 +37,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	function.cpp
 	record_result.cpp
 	record.cpp
+	value.cpp
 	result.cpp
 	statement.cpp
 )
@@ -51,5 +52,6 @@ set_source_files_properties(dcn_server_stub.cpp PROPERTIES COMPILE_OPTIONS -Xaut
 set_source_files_properties(function.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(record_result.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(record.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
+set_source_files_properties(value.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(result.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(statement.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
