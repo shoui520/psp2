@@ -55,6 +55,18 @@ _Static_assert(sizeof(SceKernelSegmentInfo) == 0x18, "SceKernelSegmentInfo size"
 _Static_assert(sizeof(SceKernelModuleInfo) == 0x1b8, "SceKernelModuleInfo size");
 #endif
 
+/*
+ * The thread a user module's module_start or module_stop runs on: the variables of its NID 0
+ * export 0x1A9822A4 (start) and 0xD20886EB (stop), read by the module manager's loader.
+ */
+typedef struct SceModuleThreadParam {
+	SceUInt32 numParams;		/* 4 */
+	SceInt32 priority;		/* 0: the default */
+	SceSize stackSize;
+	SceUInt32 attr;
+	SceInt32 cpuAffinityMask;
+} SceModuleThreadParam;
+
 /* sceKernelGetSystemSwVersion's output */
 typedef struct SceKernelSystemSwVersion {
 	SceSize size;			/* 0x28 */

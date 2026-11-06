@@ -19,6 +19,7 @@
 #include <processmgr/process.h>
 #include <modulemgr/modulemgr_patch.h>
 #include <modulemgr/modulemgr.h>
+#include <modulemgr/module_info.h>
 #include <iofilemgr/iofilemgr.h>
 #include <modulemgr/module_library.h>
 #include <modulemgr/elf.h>
@@ -340,15 +341,6 @@ typedef struct ModulemgrThreadState {
 #define THREAD_STATE_RETRY_WAIT		0x020	/* wait for the entry thread again */
 #define THREAD_STATE_START_RESULT	0x100	/* result holds the start result */
 #define THREAD_STATE_START_SUSPEND	0x200	/* report the failed start first */
-
-/* start_thread / stop_thread parameter of a user module */
-typedef struct SceModuleThreadParam {
-	SceUInt32 numParams;		/* 4 */
-	SceInt32 priority;
-	SceSize stackSize;
-	SceUInt32 attr;
-	SceInt32 cpuAffinityMask;
-} SceModuleThreadParam;
 
 /* SceProcessParam of a process image (up to 0x34 bytes) */
 typedef struct SceProcessParam {
