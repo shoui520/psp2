@@ -50,6 +50,7 @@
 
 /* Connection::SetOption */
 #define DBUTIL_OPTION_WAIT_STATEMENTS	0	/* a rollback waits for the running statements */
+#define DBUTIL_OPTION_CHANGES_ONLY	1	/* a commit or rollback that changed no row is not posted */
 #define DBUTIL_OPTION_COUNT		2
 
 namespace dbutil {

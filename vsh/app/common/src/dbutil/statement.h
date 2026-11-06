@@ -31,16 +31,29 @@ public:
 	Statement(Connection *connection, const paf::string &sql);
 	virtual ~Statement();
 
-	void AddRef();
-	void Release();
+	int Finalize();
+	virtual void OnCommit(Event *event);
+	virtual void OnOverflow(Event *event);
+	virtual void OnClose(Event *event);
+	int AddRef();
+	int Release();
 	int Step(int count);
 	int Reset();
-	int Finalize();
-	int BindAll(const Value *values, int count);
 	const char *GetColumnDatabaseName(int column);
 	const char *GetColumnTableName(int column);
 	const char *GetColumnOriginName(int column);
+	int GetColumnMetadata(int column, int *type, const char **collation, bool *notNull,
+			      bool *primaryKey, bool *autoIncrement);
 	int GetValue(int column, Value *value);
+	int Bind(int index, const Value *value, bool keep);
+	int BindAll(const Value *values, int count);
+	int BindZeroblob(int index, int size);
+	int GetParameterCount(int *count);
+	int GetParameterIndex(const paf::string &name, int *index);
+	int GetParameterName(int index, const char **name);
+	int ClearBindings();
+	int ClearChanged();
+	int FindRowidColumn();
 
 	Connection *m_connection;
 	sqlite3 *m_db;
@@ -50,7 +63,7 @@ public:
 	int m_result;			/* the constructor's: nonzero when preparing failed */
 	int m_refCount;
 	paf::thread::RMutex m_lock;
-	bool m_changed;
+	bool m_changed;			/* a commit or an overflow may have changed its rows */
 	bool m_active;			/* counted in the connection's m_activeStatements */
 };
 
