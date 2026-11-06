@@ -105,6 +105,9 @@ _Static_assert(sizeof(SceAppMgrSaveDataUmountParam) == 0x14, "SceAppMgrSaveDataU
 
 int sceAppMgrSaveDataDataSave(SceAppMgrSaveDataData *data);
 int sceAppMgrSaveDataDataRemove(SceAppMgrSaveDataDataDelete *data);
+/* their second forms (SceDriverUser), which SceAppUtilExt calls */
+int sceAppMgrSaveDataDataSave2(SceAppMgrSaveDataData *data);
+int sceAppMgrSaveDataDataRemove2(SceAppMgrSaveDataDataDelete *data);
 /* sceAppMgrSaveDataDataSave and sceAppMgrSaveDataDataRemove for system applications */
 int SceAppMgrForDriver_30947DF4(SceAppMgrSaveDataData *operation);
 int SceAppMgrForDriver_EBFE1BE2(SceAppMgrSaveDataDataDelete *operation);

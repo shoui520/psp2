@@ -15,6 +15,25 @@
 extern "C" {
 #endif
 
+/* error codes */
+#define SCE_APPUTIL_ERROR_PARAMETER			(-2146433536)	/* 0x80100600 */
+#define SCE_APPUTIL_ERROR_NOT_INITIALIZED		(-2146433535)	/* 0x80100601 */
+#define SCE_APPUTIL_ERROR_NO_MEMORY			(-2146433534)	/* 0x80100602 */
+#define SCE_APPUTIL_ERROR_BUSY				(-2146433533)	/* 0x80100603 */
+#define SCE_APPUTIL_ERROR_NOT_MOUNTED			(-2146433532)	/* 0x80100604 */
+#define SCE_APPUTIL_ERROR_NO_PERMISSION			(-2146433531)	/* 0x80100605 */
+#define SCE_APPUTIL_ERROR_PASSCODE_MISMATCH		(-2146433530)	/* 0x80100606 */
+#define SCE_APPUTIL_ERROR_STACKSIZE_TOO_SHORT		(-2146433376)	/* 0x801006a0 */
+#define SCE_APPUTIL_ERROR_APPEVENT_PARSE_INVALID_DATA	(-2146433504)	/* 0x80100620 */
+#define SCE_APPUTIL_ERROR_SAVEDATA_SLOT_EXISTS		(-2146433472)	/* 0x80100640 */
+#define SCE_APPUTIL_ERROR_SAVEDATA_SLOT_NOT_FOUND	(-2146433471)	/* 0x80100641 */
+#define SCE_APPUTIL_ERROR_SAVEDATA_NO_SPACE_QUOTA	(-2146433470)	/* 0x80100642 */
+#define SCE_APPUTIL_ERROR_SAVEDATA_NO_SPACE_FS		(-2146433469)	/* 0x80100643 */
+#define SCE_APPUTIL_ERROR_DRM_NO_ENTITLEMENT		(-2146433440)	/* 0x80100660 */
+#define SCE_APPUTIL_ERROR_PHOTO_DEVICE_NOT_FOUND	(-2146433408)	/* 0x80100680 */
+#define SCE_APPUTIL_ERROR_MUSIC_DEVICE_NOT_FOUND	(-2146433403)	/* 0x80100685 */
+#define SCE_APPUTIL_ERROR_MOUNT_LIMIT_OVER		(-2146433402)	/* 0x80100686 */
+
 #define SCE_APPUTIL_MOUNTPOINT_DATA_MAXSIZE		(16)
 
 /* save data slots */
@@ -62,6 +81,13 @@ typedef struct SceAppUtilSaveDataSlotParam {
 	SceDateTime modifiedTime;
 	SceChar8 reserved[48];
 } SceAppUtilSaveDataSlotParam;
+
+/* the slot a save data data call updates */
+typedef struct SceAppUtilSaveDataDataSlot {
+	SceAppUtilSaveDataSlotId id;
+	SceAppUtilSaveDataSlotParam *slotParam;		/* the slot's new parameters, or NULL */
+	SceChar8 reserved[32];
+} SceAppUtilSaveDataDataSlot;
 
 /* a file or directory to save */
 typedef struct SceAppUtilSaveDataDataSaveItem {

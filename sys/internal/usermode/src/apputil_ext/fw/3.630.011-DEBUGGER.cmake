@@ -1,5 +1,6 @@
 # 3.630.011-DEBUGGER: vs0:sys/external/apputil_ext.suprx (generated)
 set(MODULE_NID 0x5F6E5DF9)
+set(MODULE_AUTH_ID 0x28000000000280A5)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03630011)
@@ -34,29 +35,4 @@ set(MODULE_IMPORT_NIDS
 	0x48E01D74:F:0xA3E0694F
 	0x48E01D74:F:0xE8CADCA9
 	0x48E01D74:F:0xF93C691C
-)
-set(MODULE_IMPORT_FUNCS
-	sceAppMgrGetSystemDataFilePlayReady
-	sceAppMgrAppDataMount
-	sceAppMgrSetSystemDataFile
-	sceAppMgrSaveDataDataRemove2
-	sceAppMgrSetSystemDataFilePlayReady
-	sceAppMgrUmount
-	sceAppMgrSaveDataDataSave2
-	sceAppMgrGetSystemDataFile
-	sceRtcGetCurrentClockLocalTime
-	sceClibMemcpy_safe
-	__stack_chk_fail
-	sceClibMemset
-	sceKernelCheckThreadStack
-	SceLibKernel_9F793F84
-	sceClibStrncpy
-	sceClibPrintf
-	SceAppUtil_1CFFE892
-	SceAppUtil_A3E0694F
-	SceAppUtil_E8CADCA9
-	SceAppUtil_F93C691C
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
 )

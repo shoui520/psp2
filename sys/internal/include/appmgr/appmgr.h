@@ -191,6 +191,13 @@ int sceAppMgrAppDataMountById(unsigned int mountId, const char *id,
 				struct ScePfsRndDriveId *mountPoint);
 int SceAppMgrForDriver_EC9D5A35(void *status);	/* vitasdk: ksceAppMgrSaveDataSlotGetStatus */
 int sceAppMgrGetSystemDataFile(SceUInt32 location, void *buffer, SceSize size);
+/* SceAppMgrUser's system data calls (SceDriverUser); location 1 is the PlayReady information, 2 its
+ * data */
+int sceAppMgrSetSystemDataFile(SceUInt32 location, const void *userData, SceSize dataSize);
+int sceAppMgrGetSystemDataFilePlayReady(SceUInt32 location, void *information, void *userData,
+					SceSize dataSize);
+int sceAppMgrSetSystemDataFilePlayReady(SceUInt32 location, const void *information,
+					const void *userData, SceSize dataSize);
 int SceAppMgrForDriver_193784A9(SceUID pid);	/* vitasdk: ksceAppMgrCheckContentInstallPeriod */
 int sceAppMgrUpdateRifInfo(const char *titleId);
 int SceAppMgrForDriver_B53FB98E(const char *path, int kind);	/* vitasdk: ksceAppMgrRegisterPath */
