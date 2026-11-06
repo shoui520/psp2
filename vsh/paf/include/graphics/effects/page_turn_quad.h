@@ -25,8 +25,9 @@ public:
    down (names ours); 0x20 bytes */
 class PageTurnQuad {
 public:
-	/* 0x812153bc: the place, the texture coordinates or both from -1 to 1 instead of 0 to 1 */
-	void Init(bool ndc_position, bool ndc_uv)
+	/* 0x812153bc: the place, the texture coordinates or both from -1 to 1 instead of 0 to 1
+	   (Sony's build keeps it out of line) */
+	__attribute__((noinline)) void Init(bool ndc_position, bool ndc_uv)
 	{
 		arl::ArlInstance *gl = arl::Gl();
 		PageTurnQuadVertex vertices[4] = {

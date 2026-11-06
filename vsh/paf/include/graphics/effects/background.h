@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <common/shared_ptr.h>
 #include <graphics/camera.h>
+#include <graphics/effects/page_turn_quad.h>
 #include <graphics/effects/post_effects.h>
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
 #include <graphics/arl/gxm/gxm_framebuffer_copy.h>
@@ -186,8 +187,98 @@ public:
 	uint8_t reserved[0xc4];
 };
 
-/* a background lit from light probes (its Load reads grace_probe, beach_probe, sky_03 and
-   ls01.tga); 0x210 bytes */
+/* background_image.vp: the quad placed by MVP, its texture coordinates by UVTransform (the
+   program's path and parameters Sony's, the class name ours) */
+class BackgroundImageVertShader : public arl::ShaderInterfaceBase {
+public:
+	BackgroundImageVertShader() : m_mvp(m_setup), m_uv_transform(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_mvp.init("MVP", arl::ShaderParameterBase::UNIFORM, 0);
+		m_uv_transform.init("UVTransform", arl::ShaderParameterBase::UNIFORM, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_mvp.Apply();
+		m_uv_transform.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	virtual const char *GetName()
+	{
+		return "paf/cg/drawobj/background_image.vp";
+	}
+
+	virtual const uint8_t *GetBinary()
+	{
+		return s_binary;
+	}
+
+	virtual uint32_t GetBinarySize()
+	{
+		return sizeof(s_binary);
+	}
+
+	/* background_image.vp built by psp2cgc */
+	static const uint8_t s_binary[344];
+
+	arl::ShaderParameter<math::matrix> m_mvp;
+	/* the texture coordinates' origin (x, y) and size (z, w) */
+	arl::ShaderParameter<math::v4> m_uv_transform;
+};
+
+/* background_image.fp: the texture (ColorMap) as it is */
+class BackgroundImageFragShader : public arl::ShaderInterfaceBase {
+public:
+	BackgroundImageFragShader() : m_color_map(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_color_map.init("ColorMap", 0, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_color_map.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	virtual const char *GetName()
+	{
+		return "paf/cg/drawobj/background_image.fp";
+	}
+
+	virtual const uint8_t *GetBinary()
+	{
+		return s_binary;
+	}
+
+	virtual uint32_t GetBinarySize()
+	{
+		return sizeof(s_binary);
+	}
+
+	/* background_image.fp built by psp2cgc */
+	static const uint8_t s_binary[264];
+
+	arl::ShaderParameter<arl::TextureSource> m_color_map;
+};
+
+/* a background that draws one image, G_PixelJunk.dds from the background folder, over the
+   screen, and whose reflections and refractions sample it; everything is made the first time
+   it is used. 0x210 bytes */
 class ProbeBackground : public Background {
 public:
 	/* 0x810cf5e0 */
@@ -202,7 +293,20 @@ public:
 	virtual math::matrix GetUVTransform();
 	virtual void SetState(int32_t state);
 
-	uint8_t reserved[0x20c];
+	/* 0x810cf154: the quad, the shaders and the image, made once (name ours) */
+	void Prepare();
+
+	arl::TextureSource m_image;
+	PageTurnQuad m_quad;
+	arl::ShaderInstance<BackgroundImageVertShader, arl::VertShaderObject> m_vert;
+	arl::ShaderInstance<BackgroundImageFragShader, arl::FragShaderObject> m_frag;
+	/* where the image is drawn, from 0 to 1 over the screen, and the part of it drawn */
+	math::v2 m_position_min;
+	math::v2 m_position_max;
+	math::v2 m_uv_min;
+	math::v2 m_uv_max;
+	common::SharedPtr<SharedTexture> m_shared_texture;
+	bool m_loaded;
 };
 
 /* rect2env.vp: the quad's corners and texture coordinates, no parameters (the program's
