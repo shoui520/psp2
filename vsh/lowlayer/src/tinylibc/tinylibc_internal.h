@@ -1,6 +1,7 @@
 /*
  * What SceTinyLibc's objects share: __dso_handle, the lock and the exit handlers' pool
- * (tinylibc.c), and the runtime's mspace (malloc.c). The names are ours.
+ * (tinylibc.c), the exit handlers' list (cxa_atexit.c) and the runtime's mspace (malloc.c).
+ * The names are ours.
  */
 #ifndef TINYLIBC_TINYLIBC_INTERNAL_H
 #define TINYLIBC_TINYLIBC_INTERNAL_H
@@ -21,6 +22,7 @@ typedef struct TinyLibcAtexitEntry {
 extern void *__dso_handle;
 extern TinyLibcAtexitEntry g_tinyLibcAtexitPool[TINYLIBC_ATEXIT_POOL_COUNT];
 extern SceKernelLwMutexWork g_tinyLibcLock;
+extern TinyLibcAtexitEntry *g_tinyLibcAtexitHead;
 extern void *g_tinyLibcMspace;
 
 #endif

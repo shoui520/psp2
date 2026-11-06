@@ -1,6 +1,6 @@
 /*
- * SceTinyLibc's exit handlers: __cxa_finalize runs those registered for a module, newest first.
- * trigger_util's __cxa_atexit, which registers them, comes before it.
+ * SceTinyLibc's exit handlers: __cxa_finalize runs those registered for a module, newest first
+ * (__aeabi_atexit registers them: aeabi_atexit.c).
  */
 #include <stddef.h>
 #include <scetypes.h>
@@ -8,7 +8,7 @@
 #include "tinylibc.h"
 #include "tinylibc_internal.h"
 
-static TinyLibcAtexitEntry *s_atexitHead = NULL;
+TinyLibcAtexitEntry *g_tinyLibcAtexitHead = NULL;
 
 /* an entry from the pool goes back to it, any other to the mspace */
 static inline void freeAtexitEntry(TinyLibcAtexitEntry *entry)
@@ -40,7 +40,7 @@ void __cxa_finalize(void *dso)
 
 	sceKernelLockLwMutex(&g_tinyLibcLock, 1, NULL);
 	if (dso != NULL) {
-		head = s_atexitHead;
+		head = g_tinyLibcAtexitHead;
 		entry = head;
 		first = entry;
 		prev = NULL;
@@ -48,7 +48,7 @@ void __cxa_finalize(void *dso)
 			next = entry->next;
 			if (entry->dso == *(void **)dso) {
 				if (entry == head) {
-					s_atexitHead = next;
+					g_tinyLibcAtexitHead = next;
 					first = next;
 				}
 				if (prev != NULL)
@@ -61,7 +61,7 @@ void __cxa_finalize(void *dso)
 				func(arg);
 
 				sceKernelLockLwMutex(&g_tinyLibcLock, 1, NULL);
-				head = s_atexitHead;
+				head = g_tinyLibcAtexitHead;
 			} else {
 				prev = entry;
 			}

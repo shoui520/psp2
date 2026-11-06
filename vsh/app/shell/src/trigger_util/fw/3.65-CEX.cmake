@@ -1,5 +1,6 @@
 # 3.65-CEX: vs0:sys/external/trigger_util.suprx (generated)
 set(MODULE_NID 0x169ACC8C)
+set(MODULE_AUTH_ID 0x2800000000024002)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

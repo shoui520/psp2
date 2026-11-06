@@ -1,6 +1,6 @@
 /*
- * SceTinyLibc's allocator: free into the runtime's mspace. trigger_util's malloc, which makes
- * the mspace, is not written yet, so the mspace is external.
+ * SceTinyLibc's free, into the runtime's mspace (malloc is alloc.c's). No module that links the
+ * runtime creates the mspace (their sceClibMspaceCreate imports are unused), so it is external.
  */
 #include <stddef.h>
 #include <scetypes.h>

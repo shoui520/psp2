@@ -7,6 +7,8 @@
 #ifndef TINYLIBC_TINYLIBC_H
 #define TINYLIBC_TINYLIBC_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,9 +18,13 @@ void tinyLibcInit(void);
 /* term.c: the module's exit handlers, then the lock; module_stop calls it */
 void tinyLibcTerm(void);
 
+/* aeabi_atexit.c: the destroyer of a static object, for __cxa_finalize */
+int __aeabi_atexit(void *object, void (*destroyer)(void *), void *dso);
 /* cxa_atexit.c */
 void __cxa_finalize(void *dso);
 
+/* alloc.c */
+void *malloc(size_t size);
 /* malloc.c */
 void free(void *ptr);
 
