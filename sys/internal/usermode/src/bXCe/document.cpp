@@ -1053,3 +1053,190 @@ int bxceDocumentFlushAttributes(BxceDocument *doc)
 	doc->pendingAttrCount = 0;
 	return ret;
 }
+
+/* the attribute after this one of its element, or 0 */
+BxceNodeId ScebXCe_134F491C(const BxceDocument *doc, BxceNodeId node)
+{
+	const char *p;
+	int i;
+
+	if (node == 0)
+		return 0;
+
+	p = doc->nodes + node;
+	if ((p[0] & 0xF) != SCE_XML_TOKEN_DOM_ATTR)
+		return 0;
+
+	/* past the count, the name offset and the value position */
+	i = (p[0] & SCE_XML_TOKEN_DOM_HAS_SIBLING) ? 1 : 0;
+	i += 1 + bxceLengthSize(((const SceUInt8 *)p)[i + 1]);
+	i += bxceLengthSize(((const SceUInt8 *)p)[i]);
+	if ((p[i] & 0xF) == SCE_XML_TOKEN_DOM_ATTR)
+		return node + i;
+	return 0;
+}
+
+/* the first attribute of an element, or 0 */
+BxceNodeId ScebXCe_B034C595(const BxceDocument *doc, BxceNodeId node)
+{
+	const char *p;
+	SceUInt32 attr;
+	int type, size;
+
+	if (node == 0)
+		return 0;
+
+	if (!doc->isBinary) {
+		type = ScebXCe_FA18A039(doc, node);
+		if ((type & 5) != 0 || (type & 4) != 0) {
+			attr = ((const BxceDomNode *)node)->text;
+			return attr != 0 ? attr + 1 : 0;
+		}
+		return 0;
+	}
+
+	p = doc->nodes + node;
+	switch (p[0]) {
+	case SCE_XML_TOKEN_DOM_ELEMENT_ATTR:
+	case SCE_XML_TOKEN_DOM_RWELEMENT_ATTR:
+	case SCE_XML_TOKEN_DOM_ELEMENT_ATTR_CHILD:
+	case SCE_XML_TOKEN_DOM_RWELEMENT_ATTR_CHILD:
+	case SCE_XML_TOKEN_DOM_ELEMENT_ATTR_SIB:
+	case SCE_XML_TOKEN_DOM_RWELEMENT_ATTR_SIB:
+	case SCE_XML_TOKEN_DOM_ELEMENT_ATTR_SIB_CHILD:
+	case SCE_XML_TOKEN_DOM_RWELEMENT_ATTR_SIB_CHILD:
+		/* past the token, the name, the sibling offset and a child's length */
+		size = 0;
+		if (p[0] & SCE_XML_TOKEN_DOM_HAS_CHILD)
+			size = bxceLengthSize(((const SceUInt8 *)p)[7]);
+		return node + size + 7;
+	default:
+		return 0;
+	}
+}
+
+/* the document node */
+BxceNodeId ScebXCe_75E1B095(const BxceDocument *doc)
+{
+	if (!doc->isBinary)
+		return (BxceNodeId)doc->domRoot;
+	return doc->nodes != NULL ? 1 : 0;
+}
+
+/* the parent of a node, searched from the root; 0 for the root itself */
+BxceNodeId bxceDocumentGetParent(BxceDocument *doc, BxceNodeId node)
+{
+	BxceNodeId root, parent;
+	int found;
+
+	if (node == 0) {
+		doc->status = SCE_BXCE_ERROR_INVALID_ARGUMENT;
+		return 0;
+	}
+
+	doc->status = 0;
+	root = ScebXCe_CED6BECF(doc);
+	if (root == 0)
+		return ScebXCe_75E1B095(doc);
+
+	parent = root;
+	found = 0;
+	bxceFindParent(doc, root, node, &found, &parent);
+	if (parent == node)
+		return 0;
+	if (parent == 0)
+		doc->status = SCE_BXCE_ERROR_DOM_NOT_FOUND_ERROR;
+	return parent;
+}
+
+/* links a DOM node under parent, after the child after (first when 0) */
+BxceNodeId ScebXCe_3BF2F11B(BxceDocument *doc, BxceNodeId parent, BxceNodeId after,
+			    BxceNodeId child)
+{
+	BxceDomNode *p = (BxceDomNode *)parent;
+	BxceDomNode *c = (BxceDomNode *)child;
+	BxceDomNode *n, *next;
+
+	doc->status = 0;
+	if (doc->isBinary) {
+		doc->status = SCE_BXCE_ERROR_DOM_READ_ONLY_ERROR;
+		return 0;
+	}
+
+	if (child == 0 || parent == 0) {
+		doc->status = SCE_BXCE_ERROR_INVALID_ARGUMENT;
+		return 0;
+	}
+
+	if (p->child == NULL) {
+		p->child = c;
+		p->info |= SCE_XML_TOKEN_DOM_HAS_CHILD;
+		return child;
+	}
+
+	if (after == 0) {
+		n = p->child;
+		p->child = c;
+		c->sibling = n;
+		c->info |= SCE_XML_TOKEN_DOM_HAS_SIBLING;
+		return child;
+	}
+
+	for (n = p->child; n != NULL; n = next) {
+		next = n->sibling;
+		if (n == (BxceDomNode *)after) {
+			n->sibling = c;
+			n->info |= SCE_XML_TOKEN_DOM_HAS_SIBLING;
+			c->sibling = next;
+			if (next != NULL)
+				c->info |= SCE_XML_TOKEN_DOM_HAS_SIBLING;
+			return child;
+		}
+	}
+
+	doc->status = SCE_BXCE_ERROR_DOM_NOT_FOUND_ERROR;
+	return 0;
+}
+
+/* a new DOM text node, its text added to the text table */
+BxceNodeId ScebXCe_AEB2CE13(BxceDocument *doc, const char *text, SceUInt32 length)
+{
+	BxceDomNode *node;
+	SceUInt32 pos;
+
+	if (doc->isBinary) {
+		doc->status = SCE_BXCE_ERROR_DOM_READ_ONLY_ERROR;
+		return 0;
+	}
+
+	if (text == NULL || length == 0) {
+		doc->status = SCE_BXCE_ERROR_INVALID_ARGUMENT;
+		return 0;
+	}
+
+	doc->status = 0;
+	node = (BxceDomNode *)ScebXCe_B8DDE741(sizeof(BxceDomNode));
+	if (node == NULL) {
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return 0;
+	}
+
+	bxceMemset(node, 0, sizeof(BxceDomNode));
+	node->info = SCE_XML_TOKEN_DOM_TEXT;
+	node->child = NULL;
+	node->sibling = NULL;
+	if (doc->textsSize <= 0xEF) {
+		node->text = doc->textsSize;
+	} else {
+		pos = 0;
+		bxceWriteLength(doc, doc->textsSize, (char *)&node->text, &pos);
+	}
+
+	if (bxceDocumentAddText(doc, text, length) != 0) {
+		ScebXCe_EC560647(node);
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return 0;
+	}
+
+	return (BxceNodeId)node;
+}

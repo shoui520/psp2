@@ -22,6 +22,8 @@ extern "C" {
 #define SCE_BXCE_ERROR_NO_MEMORY			-2138759168	/* 0x80852000 */
 #define SCE_BXCE_ERROR_INVALID_ARGUMENT			-2138759166	/* 0x80852002 */
 #define SCE_BXCE_ERROR_DUPLICATE_ATTRIBUTE_NAME		-2138759126	/* 0x8085202A */
+#define SCE_BXCE_ERROR_DOM_NOT_FOUND_ERROR		-2138758651	/* 0x80852205 */
+#define SCE_BXCE_ERROR_DOM_READ_ONLY_ERROR		-2138758647	/* 0x80852209 */
 #define SCE_BXCE_ERROR_EXCEED_LIMIT			-2138758640	/* 0x80852210 */
 
 /* the sizes of a new table and name table, the limit of a table, the longest element name */
@@ -208,6 +210,14 @@ const char *ScebXCe_2FAD3DFA(const BxceDocument *doc, BxceNodeId node);	/* getSk
 const char *ScebXCe_33825EFF(const BxceDocument *doc, BxceNodeId node);	/* getText */
 const char *ScebXCe_1189A2B1(const BxceDocument *doc, BxceNodeId node);	/* getNodeName */
 int ScebXCe_FA18A039(const BxceDocument *doc, BxceNodeId node);		/* getNodeType */
+
+BxceNodeId ScebXCe_134F491C(const BxceDocument *doc, BxceNodeId node);	/* getNextAttr */
+BxceNodeId ScebXCe_B034C595(const BxceDocument *doc, BxceNodeId node);	/* getFirstAttr */
+BxceNodeId ScebXCe_75E1B095(const BxceDocument *doc);			/* getDocRoot */
+BxceNodeId bxceDocumentGetParent(BxceDocument *doc, BxceNodeId node);
+BxceNodeId ScebXCe_3BF2F11B(BxceDocument *doc, BxceNodeId parent, BxceNodeId after,
+			    BxceNodeId child);				/* insert a DOM node */
+BxceNodeId ScebXCe_AEB2CE13(BxceDocument *doc, const char *text, SceUInt32 length); /* createText */
 
 BxceNodeList *bxceGetElementsByTagName(const BxceDocument *doc, BxceNodeId node,
 					const char *name, BxceNodeList *list);
