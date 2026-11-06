@@ -4,7 +4,9 @@
  * SceSblSsUpdateMgr. cui_setupper, psp2swu and safemode link it.
  *
  * The functions are Sony's sceUpdater* API (their names from the 0.990 and 0.995 builds'
- * error messages); a function those builds do not name has a name of ours.
+ * error messages; sceUpdaterGetProgressRate, GetEstimateProcessTime, GetSegmentAnalysisSize,
+ * GetUpdateModeState, UpdateModeSetLastError, PowerLock, PowerUnlock and SetProgressCallback
+ * are ours, as are the error codes' names).
  */
 #ifndef UPDATER_CORE_UPDATER_CORE_H
 #define UPDATER_CORE_UPDATER_CORE_H
@@ -25,6 +27,11 @@ typedef struct SceUpdaterMemoryInfo {
 /* error codes (the names ours) */
 #define SCE_UPDATER_ERROR_INVALID_STATE		0x80180002
 #define SCE_UPDATER_ERROR_INVALID_ARGUMENT	0x80180006
+#define SCE_UPDATER_ERROR_POWER_STATE		0x80180009
+#define SCE_UPDATER_ERROR_ANALYSIS_STATE	0x8018000a
+#define SCE_UPDATER_ERROR_LOG_OPEN		0x80180011
+#define SCE_UPDATER_ERROR_LOG_CLOSE		0x80180021
+#define SCE_UPDATER_ERROR_LOG_WRITE		0x80180041
 #define SCE_UPDATER_ERROR_PUP_NOT_FOUND		0x8018010a
 #define SCE_UPDATER_ERROR_PUP_AUTH		0x8018010d
 #define SCE_UPDATER_ERROR_PUP_NO_FILE		0x8018010f
@@ -53,18 +60,60 @@ typedef struct SceUpdaterCopyFileOption {
 	SceUInt32 reserved[2];
 } SceUpdaterCopyFileOption;
 
+/* a segment analysis (sceUpdaterCreateSegmentAnalysisHandler) */
+typedef void *SceUpdaterSegmentAnalysisHandler;
+
+/* a piece of a PUP segment that sceUpdaterIsSegmentAvailable looks at */
+typedef struct SceUpdaterSegmentData {
+	SceUpdaterSegmentAnalysisHandler handler;
+	const void *data;
+	SceUInt64 size;
+} SceUpdaterSegmentData;
+
+/* the update's progress (0x40 bytes), which sceUpdaterSetProgressCallback's callback gets */
+typedef struct SceUpdaterProgress SceUpdaterProgress;
+typedef void (*SceUpdaterProgressCallback)(int type, int reserved, SceUpdaterProgress progress);
+
 int sceUpdaterInitialize(const SceUpdaterMemoryInfo *memoryInfo);
 int sceUpdaterFinalize(int reboot);
+int sceUpdaterGetProgressRate(void);
+int sceUpdaterUpdateAllSpackage(const char *fileName);
+int sceUpdaterInspectAllSpackage(const char *fileName);
+int sceUpdaterGetSpackageHeader(void *header, int type);
+int sceUpdaterGetProgress(SceUpdaterProgress *progress);
+int sceUpdaterGetEstimateProcessTime(const char *fileName, int *time);
+int sceUpdaterVerifyPup(const char *fileName);
+int sceUpdaterVerifyPupSegment(const char *fileName, SceUInt64 segmentId);
 int sceUpdaterParse(const char *fileName, SceUInt64 segmentId, void *pData, SceUInt64 size,
 		    SceUInt64 offset);
 int sceUpdaterGetSegmentSize(const char *fileName, SceUInt64 segmentId, SceUInt64 *size);
 int sceUpdaterIsApplicablePup(const char *fileName);
+int sceUpdaterCheckAcceptableSpkgType(const char *fileName, const int *types, int count,
+				      int *result);
+int sceUpdaterGetPupInformation(const char *fileName, void *information);
+int sceUpdaterNetworkPreCheckVersion(void *versionInfo, void *result);
+int sceUpdaterNetworkCheckBaseVersion(void *versionInfo, void *result);
+int sceUpdaterCheckNewerThanSystemVersion(void *versionInfo, void *result);
+SceUInt64 sceUpdaterGetSegmentAnalysisSize(void);
+int sceUpdaterCreateSegmentAnalysisHandler(SceUInt64 size,
+					   SceUpdaterSegmentAnalysisHandler *handler);
+int sceUpdaterDestroySegmentAnalysisHandler(SceUpdaterSegmentAnalysisHandler handler);
+int sceUpdaterIsSegmentAvailable(SceUpdaterSegmentData *data, int *result);
+int sceUpdaterGetDeviceInfo(void *deviceInfo);
+int sceUpdaterGetUpdateModeState(void);
 int sceUpdaterGetUpdateMode(SceUInt8 *mode);
 int sceUpdaterSetUpdateMode(SceUInt8 mode);
+int sceUpdaterUpdateModeSetLastError(int error);
+int sceUpdaterUpdateModeGetLastError(int *error);
 const char *sceUpdaterGetWorkingDirectory(void);
+int sceUpdaterLogStart(void);
+int sceUpdaterLogEnd(void);
 int sceUpdaterPartitionSetUp(void);
 int sceUpdaterCleanUp(void);
 const char *sceUpdaterGetPupPath(void);
+int sceUpdaterPowerLock(void);
+int sceUpdaterPowerUnlock(void);
+void sceUpdaterSetProgressCallback(SceUpdaterProgressCallback callback, SceUInt32 interval);
 int sceUpdaterCopyFile(const SceUpdaterCopyFileTarget *src, const SceUpdaterCopyFileTarget *dst,
 		       const SceUpdaterCopyFileOption *option);
 
