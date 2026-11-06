@@ -25,6 +25,14 @@ extern "C" {
 #define SCE_BXCE_ERROR_NO_MEMORY			-2138759168	/* 0x80852000 */
 #define SCE_BXCE_ERROR_INVALID_ARGUMENT			-2138759166	/* 0x80852002 */
 #define SCE_BXCE_ERROR_DUPLICATE_ATTRIBUTE_NAME		-2138759126	/* 0x8085202A */
+#define SCE_BXCE_ERROR_XML_SYNTAX_ERROR			-2138759157	/* 0x8085200B */
+#define SCE_BXCE_ERROR_XML_END_TAG_MISMATCH		-2138759155	/* 0x8085200D */
+#define SCE_BXCE_ERROR_XML_EXPECTED_CLOSING_ANGLE_BRACKET	-2138759149	/* 0x80852013 */
+#define SCE_BXCE_ERROR_XML_EXPECTED_EQUALITY_OPERATOR	-2138759148	/* 0x80852014 */
+#define SCE_BXCE_ERROR_XML_EXPECTED_SEMI_COLON		-2138759147	/* 0x80852015 */
+#define SCE_BXCE_ERROR_XML_EXPECTED_QUOTE		-2138759143	/* 0x80852019 */
+#define SCE_BXCE_ERROR_XML_NULL_HANDLER			-2138759132	/* 0x80852024 */
+#define SCE_BXCE_ERROR_XML_DOCUMENT_ELEMENT_NOT_FOUND	-2138759129	/* 0x80852027 */
 #define SCE_BXCE_ERROR_DOM_NOT_FOUND_ERROR		-2138758651	/* 0x80852205 */
 #define SCE_BXCE_ERROR_DOM_READ_ONLY_ERROR		-2138758647	/* 0x80852209 */
 #define SCE_BXCE_ERROR_DOM_MAX_NUM_OF_ATTR_ERROR		-2138758645	/* 0x8085220B */
@@ -233,6 +241,104 @@ BxceAttr *ScebXCe_2AD8DA26(const BxceAttributeList *list, const char *name, SceS
 BxceAttr *ScebXCe_01DC4E22(const BxceAttributeList *list, SceSize index);
 int ScebXCe_69F4B8B6(const BxceAttributeList *list);	/* getLength */
 int ScebXCe_3DD761CF(BxceAttributeList *list, const char *name, const char *value);
+
+/* the parser's growing buffers: the bytes, how many are used, how many are allocated */
+#define BXCE_BUFFER_INITIAL_SIZE	20
+
+typedef struct BxceBuffer {
+	char *data;
+	int length;
+	int capacity;
+} BxceBuffer;
+
+int bxceBufferGrow(char **data, int *capacity, int extra);
+
+/* the parser's class of each byte value (expat's byte types, with letters, '.' and 5- and 6-byte leads of their own) */
+enum {
+	BXCE_BT_NONXML, BXCE_BT_MALFORM, BXCE_BT_LT, BXCE_BT_AMP, BXCE_BT_RSQB,
+	BXCE_BT_LEAD2, BXCE_BT_LEAD3, BXCE_BT_LEAD4, BXCE_BT_TRAIL, BXCE_BT_CR,
+	BXCE_BT_LF, BXCE_BT_GT, BXCE_BT_QUOT, BXCE_BT_APOS, BXCE_BT_EQUALS,
+	BXCE_BT_QUEST, BXCE_BT_EXCL, BXCE_BT_SOL, BXCE_BT_SEMI, BXCE_BT_NUM,
+	BXCE_BT_LSQB, BXCE_BT_S, BXCE_BT_NMSTRT, BXCE_BT_COLON, BXCE_BT_HEX,
+	BXCE_BT_DIGIT, BXCE_BT_NAME, BXCE_BT_MINUS, BXCE_BT_OTHER, BXCE_BT_NONASCII,
+	BXCE_BT_PERCNT, BXCE_BT_LPAR, BXCE_BT_RPAR, BXCE_BT_AST, BXCE_BT_PLUS,
+	BXCE_BT_COMMA, BXCE_BT_VERBAR, BXCE_BT_LETTER, BXCE_BT_PERIOD, BXCE_BT_LEAD5,
+	BXCE_BT_LEAD6
+};
+
+/* what bxceParserLookupReference finds an entity reference to be */
+enum {
+	BXCE_REF_AMP, BXCE_REF_QUOT, BXCE_REF_LT, BXCE_REF_GT, BXCE_REF_APOS,
+	BXCE_REF_UNKNOWN, BXCE_REF_CHAR, BXCE_REF_ERROR
+};
+
+/*
+ * The tokenizer both parsers share (the SAX parser and the document builder put theirs at their
+ * start): the input chunk, the state it stopped in, the token being read and the buffers that
+ * keep what a chunk's end split.
+ */
+#define BXCE_PARSER_SAVED_MAX		16
+
+typedef struct BxceParserState BxceParserState;
+typedef struct BxceNameStack BxceNameStack;
+
+typedef struct BxceParser {
+	BxceParserState *saved[BXCE_PARSER_SAVED_MAX];
+	SceUInt8 skipIgnorableWhiteSpace;
+	SceUInt8 resolveEntity;		/* '&' ends character data */
+	SceUInt8 resolveAttrEntity;	/* attribute values have their references decoded */
+	SceUInt8 padding;
+	int state;
+	int token;
+	int lastToken;
+	char pending[12];		/* the start of a "<!" the chunk's end split */
+	int pendingLength;
+	char terminator;
+	int terminatorMatched;
+	const char *input;
+	int position;
+	int size;
+	SceUInt8 isFinal;
+	SceUInt8 documentElementSeen;
+	char quote;
+	BxceBuffer elementName;
+	BxceBuffer characters;
+	BxceBuffer terminatorWindow;
+	SceUInt8 emptyElement;
+	BxceNameStack *nameStack;
+	BxceAttributeList *attrList;
+	BxceAttr *attr;
+	int status;
+	const char *text;
+	int textLength;
+	const char *skippedText;
+	int skippedTextLength;
+	const char *tokenStart;
+	int reserved;			/* zeroed by bxceParserTerminate; nothing reads it */
+	int consumed;
+} BxceParser;
+
+/* an attribute's growing name and value */
+int bxceAttrAppendName(BxceAttr *attr, const char *name, int length);
+int bxceAttrAppendValue(BxceAttr *attr, const char *value, int length);
+
+/* the names of the open elements */
+int bxceNameStackTerminate(BxceNameStack *stack);
+
+/* character references */
+int ScebXCe_DFB92627(SceUInt32 *value, const char *digits, int length);	/* hexadecimal */
+int ScebXCe_CC190FA8(SceUInt32 *value, const char *digits, int length);	/* decimal */
+int ScebXCe_BD9D727B(SceUInt32 value, char **out, int *length);		/* to UTF-8 */
+
+/* the tokenizer */
+void bxceParserResetBuffer(BxceParser *parser, BxceBuffer *buffer);
+void bxceParserReleaseState(BxceParser *parser);
+int bxceParserReadAttrName(BxceParser *parser, BxceAttr *attr);
+int bxceParserReadAttrValue(BxceParser *parser, BxceAttr *attr);
+int bxceParserLookupReference(BxceParser *parser, BxceBuffer *reference);
+int bxceParserDecodeAttrValue(BxceParser *parser, BxceAttr *attr);
+int bxceParserSkipChar(BxceParser *parser, char c);
+int bxceParserSkipSpace(BxceParser *parser);
 
 /* a node list (the SDK's NodeList): its entries in a doubly linked list */
 typedef struct BxceNodeListEntry {

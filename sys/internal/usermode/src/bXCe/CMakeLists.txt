@@ -9,5 +9,6 @@ psp2_module(vs0_sys_external_bXCe KIND user COMPILER snc PARTIAL SOURCES
 	allocator.cpp
 	name_table.cpp
 	node_list.cpp
+	parser.cpp
 	bXCe.c
 )
