@@ -291,6 +291,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/global_state.c
 	../../sys/sdk/target/src/libsnc/i32ops.c
 	../../sys/sdk/target/src/libsnc/i64ops.c
+	../../sys/sdk/target/src/libsnc/unwind_pr0.c
+	../../sys/sdk/target/src/libsnc/unwind_pr1.c
 	../../sys/sdk/target/src/deflt/crc.S
 	../../sys/sdk/target/src/deflt/zlibhdr.c
 	../../sys/sdk/target/src/deflt/deflate.c
