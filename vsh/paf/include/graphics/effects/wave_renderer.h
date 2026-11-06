@@ -383,7 +383,12 @@ public:
 	math::v4 m_normal;
 };
 
-class SkydomeVertex;
+/* a vertex of the sky dome's grid: where it is in the grid, 0 to 1 across (names ours) */
+class SkydomeVertex {
+public:
+	math::v2 m_uv;
+};
+
 class Camera;
 
 /* what makes each vertex of a grid from where it is in the grid, 0 to 1 across (names ours) */
@@ -639,7 +644,7 @@ public:
 	Skydome();
 
 	/* 0x811a6a6a: the dome's grid and shaders made (name ours) */
-	void Init(int32_t width, int32_t height);
+	void Init(arl::SurfaceSize size);
 	/* 0x811a7276: the camera the sky is drawn from (name ours) */
 	void SetCamera(common::SharedPtr<Camera> camera);
 
@@ -659,10 +664,13 @@ public:
 	WaveMesh<SkydomeVertex> m_mesh;
 	arl::ShaderInstance<SkydomeVertShader, arl::VertShaderObject> m_vert;
 	arl::ShaderInstance<SkydomeFragShader, arl::FragShaderObject> m_frag;
-	bool m_dirty;
+	/* the dome blended over what is drawn, alpha over */
+	bool m_blend;
+	/* copied in Draw and not used */
 	common::SharedPtr<arl::Texture2D> m_texture;
 	common::SharedPtr<Camera> m_camera;
-	bool m_loaded;
+	/* the dome drawn as lines */
+	bool m_wireframe;
 };
 
 class WaveRenderer;

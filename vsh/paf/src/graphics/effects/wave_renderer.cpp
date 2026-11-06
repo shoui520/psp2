@@ -667,7 +667,7 @@ void WaveRenderer::Load(const string &dir, uint32_t count)
 	}
 
 	Update();
-	m_skydome.Init(32, 64);
+	m_skydome.Init(arl::SurfaceSize(32, 64));
 	m_skydome.SetCamera(m_camera);
 	ResetRotation();
 }
