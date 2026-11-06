@@ -52,19 +52,19 @@ BxceDocument *ScebXCe_63593407(BxceDocument *doc)
 	doc->texts = NULL;
 	doc->elementNames = NULL;
 	doc->attrNames = NULL;
-	doc->field20 = 0;
+	doc->status = 0;
 	doc->attrNameHash = NULL;
 	doc->elementNameHash = NULL;
-	doc->field32 = 0;
-	doc->field36 = 0;
-	doc->field40 = 0;
-	doc->field44 = 0;
+	doc->nodesCapacity = 0;
+	doc->textsCapacity = 0;
+	doc->elementNamesCapacity = 0;
+	doc->attrNamesCapacity = 0;
 	doc->isBinary = 1;
-	doc->field48 = 0;
-	doc->field52 = 1;
+	doc->nodesSize = 0;
+	doc->textsSize = 1;
 	doc->elementNamesSize = 0;
 	doc->attrNamesSize = 0;
-	doc->field1092 = 0;
+	doc->pendingAttrCount = 0;
 	doc->field1112 = 0;
 	doc->field1120 = 0;
 	doc->domRoot = NULL;
@@ -370,4 +370,686 @@ int ScebXCe_FA18A039(const BxceDocument *doc, BxceNodeId node)
 	default:
 		return token & 0xF;
 	}
+}
+
+/*
+ * The elements under the node (and the node) named so, or all of them for "*", in document
+ * order, appended to the list (a new one when none is given). NULL when out of memory; a list
+ * the recursion could not fill is terminated, a new one not freed.
+ */
+BxceNodeList *bxceGetElementsByTagName(const BxceDocument *doc, BxceNodeId node,
+					const char *name, BxceNodeList *list)
+{
+	const char *nodeName;
+	BxceNodeId child;
+	int type;
+
+	if (list == NULL) {
+		list = (BxceNodeList *)ScebXCe_B8DDE741(sizeof(BxceNodeList));
+		if (list == NULL)
+			return NULL;
+		bxceNodeListInitialize(list, doc);
+	}
+
+	type = ScebXCe_FA18A039(doc, node);
+	if (type == SCE_XML_TOKEN_DOM_ELEMENT || type == SCE_XML_TOKEN_DOM_COMPACT_ELEMENT ||
+	    type == SCE_XML_TOKEN_DOM_PRED_ELEMENT) {
+		nodeName = ScebXCe_1189A2B1(doc, node);
+		if ((nodeName != NULL && bxceStrncmpTag(nodeName, name, BXCE_ATTR_STRING_MAX) == 0) ||
+		    bxceStrncmpTag(name, "*", BXCE_ATTR_STRING_MAX) == 0)
+			bxceNodeListAppend(list, node);
+	}
+
+	for (child = ScebXCe_FEA6E4A1(doc, node); child != 0;
+	     child = ScebXCe_6FC9DC3F(doc, child)) {
+		if (bxceGetElementsByTagName(doc, child, name, list) == NULL) {
+			ScebXCe_1F59F0C4(list);
+			return NULL;
+		}
+	}
+
+	return list;
+}
+
+/* the tables a document builds in, each empty and owned by it; NoMemory frees what was made */
+int bxceDocumentAllocateTables(BxceDocument *doc)
+{
+	doc->field1112 = 0;
+
+	doc->elementNames = (char *)ScebXCe_B8DDE741(BXCE_NAMES_INITIAL_SIZE);
+	if (doc->elementNames == NULL) {
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return SCE_BXCE_ERROR_NO_MEMORY;
+	}
+	bxceMemset(doc->elementNames, 0, BXCE_NAMES_INITIAL_SIZE);
+	doc->elementNamesCapacity = BXCE_NAMES_INITIAL_SIZE;
+
+	doc->texts = (char *)ScebXCe_B8DDE741(BXCE_TABLE_INITIAL_SIZE);
+	if (doc->texts == NULL) {
+		if (doc->elementNames != NULL)
+			ScebXCe_EC560647(doc->elementNames);
+		doc->elementNames = NULL;
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return SCE_BXCE_ERROR_NO_MEMORY;
+	}
+	bxceMemset(doc->texts, 0, BXCE_TABLE_INITIAL_SIZE);
+	doc->textsCapacity = BXCE_TABLE_INITIAL_SIZE;
+
+	doc->attrNames = (char *)ScebXCe_B8DDE741(BXCE_NAMES_INITIAL_SIZE);
+	if (doc->attrNames == NULL) {
+		if (doc->texts != NULL)
+			ScebXCe_EC560647(doc->texts);
+		doc->texts = NULL;
+		if (doc->elementNames != NULL)
+			ScebXCe_EC560647(doc->elementNames);
+		doc->elementNames = NULL;
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return SCE_BXCE_ERROR_NO_MEMORY;
+	}
+	bxceMemset(doc->attrNames, 0, BXCE_NAMES_INITIAL_SIZE);
+	doc->attrNamesCapacity = BXCE_NAMES_INITIAL_SIZE;
+
+	doc->elementNameHash = (BxceNameHash *)ScebXCe_B8DDE741(sizeof(BxceNameHash));
+	if (doc->elementNameHash == NULL) {
+		if (doc->texts != NULL)
+			ScebXCe_EC560647(doc->texts);
+		doc->texts = NULL;
+		if (doc->elementNames != NULL)
+			ScebXCe_EC560647(doc->elementNames);
+		doc->elementNames = NULL;
+		if (doc->attrNames != NULL)
+			ScebXCe_EC560647(doc->attrNames);
+		doc->attrNames = NULL;
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return SCE_BXCE_ERROR_NO_MEMORY;
+	}
+	bxceNameHashInitialize(doc->elementNameHash);
+
+	doc->attrNameHash = (BxceNameHash *)ScebXCe_B8DDE741(sizeof(BxceNameHash));
+	if (doc->attrNameHash == NULL) {
+		bxceNameHashClear(doc->elementNameHash);
+		if (doc->elementNameHash != NULL)
+			ScebXCe_EC560647(doc->elementNameHash);
+		doc->elementNameHash = NULL;
+		if (doc->texts != NULL)
+			ScebXCe_EC560647(doc->texts);
+		doc->texts = NULL;
+		if (doc->elementNames != NULL)
+			ScebXCe_EC560647(doc->elementNames);
+		doc->elementNames = NULL;
+		if (doc->attrNames != NULL)
+			ScebXCe_EC560647(doc->attrNames);
+		doc->attrNames = NULL;
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return SCE_BXCE_ERROR_NO_MEMORY;
+	}
+	bxceNameHashInitialize(doc->attrNameHash);
+	return 0;
+}
+
+/* an empty bX document to build: its node table holds the document node, at 1 */
+int bxceDocumentInitializeWriter(BxceDocument *doc)
+{
+	doc->isExternal = 0;
+	doc->nodes = NULL;
+	doc->texts = NULL;
+	doc->elementNames = NULL;
+	doc->attrNames = NULL;
+	doc->status = 0;
+	doc->attrNameHash = NULL;
+	doc->elementNameHash = NULL;
+	doc->nodesCapacity = 0;
+	doc->textsCapacity = 0;
+	doc->elementNamesCapacity = 0;
+	doc->attrNamesCapacity = 0;
+	doc->isBinary = 1;
+	doc->nodesSize = 0;
+	doc->textsSize = 1;
+	doc->elementNamesSize = 0;
+	doc->attrNamesSize = 0;
+	doc->pendingAttrCount = 0;
+	doc->field1112 = 0;
+	doc->domRoot = NULL;
+	doc->field1120 = 0;
+
+	doc->nodes = (char *)ScebXCe_B8DDE741(BXCE_TABLE_INITIAL_SIZE);
+	if (doc->nodes == NULL) {
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return SCE_BXCE_ERROR_NO_MEMORY;
+	}
+	bxceMemset(doc->nodes, 0, BXCE_TABLE_INITIAL_SIZE);
+	doc->nodesCapacity = BXCE_TABLE_INITIAL_SIZE;
+	doc->nodes[doc->nodesSize + 1] = SCE_XML_TOKEN_DOM_ROOT_DOCUMENT;
+	doc->nodesSize += 2;
+	return bxceDocumentAllocateTables(doc);
+}
+
+/*
+ * Sets *parent to the node under which target is (target itself when it is the node), searching
+ * from node down; *found tells whether it was found. A sibling that is the target is taken even
+ * after the search below found it.
+ */
+void bxceFindParent(const BxceDocument *doc, BxceNodeId node, BxceNodeId target, int *found,
+		    BxceNodeId *parent)
+{
+	BxceNodeId child;
+
+	if (*found != 0)
+		return;
+
+	if (node == target) {
+		*parent = node;
+		*found = 1;
+		return;
+	}
+
+	child = ScebXCe_FEA6E4A1(doc, node);
+	if (child == target) {
+		*parent = node;
+		*found = 1;
+		return;
+	}
+
+	while (child != 0) {
+		bxceFindParent(doc, child, target, found, parent);
+		child = ScebXCe_6FC9DC3F(doc, child);
+		if (child == target) {
+			*parent = node;
+			*found = 1;
+			return;
+		}
+		if (*found != 0)
+			return;
+	}
+
+	if (*found == 0)
+		*parent = 0;
+}
+
+/* writes an encoded length at *pos of the table and moves *pos past it */
+void bxceWriteLength(BxceDocument *doc, SceUInt32 value, char *table, SceUInt32 *pos)
+{
+	if (value <= 0xEF) {
+		table[*pos] = value;
+		*pos += 1;
+	} else if (value <= 0xFFFF) {
+		table[*pos] = 0xF0;
+		*pos += 1;
+		table[*pos + 1] = value;
+		table[*pos] = value >> 8;
+		*pos += 2;
+	} else {
+		table[*pos] = 0xF1;
+		*pos += 1;
+		table[*pos + 2] = value;
+		table[*pos + 1] = value >> 8;
+		table[*pos] = value >> 16;
+		*pos += 3;
+	}
+}
+
+/* appends a string to the text table */
+int bxceDocumentAddText(BxceDocument *doc, const char *text, SceUInt32 length)
+{
+	SceUInt32 size;
+
+	size = doc->textsSize + length;
+	if (size + 5 >= BXCE_TABLE_LIMIT) {
+		doc->status = SCE_BXCE_ERROR_EXCEED_LIMIT;
+		return SCE_BXCE_ERROR_EXCEED_LIMIT;
+	}
+
+	if (doc->textsCapacity <= size + 10) {
+		doc->texts = bxceGrowTable(doc->texts, size + 10, &doc->textsCapacity);
+		if (doc->texts == NULL) {
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return SCE_BXCE_ERROR_NO_MEMORY;
+		}
+	}
+
+	bxceWriteLength(doc, length, doc->texts, &doc->textsSize);
+	bxceMemcpy(doc->texts + doc->textsSize, text, length);
+	doc->texts[doc->textsSize + length] = 0;
+	doc->textsSize += length + 1;
+	return 0;
+}
+
+/*
+ * Writes an attribute node at *pos of the node table: its name offset and value position pairs,
+ * the count first when there are several. The table is grown for one pair only.
+ */
+int bxceDocumentWriteAttributes(BxceDocument *doc, const SceUInt32 *attrs, SceUInt32 count,
+				char *nodes, SceUInt32 *pos, int reserved)
+{
+	SceUInt32 start, i;
+
+	if (doc->isBinary && doc->nodesCapacity <= doc->nodesSize + count * 12) {
+		nodes = doc->nodes = bxceGrowTable(doc->nodes, doc->nodesSize + 12,
+						   &doc->nodesCapacity);
+		if (nodes == NULL) {
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return SCE_BXCE_ERROR_NO_MEMORY;
+		}
+	}
+
+	start = *pos;
+	doc->attrNode = start;
+	nodes[start] = 0;
+	nodes[start] |= SCE_XML_TOKEN_DOM_ATTR;
+	*pos += 1;
+
+	if (count > 1) {
+		nodes[start] |= SCE_XML_TOKEN_DOM_ATTR | SCE_XML_TOKEN_DOM_HAS_SIBLING;
+		nodes[*pos] = count;
+		*pos += 1;
+		bxceWriteLength(doc, attrs[0], nodes, pos);
+		bxceWriteLength(doc, attrs[1], nodes, pos);
+	} else {
+		nodes[*pos] = attrs[0];
+		*pos += 1;
+		bxceWriteLength(doc, attrs[1], nodes, pos);
+	}
+
+	for (i = 2; i < count * 2; i += 2) {
+		nodes[*pos] = SCE_XML_TOKEN_DOM_ATTR;
+		*pos += 1;
+		bxceWriteLength(doc, attrs[i], nodes, pos);
+		bxceWriteLength(doc, attrs[i + 1], nodes, pos);
+	}
+
+	return 0;
+}
+
+/*
+ * Appends an element under parent: after its last child, or as its first child (writing the
+ * attributes waiting for the parent first). Its own attributes wait for its first child. The
+ * node, or 0 on an error.
+ */
+BxceNodeId bxceDocumentAppendElement(BxceDocument *doc, BxceNodeId parent, const char *name,
+				     int length, const BxceAttributeList *attrs)
+{
+	const BxceAttr *attr;
+	char *nodes;
+	int nameOffset, offset, i, len;
+	BxceNodeId prev, next;
+	SceUInt32 start, off, pos;
+	char token;
+
+	if (doc->nodesCapacity <= doc->nodesSize + 12) {
+		doc->nodes = bxceGrowTable(doc->nodes, doc->nodesSize + 12, &doc->nodesCapacity);
+		if (doc->nodes == NULL) {
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return 0;
+		}
+	}
+
+	if (doc->elementNamesCapacity <= doc->elementNamesSize + length + 5) {
+		doc->elementNames = bxceGrowTable(doc->elementNames,
+						  doc->elementNamesSize + length + 5,
+						  &doc->elementNamesCapacity);
+		if (doc->elementNames == NULL) {
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return 0;
+		}
+	}
+
+	if (length > BXCE_NAME_MAX) {
+		doc->status = SCE_BXCE_ERROR_EXCEED_LIMIT;
+		length = BXCE_NAME_MAX;
+	}
+
+	nameOffset = bxceNameHashIntern(doc->elementNameHash, name, length, doc->elementNames,
+					&doc->elementNamesSize);
+	if (nameOffset == -1) {
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return 0;
+	}
+
+	token = doc->nodes[parent];
+	if (token != SCE_XML_TOKEN_DOM_ROOT_DOCUMENT) {
+		if (token & SCE_XML_TOKEN_DOM_HAS_CHILD) {
+			prev = next = ScebXCe_FEA6E4A1(doc, parent);
+			while (next != 0) {
+				prev = next;
+				next = ScebXCe_6FC9DC3F(doc, prev);
+			}
+			if (((doc->nodes[prev] |= SCE_XML_TOKEN_DOM_HAS_SIBLING) & 0xF) ==
+			    SCE_XML_TOKEN_DOM_ELEMENT) {
+				doc->nodes[prev + 6] = doc->nodesSize - prev - 3;
+				doc->nodes[prev + 5] = ((doc->nodesSize - prev - 3) >> 8) & 0xFF;
+				doc->nodes[prev + 4] = ((doc->nodesSize - prev - 3) >> 16) & 0xFF;
+				doc->nodes[prev + 3] = (doc->nodesSize - prev - 3) >> 24;
+			} else {
+				doc->nodes[doc->nodesSize] = SCE_XML_TOKEN_DOM_ATTR;
+				doc->nodesSize += 1;
+			}
+		} else {
+			doc->nodes[parent] = token | SCE_XML_TOKEN_DOM_HAS_CHILD;
+			start = doc->nodesSize;
+			doc->nodesSize = start + 1;
+			if (doc->pendingAttrCount > 0) {
+				if (bxceDocumentWriteAttributes(doc, doc->pendingAttr,
+								doc->pendingAttrCount, doc->nodes,
+								&doc->nodesSize, 0) != 0)
+					return 0;
+				doc->pendingAttrCount = 0;
+			}
+			len = doc->nodesSize - start;
+			off = start + 1;
+			if (len <= 0xEF) {
+				doc->nodes[start] = len;
+			} else if (len <= 0xFFFF) {
+				doc->nodes[start] = 0xF0;
+				doc->nodes[off + 1] = len;
+				doc->nodes[start + 1] = (len >> 8) & 0xFF;
+			} else {
+				doc->nodes[start] = 0xF1;
+				doc->nodes[off + 2] = len;
+				doc->nodes[off + 1] = (len >> 8) & 0xFF;
+				doc->nodes[start + 1] = (len >> 16) & 0xFF;
+			}
+		}
+	}
+
+	nodes = doc->nodes;
+	pos = doc->nodesSize;
+	doc->nodesSize = pos + 1;
+	if (nameOffset & 0xFFFF0000)
+		nodes[pos] = SCE_XML_TOKEN_DOM_PRED_ELEMENT;
+	else
+		nodes[pos] = SCE_XML_TOKEN_DOM_ELEMENT;
+	doc->nodes[doc->nodesSize + 1] = nameOffset;
+	doc->nodes[doc->nodesSize] = (nameOffset >> 8) & 0xFF;
+	doc->nodesSize += 6;
+
+	doc->pendingAttrCount = attrs->length;
+	if (doc->pendingAttrCount != 0)
+		nodes[pos] |= SCE_XML_TOKEN_DOM_HAS_ATTR;
+
+	for (i = 0; i < doc->pendingAttrCount; i++) {
+		attr = ScebXCe_01DC4E22(attrs, i);
+		if (doc->attrNamesCapacity <= doc->attrNamesSize + attr->nameLength + 5) {
+			doc->attrNames = bxceGrowTable(doc->attrNames,
+						       doc->attrNamesSize + attr->nameLength + 5,
+						       &doc->attrNamesCapacity);
+			if (doc->attrNames == NULL) {
+				doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+				return 0;
+			}
+		}
+
+		offset = bxceNameHashIntern(doc->attrNameHash, attr->name, attr->nameLength,
+					    doc->attrNames, &doc->attrNamesSize);
+		if (offset == -1) {
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return 0;
+		}
+
+		doc->pendingAttr[2 * i] = offset;
+		doc->pendingAttr[2 * i + 1] = doc->textsSize;
+		if (bxceDocumentAddText(doc, attr->value, attr->valueLength) != 0) {
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return 0;
+		}
+	}
+
+	return pos;
+}
+
+/* appends a text under parent, as appendElement places a node; its text position, or 0 */
+SceUInt32 bxceDocumentAppendText(BxceDocument *doc, BxceNodeId parent, const char *text,
+				 SceUInt32 length)
+{
+	SceUInt32 pos, start, off, len;
+	BxceNodeId prev, next;
+	char *nodes;
+	char token;
+
+	pos = doc->textsSize;
+	if (bxceDocumentAddText(doc, text, length) != 0)
+		return 0;
+
+	token = doc->nodes[parent];
+	if (token & SCE_XML_TOKEN_DOM_HAS_CHILD) {
+		prev = next = ScebXCe_FEA6E4A1(doc, parent);
+		while (next != 0) {
+			prev = next;
+			next = ScebXCe_6FC9DC3F(doc, prev);
+		}
+		if (((doc->nodes[prev] |= SCE_XML_TOKEN_DOM_HAS_SIBLING) & 0xF) ==
+		    SCE_XML_TOKEN_DOM_ELEMENT) {
+			doc->nodes[prev + 6] = doc->nodesSize - prev - 3;
+			doc->nodes[prev + 5] = ((doc->nodesSize - prev - 3) >> 8) & 0xFF;
+			doc->nodes[prev + 4] = ((doc->nodesSize - prev - 3) >> 16) & 0xFF;
+			doc->nodes[prev + 3] = (doc->nodesSize - prev - 3) >> 24;
+		} else {
+			doc->nodes[doc->nodesSize] = SCE_XML_TOKEN_DOM_ATTR;
+			doc->nodesSize += 1;
+		}
+	} else {
+		doc->nodes[parent] = token | SCE_XML_TOKEN_DOM_HAS_CHILD;
+		start = doc->nodesSize;
+		doc->nodesSize = start + 1;
+		if (doc->pendingAttrCount > 0) {
+			if (bxceDocumentWriteAttributes(doc, doc->pendingAttr, doc->pendingAttrCount,
+							doc->nodes, &doc->nodesSize, 0) != 0)
+				return 0;
+			doc->pendingAttrCount = 0;
+		}
+		len = doc->nodesSize - start;
+		off = start + 1;
+		if (len <= 0xEF) {
+			doc->nodes[start] = len;
+		} else if (len <= 0xFFFF) {
+			doc->nodes[start] = 0xF0;
+			doc->nodes[off + 1] = doc->nodesSize - off;
+			doc->nodes[start + 1] = (doc->nodesSize - off) >> 8;
+		} else {
+			doc->nodes[start] = 0xF1;
+			doc->nodes[off + 2] = doc->nodesSize - off;
+			doc->nodes[off + 1] = (doc->nodesSize - off) >> 8;
+			doc->nodes[start + 1] = (doc->nodesSize - off) >> 16;
+		}
+	}
+
+	nodes = doc->nodes;
+	if (doc->nodesCapacity <= doc->nodesSize + 12) {
+		nodes = doc->nodes = bxceGrowTable(nodes, doc->nodesSize + 12, &doc->nodesCapacity);
+		if (nodes == NULL) {
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return 0;
+		}
+	}
+
+	nodes[doc->nodesSize] = SCE_XML_TOKEN_DOM_TEXT;
+	doc->nodesSize += 1;
+	bxceWriteLength(doc, pos, nodes, &doc->nodesSize);
+	return pos;
+}
+
+/* writes a token and its encoded operand at the end of the node table; a failed grow is noted only */
+int bxceDocumentWriteSkipped(BxceDocument *doc, SceUInt32 value, int token)
+{
+	if (doc->nodesCapacity <= doc->nodesSize + 12) {
+		doc->nodes = bxceGrowTable(doc->nodes, doc->nodesSize + 12, &doc->nodesCapacity);
+		if (doc->nodes == NULL)
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+	}
+
+	doc->nodes[doc->nodesSize] = token;
+	doc->nodesSize += 1;
+	if (value <= 0xEF) {
+		doc->nodes[doc->nodesSize] = value;
+		doc->nodesSize += 1;
+	} else if (value <= 0xFFFF) {
+		doc->nodes[doc->nodesSize] = 0xF0;
+		doc->nodesSize += 1;
+		doc->nodes[doc->nodesSize + 1] = value;
+		doc->nodes[doc->nodesSize] = value >> 8;
+		doc->nodesSize += 2;
+	} else {
+		doc->nodes[doc->nodesSize] = 0xF1;
+		doc->nodesSize += 1;
+		doc->nodes[doc->nodesSize + 2] = value;
+		doc->nodes[doc->nodesSize + 1] = value >> 8;
+		doc->nodes[doc->nodesSize] = value >> 16;
+		doc->nodesSize += 3;
+	}
+	return 0;
+}
+
+/*
+ * Appends a skipped text (kind is its token) under parent. An entity of kind 2 below 5 is written
+ * as its number, without a text; 5 and above mark the parent. Its text position, or 0.
+ */
+SceUInt32 bxceDocumentAppendSkipped(BxceDocument *doc, BxceNodeId parent, const char *text,
+				    SceUInt32 length, int kind, int entity)
+{
+	SceUInt32 pos, start, off, len;
+	BxceNodeId prev, next;
+	char *nodes;
+	char token;
+
+	pos = doc->textsSize;
+	if (kind != 2 || entity > 4)
+		bxceDocumentAddText(doc, text, length);
+
+	nodes = doc->nodes;
+	token = nodes[parent];
+	if (token & SCE_XML_TOKEN_DOM_HAS_CHILD) {
+		prev = next = ScebXCe_FEA6E4A1(doc, parent);
+		while (next != 0) {
+			prev = next;
+			next = ScebXCe_6FC9DC3F(doc, prev);
+		}
+		if (((doc->nodes[prev] |= SCE_XML_TOKEN_DOM_HAS_SIBLING) & 0xF) ==
+		    SCE_XML_TOKEN_DOM_ELEMENT) {
+			doc->nodes[prev + 6] = doc->nodesSize - prev - 3;
+			doc->nodes[prev + 5] = ((doc->nodesSize - prev - 3) >> 8) & 0xFF;
+			doc->nodes[prev + 4] = ((doc->nodesSize - prev - 3) >> 16) & 0xFF;
+			doc->nodes[prev + 3] = (doc->nodesSize - prev - 3) >> 24;
+		} else {
+			doc->nodes[doc->nodesSize] = SCE_XML_TOKEN_DOM_ATTR;
+			doc->nodesSize += 1;
+		}
+	} else {
+		nodes[parent] = token | SCE_XML_TOKEN_DOM_HAS_CHILD;
+		start = doc->nodesSize;
+		doc->nodesSize = start + 1;
+		if (doc->pendingAttrCount > 0) {
+			if (bxceDocumentWriteAttributes(doc, doc->pendingAttr, doc->pendingAttrCount,
+							doc->nodes, &doc->nodesSize, 0) != 0)
+				return 0;
+			doc->pendingAttrCount = 0;
+		}
+		len = doc->nodesSize - start;
+		off = start + 1;
+		if (len <= 0xEF) {
+			doc->nodes[start] = len;
+		} else if (len <= 0xFFFF) {
+			doc->nodes[start] = 0xF0;
+			doc->nodes[off + 1] = doc->nodesSize - off;
+			doc->nodes[start + 1] = (doc->nodesSize - off) >> 8;
+		} else {
+			doc->nodes[start] = 0xF1;
+			doc->nodes[off + 2] = doc->nodesSize - off;
+			doc->nodes[off + 1] = (doc->nodesSize - off) >> 8;
+			doc->nodes[start + 1] = (doc->nodesSize - off) >> 16;
+		}
+	}
+
+	if (kind == 2) {
+		if (entity < 5) {
+			bxceDocumentWriteSkipped(doc, entity, kind);
+		} else if (entity == 5) {
+			bxceDocumentWriteSkipped(doc, pos, kind);
+			nodes[parent] |= 0x12;
+		} else {
+			bxceDocumentWriteSkipped(doc, pos, kind);
+			nodes[parent] |= 0x42;
+		}
+	} else {
+		bxceDocumentWriteSkipped(doc, pos, kind);
+	}
+
+	return pos;
+}
+
+/* a token for a text added after it: the text's position */
+SceUInt32 bxceDocumentAddSkipped(BxceDocument *doc, const char *text, SceUInt32 length, int token)
+{
+	SceUInt32 pos;
+
+	pos = doc->textsSize;
+	bxceDocumentWriteSkipped(doc, pos, token);
+	bxceDocumentAddText(doc, text, length);
+	return pos;
+}
+
+/*
+ * Appends to the text at position text of the text table, moving it when its encoded length
+ * grows (by the sizes Sony's code adds, which for a one byte length becoming three is one more
+ * than it moved).
+ */
+int bxceDocumentExtendText(BxceDocument *doc, SceUInt32 text, const char *more, SceUInt32 length)
+{
+	SceUInt32 oldLength, newLength;
+	char *data;
+
+	if (doc->textsCapacity <= doc->textsSize + length + 5) {
+		doc->texts = bxceGrowTable(doc->texts, doc->textsSize + length + 5,
+					   &doc->textsCapacity);
+		if (doc->texts == NULL) {
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return SCE_BXCE_ERROR_NO_MEMORY;
+		}
+	}
+
+	data = doc->texts + bxceLengthSize(((const SceUInt8 *)doc->texts)[text]) + text;
+	oldLength = bxceReadLength((const SceUInt8 *)doc->texts + text);
+	bxceMemcpy(data + oldLength, more, length);
+	newLength = oldLength + length;
+	data[newLength] = 0;
+	doc->textsSize += length;
+
+	if (newLength <= 0xEF) {
+		doc->texts[text] = newLength;
+	} else if (newLength <= 0xFFFF) {
+		SceUInt32 pos;
+
+		if (oldLength <= 0xEF) {
+			bxceMemmove(doc->texts + text + 3, doc->texts + text + 1, newLength);
+			doc->textsSize += 2;
+		}
+		pos = text;
+		bxceWriteLength(doc, newLength, doc->texts, &pos);
+	} else {
+		SceUInt32 pos;
+
+		if (oldLength <= 0xEF) {
+			bxceMemmove(doc->texts + text + 4, doc->texts + text + 1, newLength);
+			doc->textsSize += 4;
+		} else if (oldLength <= 0xFFFF) {
+			bxceMemmove(doc->texts + text + 4, doc->texts + text + 3, newLength);
+			doc->textsSize += 1;
+		}
+		pos = text;
+		bxceWriteLength(doc, newLength, doc->texts, &pos);
+	}
+
+	return 0;
+}
+
+/* writes the attributes waiting for a child, at the end of the node table */
+int bxceDocumentFlushAttributes(BxceDocument *doc)
+{
+	int ret;
+
+	if (doc->pendingAttrCount <= 0)
+		return 0;
+
+	ret = bxceDocumentWriteAttributes(doc, doc->pendingAttr, doc->pendingAttrCount, doc->nodes,
+					  &doc->nodesSize, 0);
+	doc->pendingAttrCount = 0;
+	return ret;
 }

@@ -22,6 +22,13 @@ extern "C" {
 #define SCE_BXCE_ERROR_NO_MEMORY			-2138759168	/* 0x80852000 */
 #define SCE_BXCE_ERROR_INVALID_ARGUMENT			-2138759166	/* 0x80852002 */
 #define SCE_BXCE_ERROR_DUPLICATE_ATTRIBUTE_NAME		-2138759126	/* 0x8085202A */
+#define SCE_BXCE_ERROR_EXCEED_LIMIT			-2138758640	/* 0x80852210 */
+
+/* the sizes of a new table and name table, the limit of a table, the longest element name */
+#define BXCE_TABLE_INITIAL_SIZE		5240
+#define BXCE_NAMES_INITIAL_SIZE		2024
+#define BXCE_TABLE_LIMIT		0x1000000
+#define BXCE_NAME_MAX			0x400
 
 /* the longest name or value addAttribute measures */
 #define BXCE_ATTR_STRING_MAX		0x100000
@@ -81,6 +88,9 @@ typedef struct BxceNameHash {
 	BxceNameHashEntry *bucket[BXCE_NAME_HASH_SIZE];
 } BxceNameHash;
 
+/* the attributes an element waits to have written: name offset and text position pairs */
+#define BXCE_PENDING_ATTR_MAX		128
+
 /*
  * A document (1124 bytes). Its tables hold the bX form: the node tokens, the texts and the
  * element and attribute names, each string after its encoded length.
@@ -89,25 +99,26 @@ typedef struct BxceNameHash {
  */
 typedef struct BxceDocument {
 	int isExternal;			/* the tables are not the document's own */
-	const char *nodes;
-	const char *texts;
-	const char *elementNames;
-	const char *attrNames;
-	int field20;
+	char *nodes;
+	char *texts;
+	char *elementNames;
+	char *attrNames;
+	int status;			/* the last error */
 	int field24;
 	SceUInt8 isBinary;		/* the bX form, else the DOM form */
 	SceUInt8 padding29[3];
-	int field32;
-	int field36;
-	int field40;
-	int field44;
-	int field48;
-	int field52;
-	int elementNamesSize;
-	int attrNamesSize;
-	SceUInt8 field64[1028];
-	int field1092;
-	int field1096;
+	SceUInt32 nodesCapacity;
+	SceUInt32 textsCapacity;
+	SceUInt32 elementNamesCapacity;
+	SceUInt32 attrNamesCapacity;
+	SceUInt32 nodesSize;
+	SceUInt32 textsSize;
+	SceUInt32 elementNamesSize;
+	SceUInt32 attrNamesSize;
+	int field64;
+	SceUInt32 pendingAttr[2 * BXCE_PENDING_ATTR_MAX];
+	int pendingAttrCount;
+	int attrNode;			/* where the last attributes were written */
 	BxceNameHash *attrNameHash;
 	BxceNameHash *elementNameHash;
 	int field1108;
@@ -123,8 +134,16 @@ void ScebXCe_EC560647(void *ptr);
 /* deletes the default allocator, if it made one */
 void bxceDeleteDefaultAllocator(void);
 
+/* the heap behind them, and its realloc */
+extern void *g_bxceHeap;
+void *bxceRealloc(void *heap, void *ptr, SceSize size);
+
 /* the C library calls, each through a function of its own */
+void *bxceMemset(void *dst, int c, SceSize len);
 void *bxceMemcpy(void *dst, const void *src, SceSize len);
+void *bxceMemmove(void *dst, const void *src, SceSize len);
+int bxceStrncmp(const char *s1, const char *s2, SceSize len);
+int bxceStrncmpTag(const char *s1, const char *s2, SceSize len);
 int bxceMemcmp(const void *s1, const void *s2, SceSize len);
 SceSize bxceStrnlen(const char *s, SceSize maxlen);
 
@@ -151,6 +170,31 @@ BxceAttr *ScebXCe_01DC4E22(const BxceAttributeList *list, SceSize index);
 int ScebXCe_69F4B8B6(const BxceAttributeList *list);	/* getLength */
 int ScebXCe_3DD761CF(BxceAttributeList *list, const char *name, const char *value);
 
+/* a node list (the SDK's NodeList): its entries in a doubly linked list */
+typedef struct BxceNodeListEntry {
+	BxceNodeId node;
+	struct BxceNodeListEntry *next;
+	struct BxceNodeListEntry *prev;
+} BxceNodeListEntry;
+
+typedef struct BxceNodeList {
+	const struct BxceDocument *doc;
+	BxceNodeListEntry *head;
+	BxceNodeListEntry *tail;
+	int length;
+} BxceNodeList;
+
+BxceNodeList *bxceNodeListInitialize(BxceNodeList *list, const BxceDocument *doc);
+BxceNodeId bxceNodeListAppend(BxceNodeList *list, BxceNodeId node);
+int ScebXCe_1F59F0C4(BxceNodeList *list);
+
+/* the name hash tables */
+void *bxceNameHashInitialize(BxceNameHash *hash);
+void bxceNameHashClear(BxceNameHash *hash);
+int bxceNameHashIntern(BxceNameHash *hash, const char *name, int length, char *table,
+		       SceUInt32 *size);
+char *bxceGrowTable(char *table, SceUInt32 needed, SceUInt32 *capacity);
+
 /* the document */
 int bxceReadLength(const SceUInt8 *p);
 const int *ScebXCe_578CC576(void);
@@ -164,6 +208,30 @@ const char *ScebXCe_2FAD3DFA(const BxceDocument *doc, BxceNodeId node);	/* getSk
 const char *ScebXCe_33825EFF(const BxceDocument *doc, BxceNodeId node);	/* getText */
 const char *ScebXCe_1189A2B1(const BxceDocument *doc, BxceNodeId node);	/* getNodeName */
 int ScebXCe_FA18A039(const BxceDocument *doc, BxceNodeId node);		/* getNodeType */
+
+BxceNodeList *bxceGetElementsByTagName(const BxceDocument *doc, BxceNodeId node,
+					const char *name, BxceNodeList *list);
+
+/* the bX writer */
+int bxceDocumentAllocateTables(BxceDocument *doc);
+int bxceDocumentInitializeWriter(BxceDocument *doc);
+void bxceFindParent(const BxceDocument *doc, BxceNodeId node, BxceNodeId target, int *found,
+		    BxceNodeId *parent);
+void bxceWriteLength(BxceDocument *doc, SceUInt32 value, char *table, SceUInt32 *pos);
+int bxceDocumentAddText(BxceDocument *doc, const char *text, SceUInt32 length);
+int bxceDocumentWriteAttributes(BxceDocument *doc, const SceUInt32 *attrs, SceUInt32 count,
+				char *nodes, SceUInt32 *pos, int reserved);
+BxceNodeId bxceDocumentAppendElement(BxceDocument *doc, BxceNodeId parent, const char *name,
+				     int length, const BxceAttributeList *attrs);
+SceUInt32 bxceDocumentAppendText(BxceDocument *doc, BxceNodeId parent, const char *text,
+				 SceUInt32 length);
+int bxceDocumentWriteSkipped(BxceDocument *doc, SceUInt32 value, int token);
+SceUInt32 bxceDocumentAppendSkipped(BxceDocument *doc, BxceNodeId parent, const char *text,
+				    SceUInt32 length, int kind, int entity);
+SceUInt32 bxceDocumentAddSkipped(BxceDocument *doc, const char *text, SceUInt32 length,
+				 int token);
+int bxceDocumentExtendText(BxceDocument *doc, SceUInt32 text, const char *more, SceUInt32 length);
+int bxceDocumentFlushAttributes(BxceDocument *doc);
 
 #ifdef __cplusplus
 }
