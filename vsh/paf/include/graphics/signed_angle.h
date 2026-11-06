@@ -1,5 +1,6 @@
 /* paf::graph::GetSignedAngle: the angle between two directions (an inline function Sony's link
-   keeps once, at 0x8120431c in 3.650.011-TOOL; name ours). */
+   keeps once, at 0x8120431c in 3.650.011-TOOL; name ours). SignedAngle is its body, for the
+   callers Sony's build inlines it into (the custom trail's panel outline). */
 #ifndef PAF_GRAPHICS_SIGNED_ANGLE_H
 #define PAF_GRAPHICS_SIGNED_ANGLE_H
 
@@ -11,7 +12,7 @@ namespace paf {
 namespace graph {
 
 /* the angle from from to to, negative the other way round */
-inline __attribute__((noinline)) float GetSignedAngle(const math::v2 &from, const math::v2 &to)
+inline __attribute__((always_inline)) float SignedAngle(const math::v2 &from, const math::v2 &to)
 {
 	sce::Vectormath::Simd::Aos::Vector2 a =
 		from.getImpl() * sce::Vectormath::Simd::recipf(length(from.getImpl()));
@@ -25,6 +26,11 @@ inline __attribute__((noinline)) float GetSignedAngle(const math::v2 &from, cons
 						     sce::Vectormath::Simd::floatInVec(1.0f),
 						     cross > sce::Vectormath::Simd::floatInVec(0.0f))
 			       .getAsFloat();
+}
+
+inline __attribute__((noinline)) float GetSignedAngle(const math::v2 &from, const math::v2 &to)
+{
+	return SignedAngle(from, to);
 }
 
 }

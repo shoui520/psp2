@@ -69,22 +69,6 @@ uint32_t *sce_paf_graphics_shared_reference_0f84;
 uint32_t sce_paf_graphics_state_11e0;
 uint32_t sce_paf_graphics_state_11fc;
 uint8_t sce_paf_graphics_flag_06e8;
-uint8_t sce_paf_graphics_flag_3518;
-uint8_t sce_paf_graphics_flag_136c;
-uint8_t sce_paf_graphics_flag_351a;
-
-char *ScePafGraphics_0EC5770E(void)
-{
-	char *result = (char *)(uintptr_t)sce_paf_graphics_flag_3518;
-
-	if (sce_paf_graphics_flag_3518) {
-		sce_paf_graphics_flag_136c = 0;
-		sce_paf_graphics_flag_351a = 0;
-		return (char *)&sce_paf_graphics_flag_351a;
-	}
-	return result;
-}
-
 __attribute__((noinline))
 
 static inline __attribute__((always_inline))

@@ -1587,7 +1587,7 @@ ScePaf:
         - _ZNK3paf5graph7Surface21GetDivideStretchRatioERNS_4math2v2E: 0x111C68BE
         - _ZN3paf5graph3arl16FragShaderObjectD1Ev: 0x113A640A
         - _ZN3paf5graph8GateBlur10InitializeEv: 0x113D1633
-        - ScePafGraphics_11A133FB: 0x11A133FB
+        - _ZN3paf5graph15CustomTrailMoveC1ERKNS_4math2v4ES5_RKNS2_2v2ES8_PNS_5TimerE: 0x11A133FB
         - _ZN3paf5graph3arl16VertShaderObjectD1Ev: 0x1219315E
         - _ZN3paf5graph8PlaneObj25UpdateDivVerticesTexcoordEv: 0x12844BC6
         - ScePafGraphics_12BDEBFF: 0x12BDEBFF
