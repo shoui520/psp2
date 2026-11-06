@@ -6,16 +6,6 @@
 
 #include <skeleton.h>
 
-STUB(ScePafGraphics_10BBFDEA)
-STUB(ScePafGraphics_615A144A)
-STUB(ScePafGraphics_62E5C65D)
-STUB(ScePafGraphics_9D125A54)
-STUB(ScePafGraphics_9FAF906E)
-STUB(ScePafGraphics_AED35D0B)
-STUB(ScePafGraphics_CEB524F1)
-STUB(ScePafGraphics_D8C5E33F)
-STUB(ScePafGraphics_DB76291A)
-STUB(ScePafGraphics_FE4A7BD2)
 STUB(ScePafResource_9F8FA452)
 STUB(_ZN3paf2ui16ProgressBarParam9ParamNameEv)
 STUB(ScePafWidget_00253246)

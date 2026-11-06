@@ -69,56 +69,6 @@ uint32_t *sce_paf_graphics_shared_reference_0f84;
 uint32_t sce_paf_graphics_state_11e0;
 uint32_t sce_paf_graphics_state_11fc;
 uint8_t sce_paf_graphics_flag_06e8;
-__attribute__((noinline))
-
-static inline __attribute__((always_inline))
-uint32_t *DestroyGraphicsRefPair(uint32_t *self)
-{
-	uint32_t second = self[1];
-
-	if (second)
-		_ZN3paf5graph7Surface7ReleaseEv((uint8_t *)(uintptr_t)second);
-	if (self[0])
-		_ZN3paf5graph7Surface7ReleaseEv((uint8_t *)(uintptr_t)self[0]);
-	return self;
-}
-
-uint32_t *ScePafGraphics_025C548E(uint32_t *self)
-{
-	return DestroyGraphicsRefPair(self);
-}
-
-uint32_t *ScePafGraphics_9E20360C(uint32_t *self)
-{
-	return DestroyGraphicsRefPair(self);
-}
-
-static inline __attribute__((always_inline))
-uint32_t *InitGraphicsRefParameter(uint32_t *result,
-				   const uint32_t *source, uint32_t value)
-{
-	uint32_t object = source[0];
-
-	result[0] = source[0];
-	if (object)
-		_ZN3paf5graph7Surface6AddRefEv((uint8_t *)(uintptr_t)object);
-	result[2] = value;
-	result[1] = 0;
-	return result;
-}
-
-uint32_t *ScePafGraphics_3D0309E3(uint32_t *result,
-				   const uint32_t *source, uint32_t value)
-{
-	return InitGraphicsRefParameter(result, source, value);
-}
-
-uint32_t *ScePafGraphics_A078C447(uint32_t *result,
-				   const uint32_t *source, uint32_t value)
-{
-	return InitGraphicsRefParameter(result, source, value);
-}
-
 static inline __attribute__((always_inline))
 void *InitGraphicsHeapSlot(uint8_t *self)
 {
