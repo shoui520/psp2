@@ -497,6 +497,39 @@ void bxceParserSetResolveAttrEntity(BxceParser *parser, SceUInt8 resolve);
 int bxceParserStateRelease(BxceParserState *state);
 int bxceIsUtf8Bom(const char *s);
 
+/* the open elements' parent nodes, their entries kept in a pool for reuse (0x81008f4e..0x81008fea) */
+typedef struct BxceNodeStackEntry {
+	BxceNodeId node;
+	struct BxceNodeStackEntry *next;
+} BxceNodeStackEntry;
+
+typedef struct BxceNodeStack {
+	BxceNodeStackEntry *top;
+	BxceAttrPool *pool;
+} BxceNodeStack;
+
+int bxceNodeStackInitialize(BxceNodeStack *stack);
+int bxceNodeStackTerminate(BxceNodeStack *stack);
+int bxceNodeStackPush(BxceNodeStack *stack, BxceNodeId node);
+BxceNodeId bxceNodeStackPop(BxceNodeStack *stack);
+
+/* the document builder (the SDK's DocumentBuilder): the tokenizer and the document it writes */
+typedef struct BxceDocumentBuilder {
+	BxceParser parser;
+	SceUInt8 skipIgnorableText;	/* CDATA, PIs and the DTD are left out of the document */
+	BxceDocument *document;
+	BxceNodeId parent;		/* the element new nodes go under */
+	SceUInt32 skippedNode;		/* the skipped text a chunk's end split, to extend */
+	SceUInt32 textNode;		/* the text node character data goes on extending */
+	BxceNodeStack *nodeStack;
+} BxceDocumentBuilder;
+
+int bxceDocumentBuilderParseChunk(BxceDocumentBuilder *builder);
+int ScebXCe_11D1FC0D(BxceDocumentBuilder *builder);		/* initialize */
+int ScebXCe_8FA315F1(BxceDocumentBuilder *builder);		/* terminate */
+int bxceDocumentBuilderReset(BxceDocumentBuilder *builder);
+int ScebXCe_BC0D9A6B(BxceDocumentBuilder *builder, const char *input, int size, SceUInt8 isFinal);	/* parse */
+
 /* the SAX parser */
 int bxceSaxParserParseChunk(BxceSaxParser *sax);
 int ScebXCe_C85586BD(BxceSaxParser *sax);		/* initialize */

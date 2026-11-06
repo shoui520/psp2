@@ -5,6 +5,7 @@
  */
 #include "bxce_internal.h"
 #include "byte_type.h"
+#include <xml/xml_node_types.h>
 
 /* UTF-8: the largest code point each length holds, its lead byte, and the trail bytes' bits */
 SceUInt32 g_bxceUtf8Max[6] = { 0x7f, 0x7ff, 0xffff, 0x1fffff, 0x3ffffff, 0x7fffffff };
@@ -644,4 +645,587 @@ int ScebXCe_A12B0F90(BxceSaxParser *sax, SceUInt8 slot)
 		ScebXCe_EC560647(state);
 	parser->saved[slot] = NULL;
 	return 0;
+}
+
+/*
+ * The document builder's token loop: each token written into the document. A chunk that ends
+ * inside a token suspends the parse until the next chunk, unless it is the last.
+ */
+int bxceDocumentBuilderParseChunk(BxceDocumentBuilder *builder)
+{
+	static const char piEnd[] = "?>";
+	static const char commentEnd[] = "-->";
+	static const char cdataEnd[] = "]]>";
+	BxceParser *parser = &builder->parser;
+	BxceDocument *doc;
+	int result;
+	int ret;
+
+	if (parser->state == 0 || parser->token == BXCE_TOKEN_EMPTY) {
+		ret = bxceParserReadToken(parser);
+	} else {
+		if (parser->state != BXCE_STATE_CONTENT)
+			goto next;
+		ret = bxceParserReadMarkup(parser);
+	}
+	if (ret == 0) {
+		if (!parser->isFinal) {
+			parser->status = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+			return SCE_BXCE_ERROR_PARSE_SUSPENDED;
+		}
+		if (bxceNameStackIsEmpty(parser->nameStack) == 0) {
+			builder->document->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+			parser->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+			return SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+		}
+		return parser->status;
+	}
+
+next:
+	for (;;) {
+		if (!bxceParserTokenAllowed(parser)) {
+			builder->document->status = SCE_BXCE_ERROR_XML_UNEXPECTED_CHAR;
+			parser->status = SCE_BXCE_ERROR_XML_UNEXPECTED_CHAR;
+			return SCE_BXCE_ERROR_XML_UNEXPECTED_CHAR;
+		}
+
+		switch (parser->token) {
+		case BXCE_TOKEN_START_TAG: {
+			BxceNodeId node;
+
+			if (parser->state == BXCE_STATE_CONTENT)
+				parser->state = BXCE_STATE_TAG_NAME;
+			if (!bxceParserReadStartTag(parser, &parser->elementName, parser->attrList)) {
+				if (parser->isFinal) {
+					builder->document->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+					parser->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+					return SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+				}
+				parser->status = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				return SCE_BXCE_ERROR_PARSE_SUSPENDED;
+			}
+			result = parser->status;
+			if (result != 0) {
+				builder->document->status = result;
+				return result;
+			}
+
+			bxceParserSkipSpace(parser);
+			if (parser->position >= parser->size) {
+				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				if (parser->isFinal) {
+					result = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+					builder->document->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+				}
+				parser->status = result;
+				return result;
+			}
+			if (parser->state != BXCE_STATE_TAG_CLOSE) {
+				parser->emptyElement = bxceParserSkipChar(parser, '/');
+				if (parser->position >= parser->size) {
+					if (parser->isFinal) {
+						result = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+						builder->document->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+					} else {
+						parser->state = BXCE_STATE_TAG_CLOSE;
+						result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+					}
+					parser->status = result;
+					return result;
+				}
+			}
+			if (bxceParserSkipChar(parser, '>') == 0) {
+				builder->document->status = SCE_BXCE_ERROR_XML_EXPECTED_CLOSING_ANGLE_BRACKET;
+				parser->status = SCE_BXCE_ERROR_XML_EXPECTED_CLOSING_ANGLE_BRACKET;
+				return SCE_BXCE_ERROR_XML_EXPECTED_CLOSING_ANGLE_BRACKET;
+			}
+
+			/* a second document element */
+			if (parser->documentElementSeen) {
+				int empty = bxceNameStackIsEmpty(parser->nameStack);
+
+				doc = builder->document;
+				if (empty != 0) {
+					doc->status = SCE_BXCE_ERROR_XML_INVALID_DOCUMENT_ELEMENT;
+					parser->status = SCE_BXCE_ERROR_XML_INVALID_DOCUMENT_ELEMENT;
+					break;
+				}
+			} else {
+				parser->documentElementSeen = 1;
+				doc = builder->document;
+			}
+
+			node = bxceDocumentAppendElement(doc, builder->parent, parser->elementName.data,
+							 parser->elementName.length, parser->attrList);
+			if (node == 0)
+				goto noMemory;
+			ScebXCe_B367042F(parser->attrList);
+
+			if (parser->emptyElement) {
+				if (parser->elementName.data != NULL)
+					ScebXCe_EC560647(parser->elementName.data);
+				bxceParserResetBuffer(parser, &parser->elementName);
+				parser->token = BXCE_TOKEN_END_TAG;
+				bxceDocumentFlushAttributes(builder->document);
+				if (builder->document->status != 0)
+					goto noMemory;
+			} else {
+				/* the element is the parent of what follows, until its end tag */
+				if (bxceNodeStackPush(builder->nodeStack, builder->parent) != 0)
+					goto noMemory;
+				builder->parent = node;
+				if (bxceNameStackPush(parser->nameStack, parser->elementName.data,
+						      parser->elementName.length) != 0)
+					goto noMemory;
+			}
+			if (parser->elementName.data != NULL)
+				bxceParserResetBuffer(parser, &parser->elementName);
+			if (parser->skipIgnorableWhiteSpace)
+				bxceParserSkipSpace(parser);
+			break;
+		}
+
+		case BXCE_TOKEN_END_TAG:
+			if (parser->state == BXCE_STATE_CONTENT)
+				parser->state = BXCE_STATE_END_TAG_NAME;
+			if (bxceParserReadEndTag(parser) == 0) {
+				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				if (parser->isFinal) {
+					result = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+					builder->document->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+				}
+				parser->status = result;
+				return result;
+			}
+			result = parser->status;
+			doc = builder->document;
+			if (result != 0) {
+				doc->status = result;
+				break;
+			}
+			bxceDocumentFlushAttributes(doc);
+			if (builder->document->status != 0)
+				goto noMemory;
+			builder->parent = bxceNodeStackPop(builder->nodeStack);
+			if (parser->elementName.data != NULL) {
+				ScebXCe_EC560647(parser->elementName.data);
+				bxceParserResetBuffer(parser, &parser->elementName);
+			}
+			if (parser->skipIgnorableWhiteSpace)
+				bxceParserSkipSpace(parser);
+			break;
+
+		case BXCE_TOKEN_CHAR_DATA:
+			parser->state = BXCE_STATE_CHAR_DATA;
+			bxceParserScanText(parser, &parser->text, &parser->textLength);
+			doc = builder->document;
+			if (builder->textNode != 0) {
+				if (bxceDocumentExtendText(doc, builder->textNode, parser->text, parser->textLength) != 0)
+					goto noMemory;
+			} else {
+				builder->textNode = bxceDocumentAppendText(doc, builder->parent, parser->text,
+									   parser->textLength);
+				if (builder->textNode == 0)
+					goto noMemory;
+			}
+			break;
+
+		case BXCE_TOKEN_DTD:
+			parser->state = BXCE_STATE_DTD;
+			if (bxceParserScanDoctype(parser, &parser->skippedText, &parser->skippedTextLength,
+						  &parser->terminator) == 0) {
+				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				doc = builder->document;
+				if (parser->isFinal) {
+					result = SCE_BXCE_ERROR_XML_END_OF_DTD_NOT_FOUND;
+					doc->status = SCE_BXCE_ERROR_XML_END_OF_DTD_NOT_FOUND;
+				}
+				parser->status = result;
+				if (!builder->skipIgnorableText) {
+					if (builder->skippedNode != 0)
+						bxceDocumentExtendText(doc, builder->skippedNode, parser->skippedText,
+								       parser->skippedTextLength);
+					else
+						builder->skippedNode = bxceDocumentAddSkipped(doc, parser->skippedText,
+							parser->skippedTextLength, SCE_XML_TOKEN_DOM_SKIP_TEXT_DTD);
+					doc = builder->document;
+				}
+				result = doc->status;
+				if (result == 0)
+					return parser->status;
+				parser->status = result;
+				return result;
+			}
+			parser->terminator = '>';
+			bxceParserSkipSpace(parser);
+			doc = builder->document;
+			if (!builder->skipIgnorableText) {
+				if (builder->skippedNode != 0) {
+					bxceDocumentExtendText(builder->document, builder->skippedNode, parser->skippedText,
+							       parser->skippedTextLength);
+					builder->skippedNode = 0;
+				} else {
+					bxceDocumentAddSkipped(builder->document, parser->skippedText,
+							       parser->skippedTextLength, SCE_XML_TOKEN_DOM_SKIP_TEXT_DTD);
+				}
+				doc = builder->document;
+			}
+			result = doc->status;
+			if (result != 0) {
+				parser->status = result;
+				return result;
+			}
+			break;
+
+		case BXCE_TOKEN_PI:
+			parser->state = BXCE_STATE_PI;
+			if (bxceParserScanUntil(parser, &parser->skippedText, &parser->skippedTextLength, piEnd,
+						&parser->terminatorMatched, 2) == 0) {
+				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				if (parser->isFinal) {
+					result = SCE_BXCE_ERROR_XML_INVALID_PI;
+					builder->document->status = SCE_BXCE_ERROR_XML_INVALID_PI;
+				}
+				parser->status = result;
+				if (!builder->skipIgnorableText) {
+					if (builder->skippedNode != 0)
+						bxceDocumentExtendText(builder->document, builder->skippedNode,
+								       parser->skippedText, parser->skippedTextLength);
+					else if (bxceNameStackIsEmpty(parser->nameStack) == 0)
+						builder->skippedNode = bxceDocumentAppendSkipped(builder->document,
+							builder->parent, parser->skippedText, parser->skippedTextLength,
+							SCE_XML_TOKEN_DOM_SKIP_TEXT_PI, 0);
+					else
+						builder->skippedNode = bxceDocumentAddSkipped(builder->document,
+							parser->skippedText, parser->skippedTextLength,
+							SCE_XML_TOKEN_DOM_SKIP_TEXT_PI);
+				}
+				result = builder->document->status;
+				if (result == 0)
+					return parser->status;
+				parser->status = result;
+				return result;
+			}
+			parser->terminatorMatched = 0;
+			bxceParserSkipSpace(parser);
+			if (!builder->skipIgnorableText) {
+				if (builder->skippedNode != 0) {
+					bxceDocumentExtendText(builder->document, builder->skippedNode, parser->skippedText,
+							       parser->skippedTextLength);
+					builder->skippedNode = 0;
+				} else if (bxceNameStackIsEmpty(parser->nameStack) == 0) {
+					bxceDocumentAppendSkipped(builder->document, builder->parent, parser->skippedText,
+								  parser->skippedTextLength, SCE_XML_TOKEN_DOM_SKIP_TEXT_PI, 0);
+				} else {
+					bxceDocumentAddSkipped(builder->document, parser->skippedText,
+							       parser->skippedTextLength, SCE_XML_TOKEN_DOM_SKIP_TEXT_PI);
+				}
+			}
+			result = builder->document->status;
+			if (result != 0) {
+				parser->status = result;
+				return result;
+			}
+			break;
+
+		case BXCE_TOKEN_CDATA: {
+			int length;
+
+			parser->state = BXCE_STATE_CDATA;
+			if (bxceParserScanUntil(parser, &parser->skippedText, &parser->skippedTextLength, cdataEnd,
+						&parser->terminatorMatched, 3) == 0) {
+				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				doc = builder->document;
+				if (parser->isFinal) {
+					result = SCE_BXCE_ERROR_XML_END_OF_CDSECT_NOT_FOUND;
+					doc->status = SCE_BXCE_ERROR_XML_END_OF_CDSECT_NOT_FOUND;
+				}
+				parser->status = result;
+				if (!builder->skipIgnorableText) {
+					if (builder->skippedNode != 0)
+						bxceDocumentExtendText(doc, builder->skippedNode, parser->skippedText,
+								       parser->skippedTextLength);
+					else
+						builder->skippedNode = bxceDocumentAppendSkipped(doc, builder->parent,
+							parser->skippedText, parser->skippedTextLength,
+							SCE_XML_TOKEN_DOM_SKIP_TEXT_CDATA, 0);
+					doc = builder->document;
+				}
+				result = doc->status;
+				if (result == 0)
+					return parser->status;
+				parser->status = result;
+				return result;
+			}
+			parser->terminatorMatched = 0;
+			bxceParserSkipSpace(parser);
+
+			/* the text ends with the "]]>" the scan matched, or the "]]" before the '>' */
+			length = parser->skippedTextLength;
+			doc = builder->document;
+			if (length > 3) {
+				const char *end = parser->skippedText + length;
+				char last = end[-1];
+
+				if (last == '>' && end[-2] == ']' && end[-3] == ']') {
+					parser->skippedTextLength = length - 3;
+					length -= 3;
+				} else if (*end == '>' && last == ']' && end[-2] == ']') {
+					parser->skippedTextLength = length - 3;
+					length -= 3;
+				}
+			}
+			if (!builder->skipIgnorableText) {
+				if (builder->skippedNode != 0) {
+					bxceDocumentExtendText(doc, builder->skippedNode, parser->skippedText, length);
+					builder->skippedNode = 0;
+				} else {
+					bxceDocumentAppendSkipped(doc, builder->parent, parser->skippedText, length,
+								  SCE_XML_TOKEN_DOM_SKIP_TEXT_CDATA, 0);
+				}
+				doc = builder->document;
+			}
+			result = doc->status;
+			if (result != 0) {
+				parser->status = result;
+				return result;
+			}
+			break;
+		}
+
+		case BXCE_TOKEN_COMMENT:
+			/* comments are not kept */
+			parser->state = BXCE_STATE_COMMENT;
+			if (bxceParserScanUntil(parser, &parser->skippedText, &parser->skippedTextLength, commentEnd,
+						&parser->terminatorMatched, 3) == 0) {
+				result = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				doc = builder->document;
+				if (parser->isFinal) {
+					result = SCE_BXCE_ERROR_XML_END_OF_COMMENT_NOT_FOUND;
+					doc->status = SCE_BXCE_ERROR_XML_END_OF_COMMENT_NOT_FOUND;
+				}
+				parser->status = result;
+				if (doc->status != 0) {
+					result = doc->status;
+					doc->status = result;
+					parser->status = result;
+				}
+				return result;
+			}
+			parser->terminatorMatched = 0;
+			bxceParserSkipSpace(parser);
+			result = builder->document->status;
+			if (result != 0) {
+				parser->status = result;
+				return result;
+			}
+			break;
+
+		case BXCE_TOKEN_ENTITY: {
+			const char *data;
+			int length;
+			int type;
+
+			parser->state = BXCE_STATE_REFERENCE;
+			if (parser->characters.data == NULL) {
+				parser->characters.data = (char *)ScebXCe_B8DDE741(BXCE_BUFFER_INITIAL_SIZE);
+				if (parser->characters.data == NULL)
+					goto noMemory;
+				parser->characters.length = 0;
+				parser->characters.capacity = BXCE_BUFFER_INITIAL_SIZE;
+			}
+			if (bxceParserReadReference(parser, &parser->characters) == 0) {
+				if (parser->isFinal) {
+					builder->document->status = SCE_BXCE_ERROR_XML_EXPECTED_SEMI_COLON;
+					parser->status = SCE_BXCE_ERROR_XML_EXPECTED_SEMI_COLON;
+					return SCE_BXCE_ERROR_XML_EXPECTED_SEMI_COLON;
+				}
+				parser->status = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+				return SCE_BXCE_ERROR_PARSE_SUSPENDED;
+			}
+			result = parser->status;
+			if (result != 0) {
+				builder->document->status = result;
+				return result;
+			}
+
+			parser->characters.data[parser->characters.length] = 0;
+			type = bxceParserLookupReference(parser, &parser->characters);
+			data = parser->characters.data;
+			length = parser->characters.length;
+			if (type == BXCE_REF_ERROR) {
+				builder->document->status = SCE_BXCE_ERROR_XML_SYNTAX_ERROR;
+				parser->status = SCE_BXCE_ERROR_XML_SYNTAX_ERROR;
+			}
+			if (type >= BXCE_REF_AMP && type <= BXCE_REF_APOS) {
+				/* a predefined entity is text */
+				const char *text;
+
+				parser->state = BXCE_STATE_CHAR_DATA;
+				text = g_bxceEntityText[type];
+				if (builder->textNode != 0) {
+					if (bxceDocumentExtendText(builder->document, builder->textNode, text, 1) != 0) {
+						builder->document->status = SCE_BXCE_ERROR_NO_MEMORY;
+						parser->status = SCE_BXCE_ERROR_NO_MEMORY;
+					}
+				} else {
+					builder->textNode = bxceDocumentAppendText(builder->document, builder->parent, text, 1);
+					if (builder->textNode == 0) {
+						builder->document->status = SCE_BXCE_ERROR_NO_MEMORY;
+						parser->status = SCE_BXCE_ERROR_NO_MEMORY;
+					}
+				}
+				parser->characters.length = 0;
+				break;
+			}
+			if (length != 0) {
+				/* other references are entity nodes */
+				bxceDocumentAppendSkipped(builder->document, builder->parent, data, length,
+							  SCE_XML_TOKEN_DOM_ENTITY, type);
+				result = builder->document->status;
+				if (result != 0) {
+					parser->status = result;
+					return result;
+				}
+				parser->characters.length = 0;
+			}
+			break;
+		}
+
+		default:
+			break;
+		}
+
+		result = parser->status;
+		if (result != 0)
+			return result;
+		parser->lastToken = parser->token;
+		if (builder->textNode != 0 && parser->token != BXCE_TOKEN_CHAR_DATA)
+			builder->textNode = 0;
+		if (bxceParserReadToken(parser) == 0)
+			break;
+	}
+
+	if (parser->isFinal) {
+		if (bxceNameStackIsEmpty(parser->nameStack) == 0) {
+			builder->document->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+			parser->status = SCE_BXCE_ERROR_XML_UNEXPECTED_EOF;
+		}
+	} else {
+		parser->status = SCE_BXCE_ERROR_PARSE_SUSPENDED;
+		if (parser->state != BXCE_STATE_CONTENT)
+			parser->token = BXCE_TOKEN_EMPTY;
+	}
+	return parser->status;
+
+noMemory:
+	builder->document->status = SCE_BXCE_ERROR_NO_MEMORY;
+	parser->status = SCE_BXCE_ERROR_NO_MEMORY;
+	return SCE_BXCE_ERROR_NO_MEMORY;
+}
+
+int ScebXCe_11D1FC0D(BxceDocumentBuilder *builder)
+{
+	builder->skipIgnorableText = 0;
+	builder->parent = 0;
+	builder->skippedNode = 0;
+	builder->nodeStack = NULL;
+	builder->document = NULL;
+	return bxceParserInitialize(&builder->parser);
+}
+
+int ScebXCe_8FA315F1(BxceDocumentBuilder *builder)
+{
+	bxceParserTerminate(&builder->parser);
+	if (builder->nodeStack != NULL) {
+		bxceNodeStackTerminate(builder->nodeStack);
+		if (builder->nodeStack != NULL)
+			ScebXCe_EC560647(builder->nodeStack);
+		builder->nodeStack = NULL;
+	}
+	if (builder->document != NULL) {
+		ScebXCe_B0891B13(builder->document);
+		if (builder->document != NULL)
+			ScebXCe_EC560647(builder->document);
+		builder->document = NULL;
+	}
+	return 0;
+}
+
+/* a new document to write into, its root the parent */
+int bxceDocumentBuilderReset(BxceDocumentBuilder *builder)
+{
+	bxceParserReset(&builder->parser);
+	builder->skippedNode = 0;
+	if (builder->document != NULL) {
+		ScebXCe_B0891B13(builder->document);
+		if (builder->document != NULL)
+			ScebXCe_EC560647(builder->document);
+		builder->document = NULL;
+	}
+	if (builder->nodeStack != NULL) {
+		bxceNodeStackTerminate(builder->nodeStack);
+		if (builder->nodeStack != NULL)
+			ScebXCe_EC560647(builder->nodeStack);
+		builder->nodeStack = NULL;
+	}
+	builder->parent = 0;
+
+	builder->document = (BxceDocument *)ScebXCe_B8DDE741(sizeof(BxceDocument));
+	if (builder->document == NULL)
+		return SCE_BXCE_ERROR_NO_MEMORY;
+	if (bxceDocumentInitializeWriter(builder->document) != 0) {
+		ScebXCe_B0891B13(builder->document);
+		if (builder->document != NULL)
+			ScebXCe_EC560647(builder->document);
+		builder->document = NULL;
+		return SCE_BXCE_ERROR_NO_MEMORY;
+	}
+	builder->parent = ScebXCe_75E1B095(builder->document);
+
+	builder->nodeStack = (BxceNodeStack *)ScebXCe_B8DDE741(sizeof(BxceNodeStack));
+	if (builder->nodeStack == NULL)
+		return SCE_BXCE_ERROR_NO_MEMORY;
+	return bxceNodeStackInitialize(builder->nodeStack);
+}
+
+/* parses a chunk of the document into a new document; isFinal marks the last */
+int ScebXCe_BC0D9A6B(BxceDocumentBuilder *builder, const char *input, int size, SceUInt8 isFinal)
+{
+	BxceParser *parser = &builder->parser;
+	int result;
+
+	if (parser->status != 0) {
+		if (parser->status == SCE_BXCE_ERROR_PARSE_SUSPENDED) {
+			parser->status = 0;
+		} else {
+			result = bxceDocumentBuilderReset(builder);
+			parser->status = result;
+			if (result != 0)
+				return result;
+		}
+	} else {
+		result = bxceDocumentBuilderReset(builder);
+		parser->status = result;
+		if (result != 0)
+			return result;
+	}
+
+	parser->size = size;
+	parser->input = input;
+	parser->position = 0;
+	parser->isFinal = isFinal;
+	if (size > 3 && bxceIsUtf8Bom(input)) {
+		parser->input += 3;
+		parser->size -= 3;
+	}
+
+	if (parser->state == 0)
+		bxceParserSkipSpace(parser);
+
+	if (bxceDocumentBuilderParseChunk(builder) == 0 && isFinal && !parser->documentElementSeen) {
+		builder->document->status = SCE_BXCE_ERROR_XML_DOCUMENT_ELEMENT_NOT_FOUND;
+		parser->status = SCE_BXCE_ERROR_XML_DOCUMENT_ELEMENT_NOT_FOUND;
+	}
+	return parser->status;
 }
