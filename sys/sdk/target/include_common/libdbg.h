@@ -38,10 +38,23 @@ typedef enum SceDbgLogLevel {
 	SCE_DBG_NUM_LOG_LEVELS
 } SceDbgLogLevel;
 
+typedef enum SceDbgBreakOnErrorState {
+	SCE_DBG_DISABLE_BREAK_ON_ERROR = 0,
+	SCE_DBG_ENABLE_BREAK_ON_ERROR
+} SceDbgBreakOnErrorState;
+
+typedef enum SceDbgBreakOnWarningState {
+	SCE_DBG_DISABLE_BREAK_ON_WARNING = 0,
+	SCE_DBG_ENABLE_BREAK_ON_WARNING
+} SceDbgBreakOnWarningState;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+SceInt32 sceDbgSetMinimumLogLevel(SceInt32 minimumLogLevel);
+SceInt32 sceDbgSetBreakOnErrorState(SceDbgBreakOnErrorState state);
+SceInt32 sceDbgSetBreakOnWarningState(SceDbgBreakOnWarningState state);
 SceInt32 sceDbgAssertionHandler(const char *pFile, int line, bool stop, const char *pComponent,
 				const char *pMessage, ...) __attribute__((__format__(__printf__, 5, 6)));
 SceInt32 sceDbgLoggingHandler(const char *pFile, int line, int severity, const char *pComponent,
