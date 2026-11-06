@@ -113,6 +113,9 @@ public:
 	/* The string str by the set's order (first character, then sce_paf_strcmp), else end(). */
 	iterator find(const char *const &str)
 	{
+		if (head == NULL)
+			return iterator(NULL);
+
 		_Node *node = head->parent;
 
 		while (!node->isnil) {
