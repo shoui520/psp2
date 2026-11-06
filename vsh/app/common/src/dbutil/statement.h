@@ -37,6 +37,10 @@ public:
 	int Reset();
 	int Finalize();
 	int BindAll(const Value *values, int count);
+	const char *GetColumnDatabaseName(int column);
+	const char *GetColumnTableName(int column);
+	const char *GetColumnOriginName(int column);
+	int GetValue(int column, Value *value);
 
 	Connection *m_connection;
 	sqlite3 *m_db;
