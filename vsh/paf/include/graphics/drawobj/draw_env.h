@@ -583,7 +583,9 @@ public:
 	/* how much of the blur is drawn (0 when it is made; nothing in the renderer sets it) */
 	float m_blur_amount;
 	bool m_reserved_flag;
-	ScreenFilter m_filter;
+	DepthOfField m_depth_of_field;
+	/* the flag ScePafGraphics_505CD74E sets; nothing in libpaf reads it */
+	bool m_flag_505CD74E;
 	DrawLayer *m_rs_world_grid;
 	DrawLayer *m_rs_dummy_background;
 	DrawLayer *m_rs_capture_reflections;

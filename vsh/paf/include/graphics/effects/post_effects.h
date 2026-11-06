@@ -1,9 +1,9 @@
 /*
  * The effects drawn over the scene once it is drawn: the blur of the screen behind the panels,
  * and the texture operations they share. Blur and TextureOps are Sony's names (the markers
- * "Blur::draw_uniform_blur" and "TextureOps::copy"); the filter's and every member name are
- * ours. Blur's code is in blur.cpp; the filter's and the programs' are not converted yet
- * (0x811a0f64.. and 0x811a16f2).
+ * "Blur::draw_uniform_blur" and "TextureOps::copy"); the depth of field's and every member name
+ * are ours. Blur's code is in blur.cpp, the depth of field's in depth_of_field.cpp; the
+ * texture operations' are not converted yet (0x811a16f2..).
  */
 #ifndef PAF_GRAPHICS_EFFECTS_POST_EFFECTS_H
 #define PAF_GRAPHICS_EFFECTS_POST_EFFECTS_H
@@ -340,18 +340,216 @@ public:
 	arl::ShaderInstance<VariableBlurShader, arl::FragShaderObject> m_variable_blur;
 };
 
-/* a filter drawn over the screen; 0x2ec bytes */
-class ScreenFilter {
+/* the depth of field's first program: the blur amount from Depth, by the distance between
+   NearFar and the two curves (the parameters' names the program's, the class name ours) */
+class DobInitShader : public arl::ShaderInterfaceBase {
+public:
+	DobInitShader() : m_depth(m_setup), m_near_far(m_setup), m_curve1(m_setup), m_curve2(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_depth.init("Depth", 1, 0);
+		m_near_far.init("NearFar", arl::ShaderParameterBase::UNIFORM, 0);
+		m_curve1.init("Curve1", arl::ShaderParameterBase::UNIFORM, 0);
+		m_curve2.init("Curve2", arl::ShaderParameterBase::UNIFORM, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_depth.Apply();
+		m_near_far.Apply();
+		m_curve1.Apply();
+		m_curve2.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	virtual const char *GetName()
+	{
+		return "paf/cg/misc/dof/dob_init.fp";
+	}
+
+	virtual const uint8_t *GetBinary()
+	{
+		return s_binary;
+	}
+
+	virtual uint32_t GetBinarySize()
+	{
+		return sizeof(s_binary);
+	}
+
+	/* dob_init.fp built by psp2cgc */
+	static const uint8_t s_binary[552];
+
+	arl::ShaderParameter<arl::TextureSource> m_depth;
+	arl::ShaderParameter<math::v2> m_near_far;
+	arl::ShaderParameter<math::v4> m_curve1;
+	arl::ShaderParameter<math::v4> m_curve2;
+};
+
+/* the depth of field's second program: the amount spread from Source by Step (the parameters'
+   names the program's, the class name ours) */
+class DobSpreadShader : public arl::ShaderInterfaceBase {
+public:
+	DobSpreadShader() : m_source(m_setup), m_step(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_source.init("Source", 1, 0);
+		m_step.init("Step", arl::ShaderParameterBase::UNIFORM, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_source.Apply();
+		m_step.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	virtual const char *GetName()
+	{
+		return "paf/cg/misc/dof/dob_spread.fp";
+	}
+
+	virtual const uint8_t *GetBinary()
+	{
+		return s_binary;
+	}
+
+	virtual uint32_t GetBinarySize()
+	{
+		return sizeof(s_binary);
+	}
+
+	/* dob_spread.fp built by psp2cgc */
+	static const uint8_t s_binary[592];
+
+	arl::ShaderParameter<arl::TextureSource> m_source;
+	arl::ShaderParameter<math::v2> m_step;
+};
+
+/* the depth of field's last program: Dob and DobBlurred mixed (the parameters' names the
+   program's, the class name ours) */
+class DobCombineShader : public arl::ShaderInterfaceBase {
+public:
+	DobCombineShader() : m_dob(m_setup), m_dob_blurred(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_dob.init("Dob", 1, 0);
+		m_dob_blurred.init("DobBlurred", 2, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_dob.Apply();
+		m_dob_blurred.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	virtual const char *GetName()
+	{
+		return "paf/cg/misc/dof/dob_combine.fp";
+	}
+
+	virtual const uint8_t *GetBinary()
+	{
+		return s_binary;
+	}
+
+	virtual uint32_t GetBinarySize()
+	{
+		return sizeof(s_binary);
+	}
+
+	/* dob_combine.fp built by psp2cgc */
+	static const uint8_t s_binary[332];
+
+	arl::ShaderParameter<arl::TextureSource> m_dob;
+	arl::ShaderParameter<arl::TextureSource> m_dob_blurred;
+};
+
+/* a cubic Hermite curve y(x) over x in [0, 1]: its end values and slopes, its polynomial, and
+   the lowest and highest point it reaches there (names ours) */
+class HermiteCurve {
+public:
+	/* a point where the slope is zero: x in both lanes */
+	class Extremum {
+	public:
+		Extremum() : m_x(0.0f, 0.0f), m_valid(false)
+		{
+		}
+
+		math::v2 m_x;
+		/* not set */
+		math::v2 m_point;
+		bool m_valid;
+	};
+
+	/* the curve from y(0), y(1), y'(0) and y'(1) */
+	HermiteCurve(const math::v4 &points) : m_inverse_range(0.0f, 0.0f)
+	{
+		Set(points);
+	}
+
+	/* the points taken, the polynomial and its bounds worked out */
+	void Set(const math::v4 &points);
+
+	/* y(0), y(1), y'(0), y'(1) */
+	math::v4 m_points;
+	/* a, b, c, d of a x^3 + b x^2 + c x + d */
+	math::v4 m_coeffs;
+	/* the lowest and highest (x, y) */
+	math::v2 m_min;
+	math::v2 m_max;
+	/* 1 / (highest y - lowest y), in both lanes */
+	math::v2 m_inverse_range;
+	/* nothing sets or reads it */
+	math::v2 m_reserved;
+	Extremum m_extrema[2];
+};
+
+/* the depth of field the renderer keeps: its three programs, the textures they draw, and the
+   curve the blur amount follows; nothing in libpaf draws it. 0x2e8 bytes (names ours) */
+class DepthOfField {
 public:
 	/* 0x811a0f64 */
-	ScreenFilter();
-	/* 0x811f1198: implicit, emitted with the renderer's destructor */
-	~ScreenFilter();
+	DepthOfField();
+	/* the destructor is implicit (0x811f1198), emitted with the renderer's */
 
-	uint32_t reserved[0x2e8 / 4];
-	/* the flag ScePafGraphics_505CD74E sets; nothing in libpaf reads it by this offset */
-	bool m_flag_505CD74E;
-	uint8_t reserved2[3];
+	bool m_initialized;
+	arl::ShaderInstance<DobInitShader, arl::FragShaderObject> m_init;
+	arl::ShaderInstance<DobSpreadShader, arl::FragShaderObject> m_spread;
+	arl::ShaderInstance<DobCombineShader, arl::FragShaderObject> m_combine;
+	common::SharedPtr<arl::Texture2D> m_targets[3];
+	math::v2 m_scale;
+	bool m_half_size;
+	uint32_t m_width;
+	uint32_t m_height;
+	HermiteCurve m_curve;
+	/* the values the constructor sets (16.4, 1, 3, 5, false, 3, 5, 1, 1); nothing in libpaf
+	   reads them */
+	float m_settings[4];
+	bool m_setting_flag;
+	float m_settings2[4];
+	/* nothing sets or reads it */
+	uint32_t m_reserved;
+	common::SharedPtr<arl::Texture2D> m_temporary;
 };
 
 }
