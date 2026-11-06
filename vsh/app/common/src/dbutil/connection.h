@@ -123,12 +123,12 @@ public:
 /* a change to a connection's databases */
 struct Event {
 	Event(int type)
-		: reserved(0), local(0), source(NULL), type(type), database((const char *)NULL, 0),
+		: processId(0), local(0), source(NULL), type(type), database((const char *)NULL, 0),
 		  table((const char *)NULL, 0), rowid(0)
 	{
 	}
 
-	SceUInt32 reserved;
+	SceUID processId;		/* the process that posted it (the DCN client's) */
 	SceBool local;			/* no file database: only the source connection is told */
 	Connection *source;
 	int type;			/* DBUTIL_EVENT_* */
@@ -291,15 +291,6 @@ public:
 	paf::thread::Mutex m_statementMutex;
 	paf::thread::Cond m_statementCond;
 	paf::thread::RMutex m_lock;
-};
-
-/* the DCN client keeps every connection, to tell them of other processes' changes */
-class DCNClient {
-public:
-	static int AddConnection(Connection *connection);
-	static int RemoveConnection(Connection *connection);
-	/* sends a connection's event to the DCN server, for every other process */
-	static int Post(const Event *event);
 };
 
 }

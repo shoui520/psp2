@@ -6,6 +6,7 @@
 #include <scetypes.h>
 #include <appmgr/appmgr.h>
 #include "connection.h"
+#include "dcn_client.h"
 #include "statement.h"
 #include "record.h"
 #include "result.h"
