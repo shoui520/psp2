@@ -6,6 +6,10 @@
 #include <appmgr/appmgr_launch.h>
 #include <appmgr/appmgr_notification.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* SceAppMgr's error codes beyond the SDK's (appmgr.h): the henkaku wiki's and vitasdk's names */
 #define SCE_APPMGR_ERROR_INVALID_PARAM_SFO	0x80800015
 #define SCE_APPMGR_ERROR_PARAM			0x80802002
@@ -262,3 +266,7 @@ int SceAppMgrForDriver_61B13981(void *offlineId, SceUInt32 *checkWord);	/* vitas
 /* vitasdk: ksceAppMgrLocalBackupVerifyOfflineHeader */
 int SceAppMgrForDriver_62E98C42(const void *header);
 int sceAppMgrSaveDataNotifyBackupFinished(const char *saveDataTitleId);
+
+#ifdef __cplusplus
+}
+#endif
