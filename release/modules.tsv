@@ -348,7 +348,7 @@ vs0/sys/external/np_message	vsh/app/common/src/np/np_message	vs0:sys/external/np
 vs0/sys/external/np_message_contacts	vsh/app/common/src/np/np_message_contacts	vs0:sys/external/np_message_contacts.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
 vs0/sys/external/np_message_dialog_impl	vsh/app/common/src/np/np_message_dialog_impl	vs0:sys/external/np_message_dialog_impl.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
 vs0/sys/external/np_message_padding	vsh/app/common/src/np/np_message_padding	vs0:sys/external/np_message_padding.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
-vs0/sys/external/np_party	vsh/app/shell/src/np/ipc/npparty/party_game	vs0:sys/external/np_party.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	npparty/party_game/ipc_client + npparty/party_game_client (SceNpPartyGameUtil)
+vs0/sys/external/np_party	vsh/app/shell/src/np/ipc/npparty/party_game_client	vs0:sys/external/np_party.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	npparty/party_game_client/party_game_client.cpp (3.20-3.72; party_game/ipc_client before; SceNpPartyGameUtil)
 vs0/sys/external/np_ranking	vsh/app/common/src/np/np_ranking	vs0:sys/external/np_ranking.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
 vs0/sys/external/np_signaling	vsh/app/common/src/np/np_signaling	vs0:sys/external/np_signaling.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
 vs0/sys/external/np_sns_facebook	vsh/app/common/src/np/np_sns_facebook	vs0:sys/external/np_sns_facebook.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np

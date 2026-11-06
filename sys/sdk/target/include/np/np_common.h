@@ -69,6 +69,14 @@ typedef struct SceNpAuthorizationCode {
 	SceUInt8 padding[7];
 } SceNpAuthorizationCode;
 
+/* NP Session ID */
+#define SCE_NP_SESSION_ID_MAX_SIZE		(45)
+typedef struct SceNpSessionId {
+	char data[SCE_NP_SESSION_ID_MAX_SIZE];
+	char term;
+	char padding[2];
+} SceNpSessionId;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
