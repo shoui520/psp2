@@ -1240,3 +1240,182 @@ BxceNodeId ScebXCe_AEB2CE13(BxceDocument *doc, const char *text, SceUInt32 lengt
 
 	return (BxceNodeId)node;
 }
+
+/*
+ * A new DOM element of this name, with its attributes written in bX form into a block of its own
+ * and, when text is given, a text node as its child.
+ */
+BxceNodeId bxceDocumentCreateElement(BxceDocument *doc, const char *name,
+				     const BxceAttributeList *attrs, const char *text,
+				     SceUInt32 textLength)
+{
+	char buffer[BXCE_DOM_ATTR_BUFFER_SIZE];
+	const BxceAttr *attr;
+	BxceDomNode *node, *child;
+	SceUInt32 size, pos;
+	char *block;
+	int length, nameOffset, offset, nameLength, i;
+
+	if (doc->isBinary) {
+		doc->status = SCE_BXCE_ERROR_DOM_READ_ONLY_ERROR;
+		return 0;
+	}
+
+	if (name == NULL) {
+		doc->status = SCE_BXCE_ERROR_INVALID_ARGUMENT;
+		return 0;
+	}
+
+	doc->status = 0;
+	length = bxceStrnlen(name, BXCE_ATTR_STRING_MAX);
+	if (length > BXCE_NAME_MAX) {
+		doc->status = SCE_BXCE_ERROR_EXCEED_LIMIT;
+		length = BXCE_NAME_MAX;
+	}
+
+	if (doc->elementNamesCapacity <= doc->elementNamesSize + length + 5) {
+		doc->elementNames = bxceGrowTable(doc->elementNames,
+						  doc->elementNamesSize + length + 5,
+						  &doc->elementNamesCapacity);
+		if (doc->elementNames == NULL) {
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return 0;
+		}
+	}
+
+	nameOffset = bxceNameHashIntern(doc->elementNameHash, name, length, doc->elementNames,
+					&doc->elementNamesSize);
+	if (nameOffset >= BXCE_DOM_UNIQUE_NAME_MAX) {
+		doc->status = SCE_BXCE_ERROR_DOM_MAX_UNIQUE_ELEMENT_ERROR;
+		return 0;
+	}
+	if (nameOffset == -1) {
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return 0;
+	}
+
+	node = (BxceDomNode *)ScebXCe_B8DDE741(sizeof(BxceDomNode));
+	if (node == NULL) {
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return 0;
+	}
+	node->text = 0;
+	node->child = NULL;
+	node->sibling = NULL;
+	node->info = nameOffset << 8 | SCE_XML_TOKEN_DOM_COMPACT_ELEMENT;
+
+	if (attrs != NULL && attrs->length != 0) {
+		if (attrs->length > BXCE_DOM_ATTR_MAX) {
+			ScebXCe_EC560647(node);
+			doc->status = SCE_BXCE_ERROR_DOM_MAX_NUM_OF_ATTR_ERROR;
+			return 0;
+		}
+
+		for (i = 0; i < attrs->length; i++) {
+			attr = ScebXCe_01DC4E22(attrs, i);
+			if (doc->attrNamesCapacity <= doc->attrNamesSize + attr->nameLength + 5) {
+				doc->attrNames = bxceGrowTable(doc->attrNames,
+							       doc->attrNamesSize + attr->nameLength + 5,
+							       &doc->attrNamesCapacity);
+				if (doc->attrNames == NULL) {
+					if (node != NULL)
+						ScebXCe_EC560647(node);
+					doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+					return 0;
+				}
+			}
+
+			nameLength = attr->nameLength;
+			if (nameLength > BXCE_DOM_ATTR_NAME_MAX) {
+				doc->status = SCE_BXCE_ERROR_EXCEED_LIMIT;
+				nameLength = BXCE_DOM_ATTR_NAME_MAX;
+			}
+
+			offset = bxceNameHashIntern(doc->attrNameHash, attr->name, nameLength,
+						    doc->attrNames, &doc->attrNamesSize);
+			if (offset >= BXCE_DOM_UNIQUE_NAME_MAX) {
+				if (node != NULL)
+					ScebXCe_EC560647(node);
+				doc->status = SCE_BXCE_ERROR_DOM_MAX_UNIQUE_ATTR_ERROR;
+				return 0;
+			}
+			if (offset == -1) {
+				if (node != NULL)
+					ScebXCe_EC560647(node);
+				doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+				return 0;
+			}
+
+			doc->pendingAttr[2 * i] = offset;
+			doc->pendingAttr[2 * i + 1] = doc->textsSize;
+			if (bxceDocumentAddText(doc, attr->value, attr->valueLength) != 0) {
+				if (node != NULL)
+					ScebXCe_EC560647(node);
+				doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+				return 0;
+			}
+		}
+
+		/* the attributes into the buffer, then into a block after its length byte */
+		size = 0;
+		doc->nodesCapacity = BXCE_DOM_ATTR_BUFFER_SIZE;
+		if (bxceDocumentWriteAttributes(doc, doc->pendingAttr, attrs->length, buffer, &size,
+						0) != 0) {
+			if (node != NULL)
+				ScebXCe_EC560647(node);
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return 0;
+		}
+
+		block = (char *)ScebXCe_B8DDE741(size + 2);
+		node->text = (SceUInt32)block;
+		if (block == NULL) {
+			if (node != NULL)
+				ScebXCe_EC560647(node);
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return 0;
+		}
+		bxceMemcpy(block + 1, buffer, size);
+		((char *)node->text)[0] = size + 1;
+		((char *)node->text)[size + 1] = 0;
+		node->info |= SCE_XML_TOKEN_DOM_HAS_ATTR;
+	}
+
+	if (text != NULL) {
+		child = (BxceDomNode *)ScebXCe_B8DDE741(sizeof(BxceDomNode));
+		if (child == NULL) {
+			if (node->text != 0)
+				ScebXCe_EC560647((void *)node->text);
+			if (node != NULL)
+				ScebXCe_EC560647(node);
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return 0;
+		}
+
+		bxceMemset(child, 0, sizeof(BxceDomNode));
+		child->child = NULL;
+		child->sibling = NULL;
+		child->info = SCE_XML_TOKEN_DOM_TEXT;
+		if (doc->textsSize <= 0xEF) {
+			child->text = doc->textsSize;
+		} else {
+			pos = 0;
+			bxceWriteLength(doc, doc->textsSize, (char *)&child->text, &pos);
+		}
+
+		if (bxceDocumentAddText(doc, text, textLength) != 0) {
+			if (node->text != 0)
+				ScebXCe_EC560647((void *)node->text);
+			if (node != NULL)
+				ScebXCe_EC560647(node);
+			ScebXCe_EC560647(child);
+			doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return 0;
+		}
+
+		node->child = child;
+		node->info |= SCE_XML_TOKEN_DOM_HAS_CHILD;
+	}
+
+	return (BxceNodeId)node;
+}

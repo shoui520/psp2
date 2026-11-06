@@ -24,7 +24,16 @@ extern "C" {
 #define SCE_BXCE_ERROR_DUPLICATE_ATTRIBUTE_NAME		-2138759126	/* 0x8085202A */
 #define SCE_BXCE_ERROR_DOM_NOT_FOUND_ERROR		-2138758651	/* 0x80852205 */
 #define SCE_BXCE_ERROR_DOM_READ_ONLY_ERROR		-2138758647	/* 0x80852209 */
+#define SCE_BXCE_ERROR_DOM_MAX_NUM_OF_ATTR_ERROR		-2138758645	/* 0x8085220B */
+#define SCE_BXCE_ERROR_DOM_MAX_UNIQUE_ELEMENT_ERROR	-2138758644	/* 0x8085220C */
+#define SCE_BXCE_ERROR_DOM_MAX_UNIQUE_ATTR_ERROR		-2138758643	/* 0x8085220D */
 #define SCE_BXCE_ERROR_EXCEED_LIMIT			-2138758640	/* 0x80852210 */
+
+/* the most attributes of a DOM element, the longest attribute name, the most unique names */
+#define BXCE_DOM_ATTR_MAX		128
+#define BXCE_DOM_ATTR_NAME_MAX		0x80
+#define BXCE_DOM_UNIQUE_NAME_MAX	0xFFFF
+#define BXCE_DOM_ATTR_BUFFER_SIZE	0x400
 
 /* the sizes of a new table and name table, the limit of a table, the longest element name */
 #define BXCE_TABLE_INITIAL_SIZE		5240
@@ -218,6 +227,10 @@ BxceNodeId bxceDocumentGetParent(BxceDocument *doc, BxceNodeId node);
 BxceNodeId ScebXCe_3BF2F11B(BxceDocument *doc, BxceNodeId parent, BxceNodeId after,
 			    BxceNodeId child);				/* insert a DOM node */
 BxceNodeId ScebXCe_AEB2CE13(BxceDocument *doc, const char *text, SceUInt32 length); /* createText */
+
+BxceNodeId bxceDocumentCreateElement(BxceDocument *doc, const char *name,
+				     const BxceAttributeList *attrs, const char *text,
+				     SceUInt32 textLength);
 
 BxceNodeList *bxceGetElementsByTagName(const BxceDocument *doc, BxceNodeId node,
 					const char *name, BxceNodeList *list);
