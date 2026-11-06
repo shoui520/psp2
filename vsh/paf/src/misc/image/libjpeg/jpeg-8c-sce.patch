@@ -1,0 +1,135 @@
+--- a/jdmarker.c
++++ b/jdmarker.c
+@@ -305,7 +305,7 @@
+ /* Process a SOS marker */
+ {
+   INT32 length;
+-  int i, ci, n, c, cc;
++  int i, ci, n, c, cc, pi;
+   jpeg_component_info * compptr;
+   INPUT_VARS(cinfo);
+ 
+@@ -347,6 +347,12 @@
+     
+     TRACEMS3(cinfo, 1, JTRC_SOS_COMPONENT, cc,
+ 	     compptr->dc_tbl_no, compptr->ac_tbl_no);
++
++    /* SCE: this CSi (cc) should differ from the previous CSi */
++    for (pi = 0; pi < i; pi++) {
++      if (cinfo->cur_comp_info[pi] == compptr)
++	ERREXIT1(cinfo, JERR_BAD_COMPONENT_ID, cc);
++    }
+   }
+ 
+   /* Collect the additional scan parameters Ss, Se, Ah/Al. */
+@@ -461,6 +467,8 @@
+     if (count > 256 || ((INT32) count) > length)
+       ERREXIT(cinfo, JERR_BAD_HUFF_TABLE);
+ 
++    MEMZERO(huffval, SIZEOF(huffval));	/* SCE: no stale values past count */
++
+     for (i = 0; i < count; i++)
+       INPUT_BYTE(cinfo, huffval[i], return FALSE);
+ 
+--- a/jerror.c
++++ b/jerror.c
+@@ -22,6 +22,8 @@
+ #include "jinclude.h"
+ #include "jpeglib.h"
+ #include "jversion.h"
++#include <std/stdio.h>	/* SCE: sce_paf_snprintf */
++#include <std/stdlib.h>	/* SCE: sce_paf_private_exit */
+ #include "jerror.h"
+ 
+ #ifdef USE_WINDOWS_MESSAGEBOX
+@@ -45,7 +47,8 @@
+ #define jpeg_std_message_table	jMsgTable
+ #endif
+ 
+-#define JMESSAGE(code,string)	string ,
++/* SCE: the messages themselves are left out */
++#define JMESSAGE(code,string)	"" ,
+ 
+ const char * const jpeg_std_message_table[] = {
+ #include "jerror.h"
+@@ -75,7 +78,7 @@
+   /* Let the memory manager delete any temp files before we die */
+   jpeg_destroy(cinfo);
+ 
+-  exit(EXIT_FAILURE);
++  sce_paf_private_exit(EXIT_FAILURE);	/* SCE: paf's exit */
+ }
+ 
+ 
+@@ -102,14 +105,7 @@
+   /* Create the message */
+   (*cinfo->err->format_message) (cinfo, buffer);
+ 
+-#ifdef USE_WINDOWS_MESSAGEBOX
+-  /* Display it in a message dialog box */
+-  MessageBox(GetActiveWindow(), buffer, "JPEG Library Error",
+-	     MB_OK | MB_ICONERROR);
+-#else
+-  /* Send it to stderr, adding a newline */
+-  fprintf(stderr, "%s\n", buffer);
+-#endif
++  /* SCE: the message is not shown */
+ }
+ 
+ 
+@@ -189,10 +185,11 @@
+   }
+ 
+   /* Format the message into the passed buffer */
++  /* SCE: formatted by paf, at most JMSG_LENGTH_MAX characters */
+   if (isstring)
+-    sprintf(buffer, msgtext, err->msg_parm.s);
++    sce_paf_snprintf(buffer, JMSG_LENGTH_MAX, msgtext, err->msg_parm.s);
+   else
+-    sprintf(buffer, msgtext,
++    sce_paf_snprintf(buffer, JMSG_LENGTH_MAX, msgtext,
+ 	    err->msg_parm.i[0], err->msg_parm.i[1],
+ 	    err->msg_parm.i[2], err->msg_parm.i[3],
+ 	    err->msg_parm.i[4], err->msg_parm.i[5],
+--- a/jmemnobs.c
++++ b/jmemnobs.c
+@@ -19,6 +19,7 @@
+ #include "jinclude.h"
+ #include "jpeglib.h"
+ #include "jmemsys.h"		/* import the system-dependent declarations */
++#include "jpeg_paf.h"		/* SCE: the paf heap allocations */
+ 
+ #ifndef HAVE_STDLIB_H		/* <stdlib.h> should declare malloc(),free() */
+ extern void * malloc JPP((size_t size));
+@@ -34,13 +35,13 @@
+ GLOBAL(void *)
+ jpeg_get_small (j_common_ptr cinfo, size_t sizeofobject)
+ {
+-  return (void *) malloc(sizeofobject);
++  return jpeg_paf_malloc(sizeofobject, cinfo->client_data);	/* SCE */
+ }
+ 
+ GLOBAL(void)
+ jpeg_free_small (j_common_ptr cinfo, void * object, size_t sizeofobject)
+ {
+-  free(object);
++  jpeg_paf_free(object, cinfo->client_data);	/* SCE */
+ }
+ 
+ 
+@@ -54,13 +55,13 @@
+ GLOBAL(void FAR *)
+ jpeg_get_large (j_common_ptr cinfo, size_t sizeofobject)
+ {
+-  return (void FAR *) malloc(sizeofobject);
++  return (void FAR *) jpeg_paf_memalign(64, sizeofobject, cinfo->client_data);	/* SCE */
+ }
+ 
+ GLOBAL(void)
+ jpeg_free_large (j_common_ptr cinfo, void FAR * object, size_t sizeofobject)
+ {
+-  free(object);
++  jpeg_paf_free(object, cinfo->client_data);	/* SCE */
+ }
+ 
+ 

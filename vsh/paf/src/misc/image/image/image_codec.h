@@ -11,7 +11,10 @@
 #include <thread/thread.h>
 #include <std/setjmp.h>
 #include "gif_lib.h"
-#include "jpeglib.h"
+#include <stdio.h>
+#include <jpeglib.h>
+#include <jerror.h>
+#include "../libjpeg/jpeg_paf.h"
 #include "png.h"
 #include "tiffio.h"
 #include <gxt.h>

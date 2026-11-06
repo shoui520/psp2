@@ -21,6 +21,8 @@ int sce_paf_printf_dummy(void);
 int sce_paf_wprintf_dummy(void);
 unsigned long sce_paf_strtoul(const char *str, char **endptr, int base);
 int sce_paf_rand(void);
+/* exit(): the module's exit, the atexit handlers, then the process's */
+void sce_paf_private_exit(int status);
 /* name unknown: reports a failed allocation in the paf templates and breaks */
 int ScePafStdc_D608246A(void);
 

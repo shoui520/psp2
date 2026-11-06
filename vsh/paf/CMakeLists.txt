@@ -19,6 +19,9 @@ set(MODULE_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:C,CXX>:-Xautoinlinesize=8>)
 # zlib.h for paf::compress, configured as the kernel modules' zlib 1.2.5 is.
 include("${PSP2_SRC}/sys/internal/kernel/src/post_ss_mgr/zlib/zlib.cmake")
 psp2_zlib_sce(paf_zlib)
+# libjpeg 8c with Sony's changes (src/misc/image/libjpeg).
+include("${CMAKE_CURRENT_SOURCE_DIR}/src/misc/image/libjpeg/libjpeg.cmake")
+psp2_libjpeg_sce(paf_jpeg)
 enable_language(CXX)
 psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/module.c
@@ -62,6 +65,9 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/image/image/image_tif.cpp
 	src/misc/image/image/image_transparentize.cpp
 	src/misc/image/image/image_gxt.cpp
+	${paf_jpeg_SOURCES}
+	src/misc/image/libjpeg/jdatasrc_paf.cpp
+	src/misc/image/libjpeg/jmem_paf.cpp
 	src/inputdevice/hidkeyboard/hidkeyboard.cpp
 	src/inputdevice/inputdevice.cpp
 	src/file/httpfile.cpp
@@ -269,6 +275,7 @@ set_source_files_properties(../../sys/sdk/target/src/libSceVshBridge_stub/vshbri
 target_include_directories(vs0_sys_external_libpaf PRIVATE
 	"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt"
 	"${paf_zlib_INCLUDE}"
+	${paf_jpeg_INCLUDE}
 	"${CMAKE_SOURCE_DIR}/contrib/squish-1.11")
 
 # paf::thread's and paf::job's constructors and destructors have full C2/D2 copies where 8 makes
@@ -283,6 +290,11 @@ set_source_files_properties(
 	src/thread/rmutex.cpp src/thread/rwlock.cpp src/thread/semaphore.cpp src/thread/sleep.cpp
 	src/thread/synccall.cpp src/thread/thread.cpp src/thread/thread_id_cache.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+
+# libjpeg was built with SNC's default budget, 32 (its manual: the old -Xinllev's equivalent):
+# read_markers inlines get_soi, get_dac, get_dri and first_marker, while write_scan_header and
+# consume_markers keep their calls; 30 and 20 change these, none and 32 do not (2026-11-06).
+set_source_files_properties(${paf_jpeg_SOURCES} PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=32)
 
 # Sony's dlmalloc inlined init_mparams, init_top, segment_holding and internal_mallinfo but not
 # init_user_mstate: budgets 21 to 24 do that, 20 or less keeps internal_mallinfo out of line
