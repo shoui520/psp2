@@ -110,11 +110,41 @@ void RemoveDebugGuiFunc(void (*func)(void *), void *userdata);
 void RemoveDebugGuiFuncs(void (*func)(void *));
 void CallDebugGuiFuncs();
 
-/* the mouse and keyboard of a devkit's host, read once a frame (0x81191822..; their code is
-   not converted, names ours) */
+/* the mouse and keyboard of a devkit's host, read once a frame (debug/keyboard.cpp,
+   debug/mouse.cpp; names ours) */
 /* a button, counted a frame at a time */
 class MouseButton {
 public:
+	void Clear()
+	{
+		m_down = false;
+		m_last_down = false;
+		m_down_frames = 0;
+		m_up_frames = 0;
+		m_held = false;
+		m_pressed = false;
+		m_released = false;
+		m_unread_flag = false;
+	}
+
+	/* the frames counted and the edges taken from m_down */
+	void Update()
+	{
+		bool down = m_down;
+
+		if (down) {
+			m_up_frames = 0;
+			m_down_frames++;
+		} else {
+			m_down_frames = 0;
+			m_up_frames++;
+		}
+		m_held = down && m_last_down;
+		m_pressed = down && !m_last_down;
+		m_released = !down && m_last_down;
+		m_last_down = down;
+	}
+
 	bool m_down;
 	/* cleared by the constructor and read nowhere */
 	bool m_unread_flag;
@@ -132,6 +162,25 @@ public:
 /* a pointer: where it was the frame before, where it is, and how far it moved */
 class MousePointer {
 public:
+	void Clear()
+	{
+		m_last_x = 0;
+		m_last_y = 0;
+		m_x = 0;
+		m_y = 0;
+		m_move_x = 0;
+		m_move_y = 0;
+	}
+
+	/* how far it moved since the frame before */
+	void Update()
+	{
+		m_move_x = m_x - m_last_x;
+		m_move_y = m_y - m_last_y;
+		m_last_x = m_x;
+		m_last_y = m_y;
+	}
+
 	int32_t m_last_x;
 	int32_t m_last_y;
 	int32_t m_x;
@@ -142,6 +191,8 @@ public:
 
 class Mouse {
 public:
+	Mouse();
+
 	static Mouse *GetInstance();
 
 	/* the buttons and the pointer's positions read for the frame */
@@ -158,11 +209,44 @@ public:
 
 class Keyboard {
 public:
+	/* eight bytes per entry, cleared by the constructor and read nowhere */
+	class Input {
+	public:
+		void Clear()
+		{
+			m_byte0 = 0;
+			m_byte1 = 0;
+			m_byte2 = 0;
+			m_byte3 = 0;
+			m_byte4 = 0;
+			m_byte5 = 0;
+			m_byte6 = 0;
+			m_byte7 = 0;
+		}
+
+		uint8_t m_byte0;
+		uint8_t m_byte1;
+		uint8_t m_byte2;
+		uint8_t m_byte3;
+		uint8_t m_byte4;
+		uint8_t m_byte5;
+		uint8_t m_byte6;
+		uint8_t m_byte7;
+	};
+
+	Keyboard(int32_t param);
+
 	static Keyboard *GetInstance();
 
+	/* nothing in this build */
 	void Read();
 	/* the 256 keys' states counted on */
 	void Update();
+
+	MouseButton m_keys[256];
+	/* the constructor's argument (0), read nowhere */
+	int32_t m_param;
+	Input m_inputs[32];
 };
 }
 

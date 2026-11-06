@@ -117,6 +117,9 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/string_util.cpp
 	src/common/transition.cpp
 	src/inputdevice/hidrm/hidrm.cpp
+	src/graphics/debug/keyboard.cpp
+	src/graphics/debug/mouse.cpp
+	src/graphics/gpu_clock.cpp
 	src/url/uri.c
 	src/template_cache.cpp
 	src/common/resource_hooks.c
@@ -353,6 +356,11 @@ set_source_files_properties("${paf_dlmalloc_source}" PROPERTIES COMPILE_OPTIONS 
 # CacheImage's destructor stays out of line in its subclass's and its own deleting destructors,
 # while IsResourcePath is inlined: budget 16 does both, 12 and 20 do not (2026-10-31).
 set_source_files_properties(src/cache/cache_image.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)
+
+# The debug keyboard and mouse inline their buttons' and pointers' constructors and updates
+# (2026-11-06).
+set_source_files_properties(src/graphics/debug/keyboard.cpp src/graphics/debug/mouse.cpp
+	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # ScreenSurface inlines its table lookups and GetRawContext but calls InitDepthSurface,
 # CreateRenderTarget and its complete destructor: budgets 12 to 20 do that, 24 and 30 inline
