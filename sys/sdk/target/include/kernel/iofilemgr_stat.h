@@ -40,6 +40,17 @@ typedef struct SceIoStat {
 	unsigned int	st_private[6];
 } SceIoStat;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int sceIoGetstat(const char *name, SceIoStat *buf);
+int sceIoGetstatByFd(SceUID fd, SceIoStat *buf);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* !_LANGUAGE_ASSEMBLY */
 
 #endif /* _SCE_KERNEL_IOFILEMGR_STAT_H */
