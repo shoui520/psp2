@@ -23,13 +23,10 @@ extern "C" {
 #include "../../../lowlayer/src/ipmi/ipmi_error.h"
 
 /*
- * The SDK's libSceCes (libces_ucs.h, libces_jis.h, libces_gb.h) as far as the filter uses it,
- * until the tree's ces headers declare it.
+ * The SDK's libSceCes (libces_jis.h, libces_gb.h) as far as the filter uses it, until the
+ * tree's ces headers declare it; the profile sheet is libces_ucs.h's.
  */
 extern "C" {
-typedef union SceCesUcsProfileSheet {
-	void *systemUse[32];
-} SceCesUcsProfileSheet;
 typedef union SceCesSJisUcsProfile SceCesSJisUcsProfile;
 typedef union SceCesGbUcsProfile SceCesGbUcsProfile;
 
