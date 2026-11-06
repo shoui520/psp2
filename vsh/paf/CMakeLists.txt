@@ -16,9 +16,9 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 # any budget from 4 to 12 reproduces TTY's and Output's constructors, Output::WaitSoundStopped
 # and common::Utf8ToUtf16, 0 and 13 or more do not (2026-10-31).
 set(MODULE_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:C,CXX>:-Xautoinlinesize=8>)
-# zlib.h for paf::compress, configured as the kernel modules' zlib 1.2.5 is.
-include("${PSP2_SRC}/sys/internal/kernel/src/post_ss_mgr/zlib/zlib.cmake")
-psp2_zlib_sce(paf_zlib)
+# zlib 1.2.5 unmodified, with libhttp's check values and paf's allocator (src/misc/zlib).
+include("${CMAKE_CURRENT_SOURCE_DIR}/src/misc/zlib/zlib.cmake")
+psp2_paf_zlib(paf_zlib)
 # libjpeg 8c with Sony's changes (src/misc/image/libjpeg).
 include("${CMAKE_CURRENT_SOURCE_DIR}/src/misc/image/libjpeg/libjpeg.cmake")
 psp2_libjpeg_sce(paf_jpeg)
@@ -73,6 +73,9 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/image/libjpeg/jmem_paf.cpp
 	${paf_png_SOURCES}
 	${paf_png_NEON}
+	${paf_zlib_SOURCES}
+	${paf_zlib_CHECKSUM}
+	${paf_zlib_INFFAST}
 	src/inputdevice/hidkeyboard/hidkeyboard.cpp
 	src/inputdevice/inputdevice.cpp
 	src/file/httpfile.cpp
@@ -265,6 +268,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/global_state.c
 	../../sys/sdk/target/src/libsnc/i32ops.c
 	../../sys/sdk/target/src/libsnc/i64ops.c
+	../../sys/sdk/target/src/deflt/crc.S
 	../../sys/sdk/target/src/deflt/zlibhdr.c
 	../../sys/sdk/target/src/deflt/deflate.c
 	../../sys/sdk/target/src/deflt/deflate_common.c
@@ -279,7 +283,7 @@ set_source_files_properties(../../sys/sdk/target/src/libSceVshBridge_stub/vshbri
 
 target_include_directories(vs0_sys_external_libpaf PRIVATE
 	"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt"
-	"${paf_zlib_INCLUDE}"
+	${paf_zlib_INCLUDE}
 	${paf_jpeg_INCLUDE}
 	${paf_png_INCLUDE}
 	"${CMAKE_SOURCE_DIR}/contrib/squish-1.11")
@@ -305,6 +309,11 @@ set_source_files_properties(${paf_jpeg_SOURCES} PROPERTIES COMPILE_OPTIONS -Xaut
 # png_read_filter_row installs arm/filter_neon.S's functions for 3 and 4 bytes a pixel).
 set_source_files_properties(${paf_png_SOURCES} PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=32
 	COMPILE_DEFINITIONS "PNG_USER_CONFIG;PNG_ARM_NEON")
+# zlib too; zutil.c without its allocator (zalloc.c has paf's).
+set_source_files_properties(${paf_zlib_SOURCES} ${paf_zlib_INFFAST} ${PSP2_PAF_ZLIB_CHECKSUM}/checksum.c
+	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=32)
+set_source_files_properties(${PSP2_PAF_ZLIB_UPSTREAM}/zutil.c PROPERTIES
+	COMPILE_DEFINITIONS MY_ZCALLOC)
 
 # Sony's dlmalloc inlined init_mparams, init_top, segment_holding and internal_mallinfo but not
 # init_user_mstate: budgets 21 to 24 do that, 20 or less keeps internal_mallinfo out of line

@@ -25,7 +25,7 @@ ScePaf:
         - ScePafLowlayer_7982DC0B: 0x7982DC0B
         - ScePafLowlayer_8B6B2EA3: 0x8B6B2EA3
         - ScePafLowlayer_B7FA6F32: 0xB7FA6F32
-        - ScePafLowlayer_BFA53111: 0xBFA53111
+        - sceGzipCrc32: 0xBFA53111
         - sceZlibDecompress: 0xD7DAA151
         - ScePafLowlayer_DA3128F0: 0xDA3128F0
         - ScePafLowlayer_DB3B6E8D: 0xDB3B6E8D
