@@ -9,6 +9,7 @@
 #include <graphics/arl/gxm/gxm_shader.h>
 #include <graphics/arl/gxm/gxm_vertex_array.h>
 #include <graphics/color.h>
+#include <graphics/arl/arl_defines.h>
 #include <math/ngp/v2.h>
 
 namespace paf {
