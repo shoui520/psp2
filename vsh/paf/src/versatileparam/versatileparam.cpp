@@ -508,6 +508,12 @@ int32_t WidgetLayoutParam::Init()
 	return 0;
 }
 
+WidgetLayoutParam::WidgetLayoutParam()
+	: m_widget(NULL), m_timer(NULL), m_pos_array(NULL), m_size_array(NULL), m_rot_array(NULL)
+{
+	Init();
+}
+
 WidgetLayoutParam::~WidgetLayoutParam()
 {
 	if (m_pos_array != NULL)
@@ -1348,22 +1354,27 @@ const char *WidgetStyleParam::ParamName()
 	return m_param_name;
 }
 
-/* inline in the constructor */
-__attribute__((always_inline)) int32_t WidgetStyleParam::Init()
+/* Init's body: the constructor has it inline as well (name ours) */
+static __attribute__((always_inline)) inline int32_t InitStyleParam(WidgetStyleParam *param)
 {
-	for (vector<graph::DrawObjParam *>::iterator it = m_drawobj_param_list.begin();
-	     it != m_drawobj_param_list.end(); ++it)
+	for (vector<graph::DrawObjParam *>::iterator it = param->m_drawobj_param_list.begin();
+	     it != param->m_drawobj_param_list.end(); ++it)
 		(*it)->Init();
-	m_color = math::v4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_sound_id.m_idhash = 0;
+	param->m_color = math::v4(1.0f, 1.0f, 1.0f, 1.0f);
+	param->m_sound_id.m_idhash = 0;
 	return 0;
+}
+
+int32_t WidgetStyleParam::Init()
+{
+	return InitStyleParam(this);
 }
 
 WidgetStyleParam::WidgetStyleParam() : m_sound_id(s_empty_name, 0)
 {
 	m_widget_list.clear();
 	m_drawobj_param_list.clear();
-	Init();
+	InitStyleParam(this);
 }
 
 int32_t WidgetStyleParam::Set()

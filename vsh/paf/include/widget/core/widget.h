@@ -201,12 +201,7 @@ public:
 	static const char *s_names[];
 	static const char *ParamName();
 
-	WidgetLayoutParam()
-		: m_widget(NULL), m_timer(NULL), m_pos_array(NULL), m_size_array(NULL),
-		  m_rot_array(NULL)
-	{
-		Init();
-	}
+	WidgetLayoutParam();
 
 	virtual const char *GetParamName() const;
 	virtual ~WidgetLayoutParam();
