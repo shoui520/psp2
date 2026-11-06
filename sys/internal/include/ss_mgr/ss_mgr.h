@@ -6,6 +6,10 @@
 #include <sysmem/memblock.h>
 #include <sysmem/pmmgr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* the SBL facility's general errors (names unknown) */
 #define SCE_SBL_ERROR_UNSUPPORTED		0x800f0002
 #define SCE_SBL_ERROR_NO_MEMORY			0x800f000c
@@ -169,3 +173,7 @@ int sceSblRngPseudoRandomNumber(void *result, SceSize size);
 int sceSblSsGetNvsData(uint32_t area, void *buffer, SceSize size);
 int sceSblSsInfraAllocatePARangeVector(void *addr, SceSize size, SceUID heap, SceKernelPAVector *vector);
 int sceSblSsSetNvsData(uint32_t area, const void *buffer, SceSize size);
+
+#ifdef __cplusplus
+}
+#endif

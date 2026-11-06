@@ -34,8 +34,12 @@ typedef struct SceUpdaterMemoryInfo {
 #define SCE_UPDATER_ERROR_CHANNEL_FULL		0x8018000b
 #define SCE_UPDATER_ERROR_CHANNEL_EMPTY		0x8018000c
 #define SCE_UPDATER_ERROR_LOG_OPEN		0x80180011
+#define SCE_UPDATER_ERROR_PUP_OPEN		0x80180012
 #define SCE_UPDATER_ERROR_LOG_CLOSE		0x80180021
+#define SCE_UPDATER_ERROR_PUP_CLOSE		0x80180022
+#define SCE_UPDATER_ERROR_PUP_READ		0x80180032
 #define SCE_UPDATER_ERROR_LOG_WRITE		0x80180041
+#define SCE_UPDATER_ERROR_PUP_SEEK		0x80180052
 #define SCE_UPDATER_ERROR_PUP_NOT_FOUND		0x8018010a
 #define SCE_UPDATER_ERROR_PUP_AUTH		0x8018010d
 #define SCE_UPDATER_ERROR_PUP_NO_FILE		0x8018010f
@@ -83,6 +87,31 @@ typedef struct SceUpdaterSegmentData {
 	SceUInt64 size;
 } SceUpdaterSegmentData;
 
+/* what sceUpdaterGetPupInformation reads from a PUP's header */
+typedef struct SceUpdaterPupInformation {
+	SceUInt32 magicVersion;		/* the magic's last byte */
+	SceUInt32 reserved;
+	SceUInt64 version;		/* the system version it installs */
+	SceUInt64 fileSize;		/* the header's offset and size of the file */
+	SceUInt8 attribute[4];
+	SceUInt32 platform;
+	SceUInt32 formatPolicy;
+	SceUInt32 supportList;
+	SceUInt32 baseVersion;		/* the version a differential PUP applies to */
+	SceUInt32 baseBuildNo;
+} SceUpdaterPupInformation;
+
+/* the console, for sceUpdaterGetDeviceInfo (the names ours) */
+#define SCE_UPDATER_DEVICE_TYPE_DEVELOPMENT	1
+#define SCE_UPDATER_DEVICE_TYPE_CEX		2
+
+typedef struct SceUpdaterDeviceInfo {
+	SceUInt32 systemVersion;	/* the installed system's */
+	SceUInt32 reserved;
+	SceUInt32 qaPupOnly;		/* only a QA-approved PUP may be installed */
+	SceUInt32 deviceType;
+} SceUpdaterDeviceInfo;
+
 /* the update's progress (0x40 bytes), which sceUpdaterSetProgressCallback's callback gets */
 typedef struct SceUpdaterProgress SceUpdaterProgress;
 typedef void (*SceUpdaterProgressCallback)(int type, int reserved, SceUpdaterProgress progress);
@@ -103,16 +132,16 @@ int sceUpdaterGetSegmentSize(const char *fileName, SceUInt64 segmentId, SceUInt6
 int sceUpdaterIsApplicablePup(const char *fileName);
 int sceUpdaterCheckAcceptableSpkgType(const char *fileName, const int *types, int count,
 				      int *result);
-int sceUpdaterGetPupInformation(const char *fileName, void *information);
-int sceUpdaterNetworkPreCheckVersion(void *versionInfo, void *result);
-int sceUpdaterNetworkCheckBaseVersion(void *versionInfo, void *result);
-int sceUpdaterCheckNewerThanSystemVersion(void *versionInfo, void *result);
+int sceUpdaterGetPupInformation(const char *fileName, SceUpdaterPupInformation *information);
+int sceUpdaterNetworkPreCheckVersion(SceUInt32 version, int *result);
+int sceUpdaterNetworkCheckBaseVersion(SceUInt32 version, int *result);
+int sceUpdaterCheckNewerThanSystemVersion(SceUInt32 version, int *result);
 SceUInt64 sceUpdaterGetSegmentAnalysisSize(void);
 int sceUpdaterCreateSegmentAnalysisHandler(SceUInt64 size,
 					   SceUpdaterSegmentAnalysisHandler *handler);
 int sceUpdaterDestroySegmentAnalysisHandler(SceUpdaterSegmentAnalysisHandler handler);
 int sceUpdaterIsSegmentAvailable(SceUpdaterSegmentData *data, int *result);
-int sceUpdaterGetDeviceInfo(void *deviceInfo);
+int sceUpdaterGetDeviceInfo(SceUpdaterDeviceInfo *deviceInfo);
 int sceUpdaterGetUpdateModeState(void);
 int sceUpdaterGetUpdateMode(SceUInt8 *mode);
 int sceUpdaterSetUpdateMode(SceUInt8 mode);

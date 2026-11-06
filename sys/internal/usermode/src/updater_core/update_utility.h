@@ -3,13 +3,14 @@
 #define UPDATER_CORE_UPDATE_UTILITY_H
 
 #include <scetypes.h>
+#include <updater_core/updater_core.h>
 
 class UpdateUtility {
 public:
 	UpdateUtility();
 	~UpdateUtility();
 
-	int GetDeviceInfo(void *deviceInfo);
+	int GetDeviceInfo(SceUpdaterDeviceInfo *deviceInfo);
 	int GetUpdateModeState(void);
 	int GetUpdateMode(SceUInt8 *mode);
 	int SetUpdateMode(SceUInt8 mode);

@@ -9,6 +9,7 @@
 #include <touch/touch.h>
 #include <sdstor/mbr.h>
 #include <threadmgr/threadmgr.h>
+#include <update_mgr/update_mgr.h>
 #include <sm_comm/sm_comm.h>
 #include "pup.h"
 
@@ -32,13 +33,6 @@ _Static_assert(sizeof(SceKernelSpackageArgs) == 44, "s-package user request size
 _Static_assert(offsetof(SceKernelSpackageArgs, flags) == 16 &&
 	       offsetof(SceKernelSpackageArgs, seq_no) == 28,
 	       "s-package user request layout");
-
-typedef struct SceSblUsSpkgInfo {
-	SceSize size;
-	uint32_t version;
-	uint8_t status[4];
-	int reserved2;
-} SceSblUsSpkgInfo;
 
 _Static_assert(sizeof(SceSblUsSpkgInfo) == 16, "s-package information size");
 

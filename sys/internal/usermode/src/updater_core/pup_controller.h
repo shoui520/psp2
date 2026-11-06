@@ -3,6 +3,7 @@
 #define UPDATER_CORE_PUP_CONTROLLER_H
 
 #include <scetypes.h>
+#include <updater_core/updater_core.h>
 
 class PupController {
 public:
@@ -15,11 +16,15 @@ public:
 		  SceUInt64 offset);
 	int GetSegmentSize(const char *fileName, SceUInt64 segmentId, SceUInt64 *size);
 	int IsApplicablePup(const char *fileName);
-	int GetPupInformation(const char *fileName, void *information);
-	int NetworkPreCheckVersion(void *versionInfo, void *result);
-	int NetworkCheckBaseVersion(void *versionInfo, void *result);
-	int CheckNewerThanSystemVersion(void *versionInfo, void *result);
+	int GetPupInformation(const char *fileName, SceUpdaterPupInformation *information);
+	int NetworkPreCheckVersion(SceUInt32 version, int *result);
+	int NetworkCheckBaseVersion(SceUInt32 version, int *result);
+	int CheckNewerThanSystemVersion(SceUInt32 version, int *result);
 	SceUInt64 GetSegmentAnalysisSize(void);
+
+private:
+	int getSegmentInfo(const char *fileName, SceUInt64 segmentId, SceUInt64 *size,
+			   SceUInt64 *offset);
 };
 
 #endif

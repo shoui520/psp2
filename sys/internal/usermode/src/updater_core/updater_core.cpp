@@ -306,7 +306,7 @@ int sceUpdaterCheckAcceptableSpkgType(const char *fileName, const int *types, in
 	return s_spkgGroupManager->CheckAcceptableSpkgType(fileName, types, count, result);
 }
 
-int sceUpdaterGetPupInformation(const char *fileName, void *information)
+int sceUpdaterGetPupInformation(const char *fileName, SceUpdaterPupInformation *information)
 {
 	PupController pup;
 
@@ -321,7 +321,7 @@ int sceUpdaterGetPupInformation(const char *fileName, void *information)
 	return pup.GetPupInformation(fileName, information);
 }
 
-int sceUpdaterNetworkPreCheckVersion(void *versionInfo, void *result)
+int sceUpdaterNetworkPreCheckVersion(SceUInt32 version, int *result)
 {
 	PupController pup;
 
@@ -329,10 +329,10 @@ int sceUpdaterNetworkPreCheckVersion(void *versionInfo, void *result)
 		UPDATER_ERROR(572);
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
-	return pup.NetworkPreCheckVersion(versionInfo, result);
+	return pup.NetworkPreCheckVersion(version, result);
 }
 
-int sceUpdaterNetworkCheckBaseVersion(void *versionInfo, void *result)
+int sceUpdaterNetworkCheckBaseVersion(SceUInt32 version, int *result)
 {
 	PupController pup;
 
@@ -340,10 +340,10 @@ int sceUpdaterNetworkCheckBaseVersion(void *versionInfo, void *result)
 		UPDATER_ERROR(596);
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
-	return pup.NetworkCheckBaseVersion(versionInfo, result);
+	return pup.NetworkCheckBaseVersion(version, result);
 }
 
-int sceUpdaterCheckNewerThanSystemVersion(void *versionInfo, void *result)
+int sceUpdaterCheckNewerThanSystemVersion(SceUInt32 version, int *result)
 {
 	PupController pup;
 
@@ -351,7 +351,7 @@ int sceUpdaterCheckNewerThanSystemVersion(void *versionInfo, void *result)
 		UPDATER_ERROR(620);
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
-	return pup.CheckNewerThanSystemVersion(versionInfo, result);
+	return pup.CheckNewerThanSystemVersion(version, result);
 }
 
 SceUInt64 sceUpdaterGetSegmentAnalysisSize(void)
@@ -409,7 +409,7 @@ int sceUpdaterIsSegmentAvailable(SceUpdaterSegmentData *data, int *result)
 	return static_cast<SegmentAnalysis *>(data->handler)->IsSegmentAvailable(data, result);
 }
 
-int sceUpdaterGetDeviceInfo(void *deviceInfo)
+int sceUpdaterGetDeviceInfo(SceUpdaterDeviceInfo *deviceInfo)
 {
 	UpdateUtility utility;
 
