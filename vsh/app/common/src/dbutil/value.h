@@ -54,6 +54,12 @@ public:
 	{
 	}
 
+	/* over heap, or the default heap without one */
+	explicit Allocator(void *heap)
+		: m_heap(heap != NULL ? (paf::memory::HeapAllocator *)heap : ScePafStdc_261CAF72())
+	{
+	}
+
 	_Ty *allocate(size_t count)
 	{
 		return (_Ty *)scePafMallocWithContext(m_heap, count * sizeof(_Ty));

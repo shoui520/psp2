@@ -38,6 +38,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	record_result.cpp
 	record.cpp
 	value.cpp
+	row_cache.cpp
 	result.cpp
 	rowid_result.cpp
 	statement.cpp
@@ -55,6 +56,7 @@ set_source_files_properties(function.cpp PROPERTIES COMPILE_OPTIONS -Xautoinline
 set_source_files_properties(record_result.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(record.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(value.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
+set_source_files_properties(row_cache.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(result.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(rowid_result.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(statement.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
