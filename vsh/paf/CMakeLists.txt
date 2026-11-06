@@ -202,6 +202,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/effects/texture_ops.cpp
 	src/graphics/effects/skydome.cpp
 	src/graphics/drawobj/focus_shader.cpp
+	src/widget/canvas_painter.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
 	src/widget/core/widget.cpp
