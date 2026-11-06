@@ -1,5 +1,6 @@
 # 3.65-CEX: vs0:sys/external/notification_util.suprx (generated)
 set(MODULE_NID 0x9E920AA5)
+set(MODULE_AUTH_ID 0x2800000000028085)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
@@ -23,21 +24,4 @@ set(MODULE_IMPORT_NIDS
 	0xCAE9ACE6:F:0xAC595E68
 	0xCAE9ACE6:F:0xDA6EC8EF
 	0xCAE9ACE6:V:0x93B8AA67
-)
-set(MODULE_IMPORT_FUNCS
-	SceShellSvc_7CBF442B
-	SceShellSvc_8D4F9F2E
-	SceShellSvc_A0B067AC
-	SceShellSvc_B31E7F1C
-	SceShellSvc_D943CE15
-	SceShellSvc_FB03FBC9
-	sceKernelDeleteLwMutex
-	__stack_chk_fail
-	sceKernelLockLwMutex
-	sceKernelUnlockLwMutex
-	sceClibStrnlen
-	sceKernelCreateLwMutex
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
 )
