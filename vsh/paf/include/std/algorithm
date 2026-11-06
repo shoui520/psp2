@@ -1,4 +1,4 @@
-/* paf::copy, paf::for_each, paf::min and paf::max (Dinkumware's <algorithm>). */
+/* paf::copy, paf::for_each, paf::find_if, paf::min and paf::max (Dinkumware's <algorithm>). */
 #ifndef PAF_STD_ALGORITHM
 #define PAF_STD_ALGORITHM
 
@@ -18,6 +18,15 @@ inline _Fn1 for_each(_InIt _First, _InIt _Last, _Fn1 _Func)
 	for (; _First != _Last; ++_First)
 		_Func(*_First);
 	return _Func;
+}
+
+template<class _InIt, class _Pr>
+inline _InIt find_if(_InIt _First, _InIt _Last, _Pr _Pred)
+{
+	for (; _First != _Last; ++_First)
+		if (_Pred(*_First))
+			break;
+	return _First;
 }
 
 template<class _Ty>
