@@ -31,8 +31,10 @@ public:
 	{
 	}
 
-	/* Takes ownership of ptr; on no memory for the counter block it holds nothing. */
-	explicit SharedPtr(T *ptr) : m_ptr(ptr)
+	/* Takes ownership of ptr, deleted as the class it was made as (Sony's build has a deleter
+	   for each); on no memory for the counter block it holds nothing. */
+	template<class U>
+	explicit SharedPtr(U *ptr) : m_ptr(ptr)
 	{
 		if (ptr != NULL) {
 			m_ref_counter = (RefCounter *)operator new(sizeof(RefCounter));
@@ -40,7 +42,8 @@ public:
 				m_ref_counter->m_ptr = ptr;
 				m_ref_counter->m_counter = 1;
 				m_ref_counter->m_weak_counter = 1;
-				m_ref_counter->m_deleter = DefaultDeleter;
+				m_ref_counter->m_deleter =
+					(void (*)(T *))&SharedPtr<U>::DefaultDeleter;
 			} else {
 				m_ptr = NULL;
 				m_ref_counter = NULL;
