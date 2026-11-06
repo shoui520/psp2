@@ -37,6 +37,9 @@
 #   MODULE_EXPORT_ATTRS   LIBNID:ATTR for exports whose attributes the yml cannot express
 #   MODULE_IMPORT_FUNCS   import symbols the module must reference (skeletons only)
 #   MODULE_IMPORT_VARS
+#   MODULE_IMPORT_NAMES   exporters' exports.yml (from the tree's root) whose link names the
+#                         module's imports take (C++ imports: the exporter's mangled names);
+#                         set in the module's CMakeLists
 #   MODULE_NID0_VARS      NID:symbol per extra variable of the module's own (NID 0) export
 #                         record, beyond module_info / module_sdk_version (process param,
 #                         ...); vita-elf-create cannot emit them, fixup_velf.py splices them in
@@ -370,10 +373,15 @@ macro(psp2_sce_layout name)
 	foreach(v IN LISTS MODULE_NID0_VARS)
 		list(APPEND nid0 ${v})
 	endforeach()
+	set(import_names "")
+	foreach(v IN LISTS MODULE_IMPORT_NAMES)
+		list(APPEND import_names "${PSP2_SRC}/${v}")
+	endforeach()
 	add_custom_command(OUTPUT "${tables}"
 		COMMAND python3 "${PSP2_SRC}/tools/mkprx.py" tables -o "${tables}"
 			--exports "${CMAKE_CURRENT_SOURCE_DIR}/${MODULE_EXPORTS}"
 			--nids "${PSP2_SRC}/tools/nids/${M_KIND}.yml" "${PSP2_SRC}/tools/nids/user.yml"
+			--import-names ${import_names}
 			--nid ${MODULE_NID} --attr ${MODULE_ATTR} ${sdk}
 			--import ${MODULE_IMPORT_LIBS} --import-nids ${MODULE_IMPORT_NIDS}
 			--import-format ${MODULE_IMPORT_FORMAT}
@@ -381,7 +389,7 @@ macro(psp2_sce_layout name)
 			--export-aux ${MODULE_EXPORT_AUX} --nid0 ${nid0}
 			--nid0-var-order ${MODULE_NID0_VAR_ORDER}
 		DEPENDS "${PSP2_SRC}/tools/mkprx.py" "${CMAKE_CURRENT_SOURCE_DIR}/${MODULE_EXPORTS}" "${fwfile}"
-			"${PSP2_SRC}/tools/nids/${M_KIND}.yml" "${PSP2_SRC}/tools/nids/user.yml"
+			"${PSP2_SRC}/tools/nids/${M_KIND}.yml" "${PSP2_SRC}/tools/nids/user.yml" ${import_names}
 		VERBATIM)
 
 	add_executable(${name} ${M_SOURCES} "${tables}")

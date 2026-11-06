@@ -63,10 +63,12 @@ typedef struct SceAppMgrLoadExecOptParam {
 } SceAppMgrLoadExecOptParam;
 
 /*
- * not in the SDK: the status of a running application (NULL: the caller's own; the layout is
- * SceAppMgrAppStatus in <appmgr/appmgr.h>), and whether a process is the shell and crashed
+ * not in the SDK: the status of a running application, by name (NULL: the caller's own) or by
+ * application ID (the layout is SceAppMgrAppStatus in <appmgr/appmgr.h>), and whether a
+ * process is the shell and crashed
  */
 int sceAppMgrGetStatusByName(const char *name, void *status);
+int sceAppMgrGetStatusByAppId(int appId, void *status);
 int sceAppMgrIsPidShellAndCrashed(SceUID pid);
 
 #ifdef __cplusplus

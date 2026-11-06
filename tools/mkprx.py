@@ -125,6 +125,14 @@ def tables(a):
 	y = parse_yaml(a.exports)
 	(mod_name, mod), = y.items()
 	symbols, libnames = parse_nids(a.nids)
+	# an exporter's own link names (its exports.yml) win over the NID databases': C++ code
+	# links against the exporter's mangled names
+	for path in a.import_names:
+		(_, exporter), = parse_yaml(path).items()
+		for lib in exporter.get("libraries", {}).values():
+			lib_nid = int(lib["nid"], 0)
+			for sym, nid in lib.get("functions", []) + lib.get("variables", []):
+				symbols[(lib_nid, int(nid, 0))] = sym
 	version = mod.get("version", {})
 	main = mod.get("main", {})
 	nid0_vars = [(int(n, 0), s) for n, s in (v.split(":") for v in a.nid0)]
@@ -592,6 +600,7 @@ def main():
 	t.add_argument("-o", required=True)
 	t.add_argument("--exports", required=True)
 	t.add_argument("--nids", nargs="+", required=True)
+	t.add_argument("--import-names", nargs="*", default=[])
 	t.add_argument("--nid", required=True)
 	t.add_argument("--attr")
 	t.add_argument("--sdk-version")
