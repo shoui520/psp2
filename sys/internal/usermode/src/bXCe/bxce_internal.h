@@ -231,6 +231,8 @@ int bxceStrncmp(const char *s1, const char *s2, SceSize len);
 int bxceStrncmpTag(const char *s1, const char *s2, SceSize len);
 int bxceMemcmp(const void *s1, const void *s2, SceSize len);
 SceSize bxceStrnlen(const char *s, SceSize maxlen);
+SceSize bxceStrlcpy(char *dst, const char *src, SceSize size);
+int bxceSprintf(char *dst, const char *format, ...);	/* at most 1 MiB */
 
 /* the attribute pool */
 int bxceAttrPoolInitialize(BxceAttrPool *pool);
@@ -529,6 +531,23 @@ int ScebXCe_11D1FC0D(BxceDocumentBuilder *builder);		/* initialize */
 int ScebXCe_8FA315F1(BxceDocumentBuilder *builder);		/* terminate */
 int bxceDocumentBuilderReset(BxceDocumentBuilder *builder);
 int ScebXCe_BC0D9A6B(BxceDocumentBuilder *builder, const char *input, int size, SceUInt8 isFinal);	/* parse */
+
+/* the XML writer: a document's nodes as XML text */
+typedef struct BxceSerializer {
+	int reserved;			/* nothing here reads or writes it */
+	SceUInt8 tagOpen;		/* the last start tag still wants its '>' or "/>" */
+} BxceSerializer;
+
+BxceSerializer *ScebXCe_DC8483D4(BxceSerializer *serializer);	/* constructor */
+BxceSerializer *ScebXCe_8EA5A077(BxceSerializer *serializer);	/* constructor */
+void bxceSerializerNop(void);
+void ScebXCe_BE1AD985(void);				/* destructor */
+void ScebXCe_D24E80F2(void);				/* destructor */
+void bxceSerializerNop2(void);
+int bxceSerializerWriteNodes(BxceSerializer *serializer, const BxceDocument *doc, BxceNodeId node,
+			     char **buffer, SceUInt32 *length, SceUInt32 *capacity);
+int ScebXCe_D7FE96A2(BxceSerializer *serializer, const BxceDocument *doc, char **out, SceUInt32 *outSize,
+		     SceUInt8 writeDeclaration);	/* serialize */
 
 /* the SAX parser */
 int bxceSaxParserParseChunk(BxceSaxParser *sax);
