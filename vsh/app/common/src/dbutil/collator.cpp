@@ -319,13 +319,9 @@ int Collator::GetIndex(const char *str, int length)
 	const SceUInt8 *p;
 	int index = COLLATOR_INDEX_NONE;
 
-	if (str != NULL) {
-		p = (const SceUInt8 *)str;
-		if (length >= 3 && sce_paf_memcmp(str, s_utf8Bom, 3) == 0)
-			p += 3;
-	} else {
-		p = NULL;
-	}
+	p = (const SceUInt8 *)str;
+	if (str != NULL && length >= 3 && sce_paf_memcmp(str, s_utf8Bom, 3) == 0)
+		p = (const SceUInt8 *)str + 3;
 	if (m_attribute[COLLATOR_ATTR_IGNORE_ARTICLES])
 		p = SkipArticle(p, length - (p - (const SceUInt8 *)str));
 	if (length - (p - (const SceUInt8 *)str) > 0) {
