@@ -1,0 +1,8 @@
+--- sqlite3.c
++++ sqlite3.c
+@@ -11705,2 +11705,3 @@
+-   100,                       /* szLookaside */
+-   500,                       /* nLookaside */
++   /* SCE: no lookaside memory by default */
++   0,                         /* szLookaside */
++   0,                         /* nLookaside */

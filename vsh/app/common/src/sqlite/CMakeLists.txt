@@ -1,4 +1,7 @@
-# SceSqliteVsh: configured pristine SQLite plus Sony's platform layer.
+# SceSqliteVsh (vs0:sys/external/sqlite.suprx): SQLite 3.7.6.3, configured and patched as Sony
+# built it (its amalgamation in sqlite3.c with Sony's options), Sony's OS layer (os_psp2.c) and
+# the SNC runtime's helpers it links. Its paf imports take libpaf's link names.
+set(MODULE_IMPORT_NAMES vsh/paf/fw/3.65-CEX.exports.yml)
 set(sqlite_upstream "${PSP2_SRC}/contrib/sqlite-3.7.6.3/upstream/sqlite-src-3070603")
 set(sqlite_generated "${CMAKE_CURRENT_BINARY_DIR}/sqlite-config")
 file(MAKE_DIRECTORY "${sqlite_generated}")
@@ -19,21 +22,27 @@ add_custom_command(OUTPUT "${sqlite_generated}/sqlite3.c"
 		"${CMAKE_CURRENT_SOURCE_DIR}/mutex-appdef.patch"
 	COMMAND "${sqlite_native_patch}" sqlite3.c
 		"${CMAKE_CURRENT_SOURCE_DIR}/journal-alignment.patch"
+	COMMAND "${sqlite_native_patch}" sqlite3.c
+		"${CMAKE_CURRENT_SOURCE_DIR}/lookaside-default.patch"
+	COMMAND "${sqlite_native_patch}" sqlite3.c
+		"${CMAKE_CURRENT_SOURCE_DIR}/open-flags-mask.patch"
+	COMMAND "${sqlite_native_patch}" sqlite3.c
+		"${CMAKE_CURRENT_SOURCE_DIR}/line-offsets.patch"
 	WORKING_DIRECTORY "${sqlite_generated}"
 	DEPENDS "${sqlite_upstream}/src/parse.y" "${sqlite_upstream}/tool/mkkeywordhash.c"
 		"${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
 		"${CMAKE_CURRENT_SOURCE_DIR}/mutex-appdef.patch"
 		"${CMAKE_CURRENT_SOURCE_DIR}/journal-alignment.patch"
+		"${CMAKE_CURRENT_SOURCE_DIR}/lookaside-default.patch"
+		"${CMAKE_CURRENT_SOURCE_DIR}/open-flags-mask.patch"
+		"${CMAKE_CURRENT_SOURCE_DIR}/line-offsets.patch"
 	VERBATIM)
-psp2_module(vs0_sys_external_sqlite KIND user SOURCES
+psp2_module(vs0_sys_external_sqlite KIND user COMPILER snc SOURCES
 	module.c
 	sqlite3.c
 	os_psp2.c
-	localtime.c
-	vfs_time.c
 	../../../../../sys/sdk/target/src/libsnc/i32ops.c
 	../../../../../sys/sdk/target/src/libsnc/i64ops.c
-	../../../../../sys/sdk/target/src/libsnc/aeabi_ldivmod.S
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )
@@ -42,6 +51,4 @@ add_custom_target(vs0_sys_external_sqlite_core
 add_dependencies(vs0_sys_external_sqlite vs0_sys_external_sqlite_core)
 # sqlite3.h by name, as Sony's os_psp2.c includes it
 target_include_directories(vs0_sys_external_sqlite PRIVATE "${CMAKE_CURRENT_BINARY_DIR}"
-	"${PSP2_SRC}/contrib/sqlite-3.7.6.3")
-set_source_files_properties("vfs_time.c" PROPERTIES
-	COMPILE_DEFINITIONS "memset=sce_paf_memset;memcpy=sce_paf_memcpy")
+	"${PSP2_SRC}/contrib/sqlite-3.7.6.3" "${PSP2_SRC}/vsh/paf/include")

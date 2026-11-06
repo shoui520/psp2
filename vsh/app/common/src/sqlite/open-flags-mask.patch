@@ -1,0 +1,7 @@
+--- sqlite3.c
++++ sqlite3.c
+@@ -14062,3 +14062,3 @@
+   ** reaching the VFS. */
+-  rc = pVfs->xOpen(pVfs, zPath, pFile, flags & 0x87f3f, pFlagsOut);
++  rc = pVfs->xOpen(pVfs, zPath, pFile, flags & 0xf0087f3f, pFlagsOut); /* SCE: and the platform's flags 0xf0000000 */
+   assert( rc==SQLITE_OK || pFile->pMethods==0 );

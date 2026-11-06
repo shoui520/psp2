@@ -46,6 +46,10 @@ extern "C" {
 
 int sceIoGetstat(const char *name, SceIoStat *buf);
 int sceIoGetstatByFd(SceUID fd, SceIoStat *buf);
+/* the kernel's export of the same name takes its own types (iofilemgr/iofilemgr.h) */
+#if !defined(PSP2_KERNEL) && !defined(_SCE_IOFILEMGR_KERNEL_EXPORTS)
+int sceIoChstatByFd(SceUID fd, const SceIoStat *buf, unsigned int cbit);
+#endif
 
 #ifdef __cplusplus
 }

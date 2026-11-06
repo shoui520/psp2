@@ -15,6 +15,18 @@ extern "C" {
 #define SCE_APPMGR_ERROR_PARAM			0x80802002
 #define SCE_APPMGR_ERROR_NOEXEC			0x8080201F	/* the caller may not do this */
 
+/* SceAppMgr's errors no SDK header names (SceAppUtilExt translates them, SQLite's work
+ * directory mount accepts ALREADY_MOUNTED) */
+#define APPMGR_ERROR_NOT_MOUNTED		(-2139095038)	/* 0x80800002 */
+#define APPMGR_ERROR_ALREADY_MOUNTED		(-2139095037)	/* 0x80800003 */
+#define APPMGR_ERROR_NO_PERMISSION		(-2139095031)	/* 0x80800009 */
+#define APPMGR_ERROR_MOUNT_LIMIT_OVER		(-2139094968)	/* 0x80800048 */
+#define APPMGR_ERROR_SAVEDATA_NO_SPACE_QUOTA	(-2139090804)	/* 0x8080108c */
+#define APPMGR_ERROR_SAVEDATA_NO_SPACE_FS	(-2139090803)	/* 0x8080108d */
+#define APPMGR_ERROR_SAVEDATA_PARAMETER		(-2139090802)	/* 0x8080108e */
+#define APPMGR_ERROR_PLAYREADY_NO_DATA		(-2139090701)	/* 0x808010f3 */
+#define APPMGR_ERROR_MARLIN_IPTV_DIRTY		(-2139090699)	/* 0x808010f5 */
+
 int _sceAppMgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode, const void *userArguments);
 int _sceAppMgrAppParamGetInt(int pid, int param, int *value);
 int _sceAppMgrGetAppMgrState(void *appMgrState);
@@ -63,7 +75,10 @@ int sceAppMgrDump(void);
 int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume);
 int sceAppMgrEnablePrioritizingSystemChat(int enabled);
 int sceAppMgrGetAppIdByAppId(int appId);
+/* SceAppMgrUser's (driver_us); the kernel's function of the same name is appmgr's mount.c */
+#if !defined(PSP2_KERNEL)
 int sceAppMgrGetRawPath(const char *path, char *out, int outSize);
+#endif
 int sceAppMgrNotifyLiveBoardModeForShell(int appId, int mode);
 int sceAppMgrReceiveShellEventNum(void);
 int sceAppMgrReleaseBgmPort(void);

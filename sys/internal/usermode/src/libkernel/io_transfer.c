@@ -158,7 +158,7 @@ int sceIoGetstatByFd(SceUID id, SceIoStat *status)
 	return _sceIoGetstatByFd(id, status);
 }
 
-int sceIoChstatByFd(SceUID id, const SceIoStat *status, int bits)
+int sceIoChstatByFd(SceUID id, const SceIoStat *status, unsigned int bits)
 {
 	return _sceIoChstatByFd(id, status, bits);
 }

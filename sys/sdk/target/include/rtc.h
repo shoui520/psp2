@@ -54,6 +54,15 @@ int sceRtcIsLeapYear(int year);
 int sceRtcGetDaysInMonth(int year, int month);
 int sceRtcGetDayOfWeek(int year, int month, int day);
 int sceRtcCheckValid(const SceDateTime *pTime);
+/*
+ * Sony's rtc.h includes <time.h> for these; ours declares them only after the SDK's time.h
+ * (a module's private time.h can shadow it: libssl's), and not for the kernel, whose take an
+ * unsigned int (rtc/rtc.h) and whose code may use another libc's time_t.
+ */
+#if !defined(PSP2_KERNEL) && defined(_TIME)
+int sceRtcSetTime_t(SceDateTime *pTime, time_t iTime);
+int sceRtcGetTime_t(const SceDateTime *pTime, time_t *piTime);
+#endif
 int sceRtcSetTime64_t(SceDateTime *pTime, SceUInt64 ullTime);
 int sceRtcGetTime64_t(const SceDateTime *pTime, SceUInt64 *pullTime);
 int sceRtcSetTick(SceDateTime *pTime, const SceRtcTick *pTick);

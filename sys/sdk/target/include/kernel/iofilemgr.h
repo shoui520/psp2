@@ -86,6 +86,10 @@ SceOff sceIoLseek(SceUID fd, SceOff offset, int whence);
 #if !defined(PSP2_KERNEL) && !defined(_SCE_IOFILEMGR_KERNEL_EXPORTS)
 long sceIoLseek32(SceUID fd, long offset, int whence);
 #endif
+#if !defined(PSP2_KERNEL)
+/* not in Sony's SDK: SceIofilemgr's system call (sceIoFlockForSystemForUser), flock(2)'s operations */
+int sceIoFlockForSystem(SceUID fd, int operation);
+#endif
 SceSSize sceIoRead(SceUID fd, void *buf, SceSize nbyte);
 SceSSize sceIoWrite(SceUID fd, const void *buf, SceSize nbyte);
 SceSSize sceIoPread(SceUID fd, void *buf, SceSize nbyte, SceOff offset);

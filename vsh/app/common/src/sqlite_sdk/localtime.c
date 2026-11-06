@@ -1,7 +1,7 @@
-/* RTC-backed localtime_r shared by Sony's SQLite modules. */
+/* RTC-backed localtime_r for SceSqlite. */
 
 #include <time.h>
-#include <psp2/rtc.h>
+#include <rtc.h>
 
 struct tm *localtime_r(const time_t *timer, struct tm *result)
 {

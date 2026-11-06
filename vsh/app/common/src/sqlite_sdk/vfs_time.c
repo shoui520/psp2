@@ -1,10 +1,10 @@
-/* RTC and scheduling callbacks shared by Sony's SQLite VFS implementations. */
+/* SceSqlite's RTC and scheduling callbacks. */
 
 #include <string.h>
 #include <time.h>
-#include <psp2/kernel/processmgr.h>
-#include <psp2/kernel/threadmgr.h>
-#include <psp2/rtc.h>
+#include <kernel/processmgr.h>
+#include <kernel/threadmgr.h>
+#include <rtc.h>
 #include "vfs_time.h"
 
 /* Seed with the current tick, then the process ID. */

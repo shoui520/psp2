@@ -1,6 +1,6 @@
 /* SQLite 3.7.6.3 with the VSH build configuration and PAF libc bindings. */
 
-#include <psp2/kernel/threadmgr.h>
+#include <kernel/threadmgr.h>
 #include <stdint.h>
 
 #define SQLITE_THREADSAFE			1
@@ -38,7 +38,7 @@
 #define HAVE_USLEEP				1
 
 #define malloc		sce_paf_malloc
-#define realloc		ScePafStdc_0ADEA3AD
+#define realloc		sce_paf_realloc
 #define free		sce_paf_free
 #define memcpy		sce_paf_memcpy
 #define memset		sce_paf_memset
@@ -58,7 +58,7 @@ struct sqlite3_mutex {
 
 static sqlite3_mutex g_staticMutexes[6];
 static int g_mutexInitialized;
-static const char *const g_mutexNames[] = {
+static const char *g_mutexNames[] = {
 	"SceSqliteFast",
 	"SceSqliteRecursive",
 	"SceSqliteStaticMaster",
@@ -69,6 +69,21 @@ static const char *const g_mutexNames[] = {
 	"SceSqliteStaticPmem",
 };
 
+/* a lightweight mutex named for its SQLITE_MUTEX_ id, recursive for SQLITE_MUTEX_RECURSIVE */
+static int psp2MutexCreate(sqlite3_mutex *mutex, int id)
+{
+	SceUInt32 attr = 0x2000;
+	const char *name;
+
+	if (id == SQLITE_MUTEX_RECURSIVE)
+		attr = 0x2002;
+	if (id >= 0 && id < (int)ArraySize(g_mutexNames))
+		name = g_mutexNames[id];
+	else
+		name = "SceSqlite";
+	return sceKernelCreateLwMutex(&mutex->work, name, attr, 0, NULL);
+}
+
 static int psp2MutexInit(void)
 {
 	int index, result;
@@ -76,11 +91,12 @@ static int psp2MutexInit(void)
 	if (!g_mutexInitialized) {
 		memset(g_staticMutexes, 0, sizeof(g_staticMutexes));
 		for (index = 0; index < 6; index++) {
-			result = sceKernelCreateLwMutex(&g_staticMutexes[index].work,
-						      g_mutexNames[index + 2], 0x2000,
-						      0, NULL);
-			if (result < 0)
-				return SQLITE_NOMEM;
+			result = psp2MutexCreate(&g_staticMutexes[index],
+						 index + SQLITE_MUTEX_STATIC_MASTER);
+			if (result != SQLITE_OK) {
+				if (result < 0)
+					return SQLITE_NOMEM;
+			}
 		}
 		g_mutexInitialized = 1;
 	}
@@ -104,23 +120,15 @@ static int psp2MutexEnd(void)
 static sqlite3_mutex *psp2MutexAlloc(int id)
 {
 	sqlite3_mutex *mutex;
-	const char *name;
-	int result;
 
-	if (id >= SQLITE_MUTEX_STATIC_MASTER)
-		return &g_staticMutexes[id - SQLITE_MUTEX_STATIC_MASTER];
-	mutex = sqlite3Malloc(sizeof(*mutex));
-	if (mutex) {
-		memset(mutex, 0, sizeof(*mutex));
-		name = (unsigned int)id < ArraySize(g_mutexNames) ?
-			g_mutexNames[id] : "SceSqlite";
-		result = sceKernelCreateLwMutex(&mutex->work, name,
-					      id == SQLITE_MUTEX_RECURSIVE ? 0x2002 : 0x2000,
-					      0, NULL);
-		if (result < 0) {
+	if (id <= SQLITE_MUTEX_RECURSIVE) {
+		mutex = sqlite3MallocZero(sizeof(*mutex));
+		if (mutex && psp2MutexCreate(mutex, id) < 0) {
 			sqlite3_free(mutex);
 			mutex = NULL;
 		}
+	} else {
+		mutex = &g_staticMutexes[id - SQLITE_MUTEX_STATIC_MASTER];
 	}
 	return mutex;
 }

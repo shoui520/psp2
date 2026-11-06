@@ -1,0 +1,38 @@
+--- sqlite3.c
++++ sqlite3.c
+@@ -12683,6 +12683,11 @@
+ ** 32-bit integer is an atomic operation.  If that assumption is not true,
+ ** then this routine is not threadsafe.
+ */
++/* SCE: Sony's __LINE__ values are 2 higher from here on (the first function
++** whose log calls show it); the code is the same, the text of Sony's extra
++** lines is not known.
++*/
++#line 12688
+ SQLITE_API int sqlite3_status(int op, int *pCurrent, int *pHighwater, int resetFlag){
+   wsdStatInit;
+   if( op<0 || op>=ArraySize(wsdStat.nowValue) ){
+@@ -40615,6 +40620,11 @@
+ ** (sqlite3Malloc() is used to allocate memory), SQLITE_CANTOPEN or 
+ ** various SQLITE_IO_XXX errors.
+ */
++/* SCE: Sony's __LINE__ values are 6 higher from here on (the first function
++** whose log calls show it); the code is the same, the text of Sony's extra
++** lines is not known.
++*/
++#line 40624
+ SQLITE_PRIVATE int sqlite3PagerOpen(
+   sqlite3_vfs *pVfs,       /* The virtual file system to use */
+   Pager **ppPager,         /* OUT: Return the Pager structure here */
+@@ -48054,6 +48064,11 @@
+ ** big FreeBlk that occurs in between the header and cell
+ ** pointer array and the cell content area.
+ */
++/* SCE: Sony's __LINE__ values are 18 higher from here on (the first function
++** whose log calls show it); the code is the same, the text of Sony's extra
++** lines is not known.
++*/
++#line 48075
+ static int defragmentPage(MemPage *pPage){
+   int i;                     /* Loop counter */
+   int pc;                    /* Address of a i-th cell */
