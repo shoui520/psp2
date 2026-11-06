@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <common/shared_ptr.h>
 #include <graphics/camera.h>
+#include <graphics/effects/cube_map.h>
 #include <graphics/effects/page_turn_quad.h>
 #include <graphics/effects/post_effects.h>
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
@@ -19,6 +20,7 @@
 #include <graphics/arl/gxm/gxm_texture.h>
 #include <math/ngp/matrix.h>
 #include <math/ngp/v2.h>
+#include <math/ngp/v3.h>
 #include <math/ngp/v4.h>
 #include <std/string>
 #include <std/vector>
@@ -57,8 +59,8 @@ public:
 
 	/* how the background's texture coordinates are moved */
 	virtual math::matrix GetUVTransform() = 0;
-	/* a value the list hands on to the background chosen (no caller in libpaf) */
-	virtual void SetState(int32_t state) = 0;
+	/* the transform set (no caller in libpaf) */
+	virtual void SetUVTransform(const math::matrix &transform) = 0;
 };
 
 /* the backgrounds, of which the one at the index is drawn */
@@ -159,21 +161,61 @@ public:
 		return math::matrix::Identity();
 	}
 
-	virtual void SetState(int32_t state)
+	virtual void SetUVTransform(const math::matrix &transform)
 	{
 		if (GetCurrent().get() != NULL)
-			GetCurrent()->SetState(state);
+			GetCurrent()->SetUVTransform(transform);
 	}
 
 	vector<common::SharedPtr<Background> > m_backgrounds;
 	int32_t m_index;
 };
 
-/* a background of one colour, drawn with the EmptyBackground program; 0xc8 bytes */
-class EmptyBackground : public Background {
+/* a light probe: an environment's cube map, and its angular map (names ours) */
+class EnvProbe {
 public:
-	/* 0x810d151c */
-	EmptyBackground(int32_t mode);
+	/* 0x810d02b4: the maps of the name, its spherical-harmonics projection when sh */
+	EnvProbe(const string &name, bool sh);
+
+	~EnvProbe()
+	{
+	}
+
+	string m_name;
+	CubeMap m_cube;
+	/* the angular map, name.ang.dds */
+	arl::TextureSource m_angular_map;
+};
+
+/* a rotation dragged with the pointer, on a sphere where the pointer is over it and about the
+   view axis where it is not (names ours) */
+class Trackball {
+public:
+	Trackball() : m_start_rotation(math::matrix::Identity()), m_start_point(0.0f),
+		      m_start_on_sphere(false)
+	{
+	}
+
+	/* the point where the ray meets the sphere, else the closest; true when it meets it */
+	__attribute__((noinline)) bool Hit(math::v3 center, math::v3 origin, math::v3 direction,
+					   math::v3 &point, float radius);
+	/* the rotation turned from where the drag started to where the pointer is now */
+	__attribute__((noinline)) void Update(const math::v3 &center, const math::v3 &origin,
+					      const math::v3 &direction, bool pressed, bool down,
+					      math::matrix &rotation, float radius);
+
+	/* the rotation and the point where the drag started, and whether it was on the sphere */
+	math::matrix m_start_rotation;
+	math::v3 m_start_point;
+	bool m_start_on_sphere;
+};
+
+/* the light probes' cube maps drawn around the eye, turned with the pointer; reflections and
+   refractions sample the chosen probe's angular map and its projection; 0xc8 bytes */
+class EnvProbeBackground : public Background {
+public:
+	/* 0x810d151c: every probe when all, else the debug ones */
+	EnvProbeBackground(bool all);
 
 	virtual void Load(const string &dir);
 	virtual void Draw();
@@ -181,10 +223,25 @@ public:
 	virtual arl::TextureSource GetRefractionTexture();
 	virtual common::SharedPtr<arl::Texture2D> GetSharedTexture();
 	virtual void Init(common::SharedPtr<Camera> camera, common::SharedPtr<SharedTexture> texture);
+	virtual void Update();
+	virtual void Reset(bool force);
 	virtual math::matrix GetUVTransform();
-	virtual void SetState(int32_t state);
+	virtual void SetUVTransform(const math::matrix &transform);
 
-	uint8_t reserved[0xc4];
+	/* the probes loaded and the rotation set, the first time */
+	void Prepare();
+	/* the probe at the index, counted round the list */
+	common::SharedPtr<EnvProbe> GetProbe(int32_t index);
+
+	common::SharedPtr<Camera> m_camera;
+	common::SharedPtr<SharedTexture> m_shared_texture;
+	/* the probe chosen: its map at the even index, its projection at the odd one */
+	int32_t m_index;
+	vector<common::SharedPtr<EnvProbe> > m_probes;
+	math::matrix m_rotation;
+	Trackball m_trackball;
+	bool m_all;
+	bool m_loaded;
 };
 
 /* background_image.vp: the quad placed by MVP, its texture coordinates by UVTransform (the
@@ -291,7 +348,7 @@ public:
 	virtual common::SharedPtr<arl::Texture2D> GetSharedTexture();
 	virtual void Init(common::SharedPtr<Camera> camera, common::SharedPtr<SharedTexture> texture);
 	virtual math::matrix GetUVTransform();
-	virtual void SetState(int32_t state);
+	virtual void SetUVTransform(const math::matrix &transform);
 
 	/* 0x810cf154: the quad, the shaders and the image, made once (name ours) */
 	void Prepare();
@@ -416,7 +473,7 @@ public:
 	virtual common::SharedPtr<arl::Texture2D> GetSharedTexture();
 	virtual void Init(common::SharedPtr<Camera> camera, common::SharedPtr<SharedTexture> texture);
 	virtual math::matrix GetUVTransform();
-	virtual void SetState(int32_t state);
+	virtual void SetUVTransform(const math::matrix &transform);
 
 	/* 0x810cc918: the map from the screen to the sphere, made again when the angle changed
 	   (name ours) */

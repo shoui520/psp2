@@ -225,6 +225,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/effects/page_turn_renderer.cpp
 	src/graphics/effects/env_auto.cpp
 	src/graphics/effects/probe_background.cpp
+	src/graphics/effects/env_probe.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/graphics/arl/gxm/gxm_framebuffer_object.cpp
 	src/graphics/effects/fft.cpp

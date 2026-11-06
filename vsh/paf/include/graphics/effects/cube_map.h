@@ -133,6 +133,11 @@ public:
 	/* 0x8119e96a (CEX) */
 	CubeMap();
 
+	/* Sony's build keeps the destructor out of line */
+	__attribute__((noinline)) ~CubeMap()
+	{
+	}
+
 	/* each face's image loaded from the directory; the allocator is not used */
 	void LoadFaces(common::SharedPtr<arl::VramAllocator> allocator);
 	/* each face's quad made, turned to its side of the cube, and the programs set up */

@@ -216,7 +216,7 @@ math::matrix EnvAuto::GetUVTransform()
 	return math::matrix::Identity();
 }
 
-void EnvAuto::SetState(int32_t state)
+void EnvAuto::SetUVTransform(const math::matrix &transform)
 {
 }
 

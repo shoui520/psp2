@@ -161,7 +161,7 @@ math::matrix ProbeBackground::GetUVTransform()
 	return math::matrix::Identity();
 }
 
-void ProbeBackground::SetState(int32_t state)
+void ProbeBackground::SetUVTransform(const math::matrix &transform)
 {
 	Prepare();
 }

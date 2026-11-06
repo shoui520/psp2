@@ -74,7 +74,7 @@ Renderer::Renderer(common::SharedPtr<DrawEnv> draw_env)
 	m_shared_texture = common::SharedPtr<SharedTexture>(new SharedTexture());
 
 	m_backgrounds = common::SharedPtr<BackgroundList>(new BackgroundList());
-	m_backgrounds->Add(common::SharedPtr<EmptyBackground>(new EmptyBackground(0)));
+	m_backgrounds->Add(common::SharedPtr<EnvProbeBackground>(new EnvProbeBackground(false)));
 	m_backgrounds->Add(common::SharedPtr<ProbeBackground>(new ProbeBackground()));
 	m_backgrounds->Init(m_camera_2d, m_shared_texture);
 	m_backgrounds->Load(ResourcePath(m_resource_path));
