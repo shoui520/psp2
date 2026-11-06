@@ -291,7 +291,21 @@ enum {
 	BXCE_STATE_ATTR_VALUE = 12,
 	BXCE_STATE_ATTR_CLOSE = 13,
 	BXCE_STATE_END_TAG_NAME = 18,
-	BXCE_STATE_END_TAG_CLOSE = 19
+	BXCE_STATE_END_TAG_CLOSE = 19,
+	BXCE_STATE_CONTENT = 29
+};
+
+/* the token the tokenizer found (the SDK's TokenType values) */
+enum {
+	BXCE_TOKEN_START_TAG = 1,
+	BXCE_TOKEN_END_TAG = 2,
+	BXCE_TOKEN_CHAR_DATA = 3,
+	BXCE_TOKEN_DTD = 4,
+	BXCE_TOKEN_PI = 6,
+	BXCE_TOKEN_CDATA = 8,
+	BXCE_TOKEN_COMMENT = 10,
+	BXCE_TOKEN_UNEXPECTED = 12,
+	BXCE_TOKEN_ENTITY = 15
 };
 
 /* the names of the open elements, the innermost first */
@@ -372,6 +386,8 @@ int bxceParserReadName(BxceParser *parser, BxceBuffer *name);
 int bxceParserReadStartTag(BxceParser *parser, BxceBuffer *name, BxceAttributeList *list);
 int bxceParserScanText(BxceParser *parser, const char **text, int *length);
 int bxceParserReadEndTag(BxceParser *parser);
+int bxceParserReadMarkup(BxceParser *parser);
+int bxceParserReadToken(BxceParser *parser);
 
 /* a node list (the SDK's NodeList): its entries in a doubly linked list */
 typedef struct BxceNodeListEntry {

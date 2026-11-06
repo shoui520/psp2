@@ -796,3 +796,255 @@ int bxceParserReadEndTag(BxceParser *parser)
 		parser->status = SCE_BXCE_ERROR_XML_EXPECTED_CLOSING_ANGLE_BRACKET;
 	return 1;
 }
+
+/*
+ * After a '<' the chunk's end split from what follows: which token the markup starts, the start
+ * of a "<!" kept in pending until enough of it is here. 1 when the token is known, 0 when the
+ * chunk ended first.
+ */
+int bxceParserReadMarkup(BxceParser *parser)
+{
+	int position = parser->position;
+	int size = parser->size;
+	int pending;
+	int left;
+
+	if (position >= size)
+		return 0;
+
+	pending = parser->pendingLength;
+	if (pending == 0) {
+		const char *input = parser->input;
+
+		parser->tokenStart = input + position;
+		switch (input[position]) {
+		case '/':
+			parser->token = BXCE_TOKEN_END_TAG;
+			parser->position = position + 1;
+			break;
+		case '?':
+			parser->token = BXCE_TOKEN_PI;
+			parser->position = position + 1;
+			break;
+		case '!':
+			parser->position = ++position;
+			if (position >= size) {
+				parser->pending[0] = '!';
+				parser->pendingLength = 1;
+				return 0;
+			}
+			parser->tokenStart = input + position;
+			left = size - position;
+			if (left > 1) {
+				int differs = bxceMemcmp("--", input + position, 2);
+
+				input = parser->input;
+				position = parser->position;
+				if (differs == 0) {
+					parser->token = BXCE_TOKEN_COMMENT;
+					parser->position = position + 2;
+					break;
+				}
+			}
+			if (left <= 6) {
+				parser->pending[0] = '!';
+				bxceMemcpy(parser->pending + 1, input + position, left);
+				parser->pendingLength = left + 1;
+				return 0;
+			}
+			if (bxceMemcmp(g_bxceDoctype, input + position, 7) == 0) {
+				parser->token = BXCE_TOKEN_DTD;
+				parser->position = parser->position + 7;
+			} else if (bxceMemcmp(g_bxceCdata, parser->input + parser->position, 7) == 0) {
+				parser->token = BXCE_TOKEN_CDATA;
+				parser->position = parser->position + 7;
+			} else {
+				parser->token = BXCE_TOKEN_UNEXPECTED;
+			}
+			break;
+		default:
+			parser->token = BXCE_TOKEN_START_TAG;
+			break;
+		}
+		goto done;
+	}
+
+	if (parser->pending[0] == '!') {
+		const char *input;
+		int total;
+
+		if (position >= size)
+			return 0;
+		input = parser->input;
+		parser->tokenStart = input + position;
+		total = parser->size - position + pending - 1;
+		if (total > 1) {
+			if (pending < 3) {
+				if (pending == 2) {
+					if (parser->pending[1] == '-' && input[position] == '-') {
+						parser->token = BXCE_TOKEN_COMMENT;
+						parser->position = position + 1;
+						goto done;
+					}
+				} else if (bxceMemcmp(input + position, "--", 2) == 0) {
+					parser->token = BXCE_TOKEN_COMMENT;
+					parser->position = parser->position + 2;
+					goto done;
+				}
+			} else if (bxceMemcmp("--", parser->pending, 2) == 0) {
+				/* Sony's code compares from the '!' */
+				parser->token = BXCE_TOKEN_COMMENT;
+				goto done;
+			}
+		}
+
+		pending = parser->pendingLength;
+		if (total <= 6) {
+			bxceMemcpy(parser->pending + pending, parser->input + parser->position,
+				   parser->size - parser->position);
+			parser->pendingLength = parser->pendingLength + parser->size - parser->position;
+			return 0;
+		}
+		if (pending < 8) {
+			if (pending > 0) {
+				if (bxceMemcmp(g_bxceDoctype, parser->pending + 1, pending - 1) == 0 &&
+				    bxceMemcmp(g_bxceDoctype + parser->pendingLength - 1, parser->tokenStart,
+					       8 - parser->pendingLength) == 0) {
+					parser->position = parser->position - parser->pendingLength + 8;
+					parser->token = BXCE_TOKEN_DTD;
+				} else if (bxceMemcmp(g_bxceCdata, parser->pending + 1,
+						      parser->pendingLength - 1) != 0 ||
+					   bxceMemcmp(g_bxceCdata + parser->pendingLength - 1,
+						      parser->tokenStart, 8 - parser->pendingLength) != 0) {
+					parser->token = BXCE_TOKEN_UNEXPECTED;
+				} else {
+					parser->token = BXCE_TOKEN_CDATA;
+					parser->position = parser->position - parser->pendingLength + 8;
+				}
+				goto done;
+			}
+		} else {
+			if (bxceMemcmp(g_bxceDoctype, parser->pending, 7) == 0) {
+				parser->token = BXCE_TOKEN_DTD;
+				goto done;
+			}
+			if (bxceMemcmp(g_bxceCdata, parser->pending, 7) == 0) {
+				parser->token = BXCE_TOKEN_CDATA;
+				goto done;
+			}
+		}
+
+		if (bxceMemcmp(parser->tokenStart, g_bxceDoctype, 7) == 0) {
+			parser->token = BXCE_TOKEN_DTD;
+			parser->position = parser->position + 7;
+		} else if (bxceMemcmp(parser->tokenStart, g_bxceCdata, 7) == 0) {
+			/* Sony's code makes a CDATA section here a DTD token */
+			parser->token = BXCE_TOKEN_DTD;
+			parser->position = parser->position + 7;
+		} else {
+			parser->token = BXCE_TOKEN_UNEXPECTED;
+		}
+	}
+
+done:
+	parser->pendingLength = 0;
+	return 1;
+}
+
+/*
+ * The next token in content: markup after '<', a reference after '&' (when references are
+ * resolved) or character data; white space between the top-level items is skipped.
+ */
+int bxceParserReadToken(BxceParser *parser)
+{
+	const char *input;
+	int position, size, left;
+	char c;
+
+	if (parser->skipIgnorableWhiteSpace) {
+		int last = parser->lastToken;
+
+		if (last != BXCE_TOKEN_CHAR_DATA && last != BXCE_TOKEN_ENTITY)
+			bxceParserSkipSpace(parser);
+	}
+
+	position = parser->position;
+	size = parser->size;
+	if (position >= size)
+		return 0;
+
+	input = parser->input;
+	if (parser->state != BXCE_STATE_CONTENT)
+		parser->state = BXCE_STATE_CONTENT;
+
+	c = input[position];
+	if (c == '<') {
+		parser->token = BXCE_TOKEN_START_TAG;
+		parser->position = position + 1;
+		if (position + 1 >= size) {
+			parser->pendingLength = 0;
+			return 0;
+		}
+		switch (input[position + 1]) {
+		case '/':
+			parser->token = BXCE_TOKEN_END_TAG;
+			parser->position = position + 2;
+			break;
+		case '!':
+			position += 2;
+			parser->position = position;
+			if (position >= size) {
+				parser->pendingLength = 1;
+				parser->pending[0] = '!';
+				return 0;
+			}
+			left = size - position;
+			if (left > 1) {
+				int differs = bxceMemcmp("--", input + position, 2);
+
+				input = parser->input;
+				position = parser->position;
+				if (differs == 0) {
+					parser->token = BXCE_TOKEN_COMMENT;
+					parser->position = position + 2;
+					break;
+				}
+			}
+			if (left <= 6) {
+				parser->pending[0] = '!';
+				bxceMemcpy(parser->pending + 1, input + position, left);
+				parser->pendingLength = left + 1;
+				return 0;
+			}
+			if (bxceMemcmp(g_bxceDoctype, input + position, 7) == 0) {
+				parser->token = BXCE_TOKEN_DTD;
+				parser->position = parser->position + 7;
+			} else if (bxceMemcmp(g_bxceCdata, parser->input + parser->position, 7) == 0) {
+				parser->token = BXCE_TOKEN_CDATA;
+				parser->position = parser->position + 7;
+			} else {
+				parser->token = BXCE_TOKEN_UNEXPECTED;
+			}
+			break;
+		case '?':
+			parser->token = BXCE_TOKEN_PI;
+			parser->position = position + 2;
+			break;
+		default:
+			parser->token = BXCE_TOKEN_START_TAG;
+			break;
+		}
+		return 1;
+	}
+
+	if (c == '&' && parser->resolveEntity) {
+		parser->token = BXCE_TOKEN_ENTITY;
+		parser->position = position + 1;
+		return 1;
+	}
+
+	parser->token = BXCE_TOKEN_CHAR_DATA;
+	if (bxceNameStackIsEmpty(parser->nameStack) && bxceParserSkipSpace(parser))
+		return bxceParserReadToken(parser);
+	return 1;
+}
