@@ -159,7 +159,7 @@ slb2/nskbl	sys/internal/kernel/src/kernel_boot_loader/nskbl	slb2:nskbl	4.00-DEBU
 slb2/skbl	sys/internal/kernel/src/kernel_boot_loader/skbl	slb2:skbl	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	sysmem dlmalloc/ memblock/ records; slb2 kernel_boot_loader
 vs0/app/NPXS10000/eboot	vsh/app/near	vs0:app/NPXS10000/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/near/{core,near_common,ui} (SceNear; near_plugin)
 vs0/app/NPXS10001/eboot	vsh/app/party	vs0:app/NPXS10001/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/party/PartySdkManager (SceParty)
-vs0/app/NPXS10001/np_party_app	vsh/app/shell/src/np/ipc/npparty/party_app	vs0:app/NPXS10001/np_party_app.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	npparty/party_app/ipc_client + npparty/party_app_client (SceNpPartyAppUtil, the party app's IPC client)
+vs0/app/NPXS10001/np_party_app	vsh/app/shell/src/np/ipc/npparty/party_app_client	vs0:app/NPXS10001/np_party_app.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	npparty/party_app_client/party_app_client.cpp (3.x; party_app/ipc_client before; SceNpPartyAppUtil)
 vs0/app/NPXS10002/eboot	vsh/app/store/browser	vs0:app/NPXS10002/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/store/browser/{plugin,ext} (SceStoreBrowser; store_browser_plugin)
 vs0/app/NPXS10003/eboot	vsh/app/webbrowser	vs0:app/NPXS10003/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	webbrowser_plugin, webbrowser_{action,config,core,home,menu}_plugin.rco (SceWebBrowser); no source path in any firmware
 vs0/app/NPXS10004/eboot	vsh/app/photocam	vs0:app/NPXS10004/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/photocam/{plugin,xcommon} (ScePhotoCam)
