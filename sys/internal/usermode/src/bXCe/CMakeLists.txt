@@ -21,5 +21,7 @@ psp2_module(vs0_sys_external_bXCe KIND user COMPILER snc PARTIAL SOURCES
 	dom_document_impl.cpp
 	dom_node_list.cpp
 	dom_node_list_impl.cpp
+	mem_allocator.cpp
+	result.cpp
 	bXCe.c
 )

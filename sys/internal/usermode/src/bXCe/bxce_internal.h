@@ -9,6 +9,8 @@
 
 #include <stddef.h>
 #include <scetypes.h>
+#include <kernel/sysmem/memblock.h>
+#include <libkernel/libkernel.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -220,11 +222,22 @@ void *bxceHeapAlloc(BxceHeap *heap, SceSize size);
 void bxceHeapFree(BxceHeap *heap, void *ptr);
 void *bxceHeapExtend(BxceHeap *heap, void *ptr, SceSize extra);
 
-/* the allocator under the heap */
+/* the allocator under the heap: the application's MemAllocator, else one over a memory block */
+#define BXCE_MEMBLOCK_DEFAULT_SIZE	0x32000
+
+int bxceMemBlockCreate(SceSize size, SceUID *memblock, void **mspace);
 void *bxceMspaceMalloc(SceSize size);
 void bxceMspaceDestroy(void);
 void *bxceDefaultAllocate(SceSize size);
 void bxceDefaultDeallocate(void *ptr);
+void bxceDeleteDefaultAllocator(void);
+
+/* a memory block of its own nothing creates; bxceMspaceDestroy frees it */
+extern SceUID g_bxceMemBlock;
+extern void *g_bxceMspace;
+extern SceUInt8 g_bxceAllocatorByApplication;
+extern void *g_bxceAllocatorUserData;
+extern int g_bxceInitializeResult;
 
 /* the C library calls, each through a function of its own */
 void *bxceMemset(void *dst, int c, SceSize len);
@@ -660,12 +673,11 @@ SceUInt32 bxceDocumentAddSkipped(BxceDocument *doc, const char *text, SceUInt32 
 int bxceDocumentExtendText(BxceDocument *doc, SceUInt32 text, const char *more, SceUInt32 length);
 int bxceDocumentFlushAttributes(BxceDocument *doc);
 
-/* the library's reference count, the allocator its objects come from, the public results */
+/* the library's reference count and the public results */
 int bxceLibraryAddRef(void);
 void bxceLibraryRelease(void);
-void *bxceAllocate(SceSize size);
-void bxceDeallocate(void *ptr);
 int bxceConvertResult(int result);
+const char *ScebXCe_998552A5(int result);		/* the result's name */
 
 #ifdef __cplusplus
 }
@@ -681,13 +693,58 @@ int bxceConvertResult(int result);
  */
 namespace bXCe {
 
+/* the SDK's sce::Xml::MemAllocator: what the library's memory comes from */
+class MemAllocator {
+public:
+	MemAllocator() {}
+	virtual ~MemAllocator() {}
+
+	virtual void *allocate(size_t size, void *userData) = 0;
+	virtual void deallocate(void *ptr, void *userData) = 0;
+};
+
+/* the library's own allocator: an mspace in a memory block */
+class DefaultMemAllocator : public MemAllocator {
+public:
+	DefaultMemAllocator() : memblock(0), mspace(NULL) {}
+
+	virtual ~DefaultMemAllocator()
+	{
+		if (mspace != NULL) {
+			sceClibMspaceDestroy(mspace);
+			mspace = NULL;
+		}
+		if (memblock != 0) {
+			sceKernelFreeMemBlock(memblock);
+			memblock = 0;
+		}
+	}
+
+	virtual void *allocate(size_t size, void *userData)
+	{
+		return sceClibMspaceMalloc(mspace, size);
+	}
+
+	virtual void deallocate(void *ptr, void *userData)
+	{
+		sceClibMspaceFree(mspace, ptr);
+	}
+
+	SceUID memblock;
+	void *mspace;
+};
+
+/* the allocator the library uses and the one it made, if it made one */
+extern MemAllocator *g_bxceDefaultAllocator;
+extern MemAllocator *g_bxceAllocator;
+
 /* what the implementation objects derive from: their allocator */
 class Object {
 public:
 	virtual ~Object() {}
 
-	static void *operator new(size_t size) throw() { return bxceAllocate(size); }
-	static void operator delete(void *ptr) { bxceDeallocate(ptr); }
+	static void *operator new(size_t size) throw() { return bxceDefaultAllocate(size); }
+	static void operator delete(void *ptr) { bxceDefaultDeallocate(ptr); }
 };
 
 namespace Dom {
@@ -887,6 +944,8 @@ public:
 
 } /* namespace Dom */
 } /* namespace bXCe */
+
+extern "C" int ScebXCe_EB4E6C8D(bXCe::MemAllocator *allocator, void *userData);	/* set the allocator */
 #endif
 
 #endif /* _BXCE_INTERNAL_H */
