@@ -20,7 +20,7 @@ CacheManagerImpl::CacheManagerImpl(const CacheManager::Params *param)
 	  m_longlife_align_size(param->longlife_heap_align_size),
 	  m_instant_align_size(param->instant_heap_align_size), m_name(param->name),
 	  m_cancel_func(param->cancel_func), m_cancel_userdata(param->cancel_userdata),
-	  m_reserved0(param->reserved0), m_reserved1(param->reserved1),
+	  m_finish_func(param->finish_func), m_finish_userdata(param->finish_userdata),
 	  m_destroy_requested(false), m_is_shutdown(false),
 	  m_cache_longlife_heap(param->cache_longlife_heap),
 	  m_local_file_nobuf(param->local_file_nobuf), m_job_count(0),

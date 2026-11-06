@@ -17,6 +17,7 @@ class CacheJobRunner : public job::JobItem {
 public:
 	CacheJobRunner(const intrusive_ptr<CacheBase> &cache, const job::JobItem::Option *option);
 	virtual ~CacheJobRunner();
+	virtual void Cancel();
 	virtual int Run();
 	virtual void Finish(int result);
 

@@ -74,8 +74,8 @@ public:
 	CacheMap m_caches;
 	CacheManager::CancelFunc m_cancel_func;
 	void *m_cancel_userdata;
-	uint32_t m_reserved0;
-	uint32_t m_reserved1;
+	CacheManager::FinishFunc m_finish_func;
+	void *m_finish_userdata;
 	bool m_destroy_requested;
 	bool m_is_shutdown;
 	bool m_cache_longlife_heap;

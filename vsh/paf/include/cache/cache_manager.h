@@ -39,6 +39,7 @@ class CacheManagerImpl;
 class CacheManager {
 public:
 	typedef bool (*CancelFunc)(void *userdata);
+	typedef void (*FinishFunc)(int32_t result, const string &path, void *userdata);
 
 	/* The default job queues: local files, network files, decoding. */
 	enum JobQueueType {
@@ -68,8 +69,10 @@ public:
 		graph::SurfacePool *surface_pool;
 		CancelFunc cancel_func;
 		void *cancel_userdata;
-		uint32_t reserved0;
-		uint32_t reserved1;
+		/* called with a job's result and its cache's path when the job is finished (names
+		   ours) */
+		FinishFunc finish_func;
+		void *finish_userdata;
 		Finalizer *finalizer;
 		bool cache_longlife_heap;
 		bool local_file_nobuf;

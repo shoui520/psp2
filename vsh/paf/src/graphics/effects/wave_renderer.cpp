@@ -11,6 +11,7 @@
 #include <graphics/effects/wave_renderer.h>
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
 #include <graphics/camera.h>
+#include <graphics/signed_angle.h>
 #include <graphics/drawobj/draw_env.h>
 #include <math/math.h>
 #include <src/common/frame_count.h>
@@ -492,20 +493,6 @@ void WaveRenderer::ResetRotation()
 
 	listener->m_rotation =
 		math::matrix(x, y, front, math::v4(0.0f, 0.0f, 0.0f, 1.0f)).inverse1();
-}
-
-/* the angle from from to to, negative the other way round (0x8120431c; name ours) */
-inline __attribute__((noinline)) float GetSignedAngle(const math::v2 &from, const math::v2 &to)
-{
-	Vector2 a = from.getImpl() * sce::Vectormath::Simd::recipf(length(from.getImpl()));
-	Vector2 b = to.getImpl() * sce::Vectormath::Simd::recipf(length(to.getImpl()));
-	float angle = sce_paf_acosf(math::ClampUnit(dot(b, a).getAsFloat()));
-	floatInVec cross = floatInVec(to.extract_y() * from.extract_x() -
-				      to.extract_x() * from.extract_y());
-
-	return angle * sce::Vectormath::Simd::select(floatInVec(-1.0f), floatInVec(1.0f),
-						     cross > floatInVec(0.0f))
-			       .getAsFloat();
 }
 
 void WaveRenderer::UpdateInstances()
