@@ -12,5 +12,6 @@ psp2_module(vs0_sys_external_bXCe KIND user COMPILER snc PARTIAL SOURCES
 	tokenizer.cpp
 	parser.cpp
 	serializer.cpp
+	clib.cpp
 	bXCe.c
 )
