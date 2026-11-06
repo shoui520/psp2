@@ -18,6 +18,8 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/pup_controller.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/segment_analysis.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/update_utility.cpp
+	${PSP2_SRC}/sys/sdk/target/src/libSceSblSsUpdateMgr_stub/update_mgr_stub.c
+	${PSP2_SRC}/sys/sdk/target/src/libSceVshBridge_stub/vshbridge_io_stub.c
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include")
 # updater_core, a library of its own in Sony's build: budget 24 writes its classes' C2 and D2
@@ -33,3 +35,9 @@ set_source_files_properties(
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/segment_analysis.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/update_utility.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=24)
+# the SceSblSsUpdateMgr and SceVshBridge stub libraries' wrappers, which Sony built with GCC 4.8
+# and without a stack guard, as libpaf's (2026-11-06)
+set_source_files_properties(
+	${PSP2_SRC}/sys/sdk/target/src/libSceSblSsUpdateMgr_stub/update_mgr_stub.c
+	${PSP2_SRC}/sys/sdk/target/src/libSceVshBridge_stub/vshbridge_io_stub.c
+	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48 COMPILE_OPTIONS -fno-stack-protector)

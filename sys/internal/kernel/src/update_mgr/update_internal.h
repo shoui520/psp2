@@ -15,20 +15,6 @@
 
 typedef char SceUpdateMode;
 
-/* Whole user request, including the uninterpreted words preserved on output. */
-typedef struct SceKernelSpackageArgs {
-	SceSize arg_size;
-	uint32_t package_type;
-	void *addr;
-	SceSize size;
-	uint32_t flags;
-	uint32_t extension[2];
-	uint32_t *seq_no;
-	uint32_t *result;
-	uint32_t *progress;
-	uint32_t *written_rates;
-} SceKernelSpackageArgs;
-
 _Static_assert(sizeof(SceKernelSpackageArgs) == 44, "s-package user request size");
 _Static_assert(offsetof(SceKernelSpackageArgs, flags) == 16 &&
 	       offsetof(SceKernelSpackageArgs, seq_no) == 28,

@@ -24,6 +24,54 @@ typedef struct SceSblUsSpkgInfo {
 	int reserved2;
 } SceSblUsSpkgInfo;
 
+/* Whole user request, including the uninterpreted words preserved on output. */
+typedef struct SceKernelSpackageArgs {
+	SceSize arg_size;
+	uint32_t package_type;
+	void *addr;
+	SceSize size;
+	uint32_t flags;
+	uint32_t extension[2];
+	uint32_t *seq_no;
+	uint32_t *result;
+	uint32_t *progress;
+	uint32_t *written_rates;
+} SceKernelSpackageArgs;
+
+/* The package-info record is separate from the following chunk-info record. */
+typedef struct SpkgPackageInfo {
+	uint32_t version;
+	uint32_t type;
+	uint64_t hardwareInfo;
+	uint64_t updateVersion;
+	uint64_t finalSize;
+	uint64_t decryptedSize;
+	uint32_t requirements;
+	uint32_t platform;
+	uint32_t downgradeBarrier;
+	uint32_t baseVersion;
+	uint8_t description[8];
+} SpkgPackageInfo;
+
+/* Descriptions are serialized secure-service output, not kernel-owned fields. */
+typedef struct SpkgChunkInfo {
+	uint8_t description[16];
+	uint64_t offset;
+	uint64_t size;
+	uint64_t chunkIndex;
+	uint64_t chunkCount;
+	uint8_t extension[16];
+} SpkgChunkInfo;
+
+/*
+ * What sceSblUsGetExtractSpackage hands back past the certified-file header: the package's two
+ * records, then the chunk's data (the name ours).
+ */
+typedef struct SceSblUsExtractedSpackage {
+	SpkgPackageInfo info;
+	SpkgChunkInfo chunk;
+} SceSblUsExtractedSpackage;
+
 /* the package types sceSblUsGetSpkgInfo takes (the name ours) */
 #define SCE_SBL_US_SPKG_TYPE_SYSTEM	1
 #define SCE_SBL_US_SPKG_TYPE_MANUFACTURING	23	/* the manufacturing image (cui_setupper's message) */
@@ -53,6 +101,16 @@ int _sceSblUsSetSwInfoBin(const char *name, SceSize nameLength, const void *valu
 int _sceSblUsVerifyPup(const char *path);
 int _sceSblUsVerifyPupHeader(const char *path);
 int _sceSblUsVerifyPupSegmentById(const char *path, SceUInt64 segmentId);
+int _sceSblUsUpdateSpackage(int packageType, const SceKernelSpackageArgs *args,
+			    uint32_t *requestId);
+int _sceSblUsInspectSpackage(int packageType, const SceKernelSpackageArgs *args,
+			     uint32_t *requestId);
+int _sceSblUsExtractSpackage(int packageType, const SceKernelSpackageArgs *args,
+			     uint32_t *requestId);
+int _sceSblUsGetExtractSpackage(int nodeType, uint32_t requestId, SceKernelSpackageArgs *args);
+int _sceSblUsAllocateBuffer(SceSize size, void **buffer);
+int _sceSblUsReleaseBuffer(void *buffer);
+int _sceSblUsGetStatus(int nodeType, uint32_t requestId, const SceKernelSpackageArgs *args);
 int _sceSblUsGetSpkgInfo(int packageType, SceSblUsSpkgInfo *info);
 int _sceSblUsGetUpdateMode(SceUInt8 *mode);
 int _sceSblUsSetUpdateMode(SceUInt8 mode);
@@ -62,6 +120,18 @@ int _sceSblUsPowerControl(int operation, int flags);
 int sceSblUsVerifyPup(const char *path);
 int sceSblUsVerifyPupHeader(const char *path);
 int sceSblUsVerifyPupSegmentById(const char *path, SceUInt64 segmentId);
+int sceSblUsUpdateSpackage(int packageType, void *addr, SceSize size, uint32_t flags,
+			   uint32_t *requestId);
+int sceSblUsInspectSpackage(int packageType, void *addr, SceSize size, uint32_t flags,
+			    uint32_t *requestId);
+int sceSblUsExtractSpackage(int packageType, void *addr, SceSize size, uint32_t flags,
+			    uint32_t *requestId);
+int sceSblUsGetExtractSpackage(int nodeType, uint32_t requestId, uint32_t extension,
+			       SceSize bufferSize, void *buffer);
+int sceSblUsAllocateBuffer(SceSize size, void **buffer);
+int sceSblUsReleaseBuffer(void *buffer);
+int sceSblUsGetStatus(int nodeType, uint32_t requestId, uint32_t *seqNo, uint32_t *result,
+		      uint32_t *progress, uint32_t *writtenRates);
 int sceSblUsGetSpkgInfo(int packageType, SceSblUsSpkgInfo *info);
 int sceSblUsGetUpdateMode(SceUInt8 *mode);
 int sceSblUsSetUpdateMode(SceUInt8 mode);

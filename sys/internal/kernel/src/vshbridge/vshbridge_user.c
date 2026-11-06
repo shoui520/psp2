@@ -6,6 +6,7 @@
  * separate kernel stack (SceThreadmgrForDriver_E54FD746).
  */
 #include <scetypes.h>
+#include <vshbridge/vshbridge.h>
 #include "vshbridge.h"
 #include "vshbridge_copy.h"
 
@@ -454,14 +455,6 @@ int _vshIdStorageCreateAtomicLeaves(const SceUInt16 *leaves, int num)
 {
 	return vshIdStorageCreateAtomicLeaves(leaves, num);
 }
-
-/* sceIoMount's data and its 64-bit reserved word, in two halves */
-typedef struct VshIoMountArgs {
-	void *data;
-	SceUInt32 reservedLow;
-	SceUInt32 reservedHigh;
-	SceUInt32 reserved[3];
-} __attribute__((aligned(8))) VshIoMountArgs;
 
 int _vshIoMount(int id, const char *path, int permission, const VshIoMountArgs *uargs)
 {
