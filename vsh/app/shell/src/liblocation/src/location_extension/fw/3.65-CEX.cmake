@@ -1,9 +1,10 @@
-# 3.650.011-TOOL: vs0:sys/external/liblocation_extension.suprx (generated)
-set(MODULE_NID 0xC4A321A1)
+# 3.65-CEX: vs0:sys/external/liblocation_extension.suprx (generated)
+set(MODULE_NID 0x9ABB7402)
+set(MODULE_AUTH_ID 0x280000000002809C)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
-set(MODULE_NID0_VARS 0x1A9822A4:module_nid0_1A9822A4 0xD20886EB:module_nid0_D20886EB)
+set(MODULE_NID0_VARS 0x1A9822A4:sce_module_start_thread_parameter 0xD20886EB:sce_module_stop_thread_parameter)
 set(MODULE_NID0_VAR_ORDER 0x1A9822A4 0xD20886EB 0x936C8A78 0x6C2224BA)
 set(MODULE_EXPORT_ORDER 0x00000000 0x2ECC3C56)
 set(MODULE_IMPORT_LIBS

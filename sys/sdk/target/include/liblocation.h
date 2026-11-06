@@ -206,6 +206,13 @@ SceInt32 sceLocationDenyApplication(SceLocationHandle handle);
 SceInt32 sceLocationSetThreadParameter(SceInt32 intPriority, SceInt32 cpuAffinityMask);
 SceInt32 sceLocationSetGpsEmulationFile(unsigned char *filename);
 
+/* SceLibLocationExtension (liblocation_extension.suprx) exports these */
+SceInt32 sceLocationGetLocationWifiHistory(SceLocationHandle handle, SceUInt32 timeout,
+					   SceLocationLocationInfo *linfo);
+SceInt32 sceLocationQueryLocationWifiHistory(SceLocationHandle handle, SceRtcTick timestamp,
+					     SceUInt32 timeout, SceLocationLocationInfo *linfo);
+SceInt32 sceLocationCancelQueryLocationWifiHistory(SceLocationHandle handle);
+
 #ifdef __cplusplus
 }
 #endif
