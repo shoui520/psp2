@@ -88,10 +88,12 @@ public:
 
 	RefPtr &operator=(const RefPtr &other)
 	{
-		if (other.m_ptr != m_ptr) {
+		T *ptr = other.m_ptr;
+
+		if (ptr != m_ptr) {
 			if (m_ptr != NULL)
 				m_ptr->Release();
-			m_ptr = other.m_ptr;
+			m_ptr = ptr;
 			if (m_ptr != NULL)
 				m_ptr->AddRef();
 		}
