@@ -456,3 +456,343 @@ int bxceParserSkipSpace(BxceParser *parser)
 	}
 	return skipped;
 }
+
+/*
+ * Goes on with the attribute a chunk's end split, from the state it left: 1 when the attribute
+ * was appended or an error set the status, 0 when the chunk ended again.
+ */
+int bxceParserResumeAttribute(BxceParser *parser, BxceAttributeList *list)
+{
+	int state = parser->state;
+	int ret;
+
+	if (state == BXCE_STATE_ATTR_NAME) {
+		if (bxceParserReadAttrName(parser, parser->attr) == 0)
+			return 0;
+		if (parser->status != 0)
+			return 1;
+		state = BXCE_STATE_ATTR_EQUALS;
+		parser->state = BXCE_STATE_ATTR_EQUALS;
+	} else if (state >= BXCE_STATE_ATTR_QUOTE) {
+		goto value;
+	}
+
+	bxceParserSkipSpace(parser);
+	if (parser->position >= parser->size)
+		return 0;
+	if (parser->input[parser->position] != '=') {
+		parser->status = SCE_BXCE_ERROR_XML_EXPECTED_EQUALITY_OPERATOR;
+		return 1;
+	}
+	parser->position++;
+
+value:
+	if (state < BXCE_STATE_ATTR_QUOTE + 1) {
+		bxceParserSkipSpace(parser);
+		if (parser->position >= parser->size) {
+			parser->state = BXCE_STATE_ATTR_QUOTE;
+			return 0;
+		}
+		parser->quote = parser->input[parser->position];
+		if (parser->input[parser->position] != '"' &&
+		    parser->input[parser->position] != '\'') {
+			parser->status = SCE_BXCE_ERROR_XML_EXPECTED_QUOTE;
+			return 1;
+		}
+		parser->state = BXCE_STATE_ATTR_VALUE;
+		parser->position++;
+	} else if (state != BXCE_STATE_ATTR_VALUE) {
+		goto close;
+	}
+
+	if (bxceParserReadAttrValue(parser, parser->attr) == 0)
+		return 0;
+	if (parser->status != 0)
+		return 1;
+	parser->state = BXCE_STATE_ATTR_CLOSE;
+
+close:
+	if (parser->position >= parser->size)
+		return 0;
+	if (parser->input[parser->position] != parser->quote) {
+		parser->status = SCE_BXCE_ERROR_XML_EXPECTED_QUOTE;
+		return 1;
+	}
+	parser->position++;
+
+	if (parser->resolveAttrEntity &&
+	    (ret = bxceParserDecodeAttrValue(parser, parser->attr)) != 0) {
+		parser->status = ret;
+		return 0;
+	}
+	ret = bxceAttributeListAppend(list, parser->attr);
+	parser->attr = NULL;
+	if (ret != 0) {
+		parser->status = SCE_BXCE_ERROR_DUPLICATE_ATTRIBUTE_NAME;
+		return 0;
+	}
+	return 1;
+}
+
+/* reads a start tag's attributes up to its '>' or "/": 1 when there, or on an error, 0 when the chunk ended */
+int bxceParserReadAttributes(BxceParser *parser, BxceAttributeList *list)
+{
+	char c = parser->input[parser->position];
+	BxceAttr *attr;
+	int ret;
+
+	if (c == '/')
+		return 1;
+
+	while (c != '>') {
+		attr = bxceAttributeListNewAttr(list);
+		parser->attr = attr;
+		if (attr == NULL) {
+			parser->status = SCE_BXCE_ERROR_NO_MEMORY;
+			return 1;
+		}
+		if (bxceParserReadAttrName(parser, attr) == 0) {
+			parser->state = BXCE_STATE_ATTR_NAME;
+			return 0;
+		}
+		if (parser->status != 0)
+			return 1;
+
+		bxceParserSkipSpace(parser);
+		if (parser->position >= parser->size) {
+			parser->state = BXCE_STATE_ATTR_EQUALS;
+			return 0;
+		}
+		if (parser->input[parser->position] != '=') {
+			parser->status = SCE_BXCE_ERROR_XML_EXPECTED_EQUALITY_OPERATOR;
+			return 1;
+		}
+		parser->position++;
+
+		bxceParserSkipSpace(parser);
+		if (parser->position >= parser->size) {
+			parser->state = BXCE_STATE_ATTR_QUOTE;
+			return 0;
+		}
+		parser->quote = parser->input[parser->position];
+		if (parser->input[parser->position] != '"' &&
+		    parser->input[parser->position] != '\'') {
+			parser->status = SCE_BXCE_ERROR_XML_EXPECTED_QUOTE;
+			return 1;
+		}
+		parser->state = BXCE_STATE_ATTR_VALUE;
+		parser->position++;
+
+		ret = bxceParserReadAttrValue(parser, parser->attr);
+		attr = parser->attr;
+		if (ret == 0)
+			return 0;
+		if (parser->status != 0)
+			return 1;
+		if (parser->position >= parser->size) {
+			parser->state = BXCE_STATE_ATTR_CLOSE;
+			return 0;
+		}
+		if (parser->input[parser->position] != parser->quote) {
+			parser->status = SCE_BXCE_ERROR_XML_EXPECTED_QUOTE;
+			return 1;
+		}
+		parser->position++;
+
+		if (parser->resolveAttrEntity) {
+			ret = bxceParserDecodeAttrValue(parser, attr);
+			attr = parser->attr;
+			if (ret != 0) {
+				parser->status = ret;
+				return 0;
+			}
+		}
+		ret = bxceAttributeListAppend(list, attr);
+		parser->attr = NULL;
+		if (ret != 0) {
+			parser->status = SCE_BXCE_ERROR_DUPLICATE_ATTRIBUTE_NAME;
+			return 0;
+		}
+
+		if (parser->position >= parser->size)
+			return 0;
+		if (!bxceParserSkipSpace(parser))
+			return 1;
+		if (parser->position >= parser->size) {
+			parser->state = BXCE_STATE_ATTR_NAME;
+			return 0;
+		}
+		c = parser->input[parser->position];
+		if (c == '/')
+			return 1;
+	}
+	return 1;
+}
+
+/*
+ * Reads a tag's name up to '>', '/' or white space: 1 when it ended (NUL-terminated, its capacity
+ * set to its length) or out of memory, 0 when the chunk ended first.
+ */
+int bxceParserReadName(BxceParser *parser, BxceBuffer *name)
+{
+	int position = parser->position;
+
+	if (position >= parser->size)
+		return 0;
+
+	for (;;) {
+		const char *input = parser->input;
+		int length = name->length;
+		char c = input[position];
+
+		if (c == '>' || c == '/' || s_bxceByteType[(SceUInt8)input[position]] == BXCE_BT_S) {
+			name->data[length] = 0;
+			name->capacity = name->length;
+			return 1;
+		}
+		if (name->capacity <= length) {
+			int ret = bxceBufferGrow(&name->data, &name->capacity, 0);
+
+			input = parser->input;
+			position = parser->position;
+			length = name->length;
+			if (ret != 0)
+				break;
+		}
+		name->data[length] = input[position];
+		name->length++;
+		position = parser->position + 1;
+		parser->position = position;
+		if (position >= parser->size)
+			return 0;
+	}
+
+	parser->status = SCE_BXCE_ERROR_NO_MEMORY;
+	return 1;
+}
+
+/* reads a start tag's name and attributes: 1 when the tag's end is next or on an error, 0 when the chunk ended */
+int bxceParserReadStartTag(BxceParser *parser, BxceBuffer *name, BxceAttributeList *list)
+{
+	int state = parser->state;
+
+	if (state == BXCE_STATE_TAG_NAME) {
+		if (name->data == NULL) {
+			name->data = (char *)ScebXCe_B8DDE741(0x80);
+			if (name->data == NULL) {
+				parser->status = SCE_BXCE_ERROR_NO_MEMORY;
+				return 1;
+			}
+			name->capacity = 0x80;
+		}
+		if (bxceParserReadName(parser, name) == 0)
+			return 0;
+		if (parser->status != 0)
+			return 1;
+		state = BXCE_STATE_ATTRIBUTES;
+		parser->state = BXCE_STATE_ATTRIBUTES;
+	}
+
+	if (parser->position >= parser->size)
+		return 0;
+	if (parser->attr != NULL) {
+		if (bxceParserResumeAttribute(parser, list) == 0)
+			return 0;
+		if (parser->status != 0)
+			return 1;
+		state = parser->state;
+		if (parser->position >= parser->size)
+			return 0;
+	}
+
+	if (!bxceParserSkipSpace(parser) && state != BXCE_STATE_ATTR_NAME)
+		return 1;
+	if (parser->position >= parser->size) {
+		parser->state = BXCE_STATE_ATTR_NAME;
+		return 0;
+	}
+	return bxceParserReadAttributes(parser, list) != 0;
+}
+
+/* character data up to '<' (or '&' when references are resolved): 1 when it ended there, 0 at the chunk's end */
+int bxceParserScanText(BxceParser *parser, const char **text, int *length)
+{
+	int position = parser->position;
+	int end = parser->size;
+	int start = position;
+
+	*text = parser->input + position;
+	if (position < end) {
+		const char *s = parser->input + position;
+
+		do {
+			char c = *s;
+
+			if (c == '<' || (parser->resolveEntity && c == '&')) {
+				*length = position - start;
+				return 1;
+			}
+			parser->position = ++position;
+			s++;
+		} while (position < end);
+	}
+
+	*length = position - start;
+	return 0;
+}
+
+/*
+ * Matches an end tag's name against the innermost open element, a chunk's end at any place, then
+ * its '>': 1 when done or on an error, 0 when the chunk ended.
+ */
+int bxceParserReadEndTag(BxceParser *parser)
+{
+	if (parser->state == BXCE_STATE_END_TAG_NAME) {
+		int available, matched, remaining;
+		const char *input;
+
+		if (parser->elementName.data == NULL) {
+			BxceNameStackEntry *entry = bxceNameStackPop(parser->nameStack);
+
+			if (entry == NULL) {
+				parser->status = SCE_BXCE_ERROR_XML_END_TAG_MISMATCH;
+				return 1;
+			}
+			parser->elementName.capacity = entry->length;
+			parser->elementName.data = entry->name;
+			parser->elementName.length = 0;
+			ScebXCe_EC560647(entry);
+		}
+
+		available = parser->size - parser->position;
+		matched = parser->elementName.length;
+		remaining = parser->elementName.capacity - matched;
+		input = parser->input + parser->position;
+		if (remaining > available) {
+			if (bxceMemcmp(parser->elementName.data + matched, input, available) != 0) {
+				parser->status = SCE_BXCE_ERROR_XML_END_TAG_MISMATCH;
+				return 1;
+			}
+			parser->elementName.length += available;
+			return 0;
+		}
+		if (bxceMemcmp(parser->elementName.data + matched, input, remaining) != 0) {
+			parser->status = SCE_BXCE_ERROR_XML_END_TAG_MISMATCH;
+			return 1;
+		}
+		matched = parser->elementName.length;
+		parser->elementName.length = parser->elementName.capacity;
+		parser->position = parser->position + parser->elementName.capacity - matched;
+		parser->state = BXCE_STATE_END_TAG_CLOSE;
+	}
+
+	bxceParserSkipSpace(parser);
+	parser->state = BXCE_STATE_END_TAG_CLOSE;
+	if (parser->size == parser->position)
+		return 0;
+	if (parser->input[parser->position] == '>')
+		parser->position++;
+	else
+		parser->status = SCE_BXCE_ERROR_XML_EXPECTED_CLOSING_ANGLE_BRACKET;
+	return 1;
+}

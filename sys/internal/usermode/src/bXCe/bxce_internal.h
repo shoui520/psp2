@@ -280,7 +280,30 @@ enum {
 #define BXCE_PARSER_SAVED_MAX		16
 
 typedef struct BxceParserState BxceParserState;
-typedef struct BxceNameStack BxceNameStack;
+
+/* the states a chunk's end can leave the tokenizer in, where the next chunk resumes (values Sony's) */
+enum {
+	BXCE_STATE_TAG_NAME = 5,
+	BXCE_STATE_ATTRIBUTES = 7,
+	BXCE_STATE_ATTR_NAME = 8,
+	BXCE_STATE_ATTR_EQUALS = 9,
+	BXCE_STATE_ATTR_QUOTE = 10,
+	BXCE_STATE_ATTR_VALUE = 12,
+	BXCE_STATE_ATTR_CLOSE = 13,
+	BXCE_STATE_END_TAG_NAME = 18,
+	BXCE_STATE_END_TAG_CLOSE = 19
+};
+
+/* the names of the open elements, the innermost first */
+typedef struct BxceNameStackEntry {
+	char *name;
+	int length;
+	struct BxceNameStackEntry *next;
+} BxceNameStackEntry;
+
+typedef struct BxceNameStack {
+	BxceNameStackEntry *top;
+} BxceNameStack;
 
 typedef struct BxceParser {
 	BxceParserState *saved[BXCE_PARSER_SAVED_MAX];
@@ -322,8 +345,12 @@ typedef struct BxceParser {
 int bxceAttrAppendName(BxceAttr *attr, const char *name, int length);
 int bxceAttrAppendValue(BxceAttr *attr, const char *value, int length);
 
-/* the names of the open elements */
+/* the name stack */
+int bxceNameStackInitialize(BxceNameStack *stack);
 int bxceNameStackTerminate(BxceNameStack *stack);
+int bxceNameStackPush(BxceNameStack *stack, char *name, int length);
+BxceNameStackEntry *bxceNameStackPop(BxceNameStack *stack);
+int bxceNameStackIsEmpty(const BxceNameStack *stack);
 
 /* character references */
 int ScebXCe_DFB92627(SceUInt32 *value, const char *digits, int length);	/* hexadecimal */
@@ -339,6 +366,12 @@ int bxceParserLookupReference(BxceParser *parser, BxceBuffer *reference);
 int bxceParserDecodeAttrValue(BxceParser *parser, BxceAttr *attr);
 int bxceParserSkipChar(BxceParser *parser, char c);
 int bxceParserSkipSpace(BxceParser *parser);
+int bxceParserResumeAttribute(BxceParser *parser, BxceAttributeList *list);
+int bxceParserReadAttributes(BxceParser *parser, BxceAttributeList *list);
+int bxceParserReadName(BxceParser *parser, BxceBuffer *name);
+int bxceParserReadStartTag(BxceParser *parser, BxceBuffer *name, BxceAttributeList *list);
+int bxceParserScanText(BxceParser *parser, const char **text, int *length);
+int bxceParserReadEndTag(BxceParser *parser);
 
 /* a node list (the SDK's NodeList): its entries in a doubly linked list */
 typedef struct BxceNodeListEntry {
