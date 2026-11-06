@@ -6,25 +6,6 @@
 #include <scetypes.h>
 #include "location_extension.h"
 
-#define LOCATION_METHOD_GET_LOCATION_WIFI_HISTORY		0x12340015
-#define LOCATION_METHOD_GET_LOCATION_WIFI_HISTORY_RESULT	0x12340016
-#define LOCATION_METHOD_CANCEL_QUERY_LOCATION_WIFI_HISTORY	0x12340018
-
-struct GetLocationWifiHistoryParam {
-	SceLocationHandle handle;
-	bool query;
-	/* always false from this library */
-	bool option;
-	SceRtcTick timestamp;
-	SceUInt32 timeout;
-};
-
-struct GetLocationWifiHistoryResultParam {
-	SceLocationHandle handle;
-	bool query;
-	bool option;
-};
-
 int locationServiceGetLocationWifiHistory(IPMI::Client *client, SceLocationHandle handle,
 					  bool query, bool option, SceRtcTick timestamp,
 					  SceUInt32 timeout, SceLocationLocationInfo *linfo)

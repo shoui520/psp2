@@ -12,6 +12,7 @@
 #include <libkernel/libkernel.h>
 #include <kernel/threadmgr.h>
 #include <liblocation.h>
+#include <rtc.h>
 #include "../../../../../../../lowlayer/src/ipmi/client.h"
 
 /* the services: one location client per handle, one heading client for all of them */
@@ -116,7 +117,10 @@ public:
 	SceUInt32 mode;						/* 0x64 */
 	int useConfirmData;					/* 0x68 */
 	IPMI::Client *headingClient;				/* 0x6c */
+#ifndef LOCATION_INTERNAL
+	/* not in liblocation_internal's build of the list (0x70 bytes there) */
 	int confirmPending;					/* 0x70 */
+#endif
 
 	IpcClientList()
 	{
@@ -132,7 +136,9 @@ public:
 		mode = 0;
 		useConfirmData = 0;
 		headingClient = NULL;
+#ifndef LOCATION_INTERNAL
 		confirmPending = 0;
+#endif
 	}
 
 	~IpcClientList()
@@ -177,6 +183,8 @@ public:
 	static void getThreadParameter(SceInt32 *pPriority, SceInt32 *pCpuAffinityMask);
 	static bool isSystemInitialized();
 	static bool isInitialized();
+	/* liblocation_internal's */
+	static SceUInt8 getUseHeap();
 
 	int connectLocation(IpcClientInfo *info);
 	int close(IpcClientInfo *info);
@@ -204,6 +212,11 @@ public:
 	int getServiceValue(IpcClientInfo *info, SceUInt32 *value);
 	SceUInt32 getMode();
 	void setConfirmPending(int pending);
+	/* liblocation_internal's */
+	int getLocationWifiHistory(IpcClientInfo *info, bool query, SceRtcTick timestamp,
+				   SceUInt32 timeout, SceLocationLocationInfo *linfo);
+	int setConfirmData(SceLocationHandle handle, const LocationAllocator *allocator,
+			   SceUInt32 arg, const SceWChar16 *firstText, const SceWChar16 *secondText);
 
 private:
 	static int destroyClients();
