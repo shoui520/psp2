@@ -122,6 +122,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/gpu_clock.cpp
 	src/url/uri.c
 	src/template_cache.cpp
+	src/graphics/camera_target.cpp
 	src/common/resource_hooks.c
 	src/common/frame_count.c
 	src/common/halt_assert.c

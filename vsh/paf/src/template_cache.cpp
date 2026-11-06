@@ -10,6 +10,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <plugin.h>
+/* the colours' statics are made before arl's */
+#include <graphics/color.h>
+#include <graphics/arl/arl_defines.h>
 #include <framework.h>
 #include <cxml/cxml.h>
 #include <resource/resource_obj.h>

@@ -79,14 +79,15 @@ public:
 	}
 
 	/* the transform placed at eye, turned to look at center (0x81193760) */
-	void LookAt(math::v4 eye, math::v4 center, math::v4 up);
+	void LookAt(const math::v4 &eye, const math::v4 &center, const math::v4 &up);
 
 	math::v4 m_center;
 	/* 1 once LookAt has placed the transform */
 	int32_t m_mode;
 	common::SharedPtr<Transform> m_transform;
-	/* the up of the last LookAt was the y axis, else the z axis is */
-	bool m_y_up;
+	/* the up of the last LookAt was the y axis, else the z axis is; a byte (Sony's LookAt
+	   reads its arguments again after storing it, as after a character store) */
+	uint8_t m_y_up;
 };
 
 /* what moves the camera: the point it looks at and the steps it moves by */
