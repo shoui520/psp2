@@ -10,6 +10,7 @@
 #include <cache/cache_manager.h>
 #include <datetime/datetime.h>
 #include <file/localfile.h>
+#include <graphics/arl/arl_defines.h>
 #include <graphics/graphmem/graphmem.h>
 #include <graphics/gutil.h>
 #include <graphics/surface/surface_display.h>
