@@ -40,6 +40,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	value.cpp
 	result.cpp
 	statement.cpp
+	collation.cpp
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/contrib/sqlite-3.7.6.3" "${PSP2_SRC}/vsh/lowlayer/src")
@@ -55,3 +56,4 @@ set_source_files_properties(record.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesi
 set_source_files_properties(value.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(result.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(statement.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
+set_source_files_properties(collation.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)

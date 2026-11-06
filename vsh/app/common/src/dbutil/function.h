@@ -14,6 +14,12 @@ namespace dbutil {
 
 class Function {
 public:
+	Function()
+		: m_argCount(0), m_func(NULL), m_step(NULL), m_final(NULL), m_arg(NULL),
+		  m_textRep(SQLITE_UTF8)
+	{
+	}
+
 	virtual ~Function()
 	{
 	}

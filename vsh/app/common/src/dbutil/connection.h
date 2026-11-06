@@ -174,6 +174,10 @@ public:
 /* a collation the caller registers on a connection (sqlite3_create_collation) */
 class Collation {
 public:
+	Collation() : m_textRep(SQLITE_UTF8), m_arg(NULL), m_compare(NULL)
+	{
+	}
+
 	virtual ~Collation()
 	{
 	}
