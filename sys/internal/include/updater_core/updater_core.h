@@ -43,21 +43,30 @@ typedef struct SceUpdaterMemoryInfo {
 #define SCE_UPDATER_UPDATE_MODE_NONE	0xff
 #define SCE_UPDATER_UPDATE_MODE_UPDATE	0x30
 
-/* one side of sceUpdaterCopyFile */
+/*
+ * One side of sceUpdaterCopyFile: the file and how to reach it. A side whose open is NULL gets
+ * the core's own, on the file system (sceIoOpen and the rest, arg pointing at the descriptor).
+ */
 typedef struct SceUpdaterCopyFileTarget {
-	SceUInt32 reserved0;
+	void *arg;
 	const char *path;
-	SceUInt32 reserved[5];
+	int (*open)(void *arg, const char *path);
+	int (*close)(void *arg);
+	SceInt32 (*getSize)(void *arg);
+	SceSSize (*read)(void *arg, void *buf, SceSize size);
+	SceSSize (*write)(void *arg, const void *buf, SceSize size);
 } SceUpdaterCopyFileTarget;
 
-typedef void (*SceUpdaterCopyFileCallback)(void *arg, SceInt32 status, SceUInt64 offset,
-					   SceUInt64 copied);
+/* called after each buffer is read: the file's size and the bytes read so far */
+typedef void (*SceUpdaterCopyFileCallback)(void *arg, SceUInt64 fileSize, SceUInt64 copied);
 
+/* a field left 0 takes its default (buffer 0x40000 bytes, no callback, the user priority) */
 typedef struct SceUpdaterCopyFileOption {
 	void *arg;
-	SceSize bufferSize;
+	SceInt32 bufferSize;
 	SceUpdaterCopyFileCallback callback;
-	SceUInt32 reserved[2];
+	SceInt32 threadPriority;
+	SceInt32 cpuAffinityMask;
 } SceUpdaterCopyFileOption;
 
 /* a segment analysis (sceUpdaterCreateSegmentAnalysisHandler) */
@@ -114,8 +123,8 @@ const char *sceUpdaterGetPupPath(void);
 int sceUpdaterPowerLock(void);
 int sceUpdaterPowerUnlock(void);
 void sceUpdaterSetProgressCallback(SceUpdaterProgressCallback callback, SceUInt32 interval);
-int sceUpdaterCopyFile(const SceUpdaterCopyFileTarget *src, const SceUpdaterCopyFileTarget *dst,
-		       const SceUpdaterCopyFileOption *option);
+int sceUpdaterCopyFile(SceUpdaterCopyFileTarget *src, SceUpdaterCopyFileTarget *dst,
+		       SceUpdaterCopyFileOption *option);
 
 #ifdef __cplusplus
 }

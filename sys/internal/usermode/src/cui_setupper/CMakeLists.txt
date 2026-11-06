@@ -11,5 +11,13 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	cui_view.c
 	${PSP2_SRC}/sys/sdk/target/src/crt0/crt0_main.c
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/updater_core.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/parallel_copy_file.cpp
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include")
+# updater_core, a library of its own in Sony's build: budget 24 writes its classes' C2 and D2
+# copies in full and inlines ParallelCopyFileBuffer's constructor into CreateElement, as Sony's
+# build did (12 and 16 call C1 from C2), 2026-11-06
+set_source_files_properties(
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/updater_core.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/parallel_copy_file.cpp
+	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=24)

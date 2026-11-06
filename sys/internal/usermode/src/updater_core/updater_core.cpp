@@ -11,6 +11,7 @@
 #include <libkernel/libkernel.h>
 #include <updater_core/updater_core.h>
 #include "updater_log.h"
+#include "updater_memory.h"
 #include "updater_progress.h"
 #include "parallel_copy_file.h"
 #include "partition_manager.h"
@@ -56,7 +57,7 @@ static int s_logState = UPDATER_OPEN_NONE;
 static SceUID s_logFd = -1;
 static int s_segmentAnalysisState = UPDATER_OPEN_NONE;
 
-static SceUpdaterMemoryInfo s_memoryInfo;
+SceUpdaterMemoryInfo g_updaterMemoryInfo;
 
 int UpdaterLogPrintf(const char *format, ...)
 {
@@ -99,7 +100,7 @@ int sceUpdaterInitialize(const SceUpdaterMemoryInfo *memoryInfo)
 		UPDATER_ERROR(115);
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
-	s_memoryInfo = *memoryInfo;
+	g_updaterMemoryInfo = *memoryInfo;
 	s_spkgGroupManager = new SpkgGroupManager(0);
 	s_state = UPDATER_STATE_INITIALIZED;
 	return 0;
@@ -560,8 +561,8 @@ void sceUpdaterSetProgressCallback(SceUpdaterProgressCallback callback, SceUInt3
 	g_updaterProgressInterval = interval;
 }
 
-int sceUpdaterCopyFile(const SceUpdaterCopyFileTarget *src, const SceUpdaterCopyFileTarget *dst,
-		       const SceUpdaterCopyFileOption *option)
+int sceUpdaterCopyFile(SceUpdaterCopyFileTarget *src, SceUpdaterCopyFileTarget *dst,
+		       SceUpdaterCopyFileOption *option)
 {
 	ParallelCopyFile copy(src, dst, option);
 
@@ -572,20 +573,20 @@ int sceUpdaterCopyFile(const SceUpdaterCopyFileTarget *src, const SceUpdaterCopy
 
 void *operator new(size_t size)
 {
-	return s_memoryInfo.updaterCoreAlloc(size);
+	return g_updaterMemoryInfo.updaterCoreAlloc(size);
 }
 
 void *operator new[](size_t size)
 {
-	return s_memoryInfo.updaterCoreAlloc(size);
+	return g_updaterMemoryInfo.updaterCoreAlloc(size);
 }
 
 void operator delete(void *ptr)
 {
-	s_memoryInfo.updaterCoreFree(ptr);
+	g_updaterMemoryInfo.updaterCoreFree(ptr);
 }
 
 void operator delete[](void *ptr)
 {
-	s_memoryInfo.updaterCoreFree(ptr);
+	g_updaterMemoryInfo.updaterCoreFree(ptr);
 }

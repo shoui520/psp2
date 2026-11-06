@@ -69,7 +69,7 @@ private:
 	int CopyPup(void);
 	void ReportProgress(void);
 	int ExtractUpdater(void);
-	static void CopyCallback(void *arg, SceInt32 status, SceUInt64 offset, SceUInt64 copied);
+	static void CopyCallback(void *arg, SceUInt64 fileSize, SceUInt64 copied);
 
 	char *m_pupPath;
 	void *m_buffer;
@@ -416,7 +416,7 @@ int CuiSetUpper::ExtractUpdater(void)
 	return ret;
 }
 
-void CuiSetUpper::CopyCallback(void *arg, SceInt32 status, SceUInt64 offset, SceUInt64 copied)
+void CuiSetUpper::CopyCallback(void *arg, SceUInt64 fileSize, SceUInt64 copied)
 {
 	CuiSetUpper *setupper = (CuiSetUpper *)arg;
 	SceUInt64 total;
@@ -424,7 +424,7 @@ void CuiSetUpper::CopyCallback(void *arg, SceInt32 status, SceUInt64 offset, Sce
 	total = setupper->m_total;
 	setupper->m_done = copied;
 	if (total == 0) {
-		total = offset + setupper->m_updaterSize;
+		total = fileSize + setupper->m_updaterSize;
 		setupper->m_total = total;
 	}
 	if (++s_progressCount % CUI_SETUPPER_PROGRESS_INTERVAL == 0)
