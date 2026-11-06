@@ -1419,3 +1419,312 @@ BxceNodeId bxceDocumentCreateElement(BxceDocument *doc, const char *name,
 
 	return (BxceNodeId)node;
 }
+
+/* an attribute's value: the text its value position names */
+const char *ScebXCe_84383D8E(const BxceDocument *doc, BxceNodeId attr)
+{
+	const char *p;
+	const char *texts;
+	int i;
+
+	if (attr == 0)
+		return NULL;
+
+	if (!doc->isBinary) {
+		p = (const char *)attr;
+		if ((p[0] & 0xF) != SCE_XML_TOKEN_DOM_ATTR)
+			return NULL;
+		texts = doc->texts;
+		i = (p[0] & SCE_XML_TOKEN_DOM_HAS_SIBLING) ? 1 : 0;
+		i += 1 + bxceLengthSize(((const SceUInt8 *)p)[i + 1]);
+		return bxceString(texts, bxceReadLength((const SceUInt8 *)p + i));
+	}
+
+	p = doc->nodes + attr;
+	if ((p[0] & 0xF) != SCE_XML_TOKEN_DOM_ATTR)
+		return NULL;
+	texts = doc->texts;
+	i = (p[0] & SCE_XML_TOKEN_DOM_HAS_SIBLING) ? 1 : 0;
+	i += 1 + bxceLengthSize(((const SceUInt8 *)p)[i + 1]);
+	return bxceString(texts, bxceReadLength((const SceUInt8 *)p + i));
+}
+
+/*
+ * Copies node and its following siblings (up to last) of the document src, with their elements'
+ * attributes, texts and children, into the DOM document doc under parent, after the child after.
+ * Stops at the first error doc notes.
+ */
+void bxceDocumentCopyNodes(BxceDocument *doc, const BxceDocument *src, BxceNodeId node,
+			   BxceNodeId after, BxceNodeId parent, BxceNodeId last)
+{
+	BxceAttributeList *attrs;
+	BxceNodeId attr, copy, child;
+	const char *name;
+	SceUInt32 type;
+
+	for (; node != 0 && doc->status == 0; node = ScebXCe_6FC9DC3F(src, node)) {
+		type = ScebXCe_FA18A039(src, node) & 0xF;
+		if (type <= SCE_XML_TOKEN_DOM_COMPACT_ELEMENT) {
+			copy = 0;
+			if (type > SCE_XML_TOKEN_DOM_END_ELEMENT) {
+				attrs = NULL;
+				attr = ScebXCe_B034C595(src, node);
+				if (attr != 0) {
+					attrs = (BxceAttributeList *)ScebXCe_B8DDE741(sizeof(BxceAttributeList));
+					if (attrs == NULL) {
+						doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+						return;
+					}
+					ScebXCe_E7C8B20D(attrs);
+					do {
+						name = ScebXCe_B4989A58(src, attr);
+						if (ScebXCe_3DD761CF(attrs, name,
+								     ScebXCe_84383D8E(src, attr)) != 0) {
+							doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+							ScebXCe_9C2F9897(attrs);
+							if (attrs != NULL)
+								ScebXCe_EC560647(attrs);
+							return;
+						}
+						attr = ScebXCe_134F491C(src, attr);
+					} while (attr != 0);
+				}
+
+				copy = bxceDocumentCreateElement(doc, ScebXCe_1189A2B1(src, node), attrs,
+								 NULL, 0);
+				if (copy == 0) {
+					doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+					return;
+				}
+				if (after != 0)
+					ScebXCe_3BF2F11B(doc, parent, after, copy);
+				else
+					ScebXCe_3BF2F11B(doc, parent, after, copy);
+				if (attrs != NULL) {
+					ScebXCe_9C2F9897(attrs);
+					ScebXCe_EC560647(attrs);
+				}
+			}
+		} else {
+			copy = 0;
+			if (type == SCE_XML_TOKEN_DOM_TEXT) {
+				copy = ScebXCe_AEB2CE13(doc, ScebXCe_33825EFF(src, node),
+							bxceStrnlen(ScebXCe_33825EFF(src, node),
+								    BXCE_ATTR_STRING_MAX));
+				if (copy == 0) {
+					doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+					return;
+				}
+				if (after != 0)
+					ScebXCe_3BF2F11B(doc, parent, after, copy);
+				else
+					ScebXCe_3BF2F11B(doc, parent, after, copy);
+			}
+		}
+
+		/* the children, after the copy's last child */
+		after = 0;
+		for (child = ScebXCe_FEA6E4A1(doc, copy); child != 0;
+		     child = ScebXCe_6FC9DC3F(doc, child))
+			after = child;
+		bxceDocumentCopyNodes(doc, src, ScebXCe_FEA6E4A1(src, node), after, copy, last);
+
+		/* the next sibling, after the last child of the copy's parent */
+		parent = bxceDocumentGetParent(doc, copy);
+		after = 0;
+		for (child = ScebXCe_FEA6E4A1(doc, parent); child != 0;
+		     child = ScebXCe_6FC9DC3F(doc, child))
+			after = child;
+
+		if (node == last)
+			return;
+	}
+}
+
+/* an empty document: a bX one with no tables, or a DOM one with its document node and tables */
+int ScebXCe_FAB50608(BxceDocument *doc, SceUInt8 isDom)
+{
+	if (!isDom) {
+		doc->isExternal = 0;
+		doc->nodes = NULL;
+		doc->texts = NULL;
+		doc->elementNames = NULL;
+		doc->attrNames = NULL;
+		doc->status = 0;
+		doc->attrNameHash = NULL;
+		doc->elementNameHash = NULL;
+		doc->nodesCapacity = 0;
+		doc->textsCapacity = 0;
+		doc->elementNamesCapacity = 0;
+		doc->attrNamesCapacity = 0;
+		doc->nodesSize = 0;
+		doc->textsSize = 1;
+		doc->elementNamesSize = 0;
+		doc->attrNamesSize = 0;
+		doc->pendingAttrCount = 0;
+		doc->field1112 = 0;
+		doc->domRoot = NULL;
+		doc->isBinary = 1;
+		doc->field1120 = 0;
+		return 0;
+	}
+
+	doc->isExternal = 0;
+	doc->nodes = NULL;
+	doc->texts = NULL;
+	doc->elementNames = NULL;
+	doc->attrNames = NULL;
+	doc->status = 0;
+	doc->attrNameHash = NULL;
+	doc->elementNameHash = NULL;
+	doc->nodesCapacity = 0;
+	doc->textsCapacity = 0;
+	doc->elementNamesCapacity = 0;
+	doc->attrNamesCapacity = 0;
+	doc->nodesSize = 0;
+	doc->textsSize = 1;
+	doc->elementNamesSize = 0;
+	doc->attrNamesSize = 0;
+	doc->pendingAttrCount = 0;
+	doc->field1112 = 0;
+	doc->domRoot = NULL;
+	doc->isBinary = 1;
+	doc->field1120 = 0;
+
+	doc->domRoot = (BxceDomNode *)ScebXCe_B8DDE741(sizeof(BxceDomNode));
+	if (doc->domRoot == NULL) {
+		doc->status = SCE_BXCE_ERROR_NO_MEMORY;
+		return SCE_BXCE_ERROR_NO_MEMORY;
+	}
+	doc->domRoot->child = NULL;
+	doc->domRoot->sibling = NULL;
+	doc->domRoot->info = SCE_XML_TOKEN_DOM_ROOT_DOCUMENT;
+	doc->domRoot->text = 0;
+	doc->isBinary = 0;
+	return bxceDocumentAllocateTables(doc);
+}
+
+/* an empty function nothing calls */
+void bxceDocumentNop(void)
+{
+}
+
+/* the kind of a bX entity node: 5 or 6 when marked so, else the number it holds */
+int ScebXCe_35CDE77C(const BxceDocument *doc, BxceNodeId node)
+{
+	const char *p;
+
+	if (node == 0)
+		return SCE_BXCE_ERROR_DOM_ENITITY_ERROR;
+	if (!doc->isBinary)
+		return SCE_BXCE_ERROR_DOM_ENITITY_ERROR;
+
+	p = doc->nodes + node;
+	if (p[0] & 0x10)
+		return 5;
+	if (p[0] & 0x40)
+		return 6;
+	return ((const SceUInt8 *)p)[1];
+}
+
+/* the text of a bX entity node marked 0x12 or 0x42, else NULL */
+const char *bxceDocumentGetEntityText(const BxceDocument *doc, BxceNodeId node)
+{
+	const char *p;
+	const char *texts;
+
+	if (node == 0)
+		return NULL;
+	if (!doc->isBinary)
+		return NULL;
+
+	p = doc->nodes + node;
+	if ((p[0] & 0x12) == 0x12 || (p[0] & 0x42) == 0x42) {
+		texts = doc->texts;
+		return texts + bxceReadLength((const SceUInt8 *)p + 1) + 1;
+	}
+	return NULL;
+}
+
+/* frees a DOM node, its following siblings and their children, with their attribute blocks */
+void ScebXCe_2C2628BB(BxceDocument *doc, BxceNodeId node)
+{
+	BxceNodeId next;
+
+	if (doc->isBinary || node == 0)
+		return;
+
+	do {
+		ScebXCe_2C2628BB(doc, ScebXCe_FEA6E4A1(doc, node));
+		next = ScebXCe_6FC9DC3F(doc, node);
+		if (node != 0) {
+			switch (ScebXCe_FA18A039(doc, node)) {
+			case SCE_XML_TOKEN_DOM_ELEMENT:
+			case SCE_XML_TOKEN_DOM_COMPACT_ELEMENT:
+			case SCE_XML_TOKEN_DOM_PRED_ELEMENT:
+				if (((BxceDomNode *)node)->text != 0)
+					ScebXCe_EC560647((void *)((BxceDomNode *)node)->text);
+				/* fall through */
+			case SCE_XML_TOKEN_DOM_SKIP_TEXT_CDATA:
+			case SCE_XML_TOKEN_DOM_TEXT:
+			case SCE_XML_TOKEN_DOM_TEXT_SKIPPED:
+			case SCE_XML_TOKEN_DOM_SKIP_TEXT_PI:
+			case SCE_XML_TOKEN_DOM_SKIP_TEXT_COMMENT:
+				ScebXCe_EC560647((void *)node);
+				break;
+			default:
+				break;
+			}
+		}
+		node = next;
+	} while (node != 0);
+}
+
+/* frees what the document owns: its tables unless external, its DOM nodes */
+int ScebXCe_B0891B13(BxceDocument *doc)
+{
+	if (!doc->isExternal) {
+		if (doc->attrNameHash != NULL) {
+			bxceNameHashClear(doc->attrNameHash);
+			if (doc->attrNameHash != NULL)
+				ScebXCe_EC560647(doc->attrNameHash);
+			doc->attrNameHash = NULL;
+		}
+		if (doc->elementNameHash != NULL) {
+			bxceNameHashClear(doc->elementNameHash);
+			if (doc->elementNameHash != NULL)
+				ScebXCe_EC560647(doc->elementNameHash);
+			doc->elementNameHash = NULL;
+		}
+		if (doc->attrNames != NULL)
+			ScebXCe_EC560647(doc->attrNames);
+		doc->attrNames = NULL;
+		if (doc->texts != NULL)
+			ScebXCe_EC560647(doc->texts);
+		doc->texts = NULL;
+		if (doc->elementNames != NULL)
+			ScebXCe_EC560647(doc->elementNames);
+		doc->elementNames = NULL;
+		if (doc->nodes != NULL)
+			ScebXCe_EC560647(doc->nodes);
+		doc->nodes = NULL;
+	}
+
+	if (!doc->isBinary) {
+		ScebXCe_2C2628BB(doc, ScebXCe_CED6BECF(doc));
+		if (doc->domRoot != NULL)
+			ScebXCe_EC560647(doc->domRoot);
+		doc->domRoot = NULL;
+	}
+
+	if (doc->field1112 != 0)
+		doc->field1112 = 0;
+	return 0;
+}
+
+BxceNodeList *ScebXCe_1FA24DC0(const BxceDocument *doc, BxceNodeId node, const char *name)
+{
+	if (node == 0 || name == NULL)
+		return NULL;
+	return bxceGetElementsByTagName(doc, node, name, NULL);
+}

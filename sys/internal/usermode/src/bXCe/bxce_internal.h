@@ -27,6 +27,7 @@ extern "C" {
 #define SCE_BXCE_ERROR_DOM_MAX_NUM_OF_ATTR_ERROR		-2138758645	/* 0x8085220B */
 #define SCE_BXCE_ERROR_DOM_MAX_UNIQUE_ELEMENT_ERROR	-2138758644	/* 0x8085220C */
 #define SCE_BXCE_ERROR_DOM_MAX_UNIQUE_ATTR_ERROR		-2138758643	/* 0x8085220D */
+#define SCE_BXCE_ERROR_DOM_ENITITY_ERROR		-2138758642	/* 0x8085220E */
 #define SCE_BXCE_ERROR_EXCEED_LIMIT			-2138758640	/* 0x80852210 */
 
 /* the most attributes of a DOM element, the longest attribute name, the most unique names */
@@ -228,6 +229,16 @@ BxceNodeId ScebXCe_3BF2F11B(BxceDocument *doc, BxceNodeId parent, BxceNodeId aft
 			    BxceNodeId child);				/* insert a DOM node */
 BxceNodeId ScebXCe_AEB2CE13(BxceDocument *doc, const char *text, SceUInt32 length); /* createText */
 
+const char *ScebXCe_84383D8E(const BxceDocument *doc, BxceNodeId attr);	/* getAttrValue */
+void bxceDocumentCopyNodes(BxceDocument *doc, const BxceDocument *src, BxceNodeId node,
+			   BxceNodeId after, BxceNodeId parent, BxceNodeId last);
+int ScebXCe_FAB50608(BxceDocument *doc, SceUInt8 isDom);		/* initialize */
+void bxceDocumentNop(void);
+int ScebXCe_35CDE77C(const BxceDocument *doc, BxceNodeId node);		/* getEntityType */
+const char *bxceDocumentGetEntityText(const BxceDocument *doc, BxceNodeId node);
+void ScebXCe_2C2628BB(BxceDocument *doc, BxceNodeId node);		/* free DOM nodes */
+int ScebXCe_B0891B13(BxceDocument *doc);				/* terminate */
+BxceNodeList *ScebXCe_1FA24DC0(const BxceDocument *doc, BxceNodeId node, const char *name);
 BxceNodeId bxceDocumentCreateElement(BxceDocument *doc, const char *name,
 				     const BxceAttributeList *attrs, const char *text,
 				     SceUInt32 textLength);
