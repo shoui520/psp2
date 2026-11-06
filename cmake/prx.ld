@@ -59,6 +59,18 @@ SECTIONS
 
 	. = ALIGN(0x1000);
 	.data : { *(.data .data.*) } :data
+	/* the constructor tables after the data, bounded as psp2ld's script bounds them */
+	.preinit_array : {
+		PROVIDE(__start__Zpreinit_array = .);
+		KEEP(*(.preinit_array))
+		PROVIDE(__stop__Zpreinit_array = .);
+	}
+	.init_array : {
+		PROVIDE(__start__Zinit_array = .);
+		KEEP(*(SORT(.init_array.*)))
+		KEEP(*(.init_array))
+		PROVIDE(__stop__Zinit_array = .);
+	}
 	.bss : { *(.bss .bss.*) *(COMMON) }
 
 	.ARM.attributes 0 : { *(.ARM.attributes) }

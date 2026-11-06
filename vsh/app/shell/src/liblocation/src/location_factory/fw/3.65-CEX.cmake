@@ -1,8 +1,9 @@
-# 3.630.011-DEBUGGER: vs0:sys/external/liblocation_factory.suprx (generated)
-set(MODULE_NID 0x9A35F42E)
+# 3.65-CEX: vs0:sys/external/liblocation_factory.suprx (generated)
+set(MODULE_NID 0xE2C021C4)
+set(MODULE_AUTH_ID 0x2800000000028092)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
-set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_SDK_VERSION 0x03650011)
 set(MODULE_EXPORT_ORDER 0x00000000 0x6F397272)
 set(MODULE_IMPORT_LIBS
 	0xCAE9ACE6:5:0x0
