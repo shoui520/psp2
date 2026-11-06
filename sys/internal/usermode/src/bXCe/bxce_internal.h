@@ -242,6 +242,11 @@ BxceNodeList *ScebXCe_1FA24DC0(const BxceDocument *doc, BxceNodeId node, const c
 BxceNodeId ScebXCe_AC0E4F67(BxceDocument *doc, BxceNodeId parent, const char *name,
 			    const BxceAttributeList *attrs, const char *text,
 			    SceUInt32 textLength);			/* appendElement */
+BxceNodeId ScebXCe_568CE24D(BxceDocument *doc, BxceNodeId child, BxceNodeId parent); /* removeChild */
+BxceNodeId ScebXCe_62C76804(BxceDocument *doc, BxceNodeId parent, BxceNodeId after,
+			    const BxceDocument *src, BxceNodeId node);	/* import nodes */
+BxceNodeList *ScebXCe_2B9B57AE(const BxceDocument *doc, BxceNodeId node);	/* getChildNodes */
+const char *ScebXCe_753D9382(const BxceDocument *doc, BxceNodeId node, const char *name);
 BxceNodeId bxceDocumentCreateElement(BxceDocument *doc, const char *name,
 				     const BxceAttributeList *attrs, const char *text,
 				     SceUInt32 textLength);

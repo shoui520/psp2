@@ -1918,3 +1918,113 @@ BxceNodeId ScebXCe_AC0E4F67(BxceDocument *doc, BxceNodeId parent, const char *na
 
 	return (BxceNodeId)node;
 }
+
+/* unlinks a DOM child from parent; the flags stay as they were */
+BxceNodeId ScebXCe_568CE24D(BxceDocument *doc, BxceNodeId child, BxceNodeId parent)
+{
+	BxceDomNode *c = (BxceDomNode *)child;
+	BxceDomNode *p = (BxceDomNode *)parent;
+	BxceDomNode *first, *prev, *n;
+
+	doc->status = 0;
+	if (doc->isBinary) {
+		doc->status = SCE_BXCE_ERROR_DOM_READ_ONLY_ERROR;
+		return 0;
+	}
+
+	if (child == 0 || parent == 0) {
+		doc->status = SCE_BXCE_ERROR_INVALID_ARGUMENT;
+		return 0;
+	}
+
+	first = p->child;
+	if (first == NULL)
+		return 0;
+
+	if (first == c) {
+		if (c->sibling == NULL) {
+			p->child = NULL;
+		} else {
+			p->child = c->sibling;
+			c->sibling = NULL;
+		}
+		return child;
+	}
+
+	/* never taken: the case above */
+	if (first == c && c->sibling == NULL) {
+		p->child = NULL;
+		return child;
+	}
+
+	prev = first;
+	n = prev->sibling;
+	while (n != NULL && n != c) {
+		prev = n;
+		n = prev->sibling;
+	}
+	if (n == NULL) {
+		doc->status = SCE_BXCE_ERROR_DOM_NOT_FOUND_ERROR;
+		return 0;
+	}
+
+	prev->sibling = c->sibling;
+	c->sibling = NULL;
+	return child;
+}
+
+/* copies node of src and its subtree under parent, after the child after; parent, or 0 */
+BxceNodeId ScebXCe_62C76804(BxceDocument *doc, BxceNodeId parent, BxceNodeId after,
+			    const BxceDocument *src, BxceNodeId node)
+{
+	if (doc->isBinary) {
+		doc->status = SCE_BXCE_ERROR_DOM_READ_ONLY_ERROR;
+		return 0;
+	}
+
+	if (parent == 0 || src == NULL || node == 0) {
+		doc->status = SCE_BXCE_ERROR_INVALID_ARGUMENT;
+		return 0;
+	}
+
+	if (((BxceDomNode *)parent)->child == NULL)
+		((BxceDomNode *)parent)->info |= SCE_XML_TOKEN_DOM_HAS_CHILD;
+
+	bxceDocumentCopyNodes(doc, src, node, after, parent, node);
+	if (doc->status != 0) {
+		doc->status = 0;
+		return 0;
+	}
+	return parent;
+}
+
+/* a new list of the node's children */
+BxceNodeList *ScebXCe_2B9B57AE(const BxceDocument *doc, BxceNodeId node)
+{
+	BxceNodeList *list;
+	BxceNodeId child;
+
+	list = (BxceNodeList *)ScebXCe_B8DDE741(sizeof(BxceNodeList));
+	if (list == NULL)
+		return NULL;
+
+	bxceNodeListInitialize(list, doc);
+	for (child = ScebXCe_FEA6E4A1(doc, node); child != 0; child = ScebXCe_6FC9DC3F(doc, child))
+		bxceNodeListAppend(list, child);
+	return list;
+}
+
+/* the value of the element's attribute of this name, or NULL */
+const char *ScebXCe_753D9382(const BxceDocument *doc, BxceNodeId node, const char *name)
+{
+	BxceNodeId attr;
+
+	if (name == NULL || node == 0)
+		return NULL;
+
+	for (attr = ScebXCe_B034C595(doc, node); attr != 0; attr = ScebXCe_134F491C(doc, attr)) {
+		if (bxceStrncmpTag(ScebXCe_B4989A58(doc, attr), name, BXCE_ATTR_STRING_MAX) == 0)
+			return ScebXCe_84383D8E(doc, attr);
+	}
+	return NULL;
+}
