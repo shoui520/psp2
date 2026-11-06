@@ -42,6 +42,12 @@ float sce_paf_floorf(float x)
 	return truncated;
 }
 
+/* pow() for code built against the C library (libpng): in single precision */
+double sce_paf_pow(double base, double exponent)
+{
+	return (double)sce_paf_powf((float)base, (float)exponent);
+}
+
 double sce_paf_floor(double x)
 {
 	return (double)sce_paf_floorf((float)x);

@@ -15,7 +15,11 @@
 #include <jpeglib.h>
 #include <jerror.h>
 #include "../libjpeg/jpeg_paf.h"
-#include "png.h"
+#include <png.h>
+/* libpng's png_jmpbuf names the C library's longjmp; the codecs jump through paf's */
+#undef png_jmpbuf
+#define png_jmpbuf(png_ptr) \
+	(*png_set_longjmp_fn((png_ptr), sce_paf_longjmp, sizeof(jmp_buf)))
 #include "tiffio.h"
 #include <gxt.h>
 

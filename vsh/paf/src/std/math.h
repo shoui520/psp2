@@ -37,6 +37,8 @@ float sce_paf_powf(float base, float exponent);
 float sce_paf_floorf(float x);
 float sce_paf_ceilf(float x);
 float sce_paf_roundf(float x);
+/* not exported; name ours */
+double sce_paf_pow(double base, double exponent);
 double sce_paf_floor(double x);
 double sce_paf_fmod(double x, double y);
 

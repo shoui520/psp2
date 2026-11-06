@@ -22,6 +22,9 @@ psp2_zlib_sce(paf_zlib)
 # libjpeg 8c with Sony's changes (src/misc/image/libjpeg).
 include("${CMAKE_CURRENT_SOURCE_DIR}/src/misc/image/libjpeg/libjpeg.cmake")
 psp2_libjpeg_sce(paf_jpeg)
+# libpng 1.5.10 with Sony's configuration (src/misc/image/libpng).
+include("${CMAKE_CURRENT_SOURCE_DIR}/src/misc/image/libpng/libpng.cmake")
+psp2_libpng_sce(paf_png)
 enable_language(CXX)
 psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/module.c
@@ -68,6 +71,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	${paf_jpeg_SOURCES}
 	src/misc/image/libjpeg/jdatasrc_paf.cpp
 	src/misc/image/libjpeg/jmem_paf.cpp
+	${paf_png_SOURCES}
+	${paf_png_NEON}
 	src/inputdevice/hidkeyboard/hidkeyboard.cpp
 	src/inputdevice/inputdevice.cpp
 	src/file/httpfile.cpp
@@ -276,6 +281,7 @@ target_include_directories(vs0_sys_external_libpaf PRIVATE
 	"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt"
 	"${paf_zlib_INCLUDE}"
 	${paf_jpeg_INCLUDE}
+	${paf_png_INCLUDE}
 	"${CMAKE_SOURCE_DIR}/contrib/squish-1.11")
 
 # paf::thread's and paf::job's constructors and destructors have full C2/D2 copies where 8 makes
@@ -295,6 +301,10 @@ set_source_files_properties(
 # read_markers inlines get_soi, get_dac, get_dri and first_marker, while write_scan_header and
 # consume_markers keep their calls; 30 and 20 change these, none and 32 do not (2026-11-06).
 set_source_files_properties(${paf_jpeg_SOURCES} PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=32)
+# libpng too (SNC's default budget), built with its NEON filters (configure's --enable-arm-neon:
+# png_read_filter_row installs arm/filter_neon.S's functions for 3 and 4 bytes a pixel).
+set_source_files_properties(${paf_png_SOURCES} PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=32
+	COMPILE_DEFINITIONS "PNG_USER_CONFIG;PNG_ARM_NEON")
 
 # Sony's dlmalloc inlined init_mparams, init_top, segment_holding and internal_mallinfo but not
 # init_user_mstate: budgets 21 to 24 do that, 20 or less keeps internal_mallinfo out of line
