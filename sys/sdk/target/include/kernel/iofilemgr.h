@@ -63,10 +63,34 @@
 extern "C" {
 #endif
 
+int sceIoRemove(const char *filename);
+int sceIoMkdir(const char *dirname, SceIoMode mode);
+int sceIoRmdir(const char *dirname);
+int sceIoRename(const char *oldname, const char *newname);
+/*
+ * The kernel exports these under the same names with its own parameter types
+ * (iofilemgr/iofilemgr.h): kernel code and the files that include those exports see them there.
+ */
+#if !defined(PSP2_KERNEL) && !defined(_SCE_IOFILEMGR_KERNEL_EXPORTS)
+int sceIoDevctl(const char *devname, int cmd, const void *arg,
+		SceSize arglen, void *bufp, SceSize buflen);
+int sceIoSync(const char *devname, int flag);
+#endif
 SceUID sceIoOpen(const char *filename, int flag, SceIoMode mode);
 int sceIoClose(SceUID fd);
+#if !defined(PSP2_KERNEL) && !defined(_SCE_IOFILEMGR_KERNEL_EXPORTS)
+int sceIoIoctl(SceUID fd, int cmd, const void *argp, SceSize arglen,
+	       void *bufp, SceSize buflen);
+#endif
 SceOff sceIoLseek(SceUID fd, SceOff offset, int whence);
+#if !defined(PSP2_KERNEL) && !defined(_SCE_IOFILEMGR_KERNEL_EXPORTS)
+long sceIoLseek32(SceUID fd, long offset, int whence);
+#endif
 SceSSize sceIoRead(SceUID fd, void *buf, SceSize nbyte);
+SceSSize sceIoWrite(SceUID fd, const void *buf, SceSize nbyte);
+SceSSize sceIoPread(SceUID fd, void *buf, SceSize nbyte, SceOff offset);
+SceSSize sceIoPwrite(SceUID fd, const void *buf, SceSize nbyte, SceOff offset);
+int sceIoSyncByFd(SceUID fd, int flag);
 
 #ifdef __cplusplus
 }

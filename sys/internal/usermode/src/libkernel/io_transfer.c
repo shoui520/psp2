@@ -64,7 +64,7 @@ int sceIoLseekAsync(SceUID id, SceOff offset, int whence, void *result)
 	return _sceIoLseekAsync(id, &options);
 }
 
-int sceIoIoctl(SceUID id, unsigned int command, const void *input,
+int sceIoIoctl(SceUID id, int command, const void *input,
 		SceSize inputSize, void *output, SceSize outputSize)
 {
 	struct IoControlOptions options;
@@ -76,7 +76,7 @@ int sceIoIoctl(SceUID id, unsigned int command, const void *input,
 	return _sceIoIoctl(id, command, input, &options);
 }
 
-int sceIoDevctl(const char *device, unsigned int command, const void *input,
+int sceIoDevctl(const char *device, int command, const void *input,
 		SceSize inputSize, void *output, SceSize outputSize)
 {
 	struct IoDeviceControlOptions options;

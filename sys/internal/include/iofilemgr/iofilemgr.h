@@ -8,6 +8,7 @@
 #include <scetypes.h>
 #include <stdint.h>
 #include <kernel/types.h>
+#define _SCE_IOFILEMGR_KERNEL_EXPORTS	/* the SDK header leaves these exports to this one */
 #include <kernel/iofilemgr.h>
 
 /*

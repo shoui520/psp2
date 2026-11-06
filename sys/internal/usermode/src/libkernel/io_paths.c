@@ -72,7 +72,7 @@ int sceIoChstat(const char *path, const SceIoStat *status, int bits)
 	return _sceIoChstat(path, status, bits, &options);
 }
 
-int sceIoSync(const char *device, unsigned int flags)
+int sceIoSync(const char *device, int flags)
 {
 	struct IoPathOptions options;
 
