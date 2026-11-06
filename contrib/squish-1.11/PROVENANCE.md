@@ -12,3 +12,7 @@ metric flags (`kColourMetricPerceptual`, `kColourMetricUniform`) and folds
 `kColourIterativeClusterFit` into `kColourClusterFit`, which is 1.11's
 `FixFlags`; 1.13 dropped the metric flags for a metric pointer, and 1.14 moved
 the fit flags for BC4/BC5.
+
+libpaf builds it with Sony's changes, `vsh/paf/src/misc/image/squish/squish-1.11-sce.patch`:
+a Vec4 on ARM NEON (`simd_neon.h`, chosen by `SQUISH_USE_NEON`) and DXT1 blocks that try only
+the three-colour fit for a transparent set and only the four-colour fit otherwise.

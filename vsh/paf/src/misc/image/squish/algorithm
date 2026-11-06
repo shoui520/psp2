@@ -1,0 +1,31 @@
+/* squish's <algorithm>: std::min, std::max and std::swap (Dinkumware's), and INT_MAX. */
+#ifndef PAF_SQUISH_ALGORITHM
+#define PAF_SQUISH_ALGORITHM
+
+#include <limits.h>
+
+namespace std {
+
+template<class _Ty>
+inline const _Ty &min(const _Ty &_Left, const _Ty &_Right)
+{
+	return _Right < _Left ? _Right : _Left;
+}
+
+template<class _Ty>
+inline const _Ty &max(const _Ty &_Left, const _Ty &_Right)
+{
+	return _Left < _Right ? _Right : _Left;
+}
+
+template<class _Ty>
+inline void swap(_Ty &_Left, _Ty &_Right)
+{
+	_Ty _Tmp = _Left;
+	_Left = _Right;
+	_Right = _Tmp;
+}
+
+}
+
+#endif

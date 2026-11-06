@@ -31,6 +31,9 @@ psp2_giflib_sce(paf_gif)
 # libtiff 3.9.5 with Sony's changes (src/misc/image/libtiff).
 include("${CMAKE_CURRENT_SOURCE_DIR}/src/misc/image/libtiff/libtiff.cmake")
 psp2_libtiff_sce(paf_tiff)
+# squish 1.11 (src/misc/image/squish).
+include("${CMAKE_CURRENT_SOURCE_DIR}/src/misc/image/squish/squish.cmake")
+psp2_paf_squish(paf_squish)
 enable_language(CXX)
 psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/module.c
@@ -83,6 +86,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	${paf_zlib_SOURCES}
 	${paf_zlib_CHECKSUM}
 	${paf_zlib_INFFAST}
+	${paf_squish_SOURCES}
 	${paf_tiff_CODECS}
 	src/inputdevice/hidkeyboard/hidkeyboard.cpp
 	src/inputdevice/inputdevice.cpp
@@ -132,6 +136,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/cache/cache_job_runner.cpp
 	${paf_gif_SOURCES}
 	${paf_tiff_SOURCES}
+	${paf_squish_API}
 	src/cache/cache_base.cpp
 	src/cache/cache_image.cpp
 	src/cache/cache_manager.cpp
@@ -300,7 +305,7 @@ target_include_directories(vs0_sys_external_libpaf PRIVATE
 	${paf_png_INCLUDE}
 	${paf_gif_INCLUDE}
 	${paf_tiff_INCLUDE}
-	"${CMAKE_SOURCE_DIR}/contrib/squish-1.11")
+	${paf_squish_INCLUDE})
 
 # paf::thread's and paf::job's constructors and destructors have full C2/D2 copies where 8 makes
 # them call C1/D1, and CallQueue::Enqueue calls string::assign out of line; budgets 29 to 31 do
@@ -329,6 +334,9 @@ set_source_files_properties(${paf_gif_SOURCES} PROPERTIES COMPILE_OPTIONS -Xauto
 # libtiff too, without its asserts.
 set_source_files_properties(${paf_tiff_SOURCES} ${paf_tiff_CODECS} PROPERTIES
 	COMPILE_OPTIONS -Xautoinlinesize=32 COMPILE_DEFINITIONS NDEBUG)
+# squish too.
+set_source_files_properties(${paf_squish_SOURCES} ${paf_squish_API} PROPERTIES
+	COMPILE_OPTIONS -Xautoinlinesize=32 COMPILE_DEFINITIONS SQUISH_USE_NEON=1)
 # zlib too; zutil.c without its allocator (zalloc.c has paf's).
 set_source_files_properties(${paf_zlib_SOURCES} ${paf_zlib_INFFAST} ${PSP2_PAF_ZLIB_CHECKSUM}/checksum.c
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=32)

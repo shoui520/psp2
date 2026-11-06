@@ -1,0 +1,7 @@
+/* squish's <cfloat>: the SDK's float.h. */
+#ifndef PAF_SQUISH_CFLOAT
+#define PAF_SQUISH_CFLOAT
+
+#include <float.h>
+
+#endif

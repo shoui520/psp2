@@ -1,0 +1,206 @@
+--- a/colourfit.cpp
++++ b/colourfit.cpp
+@@ -39,8 +39,10 @@
+ 	bool isDxt1 = ( ( m_flags & kDxt1 ) != 0 );
+ 	if( isDxt1 )
+ 	{
+-		Compress3( block );
+-		if( !m_colours->IsTransparent() )
++		/* SCE: the three-colour block only for a transparent set, else only the four-colour one */
++		if( m_colours->IsTransparent() )
++			Compress3( block );
++		else
+ 			Compress4( block );
+ 	}
+ 	else
+--- a/config.h
++++ b/config.h
+@@ -36,11 +36,16 @@
+ #define SQUISH_USE_SSE 0
+ #endif
+ 
++/* SCE: set to 1 when building squish to use NEON instructions. */
++#ifndef SQUISH_USE_NEON
++#define SQUISH_USE_NEON 0
++#endif
++
+ // Internally et SQUISH_USE_SIMD when either Altivec or SSE is available.
+ #if SQUISH_USE_ALTIVEC && SQUISH_USE_SSE
+ #error "Cannot enable both Altivec and SSE!"
+ #endif
+-#if SQUISH_USE_ALTIVEC || SQUISH_USE_SSE
++#if SQUISH_USE_ALTIVEC || SQUISH_USE_SSE || SQUISH_USE_NEON
+ #define SQUISH_USE_SIMD 1
+ #else
+ #define SQUISH_USE_SIMD 0
+--- a/simd.h
++++ b/simd.h
+@@ -32,6 +32,8 @@
+ #include "simd_ve.h"
+ #elif SQUISH_USE_SSE
+ #include "simd_sse.h"
++#elif SQUISH_USE_NEON	/* SCE */
++#include "simd_neon.h"
+ #else
+ #include "simd_float.h"
+ #endif
+--- a/simd_neon.h
++++ b/simd_neon.h
+@@ -0,0 +1,157 @@
++/* -----------------------------------------------------------------------------
++
++	Copyright (c) 2006 Simon Brown                          si@sjbrown.co.uk
++
++	Permission is hereby granted, free of charge, to any person obtaining
++	a copy of this software and associated documentation files (the 
++	"Software"), to	deal in the Software without restriction, including
++	without limitation the rights to use, copy, modify, merge, publish,
++	distribute, sublicense, and/or sell copies of the Software, and to 
++	permit persons to whom the Software is furnished to do so, subject to 
++	the following conditions:
++
++	The above copyright notice and this permission notice shall be included
++	in all copies or substantial portions of the Software.
++
++	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
++	OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
++	MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
++	IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY 
++	CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
++	TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
++	SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
++	
++   -------------------------------------------------------------------------- */
++   
++
++/* SCE: squish's Vec4 on ARM NEON, after simd_sse.h. */
++
++#ifndef SQUISH_SIMD_NEON_H
++#define SQUISH_SIMD_NEON_H
++
++#include <arm_neon.h>
++
++namespace squish {
++
++#define VEC4_CONST( X ) Vec4( X )
++
++class Vec4
++{
++public:
++	typedef Vec4 const& Arg;
++
++	Vec4() {}
++		
++	explicit Vec4( float32x4_t v ) : m_v( v ) {}
++	
++	Vec4( Vec4 const& arg ) : m_v( arg.m_v ) {}
++	
++	Vec4& operator=( Vec4 const& arg )
++	{
++		m_v = arg.m_v;
++		return *this;
++	}
++	
++	explicit Vec4( float s ) : m_v( vdupq_n_f32( s ) ) {}
++	
++	Vec4( float x, float y, float z, float w )
++	{
++		float32x4_t v = { x, y, z, w };
++		m_v = v;
++	}
++	
++	Vec3 GetVec3() const
++	{
++		return Vec3( vgetq_lane_f32( m_v, 0 ), vgetq_lane_f32( m_v, 1 ), vgetq_lane_f32( m_v, 2 ) );
++	}
++	
++	Vec4 SplatX() const { return Vec4( vdupq_lane_f32( vget_low_f32( m_v ), 0 ) ); }
++	Vec4 SplatY() const { return Vec4( vdupq_lane_f32( vget_low_f32( m_v ), 1 ) ); }
++	Vec4 SplatZ() const { return Vec4( vdupq_lane_f32( vget_high_f32( m_v ), 0 ) ); }
++	Vec4 SplatW() const { return Vec4( vdupq_lane_f32( vget_high_f32( m_v ), 1 ) ); }
++
++	Vec4& operator+=( Arg v )
++	{
++		m_v = vaddq_f32( m_v, v.m_v );
++		return *this;
++	}
++	
++	Vec4& operator-=( Arg v )
++	{
++		m_v = vsubq_f32( m_v, v.m_v );
++		return *this;
++	}
++	
++	Vec4& operator*=( Arg v )
++	{
++		m_v = vmulq_f32( m_v, v.m_v );
++		return *this;
++	}
++	
++	friend Vec4 operator+( Vec4::Arg left, Vec4::Arg right  )
++	{
++		return Vec4( vaddq_f32( left.m_v, right.m_v ) );
++	}
++	
++	friend Vec4 operator-( Vec4::Arg left, Vec4::Arg right  )
++	{
++		return Vec4( vsubq_f32( left.m_v, right.m_v ) );
++	}
++	
++	friend Vec4 operator*( Vec4::Arg left, Vec4::Arg right  )
++	{
++		return Vec4( vmulq_f32( left.m_v, right.m_v ) );
++	}
++	
++	//! Returns a*b + c
++	friend Vec4 MultiplyAdd( Vec4::Arg a, Vec4::Arg b, Vec4::Arg c )
++	{
++		return Vec4( vmlaq_f32( c.m_v, a.m_v, b.m_v ) );
++	}
++	
++	//! Returns -( a*b - c )
++	friend Vec4 NegativeMultiplySubtract( Vec4::Arg a, Vec4::Arg b, Vec4::Arg c )
++	{
++		return Vec4( vmlsq_f32( c.m_v, a.m_v, b.m_v ) );
++	}
++	
++	friend Vec4 Reciprocal( Vec4::Arg v )
++	{
++		// get the reciprocal estimate
++		float32x4_t estimate = vrecpeq_f32( v.m_v );
++
++		// two rounds of Newton-Rhaphson refinement
++		estimate = vmulq_f32( estimate, vrecpsq_f32( estimate, v.m_v ) );
++		return Vec4( vmulq_f32( estimate, vrecpsq_f32( estimate, v.m_v ) ) );
++	}
++	
++	friend Vec4 Min( Vec4::Arg left, Vec4::Arg right )
++	{
++		return Vec4( vminq_f32( left.m_v, right.m_v ) );
++	}
++	
++	friend Vec4 Max( Vec4::Arg left, Vec4::Arg right )
++	{
++		return Vec4( vmaxq_f32( left.m_v, right.m_v ) );
++	}
++	
++	friend Vec4 Truncate( Vec4::Arg v )
++	{
++		return Vec4( vcvtq_f32_s32( vcvtq_s32_f32( v.m_v ) ) );
++	}
++	
++	friend bool CompareAnyLessThan( Vec4::Arg left, Vec4::Arg right ) 
++	{
++		uint32x4_t bits = vcltq_f32( left.m_v, right.m_v );
++		bits = vandq_u32( bits, vrev64q_u32( bits ) );
++		uint32x2_t value = vand_u32( vget_low_u32( bits ), vget_high_u32( bits ) );
++		return vget_lane_u32( value, 0 ) != 0;
++	}
++	
++private:
++	float32x4_t m_v;
++};
++
++} // namespace squish
++
++#endif // ndef SQUISH_SIMD_NEON_H

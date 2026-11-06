@@ -1,0 +1,26 @@
+/*
+ * squish's <cmath>: Sony's libpaf builds squish on paf's float maths (its calls go to
+ * sce_paf_floorf, sce_paf_ceilf, sce_paf_powf, sce_paf_atan2f, sce_paf_cosf and sce_paf_sinf;
+ * sqrt and fabs are VFP instructions).
+ */
+#ifndef PAF_SQUISH_CMATH
+#define PAF_SQUISH_CMATH
+
+#include "../../../std/math.h"
+
+inline float sqrt(float x)		{ return __builtin_sqrtf(x); }
+inline float fabs(float x)		{ return __builtin_fabsf(x); }
+inline float floor(float x)		{ return sce_paf_floorf(x); }
+inline float ceil(float x)		{ return sce_paf_ceilf(x); }
+inline float pow(float x, float y)	{ return sce_paf_powf(x, y); }
+inline float atan2(float y, float x)	{ return sce_paf_atan2f(y, x); }
+inline float cos(float x)		{ return sce_paf_cosf(x); }
+inline float sin(float x)		{ return sce_paf_sinf(x); }
+
+/* Dinkumware's <cmath> has them in both namespaces (maths.cpp calls sqrt unqualified) */
+namespace std {
+using ::sqrt; using ::fabs; using ::floor; using ::ceil;
+using ::pow; using ::atan2; using ::cos; using ::sin;
+}
+
+#endif
