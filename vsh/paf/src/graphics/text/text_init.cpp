@@ -58,13 +58,13 @@ TextInitParam::TextInitParam()
 	mem_pvf_hangul_size = 0;
 	mem_pvf_chinese_addr = NULL;
 	mem_pvf_chinese_size = 0;
+	mem_pvf_arib_addr = NULL;
+	mem_pvf_arib_size = 0;
 	path_pvf_japanese = NULL;
 	path_pvf_latin = NULL;
-	pvf_param[0] = 0;
-	pvf_param[1] = 0;
-	pvf_param[2] = 0;
-	pvf_param[3] = 0;
-	pvf_param[4] = 0;
+	path_pvf_hangul = NULL;
+	path_pvf_chinese = NULL;
+	path_pvf_arib = NULL;
 	mem_emoji_font_addr = NULL;
 	path_emoji_font = NULL;
 	mem_emoji_font_size = 0;
@@ -199,13 +199,13 @@ int32_t InitText(const TextInitParam &param)
 	pvf_param.font.mem_hangul_size = param.mem_pvf_hangul_size;
 	pvf_param.font.mem_chinese_addr = param.mem_pvf_chinese_addr;
 	pvf_param.font.mem_chinese_size = param.mem_pvf_chinese_size;
+	pvf_param.font.mem_arib_addr = param.mem_pvf_arib_addr;
+	pvf_param.font.mem_arib_size = param.mem_pvf_arib_size;
 	pvf_param.font.path_japanese = param.path_pvf_japanese;
 	pvf_param.font.path_latin = param.path_pvf_latin;
-	pvf_param.font.reserved[0] = param.pvf_param[0];
-	pvf_param.font.reserved[1] = param.pvf_param[1];
-	pvf_param.font.reserved[2] = param.pvf_param[2];
-	pvf_param.font.reserved[3] = param.pvf_param[3];
-	pvf_param.font.reserved[4] = param.pvf_param[4];
+	pvf_param.font.path_hangul = param.path_pvf_hangul;
+	pvf_param.font.path_chinese = param.path_pvf_chinese;
+	pvf_param.font.path_arib = param.path_pvf_arib;
 	FontRasterizerPvf::Init(pvf_param);
 
 	s_queue = new TextQueue();

@@ -99,6 +99,28 @@ public:
 			return tmp;
 		}
 
+		/* In order: from the head the largest node, else the rightmost node of the left
+		   subtree, else the first ancestor on the right. */
+		iterator &operator--()
+		{
+			if (node != NULL) {
+				if (node->isnil) {
+					node = node->right;
+				} else if (!node->left->isnil) {
+					node = node->left;
+					while (!node->right->isnil)
+						node = node->right;
+				} else {
+					_Node *parent;
+
+					while (!(parent = node->parent)->isnil && node != parent->right)
+						node = parent;
+					node = parent;
+				}
+			}
+			return *this;
+		}
+
 		bool operator==(const iterator &other) const
 		{
 			return node == other.node;

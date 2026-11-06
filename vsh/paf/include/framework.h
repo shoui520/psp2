@@ -114,8 +114,10 @@ public:
 		uint32_t mem_pvf_hangul_size;
 		void *mem_pvf_chinese_addr;
 		uint32_t mem_pvf_chinese_size;
-		char *path_pvf_japanese;
-		char *path_pvf_latin;
+		/* the ARIB music symbols font (names ours, after FontRasterizerPvf's use; were
+		   ScePaf-RE's path_pvf_japanese and path_pvf_latin) */
+		void *mem_pvf_arib_addr;
+		uint32_t mem_pvf_arib_size;
 		/* the emoji font already in memory, the text system's in place of its file (names ours) */
 		void *mem_emoji_font_addr;
 		uint32_t mem_emoji_font_size;

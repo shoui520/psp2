@@ -5,13 +5,13 @@
  * ScePafFontRasterizerPvfHeap and ScePafFontRasterizerPvfMutex, FontRasterizerImage after the
  * emoji font's file imagefont.bin, their params and the methods no export names are ours.
  * FontMetrics, CharMetrics and the methods TextLayout calls through the vtable (GetFontMetrics,
- * GetCharMetrics, Rasterize) are named by us. FontRasterizerPvf is not in C yet: its members
- * are left as bytes until it is.
+ * GetCharMetrics, Rasterize) are named by us.
  */
 #ifndef PAF_GRAPHICS_TEXT_FONT_RASTERIZER_H
 #define PAF_GRAPHICS_TEXT_FONT_RASTERIZER_H
 
 #include <stdint.h>
+#include <font/libpvf.h>
 #include <common/shared_ptr.h>
 #include <file/file.h>
 #include <graphics/text/text_style.h>
@@ -78,8 +78,25 @@ public:
 				  intrusive_ptr<Surface> &surface) = 0;
 };
 
+/*
+ * The system fonts through the PVF library, one per script (Japanese, Latin, Hangul, Chinese,
+ * the ARIB music symbols and the style's family), opened once for every rasterizer and shared
+ * between them by font index. A character is drawn with the first font of its script that has
+ * it.
+ */
 class FontRasterizerPvf : public FontRasterizer {
 public:
+	/* the fonts' slots (names ours) */
+	enum {
+		Font_Japanese = 0,
+		Font_Latin = 1,
+		Font_Hangul = 2,
+		Font_Chinese = 3,
+		Font_Arib = 4,
+		Font_Family = 5,
+		Font_Num = 6
+	};
+
 	/* the fonts the PVF library opens: from memory, else from their files */
 	class FontParam {
 	public:
@@ -99,9 +116,13 @@ public:
 		uint32_t mem_hangul_size;
 		void *mem_chinese_addr;
 		uint32_t mem_chinese_size;
+		void *mem_arib_addr;
+		uint32_t mem_arib_size;
 		char *path_japanese;
 		char *path_latin;
-		uint32_t reserved[5];
+		char *path_hangul;
+		char *path_chinese;
+		char *path_arib;
 	};
 
 	class InitParam {
@@ -115,10 +136,24 @@ public:
 		}
 
 		uint32_t heap_size;
+		/* Option_* */
 		uint32_t option;
 		/* the Locale */
 		int32_t locale;
 		FontParam font;
+	};
+
+	/* InitParam's option bits (names ours) */
+	enum {
+		/* the ARIB music symbols font draws its characters */
+		Option_Arib = 0x01,
+		/* each font read whole into memory when opened, by slot */
+		Option_MemoryJapanese = 0x02,
+		Option_MemoryLatin = 0x04,
+		Option_MemoryHangul = 0x08,
+		Option_MemoryChinese = 0x10,
+		Option_MemoryArib = 0x20,
+		Option_MemoryFamily = 0x40
 	};
 
 	FontRasterizerPvf();
@@ -137,7 +172,47 @@ public:
 	static int32_t Term();
 	static int32_t SetLocale(int32_t locale);
 
-	uint8_t m_data[0x54];
+	/* an opened font, closed with its last reference (names ours) */
+	class Font {
+	public:
+		Font(int32_t slot, ScePvf_t_fontIndex index);
+		virtual ~Font();
+
+		ScePvf_t_fontId m_id;
+		bool m_opened;
+	};
+
+private:
+	/* the fonts of the slots set from the param */
+	static int32_t SetFont(const FontParam &param);
+
+	/* the style's fonts let go */
+	int32_t ReleaseFonts();
+	/* the font index a slot opens for the style */
+	ScePvf_t_fontIndex GetFontIndex(int32_t slot);
+	/* the style's fonts opened, or found open, and its line metrics */
+	int32_t LoadFonts();
+	/* the style's attributes read again and its fonts loaded, after a change */
+	void ApplyStyle();
+	/* the slot whose font draws a character; c may change to the one drawn */
+	int32_t GetFontSlot(ScePvf_t_charCode *c);
+	int32_t GetCharInfo(int32_t slot, ScePvf_t_fontId font, ScePvf_t_charCode c,
+			    ScePvf_t_charInfo *info);
+	/* the characters drawn into the surface's page */
+	int32_t DrawChars(const wchar_t *str, uint32_t len, intrusive_ptr<Surface> &surface);
+
+	common::SharedPtr<TextStyle> m_style;
+	/* the style changed since its fonts were loaded */
+	bool m_dirty;
+	math::v2 m_point;
+	bool m_bold;
+	bool m_oblique;
+	bool m_shadow;
+	int32_t m_family;
+	/* the line's height and ascender in pixels */
+	int32_t m_height;
+	int32_t m_ascender;
+	common::SharedPtr<Font> m_fonts[Font_Num];
 };
 
 /*

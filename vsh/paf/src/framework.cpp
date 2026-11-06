@@ -216,8 +216,8 @@ Framework::Framework(const InitParam &init_param)
 	text_param.mem_pvf_hangul_size = init_param.mem_pvf_hangul_size;
 	text_param.mem_pvf_chinese_addr = init_param.mem_pvf_chinese_addr;
 	text_param.mem_pvf_chinese_size = init_param.mem_pvf_chinese_size;
-	text_param.path_pvf_japanese = init_param.path_pvf_japanese;
-	text_param.path_pvf_latin = init_param.path_pvf_latin;
+	text_param.mem_pvf_arib_addr = init_param.mem_pvf_arib_addr;
+	text_param.mem_pvf_arib_size = init_param.mem_pvf_arib_size;
 	text_param.mem_emoji_font_addr = init_param.mem_emoji_font_addr;
 	text_param.mem_emoji_font_size = init_param.mem_emoji_font_size;
 	text_param.pvf_heap_size = init_param.pvf_heap_size;
@@ -1468,8 +1468,8 @@ Framework::InitParam::InitParam()
 	mem_pvf_hangul_size = 0;
 	mem_pvf_chinese_addr = NULL;
 	mem_pvf_chinese_size = 0;
-	path_pvf_japanese = NULL;
-	path_pvf_latin = NULL;
+	mem_pvf_arib_addr = NULL;
+	mem_pvf_arib_size = 0;
 	mem_emoji_font_addr = NULL;
 	mem_emoji_font_size = 0;
 	pvf_option = 0;
