@@ -65,11 +65,23 @@ public:
 	DrawCallList *m_next;
 };
 
+/* a DrawCallList a class derives from once for each list it is in, N the list (name
+   ours): a layer is in its draw environment's lists 0 and 1, the second 8 bytes in */
+template<int N>
+class DrawListNode : public DrawCallList {
+public:
+	DrawListNode(DrawCallList *prev, DrawCallList *next) : DrawCallList(prev, next)
+	{
+	}
+};
+
 class DrawLayer;
 
 class DrawEnv {
 public:
-	DrawEnv() : m_index(-1), m_count(0), m_counted(false), m_begin(0), m_end(0), m_ended(false)
+	DrawEnv()
+		: m_index(-1), m_count(0), m_counted(false), m_used_total(0), m_drawn_total(0),
+		  m_ended(false)
 	{
 	}
 
@@ -79,16 +91,24 @@ public:
 	   draws in a buffer of the size */
 	DrawLayer *AddLayer(const string &name, int32_t priority, int32_t mode, size_t buffer_size);
 
+	/* the layers of m_lists[1] from the cursor on that took draws this frame drawn, once
+	   the layer takes draws (draw_env_flush.h; names ours) */
+	void FlushLayers(DrawLayer *layer);
+	void SetPriority(DrawLayer *layer, int32_t priority);
+	void SetDrawMode(DrawLayer *layer, int32_t mode);
+
 	DrawCallList m_lists[4];
-	/* not set when it is made */
-	uint32_t m_spare;
+	/* the next layer of m_lists[1] FlushLayers draws; not set when it is made */
+	DrawCallList *m_cursor;
 	/* -1: none */
 	int32_t m_index;
 	/* counted up by ui::Environment, which clears m_counted with it */
 	uint32_t m_count;
+	/* FlushLayers makes its "[REN] frame=" line, which it prints nowhere */
 	bool m_counted;
-	uint32_t m_begin;
-	uint32_t m_end;
+	/* the bytes of draws and the draws FlushLayers drew, added up */
+	uint32_t m_used_total;
+	uint32_t m_drawn_total;
 	bool m_ended;
 };
 
@@ -291,8 +311,18 @@ public:
 };
 
 /* the draws of a frame: each is built in the layer's buffer and sorted by its key (names ours) */
-class DrawLayer : public DrawCallList {
+class DrawLayer : public DrawListNode<0>, public DrawListNode<1> {
 public:
+	/* m_mode's bits (names ours) */
+	enum {
+		/* drawn between a GPU marker of its name */
+		MODE_MARKER = 1,
+		/* the draws kept after they are drawn */
+		MODE_KEEP = 2,
+		/* the draws drawn in the order they were queued, not by their keys */
+		MODE_UNSORTED = 4
+	};
+
 	/* a key of two words, as the entries are sorted by */
 	class Key {
 	public:
@@ -317,6 +347,14 @@ public:
 			m_key = key;
 		}
 
+		/* by the first word, then the second */
+		bool operator<(const Entry &other) const
+		{
+			if (m_kind == other.m_kind)
+				return m_word < other.m_word;
+			return m_kind < other.m_kind;
+		}
+
 		Entry(uint32_t kind, uint32_t word, DrawLayerCall *call)
 			: m_kind(kind), m_word(word), m_call(call)
 		{
@@ -334,10 +372,10 @@ public:
 	};
 
 	DrawLayer(const string &name, int32_t mode, size_t buffer_size)
-		: DrawCallList(NULL, NULL), m_reserved_word(0), m_reserved_word2(0), m_reserved_flag(false),
-		  m_name(name), m_index(-1), m_priority(0), m_state(0), m_reserved_value(1),
+		: DrawListNode<0>(NULL, NULL), DrawListNode<1>(NULL, NULL), m_drawn(false),
+		  m_name(name), m_index(-1), m_priority(0), m_state(0), m_draw_mode(1),
 		  m_buffer(buffer_size), m_used(0), m_first(-1), m_last(-1), m_mode(mode),
-		  m_key_count(0), m_reserved_word4(0), m_reserved_word5(0)
+		  m_key_count(0), m_last_used(0), m_last_count(0)
 	{
 	}
 
@@ -438,16 +476,27 @@ public:
 		return true;
 	}
 
-	uint32_t m_reserved_word;
-	uint32_t m_reserved_word2;
-	bool m_reserved_flag;
+	/* the layer of its node in the draw order (name ours) */
+	static DrawLayer *FromOrder(DrawCallList *node)
+	{
+		return static_cast<DrawLayer *>(static_cast<DrawListNode<1> *>(node));
+	}
+
+	/* the frame's draws drawn, sorted by their keys unless MODE_UNSORTED, then dropped
+	   unless MODE_KEEP; index is the environment's, log whether to make the "[REN]" line
+	   (draw_env_flush.h; name ours) */
+	void Draw(int32_t index, bool log);
+
+	/* set by Draw once it has drawn */
+	bool m_drawn;
 	string m_name;
 	int32_t m_index;
 	/* the order the layers are drawn in */
 	int32_t m_priority;
 	int32_t m_state;
-	/* 1 when it is made; the renderer sets its layers' to 2 */
-	int32_t m_reserved_value;
+	/* 1 when it is made; the renderers set their layers' to 2, the wave switch 1 or 2 as
+	   it is on or off (name ours) */
+	int32_t m_draw_mode;
 	vector<uint8_t> m_buffer;
 	uint32_t m_used;
 	vector<Entry> m_entries;
@@ -457,8 +506,9 @@ public:
 	/* the keys of the state changes queued this frame, each queued once, and how many are */
 	vector<Key> m_keys;
 	uint32_t m_key_count;
-	uint32_t m_reserved_word4;
-	uint32_t m_reserved_word5;
+	/* the bytes of draws and the draws of the last Draw */
+	uint32_t m_last_used;
+	uint32_t m_last_count;
 };
 
 inline DrawLayer *DrawEnv::AddLayer(const string &name, int32_t priority, int32_t mode,
@@ -466,7 +516,7 @@ inline DrawLayer *DrawEnv::AddLayer(const string &name, int32_t priority, int32_
 {
 	DrawLayer *layer = new DrawLayer(name, mode, buffer_size);
 
-	layer->InsertBefore(&m_lists[0]);
+	static_cast<DrawListNode<0> *>(layer)->InsertBefore(&m_lists[0]);
 	layer->m_priority = priority;
 	return layer;
 }
@@ -551,6 +601,12 @@ public:
 
 	void SetRoll(float roll);
 	void Update();
+
+	/* the layer's draw mode set (name ours) */
+	void SetDrawMode(DrawLayer *layer, int32_t mode)
+	{
+		layer->m_draw_mode = mode;
+	}
 
 	common::SharedPtr<PanelRenderer> m_panel_renderer;
 	common::SharedPtr<FFTWave> m_fft_wave;

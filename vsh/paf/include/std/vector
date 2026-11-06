@@ -88,6 +88,11 @@ public:
 			return m_ptr != right.m_ptr;
 		}
 
+		bool operator<(const iterator &right) const
+		{
+			return m_ptr < right.m_ptr;
+		}
+
 		_Ty *m_ptr;
 	};
 

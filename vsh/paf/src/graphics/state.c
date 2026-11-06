@@ -66,34 +66,6 @@ uint8_t *_ZN3paf5graph7Surface4SwapEv(uint8_t *self)
 /* A global graphics pointer uses the SDK's acquire/release atomic counter. */
 uint32_t *sce_paf_graphics_shared_reference_0f84;
 
-extern uint8_t *sce_paf_graphics_indicator_3070;
-uint8_t sce_paf_graphics_reset_flag_3074;
-uint8_t sce_paf_graphics_reset_gate_3075;
-
-uint8_t *ScePafGraphics_00B9D8CC(void)
-{
-	uint8_t *result = sce_paf_graphics_indicator_3070;
-
-	if (result) {
-		sce_paf_graphics_reset_flag_3074 = 1;
-		*result = 0;
-	}
-	return result;
-}
-
-uint8_t *ScePafGraphics_906BE45C(void)
-{
-	uint8_t *result = sce_paf_graphics_indicator_3070;
-
-	if (result) {
-		sce_paf_graphics_reset_flag_3074 = 0;
-		if (!sce_paf_graphics_reset_gate_3075)
-			*result = 1;
-	}
-	return result;
-}
-
-uint8_t sce_paf_graphics_flag_306c;
 uint32_t sce_paf_graphics_state_11e0;
 uint32_t sce_paf_graphics_state_11fc;
 uint8_t sce_paf_graphics_flag_06e8;
@@ -172,12 +144,6 @@ void *InitGraphicsHeapSlot(uint8_t *self)
 	return self;
 }
 
-uint32_t ScePafGraphics_52C45E43(uint32_t value)
-{
-	sce_paf_graphics_flag_306c = value;
-	return value;
-}
-
 RMutex sce_paf_graphics_rmutex_1230;
 void *sce_paf_graphics_selected_object_12a4;
 
@@ -214,11 +180,4 @@ int GraphicsInvokeOffset20(const uint32_t *self)
 		*(void **)object)[5](object, self[1], self[2], self[3]);
 }
 
-uint8_t *sce_paf_graphics_indicator_3070;
 
-int ScePafGraphics_DD2002B4(void)
-{
-	if (sce_paf_graphics_indicator_3070)
-		return *sce_paf_graphics_indicator_3070;
-	return 0;
-}

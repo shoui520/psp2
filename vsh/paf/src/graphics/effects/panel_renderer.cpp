@@ -941,14 +941,14 @@ void PanelRenderer::Load(const string &dir)
 	int32_t mode = m_screen == NULL;
 
 	m_rs_solid_3x3_panel = m_draw_env->AddLayer("m_rs_solid_3x3_panel", 232, mode, 0x4000);
-	m_rs_solid_3x3_panel->m_reserved_value = 2;
+	m_rs_solid_3x3_panel->m_draw_mode = 2;
 	m_rs_bubble_opaque = m_draw_env->AddLayer("m_rs_bubble_opaque", 230, mode, 0x4000);
-	m_rs_bubble_opaque->m_reserved_value = 2;
+	m_rs_bubble_opaque->m_draw_mode = 2;
 	m_rs_bubble_glass = m_draw_env->AddLayer("m_rs_bubble_glass", 225, mode, 0x4000);
-	m_rs_bubble_glass->m_reserved_value = 2;
+	m_rs_bubble_glass->m_draw_mode = 2;
 	m_rs_panel_debug = m_draw_env->AddLayer("m_rs_panel_debug", 900, 2, 0x4000);
 	m_rs_panel_debug->Push(0x40000000, 0, &PanelRenderer::DrawDebug, this);
-	m_rs_panel_debug->m_reserved_value = 2;
+	m_rs_panel_debug->m_draw_mode = 2;
 
 	m_bubble_light.m_keys.m_default.m_values.m_distance.SetRange(0.0f, 10000.0f);
 	m_panel_light.m_keys.m_default.m_values.m_distance.SetRange(0.0f, 10000.0f);

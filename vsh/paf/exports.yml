@@ -1662,7 +1662,7 @@ ScePaf:
         - _ZN3paf5graph7Surface6AddRefEv: 0x29FC820B
         - _ZN3paf5graph11SurfaceCLUT12ActivateCLUTEv: 0x2A0A4737
         - _ZN3paf5graph14DisplaySurface5ClearERKNS_4math2v4Ej: 0x2A1D57C0
-        - ScePafGraphics_2A2F68EF: 0x2A2F68EF
+        - _ZN3paf5graph10WaveSwitchD1Ev: 0x2A2F68EF
         - _ZN3paf5graph3arl11ArlInstance9DepthMaskEbNS1_8FaceEnumE: 0x2AE23377
         - _ZN3paf5graph13ScreenSurface18ConvertDepthFormatE9ImageMode: 0x2B0AC967
         - _ZN3paf5graph11SurfacePoolD2Ev: 0x2B1159EC
@@ -1680,7 +1680,7 @@ ScePaf:
         - _ZN3paf5gutil12DevInitParamC1Ev: 0x2F46C2B9
         - _ZN3paf5graph7DrawObjD0Ev: 0x2F77118D
         - _ZN3paf5graph10TextLayoutD0Ev: 0x2F82343F
-        - ScePafGraphics_2FB40E94: 0x2FB40E94
+        - _ZN3paf5graph10WaveSwitchD2Ev: 0x2FB40E94
         - _ZN3paf5graph11SurfacePoolD1Ev: 0x2FBA10B9
         - _ZN3paf5graph16PageTurnObjParam9ParamNameEv: 0x2FD4CCFE
         - _ZN3paf5graph9TextStyleneERKS1_: 0x30754CE0
@@ -2009,7 +2009,7 @@ ScePaf:
         - ScePafGraphics_AC339F46: 0xAC339F46
         - _ZN3paf5graph9TextStyle17SetStyleAttributeENS0_18TextStyleAttributeEb: 0xAC63202A
         - _ZN3paf5graph14DisplaySurface13GetUpdateInfoEPNS1_10UpdateInfoE: 0xAC904511
-        - ScePafGraphics_ACD27A89: 0xACD27A89
+        - _ZN3paf5graph10WaveSwitchC2Ev: 0xACD27A89
         - _ZN3paf5graph8PanelObjD1Ev: 0xAD1BCE7A
         - ScePafGraphics_AD93FF1B: 0xAD93FF1B
         - _ZN3paf5graph7Surface10FastMemcpyEPvPKvi: 0xAE20B115
@@ -2059,7 +2059,7 @@ ScePaf:
         - _ZN3paf5graph7TextObj15SetSelectionPosERKNS_4math2v2ES5_: 0xBF93B627
         - _ZN3paf5graph10TextLayout12GetLineCountERj: 0xBFDF8AC1
         - _ZN3paf5graph7TextObj17GetStyleAttributeENS0_18TextStyleAttributeEjRb: 0xC0403E4C
-        - ScePafGraphics_C0487D0A: 0xC0487D0A
+        - _ZN3paf5graph10WaveSwitchC1Ev: 0xC0487D0A
         - _ZN3paf5graph10TextLayout10InvalidateEv: 0xC16D98B4
         - _ZN3paf5graph14DisplaySurface18SetFrameBufferModeENS_5gutil15FrameBufferModeE: 0xC34E1F2C
         - _ZN3paf5graph3arl16FragShaderObject18setMultisampleModeE21SceGxmMultisampleMode: 0xC398E016

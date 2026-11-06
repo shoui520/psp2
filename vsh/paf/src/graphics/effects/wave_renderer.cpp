@@ -608,11 +608,11 @@ void WaveRenderer::Load(const string &dir, uint32_t count)
 
 	m_rs_wave = m_draw_env->AddLayer("m_rs_wave", 100, 2, 0x4000);
 	m_rs_wave->Push(0x40000000, 0, &WaveRenderer::Draw, this);
-	m_rs_wave->m_reserved_value = 2;
+	m_rs_wave->m_draw_mode = 2;
 
 	m_rs_wave_debug = m_draw_env->AddLayer("m_rs_wave_debug", 900, 2, 0x4000);
 	m_rs_wave_debug->Push(0x40000000, 0, &WaveRenderer::DrawDebug, this);
-	m_rs_wave_debug->m_reserved_value = 2;
+	m_rs_wave_debug->m_draw_mode = 2;
 
 	m_gradient_power_min = 2.0f;
 	m_gradient_power_max = 18.0f;

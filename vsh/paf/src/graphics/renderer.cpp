@@ -89,26 +89,26 @@ Renderer::Renderer(common::SharedPtr<DrawEnv> draw_env)
 
 	m_rs_world_grid = m_draw_env->AddLayer("m_rs_world_grid", 101, 2, 0x4000);
 	m_rs_world_grid->Push(0x40000000, 0, &Camera::DrawNothing, m_camera_2d.get());
-	m_rs_world_grid->m_reserved_value = 2;
+	m_rs_world_grid->m_draw_mode = 2;
 
 	m_rs_dummy_background = m_draw_env->AddLayer("m_rs_dummy_background", 10, 2, 0x4000);
 	m_rs_dummy_background->Push(0x40000000, 0, &Renderer::DrawDummyBackground, this);
-	m_rs_dummy_background->m_reserved_value = 2;
+	m_rs_dummy_background->m_draw_mode = 2;
 
 	m_rs_capture_reflections = m_draw_env->AddLayer("m_rs_capture_reflections", 200, 2, 0x4000);
 	m_rs_capture_reflections->Push(0x40000000, 0, &EnvAuto::captureReflections, m_env.get());
-	m_rs_capture_reflections->m_reserved_value = 2;
+	m_rs_capture_reflections->m_draw_mode = 2;
 
 	m_rs_copy_screen_for_refractions =
 		m_draw_env->AddLayer("m_rs_copy_screen_for_refractions", 202, 2, 0x4000);
 	m_rs_copy_screen_for_refractions->Push(0x40000000, 0, &EnvAuto::CopyScreenForRefractions,
 					       m_env.get());
-	m_rs_copy_screen_for_refractions->m_reserved_value = 2;
+	m_rs_copy_screen_for_refractions->m_draw_mode = 2;
 
 	m_rs_capture_blur = m_draw_env->AddLayer("m_rs_capture_blur", 500, 2, 0x4000);
 	m_rs_capture_blur->Push(0x40000000, 0, &Renderer::CaptureBlur, this);
 	m_rs_capture_blur->Push(0x50000000, 0, &Renderer::DrawBlur, this);
-	m_rs_capture_blur->m_reserved_value = 2;
+	m_rs_capture_blur->m_draw_mode = 2;
 
 	arl::ArlInstance *gl = arl::Gl();
 	arl::RenderTargetPool::Key small = { 64, 64, 0 };
