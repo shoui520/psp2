@@ -72,6 +72,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/misc/image/libjpeg/jdatasrc_paf.cpp
 	src/misc/image/libjpeg/jmem_paf.cpp
 	${paf_png_SOURCES}
+	src/ime/ime.cpp
 	${paf_png_NEON}
 	${paf_zlib_SOURCES}
 	${paf_zlib_CHECKSUM}

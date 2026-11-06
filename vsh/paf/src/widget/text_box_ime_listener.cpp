@@ -267,13 +267,13 @@ int32_t TextBoxImeListener::BeginEdit(TextBox *text_box)
 				param.focusShown = ScePafWidget_529FB877(env, -1);
 
 			if (m_text_box == NULL) {
-				ret = ScePafLowlayer_DBDC964A(&m_ime, &param);
+				ret = sceImeVshOpen(&m_ime, &param);
 				if (ret < 0 && m_work != NULL) {
 					delete[] m_work;
 					m_work = NULL;
 				}
 			} else {
-				ret = ScePafLowlayer_58939BC4(m_ime, &param);
+				ret = sceImeVshSetParam(m_ime, &param);
 				if (ret != 0)
 					return ret;
 				m_switching = true;
@@ -359,7 +359,7 @@ int32_t TextBoxImeListener::EndEdit(TextBox *text_box)
 		Environment *env;
 
 		if (!m_switching) {
-			ret = ScePafLowlayer_0ABE4841(m_ime);
+			ret = sceImeVshClose(m_ime);
 			if (ret == 0) {
 				if (m_work != NULL) {
 					delete[] m_work;
@@ -390,7 +390,7 @@ int32_t TextBoxImeListener::Update(TextBox *text_box)
 	int32_t ret = SCE_PAF_ERROR_INVALID_ARGUMENT;
 
 	if (text_box != NULL && text_box == m_text_box)
-		return ScePafLowlayer_7294ADDF(m_ime);
+		return sceImeVshUpdate(m_ime);
 	return ret;
 }
 
@@ -408,10 +408,10 @@ int32_t TextBoxImeListener::NotifyCaretMove(TextBox *text_box)
 			if (caret >= m_preedit_index && m_preedit_index + m_preedit_len >= caret)
 				ScePafLowlayer_5CE62E49(m_ime, caret - m_preedit_index);
 			else
-				ScePafLowlayer_7593DFF0(m_ime);
+				sceImeVshConfirmPreedit(m_ime);
 		}
 		ScePafWidget_62604965(m_text_box, &buf, &buf_len);
-		ret = ScePafLowlayer_2131CEE6(m_ime, buf, caret);
+		ret = sceImeVshUpdateContext(m_ime, buf, caret);
 		if (ret == 0)
 			Mask(0, 0, 0);
 	}
@@ -425,7 +425,7 @@ int32_t TextBoxImeListener::Commit(TextBox *text_box)
 	if (text_box != NULL && text_box == m_text_box) {
 		if (m_preedit_len == 0)
 			return SCE_PAF_ERROR_NO_ENTRY;
-		ret = ScePafLowlayer_B7FA6F32(m_ime);
+		ret = sceImeVshClearPreedit(m_ime);
 		if (ret == 0) {
 			ClearPreedit();
 			Mask(0, 0, 0);
@@ -659,7 +659,7 @@ int32_t TextBoxImeListener::TrimToLayout()
 			end = info.index + info.len;
 			if (end < total) {
 				if (m_preedit_len != 0) {
-					if (ScePafLowlayer_B7FA6F32(m_ime) == 0) {
+					if (sceImeVshClearPreedit(m_ime) == 0) {
 						ClearPreedit();
 						Mask(0, 0, 0);
 					}

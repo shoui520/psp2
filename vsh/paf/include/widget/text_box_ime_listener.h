@@ -11,98 +11,10 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <libime/libime_api.h>
+#include <ime/ime.h>
 #include <widget/w_text_box.h>
 #include <widget/core/event.h>
 #include <math/ngp/v4.h>
-
-extern "C" {
-
-/* the IME's events besides the SDK's SCE_IME_EVENT_*: the edits from 0x100 and the caret moves
-   from 0x200 are the system IME's own */
-enum {
-	/* the preedit text replaced */
-	SCE_IME_VSH_EVENT_UPDATE_PREEDIT = 0x100,
-	/* the preedit text made part of the string */
-	SCE_IME_VSH_EVENT_COMMIT = 0x101,
-	/* text inserted at the caret */
-	SCE_IME_VSH_EVENT_INSERT = 0x102,
-	/* the character before the caret deleted */
-	SCE_IME_VSH_EVENT_BACKSPACE = 0x103,
-	/* everything before the caret deleted */
-	SCE_IME_VSH_EVENT_DELETE_TO_START = 0x104,
-	/* the string emptied */
-	SCE_IME_VSH_EVENT_CLEAR = 0x105,
-	/* the character at the caret deleted */
-	SCE_IME_VSH_EVENT_DELETE = 0x106,
-	SCE_IME_VSH_EVENT_CARET_LEFT = 0x200,
-	SCE_IME_VSH_EVENT_CARET_RIGHT = 0x201,
-	SCE_IME_VSH_EVENT_CARET_UP = 0x202,
-	SCE_IME_VSH_EVENT_CARET_DOWN = 0x203
-};
-
-/* the IME's window, in screen pixels */
-struct SceImeVshRect {
-	uint32_t x;
-	uint32_t y;
-	uint32_t width;
-	uint32_t height;
-};
-
-struct SceImeVshEvent {
-	uint32_t id;
-	union {
-		/* SCE_IME_EVENT_OPEN and SCE_IME_EVENT_CHANGE_SIZE */
-		SceImeVshRect rect;
-		/* the edits: the text, and where the caret goes in the preedit text */
-		struct {
-			const wchar_t *str;
-			uint32_t caretIndex;
-		} text;
-		/* SCE_IME_EVENT_PRESS_CLOSE: the focus is shown again */
-		bool showFocus;
-	} param;
-};
-
-typedef void (*SceImeVshEventHandler)(void *arg, const SceImeVshEvent *e);
-
-/* 0x40 bytes; a caller of 0x30 bytes (no sdkVersion) is taken as one of SDK 1.03 */
-struct SceImeVshParam {
-	uint32_t size;
-	uint32_t inputMethod;
-	uint64_t supportedLanguages;
-	uint32_t languagesForced;
-	uint32_t type;
-	uint32_t option;
-	void *arg;
-	SceImeVshEventHandler handler;
-	int32_t (*filter)(wchar_t *out, uint32_t *out_len, const wchar_t *src, uint32_t src_len);
-	wchar_t *work;
-	uint8_t enterLabel;
-	/* whether a focus is shown (ScePafWidget_529FB877) */
-	uint8_t focusShown;
-	uint8_t reserved0[2];
-	uint32_t sdkVersion;
-	uint8_t reserved[12];
-};
-
-/* the IME client libpaf exports (ScePafLowlayer); no names found for their NIDs */
-/* opens the IME with the parameter */
-int32_t ScePafLowlayer_DBDC964A(void **ime, const SceImeVshParam *param);
-/* gives the open IME a new parameter */
-int32_t ScePafLowlayer_58939BC4(void *ime, const SceImeVshParam *param);
-/* closes the IME */
-int32_t ScePafLowlayer_0ABE4841(void *ime);
-int32_t ScePafLowlayer_7294ADDF(void *ime);
-/* the caret at the index in the preedit text */
-int32_t ScePafLowlayer_5CE62E49(void *ime, uint32_t index);
-/* the caret outside the preedit text */
-int32_t ScePafLowlayer_7593DFF0(void *ime);
-/* the text and the caret's index in it */
-int32_t ScePafLowlayer_2131CEE6(void *ime, const wchar_t *text, uint32_t caret);
-/* makes the preedit text part of the string */
-int32_t ScePafLowlayer_B7FA6F32(void *ime);
-
-}
 
 namespace paf {
 namespace ui {

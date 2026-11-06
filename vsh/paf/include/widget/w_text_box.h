@@ -13,7 +13,7 @@
 #include <math/ngp/v4.h>
 #include <std/string>
 
-/* an event of the system's IME (text_box_ime_listener.h) */
+/* an event of the system's IME (ime/ime.h) */
 extern "C" {
 struct SceImeVshEvent;
 }

@@ -12,26 +12,26 @@ ScePaf:
       version: 1
       nid: 0x2342266A
       functions:
-        - ScePafLowlayer_0ABE4841: 0x0ABE4841
-        - ScePafLowlayer_1604C5D8: 0x1604C5D8
-        - ScePafLowlayer_2131CEE6: 0x2131CEE6
-        - ScePafLowlayer_3767C762: 0x3767C762
-        - ScePafLowlayer_56E58036: 0x56E58036
-        - ScePafLowlayer_58939BC4: 0x58939BC4
+        - sceImeVshClose: 0x0ABE4841
+        - sceImeFilterText: 0x1604C5D8
+        - sceImeVshUpdateContext: 0x2131CEE6
+        - sceImeDicAddWord: 0x3767C762
+        - sceImeVshSetCaretGeometry: 0x56E58036
+        - sceImeVshSetParam: 0x58939BC4
         - ScePafLowlayer_5CE62E49: 0x5CE62E49
-        - ScePafLowlayer_698D2534: 0x698D2534
-        - ScePafLowlayer_7294ADDF: 0x7294ADDF
-        - ScePafLowlayer_7593DFF0: 0x7593DFF0
+        - sceImeDicDeleteWord: 0x698D2534
+        - sceImeVshUpdate: 0x7294ADDF
+        - sceImeVshConfirmPreedit: 0x7593DFF0
         - ScePafLowlayer_7982DC0B: 0x7982DC0B
         - ScePafLowlayer_8B6B2EA3: 0x8B6B2EA3
-        - ScePafLowlayer_B7FA6F32: 0xB7FA6F32
+        - sceImeVshClearPreedit: 0xB7FA6F32
         - sceGzipCrc32: 0xBFA53111
         - sceZlibDecompress: 0xD7DAA151
-        - ScePafLowlayer_DA3128F0: 0xDA3128F0
-        - ScePafLowlayer_DB3B6E8D: 0xDB3B6E8D
-        - ScePafLowlayer_DBDC964A: 0xDBDC964A
-        - ScePafLowlayer_EFE8A282: 0xEFE8A282
-        - ScePafLowlayer_F960B5E5: 0xF960B5E5
+        - sceImeConfigSet: 0xDA3128F0
+        - sceImeDicReplaceWord: 0xDB3B6E8D
+        - sceImeVshOpen: 0xDBDC964A
+        - sceImeConfigGet: 0xEFE8A282
+        - sceImeDicGetWords: 0xF960B5E5
     ScePafStdc:
       syscall: false
       version: 1
