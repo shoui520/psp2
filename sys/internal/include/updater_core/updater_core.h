@@ -28,6 +28,7 @@ typedef struct SceUpdaterMemoryInfo {
 #define SCE_UPDATER_ERROR_NO_MEMORY		0x80180001
 #define SCE_UPDATER_ERROR_INVALID_STATE		0x80180002
 #define SCE_UPDATER_ERROR_INVALID_ARGUMENT	0x80180006
+#define SCE_UPDATER_ERROR_SEGMENT_NOT_FOUND	0x80180007
 #define SCE_UPDATER_ERROR_ABORTED		0x80180008
 #define SCE_UPDATER_ERROR_POWER_STATE		0x80180009
 #define SCE_UPDATER_ERROR_ANALYSIS_STATE	0x8018000a
@@ -87,6 +88,10 @@ typedef struct SceUpdaterSegmentData {
 	SceUInt64 size;
 } SceUpdaterSegmentData;
 
+/* sceUpdaterIsSegmentAvailable's result (the names ours) */
+#define SCE_UPDATER_SEGMENT_NOT_AVAILABLE	1
+#define SCE_UPDATER_SEGMENT_AVAILABLE		2
+
 /* what sceUpdaterGetPupInformation reads from a PUP's header */
 typedef struct SceUpdaterPupInformation {
 	SceUInt32 magicVersion;		/* the magic's last byte */
@@ -137,7 +142,7 @@ int sceUpdaterNetworkPreCheckVersion(SceUInt32 version, int *result);
 int sceUpdaterNetworkCheckBaseVersion(SceUInt32 version, int *result);
 int sceUpdaterCheckNewerThanSystemVersion(SceUInt32 version, int *result);
 SceUInt64 sceUpdaterGetSegmentAnalysisSize(void);
-int sceUpdaterCreateSegmentAnalysisHandler(SceUInt64 size,
+int sceUpdaterCreateSegmentAnalysisHandler(SceUInt64 segmentId,
 					   SceUpdaterSegmentAnalysisHandler *handler);
 int sceUpdaterDestroySegmentAnalysisHandler(SceUpdaterSegmentAnalysisHandler handler);
 int sceUpdaterIsSegmentAvailable(SceUpdaterSegmentData *data, int *result);

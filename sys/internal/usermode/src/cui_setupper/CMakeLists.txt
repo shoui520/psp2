@@ -16,6 +16,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/partition_manager.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/producer_consumer_channel.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/pup_controller.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/segment_analysis.cpp
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include")
 # updater_core, a library of its own in Sony's build: budget 24 writes its classes' C2 and D2
@@ -28,4 +29,5 @@ set_source_files_properties(
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/partition_manager.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/producer_consumer_channel.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/pup_controller.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/segment_analysis.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=24)

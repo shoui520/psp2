@@ -361,7 +361,7 @@ SceUInt64 sceUpdaterGetSegmentAnalysisSize(void)
 	return pup.GetSegmentAnalysisSize();
 }
 
-int sceUpdaterCreateSegmentAnalysisHandler(SceUInt64 size,
+int sceUpdaterCreateSegmentAnalysisHandler(SceUInt64 segmentId,
 					   SceUpdaterSegmentAnalysisHandler *handler)
 {
 	SegmentAnalysis *analysis;
@@ -372,7 +372,7 @@ int sceUpdaterCreateSegmentAnalysisHandler(SceUInt64 size,
 	}
 	analysis = new SegmentAnalysis();
 	*handler = analysis;
-	analysis->Initialize(size);
+	analysis->Initialize(segmentId);
 	s_segmentAnalysisState = UPDATER_OPEN_OPENED;
 	return 0;
 }
