@@ -15,14 +15,9 @@
 #include <memory/heap_allocator.h>
 #include "statement.h"
 
-/* libpaf's heaps (ScePafMisc) */
-extern "C" {
-void *scePafMallocWithContext(void *context, SceSize size);
-void scePafFreeWithContext(void *context, void *ptr);
-}
-
-/* paf's default heap (ScePafStdc) */
-extern "C" paf::memory::HeapAllocator *ScePafStdc_261CAF72(void);
+/* paf's default heap (ScePafStdc), exported by its C name; libpaf declares it in its own
+   src/std/stdlib.h */
+extern "C" void *GetGlobalHeapAllocator(void);
 
 namespace dbutil {
 
@@ -30,14 +25,14 @@ namespace dbutil {
 static inline void *Allocate(void *heap, SceSize size)
 {
 	if (heap != NULL)
-		return scePafMallocWithContext(heap, size);
+		return ((paf::memory::HeapAllocator *)heap)->sce_paf_malloc(size);
 	return sce_paf_malloc(size);
 }
 
 static inline void Free(void *heap, void *ptr)
 {
 	if (heap != NULL)
-		scePafFreeWithContext(heap, ptr);
+		((paf::memory::HeapAllocator *)heap)->sce_paf_free(ptr);
 	else
 		sce_paf_free(ptr);
 }
@@ -46,7 +41,7 @@ static inline void Free(void *heap, void *ptr)
 template<class _Ty>
 class Allocator {
 public:
-	Allocator() : m_heap(ScePafStdc_261CAF72())
+	Allocator() : m_heap((paf::memory::HeapAllocator *)GetGlobalHeapAllocator())
 	{
 	}
 
@@ -56,18 +51,18 @@ public:
 
 	/* over heap, or the default heap without one */
 	explicit Allocator(void *heap)
-		: m_heap(heap != NULL ? (paf::memory::HeapAllocator *)heap : ScePafStdc_261CAF72())
+		: m_heap((paf::memory::HeapAllocator *)(heap != NULL ? heap : GetGlobalHeapAllocator()))
 	{
 	}
 
 	_Ty *allocate(size_t count)
 	{
-		return (_Ty *)scePafMallocWithContext(m_heap, count * sizeof(_Ty));
+		return (_Ty *)m_heap->sce_paf_malloc(count * sizeof(_Ty));
 	}
 
 	void deallocate(_Ty *ptr, size_t)
 	{
-		scePafFreeWithContext(m_heap, ptr);
+		m_heap->sce_paf_free(ptr);
 	}
 
 	void construct(_Ty *ptr, const _Ty &val)
