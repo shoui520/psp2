@@ -60,6 +60,12 @@ int SceSslInternal_CC7F4211(void *ctx, int cmd, int larg, void *parg);
 int SceSslInternal_260F5A85(void *ctx, int value);
 int SceSslInternal_AF50B945(void *ctx, SceSslInternalCallback callback, void *arg);
 int SceSslInternal_461C5990(int library, int error);
+int SceSslInternal_33737FDC(void);
+unsigned int SceSslInternal_422DFE70(void);
+void SceSslInternal_56FE376A(void);
+void SceSslInternal_C0B135F0(void);
+void *SceSslInternal_FB51AE89(void);
+void SceSslInternal_DEC6DD27(void);
 
 /* connections */
 int SceSslInternal_3EF42454(struct ssl_st *ssl);
@@ -105,6 +111,9 @@ int SceSslInternal_3DE4F3DB(void *oid, int arg1, SceSize size, char *buf);
 int SceSslInternal_BF99D664(void *lib, int arg1, void **ext);
 int SceSslInternal_64BDF1BB(void *cert, int item, void *ext);
 int SceSslInternal_93EAE08A(void *ext, int item, void *data);
+int SceSslInternal_2464F9D0(void *cert, void *date);
+int SceSslInternal_2074A6EB(void *cert, void *date);
+int SceSslInternal_349B0E73(int store, int mask, const void **serials, int *count);
 int SceSslInternal_3746501F(void *store, const char ***pem, void *buf, SceSize size,
 			    SceSize *outSize, SceBool systemOnly);
 

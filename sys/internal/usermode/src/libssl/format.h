@@ -7,6 +7,7 @@
 
 char *sslCopyString(char *destination, const char *source, SceUInt32 size);
 char *sslAppendString(char *destination, const char *source, SceUInt32 size);
+int sslCompareStrings(const char *left, const char *right, SceUInt32 size);
 int sslVFormatString(char *destination, SceUInt32 size, const char *format,
 		     va_list arguments);
 int sslFormatString(char *destination, SceUInt32 size, const char *format, ...);

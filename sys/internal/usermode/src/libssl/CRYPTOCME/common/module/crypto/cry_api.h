@@ -33,7 +33,8 @@ typedef struct SslCryptoLifecycleMethods {
 				SceUIntPtr value);
 	SceUIntPtr opaqueOperations[20];
 	int (*DigestInit)(SslCryptoAlgorithm *algorithm);
-	SceUIntPtr opaqueDigestOperation;
+	int (*Digest)(SslCryptoAlgorithm *algorithm, const void *data,
+		      SceUInt32 length, void *digest, SceUInt32 *digestLength);
 	int (*DigestUpdate)(SslCryptoAlgorithm *algorithm, const void *data,
 			    SceUInt32 length);
 	int (*DigestFinal)(SslCryptoAlgorithm *algorithm, void *data, SceUInt32 *length);
@@ -114,6 +115,8 @@ int sslDestroyAlgorithm(SslCryptoAlgorithm *algorithm);
 int sslCreateAlgorithm(SslCryptoContextHeader *context, int family, int algorithm,
 		       SceUInt32 mode, SslCryptoAlgorithm **result);
 int sslDigestInit(SslCryptoAlgorithm *algorithm);
+int sslDigest(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length,
+	      void *digest, SceUInt32 *digestLength);
 int sslDigestUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length);
 int sslDigestFinal(SslCryptoAlgorithm *algorithm, void *data, SceUInt32 *length);
 int sslCreateCryptoContext(SslLibrary *library, int mode, void **result);

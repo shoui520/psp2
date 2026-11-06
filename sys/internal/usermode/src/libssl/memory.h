@@ -8,6 +8,8 @@ typedef void *(*SslAllocCallback)(SceUInt32 size);
 typedef void *(*SslReallocCallback)(void *ptr, SceUInt32 size, SceUInt32 oldSize);
 typedef void (*SslFreeCallback)(void *ptr);
 
+void *SceSslInternal_C1299FB6(SslAllocCallback alloc, SslReallocCallback realloc,
+			      SslFreeCallback freeCallback);
 void *sslAllocate(SceUInt32 size);
 void *sslReallocate(void *ptr, SceUInt32 size, SceUInt32 oldSize);
 void sslFree(void *ptr);

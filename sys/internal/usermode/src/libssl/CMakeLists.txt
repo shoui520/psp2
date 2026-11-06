@@ -179,6 +179,9 @@ set_source_files_properties(
 	../../../../../toolchains/libgcc/ashldi3.S
 	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
 set_source_files_properties(
+	libssl.c
+	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
+set_source_files_properties(
 	../../../../sdk/target/src/sha224/libsha224.c
 	../../../../sdk/target/src/sha256/libsha256.c
 	../../../../sdk/target/src/sha384/libsha384.c

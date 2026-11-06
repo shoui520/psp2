@@ -54,6 +54,8 @@ int sceRtcIsLeapYear(int year);
 int sceRtcGetDaysInMonth(int year, int month);
 int sceRtcGetDayOfWeek(int year, int month, int day);
 int sceRtcCheckValid(const SceDateTime *pTime);
+int sceRtcSetTime64_t(SceDateTime *pTime, SceUInt64 ullTime);
+int sceRtcGetTime64_t(const SceDateTime *pTime, SceUInt64 *pullTime);
 int sceRtcSetTick(SceDateTime *pTime, const SceRtcTick *pTick);
 int sceRtcGetTick(const SceDateTime *pTime, SceRtcTick *pTick);
 int sceRtcTickAddMicroseconds(SceRtcTick *pTick0, const SceRtcTick *pTick1, SceLong64 lAdd);

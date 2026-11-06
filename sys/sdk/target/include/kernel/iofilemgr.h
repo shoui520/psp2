@@ -59,4 +59,17 @@
 #define SCE_IO_MAX_PATH_BUFFER_SIZE	(1024)	/* maximum path buffer size */
 #define SCE_IO_MAX_PATH_LENGTH		(200)	/* maximum path length */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+SceUID sceIoOpen(const char *filename, int flag, SceIoMode mode);
+int sceIoClose(SceUID fd);
+SceOff sceIoLseek(SceUID fd, SceOff offset, int whence);
+SceSSize sceIoRead(SceUID fd, void *buf, SceSize nbyte);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* _SCE_KERNEL_IOFILEMGR_H */

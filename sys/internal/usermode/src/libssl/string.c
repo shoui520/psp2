@@ -23,3 +23,19 @@ char *sslAppendString(char *destination, const char *source, SceUInt32 size)
 {
 	return sceClibStrncat(destination, source, size);
 }
+
+int sslCompareStrings(const char *left, const char *right, SceUInt32 size)
+{
+	return sceClibStrncmp(left, right, size);
+}
+
+void _sceSslQuickSort(char *base, SceSize size,
+		      int (*compare)(const void *, const void *),
+		      int left, int right);
+
+void sslSort(void *base, unsigned int count, unsigned int size,
+	     int (*compare)(const void *, const void *))
+{
+	if (base != 0 && compare != 0 && count != 0 && size != 0)
+		_sceSslQuickSort((char *)base, size, compare, 0, (int)count - 1);
+}
