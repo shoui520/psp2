@@ -281,6 +281,8 @@ private:
 	friend ui::Widget *(::ScePafToplevel_E37EC9D8)(ui::Widget *parent, const char *type,
 						     const IDParam &id, const IDParam &style,
 						     void *data);
+	friend int32_t PowerCallback(int32_t notify_id, int32_t notify_count, int32_t power_info,
+				     void *common);
 
 	static void JobInit();
 

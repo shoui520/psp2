@@ -1359,6 +1359,47 @@ void ScePafToplevel_C9C02705(void *userdata)
 
 namespace paf {
 
+/*
+ * While the system suspends (bit 22) the screen is not drawn and the GPU runs at
+ * level 2 (not on a Dolce, not in a common dialog); its resume (bit 23) gives the
+ * clock back. Once a process has resumed, the display area settings are read again.
+ */
+int32_t PowerCallback(int32_t notify_id, int32_t notify_count, int32_t power_info,
+		      void *common)
+{
+	int32_t mode = Framework::framework->m_mode;
+
+	if (power_info & SCE_POWER_CALLBACKARG_RESERVED_22) {
+		if (mode != Framework::Mode_CommonDialog) {
+			Framework::framework->m_env->m_suspended = true;
+			if (system::Model::GetType() != system::Model::Type_Dolce) {
+				if (ui::Screen::s_root_surface != NULL)
+					ui::Screen::s_root_surface->m_keep_gpu_clock = true;
+				if (GetGpuClockLevel() != 2) {
+					SaveGpuClock();
+					SetGpuClockLevel(2);
+				}
+			}
+		}
+	} else if ((power_info & SCE_POWER_CALLBACKARG_RESERVED_23) &&
+		   mode != Framework::Mode_CommonDialog) {
+		Framework::framework->m_env->m_suspended = false;
+		if (system::Model::GetType() != system::Model::Type_Dolce) {
+			SetGpuClockLevel(255);
+			if (ui::Screen::s_root_surface != NULL)
+				ui::Screen::s_root_surface->m_keep_gpu_clock = false;
+		}
+	}
+	if ((power_info & SCE_POWER_CALLBACKARG_PROCESS_RESUME_COMP) &&
+	    (mode == Framework::Mode_Normal || mode == Framework::Mode_CommonDialog)) {
+		ui::Environment *env = Framework::framework->m_env;
+
+		if (env != NULL && env->m_display_area_applied)
+			env->UpdateDisplayAreaSettings();
+	}
+	return 0;
+}
+
 Framework *Framework::Instance()
 {
 	return framework;

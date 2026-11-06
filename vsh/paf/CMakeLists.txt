@@ -248,6 +248,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/gesture_drag.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
+	src/widget/core/environment.cpp
 	src/widget/core/widget.cpp
 	src/widget/state.c
 	src/hash/sha1.c

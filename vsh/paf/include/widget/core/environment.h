@@ -136,8 +136,15 @@ public:
 	void ShowFocus(int32_t port);
 	/* the display area scale from the system settings, once */
 	void ApplyDisplayAreaSettings();
+	/* the display area scale read again, once it has been applied (name ours) */
+	void UpdateDisplayAreaSettings();
 
-	uint8_t reserved[0xb0];
+	uint8_t reserved[0x40];
+	/* the display area scale the root surface shows at (names ours) */
+	float m_display_area_scale;
+	bool m_display_area_applied;
+	bool m_display_area_changed;
+	uint8_t reserved8[0x6a];
 	/* the Framework's InitParam::screen_orientation_mode and env_param */
 	int32_t m_screen_orientation_mode;
 	uint8_t reserved0[4];
@@ -145,7 +152,10 @@ public:
 	uint8_t reserved7[0x15];
 	/* set by RequestTerm */
 	bool m_term_requested;
-	uint8_t reserved1[2];
+	/* set by the power callback while the system suspends: the frame is not drawn (name
+	   ours) */
+	bool m_suspended;
+	uint8_t reserved1[1];
 	/* the Framework's InitParam::env_option */
 	bool m_env_option;
 	uint8_t reserved2[3];
