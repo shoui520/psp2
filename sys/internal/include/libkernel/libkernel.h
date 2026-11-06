@@ -116,6 +116,13 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, SceUInt32 type, SceUInt32 
 				    SceSize size, const SceKernelMsgPipeOptParam *option,
 				    void *caller);
 
+/*
+ * The lightweight mutex's lock (without callbacks) and unlock that the SDK's early stubs link
+ * (cui_setupper's updater_core, built with the 0.996 SDK); no Sony name is known for either
+ */
+int SceLibKernel_A7819967(SceKernelLwMutexWork *work, int count, unsigned int *timeout);
+int SceLibKernel_499EA781(SceKernelLwMutexWork *work, int count);
+
 #ifdef __cplusplus
 }
 #endif

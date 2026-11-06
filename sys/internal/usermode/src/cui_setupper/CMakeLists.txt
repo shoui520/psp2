@@ -12,6 +12,8 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/sys/sdk/target/src/crt0/crt0_main.c
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/updater_core.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/parallel_copy_file.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/parallel_operation_base.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/producer_consumer_channel.cpp
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include")
 # updater_core, a library of its own in Sony's build: budget 24 writes its classes' C2 and D2
@@ -20,4 +22,6 @@ target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include")
 set_source_files_properties(
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/updater_core.cpp
 	${PSP2_SRC}/sys/internal/usermode/src/updater_core/parallel_copy_file.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/parallel_operation_base.cpp
+	${PSP2_SRC}/sys/internal/usermode/src/updater_core/producer_consumer_channel.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=24)

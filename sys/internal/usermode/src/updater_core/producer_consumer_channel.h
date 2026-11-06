@@ -13,12 +13,12 @@
 
 class ProducerConsumerChannel : public UpdaterObject {
 public:
-	ProducerConsumerChannel(int capacity);
+	ProducerConsumerChannel(SceUInt32 capacity);
 	virtual ~ProducerConsumerChannel();
 
-	int Initialize(void **items, int count);
-	int Push(void *item, int wait);
-	int Pop(void **item, int wait);
+	int Initialize(void **items, SceUInt32 count);
+	int Push(void *item, bool wait);
+	int Pop(void **item, bool wait);
 	int Abort(void);
 
 	bool IsAborted(void) const
@@ -27,7 +27,11 @@ public:
 	}
 
 private:
-	SceUInt8 m_queue[0x14];		/* laid out with producer_consumer_channel.cpp */
+	void **m_items;			/* the ring, capacity entries */
+	SceUInt32 m_capacity;
+	SceUInt32 m_count;
+	SceUInt32 m_tail;		/* where the next push goes */
+	SceUInt32 m_head;		/* where the next pop comes from */
 	SceKernelLwMutexWork m_mutex;
 	SceKernelLwCondWork m_cond;
 	bool m_aborted;

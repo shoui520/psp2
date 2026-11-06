@@ -16,7 +16,11 @@
 /* one unit of work the consumer thread runs */
 class ParallelOperationElement : public UpdaterObject {
 public:
-	virtual int Operate(void) = 0;
+	/* an element of a derived operation overrides it; Sony's base returns -1 */
+	virtual int Operate(void)
+	{
+		return -1;
+	}
 };
 
 class ParallelOperationBase : public UpdaterObject {

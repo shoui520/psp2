@@ -182,7 +182,7 @@ int ParallelCopyFile::mainOperation(void *arg)
 	int ret;
 
 	do {
-		ret = m_freeChannel.Pop((void **)&buffer, 1);
+		ret = m_freeChannel.Pop((void **)&buffer, true);
 		if (ret < 0)
 			return ret;
 		length = m_src->read(m_src->arg, buffer->GetBuffer(), m_option->bufferSize);
@@ -191,7 +191,7 @@ int ParallelCopyFile::mainOperation(void *arg)
 			return length;
 		}
 		copied += length;
-		ret = m_fullChannel.Push(buffer, 1);
+		ret = m_fullChannel.Push(buffer, true);
 		if (ret < 0)
 			return ret;
 		m_option->callback(m_option->arg, m_fileSize, copied);
