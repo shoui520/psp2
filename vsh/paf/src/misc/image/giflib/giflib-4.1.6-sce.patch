@@ -1,0 +1,548 @@
+--- a/lib/dgif_lib.c
++++ b/lib/dgif_lib.c
+@@ -14,28 +14,7 @@
+ #include <config.h>
+ #endif
+ 
+-#include <stdlib.h>
+-#if defined (__MSDOS__) && !defined(__DJGPP__) && !defined(__GNUC__)
+-#include <io.h>
+-#include <alloc.h>
+-#include <sys\stat.h>
+-#else
+-#include <sys/types.h>
+-#include <sys/stat.h>
+-#endif /* __MSDOS__ */
+-
+-#ifdef HAVE_IO_H
+-#include <io.h>
+-#endif
+-
+-#ifdef HAVE_FCNTL_H
+-#include <fcntl.h>
+-#endif /* HAVE_FCNTL_H */
+-#ifdef HAVE_UNISTD_H
+-#include <unistd.h>
+-#endif /* HAVE_UNISTD_H */
+-#include <stdio.h>
+-#include <string.h>
++#include <std/string.h>	/* SCE: paf's C library */
+ #include "gif_lib.h"
+ #include "gif_lib_private.h"
+ 
+@@ -46,7 +25,7 @@
+ #define READ(_gif,_buf,_len)                                     \
+   (((GifFilePrivateType*)_gif->Private)->Read ?                   \
+     ((GifFilePrivateType*)_gif->Private)->Read(_gif,_buf,_len) : \
+-    fread(_buf,1,_len,((GifFilePrivateType*)_gif->Private)->File))
++    sce_paf_fread(_buf,1,_len,((GifFilePrivateType*)_gif->Private)->File))
+ 
+ static int DGifGetWord(GifFileType *GifFile, GifWord *Word);
+ static int DGifSetupDecompress(GifFileType *GifFile);
+@@ -167,24 +146,29 @@
+  *****************************************************************************/
+ GifFileType *
+ DGifOpen(void *userData,
+-         InputFunc readFunc) {
++         VoidPtr heap,	/* SCE: the heap and its memory functions */
++         InputFunc readFunc,
++         GifMallocFunc mallocFunc,
++         GifFreeFunc freeFunc,
++         GifReallocFunc reallocFunc,
++         GifCallocFunc callocFunc) {
+ 
+     unsigned char Buf[GIF_STAMP_LEN + 1];
+     GifFileType *GifFile;
+     GifFilePrivateType *Private;
+ 
+-    GifFile = (GifFileType *)malloc(sizeof(GifFileType));
++    GifFile = (GifFileType *)mallocFunc(heap, sizeof(GifFileType));
+     if (GifFile == NULL) {
+         _GifError = D_GIF_ERR_NOT_ENOUGH_MEM;
+         return NULL;
+     }
+ 
+-    memset(GifFile, '\0', sizeof(GifFileType));
++    sce_paf_memset(GifFile, '\0', sizeof(GifFileType));
+ 
+-    Private = (GifFilePrivateType *)malloc(sizeof(GifFilePrivateType));
++    Private = (GifFilePrivateType *)mallocFunc(heap, sizeof(GifFilePrivateType));
+     if (!Private) {
+         _GifError = D_GIF_ERR_NOT_ENOUGH_MEM;
+-        free((char *)GifFile);
++        freeFunc(heap, (char *)GifFile);
+         return NULL;
+     }
+ 
+@@ -194,29 +178,34 @@
+     Private->FileState = FILE_STATE_READ;
+ 
+     Private->Read = readFunc;    /* TVT */
++    GifFile->Heap = heap;    /* SCE */
++    GifFile->Malloc = mallocFunc;
++    GifFile->Free = freeFunc;
++    GifFile->Realloc = reallocFunc;
++    GifFile->Calloc = callocFunc;
+     GifFile->UserData = userData;    /* TVT */
+ 
+     /* Lets see if this is a GIF file: */
+     if (READ(GifFile, Buf, GIF_STAMP_LEN) != GIF_STAMP_LEN) {
+         _GifError = D_GIF_ERR_READ_FAILED;
+-        free((char *)Private);
+-        free((char *)GifFile);
++        freeFunc(heap, (char *)Private);
++        freeFunc(heap, (char *)GifFile);
+         return NULL;
+     }
+ 
+     /* The GIF Version number is ignored at this time. Maybe we should do
+      * something more useful with it. */
+     Buf[GIF_STAMP_LEN] = 0;
+-    if (strncmp(GIF_STAMP, Buf, GIF_VERSION_POS) != 0) {
++    if (sce_paf_strncmp(GIF_STAMP, Buf, GIF_VERSION_POS) != 0) {
+         _GifError = D_GIF_ERR_NOT_GIF_FILE;
+-        free((char *)Private);
+-        free((char *)GifFile);
++        freeFunc(heap, (char *)Private);
++        freeFunc(heap, (char *)GifFile);
+         return NULL;
+     }
+ 
+     if (DGifGetScreenDesc(GifFile) == GIF_ERROR) {
+-        free((char *)Private);
+-        free((char *)GifFile);
++        freeFunc(heap, (char *)Private);
++        freeFunc(heap, (char *)GifFile);
+         return NULL;
+     }
+ 
+@@ -256,7 +245,7 @@
+     GifFile->SBackGroundColor = Buf[1];
+     if (Buf[0] & 0x80) {    /* Do we have global color map? */
+ 
+-        GifFile->SColorMap = MakeMapObject(1 << BitsPerPixel, NULL);
++        GifFile->SColorMap = MakeMapObject(1 << BitsPerPixel, NULL, GifFile);
+         if (GifFile->SColorMap == NULL) {
+             _GifError = D_GIF_ERR_NOT_ENOUGH_MEM;
+             return GIF_ERROR;
+@@ -265,7 +254,7 @@
+         /* Get the global color map: */
+         for (i = 0; i < GifFile->SColorMap->ColorCount; i++) {
+             if (READ(GifFile, Buf, 3) != 3) {
+-                FreeMapObject(GifFile->SColorMap);
++                FreeMapObject(GifFile->SColorMap, GifFile);
+                 GifFile->SColorMap = NULL;
+                 _GifError = D_GIF_ERR_READ_FAILED;
+                 return GIF_ERROR;
+@@ -355,9 +344,9 @@
+         /*** FIXME: Why do we check both of these in order to do this? 
+          * Why do we have both Image and SavedImages? */
+         if (GifFile->Image.ColorMap && GifFile->SavedImages == NULL)
+-            FreeMapObject(GifFile->Image.ColorMap);
++            FreeMapObject(GifFile->Image.ColorMap, GifFile);
+ 
+-        GifFile->Image.ColorMap = MakeMapObject(1 << BitsPerPixel, NULL);
++        GifFile->Image.ColorMap = MakeMapObject(1 << BitsPerPixel, NULL, GifFile);
+         if (GifFile->Image.ColorMap == NULL) {
+             _GifError = D_GIF_ERR_NOT_ENOUGH_MEM;
+             return GIF_ERROR;
+@@ -366,7 +355,7 @@
+         /* Get the image local color map: */
+         for (i = 0; i < GifFile->Image.ColorMap->ColorCount; i++) {
+             if (READ(GifFile, Buf, 3) != 3) {
+-                FreeMapObject(GifFile->Image.ColorMap);
++                FreeMapObject(GifFile->Image.ColorMap, GifFile);
+                 _GifError = D_GIF_ERR_READ_FAILED;
+                 GifFile->Image.ColorMap = NULL;
+                 return GIF_ERROR;
+@@ -376,12 +365,12 @@
+             GifFile->Image.ColorMap->Colors[i].Blue = Buf[2];
+         }
+     } else if (GifFile->Image.ColorMap) {
+-        FreeMapObject(GifFile->Image.ColorMap);
++        FreeMapObject(GifFile->Image.ColorMap, GifFile);
+         GifFile->Image.ColorMap = NULL;
+     }
+ 
+     if (GifFile->SavedImages) {
+-        if ((GifFile->SavedImages = (SavedImage *)realloc(GifFile->SavedImages,
++        if ((GifFile->SavedImages = (SavedImage *)GifFile->Realloc(GifFile->Heap, GifFile->SavedImages,
+                                       sizeof(SavedImage) *
+                                       (GifFile->ImageCount + 1))) == NULL) {
+             _GifError = D_GIF_ERR_NOT_ENOUGH_MEM;
+@@ -389,18 +378,18 @@
+         }
+     } else {
+         if ((GifFile->SavedImages =
+-             (SavedImage *) malloc(sizeof(SavedImage))) == NULL) {
++             (SavedImage *) GifFile->Malloc(GifFile->Heap, sizeof(SavedImage))) == NULL) {
+             _GifError = D_GIF_ERR_NOT_ENOUGH_MEM;
+             return GIF_ERROR;
+         }
+     }
+ 
+     sp = &GifFile->SavedImages[GifFile->ImageCount];
+-    memcpy(&sp->ImageDesc, &GifFile->Image, sizeof(GifImageDesc));
++    sce_paf_memcpy(&sp->ImageDesc, &GifFile->Image, sizeof(GifImageDesc));
+     if (GifFile->Image.ColorMap != NULL) {
+         sp->ImageDesc.ColorMap = MakeMapObject(
+                                  GifFile->Image.ColorMap->ColorCount,
+-                                 GifFile->Image.ColorMap->Colors);
++                                 GifFile->Image.ColorMap->Colors, GifFile);
+         if (sp->ImageDesc.ColorMap == NULL) {
+             _GifError = D_GIF_ERR_NOT_ENOUGH_MEM;
+             return GIF_ERROR;
+@@ -553,7 +542,8 @@
+     if (Buf > 0) {
+         *Extension = Private->Buf;    /* Use private unused buffer. */
+         (*Extension)[0] = Buf;  /* Pascal strings notation (pos. 0 is len.). */
+-        if (READ(GifFile, &((*Extension)[1]), Buf) != Buf) {
++        /* SCE: the count is read before the block */
++        if (Buf != READ(GifFile, &((*Extension)[1]), Buf)) {
+             _GifError = D_GIF_ERR_READ_FAILED;
+             return GIF_ERROR;
+         }
+@@ -570,7 +560,7 @@
+ DGifCloseFile(GifFileType * GifFile) {
+     
+     GifFilePrivateType *Private;
+-    FILE *File;
++    sce_paf_FILE *File;
+ 
+     if (GifFile == NULL)
+         return GIF_ERROR;
+@@ -586,17 +576,17 @@
+     File = Private->File;
+ 
+     if (GifFile->Image.ColorMap) {
+-        FreeMapObject(GifFile->Image.ColorMap);
++        FreeMapObject(GifFile->Image.ColorMap, GifFile);
+         GifFile->Image.ColorMap = NULL;
+     }
+ 
+     if (GifFile->SColorMap) {
+-        FreeMapObject(GifFile->SColorMap);
++        FreeMapObject(GifFile->SColorMap, GifFile);
+         GifFile->SColorMap = NULL;
+     }
+ 
+     if (Private) {
+-        free((char *)Private);
++        GifFile->Free(GifFile->Heap, (char *)Private);
+         Private = NULL;
+     }
+ 
+@@ -605,9 +595,9 @@
+         GifFile->SavedImages = NULL;
+     }
+ 
+-    free(GifFile);
++    GifFile->Free(GifFile->Heap, GifFile);
+ 
+-    if (File && (fclose(File) != 0)) {
++    if (File && (sce_paf_fclose(File) != 0)) {
+         _GifError = D_GIF_ERR_CLOSE_FAILED;
+         return GIF_ERROR;
+     }
+@@ -677,7 +667,8 @@
+     if (Buf > 0) {
+         *CodeBlock = Private->Buf;    /* Use private unused buffer. */
+         (*CodeBlock)[0] = Buf;  /* Pascal strings notation (pos. 0 is len.). */
+-        if (READ(GifFile, &((*CodeBlock)[1]), Buf) != Buf) {
++        /* SCE: the count is read before the block */
++        if (Buf != READ(GifFile, &((*CodeBlock)[1]), Buf)) {
+             _GifError = D_GIF_ERR_READ_FAILED;
+             return GIF_ERROR;
+         }
+@@ -994,7 +985,8 @@
+             _GifError = D_GIF_ERR_IMAGE_DEFECT;
+             return GIF_ERROR;
+         }
+-        if (READ(GifFile, &Buf[1], Buf[0]) != Buf[0]) {
++        /* SCE: the count is read before the block */
++        if (Buf[0] != READ(GifFile, &Buf[1], Buf[0])) {
+             _GifError = D_GIF_ERR_READ_FAILED;
+             return GIF_ERROR;
+         }
+--- a/lib/gif_lib.h
++++ b/lib/gif_lib.h
+@@ -16,6 +16,8 @@
+ #ifndef _GIF_LIB_H_
+ #define _GIF_LIB_H_ 1
+ 
++#include <stddef.h>	/* SCE: size_t */
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif /* __cplusplus */
+@@ -81,6 +83,12 @@
+     ColorMapObject *ColorMap;       /* The local color map */
+ } GifImageDesc;
+ 
++/* SCE: the memory functions, each given the heap first */
++typedef VoidPtr (*GifMallocFunc)(VoidPtr Heap, size_t Size);
++typedef void (*GifFreeFunc)(VoidPtr Heap, VoidPtr Ptr);
++typedef VoidPtr (*GifReallocFunc)(VoidPtr Heap, VoidPtr Ptr, size_t Size);
++typedef VoidPtr (*GifCallocFunc)(VoidPtr Heap, size_t Count, size_t Size);
++
+ typedef struct GifFileType {
+     GifWord SWidth, SHeight,        /* Screen dimensions. */
+       SColorResolution,         /* How many colors can we generate? */
+@@ -91,6 +99,12 @@
+     struct SavedImage *SavedImages; /* Use this to accumulate file state */
+     VoidPtr UserData;           /* hook to attach user data (TVT) */
+     VoidPtr Private;            /* Don't mess with this! */
++    /* SCE: the heap and the memory functions the decoder allocates with */
++    VoidPtr Heap;
++    GifMallocFunc Malloc;
++    GifFreeFunc Free;
++    GifReallocFunc Realloc;
++    GifCallocFunc Calloc;
+ } GifFileType;
+ 
+ typedef enum {
+@@ -185,8 +199,10 @@
+ GifFileType *DGifOpenFileHandle(int GifFileHandle);
+ int DGifSlurp(GifFileType * GifFile);
+ #endif /* _GBA_NO_FILEIO */
+-GifFileType *DGifOpen(void *userPtr, InputFunc readFunc);    /* new one
+-                                                             * (TVT) */
++/* SCE: the heap and its memory functions */
++GifFileType *DGifOpen(void *userPtr, VoidPtr heap, InputFunc readFunc,
++                      GifMallocFunc mallocFunc, GifFreeFunc freeFunc,
++                      GifReallocFunc reallocFunc, GifCallocFunc callocFunc);
+ int DGifGetScreenDesc(GifFileType * GifFile);
+ int DGifGetRecordType(GifFileType * GifFile, GifRecordType * GifType);
+ int DGifGetImageDesc(GifFileType * GifFile);
+@@ -264,9 +280,12 @@
+  * Color Map handling from ALLOCGIF.C                          
+  *****************************************************************************/
+ 
++/* SCE: allocated with GifFile's memory functions */
+ extern ColorMapObject *MakeMapObject(int ColorCount,
+-                                     const GifColorType * ColorMap);
+-extern void FreeMapObject(ColorMapObject * Object);
++                                     const GifColorType * ColorMap,
++                                     const GifFileType * GifFile);
++extern void FreeMapObject(ColorMapObject * Object,
++                          const GifFileType * GifFile);
+ extern ColorMapObject *UnionColorMap(const ColorMapObject * ColorIn1,
+                                      const ColorMapObject * ColorIn2,
+                                      GifPixelType ColorTransIn2[]);
+@@ -296,7 +315,8 @@
+ extern void MakeExtension(SavedImage * New, int Function);
+ extern int AddExtensionBlock(SavedImage * New, int Len,
+                              unsigned char ExtData[]);
+-extern void FreeExtension(SavedImage * Image);
++extern void FreeExtension(SavedImage * Image,
++                          const GifFileType * GifFile);	/* SCE */
+ extern SavedImage *MakeSavedImage(GifFileType * GifFile,
+                                   const SavedImage * CopyFrom);
+ extern void FreeSavedImages(GifFileType * GifFile);
+--- a/lib/gif_lib_private.h
++++ b/lib/gif_lib_private.h
+@@ -1,8 +1,8 @@
+ #ifndef _GIF_LIB_PRIVATE_H
+ #define _GIF_LIB_PRIVATE_H
+ 
++#include <std/stdio.h>	/* SCE: paf's streams */
+ #include "gif_lib.h"
+-#include "gif_hash.h"
+ 
+ #define PROGRAM_NAME "GIFLIB"
+ 
+@@ -44,14 +44,14 @@
+       CrntShiftState;    /* Number of bits in CrntShiftDWord. */
+     unsigned long CrntShiftDWord;   /* For bytes decomposition into codes. */
+     unsigned long PixelCount;   /* Number of pixels in image. */
+-    FILE *File;    /* File as stream. */
++    sce_paf_FILE *File;    /* File as stream (SCE: paf's). */
+     InputFunc Read;     /* function to read gif input (TVT) */
+     OutputFunc Write;   /* function to write gif output (MRB) */
+     GifByteType Buf[256];   /* Compressed input is buffered here. */
+     GifByteType Stack[LZ_MAX_CODE]; /* Decoded pixels are stacked here. */
+     GifByteType Suffix[LZ_MAX_CODE + 1];    /* So we can trace the codes. */
+     GifPrefixType Prefix[LZ_MAX_CODE + 1];
+-    GifHashTableType *HashTable;
++    /* SCE: no hash table (the encoder's) */
+ } GifFilePrivateType;
+ 
+ extern int _GifError;
+--- a/lib/gifalloc.c
++++ b/lib/gifalloc.c
+@@ -17,6 +17,7 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <string.h>
++#include <std/string.h>	/* SCE: paf's C library */
+ #include "gif_lib.h"
+ 
+ #define MAX(x, y)    (((x) > (y)) ? (x) : (y))
+@@ -47,7 +48,8 @@
+  */
+ ColorMapObject *
+ MakeMapObject(int ColorCount,
+-              const GifColorType * ColorMap) {
++              const GifColorType * ColorMap,
++              const GifFileType * GifFile) {	/* SCE: its memory functions */
+     
+     ColorMapObject *Object;
+ 
+@@ -57,12 +59,12 @@
+         return ((ColorMapObject *) NULL);
+     }
+     
+-    Object = (ColorMapObject *)malloc(sizeof(ColorMapObject));
++    Object = (ColorMapObject *)GifFile->Malloc(GifFile->Heap, sizeof(ColorMapObject));
+     if (Object == (ColorMapObject *) NULL) {
+         return ((ColorMapObject *) NULL);
+     }
+ 
+-    Object->Colors = (GifColorType *)calloc(ColorCount, sizeof(GifColorType));
++    Object->Colors = (GifColorType *)GifFile->Calloc(GifFile->Heap, ColorCount, sizeof(GifColorType));
+     if (Object->Colors == (GifColorType *) NULL) {
+         return ((ColorMapObject *) NULL);
+     }
+@@ -71,7 +73,7 @@
+     Object->BitsPerPixel = BitSize(ColorCount);
+ 
+     if (ColorMap) {
+-        memcpy((char *)Object->Colors,
++        sce_paf_memcpy((char *)Object->Colors,
+                (char *)ColorMap, ColorCount * sizeof(GifColorType));
+     }
+ 
+@@ -82,11 +84,12 @@
+  * Free a color map object
+  */
+ void
+-FreeMapObject(ColorMapObject * Object) {
++FreeMapObject(ColorMapObject * Object,
++              const GifFileType * GifFile) {	/* SCE: its memory functions */
+ 
+     if (Object != NULL) {
+-        free(Object->Colors);
+-        free(Object);
++        GifFile->Free(GifFile->Heap, Object->Colors);
++        GifFile->Free(GifFile->Heap, Object);
+         /*** FIXME:
+          * When we are willing to break API we need to make this function
+          * FreeMapObject(ColorMapObject **Object)
+@@ -124,6 +127,7 @@
+  * copied iff they didn't exist before.  ColorTransIn2 maps the old
+  * ColorIn2 into ColorUnion color map table.
+  */
++#if 0	/* SCE: left out (no GifFile to allocate the union with) */
+ ColorMapObject *
+ UnionColorMap(const ColorMapObject * ColorIn1,
+               const ColorMapObject * ColorIn2,
+@@ -211,6 +215,7 @@
+ 
+     return (ColorUnion);
+ }
++#endif
+ 
+ /*
+  * Apply a given color translation to the raster bits of an image
+@@ -280,7 +285,8 @@
+ }
+ 
+ void
+-FreeExtension(SavedImage * Image)
++FreeExtension(SavedImage * Image,
++              const GifFileType * GifFile)	/* SCE: its memory functions */
+ {
+     ExtensionBlock *ep;
+ 
+@@ -289,8 +295,8 @@
+     }
+     for (ep = Image->ExtensionBlocks;
+          ep < (Image->ExtensionBlocks + Image->ExtensionBlockCount); ep++)
+-        (void)free((char *)ep->Bytes);
+-    free((char *)Image->ExtensionBlocks);
++        GifFile->Free(GifFile->Heap, (char *)ep->Bytes);
++    GifFile->Free(GifFile->Heap, (char *)Image->ExtensionBlocks);
+     Image->ExtensionBlocks = NULL;
+ }
+ 
+@@ -315,17 +321,17 @@
+ 
+     /* Deallocate its Colormap */
+     if (sp->ImageDesc.ColorMap) {
+-        FreeMapObject(sp->ImageDesc.ColorMap);
++        FreeMapObject(sp->ImageDesc.ColorMap, GifFile);
+         sp->ImageDesc.ColorMap = NULL;
+     }
+ 
+     /* Deallocate the image data */
+     if (sp->RasterBits)
+-        free((char *)sp->RasterBits);
++        GifFile->Free(GifFile->Heap, (char *)sp->RasterBits);
+ 
+     /* Deallocate any extensions */
+     if (sp->ExtensionBlocks)
+-        FreeExtension(sp);
++        FreeExtension(sp, GifFile);
+ 
+     /*** FIXME: We could realloc the GifFile->SavedImages structure but is
+      * there a point to it? Saves some memory but we'd have to do it every
+@@ -345,9 +351,9 @@
+     SavedImage *sp;
+ 
+     if (GifFile->SavedImages == NULL)
+-        GifFile->SavedImages = (SavedImage *)malloc(sizeof(SavedImage));
++        GifFile->SavedImages = (SavedImage *)GifFile->Malloc(GifFile->Heap, sizeof(SavedImage));
+     else
+-        GifFile->SavedImages = (SavedImage *)realloc(GifFile->SavedImages,
++        GifFile->SavedImages = (SavedImage *)GifFile->Realloc(GifFile->Heap, GifFile->SavedImages,
+                                sizeof(SavedImage) * (GifFile->ImageCount + 1));
+ 
+     if (GifFile->SavedImages == NULL)
+@@ -369,7 +375,7 @@
+             if (sp->ImageDesc.ColorMap) {
+                 sp->ImageDesc.ColorMap = MakeMapObject(
+                                          CopyFrom->ImageDesc.ColorMap->ColorCount,
+-                                         CopyFrom->ImageDesc.ColorMap->Colors);
++                                         CopyFrom->ImageDesc.ColorMap->Colors, GifFile);
+                 if (sp->ImageDesc.ColorMap == NULL) {
+                     FreeLastSavedImage(GifFile);
+                     return (SavedImage *)(NULL);
+@@ -377,7 +383,7 @@
+             }
+ 
+             /* next, the raster */
+-            sp->RasterBits = (unsigned char *)malloc(sizeof(GifPixelType) *
++            sp->RasterBits = (unsigned char *)GifFile->Malloc(GifFile->Heap, sizeof(GifPixelType) *
+                                                    CopyFrom->ImageDesc.Height *
+                                                    CopyFrom->ImageDesc.Width);
+             if (sp->RasterBits == NULL) {
+@@ -390,7 +396,7 @@
+ 
+             /* finally, the extension blocks */
+             if (sp->ExtensionBlocks) {
+-                sp->ExtensionBlocks = (ExtensionBlock *)malloc(
++                sp->ExtensionBlocks = (ExtensionBlock *)GifFile->Malloc(GifFile->Heap,
+                                       sizeof(ExtensionBlock) *
+                                       CopyFrom->ExtensionBlockCount);
+                 if (sp->ExtensionBlocks == NULL) {
+@@ -428,16 +434,16 @@
+     for (sp = GifFile->SavedImages;
+          sp < GifFile->SavedImages + GifFile->ImageCount; sp++) {
+         if (sp->ImageDesc.ColorMap) {
+-            FreeMapObject(sp->ImageDesc.ColorMap);
++            FreeMapObject(sp->ImageDesc.ColorMap, GifFile);
+             sp->ImageDesc.ColorMap = NULL;
+         }
+ 
+         if (sp->RasterBits)
+-            free((char *)sp->RasterBits);
++            GifFile->Free(GifFile->Heap, (char *)sp->RasterBits);
+ 
+         if (sp->ExtensionBlocks)
+-            FreeExtension(sp);
++            FreeExtension(sp, GifFile);
+     }
+-    free((char *)GifFile->SavedImages);
++    GifFile->Free(GifFile->Heap, (char *)GifFile->SavedImages);
+     GifFile->SavedImages=NULL;
+ }
