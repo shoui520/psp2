@@ -115,7 +115,7 @@ public:
 		_Ty *buffer = alloc.allocate(size);
 
 		if (buffer == NULL)
-			ScePafStdc_D608246A();
+			alloc.report_failure();
 		ptr = buffer;
 		if (buffer != NULL) {
 			count = size;
@@ -135,7 +135,7 @@ public:
 		_Ty *buffer = alloc.allocate(size);
 
 		if (buffer == NULL)
-			ScePafStdc_D608246A();
+			alloc.report_failure();
 		ptr = buffer;
 		if (buffer != NULL) {
 			count = size;
@@ -275,7 +275,7 @@ vector<_Ty, _Ax>::vector(const _Myt &src) : alloc(src.alloc)
 	_Ty *data = alloc.allocate(src.limit);
 
 	if (data == NULL)
-		ScePafStdc_D608246A();
+		alloc.report_failure();
 	ptr = data;
 	if (data != NULL) {
 		count = src.count;
@@ -306,7 +306,7 @@ vector<_Ty, _Ax>::reserve(size_type size)
 		_Ty *data = alloc.allocate(size);
 
 		if (data == NULL)
-			ScePafStdc_D608246A();
+			alloc.report_failure();
 		ptr = data;
 		if (data == NULL)
 			return false;
@@ -317,7 +317,7 @@ vector<_Ty, _Ax>::reserve(size_type size)
 	_Ty *dst = alloc.allocate(size);
 
 	if (dst == NULL) {
-		ScePafStdc_D608246A();
+		alloc.report_failure();
 		return false;
 	}
 	for (size_type i = 0; i < count; ++i)

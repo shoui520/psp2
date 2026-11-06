@@ -4,6 +4,7 @@
 
 #include <stddef.h>
 #include <std/new>
+#include <std/stdlib.h>
 
 namespace paf {
 
@@ -35,6 +36,13 @@ public:
 	void construct(pointer ptr, const _Ty &val)
 	{
 		new ((void *)ptr) _Ty(val);
+	}
+
+	/* a failed allocate, as the containers that take an allocator report it: paf's
+	   heap reports it, an allocator of its own need not (name ours) */
+	void report_failure()
+	{
+		ScePafStdc_D608246A();
 	}
 };
 
