@@ -1,5 +1,6 @@
-# 3.65-CEX: vs0:sys/external/livearea_util.suprx (generated)
-set(MODULE_NID 0x294F0E22)
+# 3.650.011-TOOL: vs0:sys/external/livearea_util.suprx (generated)
+set(MODULE_NID 0x82BE70E1)
+set(MODULE_AUTH_ID 0x2800000000028057)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
@@ -23,20 +24,4 @@ set(MODULE_IMPORT_NIDS
 	0xCAE9ACE6:F:0xDA6EC8EF
 	0xCAE9ACE6:V:0x93B8AA67
 	0x859A24B1:F:0x4B675D05
-)
-set(MODULE_IMPORT_FUNCS
-	SceShellSvc_8D4F9F2E
-	SceShellSvc_A0B067AC
-	SceShellSvc_B31E7F1C
-	sceKernelDeleteLwMutex
-	__stack_chk_fail
-	sceKernelLockLwMutex
-	sceClibStrncmp
-	sceKernelUnlockLwMutex
-	sceClibStrnlen
-	sceKernelCreateLwMutex
-	sceKernelDelayThread
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
 )
