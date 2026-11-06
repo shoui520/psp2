@@ -367,7 +367,8 @@ void WaveRenderer::render_lighting_texture()
 		arl::FrameBufferObject::Unbind();
 
 		if (m_lit_feedback > 0.001f) {
-			m_texture_ops->fliptri(instance->m_textures[3], instance->m_textures[2], 0);
+			m_texture_ops->fliptri(instance->m_textures[3], instance->m_textures[2], 0,
+					       m_lit_feedback);
 
 			common::SharedPtr<arl::Texture2D> flipped = instance->m_textures[3];
 
@@ -607,7 +608,7 @@ void WaveRenderer::Load(const string &dir, uint32_t count)
 	state = gl;
 	m_wave_frag.m_object.init(*gl, state->m_patcher);
 	state = gl;
-	m_pos_vert.m_object.init(*gl, state->m_patcher, m_texture_ops->m_quad.m_spec,
+	m_pos_vert.m_object.init(*gl, state->m_patcher, m_texture_ops->m_quad.m_vertices.m_spec,
 				 common::SharedPtr<arl::VertexArraySpec>(),
 				 common::SharedPtr<arl::VertexArraySpec>(),
 				 common::SharedPtr<arl::VertexArraySpec>());

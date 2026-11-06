@@ -2,8 +2,8 @@
  * The effects drawn over the scene once it is drawn: the blur of the screen behind the panels,
  * and the texture operations they share. Blur and TextureOps are Sony's names (the markers
  * "Blur::draw_uniform_blur" and "TextureOps::copy"); the depth of field's and every member name
- * are ours. Blur's code is in blur.cpp, the depth of field's in depth_of_field.cpp; the
- * texture operations' are not converted yet (0x811a16f2..).
+ * are ours. Blur's code is in blur.cpp, the depth of field's in depth_of_field.cpp, the
+ * texture operations' in texture_ops.cpp.
  */
 #ifndef PAF_GRAPHICS_EFFECTS_POST_EFFECTS_H
 #define PAF_GRAPHICS_EFFECTS_POST_EFFECTS_H
@@ -17,12 +17,19 @@
 #include <graphics/arl/gxm/gxm_shader.h>
 #include <graphics/arl/gxm/gxm_texture.h>
 #include <graphics/arl/gxm/gxm_vertex_array.h>
+#include <graphics/effects/page_turn_quad.h>
 #include <math/ngp/matrix.h>
 #include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
 
 namespace paf {
 namespace graph {
+
+namespace arl {
+class FrameBufferObject;
+}
+
+class TextureOpsPrograms;
 
 /* the rectangle of the screen a quad covers, 0 to 1 (names ours) */
 class QuadArea {
@@ -78,10 +85,23 @@ public:
 	{
 	}
 
-	/* "paf/cg/misc/texture_ops/quad.vp" */
-	virtual const char *GetName();
-	virtual const uint8_t *GetBinary();
-	virtual uint32_t GetBinarySize();
+	virtual const char *GetName()
+	{
+		return "paf/cg/misc/texture_ops/quad.vp";
+	}
+
+	virtual const uint8_t *GetBinary()
+	{
+		return s_binary;
+	}
+
+	virtual uint32_t GetBinarySize()
+	{
+		return sizeof(s_binary);
+	}
+
+	/* quad.vp built by psp2cgc */
+	static const uint8_t s_binary[344];
 
 	arl::ShaderParameter<math::matrix> m_mvp;
 	/* the UVs' offset, then their scale */
@@ -94,8 +114,13 @@ class TextureOps {
 public:
 	/* 0x811a16f2 */
 	TextureOps();
-	/* 0x811fe8e4: implicit, emitted with the programs */
+	/* 0x811a28d2 */
 	~TextureOps();
+
+	/* 0x811a2b82: whether the source is drawn upside down into dest, both colour surfaces
+	   (name ours) */
+	static bool IsFlipped(const common::SharedPtr<arl::Texture2D> &dest,
+			      const common::SharedPtr<arl::Texture2D> &source);
 
 	/* 0x811a5422: the normals of the grid of positions in source drawn into the level of
 	   normals, in a scene begun with the flags (arguments' names ours) */
@@ -135,20 +160,23 @@ public:
 	   its step scaled (arguments' names ours) */
 	void boxBlur(const common::SharedPtr<arl::Texture2D> &texture,
 		     const common::SharedPtr<arl::Texture2D> &temporary, float radius, float step);
-	/* 0x811a5afe: source drawn into the level of dest flipped (arguments' names ours) */
+	/* 0x811a5afe: source drawn into the level of dest through the flip pattern, the
+	   amount the pattern's offsets are moved by (arguments' names ours) */
 	void fliptri(common::SharedPtr<arl::Texture2D> &dest, common::SharedPtr<arl::Texture2D> &source,
-		     uint32_t level);
+		     uint32_t level, float amount);
 
-	/* the unit quad drawn with the shaders begun (name ours) */
-	void DrawQuad()
+	/* the unit quad drawn with the shaders begun, its texture coordinates upside down when
+	   flipped (name ours) */
+	void DrawQuad(bool flipped)
 	{
+		arl::VertexArray &quad = flipped ? m_quad.m_flipped : m_quad.m_vertices;
 		arl::ArlInstance &gl = *arl::Gl();
 		arl::ShaderState *state = &gl;
 
-		state->m_dirty_vertex |= m_quad.m_spec->m_kinds;
+		state->m_dirty_vertex |= quad.m_spec->m_kinds;
 		state = &gl;
 		state->m_dirty_fragment |= 1;
-		sceGxmSetVertexStream(gl.m_context, 0, m_quad.m_buffer->m_memory->m_addr);
+		sceGxmSetVertexStream(gl.m_context, 0, quad.m_buffer->m_memory->m_addr);
 		arl::VertexArray::DrawArrays(gl, arl::TRIANGLE_STRIP, 0, 4);
 		state = &gl;
 		state->m_dirty_vertex = 0;
@@ -156,12 +184,35 @@ public:
 		state->m_dirty_fragment = 0;
 	}
 
-	uint32_t reserved[8];
-	/* the unit quad, a triangle strip, the operations are drawn with (name ours) */
-	arl::VertexArray m_quad;
-	uint32_t reserved1[4];
+	/* the unit quad drawn with the shaders begun (name ours) */
+	void DrawQuad()
+	{
+		arl::ArlInstance &gl = *arl::Gl();
+		arl::ShaderState *state = &gl;
+
+		state->m_dirty_vertex |= m_quad.m_vertices.m_spec->m_kinds;
+		state = &gl;
+		state->m_dirty_fragment |= 1;
+		sceGxmSetVertexStream(gl.m_context, 0, m_quad.m_vertices.m_buffer->m_memory->m_addr);
+		arl::VertexArray::DrawArrays(gl, arl::TRIANGLE_STRIP, 0, 4);
+		state = &gl;
+		state->m_dirty_vertex = 0;
+		state = &gl;
+		state->m_dirty_fragment = 0;
+	}
+
+	/* drawn into by every operation (names ours) */
+	common::SharedPtr<arl::FrameBufferObject> m_fbo;
+	/* the cubic B-spline's weights and offsets bicubic reads, 128 texels */
+	common::SharedPtr<arl::Texture2D> m_bicubic_table;
+	/* an 8 by 8 checkerboard of single texels; nothing draws with it */
+	common::SharedPtr<arl::Texture2D> m_checker;
+	/* 8 by 8: red on odd columns, green on odd rows, the pattern fliptri reads */
+	common::SharedPtr<arl::Texture2D> m_flip_pattern;
+	/* the unit quad, a triangle strip, the operations are drawn with */
+	PageTurnQuad m_quad;
 	arl::ShaderInstance<QuadVertShader, arl::VertShaderObject> m_vert;
-	uint32_t reserved2[(0x188 - 0x180) / 4];
+	TextureOpsPrograms *m_programs;
 };
 
 /* the uniform blur's program: the copy's levels, faded by Alpha (the parameters' names the

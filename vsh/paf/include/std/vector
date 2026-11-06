@@ -118,6 +118,25 @@ public:
 		}
 	}
 
+	/* Sony's build calls it out of line */
+	__attribute__((noinline)) vector(size_type size, const _Ty &val, const _Ax &al = _Ax())
+	{
+		count = 0;
+		limit = 0;
+
+		_Ty *buffer = alloc.allocate(size);
+
+		if (buffer == NULL)
+			ScePafStdc_D608246A();
+		ptr = buffer;
+		if (buffer != NULL) {
+			count = size;
+			limit = size;
+			for (size_type i = 0; i < count; ++i)
+				new (&ptr[i]) _Ty(val);
+		}
+	}
+
 	vector(const _Myt &src);
 
 	~vector();

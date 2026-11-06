@@ -199,6 +199,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/effects/blur.cpp
 	src/graphics/effects/cube_map.cpp
 	src/graphics/effects/depth_of_field.cpp
+	src/graphics/effects/texture_ops.cpp
 	src/toplevel/state.c
 	src/graphics/state.c
 	src/widget/core/widget.cpp
@@ -387,3 +388,7 @@ set_source_files_properties(src/common/string_util.cpp PROPERTIES COMPILE_OPTION
 # The PVF font cache inlines initAllCacheSlots into myPvfCache_new and the slot helpers into
 # freeAllCacheSlots, which stays a call: budgets 12 to 30 all do that (2026-11-06).
 set_source_files_properties(src/graphics/text/fontcache.c PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=12)
+
+# Sony inlined TextureOps::IsFlipped into the operations of its file and kept it out of line
+# for its other callers (2026-11-06)
+set_source_files_properties(src/graphics/effects/texture_ops.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
