@@ -5,7 +5,7 @@ enable_language(CXX)
 # its SQLite imports take the vendored SQLite's names, its IPMI imports the C++ names SceShellSvc
 # exports them under
 set(MODULE_IMPORT_NAMES vsh/paf/fw/3.65-CEX.exports.yml vsh/app/common/src/sqlite/exports.yml
-	vsh/lowlayer/src/shell_svc/exports.yml)
+	vsh/lowlayer/src/shell_svc/exports.yml sys/internal/usermode/src/driver_us/exports.yml)
 psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	module.c
 	collator.cpp
@@ -30,6 +30,10 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	collator_swedish.cpp
 	collator_traditional_chinese.cpp
 	collator_turkish.cpp
+	connection.cpp
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/contrib/sqlite-3.7.6.3")
+# Sony's connection code calls paf::string's assign out of line and inlines AddListener and the
+# table map's find: the budget that gives both
+set_source_files_properties(connection.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)

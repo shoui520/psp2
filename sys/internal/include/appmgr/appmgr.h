@@ -63,6 +63,7 @@ int sceAppMgrDump(void);
 int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume);
 int sceAppMgrEnablePrioritizingSystemChat(int enabled);
 int sceAppMgrGetAppIdByAppId(int appId);
+int sceAppMgrGetRawPath(const char *path, char *out, int outSize);
 int sceAppMgrNotifyLiveBoardModeForShell(int appId, int mode);
 int sceAppMgrReceiveShellEventNum(void);
 int sceAppMgrReleaseBgmPort(void);
