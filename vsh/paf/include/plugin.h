@@ -529,31 +529,6 @@ public:
 };
 
 /*
- * A template's widgets made ahead for TemplateOpen (fast_open="1"): the plugin
- * keeps one per template ID (class and method names ours; 0x81192a24, 0x81192312).
- */
-class TemplateCache {
-public:
-	TemplateCache() : m_created(false)
-	{
-	}
-
-	~TemplateCache()
-	{
-		Clear();
-	}
-
-	/* makes the template's widgets; 0 when done */
-	int32_t Create(Plugin *plugin, const IDParam &id);
-	void Clear();
-	/* opens the template from the widgets made ahead (0x8119311a, name ours) */
-	int32_t Open(Plugin *plugin, ui::Widget *parent, const Plugin::TemplateOpenParam &param);
-
-	bool m_created;
-	list<void *> m_items;
-};
-
-/*
  * What a widget made from a resource keeps as its first user data: its
  * plugin, its parameter and its resource node, and the layouts read for it.
  */
@@ -587,6 +562,77 @@ public:
 	IDParam m_sound_id;
 	vector<LayoutData> m_list_layout;
 };
+
+/*
+ * A template's widgets made ahead for TemplateOpen (fast_open="1"): the plugin
+ * keeps one per template ID; each widget of the template is an Item, read once
+ * from the resource, that makes its widget when the template opens
+ * (template_cache.cpp; class and member names ours).
+ */
+class TemplateCache {
+public:
+	class Item;
+
+	TemplateCache() : m_created(false)
+	{
+	}
+
+	~TemplateCache()
+	{
+		Clear();
+	}
+
+	/* makes the template's items; 0 when done */
+	int32_t Create(Plugin *plugin, const IDParam &id);
+	int32_t Clear();
+	/* opens the template: each item makes its widget under the parent */
+	int32_t Open(Plugin *plugin, ui::Widget *parent, const Plugin::TemplateOpenParam &param);
+
+	bool m_created;
+	list<Item *> m_items;
+};
+
+/* A template's widget as read from its element: its type's factories and parameters. */
+class TemplateCache::Item {
+public:
+	Item();
+
+	__attribute__((always_inline)) ~Item()
+	{
+		Clear();
+	}
+
+	int32_t Clear();
+	/* the widget type's style parameter of the ID, the plugin's or the common resource's */
+	int32_t SetStyleParam(Plugin *plugin, const IDParam &id);
+	/* the widget type's sound parameter of the ID, the plugin's or the common resource's */
+	int32_t SetSoundParam(Plugin *plugin, const IDParam &id);
+	/* reads the element and its children; 0 when done */
+	int32_t Create(Plugin *plugin, const cxml::Element &elm);
+	/* makes the widget under the parent, and its children's */
+	int32_t Open(Plugin *plugin, ui::Widget *parent, InitEventFunctionEntry2 *event_handler_table,
+		     ui::Widget *sibling);
+
+	bool m_created;
+	cxml::Element m_node;
+	/* the first "layout_" and "focus_" children */
+	cxml::Element m_layout;
+	cxml::Element m_focus;
+	IDParam m_id;
+	IDParam m_style_id;
+	/* the widget type's factories */
+	ui::FactoryFuncTable m_factory;
+	ui::WidgetStyleParam *m_style_param;
+	ui::WidgetSoundParam *m_sound_param;
+	ui::WidgetParam *m_wparam;
+	ui::WidgetLayoutParam *m_layout_param;
+	ui::WidgetFocusParam *m_focus_param;
+	list<WidgetResourceInfo::LayoutData> m_list_layout;
+	list<Item *> m_children;
+	/* a "template_ref" element's template */
+	TemplateCache *m_template;
+};
+
 
 }
 
