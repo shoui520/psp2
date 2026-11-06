@@ -25,6 +25,14 @@ extern "C" {
 #define SCE_BXCE_ERROR_NO_MEMORY			-2138759168	/* 0x80852000 */
 #define SCE_BXCE_ERROR_INVALID_ARGUMENT			-2138759166	/* 0x80852002 */
 #define SCE_BXCE_ERROR_DUPLICATE_ATTRIBUTE_NAME		-2138759126	/* 0x8085202A */
+#define SCE_BXCE_ERROR_XML_UNEXPECTED_EOF		-2138759158	/* 0x8085200A */
+#define SCE_BXCE_ERROR_XML_INVALID_DOCUMENT_ELEMENT	-2138759130	/* 0x80852026 */
+/* results the result-name table does not name (names ours) */
+#define SCE_BXCE_ERROR_PARSE_SUSPENDED			-2138758912	/* 0x80852100 */
+#define SCE_BXCE_ERROR_HANDLER_ABORTED			-2138758911	/* 0x80852101 */
+#define SCE_BXCE_ERROR_INVALID_CHARACTER		-2138757888	/* 0x80852500 */
+#define SCE_BXCE_ERROR_INVALID_DECIMAL			-2138757886	/* 0x80852502 */
+#define SCE_BXCE_ERROR_INVALID_HEXADECIMAL		-2138757885	/* 0x80852503 */
 #define SCE_BXCE_ERROR_XML_SYNTAX_ERROR			-2138759157	/* 0x8085200B */
 #define SCE_BXCE_ERROR_XML_END_TAG_MISMATCH		-2138759155	/* 0x8085200D */
 #define SCE_BXCE_ERROR_XML_EXPECTED_CLOSING_ANGLE_BRACKET	-2138759149	/* 0x80852013 */
@@ -279,7 +287,6 @@ enum {
  */
 #define BXCE_PARSER_SAVED_MAX		16
 
-typedef struct BxceParserState BxceParserState;
 
 /* the states a chunk's end can leave the tokenizer in, where the next chunk resumes (values Sony's) */
 enum {
@@ -320,7 +327,7 @@ typedef struct BxceNameStack {
 } BxceNameStack;
 
 typedef struct BxceParser {
-	BxceParserState *saved[BXCE_PARSER_SAVED_MAX];
+	struct BxceParserState *saved[BXCE_PARSER_SAVED_MAX];
 	SceUInt8 skipIgnorableWhiteSpace;
 	SceUInt8 resolveEntity;		/* '&' ends character data */
 	SceUInt8 resolveAttrEntity;	/* attribute values have their references decoded */
@@ -355,6 +362,46 @@ typedef struct BxceParser {
 	int consumed;
 } BxceParser;
 
+/* a SAX parser's saved state: the tokenizer's fields that go on, the handler and its user data */
+typedef struct BxceParserState {
+	SceUInt8 skipIgnorableWhiteSpace;
+	SceUInt8 resolveEntity;
+	SceUInt8 resolveAttrEntity;
+	int state;
+	int token;
+	int lastToken;
+	SceUInt8 documentElementSeen;
+	char quote;
+	int pendingLength;
+	char terminator;
+	int terminatorMatched;
+	const char *input;
+	int position;
+	int size;
+	SceUInt8 isFinal;
+	BxceBuffer elementName;
+	BxceBuffer characters;
+	BxceBuffer terminatorWindow;
+	SceUInt8 emptyElement;
+	BxceNameStack *nameStack;
+	BxceAttributeList *attrList;
+	BxceAttr *attr;
+	int status;
+	const char *text;
+	int textLength;
+	const char *skippedText;
+	int skippedTextLength;
+	const char *tokenStart;
+	void *handler;
+	void *userData;
+	int reserved[5];
+	int consumed;
+	SceUInt8 extendedCharacters;	/* characters go to the handler's method after fatalError */
+} BxceParserState;
+
+/* the text of each predefined entity, by BXCE_REF_* */
+extern const char *g_bxceEntityText[5];
+
 /* an attribute's growing name and value */
 int bxceAttrAppendName(BxceAttr *attr, const char *name, int length);
 int bxceAttrAppendValue(BxceAttr *attr, const char *value, int length);
@@ -367,8 +414,8 @@ BxceNameStackEntry *bxceNameStackPop(BxceNameStack *stack);
 int bxceNameStackIsEmpty(const BxceNameStack *stack);
 
 /* character references */
-int ScebXCe_DFB92627(SceUInt32 *value, const char *digits, int length);	/* hexadecimal */
-int ScebXCe_CC190FA8(SceUInt32 *value, const char *digits, int length);	/* decimal */
+int ScebXCe_DFB92627(SceUInt32 *value, const char *digits, SceUInt32 length);	/* hexadecimal */
+int ScebXCe_CC190FA8(SceUInt32 *value, const char *digits, SceUInt32 length);	/* decimal */
 int ScebXCe_BD9D727B(SceUInt32 value, char **out, int *length);		/* to UTF-8 */
 
 /* the tokenizer */
@@ -393,6 +440,16 @@ int bxceParserScanDoctype(BxceParser *parser, const char **text, int *length, ch
 int bxceParserScanUntil(BxceParser *parser, const char **text, int *length, const char *terminator,
 			int *matched, int terminatorLength);
 int bxceParserReadReference(BxceParser *parser, BxceBuffer *name);
+int bxceParserSaveState(BxceParser *parser, int slot);
+int bxceParserRestoreState(BxceParser *parser, SceUInt8 slot);
+int bxceParserReset(BxceParser *parser);
+int bxceParserInitialize(BxceParser *parser);
+int bxceParserTerminate(BxceParser *parser);
+void ScebXCe_A40944DD(BxceParser *parser, SceUInt8 skip);	/* setSkipIgnorableWhiteSpace */
+void ScebXCe_FF7CB737(BxceParser *parser, SceUInt8 resolve);	/* setResolveEntity */
+void bxceParserSetResolveAttrEntity(BxceParser *parser, SceUInt8 resolve);
+int bxceParserStateRelease(BxceParserState *state);
+int bxceIsUtf8Bom(const char *s);
 
 /* a node list (the SDK's NodeList): its entries in a doubly linked list */
 typedef struct BxceNodeListEntry {
