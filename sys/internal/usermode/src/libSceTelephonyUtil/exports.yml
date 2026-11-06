@@ -10,5 +10,5 @@ SceTelephonyUtil:
       nid: 0x6BB68D9A
       functions:
         - SceTelephonyUtil_68D0E38D: 0x68D0E38D
-        - SceTelephonyUtil_D0EDF28D: 0xD0EDF28D
+        - sceTelephonyIsAvailable: 0xD0EDF28D
         - SceTelephonyUtil_D7362313: 0xD7362313
