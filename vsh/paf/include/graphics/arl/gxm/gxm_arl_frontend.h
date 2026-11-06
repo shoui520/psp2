@@ -267,14 +267,28 @@ public:
 	{
 	}
 
+	/* the projection stack, marked changed for whoever may load it (name ours) */
+	MatrixStack &Projection()
+	{
+		m_projection_changed = true;
+		return m_projection;
+	}
+
+	/* the view stack, marked changed the same way (name ours) */
+	MatrixStack &View()
+	{
+		m_view_changed = true;
+		return m_view;
+	}
+
 	/* the projection and the model view multiplied, worked out again when either changed
 	   (names ours) */
 	math::matrix GetModelViewProjection()
 	{
 		if (m_projection_changed || m_view_changed) {
-			m_view_changed = false;
-			m_view_projection = m_projection.Top().m_matrix * m_view.Top().m_matrix;
+			m_view_projection = Projection().Top().m_matrix * View().Top().m_matrix;
 			m_projection_changed = false;
+			m_view_changed = false;
 		}
 		return m_view_projection * m_model.Top().m_matrix;
 	}
