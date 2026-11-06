@@ -1,72 +1,64 @@
 /*
- * Clipboard validation and ShellUtil forwarding.
- * Text consists of UTF-16 code units; isolated surrogate units are rejected.
- * ShellUtil entry names retain NIDs until their public names are established.
+ * SceClipboard (Sony's clipboard.h): the system clipboard of UTF-16 text, which the shell keeps
+ * (SceShellUtil's text clipboard). Setting it checks that the text holds no surrogate code unit
+ * and tells the shell to show a notice.
  */
-#include <stdint.h>
 #include <stddef.h>
+#include <scetypes.h>
+#include <sceerror.h>
+#include <clipboard.h>
+#include <ces/libces_ucs.h>
+#include <kernel/libkernel.h>
+#include <libkernel/libkernel.h>
+#include <appmgr/appmgr.h>
+#include "../../../../../vsh/lowlayer/src/shell_svc/text_clipboard.h"
 
-#define CLIPBOARD_INVALID_POINTER	0x80104601U
-#define CLIPBOARD_INVALID_LENGTH	0x80104602U
-#define CLIPBOARD_INVALID_TEXT		0x80104603U
-#define CLIPBOARD_MAX_LENGTH		0x1ffdU
+static int s_isInitialized;
 
-extern int SceShellUtil_C4810C56(const uint16_t *text, uint32_t length);
-extern int SceShellUtil_1B186905(uint16_t *text, uint32_t capacity,
-			      uint32_t *length);
-extern void *sceClibMemset(void *buffer, int value, size_t size);
-extern char *sceClibStrncpy(char *destination, const char *source, size_t size);
-extern int sceAppMgrSendNotificationRequest(const void *request, uint32_t flags);
-
-static volatile uint32_t clipboardInitialized;
-
-int module_start(uint32_t argumentSize, void *arguments)
+int module_start(SceSize args, const void *argp)
 {
-	clipboardInitialized = 1;
-	return 0;
+	s_isInitialized = 1;
+	return SCE_OK;
 }
 
-int module_stop(uint32_t argumentSize, void *arguments)
+int module_stop(SceSize args, const void *argp)
 {
-	return 0;
+	return SCE_OK;
 }
 
-int module_exit(uint32_t argumentSize, void *arguments)
+int module_exit(SceSize args, const void *argp)
 {
-	return 0;
+	return SCE_OK;
 }
 
-static int isSurrogateCodeUnit(uint16_t codeUnit)
+SceInt32 sceClipboardSetText(const SceWChar16 *newContents, SceUInt length)
 {
-	return codeUnit >= 0xd800 && codeUnit <= 0xdfff;
-}
+	AppmgrNotificationRequest notification;
+	const SceWChar16 *p;
+	SceUInt i;
+	int ret;
 
-int sceClipboardSetText(const uint16_t *text, uint32_t length)
-{
-	uint8_t notification[64];
-	uint32_t index;
-	int result;
-
-	if (!text)
-		return (int)CLIPBOARD_INVALID_POINTER;
-	if (length > CLIPBOARD_MAX_LENGTH)
-		return (int)CLIPBOARD_INVALID_LENGTH;
-	for (index = 0; index < length; index++) {
-		if (isSurrogateCodeUnit(text[index]))
-			return (int)CLIPBOARD_INVALID_TEXT;
+	if (newContents == NULL)
+		return SCE_CLIPBOARD_ERROR_NULL_POINTER;
+	if (length > SCE_CLIPBOARD_MAX_STRING_LENGTH)
+		return SCE_CLIPBOARD_ERROR_TEXT_TOO_LONG;
+	for (i = 0, p = newContents; i < length; i++, p++) {
+		if (sceCesUcs2CheckCode(*p) != SCE_CES_OK)
+			return SCE_CLIPBOARD_ERROR_UNSUPPORTED_CHARACTER;
 	}
-	result = SceShellUtil_C4810C56(text, length);
-	if (result)
-		return result;
-	sceClibMemset(notification, 0, sizeof(notification));
-	sceClibStrncpy((char *)notification + 4, "Clipboard:\nSet Text", 59);
-	sceAppMgrSendNotificationRequest(notification, 0);
-	return result;
+	ret = SceShellUtil_C4810C56(newContents, length);
+	if (ret == SCE_OK) {
+		sceClibMemset(&notification, 0, sizeof(notification));
+		sceClibStrncpy((char *)notification.payload, "Clipboard:\nSet Text",
+			       sizeof(notification.payload) - 1);
+		sceAppMgrSendNotificationRequest(&notification, 0);
+	}
+	return ret;
 }
 
-int sceClipboardGetText(uint16_t *text, uint32_t capacity, uint32_t *length)
+SceInt32 sceClipboardGetText(SceWChar16 *buffer, SceUInt maxLength, SceUInt *pLength)
 {
-	if (!text || !length)
-		return (int)CLIPBOARD_INVALID_POINTER;
-	return SceShellUtil_1B186905(text, capacity, length);
+	if (buffer == NULL || pLength == NULL)
+		return SCE_CLIPBOARD_ERROR_NULL_POINTER;
+	return SceShellUtil_1B186905(buffer, maxLength, pLength);
 }

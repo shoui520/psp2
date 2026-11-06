@@ -4,6 +4,7 @@
 #include <scetypes.h>
 #include <stdint.h>
 #include <appmgr/appmgr_launch.h>
+#include <appmgr/appmgr_notification.h>
 
 /* SceAppMgr's error codes beyond the SDK's (appmgr.h): the henkaku wiki's and vitasdk's names */
 #define SCE_APPMGR_ERROR_INVALID_PARAM_SFO	0x80800015
@@ -194,6 +195,7 @@ int sceAppMgrGetSystemDataFile(SceUInt32 location, void *buffer, SceSize size);
 /* SceAppMgrUser's system data calls (SceDriverUser); location 1 is the PlayReady information, 2 its
  * data */
 int sceAppMgrSetSystemDataFile(SceUInt32 location, const void *userData, SceSize dataSize);
+int sceAppMgrSendNotificationRequest(const AppmgrNotificationRequest *request, int wait);
 int sceAppMgrGetSystemDataFilePlayReady(SceUInt32 location, void *information, void *userData,
 					SceSize dataSize);
 int sceAppMgrSetSystemDataFilePlayReady(SceUInt32 location, const void *information,

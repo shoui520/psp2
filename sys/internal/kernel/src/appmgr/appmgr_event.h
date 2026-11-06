@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <scetypes.h>
+#include <appmgr/appmgr_notification.h>
 #include "appmgr_shell_event.h"
 
 typedef struct AppmgrExtraAppParam {
@@ -61,13 +62,6 @@ typedef struct AppmgrNotificationQueue {
 } AppmgrNotificationQueue;
 
 _Static_assert(sizeof(AppmgrNotificationQueue) == 32, "notification queue");
-
-typedef struct AppmgrNotificationRequest {
-	SceUInt32 type;
-	unsigned char payload[60];
-} AppmgrNotificationRequest;
-
-_Static_assert(sizeof(AppmgrNotificationRequest) == 64, "notification request");
 
 int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait);
 int _appmgrQueuePop(AppmgrNotificationRequest *request);
