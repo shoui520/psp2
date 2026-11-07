@@ -244,14 +244,14 @@ static const CommonGuiDialogButton s_magneticButtons[] = {
 	{ 0, 0, 0, 0 },
 };
 
-static CommonGuiDialogStyle s_magneticStyle[] = {
+static ui::Dialog::PartsList s_magneticParts[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
 	{ MSG_DIALOG_WIDGET_BUTTON1, IDParam((uint32_t)0x5049F5E4) },
 	{ 0, IDParam() },
 };
 
 static const CommonGuiDialogLayout s_magneticLayout = {
-	&s_magneticPage, s_magneticStyle, s_magneticButtons
+	&s_magneticPage, s_magneticParts, s_magneticButtons
 };
 
 /* the location failure message's layout with a retry button: cancel and retry */
@@ -265,7 +265,7 @@ static const CommonGuiDialogButton s_locationRetryButtons[] = {
 	{ 0, 0, 0, 0 },
 };
 
-static CommonGuiDialogStyle s_locationRetryStyle[] = {
+static ui::Dialog::PartsList s_locationRetryParts[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
 	{ MSG_DIALOG_WIDGET_BUTTON1, IDParam((uint32_t)0x5049F5E4) },
 	{ MSG_DIALOG_WIDGET_BUTTON2, IDParam((uint32_t)0xBD559A97) },
@@ -273,7 +273,7 @@ static CommonGuiDialogStyle s_locationRetryStyle[] = {
 };
 
 static const CommonGuiDialogLayout s_locationRetryLayout = {
-	&s_locationRetryPage, s_locationRetryStyle, s_locationRetryButtons
+	&s_locationRetryPage, s_locationRetryParts, s_locationRetryButtons
 };
 
 /* the patch message's layout: a yes button */
@@ -286,14 +286,14 @@ static const CommonGuiDialogButton s_patchButtons[] = {
 	{ 0, 0, 0, 0 },
 };
 
-static CommonGuiDialogStyle s_patchStyle[] = {
+static ui::Dialog::PartsList s_patchParts[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
 	{ MSG_DIALOG_WIDGET_BUTTON1, IDParam((uint32_t)0x5049F5E4) },
 	{ 0, IDParam() },
 };
 
 static const CommonGuiDialogLayout s_patchLayout = {
-	&s_patchPage, s_patchStyle, s_patchButtons
+	&s_patchPage, s_patchParts, s_patchButtons
 };
 
 static MsgDialog *s_dialog = NULL;
@@ -848,7 +848,7 @@ static __attribute__((noinline)) int UserMsg(const SceMsgDialogParam *param, Msg
 		layout = SceCommonGuiDialog_F8B2D7E1;
 	} else if (buttonType == SCE_MSG_DIALOG_BUTTON_TYPE_3BUTTONS) {
 		layout.page = &s_3ButtonsPage;
-		layout.style = SceCommonGuiDialog_78399261.style;
+		layout.parts = SceCommonGuiDialog_78399261.parts;
 		layout.buttons = s_3ButtonsButtons;
 	} else {
 		layout = SceCommonGuiDialog_AF75CA6D;

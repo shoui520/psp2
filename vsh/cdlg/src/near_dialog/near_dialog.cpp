@@ -147,7 +147,7 @@ static const CommonGuiDialogButton s_locationRetryButtons[] = {
 	{ 0, 0, 0, 0 },
 };
 
-static CommonGuiDialogStyle s_locationRetryStyle[] = {
+static ui::Dialog::PartsList s_locationRetryParts[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
 	{ NEAR_DIALOG_WIDGET_BUTTON1, IDParam((uint32_t)0x5049F5E4) },
 	{ NEAR_DIALOG_WIDGET_BUTTON2, IDParam((uint32_t)0xBD559A97) },
@@ -155,7 +155,7 @@ static CommonGuiDialogStyle s_locationRetryStyle[] = {
 };
 
 static const CommonGuiDialogLayout s_locationRetryLayout = {
-	&s_locationRetryPage, s_locationRetryStyle, s_locationRetryButtons
+	&s_locationRetryPage, s_locationRetryParts, s_locationRetryButtons
 };
 
 /* the buttons the library's two-button page takes for the check-in's questions, the gift's and
@@ -400,7 +400,7 @@ static inline void SetLayout(CommonGuiDialogLayout *layout, const CommonGuiDialo
 			     const CommonGuiDialogButton *buttons)
 {
 	layout->page = base.page;
-	layout->style = base.style;
+	layout->parts = base.parts;
 	layout->buttons = buttons;
 }
 

@@ -14,12 +14,10 @@
 #include <graphics/surface/surface.h>
 #include <cache/cache_image.h>
 #include <versatileparam/idparam.h>
+#include <widget/w_dialog.h>
 
 namespace paf {
 class Plugin;
-namespace ui {
-class Widget;
-}
 }
 
 /*
@@ -81,20 +79,14 @@ struct CommonGuiDialogPage {
 	SceUInt32 id[3];
 };
 
-/* an entry of a dialog's style table: a widget by its index in the layout, and the resource
-   it takes; an index of 0 ends it */
-struct CommonGuiDialogStyle {
-	SceInt32 index;
-	paf::IDParam id;
-};
-
 /*
- * A dialog's layout: its page and style tables, which only the library reads, and its buttons.
- * The library exports its own layouts as variables (below).
+ * A dialog's layout: its page; its parts, each index (as SceCommonGuiDialog_8947FC23 takes it) to
+ * its widget's ID, which the library gives the paf::ui::Dialog; and its buttons. The library
+ * exports its own layouts as variables (below).
  */
 struct CommonGuiDialogLayout {
 	const CommonGuiDialogPage *page;
-	const CommonGuiDialogStyle *style;
+	const paf::ui::Dialog::PartsList *parts;
 	const CommonGuiDialogButton *buttons;
 };
 
@@ -225,24 +217,37 @@ paf::ui::Widget *SceCommonGuiDialog_8947FC23(int dialogId, int index);
 /* called on a dialog just opened with a resource ID (the trophy setup dialog's 0xE0D9F918) */
 int SceCommonGuiDialog_D3F78BA5(int dialogId, SceUInt32 id);
 
-/* the library's layouts: a dialog with buttons, a waiting dialog without and with a cancel
-   button, and the default; and two the trophy setup dialog uses, for its last message and its
-   question */
-extern const CommonGuiDialogLayout SceCommonGuiDialog_52A53037;
-extern const CommonGuiDialogLayout SceCommonGuiDialog_6CD802FC;
-extern const CommonGuiDialogLayout SceCommonGuiDialog_22B17F2B;
-extern const CommonGuiDialogLayout SceCommonGuiDialog_2A68B4A4;
-extern const CommonGuiDialogLayout SceCommonGuiDialog_F8B2D7E1;
-extern const CommonGuiDialogLayout SceCommonGuiDialog_AF75CA6D;
-/* the message dialog's layouts (libcdlg_msg): the progress bar with a cancel button; the one
-   whose style its 3-button layout takes; no button; OK and cancel; the progress bar. With
-   6CD802FC (yes/no), F8B2D7E1 (cancel), AF75CA6D (OK) and 2A68B4A4 (the small waiting
-   dialog) above */
-extern const CommonGuiDialogLayout SceCommonGuiDialog_446F8B49;
-extern const CommonGuiDialogLayout SceCommonGuiDialog_78399261;
-extern const CommonGuiDialogLayout SceCommonGuiDialog_7AEA192C;
-extern const CommonGuiDialogLayout SceCommonGuiDialog_92752DE2;
-extern const CommonGuiDialogLayout SceCommonGuiDialog_A0E0A437;
+/*
+ * The library's layouts, by their parts (1: the text, 2: a second text, 12 to 14: the buttons,
+ * 18 and 19: the progress bar; the others are not known yet) and their buttons. The pages differ
+ * between layouts with the same parts.
+ */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_AF75CA6D;	/* text; OK (the default) */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_EF7F04DD;	/* text; cancel */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_6CD802FC;	/* text; no, yes */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_22B17F2B;	/* text; yes, no */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_78399261;	/* text; yes, no, cancel */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_92752DE2;	/* text; cancel, OK */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_446F8B49;	/* text, progress; cancel */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_25BD4084;	/* text, progress; cancel */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_95087497;	/* two texts, progress; cancel */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_EA557911;	/* two texts, progress; cancel */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_A0E0A437;	/* text, progress */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_7AEA192C;	/* text */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_5C8A2999;	/* text */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_E872FB5D;	/* parts 9, 10; part 8 */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_1424609E;	/* parts 9, 10; OK */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_3AC06BC6;	/* parts 9, 10; no, yes */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_DDC59760;	/* part 11; part 8 */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_3785AD25;	/* part 11; OK */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_2A68B4A4;	/* text (the small waiting dialog) */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_F8B2D7E1;	/* text; cancel */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_7D8FE85E;	/* part 5, text; OK */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_C4A714DE;	/* part 5, text; cancel, OK */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_52A53037;	/* part 5, text */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_B04C8C1A;	/* part 5, text; OK */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_DEDA75E4;	/* two texts; OK */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_04D71470;	/* text; buttons 7, cancel and 8 */
 /* the colour that leaves a dialog's own */
 extern const paf::math::v4 SceCommonGuiDialog_EF2C5382;
 }
