@@ -54,6 +54,10 @@ class AnimQueue;
 typedef void (*AnimCB)(Timer *t, AnimListener *listener, void *data1, void *data2,
 		       void *data3);
 
+/* the bit of a key code in a widget's m_keycode, 0 for a key that has none (0x811411f6, name
+   ours) */
+uint32_t KeycodeToMask(int32_t keycode);
+
 /* a position, size or rotation for one screen resolution */
 class ResolutionData {
 public:
@@ -262,15 +266,24 @@ public:
  */
 class WidgetSoundParam : public VersatileParam {
 public:
-	/* a sound of the parameter: its element, its ID and its waveforms (names ours) */
+	/* a sound of the parameter: its element, its index, its ID and its waveforms (names ours) */
 	class Sound {
 	public:
+		/* the element and index named, no ID or waveforms yet (ButtonBaseSoundParam's) */
+		Sound(const char *name, uint32_t index)
+			: m_name(name), m_index(index), m_handle(-1), reserved2(-1.0f), m_buffer1(NULL),
+			  m_size1(0), m_buffer2(NULL), m_size2(0), m_samplerate(0), m_type(0)
+		{
+		}
+
 		const char *m_name;
-		uint32_t reserved;
+		/* the index a widget plays it by (PlaySound, GetSound) */
+		uint32_t m_index;
 		IDParam m_id;
 		/* -1 until played */
 		int32_t m_handle;
-		uint32_t reserved2;
+		/* made -1.0; its readers are not converted */
+		float reserved2;
 		const char *m_buffer1;
 		uint32_t m_size1;
 		const char *m_buffer2;
@@ -644,7 +657,9 @@ public:
 	{
 	}
 
-	virtual void UpdateGesture()
+	/* a key of the pad port has been captured (captured) or let go; group 1 for the keys of
+	   pad capture 0x17c, 0 for those of 0x17d (names ours) */
+	virtual void OnPadCaptureChanged(bool captured, int32_t group, uint32_t port, uint32_t key)
 	{
 	}
 
@@ -745,7 +760,8 @@ public:
 		return FindSound(id);
 	}
 
-	virtual void DoNothing()
+	/* a sound to take as the one of the index (names ours) */
+	virtual void AddSound(uint32_t index, WidgetSoundParam::Sound &sound)
 	{
 	}
 
@@ -793,6 +809,14 @@ public:
 
 	/* the sound with the ID (export 6811A0CF, name ours) */
 	WidgetSoundParam::Sound *FindSound(int32_t id);
+	/* the pad keys of its capture 0x17c (dir keys) or 0x17d (the others) let go, their gestures
+	   reset with reset; key 255 for all of them (0x811513f0, 0x811510ce, names ours) */
+	int32_t ReleasePadCaptureDir(uint32_t key, bool reset);
+	int32_t ReleasePadCaptureButton(uint32_t key, bool reset);
+	/* captures the pad port's key, its gestures applied (0x8115d4de, name ours) */
+	int32_t CapturePad(uint32_t port, uint32_t key, bool apply, bool reset_touch);
+	/* its depth among its scene's layers, from its parents' down (0x81162db2, name ours) */
+	uint64_t GetLayerDepth();
 	/* the draw object added, the surface drawn as the widget's, and the size updated with
 	   update (export 7A682C7B, name ours) */
 	void AddDrawObj(const DrawObjEntry &entry, bool update);
@@ -1030,7 +1054,11 @@ public:
 	uint8_t reserved3a[3];
 	/* the keys bound to it while m_bound_keycode (names after ScePaf-RE) */
 	uint32_t m_keycode;
-	uint32_t reserved3x : 16;
+	/* its draw priority and the layer it is drawn in, its scene's weight of the layer times the
+	   priority adding up to its depth (GetLayerDepth; names ours) */
+	uint32_t m_priority : 8;
+	uint32_t m_layer : 4;
+	uint32_t reserved3x : 4;
 	/* how it is modal (export 42C5A4D4): 0 or 1 as Environment::RegisterModalWidget's mode, 2
 	   not modal; and the option given with it (names ours) */
 	uint32_t m_modal_mode : 4;
@@ -1042,7 +1070,9 @@ public:
 	bool m_touch_rear_event : 1;
 	bool reserved3y1 : 1;
 	bool reserved3y2 : 1;
-	bool reserved3y3 : 1;
+	/* the focus moves to it within its group (ButtonBaseStyleParam's "focus_in_group"; name
+	   after it) */
+	bool m_focus_in_group : 1;
 	bool reserved3y4 : 1;
 	bool reserved3y5 : 1;
 	bool reserved3y6 : 1;
@@ -1163,7 +1193,9 @@ public:
 	vector<DrawObjEntry> m_drawobjs;
 	/* what is called when it is deleted (names after DrawObj's, Sony's DWARF) */
 	vector<DeleteCBInfo> m_list_delete_cb;
-	uint8_t reserved7b[0xb];
+	uint8_t reserved7b[8];
+	/* the indexes of the sounds it plays, a bit each (PlaySound; name ours) */
+	uint32_t m_sound_mask : 24;
 	/* the sounds of its sound parameter (names ours) */
 	uint8_t m_sound_num;
 	WidgetSoundParam::Sound *m_sounds;
@@ -1226,6 +1258,11 @@ int32_t ScePafWidget_D3D0A7C3(paf::ui::Widget *widget, uint32_t port, uint32_t i
 			      bool reset_pad);
 /* lets go of every touch it holds */
 int32_t ScePafWidget_931AD41E(paf::ui::Widget *widget, bool release);
+/* lets go of the touch of the port and ID it holds, its release handled when release is set:
+   -1 if it does not hold it */
+int32_t ScePafWidget_5ABB3393(paf::ui::Widget *widget, uint32_t port, uint32_t id, bool release);
+/* plays its sound of the index where its sound mask has it: -1 when none is played */
+int32_t ScePafWidget_2B1A1493(paf::ui::Widget *widget, int32_t index);
 /* binds the keys of the mask to the widget (SetKeycode after ScePaf-RE) */
 int32_t ScePafWidget_21125870(paf::ui::Widget *widget, uint32_t keycode);
 /* gives the widget its focus cursor: a copy of the shape, its offset, size and rotation

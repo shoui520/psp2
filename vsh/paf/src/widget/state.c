@@ -509,19 +509,6 @@ int _ZN3paf2ui7TextBox11GetImeParamERNS1_8ImeParamE(const uint8_t *self, uint8_t
 	return 0;
 }
 
-uint8_t *_ZN3paf2ui10ButtonBase13SetButtonModeEj(uint8_t *self, uint32_t value)
-{
-	if (*(uint32_t *)(self + 644) != value) {
-		*(uint32_t *)(self + 644) = value;
-		uint8_t flags = self[405];
-		if (value == 2)
-			self[405] = flags & 0xFE;
-		else
-			self[405] = flags | 1;
-	}
-	return self;
-}
-
 uint8_t *_ZN3paf2ui14ScrollViewBase14OnDestroyTimerEPNS0_15ScrollViewTimerE(uint8_t *self, const uint8_t *value)
 {
 	if (*(const uint8_t **)(self + 920) == value) {
@@ -979,8 +966,8 @@ __attribute__((noinline)) int name(const void *self, const char *type) \
 	return parent(self, type); \
 }
 
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui10ButtonBase9IsInheritEPKc, "button_base",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+/* ButtonBase's is C++ (w_button_base.cpp) */
+int _ZNK3paf2ui10ButtonBase9IsInheritEPKc(const void *self, const char *type);
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui15StateButtonBase9IsInheritEPKc, "state_button_base",
 		   _ZNK3paf2ui10ButtonBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui9ScrollBar9IsInheritEPKc, "scrollbar",
@@ -1724,22 +1711,6 @@ int _ZN3paf2ui18ImageSlideBarParam3GetEv(uint32_t *self)
 
 		self[30] = *(const uint32_t *)(state + 636);
 		self[31] = upper;
-		return 0;
-	}
-	return result;
-}
-
-int ScePafWidget_670B0492(uint8_t *self)
-{
-	int result = _ZN3paf2ui11WidgetParam3GetEv(self);
-
-	if (result >= 0) {
-		const uint8_t *state = *(const uint8_t *const *)(self + 32);
-		uint8_t active = 0;
-
-		if (state[656] & 1)
-			active = (state[656] & 2) != 0;
-		self[120] = active;
 		return 0;
 	}
 	return result;

@@ -190,7 +190,10 @@ public:
 	float m_display_area_scale;
 	bool m_display_area_applied;
 	bool m_display_area_changed;
-	uint8_t reserved8[0x36];
+	uint8_t reserved8[0x2e];
+	/* the gesture listener of the pad (name ours) */
+	inputdevice::InputGestureListener *m_pad_gesture_listener;
+	uint8_t reserved8a[4];
 	/* the gesture listeners of the front (0) and rear (1) touch ports (names ours) */
 	common::SharedPtr<inputdevice::InputGestureListener> m_touch_gesture_listener_front;
 	common::SharedPtr<inputdevice::InputGestureListener> m_touch_gesture_listener_rear;
@@ -213,7 +216,10 @@ public:
 	void *m_sound_callback_data;
 	CreateWidgetCallback m_create_widget_callback;
 	void *m_create_widget_callback_data;
-	uint8_t reserved3[8];
+	uint8_t reserved3[4];
+	/* the modal widget on top: a button below it in depth is not pressed while it is modal with
+	   option 1 (name ours) */
+	Widget *m_top_modal_widget;
 	/* RegisterModalWidget's widgets (name ours) */
 	ModalWidgetList m_modal_widgets;
 	uint8_t reserved3b[0x50];

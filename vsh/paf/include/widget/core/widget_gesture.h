@@ -26,7 +26,7 @@ public:
    the widget asks for the short hold, and the area it is held in (vtable 812F12D0) */
 class HoldGestureParam : public inputdevice::GestureParam {
 public:
-	HoldGestureParam() : m_move_tolerance(3.0f), m_hold_time(500), reserved2(5), reserved3(112)
+	HoldGestureParam() : m_move_tolerance(3.0f), m_hold_time(500), m_repeat_time(5), reserved3(112)
 	{
 	}
 
@@ -51,7 +51,8 @@ public:
 	/* how far the touch may move while it is held */
 	float m_move_tolerance;
 	uint32_t m_hold_time;
-	uint32_t reserved2;
+	/* how often a held touch repeats, in milliseconds (ButtonBase's repeat_msec) */
+	uint32_t m_repeat_time;
 	uint32_t reserved3;
 	math::rect m_rect;
 };
@@ -122,6 +123,14 @@ public:
 	uint32_t reserved4[4];
 	/* the short hold (300 ms) asked for */
 	bool m_short_hold;
+	HoldGestureParam m_param;
+};
+
+/* the listener a widget holds a pad key with, its hold and repeat as a touch's (the
+   Environment's pad gesture listener gives it; layout from ButtonBase's uses, names ours) */
+class PadHoldGestureListener : public inputdevice::GestureListener {
+public:
+	uint8_t reserved[0x14];
 	HoldGestureParam m_param;
 };
 

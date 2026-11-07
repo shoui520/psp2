@@ -2,8 +2,8 @@
  * paf::ui::ButtonBase: what every button shares, its states, the events it sends, its glow and
  * the text auto scroll a long press starts; and its resource, style and handler parameters.
  * Names after ScePaf-RE (restored from Sony's DWARF) and the exports; the virtual functions and
- * members Sony's records do not name are ours. Its file (0x810e109c) is converted after Button's:
- * until then the members its code alone uses keep provisional names.
+ * members Sony's records do not name are ours, after what its file (w_button_base.cpp) does with
+ * them.
  */
 #ifndef PAF_WIDGET_W_BUTTON_BASE_H
 #define PAF_WIDGET_W_BUTTON_BASE_H
@@ -52,13 +52,29 @@ public:
 		ST_BTN_PRESS_REPEAT = 4
 	};
 
-	/* an entry of m_event_list: a string among values ButtonBase's file sets (provisional,
-	   0x38 bytes) */
-	class EventEntry {
-	public:
-		int32_t reserved[2];
-		string m_name;
-		uint8_t reserved2[0x24];
+	/* the indexes of its sounds (its sound parameter's names: "press", "move_out",
+	   "long_press", "decide", "multi_tap"; names ours) */
+	enum {
+		SOUND_PRESS = 1,
+		SOUND_MOVE_OUT = 2,
+		SOUND_LONG_PRESS = 3,
+		SOUND_DECIDE = 4,
+		SOUND_MULTI_TAP = 5
+	};
+
+	/* the glow's animations (SetGlowAnim; names ours, after what starts them): faded out, hidden
+	   at once, up to m_glow_max as it is pressed, to half as it repeats, dimmed as it is
+	   pressed out, flashed as it is decided, flashed twice, and the two pulses */
+	enum GlowAnim {
+		GLOW_OFF = 0,
+		GLOW_HIDE = 1,
+		GLOW_PRESS = 2,
+		GLOW_REPEAT = 3,
+		GLOW_PRESS_OUT = 4,
+		GLOW_DECIDE = 5,
+		GLOW_FLASH = 6,
+		GLOW_PULSE = 7,
+		GLOW_BREATHE = 8
 	};
 
 	static const char m_widget_type[];
@@ -78,7 +94,7 @@ public:
 	virtual int32_t OnDraw(graph::DrawInfo &info);
 	virtual int32_t ApplyDrawObjState(int32_t arg);
 	virtual void OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg);
-	virtual void UpdateGesture();
+	virtual void OnPadCaptureChanged(bool captured, int32_t group, uint32_t port, uint32_t key);
 	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,
 				   uint32_t index);
 	using Widget::SetTexture;
@@ -89,7 +105,7 @@ public:
 	virtual int32_t GetString(wstring &str, int32_t obj);
 	using Widget::GetString;
 	virtual WidgetSoundParam::Sound *GetSound(int32_t id);
-	virtual void DoNothing();
+	virtual void AddSound(uint32_t index, WidgetSoundParam::Sound &sound);
 
 	/* it takes the text events where a decide or press handler is set */
 	virtual bool IsTextEventEnabled()
@@ -211,10 +227,23 @@ public:
 
 	void SetButtonMode(uint32_t mode);
 	void EnableRepeat(uint32_t begin_msec, uint32_t repeat_msec);
-	void Enable(bool notify);
-	void Disable(bool notify);
+	/* the fade to or from the disable color done at once with immediate */
+	void Enable(bool immediate);
+	void Disable(bool immediate);
 	/* the draw object that glows when it is focused, -1 for none (export F02C5605) */
 	void SetGlowObj(int32_t obj);
+	/* the glow's animation of the type started, kept to restart once it ends with store
+	   (export 7602488B, name ours) */
+	void SetGlowAnim(int32_t type, bool store);
+	/* normal while enabled, else disabled, unless it is already (export F08F954E, name
+	   ours) */
+	void UpdateButtonState(bool enabled);
+
+	/* enabled, and not below the top modal widget */
+	bool IsButtonEnabled() const
+	{
+		return m_enable && m_active;
+	}
 
 	/* the draw object that glows */
 	int32_t m_glow_obj;
@@ -222,22 +251,30 @@ public:
 	float m_glow_max;
 	uint32_t m_btn_mode;
 	ButtonState m_btn_state;
+	/* the color it fades to while disabled: (1, 1, 1, 0.3) without one */
 	math::v4 *m_disable_color;
 	bool m_enable : 1;
-	bool m_flag1 : 1;
+	/* not below the top modal widget (Update) */
+	bool m_active : 1;
 	/* a long press is reported after m_long_press_msec */
 	bool m_enable_long_press : 1;
 	bool m_enable_repeat : 1;
-	bool m_flag4 : 1;
+	/* stays pressed when the touch leaves it */
+	bool m_keep_press : 1;
 	bool m_long_press_flag : 1;
-	uint32_t m_value6 : 24;
+	/* the fade to the disable color, 0 to 200 */
+	uint32_t m_disable_fade : 8;
+	uint32_t reserved : 16;
 	uint32_t reserved1 : 2;
 	uint16_t m_long_press_msec;
 	uint16_t m_repeat_begin;
 	uint16_t m_repeat_msec;
-	uint16_t m_value666;
-	int32_t m_value668;
-	list<EventEntry> m_event_list;
+	/* set to 5 as a repeat begins */
+	uint16_t m_repeat_count;
+	/* the glow animation SetGlowAnim restarts as one ends */
+	int32_t m_glow_anim;
+	/* the sounds given it, by index (AddSound) */
+	list<WidgetSoundParam::Sound> m_sound_list;
 	/* a long press scrolls the text, and one holds the scroll now (names ours) */
 	bool m_long_press_text_auto_scroll : 1;
 	bool m_text_auto_scroll_locked : 1;
@@ -247,7 +284,6 @@ public:
 class ButtonBaseParam : public WidgetParam {
 public:
 	static const char m_param_name[];
-	static const char *ParamName();
 
 	ButtonBaseParam();
 	virtual const char *GetParamName() const;
@@ -266,7 +302,9 @@ public:
 	{
 	}
 
-	/* 0x810e3646, 0x810e36b2, 0x810e3754 */
+	static const char m_param_name[];
+
+	virtual const char *GetParamName() const;
 	virtual int32_t Create(int32_t mode);
 	virtual int32_t SetEach(Widget *widget);
 	virtual int32_t GetEach(Widget *widget);
@@ -278,16 +316,20 @@ public:
 	int32_t m_direct_key;
 };
 
-/* a ButtonBase's five sounds (class name ours; its constructor, export A8EFD387, and the virtual
-   functions of its own vtable are in ButtonBase's file, converted next) */
+/* a ButtonBase's five sounds */
 class ButtonBaseSoundParam : public WidgetSoundParam {
 public:
+	static const char m_param_name[];
+	static const char *ParamName();
+
 	ButtonBaseSoundParam();
+	virtual const char *GetParamName() const;
 };
 
 class ButtonBaseHandlerParam : public WidgetHandlerParam {
 public:
 	static const char m_param_name[];
+	static const EventList c_eventList[];
 	static const char *ParamName();
 
 	ButtonBaseHandlerParam();

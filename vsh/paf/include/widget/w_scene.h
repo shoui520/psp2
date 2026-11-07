@@ -63,10 +63,16 @@ public:
 	/* whether the camera's roll turns the margins */
 	int32_t m_use_camera;
 	Camera *m_camera;
-	uint8_t reserved[8];
+	/* what a widget's depth in the scene is ordered by first (ButtonBase::Update; name ours) */
+	uint32_t m_scene_priority;
+	uint8_t reserved[4];
 	/* the ID hash of the plugin that opened the page */
 	uint32_t m_plugin_id;
-	uint8_t reserved1[0xc4];
+	uint8_t reserved1[0x40];
+	/* each layer's weight of a widget's priority in its depth (Widget::GetLayerDepth; name
+	   ours) */
+	uint64_t m_layer_weight[16];
+	uint8_t reserved1b[4];
 	/* the resolutions it lays out for */
 	EnvironmentParam *m_env_param;
 	uint8_t reserved2a;
