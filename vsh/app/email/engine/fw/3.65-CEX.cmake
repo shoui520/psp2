@@ -161,8 +161,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemSwVersion
 	scePafMallocAlignWithContext
 	scePafReallocWithContext
-	scePafMallocWithContext
-	scePafFreeWithContext
+	_ZN3paf6memory13HeapAllocator14sce_paf_mallocEj
+	_ZN3paf6memory13HeapAllocator12sce_paf_freeEPv
 	_sceFiosKernelOverlayAddForProcess
 	_sceFiosKernelOverlayThreadSetDisabled
 	_sceFiosKernelOverlayThreadIsDisabled

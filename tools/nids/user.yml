@@ -13995,10 +13995,10 @@ modules:
           ScePafMisc_FFE8F348: 0xFFE8F348
           scePafCreateHeap: 0xA2B0BF4D
           scePafDeleteHeap: 0x25238A3A
-          scePafFreeWithContext: 0xCE97B579
+          _ZN3paf6memory13HeapAllocator12sce_paf_freeEPv: 0xCE97B579
           scePafGetCurrentClockLocalTime: 0x96345146
           scePafMallocAlignWithContext: 0x04716F15
-          scePafMallocWithContext: 0x89A1CE78
+          _ZN3paf6memory13HeapAllocator14sce_paf_mallocEj: 0x89A1CE78
           scePafReallocWithContext: 0x74DB7F5D
           scePafSha1Init: 0xB38C53C0
           scePafSha1Result: 0xB3BF59FC

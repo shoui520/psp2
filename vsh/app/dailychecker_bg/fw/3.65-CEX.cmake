@@ -426,7 +426,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafMisc_7616DF6C
 	ScePafMisc_7D7C31A2
 	ScePafMisc_8523A173
-	scePafMallocWithContext
+	_ZN3paf6memory13HeapAllocator14sce_paf_mallocEj
 	ScePafMisc_8E656E2D
 	ScePafMisc_932FCF17
 	ScePafMisc_93900EA9
@@ -442,7 +442,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafMisc_B9FB9BD6
 	ScePafMisc_BB870784
 	ScePafMisc_C8CA2008
-	scePafFreeWithContext
+	_ZN3paf6memory13HeapAllocator12sce_paf_freeEPv
 	ScePafMisc_CECA5E52
 	ScePafMisc_D00CCC22
 	ScePafMisc_D2221E7B

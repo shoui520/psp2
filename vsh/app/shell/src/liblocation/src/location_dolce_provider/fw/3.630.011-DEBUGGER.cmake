@@ -48,12 +48,12 @@ set(MODULE_IMPORT_FUNCS
 	ScePafMisc_039D7846
 	scePafMallocAlignWithContext
 	scePafReallocWithContext
-	scePafMallocWithContext
+	_ZN3paf6memory13HeapAllocator14sce_paf_mallocEj
 	ScePafMisc_A4554B25
 	ScePafMisc_B90DBCA6
 	ScePafMisc_C565FD29
 	ScePafMisc_CE6EB459
-	scePafFreeWithContext
+	_ZN3paf6memory13HeapAllocator12sce_paf_freeEPv
 	sceRegMgrGetKeyInt
 	sceRegMgrSetKeyInt
 	sceKernelWaitSema

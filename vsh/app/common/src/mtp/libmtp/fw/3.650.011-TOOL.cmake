@@ -95,12 +95,12 @@ set(MODULE_IMPORT_FUNCS
 	ScePafStdc_FC5CD359
 	scePafMallocAlignWithContext
 	ScePafMisc_6DB38377
-	scePafMallocWithContext
+	_ZN3paf6memory13HeapAllocator14sce_paf_mallocEj
 	scePafCreateHeap
 	ScePafMisc_AF4FC3F4
 	ScePafMisc_B9FB9BD6
 	ScePafMisc_C8CA2008
-	scePafFreeWithContext
+	_ZN3paf6memory13HeapAllocator12sce_paf_freeEPv
 	ScePafMisc_E39FA610
 	ScePafThread_142E7F78
 	ScePafThread_1ABA2C42

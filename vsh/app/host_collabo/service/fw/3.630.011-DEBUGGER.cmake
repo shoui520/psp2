@@ -130,10 +130,10 @@ set(MODULE_IMPORT_FUNCS
 	ScePafMisc_2DBDFC13
 	ScePafMisc_2EAB756A
 	ScePafMisc_8523A173
-	scePafMallocWithContext
+	_ZN3paf6memory13HeapAllocator14sce_paf_mallocEj
 	ScePafMisc_93900EA9
 	ScePafMisc_BB870784
-	scePafFreeWithContext
+	_ZN3paf6memory13HeapAllocator12sce_paf_freeEPv
 	ScePafThread_2AE6D3EB
 	ScePafThread_30154F76
 	ScePafThread_651F4F81

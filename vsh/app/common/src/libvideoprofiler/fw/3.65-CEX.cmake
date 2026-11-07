@@ -56,13 +56,13 @@ set(MODULE_IMPORT_FUNCS
 	ScePafMisc_2E8E9CBB
 	scePafReallocWithContext
 	ScePafMisc_8523A173
-	scePafMallocWithContext
+	_ZN3paf6memory13HeapAllocator14sce_paf_mallocEj
 	ScePafMisc_93900EA9
 	ScePafMisc_95F2C107
 	scePafGetCurrentClockLocalTime
 	ScePafMisc_A4F553B0
 	ScePafMisc_C8CA2008
-	scePafFreeWithContext
+	_ZN3paf6memory13HeapAllocator12sce_paf_freeEPv
 	ScePafMisc_DFE98F6E
 	ScePafMisc_DFF0CA06
 	ScePafMisc_E7AFBC2B
