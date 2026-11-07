@@ -89,23 +89,6 @@
 /* the module load flag of a process that may show common dialogs */
 #define CDLG_MODULE_LOAD_FLAG_CDIALOG		0x10
 
-/*
- * The kernel's sceKernelCreateThread option (threadmgr/threadmgr.h): the
- * memory types of the user stack and the TLS, which the SDK's option lacks.
- */
-typedef struct CommonDialogThreadOptParam {
-	SceSize size;
-	SceUInt32 attr;
-	SceUInt32 kStackMemType;
-	SceUInt32 uStackMemType;
-	SceUInt32 uTLSMemType;
-	SceUInt32 uStackMemid;
-	SceUInt32 handedExceptions;
-} CommonDialogThreadOptParam;
-
-#define CDLG_THREAD_OPT_USTACK_MEMTYPE		0x2
-#define CDLG_THREAD_OPT_UTLS_MEMTYPE		0x4
-
 bool g_initialized;
 CommonDialogWork g_work;
 bool g_moduleStartSkipped;
@@ -766,7 +749,7 @@ int callByWorkerThread(void *func, SceUInt32 numArgs, ...)
 	if (!g_initialized)
 		return COMMON_DIALOG_ERROR_NOT_INITIALIZED;
 	va_start(args, numArgs);
-	return dispatch(func, numArgs, args, 0);
+	return dispatch(func, numArgs, args, false);
 }
 
 /* sceCommonDialogSetConfigParam, on the worker thread */
@@ -1055,7 +1038,7 @@ int DispatchApiCall(int dialogType, void *func, SceUInt32 numArgs, ...)
 		return SCE_COMMON_DIALOG_ERROR_NOT_IN_USE;
 	if (!isSlotCaller(thread, i))
 		return SCE_COMMON_DIALOG_ERROR_NOT_IN_USE;
-	return dispatch(func, numArgs, args, 0);
+	return dispatch(func, numArgs, args, false);
 }
 
 int LockDialog(int dialogType)

@@ -19,14 +19,34 @@
 /* the module's errors that the SDK does not name */
 #define COMMON_DIALOG_ERROR_FATAL			-2147351297	/* 0x800204FF */
 #define COMMON_DIALOG_ERROR_ALREADY_EXISTS		-2147351359	/* 0x800204C1 */
+#define COMMON_DIALOG_ERROR_NULL_FUNCTION		-2147351358	/* 0x800204C2 */
 #define COMMON_DIALOG_ERROR_NOT_INITIALIZED		-2147351357	/* 0x800204C3 */
 #define COMMON_DIALOG_ERROR_NO_BUDGET			-2147351356	/* 0x800204C4 */
 #define COMMON_DIALOG_ERROR_UNKNOWN_TYPE		-2147351355	/* 0x800204C5 */
+#define COMMON_DIALOG_ERROR_DISPATCH_BUSY		-2147351352	/* 0x800204C8 */
 #define COMMON_DIALOG_ERROR_NEST_TOO_DEEP		-2147351341	/* 0x800204D3 */
 #define COMMON_DIALOG_ERROR_NEST_NOT_RUNNING		-2147351340	/* 0x800204D4 */
 #define COMMON_DIALOG_ERROR_NOT_PAF_MAIN_THREAD		-2147351339	/* 0x800204D5 */
+#define COMMON_DIALOG_ERROR_TOO_MANY_ARGS		-2147351328	/* 0x800204E0 */
 #define COMMON_DIALOG_ERROR_LOCK_FAILED			-2147351327	/* 0x800204E1 */
 #define COMMON_DIALOG_ERROR_UNLOCK_FAILED		-2147351326	/* 0x800204E2 */
+
+/*
+ * The kernel's sceKernelCreateThread option (threadmgr/threadmgr.h): the
+ * memory types of the user stack and the TLS, which the SDK's option lacks.
+ */
+typedef struct CommonDialogThreadOptParam {
+	SceSize size;
+	SceUInt32 attr;
+	SceUInt32 kStackMemType;
+	SceUInt32 uStackMemType;
+	SceUInt32 uTLSMemType;
+	SceUInt32 uStackMemid;
+	SceUInt32 handedExceptions;
+} CommonDialogThreadOptParam;
+
+#define CDLG_THREAD_OPT_USTACK_MEMTYPE		0x2
+#define CDLG_THREAD_OPT_UTLS_MEMTYPE		0x4
 
 /* a dialog of the table: its type and its Init and Init2 (the two-argument form) */
 typedef struct CommonDialogTableEntry {
@@ -82,7 +102,7 @@ bool isCommonDialogError(int error);
 /* the worker thread (worker_thread.cpp) */
 int initializeWorkerThread(void);
 int finalizeWorkerThread(void);
-int dispatch(void *func, SceUInt32 numArgs, va_list args, int option);
+int dispatch(void *func, SceUInt32 numArgs, va_list args, bool tryLock);
 void setWorkerThreadOwner(SceUID thread);
 void clearWorkerThreadOwner(void);
 SceUID getWorkerThreadId(void);
