@@ -1521,7 +1521,7 @@ ScePaf:
         - _ZN3paf6common13property_list14WStringElement11m_type_nameE: 0xAC782C5E
         - ScePafCommon_B223AB63: 0xB223AB63
         - _ZN3paf6common15_error_callbackE: 0xC2FB1713
-        - ScePafCommon_EBADE799: 0xEBADE799
+        - _ZTVN3paf6common11SlotJobItemE: 0xEBADE799
         - ScePafCommon_F166B292: 0xF166B292
         - _ZTVN3paf6common13property_list14WStringElementE: 0xF186C2A4
         - _ZN3paf6common13property_list13StringElement14s_empty_stringE: 0xF3FEA96C
