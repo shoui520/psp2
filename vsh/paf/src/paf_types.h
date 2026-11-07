@@ -11,6 +11,10 @@
 #define SCE_PAF_ERROR_NOT_FOUND (-2136014811) /* 0x80AF0025 */
 #define SCE_PAF_ERROR_INVALID_ARGUMENT (-2136014705) /* 0x80AF008F */
 #define SCE_PAF_ERROR_TOPLEVEL_ARGUMENT (-2136014717) /* 0x80AF0083 */
+/* the view parent has no child of that ID (SlidingDrawer; name ours) */
+#define SCE_PAF_ERROR_NO_CHILD (-2136014719) /* 0x80AF0081 */
+/* a snap point is there already (SlidingDrawer, ScrollBar; name ours) */
+#define SCE_PAF_ERROR_ALREADY_EXISTS (-2136014706) /* 0x80AF008E */
 /* an operation the object does not allow: a screen surface resized over a render target
    someone else keeps (name ours) */
 #define SCE_PAF_ERROR_NOT_PERMITTED (-2136014713) /* 0x80AF0087 */

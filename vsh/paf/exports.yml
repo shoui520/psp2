@@ -3261,7 +3261,7 @@ ScePaf:
         - _ZNK3paf2ui24ScrollViewBaseSoundParam12GetParamNameEv: 0x215292CE
         - _ZNK3paf2ui18SlideBarSoundParam12GetParamNameEv: 0x21651F5B
         - _ZN3paf2ui23ImageSlideBarSoundParamC1Ev: 0x21A0CE65
-        - ScePafWidget_21DD74D2: 0x21DD74D2
+        - _ZN3paf2ui13SlidingDrawer21ScePafWidget_A0538225Ei: 0x21DD74D2
         - _ZN3paf2ui14ScrollViewBase22HandleFocusSwitchEventEPNS0_5EventE: 0x21FB8500
         - _ZN3paf2ui6Widget11RemoveChildEPS1_: 0x2228232B
         - _ZNK3paf2ui9TextParam12GetParamNameEv: 0x2229E0D7
@@ -3748,7 +3748,7 @@ ScePaf:
         - _ZN3paf2ui11Environment6OnDrawEv: 0x561523BD
         - ScePafWidget_56384DA3: 0x56384DA3
         - _ZN3paf2ui8filelist10Visualizer8TypeNameEv: 0x5648D334
-        - ScePafWidget_5654DE15: 0x5654DE15
+        - _ZN3paf2ui13SlidingDrawer21ScePafWidget_7F653E08ERKNS_4math2v2Ei: 0x5654DE15
         - _ZN3paf2ui12CornerButtonD1Ev: 0x565D6895
         - _ZN3paf2ui8ListItemD1Ev: 0x56621852
         - ScePafWidget_566E18A6: 0x566E18A6
@@ -4335,7 +4335,7 @@ ScePaf:
         - _ZN3paf2ui7TextBoxC1EPNS0_6WidgetEPNS2_11CreateParamE: 0x931809E8
         - ScePafWidget_931AD41E: 0x931AD41E
         - _ZN3paf2ui19ScrollBarTouchParam3SetEv: 0x933C5588
-        - ScePafWidget_933DF970: 0x933DF970
+        - _ZN3paf2ui13SlidingDrawer14MoveViewParentERKNS_4math2v2EPNS_5TimerE: 0x933DF970
         - ScePafWidget_93456E5E: 0x93456E5E
         - _ZN3paf2ui14TextStyleParamC1Ev: 0x9348BF3F
         - _ZN3paf2ui5Plane10CheckStateEv: 0x938F9536
