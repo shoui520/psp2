@@ -132,13 +132,6 @@ public:
    tex_mode */
 class ImageSlideBarParam : public WidgetParam {
 public:
-	/* a texture the resource names, and the draw object it is for (name ours) */
-	class TextureRef {
-	public:
-		const char *name;
-		int32_t index;
-	};
-
 	static const char m_param_name[];
 	static const TextureRef c_textureList[];
 	static const char *ParamName();

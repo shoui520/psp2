@@ -86,6 +86,14 @@ public:
 		IDParam id;
 	};
 
+	/* a texture the widget type's resource names, and the draw object it is for (names
+	   ours) */
+	class TextureRef {
+	public:
+		const char *name;
+		int32_t index;
+	};
+
 	static const char m_param_name[];
 	static const char *s_names[];
 	static const char *ParamName();

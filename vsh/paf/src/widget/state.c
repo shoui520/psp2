@@ -953,8 +953,8 @@ __attribute__((noinline)) int name(const void *self, const char *type) \
 int _ZNK3paf2ui10ButtonBase9IsInheritEPKc(const void *self, const char *type);
 /* StateButtonBase's is C++ (w_state_button_base.cpp) */
 int _ZNK3paf2ui15StateButtonBase9IsInheritEPKc(const void *self, const char *type);
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui9ScrollBar9IsInheritEPKc, "scrollbar",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+/* ScrollBar's is C++ (w_scrollbar.cpp) */
+int _ZNK3paf2ui9ScrollBar9IsInheritEPKc(const void *self, const char *type);
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui14ScrollViewBase9IsInheritEPKc, "scroll_view_base",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ListView9IsInheritEPKc, "list_view",
