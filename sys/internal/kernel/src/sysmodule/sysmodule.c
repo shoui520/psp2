@@ -8,7 +8,7 @@
  */
 
 #include <fw.h>
-#include "sysmodule_ids.h"
+#include <sysmodule/sysmodule.h>
 #include <sysmem/dipsw.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/procevent.h>
@@ -768,12 +768,12 @@ static int __attribute__((noinline)) sysmoduleUnloadWithOpt(SceUInt32 id, SceSiz
 	return sysmoduleUnload(id | SYSMODULE_ID_SYSTEM, &opt);
 }
 
-/* sceSysmodule*InternalWithArg option (user) */
-typedef struct SysmoduleUserOpt {
-	SceUInt32 flags;
-	int *status;				/* user: receives the module's status */
-	SceUInt32 reserved[2];
-} SysmoduleUserOpt;
+/*
+ * sceSysmodule*InternalWithArg: the user's option (SysmoduleUserOpt, in
+ * <sysmodule/sysmodule.h>) is copied in, its flags go to the load or the
+ * unload, and the module's status is copied back out when the user asks for
+ * it; the kernel's own callers pass a SysmoduleOpt instead.
+ */
 
 int sceSysmoduleLoadModuleInternalWithArg(SceUInt32 id, SceSize args, void *argp, const SysmoduleUserOpt *uopt)
 {

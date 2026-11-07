@@ -1,7 +1,7 @@
 /*
- * SceSysmodule's module IDs, with vitasdk's names (psp2/sysmodule.h), for the
- * kernel module that implements them: vitasdk's header also declares the user
- * exports with prototypes that differ from the implementation's.
+ * SceSysmodule's module IDs, with vitasdk's names (psp2/sysmodule.h): the
+ * kernel module that implements them and the user code that loads by them
+ * (sysmodule.h declares the exports).
  */
 #pragma once
 
