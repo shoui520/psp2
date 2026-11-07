@@ -3738,7 +3738,7 @@ ScePaf:
         - _ZN3paf2ui13BusyIndicatorD0Ev: 0x5456D1F9
         - _ZN3paf2ui9DirectBar6OnDrawERNS_5graph8DrawInfoE: 0x545DC6C2
         - ScePafWidget_549B5EBB: 0x549B5EBB
-        - _ZN3paf2ui6Widget10SetSurfaceERKNS_13intrusive_ptrINS_5graph7SurfaceEEEi: 0x54A1276E
+        - _ZN3paf2ui6Widget11SwapDrawObjENS_6common9SharedPtrINS_5graph7DrawObjEEEi: 0x54A1276E
         - _ZN3paf2ui23BusyIndicatorStyleParamC2Ev: 0x54C6A19E
         - ScePafWidget_54DFB062: 0x54DFB062
         - _ZN3paf2ui8ListItem7EndDragEi: 0x55056D31
@@ -3925,7 +3925,7 @@ ScePaf:
         - ScePafWidget_69E33AF3: 0x69E33AF3
         - _ZN3paf2ui6Widget18CalcDistLineToLineERKNS_4math2v4ES5_S5_S5_PS3_S6_: 0x6A05D02D
         - _ZNK3paf2ui8filelist10Visualizer11GetTypeNameEv: 0x6A0674B4
-        - _ZN3paf2ui5Plane10SetSurfaceERKNS_13intrusive_ptrINS_5graph7SurfaceEEEi: 0x6A222804
+        - _ZN3paf2ui5Plane11SwapDrawObjENS_6common9SharedPtrINS_5graph7DrawObjEEEi: 0x6A222804
         - _ZN3paf2ui8ListView16FreeCellPositionEiib: 0x6A2A7BDC
         - ScePafWidget_6A60296B: 0x6A60296B
         - _ZNK3paf2ui6Widget11GetTypeNameEv: 0x6A74B572

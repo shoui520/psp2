@@ -701,9 +701,10 @@ public:
 	}
 
 	virtual void UpdateAdjustChildSize(Widget *child);
-	/* gives the surface to draw and returns the one drawn before (Plane, Canvas) */
-	virtual intrusive_ptr<graph::Surface> SetSurface(const intrusive_ptr<graph::Surface> &surf,
-							 int32_t obj);
+	/* puts the draw object in place of the one with the ID and returns that one (an empty
+	   pointer where it has none); an empty object deletes it (name Sony's, by NID hash) */
+	virtual common::SharedPtr<graph::DrawObj> SwapDrawObj(common::SharedPtr<graph::DrawObj> obj,
+							      int32_t id);
 	virtual graph::DrawObj *GetDrawObj(int32_t obj);
 	/* the texture of the draw object (name after ScePaf-RE) */
 	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,
