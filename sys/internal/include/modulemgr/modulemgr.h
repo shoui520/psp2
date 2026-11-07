@@ -12,6 +12,7 @@
 #include <modulemgr/modulemgr_control.h>
 #include <modulemgr/modulemgr_debugger.h>
 #include <modulemgr/modulemgr_patch.h>
+#include <modulemgr/modulemgr_syscall.h>
 #include <authmgr/sblauthmgr.h>
 
 #ifdef __cplusplus
@@ -113,15 +114,6 @@ int sceKernelUmountBootimageFS(void);
 int sceKernelUnlinkNormalSyscall(SceUID pid);
 int sceKernelUnloadModule(SceUID modid, SceUInt32 flags, const SceKernelUnloadModuleOpt *opt);
 int sceKernelUnregisterLibrary(const void *libent);
-
-/* SceModulemgr: the user syscalls */
-SceUID _sceKernelLoadModule(const char *path, SceUInt32 flags, const SceKernelLoadModuleOpt *uopt);
-int _sceKernelUnloadModule(SceUID modid, SceUInt32 flags, const SceKernelUnloadModuleOpt *uopt);
-SceUInt32 sceKernelGetAllowedSdkVersionOnSystem(void);
-SceUID sceKernelGetModuleIdByAddrForUser(const void *addr);
-int sceKernelGetModuleInfoForUser(SceUID modid, SceKernelModuleInfo *uinfo);
-int sceKernelInhibitLoadingModule(SceUInt32 flags);
-int sceKernelIsCalledFromSysModule(const void *addr);
 
 /* backtrace.c: SceBacktraceForDriver */
 struct SceKernelBacktraceFrame;

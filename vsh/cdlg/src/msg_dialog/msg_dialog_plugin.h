@@ -23,6 +23,12 @@
 #define MSG_DIALOG_PLUGIN_ERROR_NO_MEMORY	-2146432383	/* 0x80100A81 */
 #define MSG_DIALOG_PLUGIN_ERROR_NOSPACE_MEDIA	-2146432352	/* 0x80100AA0 */
 
+/* the errors of the SDK version check (names ours): the caller's process has no SDK version, the
+   system allows none, and the caller's is newer than the system allows */
+#define MSG_DIALOG_PLUGIN_ERROR_NO_SDK_VERSION		-2146432352	/* 0x80100AA0 */
+#define MSG_DIALOG_PLUGIN_ERROR_NO_ALLOWED_SDK_VERSION	-2146432351	/* 0x80100AA1 */
+#define MSG_DIALOG_PLUGIN_ERROR_SDK_VERSION_TOO_NEW	-2146432350	/* 0x80100AA2 */
+
 /* what the dialog calls when it has closed: its result, its mode, the button that closed it and
    the user data it was made with */
 typedef void (*MsgDialogFunction)(SceInt32 result, SceMsgDialogMode mode, SceInt32 button,
@@ -78,7 +84,9 @@ public:
 	SceInt32 m_button;
 };
 
-/* the common functions the plugin shares with the system software's applications (file 3) */
+/* the common functions the plugin shares with the system software's applications
+   (msg_dialog_util.cpp) */
+int MsgDialogCheckSdkVersion(SceUInt32 sdkVersion);
 int MsgDialogGetSdkLevel(void);
 void MsgDialogFormatSize(paf::wstring *out, SceUInt32 sizeKiB);
 paf::wstring MsgDialogFormat(const wchar_t *format, const wchar_t *arg1 = L"",

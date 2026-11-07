@@ -26,4 +26,5 @@ psp2_module(vs0_sys_external_libshellsvc KIND user COMPILER snc SOURCES
 	allocator.cpp
 	shell_svc_client.cpp
 	shell_svc_ipc_client.cpp
+	weak_call.cpp
 )

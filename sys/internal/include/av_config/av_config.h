@@ -3,6 +3,10 @@
 
 #include <scetypes.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Display requests: a sound-exclusive application asks for the display at a
  * priority (index); its callers pass a fifth argument, which is not read.
@@ -15,3 +19,7 @@ int SceAVConfigForDriver_91792D6F(unsigned int index);
 
 /* the audio devices connected (a syscall SceAVConfig's user library passes on) */
 int sceAVConfigGetConnectedAudioDevice(SceUInt32 *devices);
+
+#ifdef __cplusplus
+}
+#endif
