@@ -1523,7 +1523,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafWidget_68CE5A20
 	ScePafWidget_68D2630C
 	ScePafWidget_69AE35D7
-	ScePafWidget_6A222804
+	_ZN3paf2ui5Plane10SetSurfaceERKNS_13intrusive_ptrINS_5graph7SurfaceEEEi
 	ScePafWidget_6A60296B
 	ScePafWidget_6A9532CE
 	ScePafWidget_6AC52E63
@@ -1534,7 +1534,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafWidget_701AADB6
 	ScePafWidget_71349B04
 	ScePafWidget_71CD05AC
-	ScePafWidget_7239B876
+	_ZN3paf2ui6Widget11SetPos_coreERKNS_4math2v4Ejb
 	ScePafWidget_723F6A4C
 	ScePafWidget_7284DAB8
 	ScePafWidget_733EF398

@@ -485,7 +485,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafWidget_07749D55
 	ScePafWidget_08D85CB4
 	ScePafWidget_094DF388
-	ScePafWidget_0A178775
+	_ZN3paf2ui10PlaneParam3SetEv
 	ScePafWidget_0A46AD43
 	ScePafWidget_0BC06625
 	ScePafWidget_0BEBC84F
@@ -659,7 +659,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafWidget_68CE5A20
 	ScePafWidget_69AE35D7
 	ScePafWidget_69E33AF3
-	ScePafWidget_6A222804
+	_ZN3paf2ui5Plane10SetSurfaceERKNS_13intrusive_ptrINS_5graph7SurfaceEEEi
 	ScePafWidget_6A2A7BDC
 	ScePafWidget_6A9532CE
 	ScePafWidget_6E0FC68D
@@ -668,7 +668,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafWidget_6F5FB5EC
 	ScePafWidget_701AADB6
 	ScePafWidget_71349B04
-	ScePafWidget_7239B876
+	_ZN3paf2ui6Widget11SetPos_coreERKNS_4math2v4Ejb
 	ScePafWidget_723F6A4C
 	ScePafWidget_7284DAB8
 	ScePafWidget_730AA895
@@ -880,7 +880,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafWidget_F8E68E31
 	ScePafWidget_F9AAD70E
 	ScePafWidget_F9B56FFF
-	ScePafWidget_F9BDDCE4
+	_ZN3paf2ui10PlaneParam3GetEv
 	ScePafWidget_FA6A3B67
 	ScePafWidget_FB7FE189
 	ScePafWidget_FBE8F084

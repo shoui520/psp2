@@ -229,7 +229,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafWidget_66779ECA
 	ScePafWidget_66D4EAE7
 	ScePafWidget_6811A0CF
-	ScePafWidget_6A222804
+	_ZN3paf2ui5Plane10SetSurfaceERKNS_13intrusive_ptrINS_5graph7SurfaceEEEi
 	ScePafWidget_6A9532CE
 	ScePafWidget_6E3EEF4E
 	ScePafWidget_6F5FB5EC
