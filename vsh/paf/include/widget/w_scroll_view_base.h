@@ -559,7 +559,7 @@ public:
 	/* its offset and scale, applied to its matrix each update (name ours) */
 	void SetTransform(const math::v4 &offset, const math::v4 &scale);
 	/* its scale made 1 again where it was transformed (name ours) */
-	void ResetTransform();
+	__attribute__((noinline)) void ResetTransform();
 
 	math::v4 m_transform_offset;
 	math::v4 m_transform_scale;

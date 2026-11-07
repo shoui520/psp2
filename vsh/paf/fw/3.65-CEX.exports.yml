@@ -3258,7 +3258,7 @@ ScePaf:
         - _ZN3paf2ui14ScrollViewBase6DoSnapEiPNS_5TimerE: 0x20F2E5B6
         - ScePafWidget_21125870: 0x21125870
         - _ZN3paf2ui14ScrollViewBase14RearMochiBeginEPNS0_5EventE: 0x2141506E
-        - ScePafWidget_215292CE: 0x215292CE
+        - _ZNK3paf2ui24ScrollViewBaseSoundParam12GetParamNameEv: 0x215292CE
         - _ZNK3paf2ui18SlideBarSoundParam12GetParamNameEv: 0x21651F5B
         - _ZN3paf2ui23ImageSlideBarSoundParamC1Ev: 0x21A0CE65
         - ScePafWidget_21DD74D2: 0x21DD74D2
@@ -3369,7 +3369,7 @@ ScePaf:
         - _ZN3paf2ui6CanvasD2Ev: 0x2D34C221
         - _ZN3paf2ui11AppIconBaseC1EPNS0_6WidgetEPNS2_11CreateParamE: 0x2D4FBF97
         - _ZN3paf2ui6Widget9CalcBoundERKNS_4math2v4ERKNS2_10quaternionE: 0x2D5C1EB9
-        - ScePafWidget_2D5D9218: 0x2D5D9218
+        - _ZN3paf2ui24ScrollViewBaseSoundParam9ParamNameEv: 0x2D5D9218
         - _ZN3paf2ui8FileList9StartItemERNS0_8listview11ItemFactory10StartParamE: 0x2D688E46
         - _ZN3paf2ui8filelist19SegmentListAccessorC2EPNS0_8FileListE: 0x2D78EBE5
         - _ZN3paf2ui8filelist16CellListAccessor8SetFocusEiNS0_8ListView14FocusAlignTypeEPNS_5TimerE: 0x2DDBB8E3
@@ -3878,7 +3878,7 @@ ScePaf:
         - _ZNK3paf2ui6Dialog11GetTypeNameEv: 0x644CA867
         - _ZN3paf2ui8filelist14CellFocusParamC1Ev: 0x647784E1
         - _ZNK3paf2ui15ScrollViewParam12GetParamNameEv: 0x647E8F32
-        - ScePafWidget_64A10940: 0x64A10940
+        - _ZN3paf2ui15ScrollViewDebugD2Ev: 0x64A10940
         - ScePafWidget_6591E40B: 0x6591E40B
         - _ZN3paf2ui8filelist7Manager12PopCacheItemEjPNS0_6WidgetE: 0x65A6B4E8
         - _ZN3paf2ui4Text18calc_origin_offsetERKNS_4math2v4ES5_jjj: 0x66592F7E

@@ -605,15 +605,6 @@ int _ZN3paf2ui8RadioBox16CBDestroyCheckedEPNS0_6WidgetEPv(void *self, void *othe
 	return ((int (*)(void *, void *))methods[95])(other, self);
 }
 
-void *ScePafWidget_64A10940(uint8_t *self)
-{
-	void *other = *(void **)(self + 24);
-	void *const *methods = *(void *const *const *)other;
-
-	((void (*)(void *))methods[27])(other);
-	return self;
-}
-
 void *ScePafWidget_40F2A311(uint32_t *self)
 {
 	if (self[118] == 0) {

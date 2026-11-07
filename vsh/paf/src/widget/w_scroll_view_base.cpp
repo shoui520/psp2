@@ -5205,5 +5205,256 @@ void ScrollViewOverScrollStretch::GetTransform(math::v4 &offset, math::v4 &scale
 	scale = math::v4(stretch.extract_x(), stretch.extract_y(), 1.0f, 0.0f);
 }
 
+const char ScrollViewBaseParam::m_param_name[] = "scroll_view_base_base";
+
+const char *ScrollViewBaseParam::GetParamName() const
+{
+	return m_param_name;
+}
+
+const char *ScrollViewBaseParam::ParamName()
+{
+	return m_param_name;
+}
+
+int32_t ScrollViewBaseParam::Create(int32_t mode)
+{
+	int32_t ret = WidgetParam::Create(mode);
+
+	if (ret < 0)
+		return ret;
+	if (m_serial != NULL) {
+		m_serial->AddParam("snap_power", &m_snap_power, ResourceParam::SEMANTIC_FLOAT);
+		if (m_serial != NULL) {
+			m_serial->AddParam("snap_anim_time", &m_snap_time, ResourceParam::SEMANTIC_FLOAT);
+			if (m_serial != NULL) {
+				m_serial->AddParam("edit_auto_transition_mode", &m_scroll_lock,
+						   ResourceParam::SEMANTIC_BOOL);
+				if (m_serial != NULL) {
+					m_serial->AddParam("sbar_fadeout_time", &m_bar_fade_time,
+							   ResourceParam::SEMANTIC_FLOAT);
+					if (m_serial != NULL) {
+						m_serial->AddParam("default_dir", &m_move_dir,
+								   ResourceParam::SEMANTIC_INT);
+						if (m_serial != NULL) {
+							m_serial->AddParam(
+								"w_sbar_v", &m_vertical_bar,
+								ResourceParam::SEMANTIC_WIDGETREF);
+							if (m_serial != NULL)
+								m_serial->AddParam(
+									"w_sbar_h", &m_horizontal_bar,
+									ResourceParam::SEMANTIC_WIDGETREF);
+						}
+					}
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+int32_t ScrollViewBaseParam::Set()
+{
+	int32_t ret = WidgetParam::Set();
+
+	if (ret < 0)
+		return ret;
+
+	ScrollViewBase *view = (ScrollViewBase *)m_widget;
+
+	view->SetSnapPower(m_snap_power);
+	view->SetSnapTime(m_snap_time);
+	view->m_scroll_lock = m_scroll_lock;
+	view->SetBarFadeTime(m_bar_fade_time);
+	view->SetMoveDirection(m_move_dir);
+	if (m_vertical_bar.GetIDHash() != 0) {
+		Widget *bar = view->FindChild(m_vertical_bar, 0);
+
+		if (bar != NULL)
+			view->SetVerticalScrollBar(
+				bar->IsInherit(ScrollBar::TypeName()) ? (ScrollBar *)bar : NULL);
+	}
+	if (m_horizontal_bar.GetIDHash() != 0) {
+		Widget *bar = view->FindChild(m_horizontal_bar, 0);
+
+		if (bar != NULL)
+			view->SetHorizontalScrollBar(
+				bar->IsInherit(ScrollBar::TypeName()) ? (ScrollBar *)bar : NULL);
+	}
+	return 0;
+}
+
+int32_t ScrollViewBaseParam::Get()
+{
+	int32_t ret = WidgetParam::Get();
+
+	if (ret < 0)
+		return ret;
+
+	ScrollViewBase *view = (ScrollViewBase *)m_widget;
+
+	m_snap_power = view->m_snap_power;
+	m_scroll_lock = view->m_scroll_lock;
+	m_move_dir = view->m_move_dir;
+	m_bar_fade_time = view->m_bar_fade_time;
+
+	ScrollBar *vertical = view->m_vertical_bar;
+
+	if (vertical != NULL && !vertical->m_parent_protected)
+		m_vertical_bar = vertical->m_name;
+
+	ScrollBar *horizontal = view->m_horizontal_bar;
+
+	if (horizontal != NULL && !horizontal->m_parent_protected)
+		m_horizontal_bar = horizontal->m_name;
+	return 0;
+}
+
+const char ScrollViewBaseStyleParam::m_param_name[] = "style_scroll_view_base";
+
+const char *ScrollViewBaseStyleParam::GetParamName() const
+{
+	return m_param_name;
+}
+
+const char *ScrollViewBaseStyleParam::ParamName()
+{
+	return m_param_name;
+}
+
+int32_t ScrollViewBaseStyleParam::Create(int32_t mode)
+{
+	int32_t ret = WidgetStyleParam::Create(mode);
+
+	if (ret < 0)
+		return ret;
+	if (m_serial != NULL) {
+		m_serial->AddParam("sbar_v_margin", &m_vertical_bar_margin,
+				   ResourceParam::SEMANTIC_VEC4);
+		if (m_serial != NULL)
+			m_serial->AddParam("sbar_h_margin", &m_horizontal_bar_margin,
+					   ResourceParam::SEMANTIC_VEC4);
+	}
+	return 0;
+}
+
+int32_t ScrollViewBaseStyleParam::SetEach(Widget *widget)
+{
+	int32_t ret = WidgetStyleParam::SetEach(widget);
+
+	if (ret < 0)
+		return ret;
+
+	ScrollViewBase *view = (ScrollViewBase *)widget;
+
+	view->SetVerticalBarMargin(m_vertical_bar_margin);
+	view->SetHorizontalBarMargin(m_horizontal_bar_margin);
+	return 0;
+}
+
+int32_t ScrollViewBaseStyleParam::GetEach(Widget *widget)
+{
+	int32_t ret = WidgetStyleParam::GetEach(widget);
+
+	if (ret < 0)
+		return ret;
+
+	ScrollViewBase *view = (ScrollViewBase *)widget;
+
+	m_vertical_bar_margin = view->m_vertical_bar_margin;
+	m_horizontal_bar_margin = view->m_horizontal_bar_margin;
+	return 0;
+}
+
+const char ScrollViewBaseSoundParam::m_param_name[] = "sound_scroll_view_base";
+
+const char *ScrollViewBaseSoundParam::GetParamName() const
+{
+	return m_param_name;
+}
+
+const char *ScrollViewBaseSoundParam::ParamName()
+{
+	return m_param_name;
+}
+
+void TouchScrollSupplier::Update()
+{
+	for (vector<ScrollViewBase *>::iterator it = m_views.begin(); it != m_views.end(); ++it)
+		(*it)->m_view_parent->ResetTransform();
+	for (vector<ScrollViewBase *>::iterator it = m_views.begin(); it != m_views.end(); ++it) {
+		ScrollViewParent *parent = (*it)->m_view_parent;
+
+		if (parent->m_update_flag & 1)
+			parent->UpdateMatrixTree();
+	}
+}
+
+void TouchScrollListener::OnUpdate(const inputdevice::Data *data)
+{
+	s_touch_scroll_supplier.Update();
+}
+
+/* the focus moves on from the view only where it is not in the view and the view moves
+   (name ours) */
+static int32_t ScrollViewBaseFocusCB(Focuser *focuser, Widget *widget, void *data, void *move)
+{
+	Widget::FocusSearchInfo *info = (Widget::FocusSearchInfo *)move;
+
+	if (info == NULL || widget->FindChild(info->m_origin, 0) != NULL ||
+	    ((ScrollViewBase *)widget)->m_movable_dir == ScrollViewBase::MoveDir_None)
+		return 0;
+	return DefaultFocusCB(focuser, widget, data, move);
+}
+
 }
 }
+
+using namespace paf;
+using namespace paf::ui;
+
+static Widget *NewScrollViewBase(Widget *parent)
+{
+	return new ScrollViewBase(parent, NULL);
+}
+
+static WidgetParam *NewScrollViewBaseParam()
+{
+	return new ScrollViewBaseParam;
+}
+
+static VersatileParam *NewScrollViewBaseLayoutParam()
+{
+	return new WidgetLayoutParam;
+}
+
+static VersatileParam *NewScrollViewBaseFocusParam()
+{
+	return new WidgetFocusParam;
+}
+
+static VersatileParam *NewScrollViewBaseStyleParam()
+{
+	return new ScrollViewBaseStyleParam;
+}
+
+static VersatileParam *NewScrollViewBaseHandlerParam()
+{
+	return new WidgetHandlerParam;
+}
+
+static VersatileParam *NewScrollViewBaseSoundParam()
+{
+	return new ScrollViewBaseSoundParam;
+}
+
+FactoryFuncTable g_factoryScrollViewBase = {
+	ScrollViewBase::TypeName(),
+	NewScrollViewBase,
+	NewScrollViewBaseParam,
+	NewScrollViewBaseLayoutParam,
+	NewScrollViewBaseFocusParam,
+	NewScrollViewBaseStyleParam,
+	NewScrollViewBaseHandlerParam,
+	NewScrollViewBaseSoundParam,
+};
