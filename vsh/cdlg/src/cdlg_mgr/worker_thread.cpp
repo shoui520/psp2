@@ -28,9 +28,7 @@
 #define CDLG_WORKER_PRIORITY_GAME	(SCE_KERNEL_DEFAULT_PRIORITY - 4)
 #define CDLG_WORKER_STACK_SIZE		0x10000
 
-/* the application parameter of the title ID, and the title whose worker keeps the default
-   stack */
-#define CDLG_APP_PARAM_TITLE_ID		12
+/* the title whose worker keeps the default stack */
 #define CDLG_TITLE_DEFAULT_STACK	"PCSG00118"
 
 typedef struct CommonDialogWorker {

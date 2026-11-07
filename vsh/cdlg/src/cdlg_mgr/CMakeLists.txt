@@ -20,6 +20,7 @@ psp2_module(vs0_sys_external_libcdlg KIND user COMPILER snc PARTIAL SOURCES
 	netcheck_dialog.cpp
 	ime_dialog.cpp
 	msg_dialog.cpp
+	np_message_dialog.cpp
 )
 target_include_directories(vs0_sys_external_libcdlg PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/vsh/paf")
@@ -41,3 +42,4 @@ set_source_files_properties(savedata_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xaut
 set_source_files_properties(netcheck_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(ime_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(msg_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
+set_source_files_properties(np_message_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)

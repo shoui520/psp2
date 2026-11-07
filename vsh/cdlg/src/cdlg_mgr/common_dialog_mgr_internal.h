@@ -37,6 +37,10 @@
 #define SAVEDATA_DIALOG_ERROR_NO_WORK_MEMORY		-2146432222	/* 0x80100B22 */
 #define SAVEDATA_DIALOG_ERROR_API_NAME			-2146432223	/* 0x80100B21 */
 
+/* the application parameters the dialogs read (sceAppMgrAppParamGetString) */
+#define CDLG_APP_PARAM_NP_COMMUNICATION_ID	7
+#define CDLG_APP_PARAM_TITLE_ID			12
+
 /*
  * The kernel's sceKernelCreateThread option (threadmgr/threadmgr.h): the
  * memory types of the user stack and the TLS, which the SDK's option lacks.

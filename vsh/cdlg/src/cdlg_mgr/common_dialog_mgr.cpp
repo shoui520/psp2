@@ -48,7 +48,6 @@
 #define CDLG_SDK_VERSION_GXM_CHECK		0x02500000
 
 /* the application parameters and the system parameter the configuration is read from */
-#define CDLG_APP_PARAM_TITLE_ID			12
 #define CDLG_APP_PARAM_ENTER_BUTTON		16
 #define CDLG_REG_LANGUAGE			226562
 
