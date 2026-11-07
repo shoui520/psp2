@@ -227,7 +227,8 @@ public:
 	virtual bool TrackGrab(Event *e);
 	virtual bool TrackMove(Event *e);
 	virtual bool TrackDrag(Event *e);
-	virtual bool ScePafWidget_E0FAE144(Event *e);
+	/* the views moved by gesture 0x16, the touch's pan, by its move (E0FAE144; name ours) */
+	virtual bool TrackPan(Event *e);
 	virtual bool ScePafWidget_4770835D(Event *e);
 	virtual bool ScePafWidget_1DA7A46A(Event *e);
 	virtual bool ScePafWidget_423AF7BA(Event *e);
@@ -266,8 +267,11 @@ public:
 	virtual void OnChildRemoved(Widget *child);
 	virtual void OnDestroyTimer(ScrollViewTimer *timer);
 	virtual void OnScrollBarChanged(int32_t type, Handler *self, Event *e);
-	virtual void ScePafWidget_D95AFF11();
-	virtual void ScePafWidget_E9C7617A();
+	/* the view moved by the drag's move, the part of it the view could not move left in move
+	   (no name found) */
+	virtual void ScePafWidget_D95AFF11(math::v2 &move, bool dragging, bool locked, bool reset);
+	/* the touch it tracks (m_track_port; no name found) */
+	virtual void ScePafWidget_E9C7617A(uint32_t touch_id);
 	/* the touch released: the view flicked in the direction, at the velocity */
 	virtual void ScePafWidget_D9FE36A6(int32_t id, const math::v2 &dir, const math::v2 &velocity);
 	virtual void ScePafWidget_AD706F2A();
@@ -409,8 +413,9 @@ public:
 	/* the scroll bars' fade time */
 	float m_bar_fade_time;
 	bool m_bar_reset;
-	bool m_scroll_touch;
 	bool m_scroll_key;
+	/* the view scrolls by touch (BeginTouch reads it) */
+	bool m_scroll_touch;
 	bool m_scroll_analog;
 	bool m_scroll_lock;
 	bool m_ime_padding;

@@ -55,7 +55,89 @@ public:
 	uint32_t m_port;
 };
 
+/* a touch gesture listener of several touches at once (vtable 812F91C8) */
+class MultiTouchGestureListener : public TouchGestureListener {
+public:
+	virtual ~MultiTouchGestureListener();
+	virtual int32_t OnUpdate(const inputdevice::Data *data, uint32_t port_id);
+	/* what OnUpdate asks of the InputGestureListener for the touches of the bitmaps, now and
+	   the update before (name ours; 0 here) */
+	virtual int32_t OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre);
+	virtual void RefreshActiveTouch(uint32_t touch_id);
+};
+
+/* how a drag gesture starts and ends (vtable 812F6CBC, 0x48 bytes; names ours, the
+   distances and speeds in millimetres as the listener scales them by pixel_per_mm) */
+class DragGestureParam : public inputdevice::GestureParam {
+public:
+	DragGestureParam() : m_move_tolerance(0.0f), m_hold_time(500.0f), m_dir(1), m_touch_count(1)
+	{
+		m_start_distance[0] = 0.0f;
+		m_start_distance[1] = 0.0f;
+		m_start_distance[2] = 0.0f;
+		m_end_distance[0] = 0.0f;
+		m_end_distance[1] = 0.0f;
+		m_end_distance[2] = 0.0f;
+		m_flick_speed = 20.0f;
+		m_end_speed[0] = 0.0f;
+		m_end_speed[1] = 0.0f;
+	}
+
+	/* the hold time kept within 400 to 1100 ms, the start distances at 0 or more */
+	virtual void AdjustParam()
+	{
+		float hold_time = m_hold_time;
+		float x = m_start_distance[0];
+		float y = m_start_distance[1];
+		float xy = m_start_distance[2];
+
+		if (hold_time < 400.0f) {
+			hold_time = 400.0f;
+			m_hold_time = hold_time;
+		}
+		if (hold_time > 1100.0f)
+			m_hold_time = 1100.0f;
+		if (x < 0.0f)
+			m_start_distance[0] = 0.0f;
+		if (y < 0.0f)
+			m_start_distance[1] = 0.0f;
+		if (xy < 0.0f)
+			m_start_distance[2] = 0.0f;
+	}
+
+	/* how far the touch may move while it is held, and how long it is held */
+	float m_move_tolerance;
+	float m_hold_time;
+	math::rect m_rect;
+	/* the axes it drags along: 0 X, 1 Y, 2 both */
+	int32_t m_dir;
+	int32_t m_touch_count;
+	/* how far the touch moves along each of the axes, X, Y and both, before it drags */
+	float m_start_distance[3];
+	float m_end_distance[3];
+	/* the least speed the drag starts at */
+	float m_flick_speed;
+	float m_end_speed[2];
+};
+
+/* the listener a touch is dragged with (constructor 0x81162fdc TOOL, vtable 812F95A4;
+   names ours) */
+class DragGestureListener : public MultiTouchGestureListener {
+public:
+	/* where the drag is, and how far it moved (meaning open) */
+	virtual int32_t GetDragState(float *x, float *y, float *a, float *b, float *c);
+	/* the parameters taken over, while it is not dragging */
+	virtual void SetParam(const DragGestureParam *param);
+	virtual void GetParam(DragGestureParam *param);
+	/* the flick's velocity scaled by the time since it began */
+	virtual bool ScaleFlick(float *x, float *y);
+};
+
 extern "C" {
+/* the widget's gesture listener of the type for the touch, made with the rect where it has
+   none (no name found) */
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_712AD1C7(Widget *widget,
+	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect &rect);
 /* the gesture's event sent for the touch, with its velocity (no name found) */
 void ScePafWidget_C5939A92(TouchGestureListener *listener, int32_t gesture, uint32_t touch_id,
 			   int32_t arg, float vx, float vy, int32_t a, int32_t b);

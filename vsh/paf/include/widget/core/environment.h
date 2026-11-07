@@ -286,13 +286,19 @@ public:
 	uint8_t reserved4[8];
 	/* the focus cursor and the widget it is on */
 	FocusInfo m_focus_cursor;
-	uint8_t reserved4a[0x78];
+	uint8_t reserved4a[0x18];
+	/* cleared with m_rear_touch_move when a scroll view takes a touch (names ours, meaning
+	   open) */
+	math::v4 m_front_touch_move;
+	uint8_t reserved4e[0x50];
 	/* the focus cursor is drawn with its widget only while it moves or the widget turns its
 	   focus directions off (Camera's draw walk; name ours) */
 	uint8_t reserved4b : 4;
 	bool m_focus_cursor_moving_only : 1;
 	uint8_t reserved4c : 3;
-	uint8_t reserved4d[0xef];
+	uint8_t reserved4d[0x3f];
+	math::v4 m_rear_touch_move;
+	uint8_t reserved4f[0xa0];
 	/* the events passed on at the next frame (names after ScePaf-RE) */
 	EventQueue m_ev_queue;
 	list<Event> m_ev_subrouting;
@@ -306,7 +312,10 @@ public:
 	TouchState m_touch_state[16];
 	/* where each touch ID last hit (name ours) */
 	HitInfo m_touch_hit[8];
-	uint8_t reserved5b[0x1d80];
+	uint8_t reserved5b[0xd80];
+	/* the widget capturing each touch of the front and rear panels (name ours) */
+	TouchCapture m_touch_capture[2][8];
+	uint8_t reserved5d[0xf00];
 	/* the widgets the touches are on (TouchScrollSupplier's checks; name ours) */
 	list<HitInfo> m_touch_hits;
 	uint8_t reserved5c[0x32];

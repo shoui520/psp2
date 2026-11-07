@@ -963,6 +963,8 @@ public:
 
 	math::v4 *GetSize(int32_t opt);
 	math::v4 *GetScale(int32_t opt);
+	/* the rect its touches hit it in */
+	math::rect CalcHitRect();
 	/* the world matrix made again from its position, scale and rotation and its parent's */
 	void UpdateMatrix();
 	/* its matrix and its descendants' made again (0x811553b0 TOOL; name ours) */

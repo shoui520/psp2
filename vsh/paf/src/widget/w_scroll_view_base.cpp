@@ -306,7 +306,8 @@ public:
 	vector<MochiPoint> m_points;
 	/* the frame the last move was taken in */
 	uint64_t m_time;
-	math::v2 m_pos;
+	/* the frame the touch began in (name ours) */
+	uint64_t m_start_time;
 };
 
 /* the gesture listener of the touch a view tracks: it takes the touch over once the touch
@@ -404,7 +405,7 @@ public:
 	bool IsAnalogOnly();
 	/* the axes the views move along, without those they may not where masked is set (MoveDir;
 	   name ours) */
-	uint32_t GetMovableDir(bool masked);
+	__attribute__((noinline)) uint32_t GetMovableDir(bool masked);
 	/* the last view's touch is on one of its touch scroll bars (name ours) */
 	bool IsOnScrollBar();
 	/* each view's parent put back in place, and its matrices made again where they changed */
@@ -419,9 +420,55 @@ public:
 		{
 		}
 
+		TouchView(ScrollViewBase *view) : m_view(view), m_id(-1)
+		{
+		}
+
 		ScrollViewBase *m_view;
 		int32_t m_id;
 	};
+
+	/* the touch begun on the views: where it is, their snap points, and the velocities they
+	   had as its first move (name ours) */
+	void BeginTouch();
+	/* the view and the scroll views it is in, outermost first (name ours) */
+	void GetTouchViews(vector<TouchView> &views, ScrollViewBase *view);
+	/* the touch taken by the view where it is the topmost scroll view on it: it captures the
+	   touch where it moves already or a flick goes on, else a gesture listener waits for the
+	   touch to move (name ours) */
+	bool TakeTouch(ScrollViewBase *view, uint32_t touch_id);
+	/* the touch begun dragging the views by the move: along the axes they move, the one it
+	   moved most along where they move along both, or both once it moved far enough (name
+	   ours) */
+	void BeginDrag(const math::v2 &move, bool masked);
+	/* the touch moved further than the drag distance along an axis a view moves along (name
+	   ours) */
+	bool IsDragged();
+	/* the views dragged by the touch's move, the drag begun once the touch moved far enough,
+	   and the part they moved taken into the mochi gesture's moves (name ours) */
+	void Drag(const math::v2 &move);
+	/* the views dragged where the touch moved since the frame's drag (name ours) */
+	void UpdateDrag();
+	/* the touch captured by the first view where the view is the last and no widget
+	   captures it yet (name ours) */
+	bool CaptureTouch(ScrollViewBase *view);
+	/* the touch captured by the first view and the views dragged, once it moved far enough
+	   (name ours) */
+	bool GrabTouch(ScrollViewBase *view);
+
+	/* the views' flicks stopped (name ours) */
+	void StopViews()
+	{
+		for (vector<TouchView>::iterator it = m_touch_views.begin();
+		     it != m_touch_views.end(); ++it) {
+			ScrollViewBase *view = it->m_view;
+			ScrollViewTimer *timer = view->m_focus_timer;
+
+			if (timer == NULL || timer->m_type == ScrollViewTimer::TIMER_TYPE_MOTION)
+				view->m_view_parent->KillAnim(0x10000);
+			view->m_velocity = math::v2(0.0f, 0.0f);
+		}
+	}
 
 	/* the views the touches hold */
 	vector<TouchView> m_touch_views;
@@ -432,7 +479,8 @@ public:
 	MochiHistory m_mochi;
 	vector<ScrollViewBase *> m_views;
 	common::SharedPtr<inputdevice::InputListener> m_listener;
-	uint8_t reserved1[8];
+	/* where the touch began on the view's plane (name ours) */
+	math::v2 m_touch_start;
 	/* where the touch is on the view's plane */
 	math::v2 m_touch_pos;
 	bool m_dragging;
@@ -444,7 +492,8 @@ public:
 	int32_t m_touch_state;
 	uint8_t reserved2[0x10];
 	uint64_t m_time;
-	math::v2 m_flick_velocity;
+	/* the frame the touch last dragged the views in, 0 from its begin (name ours) */
+	uint64_t m_drag_time;
 	/* the axes the touch drags along (ScrollViewBase::MoveDir) */
 	uint32_t m_drag_dir;
 };
@@ -639,7 +688,7 @@ ScrollViewBase::ScrollViewBase(Widget *parent, CreateParam *param)
 	  m_anchor(NULL), m_enable_analog(true), m_limit_focus(true), m_snap_power(25.0f),
 	  m_preferred_snap_id(-1), m_snap_time(200.0f), m_key_step(4.0f),
 	  m_over_scroll_length(20.0f), m_bar_fade_time(200.0f), m_bar_reset(true),
-	  m_scroll_touch(true), m_scroll_key(true), m_scroll_analog(true), m_scroll_lock(false),
+	  m_scroll_key(true), m_scroll_touch(true), m_scroll_analog(true), m_scroll_lock(false),
 	  m_ime_padding(false), m_ime_height(0.0f), m_scroll_ended(false), m_drag_dir(0),
 	  m_touch_mask_on(0), m_focus_wrap(false), m_focus_lock(false)
 {
@@ -1683,7 +1732,7 @@ int32_t ScrollViewBase::HandleGestureEvent(Event *e)
 					e->Consume();
 				break;
 			case 0x16:
-				if (ScePafWidget_E0FAE144(e))
+				if (TrackPan(e))
 					e->Consume();
 				break;
 			}
@@ -2320,6 +2369,513 @@ bool TouchScrollSupplier::IsOnScrollBar()
 	    !view->m_vertical_bar->IsInherit(ScrollBarTouch::TypeName()))
 		return false;
 	return IsTouchOn(view->m_vertical_bar, view->m_track_port);
+}
+
+void TouchScrollSupplier::BeginTouch()
+{
+	m_drag_dir = ScrollViewBase::MoveDir_None;
+
+	math::v2 pos = m_touch_views.begin()->m_view->GetTrackPos();
+
+	m_dragging = false;
+	m_drag_locked = false;
+	m_touch_start = pos;
+	m_touch_pos = pos;
+	m_reset = false;
+	m_touch_state = 1;
+	m_drag_time = 0;
+	DetachGesture();
+
+	for (vector<TouchView>::iterator it = m_touch_views.begin(); it != m_touch_views.end();
+	     ++it) {
+		if (!it->m_view->m_scroll_touch) {
+			m_drag_dir = ScrollViewBase::MoveDir_XY;
+			m_touch_state = 2;
+			break;
+		}
+	}
+
+	math::v2 velocity(0.0f, 0.0f);
+
+	for (vector<TouchView>::iterator it = m_touch_views.begin(); it != m_touch_views.end();
+	     ++it) {
+		ScrollViewBase *view = it->m_view;
+
+		it->m_id = view->FindSnapID(view->GetViewFocusTarget());
+		velocity = velocity + view->m_velocity;
+		view->m_velocity = math::v2(0.0f, 0.0f);
+	}
+
+	m_mochi.m_points.clear();
+	m_mochi.m_time = ScePafMisc_256F9060[0];
+	m_mochi.m_start_time = ScePafMisc_256F9060[0];
+	if (!IsSame(velocity, math::v2(0.0f, 0.0f))) {
+		float time = Timer::s_tick_unit * 1000000.0f;
+
+		m_mochi.m_points.push_back(
+			MochiPoint(velocity * Timer::s_tick_unit, (uint64_t)time, true));
+		if (m_drag_dir == ScrollViewBase::MoveDir_None &&
+		    lengthSqr(velocity.getImpl()) > 200000.0f) {
+			uint32_t dir = velocity.extract_x() != 0.0f;
+
+			if (velocity.extract_y() != 0.0f)
+				dir |= ScrollViewBase::MoveDir_Y;
+			m_drag_dir = dir;
+			m_touch_state = 2;
+		}
+	}
+}
+
+/* the scroll view the widget is in (name ours) */
+static inline ScrollViewBase *GetParentScrollView(Widget *widget)
+{
+	for (Widget *parent = widget->m_parent; parent != NULL; parent = parent->m_parent)
+		if (parent->IsInherit("scroll_view_base"))
+			return (ScrollViewBase *)parent;
+	return NULL;
+}
+
+void TouchScrollSupplier::GetTouchViews(vector<TouchView> &views, ScrollViewBase *view)
+{
+	vector<ScrollViewBase *> chain;
+
+	chain.push_back(view);
+	for (ScrollViewBase *parent = GetParentScrollView(view); parent != NULL;
+	     parent = GetParentScrollView(parent))
+		chain.push_back(parent);
+
+	views.resize(0);
+	if (views.capacity() < chain.size())
+		views.reserve(chain.size());
+	for (int32_t i = chain.size() - 1; i >= 0; i--)
+		views.push_back(TouchView(chain.at(i)));
+}
+
+bool TouchScrollSupplier::TakeTouch(ScrollViewBase *view, uint32_t touch_id)
+{
+	if (m_reset)
+		StopFlick();
+	if (m_touch_views.size() != 0)
+		return m_touch_views.begin()->m_view->m_touch_captures.size() != 0;
+
+	ScrollViewBase *top = NULL;
+	list<HitInfo> &hits = view->m_env->m_touch_hits;
+	list<HitInfo>::iterator end = hits.end();
+
+	for (list<HitInfo>::iterator it = hits.begin(); it != end; ++it) {
+		if (it->m_touch_id == touch_id && it->m_widget != NULL &&
+		    it->m_widget->IsInherit("scroll_view_base") && it->m_widget != NULL)
+			top = (ScrollViewBase *)it->m_widget;
+	}
+	if (top != view)
+		return false;
+
+	GetTouchViews(m_touch_views, view);
+
+	bool moving = false;
+
+	for (vector<TouchView>::iterator it = m_touch_views.begin(); it != m_touch_views.end();
+	     ++it) {
+		ScrollViewBase *v = it->m_view;
+
+		v->ScePafWidget_E9C7617A(touch_id);
+		if (!moving && v->m_view_parent->FindAnim(0x10000) != NULL) {
+			ScrollViewTimer *timer = v->m_focus_timer;
+
+			if (timer == NULL || timer->m_type != ScrollViewTimer::TIMER_TYPE_MOVE ||
+			    timer->m_userdata >= 0)
+				moving = true;
+		}
+	}
+
+	BeginTouch();
+
+	bool on_bar = IsOnScrollBar();
+	ScrollViewBase *first = m_touch_views.begin()->m_view;
+	uint32_t dir = GetMovableDir(false);
+
+	if (dir != ScrollViewBase::MoveDir_None && IsAnalogOnly() && !on_bar) {
+		ScePafWidget_712AD1C7(first, 0, touch_id, 64, first->CalcHitRect());
+
+		inputdevice::InputGestureListener *input =
+			first->m_env->GetTouchGestureListener(0).get();
+		common::SharedPtr<inputdevice::GestureListener> listener =
+			input != NULL ? input->GetGestureListener(touch_id, 50, first)
+				      : common::SharedPtr<inputdevice::GestureListener>();
+
+		if (listener.get() != NULL) {
+			DragGestureListener *drag = (DragGestureListener *)listener.get();
+			DragGestureParam param;
+
+			drag->GetParam(&param);
+
+			const ScrollViewScrollParam *scroll = first->m_scroll_param;
+
+			if (dir == ScrollViewBase::MoveDir_X)
+				param.m_dir = 0;
+			else if (dir == ScrollViewBase::MoveDir_Y)
+				param.m_dir = 1;
+			else
+				param.m_dir = 2;
+			if (scroll == NULL)
+				scroll = &TouchScrollConfig::Get().m_param;
+			param.m_start_distance[0] = scroll->m_value[0];
+			param.m_start_distance[2] = scroll->m_value[1];
+			param.m_start_distance[1] = scroll->m_value[2];
+			param.m_move_tolerance = scroll->m_value[5];
+			param.m_end_speed[0] = scroll->m_value[6];
+			param.m_flick_speed = scroll->m_value[22];
+			param.m_end_speed[1] = scroll->m_value[7];
+			param.m_end_distance[0] = scroll->m_value[8];
+			param.m_end_distance[1] = scroll->m_value[9];
+			param.m_end_distance[2] = scroll->m_value[10];
+			if (scroll->m_bounce) {
+				math::v4 size = *first->GetSize(0);
+
+				if (param.m_dir == 1) {
+					/* the distances scaled down for a view under 410.5 high, to
+					   their least at 277 */
+					float t = (size.extract_y() - 277.0f) / 133.5f;
+
+					if (t < 0.0f)
+						t = 0.0f;
+
+					float scale = 1.0f;
+
+					if (t < 1.0f)
+						scale = t;
+					if (param.m_start_distance[0] >= 12.0f)
+						param.m_start_distance[0] =
+							(param.m_start_distance[0] - 12.0f) * scale + 12.0f;
+					if (param.m_start_distance[2] >= 12.0f)
+						param.m_start_distance[2] =
+							(param.m_start_distance[2] - 12.0f) * scale + 12.0f;
+					if (param.m_end_speed[0] >= 150.0f)
+						param.m_end_speed[0] =
+							(param.m_end_speed[0] - 150.0f) * scale + 150.0f;
+					if (param.m_end_distance[0] >= 30.0f)
+						param.m_end_distance[0] =
+							(param.m_end_distance[0] - 30.0f) * scale + 30.0f;
+					if (param.m_end_distance[1] >= 30.0f)
+						param.m_end_distance[1] =
+							(param.m_end_distance[1] - 30.0f) * scale + 30.0f;
+				}
+			}
+			drag->SetParam(&param);
+		}
+	}
+
+	if (!on_bar && !IsGestureTaken() && (moving || m_mochi.m_points.size() != 0)) {
+		ScePafWidget_2B1A1493(first, 1);
+		ScePafWidget_D3D0A7C3(first, 0, touch_id, true, true);
+		first->SetFocus(NULL);
+		first->m_env->m_front_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+		first->m_env->m_rear_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+		return true;
+	}
+	AttachGesture(dir);
+	return false;
+}
+
+/* the listener attached to the touch again, at priority 50 (name ours) */
+static inline void ReattachTouchGesture(Environment *env, uint32_t touch_id,
+					common::SharedPtr<inputdevice::GestureListener> listener)
+{
+	inputdevice::InputGestureListener *input = env->GetTouchGestureListener(0).get();
+
+	if (input != NULL)
+		input->AttachGestureListener(touch_id, 50, listener);
+}
+
+bool ScrollViewBase::TrackBegin(Event *e)
+{
+	if (e == NULL)
+		return false;
+
+	uint32_t track_port = m_track_port;
+
+	if (track_port != -1) {
+		inputdevice::InputGestureListener *input =
+			m_env->GetTouchGestureListener(0).get();
+		common::SharedPtr<inputdevice::GestureListener> listener =
+			input != NULL ? input->GetGestureListener(track_port, 50, this)
+				      : common::SharedPtr<inputdevice::GestureListener>();
+
+		if (listener.get() != NULL)
+			ReattachTouchGesture(m_env, (uint8_t)e->m_detail, listener);
+		if ((m_drag_dir & m_touch_mask_on) != 0)
+			return true;
+	}
+	return s_touch_scroll_supplier.TakeTouch(this, (uint8_t)e->m_detail);
+}
+
+void TouchScrollSupplier::BeginDrag(const math::v2 &move, bool masked)
+{
+	if (m_touch_state != 1)
+		return;
+
+	bool both = false;
+	uint32_t dir = ScrollViewBase::MoveDir_None;
+
+	for (vector<TouchView>::iterator it = m_touch_views.begin(); it != m_touch_views.end();
+	     ++it) {
+		ScrollViewBase *view = it->m_view;
+		uint32_t off = masked ? view->m_movable_dir_off : 0;
+		uint32_t d = view->m_movable_dir & ~off;
+
+		if (d == ScrollViewBase::MoveDir_XY)
+			both = true;
+		dir |= d;
+	}
+
+	if (dir != ScrollViewBase::MoveDir_XY) {
+		m_drag_dir = dir;
+	} else {
+		math::v2 a(sce::Vectormath::Simd::Aos::absPerElem(move.getImpl()));
+
+		m_drag_dir = (a.getImpl().getX() > a.getImpl().getY()).getAsBool()
+				     ? ScrollViewBase::MoveDir_X
+				     : ScrollViewBase::MoveDir_Y;
+		if (both) {
+			float distance;
+
+			if (masked) {
+				distance = TouchScrollConfig::Get().m_hold_distance * 0.6f;
+			} else {
+				/* from 1.4 times the hold distance at the touch's begin down to
+				   0.6 times it 134 ms on */
+				float t = (float)(ScePafMisc_256F9060[0] - m_mochi.m_start_time) /
+					  134000.0f;
+
+				if (t < 0.0f)
+					t = 0.0f;
+
+				float s = 1.0f;
+
+				if (t < 1.0f)
+					s = t;
+
+				float k = (1.0f - s) * 0.79999995f;
+
+				distance = (k + 0.6f) * TouchScrollConfig::Get().m_hold_distance;
+			}
+			if (a.extract_x() > distance)
+				m_drag_dir |= ScrollViewBase::MoveDir_X;
+			if (a.extract_y() > distance)
+				m_drag_dir |= ScrollViewBase::MoveDir_Y;
+		}
+	}
+	StopViews();
+	m_touch_state = 2;
+}
+
+bool TouchScrollSupplier::IsDragged()
+{
+	if (m_touch_views.size() == 0)
+		return false;
+
+	math::v2 pos = m_touch_views.begin()->m_view->GetTrackPos();
+	math::v2 d(sce::Vectormath::Simd::Aos::absPerElem((m_touch_start - pos).getImpl()));
+	uint32_t dir = ScrollViewBase::MoveDir_None;
+
+	if (d.extract_x() > TouchScrollConfig::Get().m_drag_distance)
+		dir = ScrollViewBase::MoveDir_X;
+	if (d.extract_y() > TouchScrollConfig::Get().m_drag_distance)
+		dir |= ScrollViewBase::MoveDir_Y;
+	for (vector<TouchView>::iterator it = m_touch_views.begin(); it != m_touch_views.end();
+	     ++it)
+		if ((dir & it->m_view->m_movable_dir) != 0)
+			return true;
+	return false;
+}
+
+void TouchScrollSupplier::Drag(const math::v2 &move)
+{
+	DetachGesture();
+	if (m_touch_state == 1) {
+		if (!IsDragged()) {
+			/* the flicks stopped once the touch is held 67 ms */
+			if (ScePafMisc_256F9060[0] - m_mochi.m_start_time >= 67000)
+				StopViews();
+			return;
+		}
+
+		math::v2 pos = m_touch_views.begin()->m_view->GetTrackPos();
+
+		BeginDrag(m_touch_start - pos, false);
+		StopViews();
+		m_touch_state = 2;
+	} else if (m_touch_state != 2) {
+		return;
+	}
+
+	math::v2 rest = MaskMoveDir(move, m_drag_dir);
+
+	for (int32_t i = m_touch_views.size() - 1; i >= 0; i--) {
+		if (IsSame(rest, math::v2(0.0f, 0.0f)))
+			break;
+		m_touch_views.at(i).m_view->ScePafWidget_D95AFF11(rest, m_dragging, m_drag_locked,
+								 m_reset);
+	}
+
+	uint64_t last = m_mochi.m_time;
+	uint64_t time = ScePafMisc_256F9060[0];
+	math::v2 moved = MaskMoveDir(move - rest, m_drag_dir);
+
+	if (last != time) {
+		m_mochi.m_points.push_back(MochiPoint(moved, time - last, false));
+		if (m_mochi.m_points.size() >= 8)
+			m_mochi.m_points.erase(m_mochi.m_points.begin(),
+					       m_mochi.m_points.begin() + 1);
+		m_mochi.m_time = time;
+	}
+}
+
+void TouchScrollSupplier::UpdateDrag()
+{
+	if (m_touch_views.size() == 0)
+		return;
+
+	ScrollViewBase *view = m_touch_views.begin()->m_view;
+
+	if (view->m_touch_captures.size() != 0 && !m_drag_locked &&
+	    m_drag_time != ScePafMisc_256F9060[0]) {
+		math::v2 pos = view->GetTrackPos();
+
+		if (!IsSame(m_touch_pos, pos) && !m_drag_locked)
+			Drag(m_touch_views.begin()->m_view->GetTrackPos() - m_touch_pos);
+	}
+}
+
+bool ScrollViewBase::TrackEnd(Event *e)
+{
+	if (e != NULL && m_track_port != (uint8_t)e->m_detail)
+		return false;
+	s_touch_scroll_supplier.UpdateDrag();
+	s_touch_scroll_supplier.StopFlick();
+	return false;
+}
+
+bool TouchScrollSupplier::CaptureTouch(ScrollViewBase *view)
+{
+	if (m_touch_views.size() == 0 || m_touch_views.back().m_view != view)
+		return false;
+
+	ScrollViewBase *first = m_touch_views.begin()->m_view;
+
+	if (first->m_touch_captures.size() != 0)
+		return false;
+
+	uint32_t id = first->m_track_port;
+	Environment *env = first->m_env;
+
+	if (id < 8 && env->m_touch_capture[0][id].m_widget != NULL)
+		return false;
+	ScePafWidget_2B1A1493(first, 1);
+	ScePafWidget_D3D0A7C3(first, 0, first->m_track_port, true, true);
+	return true;
+}
+
+bool ScrollViewBase::TrackPress(Event *e)
+{
+	if (e == NULL || m_track_port != (uint8_t)e->m_detail)
+		return true;
+	s_touch_scroll_supplier.CaptureTouch(this);
+	return true;
+}
+
+bool ScrollViewBase::TrackLongPress(Event *e)
+{
+	if (e == NULL)
+		return true;
+	if (m_track_port == -1)
+		TrackBegin(e);
+	if (m_track_port != (uint8_t)e->m_detail)
+		return true;
+	s_touch_scroll_supplier.CaptureTouch(this);
+	return true;
+}
+
+bool ScrollViewBase::TrackRelease(Event *e)
+{
+	return true;
+}
+
+bool TouchScrollSupplier::GrabTouch(ScrollViewBase *view)
+{
+	if (m_touch_views.size() == 0 || m_touch_views.back().m_view != view)
+		return false;
+
+	ScrollViewBase *first = m_touch_views.begin()->m_view;
+
+	if (first->m_touch_captures.size() != 0)
+		return false;
+	if (!IsDragged())
+		return false;
+	ScePafWidget_D3D0A7C3(first, 0, first->m_track_port, true, true);
+	if (!m_drag_locked)
+		Drag(m_touch_views.begin()->m_view->GetTrackPos() - m_touch_pos);
+	return true;
+}
+
+bool ScrollViewBase::TrackGrab(Event *e)
+{
+	if (e == NULL)
+		return false;
+	if (m_track_port == -1)
+		return TrackBegin(e);
+	if (m_track_port == (uint8_t)e->m_detail)
+		return s_touch_scroll_supplier.GrabTouch(this);
+	return false;
+}
+
+bool ScrollViewBase::TrackMove(Event *e)
+{
+	if (e == NULL || m_track_port != (uint8_t)e->m_detail)
+		return false;
+	if (m_touch_captures.size() == 0)
+		return false;
+
+	TouchScrollSupplier &supplier = s_touch_scroll_supplier;
+
+	if (!supplier.m_drag_locked)
+		supplier.Drag(supplier.m_touch_views.begin()->m_view->GetTrackPos() -
+			      supplier.m_touch_pos);
+	return true;
+}
+
+bool ScrollViewBase::TrackDrag(Event *e)
+{
+	if (m_track_port == -1)
+		return false;
+
+	TouchScrollSupplier &supplier = s_touch_scroll_supplier;
+
+	if (!supplier.m_drag_locked)
+		supplier.Drag(supplier.m_touch_views.begin()->m_view->GetTrackPos() -
+			      supplier.m_touch_pos);
+	return true;
+}
+
+bool ScrollViewBase::TrackPan(Event *e)
+{
+	if (m_track_port == -1)
+		return false;
+
+	/* the gesture's move, in the event's first two data words */
+	math::v2 move = *(const math::v2 *)&e->m_data[0];
+	TouchScrollSupplier &supplier = s_touch_scroll_supplier;
+
+	if (!supplier.m_drag_locked) {
+		supplier.m_touch_state = 2;
+		supplier.m_drag_dir = MoveDir_XY;
+		supplier.m_dragging = true;
+		supplier.Drag(move * -1.0f);
+		supplier.m_mochi.m_points.clear();
+		supplier.m_mochi.m_time = ScePafMisc_256F9060[0];
+		supplier.m_mochi.m_start_time = ScePafMisc_256F9060[0];
+	}
+	return true;
 }
 
 }

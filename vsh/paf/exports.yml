@@ -4021,7 +4021,7 @@ ScePaf:
         - ScePafWidget_7524969B: 0x7524969B
         - ScePafWidget_7524D3BB: 0x7524D3BB
         - ScePafWidget_7525AE08: 0x7525AE08
-        - ScePafWidget_7530A167: 0x7530A167
+        - _ZN3paf2ui14ScrollViewBase14TrackLongPressEPNS0_5EventE: 0x7530A167
         - ScePafWidget_753302E3: 0x753302E3
         - _ZNK3paf2ui8RichText11GetItemTypeEi: 0x75420B80
         - _ZN3paf2ui9DirectBar12GetHitNumberEPNS0_7HitInfoE: 0x7558B246
@@ -5038,7 +5038,7 @@ ScePaf:
         - _ZN3paf2ui9AppIcon2dD1Ev: 0xE0EF522B
         - _ZN3paf2ui11ScrollBar2d16HandleTouchEventEPNS0_5EventE: 0xE0F1DC4B
         - _ZN3paf2ui8listview11SegmentListC1EPNS0_8ListViewE: 0xE0F8DBA7
-        - ScePafWidget_E0FAE144: 0xE0FAE144
+        - _ZN3paf2ui14ScrollViewBase8TrackPanEPNS0_5EventE: 0xE0FAE144
         - _ZN3paf2ui5SceneD2Ev: 0xE112D1A8
         - _ZN3paf2ui6Widget16EnableFocusEventEb: 0xE113366E
         - _ZN3paf2ui11Environment9SetScreenEPNS0_6ScreenE: 0xE1457599
