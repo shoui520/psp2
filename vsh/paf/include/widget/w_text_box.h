@@ -21,6 +21,8 @@ struct SceImeVshEvent;
 namespace paf {
 namespace ui {
 
+class ScrollView;
+
 class Text : public Widget {
 public:
 	enum {
@@ -76,6 +78,8 @@ public:
 	/* only returns the error 0x80AF5004 */
 	int32_t SetSelectionMode(bool mode);
 	int32_t GetLength(uint32_t &len);
+	/* its text object's string with its style runs; 0x80AF4122 without a text object */
+	int32_t GetAttributedString(graph::AttributedString &str);
 	int32_t GetCaretIndex(uint32_t &index);
 	int32_t GetSelectionRange(uint32_t &index, uint32_t &len);
 	int32_t GetSelectionMode(bool &mode);
@@ -210,6 +214,9 @@ extern "C" {
 int32_t ScePafWidget_E0D414F7(paf::ui::TextBox *text_box, bool *enabled);
 /* the text's string buffer and its length (Text::GetStringBuffer, by graph::TextObj's) */
 int32_t ScePafWidget_62604965(paf::ui::Text *text, const wchar_t **buf, uint32_t *len);
+/* the scroll view a multi-line text box scrolls in, kept at 0x284 (0x81131ce2 TOOL; no name
+   found): 0x80AF4122 without a text object, 0x80AF418F for a NULL view, else 0 */
+int32_t ScePafWidget_DA5F91F8(paf::ui::TextBox *text_box, paf::ui::ScrollView *view);
 }
 
 #endif

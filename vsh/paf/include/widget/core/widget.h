@@ -1330,6 +1330,9 @@ int32_t ScePafWidget_21125870(paf::ui::Widget *widget, uint32_t keycode);
 /* gives the widget its focus cursor: a copy of the shape, its offset, size and rotation
    taken from the widget's own where the shape has none */
 void ScePafWidget_13B246E0(paf::ui::Widget *widget, paf::ui::FocusShape *shape);
+/* makes the widget (on) the default focus of the nearest ancestor with a focus root at 0x234, or
+   stops it being that (off) (0x8114fcfa TOOL; no name found) */
+void ScePafWidget_EC6175D6(paf::ui::Widget *widget, bool on);
 /* Hide(Timer *, int32_t opt, float delay, AnimCB): hides the widget, over the timer's time */
 int32_t ScePafWidget_4588699E(paf::ui::Widget *widget, paf::Timer *t, int32_t opt, float delay,
 			      paf::ui::AnimCB cb_fin);
