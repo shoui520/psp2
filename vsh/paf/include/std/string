@@ -176,6 +176,10 @@ public:
 
 	_Myt &insert(size_type pos, const _Elem *src, size_type len);
 
+	/* len elements from src written over the string from pos, which grows where they reach past
+	   its end; a pos past the end is reported (name ours: no source names it) */
+	_Myt &replace(size_type pos, const _Elem *src, size_type len);
+
 	void resize(size_type len, _Elem ch)
 	{
 		if (len < count)
@@ -579,6 +583,35 @@ basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, const _Elem *src, size_
 }
 
 template<class _Elem, class _Traits, class _Ax>
+basic_string<_Elem, _Traits, _Ax> &
+basic_string<_Elem, _Traits, _Ax>::replace(size_type pos, const _Elem *src, size_type len)
+{
+	if (pos > count)
+		ScePafStdc_D608246A();
+	if (pos < count) {
+		size_type size = pos + len > count ? pos + len : count;
+		_Elem *dst = alloc.allocate(size + 1);
+
+		if (dst != NULL) {
+			size_type tail = count - (pos + len);
+
+			_Traits::copy(dst, ptr, pos);
+			_Traits::copy(dst + pos, src, len);
+			if (tail != 0)
+				_Traits::copy(dst + pos + len, ptr + pos + len, tail);
+			dst[size] = 0;
+			if (ptr != &empty_string)
+				alloc.deallocate(ptr, count + 1);
+			ptr = dst;
+			count = size;
+		} else {
+			ScePafStdc_D608246A();
+		}
+	}
+	return *this;
+}
+
+template<class _Elem, class _Traits, class _Ax>
 __attribute__((noinline)) basic_string<_Elem, _Traits, _Ax>
 basic_string<_Elem, _Traits, _Ax>::substr(size_type pos, size_type len) const
 {
@@ -669,6 +702,34 @@ basic_string<wchar_t>::append(const wchar_t *src, size_type len)
 			alloc.deallocate(ptr, count + 1);
 		ptr = dst;
 		count = size;
+	}
+	return *this;
+}
+
+/* Sony's build calls the char assign from a string everywhere rather than inlining it. */
+template<>
+inline __attribute__((noinline)) basic_string<char> &
+basic_string<char>::assign(const basic_string<char> &src)
+{
+	if (&src != this) {
+		if (ptr != &empty_string)
+			alloc.deallocate(ptr, count + 1);
+		if (src.count != 0) {
+			char *dst = alloc.allocate(src.count + 1);
+
+			if (dst != NULL) {
+				ptr = dst;
+				count = src.count;
+				char_traits<char>::copy(dst, src.ptr, src.count + 1);
+			} else {
+				ScePafStdc_D608246A();
+				ptr = &empty_string;
+				count = 0;
+			}
+		} else {
+			ptr = &empty_string;
+			count = 0;
+		}
 	}
 	return *this;
 }
