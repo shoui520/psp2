@@ -141,7 +141,9 @@ public:
 	math::v2 m_hit_pos;
 	uint8_t reserved2[0x30];
 	math::v4 reserved3;
-	uint8_t reserved4[0x2c];
+	uint8_t reserved4[0x28];
+	/* the touch ID (the Environment's m_touch_hits; name ours) */
+	uint32_t m_touch_id;
 	Widget *m_widget;
 };
 
@@ -304,7 +306,10 @@ public:
 	TouchState m_touch_state[16];
 	/* where each touch ID last hit (name ours) */
 	HitInfo m_touch_hit[8];
-	uint8_t reserved5b[0x1dba];
+	uint8_t reserved5b[0x1d80];
+	/* the widgets the touches are on (TouchScrollSupplier's checks; name ours) */
+	list<HitInfo> m_touch_hits;
+	uint8_t reserved5c[0x32];
 	/* each frame waits for the GPU once it is drawn (Framework::Option_4) */
 	bool m_finish_after_draw;
 	uint8_t reserved6[0x35];

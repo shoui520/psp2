@@ -29,6 +29,7 @@
 #include <widget/core/event.h>
 #include <widget/core/layouter.h>
 #include <widget/core/uiinputlistener.h>
+#include <widget/core/widget_gesture.h>
 #include <widget/factory.h>
 #include <widget/w_camera.h>
 #include <widget/w_scene.h>
@@ -308,6 +309,45 @@ public:
 	math::v2 m_pos;
 };
 
+/* the gesture listener of the touch a view tracks: it takes the touch over once the touch
+   moves along the axes fast enough (names ours) */
+class ScrollGestureListener : public TouchGestureListener {
+public:
+	ScrollGestureListener(uint32_t touch_id, ScrollViewBase *view)
+		: TouchGestureListener(0, touch_id, view), m_axis(1.0f, 1.0f)
+	{
+	}
+
+	virtual int32_t OnUpdateTouch(uint32_t port_id)
+	{
+		const inputdevice::touchscreen::Data *data;
+
+		inputdevice::touchscreen::GetData(m_port, m_touch_id, &data);
+		if (data->state != inputdevice::touchscreen::Data::STATE_RELEASE)
+			/* not released yet */
+			return 1;
+
+		float vx;
+		float vy;
+		inputdevice::touchscreen::DeviceInfo info;
+
+		ScePafMisc_88F4A40B(m_port, m_touch_id, 50, &vx, &vy);
+		inputdevice::touchscreen::GetDeviceInfo(m_port, &info);
+
+		math::v2 speed(sce::Vectormath::Simd::Aos::absPerElem(
+			(m_axis * math::v2(vx, vy) / info.pixel_per_mm).getImpl()));
+
+		if (speed.extract_x() > 0.012f || speed.extract_y() > 0.012f) {
+			ScePafWidget_C5939A92(this, 3, m_touch_id, 0, vx * 1000.0f, vy * 1000.0f, 1, 0);
+			return UPDATE_DETACH_SELF | UPDATE_DETACH_LOWER;
+		}
+		return UPDATE_DETACH_SELF;
+	}
+
+	/* the axes the touch's velocity counts along */
+	math::v2 m_axis;
+};
+
 /* what the scroll views share of the touch panel: the views the touches hold, the snap points'
    IDs, the views it updates and their listener (names ours) */
 class TouchScrollSupplier {
@@ -353,6 +393,20 @@ public:
 	/* the touch's position kept where the view holds it last, and the time without a move
 	   taken into the mochi gesture's moves (name ours) */
 	void UpdateTouch(ScrollViewBase *view);
+	/* the gesture listener taken off the touch (name ours) */
+	void DetachGesture();
+	/* a gesture listener attached to the touch the first view tracks, counting its velocity
+	   along the axes (MoveDir; name ours) */
+	void AttachGesture(uint32_t dir);
+	/* a widget after the last view, on its touch, takes gesture 5 (name ours) */
+	bool IsGestureTaken();
+	/* every view scrolls by analog and has no touch scroll bar (name ours) */
+	bool IsAnalogOnly();
+	/* the axes the views move along, without those they may not where masked is set (MoveDir;
+	   name ours) */
+	uint32_t GetMovableDir(bool masked);
+	/* the last view's touch is on one of its touch scroll bars (name ours) */
+	bool IsOnScrollBar();
 	/* each view's parent put back in place, and its matrices made again where they changed */
 	void Update();
 	/* the flick under way stopped, the views' velocities cleared (name ours) */
@@ -384,6 +438,8 @@ public:
 	bool m_dragging;
 	bool m_drag_locked;
 	bool m_reset;
+	/* its gesture listener is attached to the touch (name ours) */
+	bool m_gesture_attached;
 	/* what the touch does (2 drags, 3 moves no view) */
 	int32_t m_touch_state;
 	uint8_t reserved2[0x10];
@@ -2109,6 +2165,161 @@ void ScrollViewBase::UpdatePost()
 		s_touch_scroll_supplier.UpdateTouch(this);
 	if (m_over_scroll != NULL)
 		m_over_scroll->Update();
+}
+
+/* the gesture listener attached to the touch of the front touch port with priority 21: -1
+   where there is no listener to attach it to (name ours) */
+static inline int32_t AttachTouchGesture(Environment *env, uint32_t touch_id,
+					 common::SharedPtr<inputdevice::GestureListener> listener)
+{
+	inputdevice::InputGestureListener *input = env->GetTouchGestureListener(0).get();
+
+	if (input == NULL || input->AttachGestureListener(touch_id, 21, listener) < 0)
+		return -1;
+	return 0;
+}
+
+void TouchScrollSupplier::DetachGesture()
+{
+	if (m_gesture_attached) {
+		m_gesture_attached = false;
+		if (m_touch_views.size() != 0) {
+			ScrollViewBase *view = m_touch_views.begin()->m_view;
+
+			if (view->m_track_port != -1) {
+				inputdevice::InputGestureListener *input =
+					view->m_env->GetTouchGestureListener(0).get();
+
+				if (input != NULL)
+					input->DetachGestureListener(view->m_track_port, 21, view);
+			}
+		}
+	}
+}
+
+void TouchScrollSupplier::AttachGesture(uint32_t dir)
+{
+	DetachGesture();
+	if (dir == ScrollViewBase::MoveDir_None || m_touch_views.size() == 0)
+		return;
+
+	ScrollViewBase *view = m_touch_views.begin()->m_view;
+
+	if (view->m_track_port == -1)
+		return;
+
+	ScrollGestureListener *gesture = new ScrollGestureListener(view->m_track_port, view);
+	common::SharedPtr<inputdevice::GestureListener> listener(gesture);
+
+	if (AttachTouchGesture(view->m_env, view->m_track_port, listener) < 0)
+		return;
+
+	math::v2 axis;
+
+	switch (dir) {
+	case ScrollViewBase::MoveDir_X:
+		axis = math::v2(1.0f, 0.0f);
+		break;
+	case ScrollViewBase::MoveDir_Y:
+		axis = math::v2(0.0f, 1.0f);
+		break;
+	case ScrollViewBase::MoveDir_XY:
+		axis = math::v2(1.0f, 1.0f);
+		break;
+	default:
+		axis = math::v2(0.0f, 0.0f);
+		break;
+	}
+	gesture->m_axis = axis;
+	m_gesture_attached = true;
+}
+
+bool TouchScrollSupplier::IsGestureTaken()
+{
+	if (m_touch_views.size() == 0)
+		return false;
+
+	ScrollViewBase *view = m_touch_views.back().m_view;
+	list<HitInfo> &hits = view->m_env->m_touch_hits;
+	list<HitInfo>::iterator it = hits.begin();
+	list<HitInfo>::iterator end = hits.end();
+	list<HitInfo>::iterator hit;
+
+	for (hit = it; hit != end; ++hit) {
+		if (hit->m_widget == view && hit->m_touch_id == view->m_track_port) {
+			it = ++hit;
+			break;
+		}
+	}
+
+	uint32_t touch_id = view->m_track_port;
+
+	for (; it != end; ++it)
+		if (it->m_touch_id == touch_id && (it->m_widget->m_touch_gesture_mask & 0x20) != 0)
+			return true;
+	return false;
+}
+
+bool TouchScrollSupplier::IsAnalogOnly()
+{
+	for (vector<TouchView>::iterator it = m_touch_views.begin(); it != m_touch_views.end();
+	     ++it) {
+		ScrollViewBase *view = it->m_view;
+
+		if (!view->m_scroll_analog)
+			return false;
+		if (view->m_horizontal_bar != NULL &&
+		    view->m_horizontal_bar->IsInherit(ScrollBarTouch::TypeName()))
+			return false;
+		if (view->m_vertical_bar != NULL &&
+		    view->m_vertical_bar->IsInherit(ScrollBarTouch::TypeName()))
+			return false;
+	}
+	return true;
+}
+
+uint32_t TouchScrollSupplier::GetMovableDir(bool masked)
+{
+	vector<TouchView>::iterator it = m_touch_views.begin();
+	vector<TouchView>::iterator end = m_touch_views.end();
+	uint32_t dir = ScrollViewBase::MoveDir_None;
+
+	if (masked) {
+		for (; it != end; ++it)
+			dir |= it->m_view->m_movable_dir_y & ~it->m_view->m_movable_dir_off;
+	} else {
+		for (; it != end; ++it)
+			dir |= it->m_view->m_movable_dir_y;
+	}
+	return dir;
+}
+
+/* the widget is on the touch */
+static inline bool IsTouchOn(Widget *widget, uint32_t touch_id)
+{
+	list<HitInfo> &hits = widget->m_env->m_touch_hits;
+
+	for (list<HitInfo>::iterator it = hits.begin(); it != hits.end(); ++it)
+		if (it->m_widget == widget && it->m_touch_id == touch_id)
+			return true;
+	return false;
+}
+
+bool TouchScrollSupplier::IsOnScrollBar()
+{
+	if (m_touch_views.size() == 0)
+		return false;
+
+	ScrollViewBase *view = m_touch_views.back().m_view;
+
+	if (view->m_horizontal_bar != NULL &&
+	    view->m_horizontal_bar->IsInherit(ScrollBarTouch::TypeName()) &&
+	    IsTouchOn(view->m_horizontal_bar, view->m_track_port))
+		return true;
+	if (view->m_vertical_bar == NULL ||
+	    !view->m_vertical_bar->IsInherit(ScrollBarTouch::TypeName()))
+		return false;
+	return IsTouchOn(view->m_vertical_bar, view->m_track_port);
 }
 
 }

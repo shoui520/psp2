@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <math/rect.h>
 #include <inputdevice/inputlistener.h>
+#include <inputdevice/touchscreen/touchscreen.h>
 
 namespace paf {
 namespace ui {
@@ -17,10 +18,48 @@ namespace ui {
 /* a gesture listener for one touch of one touch port (constructor E5EE88D6) */
 class TouchGestureListener : public inputdevice::GestureListener {
 public:
+	/* the touch ID of the port, its user data the widget (5065F85A, E5EE88D6) */
+	TouchGestureListener(uint32_t port, uint32_t touch_id, void *user_data);
+
+	virtual ~TouchGestureListener()
+	{
+	}
+
+	/* let go of where its user data is no longer valid */
+	virtual void PreUpdate()
+	{
+		if (!IsValidUserData(m_user_data)) {
+			m_attached_bitmap = 0;
+			m_attached_counter = 0;
+		}
+		m_update_count = 0;
+	}
+
+	virtual int32_t OnUpdate(const inputdevice::Data *data, uint32_t port_id)
+	{
+		int32_t ret = OnUpdateTouch(port_id);
+
+		m_update_count++;
+		return ret;
+	}
+
+	/* what OnUpdate asks of the InputGestureListener for the touch (name ours) */
+	virtual int32_t OnUpdateTouch(uint32_t port_id)
+	{
+		return 0;
+	}
+
 	uint32_t m_touch_id;
-	uint32_t reserved1;
+	/* the updates since the last PreUpdate (name ours) */
+	uint32_t m_update_count;
 	uint32_t m_port;
 };
+
+extern "C" {
+/* the gesture's event sent for the touch, with its velocity (no name found) */
+void ScePafWidget_C5939A92(TouchGestureListener *listener, int32_t gesture, uint32_t touch_id,
+			   int32_t arg, float vx, float vy, int32_t a, int32_t b);
+}
 
 /* how long a touch is held before it counts as a press, in milliseconds: 500, or 300 where
    the widget asks for the short hold, and the area it is held in (vtable 812F12D0) */

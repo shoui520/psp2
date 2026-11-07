@@ -3704,7 +3704,7 @@ ScePaf:
         - _ZN3paf2ui8RichText11scroll_downEf: 0x500B93F3
         - ScePafWidget_50361A7E: 0x50361A7E
         - _ZN3paf2ui4Text10SetCharPosEjRKNS_4math2v2E: 0x5054D8CA
-        - ScePafWidget_5065F85A: 0x5065F85A
+        - _ZN3paf2ui20TouchGestureListenerC2EjjPv: 0x5065F85A
         - _ZN3paf2ui17EventListenerList2DoEiPNS0_7HandlerEPNS0_5EventE: 0x5076E001
         - _ZN3paf2ui14ScrollViewBase18HandleTouchFwEventEPNS0_5EventE: 0x50BCBFEB
         - _ZN3paf2ui14ScrollViewBase14SetBarFadeTimeEf: 0x50E4EA5C
@@ -5079,7 +5079,7 @@ ScePaf:
         - ScePafWidget_E534D91D: 0xE534D91D
         - ScePafWidget_E5BA7A94: 0xE5BA7A94
         - _ZN3paf2ui13AppIconSimple9EnableTapEb: 0xE5EDFA14
-        - ScePafWidget_E5EE88D6: 0xE5EE88D6
+        - _ZN3paf2ui20TouchGestureListenerC1EjjPv: 0xE5EE88D6
         - _ZN3paf2ui8filelist10CellSource8TypeNameEv: 0xE60CC6D4
         - ScePafWidget_E60EAA9F: 0xE60EAA9F
         - _ZN3paf2ui8SlideBar12GetLabelModeERNS1_9LabelModeENS1_7LabelIdE: 0xE636C722
