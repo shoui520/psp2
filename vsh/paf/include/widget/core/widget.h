@@ -30,6 +30,7 @@
 #include <common/transition.h>
 #include <common/shared_ptr.h>
 #include <timer/timer.h>
+#include <graphics/text/text_style.h>
 
 namespace paf {
 
@@ -1331,6 +1332,11 @@ int32_t ScePafWidget_931AD41E(paf::ui::Widget *widget, bool release);
 int32_t ScePafWidget_5ABB3393(paf::ui::Widget *widget, uint32_t port, uint32_t id, bool release);
 /* plays its sound of the index where its sound mask has it: -1 when none is played */
 int32_t ScePafWidget_2B1A1493(paf::ui::Widget *widget, int32_t index);
+/* sets the style attribute of its text from pos for len characters, its size where attr is
+   TextStyleAttribute_Point, laying the text out again where that changes it; NULL text
+   object 0x80AF0022 (argument names ours, after TextObj::SetStyleAttribute) */
+int32_t scePafWidgetSetFontSize(paf::ui::Widget *widget, float size,
+				paf::graph::TextStyleAttribute attr, uint32_t pos, uint32_t len);
 /* the hit box size for the size: its height at least the minimum (ImageSlideBar's; no name
    found) */
 paf::math::v4 ScePafWidget_301AA80F(paf::ui::Widget *widget, const paf::math::v4 &size);
