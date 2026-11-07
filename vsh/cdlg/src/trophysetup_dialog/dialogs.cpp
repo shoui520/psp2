@@ -59,10 +59,10 @@ public:
 	void *m_arg;
 };
 
-/* the error dialog's other handler, which does nothing */
-class TrophySetupCloseHandler : public CommonGuiDialogCloseHandler {
+/* what the error dialog calls as it opens: nothing */
+class TrophySetupOpenHandler : public CommonGuiMessageDialogOpenHandler {
 public:
-	virtual void operator()(SceInt32 value)
+	virtual void operator()(CommonGuiMessageDialogParam *param)
 	{
 	}
 };
@@ -115,7 +115,7 @@ int OpenErrorDialog(SceInt32 error, CommonGuiDialogFunction func, void *arg)
 	if (messageId != 0)
 		param.message = plugin->GetString(IDParam(s_empty_name, messageId));
 	dialogId = SceCommonGuiDialog_A6422883(plugin, &param, new TrophySetupDialogHandler(func, arg),
-					       new TrophySetupCloseHandler);
+					       new TrophySetupOpenHandler);
 	if (dialogId >= 0) {
 		math::v4 block(0.0f, 0.0f, 0.0f, 0.0f);
 

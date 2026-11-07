@@ -7,6 +7,11 @@
 #include <scetypes.h>
 #include <sysmodule/sysmodule_ids.h>
 
+/* SceSysmodule's errors (Sony's libsysmodule.h) */
+#define SCE_SYSMODULE_ERROR_INVALID_VALUE	-2141581312	/* 0x805A1000 */
+#define SCE_SYSMODULE_ERROR_UNLOADED		-2141581311	/* 0x805A1001 */
+#define SCE_SYSMODULE_ERROR_FATAL		-2141581057	/* 0x805A10FF */
+
 #ifdef __cplusplus
 extern "C" {
 #endif

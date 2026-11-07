@@ -13,6 +13,7 @@
 #include <math/math.h>
 #include <graphics/surface/surface.h>
 #include <cache/cache_image.h>
+#include <versatileparam/idparam.h>
 
 namespace paf {
 class Plugin;
@@ -34,27 +35,57 @@ public:
 	virtual void operator()(SceInt32 value, SceInt32 button) = 0;
 };
 
+class CommonGuiMessageDialogParam;
+
 /*
- * What a message dialog (SceCommonGuiDialog_A6422883) calls besides its handler, kept and deleted
- * by the library like the handler. What it is called with is not known: the only caller seen
- * passes one that does nothing.
+ * What a message dialog calls as it opens, with its parameters, which the object may still change
+ * (its title and lines, its buttons): the library keeps the object and deletes it with the dialog.
  */
-class CommonGuiDialogCloseHandler {
+class CommonGuiMessageDialogOpenHandler {
 public:
-	virtual ~CommonGuiDialogCloseHandler()
+	virtual ~CommonGuiMessageDialogOpenHandler()
 	{
 	}
 
-	virtual void operator()(SceInt32 value) = 0;
+	virtual void operator()(CommonGuiMessageDialogParam *param) = 0;
+};
+
+/* what a dialog with its own layout calls as it opens, kept and deleted like its handler */
+class CommonGuiLayoutDialogOpenHandler {
+public:
+	virtual ~CommonGuiLayoutDialogOpenHandler()
+	{
+	}
+
+	virtual void operator()() = 0;
 };
 
 /* the function form of a handler, which SceCommonGuiDialog_6CE14F66 wraps in one itself */
 typedef void (*CommonGuiDialogFunction)(SceInt32 value, SceInt32 button, void *arg);
 
-/* an entry of a dialog's button table: the button and its label's resource ID; {0, 0} ends it */
+/*
+ * An entry of a dialog's button table: the button's widget (by its index in the layout, as
+ * SceCommonGuiDialog_8947FC23 takes it), its label's resource ID, the button the handler is
+ * called with, and the resource ID of its look (0x20413274 for the dialogs' buttons, 0xC17D7980
+ * for their cancel buttons); an entry of zeros ends it.
+ */
 struct CommonGuiDialogButton {
-	SceInt32 button;
+	SceInt32 index;
 	SceUInt32 labelId;
+	SceInt32 button;
+	SceUInt32 styleId;
+};
+
+/* a dialog's page: three resource IDs only the library reads */
+struct CommonGuiDialogPage {
+	SceUInt32 id[3];
+};
+
+/* an entry of a dialog's style table: a widget by its index in the layout, and the resource
+   it takes; an index of 0 ends it */
+struct CommonGuiDialogStyle {
+	SceInt32 index;
+	paf::IDParam id;
 };
 
 /*
@@ -62,8 +93,8 @@ struct CommonGuiDialogButton {
  * The library exports its own layouts as variables (below).
  */
 struct CommonGuiDialogLayout {
-	const void *page;
-	const void *style;
+	const CommonGuiDialogPage *page;
+	const CommonGuiDialogStyle *style;
 	const CommonGuiDialogButton *buttons;
 };
 
@@ -109,7 +140,7 @@ public:
 	CommonGuiMessageDialogParam()
 		: type(0), option(), buttonType(-2), buttonCount(2), defaultButton(2), cancelButton(2),
 		  messageId(0), closeOnSelect(false), modal(true), useLayout(false), handler(NULL),
-		  callbackArg(0)
+		  openHandler(NULL)
 	{
 	}
 
@@ -130,7 +161,7 @@ public:
 	bool useLayout;
 	const void *layout[3];		/* read when useLayout is set */
 	CommonGuiDialogHandler *handler;
-	SceUInt32 callbackArg;
+	CommonGuiMessageDialogOpenHandler *openHandler;
 };
 
 typedef char CommonGuiMessageDialogParamSize[sizeof(CommonGuiMessageDialogParam) == 192 ? 1 : -1];
@@ -156,7 +187,7 @@ public:
 	paf::intrusive_ptr<paf::cache::CacheImageInterface> cachedImage;
 	paf::intrusive_ptr<paf::graph::Surface> secondImage;
 	CommonGuiDialogHandler *handler;
-	CommonGuiDialogHandler *closeHandler;
+	CommonGuiLayoutDialogOpenHandler *openHandler;
 	CommonGuiDialogHandler *updateHandler;
 };
 
@@ -169,7 +200,8 @@ int SceCommonGuiDialog_20B141F1(CommonGuiMessageDialogParam *param);
 /* shows a message dialog with the plugin's resources and the two handlers, which the library
    takes over: its ID, or a negative error */
 int SceCommonGuiDialog_A6422883(paf::Plugin *plugin, CommonGuiMessageDialogParam *param,
-				CommonGuiDialogHandler *handler, CommonGuiDialogCloseHandler *closeHandler);
+				CommonGuiDialogHandler *handler,
+				CommonGuiMessageDialogOpenHandler *openHandler);
 /* called on a message dialog just opened with a 16-byte block twice, zeroed by its caller */
 int SceCommonGuiDialog_206623FF(int dialogId, void *arg1, void *arg2);
 /* shows a dialog with its own layout: its ID, or a negative error */
@@ -184,6 +216,8 @@ int SceCommonGuiDialog_F1A40838(int dialogId, int (*func)(int value, void *arg),
 int SceCommonGuiDialog_01702008(int dialogId, int result);
 /* lets a dialog go */
 int SceCommonGuiDialog_BC311DC0(int dialogId);
+/* sets an open dialog's text */
+int SceCommonGuiDialog_273A476A(int dialogId, const paf::wstring &text);
 /* a dialog's widget by its index in the layout (1: its text, 4: its waiting animation, 10: its
    contents, 12: a part the processing dialog removes, as the trophy setup dialog uses them) */
 paf::ui::Widget *SceCommonGuiDialog_8947FC23(int dialogId, int index);
@@ -199,6 +233,15 @@ extern const CommonGuiDialogLayout SceCommonGuiDialog_22B17F2B;
 extern const CommonGuiDialogLayout SceCommonGuiDialog_2A68B4A4;
 extern const CommonGuiDialogLayout SceCommonGuiDialog_F8B2D7E1;
 extern const CommonGuiDialogLayout SceCommonGuiDialog_AF75CA6D;
+/* the message dialog's layouts (libcdlg_msg): the progress bar with a cancel button; the one
+   whose style its 3-button layout takes; no button; OK and cancel; the progress bar. With
+   6CD802FC (yes/no), F8B2D7E1 (cancel), AF75CA6D (OK) and 2A68B4A4 (the small waiting
+   dialog) above */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_446F8B49;
+extern const CommonGuiDialogLayout SceCommonGuiDialog_78399261;
+extern const CommonGuiDialogLayout SceCommonGuiDialog_7AEA192C;
+extern const CommonGuiDialogLayout SceCommonGuiDialog_92752DE2;
+extern const CommonGuiDialogLayout SceCommonGuiDialog_A0E0A437;
 /* the colour that leaves a dialog's own */
 extern const paf::math::v4 SceCommonGuiDialog_EF2C5382;
 }
@@ -210,7 +253,7 @@ inline CommonGuiDialogParam::CommonGuiDialogParam()
 
 inline CommonGuiLayoutDialogParam::CommonGuiLayoutDialogParam()
 	: wait(false), layout(SceCommonGuiDialog_AF75CA6D), textColor(SceCommonGuiDialog_EF2C5382),
-	  scale(1.0f), handler(NULL), closeHandler(NULL), updateHandler(NULL)
+	  scale(1.0f), handler(NULL), openHandler(NULL), updateHandler(NULL)
 {
 }
 

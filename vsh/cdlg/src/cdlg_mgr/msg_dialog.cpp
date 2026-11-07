@@ -19,52 +19,10 @@
 /* the draw priority of sceMsgDialogInit */
 #define MSG_DIALOG_PRIORITY			229
 
-/* what the plugin is asked to do (CommonDialogMsgParam::request) */
-#define MSG_DIALOG_REQUEST_INIT			1
-#define MSG_DIALOG_REQUEST_SET_MSG		2
-#define MSG_DIALOG_REQUEST_PROGRESS_INC		3
-#define MSG_DIALOG_REQUEST_PROGRESS_SET		4
-
-/* what changed since the plugin last looked (CommonDialogMsgParam::requestFlags) */
-#define MSG_DIALOG_FLAG_PARAM			0x01
-#define MSG_DIALOG_FLAG_MSG			0x02
-#define MSG_DIALOG_FLAG_PROGRESS_INC		0x04
-#define MSG_DIALOG_FLAG_PROGRESS_SET		0x08
-
 /* the numbers of the parameter error messages */
 #define MSG_DIALOG_PARAM_ERROR_RESULT_RESERVED	100
 #define MSG_DIALOG_PARAM_ERROR_PROGRESS_TARGET	101
 #define MSG_DIALOG_PARAM_ERROR_BG_COLOR		102
-
-/* the work memory (CommonDialogSlot::workMemory) */
-typedef struct CommonDialogMsgParam {
-	int request;
-	int requestFlags;
-	int closeRequested;
-	int abortRequested;
-	SceMsgDialogParam param;
-	SceMsgDialogUserMessageParam userMsgParam;
-	SceMsgDialogSystemMessageParam sysMsgParam;
-	SceMsgDialogErrorCodeParam errorCodeParam;
-	SceMsgDialogProgressBarParam progBarParam;
-	SceMsgDialogProgressBarTarget progressBarTarget;
-	SceUInt32 progressBarRate;
-	SceUInt32 msgSize;
-	SceChar8 msg[SCE_MSG_DIALOG_USER_MSG_SIZE];
-	SceUInt8 reserved[36];
-	SceMsgDialogResult result;
-	SceMsgDialogButtonsParam buttonParam;
-	SceChar8 buttonMsg1[SCE_MSG_DIALOG_BUTTON_MSG_SIZE];
-	SceChar8 buttonMsg2[SCE_MSG_DIALOG_BUTTON_MSG_SIZE];
-	SceChar8 buttonMsg3[SCE_MSG_DIALOG_BUTTON_MSG_SIZE];
-	char apiName[64];
-} CommonDialogMsgParam;
-
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogMsgParamProgBar, __builtin_offsetof(CommonDialogMsgParam, progBarParam) == 268);
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogMsgParamMsg, __builtin_offsetof(CommonDialogMsgParam, msg) == 360);
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogMsgParamResult, __builtin_offsetof(CommonDialogMsgParam, result) == 908);
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogMsgParamName, __builtin_offsetof(CommonDialogMsgParam, apiName) == 1200);
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogMsgParamSize, sizeof(CommonDialogMsgParam) == 1264);
 
 typedef CommonDialogApiScope<CommonDialogMsgParam, COMMON_DIALOG_TYPE_MSG,
 			     MSG_DIALOG_ERROR_NO_WORK_MEMORY,

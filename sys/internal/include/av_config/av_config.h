@@ -12,3 +12,6 @@ int SceAVConfigForDriver_2A2E9042(unsigned int index, unsigned int enabled,
 int SceAVConfigForDriver_3817CDA1(unsigned int index, unsigned int enabled,
 		unsigned int mode);
 int SceAVConfigForDriver_91792D6F(unsigned int index);
+
+/* the audio devices connected (a syscall SceAVConfig's user library passes on) */
+int sceAVConfigGetConnectedAudioDevice(SceUInt32 *devices);

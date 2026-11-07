@@ -86,11 +86,9 @@ using namespace paf;
 
 /* the system update dialog's buttons and their labels */
 static const CommonGuiDialogButton s_updateButtons[] = {
-	{ 12, 0x6c2b7e72 },
-	{ 4, 0x20413274 },
-	{ 13, 0xadcd9adf },
-	{ 5, 0xc17d7980 },
-	{ 0, 0 },
+	{ 12, 0x6c2b7e72, 4, 0x20413274 },
+	{ 13, 0xadcd9adf, 5, 0xc17d7980 },
+	{ 0, 0, 0, 0 },
 };
 
 extern "C" void *__dso_handle;

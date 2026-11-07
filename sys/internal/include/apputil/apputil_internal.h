@@ -16,6 +16,10 @@ extern "C" {
 /* a save data slot changed (SceAppUtil_F93C691C's event) */
 #define SCE_APPUTIL_INTERNAL_EVENT_SAVEDATA_SLOT	1
 
+/* the error between SCE_APPUTIL_ERROR_PHOTO_DEVICE_NOT_FOUND and _MUSIC_DEVICE_NOT_FOUND that
+   the SDK does not name (name ours): the message dialog shows it as no memory card */
+#define SCE_APPUTIL_INTERNAL_ERROR_DEVICE_NOT_FOUND	(-2146433404)	/* 0x80100684 */
+
 /* the library's state: SCE_APPUTIL_ERROR_NOT_INITIALIZED before sceAppUtilInit */
 typedef struct SceAppUtilInternalState {
 	SceUInt32 sdkVersion;		/* the main module's */
@@ -34,6 +38,9 @@ int SceAppUtil_1CFFE892(const SceAppUtilSaveDataDataSlot *slot,
 int SceAppUtil_A3E0694F(SceAppUtilInternalState *state);
 /* passes the event to the callback the library was given, if any */
 int SceAppUtil_F93C691C(int event, SceAppUtilSaveDataSlotId id);
+/* two values of the application's: SceMsgDialogPlugin takes a first one above 0 as a patch found
+   for it */
+int SceAppUtil_B2FE3BB1(SceInt32 *value, SceInt32 *value2);
 
 #ifdef __cplusplus
 }

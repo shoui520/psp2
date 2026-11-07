@@ -78,6 +78,8 @@ int sceAppMgrGetAppIdByAppId(int appId);
 /* SceAppMgrUser's (driver_us); the kernel's function of the same name is appmgr's mount.c */
 #if !defined(PSP2_KERNEL)
 int sceAppMgrGetRawPath(const char *path, char *out, int outSize);
+int sceAppMgrGetMediaTypeFromDrive(const char *drive, int *mediaType);
+int sceAppMgrSaveDataGetCachedRequiredSizeKiB(void);
 #endif
 int sceAppMgrNotifyLiveBoardModeForShell(int appId, int mode);
 int sceAppMgrReceiveShellEventNum(void);

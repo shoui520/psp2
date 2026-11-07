@@ -12,6 +12,7 @@
 #include <libkernel/libkernel.h>
 #include <kernel/threadmgr.h>
 #include <liblocation.h>
+#include <liblocation/liblocation_internal.h>
 #include <rtc.h>
 #include "../../../../../../../lowlayer/src/ipmi/client.h"
 
@@ -253,7 +254,6 @@ SceUInt32 SceLibLocation_0341758B(void);
 void SceLibLocation_5C7185D2(void);
 bool SceLibLocation_2311B24A(void);
 void SceLibLocation_41C1E68F(int pending);
-SceInt32 SceLibLocation_C1CFEC92(SceUInt32 *value);
 }
 
 #endif
