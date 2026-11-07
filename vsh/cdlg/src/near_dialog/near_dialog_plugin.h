@@ -73,8 +73,9 @@
    the user data it was made with */
 typedef void (*NearDialogFunction)(SceInt32 result, SceInt32 mode, SceInt32 button, void *userdata);
 
-/* what the check-in library calls when a job has started, and when it has ended */
-typedef void (*NearCheckinLibFunction)(SceInt32 result);
+/* what the check-in library calls when a job has started, and when it has ended, with the user
+   data it was given */
+typedef void (*NearCheckinLibFunction)(SceInt32 result, void *userdata);
 
 /* the plugin (near_dialog_plugin.cpp), which the dialog opens its page from */
 extern paf::Plugin *g_nearDialogPlugin;
@@ -171,6 +172,7 @@ public:
 	}
 
 	int Build(void);
+	SceUInt32 Distance(float metres);
 
 	paf::Plugin *m_plugin;
 	SceInt32 m_dialogId;
@@ -216,6 +218,38 @@ public:
    download as jobs, one at a time */
 class NearCheckinLib {
 public:
+	/* the jobs it queues (NearCheckinLibJob::m_type), as the background service's launch
+	   parameter names them (the modes of near_auto_checkin's URI) */
+	enum Mode {
+		MODE_AUTO_CHECKIN = 1,
+		MODE_MANUAL_CHECKIN_LIVEAREA = 2,
+		MODE_MANUAL_CHECKIN_TOPMENU = 3,
+		MODE_MANUAL_CHECKIN_PUBLIC = 4,
+		MODE_MANUAL_CHECKIN_FRIEND = 5,
+		MODE_MANUAL_POST = 6,
+		MODE_MANUAL_POST_EXIT = 7,
+		MODE_CHECKIN_EXIT = 8,
+		MODE_SDK_CHECKIN = 9,
+		MODE_SDK_CHECKIN_RETRY = 10,
+		MODE_SDK_ITEM_DL = 11
+	};
+
+	/* none, a job queued, terminating */
+	enum State {
+		STATE_NONE = 0,
+		STATE_STARTED = 1,
+		STATE_TERMINATING = 2
+	};
+
+	/* the library's results (names ours) */
+	enum {
+		RESULT_STATE = 1,
+		RESULT_PARAM = 2,
+		RESULT_BUSY = 3,
+		RESULT_NO_MEMORY = 4,
+		RESULT_NOT_STARTED = 8
+	};
+
 	NearCheckinLib();
 	~NearCheckinLib();
 
@@ -229,20 +263,37 @@ public:
 	int Term(NearCheckinLibFunction callback, void *userdata);
 	void Update(void);
 
+	/* what the jobs call: the status they read, and their end */
+	static void UpdateCheckinStatus(NearCheckinLib *lib, SceInt32 error,
+					const NearCheckinStatus *status);
+	static void UpdateItemDownloadStatus(NearCheckinLib *lib, SceInt32 error,
+					     const NearItemDownloadStatus *status);
+	static void ConnectJobEnd(NearCheckinLib *lib, SceInt32 result);
+	static void StatusJobEnd(NearCheckinLib *lib, SceInt32 result);
+	static void TermJobEnd(NearCheckinLib *lib, SceInt32 result);
+
 	bool m_initialized;
-	/* the job queued last: a check-in, a retried check-in, a download */
+	/* the job queued last */
 	SceInt32 m_jobType;
-	/* none, ready, terminating */
 	SceInt32 m_state;
 	paf::job::JobQueue *m_queue;
 	paf::thread::Mutex *m_mutex;
 	paf::common::SharedPtr<paf::job::JobItem> m_job;
-	NearCheckinLibFunction m_termCallback;
-	void *m_termUserdata;
-	/* the last job's error, -999 before one has ended */
+	/* what is called when the job has started or the library has terminated */
+	NearCheckinLibFunction m_callback;
+	void *m_userdata;
+	/* the last status's error, -999 before one has come */
 	SceInt32 m_error;
 	NearCheckinStatus m_checkinStatus;
 	NearItemDownloadStatus m_downloadStatus;
+
+private:
+	int Init(void);
+	int Fini(void);
+	int Start(SceInt32 type, NearCheckinLibFunction callback, void *userdata,
+		  paf::string giftDiscoveringId);
+	int StartStatusJob(void);
+	int StartTermJob(NearCheckinLibFunction callback, void *userdata);
 };
 
 #endif

@@ -663,7 +663,6 @@ typedef struct NearCheckinStatus {
 /* the gift download's status (NearCheckinLib::GetItemDownloadStatus) */
 typedef struct NearItemDownloadStatus {
 	bool finished;
-	SceUInt8 padding[3];
 	SceUInt32 rate;
 	SceInt32 errorCode;
 } NearItemDownloadStatus;

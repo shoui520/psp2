@@ -105,9 +105,9 @@ static void nearDialogPluginStop(Plugin *plugin);
 static void nearDialogPluginExit(Plugin *plugin);
 static void nearDialogPluginSetParam(Plugin::InitParam2 *param);
 static void NearDialogCallback(SceInt32 result, SceInt32 mode, SceInt32 button, void *userdata);
-static void StartCheckinCallback(SceInt32 result);
-static void StartItemDownloadCallback(SceInt32 result);
-static void TermCallback(SceInt32 result);
+static void StartCheckinCallback(SceInt32 result, void *userdata);
+static void StartItemDownloadCallback(SceInt32 result, void *userdata);
+static void TermCallback(SceInt32 result, void *userdata);
 static void OnUpdate(void *userdata);
 
 extern "C" int module_start(SceSize argSize, const void *argp)
@@ -439,16 +439,17 @@ static void NearDialogCallback(SceInt32 result, SceInt32 mode, SceInt32 button, 
 		} else if (NearDialogStateResult(work, result, button, &res)) {
 			SetResult(work, res);
 		} else {
-			res = NearDialogNextState(work, button);
-			if (res != SCE_OK)
-				SetResult(work, res);
+			SceInt32 next = NearDialogNextState(work, button);
+
+			if (next != SCE_OK)
+				SetResult(work, next);
 		}
 	}
 	work->closeRequest = 0;
 }
 
 /* the check-in has started: its result, and the next state waits for its status */
-static void StartCheckinCallback(SceInt32 result)
+static void StartCheckinCallback(SceInt32 result, void *userdata)
 {
 	int ret;
 	NearDialogPluginApiScope scope(__FUNCTION__, ret);
@@ -475,7 +476,7 @@ static void StartCheckinCallback(SceInt32 result)
 }
 
 /* the download has started: its result, with the download's own error when it has one */
-static void StartItemDownloadCallback(SceInt32 result)
+static void StartItemDownloadCallback(SceInt32 result, void *userdata)
 {
 	int ret;
 	NearDialogPluginApiScope scope(__FUNCTION__, ret);
@@ -507,7 +508,7 @@ static void StartItemDownloadCallback(SceInt32 result)
 }
 
 /* the check-in library has terminated: the dialog ends */
-static void TermCallback(SceInt32 result)
+static void TermCallback(SceInt32 result, void *userdata)
 {
 	int ret;
 	NearDialogPluginApiScope scope(__FUNCTION__, ret);

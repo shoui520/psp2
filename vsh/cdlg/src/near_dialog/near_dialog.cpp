@@ -342,8 +342,12 @@ static void OnClosed(int32_t type, ui::Handler *self, ui::Event *e, void *userda
 {
 	NearDialog *dialog = (NearDialog *)userdata;
 
-	if (dialog != NULL && dialog->m_callback != NULL)
-		dialog->m_callback(SCE_OK, dialog->m_mode, dialog->m_button, dialog->m_userdata);
+	if (dialog != NULL) {
+		SceInt32 button = dialog->m_button;
+
+		if (dialog->m_callback != NULL)
+			dialog->m_callback(SCE_OK, dialog->m_mode, button, dialog->m_userdata);
+	}
 }
 
 /* the caller aborted: the dialog goes, and the plugin hears with no button */
@@ -361,9 +365,11 @@ static void OnAbort(int32_t type, ui::Handler *self, ui::Event *e, void *userdat
 
 void NearDialogLayoutHandler::operator()(SceInt32 value, SceInt32 button)
 {
-	if (m_dialog->m_dialogId == value) {
+	NearDialog *dialog = m_dialog;
+
+	if (dialog->m_dialogId == value) {
 		SceCommonGuiDialog_BC311DC0(value);
-		m_dialog->m_dialogId = -1;
+		dialog->m_dialogId = -1;
 	}
 	if (m_dialog->m_scene != NULL) {
 		m_dialog->m_button = button;
@@ -620,28 +626,34 @@ static __attribute__((noinline)) int ProgressBar(SceInt32 type, NearDialogConten
 }
 
 /* a distance in whole kilometres or miles, in the country's number format */
+/* the UTF-16 text of a UTF-8 string */
+static inline wstring Utf8ToUtf16String(const string &src)
+{
+	wstring text;
+
+	common::Utf8ToUtf16(src, &text, 0);
+	return text;
+}
+
 static wstring FormatDistance(Plugin *plugin, SceUInt32 distance, const string &country)
 {
-	if (plugin != NULL && country.length() != 0) {
-		string number;
+	if (plugin == NULL || country.length() == 0)
+		return wstring();
 
-		number = NearDialogFormatNumber(distance, plugin->m_locale, country);
-		wstring text;
+	string number;
 
-		common::Utf8ToUtf16(number, &text, 0);
-		return text;
-	}
-	return wstring();
+	number = NearDialogFormatNumber(distance, plugin->m_locale, country);
+	return Utf8ToUtf16String(number);
 }
 
 /* a distance in metres as the end screen shows it */
-static inline SceUInt32 Distance(float metres, bool metric)
+inline SceUInt32 NearDialogFinishScreen::Distance(float metres)
 {
 	float distance = 0.0f;
 
 	if (metres != 0.0f) {
 		distance = metres * 0.001f;
-		if (!metric)
+		if (!m_metric)
 			distance = distance * NEAR_DIALOG_MILES_PER_KM;
 	}
 	return (SceUInt32)distance;
@@ -671,10 +683,9 @@ int NearDialogFinishScreen::Build(void)
 	string name("SceNearFinishInfoList");
 
 	name += "_base_box";
-	box = NULL;
-	if (contents->FindChild(IDParam(name), 0) != NULL &&
-	    contents->FindChild(IDParam(name), 0)->IsInherit(ui::Box::TypeName()))
-		box = contents->FindChild(IDParam(name), 0);
+	box = contents->FindChild(IDParam(name), 0) != NULL &&
+	      contents->FindChild(IDParam(name), 0)->IsInherit(ui::Box::TypeName()) ?
+	      contents->FindChild(IDParam(name), 0) : NULL;
 	if (box == NULL)
 		return NEAR_DIALOG_PLUGIN_ERROR_STATE;
 	box->SetAlign(0, 0, 0, NULL);
@@ -694,31 +705,31 @@ int NearDialogFinishScreen::Build(void)
 			    text.c_str(), "SceNearFinishPostCount") != SCE_OK)
 		return NEAR_DIALOG_PLUGIN_ERROR_STATE;
 
-	SceUInt32 total = Distance(m_totalDistance, m_metric);
+	SceUInt32 total = Distance(m_totalDistance);
 	wstring totalText = FormatDistance(m_plugin, total, m_country);
-	SceUInt32 today = Distance(m_todayDistance, m_metric);
+	SceUInt32 today = Distance(m_todayDistance);
 	wstring todayText = FormatDistance(m_plugin, today, m_country);
 
 	sce_paf_swprintf(buf, 32, L": ");
 	if (m_metric) {
 		text = buf;
-		if (total != 0)
+		if (total == 0)
+			text.append(m_plugin->GetString(IDParam(s_empty_name, NEAR_DIALOG_MSG_KM_ZERO)));
+		else
 			text.append(NearDialogFormat(m_plugin->GetString(IDParam(s_empty_name,
 									      NEAR_DIALOG_MSG_KM)),
 						 totalText.c_str()));
-		else
-			text.append(m_plugin->GetString(IDParam(s_empty_name, NEAR_DIALOG_MSG_KM_ZERO)));
 		if (m_list->AddItem(m_plugin->GetString(IDParam(s_empty_name,
 								NEAR_DIALOG_MSG_TOTAL_DISTANCE)),
 				    text.c_str(), "SceNearFinishInfoTotalDistanceTitle") != SCE_OK)
 			return NEAR_DIALOG_PLUGIN_ERROR_STATE;
 		text = buf;
-		if (today != 0)
+		if (today == 0)
+			text.append(m_plugin->GetString(IDParam(s_empty_name, NEAR_DIALOG_MSG_KM_ZERO)));
+		else
 			text.append(NearDialogFormat(m_plugin->GetString(IDParam(s_empty_name,
 									      NEAR_DIALOG_MSG_KM)),
 						 todayText.c_str()));
-		else
-			text.append(m_plugin->GetString(IDParam(s_empty_name, NEAR_DIALOG_MSG_KM_ZERO)));
 		if (m_list->AddItem(m_plugin->GetString(IDParam(s_empty_name,
 								NEAR_DIALOG_MSG_TODAY_DISTANCE)),
 				    text.c_str(), "SceNearFinishInfoTodayDistanceTitle") != SCE_OK)
