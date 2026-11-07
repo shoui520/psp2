@@ -12,6 +12,7 @@
 #define PAF_WIDGET_CORE_WIDGET_H
 
 #include <stdint.h>
+#include <scetypes.h>
 #include <arm_neon.h>
 #include <std/list>
 #include <std/memory>
@@ -867,6 +868,25 @@ public:
 				   const math::v4 &normal, HitInfo *info);
 	/* exports 7A3A7304, 0FCCC833, B94694E3 */
 	void SetDragMode(uint32_t mode);
+
+	/* the smallest and the largest position its drag keeps it in (names ours) */
+	void SetDragLimitMin(const math::v4 &pos)
+	{
+		if (m_drag_limit == NULL)
+			m_drag_limit = new SceFVector3[2];
+		m_drag_limit[0].x = pos.extract_x();
+		m_drag_limit[0].y = pos.extract_y();
+		m_drag_limit[0].z = pos.extract_z();
+	}
+
+	void SetDragLimitMax(const math::v4 &pos)
+	{
+		if (m_drag_limit == NULL)
+			m_drag_limit = new SceFVector3[2];
+		m_drag_limit[1].x = pos.extract_x();
+		m_drag_limit[1].y = pos.extract_y();
+		m_drag_limit[1].z = pos.extract_z();
+	}
 	void KillObjAnim(int32_t obj, int32_t id);
 	/* the draw object with the ID, or the end (name ours) */
 	vector<DrawObjEntry>::iterator FindDrawObj(int32_t id);
@@ -1253,7 +1273,11 @@ public:
 	uint32_t m_adjust_y : 4;
 	uint32_t m_adjust_z : 4;
 	uint32_t reserved6b : 4;
-	uint8_t reserved7[0xc];
+	uint8_t reserved7[4];
+	/* the bounds its drag keeps it in, its smallest and largest position (or, pinched, its
+	   scale), made by SetDragMode (names ours) */
+	SceFVector3 *m_drag_limit;
+	uint8_t reserved7e[4];
 	/* how it is sized to its contents where it adjusts, shared by reference count; NULL for
 	   the default, ScePafWidget_BE1CEA2E (name ours) */
 	AdjustParam *m_adjust_param;

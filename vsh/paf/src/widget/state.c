@@ -886,13 +886,6 @@ int _ZN3paf2ui13SlidingDrawer19SetMovableDirectionEj(uint32_t *self, uint32_t va
 	return ((int (*)(uint32_t *))*(void **)(vtable + 572))(self);
 }
 
-int _ZNK3paf2ui11ScrollBar2d9IsInheritEPKc(const void *self, const char *tag)
-{
-	if (tag == "scrollbar2d")
-		return 1;
-	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
-}
-
 int ScePafWidget_A4E53390(uint8_t *self)
 {
 	uint8_t *vtable = *(uint8_t **)self;
@@ -1103,11 +1096,6 @@ int ScePafWidget_17BFAECF(void *self)
 int _ZN3paf2ui10ScrollView13GetViewParentEv(void *self)
 {
 	return WidgetInvokeSlot(self, 140);
-}
-
-int _ZN3paf2ui11ScrollBar2d16OnDragMoveSliderEPNS0_5EventE(void *self)
-{
-	return WidgetInvokeSlot(self, 416);
 }
 
 int _ZN3paf2ui14ScrollBarTouch16OnDragMoveSliderEPNS0_5EventE(void *self)
