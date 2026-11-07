@@ -78,6 +78,8 @@ public:
 	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, math::v2 &val);
 	/* its auto scroll running, or its animation 2 (0x81132452, name ours) */
 	bool IsScrolling();
+	int32_t StartAutoScroll(ScrollType type);
+	int32_t StopAutoScroll();
 	/* sends the event with the rectangle, as integers (0x8113262e, name ours) */
 	int32_t SendRectEvent(int32_t type, const math::v4 &rect);
 };

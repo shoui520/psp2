@@ -56,7 +56,7 @@ static inline __attribute__((always_inline)) graph::TextObj *GetFriendTextObj(Wi
 	return NULL;
 }
 
-TextAutoScroll::TextAutoScroll(Text *text, graph::TextObj *text_obj)
+TextAutoScroll::TextAutoScroll(Widget *text, graph::TextObj *text_obj)
 	: m_text(text), m_text_obj(text_obj), m_ellipsis(false), m_word_wrap(false),
 	  m_length_new(false), m_type(0), m_speed(60.0f), m_length(0.0f, 0.0f),
 	  m_origin(-1000.0f, -1000.0f)
@@ -356,7 +356,7 @@ int32_t TextAutoScroll::Start(Text::ScrollType type)
 	return 0;
 }
 
-int32_t TextAutoScroll::GetSpeedByPos(const math::v2 &pos, float &speed, bool set_origin,
+int32_t TextAutoScroll::GetSpeedByPos(math::v2 pos, float &speed, bool set_origin,
 				      bool reverse)
 {
 	int32_t ret = SCE_PAF_ERROR_FAILED;

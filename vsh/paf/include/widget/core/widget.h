@@ -71,6 +71,10 @@ public:
 	/* a texture or string ID of the widget's draw object index (names ours) */
 	class IndexedRef {
 	public:
+		IndexedRef(const char *name, int32_t index) : name(name), index(index)
+		{
+		}
+
 		const char *name;
 		int32_t index;
 		IDParam id;
@@ -398,6 +402,30 @@ public:
 	/* the widget's resolution and its base resolution (names ours) */
 	uint32_t m_resolution_id;
 	int32_t m_base_resolution_id;
+};
+
+/*
+ * How a widget that adjusts to its contents is sized: the smallest and largest size it is given
+ * and the margins around its contents, from the style's "adjust_min_size", "adjust_max_size" and
+ * "*_margin" (Button's; the class name is ours). 0x38 bytes, shared by reference count.
+ */
+class AdjustParam {
+public:
+	AdjustParam()
+		: m_ref_count(0), m_min_size(0.0f, 0.0f, 0.0f, 0.0f),
+		  m_max_size(3.4028235e+18f, 3.4028235e+18f, 3.4028235e+18f, 3.4028235e+18f),
+		  m_top_margin(0.0f), m_bottom_margin(0.0f), m_left_margin(0.0f),
+		  m_right_margin(0.0f)
+	{
+	}
+
+	int32_t m_ref_count;
+	math::v4 m_min_size;
+	math::v4 m_max_size;
+	float m_top_margin;
+	float m_bottom_margin;
+	float m_left_margin;
+	float m_right_margin;
 };
 
 class Widget : public Handler {
@@ -876,6 +904,40 @@ public:
 	/* puts the widget behind the other in its parent's draw order */
 	int32_t SetBehind(Widget *w);
 
+	/* the texture animation of the draw object: frames start to end of a grid of column_num by
+	   row_num, over the timer's time */
+	int32_t SetTexAnim(int32_t obj, int32_t column_num, int32_t row_num, int32_t start_frame,
+			   int32_t end_frame, Timer *t, int32_t option, float delay, AnimCB cb_fin,
+			   void *userdata);
+	/* the descendants of the type, not held, added to the list; how many (0x811529e0, name
+	   ours) */
+	int32_t FindChildrenByType(const char *type, vector<Widget *> *out);
+
+	/* the list cleared first; nothing for no type (inline in Sony's callers, name ours) */
+	void GetChildrenByType(const char *type, vector<Widget *> &out)
+	{
+		if (type != NULL) {
+			out.clear();
+			FindChildrenByType(type, &out);
+		}
+	}
+
+	/* the first of its draw objects with an ID from id on (0x81160486, name ours) */
+	vector<DrawObjEntry>::iterator LowerBoundDrawObj(int32_t id);
+	/* the draw object put before it, the surface drawn as the widget's, and the size updated
+	   with update (0x8115ff82, name ours) */
+	void InsertDrawObj(vector<DrawObjEntry>::iterator it, const DrawObjEntry &entry, bool update);
+
+	/* deletes the widget's Animator and binds this one (name after ScePaf-RE) */
+	int32_t SetAnimator(Animator *animator)
+	{
+		delete m_animator;
+		m_animator = animator;
+		if (m_animator != NULL)
+			m_animator->BindWidget(this);
+		return 0;
+	}
+
 	/* deletes the widget's Layouter and binds this one (name after ScePaf-RE) */
 	int32_t SetLayouter(Layouter *layouter)
 	{
@@ -1084,10 +1146,13 @@ public:
 	uint32_t m_adjust_y : 4;
 	uint32_t m_adjust_z : 4;
 	uint32_t reserved6b : 4;
-	uint8_t reserved7[0x10];
-	/* lays the widget out each update (name after ScePaf-RE) */
+	uint8_t reserved7[0xc];
+	/* how it is sized to its contents where it adjusts, shared by reference count; NULL for
+	   the default, ScePafWidget_BE1CEA2E (name ours) */
+	AdjustParam *m_adjust_param;
+	/* lays the widget out each update, and animates it (names after ScePaf-RE) */
 	Layouter *m_layouter;
-	uint8_t reserved7a[4];
+	Animator *m_animator;
 	/* its focus state, its focus cursor and the focus of its children (names ours) */
 	Focuser *m_focuser;
 	FocusShape *m_focus_shape;
@@ -1187,6 +1252,10 @@ float ScePafWidget_F1176ACC(paf::ui::Widget *widget, paf::common::transition::Ty
 			    float delay, paf::ui::HandlerCB cb, void *data);
 /* makes the widget modal in the mode (0, 1), or not (2), with the option */
 int32_t ScePafWidget_42C5A4D4(paf::ui::Widget *widget, int32_t mode, int32_t option);
+/* the widget's adjust parameter, held by reference, and its size updated */
+void ScePafWidget_55D83675(paf::ui::Widget *widget, paf::ui::AdjustParam *param);
+/* the adjust parameter of the widgets that have none */
+extern paf::ui::AdjustParam ScePafWidget_BE1CEA2E;
 }
 
 #endif

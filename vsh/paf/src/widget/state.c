@@ -991,8 +991,8 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ListView9IsInheritEPKc, "list_view",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui11ProgressBar9IsInheritEPKc, "progressbar",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui6Button9IsInheritEPKc, "button",
-		   _ZNK3paf2ui10ButtonBase9IsInheritEPKc)
+/* Button's is C++ (w_button.cpp) */
+int _ZNK3paf2ui6Button9IsInheritEPKc(const void *self, const char *type);
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui15CompositeButton9IsInheritEPKc, "composite_button",
 		   _ZNK3paf2ui10ButtonBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8CheckBox9IsInheritEPKc, "check_box",
@@ -1067,16 +1067,6 @@ int _ZN3paf2ui8Layouter8OnUpdateEv(uint32_t *self)
 	sce_paf_widget_dispatch_guard_142d4 = 1;
 	((void (*)(uint32_t *))*(void **)(vtable + 8))(self);
 	sce_paf_widget_dispatch_guard_142d4 = 0;
-	return 0;
-}
-
-int ScePafWidget_3C06E3D4(const uint8_t *self, uint64_t *output)
-{
-	const uint8_t *item = *(const uint8_t *const *)(self + 700);
-
-	if (!item)
-		return -2136014814;
-	*output = *(const uint64_t *)(item + 48);
 	return 0;
 }
 
@@ -1157,11 +1147,6 @@ int _ZN3paf2ui11ScrollBar2d16OnDragMoveSliderEPNS0_5EventE(void *self)
 int _ZN3paf2ui14ScrollBarTouch16OnDragMoveSliderEPNS0_5EventE(void *self)
 {
 	return WidgetInvokeSlot(self, 484);
-}
-
-int _ZN3paf2ui6Button16UpdateAdjustSizeEv(void *self)
-{
-	return WidgetInvokeSlot(self, 448);
 }
 
 int ScePafWidget_BDEF4D3F(void *self)

@@ -33,8 +33,8 @@ public:
 		TIMER_WAIT_LAYOUT = 0x8000
 	};
 
-	/* 0x811ad35c (TOOL) */
-	TextAutoScroll(Text *text, graph::TextObj *text_obj);
+	/* 0x811ad35c (TOOL): a text's, or a button's for its label */
+	TextAutoScroll(Widget *text, graph::TextObj *text_obj);
 	/* 0x811ad3b4 */
 	virtual ~TextAutoScroll();
 
@@ -56,7 +56,7 @@ public:
 	int32_t Start(Text::ScrollType type);
 	/* 0x811ae1ce: the speed for a press at the position, from where the text was when the
 	   press began */
-	int32_t GetSpeedByPos(const math::v2 &pos, float &speed, bool set_origin, bool reverse);
+	int32_t GetSpeedByPos(math::v2 pos, float &speed, bool set_origin, bool reverse);
 	/* 0x811ae32c: mode 1 restores the layout before the scroll starts again */
 	int32_t SetSpeed(float speed, int32_t mode);
 	/* 0x811ae382 */
@@ -106,7 +106,8 @@ public:
 		return false;
 	}
 
-	Text *m_text;
+	/* the text, or the button whose label it scrolls */
+	Widget *m_text;
 	graph::TextObj *m_text_obj;
 	vector<IDParam> m_friends;
 	/* the ellipsis and the word wrap the scroll turned off */
