@@ -1329,6 +1329,9 @@ int32_t ScePafWidget_42C5A4D4(paf::ui::Widget *widget, int32_t mode, int32_t opt
 void ScePafWidget_55D83675(paf::ui::Widget *widget, paf::ui::AdjustParam *param);
 /* the adjust parameter of the widgets that have none */
 extern paf::ui::AdjustParam ScePafWidget_BE1CEA2E;
+/* the widget's adjust parameter set to a copy of the one given and its adjust size updated where
+   they differ; -1 where it has none, else 0 */
+int32_t ScePafWidget_B1C23134(paf::ui::Widget *widget, const paf::ui::AdjustParam &param);
 }
 
 #endif

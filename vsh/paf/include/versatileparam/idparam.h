@@ -36,6 +36,11 @@ public:
 	{
 	}
 
+	/* an ID known only by its hash, with the empty name (libcdlg_ime's COMDAT copy) */
+	explicit IDParam(uint32_t idhash) : m_id(s_empty_name), m_idhash(idhash)
+	{
+	}
+
 	~IDParam()
 	{
 	}

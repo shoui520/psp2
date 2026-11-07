@@ -69,7 +69,12 @@ public:
 	int32_t SetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, uint32_t len,
 				  bool val);
 	int32_t SetLayoutAttribute(graph::TextLayoutAttribute attr, int32_t val);
+	int32_t SetLayoutAttribute(graph::TextLayoutAttribute attr, bool val);
 	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, int32_t &val);
+	/* its text object's bounds */
+	int32_t GetBounds(math::v2 &bounds);
+	/* only returns the error 0x80AF5004 */
+	int32_t SetSelectionMode(bool mode);
 	int32_t GetLength(uint32_t &len);
 	int32_t GetCaretIndex(uint32_t &index);
 	int32_t GetSelectionRange(uint32_t &index, uint32_t &len);
@@ -122,14 +127,37 @@ public:
 
 	static const char *TypeName();
 
+	int32_t BeginEdit();
 	int32_t EndEdit();
+	int32_t SetPasswordMode(bool mode);
 	int32_t GetPasswordMode(bool &mode);
+	/* its string cut to the length where it changes */
+	int32_t SetMaxLength(uint32_t len);
+	int32_t SetEditMode(bool mode);
 	int32_t GetEditMode(bool &mode);
+	int32_t SetImeParam(const ImeParam &param);
 	int32_t GetEditAutoTransitionMode(bool &mode);
 	int32_t GetImeParam(ImeParam &param);
 	/* Text::ReplaceString, and the text box told its string changed (0x81135326, name ours) */
 	int32_t ReplaceStringNotify(uint32_t index, uint32_t len, const wstring &str);
 };
+
+/* the text box's text filter, which makes the string it shows from its own (stored at +776; name
+   ours) */
+typedef wstring (*TextBoxTextFilter)(const wstring &in);
+
+}
+}
+
+extern "C" {
+/* sets the text box's text filter, 0 returned */
+int32_t ScePafWidget_3EB376F2(paf::ui::TextBox *text_box, paf::ui::TextBoxTextFilter filter);
+/* only returns the error 0x80AF5004 */
+int32_t ScePafWidget_10E22E5A(paf::ui::TextBox *text_box, bool onoff);
+}
+
+namespace paf {
+namespace ui {
 
 /* what edits a text box: the object wutil::InitParam's edit_listener gives, by default the IME's
    (name after the exports; the virtual functions after ScePaf-RE's where it has them, the others
