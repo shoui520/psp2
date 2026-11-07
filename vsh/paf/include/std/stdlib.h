@@ -17,6 +17,7 @@ void *ScePafStdc_0ADEA3AD(void *ptr, size_t size);
 /* vitasdk: sce_paf_calloc */
 void *ScePafStdc_C9532982(size_t nitems, size_t size);
 int sce_paf_abs(int value);
+int sce_paf_atoi(const char *str);
 int sce_paf_printf_dummy(void);
 int sce_paf_wprintf_dummy(void);
 unsigned long sce_paf_strtoul(const char *str, char **endptr, int base);

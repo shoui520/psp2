@@ -3052,7 +3052,7 @@ ScePaf:
         - _ZNK3paf2ui10ButtonBase11GetTypeNameEv: 0x0C27E5ED
         - _ZN3paf2ui10ButtonBase17ApplyDrawObjStateEi: 0x0C39716B
         - _ZN3paf2ui8RichText12SetImageSizeEiRKNS_4math2v4E: 0x0C39BC21
-        - ScePafWidget_0C619327: 0x0C619327
+        - _ZN3paf2ui15CompositeButton17GetDrawObjByIndexEi: 0x0C619327
         - _ZN3paf2ui8Layouter8OnUpdateEv: 0x0C7FE13F
         - _ZN3paf2ui8listview4Cell11GetListViewEv: 0x0CCA3994
         - _ZN3paf2ui6Widget11ChangeStateEji: 0x0CF14050
@@ -3930,7 +3930,7 @@ ScePaf:
         - ScePafWidget_6A60296B: 0x6A60296B
         - _ZNK3paf2ui6Widget11GetTypeNameEv: 0x6A74B572
         - _ZN3paf2ui8SpinBaseC1EPNS0_6WidgetEPNS2_11CreateParamE: 0x6A8DA1E8
-        - _ZN3paf2ui6Widget8SetFocusEPKv: 0x6A9532CE
+        - _ZN3paf2ui6Widget8SetFocusEPNS1_12SetFocusInfoE: 0x6A9532CE
         - _ZN3paf2ui13AppIconSimpleC1EPNS0_6WidgetEPNS2_11CreateParamE: 0x6AC52E63
         - _ZN3paf2ui8listview7SegmentC1EPNS1_11SegmentListEi: 0x6AE25F7E
         - ScePafWidget_6AEB7291: 0x6AEB7291
@@ -4224,7 +4224,7 @@ ScePaf:
         - ScePafWidget_87E4C9C1: 0x87E4C9C1
         - _ZNK3paf2ui8ListItem9IsInheritEPKc: 0x87ECDABA
         - _ZN3paf2ui13ImageSlideBar10UpdateBaseEv: 0x8804B378
-        - ScePafWidget_88191FC3: 0x88191FC3
+        - _ZN3paf2ui15CompositeButton13DeleteDrawObjEi: 0x88191FC3
         - _ZN3paf2ui14ScrollViewBaseD2Ev: 0x884DBF04
         - _ZN3paf2ui5wutil6SetEnvEPNS0_11EnvironmentE: 0x887EF5E5
         - _ZN3paf2ui6Widget6LookAtEPS1_RKNS_4math2v4ES2_S6_: 0x88A433CC
@@ -4542,7 +4542,7 @@ ScePaf:
         - _ZN3paf2ui7TextBox12SetMaxLengthEj: 0xAA43C610
         - _ZN3paf2ui24ScrollBarTouchStyleParamC2Ev: 0xAA661590
         - _ZN3paf2ui6Widget15GetOriginOffsetEi: 0xAA7BE7E4
-        - ScePafWidget_AA96687B: 0xAA96687B
+        - _ZN3paf2ui15CompositeButton13InsertDrawObjERNS_6common9SharedPtrINS_5graph7DrawObjEEEib: 0xAA96687B
         - _ZN3paf2ui8RichTextD1Ev: 0xAAAB3D3A
         - ScePafWidget_AAE71C36: 0xAAE71C36
         - _ZNK3paf2ui13AppIconSimple11GetTypeNameEv: 0xAAECAF31

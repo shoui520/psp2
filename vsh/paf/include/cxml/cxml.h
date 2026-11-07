@@ -204,6 +204,9 @@ extern "C" {
 int32_t scePafResourceGetAttribute(const paf::cxml::Element *elm, const char *name,
 				   paf::cxml::Attribute *attr);
 int32_t scePafResourceGetInteger(const paf::cxml::Attribute *attr, int32_t *value);
+/* the attribute's ID hash, and the element it refers to (CxmlAttributeGetIDHashRef) */
+int32_t scePafResourceGetIdInt(const paf::cxml::Attribute *attr, uint32_t *value,
+			       paf::cxml::Element *entity);
 int32_t scePafResourceGetAttributeIdIntLpb(const paf::cxml::Element *elm, const char *attrname,
 					   uint32_t *value);
 /* the ID hash of an attribute, and the element it refers to */

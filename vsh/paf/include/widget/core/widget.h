@@ -517,11 +517,22 @@ public:
 		{
 		}
 
+		/* a static one is destroyed at exit (CompositeButton's) */
+		~CreateParam()
+		{
+		}
+
 		bool m_create_drawobj : 1;
 		bool m_parent_protected : 1;
 		bool m_under_template : 1;
 		uint32_t reserved : 29;
 	};
+
+	/* how SetFocus moves the focus to it, and a search for where the focus goes
+	   (widget/core/focus.h: defined outside, as a definition here moves SNC's code in
+	   unrelated files) */
+	class SetFocusInfo;
+	class FocusSearchInfo;
 
 	/* how a draw object of the widget is kept (names ours): three flags set when it is
 	   made, its ID and a value made 0 */
@@ -536,6 +547,16 @@ public:
 			: m_flag0(other.m_flag0), m_flag1(other.m_flag1), m_flag2(other.m_flag2),
 			  m_id(other.m_id), m_value(other.m_value)
 		{
+		}
+
+		DrawObjAttr &operator=(const DrawObjAttr &other)
+		{
+			m_flag0 = other.m_flag0;
+			m_flag1 = other.m_flag1;
+			m_flag2 = other.m_flag2;
+			m_id = other.m_id;
+			m_value = other.m_value;
+			return *this;
 		}
 
 		bool m_flag0 : 1;
@@ -773,7 +794,7 @@ public:
 			m_focus_root->m_state = state;
 	}
 
-	virtual int32_t SetFocus(const void *param);
+	virtual int32_t SetFocus(SetFocusInfo *info);
 	/* the widget the focus moves to in the direction (0 up, 1 down, 2 left, 3 right) */
 	virtual void SetFocusDirection(int32_t dir, IDParam id);
 	virtual void SetFocusDirectionWidget(int32_t dir, Widget *widget);
@@ -781,8 +802,9 @@ public:
 	/* the flag kept with the focus directions and search rect (0x81222140; this slot to
 	   GetFocusShapeSize named ours) */
 	virtual void EnableFocusSearchRect(bool on_off);
-	/* SetFocus with an option (export F7F7F682) */
-	virtual int32_t SetFocusOption(const void *param, int32_t option);
+	/* the focus moved by the search (a FocusSearchInfo, or NULL for none); the widget it
+	   went to (export F7F7F682) */
+	virtual Widget *SetFocusOption(const void *param, int32_t option);
 	/* every direction, or none while its focus directions are off */
 	virtual int32_t GetFocusDirectionMask()
 	{
@@ -1111,7 +1133,9 @@ public:
 	bool m_focus_target : 1;
 	/* a scene or camera, which the touch walk passes over (name ours) */
 	bool m_not_hit_target : 1;
-	bool reserved3z4 : 1;
+	/* a composite button takes its focus switch events itself (CompositeButton's ctor and
+	   EnableFocusEvent; name ours) */
+	bool m_composite_focus : 1;
 	bool reserved3z5 : 1;
 	bool reserved3z6 : 1;
 	/* drawn before its children, not after (Camera's draw walk; name ours) */
