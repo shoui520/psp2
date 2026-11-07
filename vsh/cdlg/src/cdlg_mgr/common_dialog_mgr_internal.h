@@ -114,9 +114,11 @@ bool isCommonDialogError(int error);
  * apiName in its work memory), and given back when the call ends. The name
  * still there at the end shows that no other call took the work memory in
  * between. The errors are the dialog's own; the first error of the call is
- * the one it returns.
+ * the one it returns. NoWorkUnlockType is the dialog unlocked when the work
+ * memory is missing: Sony's Twitter dialogs unlock dialog 1 there, not
+ * their own.
  */
-template <class Work, int DialogType, int ErrorNoWork, int ErrorApiName>
+template <class Work, int DialogType, int ErrorNoWork, int ErrorApiName, int NoWorkUnlockType = DialogType>
 class CommonDialogApiScope {
 public:
 	CommonDialogApiScope(const char *name, int &ret)
@@ -128,7 +130,7 @@ public:
 		m_work = (Work *)GetWorkMemory(DialogType);
 		if (m_work == NULL) {
 			ret = ErrorNoWork;
-			UnlockDialog(DialogType);
+			UnlockDialog(NoWorkUnlockType);
 			return;
 		}
 		sceClibStrncpy(m_work->apiName, name, sizeof(m_work->apiName));
