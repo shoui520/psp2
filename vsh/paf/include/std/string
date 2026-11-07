@@ -706,6 +706,30 @@ basic_string<wchar_t>::append(const wchar_t *src, size_type len)
 	return *this;
 }
 
+/* Sony's build calls the char append of repeated characters everywhere rather than inlining it. */
+template<>
+inline __attribute__((noinline)) basic_string<char> &
+basic_string<char>::append(size_type len, char ch)
+{
+	char *dst = alloc.allocate(count + len + 1);
+
+	if (dst != NULL) {
+		size_type size = count + len;
+
+		char_traits<char>::copy(dst, ptr, count);
+		for (size_type i = 0; i < len; ++i)
+			dst[count + i] = ch;
+		dst[count + len] = 0;
+		if (ptr != &empty_string)
+			alloc.deallocate(ptr, count + 1);
+		ptr = dst;
+		count = size;
+	} else {
+		ScePafStdc_D608246A();
+	}
+	return *this;
+}
+
 /* Sony's build calls the char assign from a string everywhere rather than inlining it. */
 template<>
 inline __attribute__((noinline)) basic_string<char> &
