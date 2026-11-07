@@ -246,6 +246,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/w_state_button_base.cpp
 	src/widget/w_check_box.cpp
 	src/widget/w_composite_button.cpp
+	src/widget/w_composite_drawer.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/graphics/arl/gxm/gxm_framebuffer_object.cpp
 	src/graphics/effects/fft.cpp
@@ -366,6 +367,7 @@ set_source_files_properties(src/widget/w_camera.cpp PROPERTIES COMPILE_OPTIONS -
 set_source_files_properties(src/widget/w_canvas.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_check_box.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_composite_button.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+set_source_files_properties(src/widget/w_composite_drawer.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_state_button_base.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # libjpeg was built with SNC's default budget, 32 (its manual: the old -Xinllev's equivalent):
