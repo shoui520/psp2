@@ -16,6 +16,7 @@
 #include <photoimport_dialog.h>
 #include <photoreview_dialog.h>
 #include <videoimport_dialog.h>
+#include <store_checkout_dialog.h>
 #include <np/np_common.h>
 #include <net.h>
 #include <libkernel/libkernel.h>
@@ -416,5 +417,32 @@ typedef struct CommonDialogRemoteOskParam {
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogRemoteOskDrawPriority,
 			   __builtin_offsetof(CommonDialogRemoteOskParam, drawPriority) == 432);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogRemoteOskSize, sizeof(CommonDialogRemoteOskParam) == 500);
+
+/* the SKU IDs the work memory keeps, and their length */
+#define STORE_CHECKOUT_DIALOG_SKU_NUM_MAX		16
+#define STORE_CHECKOUT_DIALOG_SKU_ID_LEN		56
+#define STORE_CHECKOUT_DIALOG_SERVICE_ID_LEN		32
+
+/*
+ * store_checkout_dialog.cpp: the work memory (CommonDialogSlot::workMemory) the
+ * checkout plugin (libcdlg_checkout) reads: the caller's parameter,
+ * the result for GetResult, and copies of the dimmer colour, the SKU IDs
+ * and the service ID. The copied parameter points to the dimmer colour's
+ * copy; the dialog takes no background colour.
+ */
+typedef struct CommonDialogStoreCheckoutParam {
+	SceStoreCheckoutDialogParam param;
+	SceStoreCheckoutDialogResult result;
+	SceCommonDialogColor bgColor;
+	SceCommonDialogColor dimmerColor;
+	SceChar8 skuIds[STORE_CHECKOUT_DIALOG_SKU_NUM_MAX][STORE_CHECKOUT_DIALOG_SKU_ID_LEN + 1];
+	SceChar8 serviceId[STORE_CHECKOUT_DIALOG_SERVICE_ID_LEN + 1];
+	SceUInt8 padding[3];
+	char apiName[64];
+} CommonDialogStoreCheckoutParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogStoreCheckoutApiName,
+			   __builtin_offsetof(CommonDialogStoreCheckoutParam, apiName) == 1128);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogStoreCheckoutSize, sizeof(CommonDialogStoreCheckoutParam) == 1192);
 
 #endif

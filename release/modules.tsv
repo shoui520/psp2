@@ -259,7 +259,7 @@ vs0/sys/external/libc	sys/internal/usermode/src/libc	vs0:sys/external/libc.suprx
 vs0/sys/external/libcdlg	vsh/cdlg/src/cdlg_mgr	vs0:sys/external/libcdlg.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/cdlg_mgr (6 paths)
 vs0/sys/external/libcdlg_calendar_review	vsh/cdlg/src/calendar_review_dialog	vs0:sys/external/libcdlg_calendar_review.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/calendar_review_dialog (9 paths)
 vs0/sys/external/libcdlg_cameraimport	vsh/cdlg/src/cameraimport_dialog	vs0:sys/external/libcdlg_cameraimport.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
-vs0/sys/external/libcdlg_checkout	vsh/cdlg/src/checkout_dialog	vs0:sys/external/libcdlg_checkout.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_checkout	vsh/app/store/checkout/plugin	vs0:sys/external/libcdlg_checkout.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/store/checkout/plugin/page/DialogPage.cpp (0.940.050-TOOL, 0.945.040-TOOL: the module of this name)
 vs0/sys/external/libcdlg_companion	vsh/cdlg/src/companion_dialog	vs0:sys/external/libcdlg_companion.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/companion_dialog (9 paths)
 vs0/sys/external/libcdlg_compat	vsh/cdlg/src/compat_dialog	vs0:sys/external/libcdlg_compat.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
 vs0/sys/external/libcdlg_cross_controller	vsh/cdlg/src/cross_controller_dialog	vs0:sys/external/libcdlg_cross_controller.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog

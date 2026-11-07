@@ -25,34 +25,8 @@
 #define STORE_CHECKOUT_DIALOG_SDK_VERSION_MODE2		0x01600000
 #define STORE_CHECKOUT_DIALOG_SDK_VERSION_INSTALL	0x01650000
 
-/* the SKU IDs the work memory keeps, and their length */
-#define STORE_CHECKOUT_DIALOG_SKU_NUM_MAX		16
-#define STORE_CHECKOUT_DIALOG_SKU_ID_LEN		56
-#define STORE_CHECKOUT_DIALOG_SERVICE_ID_LEN		32
-
 /* the checks' message, with a number for the check that failed */
 #define STORE_CHECKOUT_PARAM_ERROR_MSG	"\n\n****** SceStoreCheckoutDialog Parameter Error : %d ******\n\n"
-
-/*
- * The work memory (CommonDialogSlot::workMemory): the caller's parameter,
- * the result for GetResult, and copies of the dimmer colour, the SKU IDs
- * and the service ID. The copied parameter points to the dimmer colour's
- * copy; the dialog takes no background colour.
- */
-typedef struct CommonDialogStoreCheckoutParam {
-	SceStoreCheckoutDialogParam param;
-	SceStoreCheckoutDialogResult result;
-	SceCommonDialogColor bgColor;
-	SceCommonDialogColor dimmerColor;
-	SceChar8 skuIds[STORE_CHECKOUT_DIALOG_SKU_NUM_MAX][STORE_CHECKOUT_DIALOG_SKU_ID_LEN + 1];
-	SceChar8 serviceId[STORE_CHECKOUT_DIALOG_SERVICE_ID_LEN + 1];
-	SceUInt8 padding[3];
-	char apiName[64];
-} CommonDialogStoreCheckoutParam;
-
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogStoreCheckoutApiName,
-			   __builtin_offsetof(CommonDialogStoreCheckoutParam, apiName) == 1128);
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogStoreCheckoutSize, sizeof(CommonDialogStoreCheckoutParam) == 1192);
 
 typedef CommonDialogApiScope<CommonDialogStoreCheckoutParam, COMMON_DIALOG_TYPE_CHECKOUT,
 			     STORE_CHECKOUT_DIALOG_ERROR_NO_WORK_MEMORY,
