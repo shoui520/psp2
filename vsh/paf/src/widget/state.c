@@ -893,13 +893,6 @@ int _ZNK3paf2ui11ScrollBar2d9IsInheritEPKc(const void *self, const char *tag)
 	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
-int _ZNK3paf2ui5Group9IsInheritEPKc(const void *self, const char *tag)
-{
-	if (tag == "group")
-		return 1;
-	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
-}
-
 int ScePafWidget_A4E53390(uint8_t *self)
 {
 	uint8_t *vtable = *(uint8_t **)self;
