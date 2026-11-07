@@ -21,6 +21,8 @@ struct SslObjectIdentifier {
 
 typedef struct SslObjectIdentifier SslObjectIdentifier;
 
+int sslGetObjectShortNameByNid(int nid, const char **result);
+int sslGetObjectLongNameByNid(int nid, const char **result);
 int sslGetObjectNid(const void *oid, SceUInt32 length, int *result);
 int sslGetObjectShortName(const void *oid, SceUInt32 length, const char **result);
 int sslGetObjectLongName(const void *oid, SceUInt32 length, const char **result);

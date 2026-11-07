@@ -17,8 +17,6 @@
 static const char certificateSource[] =
 	"S:\\work\\MES\\common\\cert/src/ri_cert.c";
 
-static const unsigned char extensionCritical = 0xff;
-
 int sslValidateCriticalCertificateExtensions(SslCertificate *certificate)
 {
 	SslCertificateContext *context = NULL;
@@ -256,134 +254,21 @@ const SslCertificateMethods *sslGetCertificateModuleMethods(void)
 	return &sslCertificateMethods;
 }
 
-int sslGetCertificateExtension(SslPropertyList *list, int mode,
-			       SslCertificateExtension *extension)
+int sslGetCertificateRawProperty(SslCertificate *certificate, int id,
+				 SceUInt32 *value, void **data,
+				 SceUInt32 *length)
 {
-	SslProperty *property;
-	SslCertificateExtensionData value, oid;
-	SceUInt32 base = 3u * (SceUInt32)extension->index;
-	int status;
+	SslProperty *property = NULL;
+	int status = 10008;
 
-	if (sslFindProperty(list, 108, (int)(base + 4u), NULL, &property, 0) != 0)
-		return 10008;
-	value.length = property->length;
-	value.data = property->data;
-	base = 3u * (SceUInt32)extension->index;
-	if (sslFindProperty(list, 108, (int)(base + 2u), NULL, &property, 0) != 0)
-		return 10008;
-	oid.length = property->length;
-	oid.data = property->data;
-	status = sslSetCertificateExtensionData(extension, SSL_CERT_EXTENSION_OID,
-					      mode, &oid);
-	if (status != 0)
-		return status;
-	status = sslSetCertificateExtensionData(extension, SSL_CERT_EXTENSION_VALUE,
-					      mode, &value);
-	if (status != 0)
-		return status;
-	base = 3u * (SceUInt32)extension->index;
-	extension->critical =
-		sslFindProperty(list, 108, (int)(base + 3u), NULL, &property, 0) == 0 &&
-		(property->length != 1 || *(unsigned char *)property->data != 0);
-	return 0;
-}
-
-int sslGetCertificateExtensionCount(SslPropertyList *list, SceUInt32 *result)
-{
-	SslProperty *property;
-
-	if (sslFindProperty(list, 108, 1, NULL, &property, 0) != 0)
-		return 10008;
-	*result = property->length;
-	return 0;
-}
-
-int sslFindCertificateExtension(SslPropertyList *list, int mode,
-				SslCertificateExtension *extension)
-{
-	const char *oid;
-	SceUInt32 length;
-	SslProperty *property;
-	int index, relative;
-
-	if (extension->type == SSL_CERT_EXTENSION_CUSTOM) {
-		oid = extension->oid.data;
-		if (oid == NULL || extension->oid.length == 0)
-			return 10008;
-		length = extension->oid.length;
-	} else {
-		if (sslGetCertificateExtensionOid(extension->type, &oid, &length) != 0)
-			return 10008;
+	if (sslFindProperty(certificate->properties, 96, id, NULL, &property,
+			    0) == 0) {
+		status = 0;
+		*value = property->value;
+		*data = property->data;
+		*length = property->length;
 	}
-	for (index = 0; index < list->count; index++) {
-		property = list->entries[index];
-		relative = (int)((SceUInt32)property->id - 2u);
-		if (relative % 3 != 0 || property->length != length)
-			continue;
-		if (sslCompareMemory(property->data, oid, length) != 0)
-			continue;
-		property = list->entries[index];
-		extension->index = (int)((SceUInt32)property->id - 2u) / 3;
-		return sslGetCertificateExtension(list, mode, extension);
-	}
-	return 10008;
-}
-
-int sslFindCertificateExtensionByType(SslPropertyList *list, int type, int mode,
-				      SslCertificateExtension *extension)
-{
-	if (extension == NULL)
-		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-	extension->type = type;
-	return sslFindCertificateExtension(list, mode, extension);
-}
-
-int sslStoreCertificateExtension(SslPropertyList *list, int mode,
-				 SslCertificateExtension *extension)
-{
-	SslCertificateExtension probe = {0};
-	SslProperty *property;
-	SceUInt32 count = 0, base, length;
-	unsigned int flags = SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE;
-	const char *oid;
-	int newCount = 1;
-
-	if (extension == NULL)
-		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-	probe.type = extension->type;
-	if (sslFindCertificateExtension(list, 1, &probe) == 0) {
-		base = 3u * (SceUInt32)probe.index;
-		newCount = -1;
-	} else {
-		if (sslFindProperty(list, 108, 1, NULL, &property, 0) == 0) {
-			count = property->length;
-			newCount = (int)(count + 1u);
-		}
-		base = 3u * count;
-	}
-	if (mode == 1)
-		flags = SSL_PROPERTY_BORROW_ENTRY | SSL_PROPERTY_REPLACE;
-	if (sslAddPropertyValue(list, 108, (int)(base + 4u), 0,
-				extension->value.data, extension->value.length, flags) != 0)
-		return 10005;
-	length = extension->oid.length;
-	oid = extension->oid.data;
-	if (extension->type != SSL_CERT_EXTENSION_CUSTOM)
-		sslGetCertificateExtensionOid(extension->type, &oid, &length);
-	if (sslAddPropertyValue(list, 108, (int)(base + 2u), 0,
-				oid, length, flags) != 0)
-		return 10005;
-	if (extension->critical != 0) {
-		if (sslAddPropertyValue(list, 108, (int)(base + 3u), 0,
-					&extensionCritical, 1, flags) != 0)
-			return 10005;
-	} else {
-		sslDeleteProperty(list, 108, (int)(base + 3u));
-	}
-	if (newCount > 0 && sslAddPropertyValue(list, 108, 1, 0, NULL,
-					       newCount, flags) != 0)
-		return 10005;
-	return 0;
+	return status;
 }
 
 int sslApplyCertificateProperties(SslCertificate *certificate,
@@ -471,7 +356,9 @@ int sslGetCertificateProperty(SslCertificate *certificate, SceUInt32 selector,
 	SslCertificateExtensionData *buffer = result;
 	SslCertificateIndexedData *indexed = result;
 	SslProperty *property;
-	int dirty = 0, allowMissing = 0, scalar = 0, status;
+	SceUInt32 rawValue;
+	void *rawData;
+	int dirty = 0, allowMissing = 0, mode = 0, status = 0;
 
 	if (selector >= 0x4700 && selector <= 0x480f)
 		goto getBuffer;
@@ -481,29 +368,38 @@ int sslGetCertificateProperty(SslCertificate *certificate, SceUInt32 selector,
 	case 23:
 		goto getBuffer;
 	case 4:
-		dirty = certificate->issuer != NULL && (certificate->issuer->flags & 1);
+		if (certificate->issuer != NULL)
+			dirty = (certificate->issuer->flags & 1) != 0;
 		break;
 	case 7:
-		dirty = certificate->subject != NULL && (certificate->subject->flags & 1);
+		if (certificate->subject != NULL)
+			dirty = (certificate->subject->flags & 1) != 0;
 		break;
 	case 9:
-		dirty = certificate->publicKey != NULL && (certificate->publicKey->flags & 1);
+		if (certificate->publicKey != NULL)
+			dirty = (certificate->publicKey->flags & 1) != 0;
 		break;
 	case 10:
+		if (certificate->propertyCaches[0] != NULL)
+			dirty = (certificate->propertyCaches[0]->flags & 1) != 0;
+		allowMissing = 1;
+		break;
 	case 11:
-		dirty = certificate->propertyCaches[selector - 10] != NULL &&
-			(certificate->propertyCaches[selector - 10]->flags & 1);
+		if (certificate->propertyCaches[1] != NULL)
+			dirty = (certificate->propertyCaches[1]->flags & 1) != 0;
 		allowMissing = 1;
 		break;
 	case 12:
 	case 16:
+		if (certificate->type == 10)
+			dirty = 2;
 		allowMissing = 1;
 		break;
 	case 14:
 	case 64:
 	case 65:
 	case 127:
-		dirty = certificate->flags & 1;
+		dirty = 2;
 		break;
 	case 5:
 	case 6:
@@ -555,38 +451,30 @@ int sslGetCertificateProperty(SslCertificate *certificate, SceUInt32 selector,
 	default:
 		return 10021;
 	}
-	if (dirty && certificate->type != 10) {
-		status = sslCanonicalizeCertificate(certificate);
+	if (dirty == 2)
+		dirty = (certificate->flags & 1) != 0;
+	if (dirty == 1) {
+		if (certificate->type != 10)
+			status = sslCanonicalizeCertificate(certificate);
 		if (status != 0)
 			return status;
 	}
-	property = NULL;
-	status = 10008;
-	if (sslFindProperty(certificate->properties, 96, (int)selector, NULL, &property, 0) == 0) {
-		value->value = property->value;
-		value->data = property->data;
-		value->length = property->length;
-		status = 0;
-	}
+	status = sslGetCertificateRawProperty(certificate, (int)selector,
+					      &value->value, &value->data,
+					      &value->length);
 	goto finish;
 getBuffer:
-	property = NULL;
-	if (sslFindProperty(certificate->properties, 96, (int)selector, NULL, &property, 0) != 0)
-		return 10008;
-	buffer->data = property->data;
-	buffer->length = property->length;
-	return 0;
+	return sslGetCertificateRawProperty(certificate, (int)selector,
+					    &rawValue, &buffer->data,
+					    &buffer->length);
 getScalar:
-	property = NULL;
-	status = 10008;
-	if (sslFindProperty(certificate->properties, 96, (int)selector, NULL, &property, 0) == 0) {
-		*(SceUInt32 *)result = property->length;
-		status = 0;
-	}
-	scalar = 1;
+	status = sslGetCertificateRawProperty(certificate, (int)selector,
+					      &rawValue, &rawData,
+					      (SceUInt32 *)result);
+	mode = 2;
 finish:
-	if (allowMissing && status == 10008) {
-		if (!scalar) {
+	if (allowMissing == 1 && status == 10008) {
+		if (mode == 0) {
 			value->value = 0;
 			value->length = 0;
 			value->data = NULL;
@@ -701,14 +589,13 @@ int sslGetCertificatePublicKey(SslCertificate *certificate, int mode, void **res
 int sslGetCertificateVersion(SslCertificate *certificate, int *result)
 {
 	SceUInt32 encodedVersion = 0;
-	SslProperty *property = NULL;
+	SceUInt32 rawValue;
+	void *rawData;
 	int present = 1;
-	int status = 10008;
+	int status;
 
-	if (sslFindProperty(certificate->properties, 96, 1, NULL, &property, 0) == 0) {
-		status = 0;
-		encodedVersion = property->length;
-	}
+	status = sslGetCertificateRawProperty(certificate, 1, &rawValue,
+					      &rawData, &encodedVersion);
 	if (status == 10008) {
 		encodedVersion = 0;
 		present = 0;
@@ -1257,8 +1144,11 @@ int sslSetCertificateInfo(SslCertificate *certificate, int selector, void *value
 	SslCertificateInfoRequest *requests;
 	SslCertificateExtension *extension = NULL;
 	const SslObjectMethods *methods;
+	int id = selector;
 	int status;
 
+	if (selector == 0x4701)
+		id = *(int *)value;
 	if (certificate->references != 1)
 		return 10025;
 	if (selector >= 0x4700 && selector <= 0x480f && selector != 0x4701)
@@ -1277,7 +1167,7 @@ int sslSetCertificateInfo(SslCertificate *certificate, int selector, void *value
 		return sslSetCertificateEncodedProperty(certificate, selector, 0,
 						 NULL, *(SceUInt32 *)value);
 	case 0x4701:
-		return sslDeleteCertificateProperty(certificate, *(int *)value);
+		return sslDeleteCertificateProperty(certificate, id);
 	case 0x8001:
 		status = sslStoreCertificateExtension(&certificate->attributes, 0, value);
 		if (status == 0)

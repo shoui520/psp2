@@ -20,6 +20,9 @@ _Static_assert(sizeof(SslX509KeyExport) == 8, "SslX509KeyExport");
 
 int sslEncodeX509PublicKey(void *unused, void *key, void **data,
 			  SceUInt32 *length, SceUInt32 capacity);
+int sslStoreX509PublicKeyProperty(void *key, SslPropertyList *properties);
+int sslStoreX509NameProperty(SslCertificateName *name, int id,
+			     SslPropertyList *properties);
 int sslUpdateX509Properties(SslCertificate *certificate, SslPropertyList *properties);
 int sslExportX509Properties(SslCertificate *certificate, SslPropertyList *properties);
 int sslCollectX509KeyComponent(void *arg, int id, const SslKeyComponent *component);
@@ -33,6 +36,9 @@ int sslDecodeX509Date(void *unused, const SslCertificatePropertyValue *value, vo
 int sslGetX509NameComponentCount(SslCertificateName *name, SceUInt32 *result);
 int sslGetX509NameComponent(SslCertificateName *name, SceUInt32 index,
 			   SslCertificateNameComponent **result);
+int sslInsertX509NameComponent(SslCertificateName *name, int index,
+			       SslCertificateNameComponent *component);
+int sslDeleteX509NameComponent(SslCertificateName *name, int index);
 
 int sslSerializeX509Certificate(SslCertificate *certificate, SceUInt32 capacity,
 			       void *data, SceUInt32 *length);

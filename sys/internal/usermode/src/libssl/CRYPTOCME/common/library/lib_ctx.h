@@ -95,6 +95,7 @@ int sslGetLibraryMethod(SslLibrary *library, int type, int selector,
 int sslCreateLibraryObject(SslLibrary *library, int type, int selector,
 			   SceUInt32 flags, int parameter, void *result);
 int sslGetLibraryData(SslLibrary *library, int type, void **result);
+SslLibraryModule *sslGetLibraryModuleTable(SslLibrary *library);
 int sslConstructLibraryObject(SslLibrary *library, int type, int selector,
 			      SceUInt32 flags, int parameter,
 			      SslObjectHeader **result);

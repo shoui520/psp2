@@ -1,5 +1,7 @@
 /* Filename and private names are ours; component follows MES/common/cert/src. */
+#include <libssl/name.h>
 #include "x509.h"
+#include "extension.h"
 #include "../../../../asn1.h"
 #include "../../../../memory.h"
 #include "../../../../date.h"
@@ -488,48 +490,81 @@ out:
 	return status;
 }
 
+int sslStoreX509PublicKeyProperty(void *key, SslPropertyList *properties)
+{
+	void *data;
+	SceUInt32 length;
+	int status;
+
+	status = sslEncodeX509PublicKey(NULL, key, NULL, &length, 0);
+	if (status != 0)
+		return status;
+	data = sslAllocate(length);
+	if (data == NULL)
+		return 10005;
+	status = sslEncodeX509PublicKey(NULL, key, &data, &length, length);
+	if (status == 0 && sslAddPropertyValue(properties, 96, 9, 0, data,
+					       length,
+					       SSL_PROPERTY_COPY_DATA |
+					       SSL_PROPERTY_REPLACE) != 0)
+		status = 10001;
+	sslFree(data);
+	return status;
+}
+
+int sslEncodeCertificateName(SslCertificateName *name, SceUInt32 capacity,
+			     void *data, SceUInt32 *length)
+{
+	return sslEncodeCertificateNameProperties(name->properties, data, length,
+						  capacity);
+}
+
+int sslStoreX509NameProperty(SslCertificateName *name, int id,
+			     SslPropertyList *properties)
+{
+	SceUInt8 *data;
+	SceUInt32 length;
+	int status;
+
+	status = sslEncodeCertificateNameProperties(name->properties, NULL,
+						    &length, 0);
+	if (status != 0)
+		return status;
+	data = sslAllocate(length);
+	if (data == NULL)
+		return 10005;
+	status = sslEncodeCertificateNameProperties(name->properties, data,
+						    &length, length);
+	if (status == 0 && sslAddPropertyValue(properties, 96, id, 0, data,
+					       length,
+					       SSL_PROPERTY_COPY_DATA |
+					       SSL_PROPERTY_REPLACE) != 0)
+		status = 10001;
+	sslFree(data);
+	return status;
+}
+
 int sslUpdateX509Properties(SslCertificate *certificate, SslPropertyList *properties)
 {
 	SslCertificateName *name;
 	SslCertificateKeyCache *cache;
-	void *key, *buffer;
-	SceUInt32 length;
-	int index, status;
+	int status = 0;
 
-	for (index = 0; index < 2; index++) {
-		name = index == 0 ? certificate->issuer : certificate->subject;
-		if (name == NULL || !(name->flags & 1))
-			continue;
-		status = sslEncodeCertificateNameProperties(name->properties, NULL, &length, 0);
+	name = certificate->issuer;
+	if (name != NULL && (name->flags & 1)) {
+		status = sslStoreX509NameProperty(name, 4, properties);
 		if (status != 0)
 			return status;
-		buffer = sslAllocate(length);
-		if (buffer == NULL)
-			return 10005;
-		status = sslEncodeCertificateNameProperties(name->properties, buffer, &length, length);
-		if (status == 0 && sslAddPropertyValue(properties, 96, index == 0 ? 4 : 7, 0,
-						      buffer, length,
-						      SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0)
-			status = 10001;
-		sslFree(buffer);
+	}
+	name = certificate->subject;
+	if (name != NULL && (name->flags & 1)) {
+		status = sslStoreX509NameProperty(name, 7, properties);
 		if (status != 0)
 			return status;
 	}
 	cache = certificate->publicKey;
-	if (cache == NULL || !(cache->flags & 1))
-		return 0;
-	key = cache->key;
-	status = sslEncodeX509PublicKey(NULL, key, NULL, &length, 0);
-	if (status != 0)
-		return status;
-	buffer = sslAllocate(length);
-	if (buffer == NULL)
-		return 10005;
-	status = sslEncodeX509PublicKey(NULL, key, &buffer, &length, length);
-	if (status == 0 && sslAddPropertyValue(properties, 96, 9, 0, buffer, length,
-					      SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0)
-		status = 10001;
-	sslFree(buffer);
+	if (cache != NULL && (cache->flags & 1))
+		status = sslStoreX509PublicKeyProperty(cache->key, properties);
 	return status;
 }
 
@@ -644,7 +679,9 @@ static const SslCertificateBackendMethods sslX509BackendMethods = {
 	.Serialize = sslSerializeX509Certificate,
 	.Finalize = sslFinalizeX509Certificate,
 	.GetNameComponentCount = sslGetX509NameComponentCount,
-	.GetNameComponent = sslGetX509NameComponent
+	.GetNameComponent = sslGetX509NameComponent,
+	.InsertNameComponent = sslInsertX509NameComponent,
+	.DeleteNameComponent = sslDeleteX509NameComponent
 };
 
 const SslCertificateBackendMethods *sslGetX509BackendMethods(void)
@@ -726,6 +763,28 @@ int sslDecodeX509Date(void *unused, const SslCertificatePropertyValue *value, vo
 	return SceSslInternal_88391E03(date, format, value->data, value->length);
 }
 
+int sslDecodeCertificateName(SslCertificateContext *context, int mode,
+			     SceUInt32 length, const void *data,
+			     SceUInt32 *consumed, void **result)
+{
+	SslCertificateName *name;
+	int status;
+
+	status = sslNewCertificateName(context, &name);
+	if (status != 0)
+		return status;
+	status = sslDecodeCertificateNameProperties(name->properties, data,
+						    length, consumed);
+	if (status == 0 && mode == 0 &&
+	    sslPackProperties(name->properties, 0) != 0)
+		status = 10001;
+	if (status == 0)
+		*result = name;
+	else if (name != NULL)
+		sslFreeCertificateName(name);
+	return status;
+}
+
 int sslGetX509NameComponentCount(SslCertificateName *name, SceUInt32 *result)
 {
 	SslProperty *property;
@@ -772,6 +831,123 @@ out:
 	return status;
 }
 
+int sslInsertX509NameComponent(SslCertificateName *name, int index,
+			       SslCertificateNameComponent *component)
+{
+	SslProperty *countProp = NULL;
+	SslProperty *entry = NULL;
+	int count, cursor, offset, status = 0;
+
+	if (sslFindProperty(name->properties, 104, 15, NULL, &countProp, 0) != 0) {
+		countProp = sslNewProperty();
+		if (countProp != NULL) {
+			countProp->type = 104;
+			countProp->id = 15;
+		}
+	} else {
+		countProp = sslCloneProperty(NULL, countProp, 0);
+	}
+	if (countProp == NULL) {
+		status = 10005;
+		goto out;
+	}
+	count = (int)countProp->length;
+	if (index < 0 || index > count) {
+		status = 10018;
+		goto out;
+	}
+	for (cursor = count - 1; cursor >= index; cursor--) {
+		offset = cursor * 2;
+		if (sslFindProperty(name->properties, 104, offset + 16, NULL,
+				    &entry, 0) != 0) {
+			status = 10001;
+			goto out;
+		}
+		entry->id += 2;
+		if (sslFindProperty(name->properties, 104, offset + 17, NULL,
+				    &entry, 0) != 0) {
+			status = 10001;
+			goto out;
+		}
+		entry->id += 2;
+	}
+	offset = index * 2;
+	if (sslAddPropertyValue(name->properties, 104, offset + 16,
+				component->oid->value, component->oid->data,
+				component->oid->length,
+				SSL_PROPERTY_COPY_DATA) != 0) {
+		status = 10001;
+		goto out;
+	}
+	name->flags |= 1u;
+	if (sslAddPropertyValue(name->properties, 104, offset + 17,
+				component->value->value, component->value->data,
+				component->value->length,
+				SSL_PROPERTY_COPY_DATA) != 0) {
+		status = 10001;
+		goto out;
+	}
+	countProp->length++;
+	if (sslAddProperty(name->properties, countProp,
+			   SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0)
+		status = 10001;
+out:
+	if (countProp != NULL)
+		sslFreeProperty(countProp);
+	return status;
+}
+
+int sslDeleteX509NameComponent(SslCertificateName *name, int index)
+{
+	SslProperty *countProp = NULL;
+	SslProperty *entry;
+	int count, cursor, offset, status = 0;
+
+	if (sslFindProperty(name->properties, 104, 15, NULL, &countProp,
+			    SSL_PROPERTY_COPY_DATA) != 0) {
+		status = 10001;
+		goto out;
+	}
+	count = (int)countProp->length;
+	countProp = sslCloneProperty(NULL, countProp, 0);
+	if (countProp == NULL) {
+		status = 10005;
+		goto out;
+	}
+	if (index < 0 || index >= count) {
+		status = 10018;
+		goto out;
+	}
+	if (sslDeleteProperty(name->properties, 104, index * 2 + 16) != 0 ||
+	    sslDeleteProperty(name->properties, 104, index * 2 + 17) != 0) {
+		status = 10001;
+		goto out;
+	}
+	for (cursor = index + 1; cursor < count; cursor++) {
+		offset = cursor * 2;
+		if (sslFindProperty(name->properties, 104, offset + 16, NULL,
+				    &entry, 0) != 0) {
+			status = 10001;
+			goto out;
+		}
+		entry->id -= 2;
+		if (sslFindProperty(name->properties, 104, offset + 17, NULL,
+				    &entry, 0) != 0) {
+			status = 10001;
+			goto out;
+		}
+		entry->id -= 2;
+	}
+	countProp->length--;
+	if (sslAddProperty(name->properties, countProp,
+			   SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0)
+		status = 10001;
+out:
+	if (countProp != NULL)
+		sslFreeProperty(countProp);
+	return status;
+}
+
 int sslCollectX509KeyComponent(void *arg, int id, const SslKeyComponent *component)
 {
 	SslX509KeyExport *export = arg;
@@ -810,4 +986,136 @@ int sslDecodeX509ExtensionProperties(SslPropertyList *properties, const SceUInt8
 {
 	return sslAsn1DecodeProperties(sslX509ExtensionDecodingSchema, properties,
 				       data, length, consumed);
+}
+
+static const unsigned char extensionCritical = 0xff;
+
+int sslGetCertificateExtension(SslPropertyList *list, int mode,
+			       SslCertificateExtension *extension)
+{
+	SslProperty *property;
+	SslCertificateExtensionData value, oid;
+	SceUInt32 base = 3u * (SceUInt32)extension->index;
+	int status;
+
+	if (sslFindProperty(list, 108, (int)(base + 4u), NULL, &property, 0) != 0)
+		return 10008;
+	value.length = property->length;
+	value.data = property->data;
+	base = 3u * (SceUInt32)extension->index;
+	if (sslFindProperty(list, 108, (int)(base + 2u), NULL, &property, 0) != 0)
+		return 10008;
+	oid.length = property->length;
+	oid.data = property->data;
+	status = sslSetCertificateExtensionData(extension, SSL_CERT_EXTENSION_OID,
+					      mode, &oid);
+	if (status != 0)
+		return status;
+	status = sslSetCertificateExtensionData(extension, SSL_CERT_EXTENSION_VALUE,
+					      mode, &value);
+	if (status != 0)
+		return status;
+	base = 3u * (SceUInt32)extension->index;
+	extension->critical =
+		sslFindProperty(list, 108, (int)(base + 3u), NULL, &property, 0) == 0 &&
+		(property->length != 1 || *(unsigned char *)property->data != 0);
+	return 0;
+}
+
+int sslGetCertificateExtensionCount(SslPropertyList *list, SceUInt32 *result)
+{
+	SslProperty *property;
+
+	if (sslFindProperty(list, 108, 1, NULL, &property, 0) != 0)
+		return 10008;
+	*result = property->length;
+	return 0;
+}
+
+int sslFindCertificateExtension(SslPropertyList *list, int mode,
+				SslCertificateExtension *extension)
+{
+	const char *oid;
+	SceUInt32 length;
+	SslProperty *property;
+	int index, relative;
+
+	if (extension->type == SSL_CERT_EXTENSION_CUSTOM) {
+		oid = extension->oid.data;
+		if (oid == NULL || extension->oid.length == 0)
+			return 10008;
+		length = extension->oid.length;
+	} else {
+		if (sslGetCertificateExtensionOid(extension->type, &oid, &length) != 0)
+			return 10008;
+	}
+	for (index = 0; index < list->count; index++) {
+		property = list->entries[index];
+		relative = (int)((SceUInt32)property->id - 2u);
+		if (relative % 3 != 0 || property->length != length)
+			continue;
+		if (sslCompareMemory(property->data, oid, length) != 0)
+			continue;
+		property = list->entries[index];
+		extension->index = (int)((SceUInt32)property->id - 2u) / 3;
+		return sslGetCertificateExtension(list, mode, extension);
+	}
+	return 10008;
+}
+
+int sslFindCertificateExtensionByType(SslPropertyList *list, int type, int mode,
+				      SslCertificateExtension *extension)
+{
+	if (extension == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	extension->type = type;
+	return sslFindCertificateExtension(list, mode, extension);
+}
+
+int sslStoreCertificateExtension(SslPropertyList *list, int mode,
+				 SslCertificateExtension *extension)
+{
+	SslCertificateExtension probe = {0};
+	SslProperty *property;
+	SceUInt32 count = 0, base, length;
+	unsigned int flags = SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE;
+	const char *oid;
+	int newCount = 1;
+
+	if (extension == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	probe.type = extension->type;
+	if (sslFindCertificateExtension(list, 1, &probe) == 0) {
+		base = 3u * (SceUInt32)probe.index;
+		newCount = -1;
+	} else {
+		if (sslFindProperty(list, 108, 1, NULL, &property, 0) == 0) {
+			count = property->length;
+			newCount = (int)(count + 1u);
+		}
+		base = 3u * count;
+	}
+	if (mode == 1)
+		flags = SSL_PROPERTY_BORROW_ENTRY | SSL_PROPERTY_REPLACE;
+	if (sslAddPropertyValue(list, 108, (int)(base + 4u), 0,
+				extension->value.data, extension->value.length, flags) != 0)
+		return 10005;
+	length = extension->oid.length;
+	oid = extension->oid.data;
+	if (extension->type != SSL_CERT_EXTENSION_CUSTOM)
+		sslGetCertificateExtensionOid(extension->type, &oid, &length);
+	if (sslAddPropertyValue(list, 108, (int)(base + 2u), 0,
+				oid, length, flags) != 0)
+		return 10005;
+	if (extension->critical != 0) {
+		if (sslAddPropertyValue(list, 108, (int)(base + 3u), 0,
+					&extensionCritical, 1, flags) != 0)
+			return 10005;
+	} else {
+		sslDeleteProperty(list, 108, (int)(base + 3u));
+	}
+	if (newCount > 0 && sslAddPropertyValue(list, 108, 1, 0, NULL,
+					       newCount, flags) != 0)
+		return 10005;
+	return 0;
 }

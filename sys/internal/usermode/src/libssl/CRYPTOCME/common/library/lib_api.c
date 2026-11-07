@@ -48,3 +48,12 @@ int sslGetLibraryData(SslLibrary *library, int type, void **result)
 		return SSL_LIBRARY_ERROR_MODULE_TYPE;
 	return methods->GetModuleData(library, type, result);
 }
+
+SslLibraryModule *sslGetLibraryModuleTable(SslLibrary *library)
+{
+	SslLibraryModule *table;
+
+	if (library == NULL || sslGetLibraryInfo(library, 1, &table) != 0)
+		table = NULL;
+	return table;
+}

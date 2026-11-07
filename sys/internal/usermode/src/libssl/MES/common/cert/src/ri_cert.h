@@ -39,6 +39,9 @@ typedef struct SslCertificateBackendMethods {
 	int (*GetNameComponentCount)(SslCertificateName *name, SceUInt32 *result);
 	int (*GetNameComponent)(SslCertificateName *name, SceUInt32 index,
 				SslCertificateNameComponent **result);
+	int (*InsertNameComponent)(SslCertificateName *name, int index,
+				   SslCertificateNameComponent *component);
+	int (*DeleteNameComponent)(SslCertificateName *name, int index);
 } SslCertificateBackendMethods;
 
 typedef struct SslCertificateKeyMethods {
@@ -232,6 +235,9 @@ _Static_assert(offsetof(SslCertificate, publicKey) == 36, "publicKey");
 _Static_assert(offsetof(SslCertificate, attributes) == 56, "attributes");
 
 int sslFreeCertificateContext(void *object);
+int sslGetCertificateRawProperty(SslCertificate *certificate, int id,
+				 SceUInt32 *value, void **data,
+				 SceUInt32 *length);
 int sslApplyCertificateProperties(SslCertificate *certificate,
 				 SslPropertyList *properties);
 int sslExportCertificateProperties(SslCertificate *certificate,

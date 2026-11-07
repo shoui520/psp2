@@ -73,6 +73,40 @@ int sslAllocateAndSerializeCertificate(SslCertificate *certificate, void **data,
 	return status;
 }
 
+int sslGetCertificateName(SslCertificate *certificate, int selector, int mode,
+			  void **result)
+{
+	SslCertificatePropertyValue encoded;
+	SslCertificateContext *context;
+	void *name = NULL;
+	SceUInt32 consumed = 0;
+	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+
+	if (certificate == NULL || result == NULL)
+		return status;
+	status = certificate->methods->GetCertificateInfo(certificate, selector, &encoded);
+	if (status == 0)
+		status = certificate->methods->GetCertificateInfo(certificate, 0x8005, &context);
+	if (status == 0)
+		status = context->methods->nameMethods->Decode(context, mode, encoded.length,
+							     encoded.data, &consumed, &name);
+	if (status == 0)
+		*result = name;
+	else if (name != NULL)
+		((SslObjectHeader *)name)->methods->Destroy(name);
+	return status;
+}
+
+int SceSslInternal_81FA5DBE(void *certificate, int mode, void **result)
+{
+	return sslGetCertificateName(certificate, 4, mode, result);
+}
+
+int SceSslInternal_08179EBD(void *certificate, int mode, void **result)
+{
+	return sslGetCertificateName(certificate, 7, mode, result);
+}
+
 int SceSslInternal_D68D8421(void *certificate, void *publicKey)
 {
 	SslCertificate *object = certificate;
@@ -423,299 +457,6 @@ int sslValidateCertificateVersionFields(SslCertificate *certificate)
 					status = 10022;
 			}
 		}
-	}
-	return status;
-}
-
-int sslCreateCertificateContext(SslLibrary *library, int parameter,
-				SceUInt32 flags, SslObjectHeader **result)
-{
-	return sslConstructLibraryObject(library, 10, 0, flags, parameter, result);
-}
-
-int sslDestroyCertificateContext(void *context)
-{
-	SslCertificateHeader *object = context;
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (object != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (object->methods->DestroyContext != NULL)
-			status = object->methods->DestroyContext(context);
-	}
-	return status;
-}
-
-int sslSetCertificateContextOption(void *context, int selector, void *value)
-{
-	SslCertificateHeader *object = context;
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (object != NULL && value != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (object->methods->SetContextInfo != NULL)
-			status = object->methods->SetContextInfo(context, selector, value);
-	}
-	return status;
-}
-
-int sslCreateCertificate(void *context, int flags, void **result)
-{
-	SslCertificateHeader *object = context;
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (object != NULL && result != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (object->methods->CreateCertificate != NULL)
-			status = object->methods->CreateCertificate(context, flags, result);
-	}
-	return status;
-}
-
-int SceSslInternal_144FA354(void *certificate)
-{
-	SslCertificateHeader *object = certificate;
-
-	if (object == NULL)
-		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-	if (object->methods->DestroyCertificate == NULL)
-		return SSL_CRYPTO_ERROR_NO_OPERATION;
-	return object->methods->DestroyCertificate(certificate);
-}
-
-int sslRetainCertificateObject(SslCertificate *certificate)
-{
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (certificate != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (certificate->methods->RetainCertificate != NULL)
-			status = certificate->methods->RetainCertificate(certificate, 1, 0);
-	}
-	return status;
-}
-
-int sslDuplicateCertificateObject(SslCertificate *certificate)
-{
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (certificate != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (certificate->methods->RetainCertificate != NULL)
-			status = certificate->methods->RetainCertificate(certificate, 1, 0);
-	}
-	return status;
-}
-
-int SceSslInternal_64BDF1BB(void *certificate, int selector, void *result)
-{
-	SslCertificate *object = certificate;
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (object != NULL && result != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (object->methods->GetCertificateInfo != NULL)
-			status = object->methods->GetCertificateInfo(object, selector,
-								     result);
-	}
-	return status;
-}
-
-int sslSetCertificateObjectInfo(SslCertificate *certificate, int selector,
-				void *value)
-{
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (certificate != NULL && value != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (certificate->methods->SetCertificateInfo != NULL)
-			status = certificate->methods->SetCertificateInfo(certificate,
-									  selector, value);
-	}
-	return status;
-}
-
-int sslCreateCertificateNameObject(SslCertificateContext *context, void **result)
-{
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (context != NULL && result != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (context->methods->nameMethods->Create != NULL)
-			status = context->methods->nameMethods->Create(context, result);
-	}
-	return status;
-}
-
-int sslCopyCertificateNameObject(SslCertificateName *source, int mode,
-				 SslCertificateName **result)
-{
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (source != NULL && result != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (source->methods->Copy != NULL)
-			status = source->methods->Copy(source, mode, result);
-	}
-	return status;
-}
-
-int sslCreateCertificateNameComponentObject(SslCertificateName *name,
-					    SslCertificateNameComponent **result)
-{
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (name != NULL && result != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (name->methods->CreateComponent != NULL)
-			status = name->methods->CreateComponent(name, result);
-	}
-	return status;
-}
-
-int SceSslInternal_17BF2367(void *component)
-{
-	SslCertificateNameComponent *object = component;
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (object != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (object->methods->DestroyComponent != NULL)
-			status = object->methods->DestroyComponent(object);
-	}
-	return status;
-}
-
-int SceSslInternal_B5A099D2(void *component, int selector, void *result)
-{
-	SslCertificateNameComponent *object = component;
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (object != NULL && result != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (object->methods->GetComponentInfo != NULL)
-			status = object->methods->GetComponentInfo(object, selector,
-								   result);
-	}
-	return status;
-}
-
-int SceSslInternal_306E2A22(void *certificate, void *key, void *cryptoContext)
-{
-	SslCertificate *object = certificate;
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (object != NULL && key != NULL && cryptoContext != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (object->methods->keyMethods != NULL &&
-		    object->methods->keyMethods->VerifySignature != NULL)
-			status = object->methods->keyMethods->VerifySignature(object, key,
-									      cryptoContext);
-	}
-	return status;
-}
-
-int sslSerializeCertificateObject(SslCertificate *certificate, SceUInt32 capacity,
-				  void *data, SceUInt32 *length)
-{
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (certificate != NULL && length != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (certificate->methods->SerializeCertificate != NULL)
-			status = certificate->methods->SerializeCertificate(certificate,
-									    capacity, data,
-									    length);
-	}
-	return status;
-}
-
-int SceSslInternal_29AAC768(void *context, int mode, int type,
-			    SceSize length, const void *data,
-			    void **consumed, void **result)
-{
-	SslCertificateHeader *object = context;
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (object != NULL && result != NULL && data != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (object->methods->NewCertificateFromData != NULL)
-			status = object->methods->NewCertificateFromData(context, mode,
-									 type, length,
-									 data,
-									 (SceUInt32 *)consumed,
-									 result);
-	}
-	return status;
-}
-
-int SceSslInternal_170D595D(void *certificate, int mode, void **result)
-{
-	SslCertificate *object = certificate;
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (object != NULL && result != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (object->methods->keyMethods != NULL &&
-		    object->methods->keyMethods->GetPublicKey != NULL)
-			status = object->methods->keyMethods->GetPublicKey(object, mode,
-									   result);
-	}
-	return status;
-}
-
-int sslDecodeCertificateNameObject(SslCertificateContext *context, int mode,
-				   SceUInt32 length, const void *data,
-				   SceUInt32 *consumed, void **result)
-{
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (context != NULL && result != NULL && data != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (context->methods->nameMethods != NULL &&
-		    context->methods->nameMethods->Decode != NULL)
-			status = context->methods->nameMethods->Decode(context, mode,
-								       length, data,
-								       consumed, result);
-	}
-	return status;
-}
-
-int sslEncodeCertificateNameObject(SslCertificateName *name, SceUInt32 capacity,
-				   void *data, SceUInt32 *length)
-{
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (name != NULL && length != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (name->methods->Encode != NULL)
-			status = name->methods->Encode(name, capacity, data, length);
-	}
-	return status;
-}
-
-int SceSslInternal_DABB61EE(void *name, SceUInt32 capacity, char *data)
-{
-	SslCertificateName *object = name;
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (object != NULL && data != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (object->methods->Format != NULL)
-			status = object->methods->Format(object, 1, capacity, data);
-	}
-	return status;
-}
-
-int SceSslInternal_91C2531C(void *name, int selector, void *result)
-{
-	SslCertificateName *object = name;
-	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
-
-	if (object != NULL && result != NULL) {
-		status = SSL_CRYPTO_ERROR_NO_OPERATION;
-		if (object->methods->GetInfo != NULL)
-			status = object->methods->GetInfo(object, selector, result);
 	}
 	return status;
 }

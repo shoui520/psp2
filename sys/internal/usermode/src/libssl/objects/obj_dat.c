@@ -24,6 +24,32 @@ static int sslCompareObjectNames(const char *left, const char *right,
 	return 0;
 }
 
+int sslGetObjectShortNameByNid(int nid, const char **result)
+{
+	int status = 0;
+
+	if (result == NULL)
+		status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	else if (nid < 0 || nid >= NUM_NID)
+		status = 10018;
+	else
+		*result = nid_objs[nid].ln;
+	return status;
+}
+
+int sslGetObjectLongNameByNid(int nid, const char **result)
+{
+	int status = 0;
+
+	if (result == NULL)
+		status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	else if (nid < 0 || nid >= NUM_NID)
+		status = 10018;
+	else
+		*result = nid_objs[nid].ln;
+	return status;
+}
+
 int sslGetObjectNid(const void *oid, SceUInt32 length, int *result)
 {
 	int status = 10008;
