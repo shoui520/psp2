@@ -15,6 +15,7 @@ psp2_module(vs0_sys_external_libcdlg KIND user COMPILER snc PARTIAL SOURCES
 	remote_osk_dialog.cpp
 	pocketstation_dialog.cpp
 	worker_thread.cpp
+	common_dialog.cpp
 )
 target_include_directories(vs0_sys_external_libcdlg PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/vsh/paf")
@@ -31,3 +32,4 @@ set_source_files_properties(invitation_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xa
 set_source_files_properties(remote_osk_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(pocketstation_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(worker_thread.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
+set_source_files_properties(common_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
