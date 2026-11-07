@@ -995,8 +995,8 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui8PageTurn9IsInheritEPKc, "pageturn",
 		   _ZNK3paf2ui12PageTurnBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RichText9IsInheritEPKc, "rich_text",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui13ImageSlideBar9IsInheritEPKc, "image_slidebar",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+/* ImageSlideBar's is C++ (w_image_slidebar.cpp) */
+int _ZNK3paf2ui13ImageSlideBar9IsInheritEPKc(const void *self, const char *type);
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8SlideBar9IsInheritEPKc, "slidebar",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 /* CornerButton's is C++ (w_corner_button.cpp) */
@@ -1563,19 +1563,6 @@ uint8_t *ScePafWidget_0DCB8EA5(uint8_t *self, float seconds)
 	return self;
 }
 
-int _ZN3paf2ui13ImageSlideBar8SetValueEib(uint8_t *self, uint32_t value, uint8_t flag)
-{
-	const uint8_t *vtable = *(const uint8_t *const *)self;
-
-	*(uint32_t *)(self + 648) = value;
-	((void (*)(uint8_t *, uint32_t))*(void *const *)(vtable + 396))(
-		self, value);
-	vtable = *(const uint8_t *const *)self;
-	((void (*)(uint8_t *, int))*(void *const *)(vtable + 404))(
-		self, flag);
-	return 0;
-}
-
 int ScePafWidget_A38D5EAB(uint8_t *self, uint32_t value, uint8_t flag)
 {
 	const uint8_t *vtable = *(const uint8_t *const *)self;
@@ -1678,21 +1665,6 @@ uint32_t *ScePafWidget_D0D78958(uint32_t *self, uint32_t *first,
 	*first = self[9];
 	*third = self[10];
 	return self;
-}
-
-int _ZN3paf2ui18ImageSlideBarParam3GetEv(uint32_t *self)
-{
-	int result = _ZN3paf2ui11WidgetParam3GetEv(self);
-
-	if (result >= 0) {
-		const uint8_t *state = (const uint8_t *)self[8];
-		uint32_t upper = *(const uint32_t *)(state + 640);
-
-		self[30] = *(const uint32_t *)(state + 636);
-		self[31] = upper;
-		return 0;
-	}
-	return result;
 }
 
 int _ZN3paf2ui10PlaneParam3GetEv(uint8_t *self)

@@ -48,6 +48,7 @@ class Environment;
 class Widget;
 class Scene;
 class TouchCapture;
+class HitInfo;
 class Camera;
 class AnimListener;
 class AnimQueue;
@@ -850,6 +851,11 @@ public:
 	void ReplaceDrawObj(const DrawObjEntry &entry, bool update);
 	/* whether its draw objects are ready to draw (export 9B9A9406) */
 	bool IsPrepareObjs();
+	/* where the line from start to end crosses the plane through pos with the normal, the hit
+	   in the widget's space filled in: 1, or -1 for a line along the plane or no info (argument
+	   names ours) */
+	int32_t CalcHitLineToPlane(const math::v4 &start, const math::v4 &end, const math::v4 &pos,
+				   const math::v4 &normal, HitInfo *info);
 	/* exports 7A3A7304, 0FCCC833, B94694E3 */
 	void SetDragMode(uint32_t mode);
 	void KillObjAnim(int32_t obj, int32_t id);
@@ -1325,6 +1331,9 @@ int32_t ScePafWidget_931AD41E(paf::ui::Widget *widget, bool release);
 int32_t ScePafWidget_5ABB3393(paf::ui::Widget *widget, uint32_t port, uint32_t id, bool release);
 /* plays its sound of the index where its sound mask has it: -1 when none is played */
 int32_t ScePafWidget_2B1A1493(paf::ui::Widget *widget, int32_t index);
+/* the hit box size for the size: its height at least the minimum (ImageSlideBar's; no name
+   found) */
+paf::math::v4 ScePafWidget_301AA80F(paf::ui::Widget *widget, const paf::math::v4 &size);
 /* binds the keys of the mask to the widget (SetKeycode after ScePaf-RE) */
 int32_t ScePafWidget_21125870(paf::ui::Widget *widget, uint32_t keycode);
 /* gives the widget its focus cursor: a copy of the shape, its offset, size and rotation

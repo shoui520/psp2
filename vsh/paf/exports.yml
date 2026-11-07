@@ -3253,14 +3253,14 @@ ScePaf:
         - _ZNK3paf2ui13SlideBarParam12GetParamNameEv: 0x204D1504
         - _ZNK3paf2ui14TextStyleParam12GetParamNameEv: 0x206A14ED
         - ScePafWidget_20824179: 0x20824179
-        - ScePafWidget_2088C6E9: 0x2088C6E9
+        - _ZN3paf2ui23ImageSlideBarSoundParam9ParamNameEv: 0x2088C6E9
         - _ZN3paf2ui6CameraC1EPNS0_6WidgetEPNS2_11CreateParamE: 0x20AD4B92
         - _ZN3paf2ui14ScrollViewBase6DoSnapEiPNS_5TimerE: 0x20F2E5B6
         - ScePafWidget_21125870: 0x21125870
         - ScePafWidget_2141506E: 0x2141506E
         - ScePafWidget_215292CE: 0x215292CE
         - _ZNK3paf2ui18SlideBarSoundParam12GetParamNameEv: 0x21651F5B
-        - ScePafWidget_21A0CE65: 0x21A0CE65
+        - _ZN3paf2ui23ImageSlideBarSoundParamC1Ev: 0x21A0CE65
         - ScePafWidget_21DD74D2: 0x21DD74D2
         - ScePafWidget_21FB8500: 0x21FB8500
         - _ZN3paf2ui6Widget11RemoveChildEPS1_: 0x2228232B
@@ -3414,7 +3414,7 @@ ScePaf:
         - _ZN3paf2ui9DirectBarC1EPNS0_6WidgetEPNS2_11CreateParamE: 0x31693D23
         - _ZN3paf2ui25StateButtonBaseSoundParam9ParamNameEv: 0x317FAD4E
         - _ZN3paf2ui14ScrollViewBase12SetSnapPowerEf: 0x31892C5A
-        - ScePafWidget_3193468E: 0x3193468E
+        - _ZNK3paf2ui23ImageSlideBarSoundParam12GetParamNameEv: 0x3193468E
         - ScePafWidget_3196DEE8: 0x3196DEE8
         - _ZN3paf2ui14ScrollBarParam3SetEv: 0x31AA7AEE
         - _ZN3paf2ui10ButtonBase9GetStringERNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEi: 0x31B29AA9
@@ -3613,7 +3613,7 @@ ScePaf:
         - _ZN3paf2ui9ScrollBar13SetColor_coreERKNS_4math2v4E: 0x466CC03A
         - _ZN3paf2ui3BoxD2Ev: 0x467E5FD1
         - _ZN3paf2ui11ProgressBar13SetColor_coreERKNS_4math2v4E: 0x46988B62
-        - ScePafWidget_469B6AD9: 0x469B6AD9
+        - _ZN3paf2ui13ImageSlideBar8GetSoundEi: 0x469B6AD9
         - _ZN3paf2ui3Box18calc_origin_offsetERKNS_4math2v4ES5_jjj: 0x46B4387F
         - ScePafWidget_46CD91F6: 0x46CD91F6
         - _ZN3paf2ui16ScrollViewParentC1EPNS0_6WidgetEPNS2_11CreateParamE: 0x46DE1318
@@ -4051,7 +4051,7 @@ ScePaf:
         - ScePafWidget_77E369F4: 0x77E369F4
         - ScePafWidget_77F1FDD5: 0x77F1FDD5
         - _ZN3paf2ui6Widget20CalcDistPointToPlaneERKNS_4math2v4ES5_S5_i: 0x780E51BE
-        - ScePafWidget_781068E0: 0x781068E0
+        - _ZN3paf2ui13ImageSlideBar8AddSoundEjRNS0_16WidgetSoundParam5SoundE: 0x781068E0
         - _ZN3paf2ui8listview7Segment12GenerateCellEii: 0x784D93ED
         - _ZN3paf2ui11ProgressBar11GetObjColorERNS_4math2v4Ei: 0x7853E6CD
         - _ZN3paf2ui20PadLongPressListener11OnPadUpdateEPKNS_11inputdevice3pad4DataES6_: 0x786C844F
@@ -5300,7 +5300,7 @@ ScePaf:
         - _ZNK3paf2ui11RadioButton9IsInheritEPKc: 0xFE7FF370
         - _ZN3paf2ui11Environment11GetSceneTopEiRNS_14_list_iteratorIPNS0_6WidgetENS_9allocatorIS4_EEEE: 0xFECBEF73
         - _ZN3paf2ui6Widget16HitDetectRoutingEPNS0_5EventERKNS_4math2v4ES7_PNS0_9TouchInfoEPNS0_7HitInfoE: 0xFECECAD1
-        - ScePafWidget_FF097495: 0xFF097495
+        - _ZN3paf2ui23ImageSlideBarSoundParamC2Ev: 0xFF097495
         - ScePafWidget_FF14BB05: 0xFF14BB05
         - _ZNK3paf2ui11ImageButton11GetBackPosXERKfS3_S3_: 0xFF1D5AE4
         - _ZN3paf2ui15StateButtonBase9SendEventEiiiii: 0xFF299003

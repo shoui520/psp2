@@ -153,7 +153,12 @@ public:
 	uint8_t reserved[8];
 	/* where the touch is (DirectBar's drag out of its bar) */
 	math::v2 m_pos;
-	uint8_t reserved_b[0x68];
+	uint8_t reserved_b[8];
+	/* the line through the scene under the touch, from its start to its end (ImageSlideBar's
+	   CalcHitLineToPlane) */
+	math::v4 m_line_start;
+	math::v4 m_line_end;
+	uint8_t reserved_c[0x40];
 };
 
 /* a widget's hold on a touch, kept by the Environment for each port and touch ID (names
