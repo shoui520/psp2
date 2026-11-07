@@ -966,8 +966,6 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui7NumSpin9IsInheritEPKc, "num_spin",
 		   _ZNK3paf2ui8SpinBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ItemSpin9IsInheritEPKc, "item_spin",
 		   _ZNK3paf2ui8SpinBase9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui14ScrollBarTouch9IsInheritEPKc, "scrollbar_touch",
-		   _ZNK3paf2ui9ScrollBar9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui10ScrollView9IsInheritEPKc, "scroll_view",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8FileList9IsInheritEPKc, "file_list",
@@ -1096,11 +1094,6 @@ int ScePafWidget_17BFAECF(void *self)
 int _ZN3paf2ui10ScrollView13GetViewParentEv(void *self)
 {
 	return WidgetInvokeSlot(self, 140);
-}
-
-int _ZN3paf2ui14ScrollBarTouch16OnDragMoveSliderEPNS0_5EventE(void *self)
-{
-	return WidgetInvokeSlot(self, 484);
 }
 
 int ScePafWidget_BDEF4D3F(void *self)
@@ -1298,14 +1291,6 @@ void *_ZN3paf2ui14ScrollViewBase4SnapC2ERKNS0_19ScrollViewSnapPointE(uint8_t *re
 	sce_paf_widget_serial_13cd8 = previous + 1;
 	*(uint32_t *)(result + 8) = previous;
 	return result;
-}
-
-int _ZN3paf2ui14ScrollBarTouch17SetPageScrollModeENS1_14PageScrollModeE(uint8_t *self, uint32_t value)
-{
-	if ((int32_t)value < 0 || (int32_t)value > 2)
-		return -2136014706;
-	*(uint32_t *)(self + 716) = value;
-	return 0;
 }
 
 static inline __attribute__((always_inline))

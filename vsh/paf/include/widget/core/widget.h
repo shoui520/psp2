@@ -324,6 +324,24 @@ public:
 	vector<Sound> m_sound_list;
 };
 
+}
+
+/* Sony's build calls the push of a sound everywhere (0x81224cf0) rather than inlining it. */
+template<>
+inline __attribute__((noinline)) int
+vector<ui::WidgetSoundParam::Sound>::push_back(const ui::WidgetSoundParam::Sound &val)
+{
+	int result;
+
+	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
+		new (&ptr[count]) ui::WidgetSoundParam::Sound(val);
+		result = ++count;
+	}
+	return result;
+}
+
+namespace ui {
+
 /*
  * The focus cursor of a widget: its shape, the offset, size and rotation it
  * takes, for each resolution in the arrays, and its texture (names ours).
