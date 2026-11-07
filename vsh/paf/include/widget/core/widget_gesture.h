@@ -133,6 +133,34 @@ public:
 	virtual bool ScaleFlick(float *x, float *y);
 };
 
+/* the flick parameters every drag gesture listener points to, made once (vtable 812F6CC8;
+   names ours): m_value[3] scales a mochi gesture's velocity, the others' meaning is open */
+class DragFlickParam {
+public:
+	DragFlickParam()
+	{
+		m_value[0] = 45.0f;
+		m_value[1] = 45.0f;
+		m_value[2] = 240.0f;
+		m_value[3] = 1000.0f;
+		m_value[5] = 1000.0f;
+		m_value[4] = 80.0f;
+	}
+
+	virtual ~DragFlickParam()
+	{
+	}
+
+	static DragFlickParam &Get()
+	{
+		static DragFlickParam s_param;
+
+		return s_param;
+	}
+
+	float m_value[6];
+};
+
 extern "C" {
 /* the widget's gesture listener of the type for the touch, made with the rect where it has
    none (no name found) */

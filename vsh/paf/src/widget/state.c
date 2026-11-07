@@ -222,13 +222,6 @@ int _ZN3paf2ui16ProgressBarTouch18SetLabelSliderModeENS0_11ProgressBar9LabelMode
 	return 0;
 }
 
-int ScePafWidget_CEBDCDB3(const uint8_t *self, const uint8_t *other)
-{
-	return other &&
-		*(const uint32_t *)(self + 636) ==
-		(uint8_t)*(const uint32_t *)(other + 8);
-}
-
 int _ZN3paf2ui11Environment15IsTermAvailableEv(const uint8_t *self)
 {
 	return !*(const uint32_t *)(self + 44) &&

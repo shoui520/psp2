@@ -416,10 +416,13 @@ public:
 /* the focus of the widgets under one that holds it (names ours) */
 class FocusRoot {
 public:
-	/* what SetFocusRootState sets */
+	/* what SetFocusRootState sets; the widget under it that has the focus (ReleaseFocus,
+	   ScrollViewBase's focus moves) */
 	uint32_t m_state;
 	/* the widget that takes the focus first */
 	Widget *m_init_focus;
+	/* cleared where a scroll view moves the focus by its own search (name ours) */
+	uint32_t m_focus_moved;
 };
 
 /*
@@ -1166,6 +1169,8 @@ public:
 	Widget *FindChild(const IDParam &id, int32_t option);
 	/* the widget where it is one of its descendants, else NULL */
 	Widget *FindChild(Widget *child, int32_t option);
+	/* the focus taken off it: -1 where it has none */
+	int32_t ReleaseFocus();
 	/* the child at the index in m_children */
 	Widget *GetChild(int32_t index) const;
 	AnimQueue *FindAnim(int32_t id);
@@ -1257,7 +1262,8 @@ public:
 	/* a composite button takes its focus switch events itself (CompositeButton's ctor and
 	   EnableFocusEvent; name ours) */
 	bool m_composite_focus : 1;
-	bool reserved3z5 : 1;
+	/* a scroll view searches the focus from it (ScrollViewBase::SearchFocus; name ours) */
+	bool m_focus_searching : 1;
 	bool reserved3z6 : 1;
 	/* drawn before its children, not after (Camera's draw walk; name ours) */
 	bool m_draw_before_children : 1;

@@ -229,19 +229,33 @@ public:
 	virtual bool TrackDrag(Event *e);
 	/* the views moved by gesture 0x16, the touch's pan, by its move (E0FAE144; name ours) */
 	virtual bool TrackPan(Event *e);
-	virtual bool ScePafWidget_4770835D(Event *e);
-	virtual bool ScePafWidget_1DA7A46A(Event *e);
-	virtual bool ScePafWidget_423AF7BA(Event *e);
-	virtual bool ScePafWidget_E6DD4083(Event *e);
-	virtual bool ScePafWidget_F8E68E31(Event *e);
-	virtual bool ScePafWidget_422E30D5(Event *e);
-	virtual bool ScePafWidget_0F056788(Event *e);
-	virtual bool ScePafWidget_33742E18(Event *e);
-	virtual bool ScePafWidget_797EE334(Event *e);
-	virtual bool ScePafWidget_7B155BE4(Event *e);
-	virtual bool ScePafWidget_08D85CB4(Event *e);
-	virtual bool ScePafWidget_2FDBFE08(Event *e);
-	virtual bool ScePafWidget_CEBDCDB3(Event *e);
+	/* a text box in the view begins editing: the view padded above the IME, the text box
+	   kept in sight (TextBoxImeListener::EVENT_EDIT_BEGIN; 4770835D, name ours) */
+	virtual bool OnEditBegin(Event *e);
+	/* the text box ends editing: the IME padding off (EVENT_EDIT_END; 1DA7A46A, name ours) */
+	virtual bool OnEditEnd(Event *e);
+	/* the IME opened, resized or edited: the padding fitted to its rectangle, the text box
+	   kept in sight (EVENT_IME_OPEN to EVENT_IME_EDIT; 423AF7BA, name ours) */
+	virtual bool OnImeEvent(Event *e);
+	/* the up, down, left and right keys pressed or repeated: the focus moved that way while
+	   no touch is tracked (E6DD4083, F8E68E31, 422E30D5, 0F056788; names ours) */
+	virtual bool OnUpKey(Event *e);
+	virtual bool OnDownKey(Event *e);
+	virtual bool OnLeftKey(Event *e);
+	virtual bool OnRightKey(Event *e);
+	/* the focus events 0x401 to 0x404 (HandleFocusEvent; names ours): the focus coming in
+	   given to the widget the view's pending move finds; 0x402 and 0x403 not taken; the
+	   focus going out moving the view on where it can still scroll, and passed to the
+	   parent views (33742E18, 797EE334, 7B155BE4, 08D85CB4) */
+	virtual bool OnFocusIn(Event *e);
+	virtual bool OnFocusEnter(Event *e);
+	virtual bool OnFocusLeave(Event *e);
+	virtual bool OnFocusOut(Event *e);
+	/* the tracked touch flicked: the views captured and dragged by the flick's velocity over
+	   a frame (gesture 3; 2FDBFE08, name ours) */
+	virtual bool OnFlick(Event *e);
+	/* gesture 7 taken where it is on the tracked touch (CEBDCDB3; name ours) */
+	virtual bool TakeTrackedGesture(Event *e);
 	virtual bool MochiBegin(Event *e);
 	virtual bool MochiMove(Event *e);
 	virtual bool ScePafWidget_3196DEE8(Event *e);
@@ -274,7 +288,8 @@ public:
 	virtual void ScePafWidget_E9C7617A(uint32_t touch_id);
 	/* the touch released: the view flicked in the direction, at the velocity */
 	virtual void ScePafWidget_D9FE36A6(int32_t id, const math::v2 &dir, const math::v2 &velocity);
-	virtual void ScePafWidget_AD706F2A();
+	/* the focus moved in the direction, from the widget or the focus (no name found) */
+	virtual bool ScePafWidget_AD706F2A(const math::v2 &dir, Widget *from);
 	virtual void ScePafWidget_22EF63CE();
 	virtual void ScePafWidget_B6CECFDF();
 
@@ -329,6 +344,19 @@ public:
 	/* the half view, the positions the view is kept in and the axes it fits along, from its
 	   size (ScePafWidget 2A1C86B1; name ours) */
 	void UpdateViewLimit();
+	/* the view moved to show the rectangle above the IME, over the timer where one is given;
+	   the timer is the view's (ScePafWidget 11A7D5E8; name ours) */
+	void ScrollToRect(const math::rect &rect, Timer *timer);
+	/* the padding in use, the IME's included, and the scroll box from it (ScePafWidget
+	   7D7D54F5; name ours) */
+	void UpdatePadding();
+	/* the padding, the limits, the layout and the range brought up to date with the IME (name
+	   ours) */
+	void UpdateImeLayout();
+	/* the view padded above the IME while on (ScePafWidget E42A2262; name ours) */
+	void SetImePadding(bool on);
+	/* the IME's height taken from its rectangle (ScePafWidget 06315921; name ours) */
+	void SetImeRect(const math::rect &rect);
 
 	/* the nearest scroll view it sits in, NULL for none (ScePafWidget 5CB1000F; name ours) */
 	ScrollViewBase *GetParentView();
@@ -339,6 +367,9 @@ public:
 	/* the focus kept within the view's limits, at the center along the axes that fit where
 	   center_fit is set (ScePafWidget 1EB87BE1; name ours) */
 	ScrollViewFocusLimit LimitFocus(const math::v2 &focus, bool center_fit);
+	/* the widget the focus goes to in the direction, from the widget or the focus; NULL for
+	   none or itself (name ours) */
+	Widget *SearchFocus(const math::v2 &dir, Widget *from);
 
 	void ResetScrollBar(ScrollBar *&scroll_bar, ScrollBar *next_bar);
 	list<Snap>::iterator FindSnapPoint(int32_t snap_id);
@@ -663,6 +694,10 @@ public:
 	math::v4 m_manual_view_box;
 	int32_t m_auto_bound;
 };
+
+/* the focus taken off the widget's focus root's focus where it is not the environment's focus
+   target (name ours) */
+void ReleaseRootFocus(Widget *widget);
 
 }
 }
