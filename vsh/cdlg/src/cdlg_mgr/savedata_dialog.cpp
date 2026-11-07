@@ -15,10 +15,6 @@
 #include "common_dialog_mgr.h"
 #include "common_dialog_mgr_internal.h"
 
-/* no work memory for the call, or another call took it */
-#define SAVEDATA_DIALOG_ERROR_NO_WORK_MEMORY	-2146432222	/* 0x80100B22 */
-#define SAVEDATA_DIALOG_ERROR_API_NAME		-2146432223	/* 0x80100B21 */
-
 /* the draw priority the dialog asks checkCommonParam for */
 #define SAVEDATA_DIALOG_PRIORITY		229
 

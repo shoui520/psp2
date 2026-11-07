@@ -32,6 +32,11 @@
 #define COMMON_DIALOG_ERROR_LOCK_FAILED			-2147351327	/* 0x800204E1 */
 #define COMMON_DIALOG_ERROR_UNLOCK_FAILED		-2147351326	/* 0x800204E2 */
 
+/* the save data and net check dialogs' calls: no work memory, or another
+   call took it */
+#define SAVEDATA_DIALOG_ERROR_NO_WORK_MEMORY		-2146432222	/* 0x80100B22 */
+#define SAVEDATA_DIALOG_ERROR_API_NAME			-2146432223	/* 0x80100B21 */
+
 /*
  * The kernel's sceKernelCreateThread option (threadmgr/threadmgr.h): the
  * memory types of the user stack and the TLS, which the SDK's option lacks.
