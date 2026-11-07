@@ -85,7 +85,8 @@ def main():
             raise SystemExit(1)
         if any(h['type'] in (4, 17) for h in elfsections.Sections(candidate.read_bytes()).headers):
             converted = candidate.with_suffix('.rel.o')
-            converted.write_bytes(elfsections.object_for_ld(candidate.read_bytes()))
+            converted.write_bytes(elfsections.object_for_ld(
+                candidate.read_bytes(), split=sonycc.STRIP_UNUSED in defines))
             candidate = converted
         link[index] = str(candidate)
     if source_compilers:

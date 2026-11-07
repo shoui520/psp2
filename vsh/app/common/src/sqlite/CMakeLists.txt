@@ -52,3 +52,8 @@ add_dependencies(vs0_sys_external_sqlite vs0_sys_external_sqlite_core)
 # sqlite3.h by name, as Sony's os_psp2.c includes it
 target_include_directories(vs0_sys_external_sqlite PRIVATE "${CMAKE_CURRENT_BINARY_DIR}"
 	"${PSP2_SRC}/contrib/sqlite-3.7.6.3" "${PSP2_SRC}/vsh/paf/include")
+# Sony linked with psp2ld --strip-unused, which drops the functions nothing references
+# (sqlite3_vsnprintf, sqlite3_blob_reopen, sqlite3_stmt_readonly, the sqlite3_wal_* entry
+# points, libsnc's __modsi3 and __aeabi_idiv0): a section per SNC function, and --gc-sections
+target_compile_definitions(vs0_sys_external_sqlite PRIVATE PSP2_STRIP_UNUSED)
+target_link_options(vs0_sys_external_sqlite PRIVATE -Wl,--gc-sections)

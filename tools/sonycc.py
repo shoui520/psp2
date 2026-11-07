@@ -49,6 +49,11 @@ SNC_DEFINES = ('-DSCE_DEPRECATED(n)=n', '-DSCE_DEPRECATED_EX(n,c)=n',
 GCC48_SOURCE = '-DPSP2_COMPILER_GCC48'
 
 
+# a module that links with --gc-sections as Sony's did with psp2ld --strip-unused: its SNC
+# objects get a section per function (elfsections.object_split_text)
+STRIP_UNUSED = '-DPSP2_STRIP_UNUSED'
+
+
 def source_compiler(defines, kind):
 	"""The compiler of one source: GCC 4.8 where its defines say so, else the module's."""
 	return 'gcc48' if GCC48_SOURCE in defines else kind
@@ -163,7 +168,8 @@ def snc(argv):
 	if not compile_one(src, out, kind, options['defines'], options['includes'], options['opt'],
 			   extra=options['extra'], mode=options['mode'] if kind == 'gcc48' else 'thumb'):
 		return 1
-	out.write_bytes(elfsections.object_for_ld(out.read_bytes()))
+	out.write_bytes(elfsections.object_for_ld(out.read_bytes(),
+							  split=STRIP_UNUSED in options['defines']))
 	if '-MF' in argv:
 		# SNC's own dependency output is not used: the object depends on its source
 		Path(argv[argv.index('-MF') + 1]).write_text(f'{out}: {ROOT / src if kind == "gcc48" else src}\n')
