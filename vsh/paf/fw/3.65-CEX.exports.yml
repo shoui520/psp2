@@ -3033,7 +3033,7 @@ ScePaf:
         - _ZN3paf2ui5PlaneD0Ev: 0x095D6851
         - _ZN3paf2ui4Text18GetLayoutAttributeENS_5graph19TextLayoutAttributeERNS_4math2v2E: 0x09B7286A
         - _ZN3paf2ui16ScrollViewParent11RemoveChildEPNS0_6WidgetE: 0x0A0C3210
-        - ScePafWidget_0A178775: 0x0A178775
+        - _ZN3paf2ui10PlaneParam3SetEv: 0x0A178775
         - _ZN3paf2ui21ScrollBar2dStyleParam7GetEachEPNS0_6WidgetE: 0x0A2EF387
         - _ZN3paf2ui15PlaneStyleParamC2Ev: 0x0A46AD43
         - _ZN3paf2ui8listview7CellMap4FindEPNS1_4CellE: 0x0A4B2AA3
@@ -3175,7 +3175,7 @@ ScePaf:
         - _ZN3paf2ui6Widget14SetAlignOffsetERKNS_4math2v4EPNS_5TimerEiifPFvS7_PNS0_12AnimListenerEPvSA_SA_ESA_: 0x19F594F5
         - _ZN3paf2ui12AnimListener13PropOriginSetEPS1_NS_4math2v4E: 0x1A0AA64F
         - _ZN3paf2ui10ButtonBase10SetTextureERKNS_13intrusive_ptrINS_5graph7SurfaceEEEij: 0x1A140164
-        - ScePafWidget_1A2ACD70: 0x1A2ACD70
+        - _ZN3paf2ui3Box18SetSize_core_forceERKNS_4math2v4Ejb: 0x1A2ACD70
         - _ZNK3paf2ui16AppIconBaseParam12GetParamNameEv: 0x1A6516AF
         - _ZN3paf2ui5PlaneC1EPNS0_6WidgetEPNS2_11CreateParamE: 0x1A678CB4
         - ScePafWidget_1A6D5164: 0x1A6D5164
@@ -3925,7 +3925,7 @@ ScePaf:
         - ScePafWidget_69E33AF3: 0x69E33AF3
         - _ZN3paf2ui6Widget18CalcDistLineToLineERKNS_4math2v4ES5_S5_S5_PS3_S6_: 0x6A05D02D
         - _ZNK3paf2ui8filelist10Visualizer11GetTypeNameEv: 0x6A0674B4
-        - ScePafWidget_6A222804: 0x6A222804
+        - _ZN3paf2ui5Plane10SetSurfaceERKNS_13intrusive_ptrINS_5graph7SurfaceEEEi: 0x6A222804
         - _ZN3paf2ui8ListView16FreeCellPositionEiib: 0x6A2A7BDC
         - ScePafWidget_6A60296B: 0x6A60296B
         - _ZNK3paf2ui6Widget11GetTypeNameEv: 0x6A74B572
@@ -3989,7 +3989,7 @@ ScePaf:
         - _ZN3paf2ui11Environment4InitEv: 0x71F214AD
         - _ZN3paf2ui11ProgressBarD2Ev: 0x71F4BE03
         - _ZN3paf2ui8RadioBox16CBDestroyCheckedEPNS0_6WidgetEPv: 0x722CAC54
-        - ScePafWidget_7239B876: 0x7239B876
+        - _ZN3paf2ui6Widget11SetPos_coreERKNS_4math2v4Ejb: 0x7239B876
         - _ZN3paf2ui4Text8TypeNameEv: 0x723F6A4C
         - _ZN3paf2ui8FileList11DisposeItemERNS0_8listview11ItemFactory12DisposeParamE: 0x7261FFA4
         - _ZN3paf2ui18BusyIndicatorParamC2Ev: 0x726D02B1
@@ -5250,7 +5250,7 @@ ScePaf:
         - _ZN3paf2ui9AppIcon2d8TypeNameEv: 0xF9AAAC6D
         - _ZN3paf2ui6Widget17calc_align_offsetERKNS_4math2v4ES5_jjj: 0xF9AAD70E
         - ScePafWidget_F9B56FFF: 0xF9B56FFF
-        - ScePafWidget_F9BDDCE4: 0xF9BDDCE4
+        - _ZN3paf2ui10PlaneParam3GetEv: 0xF9BDDCE4
         - _ZNK3paf2ui8Supplier9IsInheritEPKc: 0xFA0BFE83
         - _ZNK3paf2ui5Scene9IsInheritEPKc: 0xFA17CA06
         - ScePafWidget_FA21D400: 0xFA21D400

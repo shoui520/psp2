@@ -557,32 +557,6 @@ uint8_t *_ZN3paf2ui6Widget9FindChildEPS1_i(uint8_t *self, uint8_t *value, int32_
 	return value;
 }
 
-uint8_t *_ZN3paf2ui3Box18AddToExclusiveListEPNS0_6WidgetE(uint8_t *self, uint8_t *item)
-{
-	int8_t flags = *(int8_t *)(item + 404);
-
-	if (!(flags & 1)) {
-		item[404] = flags | 1;
-		self = *(uint8_t **)(self + 532);
-		if (self)
-			self[12] |= 1;
-	}
-	return self;
-}
-
-uint8_t *_ZN3paf2ui3Box23DeleteFromExclusiveListEPNS0_6WidgetE(uint8_t *self, uint8_t *item)
-{
-	int8_t flags = *(int8_t *)(item + 404);
-
-	if (flags & 1) {
-		item[404] = flags & ~1;
-		self = *(uint8_t **)(self + 532);
-		if (self)
-			self[12] |= 1;
-	}
-	return self;
-}
-
 uint8_t *_ZN3paf2ui6Widget19NotifyAnimatorDirtyEj(uint8_t *self, uint16_t mask)
 {
 	uint16_t flags = *(uint16_t *)(self + 574);
@@ -869,17 +843,6 @@ uint32_t *_ZN3paf2ui8Animator6FinishEv(void)
 	return &sce_paf_widget_state_142d8;
 }
 
-int _ZN3paf2ui3Box15anchor_to_orignEj(void *self, unsigned int value)
-{
-	if (value <= 1) {
-		if (value)
-			return 1;
-	} else if (value <= 2) {
-		return 2;
-	}
-	return 0;
-}
-
 int _ZN3paf2ui11Environment25RegisterTouchDeviceRegionEjPNS0_6WidgetE(uint8_t *self, unsigned int index, int value)
 {
 	if (index >= 6)
@@ -1010,6 +973,9 @@ __attribute__((noinline)) int _ZNK3paf2ui4Text9IsInheritEPKc(const void *self, c
 }
 
 /* Type tags are compared by pointer identity in the native widget hierarchy. */
+/* Box's, in w_box.cpp; Dialog's calls it */
+int _ZNK3paf2ui3Box9IsInheritEPKc(const void *self, const char *type);
+
 #define DEFINE_WIDGET_TYPE(name, tag, parent) \
 __attribute__((noinline)) int name(const void *self, const char *type) \
 { \
@@ -1062,8 +1028,6 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui13SlidingDrawer9IsInheritEPKc, "sliding_drawer",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui5Plane9IsInheritEPKc, "plane",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui3Box9IsInheritEPKc, "box",
-		   _ZNK3paf2ui5Plane9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui13BusyIndicator9IsInheritEPKc, "busyindicator",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8PageTurn9IsInheritEPKc, "pageturn",
@@ -1828,7 +1792,7 @@ int ScePafWidget_670B0492(uint8_t *self)
 	return result;
 }
 
-int ScePafWidget_F9BDDCE4(uint8_t *self)
+int _ZN3paf2ui10PlaneParam3GetEv(uint8_t *self)
 {
 	int result = _ZN3paf2ui11WidgetParam3GetEv(self);
 

@@ -27,6 +27,27 @@ public:
 
 	virtual ~AnimListener();
 
+	/* the value it animates toward and from, by its semantic: none here */
+	virtual float *GetTargetF()
+	{
+		return NULL;
+	}
+
+	virtual math::v4 *GetTargetV4()
+	{
+		return NULL;
+	}
+
+	virtual float *GetStartF()
+	{
+		return NULL;
+	}
+
+	virtual math::v4 *GetStartV4()
+	{
+		return NULL;
+	}
+
 	Widget *m_widget;
 	AnimCB m_cb_anim;
 	AnimCB m_cb_finish;
@@ -37,6 +58,14 @@ public:
 };
 
 class AnimQueueBase : public TimerQueue {
+public:
+	/* the target of its last listener */
+	math::v4 *GetTargetV4()
+	{
+		AnimListener *l = (AnimListener *)GetBack();
+
+		return l != NULL ? l->GetTargetV4() : NULL;
+	}
 };
 
 class AnimQueue {

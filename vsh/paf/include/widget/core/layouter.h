@@ -29,12 +29,25 @@ public:
 	{
 	}
 
-	virtual ~Layouter();
+	virtual ~Layouter()
+	{
+	}
+
 	virtual int32_t OnUpdate_core();
 
 	void BindWidget(Widget *w)
 	{
 		m_widget = w;
+	}
+
+	bool IsDirty(uint32_t val)
+	{
+		return (m_dirty & val) != 0;
+	}
+
+	void SetDirty(uint32_t val)
+	{
+		m_dirty |= val;
 	}
 
 	static bool s_enter_layout;

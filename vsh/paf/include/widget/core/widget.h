@@ -782,6 +782,7 @@ public:
 	void SetGestureMask(uint32_t mask, bool update);
 	/* the size, on the axes adjusted to the scene its scene's, passed on to SetSize_core_force */
 	int32_t SetSize_core(const math::v4 &size, uint32_t notify_layout, bool force);
+	int32_t SetPos_core(const math::v4 &pos, uint32_t notify_layout, bool force);
 	void SetObjAnim(int32_t obj, int32_t id, const math::v4 &value, Timer *t, int32_t opt);
 
 	/* room for num draw objects (name ours) */
@@ -829,6 +830,10 @@ public:
 	}
 	math::v4 GetPos(int32_t opt, Widget *ref, const math::v4 &off_pos);
 	math::v4 GetPosCenter(int32_t opt, Widget *ref, const math::v4 &off_pos);
+	/* its anchor offset; with opt 1 the target of a running anchor animation */
+	math::v4 GetAnchorOffset(int32_t opt);
+	/* marks what its next update recalculates */
+	void SetUpdateParam(uint32_t param);
 	math::v4 GetRot(int32_t opt, Widget *ref, const math::v4 &off_rot, int32_t option);
 	math::v4 GetAlignOffsetToCenter(int32_t opt);
 	Camera *GetCamera() const;
@@ -952,7 +957,10 @@ public:
 	bool m_dim_held : 1;
 	uint8_t reserved3c0 : 7;
 	bool m_dim_held_enable : 1;
-	uint8_t reserved3[5];
+	/* its children not ready to draw yet, as CountPrepareChildren counted them; a box lays
+	   out only at 0 (name ours, after CountPrepareChildren) */
+	uint16_t m_prepare_count;
+	uint8_t reserved3[3];
 	/* what UpdateMatrix still has to make again: bits 0 to 2 (name after ScePaf-RE) */
 	uint8_t m_update_flag;
 	/* 0xff before a reverse transition (name after ScePaf-RE) */
@@ -985,7 +993,8 @@ public:
 	bool reserved3z5 : 1;
 	bool reserved3z6 : 1;
 	bool reserved3z7 : 1;
-	/* its parent writes it: WriteWidget writes only its children (names after ScePaf-RE) */
+	/* its parent writes it: WriteWidget writes only its children; a box does not lay it out
+	   (its exclusive list) (names after ScePaf-RE) */
 	bool m_parent_protected : 1;
 	/* made by a template (TemplateOpen); WriteWidget leaves it out */
 	bool m_under_template : 1;
