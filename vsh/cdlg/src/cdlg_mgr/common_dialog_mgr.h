@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <scetypes.h>
 #include <kernel/threadmgr.h>
+#include <cameraimport_dialog.h>
 #include <photoimport_dialog.h>
 #include <photoreview_dialog.h>
 #include <videoimport_dialog.h>
@@ -215,10 +216,23 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogPhotoReviewDrawPriority,
 			   __builtin_offsetof(CommonDialogPhotoReviewParam, drawPriority) == 2260);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogPhotoReviewSize, sizeof(CommonDialogPhotoReviewParam) == 2328);
 
+/* cameraimport_dialog.cpp: the caller's parameter, copies of what it points to (which
+   the copied parameter points to instead), the result for GetResult and the draw priority */
 typedef struct CommonDialogCameraImportParam {
-	SceUInt8 reserved[424];
+	SceCameraImportDialogParam param;
+	SceCameraImportDialogMemoryRawParam memRawParam;
+	SceCameraImportDialogMemoryJpegParam memJpegParam;
+	SceCameraImportDialogOverlayImage overlayImage;
+	SceCommonDialogColor bgColor;
+	SceCameraImportDialogResult result;
 	int drawPriority;
+	/* the API call that holds the dialog (CommonDialogApiScope) */
+	char apiName[64];
 } CommonDialogCameraImportParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCameraImportDrawPriority,
+			   __builtin_offsetof(CommonDialogCameraImportParam, drawPriority) == 424);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCameraImportSize, sizeof(CommonDialogCameraImportParam) == 492);
 
 typedef struct CommonDialogNpEulaParam {
 	SceUInt8 reserved[28];

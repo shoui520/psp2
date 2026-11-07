@@ -230,6 +230,8 @@ int SceSvcCtrl_077F8AF1(void);
 int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 SceUID sceGxmGetDisplayQueueThreadIdInternal(void);
 int sceGxmIsInitializationInternal(void);
+/* whether the GPU may use a range of memory; the flags say for what */
+int sceGxmCheckMemoryInternal(const void *base, SceSize size, SceUInt32 flags);
 int sceGxmRenderingContextIsWithinSceneInternal(void);
 
 #ifdef __cplusplus
