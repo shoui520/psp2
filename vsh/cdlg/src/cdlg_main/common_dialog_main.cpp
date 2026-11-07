@@ -234,8 +234,8 @@ Framework *createFramework(int dialogType)
 	param.surf_dev_mem_addr = NULL;
 	param.surf_dev_mem_size = 0;
 	if (g_work->hasConfig) {
-		param.locale = getLocale(g_work->language);
-		switch (g_work->enterButtonAssign) {
+		param.locale = getLocale(g_work->config.language);
+		switch (g_work->config.enterButtonAssign) {
 		case CDLG_ENTER_BUTTON_CIRCLE:
 			param.enter_button_assign = CDLG_ENTER_BUTTON_CIRCLE;
 			break;
@@ -286,9 +286,9 @@ void load_finish_callback(Plugin *plugin)
 	for (i = 0; i <= g_work->lastSlot; i++) {
 		if (sceClibStrcmp(plugin->m_name.c_str(), g_work->slot[i].pluginName) == 0) {
 			g_work->slot[i].plugin = plugin;
-			g_work->slot[i].status = COMMON_DIALOG_SLOT_RUNNING;
+			g_work->slot[i].state = COMMON_DIALOG_SLOT_RUNNING;
 			if (sceAtomicIncrement32AcqRel(&g_work->openCount) == 0 &&
-			    !g_work->keepInputLocked)
+			    !g_work->cdialogMode)
 				inputdevice::Unlock(0x7F);
 			return;
 		}
@@ -311,7 +311,7 @@ void unload_finish_callback(const char *name)
 			break;
 	}
 	CDLG_ASSERT(slot != NULL);
-	slot->status = COMMON_DIALOG_SLOT_UNLOADED;
+	slot->state = COMMON_DIALOG_SLOT_UNLOADED;
 	if (sceAtomicDecrement32AcqRel(&g_work->openCount) == 1) {
 		if (!g_work->frameworkShared) {
 			Framework::Instance()->UnLoadCommonResourceAsync(NULL);
@@ -328,7 +328,7 @@ void unload_finish_callback(const char *name)
 		ret = sceKernelSignalSema(g_work->frameworkSema, 1);
 		CDLG_ASSERT_RESULT(ret);
 	} else {
-		slot->closeState = COMMON_DIALOG_CLOSE_DONE;
+		slot->dialogStatus = SCE_COMMON_DIALOG_STATUS_FINISHED;
 	}
 	ret = sceKernelSignalSema(slot->doneSema, 1);
 	CDLG_ASSERT_RESULT(ret);
@@ -468,8 +468,8 @@ int OnFrameworkDestruction(int dialogType)
 		CDLG_ASSERT_RESULT(ret);
 		g_work->pafLoaded = false;
 	}
-	g_work->slot[0].status = COMMON_DIALOG_SLOT_FINISHED;
-	g_work->slot[0].closeState = COMMON_DIALOG_CLOSE_DONE;
+	g_work->slot[0].state = COMMON_DIALOG_SLOT_FINISHED;
+	g_work->slot[0].dialogStatus = SCE_COMMON_DIALOG_STATUS_FINISHED;
 	return SCE_OK;
 }
 
@@ -492,7 +492,7 @@ int OnPluginLoad(int dialogType)
 	info = findModuleInfo(dialogType);
 	info->setPluginParam(&param);
 	slot = &g_work->slot[i];
-	slot->status = COMMON_DIALOG_SLOT_LOADING;
+	slot->state = COMMON_DIALOG_SLOT_LOADING;
 	sceClibStrncpy(slot->pluginName, param.init.name.c_str(), sizeof(slot->pluginName));
 	g_work->slot[i].pluginName[sizeof(slot->pluginName) - 1] = '\0';
 	Plugin::LoadAsync(param.init, load_finish_callback, 0);
@@ -543,7 +543,7 @@ void hideDimmer(void *arg)
 __attribute__((noinline)) int setWork(CommonDialogWork *work)
 {
 	g_work = work;
-	g_work->slot[0].status = COMMON_DIALOG_SLOT_IDLE;
+	g_work->slot[0].state = COMMON_DIALOG_SLOT_IDLE;
 	g_work->initFunc = (void *)OnFrameworkCreation;
 	g_work->termFunc = (void *)OnFrameworkDestruction;
 	g_work->loadFunc = (void *)OnPluginLoad;
@@ -564,7 +564,7 @@ int SceCommonDialogMain_05EFC635(int dialogType)
 
 	if (i < 0)
 		return COMMON_DIALOG_ERROR_SLOT_NOT_FOUND;
-	if (sceAtomicCompareAndSwap32AcqRel(&g_work->slot[i].status,
+	if (sceAtomicCompareAndSwap32AcqRel(&g_work->slot[i].state,
 					    COMMON_DIALOG_SLOT_RUNNING,
 					    COMMON_DIALOG_SLOT_CLOSING) != COMMON_DIALOG_SLOT_RUNNING)
 		return COMMON_DIALOG_ERROR_SLOT_NOT_RUNNING;
@@ -578,7 +578,7 @@ __attribute__((noinline)) void *SceCommonDialogMain_DD2CAC30(int dialogType)
 
 	if (i < 0)
 		return NULL;
-	return g_work->slot[i].param;
+	return g_work->slot[i].workMemory;
 }
 
 bool SceCommonDialogMain_75F10F83(int dialogType)

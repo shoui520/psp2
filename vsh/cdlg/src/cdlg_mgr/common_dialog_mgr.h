@@ -1,10 +1,10 @@
 /*
  * The common dialog's work area: SceCommonDialog (libcdlg) keeps it and hands
- * it to SceCommonDialogMain (libcdlg_main) when its worker thread loads that
- * module; the main module fills in the callbacks the worker thread runs. One
- * slot per dialog that can be open at once. No Sony record names the
- * structures or their fields: the names are ours, after their readers and
- * writers in both modules.
+ * it to SceCommonDialogMain (libcdlg_main) when the PafMain thread loads that
+ * module; the main module fills in the callbacks the PafMain thread runs. One
+ * slot per dialog that can be open at once: the first dialog, and the dialogs
+ * nested on it. No Sony record names the structures or their fields: the
+ * names are ours, after their readers and writers in both modules.
  */
 #ifndef CDLG_MGR_COMMON_DIALOG_MGR_H
 #define CDLG_MGR_COMMON_DIALOG_MGR_H
@@ -55,8 +55,10 @@ enum CommonDialogType {
 	COMMON_DIALOG_TYPE_VIDEOIMPORT = 28
 };
 
-/* CommonDialogSlot::status */
-enum CommonDialogSlotStatus {
+/* CommonDialogSlot::state: where the slot's dialog is (0: the slot is free) */
+enum CommonDialogSlotState {
+	COMMON_DIALOG_SLOT_FREE = 0,
+	COMMON_DIALOG_SLOT_RESERVED = 1,
 	COMMON_DIALOG_SLOT_IDLE = 2,
 	COMMON_DIALOG_SLOT_LOADING = 3,
 	COMMON_DIALOG_SLOT_RUNNING = 4,
@@ -74,27 +76,26 @@ enum CommonDialogSlotStatus {
 #define COMMON_DIALOG_ERROR_LOCK_NOT_OWNED	-2147351390	/* 0x800204A2 */
 #define COMMON_DIALOG_ERROR_INTERNAL		-2147351361	/* 0x800204BF */
 
-/* CommonDialogSlot::closeState */
-enum {
-	COMMON_DIALOG_CLOSE_DONE = 2
-};
-
-/* the worker thread's callbacks, set by SceCommonDialogMain (kept as void * in the work
+/* the PafMain thread's callbacks, set by SceCommonDialogMain (kept as void * in the work
    area, CommonDialogWork::initFunc ...) */
 typedef int (*CommonDialogInitFunc)(int dialogType);
 typedef int (*CommonDialogTermFunc)(int dialogType);
 typedef int (*CommonDialogLoadFunc)(int dialogType);
-typedef int (*CommonDialogStopFunc)(void);
+typedef int (*CommonDialogStopFunc)(int dialogType);	/* SceCommonDialogMain's ignores it */
 typedef int (*CommonDialogRunFunc)(void);
 typedef int (*CommonDialogUpdateFunc)(const void *updateParam);
 
 typedef struct CommonDialogSlot {
 	int dialogType;
-	int closeState;
+	/* SceCommonDialogStatus: what the dialog's GetStatus returns */
+	int dialogStatus;
 	int userData;
-	int32_t status;
-	SceUInt8 reserved16[8];
-	void *param;
+	/* CommonDialogSlotState */
+	int32_t state;
+	SceUInt8 reserved16[4];
+	/* the work memory the dialog's Init allocates (AllocateWorkMemory), and its base */
+	SceUID workMemoryBlock;
+	void *workMemory;
 	SceUInt8 reserved28[4];
 	bool paramReady;
 	SceUInt8 reserved33[3];
@@ -113,24 +114,36 @@ typedef struct CommonDialogColor {
 	SceUInt8 a;
 } CommonDialogColor;
 
-typedef struct CommonDialogWork {
-	bool hasConfig;
-	SceUInt8 reserved1[7];
+/* SceCommonDialogConfigParam, as sceCommonDialogSetConfigParam copies it */
+typedef struct CommonDialogConfig {
+	SceUInt32 sdkVersion;
 	int language;
 	int enterButtonAssign;
-	SceUInt8 reserved16[32];
+	SceUInt8 reserved[32];
+} CommonDialogConfig;
+
+typedef struct CommonDialogWork {
+	bool hasConfig;
+	SceUInt8 reserved1[3];
+	CommonDialogConfig config;
 	bool hasDimmerColor;
 	CommonDialogColor dimmerColor;
 	SceUInt8 reserved53[3];
 	int drawPriority;
-	bool keepInputLocked;
-	SceUInt8 reserved61[3];
+	/* the dialog runs in a game's common dialog mode (sceKernelIsCDialogAvailable, paf loaded):
+	   only the PafMain thread drives it, and the input stays intercepted */
+	bool cdialogMode;
+	/* the 1280x720 and the 1440 or 1920x1080 render targets are accepted */
+	bool allow720p;
+	bool allow1080p;
+	SceUInt8 reserved63[1];
 	int32_t openCount;
 	SceUInt32 lastSlot;
 	CommonDialogSlot slot[COMMON_DIALOG_SLOT_NUM];
 	bool frameworkShared;
 	bool pafLoaded;
-	SceUInt8 reserved434[6];
+	SceUInt8 reserved434[2];
+	SceUID pafMainThread;
 	SceUID frameworkSema;
 	void *initFunc;
 	void *termFunc;
@@ -138,14 +151,28 @@ typedef struct CommonDialogWork {
 	void *stopFunc;
 	void *runFunc;
 	void *updateFunc;
-	SceUInt8 reserved468[48];
+	SceUInt8 reserved468[4];
+	/* "SceCommonDialogPafUpdateMutex": the update callback against the PafMain thread's term */
+	SceKernelLwMutexWork updateMutex;
+	SceUInt8 reserved504[4];
+	/* the free budget at module start, and the main module's SDK version */
+	SceSize initialBudgetFree;
+	SceUInt32 sdkVersion;
 	/* SceCommonDialogFocusStatus: whether the system shows a focus */
 	int focusState;
 } CommonDialogWork;
 
+/* the layout both modules share */
+#define COMMON_DIALOG_LAYOUT_CHECK(name, cond)	typedef char name[(cond) ? 1 : -1]
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogSlotSize, sizeof(CommonDialogSlot) == 120);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogWorkSlot, __builtin_offsetof(CommonDialogWork, slot) == 72);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogWorkUpdateMutex,
+			   __builtin_offsetof(CommonDialogWork, updateMutex) == 0x1d8);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogWorkSize, sizeof(CommonDialogWork) == 0x208);
+
 /*
  * The parameters libcdlg keeps for the dialogs whose plugins draw at the
- * caller's priority (CommonDialogSlot::param): the SDK's parameter copied in,
+ * caller's priority (CommonDialogSlot::workMemory): the SDK's parameter copied in,
  * and what libcdlg adds. Only the draw priority SceCommonDialogMain reads is
  * laid out yet; the rest comes with libcdlg's dialogs.
  */
