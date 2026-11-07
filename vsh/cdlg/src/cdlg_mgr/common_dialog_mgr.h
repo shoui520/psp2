@@ -22,6 +22,7 @@
 #include <np_trophy_setup_dialog.h>
 #include <ime_dialog.h>
 #include <message_dialog.h>
+#include <near_dialog_util.h>
 #include <np/np_common.h>
 #include <net.h>
 #include <libkernel/libkernel.h>
@@ -619,5 +620,102 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogGameCustomDataSentNpId,
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogGameCustomDataDrawPriority,
 			   __builtin_offsetof(CommonDialogGameCustomDataParam, drawPriority) == 2396);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogGameCustomDataSize, sizeof(CommonDialogGameCustomDataParam) == 2468);
+
+/* the gift ID the download mode receives, as the work memory keeps it */
+#define NEAR_DIALOG_GIFT_ID_LEN		127
+
+/* the near dialog's message dialog: a system message's type, the user message and the error code,
+   as the plugin's states ask for them, with the results the check-in's end screen shows */
+typedef struct NearDialogFinishInfo {
+	SceInt32 postCount;
+	/* the country whose number format the distances take */
+	char country[4];
+	/* metres */
+	SceFloat totalDistance;
+	SceFloat todayDistance;
+	/* the distances are shown in miles */
+	SceInt32 imperial;
+} NearDialogFinishInfo;
+
+typedef struct NearDialogMsgParam {
+	SceInt32 mode;
+	SceInt32 sysMsgType;
+	SceInt32 errorCode;
+	NearDialogFinishInfo finishInfo;
+	SceUInt8 reserved[4];
+	SceChar8 msg[1024];
+	SceUInt8 reservedMsg[4];
+} NearDialogMsgParam;
+
+/* the check-in's status (NearCheckinLib::GetCheckinStatus): each step's result, the error, and the
+   end screen's results once it has finished */
+typedef struct NearCheckinStatus {
+	SceInt32 stepResult[4];
+	SceInt32 errorCode;
+	bool postedBefore;
+	SceUInt8 padding[3];
+	SceInt32 postType;
+	bool finished;
+	SceUInt8 padding2[3];
+	NearDialogFinishInfo finishInfo;
+} NearCheckinStatus;
+
+/* the gift download's status (NearCheckinLib::GetItemDownloadStatus) */
+typedef struct NearItemDownloadStatus {
+	bool finished;
+	SceUInt8 padding[3];
+	SceUInt32 rate;
+	SceInt32 errorCode;
+} NearItemDownloadStatus;
+
+/*
+ * near_dialog.cpp: the work memory (CommonDialogSlot::workMemory), which the near dialog's plugin
+ * (libcdlg_near) reads too: the plugin's state and what it is asked to do, the close and abort
+ * requests, the check-in job's state, the caller's parameter, the message dialog the state asks
+ * for and its progress, the check-in's and the download's status, the gift ID, and the result for
+ * GetResult.
+ */
+typedef struct CommonDialogNearParam {
+	SceInt32 state;
+	SceInt32 errorCode;
+	SceUInt32 flags;
+	/* the dialog is to close (1, Abort's request too) and has been closed (2) */
+	SceInt32 closeRequest;
+	bool abortRequested;
+	/* the plugin cancelled the check-in and waits for it to finish */
+	bool cancelling;
+	/* SCE_NEAR_DIALOG_MODE_UPDATE_RETRY */
+	bool retry;
+	/* the check-in posted content the user wrote */
+	bool userContentPosted;
+	/* the check-in job: none, running, called back, finished */
+	SceInt32 jobState;
+	SceNearDialogParam param;
+	NearDialogMsgParam msgParam;
+	SceInt32 progressTarget;
+	SceUInt32 progressRate;
+	/* the result a check-in or download start passed its callback */
+	SceInt32 startResult;
+	NearCheckinStatus checkinStatus;
+	/* the result of the step the state waited for */
+	SceInt32 stepResult;
+	NearItemDownloadStatus downloadStatus;
+	SceInt32 downloadResult;
+	char giftDiscoveringId[NEAR_DIALOG_GIFT_ID_LEN + 1];
+	SceNearDialogResult result;
+	char apiName[64];
+} CommonDialogNearParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(NearDialogParamSize, sizeof(SceNearDialogParam) == 120);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNearMsgParam, __builtin_offsetof(CommonDialogNearParam, msgParam) == 144);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNearProgress,
+			   __builtin_offsetof(CommonDialogNearParam, progressTarget) == 1208);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNearCheckinStatus,
+			   __builtin_offsetof(CommonDialogNearParam, checkinStatus) == 1220);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNearDownloadStatus,
+			   __builtin_offsetof(CommonDialogNearParam, downloadStatus) == 1276);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNearGiftId,
+			   __builtin_offsetof(CommonDialogNearParam, giftDiscoveringId) == 1292);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNearSize, sizeof(CommonDialogNearParam) == 1524);
 
 #endif
