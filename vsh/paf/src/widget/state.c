@@ -990,8 +990,6 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui16ProgressBarTouch9IsInheritEPKc, "progressbar_tou
 		   _ZNK3paf2ui11ProgressBar9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ListItem9IsInheritEPKc, "list_item",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui9DirectBar9IsInheritEPKc, "directbar",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui11PlaneButton9IsInheritEPKc, "plane_button",
 		   _ZNK3paf2ui10ButtonBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RadioBox9IsInheritEPKc, "radio_box",
