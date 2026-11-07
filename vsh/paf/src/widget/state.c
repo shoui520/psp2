@@ -220,47 +220,6 @@ int _ZN3paf2ui7TextBox25SetEditAutoTransitionModeEb(uint8_t *self, uint8_t value
 	return 0;
 }
 
-uint32_t ScePafWidget_81FE70D6(const uint8_t *self, int32_t index)
-{
-	if (index < 0 || index > 2)
-		return 0;
-	return ((const uint32_t *)*(const void *const *)(self + 636))[index + 1];
-}
-
-int ScePafWidget_02A5FA8E(const uint8_t *self, int32_t index)
-{
-	if (index < 0 || index > 2)
-		return -2136014706;
-	((uint32_t *)*(void *const *)(self + 636))[index + 1] = 0;
-	return 0;
-}
-
-int ScePafWidget_28D9B1FE(uint8_t *self, int32_t index)
-{
-	if (index < 0 || index > 1)
-		return -2136014706;
-	*(uint32_t *)(self + 652) = index;
-	return 0;
-}
-
-int ScePafWidget_E636C722(const uint8_t *self, uint32_t *result,
-			      int32_t index)
-{
-	if (index < 0 || index > 2)
-		return -2136014706;
-	*result = ((const uint32_t *)(self + 672))[index];
-	return 0;
-}
-
-int ScePafWidget_B86ADE3E(const uint8_t *self, uint32_t *result,
-			      int32_t index)
-{
-	if (index < 0 || index > 2)
-		return -2136014706;
-	*result = ((const uint32_t *)(self + 684))[index];
-	return 0;
-}
-
 int _ZN3paf2ui16ProgressBarTouch18SetLabelSliderModeENS0_11ProgressBar9LabelModeE(uint8_t *self, int32_t index)
 {
 	if (index < 0 || index > 2)
@@ -988,8 +947,7 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RichText9IsInheritEPKc, "rich_text",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
 /* ImageSlideBar's is C++ (w_image_slidebar.cpp) */
 int _ZNK3paf2ui13ImageSlideBar9IsInheritEPKc(const void *self, const char *type);
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui8SlideBar9IsInheritEPKc, "slidebar",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+/* SlideBar's is C++ (w_slidebar.cpp) */
 /* CornerButton's is C++ (w_corner_button.cpp) */
 /* Dialog's is C++ (w_dialog.cpp) */
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui7TextBox9IsInheritEPKc, "text_box",
@@ -1084,11 +1042,6 @@ int WidgetInvokeSlot(void *self, uint32_t offset)
 int _ZN3paf2ui11PlaneButton16UpdateAdjustSizeEv(void *self)
 {
 	return WidgetInvokeSlot(self, 448);
-}
-
-int ScePafWidget_17BFAECF(void *self)
-{
-	return WidgetInvokeSlot(self, 468);
 }
 
 int _ZN3paf2ui10ScrollView13GetViewParentEv(void *self)
@@ -1454,21 +1407,6 @@ void *_ZN3paf2ui8ListItem11GetListItemEPNS0_6WidgetE(const uint8_t *self)
 	return 0;
 }
 
-int ScePafWidget_7B743729(uint8_t *self, int32_t value)
-{
-	const uint8_t *vtable;
-
-	if (value <= 0)
-		return -2136014706;
-	*(int32_t *)(self + 656) = value;
-	vtable = *(const uint8_t *const *)self;
-	((void (*)(void *, uint32_t, int))*(void *const *)(vtable + 392))(
-		self, *(uint32_t *)(self + 660), 0);
-	vtable = *(const uint8_t *const *)self;
-	((void (*)(void *, int))*(void *const *)(vtable + 444))(self, 2);
-	return 0;
-}
-
 int _ZN3paf2ui8filelist16CellListAccessor8SetFocusEiNS0_8ListView14FocusAlignTypeEPNS_5TimerE(uint8_t *self, uint32_t first,
 			     uint32_t second, uint32_t third)
 {
@@ -1510,14 +1448,6 @@ int ScePafWidget_97020684(uint8_t *self)
 	return 0;
 }
 
-int ScePafWidget_ECC76080(uint8_t *self, float *output, int32_t index)
-{
-	if (index < 0 || index > 2)
-		return -2136014706;
-	*output = *(const float *)(self + 696 + 4 * index);
-	return 0;
-}
-
 uint32x4_t *_ZN3paf2ui15AnimListenerObj13PropObjRotGetEPNS0_12AnimListenerE(uint32x4_t *result,
 					  const uint8_t *self)
 {
@@ -1534,19 +1464,6 @@ uint8_t *ScePafWidget_0DCB8EA5(uint8_t *self, float seconds)
 		seconds = 200.0f;
 	*(float *)(self + 976) = seconds;
 	return self;
-}
-
-int ScePafWidget_A38D5EAB(uint8_t *self, uint32_t value, uint8_t flag)
-{
-	const uint8_t *vtable = *(const uint8_t *const *)self;
-
-	*(uint32_t *)(self + 660) = value;
-	((void (*)(uint8_t *, uint32_t))*(void *const *)(vtable + 436))(
-		self, value);
-	vtable = *(const uint8_t *const *)self;
-	((void (*)(uint8_t *, int))*(void *const *)(vtable + 440))(
-		self, flag);
-	return 0;
 }
 
 int _ZN3paf2ui14ScrollViewBase19OnViewLayoutUpdatedEb(uint8_t *self, uint8_t execute)

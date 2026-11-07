@@ -602,6 +602,11 @@ public:
 		{
 		}
 
+		DrawObjEntry(const common::SharedPtr<graph::DrawObj> &obj, uint32_t id)
+			: m_obj(obj), m_attr(id)
+		{
+		}
+
 		DrawObjEntry(const common::SharedPtr<graph::DrawObj> &obj, const DrawObjAttr &attr)
 			: m_obj(obj), m_attr(attr)
 		{
@@ -1177,7 +1182,8 @@ public:
 	/* the focus moves to it within its group (ButtonBaseStyleParam's "focus_in_group"; name
 	   after it) */
 	bool m_focus_in_group : 1;
-	bool reserved3y4 : 1;
+	/* events are dispatched to it first, before its descendants (EventExecDispatch; name ours) */
+	bool m_pre_dispatch : 1;
 	bool reserved3y5 : 1;
 	/* a list view's drag has begun (ListView::BeginDrag sets it; name ours) */
 	bool m_drag_begun : 1;
