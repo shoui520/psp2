@@ -13,16 +13,6 @@
 #include "common_dialog_mgr.h"
 #include "common_dialog_mgr_internal.h"
 
-/* the Twitter dialogs' errors: an invalid parameter, the network modules
-   not loaded, no work memory for the call, another call took it */
-#define TW_DIALOG_ERROR_PARAM				-2146403071	/* 0x80107D01 */
-#define TW_DIALOG_ERROR_REQUIRED_MODULES_NOT_LOADED	-2146403069	/* 0x80107D03 */
-#define TW_DIALOG_ERROR_NO_WORK_MEMORY			-2146402942	/* 0x80107D82 */
-#define TW_DIALOG_ERROR_API_NAME			-2146402943	/* 0x80107D81 */
-
-/* the checks' message, with a number for the check that failed */
-#define TW_DIALOG_PARAM_ERROR_MSG	"\n\n****** SceTwDialog Parameter Error : %d ******\n\n"
-
 #define TW_LOGIN_DIALOG_MODE_1		1
 #define TW_LOGIN_DIALOG_MODE_2		2
 

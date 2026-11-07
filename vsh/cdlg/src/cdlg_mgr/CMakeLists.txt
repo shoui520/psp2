@@ -32,6 +32,7 @@ psp2_module(vs0_sys_external_libcdlg KIND user COMPILER snc PARTIAL SOURCES
 	np_sns_facebook_dialog.cpp
 	npeula_dialog.cpp
 	cross_controller_dialog.cpp
+	tw_dialog.cpp
 	tw_login_dialog.cpp
 )
 target_include_directories(vs0_sys_external_libcdlg PRIVATE "${PSP2_SRC}/vsh/paf/include"
@@ -66,4 +67,5 @@ set_source_files_properties(compat_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoi
 set_source_files_properties(np_sns_facebook_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(npeula_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(cross_controller_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
+set_source_files_properties(tw_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(tw_login_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)

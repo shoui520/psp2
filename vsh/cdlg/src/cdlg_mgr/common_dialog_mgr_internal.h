@@ -108,6 +108,17 @@ int checkCommonParamWithInfobar(const SceCommonDialogParam *commonParam, bool *i
 void clearWorkFlags(void);
 bool isCommonDialogError(int error);
 
+/* the Twitter dialogs' errors (tw_dialog.cpp, tw_login_dialog.cpp): an
+   invalid parameter, the plugin's error, the network modules not loaded, no
+   work memory for the call, another call took it; and the checks' message,
+   with a number for the check that failed */
+#define TW_DIALOG_ERROR_PARAM				-2146403071	/* 0x80107D01 */
+#define TW_DIALOG_ERROR_PLUGIN				-2146403070	/* 0x80107D02 */
+#define TW_DIALOG_ERROR_REQUIRED_MODULES_NOT_LOADED	-2146403069	/* 0x80107D03 */
+#define TW_DIALOG_ERROR_NO_WORK_MEMORY			-2146402942	/* 0x80107D82 */
+#define TW_DIALOG_ERROR_API_NAME			-2146402943	/* 0x80107D81 */
+#define TW_DIALOG_PARAM_ERROR_MSG	"\n\n****** SceTwDialog Parameter Error : %d ******\n\n"
+
 /*
  * An API call of a dialog on its work memory: the dialog is locked and its
  * work memory taken for the call, under the call's name (each dialog keeps
