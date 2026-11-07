@@ -632,11 +632,6 @@ int WidgetResourceReady(const void *resource)
 	return result;
 }
 
-int _ZN3paf2ui18BusyIndicatorParam3GetEv(const void *resource)
-{
-	return WidgetResourceReady(resource);
-}
-
 int _ZN3paf2ui18SlidingDrawerParam3GetEv(const void *resource)
 {
 	return WidgetResourceReady(resource);
@@ -1027,8 +1022,6 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RadioBox9IsInheritEPKc, "radio_box",
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui13SlidingDrawer9IsInheritEPKc, "sliding_drawer",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui5Plane9IsInheritEPKc, "plane",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui13BusyIndicator9IsInheritEPKc, "busyindicator",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8PageTurn9IsInheritEPKc, "pageturn",
 		   _ZNK3paf2ui12PageTurnBase9IsInheritEPKc)
@@ -1619,15 +1612,6 @@ uint8_t *ScePafWidget_0DCB8EA5(uint8_t *self, float seconds)
 	return self;
 }
 
-uint8_t *_ZN3paf2ui13BusyIndicator11SetBallSizeEf(uint8_t *self, float value)
-{
-	if (value > 0.0f) {
-		*(float *)(self + 672) = value;
-		*(uint32_t *)(self + 656) = 1059117436U;
-	}
-	return self;
-}
-
 int _ZN3paf2ui13ImageSlideBar8SetValueEib(uint8_t *self, uint32_t value, uint8_t flag)
 {
 	const uint8_t *vtable = *(const uint8_t *const *)self;
@@ -1742,22 +1726,6 @@ uint32_t *ScePafWidget_D0D78958(uint32_t *self, uint32_t *first,
 	*fourth = additional;
 	*first = self[9];
 	*third = self[10];
-	return self;
-}
-
-uint8_t *_ZN3paf2ui13BusyIndicator4StopEv(uint8_t *self)
-{
-	uint32_t state = *(uint32_t *)(self + 636);
-
-	if (state == 1) {
-		float progress = *(float *)(self + 664) / 0.3f;
-
-		*(uint32_t *)(self + 636) = 3;
-		*(float *)(self + 664) = (1.0f - progress) * 0.5f;
-	} else if (state == 2) {
-		*(uint32_t *)(self + 636) = 3;
-		*(uint32_t *)(self + 664) = 0;
-	}
 	return self;
 }
 

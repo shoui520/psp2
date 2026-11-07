@@ -238,6 +238,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/w_appicon_base.cpp
 	src/widget/w_appicon_simple.cpp
 	src/widget/w_box.cpp
+	src/widget/w_busyindicator.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/graphics/arl/gxm/gxm_framebuffer_object.cpp
 	src/graphics/effects/fft.cpp
@@ -349,6 +350,8 @@ set_source_files_properties(
 # paf::ui::Box inlines calc_offset, anchor_to_orign and SetChildrenAdjustX/Y into
 # their callers, which 8 calls out of line.
 set_source_files_properties(src/widget/w_box.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+# paf::ui::BusyIndicatorStyleParam's constructor is inlined into its C2 and its factory.
+set_source_files_properties(src/widget/w_busyindicator.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # libjpeg was built with SNC's default budget, 32 (its manual: the old -Xinllev's equivalent):
 # read_markers inlines get_soi, get_dac, get_dri and first_marker, while write_scan_header and
