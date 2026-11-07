@@ -943,6 +943,10 @@ public:
 	int32_t SetPosCenter(const math::v4 &v);
 	/* puts the widget behind the other in its parent's draw order */
 	int32_t SetBehind(Widget *w);
+	/* moves the widget under the parent, before the sibling (NULL: last), queued on
+	   s_list_restruct for the next update; -1 for no parent or while it is held (name Sony's,
+	   the parameters ours) */
+	int32_t SetParent(Widget *parent, Widget *sibling, int32_t option);
 
 	/* the texture animation of the draw object: frames start to end of a grid of column_num by
 	   row_num, over the timer's time */
