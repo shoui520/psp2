@@ -4,12 +4,12 @@
 #include "../memory.h"
 
 /* Descriptive adapter name is ours; the original has no recovered name. */
-int sslCompareStrings(const char *left, const char *right);
+int sslCompareCString(const char *left, const char *right);
 
 #undef Malloc
 #undef Free
 #define Malloc(size) sslAllocate(size)
 #define Free(ptr) sslFree(ptr)
-#define strcmp sslCompareStrings
+#define strcmp sslCompareCString
 
 #include "lhash_sce.inc"

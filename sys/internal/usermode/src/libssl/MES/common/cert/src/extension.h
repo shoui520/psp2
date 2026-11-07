@@ -54,8 +54,12 @@ int SceSslInternal_93EAE08A(SslCertificateExtension *extension, int selector, vo
 int sslGetCertificateGeneralName(SslCertificateExtension *extension,
 				 int selector, int base,
 				 SslCertificateExtensionData *result);
+int sslGetCertificateSubjectKeyIdentifier(SslCertificateExtension *extension,
+					  int selector,
+					  SslCertificateExtensionData *result);
 int sslGetCertificateBasicConstraint(SslCertificateExtension *extension,
 				     int selector, int *result);
+int sslGetCertificateExtensionName(int type, const char **name);
 int SceSslInternal_BF99D664(const SslObjectMethods *methods, int unused,
 			  SslCertificateExtension **result);
 

@@ -83,6 +83,12 @@ libssl_prepare_patched(${libssl_ssleay}/crypto/buffer/buffer.c
 	${CMAKE_CURRENT_BINARY_DIR}/buffer_sce.inc)
 configure_file(${libssl_ssleay}/crypto/buffer/buffer.h
 	${CMAKE_CURRENT_BINARY_DIR}/buffer_upstream.h COPYONLY)
+libssl_prepare_patched(${libssl_ssleay}/crypto/evp/encode.c
+	${CMAKE_CURRENT_SOURCE_DIR}/evp/encode_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/encode_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/crypto/pem/pem_lib.c
+	${CMAKE_CURRENT_SOURCE_DIR}/pem/pem_lib_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/pem_lib_sce.inc)
 psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	asn1.c
 	objects/obj_dat.c
@@ -109,6 +115,8 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	ssl/ssl_ext.c
 	err/err.c
 	buffer/buffer.c
+	evp/encode.c
+	pem/pem_lib.c
 	bio/bio_flags.c
 	string.c
 	format.c

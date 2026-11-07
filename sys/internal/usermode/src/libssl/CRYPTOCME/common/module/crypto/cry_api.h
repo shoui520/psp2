@@ -31,7 +31,14 @@ typedef struct SslCryptoLifecycleMethods {
 				void *result);
 	int (*SetAlgorithmInfo)(SslCryptoAlgorithm *algorithm, int selector,
 				SceUIntPtr value);
-	SceUIntPtr opaqueOperations[20];
+	SceUIntPtr opaqueOperationsBeforeVerify[12];
+	int (*VerifyInit)(SslCryptoAlgorithm *algorithm, void *key);
+	SceUIntPtr opaqueVerifyOperation;
+	int (*VerifyUpdate)(SslCryptoAlgorithm *algorithm, const void *data,
+			    SceUInt32 length);
+	int (*VerifyFinal)(SslCryptoAlgorithm *algorithm, const void *signature,
+			   SceUInt32 length, int *result);
+	SceUIntPtr opaqueOperationsAfterVerify[4];
 	int (*DigestInit)(SslCryptoAlgorithm *algorithm);
 	int (*Digest)(SslCryptoAlgorithm *algorithm, const void *data,
 		      SceUInt32 length, void *digest, SceUInt32 *digestLength);
@@ -114,6 +121,10 @@ _Static_assert(offsetof(SslCryptoLifecycleMethods, DestroyAlgorithm) == 16,
 int sslDestroyAlgorithm(SslCryptoAlgorithm *algorithm);
 int sslCreateAlgorithm(SslCryptoContextHeader *context, int family, int algorithm,
 		       SceUInt32 mode, SslCryptoAlgorithm **result);
+int sslVerifyInit(SslCryptoAlgorithm *algorithm, void *key);
+int sslVerifyUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length);
+int sslVerifyFinal(SslCryptoAlgorithm *algorithm, const void *signature,
+		   SceUInt32 length, int *result);
 int sslDigestInit(SslCryptoAlgorithm *algorithm);
 int sslDigest(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length,
 	      void *digest, SceUInt32 *digestLength);

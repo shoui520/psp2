@@ -3,8 +3,14 @@
 #include <libssl/name.h>
 #include "ri_cert.h"
 #include "extension.h"
+#include "x509.h"
 #include "../../../../memory.h"
+#include "../../../../format.h"
 #include "../../../../runtime.h"
+#include "../../../../bio/bio.h"
+#include "../../../../buffer/buffer.h"
+#include "../../../../pem/pem.h"
+#include "../../../../CRYPTOCME/common/asn1_props.h"
 #include "../../../../CRYPTOCME/common/key/pkey_ctx.h"
 #include "../../../../CRYPTOCME/common/module/crypto/cry_api.h"
 
@@ -55,6 +61,199 @@ int sslValidateCriticalCertificateExtensions(SslCertificate *certificate)
 	if (extension != NULL)
 		SceSslInternal_F030A0DE(extension);
 	return status;
+}
+
+int sslValidateCertificateOptions(SslCertificate *certificate, int flags)
+{
+	int status = 0;
+
+	if (flags & 0x1000) {
+		status = sslValidateCertificateVersionFields(certificate);
+		if (status != 0)
+			return status;
+	}
+	if (flags & 0x2000)
+		status = sslValidateCriticalCertificateExtensions(certificate);
+	return status;
+}
+
+int sslGetCertificatePemName(int type, SceUInt32 capacity, char *name)
+{
+	const char *source;
+	int status = 0;
+
+	if (name == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (capacity == 0)
+		return 10016;
+	if (type == 1)
+		source = "CERTIFICATE";
+	else if (type == 2)
+		source = "WTLS CERTIFICATE";
+	else
+		return 10018;
+	sslCopyString(name, source, capacity);
+	if (sslStringLength(source) + 1u > capacity) {
+		name[capacity - 1u] = '\0';
+		status = 10016;
+	}
+	return status;
+}
+
+int SceSslInternal_6D0D3B11(void *context, BIO *bio, int type, int format,
+			    void **result)
+{
+	SslCertificateContext *certContext = context;
+	BUF_MEM *buffer = NULL;
+	int totalLength = 0;
+	SceUInt32 consumed;
+	SslLibrary *library;
+	void *pemData = NULL;
+	SceUInt32 pemLength;
+	SslObjectHeader *pemContext = NULL;
+	int base64Consumed;
+	SceUInt32 decodedLength, outLength;
+	void *decodedData = NULL;
+	char chunk[256];
+	int readCount;
+	int status;
+
+	if (certContext == NULL || result == NULL || bio == NULL) {
+		status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+		goto out;
+	}
+	switch (format) {
+	case 0x1100:
+		status = certContext->methods->GetContextInfo(certContext, 0,
+							      &library);
+		if (status != 0)
+			goto out;
+		status = sslCreatePemContext(library, 0, &pemContext);
+		if (status != 0)
+			goto out;
+		status = sslGetCertificatePemName(type, sizeof(chunk), chunk);
+		if (status != 0)
+			goto out;
+		status = sslReadPemObject(pemContext, bio, chunk, &pemData,
+					  &pemLength);
+		if (status != 0)
+			goto out;
+		status = certContext->methods->NewCertificateFromData(
+			certContext, 0, type, pemLength, pemData, &consumed,
+			result);
+		break;
+	case 0x100:
+		buffer = BUF_MEM_new();
+		if (buffer == NULL) {
+			status = 10005;
+			goto out_buf;
+		}
+		for (;;) {
+			readCount = BIO_read(bio, chunk, sizeof(chunk));
+			if (readCount <= 0)
+				break;
+			totalLength = sslBufferAppend(buffer, chunk, readCount);
+			if (totalLength <= 0) {
+				status = 10005;
+				goto out_buf;
+			}
+		}
+		status = sslDecodeBase64Block((SceUInt32)totalLength,
+					      buffer->data, NULL, NULL,
+					      &decodedLength);
+		if (status == 0) {
+			decodedData = sslAllocate(decodedLength);
+			if (decodedData == NULL) {
+				status = 10005;
+				goto out_buf;
+			}
+			status = sslDecodeBase64Block(
+				(SceUInt32)totalLength, buffer->data,
+				&base64Consumed, decodedData, &outLength);
+			if (status == 0)
+				status = certContext->methods->NewCertificateFromData(
+					certContext, 0, type, outLength,
+					decodedData, &consumed, result);
+		}
+		break;
+	case 0:
+		buffer = BUF_MEM_new();
+		if (buffer == NULL) {
+			status = 10005;
+			goto out_buf;
+		}
+		for (;;) {
+			readCount = BIO_read(bio, chunk, sizeof(chunk));
+			if (readCount <= 0)
+				break;
+			totalLength = sslBufferAppend(buffer, chunk, readCount);
+			if (totalLength <= 0) {
+				status = 10005;
+				goto out_buf;
+			}
+		}
+		status = certContext->methods->NewCertificateFromData(
+			certContext, 0, type, (SceUInt32)totalLength,
+			buffer->data, &consumed, result);
+		break;
+	default:
+		status = 10010;
+		goto out;
+	}
+out_buf:
+	if (buffer != NULL)
+		BUF_MEM_free(buffer);
+out:
+	if (pemData != NULL)
+		sslFree(pemData);
+	if (pemContext != NULL)
+		sslDestroyPemContext(pemContext);
+	if (decodedData != NULL)
+		sslFree(decodedData);
+	return status;
+}
+
+static const SslCertificateKeyMethods sslCertificateKeyMethods = {
+	.VerifySignature = sslVerifyCertificateSignature,
+	.GetPublicKey = sslGetCertificatePublicKey
+};
+
+static const SslCertificateNameMethods sslCertificateNameMethods = {
+	.Create = (int (*)(void *, void **))sslNewCertificateName,
+	.Destroy = sslFreeCertificateName,
+	.Copy = sslCopyCertificateName,
+	.Format = sslFormatCertificateName,
+	.Decode = (int (*)(void *, int, SceUInt32, const void *, SceUInt32 *, void **))sslDecodeCertificateName,
+	.Encode = sslEncodeCertificateName,
+	.GetInfo = sslGetCertificateNameInfo,
+	.DestroyComponent = sslFreeCertificateNameComponent,
+	.GetComponentInfo = sslGetCertificateNameComponentInfo
+};
+
+static const SslCertificateMethods sslCertificateMethods = {
+	.CreateContext = (int (*)(void *, int, void **))sslNewX509CertificateContext,
+	.DestroyContext = sslFreeCertificateContext,
+	.GetContextInfo = sslGetCertificateContextInfo,
+	.SetContextInfo = sslSetCertificateContextInfo,
+	.CreateCertificate = sslNewCertificate,
+	.DestroyCertificate = sslFreeCertificate,
+	.SerializeCertificate = sslSerializeCertificate,
+	.NewCertificateFromData = sslNewCertificateFromData,
+	.RetainCertificate = sslRetainCertificate,
+	.GetCertificateInfo = sslGetCertificateInfo,
+	.SetCertificateInfo = sslSetCertificateInfo,
+	.DecodeDate = sslDecodeX509Date,
+	.operationName = "vfy_x509_op",
+	.version = 1,
+	.moduleType = 6,
+	.keyMethods = &sslCertificateKeyMethods,
+	.nameMethods = &sslCertificateNameMethods,
+	.RetainContext = sslRetainCertificateContext
+};
+
+const SslCertificateMethods *sslGetCertificateModuleMethods(void)
+{
+	return &sslCertificateMethods;
 }
 
 int sslGetCertificateExtension(SslPropertyList *list, int mode,
@@ -223,29 +422,45 @@ int sslApplyCertificateProperties(SslCertificate *certificate,
 	return 0;
 }
 
-int sslCanonicalizeCertificate(SslCertificate *certificate)
+int sslExportCertificateProperties(SslCertificate *certificate,
+				   SslPropertyList **result)
 {
 	SslPropertyList *properties;
-	int status = 0;
+	int status = SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
 
-	if (!(certificate->flags & 1))
-		return 0;
-	if (certificate->backendMethods->Prepare != NULL)
-		status = certificate->backendMethods->Prepare(certificate);
-	if (status != 0 && status != 10010)
-		return status;
 	properties = sslCopyPropertyList(NULL, certificate->properties,
 					 SSL_PROPERTY_COPY_DATA);
 	if (properties == NULL)
 		return 10005;
-	status = SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
 	if (certificate->backendMethods->ExportProperties != NULL)
 		status = certificate->backendMethods->ExportProperties(certificate,
-							      properties);
-	if (status == 0)
-		status = sslApplyCertificateProperties(certificate, properties);
+								       properties);
 	if (status != 0)
 		sslFreePropertyList(properties);
+	else
+		*result = properties;
+	return status;
+}
+
+int sslCanonicalizeCertificate(SslCertificate *certificate)
+{
+	SslPropertyList *properties = NULL;
+	int status = 0;
+
+	if (certificate->flags & 1) {
+		if (certificate->backendMethods->Prepare != NULL)
+			status = certificate->backendMethods->Prepare(certificate);
+		if (status == 10010 || status == 0) {
+			status = sslExportCertificateProperties(certificate,
+								&properties);
+			if (status == 0) {
+				status = sslApplyCertificateProperties(certificate,
+								       properties);
+				if (status != 0)
+					sslFreePropertyList(properties);
+			}
+		}
+	}
 	return status;
 }
 
@@ -381,25 +596,62 @@ finish:
 	return status;
 }
 
-int sslCacheCertificatePublicKey(SslCertificate *certificate, int mode, void *source)
+int sslFindCertificateExtensionValue(SslCertificate *certificate, int selector,
+				     void *result)
 {
-	void *replacement = NULL;
+	SceUInt32 count = 0;
+	int index;
+	SslCertificateExtension probe = { 0 };
+	int status;
+
+	status = sslGetCertificateExtensionCount(&certificate->attributes, &count);
+	if (status == 0) {
+		index = 0;
+		status = 10008;
+		while (index < (int)count) {
+			sslSetCertificateExtensionInfo(&probe, 0x8006, &index);
+			if (sslGetCertificateExtension(&certificate->attributes, 1,
+						       &probe) == 0 &&
+			    SceSslInternal_93EAE08A(&probe, selector, result) == 0) {
+				status = 0;
+				break;
+			}
+			index++;
+		}
+	}
+	return status;
+}
+
+int sslCloneCertificatePublicKey(void *source, int algorithm, int mode,
+				 void **result)
+{
 	void *key = NULL;
 	void *context;
-	int algorithm = sslGetPublicKeyAlgorithm(source);
+	int copyMode = (mode == 1);
 	int status;
 
 	status = sslGetPublicKeyInfo(source, SSL_KEY_INFO_CONTEXT, &context);
 	if (status == 0) {
 		status = sslCreatePublicKey(context, algorithm, &key);
 		if (status == 0) {
-			status = sslCopyPublicKey(source, key, mode == 1);
-			if (status != 0)
-				SceSslInternal_46358909(key);
+			status = sslCopyPublicKey(source, key, copyMode);
+			if (status == 0)
+				*result = key;
 			else
-				replacement = key;
+				SceSslInternal_46358909(key);
 		}
 	}
+	return status;
+}
+
+int sslCacheCertificatePublicKey(SslCertificate *certificate, int mode, void *source)
+{
+	void *replacement = NULL;
+	int algorithm = sslGetPublicKeyAlgorithm(source);
+	int status;
+
+	status = sslCloneCertificatePublicKey(source, algorithm, mode,
+					      &replacement);
 	if (status != 0)
 		return status;
 	if (certificate->publicKey != NULL) {
@@ -423,23 +675,12 @@ int sslGetCertificatePublicKey(SslCertificate *certificate, int mode, void **res
 {
 	SslCertificateKeyCache *cache = certificate->publicKey;
 	SslProperty *property;
-	void *decoded = NULL, *key = NULL, *context, *source;
-	int algorithm, status;
+	void *decoded = NULL;
+	int status;
 
 	if (cache != NULL && cache->key != NULL) {
-		source = cache->key;
-		algorithm = cache->algorithm;
-		status = sslGetPublicKeyInfo(source, SSL_KEY_INFO_CONTEXT, &context);
-		if (status == 0) {
-			status = sslCreatePublicKey(context, algorithm, &key);
-			if (status == 0) {
-				status = sslCopyPublicKey(source, key, mode == 1);
-				if (status != 0)
-					SceSslInternal_46358909(key);
-				else
-					decoded = key;
-			}
-		}
+		status = sslCloneCertificatePublicKey(
+			cache->key, cache->algorithm, mode, &decoded);
 	} else if (sslFindProperty(certificate->properties, 96, 9, NULL, &property, 0) != 0) {
 		status = 10008;
 	} else {
@@ -457,45 +698,54 @@ int sslGetCertificatePublicKey(SslCertificate *certificate, int mode, void **res
 	return status;
 }
 
+int sslGetCertificateVersion(SslCertificate *certificate, int *result)
+{
+	SceUInt32 encodedVersion = 0;
+	SslProperty *property = NULL;
+	int present = 1;
+	int status = 10008;
+
+	if (sslFindProperty(certificate->properties, 96, 1, NULL, &property, 0) == 0) {
+		status = 0;
+		encodedVersion = property->length;
+	}
+	if (status == 10008) {
+		encodedVersion = 0;
+		present = 0;
+	}
+	if (certificate->backendMethods->DecodeVersion == NULL)
+		return 10009;
+	return certificate->backendMethods->DecodeVersion(certificate, present,
+							  encodedVersion, result);
+}
+
+static int sslGetCertificateSignatureAlgorithm(SslCertificate *certificate,
+					       int *result)
+{
+	if (certificate->backendMethods->GetSignatureAlgorithm == NULL)
+		return 10009;
+	*result = certificate->backendMethods->GetSignatureAlgorithm(certificate);
+	return *result != -1 ? 0 : 10001;
+}
+
 int sslGetCertificateInfo(SslCertificate *certificate, int selector, void *result)
 {
 	SslCertificateExtension *extension = NULL;
 	const SslObjectMethods *methods = NULL;
-	SslCertificateExtension probe;
 	SslCertificateInfoRequest *requests;
-	SslProperty *property;
-	SceUInt32 count, encodedVersion = 0;
-	int index, present = 0, status, value;
+	int status, value;
 
 	switch (selector) {
 	case 1:
-		property = NULL;
-		if (sslFindProperty(certificate->properties, 96, 1, NULL, &property, 0) == 0) {
-			present = 1;
-			encodedVersion = property->length;
-		}
-		if (certificate->backendMethods->DecodeVersion == NULL)
-			return 10009;
-		return certificate->backendMethods->DecodeVersion(certificate, present,
-								 encodedVersion, result);
+		return sslGetCertificateVersion(certificate, result);
 	case 0x4201:
 	case 0x4202:
 	case 0x4207:
 	case 0x4401:
 	case 0x4402:
 	case 0x4407:
-		count = 0;
-		sslFillMemory(&probe, 0, sizeof(probe));
-		status = sslGetCertificateExtensionCount(&certificate->attributes, &count);
-		if (status != 0)
-			return status;
-		for (index = 0; index < (int)count; index++) {
-			sslSetCertificateExtensionInfo(&probe, 0x8006, &index);
-			if (sslGetCertificateExtension(&certificate->attributes, 1, &probe) == 0 &&
-			    SceSslInternal_93EAE08A(&probe, selector, result) == 0)
-				return 0;
-		}
-		return 10008;
+		return sslFindCertificateExtensionValue(certificate, selector,
+							result);
 	case 0x8000:
 		return sslGetCertificateExtensionCount(&certificate->attributes, result);
 	case 0x8001:
@@ -509,11 +759,7 @@ int sslGetCertificateInfo(SslCertificate *certificate, int selector, void *resul
 		*(int *)result = value;
 		return value != 0 ? 0 : 10001;
 	case 0x8007:
-		if (certificate->backendMethods->GetSignatureAlgorithm == NULL)
-			return 10009;
-		value = certificate->backendMethods->GetSignatureAlgorithm(certificate);
-		*(int *)result = value;
-		return value != -1 ? 0 : 10001;
+		return sslGetCertificateSignatureAlgorithm(certificate, result);
 	case 0x8008:
 		if (certificate->backendMethods->QuerySignedValue == NULL)
 			return 10009;
@@ -874,6 +1120,32 @@ out:
 	return status;
 }
 
+int sslSetCertificateAttributeData(SslCertificate *certificate,
+				   const SslCertificateIndexedData *value)
+{
+	int status = 0;
+	SceUInt32 count = 0;
+	SslCertificateIndexedData probe;
+
+	sslGetCertificateProperty(certificate, 0x8011, &count);
+	if (value->index != (SceUInt32)-1) {
+		probe.index = value->index;
+		if (sslGetCertificateProperty(certificate, 0x8012, &probe) != 0)
+			count++;
+	} else {
+		count++;
+	}
+	if (sslAddPropertyValue(certificate->properties, 114,
+				(int)(value->index + 0x100u), 0, value->data,
+				value->length,
+				SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0)
+		status = 10001;
+	else if (sslAddPropertyValue(certificate->properties, 114, 1, 0, NULL,
+				     count, SSL_PROPERTY_REPLACE) != 0)
+		status = 10001;
+	return status;
+}
+
 int sslCopyCertificateName(SslCertificateName *source, int mode,
 			   SslCertificateName **result)
 {
@@ -967,20 +1239,26 @@ int sslSetCertificateVersion(SslCertificate *certificate, int version)
 	return 0;
 }
 
+int sslDeleteCertificateProperty(SslCertificate *certificate, int id)
+{
+	int status = 0;
+
+	if (sslDeleteProperty(certificate->properties, 96, id) != 0)
+		return 10001;
+	if (id < 0x4700 || id > 0x480f)
+		sslInvalidateCertificateProperties(certificate);
+	return status;
+}
+
 int sslSetCertificateInfo(SslCertificate *certificate, int selector, void *value)
 {
 	SslCertificatePropertyValue *encoded = value;
 	SslCertificateExtensionData *buffer = value;
-	SslCertificateIndexedData *indexed = value;
 	SslCertificateInfoRequest *requests;
-	SslCertificateIndexedData probe;
 	SslCertificateExtension *extension = NULL;
 	const SslObjectMethods *methods;
-	SceUInt32 count;
-	int id = selector, status;
+	int status;
 
-	if (selector == 0x4701)
-		id = *(int *)value;
 	if (certificate->references != 1)
 		return 10025;
 	if (selector >= 0x4700 && selector <= 0x480f && selector != 0x4701)
@@ -999,11 +1277,7 @@ int sslSetCertificateInfo(SslCertificate *certificate, int selector, void *value
 		return sslSetCertificateEncodedProperty(certificate, selector, 0,
 						 NULL, *(SceUInt32 *)value);
 	case 0x4701:
-		if (sslDeleteProperty(certificate->properties, 96, id) != 0)
-			return 10001;
-		if (id < 0x4700 || id > 0x480f)
-			sslInvalidateCertificateProperties(certificate);
-		return 0;
+		return sslDeleteCertificateProperty(certificate, *(int *)value);
 	case 0x8001:
 		status = sslStoreCertificateExtension(&certificate->attributes, 0, value);
 		if (status == 0)
@@ -1042,24 +1316,7 @@ int sslSetCertificateInfo(SslCertificate *certificate, int selector, void *value
 		SceSslInternal_F030A0DE(extension);
 		return status;
 	case 0x8012:
-		count = 0;
-		sslGetCertificateProperty(certificate, 0x8011, &count);
-		if (indexed->index == (SceUInt32)-1) {
-			count++;
-		} else {
-			probe.index = indexed->index;
-			if (sslGetCertificateProperty(certificate, 0x8012, &probe) != 0)
-				count++;
-		}
-		if (sslAddPropertyValue(certificate->properties, 114,
-					(int)(indexed->index + 0x100u), 0,
-					indexed->data, indexed->length,
-					SSL_PROPERTY_COPY_DATA | SSL_PROPERTY_REPLACE) != 0)
-			return 10001;
-		if (sslAddPropertyValue(certificate->properties, 114, 1, 0, NULL,
-					count, SSL_PROPERTY_REPLACE) != 0)
-			return 10001;
-		return 0;
+		return sslSetCertificateAttributeData(certificate, value);
 	case 0x8014:
 		certificate->flags = *(SceUInt32 *)value;
 		return 0;
@@ -1115,6 +1372,11 @@ out:
 	return status;
 }
 
+int sslGetCertificateNameSha1Hash(SslCertificateName *name, SceUInt32 *result)
+{
+	return sslGetCertificateNameHash(name, 64, result);
+}
+
 int sslGetCertificateNameInfo(SslCertificateName *name, int selector, void *result)
 {
 	SslCertificateNameComponentRequest *request = result;
@@ -1139,6 +1401,7 @@ int sslGetCertificateNameInfo(SslCertificateName *name, int selector, void *resu
 		return methods->GetNameComponent(name, (SceUInt32)request->index,
 						 &request->component);
 	case 80:
+		return sslGetCertificateNameSha1Hash(name, result);
 	case 82:
 		return sslGetCertificateNameHash(name, 64, result);
 	case 83:
@@ -1146,6 +1409,48 @@ int sslGetCertificateNameInfo(SslCertificateName *name, int selector, void *resu
 	default:
 		return 10018;
 	}
+}
+
+int sslVerifyCertificateSignature(SslCertificate *certificate, void *key,
+				  void *cryptoContext)
+{
+	SslCryptoAlgorithm *algorithm = NULL;
+	SslCryptoContextHeader *context = certificate->context->cryptoContext;
+	int verified;
+	SslCertificatePropertyValue property;
+	int sigAlg = 0;
+	int status;
+
+	if (context == NULL) {
+		status = 10001;
+		goto out;
+	}
+	status = sslGetCertificateSignatureAlgorithm(certificate, &sigAlg);
+	if (status != 0)
+		goto out;
+	status = sslGetCertificateProperty(certificate, 64, &property);
+	if (status != 0)
+		goto out;
+	status = sslCreateAlgorithm(context, 6, sigAlg, 4, &algorithm);
+	if (status != 0)
+		goto out;
+	status = sslVerifyInit(algorithm, key);
+	if (status != 0)
+		goto out;
+	status = sslVerifyUpdate(algorithm, property.data, property.length);
+	if (status != 0)
+		goto out;
+	status = sslGetCertificateProperty(certificate, 14, &property);
+	if (status != 0)
+		goto out;
+	status = sslVerifyFinal(algorithm, property.data, property.length,
+				&verified);
+	if (status == 0)
+		*(int *)cryptoContext = (verified == 0);
+out:
+	if (algorithm != NULL)
+		sslDestroyAlgorithm(algorithm);
+	return status;
 }
 
 int sslNewCertificateContext(SslLibrary *library, int unused, SceUInt32 types,
@@ -1322,4 +1627,42 @@ int sslFreeCertificateNameComponent(SslCertificateNameComponent *component)
 		sslFreeCertificateContext(component->context);
 	sslFree(component);
 	return 0;
+}
+
+int sslGetCertificateNameComponentValue(SslCertificateNameComponent *component,
+					SceUInt32 *tag, void **data,
+					SceUInt32 *length)
+{
+	*tag = component->value->value;
+	*data = component->value->data;
+	*length = component->value->length;
+	return 0;
+}
+
+int sslGetCertificateNameComponentOid(SslCertificateNameComponent *component,
+				      SceUInt32 *tag, void **data,
+				      SceUInt32 *length)
+{
+	*tag = component->oid->value;
+	*data = component->oid->data;
+	*length = component->oid->length;
+	return 0;
+}
+
+int sslGetCertificateNameComponentInfo(SslCertificateNameComponent *component,
+				       int selector,
+				       SslCertificatePropertyValue *result)
+{
+	switch (selector) {
+	case 1:
+		return sslGetCertificateNameComponentOid(
+			component, &result->value, &result->data,
+			&result->length);
+	case 2:
+		return sslGetCertificateNameComponentValue(
+			component, &result->value, &result->data,
+			&result->length);
+	default:
+		return 10018;
+	}
 }

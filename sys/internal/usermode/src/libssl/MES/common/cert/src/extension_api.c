@@ -428,6 +428,24 @@ int sslGetCertificateGeneralName(SslCertificateExtension *extension,
 	return 10022;
 }
 
+int sslGetCertificateSubjectKeyIdentifier(SslCertificateExtension *extension,
+					  int selector,
+					  SslCertificateExtensionData *result)
+{
+	SslAsn1Element element;
+
+	if (extension == NULL || result == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (sslAsn1DecodeHeader(&element, extension->value.data, extension->value.length) != 0 ||
+	    element.tag != 4 || element.headerLength + element.length != extension->value.length)
+		return 10022;
+	if (selector != 0x8009)
+		return 10022;
+	result->length = element.length;
+	result->data = (void *)element.data;
+	return 0;
+}
+
 int sslGetCertificateAuthorityKeyIdentifier(SslCertificateExtension *extension,
 					  int selector,
 					  SslCertificateExtensionData *result)
@@ -504,6 +522,16 @@ int sslGetCertificateBasicConstraint(SslCertificateExtension *extension,
 	offset = (SceUInt32)element.data + element.length - (SceUInt32)extension->value.data;
 	if (offset != extension->value.length || sslAsn1GetInteger(&element, result) != 0)
 		return 10022;
+	return 0;
+}
+
+int sslGetCertificateExtensionName(int type, const char **name)
+{
+	int index = type - SSL_CERT_EXTENSION_FIRST;
+
+	if (index < 0 || index >= SSL_CERT_EXTENSION_COUNT)
+		return 10008;
+	*name = sslCertificateExtensionNames[index];
 	return 0;
 }
 
@@ -586,11 +614,7 @@ int SceSslInternal_93EAE08A(SslCertificateExtension *extension, int selector, vo
 		*integer = extension->type;
 		return 0;
 	case 0x8005:
-		index = (SceUInt32)extension->type - SSL_CERT_EXTENSION_FIRST;
-		if (index >= SSL_CERT_EXTENSION_COUNT)
-			return 10008;
-		*(const char **)result = sslCertificateExtensionNames[index];
-		return 0;
+		return sslGetCertificateExtensionName(extension->type, result);
 	case 0x8006:
 		*integer = extension->index;
 		return 0;
@@ -599,14 +623,8 @@ int SceSslInternal_93EAE08A(SslCertificateExtension *extension, int selector, vo
 		return extension->type == 0x4005 ?
 			sslGetCertificateBasicConstraint(extension, selector, integer) : 10018;
 	case 0x8009:
-		if (extension->type != 0x4000)
-			return 10018;
-		if (sslAsn1DecodeHeader(&element, extension->value.data, extension->value.length) != 0 ||
-		    element.tag != 4 || element.headerLength + element.length != extension->value.length)
-			return 10022;
-		buffer->length = element.length;
-		buffer->data = (void *)element.data;
-		return 0;
+		return extension->type == 0x4000 ?
+			sslGetCertificateSubjectKeyIdentifier(extension, selector, buffer) : 10018;
 	case 0x800a:
 		return extension->type == 0x4018 ?
 			sslGetOcspAcceptableResponses(extension, result) : 10018;

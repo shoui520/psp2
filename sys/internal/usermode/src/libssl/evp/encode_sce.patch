@@ -1,0 +1,154 @@
+--- a/encode.c
++++ b/encode.c
+@@ -57,8 +57,7 @@
+  */
+ 
+ #include <stdio.h>
+-#include "cryptlib.h"
+-#include "evp.h"
++/* SCE: the consuming wrapper supplies allocation, memory and EVP interfaces. */
+ 
+ #define conv_bin2ascii(a)	(data_bin2ascii[(a)&0x3f])
+ #define conv_ascii2bin(a)	(data_ascii2bin[(a)&0x7f])
+@@ -113,9 +112,10 @@
+ void EVP_EncodeInit(ctx)
+ EVP_ENCODE_CTX *ctx;
+ 	{
++	ctx->num=0;
+ 	ctx->length=48;
+-	ctx->num=0;
+ 	ctx->line_num=0;
++	ctx->newlineFlags=2;
+ 	}
+ 
+ void EVP_EncodeUpdate(ctx,out,outl,in,inl)
+@@ -145,9 +145,18 @@
+ 		j=EVP_EncodeBlock(out,ctx->enc_data,ctx->length);
+ 		ctx->num=0;
+ 		out+=j;
+-		*(out++)='\n';
++		total=j;
++		if (ctx->newlineFlags & 1)
++			{
++			*(out++)='\r';
++			total++;
++			}
++		if (ctx->newlineFlags & 2)
++			{
++			*(out++)='\n';
++			total++;
++			}
+ 		*out='\0';
+-		total=j+1;
+ 		}
+ 	while (inl >= ctx->length)
+ 		{
+@@ -155,9 +164,18 @@
+ 		in+=ctx->length;
+ 		inl-=ctx->length;
+ 		out+=j;
+-		*(out++)='\n';
++		total+=j;
++		if (ctx->newlineFlags & 1)
++			{
++			*(out++)='\r';
++			total++;
++			}
++		if (ctx->newlineFlags & 2)
++			{
++			*(out++)='\n';
++			total++;
++			}
+ 		*out='\0';
+-		total+=j+1;
+ 		}
+ 	if (inl != 0)
+ 		memcpy(&(ctx->enc_data[0]),in,inl);
+@@ -175,7 +193,10 @@
+ 	if (ctx->num != 0)
+ 		{
+ 		ret=EVP_EncodeBlock(out,ctx->enc_data,ctx->num);
+-		out[ret++]='\n';
++		if (ctx->newlineFlags & 1)
++			out[ret++]='\r';
++		if (ctx->newlineFlags & 2)
++			out[ret++]='\n';
+ 		out[ret]='\0';
+ 		ctx->num=0;
+ 		}
+@@ -221,10 +242,11 @@
+ void EVP_DecodeInit(ctx)
+ EVP_ENCODE_CTX *ctx;
+ 	{
++	ctx->num=0;
+ 	ctx->length=30;
+-	ctx->num=0;
+ 	ctx->line_num=0;
+ 	ctx->expect_nl=0;
++	ctx->newlineFlags=0;
+ 	}
+ 
+ /* -1 for error
+@@ -249,6 +271,11 @@
+ 	/* last line of input. */
+ 	if ((inl == 0) || ((n == 0) && (conv_ascii2bin(in[0]) == B64_EOF)))
+ 		{ rv=0; goto end; }
++	if ((n > 1) && (d[n-1] == '='))
++		{
++		eof=1;
++		seof=n;
++		}
+ 		
+ 	/* We parse the input data */
+ 	for (i=0; i<inl; i++)
+@@ -271,6 +298,18 @@
+ 			goto end;
+ 			}
+ 
++		if (v == B64_EOLN)
++			ctx->newlineFlags|=2;
++		if (v == B64_CR)
++			ctx->newlineFlags|=1;
++		if (exp_nl)
++			{
++			if ((v == B64_EOLN) || (v == B64_CR))
++				continue;
++			ln=0;
++			exp_nl=0;
++			}
++
+ 		/* have we seen a '=' which is 'definitly' the last
+ 		 * input line.  seof will point to the character that
+ 		 * holds it. and eof will hold how many characters to
+@@ -281,21 +320,9 @@
+ 			eof++;
+ 			}
+ 
+-		/* eoln */
+-		if (v == B64_EOLN)
+-			{
+-			ln=0;
+-			if (exp_nl)
+-				{
+-				exp_nl=0;
+-				continue;
+-				}
+-			}
+-		exp_nl=0;
+-
+ 		/* If we are at the end of input and it looks like a
+ 		 * line, process it. */
+-		if (((i+1) == inl) && (((n&3) == 0) || eof))
++		if (((i+1) == inl) && ((n&3) == 0) && ((n >= 64) || eof))
+ 			v=B64_EOF;
+ 
+ 		if ((v == B64_EOF) || (n >= 64))
+@@ -303,7 +330,7 @@
+ 			/* This is needed to work correctly on 64 byte input
+ 			 * lines.  We process the line and then need to
+ 			 * accept the '\n' */
+-			if ((v != B64_EOF) && (n >= 64)) exp_nl=1;
++			exp_nl=1;
+ 			tmp2=v;
+ 			if (n > 0)
+ 				{

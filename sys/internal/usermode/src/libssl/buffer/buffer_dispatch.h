@@ -8,6 +8,7 @@
 #include "../memory.h"
 
 #define SCE_BUF_DECL static inline
+#define SCE_BUF_NO_STRDUP
 #define BUF_MEM_new sslBufferNewInline
 #define BUF_MEM_free sslBufferFreeInline
 #define BUF_MEM_grow sslBufferGrowInline
@@ -18,6 +19,7 @@
 #undef memset
 #undef Free
 #undef Malloc
+#undef SCE_BUF_NO_STRDUP
 #undef SCE_BUF_DECL
 
 #endif

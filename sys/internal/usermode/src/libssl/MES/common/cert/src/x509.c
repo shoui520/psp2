@@ -647,6 +647,11 @@ static const SslCertificateBackendMethods sslX509BackendMethods = {
 	.GetNameComponent = sslGetX509NameComponent
 };
 
+const SslCertificateBackendMethods *sslGetX509BackendMethods(void)
+{
+	return &sslX509BackendMethods;
+}
+
 int sslNewX509CertificateContext(SslLibrary *library, int unused, void **result)
 {
 	int status;

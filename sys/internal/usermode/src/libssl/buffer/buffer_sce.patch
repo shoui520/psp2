@@ -62,15 +62,23 @@
  		len=0;
  		}
  	else
-@@ -124,6 +126,7 @@
+@@ -124,7 +126,8 @@
  	return(len);
  	}
  
-+#if 0 /* SCE: no native identity established for this upstream helper yet. */
- char *BUF_strdup(str)
+-char *BUF_strdup(str)
++#ifndef SCE_BUF_NO_STRDUP
++SCE_BUF_DECL char *BUF_strdup(str)
  char *str;
  	{
-@@ -142,4 +145,5 @@
+ 	char *ret;
+@@ -136,10 +139,10 @@
+ 	ret=Malloc(n+1);
+ 	if (ret == NULL) 
+ 		{
+-		BUFerr(BUF_F_BUF_STRDUP,ERR_R_MALLOC_FAILURE);
+ 		return(NULL);
+ 		}
  	memcpy(ret,str,n+1);
  	return(ret);
  	}

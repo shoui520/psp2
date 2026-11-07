@@ -38,6 +38,13 @@ BIO *BIO_set_retry_write(BIO *bio)
 	return bio;
 }
 
+BIO *BIO_set_retry_special(BIO *bio)
+{
+	if (bio != NULL)
+		bio->flags |= BIO_FLAGS_IO_SPECIAL | BIO_FLAGS_SHOULD_RETRY;
+	return bio;
+}
+
 /* SSL-C also emits these upstream macros as null-safe query functions. */
 int (BIO_should_read)(BIO *bio)
 {
@@ -58,4 +65,32 @@ int (BIO_should_io_special)(BIO *bio)
 	if (bio == NULL)
 		return -1;
 	return BIO_should_io_special(bio);
+}
+
+BIO *BIO_set_callback(BIO *bio, long (*callback)(BIO *, int, char *, int, long, long))
+{
+	if (bio != NULL)
+		bio->callback = callback;
+	return bio;
+}
+
+BIO *BIO_set_callback_arg(BIO *bio, char *arg)
+{
+	if (bio != NULL)
+		bio->cb_arg = arg;
+	return bio;
+}
+
+char *BIO_get_callback_arg(BIO *bio)
+{
+	if (bio == NULL)
+		return NULL;
+	return bio->cb_arg;
+}
+
+long (*BIO_get_callback(BIO *bio))(BIO *, int, char *, int, long, long)
+{
+	if (bio == NULL)
+		return NULL;
+	return bio->callback;
 }

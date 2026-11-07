@@ -140,6 +140,49 @@ int sslSetAlgorithmInfo(SslCryptoAlgorithm *algorithm, int selector,
 	return methods->SetAlgorithmInfo(algorithm, selector, value);
 }
 
+int sslVerifyInit(SslCryptoAlgorithm *algorithm, void *key)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->VerifyInit == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->VerifyInit(algorithm, key);
+}
+
+int sslVerifyUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->VerifyUpdate == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->VerifyUpdate(algorithm, data, length);
+}
+
+int sslVerifyFinal(SslCryptoAlgorithm *algorithm, const void *signature,
+		   SceUInt32 length, int *result)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->VerifyFinal == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->VerifyFinal(algorithm, signature, length, result);
+}
+
 int sslDigestInit(SslCryptoAlgorithm *algorithm)
 {
 	const SslCryptoLifecycleMethods *methods;

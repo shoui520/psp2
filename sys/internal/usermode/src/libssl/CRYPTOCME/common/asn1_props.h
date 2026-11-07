@@ -17,5 +17,7 @@ int sslEncodeSubjectPublicKeyInfoProperties(SslPropertyList *properties, SceUInt
 
 int sslDecodeSignatureProperties(SslPropertyList *properties, const SceUInt8 *data,
 				 SceUInt32 length, SceUInt32 *consumed);
+int sslDecodeBase64Block(SceUInt32 inLength, const void *in, int *newlineFlags,
+			 void *out, SceUInt32 *outLength);
 
 #endif

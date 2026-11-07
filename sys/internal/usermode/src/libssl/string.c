@@ -9,6 +9,52 @@ SceUInt32 sslStringLength(const char *string)
 	return sslStringLengthInline(string);
 }
 
+int sslCompareCString(const char *left, const char *right)
+{
+	while (*left == *right && *left != '\0') {
+		left++;
+		right++;
+	}
+	if (*left == *right && *left == '\0')
+		return 0;
+	return (unsigned char)*left - (unsigned char)*right;
+}
+
+char *sslCopyCString(char *destination, const char *source)
+{
+	char *result = destination;
+
+	while ((*destination++ = *source++) != '\0')
+		;
+	return result;
+}
+
+void *sslBinarySearch(const void *key, const void *base, int count,
+		      int size, int (*compare)(const void *, const void *))
+{
+	int low = 0;
+	int high = count - 1;
+	int middle;
+	int result;
+	const char *element;
+
+	while (high > low) {
+		middle = (high + low) / 2;
+		element = (const char *)base + middle * size;
+		result = compare(key, element);
+		if (result == 0)
+			return (void *)element;
+		if (result > 0)
+			low = middle + 1;
+		else
+			high = middle - 1;
+	}
+	if (high != low)
+		return 0;
+	element = (const char *)base + low * size;
+	return compare(key, element) == 0 ? (void *)element : 0;
+}
+
 int sslToUpper(int character)
 {
 	return sceClibToupper(character);

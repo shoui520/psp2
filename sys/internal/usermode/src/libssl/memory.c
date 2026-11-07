@@ -4,9 +4,9 @@
 
 static void *sslDefaultReallocate(void *ptr, SceUInt32 size, SceUInt32 oldSize);
 
-static SslAllocCallback sslAllocCallback;
-static SslReallocCallback sslReallocCallback = sslDefaultReallocate;
-static SslFreeCallback sslFreeCallback;
+SslAllocCallback sslAllocCallback;
+SslReallocCallback sslReallocCallback = sslDefaultReallocate;
+SslFreeCallback sslFreeCallback;
 
 void sslFree(void *ptr)
 {

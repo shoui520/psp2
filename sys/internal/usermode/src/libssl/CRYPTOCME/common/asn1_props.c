@@ -1,6 +1,7 @@
 /* Filename and private names are ours; generic CRYPTOCME property schemas. */
 #include "asn1_props.h"
 #include "../../asn1.h"
+#include "../../evp/evp.h"
 
 #define SSL_KEY_COMMAND(opcode, first, second, third) \
 	((SceUInt32)(opcode) | ((SceUInt32)(first) << 8) | \
@@ -23,6 +24,73 @@ static const SceUInt32 sslSubjectPublicKeyInfoDecodingSchema[] = {
 	/* Retain the BIT STRING content, including its unused-bits byte. */
 	SSL_KEY_COMMAND(0x60, 0x3, 0x0, 0x0),
 	SSL_KEY_COMMAND(0x40, 0x42, 0x30, 0x3),
+	SSL_KEY_COMMAND(0x1, 0x0, 0x0, 0x0),
+	0
+};
+
+static const SceUInt32 sslRsaPrivateKeyDecodingSchema[] = {
+	/* RSAPrivateKey SEQUENCE, including optional multi-prime triplets. */
+	SSL_KEY_COMMAND(0x80, 0x82, 0x2, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x51, 0x83, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x42, 0x10, 0x10),
+	SSL_KEY_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x42, 0x10, 0x11),
+	SSL_KEY_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x42, 0x10, 0x12),
+	SSL_KEY_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x42, 0x10, 0x16),
+	SSL_KEY_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x42, 0x10, 0x13),
+	SSL_KEY_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x42, 0x10, 0x17),
+	SSL_KEY_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x42, 0x10, 0x14),
+	SSL_KEY_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x42, 0x10, 0x18),
+	SSL_KEY_COMMAND(0x1a, 0x80, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x71, 0x83, 0x2, 0x0),
+	SSL_KEY_COMMAND(0x70, 0x80, 0x3, 0x0),
+	SSL_KEY_COMMAND(0x1, 0x0, 0x3, 0x0),
+	SSL_KEY_COMMAND(0x20, 0x0, 0x2, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x80, 0x84, 0x19, 0x0),
+	SSL_KEY_COMMAND(0x20, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x10, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x18, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x42, 0x10, 0x84),
+	SSL_KEY_COMMAND(0x80, 0x84, 0x84, 0x1),
+	SSL_KEY_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x42, 0x10, 0x84),
+	SSL_KEY_COMMAND(0x80, 0x84, 0x84, 0x1),
+	SSL_KEY_COMMAND(0x1a, 0x0, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x60, 0x2, 0x0, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x42, 0x10, 0x84),
+	SSL_KEY_COMMAND(0x80, 0x84, 0x84, 0x1),
+	SSL_KEY_COMMAND(0x80, 0x82, 0x82, 0x1),
+	SSL_KEY_COMMAND(0x1a, 0x80, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x70, 0x80, 0x4, 0x0),
+	SSL_KEY_COMMAND(0x1, 0x0, 0x4, 0x0),
+	SSL_KEY_COMMAND(0x20, 0x0, 0x4, 0x0),
+	SSL_KEY_COMMAND(0x19, 0x80, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x1a, 0x80, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x71, 0x80, 0x1, 0x0),
+	SSL_KEY_COMMAND(0x20, 0x0, 0x3, 0x0),
+	SSL_KEY_COMMAND(0x80, 0x80, 0x82, 0x0),
+	SSL_KEY_COMMAND(0x40, 0x43, 0x10, 0x1),
 	SSL_KEY_COMMAND(0x1, 0x0, 0x0, 0x0),
 	0
 };
@@ -93,10 +161,61 @@ static const SceUInt32 sslSignatureDecodingSchema[] = {
 
 #undef SSL_SIGNATURE_COMMAND
 
+const SceUInt32 *sslGetSubjectPublicKeyInfoDecodingSchema(void)
+{
+	return sslSubjectPublicKeyInfoDecodingSchema;
+}
+
+const SceUInt32 *sslGetSubjectPublicKeyInfoEncodingSchema(void)
+{
+	return sslSubjectPublicKeyInfoEncodingSchema;
+}
+
+const SceUInt32 *sslGetRsaPrivateKeyDecodingSchema(void)
+{
+	return sslRsaPrivateKeyDecodingSchema;
+}
+
+const SceUInt32 *sslGetRsaPublicKeyDecodingSchema(void)
+{
+	return sslRsaPublicKeyDecodingSchema;
+}
+
+const SceUInt32 *sslGetRsaPublicKeyEncodingSchema(void)
+{
+	return sslRsaPublicKeyEncodingSchema;
+}
+
+const SceUInt32 *sslGetSignatureDecodingSchema(void)
+{
+	return sslSignatureDecodingSchema;
+}
+
+int sslEncodeRsaPublicKeyProperties(SslPropertyList *properties, SceUInt8 *data,
+				    SceUInt32 *length, SceUInt32 capacity)
+{
+	return sslAsn1EncodeProperties(sslRsaPublicKeyEncodingSchema, properties, data,
+				       length, capacity);
+}
+
 int sslDecodeRsaPublicKeyProperties(SslPropertyList *properties, const SceUInt8 *data,
 				    SceUInt32 length, SceUInt32 *consumed)
 {
 	return sslAsn1DecodeProperties(sslRsaPublicKeyDecodingSchema, properties, data,
+				       length, consumed);
+}
+
+int sslDecodeRsaPrivateKeyProperties(SslPropertyList *properties, const SceUInt8 *data,
+				     SceUInt32 length, SceUInt32 *consumed)
+{
+	return sslAsn1DecodeProperties(sslRsaPrivateKeyDecodingSchema, properties, data,
+				       length, consumed);
+}
+
+int sslDecodeSignatureProperties(SslPropertyList *properties, const SceUInt8 *data,
+				 SceUInt32 length, SceUInt32 *consumed)
+{
+	return sslAsn1DecodeProperties(sslSignatureDecodingSchema, properties, data,
 				       length, consumed);
 }
 
@@ -108,23 +227,41 @@ int sslDecodeSubjectPublicKeyInfoProperties(SslPropertyList *properties,
 				       data, length, consumed);
 }
 
-int sslEncodeRsaPublicKeyProperties(SslPropertyList *properties, SceUInt8 *data,
-				    SceUInt32 *length, SceUInt32 capacity)
-{
-	return sslAsn1EncodeProperties(sslRsaPublicKeyEncodingSchema, properties, data,
-				       length, capacity);
-}
-
-int sslDecodeSignatureProperties(SslPropertyList *properties, const SceUInt8 *data,
-				 SceUInt32 length, SceUInt32 *consumed)
-{
-	return sslAsn1DecodeProperties(sslSignatureDecodingSchema, properties, data,
-				       length, consumed);
-}
-
 int sslEncodeSubjectPublicKeyInfoProperties(SslPropertyList *properties, SceUInt8 *data,
 					   SceUInt32 *length, SceUInt32 capacity)
 {
 	return sslAsn1EncodeProperties(sslSubjectPublicKeyInfoEncodingSchema, properties,
 				       data, length, capacity);
+}
+
+int sslDecodeBase64Block(SceUInt32 inLength, const void *in, int *newlineFlags,
+			 void *out, SceUInt32 *outLength)
+{
+	EVP_ENCODE_CTX *ctx;
+	int chunkLength;
+	int firstLength;
+
+	if (out != NULL) {
+		if (in == NULL) {
+			*outLength = 0;
+			return 0x2721;
+		}
+		ctx = sslNewEncodeContext();
+		if (ctx == NULL)
+			return 0x2715;
+		EVP_DecodeInit(ctx);
+		EVP_DecodeUpdate(ctx, (unsigned char *)out, &chunkLength,
+				 (unsigned char *)in, (int)inLength);
+		firstLength = chunkLength;
+		EVP_DecodeFinal(ctx, (unsigned char *)out + chunkLength, &chunkLength);
+		*outLength = (SceUInt32)(chunkLength + firstLength);
+		if (newlineFlags != NULL)
+			*newlineFlags = sslGetEncodeNewlineFlags(ctx);
+		sslFreeEncodeContext(ctx);
+		return 0;
+	}
+	if (outLength == NULL)
+		return 0x2721;
+	*outLength = (inLength & ~3U) - (inLength >> 2);
+	return 0;
 }
