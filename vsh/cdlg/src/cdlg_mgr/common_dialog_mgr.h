@@ -161,7 +161,9 @@ typedef struct CommonDialogWork {
 	SceUInt8 reserved468[4];
 	/* "SceCommonDialogPafUpdateMutex": the update callback against the PafMain thread's term */
 	SceKernelLwMutexWork updateMutex;
-	SceUInt8 reserved504[4];
+	/* the main module's flags, cleared when its work ends (clearMainWorkFlags) */
+	bool mainWorkFlags[3];
+	SceUInt8 reserved507[1];
 	/* the free budget at module start, and the main module's SDK version */
 	SceSize initialBudgetFree;
 	SceUInt32 sdkVersion;
@@ -260,8 +262,8 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNpEulaSize, sizeof(CommonDialogNpEulaPara
  * plugin alone reads and writes.
  */
 #ifdef __cplusplus
-/* placement new: the module has its own copy (no <new>) */
-void *operator new(SceSize size, void *ptr);
+/* placement new, the copy paf's <new> keeps out of line */
+#include <std/new>
 
 class CommonDialogCrossControllerParam {
 public:

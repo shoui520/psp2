@@ -8,7 +8,7 @@
 #include <scetypes.h>
 #include <libkernel/libkernel.h>
 #include <common_dialog.h>
-#include <libsysmodule.h>
+#include <sysmodule/sysmodule.h>
 #include <modulemgr/module_info.h>
 #include "common_dialog_mgr.h"
 #include "common_dialog_mgr_internal.h"

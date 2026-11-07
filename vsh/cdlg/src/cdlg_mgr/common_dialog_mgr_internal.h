@@ -15,6 +15,7 @@
 #include <appmgr/appmgr.h>
 #include <stdarg.h>
 #include <libkernel/libkernel.h>
+#include <sysmodule/sysmodule.h>
 #include "common_dialog_mgr.h"
 
 /* the module's errors that the SDK does not name */
@@ -187,10 +188,32 @@ static inline int toCommonDialogResult(int ret)
 	return ret;
 }
 
-/* the sysmodule calls with the module's status (the module's tail) */
-int loadSysmoduleWithArg(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags, int *status);
-void clearMainWorkFlags(CommonDialogWork *work);
-int unloadSysmoduleWithArg(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags, int *status);
+/* the sysmodule calls with the module's status, and the main module's flags cleared: header
+   functions, which Sony's build kept out of line (at the module's tail) */
+__attribute__((noinline)) inline int loadSysmoduleWithArg(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags, int *status)
+{
+	SysmoduleUserOpt opt;
+
+	opt.flags = flags;
+	opt.status = status;
+	return sceSysmoduleLoadModuleInternalWithArg(id, args, argp, &opt);
+}
+
+__attribute__((noinline)) inline void clearMainWorkFlags(CommonDialogWork *work)
+{
+	work->mainWorkFlags[2] = false;
+	work->mainWorkFlags[0] = false;
+	work->mainWorkFlags[1] = false;
+}
+
+__attribute__((noinline)) inline int unloadSysmoduleWithArg(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags, int *status)
+{
+	SysmoduleUserOpt opt;
+
+	opt.flags = flags;
+	opt.status = status;
+	return sceSysmoduleUnloadModuleInternalWithArg(id, args, argp, &opt);
+}
 
 /* the string checks the NP web API dialogs share (game_custom_data_dialog.cpp) */
 namespace GameCustomDataDialog {

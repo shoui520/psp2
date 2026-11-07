@@ -9,7 +9,7 @@
 #include <scetypes.h>
 #include <libkernel/libkernel.h>
 #include <common_dialog.h>
-#include <libsysmodule.h>
+#include <sysmodule/sysmodule.h>
 #include <np/np_common.h>
 #include "common_dialog_mgr.h"
 #include "common_dialog_mgr_internal.h"

@@ -36,6 +36,8 @@ psp2_module(vs0_sys_external_libcdlg KIND user COMPILER snc PARTIAL SOURCES
 	tw_login_dialog.cpp
 	near_dialog.cpp
 	../../../../sys/internal/usermode/src/ces/libces/src/UCS/UTF8.c
+	../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
+	../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )
 target_include_directories(vs0_sys_external_libcdlg PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/vsh/paf")

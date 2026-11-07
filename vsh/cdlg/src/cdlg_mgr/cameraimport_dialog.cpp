@@ -10,7 +10,7 @@
 #include <libkernel/libkernel.h>
 #include <kernel/sysmem/memblock.h>
 #include <common_dialog.h>
-#include <libsysmodule.h>
+#include <sysmodule/sysmodule.h>
 #include <cameraimport_dialog.h>
 #include <gxm/error.h>
 #include "common_dialog_mgr.h"
