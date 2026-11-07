@@ -598,6 +598,9 @@ public:
 	uint32_t m_drag_dir;
 };
 
+/* a zero made at start-up that nothing reads (Sony's __sti stores it; name ours) */
+static const sce::Vectormath::Simd::floatInVec s_zero(0.0f);
+
 static AnalogScrollSupplier s_analog_scroll_supplier;
 static TouchScrollSupplier s_touch_scroll_supplier;
 
