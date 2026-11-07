@@ -975,8 +975,8 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui11ProgressBar9IsInheritEPKc, "progressbar",
 int _ZNK3paf2ui6Button9IsInheritEPKc(const void *self, const char *type);
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui15CompositeButton9IsInheritEPKc, "composite_button",
 		   _ZNK3paf2ui10ButtonBase9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui8CheckBox9IsInheritEPKc, "check_box",
-		   _ZNK3paf2ui15StateButtonBase9IsInheritEPKc)
+/* CheckBox's is C++ (w_check_box.cpp) */
+int _ZNK3paf2ui8CheckBox9IsInheritEPKc(const void *self, const char *type);
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui11ImageButton9IsInheritEPKc, "image_button",
 		   _ZNK3paf2ui6Button9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui7NumSpin9IsInheritEPKc, "num_spin",
