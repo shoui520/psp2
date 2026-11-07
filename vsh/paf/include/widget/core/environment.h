@@ -292,6 +292,15 @@ public:
 
 /* Exports with no name found for their NIDs. */
 extern "C" {
+/* the screen size of each resolution, qHD, HD and full HD (EnvironmentParam's rodata, defined with
+   the stand-ins in state.c until its file is C; names ours) */
+extern const uint32_t g_screen_width_qhd;
+extern const uint32_t g_screen_height_qhd;
+extern const uint32_t g_screen_width_hd;
+extern const uint32_t g_screen_height_hd;
+extern const uint32_t g_screen_width_full_hd;
+extern const uint32_t g_screen_height_full_hd;
+
 /* the resource variant of the parameter's resolution with the ID, or the empty one */
 paf::ui::ResolutionResource ScePafWidget_E963EAEE(const paf::ui::EnvironmentParam *param,
 						  uint32_t id);

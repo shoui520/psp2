@@ -811,7 +811,9 @@ public:
 		return m_focus_direction_off ? 0 : 7;
 	}
 
-	virtual int32_t GetFocusPriority()
+	/* nonzero to be found first in the focus search in the direction (CornerButton's: up and
+	   down) */
+	virtual int32_t GetFocusPriority(int32_t dir)
 	{
 		return 0;
 	}

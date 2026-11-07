@@ -12,6 +12,15 @@ int32x4_t *_ZN3paf2ui8filelist10CellSource13GetVisualSizeEv(int32x4_t *result)
 
 uint32_t sce_paf_widget_state_155c;
 
+/* the screen size of each resolution, qHD, HD and full HD (EnvironmentParam's rodata; declared in
+   widget/core/environment.h; until its file is C) */
+const uint32_t g_screen_width_qhd = 960;
+const uint32_t g_screen_height_qhd = 544;
+const uint32_t g_screen_width_hd = 1280;
+const uint32_t g_screen_height_hd = 725;
+const uint32_t g_screen_width_full_hd = 1920;
+const uint32_t g_screen_height_full_hd = 1088;
+
 static inline __attribute__((always_inline))
 uint32_t *InitializeWidgetRecord(uint32_t *self, uint32_t payload)
 {
@@ -1011,8 +1020,7 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui13ImageSlideBar9IsInheritEPKc, "image_slidebar",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8SlideBar9IsInheritEPKc, "slidebar",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui12CornerButton9IsInheritEPKc, "corner_button",
-		   _ZNK3paf2ui6Button9IsInheritEPKc)
+/* CornerButton's is C++ (w_corner_button.cpp) */
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui6Dialog9IsInheritEPKc, "dialog",
 		   _ZNK3paf2ui3Box9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui7TextBox9IsInheritEPKc, "text_box",
