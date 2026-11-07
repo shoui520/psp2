@@ -244,10 +244,39 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCalendarReviewDrawPriority,
 			   __builtin_offsetof(CommonDialogCalendarReviewParam, drawPriority) == 1188);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCalendarReviewSize, sizeof(CommonDialogCalendarReviewParam) == 1256);
 
+/* the companion util dialog's parameter, its Init2 argument and its result: no SDK
+   header has them; the dialog's own parts only its plugin reads */
+typedef struct CompanionUtilDialogParam {
+	SceUInt32 sdkVersion;
+	SceCommonDialogParam commonParam;
+	SceUInt8 dialogData[8];
+	SceUInt8 reserved[32];
+} CompanionUtilDialogParam;
+
+typedef struct CompanionUtilDialogInitArg {
+	SceUInt8 dialogData[40];
+} CompanionUtilDialogInitArg;
+
+typedef struct CompanionUtilDialogResult {
+	SceInt32 result;
+	SceUInt8 dialogData[6];
+	SceUInt8 reserved[32];
+	SceUInt8 padding[2];
+} CompanionUtilDialogResult;
+
+/* companion_util_dialog.cpp: the caller's parameter, the Init2 argument and the
+   result for GetResult */
 typedef struct CommonDialogCompanionParam {
-	SceUInt8 reserved[204];
+	CompanionUtilDialogParam param;
+	CompanionUtilDialogInitArg initArg;
+	CompanionUtilDialogResult result;
 	int drawPriority;
+	char apiName[64];
 } CommonDialogCompanionParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCompanionDrawPriority,
+			   __builtin_offsetof(CommonDialogCompanionParam, drawPriority) == 204);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCompanionSize, sizeof(CommonDialogCompanionParam) == 272);
 
 typedef struct CommonDialogRemoteOskParam {
 	SceUInt8 reserved[432];
