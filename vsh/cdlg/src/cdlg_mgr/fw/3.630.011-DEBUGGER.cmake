@@ -1,8 +1,10 @@
 # 3.630.011-DEBUGGER: vs0:sys/external/libcdlg.suprx (generated)
 set(MODULE_NID 0x6E9BD029)
+set(MODULE_AUTH_ID 0x280000000002800F)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0x00000000 0xE537816C 0x883CFD5C)
 set(MODULE_IMPORT_LIBS
 	0xCAE9ACE6:5:0x0
 	0x2DD91812:2:0x0
@@ -21,70 +23,69 @@ set(MODULE_IMPORT_LIBS
 	0x3D643CE8:1:0x8
 	0x67E45817:1:0x0
 )
-set(MODULE_IMPORT_FUNCS
-	sceKernelWaitSema
-	sceKernelGetThreadId
-	sceKernelCreateSema
-	sceKernelDeleteLwMutex
-	sceClibMemcpy_safe
-	__stack_chk_fail
-	sceKernelLockLwMutex
-	sceClibMemset
-	sceClibStrncmp
-	sceClibSnprintf
-	sceKernelUnlockLwMutex
-	SceLibKernel_9F793F84
-	sceClibStrcmp
-	sceKernelTryLockLwMutex
-	sceClibStrnlen
-	sceIoGetstat
-	sceClibStrncpy
-	sceKernelCreateThread
-	sceKernelCreateLwMutex
-	sceKernelWaitThreadEnd
-	sceKernelStartThread
-	sceClibPrintf
-	sceKernelIsCDialogAvailable
-	sceKernelIsGameBudget
-	sceKernelCDialogSessionClose
-	sceKernelCDialogSetLeaseLimit
-	sceKernelGetMemBlockInfoByRange
-	sceKernelGetSubbudgetInfo
-	sceKernelFreeMemBlock
-	sceKernelGetMemBlockBase
-	sceKernelAllocMemBlock
-	sceKernelDeleteThread
-	sceKernelGetProcessId
-	sceKernelDeleteSema
-	sceKernelSignalSema
-	SceThreadmgrCoredumpTime_sceKernelExitThread
-	SceSvcCtrl_077F8AF1
-	SceSvcCtrl_8BEB8B7C
-	sceGxmCheckMemoryInternal
-	sceGxmGetDisplayQueueThreadIdInternal
-	sceGxmRenderingContextIsWithinSceneInternal
-	sceGxmIsInitializationInternal
-	sceKernelGetSystemSwVersion
-	sceTouchGetPanelInfo
-	sceTouchClearRegion
-	sceTouchSetRegion
-	sceTouchActivateRegion
-	sceAppMgrAppParamGetString
-	sceAppMgrGetStatusByName
-	sceAppMgrSendNotificationRequest
-	sceAppMgrAppParamGetInt
-	sceAppMgrIsDevelopmentMode
-	sceAppMgrSetInfobarStateForCommonDialog
-	sceAppMgrIsGameProgram
-	sceCtrlSetButtonIntercept
-	sceSysmoduleIsLoadedInternal
-	sceSysmoduleIsLoaded
-	sceSysmoduleUnloadModuleInternalWithArg
-	sceSysmoduleLoadModuleInternalWithArg
-	sceDisplayGetMaximumFrameBufResolution
-	ScePafMisc_F99966E5
-	sceRegMgrUtilityGetInt
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x0C7B834B
+	0xCAE9ACE6:F:0x0FB972F9
+	0xCAE9ACE6:F:0x1BD67366
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x660D1F6D
+	0xCAE9ACE6:F:0x8CBA03D5
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0x9F793F84
+	0xCAE9ACE6:F:0xA2FB4D9D
+	0xCAE9ACE6:F:0xA6A2C915
+	0xCAE9ACE6:F:0xAC595E68
+	0xCAE9ACE6:F:0xBCA5B623
+	0xCAE9ACE6:F:0xC458D60A
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:F:0xFA26BC62
+	0xCAE9ACE6:V:0x93B8AA67
+	0x2DD91812:F:0x143BC4D6
+	0x2DD91812:F:0xCE0F02F0
+	0x2DD91812:F:0xDB4CC1D0
+	0x2DD91812:F:0xEC8DDAAD
+	0x37FE725A:F:0x006F3DB4
+	0x37FE725A:F:0x832B4A65
+	0x37FE725A:F:0xA91E15EE
+	0x37FE725A:F:0xB8EF5818
+	0x37FE725A:F:0xB9D5EBDE
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0x9DCB4B7A
+	0x859A24B1:F:0xDB32948A
+	0x859A24B1:F:0xE6B761D1
+	0x5E8D0E22:F:0x0C8A38E1
+	0x33E9B101:F:0x077F8AF1
+	0x33E9B101:F:0x8BEB8B7C
+	0x3FE654E6:F:0x88B424FB
+	0x3FE654E6:F:0xAB1D9466
+	0x3FE654E6:F:0xB56413BB
+	0x3FE654E6:F:0xEC82DB20
+	0xEAED1616:F:0x5182E212
+	0x3E4F4A81:F:0x10A2CA25
+	0x3E4F4A81:F:0x2D94EAEA
+	0x3E4F4A81:F:0x6134DFBE
+	0x3E4F4A81:F:0xBD59D652
+	0xA6605D6F:F:0x0C733AE2
+	0xA6605D6F:F:0x656E0ABD
+	0xA6605D6F:F:0x6E4997D7
+	0xA6605D6F:F:0x9E57853D
+	0x8AF17416:F:0x7D4F8F83
+	0x8AF17416:F:0xD6758B4E
+	0x8AF17416:F:0xFFF8F7F0
+	0xD197E3C7:F:0x433D71F4
+	0x03FCF19D:F:0x09A4AF1D
+	0x03FCF19D:F:0x53099B7A
+	0x03FCF19D:F:0xA2F40C4C
+	0x03FCF19D:F:0xC3C26339
+	0x4FAACD11:F:0x8848ADDD
+	0x3D643CE8:F:0xF99966E5
+	0x67E45817:F:0x8154D696
 )

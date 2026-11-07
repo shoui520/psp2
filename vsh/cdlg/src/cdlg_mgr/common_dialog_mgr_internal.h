@@ -222,6 +222,35 @@ int checkStringLength(const char *str, SceUInt32 max, bool allowEmpty);
 bool isZeroFilled(const SceUChar8 *data, SceUInt32 size);
 }
 
+/* each dialog's Init and Init2 on the worker thread, which the dialog table calls */
+namespace CalendarReviewDialog { int onInit(void *param); }
+namespace CameraImportDialog { int onInit(void *param); int onInit2(void *param, void *arg); }
+namespace CompanionUtilDialog { int OnInit(void *param); int OnInit2(void *param, void *arg); }
+namespace CompatDialog { int OnInit(void *param); }
+namespace CrossControllerDialog { int OnInit(void *param); }
+namespace FriendList2Dialog { int OnInit(void *param); int OnInit2(void *param, void *arg); }
+namespace FriendListDialog { int OnInit(void *param); int OnInit2(void *param, void *arg); }
+namespace GameCustomDataDialog { int OnInit(void *param); }
+namespace ImeDialog { int OnInit(void *param); int OnInit2(void *param, void *arg); }
+namespace InvitationDialog { int OnInit(void *param); }
+namespace MsgDialog { int OnInit(void *param); }
+namespace NearDialog { int OnInit(void *param); }
+namespace NetCheckDialog { int OnInit(void *param); int onInit2(void *param, void *arg); }
+namespace NpEulaDialog { int OnInit(void *param); }
+namespace NpMessageDialog { int OnInit(void *param); }
+namespace NpProfileDialog { int OnInit(void *param); int OnInit2(void *param, void *arg); }
+namespace NpSnsFacebookDialog { int OnInit(void *param); int OnInit2(void *param, void *arg); }
+namespace PhotoImportDialog { int onInit(void *param); int onInit2(void *param, void *arg); }
+namespace PhotoReviewDialog { int onInit(void *param); int onInit2(void *param, void *arg); }
+namespace PocketStationDialog { int OnInit(void *param); }
+namespace RemoteOskDialog { int OnInit(void *param); }
+namespace SaveDataDialog { int OnInit(void *param); int onInit2(void *param, void *arg); }
+namespace StoreCheckoutDialog { int OnInit(void *param); }
+namespace TrophySetupDialog { int OnInit(void *param); }
+namespace TwDialog { int OnInit(void *param); }
+namespace TwLoginDialog { int OnInit(void *param); }
+namespace VideoImportDialog { int onInit(void *param); int onInit2(void *param, void *arg); }
+
 /* the worker thread (worker_thread.cpp) */
 int initializeWorkerThread(void);
 int finalizeWorkerThread(void);

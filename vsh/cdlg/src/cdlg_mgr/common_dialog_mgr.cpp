@@ -111,6 +111,38 @@ static inline bool isSlotCaller(SceUID thread, int i)
 	return !g_work.cdialogMode || thread == g_work.pafMainThread || i <= 0;
 }
 
+/* the dialogs libcdlg runs: each type with its Init, and its Init2 where it has one */
+const CommonDialogTableEntry g_commonDialogTable[] = {
+	{ COMMON_DIALOG_TYPE_MSG, MsgDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_SAVEDATA, SaveDataDialog::OnInit, SaveDataDialog::onInit2 },
+	{ COMMON_DIALOG_TYPE_NETCHECK, NetCheckDialog::OnInit, NetCheckDialog::onInit2 },
+	{ COMMON_DIALOG_TYPE_IME, ImeDialog::OnInit, ImeDialog::OnInit2 },
+	{ COMMON_DIALOG_TYPE_NP_MESSAGE, NpMessageDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_INVITATION, InvitationDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_GAME_CUSTOM_DATA, GameCustomDataDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_FRIENDLIST, FriendListDialog::OnInit, FriendListDialog::OnInit2 },
+	{ COMMON_DIALOG_TYPE_FRIENDLIST2, FriendList2Dialog::OnInit, FriendList2Dialog::OnInit2 },
+	{ COMMON_DIALOG_TYPE_NPPROFILE2, NpProfileDialog::OnInit, NpProfileDialog::OnInit2 },
+	{ COMMON_DIALOG_TYPE_TROPHY_SETUP, TrophySetupDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_PHOTOIMPORT, PhotoImportDialog::onInit, PhotoImportDialog::onInit2 },
+	{ COMMON_DIALOG_TYPE_PHOTOREVIEW, PhotoReviewDialog::onInit, PhotoReviewDialog::onInit2 },
+	{ COMMON_DIALOG_TYPE_CHECKOUT, StoreCheckoutDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_CAMERAIMPORT, CameraImportDialog::onInit, CameraImportDialog::onInit2 },
+	{ COMMON_DIALOG_TYPE_COMPAT, CompatDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_NP_SNS_FB, NpSnsFacebookDialog::OnInit, NpSnsFacebookDialog::OnInit2 },
+	{ COMMON_DIALOG_TYPE_NPEULA, NpEulaDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_CROSS_CONTROLLER, CrossControllerDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_TWITTER, TwDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_NEAR, NearDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_COMPANION, CompanionUtilDialog::OnInit, CompanionUtilDialog::OnInit2 },
+	{ COMMON_DIALOG_TYPE_REMOTE_OSK, RemoteOskDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_TW_LOGIN, TwLoginDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_CALENDAR_REVIEW, CalendarReviewDialog::onInit, NULL },
+	{ COMMON_DIALOG_TYPE_POCKETSTATION, PocketStationDialog::OnInit, NULL },
+	{ COMMON_DIALOG_TYPE_VIDEOIMPORT, VideoImportDialog::onInit, VideoImportDialog::onInit2 },
+	{ 0, NULL, NULL }
+};
+
 /* the dialog table's entry of a dialog type */
 static inline const CommonDialogTableEntry *findDialog(int dialogType)
 {

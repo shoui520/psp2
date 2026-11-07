@@ -1,10 +1,9 @@
 enable_language(CXX)
 # SceCommonDialog (vs0:sys/external/libcdlg.suprx), built by Sony with SNC 3.57 in C++: the
 # manager every common dialog shares (common_dialog_mgr.cpp), the worker thread and each
-# dialog's API. Its paf import takes libpaf's link name. Being converted: the skeleton's stubs
-# (libcdlg.c) are left out until the last dialog is C.
+# dialog's API. Its paf import takes libpaf's link name.
 set(MODULE_IMPORT_NAMES vsh/paf/fw/3.65-CEX.exports.yml)
-psp2_module(vs0_sys_external_libcdlg KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(vs0_sys_external_libcdlg KIND user COMPILER snc SOURCES
 	common_dialog_mgr.cpp
 	videoimport_dialog.cpp
 	calendar_review_dialog.cpp
