@@ -354,7 +354,7 @@ set(MODULE_IMPORT_VARS
 	ScePafStdc_610F2F91
 	ScePafStdc_B4A712A7
 	ScePafMisc_E05FACA7
-	ScePafCommon_EBADE799
+	_ZTVN3paf6common11SlotJobItemE
 	ScePafThread_83970927
 	ScePafWidget_9AC1E040
 	ScePafWidget_A25ADFC4

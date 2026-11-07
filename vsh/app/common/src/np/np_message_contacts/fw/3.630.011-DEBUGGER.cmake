@@ -1200,7 +1200,7 @@ set(MODULE_IMPORT_VARS
 	ScePafMisc_A55320A6
 	ScePafMisc_DC169B6B
 	ScePafMisc_E05FACA7
-	ScePafCommon_EBADE799
+	_ZTVN3paf6common11SlotJobItemE
 	ScePafThread_11807592
 	ScePafThread_83CE85DD
 	ScePafWidget_9AC1E040

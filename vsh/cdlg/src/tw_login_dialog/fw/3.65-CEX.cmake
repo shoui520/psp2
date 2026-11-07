@@ -249,7 +249,7 @@ set(MODULE_IMPORT_VARS
 	__stack_chk_guard
 	ScePafStdc_610F2F91
 	ScePafStdc_B4A712A7
-	ScePafCommon_EBADE799
+	_ZTVN3paf6common11SlotJobItemE
 	ScePafCommon_F166B292
 	ScePafThread_83970927
 	SceCommonGuiDialog_2A68B4A4
