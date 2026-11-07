@@ -1171,6 +1171,14 @@ public:
 	Widget *FindChild(Widget *child, int32_t option);
 	/* the focus taken off it: -1 where it has none */
 	int32_t ReleaseFocus();
+	/* a touch or key may reach it: an input target, shown and in no transition, and not
+	   destroy protected (inline in Sony's code: ButtonBase's press, TouchScrollSupplier's rear
+	   mochi gesture; name ours) */
+	bool IsInputTarget()
+	{
+		return m_input_target && m_show_a_sum >= 0.95f && !m_transition_in &&
+		       !m_transition_out && !m_destroy_protected;
+	}
 	/* the child at the index in m_children */
 	Widget *GetChild(int32_t index) const;
 	AnimQueue *FindAnim(int32_t id);
@@ -1277,7 +1285,9 @@ public:
 	bool m_debug_events : 1;
 	/* its clip and scissor rectangles pushed around its children (name ours) */
 	bool m_clip_children : 1;
-	bool reserved3t : 1;
+	/* touch and key input may reach it (ButtonBase's press, ScrollViewBase's rear mochi
+	   gesture; name ours) */
+	bool m_input_target : 1;
 	/* its draw objects draw to a surface (name after SurfaceDrawParam's) */
 	bool m_surface_draw : 1;
 	bool reserved3v : 1;
@@ -1288,8 +1298,10 @@ public:
 	bool reserved3d : 1;
 	/* not destroyed when its page closes (name ours) */
 	bool m_destroy_protected : 1;
-	bool reserved3e : 1;
-	bool reserved3f : 1;
+	/* its transitions in and out are under way: it takes no input and its timers wait
+	   (Widget::OnUpdate, ScePafWidget 5A9793B0; names ours) */
+	bool m_transition_in : 1;
+	bool m_transition_out : 1;
 	bool reserved3g : 1;
 	/* outside the camera's view, not drawn (Camera::add_obj; name ours) */
 	bool m_culled : 1;

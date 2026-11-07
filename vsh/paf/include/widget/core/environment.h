@@ -11,6 +11,7 @@
 #include <std/string>
 #include <std/list>
 #include <std/string.h>
+#include <math/ngp/matrix.h>
 #include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
 #include <math/rect.h>
@@ -141,7 +142,9 @@ public:
 	math::v2 m_hit_pos;
 	uint8_t reserved2[0x30];
 	math::v4 reserved3;
-	uint8_t reserved4[0x28];
+	uint8_t reserved4[0x24];
+	/* the touch panel, 0 front or 1 rear (name ours) */
+	uint32_t m_port;
 	/* the touch ID (the Environment's m_touch_hits; name ours) */
 	uint32_t m_touch_id;
 	Widget *m_widget;
@@ -150,9 +153,11 @@ public:
 /* 0x80 bytes, at 0x330 of the Environment (names ours) */
 class TouchState {
 public:
-	int32_t m_state;
+	/* the panel, 0 front or 1 rear, and the touch ID, set by the widget taking it */
+	uint32_t m_port;
 	uint32_t m_id;
-	uint32_t reserved;
+	/* the touch's last event type (0x42 released) */
+	uint32_t m_type;
 	/* m_line_start and m_line_end are taken through a camera (ScrollViewBase::GetTrackPos) */
 	bool m_has_line;
 	/* where the touch is (DirectBar's drag out of its bar) */
@@ -257,7 +262,11 @@ public:
 	int32_t m_screen_orientation_mode;
 	uint8_t reserved0[4];
 	EnvironmentParam *m_env_param;
-	uint8_t reserved7[0x15];
+	uint8_t reserved7[4];
+	/* the widget whose hit rect is the screen a rear touch scrolls within (TouchScrollSupplier's
+	   rear mochi gesture; name ours) */
+	Widget *m_root_widget;
+	uint8_t reserved7a[0xd];
 	/* set by RequestTerm */
 	bool m_term_requested;
 	/* set by the power callback while the system suspends: the frame is not drawn (name
@@ -307,8 +316,8 @@ public:
 	list<Widget *> m_scenes_onupdate;
 	/* the screen SetScreen gives */
 	Screen *m_screen;
-	/* a state per touch ID: Canvas clears it and sets the ID at each touch it takes (names
-	   ours) */
+	/* a state per touch ID, the front panel's 0 to 7 and the rear's 8 to 15: the widget
+	   taking a touch sets its port and ID (names ours) */
 	TouchState m_touch_state[16];
 	/* where each touch ID last hit (name ours) */
 	HitInfo m_touch_hit[8];

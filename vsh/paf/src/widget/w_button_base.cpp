@@ -223,14 +223,6 @@ void ButtonBase::AddSound(uint32_t index, WidgetSoundParam::Sound &sound)
 	}
 }
 
-/* a touch or key may press it: touchable, shown and none of the three flags that keep it from
-   input (inline in Sony's code, name ours) */
-static inline bool IsPressable(Widget *widget)
-{
-	return widget->reserved3t && widget->m_show_a_sum >= 0.95f && !widget->reserved3e &&
-	       !widget->reserved3f && !widget->m_destroy_protected;
-}
-
 int32_t ButtonBase::HandleTouchEvent(Event *e)
 {
 	if (m_env == NULL)
@@ -242,7 +234,7 @@ int32_t ButtonBase::HandleTouchEvent(Event *e)
 	if (IsButtonEnabled()) {
 		switch (e->GetType()) {
 		case 0x41:
-			if (IsPressable(this)) {
+			if (IsInputTarget()) {
 				ScePafWidget_D3D0A7C3(this, port, id, true, true);
 				ScePafWidget_2B1A1493(this, SOUND_PRESS);
 				ChangeButtonState(ST_BTN_PRESS);
@@ -331,7 +323,7 @@ int32_t ButtonBase::HandleKeycodeEvent(Event *e)
 			if (type <= 0x11) {
 				uint32_t mask;
 
-				if (IsPressable(this) ||
+				if (IsInputTarget() ||
 				    (reserved3o && (mask = KeycodeToMask(detail & 0xFF),
 						    detail = e->m_detail, m_bound_keycode) &&
 				     (mask & m_keycode) != 0)) {

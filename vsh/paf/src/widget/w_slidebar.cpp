@@ -920,7 +920,7 @@ void SlideBar::OnDragBeginSlider(Event *e)
 		if (id < 8)
 			hit = &env->m_touch_hit[id];
 		if ((hit == NULL || hit->m_widget != slider) && id < 8) {
-			env->m_touch_state[id].m_state = 0;
+			env->m_touch_state[id].m_port = 0;
 			env->m_touch_state[id].m_id = id;
 
 			TouchState *touch = &env->m_touch_state[id];

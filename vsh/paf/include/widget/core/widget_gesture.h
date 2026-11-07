@@ -64,6 +64,29 @@ public:
 	   the update before (name ours; 0 here) */
 	virtual int32_t OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre);
 	virtual void RefreshActiveTouch(uint32_t touch_id);
+
+	/* the touch IDs it holds, a bit each */
+	uint32_t m_touch_bitmap;
+	/* the most and the fewest touches it takes (8 and 1; meaning open) */
+	uint32_t m_touch_count_max;
+	uint32_t m_touch_count_min;
+	/* the front touch panel's pixels per millimetre */
+	float m_pixel_per_mm;
+};
+
+/* the listener of gesture 20, two touches pinched (constructor 0x81164820 TOOL, vtable
+   812F960C; names ours, the meaning of its positions open) */
+class PinchGestureListener : public MultiTouchGestureListener {
+public:
+	/* the pinch's two positions, as its state gives them; false and 0 where it has none */
+	bool GetPinchPos(float *x0, float *y0, float *x1, float *y1);
+
+	/* what the pinch does (0 to 3) */
+	int32_t m_pinch_state;
+	float m_pos[8];
+	uint8_t reserved[8];
+	/* the touch IDs it pinches with, a bit each (ScrollViewBase's rear pinch gesture) */
+	uint32_t m_pinch_touches;
 };
 
 /* how a drag gesture starts and ends (vtable 812F6CBC, 0x48 bytes; names ours, the
@@ -131,6 +154,11 @@ public:
 	virtual void GetParam(DragGestureParam *param);
 	/* the flick's velocity scaled by the time since it began */
 	virtual bool ScaleFlick(float *x, float *y);
+
+	uint8_t reserved[0x120 - sizeof(MultiTouchGestureListener)];
+	/* the touch IDs it drags with, a bit each (ScrollViewBase's rear mochi gesture; name
+	   ours) */
+	uint32_t m_drag_touches;
 };
 
 /* the flick parameters every drag gesture listener points to, made once (vtable 812F6CC8;
@@ -166,6 +194,18 @@ extern "C" {
    none (no name found) */
 common::SharedPtr<inputdevice::GestureListener> ScePafWidget_712AD1C7(Widget *widget,
 	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect &rect);
+/* the widget's gesture listeners of the types 128, 16 and 2 for the touch, made where it has
+   none, within the rect where one is given (no names found) */
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_DE7EC3CF(Widget *widget,
+	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect);
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_F4625FAD(Widget *widget,
+	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect);
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_5E7757AA(Widget *widget,
+	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect);
+/* the widget's gesture listener of the type on a rear touch, the first touch ID that has one
+   (no name found) */
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_0F9F14D4(Widget *widget,
+								       int32_t type);
 /* the gesture's event sent for the touch, with its velocity (no name found) */
 void ScePafWidget_C5939A92(TouchGestureListener *listener, int32_t gesture, uint32_t touch_id,
 			   int32_t arg, float vx, float vy, int32_t a, int32_t b);

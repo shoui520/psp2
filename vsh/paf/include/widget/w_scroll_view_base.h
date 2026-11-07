@@ -46,6 +46,24 @@ public:
 	uint32_t m_dir;
 };
 
+/* where the focus goes: the view's focus there, how far it is from the focus it starts at,
+   the axes it moves along (MoveDir) and the snap point it is, -1 for none (names ours) */
+class ScrollViewFocusTarget {
+public:
+	ScrollViewFocusTarget()
+	{
+	}
+
+	/* the snap point's position, the focus it is gone to from and its ID (ScePafWidget
+	   261D26DE) */
+	ScrollViewFocusTarget(math::v2 snap_pos, math::v2 focus, int32_t snap_id);
+
+	math::v2 m_pos;
+	math::v2 m_move;
+	uint32_t m_dir;
+	int32_t m_snap_id;
+};
+
 /* what ScrollViewBase gives its controller to lay its scroll bars out (name ours) */
 class ScrollViewBarLayout {
 public:
@@ -258,15 +276,29 @@ public:
 	virtual bool TakeTrackedGesture(Event *e);
 	virtual bool MochiBegin(Event *e);
 	virtual bool MochiMove(Event *e);
-	virtual bool ScePafWidget_3196DEE8(Event *e);
-	virtual bool ScePafWidget_46CD91F6(Event *e);
-	virtual bool ScePafWidget_0BC06625(Event *e);
-	virtual bool ScePafWidget_2141506E(Event *e);
-	virtual bool ScePafWidget_0ECFFCE1(Event *e);
-	virtual bool ScePafWidget_3403FD90(Event *e);
-	virtual bool ScePafWidget_22F22B80(Event *e);
-	virtual bool ScePafWidget_C8C679BB(Event *e);
-	virtual bool ScePafWidget_7F653E08(Event *e);
+	/* a rear touch released: the flick stopped once it tracks no rear touch (3196DEE8; name
+	   ours) */
+	virtual bool TrackRearRelease(Event *e);
+	/* a rear touch pressed, taken by the views (46CD91F6; name ours) */
+	virtual bool TrackRearPress(Event *e);
+	/* gesture 7 of a rear touch, taken (0BC06625; name ours) */
+	virtual bool TakeRearGesture(Event *e);
+	/* gesture 10 of a rear touch: the mochi gesture begun on the touches its drag listener
+	   holds (2141506E; name ours) */
+	virtual bool RearMochiBegin(Event *e);
+	/* gesture 11 of a rear touch: the views dragged by its flick (0ECFFCE1; name ours) */
+	virtual bool RearMochiMove(Event *e);
+	/* gesture 20 of the rear touches begun: the views take the touches its pinch listener
+	   holds (3403FD90; name ours) */
+	virtual bool RearPinchBegin(Event *e);
+	/* gesture 20 of the rear touches moved: the views dragged to its position (22F22B80; name
+	   ours) */
+	virtual bool RearPinchMove(Event *e);
+	/* the position a view of its kind takes the focus to, none here (no name found) */
+	virtual bool ScePafWidget_C8C679BB(math::v2 &pos, const math::v2 &focus);
+	/* where the focus goes from the focus: the snap point with the ID, else the one nearest
+	   it, else the kind's position, else the focus within the limits (no name found) */
+	virtual ScrollViewFocusTarget ScePafWidget_7F653E08(const math::v2 &focus, int32_t snap_id);
 	virtual void SetViewBox(const math::v4 &view_box);
 	/* the padding between the view box and the contents' ends (name ours) */
 	virtual void SetPadding(const math::v4 &padding);
@@ -370,14 +402,32 @@ public:
 	/* the widget the focus goes to in the direction, from the widget or the focus; NULL for
 	   none or itself (name ours) */
 	Widget *SearchFocus(const math::v2 &dir, Widget *from);
+	/* the scroll bars' jet tails as long as the view moved since the last tick, along the
+	   axes (MoveDir; name ours) */
+	void UpdateJetTail(uint32_t dir);
+	/* the released rear touches taken out of those it tracks: none left (45AD0825; name
+	   ours) */
+	bool UpdateRearTouches();
 
 	void ResetScrollBar(ScrollBar *&scroll_bar, ScrollBar *next_bar);
 	list<Snap>::iterator FindSnapPoint(int32_t snap_id);
+	/* where the touch it tracks is: where it hit the view, else on its plane (ScePafWidget
+	   F20AED37; name ours) */
+	math::v2 GetTouchPos();
+	/* the snap point the focus goes to: the preferred one, the nearest ahead of the focus in
+	   the direction along its main axis, the one at the focus, else the nearest within the
+	   snap power or the nearest of all (ScePafWidget 6172A6A8; name ours) */
+	list<Snap>::iterator FindSnapPointToward(const math::v2 &focus, const math::v2 &dir);
+	/* how long the view takes to move the distance: the snap time, halved where fixed is set,
+	   else scaled by 20 over the over scroll length, by the distance's fourth root (1 at the
+	   least; name ours) */
+	float CalcScrollTime(float distance, bool fixed);
 	void SendEvent(int32_t type, int32_t v0, int32_t v1, int32_t v2, int32_t v3);
 
 	/* the touch port it tracks, -1 for none */
 	int32_t m_track_port;
-	int32_t m_track_state;
+	/* the rear touch IDs it tracks, a bit each (name ours) */
+	uint32_t m_rear_touches;
 	/* how fast the view moves */
 	math::v2 m_velocity;
 	/* the widget its children sit in, which it moves */
