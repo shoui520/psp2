@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <scetypes.h>
 #include <kernel/threadmgr.h>
+#include <videoimport_dialog.h>
 
 #ifdef __cplusplus
 namespace paf {
@@ -201,10 +202,20 @@ typedef struct CommonDialogCrossControllerParam {
 	int drawPriority;
 } CommonDialogCrossControllerParam;
 
+/* videoimport_dialog.cpp: the caller's parameter and the result for GetResult */
 typedef struct CommonDialogVideoImportParam {
-	SceUInt8 reserved[284];
+	SceVideoImportDialogParam param;
+	SceVideoImportDialogResult result;
+	SceCommonDialogColor bgColor;
+	int infobarShown;
 	int drawPriority;
+	/* the API call that holds the dialog (CommonDialogApiScope) */
+	char apiName[64];
 } CommonDialogVideoImportParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogVideoImportDrawPriority,
+			   __builtin_offsetof(CommonDialogVideoImportParam, drawPriority) == 284);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogVideoImportSize, sizeof(CommonDialogVideoImportParam) == 0x160);
 
 typedef struct CommonDialogCalendarReviewParam {
 	SceUInt8 reserved[1188];

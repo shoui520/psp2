@@ -14,6 +14,7 @@
 #include <appmgr.h>
 #include <appmgr/appmgr.h>
 #include <stdarg.h>
+#include <libkernel/libkernel.h>
 #include "common_dialog_mgr.h"
 
 /* the module's errors that the SDK does not name */
@@ -92,12 +93,78 @@ int checkCommonParam(const CommonDialogParamOption *option, const SceCommonDialo
 int checkCommonParamWithInfobar(const SceCommonDialogParam *commonParam, bool *infobarShown,
 				bool keepInfobar, bool hideInfobar);
 void clearWorkFlags(void);
+bool isCommonDialogError(int error);
+
+/*
+ * An API call of a dialog on its work memory: the dialog is locked and its
+ * work memory taken for the call, under the call's name (each dialog keeps
+ * apiName in its work memory), and given back when the call ends. The name
+ * still there at the end shows that no other call took the work memory in
+ * between. The errors are the dialog's own; the first error of the call is
+ * the one it returns.
+ */
+template <class Work, int DialogType, int ErrorNoWork, int ErrorApiName>
+class CommonDialogApiScope {
+public:
+	CommonDialogApiScope(const char *name, int &ret)
+		: m_ret(ret), m_name(name), m_work(NULL)
+	{
+		ret = LockDialog(DialogType);
+		if (ret != SCE_OK)
+			return;
+		m_work = (Work *)GetWorkMemory(DialogType);
+		if (m_work == NULL) {
+			ret = ErrorNoWork;
+			UnlockDialog(DialogType);
+			return;
+		}
+		sceClibStrncpy(m_work->apiName, name, sizeof(m_work->apiName));
+		m_work->apiName[sizeof(m_work->apiName) - 1] = '\0';
+		ret = SCE_OK;
+	}
+
+	~CommonDialogApiScope()
+	{
+		int ret;
+
+		if (m_work == NULL)
+			return;
+		if (sceClibStrncmp(m_work->apiName, m_name, sizeof(m_work->apiName)) != 0) {
+			ret = ErrorApiName;
+		} else {
+			sceClibMemset(m_work->apiName, 0, sizeof(m_work->apiName));
+			ret = UnlockDialog(DialogType);
+			if (ret == SCE_OK)
+				return;
+		}
+		if (m_ret == SCE_OK)
+			m_ret = ret;
+	}
+
+	Work *work(void) const
+	{
+		return m_work;
+	}
+
+private:
+	int &m_ret;
+	const char *m_name;
+	Work *m_work;
+};
+
+/* what a dialog's API call returns: the common dialog's errors as they are,
+   any other error as an unexpected one */
+static inline int toCommonDialogResult(int ret)
+{
+	if (!isCommonDialogError(ret) && ret < 0)
+		return SCE_COMMON_DIALOG_ERROR_UNEXPECTED_FATAL;
+	return ret;
+}
 
 /* the sysmodule calls with the module's status (the module's tail) */
 int loadSysmoduleWithArg(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags, int *status);
 void clearMainWorkFlags(CommonDialogWork *work);
 int unloadSysmoduleWithArg(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags, int *status);
-bool isCommonDialogError(int error);
 
 /* the worker thread (worker_thread.cpp) */
 int initializeWorkerThread(void);

@@ -6,6 +6,7 @@ enable_language(CXX)
 set(MODULE_IMPORT_NAMES vsh/paf/fw/3.65-CEX.exports.yml)
 psp2_module(vs0_sys_external_libcdlg KIND user COMPILER snc PARTIAL SOURCES
 	common_dialog_mgr.cpp
+	videoimport_dialog.cpp
 	worker_thread.cpp
 )
 target_include_directories(vs0_sys_external_libcdlg PRIVATE "${PSP2_SRC}/vsh/paf/include"
@@ -14,4 +15,5 @@ target_include_directories(vs0_sys_external_libcdlg PRIVATE "${PSP2_SRC}/vsh/paf
 target_compile_definitions(vs0_sys_external_libcdlg PRIVATE PSP2_STRIP_UNUSED)
 target_link_options(vs0_sys_external_libcdlg PRIVATE -Wl,--gc-sections)
 set_source_files_properties(common_dialog_mgr.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
+set_source_files_properties(videoimport_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(worker_thread.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
