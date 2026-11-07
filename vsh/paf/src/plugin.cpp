@@ -1870,8 +1870,6 @@ void Plugin::Start()
 				PageOpen(page, param);
 				if (m_option & Option_AutoActivate)
 					PageActivate(page);
-				if (param.timer != NULL)
-					delete param.timer;
 			}
 		}
 	}

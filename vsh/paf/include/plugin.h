@@ -273,6 +273,12 @@ public:
 	public:
 		PageOpenParam();
 
+		~PageOpenParam()
+		{
+			if (timer != NULL)
+				delete timer;
+		}
+
 		int32_t draw_layer;
 		int32_t draw_mask;
 		int32_t overwrite_draw_priority;
