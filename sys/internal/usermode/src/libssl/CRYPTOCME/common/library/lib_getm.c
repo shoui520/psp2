@@ -2,6 +2,7 @@
  * descriptor matcher here and the descriptive private names are ours.
  */
 #include "lib_ctx.h"
+#include "../../../memory.h"
 #include "../../../runtime.h"
 
 static const char getModuleSource[] =
@@ -10,6 +11,17 @@ static const char getModuleSource[] =
 /* Descriptive names are ours; the originals keep two distinct writable lists. */
 static int referenceModuleTypes[] = { 6, 9, 10, 16, 17, 0 };
 static int initialReferenceModuleTypes[] = { 6, 9, 10, 16, 17, 0 };
+
+int sslSelectLibraryModule(SslLibraryModule *table, SslLibraryModule **result,
+			   SslLibraryModule **next)
+{
+	if (table == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	*result = table;
+	if (next != NULL)
+		*next = table->type != 0 ? table + 1 : NULL;
+	return 0;
+}
 
 int sslFindLibraryModule(SslLibraryModule *table, int type, int selector,
 			SceUInt32 flags, int parameter, SslLibraryModule **result,
@@ -30,10 +42,42 @@ int sslFindLibraryModule(SslLibraryModule *table, int type, int selector,
 	}
 	if (table->type == 0 && type != 0)
 		return SSL_LIBRARY_ERROR_NOT_FOUND;
-	*result = table;
-	if (next != NULL)
-		*next = table->type != 0 ? table + 1 : NULL;
+	return sslSelectLibraryModule(table, result, next);
+}
+
+int sslCleanupLibraryModuleData(void *data, SslLibraryModule *module)
+{
+	if (module != NULL && (module->parameter & 2) != 0)
+		sslFree(data);
 	return 0;
+}
+
+int sslLookupLibraryValue(const SslLibraryValueMap *table, int key, int column,
+			  int fallback)
+{
+	int result = fallback;
+
+	if (table != NULL) {
+		while ((column == 1 && table->first != 0) ||
+		       (column == 2 && table->second != 0)) {
+			if (table->key == key) {
+				if (column == 1)
+					result = table->first;
+				else if (column == 2)
+					result = table->second;
+				break;
+			}
+			table++;
+		}
+	}
+	return result;
+}
+
+const char *sslLookupLibraryString(const SslLibraryValueMap *table, int key,
+				   int column)
+{
+	return (const char *)sslLookupLibraryValue(table, key, column,
+						   (int)"UNKNOWN");
 }
 
 int sslLookupLibraryMethod(SslLibrary *library, int type, int selector,

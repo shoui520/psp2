@@ -26,9 +26,12 @@ typedef struct SslKeyModule {
 	int (*GetKeyInfo)(void *key, int selector, void *result);
 	int (*SetKeyInfo)(void *key, int selector, void *value);
 	int (*CopyKey)(void *source, void *destination, int mode);
-	SceUIntPtr opaqueKeyOperations[5];
+	SceUIntPtr opaqueKeyOperations[4];
+	int (*RetainKey)(void *key);
 	int (*EnumerateComponents)(void *key, SslKeyComponentCallback callback, void *arg);
-	SceUIntPtr opaqueContextOperations[5];
+	SceUIntPtr opaqueComponentOperations[3];
+	int (*CompareKeys)(void *left, void *right);
+	int (* opaqueContextOperation)(void);
 	int (*RetainContext)(void *context);
 } SslKeyModule;
 
@@ -58,13 +61,16 @@ typedef struct SslPublicKeyHeader {
 #define SSL_KEY_MODULE_TYPE 16
 #define SSL_KEY_INFO_CONTEXT 2001
 #define SSL_KEY_INFO_ALGORITHM 2006
+#define SSL_KEY_INFO_BIT_LENGTH 2007
 
 _Static_assert(sizeof(SslKeyContext) == 24, "SslKeyContext");
 _Static_assert(offsetof(SslKeyContext, references) == 20, "references");
 _Static_assert(offsetof(SslKeyModule, DestroyKey) == 32, "DestroyKey");
 _Static_assert(offsetof(SslKeyModule, GetKeyInfo) == 36, "GetKeyInfo");
 _Static_assert(offsetof(SslKeyModule, CopyKey) == 44, "CopyKey");
+_Static_assert(offsetof(SslKeyModule, RetainKey) == 64, "RetainKey");
 _Static_assert(offsetof(SslKeyModule, EnumerateComponents) == 68, "EnumerateComponents");
+_Static_assert(offsetof(SslKeyModule, CompareKeys) == 84, "CompareKeys");
 _Static_assert(offsetof(SslKeyModule, RetainContext) == 92, "RetainContext");
 _Static_assert(sizeof(SslKeyComponent) == 8, "SslKeyComponent");
 
@@ -72,7 +78,11 @@ int sslCreateKeyContext(SslLibrary *library, int parameter, SceUInt32 flags,
 			void **result);
 int sslCreatePublicKey(void *context, int algorithm, void **result);
 int sslCopyPublicKey(void *source, void *destination, int mode);
+int sslClonePublicKey(void *source, int mode, void **result);
+int sslRetainPublicKey(void *key);
 int sslEnumerateKeyComponents(void *key, SslKeyComponentCallback callback, void *arg);
+int sslGetPublicKeyBitLength(void *key);
+int sslComparePublicKeys(void *left, void *right);
 int sslGetPublicKeyInfo(void *key, int selector, void *result);
 int sslSetPublicKeyInfo(void *key, int selector, void *value);
 int sslRetainKeyContext(void *context);

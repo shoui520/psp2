@@ -5,6 +5,7 @@
 #include "../../../../CRYPTOCME/common/object.h"
 #include "../../../../CRYPTOCME/common/property.h"
 #include "../../../../CRYPTOCME/common/library/lib_ctx.h"
+#include "../../../../objects/objects.h"
 
 typedef struct SslCertificate SslCertificate;
 typedef struct SslCertificateName SslCertificateName;
@@ -40,8 +41,15 @@ typedef struct SslCertificateBackendMethods {
 				SslCertificateNameComponent **result);
 } SslCertificateBackendMethods;
 
+typedef struct SslCertificateKeyMethods {
+	int (*VerifySignature)(SslCertificate *certificate, void *key,
+			       void *cryptoContext);
+	SceUIntPtr opaqueOperation;
+	int (*GetPublicKey)(SslCertificate *certificate, int mode, void **result);
+} SslCertificateKeyMethods;
+
 typedef struct SslCertificateNameMethods {
-	int (*Create)();
+	int (*Create)(void *context, void **result);
 	int (*Destroy)(void *name);
 	int (*Copy)(SslCertificateName *source, int mode, SslCertificateName **result);
 	SceUIntPtr opaqueOperation;
@@ -52,7 +60,9 @@ typedef struct SslCertificateNameMethods {
 	int (*Encode)(SslCertificateName *name, SceUInt32 capacity, void *data,
 		      SceUInt32 *length);
 	int (*GetInfo)(SslCertificateName *name, int selector, void *result);
-	SceUIntPtr opaqueSetters[2];
+	SceUIntPtr opaqueSetter;
+	int (*CreateComponent)(SslCertificateName *name,
+			       SslCertificateNameComponent **result);
 	int (*DestroyComponent)(SslCertificateNameComponent *component);
 	int (*GetComponentInfo)(SslCertificateNameComponent *component, int selector,
 				SslCertificatePropertyValue *result);
@@ -71,10 +81,14 @@ typedef struct SslCertificateMethods {
 	int (*NewCertificateFromData)(void *context, int mode, int type,
 				      SceUInt32 length, const void *data,
 				      SceUInt32 *consumed, void **result);
-	int (*RetainCertificate)(SslCertificate *certificate, int mode);
+	int (*RetainCertificate)();
 	int (*GetCertificateInfo)(SslCertificate *certificate, int selector, void *result);
 	int (*SetCertificateInfo)(SslCertificate *certificate, int selector, void *value);
-	SceUIntPtr opaqueInterface[9];
+	SceUIntPtr opaqueOperation;
+	int (*DecodeDate)(SslCertificate *certificate,
+			  SslCertificatePropertyValue *encoded, void *result);
+	SceUIntPtr opaqueInterface[6];
+	const SslCertificateKeyMethods *keyMethods;
 	const SslCertificateNameMethods *nameMethods;
 } SslCertificateMethods;
 
@@ -283,5 +297,42 @@ int sslGetCertificateNameHash(SslCertificateName *name, int algorithm,
 int sslGetCertificateNameInfo(SslCertificateName *name, int selector, void *result);
 int sslEncodeCertificateName(SslCertificateName *name, SceUInt32 capacity,
 			     void *data, SceUInt32 *length);
+int sslAllocateAndSerializeCertificate(SslCertificate *certificate, void **data,
+				       SceUInt32 *length);
+int sslCompareCertificates(SslCertificate *left, SslCertificate *right);
+int sslAreCertificatesEqual(SslCertificate *left, SslCertificate *right);
+int sslCompareCertificateNames(SslCertificateName *left,
+			       SslCertificateName *right);
+int sslCompareCertificateSubjects(SslCertificate *left, SslCertificate *right);
+int sslAreCertificateSubjectsEqual(SslCertificate *left, SslCertificate *right);
+int sslComputeCertificateDigest(SslCertificate *certificate, int selector,
+				int algorithm, SceUInt32 capacity, void *digest,
+				SceUInt32 *digestLength);
+int sslGetCertificateDate(SslCertificate *certificate, int selector, void *result);
+int sslSetObjectIdentifierByType(struct SslObjectIdentifier *object, int type);
+int sslNewObjectIdentifierByType(void *unused, int type,
+				 struct SslObjectIdentifier **result);
+int sslValidateCertificateVersionFields(SslCertificate *certificate);
+int sslCreateCertificateContext(SslLibrary *library, int parameter,
+				SceUInt32 flags, SslObjectHeader **result);
+int sslDestroyCertificateContext(void *context);
+int sslSetCertificateContextOption(void *context, int selector, void *value);
+int sslCreateCertificate(void *context, int flags, void **result);
+int sslRetainCertificateObject(SslCertificate *certificate);
+int sslDuplicateCertificateObject(SslCertificate *certificate);
+int sslSetCertificateObjectInfo(SslCertificate *certificate, int selector,
+				void *value);
+int sslCreateCertificateNameObject(SslCertificateContext *context, void **result);
+int sslCopyCertificateNameObject(SslCertificateName *source, int mode,
+				 SslCertificateName **result);
+int sslCreateCertificateNameComponentObject(SslCertificateName *name,
+					    SslCertificateNameComponent **result);
+int sslSerializeCertificateObject(SslCertificate *certificate, SceUInt32 capacity,
+				  void *data, SceUInt32 *length);
+int sslDecodeCertificateNameObject(SslCertificateContext *context, int mode,
+				   SceUInt32 length, const void *data,
+				   SceUInt32 *consumed, void **result);
+int sslEncodeCertificateNameObject(SslCertificateName *name, SceUInt32 capacity,
+				   void *data, SceUInt32 *length);
 
 #endif

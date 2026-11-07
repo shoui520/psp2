@@ -13,3 +13,25 @@ int sslDestroyKey(void *key)
 		return SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
 	return object->methods->Destroy(key);
 }
+
+int sslGetKeyInfo(void *key, int selector, void *result)
+{
+	SslObjectHeader *object = key;
+
+	if (object == NULL || result == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (object->methods->GetInfo == NULL)
+		return SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+	return object->methods->GetInfo(key, selector, result);
+}
+
+int sslSetKeyInfo(void *key, int selector, void *value)
+{
+	SslObjectHeader *object = key;
+
+	if (object == NULL || value == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (object->methods->SetInfo == NULL)
+		return SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+	return object->methods->SetInfo(key, selector, value);
+}

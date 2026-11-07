@@ -94,6 +94,36 @@ int sslCopyPublicKey(void *source, void *destination, int mode)
 	return object->context->module->CopyKey(source, destination, mode);
 }
 
+int sslClonePublicKey(void *source, int mode, void **result)
+{
+	void *context;
+	int algorithm;
+	int status;
+
+	if (source == NULL || result == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	context = NULL;
+	algorithm = sslGetPublicKeyAlgorithm(source);
+	status = sslGetPublicKeyInfo(source, SSL_KEY_INFO_CONTEXT, &context);
+	if (status == 0) {
+		status = sslCreatePublicKey(context, algorithm, result);
+		if (status == 0)
+			status = sslCopyPublicKey(source, *result, mode);
+	}
+	return status;
+}
+
+int sslRetainPublicKey(void *key)
+{
+	SslPublicKeyHeader *object = key;
+
+	if (object == NULL || object->context->module == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (object->context->module->RetainKey == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return object->context->module->RetainKey(key);
+}
+
 int sslEnumerateKeyComponents(void *key, SslKeyComponentCallback callback, void *arg)
 {
 	SslPublicKeyHeader *object = key;
@@ -103,6 +133,26 @@ int sslEnumerateKeyComponents(void *key, SslKeyComponentCallback callback, void 
 	if (object->context->module->EnumerateComponents == NULL)
 		return SSL_CRYPTO_ERROR_NO_OPERATION;
 	return object->context->module->EnumerateComponents(key, callback, arg);
+}
+
+int sslGetPublicKeyBitLength(void *key)
+{
+	int bits = 0;
+
+	if (sslGetPublicKeyInfo(key, SSL_KEY_INFO_BIT_LENGTH, &bits) != 0)
+		return 0;
+	return bits;
+}
+
+int sslComparePublicKeys(void *left, void *right)
+{
+	SslPublicKeyHeader *object = left;
+
+	if (right == NULL || object == NULL || object->context->module == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (object->context->module->CompareKeys == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return object->context->module->CompareKeys(left, right);
 }
 
 int sslCreateKeyContext(SslLibrary *library, int parameter, SceUInt32 flags,

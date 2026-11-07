@@ -45,6 +45,12 @@ typedef struct SslLibraryModuleState {
 	void *data;
 } SslLibraryModuleState;
 
+typedef struct SslLibraryValueMap {
+	int key;
+	int first;
+	int second;
+} SslLibraryValueMap;
+
 struct SslLibrary {
 	const SslLibraryMethods *methods;
 	SslLibraryModule *modules_table;
@@ -71,9 +77,16 @@ SslLibrary *sslGetDefaultLibrary(void);
 int SceSslInternal_09657E15(SslLibraryModule *table, int unused,
 			  SslLibrary **result);
 int sslGetLibraryInfo(SslLibrary *library, int selector, void *result);
+int sslSelectLibraryModule(SslLibraryModule *table, SslLibraryModule **result,
+			   SslLibraryModule **next);
 int sslFindLibraryModule(SslLibraryModule *table, int type, int selector,
 			SceUInt32 flags, int parameter, SslLibraryModule **result,
 			SslLibraryModule **next);
+int sslCleanupLibraryModuleData(void *data, SslLibraryModule *module);
+int sslLookupLibraryValue(const SslLibraryValueMap *table, int key, int column,
+			  int fallback);
+const char *sslLookupLibraryString(const SslLibraryValueMap *table, int key,
+				   int column);
 int sslLookupLibraryMethod(SslLibrary *library, int type, int selector,
 			   SceUInt32 flags, int parameter, int request,
 			   SceUIntPtr *result);

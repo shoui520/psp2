@@ -10,6 +10,8 @@
 typedef struct SslObjectMethods {
 	int (*Create)();
 	int (*Destroy)(void *object);
+	int (*GetInfo)(void *object, int selector, void *result);
+	int (*SetInfo)(void *object, int selector, void *value);
 } SslObjectMethods;
 
 typedef struct SslObjectHeader {
