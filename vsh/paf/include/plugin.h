@@ -154,6 +154,11 @@ public:
 
 	class Argument {
 	public:
+		/* an int 0, stored as the float 0.0 (what map::operator[] inserts in libcdlg_checkout) */
+		Argument() : type(ArgumentType_Int), f(0.0f)
+		{
+		}
+
 		Argument(int32_t value) : type(ArgumentType_Int), i(value)
 		{
 		}
@@ -165,6 +170,16 @@ public:
 			i = src.i;
 			f = src.f;
 			str = src.str;
+		}
+
+		/* the same two stores of the value as the copy (libcdlg_checkout's assignments) */
+		Argument &operator=(const Argument &src)
+		{
+			type = src.type;
+			i = src.i;
+			f = src.f;
+			str = src.str;
+			return *this;
 		}
 
 		operator int32_t() const;
