@@ -1,0 +1,13 @@
+# The link names this module's C++ gives two of libpaf's exports that have no Sony name and no
+# mangled name of their NID (common/state_check.h): ::StateCheck's vtable and Sleep. It binds
+# them for this module's link only, the way an exporter's exports.yml names its exports.
+ScePaf:
+  libraries:
+    ScePafCommon:
+      syscall: false
+      version: 1
+      nid: 0x3C1965CD
+      functions:
+        - _ZN10StateCheck5SleepEv: 0x83FFAFCA
+      variables:
+        - _ZTV10StateCheck: 0xF166B292
