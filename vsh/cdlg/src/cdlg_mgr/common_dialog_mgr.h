@@ -403,7 +403,9 @@ typedef struct RemoteOskDialogParam {
 
 typedef struct RemoteOskDialogResult {
 	SceInt32 result;
-	SceUInt8 dialogData[8];
+	/* the plugin's: the dialog's SceCommonDialogResult (OK, USER_CANCELED, ABORTED), and how
+	   the companion's text field ended (1 entered, 2 canceled) */
+	SceInt32 dialogData[2];
 	char reserved[28];
 } RemoteOskDialogResult;
 
