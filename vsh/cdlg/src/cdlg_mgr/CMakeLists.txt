@@ -11,6 +11,7 @@ psp2_module(vs0_sys_external_libcdlg KIND user COMPILER snc PARTIAL SOURCES
 	friendlist2_dialog.cpp
 	companion_util_dialog.cpp
 	game_custom_data_dialog.cpp
+	invitation_dialog.cpp
 	worker_thread.cpp
 )
 target_include_directories(vs0_sys_external_libcdlg PRIVATE "${PSP2_SRC}/vsh/paf/include"
@@ -24,4 +25,5 @@ set_source_files_properties(calendar_review_dialog.cpp PROPERTIES COMPILE_OPTION
 set_source_files_properties(friendlist2_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(companion_util_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(game_custom_data_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
+set_source_files_properties(invitation_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(worker_thread.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)

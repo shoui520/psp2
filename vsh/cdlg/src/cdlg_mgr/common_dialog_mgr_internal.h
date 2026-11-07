@@ -166,6 +166,13 @@ int loadSysmoduleWithArg(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags
 void clearMainWorkFlags(CommonDialogWork *work);
 int unloadSysmoduleWithArg(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags, int *status);
 
+/* the string checks the NP web API dialogs share (game_custom_data_dialog.cpp) */
+namespace GameCustomDataDialog {
+int checkUtf8Length(const char *str, SceUInt32 max);
+int checkStringLength(const char *str, SceUInt32 max, bool allowEmpty);
+bool isZeroFilled(const SceUChar8 *data, SceUInt32 size);
+}
+
 /* the worker thread (worker_thread.cpp) */
 int initializeWorkerThread(void);
 int finalizeWorkerThread(void);
