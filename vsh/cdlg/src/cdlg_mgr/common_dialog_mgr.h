@@ -13,6 +13,7 @@
 #include <scetypes.h>
 #include <kernel/threadmgr.h>
 #include <photoimport_dialog.h>
+#include <photoreview_dialog.h>
 #include <videoimport_dialog.h>
 
 #ifdef __cplusplus
@@ -194,10 +195,25 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogPhotoImportDrawPriority,
 			   __builtin_offsetof(CommonDialogPhotoImportParam, drawPriority) == 176);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogPhotoImportSize, sizeof(CommonDialogPhotoImportParam) == 244);
 
+/* photoreview_dialog.cpp: the caller's parameter, the result for GetResult, and a copy
+   of the export metadata with its strings, which the copied parameter points to */
 typedef struct CommonDialogPhotoReviewParam {
-	SceUInt8 reserved[2260];
+	ScePhotoReviewDialogParam param;
+	ScePhotoReviewDialogResult result;
+	SceCommonDialogColor bgColor;
+	int infobarShown;
+	ScePhotoReviewDialogExportParam exportParam;
+	SceChar8 photoTitle[SCE_PHOTOREVIEW_DIALOG_MAX_PHOTO_TITLE_SIZE];
+	SceChar8 gameTitle[SCE_PHOTOREVIEW_DIALOG_MAX_GAME_TITLE_SIZE];
+	SceChar8 gameComment[SCE_PHOTOREVIEW_DIALOG_MAX_GAME_COMMENT_SIZE];
 	int drawPriority;
+	/* the API call that holds the dialog (CommonDialogApiScope) */
+	char apiName[64];
 } CommonDialogPhotoReviewParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogPhotoReviewDrawPriority,
+			   __builtin_offsetof(CommonDialogPhotoReviewParam, drawPriority) == 2260);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogPhotoReviewSize, sizeof(CommonDialogPhotoReviewParam) == 2328);
 
 typedef struct CommonDialogCameraImportParam {
 	SceUInt8 reserved[424];

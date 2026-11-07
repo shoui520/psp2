@@ -21,6 +21,7 @@ extern "C" {
 
 /* one character code check */
 int sceCesUcs2CheckCode(uint16_t ucs2);
+int sceCesUtf8CheckCode(const uint8_t *utf8addr, uint32_t utf8max, uint32_t *utf8Len);
 
 /* character string conversion */
 /* ================================================== */
