@@ -54,6 +54,11 @@ extern "C" {
 #define SCE_IME_EVENT_PRESS_ENTER      5
 #define SCE_IME_WORK_BUFFER_SIZE      (20*1024)
 
+/* the IME text filter */
+typedef SceInt32 (*SceImeTextFilter)(
+	SceWChar16 *outText, SceUInt32 *outTextLength,
+	const SceWChar16 *srcText, SceUInt32 srcTextLength);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
