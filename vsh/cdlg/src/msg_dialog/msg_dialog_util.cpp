@@ -10,12 +10,10 @@
 #include <modulemgr/modulemgr_syscall.h>
 #include <std/string.h>
 #include <std/string>
+#include <std/stdio.h>
 #include "msg_dialog_plugin.h"
 
 using namespace paf;
-
-/* TODO(Tamsin): declared by vsh/paf/include/std/stdio.h once it has it */
-extern "C" int sce_paf_swprintf(wchar_t *buffer, size_t bufsz, const wchar_t *format, ...);
 
 /* the SDK versions from which the caller sees the newer dialogs: 1.500 and 2.100 */
 #define MSG_DIALOG_SDK_VERSION_LEVEL1	0x01500000

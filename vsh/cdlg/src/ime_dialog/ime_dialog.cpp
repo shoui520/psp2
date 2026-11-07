@@ -239,8 +239,6 @@ ImeDialog::ImeDialog(SceImeDialogParam *param, ImeDialogFunction callback, bool 
 			}
 		}
 	}
-	if (openParam.timer != NULL)
-		delete openParam.timer;
 }
 
 ImeDialog::~ImeDialog()

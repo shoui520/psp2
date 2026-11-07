@@ -344,8 +344,6 @@ MsgDialog::MsgDialog(SceMsgDialogMode mode, MsgDialogFunction callback, void *us
 	Plugin::PageOpenParam openParam;
 
 	m_scene = g_msgDialogPlugin->PageOpen(IDParam(s_empty_name, MSG_DIALOG_PAGE_ID), openParam);
-	if (openParam.timer != NULL)
-		delete openParam.timer;
 }
 
 MsgDialog::~MsgDialog()

@@ -104,9 +104,6 @@ int EulaView::Open(Plugin *plugin)
 		Plugin::PageOpenParam openParam;
 
 		m_page = plugin->PageOpen(page, openParam);
-		/* the parameters' timer goes with them */
-		if (openParam.timer != NULL)
-			delete openParam.timer;
 	}
 	m_text = NPEULA_FIND(m_page, ui::RichText, NPEULA_TEXT);
 	m_scrollBar = NPEULA_FIND(m_page, ui::ScrollBarTouch, NPEULA_SCROLL_BAR);

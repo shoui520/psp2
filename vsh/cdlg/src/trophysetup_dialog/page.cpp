@@ -38,14 +38,8 @@ int TrophySetupPage::Open()
 		Plugin::PageOpenParam param;
 
 		m_scene = m_plugin->PageOpen(IDParam(s_empty_name, TROPHY_SETUP_PAGE_ID), param);
-		/* the parameters' timer goes with them (Sony's code deletes it on both paths) */
-		if (m_scene == NULL) {
-			if (param.timer != NULL)
-				delete param.timer;
+		if (m_scene == NULL)
 			return -1;
-		}
-		if (param.timer != NULL)
-			delete param.timer;
 	}
 	return 0;
 }

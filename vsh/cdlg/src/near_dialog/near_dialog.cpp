@@ -30,9 +30,6 @@
 
 using namespace paf;
 
-/* TODO(Tamsin): declared by vsh/paf/include/std/stdio.h once it has it */
-extern "C" int sce_paf_swprintf(wchar_t *buffer, size_t bufsz, const wchar_t *format, ...);
-
 /* the dialog's widgets, by their index in the layout (SceCommonGuiDialog_8947FC23) */
 #define NEAR_DIALOG_WIDGET_CONTENTS	4
 #define NEAR_DIALOG_WIDGET_BUTTON1	12
@@ -255,8 +252,6 @@ NearDialog::NearDialog(SceInt32 mode, NearDialogFunction callback, void *userdat
 	Plugin::PageOpenParam openParam;
 
 	m_scene = g_nearDialogPlugin->PageOpen(IDParam(s_empty_name, NEAR_DIALOG_PAGE_ID), openParam);
-	if (openParam.timer != NULL)
-		delete openParam.timer;
 }
 
 /* opens a layout dialog with the text in place of the one open: its ID */

@@ -281,8 +281,6 @@ static __attribute__((noinline)) void crossControllerDialogOpen(CommonDialogCros
 		SceCommonGuiDialog_F1A40838(work->dialogId, crossControllerDialogPoll, work,
 					    CROSS_CONTROLLER_DIALOG_POLL_INTERVAL);
 	common::MainThreadCallList::Register(crossControllerDialogUpdate, work);
-	if (openParam.timer != NULL)
-		delete openParam.timer;
 }
 
 static __attribute__((noinline)) void crossControllerDialogStart(Plugin *plugin)

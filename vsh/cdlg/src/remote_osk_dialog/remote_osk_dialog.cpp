@@ -333,11 +333,8 @@ RemoteOskDialog::RemoteOskDialog(RemoteOskDialogParam *param, RemoteOskDialogFun
 
 	m_scene = g_remoteOskDialogPlugin->PageOpen(IDParam(s_empty_name, REMOTE_OSK_DIALOG_PAGE_ID),
 						    openParam);
-	if (m_scene == NULL) {
-		if (openParam.timer != NULL)
-			delete openParam.timer;
+	if (m_scene == NULL)
 		return;
-	}
 	{
 		ui::Text *title;
 
@@ -377,8 +374,6 @@ RemoteOskDialog::RemoteOskDialog(RemoteOskDialogParam *param, RemoteOskDialogFun
 		}
 		Layout(true);
 	}
-	if (openParam.timer != NULL)
-		delete openParam.timer;
 }
 
 /* the plugin's error: the dialog is open already */

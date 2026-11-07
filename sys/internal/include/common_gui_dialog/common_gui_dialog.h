@@ -125,13 +125,14 @@ struct CommonGuiMessageDialogItem {
 	SceUInt32 value;
 };
 
-/* the 4-byte option word after the dialog's type: flags in its first byte (the trophy setup
-   dialog sets 8 for its error dialog; what the bits mean is not known) */
+/* the 4-byte option word after the dialog's type, in bit fields (Sony's copies it field by field):
+   flags in its first byte (the trophy setup dialog sets 8 for its error dialog; what the bits
+   mean is not known) */
 struct CommonGuiMessageDialogOption {
-	SceUInt8 flags;
-	SceUInt8 reserved[3];
+	SceUInt32 flags : 8;
+	SceUInt32 reserved : 24;
 
-	CommonGuiMessageDialogOption() : flags(0), reserved() {}
+	CommonGuiMessageDialogOption() : flags(0), reserved(0) {}
 };
 
 /* the parameters of a message dialog (SceCommonGuiDialog_20B141F1) */
