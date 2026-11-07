@@ -82,6 +82,23 @@ typedef struct SceAppUtilSaveDataSlotParam {
 	SceChar8 reserved[48];
 } SceAppUtilSaveDataSlotParam;
 
+/* an empty slot as the save data dialog shows it */
+typedef struct SceAppUtilSaveDataSlotEmptyParam {
+	SceChar8 *title;
+	SceChar8 *iconPath;
+	void *iconBuf;
+	SceSize iconBufSize;
+	SceChar8 reserved[32];
+} SceAppUtilSaveDataSlotEmptyParam;
+
+/* a slot for the save data dialog */
+typedef struct SceAppUtilSaveDataSlot {
+	SceAppUtilSaveDataSlotId id;
+	SceAppUtilSaveDataSlotStatus status;
+	SceInt32 userParam;
+	SceAppUtilSaveDataSlotEmptyParam *emptyParam;
+} SceAppUtilSaveDataSlot;
+
 /* the slot a save data data call updates */
 typedef struct SceAppUtilSaveDataDataSlot {
 	SceAppUtilSaveDataSlotId id;
