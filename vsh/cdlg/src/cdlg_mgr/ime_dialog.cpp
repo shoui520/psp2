@@ -34,29 +34,6 @@
 #define IME_DIALOG_SDK_VERSION_MAIL			0x02500000	/* URL and MAIL types */
 #define IME_DIALOG_SHORT_TEXT_LENGTH			512
 
-/* the work memory (CommonDialogSlot::workMemory) */
-typedef struct CommonDialogImeParam {
-	int abortRequested;
-	int abortResult;
-	bool infobarShown;
-	bool hasButton;		/* the result has its button (SDK 1.50 and later) */
-	SceWChar16 title[SCE_IME_DIALOG_MAX_TITLE_LENGTH];
-	SceUInt8 reservedTitle[2];
-	SceWChar16 text[SCE_IME_DIALOG_MAX_TEXT_LENGTH];
-	SceUInt8 reservedText[4];
-	int paramSet;
-	SceUInt8 reservedParam[4];
-	SceImeDialogParam param;
-	SceImeDialogResult result;
-	char apiName[64];
-	SceUInt8 padding[4];
-} CommonDialogImeParam;
-
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogImeParamSet, __builtin_offsetof(CommonDialogImeParam, paramSet) == 4368);
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogImeParamParam, __builtin_offsetof(CommonDialogImeParam, param) == 4376);
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogImeParamName, __builtin_offsetof(CommonDialogImeParam, apiName) == 4580);
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogImeParamSize, sizeof(CommonDialogImeParam) == 4648);
-
 typedef CommonDialogApiScope<CommonDialogImeParam, COMMON_DIALOG_TYPE_IME,
 			     SAVEDATA_DIALOG_ERROR_NO_WORK_MEMORY,
 			     SAVEDATA_DIALOG_ERROR_API_NAME> ImeApiScope;

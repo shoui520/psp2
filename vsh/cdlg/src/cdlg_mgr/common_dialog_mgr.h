@@ -20,6 +20,7 @@
 #include <invitation_dialog.h>
 #include <game_custom_data_dialog.h>
 #include <np_trophy_setup_dialog.h>
+#include <ime_dialog.h>
 #include <np/np_common.h>
 #include <net.h>
 #include <libkernel/libkernel.h>
@@ -428,6 +429,34 @@ typedef struct CommonDialogRemoteOskParam {
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogRemoteOskDrawPriority,
 			   __builtin_offsetof(CommonDialogRemoteOskParam, drawPriority) == 432);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogRemoteOskSize, sizeof(CommonDialogRemoteOskParam) == 500);
+
+/*
+ * ime_dialog.cpp: the work memory (CommonDialogSlot::workMemory), which the IME
+ * dialog's plugin (libcdlg_ime) reads too: Abort's request and the plugin's
+ * state for it, the caller's parameter with copies of its title and its text
+ * (which the copied parameter points to), and the result for GetResult.
+ */
+typedef struct CommonDialogImeParam {
+	int abortRequested;
+	int abortResult;
+	bool infobarShown;
+	bool hasButton;		/* the result has its button (SDK 1.50 and later) */
+	SceWChar16 title[SCE_IME_DIALOG_MAX_TITLE_LENGTH];
+	SceUInt8 reservedTitle[2];
+	SceWChar16 text[SCE_IME_DIALOG_MAX_TEXT_LENGTH];
+	SceUInt8 reservedText[4];
+	int paramSet;
+	SceUInt8 reservedParam[4];
+	SceImeDialogParam param;
+	SceImeDialogResult result;
+	char apiName[64];
+	SceUInt8 padding[4];
+} CommonDialogImeParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogImeParamSet, __builtin_offsetof(CommonDialogImeParam, paramSet) == 4368);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogImeParamParam, __builtin_offsetof(CommonDialogImeParam, param) == 4376);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogImeParamName, __builtin_offsetof(CommonDialogImeParam, apiName) == 4580);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogImeParamSize, sizeof(CommonDialogImeParam) == 4648);
 
 /*
  * trophy_setup_dialog.cpp: the work memory (CommonDialogSlot::workMemory), which the
