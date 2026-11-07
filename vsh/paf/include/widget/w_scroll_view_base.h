@@ -39,6 +39,11 @@ public:
 
 	/* where the view is: its contents' position, negated */
 	math::v2 GetViewFocus();
+
+	/* its members from Widget's end (0x280), not converted yet */
+	uint8_t reserved[0x2A0 - 0x280];
+	/* the box the view shows (ScePafWidget_46F36554's, after ScePaf-RE's SetViewBox) */
+	math::v4 m_view_box;
 };
 
 class ScrollView : public ScrollViewBase {
