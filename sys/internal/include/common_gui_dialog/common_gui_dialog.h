@@ -16,6 +16,9 @@
 
 namespace paf {
 class Plugin;
+namespace ui {
+class Widget;
+}
 }
 
 /*
@@ -29,6 +32,20 @@ public:
 	}
 
 	virtual void operator()(SceInt32 value, SceInt32 button) = 0;
+};
+
+/*
+ * What a message dialog (SceCommonGuiDialog_A6422883) calls besides its handler, kept and deleted
+ * by the library like the handler. What it is called with is not known: the only caller seen
+ * passes one that does nothing.
+ */
+class CommonGuiDialogCloseHandler {
+public:
+	virtual ~CommonGuiDialogCloseHandler()
+	{
+	}
+
+	virtual void operator()(SceInt32 value) = 0;
 };
 
 /* the function form of a handler, which SceCommonGuiDialog_6CE14F66 wraps in one itself */
@@ -77,12 +94,13 @@ struct CommonGuiMessageDialogItem {
 	SceUInt32 value;
 };
 
-/* the 4-byte option word after the dialog's type: a flag in its first byte */
+/* the 4-byte option word after the dialog's type: flags in its first byte (the trophy setup
+   dialog sets 8 for its error dialog; what the bits mean is not known) */
 struct CommonGuiMessageDialogOption {
-	bool enabled;
+	SceUInt8 flags;
 	SceUInt8 reserved[3];
 
-	CommonGuiMessageDialogOption() : enabled(false), reserved() {}
+	CommonGuiMessageDialogOption() : flags(0), reserved() {}
 };
 
 /* the parameters of a message dialog (SceCommonGuiDialog_20B141F1) */
@@ -148,6 +166,12 @@ extern "C" {
 CommonGuiDialogParam *SceCommonGuiDialog_696DB9C9(CommonGuiDialogParam *param);
 /* shows a message dialog: returns when it is closed */
 int SceCommonGuiDialog_20B141F1(CommonGuiMessageDialogParam *param);
+/* shows a message dialog with the plugin's resources and the two handlers, which the library
+   takes over: its ID, or a negative error */
+int SceCommonGuiDialog_A6422883(paf::Plugin *plugin, CommonGuiMessageDialogParam *param,
+				CommonGuiDialogHandler *handler, CommonGuiDialogCloseHandler *closeHandler);
+/* called on a message dialog just opened with a 16-byte block twice, zeroed by its caller */
+int SceCommonGuiDialog_206623FF(int dialogId, void *arg1, void *arg2);
 /* shows a dialog with its own layout: its ID, or a negative error */
 int SceCommonGuiDialog_CCFCD9A6(CommonGuiLayoutDialogParam *param);
 /* shows a waiting dialog with the given heading, text and layout: its ID, or a negative error */
@@ -160,9 +184,17 @@ int SceCommonGuiDialog_F1A40838(int dialogId, int (*func)(int value, void *arg),
 int SceCommonGuiDialog_01702008(int dialogId, int result);
 /* lets a dialog go */
 int SceCommonGuiDialog_BC311DC0(int dialogId);
+/* a dialog's widget by its index in the layout (1: its text, 4: its waiting animation, 10: its
+   contents, 12: a part the processing dialog removes, as the trophy setup dialog uses them) */
+paf::ui::Widget *SceCommonGuiDialog_8947FC23(int dialogId, int index);
+/* called on a dialog just opened with a resource ID (the trophy setup dialog's 0xE0D9F918) */
+int SceCommonGuiDialog_D3F78BA5(int dialogId, SceUInt32 id);
 
 /* the library's layouts: a dialog with buttons, a waiting dialog without and with a cancel
-   button, and the default */
+   button, and the default; and two the trophy setup dialog uses, for its last message and its
+   question */
+extern const CommonGuiDialogLayout SceCommonGuiDialog_52A53037;
+extern const CommonGuiDialogLayout SceCommonGuiDialog_6CD802FC;
 extern const CommonGuiDialogLayout SceCommonGuiDialog_22B17F2B;
 extern const CommonGuiDialogLayout SceCommonGuiDialog_2A68B4A4;
 extern const CommonGuiDialogLayout SceCommonGuiDialog_F8B2D7E1;

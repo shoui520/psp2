@@ -19,6 +19,7 @@
 #include <store_checkout_dialog.h>
 #include <invitation_dialog.h>
 #include <game_custom_data_dialog.h>
+#include <np_trophy_setup_dialog.h>
 #include <np/np_common.h>
 #include <net.h>
 #include <libkernel/libkernel.h>
@@ -427,6 +428,23 @@ typedef struct CommonDialogRemoteOskParam {
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogRemoteOskDrawPriority,
 			   __builtin_offsetof(CommonDialogRemoteOskParam, drawPriority) == 432);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogRemoteOskSize, sizeof(CommonDialogRemoteOskParam) == 500);
+
+/*
+ * trophy_setup_dialog.cpp: the work memory (CommonDialogSlot::workMemory), which the
+ * trophy setup plugin (libcdlg_np_trophy_setup) reads too: the caller's parameter,
+ * the result for GetResult, and copies of what the parameter's common part
+ * points to, which the copied parameter then points to instead.
+ */
+typedef struct CommonDialogTrophySetupParam {
+	SceNpTrophySetupDialogParam param;
+	SceNpTrophySetupDialogResult result;
+	SceCommonDialogInfobarParam infobarParam;
+	SceCommonDialogColor bgColor;
+	SceCommonDialogColor dimmerColor;
+	char apiName[64];
+} CommonDialogTrophySetupParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogTrophySetupSize, sizeof(CommonDialogTrophySetupParam) == 464);
 
 /* the SKU IDs the work memory keeps, and their length */
 #define STORE_CHECKOUT_DIALOG_SKU_NUM_MAX		16

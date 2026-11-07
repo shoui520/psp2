@@ -1,5 +1,6 @@
 # 3.650.011-TOOL: vs0:sys/external/libcdlg_np_trophy_setup.suprx (generated)
 set(MODULE_NID 0xE84AF828)
+set(MODULE_AUTH_ID 0x280000000002801B)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
@@ -106,93 +107,4 @@ set(MODULE_IMPORT_NIDS
 	0xCAE9ACE6:F:0xC458D60A
 	0xCAE9ACE6:V:0x93B8AA67
 	0x859A24B1:F:0x4B675D05
-)
-set(MODULE_IMPORT_FUNCS
-	SceCommonGuiDialog_206623FF
-	SceCommonGuiDialog_696DB9C9
-	SceCommonGuiDialog_8947FC23
-	SceCommonGuiDialog_A6422883
-	SceCommonGuiDialog_BC311DC0
-	SceCommonGuiDialog_CCFCD9A6
-	SceCommonGuiDialog_D3F78BA5
-	SceCommonDialogMain_05EFC635
-	SceCommonDialogMain_5739BC42
-	SceCommonDialogMain_75F10F83
-	SceCommonDialogMain_877BB562
-	SceCommonDialogMain_B9D0E5A8
-	SceCommonDialogMain_DD2CAC30
-	SceCommonDialogMain_FDED47DB
-	ScePafStdc_1B77082E
-	ScePafStdc_2730262C
-	sce_paf_memcpy
-	ScePafStdc_5C468294
-	sce_paf_wcslen
-	ScePafStdc_C95732BB
-	ScePafStdc_D608246A
-	ScePafStdc_D8CC1AFE
-	ScePafStdc_F36BABE3
-	sce_paf_strlen
-	ScePafStdc_FC5CD359
-	ScePafMisc_17260154
-	ScePafMisc_488437AD
-	ScePafMisc_4B90AA0D
-	ScePafMisc_FDFC29F2
-	ScePafCommon_4A8115D5
-	ScePafCommon_6735B503
-	ScePafCommon_950C3AA0
-	ScePafGraphics_29FC820B
-	ScePafGraphics_9BF8E94C
-	ScePafGraphics_9FAF51CF
-	ScePafThread_142E7F78
-	ScePafThread_1ABA2C42
-	ScePafThread_2AE6D3EB
-	ScePafThread_88061E60
-	ScePafThread_93F7A9D6
-	ScePafThread_A59ABB3B
-	ScePafThread_E639D331
-	ScePafThread_ECF8334D
-	ScePafThread_EEDBA99E
-	ScePafToplevel_004D98CC
-	ScePafToplevel_185EC9F9
-	ScePafToplevel_19CEFDA7
-	ScePafToplevel_30B442D9
-	ScePafToplevel_34FE1331
-	ScePafToplevel_3FE812F6
-	ScePafToplevel_99300D8B
-	ScePafToplevel_AB0DB9B0
-	ScePafWidget_44C56F46
-	ScePafWidget_6E3EEF4E
-	ScePafWidget_723F6A4C
-	ScePafWidget_9D304F4A
-	SceNpTrophy_061DE3F5
-	SceNpTrophy_0AC3CEA8
-	SceNpTrophy_10182F1B
-	SceNpTrophy_10371F25
-	SceNpTrophy_17FB1D9E
-	SceNpTrophy_2B0CC831
-	SceNpTrophy_2EE76D88
-	SceNpTrophy_3AC04020
-	SceNpTrophy_44E0F73E
-	SceNpTrophy_62E37599
-	SceNpTrophy_97D19AB6
-	SceNpTrophy_C338E582
-	SceNpTrophy_C80794CF
-	SceNpTrophy_D70DAFA7
-	SceNpTrophy_FD34F7CF
-	sceRegMgrSystemParamGetInt
-	__stack_chk_fail
-	sceClibMemset
-	sceClibStrncmp
-	sceClibStrncpy
-	sceKernelDelayThread
-)
-set(MODULE_IMPORT_VARS
-	SceCommonGuiDialog_52A53037
-	SceCommonGuiDialog_6CD802FC
-	SceCommonGuiDialog_AF75CA6D
-	SceCommonGuiDialog_EF2C5382
-	SceCommonGuiDialog_F8B2D7E1
-	ScePafStdc_610F2F91
-	ScePafStdc_B4A712A7
-	__stack_chk_guard
 )
