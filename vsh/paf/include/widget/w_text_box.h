@@ -68,6 +68,7 @@ public:
 				  const math::v4 &val);
 	int32_t SetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, uint32_t len,
 				  bool val);
+	int32_t SetLayoutAttribute(graph::TextLayoutAttribute attr, int32_t val);
 	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, int32_t &val);
 	int32_t GetLength(uint32_t &len);
 	int32_t GetCaretIndex(uint32_t &index);
