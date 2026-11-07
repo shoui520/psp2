@@ -5,16 +5,13 @@
  * names are ours, the pages and parts after the first layout that uses them.
  */
 #include <stdint.h>
-#include <versatileparam/idparam.h>
-#include <widget/w_dialog.h>
-#include <common_gui_dialog/common_gui_dialog.h>
 #include "layouts.h"
 
 using namespace paf;
 using namespace paf::ui;
 
 /* the pages: the plugin, the page and the template (their IDs' hashes) */
-static const CommonGuiDialogPage s_pageAF75CA6D = {
+const CommonGuiDialogPage g_pageAF75CA6D = {
 	{ 0x3A918C2C, 0x438C7285, 0xD3AA1490 }
 };
 
@@ -54,19 +51,19 @@ static const CommonGuiDialogPage s_page7AEA192C = {
 	{ 0x3A918C2C, 0x438C7285, 0x0EAB1063 }
 };
 
-static const CommonGuiDialogPage s_pageInternal = {
+const CommonGuiDialogPage g_pageInternal = {
 	{ 0x3A918C2C, 0x438C7285, 0x094FBF94 }
 };
 
-static const CommonGuiDialogPage s_pageE872FB5D = {
+const CommonGuiDialogPage g_pageE872FB5D = {
 	{ 0x3A918C2C, 0x438C7285, 0xC062E36D }
 };
 
-static const CommonGuiDialogPage s_page1424609E = {
+const CommonGuiDialogPage g_page1424609E = {
 	{ 0x3A918C2C, 0x438C7285, 0xF0CB76BD }
 };
 
-static const CommonGuiDialogPage s_page3AC06BC6 = {
+const CommonGuiDialogPage g_page3AC06BC6 = {
 	{ 0x3A918C2C, 0x438C7285, 0x4A92F174 }
 };
 
@@ -110,12 +107,12 @@ static const CommonGuiDialogPage s_pageDEDA75E4 = {
 	{ 0x3A918C2C, 0x438C7285, 0x72F56B40 }
 };
 
-static const CommonGuiDialogPage s_page04D71470 = {
+const CommonGuiDialogPage g_page04D71470 = {
 	{ 0x3A918C2C, 0x438C7285, 0xF6FC5F73 }
 };
 
 /* the buttons: the part, its label, the button the handler is told and its look */
-static const CommonGuiDialogButton s_okButtons[] = {
+const CommonGuiDialogButton g_okButtons[] = {
 	{ 12, 0x805BECA6, 2, 0x20413274 },
 	{ 0, 0, 0, 0 },
 };
@@ -125,7 +122,7 @@ static const CommonGuiDialogButton s_cancelButtons[] = {
 	{ 0, 0, 0, 0 },
 };
 
-static const CommonGuiDialogButton s_noYesButtons[] = {
+const CommonGuiDialogButton g_noYesButtons[] = {
 	{ 12, 0xA060AED9, 5, 0xC17D7980 },
 	{ 13, 0x18A9DA04, 4, 0x20413274 },
 	{ 0, 0, 0, 0 },
@@ -150,24 +147,24 @@ static const CommonGuiDialogButton s_yesNoCancelButtons[] = {
 	{ 0, 0, 0, 0 },
 };
 
-static const CommonGuiDialogButton s_04D71470Buttons[] = {
+const CommonGuiDialogButton g_04D71470Buttons[] = {
 	{ 12, 0x0D47D642, 7, 0x20413274 },
 	{ 13, 0xADCD9ADF, 3, 0xC17D7980 },
 	{ 23, 0x96DA3F40, 8, 0x6622F138 },
 	{ 0, 0, 0, 0 },
 };
 
-static const CommonGuiDialogButton s_panelButtons[] = {
+const CommonGuiDialogButton g_panelButtons[] = {
 	{ 8, 0x00000000, 1, 0x25D6D211 },
 	{ 0, 0, 0, 0 },
 };
 
-static const CommonGuiDialogButton s_noButtons[] = {
+const CommonGuiDialogButton g_noButtons[] = {
 	{ 0, 0, 0, 0 },
 };
 
 /* the parts: each index to its widget's ID */
-static Dialog::PartsList s_partsAF75CA6D[] = {
+Dialog::PartsList g_partsAF75CA6D[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
 	{ 12, IDParam((uint32_t)0x5049F5E4) },
 	{ 0, IDParam() },
@@ -227,27 +224,27 @@ static Dialog::PartsList s_parts7AEA192C[] = {
 	{ 0, IDParam() },
 };
 
-static Dialog::PartsList s_partsInternal[] = {
+Dialog::PartsList g_partsInternal[] = {
 	{ 9, IDParam((uint32_t)0xE9C61C2C) },
 	{ 10, IDParam((uint32_t)0x019BC95D) },
 	{ 0, IDParam() },
 };
 
-static Dialog::PartsList s_partsE872FB5D[] = {
+Dialog::PartsList g_partsE872FB5D[] = {
 	{ 9, IDParam((uint32_t)0xE9C61C2C) },
 	{ 10, IDParam((uint32_t)0x019BC95D) },
 	{ 8, IDParam((uint32_t)0xC57612A0) },
 	{ 0, IDParam() },
 };
 
-static Dialog::PartsList s_parts1424609E[] = {
+Dialog::PartsList g_parts1424609E[] = {
 	{ 9, IDParam((uint32_t)0xE9C61C2C) },
 	{ 10, IDParam((uint32_t)0x019BC95D) },
 	{ 12, IDParam((uint32_t)0x5049F5E4) },
 	{ 0, IDParam() },
 };
 
-static Dialog::PartsList s_parts3AC06BC6[] = {
+Dialog::PartsList g_parts3AC06BC6[] = {
 	{ 9, IDParam((uint32_t)0xE9C61C2C) },
 	{ 10, IDParam((uint32_t)0x019BC95D) },
 	{ 12, IDParam((uint32_t)0x5049F5E4) },
@@ -295,7 +292,7 @@ static Dialog::PartsList s_partsDEDA75E4[] = {
 	{ 0, IDParam() },
 };
 
-static Dialog::PartsList s_parts04D71470[] = {
+Dialog::PartsList g_parts04D71470[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
 	{ 12, IDParam((uint32_t)0x5049F5E4) },
 	{ 13, IDParam((uint32_t)0xBD559A97) },
@@ -305,15 +302,15 @@ static Dialog::PartsList s_parts04D71470[] = {
 
 /* the layouts */
 const CommonGuiDialogLayout SceCommonGuiDialog_AF75CA6D = {
-	&s_pageAF75CA6D, s_partsAF75CA6D, s_okButtons
+	&g_pageAF75CA6D, g_partsAF75CA6D, g_okButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_EF7F04DD = {
-	&s_pageAF75CA6D, s_partsAF75CA6D, s_cancelButtons
+	&g_pageAF75CA6D, g_partsAF75CA6D, s_cancelButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_6CD802FC = {
-	&s_page6CD802FC, s_parts6CD802FC, s_noYesButtons
+	&s_page6CD802FC, s_parts6CD802FC, g_noYesButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_22B17F2B = {
@@ -345,51 +342,51 @@ const CommonGuiDialogLayout SceCommonGuiDialog_EA557911 = {
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_A0E0A437 = {
-	&s_pageA0E0A437, s_partsA0E0A437, s_noButtons
+	&s_pageA0E0A437, s_partsA0E0A437, g_noButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_7AEA192C = {
-	&s_page7AEA192C, s_parts7AEA192C, s_noButtons
+	&s_page7AEA192C, s_parts7AEA192C, g_noButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_5C8A2999 = {
-	&s_page5C8A2999, s_parts7AEA192C, s_noButtons
+	&s_page5C8A2999, s_parts7AEA192C, g_noButtons
 };
 
 const CommonGuiDialogLayout g_contentsLayoutNoButtons = {
-	&s_pageInternal, s_partsInternal, s_noButtons
+	&g_pageInternal, g_partsInternal, g_noButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_E872FB5D = {
-	&s_pageE872FB5D, s_partsE872FB5D, s_panelButtons
+	&g_pageE872FB5D, g_partsE872FB5D, g_panelButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_1424609E = {
-	&s_page1424609E, s_parts1424609E, s_okButtons
+	&g_page1424609E, g_parts1424609E, g_okButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_3AC06BC6 = {
-	&s_page3AC06BC6, s_parts3AC06BC6, s_noYesButtons
+	&g_page3AC06BC6, g_parts3AC06BC6, g_noYesButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_DDC59760 = {
-	&s_pageDDC59760, s_partsDDC59760, s_panelButtons
+	&s_pageDDC59760, s_partsDDC59760, g_panelButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_3785AD25 = {
-	&s_page3785AD25, s_parts3785AD25, s_okButtons
+	&s_page3785AD25, s_parts3785AD25, g_okButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_2A68B4A4 = {
-	&s_page2A68B4A4, s_parts7AEA192C, s_noButtons
+	&s_page2A68B4A4, s_parts7AEA192C, g_noButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_F8B2D7E1 = {
-	&s_pageF8B2D7E1, s_partsAF75CA6D, s_cancelButtons
+	&s_pageF8B2D7E1, g_partsAF75CA6D, s_cancelButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_7D8FE85E = {
-	&s_page7D8FE85E, s_parts7D8FE85E, s_okButtons
+	&s_page7D8FE85E, s_parts7D8FE85E, g_okButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_C4A714DE = {
@@ -397,18 +394,18 @@ const CommonGuiDialogLayout SceCommonGuiDialog_C4A714DE = {
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_52A53037 = {
-	&s_page52A53037, s_parts52A53037, s_noButtons
+	&s_page52A53037, s_parts52A53037, g_noButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_B04C8C1A = {
-	&s_pageB04C8C1A, s_parts7D8FE85E, s_okButtons
+	&s_pageB04C8C1A, s_parts7D8FE85E, g_okButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_DEDA75E4 = {
-	&s_pageDEDA75E4, s_partsDEDA75E4, s_okButtons
+	&s_pageDEDA75E4, s_partsDEDA75E4, g_okButtons
 };
 
 const CommonGuiDialogLayout SceCommonGuiDialog_04D71470 = {
-	&s_page04D71470, s_parts04D71470, s_04D71470Buttons
+	&g_page04D71470, g_parts04D71470, g_04D71470Buttons
 };
 

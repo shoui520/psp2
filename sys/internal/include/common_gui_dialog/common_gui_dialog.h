@@ -92,22 +92,38 @@ struct CommonGuiDialogLayout {
 
 /*
  * What every dialog's parameters start with, filled by SceCommonGuiDialog_696DB9C9:
- * the framework's common resource plugin, then the dialog's placement and options, which only
- * the library reads (its layout is left to its conversion).
+ * the framework's common resource plugin, the dialog's colours, and how its page opens.
  */
 class CommonGuiDialogParam {
 public:
 	CommonGuiDialogParam();
 
 	paf::Plugin *resourcePlugin;
-	SceUInt32 reserved4;
+	/* neither filled nor copied by the library */
+	SceUInt32 reserved;
 	/* the background's and the dimmer's colours, RGBA from 0 to 1; SceCommonGuiDialog_EF2C5382 by
 	   default (the dialog's own) */
 	float bgColor[4];
 	float dimmerColor[4];
-	/* the library's own placement and options; not read by its callers */
-	SceUInt8 options[28];
+	/* the resource ID of the sound the dialog plays as it closes; 0 for none */
+	SceUInt32 soundId;
+	/* the plane behind the dialog: 0 dims the screen, 1 leaves it */
+	SceInt32 dimmer;
+	/* the page's priority; -1 for the library's default */
+	SceInt32 priority;
+	/* the call returns once the dialog's transition has ended */
+	bool waitTransition;
+	/* the handler is called (with button 0) when the dialog closes without one */
+	bool notifyClose;
+	/* an open dialog whose page is used again; -1 for a new one */
+	SceInt32 dialogId;
+	/* where the new dialog's ID is written, or NULL */
+	SceInt32 *outId;
+	/* the page's PageOpenParam option */
+	SceInt32 pageOption;
 };
+
+typedef char CommonGuiDialogParamSize[sizeof(CommonGuiDialogParam) == 68 ? 1 : -1];
 
 /* a button or line of a message dialog */
 struct CommonGuiMessageDialogItem {
@@ -186,6 +202,55 @@ public:
 
 typedef char CommonGuiLayoutDialogParamSize[sizeof(CommonGuiLayoutDialogParam) == 160 ? 1 : -1];
 
+/*
+ * The parameters of the PlayStation Plus dialog (SceCommonGuiDialog_D6B6809B): its two buttons
+ * open the PlayStation Store's PlayStation Plus page, and every button is passed on to the handler,
+ * which the library takes over.
+ */
+class CommonGuiPlusDialogParam : public CommonGuiDialogParam {
+public:
+	CommonGuiPlusDialogParam() : handler(NULL)
+	{
+	}
+
+	CommonGuiDialogHandler *handler;
+};
+
+/*
+ * A line of a list dialog: a mark and a text, each with its colour (SceCommonGuiDialog_EF2C5382
+ * leaves the layout's), and a button when its label is not empty, whose value the dialog closes
+ * with.
+ */
+struct CommonGuiListDialogItem {
+	/* the line has its mark; both texts are drawn with a shadow */
+	bool mark : 1;
+	bool shadow : 1;
+	paf::math::v4 markColor;
+	paf::wstring text;
+	paf::math::v4 textColor;
+	paf::wstring buttonLabel;
+	paf::math::v4 buttonColor;
+	SceInt32 buttonValue;
+};
+
+typedef char CommonGuiListDialogItemSize[sizeof(CommonGuiListDialogItem) == 96 ? 1 : -1];
+
+/* the parameters of a list dialog (SceCommonGuiDialog_F3D37CAE) */
+class CommonGuiListDialogParam : public CommonGuiDialogParam {
+public:
+	/* the layout: 1 with an OK button, 2 without buttons, 3 with no and yes; else the panel's */
+	SceInt32 type;
+	/* the dialog is fitted to its lines */
+	bool fit;
+	paf::wstring heading;
+	paf::math::v4 headingColor;
+	/* the call waits until the dialog closes, and returns its result */
+	bool wait;
+	SceInt32 *outId;
+	paf::vector<CommonGuiListDialogItem> items;
+	CommonGuiDialogHandler *handler;
+};
+
 extern "C" {
 CommonGuiDialogParam *SceCommonGuiDialog_696DB9C9(CommonGuiDialogParam *param);
 /* shows a message dialog: returns when it is closed */
@@ -199,6 +264,10 @@ int SceCommonGuiDialog_A6422883(paf::Plugin *plugin, CommonGuiMessageDialogParam
 int SceCommonGuiDialog_206623FF(int dialogId, void *arg1, void *arg2);
 /* shows a dialog with its own layout: its ID, or a negative error */
 int SceCommonGuiDialog_CCFCD9A6(CommonGuiLayoutDialogParam *param);
+/* shows the PlayStation Plus dialog: its ID, or a negative error */
+int SceCommonGuiDialog_D6B6809B(const CommonGuiPlusDialogParam *param);
+/* shows a list dialog: its ID (its result when it waits), or a negative error */
+int SceCommonGuiDialog_F3D37CAE(const CommonGuiListDialogParam *param);
 /* shows a waiting dialog with the given heading, text and layout: its ID, or a negative error */
 int SceCommonGuiDialog_6CE14F66(paf::Plugin *plugin, const paf::wstring &heading,
 				const paf::wstring &text, const CommonGuiDialogLayout *layout,
@@ -209,6 +278,10 @@ int SceCommonGuiDialog_F1A40838(int dialogId, int (*func)(int value, void *arg),
 int SceCommonGuiDialog_01702008(int dialogId, int result);
 /* lets a dialog go */
 int SceCommonGuiDialog_BC311DC0(int dialogId);
+/* sets the result a call waiting for the dialog returns: 0, or -1 without the dialog */
+int SceCommonGuiDialog_2CA16BBF(int dialogId, int result);
+/* waits until the dialog has closed: its result, or -1 without the dialog */
+int SceCommonGuiDialog_D2381B88(int dialogId);
 /* sets an open dialog's text */
 int SceCommonGuiDialog_273A476A(int dialogId, const paf::wstring &text);
 /* a dialog's widget by its index in the layout (1: its text, 4: its waiting animation, 10: its
@@ -257,8 +330,14 @@ inline CommonGuiDialogParam::CommonGuiDialogParam()
 	SceCommonGuiDialog_696DB9C9(this);
 }
 
+/* the layout a layout dialog takes by default; the library's own code takes its parts as
+   constants (layouts.h) */
+#ifndef COMMON_GUI_DIALOG_DEFAULT_LAYOUT
+#define COMMON_GUI_DIALOG_DEFAULT_LAYOUT	SceCommonGuiDialog_AF75CA6D
+#endif
+
 inline CommonGuiLayoutDialogParam::CommonGuiLayoutDialogParam()
-	: wait(false), layout(SceCommonGuiDialog_AF75CA6D), textColor(SceCommonGuiDialog_EF2C5382),
+	: wait(false), layout(COMMON_GUI_DIALOG_DEFAULT_LAYOUT), textColor(SceCommonGuiDialog_EF2C5382),
 	  scale(1.0f), handler(NULL), openHandler(NULL), updateHandler(NULL)
 {
 }
