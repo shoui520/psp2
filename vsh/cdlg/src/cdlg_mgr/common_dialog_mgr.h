@@ -17,6 +17,8 @@
 #include <photoreview_dialog.h>
 #include <videoimport_dialog.h>
 #include <store_checkout_dialog.h>
+#include <invitation_dialog.h>
+#include <game_custom_data_dialog.h>
 #include <np/np_common.h>
 #include <net.h>
 #include <libkernel/libkernel.h>
@@ -452,5 +454,73 @@ typedef struct CommonDialogStoreCheckoutParam {
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogStoreCheckoutApiName,
 			   __builtin_offsetof(CommonDialogStoreCheckoutParam, apiName) == 1128);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogStoreCheckoutSize, sizeof(CommonDialogStoreCheckoutParam) == 1192);
+
+/*
+ * The invitation dialog's work memory (CommonDialogSlot::workMemory), which libcdlg's
+ * sceInvitationDialog* and the invitation plugin (libcdlg_invitation) share: the caller's
+ * parameter, the result for GetResult, the addressees the dialog starts with and those it sent
+ * the invitation to, and the plugin's draw priority (-1 for the default). The impl plugin
+ * (libcdlg_invitation_impl) keeps its state in the fields neither of the two reads.
+ */
+typedef struct CommonDialogInvitationParam {
+	SceInvitationDialogParam param;
+	SceUInt8 pluginHeader[4];
+	SceInt32 errorCode;
+	SceCommonDialogResult result;
+	SceUInt8 pluginState[36];
+	/* how the impl plugin's dialog ended (GetDialogStatus) */
+	SceInt32 dialogStatus;
+	/* the addressees: the caller's, and those the user picks from the lists */
+	SceNpId addresses[SCE_INVITATION_DIALOG_ADDRESS_USER_LIST_MAX_NUMBER];
+	SceUInt32 addressCount;
+	/* the addresses the plugin sent the invitation to */
+	SceNpId sentNpId[SCE_INVITATION_DIALOG_ADDRESS_USER_LIST_MAX_NUMBER];
+	SceUInt32 sentNpIdCount;
+	SceUInt8 pluginSendState[1092];
+	SceInt32 drawPriority;
+	SceCommonDialogColor bgColor;
+	char apiName[64];
+} CommonDialogInvitationParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogInvitationDialogStatus,
+			   __builtin_offsetof(CommonDialogInvitationParam, dialogStatus) == 204);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogInvitationSentNpId,
+			   __builtin_offsetof(CommonDialogInvitationParam, sentNpId) == 788);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogInvitationDrawPriority,
+			   __builtin_offsetof(CommonDialogInvitationParam, drawPriority) == 2460);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogInvitationSize, sizeof(CommonDialogInvitationParam) == 2532);
+
+/*
+ * The game custom data dialog's work memory, which libcdlg's sceGameCustomDataDialog* and its
+ * plugin (libcdlg_game_custom_data) share: the invitation dialog's layout, with a smaller state
+ * for the impl plugin (libcdlg_game_custom_data_impl).
+ */
+typedef struct CommonDialogGameCustomDataParam {
+	SceGameCustomDataDialogParam param;
+	SceUInt8 pluginHeader[4];
+	SceInt32 errorCode;
+	SceCommonDialogResult result;
+	SceUInt8 pluginState[36];
+	/* how the impl plugin's dialog ended (GetDialogStatus) */
+	SceInt32 dialogStatus;
+	/* the addressees: the caller's, and those the user picks from the lists */
+	SceNpId addresses[SCE_GAME_CUSTOM_DATA_DIALOG_ADDRESS_USER_LIST_MAX_NUMBER];
+	SceUInt32 addressCount;
+	/* the addresses the plugin sent the data to */
+	SceNpId sentNpId[SCE_GAME_CUSTOM_DATA_DIALOG_ADDRESS_USER_LIST_MAX_NUMBER];
+	SceUInt32 sentNpIdCount;
+	SceUInt8 pluginSendState[1028];
+	SceInt32 drawPriority;
+	SceCommonDialogColor bgColor;
+	char apiName[64];
+} CommonDialogGameCustomDataParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogGameCustomDataDialogStatus,
+			   __builtin_offsetof(CommonDialogGameCustomDataParam, dialogStatus) == 204);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogGameCustomDataSentNpId,
+			   __builtin_offsetof(CommonDialogGameCustomDataParam, sentNpId) == 788);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogGameCustomDataDrawPriority,
+			   __builtin_offsetof(CommonDialogGameCustomDataParam, drawPriority) == 2396);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogGameCustomDataSize, sizeof(CommonDialogGameCustomDataParam) == 2468);
 
 #endif

@@ -17,29 +17,6 @@
 
 #define INVITATION_MODULE_NUM		5
 
-/* the caller's parameter, the plugin's state and the result for GetResult
-   (CommonDialogSlot::workMemory) */
-typedef struct CommonDialogInvitationParam {
-	SceInvitationDialogParam param;
-	/* the plugin's own state, which libcdlg does not read */
-	SceUInt8 pluginHeader[4];
-	SceInt32 errorCode;
-	SceCommonDialogResult result;
-	SceUInt8 pluginState[620];
-	/* the addresses the plugin sent the invitation to */
-	SceNpId sentNpId[SCE_INVITATION_DIALOG_ADDRESS_USER_LIST_MAX_NUMBER];
-	SceUInt32 sentNpIdCount;
-	SceUInt8 pluginSendState[1092];
-	/* -1 until the plugin starts */
-	int pluginHandle;
-	SceCommonDialogColor bgColor;
-	char apiName[64];
-} CommonDialogInvitationParam;
-
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogInvitationSentNpId,
-			   __builtin_offsetof(CommonDialogInvitationParam, sentNpId) == 788);
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogInvitationSize, sizeof(CommonDialogInvitationParam) == 2532);
-
 namespace InvitationDialog {
 
 int GetResult(SceInvitationDialogResult *result);
@@ -190,7 +167,7 @@ int OnInit(void *arg)
 	sceClibMemcpy_safe(&work->param.commonParam, &param->commonParam, sizeof(work->param.commonParam));
 	work->param.callbackArg = param->callbackArg;
 	work->param.dataParam = param->dataParam;
-	work->pluginHandle = -1;
+	work->drawPriority = -1;
 	if (param->commonParam.bgColor != NULL) {
 		sceClibMemcpy_safe(&work->bgColor, param->commonParam.bgColor, sizeof(work->bgColor));
 		work->param.commonParam.bgColor = &work->bgColor;

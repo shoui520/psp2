@@ -22,28 +22,6 @@
 /* the longest online ID, URL and thumbnail the dialog takes */
 #define GAME_CUSTOM_DATA_MAX_THUMBNAIL_SIZE	0x28000
 
-/* the caller's parameter, the plugin's state and the result for GetResult
-   (CommonDialogSlot::workMemory) */
-typedef struct CommonDialogGameCustomDataParam {
-	SceGameCustomDataDialogParam param;
-	SceUInt8 pluginHeader[4];	/* the plugin's own state, which libcdlg does not read */
-	SceInt32 errorCode;
-	SceCommonDialogResult result;
-	SceUInt8 pluginState[620];
-	/* the addresses the plugin sent the data to */
-	SceNpId sentNpId[SCE_GAME_CUSTOM_DATA_DIALOG_ADDRESS_USER_LIST_MAX_NUMBER];
-	SceUInt32 sentNpIdCount;
-	SceUInt8 pluginSendState[1028];
-	/* -1 until the plugin starts */
-	int pluginHandle;
-	SceCommonDialogColor bgColor;
-	char apiName[64];
-} CommonDialogGameCustomDataParam;
-
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogGameCustomDataSentNpId,
-			   __builtin_offsetof(CommonDialogGameCustomDataParam, sentNpId) == 788);
-COMMON_DIALOG_LAYOUT_CHECK(CommonDialogGameCustomDataSize, sizeof(CommonDialogGameCustomDataParam) == 2468);
-
 /* a language of a translated string: the system's language and its code */
 typedef struct GameCustomDataLanguage {
 	int language;
@@ -407,7 +385,7 @@ int OnInit(void *arg)
 	sceClibMemcpy_safe(&work->param.commonParam, &param->commonParam, sizeof(work->param.commonParam));
 	work->param.callbackArg = param->callbackArg;
 	work->param.dataParam = param->dataParam;
-	work->pluginHandle = -1;
+	work->drawPriority = -1;
 	if (work->param.commonParam.bgColor != NULL) {
 		sceClibMemcpy_safe(&work->bgColor, work->param.commonParam.bgColor, sizeof(work->bgColor));
 		work->param.commonParam.bgColor = &work->bgColor;
