@@ -24,6 +24,7 @@ psp2_module(vs0_sys_external_libcdlg KIND user COMPILER snc PARTIAL SOURCES
 	friendlist_dialog.cpp
 	photoimport_dialog.cpp
 	npprofile_dialog.cpp
+	trophy_setup_dialog.cpp
 )
 target_include_directories(vs0_sys_external_libcdlg PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/vsh/paf")
@@ -49,3 +50,4 @@ set_source_files_properties(np_message_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xa
 set_source_files_properties(friendlist_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(photoimport_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(npprofile_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
+set_source_files_properties(trophy_setup_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
