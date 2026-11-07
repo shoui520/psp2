@@ -321,17 +321,41 @@ public:
 	virtual void ScePafWidget_D95AFF11(math::v2 &move, bool dragging, bool locked, bool reset);
 	/* the touch it tracks (m_track_port; no name found) */
 	virtual void ScePafWidget_E9C7617A(uint32_t touch_id);
-	/* the touch released: the view flicked in the direction, at the velocity */
-	virtual void ScePafWidget_D9FE36A6(int32_t id, const math::v2 &dir, const math::v2 &velocity);
+	/* the touch released: the view flicked in the direction, at the velocity, toward the snap
+	   point after the one of the ID; the direction and velocity are cleared along the axes it
+	   does not take them */
+	virtual void ScePafWidget_D9FE36A6(int32_t id, math::v2 &dir, math::v2 &velocity);
 	/* the focus moved in the direction, from the widget or the focus (no name found) */
 	virtual bool ScePafWidget_AD706F2A(const math::v2 &dir, Widget *from);
 	virtual void ScePafWidget_22EF63CE();
+	/* each frame: the focus moved into the view where it has none, or along with the key's
+	   scroll (no name found) */
 	virtual void ScePafWidget_B6CECFDF();
 
 	ScrollViewSnapPoint GetSnapPoint(int32_t snap_id);
 	int32_t FindSnapID(const ScrollViewSnapPoint &snap_point);
 	float GetSnapPower();
 	/* where the view is: its contents' position, negated */
+	/* where a flick at its velocity takes the view: how far it moves (xy) and in how long
+	   (z, ms) (no name found) */
+	math::v4 ScePafWidget_19AA6FB5();
+	/* the view moved on by its velocity for the frame, slowing, and pulled back within its
+	   limits once it stops while a touch holds it (no name found) */
+	void ScePafWidget_77E369F4();
+	/* the scroll view it is in scrolled in the direction by a key, where its focus event is
+	   on (AD706F2A; name ours) */
+	__attribute__((noinline)) bool ScrollParentByKey(const math::v2 &dir);
+	/* the view scrolled in the direction by a key: to the next snap point where it has them,
+	   else moved on at a key's velocity; false where it does not scroll (name ours) */
+	bool ScrollByKey(const math::v2 &dir);
+	/* where a touch scrolls the view, the first view the touch scrolls lets go of its gesture
+	   (no name found) */
+	void ScePafWidget_1E6F658F();
+	/* the way the view moves, -1, 0 or 1 along each axis: toward where its move goes, else
+	   along its velocity (no name found) */
+	math::v2 ScePafWidget_A503544D();
+	/* a touch drags the view (no name found) */
+	bool ScePafWidget_28AF15BB();
 	math::v2 GetViewFocus();
 	math::v2 GetViewFocusTarget();
 	void BlockUpdateViewPort();

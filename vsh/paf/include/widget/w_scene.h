@@ -26,7 +26,7 @@ public:
 	ResolutionResource m_base_resource;
 	uint8_t reserved[0x10];
 	int32_t m_width;
-	uint8_t reserved2[4];
+	int32_t m_height;
 };
 
 class SceneResolutionList {

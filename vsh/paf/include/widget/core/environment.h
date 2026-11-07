@@ -191,6 +191,11 @@ public:
 	bool IsMoving();
 	/* the widget taken out of the focus history */
 	void RemoveFocusHistory(Widget *widget);
+	/* the widget the focus left for the one going the other way of the direction, NULL for
+	   none */
+	Widget *FindFocusHistory(Widget *widget, uint32_t dir);
+	/* the move from the widget to the next one in the direction kept */
+	void AddFocusHistory(Widget *widget, Widget *next, uint32_t dir);
 
 	Widget *m_cursor;
 	Widget *m_target;
@@ -229,6 +234,8 @@ public:
 	void UpdateDisplayAreaSettings();
 	/* nothing is drawn now (0x8113dcca; name ours) */
 	bool IsDrawSkipped();
+	/* the widget is not below the modal widgets in depth (0x8113fa84; name ours) */
+	bool IsOverModal(Widget *widget);
 	/* its camera's roll, 0 without one (0x8113dce2; name ours) */
 	float GetRollScreen();
 
@@ -292,7 +299,9 @@ public:
 	uint8_t reserved3c[0x44];
 	/* set before the focus is first shown */
 	int32_t m_focus_mode;
-	uint8_t reserved4[8];
+	/* set: a scroll view does not take the focus by itself (name ours, meaning open) */
+	bool m_focus_auto_off;
+	uint8_t reserved4[7];
 	/* the focus cursor and the widget it is on */
 	FocusInfo m_focus_cursor;
 	uint8_t reserved4a[0x18];

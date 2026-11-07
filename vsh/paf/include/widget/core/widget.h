@@ -407,6 +407,10 @@ public:
 		m_widget = w;
 	}
 
+	/* the widget its hint names for the focus direction (0 up, 1 down, 2 left, 3 right): by
+	   ID under its widget's focus root, else the hint's own widget (0x811460e8; name ours) */
+	Widget *GetHintWidget(int32_t dir);
+
 	Widget *m_widget;
 	FocusCB m_cb;
 	FocusHint *m_hint;
@@ -421,8 +425,11 @@ public:
 	uint32_t m_state;
 	/* the widget that takes the focus first */
 	Widget *m_init_focus;
-	/* cleared where a scroll view moves the focus by its own search (name ours) */
+	/* the frames a scroll view under it has waited to move the focus, cleared where it moves
+	   it by its own search (name ours) */
 	uint32_t m_focus_moved;
+	/* nonzero: a scroll view under it does not take the focus (name ours, meaning open) */
+	uint32_t m_focus_hold;
 };
 
 /*
@@ -1222,7 +1229,10 @@ public:
 	/* its children not ready to draw yet, as CountPrepareChildren counted them; a box lays
 	   out only at 0 (name ours, after CountPrepareChildren) */
 	uint16_t m_prepare_count;
-	uint8_t reserved3[3];
+	/* nonzero: a scroll view takes the focus while it has none (ScrollViewBase's focus update;
+	   name ours, meaning open) */
+	uint16_t m_focus_count;
+	uint8_t reserved3[1];
 	/* what UpdateMatrix still has to make again: bits 0 to 2 (name after ScePaf-RE) */
 	uint8_t m_update_flag;
 	/* 0xff before a reverse transition (name after ScePaf-RE) */
@@ -1251,7 +1261,9 @@ public:
 	bool m_touch_front_event : 1;
 	bool m_touch_rear_event : 1;
 	bool reserved3y1 : 1;
-	bool reserved3y2 : 1;
+	/* a scroll view does not take the focus by itself while it is idle (ScrollViewBase's focus
+	   update; name ours) */
+	bool m_auto_focus_off : 1;
 	/* the focus moves to it within its group (ButtonBaseStyleParam's "focus_in_group"; name
 	   after it) */
 	bool m_focus_in_group : 1;
@@ -1526,6 +1538,8 @@ float ScePafWidget_F1176ACC(paf::ui::Widget *widget, paf::common::transition::Ty
 int32_t ScePafWidget_0253DC9C(paf::ui::Widget *widget, bool on);
 /* the widget or the nearest of its parents below its scene that has a focus root, or NULL */
 paf::ui::Widget *ScePafWidget_CFA1EB7A(paf::ui::Widget *widget);
+/* the widget is shown, so the focus may go to it (no name found) */
+bool ScePafWidget_DB0FFD33(paf::ui::Widget *widget);
 /* makes the widget modal in the mode (0, 1), or not (2), with the option */
 int32_t ScePafWidget_42C5A4D4(paf::ui::Widget *widget, int32_t mode, int32_t option);
 /* the widget's adjust parameter, held by reference, and its size updated */

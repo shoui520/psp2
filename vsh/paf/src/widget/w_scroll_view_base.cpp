@@ -33,6 +33,7 @@
 #include <widget/core/widget_gesture.h>
 #include <widget/factory.h>
 #include <widget/w_camera.h>
+#include <widget/w_text_box.h>
 #include <widget/w_scene.h>
 #include <widget/w_scroll_bar.h>
 #include <widget/w_scroll_view_base.h>
@@ -4421,6 +4422,787 @@ uint32_t TouchScrollSupplier::GetParentMovableDir(ScrollViewBase *view, bool mas
 		}
 	}
 	return dir;
+}
+
+/* the axes the move goes along (MoveDir) */
+static inline uint32_t MoveDirOf(const math::v2 &move)
+{
+	uint32_t dir = ScrollViewBase::MoveDir_None;
+
+	if (move.extract_x() != 0.0f)
+		dir = ScrollViewBase::MoveDir_X;
+	if (move.extract_y() != 0.0f)
+		dir |= ScrollViewBase::MoveDir_Y;
+	return dir;
+}
+
+void ScrollViewBase::ScePafWidget_D95AFF11(math::v2 &move, bool dragging, bool locked, bool reset)
+{
+	using sce::Vectormath::Simd::floatInVec;
+
+	if (dragging) {
+		math::v4 pos = m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+
+		MoveViewParent(math::v2(pos.getImpl().getXY()) + move, NULL);
+
+		math::v2 rest(0.0f, 0.0f);
+
+		move = rest;
+		m_scroll_flags |= MoveDirOf(rest);
+		return;
+	}
+
+	uint32_t dir = m_movable_dir;
+
+	if (reset)
+		dir &= ~m_movable_dir_off;
+	if (dir == MoveDir_None)
+		return;
+
+	uint32_t held = m_drag_dir & m_touch_mask_on;
+
+	if (held == MoveDir_XY)
+		return;
+
+	math::v2 want = move;
+	math::v2 step = MaskMoveDir(want, dir);
+	math::v4 pos = m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v2 focus(pos.getImpl().getXY());
+	math::v2 next = focus + step;
+	uint32_t parent_dir = s_touch_scroll_supplier.GetParentMovableDir(this, reset);
+	ScrollViewFocusLimit limit = LimitFocus(math::v2(next), false);
+	ScrollViewFocusLimit focus_limit;
+	math::v2 over;
+
+	if (locked && limit.m_dir != MoveDir_None) {
+		focus_limit = LimitFocus(math::v2(focus), false);
+	} else {
+		focus_limit.m_pos = math::v2(0.0f, 0.0f);
+		focus_limit.m_over = math::v2(0.0f, 0.0f);
+		focus_limit.m_dir = MoveDir_None;
+	}
+	if (focus_limit.m_dir != MoveDir_None)
+		over = limit.m_over * step;
+
+	if ((dir & MoveDir_X) == 0 || (held & MoveDir_X) != 0) {
+		next.set_x(focus.extract_x());
+	} else if ((parent_dir & MoveDir_X) != 0) {
+		if ((limit.m_dir & MoveDir_X) != 0) {
+			m_touch_mask_on |= MoveDir_X;
+			next.set_x(limit.m_pos.extract_x());
+		}
+	} else if ((limit.m_dir & MoveDir_X) != 0) {
+		if (!m_enable_analog) {
+			next.set_x(limit.m_pos.extract_x());
+		} else if (locked) {
+			if ((focus_limit.m_dir & MoveDir_X) == 0) {
+				math::v2 velocity = s_touch_scroll_supplier.m_mochi.GetVelocity();
+
+				m_velocity = m_velocity + math::v2(velocity.extract_x(), 0.0f);
+				next.set_x(limit.m_pos.extract_x());
+			} else if ((over.getImpl().getX() > floatInVec(0.0f)).getAsBool()) {
+				next.set_x(focus.extract_x());
+			}
+		}
+	}
+
+	if ((dir & MoveDir_Y) == 0 || (held & MoveDir_Y) != 0) {
+		next.set_y(focus.extract_y());
+	} else if ((parent_dir & MoveDir_Y) != 0) {
+		if ((limit.m_dir & MoveDir_Y) != 0) {
+			m_touch_mask_on |= MoveDir_Y;
+			next.set_y(limit.m_pos.extract_y());
+		}
+	} else if ((limit.m_dir & MoveDir_Y) != 0) {
+		if (!m_enable_analog) {
+			next.set_y(limit.m_pos.extract_y());
+		} else if (locked) {
+			if ((focus_limit.m_dir & MoveDir_Y) == 0) {
+				math::v2 velocity = s_touch_scroll_supplier.m_mochi.GetVelocity();
+
+				m_velocity = m_velocity + math::v2(0.0f, velocity.extract_y());
+				next.set_y(limit.m_pos.extract_y());
+			} else if ((over.getImpl().getY() > floatInVec(0.0f)).getAsBool()) {
+				next.set_y(focus.extract_y());
+			}
+		}
+	}
+
+	if (!IsSame(next, focus)) {
+		math::v2 delta = next - focus;
+
+		move = move - delta;
+		m_scroll_flags |= MoveDirOf(delta);
+		MoveViewParent(next, NULL);
+	}
+}
+
+math::v4 ScrollViewBase::ScePafWidget_19AA6FB5()
+{
+	using sce::Vectormath::Simd::Aos::Vector2;
+	using sce::Vectormath::Simd::Aos::Vector4;
+	using sce::Vectormath::Simd::Aos::absPerElem;
+	using sce::Vectormath::Simd::Aos::copySignPerElem;
+	using sce::Vectormath::Simd::Aos::minPerElem;
+
+	math::v2 velocity = m_velocity;
+	math::v2 sign(copySignPerElem(Vector2(1.0f, 1.0f), velocity.getImpl()));
+	const float *signs = (const float *)&sign;
+	math::v2 dir(Sign(signs[0]), Sign(signs[1]));
+	math::v2 distance(0.0f, 0.0f);
+	float time = 0.0f;
+
+	while (!IsSame(velocity, math::v2(0.0f, 0.0f))) {
+		float slow = (length(velocity.getImpl()) * m_key_step + 20.0f) * Timer::s_tick_unit;
+
+		time += Timer::s_tick_unit;
+		velocity = velocity - math::v2(minPerElem(Vector2(slow, slow),
+							  absPerElem(velocity.getImpl()))) *
+					      dir;
+
+		math::v2 step = velocity * Timer::s_tick_unit;
+
+		distance = distance + step;
+		if (length(step.getImpl()) < 2.0f || length(velocity.getImpl()) < 12.0f)
+			break;
+	}
+	return math::v4(Vector4(distance.getImpl(), time * 1000.0f, 0.0f));
+}
+
+void ScrollViewBase::ScePafWidget_77E369F4()
+{
+	using sce::Vectormath::Simd::Aos::Vector2;
+	using sce::Vectormath::Simd::Aos::absPerElem;
+	using sce::Vectormath::Simd::Aos::copySignPerElem;
+	using sce::Vectormath::Simd::Aos::minPerElem;
+
+	if (m_hold_count > 0)
+		return;
+	if (IsSame(m_velocity, math::v2(0.0f, 0.0f)))
+		return;
+
+	TouchScrollSupplier &supplier = s_touch_scroll_supplier;
+	uint32_t parent_dir = supplier.GetParentMovableDir(this, false);
+	ScrollViewBase *parent = GetParentScrollView(this);
+	math::v2 pass(0.0f, 0.0f);
+
+	/* the velocity along the axes it may not move goes to the scroll view it is in */
+	if ((m_movable_dir & MoveDir_X) == 0) {
+		if ((parent_dir & MoveDir_X) != 0)
+			pass.set_x(m_velocity.extract_x());
+		m_velocity.set_x(0.0f);
+	}
+	if ((m_movable_dir & MoveDir_Y) == 0) {
+		if ((parent_dir & MoveDir_Y) != 0)
+			pass.set_y(m_velocity.extract_y());
+		m_velocity.set_y(0.0f);
+	}
+	if (parent != NULL)
+		parent->m_velocity = pass + parent->m_velocity;
+
+	if (m_view_parent->FindAnim(0x10000) != NULL) {
+		m_velocity = math::v2(0.0f, 0.0f);
+		return;
+	}
+
+	math::v4 pos = m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v2 start(pos.getImpl().getXY());
+	math::v2 focus = start;
+	math::v2 sign(copySignPerElem(Vector2(1.0f, 1.0f), m_velocity.getImpl()));
+	const float *signs = (const float *)&sign;
+	math::v2 dir(Sign(signs[0]), Sign(signs[1]));
+	float rest = Timer::s_tick_interval;
+
+	while (rest > 0.0f) {
+		float ticks = rest < 1.0f ? rest : 1.0f;
+
+		rest -= ticks;
+
+		float time = Timer::s_tick_unit * ticks;
+		float over = (float)(ScePafWidget_7F653E08(focus, -1).m_dir != MoveDir_None);
+		ScrollViewFocusTarget target = ScePafWidget_7F653E08(focus, -1);
+		math::v2 velocity = m_velocity;
+		/* it slows faster past its ends */
+		math::v2 friction((target.m_dir & MoveDir_X) != 0 ? m_over_scroll_length : m_key_step,
+				  (target.m_dir & MoveDir_Y) != 0 ? m_over_scroll_length : m_key_step);
+		math::v2 speed(absPerElem(velocity.getImpl()));
+		math::v2 slow = (speed * friction + math::v2(20.0f, 20.0f)) * time;
+
+		velocity = velocity - math::v2(minPerElem(slow.getImpl(), speed.getImpl())) * dir;
+
+		math::v2 step = velocity * time;
+		math::v2 next = focus + step;
+
+		if (parent_dir != MoveDir_None) {
+			ScrollViewFocusTarget end = ScePafWidget_7F653E08(next, -1);
+			uint32_t stop = parent_dir & end.m_dir & ~m_drag_dir;
+
+			/* where it stops at an end, the scroll view it is in goes on */
+			if (stop != MoveDir_None) {
+				math::v2 passed(0.0f, 0.0f);
+
+				if ((stop & MoveDir_X) != 0) {
+					next.set_x(end.m_pos.extract_x());
+					passed.set_x(velocity.extract_x());
+					velocity.set_x(0.0f);
+				}
+				if ((stop & MoveDir_Y) != 0) {
+					next.set_y(end.m_pos.extract_y());
+					passed.set_y(velocity.extract_y());
+					velocity.set_y(0.0f);
+				}
+				if (parent != NULL)
+					parent->m_velocity = passed + parent->m_velocity;
+			}
+		}
+		if (!m_enable_analog || m_movable_dir == MoveDir_XY) {
+			ScrollViewFocusTarget end = ScePafWidget_7F653E08(next, -1);
+
+			if ((end.m_dir & MoveDir_X) != 0) {
+				next.set_x(end.m_pos.extract_x());
+				velocity.set_x(0.0f);
+			}
+			if ((end.m_dir & MoveDir_Y) != 0) {
+				next.set_y(end.m_pos.extract_y());
+				velocity.set_y(0.0f);
+			}
+		}
+		m_velocity = velocity;
+		focus = next;
+		if (over != 0.0f && length(step.getImpl()) < 2.0f) {
+			m_velocity = math::v2(0.0f, 0.0f);
+			velocity = math::v2(0.0f, 0.0f);
+		}
+		if (length(velocity.getImpl()) < 12.0f) {
+			m_velocity = math::v2(0.0f, 0.0f);
+			velocity = math::v2(0.0f, 0.0f);
+		}
+		if (IsSame(velocity, math::v2(0.0f, 0.0f)))
+			break;
+	}
+
+	if (IsSame(focus, start))
+		ScePafWidget_A0538225(-1);
+	else
+		MoveViewParent(focus, NULL);
+
+	if (!IsSame(m_velocity, math::v2(0.0f, 0.0f)))
+		return;
+
+	vector<TouchScrollSupplier::TouchView>::iterator it;
+
+	for (it = supplier.m_touch_views.begin(); it != supplier.m_touch_views.end(); ++it)
+		if (it->m_view == this)
+			break;
+	if (it != supplier.m_touch_views.end() && supplier.m_touch_state == 2 &&
+	    supplier.m_drag_locked) {
+		/* pulled back within its limits */
+		ScrollViewFocusLimit limit = LimitFocus(math::v2(focus), false);
+		float over = length(limit.m_over.getImpl());
+
+		if (over < 1.0f)
+			over = 1.0f;
+
+		float pull = __builtin_sqrtf(over);
+		float time = m_snap_time * (20.0f / m_over_scroll_length) * __builtin_sqrtf(pull);
+
+		m_focus_timer = new ScrollViewTimer(this, ScrollViewTimer::TIMER_TYPE_MOVE, time,
+						    Timer::FUNC_QUART_OUT, 0, 0xFFFF, NULL, -1);
+		MoveViewParent(limit.m_pos, m_focus_timer);
+	}
+}
+
+void ScrollViewBase::ScePafWidget_E9C7617A(uint32_t touch_id)
+{
+	m_track_port = touch_id;
+}
+
+void ScrollViewBase::ScePafWidget_D9FE36A6(int32_t id, math::v2 &dir, math::v2 &velocity)
+{
+	if (id != -1) {
+		list<Snap>::iterator it;
+
+		for (it = m_snap_list.begin(); it != m_snap_list.end(); ++it)
+			if (it->m_id == id)
+				break;
+		if (it != m_snap_list.end()) {
+			math::v2 focus = it->m_pos * -1.0f;
+			math::v2 toward = dir;
+
+			it = FindSnapPointToward(focus, toward);
+			if (it != m_snap_list.end())
+				id = it->m_id;
+		}
+	}
+
+	uint32_t held = m_drag_dir & m_touch_mask_on;
+	uint32_t port = m_track_port;
+
+	if ((held & MoveDir_X) != 0)
+		velocity.set_x(0.0f);
+	else if ((m_movable_dir & MoveDir_X) != 0)
+		dir.set_x(0.0f);
+	if ((held & MoveDir_Y) != 0)
+		velocity.set_y(0.0f);
+	else if ((m_movable_dir & MoveDir_Y) != 0)
+		dir.set_y(0.0f);
+	if (port != (uint32_t)-1)
+		remove_touch_gesture_mask(0, port, 0x40);
+	m_track_port = -1;
+	m_rear_touches = 0;
+	m_touch_mask_on = 0;
+	if (m_touch_captures.size() != 0)
+		ScePafWidget_931AD41E(this, false);
+	ScePafWidget_A0538225(id);
+	UpdateScrollRange();
+}
+
+bool ScrollViewBase::ScrollParentByKey(const math::v2 &dir)
+{
+	ScrollViewBase *parent = GetParentScrollView(this);
+
+	if (parent == NULL || (parent->m_event_enable & 0x400) == 0)
+		return false;
+	return parent->ScePafWidget_AD706F2A(math::v2(dir), NULL);
+}
+
+bool ScrollViewBase::ScrollByKey(const math::v2 &dir)
+{
+	if (m_focus_wrap) {
+		m_focus_wrap = false;
+		return true;
+	}
+
+	math::v2 d = dir;
+	math::v2 target = m_focus_target;
+	math::v2 start = m_focus_start;
+	bool moves = false;
+	bool turned = false;
+
+	if ((d.extract_x() != 0.0f && (m_movable_dir & MoveDir_X) != 0) ||
+	    (d.extract_y() != 0.0f && (m_movable_dir & MoveDir_Y) != 0))
+		moves = true;
+	if (!IsSame(target, math::v2(0.0f, 0.0f)) && !IsSame(target, d))
+		turned = true;
+	m_focus_target = d;
+	if (!IsSame(start, math::v2(0.0f, 0.0f)) && !IsSame(start, dir))
+		turned = true;
+	m_focus_start = d;
+
+	if (m_snap_list.size() == 0) {
+		math::v4 pos = m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		math::v2 focus(pos.getImpl().getXY());
+
+		if (LimitFocus(focus - dir, false).m_dir != MoveDir_None) {
+			/* at its end: it bounces back where it turned */
+			if (moves && turned && m_enable_analog) {
+				MoveViewParent(ScePafWidget_7F653E08(focus, -1).m_pos, NULL);
+				m_velocity = (dir * -1.0f) * math::v2(1200.0f, 800.0f);
+				return true;
+			}
+			return false;
+		}
+		if (!moves)
+			return false;
+
+		math::v2 velocity = m_velocity;
+
+		if (turned) {
+			m_velocity = math::v2(0.0f, 0.0f);
+			velocity = math::v2(0.0f, 0.0f);
+		}
+		m_velocity = velocity - dir * math::v2(1200.0f, 800.0f);
+		m_focus_target = dir;
+		return true;
+	}
+
+	math::v4 pos = m_view_parent->GetPos(1, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v2 focus(pos.getImpl().getXY());
+	math::v2 toward = dir;
+	list<Snap>::iterator it = FindSnapPointToward(focus, toward);
+
+	if (it != m_snap_list.end() && !IsSame(focus, it->m_pos * -1.0f) && moves) {
+		ScePafWidget_A0538225(it->m_id);
+		return true;
+	}
+	return false;
+}
+
+/* the widget the focus may go to: one that takes events, is focusable and is shown */
+static inline bool CanFocus(Widget *widget)
+{
+	return widget->m_hold_count <= 0 && (widget->m_event_enable & 0x400) != 0 &&
+	       widget->IsTextEventEnabled() && ScePafWidget_DB0FFD33(widget);
+}
+
+/* the widget the focuser's hint names for the direction, where the focus may go to it */
+static inline Widget *GetHintFocus(Widget *widget, int32_t dir)
+{
+	Focuser *focuser = widget->m_focuser;
+
+	if (focuser == NULL)
+		return NULL;
+
+	Widget *hint = focuser->GetHintWidget(dir);
+
+	if (hint == NULL || !CanFocus(hint))
+		return NULL;
+	return hint;
+}
+
+bool ScrollViewBase::ScePafWidget_AD706F2A(const math::v2 &dir, Widget *from)
+{
+	if (!IsSame(m_focus_target, math::v2(0.0f, 0.0f))) {
+		bool turned = !IsSame(m_focus_target, dir);
+		ScrollViewTimer *timer = m_focus_timer;
+
+		/* the move the same way is still under way */
+		if (timer != NULL && timer->m_type == ScrollViewTimer::TIMER_TYPE_MOVE && !turned &&
+		    timer->m_mapped_x < 0.5f)
+			return false;
+		if (m_env->m_focus_cursor.m_target == this)
+			from = GetRootFocus(this);
+	}
+	if (m_focus_root != NULL)
+		m_focus_root->m_focus_moved = 0;
+
+	Widget *focus = m_env->m_focus_cursor.m_target;
+	Widget *hint = NULL;
+
+	if (focus != NULL) {
+		int32_t focus_dir = GetFocusDir(dir);
+		Widget *w;
+
+		if (focus_dir == 1 && (w = GetHintFocus(focus, 0)) != NULL)
+			hint = w;
+		else if (focus_dir == 2 && (w = GetHintFocus(focus, 1)) != NULL)
+			hint = w;
+		else if (focus_dir == 3 && (w = GetHintFocus(focus, 2)) != NULL)
+			hint = w;
+		else if (focus_dir == 4 && (w = GetHintFocus(focus, 3)) != NULL)
+			hint = w;
+		else
+			hint = NULL;
+	}
+
+	Widget *found = NULL;
+
+	if (focus != NULL && FindChild(focus, 0) != NULL) {
+		if (hint != NULL) {
+			if (hint != this)
+				found = hint;
+			if (focus->IsInherit(Text::TypeName()) && focus->IsTextEventEnabled())
+				goto search;
+			if (found != NULL)
+				goto set;
+			goto search;
+		}
+
+		Environment *env = m_env;
+
+		if (env->m_focus_history_on) {
+			int32_t focus_dir = GetFocusDir(dir);
+
+			found = focus_dir != 255 ?
+					env->m_focus_cursor.FindFocusHistory(focus, focus_dir) :
+					NULL;
+		}
+		if (found != NULL) {
+			if (FindChild(found, 0) != NULL && found != this && CanFocus(found)) {
+				/* it goes back the way it came */
+				focus = NULL;
+				goto set;
+			}
+		}
+	}
+
+search:
+	found = SearchFocus(math::v2(dir), from);
+	if (found == NULL || found == this)
+		goto scroll;
+	if (ScePafWidget_CFA1EB7A(found) != this &&
+	    FindChild(ScePafWidget_CFA1EB7A(found), 0) == NULL)
+		goto scroll;
+
+set: {
+	if (found->IsInherit(Text::TypeName()) && found->GetFocusDirectionMask() == 7)
+		goto scroll;
+
+	math::v4 world = found->GetWorldMatrix().w();
+	float scale = 1.0f;
+	Camera *camera = GetCamera();
+
+	if (camera != NULL) {
+		math::v4 eye = camera->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		float depth = eye.extract_z() - world.extract_z();
+
+		ScePafWidget_72F479CA(camera);
+		if (depth == 0.0f)
+			scale = 0.0f;
+		else
+			scale = camera->m_distance / depth;
+	}
+
+	using sce::Vectormath::Simd::Aos::mulPerElem;
+
+	math::v4 half(0.5f, 0.5f, 0.5f, 0.5f);
+	float top = ((world + math::v4(mulPerElem(found->GetSize(0)->getImpl(), half.getImpl()))) *
+		     scale).extract_y();
+	math::v4 low =
+		(world - math::v4(mulPerElem(found->GetSize(0)->getImpl(), half.getImpl()))) * scale;
+
+	/* the view scrolls first where the widget is past its clip */
+	if (IsSame(dir, math::v2(0.0f, 1.0f)) && top > CalcClipRect().top())
+		goto scroll;
+	if (IsSame(dir, math::v2(0.0f, -1.0f)) && low.extract_y() < CalcClipRect().bottom())
+		goto scroll;
+
+	SetFocusInfo info;
+
+	info.m_mode = 0;
+	info.m_notify = true;
+	info.m_direction = dir;
+	info.m_keep = false;
+	found->SetFocus(&info);
+	m_focus_target = math::v2(0.0f, 0.0f);
+	m_focus_start = dir;
+	if (focus != NULL && focus != this && found != this) {
+		Environment *env = m_env;
+		int32_t focus_dir = GetFocusDir(dir);
+
+		if (env->m_focus_history_on && focus_dir != 255)
+			env->m_focus_cursor.AddFocusHistory(focus, found, focus_dir);
+	}
+	return true;
+}
+
+scroll:
+	if (ScrollByKey(math::v2(dir)))
+		return true;
+	m_focus_start = m_focus_target;
+	m_focus_target = math::v2(0.0f, 0.0f);
+	return ScrollParentByKey(math::v2(dir));
+}
+
+void ScrollViewBase::ScePafWidget_1E6F658F()
+{
+	TouchScrollSupplier &supplier = s_touch_scroll_supplier;
+	vector<TouchScrollSupplier::TouchView>::iterator it;
+
+	for (it = supplier.m_touch_views.begin(); it != supplier.m_touch_views.end(); ++it)
+		if (it->m_view == this)
+			break;
+	if (it != supplier.m_touch_views.end()) {
+		ScrollViewBase *first = supplier.m_touch_views.begin()->m_view;
+
+		first->remove_touch_gesture_mask(0, first->m_track_port, 0x40);
+	}
+}
+
+void ScrollViewBase::ScePafWidget_22EF63CE()
+{
+	uint32_t id = m_track_port;
+
+	if (id != (uint32_t)-1) {
+		Environment *env = m_env;
+		TouchState *state = NULL;
+
+		if (id < 8) {
+			env->m_touch_state[id].m_port = 0;
+			env->m_touch_state[id].m_id = id;
+			state = &env->m_touch_state[id];
+		}
+		/* the touch it tracks is gone or released */
+		if (state == NULL || state->m_type == 0x42 || state->m_type == 0x47)
+			TrackEnd(NULL);
+	}
+	if (m_rear_touches != 0 && UpdateRearTouches())
+		TrackRearRelease(NULL);
+	if (m_ime_padding && m_scroll_ended && GetCamera()->FindAnim(0x10000) == NULL) {
+		m_scroll_ended = false;
+		UpdatePadding();
+		UpdateViewLimit();
+		UpdateMovableDirection();
+		UpdateScrollLayout();
+		UpdateScrollRange();
+	}
+	ScePafWidget_77E369F4();
+}
+
+void ScrollViewBase::ScePafWidget_B6CECFDF()
+{
+	FocusRoot *root = m_focus_root;
+
+	if (root == NULL)
+		return;
+
+	Environment *env = m_env;
+
+	if (env->m_focus_cursor.m_target == this && Widget::m_focus_target) {
+		/* it has the focus: every fifth frame the focus goes into its view */
+		if (++root->m_focus_moved % 5 == 0) {
+			Widget *focus = GetRootFocus(this);
+			bool idle = IsSame(m_focus_target, math::v2(0.0f, 0.0f));
+
+			Widget *from = idle ? NULL : focus;
+
+			if (focus == this || !ScePafWidget_DB0FFD33(focus))
+				focus = SearchFocus(math::v2(0.0f, 0.0f), from);
+			if (focus != NULL && focus != this &&
+			    (ScePafWidget_CFA1EB7A(focus) == this ||
+			     FindChild(ScePafWidget_CFA1EB7A(focus), 0) != NULL)) {
+				Widget *target = focus;
+
+				if (ScePafWidget_CFA1EB7A(focus) != this)
+					target = ScePafWidget_CFA1EB7A(this);
+				target->SetFocus(NULL);
+
+				math::v2 dir = m_focus_target;
+
+				m_focus_target = math::v2(0.0f, 0.0f);
+				m_focus_root->m_focus_moved = 0;
+				m_focus_start = dir;
+				if (!m_focus_in_group)
+					ReleaseRootFocus(this);
+			}
+		}
+		if (m_focus_root->m_focus_moved >= 60)
+			m_focus_root->m_focus_moved = 0;
+	} else if (root->m_focus_hold == 0 && env != NULL && ScePafWidget_A6B659BB(env, 0) &&
+		   !m_env->m_focus_auto_off && ScePafWidget_DB0FFD33(this) &&
+		   Widget::m_focus_target && ((m_event_enable & 0x400) != 0 || m_focus_count != 0) &&
+		   m_env->IsOverModal(this) && m_hold_count <= 0 && m_focus_in_group) {
+		if (IsSame(m_focus_target, math::v2(0.0f, 0.0f))) {
+			Widget::UpdateAfterChildren();
+
+			FocusRoot *focus_root = m_focus_root;
+			uint32_t frames = focus_root->m_focus_moved;
+
+			/* idle long enough: it takes the focus itself */
+			if (!m_auto_focus_off && frames >= 30 && m_movable_dir != MoveDir_None) {
+				SetFocusInfo info;
+
+				info.m_mode = 0;
+				info.m_notify = false;
+				info.m_direction = math::v2(0.0f, 0.0f);
+				info.m_keep = false;
+				SetFocus(&info);
+				focus_root = m_focus_root;
+				frames = focus_root->m_focus_moved;
+			}
+			if (frames >= 60)
+				focus_root->m_focus_moved = 0;
+		} else {
+			Widget *found = SearchFocus(math::v2(m_focus_target), NULL);
+
+			if (found != NULL && (ScePafWidget_CFA1EB7A(found) == this ||
+					      FindChild(ScePafWidget_CFA1EB7A(found), 0) != NULL)) {
+				Widget *target = found;
+
+				if (ScePafWidget_CFA1EB7A(found) != this)
+					target = ScePafWidget_CFA1EB7A(this);
+
+				SetFocusInfo info;
+
+				info.m_mode = 0;
+				info.m_notify = false;
+				info.m_direction = math::v2(0.0f, 0.0f);
+				info.m_keep = false;
+				target->SetFocus(&info);
+
+				math::v2 dir = m_focus_target;
+
+				m_focus_target = math::v2(0.0f, 0.0f);
+				m_focus_root->m_focus_moved = 0;
+				m_focus_start = dir;
+			} else if (++m_focus_root->m_focus_moved >= 30 && m_focus_timer == NULL) {
+				Widget::UpdateAfterChildren();
+
+				math::v2 dir = m_focus_target;
+
+				m_focus_target = math::v2(0.0f, 0.0f);
+				m_focus_root->m_focus_moved = 0;
+				m_focus_start = dir;
+			}
+		}
+	} else {
+		FocusRoot *focus_root = m_focus_root;
+
+		if (Widget::m_focus_target) {
+			m_focus_start = m_focus_target;
+			m_focus_target = math::v2(0.0f, 0.0f);
+		}
+		focus_root->m_focus_moved = 0;
+	}
+}
+
+math::v2 ScrollViewBase::ScePafWidget_A503544D()
+{
+	if (m_view_parent->FindAnim(0x10000) != NULL) {
+		math::v4 to = m_view_parent->GetPos(1, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		math::v4 at = m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		math::v2 move = math::v2(to.getImpl().getXY()) - math::v2(at.getImpl().getXY());
+
+		return math::v2(Sign(move.extract_x()), Sign(move.extract_y()));
+	}
+
+	math::v2 velocity = m_velocity;
+
+	return math::v2(Sign(velocity.extract_x()), Sign(velocity.extract_y()));
+}
+
+bool ScrollViewBase::ScePafWidget_28AF15BB()
+{
+	TouchScrollSupplier &supplier = s_touch_scroll_supplier;
+	vector<TouchScrollSupplier::TouchView>::iterator it;
+
+	for (it = supplier.m_touch_views.begin(); it != supplier.m_touch_views.end(); ++it)
+		if (it->m_view == this)
+			break;
+	if (it == supplier.m_touch_views.end())
+		return false;
+	return supplier.m_touch_state == 2;
+}
+
+void ScrollViewOverScrollStretch::GetTransform(math::v4 &offset, math::v4 &scale)
+{
+	using sce::Vectormath::Simd::Aos::Vector4;
+	using sce::Vectormath::Simd::Aos::absPerElem;
+	using sce::Vectormath::Simd::Aos::mulPerElem;
+
+	scale = math::v4(1.0f, 1.0f, 1.0f, 0.0f);
+	offset = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	math::v4 pos = m_view->m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v2 focus(pos.getImpl().getXY());
+	math::v2 over = m_view->LimitFocus(math::v2(focus), false).m_over;
+
+	if (IsSame(over, math::v2(0.0f, 0.0f)))
+		return;
+
+	/* the stretch per pixel past the end, from the screen */
+	static SceneResolution *s_resolution = ScePafWidget_CDC90BA2(
+		m_view->m_scene->m_env_param, m_view->m_scene->m_resolution_id);
+	static math::v2 s_rate(0.217f / (s_resolution->m_width - 72),
+			       0.217f / (s_resolution->m_height - 72));
+
+	math::v2 stretch = math::v2(1.0f, 1.0f) + math::v2(absPerElem(over.getImpl())) * s_rate;
+	math::v4 box(mulPerElem(m_view->m_view_box.getImpl(),
+				Vector4(stretch.getImpl(), stretch.getImpl())));
+
+	box = box + m_view->m_padding_sign;
+
+	math::v4 edge = m_view->m_view_half - math::v4(Vector4(focus.getImpl(), focus.getImpl()));
+
+	if (over.extract_x() > 0.0f)
+		offset.set_x(edge.extract_x() - box.extract_x());
+	if (over.extract_x() < 0.0f)
+		offset.set_x(edge.extract_z() - box.extract_z());
+	if (over.extract_y() > 0.0f)
+		offset.set_y(edge.extract_w() - box.extract_w());
+	if (over.extract_y() < 0.0f)
+		offset.set_y(edge.extract_y() - box.extract_y());
+	scale = math::v4(stretch.extract_x(), stretch.extract_y(), 1.0f, 0.0f);
 }
 
 }
