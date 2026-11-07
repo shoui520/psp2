@@ -74,7 +74,7 @@ public:
 
 	void Register(ScrollViewBase *view)
 	{
-		string func("Register");
+		string func(__func__);
 		string scope = "AnalogScrollSupplier::" + func;
 
 		if (m_views.size() == 0) {
@@ -83,6 +83,21 @@ public:
 			inputdevice::AddInputListener(m_listener);
 		}
 		m_views.push_back(view);
+	}
+
+	void Unregister(ScrollViewBase *view)
+	{
+		string func(__func__);
+		string scope = "AnalogScrollSupplier::" + func;
+		vector<ScrollViewBase *>::iterator it;
+
+		for (it = m_views.begin(); it != m_views.end(); ++it)
+			if (*it == view)
+				break;
+		if (it != m_views.end())
+			m_views.erase(it);
+		if (m_views.size() == 0)
+			inputdevice::DelInputListener(m_listener);
 	}
 
 	vector<ScrollViewBase *> m_views;
@@ -295,6 +310,24 @@ public:
 		m_views.push_back(view);
 	}
 
+	void Unregister(ScrollViewBase *view)
+	{
+		vector<ScrollViewBase *>::iterator it;
+
+		for (it = m_views.begin(); it != m_views.end(); ++it)
+			if (*it == view)
+				break;
+		if (it != m_views.end())
+			m_views.erase(it);
+		if (m_views.size() == 0) {
+			inputdevice::DelInputListener(m_listener);
+			m_listener.reset();
+		}
+	}
+
+	/* the touch the view holds let go of: the flick stopped where it is the first (name
+	   ours) */
+	void Release(ScrollViewBase *view);
 	/* each view's parent put back in place, and its matrices made again where they changed */
 	void Update();
 	/* the flick under way stopped, the views' velocities cleared (name ours) */
@@ -1319,6 +1352,472 @@ int32_t ScrollViewBase::SetString(const wstring &str, int32_t index)
 	if (draw_obj != NULL && draw_obj->IsInherit(graph::TextObj::DrawObjType()))
 		return static_cast<graph::TextObj *>(draw_obj)->SetString(str);
 	return 0x80AF4101;
+}
+
+int32_t ScrollViewBase::GetString(wstring &str, int32_t index)
+{
+	graph::DrawObj *draw_obj = GetDrawObj(index);
+
+	if (draw_obj != NULL && draw_obj->IsInherit(graph::TextObj::DrawObjType()))
+		return static_cast<graph::TextObj *>(draw_obj)->GetString(str);
+	return 0x80AF4101;
+}
+
+int32_t ScrollViewBase::SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,
+				   uint32_t index)
+{
+	graph::DrawObj *draw_obj = GetDrawObj(obj);
+
+	if (draw_obj == NULL)
+		return 0x80AF4101;
+	draw_obj->SetTexture(surf, index);
+	return 0;
+}
+
+int32_t ScrollViewBase::GetTexture(intrusive_ptr<graph::Surface> &surf, int32_t obj,
+				   uint32_t index)
+{
+	graph::DrawObj *draw_obj = GetDrawObj(obj);
+
+	if (draw_obj == NULL)
+		return 0x80AF4101;
+	draw_obj->GetTexture(surf, index);
+	return 0;
+}
+
+Widget *ScrollViewBase::GetInternalWidget()
+{
+	return m_view_parent;
+}
+
+void TouchScrollSupplier::Release(ScrollViewBase *view)
+{
+	vector<TouchView>::iterator it;
+
+	for (it = m_touch_views.begin(); it != m_touch_views.end(); ++it)
+		if (it->m_view == view)
+			break;
+	if (it != m_touch_views.end()) {
+		if (it == m_touch_views.begin())
+			StopFlick();
+		else
+			m_touch_views.erase(it);
+	}
+}
+
+void ScrollViewBase::DestroyWidget()
+{
+	s_touch_scroll_supplier.Unregister(this);
+	s_analog_scroll_supplier.Unregister(this);
+	ScePafWidget_A89BE22F(this);
+	s_touch_scroll_supplier.Release(this);
+	if (m_debug != NULL) {
+		delete m_debug;
+		m_debug = NULL;
+	}
+	Widget::DestroyWidget();
+}
+
+/* its state, but 3 (ready) or 0 for states 0, 1 and 3 as its draw objects are ready */
+uint32_t ScrollViewBase::CheckState()
+{
+	uint32_t state = m_state;
+
+	if (state != 1 && state != 0 && state != 3)
+		return state;
+	return IsPrepareObjs() ? 3 : 0;
+}
+
+void ScrollViewBase::UpdateAnchor()
+{
+	math::v2 *anchor = m_anchor;
+
+	if (anchor != NULL) {
+		math::v2 pos(GetOriginWorldMatrix().getImpl().getCol3().getXY());
+
+		if (!(*anchor == pos)) {
+			SetViewFocus(GetViewFocus() - *anchor + pos, NULL, true, true);
+			*anchor = pos;
+		}
+	}
+}
+
+void ScrollViewBase::UpdateViewLimit()
+{
+	using sce::Vectormath::Simd::Aos::Vector4;
+	using sce::Vectormath::Simd::Aos::mulPerElem;
+
+	Vector4 size(m_view_size.getImpl(), m_view_size.getImpl());
+	math::v2 widget_size(m_size.getImpl().getXY());
+
+	m_fit_dir = MoveDir_None;
+	m_view_half = math::v4(mulPerElem(size, Vector4(-0.5f, 0.5f, 0.5f, -0.5f)));
+
+	math::v4 limit((mulPerElem(size, Vector4(0.5f, -0.5f, -0.5f, 0.5f)) +
+			m_scroll_box.getImpl()) * -1.0f);
+
+	m_view_limit = limit;
+	if (widget_size.getImpl().getX() > m_scroll_box_size.getImpl().getX()) {
+		m_fit_dir = MoveDir_X;
+		limit.set_x(m_scroll_center.extract_x());
+		m_view_limit = limit;
+	}
+	if (widget_size.getImpl().getY() > m_scroll_box_size.getImpl().getY()) {
+		m_fit_dir |= MoveDir_Y;
+		limit.set_y(m_scroll_center.extract_y());
+		m_view_limit = limit;
+	}
+}
+
+void ScrollViewBase::UpdateSize()
+{
+	Widget::UpdateSize();
+	m_view_parent->SetSize(m_size);
+	m_view_size = math::v2(m_size.getImpl().getXY());
+	UpdateViewLimit();
+	UpdateMovableDirection();
+	UpdateScrollLayout();
+	ScePafWidget_A0538225(-1);
+	UpdateScrollRange();
+	UpdateAnchor();
+}
+
+void ScrollViewBase::OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg)
+{
+	if (m_touch_captures.size() == 0)
+		s_touch_scroll_supplier.StopFlick();
+}
+
+int32_t ScrollViewBase::HandleTouchFwEvent(Event *e)
+{
+	if (e != NULL) {
+		uint32_t port = (e->m_detail >> 20) & 0xF;
+
+		if (port == 0) {
+			switch (e->GetType()) {
+			case 0x41:
+			case 0x44:
+				if (TrackBegin(e))
+					e->Consume();
+				break;
+			case 0x42:
+				if (TrackEnd(e))
+					e->Consume();
+				break;
+			case 0x47:
+				if (TrackEnd(e))
+					e->Consume();
+				break;
+			}
+		} else if (port == 1) {
+			switch (e->GetType()) {
+			case 0x42:
+				if (ScePafWidget_3196DEE8(e))
+					e->Consume();
+				break;
+			case 0x47:
+				if (ScePafWidget_3196DEE8(e))
+					e->Consume();
+				break;
+			}
+		}
+	}
+	return Handler::HandleTouchFwEvent(e);
+}
+
+int32_t ScrollViewBase::HandleTouchEvent(Event *e)
+{
+	if (e != NULL) {
+		uint32_t port = (e->m_detail >> 20) & 0xF;
+
+		if (port == 0) {
+			switch (e->GetType()) {
+			case 0x41:
+				if (TrackPress(e))
+					e->Consume();
+				break;
+			case 0x42:
+				if (TrackRelease(e))
+					e->Consume();
+				break;
+			case 0x43:
+				if (TrackMove(e))
+					e->Consume();
+				break;
+			case 0x44:
+				if (TrackLongPress(e))
+					e->Consume();
+				break;
+			case 0x46:
+				if (TrackGrab(e))
+					e->Consume();
+				break;
+			}
+		} else if (port == 1) {
+			switch (e->GetType()) {
+			case 0x41:
+				if (ScePafWidget_46CD91F6(e))
+					e->Consume();
+				break;
+			case 0x42:
+				if (ScePafWidget_3196DEE8(e))
+					e->Consume();
+				break;
+			}
+		}
+	}
+	return Widget::HandleTouchEvent(e);
+}
+
+int32_t ScrollViewBase::HandleGestureEvent(Event *e)
+{
+	if (e != NULL) {
+		uint32_t detail = e->m_detail;
+		uint32_t port = (detail >> 20) & 0xF;
+
+		if (port == 0) {
+			switch ((detail >> 8) & 0x7F) {
+			case 3: {
+				if (ScePafWidget_2FDBFE08(e))
+					e->Consume();
+
+				Event end(0x8000, Event::MODE_DISPATCH, Event::ROUTE_FORWARD, 0);
+				DoEvent(CB_SCROLL_VIEW_BASE_END, &end);
+				break;
+			}
+			case 7:
+				if (ScePafWidget_CEBDCDB3(e))
+					e->Consume();
+				break;
+			case 10:
+				if (MochiBegin(e))
+					e->Consume();
+				break;
+			case 11:
+				if (MochiMove(e))
+					e->Consume();
+				break;
+			case 0x10:
+				if (TrackDrag(e))
+					e->Consume();
+				break;
+			case 0x16:
+				if (ScePafWidget_E0FAE144(e))
+					e->Consume();
+				break;
+			}
+		} else if (port == 1) {
+			switch ((detail >> 8) & 0x7F) {
+			case 7:
+				if (ScePafWidget_0BC06625(e))
+					e->Consume();
+				break;
+			case 10:
+				if (ScePafWidget_2141506E(e))
+					e->Consume();
+				break;
+			case 11:
+				if (ScePafWidget_0ECFFCE1(e))
+					e->Consume();
+				break;
+			case 13:
+				if (ScePafWidget_3403FD90(e))
+					e->Consume();
+				break;
+			case 14:
+				if (ScePafWidget_22F22B80(e))
+					e->Consume();
+				break;
+			}
+		}
+	}
+	return Widget::HandleGestureEvent(e);
+}
+
+ScrollViewBase *ScrollViewBase::GetParentView()
+{
+	for (Widget *parent = m_parent; parent != NULL; parent = parent->m_parent)
+		if (parent->IsInherit(m_widget_type))
+			return static_cast<ScrollViewBase *>(parent);
+	return NULL;
+}
+
+int32_t ScrollViewBase::HandleKeycodeEvent(Event *e)
+{
+	if (e != NULL) {
+		switch (e->m_detail & 0xFF) {
+		case 1:
+			if (ScePafWidget_E6DD4083(e))
+				e->Consume();
+			break;
+		case 2:
+			if (ScePafWidget_F8E68E31(e))
+				e->Consume();
+			break;
+		case 3:
+			if (ScePafWidget_422E30D5(e))
+				e->Consume();
+			break;
+		case 4:
+			if (ScePafWidget_0F056788(e))
+				e->Consume();
+			break;
+		default:
+			if (m_pre_dispatch && (e->m_type & 0x40000000) != 0 &&
+			    (e->m_type & Event::ROUTE_TERM) != 0)
+				return 0;
+		}
+
+		uint32_t type = e->GetType();
+
+		if (type == 0x11) {
+			uint32_t detail = e->m_detail;
+
+			switch ((uint32_t)(detail & 0xFF)) {
+			case 1:
+			case 2:
+			case 3:
+			case 4: {
+				Environment *env = m_env;
+				uint32_t port = (detail >> 20) & 0xF;
+
+				env->ReleasePadCaptureLow(port);
+				env->ReleasePadCaptureHigh(port);
+				ScePafWidget_ABF05727(m_env, 0, true, NULL);
+				ScePafWidget_ABF05727(m_env, 1, true, NULL);
+				break;
+			}
+			}
+			m_focus_lock = true;
+
+			ScrollViewBase *parent = GetParentView();
+			if (parent != NULL)
+				parent->m_focus_lock = true;
+		} else if (type == 0x12 || type == 0x14) {
+			m_focus_lock = false;
+
+			ScrollViewBase *parent = GetParentView();
+			if (parent != NULL)
+				parent->m_focus_lock = false;
+		}
+	}
+	if (m_track_port != -1)
+		return 0;
+	return Widget::HandleKeycodeEvent(e);
+}
+
+int32_t ScrollViewBase::HandleFocusSwitchEvent(Event *e)
+{
+	int32_t ret = Widget::HandleFocusSwitchEvent(e);
+
+	if ((e->m_type & Event::STATE_CONSUME) != 0) {
+		Environment *env = m_env;
+
+		if (env != NULL && FindChild(env->m_focus_cursor.m_target, 0) != NULL &&
+		    m_env->m_focus_history_on)
+			m_env->m_focus_cursor.RemoveFocusHistory(this);
+	}
+	return ret;
+}
+
+int32_t ScrollViewBase::HandleFocusEvent(Event *e)
+{
+	if (e != NULL) {
+		switch (e->GetType()) {
+		case 0x401:
+			if (ScePafWidget_33742E18(e))
+				e->Consume();
+			break;
+		case 0x402:
+			if (ScePafWidget_797EE334(e))
+				e->Consume();
+			break;
+		case 0x403:
+			if (ScePafWidget_7B155BE4(e))
+				e->Consume();
+			break;
+		case 0x404:
+			if (ScePafWidget_08D85CB4(e))
+				e->Consume();
+			break;
+		}
+	}
+	return Handler::HandleFocusEvent(e);
+}
+
+int32_t ScrollViewBase::HandleCommandEvent(Event *e)
+{
+	if (e != NULL) {
+		switch (e->GetType()) {
+		case 0x8001:
+			if (ScePafWidget_4770835D(e))
+				e->Consume();
+			break;
+		case 0x8002:
+			if (ScePafWidget_1DA7A46A(e))
+				e->Consume();
+			break;
+		case 0x8003:
+		case 0x8004:
+		case 0x8005:
+			if (ScePafWidget_423AF7BA(e))
+				e->Consume();
+			break;
+		}
+	}
+	return Handler::HandleCommandEvent(e);
+}
+
+void ScrollViewBase::OnViewLayoutUpdated(bool is_dirty)
+{
+	if (is_dirty) {
+		ScePafWidget_A0538225(-1);
+		UpdateScrollRange();
+	}
+}
+
+void ScrollViewBase::SendFocusChangeEvent()
+{
+	math::v4 pos = m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v2 focus(pos.getImpl().getXY());
+
+	if (!(focus == m_focus_pos)) {
+		m_focus_pos = focus;
+
+		Event e(0x8000, Event::MODE_DISPATCH, Event::ROUTE_FORWARD, 0);
+		DoEvent(CB_SCROLL_VIEW_BASE_FOCUS_CHANGED, &e);
+	}
+}
+
+void ScrollViewBase::OnPartsLayoutUpdated(bool is_dirty)
+{
+	if (is_dirty) {
+		ScePafWidget_A0538225(-1);
+		UpdateScrollRange();
+		SendFocusChangeEvent();
+	}
+}
+
+ScrollViewBase::~ScrollViewBase()
+{
+	if (m_bar_controller != NULL)
+		delete m_bar_controller;
+	m_bar_controller = (ScrollViewScrollBarController *)-1;
+	if (m_scroll_param != NULL)
+		delete m_scroll_param;
+	m_scroll_param = (ScrollViewScrollParam *)-1;
+	if (m_over_scroll != NULL)
+		delete m_over_scroll;
+	m_over_scroll = (ScrollViewOverScroll *)-1;
+	if (m_anchor != NULL)
+		delete m_anchor;
+	m_anchor = (math::v2 *)-1;
+}
+
+void ScrollViewBase::UpdateAfterChildren()
+{
+	ScePafWidget_22EF63CE();
+	ScePafWidget_B6CECFDF();
 }
 
 }

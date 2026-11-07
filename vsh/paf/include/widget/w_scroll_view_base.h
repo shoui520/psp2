@@ -310,6 +310,16 @@ public:
 	/* how far a key moves the view (ScePafWidget 93C21B53; name ours) */
 	void SetKeyStep(float step);
 
+	/* the view kept where its origin was in the world while anchoring is on (ScePafWidget
+	   EA4E6C5D; name ours) */
+	void UpdateAnchor();
+	/* the half view, the positions the view is kept in and the axes it fits along, from its
+	   size (ScePafWidget 2A1C86B1; name ours) */
+	void UpdateViewLimit();
+
+	/* the nearest scroll view it sits in, NULL for none (ScePafWidget 5CB1000F; name ours) */
+	ScrollViewBase *GetParentView();
+
 	void ResetScrollBar(ScrollBar *&scroll_bar, ScrollBar *next_bar);
 	list<Snap>::iterator FindSnapPoint(int32_t snap_id);
 	void SendEvent(int32_t type, int32_t v0, int32_t v1, int32_t v2, int32_t v3);

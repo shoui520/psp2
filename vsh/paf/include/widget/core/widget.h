@@ -1162,6 +1162,8 @@ public:
 
 	/* the descendant with the ID */
 	Widget *FindChild(const IDParam &id, int32_t option);
+	/* the widget where it is one of its descendants, else NULL */
+	Widget *FindChild(Widget *child, int32_t option);
 	AnimQueue *FindAnim(int32_t id);
 	int32_t KillAnimType(int32_t type);
 	/* the animation's listeners stopped where they are */
@@ -1451,6 +1453,9 @@ int32_t ScePafWidget_931AD41E(paf::ui::Widget *widget, bool release);
 /* lets go of the touch of the port and ID it holds, its release handled when release is set:
    -1 if it does not hold it */
 int32_t ScePafWidget_5ABB3393(paf::ui::Widget *widget, uint32_t port, uint32_t id, bool release);
+/* takes the widget off the list of widgets (0x81315084 in DEBUGGER) it was put on (no name
+   found) */
+void ScePafWidget_A89BE22F(paf::ui::Widget *widget);
 /* plays its sound of the index where its sound mask has it: -1 when none is played */
 int32_t ScePafWidget_2B1A1493(paf::ui::Widget *widget, int32_t index);
 /* sets the style attribute of its text from pos for len characters, its size where attr is

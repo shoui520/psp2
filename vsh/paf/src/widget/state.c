@@ -933,15 +933,6 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui11RadioButton9IsInheritEPKc, "radio_button",
 
 #undef DEFINE_WIDGET_TYPE
 
-int _ZN3paf2ui14ScrollViewBase19UpdateAfterChildrenEv(uint32_t *self)
-{
-	uint8_t *vtable = (uint8_t *)self[0];
-
-	((void (*)(uint32_t *))*(void **)(vtable + 612))(self);
-	vtable = (uint8_t *)self[0];
-	return ((int (*)(uint32_t *))*(void **)(vtable + 616))(self);
-}
-
 /* The native delete callback marks the dispatch scope in a shared word. */
 uint32_t sce_paf_widget_dispatch_guard_142d4;
 
@@ -1383,19 +1374,6 @@ uint8_t *ScePafWidget_0DCB8EA5(uint8_t *self, float seconds)
 		seconds = 200.0f;
 	*(float *)(self + 976) = seconds;
 	return self;
-}
-
-int _ZN3paf2ui14ScrollViewBase19OnViewLayoutUpdatedEb(uint8_t *self, uint8_t execute)
-{
-	const uint8_t *vtable;
-
-	if (!execute)
-		return (int)(uintptr_t)self;
-	vtable = *(const uint8_t *const *)self;
-	((void (*)(uint8_t *, int))*(void *const *)(vtable + 556))(
-		self, -1);
-	vtable = *(const uint8_t *const *)self;
-	return ((int (*)(uint8_t *))*(void *const *)(vtable + 560))(self);
 }
 
 int ScePafWidget_6A60296B(uint8_t *self, uint32_t index, float value)

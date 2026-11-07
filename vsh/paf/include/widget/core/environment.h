@@ -171,11 +171,14 @@ public:
 	void *m_touch;
 };
 
-/* the widget drawn as the focus cursor, and the widget it is on (names ours) */
-class FocusCursor {
+/* the focus: the widget drawn as the focus cursor and the widget it is on (Sony's class name,
+   from its exports; the members' names ours) */
+class FocusInfo {
 public:
 	/* whether the cursor is moving or resizing (0x81142952) */
 	bool IsMoving();
+	/* the widget taken out of the focus history */
+	void RemoveFocusHistory(Widget *widget);
 
 	Widget *m_cursor;
 	Widget *m_target;
@@ -196,6 +199,11 @@ public:
 	bool IsTermAvailable();
 	/* lets the widgets end: m_term_requested once nothing keeps them */
 	int32_t RequestTerm();
+	/* the widget that holds the port's pad keys of the low group (0x1f) or the high group
+	   (0x3e0) lets go of them: -1 where none holds them (0x8113f4be, 0x8113f470; names
+	   ours) */
+	int32_t ReleasePadCaptureLow(uint32_t port);
+	int32_t ReleasePadCaptureHigh(uint32_t port);
 	/* a frame's steps, in the order the Framework runs them */
 	void OnUpdatePre();
 	void EventLoop();
@@ -223,7 +231,9 @@ public:
 		return common::SharedPtr<inputdevice::InputGestureListener>();
 	}
 
-	uint8_t reserved[0x40];
+	/* set: the widgets the focus leaves are kept in its history (name ours) */
+	bool m_focus_history_on;
+	uint8_t reserved[0x3f];
 	/* the display area scale the root surface shows at (names ours) */
 	float m_display_area_scale;
 	bool m_display_area_applied;
@@ -268,7 +278,7 @@ public:
 	int32_t m_focus_mode;
 	uint8_t reserved4[8];
 	/* the focus cursor and the widget it is on */
-	FocusCursor m_focus_cursor;
+	FocusInfo m_focus_cursor;
 	uint8_t reserved4a[0x78];
 	/* the focus cursor is drawn with its widget only while it moves or the widget turns its
 	   focus directions off (Camera's draw walk; name ours) */
@@ -322,6 +332,11 @@ void ScePafWidget_B4A4660B(paf::ui::Environment *env, int32_t enable, int32_t po
 bool ScePafWidget_A6B659BB(paf::ui::Environment *env, int32_t port);
 /* bit 0 of the port's focus state; for a port below 0, whether any port has it */
 bool ScePafWidget_529FB877(paf::ui::Environment *env, int32_t port);
+/* the touches of the port (0 front, 1 rear) let go of by the widgets that capture them, all
+   but the widget's, their releases handled where release is set: -1 for another port (no
+   name found) */
+int32_t ScePafWidget_ABF05727(paf::ui::Environment *env, uint32_t port, bool release,
+			      paf::ui::Widget *keep);
 /* updates the input devices */
 int32_t ScePafWidget_909850C4(void);
 /* sets the focus frame texture no (below 9); with none, reads all of them from the common resource */
