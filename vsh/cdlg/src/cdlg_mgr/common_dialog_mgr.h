@@ -217,10 +217,32 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogVideoImportDrawPriority,
 			   __builtin_offsetof(CommonDialogVideoImportParam, drawPriority) == 284);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogVideoImportSize, sizeof(CommonDialogVideoImportParam) == 0x160);
 
+/* the calendar review dialog's parameter: no SDK header has it; the dialog's
+   own part only its plugin reads */
+typedef struct CalendarReviewDialogParam {
+	SceUInt32 sdkVersion;
+	SceCommonDialogParam commonParam;
+	SceUInt8 dialogData[1064];
+} CalendarReviewDialogParam;
+
+typedef struct CalendarReviewDialogResult {
+	SceInt32 result;
+	SceUInt8 dialogData[32];
+} CalendarReviewDialogResult;
+
+/* calendar_review_dialog.cpp: the caller's parameter and the result for GetResult */
 typedef struct CommonDialogCalendarReviewParam {
-	SceUInt8 reserved[1188];
+	CalendarReviewDialogParam param;
+	CalendarReviewDialogResult result;
+	SceCommonDialogColor bgColor;
+	int infobarShown;
 	int drawPriority;
+	char apiName[64];
 } CommonDialogCalendarReviewParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCalendarReviewDrawPriority,
+			   __builtin_offsetof(CommonDialogCalendarReviewParam, drawPriority) == 1188);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCalendarReviewSize, sizeof(CommonDialogCalendarReviewParam) == 1256);
 
 typedef struct CommonDialogCompanionParam {
 	SceUInt8 reserved[204];
