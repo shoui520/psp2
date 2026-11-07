@@ -14,9 +14,8 @@
 extern "C" {
 #endif
 
-/* closes the dialog: unloads its plugin once it runs (the plugins pass the dialog's work memory
-   too, which it does not read) */
-int SceCommonDialogMain_05EFC635(int dialogType, void *workMemory);
+/* closes the dialog: unloads its plugin once it runs */
+int SceCommonDialogMain_05EFC635(int dialogType);
 /* the dialog's parameter, as libcdlg keeps it */
 void *SceCommonDialogMain_DD2CAC30(int dialogType);
 /* whether the dialog's parameter is ready */

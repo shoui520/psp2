@@ -155,6 +155,52 @@ def object_comdat_weak(data):
 	return bytes(out)
 
 
+def _group_members(data, h):
+	return struct.unpack_from(f'<{h["size"] // 4}I', data, h['offset'])[1:]
+
+
+def object_groups_first(data):
+	"""Put each COMDAT group's section header before its members.
+
+	GNU ld 2.27 ties a group to its members only when a member's header follows the group's
+	(bfd's setup_group); SNC writes a vtable's group after its one member, and --gc-sections
+	then follows the group's empty member list. Only the header table's order and the section
+	indices that name it change: the members keep their order, so the link does not.
+	"""
+	sections = Sections(data)
+	headers = sections.headers
+	late = [h for h in headers if h['type'] == 17 and
+		all(m < h['index'] for m in _group_members(data, h))]
+	if not late:
+		return data
+	order = [h['index'] for h in headers]
+	for h in late:
+		order.remove(h['index'])
+		order.insert(order.index(min(_group_members(data, h))), h['index'])
+	new = {old: i for i, old in enumerate(order)}
+	out = bytearray(data)
+	shoff, = struct.unpack_from('<I', data, 32)
+	shentsize, = struct.unpack_from('<H', data, 46)
+	for h in headers:
+		v = list(struct.unpack_from('<10I', data, h['header_offset']))
+		if h['type'] in (2, 4, 9, 17, 0x70000001):	# SYMTAB, RELA, REL, GROUP, ARM_EXIDX
+			v[6] = new[v[6]]
+		if h['type'] in (4, 9):
+			v[7] = new[v[7]]
+		struct.pack_into('<10I', out, shoff + new[h['index']] * shentsize, *v)
+		if h['type'] == 17:
+			members = _group_members(data, h)
+			struct.pack_into(f'<{len(members)}I', out, h['offset'] + 4, *(new[m] for m in members))
+		if h['type'] == 2:
+			for o in range(h['offset'], h['offset'] + h['size'], 16):
+				shndx, = struct.unpack_from('<H', data, o + 14)
+				if 0 < shndx < 0xff00:
+					struct.pack_into('<H', out, o + 14, new[shndx])
+	shstrndx, = struct.unpack_from('<H', data, 50)
+	struct.pack_into('<H', out, 50, new[shstrndx])
+	return bytes(out)
+
+
 def _thumb_branch(code, at):
 	"""(length, target offset or None) of the Thumb instruction at `at` in `code`."""
 	hw1, = struct.unpack_from('<H', code, at)
@@ -379,4 +425,5 @@ def object_for_ld(data, split=False):
 		data = object_rela_to_rel(data)
 	if any(h['type'] == 17 for h in Sections(data).headers):
 		data = object_comdat_weak(data)
+		data = object_groups_first(data)
 	return data

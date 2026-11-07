@@ -224,7 +224,7 @@ static void checkoutDialogResult(SceInt32 result, SceInt32 npError)
 	work = (CommonDialogStoreCheckoutParam *)SceCommonDialogMain_DD2CAC30(COMMON_DIALOG_TYPE_CHECKOUT);
 	work->result.npError = npError;
 	work->result.result = result;
-	SceCommonDialogMain_05EFC635(COMMON_DIALOG_TYPE_CHECKOUT, work);
+	SceCommonDialogMain_05EFC635(COMMON_DIALOG_TYPE_CHECKOUT);
 }
 
 /* a colour of the caller's, as store_checkout_plugin takes it */

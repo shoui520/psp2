@@ -280,8 +280,6 @@ int sceKernelCDialogSessionClose(void);
 int sceKernelCDialogSetLeaseLimit(SceUInt32 limit);
 int sceAppMgrIsGameProgram(void);
 int sceAppMgrIsDevelopmentMode(void);
-int sceAppMgrAppParamGetInt(int pid, int param, int *value);
-int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length);
 int sceAppMgrSetInfobarStateForCommonDialog(int visibility, int color, int transparency);
 int sceDisplayGetMaximumFrameBufResolution(int *width, int *height);
 int sceCtrlSetButtonIntercept(int intercept);

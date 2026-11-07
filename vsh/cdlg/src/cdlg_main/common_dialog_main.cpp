@@ -558,7 +558,7 @@ __attribute__((noinline)) int clearWork(void)
 	return SCE_OK;
 }
 
-int SceCommonDialogMain_05EFC635(int dialogType, void *workMemory)
+int SceCommonDialogMain_05EFC635(int dialogType)
 {
 	int i = findSlot(dialogType);
 

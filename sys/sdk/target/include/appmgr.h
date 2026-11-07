@@ -71,6 +71,14 @@ int sceAppMgrGetStatusByName(const char *name, void *status);
 int sceAppMgrGetStatusByAppId(int appId, void *status);
 int sceAppMgrIsPidShellAndCrashed(SceUID pid);
 
+/*
+ * not in the SDK: a process's application parameter (pid 0: the caller's own; id 3 its version,
+ * 12 its title ID), and an application started by its URI (SceAppMgrUser, driver_us)
+ */
+int sceAppMgrAppParamGetInt(SceUID pid, int id, int *value);
+int sceAppMgrAppParamGetString(SceUID pid, int id, char *buf, SceSize bufSize);
+int sceAppMgrLaunchAppByUri(int flags, const char *uri);
+
 #ifdef __cplusplus
 }
 #endif

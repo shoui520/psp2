@@ -259,8 +259,10 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNpEulaSize, sizeof(CommonDialogNpEulaPara
 /*
  * cross_controller_dialog.cpp: the PS3 title the dialog connects to and the
  * connection's state and result, which the plugin fills. OnInit constructs
- * it in the work memory. The names are ours: nothing names the fields the
- * plugin alone reads and writes.
+ * it in the work memory; the plugin (vsh/cdlg/src/cross_controller_dialog)
+ * opens the socket, reads the caller's own version and title ID from its
+ * application parameters and keeps its dialog here. The names are ours:
+ * nothing names the fields the plugin alone reads and writes.
  */
 #ifdef __cplusplus
 /* placement new, the copy paf's <new> keeps out of line */
@@ -268,33 +270,39 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNpEulaSize, sizeof(CommonDialogNpEulaPara
 
 class CommonDialogCrossControllerParam {
 public:
-	CommonDialogCrossControllerParam(const char *titleId, const char *appMinVer, bool isCancelable)
+	CommonDialogCrossControllerParam(const char *ps3Title, const char *appMinVer, bool isCancelable)
 	{
-		sessionId = -1;
+		socketId = -1;
 		sceClibMemset(&inaddr, 0, sizeof(inaddr));
-		errorCode = 0;
-		sceClibMemset(peerTitleId, 0, sizeof(peerTitleId));
+		appVersion = 0;
+		sceClibMemset(titleId, 0, sizeof(titleId));
 		sceClibMemset(ps3AppMinVer, 0, sizeof(ps3AppMinVer));
 		sceClibMemset(ps3TitleId, 0, sizeof(ps3TitleId));
 		sceClibMemset(peerName, 0, sizeof(peerName));
 		sceClibStrncpy(ps3AppMinVer, appMinVer, sizeof(ps3AppMinVer) - 1);
-		sceClibStrncpy(ps3TitleId, titleId, sizeof(ps3TitleId) - 1);
+		sceClibStrncpy(ps3TitleId, ps3Title, sizeof(ps3TitleId) - 1);
 		result = SCE_OK;
-		requestId = -1;
+		dialogId = -1;
 		cancelable = isCancelable;
 	}
 
-	SceInt32 sessionId;
+	/* the UDP socket the plugin broadcasts on */
+	SceInt32 socketId;
+	/* the PS3 that answered */
 	SceNetInAddr inaddr;
-	SceInt32 errorCode;
-	char peerTitleId[9 + 1];
+	/* the caller's own version (its application parameter 3, as 100 * major + minor) and title ID */
+	SceInt32 appVersion;
+	char titleId[9 + 1];
 	char ps3AppMinVer[5 + 1];
 	char ps3TitleId[9 + 1];
+	/* the PS3's name, from its answer */
 	char peerName[128];
-	SceUInt32 reserved;
+	/* the dialog's plugin, once it has started */
+	paf::Plugin *plugin;
 	int drawPriority;
 	SceInt32 result;
-	SceInt32 requestId;
+	/* SceCommonGuiDialog's waiting dialog, -1 without one */
+	SceInt32 dialogId;
 	bool cancelable;
 };
 
