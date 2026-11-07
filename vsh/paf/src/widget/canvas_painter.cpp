@@ -604,7 +604,7 @@ void CanvasPainter::ContinueStroke(float x, float y, float pressure)
 	impl->Draw();
 }
 
-void CanvasPainter::EndStroke()
+void CanvasPainter::EndStroke(float x, float y)
 {
 	Impl *impl = m_impl;
 

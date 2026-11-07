@@ -145,6 +145,14 @@ public:
 	Widget *m_widget;
 };
 
+/* 0x80 bytes, at 0x330 of the Environment (names ours) */
+class TouchState {
+public:
+	int32_t m_state;
+	uint32_t m_id;
+	uint8_t reserved[0x78];
+};
+
 /* a widget's hold on a touch, kept by the Environment for each port and touch ID (names
    ours) */
 class TouchCapture {
@@ -268,7 +276,9 @@ public:
 	list<Widget *> m_scenes_onupdate;
 	/* the screen SetScreen gives */
 	Screen *m_screen;
-	uint8_t reserved5[0x800];
+	/* a state per touch ID: Canvas clears it and sets the ID at each touch it takes (names
+	   ours) */
+	TouchState m_touch_state[16];
 	/* where each touch ID last hit (name ours) */
 	HitInfo m_touch_hit[8];
 	uint8_t reserved5b[0x1dba];

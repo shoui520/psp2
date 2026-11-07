@@ -42,8 +42,9 @@ public:
 	void BeginStroke(float x, float y, float pressure);
 	/* 0x811aabf6 */
 	void ContinueStroke(float x, float y, float pressure);
-	/* 0x811aac08: the stroke kept in the picture */
-	void EndStroke();
+	/* 0x811aac08: the stroke kept in the picture (the position the touch ended at is not
+	   used) */
+	void EndStroke(float x, float y);
 	/* 0x811aac22: the picture as a texture, its size and its pitch */
 	void GetTexture(SceGxmTexture **texture, int32_t *width, int32_t *height, int32_t *pitch);
 
