@@ -29,6 +29,7 @@ psp2_module(vs0_sys_external_libcdlg KIND user COMPILER snc PARTIAL SOURCES
 	store_checkout_dialog.cpp
 	cameraimport_dialog.cpp
 	compat_dialog.cpp
+	np_sns_facebook_dialog.cpp
 )
 target_include_directories(vs0_sys_external_libcdlg PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/vsh/paf")
@@ -59,3 +60,4 @@ set_source_files_properties(photoreview_dialog.cpp PROPERTIES COMPILE_OPTIONS -X
 set_source_files_properties(store_checkout_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(cameraimport_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
 set_source_files_properties(compat_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
+set_source_files_properties(np_sns_facebook_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=8)
