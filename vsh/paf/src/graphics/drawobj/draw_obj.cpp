@@ -19,6 +19,7 @@ namespace graph {
 using namespace arl;
 
 const char DrawObj::m_drawobj_type[] = "DrawObj";
+extern "C" const uint32_t ScePafGraphics_560A9546 = 0x11;
 bool DrawObj::s_safety;
 uint32_t DrawObj::s_dirty_count = 1;
 

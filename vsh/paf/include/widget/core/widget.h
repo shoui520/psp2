@@ -4,9 +4,9 @@
  * objects it draws.
  *
  * Names after ScePaf-RE (restored from Sony's DWARF), the virtual functions in
- * its order, which is the order of Widget's vtable; the functions after
- * GetDrawObj are not declared yet. Where no name is known the name says what
- * the function does (namecheck lists them).
+ * its order, which is the order of Widget's vtable; the virtual functions Sony
+ * defined in the class (the copies the linker kept) are defined here. Where no
+ * name is known the name says what the function does (namecheck lists them).
  */
 #ifndef PAF_WIDGET_CORE_WIDGET_H
 #define PAF_WIDGET_CORE_WIDGET_H
@@ -28,6 +28,8 @@
 #include <widget/core/handler.h>
 #include <widget/core/layouter.h>
 #include <common/transition.h>
+#include <common/shared_ptr.h>
+#include <timer/timer.h>
 
 namespace paf {
 
@@ -45,6 +47,7 @@ namespace ui {
 class Environment;
 class Widget;
 class Scene;
+class TouchCapture;
 class Camera;
 class AnimListener;
 class AnimQueue;
@@ -77,6 +80,11 @@ public:
 	static const char *s_names[];
 	static const char *ParamName();
 
+	/* the IDs cleared (the widget types' parameters inline it) */
+	WidgetParam() : m_widget(NULL)
+	{
+		Init();
+	}
 	virtual const char *GetParamName() const;
 	/* below Widget: the widget forgets this parameter's delete callback */
 	virtual ~WidgetParam();
@@ -474,53 +482,180 @@ public:
 		uint32_t reserved : 29;
 	};
 
+	/* how a draw object of the widget is kept (names ours): three flags set when it is
+	   made, its ID and a value made 0 */
+	class DrawObjAttr {
+	public:
+		DrawObjAttr(uint32_t id) : m_flag0(true), m_flag1(true), m_flag2(true), m_id(id), m_value(0)
+		{
+		}
+
+		/* copied field by field, as Sony's copies are */
+		DrawObjAttr(const DrawObjAttr &other)
+			: m_flag0(other.m_flag0), m_flag1(other.m_flag1), m_flag2(other.m_flag2),
+			  m_id(other.m_id), m_value(other.m_value)
+		{
+		}
+
+		bool m_flag0 : 1;
+		bool m_flag1 : 1;
+		bool m_flag2 : 1;
+		uint32_t m_id : 8;
+		uint32_t m_value : 4;
+	};
+
+	/* a draw object of the widget, found by its ID (names ours) */
+	class DrawObjEntry {
+	public:
+		DrawObjEntry(graph::DrawObj *obj, uint32_t id) : m_obj(obj), m_attr(id)
+		{
+		}
+
+		DrawObjEntry(const common::SharedPtr<graph::DrawObj> &obj, const DrawObjAttr &attr)
+			: m_obj(obj), m_attr(attr)
+		{
+		}
+
+		common::SharedPtr<graph::DrawObj> m_obj;
+		DrawObjAttr m_attr;
+	};
+
 	/* the widgets being destroyed; Plugin::Exit waits for them */
 	static int32_t s_destroying_count;
 
+	Widget(Widget *parent, CreateParam *param);
 	virtual ~Widget();
+
+	virtual int32_t HandlerProc(Event *e);
+	virtual int32_t HandleKeycodeEvent(Event *e);
+	virtual int32_t HandleTouchEvent(Event *e);
+	virtual int32_t HandleGestureEvent(Event *e);
+	virtual int32_t HandleFocusSwitchEvent(Event *e);
+	virtual void EnableFocusEvent(bool on_off);
+	virtual int32_t EnableTouchRearEvent(bool on_off);
+
+	virtual bool IsTouchRearEventEnabled()
+	{
+		return m_touch_rear_event;
+	}
+
+	virtual void EnableTouchFrontEvent(bool on_off)
+	{
+		m_touch_front_event = on_off;
+	}
+
+	virtual bool IsTouchFrontEventEnabled()
+	{
+		return m_touch_front_event;
+	}
+
+	virtual int32_t DoEvent(int32_t type, Event *e);
 
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	virtual void DestroyWidget();
-	virtual uint32_t CheckState();
+
+	virtual uint32_t CheckState()
+	{
+		return m_state;
+	}
+
 	virtual uint32_t ChangeState(uint32_t state, int32_t ev_type);
 	virtual int32_t SetEnvironment(Environment *env);
 	virtual int32_t SetScene_core(Scene *scene);
 	virtual bool RemoveChild(Widget *obj);
 	virtual void RegisterChild(Widget *obj, Widget *sibling);
 	virtual bool ReorderChild(Widget *obj, Widget *sibling);
-	virtual Widget *GetInternalWidget();
-	virtual int32_t DoTransition_core(float parameter, bool set);
-	virtual int32_t DoTransitionReverse_core(float parameter, bool set);
+
+	virtual Widget *GetInternalWidget()
+	{
+		return this;
+	}
+
+	/* shows it over 50 ticks after parameter (at once with set); returns when it is shown */
+	virtual float DoTransition_core(float parameter, bool set)
+	{
+		float time = set ? 0.0f : 50.0f;
+
+		SetShowAlpha(1.0f, new Timer(time), ANIM_SHOW_ALPHA, 2, parameter, NULL);
+		return parameter + time;
+	}
+
+	/* hides it the same way */
+	virtual float DoTransitionReverse_core(float parameter, bool set)
+	{
+		float time = set ? 0.0f : 50.0f;
+
+		SetShowAlpha(0.0f, new Timer(time), ANIM_SHOW_ALPHA, 2, parameter, NULL);
+		return parameter + time;
+	}
+
 	virtual int32_t SetColor_core(const math::v4 &v);
 	virtual int32_t SetSize_core_force(const math::v4 &v, uint32_t notify_layout,
 					   bool force);
 	virtual void UpdateSize();
 	/* Text keeps the flag only while it fits in its scene */
-	virtual void SetFitToScene(bool on_off);
+	virtual void SetFitToScene(bool on_off)
+	{
+		m_fit_to_scene = on_off;
+	}
+
 	virtual void Update();
 	virtual void UpdateAfterChildren();
-	virtual void UpdatePost();
+
+	virtual void UpdatePost()
+	{
+	}
+
 	virtual int32_t OnDraw(graph::DrawInfo &info);
 	/* Button hands its draw object the widget's state */
 	virtual int32_t ApplyDrawObjState(int32_t arg);
-	virtual void UpdateContent();
-	virtual void UpdateGesture();
+
+	/* a touch of the port and ID has been captured (arg 0) or let go (names ours) */
+	virtual void OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg)
+	{
+	}
+
+	virtual void UpdateGesture()
+	{
+	}
+
 	virtual math::v4 calc_align_offset(const math::v4 &size, const math::v4 &aoffs,
 					   uint32_t ax, uint32_t ay, uint32_t az);
 	virtual int32_t SetOrigin(uint32_t ax, uint32_t ay, uint32_t az, Timer *t);
-	virtual void GetOrigin(uint32_t &ax, uint32_t &ay, uint32_t &az);
+
+	virtual void GetOrigin(uint32_t &ax, uint32_t &ay, uint32_t &az)
+	{
+		ax = m_origin_x;
+		ay = m_origin_y;
+		az = m_origin_z;
+	}
+
 	virtual math::v4 calc_origin_offset(const math::v4 &size, const math::v4 &offs,
 					    uint32_t ax, uint32_t ay, uint32_t az);
 	virtual int32_t SetAnchor(uint32_t ax, uint32_t ay, uint32_t az, Timer *t);
-	virtual void GetAnchor(uint32_t &ax, uint32_t &ay, uint32_t &az);
+
+	virtual void GetAnchor(uint32_t &ax, uint32_t &ay, uint32_t &az)
+	{
+		ax = m_anchor_x;
+		ay = m_anchor_y;
+		az = m_anchor_z;
+	}
+
 	virtual math::v4 calc_anchor_offset(const math::v4 &size, const math::v4 &offs,
 					    uint32_t ax, uint32_t ay, uint32_t az);
 	/* the hit region at 0x210, made on first use */
 	virtual void *GetHitRegion();
 	virtual int32_t SetHitRegion(const math::v4 &region);
-	virtual void UpdateLayoutAttribute();
-	virtual void UpdateAdjustSize();
+
+	virtual void UpdateLayoutAttribute()
+	{
+	}
+
+	virtual void UpdateAdjustSize()
+	{
+	}
+
 	virtual void UpdateAdjustChildSize(Widget *child);
 	/* gives the surface to draw and returns the one drawn before (Plane, Canvas) */
 	virtual intrusive_ptr<graph::Surface> SetSurface(const intrusive_ptr<graph::Surface> &surf,
@@ -528,10 +663,26 @@ public:
 	virtual graph::DrawObj *GetDrawObj(int32_t obj);
 	/* the texture of the draw object (name after ScePaf-RE) */
 	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,
-				   uint32_t index);
-	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf);
-	virtual int32_t GetTexture(intrusive_ptr<graph::Surface> &surf, int32_t obj, uint32_t index);
-	virtual int32_t GetTexture(intrusive_ptr<graph::Surface> &surf);
+				   uint32_t index)
+	{
+		return 0x80AF4101;
+	}
+
+	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf)
+	{
+		return SetTexture(surf, 0, 0);
+	}
+
+	virtual int32_t GetTexture(intrusive_ptr<graph::Surface> &surf, int32_t obj, uint32_t index)
+	{
+		return 0x80AF4101;
+	}
+
+	virtual int32_t GetTexture(intrusive_ptr<graph::Surface> &surf)
+	{
+		return GetTexture(surf, 0, 0);
+	}
+
 	/*
 	 * Three slots no source names (ScePafWidget C3D53C98, AC3B6830, FD48BD49): they set
 	 * and read a bit of a draw object's 4-bit mask through the draw manager. Not
@@ -540,14 +691,42 @@ public:
 	virtual int32_t SetDrawObjMaskBit(const void *param, int32_t obj);
 	virtual int32_t SetDrawObjMaskBit(const void *param, int32_t obj, uint32_t bit);
 	virtual void *GetDrawObjMaskBit(int32_t obj);
-	virtual int32_t SetString(const wstring &str, int32_t obj);
-	virtual int32_t SetString(const wstring &str);
-	virtual int32_t GetString(wstring &str, int32_t obj);
-	virtual int32_t GetString(wstring &str);
+	virtual int32_t SetString(const wstring &str, int32_t obj)
+	{
+		return 0x80AF4101;
+	}
+
+	virtual int32_t SetString(const wstring &str)
+	{
+		return SetString(str, 0);
+	}
+
+	virtual int32_t GetString(wstring &str, int32_t obj)
+	{
+		return 0x80AF4101;
+	}
+
+	virtual int32_t GetString(wstring &str)
+	{
+		return GetString(str, 0);
+	}
+
 	/* the sound of its sound parameter with the ID (names ours, the slots to SetFocusDirection) */
-	virtual WidgetSoundParam::Sound *GetSound(int32_t id);
-	virtual void DoNothing();
-	virtual void SetFocusRootState(uint32_t state);
+	virtual WidgetSoundParam::Sound *GetSound(int32_t id)
+	{
+		return FindSound(id);
+	}
+
+	virtual void DoNothing()
+	{
+	}
+
+	virtual void SetFocusRootState(uint32_t state)
+	{
+		if (m_focus_root != NULL)
+			m_focus_root->m_state = state;
+	}
+
 	virtual int32_t SetFocus(const void *param);
 	/* the widget the focus moves to in the direction (0 up, 1 down, 2 left, 3 right) */
 	virtual void SetFocusDirection(int32_t dir, IDParam id);
@@ -558,10 +737,17 @@ public:
 	virtual void EnableFocusSearchRect(bool on_off);
 	/* SetFocus with an option (export F7F7F682) */
 	virtual int32_t SetFocusOption(const void *param, int32_t option);
-	/* 7, or 0 when bit 0 of the byte at 0x193 is set (0x81223cd8) */
-	virtual int32_t GetFocusDirectionMask();
-	/* 0 (0x81222254) */
-	virtual int32_t GetFocusPriority();
+	/* every direction, or none while its focus directions are off */
+	virtual int32_t GetFocusDirectionMask()
+	{
+		return m_focus_direction_off ? 0 : 7;
+	}
+
+	virtual int32_t GetFocusPriority()
+	{
+		return 0;
+	}
+
 	/* its position, the focus shape's offset added (0x81222258) */
 	virtual math::v4 GetFocusShapePos();
 	/* its world position, the focus shape's offset added (0x812222c4) */
@@ -571,8 +757,39 @@ public:
 	virtual int32_t EventExecDispatch(Event *e);
 	virtual int32_t EventExecBroadcast(Event *e);
 	virtual int32_t EventExecDirect(Event *e);
-	/* true (0x81222350; ui::Text's: whether it handles its text events, name ours) */
-	virtual bool IsTextEventEnabled();
+	/* ui::Text's: whether it handles its text events (name ours) */
+	virtual bool IsTextEventEnabled()
+	{
+		return true;
+	}
+
+	/* the sound with the ID (export 6811A0CF, name ours) */
+	WidgetSoundParam::Sound *FindSound(int32_t id);
+	/* the draw object added, the surface drawn as the widget's, and the size updated with
+	   update (export 7A682C7B, name ours) */
+	void AddDrawObj(const DrawObjEntry &entry, bool update);
+	/* the draw object with the entry's ID replaced by the entry's (0x81160032, name ours) */
+	void ReplaceDrawObj(const DrawObjEntry &entry, bool update);
+	/* whether its draw objects are ready to draw (export 9B9A9406) */
+	bool IsPrepareObjs();
+	/* exports 7A3A7304, 0FCCC833, B94694E3 */
+	void SetDragMode(uint32_t mode);
+	void KillObjAnim(int32_t obj, int32_t id);
+	/* the draw object with the ID, or the end (name ours) */
+	vector<DrawObjEntry>::iterator FindDrawObj(int32_t id);
+	/* the gestures its touches are given; with update, m_hit_check follows whether there are
+	   any */
+	void SetGestureMask(uint32_t mask, bool update);
+	/* the size, on the axes adjusted to the scene its scene's, passed on to SetSize_core_force */
+	int32_t SetSize_core(const math::v4 &size, uint32_t notify_layout, bool force);
+	void SetObjAnim(int32_t obj, int32_t id, const math::v4 &value, Timer *t, int32_t opt);
+
+	/* room for num draw objects (name ours) */
+	void ReserveDrawObj(uint32_t num)
+	{
+		if (m_drawobjs.capacity() < num)
+			m_drawobjs.reserve(num);
+	}
 
 	/* whether it is the widget its focus root focuses first (0x8114fd64, name ours) */
 	bool IsInitFocus();
@@ -593,6 +810,11 @@ public:
 
 	/* the hit box's mode, and its size and center offset unless both are zero (inline in
 	   Sony's callers, name ours) */
+	/* the gestures of the type taken off the pad port, or off the touch port's touch
+	   (exports 0DB27A25, A74F495E) */
+	void remove_pad_gesture_mask(uint32_t port_id, uint32_t type);
+	void remove_touch_gesture_mask(uint32_t port_id, uint32_t touch_id, uint32_t type);
+
 	void SetHitBox(uint8_t mode, const math::v4 &size, const math::v4 &center)
 	{
 		m_hit_box_mode = mode;
@@ -617,6 +839,9 @@ public:
 	/* the values for each resolution, in the array */
 	int32_t SetPos(const ResolutionData *pos, uint32_t num, Timer *t, int32_t id, int32_t opt,
 		       float delay, AnimCB cb_fin, void *usrdata);
+	/* the alpha it is shown with (Sony's name from the export) */
+	int32_t SetShowAlpha(float alpha, Timer *t, int32_t id, int32_t opt, float delay,
+			     AnimCB cb_fin);
 	int32_t SetSize(const math::v4 &size, Timer *t = NULL, int32_t id = ANIM_SIZE,
 			int32_t opt = 0, float delay = 0.0f, AnimCB cb_fin = NULL,
 			void *usrdata = NULL);
@@ -721,7 +946,13 @@ public:
 	Widget *m_parent;
 	Scene *m_scene;
 	list<Widget *> m_children;
-	uint8_t reserved3[7];
+	uint8_t reserved3b0 : 7;
+	/* both set, AppIconBase::OnDraw dims an icon held in its mode 1; no writer found (names ours,
+	   from that use) */
+	bool m_dim_held : 1;
+	uint8_t reserved3c0 : 7;
+	bool m_dim_held_enable : 1;
+	uint8_t reserved3[5];
 	/* what UpdateMatrix still has to make again: bits 0 to 2 (name after ScePaf-RE) */
 	uint8_t m_update_flag;
 	/* 0xff before a reverse transition (name after ScePaf-RE) */
@@ -735,7 +966,25 @@ public:
 	uint32_t m_modal_mode : 4;
 	uint32_t m_modal_option : 4;
 	uint32_t reserved3x1 : 8;
-	uint8_t reserved3x2[4];
+	uint8_t reserved3x2[2];
+	/* what the touch event slots set (names after them) */
+	bool m_touch_front_event : 1;
+	bool m_touch_rear_event : 1;
+	bool reserved3y1 : 1;
+	bool reserved3y2 : 1;
+	bool reserved3y3 : 1;
+	bool reserved3y4 : 1;
+	bool reserved3y5 : 1;
+	bool reserved3y6 : 1;
+	/* none of its focus directions (name ours) */
+	bool m_focus_direction_off : 1;
+	bool reserved3z1 : 1;
+	bool reserved3z2 : 1;
+	bool reserved3z3 : 1;
+	bool reserved3z4 : 1;
+	bool reserved3z5 : 1;
+	bool reserved3z6 : 1;
+	bool reserved3z7 : 1;
 	/* its parent writes it: WriteWidget writes only its children (names after ScePaf-RE) */
 	bool m_parent_protected : 1;
 	/* made by a template (TemplateOpen); WriteWidget leaves it out */
@@ -743,10 +992,12 @@ public:
 	bool reserved3r : 1;
 	bool reserved3s : 1;
 	bool reserved3t : 1;
-	bool reserved3u : 1;
+	/* its draw objects draw to a surface (name after SurfaceDrawParam's) */
+	bool m_surface_draw : 1;
 	bool reserved3v : 1;
 	bool reserved3w : 1;
-	bool reserved3b : 1;
+	/* taps are taken (AppIconSimple::EnableTap; AppIconBase sets it; name after the export) */
+	bool m_enable_tap : 1;
 	bool reserved3c : 1;
 	bool reserved3d : 1;
 	/* not destroyed when its page closes (name ours) */
@@ -755,7 +1006,8 @@ public:
 	bool reserved3f : 1;
 	bool reserved3g : 1;
 	bool reserved3h : 1;
-	bool reserved3i : 1;
+	/* what SetFitToScene sets */
+	bool m_fit_to_scene : 1;
 	bool reserved3j : 1;
 	bool reserved3k : 1;
 	bool reserved3l : 1;
@@ -764,10 +1016,17 @@ public:
 	bool reserved3o : 1;
 	/* cleared before a reverse transition (name after ScePaf-RE) */
 	bool m_transition_complete : 1;
-	uint8_t reserved3p[0xd];
+	uint8_t reserved3p[1];
+	/* the gestures a touch it captures is given (ScePafWidget D3D0A7C3 applies them; name
+	   from that use) */
+	uint32_t m_touch_gesture_mask;
+	/* the alpha SetShowAlpha sets, and it multiplied by its parents' (names after ScePaf-RE) */
+	float m_show_alpha;
+	float m_show_a_sum;
 	/* the alpha SetMetaAlpha sets (name ours) */
 	float m_meta_alpha;
-	uint8_t reserved3q[4];
+	/* m_meta_alpha multiplied by its parents' (name after ScePaf-RE) */
+	float m_meta_a_sum;
 	/* its color: the alpha as SetColor_core gave it, and the RGBA bytes (names ours) */
 	float m_color_alpha;
 	uint32_t m_color;
@@ -785,21 +1044,32 @@ public:
 	/* the entries of m_size_array and m_rot_array (names ours) */
 	uint8_t m_size_num;
 	uint8_t m_rot_num;
-	uint8_t reserved5[0x1a];
+	uint8_t reserved5[2];
+	/* the touches it holds, by port << 8 | touch ID (name ours) */
+	map<uint32_t, TouchCapture *> m_touch_captures;
+	uint8_t reserved5b[0xc];
 	/* the hit box GetHitBoxSize and GetHitBoxCenter give (names ours): its center offset and
 	   its size, the size an addition to the widget's (mode 1), a scale of it (2) or itself (3);
 	   mode 0 is the widget's own size */
 	math::v4 *m_hit_box;
 	uint8_t m_hit_box_mode;
-	uint8_t reserved5a[0xb];
+	/* how a touch finds it and hits it (names after ScePaf-RE) */
+	uint8_t m_hit_find_mode;
+	uint8_t m_hit_detect_mode;
+	uint8_t m_hit_detect_b_mode;
+	/* whether touches are tested against it, set by AppIconBase (name ours) */
+	uint8_t m_hit_check;
+	uint8_t reserved5a[7];
 	uint32_t m_align_x : 4;
 	uint32_t m_align_y : 4;
 	uint32_t m_align_z : 4;
 	uint32_t m_origin_x : 4;
 	uint32_t m_origin_y : 4;
 	uint32_t m_origin_z : 4;
-	uint32_t reserved6 : 8;
-	uint32_t reserved6a : 16;
+	/* what SetAnchor sets (names after its arguments) */
+	uint32_t m_anchor_x : 8;
+	uint32_t m_anchor_y : 8;
+	uint32_t m_anchor_z : 8;
 	/* what SetAdjust sets (names after the resource's adjust_x and adjust_y) */
 	uint32_t m_adjust_x : 4;
 	uint32_t m_adjust_y : 4;
@@ -814,7 +1084,9 @@ public:
 	FocusShape *m_focus_shape;
 	uint8_t reserved7c[0x10];
 	FocusRoot *m_focus_root;
-	uint8_t reserved7d[0x24];
+	uint8_t reserved7d[0x14];
+	/* its draw objects, drawn in order */
+	vector<DrawObjEntry> m_drawobjs;
 	/* what is called when it is deleted (names after DrawObj's, Sony's DWARF) */
 	vector<DeleteCBInfo> m_list_delete_cb;
 	uint8_t reserved7b[0xb];
@@ -869,6 +1141,17 @@ inline WidgetParam::~WidgetParam()
 extern "C" {
 /* puts the widget into its transition: auto_delete deletes it once the time ends */
 int32_t ScePafWidget_8AF26B1F(paf::ui::Widget *widget, bool auto_delete, float time);
+/* the widget holds the touch of the port and ID, dragged in the mode: 0 once held, -1 if not */
+int32_t ScePafWidget_DE592034(paf::ui::Widget *widget, uint32_t port, uint32_t id,
+			      uint32_t drag_mode);
+/* the widget lets go of the touch of the port and ID it holds, its release handled when
+   release is set: -1 if it does not hold it */
+int32_t ScePafWidget_093F1C89(paf::ui::Widget *widget, uint32_t port, uint32_t id, bool release);
+/* captures the touch of the port, its gestures applied (names ours) */
+int32_t ScePafWidget_D3D0A7C3(paf::ui::Widget *widget, uint32_t port, uint32_t id, bool apply,
+			      bool reset_pad);
+/* lets go of every touch it holds */
+int32_t ScePafWidget_931AD41E(paf::ui::Widget *widget, bool release);
 /* binds the keys of the mask to the widget (SetKeycode after ScePaf-RE) */
 int32_t ScePafWidget_21125870(paf::ui::Widget *widget, uint32_t keycode);
 /* gives the widget its focus cursor: a copy of the shape, its offset, size and rotation

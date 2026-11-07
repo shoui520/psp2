@@ -69,7 +69,10 @@ public:
 	uint8_t reserved1[0xc4];
 	/* the resolutions it lays out for */
 	EnvironmentParam *m_env_param;
-	uint8_t reserved2[0x28];
+	uint8_t reserved2a;
+	/* the font flags its widgets' draw objects take (name after SurfaceDrawParam's) */
+	int8_t m_font_flags;
+	uint8_t reserved2[0x26];
 	/* the debug mode and its state (names after ScePaf-RE) */
 	uint32_t m_debug_mode;
 	Widget *m_debug_focus;

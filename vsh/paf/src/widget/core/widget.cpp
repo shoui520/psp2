@@ -3,6 +3,7 @@
  * still ScePafWidget's.
  */
 #include <stddef.h>
+#include <graphics/drawobj/draw_obj.h>
 #include <widget/core/widget.h>
 #include <widget/w_scene.h>
 
@@ -31,6 +32,46 @@ bool Widget::IsInitFocus()
 	if (root != NULL && root->m_focus_root != NULL && root->m_focus_root->m_init_focus == this)
 		init = true;
 	return init;
+}
+
+
+/* the draw object drawn to a surface as the widget is, with its scene's font flags (name
+   ours) */
+static inline void SetDrawObjSurfaceDraw(Widget *widget, graph::DrawObj *obj)
+{
+	graph::SurfaceDrawParam param;
+
+	param.m_font_flags = widget->m_scene != NULL ? widget->m_scene->m_font_flags : 128;
+	param.m_surface_draw = widget->m_surface_draw;
+	obj->SetSurfaceDraw(param);
+}
+
+void Widget::AddDrawObj(const DrawObjEntry &entry, bool update)
+{
+	if (m_drawobjs.capacity() <= m_drawobjs.size())
+		ReserveDrawObj(m_drawobjs.capacity() + 2);
+	m_drawobjs.push_back(entry);
+	if (entry.m_obj.get() != NULL)
+		SetDrawObjSurfaceDraw(this, entry.m_obj.get());
+	if (update)
+		UpdateSize();
+}
+
+void Widget::ReplaceDrawObj(const DrawObjEntry &entry, bool update)
+{
+	vector<DrawObjEntry>::iterator it;
+
+	for (it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it) {
+		if (it->m_attr.m_id == entry.m_attr.m_id)
+			break;
+	}
+	if (it == m_drawobjs.end())
+		return;
+	*it = entry;
+	if (entry.m_obj.get() != NULL)
+		SetDrawObjSurfaceDraw(this, entry.m_obj.get());
+	if (update)
+		UpdateSize();
 }
 
 }

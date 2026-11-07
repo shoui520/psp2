@@ -663,11 +663,6 @@ int _ZN3paf2ui18BusyIndicatorParam3GetEv(const void *resource)
 	return WidgetResourceReady(resource);
 }
 
-int _ZN3paf2ui16AppIconBaseParam3GetEv(const void *resource)
-{
-	return WidgetResourceReady(resource);
-}
-
 int _ZN3paf2ui18SlidingDrawerParam3GetEv(const void *resource)
 {
 	return WidgetResourceReady(resource);
@@ -725,7 +720,7 @@ int _ZN3paf2ui7Handler18HandleCommandEventEPNS0_5EventE(void *self, uint32_t val
 	return 0;
 }
 
-int ScePafWidget_66D4EAE7(void *self, uint32_t value)
+int _ZN3paf2ui7Handler16HandleInputEventEPNS0_5EventE(void *self, uint32_t value)
 {
 	void *const *methods = *(void *const *const *)self;
 
@@ -757,14 +752,6 @@ void *ScePafWidget_40F2A311(uint32_t *self)
 		return ((void *(*)(void *))methods[104])(self);
 	}
 	return self;
-}
-
-int ScePafWidget_A8F7D4C1(void *self, uint32_t value)
-{
-	void *const *methods = *(void *const *const *)self;
-
-	return ((int (*)(void *, uint32_t, uint32_t, uint32_t))methods[63])(
-		self, value, 1, 0);
 }
 
 int _ZN3paf2ui16ProgressBarTouch16OnDragMoveSliderEPNS0_5EventE(void *self)
@@ -902,7 +889,7 @@ int _ZN3paf2ui11Environment25RegisterTouchDeviceRegionEjPNS0_6WidgetE(uint8_t *s
 	return 0;
 }
 
-uint8_t *ScePafWidget_730AA895(uint8_t *self, uint32_t value,
+uint8_t *_ZN3paf2ui6Widget14SetGestureMaskEjb(uint8_t *self, uint32_t value,
 				uint8_t toggle)
 {
 	if (*(uint32_t *)(self + 408) != value) {
@@ -1001,13 +988,6 @@ __attribute__((noinline)) int _ZNK3paf2ui12PageTurnBase9IsInheritEPKc(const void
 	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
-int _ZNK3paf2ui13AppIconSimple9IsInheritEPKc(const void *self, const char *tag)
-{
-	if (tag == "app_icon_simple")
-		return 1;
-	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
-}
-
 __attribute__((noinline)) int _ZNK3paf2ui8SpinBase9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "spin_base")
@@ -1048,8 +1028,6 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui14ScrollViewBase9IsInheritEPKc, "scroll_view_base"
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ListView9IsInheritEPKc, "list_view",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui11AppIconBase9IsInheritEPKc, "app_icon_base",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui11ProgressBar9IsInheritEPKc, "progressbar",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui6Button9IsInheritEPKc, "button",
@@ -1070,8 +1048,6 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui10ScrollView9IsInheritEPKc, "scroll_view",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8FileList9IsInheritEPKc, "file_list",
 		   _ZNK3paf2ui8ListView9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui9AppIcon2d9IsInheritEPKc, "app_icon_2d",
-		   _ZNK3paf2ui11AppIconBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui16ProgressBarTouch9IsInheritEPKc, "progressbar_touch",
 		   _ZNK3paf2ui11ProgressBar9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ListItem9IsInheritEPKc, "list_item",
@@ -1236,7 +1212,7 @@ int ScePafWidget_BDEF4D3F(void *self)
 	return WidgetInvokeSlot(self, 552);
 }
 
-int ScePafWidget_BC080BD7(void *self)
+int _ZN3paf2ui7Handler14HandleKeyEventEPNS0_5EventE(void *self)
 {
 	(void)((void (*)(void *))*(void *const *)
 		(*(const uint8_t *const *)self + 20))(self);
@@ -1408,7 +1384,7 @@ int ScePafWidget_730C0464(const uint8_t *self, uint32_t index)
 	return 255;
 }
 
-int ScePafWidget_C3D53C98(void *self, int first, int second)
+int _ZN3paf2ui6Widget17SetDrawObjMaskBitEPKvi(void *self, int first, int second)
 {
 	const uint8_t *vtable = *(const uint8_t *const *)self;
 

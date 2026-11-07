@@ -10,11 +10,15 @@
 #include <std/memory>
 #include <std/string>
 #include <std/list>
+#include <std/string.h>
+#include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
 #include <math/rect.h>
 #include <versatileparam/idparam.h>
 #include <graphics/surface/surface.h>
 #include <widget/core/event.h>
+#include <common/shared_ptr.h>
+#include <inputdevice/inputlistener.h>
 
 namespace paf {
 namespace graph {
@@ -114,6 +118,35 @@ public:
 	uint32_t m_count;
 };
 
+/* where a touch hit a widget (0x90 bytes, filled by Environment::GetHitStack; Sony's class
+   name from the export, the fields' names ours) */
+class HitInfo {
+public:
+	HitInfo() : reserved3(0.0f, 0.0f, 0.0f, 1.0f)
+	{
+		sce_paf_memset(this, 0, sizeof(HitInfo));
+	}
+
+	uint8_t reserved1[0x10];
+	/* the touch's position, and where it hit (copied by AppIconBase at a touch down) */
+	math::v2 m_touch_pos;
+	math::v2 m_hit_pos;
+	uint8_t reserved2[0x30];
+	math::v4 reserved3;
+	uint8_t reserved4[0x2c];
+	Widget *m_widget;
+};
+
+/* a widget's hold on a touch, kept by the Environment for each port and touch ID (names
+   ours) */
+class TouchCapture {
+public:
+	uint32_t m_port;
+	uint32_t m_id;
+	Widget *m_widget;
+	void *m_touch;
+};
+
 class Environment {
 public:
 	typedef int32_t (*SoundCallback)(const char *buffer1, uint32_t size1, const char *buffer2,
@@ -134,17 +167,34 @@ public:
 	void EventLoop();
 	void OnUpdatePost();
 	void ShowFocus(int32_t port);
+	/* where the touch that hit the widget hit it: 0, or -1 when none did */
+	int32_t GetHitStack(HitInfo *info, Widget *widget);
 	/* the display area scale from the system settings, once */
 	void ApplyDisplayAreaSettings();
 	/* the display area scale read again, once it has been applied (name ours) */
 	void UpdateDisplayAreaSettings();
+
+	/* the gesture listener of the touch port, NULL for another port (inline in Sony's callers,
+	   name ours) */
+	common::SharedPtr<inputdevice::InputGestureListener> GetTouchGestureListener(uint32_t port)
+	{
+		if (port == 0)
+			return m_touch_gesture_listener_front;
+		if (port == 1)
+			return m_touch_gesture_listener_rear;
+		return common::SharedPtr<inputdevice::InputGestureListener>();
+	}
 
 	uint8_t reserved[0x40];
 	/* the display area scale the root surface shows at (names ours) */
 	float m_display_area_scale;
 	bool m_display_area_applied;
 	bool m_display_area_changed;
-	uint8_t reserved8[0x6a];
+	uint8_t reserved8[0x36];
+	/* the gesture listeners of the front (0) and rear (1) touch ports (names ours) */
+	common::SharedPtr<inputdevice::InputGestureListener> m_touch_gesture_listener_front;
+	common::SharedPtr<inputdevice::InputGestureListener> m_touch_gesture_listener_rear;
+	uint8_t reserved8b[0x24];
 	/* the Framework's InitParam::screen_orientation_mode and env_param */
 	int32_t m_screen_orientation_mode;
 	uint8_t reserved0[4];
@@ -178,7 +228,10 @@ public:
 	list<Widget *> m_scenes_onupdate;
 	/* the screen SetScreen gives */
 	Screen *m_screen;
-	uint8_t reserved5[0x2a3a];
+	uint8_t reserved5[0x800];
+	/* where each touch ID last hit (name ours) */
+	HitInfo m_touch_hit[8];
+	uint8_t reserved5b[0x1dba];
 	/* each frame waits for the GPU once it is drawn (Framework::Option_4) */
 	bool m_finish_after_draw;
 	uint8_t reserved6[0x35];

@@ -223,6 +223,19 @@ public:
 		return m_flags.m_dirty != 0;
 	}
 
+	/* shown, it is redrawn (name ours) */
+	void SetVisible(bool visible)
+	{
+		if (visible) {
+			if (!m_flags.m_visible) {
+				m_flags.m_visible = true;
+				UpdateDirty();
+			}
+		} else if (m_flags.m_visible) {
+			m_flags.m_visible = false;
+		}
+	}
+
 	/* the RGBA bytes of m_color as four floats from 0 to 1 */
 	math::v4 GetColor() const
 	{
@@ -313,6 +326,16 @@ public:
 	int8_t m_deepen_color;
 	int8_t m_reduce_transparency;
 };
+
+/* the style draw objects are made with (blend 1, depth 1), exported as its word as the plane and
+   text objects' are (no Sony name found) */
+extern "C" const uint32_t ScePafGraphics_560A9546;
+
+/* that style as a DrawStyle (name ours) */
+static inline __attribute__((always_inline)) const DrawStyle &DrawObjStyle()
+{
+	return reinterpret_cast<const DrawStyle &>(ScePafGraphics_560A9546);
+}
 
 }
 }

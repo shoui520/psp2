@@ -61,6 +61,12 @@ public:
 		}
 	}
 
+	/* marks it consumed (name after ScePaf-RE) */
+	void Consume()
+	{
+		m_type = (m_type & 0xf0ffffff) | STATE_CONSUME;
+	}
+
 	void SetDetail(uint32_t detail)
 	{
 		m_detail = detail;

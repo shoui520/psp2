@@ -234,6 +234,9 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/effects/custom_trail.cpp
 	src/graphics/effects/screen_copy.cpp
 	src/graphics/drawobj/drawobj_factory.cpp
+	src/widget/w_appicon2d.cpp
+	src/widget/w_appicon_base.cpp
+	src/widget/w_appicon_simple.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/graphics/arl/gxm/gxm_framebuffer_object.cpp
 	src/graphics/effects/fft.cpp
