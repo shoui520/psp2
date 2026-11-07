@@ -133,6 +133,8 @@ public:
 	virtual int32_t DoEvent(int32_t type, Event *e);
 
 	int32_t AddEventListener(int32_t type, EventListener *listener, bool del_prev = false);
+	/* the listener taken off the event type (export AC0AC756) */
+	int32_t DeleteEventListener(int32_t type, EventListener *listener);
 	int32_t SetTimerListener(int32_t id, float timeout, EventListener *listener);
 	int32_t KillTimer(int32_t id);
 

@@ -92,6 +92,8 @@ public:
 	int32_t StopAutoScroll();
 	/* sends the event with the rectangle, as integers (0x8113262e, name ours) */
 	int32_t SendRectEvent(int32_t type, const math::v4 &rect);
+	/* the style at the index of its text */
+	int32_t GetStyle(uint32_t index, graph::TextStyle &style);
 };
 
 class TextBox : public Text {
@@ -217,6 +219,9 @@ int32_t ScePafWidget_62604965(paf::ui::Text *text, const wchar_t **buf, uint32_t
 /* the scroll view a multi-line text box scrolls in, kept at 0x284 (0x81131ce2 TOOL; no name
    found): 0x80AF4122 without a text object, 0x80AF418F for a NULL view, else 0 */
 int32_t ScePafWidget_DA5F91F8(paf::ui::TextBox *text_box, paf::ui::ScrollView *view);
+/* prototypes from common_gui_dialog's calls, not written in C yet (no name found) */
+void ScePafWidget_B2A7DF66(paf::ui::Text *text, int32_t state, const paf::graph::TextStyle &style);
+void ScePafWidget_4D5F35D5(paf::ui::Text *text, uint32_t a, uint32_t b);
 }
 
 #endif

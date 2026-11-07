@@ -3230,7 +3230,7 @@ ScePaf:
         - _ZN3paf2ui5PlaneC2EPNS0_6WidgetEPNS2_11CreateParamE: 0x1E708E16
         - _ZN3paf2ui18ImageSlideBarParam3SetEv: 0x1E8FC612
         - _ZN3paf2ui16ScrollViewParentD0Ev: 0x1EA76BAE
-        - ScePafWidget_1EB87BE1: 0x1EB87BE1
+        - _ZN3paf2ui14ScrollViewBase10LimitFocusERKNS_4math2v2Eb: 0x1EB87BE1
         - _ZN3paf2ui6Widget13SetScale_coreERKNS_4math2v4Ej: 0x1ECBFDF7
         - ScePafWidget_1EE9D37E: 0x1EE9D37E
         - _ZN3paf2ui14ScrollViewBase21OnTouchCaptureChangedEjji: 0x1EF0159D
@@ -4464,7 +4464,7 @@ ScePaf:
         - _ZN3paf2ui14ScrollViewBase16HandleFocusEventEPNS0_5EventE: 0xA18D3437
         - _ZN3paf2ui7TextBox15GetPasswordModeERb: 0xA1BF1E27
         - ScePafWidget_A1E2CEDE: 0xA1E2CEDE
-        - ScePafWidget_A1ED1315: 0xA1ED1315
+        - _ZN3paf2ui14ScrollViewBase11GetTrackPosEv: 0xA1ED1315
         - _ZN3paf2ui8ListView18SetCellSizeDefaultEiRKNS_4math2v4E: 0xA2061BF4
         - _ZN3paf2ui8RadioBox6UpdateEv: 0xA2153C95
         - _ZN3paf2ui8SlideBar18HandleKeycodeEventEPNS0_5EventE: 0xA2338433
@@ -4621,7 +4621,7 @@ ScePaf:
         - _ZN3paf2ui9DirectBarD1Ev: 0xB325ED6D
         - _ZN3paf2ui8RichText5ClearEv: 0xB34A0181
         - _ZN3paf2ui8SlideBar13SetColor_coreERKNS_4math2v4E: 0xB34E13BA
-        - ScePafWidget_B35DEA06: 0xB35DEA06
+        - _ZN3paf2ui15ScrollViewDebug6UpdateEv: 0xB35DEA06
         - _ZNK3paf2ui12PageTurnBase11GetTypeNameEv: 0xB37108A7
         - _ZNK3paf2ui9ScrollBar11GetTypeNameEv: 0xB3878D10
         - ScePafWidget_B3B40B75: 0xB3B40B75

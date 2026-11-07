@@ -150,15 +150,20 @@ class TouchState {
 public:
 	int32_t m_state;
 	uint32_t m_id;
-	uint8_t reserved[8];
+	uint32_t reserved;
+	/* m_line_start and m_line_end are taken through a camera (ScrollViewBase::GetTrackPos) */
+	bool m_has_line;
 	/* where the touch is (DirectBar's drag out of its bar) */
 	math::v2 m_pos;
-	uint8_t reserved_b[8];
+	float reserved_b;
+	/* the camera's distance the line is taken to */
+	float m_depth;
 	/* the line through the scene under the touch, from its start to its end (ImageSlideBar's
 	   CalcHitLineToPlane) */
 	math::v4 m_line_start;
 	math::v4 m_line_end;
-	uint8_t reserved_c[0x40];
+	/* the world matrix of the camera the line is taken through */
+	math::matrix m_camera_matrix;
 };
 
 /* a widget's hold on a touch, kept by the Environment for each port and touch ID (names

@@ -16,6 +16,7 @@
 #include <math/ngp/v4.h>
 #include <std/list>
 #include <std/memory>
+#include <std/stdlib.h>
 #include <std/string>
 #include <std/vector>
 #include <timer/timer.h>
@@ -29,6 +30,8 @@
 #include <widget/core/layouter.h>
 #include <widget/core/uiinputlistener.h>
 #include <widget/factory.h>
+#include <widget/w_camera.h>
+#include <widget/w_scene.h>
 #include <widget/w_scroll_bar.h>
 #include <widget/w_scroll_view_base.h>
 
@@ -171,6 +174,14 @@ static inline math::v2 MaskMoveDir(const math::v2 &v, int32_t dir)
 }
 
 /* -1, 0 or 1 */
+/* whether the two are equal, compared lane by lane */
+static inline bool IsSame(const math::v2 &a, const math::v2 &b)
+{
+	return ((a.getImpl().getX() == b.getImpl().getX()) &
+		(a.getImpl().getY() == b.getImpl().getY()))
+		.getAsBool();
+}
+
 static inline float Sign(float x)
 {
 	if (x == 0.0f)
@@ -182,9 +193,19 @@ static inline float Sign(float x)
    the touch stopped (names ours) */
 class MochiPoint {
 public:
+	enum {
+		FLAG_LAST = 1
+	};
+
+	MochiPoint(const math::v2 &move, uint64_t time, bool last)
+		: m_move(move), m_time(time), m_flags(last ? FLAG_LAST : 0)
+	{
+	}
+
 	math::v2 m_move;
 	uint64_t m_time;
-	uint32_t m_last : 1;
+	/* FLAG_LAST: it was the last before the touch stopped */
+	uint32_t m_flags;
 };
 
 /* the moves a mochi gesture went through, where it started and where it is (names ours) */
@@ -203,14 +224,14 @@ public:
 
 		math::v2 last(0.0f, 0.0f);
 		MochiPoint &back = m_points.back();
-		if (!back.m_last)
+		if ((back.m_flags & MochiPoint::FLAG_LAST) == 0)
 			last = back.m_move * 1000000.0f / (float)back.m_time;
 
 		math::v2 velocity = last;
 		if (m_points.size() >= 2) {
 			MochiPoint &prev = m_points.at(m_points.size() - 2);
 			math::v2 before(0.0f, 0.0f);
-			if (!prev.m_last)
+			if ((prev.m_flags & MochiPoint::FLAG_LAST) == 0)
 				before = prev.m_move * 1000000.0f / (float)prev.m_time;
 			velocity = last + before;
 		}
@@ -266,7 +287,7 @@ public:
 					sign_y = 0.0f;
 				}
 				v = move * 1000000.0f / (float)point.m_time * w;
-				if (point.m_last)
+				if ((point.m_flags & MochiPoint::FLAG_LAST) != 0)
 					tail = w * v;
 			}
 			sum = sum + v;
@@ -282,7 +303,8 @@ public:
 	}
 
 	vector<MochiPoint> m_points;
-	math::v2 m_start;
+	/* the frame the last move was taken in */
+	uint64_t m_time;
 	math::v2 m_pos;
 };
 
@@ -328,6 +350,9 @@ public:
 	/* the touch the view holds let go of: the flick stopped where it is the first (name
 	   ours) */
 	void Release(ScrollViewBase *view);
+	/* the touch's position kept where the view holds it last, and the time without a move
+	   taken into the mochi gesture's moves (name ours) */
+	void UpdateTouch(ScrollViewBase *view);
 	/* each view's parent put back in place, and its matrices made again where they changed */
 	void Update();
 	/* the flick under way stopped, the views' velocities cleared (name ours) */
@@ -354,8 +379,8 @@ public:
 	vector<ScrollViewBase *> m_views;
 	common::SharedPtr<inputdevice::InputListener> m_listener;
 	uint8_t reserved1[8];
-	/* where the drag started */
-	math::v2 m_drag_start;
+	/* where the touch is on the view's plane */
+	math::v2 m_touch_pos;
 	bool m_dragging;
 	bool m_drag_locked;
 	bool m_reset;
@@ -555,7 +580,7 @@ ScrollViewBase::ScrollViewBase(Widget *parent, CreateParam *param)
 	  m_scroll_flags(0), m_world_rot_pre(m_world_rot), m_focus_pos(0.0f, 0.0f),
 	  m_focus_target(0.0f, 0.0f), m_focus_start(0.0f, 0.0f), m_focus_timer(NULL),
 	  m_block_count(0), m_debug(NULL), m_scroll_param(NULL), m_over_scroll(NULL),
-	  m_anchor(NULL), m_enable_analog(true), m_enable_touch(true), m_snap_power(25.0f),
+	  m_anchor(NULL), m_enable_analog(true), m_limit_focus(true), m_snap_power(25.0f),
 	  m_preferred_snap_id(-1), m_snap_time(200.0f), m_key_step(4.0f),
 	  m_over_scroll_length(20.0f), m_bar_fade_time(200.0f), m_bar_reset(true),
 	  m_scroll_touch(true), m_scroll_key(true), m_scroll_analog(true), m_scroll_lock(false),
@@ -1818,6 +1843,272 @@ void ScrollViewBase::UpdateAfterChildren()
 {
 	ScePafWidget_22EF63CE();
 	ScePafWidget_B6CECFDF();
+}
+
+math::v2 ScrollViewBase::GetTrackPos()
+{
+	uint32_t id = m_track_port;
+	TouchState *state = NULL;
+
+	if (id != (uint32_t)-1 && id < 8) {
+		m_env->m_touch_state[id].m_state = 0;
+		m_env->m_touch_state[id].m_id = id;
+		state = &m_env->m_touch_state[id];
+	}
+	if (state != NULL) {
+		Camera *camera = m_scene->m_camera;
+
+		if (camera != NULL) {
+			TouchState touch = *state;
+			const math::matrix &camera_world = camera->GetWorldMatrix();
+
+			ScePafWidget_72F479CA(camera);
+
+			math::matrix world = camera_world;
+
+			touch.m_depth = camera->m_distance;
+			touch.m_line_start = world.w();
+			touch.m_has_line = true;
+			touch.m_camera_matrix = world;
+			touch.m_line_end = math::v4(world.getImpl() *
+						    sce::Vectormath::Simd::Aos::Vector4(
+							    -touch.m_pos.extract_x(),
+							    touch.m_pos.extract_y(), touch.m_depth,
+							    1.0f));
+
+			HitInfo info;
+
+			/* cleared once more after its constructor did */
+			sce_paf_memset(&info, 0, sizeof(HitInfo));
+			CalcHitLineToPlane(touch.m_line_start, touch.m_line_end,
+					   math::v4(0.0f, 0.0f, 0.0f, 0.0f),
+					   math::v4(0.0f, 0.0f, 1.0f, 0.0f), &info);
+			return info.m_touch_pos;
+		}
+	}
+	return math::v2(0.0f, 0.0f);
+}
+
+void TouchScrollSupplier::UpdateTouch(ScrollViewBase *view)
+{
+	if (m_touch_views.size() != 0 && m_touch_views.back().m_view == view) {
+		m_touch_pos = m_touch_views.begin()->m_view->GetTrackPos();
+		if (m_mochi.m_points.size() != 0) {
+			uint64_t time = ScePafMisc_256F9060[0];
+
+			if (m_mochi.m_time != time) {
+				m_mochi.m_points.push_back(
+					MochiPoint(math::v2(0.0f, 0.0f), time - m_mochi.m_time, false));
+				if (m_mochi.m_points.size() >= 8)
+					m_mochi.m_points.erase(m_mochi.m_points.begin(),
+							       m_mochi.m_points.begin() + 1);
+				m_mochi.m_time = time;
+			}
+		}
+	}
+}
+
+void ScrollViewBase::UpdateWorldRot()
+{
+	if (m_hold_count <= 0 && !(m_world_rot == m_world_rot_pre)) {
+		m_world_rot_pre = m_world_rot;
+		UpdateScrollRange();
+	}
+}
+
+ScrollViewFocusLimit ScrollViewBase::LimitFocus(const math::v2 &focus, bool center_fit)
+{
+	ScrollViewFocusLimit ret;
+
+	if (!m_limit_focus) {
+		ret.m_pos = focus;
+		ret.m_over = math::v2(0.0f, 0.0f);
+		ret.m_dir = MoveDir_None;
+		return ret;
+	}
+
+	uint32_t fit = m_fit_dir;
+
+	if (fit == MoveDir_XY) {
+		if (center_fit) {
+			math::v2 center = m_scroll_center;
+
+			ret.m_pos = center;
+			ret.m_dir = (m_scroll_center.extract_x() != focus.extract_x()) |
+				    (m_scroll_center.extract_y() != focus.extract_y());
+			ret.m_over = focus - center;
+		} else {
+			ret.m_pos = focus;
+			ret.m_over = math::v2(0.0f, 0.0f);
+			ret.m_dir = MoveDir_None;
+		}
+		return ret;
+	}
+
+	using sce::Vectormath::Simd::Aos::Vector4;
+
+	math::v4 over(m_scroll_box.getImpl() -
+		      (m_view_half.getImpl() - Vector4(focus.getImpl(), focus.getImpl())));
+	float focus_x = focus.extract_x();
+	float focus_y = focus.extract_y();
+	float x = focus_x;
+	float y = focus_y;
+
+	if ((fit & MoveDir_X) != 0) {
+		if (center_fit)
+			x = m_scroll_center.extract_x();
+	} else if (over.extract_x() > 0.0f) {
+		x = m_view_limit.extract_x();
+	} else if (over.extract_z() < 0.0f) {
+		x = m_view_limit.extract_z();
+	}
+	if ((fit & MoveDir_Y) != 0) {
+		if (center_fit)
+			y = m_scroll_center.extract_y();
+	} else if (over.extract_w() > 0.0f) {
+		y = m_view_limit.extract_w();
+	} else if (over.extract_y() < 0.0f) {
+		y = m_view_limit.extract_y();
+	}
+
+	if (x == focus_x || y == focus_y) {
+		if (y == focus_y) {
+			if (x == focus_x) {
+				ret.m_pos = focus;
+				ret.m_over = math::v2(0.0f, 0.0f);
+				ret.m_dir = MoveDir_None;
+			} else {
+				ret.m_pos = math::v2(x, focus_y);
+				ret.m_over = math::v2(focus_x - x, 0.0f);
+				ret.m_dir = MoveDir_X;
+			}
+		} else {
+			ret.m_pos = math::v2(focus_x, y);
+			ret.m_over = math::v2(0.0f, focus_y - y);
+			ret.m_dir = MoveDir_Y;
+		}
+	} else {
+		math::v2 pos(x, y);
+
+		ret.m_pos = pos;
+		ret.m_over = focus - pos;
+		ret.m_dir = MoveDir_XY;
+	}
+	return ret;
+}
+
+void ScrollViewDebug::Update()
+{
+	using sce::Vectormath::Simd::Aos::Vector4;
+	using sce::Vectormath::Simd::Aos::divPerElem;
+	using sce::Vectormath::Simd::Aos::mulPerElem;
+
+	math::v4 parent_pos = m_view->m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v2 pos = math::v2(parent_pos.getImpl().getXY()) * -1.0f;
+	ScrollViewBase *view = m_view;
+	math::v2 size = view->m_view_size;
+
+	if (IsSame(pos, m_box_pos) && IsSame(size, m_box_size))
+		return;
+
+	m_box_pos = pos;
+	m_box_size = size;
+
+	math::v4 box(Vector4(pos.getImpl(), pos.getImpl()) +
+		     mulPerElem(Vector4(size.getImpl(), size.getImpl()),
+				Vector4(-0.5f, 0.5f, 0.5f, -0.5f)));
+
+	if (m_mode == 1 || m_mode == 3) {
+		math::v4 view_box = view->m_view_box;
+
+		if (view_box.extract_x() > box.extract_x()) {
+			box.set_x(view_box.extract_x());
+			box.set_z(view_box.extract_x() + size.extract_x());
+		} else if (box.extract_z() > view_box.extract_z()) {
+			box.set_x(view_box.extract_z() - size.extract_x());
+			box.set_z(view_box.extract_z());
+		}
+		if (box.extract_y() > view_box.extract_y()) {
+			box.set_y(view_box.extract_y());
+			box.set_w(view_box.extract_y() - size.extract_y());
+		} else if (view_box.extract_w() > box.extract_w()) {
+			box.set_y(view_box.extract_w() + size.extract_y());
+			box.set_w(view_box.extract_w());
+		}
+	}
+
+	math::v2 depth(0.0f, 0.0f);
+	math::v2 over(0.0f, 0.0f);
+
+	if (m_mode == 3) {
+		math::v4 focus = view->m_view_parent->GetPos(0, NULL,
+							     math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+
+		over = view->LimitFocus(math::v2(focus.getImpl().getXY()), false).m_over;
+	}
+
+	math::v2 cell(sce::Vectormath::Simd::Aos::Vector2(sce_vectormath_floorf(
+		divPerElem(sce::Vectormath::Simd::Aos::Vector2(box.extract_z(), box.extract_y()),
+			   size.getImpl())
+			.get64())));
+	int32_t cell_x = (int32_t)cell.extract_x();
+	int32_t cell_y = (int32_t)cell.extract_y();
+	int32_t abs_x = sce_paf_abs(cell_x);
+	int32_t row = sce_paf_abs(cell_y) % 2 * 2;
+	int32_t index = abs_x % 2 + row;
+	Marker *markers[4];
+
+	markers[0] = &m_marker[index];
+	markers[1] = &m_marker[(abs_x + 1) % 2 + row];
+	markers[2] = &m_marker[(index + 2) % 4];
+	markers[3] = &m_marker[3 - index];
+
+	math::v2 origin = cell * size;
+
+	for (uint32_t i = 0; i < 4; i++) {
+		static const math::v2 s_offset[4] = {
+			math::v2(-0.5f, 0.5f),
+			math::v2(0.5f, 0.5f),
+			math::v2(-0.5f, -0.5f),
+			math::v2(0.5f, -0.5f),
+		};
+		Marker *marker = markers[i];
+		Widget *widget = marker->m_widget;
+		math::v2 marker_pos = size * s_offset[i] + origin;
+
+		widget->SetPos(math::v4(Vector4((marker_pos - over).getImpl(), depth.getImpl())),
+			       NULL, 0x10000, 0, 0.0f, NULL, NULL);
+		if (!IsSame(marker->m_pos, marker_pos) ||
+		    !IsSame(math::v2(widget->GetSize(0)->getImpl().getXY()), size)) {
+			widget->SetSize(math::v4(Vector4(size.getImpl(), depth.getImpl())), NULL,
+					0x10004, 0, 0.0f, NULL, NULL);
+			marker->m_pos = marker_pos;
+			marker->m_cell_x = cell_x;
+			marker->m_cell_y = cell_y;
+
+			Event e(0x8000, Event::MODE_DISPATCH, Event::ROUTE_FORWARD, 0,
+				(int32_t)marker);
+
+			m_view->DoEvent(CB_MARKER_MOVED, &e);
+		}
+	}
+}
+
+void ScrollViewBase::UpdatePost()
+{
+	math::v2 *anchor = m_anchor;
+
+	if (anchor != NULL)
+		*anchor = math::v2(GetOriginWorldMatrix().getImpl().getCol3().getXY());
+	if (m_debug != NULL)
+		m_debug->Update();
+	if (!m_ime_padding)
+		m_ime_height = 0.0f;
+	UpdateWorldRot();
+	if (m_track_port != -1 || m_track_state != 0)
+		s_touch_scroll_supplier.UpdateTouch(this);
+	if (m_over_scroll != NULL)
+		m_over_scroll->Update();
 }
 
 }

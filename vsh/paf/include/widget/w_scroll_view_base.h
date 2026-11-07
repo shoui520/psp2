@@ -37,6 +37,15 @@ public:
 	math::v2 m_pos;
 };
 
+/* a focus kept within the view's limits: where it is kept, how far it was past them and
+   along which axes (MoveDir; names ours) */
+class ScrollViewFocusLimit {
+public:
+	math::v2 m_pos;
+	math::v2 m_over;
+	uint32_t m_dir;
+};
+
 /* what ScrollViewBase gives its controller to lay its scroll bars out (name ours) */
 class ScrollViewBarLayout {
 public:
@@ -319,6 +328,13 @@ public:
 
 	/* the nearest scroll view it sits in, NULL for none (ScePafWidget 5CB1000F; name ours) */
 	ScrollViewBase *GetParentView();
+	/* where the touch it tracks is on its plane (ScePafWidget A1ED1315; name ours) */
+	math::v2 GetTrackPos();
+	/* the scroll range updated where its world rotation changed (name ours) */
+	void UpdateWorldRot();
+	/* the focus kept within the view's limits, at the center along the axes that fit where
+	   center_fit is set (ScePafWidget 1EB87BE1; name ours) */
+	ScrollViewFocusLimit LimitFocus(const math::v2 &focus, bool center_fit);
 
 	void ResetScrollBar(ScrollBar *&scroll_bar, ScrollBar *next_bar);
 	list<Snap>::iterator FindSnapPoint(int32_t snap_id);
@@ -378,7 +394,8 @@ public:
 	/* where its origin sat in the world when anchoring was turned on, else NULL (name ours) */
 	math::v2 *m_anchor;
 	bool m_enable_analog;
-	bool m_enable_touch;
+	/* the focus is kept within the view's limits (LimitFocus; name ours) */
+	bool m_limit_focus;
 	list<Snap> m_snap_list;
 	float m_snap_power;
 	/* the snap point it snaps to when it stops, its timer's time and function */
@@ -480,11 +497,18 @@ public:
    four markers (names ours) */
 class ScrollViewDebug {
 public:
+	enum {
+		/* a marker moved to another cell (name ours) */
+		CB_MARKER_MOVED = 0x20001001
+	};
+
 	class Marker {
 	public:
 		Widget *m_widget;
 		int32_t m_index;
-		uint8_t reserved[8];
+		/* the cell of the view's size it shows (names ours) */
+		int32_t m_cell_x;
+		int32_t m_cell_y;
 		math::v2 m_pos;
 	};
 
@@ -492,6 +516,9 @@ public:
 	~ScrollViewDebug();
 
 	void SetMode(int32_t mode);
+	/* the markers moved to the cells around the view where it moved or changed its size
+	   (ScePafWidget B35DEA06; name ours) */
+	void Update();
 
 	ScrollViewBase *m_view;
 	int32_t m_mode;

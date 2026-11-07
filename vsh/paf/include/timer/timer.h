@@ -332,6 +332,8 @@ void ScePafMisc_F8D63B8E(float ratio);
 void ScePafMisc_A04B01AB(void);
 int ScePafMisc_EF1C440B(void);
 int ScePafMisc_4357D271(void);
+/* the frames' start times, the current frame's first */
+extern SceUInt64 ScePafMisc_256F9060[];
 }
 
 #endif /* PAF_TIMER_TIMER_H_CXX */

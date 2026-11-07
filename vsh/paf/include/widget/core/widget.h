@@ -1164,6 +1164,8 @@ public:
 	Widget *FindChild(const IDParam &id, int32_t option);
 	/* the widget where it is one of its descendants, else NULL */
 	Widget *FindChild(Widget *child, int32_t option);
+	/* the child at the index in m_children */
+	Widget *GetChild(int32_t index) const;
 	AnimQueue *FindAnim(int32_t id);
 	int32_t KillAnimType(int32_t type);
 	/* the animation's listeners stopped where they are */
@@ -1456,6 +1458,12 @@ int32_t ScePafWidget_5ABB3393(paf::ui::Widget *widget, uint32_t port, uint32_t i
 /* takes the widget off the list of widgets (0x81315084 in DEBUGGER) it was put on (no name
    found) */
 void ScePafWidget_A89BE22F(paf::ui::Widget *widget);
+/* the vblank waits counted up and down, with paf::graph::s_wait_vblank_count (state.c; no
+   name found) */
+uint32_t *ScePafWidget_10BEC7CF(uint32_t *count);
+uint32_t *ScePafWidget_DB993F51(uint32_t *count);
+/* prototypes from common_gui_dialog's calls, not written in C yet (no name found) */
+void ScePafWidget_A1193AAB(paf::ui::Widget *widget, int32_t a, int32_t b);
 /* plays its sound of the index where its sound mask has it: -1 when none is played */
 int32_t ScePafWidget_2B1A1493(paf::ui::Widget *widget, int32_t index);
 /* sets the style attribute of its text from pos for len characters, its size where attr is
