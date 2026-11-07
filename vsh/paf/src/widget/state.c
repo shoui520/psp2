@@ -194,12 +194,6 @@ int _ZN3paf2ui4Text16GetSelectionModeERb(const uint8_t *self, uint8_t *output)
 	return 0;
 }
 
-int _ZN3paf2ui6Dialog16HandleTouchEventEPNS0_5EventE(void *self, uint32_t *attributes)
-{
-	attributes[1] = (attributes[1] & 0xF0FFFFFFU) | 0x01000000U;
-	return 0;
-}
-
 int _ZN3paf2ui8ListItem12GetCellIndexEv(const uint8_t *self)
 {
 	const uint8_t *value = *(const uint8_t *const *)(self + 636);
@@ -597,12 +591,6 @@ uint8_t *_ZN3paf2ui8listview7CellMap4FindEPNS0_8ListItemE(const uint32_t *self, 
 uint32_t *_ZN3paf2ui8listview11SegmentListC2EPNS0_8ListViewE(uint32_t *self, uint32_t payload)
 {
 	return InitializeWidgetRecord(self, payload);
-}
-
-int _ZN3paf2ui6Dialog16HandlePointEventEPNS0_5EventE(void *self, uint32_t *attributes)
-{
-	attributes[1] = (attributes[1] & 0xF0FFFFFFU) | 0x01000000U;
-	return 0;
 }
 
 uint32_t _ZN3paf2ui8filelist7Manager11GetJobQueueENS2_9QueueTypeE(int32_t index)
@@ -1021,8 +1009,7 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui13ImageSlideBar9IsInheritEPKc, "image_slidebar",
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8SlideBar9IsInheritEPKc, "slidebar",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 /* CornerButton's is C++ (w_corner_button.cpp) */
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui6Dialog9IsInheritEPKc, "dialog",
-		   _ZNK3paf2ui3Box9IsInheritEPKc)
+/* Dialog's is C++ (w_dialog.cpp) */
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui7TextBox9IsInheritEPKc, "text_box",
 		   _ZNK3paf2ui4Text9IsInheritEPKc)
 /* CompositeDrawer's is C++ (w_composite_drawer.cpp) */
