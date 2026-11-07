@@ -170,6 +170,16 @@ public:
 		return m_total * 1000.0f;
 	}
 
+	/* the time it has run, none before it starts (name ours) */
+	float GetCurrTime() const
+	{
+		float curr = 0.0f;
+
+		if (m_state != State_Standby)
+			curr = m_curr * 1000.0f;
+		return curr;
+	}
+
 	static float Cbrt(float input);
 
 	static float DoFuncLinear(float rate);

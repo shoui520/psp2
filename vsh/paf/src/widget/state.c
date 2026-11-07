@@ -76,12 +76,6 @@ uint8_t *_ZN3paf2ui8ListView9BlockSyncEv(uint8_t *self)
 	return self;
 }
 
-uint8_t *_ZN3paf2ui14ScrollViewBase19BlockUpdateViewPortEv(uint8_t *self)
-{
-	++*(uint32_t *)(self + 924);
-	return self;
-}
-
 int ScePafWidget_9A7BE3B0(uint8_t *self, uint32_t value, uint8_t flag)
 {
 	self[205] = flag;
@@ -518,21 +512,6 @@ uint8_t *_ZN3paf2ui6Widget19NotifyAnimatorDirtyEj(uint8_t *self, uint16_t mask)
 	return self;
 }
 
-int _ZN3paf2ui10ScrollView9IsIgnoredEPNS0_6WidgetE(const uint8_t *self, uint32_t value)
-{
-	uint32_t count = *(const uint32_t *)(self + 1036);
-	const uint32_t *cursor = *(const uint32_t *const *)(self + 1032);
-	const uint32_t *end = cursor + count;
-
-	while (cursor != end) {
-		if (*cursor == value)
-			break;
-		if (cursor)
-			++cursor;
-	}
-	return cursor != end;
-}
-
 uint8_t *_ZN3paf2ui8listview7CellMap4FindEPNS0_8ListItemE(const uint32_t *self, uint32_t value)
 {
 	const uint8_t *const *cursor = (const uint8_t *const *)self[0];
@@ -875,13 +854,6 @@ __attribute__((noinline)) int _ZNK3paf2ui8SpinBase9IsInheritEPKc(const void *sel
 	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
-int _ZNK3paf2ui16ScrollViewParent9IsInheritEPKc(const void *self, const char *tag)
-{
-	if (tag == "scroll_view_parent")
-		return 1;
-	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
-}
-
 __attribute__((noinline)) int _ZNK3paf2ui4Text9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "text")
@@ -907,8 +879,8 @@ int _ZNK3paf2ui10ButtonBase9IsInheritEPKc(const void *self, const char *type);
 int _ZNK3paf2ui15StateButtonBase9IsInheritEPKc(const void *self, const char *type);
 /* ScrollBar's is C++ (w_scrollbar.cpp) */
 int _ZNK3paf2ui9ScrollBar9IsInheritEPKc(const void *self, const char *type);
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui14ScrollViewBase9IsInheritEPKc, "scroll_view_base",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+/* ScrollViewBase's is C++ (w_scroll_view_base.cpp) */
+int _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc(const void *self, const char *type);
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ListView9IsInheritEPKc, "list_view",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui11ProgressBar9IsInheritEPKc, "progressbar",
@@ -925,8 +897,6 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui7NumSpin9IsInheritEPKc, "num_spin",
 		   _ZNK3paf2ui8SpinBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ItemSpin9IsInheritEPKc, "item_spin",
 		   _ZNK3paf2ui8SpinBase9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui10ScrollView9IsInheritEPKc, "scroll_view",
-		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8FileList9IsInheritEPKc, "file_list",
 		   _ZNK3paf2ui8ListView9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui16ProgressBarTouch9IsInheritEPKc, "progressbar_touch",
@@ -1019,18 +989,6 @@ uint32_t *_ZN3paf2ui5EventC2Ev(uint32_t *self)
 	return InitializeWidgetStatusRecord(self);
 }
 
-uint32_t sce_paf_widget_token_counter_13cd8;
-
-uint32_t *_ZN3paf2ui14ScrollViewBase4SnapC1ERKNS0_19ScrollViewSnapPointE(uint32_t *self, const uint64_t *value)
-{
-	uint32_t previous = sce_paf_widget_token_counter_13cd8;
-
-	*(uint64_t *)self = *value;
-	sce_paf_widget_token_counter_13cd8 = previous + 1;
-	self[2] = previous;
-	return self;
-}
-
 /* Native single-dispatch widget methods. */
 static inline __attribute__((always_inline))
 int WidgetInvokeSlot(void *self, uint32_t offset)
@@ -1042,11 +1000,6 @@ int WidgetInvokeSlot(void *self, uint32_t offset)
 int _ZN3paf2ui11PlaneButton16UpdateAdjustSizeEv(void *self)
 {
 	return WidgetInvokeSlot(self, 448);
-}
-
-int _ZN3paf2ui10ScrollView13GetViewParentEv(void *self)
-{
-	return WidgetInvokeSlot(self, 140);
 }
 
 int ScePafWidget_BDEF4D3F(void *self)
@@ -1234,18 +1187,6 @@ int _ZN3paf2ui6Widget17SetDrawObjMaskBitEPKvi(void *self, int first, int second)
 		self, first, second, 0);
 }
 
-uint32_t sce_paf_widget_serial_13cd8;
-
-void *_ZN3paf2ui14ScrollViewBase4SnapC2ERKNS0_19ScrollViewSnapPointE(uint8_t *result, const uint64_t *payload)
-{
-	uint32_t previous = sce_paf_widget_serial_13cd8;
-
-	*(uint64_t *)result = *payload;
-	sce_paf_widget_serial_13cd8 = previous + 1;
-	*(uint32_t *)(result + 8) = previous;
-	return result;
-}
-
 static inline __attribute__((always_inline))
 void *DestroyWidgetResourceHandle(uint8_t *self)
 {
@@ -1285,11 +1226,6 @@ float ScePafWidget_4983B3FC(uint8_t *self)
 	if (delegate)
 		return *(const float *)(delegate + 668);
 	return (float)*(const int32_t *)(self + 644);
-}
-
-const char *_ZN3paf2ui20ScrollViewStyleParam9ParamNameEv(void)
-{
-	return "style_scroll_view";
 }
 
 int ScePafWidget_3E4AABD3(uint8_t *self, void *replacement)
@@ -1335,23 +1271,6 @@ int _ZN3paf2ui17EventListenerList4FindEPNS0_13EventListenerE(const uint8_t *self
 			node = *(const uint8_t *const *)(node + 4);
 	}
 	return 0;
-}
-
-int _ZN3paf2ui14ScrollViewBase22SetScrollBarControllerEPNS0_29ScrollViewScrollBarControllerE(uint8_t *self, void *replacement)
-{
-	void *previous = *(void **)(self + 660);
-	const uint8_t *vtable;
-
-	if (previous) {
-		const uint8_t *methods = *(const uint8_t *const *)previous;
-
-		((void (*)(void *))*(void *const *)(methods + 4))(previous);
-	}
-	vtable = *(const uint8_t *const *)self;
-	*(void **)(self + 660) = replacement;
-	((void (*)(void *))*(void *const *)(vtable + 568))(self);
-	vtable = *(const uint8_t *const *)self;
-	return ((int (*)(void *))*(void *const *)(vtable + 560))(self);
 }
 
 void *_ZN3paf2ui8ListView22GetSegmentPropertyListEi(uint8_t *self, int32_t index)
@@ -1477,12 +1396,6 @@ int _ZN3paf2ui14ScrollViewBase19OnViewLayoutUpdatedEb(uint8_t *self, uint8_t exe
 		self, -1);
 	vtable = *(const uint8_t *const *)self;
 	return ((int (*)(uint8_t *))*(void *const *)(vtable + 560))(self);
-}
-
-uint8_t *_ZN3paf2ui14ScrollViewBase12SetSnapPowerEf(uint8_t *self, float value)
-{
-	*(float *)(self + 960) = value > 0.0f ? value : 0.0f;
-	return self;
 }
 
 int ScePafWidget_6A60296B(uint8_t *self, uint32_t index, float value)

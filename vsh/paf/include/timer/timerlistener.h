@@ -44,6 +44,14 @@ public:
 		return m_timer->GetTotalTime();
 	}
 
+	/* the time its timer has run (name ours) */
+	float GetCurrTime() const
+	{
+		if (m_timer == NULL)
+			return 0.0f;
+		return m_timer->GetCurrTime();
+	}
+
 	Timer *m_timer;
 	void *m_data;
 };

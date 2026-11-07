@@ -376,11 +376,41 @@ public:
 	bool reserved;
 };
 
-/* a widget's focus state; only the hint is converted (names ours) */
+class Focuser;
+
+/* what a Focuser calls to move the focus: the focuser, its widget, and what Focus was given
+   (name ours) */
+typedef int32_t (*FocusCB)(Focuser *focuser, Widget *widget, void *data, void *move);
+
+/* the callback moving the focus to the nearest widget the way it moves (0x81146794 TOOL; name
+   ours) */
+int32_t DefaultFocusCB(Focuser *focuser, Widget *widget, void *data, void *move);
+
+/* a widget's focus: the function that moves it, and the hint where it goes (names ours) */
 class Focuser {
 public:
-	uint8_t reserved[0xc];
+	Focuser(FocusCB cb) : m_widget(NULL), m_cb(cb), m_hint(NULL), m_data(NULL)
+	{
+	}
+
+	virtual ~Focuser()
+	{
+		delete m_hint;
+		delete m_data;
+	}
+
+	/* the focus moved by the callback (ScePafWidget_97020684) */
+	virtual int32_t Focus(void *move);
+
+	void BindWidget(Widget *w)
+	{
+		m_widget = w;
+	}
+
+	Widget *m_widget;
+	FocusCB m_cb;
 	FocusHint *m_hint;
+	uint8_t *m_data;
 };
 
 /* the focus of the widgets under one that holds it (names ours) */
@@ -935,6 +965,8 @@ public:
 	math::v4 *GetScale(int32_t opt);
 	/* the world matrix made again from its position, scale and rotation and its parent's */
 	void UpdateMatrix();
+	/* its matrix and its descendants' made again (0x811553b0 TOOL; name ours) */
+	void UpdateMatrixTree();
 
 	/* the world matrix, made again first where m_update_flag asks for it (inline in Sony's
 	   callers, name ours) */
@@ -943,6 +975,24 @@ public:
 		if ((m_update_flag & 7) != 0)
 			UpdateMatrix();
 		return m_world_matrix;
+	}
+
+	/* the world matrix moved back to its origin, where it has one (Sony's copy out of line,
+	   0x812353b4; name ours) */
+	__attribute__((noinline)) math::matrix GetOriginWorldMatrix()
+	{
+		math::v4 offs = m_origin_offs;
+
+		if ((m_origin_x | m_origin_y | m_origin_z) == 0 &&
+		    offs == math::v4(0.0f, 0.0f, 0.0f, 0.0f))
+			return GetWorldMatrix();
+
+		math::v4 offset(-offs.getImpl());
+
+		offset.set_w(1.0f);
+		return GetWorldMatrix() * math::matrix(math::v4(1.0f, 0.0f, 0.0f, 0.0f),
+						       math::v4(0.0f, 1.0f, 0.0f, 0.0f),
+						       math::v4(0.0f, 0.0f, 1.0f, 0.0f), offset);
 	}
 
 	/* culled or not, its children with it (Sony's copy out of line, 0x81225744; name
@@ -1125,7 +1175,11 @@ public:
 	math::v4 m_scale;
 	math::v4 m_size;
 	math::v4 m_rot;
-	uint8_t reserved[0x50];
+	/* its rotation combined with its parents', as UpdateMatrix made it (name ours) */
+	math::quaternion m_world_rot;
+	/* its matrix in its parent's space, which UpdateMatrix multiplies by the parent's (name
+	   ours) */
+	math::matrix m_local_matrix;
 	/* its world matrix, as UpdateMatrix made it (name ours) */
 	math::matrix m_world_matrix;
 	math::v4 m_align_offs;
@@ -1313,7 +1367,12 @@ public:
 	FocusShape *m_focus_shape;
 	uint8_t reserved7c[0x10];
 	FocusRoot *m_focus_root;
-	uint8_t reserved7d[0x14];
+	uint8_t reserved7d[4];
+	/* the layout changes it tells its parent's layouter of (NotifyLayoutDirty): the low byte
+	   the kinds, the high byte the ones it passes on; a scroll view's child passes 0x300 on
+	   (ScrollView::OnChildRegistered; name ours) */
+	uint16_t m_layout_notify_mask;
+	uint8_t reserved7f[0xe];
 	/* its draw objects, drawn in order */
 	vector<DrawObjEntry> m_drawobjs;
 	/* what is called when it is deleted (names after DrawObj's, Sony's DWARF) */
@@ -1370,6 +1429,12 @@ inline WidgetParam::~WidgetParam()
 }
 
 extern "C" {
+/* the widget given a focus root of its own, the focus taken from the root above it
+   (no name found) */
+int32_t ScePafWidget_00AA6519(paf::ui::Widget *widget);
+/* the widget added to the shared list the file of AnimQueue keeps, whose object (0x2b0 bytes)
+   is made on first use, with a delete callback dropping it again (no name found) */
+int32_t ScePafWidget_82A61BBC(paf::ui::Widget *widget);
 /* puts the widget into its transition: auto_delete deletes it once the time ends */
 int32_t ScePafWidget_8AF26B1F(paf::ui::Widget *widget, bool auto_delete, float time);
 /* the widget holds the touch of the port and ID, dragged in the mode: 0 once held, -1 if not */

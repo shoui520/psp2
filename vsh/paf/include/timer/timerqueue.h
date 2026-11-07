@@ -42,6 +42,14 @@ public:
 		return m_list.size();
 	}
 
+	/* the time left of its timers: their total less what the front one has run (name ours) */
+	float GetRestTime()
+	{
+		TimerListener *front = GetFront();
+
+		return m_total - (front != NULL ? front->GetCurrTime() : 0.0f);
+	}
+
 protected:
 	list<TimerListener *> m_list;
 	float m_total;
