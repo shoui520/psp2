@@ -178,8 +178,14 @@ public:
 
 	typedef map<int32_t, GestureListenerPack, greater<int32_t> > GestureMap;
 
-	InputGestureListener() : m_update_port(0)
+	InputGestureListener() : InputListener(DEVICE_TYPE_PAD)
 	{
+		for (int32_t i = 0; i < PORT_NUM; i++) {
+			m_gesture[i].clear();
+			m_capture[i].reset();
+		}
+		m_update_port = 0;
+		Init();
 	}
 
 	virtual ~InputGestureListener()
