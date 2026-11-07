@@ -260,6 +260,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/w_scrollbar_touch.cpp
 	src/widget/w_slidebar.cpp
 	src/widget/w_sliding_drawer.cpp
+	src/widget/w_speech_balloon.cpp
 	src/graphics/arl/gxm/gxm_default_textures.cpp
 	src/graphics/arl/gxm/gxm_framebuffer_object.cpp
 	src/graphics/effects/fft.cpp
@@ -396,6 +397,7 @@ set_source_files_properties(src/widget/w_scrollbar2d.cpp PROPERTIES COMPILE_OPTI
 set_source_files_properties(src/widget/w_scrollbar_touch.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_slidebar.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_sliding_drawer.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+set_source_files_properties(src/widget/w_speech_balloon.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_state_button_base.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 
 # libjpeg was built with SNC's default budget, 32 (its manual: the old -Xinllev's equivalent):

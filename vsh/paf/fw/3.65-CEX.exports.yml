@@ -3003,7 +3003,7 @@ ScePaf:
         - _ZN3paf2ui7TextBox10UpdateSizeEv: 0x063D7170
         - _ZNK3paf2ui11ProgressBar11GetTypeNameEv: 0x064AF4AA
         - _ZN3paf2ui3Box8TypeNameEv: 0x065D3B50
-        - ScePafWidget_06980C50: 0x06980C50
+        - _ZN3paf2ui13SpeechBalloon10SetTailPosEf: 0x06980C50
         - _ZN3paf2ui19ScrollViewBaseParamC2Ev: 0x06C2E53C
         - ScePafWidget_06D0F83A: 0x06D0F83A
         - ScePafWidget_0701121B: 0x0701121B
@@ -4936,7 +4936,7 @@ ScePaf:
         - _ZNK3paf2ui8listview4Cell10GetSegmentEv: 0xD5E3D827
         - _ZN3paf2ui3Box11calc_offsetEjff: 0xD5EBC854
         - _ZN3paf2ui9DirectBar11GetObjColorERNS_4math2v4Ei: 0xD5EE796A
-        - ScePafWidget_D5EF09AE: 0xD5EF09AE
+        - _ZN3paf2ui13SpeechBalloon13GetTailLengthEv: 0xD5EF09AE
         - _ZN3paf2ui10EventQueue3AddERKNS0_5EventEi: 0xD61B419A
         - _ZN3paf2ui10ScrollView19OnViewLayoutUpdatedEb: 0xD61EFFA6
         - _ZN3paf2ui24ScrollBarTouchSoundParam9ParamNameEv: 0xD6244120
@@ -5198,7 +5198,7 @@ ScePaf:
         - _ZN3paf2ui10ScrollViewD0Ev: 0xF22A1F37
         - _ZN3paf2ui11AppIconBase15HandleTouchHeldEPNS0_5EventE: 0xF23A1CF1
         - _ZN3paf2ui16UIAnalogListener8OnUpdateEPKNS_11inputdevice4DataE: 0xF25D7622
-        - ScePafWidget_F25F3B4A: 0xF25F3B4A
+        - _ZN3paf2ui13SpeechBalloonC1EPNS0_6WidgetEPNS2_11CreateParamE: 0xF25F3B4A
         - _ZN3paf2ui10ScrollView15DelIgnoredChildEPNS0_6WidgetE: 0xF28CABFF
         - _ZN3paf2ui7TextBox6UpdateEv: 0xF299CD95
         - _ZN3paf2ui14ScrollBarParamC1Ev: 0xF2A1FEAA
