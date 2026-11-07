@@ -3412,7 +3412,7 @@ ScePaf:
         - _ZNK3paf2ui8CheckBox9IsInheritEPKc: 0x315650EC
         - _ZN3paf2ui16ProgressBarTouch21SetLabelSliderPosModeENS0_11ProgressBar12LabelPosModeE: 0x316164E1
         - _ZN3paf2ui9DirectBarC1EPNS0_6WidgetEPNS2_11CreateParamE: 0x31693D23
-        - ScePafWidget_317FAD4E: 0x317FAD4E
+        - _ZN3paf2ui25StateButtonBaseSoundParam9ParamNameEv: 0x317FAD4E
         - _ZN3paf2ui14ScrollViewBase12SetSnapPowerEf: 0x31892C5A
         - ScePafWidget_3193468E: 0x3193468E
         - ScePafWidget_3196DEE8: 0x3196DEE8
@@ -3687,7 +3687,7 @@ ScePaf:
         - _ZN3paf2ui9TextParamD2Ev: 0x4E6BF299
         - _ZNK3paf2ui11AppIconBase9IsInheritEPKc: 0x4E7DAB19
         - ScePafWidget_4EA317B8: 0x4EA317B8
-        - ScePafWidget_4ED17152: 0x4ED17152
+        - _ZNK3paf2ui25StateButtonBaseSoundParam12GetParamNameEv: 0x4ED17152
         - _ZN3paf2ui3Box26GetNextAdjustChildrenStateEbNS1_19ChildrenAdjustStateENS1_14ChildrenAdjustE: 0x4ED2143D
         - _ZN3paf2ui15ScrollViewTimerD0Ev: 0x4ED3C8BA
         - _ZN3paf2ui14ScrollViewBase20SetVerticalScrollBarEPNS0_9ScrollBarE: 0x4F0E8DCA
@@ -4039,7 +4039,7 @@ ScePaf:
         - _ZN3paf2ui4Text13GetCaretIndexERj: 0x7696D03E
         - _ZN3paf2ui6Widget9FindChildEPS1_i: 0x76BA63C3
         - _ZN3paf2ui8listview11ItemFactoryD1Ev: 0x76C04679
-        - ScePafWidget_76C1868C: 0x76C1868C
+        - _ZN3paf2ui15StateButtonBase13CreateDrawObjEi: 0x76C1868C
         - _ZN3paf2ui4Text13SetVisiblePosERKNS_4math2v2E: 0x7702161A
         - _ZN3paf2ui8filelist13SegmentSource13GetCellSourceEix: 0x7710E053
         - ScePafWidget_773A87E8: 0x773A87E8
@@ -4792,7 +4792,7 @@ ScePaf:
         - ScePafWidget_C6559467: 0xC6559467
         - _ZNK3paf2ui21ScrollBar2dStyleParam12GetParamNameEv: 0xC661BA1C
         - _ZN3paf2ui9AnimQueue6DoTickEPvS2_: 0xC6655EF4
-        - ScePafWidget_C673AF90: 0xC673AF90
+        - _ZN3paf2ui25StateButtonBaseSoundParamC2Ev: 0xC673AF90
         - _ZN3paf2ui11Environment15GetLastHitStackEPNS0_7HitInfoE: 0xC6EF8AD4
         - ScePafWidget_C71B79B2: 0xC71B79B2
         - _ZN3paf2ui12PageTurnBaseC2EPNS0_6WidgetEPNS2_11CreateParamE: 0xC768C122
@@ -5176,7 +5176,7 @@ ScePaf:
         - _ZN3paf2ui3Box19UpdateLayoutSizePreEb: 0xF04370DC
         - _ZN3paf2ui10ButtonBase17UpdateButtonStateEb: 0xF08F954E
         - _ZN3paf2ui10ButtonBase13SetButtonModeEj: 0xF09837F9
-        - ScePafWidget_F09C0FC2: 0xF09C0FC2
+        - _ZN3paf2ui25StateButtonBaseSoundParamC1Ev: 0xF09C0FC2
         - ScePafWidget_F0C646CD: 0xF0C646CD
         - _ZN3paf2ui13SlidingDrawer19SetMovableDirectionEj: 0xF0D05847
         - ScePafWidget_F1176ACC: 0xF1176ACC
