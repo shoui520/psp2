@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <scetypes.h>
 #include <kernel/threadmgr.h>
+#include <photoimport_dialog.h>
 #include <videoimport_dialog.h>
 
 #ifdef __cplusplus
@@ -177,10 +178,21 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogWorkSize, sizeof(CommonDialogWork) == 0x2
  * and what libcdlg adds. Only the draw priority SceCommonDialogMain reads is
  * laid out yet; the rest comes with libcdlg's dialogs.
  */
+/* photoimport_dialog.cpp: the caller's parameter, the result for GetResult and what the
+   plugin draws with */
 typedef struct CommonDialogPhotoImportParam {
-	SceUInt8 reserved[176];
+	ScePhotoImportDialogParam param;
+	ScePhotoImportDialogResult result;
+	SceCommonDialogColor bgColor;
+	int infobarShown;
 	int drawPriority;
+	/* the API call that holds the dialog (CommonDialogApiScope) */
+	char apiName[64];
 } CommonDialogPhotoImportParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogPhotoImportDrawPriority,
+			   __builtin_offsetof(CommonDialogPhotoImportParam, drawPriority) == 176);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogPhotoImportSize, sizeof(CommonDialogPhotoImportParam) == 244);
 
 typedef struct CommonDialogPhotoReviewParam {
 	SceUInt8 reserved[2260];
