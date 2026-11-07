@@ -17,6 +17,8 @@
 #include <photoreview_dialog.h>
 #include <videoimport_dialog.h>
 #include <np/np_common.h>
+#include <net.h>
+#include <libkernel/libkernel.h>
 
 #ifdef __cplusplus
 namespace paf {
@@ -251,10 +253,52 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNpEulaDrawPriority,
 			   __builtin_offsetof(CommonDialogNpEulaParam, drawPriority) == 28);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNpEulaSize, sizeof(CommonDialogNpEulaParam) == 36);
 
-typedef struct CommonDialogCrossControllerParam {
-	SceUInt8 reserved[172];
+/*
+ * cross_controller_dialog.cpp: the PS3 title the dialog connects to and the
+ * connection's state and result, which the plugin fills. OnInit constructs
+ * it in the work memory. The names are ours: nothing names the fields the
+ * plugin alone reads and writes.
+ */
+#ifdef __cplusplus
+/* placement new: the module has its own copy (no <new>) */
+void *operator new(SceSize size, void *ptr);
+
+class CommonDialogCrossControllerParam {
+public:
+	CommonDialogCrossControllerParam(const char *titleId, const char *appMinVer, bool isCancelable)
+	{
+		sessionId = -1;
+		sceClibMemset(&inaddr, 0, sizeof(inaddr));
+		errorCode = 0;
+		sceClibMemset(peerTitleId, 0, sizeof(peerTitleId));
+		sceClibMemset(ps3AppMinVer, 0, sizeof(ps3AppMinVer));
+		sceClibMemset(ps3TitleId, 0, sizeof(ps3TitleId));
+		sceClibMemset(peerName, 0, sizeof(peerName));
+		sceClibStrncpy(ps3AppMinVer, appMinVer, sizeof(ps3AppMinVer) - 1);
+		sceClibStrncpy(ps3TitleId, titleId, sizeof(ps3TitleId) - 1);
+		result = SCE_OK;
+		requestId = -1;
+		cancelable = isCancelable;
+	}
+
+	SceInt32 sessionId;
+	SceNetInAddr inaddr;
+	SceInt32 errorCode;
+	char peerTitleId[9 + 1];
+	char ps3AppMinVer[5 + 1];
+	char ps3TitleId[9 + 1];
+	char peerName[128];
+	SceUInt32 reserved;
 	int drawPriority;
-} CommonDialogCrossControllerParam;
+	SceInt32 result;
+	SceInt32 requestId;
+	bool cancelable;
+};
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCrossControllerDrawPriority,
+			   __builtin_offsetof(CommonDialogCrossControllerParam, drawPriority) == 172);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCrossControllerSize, sizeof(CommonDialogCrossControllerParam) == 188);
+#endif
 
 /* videoimport_dialog.cpp: the caller's parameter and the result for GetResult */
 typedef struct CommonDialogVideoImportParam {
