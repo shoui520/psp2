@@ -278,9 +278,43 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCompanionDrawPriority,
 			   __builtin_offsetof(CommonDialogCompanionParam, drawPriority) == 204);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCompanionSize, sizeof(CommonDialogCompanionParam) == 272);
 
+/* the remote OSK dialog's parameter and result: no SDK header has them; the
+   dialog's own parts only its plugin reads */
+typedef struct RemoteOskDialogParam {
+	SceUInt32 sdkVersion;
+	const SceWChar16 *title;
+	SceCommonDialogParam commonParam;
+	char reserved[35];
+	SceUInt8 padding;
+} RemoteOskDialogParam;
+
+typedef struct RemoteOskDialogResult {
+	SceInt32 result;
+	SceUInt8 dialogData[8];
+	char reserved[28];
+} RemoteOskDialogResult;
+
+#define REMOTE_OSK_DIALOG_TITLE_LENGTH		128
+
+/* remote_osk_dialog.cpp: the caller's parameter with its title, the plugin's
+   state and the result for GetResult */
 typedef struct CommonDialogRemoteOskParam {
-	SceUInt8 reserved[432];
+	/* Abort asked the plugin to close, and the plugin's result for it */
+	int abortRequested;
+	int abortResult;
+	bool infobarShown;
+	SceUInt8 reservedByte;
+	SceWChar16 title[REMOTE_OSK_DIALOG_TITLE_LENGTH];
+	SceUInt8 reservedTitle[2];
+	int paramSet;
+	RemoteOskDialogParam param;
+	RemoteOskDialogResult result;
 	int drawPriority;
+	char apiName[64];
 } CommonDialogRemoteOskParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogRemoteOskDrawPriority,
+			   __builtin_offsetof(CommonDialogRemoteOskParam, drawPriority) == 432);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogRemoteOskSize, sizeof(CommonDialogRemoteOskParam) == 500);
 
 #endif

@@ -193,6 +193,9 @@ typedef struct SceKernelSubbudgetInfo {
 } SceKernelSubbudgetInfo;
 
 int sceKernelGetSubbudgetInfo(int budget, SceKernelSubbudgetInfo *info);
+/* SceModulemgr's user export; the kernel's declaration is in modulemgr/modulemgr.h */
+struct SceKernelSystemSwVersion;
+int sceKernelGetSystemSwVersion(struct SceKernelSystemSwVersion *info);
 int sceKernelIsCDialogAvailable(void);
 int sceKernelIsGameBudget(void);
 int sceKernelCDialogSessionClose(void);
