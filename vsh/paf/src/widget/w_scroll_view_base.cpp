@@ -499,6 +499,9 @@ public:
 	   (MoveDir; name ours) */
 	__attribute__((noinline)) static uint32_t GetMoveDir(vector<TouchView> &views,
 							       bool masked);
+	/* the axes the scroll views the view is in may move along, without those they may not
+	   where masked is set (MoveDir; name ours) */
+	uint32_t GetParentMovableDir(ScrollViewBase *view, bool masked);
 
 	/* the touch begun on the views: where it is, their snap points, and the velocities they
 	   had as its first move (name ours) */
@@ -784,7 +787,7 @@ ScrollViewBase::ScrollViewBase(Widget *parent, CreateParam *param)
 	  m_anchor(NULL), m_enable_analog(true), m_limit_focus(true), m_snap_power(25.0f),
 	  m_preferred_snap_id(-1), m_snap_time(200.0f), m_key_step(4.0f),
 	  m_over_scroll_length(20.0f), m_bar_fade_time(200.0f), m_bar_reset(true),
-	  m_scroll_key(true), m_scroll_touch(true), m_scroll_analog(true), m_scroll_lock(false),
+	  m_jump(true), m_scroll_touch(true), m_scroll_analog(true), m_scroll_lock(false),
 	  m_ime_padding(false), m_ime_height(0.0f), m_scroll_ended(false), m_drag_dir(0),
 	  m_touch_mask_on(0), m_focus_wrap(false), m_focus_lock(false)
 {
@@ -4130,6 +4133,294 @@ float ScrollViewBase::CalcScrollTime(float distance, bool fixed)
 	float root = __builtin_sqrtf(1.0f > distance ? 1.0f : distance);
 
 	return time * __builtin_sqrtf(root);
+}
+
+void ScrollViewBase::ScePafWidget_A0538225(int32_t snap_id)
+{
+	using sce::Vectormath::Simd::floatInVec;
+
+	if (m_block_count != 0)
+		return;
+	if (m_focus_timer != NULL && !m_focus_timer->m_keep_layout)
+		return;
+	if (!(m_velocity.getImpl().getX() == floatInVec(0.0f) &&
+	      m_velocity.getImpl().getY() == floatInVec(0.0f)))
+		return;
+
+	TouchScrollSupplier &supplier = s_touch_scroll_supplier;
+	vector<TouchScrollSupplier::TouchView>::iterator it;
+
+	for (it = supplier.m_touch_views.begin(); it != supplier.m_touch_views.end(); ++it)
+		if (it->m_view == this)
+			break;
+	if (it != supplier.m_touch_views.end() && supplier.m_touch_state == 2)
+		return;
+
+	if (m_scroll_box_size.getImpl().getX() == floatInVec(0.0f) &&
+	    m_scroll_box_size.getImpl().getY() == floatInVec(0.0f)) {
+		MoveViewParent(math::v2(0.0f, 0.0f), NULL);
+		m_jump = true;
+	} else {
+		math::v4 pos = m_view_parent->GetPos(1, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		ScrollViewFocusTarget target =
+			ScePafWidget_7F653E08(math::v2(pos.getImpl().getXY()), snap_id);
+
+		if (target.m_snap_id != -1 &&
+		    (m_focus_timer == NULL ||
+		     m_focus_timer->m_type != ScrollViewTimer::TIMER_TYPE_MOVE))
+			SendEvent(CB_SCROLL_VIEW_BASE_SNAP_POINT_DETECTED, target.m_snap_id, 0, 0, 0);
+		if (target.m_dir != MoveDir_None) {
+			bool entered = Layouter::IsEnter();
+
+			if (entered)
+				Layouter::Finish();
+			if (m_preferred_snap_id == -1 || target.m_snap_id != m_preferred_snap_id) {
+				float time = CalcScrollTime(length(target.m_move.getImpl()),
+							    target.m_snap_id != -1);
+
+				if (m_jump || time == 0.0f ||
+				    (target.m_snap_id == -1 && m_movable_dir == MoveDir_XY)) {
+					m_focus_timer = NULL;
+					MoveViewParent(target.m_pos, NULL);
+				} else {
+					ScrollViewTimer *timer = new ScrollViewTimer(
+						this, ScrollViewTimer::TIMER_TYPE_MOVE, time,
+						Timer::FUNC_QUART_OUT, 0, 0xFFFF, NULL, -1);
+
+					m_focus_timer = timer;
+					timer->m_userdata = target.m_snap_id;
+					MoveViewParent(target.m_pos, m_focus_timer);
+				}
+				if (target.m_snap_id != -1) {
+					SendEvent(CB_SCROLL_VIEW_BASE_SNAPPED, target.m_snap_id, 0, 0, 0);
+					ScePafWidget_2B1A1493(this, SOUND_SNAP);
+				}
+			} else {
+				if (m_preferred_snap_time > 0.0f) {
+					ScrollViewTimer *timer = new ScrollViewTimer(
+						this, ScrollViewTimer::TIMER_TYPE_MOVE,
+						m_preferred_snap_time, m_preferred_snap_func, 0, 0xFFFF,
+						NULL, -1);
+
+					m_focus_timer = timer;
+					timer->m_userdata = target.m_snap_id;
+					MoveViewParent(target.m_pos, m_focus_timer);
+				} else {
+					m_focus_timer = NULL;
+					MoveViewParent(target.m_pos, NULL);
+				}
+				SendEvent(CB_SCROLL_VIEW_BASE_PREFER_SNAPPED, target.m_snap_id, 0, 0, 0);
+			}
+			if (entered)
+				Layouter::Enter();
+		} else if (m_scroll_flags != 0 && target.m_snap_id != -1) {
+			SendEvent(CB_SCROLL_VIEW_BASE_SNAPPED, target.m_snap_id, 0, 0, 0);
+			ScePafWidget_2B1A1493(this, SOUND_SNAP);
+		}
+		m_jump = false;
+	}
+	m_scroll_flags = 0;
+}
+
+void ScrollViewBase::UpdateScrollRange()
+{
+	using sce::Vectormath::Simd::floatInVec;
+	using sce::Vectormath::Simd::Aos::Vector2;
+	using sce::Vectormath::Simd::Aos::Vector4;
+
+	if (m_block_count != 0 || m_bar_controller == NULL)
+		return;
+
+	math::v4 pos = m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	Vector2 focus = pos.getImpl().getXY();
+	/* the view's box among the contents, and the scroll box grown to hold it: left, top,
+	   right and bottom */
+	Vector4 view = m_view_half.getImpl() - Vector4(focus, focus);
+	Vector4 range = m_scroll_box.getImpl();
+
+	if (range.getX() > view.getX())
+		range.setX(view.getX());
+	if (view.getY() > range.getY())
+		range.setY(view.getY());
+	if (view.getZ() > range.getZ())
+		range.setZ(view.getZ());
+	if (range.getW() > view.getW())
+		range.setW(view.getW());
+
+	math::v2 value(Vector2(view.getX() - range.getX(), range.getY() - view.getY()));
+	math::v2 max(Vector2(range.getZ() - range.getX(), range.getY() - range.getW()));
+	/* the bars fade out within a tick */
+	bool fade_now = false;
+
+	if (m_bar_fade_time > 0.0f)
+		fade_now = m_bar_fade_time <= Timer::s_tick_unit;
+
+	TouchScrollSupplier &supplier = s_touch_scroll_supplier;
+	bool touched = false;
+
+	if (supplier.m_touch_state != 3) {
+		vector<TouchScrollSupplier::TouchView>::iterator it;
+
+		for (it = supplier.m_touch_views.begin(); it != supplier.m_touch_views.end(); ++it)
+			if (it->m_view == this)
+				break;
+		if (it != supplier.m_touch_views.end() && supplier.m_touch_views.size() != 0 &&
+		    supplier.m_touch_views.begin()->m_view->m_touch_captures.size() != 0)
+			touched = true;
+	}
+
+	Vector2 now = m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f))
+			      .getImpl()
+			      .getXY();
+	Vector2 target = m_view_parent->GetPos(1, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f))
+				 .getImpl()
+				 .getXY();
+	bool moving = !(now.getX() == target.getX() && now.getY() == target.getY());
+	ScrollViewBarRange bar_range;
+
+	bar_range.m_horizontal_bar = m_horizontal_bar;
+	bar_range.m_vertical_bar = m_vertical_bar;
+	bar_range.m_value = value;
+	bar_range.m_max = max;
+	bar_range.m_view_size = m_view_size;
+	bar_range.m_no_fade = (moving || touched) && !fade_now;
+	bar_range.m_fade_time = m_bar_fade_time;
+	bar_range.m_reset = false;
+	if (m_bar_reset && ((max.getImpl().getX() > m_view_size.getImpl().getX()).getAsBool() ||
+			    (max.getImpl().getY() > m_view_size.getImpl().getY()).getAsBool())) {
+		m_bar_reset = false;
+		bar_range.m_reset = true;
+		if (!fade_now)
+			bar_range.m_fade_time = m_bar_fade_time * 20.0f;
+	}
+	m_bar_controller->UpdateRange(bar_range);
+}
+
+void ScrollViewBase::GetBarLayout(ScrollViewBarLayout &layout)
+{
+	const math::v4 &padding = m_padding_used;
+
+	layout.m_horizontal_bar = m_horizontal_bar;
+	layout.m_vertical_bar = m_vertical_bar;
+	layout.m_view_size = m_view_size;
+	/* the horizontal bar runs between the left and the right padding, the vertical one
+	   between the top and the bottom */
+	layout.m_horizontal_margin =
+		m_horizontal_bar_margin +
+		math::v4(padding.extract_x(), padding.extract_z(), 0.0f, 0.0f);
+	layout.m_vertical_margin =
+		m_vertical_bar_margin + math::v4(padding.extract_y(), padding.extract_w(), 0.0f, 0.0f);
+	layout.m_movable_x = (m_movable_dir & MoveDir_X) != 0;
+	layout.m_movable_y = (m_movable_dir & MoveDir_Y) != 0;
+}
+
+void ScrollViewBase::UpdateScrollLayout()
+{
+	if (m_bar_controller != NULL) {
+		ScrollViewBarLayout layout;
+
+		layout.m_horizontal_bar = NULL;
+		layout.m_vertical_bar = NULL;
+		layout.m_view_size = math::v2(0.0f, 0.0f);
+		layout.m_horizontal_margin = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+		layout.m_vertical_margin = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+		layout.m_movable_x = false;
+		layout.m_movable_y = false;
+		GetBarLayout(layout);
+		m_bar_controller->UpdateLayout(layout);
+	}
+}
+
+void ScrollViewBase::UpdateMovableDirection()
+{
+	math::v2 size = m_view_size;
+	math::v2 range = m_scroll_box_size;
+	/* the axes the contents are longer than the view along */
+	uint32_t dir = range.getImpl().getY() > size.getImpl().getY() ? MoveDir_Y : MoveDir_None;
+
+	if (range.getImpl().getX() > size.getImpl().getX())
+		dir |= MoveDir_X;
+	/* m_movable_dir_on holds the axes taken out */
+	m_movable_dir_y = dir & ~m_movable_dir_on;
+	m_movable_dir = (m_move_dir | dir) & ~m_movable_dir_on;
+}
+
+void ScrollViewBase::MoveViewParent(const math::v2 &pos, Timer *timer)
+{
+	m_view_parent->KillAnim(0x10000);
+	m_view_parent->SetPos(math::v4(sce::Vectormath::Simd::Aos::Vector4(pos.getImpl(), 0.0f, 0.0f)), timer,
+			      0x10000, 0, 0, 0);
+	if (m_focus_timer != timer)
+		m_focus_timer = NULL;
+}
+
+void ScrollViewBase::OnChildRegistered(Widget *child)
+{
+}
+
+void ScrollViewBase::OnChildRemoved(Widget *child)
+{
+}
+
+void ScrollViewBase::OnDestroyTimer(ScrollViewTimer *timer)
+{
+	if (m_focus_timer == timer) {
+		bool keep_layout = timer->m_keep_layout;
+
+		m_focus_timer = NULL;
+		if (!keep_layout && m_layouter != NULL)
+			m_layouter->SetDirty(1);
+	}
+}
+
+void ScrollViewBase::CBScrollBarChanged(int32_t type, Handler *self, Event *e, void *data)
+{
+	((ScrollViewBase *)data)->OnScrollBarChanged(type, self, e);
+}
+
+void ScrollViewBase::OnScrollBarChanged(int32_t type, Handler *self, Event *e)
+{
+	ScrollBar *bar = (ScrollBar *)self;
+	float value = bar->GetValue();
+	math::v4 box = m_scroll_box;
+	math::v4 size = m_size;
+	/* the view's focus where the bar's value is 0 */
+	float left = -box.extract_x() - size.extract_x() * 0.5f;
+	float top = size.extract_y() * 0.5f - box.extract_y();
+	math::v2 pos = GetViewFocus() * -1.0f;
+
+	switch (bar->m_scroll_type) {
+	case ScrollBar::SCROLL_TYPE_HORIZONTAL:
+		pos.set_x(left - value);
+		break;
+	case ScrollBar::SCROLL_TYPE_VERTICAL:
+		pos.set_y(top + value);
+		break;
+	}
+	MoveViewParent(pos, NULL);
+}
+
+uint32_t TouchScrollSupplier::GetParentMovableDir(ScrollViewBase *view, bool masked)
+{
+	uint32_t dir = ScrollViewBase::MoveDir_None;
+	ScrollViewBase *parent;
+
+	if (masked) {
+		for (parent = GetParentScrollView(view); parent != NULL;
+		     parent = GetParentScrollView(parent)) {
+			dir |= parent->m_movable_dir & ~parent->m_movable_dir_off;
+			if (dir == ScrollViewBase::MoveDir_XY)
+				break;
+		}
+	} else {
+		for (parent = GetParentScrollView(view); parent != NULL;
+		     parent = GetParentScrollView(parent)) {
+			dir |= parent->m_movable_dir;
+			if (dir == ScrollViewBase::MoveDir_XY)
+				break;
+		}
+	}
+	return dir;
 }
 
 }

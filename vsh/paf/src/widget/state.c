@@ -458,21 +458,6 @@ int _ZN3paf2ui7TextBox11GetImeParamERNS1_8ImeParamE(const uint8_t *self, uint8_t
 	return 0;
 }
 
-uint8_t *_ZN3paf2ui14ScrollViewBase14OnDestroyTimerEPNS0_15ScrollViewTimerE(uint8_t *self, const uint8_t *value)
-{
-	if (*(const uint8_t **)(self + 920) == value) {
-		uint32_t state = value[36];
-
-		*(uint32_t *)(self + 920) = 0;
-		if (!state) {
-			self = *(uint8_t **)(self + 532);
-			if (self)
-				self[12] |= 1;
-		}
-	}
-	return self;
-}
-
 uint8_t *_ZN3paf2ui6Widget9FindChildEPS1_i(uint8_t *self, uint8_t *value, int32_t mode)
 {
 	uint8_t *node;
@@ -823,14 +808,6 @@ int ScePafWidget_A4E53390(uint8_t *self)
 
 	self[992] = 1;
 	return ((int (*)(uint8_t *))*(void **)(vtable + 560))(self);
-}
-
-int _ZN3paf2ui14ScrollViewBase18CBScrollBarChangedEiPNS0_7HandlerEPNS0_5EventEPv(int a1, int a2, int a3, uint8_t *self)
-{
-	uint8_t *vtable = *(uint8_t **)self;
-
-	return ((int (*)(uint8_t *, int, int, int))*(void **)(vtable + 592))(
-		self, a1, a2, a3);
 }
 
 __attribute__((noinline)) int _ZNK3paf2ui12PageTurnBase9IsInheritEPKc(const void *self, const char *tag)

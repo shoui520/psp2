@@ -54,6 +54,11 @@ public:
 		m_dirty |= val;
 	}
 
+	/* the layout pass left and entered again, and whether one is under way (s_enter_layout) */
+	static void Finish();
+	static void Enter();
+	static bool IsEnter();
+
 	static bool s_enter_layout;
 
 protected:

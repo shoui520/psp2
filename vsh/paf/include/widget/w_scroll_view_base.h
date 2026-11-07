@@ -302,6 +302,9 @@ public:
 	virtual void SetViewBox(const math::v4 &view_box);
 	/* the padding between the view box and the contents' ends (name ours) */
 	virtual void SetPadding(const math::v4 &padding);
+	/* the view moved to where its focus goes (ScePafWidget_7F653E08) from where it is: at
+	   once, or over a timer by the distance, snapped and the snap reported; nothing while it
+	   is blocked, moving by a timer of its own, by its velocity, or dragged (no name found) */
 	virtual void ScePafWidget_A0538225(int32_t snap_id);
 	virtual void UpdateScrollRange();
 	virtual void GetBarLayout(ScrollViewBarLayout &layout);
@@ -462,6 +465,8 @@ public:
 	uint32_t m_movable_dir_off;
 	/* the axes it is set to move along (MoveDir; name ours) */
 	uint32_t m_move_dir;
+	/* a snap is to be reported where the focus update finds the view on a snap point
+	   already; cleared by every update (meaning partly open) */
 	uint32_t m_scroll_flags;
 	/* its world rotation when the scroll range was last updated */
 	math::quaternion m_world_rot_pre;
@@ -494,7 +499,9 @@ public:
 	/* the scroll bars' fade time */
 	float m_bar_fade_time;
 	bool m_bar_reset;
-	bool m_scroll_key;
+	/* the next focus update moves the view at once, without a timer (set while it has no
+	   scroll range; name ours) */
+	bool m_jump;
 	/* the view scrolls by touch (BeginTouch reads it) */
 	bool m_scroll_touch;
 	bool m_scroll_analog;
