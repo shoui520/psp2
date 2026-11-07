@@ -92,7 +92,7 @@ public:
 	virtual void UpdateSize();
 	virtual void Update();
 	virtual int32_t OnDraw(graph::DrawInfo &info);
-	virtual int32_t ApplyDrawObjState(int32_t arg);
+	virtual int32_t ApplyDrawObjState(graph::DrawInfo &info);
 	virtual void OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg);
 	virtual void OnPadCaptureChanged(bool captured, int32_t group, uint32_t port, uint32_t key);
 	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,

@@ -655,13 +655,12 @@ int32_t ButtonBase::OnDraw(graph::DrawInfo &info)
 }
 
 /* the glow drawn over the widget in its own color and alpha */
-int32_t ButtonBase::ApplyDrawObjState(int32_t arg)
+int32_t ButtonBase::ApplyDrawObjState(graph::DrawInfo &info)
 {
 	graph::DrawObj *glow = GetDrawObj(m_glow_obj);
 
 	if (glow != NULL)
-		glow->OnDraw(m_world_matrix, m_color, m_color_alpha * m_meta_a_sum * m_show_a_sum,
-			     *(graph::DrawInfo *)arg);
+		glow->OnDraw(m_world_matrix, m_color, m_color_alpha * m_meta_a_sum * m_show_a_sum, info);
 	return 0;
 }
 

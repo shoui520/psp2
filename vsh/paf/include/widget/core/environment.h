@@ -44,9 +44,17 @@ public:
 		return s_root_screen;
 	}
 
-	/* the surface made the target of the draws that follow, and the draws finished */
-	void OnTarget();
+	/* the surface made the target of the draws that follow, 0 when it is not cleared yet;
+	   cleared; and the draws finished */
+	int32_t OnTarget();
+	void OnClear();
 	void OnFinish();
+	/* whether the surface is the size of the viewport (0x81147d50; name ours) */
+	bool IsFullSize();
+	/* the rectangle in the surface's coordinates, in its pixels (0x81147baa) and in the
+	   pixels it shows at (0x81147c68) (names ours) */
+	math::rect ToSurfaceRect(const math::rect &rect);
+	math::rect ToPixelRect(const math::rect &rect);
 
 	intrusive_ptr<graph::Surface> GetSurface()
 	{
@@ -147,6 +155,16 @@ public:
 	void *m_touch;
 };
 
+/* the widget drawn as the focus cursor, and the widget it is on (names ours) */
+class FocusCursor {
+public:
+	/* whether the cursor is moving or resizing (0x81142952) */
+	bool IsMoving();
+
+	Widget *m_cursor;
+	Widget *m_target;
+};
+
 class Environment {
 public:
 	typedef int32_t (*SoundCallback)(const char *buffer1, uint32_t size1, const char *buffer2,
@@ -173,6 +191,10 @@ public:
 	void ApplyDisplayAreaSettings();
 	/* the display area scale read again, once it has been applied (name ours) */
 	void UpdateDisplayAreaSettings();
+	/* nothing is drawn now (0x8113dcca; name ours) */
+	bool IsDrawSkipped();
+	/* its camera's roll, 0 without one (0x8113dce2; name ours) */
+	float GetRollScreen();
 
 	/* the gesture listener of the touch port, NULL for another port (inline in Sony's callers,
 	   name ours) */
@@ -222,10 +244,22 @@ public:
 	Widget *m_top_modal_widget;
 	/* RegisterModalWidget's widgets (name ours) */
 	ModalWidgetList m_modal_widgets;
-	uint8_t reserved3b[0x50];
+	uint8_t reserved3b[8];
+	/* the scene the display area scale is applied to (Camera's DrawScene; name ours) */
+	Widget *m_display_area_scene;
+	uint8_t reserved3c[0x44];
 	/* set before the focus is first shown */
 	int32_t m_focus_mode;
-	uint8_t reserved4[0x178];
+	uint8_t reserved4[8];
+	/* the focus cursor and the widget it is on */
+	FocusCursor m_focus_cursor;
+	uint8_t reserved4a[0x78];
+	/* the focus cursor is drawn with its widget only while it moves or the widget turns its
+	   focus directions off (Camera's draw walk; name ours) */
+	uint8_t reserved4b : 4;
+	bool m_focus_cursor_moving_only : 1;
+	uint8_t reserved4c : 3;
+	uint8_t reserved4d[0xef];
 	/* the events passed on at the next frame (names after ScePaf-RE) */
 	EventQueue m_ev_queue;
 	list<Event> m_ev_subrouting;

@@ -649,8 +649,9 @@ public:
 	}
 
 	virtual int32_t OnDraw(graph::DrawInfo &info);
-	/* Button hands its draw object the widget's state */
-	virtual int32_t ApplyDrawObjState(int32_t arg);
+	/* called after its children are drawn, when OnDraw returned 1 (Camera's draw walk);
+	   Button draws its glow there */
+	virtual int32_t ApplyDrawObjState(graph::DrawInfo &info);
 
 	/* a touch of the port and ID has been captured (arg 0) or let go (names ours) */
 	virtual void OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg)
@@ -861,6 +862,16 @@ public:
 		return m_world_matrix;
 	}
 
+	/* culled or not, its children with it (Sony's copy out of line, 0x81225744; name
+	   ours) */
+	void SetCulled(bool culled)
+	{
+		m_culled = culled;
+		SetFitToScene(culled);
+		for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
+			(*it)->SetCulled(culled);
+	}
+
 	/* the hit box's mode, and its size and center offset unless both are zero (inline in
 	   Sony's callers, name ours) */
 	/* the gestures of the type taken off the pad port, or off the touch port's touch
@@ -887,6 +898,11 @@ public:
 	/* marks what its next update recalculates */
 	void SetUpdateParam(uint32_t param);
 	math::v4 GetRot(int32_t opt, Widget *ref, const math::v4 &off_rot, int32_t option);
+	/* turned to look at the target's position plus the offset, with up taken from ref
+	   (export 88A433CC; argument names ours) */
+	int32_t LookAt(Widget *target, const math::v4 &offs, Widget *ref, const math::v4 &up);
+	/* the rectangle it clips its children to */
+	math::rect CalcClipRect();
 	math::v4 GetAlignOffsetToCenter(int32_t opt);
 	Camera *GetCamera() const;
 
@@ -1064,7 +1080,13 @@ public:
 	uint32_t m_modal_mode : 4;
 	uint32_t m_modal_option : 4;
 	uint32_t reserved3x1 : 8;
-	uint8_t reserved3x2[2];
+	/* how the camera clips it and its children (1 the clip stack; 2 and 3 the scissor
+	   snapped inward and to the nearest pixel, else outward), and where it is drawn (1
+	   into a surface of its scene's list) (Camera's draw walk; names ours) */
+	uint32_t m_clip_mode : 4;
+	uint32_t reserved3x3 : 4;
+	uint32_t m_draw_target : 4;
+	uint32_t reserved3x4 : 4;
 	/* what the touch event slots set (names after them) */
 	bool m_touch_front_event : 1;
 	bool m_touch_rear_event : 1;
@@ -1075,23 +1097,30 @@ public:
 	bool m_focus_in_group : 1;
 	bool reserved3y4 : 1;
 	bool reserved3y5 : 1;
-	bool reserved3y6 : 1;
+	/* a list view's drag has begun (ListView::BeginDrag sets it; name ours) */
+	bool m_drag_begun : 1;
 	/* none of its focus directions (name ours) */
 	bool m_focus_direction_off : 1;
 	bool reserved3z1 : 1;
-	bool reserved3z2 : 1;
-	bool reserved3z3 : 1;
+	/* the focus code takes it as a focus target (Widget::HandleFocusSwitchEvent; name ours) */
+	bool m_focus_target : 1;
+	/* a scene or camera, which the touch walk passes over (name ours) */
+	bool m_not_hit_target : 1;
 	bool reserved3z4 : 1;
 	bool reserved3z5 : 1;
 	bool reserved3z6 : 1;
-	bool reserved3z7 : 1;
+	/* drawn before its children, not after (Camera's draw walk; name ours) */
+	bool m_draw_before_children : 1;
 	/* its parent writes it: WriteWidget writes only its children; a box does not lay it out
 	   (its exclusive list) (names after ScePaf-RE) */
 	bool m_parent_protected : 1;
 	/* made by a template (TemplateOpen); WriteWidget leaves it out */
 	bool m_under_template : 1;
-	bool reserved3r : 1;
-	bool reserved3s : 1;
+	/* it takes every event while its scene is in debug mode 2 or 3 (GrabEventRouting; name
+	   ours) */
+	bool m_debug_events : 1;
+	/* its clip and scissor rectangles pushed around its children (name ours) */
+	bool m_clip_children : 1;
 	bool reserved3t : 1;
 	/* its draw objects draw to a surface (name after SurfaceDrawParam's) */
 	bool m_surface_draw : 1;
@@ -1106,10 +1135,12 @@ public:
 	bool reserved3e : 1;
 	bool reserved3f : 1;
 	bool reserved3g : 1;
-	bool reserved3h : 1;
+	/* outside the camera's view, not drawn (Camera::add_obj; name ours) */
+	bool m_culled : 1;
 	/* what SetFitToScene sets */
 	bool m_fit_to_scene : 1;
-	bool reserved3j : 1;
+	/* drawn by the camera also when it is culled (name ours) */
+	bool m_draw_always : 1;
 	bool reserved3k : 1;
 	bool reserved3l : 1;
 	bool m_bound_keycode : 1;
@@ -1287,6 +1318,11 @@ float ScePafWidget_44B22ACA(paf::ui::Widget *widget, paf::common::transition::Ty
 /* Hide(common::transition::Type, float delay, HandlerCB, void *): hides it the same way */
 float ScePafWidget_F1176ACC(paf::ui::Widget *widget, paf::common::transition::Type type,
 			    float delay, paf::ui::HandlerCB cb, void *data);
+/* the widget put on its environment's modal list (on) or taken off it; 0 when it already was,
+   -1 without an environment or when it cannot be added */
+int32_t ScePafWidget_0253DC9C(paf::ui::Widget *widget, bool on);
+/* the widget or the nearest of its parents below its scene that has a focus root, or NULL */
+paf::ui::Widget *ScePafWidget_CFA1EB7A(paf::ui::Widget *widget);
 /* makes the widget modal in the mode (0, 1), or not (2), with the option */
 int32_t ScePafWidget_42C5A4D4(paf::ui::Widget *widget, int32_t mode, int32_t option);
 /* the widget's adjust parameter, held by reference, and its size updated */

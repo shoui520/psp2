@@ -75,7 +75,7 @@ public:
 		: m_depth(0), m_name(name)
 	{
 		m_stack.resize(capacity);
-		Push();
+		PushEntry();
 	}
 
 	~MatrixStack()
@@ -83,7 +83,15 @@ public:
 		--m_depth;
 	}
 
-	void Push()
+	/* the top entry pushed again; the first one the identity (Sony's build keeps it out of
+	   line, 0x81225680, and inline in the constructor) */
+	__attribute__((noinline)) void Push()
+	{
+		PushEntry();
+	}
+
+	/* Push's body (name ours) */
+	__attribute__((always_inline)) void PushEntry()
 	{
 		Entry &top = m_stack[m_depth];
 

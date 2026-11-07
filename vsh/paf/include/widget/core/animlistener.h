@@ -79,6 +79,56 @@ public:
 	uint32_t m_slot_type : 8;
 };
 
+/* how an AnimListenerF1 reads and writes the float it animates: the animation type, and the
+   two callbacks (names after AnimPropertyV4's) */
+class AnimPropertyF1 {
+public:
+	typedef void (*SetFunc)(AnimListener *anim, float data);
+	typedef float (*GetFunc)(AnimListener *anim);
+
+	uint32_t m_type;
+	SetFunc m_cb_set;
+	GetFunc m_cb_get;
+};
+
+/* animates a float from m_anim_data[0] to m_anim_data[1] through its property (Sony's name
+   from its vtable; members after AnimListenerV4's) */
+class AnimListenerF1 : public AnimListener {
+public:
+	AnimListenerF1(Timer *t, Widget *w, float src, float dst, AnimPropertyF1 *prop,
+		       AnimCB cb_fin, void *data)
+		: AnimListener(t, w, NULL, cb_fin, data), m_herm_data(NULL), m_prop(prop)
+	{
+		m_anim_data[0] = src;
+		m_anim_data[1] = dst;
+		if (m_prop != NULL)
+			m_type = m_prop->m_type;
+		m_semantic = SEMANTIC_FLOAT;
+	}
+
+	virtual ~AnimListenerF1()
+	{
+		if (m_herm_data != NULL)
+			delete[] m_herm_data;
+	}
+
+	virtual void OnTick(void *data1, void *data2);
+
+	virtual float *GetTargetF()
+	{
+		return &m_anim_data[1];
+	}
+
+	virtual float *GetStartF()
+	{
+		return &m_anim_data[0];
+	}
+
+	float m_anim_data[2];
+	float *m_herm_data;
+	AnimPropertyF1 *m_prop;
+};
+
 /* how an AnimListenerV4 reads and writes what it animates: the animation type, and the two
    callbacks */
 class AnimPropertyV4 {

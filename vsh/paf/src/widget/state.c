@@ -919,13 +919,6 @@ int _ZN3paf2ui14ScrollViewBase18CBScrollBarChangedEiPNS0_7HandlerEPNS0_5EventEPv
 		self, a1, a2, a3);
 }
 
-int _ZNK3paf2ui6Camera9IsInheritEPKc(const void *self, const char *tag)
-{
-	if (tag == "camera")
-		return 1;
-	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
-}
-
 __attribute__((noinline)) int _ZNK3paf2ui12PageTurnBase9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "pageturn_base")

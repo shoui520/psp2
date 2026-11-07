@@ -9,6 +9,7 @@
 #include <math/ngp/v4.h>
 #include <widget/core/widget.h>
 #include <widget/core/environment.h>
+#include <graphics/drawobj/draw_info.h>
 
 namespace paf {
 namespace ui {
@@ -50,6 +51,14 @@ public:
 	/* called with the widget the debug mode focuses */
 	typedef int32_t (*DebugFocusCB)(Widget *focus, Widget *prev, void *userdata);
 
+	/* a widget drawn into a surface, and where the camera's draw walk reached it (names
+	   ours) */
+	class SurfaceWidget {
+	public:
+		graph::DrawInfo m_info;
+		Widget *m_widget;
+	};
+
 	/* a page in the environment, drawn at the priority (export 0xECB1A10D) */
 	Scene(Environment *env, int32_t priority, CreateParam *param, EnvironmentParam *env_param,
 	      int32_t graphics_flag);
@@ -59,9 +68,12 @@ public:
 	/* the screen margins, turned with the camera's roll */
 	math::v4 GetRolledMargin();
 	void SetDebugMode(uint32_t mode);
+	void SetCamera(Camera *camera);
+	/* whether it shows scaled by the display area scale (0x811150cc; name ours) */
+	bool IsDisplayAreaScaled();
 
-	/* whether the camera's roll turns the margins */
-	int32_t m_use_camera;
+	/* the screen it is drawn to (its camera's Setup and draws use it; name ours) */
+	Screen *m_screen;
 	Camera *m_camera;
 	/* what a widget's depth in the scene is ordered by first (ButtonBase::Update; name ours) */
 	uint32_t m_scene_priority;
@@ -72,13 +84,25 @@ public:
 	/* each layer's weight of a widget's priority in its depth (Widget::GetLayerDepth; name
 	   ours) */
 	uint64_t m_layer_weight[16];
-	uint8_t reserved1b[4];
+	uint8_t reserved1b[2];
+	/* its camera scissors the draws to the scene's own rectangle (Camera's DrawScene; name
+	   ours) */
+	bool m_scissor_to_scene;
+	uint8_t reserved1c;
 	/* the resolutions it lays out for */
 	EnvironmentParam *m_env_param;
 	uint8_t reserved2a;
 	/* the font flags its widgets' draw objects take (name after SurfaceDrawParam's) */
 	int8_t m_font_flags;
-	uint8_t reserved2[0x26];
+	uint8_t reserved2[2];
+	/* the widgets drawn into a surface, with where the camera's walk reached them (names
+	   ours) */
+	list<SurfaceWidget> m_surface_widgets;
+	uint8_t reserved2b[0x14];
+	/* whether it shows scaled by the display area scale: 0 as the environment says, 1
+	   scaled, more not (name ours) */
+	uint8_t m_display_area_mode;
+	uint8_t reserved2c[3];
 	/* the debug mode and its state (names after ScePaf-RE) */
 	uint32_t m_debug_mode;
 	Widget *m_debug_focus;

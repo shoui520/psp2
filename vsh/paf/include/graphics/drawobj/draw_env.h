@@ -11,6 +11,7 @@
 #include <common/common_internal.h>
 #include <common/shared_ptr.h>
 #include <graphics/camera.h>
+#include <graphics/drawobj/draw_info.h>
 #include <graphics/effects/background.h>
 #include <graphics/effects/fft_wave_surface.h>
 #include <graphics/effects/param.h>
@@ -220,15 +221,6 @@ class PageTurnMesh;
 
 class PageTurnRenderer;
 
-/* where a widget's draw objects queue their draws: the order counted up per draw, under the
-   widget's layer and sub-layer (names ours) */
-class DrawInfo {
-public:
-	int32_t m_layer;
-	int32_t m_reserved;
-	int32_t m_order;
-	int32_t m_sub_layer;
-};
 
 /* a draw queued in a layer, which the layer calls when it draws (names ours) */
 class DrawLayerCall {
@@ -425,6 +417,23 @@ public:
 
 		call->m_queued = true;
 		m_entries.push_back(Entry(key, call));
+		m_used += sizeof(DrawLayerFuncCall<Arg>);
+	}
+
+	/* a function called with the argument, under a key of two words */
+	template<class Arg>
+	void Push(uint32_t kind, uint32_t word, void (*func)(const Arg &arg), const Arg &arg)
+	{
+		if (m_state != 1 && m_state != 0)
+			return;
+		if (m_used + sizeof(DrawLayerFuncCall<Arg>) > m_buffer.size())
+			common_internal::on_error();
+
+		DrawLayerFuncCall<Arg> *call =
+			new (&m_buffer[m_used]) DrawLayerFuncCall<Arg>(func, arg);
+
+		call->m_queued = true;
+		m_entries.push_back(Entry(kind, word, call));
 		m_used += sizeof(DrawLayerFuncCall<Arg>);
 	}
 
