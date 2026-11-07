@@ -16,6 +16,7 @@
 #include <photoimport_dialog.h>
 #include <photoreview_dialog.h>
 #include <videoimport_dialog.h>
+#include <np/np_common.h>
 
 #ifdef __cplusplus
 namespace paf {
@@ -234,10 +235,21 @@ COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCameraImportDrawPriority,
 			   __builtin_offsetof(CommonDialogCameraImportParam, drawPriority) == 424);
 COMMON_DIALOG_LAYOUT_CHECK(CommonDialogCameraImportSize, sizeof(CommonDialogCameraImportParam) == 492);
 
+/* npeula_dialog.cpp: the plugin's result and what it needs of the
+   caller's parameter */
 typedef struct CommonDialogNpEulaParam {
-	SceUInt8 reserved[28];
+	SceInt32 result;
+	SceInt32 errorCode;
+	SceNpCommunicationId npCommId;
+	SceUInt32 version;
+	SceUInt32 resultVersion;
 	int drawPriority;
+	SceUInt8 option;
 } CommonDialogNpEulaParam;
+
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNpEulaDrawPriority,
+			   __builtin_offsetof(CommonDialogNpEulaParam, drawPriority) == 28);
+COMMON_DIALOG_LAYOUT_CHECK(CommonDialogNpEulaSize, sizeof(CommonDialogNpEulaParam) == 36);
 
 typedef struct CommonDialogCrossControllerParam {
 	SceUInt8 reserved[172];
