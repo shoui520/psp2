@@ -209,6 +209,9 @@ public:
 	typedef int32_t (*SoundCallback)(const char *buffer1, uint32_t size1, const char *buffer2,
 					 uint32_t size2, int32_t samplerate, float vol,
 					 bool ignore_init, void *data);
+
+	/* the focus cursor hidden on the port (-1: all) */
+	int32_t HideFocus(int32_t port);
 	typedef Widget *(*CreateWidgetCallback)(Widget *parent, const char *type,
 						const IDParam &id, const IDParam &style,
 						void *data);
@@ -319,7 +322,12 @@ public:
 	uint8_t reserved4c : 3;
 	uint8_t reserved4d[0x3f];
 	math::v4 m_rear_touch_move;
-	uint8_t reserved4f[0xa0];
+	uint8_t reserved4f[0x50];
+	/* set and cleared with m_focus_cursor_moving_only (ListView's focus; name ours) */
+	uint8_t reserved4g : 4;
+	bool m_rear_focus_cursor_moving_only : 1;
+	uint8_t reserved4h : 3;
+	uint8_t reserved4i[0x4f];
 	/* the events passed on at the next frame (names after ScePaf-RE) */
 	EventQueue m_ev_queue;
 	list<Event> m_ev_subrouting;
@@ -339,7 +347,10 @@ public:
 	uint8_t reserved5d[0xf00];
 	/* the widgets the touches are on (TouchScrollSupplier's checks; name ours) */
 	list<HitInfo> m_touch_hits;
-	uint8_t reserved5c[0x32];
+	/* the widgets IsHitStackParent takes as the hit stack's parents, cleared with
+	   m_touch_hits (name after IsHitStackParent) */
+	list<Widget *> m_hit_stack;
+	uint8_t reserved5c[0x26];
 	/* each frame waits for the GPU once it is drawn (Framework::Option_4) */
 	bool m_finish_after_draw;
 	uint8_t reserved6[0x35];

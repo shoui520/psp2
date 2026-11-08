@@ -94,6 +94,19 @@ public:
 	int32_t SendRectEvent(int32_t type, const math::v4 &rect);
 	/* the style at the index of its text */
 	int32_t GetStyle(uint32_t index, graph::TextStyle &style);
+	/* a press of the touch in the event: the touch begun at its position, the auto scroll's
+	   origin set there where a touch moves it, and the touch held (0x8112f85c; name ours) */
+	int32_t HandleTouchPress(Event *e);
+
+	/* not laid out yet */
+	uint8_t reserved[12];
+	bool reserved1 : 1;
+	/* its auto scroll's origin follows the touch (ScePafWidget_222D55C7 reads it; name ours) */
+	bool m_touch_auto_scroll : 1;
+	bool reserved2 : 6;
+	/* a touch press holds it (HandleTouchPress; name ours) */
+	bool m_touch_held : 1;
+	bool reserved3 : 7;
 };
 
 class TextBox : public Text {
@@ -222,6 +235,13 @@ int32_t ScePafWidget_DA5F91F8(paf::ui::TextBox *text_box, paf::ui::ScrollView *v
 /* prototypes from common_gui_dialog's calls, not written in C yet (no name found) */
 void ScePafWidget_B2A7DF66(paf::ui::Text *text, int32_t state, const paf::graph::TextStyle &style);
 void ScePafWidget_4D5F35D5(paf::ui::Text *text, uint32_t a, uint32_t b);
+}
+
+extern "C" {
+/* whether the text's auto scroll origin follows the touch, and its auto scroll's origin (Text's;
+   no names found) */
+int32_t ScePafWidget_222D55C7(paf::ui::Text *text, bool *on);
+int32_t ScePafWidget_4608F7EF(paf::ui::Text *text, paf::math::v2 *origin);
 }
 
 #endif

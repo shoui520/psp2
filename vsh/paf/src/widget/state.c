@@ -22,40 +22,6 @@ const uint32_t g_screen_width_full_hd = 1920;
 const uint32_t g_screen_height_full_hd = 1088;
 
 static inline __attribute__((always_inline))
-uint32_t *InitializeWidgetRecord(uint32_t *self, uint32_t payload)
-{
-	self[4] = payload;
-	self[0] = 0;
-	self[1] = 0;
-	self[2] = 0;
-	return self;
-}
-
-uint32_t *_ZN3paf2ui8listview8CellListC2EPNS1_7SegmentE(uint32_t *self, uint32_t payload)
-{
-	return InitializeWidgetRecord(self, payload);
-}
-
-uint32_t *_ZN3paf2ui8listview7CellMapC2EPNS0_8ListViewE(uint32_t *self, uint32_t payload)
-{
-	return InitializeWidgetRecord(self, payload);
-}
-
-uint32_t *_ZN3paf2ui8listview11SegmentListC1EPNS0_8ListViewE(uint32_t *self, uint32_t payload)
-{
-	return InitializeWidgetRecord(self, payload);
-}
-
-uint32_t *_ZN3paf2ui8listview8CellListC1EPNS1_7SegmentE(uint32_t *self, uint32_t payload)
-{
-	return InitializeWidgetRecord(self, payload);
-}
-
-uint32_t *_ZN3paf2ui8listview7CellMapC1EPNS0_8ListViewE(uint32_t *self, uint32_t payload)
-{
-	return InitializeWidgetRecord(self, payload);
-}
-
 uint32_t *_ZN3paf2ui8filelist14CellFocusParamC1Ev(uint32_t *self)
 {
 	self[0] = UINT32_MAX;
@@ -67,12 +33,6 @@ uint32_t *_ZN3paf2ui8filelist14CellFocusParamC2Ev(uint32_t *self)
 {
 	self[0] = UINT32_MAX;
 	self[3] = 0;
-	return self;
-}
-
-uint8_t *_ZN3paf2ui8ListView9BlockSyncEv(uint8_t *self)
-{
-	++*(uint32_t *)(self + 1056);
 	return self;
 }
 
@@ -312,26 +272,6 @@ uint32_t _ZN3paf2ui4Text10CheckStateEv(const uint8_t *self)
 	return result;
 }
 
-void *ScePafWidget_FFD97FCD(uint8_t *self, const uint64_t *source)
-{
-	uint64_t upper = source[1];
-	uint64_t *destination = (uint64_t *)(self + 1040);
-
-	destination[0] = source[0];
-	destination[1] = upper;
-	return destination;
-}
-
-void *ScePafWidget_C6559467(uint64_t *destination, const uint8_t *self)
-{
-	const uint64_t *source = (const uint64_t *)(self + 1040);
-	uint64_t upper = source[1];
-
-	destination[0] = source[0];
-	destination[1] = upper;
-	return destination;
-}
-
 int _ZN3paf2ui11ProgressBar12SetLabelModeENS1_9LabelModeE(uint8_t *self, int32_t index)
 {
 	uint32_t flags;
@@ -483,25 +423,6 @@ uint8_t *_ZN3paf2ui6Widget19NotifyAnimatorDirtyEj(uint8_t *self, uint16_t mask)
 	return self;
 }
 
-uint8_t *_ZN3paf2ui8listview7CellMap4FindEPNS0_8ListItemE(const uint32_t *self, uint32_t value)
-{
-	const uint8_t *const *cursor = (const uint8_t *const *)self[0];
-	const uint8_t *const *end = cursor + self[1];
-
-	while (cursor != end) {
-		if (*(const uint32_t *)(*cursor + 8) == value)
-			return (uint8_t *)*cursor;
-		if (cursor)
-			++cursor;
-	}
-	return 0;
-}
-
-uint32_t *_ZN3paf2ui8listview11SegmentListC2EPNS0_8ListViewE(uint32_t *self, uint32_t payload)
-{
-	return InitializeWidgetRecord(self, payload);
-}
-
 uint32_t _ZN3paf2ui8filelist7Manager11GetJobQueueENS2_9QueueTypeE(int32_t index)
 {
 	return ((const uint32_t *)sce_paf_widget_state_155c)[index];
@@ -533,12 +454,6 @@ int _ZN3paf2ui18SlidingDrawerParam3GetEv(const void *resource)
 int _ZNK3paf2ui8filelist10CellSource9IsInheritEPKc(const void *self, const char *tag)
 {
 	return tag == "cell_source";
-}
-
-void _ZN3paf2ui8listview11ItemFactoryD0Ev(uint32_t *self)
-{
-	*self = (uint32_t)-2127612860;
-	PafDelete(self);
 }
 
 void _ZN3paf2ui19TextBoxEditListenerD0Ev(uint32_t *self)
@@ -748,15 +663,6 @@ uint8_t *_ZN3paf2ui6Widget14SetGestureMaskEjb(uint8_t *self, uint32_t value,
 	return self;
 }
 
-uint32_t _ZN3paf2ui8listview8CellList7GetLastEv(const uint32_t *self)
-{
-	uint32_t index = self[1];
-
-	if (!index)
-		return 0;
-	return *(const uint32_t *)((const uint8_t *)self[0] + 8 * (index - 1));
-}
-
 __attribute__((noinline)) int _ZNK3paf2ui6Widget9IsInheritEPKc(const void *self, const char *tag)
 {
 	return tag == "widget_base";
@@ -770,12 +676,6 @@ int _ZNK3paf2ui8filelist13SegmentSource9IsInheritEPKc(const void *self, const ch
 int _ZNK3paf2ui8filelist10Visualizer9IsInheritEPKc(const void *self, const char *tag)
 {
 	return tag == "visualizer";
-}
-
-void ScePafWidget_D3AFE81E(uint32_t *self)
-{
-	*self = (uint32_t)-2127612828;
-	PafDelete(self);
 }
 
 int _ZN3paf2ui13SlidingDrawer19SetMovableDirectionEj(uint32_t *self, uint32_t value)
@@ -830,8 +730,8 @@ int _ZNK3paf2ui9ScrollBar9IsInheritEPKc(const void *self, const char *type);
 int _ZNK3paf2ui8SpinBase9IsInheritEPKc(const void *self, const char *type);
 /* ScrollViewBase's is C++ (w_scroll_view_base.cpp) */
 int _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc(const void *self, const char *type);
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ListView9IsInheritEPKc, "list_view",
-		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
+/* ListView's is C++ (w_list_view.cpp) */
+int _ZNK3paf2ui8ListView9IsInheritEPKc(const void *self, const char *type);
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui11ProgressBar9IsInheritEPKc, "progressbar",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 /* Button's is C++ (w_button.cpp) */
@@ -977,13 +877,6 @@ uint8_t *ScePafWidget_6CC95725(const uint8_t *self, const uint64_t *value)
 	return target;
 }
 
-int _ZN3paf2ui8listview11ItemFactory7DisposeERNS2_12DisposeParamE(void *self, const uint8_t *argument)
-{
-	void *target = *(void *const *)(argument + 12);
-	const uint8_t *vtable = *(const uint8_t *const *)target;
-	return ((int (*)(void *))*(void *const *)(vtable + 108))(target);
-}
-
 int ScePafWidget_6B4F7595(void *unused0, void *unused1,
 			  void *unused2, void *unused3, void *target)
 {
@@ -1012,45 +905,10 @@ uint32_t *_ZN3paf2ui19TextBoxEditListenerD1Ev(uint32_t *self)
 	return self;
 }
 
-uint32_t *ScePafWidget_4F5ED653(uint32_t *self)
-{
-	*self = (uint32_t)-2127612828;
-	return self;
-}
-
-uint32_t *_ZN3paf2ui8listview11ItemFactoryD1Ev(uint32_t *self)
-{
-	*self = (uint32_t)-2127612860;
-	return self;
-}
-
-uint32_t *_ZN3paf2ui8listview11ItemFactoryD2Ev(uint32_t *self)
-{
-	*self = (uint32_t)-2127612860;
-	return self;
-}
-
-uint32_t *ScePafWidget_9FBE52BB(uint32_t *self)
-{
-	*self = (uint32_t)-2127612828;
-	return self;
-}
-
 uint32_t *_ZN3paf2ui19TextBoxEditListenerC2Ev(uint32_t *self)
 {
 	*self = (uint32_t)-2127593716;
 	return self;
-}
-
-int ScePafWidget_B5DACB0A(void *unused, const uint8_t *argument)
-{
-	void *target = *(void *const *)(argument + 8);
-
-	if (target) {
-		const uint8_t *vtable = *(const uint8_t *const *)target;
-		return ((int (*)(void *))*(void *const *)(vtable + 108))(target);
-	}
-	return 0;
 }
 
 int _ZN3paf2ui12AnimListener12PropColorSetEPS1_NS_4math2v4E(const uint8_t *self)
@@ -1169,21 +1027,6 @@ int ScePafWidget_3E4AABD3(uint8_t *self, void *replacement)
 	return 0;
 }
 
-int _ZN3paf2ui8listview11SegmentList10GetSegmentEi(const uint8_t *self, int32_t index)
-{
-	int32_t count;
-
-	if (index < 0)
-		return 0;
-	count = *(const int32_t *)(self + 4);
-	if (count <= index)
-		return 0;
-	if ((uint32_t)index >= (uint32_t)count)
-		ScePafStdc_D608246A();
-	return *(const int32_t *)(*(const uint8_t *const *)self +
-				  8 * (uint32_t)index);
-}
-
 int _ZN3paf2ui17EventListenerList4FindEPNS0_13EventListenerE(const uint8_t *self, int32_t requested)
 {
 	const uint8_t *root = *(const uint8_t *const *)(self + 4);
@@ -1196,26 +1039,6 @@ int _ZN3paf2ui17EventListenerList4FindEPNS0_13EventListenerE(const uint8_t *self
 			node = *(const uint8_t *const *)(node + 4);
 	}
 	return 0;
-}
-
-void *_ZN3paf2ui8ListView22GetSegmentPropertyListEi(uint8_t *self, int32_t index)
-{
-	uint32_t *list = *(uint32_t **)(self + 1064);
-	void *fallback = self + 1080;
-	int32_t count;
-	void *entry;
-
-	if (index < 0)
-		return fallback;
-	count = (int32_t)list[1];
-	if (count <= index)
-		return fallback;
-	if ((uint32_t)index >= (uint32_t)count)
-		ScePafStdc_D608246A();
-	entry = *(void **)((uint8_t *)(uintptr_t)list[0] + 8 * (uint32_t)index);
-	if (entry)
-		return (uint8_t *)entry + 80;
-	return fallback;
 }
 
 void *ScePafWidget_55D83675(uint8_t *self, uint32_t *replacement)

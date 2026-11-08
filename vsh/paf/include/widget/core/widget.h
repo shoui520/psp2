@@ -1160,6 +1160,8 @@ public:
 	int32_t SetPosCenter(const math::v4 &v);
 	/* puts the widget behind the other in its parent's draw order */
 	int32_t SetBehind(Widget *w);
+	/* puts the widget in front of the other in its parent's draw order */
+	int32_t SetForward(Widget *w);
 	/* moves the widget under the parent, before the sibling (NULL: last), queued on
 	   s_list_restruct for the next update; -1 for no parent or while it is held (name Sony's,
 	   the parameters ours) */
@@ -1619,6 +1621,8 @@ float ScePafWidget_F1176ACC(paf::ui::Widget *widget, paf::common::transition::Ty
 int32_t ScePafWidget_0253DC9C(paf::ui::Widget *widget, bool on);
 /* the widget or the nearest of its parents below its scene that has a focus root, or NULL */
 paf::ui::Widget *ScePafWidget_CFA1EB7A(paf::ui::Widget *widget);
+/* the widget that has the focus under the widget's focus root, NULL for none (name ours) */
+paf::ui::Widget *FindRootFocus(paf::ui::Widget *widget);
 /* the widget is shown, so the focus may go to it (no name found) */
 bool ScePafWidget_DB0FFD33(paf::ui::Widget *widget);
 /* makes the widget modal in the mode (0, 1), or not (2), with the option */

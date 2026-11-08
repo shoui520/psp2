@@ -34,6 +34,8 @@ public:
 		DETAIL_HOOKED = 0x80000000
 	};
 
+	/* an empty event (defined in state.c) */
+	Event();
 	Event(uint32_t type, Handler *target, uint32_t route, uint32_t detail, int32_t d0 = 0,
 	      int32_t d1 = 0, int32_t d2 = 0, int32_t d3 = 0);
 	Event(uint32_t type, uint32_t mode, uint32_t route, uint32_t detail, int32_t d0 = 0,

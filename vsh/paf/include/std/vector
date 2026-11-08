@@ -243,6 +243,8 @@ public:
 	}
 
 	iterator insert(const iterator &where, const _Ty &val);
+	iterator insert(const iterator &where, size_type num, const _Ty &val);
+	void insert(const iterator &where, iterator first, iterator last);
 	iterator erase(const iterator &first, const iterator &last);
 
 	iterator erase(iterator where)
@@ -390,7 +392,9 @@ vector<_Ty, _Ax>::insert(const iterator &where, const _Ty &val)
 		grown = reserve(limit + 10);
 	if (grown) {
 		if (count != 0) {
-			new (&ptr[count]) _Ty(ptr[count - 1]);
+			_Ty *last = &ptr[count];
+
+			new (last) _Ty(last[-1]);
 			for (size_type i = count - 1; i > off; --i)
 				ptr[i] = ptr[i - 1];
 			ptr[off] = val;
@@ -402,6 +406,93 @@ vector<_Ty, _Ax>::insert(const iterator &where, const _Ty &val)
 		off = count;
 	}
 	return begin() + off;
+}
+
+/*
+ * num copies of the value at where: the array grows to the next ten that holds them, the elements
+ * past the end are made from the ones num below (or the value) and the rest move up. A failed
+ * growth returns end().
+ */
+template<class _Ty, class _Ax>
+typename vector<_Ty, _Ax>::iterator
+vector<_Ty, _Ax>::insert(const iterator &where, size_type num, const _Ty &val)
+{
+	size_type off = 0;
+
+	if (count != 0)
+		off = where - begin();
+
+	bool grown = true;
+
+	if ((int)(count + num) > (int)limit)
+		grown = reserve(10 * ((count + num + 9) / 10));
+	if (grown) {
+		if (count != 0) {
+			int stop = off + num;
+			int i = count + num - 1;
+
+			if (stop < (int)count)
+				stop = count;
+			for (; i >= stop; --i)
+				new (&ptr[i]) _Ty(ptr[i - num]);
+			for (; (size_type)i >= count; --i)
+				new (&ptr[i]) _Ty(val);
+			for (; i >= (int)(off + num); --i)
+				ptr[i] = ptr[i - num];
+			for (_Ty *p = &ptr[off]; p != &ptr[off + num]; ++p)
+				*p = val;
+		} else {
+			for (_Ty *p = &ptr[off]; p != &ptr[off + num]; ++p)
+				new (p) _Ty(val);
+		}
+		count += num;
+	} else {
+		off = count;
+	}
+	return begin() + off;
+}
+
+/*
+ * [first, last) copied in at where: the array grows by tens until it holds them, the elements
+ * past the end are made from the ones below (or the range's last ones) and the rest move up.
+ */
+template<class _Ty, class _Ax>
+void
+vector<_Ty, _Ax>::insert(const iterator &where, iterator first, iterator last)
+{
+	size_type off = 0;
+
+	if (count != 0)
+		off = where - begin();
+
+	difference_type num = last - first;
+	int newlimit = limit;
+
+	while (newlimit < (int)(num + count))
+		newlimit += 10;
+	if (limit != newlimit && !reserve(newlimit))
+		return;
+	if (count != 0) {
+		size_type stop = count;
+		int i = num + count - 1;
+
+		if (num + off > count)
+			stop = num + off;
+		for (; i >= (int)stop; --i)
+			new (&ptr[i]) _Ty(ptr[i - num]);
+		for (; (size_type)i >= count; --i) {
+			--last;
+			new (&ptr[i]) _Ty(*last);
+		}
+		for (; i >= (int)(num + off); --i)
+			ptr[i] = ptr[i - num];
+		for (size_type j = off; first != last; ++first, ++j)
+			ptr[j] = *first;
+	} else {
+		for (size_type j = off; first != last; ++first, ++j)
+			new (&ptr[j]) _Ty(*first);
+	}
+	count += num;
 }
 
 /* The elements after last move down and the ones left over at the end are destroyed; the array

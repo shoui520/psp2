@@ -73,6 +73,11 @@ public:
 	{
 		m_text_auto_scroll_target = id;
 	}
+	/* the text auto scroll target, a copy (name ours) */
+	IDParam GetTextAutoScrollTarget()
+	{
+		return m_text_auto_scroll_target;
+	}
 
 	/* its cell */
 	listview::Cell *m_cell;

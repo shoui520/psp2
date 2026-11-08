@@ -117,6 +117,31 @@ public:
 		return *this;
 	}
 
+	/* the pointer held instead, with a counter block of its own */
+	template<class U>
+	void reset(U *ptr)
+	{
+		if (m_ptr != ptr) {
+			Release();
+			m_ptr = ptr;
+			if (ptr != NULL) {
+				m_ref_counter = (RefCounter *)operator new(sizeof(RefCounter));
+				if (m_ref_counter != NULL) {
+					m_ref_counter->m_ptr = ptr;
+					m_ref_counter->m_counter = 1;
+					m_ref_counter->m_weak_counter = 1;
+					m_ref_counter->m_deleter =
+						(void (*)(T *))&SharedPtr<U>::DefaultDeleter;
+				} else {
+					m_ptr = NULL;
+					m_ref_counter = NULL;
+				}
+			} else {
+				m_ref_counter = NULL;
+			}
+		}
+	}
+
 	void reset()
 	{
 		Release();
