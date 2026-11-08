@@ -6,6 +6,7 @@
 #include <graphics/surface/surface_display.h>
 #include <system/system.h>
 #include <widget/core/widget.h>
+#include <widget/w_scene.h>
 
 namespace paf {
 
@@ -289,6 +290,65 @@ extern "C" bool ScePafWidget_529FB877(Environment *env, int32_t port)
 			return true;
 	}
 	return shown;
+}
+
+extern "C" SceneResolution *ScePafWidget_CDC90BA2(const EnvironmentParam *param, int32_t id)
+{
+	SceneResolution *result = NULL;
+	SceneResolution *it = param->m_resolution_list->m_data;
+	SceneResolution *end = it + param->m_resolution_list->m_num;
+
+	while (it != end) {
+		if (it->m_id == (uint32_t)id) {
+			result = it;
+			break;
+		}
+		if (it != NULL)
+			it++;
+	}
+	return result;
+}
+
+extern "C" SceneResolution *ScePafWidget_615501F0(const EnvironmentParam *param, const IDParam &id)
+{
+	SceneResolution *result = NULL;
+	SceneResolution *it = param->m_resolution_list->m_data;
+	SceneResolution *end = it + param->m_resolution_list->m_num;
+
+	if (it != end) {
+		uint32_t idhash = id.m_idhash;
+
+		while (it != end) {
+			if (it->m_resource.m_value == idhash || it->m_base_resource.m_value == idhash) {
+				result = it;
+				break;
+			}
+			if (it != NULL)
+				it++;
+		}
+	}
+	return result;
+}
+
+extern "C" int32_t ScePafWidget_36505C86(const EnvironmentParam *param, const IDParam &id)
+{
+	SceneResolution *it = param->m_resolution_list->m_data;
+	SceneResolution *end = it + param->m_resolution_list->m_num;
+
+	if (it == end)
+		return -1;
+
+	uint32_t idhash = id.m_idhash;
+
+	while (it != end) {
+		if (it->m_resource.m_value == idhash)
+			return it->m_id;
+		if (it->m_base_resource.m_value == idhash)
+			return it->m_base_id;
+		if (it != NULL)
+			it++;
+	}
+	return -1;
 }
 }
 }
