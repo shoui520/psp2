@@ -1,0 +1,229 @@
+--- a/ssl_algs.c
++++ b/ssl_algs.c
+@@ -56,47 +56,184 @@
+  * [including the GNU Public Licence.]
+  */
+ 
+-#include <stdio.h>
+-#include "objects.h"
+-#include "lhash.h"
+-#include "ssl_locl.h"
+-
+-void SSLeay_add_ssl_algorithms()
+-	{
+-#ifndef NO_DES
+-	EVP_add_cipher(EVP_des_cbc());
+-	EVP_add_cipher(EVP_des_ede3_cbc());
+-#endif
+-#ifndef NO_IDEA
+-	EVP_add_cipher(EVP_idea_cbc());
+-#endif
+-#ifndef NO_RC4
+-        EVP_add_cipher(EVP_rc4());
+-#endif  
+-#ifndef NO_RC2
+-        EVP_add_cipher(EVP_rc2_cbc());
+-#endif  
+-
+-#ifndef NO_MD2
+-        EVP_add_digest(EVP_md2());
+-#endif
+-#ifndef NO_MD5
+-	EVP_add_digest(EVP_md5());
+-	EVP_add_digest_alias(SN_md5,"ssl2-md5");
+-	EVP_add_digest_alias(SN_md5,"ssl3-md5");
+-#endif
+-#ifndef NO_SHA1
+-	EVP_add_digest(EVP_sha1()); /* RSA with sha1 */
+-	EVP_add_digest_alias(SN_sha1,"ssl3-sha1");
+-#endif
+-#if !defined(NO_SHA1) && !defined(NO_DSA)
+-	EVP_add_digest(EVP_dss1()); /* DSA with sha1 */
+-#endif
+-
+-	/* If you want support for phased out ciphers, add the following */
+-#if 0
+-	EVP_add_digest(EVP_sha());
+-	EVP_add_digest(EVP_dss());
+-#endif
++void *ssl_temp_rsa_512;
++void *ssl_temp_rsa_1024;
++
++int SSL_library_init(void)
++	{
++	sslResetWeakCipherFlags();
++	sslRetainExDataMethods();
++	return(1);
++	}
++
++int sslLibraryCleanup(void)
++	{
++	sslFreeTempRsaKeys();
++	sslReleaseExDataMethods();
++	sslResetWeakCipherFlags();
++	sslRemoveThreadErrors(0);
++	return(1);
++	}
++
++int sslGenerateTempRsaKey(void *crypto_ctx, int bits, int exp_type,
++	void *key_ctx, void **out_key)
++	{
++	int status;
++	SslCryptoAlgorithm *alg = NULL;
++
++	if ((crypto_ctx == NULL) || (out_key == NULL))
++		{
++		status = 0x2721;
++		goto err;
++		}
++	*out_key = NULL;
++	status = sslCreatePublicKey(key_ctx, 6, out_key);
++	if (status != 0)
++		goto err;
++	status = sslCreateAlgorithm(crypto_ctx, 8, 0x1003, 0, &alg);
++	if (status == 0)
++		{
++		status = sslKeyGenInit(alg);
++		if (status == 0)
++			{
++			status = sslSetAlgorithmInfo(alg, 22, (SceUIntPtr)&bits);
++			if (status == 0)
++				{
++				status = sslSetAlgorithmInfo(alg, 23, (SceUIntPtr)&exp_type);
++				if (status == 0)
++					status = sslGenerateKey(alg, out_key);
++				}
++			}
++		}
++	if (status != 0)
++		{
++err:
++		if ((out_key != NULL) && (*out_key != NULL))
++			{
++			SceSslInternal_46358909(*out_key);
++			*out_key = NULL;
++			}
++		}
++	if (alg != NULL)
++		sslDestroyAlgorithm(alg);
++	return(status);
++	}
++
++int sslCtxSetupTempRsaKeys(SSL_CTX *ctx, int mode, int use_callback)
++	{
++	int ret = 0;
++	void *key;
++	unsigned long f4;
++
++	if (use_callback == 0)
++		{
++		f4 = ctx->options & 0x10000;
++		if (mode & 1)
++			{
++			if (sslGenerateTempRsaKey(ctx->crypto_context, 512, 2,
++				ctx->key_context, &key) != 0)
++				return(0);
++			SSL_CTX_ctrl(ctx, 62, 0, (char *)key);
++			ret = 1;
++			SceSslInternal_46358909(key);
++			}
++		if (mode & 0x10)
++			{
++			if (sslGenerateTempRsaKey(ctx->crypto_context, 1024,
++				(f4 != 0) ? 3 : 2, ctx->key_context, &key) == 0)
++				{
++				SSL_CTX_ctrl(ctx, 63, 0, (char *)key);
++				ret = 1;
++				SceSslInternal_46358909(key);
++				}
++			}
++		}
++	else if (mode & 0x11)
++		{
++		SSL_CTX_ctrl(ctx, 59, 0, (char *)sslGetOrCreateTempRsaKeyCallback);
++		ret = 1;
++		}
++	return(ret);
++	}
++
++void *sslGetOrCreateTempRsaKeyCallback(SSL *s, int is_export)
++	{
++	void *key = NULL;
++	int f4 = (s->ctx->options & 0x10000) ? 1 : 0;
++	int bits = 0, exp_type = 0;
++
++	if (is_export == 1)
++		{
++		key = sslGetTempRsaKey512();
++		if (key == NULL)
++			{
++			bits = 512;
++			exp_type = 2;
++			}
++		}
++	else
++		{
++		key = sslGetTempRsaKey1024();
++		if (key == NULL)
++			{
++			bits = 1024;
++			exp_type = f4 ? 3 : 2;
++			}
++		}
++	if (exp_type != 0)
++		{
++		if (sslGenerateTempRsaKey(s->ctx->crypto_context, bits, exp_type,
++			s->ctx->key_context, &key) == 0)
++			{
++			if (bits == 512)
++				sslSetTempRsaKey512(key);
++			else
++				sslSetTempRsaKey1024(key);
++			}
++		}
++	return(key);
+ 	}
+ 
++void sslResetTempRsaKeys(void)
++	{
++	ssl_temp_rsa_512 = NULL;
++	ssl_temp_rsa_1024 = NULL;
++	}
++
++void *sslGetTempRsaKey512(void)
++	{
++	return(ssl_temp_rsa_512);
++	}
++
++void *sslGetTempRsaKey1024(void)
++	{
++	return(ssl_temp_rsa_1024);
++	}
++
++void sslSetTempRsaKey512(void *key)
++	{
++	if (ssl_temp_rsa_512 != NULL)
++		SceSslInternal_46358909(ssl_temp_rsa_512);
++	ssl_temp_rsa_512 = key;
++	}
++
++void sslSetTempRsaKey1024(void *key)
++	{
++	if (ssl_temp_rsa_1024 != NULL)
++		SceSslInternal_46358909(ssl_temp_rsa_1024);
++	ssl_temp_rsa_1024 = key;
++	}
++
++void sslFreeTempRsaKeys(void)
++	{
++	if (ssl_temp_rsa_512 != NULL)
++		{
++		SceSslInternal_46358909(ssl_temp_rsa_512);
++		ssl_temp_rsa_512 = NULL;
++		}
++	if (ssl_temp_rsa_1024 != NULL)
++		{
++		SceSslInternal_46358909(ssl_temp_rsa_1024);
++		ssl_temp_rsa_1024 = NULL;
++		}
++	}

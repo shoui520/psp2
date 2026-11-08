@@ -42,21 +42,44 @@ typedef struct SslCryptoLifecycleMethods {
 	int (*DecryptUpdate)(SslCryptoAlgorithm *algorithm, const void *input,
 			     SceUInt32 inputLength, void *output,
 			     SceUInt32 *outputLength);
-	SceUIntPtr opaqueOperationsBeforeVerify[5];
+	SceUIntPtr opaqueDecryptFinalOperation;
+	int (*SignInit)(SslCryptoAlgorithm *algorithm, void *key);
+	int (*Sign)(SslCryptoAlgorithm *algorithm, const void *digest,
+		    SceUInt32 digestLength, void *signature,
+		    SceUInt32 *signatureLength);
+	SceUIntPtr opaqueSignOperations[2];
 	int (*VerifyInit)(SslCryptoAlgorithm *algorithm, void *key);
-	SceUIntPtr opaqueVerifyOperation;
+	int (*Verify)(SslCryptoAlgorithm *algorithm, const void *digest,
+		      SceUInt32 digestLength, const void *signature,
+		      SceUInt32 signatureLength, int *result);
 	int (*VerifyUpdate)(SslCryptoAlgorithm *algorithm, const void *data,
 			    SceUInt32 length);
 	int (*VerifyFinal)(SslCryptoAlgorithm *algorithm, const void *signature,
 			   SceUInt32 length, int *result);
-	SceUIntPtr opaqueOperationsAfterVerify[4];
+	int (*AsymEncryptInit)(SslCryptoAlgorithm *algorithm, void *key);
+	int (*AsymEncrypt)(SslCryptoAlgorithm *algorithm, const void *input,
+			   SceUInt32 inputLength, void *output,
+			   SceUInt32 *outputLength);
+	int (*AsymDecryptInit)(SslCryptoAlgorithm *algorithm, void *key);
+	int (*AsymDecrypt)(SslCryptoAlgorithm *algorithm, const void *input,
+			   SceUInt32 inputLength, void *output,
+			   SceUInt32 *outputLength);
 	int (*DigestInit)(SslCryptoAlgorithm *algorithm);
 	int (*Digest)(SslCryptoAlgorithm *algorithm, const void *data,
 		      SceUInt32 length, void *digest, SceUInt32 *digestLength);
 	int (*DigestUpdate)(SslCryptoAlgorithm *algorithm, const void *data,
 			    SceUInt32 length);
 	int (*DigestFinal)(SslCryptoAlgorithm *algorithm, void *data, SceUInt32 *length);
-	SceUIntPtr opaqueOperationsAfterDigest[15];
+	int (*MacInit)(SslCryptoAlgorithm *algorithm, void *key);
+	SceUIntPtr opaqueMacOperation;
+	int (*MacUpdate)(SslCryptoAlgorithm *algorithm, const void *data,
+			 SceUInt32 length);
+	int (*MacFinal)(SslCryptoAlgorithm *algorithm, void *mac,
+			SceUInt32 *length);
+	SceUIntPtr opaqueOperationsAfterMac[7];
+	int (*KeyGenInit)(SslCryptoAlgorithm *algorithm);
+	int (*GenerateKey)(SslCryptoAlgorithm *algorithm, void **key);
+	SceUIntPtr opaqueOperationsAfterKeyGen[2];
 	int (*SeedRandom)(SslCryptoAlgorithm *algorithm, const void *buffer,
 			  SceUInt32 length);
 	int (*GenerateRandom)(SslCryptoAlgorithm *algorithm, SceUInt32 length,
@@ -143,19 +166,38 @@ int sslEncryptUpdate(SslCryptoAlgorithm *algorithm, const void *input,
 int sslDecryptInit(SslCryptoAlgorithm *algorithm, void *key, const void *iv);
 int sslDecryptUpdate(SslCryptoAlgorithm *algorithm, const void *input,
 		     SceUInt32 inputLength, void *output, SceUInt32 *outputLength);
+int sslSignInit(SslCryptoAlgorithm *algorithm, void *key);
+int sslSign(SslCryptoAlgorithm *algorithm, const void *digest,
+	    SceUInt32 digestLength, void *signature, SceUInt32 *signatureLength);
 int sslVerifyInit(SslCryptoAlgorithm *algorithm, void *key);
 int sslVerifyUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length);
 int sslVerifyFinal(SslCryptoAlgorithm *algorithm, const void *signature,
 		   SceUInt32 length, int *result);
+int sslVerify(SslCryptoAlgorithm *algorithm, const void *digest,
+	      SceUInt32 digestLength, const void *signature,
+	      SceUInt32 signatureLength, int *result);
+int sslAsymEncryptInit(SslCryptoAlgorithm *algorithm, void *key);
+int sslAsymEncrypt(SslCryptoAlgorithm *algorithm, const void *input,
+		   SceUInt32 inputLength, void *output, SceUInt32 *outputLength);
+int sslAsymDecryptInit(SslCryptoAlgorithm *algorithm, void *key);
+int sslAsymDecrypt(SslCryptoAlgorithm *algorithm, const void *input,
+		   SceUInt32 inputLength, void *output, SceUInt32 *outputLength);
 int sslDigestInit(SslCryptoAlgorithm *algorithm);
 int sslDigest(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length,
 	      void *digest, SceUInt32 *digestLength);
 int sslDigestUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length);
 int sslDigestFinal(SslCryptoAlgorithm *algorithm, void *data, SceUInt32 *length);
+int sslMacInit(SslCryptoAlgorithm *algorithm, void *key);
+int sslMacUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length);
+int sslMacFinal(SslCryptoAlgorithm *algorithm, void *mac, SceUInt32 *length);
+int sslKeyGenInit(SslCryptoAlgorithm *algorithm);
+int sslGenerateKey(SslCryptoAlgorithm *algorithm, void **key);
 int sslSeedRandom(SslCryptoAlgorithm *algorithm, const void *buffer,
 		  SceUInt32 length);
 int sslGenerateRandom(SslCryptoAlgorithm *algorithm, SceUInt32 length,
 		      void *buffer, SceUInt32 *generatedLength);
+int sslUnavailableCryptoOperation(void);
+int sslCryptoBackendDigestInit(void *context);
 int sslCreateCryptoContext(SslLibrary *library, int mode, void **result);
 int sslDestroyCryptoContext(void *context);
 int sslFreeAlgorithm(SslCryptoAlgorithm *algorithm);

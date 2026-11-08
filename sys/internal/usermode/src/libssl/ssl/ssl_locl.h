@@ -163,6 +163,7 @@ typedef struct SslExDataMethod {
 extern SslCipherInfo ssl_cipher_methods[];
 extern SslDigestInfo ssl_digest_methods[];
 extern SSL3_ENC_METHOD ssl3_undef_enc_method;
+extern int ssl_weak_cipher_flags; /* Descriptive name is ours. */
 
 /* Descriptive helper names are ours, not recovered Sony names. */
 void sslStackClearElements(STACK *st, void (*func)());
@@ -262,6 +263,16 @@ int sslLibraryModuleInit(void *ctx, int flag);
 int sslLibraryModuleCleanup(void *ctx, int flag);
 int SSL_library_init(void);
 int sslLibraryCleanup(void);
+int sslGenerateTempRsaKey(void *crypto_ctx, int bits, int exp_type,
+			  void *key_ctx, void **out_key);
+int sslCtxSetupTempRsaKeys(SSL_CTX *ctx, int mode, int use_callback);
+void *sslGetOrCreateTempRsaKeyCallback(SSL *s, int is_export);
+void sslResetTempRsaKeys(void);
+void *sslGetTempRsaKey512(void);
+void *sslGetTempRsaKey1024(void);
+void sslSetTempRsaKey512(void *key);
+void sslSetTempRsaKey1024(void *key);
+void sslFreeTempRsaKeys(void);
 int sslSessionAddReference(SSL_SESSION *session);
 struct SslTime *sslSessionCopyTime(SSL_SESSION *session, struct SslTime *result);
 unsigned int sslSessionGetIdLength(SSL_SESSION *session);
@@ -328,6 +339,18 @@ int ssl3_mac(SSL *ssl, unsigned char *md, int send_data);
 int ssl3_generate_master_secret(SSL *s, unsigned char *out,
 				unsigned char *p, int len);
 int ssl3_alert_code(int code);
+int tls1_change_cipher_state(SSL *s, int which);
+int tls1_setup_key_block(SSL *s);
+int tls1_enc(SSL *s, int send_data);
+int tls1_cert_verify_mac(SSL *s, SslCryptoAlgorithm *in_ctx,
+			 unsigned char *out);
+int tls1_final_finish_mac(SSL *s, SslCryptoAlgorithm *in1_ctx,
+			  SslCryptoAlgorithm *in2_ctx, unsigned char *str,
+			  int slen, unsigned char *out);
+int tls1_mac(SSL *ssl, unsigned char *md, int send_data);
+int tls1_generate_master_secret(SSL *s, unsigned char *out,
+				unsigned char *p, int len);
+int tls1_alert_code(int code);
 int SSL_use_certificate(SSL *ssl, void *x);
 int SSL_use_PrivateKey(SSL *ssl, void *pkey);
 int SceSslInternal_D419451B(SSL_CTX *ctx, void *x);

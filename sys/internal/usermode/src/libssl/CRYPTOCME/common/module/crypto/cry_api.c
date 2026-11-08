@@ -200,6 +200,36 @@ int sslDecryptUpdate(SslCryptoAlgorithm *algorithm, const void *input,
 				      outputLength);
 }
 
+int sslSignInit(SslCryptoAlgorithm *algorithm, void *key)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->SignInit == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->SignInit(algorithm, key);
+}
+
+int sslSign(SslCryptoAlgorithm *algorithm, const void *digest,
+	    SceUInt32 digestLength, void *signature, SceUInt32 *signatureLength)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->Sign == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->Sign(algorithm, digest, digestLength, signature,
+			     signatureLength);
+}
+
 int sslVerifyInit(SslCryptoAlgorithm *algorithm, void *key)
 {
 	const SslCryptoLifecycleMethods *methods;
@@ -241,6 +271,83 @@ int sslVerifyFinal(SslCryptoAlgorithm *algorithm, const void *signature,
 	if (methods->VerifyFinal == NULL)
 		return SSL_CRYPTO_ERROR_NO_OPERATION;
 	return methods->VerifyFinal(algorithm, signature, length, result);
+}
+
+int sslVerify(SslCryptoAlgorithm *algorithm, const void *digest,
+	      SceUInt32 digestLength, const void *signature,
+	      SceUInt32 signatureLength, int *result)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->Verify == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->Verify(algorithm, digest, digestLength, signature,
+			       signatureLength, result);
+}
+
+int sslAsymEncryptInit(SslCryptoAlgorithm *algorithm, void *key)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->AsymEncryptInit == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->AsymEncryptInit(algorithm, key);
+}
+
+int sslAsymEncrypt(SslCryptoAlgorithm *algorithm, const void *input,
+		   SceUInt32 inputLength, void *output, SceUInt32 *outputLength)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->AsymEncrypt == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->AsymEncrypt(algorithm, input, inputLength, output,
+				    outputLength);
+}
+
+int sslAsymDecryptInit(SslCryptoAlgorithm *algorithm, void *key)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->AsymDecryptInit == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->AsymDecryptInit(algorithm, key);
+}
+
+int sslAsymDecrypt(SslCryptoAlgorithm *algorithm, const void *input,
+		   SceUInt32 inputLength, void *output, SceUInt32 *outputLength)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->AsymDecrypt == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->AsymDecrypt(algorithm, input, inputLength, output,
+				    outputLength);
 }
 
 int sslDigestInit(SslCryptoAlgorithm *algorithm)
@@ -300,6 +407,76 @@ int sslDigest(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length,
 	return methods->Digest(algorithm, data, length, digest, digestLength);
 }
 
+int sslMacInit(SslCryptoAlgorithm *algorithm, void *key)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->MacInit == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->MacInit(algorithm, key);
+}
+
+int sslMacUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->MacUpdate == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->MacUpdate(algorithm, data, length);
+}
+
+int sslMacFinal(SslCryptoAlgorithm *algorithm, void *mac, SceUInt32 *length)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->MacFinal == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->MacFinal(algorithm, mac, length);
+}
+
+int sslKeyGenInit(SslCryptoAlgorithm *algorithm)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->KeyGenInit == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->KeyGenInit(algorithm);
+}
+
+int sslGenerateKey(SslCryptoAlgorithm *algorithm, void **key)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->GenerateKey == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->GenerateKey(algorithm, key);
+}
+
 int sslSeedRandom(SslCryptoAlgorithm *algorithm, const void *buffer,
 		  SceUInt32 length)
 {
@@ -328,4 +505,9 @@ int sslGenerateRandom(SslCryptoAlgorithm *algorithm, SceUInt32 length,
 	if (methods->GenerateRandom == NULL)
 		return SSL_CRYPTO_ERROR_NO_OPERATION;
 	return methods->GenerateRandom(algorithm, length, buffer, generatedLength);
+}
+
+int sslUnavailableCryptoOperation(void)
+{
+	return 10010;
 }

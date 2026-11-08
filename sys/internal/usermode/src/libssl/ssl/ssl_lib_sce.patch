@@ -39,7 +39,7 @@
 -void SSL_clear(s)
 +static SslCryptoAlgorithm *ssl_default_rand_algorithm=NULL;
 +static int ssl_default_rand_ref_count;
-+static int ssl_weak_cipher_flags;
++int ssl_weak_cipher_flags;
 +
 +/* SCE: descriptive callback names are ours. */
 +static void sslExDataItemFree(void *item)

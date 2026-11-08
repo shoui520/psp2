@@ -819,7 +819,8 @@
  SSL *s;
  STACK *have,*pref;
 @@ -721,26 +583,18 @@
- 	ssl_set_cert_masks(cert);
+-	ssl_set_cert_masks(cert);
++	ssl_set_cert_masks(cert,s->ctx->default_cert);
  	mask=cert->mask;
  	emask=cert->export_mask;
 -			

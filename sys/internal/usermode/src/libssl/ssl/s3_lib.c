@@ -39,7 +39,6 @@ int sslClonePublicKey(void *key, int flags, void **out);
 int ssl_undefined_function(SSL *s);
 SSL_METHOD *ssl_bad_method(int ver);
 int ssl_cipher_ptr_id_cmp(SSL_CIPHER **ap, SSL_CIPHER **bp);
-void ssl_set_cert_masks(CERT *c);
 int ssl3_put_cipher_by_char(SSL_CIPHER *c, unsigned char *p);
 int ssl3_send_alert(SSL *s, int level, int desc);
 int ssl3_dispatch_alert(SSL *s);

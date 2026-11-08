@@ -76,6 +76,15 @@ libssl_prepare_patched(${libssl_ssleay}/ssl/s3_both.c
 libssl_prepare_patched(${libssl_ssleay}/ssl/s3_enc.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/s3_enc_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/s3_enc_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/tls1.h
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/tls1_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/tls1_sce.h)
+libssl_prepare_patched(${libssl_ssleay}/ssl/t1_enc.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/t1_enc_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/t1_enc_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_algs.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_algs_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/ssl_algs_sce.inc)
 libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_rsa.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_rsa_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/ssl_rsa_sce.inc)
@@ -120,6 +129,8 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	ssl/s3_both.c
 	ssl/ssl_cert.c
 	ssl/s3_enc.c
+	ssl/t1_enc.c
+	ssl/ssl_algs.c
 	ssl/ssl_rsa.c
 	ssl/ssl_sess_sm.c
 	ssl/ssl_lib.c
@@ -205,11 +216,15 @@ set_source_files_properties(
 	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
 # Sony's s3_both.c inlines ssl3_part_read (30 B) into ssl3_get_message while
 # keeping ssl3ResizeWriteBuffer (104 B) and ssl3ResizeReadBuffer (110 B) out of line;
-# ssl_ciph.c keeps SSL_CIPHER_get_bits (144 B) out of line in sslCipherGetBits.
+# ssl_ciph.c keeps SSL_CIPHER_get_bits (144 B) out of line in sslCipherGetBits;
+# ssl_algs.c keeps the 12 B temporary-RSA getters out of line in the callback.
 set_source_files_properties(
 	ssl/s3_both.c
 	ssl/ssl_ciph.c
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=24)
+set_source_files_properties(
+	ssl/ssl_algs.c
+	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=0)
 set_source_files_properties(
 	../../../../sdk/target/src/sha224/libsha224.c
 	../../../../sdk/target/src/sha256/libsha256.c
