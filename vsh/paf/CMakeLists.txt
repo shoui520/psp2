@@ -260,6 +260,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/w_num_spin.cpp
 	src/widget/w_pageturn.cpp
 	src/widget/w_pageturn_base.cpp
+	src/widget/w_plane.cpp
 	src/widget/w_scroll_view.cpp
 	src/widget/w_scroll_view_base.cpp
 	src/widget/w_scrollbar.cpp
@@ -405,6 +406,7 @@ set_source_files_properties(src/widget/w_list_view.cpp PROPERTIES COMPILE_OPTION
 set_source_files_properties(src/widget/w_num_spin.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_pageturn.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_pageturn_base.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+set_source_files_properties(src/widget/w_plane.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 # paf::ui::ScrollView inlines its map and vector helpers and its style constructor.
 set_source_files_properties(src/widget/w_scroll_view.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 # paf::ui::ScrollViewBase inlines SetOverScroll, SetDefaultScrollBar and its suppliers' Register.

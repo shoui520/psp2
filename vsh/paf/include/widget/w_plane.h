@@ -1,8 +1,7 @@
 /*
  * paf::ui::Plane: a widget drawn as one plane object (draw object 0), and its resource
  * parameters. The classes, their functions and TypeName are Sony's (the export NIDs hash as
- * them); the members' names are ours. Plane's own functions are not converted yet: declared
- * for the widgets built on it.
+ * them); the members' names are ours.
  */
 #ifndef PAF_WIDGET_W_PLANE_H
 #define PAF_WIDGET_W_PLANE_H

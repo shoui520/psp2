@@ -677,8 +677,8 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RadioBox9IsInheritEPKc, "radio_box",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui13SlidingDrawer9IsInheritEPKc, "sliding_drawer",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui5Plane9IsInheritEPKc, "plane",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+/* Plane's is C++ (w_plane.cpp) */
+int _ZNK3paf2ui5Plane9IsInheritEPKc(const void *self, const char *type);
 /* PageTurn's is C++ (w_pageturn.cpp) */
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RichText9IsInheritEPKc, "rich_text",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
@@ -1037,27 +1037,6 @@ uint32_t *ScePafWidget_D0D78958(uint32_t *self, uint32_t *first,
 	*first = self[9];
 	*third = self[10];
 	return self;
-}
-
-int _ZN3paf2ui10PlaneParam3GetEv(uint8_t *self)
-{
-	int result = _ZN3paf2ui11WidgetParam3GetEv(self);
-
-	if (result >= 0) {
-		const uint8_t *state = *(const uint8_t *const *)(self + 32);
-		uint8_t mode = state[498];
-		int32_t mapped;
-
-		if (mode == 2)
-			mapped = 1;
-		else if (mode == 0)
-			mapped = 0;
-		else
-			mapped = -1;
-		*(int32_t *)(self + 120) = mapped;
-		return 0;
-	}
-	return result;
 }
 
 int _ZN3paf2ui13RadioBoxParam3GetEv(uint8_t *self)
