@@ -2374,6 +2374,69 @@ bool Widget::IsMorphResolution(uint32_t &id, uint32_t &pre, float &time, float &
 	return timer != NULL;
 }
 
+vector<Widget::DrawObjEntry>::iterator Widget::FindDrawObj(int32_t id)
+{
+	vector<DrawObjEntry>::iterator it = m_drawobjs.begin();
+	vector<DrawObjEntry>::iterator end = m_drawobjs.end();
+
+	while (it != end) {
+		if (it->m_attr.m_id == (uint32_t)id)
+			break;
+		++it;
+	}
+	return it;
+}
+
+WidgetSoundParam::Sound *Widget::FindSound(int32_t id)
+{
+	WidgetSoundParam::Sound *sounds = m_sounds;
+
+	if (sounds == NULL)
+		return NULL;
+
+	uint32_t num = m_sound_num;
+
+	for (uint32_t i = 0; i < num; i++) {
+		if (sounds[i].m_index == (uint32_t)id)
+			return &sounds[i];
+	}
+	return NULL;
+}
+
+math::v4 Widget::GetFocusShapePos()
+{
+	math::v4 pos = GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+
+	if (m_focus_shape != NULL)
+		pos = pos + math::v4(m_focus_shape->m_offset, 0.0f);
+	return pos;
+}
+
+math::v4 Widget::GetFocusShapeWorldPos()
+{
+	if ((m_update_flag & 7) != 0)
+		UpdateMatrix();
+
+	math::v4 pos = m_world_matrix.w();
+
+	if (m_focus_shape != NULL)
+		pos = pos + math::v4(m_focus_shape->m_offset, 0.0f);
+	return pos;
+}
+
+math::v4 Widget::GetFocusShapeSize()
+{
+	math::v4 size = *GetSize(1);
+
+	if (m_focus_shape != NULL) {
+		math::v2 shape_size = m_focus_shape->m_size;
+
+		if (!(shape_size == math::v2(0.0f, 0.0f)))
+			size = math::v4(shape_size.extract_x(), shape_size.extract_y(), 0.0f, 0.0f);
+	}
+	return size;
+}
+
 void Widget::SetBaseDestroyCount(int32_t count)
 {
 	s_base_destroy_count = count;
