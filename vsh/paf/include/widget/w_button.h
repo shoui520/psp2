@@ -215,13 +215,4 @@ public:
 }
 }
 
-extern "C" {
-/* a text's auto scroll origin, speed by position and speed (Text's; no names found; 7C976DF2
-   is Text::SetAutoScrollSpeed(float), kept by its link name for store_browser's import) */
-int32_t ScePafWidget_8A5AE1CD(paf::ui::Text *text, const paf::math::v2 &pos);
-int32_t ScePafWidget_5B2F5119(paf::ui::Text *text, paf::math::v2 pos, float &speed,
-			      bool set_origin, bool reverse);
-int32_t ScePafWidget_7C976DF2(paf::ui::Text *text, float speed);
-}
-
 #endif

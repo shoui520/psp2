@@ -3387,7 +3387,7 @@ ScePaf:
         - _ZN3paf2ui16ProgressBarTouch15OnDragEndSliderEPNS0_5EventEb: 0x2F82BE4F
         - _ZNK3paf2ui8PageTurn11GetTypeNameEv: 0x2F886BFA
         - _ZN3paf2ui6Widget7GetSizeEi: 0x2F924BAD
-        - ScePafWidget_2FA66D6D: 0x2FA66D6D
+        - _ZN3paf2ui4Text13DestroyWidgetEv: 0x2FA66D6D
         - _ZN3paf2ui8filelist10CellSource6UpdateERNS1_16CellListAccessorE: 0x2FBD4E70
         - _ZNK3paf2ui13PageTurnParam12GetParamNameEv: 0x2FD19011
         - _ZN3paf2ui14ScrollViewBase7OnFlickEPNS0_5EventE: 0x2FDBFE08
@@ -4929,7 +4929,7 @@ ScePaf:
         - ScePafWidget_D4759650: 0xD4759650
         - _ZNK3paf2ui9ScrollBar9IsInheritEPKc: 0xD48B7AF1
         - _ZN3paf2ui7Handler16HandleTouchEventEPNS0_5EventE: 0xD4D0EDB9
-        - ScePafWidget_D54CE72C: 0xD54CE72C
+        - _ZN3paf2ui4Text18HandleGestureEventEPNS0_5EventE: 0xD54CE72C
         - _ZN3paf2ui9ScrollBar16CreateSliderGlowEv: 0xD5549174
         - ScePafWidget_D56954F6: 0xD56954F6
         - _ZN3paf2ui10EventQueue6CancelERKNS0_5EventEj: 0xD5BDE80F

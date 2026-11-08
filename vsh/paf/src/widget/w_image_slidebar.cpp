@@ -483,9 +483,9 @@ void ImageSlideBar::OnTouchUpdateValue()
 
 		if (id >= 8)
 			return;
-		env->m_touch_state[id].m_port = 0;
-		env->m_touch_state[id].m_id = id;
-		touch = &env->m_touch_state[id];
+		env->m_touch_state[0][id].m_port = 0;
+		env->m_touch_state[0][id].m_id = id;
+		touch = &env->m_touch_state[0][id];
 		if (touch == NULL)
 			return;
 

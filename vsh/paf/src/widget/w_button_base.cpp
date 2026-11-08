@@ -765,7 +765,7 @@ void ButtonBase::EnableRepeat(uint32_t begin_msec, uint32_t repeat_msec)
 int32_t ButtonBase::BeginLongPressTextAutoScroll(Event *e)
 {
 	if (!m_long_press_text_auto_scroll)
-		return SCE_PAF_ERROR_BUTTON_BUSY;
+		return SCE_PAF_ERROR_BUSY;
 	m_text_auto_scroll_locked = true;
 	if (s_text_auto_scroll_button != NULL)
 		s_text_auto_scroll_button->RequestTextAutoScrollStop();
@@ -779,7 +779,7 @@ int32_t ButtonBase::BeginLongPressTextAutoScroll(Event *e)
 int32_t ButtonBase::UpdateLongPressTextAutoScroll(Event *e)
 {
 	if (!IsTextAutoScrollLocked())
-		return SCE_PAF_ERROR_BUTTON_BUSY;
+		return SCE_PAF_ERROR_BUSY;
 
 	float speed = 0;
 
@@ -792,7 +792,7 @@ int32_t ButtonBase::UpdateLongPressTextAutoScroll(Event *e)
 int32_t ButtonBase::EndLongPressTextAutoScroll(Event *e)
 {
 	if (!IsTextAutoScrollLocked())
-		return SCE_PAF_ERROR_BUTTON_BUSY;
+		return SCE_PAF_ERROR_BUSY;
 	m_text_auto_scroll_locked = false;
 	return 0;
 }

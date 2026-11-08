@@ -116,8 +116,8 @@ __attribute__((noinline)) static void GetTouch(Canvas *canvas, Event *e, float *
 	HitInfo *hit = NULL;
 
 	if (id < 8) {
-		env->m_touch_state[id].m_port = 0;
-		env->m_touch_state[id].m_id = id;
+		env->m_touch_state[0][id].m_port = 0;
+		env->m_touch_state[0][id].m_id = id;
 		hit = &env->m_touch_hit[id];
 	}
 	*x = hit->m_touch_pos.extract_x();

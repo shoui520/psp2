@@ -17,8 +17,6 @@
 #include <widget/core/widget.h>
 #include <widget/w_text_box.h>
 
-/* a text auto scroll a long press holds, or one already running (name ours) */
-#define SCE_PAF_ERROR_BUTTON_BUSY	(-2136014815)	/* 0x80AF0021 */
 
 namespace paf {
 namespace ui {
@@ -150,7 +148,7 @@ public:
 	/* the text auto scroll started, stopped or sped up, unless a long press holds it */
 	virtual int32_t RequestTextAutoScrollStart(Text::ScrollType type)
 	{
-		int32_t ret = SCE_PAF_ERROR_BUTTON_BUSY;
+		int32_t ret = SCE_PAF_ERROR_BUSY;
 
 		if (!IsTextAutoScrollLocked())
 			return StartTextAutoScroll(type);
@@ -159,7 +157,7 @@ public:
 
 	virtual int32_t RequestTextAutoScrollStop()
 	{
-		int32_t ret = SCE_PAF_ERROR_BUTTON_BUSY;
+		int32_t ret = SCE_PAF_ERROR_BUSY;
 
 		if (!IsTextAutoScrollLocked())
 			return StopTextAutoScroll();
@@ -168,7 +166,7 @@ public:
 
 	virtual int32_t RequestTextAutoScrollSpeed(float speed)
 	{
-		int32_t ret = SCE_PAF_ERROR_BUTTON_BUSY;
+		int32_t ret = SCE_PAF_ERROR_BUSY;
 
 		if (!IsTextAutoScrollLocked())
 			return SetTextAutoScrollSpeed(speed);

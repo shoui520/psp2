@@ -143,7 +143,10 @@ public:
 	math::v2 m_hit_pos;
 	uint8_t reserved2[0x30];
 	math::v4 reserved3;
-	uint8_t reserved4[0x24];
+	uint8_t reserved4[0x20];
+	/* set once the hit on the touch's line is found (Text's touch position finds it where it
+	   is not; name ours) */
+	uint32_t m_hit_valid;
 	/* the touch panel, 0 front or 1 rear (name ours) */
 	uint32_t m_port;
 	/* the touch ID (the Environment's m_touch_hits; name ours) */
@@ -352,9 +355,9 @@ public:
 	list<Widget *> m_scenes_onupdate;
 	/* the screen SetScreen gives */
 	Screen *m_screen;
-	/* a state per touch ID, the front panel's 0 to 7 and the rear's 8 to 15: the widget
-	   taking a touch sets its port and ID (names ours) */
-	TouchState m_touch_state[16];
+	/* a state per port (the front panel's and the rear's) and touch ID: the widget taking a
+	   touch sets its port and ID (names ours) */
+	TouchState m_touch_state[2][8];
 	/* where each touch ID last hit (name ours) */
 	HitInfo m_touch_hit[8];
 	uint8_t reserved5b[0xd80];

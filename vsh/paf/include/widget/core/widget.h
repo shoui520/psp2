@@ -1006,6 +1006,10 @@ public:
 	   names ours) */
 	int32_t CalcHitLineToPlane(const math::v4 &start, const math::v4 &end, const math::v4 &pos,
 				   const math::v4 &normal, HitInfo *info);
+	/* the hit of the line from start to end on its hit box of the size, filled in (export
+	   416CF405; argument names ours) */
+	int32_t CalcHitBoxToLine(const math::v4 &size, const math::v4 &start, const math::v4 &end,
+				 HitInfo *info);
 	/* exports 7A3A7304, 0FCCC833, B94694E3 */
 	void SetDragMode(uint32_t mode);
 	/* sets the steps its drag moves it in (name ours) */

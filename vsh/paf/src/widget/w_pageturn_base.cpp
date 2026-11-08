@@ -80,9 +80,9 @@ int32_t PageTurnBase::ScePafWidget_85CB1F24(uint32_t id, math::v4 *pos)
 	TouchState *touch = NULL;
 
 	if (id < 8) {
-		env->m_touch_state[id].m_id = id;
-		env->m_touch_state[id].m_port = 0;
-		touch = &env->m_touch_state[id];
+		env->m_touch_state[0][id].m_id = id;
+		env->m_touch_state[0][id].m_port = 0;
+		touch = &env->m_touch_state[0][id];
 	}
 	if (touch == NULL)
 		return -1;

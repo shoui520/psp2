@@ -1094,9 +1094,9 @@ void DirectBar::OrientDragOutState(Event *e)
 	TouchState *touch = NULL;
 
 	if (id < 8) {
-		m_env->m_touch_state[id].m_port = 0;
-		m_env->m_touch_state[id].m_id = id;
-		touch = &m_env->m_touch_state[id];
+		m_env->m_touch_state[0][id].m_port = 0;
+		m_env->m_touch_state[0][id].m_id = id;
+		touch = &m_env->m_touch_state[0][id];
 	}
 
 	float height = m_size.extract_y();

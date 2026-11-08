@@ -151,12 +151,6 @@ int _ZN3paf2ui11Environment15IsTermAvailableEv(const uint8_t *self)
 		!*(const uint32_t *)(self + 56) && self[213] != 0;
 }
 
-int ScePafWidget_222D55C7(const uint8_t *self, uint8_t *output)
-{
-	*output = (self[648] & 2) != 0;
-	return 0;
-}
-
 int _ZN3paf2ui7TextBox11GetEditModeERb(const uint8_t *self, uint8_t *output)
 {
 	*output = (self[648] & 8) != 0;
@@ -544,12 +538,8 @@ int ScePafWidget_A4E53390(uint8_t *self)
 	return ((int (*)(uint8_t *))*(void **)(vtable + 560))(self);
 }
 
-__attribute__((noinline)) int _ZNK3paf2ui4Text9IsInheritEPKc(const void *self, const char *tag)
-{
-	if (tag == "text")
-		return 1;
-	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
-}
+/* Text's is C++ (w_text.cpp) */
+int _ZNK3paf2ui4Text9IsInheritEPKc(const void *self, const char *tag);
 
 /* Type tags are compared by pointer identity in the native widget hierarchy. */
 /* Box's, in w_box.cpp; Dialog's calls it */

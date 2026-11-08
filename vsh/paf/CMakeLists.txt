@@ -245,6 +245,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/w_canvas.cpp
 	src/widget/w_state_button_base.cpp
 	src/widget/w_supplier.cpp
+	src/widget/w_text.cpp
 	src/widget/w_check_box.cpp
 	src/widget/w_composite_button.cpp
 	src/widget/w_composite_drawer.cpp
@@ -422,6 +423,9 @@ set_source_files_properties(src/widget/w_radio_box.cpp PROPERTIES COMPILE_OPTION
 set_source_files_properties(src/widget/w_radio_button.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_rich_text.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_scene.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+# paf::ui::Text inlines vector<IDParam>'s destructor into FriendAutoScroll, which 8 calls
+# out of line.
+set_source_files_properties(src/widget/w_text.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 # paf::ui::ScrollView inlines its map and vector helpers and its style constructor.
 set_source_files_properties(src/widget/w_scroll_view.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 # paf::ui::ScrollViewBase inlines SetOverScroll, SetDefaultScrollBar and its suppliers' Register.

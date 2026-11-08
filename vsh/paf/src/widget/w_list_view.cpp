@@ -4024,7 +4024,7 @@ static void PassTextAutoScroll(ListView *view, Event *e, ListItem *item)
 
 	if (input != NULL)
 		inputdevice::ScePafMisc_CB4DB658(input, (uint8_t)touch, NULL);
-	target_text->HandleTouchPress(&ev);
+	target_text->HandleLongPress(&ev);
 	ScePafWidget_8A5AE1CD(target_text, origin);
 }
 

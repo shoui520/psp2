@@ -555,7 +555,7 @@ int32_t Button::GetTextAutoScrollSpeedByPos(const math::v2 &pos, float &speed, b
 int32_t Button::StartTextAutoScroll(Text::ScrollType type)
 {
 	if (IsTextAutoScroll())
-		return SCE_PAF_ERROR_BUTTON_BUSY;
+		return SCE_PAF_ERROR_BUSY;
 	if (m_text_auto_scroll == NULL) {
 		graph::TextObj *label = GetLabel(this);
 
@@ -601,7 +601,7 @@ int32_t Button::StartTextAutoScroll(Text::ScrollType type)
 int32_t Button::StopTextAutoScroll()
 {
 	if (!IsTextAutoScroll())
-		return SCE_PAF_ERROR_BUTTON_BUSY;
+		return SCE_PAF_ERROR_BUSY;
 	if (m_text_auto_scroll == NULL)
 		return SCE_PAF_ERROR_NO_OBJECT;
 
