@@ -6,6 +6,8 @@
 
 int sslDecodeRsaPublicKeyProperties(SslPropertyList *properties, const SceUInt8 *data,
 				    SceUInt32 length, SceUInt32 *consumed);
+int sslDecodeRsaPrivateKeyProperties(SslPropertyList *properties, const SceUInt8 *data,
+				     SceUInt32 length, SceUInt32 *consumed);
 int sslDecodeSubjectPublicKeyInfoProperties(SslPropertyList *properties,
 					   const SceUInt8 *data, SceUInt32 length,
 					   SceUInt32 *consumed);

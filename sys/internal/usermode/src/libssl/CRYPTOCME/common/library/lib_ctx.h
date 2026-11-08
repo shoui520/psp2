@@ -70,7 +70,12 @@ _Static_assert(offsetof(SslLibrary, module_references) == 408,
 
 int sslCleanupLibrary(SslLibrary *library);
 int SceSslInternal_4725F9E7(SslLibrary *library);
+int sslDestroyDefaultKey(void *key);
+int sslSetDefaultKeyInfo(void *key, int selector, void *value);
 int sslLibraryAddReference(SslLibrary *library);
+int sslCreateDefaultKey(SslLibrary *library, int type, const void *info,
+			void **result);
+int sslGetDefaultKeyInfo(void *key, int selector, void *result);
 int sslGetLibraryModuleData(SslLibrary *library, int type, void **result);
 SslLibrary **sslResetDefaultLibrary(void);
 SslLibrary *sslGetDefaultLibrary(void);

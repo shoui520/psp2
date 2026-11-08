@@ -61,22 +61,47 @@ void *sslReallocate(void *ptr, SceUInt32 size, SceUInt32 oldSize)
 	return sslReallocCallback(ptr, size, oldSize);
 }
 
-void *sslCopyMemory(void *destination, const void *source, SceUInt32 size)
+void *sslReplaceAllocation(void *ptr, SceUInt32 size)
 {
-	return sceClibMemcpy_safe(destination, source, size);
+	if (ptr != 0)
+		sslFreeCallback(ptr);
+	return sslAllocCallback(size);
 }
 
-void *sslFillMemory(void *destination, int value, SceUInt32 size)
+void *sslWipeAndFreePointer(void **ptr, SceUInt32 size)
 {
-	return sceClibMemset(destination, value, size);
+	void *result = *ptr;
+
+	if (result != 0) {
+		sslFillMemory(result, 0, size);
+		sslFreeCallback(*ptr);
+		*ptr = 0;
+		return 0;
+	}
+	return result;
 }
 
-int sslCompareMemory(const void *left, const void *right, SceUInt32 size)
+void *sslDuplicateMemory(const void *source, SceUInt32 size)
 {
-	return sceClibMemcmp(left, right, size);
+	void *copy = 0;
+
+	if (source != 0 && size != 0) {
+		copy = sslAllocCallback(size);
+		if (copy != 0)
+			sslCopyMemory(copy, source, size);
+	}
+	return copy;
 }
 
-void *sslMoveMemory(void *destination, const void *source, SceUInt32 size)
+int sslCompareBuffers(const void *left, const void *right,
+		      SceUInt32 leftLength, SceUInt32 rightLength)
 {
-	return sceClibMemmove(destination, source, size);
+	if (leftLength == rightLength) {
+		if (left == right)
+			return 0;
+		return sslCompareMemory(left, right, leftLength);
+	}
+	if (leftLength < rightLength)
+		return -1;
+	return 1;
 }

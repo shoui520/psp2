@@ -17,7 +17,8 @@ typedef int (*SslKeyComponentCallback)(void *arg, int id,
 typedef struct SslKeyModule {
 	const char *name;
 	SceUInt32 metadata[2];
-	int (*CreateContext)(void *library, int flags, int mode, void **result);
+	int (*CreateContext)(void *library, int parameter, SceUInt32 flags,
+			     void **result);
 	int (*DestroyContext)(void *context);
 	int (*GetContextInfo)(void *context, int selector, void *result);
 	int (*SetContextInfo)(void *context, int selector, void *value);
@@ -26,7 +27,18 @@ typedef struct SslKeyModule {
 	int (*GetKeyInfo)(void *key, int selector, void *result);
 	int (*SetKeyInfo)(void *key, int selector, void *value);
 	int (*CopyKey)(void *source, void *destination, int mode);
-	SceUIntPtr opaqueKeyOperations[4];
+	int (*DecodePrivateKey)(void *context, int format, int algorithm,
+				SceUInt32 length, const void *data,
+				SceUInt32 *consumed, void **result);
+	int (*EncodePrivateKey)(void *context, int format, int algorithm,
+				SceUInt32 capacity, void *data,
+				SceUInt32 *length, void *key);
+	int (*DecodePublicKey)(void *context, int format, int algorithm,
+			       SceUInt32 length, const void *data,
+			       SceUInt32 *consumed, void **result);
+	int (*EncodePublicKey)(void *context, int format, int algorithm,
+			       SceUInt32 capacity, void *data,
+			       SceUInt32 *length, void *key);
 	int (*RetainKey)(void *key);
 	int (*EnumerateComponents)(void *key, SslKeyComponentCallback callback, void *arg);
 	SceUIntPtr opaqueComponentOperations[3];
@@ -88,8 +100,30 @@ int sslSetPublicKeyInfo(void *key, int selector, void *value);
 int sslRetainKeyContext(void *context);
 int sslGetPublicKeyAlgorithm(void *key);
 int sslDestroyKeyContext(void *context);
+int sslInitKeyContext(void *library, int parameter, SceUInt32 flags,
+		      void **result);
+int sslAddKeyContextReference(void *context);
 int sslFreeKeyContext(void *context);
 int sslGetKeyContextInfo(void *context, int selector, void *result);
 int sslSetKeyContextInfo(void *context, int selector, void *value);
+int sslAddPublicKeyReference(void *key);
+int sslGetPrivateKeyPemHeader(void *key, int algorithm, int format,
+			      SceUInt32 capacity, char *header);
+int sslGetPublicKeyPemHeader(int algorithm, SceUInt32 capacity, char *header);
+int sslDecodePublicKey(void *context, int format, int algorithm,
+		       SceUInt32 length, const void *data,
+		       SceUInt32 *consumed, void **result);
+int SceSslInternal_FEFE761C(void *context, int format, int algorithm,
+			    SceUInt32 length, const void *data,
+			    SceUInt32 *consumed, void **result);
+int sslDecodePrivateKeyDer(void *context, int format, int algorithm,
+			   int mode, SceUInt32 length, const void *data,
+			   SceUInt32 *consumed, void **result);
+int sslDispatchGetKeyContextInfo(void *context, int selector, void *result);
+void *sslGetKeyContextLibrary(void *context);
+int SceSslInternal_7D30F0A6(void *bio, void *context, void **result,
+			    int algorithm, int flags);
+int sslReadPublicKeyBio(void *bio, void *context, void **result,
+			int algorithm, int flags);
 
 #endif

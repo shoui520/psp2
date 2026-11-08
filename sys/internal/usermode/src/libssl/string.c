@@ -60,6 +60,26 @@ int sslToUpper(int character)
 	return sceClibToupper(character);
 }
 
+void *sslCopyMemory(void *destination, const void *source, SceUInt32 size)
+{
+	return sceClibMemcpy_safe(destination, source, size);
+}
+
+void *sslFillMemory(void *destination, int value, SceUInt32 size)
+{
+	return sceClibMemset(destination, value, size);
+}
+
+int sslCompareMemory(const void *left, const void *right, SceUInt32 size)
+{
+	return sceClibMemcmp(left, right, size);
+}
+
+void *sslMoveMemory(void *destination, const void *source, SceUInt32 size)
+{
+	return sceClibMemmove(destination, source, size);
+}
+
 char *sslCopyString(char *destination, const char *source, SceUInt32 size)
 {
 	return sceClibStrncpy(destination, source, size);

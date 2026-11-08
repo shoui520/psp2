@@ -979,9 +979,7 @@ end:
 }
 
 STUB(SceSslInternal_133ED36D)
-STUB(SceSslInternal_7D30F0A6)
 STUB(SceSslInternal_A374CD7B)
 STUB(SceSslInternal_AC1DBE40)
 STUB(SceSslInternal_DEC6DD27)
 STUB(SceSslInternal_FB51AE89)
-STUB(SceSslInternal_FEFE761C)

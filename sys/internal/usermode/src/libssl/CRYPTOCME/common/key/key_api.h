@@ -11,11 +11,15 @@ typedef struct SslKeyMaterial {
 	const void *data;
 } SslKeyMaterial;
 
-/* Shared module interface prefix; only the first slot is accessed here. */
 typedef struct SslKeyGeneratorModule {
 	int (*CreateKey)(SslLibrary *library, int type, const void *info,
 			 void **result);
+	int (*Destroy)(void *key);
+	int (*GetInfo)(void *key, int selector, void *result);
+	int (*SetInfo)(void *key, int selector, void *value);
 } SslKeyGeneratorModule;
+
+_Static_assert(sizeof(SslKeyGeneratorModule) == 16, "SslKeyGeneratorModule");
 
 typedef const SslKeyGeneratorModule *(*SslKeyGeneratorFactory)(void *data);
 
