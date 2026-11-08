@@ -315,15 +315,15 @@ ProgressBarStyleParam::ProgressBarStyleParam()
 	m_obj[ProgressBar::OBJ_SIGNAL].m_name = "signal_obj";
 	m_obj[ProgressBar::OBJ_SIGNAL].m_index = ProgressBar::OBJ_SIGNAL;
 	m_drawobj_param_list.push_back(&m_obj[ProgressBar::OBJ_SIGNAL]);
-	m_obj[ProgressBar::OBJ_GLOW].m_name = "glow_obj";
-	m_obj[ProgressBar::OBJ_GLOW].m_index = ProgressBar::OBJ_GLOW;
-	m_drawobj_param_list.push_back(&m_obj[ProgressBar::OBJ_GLOW]);
-	m_obj[ProgressBar::OBJ_BASE_SHADOW].m_name = "base_shadow_obj";
-	m_obj[ProgressBar::OBJ_BASE_SHADOW].m_index = ProgressBar::OBJ_BASE_SHADOW;
-	m_drawobj_param_list.push_back(&m_obj[ProgressBar::OBJ_BASE_SHADOW]);
-	m_obj[ProgressBar::OBJ_BAR_SHADOW].m_name = "bar_shadow_obj";
-	m_obj[ProgressBar::OBJ_BAR_SHADOW].m_index = ProgressBar::OBJ_BAR_SHADOW;
-	m_drawobj_param_list.push_back(&m_obj[ProgressBar::OBJ_BAR_SHADOW]);
+	m_glow_obj.m_name = "glow_obj";
+	m_glow_obj.m_index = ProgressBar::OBJ_GLOW;
+	m_drawobj_param_list.push_back(&m_glow_obj);
+	m_shadow_obj[0].m_name = "base_shadow_obj";
+	m_shadow_obj[0].m_index = ProgressBar::OBJ_BASE_SHADOW;
+	m_drawobj_param_list.push_back(&m_shadow_obj[0]);
+	m_shadow_obj[1].m_name = "bar_shadow_obj";
+	m_shadow_obj[1].m_index = ProgressBar::OBJ_BAR_SHADOW;
+	m_drawobj_param_list.push_back(&m_shadow_obj[1]);
 }
 
 bool ProgressBar::IsInherit(const char *type) const

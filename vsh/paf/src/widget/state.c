@@ -144,13 +144,6 @@ int _ZN3paf2ui7TextBox25SetEditAutoTransitionModeEb(uint8_t *self, uint8_t value
 	return 0;
 }
 
-int _ZN3paf2ui16ProgressBarTouch18SetLabelSliderModeENS0_11ProgressBar9LabelModeE(uint8_t *self, int32_t index)
-{
-	if (index < 0 || index > 2)
-		return -2136014706;
-	*(uint32_t *)(self + 756) = index;
-	return 0;
-}
 
 int _ZN3paf2ui11Environment15IsTermAvailableEv(const uint8_t *self)
 {
@@ -242,17 +235,6 @@ uint32_t _ZN3paf2ui4Text10CheckStateEv(const uint8_t *self)
 }
 
 
-int _ZN3paf2ui16ProgressBarTouch21SetLabelSliderPosModeENS0_11ProgressBar12LabelPosModeE(uint8_t *self, int32_t index)
-{
-	uint32_t flags;
-
-	if (index < 0 || index > 9)
-		return -2136014706;
-	flags = *(uint32_t *)(self + 724) | 16;
-	*(uint32_t *)(self + 760) = index;
-	*(uint32_t *)(self + 724) = flags;
-	return 0;
-}
 
 
 uint32_t *ScePafWidget_5245A0F2(uint32_t *result, const uint32_t *source)
@@ -454,13 +436,6 @@ void *ScePafWidget_40F2A311(uint32_t *self)
 	return self;
 }
 
-int _ZN3paf2ui16ProgressBarTouch16OnDragMoveSliderEPNS0_5EventE(void *self)
-{
-	void *const *methods = *(void *const *const *)self;
-
-	return ((int (*)(void *, uint32_t, uint32_t))methods[152])(
-		self, 268435458, 0);
-}
 
 extern int _ZN3paf5graph7TextObj12GetLineCountERj(const uint8_t *self, uint32_t *output);
 extern int _ZN3paf5graph7TextObj11GetCharInfoEjRNS0_18TextLayoutCharInfoE(const uint8_t *self, uint32_t index,
@@ -639,8 +614,7 @@ int _ZNK3paf2ui15CompositeButton9IsInheritEPKc(const void *self, const char *typ
 int _ZNK3paf2ui8CheckBox9IsInheritEPKc(const void *self, const char *type);
 /* ImageButton's is C++ (w_image_button.cpp) */
 int _ZNK3paf2ui11ImageButton9IsInheritEPKc(const void *self, const char *type);
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui16ProgressBarTouch9IsInheritEPKc, "progressbar_touch",
-		   _ZNK3paf2ui11ProgressBar9IsInheritEPKc)
+/* ProgressBarTouch's is C++ (w_progress_bar_touch.cpp) */
 /* PlaneButton's is C++ (w_plane_button.cpp) */
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RadioBox9IsInheritEPKc, "radio_box",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
@@ -787,14 +761,6 @@ void *ScePafWidget_1D7D7860(uint8_t *self)
 	return self;
 }
 
-int _ZN3paf2ui16ProgressBarTouch20SetLabelSliderMarginEf(uint8_t *self, float value)
-{
-	uint32_t flags = *(const uint32_t *)(self + 724);
-
-	*(float *)(self + 764) = value;
-	*(uint32_t *)(self + 724) = flags | 0x10U;
-	return 0;
-}
 
 
 /* Test membership in the indexed widget selector table. */

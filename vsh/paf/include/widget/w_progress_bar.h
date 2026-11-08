@@ -19,6 +19,7 @@
 #include <graphics/drawobj/plane_obj.h>
 #include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
+#include <std/list>
 #include <std/vector>
 #include <thread/thread.h>
 #include <widget/core/widget.h>
@@ -288,7 +289,8 @@ public:
 };
 
 /* a ProgressBar's style: the bar's animation, the signal's, the shadows' offset and margin, and
-   its seven planes */
+   its seven planes: the base, the bars and the signal, the glow, and the two shadows (in three
+   groups, as Sony's constructor and destructor build and destroy them) */
 class ProgressBarStyleParam : public WidgetStyleParam {
 public:
 	static const char m_param_name[];
@@ -304,7 +306,183 @@ public:
 	int32_t m_anim_func;
 	float m_signal_anim_time;
 	ProgressBar::ShadowParam m_shadow_param;
-	graph::PlaneObjParam m_obj[ProgressBar::OBJ_PROGRESSBAR_END];
+	graph::PlaneObjParam m_obj[ProgressBar::OBJ_SIGNAL + 1];
+	graph::PlaneObjParam m_glow_obj;
+	graph::PlaneObjParam m_shadow_obj[2];
+};
+
+/* a ProgressBar with a slider on the fore bar's end, dragged by touch or moved by the left and
+   right keys to set its value, and a label on the slider showing it */
+class ProgressBarTouch : public ProgressBar {
+public:
+	/* its draw objects after ProgressBar's, the slider widget's ("slider_obj",
+	   "slider_glow_obj") */
+	enum {
+		OBJ_SLIDER = 7,
+		OBJ_SLIDER_GLOW = 8,
+		OBJ_PROGRESSBAR_TOUCH_END = 9
+	};
+
+	/* its widgets in m_parts after ProgressBar's label (names ours) */
+	enum {
+		PARTS_SLIDER = 1,
+		PARTS_LABEL_SLIDER = 2,
+		PARTS_PROGRESSBAR_TOUCH_END = 3
+	};
+
+	/* the bit of m_dirty after ProgressBar's: the slider's label to be placed (name ours) */
+	enum {
+		DIRTY_FLAG_LABEL_SLIDER_POS = 4
+	};
+
+	/* how far the slider is dragged: along the whole bar, or in BAR_MODE_DOUBLE only between
+	   the minimum and the back bar's value (Sony's type, the names ours) */
+	enum SliderMode {
+		SLIDER_MODE_BAR = 0,
+		SLIDER_MODE_BAR_BACK = 1
+	};
+
+	/* what it tells its listeners, with the value in m_data[0] as a float and, at the end of a
+	   drag, whether it was cancelled in m_data[1] (names ours, after ScrollBarTouch's) */
+	enum {
+		CB_PROGRESSBAR_TOUCH_CHANGED = 0x10000000,
+		CB_PROGRESSBAR_TOUCH_DRAG_BEGIN = 0x10000001,
+		CB_PROGRESSBAR_TOUCH_DRAG_MOVE = 0x10000002,
+		CB_PROGRESSBAR_TOUCH_DRAG_END = 0x10000003
+	};
+
+	/* its sounds, after its sound parameter's names */
+	enum {
+		SOUND_DRAG_BEGIN = 0,
+		SOUND_DRAG_END = 1,
+		SOUND_PROGRESSBAR_TOUCH_END = 2
+	};
+
+	static const char m_widget_type[];
+	static const char *TypeName();
+
+	ProgressBarTouch(Widget *parent, CreateParam *param);
+	virtual ~ProgressBarTouch();
+
+	/* the left and right keys move the value by the key step, as a drag of the slider */
+	virtual int32_t HandleKeycodeEvent(Event *e);
+	virtual int32_t HandlePointEvent(Event *e);
+	virtual int32_t HandleTouchEvent(Event *e);
+	virtual int32_t HandleFocusEvent(Event *e);
+	virtual void EnableFocusEvent(bool on_off);
+	virtual bool IsInherit(const char *type) const;
+	virtual char *GetTypeName() const;
+	virtual WidgetSoundParam::Sound *GetSound(int32_t id);
+	virtual void AddSound(uint32_t index, WidgetSoundParam::Sound &sound);
+	/* the fore bar's value is not set while the slider is dragged or moved by the keys */
+	virtual int32_t SetValue(float value, bool anim = false, BarId id = BAR_FORE);
+	using ProgressBar::SetValue;
+	virtual Widget *GetPartsWidget(int32_t obj, int32_t *child_obj);
+	virtual void CheckDirtyFlag();
+	virtual void UpdateBar(BarId id = BAR_FORE, bool anim = false);
+
+	/* the slots after ProgressBar's, from 0x204 (index 129) */
+	virtual int32_t SetObjSize(const math::v4 &size, int32_t obj);
+	virtual int32_t GetObjSize(math::v4 &size, int32_t obj);
+	virtual int32_t SetSliderMode(SliderMode mode);
+	virtual SliderMode GetSliderMode()
+	{
+		return m_slider_mode;
+	}
+	virtual int32_t AttachLabelSliderWidget(Widget *widget);
+	virtual int32_t DetachLabelSliderWidget();
+	virtual Widget *GetLabelSliderWidget();
+	virtual int32_t SetLabelSliderMode(LabelMode mode);
+	virtual LabelMode GetLabelSliderMode()
+	{
+		return m_label_slider_mode;
+	}
+	virtual int32_t SetLabelSliderPosMode(LabelPosMode mode);
+	virtual LabelPosMode GetLabelSliderPosMode()
+	{
+		return m_label_slider_pos_mode;
+	}
+	virtual int32_t SetLabelSliderMargin(float margin);
+	virtual float GetLabelSliderMargin()
+	{
+		return m_label_slider_margin;
+	}
+	/* the slider's glow made where it has none */
+	virtual void CreateSliderGlow();
+	/* the glow lit, or dimmed to 0.7 of its alpha */
+	virtual void ShowGlow(int32_t obj, bool show);
+	virtual void UpdateSliderPos(bool anim);
+	virtual void UpdateSliderDragRange();
+	virtual void UpdateLabelSlider(float value);
+	virtual void UpdateLabelSliderPos();
+	/* a touch on the bar takes the slider to it */
+	virtual void OnTouch(Event *e);
+	virtual void OnDragBeginSlider(Event *e);
+	virtual void OnDragMoveSlider(Event *e);
+	virtual void OnDragEndSlider(Event *e, bool cancel);
+	/* the value where the slider was dragged to, told to the listeners as type */
+	virtual void OnDragSlider(int32_t type, bool cancel);
+
+	/* the slider's drag events to the widget's handlers */
+	static void OnDragSliderEvent(int32_t type, Handler *self, Event *e, void *data);
+
+	SliderMode m_slider_mode;
+	LabelMode m_label_slider_mode;
+	LabelPosMode m_label_slider_pos_mode;
+	float m_label_slider_margin;
+	/* the touch dragging the slider, and the key moving it: -1 for none */
+	int32_t m_drag_touch_id;
+	int32_t m_key;
+	/* what a key press moves the value by (1 for 0) */
+	float m_key_step;
+	/* the sounds added to it, by index */
+	list<WidgetSoundParam::Sound> m_sound_list;
+};
+
+/* a ProgressBarTouch's resource parameters: ProgressBar's, slider_mode, slider_size,
+   w_label_slider, label_slider_mode, label_slider_pos_mode and label_slider_margin */
+class ProgressBarTouchParam : public ProgressBarParam {
+public:
+	static const char m_param_name[];
+	static const TextureRef c_textureList[];
+	static const char *ParamName();
+
+	ProgressBarTouchParam();
+	virtual const char *GetParamName() const;
+	virtual int32_t Set();
+	virtual int32_t Get();
+	virtual int32_t Create(int32_t mode);
+
+	int32_t m_slider_mode;
+	math::v4 m_slider_size;
+	int32_t m_label_slider_mode;
+	int32_t m_label_slider_pos_mode;
+	float m_label_slider_margin;
+	IDParam m_label_slider;
+};
+
+/* a ProgressBarTouch's style: ProgressBar's, and the slider's and its glow's planes */
+class ProgressBarTouchStyleParam : public ProgressBarStyleParam {
+public:
+	static const char m_param_name[];
+	static const char *ParamName();
+
+	ProgressBarTouchStyleParam();
+	virtual const char *GetParamName() const;
+	virtual int32_t SetEach(Widget *widget);
+
+	/* the slider's and its glow's, by OBJ_SLIDER and OBJ_SLIDER_GLOW */
+	graph::PlaneObjParam m_slider_obj[2];
+};
+
+/* a ProgressBarTouch's two sounds */
+class ProgressBarTouchSoundParam : public WidgetSoundParam {
+public:
+	static const char m_param_name[];
+	static const char *ParamName();
+
+	ProgressBarTouchSoundParam();
+	virtual const char *GetParamName() const;
 };
 
 }
