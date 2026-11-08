@@ -457,7 +457,7 @@ public:
 	void SetSegmentHeader(int32_t segment, Widget *header, bool floating, bool disappearance);
 	/* a segment given a header made by the header factory, of the size along the axis (no
 	   name found) */
-	void ScePafWidget_7AC07A92(int32_t segment, const math::v2 &size, bool floating,
+	void ScePafWidget_7AC07A92(int32_t segment, const math::v4 &size, bool floating,
 				   bool disappearance);
 	/* the size a segment's header takes (no name found) */
 	math::v4 ScePafWidget_89DDBD65(int32_t segment);

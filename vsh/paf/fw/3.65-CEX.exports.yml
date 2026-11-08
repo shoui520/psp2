@@ -3391,7 +3391,7 @@ ScePaf:
         - _ZN3paf2ui8filelist10CellSource6UpdateERNS1_16CellListAccessorE: 0x2FBD4E70
         - ScePafWidget_2FD19011: 0x2FD19011
         - _ZN3paf2ui14ScrollViewBase7OnFlickEPNS0_5EventE: 0x2FDBFE08
-        - ScePafWidget_2FF0AEC2: 0x2FF0AEC2
+        - _ZN3paf2ui8FileList21ScePafWidget_2FF0AEC2ERNS0_8listview20SegmentHeaderFactory11CreateParamE: 0x2FF0AEC2
         - _ZN3paf2ui12TextBoxParamD1Ev: 0x2FF7355A
         - _ZN3paf2ui6Widget12ReorderChildEPS1_S2_: 0x300564A9
         - _ZN3paf2ui9DirectBarD2Ev: 0x3017AD0B
@@ -3824,7 +3824,7 @@ ScePaf:
         - _ZN3paf2ui6Widget12CalcClipRectEv: 0x5E67337D
         - ScePafWidget_5E7757AA: 0x5E7757AA
         - _ZN3paf2ui9DirectBar18OrientDragOutStateEPNS0_5EventE: 0x5EB1611E
-        - ScePafWidget_5EBBC958: 0x5EBBC958
+        - _ZN3paf2ui8filelist7Manager9InitParamC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x5EBBC958
         - _ZNK3paf2ui19ScrollViewBaseParam12GetParamNameEv: 0x5ECCFD2D
         - _ZN3paf2ui8ListView21ScePafWidget_5EEE4313EPNS0_5EventE: 0x5EEE4313
         - _ZN3paf2ui6Widget8SetAlignEjjjPNS_5TimerE: 0x5F04A98E
@@ -3886,7 +3886,7 @@ ScePaf:
         - _ZN3paf2ui7Handler18HandlePointFwEventEPNS0_5EventE: 0x66779ECA
         - ScePafWidget_66847A11: 0x66847A11
         - ScePafWidget_66960CBF: 0x66960CBF
-        - ScePafWidget_66A83697: 0x66A83697
+        - _ZN3paf2ui8filelist7Manager9InitParamC2ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x66A83697
         - _ZN3paf2ui29ScrollViewScrollBarController12UpdateLayoutERKNS0_19ScrollViewBarLayoutE: 0x66B35C73
         - _ZN3paf2ui7Handler16HandleInputEventEPNS0_5EventE: 0x66D4EAE7
         - _ZN3paf2ui6Widget19SetBaseDestroyCountEi: 0x66EEB261
@@ -3919,7 +3919,7 @@ ScePaf:
         - ScePafWidget_695200BA: 0x695200BA
         - _ZN3paf2ui10EventQueueC2Ei: 0x695344D3
         - _ZN3paf2ui8ListView21ScePafWidget_697CD413Ev: 0x697CD413
-        - ScePafWidget_69860A6F: 0x69860A6F
+        - _ZN3paf2ui8FileList21ScePafWidget_69860A6FEv: 0x69860A6F
         - _ZN3paf2ui6ScreenC1ENS_13intrusive_ptrINS_5graph7SurfaceEEE: 0x699EBAF7
         - _ZN3paf2ui4Text8GetStyleEjRNS_5graph9TextStyleE: 0x69AE35D7
         - _ZN3paf2ui14ScrollViewBase14MoveViewParentERKNS_4math2v2EPNS_5TimerE: 0x69E33AF3
@@ -3941,7 +3941,7 @@ ScePaf:
         - _ZNK3paf2ui6Button13GetLayoutSizeERKNS_4math2v4ES5_: 0x6B242B0F
         - _ZN3paf2ui18SlidingDrawerParamC1Ev: 0x6B314BFF
         - _ZN3paf2ui7Handler21HandlePointEvent_coreEPNS0_5EventEb: 0x6B46EA96
-        - ScePafWidget_6B4F7595: 0x6B4F7595
+        - _ZN3paf2ui8filelist13SegmentSource21ScePafWidget_6B4F7595EixPNS0_6WidgetE: 0x6B4F7595
         - _ZN3paf2ui14AnimListenerF16OnTickEPvS2_: 0x6B532EC9
         - _ZN3paf2ui14BoxLayoutParam6CreateEi: 0x6B6018B2
         - _ZN3paf2ui16AppIconBaseParamC1Ev: 0x6B6C4693
@@ -4056,7 +4056,7 @@ ScePaf:
         - _ZN3paf2ui11ProgressBar11GetObjColorERNS_4math2v4Ei: 0x7853E6CD
         - _ZN3paf2ui20PadLongPressListener11OnPadUpdateEPKNS_11inputdevice3pad4DataES6_: 0x786C844F
         - _ZN3paf2ui14ScrollViewBase10UpdateSizeEv: 0x787F5C6A
-        - ScePafWidget_789C5142: 0x789C5142
+        - _ZN3paf2ui8FileList21ScePafWidget_789C5142ERNS0_8listview20SegmentHeaderFactory12DisposeParamE: 0x789C5142
         - _ZN3paf2ui8BoxParamC2Ev: 0x78A17797
         - _ZN3paf2ui11ProgressBar11SetMinValueEf: 0x78B6C8EC
         - _ZN3paf2ui4Text14GetNextDownHitEjRj: 0x78BED602
@@ -4079,7 +4079,7 @@ ScePaf:
         - _ZN3paf2ui13SlidingDrawer12GetViewFocusEi: 0x7A639130
         - _ZN3paf2ui6Widget10AddDrawObjERKNS1_12DrawObjEntryEb: 0x7A682C7B
         - _ZN3paf2ui4Text14GetNextLeftHitEjRj: 0x7AAD4D89
-        - _ZN3paf2ui8ListView21ScePafWidget_7AC07A92EiRKNS_4math2v2Ebb: 0x7AC07A92
+        - _ZN3paf2ui8ListView21ScePafWidget_7AC07A92EiRKNS_4math2v4Ebb: 0x7AC07A92
         - _ZN3paf2ui3Box13SetLayoutTypeENS1_10LayoutTypeE: 0x7AD706B6
         - _ZN3paf2ui19ScrollBarStyleParam7SetEachEPNS0_6WidgetE: 0x7AD9AC8F
         - _ZN3paf2ui11ImageButtonD2Ev: 0x7AECDD95
@@ -4353,7 +4353,7 @@ ScePaf:
         - _ZN3paf2ui14ScrollViewBase22SetScrollBarControllerEPNS0_29ScrollViewScrollBarControllerE: 0x94C76F94
         - _ZN3paf2ui12CornerButton14UpdateObjsSizeEv: 0x950CE36B
         - _ZN3paf2ui8ListView21ScePafWidget_9556E18AEPNS0_8listview20SegmentHeaderFactoryE: 0x9556E18A
-        - ScePafWidget_95A143BF: 0x95A143BF
+        - _ZN3paf2ui8filelist16CellListAccessor21ScePafWidget_95A143BFEi: 0x95A143BF
         - _ZN3paf2ui8ListView20OnPartsLayoutUpdatedEb: 0x95BDB620
         - _ZN3paf2ui7TextBox19OnCaretBlinkFadeOutEPNS_5TimerEPNS0_12AnimListenerEPvS6_S6_: 0x95E25C8F
         - _ZN3paf2ui8ListView5ClearEv: 0x95FE9C0D
@@ -4720,7 +4720,7 @@ ScePaf:
         - _ZN3paf2ui7Handler16HandlePointEventEPNS0_5EventE: 0xBC27DB52
         - _ZN3paf2ui14ScrollViewBase10TrackPressEPNS0_5EventE: 0xBC527FD9
         - _ZN3paf2ui8FileList11OnCellMovedEiii: 0xBC6625A3
-        - ScePafWidget_BC736EE9: 0xBC736EE9
+        - _ZN3paf2ui8filelist13SegmentSource21ScePafWidget_BC736EE9ERNS1_15HeaderBindParamE: 0xBC736EE9
         - ScePafWidget_BC74324A: 0xBC74324A
         - _ZN3paf2ui16ButtonStyleParam4InitEv: 0xBC86C211
         - _ZN3paf2ui18BusyIndicatorParam3SetEv: 0xBC92F6BC
@@ -5569,7 +5569,7 @@ ScePaf:
         - _ZTVN3paf2ui6DialogE: 0xAD341FDF
         - _ZTVN3paf2ui16ProgressBarTouchE: 0xAD407146
         - _ZN3paf2ui18ImageSlideBarParam13c_textureListE: 0xAD8ECD89
-        - ScePafWidget_ADCA1789: 0xADCA1789
+        - _ZTVN3paf2ui8filelist24FileSegmentHeaderFactoryE: 0xADCA1789
         - _ZN3paf2ui26ProgressBarTouchStyleParam12m_param_nameE: 0xB0080E86
         - _ZTVN3paf2ui22TouchLongPressListenerE: 0xB1BE1DCE
         - _ZTVN3paf2ui14BoxLayoutParamE: 0xB2BDF983

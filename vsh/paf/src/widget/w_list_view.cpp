@@ -3278,7 +3278,7 @@ void ListView::SetSegmentHeader(int32_t segment, Widget *header, bool floating,
 
 /* a segment given a header made by the header factory, of the size along the axis (no name
    found) */
-void ListView::ScePafWidget_7AC07A92(int32_t segment, const math::v2 &size, bool floating,
+void ListView::ScePafWidget_7AC07A92(int32_t segment, const math::v4 &size, bool floating,
 				     bool disappearance)
 {
 	listview::Segment *seg = m_segment_list->GetSegment(segment);

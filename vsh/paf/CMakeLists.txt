@@ -250,6 +250,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/w_corner_button.cpp
 	src/widget/w_dialog.cpp
 	src/widget/w_directbar.cpp
+	src/widget/w_file_list.cpp
 	src/widget/w_group.cpp
 	src/widget/w_image_button.cpp
 	src/widget/w_image_slidebar.cpp
@@ -390,6 +391,7 @@ set_source_files_properties(src/widget/w_composite_drawer.cpp PROPERTIES COMPILE
 set_source_files_properties(src/widget/w_corner_button.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_dialog.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_directbar.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+set_source_files_properties(src/widget/w_file_list.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_group.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_image_button.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/w_image_slidebar.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
