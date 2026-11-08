@@ -146,7 +146,7 @@
 +
 +void SceSslInternal_9E38815D(SSL_CTX *ctx, void *u)
 +	{
-+	ctx->default_passwd_callback_userdata=u;
++	ctx->client_cert_cb=u;
 +	}
 +
 +int sslGenerateRandomBytes(SSL *s, SceUInt32 len, void *buf,

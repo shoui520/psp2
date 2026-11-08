@@ -27,8 +27,10 @@
 #define SSLerr(function, reason) sslPushError(20, function, reason, NULL, 0)
 
 extern SSL_METHOD TLSv1_server_data;
+extern SSL_METHOD SSLv3_server_data;
 
 int *sceNetErrnoLoc(void);
 int sslCompareStrings(const char *left, const char *right, SceUInt32 size);
+SSL_METHOD *ssl3_get_server_method(int ver);
 
 #include "s23_srvr_sce.inc"

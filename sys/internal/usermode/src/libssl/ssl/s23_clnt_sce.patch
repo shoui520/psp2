@@ -1,6 +1,6 @@
 --- a/s23_clnt.c
 +++ b/s23_clnt.c
-@@ -56,67 +56,162 @@
+@@ -56,67 +56,153 @@
   * [including the GNU Public Licence.]
   */
  
@@ -23,18 +23,9 @@
 +static SSL_METHOD *SSLv3_client_method(void);
 +static SSL_METHOD *ssl23_get_client_method(int ver);
 +
-+static SSL_METHOD *ssl3_get_client_method(int ver)
-+	{
-+	if (ver == SSL3_VERSION)
-+		return(SSLv3_client_method());
-+	else
-+		return(NULL);
-+	}
-+
 +static SSL_METHOD *SSLv3_client_method(void)
 +	{
 +	static int init=1;
-+	static SSL_METHOD SSLv3_client_data;
 +
 +	if (init)
 +		{

@@ -1,6 +1,6 @@
 --- a/s23_srvr.c
 +++ b/s23_srvr.c
-@@ -56,69 +56,116 @@
+@@ -56,69 +56,107 @@
   * [including the GNU Public Licence.]
   */
  
@@ -21,18 +21,9 @@
 +static SSL_METHOD *SSLv3_server_method(void);
 +static SSL_METHOD *ssl23_get_server_method(int ver);
 +
-+static SSL_METHOD *ssl3_get_server_method(int ver)
-+	{
-+	if (ver == SSL3_VERSION)
-+		return(SSLv3_server_method());
-+	else
-+		return(NULL);
-+	}
-+
 +static SSL_METHOD *SSLv3_server_method(void)
 +	{
 +	static int init=1;
-+	static SSL_METHOD SSLv3_server_data;
 +
 +	if (init)
 +		{

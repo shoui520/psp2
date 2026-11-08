@@ -34,9 +34,11 @@
 #define SSLerr(function, reason) sslPushError(20, function, reason, NULL, 0)
 
 extern SSL_METHOD TLSv1_client_data;
+extern SSL_METHOD SSLv3_client_data;
 
 int *sceNetErrnoLoc(void);
 int SceSslInternal_6F3B9809(SSL *s);
 int ssl3_client_hello(SSL *s);
+SSL_METHOD *ssl3_get_client_method(int ver);
 
 #include "s23_clnt_sce.inc"

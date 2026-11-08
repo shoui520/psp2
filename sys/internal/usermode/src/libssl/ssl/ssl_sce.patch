@@ -243,7 +243,7 @@
 -	int (*client_cert_cb)(/* SSL *ssl, X509 **x509, EVP_PKEY **pkey */);
 -
 -	/* what we put in client requests */
-+	void *default_passwd_callback_userdata;
++	int (*client_cert_cb)(/* SSL *ssl, X509 **x509, EVP_PKEY **pkey */);
  	STACK *client_CA;
 -
 +	int client_message_limit;
@@ -264,7 +264,7 @@
 +	int max_send_fragment;
 +	int read_buffer_size;
 +	int rsa_key_option;
-+	int (*client_cert_cb)();
++	void *default_passwd_callback_userdata;
 +	int (*client_cert_cb_ex)();
 +	void *client_cert_cb_arg;
 +	void *library;

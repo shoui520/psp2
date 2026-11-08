@@ -307,7 +307,10 @@ int sslExtensionListProcess(
 	const unsigned char *data,
 	SSL *s,
 	int *alert);
-int sslExtensionListRunClientHandlers(const SslExtensionList *list, SSL *s);
+int sslExtensionListRunClientHandlers(
+	const SslExtensionList *list,
+	SSL *s,
+	int *alert);
 int sslSetupRenegotiationInfoExtension(SSL *s, int is_server);
 int sslStackFindUnsorted(STACK *st, char *data);
 int ssl_cipher_get_evp(SSL_CTX *ctx, SSL_CIPHER *c, SslCryptoAlgorithm **enc,
@@ -353,8 +356,6 @@ SSL_METHOD *sslv23_base_method(void);
 SSL_METHOD *SSLv23_server_method(void);
 int ssl23_accept(SSL *s);
 int ssl23_get_client_hello(SSL *s);
-SSL_METHOD *ssl3_get_server_method(int ver);
-SSL_METHOD *ssl3_get_client_method(int ver);
 SSL_METHOD *tlsv1_1_base_method(void);
 SSL_METHOD *TLSv1_1_client_method(void);
 SSL_METHOD *tls1_1_get_client_method(int ver);

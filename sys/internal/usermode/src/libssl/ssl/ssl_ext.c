@@ -835,15 +835,19 @@ end:
 	return status;
 }
 
-int sslExtensionListRunClientHandlers(const SslExtensionList *list, SSL *s)
+int sslExtensionListRunClientHandlers(
+	const SslExtensionList *list,
+	SSL *s,
+	int *alert)
 {
 	int status = 0;
-	int alert = -1;
 	SslExtension *entry = NULL;
 	SslExtensionHandler handler = { NULL, { 0, 0 } };
+	int local_alert = -1;
 	int count;
 	int i;
 
+	(void)alert;
 	if ((list == NULL) || (s == NULL)) {
 		sslPushError(0x2c, 0x7b, 0x23, NULL, 0);
 		return 0x2721;
@@ -862,7 +866,7 @@ int sslExtensionListRunClientHandlers(const SslExtensionList *list, SSL *s)
 				}
 				status = handler.callback(entry, s, handler.parameters[0]);
 				if (status != 0) {
-					sslExtensionGetProperty(entry, 4, &alert);
+					sslExtensionGetProperty(entry, 4, &local_alert);
 					break;
 				}
 			}
@@ -978,5 +982,4 @@ end:
 	return status;
 }
 
-STUB(SceSslInternal_AC1DBE40)
 STUB(SceSslInternal_FB51AE89)
