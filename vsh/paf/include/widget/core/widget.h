@@ -773,6 +773,8 @@ public:
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	virtual void DestroyWidget();
+	static const char m_widget_type[];
+	static const char *TypeName();
 
 	virtual uint32_t CheckState()
 	{
@@ -1314,6 +1316,8 @@ public:
 	/* the child at the index in m_children */
 	Widget *GetChild(int32_t index) const;
 	AnimQueue *FindAnim(int32_t id);
+	/* the count of children that can take the focus changed by delta, up to the scene (0x81152ac0) */
+	void CountFocusEnableChildren(int32_t delta);
 	int32_t KillAnimType(int32_t type);
 	/* the animation's listeners stopped where they are */
 	int32_t KillAnim(int32_t id);

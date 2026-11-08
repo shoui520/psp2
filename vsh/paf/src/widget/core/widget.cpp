@@ -4,10 +4,27 @@
  */
 #include <stddef.h>
 #include <graphics/drawobj/draw_obj.h>
+#include <timer/timerqueue.h>
+#include <widget/core/animlistener.h>
 #include <widget/core/widget.h>
 #include <widget/w_scene.h>
 
 namespace paf {
+
+/* Sony's build calls the draw objects' push_back rather than inlining it. */
+template<>
+inline __attribute__((noinline)) int vector<ui::Widget::DrawObjEntry>::push_back(
+	const ui::Widget::DrawObjEntry &val)
+{
+	int result;
+
+	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
+		new (&ptr[count]) ui::Widget::DrawObjEntry(val);
+		result = ++count;
+	}
+	return result;
+}
+
 namespace ui {
 
 /* the nearest widget up the tree, this one included, that holds the focus of its children,
@@ -72,6 +89,211 @@ void Widget::ReplaceDrawObj(const DrawObjEntry &entry, bool update)
 		SetDrawObjSurfaceDraw(this, entry.m_obj.get());
 	if (update)
 		UpdateSize();
+}
+
+
+const char Widget::m_widget_type[] = "widget_base";
+
+bool Widget::IsInherit(const char *type) const
+{
+	return m_widget_type == type;
+}
+
+char *Widget::GetTypeName() const
+{
+	return (char *)m_widget_type;
+}
+
+const char *Widget::TypeName()
+{
+	return m_widget_type;
+}
+
+math::v4 *Widget::GetSize(int32_t opt)
+{
+	if (opt == 0)
+		return &m_size;
+
+	bool front = opt == 2;
+	AnimQueue *anim = FindAnim(ANIM_SIZE);
+
+	if (anim == NULL)
+		return &m_size;
+
+	AnimQueueBase *queue = anim->m_queue[0];
+	math::v4 *result = NULL;
+
+	if (front) {
+		if (queue != NULL) {
+			AnimListener *listener = static_cast<AnimListener *>(queue->GetFront());
+
+			if (listener != NULL)
+				result = listener->GetTargetV4();
+		}
+	} else {
+		if (queue != NULL) {
+			AnimListener *listener = static_cast<AnimListener *>(queue->GetBack());
+
+			if (listener != NULL)
+				result = listener->GetTargetV4();
+		}
+	}
+	if (result == NULL)
+		return &m_size;
+	return result;
+}
+
+math::v4 *Widget::GetScale(int32_t opt)
+{
+	if (opt == 0)
+		return &m_scale;
+
+	bool front = opt == 2;
+	AnimQueue *anim = FindAnim(ANIM_SCALE);
+
+	if (anim == NULL)
+		return &m_scale;
+
+	AnimQueueBase *queue = anim->m_queue[0];
+	math::v4 *result = NULL;
+
+	if (front) {
+		if (queue != NULL) {
+			AnimListener *listener = static_cast<AnimListener *>(queue->GetFront());
+
+			if (listener != NULL)
+				result = listener->GetTargetV4();
+		}
+	} else {
+		if (queue != NULL) {
+			AnimListener *listener = static_cast<AnimListener *>(queue->GetBack());
+
+			if (listener != NULL)
+				result = listener->GetTargetV4();
+		}
+	}
+	if (result == NULL)
+		return &m_scale;
+	return result;
+}
+
+math::v4 Widget::GetAnchorOffset(int32_t opt)
+{
+	math::v4 result = m_anchor_offs;
+
+	if (opt == 1) {
+		AnimQueue *anim = FindAnim(ANIM_ANCHOR);
+
+		if (anim != NULL) {
+			AnimQueueBase *queue = anim->m_queue[0];
+
+			if (queue != NULL) {
+				AnimListener *listener = static_cast<AnimListener *>(queue->GetBack());
+
+				if (listener != NULL) {
+					math::v4 *target = listener->GetTargetV4();
+
+					if (target != NULL)
+						result = *target;
+				}
+			}
+		}
+	}
+	return result;
+}
+
+Widget *Widget::GetChild(int32_t index) const
+{
+	if ((uint32_t)index >= m_children.size())
+		return NULL;
+
+	list<Widget *>::iterator it = const_cast<list<Widget *> &>(m_children).begin();
+
+	for (; index > 0; --index)
+		++it;
+	for (; index < 0; ++index)
+		--it;
+	return *it;
+}
+
+void Widget::CountFocusEnableChildren(int32_t delta)
+{
+	int32_t count = m_focus_count + delta;
+	Widget *parent = m_parent;
+
+	if (count >= 0) {
+		if (count <= 0xFFFF)
+			m_focus_count = count;
+		else
+			m_focus_count = 0xFFFF;
+	} else {
+		m_focus_count = 0;
+	}
+	if (parent != NULL && static_cast<Widget *>(m_scene) != this)
+		parent->CountFocusEnableChildren(delta);
+}
+
+graph::DrawObj *Widget::GetDrawObj(int32_t obj)
+{
+	vector<DrawObjEntry>::iterator it;
+
+	for (it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it) {
+		if (it->m_attr.m_id == obj)
+			break;
+	}
+	if (it != m_drawobjs.end())
+		return it->m_obj.get();
+	return NULL;
+}
+
+bool Widget::IsPrepareObjs()
+{
+	for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it) {
+		if (it->m_attr.m_flag0 && it->m_obj->m_flags.m_prepare)
+			return true;
+	}
+	return false;
+}
+
+void Widget::KillObjAnim(int32_t obj, int32_t id)
+{
+	KillAnim(obj + id);
+}
+
+void Widget::SetUpdateParam(uint32_t param)
+{
+	uint32_t flags = m_update_flag;
+
+	if ((param & flags) == 0) {
+		if (param == 1) {
+			m_update_flag = flags | 1;
+			SetUpdateParam(2);
+		} else if (param == 2) {
+			m_update_flag = flags | 2;
+			for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
+				(*it)->SetUpdateParam(2);
+		}
+	}
+}
+
+int32_t Widget::SetAdjust(uint32_t ax, uint32_t ay, uint32_t az)
+{
+	m_adjust_x = ax;
+	m_adjust_y = ay;
+	m_adjust_z = az;
+	UpdateLayoutAttribute();
+	UpdateAdjustSize();
+	return 0;
+}
+
+void Widget::Update()
+{
+	if (m_hold_count <= 0) {
+		uint32_t num = m_drawobjs.size();
+
+		for (uint32_t i = 0; i != num; i++)
+			m_drawobjs[i].m_obj->Update();
+	}
 }
 
 }

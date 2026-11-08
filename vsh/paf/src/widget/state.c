@@ -163,11 +163,6 @@ int WidgetResourceReady(const void *resource)
 	return result;
 }
 
-int _ZN3paf2ui18SlidingDrawerParam3GetEv(const void *resource)
-{
-	return WidgetResourceReady(resource);
-}
-
 extern uint8_t *_ZN3paf5graph7DrawObj11EnterSafetyEv(void);
 
 uint8_t *_ZN3paf2ui8Animator5EnterEv(void)
@@ -210,19 +205,6 @@ uint8_t *_ZN3paf2ui6Widget14SetGestureMaskEjb(uint8_t *self, uint32_t value,
 		}
 	}
 	return self;
-}
-
-__attribute__((noinline)) int _ZNK3paf2ui6Widget9IsInheritEPKc(const void *self, const char *tag)
-{
-	return tag == "widget_base";
-}
-
-int _ZN3paf2ui13SlidingDrawer19SetMovableDirectionEj(uint32_t *self, uint32_t value)
-{
-	uint8_t *vtable = (uint8_t *)self[0];
-
-	self[255] = value;
-	return ((int (*)(uint32_t *))*(void **)(vtable + 572))(self);
 }
 
 int ScePafWidget_A4E53390(uint8_t *self)
@@ -273,8 +255,7 @@ int _ZNK3paf2ui11ImageButton9IsInheritEPKc(const void *self, const char *type);
 /* ProgressBarTouch's is C++ (w_progress_bar_touch.cpp) */
 /* PlaneButton's is C++ (w_plane_button.cpp) */
 /* RadioBox's is C++ (w_radio_box.cpp) */
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui13SlidingDrawer9IsInheritEPKc, "sliding_drawer",
-		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
+/* SlidingDrawer's is C++ (w_sliding_drawer.cpp) */
 /* Plane's is C++ (w_plane.cpp) */
 int _ZNK3paf2ui5Plane9IsInheritEPKc(const void *self, const char *type);
 /* PageTurn's is C++ (w_pageturn.cpp) */
@@ -327,14 +308,6 @@ int ScePafWidget_6B4F7595(void *unused0, void *unused1,
 		return ((int (*)(void *))*(void *const *)(vtable + 108))(target);
 	}
 	return 0;
-}
-
-int _ZN3paf2ui12AnimListener12PropColorSetEPS1_NS_4math2v4E(const uint8_t *self)
-{
-	void *target = *(void *const *)(self + 12);
-	const uint8_t *vtable = *(const uint8_t *const *)target;
-
-	return ((int (*)(void *))*(void *const *)(vtable + 152))(target);
 }
 
 void *ScePafWidget_1D7D7860(uint8_t *self)
@@ -403,16 +376,6 @@ int ScePafWidget_97020684(uint8_t *self)
 	if (*(void **)(self + 8))
 		return (*(int (**)(void))(self + 8))();
 	return 0;
-}
-
-uint32x4_t *_ZN3paf2ui15AnimListenerObj13PropObjRotGetEPNS0_12AnimListenerE(uint32x4_t *result,
-					  const uint8_t *self)
-{
-	const uint8_t *value = *(const uint8_t *const *)(self + 80);
-	const uint32x4_t *source = *(const uint32x4_t *const *)(value + 40);
-
-	*result = source ? *source : vdupq_n_u32(0);
-	return result;
 }
 
 uint8_t *ScePafWidget_0DCB8EA5(uint8_t *self, float seconds)
