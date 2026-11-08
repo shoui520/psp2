@@ -236,6 +236,17 @@ public:
 		}
 	}
 
+	/* shown or hidden, redrawn when it is shown: the form Scene's debug cube uses (name
+	   ours) */
+	void ChangeVisible(bool visible)
+	{
+		if (m_flags.m_visible != visible) {
+			m_flags.m_visible = visible;
+			if (visible)
+				UpdateDirty();
+		}
+	}
+
 	/* the RGBA bytes of m_color as four floats from 0 to 1 */
 	math::v4 GetColor() const
 	{

@@ -244,6 +244,12 @@ public:
 	bool IsOverModal(Widget *widget);
 	/* its camera's roll, 0 without one (0x8113dce2; name ours) */
 	float GetRollScreen();
+	/* the scene added to the scenes of the entry, before the widget (NULL: at the end), and
+	   taken out of them (0x8113ed32, 0x8113eea2; names ours) */
+	int32_t AddScene(Widget *scene, int32_t entry, Widget *before);
+	int32_t RemoveScene(Widget *scene);
+	/* the camera roll the screen orientation turns the scenes by (0x8113ca44; name ours) */
+	float GetOrientationRoll(int32_t orientation);
 
 	/* the gesture listener of the touch port, NULL for another port (inline in Sony's callers,
 	   name ours) */
@@ -258,7 +264,10 @@ public:
 
 	/* set: the widgets the focus leaves are kept in its history (name ours) */
 	bool m_focus_history_on;
-	uint8_t reserved[0x3f];
+	uint8_t reserved[0x3c];
+	/* set when a scene's layer weights are made again (Scene::UpdateLayerWeight; name ours) */
+	bool m_layer_weight_changed;
+	uint8_t reserved_42[2];
 	/* the display area scale the root surface shows at (names ours) */
 	float m_display_area_scale;
 	bool m_display_area_applied;
@@ -279,7 +288,11 @@ public:
 	/* the widget whose hit rect is the screen a rear touch scrolls within (TouchScrollSupplier's
 	   rear mochi gesture; name ours) */
 	Widget *m_root_widget;
-	uint8_t reserved7a[0xd];
+	uint8_t reserved7a[4];
+	/* the scenes' cameras turn with the screen orientation in modes 0 and 1
+	   (Scene::ResetCameraRoll; name ours) */
+	uint8_t m_camera_roll_mode;
+	uint8_t reserved7g[8];
 	/* set by RequestTerm */
 	bool m_term_requested;
 	/* set by the power callback while the system suspends: the frame is not drawn (name
@@ -327,7 +340,10 @@ public:
 	uint8_t reserved4g : 4;
 	bool m_rear_focus_cursor_moving_only : 1;
 	uint8_t reserved4h : 3;
-	uint8_t reserved4i[0x4f];
+	uint8_t reserved4i[0x1f];
+	/* the texture the scenes' debug cubes are drawn with (Scene::SetDebugMode; name ours) */
+	graph::Surface *m_debug_texture;
+	uint8_t reserved4j[0x2c];
 	/* the events passed on at the next frame (names after ScePaf-RE) */
 	EventQueue m_ev_queue;
 	list<Event> m_ev_subrouting;
@@ -373,6 +389,8 @@ extern const uint32_t g_screen_height_full_hd;
 /* the resource variant of the parameter's resolution with the ID, or the empty one */
 paf::ui::ResolutionResource ScePafWidget_E963EAEE(const paf::ui::EnvironmentParam *param,
 						  uint32_t id);
+/* constructs at mem a screen of the base's surface, viewport and scissor (NULL: none) */
+paf::ui::Screen *ScePafWidget_C0ABDE05(void *mem, paf::ui::Screen *base);
 /* constructs the Environment at mem */
 paf::ui::Environment *ScePafWidget_393F0EF0(void *mem, paf::ui::EnvironmentParam *param,
 					    int32_t screen_orientation_mode);

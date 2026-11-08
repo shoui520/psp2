@@ -4895,7 +4895,7 @@ ScePaf:
         - _ZN3paf2ui16ProgressBarTouchD0Ev: 0xD13E0F08
         - _ZN3paf2ui10ButtonBase9SetStringERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEi: 0xD149484A
         - _ZN3paf2ui9DirectBar15OrientDragStateEPNS0_5EventE: 0xD14BF002
-        - ScePafWidget_D150D035: 0xD150D035
+        - _ZN3paf2ui5SceneC2EPNS0_11EnvironmentEiPNS0_6Widget11CreateParamEPNS0_16EnvironmentParamEi: 0xD150D035
         - _ZN3paf2ui16ProgressBarTouch20GetLabelSliderWidgetEv: 0xD16FDC5B
         - _ZN3paf2ui8filelist19SegmentListAccessor6DeleteEij: 0xD1719229
         - _ZN3paf2ui8listview12CellSizeList4FindEf: 0xD174C604

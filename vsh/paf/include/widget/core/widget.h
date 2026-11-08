@@ -643,6 +643,11 @@ public:
 		ANIM_ANCHOR = 0x1000A
 	};
 
+	/* an animation ID's bit: the animation loops (name after ScePaf-RE) */
+	enum {
+		ANIM_OPTION_LOOP = 0x10000000
+	};
+
 	enum {
 		GET_CURRENT = 0,
 		GET_ANIMTARGET = 1,
@@ -1003,6 +1008,13 @@ public:
 				   const math::v4 &normal, HitInfo *info);
 	/* exports 7A3A7304, 0FCCC833, B94694E3 */
 	void SetDragMode(uint32_t mode);
+	/* sets the steps its drag moves it in (name ours) */
+	void SetDragQuant(uint8_t x, uint8_t y, uint8_t z)
+	{
+		m_drag_quant_x = x;
+		m_drag_quant_y = y;
+		m_drag_quant_z = z;
+	}
 
 	/* the smallest and the largest position its drag keeps it in (names ours) */
 	void SetDragLimitMin(const math::v4 &pos)
@@ -1047,6 +1059,13 @@ public:
 	math::v4 *GetScale(int32_t opt);
 	/* the rect its touches hit it in */
 	math::rect CalcHitRect();
+	/* where its hit box's center is, and its hit box's size (with opt 1 the target of a
+	   running size animation) */
+	math::v4 GetHitBoxCenter();
+	math::v4 GetHitBoxSize(int32_t opt);
+	/* the layout of the resolution taken at once, its children's too where children
+	   (0x8114f9c2; names ours) */
+	int32_t ChangeResolution_core(uint32_t id, bool children, bool update);
 	/* the world matrix made again from its position, scale and rotation and its parent's */
 	void UpdateMatrix();
 	/* its matrix and its descendants' made again (0x811553b0 TOOL; name ours) */
@@ -1129,6 +1148,9 @@ public:
 	/* the values for each resolution, in the array */
 	int32_t SetPos(const ResolutionData *pos, uint32_t num, Timer *t, int32_t id, int32_t opt,
 		       float delay, AnimCB cb_fin, void *usrdata);
+	/* the alpha it is shown with, kept within 0 and 1, set at once (0x8114d9f0; name ours,
+	   after SetShowAlpha) */
+	int32_t SetShowAlpha_core(float alpha);
 	/* the alpha it is shown with (Sony's name from the export) */
 	int32_t SetShowAlpha(float alpha, Timer *t, int32_t id, int32_t opt, float delay,
 			     AnimCB cb_fin);
@@ -1434,7 +1456,8 @@ public:
 	ResolutionData *m_rot_array;
 	uint8_t m_resolution_id;
 	uint8_t m_resolution_id_pre;
-	uint8_t reserved4;
+	/* the resolution it changes to over m_resolution_timer_next, 0xff for none (name ours) */
+	uint8_t m_resolution_id_next;
 	/* the entries of m_pos_array */
 	uint8_t m_pos_num;
 	/* the entries of m_size_array and m_rot_array (names ours) */
@@ -1443,7 +1466,10 @@ public:
 	uint8_t reserved5[2];
 	/* the touches it holds, by port << 8 | touch ID (name ours) */
 	map<uint32_t, TouchCapture *> m_touch_captures;
-	uint8_t reserved5b[0xc];
+	/* the drag states of the touches dragging it, the first and the second; the second
+	   becomes the first when the first is released (0x8114e258; names ours) */
+	void *m_drag_state[2];
+	uint8_t reserved5b[4];
 	/* the hit box GetHitBoxSize and GetHitBoxCenter give (names ours): its center offset and
 	   its size, the size an addition to the widget's (mode 1), a scale of it (2) or itself (3);
 	   mode 0 is the widget's own size */
@@ -1454,8 +1480,11 @@ public:
 	uint8_t m_hit_detect_mode;
 	uint8_t m_hit_detect_b_mode;
 	/* whether touches are tested against it, set by AppIconBase (name ours) */
-	uint8_t m_hit_check;
-	uint8_t reserved5a[7];
+	uint32_t m_hit_check : 8;
+	/* what SetDragMode sets */
+	uint32_t m_drag_mode : 16;
+	uint32_t reserved5a : 8;
+	uint8_t reserved5c[4];
 	uint32_t m_align_x : 4;
 	uint32_t m_align_y : 4;
 	uint32_t m_align_z : 4;
@@ -1471,7 +1500,12 @@ public:
 	uint32_t m_adjust_y : 4;
 	uint32_t m_adjust_z : 4;
 	uint32_t reserved6b : 4;
-	uint8_t reserved7[4];
+	/* the steps its drag moves it in, as a scene's layout debug mode sets them (Scene's
+	   m_debug_quant_x, y and z; names ours) */
+	uint8_t m_drag_quant_x;
+	uint8_t m_drag_quant_y;
+	uint8_t m_drag_quant_z;
+	uint8_t reserved7;
 	/* the bounds its drag keeps it in, its smallest and largest position (or, pinched, its
 	   scale), made by SetDragMode (names ours) */
 	SceFVector3 *m_drag_limit;
@@ -1602,6 +1636,10 @@ void ScePafWidget_13B246E0(paf::ui::Widget *widget, paf::ui::FocusShape *shape);
 /* makes the widget (on) the default focus of the nearest ancestor with a focus root at 0x234, or
    stops it being that (off) (0x8114fcfa TOOL; no name found) */
 void ScePafWidget_EC6175D6(paf::ui::Widget *widget, bool on);
+/* the layout of the resolution taken over the timer's time, at once without one, its
+   children's too where children */
+int32_t ScePafWidget_11D537AF(paf::ui::Widget *widget, uint32_t id, paf::Timer *t,
+			      bool children);
 /* Hide(Timer *, int32_t opt, float delay, AnimCB): hides the widget, over the timer's time */
 int32_t ScePafWidget_4588699E(paf::ui::Widget *widget, paf::Timer *t, int32_t opt, float delay,
 			      paf::ui::AnimCB cb_fin);
