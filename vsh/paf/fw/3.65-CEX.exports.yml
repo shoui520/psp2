@@ -3050,7 +3050,7 @@ ScePaf:
         - _ZN3paf2ui3Box18AddToExclusiveListEPNS0_6WidgetE: 0x0BEBC84F
         - _ZN3paf2ui25MultiTouchGestureListener18RefreshActiveTouchEj: 0x0C1CBE6B
         - _ZNK3paf2ui10ButtonBase11GetTypeNameEv: 0x0C27E5ED
-        - _ZN3paf2ui10ButtonBase17ApplyDrawObjStateEi: 0x0C39716B
+        - _ZN3paf2ui10ButtonBase17ApplyDrawObjStateERNS_5graph8DrawInfoE: 0x0C39716B
         - _ZN3paf2ui8RichText12SetImageSizeEiRKNS_4math2v4E: 0x0C39BC21
         - _ZN3paf2ui15CompositeButton17GetDrawObjByIndexEi: 0x0C619327
         - _ZN3paf2ui8Layouter8OnUpdateEv: 0x0C7FE13F
@@ -3472,7 +3472,7 @@ ScePaf:
         - ScePafWidget_36505C86: 0x36505C86
         - _ZN3paf2ui18SlidingDrawerParam3SetEv: 0x36B4E64E
         - _ZN3paf2ui19TextBoxEditListenerC1Ev: 0x36F89F9C
-        - _ZN3paf2ui6Widget17ApplyDrawObjStateEi: 0x36FAB403
+        - _ZN3paf2ui6Widget17ApplyDrawObjStateERNS_5graph8DrawInfoE: 0x36FAB403
         - _ZN3paf2ui16ButtonStyleParamD0Ev: 0x36FF6514
         - _ZN3paf2ui11ScrollBar2d16OnDragMoveSliderEPNS0_5EventE: 0x37133F0F
         - _ZN3paf2ui10EventQueueC1Ei: 0x37285198

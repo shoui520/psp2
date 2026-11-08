@@ -737,6 +737,23 @@ void ScePafWidget_622193BD(Widget *widget, bool update)
 	}
 }
 
+int32_t Widget::SetParent(Widget *parent, Widget *sibling, int32_t option)
+{
+	if (parent == NULL)
+		return -1;
+	if (m_hold_count > 0)
+		return -1;
+
+	RestructInfo info;
+
+	info.m_parent = parent;
+	info.m_widget = this;
+	info.m_sibling = sibling;
+	info.m_option = option;
+	s_list_restruct.push_back(info);
+	return 0;
+}
+
 bool Widget::IsPrepareObjs()
 {
 	for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it) {
@@ -810,6 +827,191 @@ void Widget::CountFocusEnableChildren(int32_t delta)
 		parent->CountFocusEnableChildren(delta);
 }
 
+bool Widget::UpdateSurfaceDraw(bool on)
+{
+	if (on == m_surface_draw)
+		return false;
+	m_surface_draw = on;
+
+	graph::SurfaceDrawParam param;
+
+	param.m_font_flags = 128;
+	param.m_surface_draw = on;
+	for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it)
+		it->m_obj->SetSurfaceDraw(param);
+	return true;
+}
+
+/* the ancestor of the widget that is a child of the parent, NULL when it is none (inline in
+   Sony's SetBehind_core, SetForward_core and their steps; name ours) */
+static inline Widget *ChildOfParent(Widget *parent, Widget *widget)
+{
+	if (widget != NULL) {
+		for (;;) {
+			Widget *above = widget->m_parent;
+
+			if (above == parent)
+				break;
+			widget = above;
+			if (above == NULL)
+				return NULL;
+		}
+	}
+	return widget;
+}
+
+int32_t Widget::SetBehind_core(Widget *w)
+{
+	Widget *parent = m_parent;
+
+	if (parent == NULL)
+		return -1;
+	w = ChildOfParent(parent, w);
+	if (w == NULL)
+		return -1;
+	SetParent_core(parent, w);
+	return 0;
+}
+
+int32_t Widget::SetForward_core(Widget *w)
+{
+	Widget *parent = m_parent;
+
+	if (parent == NULL)
+		return -1;
+	w = ChildOfParent(parent, w);
+	if (w == NULL)
+		return -1;
+
+	list<Widget *>::iterator it = parent->m_children.begin();
+
+	while (it != parent->m_children.end()) {
+		if (*it == w)
+			break;
+		++it;
+	}
+	++it;
+	if (it == parent->m_children.end())
+		SetParent_core(parent, NULL);
+	else
+		SetParent_core(parent, *it);
+	return 0;
+}
+
+int32_t Widget::SetBehindOneStep_core()
+{
+	Widget *parent = m_parent;
+
+	if (parent == NULL)
+		return -1;
+
+	list<Widget *>::iterator it = parent->m_children.begin();
+	list<Widget *>::iterator prev = it;
+
+	while (it != parent->m_children.end()) {
+		if (*it == this)
+			break;
+		prev = it;
+		++it;
+	}
+
+	Widget *sibling = ChildOfParent(parent, *prev);
+
+	if (sibling == NULL)
+		return -1;
+	SetParent_core(parent, sibling);
+	return 0;
+}
+
+int32_t Widget::SetForwardOneStep_core()
+{
+	Widget *parent = m_parent;
+
+	if (parent == NULL)
+		return -1;
+
+	list<Widget *>::iterator it = parent->m_children.begin();
+
+	if (it != parent->m_children.end()) {
+		while (*it != this) {
+			++it;
+			if (it == parent->m_children.end())
+				goto done;
+		}
+		++it;
+	}
+done:
+	if (it == parent->m_children.end())
+		return 1;
+	return SetForward_core(*it);
+}
+
+int32_t Widget::SetBehindMost_core()
+{
+	Widget *parent = m_parent;
+
+	if (parent == NULL)
+		return -1;
+	SetParent_core(parent, *parent->m_children.begin());
+	return 0;
+}
+
+int32_t Widget::SetForwardMost_core()
+{
+	Widget *parent = m_parent;
+
+	if (parent == NULL)
+		return -1;
+	SetParent_core(parent, NULL);
+	return 0;
+}
+
+int32_t Widget::SetBehind(Widget *w)
+{
+	if (w != NULL && w != this) {
+		if (m_parent != NULL) {
+			int32_t result = -1;
+
+			if (m_hold_count <= 0) {
+				RestructInfo info;
+
+				info.m_parent = m_parent;
+				info.m_widget = this;
+				info.m_sibling = w;
+				info.m_option = 1;
+				s_list_restruct.push_back(info);
+				result = 0;
+			}
+			return result;
+		}
+		return -1;
+	}
+	return -1;
+}
+
+int32_t Widget::SetForward(Widget *w)
+{
+	if (w != NULL && w != this) {
+		if (m_parent != NULL) {
+			int32_t result = -1;
+
+			if (m_hold_count <= 0) {
+				RestructInfo info;
+
+				info.m_parent = m_parent;
+				info.m_widget = this;
+				info.m_sibling = w;
+				info.m_option = 2;
+				s_list_restruct.push_back(info);
+				result = 0;
+			}
+			return result;
+		}
+		return -1;
+	}
+	return -1;
+}
+
 int32_t Widget::KillAnim(int32_t id)
 {
 	map<int32_t, AnimQueue *>::iterator it = m_anims.begin();
@@ -838,21 +1040,6 @@ int32_t Widget::KillAnim(int32_t id)
 void Widget::KillObjAnim(int32_t obj, int32_t id)
 {
 	KillAnim(obj + id);
-}
-
-bool Widget::UpdateSurfaceDraw(bool on)
-{
-	if (on == m_surface_draw)
-		return false;
-	m_surface_draw = on;
-
-	graph::SurfaceDrawParam param;
-
-	param.m_font_flags = 128;
-	param.m_surface_draw = on;
-	for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it)
-		it->m_obj->SetSurfaceDraw(param);
-	return true;
 }
 
 extern "C" {
@@ -1106,6 +1293,78 @@ void Widget::Update()
 		for (uint32_t i = 0; i != num; i++)
 			m_drawobjs[i].m_obj->Update();
 	}
+}
+
+}
+
+int32_t Widget::OnDraw(graph::DrawInfo &info)
+{
+	if (!m_culled || m_draw_always) {
+		float alpha = m_color_alpha * m_meta_a_sum * m_show_a_sum;
+
+		for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it)
+			it->m_obj->OnDraw(m_world_matrix, m_color, alpha, info);
+	}
+	return 0;
+}
+
+int32_t Widget::ApplyDrawObjState(graph::DrawInfo &info)
+{
+	return 0;
+}
+
+void Widget::UpdateMatrixTree()
+{
+	UpdateMatrix();
+	for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
+		(*it)->UpdateMatrixTree();
+}
+
+void Widget::OnUpdatePost()
+{
+	UpdatePost();
+	if ((m_update_flag & 7) != 0)
+		UpdateMatrix();
+	m_update_flag &= ~4;
+	DrawObjEntry *entry = &m_drawobjs[0];
+
+	for (uint32_t n = m_drawobjs.size(); n != 0; n--)
+		(entry++)->m_obj->UpdatePost(m_world_matrix);
+	if (m_children.size() != 0) {
+		for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
+			(*it)->OnUpdatePost();
+	}
+}
+
+int32_t Widget::UpdateDestroy()
+{
+	if (s_destroying_count == 0)
+		return 0;
+	if (m_children.size() != 0) {
+		list<Widget *>::iterator it = m_children.begin();
+
+		while (it != m_children.end()) {
+			Widget *child = *it;
+
+			it++;
+			child->UpdateDestroy();
+		}
+	}
+
+	int32_t hold = m_hold_count;
+
+	if (hold <= 0)
+		return 0;
+	m_hold_count = hold - 1;
+	if (hold != 1)
+		return 0;
+	if (m_children.size() != 0) {
+		m_hold_count = 1;
+		return 0;
+	}
+	delete this;
+	s_destroying_count--;
+	return 1;
 }
 
 math::v4 Widget::GetHitBoxSize(int32_t opt)
@@ -1711,12 +1970,12 @@ void Widget::SetBaseDestroyCount(int32_t count)
 
 
 int32_t Widget::s_base_destroy_count;
+int32_t Widget::s_destroying_count;
+list<RestructInfo> Widget::s_list_restruct;
 
 int32_t Widget::GetBaseDestroyCount()
 {
 	return s_base_destroy_count;
-}
-
 }
 }
 }

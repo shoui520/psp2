@@ -588,6 +588,18 @@ public:
 	float m_right_margin;
 };
 
+/* a move of a widget under a parent, kept until the next update makes it (name ours) */
+class RestructInfo {
+public:
+	Widget *m_parent;
+	Widget *m_widget;
+	/* the sibling it goes before; NULL: last */
+	Widget *m_sibling;
+	/* 0 before the sibling under the parent, 1 behind the sibling, 2 in front of it, 3 and 4 a step
+	   back and forward, 5 and 6 the back and the front (UpdateRestruct) */
+	int32_t m_option;
+};
+
 class Widget : public Handler {
 public:
 	typedef void (*DeleteCB)(Widget *widget, void *data);
@@ -1252,6 +1264,21 @@ public:
 	   s_list_restruct for the next update; -1 for no parent or while it is held (name Sony's,
 	   the parameters ours) */
 	int32_t SetParent(Widget *parent, Widget *sibling, int32_t option);
+	/* the widget made a child of the parent at once, before the sibling (NULL: last) (0x8114fd9c) */
+	int32_t SetParent_core(Widget *parent, Widget *sibling);
+	/* moves within the parent's children now, to behind or in front of the widget, a step, or
+	   to the back or the front (0x81153030 to 0x81153192) */
+	int32_t SetBehind_core(Widget *w);
+	int32_t SetForward_core(Widget *w);
+	int32_t SetBehindOneStep_core();
+	int32_t SetForwardOneStep_core();
+	int32_t SetBehindMost_core();
+	int32_t SetForwardMost_core();
+	/* the moves SetParent, SetBehind and SetForward kept (name Sony's) */
+	static list<RestructInfo> s_list_restruct;
+	/* the widgets waiting to be destroyed, with their children, each frame (0x81155f1e) */
+	int32_t UpdateDestroy();
+	void OnUpdatePost();
 
 	/* the texture animation of the draw object: frames start to end of a grid of column_num by
 	   row_num, over the timer's time */
