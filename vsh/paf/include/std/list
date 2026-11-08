@@ -183,6 +183,29 @@ public:
 
 	void pop_front();
 
+	/* the node at first moved from right to before where */
+	void splice(iterator where, _Myt &right, iterator first)
+	{
+		if (where != first) {
+			iterator last = first;
+
+			++last;
+			_Splice(where, right, first, last, 1);
+		}
+	}
+
+	/* all of right's nodes moved to before where */
+	void splice(iterator where, _Myt &right)
+	{
+		if (right.count != 0)
+			_Splice(where, right, right.begin(), right.end(), right.count);
+	}
+
+	/* the nodes from first to last moved from right to before where; num of them, counted
+	   where it is 0 */
+	void _Splice(const iterator &where, _Myt &right, const iterator &first, const iterator &last,
+		     size_type num);
+
 	void pop_back()
 	{
 		if (head != NULL) {
@@ -306,18 +329,22 @@ list<_Ty, _Ax>::push_front(const _Ty &val)
 
 	_Node *node = (_Node *)operator new(sizeof(_Node));
 
-	if (node != NULL) {
-		new (&node->value) _Ty(val);
-	} else {
+	if (node == NULL)
 		ScePafStdc_D608246A();
+	if (node != NULL)
+		new (&node->value) _Ty(val);
+	else
 		node = head;
-	}
 	if (node != head) {
 		node->prev = head;
 		node->next = head->next;
-		head->next->prev = node;
-		head->next = node;
-		++count;
+
+		_Node *first = head;
+		size_type size = count + 1;
+
+		first->next->prev = node;
+		first->next = node;
+		count = size;
 	}
 }
 
@@ -343,6 +370,36 @@ list<_Ty, _Ax>::push_back(const _Ty &val)
 		head->prev = node;
 		++count;
 	}
+}
+
+template<class _Ty, class _Ax>
+void
+list<_Ty, _Ax>::_Splice(const iterator &where, _Myt &right, const iterator &first,
+			const iterator &last, size_type num)
+{
+	_Node *fnode = first.node;
+	size_type moved = num;
+	_Node *lnode = last.node;
+
+	if (num == 0) {
+		for (iterator it = first; it.node != lnode; ++it)
+			++moved;
+	}
+
+	iterator tail = last;
+
+	--tail;
+	fnode->prev->next = lnode;
+	lnode->prev = fnode->prev;
+
+	_Node *wnode = where.node;
+
+	wnode->prev->next = fnode;
+	fnode->prev = wnode->prev;
+	wnode->prev = tail.node;
+	tail.node->next = wnode;
+	right.count -= moved;
+	count += moved;
 }
 
 /* Sony's build calls insert rather than inlining it. */

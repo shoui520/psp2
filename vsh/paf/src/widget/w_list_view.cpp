@@ -52,16 +52,6 @@ static AnimPropertyV4 s_axis_padding_prop = {
 	AxisPaddingGet,
 };
 
-/* the focus of the widget's focus root, NULL for none (the focus root's m_state holds it) */
-static inline Widget *GetRootFocus(Widget *widget)
-{
-	Widget *root = ScePafWidget_CFA1EB7A(widget);
-
-	if (root == NULL)
-		return NULL;
-	return root->m_focus_root != NULL ? (Widget *)root->m_focus_root->m_state : NULL;
-}
-
 /* whether the two are equal, compared lane by lane */
 static inline bool IsSame(const math::v2 &a, const math::v2 &b)
 {
@@ -4610,23 +4600,6 @@ void ListView::ScePafWidget_22EF63CE()
 {
 	ScrollViewBase::ScePafWidget_22EF63CE();
 	ScePafWidget_697CD413();
-}
-
-/* the focus search's direction for the move (FocusSearchInfo::m_dir; 255 for none) */
-static inline int32_t GetFocusDir(const math::v2 &dir)
-{
-	math::v2 d = dir;
-	int32_t ret = 255;
-
-	if (d.extract_x() > 0.0f)
-		ret = 4;
-	if (d.extract_x() < 0.0f)
-		ret = 3;
-	if (d.extract_y() > 0.0f)
-		ret = 1;
-	if (d.extract_y() < 0.0f)
-		ret = 2;
-	return ret;
 }
 
 /* the widget the focus may go to: one that takes events, is focusable and is shown */

@@ -16,6 +16,7 @@
 #include <std/map>
 #include <std/vector>
 #include <timer/timer.h>
+#include <widget/core/focus.h>
 #include <widget/core/layouter.h>
 #include <widget/core/widget.h>
 
@@ -222,6 +223,13 @@ public:
 	using Widget::GetTexture;
 	using Widget::SetString;
 	using Widget::GetString;
+	/* Widget's, with the direction the focus came from kept as the focus target */
+	virtual int32_t SetFocus(SetFocusInfo *info)
+	{
+		if (info != NULL)
+			m_focus_target = info->m_direction;
+		return Widget::SetFocus(info);
+	}
 
 	/* the slots after Widget's, from 0x170 (index 92) */
 	virtual void SetVerticalScrollBar(ScrollBar *scroll_bar);

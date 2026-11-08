@@ -3275,7 +3275,7 @@ ScePaf:
         - _ZN3paf2ui16ProgressBarTouch14GetPartsWidgetEiPi: 0x22926205
         - _ZN3paf2ui14ScrollViewBase8TrackEndEPNS0_5EventE: 0x22AED29E
         - _ZN3paf2ui6Camera13GetRollScreenEi: 0x22C53E91
-        - ScePafWidget_22D43581: 0x22D43581
+        - _ZN3paf2ui8RichText17SetDrawObjMaskBitEPKvij: 0x22D43581
         - _ZN3paf2ui29ScrollViewScrollBarController11UpdateRangeERKNS0_18ScrollViewBarRangeE: 0x22E867F5
         - _ZN3paf2ui14ScrollViewBase21ScePafWidget_22EF63CEEv: 0x22EF63CE
         - _ZN3paf2ui14TextStyleParamD1Ev: 0x22F210A5
@@ -4401,7 +4401,7 @@ ScePaf:
         - _ZN3paf2ui4Text13SetCaretIndexEj: 0x9A5868B1
         - ScePafWidget_9A7BE3B0: 0x9A7BE3B0
         - _ZN3paf2ui7TextBox14KillCaretBlinkEv: 0x9A8F6B6B
-        - ScePafWidget_9A93FDDD: 0x9A93FDDD
+        - _ZN3paf2ui8RichText21ScePafWidget_AD706F2AERKNS_4math2v2EPNS0_6WidgetE: 0x9A93FDDD
         - _ZN3paf2ui23BusyIndicatorStyleParam7SetEachEPNS0_6WidgetE: 0x9AB9F286
         - _ZN3paf2ui17EventListenerList8AddFrontEPNS0_13EventListenerE: 0x9AC5FFA6
         - _ZN3paf2ui11PlaneButton16SetStyleAnimatorENS1_9StyleTypeE: 0x9AE1ECEB

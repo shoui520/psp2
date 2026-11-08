@@ -1424,7 +1424,9 @@ public:
 	/* its color: the alpha as SetColor_core gave it, and the RGBA bytes (names ours) */
 	float m_color_alpha;
 	uint32_t m_color;
-	uint8_t reserved3y[4];
+	/* where it is in its parent, its size and a pixel more, as a rich text keeps it after its
+	   layout (made by RichText::Update; no other user found; name ours) */
+	math::rect *m_layout_rect;
 	Timer *m_resolution_timer;
 	Timer *m_resolution_timer_next;
 	ResolutionData *m_pos_array;

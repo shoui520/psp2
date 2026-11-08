@@ -151,28 +151,6 @@ int _ZN3paf2ui11Environment15IsTermAvailableEv(const uint8_t *self)
 		!*(const uint32_t *)(self + 56) && self[213] != 0;
 }
 
-
-uint32_t _ZN3paf2ui8RichText13GetItemWidgetEi(const uint8_t *self, int32_t index)
-{
-	if (index < 0 || index >= *(const int32_t *)(self + 1064))
-		return 0;
-	return *(const uint32_t *)(
-		((const uint8_t *const *)*(const void *const *)(self + 1060))[index]
-		+ 12);
-}
-
-int _ZNK3paf2ui8RichText11GetItemTypeEi(const uint8_t *self, int32_t index)
-{
-	uint32_t type;
-
-	if (index < 0 || index >= *(const int32_t *)(self + 1064))
-		return 0;
-	type = *(const uint32_t *)(
-		((const uint8_t *const *)*(const void *const *)(self + 1060))[index]
-		+ 4);
-	return type == 3 ? 1 : type;
-}
-
 int ScePafWidget_222D55C7(const uint8_t *self, uint8_t *output)
 {
 	*output = (self[648] & 2) != 0;
@@ -615,8 +593,7 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui13SlidingDrawer9IsInheritEPKc, "sliding_drawer",
 /* Plane's is C++ (w_plane.cpp) */
 int _ZNK3paf2ui5Plane9IsInheritEPKc(const void *self, const char *type);
 /* PageTurn's is C++ (w_pageturn.cpp) */
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RichText9IsInheritEPKc, "rich_text",
-		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
+/* RichText's is C++ (w_rich_text.cpp) */
 /* ImageSlideBar's is C++ (w_image_slidebar.cpp) */
 int _ZNK3paf2ui13ImageSlideBar9IsInheritEPKc(const void *self, const char *type);
 /* SlideBar's is C++ (w_slidebar.cpp) */

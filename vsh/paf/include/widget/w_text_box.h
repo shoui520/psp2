@@ -52,6 +52,8 @@ public:
 
 	static const char *TypeName();
 
+	Text(Widget *parent, CreateParam *param);
+
 	/* sets the touch modes from its edit and selection state (0x8123aa94, name ours) */
 	virtual void UpdateTouchMode();
 	/* replaces len characters from index with the string (0x8113187e, name after
@@ -85,6 +87,8 @@ public:
 	int32_t GetSelectionMode(bool &mode);
 	int32_t GetCharInfo(uint32_t index, graph::TextLayoutCharInfo &info);
 	int32_t GetLineInfo(uint32_t line, graph::TextLayoutLineInfo &info);
+	int32_t GetLineCount(uint32_t &count);
+	int32_t GetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, float &val);
 	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, math::v2 &val);
 	/* its auto scroll running, or its animation 2 (0x81132452, name ours) */
 	bool IsScrolling();
@@ -107,6 +111,7 @@ public:
 	/* a touch press holds it (HandleTouchPress; name ours) */
 	bool m_touch_held : 1;
 	bool reserved3 : 7;
+	uint8_t reserved4[0x2D8 - 0x290];
 };
 
 class TextBox : public Text {
