@@ -504,7 +504,7 @@ void AppIconBase::HandleTouchIdle(Event *e)
 	HitInfo *hit = NULL;
 
 	if (id < 8)
-		hit = &m_env->m_touch_hit[id];
+		hit = &m_env->m_touch_hit[0][id];
 	if ((e->m_type & 0xffff) != 0x41 || m_touch_captures.size() != 0)
 		return;
 	SetIconState(1, id);

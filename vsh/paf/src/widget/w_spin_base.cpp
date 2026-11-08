@@ -795,7 +795,7 @@ void SpinDrum::TouchDown(uint32_t touch_id)
 	if (touch_id >= 8)
 		return;
 
-	HitInfo *hit = &env->m_touch_hit[touch_id];
+	HitInfo *hit = &env->m_touch_hit[0][touch_id];
 
 	if (hit == NULL)
 		return;

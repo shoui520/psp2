@@ -10,6 +10,7 @@
 #include <std/memory>
 #include <std/string>
 #include <std/list>
+#include <std/map>
 #include <std/string.h>
 #include <math/ngp/matrix.h>
 #include <math/ngp/v2.h>
@@ -281,6 +282,14 @@ public:
 	int32_t RemoveTouchDeviceRegion(Widget *widget);
 	/* the widget forgotten as the hit of any touch (0x8113fecc) */
 	void ClearHitInfo(Widget *widget);
+	/* the number of widgets in the scene of the entry, or the iterators at the start and the
+	   end of its children (0x8113ef94, 0x8113efda, 0x8113f032); the entry shown or hidden
+	   (0x8113ec20, 0x8113eca4) */
+	int32_t GetSceneNum(int32_t entry);
+	int32_t GetSceneTop(int32_t entry, list<Widget *>::iterator &top);
+	int32_t GetSceneEnd(int32_t entry, list<Widget *>::iterator &end);
+	int32_t ShowSceneEntry(int32_t entry);
+	int32_t HideSceneEntry(int32_t entry);
 	/* whether nothing the widgets still run keeps the framework from ending */
 	bool IsTermAvailable();
 	/* lets the widgets end: m_term_requested once nothing keeps them */
@@ -327,7 +336,10 @@ public:
 
 	/* set: the widgets the focus leaves are kept in its history (name ours) */
 	bool m_focus_history_on;
-	uint8_t reserved[0x3c];
+	uint8_t reserved[0x23];
+	/* the scenes by their entry (ShowSceneEntry, GetSceneNum; name ours) */
+	map<int32_t, Widget *> m_scene_entries;
+	uint8_t reserved_52[0xd];
 	/* set when a scene's layer weights are made again (Scene::UpdateLayerWeight; name ours) */
 	bool m_layer_weight_changed;
 	uint8_t reserved_42[2];
@@ -402,8 +414,9 @@ public:
 	   touch sets its port and ID (names ours) */
 	TouchState m_touch_state[2][8];
 	/* where each touch ID last hit (name ours) */
-	HitInfo m_touch_hit[8];
-	uint8_t reserved5b[0xd80];
+	HitInfo m_touch_hit[2][8];
+	/* the last hit of each touch of the front and rear panels (ClearHitInfo; name ours) */
+	HitInfo m_touch_hit_last[2][8];
 	/* the widget capturing each touch of the front and rear panels (name ours) */
 	TouchCapture m_touch_capture[2][8];
 	uint8_t reserved5d[0xf00];
@@ -412,7 +425,11 @@ public:
 	/* the widgets IsHitStackParent takes as the hit stack's parents, cleared with
 	   m_touch_hits (name after IsHitStackParent) */
 	list<Widget *> m_hit_stack;
-	uint8_t reserved5c[0x26];
+	/* the widgets kept as touch device regions and which of the six slots are used (name ours) */
+	uint32_t m_touch_region_mask;
+	uint8_t reserved5c0[4];
+	Widget *m_touch_region[6];
+	uint8_t reserved5c[6];
 	/* each frame waits for the GPU once it is drawn (Framework::Option_4) */
 	bool m_finish_after_draw;
 	uint8_t reserved6[0x35];

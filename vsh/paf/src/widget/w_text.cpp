@@ -364,7 +364,7 @@ int32_t Text::GetTouchTextPos(uint32_t port, uint32_t id, math::v2 &pos)
 	int32_t ret = SCE_PAF_ERROR_BUSY;
 
 	if (id < 8) {
-		HitInfo *hit = &env->m_touch_hit[id];
+		HitInfo *hit = &env->m_touch_hit[0][id];
 
 		if (hit != NULL) {
 			if (hit->m_hit_valid == 0 && id < 8 && port < 2) {
@@ -2455,7 +2455,7 @@ int32_t Text::HandleTouchPress(Event *e)
 	int32_t ret = SCE_PAF_ERROR_BUSY;
 
 	if (id < 8) {
-		HitInfo *hit = &m_env->m_touch_hit[id];
+		HitInfo *hit = &m_env->m_touch_hit[0][id];
 
 		if (hit != NULL && hit->m_widget == this) {
 			math::v2 pos;

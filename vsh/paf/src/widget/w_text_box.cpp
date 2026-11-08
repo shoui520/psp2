@@ -936,7 +936,7 @@ int32_t TextBox::HandleTouchPress(Event *e)
 	int32_t ret = SCE_PAF_ERROR_BUSY;
 
 	if (id < 8) {
-		HitInfo *hit = &m_env->m_touch_hit[id];
+		HitInfo *hit = &m_env->m_touch_hit[0][id];
 
 		if (hit != NULL && hit->m_widget == this) {
 			math::v2 pos;

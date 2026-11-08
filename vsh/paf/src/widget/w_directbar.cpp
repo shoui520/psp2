@@ -988,7 +988,7 @@ void DirectBar::OrientClosedState(Event *e)
 	HitInfo *hit = NULL;
 
 	if (id < 8)
-		hit = &m_env->m_touch_hit[id];
+		hit = &m_env->m_touch_hit[0][id];
 	m_touch_id = id;
 	SendDBarEvent(CB_DIRECT_BAR_DECIDE);
 	SetDBarState(ST_DBAR_HOLD);
@@ -1162,7 +1162,7 @@ void DirectBar::OrientDragState(Event *e)
 	HitInfo *hit = NULL;
 
 	if (id < 8)
-		hit = &m_env->m_touch_hit[id];
+		hit = &m_env->m_touch_hit[0][id];
 	switch (e->m_type & 0xffff) {
 	case 0x42:
 	case 0x47: {
@@ -1224,7 +1224,7 @@ void DirectBar::OrientNormalState(Event *e)
 	HitInfo *hit = NULL;
 
 	if (id < 8)
-		hit = &m_env->m_touch_hit[id];
+		hit = &m_env->m_touch_hit[0][id];
 	m_touch_id = id;
 	SetDBarState(ST_DBAR_HOLD);
 	m_touch_pos = hit->m_touch_pos;

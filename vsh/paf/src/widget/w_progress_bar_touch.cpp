@@ -647,7 +647,7 @@ void ProgressBarTouch::OnDragBeginSlider(Event *e)
 		HitInfo *hit = NULL;
 
 		if (id < 8)
-			hit = &env->m_touch_hit[id];
+			hit = &env->m_touch_hit[0][id];
 		if ((hit == NULL || hit->m_widget != slider) && id < 8) {
 			env->m_touch_state[0][id].m_port = 0;
 			env->m_touch_state[0][id].m_id = id;

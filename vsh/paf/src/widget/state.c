@@ -89,15 +89,6 @@ int WidgetResourceReady(const void *resource)
 
 
 
-int _ZN3paf2ui11Environment25RegisterTouchDeviceRegionEjPNS0_6WidgetE(uint8_t *self, unsigned int index, int value)
-{
-	if (index >= 6)
-		return -2135998193;
-	*(uint32_t *)(self + 11592) |= 1U << index;
-	*(int *)(self + 11600 + 4 * index) = value;
-	return 0;
-}
-
 int ScePafWidget_A4E53390(uint8_t *self)
 {
 	uint8_t *vtable = *(uint8_t **)self;

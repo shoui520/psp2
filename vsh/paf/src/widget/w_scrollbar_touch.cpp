@@ -231,7 +231,7 @@ void ScrollBarTouch::UpdateSlider(bool anim)
 	HitInfo *hit = NULL;
 
 	if ((uint32_t)m_page_touch_id < 8)
-		hit = &m_env->m_touch_hit[m_page_touch_id];
+		hit = &m_env->m_touch_hit[0][m_page_touch_id];
 
 	math::v2 touch = hit->m_touch_pos;
 	math::v3 pos(0.0f, touch.extract_y(), 0.0f);
@@ -246,7 +246,7 @@ void ScrollBarTouch::PageScroll()
 	HitInfo *hit = NULL;
 
 	if ((uint32_t)m_page_touch_id < 8)
-		hit = &m_env->m_touch_hit[m_page_touch_id];
+		hit = &m_env->m_touch_hit[0][m_page_touch_id];
 	if (hit == NULL || hit->m_widget != this)
 		return;
 
