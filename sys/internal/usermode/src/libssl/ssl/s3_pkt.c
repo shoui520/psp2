@@ -1,0 +1,71 @@
+/* Identified SSLeay SSL3 packet I/O, adapted in s3_pkt_sce.patch. */
+#include "ssl_locl.h"
+#include "../memory.h"
+#include "../err/err.h"
+#include <net/errno.h>
+
+#undef Malloc
+#undef Free
+#undef BIO_should_write
+#define memcpy sslCopyMemory
+#define memcmp sslCompareMemory
+#define clear_sys_error() (*sceNetErrnoLoc() = 0)
+#define BIO_write SceSslInternal_33AC7A16
+#define SSL_state SceSslInternal_6F3B9809
+#define SSL_SENT_SHUTDOWN 1
+#define SSL_RECEIVED_SHUTDOWN 2
+#define SSL_MODE_ENABLE_PARTIAL_WRITE 0x00000001L
+#define SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER 0x00000002L
+#define SSL_MODE_AUTO_RETRY 0x00000004L
+#define SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER 0x00000020L
+#define SSL_OP_NO_SSLv3 0x02000000L
+#define SSL_OP_NO_TLSv1 0x04000000L
+#define SSL_OP_NO_TLSv1_1 0x40000000L
+#define SSL2_VERSION 0x0002
+#define TLS1_VERSION 0x0301
+#define TLS1_1_VERSION 0x0302
+#define SSL_AD_UNEXPECTED_MESSAGE SSL3_AD_UNEXPECTED_MESSAGE
+#define SSL_AD_BAD_RECORD_MAC SSL3_AD_BAD_RECORD_MAC
+#define SSL_AD_DECOMPRESSION_FAILURE SSL3_AD_DECOMPRESSION_FAILURE
+#define SSL_AD_HANDSHAKE_FAILURE SSL3_AD_HANDSHAKE_FAILURE
+#define SSL_AD_ILLEGAL_PARAMETER SSL3_AD_ILLEGAL_PARAMETER
+#define SSL_AD_CLOSE_NOTIFY SSL3_AD_CLOSE_NOTIFY
+#define SSL_AD_DECRYPT_ERROR 20
+#define SSL_AD_RECORD_OVERFLOW 22
+#define SSL_AD_DECODE_ERROR 50
+#define SSL_AD_PROTOCOL_VERSION 70
+#define SSL_AD_INTERNAL_ERROR 80
+#define SSL_AD_REASON_OFFSET 1000
+#define SSL_F_SSL3_GET_RECORD 143
+#define SSL_F_SSL3_READ_BYTES 149
+#define SSL_F_SSL3_READ_N 150
+#define SSL_F_SSL3_WRITE_BYTES 159
+#define SSL_F_SSL3_WRITE_PENDING 160
+#define ERR_R_MALLOC_FAILURE 33
+#define SSL_R_APP_DATA_IN_HANDSHAKE 100
+#define SSL_R_BAD_ALERT_RECORD 101
+#define SSL_R_BAD_CHANGE_CIPHER_SPEC 103
+#define SSL_R_BAD_CLIENT_REQUEST 105
+#define SSL_R_BAD_MAC_DECODE 113
+#define SSL_R_BAD_WRITE_RETRY 127
+#define SSL_R_BIO_NOT_SET 128
+#define SSL_R_DATA_BETWEEN_CCS_AND_FINISHED 145
+#define SSL_R_DATA_LENGTH_TOO_LONG 146
+#define SSL_R_ENCRYPTED_LENGTH_TOO_LONG 150
+#define SSL_R_LENGTH_TOO_SHORT 160
+#define SSL_R_PACKET_LENGTH_TOO_LONG 198
+#define SSL_R_PRE_MAC_LENGTH_TOO_LONG 205
+#define SSL_R_READ_BIO_NOT_SET 211
+#define SSL_R_SSL_HANDSHAKE_FAILURE 229
+#define SSL_R_UNEXPECTED_RECORD 245
+#define SSL_R_UNKNOWN_ALERT_TYPE 246
+#define SSL_R_WRONG_VERSION_NUMBER 267
+#define SSL_R_UNINITIALIZED 1101
+#define SSLerr(function, reason) sslPushError(20, function, reason, NULL, 0)
+
+int SceSslInternal_6F3B9809(SSL *ssl);
+BIO *SSL_get_rbio(SSL *s);
+int ssl3_dispatch_alert(SSL *s);
+int ssl3_do_write(SSL *s, int type);
+
+#include "s3_pkt_sce.inc"
