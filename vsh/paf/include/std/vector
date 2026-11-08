@@ -9,7 +9,7 @@
 #include <std/allocator>
 #include <std/stdlib.h>
 
-/* libpaf's build makes the allocator constructor out of line, as Sony's does */
+/* libpaf's build makes the allocator constructor and operator= out of line, as Sony's does */
 #ifdef PAF_LIBRARY_BUILD
 #define PAF_VECTOR_NOINLINE	__attribute__((noinline))
 #else
@@ -154,7 +154,7 @@ public:
 
 	~vector();
 
-	_Myt &operator=(const _Myt &src)
+	PAF_VECTOR_NOINLINE _Myt &operator=(const _Myt &src)
 	{
 		_Myt(src).swap(*this);
 		return *this;

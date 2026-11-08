@@ -3006,7 +3006,7 @@ ScePaf:
         - _ZN3paf2ui13SpeechBalloon10SetTailPosEf: 0x06980C50
         - _ZN3paf2ui19ScrollViewBaseParamC2Ev: 0x06C2E53C
         - ScePafWidget_06D0F83A: 0x06D0F83A
-        - ScePafWidget_0701121B: 0x0701121B
+        - _ZN3paf2ui8ItemSpin6CreateERKNS_6vectorINS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEENS6_IS8_EEEEib: 0x0701121B
         - _ZN3paf2ui15CompositeDrawerD2Ev: 0x070A2502
         - _ZN3paf2ui10ScrollView14OnChildRemovedEPNS0_6WidgetE: 0x072D55E5
         - _ZN3paf2ui19DirectBarStyleParam6CreateEi: 0x073BB6A4
