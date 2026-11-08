@@ -3377,7 +3377,7 @@ ScePaf:
         - _ZN3paf2ui9ScrollBar13SetSliderAnimEfi: 0x2E35741B
         - _ZN3paf2ui8ListView21ScePafWidget_22EF63CEEv: 0x2E3AA84B
         - _ZNK3paf2ui16ButtonStyleParam12GetParamNameEv: 0x2E89EF4B
-        - ScePafWidget_2EBD646E: 0x2EBD646E
+        - _ZN3paf2ui8Supplier21ScePafWidget_2EBD646EEPNS0_6WidgetEb: 0x2EBD646E
         - _ZN3paf2ui24ScrollViewBaseStyleParam7SetEachEPNS0_6WidgetE: 0x2F0235FD
         - _ZN3paf2ui11ProgressBar11SwapDrawObjENS_6common9SharedPtrINS_5graph7DrawObjEEEi: 0x2F3EE5D8
         - _ZN3paf2ui8listview4Cell9BeginDragEi: 0x2F6246F7
@@ -3879,7 +3879,7 @@ ScePaf:
         - _ZN3paf2ui8filelist14CellFocusParamC1Ev: 0x647784E1
         - _ZNK3paf2ui15ScrollViewParam12GetParamNameEv: 0x647E8F32
         - _ZN3paf2ui15ScrollViewDebugD2Ev: 0x64A10940
-        - ScePafWidget_6591E40B: 0x6591E40B
+        - _ZN3paf2ui8Supplier21ScePafWidget_6591E40BEPNS0_5EventE: 0x6591E40B
         - _ZN3paf2ui8filelist7Manager12PopCacheItemEjPNS0_6WidgetE: 0x65A6B4E8
         - _ZN3paf2ui4Text18calc_origin_offsetERKNS_4math2v4ES5_jjj: 0x66592F7E
         - _ZN3paf2ui11ImageButtonD1Ev: 0x66722DFA
@@ -4544,7 +4544,7 @@ ScePaf:
         - _ZN3paf2ui6Widget15GetOriginOffsetEi: 0xAA7BE7E4
         - _ZN3paf2ui15CompositeButton13InsertDrawObjERNS_6common9SharedPtrINS_5graph7DrawObjEEEib: 0xAA96687B
         - _ZN3paf2ui8RichTextD1Ev: 0xAAAB3D3A
-        - ScePafWidget_AAE71C36: 0xAAE71C36
+        - _ZN3paf2ui8Supplier21ScePafWidget_AAE71C36Ev: 0xAAE71C36
         - _ZNK3paf2ui13AppIconSimple11GetTypeNameEv: 0xAAECAF31
         - _ZN3paf2ui11ProgressBar10UpdateSizeEv: 0xAAF8E214
         - _ZN3paf2ui5wutil9InitParamC2Ev: 0xAB05B0A4
@@ -4751,7 +4751,7 @@ ScePaf:
         - _ZN3paf2ui21ProgressBarStyleParam6CreateEi: 0xC080C718
         - _ZN3paf2ui8RichTextD2Ev: 0xC0821FEB
         - _ZN3paf2ui21PlaneButtonStyleParam9ParamNameEv: 0xC08C9D8A
-        - ScePafWidget_C0A4DDDE: 0xC0A4DDDE
+        - _ZN3paf2ui8Supplier21ScePafWidget_C0A4DDDEEPNS0_5EventE: 0xC0A4DDDE
         - ScePafWidget_C0ABDE05: 0xC0ABDE05
         - _ZN3paf2ui26ProgressBarTouchStyleParamC2Ev: 0xC0DD766B
         - _ZN3paf2ui14ScrollViewBase18HandleKeycodeEventEPNS0_5EventE: 0xC0E7AB7E
@@ -4797,7 +4797,7 @@ ScePaf:
         - _ZN3paf2ui8SpinBase23SetFocusDirectionWidgetEiPNS0_6WidgetE: 0xC71B79B2
         - _ZN3paf2ui12PageTurnBaseC2EPNS0_6WidgetEPNS2_11CreateParamE: 0xC768C122
         - ScePafWidget_C7962202: 0xC7962202
-        - ScePafWidget_C79983DE: 0xC79983DE
+        - _ZN3paf2ui8Supplier21ScePafWidget_C79983DEEPNS0_6WidgetEPv: 0xC79983DE
         - _ZN3paf2ui11EnvironmentD0Ev: 0xC79BAF2C
         - _ZN3paf2ui13RadioBoxParam6CreateEi: 0xC7A88ABB
         - _ZNK3paf2ui8RichText21ScePafWidget_C7BE2076EiRNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0xC7BE2076

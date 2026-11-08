@@ -603,10 +603,8 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui7TextBox9IsInheritEPKc, "text_box",
 		   _ZNK3paf2ui4Text9IsInheritEPKc)
 /* CompositeDrawer's is C++ (w_composite_drawer.cpp) */
 int _ZNK3paf2ui15CompositeDrawer9IsInheritEPKc(const void *self, const char *type);
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui8Supplier9IsInheritEPKc, "supplier",
-		   _ZNK3paf2ui5Plane9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui5Scene9IsInheritEPKc, "page",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+/* Supplier's is C++ (w_supplier.cpp) */
+/* Scene's is C++ (w_scene.cpp) */
 /* RadioButton's is C++ (w_radio_button.cpp) */
 
 #undef DEFINE_WIDGET_TYPE

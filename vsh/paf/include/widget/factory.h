@@ -54,6 +54,7 @@ extern paf::ui::FactoryFuncTable g_factoryRadioButton;
 extern paf::ui::FactoryFuncTable g_factoryCornerButton;
 extern paf::ui::FactoryFuncTable g_factoryRadioBox;
 extern paf::ui::FactoryFuncTable g_factoryCheckBox;
+extern paf::ui::FactoryFuncTable g_factorySupplier;
 extern paf::ui::FactoryFuncTable g_factoryText;
 extern paf::ui::FactoryFuncTable g_factoryTextBox;
 extern paf::ui::FactoryFuncTable g_factoryScrollViewBase;

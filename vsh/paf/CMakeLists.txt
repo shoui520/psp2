@@ -244,6 +244,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/w_camera.cpp
 	src/widget/w_canvas.cpp
 	src/widget/w_state_button_base.cpp
+	src/widget/w_supplier.cpp
 	src/widget/w_check_box.cpp
 	src/widget/w_composite_button.cpp
 	src/widget/w_composite_drawer.cpp
