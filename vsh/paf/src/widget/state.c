@@ -342,30 +342,6 @@ int _ZN3paf2ui8Layouter8OnUpdateEv(uint32_t *self)
 	return 0;
 }
 
-static inline __attribute__((always_inline))
-uint32_t *InitializeWidgetStatusRecord(uint32_t *self)
-{
-#if defined(FW_TYPE_CEX)
-	((volatile uint32_t *)self)[0] = 0x812f05e0U;
-#else
-	((volatile uint32_t *)self)[0] = 0x812f1298U;
-#endif
-	((volatile uint32_t *)self)[1] = 1114112U;
-	((volatile uint32_t *)self)[8] = 0;
-	((volatile uint32_t *)self)[2] = 0;
-	return self;
-}
-
-uint32_t *_ZN3paf2ui5EventC1Ev(uint32_t *self)
-{
-	return InitializeWidgetStatusRecord(self);
-}
-
-uint32_t *_ZN3paf2ui5EventC2Ev(uint32_t *self)
-{
-	return InitializeWidgetStatusRecord(self);
-}
-
 /* Native single-dispatch widget methods. */
 static inline __attribute__((always_inline))
 int WidgetInvokeSlot(void *self, uint32_t offset)
