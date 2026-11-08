@@ -6,6 +6,7 @@
 #include <graphics/drawobj/draw_obj.h>
 #include <timer/timerqueue.h>
 #include <widget/core/animlistener.h>
+#include <widget/core/layouter.h>
 #include <widget/core/widget.h>
 #include <widget/w_scene.h>
 
@@ -293,6 +294,85 @@ void Widget::Update()
 
 		for (uint32_t i = 0; i != num; i++)
 			m_drawobjs[i].m_obj->Update();
+	}
+}
+
+
+int32_t Widget::s_base_destroy_count;
+
+int32_t Widget::GetBaseDestroyCount()
+{
+	return s_base_destroy_count;
+}
+
+void Widget::SetBaseDestroyCount(int32_t count)
+{
+	s_base_destroy_count = count;
+}
+
+Camera *Widget::GetCamera() const
+{
+	if (m_scene != NULL)
+		return m_scene->m_camera;
+	return NULL;
+}
+
+Widget *Widget::FindChild(Widget *child, int32_t option)
+{
+	if (child == NULL || child->m_hold_count > 0)
+		return NULL;
+	if (option == 2) {
+		if (child->m_parent == this)
+			return child;
+		return NULL;
+	}
+	for (Widget *node = child; node != NULL; node = node->m_parent) {
+		if (node == this)
+			return child;
+	}
+	return NULL;
+}
+
+void Widget::NotifyLayoutDirty(uint32_t kind)
+{
+	if (((uint8_t)kind & m_layout_notify_mask) != 0 && (kind & 0xFF00 & m_layout_notify_mask) != 0) {
+		if (m_parent != NULL && m_parent->m_layouter != NULL)
+			m_parent->m_layouter->SetDirty(1);
+		if (kind & 2) {
+			if (m_layouter != NULL)
+				m_layouter->SetDirty(1);
+		}
+	}
+}
+
+void Widget::NotifyAnimatorDirty(uint32_t kind)
+{
+	if (((uint8_t)kind & m_animator_notify_mask) != 0 && (kind & 0xFF00 & m_animator_notify_mask) != 0) {
+		if (m_animator != NULL)
+			m_animator->SetDirty(1);
+	}
+}
+
+void Widget::InitCreateParam(const CreateParam *param)
+{
+	if (param != NULL) {
+		m_parent_protected = param->m_parent_protected;
+		m_under_template = param->m_under_template;
+	}
+}
+
+void Widget::SetGestureMask(uint32_t mask, bool update)
+{
+	if (m_touch_gesture_mask != mask) {
+		m_touch_gesture_mask = mask;
+		if (update) {
+			if (mask) {
+				if (!m_hit_check)
+					m_hit_check = 1;
+			} else if (m_hit_check) {
+				m_hit_check = 0;
+			}
+		}
 	}
 }
 

@@ -1058,6 +1058,16 @@ public:
 	/* the gestures its touches are given; with update, m_hit_check follows whether there are
 	   any */
 	void SetGestureMask(uint32_t mask, bool update);
+	/* the layouter and animator of the parent and of itself told that kinds of change came
+	   (0x8114c7e2, 0x8114c68a) */
+	void NotifyLayoutDirty(uint32_t kind);
+	void NotifyAnimatorDirty(uint32_t kind);
+	/* the flags of the creation parameter taken over (0x81150052) */
+	void InitCreateParam(const CreateParam *param);
+	/* the count of base widgets destroyed, kept for the environment's start (0x81162e2a) */
+	static int32_t GetBaseDestroyCount();
+	static void SetBaseDestroyCount(int32_t count);
+	static int32_t s_base_destroy_count;
 	/* the size, on the axes adjusted to the scene its scene's, passed on to SetSize_core_force */
 	int32_t SetSize_core(const math::v4 &size, uint32_t notify_layout, bool force);
 	int32_t SetPos_core(const math::v4 &pos, uint32_t notify_layout, bool force);
@@ -1560,7 +1570,9 @@ public:
 	   the kinds, the high byte the ones it passes on; a scroll view's child passes 0x300 on
 	   (ScrollView::OnChildRegistered; name ours) */
 	uint16_t m_layout_notify_mask;
-	uint8_t reserved7f[0xe];
+	/* the same for the animator (NotifyAnimatorDirty; name ours) */
+	uint16_t m_animator_notify_mask;
+	uint8_t reserved7f[0xc];
 	/* its draw objects, drawn in order */
 	vector<DrawObjEntry> m_drawobjs;
 	/* what is called when it is deleted (names after DrawObj's, Sony's DWARF) */

@@ -312,6 +312,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/core/event.cpp
 	src/widget/core/handler.cpp
 	src/widget/core/screen.cpp
+	src/widget/core/layouter.cpp
 	src/widget/state.c
 	src/hash/sha1.c
 	src/std/new.c

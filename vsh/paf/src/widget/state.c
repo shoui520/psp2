@@ -32,51 +32,6 @@ int ScePafWidget_E8F862FC(void *self, const void *value)
 	return value ? 0 : -1;
 }
 
-/* Shared PAF-widget registration and state slots. */
-uint32_t sce_paf_widget_state_1ce8;
-uint32_t sce_paf_widget_state_142d4;
-uint32_t sce_paf_widget_state_142d8;
-
-uint32_t _ZN3paf2ui6Widget19GetBaseDestroyCountEv(void)
-{
-	return sce_paf_widget_state_1ce8;
-}
-
-uint32_t _ZN3paf2ui6Widget19SetBaseDestroyCountEi(uint32_t value)
-{
-	sce_paf_widget_state_1ce8 = value;
-	return value;
-}
-
-uint32_t *_ZN3paf2ui8Layouter6FinishEv(void)
-{
-	sce_paf_widget_state_142d4 = 0;
-	return &sce_paf_widget_state_142d4;
-}
-
-uint32_t *_ZN3paf2ui8Layouter5EnterEv(void)
-{
-	sce_paf_widget_state_142d4 = 1;
-	return &sce_paf_widget_state_142d4;
-}
-
-int _ZN3paf2ui8Layouter7IsEnterEv(void)
-{
-	return sce_paf_widget_state_142d4 != 0;
-}
-
-int _ZN3paf2ui8Animator7IsEnterEv(void)
-{
-	return sce_paf_widget_state_142d8 != 0;
-}
-
-int _ZNK3paf2ui6Widget9GetCameraEv(const uint8_t *self)
-{
-	const uint8_t *value = *(const uint8_t *const *)(self + 364);
-
-	return value ? *(const int32_t *)(value + 640) : 0;
-}
-
 
 int _ZN3paf2ui11Environment15IsTermAvailableEv(const uint8_t *self)
 {
@@ -118,38 +73,6 @@ uint32_t ScePafWidget_3546C104(const uint8_t *self, uint8_t filter)
 }
 
 
-uint8_t *_ZN3paf2ui6Widget9FindChildEPS1_i(uint8_t *self, uint8_t *value, int32_t mode)
-{
-	uint8_t *node;
-
-	if (!value || *(int32_t *)(value + 36) > 0)
-		return 0;
-	if (mode == 2) {
-		if (*(uint8_t **)(value + 360) != self)
-			return 0;
-	} else {
-		node = value;
-		while (node != self) {
-			node = *(uint8_t **)(node + 360);
-			if (!node)
-				return 0;
-		}
-	}
-	return value;
-}
-
-uint8_t *_ZN3paf2ui6Widget19NotifyAnimatorDirtyEj(uint8_t *self, uint16_t mask)
-{
-	uint16_t flags = *(uint16_t *)(self + 574);
-
-	if ((flags & (uint8_t)mask) && (flags & (mask & 0xFF00U))) {
-		self = *(uint8_t **)(self + 536);
-		if (self)
-			*(uint16_t *)(self + 12) |= 1;
-	}
-	return self;
-}
-
 /* Resource readiness is exposed through several widget compatibility aliases. */
 extern int _ZN3paf2ui11WidgetParam3GetEv(const void *resource);
 
@@ -163,23 +86,8 @@ int WidgetResourceReady(const void *resource)
 	return result;
 }
 
-extern uint8_t *_ZN3paf5graph7DrawObj11EnterSafetyEv(void);
-
-uint8_t *_ZN3paf2ui8Animator5EnterEv(void)
-{
-	sce_paf_widget_state_142d8 = 1;
-	return _ZN3paf5graph7DrawObj11EnterSafetyEv();
-}
 
 
-extern uint8_t *_ZN3paf5graph7DrawObj12FinishSafetyEv(void);
-
-uint32_t *_ZN3paf2ui8Animator6FinishEv(void)
-{
-	_ZN3paf5graph7DrawObj12FinishSafetyEv();
-	sce_paf_widget_state_142d8 = 0;
-	return &sce_paf_widget_state_142d8;
-}
 
 int _ZN3paf2ui11Environment25RegisterTouchDeviceRegionEjPNS0_6WidgetE(uint8_t *self, unsigned int index, int value)
 {
@@ -188,23 +96,6 @@ int _ZN3paf2ui11Environment25RegisterTouchDeviceRegionEjPNS0_6WidgetE(uint8_t *s
 	*(uint32_t *)(self + 11592) |= 1U << index;
 	*(int *)(self + 11600 + 4 * index) = value;
 	return 0;
-}
-
-uint8_t *_ZN3paf2ui6Widget14SetGestureMaskEjb(uint8_t *self, uint32_t value,
-				uint8_t toggle)
-{
-	if (*(uint32_t *)(self + 408) != value) {
-		*(uint32_t *)(self + 408) = value;
-		if (toggle) {
-			if (value) {
-				if (!self[500])
-					self[500] = 1;
-			} else if (self[500]) {
-				self[500] = 0;
-			}
-		}
-	}
-	return self;
 }
 
 int ScePafWidget_A4E53390(uint8_t *self)
@@ -274,18 +165,6 @@ int _ZNK3paf2ui15CompositeDrawer9IsInheritEPKc(const void *self, const char *typ
 
 #undef DEFINE_WIDGET_TYPE
 
-/* The native delete callback marks the dispatch scope in a shared word. */
-uint32_t sce_paf_widget_dispatch_guard_142d4;
-
-int _ZN3paf2ui8Layouter8OnUpdateEv(uint32_t *self)
-{
-	uint8_t *vtable = (uint8_t *)self[0];
-
-	sce_paf_widget_dispatch_guard_142d4 = 1;
-	((void (*)(uint32_t *))*(void **)(vtable + 8))(self);
-	sce_paf_widget_dispatch_guard_142d4 = 0;
-	return 0;
-}
 
 /* Native single-dispatch widget methods. */
 static inline __attribute__((always_inline))
@@ -384,39 +263,5 @@ uint8_t *ScePafWidget_0DCB8EA5(uint8_t *self, float seconds)
 		seconds = 200.0f;
 	*(float *)(self + 976) = seconds;
 	return self;
-}
-
-uint8_t *_ZN3paf2ui6Widget15InitCreateParamEPKNS1_11CreateParamE(uint8_t *self, const uint8_t *flags)
-{
-	if (flags) {
-		uint8_t value = (self[404] & 0xfe) | ((flags[0] & 2) != 0);
-
-		self[404] = value;
-		self[404] = (value & 0xfd) | (2 * ((flags[0] & 4) != 0));
-	}
-	return self;
-}
-
-uint8_t *_ZN3paf2ui6Widget17NotifyLayoutDirtyEj(uint8_t *self, uint16_t flags)
-{
-	uint8_t *result = self;
-
-	if (((uint8_t)flags & *(uint16_t *)(self + 572)) &&
-	    (*(uint16_t *)(self + 572) & flags & 0xff00)) {
-		uint8_t *parent = *(uint8_t **)(self + 360);
-
-		if (parent) {
-			uint8_t *parentObject = *(uint8_t **)(parent + 532);
-
-			if (parentObject)
-				parentObject[12] |= 1;
-		}
-		if (flags & 2) {
-			result = *(uint8_t **)(self + 532);
-			if (result)
-				result[12] |= 1;
-		}
-	}
-	return result;
 }
 

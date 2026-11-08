@@ -55,11 +55,13 @@ public:
 	}
 
 	/* the layout pass left and entered again, and whether one is under way (s_enter_layout) */
-	static void Finish();
-	static void Enter();
+	static int32_t *Finish();
+	static int32_t *Enter();
 	static bool IsEnter();
+	/* a pass over the widget's layout, entered for its duration */
+	int32_t OnUpdate();
 
-	static bool s_enter_layout;
+	static int32_t s_enter_layout;
 
 protected:
 	Widget *m_widget;
@@ -105,7 +107,7 @@ public:
 		m_dirty |= val;
 	}
 
-	static bool s_enter_animator;
+	static int32_t s_enter_animator;
 
 protected:
 	Widget *m_widget;
