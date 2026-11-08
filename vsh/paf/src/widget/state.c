@@ -492,24 +492,6 @@ int _ZN3paf2ui16ProgressBarTouch16OnDragMoveSliderEPNS0_5EventE(void *self)
 		self, 268435458, 0);
 }
 
-uint64_t *ScePafWidget_3D6C290E(uint64_t *result, const uint8_t *self)
-{
-	const uint8_t *source = *(const uint8_t *const *)(self + 12);
-
-	result[0] = *(const uint64_t *)(source + 712);
-	result[1] = 0;
-	return result;
-}
-
-uint64_t *ScePafWidget_6206FB7E(uint64_t *result, const uint8_t *self)
-{
-	const uint8_t *source = *(const uint8_t *const *)(self + 12);
-
-	result[0] = *(const uint64_t *)(source + 720);
-	result[1] = 0;
-	return result;
-}
-
 extern int _ZN3paf5graph7TextObj12GetLineCountERj(const uint8_t *self, uint32_t *output);
 extern int _ZN3paf5graph7TextObj11GetCharInfoEjRNS0_18TextLayoutCharInfoE(const uint8_t *self, uint32_t index,
 					   uint8_t *output);
@@ -646,13 +628,6 @@ int ScePafWidget_A4E53390(uint8_t *self)
 	return ((int (*)(uint8_t *))*(void **)(vtable + 560))(self);
 }
 
-__attribute__((noinline)) int _ZNK3paf2ui12PageTurnBase9IsInheritEPKc(const void *self, const char *tag)
-{
-	if (tag == "pageturn_base")
-		return 1;
-	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
-}
-
 __attribute__((noinline)) int _ZNK3paf2ui4Text9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "text")
@@ -704,8 +679,7 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui13SlidingDrawer9IsInheritEPKc, "sliding_drawer",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui5Plane9IsInheritEPKc, "plane",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui8PageTurn9IsInheritEPKc, "pageturn",
-		   _ZNK3paf2ui12PageTurnBase9IsInheritEPKc)
+/* PageTurn's is C++ (w_pageturn.cpp) */
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RichText9IsInheritEPKc, "rich_text",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
 /* ImageSlideBar's is C++ (w_image_slidebar.cpp) */
@@ -796,35 +770,6 @@ int _ZN3paf2ui7Handler14HandleKeyEventEPNS0_5EventE(void *self)
 	(void)((void (*)(void *))*(void *const *)
 		(*(const uint8_t *const *)self + 20))(self);
 	return 0;
-}
-
-uint8_t *ScePafWidget_4EA317B8(const uint8_t *self, const uint64_t *value)
-{
-	/* The native VLDM fetches the entire 128-bit pair before loading self. */
-	const volatile uint32_t *words = (const volatile uint32_t *)value;
-	uint32_t lo = words[0];
-	uint32_t hi = words[1];
-	volatile uint32_t unused2 = words[2];
-	volatile uint32_t unused3 = words[3];
-	uint8_t *target = *(uint8_t *const *)(self + 12);
-	(void)unused2;
-	(void)unused3;
-	*(uint64_t *)(target + 720) = (uint64_t)lo | ((uint64_t)hi << 32);
-	return target;
-}
-
-uint8_t *ScePafWidget_6CC95725(const uint8_t *self, const uint64_t *value)
-{
-	const volatile uint32_t *words = (const volatile uint32_t *)value;
-	uint32_t lo = words[0];
-	uint32_t hi = words[1];
-	volatile uint32_t unused2 = words[2];
-	volatile uint32_t unused3 = words[3];
-	uint8_t *target = *(uint8_t *const *)(self + 12);
-	(void)unused2;
-	(void)unused3;
-	*(uint64_t *)(target + 712) = (uint64_t)lo | ((uint64_t)hi << 32);
-	return target;
 }
 
 int ScePafWidget_6B4F7595(void *unused0, void *unused1,

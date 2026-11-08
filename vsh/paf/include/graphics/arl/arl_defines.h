@@ -152,8 +152,11 @@ enum Primitive {
 	TRIANGLE_EDGES = SCE_GXM_PRIMITIVE_TRIANGLE_EDGES
 };
 
-/* the size of GXM's tiles, which every arl file has its copy of (name ours) */
+/* the size of GXM's tiles, which every arl file has its copy of (name ours); a file that takes
+   the arl definitions only through a draw object's header (w_pageturn.cpp) has none */
+#ifndef PAF_ARL_NO_TILE_SIZE
 static const SurfaceSize s_tile_size(32, 32);
+#endif
 
 }
 }

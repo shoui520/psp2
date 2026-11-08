@@ -1272,6 +1272,9 @@ public:
 	int32_t KillAnim(int32_t id);
 	/* the listener queued for the animation */
 	int32_t SetAnimListener(int32_t id, AnimListener *listener, int32_t slot);
+	/* the same, the animation starting after the delay */
+	int32_t SetAnimListener_withDelay(int32_t id, AnimListener *listener, float delay,
+					  int32_t slot);
 
 	ResolutionData *get_resolution_data(ResolutionData *array, uint32_t num, uint32_t id);
 
