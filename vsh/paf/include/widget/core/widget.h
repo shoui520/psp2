@@ -1191,7 +1191,10 @@ public:
 		       float delay, AnimCB cb_fin, void *usrdata);
 	/* the alpha it is shown with, kept within 0 and 1, set at once (0x8114d9f0; name ours,
 	   after SetShowAlpha) */
-	int32_t SetShowAlpha_core(float alpha);
+	void SetShowAlpha_core(float alpha);
+	/* its show alpha multiplied up from its parent's, and its children's after it (0x8114d9ac;
+	   name ours) */
+	void UpdateShowAlphaSum(float parent_sum);
 	/* the alpha it is shown with (Sony's name from the export) */
 	int32_t SetShowAlpha(float alpha, Timer *t, int32_t id, int32_t opt, float delay,
 			     AnimCB cb_fin);
@@ -1218,6 +1221,10 @@ public:
 			 void *usrdata = NULL);
 	int32_t SetAlignOffset(const math::v4 &offs, Timer *t, int32_t id, int32_t opt,
 			       float delay, AnimCB cb_fin, void *usrdata);
+	int32_t SetOriginOffset(const math::v4 &offs, Timer *t, int32_t id, int32_t opt, float delay,
+				AnimCB cb_fin, void *usrdata);
+	int32_t SetAnchorOffset(const math::v4 &offs, Timer *t, int32_t id, int32_t opt, float delay,
+				AnimCB cb_fin, void *usrdata);
 	int32_t SetAlign(uint32_t ax, uint32_t ay, uint32_t az, Timer *t);
 	int32_t SetAdjust(uint32_t ax, uint32_t ay, uint32_t az);
 	int32_t SetPosCenter(const math::v4 &v);
@@ -1458,7 +1465,9 @@ public:
 	bool reserved3w : 1;
 	/* taps are taken (AppIconSimple::EnableTap; AppIconBase sets it; name after the export) */
 	bool m_enable_tap : 1;
-	bool reserved3c : 1;
+	/* animation listeners set on it are kept on ScePafWidget_8A0DA7BF until it takes them
+	   (SetAnimListener; name ours, the setter not found) */
+	bool m_anim_deferred : 1;
 	bool reserved3d : 1;
 	/* not destroyed when its page closes (name ours) */
 	bool m_destroy_protected : 1;
@@ -1580,7 +1589,7 @@ public:
 	/* the same for the animator (NotifyAnimatorDirty; name ours) */
 	uint16_t m_animator_notify_mask;
 	/* the animations running, by their ID (the ID's low 24 bits; name after ScePaf-RE) */
-	map<uint32_t, AnimQueue *> m_anims;
+	map<int32_t, AnimQueue *> m_anims;
 	/* its draw objects, drawn in order */
 	vector<DrawObjEntry> m_drawobjs;
 	/* what is called when it is deleted (names after DrawObj's, Sony's DWARF) */

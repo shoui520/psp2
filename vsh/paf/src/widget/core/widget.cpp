@@ -26,6 +26,14 @@ inline __attribute__((noinline)) int vector<ui::Widget::DrawObjEntry>::push_back
 	return result;
 }
 
+/* Sony's SetAnimListener has the lookup in the animation map inline. */
+template<>
+inline __attribute__((always_inline)) _Tree<_Tmap_traits<int32_t, ui::AnimQueue *, less<int32_t> > >::iterator
+_Tree<_Tmap_traits<int32_t, ui::AnimQueue *, less<int32_t> > >::find(const int32_t &key)
+{
+	return iterator(_Find(key));
+}
+
 namespace ui {
 
 /* NotifyLayoutDirty and NotifyAnimatorDirty, as Sony's callers have them inline (names ours) */
@@ -53,8 +61,8 @@ static inline void AnimatorDirty(Widget *w, uint32_t kind)
 
 AnimQueue *Widget::FindAnim(int32_t id)
 {
-	for (map<uint32_t, AnimQueue *>::iterator it = m_anims.begin(); it != m_anims.end(); it++) {
-		if ((it->first & 0xFFFFFF) == (uint32_t)id) {
+	for (map<int32_t, AnimQueue *>::iterator it = m_anims.begin(); it != m_anims.end(); it++) {
+		if ((it->first & 0xFFFFFF) == id) {
 			AnimQueue *anim = it->second;
 
 			for (int i = 0; i < 3; i++) {
@@ -198,6 +206,35 @@ void Widget::NotifyLayoutDirty(uint32_t kind)
 	LayoutDirty(this, kind);
 }
 
+ResolutionData *Widget::get_resolution_data(ResolutionData *array, uint32_t num, uint32_t id) const
+{
+	if (array == NULL || num == 0)
+		return NULL;
+
+	SceneResolution *resolution = ScePafWidget_CDC90BA2(m_scene->m_env_param, id);
+
+	if (resolution == NULL)
+		return array;
+
+	uint32_t i;
+
+	for (i = 0; i < num; i++) {
+		if (array[i].m_id == resolution->m_id)
+			goto found;
+	}
+	for (i = 0; i < num; i++) {
+		if (array[i].m_id == resolution->m_base_id) {
+found:
+			ResolutionData *entry = &array[i];
+
+			if (entry != NULL)
+				return entry;
+			return array;
+		}
+	}
+	return array;
+}
+
 void Widget::SetUpdateParam(uint32_t param)
 {
 	uint32_t flags = m_update_flag;
@@ -214,6 +251,96 @@ void Widget::SetUpdateParam(uint32_t param)
 	}
 }
 
+/* the animation's last target, where one is running (inline in Sony's callers, name ours) */
+static inline math::v4 *AnimLastTarget(AnimQueue *anim)
+{
+	if (anim != NULL) {
+		AnimQueueBase *queue = anim->m_queue[0];
+
+		if (queue != NULL) {
+			AnimListener *listener = static_cast<AnimListener *>(queue->GetBack());
+
+			if (listener != NULL)
+				return listener->GetTargetV4();
+		}
+	}
+	return NULL;
+}
+
+math::v4 Widget::GetAlignOffsetToCenter(int32_t opt)
+{
+	if (opt != 1)
+		return m_align_offs;
+
+	math::v4 offs = m_align_offs;
+	math::v4 *target = AnimLastTarget(FindAnim(ANIM_ALIGN));
+
+	if (target != NULL)
+		offs = *target;
+	target = AnimLastTarget(FindAnim(ANIM_SIZE));
+	if (target != NULL)
+		offs = calc_align_offset(*target, offs, m_align_x, m_align_y, m_align_z);
+	return math::v4(offs);
+}
+
+/* GetAlignOffsetToRotatedCenter as Sony's SetPos_core has it inline (name ours) */
+static inline math::v4 AlignOffsetToRotatedCenter(Widget *w, int32_t opt)
+{
+	if ((w->m_update_flag & 7) != 0)
+		w->UpdateMatrix();
+
+	math::v4 center = w->GetAlignOffsetToCenter(opt);
+	float32x4_t c0 = w->m_local_matrix.x().getImpl().get128();
+	float32x4_t c1 = w->m_local_matrix.y().getImpl().get128();
+	float32x4_t c2 = w->m_local_matrix.z().getImpl().get128();
+	float32x4_t c3 = w->m_local_matrix.w().getImpl().get128();
+	float32x4_t offs = center.getImpl().get128();
+	float32x2_t low = vget_low_f32(offs);
+	float32x2_t high = vget_high_f32(offs);
+	float32x4_t a = vmlaq_lane_f32(vmulq_lane_f32(c0, low, 0), c2, high, 0);
+	float32x4_t b = vmlaq_lane_f32(vmulq_lane_f32(c1, low, 1), c3, high, 1);
+
+	return math::v4(sce::Vectormath::Simd::Aos::Vector4(vaddq_f32(a, b)));
+}
+
+math::v4 Widget::GetAlignOffsetToRotatedCenter(int32_t opt)
+{
+	return AlignOffsetToRotatedCenter(this, opt);
+}
+
+int32_t Widget::SetPos_core(const math::v4 &pos, uint32_t notify_layout, bool store)
+{
+	math::v4 value = pos;
+
+	value.set_w(1.0f);
+	if ((m_align_x | m_align_y | m_align_z) == 0 &&
+	    m_align_offs == math::v4(0.0f, 0.0f, 0.0f, 0.0f)) {
+		if (m_pos == value)
+			return 0;
+		m_pos = value;
+	} else {
+		value = value + AlignOffsetToRotatedCenter(this, 0);
+		if (m_pos == value)
+			return 0;
+		m_pos = value;
+	}
+	LayoutDirty(this, notify_layout);
+	SetUpdateParam(1);
+	if (store) {
+		if (m_pos_array != NULL) {
+			ResolutionData *entry = get_resolution_data(m_pos_array, m_pos_num,
+								    m_resolution_id);
+
+			if (entry != NULL) {
+				entry->m_value[0] = m_pos.extract_x();
+				entry->m_value[1] = m_pos.extract_y();
+				entry->m_value[2] = m_pos.extract_z();
+			}
+		}
+	}
+	return 0;
+}
+
 Camera *Widget::GetCamera() const
 {
 	if (m_scene != NULL)
@@ -221,13 +348,212 @@ Camera *Widget::GetCamera() const
 	return NULL;
 }
 
+/* an animation listener kept for a widget that defers them (names ours) */
+class AnimPending {
+public:
+	Widget *m_widget;
+	int32_t m_id;
+	int32_t m_slot;
+	AnimListener *m_listener;
+};
+
+extern "C" {
+list<AnimPending> ScePafWidget_8A0DA7BF;
+}
+
+/* a move set by hand is dropped while a drag is under way (inline in Sony's callers; name
+   ours) */
+static inline bool IsDragMoving(const Widget *w)
+{
+	return w->m_drag_state[0] != NULL && w->m_drag_mode != 0 && w->m_drag_mode != 0x1000;
+}
+
+void Widget::UpdateShowAlphaSum(float parent_sum)
+{
+	m_show_a_sum = m_show_alpha * parent_sum;
+	if (m_children.size() != 0) {
+		for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
+			(*it)->UpdateShowAlphaSum(m_show_a_sum);
+	}
+}
+
+/* SetShowAlpha_core as Sony's SetShowAlpha has it inline (name ours) */
+static inline void ShowAlphaCore(Widget *w, float alpha)
+{
+	Widget *parent = w->m_parent;
+
+	if (alpha >= 0.0f) {
+		w->m_show_alpha = alpha;
+		if (alpha > 1.0f)
+			w->m_show_alpha = 1.0f;
+	}
+	w->UpdateShowAlphaSum(parent != NULL ? parent->m_show_a_sum : 1.0f);
+}
+
+void Widget::SetShowAlpha_core(float alpha)
+{
+	ShowAlphaCore(this, alpha);
+}
+
 int32_t Widget::KillAnimType(int32_t type)
 {
 	int32_t count = 0;
 
-	for (map<uint32_t, AnimQueue *>::iterator it = m_anims.begin(); it != m_anims.end(); it++)
+	for (map<int32_t, AnimQueue *>::iterator it = m_anims.begin(); it != m_anims.end(); it++)
 		count += it->second->EraseType(type, true);
 	return count;
+}
+
+int32_t Widget::SetAnimListener(int32_t id, AnimListener *listener, int32_t slot)
+{
+	if (listener == NULL)
+		return -1;
+	if (m_hold_count > 0) {
+		delete listener;
+		return -1;
+	}
+	if (m_anim_deferred) {
+		AnimPending pending;
+
+		pending.m_widget = this;
+		pending.m_id = id;
+		pending.m_slot = slot;
+		pending.m_listener = listener;
+		ScePafWidget_8A0DA7BF.push_back(pending);
+		return 0;
+	}
+	if ((id & 0xFF000000) != 0) {
+		if ((id & 0x1000000) != 0)
+			listener->m_keep_x = true;
+		if ((id & 0x2000000) != 0)
+			listener->m_keep_y = true;
+		if ((id & 0x4000000) != 0)
+			listener->m_keep_z = true;
+		if ((id & 0x8000000) != 0)
+			listener->m_keep_w = true;
+	}
+
+	AnimQueue *anim;
+	map<int32_t, AnimQueue *>::iterator it = m_anims.find(id);
+
+	if (it == m_anims.end()) {
+		anim = new AnimQueue();
+		m_anims.insert(pair<int32_t, AnimQueue *>(id, anim));
+	} else {
+		anim = it->second;
+	}
+
+	uint32_t slot_index = 0;
+
+	switch (slot & 0xFF00) {
+	case 0x100:
+		slot_index = 1;
+		break;
+	case 0x200:
+		slot_index = 2;
+		break;
+	default:
+		slot_index = 0;
+		break;
+	}
+	if (anim != NULL) {
+		uint32_t mode = (uint8_t)slot;
+
+		if (mode == 1) {
+			AnimQueueBase *queue = anim->m_queue[slot_index];
+
+			if (queue != NULL)
+				queue->Clear();
+		}
+		if (mode == 2) {
+			if (slot_index == 2) {
+				AnimQueueBase *queue = anim->m_queue[0];
+
+				anim->m_queue[0] = anim->m_queue[2];
+				anim->m_queue[2] = queue;
+				if (queue != NULL)
+					queue->ClearAll();
+			} else {
+				for (int i = 0; i < 3; i++) {
+					if (anim->m_queue[i] != NULL) {
+						delete anim->m_queue[i];
+						anim->m_queue[i] = NULL;
+					}
+				}
+			}
+		}
+		if (mode == 3) {
+			AnimQueueBase *queue = anim->m_queue[slot_index];
+
+			if (queue != NULL) {
+				TimerListener *front = queue->GetFront();
+
+				if (front != NULL)
+					front->ResetTimer();
+			}
+			anim->PushFront(listener, slot_index);
+		} else {
+			anim->PushBack(listener, slot_index);
+		}
+	}
+	return 0;
+}
+
+int32_t Widget::SetAnimListener_withDelay(int32_t id, AnimListener *listener, float delay,
+					  int32_t slot)
+{
+	int32_t type = (uint16_t)slot;
+
+	if ((uint8_t)slot != 3 && delay > 0.0f) {
+		SetAnimListener(id, new AnimListener(new Timer(delay), this, NULL, NULL, NULL), type);
+		type = slot & 0xFF00;
+	}
+	SetAnimListener(id, listener, type);
+	if (slot == 3 && delay > 0.0f)
+		SetAnimListener(id, new AnimListener(new Timer(delay), this, NULL, NULL, NULL), type);
+	return 0;
+}
+
+int32_t Widget::SetShowAlpha(float alpha, Timer *t, int32_t id, int32_t opt, float delay,
+			     AnimCB cb_fin)
+{
+	if (t != NULL) {
+		if (alpha > 1.0f)
+			alpha = 1.0f;
+		if (alpha < 0.0f)
+			alpha = 0.0f;
+
+		AnimListener *listener = new AnimListenerF1(t, this, m_show_alpha, alpha,
+							    &AnimListener::s_prop_showalpha, cb_fin, NULL);
+
+		if ((id & 0xFF0000) != 0)
+			id = (id & 0xFF000000) | ANIM_SHOW_ALPHA;
+		SetAnimListener_withDelay(id, listener, delay, opt);
+		return 0;
+	}
+	KillAnimType(ANIM_SHOW_ALPHA);
+	ShowAlphaCore(this, alpha);
+	return 0;
+}
+
+int32_t Widget::SetSize(const math::v4 &size, Timer *t, int32_t id, int32_t opt, float delay,
+			AnimCB cb_fin, void *usrdata)
+{
+	if (m_drag_state[0] != NULL && (m_drag_mode & 0x200) != 0) {
+		delete t;
+		return -1;
+	}
+	if (t != NULL) {
+		AnimListener *listener = new AnimListenerV4(t, this, m_size, size,
+							    &AnimListener::s_prop_size, cb_fin, usrdata);
+
+		if ((id & 0xFF0000) != 0)
+			id = (id & 0xFF000000) | ANIM_SIZE;
+		SetAnimListener_withDelay(id, listener, delay, opt);
+		return 0;
+	}
+	KillAnimType(ANIM_SIZE);
+	return SetSize_core(size, 0xFF02, false);
 }
 
 void Widget::SetGestureMask(uint32_t mask, bool update)
@@ -335,11 +661,11 @@ void Widget::CountFocusEnableChildren(int32_t delta)
 
 int32_t Widget::KillAnim(int32_t id)
 {
-	map<uint32_t, AnimQueue *>::iterator it = m_anims.begin();
+	map<int32_t, AnimQueue *>::iterator it = m_anims.begin();
 
 	if (it == m_anims.end())
 		return -1;
-	while ((it->first & 0xFFFFFF) != (uint32_t)id) {
+	while ((it->first & 0xFFFFFF) != id) {
 		++it;
 		if (it == m_anims.end())
 			return -1;
@@ -361,6 +687,122 @@ int32_t Widget::KillAnim(int32_t id)
 void Widget::KillObjAnim(int32_t obj, int32_t id)
 {
 	KillAnim(obj + id);
+}
+
+int32_t Widget::SetColor_core(const math::v4 &color)
+{
+	float32x4_t one = vdupq_n_f32(1.0f);
+	float32x4_t value = vmaxq_f32(vminq_f32(color.getImpl().get128(), one), vdupq_n_f32(0.0f));
+	uint32x4_t equal = vceqq_f32(value, one);
+	uint32x2_t both = vand_u32(vand_u32(vdup_lane_u32(vget_high_u32(equal), 0),
+					    vrev64_u32(vget_low_u32(equal))),
+				   vget_low_u32(equal));
+	uint32_t bytes = 0xFFFFFFFF;
+
+	if (vget_lane_u32(vdup_lane_u32(both, 0), 0) == 0) {
+		uint16x4_t narrow = vqmovn_u32(vcvtq_u32_f32(vmulq_f32(value, vdupq_n_f32(255.0f))));
+
+		bytes = vget_lane_u32(vreinterpret_u32_u8(vqmovn_u16(vcombine_u16(narrow, narrow))), 0);
+	}
+	m_color = bytes;
+	m_color_alpha = vgetq_lane_f32(value, 3);
+	return 0;
+}
+
+int32_t Widget::SetColor(const math::v4 &color, Timer *t, int32_t id, int32_t opt, float delay,
+			 AnimCB cb_fin, void *usrdata)
+{
+	if (t == NULL) {
+		KillAnimType(ANIM_COLOR);
+		return SetColor_core(color);
+	}
+
+	AnimListener *listener = new AnimListenerV4(t, this, GetColor(), color,
+						    &AnimListener::s_prop_color, cb_fin, usrdata);
+
+	if ((id & 0xFF0000) != 0)
+		id = (id & 0xFF000000) | ANIM_COLOR;
+	SetAnimListener_withDelay(id, listener, delay, opt);
+	return 0;
+}
+
+int32_t Widget::SetMetaAlpha_core(float alpha)
+{
+	Widget *parent = m_parent;
+	float meta = m_meta_alpha;
+	bool has_children = m_children.size() != 0;
+
+	if (alpha >= 0.0f) {
+		meta = alpha;
+		m_meta_alpha = alpha;
+		if (alpha > 1.0f) {
+			meta = 1.0f;
+			m_meta_alpha = 1.0f;
+		}
+	}
+	m_meta_a_sum = meta * (parent != NULL ? parent->m_meta_a_sum : 1.0f);
+	if (has_children) {
+		for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
+			(*it)->SetMetaAlpha_core(-1.0f);
+	}
+	return 0;
+}
+
+int32_t Widget::SetMetaAlpha(float alpha, Timer *t, int32_t id, int32_t opt, float delay,
+			     AnimCB cb_fin, void *usrdata)
+{
+	if (t != NULL) {
+		AnimListener *listener = new AnimListenerF1(t, this, m_meta_alpha, alpha,
+							    &AnimListener::s_prop_metaalpha, cb_fin, usrdata);
+
+		if ((id & 0xFF0000) != 0)
+			id = (id & 0xFF000000) | ANIM_META_ALPHA;
+		SetAnimListener_withDelay(id, listener, delay, opt);
+		return 0;
+	}
+	KillAnimType(ANIM_META_ALPHA);
+	return SetMetaAlpha_core(alpha);
+}
+
+int32_t Widget::SetScale_core(const math::v4 &scale, uint32_t notify_layout)
+{
+	float32x4_t clamped = vmaxq_f32(vdupq_n_f32(0.0001f), scale.getImpl().get128());
+	math::v4 value(sce::Vectormath::Simd::Aos::Vector4(vcombine_f32(
+		vget_low_f32(clamped), vset_lane_f32(0.0f, vget_high_f32(clamped), 1))));
+	math::v4 pos;
+
+	if (m_scale == value)
+		return 0;
+	if ((m_align_x | m_align_y | m_align_z) != 0 ||
+	    !(m_align_offs == math::v4(0.0f, 0.0f, 0.0f, 0.0f)))
+		pos = GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	m_scale = value;
+	LayoutDirty(this, notify_layout);
+	SetUpdateParam(1);
+	if ((m_align_x | m_align_y | m_align_z) != 0 ||
+	    !(m_align_offs == math::v4(0.0f, 0.0f, 0.0f, 0.0f)))
+		SetPos_core(pos, 1, false);
+	return 0;
+}
+
+int32_t Widget::SetScale(const math::v4 &scale, Timer *t, int32_t id, int32_t opt, float delay,
+			 AnimCB cb_fin, void *usrdata)
+{
+	if (IsDragMoving(this)) {
+		delete t;
+		return -1;
+	}
+	if (t != NULL) {
+		AnimListener *listener = new AnimListenerV4(t, this, m_scale, scale,
+							    &AnimListener::s_prop_scale, cb_fin, usrdata);
+
+		if ((id & 0xFF0000) != 0)
+			id = (id & 0xFF000000) | ANIM_SCALE;
+		SetAnimListener_withDelay(id, listener, delay, opt);
+		return 0;
+	}
+	KillAnimType(ANIM_SCALE);
+	return SetScale_core(scale, 0xFF04);
 }
 
 math::v4 *Widget::GetScale(int32_t opt)
@@ -407,6 +849,231 @@ void Widget::Update()
 	}
 }
 
+int32_t Widget::SetAlignOffset_core(const math::v4 &offs, uint32_t notify_layout)
+{
+	math::v4 zero(0.0f, 0.0f, 0.0f, 0.0f);
+	math::v4 pos = GetPos(0, NULL, zero);
+
+	m_align_offs = offs;
+	SetPos_core(pos, 0, false);
+	LayoutDirty(this, notify_layout);
+	SetUpdateParam(1);
+	return 0;
+}
+
+int32_t Widget::SetAlign(uint32_t ax, uint32_t ay, uint32_t az, Timer *t)
+{
+	m_align_x = ax;
+	m_align_y = ay;
+	m_align_z = az;
+
+	math::v4 offs = calc_align_offset(m_size, m_align_offs, ax, ay, az);
+
+	if (t != NULL) {
+		AnimListener *listener = new AnimListenerV4(t, this, GetAlignOffsetToCenter(0), offs,
+							    &AnimListener::s_prop_align, NULL, NULL);
+
+		SetAnimListener(ANIM_ALIGN, listener, 2);
+		return 0;
+	}
+	KillAnimType(ANIM_ALIGN);
+	return SetAlignOffset_core(offs, 0xFF10);
+}
+
+int32_t Widget::SetAlignOffset(const math::v4 &offs, Timer *t, int32_t id, int32_t opt,
+			       float delay, AnimCB cb_fin, void *usrdata)
+{
+	if (IsDragMoving(this)) {
+		delete t;
+		return -1;
+	}
+	m_align_x = 3;
+	m_align_y = 3;
+	m_align_z = 3;
+	if (t != NULL) {
+		AnimListener *listener = new AnimListenerV4(t, this, GetAlignOffsetToCenter(0), offs,
+							    &AnimListener::s_prop_align, cb_fin, usrdata);
+
+		if ((id & 0xFF0000) != 0)
+			id = (id & 0xFF000000) | ANIM_ALIGN;
+		SetAnimListener_withDelay(id, listener, delay, opt);
+		return 0;
+	}
+	KillAnimType(ANIM_ALIGN);
+	return SetAlignOffset_core(offs, 0xFF10);
+}
+
+math::v4 Widget::calc_align_offset(const math::v4 &size, const math::v4 &aoffs, uint32_t ax,
+				   uint32_t ay, uint32_t az)
+{
+	if ((ax | ay | az) == 0)
+		return math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	float x = aoffs.extract_x();
+	float y = aoffs.extract_y();
+	float z = aoffs.extract_z();
+	float w = aoffs.extract_w();
+
+	switch (ax) {
+	case 1:
+		x = 0.5f * size.extract_x();
+		break;
+	case 2:
+		x = -size.extract_x() * 0.5f;
+		break;
+	case 0:
+		x = 0.0f;
+		break;
+	default:
+		break;
+	}
+	switch (ay) {
+	case 1:
+		y = 0.5f * size.extract_y();
+		break;
+	case 2:
+		y = -size.extract_y() * 0.5f;
+		break;
+	case 0:
+		y = 0.0f;
+		break;
+	default:
+		break;
+	}
+	switch (az) {
+	case 1:
+		z = 0.5f * size.extract_z();
+		break;
+	case 2:
+		z = -size.extract_z() * 0.5f;
+		break;
+	case 0:
+		z = 0.0f;
+		break;
+	default:
+		break;
+	}
+	return math::v4(x, y, z, w);
+}
+
+math::v4 Widget::GetOriginOffset(int32_t opt)
+{
+	if (opt != 1)
+		return m_origin_offs;
+
+	math::v4 offs = m_origin_offs;
+	math::v4 *target = AnimLastTarget(FindAnim(ANIM_ORIGIN));
+
+	if (target != NULL)
+		offs = *target;
+	target = AnimLastTarget(FindAnim(ANIM_SIZE));
+	if (target != NULL)
+		offs = calc_origin_offset(*target, offs, m_origin_x, m_origin_y, m_origin_z);
+	return math::v4(offs);
+}
+
+int32_t Widget::SetOriginOffset_core(const math::v4 &offs, uint32_t notify_layout)
+{
+	m_origin_offs = offs;
+	SetUpdateParam(1);
+	return 0;
+}
+
+int32_t Widget::SetOrigin(uint32_t ax, uint32_t ay, uint32_t az, Timer *t)
+{
+	m_origin_x = ax;
+	m_origin_y = ay;
+	m_origin_z = az;
+
+	math::v4 offs = calc_origin_offset(m_size, m_origin_offs, ax, ay, az);
+
+	if (t != NULL) {
+		AnimListener *listener = new AnimListenerV4(t, this, GetOriginOffset(0), offs,
+							    &AnimListener::s_prop_origin, NULL, NULL);
+
+		SetAnimListener(ANIM_ORIGIN, listener, 2);
+		return 0;
+	}
+	KillAnimType(ANIM_ORIGIN);
+	m_origin_offs = offs;
+	SetUpdateParam(1);
+	return 0;
+}
+
+int32_t Widget::SetOriginOffset(const math::v4 &offs, Timer *t, int32_t id, int32_t opt,
+				float delay, AnimCB cb_fin, void *usrdata)
+{
+	m_origin_x = 3;
+	m_origin_y = 3;
+	m_origin_z = 3;
+	if (t != NULL) {
+		AnimListener *listener = new AnimListenerV4(t, this, GetOriginOffset(0), offs,
+							    &AnimListener::s_prop_origin, cb_fin, usrdata);
+
+		if ((id & 0xFF0000) != 0)
+			id = (id & 0xFF000000) | ANIM_ORIGIN;
+		SetAnimListener_withDelay(id, listener, delay, opt);
+		return 0;
+	}
+	KillAnimType(ANIM_ORIGIN);
+	m_origin_offs = offs;
+	SetUpdateParam(1);
+	return 0;
+}
+
+math::v4 Widget::calc_origin_offset(const math::v4 &size, const math::v4 &offs, uint32_t ax,
+				    uint32_t ay, uint32_t az)
+{
+	if ((ax | ay | az) == 0)
+		return math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	float x = offs.extract_x();
+	float y = offs.extract_y();
+	float z = offs.extract_z();
+	float w = offs.extract_w();
+
+	switch (ax) {
+	case 1:
+		x = 0.5f * size.extract_x();
+		break;
+	case 2:
+		x = -size.extract_x() * 0.5f;
+		break;
+	case 0:
+		x = 0.0f;
+		break;
+	default:
+		break;
+	}
+	switch (ay) {
+	case 1:
+		y = 0.5f * size.extract_y();
+		break;
+	case 2:
+		y = -size.extract_y() * 0.5f;
+		break;
+	case 0:
+		y = 0.0f;
+		break;
+	default:
+		break;
+	}
+	switch (az) {
+	case 1:
+		z = 0.5f * size.extract_z();
+		break;
+	case 2:
+		z = -size.extract_z() * 0.5f;
+		break;
+	case 0:
+		z = 0.0f;
+		break;
+	default:
+		break;
+	}
+	return math::v4(x, y, z, w);
+}
+
 math::v4 Widget::GetAnchorOffset(int32_t opt)
 {
 	math::v4 result = m_anchor_offs;
@@ -430,6 +1097,122 @@ math::v4 Widget::GetAnchorOffset(int32_t opt)
 		}
 	}
 	return result;
+}
+
+int32_t Widget::SetAnchorOffset_core(const math::v4 &offs, uint32_t notify_layout)
+{
+	m_anchor_offs = offs;
+	SetUpdateParam(1);
+	return 0;
+}
+
+int32_t Widget::SetAnchor(uint32_t ax, uint32_t ay, uint32_t az, Timer *t)
+{
+	Widget *parent = m_parent;
+
+	if (parent == NULL)
+		return -1;
+	m_anchor_x = ax;
+	m_anchor_y = ay;
+	m_anchor_z = az;
+
+	math::v4 offs = parent->calc_anchor_offset(*parent->GetSize(0), m_anchor_offs, ax, ay, az);
+
+	if (t != NULL) {
+		AnimListener *listener = new AnimListenerV4(t, this, GetAnchorOffset(0), offs,
+							    &AnimListener::s_prop_anchor, NULL, NULL);
+
+		SetAnimListener(ANIM_ANCHOR, listener, 2);
+		return 0;
+	}
+	KillAnimType(ANIM_ANCHOR);
+	m_anchor_offs = offs;
+	SetUpdateParam(1);
+	return 0;
+}
+
+int32_t Widget::SetAnchorOffset(const math::v4 &offs, Timer *t, int32_t id, int32_t opt,
+				float delay, AnimCB cb_fin, void *usrdata)
+{
+	m_anchor_x = 3;
+	m_anchor_y = 3;
+	m_anchor_z = 3;
+	if (t != NULL) {
+		AnimListener *listener = new AnimListenerV4(t, this, GetAnchorOffset(0), offs,
+							    &AnimListener::s_prop_anchor, cb_fin, usrdata);
+
+		if ((id & 0xFF0000) != 0)
+			id = (id & 0xFF000000) | ANIM_ANCHOR;
+		SetAnimListener_withDelay(id, listener, delay, opt);
+		return 0;
+	}
+	KillAnimType(ANIM_ANCHOR);
+	m_anchor_offs = offs;
+	SetUpdateParam(1);
+	return 0;
+}
+
+math::v4 Widget::calc_anchor_offset(const math::v4 &size, const math::v4 &offs, uint32_t ax,
+				    uint32_t ay, uint32_t az)
+{
+	if ((ax | ay | az) == 0)
+		return math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	if (ax == 4 && ay == 4 && az == 4)
+		return math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	float x = offs.extract_x();
+	float y = offs.extract_y();
+	float z = offs.extract_z();
+	float w = offs.extract_w();
+
+	if (ax == 1) {
+		x = 0.5f * size.extract_x();
+	} else if (ax == 2) {
+		x = -size.extract_x() * 0.5f;
+	} else if (ax != 0) {
+		if (ax == 4)
+			x = m_origin_offs.extract_x();
+	} else {
+		x = 0.0f;
+	}
+	if (ay == 1) {
+		y = 0.5f * size.extract_y();
+	} else if (ay == 2) {
+		y = -size.extract_y() * 0.5f;
+	} else if (ay != 0) {
+		if (ay == 4)
+			y = m_origin_offs.extract_y();
+	} else {
+		y = 0.0f;
+	}
+	if (az == 1) {
+		z = 0.5f * size.extract_z();
+	} else if (az == 2) {
+		z = -size.extract_z() * 0.5f;
+	} else if (az != 0) {
+		if (az == 4)
+			z = m_origin_offs.extract_z();
+	} else {
+		z = 0.0f;
+	}
+	if (ax == 110 || ax == 111 || ay == 111 || ay == 110) {
+		math::v4 scene_size = *m_scene->GetSize(0);
+
+		if ((m_update_flag & 7) != 0)
+			UpdateMatrix();
+
+		math::v4 world = m_world_matrix.w();
+
+		if (ax == 110)
+			x = 0.5f * scene_size.extract_x() + world.extract_x();
+		else if (ax == 111)
+			x = -scene_size.extract_x() * 0.5f + world.extract_x();
+		if (ay == 110)
+			y = 0.5f * scene_size.extract_y() + world.extract_y();
+		else if (ay == 111)
+			y = -scene_size.extract_y() * 0.5f + world.extract_y();
+	}
+	return math::v4(x, y, z, w);
 }
 
 int32_t Widget::SetAdjust(uint32_t ax, uint32_t ay, uint32_t az)
@@ -506,151 +1289,6 @@ int32_t Widget::s_base_destroy_count;
 int32_t Widget::GetBaseDestroyCount()
 {
 	return s_base_destroy_count;
-}
-
-ResolutionData *Widget::get_resolution_data(ResolutionData *array, uint32_t num, uint32_t id) const
-{
-	if (array == NULL || num == 0)
-		return NULL;
-
-	SceneResolution *resolution = ScePafWidget_CDC90BA2(m_scene->m_env_param, id);
-
-	if (resolution == NULL)
-		return array;
-
-	uint32_t i;
-
-	for (i = 0; i < num; i++) {
-		if (array[i].m_id == resolution->m_id)
-			goto found;
-	}
-	for (i = 0; i < num; i++) {
-		if (array[i].m_id == resolution->m_base_id) {
-found:
-			ResolutionData *entry = &array[i];
-
-			if (entry != NULL)
-				return entry;
-			return array;
-		}
-	}
-	return array;
-}
-
-/* the animation's last target, where one is running (inline in Sony's callers, name ours) */
-static inline math::v4 *AnimLastTarget(AnimQueue *anim)
-{
-	if (anim != NULL) {
-		AnimQueueBase *queue = anim->m_queue[0];
-
-		if (queue != NULL) {
-			AnimListener *listener = static_cast<AnimListener *>(queue->GetBack());
-
-			if (listener != NULL)
-				return listener->GetTargetV4();
-		}
-	}
-	return NULL;
-}
-
-math::v4 Widget::GetAlignOffsetToCenter(int32_t opt)
-{
-	if (opt != 1)
-		return m_align_offs;
-
-	math::v4 offs = m_align_offs;
-	math::v4 *target = AnimLastTarget(FindAnim(ANIM_ALIGN));
-
-	if (target != NULL)
-		offs = *target;
-	target = AnimLastTarget(FindAnim(ANIM_SIZE));
-	if (target != NULL)
-		offs = calc_align_offset(*target, offs, m_align_x, m_align_y, m_align_z);
-	return math::v4(offs);
-}
-
-/* GetAlignOffsetToRotatedCenter as Sony's SetPos_core has it inline (name ours) */
-static inline math::v4 AlignOffsetToRotatedCenter(Widget *w, int32_t opt)
-{
-	if ((w->m_update_flag & 7) != 0)
-		w->UpdateMatrix();
-
-	math::v4 center = w->GetAlignOffsetToCenter(opt);
-	float32x4_t c0 = w->m_local_matrix.x().getImpl().get128();
-	float32x4_t c1 = w->m_local_matrix.y().getImpl().get128();
-	float32x4_t c2 = w->m_local_matrix.z().getImpl().get128();
-	float32x4_t c3 = w->m_local_matrix.w().getImpl().get128();
-	float32x4_t offs = center.getImpl().get128();
-	float32x2_t low = vget_low_f32(offs);
-	float32x2_t high = vget_high_f32(offs);
-	float32x4_t a = vmlaq_lane_f32(vmulq_lane_f32(c0, low, 0), c2, high, 0);
-	float32x4_t b = vmlaq_lane_f32(vmulq_lane_f32(c1, low, 1), c3, high, 1);
-
-	return math::v4(sce::Vectormath::Simd::Aos::Vector4(vaddq_f32(a, b)));
-}
-
-math::v4 Widget::GetAlignOffsetToRotatedCenter(int32_t opt)
-{
-	return AlignOffsetToRotatedCenter(this, opt);
-}
-
-int32_t Widget::SetPos_core(const math::v4 &pos, uint32_t notify_layout, bool store)
-{
-	math::v4 value = pos;
-
-	value.set_w(1.0f);
-	if ((m_align_x | m_align_y | m_align_z) == 0 &&
-	    m_align_offs == math::v4(0.0f, 0.0f, 0.0f, 0.0f)) {
-		if (m_pos == value)
-			return 0;
-		m_pos = value;
-	} else {
-		value = value + AlignOffsetToRotatedCenter(this, 0);
-		if (m_pos == value)
-			return 0;
-		m_pos = value;
-	}
-	LayoutDirty(this, notify_layout);
-	SetUpdateParam(1);
-	if (store) {
-		if (m_pos_array != NULL) {
-			ResolutionData *entry = get_resolution_data(m_pos_array, m_pos_num,
-								    m_resolution_id);
-
-			if (entry != NULL) {
-				entry->m_value[0] = m_pos.extract_x();
-				entry->m_value[1] = m_pos.extract_y();
-				entry->m_value[2] = m_pos.extract_z();
-			}
-		}
-	}
-	return 0;
-}
-
-int32_t Widget::SetAlignOffset_core(const math::v4 &offs, uint32_t notify_layout)
-{
-	math::v4 zero(0.0f, 0.0f, 0.0f, 0.0f);
-	math::v4 pos = GetPos(0, NULL, zero);
-
-	m_align_offs = offs;
-	SetPos_core(pos, 0, false);
-	LayoutDirty(this, notify_layout);
-	SetUpdateParam(1);
-	return 0;
-}
-
-int32_t Widget::SetOriginOffset_core(const math::v4 &offs, uint32_t notify_layout)
-{
-	m_origin_offs = offs;
-	SetUpdateParam(1);
-	return 0;
-}
-
-int32_t Widget::SetAnchorOffset_core(const math::v4 &offs, uint32_t notify_layout)
-{
-	m_anchor_offs = offs;
-	SetUpdateParam(1);
-	return 0;
 }
 }
 }
