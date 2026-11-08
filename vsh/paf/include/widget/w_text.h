@@ -133,6 +133,12 @@ public:
 
 	static const char m_widget_type[];
 	static const char *TypeName();
+	/* "infinity" for a distance (10000), and the caret's scroll and blink times in milliseconds
+	   (names after the exports) */
+	static const float c_floatInfinity;
+	static const float c_caretScrollPosMsec;
+	static const float c_caretBlinkIdleMsec;
+	static const float c_caretBlinkFadeMsec;
 
 	Text(Widget *parent, CreateParam *param);
 	virtual ~Text();
@@ -385,7 +391,6 @@ public:
 	TextBoxEditMenuListener *m_edit_menu_listener;
 	/* its listener on its scene's event 0x80000A (name ours) */
 	EventListener *m_scene_listener;
-	uint32_t reserved;
 };
 
 /* a text's resource parameters (names after the resource's) */

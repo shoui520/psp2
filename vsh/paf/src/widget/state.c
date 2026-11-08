@@ -126,35 +126,11 @@ int _ZNK3paf2ui6Widget9GetCameraEv(const uint8_t *self)
 	return value ? *(const int32_t *)(value + 640) : 0;
 }
 
-int _ZN3paf2ui7TextBox9IsEditingEv(const uint8_t *self)
-{
-	return (self[649] & 4) != 0;
-}
-
-int _ZN3paf2ui7TextBox25SetEditAutoTransitionModeEb(uint8_t *self, uint8_t value)
-{
-	if (self[772] != value)
-		self[772] = value;
-	return 0;
-}
-
 
 int _ZN3paf2ui11Environment15IsTermAvailableEv(const uint8_t *self)
 {
 	return !*(const uint32_t *)(self + 44) &&
 		!*(const uint32_t *)(self + 56) && self[213] != 0;
-}
-
-int _ZN3paf2ui7TextBox11GetEditModeERb(const uint8_t *self, uint8_t *output)
-{
-	*output = (self[648] & 8) != 0;
-	return 0;
-}
-
-int ScePafWidget_E0D414F7(const uint8_t *self, uint8_t *output)
-{
-	*output = (self[648] & 4) != 0;
-	return 0;
 }
 
 /* paf::graph::s_wait_vblank_count (surface_display.cpp) */
@@ -245,38 +221,6 @@ uint32_t *_ZN3paf2ui5wutil9InitParamC1Ev(uint32_t *result)
 	return ResetWidgetTransform(result);
 }
 
-int _ZN3paf2ui7TextBox11SetImeParamERKNS1_8ImeParamE(uint8_t *self, const uint8_t *source)
-{
-	uint8_t value;
-
-	*(uint32_t *)(self + 744) = *(const uint32_t *)(source + 4);
-	*(uint32_t *)(self + 752) = *(const uint32_t *)(source + 12);
-	value = source[8];
-	*(uint32_t *)(self + 756) = *(const uint32_t *)(source + 16);
-	self[748] = value;
-	uint32_t trailing = *(const uint32_t *)(source + 24);
-	*(uint32_t *)(self + 760) = *(const uint32_t *)(source + 20);
-	*(uint32_t *)(self + 764) = trailing;
-	return 0;
-}
-
-int _ZN3paf2ui7TextBox11GetImeParamERNS1_8ImeParamE(const uint8_t *self, uint8_t *result)
-{
-	uint8_t value;
-	uint32_t tail, extra;
-
-	*(uint32_t *)(result + 4) = *(const uint32_t *)(self + 744);
-	*(uint32_t *)(result + 12) = *(const uint32_t *)(self + 752);
-	value = self[748];
-	*(uint32_t *)(result + 16) = *(const uint32_t *)(self + 756);
-	result[8] = value;
-	tail = *(const uint32_t *)(self + 760);
-	extra = *(const uint32_t *)(self + 764);
-	*(uint32_t *)(result + 20) = tail;
-	*(uint32_t *)(result + 24) = extra;
-	return 0;
-}
-
 uint8_t *_ZN3paf2ui6Widget9FindChildEPS1_i(uint8_t *self, uint8_t *value, int32_t mode)
 {
 	uint8_t *node;
@@ -325,12 +269,6 @@ int WidgetResourceReady(const void *resource)
 int _ZN3paf2ui18SlidingDrawerParam3GetEv(const void *resource)
 {
 	return WidgetResourceReady(resource);
-}
-
-void _ZN3paf2ui19TextBoxEditListenerD0Ev(uint32_t *self)
-{
-	*self = (uint32_t)-2127593716;
-	PafDelete(self);
 }
 
 int _ZN3paf2ui7Handler17HandleSystemEventEPNS0_5EventE(void *self, uint32_t value)
@@ -485,8 +423,7 @@ int _ZNK3paf2ui13ImageSlideBar9IsInheritEPKc(const void *self, const char *type)
 /* SlideBar's is C++ (w_slidebar.cpp) */
 /* CornerButton's is C++ (w_corner_button.cpp) */
 /* Dialog's is C++ (w_dialog.cpp) */
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui7TextBox9IsInheritEPKc, "text_box",
-		   _ZNK3paf2ui4Text9IsInheritEPKc)
+/* TextBox's is C++ (w_text_box.cpp) */
 /* CompositeDrawer's is C++ (w_composite_drawer.cpp) */
 int _ZNK3paf2ui15CompositeDrawer9IsInheritEPKc(const void *self, const char *type);
 /* Supplier's is C++ (w_supplier.cpp) */
@@ -560,30 +497,6 @@ int ScePafWidget_6B4F7595(void *unused0, void *unused1,
 		return ((int (*)(void *))*(void *const *)(vtable + 108))(target);
 	}
 	return 0;
-}
-
-uint32_t *_ZN3paf2ui19TextBoxEditListenerD2Ev(uint32_t *self)
-{
-	*self = (uint32_t)-2127593716;
-	return self;
-}
-
-uint32_t *_ZN3paf2ui19TextBoxEditListenerC1Ev(uint32_t *self)
-{
-	*self = (uint32_t)-2127593716;
-	return self;
-}
-
-uint32_t *_ZN3paf2ui19TextBoxEditListenerD1Ev(uint32_t *self)
-{
-	*self = (uint32_t)-2127593716;
-	return self;
-}
-
-uint32_t *_ZN3paf2ui19TextBoxEditListenerC2Ev(uint32_t *self)
-{
-	*self = (uint32_t)-2127593716;
-	return self;
 }
 
 int _ZN3paf2ui12AnimListener12PropColorSetEPS1_NS_4math2v4E(const uint8_t *self)

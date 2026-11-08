@@ -119,6 +119,11 @@ TextBoxEditMenuListener::~TextBoxEditMenuListener()
 
 const char Text::m_widget_type[] = "text";
 
+const float Text::c_floatInfinity = 10000.0f;
+const float Text::c_caretScrollPosMsec = 100.0f;
+const float Text::c_caretBlinkIdleMsec = 500.0f;
+const float Text::c_caretBlinkFadeMsec = 100.0f;
+
 bool Text::IsInherit(const char *type) const
 {
 	if (m_widget_type == type)
