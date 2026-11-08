@@ -5056,7 +5056,7 @@ void ScrollViewBase::ScePafWidget_B6CECFDF()
 			uint32_t frames = focus_root->m_focus_moved;
 
 			/* idle long enough: it takes the focus itself */
-			if (!m_auto_focus_off && frames >= 30 && m_movable_dir != MoveDir_None) {
+			if (!m_focused && frames >= 30 && m_movable_dir != MoveDir_None) {
 				SetFocusInfo info;
 
 				info.m_mode = 0;

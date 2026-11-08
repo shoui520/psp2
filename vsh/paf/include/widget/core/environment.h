@@ -250,6 +250,13 @@ public:
 
 	virtual ~Environment();
 
+	/* the widget kept as a touch device region (up to 6), at the first free slot or at the index
+	   (0x8113f3ce, 0x8113f3a2); taken off again (0x8113f40a) */
+	int32_t RegisterTouchDeviceRegion(Widget *widget);
+	int32_t RegisterTouchDeviceRegion(uint32_t index, Widget *widget);
+	int32_t RemoveTouchDeviceRegion(Widget *widget);
+	/* the widget forgotten as the hit of any touch (0x8113fecc) */
+	void ClearHitInfo(Widget *widget);
 	/* whether nothing the widgets still run keeps the framework from ending */
 	bool IsTermAvailable();
 	/* lets the widgets end: m_term_requested once nothing keeps them */

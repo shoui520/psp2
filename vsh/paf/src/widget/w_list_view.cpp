@@ -4878,9 +4878,9 @@ after:
 		}
 		if (!m_focus_lock && m_focus_root->m_focus_moved >= 4 * interval) {
 			Widget::UpdateAfterChildren();
-			if (m_auto_focus_off)
+			if (m_focused)
 				ResetFocusMove(this);
-			if (take && !m_auto_focus_off && m_focus_root->m_focus_moved >= 6 * interval &&
+			if (take && !m_focused && m_focus_root->m_focus_moved >= 6 * interval &&
 			    m_movable_dir != MoveDir_None) {
 				SetFocusInfo info;
 
@@ -5134,7 +5134,7 @@ bool ListView::OnFocusEnter(Event *e)
 
 bool ListView::OnFocusLeave(Event *e)
 {
-	if (m_auto_focus_off) {
+	if (m_focused) {
 		m_grab_cell = NULL;
 		return true;
 	}

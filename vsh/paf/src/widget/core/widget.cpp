@@ -34,6 +34,29 @@ _Tree<_Tmap_traits<int32_t, ui::AnimQueue *, less<int32_t> > >::find(const int32
 	return iterator(_Find(key));
 }
 
+/* Sony's RemoveChild has the unlinking inline, and its DoEvent the lookup in the listener map. */
+template<>
+inline __attribute__((always_inline)) list<ui::Widget *>::iterator
+list<ui::Widget *>::erase(iterator where)
+{
+	_Node *node = where.node;
+	_Node *next = node->next;
+
+	node->next->prev = node->prev;
+	node->prev->next = node->next;
+	destroy(&node->value);
+	operator delete(node);
+	--count;
+	return iterator(next);
+}
+
+template<>
+inline __attribute__((always_inline)) _Tree<_Tmap_traits<int32_t, ui::EventListenerList *, less<int32_t> > >::iterator
+_Tree<_Tmap_traits<int32_t, ui::EventListenerList *, less<int32_t> > >::find(const int32_t &key)
+{
+	return iterator(_Find(key));
+}
+
 namespace ui {
 
 /* NotifyLayoutDirty and NotifyAnimatorDirty, as Sony's callers have them inline (names ours) */
@@ -536,6 +559,78 @@ int32_t Widget::SetShowAlpha(float alpha, Timer *t, int32_t id, int32_t opt, flo
 	return 0;
 }
 
+void Widget::SetPinchMode(uint32_t mode)
+{
+	if (m_pinch_mode != mode) {
+		if (mode != 0) {
+			if (m_drag_mode == 0)
+				SetDragMode(0x1000);
+			if (m_touch_gesture_mask != (m_touch_gesture_mask | 0x20))
+				m_touch_gesture_mask = m_touch_gesture_mask | 0x20;
+		} else if (m_touch_gesture_mask != (m_touch_gesture_mask & ~0x20)) {
+			m_touch_gesture_mask = m_touch_gesture_mask & ~0x20;
+		}
+
+		SceFVector3 *limit = m_pinch_limit;
+
+		m_pinch_mode = (uint16_t)mode;
+		if ((mode & 0x400) != 0) {
+			if (limit != NULL)
+				m_size = math::v4(limit[0].x, limit[0].y, limit[0].z, 0.0f);
+			else
+				m_size = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+			if (limit != NULL)
+				m_size = math::v4(limit[1].x, limit[1].y, limit[1].z, 0.0f);
+			else
+				m_size = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+		} else if (limit == NULL) {
+			m_pinch_limit = new SceFVector3[2];
+			m_pinch_limit[0].x = 20.0f;
+			m_pinch_limit[0].y = 20.0f;
+			m_pinch_limit[0].z = 0.0f;
+			m_pinch_limit[1].x = 1000.0f;
+			m_pinch_limit[1].y = 1000.0f;
+			m_pinch_limit[1].z = 1000.0f;
+		}
+	}
+}
+
+void Widget::SetDragMode(uint32_t mode)
+{
+	if (m_drag_mode != (uint16_t)mode) {
+		if (mode == 0 && m_pinch_mode != 0)
+			SetPinchMode(0);
+		if (mode != 0) {
+			if (m_touch_gesture_mask != (m_touch_gesture_mask | 0x10))
+				m_touch_gesture_mask = m_touch_gesture_mask | 0x10;
+		} else if (m_touch_gesture_mask != (m_touch_gesture_mask & ~0x10)) {
+			m_touch_gesture_mask = m_touch_gesture_mask & ~0x10;
+		}
+		m_drag_mode = mode;
+		if ((m_drag_mode & 0x100) != 0) {
+			if (m_drag_limit == NULL) {
+				m_drag_limit = new SceFVector3[2];
+				m_drag_limit[0].x = -12288.0f;
+				m_drag_limit[0].y = -12288.0f;
+				m_drag_limit[0].z = -12288.0f;
+				m_drag_limit[1].x = 10000.0f;
+				m_drag_limit[1].y = 10000.0f;
+				m_drag_limit[1].z = 10000.0f;
+			}
+		} else if ((m_drag_mode & 0x200) != 0) {
+			if (m_drag_limit == NULL) {
+				m_drag_limit = new SceFVector3[2];
+				m_drag_limit[0].x = 20.0f;
+				m_drag_limit[0].y = 20.0f;
+				m_drag_limit[0].z = 0.0f;
+				m_drag_limit[1].x = 1000.0f;
+				m_drag_limit[1].y = 1000.0f;
+				m_drag_limit[1].z = 1000.0f;
+			}
+		}
+	}
+}
+
 int32_t Widget::SetSize(const math::v4 &size, Timer *t, int32_t id, int32_t opt, float delay,
 			AnimCB cb_fin, void *usrdata)
 {
@@ -647,14 +742,12 @@ static inline Widget *FindFocusRoot(Widget *widget)
 	return NULL;
 }
 
-extern "C" {
-
-paf::ui::Widget *ScePafWidget_CFA1EB7A(Widget *widget)
+extern "C" paf::ui::Widget *ScePafWidget_CFA1EB7A(Widget *widget)
 {
 	return FindFocusRoot(widget);
 }
 
-void ScePafWidget_EC6175D6(Widget *widget, bool on)
+extern "C" void ScePafWidget_EC6175D6(Widget *widget, bool on)
 {
 	Widget *root = FindFocusRoot(widget);
 
@@ -724,7 +817,7 @@ void Widget::InitCreateParam(const CreateParam *param)
 	}
 }
 
-void ScePafWidget_622193BD(Widget *widget, bool update)
+extern "C" void ScePafWidget_622193BD(Widget *widget, bool update)
 {
 	AdjustParam *param = widget->m_adjust_param;
 
@@ -763,6 +856,25 @@ bool Widget::IsPrepareObjs()
 	return false;
 }
 
+int32_t Widget::SetEnvironment(Environment *env)
+{
+	if (m_env != env) {
+		if (m_env != NULL)
+			detach_environment();
+		m_env = env;
+		if (env != NULL) {
+			m_event_queue = &env->m_ev_queue;
+			if (m_touch_region_registered && env->RegisterTouchDeviceRegion(this) < 0)
+				m_touch_region_registered = false;
+		}
+		if (m_children.size() != 0) {
+			for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
+				(*it)->SetEnvironment(env);
+		}
+	}
+	return 0;
+}
+
 Widget *Widget::GetChild(int32_t index) const
 {
 	if ((uint32_t)index >= m_children.size())
@@ -777,9 +889,7 @@ Widget *Widget::GetChild(int32_t index) const
 	return *it;
 }
 
-extern "C" {
-
-int32_t ScePafWidget_D4759650(Widget *widget, int32_t delta)
+extern "C" int32_t ScePafWidget_D4759650(Widget *widget, int32_t delta)
 {
 	int32_t count = widget->m_touch_rear_children + delta;
 	Widget *parent = widget->m_parent;
@@ -797,8 +907,6 @@ int32_t ScePafWidget_D4759650(Widget *widget, int32_t delta)
 	return (int32_t)parent;
 }
 
-}
-
 int32_t Widget::EnableTouchRearEvent(bool on_off)
 {
 	if (m_touch_rear_event != on_off) {
@@ -808,6 +916,84 @@ int32_t Widget::EnableTouchRearEvent(bool on_off)
 		return ScePafWidget_D4759650(m_parent, -1);
 	}
 	return (int32_t)this;
+}
+
+bool Widget::RemoveChild(Widget *obj)
+{
+	bool found = false;
+	int32_t index = 0;
+	list<Widget *>::iterator it = m_children.begin();
+
+	while (it != m_children.end()) {
+		if (*it == obj && !found) {
+			it = m_children.erase(it);
+			found = true;
+
+			int32_t prepare = obj->m_prepare_count + (obj->m_state == 3);
+
+			if (prepare != 0)
+				CountPrepareChildren(-prepare);
+
+			int32_t focus = obj->m_focus_count + ((obj->m_event_enable & 0x400) != 0);
+
+			if (focus != 0)
+				CountFocusEnableChildren(-focus);
+
+			int32_t rear = obj->m_touch_rear_children + (obj->IsTouchRearEventEnabled() != 0);
+
+			if (rear > 0)
+				ScePafWidget_D4759650(this, -rear);
+			if (it == m_children.end())
+				break;
+		}
+		(*it)->m_priority = index++;
+		++it;
+	}
+	return found;
+}
+
+void Widget::RegisterChild(Widget *obj, Widget *sibling)
+{
+	if (sibling != NULL && sibling->m_parent == this) {
+		int32_t index = 0;
+		list<Widget *>::iterator pos = m_children.begin();
+
+		if (pos != m_children.end()) {
+			while (*pos != sibling) {
+				++pos;
+				index++;
+				if (pos == m_children.end())
+					goto insert;
+			}
+			index++;
+		}
+insert:
+		list<Widget *>::iterator it = m_children.insert(pos, obj);
+
+		while (it != m_children.end()) {
+			(*it)->m_priority = index;
+			++it;
+			index++;
+		}
+	} else {
+		obj->m_priority = m_children.size();
+		m_children.push_back(obj);
+	}
+	obj->ApplyParentState(m_input_target, m_surface_draw, m_transition_in, m_destroy_protected,
+			      m_layer + 1, m_show_a_sum, m_meta_a_sum);
+	if (obj->m_prepare_count + (obj->m_state == 3) != 0)
+		CountPrepareChildren(obj->m_prepare_count + (obj->m_state == 3));
+
+	int32_t focus = obj->m_focus_count + ((obj->m_event_enable & 0x400) != 0);
+
+	if (focus > 0)
+		CountFocusEnableChildren(focus);
+	if (obj->m_touch_rear_children + (obj->IsTouchRearEventEnabled() != 0) > 0)
+		ScePafWidget_D4759650(this, 1);
+	if (m_hold_count > 0) {
+		obj->DestroyWidget();
+		m_hold_count = s_base_destroy_count;
+	}
 }
 
 void Widget::CountFocusEnableChildren(int32_t delta)
@@ -839,6 +1025,79 @@ bool Widget::UpdateSurfaceDraw(bool on)
 	param.m_surface_draw = on;
 	for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it)
 		it->m_obj->SetSurfaceDraw(param);
+	return true;
+}
+
+void Widget::ApplyParentState(bool input_target, bool surface_draw, bool transition_in,
+			      bool destroy_protected, uint32_t layer, float parent_show_sum,
+			      float parent_meta_sum)
+{
+	m_input_target = input_target;
+	UpdateSurfaceDraw(surface_draw);
+	if (!reserved3d) {
+		m_transition_in = transition_in;
+		m_destroy_protected = destroy_protected;
+	}
+	m_layer_old = m_layer;
+	m_layer = layer;
+	m_show_a_sum = m_show_alpha * parent_show_sum;
+	m_meta_a_sum = m_meta_alpha * parent_meta_sum;
+	if (m_children.size() != 0) {
+		for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
+			(*it)->ApplyParentState(m_input_target, m_surface_draw, m_transition_in,
+						m_destroy_protected, m_layer + 1, m_show_a_sum,
+						m_meta_a_sum);
+	}
+}
+
+bool Widget::ReorderChild(Widget *obj, Widget *sibling)
+{
+	if (obj == sibling)
+		return true;
+
+	int32_t index = 0;
+	bool found = false;
+	list<Widget *>::iterator it = m_children.begin();
+
+	if (it == m_children.end())
+		return false;
+	while (it != m_children.end()) {
+		if (*it == obj && !found) {
+			it = m_children.erase(it);
+			found = true;
+			if (it == m_children.end())
+				break;
+		}
+		(*it)->m_priority = index++;
+		++it;
+	}
+	if (!found)
+		return false;
+	if (sibling != NULL && sibling->m_parent == this) {
+		index = 0;
+
+		list<Widget *>::iterator pos = m_children.begin();
+
+		if (pos != m_children.end()) {
+			while (*pos != sibling) {
+				++pos;
+				index++;
+				if (pos == m_children.end())
+					goto insert;
+			}
+			index++;
+		}
+insert:
+		it = m_children.insert(pos, obj);
+		while (it != m_children.end()) {
+			(*it)->m_priority = index;
+			++it;
+			index++;
+		}
+	} else {
+		obj->m_priority = m_children.size();
+		m_children.push_back(obj);
+	}
 	return true;
 }
 
@@ -1042,9 +1301,7 @@ void Widget::KillObjAnim(int32_t obj, int32_t id)
 	KillAnim(obj + id);
 }
 
-extern "C" {
-
-void ScePafWidget_66847A11(Widget *widget, bool on)
+extern "C" void ScePafWidget_66847A11(Widget *widget, bool on)
 {
 	if (widget->UpdateSurfaceDraw(on)) {
 		for (list<Widget *>::iterator it = widget->m_children.begin();
@@ -1293,8 +1550,6 @@ void Widget::Update()
 		for (uint32_t i = 0; i != num; i++)
 			m_drawobjs[i].m_obj->Update();
 	}
-}
-
 }
 
 int32_t Widget::OnDraw(graph::DrawInfo &info)
@@ -1795,7 +2050,7 @@ math::v4 Widget::calc_anchor_offset(const math::v4 &size, const math::v4 &offs, 
 	return math::v4(x, y, z, w);
 }
 
-void ScePafWidget_55D83675(Widget *widget, AdjustParam *param)
+extern "C" void ScePafWidget_55D83675(Widget *widget, AdjustParam *param)
 {
 	AdjustParam *previous = widget->m_adjust_param;
 
@@ -1808,7 +2063,7 @@ void ScePafWidget_55D83675(Widget *widget, AdjustParam *param)
 	widget->UpdateSize();
 }
 
-int32_t ScePafWidget_B1C23134(Widget *widget, const AdjustParam &param)
+extern "C" int32_t ScePafWidget_B1C23134(Widget *widget, const AdjustParam &param)
 {
 	if (widget->m_adjust_param == NULL)
 		return -1;
@@ -1830,8 +2085,6 @@ int32_t Widget::SetAdjust(uint32_t ax, uint32_t ay, uint32_t az)
 	UpdateLayoutAttribute();
 	UpdateAdjustSize();
 	return 0;
-}
-
 }
 
 void Widget::UpdateAdjustChildSize(Widget *child)
@@ -1923,6 +2176,116 @@ graph::DrawObj *Widget::GetDrawObj(int32_t obj)
 	return NULL;
 }
 
+int32_t Widget::EventExecBroadcast(Event *e)
+{
+	if (e == NULL)
+		return -1;
+
+	uint32_t type = e->m_type;
+	int32_t result = 0;
+
+	if ((type & 0x20) != 0)
+		return ScePafWidget_EB1D1CBC(this, e);
+	if ((type & 0x40) != 0) {
+		if (((e->m_detail >> 20) & 0xF) == 0 || IsTouchRearEventEnabled() ||
+		    m_touch_rear_children != 0)
+			return ScePafWidget_EB1D1CBC(this, e);
+	} else {
+		HandlerProc(e);
+	}
+	return result;
+}
+
+int32_t Widget::EventExecDirect(Event *e)
+{
+	if (e == NULL)
+		return -1;
+
+	int32_t result;
+	uint32_t type = e->m_type;
+
+	if ((type & 0x20) != 0 || (type & 0x40) != 0) {
+		HitInfo info;
+
+		result = m_env->GetHitStack(&info, this);
+		type = e->m_type;
+		if ((type & 0x10000) != 0) {
+			result = HandlerProc(e);
+			type = e->m_type;
+		} else if ((type & 0x20000) != 0 || (type & 0x40000) != 0) {
+			HandlerProc(e);
+			result = ScePafWidget_38CDFD1D(this, e);
+			type = e->m_type;
+		}
+		if ((type & 0x1000000) != 0) {
+			Environment *env = m_env;
+
+			env->m_ev_subrouting.clear();
+			if ((e->m_type & 0x10000000) != 0) {
+				Event cancel(0x46, Event::MODE_DISPATCH, Event::ROUTE_FORWARD, 0);
+
+				env = m_env;
+				if ((e->m_type & 0x20) != 0)
+					cancel.m_detail = (cancel.m_detail & 0xFFFF0000) | 0x27;
+				env->m_ev_queue.Cancel(cancel, 1);
+			}
+		}
+	} else {
+		result = HandlerProc(e);
+		if ((e->m_type & 0x1000000) != 0) {
+			Environment *env = m_env;
+
+			env->m_ev_subrouting.clear();
+		}
+	}
+	return result;
+}
+
+int32_t Widget::EventExecDo(Event *e)
+{
+	int32_t result = Handler::DoEvent(e->m_dotype, e);
+
+	if ((e->m_type & 0x1000000) != 0) {
+		Environment *env = m_env;
+
+		if (env != NULL) {
+			env->m_ev_subrouting.clear();
+			if ((e->m_type & 0x10000000) != 0) {
+				Event cancel(0x46, Event::MODE_DISPATCH, Event::ROUTE_FORWARD, 0);
+
+				env = m_env;
+				if ((e->m_type & 0x20) != 0)
+					cancel.m_detail = (cancel.m_detail & 0xFFFF0000) | 0x27;
+				env->m_ev_queue.Cancel(cancel, 1);
+			}
+		}
+	}
+	return result;
+}
+
+int32_t Widget::DoEvent(int32_t type, Event *e)
+{
+	if ((m_hold_count > 0 || m_destroy_protected) && (uint16_t)e->m_type != 0x1002)
+		return -1;
+	if (m_scene->m_debug_mode == 2 || m_scene->m_debug_mode == 3)
+		return -1;
+
+	map<int32_t, EventListenerList *>::iterator it = m_map_e_listener.find(type);
+
+	if (it != m_map_e_listener.end()) {
+		Event ev(*e);
+
+		ev.m_type = (e->m_type & 0xFF0FFFFF) | Event::MODE_DO;
+		ev.m_dotype = type;
+		ev.m_target = this;
+		if ((type & 0x20000000) != 0)
+			return EventExecDo(&ev);
+		if (m_env != NULL)
+			m_env->m_ev_doevent.push_back(ev);
+	}
+	return 0;
+}
+
 int32_t Widget::HandlerProc(Event *e)
 {
 	if (e == NULL)
@@ -1936,6 +2299,54 @@ int32_t Widget::HandleTouchEvent(Event *e)
 {
 	Handler::HandleTouchEvent(e);
 	return 0;
+}
+
+void Widget::EnableFocusEvent(bool on_off)
+{
+	uint32_t enable = m_event_enable;
+
+	if ((enable & 0x400) == 0 || !on_off) {
+		if (on_off || (m_event_enable & 0x400) != 0) {
+			m_event_enable = on_off ? (enable | 0x400) : (enable & ~0x400);
+			if (!on_off && m_focused)
+				ReleaseFocus();
+
+			Widget *root = m_parent != NULL ? FindFocusRoot(m_parent) : NULL;
+
+			if (!on_off && root != NULL) {
+				Widget *holder = FindFocusRoot(root);
+				uint32_t state = 0;
+
+				if (holder != NULL)
+					state = holder->m_focus_root->m_state;
+				if (state == (uint32_t)this)
+					root->SetFocusRootState(0);
+			}
+			if (m_parent != NULL)
+				m_parent->CountFocusEnableChildren(on_off ? 1 : -1);
+		}
+	}
+}
+
+extern "C" int32_t ScePafWidget_A1193AAB(Widget *widget, bool on, bool option)
+{
+	widget->m_touch_region_registered = on;
+	widget->m_touch_region_option = option;
+
+	Environment *env = widget->m_env;
+
+	if (env == NULL)
+		return 0;
+	if (!on) {
+		env->RemoveTouchDeviceRegion(widget);
+		return 0;
+	}
+
+	int32_t result = env->RegisterTouchDeviceRegion(widget);
+
+	if (result < 0)
+		widget->m_touch_region_registered = false;
+	return result;
 }
 
 bool Widget::IsMorphResolution(uint32_t &id, uint32_t &pre, float &time, float &rate)

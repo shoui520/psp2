@@ -795,6 +795,9 @@ public:
 
 	virtual uint32_t ChangeState(uint32_t state, int32_t ev_type);
 	virtual int32_t SetEnvironment(Environment *env);
+	/* the widget taken off its environment: its holds on the focus, touches, pad keys and modal list let go
+	   (0x811514e6; name Sony's) */
+	void detach_environment();
 	virtual int32_t SetScene_core(Scene *scene);
 	virtual bool RemoveChild(Widget *obj);
 	virtual void RegisterChild(Widget *obj, Widget *sibling);
@@ -1004,6 +1007,9 @@ public:
 	virtual int32_t EventExecDispatch(Event *e);
 	virtual int32_t EventExecBroadcast(Event *e);
 	virtual int32_t EventExecDirect(Event *e);
+	/* the event done as the listeners of its type ask: run now, or kept for the environment's
+	   next frame (0x81161baa) */
+	int32_t EventExecDo(Event *e);
 	/* ui::Text's: whether it handles its text events (name ours) */
 	virtual bool IsTextEventEnabled()
 	{
@@ -1038,6 +1044,7 @@ public:
 				 HitInfo *info);
 	/* exports 7A3A7304, 0FCCC833, B94694E3 */
 	void SetDragMode(uint32_t mode);
+	void SetPinchMode(uint32_t mode);
 	/* sets the steps its drag moves it in (name ours) */
 	void SetDragQuant(uint8_t x, uint8_t y, uint8_t z)
 	{
@@ -1249,6 +1256,12 @@ public:
 	/* the draw objects drawn to a surface or not, and whether that changed anything (0x81152bdc;
 	   name ours) */
 	bool UpdateSurfaceDraw(bool on);
+	/* what its parent passes on taken over, and its children's after it: input, surface draw,
+	   transition and destroy protection flags, the layer, and the parent's show and meta alpha
+	   sums (0x81152c60; name ours) */
+	void ApplyParentState(bool input_target, bool surface_draw, bool transition_in,
+			      bool destroy_protected, uint32_t layer, float parent_show_sum,
+			      float parent_meta_sum);
 	void SetResolutionPos_core(const ResolutionData *pos, int32_t num);
 	void SetResolutionSize_core(const ResolutionData *size, int32_t num);
 	void SetResolutionRot_core(const ResolutionData *rot, int32_t num);
@@ -1445,7 +1458,8 @@ public:
 	   priority adding up to its depth (GetLayerDepth; names ours) */
 	uint32_t m_priority : 8;
 	uint32_t m_layer : 4;
-	uint32_t reserved3x : 4;
+	/* the layer it had before the last ApplyParentState (name ours) */
+	uint32_t m_layer_old : 4;
 	/* how it is modal (export 42C5A4D4): 0 or 1 as Environment::RegisterModalWidget's mode, 2
 	   not modal; and the option given with it (names ours) */
 	uint32_t m_modal_mode : 4;
@@ -1464,9 +1478,8 @@ public:
 	/* its focused part is laid out as its cursor (Text::UpdateSize, around its focused
 	   link; name ours) */
 	bool m_focus_parts_on : 1;
-	/* a scroll view does not take the focus by itself while it is idle (ScrollViewBase's focus
-	   update; name ours) */
-	bool m_auto_focus_off : 1;
+	/* it holds the focus (SetFocus sets it, ReleaseFocus and the environment clear it; name ours) */
+	bool m_focused : 1;
 	/* the focus moves to it within its group (ButtonBaseStyleParam's "focus_in_group"; name
 	   after it) */
 	bool m_focus_in_group : 1;
@@ -1506,8 +1519,9 @@ public:
 	bool m_input_target : 1;
 	/* its draw objects draw to a surface (name after SurfaceDrawParam's) */
 	bool m_surface_draw : 1;
-	bool reserved3v : 1;
-	bool reserved3w : 1;
+	/* registered with its environment as a touch device region (A1193AAB; names ours) */
+	bool m_touch_region_registered : 1;
+	bool m_touch_region_option : 1;
 	/* taps are taken (AppIconSimple::EnableTap; AppIconBase sets it; name after the export) */
 	bool m_enable_tap : 1;
 	/* animation listeners set on it are kept on ScePafWidget_8A0DA7BF until it takes them
@@ -1586,7 +1600,9 @@ public:
 	/* what SetDragMode sets */
 	uint32_t m_drag_mode : 16;
 	uint32_t reserved5a : 8;
-	uint8_t reserved5c[4];
+	/* what SetPinchMode sets (0x400: the pinch limits are the widget's size) */
+	uint16_t m_pinch_mode;
+	uint8_t reserved5c[2];
 	uint32_t m_align_x : 4;
 	uint32_t m_align_y : 4;
 	uint32_t m_align_z : 4;
@@ -1611,7 +1627,8 @@ public:
 	/* the bounds its drag keeps it in, its smallest and largest position (or, pinched, its
 	   scale), made by SetDragMode (names ours) */
 	SceFVector3 *m_drag_limit;
-	uint8_t reserved7e[4];
+	/* the smallest and the largest scale its pinch keeps it in, made by SetPinchMode (name ours) */
+	SceFVector3 *m_pinch_limit;
 	/* how it is sized to its contents where it adjusts, shared by reference count; NULL for
 	   the default, ScePafWidget_BE1CEA2E (name ours) */
 	AdjustParam *m_adjust_param;
@@ -1724,7 +1741,18 @@ void ScePafWidget_A89BE22F(paf::ui::Widget *widget);
 uint32_t *ScePafWidget_10BEC7CF(uint32_t *count);
 uint32_t *ScePafWidget_DB993F51(uint32_t *count);
 /* prototypes from common_gui_dialog's calls, not written in C yet (no name found) */
-void ScePafWidget_A1193AAB(paf::ui::Widget *widget, int32_t a, int32_t b);
+/* adds delta to the count of its children (itself included) that take the rear touch event, up
+   to the scene (0x81152a82; no name found) */
+int32_t ScePafWidget_D4759650(paf::ui::Widget *widget, int32_t delta);
+/* the widget's draw objects and its children's drawn to a surface (on) or not (0x811538d0; no
+   name found) */
+void ScePafWidget_66847A11(paf::ui::Widget *widget, bool on);
+/* the widget's adjust parameter let go, its size updated where update (0x81150600; no name
+   found) */
+void ScePafWidget_622193BD(paf::ui::Widget *widget, bool update);
+/* the widget registered with its environment as a touch device region (on) or taken off it; the
+   option kept (0x81162ab8; no name found) */
+int32_t ScePafWidget_A1193AAB(paf::ui::Widget *widget, bool on, bool option);
 /* plays its sound of the index where its sound mask has it: -1 when none is played */
 int32_t ScePafWidget_2B1A1493(paf::ui::Widget *widget, int32_t index);
 /* sets the style attribute of its text from pos for len characters, its size where attr is
@@ -1771,6 +1799,10 @@ float ScePafWidget_F1176ACC(paf::ui::Widget *widget, paf::common::transition::Ty
 int32_t ScePafWidget_0253DC9C(paf::ui::Widget *widget, bool on);
 /* the widget or the nearest of its parents below its scene that has a focus root, or NULL */
 paf::ui::Widget *ScePafWidget_CFA1EB7A(paf::ui::Widget *widget);
+/* the event sent to the widget and on, in the widget's routing (0x8116158e; no name found) */
+int32_t ScePafWidget_EB1D1CBC(paf::ui::Widget *widget, paf::ui::Event *e);
+/* the touch event taken by the widget's gestures (0x8116132e; no name found) */
+int32_t ScePafWidget_38CDFD1D(paf::ui::Widget *widget, paf::ui::Event *e);
 /* the widget that has the focus under the widget's focus root, NULL for none (name ours) */
 paf::ui::Widget *FindRootFocus(paf::ui::Widget *widget);
 /* the widget is shown, so the focus may go to it (no name found) */
