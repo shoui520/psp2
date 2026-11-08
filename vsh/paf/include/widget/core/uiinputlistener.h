@@ -71,15 +71,15 @@ public:
 
 	/* the touches down, a bit for each */
 	uint32_t m_touch_down;
-	uint32_t m_screen_width;
-	uint32_t m_screen_height;
+	int32_t m_screen_width;
+	int32_t m_screen_height;
 	float m_scale_x;
 	float m_scale_y;
 	/* the touch port: 0 the front, 1 the rear */
 	uint32_t m_port;
-	/* the port's touches in the last update, and how many */
+	/* the port's touches (eight) in the last update, and the update before */
 	const inputdevice::touchscreen::Data *m_touch;
-	uint32_t m_touch_num;
+	const inputdevice::touchscreen::Data *m_touch_pre;
 };
 
 }

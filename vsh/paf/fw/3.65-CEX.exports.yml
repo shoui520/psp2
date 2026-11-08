@@ -4781,7 +4781,7 @@ ScePaf:
         - _ZN3paf2ui7TextBox16AttachVScrollBarEPNS0_9ScrollBarE: 0xC51FCEAD
         - _ZN3paf2ui14ScrollViewBase16SetMoveDirectionEj: 0xC539DCD4
         - _ZN3paf2ui6Widget12GetSizeBoundEiPS1_: 0xC56CCCDC
-        - ScePafWidget_C5725FD8: 0xC5725FD8
+        - _ZN3paf2ui25MultiTouchGestureListener8OnUpdateEPKNS_11inputdevice4DataEj: 0xC5725FD8
         - ScePafWidget_C58011DB: 0xC58011DB
         - ScePafWidget_C5939A92: 0xC5939A92
         - _ZN3paf2ui16ProgressBarTouch8ShowGlowEib: 0xC5BADB17

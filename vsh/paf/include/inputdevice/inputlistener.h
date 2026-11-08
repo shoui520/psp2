@@ -115,8 +115,13 @@ public:
 	{
 	}
 
+	/* let go of where its user data is no longer valid */
 	virtual void PreUpdate()
 	{
+		if (!IsValidUserData(m_user_data)) {
+			m_attached_bitmap = 0;
+			m_attached_counter = 0;
+		}
 	}
 
 	virtual int32_t OnUpdate(const Data *data, uint32_t port_id)

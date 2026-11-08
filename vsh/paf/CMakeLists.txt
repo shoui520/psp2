@@ -310,6 +310,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/core/widget.cpp
 	src/widget/core/animlistener.cpp
 	src/widget/core/event.cpp
+	src/widget/core/uiinputlistener.cpp
+	src/widget/core/widget_gesture.cpp
 	src/widget/core/focusinfo.cpp
 	src/widget/core/handler.cpp
 	src/widget/core/screen.cpp
@@ -437,6 +439,8 @@ set_source_files_properties(src/widget/w_text.cpp PROPERTIES COMPILE_OPTIONS -Xa
 set_source_files_properties(src/widget/w_text_box.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/wutil.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/core/event.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+set_source_files_properties(src/widget/core/uiinputlistener.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+set_source_files_properties(src/widget/core/widget_gesture.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/core/focusinfo.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/core/handler.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/core/screen.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)

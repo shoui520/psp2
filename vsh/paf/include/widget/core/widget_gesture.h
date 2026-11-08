@@ -58,18 +58,30 @@ public:
 /* a touch gesture listener of several touches at once (vtable 812F91C8) */
 class MultiTouchGestureListener : public TouchGestureListener {
 public:
-	virtual ~MultiTouchGestureListener();
+	virtual ~MultiTouchGestureListener()
+	{
+	}
+
 	virtual int32_t OnUpdate(const inputdevice::Data *data, uint32_t port_id);
+
 	/* what OnUpdate asks of the InputGestureListener for the touches of the bitmaps, now and
-	   the update before (name ours; 0 here) */
-	virtual int32_t OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre);
-	virtual void RefreshActiveTouch(uint32_t touch_id);
+	   the update before, and how many touches more it holds than the update before (name ours;
+	   0 here) */
+	virtual int32_t OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre, int32_t diff)
+	{
+		return 0;
+	}
+
+	/* the touch IDs of the bitmap it holds, at most m_touch_count_max of them, and how many
+	   (0x8114931e TOOL; name ours) */
+	virtual int32_t RefreshActiveTouch(uint32_t bitmap);
 
 	/* the touch IDs it holds, a bit each */
 	uint32_t m_touch_bitmap;
-	/* the most and the fewest touches it takes (8 and 1; meaning open) */
+	/* the most touches it takes (8; meaning open) */
 	uint32_t m_touch_count_max;
-	uint32_t m_touch_count_min;
+	/* what OnUpdateMultiTouch asked of the InputGestureListener last (name ours) */
+	int32_t m_last_result;
 	/* the front touch panel's pixels per millimetre */
 	float m_pixel_per_mm;
 };
