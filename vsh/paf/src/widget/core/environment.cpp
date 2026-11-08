@@ -8,6 +8,8 @@
 #include <widget/core/widget.h>
 #include <widget/w_scene.h>
 
+extern "C" int ScePafMisc_862C8916(void);
+
 namespace paf {
 
 /* Sony has the lookup in the scene entries inline. */
@@ -265,7 +267,40 @@ int32_t Environment::RequestTerm()
 	return m_term_requested;
 }
 
-extern "C" int ScePafMisc_862C8916(void);
+
+void Environment::HideFocus(int32_t port)
+{
+	if ((m_focus_enabled || ScePafMisc_862C8916()) && m_focus_cursor.m_enabled && port < 2) {
+		if (port >= 0) {
+			(&m_focus_cursor)[port].Hide();
+		} else {
+			m_focus_cursor.Hide();
+			m_focus_cursor_rear.Hide();
+		}
+
+		Event e(0x2004, 0x200000, 0x40000, 0, 0, 0, 0, 0);
+
+		e.m_data[0] = 1;
+		m_ev_queue.PushBack(e);
+	}
+}
+
+void Environment::ShowFocus(int32_t port)
+{
+	if ((m_focus_enabled || ScePafMisc_862C8916()) && m_focus_cursor.m_enabled && port < 2) {
+		if (port >= 0) {
+			(&m_focus_cursor)[port].Show();
+		} else {
+			m_focus_cursor.Show();
+			m_focus_cursor_rear.Show();
+		}
+
+		Event e(0x2004, 0x200000, 0x40000, 0, 0, 0, 0, 0);
+
+		e.m_data[0] = 0;
+		m_ev_queue.PushBack(e);
+	}
+}
 
 extern "C" bool ScePafWidget_A6B659BB(Environment *env, int32_t port)
 {

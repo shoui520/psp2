@@ -225,6 +225,10 @@ class FocusInfo {
 public:
 	/* whether the cursor is moving or resizing (0x81142952) */
 	bool IsMoving();
+	/* the cursor shown, where it may be (0x81143f5c) */
+	void Show();
+	/* the cursor hidden (0x81143fe2) */
+	void Hide();
 	/* the widget taken out of the focus history */
 	void RemoveFocusHistory(Widget *widget);
 	/* the widget the focus left for the one going the other way of the direction, NULL for
@@ -284,7 +288,7 @@ public:
 					 bool ignore_init, void *data);
 
 	/* the focus cursor hidden on the port (-1: all) */
-	int32_t HideFocus(int32_t port);
+	void HideFocus(int32_t port);
 	typedef Widget *(*CreateWidgetCallback)(Widget *parent, const char *type,
 						const IDParam &id, const IDParam &style,
 						void *data);

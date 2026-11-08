@@ -2403,6 +2403,20 @@ WidgetSoundParam::Sound *Widget::FindSound(int32_t id)
 	return NULL;
 }
 
+AdjustParam *Widget::GetHitRegion()
+{
+	if (m_adjust_param == NULL)
+		ScePafWidget_55D83675(this, new AdjustParam());
+	return m_adjust_param;
+}
+
+int32_t Widget::SetHitRegion(const AdjustParam &param)
+{
+	if (m_adjust_param == NULL)
+		ScePafWidget_55D83675(this, new AdjustParam());
+	return ScePafWidget_B1C23134(this, param);
+}
+
 math::v4 Widget::GetFocusShapePos()
 {
 	math::v4 pos = GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));

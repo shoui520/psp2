@@ -889,9 +889,11 @@ public:
 
 	virtual math::v4 calc_anchor_offset(const math::v4 &size, const math::v4 &offs,
 					    uint32_t ax, uint32_t ay, uint32_t az);
-	/* the hit region at 0x210, made on first use */
-	virtual void *GetHitRegion();
-	virtual int32_t SetHitRegion(const math::v4 &region);
+	/* its adjust parameters (at 0x210), made on first use */
+	virtual AdjustParam *GetHitRegion();
+	/* the adjust parameters set to the values (their reference count kept), made first where it
+	   has none (0x81221bbc) */
+	virtual int32_t SetHitRegion(const AdjustParam &param);
 
 	virtual void UpdateLayoutAttribute()
 	{
