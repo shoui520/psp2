@@ -1547,7 +1547,9 @@ public:
 	   (Widget::OnUpdate, ScePafWidget 5A9793B0; names ours) */
 	bool m_transition_in : 1;
 	bool m_transition_out : 1;
-	bool reserved3g : 1;
+	/* m_rot holds the Euler angles the rotation was set with (SetRot_core sets it, SetQuat_core
+	   clears it; name ours) */
+	bool m_rot_euler : 1;
 	/* outside the camera's view, not drawn (Camera::add_obj; name ours) */
 	bool m_culled : 1;
 	/* what SetFitToScene sets */

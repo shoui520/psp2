@@ -60,6 +60,30 @@ _Tree<_Tmap_traits<int32_t, ui::EventListenerList *, less<int32_t> > >::find(con
 namespace ui {
 
 /* NotifyLayoutDirty and NotifyAnimatorDirty, as Sony's callers have them inline (names ours) */
+/* the cross product of the first three components, the first vector's w kept (Sony's copy is
+   out of line; name ours) */
+static __attribute__((noinline)) math::v4 CrossKeepW(const math::v4 &a, const math::v4 &b)
+{
+	return math::v4(sce::Vectormath::Simd::Aos::Vector4(
+		sce::Vectormath::Simd::Aos::cross(a.getImpl().getXYZ(), b.getImpl().getXYZ()),
+		a.extract_w()));
+}
+
+/* the product of two rotations (Sony's copy is out of line; name ours) */
+static __attribute__((noinline)) math::quaternion QuatMul(const math::quaternion &a, const math::quaternion &b)
+{
+	return math::quaternion(a.getImpl() * b.getImpl());
+}
+
+/* the quaternion with unit length, as Sony's copy of the vector length and reciprocal has it
+   (name ours) */
+static inline math::quaternion NormalizeQuat(const math::quaternion &q)
+{
+	math::v4 v = math::v4(sce::Vectormath::Simd::Aos::Vector4(q.getImpl())).unit();
+
+	return math::quaternion(sce::Vectormath::Simd::Aos::Quat(v.getImpl()));
+}
+
 static inline void LayoutDirty(Widget *w, uint32_t kind)
 {
 	if (((uint8_t)kind & w->m_layout_notify_mask) != 0 &&
@@ -1447,6 +1471,137 @@ int32_t Widget::SetScale(const math::v4 &scale, Timer *t, int32_t id, int32_t op
 	return SetScale_core(scale, 0xFF04);
 }
 
+int32_t Widget::SetQuat_core(const math::quaternion &quat, uint32_t notify_layout)
+{
+	if (quat == math::quaternion(0.0f, 0.0f, 0.0f, 0.0f))
+		return -1;
+
+	math::quaternion value = NormalizeQuat(quat);
+	bool equal = m_quat == value;
+
+	m_rot_euler = false;
+	if (equal)
+		return 0;
+
+	math::v4 pos;
+
+	if ((m_align_x | m_align_y | m_align_z) != 0 ||
+	    !(m_align_offs == math::v4(0.0f, 0.0f, 0.0f, 0.0f)))
+		pos = GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	m_quat = value;
+	LayoutDirty(this, notify_layout);
+	SetUpdateParam(1);
+	if ((m_align_x | m_align_y | m_align_z) != 0 ||
+	    !(m_align_offs == math::v4(0.0f, 0.0f, 0.0f, 0.0f)))
+		SetPos_core(pos, 1, false);
+	return 0;
+}
+
+int32_t Widget::SetRot_core(const math::v4 &rot, int32_t option, uint32_t notify_layout)
+{
+	const float two_pi = 6.2831855f;
+	float x = rot.extract_x() - (float)(int)(rot.extract_x() / two_pi) * two_pi;
+	float y = rot.extract_y() - (float)(int)(rot.extract_y() / two_pi) * two_pi;
+	float z = rot.extract_z() - (float)(int)(rot.extract_z() / two_pi) * two_pi;
+
+	m_rot = math::v4(x, y, z, rot.extract_w());
+
+	math::quaternion quat;
+
+	if (option == 1)
+		quat = math::quaternion::FromEulerAnglesZYX(math::v3(x, y, z));
+	else if (option == 2)
+		quat = math::quaternion::FromEulerAnglesXYZ(math::v3(x, y, z));
+	else
+		quat = math::quaternion::FromEulerAnglesYXZ(math::v3(x, y, z));
+
+	int32_t result = SetQuat_core(quat, notify_layout);
+
+	m_rot_euler = true;
+	return result;
+}
+
+int32_t Widget::SetQuat(const math::quaternion &quat, Timer *t, int32_t id, int32_t opt, float delay,
+			AnimCB cb_fin, void *usrdata)
+{
+	if (IsDragMoving(this)) {
+		delete t;
+		return -1;
+	}
+	KillAnimType(ANIM_ROT);
+	if (t == NULL) {
+		KillAnimType(ANIM_QUAT);
+		return SetQuat_core(quat, 0xFF08);
+	}
+
+	AnimListener *listener = new AnimListenerV4(
+		t, this, reinterpret_cast<const math::v4 &>(m_quat),
+		reinterpret_cast<const math::v4 &>(quat), &AnimListener::s_prop_quat, cb_fin, usrdata);
+
+	if ((id & 0xFF0000) != 0)
+		id = (id & 0xFF000000) | ANIM_QUAT;
+	SetAnimListener_withDelay(id, listener, delay, opt);
+	return 0;
+}
+
+math::quaternion Widget::GetQuat(int32_t opt, Widget *ref, const math::quaternion &off_quat)
+{
+	if (opt == 0) {
+		if (ref == NULL)
+			return m_quat;
+
+		UpdateMatrix();
+		ref->UpdateMatrix();
+
+		math::quaternion own = m_world_rot;
+		math::quaternion rel = QuatMul(ref->m_world_rot.inverse(), own);
+
+		return NormalizeQuat(rel);
+	}
+
+	bool front = opt == 2;
+	math::v4 *target = NULL;
+	AnimQueue *anim = FindAnim(ANIM_QUAT);
+
+	if (anim != NULL) {
+		AnimQueueBase *queue = anim->m_queue[0];
+		AnimListener *listener = NULL;
+
+		if (front) {
+			if (queue != NULL)
+				listener = static_cast<AnimListener *>(queue->GetFront());
+		} else {
+			if (queue != NULL)
+				listener = static_cast<AnimListener *>(queue->GetBack());
+		}
+		if (listener != NULL)
+			target = listener->GetTargetV4();
+		if (target != NULL)
+			return reinterpret_cast<math::quaternion &>(*target);
+	}
+
+	anim = FindAnim(ANIM_ROT);
+	if (anim == NULL)
+		return m_quat;
+
+	AnimQueueBase *queue = anim->m_queue[0];
+	AnimListener *listener = NULL;
+
+	target = NULL;
+	if (front) {
+		if (queue != NULL)
+			listener = static_cast<AnimListener *>(queue->GetFront());
+	} else {
+		if (queue != NULL)
+			listener = static_cast<AnimListener *>(queue->GetBack());
+	}
+	if (listener != NULL)
+		target = listener->GetTargetV4();
+	if (target == NULL)
+		return m_quat;
+	return math::quaternion::FromEulerAnglesYXZ(math::v3(target->getImpl().getXYZ()));
+}
+
 math::v4 *Widget::GetScale(int32_t opt)
 {
 	if (opt == 0)
@@ -2451,21 +2606,6 @@ math::v4 Widget::GetFocusShapeSize()
 	return size;
 }
 
-/* the cross product of the first three components, the first vector's w kept (Sony's copy is
-   out of line; name ours) */
-static __attribute__((noinline)) math::v4 CrossKeepW(const math::v4 &a, const math::v4 &b)
-{
-	return math::v4(sce::Vectormath::Simd::Aos::Vector4(
-		sce::Vectormath::Simd::Aos::cross(a.getImpl().getXYZ(), b.getImpl().getXYZ()),
-		a.extract_w()));
-}
-
-/* the product of two rotations (Sony's copy is out of line; name ours) */
-static __attribute__((noinline)) math::quaternion QuatMul(const math::quaternion &a, const math::quaternion &b)
-{
-	return math::quaternion(a.getImpl() * b.getImpl());
-}
-
 void Widget::MakeLookAtQuat(math::v4 *facing, math::v4 *up, math::quaternion *quat)
 {
 	facing->set_w(0.0f);
@@ -2476,7 +2616,7 @@ void Widget::MakeLookAtQuat(math::v4 *facing, math::v4 *up, math::quaternion *qu
 	math::v4 above = CrossKeepW(forward, right);
 	math::quaternion rotation(math::matrix(right, above, forward, math::v4(0.0f, 0.0f, 0.0f, 1.0f)));
 
-	*quat = math::quaternion(sce::Vectormath::Simd::Aos::normalize(rotation.getImpl()));
+	*quat = NormalizeQuat(rotation);
 }
 
 int32_t Widget::LookAt(const math::v4 &target, const math::v4 &up)
