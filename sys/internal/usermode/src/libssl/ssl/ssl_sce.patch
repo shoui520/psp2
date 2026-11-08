@@ -124,7 +124,7 @@
  #define SSL_OP_MICROSOFT_SESS_ID_BUG			0x00000001L
  #define SSL_OP_NETSCAPE_CHALLENGE_BUG			0x00000002L
  #define SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG		0x00000008L
-@@ -295,104 +308,69 @@
+@@ -295,104 +308,74 @@
  
  #define SSL_SESSION_CACHE_MAX_SIZE_DEFAULT	(1024*20)
  
@@ -216,7 +216,13 @@
 -
 -	/* default values to use in SSL structures */
 -	struct cert_st /* CERT */ *default_cert;
-+	int stats[6];
++	void (*info_callback)(struct ssl_st *ssl, int where, int result);
++	void (*info_callback_ex)(struct ssl_st *ssl, int where, int result,
++				 void *arg);
++	void *info_callback_arg;
++	void (*io_callback)(struct ssl_st *ssl, int where, void *arg);
++	void *io_callback_arg;
++	int reserved_callback;
 +	void *app_verify_arg;
 +	int (*app_verify_callback)(struct ssl_st *ssl, char **certs,
 +				   int num_certs, void *arg,
@@ -271,8 +277,7 @@
 +	unsigned long disabled_mac_mask;
 +	SslCryptoAlgorithm *random_type;
 +	SslCryptoAlgorithm *random_algorithm;
-+	void (*info_callback)();
-+	void *info_callback_arg;
++	void *reserved_tail[2];
 +	SslExtensionList *extensions;
 +	unsigned long mode;
 +} SSL_CTX;
@@ -347,10 +352,10 @@
 -	/* used internally to point at a raw packet */
 +	int (*handshake_func)(struct ssl_st *ssl);
 +	int server;
-+	int quiet_shutdown;
++	int new_session;
 +	int shutdown;
 +	int state;
-+	unsigned int reserved;
++	int quiet_shutdown;
 +	int rstate;
 +	BUF_MEM *init_buf;
 +	int init_num;

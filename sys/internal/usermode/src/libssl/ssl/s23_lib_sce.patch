@@ -35,7 +35,8 @@
 -char *SSL23_version_str="SSLv2/3 compatablity part of SSLeay 0.9.1a 06-Jul-1998";
 +char *SSL23_version_str="SSLv2/3 compatibility part of SSL-C 2.8.1";
  
- static SSL_METHOD SSLv23_data= {
+-static SSL_METHOD SSLv23_data= {
++SSL_METHOD SSLv23_data= {
  	TLS1_VERSION,
 @@ -88,7 +86,7 @@
  	ssl_undefined_function,

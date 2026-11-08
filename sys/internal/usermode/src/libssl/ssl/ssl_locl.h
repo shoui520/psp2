@@ -235,7 +235,8 @@ int sslCtxSetSessionCacheCallback(SSL_CTX *ctx,
 				  int (*cb)(SSL_CTX *ctx, int operation,
 					    void *data, void *arg));
 int sslCtxSetSessionCacheArg(SSL_CTX *ctx, void *arg);
-void sslCtxSetNewSessionCallback(SSL_CTX *ctx, int val);
+void sslCtxSetNewSessionCallback(SSL_CTX *ctx,
+				 void (*cb)(SSL *ssl, int where, int result));
 void sslSetIoCallback(SSL *s, void (*cb)(SSL *ssl, int where, void *arg),
 		      void *arg);
 void (*sslGetIoCallback(SSL *s))(SSL *ssl, int where, void *arg);
@@ -255,6 +256,7 @@ void SceSslInternal_AF50B945(SSL_CTX *ctx,
 void SceSslInternal_260F5A85(SSL_CTX *ctx, int mode);
 int ssl_verify_cert_chain(SSL *s, STACK *sk);
 int sslResetWeakCipherFlags(void);
+void sslResetExDataAndRandomGlobals(void);
 int sslEnableWeakCipherFlags(int flags);
 int sslDisableWeakCipherFlags(int flags);
 void *sslLibBinarySearch(const void *key, const void *base, int nmemb, int size,
@@ -346,12 +348,20 @@ int ssl23_write_bytes(SSL *s);
 extern SSL_METHOD TLSv1_1_data;
 extern SSL_METHOD TLSv1_data;
 extern SSL_METHOD TLSv1_1_client_data;
+extern SSL_METHOD SSLv23_data;
 SSL_METHOD *sslv23_base_method(void);
+SSL_METHOD *SSLv23_server_method(void);
+int ssl23_accept(SSL *s);
+int ssl23_get_client_hello(SSL *s);
+SSL_METHOD *ssl3_get_server_method(int ver);
+SSL_METHOD *ssl3_get_client_method(int ver);
 SSL_METHOD *tlsv1_1_base_method(void);
 SSL_METHOD *TLSv1_1_client_method(void);
 SSL_METHOD *tls1_1_get_client_method(int ver);
 SSL_METHOD *tlsv1_base_method(void);
 SSL_METHOD *TLSv1_server_method(void);
+SSL_METHOD *tls1_get_server_method(int ver);
+SSL_METHOD *tls1_get_client_method(int ver);
 SSL_METHOD *SceSslInternal_133ED36D(void);
 SSL_METHOD *SceSslInternal_A374CD7B(void);
 int tls1_1_new(SSL *s);

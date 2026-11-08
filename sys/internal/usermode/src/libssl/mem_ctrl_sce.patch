@@ -39,7 +39,13 @@
  	switch (mode)
  		{
  	case CRYPTO_MEM_CHECK_ON:
-@@ -105,10 +100,10 @@
+@@ -102,13 +97,16 @@
+ 		if (mh_mode&CRYPTO_MEM_CHECK_ON)
+ 			mh_mode|=CRYPTO_MEM_CHECK_ENABLE;
+ 		break;
++	case 8:
++		ret=mh_mode;
++		break;
  	default:
  		break;
  		}

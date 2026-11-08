@@ -2,7 +2,16 @@
  * The binding names and this wrapper's filename are ours, not Sony names.
  */
 #include "runtime.h"
+#include "memory.h"
+#include "format.h"
+#include "buffer/buffer.h"
+#include "stack.h"
 
+#define CRYPTO_NUM_LOCKS 39
+#define CRYPTO_LOCK_APP 24
+#define CRYPTO_num_locks sslNumLocks
+#define CRYPTO_get_new_lockid sslGetNewLockId
+#define CRYPTO_get_lock_name sslGetLockName
 #define CRYPTO_lock sslLock
 #define CRYPTO_get_locking_callback sslGetLockCallback
 #define CRYPTO_get_add_lock_callback sslGetAddLockCallback
@@ -14,7 +23,11 @@
 #define CRYPTO_thread_id sslThreadId
 #define locking_callback sslLockCallback
 #define add_lock_callback sslAddLockCallback
+#define lock_names sslLockNames
+#define app_locks sslAppLocks
 #define id_callback sslThreadCallback
+#define Free(ptr) sslFreeCallback(ptr)
+#define strcmp sslCompareCString
 
 #include "cryptlib_sce.inc"
 

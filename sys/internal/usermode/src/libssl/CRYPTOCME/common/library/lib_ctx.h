@@ -78,6 +78,7 @@ int sslCreateDefaultKey(SslLibrary *library, int type, const void *info,
 int sslGetDefaultKeyInfo(void *key, int selector, void *result);
 int sslGetLibraryModuleData(SslLibrary *library, int type, void **result);
 SslLibrary **sslResetDefaultLibrary(void);
+void SceSslInternal_DEC6DD27(void);
 SslLibrary *sslGetDefaultLibrary(void);
 int SceSslInternal_09657E15(SslLibraryModule *table, int unused,
 			  SslLibrary **result);

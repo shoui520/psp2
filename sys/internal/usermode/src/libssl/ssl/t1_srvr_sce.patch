@@ -22,16 +22,18 @@
  	{
  	if (ver == TLS1_VERSION)
  		return(TLSv1_server_method());
-@@ -73,7 +69,7 @@
+@@ -73,19 +69,19 @@
  		return(NULL);
  	}
  
 -SSL_METHOD *TLSv1_server_method()
++SSL_METHOD TLSv1_server_data;
++
 +SSL_METHOD *TLSv1_server_method(void)
  	{
  	static int init=1;
- 	static SSL_METHOD TLSv1_server_data;
-@@ -81,11 +77,10 @@
+-	static SSL_METHOD TLSv1_server_data;
+ 
  	if (init)
  		{
  		init=0;

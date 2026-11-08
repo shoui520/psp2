@@ -85,6 +85,12 @@ libssl_prepare_patched(${libssl_ssleay}/ssl/t1_enc.c
 libssl_prepare_patched(${libssl_ssleay}/ssl/s23_pkt.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/s23_pkt_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/s23_pkt_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/s23_srvr.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/s23_srvr_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/s23_srvr_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/s23_clnt.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/s23_clnt_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/s23_clnt_sce.inc)
 libssl_prepare_patched(${libssl_ssleay}/ssl/s23_lib.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/s23_lib_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/s23_lib_sce.inc)
@@ -146,6 +152,8 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	ssl/s3_enc.c
 	ssl/t1_enc.c
 	ssl/s23_pkt.c
+	ssl/s23_srvr.c
+	ssl/s23_clnt.c
 	ssl/s23_lib.c
 	ssl/t1_lib.c
 	ssl/t1_clnt.c
@@ -173,9 +181,13 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	CRYPTOCME/common/key/pkey_pk.c
 	CRYPTOCME/common/key/key_api.c
 	CRYPTOCME/common/library/lib_ctx.c
+	CRYPTOCME/common/library/lib_def.c
 	CRYPTOCME/common/library/lib_getm.c
 	CRYPTOCME/common/library/lib_api.c
 	CRYPTOCME/common/key/pkey_ctx.c
+	CRYPTOCME/common/module/dmem/mem_dmem.c
+	CRYPTOCME/common/module/dmem/dmem_api.c
+	CRYPTOCME/common/module/dmem/dmem_rmem.c
 	CRYPTOCME/common/module/crypto/cry_meth.c
 	CRYPTOCME/common/module/crypto/cry_api.c
 	CRYPTOCME/common/module/crypto/cry_init.c

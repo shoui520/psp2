@@ -8,6 +8,9 @@
 #include "../CRYPTOCME/common/module/crypto/cry_api.h"
 #include <libssl/object.h>
 
+#undef Malloc
+#undef Free
+#undef CRYPTO_add
 #define Malloc sslAllocate
 #define Free sslFree
 #define memset sslFillMemory

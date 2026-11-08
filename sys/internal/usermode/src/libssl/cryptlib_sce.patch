@@ -1,6 +1,6 @@
 --- a/cryptlib.c
 +++ b/cryptlib.c
-@@ -58,15 +58,14 @@
+@@ -58,15 +58,16 @@
  
  #include <stdio.h>
  #include <string.h>
@@ -13,12 +13,37 @@
  static double SSLeay_MSVC5_hack=0.0; /* and for VC1.5 */
  #endif
  
++SslLockCallback locking_callback=NULL;
++static SslAddLockCallback add_lock_callback=NULL;
++
  /* real #defines in crypto.h, keep these upto date */
-+#if 0 /* SCE: this unit builds the identified callback family, not lock registries. */
  static char* lock_names[CRYPTO_NUM_LOCKS] =
  	{
  	"<<ERROR>>",
-@@ -93,19 +92,14 @@
+@@ -89,110 +90,177 @@
+ 	"debug_malloc",
+ 	"BIO",
+ 	"bio_gethostbyname",
+-	"RSA_blinding",
++	"<<RESERVED>>",
++	"debug_malloc_mode",
++	"RSA_method",
++	"DH_method",
++	"app_lock",
++	"R_CACHE_LOCK",
++	"GET_MODULE",
++	"R_CERT_STORE_LOCK",
++	"R_CERT",
++	"DEVICE",
++	"HW_CTX",
++	"MALLOC_WRAP",
++	"HDW_SESSION_POOL",
++	"rand_shareable",
++	"FIPS selftests",
++	"FIPS load module",
++	"FIPS library initialise",
++	"FIPS selftests thread",
++	NULL
  	};
  
  static STACK *app_locks=NULL;
@@ -33,23 +58,119 @@
 -static void (MS_FAR *locking_callback)()=NULL;
 -static int (MS_FAR *add_lock_callback)()=NULL;
 -static unsigned long (MS_FAR *id_callback)()=NULL;
- #endif
- 
-+/* SCE: locking callbacks return status; thread callbacks take a zero argument. */
-+static SslLockCallback locking_callback=NULL;
-+static SslAddLockCallback add_lock_callback=NULL;
+-#endif
 +static SslThreadCallback id_callback=NULL;
+ 
++int CRYPTO_lock(int mode, int type, const char *file, int line);
 +
-+#if 0 /* SCE: dynamic lock registration is not consumed by this adaptation. */
++void *sslResetLockState(void)
++	{
++	app_locks=NULL;
++	return(&app_locks);
++	}
++
++int CRYPTO_num_locks(void)
++	{
++	int ret;
++
++	CRYPTO_lock(SSL_LOCK_REFERENCE,CRYPTO_LOCK_APP,
++		"S:\\work\\CRYPTOCME\\common\\os/lock/r_lock.c",304);
++	if (app_locks == NULL)
++		ret=CRYPTO_NUM_LOCKS;
++	else
++		ret=CRYPTO_NUM_LOCKS+sk_num(app_locks);
++	CRYPTO_lock(SSL_UNLOCK_REFERENCE,CRYPTO_LOCK_APP,
++		"S:\\work\\CRYPTOCME\\common\\os/lock/r_lock.c",315);
++	return(ret);
++	}
++
++static char *sslGetLockNameUnlocked(int type)
++	{
++	if (type < 0)
++		return("");
++	else if (type < CRYPTO_NUM_LOCKS)
++		return(lock_names[type]);
++	else if ((app_locks == NULL) ||
++		 (type-CRYPTO_NUM_LOCKS >= sk_num(app_locks)))
++		return("");
++	else
++		return(sk_value(app_locks,type-CRYPTO_NUM_LOCKS));
++	}
++
  int CRYPTO_get_new_lockid(name)
  char *name;
  	{
-@@ -135,64 +129,57 @@
+ 	char *str;
+-	int i;
++	int i,n;
++	char *s;
+ 
+-	/* A hack to make Visual C++ 5.0 work correctly when linking as
+-	 * a DLL using /MT. Without this, the application cannot use
+-	 * and floating point printf's.
+-	 * It also seems to be needed for Visual C 1.5 (win16) */
+-#if defined(WIN32) || defined(WIN16)
+-	SSLeay_MSVC5_hack=(double)name[0]*(double)name[1];
+-#endif
++	n=CRYPTO_num_locks();
++	CRYPTO_lock(SSL_LOCK_REFERENCE,CRYPTO_LOCK_APP,
++		"S:\\work\\CRYPTOCME\\common\\os/lock/r_lock.c",198);
++	if (name != NULL)
++		{
++		for (i=0; i<n; i++)
++			{
++			s=sslGetLockNameUnlocked(i);
++			if ((s != NULL) && (strcmp(s,name) == 0))
++				goto end;
++			}
++		}
+ 
+ 	if ((app_locks == NULL) && ((app_locks=sk_new_null()) == NULL))
+ 		{
+-		CRYPTOerr(CRYPTO_F_CRYPTO_GET_NEW_LOCKID,ERR_R_MALLOC_FAILURE);
+-		return(0);
++		i=0;
++		goto end;
+ 		}
+ 	if ((str=BUF_strdup(name)) == NULL)
+-		return(0);
++		{
++		i=0;
++		goto end;
++		}
+ 	i=sk_push(app_locks,str);
+ 	if (!i)
+ 		Free(str);
+ 	else
+-		i+=CRYPTO_NUM_LOCKS; /* gap of one :-) */
++		i+=(CRYPTO_NUM_LOCKS-1);
++end:
++	CRYPTO_lock(SSL_UNLOCK_REFERENCE,CRYPTO_LOCK_APP,
++		"S:\\work\\CRYPTOCME\\common\\os/lock/r_lock.c",253);
  	return(i);
  	}
  
 -void (*CRYPTO_get_locking_callback(P_V))(P_I_I_P_I)
-+#endif
++int sslCleanupDynamicLocks(void)
++	{
++	char *str;
++
++	CRYPTO_lock(SSL_LOCK_REFERENCE,CRYPTO_LOCK_APP,
++		"S:\\work\\CRYPTOCME\\common\\os/lock/r_lock.c",272);
++	if (app_locks != NULL)
++		{
++		while (sk_num(app_locks))
++			{
++			str=sk_pop(app_locks);
++			Free(str);
++			}
++		sk_free(app_locks);
++		app_locks=NULL;
++		}
++	CRYPTO_lock(SSL_UNLOCK_REFERENCE,CRYPTO_LOCK_APP,
++		"S:\\work\\CRYPTOCME\\common\\os/lock/r_lock.c",286);
++	return(0);
++	}
 +
 +SslLockCallback CRYPTO_get_locking_callback(void)
  	{
@@ -129,7 +250,7 @@
  int line;
  	{
  #ifdef LOCK_DEBUG
-@@ -219,17 +206,19 @@
+@@ -219,17 +280,19 @@
  		}
  #endif
  	if (locking_callback != NULL)
@@ -151,7 +272,7 @@
  
  	if (add_lock_callback != NULL)
  		{
-@@ -245,13 +234,18 @@
+@@ -245,13 +308,18 @@
  			CRYPTO_get_lock_name(type),
  			file,line);
  #endif
@@ -174,7 +295,7 @@
  #ifdef LOCK_DEBUG
  		fprintf(stderr,"ladd:%08lx:%2d+%2d->%2d %-18s %s:%d\n",
  			CRYPTO_thread_id(),
-@@ -260,11 +254,13 @@
+@@ -260,20 +328,32 @@
  			file,line);
  #endif
  		*pointer=ret;
@@ -185,12 +306,29 @@
  	return(ret);
  	}
  
-+#if 0 /* SCE: no original identity claimed for the remaining upstream helpers. */
  char *CRYPTO_get_lock_name(type)
  int type;
  	{
-@@ -306,3 +302,4 @@
- #endif
- 
- #endif
-+#endif /* unused upstream lock registry / DLL entry */
++	char *ret;
++
+ 	if (type < 0)
+ 		return("ERROR");
+ 	else if (type < CRYPTO_NUM_LOCKS)
+ 		return(lock_names[type]);
+-	else if (type-CRYPTO_NUM_LOCKS >= sk_num(app_locks))
+-		return("ERROR");
+ 	else
+-		return(sk_value(app_locks,type-CRYPTO_NUM_LOCKS));
++		{
++		CRYPTO_lock(SSL_LOCK_REFERENCE,CRYPTO_LOCK_APP,
++			"S:\\work\\CRYPTOCME\\common\\os/lock/r_lock.c",346);
++		if ((app_locks == NULL) ||
++		    (type-CRYPTO_NUM_LOCKS >= sk_num(app_locks)))
++			ret="ERROR";
++		else
++			ret=sk_value(app_locks,type-CRYPTO_NUM_LOCKS);
++		CRYPTO_lock(SSL_UNLOCK_REFERENCE,CRYPTO_LOCK_APP,
++			"S:\\work\\CRYPTOCME\\common\\os/lock/r_lock.c",355);
++		return(ret);
++		}
+ 	}

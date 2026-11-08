@@ -107,6 +107,7 @@ int sslFreeKeyContext(void *context);
 int sslGetKeyContextInfo(void *context, int selector, void *result);
 int sslSetKeyContextInfo(void *context, int selector, void *value);
 int sslAddPublicKeyReference(void *key);
+const SslKeyModule *sslGetPublicKeyModule(void);
 int sslGetPrivateKeyPemHeader(void *key, int algorithm, int format,
 			      SceUInt32 capacity, char *header);
 int sslGetPublicKeyPemHeader(int algorithm, SceUInt32 capacity, char *header);

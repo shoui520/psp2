@@ -79,7 +79,7 @@
  		{ /* we are in the client */
  		if (((s->version>>8) == SSL3_VERSION_MAJOR) &&
  			(s->s3 != NULL))
-@@ -254,6 +260,297 @@
+@@ -254,6 +260,298 @@
  		}
  	}
  
@@ -121,9 +121,10 @@
 +	return(1);
 +	}
 +
-+void sslCtxSetNewSessionCallback(SSL_CTX *ctx, int val)
++void sslCtxSetNewSessionCallback(SSL_CTX *ctx,
++	void (*cb)(SSL *ssl, int where, int result))
 +	{
-+	ctx->stats[0]=val;
++	ctx->info_callback=cb;
 +	}
 +
 +void sslSetIoCallback(SSL *s, void (*cb)(SSL *ssl, int where, void *arg),
