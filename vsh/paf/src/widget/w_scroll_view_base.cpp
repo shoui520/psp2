@@ -343,7 +343,14 @@ public:
 			(m_axis * math::v2(vx, vy) / info.pixel_per_mm).getImpl()));
 
 		if (speed.extract_x() > 0.012f || speed.extract_y() > 0.012f) {
-			ScePafWidget_C5939A92(this, 3, m_touch_id, 0, vx * 1000.0f, vy * 1000.0f, 1, 0);
+			union {
+				float f;
+				int32_t i;
+			} dx, dy;
+
+			dx.f = vx * 1000.0f;
+			dy.f = vy * 1000.0f;
+			ScePafWidget_C5939A92(this, 3, m_touch_id, 0, dx.i, dy.i, 1, 0);
 			return UPDATE_DETACH_SELF | UPDATE_DETACH_LOWER;
 		}
 		return UPDATE_DETACH_SELF;

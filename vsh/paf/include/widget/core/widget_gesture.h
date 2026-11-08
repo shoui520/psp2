@@ -19,7 +19,7 @@ namespace ui {
 class TouchGestureListener : public inputdevice::GestureListener {
 public:
 	/* the touch ID of the port, its user data the widget (5065F85A, E5EE88D6) */
-	TouchGestureListener(uint32_t port, uint32_t touch_id, void *user_data);
+	__attribute__((noinline)) TouchGestureListener(uint32_t port, uint32_t touch_id, void *user_data);
 
 	virtual ~TouchGestureListener()
 	{
@@ -218,16 +218,18 @@ common::SharedPtr<inputdevice::GestureListener> ScePafWidget_5E7757AA(Widget *wi
    (no name found) */
 common::SharedPtr<inputdevice::GestureListener> ScePafWidget_0F9F14D4(Widget *widget,
 								       int32_t type);
-/* the gesture's event sent for the touch, with its velocity (no name found) */
-void ScePafWidget_C5939A92(TouchGestureListener *listener, int32_t gesture, uint32_t touch_id,
-			   int32_t arg, float vx, float vy, int32_t a, int32_t b);
+/* the gesture's event sent for the touch: the gesture, the four numbers of the event (floats'
+   bits, as the callers give them), put in front of the queue if front, with the bit 0x8000 of its
+   detail set if flag; 0, or -1 where there is no widget to send it to (no name found) */
+int32_t ScePafWidget_C5939A92(TouchGestureListener *listener, int32_t gesture, uint32_t touch_id,
+			   int32_t arg, int32_t data2, int32_t data3, int32_t front, int32_t flag);
 }
 
 /* how long a touch is held before it counts as a press, in milliseconds: 500, or 300 where
    the widget asks for the short hold, and the area it is held in (vtable 812F12D0) */
 class HoldGestureParam : public inputdevice::GestureParam {
 public:
-	HoldGestureParam() : m_move_tolerance(3.0f), m_hold_time(500), m_repeat_time(5), reserved3(112)
+	HoldGestureParam() : m_move_tolerance(3.0f), m_hold_time(500), m_repeat_time(5), m_hold_result(112)
 	{
 	}
 
@@ -254,7 +256,9 @@ public:
 	uint32_t m_hold_time;
 	/* how often a held touch repeats, in milliseconds (ButtonBase's repeat_msec) */
 	uint32_t m_repeat_time;
-	uint32_t reserved3;
+	/* what the listener answers once the hold is sent, without the short hold (the update bits
+	   of GestureListener: 112 detaches the others; name ours) */
+	uint32_t m_hold_result;
 	math::rect m_rect;
 };
 
@@ -314,15 +318,94 @@ public:
 	math::rect m_rect;
 };
 
-/* the listener a widget holds a touch with (constructor 911DF76B, 0x78 bytes) */
+/* the listener of a touch that taps or moves little: it counts the taps and sends gestures 0
+   (a tap), 2 (taps), 1 and 25 (constructor 0x811487a0 TOOL, vtable 812F9180, 0x80 bytes;
+   names ours) */
+class MoveGestureListener : public TouchGestureListener {
+public:
+	MoveGestureListener(uint32_t port, uint32_t touch_id, void *user_data);
+
+	virtual ~MoveGestureListener()
+	{
+	}
+
+	virtual void SetGestureParam(const inputdevice::GestureParam *param)
+	{
+		const MoveGestureParam *move = (const MoveGestureParam *)param;
+
+		if (move != NULL) {
+			m_param.m_move_tolerance = move->m_move_tolerance;
+			m_param.m_hold_time = move->m_hold_time;
+			m_param.m_move_scale = move->m_move_scale;
+			m_param.m_interval_a = move->m_interval_a;
+			m_param.m_interval_b = move->m_interval_b;
+			m_param.m_rect = move->m_rect;
+		}
+	}
+
+	virtual int32_t OnUpdateTouch(uint32_t id);
+
+	/* the touch moved from where it began by more than the tolerance, or is out of the rect
+	   (0x8114880c; name ours) */
+	bool IsMoved(int32_t x, int32_t y);
+
+	/* 0 until the touch is down, 1 while it is held, 2 after a release */
+	uint32_t m_state;
+	/* when the state began */
+	uint64_t m_start_time;
+	/* the touch in the last update */
+	const inputdevice::touchscreen::Data *m_touch;
+	uint32_t reserved60;
+	/* the taps counted */
+	uint32_t m_tap_count;
+	/* the taps the gesture waits for (meaning open) */
+	uint32_t m_tap_target;
+	/* the taps counted when the last one was released */
+	uint32_t m_last_tap_count;
+	/* where the touch began */
+	int32_t m_start_x;
+	int32_t m_start_y;
+	MoveGestureParam m_param;
+	/* the hold has been sent (gesture 25) */
+	bool m_hold_sent;
+};
+
+/* the listener a widget holds a touch with (constructor 0x81148d20 TOOL, vtable 812F91A4, 0x78
+   bytes): its hold sends gesture 4, a held touch repeats 5, its release 6 */
 class HoldGestureListener : public TouchGestureListener {
 public:
-	uint32_t reserved2;
-	uint8_t reserved3[8];
-	/* when it was made */
+	HoldGestureListener(uint32_t port, uint32_t touch_id, void *user_data);
+
+	virtual ~HoldGestureListener();
+
+	virtual void SetGestureParam(const inputdevice::GestureParam *param)
+	{
+		const HoldGestureParam *hold = (const HoldGestureParam *)param;
+
+		if (hold != NULL) {
+			m_param.m_hold_time = hold->m_hold_time;
+			m_param.m_move_tolerance = hold->m_move_tolerance;
+			m_param.m_repeat_time = hold->m_repeat_time;
+			m_param.m_hold_result = hold->m_hold_result;
+			m_param.m_rect = hold->m_rect;
+		}
+	}
+
+	virtual int32_t OnUpdateTouch(uint32_t id);
+
+	/* 0 until the touch is down, 1 while it is held, 2 once the hold was sent */
+	uint32_t m_state;
+	/* the timestamp of the touch when it was pressed */
+	uint64_t m_press_time;
+	/* when the state began */
 	uint64_t m_create_time;
-	uint32_t reserved4[4];
-	/* the short hold (300 ms) asked for */
+	/* the touch in the last update */
+	const inputdevice::touchscreen::Data *m_touch;
+	uint32_t reserved68;
+	/* where the touch was pressed */
+	int32_t m_x;
+	int32_t m_y;
+	/* the short hold (300 ms) asked for: the hold then goes on to repeat */
 	bool m_short_hold;
 	HoldGestureParam m_param;
 };
