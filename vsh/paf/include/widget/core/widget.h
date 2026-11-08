@@ -1228,6 +1228,22 @@ public:
 	int32_t SetAlign(uint32_t ax, uint32_t ay, uint32_t az, Timer *t);
 	int32_t SetAdjust(uint32_t ax, uint32_t ay, uint32_t az);
 	int32_t SetPosCenter(const math::v4 &v);
+	/* the values of a resolution array kept (copied; num entries), the first three set at once
+	   by SetPos, SetSize and SetRot of an array (0x81153bfe, 0x8115446a, 0x81154908) */
+	/* the resolution it is in (id), the one it comes from (pre; -1 for none), and how far the
+	   change has run (the timer's time, its mapped value; 1 and 1 without one); whether there is
+	   a change (0x81162c50; names ours) */
+	bool IsMorphResolution(uint32_t &id, uint32_t &pre, float &time, float &rate);
+	/* the draw objects drawn to a surface or not, and whether that changed anything (0x81152bdc;
+	   name ours) */
+	bool UpdateSurfaceDraw(bool on);
+	void SetResolutionPos_core(const ResolutionData *pos, int32_t num);
+	void SetResolutionSize_core(const ResolutionData *size, int32_t num);
+	void SetResolutionRot_core(const ResolutionData *rot, int32_t num);
+	/* SetPos with the tangents the position goes through as a hermite curve (the start's and
+	   the target's, or NULL for none) (0x8114f80a; name ours) */
+	int32_t SetPosHermite(const math::v4 &pos, const math::v4 *const *tangents, Timer *t,
+			      int32_t id, int32_t opt, float delay, AnimCB cb_fin, void *usrdata);
 	/* puts the widget behind the other in its parent's draw order */
 	int32_t SetBehind(Widget *w);
 	/* puts the widget in front of the other in its parent's draw order */
@@ -1388,7 +1404,9 @@ public:
 	/* nonzero: a scroll view takes the focus while it has none (ScrollViewBase's focus update;
 	   name ours, meaning open) */
 	uint16_t m_focus_count;
-	uint8_t reserved3[1];
+	/* the children below it (and itself) that take the rear touch event, counted up to the scene
+	   (EnableTouchRearEvent; name ours) */
+	uint8_t m_touch_rear_children;
 	/* what UpdateMatrix still has to make again: bits 0 to 2 (name after ScePaf-RE) */
 	uint8_t m_update_flag;
 	/* 0xff before a reverse transition (name after ScePaf-RE) */

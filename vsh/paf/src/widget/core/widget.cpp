@@ -556,6 +556,124 @@ int32_t Widget::SetSize(const math::v4 &size, Timer *t, int32_t id, int32_t opt,
 	return SetSize_core(size, 0xFF02, false);
 }
 
+int32_t Widget::SetSize(const ResolutionData *size, uint32_t num, Timer *t, int32_t id,
+			int32_t opt, float delay, AnimCB cb_fin, void *usrdata)
+{
+	ResolutionData *entry = get_resolution_data(const_cast<ResolutionData *>(size), num,
+						    m_resolution_id);
+
+	if (entry == NULL)
+		return -1;
+	if (m_size_array != NULL)
+		delete[] m_size_array;
+	m_size_num = 0;
+	m_size_array = NULL;
+	if (num > 0) {
+		ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+		sce_paf_memcpy(copy, size, 16 * num);
+		m_size_array = copy;
+		m_size_num = num;
+	}
+	return SetSize(math::v4(entry->m_value[0], entry->m_value[1], entry->m_value[2], 0.0f), t, id,
+		       opt, delay, cb_fin, usrdata);
+}
+
+int32_t Widget::SetPosHermite(const math::v4 &pos, const math::v4 *const *tangents, Timer *t,
+			      int32_t id, int32_t opt, float delay, AnimCB cb_fin, void *usrdata)
+{
+	if (IsDragMoving(this)) {
+		delete t;
+		return -1;
+	}
+	if (t != NULL) {
+		AnimListenerV4 *listener = new AnimListenerV4(
+			t, this, GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f)), pos,
+			&AnimListener::s_prop_move, cb_fin, usrdata);
+
+		if (tangents != NULL) {
+			math::v4 start = GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+
+			listener->SetHermite(start, *tangents[0], pos, *tangents[1]);
+		}
+		if ((id & 0xFF0000) != 0)
+			id = (id & 0xFF000000) | ANIM_MOVE;
+		SetAnimListener_withDelay(id, listener, delay, opt);
+		return 0;
+	}
+	KillAnimType(ANIM_MOVE);
+	return SetPos_core(pos, 0xFF01, false);
+}
+
+int32_t Widget::SetPos(const math::v4 &pos, Timer *t, int32_t id, int32_t opt, float delay,
+		       AnimCB cb_fin, void *usrdata)
+{
+	return SetPosHermite(pos, NULL, t, id, opt, delay, cb_fin, usrdata);
+}
+
+int32_t Widget::SetPos(const ResolutionData *pos, uint32_t num, Timer *t, int32_t id,
+		       int32_t opt, float delay, AnimCB cb_fin, void *usrdata)
+{
+	ResolutionData *entry = get_resolution_data(const_cast<ResolutionData *>(pos), num,
+						    m_resolution_id);
+
+	if (entry == NULL)
+		return -1;
+	if (m_pos_array != NULL)
+		delete[] m_pos_array;
+	m_pos_array = NULL;
+	m_pos_num = 0;
+	if (num > 0) {
+		ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+		sce_paf_memcpy(copy, pos, 16 * num);
+		m_pos_array = copy;
+		m_pos_num = num;
+	}
+	return SetPosHermite(math::v4(entry->m_value[0], entry->m_value[1], entry->m_value[2], 0.0f),
+			     NULL, t, id, opt, delay, cb_fin, usrdata);
+}
+
+/* the nearest widget up the tree, this one included, that holds the focus of its children,
+   short of the scene (name ours) */
+static inline Widget *FindFocusRoot(Widget *widget)
+{
+	for (Widget *root = widget; root != NULL; root = root->m_parent) {
+		if (root->m_focus_root != NULL)
+			return root;
+		if (static_cast<Widget *>(widget->m_scene) == root)
+			return NULL;
+	}
+	return NULL;
+}
+
+extern "C" {
+
+paf::ui::Widget *ScePafWidget_CFA1EB7A(Widget *widget)
+{
+	return FindFocusRoot(widget);
+}
+
+void ScePafWidget_EC6175D6(Widget *widget, bool on)
+{
+	Widget *root = FindFocusRoot(widget);
+
+	if (root == NULL)
+		return;
+
+	FocusRoot *focus = root->m_focus_root;
+
+	if (on) {
+		uint32_t state = focus->m_state;
+
+		focus->m_init_focus = widget;
+		if (state == 0)
+			focus->m_state = (uint32_t)widget;
+	} else if (focus->m_init_focus == widget) {
+		focus->m_init_focus = NULL;
+	}
+}
+
 void Widget::SetGestureMask(uint32_t mask, bool update)
 {
 	if (m_touch_gesture_mask != mask) {
@@ -587,19 +705,6 @@ Widget *Widget::FindChild(Widget *child, int32_t option)
 	return NULL;
 }
 
-/* the nearest widget up the tree, this one included, that holds the focus of its children,
-   short of the scene (name ours) */
-static inline Widget *FindFocusRoot(Widget *widget)
-{
-	for (Widget *root = widget; root != NULL; root = root->m_parent) {
-		if (root->m_focus_root != NULL)
-			return root;
-		if (static_cast<Widget *>(widget->m_scene) == root)
-			return NULL;
-	}
-	return NULL;
-}
-
 /* whether it is the widget its focus root focuses first */
 bool Widget::IsInitFocus()
 {
@@ -616,6 +721,19 @@ void Widget::InitCreateParam(const CreateParam *param)
 	if (param != NULL) {
 		m_parent_protected = param->m_parent_protected;
 		m_under_template = param->m_under_template;
+	}
+}
+
+void ScePafWidget_622193BD(Widget *widget, bool update)
+{
+	AdjustParam *param = widget->m_adjust_param;
+
+	if (param != NULL) {
+		if (--param->m_ref_count == 0)
+			delete param;
+		widget->m_adjust_param = NULL;
+		if (update)
+			widget->UpdateSize();
 	}
 }
 
@@ -640,6 +758,39 @@ Widget *Widget::GetChild(int32_t index) const
 	for (; index < 0; ++index)
 		--it;
 	return *it;
+}
+
+extern "C" {
+
+int32_t ScePafWidget_D4759650(Widget *widget, int32_t delta)
+{
+	int32_t count = widget->m_touch_rear_children + delta;
+	Widget *parent = widget->m_parent;
+
+	if (count >= 0) {
+		if (count <= 0xFFFF)
+			widget->m_touch_rear_children = count;
+		else
+			widget->m_touch_rear_children = 0xFF;
+	} else {
+		widget->m_touch_rear_children = 0;
+	}
+	if (parent != NULL && static_cast<Widget *>(widget->m_scene) != widget)
+		return ScePafWidget_D4759650(parent, delta);
+	return (int32_t)parent;
+}
+
+}
+
+int32_t Widget::EnableTouchRearEvent(bool on_off)
+{
+	if (m_touch_rear_event != on_off) {
+		m_touch_rear_event = on_off;
+		if (on_off)
+			return ScePafWidget_D4759650(m_parent, 1);
+		return ScePafWidget_D4759650(m_parent, -1);
+	}
+	return (int32_t)this;
 }
 
 void Widget::CountFocusEnableChildren(int32_t delta)
@@ -687,6 +838,32 @@ int32_t Widget::KillAnim(int32_t id)
 void Widget::KillObjAnim(int32_t obj, int32_t id)
 {
 	KillAnim(obj + id);
+}
+
+bool Widget::UpdateSurfaceDraw(bool on)
+{
+	if (on == m_surface_draw)
+		return false;
+	m_surface_draw = on;
+
+	graph::SurfaceDrawParam param;
+
+	param.m_font_flags = 128;
+	param.m_surface_draw = on;
+	for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it)
+		it->m_obj->SetSurfaceDraw(param);
+	return true;
+}
+
+extern "C" {
+
+void ScePafWidget_66847A11(Widget *widget, bool on)
+{
+	if (widget->UpdateSurfaceDraw(on)) {
+		for (list<Widget *>::iterator it = widget->m_children.begin();
+		     it != widget->m_children.end(); ++it)
+			ScePafWidget_66847A11(*it, on);
+	}
 }
 
 int32_t Widget::SetColor_core(const math::v4 &color)
@@ -764,6 +941,27 @@ int32_t Widget::SetMetaAlpha(float alpha, Timer *t, int32_t id, int32_t opt, flo
 	return SetMetaAlpha_core(alpha);
 }
 
+void Widget::SetResolutionPos_core(const ResolutionData *pos, int32_t num)
+{
+	if (m_pos_array != NULL)
+		delete[] m_pos_array;
+	m_pos_num = 0;
+	m_pos_array = NULL;
+	if (num > 0) {
+		ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+		sce_paf_memcpy(copy, pos, 16 * num);
+		m_pos_array = copy;
+		m_pos_num = num;
+	}
+}
+
+int32_t Widget::SetPosCenter(const math::v4 &v)
+{
+	return SetPosHermite(v - AlignOffsetToRotatedCenter(this, 0), NULL, NULL, ANIM_MOVE, 0, 0.0f,
+			     NULL, NULL);
+}
+
 int32_t Widget::SetScale_core(const math::v4 &scale, uint32_t notify_layout)
 {
 	float32x4_t clamped = vmaxq_f32(vdupq_n_f32(0.0001f), scale.getImpl().get128());
@@ -839,6 +1037,67 @@ math::v4 *Widget::GetScale(int32_t opt)
 	return result;
 }
 
+void Widget::UpdateSize()
+{
+	for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it) {
+		if (it->m_attr.m_flag1)
+			it->m_obj->SetSize(math::v3(m_size.getImpl().getXYZ()));
+	}
+}
+
+void Widget::SetResolutionSize_core(const ResolutionData *size, int32_t num)
+{
+	if (m_size_array != NULL)
+		delete[] m_size_array;
+	m_size_num = 0;
+	m_size_array = NULL;
+	if (num > 0) {
+		ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+		sce_paf_memcpy(copy, size, 16 * num);
+		m_size_array = copy;
+		m_size_num = num;
+	}
+}
+
+void Widget::SetResolutionRot_core(const ResolutionData *rot, int32_t num)
+{
+	if (m_rot_array != NULL)
+		delete[] m_rot_array;
+	m_rot_num = 0;
+	m_rot_array = NULL;
+	if (num > 0) {
+		ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+		sce_paf_memcpy(copy, rot, 16 * num);
+		m_rot_array = copy;
+		m_rot_num = num;
+	}
+}
+
+int32_t Widget::SetRot(const ResolutionData *rot, uint32_t num, int32_t option, Timer *t,
+		       int32_t id, int32_t opt, float delay, AnimCB cb_fin, void *usrdata)
+{
+	ResolutionData *entry = get_resolution_data(const_cast<ResolutionData *>(rot), num,
+						    m_resolution_id);
+
+	if (entry == NULL)
+		return -1;
+	if (m_rot_array != NULL)
+		delete[] m_rot_array;
+	m_rot_num = 0;
+	m_rot_array = NULL;
+	if (num > 0) {
+		ResolutionData *copy = (ResolutionData *)operator new[](16 * num);
+
+		sce_paf_memcpy(copy, rot, 16 * num);
+		m_rot_array = copy;
+		m_rot_num = num;
+	}
+	return SetRot(math::v4(entry->m_value[0], entry->m_value[1], entry->m_value[2], 0.0f), option,
+		      t, id, opt, delay, cb_fin, usrdata);
+}
+
 void Widget::Update()
 {
 	if (m_hold_count <= 0) {
@@ -847,6 +1106,68 @@ void Widget::Update()
 		for (uint32_t i = 0; i != num; i++)
 			m_drawobjs[i].m_obj->Update();
 	}
+}
+
+math::v4 Widget::GetHitBoxSize(int32_t opt)
+{
+	uint32_t mode = m_hit_box_mode;
+
+	if (mode == 0)
+		return *GetSize(opt);
+	if (mode == 4) {
+		if ((m_event_enable & 0x20) == 0 && (m_event_enable & 0x40) == 0 && !m_clip_children)
+			return *GetSize(opt);
+		if (opt != 0)
+			return ScePafWidget_301AA80F(this, *GetSize(opt));
+		return ScePafWidget_301AA80F(this, m_size);
+	}
+
+	math::v4 box(0.0f, 0.0f, 0.0f, 0.0f);
+
+	if (m_hit_box != NULL)
+		box = m_hit_box[1];
+	if (mode > 1) {
+		if (mode <= 2)
+			return math::v4(sce::Vectormath::Simd::Aos::mulPerElem(box.getImpl(), GetSize(opt)->getImpl()));
+		return box;
+	}
+	return box + *GetSize(opt);
+}
+
+math::v4 Widget::GetHitBoxCenter()
+{
+	if (m_hit_box_mode == 4) {
+		if ((m_update_flag & 7) != 0)
+			UpdateMatrix();
+		return m_world_matrix.w();
+	}
+
+	if (m_hit_box == NULL || m_hit_box[0] == math::v4(0.0f, 0.0f, 0.0f, 0.0f)) {
+		if ((m_update_flag & 7) != 0)
+			UpdateMatrix();
+		return m_world_matrix.w();
+	}
+
+	float32x4_t center = m_hit_box[0].getImpl().get128();
+
+	center = vsetq_lane_f32(0.0f, center, 3);
+	if ((m_update_flag & 7) != 0)
+		UpdateMatrix();
+
+	float32x4_t pos = m_world_matrix.w().getImpl().get128();
+
+	if ((m_update_flag & 7) != 0)
+		UpdateMatrix();
+
+	float32x4_t col3 = m_world_matrix.w().getImpl().get128();
+	float32x2_t low = vget_low_f32(center);
+	float32x2_t high = vget_high_f32(center);
+	float32x4_t a = vmlaq_lane_f32(vmulq_lane_f32(m_world_matrix.x().getImpl().get128(), low, 0),
+				       m_world_matrix.z().getImpl().get128(), high, 0);
+	float32x4_t b = vmlaq_lane_f32(vmulq_lane_f32(m_world_matrix.y().getImpl().get128(), low, 1),
+				       col3, high, 1);
+
+	return math::v4(sce::Vectormath::Simd::Aos::Vector4(vaddq_f32(pos, vaddq_f32(a, b))));
 }
 
 int32_t Widget::SetAlignOffset_core(const math::v4 &offs, uint32_t notify_layout)
@@ -1215,6 +1536,33 @@ math::v4 Widget::calc_anchor_offset(const math::v4 &size, const math::v4 &offs, 
 	return math::v4(x, y, z, w);
 }
 
+void ScePafWidget_55D83675(Widget *widget, AdjustParam *param)
+{
+	AdjustParam *previous = widget->m_adjust_param;
+
+	if (previous == param)
+		return;
+	if (previous != NULL && --previous->m_ref_count == 0)
+		delete previous;
+	widget->m_adjust_param = param;
+	param->m_ref_count++;
+	widget->UpdateSize();
+}
+
+int32_t ScePafWidget_B1C23134(Widget *widget, const AdjustParam &param)
+{
+	if (widget->m_adjust_param == NULL)
+		return -1;
+	if (sce_paf_memcmp(widget->m_adjust_param, &param, sizeof(AdjustParam)) != 0) {
+		int32_t refs = widget->m_adjust_param->m_ref_count;
+
+		*widget->m_adjust_param = param;
+		widget->m_adjust_param->m_ref_count = refs;
+		widget->UpdateSize();
+	}
+	return 0;
+}
+
 int32_t Widget::SetAdjust(uint32_t ax, uint32_t ay, uint32_t az)
 {
 	m_adjust_x = ax;
@@ -1223,6 +1571,44 @@ int32_t Widget::SetAdjust(uint32_t ax, uint32_t ay, uint32_t az)
 	UpdateLayoutAttribute();
 	UpdateAdjustSize();
 	return 0;
+}
+
+}
+
+void Widget::UpdateAdjustChildSize(Widget *child)
+{
+	if (child == NULL || (child->m_adjust_x | child->m_adjust_y | child->m_adjust_z) == 0)
+		return;
+
+	float size[4];
+	float parent_size[4];
+
+	*(math::v4 *)size = *child->GetSize(0);
+	if (m_scene != NULL) {
+		*(math::v4 *)parent_size = *m_scene->GetSize(0);
+	} else {
+		math::rect screen(Screen::s_root_screen->sp);
+		float width = screen.width();
+		float height = screen.height();
+
+		*(math::v4 *)parent_size = math::v4(width, height, 0.0f, 0.0f);
+	}
+
+	uint32_t ax = child->m_adjust_x;
+	uint32_t ay = child->m_adjust_y;
+	uint32_t az = child->m_adjust_z;
+
+	if (ax == 1)
+		size[0] = m_size.extract_x();
+	else if (ax == 4)
+		size[0] = parent_size[0];
+	if (ay == 1)
+		size[1] = m_size.extract_y();
+	else if (ay == 4)
+		size[1] = parent_size[1];
+	if (az == 1)
+		size[2] = m_size.extract_z();
+	child->SetSize_core_force(*(math::v4 *)size, 0xFF02, false);
 }
 
 
@@ -1278,6 +1664,46 @@ graph::DrawObj *Widget::GetDrawObj(int32_t obj)
 	return NULL;
 }
 
+int32_t Widget::HandlerProc(Event *e)
+{
+	if (e == NULL)
+		return -1;
+	if (m_env != NULL)
+		return Handler::HandlerProc(e);
+	return -1;
+}
+
+int32_t Widget::HandleTouchEvent(Event *e)
+{
+	Handler::HandleTouchEvent(e);
+	return 0;
+}
+
+bool Widget::IsMorphResolution(uint32_t &id, uint32_t &pre, float &time, float &rate)
+{
+	uint32_t next;
+
+	if (m_scene != NULL && m_scene->IsResolutionActMorph(m_resolution_id)) {
+		id = m_resolution_id;
+		next = m_resolution_id_pre;
+	} else {
+		id = m_resolution_id_pre;
+		next = -1;
+	}
+	pre = next;
+
+	Timer *timer = m_resolution_timer;
+
+	if (timer != NULL) {
+		time = timer->GetCurrTime();
+		rate = timer->m_mapped_x;
+	} else {
+		time = 1.0f;
+		rate = 1.0f;
+	}
+	return timer != NULL;
+}
+
 void Widget::SetBaseDestroyCount(int32_t count)
 {
 	s_base_destroy_count = count;
@@ -1289,6 +1715,8 @@ int32_t Widget::s_base_destroy_count;
 int32_t Widget::GetBaseDestroyCount()
 {
 	return s_base_destroy_count;
+}
+
 }
 }
 }
