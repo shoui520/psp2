@@ -671,8 +671,7 @@ int _ZNK3paf2ui8CheckBox9IsInheritEPKc(const void *self, const char *type);
 int _ZNK3paf2ui11ImageButton9IsInheritEPKc(const void *self, const char *type);
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui16ProgressBarTouch9IsInheritEPKc, "progressbar_touch",
 		   _ZNK3paf2ui11ProgressBar9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui11PlaneButton9IsInheritEPKc, "plane_button",
-		   _ZNK3paf2ui10ButtonBase9IsInheritEPKc)
+/* PlaneButton's is C++ (w_plane_button.cpp) */
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RadioBox9IsInheritEPKc, "radio_box",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui13SlidingDrawer9IsInheritEPKc, "sliding_drawer",
@@ -753,11 +752,6 @@ int WidgetInvokeSlot(void *self, uint32_t offset)
 {
 	const uint8_t *vtable = *(const uint8_t *const *)self;
 	return ((int (*)(void *))*(void *const *)(vtable + offset))(self);
-}
-
-int _ZN3paf2ui11PlaneButton16UpdateAdjustSizeEv(void *self)
-{
-	return WidgetInvokeSlot(self, 448);
 }
 
 int ScePafWidget_BDEF4D3F(void *self)

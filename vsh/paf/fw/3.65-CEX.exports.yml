@@ -3216,7 +3216,7 @@ ScePaf:
         - _ZN3paf2ui14ScrollViewBaseD1Ev: 0x1D7302E5
         - _ZN3paf2ui8filelist19SegmentListAccessor6GetNumEv: 0x1D77D6D9
         - _ZN3paf2ui15ScrollViewDebugD1Ev: 0x1D7D7860
-        - ScePafWidget_1DA55BAC: 0x1DA55BAC
+        - _ZN3paf2ui28PlaneButtonStyleAnimatorBase13OnUpdate_coreEv: 0x1DA55BAC
         - _ZN3paf2ui14ScrollViewBase9OnEditEndEPNS0_5EventE: 0x1DA7A46A
         - _ZN3paf2ui15UITouchListener4InitEv: 0x1DBD1579
         - _ZN3paf2ui12CornerButton8TypeNameEv: 0x1E01046A
@@ -4260,7 +4260,7 @@ ScePaf:
         - _ZNK3paf2ui15CompositeDrawer11GetTypeNameEv: 0x8A9DDAE6
         - _ZN3paf2ui8PageTurnD0Ev: 0x8A9E7746
         - _ZN3paf2ui13ImageSlideBar16HandleTouchEventEPNS0_5EventE: 0x8AA12C6A
-        - ScePafWidget_8AA684F6: 0x8AA684F6
+        - _ZN3paf2ui11PlaneButton21ScePafWidget_8AA684F6Eb: 0x8AA684F6
         - _ZN3paf2ui11ProgressBar6UpdateEv: 0x8AB39CCA
         - _ZN3paf2ui8ListView21ScePafWidget_8AB4F072Ev: 0x8AB4F072
         - _ZN3paf2ui13BusyIndicator6UpdateEv: 0x8AD42120
@@ -5208,7 +5208,7 @@ ScePaf:
         - _ZN3paf2ui15ScrollViewParam3GetEv: 0xF310D3F6
         - _ZN3paf2ui4Text17GetStyleAttributeENS_5graph18TextStyleAttributeEjRNS_4math2v4E: 0xF3281F1C
         - _ZN3paf2ui7Handler18HandleKeycodeEventEPNS0_5EventE: 0xF369079E
-        - ScePafWidget_F378522C: 0xF378522C
+        - _ZN3paf2ui11PlaneButton13CreateDrawObjEi: 0xF378522C
         - _ZN3paf2ui8PageTurn21ScePafWidget_F378C87DEff: 0xF378C87D
         - _ZN3paf2ui8ListView16SetSegmentHeaderEiPNS0_6WidgetEbb: 0xF37CEE15
         - _ZN3paf2ui22CornerButtonStyleParam4InitEv: 0xF397EB15
@@ -5401,7 +5401,7 @@ ScePaf:
         - _ZTVN3paf2ui25StateButtonBaseSoundParamE: 0x3BB27D1C
         - _ZTVN3paf2ui10ButtonBaseE: 0x3DA7FD84
         - _ZN3paf2ui15PlaneStyleParam12m_param_nameE: 0x3DBF1290
-        - ScePafWidget_3E5A0B90: 0x3E5A0B90
+        - _ZTVN3paf2ui24PlaneButtonStyleAnimatorE: 0x3E5A0B90
         - _ZN3paf2ui15AnimListenerObj15s_prop_obj_moveE: 0x413E43D1
         - _ZN3paf2ui6Widget15s_list_restructE: 0x4183CCCD
         - _ZN3paf2ui3Box13m_widget_typeE: 0x43306F80
@@ -5592,7 +5592,7 @@ ScePaf:
         - _ZTVN3paf2ui16UIAnalogListenerE: 0xBE2A670D
         - _ZN3paf2ui11ProgressBar15c_labelPosTableE: 0xBEECA6EC
         - _ZN3paf2ui6Widget15s_upmat_count_LE: 0xBF33C29A
-        - ScePafWidget_BFFD5E33: 0xBFFD5E33
+        - _ZTVN3paf2ui28PlaneButtonStyleAnimatorBaseE: 0xBFFD5E33
         - _ZN3paf2ui8ListItem13m_widget_typeE: 0xC00C7AA6
         - _ZN3paf2ui5Group13m_widget_typeE: 0xC0C382CE
         - _ZN3paf2ui21ProgressBarStyleParam12m_param_nameE: 0xC110FBF3
