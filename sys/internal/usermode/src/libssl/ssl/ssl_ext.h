@@ -15,7 +15,7 @@ typedef struct SslExtensionHandler {
 
 typedef struct SslExtension {
 	SceUInt32 length;
-	void *data;
+	unsigned char *data;
 	SceUInt32 type;
 	SceUInt32 boolean_option;
 	SceUInt32 state;
@@ -23,7 +23,22 @@ typedef struct SslExtension {
 	SslExtensionHandler handlers[2];
 } SslExtension;
 
+typedef struct SslExtensionData {
+	SceUInt32 length;
+	unsigned char *data;
+} SslExtensionData;
+
+int sslDestroyExtension(SslExtension *extension);
+int sslExtensionNew(SceUInt32 type, SslExtension **result);
+int sslExtensionCopy(const SslExtension *src, SslExtension **result);
+int sslExtensionSetProperty(SslExtension *ext, int selector, const void *value);
+int sslExtensionGetProperty(const SslExtension *ext, int selector, void *result);
+int sslExtensionCompare(const SslExtension *const *a, const SslExtension *const *b);
 void sslExtensionFree(SslExtension *extension);
+int sslCreateRenegotiationInfoExtension(
+	void *library,
+	const SslExtensionData *verify_data,
+	SslExtension **result);
 
 _Static_assert(sizeof(SslExtension) == 48, "SslExtension");
 _Static_assert(offsetof(SslExtension, handlers) == 24, "handlers");

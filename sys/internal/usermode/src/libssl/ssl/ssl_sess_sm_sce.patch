@@ -23,7 +23,7 @@
  void SSL_SESSION_free(ss)
  SSL_SESSION *ss;
  	{
-@@ -376,18 +376,21 @@
+@@ -376,18 +376,40 @@
  		}
  #endif
  
@@ -46,6 +46,25 @@
  	Free(ss);
  	}
  
++/* SCE: descriptive helper name is ours. */
++int sslRemoveSessionFromCache(SSL *s, int mode)
++	{
++	int ret=0;
++	SSL_SESSION *session=s->session;
++	SslContextHeader *ctx;
++
++	if (session != NULL && session->session_id_length != 0)
++		{
++		ctx=(SslContextHeader *)s->ctx;
++		if (ctx->session_cache_callback != NULL &&
++			((ctx->session_cache_mode & SSL_SESS_CACHE_BOTH) & mode) != 0)
++			ret=ctx->session_cache_callback(s->ctx,
++				SCE_SSL_SESSION_CACHE_REMOVE,&session,
++				ctx->session_cache_arg);
++		}
++	return(ret);
++	}
++
 +#if 0
  int SSL_set_session(s, session)
  SSL *s;

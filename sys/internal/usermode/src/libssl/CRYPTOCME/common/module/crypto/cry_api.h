@@ -56,7 +56,9 @@ typedef struct SslCryptoLifecycleMethods {
 	int (*DigestUpdate)(SslCryptoAlgorithm *algorithm, const void *data,
 			    SceUInt32 length);
 	int (*DigestFinal)(SslCryptoAlgorithm *algorithm, void *data, SceUInt32 *length);
-	SceUIntPtr opaqueOperationsAfterDigest[16];
+	SceUIntPtr opaqueOperationsAfterDigest[15];
+	int (*SeedRandom)(SslCryptoAlgorithm *algorithm, const void *buffer,
+			  SceUInt32 length);
 	int (*GenerateRandom)(SslCryptoAlgorithm *algorithm, SceUInt32 length,
 			      void *buffer, SceUInt32 *generatedLength);
 } SslCryptoLifecycleMethods;
@@ -150,6 +152,8 @@ int sslDigest(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length,
 	      void *digest, SceUInt32 *digestLength);
 int sslDigestUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length);
 int sslDigestFinal(SslCryptoAlgorithm *algorithm, void *data, SceUInt32 *length);
+int sslSeedRandom(SslCryptoAlgorithm *algorithm, const void *buffer,
+		  SceUInt32 length);
 int sslGenerateRandom(SslCryptoAlgorithm *algorithm, SceUInt32 length,
 		      void *buffer, SceUInt32 *generatedLength);
 int sslCreateCryptoContext(SslLibrary *library, int mode, void **result);
@@ -208,6 +212,8 @@ _Static_assert(offsetof(SslCryptoLifecycleMethods, DecryptUpdate) == 56,
 _Static_assert(offsetof(SslCryptoLifecycleMethods, DigestInit) == 112, "DigestInit");
 _Static_assert(offsetof(SslCryptoLifecycleMethods, DigestUpdate) == 120, "DigestUpdate");
 _Static_assert(offsetof(SslCryptoLifecycleMethods, DigestFinal) == 124, "DigestFinal");
+_Static_assert(offsetof(SslCryptoLifecycleMethods, SeedRandom) == 188,
+	       "SeedRandom");
 _Static_assert(offsetof(SslCryptoLifecycleMethods, GenerateRandom) == 192,
 	       "GenerateRandom");
 _Static_assert(offsetof(SslCryptoImplementationMethods, GetInfo) == 12,

@@ -1,5 +1,6 @@
 /* Native filename recovered from SSL-C's session-release reference record. */
 #include "ssl_locl.h"
+#include "ssl_context.h"
 #include "ssl_ext.h"
 #include "../memory.h"
 #include "../runtime.h"

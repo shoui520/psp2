@@ -27,6 +27,7 @@ typedef struct SslExtensionList {
 	int pending_index;
 } SslExtensionList;
 
+#include "ssl_ext.h"
 #include "ssl_sce.h"
 #include "ssl23_upstream.h"
 #include "ssl_cert_layout_sce.h"
@@ -81,7 +82,9 @@ int sslClearConnection(SSL *ssl, int keep_method); /* Descriptive name ours. */
 int SSL_set_accept_state(SSL *ssl);
 int SceSslInternal_CEE46B33(SSL *ssl);
 int ssl_clear_bad_session(SSL *ssl);
+int sslRemoveSessionFromCache(SSL *ssl, int mode); /* Descriptive name ours. */
 SSL_METHOD *sslv3_base_method(void);
+SSL_METHOD *SSLv23_client_method(void);
 int ssl3_num_ciphers(void);
 SSL_CIPHER *ssl3GetScsvCipher(void); /* Descriptive name is ours. */
 int ssl3RemoveScsvCipher(STACK *sk); /* Descriptive name is ours. */
@@ -130,11 +133,135 @@ typedef struct SslDigestInfo {
 	int md_size;
 } SslDigestInfo;
 
+/* Descriptive bundle and ex-data helper types are ours. */
+typedef struct SslCtxCryptoBundle {
+	void *library;
+	void *crypto_context;
+	SslObjectHeader *certificate_context;
+	void *key_context;
+	SslCryptoAlgorithm *random_type;
+	SslCryptoAlgorithm *random_algorithm;
+	SslCryptoAlgorithm *md5;
+	SslCryptoAlgorithm *sha1;
+} SslCtxCryptoBundle;
+
+typedef struct SslExDataItem {
+	int idx;
+	char *ptr;
+} SslExDataItem;
+
+typedef struct SslExDataMethod {
+	long argl;
+	char *argp;
+	int (*new_func)(void *obj, STACK *ex_data, int idx, long argl, char *argp);
+	void (*free_func)(void *obj, char *ptr, STACK *ex_data, int idx,
+			  long argl, char *argp);
+	int (*dup_func)(void);
+	int idx;
+} SslExDataMethod;
+
 extern SslCipherInfo ssl_cipher_methods[];
 extern SslDigestInfo ssl_digest_methods[];
-extern int ssl_weak_cipher_flags; /* Descriptive name is ours. */
+extern SSL3_ENC_METHOD ssl3_undef_enc_method;
 
 /* Descriptive helper names are ours, not recovered Sony names. */
+void sslStackClearElements(STACK *st, void (*func)());
+void sk_sort(STACK *st);
+void sslResetExDataAndRandomGlobals(void);
+int sslGetNullValue1(void);
+int sslGetNullValue2(void);
+int sslGetNullContextValue(SSL *s, int type, void **val);
+int sslNoopReturnOne(void);
+int sslResetMethod(SSL *s, SSL_METHOD *method);
+void sslReleaseDefaultRandomAlgorithm(void *crypto_ctx);
+void sslCtxFreeCrypto(SSL_CTX *ctx);
+void sslReleaseExDataMethods(void);
+void sslFreeExData(void *obj, STACK *meth_stack, STACK *ex_data);
+void sslRetainExDataMethods(void);
+int sslNewExData(void *obj, STACK *meth_stack, STACK **ex_data_ptr);
+int sslCtxSetMaxSendFragment(SSL_CTX *ctx, int max_send_fragment);
+int ssl_cipher_id_cmp(SSL_CIPHER *a, SSL_CIPHER *b);
+int ssl_cipher_ptr_id_cmp(SSL_CIPHER **ap, SSL_CIPHER **bp);
+STACK *SSL_get_ciphers(SSL *s);
+STACK *ssl_get_ciphers_by_id(SSL *s);
+int sslTestWeakCipherFlags(int mask);
+STACK *sslCreateCipherList(SSL_CTX *ctx, SSL_METHOD *meth, STACK **cipher_list,
+			   STACK **cipher_list_by_id, const char *rule_str);
+#undef ssl_put_cipher_by_char
+int ssl_put_cipher_by_char(SSL_CIPHER *c, unsigned char *p);
+int ssl_cipher_list_to_bytes(SSL *s, STACK *sk, unsigned char *p);
+STACK *ssl_bytes_to_cipher_list(SSL *s, unsigned char *p, int num, STACK **skp);
+unsigned long SSL_SESSION_hash(SSL_SESSION *a);
+int SSL_SESSION_cmp(SSL_SESSION *a, SSL_SESSION *b);
+int sslInitDefaultRandomAlgorithm(void *crypto_ctx, SslCryptoAlgorithm **out_alg);
+void sslRetainDefaultRandomAlgorithm(void *crypto_ctx, SslCryptoAlgorithm **out_alg);
+void sslCtxApplyCryptoBundle(SSL_CTX *ctx, const SslCtxCryptoBundle *bundle);
+int sslInitCryptoBundleContext(SslCtxCryptoBundle *bundle, void *library);
+int sslCtxInitCryptoAlgorithms(SslCtxCryptoBundle *bundle, void *library,
+			       SslCryptoAlgorithm *random_alg);
+int sslCtxSetupCrypto(SSL_CTX *ctx, void *library);
+int sslCtxSetExtensions(SslExtensionList **list, void *library,
+			unsigned long options, int type, SslExtensionList *val);
+int sslCtxSetLibraryAndSeed(SSL_CTX *ctx, void *library, void *seed);
+int SSL_CTX_get_value(SSL_CTX *ctx, int type, void **val);
+void ssl_set_cert_masks(CERT *c, CERT *ctx_cert);
+void *ssl_get_server_send_cert(SSL *s);
+void *ssl_get_sign_pkey(SSL *s, SSL_CIPHER *cipher);
+int SSL_set_ssl_method(SSL *s, SSL_METHOD *meth);
+int ssl_undefined_function(SSL *s);
+int sslUndefinedConstFunction(const SSL *s);
+SSL_METHOD *ssl_bad_method(int ver);
+char *sslVersionString(int version);
+char *SSL_CTX_get_version(SSL_CTX *ctx);
+char *SSL_get_version(SSL *s);
+SSL_CTX *SSL_get_SSL_CTX(SSL *ssl);
+long SSL_get_verify_result(SSL *ssl);
+int ssl_init_wbio_buffer(SSL *s, int push);
+void ssl_free_wbio_buffer(SSL *s);
+void (*sslGetInfoCallbackEx(SSL *ssl))(SSL *, int, int, void *);
+void *sslGetInfoCallbackArg(SSL *ssl);
+int SSL_set_ex_data(SSL *s, int idx, char *arg);
+char *SSL_get_ex_data(SSL *s, int idx);
+int ssl_ok(SSL *s);
+unsigned int SSL_CTX_get_verify_flags(SSL_CTX *ctx);
+int SSL_get_verify_depth(SSL *s);
+int sslAddClientCa(STACK **sk, void *x);
+int SceSslInternal_00ABEBC3(SSL_CTX *ctx, void *x);
+STACK *SceSslInternal_F4007DBE(SSL *s);
+int SceSslInternal_A4EA9DE0(SSL *s);
+int SceSslInternal_243DE290(SSL *s, int idx, void **out);
+int sslCtxSetSessionCacheCallback(SSL_CTX *ctx,
+				  int (*cb)(SSL_CTX *ctx, int operation,
+					    void *data, void *arg));
+int sslCtxSetSessionCacheArg(SSL_CTX *ctx, void *arg);
+void sslCtxSetNewSessionCallback(SSL_CTX *ctx, int val);
+void sslSetIoCallback(SSL *s, void (*cb)(SSL *ssl, int where, void *arg),
+		      void *arg);
+void (*sslGetIoCallback(SSL *s))(SSL *ssl, int where, void *arg);
+void *sslGetIoCallbackArg(SSL *s);
+void SceSslInternal_9E38815D(SSL_CTX *ctx, void *u);
+int sslGenerateRandomBytes(SSL *s, SceUInt32 len, void *buf,
+			   SceUInt32 *out_len, int flags);
+int SceSslInternal_67FB1CD3(SSL_CTX *ctx, const void *buf, SceUInt32 len);
+void sslCtxSetDefaultVerifyCallback(SSL_CTX *ctx,
+				    int (*cb)(SSL *ssl, void *cert, int event,
+					      int *result));
+int SceSslInternal_05F6A292(SSL_CTX *ctx, void *cert, int trust);
+void SceSslInternal_AF50B945(SSL_CTX *ctx,
+			     int (*cb)(SSL *ssl, char **certs, int num_certs,
+				       void *arg, long *verify_result),
+			     void *arg);
+void SceSslInternal_260F5A85(SSL_CTX *ctx, int mode);
+int ssl_verify_cert_chain(SSL *s, STACK *sk);
+int sslResetWeakCipherFlags(void);
+int sslEnableWeakCipherFlags(int flags);
+int sslDisableWeakCipherFlags(int flags);
+void *sslLibBinarySearch(const void *key, const void *base, int nmemb, int size,
+			 int (*compar)(const void *, const void *));
+int sslLibraryModuleInit(void *ctx, int flag);
+int sslLibraryModuleCleanup(void *ctx, int flag);
+int SSL_library_init(void);
+int sslLibraryCleanup(void);
 int sslSessionAddReference(SSL_SESSION *session);
 struct SslTime *sslSessionCopyTime(SSL_SESSION *session, struct SslTime *result);
 unsigned int sslSessionGetIdLength(SSL_SESSION *session);
@@ -142,7 +269,34 @@ int sslSessionMarkNotResumable(SSL_SESSION *session);
 int sslSessionSetExtensions(SSL_SESSION *session, SslExtensionList *extensions);
 int sslSessionGetExtensions(SSL_SESSION *session, SslExtensionList **result);
 int sslSessionIsValid(SSL_SESSION *session);
+int sslExtensionListNew(SslExtensionList **result);
+int sslExtensionListFree(SslExtensionList *list);
 int sslExtensionListCopy(SslExtensionList *source, SslExtensionList **result);
+int sslExtensionListAdd(SslExtensionList *list, const SslExtension *ext);
+int sslExtensionListRemove(SslExtensionList *list, SceUInt32 type);
+int sslExtensionListGetProperty(const SslExtensionList *list, int selector, int *result);
+int sslExtensionListGetEntry(const SslExtensionList *list, int index, SslExtension **result);
+int sslExtensionListFindByType(
+	const SslExtensionList *list,
+	SceUInt32 type,
+	SslExtension **result);
+int sslExtensionListContainsType(const SslExtensionList *list, SceUInt32 type);
+int sslExtensionListEncode(
+	const SslExtensionList *list,
+	SceUInt32 max_len,
+	unsigned char *buf,
+	SceUInt32 *out_len);
+int sslExtensionListCheckMandatory(
+	const SslExtensionList *sent,
+	const SslExtensionList *received);
+int sslExtensionListProcess(
+	SslExtensionList *list,
+	const unsigned char *data,
+	SSL *s,
+	int *alert);
+int sslExtensionListRunClientHandlers(const SslExtensionList *list, SSL *s);
+int sslSetupRenegotiationInfoExtension(SSL *s, int is_server);
+int sslStackFindUnsorted(STACK *st, char *data);
 int ssl_cipher_get_evp(SSL_CTX *ctx, SSL_CIPHER *c, SslCryptoAlgorithm **enc,
 		       SslCryptoAlgorithm **md);
 int sslCipherQuerySupport(SSL_CTX *ctx, SSL_CIPHER *c, int *enc_supported,

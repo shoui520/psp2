@@ -300,6 +300,21 @@ int sslDigest(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length,
 	return methods->Digest(algorithm, data, length, digest, digestLength);
 }
 
+int sslSeedRandom(SslCryptoAlgorithm *algorithm, const void *buffer,
+		  SceUInt32 length)
+{
+	const SslCryptoLifecycleMethods *methods;
+
+	if (algorithm == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	methods = algorithm->methods;
+	if (methods == NULL)
+		return SSL_CRYPTO_ERROR_NO_METHODS;
+	if (methods->SeedRandom == NULL)
+		return SSL_CRYPTO_ERROR_NO_OPERATION;
+	return methods->SeedRandom(algorithm, buffer, length);
+}
+
 int sslGenerateRandom(SslCryptoAlgorithm *algorithm, SceUInt32 length,
 		      void *buffer, SceUInt32 *generatedLength)
 {

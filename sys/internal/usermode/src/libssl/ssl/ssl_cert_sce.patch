@@ -65,7 +65,319 @@
  int ssl_set_cert_type(c, type)
  CERT *c;
  int type;
-@@ -347,4 +349,40 @@
+@@ -233,11 +238,12 @@
+ 	{
+ 	return(ctx->client_CA);
+ 	}
++#endif
+ 
+ STACK *SSL_get_client_CA_list(s)
+ SSL *s;
+ 	{
+-	if (s->type == SSL_ST_CONNECT)
++	if (!s->server)
+ 		{ /* we are in the client */
+ 		if (((s->version>>8) == SSL3_VERSION_MAJOR) &&
+ 			(s->s3 != NULL))
+@@ -254,6 +260,297 @@
+ 		}
+ 	}
+ 
++int SceSslInternal_A4EA9DE0(SSL *s)
++	{
++	STACK *ca_list;
++
++	ca_list=SSL_get_client_CA_list(s);
++	if (ca_list == NULL)
++		return(0);
++	return(sk_num(ca_list));
++	}
++
++int SceSslInternal_243DE290(SSL *s, int idx, void **out)
++	{
++	int err=10008;
++	STACK *ca_list;
++
++	ca_list=SSL_get_client_CA_list(s);
++	if ((ca_list != NULL) && (idx >= 0) && (idx < sk_num(ca_list)))
++		{
++		err=0;
++		*out=sk_value(ca_list,idx);
++		}
++	return(err);
++	}
++
++/* SCE: descriptive callback/random/verification helper names are ours. */
++int sslCtxSetSessionCacheCallback(SSL_CTX *ctx,
++	int (*cb)(SSL_CTX *ctx, int operation, void *data, void *arg))
++	{
++	ctx->session_cache_callback=cb;
++	return(1);
++	}
++
++int sslCtxSetSessionCacheArg(SSL_CTX *ctx, void *arg)
++	{
++	ctx->session_cache_arg=arg;
++	return(1);
++	}
++
++void sslCtxSetNewSessionCallback(SSL_CTX *ctx, int val)
++	{
++	ctx->stats[0]=val;
++	}
++
++void sslSetIoCallback(SSL *s, void (*cb)(SSL *ssl, int where, void *arg),
++	void *arg)
++	{
++	s->io_callback=cb;
++	s->io_callback_arg=arg;
++	}
++
++void (*sslGetIoCallback(SSL *s))(SSL *ssl, int where, void *arg)
++	{
++	return(s->io_callback);
++	}
++
++void *sslGetIoCallbackArg(SSL *s)
++	{
++	return(s->io_callback_arg);
++	}
++
++void SceSslInternal_9E38815D(SSL_CTX *ctx, void *u)
++	{
++	ctx->default_passwd_callback_userdata=u;
++	}
++
++int sslGenerateRandomBytes(SSL *s, SceUInt32 len, void *buf,
++	SceUInt32 *out_len, int flags)
++	{
++	SslCryptoAlgorithm *alg;
++
++	if (flags & 1)
++		alg=s->ctx->random_algorithm;
++	else
++		alg=s->ctx->random_type;
++	return(sslGenerateRandom(alg,len,buf,out_len));
++	}
++
++int SceSslInternal_67FB1CD3(SSL_CTX *ctx, const void *buf, SceUInt32 len)
++	{
++	if ((buf == NULL) || (len == 0))
++		return(0x20);
++	return(sslSeedRandom(ctx->random_type,buf,len));
++	}
++
++void sslCtxSetDefaultVerifyCallback(SSL_CTX *ctx,
++	int (*cb)(SSL *ssl, void *cert, int event, int *result))
++	{
++	ctx->default_verify_callback=cb;
++	}
++
++int SceSslInternal_05F6A292(SSL_CTX *ctx, void *cert, int trust)
++	{
++	int ret=0,status,flags;
++	void *cursor=NULL;
++
++	if ((cert == NULL) || (ctx == NULL))
++		{
++		SSLerr(234,35);
++		goto end;
++		}
++	switch (trust)
++		{
++	case 0:
++		flags=0;
++		break;
++	case 1:
++		flags=1;
++		break;
++	case 2:
++		flags=9;
++		break;
++	default:
++		ret=10018;
++		goto end;
++		}
++	if (sslCreateCertificateStoreCursor(ctx->cert_store,&cursor) != 0)
++		{
++		SSLerr(234,ERR_R_MALLOC_FAILURE);
++		goto end;
++		}
++	if (sslResetCertificateStoreCursor(cursor) != 0)
++		goto end;
++	if (sslSetCertificateStoreCursorCertificate(cursor,cert,NULL) != 0)
++		goto end;
++	ret=sslSetCertificateStoreCursorFlags(cursor,flags);
++	if (ret == 0)
++		{
++		sslOpenCertificateStore(ctx->cert_store,8);
++		status=sslAddCertificateStoreEntry(cursor);
++		sslCloseCertificateStore(ctx->cert_store,8);
++		if (status == 0)
++			{
++			sslRetainCertificateObject(cert);
++			ret=1;
++			}
++		}
++end:
++	if (cursor != NULL)
++		sslDestroyCertificateStoreCursor(cursor);
++	return(ret);
++	}
++
++void SceSslInternal_AF50B945(SSL_CTX *ctx,
++	int (*cb)(SSL *ssl, char **certs, int num_certs, void *arg,
++		long *verify_result),
++	void *arg)
++	{
++	ctx->app_verify_arg=arg;
++	ctx->app_verify_callback=cb;
++	}
++
++void SceSslInternal_260F5A85(SSL_CTX *ctx, int mode)
++	{
++	ctx->default_verify_mode=mode;
++	}
++
++int sslVerifyCertChainCallback(SslVerifyChainEntry *entry, int depth, void *arg)
++	{
++	SSL *ssl=(SSL *)arg;
++	int status,saved_error;
++	void *cert=NULL;
++	int error;
++
++	status=sslGetVerifyChainEntryCertificate(entry,0x2000,&cert);
++	if (status == 0)
++		{
++		status=sslGetVerifyChainEntryError(entry,&error);
++		if (status == 0)
++			{
++			saved_error=error;
++			status=ssl->verify_callback(ssl,cert,depth,&error);
++			if (status == 0)
++				{
++				if (error != saved_error)
++					{
++					if (error != 0)
++						error=10;
++					sslSetVerifyChainEntryError(entry,error);
++					}
++				status=0;
++				}
++			}
++		}
++	return(status);
++	}
++
++int sslVerifyCertChainInternal(SSL *s, STACK *sk)
++	{
++	int status=0;
++	int verify_err=0;
++	SslVerifyContext *verify_ctx=NULL;
++	SslVerifyState *verify_state=NULL;
++	int verify_ok;
++	SslVerifyCallbackInfo cb_info;
++	int ret;
++
++	s->session->verify_result=10;
++	if (s->ctx->cert_store != NULL)
++		{
++		status=sslNewVerifyContext(s->ctx->library,0,&verify_ctx);
++		if (status == 0)
++			{
++			if (s->verify_flags == 0)
++				status=0;
++			else
++				{
++				status=sslSetVerifyContextFlags(verify_ctx,s->verify_flags);
++				if (status == 0)
++					{
++					if ((s->verify_depth <= 0) ||
++						((status=sslSetVerifyContextInfo(verify_ctx,2,
++							&s->verify_depth)) == 0))
++						{
++						status=sslNewVerifyState(verify_ctx,NULL,
++							&verify_state);
++						if (status == 0)
++							{
++							status=sslSetVerifyStateTimeRange(
++								verify_state,1,s->ctx,s);
++							if (status == 0)
++								{
++								status=sslBuildVerifyCertificateChainArray(
++									verify_state,
++									(SslSmallCertificateStore *)s->ctx->cert_store,
++									(SslCertificate **)sk->data,
++									sk->num,0);
++								if (status == 0)
++									{
++									if (s->verify_callback != NULL)
++										{
++										cb_info.callback=(void *)sslVerifyCertChainCallback;
++										cb_info.arg=s;
++										status=sslSetVerifyContextInfo(
++											verify_ctx,11,&cb_info);
++										}
++									if (status == 0)
++										{
++										status=sslVerifyCertificateChain(
++											verify_state,&verify_ok);
++										if (status == 0)
++											{
++											sslGetVerifyStateError(
++												verify_state,
++												&verify_err);
++											s->session->verify_result=verify_err;
++											}
++										}
++									}
++								}
++							}
++						}
++					}
++				}
++			}
++		}
++	if (verify_state != NULL)
++		sslFreeVerifyState(verify_state);
++	if (verify_ctx != NULL)
++		sslFreeVerifyContext(verify_ctx);
++	ret=0;
++	if (status == 0)
++		{
++		verify_err=0;
++		if (s->session->verify_result == 0)
++			ret=1;
++		}
++	return(ret);
++	}
++
++int ssl_verify_cert_chain(SSL *s, STACK *sk)
++	{
++	int i;
++
++	s->session->verification_state=0;
++	if ((sk == NULL) || (sk_num(sk) == 0))
++		return(0);
++
++	if (s->ctx->app_verify_callback != NULL)
++		i=s->ctx->app_verify_callback(s,sk->data,sk->num,
++			s->ctx->app_verify_arg,&s->session->verify_result);
++	else
++		i=sslVerifyCertChainInternal(s,sk);
++
++	if (s->session->verify_result == 10)
++		SSLerr(SSL_F_SSL_VERIFY_CERT_CHAIN,194);
++	if (i != 0)
++		sslClearThreadErrors();
++	return(i);
++	}
++
++#if 0
+ static int add_client_CA(sk,x)
+ STACK **sk;
+ X509 *x;
+@@ -347,4 +644,39 @@
  	return(ret);
  	}
  #endif
@@ -78,7 +390,7 @@
 +	{
 +	void *name=NULL;
 +	int err=0;
-+
+ 
 +	if ((*sk == NULL) && ((*sk=sk_new_null()) == NULL))
 +		{
 +		err=10005;
@@ -105,6 +417,3 @@
 +		return(0);
 +	return(sslAddClientCa(&(ctx->client_CA),x) == 0);
 +	}
- 
-
- 
