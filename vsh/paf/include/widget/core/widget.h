@@ -37,6 +37,11 @@ namespace paf {
 
 class Timer;
 
+namespace inputdevice {
+class GestureListener;
+class GestureParam;
+}
+
 namespace graph {
 class DrawInfo;
 class DrawObj;
@@ -350,7 +355,7 @@ class FocusShape {
 public:
 	FocusShape()
 		: m_shape(0), m_offset(0.0f, 0.0f, 0.0f), m_size(0.0f, 0.0f), m_rot(0.0f, 0.0f, 0.0f),
-		  reserved_a(false), reserved_b(true)
+		  m_use_parts(false), reserved_b(true)
 	{
 	}
 
@@ -362,8 +367,9 @@ public:
 	math::v2 m_size;
 	math::v3 m_rot;
 	intrusive_ptr<graph::Surface> m_texture;
-	/* made false and true; their readers are not converted */
-	bool reserved_a;
+	/* the cursor is drawn as the widget's part shapes (its m_focus_parts; a text's focused
+	   link sets it), and a flag made true whose readers are not converted (names ours) */
+	bool m_use_parts;
 	bool reserved_b;
 };
 
@@ -835,6 +841,12 @@ public:
 	virtual void OnPadCaptureChanged(bool captured, int32_t group, uint32_t port, uint32_t key)
 	{
 	}
+
+	/* the gesture listener of the touch, made by the environment's gesture priority for the
+	   gestures mask enables, with the parameter set where there is one (0x8115c05c) */
+	common::SharedPtr<inputdevice::GestureListener> ApplyTouchGesture(uint32_t port, uint32_t id,
+									    uint32_t mask,
+									    const inputdevice::GestureParam *param);
 
 	virtual math::v4 calc_align_offset(const math::v4 &size, const math::v4 &aoffs,
 					   uint32_t ax, uint32_t ay, uint32_t az);
@@ -1367,7 +1379,9 @@ public:
 	/* what the touch event slots set (names after them) */
 	bool m_touch_front_event : 1;
 	bool m_touch_rear_event : 1;
-	bool reserved3y1 : 1;
+	/* its focused part is laid out as its cursor (Text::UpdateSize, around its focused
+	   link; name ours) */
+	bool m_focus_parts_on : 1;
 	/* a scroll view does not take the focus by itself while it is idle (ScrollViewBase's focus
 	   update; name ours) */
 	bool m_auto_focus_off : 1;
@@ -1523,7 +1537,9 @@ public:
 	/* its focus state, its focus cursor and the focus of its children (names ours) */
 	Focuser *m_focuser;
 	FocusShape *m_focus_shape;
-	uint8_t reserved7c[0x10];
+	/* the shapes the cursor is drawn as where its shape uses parts: a text's focused link,
+	   a shape per line (name ours) */
+	vector<FocusShape> m_focus_parts;
 	FocusRoot *m_focus_root;
 	/* the widgets whose focus directions name this one, made by the first */
 	FocusReferrers *m_focus_referrers;

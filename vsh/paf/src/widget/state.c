@@ -119,12 +119,6 @@ int _ZN3paf2ui8Animator7IsEnterEv(void)
 	return sce_paf_widget_state_142d8 != 0;
 }
 
-int _ZN3paf2ui4Text16GetSelectionModeERb(const uint8_t *self, uint8_t *output)
-{
-	*output = self[648] & 1;
-	return 0;
-}
-
 int _ZNK3paf2ui6Widget9GetCameraEv(const uint8_t *self)
 {
 	const uint8_t *value = *(const uint8_t *const *)(self + 364);
@@ -196,15 +190,6 @@ uint32_t ScePafWidget_3546C104(const uint8_t *self, uint8_t filter)
 	return flags;
 }
 
-uint32_t _ZN3paf2ui4Text10CheckStateEv(const uint8_t *self)
-{
-	uint32_t result = *(const uint32_t *)(self + 336);
-	const uint8_t *state = *(const uint8_t *const *)(self + 640);
-
-	if (state && !(state[52] & 16))
-		return 0;
-	return result;
-}
 
 
 
@@ -392,97 +377,8 @@ int _ZN3paf2ui7Handler16HandleInputEventEPNS0_5EventE(void *self, uint32_t value
 	return 0;
 }
 
-void *ScePafWidget_40F2A311(uint32_t *self)
-{
-	if (self[118] == 0) {
-		void *const *methods = *(void *const *const *)self;
-		return ((void *(*)(void *))methods[104])(self);
-	}
-	return self;
-}
 
-
-extern int _ZN3paf5graph7TextObj12GetLineCountERj(const uint8_t *self, uint32_t *output);
-extern int _ZN3paf5graph7TextObj11GetCharInfoEjRNS0_18TextLayoutCharInfoE(const uint8_t *self, uint32_t index,
-					   uint8_t *output);
-extern int _ZN3paf5graph7TextObj15GetNextRightHitEjRj(const uint8_t *self, uint32_t index,
-					   uint32_t *output);
-extern int _ZN3paf5graph7TextObj17GetSelectionRangeERjS2_(const uint8_t *self, uint32_t *first,
-					   uint32_t *second);
-
-int _ZN3paf2ui4Text12GetLineCountERj(const uint8_t *self, uint32_t *output)
-{
-	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
-
-	if (graphics)
-		return _ZN3paf5graph7TextObj12GetLineCountERj(graphics, output);
-	return -2136014814;
-}
-
-int _ZN3paf2ui4Text11GetCharInfoEjRNS_5graph18TextLayoutCharInfoE(const uint8_t *self, uint32_t index,
-			   uint8_t *output)
-{
-	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
-
-	if (graphics)
-		return _ZN3paf5graph7TextObj11GetCharInfoEjRNS0_18TextLayoutCharInfoE(graphics, index, output);
-	return -2136014814;
-}
-
-int _ZN3paf2ui4Text15GetNextRightHitEjRj(const uint8_t *self, uint32_t index,
-			   uint32_t *output)
-{
-	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
-
-	if (graphics)
-		return _ZN3paf5graph7TextObj15GetNextRightHitEjRj(graphics, index, output);
-	return -2136014814;
-}
-
-int _ZN3paf2ui4Text17GetSelectionRangeERjS2_(const uint8_t *self, uint32_t *first,
-			   uint32_t *second)
-{
-	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
-
-	if (graphics)
-		return _ZN3paf5graph7TextObj17GetSelectionRangeERjS2_(graphics, first, second);
-	return -2136014814;
-}
-
-extern int _ZN3paf5graph7TextObj18GetLayoutAttributeENS0_19TextLayoutAttributeERNS_4math2v2E(const uint8_t *self, int index,
-					   uint64_t *output);
-extern int _ZN3paf5graph7TextObj9GetBoundsERNS_4math2v2E(const uint8_t *self, uint64_t *output);
-extern int _ZN3paf5graph7TextObj18GetLayoutAttributeENS0_19TextLayoutAttributeERi(const uint8_t *self, int index,
-					   uint32_t *output);
 extern uint8_t *_ZN3paf5graph7DrawObj12FinishSafetyEv(void);
-
-int _ZN3paf2ui4Text18GetLayoutAttributeENS_5graph19TextLayoutAttributeERNS_4math2v2E(const uint8_t *self, int index, uint64_t *output)
-{
-	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
-
-	if (graphics)
-		return _ZN3paf5graph7TextObj18GetLayoutAttributeENS0_19TextLayoutAttributeERNS_4math2v2E(graphics, index, output);
-	return -2136014814;
-}
-
-int _ZN3paf2ui4Text9GetBoundsERNS_4math2v2E(const uint8_t *self, uint64_t *output)
-{
-	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
-
-	if (graphics)
-		return _ZN3paf5graph7TextObj9GetBoundsERNS_4math2v2E(graphics, output);
-	return -2136014814;
-}
-
-int _ZN3paf2ui4Text18GetLayoutAttributeENS_5graph19TextLayoutAttributeERi(const uint8_t *self, int index,
-			   uint32_t *output)
-{
-	const uint8_t *graphics = *(const uint8_t *const *)(self + 640);
-
-	if (graphics)
-		return _ZN3paf5graph7TextObj18GetLayoutAttributeENS0_19TextLayoutAttributeERi(graphics, index, output);
-	return -2136014814;
-}
 
 uint32_t *_ZN3paf2ui8Animator6FinishEv(void)
 {
@@ -609,16 +505,6 @@ int _ZN3paf2ui8Layouter8OnUpdateEv(uint32_t *self)
 	sce_paf_widget_dispatch_guard_142d4 = 1;
 	((void (*)(uint32_t *))*(void **)(vtable + 8))(self);
 	sce_paf_widget_dispatch_guard_142d4 = 0;
-	return 0;
-}
-
-int ScePafWidget_4608F7EF(const uint8_t *self, uint64_t *output)
-{
-	const uint8_t *item = *(const uint8_t *const *)(self + 712);
-
-	if (!item)
-		return -2136014814;
-	*output = *(const uint64_t *)(item + 48);
 	return 0;
 }
 
@@ -752,22 +638,6 @@ int _ZN3paf2ui6Widget17SetDrawObjMaskBitEPKvi(void *self, int first, int second)
 		self, first, second, 0);
 }
 
-int ScePafWidget_3E4AABD3(uint8_t *self, void *replacement)
-{
-	void *previous = *(void **)(self + 716);
-
-	if (previous != replacement) {
-		if (previous) {
-			const uint8_t *methods = *(const uint8_t *const *)previous;
-
-			((void (*)(void *, void *))*(void *const *)(methods + 12))(
-				previous, self);
-		}
-		*(void **)(self + 716) = replacement;
-	}
-	return 0;
-}
-
 int _ZN3paf2ui17EventListenerList4FindEPNS0_13EventListenerE(const uint8_t *self, int32_t requested)
 {
 	const uint8_t *root = *(const uint8_t *const *)(self + 4);
@@ -823,16 +693,6 @@ uint8_t *ScePafWidget_0DCB8EA5(uint8_t *self, float seconds)
 		seconds = 200.0f;
 	*(float *)(self + 976) = seconds;
 	return self;
-}
-
-int ScePafWidget_B9F2249C(uint8_t *self, const uint64_t *value)
-{
-	uint8_t *target = *(uint8_t **)(self + 712);
-
-	if (!target)
-		return -2136014814;
-	*(uint64_t *)(target + 40) = *value;
-	return 0;
 }
 
 uint8_t *_ZN3paf2ui6Widget15InitCreateParamEPKNS1_11CreateParamE(uint8_t *self, const uint8_t *flags)

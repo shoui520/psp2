@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <math/ngp/v2.h>
+#include <math/ngp/v4.h>
 #include <math/rect.h>
 #include <widget/core/widget.h>
 
@@ -61,6 +62,17 @@ public:
 	math::rect m_rect;
 };
 
+/* a place the focus may move to, scored by ScePafWidget_5D4941E8 against a search: the
+   rectangle it moves from and the one it moves to (centres and sizes) and half the size of
+   the view both are in (DefaultFocusCB and the text's link search; names ours) */
+struct FocusCandidate {
+	math::v4 m_from_pos;
+	math::v4 m_from_size;
+	math::v4 m_to_pos;
+	math::v4 m_to_size;
+	math::v2 m_half_view;
+};
+
 /* the focus of the widget's focus root, NULL for none (the focus root's m_state holds it) */
 inline Widget *GetRootFocus(Widget *widget)
 {
@@ -95,6 +107,9 @@ extern "C" {
 /* the search given the widget as its origin: its position, size and focus search rectangle
    (names ours) */
 void ScePafWidget_EA117CF8(paf::ui::Widget::FocusSearchInfo *info, paf::ui::Widget *widget);
+/* the candidate's score for the search, the higher the nearer the way it goes (name ours) */
+int32_t ScePafWidget_5D4941E8(const paf::ui::FocusCandidate *candidate,
+			      paf::ui::Widget::FocusSearchInfo *info);
 }
 
 #endif

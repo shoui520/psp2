@@ -3045,7 +3045,7 @@ ScePaf:
         - _ZN3paf2ui4Text14CreatePlaneObjEv: 0x0B6954A5
         - _ZN3paf2ui4Text11SetCaretPosERKNS_4math2v2E: 0x0B9440F0
         - _ZN3paf2ui14ScrollViewBase15TakeRearGestureEPNS0_5EventE: 0x0BC06625
-        - ScePafWidget_0BCC8382: 0x0BCC8382
+        - _ZN3paf2ui14TextSoundParamD0Ev: 0x0BCC8382
         - _ZN3paf2ui11Environment12ClearHitInfoEPNS0_6WidgetE: 0x0BD5427B
         - _ZN3paf2ui3Box18AddToExclusiveListEPNS0_6WidgetE: 0x0BEBC84F
         - _ZN3paf2ui25MultiTouchGestureListener18RefreshActiveTouchEj: 0x0C1CBE6B
@@ -3587,7 +3587,7 @@ ScePaf:
         - _ZN3paf2ui6Screen4TermEv: 0x43B51900
         - ScePafWidget_43E9F757: 0x43E9F757
         - _ZN3paf2ui5Plane10SetTextureERKNS_13intrusive_ptrINS_5graph7SurfaceEEEij: 0x440A9334
-        - ScePafWidget_44480A7E: 0x44480A7E
+        - _ZN3paf2ui14TextSoundParamC2Ev: 0x44480A7E
         - _ZN3paf2ui10ButtonBase19OnPadCaptureChangedEbijj: 0x4489B12E
         - _ZN3paf2ui13RadioBoxParam3GetEv: 0x448CE9C9
         - ScePafWidget_44B22ACA: 0x44B22ACA
@@ -4384,7 +4384,7 @@ ScePaf:
         - _ZN3paf2ui14ScrollViewBase17OnChildRegisteredEPNS0_6WidgetE: 0x98AA88EE
         - _ZNK3paf2ui14DirectBarParam12GetParamNameEv: 0x98E510CD
         - _ZN3paf2ui8ListView21ScePafWidget_98FD53BFERKNS_4math2v2E: 0x98FD53BF
-        - ScePafWidget_990FB80C: 0x990FB80C
+        - _ZN3paf2ui14TextSoundParamD2Ev: 0x990FB80C
         - _ZN3paf2ui26ProgressBarTouchSoundParam9ParamNameEv: 0x99526750
         - _ZN3paf2ui8ListView22UpdateMovableDirectionEv: 0x9955EB1A
         - _ZN3paf2ui13BusyIndicatorD1Ev: 0x997E220E
@@ -4454,7 +4454,7 @@ ScePaf:
         - _ZN3paf2ui11ScrollBar2d13SetSliderAnimEfi: 0xA0E185C2
         - _ZN3paf2ui19ScrollBarStyleParamC2Ev: 0xA0E21FBC
         - _ZN3paf2ui6Button17ChangeButtonStateENS0_10ButtonBase11ButtonStateE: 0xA0EEE146
-        - ScePafWidget_A0F4E36C: 0xA0F4E36C
+        - _ZN3paf2ui4Text21UpdateLayoutAttributeEv: 0xA0F4E36C
         - _ZN3paf2ui10ButtonBase7DisableEb: 0xA1173889
         - ScePafWidget_A1193AAB: 0xA1193AAB
         - _ZN3paf2ui12PageTurnBase16HandleTouchEventEPNS0_5EventE: 0xA1240E7A
@@ -4478,7 +4478,7 @@ ScePaf:
         - _ZN3paf2ui7TextBoxD2Ev: 0xA2C93CD2
         - _ZN3paf2ui11ImageButton14SetTextureSizeERKNS_4math2v3E: 0xA2F38F08
         - _ZN3paf2ui4Text15StartAutoScrollENS1_10ScrollTypeE: 0xA304D5E7
-        - ScePafWidget_A311ED02: 0xA311ED02
+        - _ZN3paf2ui14TextSoundParamC1Ev: 0xA311ED02
         - _ZN3paf2ui10ButtonBase8TypeNameEv: 0xA3254FB6
         - _ZN3paf2ui8SlideBar8SetValueEib: 0xA38D5EAB
         - _ZN3paf2ui24ScrollViewBaseStyleParamC1Ev: 0xA3D7ED19
@@ -4532,7 +4532,7 @@ ScePaf:
         - ScePafWidget_A962B99B: 0xA962B99B
         - ScePafWidget_A96A0B4A: 0xA96A0B4A
         - _ZN3paf2ui14ScrollViewBase22SetHorizontalBarMarginERKNS_4math2v4E: 0xA9702621
-        - ScePafWidget_A9798081: 0xA9798081
+        - _ZN3paf2ui14TextSoundParamD1Ev: 0xA9798081
         - _ZN3paf2ui10ButtonBase13CreateDrawObjEi: 0xA97A1993
         - _ZN3paf2ui13SlideBarParamC2Ev: 0xA994EEB8
         - _ZN3paf2ui8ListItem21OnTouchCaptureChangedEjji: 0xA9A68A60
@@ -4860,7 +4860,7 @@ ScePaf:
         - _ZN3paf2ui19DirectBarStyleParam7SetEachEPNS0_6WidgetE: 0xCE10BB84
         - _ZN3paf2ui8listview4Cell6SetPosERKNS_4math2v2Eb: 0xCE1AB945
         - ScePafWidget_CE744F88: 0xCE744F88
-        - ScePafWidget_CE85DEFB: 0xCE85DEFB
+        - _ZN3paf2ui14TextSoundParam9ParamNameEv: 0xCE85DEFB
         - ScePafWidget_CEA2BE4E: 0xCEA2BE4E
         - _ZN3paf2ui7TextBox25SetEditAutoTransitionModeEb: 0xCEA84D74
         - _ZN3paf2ui15ScrollViewDebugC1EPNS0_14ScrollViewBaseE: 0xCEB1C41C
@@ -5077,7 +5077,7 @@ ScePaf:
         - _ZN3paf2ui4Text10UpdateSizeEv: 0xE50137C5
         - _ZN3paf2ui8SlideBar16HandlePointEventEPNS0_5EventE: 0xE51F8358
         - ScePafWidget_E534D91D: 0xE534D91D
-        - ScePafWidget_E5BA7A94: 0xE5BA7A94
+        - _ZNK3paf2ui14TextSoundParam12GetParamNameEv: 0xE5BA7A94
         - _ZN3paf2ui13AppIconSimple9EnableTapEb: 0xE5EDFA14
         - _ZN3paf2ui20TouchGestureListenerC1EjjPv: 0xE5EE88D6
         - _ZN3paf2ui8filelist10CellSource8TypeNameEv: 0xE60CC6D4

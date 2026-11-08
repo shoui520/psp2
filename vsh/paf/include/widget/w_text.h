@@ -24,6 +24,8 @@
 /* a text not in a touch mode or not touched, or its auto scroll held by a long press or
    already running (name ours) */
 #define SCE_PAF_ERROR_BUSY	(-2136014815)	/* 0x80AF0021 */
+/* what is made is there already (Text::CreatePlaneObj; name ours) */
+#define SCE_PAF_ERROR_ALREADY_CREATED	(-2136014816)	/* 0x80AF0020 */
 
 namespace paf {
 namespace ui {
@@ -66,6 +68,14 @@ public:
 		SCROLL_TYPE_VERTICAL_ONCE = 4
 	};
 
+	/* how a link was made: set, or found in the string as a URL or an e-mail address
+	   (auto_link_detect; names ours) */
+	enum {
+		LINK_SET = 0,
+		LINK_FOUND_URL = 1,
+		LINK_FOUND_MAIL = 2
+	};
+
 	/* the link styles: a link, an automatically found one, a pressed and a focused one
 	   (names ours) */
 	enum {
@@ -99,8 +109,8 @@ public:
 	   scheme bit it was found by (names ours) */
 	class Link {
 	public:
-		Link(uint32_t index, uint32_t len, bool is_auto, uint16_t scheme)
-			: m_index(index), m_len(len), m_auto(is_auto), m_scheme(scheme)
+		Link(uint32_t index, uint32_t len, int8_t found, uint16_t scheme)
+			: m_index(index), m_len(len), m_found(found), m_scheme(scheme)
 		{
 		}
 
@@ -108,9 +118,16 @@ public:
 		{
 		}
 
+		/* links sort by where they begin */
+		bool operator<(const Link &right) const
+		{
+			return m_index < right.m_index;
+		}
+
 		uint32_t m_index;
 		uint32_t m_len;
-		bool m_auto;
+		/* how it was found: LINK_SET, or found in the string (LINK_FOUND_*; names ours) */
+		int8_t m_found;
 		uint16_t m_scheme;
 	};
 
@@ -172,9 +189,60 @@ public:
 	virtual void DestroyWidget();
 	virtual int32_t HandleTouchEvent(Event *e);
 	virtual int32_t HandleGestureEvent(Event *e);
+	/* the focus put on a link of its own where the search is among them */
+	virtual Widget *SetFocusOption(const void *param, int32_t option);
+	/* a key moves the focus among its links, the focus event puts it on one */
+	virtual int32_t HandleKeycodeEvent(Event *e);
+	virtual int32_t HandleFocusEvent(Event *e);
+	/* kept only while it is smaller than its scene */
+	virtual void SetFitToScene(bool on_off);
+	/* its focused link's cursor laid out a part per line, and its text object sized to it
+	   less its margins */
+	virtual void UpdateSize();
+	/* the text laid out to what its scroll view shows, and the focus put on a link where it
+	   may be */
+	virtual void UpdatePost();
+	virtual int32_t OnDraw(graph::DrawInfo &info);
+	/* the widget's offsets, their y following the text's lines where the vertical alignment
+	   (align, origin) or anchor is one of the text's */
+	virtual math::v4 calc_align_offset(const math::v4 &size, const math::v4 &aoffs, uint32_t ax,
+					   uint32_t ay, uint32_t az);
+	virtual math::v4 calc_origin_offset(const math::v4 &size, const math::v4 &offs, uint32_t ax,
+					    uint32_t ay, uint32_t az);
+	virtual math::v4 calc_anchor_offset(const math::v4 &size, const math::v4 &offs, uint32_t ax,
+					    uint32_t ay, uint32_t az);
+	/* the y of the offset put to the text's lines, as the alignment says: 0 centres all
+	   its lines, 1 puts half the size above the last line's, 2 and 3 above the first's, 4
+	   and 5 centre the last or first line (0x811326e8, name ours) */
+	int32_t AdjustOffsetY(int32_t type, const math::v4 &size, math::v4 &offs);
+	using Widget::SetString;
+	using Widget::GetString;
+	using Widget::SetTexture;
+	/* the string set, its found links made again; 0x80AF0022 without a text object */
+	virtual int32_t SetString(const wstring &str, int32_t obj);
+	virtual int32_t GetString(wstring &str, int32_t obj);
+	/* the texture put on its plane, the plane made where there is a texture and none yet */
+	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,
+				   uint32_t index);
+	/* its plane made and added as OBJ_PLANE; SCE_PAF_ERROR_ALREADY_CREATED where it has one */
+	int32_t CreatePlaneObj();
+	/* its text object's AdjustX and AdjustY from its adjust_x and adjust_y (2 adjusts) */
+	virtual void UpdateLayoutAttribute();
+	/* its state, 0 while its text object is not prepared */
+	virtual uint32_t CheckState();
+	/* AdjustSize where it goes to state 0 */
+	virtual uint32_t ChangeState(uint32_t state, int32_t ev_type);
 
 	/* the link styles deleted (0x8112ef16, name ours) */
 	int32_t DeleteLinkStyles();
+	/* the link styles made from its text's style, where it has none: the found ones' blue,
+	   the pressed one's pink, the focused one's blue, its listener on its scene's event
+	   0x80000A added; deleted again where one cannot be made (0x81131df2, name ours) */
+	int32_t CreateLinkStyles();
+	/* every link's style made the found links' or the normal one (0x8113200c, 0x81132072,
+	   names ours) */
+	int32_t SetLinksStyleAuto();
+	int32_t SetLinksStyleNormal();
 	/* its auto scroll made where it may have one, and started (0x8112f050, name ours) */
 	int32_t RunAutoScroll(ScrollType type);
 	/* the operation done to each friend of its auto scroll found among its parent's
@@ -190,37 +258,80 @@ public:
 	int32_t BeginTouch(const math::v2 &pos);
 	/* its auto scroll there and running (inlined in Sony's code, name ours) */
 	bool IsAutoScrollRunning();
-
+	/* the link's rectangle in it, centered on it (its whole size for NULL): from its first
+	   character to its last, or across the lines it spans (0x8112f9be, name ours) */
+	math::v4 GetLinkRect(const Link *link);
+	/* the same, its position in the world (0x8113027e, name ours) */
+	math::v4 GetLinkWorldRect(const Link *link);
+	/* the link the focus moves to in the direction from the rectangle (a centre and a
+	   size, in the world), made the focus link with its styles; NULL for none (name ours;
+	   the focuser passes a fourth argument, 0, that it does not read) */
+	Link *SearchLinkFocus(int32_t dir, const math::v4 &rect, int32_t reserved);
+	/* the focus link let go where it is not all in the view (name ours) */
+	void CheckLinkFocusInView();
+	/* its text object's attributes, string and layout: each sets or gets its text
+	   object's, its state changed where a set changes the layout; 0x80AF0022 without a
+	   text object */
+	int32_t SetLayoutAttribute(graph::TextLayoutAttribute attr, int32_t val);
+	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, int32_t &val);
+	int32_t SetLayoutAttribute(graph::TextLayoutAttribute attr, float val);
+	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, float &val);
+	int32_t SetLayoutAttribute(graph::TextLayoutAttribute attr, const math::v2 &val);
+	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, math::v2 &val);
+	int32_t SetLayoutAttribute(graph::TextLayoutAttribute attr, bool val);
+	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, bool &val);
+	int32_t SetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, uint32_t len,
+				  int32_t val);
+	int32_t GetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, int32_t &val);
+	int32_t GetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, float &val);
+	int32_t SetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, uint32_t len,
+				  const math::v2 &val);
+	int32_t GetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, math::v2 &val);
 	int32_t SetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, uint32_t len,
 				  const math::v4 &val);
+	int32_t GetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, math::v4 &val);
 	int32_t SetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, uint32_t len,
 				  bool val);
-	int32_t SetLayoutAttribute(graph::TextLayoutAttribute attr, int32_t val);
-	int32_t SetLayoutAttribute(graph::TextLayoutAttribute attr, bool val);
-	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, int32_t &val);
-	/* its text object's bounds */
-	int32_t GetBounds(math::v2 &bounds);
-	/* only returns the error 0x80AF5004 */
-	int32_t SetSelectionMode(bool mode);
+	int32_t GetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, bool &val);
+	/* the style of len characters from index set */
+	int32_t SetStyle(uint32_t index, uint32_t len, const graph::TextStyle &style);
+	/* the style at the index of its text */
+	int32_t GetStyle(uint32_t index, graph::TextStyle &style);
 	int32_t GetLength(uint32_t &len);
-	/* its text object's string with its style runs; 0x80AF0022 without a text object */
+	int32_t SetAttributedString(const graph::AttributedString &str);
+	/* its text object's string with its style runs */
 	int32_t GetAttributedString(graph::AttributedString &str);
-	int32_t GetCaretIndex(uint32_t &index);
-	int32_t GetSelectionRange(uint32_t &index, uint32_t &len);
-	int32_t GetSelectionMode(bool &mode);
+	/* its bounds */
+	int32_t GetBounds(math::v2 &bounds);
+	int32_t GetLineCount(uint32_t &count);
+	int32_t SetCharPos(uint32_t index, const math::v2 &pos);
 	int32_t GetCharInfo(uint32_t index, graph::TextLayoutCharInfo &info);
 	int32_t GetLineInfo(uint32_t line, graph::TextLayoutLineInfo &info);
-	int32_t GetLineCount(uint32_t &count);
-	int32_t GetStyleAttribute(graph::TextStyleAttribute attr, uint32_t index, float &val);
-	int32_t GetLayoutAttribute(graph::TextLayoutAttribute attr, math::v2 &val);
-	/* its auto scroll running, or its animation 2 (0x81132452, name ours) */
+	int32_t GetNextUpHit(uint32_t index, uint32_t &next);
+	int32_t GetNextDownHit(uint32_t index, uint32_t &next);
+	int32_t GetNextLeftHit(uint32_t index, uint32_t &next);
+	int32_t GetNextRightHit(uint32_t index, uint32_t &next);
+	int32_t GetCaretIndex(uint32_t &index);
+	int32_t GetSelectionRange(uint32_t &index, uint32_t &len);
+	int32_t GetCaretVisible(bool &visible);
+	int32_t SetCaretColor(const math::v4 &color);
+	int32_t GetCaretColor(math::v4 &color);
+	int32_t SetSelectionColor(const math::v4 &color);
+	int32_t GetSelectionColor(math::v4 &color);
+	int32_t Invalidate();
+	/* only returns SCE_PAF_ERROR_NO_ENTRY */
+	int32_t SetSelectionMode(bool mode);
+	int32_t GetSelectionMode(bool &mode);
+	/* an empty method nothing in libpaf calls (name ours) */
+	void DoNothing();
+	/* its auto scroll's or a friend's running (0x81132452, name ours) */
 	bool IsScrolling();
 	int32_t StartAutoScroll(ScrollType type);
 	int32_t StopAutoScroll();
+	/* its touch ended: the edit menu told, the selection ended (0x81132c12, name ours) */
+	int32_t EndTouch();
 	/* sends the event with the rectangle, as integers (0x8113262e, name ours) */
 	int32_t SendRectEvent(int32_t type, const math::v4 &rect);
-	/* the style at the index of its text */
-	int32_t GetStyle(uint32_t index, graph::TextStyle &style);
 	/* a long press of the touch in the event: the touch begun at its position, the auto
 	   scroll's origin set there where a touch moves it, and the touch held (0x8112f85c; name
 	   ours) */
@@ -258,7 +369,7 @@ public:
 	/* where the touch began (BeginTouch; name ours) */
 	math::v2 m_touch_pos;
 	/* "auto_link_detect": bit 0 finds URLs, bit 1 (name ours) */
-	uint8_t m_auto_link_detect;
+	int8_t m_auto_link_detect;
 	/* "url_scheme": the URL schemes found, a bit each */
 	int16_t m_url_scheme;
 	graph::TextStyle *m_link_styles[LINK_STYLE_NUM];
@@ -280,6 +391,7 @@ public:
 /* a text's resource parameters (names after the resource's) */
 class TextParam : public WidgetParam {
 public:
+	static const char m_param_name[];
 	static const char *ParamName();
 
 	TextParam();
@@ -322,6 +434,7 @@ public:
 /* a text's sounds: its link tapped (class name ours) */
 class TextSoundParam : public WidgetSoundParam {
 public:
+	static const char m_param_name[];
 	static const char *ParamName();
 
 	TextSoundParam();
@@ -343,16 +456,65 @@ int32_t ScePafWidget_5B2F5119(paf::ui::Text *text, paf::math::v2 pos, float &spe
 int32_t ScePafWidget_8A5AE1CD(paf::ui::Text *text, const paf::math::v2 &pos);
 /* whether a long press scrolls it ("long_press_text_auto_scroll_mode") */
 int32_t ScePafWidget_222D55C7(paf::ui::Text *text, bool *on);
+/* the focused link dropped, and the one at the character the position hits made it */
+int32_t ScePafWidget_55EC0090(paf::ui::Text *text, const paf::math::v2 &pos);
 /* its auto scroll's origin */
+/* whether the animation of the ID, or any of its queues, still runs */
+int32_t ScePafWidget_56384DA3(paf::ui::Widget *widget, int32_t id);
 int32_t ScePafWidget_4608F7EF(paf::ui::Text *text, paf::math::v2 *origin);
+/* its touch release handled where no touch holds it */
+void ScePafWidget_40F2A311(paf::ui::Text *text);
 /* its auto scroll's and its friends' speed (Text::SetAutoScrollSpeed(float), kept by its link
    name for store_browser's import) */
 int32_t ScePafWidget_7C976DF2(paf::ui::Text *text, float speed);
+/* its links found again in its string (auto_link_detect) */
+int32_t ScePafWidget_439FFB75(paf::ui::Text *text);
+/* the links found in its string dropped, their style put back */
+int32_t ScePafWidget_D56954F6(paf::ui::Text *text);
+/* links made for the URLs in the string with the schemes its "url_scheme" picks
+   (auto_link_detect bit 0) */
+int32_t ScePafWidget_374B1ECF(paf::ui::Text *text, const paf::wstring &str);
+/* links made for the e-mail addresses in the string (auto_link_detect bit 1) */
+int32_t ScePafWidget_F7F1BE9A(paf::ui::Text *text, const paf::wstring &str);
+/* its text object's placeholder style and string, and the placeholder string got (names
+   after graph::TextObj's) */
+int32_t ScePafWidget_BC74324A(paf::ui::Text *text, const paf::graph::TextStyle &style);
+int32_t ScePafWidget_3CA096AE(paf::ui::Text *text, const paf::wstring &str);
+int32_t ScePafWidget_758E46AA(paf::ui::Text *text, paf::wstring &str);
+/* the character at the position: inside it, or nearest to it (TextObj::HitTestChar) */
+int32_t ScePafWidget_773A87E8(paf::ui::Text *text, const paf::math::v2 &pos, bool inside,
+			      uint32_t &index);
+/* its scroll view let go; SCE_PAF_ERROR_INVALID_ARGUMENT where it has none */
+int32_t ScePafWidget_B80D9362(paf::ui::Text *text);
+/* its edit menu listener replaced, the one before told the edit ended */
+int32_t ScePafWidget_3E4AABD3(paf::ui::Text *text, paf::ui::TextBoxEditMenuListener *listener);
+/* its long press auto scroll mode: a long press scrolls it, or its edit menu and hit
+   detection come back */
+int32_t ScePafWidget_B93118F3(paf::ui::Text *text, bool on);
+/* "auto_link_detect" set: the found links dropped and found again by the new mode's bits,
+   the link styles made first; 0x80AF0022 without a text object */
+int32_t ScePafWidget_00253246(paf::ui::Text *text, int32_t mode);
+int32_t ScePafWidget_5E14AD2A(paf::ui::Text *text, int32_t *mode);
+/* the found links' (which bit 0, the focused one's too), the pressed one's (bit 1) and the
+   focused one's (bit 2) style set, every link's style made again */
+int32_t ScePafWidget_B2A7DF66(paf::ui::Text *text, int32_t which, const paf::graph::TextStyle &style);
+/* "url_scheme" set: the found links dropped and found again */
+int32_t ScePafWidget_DDB0437F(paf::ui::Text *text, int32_t scheme);
+int32_t ScePafWidget_7524D3BB(paf::ui::Text *text, int32_t *scheme);
+/* a link set from index for len characters; SCE_PAF_ERROR_ALREADY_CREATED where it is set */
+int32_t ScePafWidget_4D5F35D5(paf::ui::Text *text, uint32_t index, uint32_t len);
+/* the set link from index for len characters dropped */
+int32_t ScePafWidget_04FF32F3(paf::ui::Text *text, uint32_t index, uint32_t len);
+/* its auto scroll's speed */
+int32_t ScePafWidget_9EA15F9C(paf::ui::Text *text, float &speed);
+/* how far its auto scroll scrolls set */
+int32_t ScePafWidget_B9F2249C(paf::ui::Text *text, const paf::math::v2 &length);
+/* a friend added to its auto scroll, made first where it may have one */
+int32_t ScePafWidget_B9F3F203(paf::ui::Text *text, const paf::IDParam &id);
+/* a friend dropped from its auto scroll */
+int32_t ScePafWidget_3612C18B(paf::ui::Text *text, const paf::IDParam &id);
 /* its string buffer and its length (Text::GetStringBuffer, by graph::TextObj's) */
 int32_t ScePafWidget_62604965(paf::ui::Text *text, const wchar_t **buf, uint32_t *len);
-/* prototypes from common_gui_dialog's calls, not written in C yet (no name found) */
-void ScePafWidget_B2A7DF66(paf::ui::Text *text, int32_t state, const paf::graph::TextStyle &style);
-void ScePafWidget_4D5F35D5(paf::ui::Text *text, uint32_t a, uint32_t b);
 }
 
 #endif
