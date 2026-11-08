@@ -4629,7 +4629,7 @@ ScePaf:
         - _ZN3paf2ui23SlidingDrawerStyleParamC1Ev: 0xB3BF9D45
         - _ZN3paf2ui11Environment11RequestTermEv: 0xB3DE5B50
         - ScePafWidget_B3E70171: 0xB3E70171
-        - ScePafWidget_B3EB6457: 0xB3EB6457
+        - _ZN3paf2ui7NumSpin6CreateEiiibi: 0xB3EB6457
         - _ZN3paf2ui8ListView20SetSegmentLayoutTypeEiNS1_10LayoutTypeE: 0xB3FA381F
         - _ZN3paf2ui4Text18GetLayoutAttributeENS_5graph19TextLayoutAttributeERf: 0xB3FA5EA2
         - ScePafWidget_B3FFAE42: 0xB3FFAE42

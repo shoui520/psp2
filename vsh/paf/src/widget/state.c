@@ -849,8 +849,6 @@ int _ZNK3paf2ui15CompositeButton9IsInheritEPKc(const void *self, const char *typ
 int _ZNK3paf2ui8CheckBox9IsInheritEPKc(const void *self, const char *type);
 /* ImageButton's is C++ (w_image_button.cpp) */
 int _ZNK3paf2ui11ImageButton9IsInheritEPKc(const void *self, const char *type);
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui7NumSpin9IsInheritEPKc, "num_spin",
-		   _ZNK3paf2ui8SpinBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ItemSpin9IsInheritEPKc, "item_spin",
 		   _ZNK3paf2ui8SpinBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8FileList9IsInheritEPKc, "file_list",

@@ -116,6 +116,10 @@ public:
 /* a spin widget's parameters: active_on_click */
 class SpinBaseParam : public WidgetParam {
 public:
+	SpinBaseParam() : m_active_on_click(false)
+	{
+	}
+
 	/* the derived widget's; none is defined for SpinBaseParam, which is never made itself, so
 	   no vtable is */
 	virtual const char *GetParamName() const;
