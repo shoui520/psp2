@@ -368,7 +368,7 @@ int32_t ScePafGraphics_C5504119(void)
 	return 0;
 }
 
-int32_t ScePafGraphics_27416D74(gutil::WinHandle whandle)
+int32_t ScePafGraphics_27416D74(int32_t width, int32_t height, void *callback)
 {
 	static uint32_t s_frame_count = 0;
 
@@ -396,7 +396,7 @@ namespace gutil {
 
 int32_t Swap(WinHandle whandle)
 {
-	return ScePafGraphics_27416D74(whandle);
+	return ScePafGraphics_27416D74(whandle.width, whandle.height, whandle.callback);
 }
 
 }

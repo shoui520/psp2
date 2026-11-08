@@ -260,7 +260,7 @@ void ScePafGraphics_E4B3B1D2(paf::graph::arl::ArlInstance *gl);
 int32_t ScePafGraphics_C5504119(void);
 /* the frame counted and timed, and once a frame the debug mouse and keyboard read, the mouse
    given the viewport's size */
-int32_t ScePafGraphics_27416D74(paf::gutil::WinHandle whandle);
+int32_t ScePafGraphics_27416D74(int32_t width, int32_t height, void *callback);
 }
 
 #endif

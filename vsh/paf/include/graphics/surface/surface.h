@@ -503,6 +503,12 @@ public:
 		return m_page_size;
 	}
 
+	/* whether the page drawn into was cleared (name ours) */
+	bool IsCleared() const
+	{
+		return m_cleared;
+	}
+
 	/* the colour table an indexed surface looks up (name ours) */
 	const intrusive_ptr<SurfaceCLUT> &GetCLUT() const
 	{

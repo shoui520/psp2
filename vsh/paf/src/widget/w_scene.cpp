@@ -415,8 +415,7 @@ int32_t Scene::SetEntry(int32_t entry)
 	env->AddScene(this, entry, NULL);
 
 	if (m_screen == NULL) {
-		void *mem = operator new(sizeof(Screen));
-		Screen *screen = mem != NULL ? ScePafWidget_C0ABDE05(mem, m_env->m_screen) : NULL;
+		Screen *screen = new Screen(m_env->m_screen);
 
 		if (m_screen != NULL && m_screen->is_auto_delete)
 			delete m_screen;

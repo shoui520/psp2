@@ -4243,7 +4243,7 @@ ScePaf:
         - _ZN3paf2ui8ListView21ScePafWidget_89DDBD65Ei: 0x89DDBD65
         - _ZN3paf2ui12AnimListener12PropColorGetEPS1_: 0x89DFEE4E
         - _ZN3paf2ui6ScreenD2Ev: 0x89F8147A
-        - ScePafWidget_8A0CAAE7: 0x8A0CAAE7
+        - _ZN3paf2ui6ScreenC2EPS1_: 0x8A0CAAE7
         - ScePafWidget_8A132DF7: 0x8A132DF7
         - _ZN3paf2ui6Widget11FindDrawObjEi: 0x8A13BDF2
         - _ZN3paf2ui6Widget8OnUpdateEv: 0x8A14B487
@@ -4752,7 +4752,7 @@ ScePaf:
         - _ZN3paf2ui8RichTextD2Ev: 0xC0821FEB
         - _ZN3paf2ui21PlaneButtonStyleParam9ParamNameEv: 0xC08C9D8A
         - _ZN3paf2ui8Supplier21ScePafWidget_C0A4DDDEEPNS0_5EventE: 0xC0A4DDDE
-        - ScePafWidget_C0ABDE05: 0xC0ABDE05
+        - _ZN3paf2ui6ScreenC1EPS1_: 0xC0ABDE05
         - _ZN3paf2ui26ProgressBarTouchStyleParamC2Ev: 0xC0DD766B
         - _ZN3paf2ui14ScrollViewBase18HandleKeycodeEventEPNS0_5EventE: 0xC0E7AB7E
         - _ZN3paf2ui16ProgressBarTouch7OnTouchEPNS0_5EventE: 0xC12A883C

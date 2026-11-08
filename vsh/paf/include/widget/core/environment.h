@@ -20,6 +20,8 @@
 #include <widget/core/event.h>
 #include <common/shared_ptr.h>
 #include <inputdevice/inputlistener.h>
+#include <graphics/gutil.h>
+#include <std/vector>
 
 namespace paf {
 namespace graph {
@@ -42,6 +44,9 @@ class Screen {
 public:
 	Screen();
 	Screen(intrusive_ptr<graph::Surface> surface);
+	/* of the base's surface, viewport and scissor (NULL: none); the exports C0ABDE05 (C1) and
+	   8A0CAAE7 (C2) */
+	Screen(Screen *base);
 	virtual ~Screen();
 
 	static Screen *GetRootScreen()
@@ -53,6 +58,17 @@ public:
 	   (below 1: the surface's) (0x81148184; name ours), and given up (0x811483c8) */
 	static int32_t Init(gutil::WinHandle whandle, int32_t vp_width, int32_t vp_height);
 	static int32_t Term();
+	/* the root screen given up for another, which is the one the root surface is of */
+	static void SetRootScreen(Screen *screen);
+	/* the frame on the root surface ended and shown (0x811484c2) */
+	static int32_t Swap();
+	/* the screen made the target of the draws that follow, and given up (0x81147e52,
+	   0x81147ff4): 0, or 1 when it is the target already, -1 for none */
+	static int32_t PushTarget(Screen *screen);
+	static int32_t PopTarget(Screen *screen);
+
+	/* the surface given in place of the one it had, which is returned (0x81147828) */
+	intrusive_ptr<graph::Surface> SetSurface(intrusive_ptr<graph::Surface> surface);
 
 	/* the surface made the target of the draws that follow, 0 when it is not cleared yet;
 	   cleared; and the draws finished */
@@ -79,14 +95,18 @@ public:
 	math::rect sp;
 	int32_t clear_policy;
 	intrusive_ptr<graph::Surface> m_surface;
-	uint8_t m_whandle[0xc];
-	int32_t reserved[2];
+	gutil::WinHandle m_whandle;
+	/* the YUV conversion the surface is drawn with (ScreenSurface's, names ours) */
+	uint32_t m_yuv_csc_index;
+	int32_t m_yuv_profile;
 
 	static Screen *s_root_screen;
 	/* where widgets whose camera does not roll the screen are drawn from */
 	static math::v4 s_draw_offset;
 	/* the root screen's surface */
 	static graph::DisplaySurface *s_root_surface;
+	/* the screens the draws go to, the last the target */
+	static vector<Screen *> s_target_list;
 };
 
 class Widget;
@@ -401,8 +421,6 @@ extern const uint32_t g_screen_height_full_hd;
 /* the resource variant of the parameter's resolution with the ID, or the empty one */
 paf::ui::ResolutionResource ScePafWidget_E963EAEE(const paf::ui::EnvironmentParam *param,
 						  uint32_t id);
-/* constructs at mem a screen of the base's surface, viewport and scissor (NULL: none) */
-paf::ui::Screen *ScePafWidget_C0ABDE05(void *mem, paf::ui::Screen *base);
 /* constructs the Environment at mem */
 paf::ui::Environment *ScePafWidget_393F0EF0(void *mem, paf::ui::EnvironmentParam *param,
 					    int32_t screen_orientation_mode);
