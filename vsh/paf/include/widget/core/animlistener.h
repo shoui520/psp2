@@ -71,6 +71,9 @@ public:
 	static AnimPropertyV4 s_prop_anchor;
 	static AnimPropertyF1 s_prop_metaalpha;
 	static AnimPropertyF1 s_prop_showalpha;
+	/* the rotate property again as its own object, for the Euler order option with bit 0x100 of
+	   SetRot (name ours) */
+	static AnimPropertyV4 s_prop_rot_short;
 
 	/* inline: the vtable and these are emitted where an AnimListener is made (Sony's copies in
 	   ButtonBase's object) */

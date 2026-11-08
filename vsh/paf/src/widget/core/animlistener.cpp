@@ -184,7 +184,7 @@ AnimPropertyV4 AnimListener::s_prop_size = { 0x10004, AnimListener::PropSizeSet,
 AnimPropertyV4 AnimListener::s_prop_scale = { 0x10005, AnimListener::PropScaleSet,
 					      AnimListener::PropScaleGet };
 AnimPropertyV4 AnimListener::s_prop_rot = { 0x10006, AnimListener::PropRotSet, AnimListener::PropRotGet };
-static AnimPropertyV4 s_prop_rot_short = { 0x10006, AnimListener::PropRotSet, AnimListener::PropRotGet };
+AnimPropertyV4 AnimListener::s_prop_rot_short = { 0x10006, AnimListener::PropRotSet, AnimListener::PropRotGet };
 AnimPropertyV4 AnimListener::s_prop_quat = { 0x10007, AnimListener::PropQuatSet,
 					     AnimListener::PropQuatGet };
 AnimPropertyV4 AnimListener::s_prop_align = { 0x10008, AnimListener::PropAlignSet,

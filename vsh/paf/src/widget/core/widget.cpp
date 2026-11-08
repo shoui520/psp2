@@ -1544,6 +1544,104 @@ int32_t Widget::SetQuat(const math::quaternion &quat, Timer *t, int32_t id, int3
 	return 0;
 }
 
+/* the animation's first or last target, where one is running (name ours) */
+static inline math::v4 *AnimEndTarget(AnimQueue *anim, bool front)
+{
+	if (anim != NULL) {
+		AnimQueueBase *queue = anim->m_queue[0];
+
+		if (queue != NULL) {
+			AnimListener *listener = static_cast<AnimListener *>(front ? queue->GetFront() : queue->GetBack());
+
+			if (listener != NULL)
+				return listener->GetTargetV4();
+		}
+	}
+	return NULL;
+}
+
+/* the Euler angles of the rotation in the order of the option (ZYX for 1, XYZ for 2, else YXZ),
+   w 0 (inline in Sony; name ours) */
+static inline __attribute__((always_inline)) math::v4 QuatToEuler(const math::quaternion &quat, uint8_t option)
+{
+	math::v3 angles;
+
+	if (option > 1) {
+		if (option <= 2)
+			angles = quat.toMatrix(0.0001f).extractEulerAnglesXYZ();
+		else
+			angles = quat.toMatrix(0.0001f).extractEulerAnglesYXZ();
+	} else if (option != 0) {
+		angles = quat.toMatrix(0.0001f).extractEulerAnglesZYX();
+	} else {
+		angles = quat.toMatrix(0.0001f).extractEulerAnglesYXZ();
+	}
+	return math::v4(angles, 0.0f);
+}
+
+int32_t Widget::SetRot(const math::v4 &rot, int32_t option, Timer *t, int32_t id, int32_t opt,
+		       float delay, AnimCB cb_fin, void *usrdata)
+{
+	if (IsDragMoving(this)) {
+		delete t;
+		return -1;
+	}
+	KillAnimType(ANIM_QUAT);
+	if (t == NULL) {
+		KillAnimType(ANIM_ROT);
+		return SetRot_core(rot, option, 0xFF08);
+	}
+
+	AnimPropertyV4 *prop = &AnimListener::s_prop_rot;
+
+	if ((option & 0x100) != 0)
+		prop = &AnimListener::s_prop_rot_short;
+
+	AnimListener *listener = new AnimListenerV4(
+		t, this, GetRot(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f), 0), rot, prop, cb_fin, usrdata);
+
+	if ((id & 0xFF0000) != 0)
+		id = (id & 0xFF000000) | ANIM_ROT;
+	SetAnimListener_withDelay(id, listener, delay, opt);
+	return 0;
+}
+
+math::v4 Widget::GetRot(int32_t opt, Widget *ref, const math::v4 &off_rot, int32_t option)
+{
+	if (opt != 0) {
+		bool front = opt == 2;
+		math::v4 *rot = AnimEndTarget(FindAnim(ANIM_ROT), front);
+
+		if (rot != NULL)
+			return *rot;
+
+		math::quaternion quat = m_quat;
+
+		if (FindAnim(ANIM_QUAT) != NULL) {
+			math::v4 *target = AnimEndTarget(FindAnim(ANIM_QUAT), front);
+
+			if (target != NULL)
+				quat = reinterpret_cast<math::quaternion &>(*target);
+			return QuatToEuler(quat, option);
+		}
+		if (m_rot_euler)
+			return math::v4(m_rot.extract_x(), m_rot.extract_y(), m_rot.extract_z(), 0.0f);
+		return QuatToEuler(m_quat, option);
+	}
+	if (ref != NULL) {
+		UpdateMatrix();
+		ref->UpdateMatrix();
+
+		math::quaternion own = m_world_rot;
+		math::quaternion rel = QuatMul(ref->m_world_rot.inverse(), own);
+
+		return QuatToEuler(rel, option);
+	}
+	if (m_rot_euler)
+		return math::v4(m_rot.extract_x(), m_rot.extract_y(), m_rot.extract_z(), 0.0f);
+	return QuatToEuler(m_quat, option);
+}
+
 math::v4 Widget::GetPos(int32_t opt, Widget *ref, const math::v4 &off_pos)
 {
 	if (opt != 0) {
