@@ -575,6 +575,95 @@ int32_t AppIconBase::HandleTouchEvent(Event *e)
 	return Widget::HandleTouchEvent(e);
 }
 
+/* the decide key (27) pressed raises the icon, released or cancelled drops it; while the
+   icon is raised the other keys stop here */
+int32_t AppIconBase::HandleKeycodeEvent(Event *e)
+{
+	uint32_t key = e->m_detail & 0xff;
+
+	if (key == 27) {
+		switch (e->GetType()) {
+		case 0x11:
+			if (m_icon_state == 0 && IsInputTarget()) {
+				m_touch_gesture_mask = 5;
+				CapturePad((e->m_detail >> 20) & 0xf, key, true, true);
+				m_touch_gesture_mask = 0;
+				SetIconState(1, key);
+			}
+			e->Consume();
+			break;
+		case 0x12:
+			ReleasePadCaptureDir(key, false);
+			ReleasePadCaptureButton(key, false);
+			SetIconState(0, key);
+			e->Consume();
+			break;
+		case 0x14:
+			ReleasePadCaptureDir(key, true);
+			ReleasePadCaptureButton(key, true);
+			SetIconState(0, key);
+			e->Consume();
+			break;
+		}
+	}
+	if (((e->m_detail >> 24) & 1) == 0 && (e->m_detail & 0xff) != 27 && m_icon_state != 0)
+		e->Consume();
+	return Handler::HandleKeycodeEvent(e);
+}
+
+/* a tap sends 0x10000001 and drops the icon, a hold raises it further, and a drag of the
+   movable icon (mode 1) enlarges it and either sends 0x10000002 over another widget or
+   drags it */
+int32_t AppIconBase::HandleGestureEvent(Event *e)
+{
+	uint32_t detail = e->m_detail;
+	uint32_t port = (detail >> 20) & 0xf;
+	uint32_t id = detail & 0xff;
+
+	switch ((detail >> 8) & 0x7f) {
+	case 0:
+		DoEvent(0x10000001, e);
+		SetIconState(0, id);
+		e->Consume();
+		return 0;
+	case 1:
+		if (m_icon_state == 1)
+			SetIconState(2, id);
+		else if (m_icon_state == 3)
+			SetIconState(4, id);
+		e->Consume();
+		return 0;
+	case 4:
+		if (m_icon_mode == 1) {
+			if (!m_dragging) {
+				m_dragging = true;
+				KillObjAnim(0, 0x20200);
+
+				math::v4 size = GetIconSize() * 1.2f;
+
+				SetObjAnim(0, 0x20200, size,
+					   new Timer(100.0f, Timer::FUNC_QUAD_OUT), 0);
+
+				HitInfo hit;
+
+				if (m_env->GetHitStack(&hit, this) != 0) {
+					DoEvent(0x10000002, e);
+					e->Consume();
+				} else {
+					ScePafWidget_DE592034(this, port, id, 0x110);
+					e->Consume();
+				}
+			}
+		} else {
+			DoEvent(0x10000002, e);
+			SetIconState(0, id);
+		}
+		e->Consume();
+		return 0;
+	}
+	return Widget::HandleGestureEvent(e);
+}
+
 AppIconBase::~AppIconBase()
 {
 }

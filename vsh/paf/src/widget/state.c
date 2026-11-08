@@ -837,14 +837,6 @@ uint8_t *ScePafWidget_0DCB8EA5(uint8_t *self, float seconds)
 	return self;
 }
 
-int ScePafWidget_6A60296B(uint8_t *self, uint32_t index, float value)
-{
-	if (index >= 8)
-		return -1;
-	*(float *)(self + 1156 + index * 4) = value;
-	return 0;
-}
-
 int ScePafWidget_B9F2249C(uint8_t *self, const uint64_t *value)
 {
 	uint8_t *target = *(uint8_t **)(self + 712);

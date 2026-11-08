@@ -2560,7 +2560,7 @@ ScePaf:
         - _ZN3paf2ui17WidgetLayoutParam3GetEv: 0x9DEF6BF0
         - _ZN3paf8resource11ResourceObjC1EPvjPKNS1_6OptionE: 0x9E3EE281
         - _ZNK3paf8resource11ResourceObj7GetPageEPKcRNS_4cxml7ElementE: 0x9EDFB093
-        - ScePafResource_9F8FA452: 0x9F8FA452
+        - _ZN3paf11VisualParam15ResolutionParam4DrawEv: 0x9F8FA452
         - _ZN3paf21VersatileParamManager8AddParamEPKcRKNS_7IDParamEPNS_14VersatileParamE: 0xA15DF9EF
         - _ZN3paf21VersatileParamManager9FindParamERKNS_7IDParamE: 0xA218AA16
         - _ZNK3paf8resource11ResourceObj20GetTextureFromBufferEjPPvPjS4_: 0xA667DEF2
@@ -3927,7 +3927,7 @@ ScePaf:
         - _ZNK3paf2ui8filelist10Visualizer11GetTypeNameEv: 0x6A0674B4
         - _ZN3paf2ui5Plane11SwapDrawObjENS_6common9SharedPtrINS_5graph7DrawObjEEEi: 0x6A222804
         - _ZN3paf2ui8ListView16FreeCellPositionEiib: 0x6A2A7BDC
-        - ScePafWidget_6A60296B: 0x6A60296B
+        - _ZN3paf2ui8RichText21ScePafWidget_6A60296BEjf: 0x6A60296B
         - _ZNK3paf2ui6Widget11GetTypeNameEv: 0x6A74B572
         - _ZN3paf2ui8SpinBaseC1EPNS0_6WidgetEPNS2_11CreateParamE: 0x6A8DA1E8
         - _ZN3paf2ui6Widget8SetFocusEPNS1_12SetFocusInfoE: 0x6A9532CE
@@ -4800,7 +4800,7 @@ ScePaf:
         - ScePafWidget_C79983DE: 0xC79983DE
         - _ZN3paf2ui11EnvironmentD0Ev: 0xC79BAF2C
         - _ZN3paf2ui13RadioBoxParam6CreateEi: 0xC7A88ABB
-        - ScePafWidget_C7BE2076: 0xC7BE2076
+        - _ZNK3paf2ui8RichText21ScePafWidget_C7BE2076EiRNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0xC7BE2076
         - _ZNK3paf2ui8PageTurn9IsInheritEPKc: 0xC7D6AD89
         - _ZN3paf2ui6Widget18HandleGestureEventEPNS0_5EventE: 0xC7E10AA6
         - _ZN3paf2ui8listview7Segment8MoveCellEiRi: 0xC8033EF2
