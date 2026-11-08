@@ -23,8 +23,10 @@ typedef struct SslContextHeader {
 #define SSL_SESS_CACHE_SERVER 0x0002
 #define SSL_SESS_CACHE_BOTH (SSL_SESS_CACHE_CLIENT | SSL_SESS_CACHE_SERVER)
 
-/* Descriptive name ours: native callback operation for removing a session. */
+/* Descriptive names ours: native callback operations for session cache. */
+#define SCE_SSL_SESSION_CACHE_ADD 1
 #define SCE_SSL_SESSION_CACHE_REMOVE 2
+#define SCE_SSL_SESSION_CACHE_GET 3
 
 _Static_assert(offsetof(SslContextHeader, session_cache_callback) == 24,
 	       "session_cache_callback");

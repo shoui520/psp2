@@ -18,4 +18,7 @@
 #define X509_free SceSslInternal_144FA354
 #define EVP_PKEY_free SceSslInternal_46358909
 
+int SceSslInternal_08179EBD(void *cert, int flags, void **subject);
+void SceSslInternal_CE37B69E(void *name);
+
 #include "ssl_cert_sce.inc"

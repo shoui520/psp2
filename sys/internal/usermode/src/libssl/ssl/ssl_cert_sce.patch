@@ -23,7 +23,7 @@
  CERT *ssl_cert_new()
  	{
  	CERT *ret;
-@@ -118,12 +118,10 @@
+@@ -118,12 +118,13 @@
  		}
  #endif
  
@@ -34,13 +34,16 @@
 -	if (c->dh_tmp) DH_free(c->dh_tmp);
 -#endif
 +	/* SCE: native temporary key ownership, before the five certificate slots. */
-+	for (i=0; i<3; i++)
-+		if (c->temporary_keys[i] != NULL)
-+			EVP_PKEY_free(c->temporary_keys[i]);
++	if (c->temporary_keys[0] != NULL)
++		EVP_PKEY_free(c->temporary_keys[0]);
++	if (c->temporary_keys[1] != NULL)
++		EVP_PKEY_free(c->temporary_keys[1]);
++	if (c->temporary_keys[2] != NULL)
++		EVP_PKEY_free(c->temporary_keys[2]);
  
  	for (i=0; i<SSL_PKEY_NUM; i++)
  		{
-@@ -131,16 +129,20 @@
+@@ -131,16 +132,20 @@
  			X509_free(c->pkeys[i].x509);
  		if (c->pkeys[i].privatekey != NULL)
  			EVP_PKEY_free(c->pkeys[i].privatekey);
@@ -62,9 +65,46 @@
  int ssl_set_cert_type(c, type)
  CERT *c;
  int type;
-@@ -347,4 +349,5 @@
+@@ -347,4 +349,40 @@
  	return(ret);
  	}
  #endif
 +#endif /* unselected certificate operations */
++
++/* SCE: SSL-C subject-name extraction adaptation of add_client_CA;
++ * descriptive helper name is ours.
++ */
++int sslAddClientCa(STACK **sk, void *x)
++	{
++	void *name=NULL;
++	int err=0;
++
++	if ((*sk == NULL) && ((*sk=sk_new_null()) == NULL))
++		{
++		err=10005;
++		goto err;
++		}
++	err=SceSslInternal_08179EBD(x,0,&name);
++	if (err != 0)
++		goto err;
++	if (sk_push(*sk,(char *)name) <= 0)
++		{
++		err=10005;
++		goto err;
++		}
++	return(0);
++err:
++	if (name != NULL)
++		SceSslInternal_CE37B69E(name);
++	return(err);
++	}
++
++int SceSslInternal_00ABEBC3(SSL_CTX *ctx, void *x)
++	{
++	if ((ctx == NULL) || (x == NULL))
++		return(0);
++	return(sslAddClientCa(&(ctx->client_CA),x) == 0);
++	}
+ 
+
  

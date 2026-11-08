@@ -4,20 +4,45 @@
  
  #ifndef HEADER_SSL_LOCL_H
  #define HEADER_SSL_LOCL_H
-+#if 0 /* SCE: only the certificate container layout is selected. */
++#if 0 /* SCE: system headers are supplied by the consuming wrapper. */
  #include <stdlib.h>
  #include <time.h>
  #include <string.h>
-@@ -211,6 +212,8 @@
- 				SSL_MAC_MASK|SSL_EXP_MASK)
- 
- /* Mostly for SSLv3 */
+@@ -74,6 +75,7 @@
+ #include "x509.h"
+ #include "err.h"
+ #include "ssl.h"
 +#endif
-+
- #define SSL_PKEY_RSA_ENC	0
- #define SSL_PKEY_RSA_SIGN	1
- #define SSL_PKEY_DSA_SIGN	2
-@@ -234,9 +237,11 @@
+ 
+ #define PKCS1_CHECK
+ 
+@@ -177,7 +179,7 @@
+ #define SSL_DH			(SSL_kDHr|SSL_kDHd|SSL_kEDH)
+ #define SSL_FZA			(SSL_aFZA|SSL_kFZA|SSL_eFZA)
+ 
+-#define SSL_ENC_MASK		0x0001Fc00L
++#define SSL_ENC_MASK		0x0803Fc00L
+ #define SSL_DES			0x00000400L
+ #define SSL_3DES		0x00000800L
+ #define SSL_RC4			0x00001000L
+@@ -185,10 +187,13 @@
+ #define SSL_IDEA		0x00004000L
+ #define SSL_eFZA		0x00008000L
+ #define SSL_eNULL		0x00010000L
++/* SCE: SSL-C AES encryption mask bits; descriptive macro names are ours. */
++#define SSL_AES128		0x00020000L
++#define SSL_AES256		0x08000000L
+ 
+-#define SSL_MAC_MASK		0x00060000L
+-#define SSL_MD5			0x00020000L
+-#define SSL_SHA1		0x00040000L
++#define SSL_MAC_MASK		0x000c0000L
++#define SSL_MD5			0x00040000L
++#define SSL_SHA1		0x00080000L
+ #define SSL_SHA			(SSL_SHA1)
+ 
+ #define SSL_EXP_MASK		0x00300000L
+@@ -234,9 +239,11 @@
  
  typedef struct cert_pkey_st
  	{
@@ -31,7 +56,7 @@
  	} CERT_PKEY;
  
  typedef struct cert_st
-@@ -262,10 +267,11 @@
+@@ -262,10 +269,11 @@
  	unsigned long mask;
  	unsigned long export_mask;
  
@@ -47,15 +72,32 @@
  	CERT_PKEY pkeys[SSL_PKEY_NUM];
  
  	STACK *cert_chain;
-@@ -273,6 +279,7 @@
+@@ -273,6 +281,7 @@
  	int references;
  	} CERT;
  
-+#if 0 /* SCE: remaining internal interfaces are reconstructed separately. */
++#ifndef SCE_SSL_LOCL_FULL
  /*#define MAC_DEBUG	*/
  
  /*#define ERR_DEBUG	*/
-@@ -565,7 +572,8 @@
+@@ -284,6 +293,8 @@
+ /*#define RSA_DEBUG	*/ 
+ /*#define IDEA_DEBUG	*/ 
+ 
++#endif
++
+ #ifndef NOPROTO
+ #define FP_ICC  (int (*)(const void *,const void *))
+ #else
+@@ -315,6 +326,7 @@
+ 	int (*alert_value)();
+ 	} SSL3_ENC_METHOD;
+ 
++#if 0 /* SCE: remaining internal interfaces are declared by ssl_locl.h. */
+ /* Used for holding the relevent compression methods loaded into SSL_CTX */
+ typedef struct ssl3_comp_st
+ 	{
+@@ -565,7 +577,8 @@
  
  #endif
  
@@ -65,9 +107,10 @@
  int ssl3_cert_verify_mac();
  int ssl3_alert_code();
  int tls1_new();
-@@ -582,3 +590,5 @@
+@@ -582,3 +595,5 @@
  int tls1_generate_master_secret();
  int tls1_alert_code();
  int ssl_ok();
 +#endif
 +#endif /* HEADER_SSL_LOCL_H */
+

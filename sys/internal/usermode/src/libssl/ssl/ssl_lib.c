@@ -37,6 +37,9 @@
 #define SSL_connect SceSslInternal_92560B8D
 #define SSL_set_connect_state SceSslInternal_CEE46B33
 
+/* Descriptive global name is ours; holds SSL-C's weak-cipher enable mask. */
+int ssl_weak_cipher_flags;
+
 #include "ssl_lib_sce.inc"
 
 /* SSL-C's out-of-line form of the upstream rwstate query. */

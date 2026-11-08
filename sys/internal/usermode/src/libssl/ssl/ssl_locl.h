@@ -12,8 +12,6 @@
 #include "../buffer/buffer.h"
 #include "../CRYPTOCME/common/module/crypto/cry_api.h"
 
-typedef struct ssl_ctx_st SSL_CTX;
-
 typedef struct SslRecordCrypto {
 	int mac_size;
 	void *mac_algorithm;
@@ -50,9 +48,6 @@ typedef void (*SslInfoCallback)(SSL *ssl, int where, int result);
 /* Retained upstream lock index, shared by the session translation units. */
 #define CRYPTO_LOCK_SSL_SESSION 14
 
-#define SSL_in_init(s) ((s)->state & SSL_ST_INIT)
-#define SSL_in_before(s) ((s)->state & SSL_ST_BEFORE)
-
 #define SSL_NOTHING 1
 #define SSL_WRITING 2
 #define SSL_READING 3
@@ -86,10 +81,26 @@ int sslClearConnection(SSL *ssl, int keep_method); /* Descriptive name ours. */
 int SSL_set_accept_state(SSL *ssl);
 int SceSslInternal_CEE46B33(SSL *ssl);
 int ssl_clear_bad_session(SSL *ssl);
+SSL_METHOD *sslv3_base_method(void);
+int ssl3_num_ciphers(void);
+SSL_CIPHER *ssl3GetScsvCipher(void); /* Descriptive name is ours. */
+int ssl3RemoveScsvCipher(STACK *sk); /* Descriptive name is ours. */
+SSL_CIPHER *ssl3_get_cipher(unsigned int u);
 int ssl3_new(SSL *ssl);
 void ssl3CleanupHandshake(SSL *ssl); /* Descriptive name is ours. */
 void ssl3_free(SSL *ssl);
 void ssl3_clear(SSL *ssl);
+long ssl3_ctrl(SSL *ssl, int cmd, long larg, char *parg);
+long ssl3_ctx_ctrl(SSL_CTX *ctx, int cmd, long larg, char *parg);
+SSL_CIPHER *ssl3_get_cipher_by_char(unsigned char *p);
+SSL_CIPHER *ssl3_choose_cipher(SSL *ssl, STACK *have, STACK *pref);
+int ssl3_get_req_cert_type(SSL *ssl, unsigned char *p);
+int ssl3_shutdown(SSL *ssl);
+int ssl3_renegotiate_check(SSL *ssl);
+int ssl3_write(SSL *ssl, const void *buf, int len);
+int ssl3_read(SSL *ssl, void *buf, int len);
+int ssl3_peek(SSL *ssl, void *buf, int len);
+int ssl3_renegotiate(SSL *ssl);
 int ssl3ResizeReadBuffer(SSL *ssl, int length);
 int ssl3_setup_buffers(SSL *ssl);
 void ssl_clear_cipher_ctx(SSL *ssl);
@@ -99,11 +110,74 @@ void SSL_SESSION_free(SSL_SESSION *session);
 CERT *ssl_cert_new(void);
 void ssl_cert_free(CERT *certificate);
 long SSL_SESSION_get_timeout(SSL_SESSION *session);
+long SSL_CTX_set_timeout(SSL_CTX *ctx, long timeout);
+int SSL_set_session(SSL *ssl, SSL_SESSION *session);
+int ssl_get_new_session(SSL *ssl, int session);
+int ssl_get_prev_session(SSL *ssl, unsigned char *session_id, int len);
+void ssl_update_cache(SSL *ssl, int mode);
+/* Descriptive cipher/digest table entry types are ours; array names are upstream's. */
+typedef struct SslCipherInfo {
+	unsigned long algorithms;
+	unsigned long algorithm2;
+	int crypto_id;
+	int key_len;
+	int iv_len;
+} SslCipherInfo;
+
+typedef struct SslDigestInfo {
+	unsigned long algorithms;
+	int crypto_id;
+	int md_size;
+} SslDigestInfo;
+
+extern SslCipherInfo ssl_cipher_methods[];
+extern SslDigestInfo ssl_digest_methods[];
+extern int ssl_weak_cipher_flags; /* Descriptive name is ours. */
+
 /* Descriptive helper names are ours, not recovered Sony names. */
 int sslSessionAddReference(SSL_SESSION *session);
 struct SslTime *sslSessionCopyTime(SSL_SESSION *session, struct SslTime *result);
 unsigned int sslSessionGetIdLength(SSL_SESSION *session);
 int sslSessionMarkNotResumable(SSL_SESSION *session);
+int sslSessionSetExtensions(SSL_SESSION *session, SslExtensionList *extensions);
+int sslSessionGetExtensions(SSL_SESSION *session, SslExtensionList **result);
+int sslSessionIsValid(SSL_SESSION *session);
+int sslExtensionListCopy(SslExtensionList *source, SslExtensionList **result);
+int ssl_cipher_get_evp(SSL_CTX *ctx, SSL_CIPHER *c, SslCryptoAlgorithm **enc,
+		       SslCryptoAlgorithm **md);
+int sslCipherQuerySupport(SSL_CTX *ctx, SSL_CIPHER *c, int *enc_supported,
+			  int *mac_supported);
+char *SSL_CIPHER_description(SSL_CIPHER *cipher, char *buf, int len);
+unsigned long SSL_CIPHER_get_id(SSL_CIPHER *c);
+char *SSL_CIPHER_get_version(SSL_CIPHER *c);
+char *SceSslInternal_2B90012E(SSL_CIPHER *c);
+int sslCipherIsValid(SSL_CIPHER *c);
+int SSL_CIPHER_get_bits(SSL_CIPHER *c, int *alg_bits);
+int sslCipherGetBits(SSL *ssl, SSL_CIPHER *c, int *alg_bits);
+int sslGetCertificateType(int sig_alg_id, void *pkey);
+int sslCheckRsaKeyLimits(SSL *ssl, void *pkey);
+int ssl3CopyDigestAlgorithm(SslCryptoAlgorithm **dst, SslCryptoAlgorithm *src);
+int sslCipherGetSizes(SSL_CIPHER *c, int *key_len, int *iv_len, int *mac_len);
+int ssl3GetCipherAndDigest(SSL_CTX *ctx, SSL_CIPHER *c, SslCryptoAlgorithm **enc,
+			   SslCryptoAlgorithm **md);
+int ssl3_change_cipher_state(SSL *s, int which);
+int ssl3_setup_key_block(SSL *s);
+void ssl3_cleanup_key_block(SSL *s);
+int ssl3_enc(SSL *s, int send_data);
+int ssl3_init_finished_mac(SSL *s);
+int ssl3_finish_mac(SSL *s, unsigned char *buf, int len);
+int ssl3_cert_verify_mac(SSL *s, SslCryptoAlgorithm *ctx, unsigned char *p);
+int ssl3_final_finish_mac(SSL *s, SslCryptoAlgorithm *ctx1,
+			  SslCryptoAlgorithm *ctx2, unsigned char *sender,
+			  int len, unsigned char *p);
+int ssl3_mac(SSL *ssl, unsigned char *md, int send_data);
+int ssl3_generate_master_secret(SSL *s, unsigned char *out,
+				unsigned char *p, int len);
+int ssl3_alert_code(int code);
+int SSL_use_certificate(SSL *ssl, void *x);
+int SSL_use_PrivateKey(SSL *ssl, void *pkey);
+int SceSslInternal_D419451B(SSL_CTX *ctx, void *x);
+int SceSslInternal_26CBEEB6(SSL_CTX *ctx, void *pkey);
 
 /* Descriptive names for SSL-C's extra states are ours, not Sony spellings. */
 #define SSL3_ST_CR_HELLO_REQ_A (0x101 | SSL_ST_CONNECT)
@@ -112,6 +186,9 @@ int sslSessionMarkNotResumable(SSL_SESSION *session);
 _Static_assert(sizeof(SslRecordCrypto) == 28, "SslRecordCrypto");
 _Static_assert(sizeof(SslExtensionList) == 8, "SslExtensionList");
 _Static_assert(sizeof(SSL) == 352, "SSL");
+_Static_assert(sizeof(SSL_CTX) == 220, "SSL_CTX");
+_Static_assert(sizeof(SSL_CIPHER) == 24, "SSL_CIPHER");
+_Static_assert(sizeof(SSL3_ENC_METHOD) == 84, "SSL3_ENC_METHOD");
 _Static_assert(sizeof(SSL_METHOD) == 88, "SSL_METHOD");
 _Static_assert(sizeof(SSL_SESSION) == 196, "SSL_SESSION");
 _Static_assert(sizeof(CERT) == 104, "CERT");

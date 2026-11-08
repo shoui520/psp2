@@ -1,6 +1,6 @@
 --- a/s3_both.c
 +++ b/s3_both.c
-@@ -57,13 +57,9 @@
+@@ -57,12 +57,7 @@
   */
  
  #include <stdio.h>
@@ -12,15 +12,624 @@
 -#include "ssl_locl.h"
 +/* SCE: the consuming wrapper supplies the identified SSL interfaces. */
  
-+#if 0 /* SCE: remaining handshake operations are not selected. */
  #define BREAK	break
  
- /* SSL3err(SSL_F_SSL3_GET_FINISHED,SSL_R_EXCESSIVE_MESSAGE_SIZE);
-@@ -460,30 +456,34 @@
+@@ -85,12 +80,14 @@
+ 		d=(unsigned char *)s->init_buf->data;
+ 		p= &(d[4]);
+ 
+ 		i=s->method->ssl3_enc->final_finish_mac(s,
+-			&(s->s3->finish_dgst1),
+-			&(s->s3->finish_dgst2),
++			s->s3->finish_dgst1,
++			s->s3->finish_dgst2,
+ 			sender,slen,p);
+-		p+=i;
++		if (i == 0)
++			return(-1);
+ 		l=i;
++		memcpy(&(s->s3->tmp.finish_md[l]),p,l);
+ 
+ #ifdef WIN16
+ 		/* MSVC 1.5 does not clear the top bytes of the word unless
+@@ -111,6 +105,160 @@
+ 	return(ssl3_do_write(s,SSL3_RT_HANDSHAKE));
+ 	}
+ 
++/* SCE: moved from s3_pkt.c in SSL-C so ssl3_get_message can inline it. */
++int ssl3_part_read(SSL *s, int i)
++	{
++	s->rwstate=SSL_READING;
++	if (i < 0)
++		return(i);
++	s->init_num+=i;
++	return(0);
++	}
++
++/* SCE: SSL-C dynamic write-buffer resize helper; descriptive name is ours. */
++int ssl3ResizeWriteBuffer(SSL *s, int len)
++	{
++	unsigned char *p;
++	int capacity;
++
++	if (s->s3->wbuf.buf == NULL)
++		{
++		capacity=len+SCE_SSL3_WRITE_OVERHEAD;
++		if ((int)s->s3->wbuf.capacity >= capacity)
++			return(1);
++		if ((p=(unsigned char *)Realloc(s->s3->wbuf.buf,capacity,
++			s->s3->wbuf.capacity)) == NULL)
++			goto err;
++		memset(&(p[s->s3->wbuf.capacity]),0,capacity-s->s3->wbuf.capacity);
++		s->s3->wbuf.capacity=capacity;
++		s->s3->wbuf.buf=p;
++		s->max_send_fragment=len;
++		}
++	return(1);
++err:
++	SSLerr(SSL_F_SSL3_SETUP_BUFFERS,ERR_R_MALLOC_FAILURE);
++	return(0);
++	}
++
++long ssl3_get_message(s,st1,stn,mt,max,ok)
++SSL *s;
++int st1,stn,mt;
++long max;
++int *ok;
++	{
++	unsigned char *p;
++	unsigned long l;
++	long n,ret= -1;
++	int i,al= -1;
++
++	*ok=0;
++	if (s->s3->tmp.reuse_message)
++		{
++		s->s3->tmp.reuse_message=0;
++		if ((mt >= 0) && (s->s3->tmp.message_type != mt))
++			{
++			SSLerr(SSL_F_SSL3_GET_MESSAGE,SSL_R_UNEXPECTED_MESSAGE);
++			al=SSL_AD_UNEXPECTED_MESSAGE;
++			goto f_err;
++			}
++		*ok=1;
++		ret=(int)s->s3->tmp.message_size;
++		goto err;
++		}
++
++	p=(unsigned char *)s->init_buf->data;
++	memset(p,0,s->init_buf->max);
++
++	if (s->state == st1)
++		{
++		int left=4;
++
++		do
++			{
++			i=ssl3_read_bytes(s,SSL3_RT_HANDSHAKE,
++				(char *)&(p[s->init_num]),left);
++			if (i <= 0)
++				{
++				ret=ssl3_part_read(s,i);
++				goto err;
++				}
++			s->init_num+=i;
++			left-=i;
++			}
++		while (left > 0);
++
++		if ((mt >= 0) && (*p != mt))
++			{
++			al=SSL_AD_UNEXPECTED_MESSAGE;
++			SSLerr(SSL_F_SSL3_GET_MESSAGE,SSL_R_UNEXPECTED_MESSAGE);
++			goto f_err;
++			}
++		s->s3->tmp.message_type= *(p++);
++
++		n2l3(p,l);
++		if (l > (unsigned long)max)
++			{
++			al=SSL_AD_ILLEGAL_PARAMETER;
++			SSLerr(SSL_F_SSL3_GET_MESSAGE,SSL_R_EXCESSIVE_MESSAGE_SIZE);
++			goto f_err;
++			}
++		if ((st1 == SSL3_ST_CR_CERT_A) && (stn == SSL3_ST_CR_CERT_B))
++			{
++			int wlen;
++
++			if (l > 2048)
++				{
++				unsigned long est=(l*51-104448)/20;
++
++				if (est > 14336)
++					wlen=2048;
++				else
++					{
++					wlen=((int)(16384-est)/16)*16;
++					if (wlen > 15360)
++						wlen=15360;
++					}
++				}
++			else
++				wlen=15360;
++			if (!ssl3ResizeWriteBuffer(s,wlen))
++				goto err;
++			}
++		if (l && !BUF_MEM_grow(s->init_buf,(int)l))
++			{
++			SSLerr(SSL_F_SSL3_GET_MESSAGE,ERR_R_BUF_LIB);
++			goto err;
++			}
++		s->s3->tmp.message_size=l;
++		s->state=stn;
++
++		s->init_num=0;
++		}
++
++	/* next state (stn) */
++	p=(unsigned char *)s->init_buf->data;
++	ret=s->s3->tmp.message_size;
++	n=ret-s->init_num;
++	while (n > 0)
++		{
++		i=ssl3_read_bytes(s,SSL3_RT_HANDSHAKE,
++			(char *)&(p[s->init_num]),(int)n);
++		if (i <= 0)
++			{
++			ret=ssl3_part_read(s,i);
++			goto err;
++			}
++		s->init_num+=i;
++		n-=i;
++		}
++	*ok=1;
++f_err:
++	if (ret == -1)
++		ssl3_send_alert(s,SSL3_AL_FATAL,al);
++err:
++	return(ret);
++	}
++
+ int ssl3_get_finished(s,a,b)
+ SSL *s;
+ int a;
+@@ -163,7 +311,7 @@
+ 	return(1);
+ f_err:
+ 	ssl3_send_alert(s,SSL3_AL_FATAL,al);
+-	return(0);
++	return(-1);
+ 	}
+ 
+ /* for these 2 messages, we need to
+@@ -196,67 +349,190 @@
+ 
++/* SCE: SSL-C certificate-store issuer lookup helper, inlined into ssl3_output_cert_chain. */
++static __inline int sslFindIssuerCertificate(SSL_CTX *ctx, void *x, void **next_cert)
++	{
++	SceSize key_id[2]={0,0};
++	void *cursor=NULL;
++	void *ext=NULL;
++	void *issuer_name=NULL;
++	int i;
++
++	*next_cert=NULL;
++	i=sslCreateCertificateStoreCursor(ctx->cert_store,&cursor);
++	if (i == 0)
++		i=SceSslInternal_BF99D664(ctx->library,0,&ext);
++	if (i == 0)
++		{
++		i=SceSslInternal_64BDF1BB(x,0x4010,ext);
++		if (i == 0)
++			{
++			i=SceSslInternal_93EAE08A(ext,1,key_id);
++			if (i == 0)
++				i=sslFindCertificateStoreEntryByKeyId(cursor,key_id,0xffff);
++			}
++		else if (i == 10008)
++			{
++			i=SceSslInternal_81FA5DBE(x,1,&issuer_name);
++			if (i == 0)
++				i=sslFindCertificateStoreEntryByName(cursor,issuer_name,0xffff);
++			}
++		if (i == 0)
++			i=sslGetCertificateStoreCursorCertificate(cursor,next_cert,0);
++		}
++	if (cursor != NULL)
++		sslDestroyCertificateStoreCursor(cursor);
++	if (ext != NULL)
++		SceSslInternal_F030A0DE(ext);
++	if (issuer_name != NULL)
++		X509_NAME_free(issuer_name);
++	if ((i != 0) && (*next_cert != NULL))
++		X509_free(*next_cert);
++	return(i);
++	}
++
+ unsigned long ssl3_output_cert_chain(s,x)
+ SSL *s;
+-X509 *x;
++void *x;
+ 	{
+ 	unsigned char *p;
+-	int n,i;
++	int n,i,written;
+ 	unsigned long l=7;
+ 	BUF_MEM *buf;
+-	X509_STORE_CTX xs_ctx;
+-	X509_OBJECT obj;
++	void *subj=NULL,*issuer=NULL;
+ 
+ 	/* TLSv1 sends a chain with nothing in it, instead of an alert */
+ 	buf=s->init_buf;
+-	if (!BUF_MEM_grow(buf,(int)(10)))
++	if (!BUF_MEM_grow(buf,(int)(2048)))
+ 		{
+ 		SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,ERR_R_BUF_LIB);
+-		return(0);
++		l=0;
++		goto end;
+ 		}
+ 	if (x != NULL)
+ 		{
+-		X509_STORE_CTX_init(&xs_ctx,s->ctx->cert_store,NULL,NULL);
++		sslRetainCertificateObject(x);
+ 
+ 		for (;;)
+ 			{
+-			n=i2d_X509(x,NULL);
++			void *next_cert=NULL;
++
++			if (sslSerializeCertificateObject(x,0,NULL,&n) != 0)
++				{
++				SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,1301);
++				l=0;
++				goto end;
++				}
+ 			if (!BUF_MEM_grow(buf,(int)(n+l+3)))
+ 				{
+ 				SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,ERR_R_BUF_LIB);
+-				return(0);
++				l=0;
++				goto end;
+ 				}
+ 			p=(unsigned char *)&(buf->data[l]);
+ 			l2n3(n,p);
+-			i2d_X509(x,&p);
++			if (sslSerializeCertificateObject(x,n,p,&written) != 0)
++				{
++				SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,1301);
++				l=0;
++				goto end;
++				}
+ 			l+=n+3;
+-			if (X509_NAME_cmp(X509_get_subject_name(x),
+-				X509_get_issuer_name(x)) == 0) break;
+-
+-			i=X509_STORE_get_by_subject(&xs_ctx,X509_LU_X509,
+-				X509_get_issuer_name(x),&obj);
+-			if (i <= 0) break;
+-			x=obj.data.x509;
+-			/* Count is one too high since the X509_STORE_get uped the
+-			 * ref count */
+-			X509_free(x);
++			if ((s->ctx->cert_store == NULL) || (s->cert_chain != NULL))
++				break;
++			if (SceSslInternal_81FA5DBE(x,1,&issuer) != 0)
++				{
++				SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,1330);
++				l=0;
++				goto end;
++				}
++			if (SceSslInternal_08179EBD(x,1,&subj) != 0)
++				{
++				SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,1331);
++				l=0;
++				goto end;
++				}
++			if (SceSslInternal_568F0E80(issuer,subj) == 1)
++				break;
++			if (sslFindIssuerCertificate(s->ctx,x,&next_cert) != 0)
++				break;
++			X509_free(x);
++			if (subj != NULL)
++				{
++				X509_NAME_free(subj);
++				subj=NULL;
++				}
++			if (issuer != NULL)
++				{
++				X509_NAME_free(issuer);
++				issuer=NULL;
++				}
++			x=next_cert;
+ 			}
+ 
+-		X509_STORE_CTX_cleanup(&xs_ctx);
++		X509_free(x);
++		if (subj != NULL)
++			{
++			X509_NAME_free(subj);
++			subj=NULL;
++			}
++		if (issuer != NULL)
++			{
++			X509_NAME_free(issuer);
++			issuer=NULL;
++			}
+ 		}
+ 
++	if (s->cert_chain != NULL)
++	for (i=0; i<sk_num(s->cert_chain); i++)
++		{
++		x=sk_value(s->cert_chain,i);
++		if (sslSerializeCertificateObject(x,0,NULL,&n) != 0)
++			{
++			SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,1301);
++			l=0;
++			goto end;
++			}
++		if (!BUF_MEM_grow(buf,(int)(n+l+3)))
++			{
++			SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,ERR_R_BUF_LIB);
++			l=0;
++			goto end;
++			}
++		p=(unsigned char *)&(buf->data[l]);
++		l2n3(n,p);
++		if (sslSerializeCertificateObject(x,n,p,&written) != 0)
++			{
++			SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,1301);
++			l=0;
++			goto end;
++			}
++		l+=n+3;
++		}
++
+ 	/* Thwate special :-) */
+ 	if (s->ctx->extra_certs != NULL)
+ 	for (i=0; i<sk_num(s->ctx->extra_certs); i++)
+ 		{
+-		x=(X509 *)sk_value(s->ctx->extra_certs,i);
+-		n=i2d_X509(x,NULL);
++		x=sk_value(s->ctx->extra_certs,i);
++		if (sslSerializeCertificateObject(x,0,NULL,&n) != 0)
++			{
++			SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,1301);
++			l=0;
++			goto end;
++			}
+ 		if (!BUF_MEM_grow(buf,(int)(n+l+3)))
+ 			{
+ 			SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,ERR_R_BUF_LIB);
+-			return(0);
++			l=0;
++			goto end;
+ 			}
+ 		p=(unsigned char *)&(buf->data[l]);
+ 		l2n3(n,p);
+-		i2d_X509(x,&p);
++		if (sslSerializeCertificateObject(x,n,p,&written) != 0)
++			{
++			SSLerr(SSL_F_SSL3_OUTPUT_CERT_CHAIN,1301);
++			l=0;
++			goto end;
++			}
+ 		l+=n+3;
+ 		}
+ 
+@@ -270,138 +535,30 @@
+ 	l+=4;
++end:
+ 	return(l);
+ 	}
+ 
+-long ssl3_get_message(s,st1,stn,mt,max,ok)
+-SSL *s;
+-int st1,stn,mt;
+-long max;
+-int *ok;
+-	{
+-	unsigned char *p;
+-	unsigned long l;
+-	long n;
+-	int i,al;
+-
+-	if (s->s3->tmp.reuse_message)
+-		{
+-		s->s3->tmp.reuse_message=0;
+-		if ((mt >= 0) && (s->s3->tmp.message_type != mt))
+-			{
+-			al=SSL_AD_UNEXPECTED_MESSAGE;
+-			SSLerr(SSL_F_SSL3_GET_MESSAGE,SSL_R_UNEXPECTED_MESSAGE);
+-			goto f_err;
+-			}
+-		*ok=1;
+-		return((int)s->s3->tmp.message_size);
+-		}
+-
+-	p=(unsigned char *)s->init_buf->data;
+-
+-	if (s->state == st1)
+-		{
+-		i=ssl3_read_bytes(s,SSL3_RT_HANDSHAKE,
+-			(char *)&(p[s->init_num]),
+-			4-s->init_num);
+-		if (i < (4-s->init_num))
+-			{
+-			*ok=0;
+-			return(ssl3_part_read(s,i));
+-			}
+-
+-		if ((mt >= 0) && (*p != mt))
+-			{
+-			al=SSL_AD_UNEXPECTED_MESSAGE;
+-			SSLerr(SSL_F_SSL3_GET_MESSAGE,SSL_R_UNEXPECTED_MESSAGE);
+-			goto f_err;
+-			}
+-		s->s3->tmp.message_type= *(p++);
+-
+-		n2l3(p,l);
+-		if (l > (unsigned long)max)
+-			{
+-			al=SSL_AD_ILLEGAL_PARAMETER;
+-			SSLerr(SSL_F_SSL3_GET_MESSAGE,SSL_R_EXCESSIVE_MESSAGE_SIZE);
+-			goto f_err;
+-			}
+-		if (l && !BUF_MEM_grow(s->init_buf,(int)l))
+-			{
+-			SSLerr(SSL_F_SSL3_GET_MESSAGE,ERR_R_BUF_LIB);
+-			goto err;
+-			}
+-		s->s3->tmp.message_size=l;
+-		s->state=stn;
+-
+-		s->init_num=0;
+-		}
+-
+-	/* next state (stn) */
+-	p=(unsigned char *)s->init_buf->data;
+-	n=s->s3->tmp.message_size;
+-	if (n > 0)
+-		{
+-		i=ssl3_read_bytes(s,SSL3_RT_HANDSHAKE,
+-			(char *)&(p[s->init_num]),(int)n);
+-		if (i != (int)n)
+-			{
+-			*ok=0;
+-			return(ssl3_part_read(s,i));
+-			}
+-		}
+-	*ok=1;
+-	return(n);
+-f_err:
+-	ssl3_send_alert(s,SSL3_AL_FATAL,al);
+-err:
+-	*ok=0;
+-	return(-1);
+-	}
+-
+ int ssl_cert_type(x,pkey)
+-X509 *x;
+-EVP_PKEY *pkey;
++void *x;
++void *pkey;
+ 	{
+-	EVP_PKEY *pk;
+-	int ret= -1,i,j;
++	void *pk;
++	int ret= -1,i;
+ 
+ 	if (pkey == NULL)
+-		pk=X509_get_pubkey(x);
++		{
++		if (SceSslInternal_170D595D(x,0,&pk) != 0)
++			goto err;
++		}
+ 	else
++		{
+ 		pk=pkey;
++		}
+ 	if (pk == NULL) goto err;
+ 
+-	i=pk->type;
+-	if (i == EVP_PKEY_RSA)
++	if (sslGetPublicKeyInfo(pk,2006,&i) == 0 && i == 6)
+ 		{
+ 		ret=SSL_PKEY_RSA_ENC;
+-		if (x != NULL)
+-			{
+-			j=X509_get_ext_count(x);
+-			/* check to see if this is a signing only certificate */
+-			/* EAY EAY EAY EAY */
+-			}
+-		}
+-	else if (i == EVP_PKEY_DSA)
+-		{
+-		ret=SSL_PKEY_DSA_SIGN;
+-		}
+-	else if (i == EVP_PKEY_DH)
+-		{
+-		/* if we just have a key, we needs to be guess */
+-
+-		if (x == NULL)
+-			ret=SSL_PKEY_DH_DSA;
+-		else
+-			{
+-			j=X509_get_signature_type(x);
+-			if (j == EVP_PKEY_RSA)
+-				ret=SSL_PKEY_DH_RSA;
+-			else if (j== EVP_PKEY_DSA)
+-				ret=SSL_PKEY_DH_DSA;
+-			else ret= -1;
+-			}
+ 		}
+-	else
+-		ret= -1;
+ 
+ err:
+ 	return(ret);
+@@ -421,11 +522,5 @@
+ 	case X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE:
+ 	case X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE:
+-	case X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY:
+-	case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD:
+-	case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD:
+-	case X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD:
+-	case X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD:
+ 	case X509_V_ERR_CERT_NOT_YET_VALID:
+-	case X509_V_ERR_CRL_NOT_YET_VALID:
+ 		al=SSL_AD_BAD_CERTIFICATE;
+ 		break;
+@@ -446,7 +541,5 @@
+ 	case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+ 	case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+-	case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+-	case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
+ 	case X509_V_ERR_CERT_CHAIN_TOO_LONG:
+ 		al=SSL_AD_UNKNOWN_CA;
+ 		break;
+@@ -460,31 +553,71 @@
  	return(al);
  	}
  
-+#endif
++/* SCE: SSL-C extension; descriptive function name is ours, not Sony's. */
++int ssl3ResizeReadBuffer(SSL *s, int len)
++	{
++	int ret=0;
++	unsigned char *p,*buf;
++	int offset=0,restore=0;
++
++	buf=s->s3->rbuf.buf;
++	if (len <= 0)
++		len=SSL3_RT_MAX_PACKET_SIZE;
++	if ((s->read_buffer_size < len) || (buf == NULL))
++		{
++		if ((s->packet != NULL) && (buf != NULL))
++			{
++			restore=1;
++			offset=s->packet-buf;
++			}
++		if (buf != NULL)
++			{
++			if ((p=(unsigned char *)Realloc(buf,len,s->s3->rbuf.capacity)) == NULL)
++				goto err;
++			}
++		else
++			{
++			if ((p=(unsigned char *)Malloc(len)) == NULL)
++				goto err;
++			}
++		s->s3->rbuf.capacity=len;
++		s->s3->rbuf.buf=p;
++		s->read_buffer_size=len;
++		if (restore)
++			s->packet=p+offset;
++		}
++	ret=1;
++err:
++	return(ret);
++	}
 +
  int ssl3_setup_buffers(s)
  SSL *s;
@@ -60,3 +669,4 @@
  		}
  	s->packet= &(s->s3->rbuf.buf[0]);
  	return(1);
+

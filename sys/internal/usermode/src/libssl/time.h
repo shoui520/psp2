@@ -11,7 +11,7 @@ typedef struct SslTime {
 } SslTime;
 
 typedef SslTime *(*SslTimeAddCallback)(SslTime *result, const SslTime *source,
-				     int seconds);
+				     int seconds, int milliseconds);
 typedef int (*SslTimeCompareCallback)(const SslTime *left, const SslTime *right);
 typedef int (*SslTimeDecodeCallback)(const void *data, int length, int format,
 				   SslTime *result);
@@ -27,13 +27,15 @@ typedef SslTime *(*SslTimeCurrentCallback)(SslTime *time);
 SslTime *SceSslInternal_4AAF0D45(SslTime *time);
 SslTime *sslCreateTime(void);
 void sslFreeTime(SslTime *time);
-SslTime *sslAddTime(SslTime *result, const SslTime *source, int seconds);
+SslTime *sslAddTime(SslTime *result, const SslTime *source, int seconds,
+		    int milliseconds);
 SslTimeAddCallback sslGetTimeAddCallback(void);
 SslTimeAddCallback sslSetTimeAddCallback(SslTimeAddCallback callback);
 int sslDecodeTime(const void *data, int length, int format, SslTime *result);
 int sslDecodeTimeSeconds(SslTime *result, SceUInt32 seconds);
 int SceSslInternal_6D2A86F0(const SslTime *time, int format, void *data,
 			  int capacity);
+SceUInt32 sslEncodeTimeSeconds(const SslTime *time);
 int sslCompareTime(const SslTime *left, const SslTime *right);
 SslTimeCompareCallback sslGetTimeCompareCallback(void);
 SslTimeCompareCallback sslSetTimeCompareCallback(SslTimeCompareCallback callback);
@@ -44,6 +46,15 @@ SslTimeEncodeCallback sslSetTimeEncodeCallback(SslTimeEncodeCallback callback);
 SceUInt32 sslGetTimeSize(void);
 SslTimeCurrentCallback sslGetTimeCurrentCallback(void);
 SslTimeCurrentCallback sslSetTimeCurrentCallback(SslTimeCurrentCallback callback);
+int sslInitPlatformTimeCallbacks(void);
+SslTime *sslGetPlatformCurrentTime(SslTime *time);
+SslTime *sslAddPlatformTime(SslTime *result, const SslTime *source, int seconds,
+			    int milliseconds);
+int sslEncodePlatformTime(const SslTime *time, int format, void *data,
+			  int capacity);
+int sslDecodePlatformTime(const void *data, int length, int format,
+			  SslTime *result);
+int sslComparePlatformTime(const SslTime *left, const SslTime *right);
 
 _Static_assert(sizeof(SslTime) == 12, "SslTime");
 

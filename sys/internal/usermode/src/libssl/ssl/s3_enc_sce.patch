@@ -1,0 +1,998 @@
+--- a/s3_enc.c
++++ b/s3_enc.c
+@@ -57,8 +57,7 @@
+  */
+ 
+ #include <stdio.h>
+-#include "evp.h"
+-#include "ssl_locl.h"
++/* SCE: the consuming wrapper supplies the identified SSL3 record interfaces. */
+ 
+ static unsigned char ssl3_pad_1[48]={
+ 	0x36,0x36,0x36,0x36,0x36,0x36,0x36,0x36,
+@@ -76,140 +75,300 @@
+ 	0x5c,0x5c,0x5c,0x5c,0x5c,0x5c,0x5c,0x5c,
+ 	0x5c,0x5c,0x5c,0x5c,0x5c,0x5c,0x5c,0x5c };
+ 
+-#ifndef NO_PROTO
+-static int ssl3_handshake_mac(SSL *s, EVP_MD_CTX *in_ctx,
+-	unsigned char *sender, int len, unsigned char *p);
+-#else
+-static int ssl3_handshake_mac();
+-#endif
++/* SCE: descriptive helper names are ours. */
++int ssl3CopyDigestAlgorithm(dst,src)
++SslCryptoAlgorithm **dst;
++SslCryptoAlgorithm *src;
++	{
++	int ret=1;
++
++	if (*dst != NULL)
++		{
++		sslDestroyAlgorithm(*dst);
++		*dst=NULL;
++		}
++	if (sslCopyAlgorithm(src,dst) != 0)
++		ret=0;
++	else if (sslDigestInit(*dst) != 0)
++		ret=0;
++	return(ret);
++	}
+ 
+-static void ssl3_generate_key_block(s,km,num)
++int sslCipherGetSizes(c,key_len,iv_len,mac_len)
++SSL_CIPHER *c;
++int *key_len;
++int *iv_len;
++int *mac_len;
++	{
++	int i;
++	SslCipherInfo *enc_info=NULL;
++	SslDigestInfo *mac_info=NULL;
++	unsigned long alg,alg2;
++
++	if ((key_len != NULL) || (iv_len != NULL))
++		{
++		alg=c->algorithms & SSL_ENC_MASK;
++		alg2=c->algorithm2 & 0xff;
++		for (i=0; ssl_cipher_methods[i].algorithms != 0; i++)
++			{
++			if ((ssl_cipher_methods[i].algorithms == alg) &&
++				((ssl_cipher_methods[i].algorithm2 == 0) ||
++				 (ssl_cipher_methods[i].algorithm2 == alg2)))
++				{
++				enc_info= &ssl_cipher_methods[i];
++				break;
++				}
++			}
++		if (enc_info == NULL)
++			return(0);
++		if (key_len != NULL)
++			*key_len=enc_info->key_len;
++		if (iv_len != NULL)
++			*iv_len=enc_info->iv_len;
++		}
++	if (mac_len != NULL)
++		{
++		alg=c->algorithms & SSL_MAC_MASK;
++		for (i=0; ssl_digest_methods[i].algorithms != 0; i++)
++			{
++			if (ssl_digest_methods[i].algorithms == alg)
++				{
++				mac_info= &ssl_digest_methods[i];
++				break;
++				}
++			}
++		if (mac_info == NULL)
++			return(0);
++		*mac_len=mac_info->md_size;
++		}
++	return(1);
++	}
++
++int ssl3GetCipherAndDigest(ctx,c,enc,md)
++SSL_CTX *ctx;
++SSL_CIPHER *c;
++SslCryptoAlgorithm **enc;
++SslCryptoAlgorithm **md;
++	{
++	int ret;
++	SslCipherInfo *enc_info=NULL;
++	SslDigestInfo *mac_info=NULL;
++	unsigned long alg,alg2;
++	int i;
++
++	if (enc != NULL)
++		{
++		alg=c->algorithms & SSL_ENC_MASK;
++		alg2=c->algorithm2 & 0xff;
++		for (i=0; ssl_cipher_methods[i].algorithms != 0; i++)
++			{
++			if ((ssl_cipher_methods[i].algorithms == alg) &&
++				((ssl_cipher_methods[i].algorithm2 == 0) ||
++				 (ssl_cipher_methods[i].algorithm2 == alg2)))
++				{
++				enc_info= &ssl_cipher_methods[i];
++				break;
++				}
++			}
++		if (enc_info == NULL)
++			goto err;
++		if (*enc != NULL)
++			{
++			sslDestroyAlgorithm(*enc);
++			*enc=NULL;
++			}
++		if (sslCreateAlgorithm(ctx->crypto_context,2,
++			enc_info->crypto_id,0,enc) != 0)
++			goto err;
++		ret=0;
++		sslSetAlgorithmInfo(*enc,20,(SceUIntPtr)&ret);
++		}
++	if (md != NULL)
++		{
++		alg=c->algorithms & SSL_MAC_MASK;
++		for (i=0; ssl_digest_methods[i].algorithms != 0; i++)
++			{
++			if (ssl_digest_methods[i].algorithms == alg)
++				{
++				mac_info= &ssl_digest_methods[i];
++				break;
++				}
++			}
++		if (mac_info == NULL)
++			goto err;
++		if (*md != NULL)
++			{
++			sslDestroyAlgorithm(*md);
++			*md=NULL;
++			}
++		if (sslCreateAlgorithm(ctx->crypto_context,3,
++			mac_info->crypto_id,0,md) != 0)
++			goto err;
++		if (sslDigestInit(*md) != 0)
++			goto err;
++		}
++	ret=1;
++	if (0)
++		{
++err:
++		ret=0;
++		if ((enc != NULL) && (*enc != NULL))
++			{
++			sslDestroyAlgorithm(*enc);
++			*enc=NULL;
++			}
++		if ((md != NULL) && (*md != NULL))
++			{
++			sslDestroyAlgorithm(*md);
++			*md=NULL;
++			}
++		}
++	return(ret);
++	}
++
++static int ssl3_generate_key_block(s,km,num)
+ SSL *s;
+ unsigned char *km;
+ int num;
+ 	{
+-	MD5_CTX m5;
+-	SHA_CTX s1;
+-	unsigned char buf[8],smd[SHA_DIGEST_LENGTH];
++	SslCryptoAlgorithm *m5;
++	SslCryptoAlgorithm *s1;
++	unsigned char sha_buf[129];
++	unsigned char md5_buf[112];
++	unsigned char *p,*smd;
+ 	unsigned char c='A';
+-	int i,j,k;
++	unsigned int out_len,sha_len,md5_len;
++	int i,j,k,master_len;
++
++	if (s->sha1_algorithm == NULL)
++		{
++		if (sslCreateAlgorithm(s->ctx->crypto_context,3,0x40,0,
++			(SslCryptoAlgorithm **)&(s->sha1_algorithm)) != 0)
++			return(0);
++		if (sslDigestInit(s->sha1_algorithm) != 0)
++			return(0);
++		}
++	s1=s->sha1_algorithm;
++	if (s->md5_algorithm == NULL)
++		{
++		if (sslCreateAlgorithm(s->ctx->crypto_context,3,4,0,
++			(SslCryptoAlgorithm **)&(s->md5_algorithm)) != 0)
++			return(0);
++		if (sslDigestInit(s->md5_algorithm) != 0)
++			return(0);
++		}
++	m5=s->md5_algorithm;
++
++	p= &(sha_buf[17]);
++	master_len=s->session->master_key_length;
++	memcpy(p,s->session->master_key,master_len);
++	memcpy(p+master_len,s->s3->server_random,SSL3_RANDOM_SIZE);
++	memcpy(p+master_len+SSL3_RANDOM_SIZE,s->s3->client_random,
++		SSL3_RANDOM_SIZE);
++	memcpy(md5_buf,s->session->master_key,master_len);
++	smd= &(md5_buf[master_len]);
+ 
+ 	k=0;
++	md5_len=master_len+SHA_DIGEST_LENGTH;
++	sha_len=master_len+(SSL3_RANDOM_SIZE*2);
+ 	for (i=0; i<num; i+=MD5_DIGEST_LENGTH)
+ 		{
+ 		k++;
++		sha_len++;
++		p--;
+ 		for (j=0; j<k; j++)
+-			buf[j]=c;
++			p[j]=c;
+ 		c++;
+-		SHA1_Init(  &s1);
+-		SHA1_Update(&s1,buf,k);
+-		SHA1_Update(&s1,s->session->master_key,
+-			s->session->master_key_length);
+-		SHA1_Update(&s1,s->s3->server_random,SSL3_RANDOM_SIZE);
+-		SHA1_Update(&s1,s->s3->client_random,SSL3_RANDOM_SIZE);
+-		SHA1_Final( smd,&s1);
+-
+-		MD5_Init(  &m5);
+-		MD5_Update(&m5,s->session->master_key,
+-			s->session->master_key_length);
+-		MD5_Update(&m5,smd,SHA_DIGEST_LENGTH);
++		if (sslDigestUpdate(s1,p,sha_len) != 0)
++			return(0);
++		if (sslDigestFinal(s1,smd,&out_len) != 0)
++			return(0);
++		if (sslDigestUpdate(m5,md5_buf,md5_len) != 0)
++			return(0);
+ 		if ((i+MD5_DIGEST_LENGTH) > num)
+ 			{
+-			MD5_Final(smd,&m5);
++			if (sslDigestFinal(m5,smd,&out_len) != 0)
++				return(0);
+ 			memcpy(km,smd,(num-i));
+ 			}
+ 		else
+-			MD5_Final(km,&m5);
++			{
++			if (sslDigestFinal(m5,km,&out_len) != 0)
++				return(0);
++			}
+ 
+ 		km+=MD5_DIGEST_LENGTH;
+ 		}
+ 	memset(smd,0,SHA_DIGEST_LENGTH);
++	return(1);
+ 	}
+ 
+ int ssl3_change_cipher_state(s,which)
+ SSL *s;
+ int which;
+ 	{
+-	unsigned char *p,*key_block,*mac_secret;
+-	unsigned char exp_key[EVP_MAX_KEY_LENGTH];
+-	unsigned char exp_iv[EVP_MAX_KEY_LENGTH];
++	unsigned char *p,*mac_secret;
++	unsigned char exp_key[32];
++	unsigned char exp_iv[32];
+ 	unsigned char *ms,*key,*iv,*er1,*er2;
+-	EVP_CIPHER_CTX *dd;
+-	EVP_CIPHER *c;
+-	COMP_METHOD *comp;
+-	EVP_MD *m;
+-	MD5_CTX md;
+-	int exp,n,i,j,k;
++	SslRecordCrypto *dd;
++	SslCryptoAlgorithm **enc,**mac;
++	SslCryptoAlgorithm *md;
++	unsigned int md_len;
++	struct
++		{
++		int length;
++		unsigned char *data;
++		} key_mat,iv_mat;
++	int exp,n,i,j,k,key_block_length;
+ 
+ 	exp=(s->s3->tmp.new_cipher->algorithms & SSL_EXPORT)?1:0;
+-	c=s->s3->tmp.new_sym_enc;
+-	m=s->s3->tmp.new_hash;
+-	comp=s->s3->tmp.new_compression;
+-	key_block=s->s3->tmp.key_block;
+ 
+ 	if (which & SSL3_CC_READ)
+ 		{
+-		if ((s->enc_read_ctx == NULL) &&
+-			((s->enc_read_ctx=(EVP_CIPHER_CTX *)
+-			Malloc(sizeof(EVP_CIPHER_CTX))) == NULL))
+-			goto err;
+-		dd= s->enc_read_ctx;
+-		s->read_hash=m;
+-		/* COMPRESS */
+-		if (s->expand != NULL)
+-			{
+-			COMP_CTX_free(s->expand);
+-			s->expand=NULL;
+-			}
+-		if (comp != NULL)
+-			{
+-			s->expand=COMP_CTX_new(comp);
+-			if (s->expand == NULL)
+-				{
+-				SSLerr(SSL_F_SSL3_CHANGE_CIPHER_STATE,SSL_R_COMPRESSION_LIBRARY_ERROR);
+-				goto err2;
+-				}
+-			s->s3->rrec.comp=(unsigned char *)
+-				Malloc(SSL3_RT_MAX_PLAIN_LENGTH);
+-			if (s->s3->rrec.comp == NULL)
+-				goto err;
+-			}
+-		memset(&(s->s3->read_sequence[0]),0,8);
++		((int *)s->s3->read_sequence)[0]=0;
+ 		mac_secret= &(s->s3->read_mac_secret[0]);
++		((int *)s->s3->read_sequence)[1]=0;
++		dd= &(s->read_crypto);
++		enc=(SslCryptoAlgorithm **)&(s->read_crypto.cipher_algorithm);
++		mac=(SslCryptoAlgorithm **)&(s->read_crypto.mac_algorithm);
+ 		}
+ 	else
+ 		{
+-		if ((s->enc_write_ctx == NULL) &&
+-			((s->enc_write_ctx=(EVP_CIPHER_CTX *)
+-			Malloc(sizeof(EVP_CIPHER_CTX))) == NULL))
+-			goto err;
+-		dd= s->enc_write_ctx;
+-		s->write_hash=m;
+-		/* COMPRESS */
+-		if (s->compress != NULL)
+-			{
+-			COMP_CTX_free(s->compress);
+-			s->compress=NULL;
+-			}
+-		if (comp != NULL)
+-			{
+-			s->compress=COMP_CTX_new(comp);
+-			if (s->compress == NULL)
+-				{
+-				SSLerr(SSL_F_SSL3_CHANGE_CIPHER_STATE,SSL_R_COMPRESSION_LIBRARY_ERROR);
+-				goto err2;
+-				}
+-			}
+-		memset(&(s->s3->write_sequence[0]),0,8);
++		((int *)s->s3->write_sequence)[0]=0;
+ 		mac_secret= &(s->s3->write_mac_secret[0]);
++		((int *)s->s3->write_sequence)[1]=0;
++		dd= &(s->write_crypto);
++		enc=(SslCryptoAlgorithm **)&(s->write_crypto.cipher_algorithm);
++		mac=(SslCryptoAlgorithm **)&(s->write_crypto.mac_algorithm);
+ 		}
+ 
+-	EVP_CIPHER_CTX_init(dd);
++	s->destroy_mac_algorithm=(int (*)(void *))sslDestroyAlgorithm;
++	if (dd->mac_algorithm != NULL)
++		{
++		sslDestroyAlgorithm(dd->mac_algorithm);
++		dd->mac_algorithm=NULL;
++		}
++	if (*enc != NULL)
++		{
++		sslDestroyAlgorithm(*enc);
++		*enc=NULL;
++		}
++	if (!ssl3GetCipherAndDigest(s->ctx,s->session->cipher,enc,mac))
++		goto err;
++	if (!sslCipherGetSizes(s->session->cipher,&j,&k,&(dd->mac_size)))
++		goto err;
++	if (k == 0)
++		dd->block_size=1;
++	else
++		dd->block_size=k;
+ 
++	key_block_length=s->s3->tmp.key_block_length;
+ 	p=s->s3->tmp.key_block;
+-	i=EVP_MD_size(m);
+-	j=(exp)?5:EVP_CIPHER_key_length(c);
+-	k=EVP_CIPHER_iv_length(c);
++	i=dd->mac_size;
++	md=NULL;
++	if (exp)
++		j=(int)(s->s3->tmp.new_cipher->algorithm2 & 0xff);
+ 	if (	(which == SSL3_CHANGE_CIPHER_CLIENT_WRITE) ||
+ 		(which == SSL3_CHANGE_CIPHER_SERVER_READ))
+ 		{
+@@ -229,7 +388,7 @@
+ 		er2= &(s->s3->client_random[0]);
+ 		}
+ 
+-	if (n > s->s3->tmp.key_block_length)
++	if (n > key_block_length)
+ 		{
+ 		SSLerr(SSL_F_SSL3_CHANGE_CIPHER_STATE,SSL_R_INTERNAL_ERROR);
+ 		goto err2;
+@@ -241,29 +400,62 @@
+ 		/* In here I set both the read and write key/iv to the
+ 		 * same value since only the correct one will be used :-).
+ 		 */
+-		MD5_Init(&md);
+-		MD5_Update(&md,key,j);
+-		MD5_Update(&md,er1,SSL3_RANDOM_SIZE);
+-		MD5_Update(&md,er2,SSL3_RANDOM_SIZE);
+-		MD5_Final(&(exp_key[0]),&md);
++		if (sslCreateAlgorithm(s->ctx->crypto_context,3,4,0,&md) != 0)
++			goto err;
++		if (sslDigestInit(md) != 0)
++			goto err;
++		if (sslDigestUpdate(md,key,j) != 0)
++			goto err;
++		if (sslDigestUpdate(md,er1,SSL3_RANDOM_SIZE) != 0)
++			goto err;
++		if (sslDigestUpdate(md,er2,SSL3_RANDOM_SIZE) != 0)
++			goto err;
++		if (sslDigestFinal(md,&(exp_key[0]),&md_len) != 0)
++			goto err;
+ 		key= &(exp_key[0]);
+ 
+ 		if (k > 0)
+ 			{
+-			MD5_Init(&md);
+-			MD5_Update(&md,er1,SSL3_RANDOM_SIZE);
+-			MD5_Update(&md,er2,SSL3_RANDOM_SIZE);
+-			MD5_Final(&(exp_iv[0]),&md);
++			if (sslDigestInit(md) != 0)
++				goto err;
++			if (sslDigestUpdate(md,er1,SSL3_RANDOM_SIZE) != 0)
++				goto err;
++			if (sslDigestUpdate(md,er2,SSL3_RANDOM_SIZE) != 0)
++				goto err;
++			if (sslDigestFinal(md,&(exp_iv[0]),&md_len) != 0)
++				goto err;
+ 			iv= &(exp_iv[0]);
+ 			}
++		if (md != NULL)
++			{
++			if (sslDestroyAlgorithm(md) != 0)
++				goto err;
++			md=NULL;
++			}
+ 		}
+ 
+ 	s->session->key_arg_length=0;
+ 
+-	EVP_CipherInit(dd,c,key,iv,(which & SSL3_CC_WRITE));
++	key_mat.length=j;
++	key_mat.data=key;
++	if (dd->cipher_key == NULL)
++		sslCreateKey(s->ctx->library,1,&key_mat,&(dd->cipher_key));
++	else if (sslSetKeyInfo(dd->cipher_key,14,&key_mat) != 0)
++		goto err;
++
++	iv_mat.length=k;
++	iv_mat.data=iv;
++	if (which & SSL3_CC_WRITE)
++		{
++		if (sslEncryptInit(*enc,dd->cipher_key,&iv_mat) != 0)
++			goto err2;
++		}
++	else
++		{
++		if (sslDecryptInit(*enc,dd->cipher_key,&iv_mat) != 0)
++			goto err2;
++		}
+ 
+-	memset(&(exp_key[0]),0,sizeof(exp_key));
+-	memset(&(exp_iv[0]),0,sizeof(exp_iv));
+ 	return(1);
+ err:
+ 	SSLerr(SSL_F_SSL3_CHANGE_CIPHER_STATE,ERR_R_MALLOC_FAILURE);
+@@ -275,45 +467,33 @@
+ SSL *s;
+ 	{
+ 	unsigned char *p;
+-	EVP_CIPHER *c;
+-	EVP_MD *hash;
+-	int num,exp;
++	int key_len,mac_len,iv_len,num;
+ 
+ 	if (s->s3->tmp.key_block_length != 0)
+ 		return(1);
+ 
+-	if (!ssl_cipher_get_evp(s->session->cipher,&c,&hash))
+-		{
+-		SSLerr(SSL_F_SSL3_SETUP_KEY_BLOCK,SSL_R_CIPHER_OR_HASH_UNAVAILABLE);
++	if (!sslCipherGetSizes(s->session->cipher,&key_len,&iv_len,&mac_len))
+ 		return(0);
+-		}
+-
+-	s->s3->tmp.new_sym_enc=c;
+-	s->s3->tmp.new_hash=hash;
+-#ifdef ZLIB
+-	s->s3->tmp.new_compression=COMP_zlib();
+-#endif
+-/*	s->s3->tmp.new_compression=COMP_rle(); */
+-/*	s->session->compress_meth= xxxxx */
+ 
+-	exp=(s->session->cipher->algorithms & SSL_EXPORT)?1:0;
+-
+-	num=EVP_CIPHER_key_length(c)+EVP_MD_size(hash)+EVP_CIPHER_iv_length(c);
++	num=key_len+mac_len+iv_len;
+ 	num*=2;
+ 
+-	ssl3_cleanup_key_block(s);
+-
+-	if ((p=(unsigned char *)Malloc(num)) == NULL)
++	if ((p=(unsigned char *)Malloc(num+1)) == NULL)
++		{
++		SSLerr(SSL_F_SSL3_SETUP_KEY_BLOCK,ERR_R_MALLOC_FAILURE);
+ 		goto err;
++		}
+ 
+ 	s->s3->tmp.key_block_length=num;
+ 	s->s3->tmp.key_block=p;
+ 
+-	ssl3_generate_key_block(s,p,num);
++	if (!ssl3_generate_key_block(s,p,num))
++		goto err;
+ 
+ 	return(1);
+ err:
+-	SSLerr(SSL_F_SSL3_SETUP_KEY_BLOCK,ERR_R_MALLOC_FAILURE);
++	if (p != NULL)
++		Free(p);
+ 	return(0);
+ 	}
+ 
+@@ -335,40 +515,35 @@
+ int send;
+ 	{
+ 	SSL3_RECORD *rec;
+-	EVP_CIPHER_CTX *ds;
++	SslCryptoAlgorithm *enc;
++	unsigned int out_len=0;
+ 	unsigned long l;
+ 	int bs,i;
+-	EVP_CIPHER *enc;
+ 
+ 	if (send)
+ 		{
+-		ds=s->enc_write_ctx;
++		enc=s->write_crypto.cipher_algorithm;
+ 		rec= &(s->s3->wrec);
+-		if (s->enc_write_ctx == NULL)
+-			enc=NULL;
+-		else
+-			enc=EVP_CIPHER_CTX_cipher(s->enc_write_ctx);
++		bs=s->write_crypto.block_size;
+ 		}
+ 	else
+ 		{
+-		ds=s->enc_read_ctx;
++		enc=s->read_crypto.cipher_algorithm;
+ 		rec= &(s->s3->rrec);
+-		if (s->enc_read_ctx == NULL)
+-			enc=NULL;
+-		else
+-			enc=EVP_CIPHER_CTX_cipher(s->enc_read_ctx);
++		bs=s->read_crypto.block_size;
+ 		}
+ 
+-	if ((s->session == NULL) || (ds == NULL) ||
+-		(enc == NULL))
++	if ((s->session == NULL) || (enc == NULL))
+ 		{
+-		memcpy(rec->data,rec->input,rec->length);
+-		rec->input=rec->data;
++		if (rec->input != rec->data)
++			{
++			memcpy(rec->data,rec->input,rec->length);
++			rec->input=rec->data;
++			}
+ 		}
+ 	else
+ 		{
+ 		l=rec->length;
+-		bs=EVP_CIPHER_block_size(ds->cipher);
+ 
+ 		/* COMPRESS */
+ 
+@@ -383,99 +558,136 @@
+ 			rec->input[l-1]=(i-1);
+ 			}
+ 
+-		EVP_Cipher(ds,rec->data,rec->input,l);
++		out_len=rec->length;
++		if (send)
++			{
++			if (sslEncryptUpdate(enc,rec->input,l,rec->data,
++				&out_len) != 0)
++				return(0);
++			}
++		else
++			{
++			if (sslDecryptUpdate(enc,rec->input,l,rec->data,
++				&out_len) != 0)
++				return(0);
++			}
+ 
+ 		if ((bs != 1) && !send)
+ 			{
+ 			i=rec->data[l-1]+1;
+ 			if (i > bs)
+-				{
+-				SSLerr(SSL_F_SSL3_ENC,SSL_R_BLOCK_CIPHER_PAD_IS_WRONG);
+-				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_DECRYPT_ERROR);
+ 				return(0);
+-				}
+ 			rec->length-=i;
+ 			}
+ 		}
+ 	return(1);
+ 	}
+ 
+-void ssl3_init_finished_mac(s)
++int ssl3_init_finished_mac(s)
+ SSL *s;
+ 	{
+-	EVP_DigestInit(&(s->s3->finish_dgst1),s->ctx->md5);
+-	EVP_DigestInit(&(s->s3->finish_dgst2),s->ctx->sha1);
++	if ((s->s3->finish_dgst1 == NULL) &&
++		(sslCreateAlgorithm(s->ctx->crypto_context,3,4,0,
++			(SslCryptoAlgorithm **)&(s->s3->finish_dgst1)) != 0))
++		return(0);
++	if ((s->s3->finish_dgst2 == NULL) &&
++		(sslCreateAlgorithm(s->ctx->crypto_context,3,0x40,0,
++			(SslCryptoAlgorithm **)&(s->s3->finish_dgst2)) != 0))
++		return(0);
++	if (sslDigestInit(s->s3->finish_dgst1) != 0)
++		return(0);
++	if (sslDigestInit(s->s3->finish_dgst2) != 0)
++		return(0);
++	return(1);
+ 	}
+ 
+-void ssl3_finish_mac(s,buf,len)
++int ssl3_finish_mac(s,buf,len)
+ SSL *s;
+ unsigned char *buf;
+ int len;
+ 	{
+-	EVP_DigestUpdate(&(s->s3->finish_dgst1),buf,len);
+-	EVP_DigestUpdate(&(s->s3->finish_dgst2),buf,len);
+-	}
+-
+-int ssl3_cert_verify_mac(s,ctx,p)
+-SSL *s;
+-EVP_MD_CTX *ctx;
+-unsigned char *p;
+-	{
+-	return(ssl3_handshake_mac(s,ctx,NULL,0,p));
+-	}
+-
+-int ssl3_final_finish_mac(s,ctx1,ctx2,sender,len,p)
+-SSL *s;
+-EVP_MD_CTX *ctx1,*ctx2;
+-unsigned char *sender;
+-int len;
+-unsigned char *p;
+-	{
+ 	int ret;
+ 
+-	ret=ssl3_handshake_mac(s,ctx1,sender,len,p);
+-	p+=ret;
+-	ret+=ssl3_handshake_mac(s,ctx2,sender,len,p);
++	ret=sslDigestUpdate(s->s3->finish_dgst1,buf,len);
++	if (ret == 0)
++		ret=sslDigestUpdate(s->s3->finish_dgst2,buf,len);
+ 	return(ret);
+ 	}
+ 
+ static int ssl3_handshake_mac(s,in_ctx,sender,len,p)
+ SSL *s;
+-EVP_MD_CTX *in_ctx;
++SslCryptoAlgorithm *in_ctx;
+ unsigned char *sender;
+ int len;
+ unsigned char *p;
+ 	{
+-	unsigned int ret;
++	unsigned int ret=0;
+ 	int npad,n;
+ 	unsigned int i;
+-	unsigned char md_buf[EVP_MAX_MD_SIZE];
+-	EVP_MD_CTX ctx;
++	SslCryptoAlgorithm *ctx=NULL;
++	unsigned char buf[160];
++	unsigned char *q;
++	int master_len;
+ 
+-	memcpy(&ctx,in_ctx,sizeof(EVP_MD_CTX));
++	if (sslCopyAlgorithm(in_ctx,&ctx) != 0)
++		goto err;
+ 
+-	n=EVP_MD_CTX_size(&ctx);
++	if (sslGetAlgorithmInfo(ctx,11,&n) != 0)
++		ret=0;
+ 	npad=(48/n)*n;
+ 
+-	if (sender != NULL)
+-		EVP_DigestUpdate(&ctx,sender,len);
+-	EVP_DigestUpdate(&ctx,s->session->master_key,
+-		s->session->master_key_length);
+-	EVP_DigestUpdate(&ctx,ssl3_pad_1,npad);
+-	EVP_DigestFinal(&ctx,md_buf,&i);
+-
+-	EVP_DigestInit(&ctx,EVP_MD_CTX_type(&ctx));
+-	EVP_DigestUpdate(&ctx,s->session->master_key,
+-		s->session->master_key_length);
+-	EVP_DigestUpdate(&ctx,ssl3_pad_2,npad);
+-	EVP_DigestUpdate(&ctx,md_buf,i);
+-	EVP_DigestFinal(&ctx,p,&ret);
++	if ((sender != NULL) && (sslDigestUpdate(ctx,sender,len) != 0))
++		goto err;
++	q=buf;
++	master_len=s->session->master_key_length;
++	memcpy(q,s->session->master_key,master_len);
++	q+=master_len;
++	memcpy(q,ssl3_pad_1,npad);
++	if (sslDigestUpdate(ctx,buf,master_len+npad) != 0)
++		goto err;
++	if (sslDigestFinal(ctx,q+npad,&i) != 0)
++		goto err;
+ 
+-	memset(&ctx,0,sizeof(EVP_MD_CTX));
++	memcpy(q,ssl3_pad_2,npad);
++	if (sslDigestUpdate(ctx,buf,master_len+npad+i) != 0)
++		goto err;
++	sslDigestFinal(ctx,p,&ret);
++err:
++	sslDestroyAlgorithm(ctx);
+ 
+ 	return((int)ret);
+ 	}
+ 
++int ssl3_cert_verify_mac(s,ctx,p)
++SSL *s;
++SslCryptoAlgorithm *ctx;
++unsigned char *p;
++	{
++	return(ssl3_handshake_mac(s,ctx,NULL,0,p));
++	}
++
++int ssl3_final_finish_mac(s,ctx1,ctx2,sender,len,p)
++SSL *s;
++SslCryptoAlgorithm *ctx1,*ctx2;
++unsigned char *sender;
++int len;
++unsigned char *p;
++	{
++	int ret,i;
++
++	ret=ssl3_handshake_mac(s,ctx1,sender,len,p);
++	if (ret != 0)
++		{
++		p+=ret;
++		i=ssl3_handshake_mac(s,ctx2,sender,len,p);
++		if (i != 0)
++			ret+=i;
++		else
++			ret=0;
++		}
++	return(ret);
++	}
++
+ int ssl3_mac(ssl,md,send)
+ SSL *ssl;
+ unsigned char *md;
+@@ -483,10 +695,10 @@
+ 	{
+ 	SSL3_RECORD *rec;
+ 	unsigned char *mac_sec,*seq;
+-	EVP_MD_CTX md_ctx;
+-	EVP_MD *hash;
+-	unsigned char *p,rec_char;
+-	unsigned int md_size;
++	SslCryptoAlgorithm *hash;
++	unsigned char *p;
++	unsigned int md_size,out_len;
++	unsigned char buf[176];
+ 	int npad,i;
+ 
+ 	if (send)
+@@ -494,38 +706,51 @@
+ 		rec= &(ssl->s3->wrec);
+ 		mac_sec= &(ssl->s3->write_mac_secret[0]);
+ 		seq= &(ssl->s3->write_sequence[0]);
+-		hash=ssl->write_hash;
++		hash=ssl->write_crypto.mac_algorithm;
++		md_size=ssl->write_crypto.mac_size;
+ 		}
+ 	else
+ 		{
+ 		rec= &(ssl->s3->rrec);
+ 		mac_sec= &(ssl->s3->read_mac_secret[0]);
+ 		seq= &(ssl->s3->read_sequence[0]);
+-		hash=ssl->read_hash;
++		hash=ssl->read_crypto.mac_algorithm;
++		md_size=ssl->read_crypto.mac_size;
+ 		}
+ 
+-	md_size=EVP_MD_size(hash);
+ 	npad=(48/md_size)*md_size;
+ 
+ 	/* Chop the digest off the end :-) */
+ 
+-	EVP_DigestInit(  &md_ctx,hash);
+-	EVP_DigestUpdate(&md_ctx,mac_sec,md_size);
+-	EVP_DigestUpdate(&md_ctx,ssl3_pad_1,npad);
+-	EVP_DigestUpdate(&md_ctx,seq,8);
+-	rec_char=rec->type;
+-	EVP_DigestUpdate(&md_ctx,&rec_char,1);
+-	p=md;
++	p=buf;
++	memcpy(p,mac_sec,md_size);
++	p+=md_size;
++	memcpy(p,ssl3_pad_1,npad);
++	p+=npad;
++	p[0]=seq[0];
++	p[1]=seq[1];
++	p[2]=seq[2];
++	p[3]=seq[3];
++	p[4]=seq[4];
++	p[5]=seq[5];
++	p[6]=seq[6];
++	p[7]=seq[7];
++	p[8]=(unsigned char)rec->type;
++	p+=9;
+ 	s2n(rec->length,p);
+-	EVP_DigestUpdate(&md_ctx,md,2);
+-	EVP_DigestUpdate(&md_ctx,rec->input,rec->length);
+-	EVP_DigestFinal( &md_ctx,md,NULL);
+-
+-	EVP_DigestInit(  &md_ctx,hash);
+-	EVP_DigestUpdate(&md_ctx,mac_sec,md_size);
+-	EVP_DigestUpdate(&md_ctx,ssl3_pad_2,npad);
+-	EVP_DigestUpdate(&md_ctx,md,md_size);
+-	EVP_DigestFinal( &md_ctx,md,&md_size);
++	if (sslDigestUpdate(hash,buf,md_size+npad+11) != 0)
++		return(0);
++	if ((rec->length != 0) &&
++		(sslDigestUpdate(hash,rec->input,rec->length) != 0))
++		return(0);
++	if (sslDigestFinal(hash,&(buf[md_size+npad]),&out_len) != 0)
++		return(0);
++
++	memcpy(&(buf[md_size]),ssl3_pad_2,npad);
++	if (sslDigestUpdate(hash,buf,md_size+npad+out_len) != 0)
++		return(0);
++	if (sslDigestFinal(hash,md,&md_size) != 0)
++		return(0);
+ 
+ 	for (i=7; i>=0; i--)
+ 		if (++seq[i]) break; 
+@@ -539,34 +764,97 @@
+ unsigned char *p;
+ int len;
+ 	{
+-	static unsigned char *salt[3]={
+-		(unsigned char *)"A",
+-		(unsigned char *)"BB",
+-		(unsigned char *)"CCC",
+-		};
+-	unsigned char buf[EVP_MAX_MD_SIZE];
+-	EVP_MD_CTX ctx;
++	unsigned char *md5_buf=NULL,*sha_buf=NULL;
++	unsigned char *smd,*sha_p;
++	SslCryptoAlgorithm *s1,*m5;
++	unsigned char c='A';
+ 	int i,ret=0;
+-	unsigned int n;
++	unsigned int n,sha_len,md5_len;
++
++	md5_len=len+SHA_DIGEST_LENGTH;
++	md5_buf=(unsigned char *)Malloc(md5_len);
++	if (md5_buf == NULL)
++		goto err;
++	sha_buf=(unsigned char *)Malloc(len+115);
++	if (sha_buf == NULL)
++		goto err;
+ 
++	memcpy(md5_buf,p,len);
++	smd=md5_buf+len;
++	sha_p=sha_buf+3;
++	memcpy(sha_p,p,len);
++	memcpy(sha_p+len,&(s->s3->client_random[0]),SSL3_RANDOM_SIZE);
++	memcpy(sha_p+len+SSL3_RANDOM_SIZE,&(s->s3->server_random[0]),
++		SSL3_RANDOM_SIZE);
++
++	if (s->sha1_algorithm == NULL)
++		{
++		if (sslCreateAlgorithm(s->ctx->crypto_context,3,0x40,0,
++			(SslCryptoAlgorithm **)&(s->sha1_algorithm)) != 0)
++			goto err;
++		if (sslDigestInit(s->sha1_algorithm) != 0)
++			goto err;
++		}
++	s1=s->sha1_algorithm;
++	if (s->md5_algorithm == NULL)
++		{
++		if (sslCreateAlgorithm(s->ctx->crypto_context,3,4,0,
++			(SslCryptoAlgorithm **)&(s->md5_algorithm)) != 0)
++			goto err;
++		if (sslDigestInit(s->md5_algorithm) != 0)
++			goto err;
++		}
++	m5=s->md5_algorithm;
++
++	sha_len=len+(SSL3_RANDOM_SIZE*2);
+ 	for (i=0; i<3; i++)
+ 		{
+-		EVP_DigestInit(&ctx,s->ctx->sha1);
+-		EVP_DigestUpdate(&ctx,salt[i],strlen((char *)salt[i]));
+-		EVP_DigestUpdate(&ctx,p,len);
+-		EVP_DigestUpdate(&ctx,&(s->s3->client_random[0]),
+-			SSL3_RANDOM_SIZE);
+-		EVP_DigestUpdate(&ctx,&(s->s3->server_random[0]),
+-			SSL3_RANDOM_SIZE);
+-		EVP_DigestFinal(&ctx,buf,&n);
+-
+-		EVP_DigestInit(&ctx,s->ctx->md5);
+-		EVP_DigestUpdate(&ctx,p,len);
+-		EVP_DigestUpdate(&ctx,buf,n);
+-		EVP_DigestFinal(&ctx,out,&n);
+-		out+=n;
+-		ret+=n;
++		sha_p--;
++		sha_len++;
++		if (i == 0)
++			{
++			sha_p[0]=c;
++			}
++		else if (i == 1)
++			{
++			sha_p[1]=c;
++			sha_p[0]=c;
++			}
++		else
++			{
++			sha_p[2]=c;
++			sha_p[1]=c;
++			sha_p[0]=c;
++			}
++		c++;
++		if (sslDigestUpdate(s1,sha_p,sha_len) != 0)
++			{
++			ret=0;
++			goto err;
++			}
++		if (sslDigestFinal(s1,smd,&n) != 0)
++			{
++			ret=0;
++			goto err;
++			}
++		if (sslDigestUpdate(m5,md5_buf,md5_len) != 0)
++			{
++			ret=0;
++			goto err;
++			}
++		if (sslDigestFinal(m5,out,&n) != 0)
++			{
++			ret=0;
++			goto err;
++			}
++		ret+=MD5_DIGEST_LENGTH;
++		out+=MD5_DIGEST_LENGTH;
+ 		}
++err:
++	if (sha_buf != NULL)
++		Free(sha_buf);
++	if (md5_buf != NULL)
++		Free(md5_buf);
+ 	return(ret);
+ 	}
+ 
+@@ -602,4 +890,3 @@
+ 	default:			return(-1);
+ 		}
+ 	}
+-

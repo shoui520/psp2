@@ -31,7 +31,18 @@ typedef struct SslCryptoLifecycleMethods {
 				void *result);
 	int (*SetAlgorithmInfo)(SslCryptoAlgorithm *algorithm, int selector,
 				SceUIntPtr value);
-	SceUIntPtr opaqueOperationsBeforeVerify[12];
+	int (*EncryptInit)(SslCryptoAlgorithm *algorithm, void *key, const void *iv);
+	SceUIntPtr opaqueEncryptOperation;
+	int (*EncryptUpdate)(SslCryptoAlgorithm *algorithm, const void *input,
+			     SceUInt32 inputLength, void *output,
+			     SceUInt32 *outputLength);
+	SceUIntPtr opaqueEncryptFinalOperation;
+	int (*DecryptInit)(SslCryptoAlgorithm *algorithm, void *key, const void *iv);
+	SceUIntPtr opaqueDecryptOperation;
+	int (*DecryptUpdate)(SslCryptoAlgorithm *algorithm, const void *input,
+			     SceUInt32 inputLength, void *output,
+			     SceUInt32 *outputLength);
+	SceUIntPtr opaqueOperationsBeforeVerify[5];
 	int (*VerifyInit)(SslCryptoAlgorithm *algorithm, void *key);
 	SceUIntPtr opaqueVerifyOperation;
 	int (*VerifyUpdate)(SslCryptoAlgorithm *algorithm, const void *data,
@@ -45,6 +56,9 @@ typedef struct SslCryptoLifecycleMethods {
 	int (*DigestUpdate)(SslCryptoAlgorithm *algorithm, const void *data,
 			    SceUInt32 length);
 	int (*DigestFinal)(SslCryptoAlgorithm *algorithm, void *data, SceUInt32 *length);
+	SceUIntPtr opaqueOperationsAfterDigest[16];
+	int (*GenerateRandom)(SslCryptoAlgorithm *algorithm, SceUInt32 length,
+			      void *buffer, SceUInt32 *generatedLength);
 } SslCryptoLifecycleMethods;
 
 /* Shared implementation interface prefix; algorithm-specific operations follow.
@@ -121,6 +135,12 @@ _Static_assert(offsetof(SslCryptoLifecycleMethods, DestroyAlgorithm) == 16,
 int sslDestroyAlgorithm(SslCryptoAlgorithm *algorithm);
 int sslCreateAlgorithm(SslCryptoContextHeader *context, int family, int algorithm,
 		       SceUInt32 mode, SslCryptoAlgorithm **result);
+int sslEncryptInit(SslCryptoAlgorithm *algorithm, void *key, const void *iv);
+int sslEncryptUpdate(SslCryptoAlgorithm *algorithm, const void *input,
+		     SceUInt32 inputLength, void *output, SceUInt32 *outputLength);
+int sslDecryptInit(SslCryptoAlgorithm *algorithm, void *key, const void *iv);
+int sslDecryptUpdate(SslCryptoAlgorithm *algorithm, const void *input,
+		     SceUInt32 inputLength, void *output, SceUInt32 *outputLength);
 int sslVerifyInit(SslCryptoAlgorithm *algorithm, void *key);
 int sslVerifyUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length);
 int sslVerifyFinal(SslCryptoAlgorithm *algorithm, const void *signature,
@@ -130,6 +150,8 @@ int sslDigest(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length,
 	      void *digest, SceUInt32 *digestLength);
 int sslDigestUpdate(SslCryptoAlgorithm *algorithm, const void *data, SceUInt32 length);
 int sslDigestFinal(SslCryptoAlgorithm *algorithm, void *data, SceUInt32 *length);
+int sslGenerateRandom(SslCryptoAlgorithm *algorithm, SceUInt32 length,
+		      void *buffer, SceUInt32 *generatedLength);
 int sslCreateCryptoContext(SslLibrary *library, int mode, void **result);
 int sslDestroyCryptoContext(void *context);
 int sslFreeAlgorithm(SslCryptoAlgorithm *algorithm);
@@ -175,9 +197,19 @@ _Static_assert(offsetof(SslCryptoLifecycleMethods, GetAlgorithmInfo) == 24,
 	       "GetAlgorithmInfo");
 _Static_assert(offsetof(SslCryptoLifecycleMethods, SetAlgorithmInfo) == 28,
 	       "SetAlgorithmInfo");
+_Static_assert(offsetof(SslCryptoLifecycleMethods, EncryptInit) == 32,
+	       "EncryptInit");
+_Static_assert(offsetof(SslCryptoLifecycleMethods, EncryptUpdate) == 40,
+	       "EncryptUpdate");
+_Static_assert(offsetof(SslCryptoLifecycleMethods, DecryptInit) == 48,
+	       "DecryptInit");
+_Static_assert(offsetof(SslCryptoLifecycleMethods, DecryptUpdate) == 56,
+	       "DecryptUpdate");
 _Static_assert(offsetof(SslCryptoLifecycleMethods, DigestInit) == 112, "DigestInit");
 _Static_assert(offsetof(SslCryptoLifecycleMethods, DigestUpdate) == 120, "DigestUpdate");
 _Static_assert(offsetof(SslCryptoLifecycleMethods, DigestFinal) == 124, "DigestFinal");
+_Static_assert(offsetof(SslCryptoLifecycleMethods, GenerateRandom) == 192,
+	       "GenerateRandom");
 _Static_assert(offsetof(SslCryptoImplementationMethods, GetInfo) == 12,
 	       "GetInfo");
 _Static_assert(offsetof(SslCryptoImplementationMethods, SetInfo) == 16,
