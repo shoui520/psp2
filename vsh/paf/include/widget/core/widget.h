@@ -370,13 +370,32 @@ public:
 /* where the focus moves from a widget, and the rectangle it searches (names ours) */
 class FocusHint {
 public:
+	FocusHint() : m_search_rect_enable(true)
+	{
+	}
+
 	/* up, down, left and right */
 	IDParam m_direction_id[4];
 	math::rect m_search_rect;
-	bool reserved;
+	/* whether the search rect is searched (EnableFocusSearchRect) */
+	bool m_search_rect_enable;
 };
 
 class Focuser;
+
+/* the widget the focus moves to in each direction: up, down, left and right (names ours) */
+class FocusDirectionWidget {
+public:
+	FocusDirectionWidget()
+	{
+		m_widget[0] = NULL;
+		m_widget[1] = NULL;
+		m_widget[2] = NULL;
+		m_widget[3] = NULL;
+	}
+
+	Widget *m_widget[4];
+};
 
 /* what a Focuser calls to move the focus: the focuser, its widget, and what Focus was given
    (name ours) */
@@ -410,11 +429,64 @@ public:
 	/* the widget its hint names for the focus direction (0 up, 1 down, 2 left, 3 right): by
 	   ID under its widget's focus root, else the hint's own widget (0x811460e8; name ours) */
 	Widget *GetHintWidget(int32_t dir);
+	/* the ID its hint names for the focus direction, where it has a widget and a hint
+	   (0x811461da; name ours) */
+	void GetHintID(int32_t dir, IDParam *id);
+
+	/* its hint, made where it has none (name ours) */
+	FocusHint *GetHint()
+	{
+		if (m_hint == NULL)
+			m_hint = new FocusHint;
+		return m_hint;
+	}
+
+	/* the ID of the focus direction in its hint (name ours) */
+	void SetHintID(int32_t dir, IDParam id)
+	{
+		FocusHint *hint = GetHint();
+		IDParam value = id;
+
+		switch (dir) {
+		case 0:
+			hint->m_direction_id[0] = value;
+			break;
+		case 1:
+			hint->m_direction_id[1] = value;
+			break;
+		case 2:
+			hint->m_direction_id[2] = value;
+			break;
+		case 3:
+			hint->m_direction_id[3] = value;
+			break;
+		}
+	}
+
+	/* its direction widgets, made where it has none (name ours) */
+	FocusDirectionWidget *GetDirectionWidget()
+	{
+		if (m_data == NULL)
+			m_data = new FocusDirectionWidget;
+		return m_data;
+	}
 
 	Widget *m_widget;
 	FocusCB m_cb;
 	FocusHint *m_hint;
-	uint8_t *m_data;
+	/* the widgets the focus moves to in each direction (SetFocusDirectionWidget) */
+	FocusDirectionWidget *m_data;
+};
+
+/* the widgets whose focus directions name a widget (SetFocusDirectionWidget; names ours) */
+class FocusReferrers {
+public:
+	FocusReferrers()
+	{
+	}
+
+	vector<Widget *> reserved;
+	vector<Widget *> m_referrers;
 };
 
 /* the focus of the widgets under one that holds it (names ours) */
@@ -1403,7 +1475,8 @@ public:
 	FocusShape *m_focus_shape;
 	uint8_t reserved7c[0x10];
 	FocusRoot *m_focus_root;
-	uint8_t reserved7d[4];
+	/* the widgets whose focus directions name this one, made by the first */
+	FocusReferrers *m_focus_referrers;
 	/* the layout changes it tells its parent's layouter of (NotifyLayoutDirty): the low byte
 	   the kinds, the high byte the ones it passes on; a scroll view's child passes 0x300 on
 	   (ScrollView::OnChildRegistered; name ours) */
@@ -1468,6 +1541,9 @@ extern "C" {
 /* the widget given a focus root of its own, the focus taken from the root above it
    (no name found) */
 int32_t ScePafWidget_00AA6519(paf::ui::Widget *widget);
+/* the widget the focuser's direction widgets name for the direction (0 up, 1 down, 2 left,
+   3 right; up for any other), NULL where it has no widget or none (no name found) */
+paf::ui::Widget *ScePafWidget_71349B04(paf::ui::Focuser *focuser, int32_t dir);
 /* the widget added to the shared list the file of AnimQueue keeps, whose object (0x2b0 bytes)
    is made on first use, with a delete callback dropping it again (no name found) */
 int32_t ScePafWidget_82A61BBC(paf::ui::Widget *widget);

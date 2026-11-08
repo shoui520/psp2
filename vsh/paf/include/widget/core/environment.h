@@ -136,7 +136,8 @@ public:
 		sce_paf_memset(this, 0, sizeof(HitInfo));
 	}
 
-	uint8_t reserved1[0x10];
+	/* where the touch is, as SpinBase's drum takes it when the touch goes down (name ours) */
+	math::v4 m_pos;
 	/* the touch's position, and where it hit (copied by AppIconBase at a touch down) */
 	math::v2 m_touch_pos;
 	math::v2 m_hit_pos;
@@ -180,7 +181,9 @@ public:
 	uint32_t m_port;
 	uint32_t m_id;
 	Widget *m_widget;
-	void *m_touch;
+	/* the touch's state (the Environment's m_touch_state for the port and ID; the drum of
+	   SpinBase reads its line end) */
+	TouchState *m_touch;
 };
 
 /* the focus: the widget drawn as the focus cursor and the widget it is on (Sony's class name,

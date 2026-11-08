@@ -808,13 +808,6 @@ __attribute__((noinline)) int _ZNK3paf2ui12PageTurnBase9IsInheritEPKc(const void
 	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
 }
 
-__attribute__((noinline)) int _ZNK3paf2ui8SpinBase9IsInheritEPKc(const void *self, const char *tag)
-{
-	if (tag == "spin_base")
-		return 1;
-	return _ZNK3paf2ui6Widget9IsInheritEPKc(self, tag);
-}
-
 __attribute__((noinline)) int _ZNK3paf2ui4Text9IsInheritEPKc(const void *self, const char *tag)
 {
 	if (tag == "text")
@@ -840,6 +833,8 @@ int _ZNK3paf2ui10ButtonBase9IsInheritEPKc(const void *self, const char *type);
 int _ZNK3paf2ui15StateButtonBase9IsInheritEPKc(const void *self, const char *type);
 /* ScrollBar's is C++ (w_scrollbar.cpp) */
 int _ZNK3paf2ui9ScrollBar9IsInheritEPKc(const void *self, const char *type);
+/* SpinBase's is C++ (w_spin_base.cpp) */
+int _ZNK3paf2ui8SpinBase9IsInheritEPKc(const void *self, const char *type);
 /* ScrollViewBase's is C++ (w_scroll_view_base.cpp) */
 int _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc(const void *self, const char *type);
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ListView9IsInheritEPKc, "list_view",
@@ -1169,15 +1164,6 @@ int _ZN3paf2ui11RadioButton14OnButtonDecideEv(void *self)
 
 	return ((int (*)(void *, int, int))*(void *const *)(vtable + 444))(
 		self, 1, 1);
-}
-
-float ScePafWidget_4983B3FC(uint8_t *self)
-{
-	const uint8_t *delegate = *(const uint8_t *const *)(self + 680);
-
-	if (delegate)
-		return *(const float *)(delegate + 668);
-	return (float)*(const int32_t *)(self + 644);
 }
 
 int ScePafWidget_3E4AABD3(uint8_t *self, void *replacement)
