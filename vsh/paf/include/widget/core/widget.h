@@ -1196,7 +1196,16 @@ public:
 	math::v4 GetRot(int32_t opt, Widget *ref, const math::v4 &off_rot, int32_t option);
 	/* turned to look at the target's position plus the offset, with up taken from ref
 	   (export 88A433CC; argument names ours) */
-	int32_t LookAt(Widget *target, const math::v4 &offs, Widget *ref, const math::v4 &up);
+	/* turned to face the point, the second look-at point (or the z axis) up (0x81154f18) */
+	int32_t LookAt(const math::v4 &target, const math::v4 &up);
+	/* the same with the points as the widgets' positions, their offsets given */
+	int32_t LookAt(Widget *target, const math::v4 &target_offs, Widget *up, const math::v4 &up_offs);
+	/* turned to the facing and up vectors, in a reference widget's rotation where it is given
+	   (0x81155072) */
+	int32_t SetPosture(const math::v4 &facing, const math::v4 &up, Widget *ref);
+	/* the rotation that faces the first vector with the second up, made into the quaternion
+	   (0x81154cee; name ours) */
+	static void MakeLookAtQuat(math::v4 *facing, math::v4 *up, math::quaternion *quat);
 	/* the rectangle it clips its children to */
 	math::rect CalcClipRect();
 	math::v4 GetAlignOffsetToCenter(int32_t opt);
@@ -1425,7 +1434,9 @@ public:
 	math::v4 m_align_offs;
 	math::v4 m_anchor_offs;
 	math::v4 m_origin_offs;
-	uint8_t reserved2[0x18];
+	uint8_t reserved2a[8];
+	/* the rotation LookAt and SetPosture make, from a facing and an up vector (name ours) */
+	math::quaternion m_quat;
 	IDParam m_name;
 	uint32_t m_state;
 	void *m_user_data[2];

@@ -2451,6 +2451,90 @@ math::v4 Widget::GetFocusShapeSize()
 	return size;
 }
 
+/* the cross product of the first three components, the first vector's w kept (Sony's copy is
+   out of line; name ours) */
+static __attribute__((noinline)) math::v4 CrossKeepW(const math::v4 &a, const math::v4 &b)
+{
+	return math::v4(sce::Vectormath::Simd::Aos::Vector4(
+		sce::Vectormath::Simd::Aos::cross(a.getImpl().getXYZ(), b.getImpl().getXYZ()),
+		a.extract_w()));
+}
+
+/* the product of two rotations (Sony's copy is out of line; name ours) */
+static __attribute__((noinline)) math::quaternion QuatMul(const math::quaternion &a, const math::quaternion &b)
+{
+	return math::quaternion(a.getImpl() * b.getImpl());
+}
+
+void Widget::MakeLookAtQuat(math::v4 *facing, math::v4 *up, math::quaternion *quat)
+{
+	facing->set_w(0.0f);
+	up->set_w(0.0f);
+
+	math::v4 forward = facing->unit();
+	math::v4 right = CrossKeepW(*up, forward).unit();
+	math::v4 above = CrossKeepW(forward, right);
+	math::quaternion rotation(math::matrix(right, above, forward, math::v4(0.0f, 0.0f, 0.0f, 1.0f)));
+
+	*quat = math::quaternion(sce::Vectormath::Simd::Aos::normalize(rotation.getImpl()));
+}
+
+int32_t Widget::LookAt(const math::v4 &target, const math::v4 &up)
+{
+	math::v4 facing = target - m_pos;
+	math::v4 above = up - m_pos;
+
+	if (up.extract_w() == -10.0f)
+		above = math::v4(0.0f, 1.0f, 0.0f, 0.0f);
+	MakeLookAtQuat(&facing, &above, &m_quat);
+	KillAnimType(65542);
+	KillAnimType(65543);
+	SetUpdateParam(1);
+	return 0;
+}
+
+int32_t Widget::LookAt(Widget *target, const math::v4 &target_offs, Widget *up, const math::v4 &up_offs)
+{
+	if (target == NULL)
+		return -1;
+
+	math::v4 facing = target->GetPos(0, m_parent, target_offs) - m_pos;
+	math::v4 above(0.0f, 1.0f, 0.0f, 0.0f);
+
+	if (up != NULL)
+		above = up->GetPos(0, m_parent, up_offs) - m_pos;
+	MakeLookAtQuat(&facing, &above, &m_quat);
+	KillAnimType(65542);
+	KillAnimType(65543);
+	SetUpdateParam(1);
+	return 0;
+}
+
+int32_t Widget::SetPosture(const math::v4 &facing, const math::v4 &up, Widget *ref)
+{
+	math::v4 f;
+	math::v4 u;
+
+	if (ref != NULL) {
+		UpdateMatrix();
+
+		math::quaternion ref_rot = ref->m_world_rot;
+		math::quaternion rel = QuatMul(m_world_rot.inverse(), ref_rot);
+		math::matrix m = rel.toMatrix(0.0001f);
+
+		f = math::v4(m.getImpl() * facing.getImpl());
+		u = math::v4(m.getImpl() * up.getImpl());
+	} else {
+		f = facing;
+		u = up;
+	}
+	MakeLookAtQuat(&f, &u, &m_quat);
+	KillAnimType(65542);
+	KillAnimType(65543);
+	SetUpdateParam(1);
+	return 0;
+}
+
 void Widget::SetBaseDestroyCount(int32_t count)
 {
 	s_base_destroy_count = count;
