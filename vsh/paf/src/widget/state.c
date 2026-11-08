@@ -420,13 +420,6 @@ int _ZN3paf2ui7Handler16HandleInputEventEPNS0_5EventE(void *self, uint32_t value
 	return 0;
 }
 
-int _ZN3paf2ui8RadioBox16CBDestroyCheckedEPNS0_6WidgetEPv(void *self, void *other)
-{
-	void *const *methods = *(void *const *const *)other;
-
-	return ((int (*)(void *, void *))methods[95])(other, self);
-}
-
 void *ScePafWidget_40F2A311(uint32_t *self)
 {
 	if (self[118] == 0) {
@@ -616,8 +609,7 @@ int _ZNK3paf2ui8CheckBox9IsInheritEPKc(const void *self, const char *type);
 int _ZNK3paf2ui11ImageButton9IsInheritEPKc(const void *self, const char *type);
 /* ProgressBarTouch's is C++ (w_progress_bar_touch.cpp) */
 /* PlaneButton's is C++ (w_plane_button.cpp) */
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RadioBox9IsInheritEPKc, "radio_box",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+/* RadioBox's is C++ (w_radio_box.cpp) */
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui13SlidingDrawer9IsInheritEPKc, "sliding_drawer",
 		   _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc)
 /* Plane's is C++ (w_plane.cpp) */
@@ -638,8 +630,7 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui8Supplier9IsInheritEPKc, "supplier",
 		   _ZNK3paf2ui5Plane9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui5Scene9IsInheritEPKc, "page",
 		   _ZNK3paf2ui6Widget9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui11RadioButton9IsInheritEPKc, "radio_button",
-		   _ZNK3paf2ui15StateButtonBase9IsInheritEPKc)
+/* RadioButton's is C++ (w_radio_button.cpp) */
 
 #undef DEFINE_WIDGET_TYPE
 
@@ -796,14 +787,6 @@ int _ZN3paf2ui6Widget17SetDrawObjMaskBitEPKvi(void *self, int first, int second)
 		self, first, second, 0);
 }
 
-int _ZN3paf2ui11RadioButton14OnButtonDecideEv(void *self)
-{
-	const uint8_t *vtable = *(const uint8_t *const *)self;
-
-	return ((int (*)(void *, int, int))*(void *const *)(vtable + 444))(
-		self, 1, 1);
-}
-
 int ScePafWidget_3E4AABD3(uint8_t *self, void *replacement)
 {
 	void *previous = *(void **)(self + 716);
@@ -949,21 +932,3 @@ uint32_t *ScePafWidget_D0D78958(uint32_t *self, uint32_t *first,
 	return self;
 }
 
-int _ZN3paf2ui13RadioBoxParam3GetEv(uint8_t *self)
-{
-	int result = _ZN3paf2ui11WidgetParam3GetEv(self);
-
-	if (result >= 0) {
-		const uint8_t *state = *(const uint8_t *const *)(self + 32);
-		const uint8_t *object = *(const uint8_t *const *)(state + 636);
-
-		if (object) {
-			PafStringCopy((PafString *)(self + 120),
-					(const PafString *)(object + 320));
-			*(uint32_t *)(self + 132) =
-				*(const uint32_t *)(object + 332);
-		}
-		return 0;
-	}
-	return result;
-}

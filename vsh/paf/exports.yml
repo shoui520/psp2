@@ -3424,7 +3424,7 @@ ScePaf:
         - _ZN3paf2ui6Screen13SetRootScreenEPS1_: 0x32028863
         - _ZN3paf2ui6Widget19NotifyAnimatorDirtyEj: 0x32053276
         - _ZN3paf2ui8CheckBox8TypeNameEv: 0x320F97D5
-        - ScePafWidget_3225DC47: 0x3225DC47
+        - _ZN3paf2ui11RadioButton8SetCheckEbfb: 0x3225DC47
         - ScePafWidget_323CEF70: 0x323CEF70
         - _ZN3paf2ui18ImageSlideBarParamC2Ev: 0x32498FFF
         - _ZN3paf2ui8filelist19SegmentListAccessor6InsertEij: 0x32559DF6

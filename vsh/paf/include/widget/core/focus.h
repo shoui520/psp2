@@ -61,6 +61,33 @@ public:
 	math::rect m_rect;
 };
 
+/* the focus of the widget's focus root, NULL for none (the focus root's m_state holds it) */
+inline Widget *GetRootFocus(Widget *widget)
+{
+	Widget *root = ScePafWidget_CFA1EB7A(widget);
+
+	if (root == NULL)
+		return NULL;
+	return root->m_focus_root != NULL ? (Widget *)root->m_focus_root->m_state : NULL;
+}
+
+/* the focus search's direction for the move (FocusSearchInfo::m_dir; 255 for none) */
+inline int32_t GetFocusDir(const math::v2 &dir)
+{
+	math::v2 d = dir;
+	int32_t ret = 255;
+
+	if (d.extract_x() > 0.0f)
+		ret = 4;
+	if (d.extract_x() < 0.0f)
+		ret = 3;
+	if (d.extract_y() > 0.0f)
+		ret = 1;
+	if (d.extract_y() < 0.0f)
+		ret = 2;
+	return ret;
+}
+
 }
 }
 
