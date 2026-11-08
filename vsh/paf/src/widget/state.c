@@ -33,52 +33,9 @@ int ScePafWidget_E8F862FC(void *self, const void *value)
 }
 
 /* Shared PAF-widget registration and state slots. */
-uint32_t sce_paf_widget_state_199c;
-uint32_t sce_paf_widget_state_19a8;
-uint32_t sce_paf_widget_state_19ac;
-uint32_t sce_paf_widget_state_19b0;
-uint32_t sce_paf_widget_state_19b4;
-uint32_t sce_paf_widget_state_19b8;
-uint32_t sce_paf_widget_state_19bc;
-uint32_t sce_paf_widget_state_19c0;
 uint32_t sce_paf_widget_state_1ce8;
 uint32_t sce_paf_widget_state_142d4;
 uint32_t sce_paf_widget_state_142d8;
-
-uint32_t ScePafWidget_1EE9D37E(void)
-{
-	return sce_paf_widget_state_19a8;
-}
-
-uint32_t _ZN3paf2ui5wutil15GetEditListenerEv(void)
-{
-	return sce_paf_widget_state_19ac;
-}
-
-uint32_t _ZN3paf2ui5wutil18GetWebEditListenerEv(void)
-{
-	return sce_paf_widget_state_19b0;
-}
-
-uint32_t _ZN3paf2ui5wutil24GetMessageDialogListenerEv(void)
-{
-	return sce_paf_widget_state_19b4;
-}
-
-uint32_t ScePafWidget_A55215E5(void)
-{
-	return sce_paf_widget_state_19b8;
-}
-
-uint32_t _ZN3paf2ui5wutil18GetWebViewListenerEv(void)
-{
-	return sce_paf_widget_state_19bc;
-}
-
-uint32_t ScePafWidget_E638AA1F(void)
-{
-	return sce_paf_widget_state_19c0;
-}
 
 uint32_t _ZN3paf2ui6Widget19GetBaseDestroyCountEv(void)
 {
@@ -88,12 +45,6 @@ uint32_t _ZN3paf2ui6Widget19GetBaseDestroyCountEv(void)
 uint32_t _ZN3paf2ui6Widget19SetBaseDestroyCountEi(uint32_t value)
 {
 	sce_paf_widget_state_1ce8 = value;
-	return value;
-}
-
-uint32_t _ZN3paf2ui5wutil6SetEnvEPNS0_11EnvironmentE(uint32_t value)
-{
-	sce_paf_widget_state_199c = value;
 	return value;
 }
 
@@ -166,60 +117,6 @@ uint32_t ScePafWidget_3546C104(const uint8_t *self, uint8_t filter)
 	return flags;
 }
 
-
-
-
-
-uint32_t *ScePafWidget_5245A0F2(uint32_t *result, const uint32_t *source)
-{
-	uint32_t first = source[0];
-	uint32_t second = source[1];
-
-	result[0] = source[0];
-	uint32_t third = source[2];
-	result[1] = second;
-	result[2] = third;
-	result[10] = first;
-	result[11] = second;
-	result[12] = first;
-	result[13] = second;
-	result[14] = 1062045612u;
-	return result;
-}
-
-static inline __attribute__((always_inline))
-uint32_t *ResetWidgetTransform(uint32_t *result)
-{
-	result[5] = 0;
-	result[6] = 0;
-	result[7] = 0;
-	result[8] = 0;
-	result[9] = 0;
-	result[10] = 0;
-	result[11] = 0;
-	result[12] = 0;
-	result[13] = 0;
-	result[14] = 0;
-	result[15] = 0;
-	result[16] = 0;
-	result[17] = 0;
-	result[18] = 0;
-	result[19] = 0;
-	result[20] = 0;
-	result[22] = 0;
-	result[21] = 0;
-	return result;
-}
-
-uint32_t *_ZN3paf2ui5wutil9InitParamC2Ev(uint32_t *result)
-{
-	return ResetWidgetTransform(result);
-}
-
-uint32_t *_ZN3paf2ui5wutil9InitParamC1Ev(uint32_t *result)
-{
-	return ResetWidgetTransform(result);
-}
 
 uint8_t *_ZN3paf2ui6Widget9FindChildEPS1_i(uint8_t *self, uint8_t *value, int32_t mode)
 {
@@ -515,7 +412,6 @@ void *ScePafWidget_1D7D7860(uint8_t *self)
 	((void (*)(void *))*(void *const *)(vtable + 108))(target);
 	return self;
 }
-
 
 
 /* Test membership in the indexed widget selector table. */

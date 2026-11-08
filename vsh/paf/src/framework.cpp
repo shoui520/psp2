@@ -231,7 +231,7 @@ Framework::Framework(const InitParam &init_param)
 
 	ui::wutil::InitParam wutil_param;
 
-	wutil_param.projection_option = 0;
+	wutil_param.text_param = 0;
 	ScePafWidget_5245A0F2(&wutil_param, &dev_param.whandle);
 	wutil_param.surf_dev_mem_addr = init_param.surf_dev_mem_addr;
 	wutil_param.surf_dev_mem_size = init_param.surf_dev_mem_size;

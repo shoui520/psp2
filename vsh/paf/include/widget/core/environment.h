@@ -27,6 +27,10 @@ class Surface;
 class DisplaySurface;
 }
 
+namespace gutil {
+class WinHandle;
+}
+
 namespace ui {
 
 /*
@@ -44,6 +48,11 @@ public:
 	{
 		return s_root_screen;
 	}
+
+	/* the root screen made of a surface of the window's size, with the viewport size given
+	   (below 1: the surface's) (0x81148184; name ours), and given up (0x811483c8) */
+	static int32_t Init(gutil::WinHandle whandle, int32_t vp_width, int32_t vp_height);
+	static int32_t Term();
 
 	/* the surface made the target of the draws that follow, 0 when it is not cleared yet;
 	   cleared; and the draws finished */
@@ -423,6 +432,10 @@ int32_t ScePafWidget_F67517A0(paf::ui::Environment *env);
 void ScePafWidget_8E61FE0C(paf::ui::Environment *env);
 /* always 0 */
 int32_t ScePafWidget_998F8F48(void);
+/* begins a frame on the root screen, and ends it (0x81148456, 0x81148418; the Environment's
+   versions are F67517A0 and 8E61FE0C) */
+int32_t ScePafWidget_0313D591(void);
+int32_t ScePafWidget_323CEF70(void);
 /* loads the effects whose bits are set from the folder */
 int32_t ScePafWidget_BA6EB0C6(uint32_t effects, const paf::string &dir);
 }
