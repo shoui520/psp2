@@ -189,3 +189,120 @@ error:
 	*result = NULL;
 	return status;
 }
+
+int sslVerifyMethodInit(SslCryptoAlgorithm *algorithm, void *key)
+{
+	int (*init)(SslCryptoAlgorithm *, void *, int);
+	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+
+	if (key != NULL) {
+		status = SSL_LIBRARY_ERROR_SELECTOR;
+		if (algorithm->family == 6) {
+			status = SSL_CRYPTO_ERROR_NO_METHODS;
+			if (algorithm->implementationMethods != NULL) {
+				int callStatus =
+					SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+
+				init = algorithm->implementationMethods->Init;
+				if (init != NULL)
+					callStatus = init(algorithm, key, 0);
+				status = callStatus;
+			}
+		}
+	}
+	return status;
+}
+
+int sslVerifyMethodVerify(SslCryptoAlgorithm *algorithm, const void *digest,
+			  SceUInt32 digestLength, const void *signature,
+			  SceUInt32 signatureLength, int *result)
+{
+	int (*verify)(SslCryptoAlgorithm *, const void *, SceUInt32,
+		      const void *, SceUInt32, int *);
+	int status;
+
+	if (signature == NULL || digest == NULL || result == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (digestLength == 0 || signatureLength == 0) {
+		status = 10022;
+	} else if (algorithm->family == 6 && algorithm->mode == 4) {
+		status = SSL_CRYPTO_ERROR_NO_METHODS;
+		if (algorithm->implementationMethods != NULL) {
+			int callStatus = SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+
+			verify = algorithm->implementationMethods->Verify;
+			if (verify != NULL)
+				callStatus = verify(algorithm, digest,
+						    digestLength, signature,
+						    signatureLength, result);
+			status = callStatus;
+		}
+	} else {
+		status = SSL_LIBRARY_ERROR_SELECTOR;
+	}
+	return status;
+}
+
+int sslVerifyMethodUpdate(SslCryptoAlgorithm *algorithm, const void *data,
+			  SceUInt32 length)
+{
+	int (*update)(SslCryptoAlgorithm *, const void *, SceUInt32);
+	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+
+	if (data != NULL) {
+		status = 10022;
+		if (length != 0) {
+			if (algorithm->family == 6 && algorithm->mode == 4) {
+				int innerStatus = SSL_CRYPTO_ERROR_NO_METHODS;
+
+				if (algorithm->implementationMethods != NULL) {
+					int callStatus =
+						SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+
+					update = algorithm->implementationMethods->VerifyUpdate;
+					if (update != NULL)
+						callStatus = update(algorithm,
+								    data,
+								    length);
+					innerStatus = callStatus;
+				}
+				status = innerStatus;
+			} else {
+				status = SSL_LIBRARY_ERROR_SELECTOR;
+			}
+		}
+	}
+	return status;
+}
+
+int sslVerifyMethodFinal(SslCryptoAlgorithm *algorithm, const void *signature,
+			 SceUInt32 length, int *result)
+{
+	int (*finalOp)(SslCryptoAlgorithm *, const void *, SceUInt32, int *);
+	int status;
+
+	if (signature == NULL || result == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	status = 10022;
+	if (length != 0) {
+		if (algorithm->family == 6 && algorithm->mode == 4) {
+			int innerStatus = SSL_CRYPTO_ERROR_NO_METHODS;
+
+			if (algorithm->implementationMethods != NULL) {
+				int callStatus =
+					SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD;
+
+				finalOp = algorithm->implementationMethods->VerifyFinal;
+				if (finalOp != NULL)
+					callStatus = finalOp(algorithm,
+							     signature, length,
+							     result);
+				innerStatus = callStatus;
+			}
+			status = innerStatus;
+		} else {
+			status = SSL_LIBRARY_ERROR_SELECTOR;
+		}
+	}
+	return status;
+}

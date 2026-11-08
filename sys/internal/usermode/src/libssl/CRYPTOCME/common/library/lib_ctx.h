@@ -25,6 +25,8 @@ struct SslLibraryMethods {
 	int (*CreateObject)(SslLibrary *library, int type, int selector,
 			    SceUInt32 flags, int parameter, void *result);
 	int (*GetModuleData)(SslLibrary *library, int type, void **result);
+	void *reserved0;
+	void *reserved1;
 };
 
 struct SslLibraryModule {
@@ -78,6 +80,7 @@ int sslCreateDefaultKey(SslLibrary *library, int type, const void *info,
 int sslGetDefaultKeyInfo(void *key, int selector, void *result);
 int sslGetLibraryModuleData(SslLibrary *library, int type, void **result);
 SslLibrary **sslResetDefaultLibrary(void);
+SslLibraryModule *SceSslInternal_FB51AE89(void);
 void SceSslInternal_DEC6DD27(void);
 SslLibrary *sslGetDefaultLibrary(void);
 int SceSslInternal_09657E15(SslLibraryModule *table, int unused,
@@ -102,6 +105,7 @@ int sslCreateLibraryObject(SslLibrary *library, int type, int selector,
 			   SceUInt32 flags, int parameter, void *result);
 int sslGetLibraryData(SslLibrary *library, int type, void **result);
 SslLibraryModule *sslGetLibraryModuleTable(SslLibrary *library);
+const void *sslGetDefaultLibraryMethods(void *data);
 int sslConstructLibraryObject(SslLibrary *library, int type, int selector,
 			      SceUInt32 flags, int parameter,
 			      SslObjectHeader **result);

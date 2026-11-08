@@ -37,6 +37,7 @@ int sslFreeCryptoContext(void *object);
 int sslNewCryptoContext(void *libraryObject, int mode, void **result);
 int sslSetCryptoContextInfo(SslCryptoContext *context, int selector,
 			    SceUIntPtr value);
+void *sslGetDefaultMacAlgorithmMappings(void *data);
 int sslNewAlgorithm(void *object, int family, int identifier, SceUInt32 mode,
 		     SslCryptoAlgorithm **result);
 

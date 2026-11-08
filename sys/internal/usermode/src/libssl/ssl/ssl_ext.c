@@ -981,5 +981,3 @@ end:
 	}
 	return status;
 }
-
-STUB(SceSslInternal_FB51AE89)

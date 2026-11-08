@@ -3,6 +3,33 @@
  */
 #include "ctx.h"
 
+static const SslCryptoMacAlgorithmMapping sslDefaultMacAlgorithmMappings[] = {
+	{ 65, 64, 6 },
+	{ 4106, 64, 4105 },
+	{ 133, 165, 6 },
+	{ 130, 162, 6 },
+	{ 131, 163, 6 },
+	{ 132, 164, 6 },
+	{ 4111, 64, 4110 },
+	{ 4124, 162, 4110 },
+	{ 4125, 163, 4110 },
+	{ 4126, 164, 4110 },
+	{ 4129, 162, 4128 },
+	{ 4173, 64, 4172 },
+	{ 4175, 163, 4174 },
+	{ 4177, 164, 4176 },
+	{ 4179, 165, 4178 },
+	{ 7, 3, 6 },
+	{ 8, 4, 6 },
+	{ 113, 64, 116 },
+	{ 179, 64, 4118 },
+	{ 233, 165, 4118 },
+	{ 234, 162, 4118 },
+	{ 235, 163, 4118 },
+	{ 236, 164, 4118 },
+	{ -1, -1, -1 }
+};
+
 int sslSetCryptoContextInfo(SslCryptoContext *context, int selector,
 			    SceUIntPtr value)
 {
@@ -44,6 +71,12 @@ int sslQueryAlgorithmSupport(SslCryptoContextHeader *context, int family,
 		break;
 	}
 	return 0;
+}
+
+void *sslGetDefaultMacAlgorithmMappings(void *data)
+{
+	(void)data;
+	return (void *)sslDefaultMacAlgorithmMappings;
 }
 
 int sslMapMacAlgorithms(SslLibrary *library, int *algorithm,

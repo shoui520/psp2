@@ -84,6 +84,8 @@ typedef struct SslCryptoLifecycleMethods {
 			  SceUInt32 length);
 	int (*GenerateRandom)(SslCryptoAlgorithm *algorithm, SceUInt32 length,
 			      void *buffer, SceUInt32 *generatedLength);
+	SceUIntPtr opaqueOperationsAfterRandom[4];
+	int (*RetainContext)(void *context);
 } SslCryptoLifecycleMethods;
 
 /* Shared implementation interface prefix; algorithm-specific operations follow.
@@ -96,6 +98,16 @@ typedef struct SslCryptoImplementationMethods {
 	int (*GetInfo)(SslCryptoAlgorithm *algorithm, int selector, void *result);
 	int (*SetInfo)(SslCryptoAlgorithm *algorithm, int selector,
 		       SceUIntPtr value);
+	void *reserved20;
+	void *Init;
+	void *Operate;
+	void *Update;
+	void *Final;
+	void *Verify;
+	int (*VerifyUpdate)(SslCryptoAlgorithm *algorithm, const void *data,
+			    SceUInt32 length);
+	int (*VerifyFinal)(SslCryptoAlgorithm *algorithm, const void *signature,
+			   SceUInt32 length, int *result);
 } SslCryptoImplementationMethods;
 
 /* Complete algorithm descriptor; the names are ours. */
@@ -223,6 +235,54 @@ int sslGetImplementationInfo(SslCryptoAlgorithm *algorithm, int selector,
 			     void *result);
 int sslSetImplementationInfo(SslCryptoAlgorithm *algorithm, int selector,
 			     SceUIntPtr value);
+int sslCipherMethodUpdate(SslCryptoAlgorithm *algorithm, const void *input,
+			  SceUInt32 inputLength, void *output,
+			  SceUInt32 *outputLength);
+int sslCipherMethodFinal(SslCryptoAlgorithm *algorithm, void *output,
+			 SceUInt32 *outputLength);
+int sslCipherMethodOperate(SslCryptoAlgorithm *algorithm, const void *input,
+			   SceUInt32 inputLength, void *output,
+			   SceUInt32 *outputLength);
+int sslCipherMethodEncryptInit(SslCryptoAlgorithm *algorithm, void *key,
+			       const void *iv);
+int sslCipherMethodDecryptInit(SslCryptoAlgorithm *algorithm, void *key,
+			       const void *iv);
+int sslAsymMethodInit(SslCryptoAlgorithm *algorithm, void *key);
+int sslAsymMethodEncrypt(SslCryptoAlgorithm *algorithm, const void *input,
+			 SceUInt32 inputLength, void *output,
+			 SceUInt32 *outputLength);
+int sslAsymMethodDecrypt(SslCryptoAlgorithm *algorithm, const void *input,
+			 SceUInt32 inputLength, void *output,
+			 SceUInt32 *outputLength);
+int sslVerifyMethodInit(SslCryptoAlgorithm *algorithm, void *key);
+int sslVerifyMethodVerify(SslCryptoAlgorithm *algorithm, const void *digest,
+			  SceUInt32 digestLength, const void *signature,
+			  SceUInt32 signatureLength, int *result);
+int sslVerifyMethodUpdate(SslCryptoAlgorithm *algorithm, const void *data,
+			  SceUInt32 length);
+int sslVerifyMethodFinal(SslCryptoAlgorithm *algorithm, const void *signature,
+			 SceUInt32 length, int *result);
+int sslRandomMethodSeed(SslCryptoAlgorithm *algorithm, const void *buffer,
+			SceUInt32 length);
+int sslRandomMethodGenerate(SslCryptoAlgorithm *algorithm, SceUInt32 length,
+			    void *buffer, SceUInt32 *generatedLength);
+int sslMacMethodInit(SslCryptoAlgorithm *algorithm, void *key);
+int sslMacMethodUpdate(SslCryptoAlgorithm *algorithm, const void *data,
+		       SceUInt32 length);
+int sslMacMethodFinal(SslCryptoAlgorithm *algorithm, void *mac,
+		      SceUInt32 *length);
+int sslMacMethodOperate(SslCryptoAlgorithm *algorithm, const void *data,
+			SceUInt32 length, void *mac, SceUInt32 *macLength);
+int sslDigestMethodInit(SslCryptoAlgorithm *algorithm);
+int sslDigestMethodOperate(SslCryptoAlgorithm *algorithm, const void *data,
+			   SceUInt32 length, void *digest,
+			   SceUInt32 *digestLength);
+int sslDigestMethodUpdate(SslCryptoAlgorithm *algorithm, const void *data,
+			  SceUInt32 length);
+int sslDigestMethodFinal(SslCryptoAlgorithm *algorithm, void *digest,
+			 SceUInt32 *length);
+void *sslGetDefaultCryptoAlgorithms(void *data);
+const void *sslGetDefaultCryptoMethods(void *data);
 
 /* Descriptive selector names are ours, established by the native field accesses. */
 #define SSL_CRYPTO_INFO_APPLICATION_DATA 16

@@ -1,6 +1,16 @@
 /* Filename and descriptive private helper names are ours. */
 #include "lib_ctx.h"
 
+static SslLibraryMethods sslDefaultLibraryMethods = {
+	(int (*)(SslLibrary *, int, int, SceUInt32, int, int, void *))
+		sslLookupLibraryMethod,
+	(int (*)(SslLibrary *, int, int, SceUInt32, int, void *))
+		sslInitCachedLibraryObject,
+	sslGetLibraryModuleData,
+	NULL,
+	NULL
+};
+
 int sslGetLibraryMethod(SslLibrary *library, int type, int selector,
 			SceUInt32 flags, int parameter, int request, void *result)
 {
@@ -56,4 +66,10 @@ SslLibraryModule *sslGetLibraryModuleTable(SslLibrary *library)
 	if (library == NULL || sslGetLibraryInfo(library, 1, &table) != 0)
 		table = NULL;
 	return table;
+}
+
+const void *sslGetDefaultLibraryMethods(void *data)
+{
+	(void)data;
+	return &sslDefaultLibraryMethods;
 }
