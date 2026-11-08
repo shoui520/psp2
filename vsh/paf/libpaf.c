@@ -9,8 +9,6 @@
 STUB(ScePafWidget_00AA6519)
 STUB(_ZN3paf2ui20TouchGestureListenerC1EjjPv)
 STUB(_ZN3paf2ui20TouchGestureListenerC2EjjPv)
-STUB(_ZN3paf2ui9FocusInfo4HideEv)
-STUB(_ZN3paf2ui9FocusInfo4ShowEv)
 STUB(ScePafWidget_0253DC9C)
 STUB(ScePafWidget_026C9E8C)
 STUB(ScePafWidget_038B47A4)

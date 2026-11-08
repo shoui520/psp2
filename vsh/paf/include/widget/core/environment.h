@@ -229,6 +229,12 @@ public:
 	void Show();
 	/* the cursor hidden (0x81143fe2) */
 	void Hide();
+	/* the highlight of the widget the cursor is on and of the one it left, set (0x81141b28;
+	   name ours) */
+	void UpdateHighlight();
+	/* the name of the widget the cursor is on written on the automatic tester's TTY (0x811438a0;
+	   name ours) */
+	void PrintTarget();
 	/* the widget taken out of the focus history */
 	void RemoveFocusHistory(Widget *widget);
 	/* the widget the focus left for the one going the other way of the direction, NULL for
@@ -247,10 +253,15 @@ public:
 
 	Widget *m_cursor;
 	Widget *m_target;
-	uint8_t reserved0[24];
+	/* the widget the cursor was on before (UpdateHighlight; name ours) */
+	Widget *m_previous;
+	uint8_t reserved0[20];
 	/* cleared with the other port's where a scroll view takes a touch (name ours, meaning open) */
 	math::v4 m_touch_move;
-	uint8_t reserved1[80];
+	uint8_t reserved1[64];
+	/* how the cursor moved last; 1, 6 and 7 hide it at once (Hide; name ours, meaning open) */
+	uint32_t m_move_mode;
+	uint8_t reserved1b[12];
 	/* the cursor is drawn with its widget only while it moves or the widget turns its focus
 	   directions off (Camera's draw walk; name ours) */
 	/* set while the cursor is shown; the shown state before it; set where the cursor may be shown
@@ -267,7 +278,9 @@ public:
 	uint32_t m_history_count;
 	/* the texture the cursor is drawn with, released with it */
 	graph::Surface *m_texture;
-	uint8_t reserved5[8];
+	/* the cursor's widget gave no texture and the default one is used (Show; name ours) */
+	bool m_default_texture;
+	uint8_t reserved5[7];
 };
 
 /* an entry of the environment's callback list: a function that ends it (names ours) */
