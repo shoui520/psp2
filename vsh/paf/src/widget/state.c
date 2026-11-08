@@ -158,14 +158,6 @@ int _ZN3paf2ui11Environment15IsTermAvailableEv(const uint8_t *self)
 		!*(const uint32_t *)(self + 56) && self[213] != 0;
 }
 
-int _ZN3paf2ui11ProgressBar17AttachLabelWidgetEPNS0_6WidgetE(uint8_t *self, uint32_t value)
-{
-	if (!value)
-		return -2136014706;
-	**(uint32_t **)(self + 636) = value;
-	*(uint32_t *)(self + 724) |= 12;
-	return 0;
-}
 
 uint32_t _ZN3paf2ui8RichText13GetItemWidgetEi(const uint8_t *self, int32_t index)
 {
@@ -249,17 +241,6 @@ uint32_t _ZN3paf2ui4Text10CheckStateEv(const uint8_t *self)
 	return result;
 }
 
-int _ZN3paf2ui11ProgressBar12SetLabelModeENS1_9LabelModeE(uint8_t *self, int32_t index)
-{
-	uint32_t flags;
-
-	if (index < 0 || index > 3)
-		return -2136014706;
-	flags = *(uint32_t *)(self + 724) | 4;
-	*(uint32_t *)(self + 656) = index;
-	*(uint32_t *)(self + 724) = flags;
-	return 0;
-}
 
 int _ZN3paf2ui16ProgressBarTouch21SetLabelSliderPosModeENS0_11ProgressBar12LabelPosModeE(uint8_t *self, int32_t index)
 {
@@ -273,17 +254,6 @@ int _ZN3paf2ui16ProgressBarTouch21SetLabelSliderPosModeENS0_11ProgressBar12Label
 	return 0;
 }
 
-int _ZN3paf2ui11ProgressBar15SetLabelPosModeENS1_12LabelPosModeE(uint8_t *self, int32_t index)
-{
-	uint32_t flags;
-
-	if (index < 0 || index > 9)
-		return -2136014706;
-	flags = *(uint32_t *)(self + 724) | 8;
-	*(uint32_t *)(self + 660) = index;
-	*(uint32_t *)(self + 724) = flags;
-	return 0;
-}
 
 uint32_t *ScePafWidget_5245A0F2(uint32_t *result, const uint32_t *source)
 {
@@ -659,8 +629,8 @@ int _ZNK3paf2ui8SpinBase9IsInheritEPKc(const void *self, const char *type);
 int _ZNK3paf2ui14ScrollViewBase9IsInheritEPKc(const void *self, const char *type);
 /* ListView's is C++ (w_list_view.cpp) */
 int _ZNK3paf2ui8ListView9IsInheritEPKc(const void *self, const char *type);
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui11ProgressBar9IsInheritEPKc, "progressbar",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
+/* ProgressBar's is C++ (w_progress_bar.cpp) */
+int _ZNK3paf2ui11ProgressBar9IsInheritEPKc(const void *self, const char *type);
 /* Button's is C++ (w_button.cpp) */
 int _ZNK3paf2ui6Button9IsInheritEPKc(const void *self, const char *type);
 /* CompositeButton's is C++ (w_composite_button.cpp) */
@@ -826,14 +796,6 @@ int _ZN3paf2ui16ProgressBarTouch20SetLabelSliderMarginEf(uint8_t *self, float va
 	return 0;
 }
 
-int _ZN3paf2ui11ProgressBar14SetLabelMarginEf(uint8_t *self, float value)
-{
-	uint32_t flags = *(const uint32_t *)(self + 724);
-
-	*(float *)(self + 664) = value;
-	*(uint32_t *)(self + 724) = flags | 8U;
-	return 0;
-}
 
 /* Test membership in the indexed widget selector table. */
 __attribute__((noinline))
@@ -921,18 +883,6 @@ void *ScePafWidget_55D83675(uint8_t *self, uint32_t *replacement)
 	return ((void *(*)(void *))*(void *const *)(vtable + 160))(self);
 }
 
-float _ZN3paf2ui11ProgressBar8GetValueENS1_5BarIdE(uint8_t *self, int32_t index)
-{
-	union {
-		uint32_t bits;
-		float value;
-	} error;
-
-	if (index >= 0 && index <= 1)
-		return *(const float *)(self + 676 + 4 * index);
-	error.bits = 1325444865U;
-	return error.value;
-}
 
 int ScePafWidget_97020684(uint8_t *self)
 {

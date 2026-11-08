@@ -204,6 +204,22 @@ public:
 			sceAtomicIncrement32AcqRel(&m_ref_counter->m_weak_counter);
 	}
 
+	/* the shared pointer's block kept instead */
+	WeakPtr &operator=(const SharedPtr<T> &src)
+	{
+		typename SharedPtr<T>::RefCounter *counter = src.m_ref_counter;
+
+		if (counter != m_ref_counter) {
+			if (m_ref_counter != NULL &&
+			    sceAtomicDecrement32AcqRel(&m_ref_counter->m_weak_counter) == 1)
+				delete m_ref_counter;
+			m_ref_counter = counter;
+			if (counter != NULL)
+				sceAtomicIncrement32AcqRel(&counter->m_weak_counter);
+		}
+		return *this;
+	}
+
 	~WeakPtr()
 	{
 		if (m_ref_counter != NULL &&

@@ -52,6 +52,14 @@ public:
 		return *this;
 	}
 
+	/* the surface's texture instead */
+	TextureSource &operator=(const intrusive_ptr<Surface> &surface)
+	{
+		m_texture.reset();
+		m_surface = surface;
+		return *this;
+	}
+
 	common::SharedPtr<TextureObject> m_texture;
 	intrusive_ptr<Surface> m_surface;
 };
