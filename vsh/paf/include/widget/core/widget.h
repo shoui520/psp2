@@ -1059,6 +1059,15 @@ public:
 	/* the size, on the axes adjusted to the scene its scene's, passed on to SetSize_core_force */
 	int32_t SetSize_core(const math::v4 &size, uint32_t notify_layout, bool force);
 	int32_t SetPos_core(const math::v4 &pos, uint32_t notify_layout, bool force);
+	int32_t SetRot_core(const math::v4 &rot, int32_t option, uint32_t notify_layout);
+	int32_t SetQuat_core(const math::quaternion &quat, uint32_t notify_layout);
+	int32_t SetScale_core(const math::v4 &scale, uint32_t notify_layout);
+	int32_t SetAlignOffset_core(const math::v4 &offs, uint32_t notify_layout);
+	int32_t SetOriginOffset_core(const math::v4 &offs, uint32_t notify_layout);
+	int32_t SetAnchorOffset_core(const math::v4 &offs, uint32_t notify_layout);
+	int32_t SetMetaAlpha_core(float alpha);
+	math::quaternion GetQuat(int32_t opt, Widget *ref, const math::quaternion &off_quat);
+	math::v4 GetOriginOffset(int32_t opt);
 	void SetObjAnim(int32_t obj, int32_t id, const math::v4 &value, Timer *t, int32_t opt);
 
 	/* room for num draw objects (name ours) */

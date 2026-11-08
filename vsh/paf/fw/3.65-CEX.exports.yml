@@ -3159,7 +3159,7 @@ ScePaf:
         - _ZN3paf2ui11ButtonParamC1Ev: 0x183F16AB
         - _ZN3paf2ui14ScrollViewBase10CheckStateEv: 0x185BD7D9
         - _ZN3paf2ui8filelist10CellSource7OnMovedEii: 0x18C1DF57
-        - ScePafWidget_18CA5962: 0x18CA5962
+        - _ZN3paf2ui14AnimListenerV410GetHermiteERNS_4math2v4ES4_S4_S4_: 0x18CA5962
         - _ZN3paf2ui12PageTurnBase19UpdateAfterChildrenEv: 0x191F2B38
         - _ZN3paf2ui15AnimListenerObj13PropObjPosGetEPNS0_12AnimListenerE: 0x19385597
         - _ZN3paf2ui12CornerButton13CreateDrawObjEi: 0x194D3838
@@ -3428,7 +3428,7 @@ ScePaf:
         - ScePafWidget_323CEF70: 0x323CEF70
         - _ZN3paf2ui18ImageSlideBarParamC2Ev: 0x32498FFF
         - _ZN3paf2ui8filelist19SegmentListAccessor6InsertEij: 0x32559DF6
-        - ScePafWidget_32A1FCF2: 0x32A1FCF2
+        - _ZN3paf2ui15AnimListenerObj19PropObjTexRegionSetEPNS0_12AnimListenerENS_4math2v4E: 0x32A1FCF2
         - _ZNK3paf2ui8ListView11GetTypeNameEv: 0x32B98BD0
         - _ZN3paf2ui8SlideBar9CreateBarEv: 0x32CC6C29
         - _ZN3paf2ui14ScrollViewBase21UnblockUpdateViewPortEv: 0x32D35C22
@@ -3531,7 +3531,7 @@ ScePaf:
         - ScePafWidget_3EB376F2: 0x3EB376F2
         - _ZN3paf2ui16ScrollViewParentD2Ev: 0x3EB61E47
         - _ZN3paf2ui6Widget10SetForwardEPS1_: 0x3EB7D29C
-        - ScePafWidget_3EDA10FD: 0x3EDA10FD
+        - _ZN3paf2ui14AnimListenerF110SetHermiteEffff: 0x3EDA10FD
         - _ZN3paf2ui14ScrollBarTouch16OnDragMoveSliderEPNS0_5EventE: 0x3EFA0B3A
         - _ZN3paf2ui19ScrollViewBaseParam9ParamNameEv: 0x3F02A7D7
         - _ZN3paf2ui17CornerButtonParam9ParamNameEv: 0x3F03AC6F
@@ -4548,11 +4548,11 @@ ScePaf:
         - _ZNK3paf2ui13AppIconSimple11GetTypeNameEv: 0xAAECAF31
         - _ZN3paf2ui11ProgressBar10UpdateSizeEv: 0xAAF8E214
         - _ZN3paf2ui5wutil9InitParamC2Ev: 0xAB05B0A4
-        - ScePafWidget_AB290C5D: 0xAB290C5D
+        - _ZN3paf2ui15AnimListenerObj19PropObjTexRegionGetEPNS0_12AnimListenerE: 0xAB290C5D
         - _ZN3paf2ui8FileListD0Ev: 0xAB56D0A8
         - _ZNK3paf2ui17TextBoxSoundParam12GetParamNameEv: 0xAB702BAD
         - _ZN3paf2ui24ScrollViewBaseStyleParam7GetEachEPNS0_6WidgetE: 0xABA0CFF5
-        - ScePafWidget_ABA19447: 0xABA19447
+        - _ZN3paf2ui14AnimListenerV410SetHermiteERKNS_4math2v4ES5_S5_S5_: 0xABA19447
         - _ZN3paf2ui17EventListenerList3DelEPNS0_13EventListenerE: 0xABA67291
         - _ZN3paf2ui21ProgressBarStyleParam9ParamNameEv: 0xABC870A5
         - ScePafWidget_ABF05727: 0xABF05727
@@ -4886,7 +4886,7 @@ ScePaf:
         - _ZNK3paf2ui23ImageButtonHandlerParam12GetParamNameEv: 0xD089504F
         - _ZN3paf2ui6Widget16GrabEventRoutingEPNS0_5EventERKNS_4math2v4ES7_PNS0_9TouchInfoEPNS0_7HitInfoE: 0xD0ADF61A
         - _ZN3paf2ui6Widget17IsMorphResolutionERjS2_RfS3_: 0xD0B1977D
-        - ScePafWidget_D0D78958: 0xD0D78958
+        - _ZN3paf2ui14AnimListenerF110GetHermiteERfS1_S1_S1_: 0xD0D78958
         - _ZN3paf2ui11ScrollBar2d15OnDragEndSliderEPNS0_5EventEb: 0xD0F14292
         - _ZN3paf2ui8SlideBarD1Ev: 0xD10169EB
         - _ZNK3paf2ui8SlideBar9IsInheritEPKc: 0xD123A71C
@@ -5619,7 +5619,7 @@ ScePaf:
         - _ZTVN3paf2ui7HandlerE: 0xCD16BB8E
         - ScePafWidget_CD1C6EE7: 0xCD1C6EE7
         - _ZTVN3paf2ui13ImageSlideBarE: 0xCD334094
-        - ScePafWidget_CD556F0C: 0xCD556F0C
+        - _ZN3paf2ui15AnimListenerObj20s_prop_obj_texregionE: 0xCD556F0C
         - _ZN3paf2ui4Text15c_floatInfinityE: 0xCF30DE88
         - _ZN3paf2ui10ButtonBase13m_widget_typeE: 0xD02E83A4
         - _ZN3paf2ui24ScrollBarTouchSoundParam12m_param_nameE: 0xD0633389
