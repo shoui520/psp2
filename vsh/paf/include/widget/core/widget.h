@@ -1070,7 +1070,9 @@ public:
 	static int32_t s_base_destroy_count;
 	/* the size, on the axes adjusted to the scene its scene's, passed on to SetSize_core_force */
 	int32_t SetSize_core(const math::v4 &size, uint32_t notify_layout, bool force);
-	int32_t SetPos_core(const math::v4 &pos, uint32_t notify_layout, bool force);
+	/* the position (w taken as 1), kept apart from the align offset's center; with store, the entry
+	   of m_pos_array for the scene's resolution is set to it too */
+	int32_t SetPos_core(const math::v4 &pos, uint32_t notify_layout, bool store);
 	int32_t SetRot_core(const math::v4 &rot, int32_t option, uint32_t notify_layout);
 	int32_t SetQuat_core(const math::quaternion &quat, uint32_t notify_layout);
 	int32_t SetScale_core(const math::v4 &scale, uint32_t notify_layout);
@@ -1177,6 +1179,8 @@ public:
 	/* the rectangle it clips its children to */
 	math::rect CalcClipRect();
 	math::v4 GetAlignOffsetToCenter(int32_t opt);
+	/* the same turned by its local matrix, as UpdateMatrix made it (0x8114c9c0) */
+	math::v4 GetAlignOffsetToRotatedCenter(int32_t opt);
 	Camera *GetCamera() const;
 
 	int32_t SetPos(const math::v4 &pos, Timer *t = NULL, int32_t id = ANIM_MOVE,
@@ -1328,6 +1332,9 @@ public:
 	AnimQueue *FindAnim(int32_t id);
 	/* the count of children that can take the focus changed by delta, up to the scene (0x81152ac0) */
 	void CountFocusEnableChildren(int32_t delta);
+	/* the children not ready to draw counted, up to the scene; at 0 the event 0x1008 is queued
+	   (0x8114c5e2) */
+	void CountPrepareChildren(int32_t delta);
 	int32_t KillAnimType(int32_t type);
 	/* the animation's listeners stopped where they are */
 	int32_t KillAnim(int32_t id);
@@ -1337,7 +1344,7 @@ public:
 	int32_t SetAnimListener_withDelay(int32_t id, AnimListener *listener, float delay,
 					  int32_t slot);
 
-	ResolutionData *get_resolution_data(ResolutionData *array, uint32_t num, uint32_t id);
+	ResolutionData *get_resolution_data(ResolutionData *array, uint32_t num, uint32_t id) const;
 
 	math::v4 m_pos;
 	math::v4 m_scale;
@@ -1572,7 +1579,8 @@ public:
 	uint16_t m_layout_notify_mask;
 	/* the same for the animator (NotifyAnimatorDirty; name ours) */
 	uint16_t m_animator_notify_mask;
-	uint8_t reserved7f[0xc];
+	/* the animations running, by their ID (the ID's low 24 bits; name after ScePaf-RE) */
+	map<uint32_t, AnimQueue *> m_anims;
 	/* its draw objects, drawn in order */
 	vector<DrawObjEntry> m_drawobjs;
 	/* what is called when it is deleted (names after DrawObj's, Sony's DWARF) */

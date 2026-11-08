@@ -326,6 +326,16 @@ public:
 		return count;
 	}
 
+	/* the timers of all its listeners held, where they are (Widget::KillAnim; name ours) */
+	void HoldAll()
+	{
+		for (list<TimerListener *>::iterator it = m_list.begin(); it != m_list.end(); ++it) {
+			TimerListener *listener = *it;
+
+			if (listener->m_timer != NULL)
+				listener->m_timer->m_state = Timer::State_Hold;
+		}
+	}
 	/* the finished listeners put at the back again, reset, their tangents made for the loop
 	   where hermite */
 	void SetFinishedLoopBack(bool hermite);
