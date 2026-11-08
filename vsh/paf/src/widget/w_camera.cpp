@@ -863,7 +863,7 @@ void ScePafWidget_1A6D5164(Camera *camera, Widget *widget, graph::DrawInfo &info
 					first = root->m_focus_root->m_state;
 				if ((uint32_t)target == first) {
 					env = camera->m_env;
-					if (!env->m_focus_cursor_moving_only ||
+					if (!env->m_focus_cursor.m_moving_only ||
 					    env->m_focus_cursor.IsMoving() ||
 					    camera->m_env->m_focus_cursor.m_target->m_focus_direction_off) {
 						Widget *cursor = camera->m_env->m_focus_cursor.m_cursor;

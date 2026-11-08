@@ -2671,8 +2671,8 @@ bool TouchScrollSupplier::TakeTouch(ScrollViewBase *view, uint32_t touch_id)
 		ScePafWidget_2B1A1493(first, 1);
 		ScePafWidget_D3D0A7C3(first, 0, touch_id, true, true);
 		first->SetFocus(NULL);
-		first->m_env->m_front_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
-		first->m_env->m_rear_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+		first->m_env->m_focus_cursor.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+		first->m_env->m_focus_cursor_rear.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
 		return true;
 	}
 	AttachGesture(dir);

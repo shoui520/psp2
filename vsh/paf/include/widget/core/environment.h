@@ -232,8 +232,32 @@ public:
 	/* the move from the widget to the next one in the direction kept */
 	void AddFocusHistory(Widget *widget, Widget *next, uint32_t dir);
 
+	/* a move of the focus: the widget it left, the one it went to and the direction (name ours) */
+	class History {
+	public:
+		Widget *m_widget;
+		Widget *m_next;
+		uint32_t m_dir;
+	};
+
 	Widget *m_cursor;
 	Widget *m_target;
+	uint8_t reserved0[24];
+	/* cleared with the other port's where a scroll view takes a touch (name ours, meaning open) */
+	math::v4 m_touch_move;
+	uint8_t reserved1[80];
+	/* the cursor is drawn with its widget only while it moves or the widget turns its focus
+	   directions off (Camera's draw walk; name ours) */
+	uint8_t reserved2 : 4;
+	bool m_moving_only : 1;
+	uint8_t reserved3 : 3;
+	uint8_t reserved4[3];
+	/* the last moves the focus made (one is kept) and how many */
+	History m_history[1];
+	uint32_t m_history_count;
+	/* the texture the cursor is drawn with, released with it */
+	graph::Surface *m_texture;
+	uint8_t reserved5[8];
 };
 
 class Environment {
@@ -360,26 +384,9 @@ public:
 	/* set: a scroll view does not take the focus by itself (name ours, meaning open) */
 	bool m_focus_auto_off;
 	uint8_t reserved4[7];
-	/* the focus cursor and the widget it is on */
+	/* the focus cursor and the widget it is on, of the front and the rear panel */
 	FocusInfo m_focus_cursor;
-	uint8_t reserved4a[0x18];
-	/* cleared with m_rear_touch_move when a scroll view takes a touch (names ours, meaning
-	   open) */
-	math::v4 m_front_touch_move;
-	uint8_t reserved4e[0x50];
-	/* the focus cursor is drawn with its widget only while it moves or the widget turns its
-	   focus directions off (Camera's draw walk; name ours) */
-	uint8_t reserved4b : 4;
-	bool m_focus_cursor_moving_only : 1;
-	uint8_t reserved4c : 3;
-	uint8_t reserved4d[0x3f];
-	math::v4 m_rear_touch_move;
-	uint8_t reserved4f[0x50];
-	/* set and cleared with m_focus_cursor_moving_only (ListView's focus; name ours) */
-	uint8_t reserved4g : 4;
-	bool m_rear_focus_cursor_moving_only : 1;
-	uint8_t reserved4h : 3;
-	uint8_t reserved4i[0x1f];
+	FocusInfo m_focus_cursor_rear;
 	/* the texture the scenes' debug cubes are drawn with (Scene::SetDebugMode; name ours) */
 	graph::Surface *m_debug_texture;
 	uint8_t reserved4j[0x2c];

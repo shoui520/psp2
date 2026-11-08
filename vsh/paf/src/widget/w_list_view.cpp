@@ -1924,11 +1924,11 @@ void ListView::ScePafWidget_A838831E()
 			if (FindListItemFocusChild(focused->m_item, 1) == NULL) {
 				Environment *env = m_env;
 
-				env->m_front_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
-				env->m_rear_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+				env->m_focus_cursor.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+				env->m_focus_cursor_rear.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
 				m_focus_pos = math::v2(-1.0f, -1.0f);
-				env->m_focus_cursor_moving_only = true;
-				env->m_rear_focus_cursor_moving_only = true;
+				env->m_focus_cursor.m_moving_only = true;
+				env->m_focus_cursor_rear.m_moving_only = true;
 			}
 
 			math::v2 dir = m_focus_target;
@@ -1945,8 +1945,8 @@ void ListView::ScePafWidget_A838831E()
 
 					Environment *env = m_env;
 
-					env->m_focus_cursor_moving_only = false;
-					env->m_rear_focus_cursor_moving_only = false;
+					env->m_focus_cursor.m_moving_only = false;
+					env->m_focus_cursor_rear.m_moving_only = false;
 				}
 			}
 			if (!m_focus_in_group)
@@ -3639,16 +3639,16 @@ void ListView::SetFocus(int32_t segment, int32_t cell, FocusAlignType align, Tim
 
 					Environment *env = m_env;
 
-					env->m_focus_cursor_moving_only = false;
-					env->m_rear_focus_cursor_moving_only = false;
+					env->m_focus_cursor.m_moving_only = false;
+					env->m_focus_cursor_rear.m_moving_only = false;
 				}
 			} else {
 				m_focus_pos = math::v2(-1.0f, -1.0f);
 
 				Environment *env = m_env;
 
-				env->m_focus_cursor_moving_only = true;
-				env->m_rear_focus_cursor_moving_only = true;
+				env->m_focus_cursor.m_moving_only = true;
+				env->m_focus_cursor_rear.m_moving_only = true;
 			}
 			SetViewFocus(pos, timer, true, true);
 		}
@@ -4811,8 +4811,8 @@ moved:
 
 			Environment *env = m_env;
 
-			env->m_focus_cursor_moving_only = false;
-			env->m_rear_focus_cursor_moving_only = false;
+			env->m_focus_cursor.m_moving_only = false;
+			env->m_focus_cursor_rear.m_moving_only = false;
 		}
 	}
 after:
@@ -4869,8 +4869,8 @@ after:
 
 							Environment *env = m_env;
 
-							env->m_focus_cursor_moving_only = false;
-							env->m_rear_focus_cursor_moving_only = false;
+							env->m_focus_cursor.m_moving_only = false;
+							env->m_focus_cursor_rear.m_moving_only = false;
 						}
 					}
 				}
@@ -4983,11 +4983,11 @@ void ListView::ScePafWidget_B6CECFDF()
 					} else {
 						move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
 						m_focus_pos = math::v2(-1.0f, -1.0f);
-						e->m_focus_cursor_moving_only = true;
-						e->m_rear_focus_cursor_moving_only = true;
+						e->m_focus_cursor.m_moving_only = true;
+						e->m_focus_cursor_rear.m_moving_only = true;
 					}
-					m_env->m_front_touch_move = move;
-					m_env->m_rear_touch_move = move;
+					m_env->m_focus_cursor.m_touch_move = move;
+					m_env->m_focus_cursor_rear.m_touch_move = move;
 				}
 			} else {
 				m_focus_root->m_focus_moved = 0;
@@ -5214,10 +5214,10 @@ bool ListView::OnFocusOut(Event *e)
 	Environment *env = m_env;
 
 	if (env != NULL) {
-		env->m_focus_cursor_moving_only = true;
-		env->m_front_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
-		env->m_rear_focus_cursor_moving_only = true;
-		env->m_rear_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+		env->m_focus_cursor.m_moving_only = true;
+		env->m_focus_cursor.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+		env->m_focus_cursor_rear.m_moving_only = true;
+		env->m_focus_cursor_rear.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
 	}
 	return ScrollViewBase::OnFocusOut(e);
 }
@@ -5825,8 +5825,8 @@ step: {
 
 				m_focus_pos = math::v2(-1.0f, -1.0f);
 				env = m_env;
-				env->m_focus_cursor_moving_only = true;
-				env->m_rear_focus_cursor_moving_only = true;
+				env->m_focus_cursor.m_moving_only = true;
+				env->m_focus_cursor_rear.m_moving_only = true;
 			} else if (ScrollByKey(math::v2(dir))) {
 				return true;
 			}
