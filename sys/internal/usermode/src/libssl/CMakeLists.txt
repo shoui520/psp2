@@ -82,6 +82,21 @@ libssl_prepare_patched(${libssl_ssleay}/ssl/tls1.h
 libssl_prepare_patched(${libssl_ssleay}/ssl/t1_enc.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/t1_enc_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/t1_enc_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/s23_pkt.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/s23_pkt_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/s23_pkt_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/s23_lib.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/s23_lib_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/s23_lib_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/t1_lib.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/t1_lib_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/t1_lib_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/t1_clnt.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/t1_clnt_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/t1_clnt_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/ssl/t1_srvr.c
+	${CMAKE_CURRENT_SOURCE_DIR}/ssl/t1_srvr_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/t1_srvr_sce.inc)
 libssl_prepare_patched(${libssl_ssleay}/ssl/ssl_algs.c
 	${CMAKE_CURRENT_SOURCE_DIR}/ssl/ssl_algs_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/ssl_algs_sce.inc)
@@ -130,6 +145,11 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	ssl/ssl_cert.c
 	ssl/s3_enc.c
 	ssl/t1_enc.c
+	ssl/s23_pkt.c
+	ssl/s23_lib.c
+	ssl/t1_lib.c
+	ssl/t1_clnt.c
+	ssl/t1_srvr.c
 	ssl/ssl_algs.c
 	ssl/ssl_rsa.c
 	ssl/ssl_sess_sm.c

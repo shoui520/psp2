@@ -1,0 +1,46 @@
+--- a/t1_srvr.c
++++ b/t1_srvr.c
+@@ -56,16 +56,12 @@
+  * [including the GNU Public Licence.]
+  */
+ 
+-#include <stdio.h>
+-#include "buffer.h"
+-#include "rand.h"
+-#include "objects.h"
+-#include "evp.h"
+-#include "x509.h"
+-#include "ssl_locl.h"
++SSL_METHOD *tlsv1_base_method(void)
++	{
++	return(&TLSv1_data);
++	}
+ 
+-static SSL_METHOD *tls1_get_server_method(ver)
+-int ver;
++static SSL_METHOD *tls1_get_server_method(int ver)
+ 	{
+ 	if (ver == TLS1_VERSION)
+ 		return(TLSv1_server_method());
+@@ -73,7 +69,7 @@
+ 		return(NULL);
+ 	}
+ 
+-SSL_METHOD *TLSv1_server_method()
++SSL_METHOD *TLSv1_server_method(void)
+ 	{
+ 	static int init=1;
+ 	static SSL_METHOD TLSv1_server_data;
+@@ -81,11 +77,10 @@
+ 	if (init)
+ 		{
+ 		init=0;
+-		memcpy((char *)&TLSv1_server_data,(char *)tlsv1_base_method(),
++		memcpy((char *)&TLSv1_server_data,(char *)&TLSv1_data,
+ 			sizeof(SSL_METHOD));
+ 		TLSv1_server_data.ssl_accept=ssl3_accept;
+ 		TLSv1_server_data.get_ssl_method=tls1_get_server_method;
+ 		}
+ 	return(&TLSv1_server_data);
+ 	}
+-

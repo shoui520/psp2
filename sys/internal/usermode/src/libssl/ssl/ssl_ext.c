@@ -978,8 +978,6 @@ end:
 	return status;
 }
 
-STUB(SceSslInternal_133ED36D)
-STUB(SceSslInternal_A374CD7B)
 STUB(SceSslInternal_AC1DBE40)
 STUB(SceSslInternal_DEC6DD27)
 STUB(SceSslInternal_FB51AE89)
