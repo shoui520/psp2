@@ -310,6 +310,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/core/widget.cpp
 	src/widget/core/animlistener.cpp
 	src/widget/core/event.cpp
+	src/widget/core/handler.cpp
 	src/widget/state.c
 	src/hash/sha1.c
 	src/std/new.c
@@ -433,6 +434,7 @@ set_source_files_properties(src/widget/w_text.cpp PROPERTIES COMPILE_OPTIONS -Xa
 set_source_files_properties(src/widget/w_text_box.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/wutil.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/core/event.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+set_source_files_properties(src/widget/core/handler.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 # paf::ui::ScrollView inlines its map and vector helpers and its style constructor.
 set_source_files_properties(src/widget/w_scroll_view.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 # paf::ui::ScrollViewBase inlines SetOverScroll, SetDefaultScrollBar and its suppliers' Register.

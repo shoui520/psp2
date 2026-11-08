@@ -168,48 +168,12 @@ int _ZN3paf2ui18SlidingDrawerParam3GetEv(const void *resource)
 	return WidgetResourceReady(resource);
 }
 
-int _ZN3paf2ui7Handler17HandleSystemEventEPNS0_5EventE(void *self, uint32_t value)
-{
-	void *const *methods = *(void *const *const *)self;
-
-	((void (*)(void *, uint32_t, uint32_t))methods[24])(
-		self, 0x800000, value);
-	return 0;
-}
-
-int _ZN3paf2ui7Handler16HandleTimerEventEPNS0_5EventE(void *self, const uint8_t *argument)
-{
-	void *const *methods = *(void *const *const *)self;
-
-	((void (*)(void *, uint32_t))methods[24])(
-		self, *(const uint32_t *)(argument + 16));
-	return 0;
-}
-
 extern uint8_t *_ZN3paf5graph7DrawObj11EnterSafetyEv(void);
 
 uint8_t *_ZN3paf2ui8Animator5EnterEv(void)
 {
 	sce_paf_widget_state_142d8 = 1;
 	return _ZN3paf5graph7DrawObj11EnterSafetyEv();
-}
-
-int _ZN3paf2ui7Handler18HandleCommandEventEPNS0_5EventE(void *self, uint32_t value)
-{
-	void *const *methods = *(void *const *const *)self;
-
-	((void (*)(void *, uint32_t, uint32_t))methods[24])(
-		self, 1048585, value);
-	return 0;
-}
-
-int _ZN3paf2ui7Handler16HandleInputEventEPNS0_5EventE(void *self, uint32_t value)
-{
-	void *const *methods = *(void *const *const *)self;
-
-	((void (*)(void *, uint32_t, uint32_t))methods[24])(
-		self, 65555, value);
-	return 0;
 }
 
 
@@ -355,13 +319,6 @@ int ScePafWidget_BDEF4D3F(void *self)
 	return WidgetInvokeSlot(self, 552);
 }
 
-int _ZN3paf2ui7Handler14HandleKeyEventEPNS0_5EventE(void *self)
-{
-	(void)((void (*)(void *))*(void *const *)
-		(*(const uint8_t *const *)self + 20))(self);
-	return 0;
-}
-
 int ScePafWidget_6B4F7595(void *unused0, void *unused1,
 			  void *unused2, void *unused3, void *target)
 {
@@ -421,20 +378,6 @@ int _ZN3paf2ui6Widget17SetDrawObjMaskBitEPKvi(void *self, int first, int second)
 
 	return ((int (*)(void *, int, int, int))*(void *const *)(vtable + 272))(
 		self, first, second, 0);
-}
-
-int _ZN3paf2ui17EventListenerList4FindEPNS0_13EventListenerE(const uint8_t *self, int32_t requested)
-{
-	const uint8_t *root = *(const uint8_t *const *)(self + 4);
-	const uint8_t *node = root ? *(const uint8_t *const *)(root + 4) : NULL;
-
-	while (node != root) {
-		if (*(const int32_t *)(node + 8) == requested)
-			return requested;
-		if (node)
-			node = *(const uint8_t *const *)(node + 4);
-	}
-	return 0;
 }
 
 void *ScePafWidget_55D83675(uint8_t *self, uint32_t *replacement)

@@ -11,9 +11,23 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <std/list>
 #include <std/map>
+#include <timer/timerlistener.h>
 
 namespace paf {
+
+/* a map's iterator by Sony's name, as delete_timer_listener takes it (the node of the map) */
+template<class _Kty, class _Ty, class _Pr, class _Ax>
+class _map_iterator {
+public:
+	_map_iterator(typename map<_Kty, _Ty, _Pr, _Ax>::iterator it) : m_it(it)
+	{
+	}
+
+	typename map<_Kty, _Ty, _Pr, _Ax>::iterator m_it;
+};
+
 namespace ui {
 
 class Event;
@@ -75,6 +89,70 @@ public:
 	HandlerCB m_func;
 };
 
+/* the listeners of an event type, called in order; the ones killed while it runs go when it is
+   done (names after ScePaf-RE) */
+class EventListenerList {
+public:
+	EventListenerList() : m_killed(false), m_on_exec(0)
+	{
+	}
+
+	virtual ~EventListenerList()
+	{
+		m_on_exec = 0;
+		DelAll();
+		for (list<EventListener *>::iterator it = m_list.begin(); it != m_list.end(); ++it)
+			delete *it;
+	}
+
+	/* the killed listeners deleted: whether the list is empty (0x81144c50) */
+	bool UpdateKill();
+	/* all of them killed, or deleted when none is running (0x81144bd4) */
+	int32_t DelAll();
+	/* each called with the type, the handler and the event */
+	int32_t Do(int32_t type, Handler *self, Event *e);
+	/* the listener when it is in the list, else NULL (0x81144e70) */
+	EventListener *Find(EventListener *listener);
+	/* the first listener of the function (0x81144e70) */
+	EventListener *Find(HandlerCB func);
+	/* put at the end, or at the front, unless it is in the list: -1 when it is */
+	int32_t Add(EventListener *listener);
+	int32_t AddFront(EventListener *listener);
+	/* killed while the list runs, else deleted */
+	int32_t Del(EventListener *listener);
+
+	bool IsOnExec()
+	{
+		return m_on_exec != 0;
+	}
+
+	uint32_t Size()
+	{
+		return m_list.size();
+	}
+
+	list<EventListener *> m_list;
+	bool m_killed;
+	int32_t m_on_exec;
+};
+
+/* the timer of a timeout or interval event: the event of its id put in the event queue when it
+   ends (names after ScePaf-RE) */
+class TimeoutListener : public TimerListener {
+public:
+	TimeoutListener(Timer *t, int32_t id) : TimerListener(t, NULL), m_id(id)
+	{
+	}
+
+	virtual ~TimeoutListener()
+	{
+	}
+
+	virtual void OnFinish(void *data1, void *data2);
+
+	int32_t m_id;
+};
+
 class Handler {
 public:
 	/* the timer IDs of SetTimeoutEvent and SetIntervalEvent (names after ScePaf-RE) */
@@ -125,12 +203,44 @@ public:
 	virtual int32_t HandleCommandEvent(Event *e);
 	virtual int32_t HandleSystemEvent(Event *e);
 	virtual int32_t HandleTimerEvent(Event *e);
-	virtual void EnableFocusEvent(bool on_off);
-	virtual int32_t EnableTouchRearEvent(bool on_off);
-	virtual bool IsTouchRearEventEnabled();
-	virtual void EnableTouchFrontEvent(bool on_off);
-	virtual bool IsTouchFrontEventEnabled();
+	virtual void EnableFocusEvent(bool on_off)
+	{
+		if (on_off)
+			m_event_enable |= 0x400;
+		else
+			m_event_enable &= ~0x400;
+	}
+
+	virtual int32_t EnableTouchRearEvent(bool on_off)
+	{
+	}
+
+	virtual bool IsTouchRearEventEnabled()
+	{
+		return false;
+	}
+
+	virtual void EnableTouchFrontEvent(bool on_off)
+	{
+	}
+
+	virtual bool IsTouchFrontEventEnabled()
+	{
+		return true;
+	}
+
 	virtual int32_t DoEvent(int32_t type, Event *e);
+
+	/* the callbacks of a point and a touch event, which forward events pass on to their listeners
+	   with 0x1000 added */
+	int32_t HandlePointEvent_core(Event *e, bool is_forward);
+	int32_t HandleTouchEvent_core(Event *e, bool is_forward);
+	/* the timers of the handler run (0x81145c48) */
+	void UpdateTimer();
+	/* the timer listener deleted, and taken out of the map (0x81144f20) */
+	int32_t delete_timer_listener(_map_iterator<int32_t, TimeoutListener *, less<int32_t>,
+						    allocator<TimeoutListener *> > it,
+				      bool map_erase);
 
 	int32_t AddEventListener(int32_t type, EventListener *listener, bool del_prev = false);
 	/* the listener taken off the event type (export AC0AC756) */
