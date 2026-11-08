@@ -1544,6 +1544,90 @@ int32_t Widget::SetQuat(const math::quaternion &quat, Timer *t, int32_t id, int3
 	return 0;
 }
 
+math::v4 Widget::GetPos(int32_t opt, Widget *ref, const math::v4 &off_pos)
+{
+	if (opt != 0) {
+		math::v4 rotated = AlignOffsetToRotatedCenter(this, opt);
+		AnimQueue *anim = FindAnim(ANIM_MOVE);
+		math::v4 *target = NULL;
+
+		if (anim != NULL) {
+			AnimQueueBase *queue = anim->m_queue[0];
+
+			if (queue != NULL) {
+				AnimListener *listener = static_cast<AnimListener *>(queue->GetBack());
+
+				if (listener != NULL)
+					target = listener->GetTargetV4();
+			}
+		}
+		if (target != NULL)
+			return *target - rotated;
+		return m_pos - rotated;
+	}
+	if (ref == NULL)
+		return m_pos - AlignOffsetToRotatedCenter(this, 0);
+
+	UpdateMatrix();
+	ref->UpdateMatrix();
+
+	math::v4 offs = off_pos - GetAlignOffsetToCenter(0);
+	float sx = m_flip_x ? -1.0f : 1.0f;
+	float sy = m_flip_y ? -1.0f : 1.0f;
+	float sz = m_flip_z ? -1.0f : 1.0f;
+
+	if (ref->m_inverse_matrix == NULL) {
+		ref->m_inverse_matrix = new math::matrix(math::matrix::Identity());
+		ref->SetUpdateParam(2);
+	}
+	if ((ref->m_update_flag & 7) != 0)
+		ref->UpdateMatrix();
+
+	math::v4 moved = math::v4(m_world_matrix.getImpl() *
+				  sce::Vectormath::Simd::Aos::Vector4(offs.extract_x() * sx,
+								      offs.extract_y() * sy,
+								      offs.extract_z() * sz, 1.0f));
+	math::v4 local = math::v4(ref->m_inverse_matrix->getImpl() * moved.getImpl());
+	float x = local.extract_x() * (ref->m_flip_x ? -1.0f : 1.0f);
+	float y = local.extract_y() * (ref->m_flip_y ? -1.0f : 1.0f);
+	float z = local.extract_z() * (ref->m_flip_z ? -1.0f : 1.0f);
+
+	return math::v4(x, y, z, local.extract_w());
+}
+
+math::v4 Widget::GetPosCenter(int32_t opt, Widget *ref, const math::v4 &off_pos)
+{
+	if (ref != NULL) {
+		math::v4 shifted = off_pos + AlignOffsetToRotatedCenter(this, opt);
+
+		return GetPos(opt, ref, shifted);
+	}
+	if (opt == 0)
+		return m_pos;
+
+	bool front = opt == 2;
+	math::v4 *target = NULL;
+	AnimQueue *anim = FindAnim(ANIM_MOVE);
+
+	if (anim != NULL) {
+		AnimQueueBase *queue = anim->m_queue[0];
+		AnimListener *listener = NULL;
+
+		if (front) {
+			if (queue != NULL)
+				listener = static_cast<AnimListener *>(queue->GetFront());
+		} else {
+			if (queue != NULL)
+				listener = static_cast<AnimListener *>(queue->GetBack());
+		}
+		if (listener != NULL)
+			target = listener->GetTargetV4();
+	}
+	if (target != NULL)
+		return *target + AlignOffsetToRotatedCenter(this, 1);
+	return m_pos;
+}
+
 math::quaternion Widget::GetQuat(int32_t opt, Widget *ref, const math::quaternion &off_quat)
 {
 	if (opt == 0) {

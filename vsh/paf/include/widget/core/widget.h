@@ -1434,7 +1434,10 @@ public:
 	math::v4 m_align_offs;
 	math::v4 m_anchor_offs;
 	math::v4 m_origin_offs;
-	uint8_t reserved2a[8];
+	/* the matrix GetPos takes a position to the widget's space with, made when another widget asks
+	   (name ours) */
+	math::matrix *m_inverse_matrix;
+	uint8_t reserved2a[4];
 	/* the rotation LookAt and SetPosture make, from a facing and an up vector (name ours) */
 	math::quaternion m_quat;
 	IDParam m_name;
@@ -1484,7 +1487,11 @@ public:
 	uint32_t m_clip_mode : 4;
 	uint32_t reserved3x3 : 4;
 	uint32_t m_draw_target : 4;
-	uint32_t reserved3x4 : 4;
+	/* the axes it takes positions in the opposite way (GetPos; names ours) */
+	uint32_t m_flip_x : 1;
+	uint32_t m_flip_y : 1;
+	uint32_t m_flip_z : 1;
+	uint32_t reserved3x4 : 1;
 	/* what the touch event slots set (names after them) */
 	bool m_touch_front_event : 1;
 	bool m_touch_rear_event : 1;
