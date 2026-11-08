@@ -188,13 +188,6 @@ int _ZN3paf2ui4Text16GetSelectionModeERb(const uint8_t *self, uint8_t *output)
 	return 0;
 }
 
-int _ZN3paf2ui8ListItem12GetCellIndexEv(const uint8_t *self)
-{
-	const uint8_t *value = *(const uint8_t *const *)(self + 636);
-
-	return value ? *(const int32_t *)(value + 4) : -1;
-}
-
 int _ZNK3paf2ui6Widget9GetCameraEv(const uint8_t *self)
 {
 	const uint8_t *value = *(const uint8_t *const *)(self + 364);
@@ -853,8 +846,6 @@ DEFINE_WIDGET_TYPE(_ZNK3paf2ui8FileList9IsInheritEPKc, "file_list",
 		   _ZNK3paf2ui8ListView9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui16ProgressBarTouch9IsInheritEPKc, "progressbar_touch",
 		   _ZNK3paf2ui11ProgressBar9IsInheritEPKc)
-DEFINE_WIDGET_TYPE(_ZNK3paf2ui8ListItem9IsInheritEPKc, "list_item",
-		   _ZNK3paf2ui6Widget9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui11PlaneButton9IsInheritEPKc, "plane_button",
 		   _ZNK3paf2ui10ButtonBase9IsInheritEPKc)
 DEFINE_WIDGET_TYPE(_ZNK3paf2ui8RadioBox9IsInheritEPKc, "radio_box",
@@ -1240,24 +1231,6 @@ void *ScePafWidget_55D83675(uint8_t *self, uint32_t *replacement)
 	++*replacement;
 	vtable = *(const uint8_t *const *)self;
 	return ((void *(*)(void *))*(void *const *)(vtable + 160))(self);
-}
-
-void *_ZN3paf2ui8ListItem11GetListItemEPNS0_6WidgetE(const uint8_t *self)
-{
-	uint8_t *parent;
-
-	if (!self)
-		return 0;
-	parent = *(uint8_t *const *)(self + 360);
-	while (parent) {
-		const uint8_t *vtable = *(const uint8_t *const *)parent;
-
-		if (((int (*)(void *, const char *))*(void *const *)(vtable + 100))(
-			parent, "list_item"))
-			return parent;
-		parent = *(uint8_t **)(parent + 360);
-	}
-	return 0;
 }
 
 int _ZN3paf2ui8filelist16CellListAccessor8SetFocusEiNS0_8ListView14FocusAlignTypeEPNS_5TimerE(uint8_t *self, uint32_t first,

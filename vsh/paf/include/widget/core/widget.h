@@ -1248,6 +1248,10 @@ public:
 	Widget *FindChild(const IDParam &id, int32_t option);
 	/* the widget where it is one of its descendants, else NULL */
 	Widget *FindChild(Widget *child, int32_t option);
+	/* the first child of the type the check takes (NULL for any), searched in its children
+	   only (mode 2) or below them too; mode 0 returns the one found deepest, else the child
+	   it is under (0x81152902 TOOL; name after FindChild) */
+	Widget *FindChild(const char *type, int32_t mode, bool (*check)(Widget *));
 	/* the focus taken off it: -1 where it has none */
 	int32_t ReleaseFocus();
 	/* a touch or key may reach it: an input target, shown and in no transition, and not
@@ -1356,7 +1360,8 @@ public:
 	bool m_composite_focus : 1;
 	/* a scroll view searches the focus from it (ScrollViewBase::SearchFocus; name ours) */
 	bool m_focus_searching : 1;
-	bool reserved3z6 : 1;
+	/* a list item (ListItem's ctor; name ours) */
+	bool m_list_item : 1;
 	/* drawn before its children, not after (Camera's draw walk; name ours) */
 	bool m_draw_before_children : 1;
 	/* its parent writes it: WriteWidget writes only its children; a box does not lay it out
