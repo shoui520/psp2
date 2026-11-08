@@ -33,12 +33,6 @@ int ScePafWidget_E8F862FC(void *self, const void *value)
 }
 
 
-int _ZN3paf2ui11Environment15IsTermAvailableEv(const uint8_t *self)
-{
-	return !*(const uint32_t *)(self + 44) &&
-		!*(const uint32_t *)(self + 56) && self[213] != 0;
-}
-
 /* paf::graph::s_wait_vblank_count (surface_display.cpp) */
 extern uint32_t _ZN3paf5graph19s_wait_vblank_countE;
 

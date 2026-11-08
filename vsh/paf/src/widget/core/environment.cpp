@@ -194,5 +194,101 @@ int32_t Environment::RegisterTouchDeviceRegion(uint32_t index, Widget *widget)
 	m_touch_region[index] = widget;
 	return 0;
 }
+
+int32_t Environment::GetHitStack(HitInfo *info, Widget *widget)
+{
+	list<HitInfo>::iterator it = m_touch_hits.begin();
+
+	while (it != m_touch_hits.end()) {
+		if (it->m_widget == widget) {
+			*info = *it;
+			return 0;
+		}
+		++it;
+	}
+	return -1;
+}
+
+int32_t Environment::GetLastHitStack(HitInfo *info)
+{
+	if (m_touch_hits.begin() == m_touch_hits.end())
+		return -1;
+	*info = m_touch_hits.back();
+	return 0;
+}
+
+bool Environment::IsHitStackParent(Widget *widget)
+{
+	list<Widget *>::iterator it = m_hit_stack.begin();
+
+	while (it != m_hit_stack.end()) {
+		if (*it == widget)
+			return true;
+		++it;
+	}
+
+	HitInfo info;
+
+	return GetHitStack(&info, widget) == 0;
+}
+
+bool Environment::IsTermAvailable()
+{
+	return m_scene_entries.size() == 0 && m_pending.size() == 0 && m_term_requested;
+}
+
+int32_t Environment::RequestTerm()
+{
+	if (m_scene_entries.size() != 0 || m_pending.size() != 0 || !m_term_requested) {
+		m_ev_doevent.clear();
+		m_ev_subrouting.clear();
+		m_ev_queue.Clear();
+		m_callbacks.clear();
+		for (map<int32_t, Widget *>::iterator it = m_scene_entries.begin();
+		     it != m_scene_entries.end(); ++it) {
+			Widget *scene = it->second;
+
+			list<Widget *>::iterator child = scene->m_children.begin();
+
+			while (child != scene->m_children.end()) {
+				Widget *widget = *child;
+
+				child++;
+				widget->DestroyWidget();
+			}
+		}
+		m_term_requested = true;
+		m_suspended = true;
+		return 1;
+	}
+	return m_term_requested;
+}
+
+extern "C" int ScePafMisc_862C8916(void);
+
+extern "C" bool ScePafWidget_A6B659BB(Environment *env, int32_t port)
+{
+	if (!env->m_focus_enabled && !ScePafMisc_862C8916())
+		return false;
+	if ((uint32_t)port < 2)
+		return (&env->m_focus_cursor)[port].m_enabled;
+	return false;
+}
+
+extern "C" bool ScePafWidget_529FB877(Environment *env, int32_t port)
+{
+	if (port >= 2)
+		return false;
+	if (port >= 0)
+		return (&env->m_focus_cursor)[port].m_shown;
+
+	bool shown = false;
+
+	for (int32_t i = 0; i < 2; i++) {
+		if ((&env->m_focus_cursor)[i].m_shown)
+			return true;
+	}
+	return shown;
+}
 }
 }

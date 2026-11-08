@@ -249,7 +249,12 @@ public:
 	uint8_t reserved1[80];
 	/* the cursor is drawn with its widget only while it moves or the widget turns its focus
 	   directions off (Camera's draw walk; name ours) */
-	uint8_t reserved2 : 4;
+	/* set while the cursor is shown; the shown state before it; set where the cursor may be shown
+	   (Show, Hide, A6B659BB; names ours) */
+	bool m_shown : 1;
+	bool m_was_shown : 1;
+	bool m_enabled : 1;
+	uint8_t reserved2 : 1;
 	bool m_moving_only : 1;
 	uint8_t reserved3 : 3;
 	uint8_t reserved4[3];
@@ -259,6 +264,17 @@ public:
 	/* the texture the cursor is drawn with, released with it */
 	graph::Surface *m_texture;
 	uint8_t reserved5[8];
+};
+
+/* an entry of the environment's callback list: a function that ends it (names ours) */
+class EnvCallback {
+public:
+	void (*m_destroy)(EnvCallback *callback);
+
+	~EnvCallback()
+	{
+		m_destroy(this);
+	}
 };
 
 class Environment {
@@ -306,6 +322,10 @@ public:
 	void ShowFocus(int32_t port);
 	/* where the touch that hit the widget hit it: 0, or -1 when none did */
 	int32_t GetHitStack(HitInfo *info, Widget *widget);
+	/* the last hit stack of the touches, 0, or -1 when there is none (0x8113ff98) */
+	int32_t GetLastHitStack(HitInfo *info);
+	/* whether the widget is one of the hit stack's parents, or has a hit stack (0x8113dea6) */
+	bool IsHitStackParent(Widget *widget);
 	/* the display area scale from the system settings, once */
 	void ApplyDisplayAreaSettings();
 	/* the display area scale read again, once it has been applied (name ours) */
@@ -336,10 +356,17 @@ public:
 
 	/* set: the widgets the focus leaves are kept in its history (name ours) */
 	bool m_focus_history_on;
-	uint8_t reserved[0x23];
+	uint8_t reserved_5[0x13];
+	/* what the environment runs at its end, each ended with a call of its first word (name ours,
+	   use not found) */
+	list<EnvCallback> m_callbacks;
+	uint8_t reserved_36[4];
 	/* the scenes by their entry (ShowSceneEntry, GetSceneNum; name ours) */
 	map<int32_t, Widget *> m_scene_entries;
-	uint8_t reserved_52[0xd];
+	/* the transitions still under way (IsTermAvailable counts them; meaning open, element type
+	   unknown; name ours) */
+	list<uint32_t> m_pending;
+	uint8_t reserved_64[1];
 	/* set when a scene's layer weights are made again (Scene::UpdateLayerWeight; name ours) */
 	bool m_layer_weight_changed;
 	uint8_t reserved_42[2];
@@ -395,7 +422,10 @@ public:
 	int32_t m_focus_mode;
 	/* set: a scroll view does not take the focus by itself (name ours, meaning open) */
 	bool m_focus_auto_off;
-	uint8_t reserved4[7];
+	bool reserved4_345;
+	/* the buttons move the focus (ScePafWidget_75FB31F1; name ours) */
+	bool m_focus_enabled;
+	uint8_t reserved4[5];
 	/* the focus cursor and the widget it is on, of the front and the rear panel */
 	FocusInfo m_focus_cursor;
 	FocusInfo m_focus_cursor_rear;
