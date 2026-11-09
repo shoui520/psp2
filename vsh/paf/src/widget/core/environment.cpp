@@ -22,6 +22,7 @@
 extern "C" int ScePafMisc_862C8916(void);
 extern "C" int sceAppMgrGetRecommendedScreenOrientation(int32_t *orientation);
 extern "C" int sceAppMgrSetShellScreenOrientation(int32_t orientation);
+extern "C" int sceAppMgrSetRecommendedScreenOrientationActivated(int32_t activated);
 
 namespace paf {
 
@@ -542,6 +543,129 @@ extern "C" int32_t ScePafWidget_F5842A6B(Environment *env, uint32_t priority, co
 		}
 	}
 	return 0x80AF008F;
+}
+
+int32_t Environment::SelectResolution()
+{
+	if (m_env_param == NULL)
+		m_env_param = new Resolution((vector<uint32_t> *)NULL);
+
+	Resolution *param = m_env_param;
+	Screen *screen = m_screen;
+	int32_t count = param->GetResolutionIdHD(screen->m_surface->GetWidth(),
+						 screen->m_surface->GetHeight(), 0) != 255;
+	uint32_t found = param->GetResolutionIdHD(screen->m_surface->GetWidth(),
+						  screen->m_surface->GetHeight(), 2);
+
+	if (found != 255)
+		count++;
+	if (param->GetResolutionIdHD(screen->m_surface->GetWidth(), screen->m_surface->GetHeight(), 1) !=
+	    255)
+		count++;
+	if (param->GetResolutionIdHD(screen->m_surface->GetWidth(), screen->m_surface->GetHeight(), 3) !=
+	    255)
+		count++;
+	if (count > 1)
+		sceAppMgrSetRecommendedScreenOrientationActivated(1);
+
+	int32_t orientation;
+
+	if (m_screen_orientation_mode == 4) {
+		int32_t recommended = 1;
+		int32_t mode;
+
+		sceAppMgrGetRecommendedScreenOrientation(&recommended);
+		if (recommended > 2) {
+			if (recommended <= 3)
+				mode = 2;
+			else if (recommended <= 4)
+				mode = 3;
+			else
+				mode = 4;
+		} else if (recommended > 0) {
+			mode = recommended > 1;
+		} else {
+			mode = 4;
+		}
+		m_screen_orientation_mode = mode;
+		orientation = recommended;
+	} else {
+		int32_t mode = m_screen_orientation_mode;
+
+		if (mode <= 1) {
+			if (mode >= 0)
+				orientation = mode <= 0 ? 1 : 2;
+			else
+				orientation = -1;
+		} else if (mode <= 2) {
+			orientation = 3;
+		} else if (mode > 3) {
+			orientation = -1;
+		} else {
+			orientation = 4;
+		}
+	}
+
+	uint32_t id = param->GetResolutionIdHD(m_screen->m_surface->GetWidth(),
+					       m_screen->m_surface->GetHeight(),
+					       m_screen_orientation_mode);
+
+	if (id == 255) {
+		id = m_env_param->GetResolutionIdHD(m_screen->m_surface->GetWidth(),
+						    m_screen->m_surface->GetHeight(), 0);
+		if (id != 255) {
+			m_screen_orientation_mode = 0;
+			orientation = 1;
+		} else {
+			id = m_env_param->GetResolutionIdHD(m_screen->m_surface->GetWidth(),
+							    m_screen->m_surface->GetHeight(), 2);
+			if (id != 255) {
+				m_screen_orientation_mode = 2;
+				orientation = 3;
+			} else {
+				id = m_env_param->GetResolutionIdHD(m_screen->m_surface->GetWidth(),
+								    m_screen->m_surface->GetHeight(), 1);
+				if (id != 255) {
+					m_screen_orientation_mode = 1;
+					orientation = 2;
+				} else {
+					id = m_env_param->GetResolutionIdHD(
+						m_screen->m_surface->GetWidth(),
+						m_screen->m_surface->GetHeight(), 3);
+					if (id != 255) {
+						m_screen_orientation_mode = 3;
+						orientation = 4;
+					} else {
+						common_internal::on_error();
+						switch (m_screen_orientation_mode) {
+						case 0:
+							orientation = 1;
+							id = 255;
+							break;
+						case 1:
+							orientation = 2;
+							id = 255;
+							break;
+						case 2:
+							orientation = 3;
+							id = 255;
+							break;
+						case 3:
+							orientation = 4;
+							id = 255;
+							break;
+						default:
+							orientation = -1;
+							id = 255;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+	sceAppMgrSetShellScreenOrientation(orientation);
+	return id;
 }
 
 void Environment::UpdateOrientation()

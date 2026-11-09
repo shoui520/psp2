@@ -635,6 +635,11 @@ public:
 	int32_t RemoveScene(Widget *scene);
 	/* the camera roll the screen orientation turns the scenes by (0x8113ca44; name ours) */
 	float GetOrientationRoll(int32_t orientation);
+	/* the layout resolution of the screen for the orientation mode (made from the system's
+	   recommended orientation where the mode is 4), another orientation if the screen has
+	   none in it, and the shell told the orientation (the environment's resolutions made when it
+	   has none; 0x81139a38, name ours); 255 for none */
+	int32_t SelectResolution();
 	/* the orientation chosen from the system's recommended one, the first a scene of the entries
 	   can be shown in (0x8113dbb2; name ours) */
 	void UpdateOrientation();
