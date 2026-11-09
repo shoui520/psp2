@@ -327,6 +327,29 @@ public:
 				     int32_t mode);
 };
 
+/* the listener of the Bluetooth remote: its keys turned into events of the widget it is given or
+   the scene (vtable at 812F93BC; the fields' names ours) */
+class UIBtrmListener : public UIInputGestureListener {
+public:
+	UIBtrmListener(Environment *env) : UIInputGestureListener(env)
+	{
+	}
+
+	virtual ~UIBtrmListener()
+	{
+	}
+
+	virtual void OnUpdate(const inputdevice::Data *data);
+
+	/* the event of the key (the remote's keys 1 to 16 are four directions and enter, 32 and 64
+	   have three each) with the state (0 down, 1 up, 2 held up), queued (0x8114b582) */
+	int32_t PostBtrmEvent(uint32_t key, int32_t state);
+
+	/* the key held, and the widget the events go to (NULL: dispatched) */
+	uint32_t m_hold_key;
+	Widget *m_target;
+};
+
 /* the listeners of the motion sensor and the analog sticks, which take no input of their own */
 class UIMotionListener : public UIInputGestureListener {
 public:

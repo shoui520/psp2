@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <inputdevice/inputdevice.h>
 #include <inputdevice/inputlistener.h>
+#include <inputdevice/btrm/btrm.h>
 #include <inputdevice/hidkeyboard/hidkeyboard.h>
 #include <inputdevice/pad/pad.h>
 #include <std/string.h>
@@ -808,6 +809,132 @@ void UITouchListener::OnUpdate(const inputdevice::Data *data)
 	}
 }
 
+
+/* the detail of a Bluetooth remote's event: the key code in the low byte and a 4 in bits 16 to
+   19 (names ours) */
+union BtrmDetail {
+	uint32_t value;
+	struct {
+		uint32_t keycode : 8;
+		uint32_t reserved : 8;
+		uint32_t kind : 4;
+		uint32_t reserved2 : 12;
+	} f;
+};
+
+int32_t UIBtrmListener::PostBtrmEvent(uint32_t key, int32_t state)
+{
+	int32_t code;
+
+	if (m_env == NULL)
+		return -1;
+	if (key > 16) {
+		if (key > 32) {
+			if (key != 64)
+				return -1;
+			if (state == 0)
+				code = 8;
+			else if (state == 1)
+				code = 9;
+			else if (state == 2)
+				code = 10;
+			else
+				return -1;
+		} else if (key > 31) {
+			if (state == 0)
+				code = 5;
+			else if (state == 1)
+				code = 6;
+			else if (state == 2)
+				code = 7;
+			else
+				return -1;
+		} else {
+			return -1;
+		}
+	} else if (key <= 8) {
+		switch (key) {
+		case 1:
+			code = 0;
+			break;
+		case 2:
+			code = 1;
+			break;
+		case 4:
+			code = 2;
+			break;
+		case 8:
+			code = 3;
+			break;
+		default:
+			return -1;
+		}
+	} else if (key <= 15) {
+		return -1;
+	} else {
+		code = 4;
+	}
+	if (m_target != NULL) {
+		Event e(0x100, 0x400000, 0x10000, 0, 0, 0, 0, 0);
+		BtrmDetail detail;
+
+		e.SetTarget(m_target);
+		detail.value = e.m_detail;
+		detail.f.keycode = code;
+		detail.f.kind = 4;
+		e.m_detail = detail.value;
+		m_env->m_ev_queue.PushBack(e);
+	} else {
+		Event e(0x100, 0x100000, 0x10000, 0, 0, 0, 0, 0);
+		BtrmDetail detail;
+
+		detail.value = e.m_detail;
+		detail.f.keycode = code;
+		detail.f.kind = 4;
+		e.m_detail = detail.value;
+		m_env->m_ev_queue.PushBack(e);
+	}
+	return 0;
+}
+
+void UIBtrmListener::OnUpdate(const inputdevice::Data *data)
+{
+	uint32_t curr = data->m_btrm_data->buttons;
+	uint32_t prev = data->m_btrm_data_pre->buttons;
+	uint32_t pressed = curr & ~prev;
+	uint32_t released = prev & ~curr;
+
+	if (pressed != 0) {
+		uint32_t first = 1;
+		uint32_t held = m_hold_key;
+
+		if ((pressed & 1) == 0) {
+			uint32_t next;
+
+			do {
+				next = pressed & (2 * first);
+				first *= 2;
+			} while (next == 0);
+		}
+		if (held != 0 && (held == 32 || held == 64))
+			PostBtrmEvent(held, 1);
+		m_hold_key = first;
+		PostBtrmEvent(first, 0);
+	}
+	if (released != 0) {
+		uint32_t held = m_hold_key;
+
+		if ((released & held) != 0) {
+			if (held == 32 || held == 64) {
+				if ((inputdevice::btrm::GetMask() & held) != 0)
+					PostBtrmEvent(held, 2);
+				else
+					PostBtrmEvent(held, 1);
+			}
+			m_hold_key = 0;
+		}
+	}
+}
 
 void UIMotionListener::OnUpdate(const inputdevice::Data *data)
 {
