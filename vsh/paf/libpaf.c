@@ -7,8 +7,6 @@
 #include <skeleton.h>
 
 STUB(_ZN3paf2ui6Widget13DestroyWidgetEv)
-STUB(_ZN3paf2ui6Widget12UpdateMatrixEv)
-STUB(_ZN3paf2ui6Widget12CalcClipRectEv)
 STUB(_ZN3paf2ui6Widget21UpdateResolutionTimerEv)
 STUB(_ZN3paf2ui6Widget17CalcHitBoxToPlaneERKNS_4math2v4ES5_S5_PfPNS0_7HitInfoE)
 

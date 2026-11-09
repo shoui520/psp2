@@ -154,6 +154,32 @@ static inline void AnimatorDirty(Widget *w, uint32_t kind)
 	}
 }
 
+/* the inverse world matrix where it keeps one, of the world matrix moved back to its origin
+   where it has one (0x8114be48; name ours) */
+static __attribute__((noinline)) void UpdateInverseMatrix(Widget *w)
+{
+	math::matrix *inverse = w->m_inverse_matrix;
+
+	if (inverse == NULL)
+		return;
+
+	math::v4 offs = w->m_origin_offs;
+
+	if ((w->m_origin_x | w->m_origin_y | w->m_origin_z) == 0 &&
+	    offs == math::v4(0.0f, 0.0f, 0.0f, 0.0f)) {
+		inverse->assign(w->m_world_matrix.inverse());
+	} else {
+		math::v4 offset(-offs.getImpl());
+
+		offset.set_w(1.0f);
+		inverse->assign((w->m_world_matrix * math::matrix(math::v4(1.0f, 0.0f, 0.0f, 0.0f),
+								    math::v4(0.0f, 1.0f, 0.0f, 0.0f),
+								    math::v4(0.0f, 0.0f, 1.0f, 0.0f),
+								    offset))
+					.inverse());
+	}
+}
+
 AnimQueue *Widget::FindAnim(int32_t id)
 {
 	for (map<int32_t, AnimQueue *>::iterator it = m_anims.begin(); it != m_anims.end(); it++) {
@@ -203,6 +229,101 @@ math::v4 *Widget::GetSize(int32_t opt)
 	if (result == NULL)
 		return &m_size;
 	return result;
+}
+
+/* the local matrix made again from its position (flipped on the axes it flips), rotation and
+   scale, where m_update_flag asks for it (0x8114c0aa; name ours) */
+static __attribute__((noinline)) void UpdateLocalMatrix(Widget *w)
+{
+	if ((w->m_update_flag & 1) == 0)
+		return;
+
+	math::v4 pos = w->m_pos;
+
+	Widget::s_upmat_count_L++;
+
+	float flip_x = 1.0f;
+	float flip_y = 1.0f;
+	float flip_z = 1.0f;
+
+	if (w->m_flip_x)
+		flip_x = -1.0f;
+	if (w->m_flip_y)
+		flip_y = -1.0f;
+	if (w->m_flip_z)
+		flip_z = -1.0f;
+	w->m_local_matrix = math::matrix(
+		math::v4(1.0f, 0.0f, 0.0f, 0.0f), math::v4(0.0f, 1.0f, 0.0f, 0.0f),
+		math::v4(0.0f, 0.0f, 1.0f, 0.0f),
+		math::v4(pos.extract_x() * flip_x, pos.extract_y() * flip_y, pos.extract_z() * flip_z,
+			 1.0f));
+
+	math::matrix rotation = w->m_quat.toMatrix(0.0001f);
+	math::matrix local = w->m_local_matrix;
+	math::v4 scale(sce::Vectormath::Simd::Aos::maxPerElem(
+		sce::Vectormath::Simd::Aos::Vector4(0.0001f), w->m_scale.getImpl()));
+
+	w->m_update_flag = (w->m_update_flag & 0xFA) | 4;
+	w->m_local_matrix = local * rotation *
+			    math::matrix(math::v4(scale.extract_x(), 0.0f, 0.0f, 0.0f),
+					 math::v4(0.0f, scale.extract_y(), 0.0f, 0.0f),
+					 math::v4(0.0f, 0.0f, scale.extract_z(), 0.0f),
+					 math::v4(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+static const math::matrix &WorldMatrix(Widget *w);
+
+const math::matrix &Widget::UpdateMatrix()
+{
+	UpdateLocalMatrix(this);
+	if ((m_update_flag & 2) != 0) {
+		s_upmat_count_W++;
+
+		math::matrix parent = math::matrix::Identity();
+		math::quaternion parent_rot = math::quaternion::Identity();
+		Widget *scene = m_scene;
+
+		if (scene != NULL && this != scene) {
+			uint32_t ax = m_anchor_x;
+			Widget *owner = m_parent;
+			uint32_t ay, az;
+
+			if ((ax == 4 || ax == 100) && ((ay = m_anchor_y) == 4 || ay == 100) &&
+			    ((az = m_anchor_z) == 4 || az == 100)) {
+				/* anchored to its parent's origin, or to its grandparent's */
+				if (ax == 4 && ay == 4 && az == 4)
+					parent = owner->GetOriginWorldMatrix();
+				else if (owner != scene)
+					parent = owner->m_parent->GetOriginWorldMatrix();
+			} else {
+				parent = WorldMatrix(m_parent);
+				if ((m_anchor_y | m_anchor_x | m_anchor_z) != 0) {
+					Widget *base = m_parent;
+
+					m_anchor_offs = base->calc_anchor_offset(*base->GetSize(0),
+										 m_anchor_offs, m_anchor_x,
+										 m_anchor_y, m_anchor_z);
+
+					math::v4 offset(-m_anchor_offs.getImpl());
+
+					offset.set_w(1.0f);
+					parent = parent * math::matrix(math::v4(1.0f, 0.0f, 0.0f, 0.0f),
+								       math::v4(0.0f, 1.0f, 0.0f, 0.0f),
+								       math::v4(0.0f, 0.0f, 1.0f, 0.0f),
+								       offset);
+				}
+			}
+			parent_rot = m_parent->m_world_rot;
+		}
+		m_world_matrix = parent * m_local_matrix;
+		UpdateInverseMatrix(this);
+
+		math::quaternion rot = QuatMul(parent_rot, m_quat);
+
+		m_update_flag = (m_update_flag & 0xF9) | 4;
+		m_world_rot = rot;
+	}
+	return m_world_matrix;
 }
 
 
@@ -1004,6 +1125,86 @@ bool Widget::IsRotated(bool x, bool y, bool z, float limit)
 			return true;
 	}
 	return false;
+}
+
+math::rect Widget::CalcClipRect()
+{
+	using sce::Vectormath::Simd::Aos::Vector2;
+	using sce::Vectormath::Simd::Aos::Vector4;
+	using sce::Vectormath::Simd::Aos::absPerElem;
+	using sce::Vectormath::Simd::Aos::maxPerElem;
+
+	Scene *scene = m_scene;
+
+	/* without a camera: a point at its position */
+	if (scene == NULL || scene->m_camera == NULL) {
+		const math::matrix &world = GetWorldMatrix();
+
+		return math::rect(math::v2(world.w().getImpl().getXY()), math::v2(0.0f, 0.0f));
+	}
+
+	/* turned out of the screen's plane: the whole scissor */
+	bool rotated = IsRotated(true, true, false, 0.15707964f);
+
+	if (rotated && m_scene != NULL && m_layout_rect == NULL)
+		return math::rect(m_scene->m_screen->sp);
+
+	Camera *camera = NULL;
+
+	if (m_scene != NULL)
+		camera = m_scene->m_camera;
+
+	math::matrix origin = m_parent->GetOriginWorldMatrix();
+	Vector4 center;
+	Vector2 corner;
+	Vector2 width, height;
+
+	if (m_layout_rect == NULL) {
+		/* its own size around its position */
+		center = GetWorldMatrix().w().getImpl();
+
+		const math::matrix &world = GetWorldMatrix();
+		Vector2 size = m_size.getImpl().getXY();
+
+		width = (world.getImpl() * Vector4(size.getX(), size.getY(), 0.0f, 0.0f)).getXY();
+		corner = absPerElem(
+			(world.getImpl() * Vector4(-size.getX(), size.getY(), 0.0f, 0.0f)).getXY());
+	} else {
+		/* the rectangle its layout gave it, in its parent */
+		math::v2 middle = m_layout_rect->center();
+
+		center = origin.getImpl() *
+			 Vector4(middle.extract_x(), middle.extract_y(), 0.0f, 1.0f);
+
+		math::v2 size = m_layout_rect->size();
+		const math::matrix &world = GetWorldMatrix();
+
+		corner = absPerElem((world.getImpl() * Vector4(size.extract_x(), -size.extract_y(),
+								  0.0f, 0.0f))
+					    .getXY());
+		width = (world.getImpl() * Vector4(size.extract_x(), size.extract_y(), 0.0f, 0.0f))
+				.getXY();
+	}
+
+	/* projected by the camera's distance over its depth */
+	Vector2 extent = maxPerElem(corner, absPerElem(width));
+	float depth = camera->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f)).extract_z() -
+		      center.getZ();
+
+	ScePafWidget_72F479CA(camera);
+
+	float scale;
+
+	if (depth == 0.0f)
+		scale = 0.0f;
+	else
+		scale = camera->m_distance / depth;
+
+	math::v4 eye = camera->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v2 size(extent * scale);
+	math::v2 middle((center - eye.getImpl()).getXY() * scale);
+
+	return math::rect(middle, size);
 }
 
 int32_t Widget::SetPosHermite(const math::v4 &pos, const math::v4 *const *tangents, Timer *t,

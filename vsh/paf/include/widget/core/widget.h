@@ -1246,8 +1246,9 @@ public:
 	/* the layout of the resolution taken at once, its children's too where children
 	   (0x8114f9c2; names ours) */
 	int32_t ChangeResolution_core(uint32_t id, bool children, bool update);
-	/* the world matrix made again from its position, scale and rotation and its parent's */
-	void UpdateMatrix();
+	/* the world matrix made again from its position, scale and rotation and its parent's,
+	   returned */
+	const math::matrix &UpdateMatrix();
 	/* its matrix and its descendants' made again (0x811553b0 TOOL; name ours) */
 	void UpdateMatrixTree();
 
