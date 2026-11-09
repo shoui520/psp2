@@ -1426,6 +1426,9 @@ public:
 	Widget *FindChild(const char *type, int32_t mode, bool (*check)(Widget *));
 	/* the focus taken off it: -1 where it has none */
 	int32_t ReleaseFocus();
+	/* the target made the widget its focus root holds the focus with (NULL: none), and the
+	   environment told (0x81150b6c; name ours, the flag meaning open) */
+	int32_t SetFocusRootFocus(Widget *target, bool notify);
 	/* a touch or key may reach it: an input target, shown and in no transition, and not
 	   destroy protected (inline in Sony's code: ButtonBase's press, TouchScrollSupplier's rear
 	   mochi gesture; name ours) */

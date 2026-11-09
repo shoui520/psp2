@@ -473,6 +473,17 @@ void ScePafWidget_9D4A5A0E(Environment *env)
 		env->m_draw_frame = false;
 }
 
+void ScePafWidget_75FB31F1(Environment *env, bool enable)
+{
+	env->m_focus_enabled = enable;
+	env->m_focus_widget = NULL;
+	env->UpdateFocus(NULL, NULL);
+	if (!env->IsTermAvailable()) {
+		env->m_focus_cursor.Update(0.0f);
+		env->m_focus_cursor_rear.Update(0.0f);
+	}
+}
+
 int32_t ScePafWidget_F67517A0(Environment *env)
 {
 	int32_t result;

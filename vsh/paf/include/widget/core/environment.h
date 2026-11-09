@@ -338,6 +338,9 @@ public:
 	/* the widget that holds the port's pad keys of the low group (0x1f) or the high group
 	   (0x3e0) lets go of them: -1 where none holds them (0x8113f4be, 0x8113f470; names
 	   ours) */
+	/* the focus searched again and set: on the focus root given as the one to take it (or NULL),
+	   the other as the one to give it up (0x8113ce6e; name ours, meaning open) */
+	void UpdateFocus(Widget *set_root, Widget *clear_root);
 	int32_t ReleasePadCaptureLow(uint32_t port);
 	int32_t ReleasePadCaptureHigh(uint32_t port);
 	/* the widget given the port's pad keys of the low group (0x8113f496) or the high group
@@ -456,7 +459,10 @@ public:
 	uint8_t reserved3b[8];
 	/* the scene the display area scale is applied to (Camera's DrawScene; name ours) */
 	Widget *m_display_area_scene;
-	uint8_t reserved3c[0x44];
+	uint8_t reserved3c[0x28];
+	/* the widget that has the focus (UpdateFocus; name ours) */
+	Widget *m_focus_widget;
+	uint8_t reserved3d[0x18];
 	/* set before the focus is first shown */
 	int32_t m_focus_mode;
 	/* set: a scroll view does not take the focus by itself (name ours, meaning open) */

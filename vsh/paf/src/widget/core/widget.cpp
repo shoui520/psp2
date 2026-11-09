@@ -1988,6 +1988,48 @@ int32_t Widget::ReleasePadCaptureButton(uint32_t key, bool reset)
 	return -1;
 }
 
+int32_t Widget::SetFocusRootFocus(Widget *target, bool notify)
+{
+	Environment *env = m_env;
+
+	if (env == NULL)
+		return -1;
+
+	Widget *old = m_focus_root != NULL ? (Widget *)m_focus_root->m_state : NULL;
+
+	if (old != target) {
+		old = m_focus_root != NULL ? (Widget *)m_focus_root->m_state : NULL;
+		SetFocusRootState((uint32_t)target);
+		if (old != NULL)
+			old->m_focused = false;
+		if (target != NULL) {
+			target->m_focused = true;
+			env = m_env;
+			env->UpdateFocus(notify ? this : NULL, NULL);
+			return 0;
+		}
+		env = m_env;
+		env->UpdateFocus(NULL, notify ? this : NULL);
+		return 0;
+	}
+	if (target == NULL)
+		env->UpdateFocus(NULL, notify ? this : NULL);
+	else
+		env->UpdateFocus(notify ? this : NULL, NULL);
+	return 0;
+}
+
+int32_t Widget::ReleaseFocus()
+{
+	Widget *root = FindFocusRoot(this);
+
+	if (root == NULL)
+		return -1;
+	if ((Widget *)root->m_focus_root->m_state == this)
+		return root->SetFocusRootFocus(NULL, true);
+	return -1;
+}
+
 /* a layer's count in the scene changed, the weights marked to be made again (inline in Sony's
    code; name ours) */
 static inline void AddLayerRange(Scene *scene, uint32_t layer, int32_t delta)
