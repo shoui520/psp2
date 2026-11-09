@@ -17,6 +17,8 @@ namespace inputdevice {
 /* What an InputListener listens to; the device it activates. */
 enum {
 	DEVICE_TYPE_PAD = 0,
+	/* the pad as the widget system's UIPadListener listens (name ours) */
+	DEVICE_TYPE_UI_PAD = 1,
 	/* the analog sticks, as the scroll views' AnalogScrollListener listens (name ours) */
 	DEVICE_TYPE_ANALOG = 2,
 	DEVICE_TYPE_TOUCHSCREEN_FRONT = 3,

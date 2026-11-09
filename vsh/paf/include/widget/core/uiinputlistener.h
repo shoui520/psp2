@@ -84,6 +84,25 @@ public:
 	const inputdevice::touchscreen::Data *m_touch_pre;
 };
 
+/* the listener of the rear touch panel: the front's with the port and the device type of the
+   rear (vtable 812F8ED0; its OnUpdate is the front's, called through) */
+class UITouchRearListener : public UITouchListener {
+public:
+	UITouchRearListener(Environment *env) : UITouchListener(env, 1)
+	{
+		m_type = inputdevice::DEVICE_TYPE_TOUCHSCREEN_BACK;
+	}
+
+	virtual ~UITouchRearListener()
+	{
+	}
+
+	virtual void OnUpdate(const inputdevice::Data *data)
+	{
+		UITouchListener::OnUpdate(data);
+	}
+};
+
 /* a gesture listener of the pad's keys of one port, its user data the widget (vtable 812F9274;
    constructor inline in apply_pad_gesture_tap and apply_pad_gesture_longpress; names ours) */
 class PadGestureListener : public inputdevice::GestureListener {
@@ -264,8 +283,11 @@ public:
    (vtable 812F9300; the fields' names ours) */
 class UIPadListener : public UIInputGestureListener {
 public:
-	UIPadListener(Environment *env) : UIInputGestureListener(env)
+	UIPadListener(Environment *env)
+		: UIInputGestureListener(env), m_repeat_delay(300.0f), m_repeat_interval(80.0f),
+		  m_repeat_count(0), m_hold_key(0), m_analog_to_dpad(false), m_prev_mask(0), m_mode(0)
 	{
+		m_type = inputdevice::DEVICE_TYPE_UI_PAD;
 	}
 
 	virtual ~UIPadListener()
@@ -331,8 +353,9 @@ public:
    the scene (vtable at 812F93BC; the fields' names ours) */
 class UIBtrmListener : public UIInputGestureListener {
 public:
-	UIBtrmListener(Environment *env) : UIInputGestureListener(env)
+	UIBtrmListener(Environment *env) : UIInputGestureListener(env), m_hold_key(0), m_target(NULL)
 	{
+		m_type = inputdevice::DEVICE_TYPE_BTRM;
 	}
 
 	virtual ~UIBtrmListener()
@@ -378,6 +401,7 @@ class UIMotionListener : public UIInputGestureListener {
 public:
 	UIMotionListener(Environment *env) : UIInputGestureListener(env)
 	{
+		m_type = inputdevice::DEVICE_TYPE_MOTIONSENSOR;
 	}
 
 	virtual ~UIMotionListener()
