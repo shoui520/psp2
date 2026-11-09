@@ -7547,6 +7547,119 @@ int32_t Widget::ApplyDrawObjState(graph::DrawInfo &info)
 	return 0;
 }
 
+/* the entry of the resolution data for the resolution, or for the one it is based on; none where
+   the scene knows neither (Sony's copy inline in UpdateResolutionTimer; unlike
+   get_resolution_data it gives no first entry instead; name ours) */
+static inline ResolutionData *FindResolutionData(Widget *w, ResolutionData *array, uint32_t num,
+						 uint32_t id)
+{
+	if (array == NULL || num == 0)
+		return NULL;
+
+	SceneResolution *resolution = ScePafWidget_CDC90BA2(w->m_scene->m_env_param, id);
+
+	if (resolution == NULL)
+		return NULL;
+
+	uint32_t i;
+
+	for (i = 0; i < num; i++) {
+		if (array[i].m_id == resolution->m_id)
+			return &array[i];
+	}
+	for (i = 0; i < num; i++) {
+		if (array[i].m_id == resolution->m_base_id)
+			return &array[i];
+	}
+	return NULL;
+}
+
+void Widget::UpdateResolutionTimer()
+{
+	/* the next resolution's change started where none runs */
+	if (m_resolution_timer == NULL && m_resolution_timer_next != NULL) {
+		if (m_layouter != NULL)
+			m_layouter->m_reso_dirty_begin = true;
+
+		Timer *timer = m_resolution_timer_next;
+		Scene *scene = m_scene;
+
+		m_resolution_timer = timer;
+		m_resolution_timer_next = NULL;
+		m_resolution_id = m_resolution_id_next;
+		m_resolution_id_next = 0xFF;
+		if (this == scene && m_env != NULL) {
+			/* the scene: its screen resized where the sizes change, and itself */
+			SceneResolution *pre =
+				ScePafWidget_CDC90BA2(scene->m_env_param, m_resolution_id_pre);
+			SceneResolution *resolution =
+				ScePafWidget_CDC90BA2(m_scene->m_env_param, m_scene->m_resolution_id);
+
+			if (resolution != NULL &&
+			    (pre == NULL || pre->m_viewport_width != resolution->m_viewport_width ||
+			     pre->m_viewport_height != resolution->m_viewport_height ||
+			     pre->m_scissor_width != resolution->m_scissor_width ||
+			     pre->m_scissor_height != resolution->m_scissor_height))
+				m_scene->UpdateScreenSize(new Timer(*timer));
+			SetSize(m_size, new Timer(timer->GetTotalTime(), timer->m_func_x), ANIM_SIZE, 0,
+				0.0f, NULL, NULL);
+		} else if (scene != NULL && scene->IsResolutionActMorph(m_resolution_id)) {
+			/* a widget: moved, sized and turned to the resolution's values */
+			Timer *morph = m_resolution_timer;
+			ResolutionData *entry =
+				FindResolutionData(this, m_pos_array, m_pos_num, m_resolution_id);
+
+			if (entry != NULL) {
+				math::v4 pos(entry->m_value[0], entry->m_value[1], entry->m_value[2], 0.0f);
+				Timer *t = new Timer(morph->GetTotalTime(), morph->m_func_x);
+
+				SetPosHermite(pos, NULL, t, ANIM_MOVE, 2, 0.0f, NULL, NULL);
+			}
+			entry = FindResolutionData(this, m_size_array, m_size_num, m_resolution_id);
+			if (entry != NULL) {
+				math::v4 size(entry->m_value[0], entry->m_value[1], entry->m_value[2],
+					      0.0f);
+				Timer *t = new Timer(morph->GetTotalTime(), morph->m_func_x);
+
+				SetSize(size, t, ANIM_SIZE, 2, 0.0f, NULL, NULL);
+			}
+			entry = FindResolutionData(this, m_rot_array, m_rot_num, m_resolution_id);
+			if (entry != NULL) {
+				math::v4 rot(entry->m_value[0], entry->m_value[1], entry->m_value[2], 0.0f);
+				Timer *t = new Timer(morph->GetTotalTime(), morph->m_func_x);
+
+				SetRot(rot, 0, t, ANIM_ROT, 2, 0.0f, NULL, NULL);
+			}
+			if (m_focus_shape != NULL)
+				ScePafWidget_13B246E0(this, m_focus_shape);
+			if (m_transition != 0xFF && m_transition_complete) {
+				m_resolution_morph = true;
+				ScePafWidget_F1176ACC(this, (common::transition::Type)m_transition, 0.0f,
+						      NULL, NULL);
+			}
+		}
+	}
+
+	/* a finished change given up */
+	Timer *timer = m_resolution_timer;
+
+	if (timer != NULL && timer->m_state == Timer::State_Finished) {
+		delete timer;
+		m_resolution_timer = NULL;
+		if (m_transition != 0xFF && m_resolution_morph) {
+			ScePafWidget_44B22ACA(this, (common::transition::Type)m_transition, 0.0f, NULL,
+					      NULL);
+			m_resolution_morph = false;
+		}
+		if (m_scene != NULL && m_scene->IsResolutionActMorph(m_resolution_id))
+			m_resolution_id_pre = m_resolution_id;
+		if (m_layouter != NULL)
+			m_layouter->m_reso_dirty_end = true;
+	}
+	if (m_resolution_timer != NULL)
+		m_resolution_timer->DoTick();
+}
+
 void Widget::UpdateMatrixTree()
 {
 	UpdateMatrix();

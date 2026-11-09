@@ -64,6 +64,9 @@ public:
 	static int32_t s_enter_layout;
 
 protected:
+	/* Widget::UpdateResolutionTimer marks a resolution change begun and ended */
+	friend class Widget;
+
 	Widget *m_widget;
 	LayoutCB m_cb_layout;
 	uint32_t m_dirty : 8;
