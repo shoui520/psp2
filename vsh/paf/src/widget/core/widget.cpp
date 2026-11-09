@@ -35,6 +35,26 @@ inline __attribute__((noinline)) int vector<ui::Widget::DrawObjEntry>::push_back
 	return result;
 }
 
+/* Sony's frame end calls the swapped draw objects' clear rather than inlining it. */
+template<>
+inline __attribute__((noinline)) void list<common::SharedPtr<graph::DrawObj> >::clear()
+{
+	if (head != NULL) {
+		_Node *node = head->next;
+
+		while (node != head) {
+			_Node *next = node->next;
+
+			destroy(&node->value);
+			operator delete(node);
+			node = next;
+		}
+		head->prev = head;
+		head->next = head;
+		count = 0;
+	}
+}
+
 /* Sony has the lookup in the touch capture map inline. */
 template<>
 inline __attribute__((always_inline)) _Tree<_Tmap_traits<uint32_t, ui::TouchCapture *, less<uint32_t> > >::iterator
@@ -1722,6 +1742,33 @@ void Widget::OnUpdate()
 		ChangeState(CheckState(), -1);
 }
 
+/* the panel's edge correction and the size and limits made of it, taken again each frame
+   (names ours): the correction's x and y and w, twice the w's magnitude, and the lowest y a
+   size keeps its height at; the correction's x and twice w's magnitude added to a size */
+static float s_edge_w;
+static float s_edge_x;
+static float s_edge_y;
+static float s_edge_w2;
+static float s_edge_min_y;
+static math::v4 s_size_adjust(0.0f, 0.0f, 0.0f, 0.0f);
+
+/* the frame's end: the panel's edge correction read, and the draw objects SwapDrawObj took out
+   let go (name ours) */
+extern "C" void ScePafWidget_D2E7815D()
+{
+	float correction[4];
+
+	inputdevice::touchscreen::GetEdgeCorrection(0, correction);
+	s_edge_w = correction[3];
+	s_edge_x = correction[0];
+	s_edge_y = correction[1];
+	s_edge_w2 = __builtin_fabsf(correction[3]) * 2.0f;
+	s_edge_min_y = correction[1] - s_edge_w2;
+	s_size_adjust.set_x(correction[0]);
+	s_size_adjust.set_y(s_edge_w2);
+	s_swapped_drawobjs.clear();
+}
+
 void Widget::UpdateRestruct()
 {
 	if (s_list_restruct.size() == 0)
@@ -1788,6 +1835,16 @@ next:
 			it->first->m_env->m_layer_weight_changed = true;
 	}
 }
+
+math::v4 ScePafWidget_301AA80F(Widget *widget, const math::v4 &size)
+{
+	math::v4 adjusted = size + s_size_adjust;
+
+	if (s_edge_min_y > size.extract_y())
+		adjusted.set_y(s_edge_y);
+	return adjusted;
+}
+
 
 void Widget::detach_environment()
 {
@@ -6392,7 +6449,7 @@ void Widget::SetBaseDestroyCount(int32_t count)
 
 uint32_t Widget::s_upmat_count_L;
 uint32_t Widget::s_upmat_count_W;
-int32_t Widget::s_base_destroy_count;
+int32_t Widget::s_base_destroy_count = 1;
 int32_t Widget::s_destroying_count;
 int32_t Widget::s_instance_count;
 list<RestructInfo> Widget::s_list_restruct;
