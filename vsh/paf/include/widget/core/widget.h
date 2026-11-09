@@ -1358,6 +1358,8 @@ public:
 	int32_t SetForwardMost_core();
 	/* the moves SetParent, SetBehind and SetForward kept (name Sony's) */
 	static list<RestructInfo> s_list_restruct;
+	/* the moves kept made, the layer weights of the scenes they were in made again (0x8115605a) */
+	static void UpdateRestruct();
 	/* the widgets waiting to be destroyed, with their children, each frame (0x81155f1e) */
 	int32_t UpdateDestroy();
 	/* the widget and its children updated each frame (0x81155cc8) */
@@ -1835,6 +1837,11 @@ inline WidgetParam::~WidgetParam()
 extern "C" {
 /* the widget given a focus root of its own, the focus taken from the root above it
    (no name found) */
+/* how many touches of the port the widget holds (no name found) */
+int32_t ScePafWidget_54DFB062(paf::ui::Widget *widget, int32_t port);
+/* where it is drawn set (1: into a surface of its scene's list), its draw objects told (no name
+   found) */
+void ScePafWidget_CB95F8F2(paf::ui::Widget *widget, int32_t target);
 int32_t ScePafWidget_00AA6519(paf::ui::Widget *widget);
 /* the widget the focuser's direction widgets name for the direction (0 up, 1 down, 2 left,
    3 right; up for any other), NULL where it has no widget or none (no name found) */

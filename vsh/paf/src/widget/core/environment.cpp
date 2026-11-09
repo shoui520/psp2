@@ -26,6 +26,14 @@ _Tree<_Tmap_traits<int32_t, ui::Widget *, less<int32_t> > >::find(const int32_t 
 	return iterator(_Find(key));
 }
 
+/* Sony has the lookup in the widget groups inline too. */
+template<>
+inline __attribute__((always_inline)) _Tree<_Tmap_traits<uint32_t, ui::ModalWidgetList, less<uint32_t> > >::iterator
+_Tree<_Tmap_traits<uint32_t, ui::ModalWidgetList, less<uint32_t> > >::find(const uint32_t &key)
+{
+	return iterator(_Find(key));
+}
+
 namespace ui {
 
 enum {
@@ -431,6 +439,34 @@ OrderEntry *ModalWidgetList::Add(Widget *widget, int32_t mark)
 	return NULL;
 }
 
+void ModalWidgetList::Refresh()
+{
+	for (vector<OrderEntry>::iterator it = m_entries.begin(); it != m_entries.end(); ++it)
+		it->Init(it->m_widget, it->m_mark);
+	if (m_entries.count != 0) {
+		m_unsorted = true;
+		sort(m_entries.begin(), m_entries.end());
+	}
+	m_unsorted = false;
+}
+
+int32_t Environment::RefreshOrderLists(bool force)
+{
+	if (force || m_layer_weight_changed) {
+		m_modal_widgets.Refresh();
+		m_ordered_widgets.Refresh();
+		m_focus_candidates.Refresh();
+		if (m_widget_groups.size() != 0) {
+			for (map<uint32_t, ModalWidgetList>::iterator it = m_widget_groups.begin();
+			     it != m_widget_groups.end(); ++it)
+				it->second.Refresh();
+		}
+		m_layer_weight_changed = false;
+		return 0;
+	}
+	return m_layer_weight_changed;
+}
+
 void ModalWidgetList::Sort()
 {
 	if (m_unsorted && m_entries.count != 0)
@@ -699,6 +735,36 @@ void ScePafWidget_9D4A5A0E(Environment *env)
 	env->m_draw_frame = state == 1;
 	if (suspended && !env->m_draw_when_suspended)
 		env->m_draw_frame = false;
+}
+
+Widget *ScePafWidget_0775F78F(Environment *env, uint32_t id)
+{
+	if (env->m_widget_groups.size() == 0)
+		return NULL;
+
+	map<uint32_t, ModalWidgetList>::iterator it = env->m_widget_groups.find(id);
+
+	if (it == env->m_widget_groups.end())
+		return NULL;
+	return it->second.m_widget;
+}
+
+int32_t ScePafWidget_D131E927(Environment *env, uint32_t id, Widget *widget)
+{
+	map<uint32_t, ModalWidgetList>::iterator it = env->m_widget_groups.find(id);
+
+	if (it == env->m_widget_groups.end())
+		return 0;
+
+	int32_t result = 0;
+
+	if (widget != NULL)
+		result = it->second.Remove(widget);
+	else
+		it->second.m_entries.clear();
+	if (widget != NULL && widget->m_hold_count < 0 && it->second.m_widget == widget)
+		it->second.m_widget = NULL;
+	return result;
 }
 
 void ScePafWidget_75FB31F1(Environment *env, bool enable)

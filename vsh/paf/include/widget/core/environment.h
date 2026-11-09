@@ -184,8 +184,11 @@ public:
 	OrderEntry *Add(Widget *widget, int32_t mark);
 	/* sorts the entries where one was added or taken out (0x8113bbba) */
 	void Sort();
+	/* the entries made again from their widgets and sorted (0x8113bd48; name ours) */
+	void Refresh();
 
-	uint8_t reserved[4];
+	/* the widget the list is for (name ours, meaning open) */
+	Widget *m_widget;
 	bool m_unsorted;
 	vector<OrderEntry> m_entries;
 };
@@ -383,6 +386,9 @@ public:
 	/* whether the widget is not behind the modal widgets (nor the second one): 1 where none is set
 	   (0x8113fa84; name ours) */
 	bool IsInFrontOfModal(Widget *widget);
+	/* the ordered lists made again where the layer weights changed, or whatever (0x8113bdba; name
+	   ours) */
+	int32_t RefreshOrderLists(bool force);
 	int32_t RegisterTouchDeviceRegion(Widget *widget);
 	int32_t RegisterTouchDeviceRegion(uint32_t index, Widget *widget);
 	int32_t RemoveTouchDeviceRegion(Widget *widget);
@@ -535,7 +541,9 @@ public:
 	Widget *m_second_modal_widget;
 	/* the widgets that have m_ordered (ScePafWidget 0253DC9C; name ours) */
 	ModalWidgetList m_ordered_widgets;
-	uint8_t reserved3c[0xc];
+	/* lists of widgets by ID, each with a widget it is for first (ScePafWidget 0775F78F and
+	   D131E927; names ours, meaning open) */
+	map<uint32_t, ModalWidgetList> m_widget_groups;
 	/* the widget that has the focus (UpdateFocus; name ours) */
 	Widget *m_focus_widget;
 	/* the widgets that can take the focus, ordered for UpdateFocus (name ours) */
@@ -626,6 +634,10 @@ int32_t ScePafWidget_ABF05727(paf::ui::Environment *env, uint32_t port, bool rel
 			      paf::ui::Widget *keep);
 /* updates the input devices */
 int32_t ScePafWidget_909850C4(void);
+/* the widget the list with the ID is for, 0 for none (no name found) */
+paf::ui::Widget *ScePafWidget_0775F78F(paf::ui::Environment *env, uint32_t id);
+/* a widget taken out of the list with the ID, or the list emptied with none (no name found) */
+int32_t ScePafWidget_D131E927(paf::ui::Environment *env, uint32_t id, paf::ui::Widget *widget);
 /* sets the focus frame texture no (below 9); with none, reads all of them from the common resource */
 void ScePafWidget_B6C64486(const paf::intrusive_ptr<paf::graph::Surface> &texture, int32_t no);
 /* begins a frame on the root surface */

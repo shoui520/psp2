@@ -1039,6 +1039,40 @@ static inline void DeleteFocusRoot(FocusRoot *root)
 	}
 }
 
+extern "C" void ScePafWidget_CB95F8F2(Widget *widget, int32_t target)
+{
+	Scene *scene = widget->m_scene;
+
+	if (scene != NULL) {
+		if (target == 1) {
+			if (scene->m_surface_widgets.size() == 0)
+				scene->CreateBgLayer();
+
+			Scene::SurfaceWidget entry;
+
+			__builtin_memset(&entry, 0, 20);
+			entry.m_widget = widget;
+			scene->m_surface_widgets.push_back(entry);
+		}
+		widget->m_draw_target = target;
+		for (vector<Widget::DrawObjEntry>::iterator it = widget->m_drawobjs.begin();
+		     it != widget->m_drawobjs.end(); ++it)
+			it->m_obj->m_flags.m_draw_list = target & 3;
+	}
+}
+
+extern "C" int32_t ScePafWidget_54DFB062(Widget *widget, int32_t port)
+{
+	int32_t count = 0;
+
+	for (map<uint32_t, TouchCapture *>::iterator it = widget->m_touch_captures.begin();
+	     it != widget->m_touch_captures.end(); ++it) {
+		if ((it->first & 0xff00) == (uint32_t)(port << 8))
+			count++;
+	}
+	return count;
+}
+
 extern "C" int32_t ScePafWidget_00AA6519(Widget *widget)
 {
 	if (widget->m_focus_root != NULL)
@@ -1479,6 +1513,73 @@ void Widget::OnUpdate()
 	}
 	if (m_hold_count <= 0)
 		ChangeState(CheckState(), -1);
+}
+
+void Widget::UpdateRestruct()
+{
+	if (s_list_restruct.size() == 0)
+		return;
+
+	map<Scene *, int32_t> scenes;
+
+	for (list<RestructInfo>::iterator it = s_list_restruct.begin(); it != s_list_restruct.end(); ++it) {
+		Widget *widget = it->m_widget;
+		Widget *sibling = it->m_sibling;
+
+		switch (it->m_option) {
+		case 1: {
+			Widget *parent = widget->m_parent;
+
+			if (parent != NULL) {
+				if (sibling != NULL) {
+					for (;;) {
+						Widget *above = sibling->m_parent;
+
+						if (above == parent)
+							break;
+						sibling = sibling->m_parent;
+						if (above == NULL)
+							goto next;
+					}
+				}
+				if (sibling != NULL)
+					widget->SetParent_core(widget->m_parent, sibling);
+			}
+			break;
+		}
+		case 2:
+			widget->SetForward_core(it->m_sibling);
+			break;
+		case 3:
+			widget->SetBehindOneStep_core();
+			break;
+		case 4:
+			widget->SetForwardOneStep_core();
+			break;
+		case 5:
+			if (widget->m_parent != NULL) {
+				list<Widget *>::iterator first = widget->m_parent->m_children.begin();
+
+				widget->SetParent_core(widget->m_parent, *first);
+			}
+			break;
+		case 6:
+			if (widget->m_parent != NULL)
+				widget->SetParent_core(widget->m_parent, NULL);
+			break;
+		default:
+			widget->SetParent_core(it->m_parent, it->m_sibling);
+			break;
+		}
+next:
+		scenes[it->m_widget->m_scene] = 1;
+	}
+	s_list_restruct.clear();
+	for (map<Scene *, int32_t>::iterator it = scenes.begin(); it != scenes.end(); ++it) {
+		it->first->UpdateLayerWeight();
+		if (it->first->m_env != NULL)
+			it->first->m_env->m_layer_weight_changed = true;
+	}
 }
 
 void Widget::SetCursorOn(bool on, Widget *from, Widget *to)
