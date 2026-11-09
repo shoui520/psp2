@@ -2960,6 +2960,148 @@ int32_t Widget::SetPosture(const math::v4 &facing, const math::v4 &up, Widget *r
 	return 0;
 }
 
+Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
+{
+	m_pos = math::v4(0.0f, 0.0f, 0.0f, 1.0f);
+	m_scale = math::v4(1.0f, 1.0f, 1.0f, 0.0f);
+	m_size = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_rot = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_world_rot = math::quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+	m_local_matrix = math::matrix::Identity();
+	m_world_matrix = math::matrix::Identity();
+	m_align_offs = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_anchor_offs = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_origin_offs = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_inverse_matrix = NULL;
+	m_quat = math::quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+	m_state = 0;
+	m_user_data[0] = NULL;
+	m_user_data[1] = NULL;
+	m_user_data2[0] = NULL;
+	m_user_data2[1] = NULL;
+	m_env = NULL;
+	m_parent = NULL;
+	m_scene = NULL;
+	reserved3b0 = 0x7F;
+	m_dim_held = true;
+	reserved3c0 = 0x7F;
+	m_dim_held_enable = true;
+	m_prepare_count = 0;
+	m_focus_count = 0;
+	m_touch_rear_children = 0;
+	m_update_flag = 3;
+	m_transition = 0xFF;
+	m_keycode = 0;
+	m_priority = 0;
+	m_layer = 0;
+	m_layer_old = 0;
+	m_modal_mode = 2;
+	m_modal_option = 0;
+	reserved3x1 = 0;
+	m_clip_mode = 0;
+	reserved3x3 = 0;
+	m_draw_target = 0;
+	m_flip_x = false;
+	m_flip_y = false;
+	m_flip_z = false;
+	reserved3x4 = false;
+	m_touch_front_event = true;
+	m_focus_in_group = true;
+	m_focus_direction_off = true;
+	m_focus_target = true;
+	m_draw_before_children = true;
+	m_debug_events = true;
+	m_input_target = true;
+	m_touch_gesture_mask = 0;
+	m_show_alpha = 1.0f;
+	m_show_a_sum = 1.0f;
+	m_meta_alpha = 1.0f;
+	m_meta_a_sum = 1.0f;
+	m_color_alpha = 1.0f;
+	m_color = 0xFFFFFFFF;
+	m_layout_rect = NULL;
+	m_resolution_timer = NULL;
+	m_resolution_timer_next = NULL;
+	m_pos_array = NULL;
+	m_size_array = NULL;
+	m_rot_array = NULL;
+	m_resolution_id = 0xFF;
+	m_resolution_id_pre = 0xFF;
+	m_resolution_id_next = 0xFF;
+	m_pos_num = 0;
+	m_size_num = 0;
+	m_rot_num = 0;
+	m_drag_state[0] = NULL;
+	m_drag_state[1] = NULL;
+	m_hit_box = NULL;
+	m_hit_box_mode = 4;
+	m_hit_find_mode = 0;
+	m_hit_detect_mode = 2;
+	m_hit_detect_b_mode = 2;
+	m_hit_check = 0;
+	reserved5c[0] = 0xFF;
+	reserved5c[1] = 0xFF;
+	m_align_x = 0;
+	m_align_y = 0;
+	m_align_z = 0;
+	m_origin_x = 0;
+	m_origin_y = 0;
+	m_origin_z = 0;
+	m_anchor_x = 4;
+	m_anchor_y = 4;
+	m_anchor_z = 4;
+	m_adjust_x = 0;
+	m_adjust_y = 0;
+	m_adjust_z = 0;
+	m_drag_quant_x = 0;
+	m_drag_quant_y = 0;
+	m_drag_quant_z = 0;
+	m_drag_limit = NULL;
+	m_pinch_limit = NULL;
+	m_adjust_param = NULL;
+	m_layouter = NULL;
+	m_animator = NULL;
+	m_focuser = NULL;
+	m_focus_shape = NULL;
+	m_focus_root = NULL;
+	m_focus_referrers = NULL;
+	m_layout_notify_mask = 0x9FF;
+	m_animator_notify_mask = 0xFFFF;
+	for (int32_t i = 0; i < 8; i++)
+		reserved7b[i] = 0;
+	m_sound_mask = 0;
+	m_sound_num = 0;
+	m_sounds = NULL;
+	m_children.clear();
+	m_anims.clear();
+	m_touch_captures.clear();
+	m_user_data[0] = NULL;
+	m_user_data[1] = NULL;
+	m_user_data2[0] = NULL;
+	m_user_data2[1] = NULL;
+	SetDragMode(0);
+	SetPinchMode(0);
+	if (param != NULL) {
+		m_parent_protected = param->m_parent_protected;
+		m_under_template = param->m_under_template;
+	}
+	if (parent != NULL) {
+		SetParent_core(parent, NULL);
+	} else {
+		m_scene = NULL;
+		m_update_flag = 0;
+	}
+	ChangeState(1, -1);
+
+	Focuser *focuser = new Focuser(DefaultFocusCB);
+
+	delete m_focuser;
+	m_focuser = focuser;
+	if (focuser != NULL)
+		focuser->m_widget = this;
+	s_instance_count++;
+}
+
 void Widget::SetBaseDestroyCount(int32_t count)
 {
 	s_base_destroy_count = count;
@@ -2968,6 +3110,7 @@ void Widget::SetBaseDestroyCount(int32_t count)
 
 int32_t Widget::s_base_destroy_count;
 int32_t Widget::s_destroying_count;
+int32_t Widget::s_instance_count;
 list<RestructInfo> Widget::s_list_restruct;
 
 int32_t Widget::GetBaseDestroyCount()

@@ -753,6 +753,8 @@ public:
 
 	/* the widgets being destroyed; Plugin::Exit waits for them */
 	static int32_t s_destroying_count;
+	/* the widgets made and not yet destroyed (ScePafWidget exports it) */
+	static int32_t s_instance_count;
 
 	Widget(Widget *parent, CreateParam *param);
 	virtual ~Widget();
