@@ -34,7 +34,7 @@ Plane::Plane(Widget *parent, CreateParam *param) : Widget(parent, param)
 }
 
 /* the style's draw object parameter by name */
-static const char *const s_plane_objs[] = {
+extern const char *const s_plane_objs[] = {
 	"planeobj",
 };
 

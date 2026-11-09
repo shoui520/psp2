@@ -121,7 +121,7 @@ static inline __attribute__((always_inline)) void AddObjParam(WidgetStyleParam *
 }
 
 /* the style's draw object parameters by name */
-static const char *const s_plane_button_objs[] = {
+extern const char *const s_plane_button_objs[] = {
 	"image_obj",
 	"glow_obj",
 };

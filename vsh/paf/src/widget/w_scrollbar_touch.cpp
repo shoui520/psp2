@@ -62,10 +62,12 @@ ScrollBarTouchStyleParam::ScrollBarTouchStyleParam()
 }
 
 /* the sounds its sound parameter names, by index */
-static const struct {
+struct SoundDef {
 	const char *name;
 	uint32_t index;
-} s_scrollbar_touch_sounds[] = {
+};
+
+extern const SoundDef s_scrollbar_touch_sounds[] = {
 	{ "drag_begin", ScrollBarTouch::SOUND_DRAG_BEGIN },
 	{ "drag_end", ScrollBarTouch::SOUND_DRAG_END },
 	{ "page_scroll", ScrollBarTouch::SOUND_PAGE_SCROLL },

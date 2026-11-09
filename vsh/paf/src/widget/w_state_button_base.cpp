@@ -141,10 +141,12 @@ StateButtonBaseStyleParam::StateButtonBaseStyleParam() : m_frame_num(2), m_frame
 }
 
 /* the sounds a state button adds to a button's */
-static const struct {
+struct SoundDef {
 	const char *name;
 	uint32_t index;
-} s_state_button_sounds[] = {
+};
+
+extern const SoundDef s_state_button_sounds[] = {
 	{ "check", StateButtonBase::SOUND_CHECK },
 	{ "uncheck", StateButtonBase::SOUND_UNCHECK },
 };

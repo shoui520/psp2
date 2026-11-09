@@ -149,10 +149,12 @@ SlideBarStyleParam::SlideBarStyleParam()
 }
 
 /* the sounds its sound parameter names, by index */
-static const struct {
+struct SoundDef {
 	const char *name;
 	uint32_t index;
-} s_slidebar_sounds[] = {
+};
+
+extern const SoundDef s_slidebar_sounds[] = {
 	{ "drag_begin", SlideBar::SOUND_DRAG_BEGIN },
 	{ "drag_end", SlideBar::SOUND_DRAG_END },
 };

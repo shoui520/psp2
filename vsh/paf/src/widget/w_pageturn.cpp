@@ -28,13 +28,13 @@ namespace paf {
 namespace ui {
 
 /* how the corner and its offset are animated (names ours) */
-static AnimPropertyV4 s_turn_prop = {
+AnimPropertyV4 s_turn_prop = {
 	PageTurn::ANIM_TURN,
 	ScePafWidget_6CC95725,
 	ScePafWidget_3D6C290E,
 };
 
-static AnimPropertyV4 s_turn_offset_prop = {
+AnimPropertyV4 s_turn_offset_prop = {
 	PageTurn::ANIM_TURN_OFFSET,
 	ScePafWidget_4EA317B8,
 	ScePafWidget_6206FB7E,
@@ -190,7 +190,7 @@ static inline __attribute__((always_inline)) void AddObjParam(WidgetStyleParam *
 }
 
 /* the style's draw object parameters by name */
-static const char *const s_pageturn_objs[] = {
+extern const char *const s_pageturn_objs[] = {
 	"turn_obj",
 	"label_obj",
 };

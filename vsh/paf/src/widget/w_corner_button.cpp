@@ -94,7 +94,7 @@ CornerButtonLayoutParam::CornerButtonLayoutParam()
 }
 
 /* the style's draw object parameters by name (name ours) */
-static const char *const s_corner_button_objs[] = {
+extern const char *const s_corner_button_objs[] = {
 	"corner_obj",
 };
 

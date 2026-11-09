@@ -857,10 +857,12 @@ ScrollViewBaseStyleParam::ScrollViewBaseStyleParam()
 }
 
 /* the sounds its sound parameter names, by index */
-static const struct {
+struct SoundDef {
 	const char *name;
 	uint32_t index;
-} s_scroll_view_base_sounds[] = {
+};
+
+extern const SoundDef s_scroll_view_base_sounds[] = {
 	{ "press", ScrollViewBase::SOUND_PRESS },
 	{ "snapped", ScrollViewBase::SOUND_SNAP },
 };

@@ -53,10 +53,12 @@ const char ProgressBarTouchStyleParam::m_param_name[] = "style_progressbar_touch
 const char ProgressBarTouchSoundParam::m_param_name[] = "sound_progressbar_touch";
 
 /* the sounds its sound parameter names, by index */
-static const struct {
+struct SoundDef {
 	const char *name;
 	uint32_t index;
-} s_progressbar_touch_sounds[] = {
+};
+
+extern const SoundDef s_progressbar_touch_sounds[] = {
 	{ "drag_begin", ProgressBarTouch::SOUND_DRAG_BEGIN },
 	{ "drag_end", ProgressBarTouch::SOUND_DRAG_END },
 };

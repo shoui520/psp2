@@ -50,10 +50,12 @@ ListItemStyleParam::ListItemStyleParam()
 }
 
 /* the sounds its sound parameter names, by index */
-static const struct {
+struct SoundDef {
 	const char *name;
 	uint32_t index;
-} s_list_item_sounds[] = {
+};
+
+extern const SoundDef s_list_item_sounds[] = {
 	{ "bar", 1 },
 };
 

@@ -162,10 +162,12 @@ ButtonBaseHandlerParam::ButtonBaseHandlerParam()
 const char ButtonBaseSoundParam::m_param_name[] = "sound_button_base";
 
 /* the sounds a button's sound parameter names, by index */
-static const struct {
+struct SoundDef {
 	const char *name;
 	uint32_t index;
-} s_button_sounds[] = {
+};
+
+extern const SoundDef s_button_sounds[] = {
 	{ "press", ButtonBase::SOUND_PRESS },
 	{ "decide", ButtonBase::SOUND_DECIDE },
 	{ "long_press", ButtonBase::SOUND_LONG_PRESS },

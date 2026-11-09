@@ -86,7 +86,7 @@ ImageButtonParam::ImageButtonParam()
 }
 
 /* the style's draw object parameters by name (name ours) */
-static const char *const s_image_button_objs[] = {
+extern const char *const s_image_button_objs[] = {
 	"image_obj",
 	"image_back_obj",
 };
