@@ -11,6 +11,7 @@
 #include <widget/core/animlistener.h>
 #include <widget/core/layouter.h>
 #include <widget/core/widget.h>
+#include <widget/core/uiinputlistener.h>
 #include <widget/core/widget_gesture.h>
 #include <widget/w_camera.h>
 #include <widget/w_scene.h>
@@ -1776,6 +1777,78 @@ Widget::ApplyPadGesture(uint32_t port, uint32_t type, const inputdevice::Gesture
 
 	if (listener.get() != NULL && param != NULL)
 		listener->SetGestureParam(param);
+	return listener;
+}
+
+common::SharedPtr<inputdevice::GestureListener> Widget::apply_pad_gesture_tap(uint32_t port_id,
+									       uint32_t type)
+{
+	if (m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+
+	inputdevice::InputGestureListener *input = m_env->m_pad_gesture_listener.get();
+	common::SharedPtr<inputdevice::GestureListener> listener =
+		input != NULL ? input->GetGestureListener(port_id, 10, this)
+			      : common::SharedPtr<inputdevice::GestureListener>();
+
+	if (listener.get() == NULL) {
+		listener = common::SharedPtr<inputdevice::GestureListener>(
+			new PadTapListener(this, port_id));
+
+		bool failed = false;
+
+		input = m_env->m_pad_gesture_listener.get();
+		if (input == NULL || input->AttachGestureListener(port_id, 10, listener) < 0)
+			failed = true;
+		if (failed)
+			listener = common::SharedPtr<inputdevice::GestureListener>();
+	}
+	if (listener.get() != NULL) {
+		PadTapListener *tap = static_cast<PadTapListener *>(listener.get());
+
+		if ((type & 2) != 0)
+			tap->m_target = 2;
+		else if ((type & 1) != 0)
+			tap->m_target = 1;
+		tap->m_param.m_on_press = m_pad_tap_on_press;
+	}
+	return listener;
+}
+
+common::SharedPtr<inputdevice::GestureListener>
+Widget::apply_pad_gesture_longpress(uint32_t port_id, uint32_t type)
+{
+	if (m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+
+	inputdevice::InputGestureListener *input = m_env->m_pad_gesture_listener.get();
+	common::SharedPtr<inputdevice::GestureListener> listener =
+		input != NULL ? input->GetGestureListener(port_id, 15, this)
+			      : common::SharedPtr<inputdevice::GestureListener>();
+
+	if (listener.get() == NULL) {
+		listener = common::SharedPtr<inputdevice::GestureListener>(
+			new PadLongPressListener(this, port_id));
+
+		bool failed = false;
+
+		input = m_env->m_pad_gesture_listener.get();
+		if (input == NULL || input->AttachGestureListener(port_id, 15, listener) < 0)
+			failed = true;
+		if (failed)
+			listener = common::SharedPtr<inputdevice::GestureListener>();
+	}
+	if (listener.get() != NULL) {
+		PadLongPressListener *hold = static_cast<PadLongPressListener *>(listener.get());
+
+		if ((type & 8) != 0) {
+			hold->m_repeat = true;
+			hold->m_param.m_hold_time = 300;
+		} else if ((type & 4) != 0) {
+			hold->m_repeat = false;
+			hold->m_param.m_hold_time = 500;
+		}
+	}
 	return listener;
 }
 
@@ -3958,6 +4031,8 @@ Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
 	m_draw_before_children = true;
 	m_debug_events = true;
 	m_input_target = true;
+	m_resolution_morph = true;
+	m_pad_tap_on_press = true;
 	m_touch_gesture_mask = 0;
 	m_show_alpha = 1.0f;
 	m_show_a_sum = 1.0f;

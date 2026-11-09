@@ -1613,7 +1613,12 @@ public:
 	bool reserved3o : 1;
 	/* cleared before a reverse transition (name after ScePaf-RE) */
 	bool m_transition_complete : 1;
-	uint8_t reserved3p[1];
+	/* set where UpdateResolutionTimer morphs the layout and cleared where it ends (name ours) */
+	bool m_resolution_morph : 1;
+	/* the pad taps are counted at the press (apply_pad_gesture_tap gives it to the listener;
+	   name ours) */
+	bool m_pad_tap_on_press : 1;
+	uint8_t reserved3p2 : 6;
 	/* the gestures a touch it captures is given (ScePafWidget D3D0A7C3 applies them; name
 	   from that use) */
 	uint32_t m_touch_gesture_mask;

@@ -57,8 +57,9 @@ public:
 	{
 	}
 
-	/* no libpaf caller */
-	virtual void Reserved()
+	/* the listener told how it takes its input (the pad's: 0 the stick moves the cursor keys, 1
+	   it does not; name ours, no libpaf caller) */
+	virtual void SetMode(int32_t mode)
 	{
 	}
 
