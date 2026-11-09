@@ -1163,6 +1163,74 @@ extern "C" int32_t ScePafWidget_D3D0A7C3(Widget *widget, uint32_t port, uint32_t
 	return 0;
 }
 
+extern "C" int32_t ScePafWidget_0E453608(Widget *widget, DragState *drag, TouchState *touch)
+{
+	if (drag == NULL || touch == NULL)
+		return -1;
+	if (drag->m_id != touch->m_id)
+		return -1;
+	if (drag->m_port != touch->m_port)
+		return -1;
+
+	HitInfo hit;
+	DragState *first = widget->m_drag_state[0];
+	math::v4 normal = first->m_axis;
+	math::v4 point = first->m_origin;
+	int32_t result = widget->CalcHitLineToPlane(touch->m_line_start, touch->m_line_end, point, normal, &hit);
+
+	drag->m_hit = hit;
+	return result;
+}
+
+extern "C" int32_t ScePafWidget_093F1C89(Widget *widget, uint32_t port, uint32_t id, bool release)
+{
+	uint32_t key = id | (port << 8);
+	map<uint32_t, TouchCapture *>::iterator it = widget->m_touch_captures.find(key);
+
+	if (it == widget->m_touch_captures.end())
+		return -1;
+	widget->remove_touch_gesture_mask(port, id, 0x10);
+	if (release)
+		return widget->ReleaseTouchCapture(it, it->second, false);
+
+	TouchCapture *capture = it->second;
+
+	if (capture == NULL)
+		return -1;
+
+	DragState *first = widget->m_drag_state[0];
+
+	if (first == NULL)
+		return -1;
+	if (first->m_capture == capture)
+		return widget->ClearDragState(first);
+
+	DragState *second = widget->m_drag_state[1];
+
+	if (second != NULL && second->m_capture == capture)
+		return widget->ClearDragState(second);
+	return -1;
+}
+
+extern "C" int32_t ScePafWidget_DE592034(Widget *widget, uint32_t port, uint32_t id, uint32_t drag_mode)
+{
+	widget->m_saved_drag_mode = widget->m_drag_mode;
+	widget->SetDragMode(drag_mode);
+	if (ScePafWidget_D3D0A7C3(widget, port, id, false, true) < 0)
+		return -1;
+
+	uint32_t key = id | (port << 8);
+	map<uint32_t, TouchCapture *>::iterator it = widget->m_touch_captures.find(key);
+	TouchCapture *capture = NULL;
+
+	if (it != widget->m_touch_captures.end())
+		capture = it->second;
+	if (ScePafWidget_9697762E(widget, capture, NULL) != NULL)
+		return 0;
+	ScePafWidget_5ABB3393(widget, port, id, false);
+	return -1;
+}
+
 extern "C" int32_t ScePafWidget_5ABB3393(Widget *widget, uint32_t port, uint32_t id, bool apply)
 {
 	uint32_t key = id | (port << 8);

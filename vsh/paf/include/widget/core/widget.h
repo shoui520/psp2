@@ -1877,6 +1877,10 @@ int32_t ScePafWidget_DE592034(paf::ui::Widget *widget, uint32_t port, uint32_t i
 /* the widget lets go of the touch of the port and ID it holds, its release handled when
    release is set: -1 if it does not hold it */
 int32_t ScePafWidget_093F1C89(paf::ui::Widget *widget, uint32_t port, uint32_t id, bool release);
+/* the drag state of the touch the capture holds begun, the capture's touch taken from the third
+   argument where given: NULL if none (no name found) */
+paf::ui::DragState *ScePafWidget_9697762E(paf::ui::Widget *widget, paf::ui::TouchCapture *capture,
+					  const void *start);
 /* captures the touch of the port, its gestures applied (names ours) */
 int32_t ScePafWidget_D3D0A7C3(paf::ui::Widget *widget, uint32_t port, uint32_t id, bool apply,
 			      bool reset_pad);
