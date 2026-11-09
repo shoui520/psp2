@@ -547,7 +547,7 @@ static inline common::SharedPtr<inputdevice::GestureListener> GetPadGesture(Envi
 									    uint32_t port,
 									    void *user)
 {
-	inputdevice::InputGestureListener *input = env->m_pad_gesture_listener;
+	inputdevice::InputGestureListener *input = env->m_pad_gesture_listener.get();
 
 	if (input == NULL)
 		return common::SharedPtr<inputdevice::GestureListener>();

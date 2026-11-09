@@ -214,6 +214,11 @@ common::SharedPtr<inputdevice::GestureListener> ScePafWidget_F4625FAD(Widget *wi
 	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect);
 common::SharedPtr<inputdevice::GestureListener> ScePafWidget_5E7757AA(Widget *widget,
 	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect);
+/* the widget's gesture listeners of the types 4 and 8, and 32, for the touch (no names found) */
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_4607555F(Widget *widget,
+	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect);
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_1975BA26(Widget *widget,
+	uint32_t port, uint32_t touch_id);
 /* the widget's gesture listener of the type on a rear touch, the first touch ID that has one
    (no name found) */
 common::SharedPtr<inputdevice::GestureListener> ScePafWidget_0F9F14D4(Widget *widget,

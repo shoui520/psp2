@@ -11,6 +11,7 @@
 #include <widget/core/animlistener.h>
 #include <widget/core/layouter.h>
 #include <widget/core/widget.h>
+#include <widget/core/widget_gesture.h>
 #include <widget/w_camera.h>
 #include <widget/w_scene.h>
 
@@ -1657,6 +1658,154 @@ Widget *Widget::FindChild(const IDParam &id, int32_t option)
 		}
 	}
 	return NULL;
+}
+
+void Widget::remove_pad_gesture_mask(uint32_t port_id, uint32_t type)
+{
+	if (m_env != NULL && port_id < 8) {
+		inputdevice::InputGestureListener *listener =
+			common::SharedPtr<inputdevice::InputGestureListener>(
+				m_env->m_pad_gesture_listener).get();
+
+		if (listener != NULL) {
+			if ((type & 4) != 0 || (type & 8) != 0)
+				listener->DetachGestureListener(port_id, 15, this);
+			if ((type & 1) != 0 || (type & 2) != 0)
+				listener->DetachGestureListener(port_id, 10, this);
+		}
+	}
+}
+
+void Widget::remove_touch_gesture_mask(uint32_t port_id, uint32_t touch_id, uint32_t type)
+{
+	if (touch_id < 8 && m_env != NULL) {
+		if (port_id != 0 && port_id != 1)
+			return;
+
+		inputdevice::InputGestureListener *listener =
+			m_env->GetTouchGestureListener(port_id).get();
+
+		if (listener == NULL)
+			return;
+		if ((type & 0x10) != 0)
+			listener->DetachGestureListener(touch_id, 20, this);
+		if ((type & 0x20) != 0)
+			listener->DetachGestureListener(touch_id, 25, this);
+		if ((type & 0x40) != 0)
+			listener->DetachGestureListener(touch_id, 50, this);
+		if ((type & 4) != 0 || (type & 8) != 0)
+			listener->DetachGestureListener(touch_id, 15, this);
+		if ((type & 1) != 0 || (type & 2) != 0)
+			listener->DetachGestureListener(touch_id, 10, this);
+	}
+}
+
+common::SharedPtr<inputdevice::GestureListener>
+Widget::ApplyTouchGesture(uint32_t port, uint32_t id, uint32_t mask,
+			  const inputdevice::GestureParam *param)
+{
+	if (m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+	apply_touch_gesture_mask(port, id, mask);
+
+	if (m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+
+	int32_t priority;
+
+	if ((mask & 0x80) != 0)
+		priority = 60;
+	else if ((mask & 0x40) != 0)
+		priority = 50;
+	else if ((mask & 0x20) != 0)
+		priority = 25;
+	else if ((mask & 0x10) != 0)
+		priority = 20;
+	else if ((mask & 4) != 0 || (mask & 8) != 0)
+		priority = 15;
+	else if ((mask & 1) != 0 || (mask & 2) != 0)
+		priority = 10;
+	else
+		priority = 0;
+
+	inputdevice::InputGestureListener *input = NULL;
+
+	if (port == 0 || port == 1)
+		input = m_env->GetTouchGestureListener(port).get();
+
+	common::SharedPtr<inputdevice::GestureListener> listener =
+		input != NULL ? input->GetGestureListener(id, priority, this)
+			      : common::SharedPtr<inputdevice::GestureListener>();
+
+	if (listener.get() != NULL && param != NULL)
+		listener->SetGestureParam(param);
+	return listener;
+}
+
+common::SharedPtr<inputdevice::GestureListener>
+Widget::ApplyPadGesture(uint32_t port, uint32_t type, const inputdevice::GestureParam *param)
+{
+	if (m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+	apply_pad_gesture_mask(port, type);
+
+	if (m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+
+	int32_t priority;
+
+	if ((int8_t)type < 0)
+		priority = 60;
+	else if ((type & 0x40) != 0)
+		priority = 50;
+	else if ((type & 0x20) != 0)
+		priority = 25;
+	else if ((type & 0x10) != 0)
+		priority = 20;
+	else if ((type & 4) != 0 || (type & 8) != 0)
+		priority = 15;
+	else if ((type & 1) != 0 || (type & 2) != 0)
+		priority = 10;
+	else
+		priority = 0;
+
+	inputdevice::InputGestureListener *input = m_env->m_pad_gesture_listener.get();
+	common::SharedPtr<inputdevice::GestureListener> listener =
+		input != NULL ? input->GetGestureListener(port, priority, this)
+			      : common::SharedPtr<inputdevice::GestureListener>();
+
+	if (listener.get() != NULL && param != NULL)
+		listener->SetGestureParam(param);
+	return listener;
+}
+
+void Widget::apply_touch_gesture_mask(uint32_t port_id, uint32_t touch_id, uint32_t type)
+{
+	math::rect hit = CalcHitRect();
+	math::rect *rect = NULL;
+
+	if (m_enable_tap)
+		rect = &hit;
+	if ((type & 1) != 0 || (type & 2) != 0)
+		ScePafWidget_5E7757AA(this, port_id, touch_id, type, rect);
+	if ((type & 4) != 0 || (type & 8) != 0)
+		ScePafWidget_4607555F(this, port_id, touch_id, type, rect);
+	if ((type & 0x10) != 0)
+		ScePafWidget_F4625FAD(this, port_id, touch_id, type, rect);
+	if ((type & 0x20) != 0)
+		ScePafWidget_1975BA26(this, port_id, touch_id);
+	if ((type & 0x40) != 0)
+		ScePafWidget_712AD1C7(this, port_id, touch_id, type, *rect);
+	if ((type & 0x80) != 0)
+		ScePafWidget_DE7EC3CF(this, port_id, touch_id, type, rect);
+}
+
+void Widget::apply_pad_gesture_mask(uint32_t port_id, uint32_t type)
+{
+	if ((type & 1) != 0 || (type & 2) != 0)
+		apply_pad_gesture_tap(port_id, type);
+	if ((type & 4) != 0 || (type & 8) != 0)
+		apply_pad_gesture_longpress(port_id, type);
 }
 
 /* a layer's count in the scene changed, the weights marked to be made again (inline in Sony's

@@ -406,8 +406,7 @@ public:
 	bool m_display_area_changed;
 	uint8_t reserved8[0x2e];
 	/* the gesture listener of the pad (name ours) */
-	inputdevice::InputGestureListener *m_pad_gesture_listener;
-	uint8_t reserved8a[4];
+	common::SharedPtr<inputdevice::InputGestureListener> m_pad_gesture_listener;
 	/* the gesture listeners of the front (0) and rear (1) touch ports (names ours) */
 	common::SharedPtr<inputdevice::InputGestureListener> m_touch_gesture_listener_front;
 	common::SharedPtr<inputdevice::InputGestureListener> m_touch_gesture_listener_rear;

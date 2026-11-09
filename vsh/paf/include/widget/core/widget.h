@@ -866,6 +866,18 @@ public:
 	common::SharedPtr<inputdevice::GestureListener> ApplyTouchGesture(uint32_t port, uint32_t id,
 									    uint32_t mask,
 									    const inputdevice::GestureParam *param);
+	/* the same for the pad port's keys, the gestures of the type bits (0x8115c25c's pad twin
+	   0x81158e98) */
+	common::SharedPtr<inputdevice::GestureListener> ApplyPadGesture(uint32_t port, uint32_t type,
+									 const inputdevice::GestureParam *param);
+	/* the gestures of the type bits made for the touch (0x8115bd7a) and for the pad port
+	   (0x81158d98), each by its own listener (0x811589ba tap, 0x811585c8 long press) */
+	void apply_touch_gesture_mask(uint32_t port_id, uint32_t touch_id, uint32_t type);
+	void apply_pad_gesture_mask(uint32_t port_id, uint32_t type);
+	common::SharedPtr<inputdevice::GestureListener> apply_pad_gesture_tap(uint32_t port_id,
+									       uint32_t type);
+	common::SharedPtr<inputdevice::GestureListener> apply_pad_gesture_longpress(uint32_t port_id,
+										     uint32_t type);
 
 	virtual math::v4 calc_align_offset(const math::v4 &size, const math::v4 &aoffs,
 					   uint32_t ax, uint32_t ay, uint32_t az);
