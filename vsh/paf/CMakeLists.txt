@@ -313,6 +313,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/widget/core/uiinputlistener.cpp
 	src/widget/core/widget_gesture.cpp
 	src/widget/core/focusinfo.cpp
+	src/widget/core/focuser.cpp
 	src/widget/core/handler.cpp
 	src/widget/core/screen.cpp
 	src/widget/core/layouter.cpp
@@ -442,6 +443,7 @@ set_source_files_properties(src/widget/core/event.cpp PROPERTIES COMPILE_OPTIONS
 set_source_files_properties(src/widget/core/uiinputlistener.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/core/widget_gesture.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/core/focusinfo.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+set_source_files_properties(src/widget/core/focuser.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/core/handler.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 set_source_files_properties(src/widget/core/screen.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
 # paf::ui::ScrollView inlines its map and vector helpers and its style constructor.

@@ -4366,7 +4366,7 @@ ScePaf:
         - _ZN3paf2ui11ScrollBar2d10CheckStateEv: 0x96C73992
         - ScePafWidget_96E26237: 0x96E26237
         - _ZNK3paf2ui6Widget20get_resolution_data2EPKNS0_14ResolutionDataEjjjPS4_S5_: 0x96FDCAE6
-        - ScePafWidget_97020684: 0x97020684
+        - _ZN3paf2ui7Focuser21ScePafWidget_97020684EPv: 0x97020684
         - _ZN3paf2ui13SlidingDrawer16HandleTouchEventEPNS0_5EventE: 0x970BAC60
         - ScePafWidget_971CF15F: 0x971CF15F
         - _ZN3paf2ui13SlidingDrawer19OnViewLayoutUpdatedEb: 0x9785B04F

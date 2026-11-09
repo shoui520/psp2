@@ -426,8 +426,9 @@ public:
 		delete m_data;
 	}
 
-	/* the focus moved by the callback (ScePafWidget_97020684) */
-	virtual int32_t Focus(void *move);
+	/* the focus moved by the callback, given the search it moves by (the export's NID names
+	   it; "Focus" ours) */
+	virtual int32_t ScePafWidget_97020684(void *move);
 
 	void BindWidget(Widget *w)
 	{
