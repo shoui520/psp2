@@ -147,7 +147,7 @@ int32_t paf::inputdevice::hidkeyboard::Deactivate()
 	return ret;
 }
 
-bool paf::inputdevice::hidkeyboard::IsActive()
+extern "C" bool ScePafMisc_862C8916(void)
 {
 	return s_device_num != 0;
 }

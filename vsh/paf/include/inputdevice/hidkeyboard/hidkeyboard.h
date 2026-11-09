@@ -112,7 +112,6 @@ int32_t Init(InitParam &init_param);
 int32_t End();
 int32_t Activate();
 int32_t Deactivate();
-bool IsActive();
 int32_t Update(float diff_time, const Data **data, const Data **data_pre);
 void Lock();
 void Reserved();
@@ -124,5 +123,8 @@ float GetIdleTime();
 }
 }
 }
+
+/* whether a keyboard is connected; Environment shows the focus cursor while one is (0x810414bc) */
+extern "C" bool ScePafMisc_862C8916(void);
 
 #endif /* PAF_INPUTDEVICE_HIDKEYBOARD_HIDKEYBOARD_H */

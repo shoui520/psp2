@@ -5,6 +5,10 @@
 #include <widget/core/environment.h>
 #include <std/algorithm>
 #include <inputdevice/touchscreen/touchscreen.h>
+#include <inputdevice/pad/pad.h>
+#include <inputdevice/hidkeyboard/hidkeyboard.h>
+#include <inputdevice/inputdevice.h>
+#include <std/math.h>
 #include <inputdevice/inputlistener.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <graphics/drawobj/draw_env.h>
@@ -25,7 +29,6 @@
 #include <widget/w_camera.h>
 #include <widget/w_scene.h>
 
-extern "C" int ScePafMisc_862C8916(void);
 extern "C" int sceAppMgrGetRecommendedScreenOrientation(int32_t *orientation);
 extern "C" int sceAppMgrSetShellScreenOrientation(int32_t orientation);
 extern "C" int sceAppMgrSetRecommendedScreenOrientationActivated(int32_t activated);
@@ -1405,6 +1408,222 @@ void Environment::ShowFocus(int32_t port)
 		e.m_data[0] = 0;
 		m_ev_queue.PushBack(e);
 	}
+}
+
+/* a key pressed while the focus may show and no cursor is shown: a direction key (1 to 4) or
+   27 with no widget group of its own shows the focus; unless its target is being dragged, the
+   touch masks of the uncaptured touches that hit are set, the pad captures of both ports let
+   go, and the key consumed where the cursor of its port moves with its animation; any other key
+   of a widget group only shows the focus (0x8113e3ea; name ours) */
+static void ShowFocusOnKey(Environment *env, Event *e)
+{
+	if (!(env->m_focus_enabled || ScePafMisc_862C8916()) || !env->m_focus_cursor.m_enabled)
+		return;
+	for (int32_t i = 0; i < 2; i++) {
+		if ((&env->m_focus_cursor)[i].m_shown)
+			return;
+	}
+	if ((e->m_type & 0x10) == 0)
+		return;
+
+	uint32_t id = (uint8_t)e->m_detail;
+
+	if ((uint16_t)e->m_type != 0x11)
+		return;
+
+	Widget *target = env->m_focus_cursor.m_target;
+
+	if ((id == 1 || id == 2 || id == 3 || id == 4 || id == 27) && ScePafWidget_0775F78F(env, id) == NULL) {
+		env->ShowFocus(-1);
+		if (target == NULL || target->m_drag_begun)
+			return;
+		if (id == 27) {
+			inputdevice::pad::Lock();
+			inputdevice::pad::Unlock();
+		}
+		for (int32_t port = 0; port < 2; port++) {
+			for (int32_t i = 0; i < 8; i++) {
+				Widget *capture = NULL;
+
+				if ((uint32_t)port < 2 && (uint32_t)i < 8)
+					capture = env->m_touch_capture[port][i].m_widget;
+				if (capture == NULL && (uint32_t)i < 8) {
+					HitInfo *hit = &env->m_touch_hit[port][i];
+
+					if (hit != NULL && ((uint32_t)i < 8 ? hit : (HitInfo *)NULL)->m_widget != NULL)
+						inputdevice::touchscreen::SetMask(port, 1 << i);
+				}
+			}
+		}
+		ScePafWidget_ABF05727(env, 0, true, NULL);
+		ScePafWidget_ABF05727(env, 1, true, NULL);
+
+		uint32_t port = e->m_detail >> 28;
+
+		if (port < 2) {
+			FocusInfo *cursor = &(&env->m_focus_cursor)[port];
+
+			if (cursor != NULL && !cursor->IsMoveImmediate())
+				e->m_type = (e->m_type & 0xF0FFFFFF) | Event::STATE_CONSUME;
+		}
+	} else if (ScePafWidget_0775F78F(env, id) != NULL) {
+		env->ShowFocus(-1);
+	}
+}
+
+void Environment::EventLoop()
+{
+	Widget::SetBaseDestroyCount(1);
+
+	Event e;
+	bool touched = false;
+	bool key_down = false;
+
+	while (true) {
+		if (m_ev_doevent.size() != 0) {
+			e = m_ev_doevent.front();
+			m_ev_doevent.pop_front();
+		} else if (m_ev_subrouting.size() != 0) {
+			e = m_ev_subrouting.front();
+			m_ev_subrouting.pop_front();
+		} else if (m_ev_queue.PopFront(e) != 0) {
+			break;
+		}
+
+		uint32_t type = e.m_type;
+
+		if ((type & Event::MODE_DISPATCH) != 0) {
+			/* a key: to its target, a widget group's widget or the focused widget */
+			bool focus = false;
+
+			if (m_focus_enabled || (ScePafMisc_862C8916() && ((e.m_detail >> 25) & 7) == 1))
+				focus = true;
+			else if (m_focus_mode != 2)
+				continue;
+
+			Widget *w = static_cast<Widget *>(e.m_target);
+
+			if (w == NULL) {
+				if ((e.m_type & 0x10) != 0) {
+					w = ScePafWidget_0775F78F(this, (uint8_t)e.m_detail);
+					if (w != NULL) {
+						e.m_detail |= 0x1000000;
+						ShowFocusOnKey(this, &e);
+					}
+				}
+				if (w == NULL && focus) {
+					uint32_t port = e.m_detail >> 28;
+
+					w = port < 2 ? (&m_focus_cursor)[port].m_target : NULL;
+					if (w != NULL)
+						ShowFocusOnKey(this, &e);
+				}
+			}
+			if (w != NULL)
+				w->EventExecDispatch(&e);
+			if ((uint16_t)e.m_type == 0x11)
+				key_down = true;
+		} else if ((type & Event::MODE_BROADCAST) != 0 && m_scenes_onupdate.size() != 0 &&
+			   e.m_target == NULL) {
+			/* to the scenes from the top one down until one takes it; a touch is turned and
+			   scaled into each scene's screen first */
+			list<Widget *>::iterator it = m_scenes_onupdate.end();
+			int32_t result = 0;
+
+			while (it != m_scenes_onupdate.begin()) {
+				--it;
+
+				Event ev(e);
+				Scene *scene = static_cast<Scene *>(*it);
+
+				if (((e.m_type & 0x20) != 0 || (e.m_type & 0x40) != 0) && scene->m_camera != NULL) {
+					float roll = scene->m_camera->GetRollScreen(0);
+
+					if (__builtin_fabsf(roll) >= 0.001f) {
+						float x = (float)e.m_data[0];
+						float y = (float)e.m_data[1];
+						float c = sce_paf_cosf(roll);
+						float s = sce_paf_sinf(roll);
+
+						ev.m_data[0] = (int32_t)(x * c - y * s);
+						ev.m_data[1] = (int32_t)(y * c + x * s);
+					}
+
+					int32_t vp_x, vp_y;
+					uint32_t vp_width, vp_height;
+
+					inputdevice::touchscreen::GetScreenViewport(vp_x, vp_y, vp_width, vp_height);
+					scene = static_cast<Scene *>(*it);
+					if (scene->m_scene != NULL && scene->m_scene->m_screen != NULL) {
+						math::rect vp(scene->m_scene->m_screen->vp);
+						float center_x = vp.center_x();
+
+						ev.m_data[0] = (int32_t)((float)ev.m_data[0] * vp.width() /
+									 (float)(vp_width - vp_x) +
+									 center_x);
+
+						float center_y = vp.center_y();
+
+						ev.m_data[1] = (int32_t)((float)ev.m_data[1] * vp.height() /
+									 (float)(vp_height - vp_y) +
+									 center_y);
+						scene = static_cast<Scene *>(*it);
+					}
+				}
+				result = scene->EventExecBroadcast(&ev);
+				if (result > 0)
+					break;
+			}
+			if ((e.m_type & 0x20) != 0 || (e.m_type & 0x40) != 0) {
+				if ((uint16_t)e.m_type != 0x47)
+					touched = true;
+				ScePafWidget_28D590B6(this, &e);
+				if (it == m_scenes_onupdate.begin() && result == 0) {
+					/* nothing took the touch: the hit change sent with no hit */
+					uint32_t detail = e.m_detail;
+					HitInfo hit;
+
+					hit.m_hit_valid = 0;
+					hit.m_widget = NULL;
+					ScePafWidget_08CE1C4B(*it, &e, (detail >> 20) & 0xF, (uint8_t)detail, &hit);
+				}
+			}
+		} else if ((type & Event::MODE_BROADCAST) != 0 && e.m_target != NULL) {
+			static_cast<Widget *>(e.m_target)->RouteTouchEvent(&e);
+		} else if ((type & Event::MODE_DIRECT) != 0) {
+			if (e.m_target == NULL)
+				continue;
+			static_cast<Widget *>(e.m_target)->EventExecDirect(&e);
+		} else if ((type & Event::MODE_DO) != 0) {
+			if (e.m_target == NULL)
+				continue;
+			static_cast<Widget *>(e.m_target)->EventExecDo(&e);
+		}
+		inputdevice::UpdateGesture(true);
+	}
+	if (!touched)
+		sce_paf_memset(m_touch_hit, 0, sizeof(m_touch_hit));
+	if ((m_scene_entries.size() != 0 || m_pending.size() != 0 || !m_term_requested) &&
+	    (m_focus_enabled || ScePafMisc_862C8916()) && m_focus_cursor.m_enabled) {
+		/* a shown cursor hidden after a touch with no key, or after both the pad and the
+		   keyboard are idle for ten seconds */
+		for (int32_t i = 0; i < 2; i++) {
+			if ((&m_focus_cursor)[i].m_shown) {
+				if (m_focus_mode != 1) {
+					if (touched && !key_down)
+						HideFocus(-1);
+					if (inputdevice::pad::GetIdleTime() > 10000.0f) {
+						if (!ScePafMisc_862C8916() ||
+						    inputdevice::hidkeyboard::GetIdleTime() > 10000.0f)
+							HideFocus(-1);
+					}
+				}
+				break;
+			}
+		}
+	}
+	m_callbacks_busy = false;
+	Widget::SetBaseDestroyCount(2);
 }
 
 int32_t OrderEntry::Init(Widget *widget, int32_t mark)
