@@ -3,6 +3,7 @@
  * root surface shows at. The rest of its functions are still ScePafWidget's.
  */
 #include <widget/core/environment.h>
+#include <inputdevice/touchscreen/touchscreen.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <graphics/surface/surface_display.h>
 #include <system/system.h>
@@ -279,6 +280,39 @@ int32_t Environment::SetScreen(Screen *screen)
 	if (screen != NULL)
 		screen->is_auto_delete = false;
 	return 0;
+}
+
+void Environment::OnUpdateTouchDeviceRegion()
+{
+	uint32_t mask = m_touch_region_mask;
+
+	if (mask == 0 && m_touch_region_mask_pre == 0)
+		return;
+
+	uint32_t bit = 1;
+
+	for (uint32_t i = 0; i < 6; i++, bit *= 2) {
+		Widget *widget = m_touch_region[i];
+
+		if ((mask & bit) != 0) {
+			if (widget->m_show_a_sum >= 0.02f) {
+				math::rect clip = widget->CalcClipRect();
+
+				inputdevice::touchscreen::SetRegion(0, i, clip, true,
+								    widget->m_touch_region_option);
+				mask = m_touch_region_mask;
+				continue;
+			}
+			inputdevice::touchscreen::SetRegion(0, i, *(const math::rect *)NULL, false,
+							    false);
+			mask = m_touch_region_mask;
+		} else if ((m_touch_region_mask_pre & bit) != 0) {
+			inputdevice::touchscreen::SetRegion(0, i, *(const math::rect *)NULL, false,
+							    false);
+			mask = m_touch_region_mask;
+		}
+	}
+	m_touch_region_mask_pre = mask;
 }
 
 void Environment::OnUpdatePost()

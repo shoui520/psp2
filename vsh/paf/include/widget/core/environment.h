@@ -483,7 +483,8 @@ public:
 	list<Widget *> m_hit_stack;
 	/* the widgets kept as touch device regions and which of the six slots are used (name ours) */
 	uint32_t m_touch_region_mask;
-	uint8_t reserved5c0[4];
+	/* the slots used when OnUpdateTouchDeviceRegion last set the regions (name ours) */
+	uint32_t m_touch_region_mask_pre;
 	Widget *m_touch_region[6];
 	uint8_t reserved5c[6];
 	/* each frame waits for the GPU once it is drawn (Framework::Option_4) */
