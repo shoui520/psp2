@@ -2582,6 +2582,149 @@ extern "C" float ScePafWidget_F1176ACC(Widget *widget, common::transition::Type 
 	return delay;
 }
 
+int32_t Widget::HandleFocusSwitchEvent(Event *e)
+{
+	Environment *env = m_env;
+
+	if (env == NULL)
+		return -1;
+
+	uint32_t type = (uint16_t)e->m_type;
+
+	if (type != 17 && type != 19)
+		return -1;
+
+	uint32_t detail = e->m_detail;
+	uint32_t dir = (uint8_t)detail;
+	int32_t listener_type;
+
+	if (dir > 2) {
+		if (dir <= 3)
+			listener_type = 262151;
+		else if (dir <= 4)
+			listener_type = 262152;
+		else
+			return -1;
+	} else if (dir == 0) {
+		return -1;
+	} else if (dir <= 1) {
+		listener_type = 262149;
+	} else {
+		listener_type = 262150;
+	}
+
+	if (type == 17) {
+		uint32_t port = (detail >> 20) & 0xF;
+
+		if (port < 5) {
+			Widget *holder = env->m_pad_capture_dir[port];
+
+			if (holder != NULL) {
+				holder->ReleasePadCaptureDir(27, true);
+				env = m_env;
+				detail = e->m_detail;
+			}
+		}
+		env->ReleasePadCaptureHigh((detail >> 20) & 0xF);
+		ScePafWidget_ABF05727(m_env, 0, true, 0);
+		ScePafWidget_ABF05727(m_env, 1, true, 0);
+		env = m_env;
+	}
+
+	Widget *cursor_target = env->m_focus_cursor.m_target;
+
+	if (m_map_e_listener.find(listener_type) == m_map_e_listener.end()) {
+		if (!env->m_focus_auto_off) {
+			Widget *hint = NULL;
+
+			if (dir == 1 && (hint = HintFocusTarget(this, 0)) != NULL) {
+			} else if (dir == 2 && (hint = HintFocusTarget(this, 1)) != NULL) {
+			} else if (dir == 3 && (hint = HintFocusTarget(this, 2)) != NULL) {
+			} else if (dir == 4) {
+				hint = HintFocusTarget(this, 3);
+			}
+			if (hint == NULL) {
+				env = m_env;
+				if (env != NULL && env->m_focus_history_on) {
+					Widget *history = env->m_focus_cursor.FindFocusHistory(cursor_target, dir);
+
+					if (history != NULL && history->m_hold_count <= 0 &&
+					    (history->m_event_enable & 0x400) != 0 &&
+					    history->IsTextEventEnabled() && ScePafWidget_DB0FFD33(history)) {
+						SetFocusInfo set;
+
+						set.m_mode = 0;
+						set.m_notify = true;
+						set.m_direction = math::v2(0.0f, 0.0f);
+						set.m_keep = false;
+						history->SetFocus(&set);
+						e->m_type = (e->m_type & 0xF0FFFFFF) | Event::STATE_CONSUME;
+						return 0;
+					}
+				}
+			}
+
+			FocusSearchInfo search(dir);
+			Widget *found;
+
+			ScePafWidget_EA117CF8(&search, cursor_target);
+			if (m_focus_target) {
+				found = SearchFocus(&search, this, 0);
+				if (found == NULL) {
+					search.m_search_outside = false;
+					found = SearchFocus(&search, this, 0);
+				}
+			} else {
+				int32_t search_dir = search.m_dir;
+
+				found = NULL;
+				if (search_dir == 1 && (found = HintFocusTarget(this, 0)) != NULL) {
+				} else if (search_dir == 2 && (found = HintFocusTarget(this, 1)) != NULL) {
+				} else if (search_dir == 3 && (found = HintFocusTarget(this, 2)) != NULL) {
+				} else if (search_dir == 4) {
+					found = HintFocusTarget(this, 3);
+				}
+			}
+			if (found != NULL) {
+				math::v2 direction(0.0f, 0.0f);
+				SetFocusInfo set;
+
+				if (dir > 2) {
+					if (dir <= 3)
+						direction = math::v2(-1.0f, 0.0f);
+					else if (dir <= 4)
+						direction = math::v2(1.0f, 0.0f);
+				} else if (dir != 0) {
+					if (dir <= 1)
+						direction = math::v2(0.0f, 1.0f);
+					else
+						direction = math::v2(0.0f, -1.0f);
+				}
+				set.m_mode = 0;
+				set.m_notify = true;
+				set.m_direction = direction;
+				set.m_keep = false;
+				found->SetFocus(&set);
+				if (found != this) {
+					env = m_env;
+					if (env->m_focus_history_on)
+						env->m_focus_cursor.AddFocusHistory(cursor_target, found, dir);
+				}
+				e->m_type = (e->m_type & 0xF0FFFFFF) | Event::STATE_CONSUME;
+			}
+		}
+	} else {
+		Handler::HandleFocusSwitchEvent(e);
+		env = m_env;
+
+		Widget *target = env->m_focus_cursor.m_target;
+
+		if (target != NULL && env->m_focus_history_on)
+			env->m_focus_cursor.AddFocusHistory(cursor_target, target, dir);
+	}
+	return 0;
+}
+
 void Widget::ReleaseShowHolds(bool recursive)
 {
 	if (m_touch_captures.size() != 0)
