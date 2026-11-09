@@ -438,6 +438,9 @@ list<AnimPending> ScePafWidget_8A0DA7BF;
 static map<Widget *, Timer *> s_destroy_timers;
 static map<Widget *, Timer *> s_show_timers;
 
+/* the draw objects SwapDrawObj took out, kept until the frame ends (name ours) */
+static list<common::SharedPtr<graph::DrawObj> > s_swapped_drawobjs;
+
 /* the widget's timer in the map taken out and deleted, if it has one (inline in Sony's callers;
    name ours) */
 static inline void DropTimer(map<Widget *, Timer *> &timers, Widget *widget)
@@ -2004,6 +2007,67 @@ void Widget::EnableFocusSearchRect(bool on_off)
 		m_focuser->GetHint()->m_search_rect_enable = on_off;
 }
 
+void Widget::SetFocusDirectionWidget(int32_t dir, Widget *widget)
+{
+	if (m_focuser == NULL)
+		return;
+
+	Widget *old = ScePafWidget_71349B04(m_focuser, dir);
+
+	if (old != NULL) {
+		FocusReferrers *referrers = ScePafWidget_71349B04(m_focuser, dir)->m_focus_referrers;
+
+		if (referrers != NULL) {
+			vector<Widget *>::iterator it = referrers->m_referrers.begin();
+			vector<Widget *>::iterator end = referrers->m_referrers.end();
+
+			for (; it != end; ++it) {
+				if (*it == this)
+					break;
+			}
+			if (it != end)
+				referrers->m_referrers.erase(it);
+		}
+	}
+
+	FocusDirectionWidget *data = m_focuser->GetDirectionWidget();
+
+	if (dir != 0) {
+		switch (dir) {
+		case 1:
+			data->m_widget[1] = widget;
+			break;
+		case 2:
+			data->m_widget[2] = widget;
+			break;
+		case 3:
+			data->m_widget[3] = widget;
+			break;
+		}
+	} else {
+		data->m_widget[0] = widget;
+	}
+
+	if (widget != NULL) {
+		FocusReferrers *referrers = widget->m_focus_referrers;
+
+		if (referrers == NULL) {
+			referrers = new FocusReferrers;
+			widget->m_focus_referrers = referrers;
+		}
+
+		vector<Widget *>::iterator it = referrers->m_referrers.begin();
+		vector<Widget *>::iterator end = referrers->m_referrers.end();
+
+		for (; it != end; ++it) {
+			if (*it == this)
+				break;
+		}
+		if (it == end)
+			referrers->m_referrers.push_back(this);
+	}
+}
+
 int32_t Widget::SetFocus(SetFocusInfo *info)
 {
 	if (m_hold_count > 0)
@@ -2052,6 +2116,244 @@ int32_t Widget::SetFocus(SetFocusInfo *info)
 	if (auto_off)
 		env->m_focus_cursor.SetTarget(this);
 	return 0;
+}
+
+Widget *Widget::SearchFocusChildren(FocusSearchInfo *info, Widget *skip)
+{
+	if (info == NULL)
+		return NULL;
+
+	Widget *found = NULL;
+	int32_t best = 0;
+
+	info->m_distance = 0;
+	for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it) {
+		Widget *child = *it;
+
+		if (child->m_hold_count > 0 || IsShowHeld(child))
+			continue;
+		if (!child->IsInputTarget() || child->m_meta_a_sum < 0.5f)
+			continue;
+
+		bool focusable = false;
+
+		if ((child->m_event_enable & 0x400) != 0) {
+			focusable = child->IsTextEventEnabled() != 0;
+			child = *it;
+		}
+
+		bool target = focusable;
+
+		if (info->m_dir == 255 && !child->m_focus_in_group)
+			target = false;
+		if (!target) {
+			Widget *origin = info->m_origin;
+			bool inside = false;
+
+			if (origin != NULL && origin->m_hold_count <= 0) {
+				for (Widget *w = origin; w != NULL; w = w->m_parent) {
+					if (w == child) {
+						inside = true;
+						break;
+					}
+				}
+			}
+			if (inside)
+				continue;
+		}
+		if (child->GetFocusPriority(info->m_dir) != 0)
+			continue;
+		child = *it;
+
+		int32_t score = 0;
+
+		if (target && !child->m_not_hit_target && !child->m_fit_to_scene && !child->m_culled &&
+		    child->m_hit_detect_mode != 3) {
+			Focuser *focuser = child->m_focuser;
+
+			if (focuser != NULL) {
+				score = focuser->ScePafWidget_97020684(info);
+				child = *it;
+			}
+		}
+		if (best < score) {
+			best = score;
+			found = child;
+		}
+		if (child != skip && child->m_focus_count != 0 && !child->m_composite_focus &&
+		    child->m_children.size() != 0) {
+			Widget *sub = child->SearchFocusChildren(info, NULL);
+
+			if (best < info->m_distance) {
+				best = info->m_distance;
+				found = sub;
+			}
+		}
+	}
+	info->m_distance = best;
+	return found;
+}
+
+/* the widget a direction's hint names, where it may take the focus */
+static inline __attribute__((always_inline)) Widget *HintFocusTarget(Widget *widget, int32_t dir)
+{
+	Focuser *focuser = widget->m_focuser;
+
+	if (focuser == NULL)
+		return NULL;
+
+	Widget *target = focuser->GetHintWidget(dir);
+
+	if (target != NULL && target->m_hold_count <= 0 && (target->m_event_enable & 0x400) != 0 &&
+	    target->IsTextEventEnabled() && ScePafWidget_DB0FFD33(target))
+		return target;
+	return NULL;
+}
+
+Widget *Widget::SearchFocus(FocusSearchInfo *info, Widget *from, uint32_t mode)
+{
+	if (info == NULL)
+		return NULL;
+
+	Widget *current = m_env->m_focus_cursor.m_target;
+
+	if (current != NULL && current->GetFocusPriority(info->m_dir) != 0)
+		return NULL;
+
+	Widget *found = NULL;
+	int32_t best = 0;
+
+	info->m_distance = 0;
+
+	Widget *root = FindFocusRoot(this);
+	Widget *hinted = NULL;
+
+	if (info->m_dir == 1 && (hinted = HintFocusTarget(this, 0)) != NULL) {
+	} else if (info->m_dir == 2 && (hinted = HintFocusTarget(this, 1)) != NULL) {
+	} else if (info->m_dir == 3 && (hinted = HintFocusTarget(this, 2)) != NULL) {
+	} else if (info->m_dir == 4) {
+		hinted = HintFocusTarget(this, 3);
+	}
+	if (hinted != NULL) {
+		info->m_distance = 0x7FFFFFFF;
+		return hinted;
+	}
+
+	if (mode <= 1) {
+		if (!m_composite_focus && m_children.size() != 0) {
+			Widget *sub = SearchFocusChildren(info, from);
+
+			if (info->m_distance > 0) {
+				found = sub;
+				best = info->m_distance;
+			}
+		}
+		if (root == this) {
+			FocusRoot *focus_root = m_focus_root;
+			Widget **array = (Widget **)focus_root->m_array;
+
+			if (focus_root->m_array_count != 0) {
+				for (Widget **it = array;
+				     it != (Widget **)m_focus_root->m_array + m_focus_root->m_array_count;
+				     ++it) {
+					if (*it != NULL) {
+						Widget *sub = (*it)->SearchFocusChildren(info, from);
+
+						if (best < info->m_distance) {
+							found = sub;
+							best = info->m_distance;
+						}
+					}
+				}
+			}
+		}
+		if (mode == 1) {
+			info->m_distance = best;
+			return found;
+		}
+	}
+
+	if (m_parent != NULL) {
+		if (!m_focus_searching) {
+			Widget *sub = m_parent->SearchFocus(info, this, 0);
+
+			if (best < info->m_distance) {
+				found = sub;
+				best = info->m_distance;
+			}
+		}
+	} else if (!m_focus_searching) {
+		list<Widget *>::iterator scene = m_env->m_scenes_onupdate.begin();
+		int32_t entry = -1;
+		Widget *first = m_children.size() == 0 ? NULL : *m_children.begin();
+
+		if (first != NULL && first->m_scene != NULL)
+			entry = first->m_scene->m_entry;
+		for (; scene != m_env->m_scenes_onupdate.end(); ++scene) {
+			Widget *widget = *scene;
+			bool under = false;
+
+			if (widget != NULL && widget->m_hold_count <= 0) {
+				for (Widget *w = widget; w != NULL; w = w->m_parent) {
+					if (w == this) {
+						under = true;
+						break;
+					}
+				}
+			}
+			if (under)
+				continue;
+			if (widget->m_scene->m_entry == entry) {
+				Widget *sub = widget->SearchFocus(info, this, 1);
+
+				if (best < info->m_distance) {
+					found = sub;
+					best = info->m_distance;
+				}
+			}
+		}
+	}
+	info->m_distance = best;
+	return found;
+}
+
+Widget *Widget::SetFocusOption(const void *param, int32_t option)
+{
+	FocusSearchInfo *info = (FocusSearchInfo *)param;
+
+	if (info == NULL) {
+		FocusSearchInfo search(255);
+
+		ScePafWidget_EA117CF8(&search, this);
+		return SearchFocus(&search, NULL, option);
+	}
+
+	int32_t dir = info->m_dir;
+	Widget *root = FindFocusRoot(this);
+	Widget *init = root != NULL ? root->m_focus_root->m_init_focus : NULL;
+
+	if (dir == 255) {
+		Widget *state_root = FindFocusRoot(this);
+
+		if (state_root == NULL || state_root->m_focus_root->m_state == 0) {
+			if (init != NULL && init->m_hold_count <= 0 && (init->m_event_enable & 0x400) != 0 &&
+			    init->IsTextEventEnabled()) {
+				info->m_result = init;
+				info->m_distance = 0x7FFFFFFF;
+				return init;
+			}
+		}
+	}
+	if (info->m_origin == NULL) {
+		if (info->m_dir == 255)
+			ScePafWidget_EA117CF8(info, this);
+		else {
+			Widget *focus_root = FindFocusRoot(this);
+
+			ScePafWidget_EA117CF8(info, focus_root != NULL ? (Widget *)focus_root->m_focus_root->m_state : NULL);
+		}
+	}
+	return SearchFocus(info, NULL, option);
 }
 
 void Widget::ReleaseShowHolds(bool recursive)
@@ -4845,6 +5147,27 @@ graph::DrawObj *Widget::GetDrawObj(int32_t obj)
 	if (it != m_drawobjs.end())
 		return it->m_obj.get();
 	return NULL;
+}
+
+common::SharedPtr<graph::DrawObj> Widget::SwapDrawObj(common::SharedPtr<graph::DrawObj> obj, int32_t id)
+{
+	vector<DrawObjEntry>::iterator it;
+
+	for (it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it) {
+		if (it->m_attr.m_id == id)
+			break;
+	}
+	if (it == m_drawobjs.end())
+		return common::SharedPtr<graph::DrawObj>();
+
+	common::SharedPtr<graph::DrawObj> old = it->m_obj;
+
+	s_swapped_drawobjs.push_back(old);
+	it->m_obj = obj;
+	if (obj.get() != NULL)
+		SetDrawObjSurfaceDraw(this, obj.get());
+	UpdateSize();
+	return old;
 }
 
 int32_t Widget::EventExecBroadcast(Event *e)

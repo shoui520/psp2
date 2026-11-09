@@ -1481,6 +1481,14 @@ public:
 	/* the target made the widget its focus root holds the focus with (NULL: none), and the
 	   environment told (0x81150b6c; name ours, the flag meaning open) */
 	int32_t SetFocusRootFocus(Widget *target, bool notify);
+	/* the best widget among its children and theirs for the focus search; the search's
+	   m_distance gets its score (0x81160ba4; name ours) */
+	Widget *SearchFocusChildren(FocusSearchInfo *info, Widget *skip);
+	/* the best widget for the focus search from it: the one its hint names, its children and
+	   its focus root's (mode 0 and 1), then up through its parent or, with none, the other
+	   scenes of its entry (mode 0 and above 1); the search's m_distance gets its score
+	   (0x81160d82; name ours) */
+	Widget *SearchFocus(FocusSearchInfo *info, Widget *from, uint32_t mode);
 	/* a touch or key may reach it: an input target, shown and in no transition, and not
 	   destroy protected (inline in Sony's code: ButtonBase's press, TouchScrollSupplier's rear
 	   mochi gesture; name ours) */
