@@ -13,7 +13,11 @@
 #include <timer/timer.h>
 #include <widget/core/animlistener.h>
 #include <widget/core/layouter.h>
+#include <widget/core/environment.h>
 #include <widget/core/widget.h>
+#include <math/rect.h>
+#include <widget/w_scene.h>
+#include <widget/w_supplier.h>
 
 /* the panel object's revolution (panel_obj.h, which makes every includer a copy of its debug
    colours) */
@@ -752,6 +756,218 @@ int32_t AnimQueue::EraseType(int32_t type, bool reserved)
 			count += m_queue[i]->HoldType(type);
 	}
 	return count;
+}
+
+
+class TouchBlockList;
+
+/* the plane over the screen that takes the rear touches meant for the widgets of its list and
+   supplies them to the uppermost of those it covers (0x2b0 bytes; names ours) */
+class TouchBlocker : public Supplier {
+public:
+	TouchBlocker(Environment *env, TouchBlockList *list);
+
+	virtual int32_t HandlerProc(Event *e);
+	virtual int32_t EventExecDirect(Event *e);
+
+	/* the widgets it blocks for */
+	TouchBlockList *m_list;
+};
+
+/* the one of the two the list holds first, given back as the other: NULL with neither in it
+   (inline in Sony's code; name ours) */
+static __attribute__((always_inline)) Widget *GetLater(list<Widget *> &l, Widget *a, Widget *b)
+{
+	for (list<Widget *>::iterator it = l.begin(); it != l.end(); ++it) {
+		if (*it == a)
+			return b;
+		if (*it == b)
+			return a;
+	}
+	return NULL;
+}
+
+/* the widget and its parents up to its root, the root first (inline in Sony's code; name ours) */
+static __attribute__((always_inline)) void GetPath(Widget *widget, vector<Widget *> &path)
+{
+	vector<Widget *> up;
+
+	for (Widget *w = widget; w != NULL; w = w->m_parent)
+		up.push_back(w);
+	if (path.capacity() < up.size())
+		path.reserve(up.size());
+	for (int32_t i = up.size() - 1; i >= 0; i--)
+		path.push_back(up.at(i));
+}
+
+/* of two widgets the touch area covers, the one drawn above the other: the one of the later
+   scene, the later child where their paths part, the one the area covers more of where they are
+   children of one parent, the deeper one where one is in the other's path (inline in Sony's
+   code; name ours) */
+static __attribute__((always_inline)) Widget *GetUpper(Widget *a, Widget *b, const math::rect &area)
+{
+	Scene *scene_b = b->m_scene;
+	Scene *scene_a = a->m_scene;
+
+	if (scene_a != scene_b)
+		return scene_a == GetLater(scene_a->m_env->m_scenes_onupdate, scene_a, scene_b) ? a : b;
+
+	vector<Widget *> path_a;
+	vector<Widget *> path_b;
+
+	GetPath(a, path_a);
+	GetPath(b, path_b);
+
+	uint32_t depth = path_b.size();
+
+	if (path_a.size() < depth)
+		depth = path_a.size();
+	for (uint32_t i = 1; i < depth; i++) {
+		Widget *wa = path_a.at(i);
+		Widget *wb = path_b.at(i);
+
+		if (wa != wb) {
+			if (wa == a && wb == b)
+				return ScePafMisc_B2795FE2(area, a->CalcHitRect()).get_area() >
+						       ScePafMisc_B2795FE2(area, b->CalcHitRect()).get_area()
+					       ? a
+					       : b;
+			return wa == GetLater(wa->m_parent->m_children, wa, wb) ? a : b;
+		}
+	}
+	return path_a.size() > path_b.size() ? a : b;
+}
+
+/* the widgets ScePafWidget_82A61BBC put behind the touch blocker, and the blocker, made with
+   the first and destroyed with the last (names ours) */
+class TouchBlockList : public vector<Widget *> {
+public:
+	TouchBlockList() : m_blocker(NULL)
+	{
+	}
+
+	/* the widget taken out, the blocker destroyed with the last one */
+	void Remove(Widget *widget)
+	{
+		iterator it;
+
+		for (it = begin(); it != end(); ++it) {
+			if (*it == widget)
+				break;
+		}
+		if (it != end())
+			erase(it);
+		if (size() == 0 && m_blocker != NULL) {
+			m_blocker->DestroyWidget();
+			m_blocker = NULL;
+		}
+	}
+
+	/* a widget's delete callback: it taken out */
+	static void OnDeleteWidget(Widget *widget, void *data)
+	{
+		static_cast<TouchBlockList *>(data)->Remove(widget);
+	}
+
+	/* the uppermost of its widgets that take rear touches, are shown upright and are covered by the
+	   blocker by more than 16 square units: NULL for none */
+	Widget *FindTarget()
+	{
+		math::rect area = m_blocker->CalcHitRect();
+		Widget *target = NULL;
+
+		for (iterator it = begin(); it != end(); ++it) {
+			Widget *w = *it;
+
+			if (!w->IsTouchRearEventEnabled() || (w->m_event_enable & 0x40) == 0 ||
+			    !w->IsInputTarget())
+				continue;
+
+			Widget *parent;
+
+			for (parent = w->m_parent; parent != NULL; parent = parent->m_parent) {
+				if (parent->m_hit_find_mode == 1)
+					break;
+			}
+			if (parent != NULL)
+				continue;
+
+			Widget *modal = w->m_env->m_top_modal_widget;
+
+			if (modal != NULL) {
+				Widget *p;
+
+				for (p = w; p != NULL; p = p->m_parent) {
+					if (p == modal)
+						break;
+				}
+				if (p == NULL)
+					continue;
+			}
+			if (w->IsRotated(true, true, true, 0.15707964f))
+				continue;
+			if (ScePafMisc_B2795FE2(area, w->CalcHitRect()).get_area() > 16.0f) {
+				if (target == NULL || GetUpper(w, target, area) != target)
+					target = w;
+			}
+		}
+		return target;
+	}
+
+	TouchBlocker *m_blocker;
+};
+
+static TouchBlockList s_touch_block_list;
+
+TouchBlocker::TouchBlocker(Environment *env, TouchBlockList *list)
+	: Supplier(env->m_root_widget, NULL), m_list(list)
+{
+	m_event_enable |= 0x40;
+	m_touch_front_event = false;
+	EnableTouchRearEvent(true);
+	m_hit_detect_b_mode = 0;
+	SetAdjust(1, 1, 0);
+	SetColor(math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+}
+
+}
+}
+
+using namespace paf;
+using namespace paf::ui;
+
+int32_t ScePafWidget_82A61BBC(Widget *widget)
+{
+	if (s_touch_block_list.m_blocker == NULL)
+		s_touch_block_list.m_blocker = new TouchBlocker(widget->m_env, &s_touch_block_list);
+	s_touch_block_list.push_back(widget);
+	widget->AddDeleteCB(TouchBlockList::OnDeleteWidget, &s_touch_block_list);
+	return widget->m_list_delete_cb.size();
+}
+
+void ScePafWidget_A89BE22F(Widget *widget)
+{
+	s_touch_block_list.Remove(widget);
+}
+
+namespace paf {
+namespace ui {
+
+/* a rear touch event gets the target the blocker's list gives first */
+int32_t TouchBlocker::HandlerProc(Event *e)
+{
+	m_target = NULL;
+	if (e != NULL && (e->m_type & 0x40) != 0 && ((e->m_detail >> 20) & 0xf) == 1)
+		m_target = m_list->FindTarget();
+	return Supplier::HandlerProc(e);
+}
+
+int32_t TouchBlocker::EventExecDirect(Event *e)
+{
+	m_target = NULL;
+	if (e != NULL && (e->m_type & 0x40) != 0 && ((e->m_detail >> 20) & 0xf) == 1)
+		m_target = m_list->FindTarget();
+	return Supplier::EventExecDirect(e);
 }
 
 }

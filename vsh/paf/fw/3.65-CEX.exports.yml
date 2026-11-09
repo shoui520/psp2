@@ -3879,7 +3879,7 @@ ScePaf:
         - _ZN3paf2ui8filelist14CellFocusParamC1Ev: 0x647784E1
         - _ZNK3paf2ui15ScrollViewParam12GetParamNameEv: 0x647E8F32
         - _ZN3paf2ui15ScrollViewDebugD2Ev: 0x64A10940
-        - _ZN3paf2ui8Supplier21ScePafWidget_6591E40BEPNS0_5EventE: 0x6591E40B
+        - _ZN3paf2ui8Supplier15EventExecDirectEPNS0_5EventE: 0x6591E40B
         - _ZN3paf2ui8filelist7Manager12PopCacheItemEjPNS0_6WidgetE: 0x65A6B4E8
         - _ZN3paf2ui4Text18calc_origin_offsetERKNS_4math2v4ES5_jjj: 0x66592F7E
         - _ZN3paf2ui11ImageButtonD1Ev: 0x66722DFA
@@ -4751,7 +4751,7 @@ ScePaf:
         - _ZN3paf2ui21ProgressBarStyleParam6CreateEi: 0xC080C718
         - _ZN3paf2ui8RichTextD2Ev: 0xC0821FEB
         - _ZN3paf2ui21PlaneButtonStyleParam9ParamNameEv: 0xC08C9D8A
-        - _ZN3paf2ui8Supplier21ScePafWidget_C0A4DDDEEPNS0_5EventE: 0xC0A4DDDE
+        - _ZN3paf2ui8Supplier11HandlerProcEPNS0_5EventE: 0xC0A4DDDE
         - _ZN3paf2ui6ScreenC1EPS1_: 0xC0ABDE05
         - _ZN3paf2ui26ProgressBarTouchStyleParamC2Ev: 0xC0DD766B
         - _ZN3paf2ui14ScrollViewBase18HandleKeycodeEventEPNS0_5EventE: 0xC0E7AB7E

@@ -1205,6 +1205,9 @@ public:
 	math::v4 GetSizeBound(int32_t opt, Widget *ref);
 	/* the rect its touches hit it in */
 	math::rect CalcHitRect();
+	/* its world matrix turns it about one of the axes asked by more than the limit (0x81154586;
+	   name ours) */
+	bool IsRotated(bool x, bool y, bool z, float limit);
 	/* the distance along the plane's normal (made a unit vector first unless is_unit) from the
 	   point to the plane through the plane's point (0x811573b0; names ours) */
 	float32x2_t CalcDistPointToPlane(const math::v4 &point, const math::v4 &plane_point,

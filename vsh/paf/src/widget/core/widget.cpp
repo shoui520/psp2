@@ -978,6 +978,33 @@ int32_t Widget::SetSize(const ResolutionData *size, uint32_t num, Timer *t, int3
 		       opt, delay, cb_fin, usrdata);
 }
 
+/* its world matrix turns it about one of the axes asked by more than the limit: either of the two
+   terms that rotation about the axis puts in the matrix above it (name ours) */
+bool Widget::IsRotated(bool x, bool y, bool z, float limit)
+{
+	const math::matrix &m = GetWorldMatrix();
+
+	if (x) {
+		float zy = __builtin_fabsf(m.z().extract_y());
+
+		if (limit < __builtin_fabsf(m.y().extract_z()) || limit < zy)
+			return true;
+	}
+	if (y) {
+		float zx = __builtin_fabsf(m.z().extract_x());
+
+		if (limit < __builtin_fabsf(m.x().extract_z()) || limit < zx)
+			return true;
+	}
+	if (z) {
+		float yx = __builtin_fabsf(m.y().extract_x());
+
+		if (limit < __builtin_fabsf(m.x().extract_y()) || limit < yx)
+			return true;
+	}
+	return false;
+}
+
 int32_t Widget::SetPosHermite(const math::v4 &pos, const math::v4 *const *tangents, Timer *t,
 			      int32_t id, int32_t opt, float delay, AnimCB cb_fin, void *usrdata)
 {

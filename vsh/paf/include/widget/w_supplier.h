@@ -31,16 +31,24 @@ public:
 			m_plane->SetVisible(false);
 	}
 
+	/* the target let go, its delete callback dropped */
+	virtual ~Supplier()
+	{
+		ScePafWidget_2EBD646E(NULL, true);
+	}
+
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 
 	/* the target set: the old one let go (its delete callback dropped where remove_cb),
 	   the new one's event types taken over (name ours) */
 	int32_t ScePafWidget_2EBD646E(Widget *target, bool remove_cb);
-	/* the event passed on to the target's HandlerProc as supplied, and consumed here */
-	int32_t ScePafWidget_C0A4DDDE(Event *e);
-	/* the same, through the target's EventExecDirect */
-	int32_t ScePafWidget_6591E40B(Event *e);
+	/* the event passed on to the target's HandlerProc as supplied, and consumed here (export
+	   C0A4DDDE, Sony's vtable slot of HandlerProc) */
+	virtual int32_t HandlerProc(Event *e);
+	/* the same, through the target's EventExecDirect (export 6591E40B, the slot of
+	   EventExecDirect) */
+	virtual int32_t EventExecDirect(Event *e);
 	/* its position and size made the target's, with its offsets */
 	void ScePafWidget_AAE71C36();
 	/* the target's delete callback: the target let go */

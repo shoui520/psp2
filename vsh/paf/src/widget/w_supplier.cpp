@@ -54,7 +54,7 @@ int32_t Supplier::ScePafWidget_2EBD646E(Widget *target, bool remove_cb)
 	return 0;
 }
 
-int32_t Supplier::ScePafWidget_C0A4DDDE(Event *e)
+int32_t Supplier::HandlerProc(Event *e)
 {
 	Widget *target = m_target;
 
@@ -72,7 +72,7 @@ int32_t Supplier::ScePafWidget_C0A4DDDE(Event *e)
 	return ret;
 }
 
-int32_t Supplier::ScePafWidget_6591E40B(Event *e)
+int32_t Supplier::EventExecDirect(Event *e)
 {
 	Widget *target = m_target;
 
