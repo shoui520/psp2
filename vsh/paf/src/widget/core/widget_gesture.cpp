@@ -331,6 +331,254 @@ int32_t MoveGestureListener::OnUpdateTouch(uint32_t id)
 	}
 }
 
+/* the touch's capture by a listener other than this one (inline in Sony's destructors and
+   updates; name ours) */
+static inline __attribute__((always_inline)) bool CapturedByOther(TouchGestureListener *listener,
+								  uint32_t id)
+{
+	inputdevice::InputGestureListener *input = (inputdevice::InputGestureListener *)listener->m_input;
+
+	if (input != NULL && id < 8 && input->m_capture[id].get() != NULL) {
+		common::SharedPtr<inputdevice::GestureListener> held = input->m_capture[id];
+
+		return held.get() != listener;
+	}
+	return false;
+}
+
+TouchTapListener::TouchTapListener(uint32_t port, uint32_t touch_id, void *user_data)
+	: MultiTouchGestureListener(port, touch_id, user_data, 1), m_state(0), m_x(0), m_y(0),
+	  reserved68(false), m_other(false), m_param()
+{
+}
+
+TouchTapListener::~TouchTapListener()
+{
+	bool other = CapturedByOther(this, m_touch_id);
+
+	if (m_state == 2) {
+		if (other)
+			ScePafWidget_C5939A92(this, 18, m_touch_id, 0, 0, 0, 0, 0);
+		ScePafWidget_C5939A92(this, 15, m_touch_id, 0, 0, 0, 0, 1);
+	} else if (m_state == 3) {
+		ScePafWidget_C5939A92(this, 15, m_touch_id, 0, 0, 0, 0, 1);
+	}
+}
+
+int32_t TouchTapListener::OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre, int32_t diff)
+{
+	int32_t previous = m_touch_id;
+	int32_t ret = 1;
+
+	m_touch_id = get_id_from_bitmap(m_touch_bitmap, 0);
+	if ((m_touch_id & previous) < 0) {
+		m_state = 0;
+		return GestureListener::UPDATE_DETACH_SELF;
+	}
+
+	const inputdevice::touchscreen::Data *touch;
+
+	inputdevice::touchscreen::GetData(m_port, m_touch_id >= 0 ? m_touch_id : previous, &touch);
+
+	bool pressed = false;
+
+	if (m_touch_id != previous && touch != NULL) {
+		pressed = true;
+		m_x = touch->center_orig_x;
+		m_y = touch->center_orig_y;
+	}
+
+	bool other = CapturedByOther(this, m_touch_id);
+	int32_t count = 0;
+
+	for (uint32_t bits = m_touch_bitmap; bits != 0; bits >>= 1) {
+		if (bits & 1)
+			count++;
+	}
+
+	if (m_state <= 1) {
+		if (m_state >= 0) {
+			if (m_state <= 0) {
+				if (touch->state == 1 || touch->state == 3) {
+					m_state = 1;
+					m_x = touch->center_orig_x;
+					m_y = touch->center_orig_y;
+				} else {
+					ret = GestureListener::UPDATE_DETACH_SELF;
+				}
+			} else if (count > 0) {
+				if (!other) {
+					float dx = (float)(touch->center_orig_x - m_x);
+					float dy = (float)(touch->center_orig_y - m_y);
+					float limit = m_param.m_move_tolerance * s_pixel_per_mm;
+
+					if (dx * dx + dy * dy >= limit * limit || pressed) {
+						m_state = 2;
+						ScePafWidget_C5939A92(this, 13, m_touch_id, 0, 0, 0, 0, 0);
+						ret = GestureListener::UPDATE_DETACH_LOWER;
+					}
+				}
+			} else {
+				ret = GestureListener::UPDATE_DETACH_SELF;
+			}
+		}
+	} else if (m_state <= 2) {
+		if (other) {
+			m_state = 3;
+			if (count <= 0)
+				m_touch_id = previous;
+			ScePafWidget_C5939A92(this, 18, m_touch_id, 0, 0, 0, 0, 0);
+		} else if (count > 0) {
+			if (pressed)
+				ScePafWidget_C5939A92(this, 17, m_touch_id, 0, 0, 0, 0, 0);
+			ScePafWidget_C5939A92(this, 14, m_touch_id, 0, 0, 0, 0, 0);
+		} else {
+			m_touch_id = previous;
+			m_state = 0;
+			ScePafWidget_C5939A92(this, 15, previous, 0, 0, 0, 0, 0);
+			ret = GestureListener::UPDATE_DETACH_SELF;
+		}
+	} else if (m_state <= 3) {
+		if (count > 0) {
+			if (!other) {
+				m_state = 2;
+				ScePafWidget_C5939A92(this, 17, m_touch_id, 0, 0, 0, 0, 0);
+			}
+		} else {
+			m_touch_id = previous;
+			m_state = 0;
+			ScePafWidget_C5939A92(this, 15, previous, 0, 0, 0, 0, 0);
+			ret = GestureListener::UPDATE_DETACH_SELF;
+		}
+	}
+	m_other = other;
+	if (ret & GestureListener::UPDATE_DETACH_SELF)
+		m_state = 0;
+	return ret;
+}
+
+TouchLongPressListener::TouchLongPressListener(uint32_t port, uint32_t touch_id, void *user_data)
+	: MultiTouchGestureListener(port, touch_id, user_data, 2), m_state(0), m_id0(-1), m_id1(-1),
+	  m_x0(0), m_y0(0), m_x1(0), m_y1(0), reserved84(false), m_param()
+{
+}
+
+TouchLongPressListener::~TouchLongPressListener()
+{
+	bool other = CapturedByOther(this, m_id0);
+
+	if (!other)
+		other = CapturedByOther(this, m_id1);
+	if (m_state == 2) {
+		if (other)
+			ScePafWidget_C5939A92(this, 24, m_id0, m_id1, 0, 0, 0, 0);
+		ScePafWidget_C5939A92(this, 21, m_id0, m_id1, 0, 0, 0, 1);
+	} else if (m_state == 3) {
+		ScePafWidget_C5939A92(this, 21, m_touch_id, 0, 0, 0, 0, 1);
+	}
+}
+
+int32_t TouchLongPressListener::OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre,
+						   int32_t diff)
+{
+	int32_t previous0 = m_id0;
+	int32_t previous1 = m_id1;
+	int32_t ret = 1;
+
+	m_id0 = get_id_from_bitmap(m_touch_bitmap, 0);
+	m_id1 = get_id_from_bitmap(m_touch_bitmap, 1);
+	if ((m_id0 & previous0) < 0) {
+		m_state = 0;
+		return GestureListener::UPDATE_DETACH_SELF;
+	}
+
+	const inputdevice::touchscreen::Data *touch0;
+	const inputdevice::touchscreen::Data *touch1;
+
+	inputdevice::touchscreen::GetData(m_port, m_id0 >= 0 ? m_id0 : previous0, &touch0);
+	inputdevice::touchscreen::GetData(m_port, m_id1 >= 0 ? m_id1 : previous1, &touch1);
+
+	bool pressed0 = false;
+	bool pressed1 = false;
+
+	if (m_id0 != previous0 && touch0 != NULL) {
+		pressed0 = true;
+		m_x0 = touch0->center_orig_x;
+		m_y0 = touch0->center_orig_y;
+	}
+	if (m_id1 != previous1 && touch1 != NULL) {
+		pressed1 = true;
+		m_x1 = touch1->center_orig_x;
+		m_y1 = touch1->center_orig_y;
+	}
+
+	bool other = CapturedByOther(this, m_id0);
+
+	if (!other)
+		other = CapturedByOther(this, m_id1);
+
+	int32_t count = 0;
+
+	for (uint32_t bits = m_touch_bitmap; bits != 0; bits >>= 1) {
+		if (bits & 1)
+			count++;
+	}
+
+	if (m_state <= 1) {
+		if (m_state >= 0) {
+			if (m_state <= 0) {
+				if (touch0->state == 1 || touch0->state == 3)
+					m_state = 1;
+				else
+					ret = GestureListener::UPDATE_DETACH_SELF;
+			} else if (count > 0) {
+				if (count != 1 && !other) {
+					ret = 2;
+					m_state = 2;
+					ScePafWidget_C5939A92(this, 19, m_id0, m_id1, 0, 0, 0, 0);
+				}
+			} else {
+				ret = GestureListener::UPDATE_DETACH_SELF;
+			}
+		}
+	} else if (m_state > 2) {
+		if (m_state <= 3) {
+			if (count > 0) {
+				if (count != 1 && !other) {
+					ret = 2;
+					m_state = 2;
+					ScePafWidget_C5939A92(this, 23, m_id0, m_id1, 0, 0, 0, 0);
+				}
+			} else {
+				m_state = 0;
+				ScePafWidget_C5939A92(this, 21, previous0, previous1, 0, 0, 0, 0);
+				ret = GestureListener::UPDATE_DETACH_SELF;
+			}
+		}
+	} else if (other) {
+		m_state = 3;
+		if (count != 0)
+			ScePafWidget_C5939A92(this, 24, m_id0, m_id1, 0, 0, 0, 0);
+		else
+			ScePafWidget_C5939A92(this, 24, previous0, previous1, 0, 0, 0, 0);
+	} else if (count >= 2) {
+		if (pressed0 || pressed1)
+			ScePafWidget_C5939A92(this, 23, m_id0, m_id1, 0, 0, 0, 0);
+		ScePafWidget_C5939A92(this, 20, m_id0, m_id1, 0, 0, 0, 0);
+		ret = 2;
+	} else if (count == 1) {
+		m_state = 1;
+		ScePafWidget_C5939A92(this, 21, previous0, previous1, 0, 0, 0, 0);
+	} else if (count == 0) {
+		m_state = 0;
+		ScePafWidget_C5939A92(this, 21, previous0, previous1, 0, 0, 0, 0);
+		ret = GestureListener::UPDATE_DETACH_SELF;
+	}
+	if (ret & GestureListener::UPDATE_DETACH_SELF)
+		m_state = 0;
+	return ret;
+}
+
 HoldGestureListener::HoldGestureListener(uint32_t port, uint32_t touch_id, void *user_data)
 	: TouchGestureListener(port, touch_id, user_data), m_state(0), m_create_time(get_time_internal()),
 	  m_touch(NULL), m_x(0), m_y(0), m_short_hold(false), m_param()

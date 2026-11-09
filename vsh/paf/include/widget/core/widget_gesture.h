@@ -58,6 +58,15 @@ public:
 /* a touch gesture listener of several touches at once (vtable 812F91C8) */
 class MultiTouchGestureListener : public TouchGestureListener {
 public:
+	/* the listeners built on it set these fields in their own constructors (inline in
+	   Sony's; name ours) */
+	MultiTouchGestureListener(uint32_t port, uint32_t touch_id, void *user_data,
+				  uint32_t touch_count_max)
+		: TouchGestureListener(port, touch_id, user_data), m_touch_bitmap(0),
+		  m_touch_count_max(touch_count_max), m_last_result(1)
+	{
+	}
+
 	virtual ~MultiTouchGestureListener()
 	{
 	}
@@ -82,14 +91,14 @@ public:
 	uint32_t m_touch_count_max;
 	/* what OnUpdateMultiTouch asked of the InputGestureListener last (name ours) */
 	int32_t m_last_result;
-	/* the front touch panel's pixels per millimetre */
-	float m_pixel_per_mm;
 };
 
 /* the listener of gesture 20, two touches pinched (constructor 0x81164820 TOOL, vtable
    812F960C; names ours, the meaning of its positions open) */
 class PinchGestureListener : public MultiTouchGestureListener {
 public:
+	/* the front touch panel's pixels per millimetre */
+	float m_pixel_per_mm;
 	/* the pinch's two positions, as its state gives them; false and 0 where it has none */
 	bool GetPinchPos(float *x0, float *y0, float *x1, float *y1);
 
@@ -373,6 +382,113 @@ public:
 	MoveGestureParam m_param;
 	/* the hold has been sent (gesture 25) */
 	bool m_hold_sent;
+};
+
+/* how far a touch may move before it is no tap: kept within 0 and 3.3 (vtable 812F91F4; names
+   ours) */
+class TouchTapParam : public inputdevice::GestureParam {
+public:
+	TouchTapParam() : m_move_tolerance(2.3f)
+	{
+	}
+
+	virtual void AdjustParam()
+	{
+		float tolerance = m_move_tolerance;
+
+		if (tolerance < 0.0f) {
+			tolerance = 0.0f;
+			m_move_tolerance = tolerance;
+		}
+		if (tolerance > 3.3f)
+			m_move_tolerance = 3.3f;
+	}
+
+	float m_move_tolerance;
+};
+
+/* the listener a widget taps with (vtable 812F9208, 0x50 bytes): its touch down sends gesture 13,
+   a move 14 and 17, the release 15, a touch another listener took 18 (names ours) */
+class TouchTapListener : public MultiTouchGestureListener {
+public:
+	TouchTapListener(uint32_t port, uint32_t touch_id, void *user_data);
+
+	virtual ~TouchTapListener();
+
+	virtual void SetGestureParam(const inputdevice::GestureParam *param)
+	{
+		const TouchTapParam *tap = (const TouchTapParam *)param;
+
+		if (tap != NULL)
+			m_param.m_move_tolerance = tap->m_move_tolerance;
+	}
+
+	virtual int32_t OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre, int32_t diff);
+
+	/* 0 until the touch is down, 1 while it waits to move, 2 once it moved, 3 once another
+	   listener took it */
+	int32_t m_state;
+	/* where the touch was pressed */
+	int32_t m_x;
+	int32_t m_y;
+	bool reserved68;
+	/* the touch is another listener's */
+	bool m_other;
+	TouchTapParam m_param;
+};
+
+/* how far a touch may move before it is no long press: kept within 2.0 and 3.3 (vtable
+   812F9234; names ours) */
+class TouchLongPressParam : public inputdevice::GestureParam {
+public:
+	TouchLongPressParam() : m_move_tolerance(2.3f)
+	{
+	}
+
+	virtual void AdjustParam()
+	{
+		float tolerance = m_move_tolerance;
+
+		if (tolerance < 2.0f) {
+			tolerance = 2.0f;
+			m_move_tolerance = tolerance;
+		}
+		if (tolerance > 3.3f)
+			m_move_tolerance = 3.3f;
+	}
+
+	float m_move_tolerance;
+};
+
+/* the listener two touches of a widget make together (vtable 812F9248, 0x60 bytes): gestures 19
+   to 24 (names ours) */
+class TouchLongPressListener : public MultiTouchGestureListener {
+public:
+	TouchLongPressListener(uint32_t port, uint32_t touch_id, void *user_data);
+
+	virtual ~TouchLongPressListener();
+
+	virtual void SetGestureParam(const inputdevice::GestureParam *param)
+	{
+		const TouchLongPressParam *press = (const TouchLongPressParam *)param;
+
+		if (press != NULL)
+			m_param.m_move_tolerance = press->m_move_tolerance;
+	}
+
+	virtual int32_t OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre, int32_t diff);
+
+	/* as the tap's */
+	int32_t m_state;
+	/* the touch IDs of the two touches and where each was pressed */
+	int32_t m_id0;
+	int32_t m_id1;
+	int32_t m_x0;
+	int32_t m_y0;
+	int32_t m_x1;
+	int32_t m_y1;
+	bool reserved84;
+	TouchLongPressParam m_param;
 };
 
 /* the listener a widget holds a touch with (constructor 0x81148d20 TOOL, vtable 812F91A4, 0x78
