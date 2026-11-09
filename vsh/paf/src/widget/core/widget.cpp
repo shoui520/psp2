@@ -13,6 +13,7 @@
 #include <widget/core/animlistener.h>
 #include <widget/core/layouter.h>
 #include <widget/core/widget.h>
+#include <widget/core/focus.h>
 #include <widget/core/uiinputlistener.h>
 #include <widget/core/widget_gesture.h>
 #include <widget/w_camera.h>
@@ -2001,6 +2002,74 @@ void Widget::EnableFocusSearchRect(bool on_off)
 {
 	if (m_focuser != NULL)
 		m_focuser->GetHint()->m_search_rect_enable = on_off;
+}
+
+int32_t Widget::SetFocus(SetFocusInfo *info)
+{
+	if (m_hold_count > 0)
+		return -1;
+	if ((m_event_enable & 0x400) == 0)
+		return -2;
+
+	Environment *env = m_env;
+
+	if (env == NULL)
+		return -3;
+
+	bool keep = false;
+	bool notify = true;
+
+	if (info != NULL) {
+		notify = info->m_notify;
+		keep = info->m_keep;
+	}
+
+	Widget *root = FindFocusRoot(this);
+
+	if (root == NULL)
+		return -1;
+
+	Widget *target = env->m_focus_cursor.m_target;
+
+	if (target != NULL && notify) {
+		Widget *target_root = FindFocusRoot(target);
+
+		if (target_root != NULL) {
+			if (!target->m_focus_in_group || !target_root->m_focus_in_group)
+				target_root->SetFocusRootState(0);
+		}
+	}
+	root->SetFocusRootFocus(this, notify);
+
+	FocusRoot *focus_root = root->m_focus_root;
+
+	env = m_env;
+
+	bool auto_off = env->m_focus_auto_off;
+
+	if (focus_root != NULL)
+		focus_root->m_pending = keep;
+	if (auto_off)
+		env->m_focus_cursor.SetTarget(this);
+	return 0;
+}
+
+void Widget::ReleaseShowHolds(bool recursive)
+{
+	if (m_touch_captures.size() != 0)
+		ScePafWidget_931AD41E(this, true);
+	if (m_pad_dir_port >= 0)
+		ReleasePadCaptureDir(255, true);
+	if (m_pad_button_port >= 0)
+		ReleasePadCaptureButton(255, true);
+	if (recursive) {
+		list<Widget *>::iterator it = m_children.begin();
+
+		while (it != m_children.end()) {
+			(*it)->ReleaseShowHolds(true);
+			++it;
+		}
+	}
 }
 
 void Widget::SetCursorOn(bool on, Widget *from, Widget *to)
