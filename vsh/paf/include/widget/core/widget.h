@@ -359,7 +359,7 @@ class FocusShape {
 public:
 	FocusShape()
 		: m_shape(0), m_offset(0.0f, 0.0f, 0.0f), m_size(0.0f, 0.0f), m_rot(0.0f, 0.0f, 0.0f),
-		  m_use_parts(false), reserved_b(true)
+		  m_use_parts(false), m_changed(true)
 	{
 	}
 
@@ -372,10 +372,22 @@ public:
 	math::v3 m_rot;
 	intrusive_ptr<graph::Surface> m_texture;
 	/* the cursor is drawn as the widget's part shapes (its m_focus_parts; a text's focused
-	   link sets it), and a flag made true whose readers are not converted (names ours) */
+	   link sets it); a part changed since the cursor took it (FocusInfo::UpdateParts; names
+	   ours) */
 	bool m_use_parts;
-	bool reserved_b;
+	bool m_changed;
 };
+
+}
+
+/* Sony's code calls these two out of line for the focus shapes (the COMDATs w_text.cpp gives,
+   0x8123a26c and 0x8123a458 in 3.650.011-TOOL); defined in w_text.cpp */
+template<>
+void vector<ui::FocusShape>::clear();
+template<>
+int vector<ui::FocusShape>::push_back(const ui::FocusShape &val);
+
+namespace ui {
 
 /* where the focus moves from a widget, and the rectangle it searches (names ours) */
 class FocusHint {
@@ -1690,7 +1702,8 @@ public:
 	bool m_drag_begun : 1;
 	/* none of its focus directions (name ours) */
 	bool m_focus_direction_off : 1;
-	bool reserved3z1 : 1;
+	/* the focus cursor is not drawn on it while it rests there (FocusInfo::Update; name ours) */
+	bool m_cursor_hidden : 1;
 	/* the focus code takes it as a focus target (Widget::HandleFocusSwitchEvent; name ours) */
 	bool m_focus_target : 1;
 	/* a scene or camera, which the touch walk passes over (name ours) */

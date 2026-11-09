@@ -15,6 +15,7 @@
 #include <widget/w_text.h>
 #include <timer/timer.h>
 #include <widget/w_plane.h>
+#include <graphics/drawobj/plane_obj.h>
 
 #ifndef SCE_PAF_ERROR_NO_MEMORY
 #define SCE_PAF_ERROR_NO_MEMORY (-2136014814) /* 0x80AF0022 */
@@ -335,9 +336,10 @@ extern "C" void ScePafWidget_B6C64486(const intrusive_ptr<graph::Surface> &textu
 	}
 }
 
-void FocusInfo::GetMoveTexture(intrusive_ptr<graph::Surface> &texture, int32_t mode)
+intrusive_ptr<graph::Surface> FocusInfo::GetMoveTexture(int32_t mode)
 {
-	texture = s_textures[0];
+	intrusive_ptr<graph::Surface> texture = s_textures[0];
+
 	switch (mode) {
 	case 0:
 	case 1:
@@ -366,6 +368,557 @@ void FocusInfo::GetMoveTexture(intrusive_ptr<graph::Surface> &texture, int32_t m
 		texture = s_textures[8];
 		break;
 	}
+	return texture;
+}
+
+void FocusInfo::UpdateParts()
+{
+	if (m_target == NULL || m_target->m_focus_parts.size() == 0)
+		return;
+
+	vector<FocusShape>::iterator part;
+	bool changed = false;
+
+	for (part = m_target->m_focus_parts.begin(); part != m_target->m_focus_parts.end(); ++part) {
+		if (part->m_changed) {
+			changed = true;
+			break;
+		}
+	}
+	if (!changed)
+		return;
+
+	m_cursor->m_focus_parts.clear();
+	ScePafWidget_13B246E0(m_cursor, m_target->m_focus_shape);
+	for (part = m_target->m_focus_parts.begin(); part != m_target->m_focus_parts.end(); ++part) {
+		intrusive_ptr<graph::Surface> texture = GetMoveTexture(part->m_shape);
+
+		part->m_texture = texture;
+		part->m_changed = false;
+		m_cursor->m_focus_parts.push_back(*part);
+	}
+	m_cursor->UpdateSize();
+	for (part = m_target->m_focus_parts.begin(); part != m_target->m_focus_parts.end(); ++part)
+		part->m_changed = false;
+}
+
+void FocusInfo::UpdateTexture()
+{
+	intrusive_ptr<graph::Surface> texture;
+
+	m_cursor->GetTexture(texture);
+	if (texture.get() != m_texture)
+		m_cursor->SetTexture(Texture());
+	if (m_target != NULL) {
+		FocusShape *shape = m_target->m_focus_shape;
+
+		if (shape != NULL && (shape->m_shape == 4 || shape->m_shape == 5)) {
+			graph::PlaneObj *obj = static_cast<graph::PlaneObj *>(m_cursor->GetDrawObj(0));
+
+			if (obj != NULL)
+				obj->m_plane_flags.m_nine_patch = true;
+		} else {
+			graph::PlaneObj *obj = static_cast<graph::PlaneObj *>(m_cursor->GetDrawObj(0));
+
+			if (obj != NULL)
+				obj->m_plane_flags.m_nine_patch = false;
+		}
+	}
+}
+
+/* the size of the widget's scene, or of the screen where it has none */
+static inline math::v4 SceneSize(Widget *widget)
+{
+	math::v4 size;
+
+	if (widget->m_scene != NULL) {
+		size = *widget->m_scene->GetSize(0);
+	} else {
+		math::rect screen(Screen::s_root_screen->sp);
+
+		size = math::v4(screen.width(), screen.height(), 0.0f, 0.0f);
+	}
+	return size;
+}
+
+void FocusInfo::Follow(bool resize, bool at_once)
+{
+	if (m_target == m_previous || m_left_saved)
+		return;
+
+	UpdateHighlight();
+	if (!m_shown) {
+		Widget *cursor = m_cursor;
+
+		cursor->m_transition_complete = false;
+		cursor->m_transition = 0xFF;
+		cursor->DoTransitionReverse_core(0.0f, true);
+		ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+		m_target_pos = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+		m_shape = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	}
+
+	Widget *target = m_target;
+
+	if (target == NULL)
+		return;
+
+	{
+		FocusShape *shape = target->m_focus_shape;
+
+		Texture() = GetMoveTexture(shape != NULL ? shape->m_shape : 0);
+	}
+
+	FocusShape *shape = m_target->m_focus_shape;
+
+	if (shape != NULL && shape->m_texture.get() != NULL)
+		Texture() = shape->m_texture;
+	UpdateTexture();
+	if (m_target->m_focus_parts.size() != 0) {
+		for (vector<FocusShape>::iterator part = m_target->m_focus_parts.begin();
+		     part != m_target->m_focus_parts.end(); ++part)
+			part->m_changed = true;
+		UpdateParts();
+	} else {
+		m_cursor->m_focus_parts.clear();
+		m_cursor->UpdateSize();
+	}
+
+	/* the cursor aligned to the target's origin, where the target is aligned by it */
+	uint32_t origin_x, origin_y, origin_z;
+	bool realign = false;
+
+	target->GetOrigin(origin_x, origin_y, origin_z);
+	if ((origin_x | origin_y | origin_z) == 0) {
+		Widget *cursor = m_cursor;
+
+		if ((cursor->m_align_x | cursor->m_align_y | cursor->m_align_z) != 0)
+			cursor->SetAlign(0, 0, 0, NULL);
+	} else {
+		uint32_t anchor_x, anchor_y, anchor_z;
+
+		target->GetAnchor(anchor_x, anchor_y, anchor_z);
+		if (origin_x == 2 && anchor_x != 2) {
+			anchor_x = 2;
+			realign = true;
+		} else if (origin_x == 1 && anchor_x != 1) {
+			anchor_x = 1;
+			realign = true;
+		}
+		if (origin_y == 2 && anchor_y != 2) {
+			anchor_y = 2;
+			realign = true;
+		} else if (origin_y == 1 && anchor_y != 1) {
+			anchor_y = 1;
+			realign = true;
+		}
+		if (origin_z == 2 && anchor_z != 2) {
+			anchor_z = 2;
+			realign = true;
+		} else if (origin_z == 1 && anchor_z != 1) {
+			anchor_z = 1;
+			realign = true;
+		}
+		if (realign)
+			m_cursor->SetAlign(anchor_x, anchor_y, anchor_z, NULL);
+	}
+
+	math::v4 size = SceneSize(m_target);
+	sce::Vectormath::Simd::Aos::Vector2 extent = sce::Vectormath::Simd::Aos::maxPerElem(
+		sce::Vectormath::Simd::Aos::Vector2(1.0f, 1.0f), size.getImpl().getXYZ().getXY());
+	math::v4 offset(0.0f, 0.0f, 0.0f, 0.0f);
+
+	shape = m_target->m_focus_shape;
+	if (shape != NULL)
+		offset = math::v4(shape->m_offset, 0.0f);
+
+	if (at_once || m_target_pos.extract_x() < -1000.0f) {
+		m_cursor->SetPos(offset + m_touch_move, NULL, Widget::ANIM_MOVE, 0, 0.0f, NULL, NULL);
+		m_cursor->SetRot(math::v4(0.0f, 0.0f, 0.0f, 0.0f), 0, NULL, Widget::ANIM_ROT, 0, 0.0f,
+				 NULL, NULL);
+	} else {
+		bool animate = resize || realign;
+		Timer *timer;
+
+		/* the cursor put back where it was in the target's frame, and moved from there */
+		if (m_previous != NULL) {
+			math::matrix world = m_target->GetWorldMatrix();
+
+			world.set_w(m_target->GetFocusShapeWorldPos());
+
+			math::matrix inv = world.inverse();
+			math::v4 from = math::v4(inv.getImpl() *
+						 m_previous->GetFocusShapeWorldPos().getImpl()) +
+					m_touch_move;
+			sce::Vectormath::Simd::Aos::Vector2 rate = sce::Vectormath::Simd::Aos::divPerElem(
+				from.getImpl().getXYZ().getXY(), extent);
+			float far_x = __builtin_fabsf(rate.getX());
+			float far_y = __builtin_fabsf(rate.getY());
+			float far = far_x > far_y ? far_x : far_y;
+			float time = far * 100.0f;
+			float scale = animate ? 0.15f : 1.0f;
+
+			m_cursor->SetPos(offset + from * scale, NULL, Widget::ANIM_MOVE, 0, 0.0f, NULL,
+					 NULL);
+			timer = new Timer(time + 150.0f, Timer::FUNC_EXPONENT);
+		} else {
+			math::matrix world = m_target->GetWorldMatrix();
+
+			world.set_w(m_target->GetFocusShapeWorldPos());
+
+			math::matrix inv = world.inverse();
+			math::v4 from = math::v4(inv.getImpl() * m_target_pos.getImpl());
+			sce::Vectormath::Simd::Aos::Vector2 rate = sce::Vectormath::Simd::Aos::divPerElem(
+				from.getImpl().getXYZ().getXY(), extent);
+			float far_x = __builtin_fabsf(rate.getX());
+			float far_y = __builtin_fabsf(rate.getY());
+			float far = far_x > far_y ? far_x : far_y;
+			float time = far * 100.0f;
+			float scale = animate ? 0.15f : 1.0f;
+
+			m_cursor->SetPos(from * scale, NULL, Widget::ANIM_MOVE, 0, 0.0f, NULL, NULL);
+			timer = new Timer(time + 150.0f, Timer::FUNC_EXPONENT);
+		}
+		m_cursor->SetPos(offset, timer, Widget::ANIM_MOVE, 0, 0.0f, NULL, NULL);
+	}
+
+	math::v4 rot = m_rot;
+
+	shape = m_target->m_focus_shape;
+	if (shape != NULL)
+		rot = math::v4(shape->m_rot, 0.0f);
+	m_cursor->SetRot(rot, 0, NULL, Widget::ANIM_ROT, 0, 0.0f, NULL, NULL);
+	if (m_moving_only) {
+		m_cursor->KillAnimType(Widget::ANIM_META_ALPHA);
+		if (!IsMoveImmediate())
+			m_cursor->SetMetaAlpha(0.3f, NULL, Widget::ANIM_META_ALPHA, 0, 0.0f, NULL, NULL);
+		m_move_mode_old = 0;
+	}
+	m_previous = m_target;
+	m_target_pos = offset;
+}
+
+void FocusInfo::MoveCursor(bool animate)
+{
+	bool parts = false;
+	math::v4 offset = m_target_pos;
+	Widget *cursor = m_cursor;
+
+	if (m_target != NULL) {
+		FocusShape *shape = m_target->m_focus_shape;
+
+		if (shape != NULL) {
+			offset = math::v4(shape->m_offset, 0.0f);
+			parts = shape->m_use_parts;
+		}
+	}
+	if (animate && parts) {
+		math::v4 pos = cursor->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		math::v4 to = offset + m_touch_move;
+
+		/* moved over where it is more than five away */
+		if (!sce::Vectormath::Simd::Aos::allElemLessThanOrEqual(
+			     sce::Vectormath::Simd::Aos::absPerElem((pos - to).getImpl()),
+			     sce::Vectormath::Simd::Aos::Vector4(5.0f))
+			     .getAsBool()) {
+			m_cursor->SetPos(to, new Timer(150.0f, Timer::FUNC_EXPONENT), Widget::ANIM_MOVE,
+					 0, 0.0f, NULL, NULL);
+			return;
+		}
+		cursor = m_cursor;
+	}
+	cursor->SetPos(offset + m_touch_move, NULL, Widget::ANIM_MOVE, 0, 0.0f, NULL, NULL);
+}
+
+void FocusInfo::Update(float time)
+{
+	if (m_previous != NULL && m_previous->m_hold_count > 0)
+		m_previous = NULL;
+	if (m_cursor == NULL)
+		return;
+	if (m_cursor->m_hold_count > 0) {
+		m_cursor = NULL;
+		return;
+	}
+	if (!m_enabled)
+		return;
+
+	/* the texture of the target's shape */
+	if (m_target != NULL) {
+		FocusShape *shape = m_target->m_focus_shape;
+		intrusive_ptr<graph::Surface> texture = GetMoveTexture(shape != NULL ? shape->m_shape :
+										       0);
+
+		shape = m_target->m_focus_shape;
+		if (shape != NULL && shape->m_texture.get() != NULL)
+			texture = shape->m_texture;
+		if (m_texture != texture.get() || m_default_texture) {
+			Texture() = texture;
+			UpdateTexture();
+			m_default_texture = false;
+		}
+	}
+	m_move_mode = 0;
+	if (m_target != NULL)
+		m_move_mode = m_target->GetFocusDirectionMask();
+	if (!m_shown) {
+		m_was_shown = false;
+		m_left_saved = false;
+		Follow(false, true);
+	}
+	if (!m_shown)
+		return;
+
+	Widget *cursor = m_cursor;
+
+	if (cursor->m_show_a_sum < 0.02f && !cursor->IsAnimRunning(Widget::ANIM_SHOW_ALPHA) &&
+	    m_shown == m_was_shown) {
+		cursor = m_cursor;
+		if (!cursor->m_transition_complete) {
+			cursor->m_transition = 0xFF;
+			cursor->m_transition_complete = true;
+			cursor->DoTransition_core(0.0f, true);
+		}
+		ScePafWidget_FF5BC957(cursor, NULL, 2, 0.0f, NULL);
+	}
+	if (m_target != NULL && m_texture == NULL) {
+		Follow(false, true);
+		return;
+	}
+
+	/* drawn at rest only, where the cursor is drawn with its widget */
+	if (m_moving_only && !IsMoving() && (m_target == NULL || !m_target->m_cursor_hidden))
+		m_cursor->m_color_alpha = 1.0f;
+	else
+		m_cursor->m_color_alpha = 0.0f;
+
+	/* the shown state changed: taken after five frames */
+	bool resized = false;
+
+	if (m_target != NULL && m_shown != m_was_shown) {
+		if (m_show_wait < 5) {
+			m_show_wait++;
+		} else {
+			m_show_wait = 0;
+			m_was_shown = m_shown;
+			if (!m_shown)
+				return;
+			cursor = m_cursor;
+			if (m_target == m_previous) {
+				/* back on the same target: shown again, grown from a third of its size */
+				cursor->m_transition_complete = false;
+				cursor->m_transition = 0xFF;
+				cursor->DoTransitionReverse_core(0.0f, true);
+				ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+
+				Timer *timer = new Timer(50.0f);
+
+				if (!cursor->m_transition_complete) {
+					cursor->m_transition = 0xFF;
+					cursor->m_transition_complete = true;
+					cursor->DoTransition_core(0.0f, true);
+				}
+				ScePafWidget_FF5BC957(cursor, timer, 2, 0.0f, NULL);
+
+				math::v4 size = SceneSize(m_target);
+				sce::Vectormath::Simd::Aos::Vector2 extent =
+					sce::Vectormath::Simd::Aos::maxPerElem(
+						sce::Vectormath::Simd::Aos::Vector2(1.0f, 1.0f),
+						size.getImpl().getXYZ().getXY());
+				math::v4 shape_size = m_target->GetFocusShapeSize();
+				sce::Vectormath::Simd::Aos::Vector2 rate =
+					sce::Vectormath::Simd::Aos::divPerElem(
+						shape_size.getImpl().getXYZ().getXY(), extent);
+				float far = rate.getY();
+
+				if (rate.getX() > far)
+					far = rate.getX();
+
+				float param = (1.0f - far) * 0.25f + 0.05f;
+				float total = far * 100.0f + 200.0f;
+
+				cursor->SetSize(shape_size * 0.3f, NULL, Widget::ANIM_SIZE, 0, 0.0f, NULL,
+						NULL);
+				cursor->SetSize(shape_size,
+						new Timer(total, Timer::FUNC_CUSTOM_BACK_OUT,
+							  Timer::REPEAT_NONE, 0, &param),
+						Widget::ANIM_SIZE, 0, 0.0f, NULL, NULL);
+				resized = true;
+				m_shape = shape_size;
+			} else {
+				cursor->m_transition_complete = false;
+				cursor->m_transition = 0xFF;
+				cursor->DoTransitionReverse_core(0.0f, true);
+				ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+				if (!cursor->m_transition_complete) {
+					cursor->m_transition = 0xFF;
+					cursor->m_transition_complete = true;
+					cursor->DoTransition_core(0.0f, true);
+				}
+				ScePafWidget_FF5BC957(cursor, NULL, 2, 0.0f, NULL);
+			}
+			if (IsMoveImmediate())
+				cursor->SetMetaAlpha(0.0f, NULL, Widget::ANIM_META_ALPHA, 0, 0.0f, NULL,
+						     NULL);
+			else
+				cursor->SetMetaAlpha(1.0f, NULL, Widget::ANIM_META_ALPHA, 0, 0.0f, NULL,
+						     NULL);
+			if (m_target->m_focus_parts.size() != 0)
+				MoveCursor(false);
+
+			FocusShape *shape = m_target->m_focus_shape;
+
+			if (shape != NULL && shape->m_use_parts)
+				shape->m_use_parts = false;
+			UpdateParts();
+			graph::FocusShader::SetColor(m_color);
+		}
+	} else {
+		m_show_wait = 0;
+	}
+
+	/* where the cursor is at rest, put at the target's focus offset and turned */
+	if (m_target != NULL && m_cursor->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f)) ==
+				    m_cursor->GetPos(1, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f))) {
+		MoveCursor(true);
+
+		math::v4 rot = m_rot;
+		FocusShape *shape = m_target->m_focus_shape;
+
+		if (shape != NULL)
+			rot = math::v4(shape->m_rot, 0.0f);
+		m_cursor->SetRot(rot, 0, NULL, Widget::ANIM_ROT, 0, 0.0f, NULL, NULL);
+		UpdateParts();
+	} else if (m_target != NULL && m_cursor->m_focus_parts.size() == 0 &&
+		   m_target->m_focus_parts.size() != 0) {
+		MoveCursor(true);
+	}
+
+	/* the cursor's frame of the move mode: blinking for modes 2 and 4, hidden for the
+	   immediate ones, else faint and grey blue */
+	graph::DrawObj *obj = m_cursor->GetDrawObj(0);
+
+	if (resized || m_move_mode != m_move_mode_old) {
+		if (m_move_mode == 2 || m_move_mode == 4) {
+			FocusShape *shape = m_target->m_focus_shape;
+
+			if (shape != NULL && shape->m_shape == 1)
+				obj->m_draw_style.blend = 1;
+			else
+				obj->m_draw_style.blend = 2;
+			m_cursor->KillAnim(Widget::ANIM_META_ALPHA);
+			m_cursor->SetMetaAlpha(1.0f, new Timer(600.0f, Timer::FUNC_QUAD_OUT),
+					       Widget::ANIM_OPTION_LOOP | Widget::ANIM_META_ALPHA, 0, 0.0f,
+					       NULL, NULL);
+			m_cursor->SetMetaAlpha(0.1f, new Timer(600.0f, Timer::FUNC_QUAD_IN),
+					       Widget::ANIM_OPTION_LOOP | Widget::ANIM_META_ALPHA, 0, 0.0f,
+					       NULL, NULL);
+			graph::FocusShader::SetColor(m_color);
+		} else if (m_move_mode == 1 || m_move_mode == 6 || m_move_mode == 7) {
+			m_cursor->KillAnimType(Widget::ANIM_META_ALPHA);
+			m_cursor->SetMetaAlpha(m_cursor->m_meta_alpha * 0.6f, NULL,
+					       Widget::ANIM_META_ALPHA, 0, 0.0f, NULL, NULL);
+			m_cursor->SetMetaAlpha(0.0f, NULL, Widget::ANIM_META_ALPHA, 0, 0.0f, NULL, NULL);
+		} else {
+			obj->m_draw_style.blend = 1;
+			m_cursor->KillAnim(Widget::ANIM_META_ALPHA);
+			m_cursor->SetMetaAlpha(0.3f, new Timer(600.0f, Timer::FUNC_QUAD_OUT),
+					       Widget::ANIM_META_ALPHA, 0, 0.0f, NULL, NULL);
+			graph::FocusShader::SetColor(math::v4(0.0f, 43.0f / 255.0f, 1.0f, 1.0f));
+		}
+		m_move_mode_old = m_move_mode;
+	}
+
+	/* moving: faint until it rests */
+	if (m_target != NULL && !(m_cursor->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f)) ==
+				  m_cursor->GetPos(1, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f)))) {
+		m_cursor->KillAnimType(Widget::ANIM_META_ALPHA);
+		if (!IsMoveImmediate())
+			m_cursor->SetMetaAlpha(0.3f, NULL, Widget::ANIM_META_ALPHA, 0, 0.0f, NULL, NULL);
+		m_move_mode_old = 0;
+	}
+
+	if (m_target == NULL) {
+		/* half a second without a target: the last one forgotten */
+		uint64_t elapsed = get_time_internal() - m_leave_time;
+
+		if ((float)elapsed / 1000000.0f * 1000.0f > 500.0f) {
+			m_shape = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+			m_previous = NULL;
+			m_target_pos = math::v4(-10000.0f, -10000.0f, -10000.0f, -10000.0f);
+			m_left_saved = false;
+		}
+		m_cursor->SetMetaAlpha(0.0f, NULL, Widget::ANIM_META_ALPHA, 0, 0.0f, NULL, NULL);
+		return;
+	}
+
+	m_leave_time = get_time_internal();
+	cursor = m_cursor;
+
+	Widget *target = m_target;
+
+	if (!cursor->m_input_target || !(cursor->m_show_a_sum >= 0.95f) ||
+	    cursor->m_transition_in || cursor->m_transition_out || cursor->m_destroy_protected) {
+		Follow(false, true);
+		return;
+	}
+	m_left_saved = false;
+
+	/* the cursor sized to the target's focus shape, flashed where it grows past half the
+	   screen, eased from 85% where the size jumps */
+	math::v4 size = *target->GetSize(1);
+	FocusShape *shape = target->m_focus_shape;
+
+	if (shape != NULL && !(shape->m_size == math::v2(0.0f, 0.0f)))
+		size = math::v4(sce::Vectormath::Simd::Aos::Vector4(shape->m_size.getImpl(), 0.0f, 0.0f));
+
+	bool jump = false;
+	bool immediate = false;
+
+	if (!resized && !(size == m_shape)) {
+		immediate = IsMoveImmediate();
+		jump = immediate;
+		if (!immediate) {
+			math::v4 screen = SceneSize(target);
+			float half = screen.extract_x() * screen.extract_y() * 0.5f;
+			float area = size.extract_x() * size.extract_y();
+			float old_area = m_shape.extract_x() * m_shape.extract_y();
+
+			if (half < area && old_area < area) {
+				m_cursor->KillAnimType(Widget::ANIM_META_ALPHA);
+				m_cursor->SetMetaAlpha(m_cursor->m_meta_alpha * 0.6f, NULL,
+						       Widget::ANIM_META_ALPHA, 0, 0.0f, NULL, NULL);
+				m_cursor->SetMetaAlpha(0.0f, new Timer(200.0f, Timer::FUNC_QUAD_OUT),
+						       Widget::ANIM_META_ALPHA, 0, 0.0f, NULL, NULL);
+				jump = true;
+			} else if (half >= area && old_area >= area) {
+				m_move_mode_old = 0;
+			}
+		}
+		if (__builtin_fabsf(m_shape.extract_x() - size.extract_x()) > size.extract_x() * 0.5f ||
+		    __builtin_fabsf(m_shape.extract_y() - size.extract_y()) > size.extract_y() * 0.5f)
+			jump = true;
+
+		math::v4 near = size * 0.85f;
+
+		if (m_shape == math::v4(0.0f, 0.0f, 0.0f, 0.0f)) {
+			m_shape = near;
+			jump = true;
+		} else if (jump) {
+			math::v4 mixed = near + m_shape * 0.15f;
+
+			mixed.set_z(m_shape.extract_z());
+			m_shape = mixed;
+		}
+		m_cursor->SetSize(m_shape, NULL, Widget::ANIM_SIZE, 0, 0.0f, NULL, NULL);
+		if (IsMoveImmediate())
+			m_cursor->SetSize(size, NULL, Widget::ANIM_SIZE, 0, 0.0f, NULL, NULL);
+		else
+			m_cursor->SetSize(size, new Timer(200.0f, Timer::FUNC_EXPONENT), Widget::ANIM_SIZE,
+					  2, 0.0f, NULL, NULL);
+		m_shape = size;
+	}
+	Follow(resized || jump, m_moving_only ? immediate : true);
 }
 
 /* the nearest widget up the tree, this one included, that takes its children's events first,

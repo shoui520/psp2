@@ -6,7 +6,6 @@
 
 #include <skeleton.h>
 
-STUB(_ZN3paf2ui9FocusInfo6UpdateEf)
 STUB(_ZN3paf2ui6Widget13DestroyWidgetEv)
 STUB(_ZN3paf2ui6Widget12UpdateMatrixEv)
 STUB(_ZN3paf2ui6Widget12CalcClipRectEv)

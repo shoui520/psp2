@@ -3689,7 +3689,7 @@ extern "C" void ScePafWidget_13B246E0(Widget *widget, FocusShape *shape)
 	focus->m_rot = shape->m_rot;
 	focus->m_texture = shape->m_texture;
 	focus->m_use_parts = shape->m_use_parts;
-	focus->reserved_b = shape->reserved_b;
+	focus->m_changed = shape->m_changed;
 }
 
 extern "C" float ScePafWidget_44B22ACA(Widget *widget, common::transition::Type type, float delay,

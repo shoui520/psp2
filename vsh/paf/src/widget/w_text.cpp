@@ -36,6 +36,33 @@ paf::ui::TextBoxEditMenuListener *ScePafWidget_1EE9D37E(void);
 }
 
 namespace paf {
+
+/* the focus shapes' clear and push_back, which Sony keeps out of line (widget.h) */
+template<>
+__attribute__((noinline)) void vector<ui::FocusShape>::clear()
+{
+	if (ptr != NULL) {
+		for (size_type i = 0; i < count; ++i)
+			ptr[i].~FocusShape();
+		alloc.deallocate(ptr, limit);
+		ptr = NULL;
+		count = 0;
+		limit = 0;
+	}
+}
+
+template<>
+__attribute__((noinline)) int vector<ui::FocusShape>::push_back(const ui::FocusShape &val)
+{
+	int result;
+
+	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
+		new (&ptr[count]) ui::FocusShape(val);
+		result = ++count;
+	}
+	return result;
+}
+
 namespace ui {
 
 /* the text whose auto scroll a touch started last (name ours) */

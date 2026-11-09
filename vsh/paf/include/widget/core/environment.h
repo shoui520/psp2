@@ -444,6 +444,24 @@ public:
 	/* the cursor moved after the widget it is on, the time since the last frame given (0x81142982;
 	   name ours) */
 	void Update(float time);
+	/* the cursor's part shapes taken again from its target's where one changed (0x8114197c; name
+	   ours) */
+	void UpdateParts();
+	/* the cursor given its texture, drawn nine-patch for the round focus shapes (0x81141a8c; name
+	   ours) */
+	void UpdateTexture();
+	/* the cursor moved onto its target, from where it was or at once, aligned and turned as the
+	   target asks (0x81142062; name ours) */
+	void Follow(bool resize, bool at_once);
+	/* the cursor put at its target's focus offset, moved there where it is far and the shape
+	   is drawn as parts (0x811427d4; name ours) */
+	void MoveCursor(bool animate);
+	/* m_texture as the reference it is held as: Sony's code assigns it and gives it to
+	   SetTexture as an intrusive_ptr, while the constructor sets it as a plain pointer */
+	intrusive_ptr<graph::Surface> &Texture()
+	{
+		return *reinterpret_cast<intrusive_ptr<graph::Surface> *>(&m_texture);
+	}
 	/* the cursor shown, where it may be (0x81143f5c) */
 	void Show();
 	/* the cursor hidden (0x81143fe2) */
@@ -470,7 +488,7 @@ public:
 	bool IsMoveImmediate();
 	/* the cursor's texture of the move mode, the default one for the modes below 2 (0x81141838;
 	   name ours) */
-	static void GetMoveTexture(intrusive_ptr<graph::Surface> &texture, int32_t mode);
+	static intrusive_ptr<graph::Surface> GetMoveTexture(int32_t mode);
 	/* the focus frame textures, SetTexture's no (0x813152b0; name ours) */
 	static intrusive_ptr<graph::Surface> s_textures[9];
 
