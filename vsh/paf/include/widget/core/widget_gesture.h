@@ -11,6 +11,9 @@
 #include <math/rect.h>
 #include <inputdevice/inputlistener.h>
 #include <inputdevice/touchscreen/touchscreen.h>
+#include <graphics/frame_clock.h>
+#include <widget/gesture_drag.h>
+#include <std/vector>
 
 namespace paf {
 namespace ui {
@@ -85,29 +88,22 @@ public:
 	   (0x8114931e TOOL; name ours) */
 	virtual int32_t RefreshActiveTouch(uint32_t bitmap);
 
+	/* the most touches it takes, its touches taken again where that changes (inline in
+	   Sony's; name ours) */
+	void SetTouchCountMax(uint32_t count)
+	{
+		if (m_touch_count_max != count) {
+			m_touch_count_max = count;
+			RefreshActiveTouch(m_attached_bitmap);
+		}
+	}
+
 	/* the touch IDs it holds, a bit each */
 	uint32_t m_touch_bitmap;
 	/* the most touches it takes (8; meaning open) */
 	uint32_t m_touch_count_max;
 	/* what OnUpdateMultiTouch asked of the InputGestureListener last (name ours) */
 	int32_t m_last_result;
-};
-
-/* the listener of gesture 20, two touches pinched (constructor 0x81164820 TOOL, vtable
-   812F960C; names ours, the meaning of its positions open) */
-class PinchGestureListener : public MultiTouchGestureListener {
-public:
-	/* the front touch panel's pixels per millimetre */
-	float m_pixel_per_mm;
-	/* the pinch's two positions, as its state gives them; false and 0 where it has none */
-	bool GetPinchPos(float *x0, float *y0, float *x1, float *y1);
-
-	/* what the pinch does (0 to 3) */
-	int32_t m_pinch_state;
-	float m_pos[8];
-	uint8_t reserved[8];
-	/* the touch IDs it pinches with, a bit each (ScrollViewBase's rear pinch gesture) */
-	uint32_t m_pinch_touches;
 };
 
 /* how a drag gesture starts and ends (vtable 812F6CBC, 0x48 bytes; names ours, the
@@ -164,24 +160,6 @@ public:
 	float m_end_speed[2];
 };
 
-/* the listener a touch is dragged with (constructor 0x81162fdc TOOL, vtable 812F95A4;
-   names ours) */
-class DragGestureListener : public MultiTouchGestureListener {
-public:
-	/* where the drag is, and how far it moved (meaning open) */
-	virtual int32_t GetDragState(float *x, float *y, float *a, float *b, float *c);
-	/* the parameters taken over, while it is not dragging */
-	virtual void SetParam(const DragGestureParam *param);
-	virtual void GetParam(DragGestureParam *param);
-	/* the flick's velocity scaled by the time since it began */
-	virtual bool ScaleFlick(float *x, float *y);
-
-	uint8_t reserved[0x120 - sizeof(MultiTouchGestureListener)];
-	/* the touch IDs it drags with, a bit each (ScrollViewBase's rear mochi gesture; name
-	   ours) */
-	uint32_t m_drag_touches;
-};
-
 /* the flick parameters every drag gesture listener points to, made once (vtable 812F6CC8;
    names ours): m_value[3] scales a mochi gesture's velocity, the others' meaning is open */
 class DragFlickParam {
@@ -208,6 +186,253 @@ public:
 	}
 
 	float m_value[6];
+};
+
+/* the listener a touch is dragged with (constructor 0x81162fdc TOOL, vtable 812F959C, 0xd8
+   bytes; names ours): once the touch moved past its tolerance and fast enough it starts a
+   drag (gesture 7), moves it (8) and ends it (9), or flicks it on (10) once the drag went far
+   and fast enough, the flick moving (11) and ending (12) */
+class DragGestureListener : public MultiTouchGestureListener {
+public:
+	enum State {
+		STATE_NONE = 0,
+		STATE_PRESS = 1,
+		STATE_DRAG = 2,
+		STATE_FLICK = 3,
+		STATE_FLICK_END = 4
+	};
+
+	DragGestureListener(uint32_t port, uint32_t touch_id, void *user_data);
+	virtual ~DragGestureListener();
+
+	virtual int32_t OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre, int32_t diff);
+	/* where the drag started and where it is, and how far into its start distance it is (0
+	   to 1, squared, eased by its time) */
+	virtual int32_t GetDragState(float *start_x, float *start_y, float *x, float *y,
+				     float *ratio);
+	/* the parameters taken over, while it is not dragging */
+	virtual void SetParam(const DragGestureParam *param);
+	virtual void GetParam(DragGestureParam *param);
+	/* the flick's velocity scaled by the time since it began */
+	virtual bool ScaleFlick(float *x, float *y);
+
+	GestureDragRatio *m_drag;
+	DragGestureParam m_param;
+	const DragFlickParam *m_flick;
+	/* the front touch panel's pixels per millimetre */
+	float m_pixel_per_mm;
+	int32_t m_state;
+	/* where the touch was pressed, where it is, and where it was the move before */
+	float m_start_x;
+	float m_start_y;
+	float m_x;
+	float m_y;
+	float m_prev_x;
+	float m_prev_y;
+	/* the touch moved within the angles of the flick parameters, along its axes */
+	bool m_straight;
+	/* when the touch was pressed and the drag began */
+	graph::FrameClock m_press_time;
+	graph::FrameClock m_drag_time;
+	/* where the drag began */
+	float m_drag_x;
+	float m_drag_y;
+	/* the touch moved faster than each of the parameter's end speeds */
+	bool m_fast;
+	bool m_faster;
+	/* when the flick began */
+	graph::FrameClock m_flick_time;
+};
+
+/* the listener several rear touches are dragged with (constructor 0x81165078 TOOL, vtable
+   812F9640, 0x1c8 bytes; names ours) */
+class RearDragGestureListener : public DragGestureListener {
+public:
+	RearDragGestureListener(uint32_t port, uint32_t touch_id, void *user_data);
+	virtual ~RearDragGestureListener();
+
+	virtual int32_t OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre, int32_t diff);
+	virtual int32_t GetDragState(float *start_x, float *start_y, float *x, float *y,
+				     float *ratio);
+	virtual void SetParam(const DragGestureParam *param);
+	virtual void GetParam(DragGestureParam *param);
+	/* the parameters it drags with put back, and the drag forgotten */
+	virtual int32_t Reset();
+	/* the bits of its touches pressed, moved and released */
+	virtual void GetTouchBits(uint32_t *pressed, uint32_t *moved, uint32_t *released);
+	/* the touches of the bitmap that move fast and the same way, and their velocity; 1 where
+	   they do, 2 where one goes against the fastest */
+	virtual int32_t GetFastMove(uint32_t bitmap, float *x, float *y);
+	/* each touch's velocity, and the fastest touch */
+	virtual int32_t GetVelocity(float *x, float *y);
+
+	DragGestureParam m_rear_param;
+	/* the touch IDs it drags with, a bit each (ScrollViewBase's rear mochi gesture) */
+	uint32_t m_drag_touches;
+	/* the touches GetFastMove found, now and the update before */
+	uint32_t m_fast_touches;
+	uint32_t m_fast_touches_pre;
+	float m_fast_x;
+	float m_fast_y;
+	/* how far the fast touches moved together */
+	float m_move_x;
+	float m_move_y;
+	bool m_moved;
+	graph::FrameClock m_press_time_of[8];
+	graph::FrameClock m_fast_time[8];
+	graph::FrameClock m_time;
+};
+
+/* the listener of gesture 20 on the rear touch panel: the touches move fast together (the
+   pinch of ScrollViewBase; constructor 0x81164820 TOOL, vtable 812F960C, 0x6c bytes; names
+   ours) */
+class PinchGestureListener : public MultiTouchGestureListener {
+public:
+	PinchGestureListener(uint32_t port, uint32_t touch_id, void *user_data);
+	virtual ~PinchGestureListener();
+
+	virtual int32_t OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre, int32_t diff);
+
+	/* each touch's velocity, and the fastest touch */
+	int32_t GetVelocity(float *x, float *y);
+	/* the velocity of the touches that move fast with the fastest one, and how far it moves in
+	   a tick; false where they do not */
+	bool GetMove(float *x, float *y, float *speed_x, float *speed_y);
+	/* the pinch's two positions, as its state gives them; false and 0 where it has none */
+	bool GetPinchPos(float *x0, float *y0, float *x1, float *y1);
+
+	/* the front touch panel's pixels per millimetre */
+	float m_pixel_per_mm;
+	/* what the pinch does (0 to 3) */
+	int32_t m_pinch_state;
+	/* the move, this update's and the update before's */
+	float m_pos[8];
+	/* how far it moved since it began */
+	float m_move_x;
+	float m_move_y;
+	/* the touch IDs it pinches with, a bit each (ScrollViewBase's rear pinch gesture) */
+	uint32_t m_pinch_touches;
+};
+
+/* whether the device is shaken, and SceMotion sampling for it (vtable 812F9604; names ours) */
+class MotionParam {
+public:
+	MotionParam() : m_sampling(false), m_enabled(true)
+	{
+	}
+
+	virtual ~MotionParam()
+	{
+	}
+
+	static MotionParam &Get()
+	{
+		static MotionParam s_param;
+
+		return s_param;
+	}
+
+	bool m_sampling;
+	bool m_enabled;
+};
+
+/* the listener that holds a rear touch while the device is not still (constructor 0x81164344
+   TOOL, vtable 812F95D8, 0x68 bytes; names ours) */
+class MotionGestureListener : public MultiTouchGestureListener {
+public:
+	MotionGestureListener(uint32_t port, uint32_t touch_id, void *user_data);
+	virtual ~MotionGestureListener();
+
+	virtual int32_t OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre, int32_t diff);
+
+	graph::FrameClock m_create_time;
+	/* the gyro stayed still long enough */
+	bool m_still;
+	/* the updates the gyro was read in */
+	int32_t m_count;
+	/* SceMotion samples for it */
+	bool m_sampling;
+	int32_t m_result;
+	float m_dir[4];
+	graph::FrameClock m_start_time;
+};
+
+/* how a rear tap is counted (vtable 812F968C; names ours) */
+class RearTapParam : public inputdevice::GestureParam {
+public:
+	RearTapParam()
+		: m_move_tolerance(4.0f), m_hold_time(250), m_tap_distance(4.0f), m_interval(200),
+		  m_margin(5.0f)
+	{
+	}
+
+	virtual void AdjustParam()
+	{
+	}
+
+	/* how far, in millimetres, a touch may move and how long it may be held, in
+	   milliseconds, to count as a tap */
+	float m_move_tolerance;
+	uint32_t m_hold_time;
+	/* how far apart taps may be to count together, and how long between them */
+	float m_tap_distance;
+	uint32_t m_interval;
+	/* the margin of the panel taps are not counted in */
+	float m_margin;
+};
+
+/* the taps counted at one place (0x18 bytes; names ours) */
+class RearTap {
+public:
+	RearTap(const math::v2 &pos)
+		: m_pos(pos), m_time(get_time_internal()), m_pressed(false), m_count(1)
+	{
+	}
+
+	math::v2 m_pos;
+	/* when it was last released */
+	SceUInt64 m_time;
+	/* a touch is down at it again */
+	bool m_pressed;
+	uint32_t m_count;
+};
+
+/* the listener that counts rear taps: one tap sends gesture 0, more 2 (constructor
+   0x811667c0 TOOL, vtable 812F96A0, 0xf8 bytes; names ours) */
+class RearTapGestureListener : public TouchGestureListener {
+public:
+	RearTapGestureListener(uint32_t port, uint32_t touch_id, void *user_data);
+	virtual ~RearTapGestureListener();
+
+	virtual void SetGestureParam(const inputdevice::GestureParam *param)
+	{
+		if (param != NULL)
+			SetParam((const RearTapParam *)param);
+	}
+
+	virtual int32_t OnUpdateTouch(uint32_t id);
+
+	void SetParam(const RearTapParam *param);
+	/* the taps of the touches pressed and released */
+	int32_t UpdateTaps(uint32_t touches, uint32_t touches_pre);
+
+	/* the rear touch panel's pixels per millimetre */
+	float m_pixel_per_mm;
+	/* the touches down, and those that may still be taps */
+	uint32_t m_touches;
+	uint32_t m_tap_touches;
+	graph::FrameClock m_press_time[8];
+	/* where each touch was pressed */
+	float m_press_pos[8][2];
+	vector<RearTap *> m_taps;
+	/* the part of the panel taps are counted in, in layout units */
+	float m_left;
+	float m_right;
+	float m_bottom;
+	float m_top;
+	/* the taps it counts (1: a tap is sent at once) */
+	uint32_t m_tap_count;
+	RearTapParam m_param;
 };
 
 extern "C" {

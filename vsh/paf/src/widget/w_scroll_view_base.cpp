@@ -3774,7 +3774,7 @@ bool ScrollViewBase::RearMochiBegin(Event *e)
 		s_touch_scroll_supplier.StopFlick();
 	}
 
-	DragGestureListener *drag = (DragGestureListener *)listener.get();
+	RearDragGestureListener *drag = (RearDragGestureListener *)listener.get();
 
 	m_rear_touches = drag->m_drag_touches;
 	for (uint32_t i = 0; i < 8; i++)
@@ -3803,7 +3803,7 @@ bool ScrollViewBase::RearMochiMove(Event *e)
 		return false;
 
 	common::SharedPtr<inputdevice::GestureListener> listener = ScePafWidget_0F9F14D4(this, 50);
-	DragGestureListener *drag = (DragGestureListener *)listener.get();
+	RearDragGestureListener *drag = (RearDragGestureListener *)listener.get();
 
 	if (drag == NULL)
 		return false;

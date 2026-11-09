@@ -310,6 +310,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/graphics/state.c
 	src/widget/core/environment.cpp
 	src/widget/core/widget.cpp
+	src/widget/core/widget_gesture_listener.cpp
 	src/widget/core/animlistener.cpp
 	src/widget/core/event.cpp
 	src/widget/core/uiinputlistener.cpp
