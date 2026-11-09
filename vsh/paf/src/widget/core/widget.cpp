@@ -1579,6 +1579,52 @@ static inline __attribute__((always_inline)) math::v4 QuatToEuler(const math::qu
 	return math::v4(angles, 0.0f);
 }
 
+int32_t Widget::SetSize_core(const math::v4 &size, uint32_t notify_layout, bool force)
+{
+	math::v4 value = size;
+
+	if (m_adjust_x != 0 || m_adjust_y != 0 || m_adjust_z != 0) {
+		float width, height;
+
+		if (m_adjust_x == 1)
+			value.set_x(m_size.extract_x());
+		if (m_adjust_y == 1)
+			value.set_y(m_size.extract_y());
+		if (m_adjust_z == 1)
+			value.set_z(m_size.extract_z());
+		if (m_scene != NULL) {
+			math::v4 *scene_size = m_scene->GetSize(0);
+
+			width = scene_size->extract_x();
+			height = scene_size->extract_y();
+		} else {
+			math::rect screen(Screen::s_root_screen->sp);
+
+			width = screen.width();
+			height = screen.height();
+		}
+		if (this == m_scene) {
+			SceneResolution *resolution =
+				ScePafWidget_CDC90BA2(m_scene->m_env_param, m_scene->m_resolution_id);
+
+			if (resolution != NULL && m_scene->IsResolutionActMorph(m_scene->m_resolution_id)) {
+				width = (float)resolution->m_width;
+				height = (float)resolution->m_height;
+			} else {
+				math::v2 vp_size = m_scene->m_screen->vp.size();
+
+				width = vp_size.extract_x();
+				height = vp_size.extract_y();
+			}
+		}
+		if (m_adjust_x == 4)
+			value.set_x(width);
+		if (m_adjust_y == 4)
+			value.set_y(height);
+	}
+	return SetSize_core_force(value, notify_layout, force);
+}
+
 int32_t Widget::SetRot(const math::v4 &rot, int32_t option, Timer *t, int32_t id, int32_t opt,
 		       float delay, AnimCB cb_fin, void *usrdata)
 {
