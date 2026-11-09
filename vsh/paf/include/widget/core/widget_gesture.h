@@ -439,7 +439,7 @@ extern "C" {
 /* the widget's gesture listener of the type for the touch, made with the rect where it has
    none (no name found) */
 common::SharedPtr<inputdevice::GestureListener> ScePafWidget_712AD1C7(Widget *widget,
-	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect &rect);
+	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect);
 /* the widget's gesture listeners of the types 128, 16 and 2 for the touch, made where it has
    none, within the rect where one is given (no names found) */
 common::SharedPtr<inputdevice::GestureListener> ScePafWidget_DE7EC3CF(Widget *widget,

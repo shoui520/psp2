@@ -2607,7 +2607,9 @@ bool TouchScrollSupplier::TakeTouch(ScrollViewBase *view, uint32_t touch_id)
 	uint32_t dir = GetMovableDir(m_touch_views, false);
 
 	if (dir != ScrollViewBase::MoveDir_None && IsAnalogOnly(m_touch_views) && !on_bar) {
-		ScePafWidget_712AD1C7(first, 0, touch_id, 64, first->CalcHitRect());
+		math::rect hit = first->CalcHitRect();
+
+		ScePafWidget_712AD1C7(first, 0, touch_id, 64, &hit);
 
 		inputdevice::InputGestureListener *input =
 			static_cast<inputdevice::InputGestureListener *>(first->m_env->GetTouchGestureListener(0).get());
@@ -3676,7 +3678,7 @@ void TouchScrollSupplier::TakeRearTouch(ScrollViewBase *view, uint32_t touch_id)
 		ScePafWidget_F4625FAD(first, 1, touch_id, 16, NULL);
 		ScePafWidget_5E7757AA(first, 1, touch_id, 2, NULL);
 		if (GetMovableDir(views, true) != ScrollViewBase::MoveDir_None) {
-			ScePafWidget_712AD1C7(first, 1, touch_id, 64, hit);
+			ScePafWidget_712AD1C7(first, 1, touch_id, 64, &hit);
 
 			inputdevice::InputGestureListener *input =
 				static_cast<inputdevice::InputGestureListener *>(first->m_env->GetTouchGestureListener(1).get());

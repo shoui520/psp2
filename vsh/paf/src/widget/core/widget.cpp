@@ -5757,6 +5757,261 @@ Widget::apply_pad_gesture_longpress(uint32_t port_id, uint32_t type)
 	return listener;
 }
 
+/* the gesture listener of the widget's touch port (port 0 the front panel, 1 the rear), NULL for
+   another port */
+static inline inputdevice::InputGestureListener *TouchGestureInput(Widget *widget, uint32_t port)
+{
+	return static_cast<inputdevice::InputGestureListener *>(
+		widget->m_env->GetTouchGestureListener(port).get());
+}
+
+/* the listener attached to the touch with the priority by the port's gesture listener; false
+   where the port has none or it refuses */
+static inline bool AttachTouchGesture(Widget *widget, uint32_t port, uint32_t touch_id,
+				      uint32_t priority,
+				      common::SharedPtr<inputdevice::GestureListener> listener)
+{
+	bool failed = false;
+	inputdevice::InputGestureListener *input = TouchGestureInput(widget, port);
+
+	if (input == NULL || input->AttachGestureListener(touch_id, priority, listener) < 0)
+		failed = true;
+	return !failed;
+}
+
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_DE7EC3CF(Widget *widget,
+	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect)
+{
+	if (widget->m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+
+	inputdevice::InputGestureListener *input = TouchGestureInput(widget, port);
+	common::SharedPtr<inputdevice::GestureListener> listener =
+		input != NULL ? input->GetGestureListener(touch_id, 60, widget)
+			      : common::SharedPtr<inputdevice::GestureListener>();
+
+	if (listener.get() == NULL && port == 1) {
+		for (uint32_t i = 0; i < 8; i++) {
+			input = TouchGestureInput(widget, port);
+
+			common::SharedPtr<inputdevice::GestureListener> other =
+				input != NULL ? input->GetGestureListener(i, 60, widget)
+					      : common::SharedPtr<inputdevice::GestureListener>();
+
+			if (other.get() != NULL && AttachTouchGesture(widget, port, touch_id, 60, other))
+				return other;
+		}
+	}
+	if (listener.get() == NULL) {
+		if (port == 1 && widget->m_env->m_motion_noise_filter)
+			listener = common::SharedPtr<inputdevice::GestureListener>(
+				new MotionGestureListener(port, touch_id, widget));
+		if (listener.get() != NULL) {
+			if (!AttachTouchGesture(widget, port, touch_id, 60, listener))
+				listener = common::SharedPtr<inputdevice::GestureListener>();
+		}
+	}
+	return listener;
+}
+
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_712AD1C7(Widget *widget,
+	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect)
+{
+	if (widget->m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+
+	inputdevice::InputGestureListener *input = TouchGestureInput(widget, port);
+	common::SharedPtr<inputdevice::GestureListener> listener =
+		input != NULL ? input->GetGestureListener(touch_id, 50, widget)
+			      : common::SharedPtr<inputdevice::GestureListener>();
+
+	if (listener.get() == NULL && port == 1) {
+		for (uint32_t i = 0; i < 8; i++) {
+			input = TouchGestureInput(widget, port);
+
+			common::SharedPtr<inputdevice::GestureListener> other =
+				input != NULL ? input->GetGestureListener(i, 50, widget)
+					      : common::SharedPtr<inputdevice::GestureListener>();
+
+			if (other.get() != NULL && AttachTouchGesture(widget, port, touch_id, 50, other))
+				return other;
+		}
+	}
+	if (listener.get() == NULL) {
+		if (port != 0)
+			listener = common::SharedPtr<inputdevice::GestureListener>(
+				new RearDragGestureListener(port, touch_id, widget));
+		else
+			listener = common::SharedPtr<inputdevice::GestureListener>(
+				new DragGestureListener(port, touch_id, widget));
+
+		if (!AttachTouchGesture(widget, port, touch_id, 50, listener))
+			listener = common::SharedPtr<inputdevice::GestureListener>();
+	}
+	if (listener.get() != NULL) {
+		DragGestureParam param;
+
+		if (rect != NULL) {
+			param.m_rect = *rect;
+		} else {
+			Camera *camera = widget->m_scene->m_camera;
+
+			ScePafWidget_72F479CA(camera);
+			param.m_rect.set(0.0f, 0.0f, camera->m_screen_width, camera->m_screen_height);
+		}
+		param.m_dir = 2;
+		static_cast<DragGestureListener *>(listener.get())->SetParam(&param);
+	}
+	return listener;
+}
+
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_1975BA26(Widget *widget,
+	uint32_t port, uint32_t touch_id)
+{
+	if (widget->m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+
+	inputdevice::InputGestureListener *input = TouchGestureInput(widget, port);
+	common::SharedPtr<inputdevice::GestureListener> listener =
+		input != NULL ? input->GetGestureListener(touch_id, 25, widget)
+			      : common::SharedPtr<inputdevice::GestureListener>();
+
+	if (listener.get() != NULL)
+		return listener;
+	for (uint32_t i = 0; i < 8; i++) {
+		input = TouchGestureInput(widget, port);
+		listener = input != NULL ? input->GetGestureListener(i, 25, widget)
+					 : common::SharedPtr<inputdevice::GestureListener>();
+		if (listener.get() != NULL && listener->m_user_data == widget)
+			break;
+	}
+	if (listener.get() == NULL)
+		listener = common::SharedPtr<inputdevice::GestureListener>(
+			new TouchLongPressListener(port, touch_id, widget));
+	if (listener.get() != NULL) {
+		if (!AttachTouchGesture(widget, port, touch_id, 25, listener))
+			listener = common::SharedPtr<inputdevice::GestureListener>();
+	}
+	return listener;
+}
+
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_F4625FAD(Widget *widget,
+	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect)
+{
+	if (widget->m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+
+	inputdevice::InputGestureListener *input = TouchGestureInput(widget, port);
+	common::SharedPtr<inputdevice::GestureListener> listener =
+		input != NULL ? input->GetGestureListener(touch_id, 20, widget)
+			      : common::SharedPtr<inputdevice::GestureListener>();
+
+	if (listener.get() != NULL)
+		return listener;
+	for (uint32_t i = 0; i < 8; i++) {
+		input = TouchGestureInput(widget, port);
+		listener = input != NULL ? input->GetGestureListener(i, 20, widget)
+					 : common::SharedPtr<inputdevice::GestureListener>();
+		if (listener.get() != NULL && listener->m_user_data == widget)
+			break;
+	}
+	if (listener.get() == NULL) {
+		if (port != 0)
+			listener = common::SharedPtr<inputdevice::GestureListener>(
+				new PinchGestureListener(port, touch_id, widget));
+		else
+			listener = common::SharedPtr<inputdevice::GestureListener>(
+				new TouchTapListener(port, touch_id, widget));
+		/* no tap or hold asked for: any move ends the tap */
+		if (listener.get() != NULL && (type & 1) == 0 && (type & 2) == 0 && (type & 4) == 0 &&
+		    (type & 8) == 0)
+			static_cast<TouchTapListener *>(listener.get())->m_param.m_move_tolerance = 0;
+	}
+	if (listener.get() != NULL) {
+		if (!AttachTouchGesture(widget, port, touch_id, 20, listener))
+			listener = common::SharedPtr<inputdevice::GestureListener>();
+	}
+	return listener;
+}
+
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_4607555F(Widget *widget,
+	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect)
+{
+	if (widget->m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+
+	inputdevice::InputGestureListener *input = TouchGestureInput(widget, port);
+	common::SharedPtr<inputdevice::GestureListener> listener =
+		input != NULL ? input->GetGestureListener(touch_id, 15, widget)
+			      : common::SharedPtr<inputdevice::GestureListener>();
+
+	if (listener.get() == NULL) {
+		listener = common::SharedPtr<inputdevice::GestureListener>(
+			new HoldGestureListener(port, touch_id, widget));
+
+		if (!AttachTouchGesture(widget, port, touch_id, 15, listener))
+			listener = common::SharedPtr<inputdevice::GestureListener>();
+	}
+	if (listener.get() != NULL) {
+		HoldGestureListener *hold = static_cast<HoldGestureListener *>(listener.get());
+
+		if (rect != NULL)
+			hold->m_param.m_rect = *rect;
+		if ((type & 8) != 0) {
+			hold->m_short_hold = true;
+			hold->m_param.m_hold_time = 300;
+		} else if ((type & 4) != 0) {
+			hold->m_short_hold = false;
+			hold->m_param.m_hold_time = 500;
+		}
+	}
+	return listener;
+}
+
+common::SharedPtr<inputdevice::GestureListener> ScePafWidget_5E7757AA(Widget *widget,
+	uint32_t port, uint32_t touch_id, uint32_t type, const math::rect *rect)
+{
+	if (widget->m_env == NULL)
+		return common::SharedPtr<inputdevice::GestureListener>();
+
+	inputdevice::InputGestureListener *input = TouchGestureInput(widget, port);
+	common::SharedPtr<inputdevice::GestureListener> listener =
+		input != NULL ? input->GetGestureListener(touch_id, 10, widget)
+			      : common::SharedPtr<inputdevice::GestureListener>();
+
+	if (listener.get() == NULL) {
+		if (port != 0)
+			listener = common::SharedPtr<inputdevice::GestureListener>(
+				new RearTapGestureListener(port, touch_id, widget));
+		else
+			listener = common::SharedPtr<inputdevice::GestureListener>(
+				new MoveGestureListener(port, touch_id, widget));
+
+		if (!AttachTouchGesture(widget, port, touch_id, 10, listener))
+			listener = common::SharedPtr<inputdevice::GestureListener>();
+	}
+	if (listener.get() != NULL) {
+		if (port == 0) {
+			MoveGestureListener *move = static_cast<MoveGestureListener *>(listener.get());
+
+			if (rect != NULL)
+				move->m_param.m_rect = *rect;
+			if ((type & 2) != 0)
+				move->m_tap_target = 2;
+			else if ((type & 1) != 0)
+				move->m_tap_target = 1;
+		} else if (port == 1) {
+			RearTapGestureListener *tap = static_cast<RearTapGestureListener *>(listener.get());
+
+			if ((type & 2) != 0)
+				tap->m_tap_count = 2;
+			else if ((type & 1) != 0)
+				tap->m_tap_count = 1;
+		}
+	}
+	return listener;
+}
+
 void Widget::apply_touch_gesture_mask(uint32_t port_id, uint32_t touch_id, uint32_t type)
 {
 	math::rect hit = CalcHitRect();
@@ -5773,7 +6028,7 @@ void Widget::apply_touch_gesture_mask(uint32_t port_id, uint32_t touch_id, uint3
 	if ((type & 0x20) != 0)
 		ScePafWidget_1975BA26(this, port_id, touch_id);
 	if ((type & 0x40) != 0)
-		ScePafWidget_712AD1C7(this, port_id, touch_id, type, *rect);
+		ScePafWidget_712AD1C7(this, port_id, touch_id, type, rect);
 	if ((type & 0x80) != 0)
 		ScePafWidget_DE7EC3CF(this, port_id, touch_id, type, rect);
 }
