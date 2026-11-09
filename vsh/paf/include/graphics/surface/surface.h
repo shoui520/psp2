@@ -22,6 +22,7 @@ namespace paf {
 class File;
 class Plugin;
 
+
 namespace memory {
 class HeapAllocator;
 }
@@ -536,6 +537,13 @@ public:
 	int16_t GetNumPage() const
 	{
 		return m_num_page;
+	}
+
+	/* the page drawn into taken as cleared, as the environment does where it draws nothing (name
+	   ours) */
+	void MarkCleared()
+	{
+		m_cleared = true;
 	}
 
 	/* The pages' memory from the pool; NULL when the pool had none. */

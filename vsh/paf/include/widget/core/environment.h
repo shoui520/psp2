@@ -876,6 +876,9 @@ void ScePafWidget_9D4A5A0E(paf::ui::Environment *env);
 void ScePafWidget_DC1B19DB(paf::ui::Environment *env);
 /* ends the frame on the root surface */
 void ScePafWidget_851911CB(paf::ui::Environment *env);
+/* the screen's targets let go of, the scene data of the root screen's surface set, and the frame's
+   draw call count begun again (no name found) */
+void ScePafWidget_BA5195CA(paf::ui::Environment *env);
 /* shows the frame drawn; below 0 on failure */
 int32_t ScePafWidget_F67517A0(paf::ui::Environment *env);
 void ScePafWidget_8E61FE0C(paf::ui::Environment *env);

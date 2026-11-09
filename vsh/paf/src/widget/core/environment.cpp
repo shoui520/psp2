@@ -10,6 +10,9 @@
 #include <graphics/drawobj/draw_env.h>
 #include <graphics/surface/surface_display.h>
 #include <graphics/gutil.h>
+#include <graphics/arl/gxm/gxm_arl_frontend.h>
+#include <graphics/effects/wave_switch.h>
+#include <graphics/effects/custom_trail.h>
 #include <system/system.h>
 #include <timer/timer.h>
 #include <widget/core/widget.h>
@@ -1293,6 +1296,97 @@ void ScePafWidget_9D4A5A0E(Environment *env)
 	env->m_draw_frame = state == 1;
 	if (suspended && !env->m_draw_when_suspended)
 		env->m_draw_frame = false;
+}
+
+void ScePafWidget_BA5195CA(Environment *env)
+{
+	vector<Screen *> &targets = Screen::s_target_list;
+
+	if (targets.ptr != NULL) {
+		operator delete(targets.ptr);
+		targets.ptr = NULL;
+		targets.count = 0;
+		targets.limit = 0;
+	}
+
+	Screen *root = Screen::s_root_screen;
+
+	if (root != NULL) {
+		graph::arl::ArlInstance *gl = graph::arl::Gl();
+
+		intrusive_ptr<graph::Surface> scene_surface = root->m_surface;
+
+		gl->SetSceneData(scene_surface);
+
+		graph::DisplaySurface *display = Screen::s_root_surface;
+
+		if (display->m_frame_buffer_mode <= 1) {
+			if (ScePafGraphics_DD2002B4()) {
+				if (env->m_draw_frame)
+					display->MarkCleared();
+			} else {
+				Widget *scene = env->m_display_area_scene;
+				bool scaled = scene != NULL;
+
+				if (scene != NULL && env->m_display_area_applied &&
+				    env->m_display_area_scale != 1.0f &&
+				    static_cast<Scene *>(scene)->IsDisplayAreaScaled())
+					scaled = false;
+				if (env->m_env_option && !scaled) {
+					intrusive_ptr<graph::Surface> surface = root->m_surface;
+					bool dirty = surface->IsDirty();
+
+					if (dirty) {
+						if (root->OnTarget() == 0)
+							root->OnClear();
+						root->OnFinish();
+					} else {
+						intrusive_ptr<graph::Surface> target = root->m_surface;
+
+						target->MarkCleared();
+					}
+				} else {
+					intrusive_ptr<graph::Surface> target = root->m_surface;
+
+					target->MarkCleared();
+				}
+			}
+		}
+	}
+	if (env->m_draw_frame)
+		ScePafGraphics_BE4C5403();
+
+	graph::DrawEnv *draw_env = graph::DrawCalls().get();
+
+	draw_env->m_counted = false;
+	draw_env->m_count++;
+	env->m_draw_frame = false;
+}
+
+void ScePafWidget_851911CB(Environment *env)
+{
+	graph::arl::ArlInstance *gl = graph::arl::Gl();
+
+	ScePafGraphics_E7B32741(gl);
+	if (env->m_draw_frame) {
+		ScePafGraphics_47F42806();
+		ScePafGraphics_3AFA1144();
+		ScePafGraphics_9409C495();
+	}
+
+	graph::DisplaySurface *surface = Screen::s_root_surface;
+	int32_t state = 0;
+
+	if (surface != NULL) {
+		surface->EndFrame();
+		surface->Swap();
+		state = surface->m_frame_state;
+	}
+	env->m_frame_state = state;
+	env->ApplyResize();
+	if (env->m_finish_after_draw)
+		ScePafGraphics_E4B3B1D2(graph::arl::Gl());
+	ScePafWidget_BA5195CA(env);
 }
 
 static inline inputdevice::InputGestureListener *GestureListenerOf(Environment *env, uint32_t port)
