@@ -389,6 +389,12 @@ public:
 	/* the ordered lists made again where the layer weights changed, or whatever (0x8113bdba; name
 	   ours) */
 	int32_t RefreshOrderLists(bool force);
+	/* the touches of the front panel held by widgets behind the widget let go of (0x8113d64e;
+	   name ours) */
+	int32_t ReleaseTouchesBehind(Widget *widget);
+	/* the widget's key listeners taken out of the environment's lists (0x8114093e; name ours,
+	   meaning open) */
+	int32_t RemoveKeyListeners(Widget *widget);
 	int32_t RegisterTouchDeviceRegion(Widget *widget);
 	int32_t RegisterTouchDeviceRegion(uint32_t index, Widget *widget);
 	int32_t RemoveTouchDeviceRegion(Widget *widget);
@@ -444,6 +450,9 @@ public:
 	void ApplyDisplayAreaSettings();
 	/* the display area scale read again, once it has been applied (name ours) */
 	void UpdateDisplayAreaSettings();
+	/* the display area settings read while the surface uses them, the screen size of the scenes
+	   made again where the area changed (0x8113c616; name ours) */
+	void UpdateDisplayArea();
 	/* nothing is drawn now (0x8113dcca; name ours) */
 	bool IsDrawSkipped();
 	/* the widget is not below the modal widgets in depth (0x8113fa84; name ours) */

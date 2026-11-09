@@ -1061,6 +1061,29 @@ extern "C" void ScePafWidget_CB95F8F2(Widget *widget, int32_t target)
 	}
 }
 
+extern "C" int32_t ScePafWidget_2B1A1493(Widget *widget, int32_t index)
+{
+	if (widget->m_env == NULL)
+		return -1;
+	if (((1 << index) & widget->m_sound_mask) == 0)
+		return -1;
+
+	WidgetSoundParam::Sound *sound = widget->GetSound(index);
+
+	if (sound == NULL)
+		return -1;
+	if (sound->m_buffer1 == NULL)
+		return -1;
+
+	Environment *env = widget->m_env;
+
+	if (env->m_sound_callback == NULL)
+		return -1;
+	env->m_sound_callback(sound->m_buffer1, sound->m_size1, sound->m_buffer2, sound->m_size2,
+			      sound->m_samplerate, sound->reserved2, false, env->m_sound_callback_data);
+	return 0;
+}
+
 extern "C" int32_t ScePafWidget_54DFB062(Widget *widget, int32_t port)
 {
 	int32_t count = 0;
@@ -1580,6 +1603,72 @@ next:
 		if (it->first->m_env != NULL)
 			it->first->m_env->m_layer_weight_changed = true;
 	}
+}
+
+void Widget::detach_environment()
+{
+	Environment *env = m_env;
+
+	if (env == NULL)
+		return;
+	if (m_key_listed > 0)
+		env->RemoveKeyListeners(this);
+	if (m_pad_dir_port >= 0)
+		ReleasePadCaptureDir(255, true);
+	if (m_bound_keycode) {
+		if (m_pad_button_port >= 0)
+			ReleasePadCaptureButton(255, true);
+		if (m_keycode != 0)
+			ScePafWidget_164BFFA5(this, m_keycode);
+	}
+	if (m_modal_mode != 2) {
+		m_env->m_modal_widgets.Remove(this);
+		m_modal_mode = 2;
+	}
+	if (m_ordered)
+		ScePafWidget_0253DC9C(this, false);
+	ScePafWidget_931AD41E(this, false);
+	m_env->ClearHitInfo(this);
+	if (m_env->m_focus_history_on)
+		m_env->m_focus_cursor.RemoveFocusHistory(this);
+
+	Widget *parent = m_parent;
+
+	if (parent != NULL) {
+		Widget *root = FindFocusRoot(parent);
+
+		if (root != NULL) {
+			Widget *state = NULL;
+			Widget *node = root;
+
+			for (;;) {
+				FocusRoot *fr = node->m_focus_root;
+
+				if (fr != NULL) {
+					state = (Widget *)fr->m_state;
+					break;
+				}
+				if (static_cast<Widget *>(root->m_scene) == node)
+					break;
+				node = node->m_parent;
+				if (node == NULL)
+					break;
+			}
+			if (state == this)
+				root->SetFocusRootState(0);
+		}
+	}
+	if (m_focused)
+		ReleaseFocus();
+
+	Widget *above = FindFocusRoot(this);
+
+	if (above != NULL && above->m_focus_root->m_init_focus == this)
+		ScePafWidget_EC6175D6(this, false);
+	if (m_focus_root != NULL)
+		ScePafWidget_929C3278(this);
+	if (m_touch_region_registered)
+		m_env->RemoveTouchDeviceRegion(this);
 }
 
 void Widget::SetCursorOn(bool on, Widget *from, Widget *to)
@@ -4836,7 +4925,7 @@ Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
 	m_modal_mode = 2;
 	m_modal_option = 0;
 	m_show_hold = 0;
-	reserved3x1 = 0;
+	m_key_listed = 0;
 	m_clip_mode = 0;
 	reserved3x3 = 0;
 	m_draw_target = 0;

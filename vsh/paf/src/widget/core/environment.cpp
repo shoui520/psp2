@@ -74,6 +74,61 @@ void Environment::UpdateDisplayAreaSettings()
 	ReadDisplayAreaSettings(this);
 }
 
+int32_t Environment::ReleaseTouchesBehind(Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+	ScePafWidget_ABF05727(this, 1, false, NULL);
+
+	OrderEntry limit;
+	OrderEntry entry;
+
+	limit.Init(widget, 0);
+	for (int32_t i = 0; i < 8; i++) {
+		Widget *held = m_touch_capture[0][i].m_widget;
+
+		if (held != NULL) {
+			entry.Init(held, 0);
+			if (limit < entry)
+				ScePafWidget_931AD41E(held, true);
+		}
+	}
+	return 0;
+}
+
+void Environment::UpdateDisplayArea()
+{
+	graph::DisplaySurface *surface = Screen::s_root_surface;
+
+	if (surface != NULL && surface->m_frame_buffer_mode == gutil::FrameBuffer_Given) {
+		if (surface->UsesDisplayArea()) {
+			if (!m_display_area_applied) {
+				m_display_area_applied = true;
+				ReadDisplayAreaSettings(this);
+			}
+		} else {
+			float scale = m_display_area_scale;
+
+			m_display_area_applied = false;
+			if (scale != 1.0f) {
+				m_display_area_scale = 1.0f;
+				Screen::s_root_surface->SetFullDisplay();
+				m_display_area_changed = true;
+			}
+		}
+	}
+	if (m_display_area_changed) {
+		for (list<Widget *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end();
+		     ++it) {
+			Scene *scene = static_cast<Scene *>(*it);
+
+			if (scene != m_root_widget)
+				scene->UpdateScreenSize(NULL);
+		}
+		m_display_area_changed = false;
+	}
+}
+
 void Environment::ApplyDisplayAreaSettings()
 {
 	if (!m_display_area_applied) {

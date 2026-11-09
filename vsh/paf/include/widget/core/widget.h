@@ -1576,7 +1576,9 @@ public:
 	/* the show timers and holds it has waiting, counted (ScePafWidget AC0C81D5 adds one, A96A0B4A
 	   adds or takes off; name ours) */
 	uint32_t m_show_hold : 4;
-	uint32_t reserved3x1 : 4;
+	/* above 0: the environment holds key listeners for it (detach_environment takes them out;
+	   name ours, meaning open) */
+	uint32_t m_key_listed : 4;
 	/* how the camera clips it and its children (1 the clip stack; 2 and 3 the scissor
 	   snapped inward and to the nearest pixel, else outward), and where it is drawn (1
 	   into a surface of its scene's list) (Camera's draw walk; names ours) */
@@ -1842,6 +1844,11 @@ int32_t ScePafWidget_54DFB062(paf::ui::Widget *widget, int32_t port);
 /* where it is drawn set (1: into a surface of its scene's list), its draw objects told (no name
    found) */
 void ScePafWidget_CB95F8F2(paf::ui::Widget *widget, int32_t target);
+/* the keys of the mask taken off its key binding (no name found) */
+int32_t ScePafWidget_164BFFA5(paf::ui::Widget *widget, uint32_t mask);
+/* the sound of the index played through the environment's sound callback: -1 where it has none
+   or no callback (the widget's sound mask; no name found) */
+int32_t ScePafWidget_2B1A1493(paf::ui::Widget *widget, int32_t index);
 int32_t ScePafWidget_00AA6519(paf::ui::Widget *widget);
 /* the widget the focuser's direction widgets name for the direction (0 up, 1 down, 2 left,
    3 right; up for any other), NULL where it has no widget or none (no name found) */
