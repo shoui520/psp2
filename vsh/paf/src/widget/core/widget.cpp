@@ -59,7 +59,6 @@ _Tree<_Tmap_traits<int32_t, ui::EventListenerList *, less<int32_t> > >::find(con
 
 namespace ui {
 
-/* NotifyLayoutDirty and NotifyAnimatorDirty, as Sony's callers have them inline (names ours) */
 /* the cross product of the first three components, the first vector's w kept (Sony's copy is
    out of line; name ours) */
 static __attribute__((noinline)) math::v4 CrossKeepW(const math::v4 &a, const math::v4 &b)
@@ -84,6 +83,7 @@ static inline math::quaternion NormalizeQuat(const math::quaternion &q)
 	return math::quaternion(sce::Vectormath::Simd::Aos::Quat(v.getImpl()));
 }
 
+/* NotifyLayoutDirty and NotifyAnimatorDirty, as Sony's callers have them inline (names ours) */
 static inline void LayoutDirty(Widget *w, uint32_t kind)
 {
 	if (((uint8_t)kind & w->m_layout_notify_mask) != 0 &&
@@ -1577,6 +1577,63 @@ static inline __attribute__((always_inline)) math::v4 QuatToEuler(const math::qu
 		angles = quat.toMatrix(0.0001f).extractEulerAnglesYXZ();
 	}
 	return math::v4(angles, 0.0f);
+}
+
+int32_t Widget::SetSize_core_force(const math::v4 &size, uint32_t notify_layout, bool store)
+{
+	math::v4 value = size;
+
+	value.set_w(0.0f);
+	if (m_size == value)
+		return 0;
+
+	math::v4 pos;
+
+	if ((m_align_x | m_align_y | m_align_z) != 0 ||
+	    !(m_align_offs == math::v4(0.0f, 0.0f, 0.0f, 0.0f)))
+		pos = GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	m_size = value;
+	if ((m_align_x | m_align_y | m_align_z) != 0 ||
+	    !(m_align_offs == math::v4(0.0f, 0.0f, 0.0f, 0.0f))) {
+		AnimQueue *anim = FindAnim(ANIM_ALIGN);
+
+		if (anim != NULL) {
+			math::v4 *target = AnimEndTarget(anim, false);
+
+			*target = calc_align_offset(m_size, *target, m_align_x, m_align_y, m_align_z);
+		} else {
+			m_align_offs = calc_align_offset(m_size, m_align_offs, m_align_x, m_align_y,
+							 m_align_z);
+			SetPos_core(pos, 1, false);
+		}
+	}
+	if ((m_origin_x | m_origin_y | m_origin_z) != 0 ||
+	    !(m_origin_offs == math::v4(0.0f, 0.0f, 0.0f, 0.0f))) {
+		AnimQueue *anim = FindAnim(ANIM_ORIGIN);
+
+		if (anim != NULL) {
+			math::v4 *target = AnimEndTarget(anim, false);
+
+			*target = calc_origin_offset(m_size, *target, m_origin_x, m_origin_y, m_origin_z);
+		} else {
+			m_origin_offs = calc_origin_offset(m_size, m_origin_offs, m_origin_x,
+							   m_origin_y, m_origin_z);
+		}
+	}
+	SetUpdateParam(2);
+	LayoutDirty(this, notify_layout);
+	AnimatorDirty(this, 0xFF02);
+	UpdateSize();
+	if (store && m_size_array != NULL) {
+		ResolutionData *entry = get_resolution_data(m_size_array, m_size_num, m_resolution_id);
+
+		if (entry != NULL) {
+			entry->m_value[0] = m_size.extract_x();
+			entry->m_value[1] = m_size.extract_y();
+			entry->m_value[2] = m_size.extract_z();
+		}
+	}
+	return 0;
 }
 
 int32_t Widget::SetSize_core(const math::v4 &size, uint32_t notify_layout, bool force)
