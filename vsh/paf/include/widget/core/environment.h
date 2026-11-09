@@ -557,6 +557,9 @@ public:
 	intrusive_ptr<TextureSource> FindTextureRequest(Widget *widget, int32_t obj, int32_t bit);
 	/* the requests of the widget taken off (0x8114093e); always -1 */
 	int32_t RemoveTextureRequests(Widget *widget);
+	/* each request whose source is a texture handed to its widget; those that are set or given up
+	   let go, those taken off and added meanwhile made up (0x8113c886; name ours) */
+	void UpdateTextureRequests();
 	/* the request of the same widget, object and bit taken off (0x8113c826) */
 	int32_t RemoveTextureRequestOf(const TextureRequest &request);
 	int32_t RegisterTouchDeviceRegion(Widget *widget);

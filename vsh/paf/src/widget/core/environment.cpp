@@ -362,6 +362,45 @@ int32_t Environment::RemoveTextureRequests(Widget *widget)
 	return -1;
 }
 
+void Environment::UpdateTextureRequests()
+{
+	if (m_texture_requests.size() == 0 && m_texture_requests_add.size() == 0)
+		return;
+
+	m_texture_requests_busy = true;
+
+	list<TextureRequest>::iterator it = m_texture_requests.begin();
+
+	while (it != m_texture_requests.end()) {
+		if (it->m_source.get() != NULL && it->m_source->GetType() == 2) {
+			int32_t result = it->m_widget->OnTextureSource(&it->m_source, it->m_obj, it->m_bit);
+
+			if (result != 0 && result != (int32_t)0x80AF5022) {
+				++it;
+			} else {
+				it->m_source = intrusive_ptr<TextureSource>();
+				it = m_texture_requests.erase(it);
+			}
+		} else {
+			++it;
+		}
+	}
+	m_texture_requests_busy = false;
+
+	while (m_texture_requests_remove.size() != 0) {
+		TextureRequest request = m_texture_requests_remove.front();
+
+		RemoveTextureRequestOf(request);
+		m_texture_requests_remove.erase(m_texture_requests_remove.begin());
+	}
+	while (m_texture_requests_add.size() != 0) {
+		TextureRequest request = m_texture_requests_add.front();
+
+		m_texture_requests.push_back(request);
+		m_texture_requests_add.erase(m_texture_requests_add.begin());
+	}
+}
+
 int32_t Environment::RemoveTextureRequestOf(const TextureRequest &request)
 {
 	for (list<TextureRequest>::iterator it = m_texture_requests.begin(); it != m_texture_requests.end();
