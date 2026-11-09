@@ -2981,7 +2981,7 @@ ScePaf:
         - _ZNK3paf2ui7NumSpin9IsInheritEPKc: 0x0354FA10
         - _ZN3paf2ui16ProgressBarTouch20SetLabelSliderMarginEf: 0x036BCE96
         - _ZN3paf2ui22ButtonBaseHandlerParamC1Ev: 0x03740C77
-        - ScePafWidget_038B47A4: 0x038B47A4
+        - _ZN3paf2ui11EnvironmentC2EPNS0_10ResolutionEi: 0x038B47A4
         - _ZN3paf2ui6Widget19GetBaseDestroyCountEv: 0x03EC4830
         - _ZN3paf2ui11ScrollBar2d17OnDragBeginSliderEPNS0_5EventE: 0x040EC752
         - _ZN3paf2ui13BusyIndicator5StartEv: 0x04310E14
@@ -3485,7 +3485,7 @@ ScePaf:
         - _ZN3paf2ui12AnimListener16PropShowAlphaGetEPS1_: 0x383D1020
         - _ZN3paf2ui14ScrollBarTouchC1EPNS0_6WidgetEPNS2_11CreateParamE: 0x388F18D0
         - ScePafWidget_38CDFD1D: 0x38CDFD1D
-        - ScePafWidget_393F0EF0: 0x393F0EF0
+        - _ZN3paf2ui11EnvironmentC1EPNS0_10ResolutionEi: 0x393F0EF0
         - _ZN3paf2ui3Box19UpdateAfterChildrenEv: 0x3961BB85
         - _ZN3paf2ui18SlidingDrawerParam9ParamNameEv: 0x396473CA
         - _ZN3paf2ui8ListView13GetSegmentNumEv: 0x399CBF5A

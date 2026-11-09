@@ -230,6 +230,13 @@ public:
    focus candidates; entries sorted after one is added (names ours) */
 class ModalWidgetList {
 public:
+	/* empty, with room for eight entries (Sony's map insert and Environment constructor make it
+	   so) */
+	ModalWidgetList() : m_widget(NULL), m_unsorted(false)
+	{
+		m_entries.reserve(8);
+	}
+
 	/* takes the widget out: -1 when it is not in the list (0x8113f74c) */
 	int32_t Remove(Widget *widget);
 	/* adds the widget with the mark, 0 where it has no order (0x8113f4e4) */
@@ -286,6 +293,10 @@ public:
 /* 0x80 bytes, at 0x330 of the Environment (names ours) */
 class TouchState {
 public:
+	__attribute__((always_inline)) TouchState() : m_port(-1), m_id(-1), m_has_line(false)
+	{
+	}
+
 	/* the panel, 0 front or 1 rear, and the touch ID, set by the widget taking it */
 	uint32_t m_port;
 	uint32_t m_id;
@@ -310,6 +321,10 @@ public:
    ours) */
 class TouchCapture {
 public:
+	__attribute__((always_inline)) TouchCapture() : m_port(-1), m_id(-1), m_widget(NULL), m_touch(NULL)
+	{
+	}
+
 	uint32_t m_port;
 	uint32_t m_id;
 	Widget *m_widget;
@@ -324,6 +339,16 @@ public:
    constructor and destructor. */
 class DragState {
 public:
+	__attribute__((always_inline)) DragState()
+	{
+		Reset();
+	}
+
+	__attribute__((always_inline)) ~DragState()
+	{
+		Reset();
+	}
+
 	/* made free again: no touch, widget or capture, the hit cleared, the vectors at their start
 	   values (inline in Sony's callers) */
 	__attribute__((always_inline)) void Reset()
@@ -351,6 +376,28 @@ public:
 	math::v4 m_delta;
 	/* how far the touch moves before the drag begins (10, 10, 10) */
 	math::v4 m_threshold;
+};
+
+/* two blocks the Environment makes for the front and rear ports and clears again in its
+   destructor; nothing else in libpaf reads or writes them (name ours) */
+class PortReserved {
+public:
+	__attribute__((always_inline)) PortReserved() : reserved0(0), reserved1(0), reserved2(0), reserved4(0.0f, 0.0f, 0.0f, 1.0f)
+	{
+	}
+
+	__attribute__((always_inline)) ~PortReserved()
+	{
+		reserved0 = 0;
+		reserved2 = 0;
+		reserved1 = 0;
+	}
+
+	uint32_t reserved0;
+	uint32_t reserved1;
+	uint32_t reserved2;
+	uint8_t reserved3[100];
+	math::v4 reserved4;
 };
 
 /* the focus: the widget drawn as the focus cursor and the widget it is on (Sony's class name,
@@ -534,6 +581,10 @@ public:
 						const IDParam &id, const IDParam &style,
 						void *data);
 
+	/* the environment of the resolution set and the screen orientation mode: its screen, the
+	   input listeners, the root scene "env_top_screen" with its camera, the debug texture and
+	   the two focus cursors (export 393F0EF0) */
+	Environment(Resolution *env_param, int32_t screen_orientation_mode);
 	virtual ~Environment();
 
 	/* the widget kept as a touch device region (up to 6), at the first free slot or at the index
@@ -662,7 +713,7 @@ public:
 
 	/* the gesture listener of the touch port, NULL for another port (inline in Sony's callers,
 	   name ours) */
-	common::SharedPtr<inputdevice::InputGestureListener> GetTouchGestureListener(uint32_t port)
+	common::SharedPtr<inputdevice::InputListener> GetTouchGestureListener(uint32_t port)
 	{
 		if (port == 0)
 			return m_touch_gesture_listener_front;
@@ -709,17 +760,18 @@ public:
 	bool m_texture_requests_busy;
 	uint8_t reserved8c[3];
 	/* the gesture listener of the pad (name ours) */
-	common::SharedPtr<inputdevice::InputGestureListener> m_pad_gesture_listener;
+	common::SharedPtr<inputdevice::InputListener> m_pad_gesture_listener;
 	/* the gesture listeners of the front (0) and rear (1) touch ports (names ours) */
-	common::SharedPtr<inputdevice::InputGestureListener> m_touch_gesture_listener_front;
-	common::SharedPtr<inputdevice::InputGestureListener> m_touch_gesture_listener_rear;
+	common::SharedPtr<inputdevice::InputListener> m_touch_gesture_listener_front;
+	common::SharedPtr<inputdevice::InputListener> m_touch_gesture_listener_rear;
 	/* the gesture listeners of the motion sensor, the Bluetooth remote, the HID remote and the
 	   keyboard (names ours) */
-	common::SharedPtr<inputdevice::InputGestureListener> m_motion_gesture_listener;
-	common::SharedPtr<inputdevice::InputGestureListener> m_btrm_gesture_listener;
-	common::SharedPtr<inputdevice::InputGestureListener> m_hidrm_gesture_listener;
+	common::SharedPtr<inputdevice::InputListener> m_motion_gesture_listener;
+	common::SharedPtr<inputdevice::InputListener> m_btrm_gesture_listener;
+	common::SharedPtr<inputdevice::InputListener> m_hidrm_gesture_listener;
 	common::SharedPtr<inputdevice::InputListener> m_keyboard_listener;
-	uint8_t reserved8d[4];
+	/* set to 0 by the constructor; no reader found (name ours) */
+	uint32_t m_reserved_word_e;
 	/* the Framework's InitParam::screen_orientation_mode and env_param */
 	int32_t m_screen_orientation_mode;
 	/* the orientation UpdateOrientation chose from the system's recommended one (name ours) */
@@ -790,7 +842,7 @@ public:
 	FocusInfo m_focus_cursor;
 	FocusInfo m_focus_cursor_rear;
 	/* the texture the scenes' debug cubes are drawn with (Scene::SetDebugMode; name ours) */
-	graph::Surface *m_debug_texture;
+	intrusive_ptr<graph::Surface> m_debug_texture;
 	/* the widget holding each port's pad keys of capture 0x17d (the keys other than the
 	   directions and enter) and of 0x17c (the low group); five ports (names ours) */
 	Widget *m_pad_capture_button[5];
@@ -815,7 +867,7 @@ public:
 	TouchCapture m_touch_capture[2][8];
 	/* the drags given out, by the touch's port and ID (names ours) */
 	DragState m_drag_state[2][8];
-	uint8_t reserved5d[0x100];
+	PortReserved m_port_reserved[2];
 	/* the widgets the touches are on (TouchScrollSupplier's checks; name ours) */
 	list<HitInfo> m_touch_hits;
 	/* the widgets IsHitStackParent takes as the hit stack's parents, cleared with
@@ -835,9 +887,10 @@ public:
 	bool m_reserved_flag_c[4];
 	uint8_t reserved6e[1];
 	uint32_t m_reserved_word_a;
-	uint32_t m_reserved_word_b;
-	uint32_t m_reserved_word_c;
-	uint32_t m_reserved_word_d;
+	/* three surfaces released by the destructor; no other reader or writer found (names ours) */
+	intrusive_ptr<graph::Surface> m_reserved_surface_a;
+	intrusive_ptr<graph::Surface> m_reserved_surface_b;
+	intrusive_ptr<graph::Surface> m_reserved_surface_c;
 	uint8_t reserved6j[16];
 	/* the motion noise filter is available (vshMotionNoiseFilterIsAvailable; name ours) */
 	bool m_motion_noise_filter;
@@ -861,9 +914,6 @@ extern const uint32_t g_screen_height_hd;
 extern const uint32_t g_screen_width_full_hd;
 extern const uint32_t g_screen_height_full_hd;
 
-/* constructs the Environment at mem */
-paf::ui::Environment *ScePafWidget_393F0EF0(void *mem, paf::ui::Resolution *param,
-					    int32_t screen_orientation_mode);
 /* whether the buttons move the focus */
 void ScePafWidget_75FB31F1(paf::ui::Environment *env, bool enable);
 void ScePafWidget_B4A4660B(paf::ui::Environment *env, int32_t enable, int32_t port, int32_t mode);

@@ -2333,7 +2333,8 @@ void ScrollViewBase::UpdatePost()
 static inline int32_t AttachTouchGesture(Environment *env, uint32_t touch_id,
 					 common::SharedPtr<inputdevice::GestureListener> listener)
 {
-	inputdevice::InputGestureListener *input = env->GetTouchGestureListener(0).get();
+	inputdevice::InputGestureListener *input =
+		static_cast<inputdevice::InputGestureListener *>(env->GetTouchGestureListener(0).get());
 
 	if (input == NULL || input->AttachGestureListener(touch_id, 21, listener) < 0)
 		return -1;
@@ -2349,7 +2350,7 @@ void TouchScrollSupplier::DetachGesture()
 
 			if (view->m_track_port != -1) {
 				inputdevice::InputGestureListener *input =
-					view->m_env->GetTouchGestureListener(0).get();
+					static_cast<inputdevice::InputGestureListener *>(view->m_env->GetTouchGestureListener(0).get());
 
 				if (input != NULL)
 					input->DetachGestureListener(view->m_track_port, 21, view);
@@ -2609,7 +2610,7 @@ bool TouchScrollSupplier::TakeTouch(ScrollViewBase *view, uint32_t touch_id)
 		ScePafWidget_712AD1C7(first, 0, touch_id, 64, first->CalcHitRect());
 
 		inputdevice::InputGestureListener *input =
-			first->m_env->GetTouchGestureListener(0).get();
+			static_cast<inputdevice::InputGestureListener *>(first->m_env->GetTouchGestureListener(0).get());
 		common::SharedPtr<inputdevice::GestureListener> listener =
 			input != NULL ? input->GetGestureListener(touch_id, 50, first)
 				      : common::SharedPtr<inputdevice::GestureListener>();
@@ -2692,7 +2693,8 @@ bool TouchScrollSupplier::TakeTouch(ScrollViewBase *view, uint32_t touch_id)
 static inline void ReattachTouchGesture(Environment *env, uint32_t touch_id,
 					common::SharedPtr<inputdevice::GestureListener> listener)
 {
-	inputdevice::InputGestureListener *input = env->GetTouchGestureListener(0).get();
+	inputdevice::InputGestureListener *input =
+		static_cast<inputdevice::InputGestureListener *>(env->GetTouchGestureListener(0).get());
 
 	if (input != NULL)
 		input->AttachGestureListener(touch_id, 50, listener);
@@ -2707,7 +2709,7 @@ bool ScrollViewBase::TrackBegin(Event *e)
 
 	if (track_port != -1) {
 		inputdevice::InputGestureListener *input =
-			m_env->GetTouchGestureListener(0).get();
+			static_cast<inputdevice::InputGestureListener *>(m_env->GetTouchGestureListener(0).get());
 		common::SharedPtr<inputdevice::GestureListener> listener =
 			input != NULL ? input->GetGestureListener(track_port, 50, this)
 				      : common::SharedPtr<inputdevice::GestureListener>();
@@ -3430,7 +3432,8 @@ bool ScrollViewBase::MochiBegin(Event *e)
 		ScePafWidget_D3D0A7C3(this, 0, m_track_port, true, true);
 
 	uint32_t dir = MoveDir_XY;
-	inputdevice::InputGestureListener *input = m_env->GetTouchGestureListener(0).get();
+	inputdevice::InputGestureListener *input =
+		static_cast<inputdevice::InputGestureListener *>(m_env->GetTouchGestureListener(0).get());
 	common::SharedPtr<inputdevice::GestureListener> listener =
 		input != NULL ? input->GetGestureListener(m_track_port, 50, this)
 			      : common::SharedPtr<inputdevice::GestureListener>();
@@ -3517,7 +3520,8 @@ bool ScrollViewBase::MochiMove(Event *e)
 	if (e == NULL || (port = m_track_port) != (e->m_detail & 0xFF))
 		return false;
 
-	inputdevice::InputGestureListener *input = m_env->GetTouchGestureListener(0).get();
+	inputdevice::InputGestureListener *input =
+		static_cast<inputdevice::InputGestureListener *>(m_env->GetTouchGestureListener(0).get());
 	common::SharedPtr<inputdevice::GestureListener> listener =
 		input != NULL ? input->GetGestureListener(port, 50, this)
 			      : common::SharedPtr<inputdevice::GestureListener>();
@@ -3675,7 +3679,7 @@ void TouchScrollSupplier::TakeRearTouch(ScrollViewBase *view, uint32_t touch_id)
 			ScePafWidget_712AD1C7(first, 1, touch_id, 64, hit);
 
 			inputdevice::InputGestureListener *input =
-				first->m_env->GetTouchGestureListener(1).get();
+				static_cast<inputdevice::InputGestureListener *>(first->m_env->GetTouchGestureListener(1).get());
 			common::SharedPtr<inputdevice::GestureListener> listener =
 				input != NULL ? input->GetGestureListener(touch_id, 50, first)
 					      : common::SharedPtr<inputdevice::GestureListener>();
@@ -3744,7 +3748,7 @@ common::SharedPtr<inputdevice::GestureListener> ScePafWidget_0F9F14D4(Widget *wi
 {
 	for (uint32_t i = 0; i < 8; i++) {
 		inputdevice::InputGestureListener *input =
-			widget->m_env->GetTouchGestureListener(1).get();
+			static_cast<inputdevice::InputGestureListener *>(widget->m_env->GetTouchGestureListener(1).get());
 		common::SharedPtr<inputdevice::GestureListener> listener =
 			input != NULL ? input->GetGestureListener(i, type, widget)
 				      : common::SharedPtr<inputdevice::GestureListener>();
@@ -3830,7 +3834,7 @@ math::v4 TouchScrollSupplier::GetRearPinchPos()
 
 		for (uint32_t i = 0; i < 8; i++) {
 			inputdevice::InputGestureListener *input =
-				view->m_env->GetTouchGestureListener(1).get();
+				static_cast<inputdevice::InputGestureListener *>(view->m_env->GetTouchGestureListener(1).get());
 			common::SharedPtr<inputdevice::GestureListener> listener =
 				input != NULL ? input->GetGestureListener(i, 20, view)
 					      : common::SharedPtr<inputdevice::GestureListener>();

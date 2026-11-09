@@ -16,6 +16,7 @@
 #include <system/system.h>
 #include <timer/timer.h>
 #include <widget/core/widget.h>
+#include <widget/core/uiinputlistener.h>
 #include <widget/w_camera.h>
 #include <widget/w_scene.h>
 
@@ -23,6 +24,7 @@ extern "C" int ScePafMisc_862C8916(void);
 extern "C" int sceAppMgrGetRecommendedScreenOrientation(int32_t *orientation);
 extern "C" int sceAppMgrSetShellScreenOrientation(int32_t orientation);
 extern "C" int sceAppMgrSetRecommendedScreenOrientationActivated(int32_t activated);
+extern "C" int vshMotionNoiseFilterIsAvailable(void);
 
 namespace paf {
 
@@ -459,6 +461,122 @@ void Environment::Init()
 	Widget::SetBaseDestroyCount(2);
 	if (m_entry_ranges.limit < 4)
 		m_entry_ranges.reserve(4);
+}
+
+Environment::Environment(Resolution *env_param, int32_t screen_orientation_mode)
+	: m_focus_history_on(true), m_callbacks_busy(false), m_scene_restruct(false),
+	  m_layer_weight_changed(false), m_display_area_scale(1.0f), m_display_area_applied(false),
+	  m_display_area_changed(false), m_texture_requests_busy(false),
+	  m_reserved_word_e(0), m_screen_orientation_mode(screen_orientation_mode), m_orientation(4),
+	  m_env_param(env_param), m_reserved_flag7(false), m_root_widget(NULL),
+	  m_root_camera(NULL), m_camera_roll_mode(0), m_orientation_dirty(false), m_frame_state(0),
+	  m_draw_frame(false), m_term_requested(false), m_suspended(false),
+	  m_draw_when_suspended(false), m_env_option(true), m_sound_callback(NULL),
+	  m_sound_callback_data(NULL), m_create_widget_callback(NULL), m_cancel_widget(NULL),
+	  m_top_modal_widget(NULL), m_display_area_scene(NULL), m_second_modal_widget(NULL),
+	  m_focus_widget(NULL), m_focus_mode(0), m_focus_auto_off(false), reserved4_345(true),
+	  m_focus_enabled(true), m_ev_queue(32), m_screen(NULL), m_reserved_flag_a(false),
+	  m_reserved_flag_b(true), m_finish_after_draw(false), m_reserved_word_a(1),
+	  m_motion_noise_filter(false)
+{
+	m_reserved_flag_c[0] = false;
+	m_reserved_flag_c[1] = false;
+	m_reserved_flag_c[2] = false;
+	m_reserved_flag_c[3] = false;
+	m_renderer_param[0] = 0;
+	m_renderer_param[1] = 0;
+
+	Init();
+	thread::ThreadIDCache::SetCurrentType(thread::ThreadIDCache::Type_Main);
+	SetScreen(new Screen());
+
+	uint32_t resolution = SelectResolution();
+	SceneResolution *res = ScePafWidget_CDC90BA2(m_env_param, resolution);
+
+	if (res != NULL) {
+		m_screen->vp = math::rect(0.0f, 0.0f, (float)res->m_viewport_width,
+					  (float)res->m_viewport_height);
+		m_screen->sp = math::rect(0.0f, 0.0f, (float)res->m_scissor_width,
+					  (float)res->m_scissor_height);
+	}
+
+	/* the input listeners: pad, both touch panels, motion, the Bluetooth and HID remotes, and a
+	   plain listener of type 10 */
+	m_pad_gesture_listener = common::SharedPtr<inputdevice::InputListener>(new UIPadListener(this));
+	m_touch_gesture_listener_front =
+		common::SharedPtr<inputdevice::InputListener>(new UITouchListener(this, 0));
+	m_touch_gesture_listener_rear =
+		common::SharedPtr<inputdevice::InputListener>(new UITouchRearListener(this));
+	m_motion_gesture_listener =
+		common::SharedPtr<inputdevice::InputListener>(new UIMotionListener(this));
+	m_btrm_gesture_listener =
+		common::SharedPtr<inputdevice::InputListener>(new UIBtrmListener(this));
+	m_hidrm_gesture_listener =
+		common::SharedPtr<inputdevice::InputListener>(new UIHidrmListener(this));
+	m_keyboard_listener = common::SharedPtr<inputdevice::InputListener>(new inputdevice::InputListener());
+	m_keyboard_listener->m_type = 10;
+	inputdevice::AddInputListener(m_touch_gesture_listener_front);
+
+	/* the root scene, of the root screen's size, and its camera */
+	m_root_widget = new Scene(this, 0, NULL, m_env_param, 128);
+
+	Scene *root = (Scene *)m_root_widget;
+
+	root->m_screen->vp = math::rect(Screen::s_root_screen->vp);
+	((Scene *)m_root_widget)->m_screen->sp = math::rect(Screen::s_root_screen->sp);
+	root = (Scene *)m_root_widget;
+	root->m_scissor_to_scene = false;
+	root->m_display_area_mode = 2;
+	ScePafWidget_83AD517E(root->m_camera, root->m_camera);
+	m_root_widget->m_name = IDParam(string("env_top_screen"));
+	m_root_widget->ChangeResolution_core(resolution, true, true);
+	if (!m_root_widget->m_drag_begun)
+		m_root_widget->m_focus_target = false;
+	m_root_camera = new Camera(m_root_widget, NULL);
+	m_root_camera->SetRollScreen(0.0f, NULL);
+
+	/* the debug texture: 8 by 8, white, with a clear 4 by 4 middle */
+	m_debug_texture = intrusive_ptr<graph::Surface>(new graph::Surface(
+		gutil::GetDefaultSurfacePool(), 8, 8, ImageMode_RGBA8888, ImageOrder_Linear, 1, 1,
+		false));
+
+	uint32_t *pixels = (uint32_t *)m_debug_texture->Lock(0);
+
+	sce_paf_memset(pixels, 0xFF, m_debug_texture->GetPageSize());
+	for (int32_t y = 2; y < 6; y++) {
+		for (int32_t x = 2; x < 6; x++)
+			pixels[y * 8 + x] = 0x00FFFFFF;
+	}
+	m_debug_texture->Unlock();
+	m_debug_texture->SetDivideMode(3);
+
+	for (int32_t port = 0; port < 2; port++)
+		(&m_focus_cursor)[port].CreateCursor(m_root_widget);
+	m_motion_noise_filter = vshMotionNoiseFilterIsAvailable() != 0;
+	sce_paf_printf_dummy();
+}
+
+/* the GPU waited for, the focus frame textures and the input listeners given up, the screen
+   deleted and the event and callback lists emptied; the members then end in their order */
+Environment::~Environment()
+{
+	ScePafGraphics_E7B32741(graph::arl::Gl());
+	ScePafWidget_B6C64486(intrusive_ptr<graph::Surface>(), 0);
+
+	inputdevice::DelInputListener(m_pad_gesture_listener);
+	inputdevice::DelInputListener(m_touch_gesture_listener_front);
+	inputdevice::DelInputListener(m_touch_gesture_listener_rear);
+	inputdevice::DelInputListener(m_motion_gesture_listener);
+	inputdevice::DelInputListener(m_btrm_gesture_listener);
+	inputdevice::DelInputListener(m_hidrm_gesture_listener);
+	inputdevice::DelInputListener(m_keyboard_listener);
+
+	delete m_screen;
+
+	m_ev_doevent.clear();
+	m_ev_subrouting.clear();
+	m_ev_queue.Clear();
+	m_callbacks.clear();
 }
 
 extern "C" int32_t ScePafWidget_094DF388(Environment *env, const EntryRange *range)
@@ -1516,7 +1634,8 @@ void ScePafWidget_851911CB(Environment *env)
 static inline inputdevice::InputGestureListener *GestureListenerOf(Environment *env, uint32_t port)
 {
 	if (port == 0 || port == 1)
-		return env->GetTouchGestureListener(port).get();
+		return static_cast<inputdevice::InputGestureListener *>(
+			env->GetTouchGestureListener(port).get());
 	return NULL;
 }
 

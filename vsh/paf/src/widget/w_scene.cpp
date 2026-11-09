@@ -326,16 +326,16 @@ void Scene::SetDebugMode(uint32_t mode)
 
 		if (mode == DEBUG_AUTH_LAYOUT_RULER) {
 			cube = new DebugRuler(this, NULL);
-			cube->SetTexture(m_env->m_debug_texture, 0, 0);
-			cube->SetTexture(m_env->m_debug_texture, 1, 0);
+			cube->SetTexture(intrusive_ptr<graph::Surface>(m_env->m_debug_texture), 0, 0);
+			cube->SetTexture(intrusive_ptr<graph::Surface>(m_env->m_debug_texture), 1, 0);
 		} else {
 			cube = new DebugCube(this, NULL);
-			cube->SetTexture(m_env->m_debug_texture, 0, 0);
-			cube->SetTexture(m_env->m_debug_texture, 1, 0);
-			cube->SetTexture(m_env->m_debug_texture, 2, 0);
-			cube->SetTexture(m_env->m_debug_texture, 3, 0);
-			cube->SetTexture(m_env->m_debug_texture, 4, 0);
-			cube->SetTexture(m_env->m_debug_texture, 5, 0);
+			cube->SetTexture(intrusive_ptr<graph::Surface>(m_env->m_debug_texture), 0, 0);
+			cube->SetTexture(intrusive_ptr<graph::Surface>(m_env->m_debug_texture), 1, 0);
+			cube->SetTexture(intrusive_ptr<graph::Surface>(m_env->m_debug_texture), 2, 0);
+			cube->SetTexture(intrusive_ptr<graph::Surface>(m_env->m_debug_texture), 3, 0);
+			cube->SetTexture(intrusive_ptr<graph::Surface>(m_env->m_debug_texture), 4, 0);
+			cube->SetTexture(intrusive_ptr<graph::Surface>(m_env->m_debug_texture), 5, 0);
 		}
 
 		m_debug_cube = cube;

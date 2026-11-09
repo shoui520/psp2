@@ -1941,7 +1941,8 @@ int32_t Widget::ReleaseTouchCapture(map<uint32_t, TouchCapture *>::iterator it, 
 		inputdevice::InputGestureListener *listener = NULL;
 
 		if (port == 0 || port == 1)
-			listener = m_env->GetTouchGestureListener(port).get();
+			listener =
+				static_cast<inputdevice::InputGestureListener *>(m_env->GetTouchGestureListener(port).get());
 		if (listener != NULL)
 			ScePafMisc_CB4DB658(listener, id, NULL);
 	}
@@ -3815,8 +3816,9 @@ void Widget::remove_pad_gesture_mask(uint32_t port_id, uint32_t type)
 {
 	if (m_env != NULL && port_id < 8) {
 		inputdevice::InputGestureListener *listener =
-			common::SharedPtr<inputdevice::InputGestureListener>(
-				m_env->m_pad_gesture_listener).get();
+			static_cast<inputdevice::InputGestureListener *>(
+				common::SharedPtr<inputdevice::InputListener>(
+					m_env->m_pad_gesture_listener).get());
 
 		if (listener != NULL) {
 			if ((type & 4) != 0 || (type & 8) != 0)
@@ -3834,7 +3836,7 @@ void Widget::remove_touch_gesture_mask(uint32_t port_id, uint32_t touch_id, uint
 			return;
 
 		inputdevice::InputGestureListener *listener =
-			m_env->GetTouchGestureListener(port_id).get();
+			static_cast<inputdevice::InputGestureListener *>(m_env->GetTouchGestureListener(port_id).get());
 
 		if (listener == NULL)
 			return;
@@ -3882,7 +3884,8 @@ Widget::ApplyTouchGesture(uint32_t port, uint32_t id, uint32_t mask,
 	inputdevice::InputGestureListener *input = NULL;
 
 	if (port == 0 || port == 1)
-		input = m_env->GetTouchGestureListener(port).get();
+		input =
+			static_cast<inputdevice::InputGestureListener *>(m_env->GetTouchGestureListener(port).get());
 
 	common::SharedPtr<inputdevice::GestureListener> listener =
 		input != NULL ? input->GetGestureListener(id, priority, this)
@@ -3920,7 +3923,8 @@ Widget::ApplyPadGesture(uint32_t port, uint32_t type, const inputdevice::Gesture
 	else
 		priority = 0;
 
-	inputdevice::InputGestureListener *input = m_env->m_pad_gesture_listener.get();
+	inputdevice::InputGestureListener *input =
+		static_cast<inputdevice::InputGestureListener *>(m_env->m_pad_gesture_listener.get());
 	common::SharedPtr<inputdevice::GestureListener> listener =
 		input != NULL ? input->GetGestureListener(port, priority, this)
 			      : common::SharedPtr<inputdevice::GestureListener>();
@@ -3936,7 +3940,8 @@ common::SharedPtr<inputdevice::GestureListener> Widget::apply_pad_gesture_tap(ui
 	if (m_env == NULL)
 		return common::SharedPtr<inputdevice::GestureListener>();
 
-	inputdevice::InputGestureListener *input = m_env->m_pad_gesture_listener.get();
+	inputdevice::InputGestureListener *input =
+		static_cast<inputdevice::InputGestureListener *>(m_env->m_pad_gesture_listener.get());
 	common::SharedPtr<inputdevice::GestureListener> listener =
 		input != NULL ? input->GetGestureListener(port_id, 10, this)
 			      : common::SharedPtr<inputdevice::GestureListener>();
@@ -3947,7 +3952,8 @@ common::SharedPtr<inputdevice::GestureListener> Widget::apply_pad_gesture_tap(ui
 
 		bool failed = false;
 
-		input = m_env->m_pad_gesture_listener.get();
+		input =
+			static_cast<inputdevice::InputGestureListener *>(m_env->m_pad_gesture_listener.get());
 		if (input == NULL || input->AttachGestureListener(port_id, 10, listener) < 0)
 			failed = true;
 		if (failed)
@@ -3971,7 +3977,8 @@ Widget::apply_pad_gesture_longpress(uint32_t port_id, uint32_t type)
 	if (m_env == NULL)
 		return common::SharedPtr<inputdevice::GestureListener>();
 
-	inputdevice::InputGestureListener *input = m_env->m_pad_gesture_listener.get();
+	inputdevice::InputGestureListener *input =
+		static_cast<inputdevice::InputGestureListener *>(m_env->m_pad_gesture_listener.get());
 	common::SharedPtr<inputdevice::GestureListener> listener =
 		input != NULL ? input->GetGestureListener(port_id, 15, this)
 			      : common::SharedPtr<inputdevice::GestureListener>();
@@ -3982,7 +3989,8 @@ Widget::apply_pad_gesture_longpress(uint32_t port_id, uint32_t type)
 
 		bool failed = false;
 
-		input = m_env->m_pad_gesture_listener.get();
+		input =
+			static_cast<inputdevice::InputGestureListener *>(m_env->m_pad_gesture_listener.get());
 		if (input == NULL || input->AttachGestureListener(port_id, 15, listener) < 0)
 			failed = true;
 		if (failed)

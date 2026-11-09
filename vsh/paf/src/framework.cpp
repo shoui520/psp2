@@ -301,10 +301,7 @@ Framework::Framework(const InitParam &init_param)
 		m_plugin_heap_created = true;
 	}
 
-	void *env_mem = operator new(sizeof(ui::Environment));
-
-	m_env = env_mem != NULL ? ScePafWidget_393F0EF0(env_mem, m_env_param,
-							init_param.screen_orientation_mode) : NULL;
+	m_env = new ui::Environment(m_env_param, init_param.screen_orientation_mode);
 	m_env->m_sound_callback_data = this;
 	m_env->m_sound_callback = ScePafToplevel_85EF6EC0;
 	m_env->m_create_widget_callback_data = this;

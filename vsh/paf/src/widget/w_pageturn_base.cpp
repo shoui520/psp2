@@ -360,7 +360,7 @@ int32_t PageTurnBase::ScePafWidget_A4245073(int32_t state)
 		if (m_env != NULL) {
 			int16_t touch_id = m_touch_id;
 			inputdevice::InputGestureListener *input =
-				m_env->GetTouchGestureListener(0).get();
+				static_cast<inputdevice::InputGestureListener *>(m_env->GetTouchGestureListener(0).get());
 
 			if (input != NULL)
 				inputdevice::ScePafMisc_CB4DB658(input, touch_id, NULL);

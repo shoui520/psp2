@@ -340,7 +340,8 @@ void AppIconBase::OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg)
 	if (m_icon_mode != 0)
 		return;
 
-	inputdevice::InputGestureListener *input = m_env->GetTouchGestureListener(port).get();
+	inputdevice::InputGestureListener *input =
+		static_cast<inputdevice::InputGestureListener *>(m_env->GetTouchGestureListener(port).get());
 
 	if (input == NULL)
 		return;
@@ -488,7 +489,8 @@ GetTouchGesture(AppIconBase *icon, Environment *env, uint32_t port, uint32_t id,
 	if (env == NULL)
 		return common::SharedPtr<inputdevice::GestureListener>();
 
-	inputdevice::InputGestureListener *input = env->GetTouchGestureListener(port).get();
+	inputdevice::InputGestureListener *input =
+		static_cast<inputdevice::InputGestureListener *>(env->GetTouchGestureListener(port).get());
 
 	if (input == NULL)
 		return common::SharedPtr<inputdevice::GestureListener>();

@@ -523,7 +523,8 @@ void ButtonBase::OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg)
 	    (!m_enable_repeat || m_repeat_begin == 0))
 		return;
 
-	inputdevice::InputGestureListener *input = m_env->GetTouchGestureListener(port).get();
+	inputdevice::InputGestureListener *input =
+		static_cast<inputdevice::InputGestureListener *>(m_env->GetTouchGestureListener(port).get());
 
 	if (input == NULL)
 		return;
@@ -549,7 +550,8 @@ static inline common::SharedPtr<inputdevice::GestureListener> GetPadGesture(Envi
 									    uint32_t port,
 									    void *user)
 {
-	inputdevice::InputGestureListener *input = env->m_pad_gesture_listener.get();
+	inputdevice::InputGestureListener *input =
+		static_cast<inputdevice::InputGestureListener *>(env->m_pad_gesture_listener.get());
 
 	if (input == NULL)
 		return common::SharedPtr<inputdevice::GestureListener>();

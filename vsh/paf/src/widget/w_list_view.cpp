@@ -3990,7 +3990,7 @@ static void PassTextAutoScroll(ListView *view, Event *e, ListItem *item)
 
 		uint32_t touch = e->m_detail;
 		inputdevice::InputGestureListener *input =
-			view->m_env->GetTouchGestureListener((touch >> 20) & 0xF).get();
+			static_cast<inputdevice::InputGestureListener *>(view->m_env->GetTouchGestureListener((touch >> 20) & 0xF).get());
 
 		if (input != NULL)
 			inputdevice::ScePafMisc_CB4DB658(input, (uint8_t)touch, NULL);
@@ -4020,7 +4020,7 @@ static void PassTextAutoScroll(ListView *view, Event *e, ListItem *item)
 
 	uint32_t touch = e->m_detail;
 	inputdevice::InputGestureListener *input =
-		view->m_env->GetTouchGestureListener((touch >> 20) & 0xF).get();
+		static_cast<inputdevice::InputGestureListener *>(view->m_env->GetTouchGestureListener((touch >> 20) & 0xF).get());
 
 	if (input != NULL)
 		inputdevice::ScePafMisc_CB4DB658(input, (uint8_t)touch, NULL);

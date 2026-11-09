@@ -278,12 +278,19 @@ public:
 
 /* the listener of the pad: its keys turned into key events, one key held at a time, repeating
    (vtable 812F9300; the fields' names ours) */
+/* the update of the pad keys the UIPadListener keeps for each port, cleared by its constructor
+   (uiinputlistener.cpp; names ours) */
+extern inputdevice::pad::Data s_pad_curr[8];
+extern inputdevice::pad::Data s_pad_prev[8];
+
 class UIPadListener : public UIInputGestureListener {
 public:
 	UIPadListener(Environment *env)
 		: UIInputGestureListener(env), m_repeat_delay(300.0f), m_repeat_interval(80.0f),
 		  m_repeat_count(0), m_hold_key(0), m_analog_to_dpad(false), m_prev_mask(0), m_mode(0)
 	{
+		sce_paf_memset(s_pad_curr, 0, sizeof(s_pad_curr));
+		sce_paf_memset(s_pad_prev, 0, sizeof(s_pad_prev));
 		m_type = inputdevice::DEVICE_TYPE_UI_PAD;
 	}
 
