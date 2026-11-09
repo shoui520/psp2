@@ -557,6 +557,9 @@ public:
 	intrusive_ptr<TextureSource> FindTextureRequest(Widget *widget, int32_t obj, int32_t bit);
 	/* the requests of the widget taken off (0x8114093e); always -1 */
 	int32_t RemoveTextureRequests(Widget *widget);
+	/* the resize of the root surface asked for made, and the display area said to have changed
+	   where it worked (0x8113baf6; name ours) */
+	void ApplyResize();
 	/* each request whose source is a texture handed to its widget; those that are set or given up
 	   let go, those taken off and added meanwhile made up (0x8113c886; name ours) */
 	void UpdateTextureRequests();
@@ -851,6 +854,10 @@ int32_t ScePafWidget_66960CBF(paf::ui::Environment *env, uint32_t id, paf::ui::W
    the entry has none, its root widget made and named "root_widget"; an error for an entry of
    0x10000 or more (no name found) */
 int32_t ScePafWidget_E6D215ED(paf::ui::Environment *env, paf::ui::Widget *scene, int32_t entry);
+/* the root surface asked to be resized to the size at the next frame; an error without a root
+   surface (0x80af0001), for a frame buffer mode of 2 or 4 (0x80af0004) and for a size above its
+   largest (0x80af008f) (no name found) */
+int32_t ScePafWidget_E8F38C84(paf::ui::Environment *env, uint16_t width, uint16_t height);
 /* a group of scene priorities added, 0 and the scenes' entries made again; an error where the
    range is no range or crosses another (no name found) */
 int32_t ScePafWidget_094DF388(paf::ui::Environment *env, const paf::ui::EntryRange *range);

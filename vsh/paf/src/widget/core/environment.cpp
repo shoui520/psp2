@@ -362,6 +362,24 @@ int32_t Environment::RemoveTextureRequests(Widget *widget)
 	return -1;
 }
 
+void Environment::ApplyResize()
+{
+	if (m_resize_pending && Screen::s_root_surface != NULL) {
+		graph::Surface *surface = m_screen->m_surface.get();
+
+		if (m_resize_width != surface->GetWidth() || m_resize_height != surface->GetHeight()) {
+			bool resized = Screen::s_root_surface->Resize(m_resize_width, m_resize_height) == 0;
+
+			surface = m_screen->m_surface.get();
+			if (resized)
+				m_display_area_changed = true;
+			m_resize_width = surface->GetWidth();
+			m_resize_height = surface->GetHeight();
+		}
+		m_resize_pending = false;
+	}
+}
+
 void Environment::UpdateTextureRequests()
 {
 	if (m_texture_requests.size() == 0 && m_texture_requests_add.size() == 0)
@@ -477,6 +495,22 @@ extern "C" int32_t ScePafWidget_094DF388(Environment *env, const EntryRange *ran
 		for (; top != end; ++top)
 			static_cast<Scene *>(*top)->m_entry = entry->m_group;
 	}
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_E8F38C84(Environment *env, uint16_t width, uint16_t height)
+{
+	graph::DisplaySurface *root = Screen::s_root_surface;
+
+	if (root == NULL)
+		return 0x80AF0001;
+	if (root->m_frame_buffer_mode == 4 || root->m_frame_buffer_mode == 2)
+		return 0x80AF0004;
+	if ((float)width > (float)root->m_max_width || (float)height > (float)root->m_max_height)
+		return 0x80AF008F;
+	env->m_resize_width = width;
+	env->m_resize_height = height;
+	env->m_resize_pending = true;
 	return 0;
 }
 
