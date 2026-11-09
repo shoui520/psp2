@@ -577,17 +577,6 @@ public:
 	graph::EffectRenderer *(*m_effect_renderer_factory)();
 };
 
-/* an entry of the environment's callback list: a function that ends it (names ours) */
-class EnvCallback {
-public:
-	void (*m_destroy)(EnvCallback *callback);
-
-	~EnvCallback()
-	{
-		m_destroy(this);
-	}
-};
-
 class Environment {
 public:
 	typedef int32_t (*SoundCallback)(const char *buffer1, uint32_t size1, const char *buffer2,
@@ -758,11 +747,11 @@ public:
 	uint8_t reserved_5a[3];
 	/* the groups of scene priorities, a vector of four to begin with (Init; name ours) */
 	vector<EntryRange> m_entry_ranges;
-	/* what the environment runs at its end, each ended with a call of its first word (name ours,
-	   use not found) */
-	list<EnvCallback> m_callbacks;
-	/* (meaning open; name ours) */
-	bool m_callbacks_busy;
+	/* the events of a simulated flick, moved to m_ev_queue by an interval timer of the widget
+	   they are for (ScePafWidget_8AD528C7; name ours) */
+	list<Event> m_delayed_events;
+	/* a gesture was simulated since the last event loop ended (name ours) */
+	bool m_gesture_simulated;
 	uint8_t reserved_37[3];
 	/* the scenes by their entry (ShowSceneEntry, GetSceneNum; name ours) */
 	map<int32_t, Widget *> m_scene_entries;
@@ -964,6 +953,24 @@ bool ScePafWidget_529FB877(paf::ui::Environment *env, int32_t port);
 /* the touches of the port (0 front, 1 rear) let go of by the widgets that capture them, all
    but the widget's, their releases handled where release is set: -1 for another port (no
    name found) */
+/* how ScePafWidget_8AD528C7 makes its gesture: where (0x7fffffff: at the widget), a flick's two
+   values (0x7fffffff: 3000) and the key it presses where the focus cursor is shown (0xff: a touch
+   instead) (names ours) */
+class GestureParam {
+public:
+	int32_t m_x;
+	int32_t m_y;
+	int32_t reserved;
+	int32_t m_flick_x;
+	int32_t m_flick_y;
+	int32_t m_keycode;
+};
+
+/* the gesture of the type (0, 2 and 4 the widget's touch gestures, 3 a scroll view's flick, 26 a
+   page turn) made on the descendant of a scene with the ID, or on what the scenes' touch hits at
+   the position where the ID is empty (no name found) */
+int32_t ScePafWidget_8AD528C7(paf::ui::Environment *env, int32_t type, const paf::IDParam &id,
+			      const GestureParam *param);
 int32_t ScePafWidget_ABF05727(paf::ui::Environment *env, uint32_t port, bool release,
 			      paf::ui::Widget *keep);
 /* updates the input devices */

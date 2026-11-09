@@ -58,6 +58,12 @@ public:
 		return m_idhash;
 	}
 
+	/* IDs differ by their hash */
+	bool operator!=(const IDParam &right) const
+	{
+		return m_idhash != right.m_idhash;
+	}
+
 	/* IDs order by their hash */
 	bool operator<(const IDParam &right) const
 	{

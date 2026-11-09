@@ -2,6 +2,9 @@
  * paf::ui::Environment, as far as it is converted: the display area scale the
  * root surface shows at. The rest of its functions are still ScePafWidget's.
  */
+#include <graphics/arl/arl_defines.h>
+#include <graphics/color.h>
+#include <graphics/drawobj/effect_path.h>
 #include <widget/core/environment.h>
 #include <std/algorithm>
 #include <inputdevice/touchscreen/touchscreen.h>
@@ -28,6 +31,9 @@
 #include <widget/core/show_held.h>
 #include <widget/w_camera.h>
 #include <widget/w_scene.h>
+#include <widget/w_pageturn.h>
+#include <widget/w_scroll_view_base.h>
+#include <widget/w_supplier.h>
 
 extern "C" int sceAppMgrGetRecommendedScreenOrientation(int32_t *orientation);
 extern "C" int sceAppMgrSetShellScreenOrientation(int32_t orientation);
@@ -497,7 +503,7 @@ void Environment::Init()
 	m_ev_doevent.clear();
 	m_ev_subrouting.clear();
 	m_ev_queue.Clear();
-	m_callbacks.clear();
+	m_delayed_events.clear();
 	m_touch_region_mask = 0;
 	m_touch_region_mask_pre = 0;
 	sce_paf_memset(m_touch_region, 0, 24);
@@ -507,7 +513,7 @@ void Environment::Init()
 }
 
 Environment::Environment(Resolution *env_param, int32_t screen_orientation_mode)
-	: m_focus_history_on(true), m_callbacks_busy(false), m_scene_restruct(false),
+	: m_focus_history_on(true), m_gesture_simulated(false), m_scene_restruct(false),
 	  m_layer_weight_changed(false), m_display_area_scale(1.0f), m_display_area_applied(false),
 	  m_display_area_changed(false), m_texture_requests_busy(false),
 	  m_orientation_timer(NULL), m_screen_orientation_mode(screen_orientation_mode), m_orientation(4),
@@ -619,7 +625,7 @@ Environment::~Environment()
 	m_ev_doevent.clear();
 	m_ev_subrouting.clear();
 	m_ev_queue.Clear();
-	m_callbacks.clear();
+	m_delayed_events.clear();
 }
 
 extern "C" int32_t ScePafWidget_094DF388(Environment *env, const EntryRange *range)
@@ -1169,6 +1175,221 @@ int32_t Environment::GetLastHitStack(HitInfo *info)
 	return 0;
 }
 
+extern "C" void ScePafWidget_28D590B6(Environment *env, Event *e);
+static void FlushDelayedEvents(int32_t type, Handler *self, Event *e, void *data);
+
+/* the event kept for the widget it is for, whose interval timer 0x8000 (0 seconds, made where it
+   has none) moves it to the queue: -1 where it is for none (name ours) */
+static int32_t DelayEvent(Environment *env, Event *e)
+{
+	Handler *target = e->m_target;
+
+	if (target == NULL)
+		return -1;
+	env->m_delayed_events.push_back(*e);
+	if (target->m_map_t_listener.find(Handler::CB_INTERVAL | 0x8000) ==
+	    target->m_map_t_listener.end())
+		target->SetIntervalEvent(0x8000, 0.0f, FlushDelayedEvents, env);
+	return 0;
+}
+
+/* the gesture of the type made on the widget, or on the uppermost widget a scene's touch hits at
+   the position where it is NULL: the touch press and release (or a key's where the focus cursor
+   is shown), then the gesture event, which a flick (3) sends with its two touch moves through the
+   widget's timer; a page turn (26) gets its own two events instead (name ours) */
+static int32_t SimulateGesture(Environment *env, int32_t type, Widget *widget,
+			       const GestureParam *param)
+{
+	if (widget != NULL) {
+		if (type == 0) {
+			if ((widget->m_touch_gesture_mask & 1) == 0)
+				return 0x80AF4071;
+		} else if (type == 2) {
+			if ((widget->m_touch_gesture_mask & 2) == 0)
+				return 0x80AF4071;
+		} else if (type == 4) {
+			if ((widget->m_touch_gesture_mask & 4) == 0)
+				return 0x80AF4071;
+		} else if (type == 3) {
+			if (!widget->IsInherit(ScrollViewBase::TypeName()))
+				return 0x80AF4071;
+		} else if (type == 26) {
+			if (!widget->IsInherit(PageTurn::TypeName()))
+				return 0x80AF4071;
+		} else {
+			return 0x80AF4072;
+		}
+	}
+
+	Event ev(0x41, Event::MODE_BROADCAST, Event::ROUTE_FORWARD, 0);
+	math::v2 pos(0.0f, 0.0f);
+
+	ev.m_detail = 0xd0000;
+	if (widget != NULL) {
+		math::v4 at = widget->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+
+		pos = math::v2(at.extract_x(), at.extract_y());
+		if (type == 26) {
+			math::v4 *size = widget->GetSize(0);
+
+			pos = math::v2(pos.extract_x() + size->extract_x() * 0.5f - 60.0f,
+				       pos.extract_y() + size->extract_y() * 0.5f - 60.0f);
+		}
+	}
+	if (param != NULL) {
+		if (param->m_x != 0x7fffffff)
+			pos.set_x((float)param->m_x);
+		if (param->m_y != 0x7fffffff)
+			pos.set_y((float)param->m_y);
+	}
+	ev.m_data[0] = (int32_t)pos.extract_x();
+	ev.m_data[1] = (int32_t)pos.extract_y();
+
+	if (env->m_scenes_onupdate.size() != 0) {
+		list<Widget *>::iterator it = env->m_scenes_onupdate.end();
+
+		while (it != env->m_scenes_onupdate.begin()) {
+			--it;
+
+			Scene *scene = static_cast<Scene *>(*it);
+
+			if (scene->m_camera == NULL)
+				continue;
+			ScePafWidget_EB1D1CBC(scene, &ev);
+
+			HitInfo hit;
+
+			env->GetLastHitStack(&hit);
+
+			Widget *hit_widget = hit.m_widget;
+
+			if (widget == NULL) {
+				if (hit_widget == NULL)
+					continue;
+				/* asked, and the answer not used, as in Sony's code */
+				hit_widget->IsInherit(Supplier::TypeName());
+				hit_widget = hit.m_widget;
+				widget = hit_widget;
+			}
+			if (hit_widget == NULL)
+				continue;
+			if (hit_widget != widget &&
+			    !(hit_widget->IsInherit(Supplier::TypeName()) && hit.m_widget != NULL &&
+			      static_cast<Supplier *>(hit.m_widget)->m_target == widget) &&
+			    (!widget->IsInherit(ScrollViewBase::TypeName()) ||
+			     env->GetHitStack(&hit, widget) != 0))
+				return 0x80AF4074;
+			goto found;
+		}
+	}
+	return 0x80AF4073;
+
+found:
+	ScePafWidget_28D590B6(env, &ev);
+	if (env->m_ev_subrouting.size() == 0)
+		return 0x80AF4075;
+	inputdevice::pad::Lock();
+	inputdevice::pad::Unlock();
+	ScePafWidget_ABF05727(env, 0, true, 0);
+	ScePafWidget_ABF05727(env, 1, true, 0);
+	env->m_gesture_simulated = true;
+	env->m_ev_subrouting.clear();
+	ev.Term();
+	ev.SetTarget(widget);
+	if (param != NULL && param->m_keycode != 0xff &&
+	    (env->m_focus_enabled || ScePafMisc_862C8916()) && env->m_focus_cursor.m_enabled) {
+		ev.m_detail = (uint8_t)param->m_keycode;
+		widget->DoEvent(0x10001, &ev);
+		widget->DoEvent(0x10002, &ev);
+	} else {
+		widget->DoEvent(0x1000b, &ev);
+		widget->DoEvent(0x1000c, &ev);
+	}
+	if (type == 26) {
+		if (widget == NULL || !widget->IsInherit(PageTurn::TypeName()))
+			return 0x80AF4074;
+		widget->DoEvent(0x10000001, &ev);
+		widget->DoEvent(0x10000003, &ev);
+		return 0;
+	}
+
+	Event gesture(0x80, widget, Event::ROUTE_TERM, 0);
+	int32_t flick_x = 3000;
+	int32_t flick_y = 3000;
+
+	gesture.m_detail = 0xd0000;
+	if (param != NULL) {
+		if (param->m_flick_x != 0x7fffffff)
+			flick_x = param->m_flick_x;
+		if (param->m_flick_y != 0x7fffffff)
+			flick_y = param->m_flick_y;
+	}
+	if (type == 3) {
+		ev.m_type = (ev.m_type & 0xffff0000) | 0x41;
+		ev.m_type = (ev.m_type & 0xfff0ffff) | Event::ROUTE_FORWARD;
+		env->m_ev_queue.PushBack(ev);
+	}
+	gesture.m_detail = (gesture.m_detail & 0xffff80ff) | ((type & 0x7f) << 8);
+	gesture.m_data[0] = ev.m_data[0];
+	gesture.m_data[1] = ev.m_data[1];
+	if (type == 3) {
+		union {
+			float f;
+			int32_t i;
+		} fx, fy;
+
+		fx.f = (float)flick_x;
+		fy.f = (float)flick_y;
+		gesture.m_data[2] = fx.i;
+		gesture.m_data[3] = fy.i;
+	} else {
+		gesture.m_data[2] = type == 2 ? 2 : 1;
+	}
+	if (type == 3) {
+		DelayEvent(env, &gesture);
+		ev.m_type = (ev.m_type & 0xffff0000) | 0x42;
+		ev.m_type = (ev.m_type & 0xfff0ffff) | Event::ROUTE_FORWARD;
+		DelayEvent(env, &ev);
+	} else {
+		env->m_ev_queue.PushBack(gesture);
+	}
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_8AD528C7(Environment *env, int32_t type, const IDParam &id,
+					 const GestureParam *param)
+{
+	list<Widget *>::iterator end = env->m_scenes_onupdate.end();
+	list<Widget *>::iterator it = env->m_scenes_onupdate.begin();
+	Widget *widget = NULL;
+
+	if (id != IDParam()) {
+		for (; it != end; ++it) {
+			widget = (*it)->FindChild(id, 0);
+			if (widget != NULL)
+				break;
+		}
+		if (widget == NULL)
+			return 0x80AF4071;
+	}
+	return SimulateGesture(env, type, widget, param);
+}
+
+/* the interval timer of DelayEvent: the kept events moved to the queue, the timer ended (name
+   ours) */
+static void FlushDelayedEvents(int32_t type, Handler *self, Event *e, void *data)
+{
+	Environment *env = static_cast<Environment *>(data);
+
+	while (env->m_delayed_events.size() != 0) {
+		Event delayed = env->m_delayed_events.front();
+
+		env->m_ev_queue.PushBack(delayed);
+		env->m_delayed_events.pop_front();
+	}
+	self->KillIntervalEvent(0x8000);
+}
+
 bool Environment::IsHitStackParent(Widget *widget)
 {
 	list<Widget *>::iterator it = m_hit_stack.begin();
@@ -1292,7 +1513,7 @@ int32_t Environment::RequestTerm()
 		m_ev_doevent.clear();
 		m_ev_subrouting.clear();
 		m_ev_queue.Clear();
-		m_callbacks.clear();
+		m_delayed_events.clear();
 		for (map<int32_t, Widget *>::iterator it = m_scene_entries.begin();
 		     it != m_scene_entries.end(); ++it) {
 			Widget *scene = it->second;
@@ -1622,7 +1843,7 @@ void Environment::EventLoop()
 			}
 		}
 	}
-	m_callbacks_busy = false;
+	m_gesture_simulated = false;
 	Widget::SetBaseDestroyCount(2);
 }
 
