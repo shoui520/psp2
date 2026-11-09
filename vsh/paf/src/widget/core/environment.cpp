@@ -38,6 +38,30 @@ _Tree<_Tmap_traits<uint32_t, ui::ModalWidgetList, less<uint32_t> > >::find(const
 	return iterator(_Find(key));
 }
 
+/* Sony's AddSceneEntry calls the pending list's push_back rather than inlining it. */
+template<>
+inline __attribute__((noinline)) void list<ui::EntryRequest>::push_back(const ui::EntryRequest &val)
+{
+	if (head == NULL)
+		return;
+
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node == NULL)
+		ScePafStdc_D608246A();
+	if (node != NULL)
+		new (&node->value) ui::EntryRequest(val);
+	else
+		node = head;
+	if (node != head) {
+		node->prev = head->prev;
+		node->next = head;
+		head->prev->next = node;
+		head->prev = node;
+		++count;
+	}
+}
+
 namespace ui {
 
 enum {
@@ -275,6 +299,22 @@ extern "C" int32_t ScePafWidget_094DF388(Environment *env, const EntryRange *ran
 		env->GetSceneEnd(entry->m_widget->m_scene->m_scene_priority, end);
 		for (; top != end; ++top)
 			static_cast<Scene *>(*top)->m_entry = entry->m_group;
+	}
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_E6D215ED(Environment *env, int32_t value, int32_t entry)
+{
+	if (entry < 0 || entry > 0xFFFF)
+		return 0x80AF410F;
+
+	env->m_pending.push_back(EntryRequest(entry, value));
+	if (env->m_scene_entries.find(entry) == env->m_scene_entries.end()) {
+		Widget *root = new Widget(NULL, NULL);
+
+		env->m_scene_entries[entry] = root;
+		root->SetEnvironment(env);
+		root->m_name.SetID(string("root_widget"));
 	}
 	return 0;
 }

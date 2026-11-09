@@ -449,6 +449,18 @@ public:
 	uint8_t reserved5[7];
 };
 
+/* a scene entry asked for, kept in the environment's pending list (names ours, meaning open) */
+class EntryRequest {
+public:
+	EntryRequest(int32_t entry, int32_t value) : m_entry(entry), m_value(value), reserved(0)
+	{
+	}
+
+	int32_t m_entry;
+	int32_t m_value;
+	uint32_t reserved;
+};
+
 /* an entry of the environment's callback list: a function that ends it (names ours) */
 class EnvCallback {
 public:
@@ -600,9 +612,8 @@ public:
 	uint8_t reserved_36[4];
 	/* the scenes by their entry (ShowSceneEntry, GetSceneNum; name ours) */
 	map<int32_t, Widget *> m_scene_entries;
-	/* the transitions still under way (IsTermAvailable counts them; meaning open, element type
-	   unknown; name ours) */
-	list<uint32_t> m_pending;
+	/* the scene entries asked for (IsTermAvailable counts them; meaning open; name ours) */
+	list<EntryRequest> m_pending;
 	/* set when scenes were taken out of the entries; UpdateRestructScene then orders the scenes' layers
 	   again (RemoveScene; name ours) */
 	bool m_scene_restruct;
@@ -779,6 +790,10 @@ int32_t ScePafWidget_D131E927(paf::ui::Environment *env, uint32_t id, paf::ui::W
 /* the widget put in the group (made where missing), kept sorted; -1 without a widget or where it
    does not fit (no name found) */
 int32_t ScePafWidget_66960CBF(paf::ui::Environment *env, uint32_t id, paf::ui::Widget *widget);
+/* the scene entry asked for with the value (kept in the pending list) and, where it has none, its
+   root widget made and named "root_widget"; an error for an entry of 0x10000 or more (no name
+   found) */
+int32_t ScePafWidget_E6D215ED(paf::ui::Environment *env, int32_t value, int32_t entry);
 /* a group of scene priorities added, 0 and the scenes' entries made again; an error where the
    range is no range or crosses another (no name found) */
 int32_t ScePafWidget_094DF388(paf::ui::Environment *env, const paf::ui::EntryRange *range);
