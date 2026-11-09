@@ -9,6 +9,7 @@
 #include <inputdevice/inputlistener.h>
 #include <inputdevice/btrm/btrm.h>
 #include <inputdevice/hidkeyboard/hidkeyboard.h>
+#include <inputdevice/hidrm/hidrm.h>
 #include <inputdevice/pad/pad.h>
 #include <std/string.h>
 #include <timer/timer.h>
@@ -932,6 +933,143 @@ void UIBtrmListener::OnUpdate(const inputdevice::Data *data)
 					PostBtrmEvent(held, 1);
 			}
 			m_hold_key = 0;
+		}
+	}
+}
+
+int32_t UIHidrmListener::PostHidrmEvent(uint32_t key, int32_t state)
+{
+	int32_t code;
+
+	if (m_env == NULL)
+		return -1;
+	switch (key) {
+	case 6:
+		if (state == 0)
+			code = 14;
+		else if (state == 1)
+			code = 15;
+		else if (state == 2)
+			code = 16;
+		else
+			return -1;
+		break;
+	case 7:
+		if (state == 0)
+			code = 11;
+		else if (state == 1)
+			code = 12;
+		else if (state == 2)
+			code = 13;
+		else
+			return -1;
+		break;
+	case 8:
+		if (state == 0)
+			code = 8;
+		else if (state == 1)
+			code = 9;
+		else if (state == 2)
+			code = 10;
+		else
+			return -1;
+		break;
+	case 9:
+		if (state == 0)
+			code = 5;
+		else if (state == 1)
+			code = 6;
+		else if (state == 2)
+			code = 7;
+		else
+			return -1;
+		break;
+	case 10:
+		if (state == 0)
+			code = 20;
+		else if (state == 1)
+			code = 21;
+		else if (state == 2)
+			code = 22;
+		else
+			return -1;
+		break;
+	case 11:
+		if (state == 0)
+			code = 17;
+		else if (state == 1)
+			code = 18;
+		else if (state == 2)
+			code = 19;
+		else
+			return -1;
+		break;
+	case 1:
+		code = 0;
+		break;
+	case 2:
+		code = 1;
+		break;
+	case 3:
+		code = 2;
+		break;
+	case 4:
+		code = 4;
+		break;
+	case 5:
+		code = 3;
+		break;
+	default:
+		if (key < 12 || key > 49)
+			return -1;
+		code = key + 11;
+		break;
+	}
+	if (m_target != NULL) {
+		Event e(0x100, 0x400000, 0x10000, 0, 0, 0, 0, 0);
+		BtrmDetail detail;
+
+		e.SetTarget(m_target);
+		detail.value = e.m_detail;
+		detail.f.keycode = code;
+		detail.f.kind = 5;
+		e.m_detail = detail.value;
+		m_env->m_ev_queue.PushBack(e);
+	} else {
+		Event e(0x100, 0x100000, 0x10000, 0, 0, 0, 0, 0);
+		BtrmDetail detail;
+
+		detail.value = e.m_detail;
+		detail.f.keycode = code;
+		detail.f.kind = 5;
+		e.m_detail = detail.value;
+		m_env->m_ev_queue.PushBack(e);
+	}
+	return 0;
+}
+
+void UIHidrmListener::OnUpdate(const inputdevice::Data *data)
+{
+	for (int32_t i = 0; i < inputdevice::hidrm::Data::KEY_MAX; i++) {
+		uint32_t curr = data->m_bdrmc_data->keycode[i];
+		uint32_t prev = data->m_bdrmc_data_pre->keycode[i];
+		bool pressed = curr != 0;
+		bool released = prev != 0;
+
+		for (int32_t j = 0; j < inputdevice::hidrm::Data::KEY_MAX; j++) {
+			pressed = pressed && curr != data->m_bdrmc_data_pre->keycode[j];
+			released = released && data->m_bdrmc_data->keycode[j] != prev;
+		}
+
+		if (pressed)
+			PostHidrmEvent(curr, 0);
+		if (released && (prev == 9 || prev == 8)) {
+			inputdevice::hidrm::Data locked = inputdevice::hidrm::GetLockedData();
+
+			if (locked.keycode[0] == prev)
+				PostHidrmEvent(prev, 2);
+			else
+				PostHidrmEvent(prev, 1);
 		}
 	}
 }

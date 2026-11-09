@@ -350,6 +350,29 @@ public:
 	Widget *m_target;
 };
 
+/* the listener of the HID remote: its key turned into an event of the widget it is given or the
+   scene (vtable at 812F93E8; name and fields ours, as UIBtrmListener's) */
+class UIHidrmListener : public UIInputGestureListener {
+public:
+	UIHidrmListener(Environment *env) : UIInputGestureListener(env), m_hold_key(0), m_target(NULL)
+	{
+		m_type = inputdevice::DEVICE_TYPE_HIDRM;
+	}
+
+	virtual ~UIHidrmListener()
+	{
+	}
+
+	virtual void OnUpdate(const inputdevice::Data *data);
+
+	/* the event of the remote's key (1 to 49) with the state (0 down, 1 up, 2 held up), queued
+	   (0x8114b75c); -1 without an environment or for a key or state it has no code for */
+	int32_t PostHidrmEvent(uint32_t key, int32_t state);
+
+	uint32_t m_hold_key;
+	Widget *m_target;
+};
+
 /* the listeners of the motion sensor and the analog sticks, which take no input of their own */
 class UIMotionListener : public UIInputGestureListener {
 public:
