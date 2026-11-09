@@ -1077,6 +1077,12 @@ public:
 	   416CF405; argument names ours) */
 	int32_t CalcHitBoxToLine(const math::v4 &size, const math::v4 &start, const math::v4 &end,
 				 HitInfo *info);
+	/* whether the line from line_a to line_b hits it with the event's touch, in the mode (1 the
+	   point of the line nearest its hit box center only, 0 also the hit box, 2 and 3 never):
+	   1 for a press, move or release it takes, 2 for the other events, 0 for no hit; the hit
+	   filled in where the mode asks for it (0x811576d0; argument names ours) */
+	int32_t HitDetect_core(uint32_t mode, Event *e, uint32_t mask, const math::v4 &line_b,
+			       const math::v4 &line_a, HitInfo *hit);
 	/* exports 7A3A7304, 0FCCC833, B94694E3 */
 	void SetDragMode(uint32_t mode);
 	/* a drag state let go of: the second becomes the first, the layout of it and its parent

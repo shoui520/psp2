@@ -3541,6 +3541,102 @@ float Widget::CalcDistPointToLine(const math::v4 &point, const math::v4 &line_a,
 	return dist;
 }
 
+int32_t Widget::HitDetect_core(uint32_t mode, Event *e, uint32_t mask, const math::v4 &line_b,
+			       const math::v4 &line_a, HitInfo *hit)
+{
+	if (m_debug_events) {
+		uint32_t debug = m_scene->m_debug_mode;
+
+		if (debug == 2 || debug == 3) {
+			mask = 0xFFF0;
+			mode = 0;
+		}
+	}
+
+	uint32_t kind = (uint16_t)(e->m_type & mask);
+
+	if (mode == 3 || mode == 2)
+		return 0;
+	if (!IsInputTarget() || IsShowHeld(this))
+		return 0;
+
+	uint32_t detail = e->m_detail;
+
+	if (((detail >> 20) & 0xF) == 0) {
+		if (!IsTouchFrontEventEnabled())
+			return 0;
+		detail = e->m_detail;
+	}
+	if (((detail >> 20) & 0xF) == 1 && !IsTouchRearEventEnabled())
+		return 0;
+
+	int32_t result = 1;
+
+	if (kind != 32 && kind != 64)
+		result = 2;
+
+	HitInfo *near_hit = NULL;
+
+	if (mode == 1)
+		near_hit = hit;
+	if ((m_update_flag & 7) != 0)
+		UpdateMatrix();
+
+	math::v4 point = m_world_matrix.w();
+
+	if (m_hit_box != NULL) {
+		math::v4 center = m_hit_box[0];
+
+		if ((m_update_flag & 7) != 0)
+			UpdateMatrix();
+		point = point + (m_world_matrix.x() * center.extract_x() + m_world_matrix.y() * center.extract_y() +
+				 m_world_matrix.z() * center.extract_z() + m_world_matrix.w() * center.extract_w());
+	}
+
+	float dist = CalcDistPointToLine(point, line_a, line_b, near_hit);
+	math::v4 half = GetHitBoxSize(0) * 0.5f;
+	float half_sq = (half.extract_x() * half.extract_x() + half.extract_y() * half.extract_y()) +
+			(half.extract_z() * half.extract_z() + half.extract_w() * half.extract_w());
+
+	if (dist * dist > half_sq) {
+		if (near_hit != NULL) {
+			near_hit->m_hit_valid = 0;
+			near_hit->m_widget = NULL;
+		}
+		return 0;
+	}
+	if (mode == 1) {
+		if (near_hit != NULL) {
+			near_hit->m_hit_valid = 1;
+			near_hit->m_widget = this;
+		}
+		return result;
+	}
+
+	HitInfo *far_hit = NULL;
+
+	if (mode == 0)
+		far_hit = hit;
+
+	math::v4 size = half * 2.0f;
+
+	if (CalcHitBoxToLine(size, line_a, line_b, far_hit) <= 0) {
+		if (far_hit != NULL) {
+			far_hit->m_hit_valid = 0;
+			far_hit->m_widget = NULL;
+		}
+		return 0;
+	}
+	if (mode == 0) {
+		if (far_hit != NULL) {
+			far_hit->m_hit_valid = 1;
+			far_hit->m_widget = this;
+		}
+		return result;
+	}
+	return 0;
+}
+
 float Widget::CalcDistLineToLine(const math::v4 &point_a, const math::v4 &dir_a,
 				 const math::v4 &point_b, const math::v4 &dir_b,
 				 math::v4 *closest_a, math::v4 *closest_b)
