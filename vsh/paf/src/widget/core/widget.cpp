@@ -11,6 +11,7 @@
 #include <widget/core/animlistener.h>
 #include <widget/core/layouter.h>
 #include <widget/core/widget.h>
+#include <widget/w_camera.h>
 #include <widget/w_scene.h>
 
 namespace paf {
@@ -1515,6 +1516,127 @@ int32_t Widget::SetParent_core(Widget *parent, Widget *sibling)
 		ScePafWidget_E17C2B53(this, m_drag_state[0], NULL, 1.0f);
 	LayoutDirty(this, 0xFFFF);
 	return 0;
+}
+
+/* the vector's lanes weighted by the matrix's columns, as Sony's CalcBound has it inline (name
+   ours) */
+static inline float32x4_t MulMatrixVec(const math::matrix &m, float32x4_t v)
+{
+	return (m.getImpl() * sce::Vectormath::Simd::Aos::Vector4(v)).get128();
+}
+
+math::v4 Widget::CalcBound(const math::v4 &size, const math::quaternion &quat)
+{
+	math::matrix m = NormalizeQuat(quat).toMatrix(0.0001f);
+	float32x4_t extent = size.getImpl().get128();
+	float32x4_t corner_a = vmulq_f32(math::v4(-1.0f, 1.0f, 1.0f, 0.0f).getImpl().get128(), extent);
+	float32x4_t corner_b = vmulq_f32(math::v4(1.0f, 1.0f, 1.0f, 0.0f).getImpl().get128(), extent);
+	float32x4_t bound_a = vabsq_f32(MulMatrixVec(m, corner_a));
+	float32x4_t bound_b = vabsq_f32(MulMatrixVec(m, corner_b));
+	float32x4_t bound;
+
+	if (size.extract_z() > 1.0f) {
+		float32x4_t corner_c = vmulq_f32(math::v4(1.0f, -1.0f, 1.0f, 0.0f).getImpl().get128(),
+						 extent);
+		float32x4_t corner_d = vmulq_f32(math::v4(-1.0f, -1.0f, 1.0f, 0.0f).getImpl().get128(),
+						 extent);
+
+		bound = vmaxq_f32(vmaxq_f32(vmaxq_f32(vabsq_f32(MulMatrixVec(m, corner_d)),
+						      vabsq_f32(MulMatrixVec(m, corner_c))),
+					    bound_b),
+				  bound_a);
+	} else {
+		bound = vmaxq_f32(bound_b, bound_a);
+	}
+	return math::v4(sce::Vectormath::Simd::Aos::Vector4(bound));
+}
+
+math::v4 Widget::GetSizeBound(int32_t opt, Widget *ref)
+{
+	math::v4 size = *GetSize(opt);
+	math::quaternion quat = GetQuat(opt, NULL, math::quaternion());
+
+	if (ref != NULL)
+		quat = GetQuat(opt, ref, math::quaternion());
+	return CalcBound(size, quat);
+}
+
+math::rect Widget::CalcHitRect()
+{
+	Camera *camera = NULL;
+
+	if (m_scene != NULL)
+		camera = m_scene->m_camera;
+	if (camera == NULL) {
+		math::v4 center = GetHitBoxCenter();
+
+		return math::rect(math::v2(center.extract_x(), center.extract_y()),
+				  math::v2(0.0f, 0.0f));
+	}
+
+	math::v4 center = GetHitBoxCenter();
+	math::v4 size = GetHitBoxSize(0);
+	sce::Vectormath::Simd::Aos::Vector4 world_size =
+		m_world_matrix.getImpl() *
+		sce::Vectormath::Simd::Aos::Vector4(size.extract_x(), size.extract_y(),
+						    size.extract_z(), 0.0f);
+	math::v4 camera_pos = camera->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	float depth = camera_pos.extract_z() - center.extract_z();
+
+	ScePafWidget_72F479CA(camera);
+
+	float scale;
+
+	if (depth == 0.0f)
+		scale = 0.0f;
+	else
+		scale = camera->m_distance / depth;
+	return math::rect(math::v2(center.extract_x(), center.extract_y()) * scale,
+			  math::v2(world_size.getX(), world_size.getY()) * scale);
+}
+
+Widget *Widget::FindChild(const IDParam &id, int32_t option)
+{
+	bool none;
+
+	{
+		IDParam empty;
+
+		none = id.m_idhash == empty.m_idhash;
+	}
+	if (none)
+		return NULL;
+
+	uint32_t hash = id.m_idhash;
+	list<Widget *>::iterator it = m_children.begin();
+
+	if (option == 2) {
+		for (; it != m_children.end(); ++it) {
+			Widget *child = *it;
+
+			if (child->m_name.m_idhash == hash && child->m_hold_count <= 0)
+				return child;
+		}
+		return NULL;
+	}
+	for (; it != m_children.end(); ++it) {
+		Widget *child = *it;
+
+		if (child->m_hold_count <= 0) {
+			if (child->m_name.m_idhash == hash)
+				return child;
+
+			Widget *found = child->FindChild(id, option);
+
+			hash = id.m_idhash;
+			if (found != NULL) {
+				if (option != 0)
+					found = child;
+				return found;
+			}
+		}
+	}
+	return NULL;
 }
 
 /* a layer's count in the scene changed, the weights marked to be made again (inline in Sony's

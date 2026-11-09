@@ -1122,6 +1122,12 @@ public:
 
 	math::v4 *GetSize(int32_t opt);
 	math::v4 *GetScale(int32_t opt);
+	/* the bounds of a box of the size (up to the size in each axis) turned by the rotation:
+	   the most each axis reaches (0x81156574; name ours) */
+	math::v4 CalcBound(const math::v4 &size, const math::quaternion &quat);
+	/* the bounds of its size turned by its rotation, relative to the widget (0x81156726; name
+	   ours) */
+	math::v4 GetSizeBound(int32_t opt, Widget *ref);
 	/* the rect its touches hit it in */
 	math::rect CalcHitRect();
 	/* where its hit box's center is, and its hit box's size (with opt 1 the target of a
