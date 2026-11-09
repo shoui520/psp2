@@ -3,6 +3,7 @@
  * still ScePafWidget's.
  */
 #include <stddef.h>
+#include <common/common_internal.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <timer/timerqueue.h>
 #include <widget/core/animlistener.h>
@@ -3167,6 +3168,103 @@ int32_t Widget::SetPosture(const math::v4 &facing, const math::v4 &up, Widget *r
 	KillAnimType(65543);
 	SetUpdateParam(1);
 	return 0;
+}
+
+/* a pointer member deleted and set to -1, as Sony's destructors leave them (name ours) */
+template<class T>
+static inline __attribute__((always_inline)) void DeletePoison(T *&pointer)
+{
+	delete pointer;
+	pointer = reinterpret_cast<T *>(-1);
+}
+
+template<class T>
+static inline __attribute__((always_inline)) void DeleteArrayPoison(T *&pointer)
+{
+	delete[] pointer;
+	pointer = reinterpret_cast<T *>(-1);
+}
+
+Widget::~Widget()
+{
+	if (s_list_restruct.size() != 0) {
+		for (list<RestructInfo>::iterator it = s_list_restruct.begin(); it != s_list_restruct.end();
+		     it++) {
+			if (it->m_parent == this)
+				common_internal::on_error();
+			if (it->m_widget == this)
+				common_internal::on_error();
+			if (it->m_sibling == this)
+				common_internal::on_error();
+		}
+	}
+	while (m_children.size() != 0) {
+		Widget *child = m_children.front();
+
+		if (child == NULL)
+			continue;
+		delete child;
+	}
+	if ((uint8_t)m_layout_notify_mask != 0 && (m_layout_notify_mask & 0xFF00) != 0) {
+		if (m_parent != NULL && m_parent->m_layouter != NULL)
+			m_parent->m_layouter->SetDirty(1);
+		if (m_layouter != NULL)
+			m_layouter->SetDirty(1);
+	}
+	if (m_parent != NULL)
+		m_parent->RemoveChild(this);
+	m_parent = reinterpret_cast<Widget *>(-1);
+	DeletePoison(m_layouter);
+	DeletePoison(m_animator);
+	DeletePoison(m_focuser);
+	DeletePoison(m_focus_shape);
+	m_focus_parts.clear();
+	DeletePoison(m_layout_rect);
+	DeleteArrayPoison(m_hit_box);
+	DeletePoison(m_inverse_matrix);
+	if (m_adjust_param != NULL) {
+		if (m_adjust_param->m_ref_count-- == 1)
+			delete m_adjust_param;
+		m_adjust_param = NULL;
+	}
+	for (int32_t i = 0; i < 2; i++)
+		DeletePoison(m_user_data2[i]);
+	DeletePoison(m_resolution_timer_next);
+	DeletePoison(m_resolution_timer);
+	DeleteArrayPoison(m_pos_array);
+	DeleteArrayPoison(m_size_array);
+	DeleteArrayPoison(m_rot_array);
+	DeleteArrayPoison(m_drag_limit);
+	DeleteArrayPoison(m_pinch_limit);
+	for (map<int32_t, AnimQueue *>::iterator it = m_anims.begin(); it != m_anims.end(); it++)
+		delete it->second;
+	m_anims.clear();
+	if (m_timer_pending) {
+		map<Widget *, Timer *>::iterator it = s_destroy_timers.find(this);
+
+		if (it != s_destroy_timers.end()) {
+			delete it->second;
+			s_destroy_timers.erase(it);
+		}
+		if (m_destroy_protected) {
+			m_destroy_protected = false;
+			s_destroying_count--;
+		}
+	}
+	if (m_show_timer_pending) {
+		map<Widget *, Timer *>::iterator it = s_show_timers.find(this);
+
+		if (it != s_show_timers.end()) {
+			delete it->second;
+			s_show_timers.erase(it);
+		}
+	}
+	m_env = reinterpret_cast<Environment *>(-1);
+	m_scene = reinterpret_cast<Scene *>(-1);
+	m_adjust_param = reinterpret_cast<AdjustParam *>(-1);
+	DeletePoison(m_focus_root);
+	DeletePoison(m_focus_referrers);
+	s_instance_count--;
 }
 
 Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
