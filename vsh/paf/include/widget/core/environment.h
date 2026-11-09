@@ -162,7 +162,7 @@ public:
    name from the export, the fields' names ours) */
 class HitInfo {
 public:
-	HitInfo() : reserved3(0.0f, 0.0f, 0.0f, 1.0f)
+	HitInfo() : m_widget_rot(0.0f, 0.0f, 0.0f, 1.0f)
 	{
 		sce_paf_memset(this, 0, sizeof(HitInfo));
 	}
@@ -172,9 +172,20 @@ public:
 	/* the touch's position, and where it hit (copied by AppIconBase at a touch down) */
 	math::v2 m_touch_pos;
 	math::v2 m_hit_pos;
-	uint8_t reserved2[0x30];
-	math::v4 reserved3;
-	uint8_t reserved4[0x20];
+	/* the two halves read as one position (the hit in the widget's space; name ours) */
+	math::v4 &LocalPos()
+	{
+		return *reinterpret_cast<math::v4 *>(&m_touch_pos);
+	}
+	/* the hit taken through the widget's local matrix (CalcHitLineToPlane; name ours) */
+	math::v4 m_local_hit;
+	uint8_t reserved2[0x10];
+	/* the widget's world position, world rotation, size and align offset when the hit was
+	   found (names ours) */
+	math::v4 m_widget_pos;
+	math::v4 m_widget_rot;
+	math::v4 m_widget_size;
+	math::v4 m_widget_scale;
 	/* set once the hit on the touch's line is found (Text's touch position finds it where it
 	   is not; name ours) */
 	uint32_t m_hit_valid;

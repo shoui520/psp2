@@ -1054,6 +1054,11 @@ public:
 	   names ours) */
 	int32_t CalcHitLineToPlane(const math::v4 &start, const math::v4 &end, const math::v4 &pos,
 				   const math::v4 &normal, HitInfo *info);
+	/* the distance from the point to the line through line_a and line_b, along the normal of
+	   the plane through the three; the foot of it, in the widget's space, filled in
+	   (0x81157460; names ours) */
+	float CalcDistPointToLine(const math::v4 &point, const math::v4 &line_a,
+				  const math::v4 &line_b, HitInfo *info);
 	/* the hit of the line from start to end on its hit box of the size, filled in (export
 	   416CF405; argument names ours) */
 	int32_t CalcHitBoxToLine(const math::v4 &size, const math::v4 &start, const math::v4 &end,
@@ -1142,6 +1147,15 @@ public:
 	math::v4 GetSizeBound(int32_t opt, Widget *ref);
 	/* the rect its touches hit it in */
 	math::rect CalcHitRect();
+	/* the distance along the plane's normal (made a unit vector first unless is_unit) from the
+	   point to the plane through the plane's point (0x811573b0; names ours) */
+	float32x2_t CalcDistPointToPlane(const math::v4 &point, const math::v4 &plane_point,
+					 const math::v4 &normal, int32_t is_unit);
+	/* the closest points of two lines, each a point and a direction, and the distance
+	   between them (0x8114d0ea; names ours) */
+	float CalcDistLineToLine(const math::v4 &point_a, const math::v4 &dir_a,
+				const math::v4 &point_b, const math::v4 &dir_b,
+				math::v4 *closest_a, math::v4 *closest_b);
 	/* where its hit box's center is, and its hit box's size (with opt 1 the target of a
 	   running size animation) */
 	math::v4 GetHitBoxCenter();

@@ -1584,6 +1584,119 @@ math::v4 Widget::GetSizeBound(int32_t opt, Widget *ref)
 	return CalcBound(size, quat);
 }
 
+float32x2_t Widget::CalcDistPointToPlane(const math::v4 &point, const math::v4 &plane_point,
+					 const math::v4 &normal, int32_t is_unit)
+{
+	using namespace sce::Vectormath::Simd;
+	Aos::Vector4 n = normal.getImpl();
+
+	if (is_unit == 0) {
+		Aos::Vector4 scaled = n * recipf(Aos::length(n.getXYZ()));
+
+		n = Aos::Vector4(scaled.getXYZ(), n.getW());
+	}
+	return vget_low_f32(Aos::dot(plane_point.getImpl() - point.getImpl(), n).get128());
+}
+
+/* the hit position taken into the widget's space and its own state filled in, as Sony's hit
+   functions have it inline (name ours) */
+static __attribute__((always_inline)) void FillHitInfo(Widget *w, HitInfo *info)
+{
+	if ((w->m_update_flag & 7) != 0)
+		w->UpdateMatrix();
+
+	math::matrix rotation = w->m_world_rot.toMatrix(0.0001f);
+	math::v4 local = rotation.transpose().getImpl() * (info->m_pos - w->GetWorldMatrix().w()).getImpl();
+
+	info->LocalPos() = math::v4(sce::Vectormath::Simd::Aos::Vector4(local.getImpl().getXYZ(), 1.0f));
+	if ((w->m_update_flag & 7) != 0)
+		w->UpdateMatrix();
+	info->m_local_hit = math::v4(w->m_local_matrix.getImpl() * info->LocalPos().getImpl());
+	info->m_widget_pos = w->GetWorldMatrix().w();
+	if ((w->m_update_flag & 7) != 0)
+		w->UpdateMatrix();
+	info->m_widget_rot = math::v4(sce::Vectormath::Simd::Aos::Vector4(w->m_world_rot.getImpl()));
+	info->m_widget_size = *w->GetSize(0);
+	info->m_widget_scale = w->m_align_offs;
+}
+
+int32_t Widget::CalcHitLineToPlane(const math::v4 &start, const math::v4 &end, const math::v4 &pos,
+				   const math::v4 &normal, HitInfo *info)
+{
+	float along = (pos - start).dot(normal);
+	math::v4 dir = end - start;
+	float rate = dir.dot(normal);
+
+	if (__builtin_fabsf(rate) < 0.01f)
+		return -1;
+	if (info == NULL)
+		return -1;
+
+	math::v4 hit = start + dir * (along / rate);
+
+	info->m_pos = math::v4(sce::Vectormath::Simd::Aos::Vector4(hit.getImpl().getXYZ(), 1.0f));
+	FillHitInfo(this, info);
+	return 1;
+}
+
+float Widget::CalcDistPointToLine(const math::v4 &point, const math::v4 &line_a,
+				  const math::v4 &line_b, HitInfo *info)
+{
+	math::v4 normal(1.0f, 1.0f, 1.0f, 1.0f);
+	float dist = 0.0f;
+	math::v4 to_b = line_b - point;
+	math::v4 to_a = line_a - point;
+
+	if ((to_b.dot(to_b) > sce::Vectormath::Simd::floatInVec(0.01f)).getAsBool()) {
+		math::v4 side = CrossKeepW(to_a, to_b);
+		math::v4 across = CrossKeepW(side, line_b - line_a);
+		sce::Vectormath::Simd::Aos::Vector4 scaled =
+			across.getImpl() *
+			sce::Vectormath::Simd::recipf(
+				sce::Vectormath::Simd::Aos::length(across.getImpl().getXYZ()));
+
+		normal = math::v4(sce::Vectormath::Simd::Aos::Vector4(scaled.getXYZ(), across.extract_w()));
+		dist = vget_lane_f32(CalcDistPointToPlane(point, line_a, normal, 1), 0);
+	}
+	if (info != NULL) {
+		math::v4 foot = point + normal * dist;
+
+		info->m_pos = math::v4(sce::Vectormath::Simd::Aos::Vector4(foot.getImpl().getXYZ(), 1.0f));
+		FillHitInfo(this, info);
+	}
+	return dist;
+}
+
+float Widget::CalcDistLineToLine(const math::v4 &point_a, const math::v4 &dir_a,
+				 const math::v4 &point_b, const math::v4 &dir_b,
+				 math::v4 *closest_a, math::v4 *closest_b)
+{
+	float aa = dir_a.dot(dir_a).getAsFloat();
+	float bb = dir_b.dot(dir_b).getAsFloat();
+	math::v4 diff = point_a - point_b;
+	float ab = dir_b.dot(dir_a).getAsFloat();
+	float a_diff = dir_a.dot(diff).getAsFloat();
+	float b_diff = dir_b.dot(diff).getAsFloat();
+	float denom = ab * ab - aa * bb;
+	float inverse = 0.0f;
+	float t;
+	float s;
+
+	if (__builtin_fabsf(denom) >= 0.0001f)
+		inverse = 1.0f / denom;
+	t = (a_diff * bb - b_diff * ab) * inverse;
+	s = (-(b_diff * aa) - -(a_diff * ab)) * inverse;
+
+	math::v4 on_a = point_a + dir_a * t;
+	math::v4 on_b = point_b + dir_b * s;
+
+	if (closest_a != NULL)
+		*closest_a = on_a;
+	if (closest_b != NULL)
+		*closest_b = on_b;
+	return __builtin_sqrtf((on_a - on_b).dot(on_a - on_b));
+}
+
 math::rect Widget::CalcHitRect()
 {
 	Camera *camera = NULL;
