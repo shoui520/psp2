@@ -378,7 +378,7 @@ public:
 /* where the focus moves from a widget, and the rectangle it searches (names ours) */
 class FocusHint {
 public:
-	FocusHint() : m_search_rect_enable(true)
+	__attribute__((always_inline)) FocusHint() : m_search_rect_enable(true)
 	{
 	}
 
@@ -442,7 +442,7 @@ public:
 	void GetHintID(int32_t dir, IDParam *id);
 
 	/* its hint, made where it has none (name ours) */
-	FocusHint *GetHint()
+	__attribute__((always_inline)) FocusHint *GetHint()
 	{
 		if (m_hint == NULL)
 			m_hint = new FocusHint;

@@ -1965,6 +1965,44 @@ int32_t Widget::ClearDragState(DragState *state)
 	return 0;
 }
 
+void Widget::SetFocusDirection(int32_t dir, IDParam id)
+{
+	if (m_focuser != NULL) {
+		FocusHint *hint = m_focuser->GetHint();
+
+		if (dir != 0) {
+			switch (dir) {
+			case 1:
+				hint->m_direction_id[1] = id;
+				break;
+			case 2:
+				hint->m_direction_id[2] = id;
+				break;
+			case 3:
+				hint->m_direction_id[3] = id;
+				break;
+			}
+		} else {
+			hint->m_direction_id[0] = id;
+		}
+	}
+}
+
+void Widget::SetFocusSearchRect(const math::rect &rect)
+{
+	if (m_focuser != NULL) {
+		math::rect copy(rect);
+
+		m_focuser->GetHint()->m_search_rect = copy;
+	}
+}
+
+void Widget::EnableFocusSearchRect(bool on_off)
+{
+	if (m_focuser != NULL)
+		m_focuser->GetHint()->m_search_rect_enable = on_off;
+}
+
 void Widget::SetCursorOn(bool on, Widget *from, Widget *to)
 {
 	if (m_cursor_on == on)
