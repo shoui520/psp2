@@ -324,7 +324,7 @@ int32_t ButtonBase::HandleKeycodeEvent(Event *e)
 				uint32_t mask;
 
 				if (IsInputTarget() ||
-				    (reserved3o && (mask = KeycodeToMask(detail & 0xFF),
+				    (m_keycode_capture && (mask = KeycodeToMask(detail & 0xFF),
 						    detail = e->m_detail, m_bound_keycode) &&
 				     (mask & m_keycode) != 0)) {
 					CapturePad((detail >> 20) & 0xF, detail & 0xFF, true, true);

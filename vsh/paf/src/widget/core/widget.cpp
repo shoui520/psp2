@@ -4,6 +4,7 @@
  */
 #include <stddef.h>
 #include <common/common_internal.h>
+#include <inputdevice/inputdevice.h>
 #include <inputdevice/pad/pad.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <graphics/drawobj/panel_obj.h>
@@ -1207,6 +1208,277 @@ bool Widget::IsInitFocus()
 	if (root != NULL && root->m_focus_root != NULL && root->m_focus_root->m_init_focus == this)
 		init = true;
 	return init;
+}
+
+/* whether the widget or a widget above it up to its scene holds its show (the copy Sony's
+   EventExecDispatch has; name ours) */
+static int32_t IsShowHeld(Widget *widget)
+{
+	if (widget->m_show_hold > 0)
+		return 1;
+	if (static_cast<Widget *>(widget->m_scene) != widget) {
+		Widget *parent = widget->m_parent;
+
+		if (parent != NULL)
+			return IsShowHeld(parent);
+	}
+	return 0;
+}
+
+int32_t Widget::EventExecDispatch(Event *e)
+{
+	if (e == NULL)
+		return -1;
+
+	Widget *group = this;
+
+	if (group != NULL) {
+		while (!group->m_pre_dispatch) {
+			if (static_cast<Widget *>(m_scene) != group) {
+				group = group->m_parent;
+				if (group != NULL)
+					continue;
+			}
+			goto routed;
+		}
+		if (group != this && IsShowHeld(group) == 0) {
+			Event copy(*e);
+
+			copy.m_type = (e->m_type & 0x0fffffff) | 0x40000000;
+			group->HandlerProc(&copy);
+			if ((copy.m_type & Event::STATE_CONSUME) != 0)
+				return 0;
+		}
+	}
+routed:
+	if (IsShowHeld(this) != 0) {
+		inputdevice::Lock(127);
+		inputdevice::Unlock(127);
+		return 0;
+	}
+
+	int32_t result = HandlerProc(e);
+	uint32_t type = e->m_type;
+
+	if ((type & Event::STATE_CONSUME) == 0 && (type & Event::ROUTE_TERM) != 0 &&
+	    this != static_cast<Widget *>(m_scene)) {
+		e->m_type = (type & 0xfff0ffff) | Event::ROUTE_BACK;
+
+		Event back(*e);
+
+		for (Widget *node = m_parent; node != NULL; node = node->m_parent) {
+			back.m_type = (back.m_type & 0xff0fffff) | Event::MODE_DIRECT;
+			back.m_target = node;
+			m_env->m_ev_subrouting.push_back(back);
+			if (node == static_cast<Widget *>(m_scene))
+				break;
+		}
+	}
+	return result;
+}
+
+int32_t Widget::HandleKeycodeEvent(Event *e)
+{
+	Environment *env = m_env;
+
+	if (env == NULL)
+		return -1;
+
+	uint32_t type = e->m_type;
+
+	if ((type & 0x40000000) != 0)
+		return Handler::HandleKeycodeEvent(e);
+	if ((type & Event::STATE_CONSUME) == 0) {
+		uint32_t detail = e->m_detail;
+
+		if ((detail & 0x1000000) != 0 || (uint8_t)detail == 27) {
+			if (m_modal_mode != 2 && (this == env->m_cancel_widget || this == env->m_top_modal_widget) &&
+			    (uint8_t)detail == 28) {
+				Event ev(0x1009, this, 0x40000, 0);
+
+				type = e->m_type;
+				if ((uint16_t)type > 0x11) {
+					if ((uint16_t)type <= 0x12) {
+						ev.m_type = (ev.m_type & 0xffff0000) | 0x100a;
+						m_env->m_ev_queue.PushBack(ev);
+						type = (e->m_type & 0xf0ffffff) | Event::STATE_CONSUME;
+						e->m_type = type;
+					}
+				} else if ((uint16_t)type > 0x10) {
+					ev.m_type = (ev.m_type & 0xffff0000) | 0x1009;
+					m_env->m_ev_queue.PushBack(ev);
+					type = (e->m_type & 0xf0ffffff) | Event::STATE_CONSUME;
+					e->m_type = type;
+				}
+				if ((type & Event::STATE_CONSUME) != 0)
+					return Handler::HandleKeycodeEvent(e);
+			}
+			if ((uint16_t)type > 0x12) {
+				if ((uint16_t)type == 20) {
+					uint32_t key = (uint8_t)e->m_detail;
+
+					ReleasePadCaptureDir(key, true);
+					ReleasePadCaptureButton(key, true);
+					e->m_type = (e->m_type & 0xf0ffffff) | Event::STATE_CONSUME;
+				}
+			} else if ((uint16_t)type > 0x10) {
+				if ((uint16_t)type <= 0x11) {
+					uint32_t mask;
+
+					if (ScePafWidget_DB0FFD33(this) ||
+					    (m_keycode_capture &&
+					     (mask = KeycodeToMask((uint8_t)e->m_detail), m_bound_keycode) &&
+					     (mask & m_keycode) != 0)) {
+						CapturePad((e->m_detail >> 20) & 0xf, (uint8_t)e->m_detail, true, true);
+						e->m_type = (e->m_type & 0xf0ffffff) | Event::STATE_CONSUME;
+					}
+				} else {
+					uint32_t key = (uint8_t)e->m_detail;
+
+					ReleasePadCaptureDir(key, false);
+					ReleasePadCaptureButton(key, false);
+					e->m_type = (e->m_type & 0xf0ffffff) | Event::STATE_CONSUME;
+				}
+			}
+		}
+	}
+	return Handler::HandleKeycodeEvent(e);
+}
+
+bool Widget::IsAnimRunning(int32_t id)
+{
+	for (map<int32_t, AnimQueue *>::iterator it = m_anims.begin(); it != m_anims.end(); ++it) {
+		if ((it->first & 0xffffff) == id) {
+			AnimQueue *queue = it->second;
+
+			for (int32_t i = 0; i < 3; i++) {
+				if (queue->m_queue[i] != NULL && !queue->m_queue[i]->IsFinished())
+					return true;
+			}
+		}
+	}
+	if (m_parent != NULL)
+		return m_parent->IsAnimRunning(id);
+	return false;
+}
+
+void Widget::UpdateAnims()
+{
+	if (m_hold_count > 0)
+		return;
+	m_anim_deferred = true;
+
+	map<int32_t, AnimQueue *>::iterator it = m_anims.begin();
+
+	while (it != m_anims.end()) {
+		AnimQueue *queue = it->second;
+
+		if (queue != NULL) {
+			if ((it->first & 0x10000000) != 0) {
+				for (int32_t i = 0; i < 3; i++) {
+					if (queue->m_queue[i] != NULL)
+						queue->m_queue[i]->SetFinishedLoopBack(i == 2);
+				}
+			}
+
+			bool running = false;
+
+			for (int32_t i = 0; i < 3; i++) {
+				if (queue->m_queue[i] != NULL && !queue->m_queue[i]->IsFinished()) {
+					queue->DoTick(m_event_queue, this);
+					++it;
+					running = true;
+					break;
+				}
+			}
+			if (!running) {
+				map<int32_t, AnimQueue *>::iterator done = it;
+
+				++it;
+				m_anims.erase(done);
+				delete queue;
+			}
+		} else {
+			++it;
+		}
+	}
+	m_anim_deferred = false;
+	if (ScePafWidget_8A0DA7BF.size() != 0) {
+		for (list<AnimPending>::iterator pending = ScePafWidget_8A0DA7BF.begin();
+		     pending != ScePafWidget_8A0DA7BF.end(); ++pending)
+			pending->m_widget->SetAnimListener(pending->m_id, pending->m_listener, pending->m_slot);
+		ScePafWidget_8A0DA7BF.clear();
+	}
+}
+
+void Widget::OnUpdate()
+{
+	Update();
+	if (m_focus_root != NULL)
+		m_focus_root->m_focus_hold = 0;
+	if (m_children.size() != 0) {
+		list<Widget *>::iterator end = m_children.end();
+
+		for (list<Widget *>::iterator it = m_children.begin(); it != end; ++it) {
+			UpdateAdjustChildSize(*it);
+			(*it)->OnUpdate();
+		}
+	}
+	if (m_timer_pending)
+		ScePafWidget_78C4DBA4(this);
+	if (m_show_timer_pending)
+		UpdateShowTimer();
+	UpdateAfterChildren();
+
+	FocusRoot *own = m_focus_root;
+
+	if (own != NULL) {
+		Widget *parent = m_parent;
+
+		if (parent != NULL) {
+			Widget *root = FindFocusRoot(parent);
+
+			if (root != NULL) {
+				if (m_env->m_focus_cursor.m_target != NULL || own->m_focus_moved <= 30) {
+					if (own->m_focus_hold != 0) {
+						root->m_focus_root->m_focus_hold = 1;
+					} else if ((ScePafWidget_DB0FFD33(this) || IsAnimRunning(65539) ||
+						    IsAnimRunning(65538) || m_transition_in || m_transition_out) &&
+						   (m_focus_count != 0 || IsTextEventEnabled())) {
+						root->m_focus_root->m_focus_hold = 1;
+
+						Widget *above = FindFocusRoot(root);
+						Widget *state = above != NULL ?
+							(Widget *)above->m_focus_root->m_state : NULL;
+
+						if (state == NULL || state == root) {
+							if (ScePafWidget_DB0FFD33(this) && (m_event_enable & 0x400) != 0 &&
+							    m_focus_in_group)
+								root->SetFocusRootState((uint32_t)this);
+						}
+					}
+				}
+			}
+		}
+	}
+	if (!m_transition_in && !m_transition_out) {
+		if (m_hold_count <= 0)
+			UpdateTimer();
+		if (m_resolution_timer != NULL || m_resolution_timer_next != NULL)
+			UpdateResolutionTimer();
+		if (m_anims.size() != 0)
+			UpdateAnims();
+	}
+	if (m_animator != NULL && m_hold_count <= 0)
+		m_animator->OnUpdate();
+	UpdateAdjustSize();
+	if (m_layouter != NULL) {
+		if (m_hold_count > 0)
+			return;
+		m_layouter->OnUpdate();
+	}
+	if (m_hold_count <= 0)
+		ChangeState(CheckState(), -1);
 }
 
 void Widget::SetCursorOn(bool on, Widget *from, Widget *to)

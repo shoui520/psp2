@@ -1362,6 +1362,13 @@ public:
 	int32_t UpdateDestroy();
 	/* the widget and its children updated each frame (0x81155cc8) */
 	void OnUpdate();
+	/* the resolution timers run, the layout morphed to the next resolution (0x81155696) */
+	void UpdateResolutionTimer();
+	/* whether an animation with the ID is running in it or a widget above it (0x811536c2; name
+	   ours) */
+	bool IsAnimRunning(int32_t id);
+	/* the animations it runs given a tick (0x811553e4; name ours) */
+	void UpdateAnims();
 	/* what it holds back for a show let go of, in it and (where recursive) in its children
 	   (0x81152394; name ours) */
 	void ReleaseShowHolds(bool recursive);
@@ -1657,7 +1664,8 @@ public:
 	bool m_show_timer_pending : 1;
 	bool m_bound_keycode : 1;
 	bool reserved3n : 1;
-	bool reserved3o : 1;
+	/* it takes the keys its m_keycode binds as pad captures (HandleKeycodeEvent; name ours, meaning open) */
+	bool m_keycode_capture : 1;
 	/* cleared before a reverse transition (name after ScePaf-RE) */
 	bool m_transition_complete : 1;
 	/* set where UpdateResolutionTimer morphs the layout and cleared where it ends (name ours) */

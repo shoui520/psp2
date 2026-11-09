@@ -377,6 +377,12 @@ public:
 
 	/* the widget kept as a touch device region (up to 6), at the first free slot or at the index
 	   (0x8113f3ce, 0x8113f3a2); taken off again (0x8113f40a) */
+	/* the widget made one of the modal widgets, ordered with the others: -1 for a mode above 1
+	   (0x8113f594; names ours) */
+	int32_t RegisterModalWidget(Widget *widget, uint32_t mode);
+	/* whether the widget is not behind the modal widgets (nor the second one): 1 where none is set
+	   (0x8113fa84; name ours) */
+	bool IsInFrontOfModal(Widget *widget);
 	int32_t RegisterTouchDeviceRegion(Widget *widget);
 	int32_t RegisterTouchDeviceRegion(uint32_t index, Widget *widget);
 	int32_t RemoveTouchDeviceRegion(Widget *widget);
@@ -514,7 +520,9 @@ public:
 	void *m_sound_callback_data;
 	CreateWidgetCallback m_create_widget_callback;
 	void *m_create_widget_callback_data;
-	uint8_t reserved3[4];
+	/* a widget that takes the cancel key like the modal one on top does (HandleKeycodeEvent; name
+	   ours, meaning open) */
+	Widget *m_cancel_widget;
 	/* the modal widget on top: a button below it in depth is not pressed while it is modal with
 	   option 1 (name ours) */
 	Widget *m_top_modal_widget;

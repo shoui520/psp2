@@ -441,6 +441,42 @@ void ModalWidgetList::Sort()
 /* the end of the focus candidates, taken from the list again each time as Sony's code does */
 #define End()	(m_focus_candidates.m_entries.ptr + m_focus_candidates.m_entries.count)
 
+bool Environment::IsInFrontOfModal(Widget *widget)
+{
+	if (m_top_modal_widget == NULL && m_second_modal_widget == NULL)
+		return true;
+
+	OrderEntry limit;
+
+	if (m_top_modal_widget != NULL)
+		limit.Init(m_top_modal_widget, 0);
+	if (m_second_modal_widget != NULL) {
+		OrderEntry other;
+
+		other.Init(m_second_modal_widget, 0);
+		if (other < limit)
+			limit = other;
+	}
+
+	OrderEntry entry;
+
+	entry.Init(widget, 0);
+	return !(limit < entry);
+}
+
+int32_t Environment::RegisterModalWidget(Widget *widget, uint32_t mode)
+{
+	if (mode < 2) {
+		if (m_modal_widgets.Add(widget, mode) != NULL) {
+			if (m_modal_widgets.m_unsorted && m_modal_widgets.m_entries.count != 0)
+				sort(m_modal_widgets.m_entries.begin(), m_modal_widgets.m_entries.end());
+			m_modal_widgets.m_unsorted = false;
+			return 0;
+		}
+	}
+	return -1;
+}
+
 void Environment::UpdateFocus(Widget *prefer, Widget *drop)
 {
 	Widget *previous = m_focus_widget;
