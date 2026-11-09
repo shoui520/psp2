@@ -1062,14 +1062,14 @@ enum {
 };
 
 /* runs a plugin load on the default job queue: the plugin is made there, started here */
-class PluginLoadJob : public job::JobItem {
+class Job_PluginLoad : public job::JobItem {
 public:
-	PluginLoadJob(const char *name, Framework::ConstructPluginData *data)
+	Job_PluginLoad(const char *name, Framework::ConstructPluginData *data)
 		: job::JobItem(name, NULL), m_data(data)
 	{
 	}
 
-	virtual ~PluginLoadJob()
+	virtual ~Job_PluginLoad()
 	{
 	}
 
@@ -1088,14 +1088,14 @@ public:
 };
 
 /* runs a plugin unload on the default job queue */
-class PluginUnloadJob : public job::JobItem {
+class Job_PluginUnLoad : public job::JobItem {
 public:
-	PluginUnloadJob(const char *name, Framework::DestructPluginData *data)
+	Job_PluginUnLoad(const char *name, Framework::DestructPluginData *data)
 		: job::JobItem(name, NULL), m_data(data)
 	{
 	}
 
-	virtual ~PluginUnloadJob()
+	virtual ~Job_PluginUnLoad()
 	{
 	}
 
@@ -1171,7 +1171,7 @@ void Framework::RequestLoadPlugin(const Plugin::InitParam &param, Plugin::LoadFi
 	data->finish_callback = finish;
 	data->option = option;
 
-	common::SharedPtr<PluginLoadJob> item(new PluginLoadJob("Job_PluginLoad", data));
+	common::SharedPtr<Job_PluginLoad> item(new Job_PluginLoad("Job_PluginLoad", data));
 
 	job::JobQueue::default_queue->Enqueue(
 		reinterpret_cast<common::SharedPtr<job::JobItem> &>(item));
@@ -1250,7 +1250,7 @@ int32_t Framework::RequestUnloadPlugin(Plugin *plugin, const char *name,
 	data->option = option;
 	data->finish_callback = finish;
 
-	common::SharedPtr<PluginUnloadJob> item(new PluginUnloadJob("Job_PluginUnLoad", data));
+	common::SharedPtr<Job_PluginUnLoad> item(new Job_PluginUnLoad("Job_PluginUnLoad", data));
 
 	return job::JobQueue::default_queue->Enqueue(
 		reinterpret_cast<common::SharedPtr<job::JobItem> &>(item));
