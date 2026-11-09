@@ -209,8 +209,8 @@ static AnimPropertyV4 s_prop_obj_rot_short = { 0x20400, AnimListenerObj::PropObj
 					AnimListenerObj::PropObjRotGet };
 AnimPropertyV4 AnimListenerObj::s_prop_obj_texregion = { 0x20600, AnimListenerObj::PropObjTexRegionSet,
 							 AnimListenerObj::PropObjTexRegionGet };
-static AnimPropertyV4 s_prop_obj_revolution = { 0x20700, AnimListenerObj::PropObjRevolutionSet,
-					 AnimListenerObj::PropObjRevolutionGet };
+AnimPropertyV4 AnimListenerObj::s_prop_obj_revolution = { 0x20700, AnimListenerObj::PropObjRevolutionSet,
+							  AnimListenerObj::PropObjRevolutionGet };
 
 
 /* the angles of the second rotation property made the shorter way round: each one that is

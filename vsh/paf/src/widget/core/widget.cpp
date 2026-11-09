@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <common/common_internal.h>
 #include <graphics/drawobj/draw_obj.h>
+#include <graphics/drawobj/panel_obj.h>
+#include <graphics/drawobj/plane_obj.h>
 #include <timer/timerqueue.h>
 #include <widget/core/animlistener.h>
 #include <widget/core/layouter.h>
@@ -1515,6 +1517,106 @@ int32_t Widget::SetParent_core(Widget *parent, Widget *sibling)
 	return 0;
 }
 
+/* a layer's count in the scene changed, the weights marked to be made again (inline in Sony's
+   code; name ours) */
+static inline void AddLayerRange(Scene *scene, uint32_t layer, int32_t delta)
+{
+	if (layer < 16) {
+		uint32_t count = scene->m_layer_range[layer];
+
+		scene->m_layer_weight_dirty = true;
+		scene->m_layer_range[layer] = count + delta;
+	}
+}
+
+void Widget::detach_scene()
+{
+	Scene *scene = m_scene;
+
+	if (scene != NULL) {
+		AddLayerRange(scene, m_layer_old, -1);
+		if (m_draw_target == 1) {
+			scene->RemoveSurfaceWidget(this);
+			scene = m_scene;
+		}
+
+		Widget *focus = NULL;
+
+		if (scene->m_debug_mode != 0)
+			focus = scene->m_debug_focus;
+		if (focus == this)
+			scene->SetDebugFocus(NULL);
+	}
+}
+
+int32_t Widget::SetScene_core(Scene *scene)
+{
+	if ((m_scene != scene || m_layer != m_layer_old) && m_hold_count <= 0) {
+		if (m_scene != NULL)
+			detach_scene();
+		m_scene = scene;
+		if (scene != NULL) {
+			AddLayerRange(scene, m_layer, 1);
+			if (m_draw_target == 1) {
+				if (scene->m_surface_widgets.size() == 0)
+					scene->CreateBgLayer();
+
+				Scene::SurfaceWidget surface = {};
+
+				surface.m_widget = this;
+				scene->m_surface_widgets.push_back(surface);
+			}
+		}
+		m_layer_old = m_layer;
+		for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end();
+		     it++)
+			(*it)->SetScene_core(scene);
+	}
+	return 0;
+}
+
+int32_t Widget::get_resolution_data2(const ResolutionData *array, uint32_t num, uint32_t id_a,
+				     uint32_t id_b, const ResolutionData **a,
+				     const ResolutionData **b) const
+{
+	if (array == NULL)
+		return -1;
+	if (m_env == NULL)
+		return -1;
+	*a = NULL;
+	*b = NULL;
+
+	SceneResolution *resolution_a = ScePafWidget_CDC90BA2(m_scene->m_env_param, id_a);
+	SceneResolution *resolution_b = ScePafWidget_CDC90BA2(m_scene->m_env_param, id_b);
+
+	if (resolution_a == NULL || resolution_b == NULL)
+		return -1;
+
+	uint32_t key_a = resolution_a->m_resource.m_value;
+	uint32_t key_b = resolution_b->m_resource.m_value;
+	uint32_t i;
+
+	for (i = 0; i < num; i++) {
+		if (array[i].m_id == key_a)
+			*a = &array[i];
+		else if (array[i].m_id == key_b)
+			*b = &array[i];
+		if (*a != NULL && *b != NULL)
+			return 0;
+	}
+	key_a = resolution_a->m_base_resource.m_value;
+	key_b = resolution_b->m_base_resource.m_value;
+	for (i = 0; i < num; i++) {
+		if (array[i].m_id == key_a)
+			*a = &array[i];
+		else if (array[i].m_id == key_b)
+			*b = &array[i];
+		if (*a != NULL && *b != NULL)
+			return 0;
+	}
+	return -1;
+}
+
 int32_t Widget::SetBehind_core(Widget *w)
 {
 	Widget *parent = m_parent;
@@ -1690,6 +1792,89 @@ int32_t Widget::KillAnim(int32_t id)
 		}
 	}
 	return 0;
+}
+
+int32_t Widget::SetObjAnim(int32_t obj, int32_t id, const math::v4 &value, Timer *t,
+			   int32_t opt)
+{
+	graph::DrawObj *drawobj = GetDrawObj(obj);
+	AnimPropertyV4 *prop;
+	math::v4 start;
+
+	if (drawobj == NULL)
+		return -1;
+	switch (id & 0xFFFFFF) {
+	case 0x20100:
+		prop = &AnimListenerObj::s_prop_obj_move;
+		start = math::v4(math::v3(drawobj->m_pos), 1.0f);
+		break;
+	case 0x20200:
+		prop = &AnimListenerObj::s_prop_obj_size;
+		start = math::v4(math::v3(drawobj->m_size), 1.0f);
+		break;
+	case 0x20300:
+		prop = &AnimListenerObj::s_prop_obj_color;
+		start = drawobj->GetColor();
+		break;
+	case 0x20400:
+		prop = &AnimListenerObj::s_prop_obj_rot;
+		if (drawobj->m_rot != NULL)
+			start = math::v4(*drawobj->m_rot, 1.0f);
+		else
+			start = math::v4(0.0f, 0.0f, 0.0f, 1.0f);
+		break;
+	case 0x20600:
+		if (!drawobj->IsInherit(graph::PlaneObj::DrawObjType()))
+			return -1;
+		prop = &AnimListenerObj::s_prop_obj_texregion;
+		if (static_cast<graph::PlaneObj *>(drawobj)->m_tex_region != NULL)
+			start = *static_cast<graph::PlaneObj *>(drawobj)->m_tex_region;
+		else
+			start = math::v4(0.0f, 0.0f, 1.0f, 1.0f);
+		break;
+	case 0x20700:
+		if (!drawobj->IsInherit(graph::PanelObj::DrawObjType()))
+			return -1;
+		prop = &AnimListenerObj::s_prop_obj_revolution;
+		start = graph::GetPanelRevolution(static_cast<graph::PanelObj *>(drawobj));
+		break;
+	default:
+		return -1;
+	}
+	SetAnimListener(obj + id, new AnimListenerObj(t, this, drawobj, start, value, prop, NULL, NULL),
+			opt);
+	return 0;
+}
+
+int32_t Widget::SetTexAnim(int32_t obj, int32_t column_num, int32_t row_num, int32_t start_frame,
+			   int32_t end_frame, Timer *t, int32_t option, float delay,
+			   AnimCB cb_fin, void *userdata)
+{
+	graph::PlaneObj *plane;
+
+	if (GetDrawObj(obj) != NULL &&
+	    (plane = static_cast<graph::PlaneObj *>(GetDrawObj(obj)))->IsInherit(
+		    graph::PlaneObj::DrawObjType()) &&
+	    (plane = static_cast<graph::PlaneObj *>(GetDrawObj(obj))) != NULL) {
+		if (t == NULL) {
+			KillAnimType(obj + 0x20500);
+
+			float column_ratio = 1.0f / (float)column_num;
+			float row_ratio = 1.0f / (float)row_num;
+
+			plane->SetTexRegion(math::v4(column_ratio * (float)(end_frame % column_num),
+						     row_ratio * (float)(end_frame / column_num % row_num),
+						     column_ratio, row_ratio));
+			return 0;
+		}
+
+		AnimListener *listener = new TexAnimListenerObj(
+			t, this, plane, column_num, row_num, start_frame, end_frame, cb_fin, userdata);
+
+		SetAnimListener_withDelay(obj + 0x20500, listener, delay, option);
+		return 0;
+	}
+	return -1;
 }
 
 void Widget::KillObjAnim(int32_t obj, int32_t id)

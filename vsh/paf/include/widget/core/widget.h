@@ -1105,7 +1105,10 @@ public:
 	int32_t SetMetaAlpha_core(float alpha);
 	math::quaternion GetQuat(int32_t opt, Widget *ref, const math::quaternion &off_quat);
 	math::v4 GetOriginOffset(int32_t opt);
-	void SetObjAnim(int32_t obj, int32_t id, const math::v4 &value, Timer *t, int32_t opt);
+	/* the property of the draw object (ID 0x201xx move, 0x202xx size, 0x203xx color, 0x204xx
+	   rotation, 0x206xx texture region, 0x207xx revolution) animated to the value over the
+	   timer; -1 for no such object or property */
+	int32_t SetObjAnim(int32_t obj, int32_t id, const math::v4 &value, Timer *t, int32_t opt);
 
 	/* room for num draw objects (name ours) */
 	void ReserveDrawObj(uint32_t num)
@@ -1292,6 +1295,9 @@ public:
 	int32_t SetParent(Widget *parent, Widget *sibling, int32_t option);
 	/* the widget made a child of the parent at once, before the sibling (NULL: last) (0x8114fd9c) */
 	int32_t SetParent_core(Widget *parent, Widget *sibling);
+	/* it taken out of its scene's layer count and surface list, and of the debug focus
+	   (0x8115164a; name ours) */
+	void detach_scene();
 	/* moves within the parent's children now, to behind or in front of the widget, a step, or
 	   to the back or the front (0x81153030 to 0x81153192) */
 	int32_t SetBehind_core(Widget *w);
@@ -1428,6 +1434,11 @@ public:
 					  int32_t slot);
 
 	ResolutionData *get_resolution_data(ResolutionData *array, uint32_t num, uint32_t id) const;
+	/* the entries of the array for the two resolutions (or their bases), 0 where both are found
+	   (0x81162cd2) */
+	int32_t get_resolution_data2(const ResolutionData *array, uint32_t num, uint32_t id_a,
+				     uint32_t id_b, const ResolutionData **a,
+				     const ResolutionData **b) const;
 
 	math::v4 m_pos;
 	math::v4 m_scale;

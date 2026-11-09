@@ -260,6 +260,7 @@ public:
 	static AnimPropertyV4 s_prop_obj_size;
 	static AnimPropertyV4 s_prop_obj_rot;
 	static AnimPropertyV4 s_prop_obj_texregion;
+	static AnimPropertyV4 s_prop_obj_revolution;
 
 	AnimListenerObj(Timer *t, Widget *w, graph::DrawObj *obj, const math::v4 &src,
 			const math::v4 &dst, AnimPropertyV4 *prop, AnimCB cb_fin, void *data)
