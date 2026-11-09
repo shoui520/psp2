@@ -3148,7 +3148,7 @@ ScePaf:
         - _ZN3paf2ui11ProgressBar17DetachLabelWidgetEv: 0x16F086D9
         - _ZN3paf2ui23ImageSlideBarStyleParamC1Ev: 0x16F39792
         - _ZN3paf2ui8SlideBar15SetLabelPosModeENS1_12LabelPosModeENS1_7LabelIdE: 0x17309156
-        - ScePafWidget_173C7C23: 0x173C7C23
+        - _ZTVN3paf2ui10ResolutionE: 0x173C7C23
         - ScePafWidget_176F3B21: 0x176F3B21
         - _ZN3paf2ui11ImageButton12SetObjsParamEv: 0x17A84AFD
         - _ZN3paf2ui14DirectBarParam3SetEv: 0x17AE89B0
@@ -5314,7 +5314,7 @@ ScePaf:
       variables:
         - _ZTVN3paf2ui25MultiTouchGestureListenerE: 0x02E184B1
         - g_factoryImageSlideBar: 0x02EB5F42
-        - ScePafWidget_048ADB79: 0x048ADB79
+        - _ZTVN3paf2ui4Text4LinkE: 0x048ADB79
         - _ZN3paf2ui13SlideBarParam12m_param_nameE: 0x05406EA1
         - _ZTVN3paf2ui18SlideBarStyleParamE: 0x06E20FC9
         - g_factorySlidingDrawer: 0x079F22EC
