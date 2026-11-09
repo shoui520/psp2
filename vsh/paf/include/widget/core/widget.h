@@ -1484,6 +1484,10 @@ public:
 	/* touch and key input may reach it and, set the same, its descendants (0x8124267c; name
 	   ours) */
 	void SetInputTarget(bool on);
+	/* whether the focus may be given to it: the cursor's widget and its focus root's focused
+	   widget are not held (as DB0FFD33 says) and its own focus root has no move pending (0x81155196;
+	   name ours) */
+	bool IsFocusFree();
 	/* the best widget among its children and theirs for the focus search; the search's
 	   m_distance gets its score (0x81160ba4; name ours) */
 	Widget *SearchFocusChildren(FocusSearchInfo *info, Widget *skip);

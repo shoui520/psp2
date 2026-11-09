@@ -2725,6 +2725,161 @@ int32_t Widget::HandleFocusSwitchEvent(Event *e)
 	return 0;
 }
 
+bool Widget::IsFocusFree()
+{
+	Environment *env = m_env;
+
+	if (env == NULL)
+		return false;
+	if (ScePafWidget_DB0FFD33(env->m_focus_cursor.m_target))
+		return false;
+
+	Widget *root = FindFocusRoot(this);
+
+	if (ScePafWidget_DB0FFD33(root != NULL ? (Widget *)root->m_focus_root->m_state : NULL))
+		return false;
+	if (m_focus_root == NULL || m_focus_root->m_pending == 0)
+		return true;
+	return false;
+}
+
+void Widget::UpdateAfterChildren()
+{
+	FocusRoot *focus_root = m_focus_root;
+
+	if (focus_root == NULL)
+		return;
+	if (focus_root->m_focus_hold != 0)
+		return;
+
+	Environment *env = m_env;
+
+	if (env == NULL || !ScePafWidget_A6B659BB(env, 0) || m_env->m_focus_auto_off ||
+	    !ScePafWidget_DB0FFD33(this) || !m_focus_target ||
+	    ((m_event_enable & 0x400) == 0 && m_focus_count == 0))
+		return;
+	if (!m_env->IsInFrontOfModal(this) || m_hold_count > 0 || !m_focus_in_group)
+		return;
+
+	if (!IsFocusFree()) {
+		m_focus_root->m_focus_moved = 0;
+		return;
+	}
+	if (m_focus_root->m_focus_moved % 5 == 0) {
+		FocusSearchInfo info(255);
+
+		ScePafWidget_EA117CF8(&info, this);
+
+		Widget *found = SetFocusOption(&info, 1);
+
+		if (found != NULL) {
+			bool move = true;
+
+			if (FindFocusRoot(found) != this) {
+				Widget *root = FindFocusRoot(found);
+
+				move = false;
+				if (root != NULL && root->m_hold_count <= 0) {
+					Widget *w = root;
+
+					while (w != this) {
+						w = w->m_parent;
+						if (w == NULL)
+							break;
+					}
+					move = w == this;
+				}
+			}
+			if (move) {
+				SetFocusInfo set;
+
+				set.m_mode = 0;
+				set.m_notify = false;
+				set.m_direction = math::v2(0.0f, 0.0f);
+				set.m_keep = false;
+				found->SetFocus(&set);
+				m_focus_root->m_focus_moved = 0;
+			}
+		}
+	}
+	focus_root = m_focus_root;
+	focus_root->m_focus_moved++;
+	if (focus_root->m_focus_moved >= 60)
+		focus_root->m_focus_moved = 0;
+}
+
+extern "C" int32_t ScePafWidget_11D537AF(Widget *widget, uint32_t id, Timer *t, bool children)
+{
+	if (widget->m_resolution_id_next == id)
+		return 0;
+	if (t == NULL)
+		return widget->ChangeResolution_core(id, children, true);
+	delete widget->m_resolution_timer_next;
+	widget->m_resolution_timer_next = t;
+	widget->m_resolution_id_next = id;
+	if (children) {
+		for (list<Widget *>::iterator it = widget->m_children.begin();
+		     it != widget->m_children.end(); ++it)
+			ScePafWidget_11D537AF(*it, id, new Timer(*t), children);
+	}
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_38CDFD1D(Widget *widget, Event *e)
+{
+	uint32_t enabled = widget->m_event_enable;
+
+	if (widget->m_debug_events) {
+		uint32_t mode = widget->m_scene->m_debug_mode;
+
+		if (mode == 2 || mode == 3)
+			enabled = (enabled & 0xFFFF0000) | 0xFFF0;
+	}
+
+	uint32_t kind = (uint16_t)(enabled & e->m_type);
+
+	if (kind != 32 && kind != 64)
+		return -1;
+
+	uint32_t port = (e->m_detail >> 20) & 0xF;
+	uint32_t id = (uint8_t)e->m_detail;
+
+	switch ((uint16_t)e->m_type) {
+	case 0x21:
+	case 0x41:
+		goto press;
+	case 0x22:
+	case 0x42:
+		goto release;
+	case 0x25:
+	case 0x44:
+		if (widget->m_hit_check != 1) {
+press:
+			if (widget->m_hit_check != 0 &&
+			    ScePafWidget_D3D0A7C3(widget, port, id, true, true) == 0)
+				e->m_type = (e->m_type & 0xF0FFFFFF) | Event::STATE_CONSUME;
+		}
+		break;
+	case 0x26:
+	case 0x45:
+		if (widget->m_hit_check == 1 || widget->m_hit_check == 3)
+			break;
+release:
+		if (widget->m_hit_check != 0) {
+capture:
+			if (ScePafWidget_5ABB3393(widget, port, id, false) == 0)
+				e->m_type = (e->m_type & 0xF0FFFFFF) | Event::STATE_CONSUME;
+		}
+		break;
+	case 0x28:
+	case 0x47:
+		goto capture;
+	default:
+		break;
+	}
+	return 0;
+}
+
 void Widget::ReleaseShowHolds(bool recursive)
 {
 	if (m_touch_captures.size() != 0)
