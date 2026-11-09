@@ -74,6 +74,86 @@ void Environment::UpdateDisplayAreaSettings()
 	ReadDisplayAreaSettings(this);
 }
 
+int32_t Environment::ReleaseTouchCapture(TouchCapture *capture)
+{
+	if (capture->m_widget == NULL)
+		return -1;
+	capture->m_port = -1;
+	capture->m_id = -1;
+	capture->m_widget = NULL;
+	capture->m_touch = NULL;
+	return 0;
+}
+
+extern "C" DragState *ScePafWidget_DE6905E2(Environment *env, TouchCapture *capture)
+{
+	if (capture == NULL)
+		return NULL;
+	if (capture->m_widget == NULL)
+		return NULL;
+
+	DragState *state = &env->m_drag_state[capture->m_port][capture->m_id];
+
+	if (state->m_widget != NULL)
+		return NULL;
+	state->Reset();
+	state->m_port = capture->m_port;
+	state->m_id = capture->m_id;
+	state->m_widget = capture->m_widget;
+	state->m_capture = capture;
+	return state;
+}
+
+void Environment::UpdateOrderedTop()
+{
+	OrderEntry *begin = m_ordered_widgets.m_entries.ptr;
+	int32_t count = m_ordered_widgets.m_entries.count;
+
+	if (m_ordered_widgets.m_unsorted && count != 0)
+		sort(m_ordered_widgets.m_entries.begin(), m_ordered_widgets.m_entries.end());
+	begin = m_ordered_widgets.m_entries.ptr;
+	m_ordered_widgets.m_unsorted = false;
+	m_display_area_scene = NULL;
+	m_second_modal_widget = NULL;
+	for (OrderEntry *it = begin; it != m_ordered_widgets.m_entries.ptr + m_ordered_widgets.m_entries.count;
+	     ++it) {
+		Widget *widget = it->m_widget;
+
+		if (widget->IsInputTarget() &&
+		    (widget->m_color_alpha * widget->m_meta_a_sum) * widget->m_show_a_sum >= 0.95f) {
+			m_display_area_scene = widget->m_scene;
+			m_second_modal_widget = widget;
+			m_ordered_widgets.m_widget = widget;
+			break;
+		}
+	}
+}
+
+void Environment::Init()
+{
+	for (int32_t port = 0; port < 2; port++) {
+		for (int32_t id = 0; id < 8; id++) {
+			m_touch_state[port][id].m_id = id;
+			m_touch_state[port][id].m_port = port;
+		}
+	}
+	m_scene_entries.clear();
+	sce_paf_memset(m_pad_capture_dir, 0, 20);
+	sce_paf_memset(m_pad_capture_button, 0, 20);
+	if (m_focus_candidates.m_entries.limit < 16)
+		m_focus_candidates.m_entries.reserve(16);
+	m_ev_doevent.clear();
+	m_ev_subrouting.clear();
+	m_ev_queue.Clear();
+	m_callbacks.clear();
+	m_touch_region_mask = 0;
+	m_touch_region_mask_pre = 0;
+	sce_paf_memset(m_touch_region, 0, 24);
+	Widget::SetBaseDestroyCount(2);
+	if (m_vector8.limit < 4)
+		m_vector8.reserve(4);
+}
+
 int32_t Environment::ReleaseTouchesBehind(Widget *widget)
 {
 	if (widget == NULL)
@@ -193,6 +273,30 @@ void Environment::ClearHitInfo(Widget *widget)
 				m_touch_hit_last[port][id].m_widget = NULL;
 		}
 	}
+}
+
+int32_t Environment::RemoveScene(Widget *scene)
+{
+	int32_t entry = static_cast<Scene *>(scene)->m_scene_priority;
+
+	if (entry < 0)
+		return ENV_ERROR_NO_ENTRY;
+
+	map<int32_t, Widget *>::iterator it = m_scene_entries.find(entry);
+
+	if (it == m_scene_entries.end()) {
+		for (it = m_scene_entries.begin(); it != m_scene_entries.end(); ++it) {
+			if (it->second->FindChild(scene, 2) != NULL) {
+				it->second->RemoveChild(scene);
+				m_scene_restruct = true;
+				return 0;
+			}
+		}
+		return -2135998204;
+	}
+	it->second->RemoveChild(scene);
+	m_scene_restruct = true;
+	return 0;
 }
 
 int32_t Environment::GetSceneNum(int32_t entry)

@@ -264,6 +264,41 @@ public:
 	/* the touch's state (the Environment's m_touch_state for the port and ID; the drum of
 	   SpinBase reads its line end) */
 	TouchState *m_touch;
+
+};
+
+/* a widget's drag by one touch (0xe0 bytes; the Environment keeps one for each port and touch ID
+   and gives them out, a widget holds up to two; names ours). Sony resets it the same way in its
+   constructor and destructor. */
+class DragState {
+public:
+	/* made free again: no touch, widget or capture, the hit cleared, the vectors at their start
+	   values (inline in Sony's callers) */
+	__attribute__((always_inline)) void Reset()
+	{
+		m_port = -1;
+		m_id = -1;
+		m_widget = NULL;
+		m_capture = NULL;
+		sce_paf_memset(&m_hit, 0, sizeof(m_hit));
+		m_delta = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+		m_axis = math::v4(0.0f, 0.0f, 1.0f, 0.0f);
+		m_origin = math::v4(0.0f, 0.0f, 0.0f, 1.0f);
+		m_threshold = math::v4(10.0f, 10.0f, 10.0f, 0.0f);
+	}
+
+	uint32_t m_port;
+	uint32_t m_id;
+	/* the widget dragged */
+	Widget *m_widget;
+	/* the touch's capture */
+	TouchCapture *m_capture;
+	HitInfo m_hit;
+	math::v4 m_axis;
+	math::v4 m_origin;
+	math::v4 m_delta;
+	/* how far the touch moves before the drag begins (10, 10, 10) */
+	math::v4 m_threshold;
 };
 
 /* the focus: the widget drawn as the focus cursor and the widget it is on (Sony's class name,
@@ -296,6 +331,15 @@ public:
 	/* the widget the cursor goes under where it has no target (set by the cursor's creation,
 	   0x81141750; name ours) */
 	static Widget *s_cursor_parent;
+	/* whether the cursor is moved on at once, without the move animation: the move modes 1, 6 and
+	   7 (0x81141824; name ours) */
+	bool IsMoveImmediate();
+	/* the cursor's texture of the move mode, the default one for the modes below 2 (0x81141838;
+	   name ours) */
+	static void GetMoveTexture(intrusive_ptr<graph::Surface> &texture, int32_t mode);
+	/* the focus frame textures, SetTexture's no (0x813152b0; name ours) */
+	static intrusive_ptr<graph::Surface> s_textures[9];
+
 	/* the cursor leaving its target for the next one (NULL for none): the widget groups told, the
 	   position and shape of the target kept, the cursor sized to it and the target's cursor
 	   state cleared; -1 where there is nothing to leave (0x8114439c; name ours) */
@@ -389,6 +433,13 @@ public:
 	/* the ordered lists made again where the layer weights changed, or whatever (0x8113bdba; name
 	   ours) */
 	int32_t RefreshOrderLists(bool force);
+	/* the capture let go of: -1 and 0 again, -1 where it held nothing (0x8113fd14; name ours) */
+	int32_t ReleaseTouchCapture(TouchCapture *capture);
+	/* the ordered widgets sorted, the first one in front of its siblings and fully shown becomes
+	   the second modal widget and its scene the display area scene (0x8113bbfe; name ours) */
+	void UpdateOrderedTop();
+	/* the touch states numbered, the lists and queues emptied (0x81139cc4) */
+	void Init();
 	/* the touches of the front panel held by widgets behind the widget let go of (0x8113d64e;
 	   name ours) */
 	int32_t ReleaseTouchesBehind(Widget *widget);
@@ -479,7 +530,9 @@ public:
 
 	/* set: the widgets the focus leaves are kept in its history (name ours) */
 	bool m_focus_history_on;
-	uint8_t reserved_5[0x13];
+	uint8_t reserved_5a[3];
+	/* a vector of four to begin with (Init; element type and use unknown; name ours) */
+	vector<uint32_t> m_vector8;
 	/* what the environment runs at its end, each ended with a call of its first word (name ours,
 	   use not found) */
 	list<EnvCallback> m_callbacks;
@@ -489,7 +542,9 @@ public:
 	/* the transitions still under way (IsTermAvailable counts them; meaning open, element type
 	   unknown; name ours) */
 	list<uint32_t> m_pending;
-	uint8_t reserved_64[1];
+	/* set when scenes were taken out of the entries; UpdateRestructScene then orders the scenes' layers
+	   again (RemoveScene; name ours) */
+	bool m_scene_restruct;
 	/* set when a scene's layer weights are made again (Scene::UpdateLayerWeight; name ours) */
 	bool m_layer_weight_changed;
 	uint8_t reserved_42[2];
@@ -592,7 +647,9 @@ public:
 	HitInfo m_touch_hit_last[2][8];
 	/* the widget capturing each touch of the front and rear panels (name ours) */
 	TouchCapture m_touch_capture[2][8];
-	uint8_t reserved5d[0xf00];
+	/* the drags given out, by the touch's port and ID (names ours) */
+	DragState m_drag_state[2][8];
+	uint8_t reserved5d[0x100];
 	/* the widgets the touches are on (TouchScrollSupplier's checks; name ours) */
 	list<HitInfo> m_touch_hits;
 	/* the widgets IsHitStackParent takes as the hit stack's parents, cleared with
@@ -643,6 +700,8 @@ int32_t ScePafWidget_ABF05727(paf::ui::Environment *env, uint32_t port, bool rel
 			      paf::ui::Widget *keep);
 /* updates the input devices */
 int32_t ScePafWidget_909850C4(void);
+/* a drag state made free for the capture's touch, NULL where it is in use (no name found) */
+paf::ui::DragState *ScePafWidget_DE6905E2(paf::ui::Environment *env, paf::ui::TouchCapture *capture);
 /* the widget the list with the ID is for, 0 for none (no name found) */
 paf::ui::Widget *ScePafWidget_0775F78F(paf::ui::Environment *env, uint32_t id);
 /* a widget taken out of the list with the ID, or the list emptied with none (no name found) */

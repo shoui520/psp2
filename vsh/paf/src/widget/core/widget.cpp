@@ -1671,6 +1671,85 @@ void Widget::detach_environment()
 		m_env->RemoveTouchDeviceRegion(this);
 }
 
+int32_t Widget::ClearDragState(DragState *state)
+{
+	Environment *env = m_env;
+
+	if (env == NULL)
+		return -1;
+	if (state == NULL)
+		return -1;
+
+	DragState *first = m_drag_state[0];
+	int32_t *pinch = m_pinch_state;
+
+	if (pinch != NULL) {
+		DragState *second = m_drag_state[1];
+
+		if (state == first) {
+			m_drag_state[0] = second;
+			first = second;
+			m_drag_state[1] = state;
+			second = state;
+		} else if (state != second) {
+			return -1;
+		}
+		if (second->m_widget != NULL) {
+			second->Reset();
+			pinch = m_pinch_state;
+			first = m_drag_state[0];
+			env = m_env;
+		}
+		m_drag_state[1] = NULL;
+		m_pinch_state = NULL;
+		pinch[0] = 0;
+		pinch[1] = 0;
+		pinch[2] = 0;
+		if ((uint8_t)m_layout_notify_mask != 0 && (m_layout_notify_mask & 0x800) != 0) {
+			if (m_parent != NULL && m_parent->m_layouter != NULL)
+				m_parent->m_layouter->SetDirty(1);
+			if (m_layouter != NULL)
+				m_layouter->SetDirty(1);
+		}
+
+		uint32_t port = first->m_port;
+		uint32_t id = first->m_id;
+
+		if (env != NULL) {
+			TouchState *touch = NULL;
+
+			if (id < 8 && port < 2) {
+				touch = &env->m_touch_state[port][id];
+				touch->m_port = port;
+				touch->m_id = id;
+			}
+			ScePafWidget_0E453608(this, first, touch);
+		}
+		return 0;
+	}
+	if (first != NULL) {
+		if (state != first)
+			return -1;
+		if (first->m_widget != NULL)
+			first->Reset();
+		m_drag_state[0] = NULL;
+		if ((uint8_t)m_layout_notify_mask != 0 && (m_layout_notify_mask & 0x800) != 0) {
+			if (m_parent != NULL && m_parent->m_layouter != NULL)
+				m_parent->m_layouter->SetDirty(1);
+			if (m_layouter != NULL)
+				m_layouter->SetDirty(1);
+		}
+
+		int32_t mode = (int16_t)m_saved_drag_mode;
+
+		if (mode >= 0) {
+			SetDragMode(mode);
+			m_saved_drag_mode = -1;
+		}
+	}
+	return 0;
+}
+
 void Widget::SetCursorOn(bool on, Widget *from, Widget *to)
 {
 	if (m_cursor_on == on)
@@ -4969,8 +5048,7 @@ Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
 	m_hit_detect_mode = 2;
 	m_hit_detect_b_mode = 2;
 	m_hit_check = 0;
-	reserved5c[0] = 0xFF;
-	reserved5c[1] = 0xFF;
+	m_saved_drag_mode = -1;
 	m_align_x = 0;
 	m_align_y = 0;
 	m_align_z = 0;

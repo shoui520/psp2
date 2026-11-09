@@ -197,6 +197,59 @@ void FocusInfo::Hide()
 	}
 }
 
+bool FocusInfo::IsMoving()
+{
+	if (m_cursor == NULL)
+		return false;
+	if (m_cursor->FindAnim(0x10000) != NULL || m_cursor->FindAnim(65540) != NULL)
+		return true;
+	return false;
+}
+
+bool FocusInfo::IsMoveImmediate()
+{
+	uint32_t mode = m_move_mode;
+
+	if (mode == 1 || mode == 6 || mode == 7)
+		return true;
+	return false;
+}
+
+intrusive_ptr<graph::Surface> FocusInfo::s_textures[9];
+
+void FocusInfo::GetMoveTexture(intrusive_ptr<graph::Surface> &texture, int32_t mode)
+{
+	texture = s_textures[0];
+	switch (mode) {
+	case 0:
+	case 1:
+		texture = s_textures[0];
+		break;
+	case 2:
+		texture = s_textures[1];
+		break;
+	case 3:
+		texture = s_textures[2];
+		break;
+	case 4:
+	case 5:
+		texture = s_textures[3];
+		break;
+	case 6:
+		texture = s_textures[5];
+		break;
+	case 7:
+		texture = s_textures[6];
+		break;
+	case 8:
+		texture = s_textures[7];
+		break;
+	case 9:
+		texture = s_textures[8];
+		break;
+	}
+}
+
 /* the nearest widget up the tree, this one included, that takes its children's events first,
    short of the scene (name ours) */
 static inline Widget *FindEventGroup(Widget *widget)

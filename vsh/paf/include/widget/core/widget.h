@@ -56,6 +56,8 @@ class Widget;
 class Scene;
 class TouchCapture;
 class HitInfo;
+class DragState;
+class TouchState;
 class Camera;
 class AnimListener;
 class AnimQueue;
@@ -1076,6 +1078,9 @@ public:
 				 HitInfo *info);
 	/* exports 7A3A7304, 0FCCC833, B94694E3 */
 	void SetDragMode(uint32_t mode);
+	/* a drag state let go of: the second becomes the first, the layout of it and its parent
+	   marked dirty, the drag mode put back (0x8114e258; name ours) */
+	int32_t ClearDragState(DragState *state);
 	void SetPinchMode(uint32_t mode);
 	/* sets the steps its drag moves it in (name ours) */
 	void SetDragQuant(uint8_t x, uint8_t y, uint8_t z)
@@ -1713,8 +1718,10 @@ public:
 	map<uint32_t, TouchCapture *> m_touch_captures;
 	/* the drag states of the touches dragging it, the first and the second; the second
 	   becomes the first when the first is released (0x8114e258; names ours) */
-	void *m_drag_state[2];
-	uint8_t reserved5b[4];
+	DragState *m_drag_state[2];
+	/* three words (the pinch of two touches: cleared when the second drag ends; no more found;
+	   name ours) */
+	int32_t *m_pinch_state;
 	/* the hit box GetHitBoxSize and GetHitBoxCenter give (names ours): its center offset and
 	   its size, the size an addition to the widget's (mode 1), a scale of it (2) or itself (3);
 	   mode 0 is the widget's own size */
@@ -1731,7 +1738,8 @@ public:
 	uint32_t reserved5a : 8;
 	/* what SetPinchMode sets (0x400: the pinch limits are the widget's size) */
 	uint16_t m_pinch_mode;
-	uint8_t reserved5c[2];
+	/* the drag mode kept while it is dragged by a touch, -1 for none (name ours) */
+	int16_t m_saved_drag_mode;
 	uint32_t m_align_x : 4;
 	uint32_t m_align_y : 4;
 	uint32_t m_align_z : 4;
@@ -1911,6 +1919,9 @@ void ScePafWidget_13B246E0(paf::ui::Widget *widget, paf::ui::FocusShape *shape);
    stops it being that (off) (0x8114fcfa TOOL; no name found) */
 void ScePafWidget_EC6175D6(paf::ui::Widget *widget, bool on);
 /* the drag state of the widget made again for the position (name ours) */
+/* the drag state's touch state filled from the hit line of the touch (no name found) */
+int32_t ScePafWidget_0E453608(paf::ui::Widget *widget, paf::ui::DragState *drag,
+			      paf::ui::TouchState *touch);
 void ScePafWidget_E17C2B53(paf::ui::Widget *widget, void *drag, const void *pos, float time);
 /* the layout of the resolution taken over the timer's time, at once without one, its
    children's too where children */
