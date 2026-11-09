@@ -330,6 +330,10 @@ public:
 	bool IsTermAvailable();
 	/* lets the widgets end: m_term_requested once nothing keeps them */
 	int32_t RequestTerm();
+	/* lets the widgets end and runs frames until nothing keeps them (0x8113db36; name ours) */
+	int32_t Term();
+	/* a frame drawn: begun on the root surface, the scenes drawn, ended (0x8113c31c) */
+	void OnDraw();
 	/* the widget that holds the port's pad keys of the low group (0x1f) or the high group
 	   (0x3e0) lets go of them: -1 where none holds them (0x8113f4be, 0x8113f470; names
 	   ours) */
@@ -420,13 +424,17 @@ public:
 	/* the scenes' cameras turn with the screen orientation in modes 0 and 1
 	   (Scene::ResetCameraRoll; name ours) */
 	uint8_t m_camera_roll_mode;
-	uint8_t reserved7g[8];
+	uint8_t reserved7g[3];
+	/* the state the root surface was in after the frame began (DisplaySurface's m_frame_state;
+	   name ours), and whether the frame is drawn: it was 1 (name ours) */
+	int32_t m_frame_state;
+	bool m_draw_frame;
 	/* set by RequestTerm */
 	bool m_term_requested;
-	/* set by the power callback while the system suspends: the frame is not drawn (name
-	   ours) */
+	/* set by the power callback while the system suspends: the frame is not drawn unless
+	   m_draw_when_suspended (name ours) */
 	bool m_suspended;
-	uint8_t reserved1[1];
+	bool m_draw_when_suspended;
 	/* the Framework's InitParam::env_option */
 	bool m_env_option;
 	uint8_t reserved2[3];

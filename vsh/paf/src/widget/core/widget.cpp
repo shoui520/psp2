@@ -583,6 +583,26 @@ extern "C" int32_t ScePafWidget_AC0C81D5(Widget *widget, float time)
 	return 0;
 }
 
+extern "C" void ScePafWidget_A96A0B4A(Widget *widget, int32_t add)
+{
+	if (add != 0) {
+		if (widget->m_show_hold == 0) {
+			if (add < 0)
+				return;
+			widget->ReleaseShowHolds(true);
+		}
+		widget->m_show_hold = widget->m_show_hold + add;
+	}
+}
+
+extern "C" bool ScePafWidget_DB0FFD33(Widget *widget)
+{
+	if (widget != NULL && (widget->m_drag_begun || (widget->IsInputTarget() && widget->m_meta_a_sum >= 0.5f)) &&
+	    !widget->m_fit_to_scene && !widget->m_culled)
+		return true;
+	return false;
+}
+
 extern "C" void ScePafWidget_CEA2BE4E(void)
 {
 	map<Widget *, Timer *>::iterator it = s_destroy_timers.begin();

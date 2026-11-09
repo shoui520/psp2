@@ -1850,8 +1850,9 @@ void ScePafWidget_83214DB9(paf::ui::Widget *widget, bool on, bool force);
 void ScePafWidget_78C4DBA4(paf::ui::Widget *widget);
 /* every destroy timer run (no name found) */
 void ScePafWidget_CEA2BE4E(void);
-/* adds to the count kept in bits 24 to 27 of the widget's flags */
-int32_t ScePafWidget_A96A0B4A(paf::ui::Widget *widget, int32_t add);
+/* adds to the count kept in bits 24 to 27 of the widget's flags (the first hold lets go of the
+   show holds first) */
+void ScePafWidget_A96A0B4A(paf::ui::Widget *widget, int32_t add);
 /* Show(common::transition::Type, float delay, HandlerCB, void *): shows the widget with the
    transition (the NID's name, ScePaf-RE's NID list); returns the transition's time */
 float ScePafWidget_44B22ACA(paf::ui::Widget *widget, paf::common::transition::Type type,

@@ -6,7 +6,9 @@
 #include <inputdevice/touchscreen/touchscreen.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <graphics/surface/surface_display.h>
+#include <graphics/gutil.h>
 #include <system/system.h>
+#include <timer/timer.h>
 #include <widget/core/widget.h>
 #include <widget/w_scene.h>
 
@@ -448,6 +450,78 @@ extern "C" int32_t ScePafWidget_36505C86(const EnvironmentParam *param, const ID
 			it++;
 	}
 	return -1;
+}
+
+extern "C" {
+
+void ScePafWidget_9D4A5A0E(Environment *env)
+{
+	graph::DisplaySurface *surface = Screen::s_root_surface;
+	int32_t state = 0;
+
+	if (surface != NULL) {
+		surface->StartFrame();
+		state = surface->m_frame_state;
+	}
+
+	bool suspended = env->m_suspended;
+
+	env->m_frame_state = state;
+	env->m_draw_frame = state == 1;
+	if (suspended && !env->m_draw_when_suspended)
+		env->m_draw_frame = false;
+}
+
+int32_t ScePafWidget_F67517A0(Environment *env)
+{
+	int32_t result;
+
+	ScePafMisc_4357D271();
+	if (Screen::s_root_screen == NULL)
+		return -1;
+	if (Screen::s_root_screen->m_whandle.width > 0) {
+		result = ScePafGraphics_27416D74(Screen::s_root_screen->m_whandle.width,
+						 Screen::s_root_screen->m_whandle.height,
+						 Screen::s_root_screen->m_whandle.callback);
+		if (result < 0)
+			return result;
+	}
+	if (Screen::s_root_surface == NULL)
+		return -1;
+	Screen::s_root_surface->WaitFrame();
+	return 0;
+}
+
+void ScePafWidget_8E61FE0C(Environment *env)
+{
+	ScePafGraphics_C5504119();
+	ScePafMisc_EF1C440B();
+}
+
+}
+
+int32_t Environment::Term()
+{
+	Widget::SetBaseDestroyCount(2);
+	RequestTerm();
+	while (!IsTermAvailable()) {
+		OnUpdatePre();
+		OnUpdatePost();
+		OnDraw();
+		ScePafMisc_4357D271();
+		if (Screen::s_root_screen != NULL) {
+			if (Screen::s_root_screen->m_whandle.width <= 0 ||
+			    ScePafGraphics_27416D74(Screen::s_root_screen->m_whandle.width,
+						    Screen::s_root_screen->m_whandle.height,
+						    Screen::s_root_screen->m_whandle.callback) >= 0) {
+				if (Screen::s_root_surface != NULL)
+					Screen::s_root_surface->WaitFrame();
+			}
+		}
+		ScePafGraphics_C5504119();
+		ScePafMisc_EF1C440B();
+	}
+	return m_term_requested;
 }
 }
 }
