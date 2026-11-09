@@ -61,6 +61,7 @@ class TouchState;
 class Camera;
 class AnimListener;
 class AnimQueue;
+class TextureSource;
 typedef void (*AnimCB)(Timer *t, AnimListener *listener, void *data1, void *data2,
 		       void *data3);
 
@@ -1370,6 +1371,11 @@ public:
 	int32_t SetParent(Widget *parent, Widget *sibling, int32_t option);
 	/* the widget made a child of the parent at once, before the sibling (NULL: last) (0x8114fd9c) */
 	int32_t SetParent_core(Widget *parent, Widget *sibling);
+	/* the texture the source gives set on the draw object, the events 0x100005 (set) and 0x100006
+	   (not) sent; 0x100007 too where the source holds no more; the request let go of when it is
+	   set or the source gives up (0x80af5022); the result of the source, -1 without an
+	   environment or for a source that is no texture (0x81160596; name ours) */
+	int32_t OnTextureSource(const intrusive_ptr<TextureSource> *source, int32_t obj, int32_t bit);
 	/* it taken out of its scene's layer count and surface list, and of the debug focus
 	   (0x8115164a; name ours) */
 	void detach_scene();

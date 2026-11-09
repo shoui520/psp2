@@ -4191,6 +4191,62 @@ static inline void AddLayerRange(Scene *scene, uint32_t layer, int32_t delta)
 	}
 }
 
+int32_t Widget::OnTextureSource(const intrusive_ptr<TextureSource> *source, int32_t obj, int32_t bit)
+{
+	if (m_env == NULL)
+		return -1;
+	if ((*source)->GetType() != 2)
+		return -1;
+
+	int32_t result = 0;
+	intrusive_ptr<graph::Surface> surface;
+
+	(*source)->GetSurface(&surface);
+	if (surface.get() != NULL) {
+		SetTexture(surface, obj, bit);
+		m_adjust_x = m_adjust_x;
+		m_adjust_y = m_adjust_y;
+		m_adjust_z = m_adjust_z;
+		UpdateLayoutAttribute();
+		UpdateAdjustSize();
+
+		Event e(0x1005, this, 0x40000, 0, 0, 0, 0, 0);
+
+		m_env->m_ev_queue.PushBack(e);
+		DoEvent(0x20100005, &e);
+	} else {
+		result = (*source)->GetResult();
+
+		Event e(0x1006, this, 0x40000, 0, 0, 0, 0, 0);
+
+		e.m_data[0] = result;
+		e.m_data[1] = obj;
+		m_env->m_ev_queue.PushBack(e);
+		DoEvent(0x20100006, &e);
+		if (result != 0) {
+			if ((*source)->Reserved9() == 0) {
+				Event e2(0x1007, this, 0x40000, 0, 0, 0, 0, 0);
+
+				e2.m_data[0] = result;
+				e2.m_data[1] = obj;
+				m_env->m_ev_queue.PushBack(e2);
+				DoEvent(0x20100007, &e2);
+			}
+			if (result != (int32_t)0x80AF5022)
+				return result;
+		}
+	}
+
+	vector<DrawObjEntry>::iterator it = m_drawobjs.begin();
+
+	while (it != m_drawobjs.end() && it->m_attr.m_id != (uint32_t)obj)
+		++it;
+	it->m_attr.m_value &= ~(1 << bit);
+	if (m_key_listed != 0)
+		m_key_listed--;
+	return result;
+}
+
 void Widget::detach_scene()
 {
 	Scene *scene = m_scene;
