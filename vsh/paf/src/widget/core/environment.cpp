@@ -38,6 +38,22 @@ _Tree<_Tmap_traits<uint32_t, ui::ModalWidgetList, less<uint32_t> > >::find(const
 	return iterator(_Find(key));
 }
 
+/* Sony has the unlinking of a texture request inline. */
+template<>
+inline __attribute__((always_inline)) list<ui::TextureRequest>::iterator
+list<ui::TextureRequest>::erase(iterator where)
+{
+	_Node *node = where.node;
+	_Node *next = node->next;
+
+	node->next->prev = node->prev;
+	node->prev->next = node->next;
+	destroy(&node->value);
+	operator delete(node);
+	--count;
+	return iterator(next);
+}
+
 /* Sony's AddSceneEntry calls the pending list's push_back rather than inlining it. */
 template<>
 inline __attribute__((noinline)) void list<ui::EntryRequest>::push_back(const ui::EntryRequest &val)
@@ -235,6 +251,128 @@ done:
 		m_cancel_widget = NULL;
 		m_modal_widgets.m_widget = NULL;
 	}
+}
+
+int32_t Environment::AddTextureRequest(Widget *widget, const intrusive_ptr<TextureSource> *source,
+				       uint8_t obj, uint8_t bit)
+{
+	if (widget == NULL || widget->m_hold_count > 0)
+		return -1;
+
+	TextureRequest request;
+
+	request.m_source = *source;
+	request.m_widget = widget;
+	request.m_obj = obj;
+	request.m_bit = bit;
+	if (m_texture_requests_busy)
+		m_texture_requests_add.push_back(request);
+	else
+		m_texture_requests.push_back(request);
+	return 0;
+}
+
+int32_t Environment::RemoveTextureRequest(Widget *widget, int32_t obj, int32_t bit)
+{
+	if (widget == NULL)
+		return -1;
+
+	if (m_texture_requests_busy) {
+		for (list<TextureRequest>::iterator it = m_texture_requests_add.begin();
+		     it != m_texture_requests_add.end(); ++it) {
+			if (it->m_widget == widget && it->m_obj == obj && it->m_bit == bit) {
+				m_texture_requests_add.erase(it);
+				return 0;
+			}
+		}
+	}
+	for (list<TextureRequest>::iterator it = m_texture_requests.begin(); it != m_texture_requests.end();
+	     ++it) {
+		if (it->m_widget == widget && it->m_obj == obj && it->m_bit == bit) {
+			if (m_texture_requests_busy) {
+				TextureRequest removed;
+
+				removed.m_widget = widget;
+				removed.m_obj = obj;
+				removed.m_bit = bit;
+				m_texture_requests_remove.push_back(removed);
+			} else {
+				m_texture_requests.erase(it);
+			}
+			return 0;
+		}
+	}
+	return -1;
+}
+
+intrusive_ptr<TextureSource> Environment::FindTextureRequest(Widget *widget, int32_t obj, int32_t bit)
+{
+	if (widget == NULL || m_texture_requests.size() == 0)
+		return intrusive_ptr<TextureSource>();
+
+	for (list<TextureRequest>::iterator it = m_texture_requests.begin(); it != m_texture_requests.end();
+	     ++it) {
+		if (it->m_widget == widget && it->m_obj == obj && it->m_bit == bit)
+			return it->m_source;
+	}
+	if (m_texture_requests_busy) {
+		for (list<TextureRequest>::iterator it = m_texture_requests_add.begin();
+		     it != m_texture_requests_add.end(); ++it) {
+			if (it->m_widget == widget && it->m_obj == obj && it->m_bit == bit)
+				return it->m_source;
+		}
+	}
+	return intrusive_ptr<TextureSource>();
+}
+
+int32_t Environment::RemoveTextureRequests(Widget *widget)
+{
+	if (widget != NULL) {
+		if (m_texture_requests_busy) {
+			list<TextureRequest>::iterator it = m_texture_requests_add.begin();
+
+			while (it != m_texture_requests_add.end()) {
+				if (it->m_widget == widget)
+					it = m_texture_requests_add.erase(it);
+				else
+					++it;
+			}
+		}
+
+		list<TextureRequest>::iterator it = m_texture_requests.begin();
+
+		while (it != m_texture_requests.end()) {
+			if (it->m_widget == widget) {
+				if (m_texture_requests_busy) {
+					TextureRequest removed;
+
+					removed.m_widget = widget;
+					removed.m_obj = it->m_obj;
+					removed.m_bit = it->m_bit;
+					m_texture_requests_remove.push_back(removed);
+					++it;
+				} else {
+					it = m_texture_requests.erase(it);
+				}
+			} else {
+				++it;
+			}
+		}
+	}
+	return -1;
+}
+
+int32_t Environment::RemoveTextureRequestOf(const TextureRequest &request)
+{
+	for (list<TextureRequest>::iterator it = m_texture_requests.begin(); it != m_texture_requests.end();
+	     ++it) {
+		if (it->m_widget == request.m_widget && it->m_obj == request.m_obj &&
+		    it->m_bit == request.m_bit) {
+			m_texture_requests.erase(it);
+			return 0;
+		}
+	}
+	return -1;
 }
 
 void Environment::Init()

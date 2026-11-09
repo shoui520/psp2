@@ -1853,7 +1853,7 @@ void Widget::detach_environment()
 	if (env == NULL)
 		return;
 	if (m_key_listed > 0)
-		env->RemoveKeyListeners(this);
+		env->RemoveTextureRequests(this);
 	if (m_pad_dir_port >= 0)
 		ReleasePadCaptureDir(255, true);
 	if (m_bound_keycode) {

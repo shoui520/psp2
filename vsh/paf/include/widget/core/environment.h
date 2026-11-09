@@ -462,6 +462,39 @@ public:
 	uint32_t reserved;
 };
 
+/* what a draw object's texture comes from while it loads: the surface it gives, its result and its
+   type (2: a texture); reference counted through its virtual AddRef and Release (name ours, the
+   methods after the vtable slots) */
+class TextureSource {
+public:
+	virtual ~TextureSource()
+	{
+	}
+
+	virtual void GetSurface(intrusive_ptr<graph::Surface> *surface) = 0;
+	virtual int32_t GetResult() = 0;
+	virtual int32_t GetType() = 0;
+	virtual void Reserved5() = 0;
+	virtual void AddRef() = 0;
+	virtual void Release() = 0;
+	virtual void Reserved8() = 0;
+	virtual int32_t Reserved9() = 0;
+};
+
+/* a draw object's texture the environment waits for: its source, the widget and the object's
+   index and bit (name ours) */
+class TextureRequest {
+public:
+	TextureRequest() : m_widget(NULL), m_obj(0), m_bit(0)
+	{
+	}
+
+	intrusive_ptr<TextureSource> m_source;
+	Widget *m_widget;
+	uint8_t m_obj;
+	uint8_t m_bit;
+};
+
 /* an entry of the environment's callback list: a function that ends it (names ours) */
 class EnvCallback {
 public:
@@ -514,9 +547,18 @@ public:
 	/* the touches of the front panel held by widgets behind the widget let go of (0x8113d64e;
 	   name ours) */
 	int32_t ReleaseTouchesBehind(Widget *widget);
-	/* the widget's key listeners taken out of the environment's lists (0x8114093e; name ours,
-	   meaning open) */
-	int32_t RemoveKeyListeners(Widget *widget);
+	/* the texture request with the widget's draw object and bit added (0x811407aa); -1 for a
+	   held widget (name ours) */
+	int32_t AddTextureRequest(Widget *widget, const intrusive_ptr<TextureSource> *source,
+				  uint8_t obj, uint8_t bit);
+	/* the request taken off (0x8114082c); -1 for none */
+	int32_t RemoveTextureRequest(Widget *widget, int32_t obj, int32_t bit);
+	/* its source, none without a request (0x81140a44) */
+	intrusive_ptr<TextureSource> FindTextureRequest(Widget *widget, int32_t obj, int32_t bit);
+	/* the requests of the widget taken off (0x8114093e); always -1 */
+	int32_t RemoveTextureRequests(Widget *widget);
+	/* the request of the same widget, object and bit taken off (0x8113c826) */
+	int32_t RemoveTextureRequestOf(const TextureRequest &request);
 	int32_t RegisterTouchDeviceRegion(Widget *widget);
 	int32_t RegisterTouchDeviceRegion(uint32_t index, Widget *widget);
 	int32_t RemoveTouchDeviceRegion(Widget *widget);
@@ -625,7 +667,18 @@ public:
 	float m_display_area_scale;
 	bool m_display_area_applied;
 	bool m_display_area_changed;
-	uint8_t reserved8[0x2e];
+	/* a resize of the root surface asked for (ScePafWidget_E8F38C84; names ours) */
+	bool m_resize_pending;
+	uint8_t reserved8a[1];
+	uint16_t m_resize_width;
+	uint16_t m_resize_height;
+	/* the textures waited for; those added and those taken off while the first is walked
+	   (UpdateTextureRequests; names ours) */
+	list<TextureRequest> m_texture_requests;
+	list<TextureRequest> m_texture_requests_add;
+	list<TextureRequest> m_texture_requests_remove;
+	bool m_texture_requests_busy;
+	uint8_t reserved8c[3];
 	/* the gesture listener of the pad (name ours) */
 	common::SharedPtr<inputdevice::InputGestureListener> m_pad_gesture_listener;
 	/* the gesture listeners of the front (0) and rear (1) touch ports (names ours) */
