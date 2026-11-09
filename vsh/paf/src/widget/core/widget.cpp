@@ -3612,6 +3612,86 @@ extern "C" int32_t ScePafWidget_4588699E(Widget *widget, Timer *t, int32_t opt, 
 	return 0;
 }
 
+/*
+ * The widget's focus cursor takes shape: each value the shape still has at its
+ * default (or at the entry of the widget's resolution) takes that entry, and a
+ * value set otherwise is written back into the entry; then the widget's cursor
+ * is made a copy of the shape.
+ */
+extern "C" void ScePafWidget_13B246E0(Widget *widget, FocusShape *shape)
+{
+	ResolutionData *entry;
+
+	if (shape->m_offset_array.ptr != NULL && shape->m_offset_array.count != 0) {
+		entry = widget->get_resolution_data(shape->m_offset_array.ptr,
+						    shape->m_offset_array.count,
+						    widget->m_resolution_id);
+		if (entry != NULL) {
+			math::v3 value(entry->m_value[0], entry->m_value[1], entry->m_value[2]);
+
+			if (shape->m_offset == value || shape->m_offset == math::v3::_000()) {
+				if (!(value == math::v3::_000()))
+					shape->m_offset = value;
+			} else {
+				entry->m_value[0] = shape->m_offset.extract_x();
+				entry->m_value[1] = shape->m_offset.extract_y();
+				entry->m_value[2] = shape->m_offset.extract_z();
+			}
+		}
+	}
+	if (shape->m_size_array.ptr != NULL && shape->m_size_array.count != 0) {
+		entry = widget->get_resolution_data(shape->m_size_array.ptr,
+						    shape->m_size_array.count,
+						    widget->m_resolution_id);
+		if (entry != NULL) {
+			math::v2 value(entry->m_value[0], entry->m_value[1]);
+
+			if (shape->m_size == value || shape->m_size == math::v2(0.0f, 0.0f)) {
+				if (!(value == math::v2(0.0f, 0.0f)))
+					shape->m_size = value;
+			} else {
+				entry->m_value[2] = 0.0f;
+				entry->m_value[0] = shape->m_size.extract_x();
+				entry->m_value[1] = shape->m_size.extract_y();
+			}
+		}
+	}
+	if (shape->m_rot_array.ptr != NULL && shape->m_rot_array.count != 0) {
+		entry = widget->get_resolution_data(shape->m_rot_array.ptr,
+						    shape->m_rot_array.count,
+						    widget->m_resolution_id);
+		if (entry != NULL) {
+			math::v3 value(entry->m_value[0], entry->m_value[1], entry->m_value[2]);
+
+			if (shape->m_rot == value || shape->m_rot == math::v3::_000()) {
+				if (!(value == math::v3::_000()))
+					shape->m_rot = value;
+			} else {
+				entry->m_value[0] = shape->m_rot.extract_x();
+				entry->m_value[1] = shape->m_rot.extract_y();
+				entry->m_value[2] = shape->m_rot.extract_z();
+			}
+		}
+	}
+
+	FocusShape *focus = widget->m_focus_shape;
+
+	if (focus == NULL) {
+		focus = new FocusShape;
+		widget->m_focus_shape = focus;
+	}
+	vector<ResolutionData>(shape->m_offset_array).swap(focus->m_offset_array);
+	vector<ResolutionData>(shape->m_size_array).swap(focus->m_size_array);
+	vector<ResolutionData>(shape->m_rot_array).swap(focus->m_rot_array);
+	focus->m_shape = shape->m_shape;
+	focus->m_offset = shape->m_offset;
+	focus->m_size = shape->m_size;
+	focus->m_rot = shape->m_rot;
+	focus->m_texture = shape->m_texture;
+	focus->m_use_parts = shape->m_use_parts;
+	focus->reserved_b = shape->reserved_b;
+}
+
 extern "C" float ScePafWidget_44B22ACA(Widget *widget, common::transition::Type type, float delay,
 				       HandlerCB cb, void *data)
 {

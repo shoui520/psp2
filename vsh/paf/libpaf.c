@@ -8,7 +8,6 @@
 
 STUB(_ZN3paf2ui9FocusInfo6UpdateEf)
 STUB(_ZN3paf2ui6Widget13DestroyWidgetEv)
-STUB(ScePafWidget_13B246E0)
 STUB(ScePafWidget_173C7C23)
 STUB(ScePafWidget_1975BA26)
 STUB(ScePafWidget_4607555F)
