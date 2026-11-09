@@ -535,7 +535,8 @@ public:
  */
 class WidgetFocusParam : public VersatileParam {
 public:
-	static const char *s_names[];
+	static const char m_param_name[];
+	static const char *const s_names[];
 
 	WidgetFocusParam();
 

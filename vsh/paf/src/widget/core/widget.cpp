@@ -435,11 +435,11 @@ list<AnimPending> ScePafWidget_8A0DA7BF;
 
 /* the timers of the widgets that hide and are destroyed when theirs runs out, and those of the
    widgets that show (names ours) */
-static map<Widget *, Timer *> s_destroy_timers;
+map<Widget *, Timer *> s_destroy_timers;
 static map<Widget *, Timer *> s_show_timers;
 
 /* the draw objects SwapDrawObj took out, kept until the frame ends (name ours) */
-static list<common::SharedPtr<graph::DrawObj> > s_swapped_drawobjs;
+list<common::SharedPtr<graph::DrawObj> > s_swapped_drawobjs;
 
 /* the widget's timer in the map taken out and deleted, if it has one (inline in Sony's callers;
    name ours) */
@@ -6394,3 +6394,6 @@ int32_t Widget::GetBaseDestroyCount()
 }
 }
 }
+
+/* the adjustment a widget without its own is given (name ours) */
+paf::ui::AdjustParam ScePafWidget_BE1CEA2E;

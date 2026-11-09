@@ -45,8 +45,8 @@ uint32_t s_scissor_tile = 32;
 
 /* the clip and the scissor rectangles pushed, the top of each, and the scissor's center and
    size and whether it is empty */
-static list<math::rect> s_clip_stack;
-static list<math::rect> s_scissor_stack;
+list<math::rect> s_clip_stack;
+list<math::rect> s_scissor_stack;
 static math::rect s_clip_rect;
 static math::rect s_scissor_rect;
 static math::v2 s_scissor_center;

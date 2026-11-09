@@ -32,6 +32,10 @@ TextBoxEditListener *GetEditListener();
 
 class TextBox : public Text {
 public:
+	/* how long the glow fades out as the box is tapped or its edit ends (a constant of the
+	   file; name ours) */
+	static const float c_glowFadeMsec;
+
 	/* what the text box tells its listeners of its editing (ScePaf-RE's names where it has them,
 	   with its values moved to this firmware's; the others ours); the edit listener's sends
 	   it as the editing begins and ends, and about the IME (0x10000009 to 0x1000000B) */

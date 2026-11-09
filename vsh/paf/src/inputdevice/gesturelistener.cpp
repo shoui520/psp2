@@ -14,7 +14,7 @@ using namespace paf::inputdevice;
 
 typedef InputGestureListener::GestureMap GestureMap;
 
-static map<void *, uint32_t> s_user_data_list;
+map<void *, uint32_t> GestureListener::s_user_data_list;
 
 int32_t GestureListener::get_id_from_bitmap(uint32_t bitmap, uint32_t idx)
 {

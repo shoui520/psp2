@@ -34,6 +34,8 @@ namespace ui {
 
 const char TextBox::m_widget_type[] = "text_box";
 
+const float TextBox::c_glowFadeMsec = 500.0f;
+
 const float TextBox::c_caretWidth = 2.0f;
 
 /* the scroll bar shown (a transition in) or hidden (a transition out) at once; inlined in Sony's

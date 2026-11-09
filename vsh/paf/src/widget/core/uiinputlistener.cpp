@@ -107,8 +107,8 @@ union PadGestureDetail {
 
 /* the update of the pad keys, what the UIPadListener keeps for each port (TOOL 0x81315350 and
    0x81315410, and the port 0x813154d0; names ours) */
-static inputdevice::pad::Data s_pad_curr[8];
-static inputdevice::pad::Data s_pad_prev[8];
+inputdevice::pad::Data s_pad_curr[8];
+inputdevice::pad::Data s_pad_prev[8];
 static int32_t s_pad_port;
 
 int32_t PadGestureListener::on_update_core()

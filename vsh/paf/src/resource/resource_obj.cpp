@@ -912,7 +912,7 @@ IDParam ResourceObj::GetAliasID(const IDParam &id) const
 }
 
 /* the locale element IDs, by the system language (name ours) */
-static const char *s_locale_id[] = {
+extern const char *const s_locale_id[] = {
 	"ja", "en", "fr", "es", "de", "it", "nl", "pt", "ru", "ko", "zh-t", "zh-s", "fi", "sv",
 	"da", "no", "pl", "pt-br", "en-gb", "tr"
 };

@@ -89,6 +89,10 @@ public:
 
 class GestureListener {
 public:
+	/* the user data the listeners hold, with how many hold each (AddUserDataList and its
+	   release; name after the NID) */
+	static map<void *, uint32_t> s_user_data_list;
+
 	/* What OnUpdate asks of the InputGestureListener, as bits. */
 	enum {
 		UPDATE_CAPTURE = 0x2,		/* hold the ports it is attached to */

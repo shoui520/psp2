@@ -907,7 +907,7 @@ void WidgetLayoutParam::delete_cb(Widget *widget, void *param)
 }
 
 
-const char *WidgetFocusParam::s_names[] = {
+const char *const WidgetFocusParam::s_names[] = {
 	"enable",
 	"init",
 	"direct_key",
@@ -923,14 +923,16 @@ const char *WidgetFocusParam::s_names[] = {
 	"search_rect",
 };
 
+const char WidgetFocusParam::m_param_name[] = "focus_hint";
+
 const char *WidgetFocusParam::GetParamName() const
 {
-	return "focus_hint";
+	return m_param_name;
 }
 
 const char *WidgetFocusParam::ParamName()
 {
-	return "focus_hint";
+	return m_param_name;
 }
 
 int32_t WidgetFocusParam::Init()
