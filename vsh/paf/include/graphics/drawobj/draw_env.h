@@ -74,6 +74,11 @@ public:
 	DrawListNode(DrawCallList *prev, DrawCallList *next) : DrawCallList(prev, next)
 	{
 	}
+
+	~DrawListNode()
+	{
+		Unlink();
+	}
 };
 
 class DrawLayer;
@@ -97,6 +102,10 @@ public:
 	void FlushLayers(DrawLayer *layer);
 	void SetPriority(DrawLayer *layer, int32_t priority);
 	void SetDrawMode(DrawLayer *layer, int32_t mode);
+	/* the frame begun: its index taken, each layer moved to the list of its draw mode, the
+	   layers of list 3 deleted, the draw order sorted by priority and the cursor put on its
+	   first; counted makes FlushLayers' "[REN]" line (0x8123d34c; name ours) */
+	void BeginFrame(bool counted);
 
 	DrawCallList m_lists[4];
 	/* the next layer of m_lists[1] FlushLayers draws; not set when it is made */
@@ -397,7 +406,7 @@ public:
 
 	DrawLayer(const string &name, int32_t mode, size_t buffer_size)
 		: DrawListNode<0>(NULL, NULL), DrawListNode<1>(NULL, NULL), m_drawn(false),
-		  m_name(name), m_index(-1), m_priority(0), m_state(0), m_draw_mode(1),
+		  m_name(name), m_frame_priority(-1), m_priority(0), m_state(0), m_draw_mode(1),
 		  m_buffer(buffer_size), m_used(0), m_first(-1), m_last(-1), m_mode(mode),
 		  m_key_count(0), m_last_used(0), m_last_count(0)
 	{
@@ -523,6 +532,17 @@ public:
 		return static_cast<DrawLayer *>(static_cast<DrawListNode<1> *>(node));
 	}
 
+	static DrawLayer &FromOrder(DrawCallList &node)
+	{
+		return static_cast<DrawLayer &>(static_cast<DrawListNode<1> &>(node));
+	}
+
+	/* whether the layer is drawn before the other this frame (0x8123d688; name ours) */
+	static bool OrderLess(const DrawLayer &layer, const DrawLayer &other)
+	{
+		return layer.m_frame_priority < other.m_frame_priority;
+	}
+
 	/* the frame's draws drawn, sorted by their keys unless MODE_UNSORTED, then dropped
 	   unless MODE_KEEP; index is the environment's, log whether to make the "[REN]" line
 	   (draw_env_flush.h; name ours) */
@@ -531,7 +551,9 @@ public:
 	/* set by Draw once it has drawn */
 	bool m_drawn;
 	string m_name;
-	int32_t m_index;
+	/* m_priority as the frame began, which the draw order is sorted by (BeginFrame; name
+	   ours) */
+	uint32_t m_frame_priority;
 	/* the order the layers are drawn in */
 	int32_t m_priority;
 	int32_t m_state;

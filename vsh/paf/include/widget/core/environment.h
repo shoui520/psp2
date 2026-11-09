@@ -26,6 +26,12 @@
 
 namespace paf {
 namespace graph {
+class EffectRenderer;
+}
+}
+
+namespace paf {
+namespace graph {
 class Surface;
 class DisplaySurface;
 class Renderer;
@@ -558,6 +564,15 @@ public:
 	uint8_t m_bit;
 };
 
+/* what ScePafWidget_1955B85D takes: the functions the environment calls before and after the
+   scenes' background layers are drawn, and the effect renderer's factory (names ours) */
+class DrawHookParam {
+public:
+	void (*m_pre_draw)(void);
+	void (*m_post_draw)(void);
+	graph::EffectRenderer *(*m_effect_renderer_factory)();
+};
+
 /* an entry of the environment's callback list: a function that ends it (names ours) */
 class EnvCallback {
 public:
@@ -895,8 +910,10 @@ public:
 	/* the motion noise filter is available (vshMotionNoiseFilterIsAvailable; name ours) */
 	bool m_motion_noise_filter;
 	uint8_t reserved6k[3];
-	/* the two words ScePafWidget_1955B85D takes (name ours, meaning open) */
-	uint32_t m_renderer_param[2];
+	/* called before and after the scenes' background layers are drawn (ScePafWidget_1955B85D
+	   sets them; names ours) */
+	void (*m_pre_draw)(void);
+	void (*m_post_draw)(void);
 	uint8_t reserved6b[4];
 };
 
@@ -959,9 +976,9 @@ int32_t ScePafWidget_F5842A6B(paf::ui::Environment *env, uint32_t priority,
 			      const paf::ui::EntryRange **range);
 /* sets the focus frame texture no (below 9); with none, reads all of them from the common resource */
 void ScePafWidget_B6C64486(const paf::intrusive_ptr<paf::graph::Surface> &texture, int32_t no);
-/* the effect renderer's factory set to the third word, and the first two kept (no name found);
-   the renderer */
-paf::graph::Renderer *ScePafWidget_1955B85D(paf::ui::Environment *env, const uint32_t *info);
+/* the draw hooks kept and the effect renderer's factory set (no name found); the renderer */
+paf::graph::Renderer *ScePafWidget_1955B85D(paf::ui::Environment *env,
+					    const paf::ui::DrawHookParam *param);
 /* the custom renderer's factory set to the word; the renderer (no name found) */
 paf::graph::Renderer *ScePafWidget_CE744F88(paf::ui::Environment *env, const uint32_t *factory);
 /* begins a frame on the root surface */

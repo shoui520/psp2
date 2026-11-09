@@ -13,6 +13,10 @@
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
 #include <graphics/effects/wave_switch.h>
 #include <graphics/effects/custom_trail.h>
+#include <graphics/effects/screen_copy.h>
+#include <graphics/drawobj/page_turn_obj.h>
+#include <graphics/drawobj/draw_env_flush.h>
+#include <graphics/drawobj/draw_env_begin.h>
 #include <system/system.h>
 #include <timer/timer.h>
 #include <widget/core/widget.h>
@@ -483,8 +487,8 @@ Environment::Environment(Resolution *env_param, int32_t screen_orientation_mode)
 	m_reserved_flag_c[1] = false;
 	m_reserved_flag_c[2] = false;
 	m_reserved_flag_c[3] = false;
-	m_renderer_param[0] = 0;
-	m_renderer_param[1] = 0;
+	m_pre_draw = NULL;
+	m_post_draw = NULL;
 
 	Init();
 	thread::ThreadIDCache::SetCurrentType(thread::ThreadIDCache::Type_Main);
@@ -1495,6 +1499,153 @@ void Environment::UpdateFocus(Widget *prefer, Widget *drop)
 
 #undef End
 
+/* the restructures of the widgets done; where scenes were taken out of the entries, the scenes
+   listed again from the entries (the last first), their layers given priorities from 300 and
+   their background layers from 100 in that order and the order lists made again; the scenes'
+   layer weights made again either way (0x8113be56) */
+void Environment::UpdateRestructScene()
+{
+	Widget::UpdateRestruct();
+	if (m_scene_restruct) {
+		int32_t bg_priority = 100;
+		int32_t priority = 300;
+
+		m_scenes_onupdate.clear();
+		for (map<int32_t, Widget *>::iterator entry = m_scene_entries.end();
+		     entry != m_scene_entries.begin();) {
+			--entry;
+
+			Widget *root = entry->second;
+
+			for (list<Widget *>::iterator it = root->m_children.begin();
+			     it != root->m_children.end(); it++) {
+				Scene *scene = static_cast<Scene *>(*it);
+
+				m_scenes_onupdate.push_back(scene);
+
+				graph::DrawLayer *layer = scene->m_layer;
+
+				if (layer != NULL)
+					graph::DrawCalls()->SetPriority(layer, priority++);
+				layer = scene->m_bg_layer;
+				if (layer != NULL)
+					graph::DrawCalls()->SetPriority(layer, bg_priority++);
+				scene->UpdateLayerWeight();
+			}
+		}
+		RefreshOrderLists(true);
+		m_scene_restruct = false;
+	} else {
+		for (list<Widget *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end();
+		     it++)
+			static_cast<Scene *>(*it)->UpdateLayerWeight();
+		RefreshOrderLists(false);
+	}
+}
+
+/* whether the display area scene was set and the frame drawn the frame before (names ours) */
+static bool s_last_drawn;
+static bool s_last_area;
+
+/* a frame's scenes drawn: the restructures done, the display area scene chosen, the root surface
+   told to hold or blank its page as the area scene comes and goes, the root camera's matrices
+   loaded, the renderer and the panels updated, the scenes' background layers and then the scenes
+   drawn (hidden without a parent, while their entry's root is all but transparent, or until the
+   area scene where there is one) and the screen copies and the debug GUI drawn last */
+extern "C" void ScePafWidget_DC1B19DB(Environment *env)
+{
+	env->UpdateRestructScene();
+	env->UpdateOrderedTop();
+
+	bool area = env->m_display_area_scene != NULL;
+	bool draw = env->m_draw_frame;
+	graph::DisplaySurface *surface = Screen::s_root_surface;
+
+	if (surface != NULL && (surface->m_frame_buffer_mode == gutil::FrameBuffer_Normal ||
+				surface->m_frame_buffer_mode == gutil::FrameBuffer_Shared_Create)) {
+		if (draw) {
+			if (!area && s_last_area) {
+				if (s_last_drawn) {
+					surface->m_hold_page = true;
+					surface->m_blank = false;
+				} else {
+					surface->m_hold_page = false;
+					surface->m_blank = true;
+				}
+			} else {
+				surface->m_hold_page = false;
+				surface->m_blank = false;
+			}
+		} else {
+			surface->m_blank = true;
+			surface->m_hold_page = true;
+		}
+		s_last_area = area;
+		s_last_drawn = draw;
+	}
+	if (!draw) {
+		graph::DrawCalls()->BeginFrame(false);
+		return;
+	}
+
+	bool in_area = env->m_display_area_scene != NULL;
+
+	if (in_area)
+		graph::SetWaveHold();
+	else
+		graph::ReleaseWaveHold();
+	if (env->m_root_camera != NULL) {
+		graph::arl::ArlInstance *gl = graph::arl::Gl();
+
+		gl->Projection().Load(env->m_root_camera->m_projection);
+		gl->View().Load(env->m_root_camera->m_inv_view);
+		gl->m_model.LoadIdentity();
+	}
+	ScePafGraphics_4EF30D15();
+	ScePafGraphics_4E038C05()->m_ptr->Update();
+	if (env->m_pre_draw != NULL)
+		env->m_pre_draw();
+	ScePafGraphics_1612A18D();
+	ScePafGraphics_0C2B6324();
+	graph::UpdatePanelLayers();
+	graph::DrawCalls()->BeginFrame(false);
+
+	list<Widget *>::iterator it;
+
+	for (it = env->m_scenes_onupdate.begin(); it != env->m_scenes_onupdate.end(); it++) {
+		Scene *scene = static_cast<Scene *>(*it);
+
+		if (scene->m_bg_layer == NULL)
+			continue;
+		ScePafWidget_687B21CA(scene, scene->m_parent == NULL ||
+						     !(scene->m_parent->m_show_a_sum >= 0.02f) ||
+						     in_area);
+	}
+	if (env->m_post_draw != NULL)
+		env->m_post_draw();
+	graph::FlushPanelReflections();
+	for (it = env->m_scenes_onupdate.begin(); it != env->m_scenes_onupdate.end(); it++) {
+		Scene *scene = static_cast<Scene *>(*it);
+
+		if (in_area && scene == env->m_display_area_scene)
+			in_area = false;
+		scene->DrawScene(scene->m_parent == NULL || !(scene->m_parent->m_show_a_sum >= 0.02f) ||
+				 in_area);
+	}
+	graph::FlushPanelLayers();
+	ScePafGraphics_67C25F27();
+	graph::ScreenCopy::Draw();
+	gutil::debug::CallDebugGuiFuncs();
+}
+
+/* a frame drawn on the root surface: begun, the scenes drawn, ended (0x8113c31c) */
+void Environment::OnDraw()
+{
+	ScePafWidget_9D4A5A0E(this);
+	ScePafWidget_DC1B19DB(this);
+	ScePafWidget_851911CB(this);
+}
+
 extern "C" bool ScePafWidget_A6B659BB(Environment *env, int32_t port)
 {
 	if (!env->m_focus_enabled && !ScePafMisc_862C8916())
@@ -1746,15 +1897,15 @@ int32_t ScePafWidget_66960CBF(Environment *env, uint32_t id, Widget *widget)
 	return it->second.Add(widget, -1) != NULL ? 0 : -1;
 }
 
-graph::Renderer *ScePafWidget_1955B85D(Environment *env, const uint32_t *info)
+graph::Renderer *ScePafWidget_1955B85D(Environment *env, const DrawHookParam *param)
 {
-	env->m_renderer_param[0] = info[0];
-	env->m_renderer_param[1] = info[1];
+	env->m_pre_draw = param->m_pre_draw;
+	env->m_post_draw = param->m_post_draw;
 
 	graph::Renderer *renderer = ScePafGraphics_4E038C05()->m_ptr;
 
 	if (renderer != NULL)
-		renderer->m_effect_renderer_factory = (graph::EffectRenderer *(*)())info[2];
+		renderer->m_effect_renderer_factory = param->m_effect_renderer_factory;
 	return renderer;
 }
 
