@@ -3,6 +3,7 @@
  * root surface shows at. The rest of its functions are still ScePafWidget's.
  */
 #include <widget/core/environment.h>
+#include <graphics/drawobj/draw_obj.h>
 #include <graphics/surface/surface_display.h>
 #include <system/system.h>
 #include <widget/core/widget.h>
@@ -268,6 +269,35 @@ int32_t Environment::RequestTerm()
 }
 
 
+int32_t Environment::SetScreen(Screen *screen)
+{
+	Screen *old = m_screen;
+
+	if (old != NULL && old->is_auto_delete)
+		delete old;
+	m_screen = screen;
+	if (screen != NULL)
+		screen->is_auto_delete = false;
+	return 0;
+}
+
+void Environment::OnUpdatePost()
+{
+	for (list<Widget *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end(); it++)
+		(*it)->OnUpdate();
+	graph::DrawObj::SetDirtyCount(2);
+	UpdateRestructScene();
+	if (m_scene_entries.size() != 0 || m_pending.size() != 0 || !m_term_requested) {
+		m_focus_cursor.Update(0.0f);
+		m_focus_cursor_rear.Update(0.0f);
+	}
+	UpdateDisplayAreaSettings();
+	for (list<Widget *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end(); it++)
+		(*it)->OnUpdatePost();
+	OnUpdateTouchDeviceRegion();
+	graph::DrawObj::SetDirtyCount(1);
+}
+
 void Environment::HideFocus(int32_t port)
 {
 	if ((m_focus_enabled || ScePafMisc_862C8916()) && m_focus_cursor.m_enabled && port < 2) {
@@ -327,14 +357,14 @@ extern "C" bool ScePafWidget_529FB877(Environment *env, int32_t port)
 	return shown;
 }
 
-extern "C" SceneResolution *ScePafWidget_CDC90BA2(const EnvironmentParam *param, int32_t id)
+extern "C" SceneResolution *ScePafWidget_CDC90BA2(const EnvironmentParam *param, uint32_t id)
 {
 	SceneResolution *result = NULL;
 	SceneResolution *it = param->m_resolution_list->m_data;
 	SceneResolution *end = it + param->m_resolution_list->m_num;
 
 	while (it != end) {
-		if (it->m_id == (uint32_t)id) {
+		if (it->m_id == id) {
 			result = it;
 			break;
 		}

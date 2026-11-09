@@ -1302,6 +1302,8 @@ public:
 	static list<RestructInfo> s_list_restruct;
 	/* the widgets waiting to be destroyed, with their children, each frame (0x81155f1e) */
 	int32_t UpdateDestroy();
+	/* the widget and its children updated each frame (0x81155cc8) */
+	void OnUpdate();
 	void OnUpdatePost();
 
 	/* the texture animation of the draw object: frames start to end of a grid of column_num by

@@ -225,6 +225,9 @@ class FocusInfo {
 public:
 	/* whether the cursor is moving or resizing (0x81142952) */
 	bool IsMoving();
+	/* the cursor moved after the widget it is on, the time since the last frame given (0x81142982;
+	   name ours) */
+	void Update(float time);
 	/* the cursor shown, where it may be (0x81143f5c) */
 	void Show();
 	/* the cursor hidden (0x81143fe2) */
@@ -336,6 +339,12 @@ public:
 	void OnUpdatePre();
 	void EventLoop();
 	void OnUpdatePost();
+	/* the scenes' restructures done (0x8113be56) */
+	void UpdateRestructScene();
+	/* the touch device regions of the widgets set on the panel (0x8113c3c2) */
+	void OnUpdateTouchDeviceRegion();
+	/* the screen the draws go to; the old one is deleted if it was auto-deleted (0x81139ca0) */
+	int32_t SetScreen(Screen *screen);
 	void ShowFocus(int32_t port);
 	/* where the touch that hit the widget hit it: 0, or -1 when none did */
 	int32_t GetHitStack(HitInfo *info, Widget *widget);
