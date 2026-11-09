@@ -1291,14 +1291,14 @@ ScePaf:
         - _ZTVN3paf3UrlE: 0x1B0593C2
         - ScePafMisc_1D135244: 0x1D135244
         - _ZTVN3paf12BufferedFileE: 0x1DBE2F67
-        - ScePafMisc_1F46671F: 0x1F46671F
+        - _ZTVN3paf11inputdevice20InputGestureListenerE: 0x1F46671F
         - ScePafMisc_256F9060: 0x256F9060
         - _ZTVN3paf7MemFileE: 0x2CBDFB23
         - ScePafMisc_37595ACC: 0x37595ACC
         - _ZN3paf5cache12CacheManager10m_jobq_netE: 0x3B06CAB1
         - _ZTVN3paf17LocalFilePsp2ImplE: 0x3EC47082
         - _ZTVN3paf9SubBufferE: 0x50950FCB
-        - ScePafMisc_5273DBC2: 0x5273DBC2
+        - _ZTVN3paf14BufferedReaderE: 0x5273DBC2
         - _ZTVN3paf5cache10CacheImageE: 0x5E401CD3
         - _ZN3paf5cache12CacheManager7m_ticksE: 0x60217BF4
         - ScePafMisc_7DB172ED: 0x7DB172ED
@@ -1307,7 +1307,7 @@ ScePaf:
         - _ZTVN3paf9LocalFileE: 0x9B00D854
         - _ZN3paf17TimerListenerList14s_default_listE: 0xA55320A6
         - ScePafMisc_B475E6AF: 0xB475E6AF
-        - ScePafMisc_B5951184: 0xB5951184
+        - _ZTVN3paf15HeapAllocBufferE: 0xB5951184
         - ScePafMisc_BE14FB2B: 0xBE14FB2B
         - _ZTVN3paf12MallocBufferE: 0xC1BBF9B4
         - _ZN3paf5Timer11s_tick_unitE: 0xC437D34C
@@ -1526,7 +1526,7 @@ ScePaf:
         - _ZTVN3paf6common13property_list14WStringElementE: 0xF186C2A4
         - _ZN3paf6common13property_list13StringElement14s_empty_stringE: 0xF3FEA96C
         - _ZN3paf6common13property_list13StringElement11m_type_nameE: 0xF5E19887
-        - ScePafCommon_FAA66E9E: 0xFAA66E9E
+        - _ZTVN3paf2ui21MessageDialogListenerE: 0xFAA66E9E
     ScePafGraphics:
       syscall: false
       version: 1
@@ -2390,7 +2390,7 @@ ScePaf:
         - _ZN3paf6thread9CallQueue21main_thread_callqueueE: 0x83CE85DD
         - _ZTVN3paf6thread6ThreadE: 0xB9F72182
         - _ZTVN3paf3job7JobItemE: 0xCB5F7F80
-        - ScePafThread_F5CF0CD3: 0xF5CF0CD3
+        - _ZTVN3paf3job9JobThreadE: 0xF5CF0CD3
     ScePafResource:
       syscall: false
       version: 1
@@ -2673,16 +2673,16 @@ ScePaf:
       variables:
         - _ZN3paf14VersatileParam12m_param_nameE: 0x00FB7206
         - _ZN3paf2ui16WidgetStyleParam12m_param_nameE: 0x05AC25AD
-        - ScePafResource_0A6B48A7: 0x0A6B48A7
+        - _ZTVN3paf2ui16WidgetFocusParamE: 0x0A6B48A7
         - ScePafResource_0CCB158B: 0x0CCB158B
         - _ZTVN3paf2ui16WidgetSoundParamE: 0x0EC6E478
         - _ZN3paf5graph12DrawObjParam7s_namesE: 0x1018131F
         - _ZN3paf2ui16WidgetStyleParam7s_namesE: 0x10A85649
         - ScePafResource_1151ACE5: 0x1151ACE5
-        - ScePafResource_12BDA1D6: 0x12BDA1D6
+        - _ZTVN3paf11VisualParam8IntParamE: 0x12BDA1D6
         - _ZN3paf2ui16WidgetSoundParam12m_param_nameE: 0x221787CB
         - _ZN3paf2ui18WidgetHandlerParam12m_param_nameE: 0x2273C38C
-        - ScePafResource_288101A2: 0x288101A2
+        - _ZTVN3paf11VisualParam9Vec4ParamE: 0x288101A2
         - ScePafResource_2E2F653D: 0x2E2F653D
         - ScePafResource_31547F6C: 0x31547F6C
         - ScePafResource_4168E37E: 0x4168E37E
@@ -2693,34 +2693,34 @@ ScePaf:
         - _ZTVN3paf2ui16WidgetStyleParamE: 0x50A500BD
         - ScePafResource_55BDEFEB: 0x55BDEFEB
         - ScePafResource_5A4B9044: 0x5A4B9044
-        - ScePafResource_5A5A75FC: 0x5A5A75FC
+        - _ZTVN3paf11VisualParam10FloatParamE: 0x5A5A75FC
         - ScePafResource_6075E320: 0x6075E320
         - ScePafResource_61E53BFE: 0x61E53BFE
         - _ZTVN3paf13ResourceParamE: 0x64643EBC
         - ScePafResource_67D75795: 0x67D75795
         - ScePafResource_68559008: 0x68559008
         - ScePafResource_6DBA28AE: 0x6DBA28AE
-        - ScePafResource_6DBCDE0F: 0x6DBCDE0F
+        - _ZTVN3paf11VisualParam12TextureParamE: 0x6DBCDE0F
         - _ZTVN3paf2ui18WidgetHandlerParamE: 0x82C92DB4
-        - ScePafResource_84353BA1: 0x84353BA1
+        - _ZTVN3paf11VisualParam9BoolParamE: 0x84353BA1
         - ScePafResource_897017CA: 0x897017CA
         - _ZN3paf2ui17WidgetLayoutParam12m_param_nameE: 0x8C55101A
         - _ZN3paf2ui18WidgetHandlerParam11c_eventListE: 0x8DEF8FC6
         - _ZTVN3paf14VersatileParamE: 0x945D78C2
         - ScePafResource_A11068C5: 0xA11068C5
         - ScePafResource_A92483CC: 0xA92483CC
-        - ScePafResource_B3ABEC34: 0xB3ABEC34
+        - _ZTVN3paf11VisualParam9ParamBaseE: 0xB3ABEC34
         - _ZTVN3paf5graph12DrawObjParamE: 0xB4147D1C
         - ScePafResource_B634C55E: 0xB634C55E
         - _ZN3paf2ui17WidgetLayoutParam7s_namesE: 0xBDBF64C4
         - _ZN3paf2ui11WidgetParam12m_param_nameE: 0xC726708F
         - _ZTVN3paf2ui17WidgetLayoutParamE: 0xCC59E113
-        - ScePafResource_D505EBBC: 0xD505EBBC
-        - ScePafResource_D63845F8: 0xD63845F8
+        - _ZTVN3paf11VisualParam12IdParamParamE: 0xD505EBBC
+        - _ZTVN3paf11VisualParam9Vec2ParamE: 0xD63845F8
         - _ZN3paf2ui11WidgetParam7s_namesE: 0xDDEF362F
         - ScePafResource_DE722071: 0xDE722071
         - ScePafResource_E4C95CF7: 0xE4C95CF7
-        - ScePafResource_F2C275D6: 0xF2C275D6
+        - _ZTVN3paf11VisualParam9Vec3ParamE: 0xF2C275D6
         - _ZTVN3paf2ui11WidgetParamE: 0xFBAC1812
     ScePafToplevel:
       syscall: false
@@ -2931,7 +2931,7 @@ ScePaf:
         - _ZN3paf6Plugin24InstantiateWidget_LayoutERKNS_4cxml7ElementEPNS_2ui6WidgetEPNS_18WidgetResourceInfoE: 0xFEFBE251
       variables:
         - ScePafToplevel_02A3A28D: 0x02A3A28D
-        - ScePafToplevel_13F5CCA5: 0x13F5CCA5
+        - _ZTVN3paf18WidgetResourceInfoE: 0x13F5CCA5
         - ScePafToplevel_BE478E55: 0xBE478E55
         - _ZN3paf9Framework9frameworkE: 0xCB81F1F1
     ScePafWidget:
@@ -5458,7 +5458,7 @@ ScePaf:
         - _ZTVN3paf2ui23ImageButtonHandlerParamE: 0x6F0D7FEB
         - _ZTVN3paf2ui18ListItemSoundParamE: 0x6F0D827B
         - ScePafWidget_6F9A8142: 0x6F9A8142
-        - ScePafWidget_7009E2DC: 0x7009E2DC
+        - _ZTVN3paf2ui8listview20SegmentHeaderFactoryE: 0x7009E2DC
         - g_factoryListView: 0x73634A9D
         - g_factoryProgressBar: 0x7434D958
         - _ZN3paf2ui23PlaneButtonHandlerParam12m_param_nameE: 0x74850425
@@ -5486,7 +5486,7 @@ ScePaf:
         - _ZTVN3paf2ui9AnimQueueE: 0x815D6B1C
         - _ZTVN3paf2ui6ScreenE: 0x8197C84B
         - g_factoryBusyIndicator: 0x81ECCBA6
-        - ScePafWidget_82079D51: 0x82079D51
+        - _ZTVN3paf2ui20ButtonBaseStyleParamE: 0x82079D51
         - _ZN3paf2ui19DirectBarStyleParam12m_param_nameE: 0x8243FEB4
         - g_factoryPageTurn: 0x82A00E64
         - _ZTVN3paf2ui13RadioBoxParamE: 0x82BA876C
@@ -5546,7 +5546,7 @@ ScePaf:
         - _ZTVN3paf2ui23PlaneButtonHandlerParamE: 0x9DF8E456
         - _ZN3paf2ui14BoxLayoutParam12m_param_nameE: 0x9FC94F82
         - _ZN3paf2ui12AnimListener13s_prop_anchorE: 0xA14A5516
-        - ScePafWidget_A1552157: 0xA1552157
+        - _ZTVN3paf2ui14UIBtrmListenerE: 0xA1552157
         - _ZTVN3paf2ui16ScrollBar2dParamE: 0xA1563363
         - _ZN3paf2ui23ImageSlideBarStyleParam12m_param_nameE: 0xA15E560F
         - _ZN3paf2ui16AppIconBaseParam12m_param_nameE: 0xA1E3F242
@@ -5587,7 +5587,7 @@ ScePaf:
         - _ZN3paf2ui20ScrollViewStyleParam12m_param_nameE: 0xBB602E78
         - ScePafWidget_BC72DE04: 0xBC72DE04
         - g_factoryProgressBarTouch: 0xBD1B6DAD
-        - ScePafWidget_BDE52742: 0xBDE52742
+        - _ZTVN3paf2ui8listview18CoordinateEffectorE: 0xBDE52742
         - ScePafWidget_BE1CEA2E: 0xBE1CEA2E
         - _ZTVN3paf2ui16UIAnalogListenerE: 0xBE2A670D
         - _ZN3paf2ui11ProgressBar15c_labelPosTableE: 0xBEECA6EC
