@@ -1353,6 +1353,79 @@ static inline Widget *ChildOfParent(Widget *parent, Widget *widget)
 	return widget;
 }
 
+int32_t Widget::ChangeResolution_core(uint32_t id, bool children, bool update)
+{
+	if (m_resolution_id != id) {
+		m_resolution_id_next = 0xFF;
+		if (m_scene != NULL) {
+			if (m_scene->IsResolutionActMorph(m_resolution_id))
+				m_resolution_id_pre = m_resolution_id;
+		}
+		m_resolution_id = id;
+		if (this == m_scene && m_env != NULL) {
+			m_scene->UpdateScreenSize(NULL);
+			SetSize(m_size, NULL, ANIM_SIZE, 0, 0.0f, NULL, NULL);
+		}
+		delete m_resolution_timer_next;
+		m_resolution_timer_next = NULL;
+		if (update && m_scene != NULL && m_scene->IsResolutionActMorph(id) &&
+		    IsInputTarget()) {
+			ResolutionData *entry = get_resolution_data(m_pos_array, m_pos_num, id);
+
+			if (entry != NULL)
+				SetPosHermite(math::v4(entry->m_value[0], entry->m_value[1],
+						       entry->m_value[2], 0.0f),
+					      NULL, NULL, ANIM_MOVE, 0, 0.0f, NULL, NULL);
+			entry = get_resolution_data(m_size_array, m_size_num, id);
+			if (entry != NULL)
+				SetSize(math::v4(entry->m_value[0], entry->m_value[1],
+						 entry->m_value[2], 0.0f),
+					NULL, ANIM_SIZE, 0, 0.0f, NULL, NULL);
+			entry = get_resolution_data(m_rot_array, m_rot_num, id);
+			if (entry != NULL)
+				SetRot(math::v4(entry->m_value[0], entry->m_value[1],
+						entry->m_value[2], 0.0f),
+				       0, NULL, ANIM_ROT, 0, 0.0f, NULL, NULL);
+			if (m_focus_shape != NULL)
+				ScePafWidget_13B246E0(this, m_focus_shape);
+			if (this != m_scene) {
+				uint8_t type = m_transition;
+
+				if (type != 0xFF && m_transition_complete) {
+					m_transition_complete = false;
+					if (type == 0xFF)
+						DoTransitionReverse_core(0.0f, true);
+					else
+						ScePafCommon_B48C9BDC(0.0f, this,
+								      (common::transition::Type)type,
+								      false, true);
+					ScePafWidget_4588699E(this, NULL, 2, 0.0f, NULL);
+					type = m_transition;
+					if (!m_transition_complete) {
+						m_transition_complete = true;
+						if (type == 0xFF)
+							DoTransition_core(0.0f, true);
+						else
+							ScePafCommon_6CF3A3C8(
+								0.0f, this,
+								(common::transition::Type)type,
+								false, true);
+					}
+					ScePafWidget_FF5BC957(this, NULL, 2, 0.0f, NULL);
+				}
+			}
+			if (m_layouter != NULL)
+				m_layouter->SetDirty(1);
+		}
+		if (children) {
+			for (list<Widget *>::iterator it = m_children.begin();
+			     it != m_children.end(); it++)
+				(*it)->ChangeResolution_core(id, children, update);
+		}
+	}
+	return 0;
+}
+
 int32_t Widget::SetParent_core(Widget *parent, Widget *sibling)
 {
 	if (m_hold_count > 0)
