@@ -4,6 +4,7 @@
  */
 #include <stddef.h>
 #include <common/common_internal.h>
+#include <inputdevice/pad/pad.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <graphics/drawobj/panel_obj.h>
 #include <graphics/drawobj/plane_obj.h>
@@ -1879,6 +1880,112 @@ void Widget::apply_pad_gesture_mask(uint32_t port_id, uint32_t type)
 		apply_pad_gesture_tap(port_id, type);
 	if ((type & 4) != 0 || (type & 8) != 0)
 		apply_pad_gesture_longpress(port_id, type);
+}
+
+/* the key mask of the keycode, 0 for none: KeycodeToMask again, the copy Sony's widget code has
+   (name ours) */
+static uint32_t PadKeyMask(int32_t keycode)
+{
+	switch (keycode) {
+	case 1:
+		return 1;
+	case 2:
+		return 2;
+	case 3:
+		return 4;
+	case 4:
+		return 8;
+	case 27:
+		return 16;
+	case 28:
+		return 32;
+	case 29:
+		return 64;
+	case 30:
+		return 128;
+	case 31:
+		return 1024;
+	case 32:
+		return 2048;
+	case 33:
+		return 0x10000;
+	case 34:
+		return 0x20000;
+	case 35:
+		return 0x40000;
+	case 36:
+		return 0x80000;
+	case 37:
+		return 512;
+	case 38:
+		return 256;
+	case 39:
+		return 4096;
+	default:
+		return 0;
+	}
+}
+
+int32_t Widget::ReleasePadCaptureDir(uint32_t key, bool reset)
+{
+	int8_t port = m_pad_dir_port;
+
+	if (port < 0)
+		return -1;
+	if (reset) {
+		uint32_t mask = 31;
+
+		if (key != 255)
+			mask = PadKeyMask(key) & 0x1F;
+		ScePafMisc_C4E8CBE6(mask);
+		remove_pad_gesture_mask(m_pad_dir_port, m_touch_gesture_mask);
+		port = m_pad_dir_port;
+	}
+	if ((uint32_t)port < 5 && this == m_env->m_pad_capture_dir[port]) {
+		m_env->m_pad_capture_dir[port] = NULL;
+		m_pad_dir_port = -1;
+		OnPadCaptureChanged(false, 1, port, key);
+
+		Event e(0x802, 0x100000, 0x10000, 0, 0, 0, 0, 0);
+
+		DoEvent(537133067, &e);
+		e.SetTarget(this);
+		e.Term();
+		m_env->m_ev_queue.PushBack(e);
+		return 0;
+	}
+	return -1;
+}
+
+int32_t Widget::ReleasePadCaptureButton(uint32_t key, bool reset)
+{
+	int8_t port = m_pad_button_port;
+
+	if (port < 0)
+		return -1;
+	if (reset) {
+		uint32_t mask = 992;
+
+		if (key != 255)
+			mask = PadKeyMask(key) & 0x3E0;
+		ScePafMisc_C4E8CBE6(mask);
+		remove_pad_gesture_mask(m_pad_button_port, m_touch_gesture_mask);
+		port = m_pad_button_port;
+	}
+	if ((uint32_t)port < 5 && this == m_env->m_pad_capture_button[port]) {
+		m_env->m_pad_capture_button[port] = NULL;
+		m_pad_button_port = -1;
+		OnPadCaptureChanged(false, 0, port, key);
+
+		Event e(0x802, 0x100000, 0x10000, 0, 0, 0, 0, 0);
+
+		DoEvent(537133067, &e);
+		e.SetTarget(this);
+		e.Term();
+		m_env->m_ev_queue.PushBack(e);
+		return 0;
+	}
+	return -1;
 }
 
 /* a layer's count in the scene changed, the weights marked to be made again (inline in Sony's

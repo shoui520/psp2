@@ -1486,12 +1486,23 @@ public:
 	Widget *m_parent;
 	Scene *m_scene;
 	list<Widget *> m_children;
-	uint8_t reserved3b0 : 7;
-	/* both set, AppIconBase::OnDraw dims an icon held in its mode 1; no writer found (names ours,
-	   from that use) */
-	bool m_dim_held : 1;
-	uint8_t reserved3c0 : 7;
-	bool m_dim_held_enable : 1;
+	/* the pad port that holds its direction keys (capture 0x17c) and its other keys (0x17d),
+	   negative for none (names ours): the signs are the bits AppIconBase::OnDraw reads, which
+	   dims an icon held in its mode 1 with both set (names from that use) */
+	union {
+		int8_t m_pad_dir_port;
+		struct {
+			uint8_t reserved3b0 : 7;
+			bool m_dim_held : 1;
+		};
+	};
+	union {
+		int8_t m_pad_button_port;
+		struct {
+			uint8_t reserved3c0 : 7;
+			bool m_dim_held_enable : 1;
+		};
+	};
 	/* its children not ready to draw yet, as CountPrepareChildren counted them; a box lays
 	   out only at 0 (name ours, after CountPrepareChildren) */
 	uint16_t m_prepare_count;

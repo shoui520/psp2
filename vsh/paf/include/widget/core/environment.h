@@ -111,6 +111,7 @@ public:
 };
 
 class Widget;
+class Camera;
 class SceneResolutionList;
 
 /*
@@ -339,6 +340,10 @@ public:
 	   ours) */
 	int32_t ReleasePadCaptureLow(uint32_t port);
 	int32_t ReleasePadCaptureHigh(uint32_t port);
+	/* the widget given the port's pad keys of the low group (0x8113f496) or the high group
+	   (0x8113f448), the widget holding them let go first: -1 for a port of 5 or more */
+	int32_t SetPadCaptureLow(uint32_t port, Widget *widget);
+	int32_t SetPadCaptureHigh(uint32_t port, Widget *widget);
 	/* a frame's steps, in the order the Framework runs them */
 	void OnUpdatePre();
 	void EventLoop();
@@ -419,7 +424,8 @@ public:
 	/* the widget whose hit rect is the screen a rear touch scrolls within (TouchScrollSupplier's
 	   rear mochi gesture; name ours) */
 	Widget *m_root_widget;
-	uint8_t reserved7a[4];
+	/* the root scene's camera (name ours) */
+	Camera *m_root_camera;
 	/* the scenes' cameras turn with the screen orientation in modes 0 and 1
 	   (Scene::ResetCameraRoll; name ours) */
 	uint8_t m_camera_roll_mode;
@@ -464,7 +470,11 @@ public:
 	FocusInfo m_focus_cursor_rear;
 	/* the texture the scenes' debug cubes are drawn with (Scene::SetDebugMode; name ours) */
 	graph::Surface *m_debug_texture;
-	uint8_t reserved4j[0x2c];
+	/* the widget holding each port's pad keys of capture 0x17d (the keys other than the
+	   directions and enter) and of 0x17c (the low group); five ports (names ours) */
+	Widget *m_pad_capture_button[5];
+	Widget *m_pad_capture_dir[5];
+	uint8_t reserved4j[4];
 	/* the events passed on at the next frame (names after ScePaf-RE) */
 	EventQueue m_ev_queue;
 	list<Event> m_ev_subrouting;

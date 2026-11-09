@@ -10,6 +10,7 @@
 #include <system/system.h>
 #include <timer/timer.h>
 #include <widget/core/widget.h>
+#include <widget/w_camera.h>
 #include <widget/w_scene.h>
 
 extern "C" int ScePafMisc_862C8916(void);
@@ -523,5 +524,78 @@ int32_t Environment::Term()
 	}
 	return m_term_requested;
 }
+
+int32_t Environment::SetPadCaptureHigh(uint32_t port, Widget *widget)
+{
+	if (port >= 5)
+		return -1;
+
+	Widget *old = m_pad_capture_button[port];
+
+	if (old != NULL)
+		old->ReleasePadCaptureButton(255, true);
+	m_pad_capture_button[port] = widget;
+	return 0;
+}
+
+int32_t Environment::ReleasePadCaptureHigh(uint32_t port)
+{
+	if (port >= 5)
+		return -1;
+
+	Widget *widget = m_pad_capture_button[port];
+
+	if (widget != NULL)
+		return widget->ReleasePadCaptureButton(255, true);
+	return -1;
+}
+
+int32_t Environment::SetPadCaptureLow(uint32_t port, Widget *widget)
+{
+	if (port >= 5)
+		return -1;
+
+	Widget *old = m_pad_capture_dir[port];
+
+	if (old != NULL)
+		old->ReleasePadCaptureDir(255, true);
+	m_pad_capture_dir[port] = widget;
+	return 0;
+}
+
+int32_t Environment::ReleasePadCaptureLow(uint32_t port)
+{
+	if (port >= 5)
+		return -1;
+
+	Widget *widget = m_pad_capture_dir[port];
+
+	if (widget != NULL)
+		return widget->ReleasePadCaptureDir(255, true);
+	return -1;
+}
+
+float Environment::GetRollScreen()
+{
+	if (m_root_camera != NULL)
+		return m_root_camera->GetRollScreen(0);
+	return 0.0f;
+}
+
+float Environment::GetOrientationRoll(int32_t orientation)
+{
+	float roll = 0.0f;
+
+	if (orientation != 0) {
+		if (orientation == 2)
+			roll = 1.5707964f;
+		else if (orientation == 1)
+			roll = 3.1415927f;
+		else if (orientation == 3)
+			roll = -1.5707964f;
+	}
+	return roll;
+}
+
 }
 }
