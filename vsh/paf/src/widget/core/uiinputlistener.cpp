@@ -727,7 +727,13 @@ int32_t UIPadHoldListener::PostPadEvent(uint32_t type, uint32_t port, uint32_t k
 	return 0;
 }
 
-void UITouchListener::Init()
+UITouchListener::UITouchListener(Environment *env, uint32_t port) : UIInputGestureListener(env), m_port(port)
+{
+	m_type = inputdevice::DEVICE_TYPE_TOUCHSCREEN_FRONT;
+	Init();
+}
+
+__attribute__((noinline)) void UITouchListener::Init()
 {
 	uint32_t width, height;
 

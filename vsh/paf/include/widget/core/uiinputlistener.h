@@ -52,11 +52,8 @@ public:
    from the touch panel's to the screen's */
 class UITouchListener : public UIInputGestureListener {
 public:
-	UITouchListener(Environment *env, uint32_t port) : UIInputGestureListener(env), m_port(port)
-	{
-		m_type = inputdevice::DEVICE_TYPE_TOUCHSCREEN_FRONT;
-		Init();
-	}
+	/* Sony's build keeps the constructor out of line (0x8123cdb4) */
+	UITouchListener(Environment *env, uint32_t port);
 
 	virtual ~UITouchListener()
 	{
