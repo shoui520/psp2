@@ -303,12 +303,12 @@ extern "C" int32_t ScePafWidget_094DF388(Environment *env, const EntryRange *ran
 	return 0;
 }
 
-extern "C" int32_t ScePafWidget_E6D215ED(Environment *env, int32_t value, int32_t entry)
+extern "C" int32_t ScePafWidget_E6D215ED(Environment *env, Widget *scene, int32_t entry)
 {
 	if (entry < 0 || entry > 0xFFFF)
 		return 0x80AF410F;
 
-	env->m_pending.push_back(EntryRequest(entry, value));
+	env->m_pending.push_back(EntryRequest(entry, scene));
 	if (env->m_scene_entries.find(entry) == env->m_scene_entries.end()) {
 		Widget *root = new Widget(NULL, NULL);
 
