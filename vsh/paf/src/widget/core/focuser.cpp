@@ -44,6 +44,8 @@ static inline __attribute__((always_inline)) IDParam *DirectionIDOf(FocusHint *h
 	return id;
 }
 
+Focuser *Focuser::s_enter_focuser;
+
 Widget *Focuser::GetHintWidget(int32_t dir)
 {
 	if (m_widget == NULL)

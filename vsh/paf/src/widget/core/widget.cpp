@@ -6381,6 +6381,8 @@ void Widget::SetBaseDestroyCount(int32_t count)
 }
 
 
+uint32_t Widget::s_upmat_count_L;
+uint32_t Widget::s_upmat_count_W;
 int32_t Widget::s_base_destroy_count;
 int32_t Widget::s_destroying_count;
 int32_t Widget::s_instance_count;

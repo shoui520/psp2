@@ -472,6 +472,9 @@ public:
 		}
 	}
 
+	/* (name ours; no user found, a pointer in the data) */
+	static Focuser *s_enter_focuser;
+
 	/* its direction widgets, made where it has none (name ours) */
 	FocusDirectionWidget *GetDirectionWidget()
 	{
@@ -769,6 +772,10 @@ public:
 	static int32_t s_destroying_count;
 	/* the widgets made and not yet destroyed (ScePafWidget exports it) */
 	static int32_t s_instance_count;
+	/* how often UpdateMatrix made the matrices again, the local one (L) and the world one (W)
+	   (counters; no reader found) */
+	static uint32_t s_upmat_count_L;
+	static uint32_t s_upmat_count_W;
 
 	Widget(Widget *parent, CreateParam *param);
 	virtual ~Widget();
