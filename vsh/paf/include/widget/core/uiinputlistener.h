@@ -301,7 +301,7 @@ public:
 	virtual void OnUpdate(const inputdevice::Data *data);
 
 	/* the stick moves the cursor keys (0) or not (1) */
-	virtual void SetMode(int32_t mode)
+	virtual void SetMode(int32_t mode, int32_t option)
 	{
 		if (mode == 0)
 			m_analog_to_dpad = true;

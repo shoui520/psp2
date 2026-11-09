@@ -161,7 +161,7 @@ extern "C" DragState *ScePafWidget_DE6905E2(Environment *env, TouchCapture *capt
 
 void Environment::ReleaseFocusBeyond(Widget *widget)
 {
-	if (!reserved4_345)
+	if (!m_release_focus_beyond)
 		return;
 
 	uint32_t group = 0xffffffff;
@@ -514,7 +514,7 @@ Environment::Environment(Resolution *env_param, int32_t screen_orientation_mode)
 	  m_draw_when_suspended(false), m_env_option(true), m_sound_callback(NULL),
 	  m_sound_callback_data(NULL), m_create_widget_callback(NULL), m_cancel_widget(NULL),
 	  m_top_modal_widget(NULL), m_display_area_scene(NULL), m_second_modal_widget(NULL),
-	  m_focus_widget(NULL), m_focus_mode(0), m_focus_auto_off(false), reserved4_345(true),
+	  m_focus_widget(NULL), m_focus_mode(0), m_focus_auto_off(false), m_release_focus_beyond(true),
 	  m_focus_enabled(true), m_ev_queue(32), m_screen(NULL), m_reserved_flag_a(false),
 	  m_reserved_flag_b(true), m_finish_after_draw(false), m_reserved_word_a(1),
 	  m_motion_noise_filter(false)
@@ -1149,6 +1149,103 @@ bool Environment::IsHitStackParent(Widget *widget)
 	HitInfo info;
 
 	return GetHitStack(&info, widget) == 0;
+}
+
+/* the touch hits and hit stack dropped, the routed events cleared and the touch ID's last hit
+   cleared (inline in Sony's 28D590B6; name ours) */
+static inline void ResetTouchHits(Environment *env, uint32_t id)
+{
+	env->m_touch_hits.clear();
+	env->m_hit_stack.clear();
+	env->m_ev_subrouting.clear();
+	if (id < 8)
+		sce_paf_memset(&env->m_touch_hit[0][id], 0, sizeof(HitInfo));
+}
+
+/* the order of the widget's scene: its scene priority over 255 less its priority (inline in
+   Sony's 28D590B6, as in OrderEntry::Init; name ours) */
+static inline uint32_t SceneOrder(Widget *widget)
+{
+	Scene *scene = widget->m_scene;
+
+	return (uint8_t)(255 - scene->m_priority) | (scene->m_scene_priority << 8);
+}
+
+extern "C" void ScePafWidget_28D590B6(Environment *env, Event *e)
+{
+	uint32_t count = env->m_modal_widgets.m_entries.count;
+
+	if (count == 0)
+		return;
+
+	Widget *top = env->m_top_modal_widget;
+
+	if (top == NULL && env->m_cancel_widget == NULL)
+		return;
+
+	uint32_t detail = e->m_detail;
+	uint32_t port = (detail >> 20) & 0xf;
+
+	if (port < 2 && (uint8_t)detail < 8 && env->m_touch_capture[port][(uint8_t)detail].m_widget != NULL)
+		return;
+
+	uint32_t type = e->m_type;
+
+	switch (type & 0xffff) {
+	case 0x42:
+	case 0x22:
+		e->m_type = (type & 0xffff0000) | 0x100a;
+		break;
+	case 0x41:
+	case 0x21:
+		e->m_type = (type & 0xffff0000) | 0x1009;
+		break;
+	}
+
+	uint32_t order = 0xffff;
+
+	if ((uint8_t)detail < 8) {
+		HitInfo *hit = &env->m_touch_hit[0][(uint8_t)detail];
+
+		if (hit != NULL && hit->m_widget != NULL)
+			order = SceneOrder(hit->m_widget);
+	}
+	if (top == NULL || env->m_cancel_widget != NULL) {
+		for (OrderEntry *it = env->m_modal_widgets.m_entries.ptr;
+		     it != env->m_modal_widgets.m_entries.ptr + env->m_modal_widgets.m_entries.count;
+		     it++) {
+			Widget *widget = it->m_widget;
+
+			if (!widget->IsInputTarget() || ((type & 0x40) != 0 && port == 1))
+				continue;
+			if (order < SceneOrder(widget))
+				break;
+			if (env->IsHitStackParent(widget))
+				break;
+
+			uint32_t id = (uint8_t)e->m_detail;
+
+			e->SetTarget(it->m_widget);
+			if (it->m_mark == 0)
+				ResetTouchHits(env, id);
+			env->m_ev_queue.PushBack(*e);
+			if (it->m_mark == 0)
+				break;
+		}
+	} else if (((type & 0x40) == 0 || port != 1) && order >= SceneOrder(top) &&
+		   !env->IsHitStackParent(top)) {
+		uint32_t id = (uint8_t)e->m_detail;
+
+		e->SetTarget(env->m_top_modal_widget);
+		ResetTouchHits(env, id);
+
+		Event cancel(0x44, Event::MODE_DISPATCH, Event::ROUTE_FORWARD, 0, 0, 0, 0, 0);
+
+		env->m_ev_queue.Cancel(cancel, 1);
+		cancel.m_type = (cancel.m_type & 0xffff0000) | 0x25;
+		env->m_ev_queue.Cancel(cancel, 1);
+		env->m_ev_queue.PushFront(*e);
+	}
 }
 
 bool Environment::IsTermAvailable()
@@ -2087,6 +2184,55 @@ graph::Renderer *ScePafWidget_CE744F88(Environment *env, const uint32_t *factory
 	if (renderer != NULL)
 		renderer->m_custom_renderer_factory = (graph::CustomRenderer *(*)())factory[0];
 	return renderer;
+}
+
+void ScePafWidget_B4A4660B(Environment *env, bool enable, int32_t port, bool release_beyond)
+{
+	common::SharedPtr<inputdevice::InputListener> pad = env->m_pad_gesture_listener;
+	common::SharedPtr<inputdevice::InputListener> keyboard = env->m_keyboard_listener;
+
+	if (enable) {
+		inputdevice::AddInputListener(pad);
+		if (!env->m_reserved_flag_a && env->m_reserved_flag_b == true)
+			pad->SetMode(0, 0);
+		inputdevice::AddInputListener(keyboard);
+	} else {
+		inputdevice::DelInputListener(pad);
+		pad->SetMode(1, 0);
+		inputdevice::DelInputListener(keyboard);
+	}
+	if (port >= 2)
+		return;
+	if (port >= 0) {
+		FocusInfo *focus = &(&env->m_focus_cursor)[port];
+
+		if (enable) {
+			focus->m_enabled = true;
+		} else {
+			focus->Hide();
+			focus->m_enabled = false;
+		}
+	} else {
+		FocusInfo *focus = &env->m_focus_cursor;
+
+		for (int32_t i = 0; i < 2; i++, focus++) {
+			if (enable) {
+				focus->m_enabled = true;
+			} else {
+				focus->Hide();
+				focus->m_enabled = false;
+			}
+		}
+	}
+	if (enable && env->m_focus_mode == 1)
+		env->ShowFocus(port);
+	env->m_release_focus_beyond = release_beyond;
+	env->m_focus_widget = NULL;
+	env->UpdateFocus(NULL, NULL);
+	if (!env->IsTermAvailable()) {
+		env->m_focus_cursor.Update(0.0f);
+		env->m_focus_cursor_rear.Update(0.0f);
+	}
 }
 
 void ScePafWidget_75FB31F1(Environment *env, bool enable)

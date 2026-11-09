@@ -60,8 +60,9 @@ public:
 	}
 
 	/* the listener told how it takes its input (the pad's: 0 the stick moves the cursor keys, 1
-	   it does not; name ours, no libpaf caller) */
-	virtual void SetMode(int32_t mode)
+	   it does not), with a second argument no listener reads (ScePafWidget_B4A4660B passes 0;
+	   names ours) */
+	virtual void SetMode(int32_t mode, int32_t option)
 	{
 	}
 

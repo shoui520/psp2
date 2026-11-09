@@ -860,7 +860,9 @@ public:
 	int32_t m_focus_mode;
 	/* set: a scroll view does not take the focus by itself (name ours, meaning open) */
 	bool m_focus_auto_off;
-	bool reserved4_345;
+	/* ReleaseFocusBeyond lets the focus go beyond a widget only while set (ScePafWidget_B4A4660B
+	   sets it; name ours) */
+	bool m_release_focus_beyond;
 	/* the buttons move the focus (ScePafWidget_75FB31F1; name ours) */
 	bool m_focus_enabled;
 	uint8_t reserved4[5];
@@ -944,7 +946,10 @@ extern const uint32_t g_screen_height_full_hd;
 
 /* whether the buttons move the focus */
 void ScePafWidget_75FB31F1(paf::ui::Environment *env, bool enable);
-void ScePafWidget_B4A4660B(paf::ui::Environment *env, int32_t enable, int32_t port, int32_t mode);
+/* the pad and keyboard listeners added (enable) or taken out, the port's focus cursors (both for
+   -1) enabled or hidden and disabled, the focus updated (names ours) */
+void ScePafWidget_B4A4660B(paf::ui::Environment *env, bool enable, int32_t port,
+			   bool release_beyond);
 /* whether the port's focus may be shown */
 bool ScePafWidget_A6B659BB(paf::ui::Environment *env, int32_t port);
 /* bit 0 of the port's focus state; for a port below 0, whether any port has it */
