@@ -486,6 +486,42 @@ void Environment::ClearHitInfo(Widget *widget)
 	}
 }
 
+int32_t Environment::AddScene(Widget *scene, int32_t entry, Widget *before)
+{
+	if (scene == NULL)
+		return -1;
+	if (entry < 0 || entry > 0xFFFF)
+		return -1;
+
+	map<int32_t, Widget *>::iterator it = m_scene_entries.find(entry);
+	Widget *root;
+
+	if (it == m_scene_entries.end()) {
+		root = new Widget(NULL, NULL);
+		m_scene_entries[entry] = root;
+		root->SetEnvironment(this);
+		root->m_name.SetID(string("root_widget"));
+	} else {
+		root = it->second;
+	}
+	scene->SetParent_core(root, before);
+
+	Scene *added = static_cast<Scene *>(scene);
+	uint32_t priority = added->m_scene_priority;
+	uint32_t group = priority;
+
+	for (vector<EntryRange>::iterator range = m_entry_ranges.begin(); range != m_entry_ranges.end();
+	     ++range) {
+		if (priority >= range->m_first && priority <= range->m_last) {
+			group = range->m_first;
+			break;
+		}
+	}
+	added->m_entry = group;
+	m_scene_restruct = true;
+	return 0;
+}
+
 int32_t Environment::RemoveScene(Widget *scene)
 {
 	int32_t entry = static_cast<Scene *>(scene)->m_scene_priority;
