@@ -625,7 +625,7 @@ public:
 	/* the texture request with the widget's draw object and bit added (0x811407aa); -1 for a
 	   held widget (name ours) */
 	int32_t AddTextureRequest(Widget *widget, const intrusive_ptr<TextureSource> *source,
-				  uint8_t obj, uint8_t bit);
+				  int32_t obj, int32_t bit);
 	/* the request taken off (0x8114082c); -1 for none */
 	int32_t RemoveTextureRequest(Widget *widget, int32_t obj, int32_t bit);
 	/* its source, none without a request (0x81140a44) */

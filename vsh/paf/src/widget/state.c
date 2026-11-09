@@ -184,15 +184,6 @@ void *ScePafWidget_1D7D7860(uint8_t *self)
 }
 
 
-int _ZN3paf2ui6Widget17SetDrawObjMaskBitEPKvi(void *self, int first, int second)
-{
-	const uint8_t *vtable = *(const uint8_t *const *)self;
-
-	return ((int (*)(void *, int, int, int))*(void *const *)(vtable + 272))(
-		self, first, second, 0);
-}
-
-
 int ScePafWidget_97020684(uint8_t *self)
 {
 	if (!*(uint32_t *)(self + 4))

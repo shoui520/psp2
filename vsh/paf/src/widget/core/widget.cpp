@@ -1875,7 +1875,7 @@ void Widget::detach_environment()
 
 	if (env == NULL)
 		return;
-	if (m_key_listed > 0)
+	if (m_texture_request_count > 0)
 		env->RemoveTextureRequests(this);
 	if (m_pad_dir_port >= 0)
 		ReleasePadCaptureDir(255, true);
@@ -4892,6 +4892,35 @@ static inline void AddLayerRange(Scene *scene, uint32_t layer, int32_t delta)
 	}
 }
 
+int32_t Widget::SetDrawObjMaskBit(const void *param, int32_t obj)
+{
+	return SetDrawObjMaskBit(param, obj, 0);
+}
+
+int32_t Widget::SetDrawObjMaskBit(const void *param, int32_t obj, uint32_t bit)
+{
+	vector<DrawObjEntry>::iterator it;
+
+	for (it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it) {
+		if (it->m_attr.m_id == (uint32_t)obj)
+			break;
+	}
+	if (it != m_drawobjs.end()) {
+		uint32_t mask = 1 << bit;
+
+		if ((it->m_attr.m_value & mask) != 0) {
+			m_env->RemoveTextureRequest(this, obj, bit);
+			if (m_texture_request_count != 0)
+				m_texture_request_count--;
+		}
+		m_env->AddTextureRequest(this, static_cast<const intrusive_ptr<TextureSource> *>(param),
+					 obj, bit);
+		it->m_attr.m_value |= mask;
+		m_texture_request_count++;
+	}
+	return 0;
+}
+
 int32_t Widget::OnTextureSource(const intrusive_ptr<TextureSource> *source, int32_t obj, int32_t bit)
 {
 	if (m_env == NULL)
@@ -4943,9 +4972,33 @@ int32_t Widget::OnTextureSource(const intrusive_ptr<TextureSource> *source, int3
 	while (it != m_drawobjs.end() && it->m_attr.m_id != (uint32_t)obj)
 		++it;
 	it->m_attr.m_value &= ~(1 << bit);
-	if (m_key_listed != 0)
-		m_key_listed--;
+	if (m_texture_request_count != 0)
+		m_texture_request_count--;
 	return result;
+}
+
+intrusive_ptr<TextureSource> Widget::GetDrawObjMaskBit(int32_t obj)
+{
+	if (m_texture_request_count != 0 && m_env != NULL) {
+		vector<DrawObjEntry>::iterator it;
+
+		for (it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it) {
+			if (it->m_attr.m_id == (uint32_t)obj)
+				break;
+		}
+		if (it == m_drawobjs.end())
+			return intrusive_ptr<TextureSource>();
+
+		uint32_t mask = it->m_attr.m_value;
+		uint32_t bit = 0;
+
+		while ((mask & 1) == 0 && bit < 4) {
+			bit++;
+			mask >>= 1;
+		}
+		return m_env->FindTextureRequest(this, it->m_attr.m_id, bit);
+	}
+	return intrusive_ptr<TextureSource>();
 }
 
 void Widget::detach_scene()
@@ -7092,7 +7145,7 @@ Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
 	m_modal_mode = 2;
 	m_modal_option = 0;
 	m_show_hold = 0;
-	m_key_listed = 0;
+	m_texture_request_count = 0;
 	m_clip_mode = 0;
 	reserved3x3 = 0;
 	m_draw_target = 0;

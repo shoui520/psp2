@@ -309,7 +309,7 @@ void Environment::OnUpdatePre()
 }
 
 int32_t Environment::AddTextureRequest(Widget *widget, const intrusive_ptr<TextureSource> *source,
-				       uint8_t obj, uint8_t bit)
+				       int32_t obj, int32_t bit)
 {
 	if (widget == NULL || widget->m_hold_count > 0)
 		return -1;

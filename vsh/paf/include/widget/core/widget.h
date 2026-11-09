@@ -968,14 +968,15 @@ public:
 		return GetTexture(surf, 0, 0);
 	}
 
-	/*
-	 * Three slots no source names (ScePafWidget C3D53C98, AC3B6830, FD48BD49): they set
-	 * and read a bit of a draw object's 4-bit mask through the draw manager. Not
-	 * converted; declared for the slots after them.
-	 */
+	/* the texture source (a const intrusive_ptr<TextureSource> *) requested through the
+	   environment for the draw object's mask bit (bit 0; ScePafWidget C3D53C98, slot names
+	   ours) */
 	virtual int32_t SetDrawObjMaskBit(const void *param, int32_t obj);
+	/* the same for the bit: one requested before dropped first (ScePafWidget AC3B6830) */
 	virtual int32_t SetDrawObjMaskBit(const void *param, int32_t obj, uint32_t bit);
-	virtual void *GetDrawObjMaskBit(int32_t obj);
+	/* the texture requested for the draw object's lowest mask bit set, NULL where none
+	   (ScePafWidget FD48BD49) */
+	virtual intrusive_ptr<TextureSource> GetDrawObjMaskBit(int32_t obj);
 	virtual int32_t SetString(const wstring &str, int32_t obj)
 	{
 		return 0x80AF4101;
@@ -1639,9 +1640,9 @@ public:
 	/* the show timers and holds it has waiting, counted (ScePafWidget AC0C81D5 adds one, A96A0B4A
 	   adds or takes off; name ours) */
 	uint32_t m_show_hold : 4;
-	/* above 0: the environment holds key listeners for it (detach_environment takes them out;
-	   name ours, meaning open) */
-	uint32_t m_key_listed : 4;
+	/* the texture requests it holds with the environment, counted (SetDrawObjMaskBit;
+	   detach_environment takes them out; name ours) */
+	uint32_t m_texture_request_count : 4;
 	/* how the camera clips it and its children (1 the clip stack; 2 and 3 the scissor
 	   snapped inward and to the nearest pixel, else outward), and where it is drawn (1
 	   into a surface of its scene's list) (Camera's draw walk; names ours) */
