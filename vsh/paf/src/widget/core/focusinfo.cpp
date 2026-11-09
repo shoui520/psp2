@@ -9,6 +9,7 @@
 #include <widget/core/widget.h>
 #include <widget/w_button_base.h>
 #include <widget/w_list_item.h>
+#include <widget/w_scene.h>
 #include <widget/w_text.h>
 #include <timer/timer.h>
 
@@ -194,6 +195,110 @@ void FocusInfo::Hide()
 #endif
 		}
 	}
+}
+
+/* the nearest widget up the tree, this one included, that takes its children's events first,
+   short of the scene (name ours) */
+static inline Widget *FindEventGroup(Widget *widget)
+{
+	for (Widget *node = widget; node != NULL; node = node->m_parent) {
+		if (node->m_pre_dispatch)
+			return node;
+		if (static_cast<Widget *>(widget->m_scene) == node)
+			return NULL;
+	}
+	return NULL;
+}
+
+Widget *FocusInfo::s_cursor_parent;
+
+int32_t FocusInfo::ClearTarget(Widget *next)
+{
+	Widget *target = m_target;
+
+	if (next == target)
+		return -1;
+	if (target == NULL)
+		return -1;
+
+	Widget *group = FindEventGroup(target);
+
+	if (group != NULL) {
+		if (next == NULL || group != FindEventGroup(next))
+			group->NotifyCursorGroup(false, target, next);
+	}
+	if (next == NULL)
+		m_leave_time = get_time_internal();
+	if (m_shown && m_texture != NULL && !m_left_saved) {
+		m_target_pos = m_target->GetWorldMatrix().w();
+		m_shape = m_target->GetFocusShapeSize();
+		m_previous = m_target;
+		m_left_saved = true;
+		if (m_cursor != NULL) {
+			if (!(m_shape == *m_cursor->GetSize(0)))
+				m_cursor->SetSize(m_shape);
+		}
+	}
+	m_target->SetCursorOn(false, m_target, next);
+	m_target = NULL;
+	m_move_mode = 0;
+	return 0;
+}
+
+int32_t FocusInfo::SetTarget(Widget *next)
+{
+	Widget *old = m_target;
+
+	if (old != next) {
+		Widget *old_group = NULL;
+		Widget *cursor;
+
+		if (old != NULL) {
+			old_group = FindEventGroup(old);
+			ClearTarget(next);
+		}
+		m_target = next;
+		if (next != NULL) {
+			if (next == m_previous && m_left_saved) {
+				math::v4 pos(0.0f, 0.0f, 0.0f, 0.0f);
+
+				if (next->m_focus_shape != NULL)
+					pos = math::v4(next->m_focus_shape->m_offset, 0.0f);
+				m_target_pos = pos;
+			}
+			next->SetCursorOn(true, old, next);
+
+			Widget *group = FindEventGroup(next);
+
+			if (group != NULL && group != old_group)
+				group->NotifyCursorGroup(true, old, next);
+			cursor = m_cursor;
+			if (cursor != NULL) {
+				cursor->SetParent(next, NULL, 0);
+				cursor = m_cursor;
+			}
+		} else {
+			cursor = m_cursor;
+			if (cursor != NULL) {
+				cursor->SetParent(s_cursor_parent, NULL, 0);
+				cursor = m_cursor;
+			}
+		}
+		bool shown = m_shown;
+
+		if (cursor != NULL && !shown) {
+			cursor->m_transition_complete = false;
+			cursor->m_transition = 0xff;
+			cursor->DoTransitionReverse_core(0.0f, true);
+			ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+			shown = m_shown;
+		}
+#if !defined(FW_TYPE_CEX)
+		if (shown)
+			PrintTarget();
+#endif
+	}
+	return 0;
 }
 
 void FocusInfo::AddFocusHistory(Widget *widget, Widget *next, uint32_t dir)

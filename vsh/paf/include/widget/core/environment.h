@@ -149,7 +149,7 @@ public:
 /* a widget in an ordered list of the environment's (32 bytes; names ours) */
 class OrderEntry {
 public:
-	OrderEntry() : m_widget(NULL), m_mark(0), m_order(-1), m_depth(-1), m_group(-1)
+	OrderEntry() : m_widget(NULL), m_mark(-1), m_order(-1), m_depth(-1), m_group(-1)
 	{
 	}
 
@@ -290,6 +290,17 @@ public:
 	/* the move from the widget to the next one in the direction kept */
 	void AddFocusHistory(Widget *widget, Widget *next, uint32_t dir);
 
+	/* the widget the cursor goes under where it has no target (set by the cursor's creation,
+	   0x81141750; name ours) */
+	static Widget *s_cursor_parent;
+	/* the cursor leaving its target for the next one (NULL for none): the widget groups told, the
+	   position and shape of the target kept, the cursor sized to it and the target's cursor
+	   state cleared; -1 where there is nothing to leave (0x8114439c; name ours) */
+	int32_t ClearTarget(Widget *next);
+	/* the cursor moved onto the widget: the old target left, the new one told, and the cursor
+	   put under it (0x81144516; name ours) */
+	int32_t SetTarget(Widget *next);
+
 	/* a move of the focus: the widget it left, the one it went to and the direction (name ours) */
 	class History {
 	public:
@@ -302,13 +313,21 @@ public:
 	Widget *m_target;
 	/* the widget the cursor was on before (UpdateHighlight; name ours) */
 	Widget *m_previous;
-	uint8_t reserved0[20];
+	uint8_t reserved0[4];
+	/* where the target was (its world position) when the cursor left it (name ours) */
+	math::v4 m_target_pos;
 	/* cleared with the other port's where a scroll view takes a touch (name ours, meaning open) */
 	math::v4 m_touch_move;
-	uint8_t reserved1[64];
+	uint8_t reserved1[32];
+	/* the size of the target's focus shape (GetFocusShapeSize) when the cursor left it, which
+	   the cursor is sized to (name ours) */
+	math::v4 m_shape;
+	uint8_t reserved1a[16];
 	/* how the cursor moved last; 1, 6 and 7 hide it at once (Hide; name ours, meaning open) */
 	uint32_t m_move_mode;
-	uint8_t reserved1b[12];
+	uint8_t reserved1b[4];
+	/* when the cursor left the last target for none, in microseconds (name ours) */
+	uint64_t m_leave_time;
 	/* the cursor is drawn with its widget only while it moves or the widget turns its focus
 	   directions off (Camera's draw walk; name ours) */
 	/* set while the cursor is shown; the shown state before it; set where the cursor may be shown
@@ -316,7 +335,8 @@ public:
 	bool m_shown : 1;
 	bool m_was_shown : 1;
 	bool m_enabled : 1;
-	uint8_t reserved2 : 1;
+	/* m_target_pos and m_shape hold the last target's (name ours) */
+	bool m_left_saved : 1;
 	bool m_moving_only : 1;
 	uint8_t reserved3 : 3;
 	uint8_t reserved4[3];
@@ -381,9 +401,10 @@ public:
 	/* the widget that holds the port's pad keys of the low group (0x1f) or the high group
 	   (0x3e0) lets go of them: -1 where none holds them (0x8113f4be, 0x8113f470; names
 	   ours) */
-	/* the focus searched again and set: on the focus root given as the one to take it (or NULL),
-	   the other as the one to give it up (0x8113ce6e; name ours, meaning open) */
-	void UpdateFocus(Widget *set_root, Widget *clear_root);
+	/* the focus chosen again among the focus candidates in front of the modal limit, the cursor
+	   put on it: the widget given first is taken where it is in the chosen group, the second
+	   loses its mark (0x8113ce6e; names ours) */
+	void UpdateFocus(Widget *prefer, Widget *drop);
 	int32_t ReleasePadCaptureLow(uint32_t port);
 	int32_t ReleasePadCaptureHigh(uint32_t port);
 	/* the widget given the port's pad keys of the low group (0x8113f496) or the high group
@@ -501,7 +522,9 @@ public:
 	ModalWidgetList m_modal_widgets;
 	/* the scene the display area scale is applied to (Camera's DrawScene; name ours) */
 	Widget *m_display_area_scene;
-	uint8_t reserved3c0[4];
+	/* a second modal widget: UpdateFocus takes the one of the two in front as the limit of the focus
+	   (name ours, meaning open) */
+	Widget *m_second_modal_widget;
 	/* the widgets that have m_ordered (ScePafWidget 0253DC9C; name ours) */
 	ModalWidgetList m_ordered_widgets;
 	uint8_t reserved3c[0xc];

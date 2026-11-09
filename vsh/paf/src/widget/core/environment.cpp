@@ -438,6 +438,129 @@ void ModalWidgetList::Sort()
 	m_unsorted = false;
 }
 
+/* the end of the focus candidates, taken from the list again each time as Sony's code does */
+#define End()	(m_focus_candidates.m_entries.ptr + m_focus_candidates.m_entries.count)
+
+void Environment::UpdateFocus(Widget *prefer, Widget *drop)
+{
+	Widget *previous = m_focus_widget;
+
+	if (!(m_focus_enabled || ScePafMisc_862C8916()) || !m_focus_cursor.m_enabled)
+		return;
+	if (m_focus_candidates.m_unsorted && m_focus_candidates.m_entries.count != 0)
+		sort(m_focus_candidates.m_entries.begin(), m_focus_candidates.m_entries.end());
+	m_focus_candidates.m_unsorted = false;
+	m_focus_widget = NULL;
+	if (m_focus_auto_off)
+		return;
+
+	int32_t prefer_group = -1;
+	OrderEntry best;
+
+	if (prefer != NULL)
+		prefer_group = prefer->m_scene->m_entry;
+	if (m_top_modal_widget != NULL)
+		best.Init(m_top_modal_widget, 0);
+	if (m_second_modal_widget != NULL) {
+		OrderEntry other;
+
+		other.Init(m_second_modal_widget, 0);
+		if (other < best)
+			best = other;
+	}
+
+	OrderEntry *it = m_focus_candidates.m_entries.ptr;
+	OrderEntry *chosen = it + m_focus_candidates.m_entries.count;
+	OrderEntry *begin = it;
+
+	if (drop != NULL) {
+		for (OrderEntry *e = begin; e != chosen; e++) {
+			if (e->m_widget == drop) {
+				e->m_mark = 0;
+				break;
+			}
+		}
+	}
+
+	int32_t chosen_group = -1;
+
+	for (; it != End(); it++) {
+		Widget *widget = it->m_widget;
+
+		if (widget->IsInputTarget()) {
+			Widget *root = ScePafWidget_CFA1EB7A(widget);
+			Widget *state = root != NULL && root->m_focus_root != NULL ?
+				(Widget *)root->m_focus_root->m_state : NULL;
+
+			if (ScePafWidget_DB0FFD33(state) && !(best < *it)) {
+				if (m_focus_widget == NULL) {
+					m_focus_widget = it->m_widget;
+					chosen_group = it->m_group;
+					chosen = it;
+				}
+				break;
+			}
+		}
+	}
+	if (it != End()) {
+		for (;;) {
+			if (it == End()) {
+				chosen->m_mark = 0x0f0f0f0f;
+				break;
+			}
+			if (chosen_group != it->m_group) {
+				chosen->m_mark = 0x0f0f0f0f;
+				break;
+			}
+			if (!(best < *it)) {
+				Widget *root = ScePafWidget_CFA1EB7A(it->m_widget);
+				Widget *state = root != NULL && root->m_focus_root != NULL ?
+					(Widget *)root->m_focus_root->m_state : NULL;
+
+				if (ScePafWidget_DB0FFD33(state)) {
+					Widget *widget = it->m_widget;
+
+					if (prefer != NULL && prefer_group == chosen_group) {
+						if (prefer == widget) {
+							m_focus_widget = widget;
+							it->m_mark = 0x0f0f0f0f;
+							break;
+						}
+					} else if (previous == widget) {
+						if (it->m_mark == 0x0f0f0f0f) {
+							m_focus_widget = widget;
+							break;
+						}
+					} else {
+						it++;
+						continue;
+					}
+				}
+			}
+			it->m_mark = 0;
+			it++;
+		}
+	}
+	if (m_focus_widget != NULL) {
+		Widget *root = ScePafWidget_CFA1EB7A(m_focus_widget);
+
+		if (root != NULL && root->m_focus_root != NULL && root->m_focus_root->m_state != 0)
+			m_focus_cursor.SetTarget((Widget *)root->m_focus_root->m_state);
+		else
+			m_focus_cursor.SetTarget(m_focus_widget);
+
+		FocusRoot *focus_root = m_focus_widget->m_focus_root;
+
+		if (focus_root != NULL && focus_root->m_pending)
+			focus_root->m_pending = false;
+	} else {
+		m_focus_cursor.ClearTarget(NULL);
+		m_focus_cursor_rear.ClearTarget(NULL);
+	}
+}
+
+#undef End
+
 extern "C" bool ScePafWidget_A6B659BB(Environment *env, int32_t port)
 {
 	if (!env->m_focus_enabled && !ScePafMisc_862C8916())

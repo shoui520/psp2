@@ -1147,6 +1147,13 @@ public:
 
 	/* whether it is the widget its focus root focuses first (0x8114fd64, name ours) */
 	bool IsInitFocus();
+	/* the focus cursor coming onto it or leaving it: the state set and the focus event 0x401
+	   or 0x402 sent with the widget the cursor came from and the one it went to; leaving also
+	   lets go of the direction keys it holds (0x81160920; name ours) */
+	void SetCursorOn(bool on, Widget *from, Widget *to);
+	/* the same for the focus events 0x403 and 0x404 of a widget that takes its children's events
+	   first (0x81160a0c; name ours) */
+	void NotifyCursorGroup(bool on, Widget *from, Widget *to);
 
 	math::v4 *GetSize(int32_t opt);
 	math::v4 *GetScale(int32_t opt);
@@ -1575,9 +1582,9 @@ public:
 	/* what the touch event slots set (names after them) */
 	bool m_touch_front_event : 1;
 	bool m_touch_rear_event : 1;
-	/* its focused part is laid out as its cursor (Text::UpdateSize, around its focused
-	   link; name ours) */
-	bool m_focus_parts_on : 1;
+	/* the focus cursor is on it: SetCursorOn sets it with the focus event 0x401 and clears it
+	   with 0x402 (Text::UpdateSize lays its focused link out as the cursor; name ours) */
+	bool m_cursor_on : 1;
 	/* it holds the focus (SetFocus sets it, ReleaseFocus and the environment clear it; name ours) */
 	bool m_focused : 1;
 	/* the focus moves to it within its group (ButtonBaseStyleParam's "focus_in_group"; name

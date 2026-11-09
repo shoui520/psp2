@@ -1209,6 +1209,51 @@ bool Widget::IsInitFocus()
 	return init;
 }
 
+void Widget::SetCursorOn(bool on, Widget *from, Widget *to)
+{
+	if (m_cursor_on == on)
+		return;
+	m_cursor_on = on;
+	if (on) {
+		Event e(0x401, this, 0x40000, 0);
+
+		e.m_data[0] = (int32_t)from;
+		e.m_data[1] = (int32_t)to;
+		m_env->m_ev_queue.PushBack(e);
+		DoEvent(537133057, &e);
+	} else {
+		Event e(0x402, this, 0x40000, 0);
+
+		e.m_data[0] = (int32_t)from;
+		e.m_data[1] = (int32_t)to;
+		m_env->m_ev_queue.PushBack(e);
+		DoEvent(537133058, &e);
+		if (m_pad_dir_port >= 0)
+			ReleasePadCaptureDir(27, true);
+	}
+}
+
+void Widget::NotifyCursorGroup(bool on, Widget *from, Widget *to)
+{
+	if (!m_pre_dispatch)
+		return;
+	if (on) {
+		Event e(0x403, this, 0x40000, 0);
+
+		e.m_data[0] = (int32_t)from;
+		e.m_data[1] = (int32_t)to;
+		m_env->m_ev_queue.PushBack(e);
+		DoEvent(537133059, &e);
+	} else {
+		Event e(0x404, this, 0x40000, 0);
+
+		e.m_data[0] = (int32_t)from;
+		e.m_data[1] = (int32_t)to;
+		m_env->m_ev_queue.PushBack(e);
+		DoEvent(537133060, &e);
+	}
+}
+
 void Widget::InitCreateParam(const CreateParam *param)
 {
 	if (param != NULL) {

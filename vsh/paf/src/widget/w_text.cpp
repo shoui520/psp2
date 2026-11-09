@@ -624,7 +624,7 @@ math::v4 Text::GetLinkRect(const Link *link)
 
 void Text::UpdateSize()
 {
-	if (m_focus_link != NULL && m_focus_parts_on) {
+	if (m_focus_link != NULL && m_cursor_on) {
 		FocusShape own;
 		FocusShape *shape = m_focus_shape;
 
@@ -1046,7 +1046,7 @@ void Text::UpdatePost()
 			       math::v3(left - right, bottom - top, 0.0f) * 0.5f);
 	}
 
-	if (Text::IsTextEventEnabled() && m_focus_parts_on && m_focus_link == NULL) {
+	if (Text::IsTextEventEnabled() && m_cursor_on && m_focus_link == NULL) {
 		FocusSearchInfo info(255);
 
 		info.m_dir = 255;
