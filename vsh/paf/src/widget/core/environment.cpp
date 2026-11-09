@@ -16,6 +16,8 @@
 #include <widget/w_scene.h>
 
 extern "C" int ScePafMisc_862C8916(void);
+extern "C" int sceAppMgrGetRecommendedScreenOrientation(int32_t *orientation);
+extern "C" int sceAppMgrSetShellScreenOrientation(int32_t orientation);
 
 namespace paf {
 
@@ -231,6 +233,41 @@ extern "C" int32_t ScePafWidget_F5842A6B(Environment *env, uint32_t priority, co
 		}
 	}
 	return 0x80AF008F;
+}
+
+void Environment::UpdateOrientation()
+{
+	int32_t recommended = 1;
+	int32_t orientation;
+
+	sceAppMgrGetRecommendedScreenOrientation(&recommended);
+	if (recommended > 2) {
+		if (recommended <= 3)
+			orientation = 2;
+		else if (recommended <= 4)
+			orientation = 3;
+		else
+			orientation = 4;
+	} else if (recommended <= 0) {
+		orientation = 4;
+	} else {
+		orientation = recommended > 1;
+	}
+
+	for (map<int32_t, Widget *>::iterator it = m_scene_entries.begin(); it != m_scene_entries.end();
+	     ++it) {
+		Widget *entry = it->second;
+
+		for (list<Widget *>::iterator child = entry->m_children.begin();
+		     child != entry->m_children.end(); ++child) {
+			if ((*child)->m_scene->IsOrientationAvailable(orientation)) {
+				sceAppMgrSetShellScreenOrientation(recommended);
+				m_orientation = orientation;
+				m_orientation_dirty = false;
+				return;
+			}
+		}
+	}
 }
 
 int32_t Environment::ReleaseTouchesBehind(Widget *widget)

@@ -570,6 +570,9 @@ public:
 	int32_t RemoveScene(Widget *scene);
 	/* the camera roll the screen orientation turns the scenes by (0x8113ca44; name ours) */
 	float GetOrientationRoll(int32_t orientation);
+	/* the orientation chosen from the system's recommended one, the first a scene of the entries
+	   can be shown in (0x8113dbb2; name ours) */
+	void UpdateOrientation();
 
 	/* the gesture listener of the touch port, NULL for another port (inline in Sony's callers,
 	   name ours) */
@@ -615,7 +618,8 @@ public:
 	uint8_t reserved8b[0x24];
 	/* the Framework's InitParam::screen_orientation_mode and env_param */
 	int32_t m_screen_orientation_mode;
-	uint8_t reserved0[4];
+	/* the orientation UpdateOrientation chose from the system's recommended one (name ours) */
+	int32_t m_orientation;
 	Resolution *m_env_param;
 	uint8_t reserved7[4];
 	/* the widget whose hit rect is the screen a rear touch scrolls within (TouchScrollSupplier's
@@ -626,7 +630,9 @@ public:
 	/* the scenes' cameras turn with the screen orientation in modes 0 and 1
 	   (Scene::ResetCameraRoll; name ours) */
 	uint8_t m_camera_roll_mode;
-	uint8_t reserved7g[3];
+	/* cleared once UpdateOrientation chose an orientation (name ours, meaning open) */
+	bool m_orientation_dirty;
+	uint8_t reserved7g[2];
 	/* the state the root surface was in after the frame began (DisplaySurface's m_frame_state;
 	   name ours), and whether the frame is drawn: it was 1 (name ours) */
 	int32_t m_frame_state;
