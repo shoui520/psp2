@@ -177,8 +177,60 @@ void Environment::Init()
 	m_touch_region_mask_pre = 0;
 	sce_paf_memset(m_touch_region, 0, 24);
 	Widget::SetBaseDestroyCount(2);
-	if (m_vector8.limit < 4)
-		m_vector8.reserve(4);
+	if (m_entry_ranges.limit < 4)
+		m_entry_ranges.reserve(4);
+}
+
+extern "C" int32_t ScePafWidget_094DF388(Environment *env, const EntryRange *range)
+{
+	uint32_t first = range->m_first;
+	uint32_t last = range->m_last;
+
+	if (first > 0xFFFF || last > 0xFFFF || last < first)
+		return 0x80AF410F;
+	for (vector<EntryRange>::iterator it = env->m_entry_ranges.begin(); it != env->m_entry_ranges.end(); ++it) {
+		if (first >= it->m_first && first <= it->m_last)
+			return 0x80AF410F;
+		if (last >= it->m_first && last <= it->m_last)
+			return 0x80AF410F;
+		if (first <= it->m_first && last >= it->m_last)
+			return 0x80AF410F;
+	}
+	env->m_entry_ranges.push_back(*range);
+	for (vector<OrderEntry>::iterator entry = env->m_focus_candidates.m_entries.begin();
+	     entry != env->m_focus_candidates.m_entries.end(); ++entry) {
+		uint32_t priority = entry->m_widget->m_scene->m_scene_priority;
+		uint32_t group = priority;
+
+		for (vector<EntryRange>::iterator it = env->m_entry_ranges.begin(); it != env->m_entry_ranges.end();
+		     ++it) {
+			if (priority >= it->m_first && priority <= it->m_last) {
+				group = it->m_first;
+				break;
+			}
+		}
+		entry->m_group = group;
+
+		list<Widget *>::iterator top = NULL;
+		list<Widget *>::iterator end = NULL;
+
+		env->GetSceneTop(entry->m_widget->m_scene->m_scene_priority, top);
+		env->GetSceneEnd(entry->m_widget->m_scene->m_scene_priority, end);
+		for (; top != end; ++top)
+			static_cast<Scene *>(*top)->m_entry = entry->m_group;
+	}
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_F5842A6B(Environment *env, uint32_t priority, const EntryRange **range)
+{
+	for (vector<EntryRange>::iterator it = env->m_entry_ranges.begin(); it != env->m_entry_ranges.end(); ++it) {
+		if (priority >= it->m_first && priority <= it->m_last) {
+			*range = &*it;
+			return 0;
+		}
+	}
+	return 0x80AF008F;
 }
 
 int32_t Environment::ReleaseTouchesBehind(Widget *widget)

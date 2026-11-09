@@ -189,6 +189,14 @@ extern "C" ResolutionResource ScePafWidget_E963EAEE(const Resolution *param, uin
    for this export) */
 extern "C" __attribute__((noinline)) void ScePafWidget_608BC317(int32_t *width, int32_t *height);
 
+/* scenes whose priorities lie in the range are one group, their entry the range's first (names
+   ours) */
+class EntryRange {
+public:
+	uint32_t m_first;
+	uint32_t m_last;
+};
+
 /* a widget in an ordered list of the environment's (32 bytes; names ours) */
 class OrderEntry {
 public:
@@ -577,8 +585,8 @@ public:
 	/* set: the widgets the focus leaves are kept in its history (name ours) */
 	bool m_focus_history_on;
 	uint8_t reserved_5a[3];
-	/* a vector of four to begin with (Init; element type and use unknown; name ours) */
-	vector<uint32_t> m_vector8;
+	/* the groups of scene priorities, a vector of four to begin with (Init; name ours) */
+	vector<EntryRange> m_entry_ranges;
 	/* what the environment runs at its end, each ended with a call of its first word (name ours,
 	   use not found) */
 	list<EnvCallback> m_callbacks;
@@ -758,6 +766,12 @@ int32_t ScePafWidget_D131E927(paf::ui::Environment *env, uint32_t id, paf::ui::W
 /* the widget put in the group (made where missing), kept sorted; -1 without a widget or where it
    does not fit (no name found) */
 int32_t ScePafWidget_66960CBF(paf::ui::Environment *env, uint32_t id, paf::ui::Widget *widget);
+/* a group of scene priorities added, 0 and the scenes' entries made again; an error where the
+   range is no range or crosses another (no name found) */
+int32_t ScePafWidget_094DF388(paf::ui::Environment *env, const paf::ui::EntryRange *range);
+/* the range holding the priority, 0 and the range, or an error without one (no name found) */
+int32_t ScePafWidget_F5842A6B(paf::ui::Environment *env, uint32_t priority,
+			      const paf::ui::EntryRange **range);
 /* sets the focus frame texture no (below 9); with none, reads all of them from the common resource */
 void ScePafWidget_B6C64486(const paf::intrusive_ptr<paf::graph::Surface> &texture, int32_t no);
 /* begins a frame on the root surface */
