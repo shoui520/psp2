@@ -607,6 +607,16 @@ void AnimQueueBase::SetFinishedLoopBack(bool hermite)
 	}
 }
 
+AnimQueue::~AnimQueue()
+{
+	for (int32_t i = 0; i < 3; i++) {
+		if (m_queue[i] != NULL) {
+			delete m_queue[i];
+			m_queue[i] = NULL;
+		}
+	}
+}
+
 int32_t AnimQueue::PushBack(TimerListener *listener, uint32_t slot)
 {
 	if (slot >= 3)

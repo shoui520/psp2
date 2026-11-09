@@ -1606,6 +1606,11 @@ SurfaceListNode Surface::m_surface_list;
 SurfaceListNode Surface::m_active_mark;
 int32_t Surface::m_initialized;
 thread::RMutex Surface::m_list_cs("ScePafSurfaceList", 0);
+/* a string of the file's data, which nothing in this module reads (name after the NID) */
+extern "C" {
+extern const char ScePafGraphics_00F2F1DF[] = "1";
+}
+
 thread::Mutex Surface::m_lock_mutex("ScePafSurface", 0);
 SurfaceListNode SurfaceCLUT::m_clut_list;
 thread::Mutex SurfaceCLUT::m_clut_mutex("ScePafSurfaceCLUT", 0);

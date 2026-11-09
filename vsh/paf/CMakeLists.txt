@@ -126,6 +126,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/common/resource_hooks.c
 	src/common/frame_count.c
 	src/common/halt_assert.c
+	src/common/error_callback.cpp
 	src/common/sequence.c
 	src/common/job_call_queue.c
 	src/common/job_slots.cpp
@@ -166,6 +167,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/url/url.cpp
 	src/misc/autotest_tty.cpp
 	src/std/math.c
+	src/std/basic_string.cpp
 	src/common/view.cpp
 	src/plugin.cpp
 	src/versatileparam/idparam.cpp

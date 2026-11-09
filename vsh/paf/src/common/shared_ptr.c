@@ -2,7 +2,7 @@
 #include "../thread/mutex.h"
 #include "../std/stdc++/atexit.h"
 
-static Mutex sharedPtrMutex;
+Mutex sharedPtrMutex;
 
 int SharedPtrInitialize(void)
 {

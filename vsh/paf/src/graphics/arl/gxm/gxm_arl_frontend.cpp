@@ -37,9 +37,9 @@ static void *s_fragment_usse_ring_buffer;
 static void *s_patcher_buffer;
 static void *s_patcher_vertex_usse;
 static void *s_patcher_fragment_usse;
-static int32_t s_memory_mode;
+static int32_t s_memory_mode = -1;
 static ArlInstance *s_instance;
-static volatile uint32_t *s_notification_region;
+volatile uint32_t *s_notification_region;
 
 /* the shader patcher's buffer and each of its USSE memories (names ours) */
 enum {

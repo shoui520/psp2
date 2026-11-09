@@ -4,6 +4,7 @@
  */
 #include <common/job_slots.h>
 #include <std/stdlib.h>
+#include <widget/wutil.h>
 
 namespace paf {
 namespace common {
@@ -157,11 +158,11 @@ JobSlots::~JobSlots()
 	CancelAll();
 }
 
-Interface_0691F7F7::Interface_0691F7F7()
+ui::MessageDialogListener::MessageDialogListener()
 {
 }
 
-Interface_0691F7F7::~Interface_0691F7F7()
+ui::MessageDialogListener::~MessageDialogListener()
 {
 }
 

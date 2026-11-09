@@ -1339,7 +1339,7 @@ ScePaf:
         - ScePafCommon_0342728E: 0x0342728E
         - _ZN3paf6common12JobCallQueueD2Ev: 0x03E15726
         - _ZNK3paf6common6String9GetStringEv: 0x0665AABD
-        - _ZN3paf6common18Interface_0691F7F7C1Ev: 0x0691F7F7
+        - _ZN3paf2ui21MessageDialogListenerC1Ev: 0x0691F7F7
         - _ZN3paf6common11Utf16ToUtf8ERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPNS1_IcNS2_IcEENS4_IcEEEE: 0x06C015C6
         - _ZN3paf6common4path5SplitERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEERS7_SA_: 0x09B0ACB5
         - ScePafCommon_0DC3E4F3: 0x0DC3E4F3
@@ -1364,10 +1364,10 @@ ScePaf:
         - _ZN3paf6common13StripFilenameERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEES8_: 0x2BD4F07A
         - _ZN3paf6common6RefObjC2Ev: 0x2CDB40AC
         - _ZN3paf6common8JobSlots5ClearEj: 0x2D234E8A
-        - _ZN3paf6common18Interface_0691F7F7C2Ev: 0x31766A0F
+        - _ZN3paf2ui21MessageDialogListenerC2Ev: 0x31766A0F
         - _ZN3paf6common12JobCallQueue9WaitEmptyEv: 0x354C389A
         - ScePafCommon_3728D46C: 0x3728D46C
-        - _ZN3paf6common18Interface_0691F7F7D0Ev: 0x38964597
+        - _ZN3paf2ui21MessageDialogListenerD0Ev: 0x38964597
         - _ZN3paf6common8JobSlotsC1Ev: 0x3BCCE98B
         - _ZN3paf6common11Utf8ToUtf16ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPNS1_IwNS2_IwEENS4_IwEEEE: 0x3CFEB1EB
         - _ZN3paf6common8CallList6UpdateEPNS_6thread5MutexE: 0x3EF56DF3
@@ -1387,7 +1387,7 @@ ScePaf:
         - _ZN3paf6common10FromStringIiEET_PKcj: 0x5383A280
         - _ZN3paf6common12JobCallQueueC2ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPNS_3job8JobQueueE: 0x543B37D2
         - _ZN3paf4ViewC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEES8_PNS_14ViewControllerE: 0x547491A7
-        - _ZN3paf6common18Interface_0691F7F7D2Ev: 0x559CDA63
+        - _ZN3paf2ui21MessageDialogListenerD2Ev: 0x559CDA63
         - _ZN3paf6common13property_list12PropertyList8SetValueERKNS_7IDParamENS1_13PropertyValueE: 0x56A4FDAC
         - _ZN3paf6common8JobSlots9CancelAllEv: 0x59FD41F2
         - _ZN3paf6common6StringC1ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE: 0x5AB8BCDE
@@ -1481,7 +1481,7 @@ ScePaf:
         - _ZN3paf6common10FrameCountEv: 0xD0D82903
         - _ZN3paf6common8CallList10UnregisterEPFvPvES2_: 0xD15A8AE1
         - _ZN3paf6common8CallList8RegisterEPFvPvES2_: 0xD2B4EFCC
-        - _ZN3paf6common18Interface_0691F7F7D1Ev: 0xD4CE120A
+        - _ZN3paf2ui21MessageDialogListenerD1Ev: 0xD4CE120A
         - _ZN3paf6common13property_list13StringElement8TypeNameEv: 0xD56E8FFC
         - _ZN3paf6common6StringC2Ev: 0xD9F31F44
         - _ZN3paf6common6StringneERKS1_: 0xDABFBEB3
@@ -1513,7 +1513,7 @@ ScePaf:
       variables:
         - _ZN3paf6common13property_list14WStringElement14s_empty_stringE: 0x00AD39F1
         - _ZN3paf6common13property_list15PropertyElement11m_type_nameE: 0x03DA7E96
-        - ScePafCommon_35855490: 0x35855490
+        - sharedPtrMutex: 0x35855490
         - ScePafCommon_55A149D9: 0x55A149D9
         - _ZTVN3paf6common13property_list15PropertyElementE: 0x8C74B524
         - _ZTVN3paf14ViewControllerE: 0x94739226
@@ -2222,8 +2222,8 @@ ScePaf:
         - ScePafGraphics_00F2F1DF: 0x00F2F1DF
         - _ZN3paf5graph7Surface12m_lock_mutexE: 0x03D6F31B
         - _ZTVN3paf5graph11SurfaceCLUTE: 0x0674B3F5
-        - ScePafGraphics_0C033F78: 0x0C033F78
-        - ScePafGraphics_0E4A525F: 0x0E4A525F
+        - _ZN3paf5graph12s_draw_styleE: 0x0C033F78
+        - _ZN3paf5graph10s_rendererE: 0x0E4A525F
         - ScePafGraphics_156C46B4: 0x156C46B4
         - _ZTVN3paf5graph3arl16FragShaderObjectE: 0x164551A1
         - _ZTVN3paf5graph3arl12ShaderObjectINS1_11VertProgramEEE: 0x1A714F10
@@ -2235,36 +2235,36 @@ ScePaf:
         - _ZTVN3paf8GraphMem18GraphHeapAllocatorE: 0x34850350
         - _ZN3paf5graph7DrawObj14m_drawobj_typeE: 0x34B13D93
         - _ZTVN3paf5graph13ScreenSurfaceE: 0x3CCB9D15
-        - ScePafGraphics_3D04E5B8: 0x3D04E5B8
-        - ScePafGraphics_482970AE: 0x482970AE
+        - _ZN3paf5graph20s_gate_blur_programsE: 0x3D04E5B8
+        - _ZN3paf5graph13s_wave_switchE: 0x482970AE
         - ScePafGraphics_560A9546: 0x560A9546
         - _ZN3paf5graph7Surface13m_active_markE: 0x57B29764
-        - ScePafGraphics_595FA72A: 0x595FA72A
+        - _ZN3paf5graph13s_trail_movesE: 0x595FA72A
         - _ZN3paf5graph7Surface14m_surface_listE: 0x59DE8420
         - ScePafGraphics_5C7E6693: 0x5C7E6693
         - _ZTVN3paf5graph12TextObjParamE: 0x6031660B
-        - ScePafGraphics_62B5157E: 0x62B5157E
+        - _ZN3paf5graph19s_wait_vblank_countE: 0x62B5157E
         - _ZTVN3paf5graph8PanelObjE: 0x650DF86E
-        - ScePafGraphics_67618610: 0x67618610
+        - _ZN3paf5graph3arl21s_notification_regionE: 0x67618610
         - _ZN3paf5graph7DrawObj8s_safetyE: 0x692F7B4A
         - _ZTVN3paf5graph7SurfaceE: 0x6C93A5C5
         - _ZN3paf5graph12TextObjParam12m_param_nameE: 0x810171DC
         - _ZN3paf5graph13PlaneObjParam12m_param_nameE: 0x82967384
         - _ZN3paf5graph8PanelObj14m_drawobj_typeE: 0x84E2C7CD
-        - ScePafGraphics_90BE06AB: 0x90BE06AB
+        - _ZN3paf5graph8GateBlur10s_instanceE: 0x90BE06AB
         - _ZN3paf5graph9BubbleObj14m_drawobj_typeE: 0x9112F3B0
         - _ZTVN3paf5graph13PlaneObjParamE: 0x91B50D82
-        - ScePafGraphics_A27330CF: 0xA27330CF
+        - _ZN3paf5graph18g_scene_draw_layerE: 0xA27330CF
         - _ZTVN3paf5graph7TextObjE: 0xA3870C39
-        - ScePafGraphics_A4F26D6F: 0xA4F26D6F
+        - _ZN3paf5graph10ScreenCopy10s_instanceE: 0xA4F26D6F
         - _ZN3paf5graph7DrawObj13s_dirty_countE: 0xA7807DB9
-        - ScePafGraphics_A893897E: 0xA893897E
+        - _ZN3paf5graph3arl15VertexArraySpec7s_countE: 0xA893897E
         - _ZN3paf5graph7TextObj14m_drawobj_typeE: 0xA8CE4BF5
         - _ZN3paf5graph11SurfaceCLUT11m_clut_listE: 0xAAAE6469
         - _ZN3paf5graph8PlaneObj14m_drawobj_typeE: 0xAB5299ED
-        - ScePafGraphics_AC62F696: 0xAC62F696
-        - ScePafGraphics_BE322CCB: 0xBE322CCB
-        - ScePafGraphics_C042C47C: 0xC042C47C
+        - _ZN3paf5graph12s_draw_callsE: 0xAC62F696
+        - _ZN3paf5graph13s_page_openedE: 0xBE322CCB
+        - _ZN3paf5graph18s_trail_idle_timerE: 0xC042C47C
         - _ZN3paf5graph7Surface9m_list_csE: 0xC9E9B20D
         - _ZTVN3paf5graph3arl12ShaderObjectINS1_11FragProgramEEE: 0xCD611F99
         - _ZTVN3paf5graph16PageTurnObjParamE: 0xD13FA80B
@@ -2275,9 +2275,9 @@ ScePaf:
         - _ZTVN3paf5graph3arl16ShaderObjectBaseE: 0xE1755C37
         - ScePafGraphics_E5D2E9F9: 0xE5D2E9F9
         - scePafGraphicsCurrentWave: 0xE71DB07B
-        - ScePafGraphics_E7ACFF04: 0xE7ACFF04
+        - _ZN3paf5graph19g_scene_draw_layer2E: 0xE7ACFF04
         - _ZN3paf5graph11SurfacePool12m_list_mutexE: 0xEF0B2CFF
-        - ScePafGraphics_F4E8AFC7: 0xF4E8AFC7
+        - _ZN3paf5graph22s_wave_switch_disabledE: 0xF4E8AFC7
         - _ZN3paf5graph14DisplaySurface11s_offscreenE: 0xF5C3D396
         - _ZTVN3paf5graph3arl16VertShaderObjectE: 0xF65D664A
         - _ZN3paf5graph11SurfaceCLUT12m_clut_mutexE: 0xF9964495
@@ -2687,11 +2687,11 @@ ScePaf:
         - ScePafResource_31547F6C: 0x31547F6C
         - _ZTVN3paf11VisualParam11MinMaxParamINS_4math2v4EEE: 0x4168E37E
         - _ZN3paf5graph12DrawObjParam12m_param_nameE: 0x452F2DCA
-        - ScePafResource_4776002E: 0x4776002E
+        - _ZN3paf8resource20s_sound_storage_baseE: 0x4776002E
         - _ZTVN3paf11VisualParam11MinMaxParamIfEE: 0x4A7C146B
         - _ZTVN3paf11VisualParam18ParamWithDirtyFlagINS_4math2v3EEE: 0x4B086A8C
         - _ZTVN3paf2ui16WidgetStyleParamE: 0x50A500BD
-        - ScePafResource_55BDEFEB: 0x55BDEFEB
+        - _ZN3paf8resource20s_sound_storage_addrE: 0x55BDEFEB
         - _ZN3paf2ui16WidgetFocusParam7s_namesE: 0x5A4B9044
         - _ZTVN3paf11VisualParam10FloatParamE: 0x5A5A75FC
         - _ZTVN3paf11VisualParam18ParamWithDirtyFlagIfEE: 0x6075E320
@@ -2703,11 +2703,11 @@ ScePaf:
         - _ZTVN3paf11VisualParam12TextureParamE: 0x6DBCDE0F
         - _ZTVN3paf2ui18WidgetHandlerParamE: 0x82C92DB4
         - _ZTVN3paf11VisualParam9BoolParamE: 0x84353BA1
-        - ScePafResource_897017CA: 0x897017CA
+        - _ZN3paf8resource23s_sound_storage_on_heapE: 0x897017CA
         - _ZN3paf2ui17WidgetLayoutParam12m_param_nameE: 0x8C55101A
         - _ZN3paf2ui18WidgetHandlerParam11c_eventListE: 0x8DEF8FC6
         - _ZTVN3paf14VersatileParamE: 0x945D78C2
-        - ScePafResource_A11068C5: 0xA11068C5
+        - _ZN3paf8resource19s_sound_storage_uidE: 0xA11068C5
         - _ZTVN3paf11VisualParam15ResolutionParamE: 0xA92483CC
         - _ZTVN3paf11VisualParam9ParamBaseE: 0xB3ABEC34
         - _ZTVN3paf5graph12DrawObjParamE: 0xB4147D1C
@@ -5389,7 +5389,7 @@ ScePaf:
         - _ZTVN3paf2ui11RadioButtonE: 0x30F84C03
         - _ZTVN3paf2ui8listview22HorizontalTailEffectorE: 0x3124EA9E
         - _ZN3paf2ui12AnimListener10s_prop_rotE: 0x31BED6AB
-        - ScePafWidget_31C7C134: 0x31C7C134
+        - _ZN3paf2ui6Screen14s_root_surfaceE: 0x31C7C134
         - _ZTVN3paf10TimerQueueE: 0x32E7E477
         - _ZTVN3paf2ui21ProgressBarTouchParamE: 0x339A7C19
         - _ZTVN3paf2ui15UITouchListenerE: 0x349A9E5F

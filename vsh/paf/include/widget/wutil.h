@@ -22,11 +22,28 @@ class Handler;
 class TextBoxEditListener;
 class TextBoxEditMenuListener;
 
-/* told when a plugin starts, before its own start function */
+/* told when a plugin starts, before its own start function; an abstract class of sixteen
+   virtual methods (all but the first named by their slot, ours) */
 class MessageDialogListener {
 public:
+	MessageDialogListener();
 	virtual ~MessageDialogListener();
-	virtual void PluginOnStart(Plugin *plugin);
+	virtual void PluginOnStart(Plugin *plugin) = 0;
+	virtual void Method3() = 0;
+	virtual void Method4() = 0;
+	virtual void Method5() = 0;
+	virtual void Method6() = 0;
+	virtual void Method7() = 0;
+	virtual void Method8() = 0;
+	virtual void Method9() = 0;
+	virtual void Method10() = 0;
+	virtual void Method11() = 0;
+	virtual void Method12() = 0;
+	virtual void Method13() = 0;
+	virtual void Method14() = 0;
+	virtual void Method15() = 0;
+	virtual void Method16() = 0;
+	virtual void Method17() = 0;
 };
 
 namespace wutil {

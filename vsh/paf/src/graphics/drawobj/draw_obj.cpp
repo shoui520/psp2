@@ -24,9 +24,9 @@ bool DrawObj::s_safety;
 uint32_t DrawObj::s_dirty_count = 1;
 
 /* the style bound last, which the next bind with the same style skips (name ours) */
-static DrawStyle s_draw_style(0);
-static common::SharedPtr<DrawEnv> s_draw_calls;
-static GlobalPtr<Renderer> s_renderer(NULL);
+DrawStyle s_draw_style(0);
+common::SharedPtr<DrawEnv> s_draw_calls;
+GlobalPtr<Renderer> s_renderer(NULL);
 GlobalPtr<DrawLayer> g_scene_draw_layer(NULL);
 GlobalPtr<DrawLayer> g_scene_draw_layer2(NULL);
 

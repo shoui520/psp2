@@ -63,17 +63,6 @@ public:
 	void *m_userdata;
 };
 
-/* an abstract class of four pure virtual methods, exported by NID only */
-class Interface_0691F7F7 {
-public:
-	Interface_0691F7F7();
-	virtual ~Interface_0691F7F7();
-	virtual void Method2() = 0;
-	virtual void Method3() = 0;
-	virtual void Method4() = 0;
-	virtual void Method5() = 0;
-};
-
 }
 }
 

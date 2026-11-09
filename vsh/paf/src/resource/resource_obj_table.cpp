@@ -105,12 +105,18 @@ ReleaseBufferTable(ResourceObj *rscobj, memory::HeapAllocator *heap, void *&buff
  * The common resource's sounds, in a memory block every process shares: the process that
  * loads the common resource first makes it, the others open it (names ours).
  */
+/* two words the module has no use of (ahead of the storage in Sony's data; names after the NIDs) */
+extern "C" {
+uint32_t ScePafResource_31547F6C;
+uint32_t ScePafResource_E4C95CF7;
+}
+
 SceUID s_sound_storage_uid = -1;
 void *s_sound_storage_addr = NULL;	/* written, never read: Sony's keeps it */
 void *s_sound_storage_base = NULL;
 
 /* the storage could not be opened, and the sounds went to the heap */
-static bool s_sound_storage_on_heap;
+bool s_sound_storage_on_heap;
 
 /* lets the storage and the sound table's entries go (name ours) */
 static inline __attribute__((always_inline)) void

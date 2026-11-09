@@ -19,6 +19,12 @@ namespace graph {
 
 const char BubbleObj::m_drawobj_type[] = "BubbleObj";
 
+/* a string of the file's data after the type name, which nothing in this module reads (name
+   after the NID) */
+extern "C" {
+extern const char ScePafGraphics_156C46B4[] = "A";
+}
+
 bool BubbleObj::IsInherit(const char *type) const
 {
 	if (type == m_drawobj_type)

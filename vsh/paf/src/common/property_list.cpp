@@ -192,6 +192,12 @@ bool PropertyList::HasValue(const IDParam &id) const
 	return m_value_map.find(id) != m_value_map.end();
 }
 
+/* a word of the file's data ahead of the empty strings, nothing in this module reads it (name
+   after the NID) */
+extern "C" {
+uint32_t ScePafCommon_55A149D9;
+}
+
 string StringElement::s_empty_string;
 wstring WStringElement::s_empty_string;
 

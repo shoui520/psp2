@@ -56,9 +56,11 @@ const char *s_wave_names[WAVE_COUNT] = {
 	"effects_original_01"
 };
 
-/* the wave the presets last moved to; switches disabled; the switch; the two holds (names
-   ours) */
-uint32_t s_current_wave;
+/* the wave the presets last moved to (Sony's name); switches disabled; the switch; the two holds
+   (names ours) */
+extern "C" {
+uint32_t scePafGraphicsCurrentWave;
+}
 bool s_wave_switch_disabled;
 WaveSwitch *s_wave_switch;
 bool s_wave_hold;
@@ -153,10 +155,10 @@ void ScePafGraphics_47F42806(void)
 
 void scePafGraphicsUpdateCurrentWave(uint32_t index, float update_interval)
 {
-	if (s_wave_switch == NULL || s_current_wave == index)
+	if (s_wave_switch == NULL || scePafGraphicsCurrentWave == index)
 		return;
 
-	s_current_wave = index;
+	scePafGraphicsCurrentWave = index;
 	if (index <= WAVE_COUNT - 1)
 		Waves(false)->m_param_keys.StartTransition(s_wave_names[index], update_interval, 0,
 							    0.09f);
