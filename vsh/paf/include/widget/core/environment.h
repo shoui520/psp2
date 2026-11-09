@@ -357,6 +357,14 @@ public:
    from its exports; the members' names ours) */
 class FocusInfo {
 public:
+	/* no cursor yet, the colour and the time set, the focus shader made (0x811416a8) */
+	FocusInfo();
+	/* the focus shader and the texture given back (0x81141738) */
+	~FocusInfo();
+	/* the cursor made under the widget: a focus plane drawn with the focus shader, hidden, kept
+	   under the widget when its own parent goes (0x81141750; name ours) */
+	void CreateCursor(Widget *parent);
+
 	/* whether the cursor is moving or resizing (0x81142952) */
 	bool IsMoving();
 	/* the cursor moved after the widget it is on, the time since the last frame given (0x81142982;
@@ -412,19 +420,25 @@ public:
 	Widget *m_target;
 	/* the widget the cursor was on before (UpdateHighlight; name ours) */
 	Widget *m_previous;
-	uint8_t reserved0[4];
+	/* set to 0 by the constructor; no reader found */
+	uint32_t reserved0;
 	/* where the target was (its world position) when the cursor left it (name ours) */
 	math::v4 m_target_pos;
 	/* cleared with the other port's where a scroll view takes a touch (name ours, meaning open) */
 	math::v4 m_touch_move;
-	uint8_t reserved1[32];
+	/* the cursor's colour, given to the focus shader (0, 191/255, 1, 1; name ours) */
+	math::v4 m_color;
+	/* the cursor's rotation where the target has no focus shape (Update; name ours) */
+	math::v4 m_rot;
 	/* the size of the target's focus shape (GetFocusShapeSize) when the cursor left it, which
 	   the cursor is sized to (name ours) */
 	math::v4 m_shape;
-	uint8_t reserved1a[16];
+	/* set to (0, 0, 0, 1) by the constructor; no reader found */
+	math::v4 reserved1a;
 	/* how the cursor moved last; 1, 6 and 7 hide it at once (Hide; name ours, meaning open) */
 	uint32_t m_move_mode;
-	uint8_t reserved1b[4];
+	/* the move mode of the frame before (Update; name ours) */
+	uint32_t m_move_mode_old;
 	/* when the cursor left the last target for none, in microseconds (name ours) */
 	uint64_t m_leave_time;
 	/* the cursor is drawn with its widget only while it moves or the widget turns its focus
@@ -446,7 +460,9 @@ public:
 	graph::Surface *m_texture;
 	/* the cursor's widget gave no texture and the default one is used (Show; name ours) */
 	bool m_default_texture;
-	uint8_t reserved5[7];
+	uint8_t reserved5[3];
+	/* the frames the shown state waited to change, up to five (Update; name ours) */
+	int32_t m_show_wait;
 };
 
 /* a scene asked to be added to an entry, kept in the environment's pending list (names ours) */

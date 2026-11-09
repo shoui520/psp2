@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <common/resource_hooks.h>
+#include <graphics/drawobj/focus_shader.h>
 #include <widget/core/environment.h>
 #include <widget/core/widget.h>
 #include <widget/w_button_base.h>
@@ -13,6 +14,11 @@
 #include <widget/w_scene.h>
 #include <widget/w_text.h>
 #include <timer/timer.h>
+#include <widget/w_plane.h>
+
+#ifndef SCE_PAF_ERROR_NO_MEMORY
+#define SCE_PAF_ERROR_NO_MEMORY (-2136014814) /* 0x80AF0022 */
+#endif
 
 #if !defined(FW_TYPE_CEX)
 extern "C" void ScePafAutoTestTty_9E10E873(int32_t type, const char *format, ...);
@@ -39,6 +45,81 @@ static inline __attribute__((always_inline)) T *FindAutoScrollChild(ListItem *it
 		}
 	}
 	return found;
+}
+
+/* the focus cursor: a plane drawn with its draw objects, or with the part planes alone where
+   its target is drawn as part shapes (TypeName "focusplane"; class name ours) */
+class FocusPlane : public Plane {
+public:
+	FocusPlane(Widget *parent) : Plane(parent, NULL)
+	{
+	}
+
+	virtual ~FocusPlane()
+	{
+	}
+
+	virtual bool IsInherit(const char *type) const;
+	virtual char *GetTypeName() const;
+	virtual void UpdateSize();
+	virtual int32_t OnDraw(graph::DrawInfo &info);
+
+	/* count part planes added, drawn with the focus shader (0x811447f0; name ours) */
+	int32_t AddParts(int32_t count);
+};
+
+static Widget *KeepCursor(Widget *widget, void *arg);
+
+FocusInfo::FocusInfo()
+{
+	m_cursor = NULL;
+	m_target = NULL;
+	m_previous = NULL;
+	reserved0 = 0;
+	m_target_pos = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_shape = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_color = math::v4(0.0f, 191.0f / 255.0f, 1.0f, 1.0f);
+	m_move_mode = 0;
+	m_move_mode_old = 0;
+	reserved1a = math::v4(0.0f, 0.0f, 0.0f, 1.0f);
+	m_leave_time = get_time_internal();
+	m_shown = false;
+	m_was_shown = false;
+	m_enabled = false;
+	m_left_saved = false;
+	m_moving_only = true;
+	m_default_texture = false;
+	m_show_wait = 0;
+	m_history_count = 0;
+	m_texture = NULL;
+	graph::FocusShader::Init();
+}
+
+FocusInfo::~FocusInfo()
+{
+	graph::FocusShader::Term();
+	if (m_texture != NULL)
+		m_texture->Release();
+}
+
+void FocusInfo::CreateCursor(Widget *parent)
+{
+	Widget *cursor = new FocusPlane(parent);
+
+	m_cursor = cursor;
+	cursor->GetDrawObj(0)->SetShader(graph::FocusShader::GetShader());
+	cursor->m_hit_detect_b_mode = 2;
+	cursor->m_hit_detect_mode = 2;
+	cursor->m_transition_complete = false;
+	cursor->m_transition = 0xFF;
+	cursor->DoTransitionReverse_core(0.0f, true);
+	ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+	s_cursor_parent = parent;
+	cursor->m_keep_cb = KeepCursor;
+	cursor->m_parent_protected = true;
+	cursor->m_keep_arg = this;
+	m_leave_time = get_time_internal();
 }
 
 void FocusInfo::UpdateHighlight()
@@ -474,6 +555,110 @@ Widget *FocusInfo::FindFocusHistory(Widget *widget, uint32_t dir)
 		}
 	}
 	return result;
+}
+
+/* the cursor kept when its widget is destroyed: put under the cursor parent, its target
+   left, unless it is the cursor parent itself */
+static Widget *KeepCursor(Widget *widget, void *arg)
+{
+	FocusInfo *info = (FocusInfo *)arg;
+
+	if (widget == FocusInfo::s_cursor_parent)
+		return NULL;
+	if (info->m_cursor != NULL && info->m_cursor->CheckState() == 0)
+		info->m_cursor->ChangeState(1, -1);
+	info->ClearTarget(NULL);
+	return FocusInfo::s_cursor_parent;
+}
+
+bool FocusPlane::IsInherit(const char *type) const
+{
+	if (type == "focusplane")
+		return true;
+	return Plane::IsInherit(type);
+}
+
+char *FocusPlane::GetTypeName() const
+{
+	return (char *)"focusplane";
+}
+
+int32_t FocusPlane::OnDraw(graph::DrawInfo &info)
+{
+	if (!m_culled || m_draw_always) {
+		float alpha = m_color_alpha * m_meta_a_sum * m_show_a_sum;
+
+		for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end();
+		     ++it) {
+			if (m_focus_parts.size() == 0 || it->m_attr.m_id == 1)
+				it->m_obj->OnDraw(m_world_matrix, m_color, alpha, info);
+		}
+	}
+	return 0;
+}
+
+int32_t FocusPlane::AddParts(int32_t count)
+{
+	int32_t ret = SCE_PAF_ERROR_ALREADY_CREATED;
+
+	for (int32_t i = 0; i < count; i++) {
+		graph::PlaneObj *obj = new graph::PlaneObj(graph::PlaneObjStyle());
+
+		if (obj == NULL) {
+			ret = SCE_PAF_ERROR_NO_MEMORY;
+			continue;
+		}
+		obj->SetShader(graph::FocusShader::GetShader());
+		obj->m_draw_style.blend = 2;
+		AddDrawObj(DrawObjEntry(obj, 1), false);
+		ret = 0;
+	}
+	return ret;
+}
+
+void FocusPlane::UpdateSize()
+{
+	Plane::UpdateSize();
+
+	/* the part planes hidden, then the ones of the target's parts shown */
+	for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it) {
+		if (it->m_attr.m_id == 1)
+			it->m_obj->SetVisible(false);
+	}
+	if (m_drawobjs.size() < m_focus_parts.size() + 1) {
+		if (AddParts(m_focus_parts.size() + 1 - m_drawobjs.size()) == SCE_PAF_ERROR_NO_MEMORY)
+			return;
+	}
+	if (m_drawobjs.size() < m_focus_parts.size() + 1)
+		return;
+
+	/* the parts are scaled from the focus shape's size to the cursor's */
+	FocusShape *shape = m_focus_shape;
+	sce::Vectormath::Simd::Aos::Vector2 scale(1.0f, 1.0f);
+
+	if (shape != NULL && !(shape->m_size == math::v2(0.0f, 0.0f)))
+		scale = sce::Vectormath::Simd::Aos::divPerElem(GetSize(0)->getImpl().getXYZ().getXY(),
+							       shape->m_size.getImpl());
+
+	uint32_t index = 1;
+
+	for (vector<FocusShape>::iterator part = m_focus_parts.begin(); part != m_focus_parts.end();
+	     ++part, ++index) {
+		if (!m_drawobjs[index].m_attr.m_flag1 || m_drawobjs[index].m_attr.m_id != 1)
+			continue;
+
+		intrusive_ptr<graph::Surface> texture(part->m_texture);
+		intrusive_ptr<graph::Surface> current;
+
+		m_drawobjs[index].m_obj->GetTexture(current, 0);
+		if (texture.get() != current.get())
+			m_drawobjs[index].m_obj->SetTexture(texture, 0);
+		m_drawobjs[index].m_obj->SetPos(part->m_offset);
+		m_drawobjs[index].m_obj->SetSize(math::v3(sce::Vectormath::Simd::Aos::Vector3(
+			sce::Vectormath::Simd::Aos::mulPerElem(part->m_size.getImpl(), scale), 0.0f)));
+		m_drawobjs[index].m_obj->SetRot(part->m_rot);
+		m_drawobjs[index].m_obj->SetVisible(true);
+	}
 }
 
 }

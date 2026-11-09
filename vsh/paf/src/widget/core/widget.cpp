@@ -6462,8 +6462,8 @@ Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
 	m_focus_referrers = NULL;
 	m_layout_notify_mask = 0x9FF;
 	m_animator_notify_mask = 0xFFFF;
-	for (int32_t i = 0; i < 8; i++)
-		reserved7b[i] = 0;
+	m_keep_cb = NULL;
+	m_keep_arg = NULL;
 	m_sound_mask = 0;
 	m_sound_num = 0;
 	m_sounds = NULL;

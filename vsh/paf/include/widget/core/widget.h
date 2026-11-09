@@ -1834,7 +1834,11 @@ public:
 	vector<DrawObjEntry> m_drawobjs;
 	/* what is called when it is deleted (names after DrawObj's, Sony's DWARF) */
 	vector<DeleteCBInfo> m_list_delete_cb;
-	uint8_t reserved7b[8];
+	/* asked, when the widget is destroyed with its parent, for a widget to move it under instead
+	   (NULL: none), with its argument; the focus cursor's goes under the cursor parent (names
+	   ours) */
+	Widget *(*m_keep_cb)(Widget *widget, void *arg);
+	void *m_keep_arg;
 	/* the indexes of the sounds it plays, a bit each (PlaySound; name ours) */
 	uint32_t m_sound_mask : 24;
 	/* the sounds of its sound parameter (names ours) */
