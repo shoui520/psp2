@@ -8215,6 +8215,68 @@ void Widget::UpdateAdjustChildSize(Widget *child)
 	child->SetSize_core_force(*(math::v4 *)size, 0xFF02, false);
 }
 
+int32_t Widget::CalcHitBoxToPlane(const math::v4 &size, const math::v4 &pos, const math::v4 &normal,
+				  float *dist, HitInfo *info)
+{
+	using sce::Vectormath::Simd::Aos::Vector4;
+
+	/* the plane in the hit box's space */
+	math::matrix inverse = GetWorldRot().toMatrix(0.0001f).transpose();
+	math::v4 local_normal(inverse.getImpl() * normal.getImpl());
+	math::v4 offset(0.0f, 0.0f, 0.0f, 0.0f);
+
+	if (m_hit_box != NULL)
+		offset = m_hit_box[0];
+
+	/* the corner of the box farthest against the normal */
+	math::v4 half = size * 0.5f;
+	float corner_x = -1.0f;
+	float corner_y = -1.0f;
+	float corner_z = -1.0f;
+
+	if (local_normal.extract_x() < 0.00001f)
+		corner_x = 1.0f;
+	if (local_normal.extract_y() < 0.00001f)
+		corner_y = 1.0f;
+	if (local_normal.extract_z() < 0.00001f)
+		corner_z = 1.0f;
+
+	math::v4 corner(corner_x * half.extract_x(), corner_y * half.extract_y(),
+			corner_z * half.extract_z(), 1.0f);
+
+	if (dist == NULL)
+		return -1;
+
+	/* how far the corner lies before the plane: below 0 it crosses it */
+	math::v4 local_pos(inverse.getImpl() * (pos - offset).getImpl());
+	float distance = vget_lane_f32(CalcDistPointToPlane(corner, local_pos, local_normal, 1), 0);
+
+	*dist = distance;
+
+	int32_t result = 0;
+
+	if (distance < 0.0f)
+		result = 1;
+	if (info == NULL)
+		return result;
+
+	math::v4 hit_offset(0.0f, 0.0f, 0.0f, 0.0f);
+
+	if (m_hit_box != NULL)
+		hit_offset = m_hit_box[0];
+
+	math::v4 local = corner + hit_offset;
+
+	info->LocalPos() = math::v4(Vector4(local.getImpl().getXYZ(), 1.0f));
+	info->m_pos = math::v4(GetWorldMatrix().getImpl() * info->LocalPos().getImpl());
+	if ((m_update_flag & 7) != 0)
+		UpdateMatrix();
+	info->m_local_hit = math::v4(m_local_matrix.getImpl() * info->LocalPos().getImpl());
+	info->m_widget_size = *GetSize(0);
+	info->m_widget_scale = m_align_offs;
+	return result;
+}
+
 
 /* the draw object drawn to a surface as the widget is, with its scene's font flags (name
    ours) */

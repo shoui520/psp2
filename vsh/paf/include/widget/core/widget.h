@@ -1111,6 +1111,11 @@ public:
 	   416CF405; argument names ours) */
 	int32_t CalcHitBoxToLine(const math::v4 &size, const math::v4 &start, const math::v4 &end,
 				 HitInfo *info);
+	/* how far the corner of its hit box of the size farthest against the plane through pos with
+	   the normal lies before it, in dist: 1 where it crosses the plane, else 0, -1 without
+	   dist; the corner's hit filled in (export of the mangled name; argument names ours) */
+	int32_t CalcHitBoxToPlane(const math::v4 &size, const math::v4 &pos, const math::v4 &normal,
+				  float *dist, HitInfo *info);
 	/* whether the line from line_a to line_b hits it with the event's touch, in the mode (1 the
 	   point of the line nearest its hit box center only, 0 also the hit box, 2 and 3 never):
 	   1 for a press, move or release it takes, 2 for the other events, 0 for no hit; the hit
