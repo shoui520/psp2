@@ -2356,6 +2356,232 @@ Widget *Widget::SetFocusOption(const void *param, int32_t option)
 	return SearchFocus(info, NULL, option);
 }
 
+/* the keys of the keycode mask are captured in the environment's groups, each bit in its own
+   (Sony has the bits tested in this order and each group's call unrolled) */
+#define RELEASE_KEY_GROUP(bit, group) \
+	if ((mask & (bit)) != 0) { \
+		result = ScePafWidget_D131E927(widget->m_env, (group), widget); \
+		if (result < 0) \
+			return result; \
+	}
+
+#define CAPTURE_KEY_GROUP(bit, group) \
+	if ((keycode & (bit)) != 0) { \
+		result = ScePafWidget_66960CBF(widget->m_env, (group), widget); \
+		if (result < 0) \
+			return result; \
+	}
+
+extern "C" int32_t ScePafWidget_164BFFA5(Widget *widget, uint32_t mask)
+{
+	if (widget->m_env == NULL)
+		return -1;
+	if (!widget->m_bound_keycode)
+		return -1;
+	if (widget->m_pad_button_port >= 0)
+		widget->ReleasePadCaptureButton(255, true);
+
+	int32_t result = 0;
+
+	RELEASE_KEY_GROUP(0x1, 1);
+	RELEASE_KEY_GROUP(0x2, 2);
+	RELEASE_KEY_GROUP(0x4, 3);
+	RELEASE_KEY_GROUP(0x8, 4);
+	RELEASE_KEY_GROUP(0x10, 27);
+	RELEASE_KEY_GROUP(0x20, 28);
+	RELEASE_KEY_GROUP(0x40, 29);
+	RELEASE_KEY_GROUP(0x80, 30);
+	RELEASE_KEY_GROUP(0x1000, 39);
+	RELEASE_KEY_GROUP(0x400, 31);
+	RELEASE_KEY_GROUP(0x800, 32);
+	RELEASE_KEY_GROUP(0x10000, 33);
+	RELEASE_KEY_GROUP(0x20000, 34);
+	RELEASE_KEY_GROUP(0x40000, 35);
+	RELEASE_KEY_GROUP(0x80000, 36);
+	RELEASE_KEY_GROUP(0x200, 37);
+	if ((mask & 0x100) == 0 || (result = ScePafWidget_D131E927(widget->m_env, 38, widget)) >= 0) {
+		if (result == 0) {
+			if (widget->m_keycode == mask) {
+				widget->m_keycode = 0;
+				widget->m_bound_keycode = false;
+			} else {
+				widget->m_keycode = widget->m_keycode & ~mask;
+			}
+		}
+	}
+	return result;
+}
+
+extern "C" int32_t ScePafWidget_21125870(Widget *widget, uint32_t keycode)
+{
+	if (widget->m_env == NULL)
+		return -1;
+	if (widget->m_bound_keycode) {
+		if (widget->m_keycode == keycode)
+			return 0;
+		if (widget->m_keycode != 0)
+			ScePafWidget_164BFFA5(widget, widget->m_keycode);
+	}
+
+	int32_t result = 0;
+
+	CAPTURE_KEY_GROUP(0x1, 1);
+	CAPTURE_KEY_GROUP(0x2, 2);
+	CAPTURE_KEY_GROUP(0x4, 3);
+	CAPTURE_KEY_GROUP(0x8, 4);
+	CAPTURE_KEY_GROUP(0x10, 27);
+	CAPTURE_KEY_GROUP(0x20, 28);
+	CAPTURE_KEY_GROUP(0x40, 29);
+	CAPTURE_KEY_GROUP(0x80, 30);
+	CAPTURE_KEY_GROUP(0x1000, 39);
+	CAPTURE_KEY_GROUP(0x400, 31);
+	CAPTURE_KEY_GROUP(0x800, 32);
+	CAPTURE_KEY_GROUP(0x10000, 33);
+	CAPTURE_KEY_GROUP(0x20000, 34);
+	CAPTURE_KEY_GROUP(0x40000, 35);
+	CAPTURE_KEY_GROUP(0x80000, 36);
+	CAPTURE_KEY_GROUP(0x200, 37);
+	if ((keycode & 0x100) == 0 || (result = ScePafWidget_66960CBF(widget->m_env, 38, widget)) >= 0) {
+		if (result == 0) {
+			widget->m_bound_keycode = true;
+			widget->m_keycode = keycode;
+		}
+	}
+	return result;
+}
+
+#undef RELEASE_KEY_GROUP
+#undef CAPTURE_KEY_GROUP
+
+extern "C" int32_t ScePafWidget_42C5A4D4(Widget *widget, int32_t mode, int32_t option)
+{
+	Environment *env = widget->m_env;
+
+	if (env == NULL)
+		return -1;
+
+	uint32_t previous = widget->m_modal_mode;
+
+	widget->m_modal_option = option;
+	if (mode == widget->m_modal_mode)
+		return 0;
+	if (mode == 2) {
+		if (previous == 0)
+			ScePafWidget_929C3278(widget);
+		ScePafWidget_164BFFA5(widget, 0x20);
+		widget->m_event_enable &= ~0x10;
+		widget->m_modal_mode = mode;
+		return widget->m_env->m_modal_widgets.Remove(widget);
+	}
+	if (previous != 2) {
+		widget->m_modal_mode = 2;
+		env->m_modal_widgets.Remove(widget);
+		env = widget->m_env;
+	}
+
+	uint32_t register_mode;
+
+	if (mode == 0) {
+		register_mode = 0;
+	} else if (mode == 1) {
+		register_mode = 1;
+	} else {
+		return -1;
+	}
+	widget->m_modal_mode = mode;
+
+	int32_t result = env->RegisterModalWidget(widget, register_mode);
+
+	widget->m_event_enable |= 0x10;
+	ScePafWidget_21125870(widget, 0x20);
+	if ((result | mode) == 0)
+		ScePafWidget_00AA6519(widget);
+	return result;
+}
+
+void Widget::SetInputTarget(bool on)
+{
+	if (!on && m_input_target)
+		ScePafWidget_931AD41E(this, true);
+	m_input_target = on;
+	for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
+		(*it)->SetInputTarget(on);
+}
+
+extern "C" int32_t ScePafWidget_FF5BC957(Widget *widget, Timer *t, int32_t opt, float delay,
+					 AnimCB cb_fin)
+{
+	widget->SetInputTarget(true);
+	if (t == NULL && delay > 0.0f)
+		t = new Timer(0.0f);
+	if (t == NULL || t->m_state == Timer::State_Disabled) {
+		widget->KillAnimType(Widget::ANIM_SHOW_ALPHA);
+		ShowAlphaCore(widget, 1.0f);
+		if (cb_fin != NULL) {
+			AnimListener listener(NULL, widget, NULL, NULL, NULL);
+
+			cb_fin(NULL, &listener, NULL, NULL, NULL);
+		}
+	} else {
+		widget->SetShowAlpha(1.0f, t, Widget::ANIM_SHOW_ALPHA, opt, delay, cb_fin);
+	}
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_4588699E(Widget *widget, Timer *t, int32_t opt, float delay,
+					 AnimCB cb_fin)
+{
+	widget->SetInputTarget(false);
+	if (t == NULL && delay > 0.0f)
+		t = new Timer(0.0f);
+	if (t == NULL || t->m_state == Timer::State_Disabled) {
+		widget->KillAnimType(Widget::ANIM_SHOW_ALPHA);
+		ShowAlphaCore(widget, 0.0f);
+		if (cb_fin != NULL) {
+			AnimListener listener(NULL, widget, NULL, NULL, NULL);
+
+			cb_fin(NULL, &listener, NULL, NULL, NULL);
+		}
+	} else {
+		widget->SetShowAlpha(0.0f, t, Widget::ANIM_SHOW_ALPHA, opt, delay, cb_fin);
+	}
+	return 0;
+}
+
+extern "C" float ScePafWidget_44B22ACA(Widget *widget, common::transition::Type type, float delay,
+				       HandlerCB cb, void *data)
+{
+	ScePafWidget_FF5BC957(widget, NULL, 2, 0.0f, NULL);
+	if (widget->m_transition_complete) {
+		delay = 0.0f;
+	} else {
+		widget->m_transition = type;
+		widget->m_transition_complete = true;
+		if (type == 255)
+			delay = widget->DoTransition_core(delay, false);
+		else
+			delay = ScePafCommon_6CF3A3C8(delay, widget, type, false, false);
+	}
+	if (cb != NULL)
+		widget->SetTimerListener(0x100FF01, delay, new EventCBListener(cb, data));
+	return delay;
+}
+
+extern "C" float ScePafWidget_F1176ACC(Widget *widget, common::transition::Type type, float delay,
+				       HandlerCB cb, void *data)
+{
+	widget->m_transition = type;
+	widget->m_transition_complete = false;
+	if (type == 255)
+		delay = widget->DoTransitionReverse_core(delay, false);
+	else
+		delay = ScePafCommon_B48C9BDC(delay, widget, type, false, false);
+	if (cb != NULL)
+		widget->SetTimerListener(0x100FF01, delay, new EventCBListener(cb, data));
+	ScePafWidget_4588699E(widget, NULL, 2, delay, NULL);
+	return delay;
+}
+
 void Widget::ReleaseShowHolds(bool recursive)
 {
 	if (m_touch_captures.size() != 0)

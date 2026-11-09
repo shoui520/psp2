@@ -755,6 +755,9 @@ paf::ui::DragState *ScePafWidget_DE6905E2(paf::ui::Environment *env, paf::ui::To
 paf::ui::Widget *ScePafWidget_0775F78F(paf::ui::Environment *env, uint32_t id);
 /* a widget taken out of the list with the ID, or the list emptied with none (no name found) */
 int32_t ScePafWidget_D131E927(paf::ui::Environment *env, uint32_t id, paf::ui::Widget *widget);
+/* the widget put in the group (made where missing), kept sorted; -1 without a widget or where it
+   does not fit (no name found) */
+int32_t ScePafWidget_66960CBF(paf::ui::Environment *env, uint32_t id, paf::ui::Widget *widget);
 /* sets the focus frame texture no (below 9); with none, reads all of them from the common resource */
 void ScePafWidget_B6C64486(const paf::intrusive_ptr<paf::graph::Surface> &texture, int32_t no);
 /* begins a frame on the root surface */

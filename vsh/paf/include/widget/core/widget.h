@@ -1481,6 +1481,9 @@ public:
 	/* the target made the widget its focus root holds the focus with (NULL: none), and the
 	   environment told (0x81150b6c; name ours, the flag meaning open) */
 	int32_t SetFocusRootFocus(Widget *target, bool notify);
+	/* touch and key input may reach it and, set the same, its descendants (0x8124267c; name
+	   ours) */
+	void SetInputTarget(bool on);
 	/* the best widget among its children and theirs for the focus search; the search's
 	   m_distance gets its score (0x81160ba4; name ours) */
 	Widget *SearchFocusChildren(FocusSearchInfo *info, Widget *skip);

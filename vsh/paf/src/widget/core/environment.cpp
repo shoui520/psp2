@@ -963,6 +963,21 @@ int32_t ScePafWidget_D131E927(Environment *env, uint32_t id, Widget *widget)
 	return result;
 }
 
+int32_t ScePafWidget_66960CBF(Environment *env, uint32_t id, Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+
+	map<uint32_t, ModalWidgetList>::iterator it = env->m_widget_groups.find(id);
+
+	if (it == env->m_widget_groups.end()) {
+		env->m_widget_groups[id] = ModalWidgetList();
+		it = env->m_widget_groups.find(id);
+	}
+	it->second.Sort();
+	return it->second.Add(widget, -1) != NULL ? 0 : -1;
+}
+
 void ScePafWidget_75FB31F1(Environment *env, bool enable)
 {
 	env->m_focus_enabled = enable;
