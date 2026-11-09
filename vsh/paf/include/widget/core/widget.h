@@ -1306,6 +1306,11 @@ public:
 	int32_t UpdateDestroy();
 	/* the widget and its children updated each frame (0x81155cc8) */
 	void OnUpdate();
+	/* what it holds back for a show let go of, in it and (where recursive) in its children
+	   (0x81152394; name ours) */
+	void ReleaseShowHolds(bool recursive);
+	/* the show timer run each update, and taken out once it is out (0x81152554; name ours) */
+	void UpdateShowTimer();
 	void OnUpdatePost();
 
 	/* the texture animation of the draw object: frames start to end of a grid of column_num by
@@ -1484,7 +1489,10 @@ public:
 	   not modal; and the option given with it (names ours) */
 	uint32_t m_modal_mode : 4;
 	uint32_t m_modal_option : 4;
-	uint32_t reserved3x1 : 8;
+	/* the show timers and holds it has waiting, counted (ScePafWidget AC0C81D5 adds one, A96A0B4A
+	   adds or takes off; name ours) */
+	uint32_t m_show_hold : 4;
+	uint32_t reserved3x1 : 4;
 	/* how the camera clips it and its children (1 the clip stack; 2 and 3 the scissor
 	   snapped inward and to the nearest pixel, else outward), and where it is drawn (1
 	   into a surface of its scene's list) (Camera's draw walk; names ours) */
@@ -1551,7 +1559,8 @@ public:
 	/* animation listeners set on it are kept on ScePafWidget_8A0DA7BF until it takes them
 	   (SetAnimListener; name ours, the setter not found) */
 	bool m_anim_deferred : 1;
-	bool reserved3d : 1;
+	/* a timer for it is waiting in the widget timers' map (SetTransitionIn and its like; name ours) */
+	bool m_timer_pending : 1;
 	/* not destroyed when its page closes (name ours) */
 	bool m_destroy_protected : 1;
 	/* its transitions in and out are under way: it takes no input and its timers wait
@@ -1568,7 +1577,8 @@ public:
 	/* drawn by the camera also when it is culled (name ours) */
 	bool m_draw_always : 1;
 	bool reserved3k : 1;
-	bool reserved3l : 1;
+	/* a timer for it is waiting in the show timers' map (name ours) */
+	bool m_show_timer_pending : 1;
 	bool m_bound_keycode : 1;
 	bool reserved3n : 1;
 	bool reserved3o : 1;
@@ -1811,6 +1821,16 @@ int32_t ScePafWidget_FF5BC957(paf::ui::Widget *widget, paf::Timer *t, int32_t op
 int32_t ScePafWidget_AC0C81D5(paf::ui::Widget *widget, float time);
 /* the widget's transition ends after the time, and the widget is deleted */
 int32_t ScePafWidget_5A9793B0(paf::ui::Widget *widget, float time);
+/* the widget (and its children) set in a transition in or out, and let go of the timer waiting for
+   it (no name found) */
+void ScePafWidget_C7962202(paf::ui::Widget *widget, bool on, bool force);
+/* the same for the destroy protection (no name found) */
+void ScePafWidget_83214DB9(paf::ui::Widget *widget, bool on, bool force);
+/* the timer waiting for the widget run out: the transition ended, or the widget destroyed (no
+   name found) */
+void ScePafWidget_78C4DBA4(paf::ui::Widget *widget);
+/* every destroy timer run (no name found) */
+void ScePafWidget_CEA2BE4E(void);
 /* adds to the count kept in bits 24 to 27 of the widget's flags */
 int32_t ScePafWidget_A96A0B4A(paf::ui::Widget *widget, int32_t add);
 /* Show(common::transition::Type, float delay, HandlerCB, void *): shows the widget with the

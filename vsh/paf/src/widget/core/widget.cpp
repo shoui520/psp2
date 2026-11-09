@@ -57,6 +57,14 @@ _Tree<_Tmap_traits<int32_t, ui::EventListenerList *, less<int32_t> > >::find(con
 	return iterator(_Find(key));
 }
 
+/* Sony's transition timer functions have the lookup in the widget timer maps inline. */
+template<>
+inline __attribute__((always_inline)) _Tree<_Tmap_traits<ui::Widget *, Timer *, less<ui::Widget *> > >::iterator
+_Tree<_Tmap_traits<ui::Widget *, Timer *, less<ui::Widget *> > >::find(ui::Widget *const &key)
+{
+	return iterator(_Find(key));
+}
+
 namespace ui {
 
 /* the cross product of the first three components, the first vector's w kept (Sony's copy is
@@ -406,6 +414,207 @@ public:
 
 extern "C" {
 list<AnimPending> ScePafWidget_8A0DA7BF;
+}
+
+/* the timers of the widgets that hide and are destroyed when theirs runs out, and those of the
+   widgets that show (names ours) */
+static map<Widget *, Timer *> s_destroy_timers;
+static map<Widget *, Timer *> s_show_timers;
+
+/* the widget's timer in the map taken out and deleted, if it has one (inline in Sony's callers;
+   name ours) */
+static inline void DropTimer(map<Widget *, Timer *> &timers, Widget *widget)
+{
+	map<Widget *, Timer *>::iterator it = timers.find(widget);
+
+	if (it != timers.end()) {
+		delete it->second;
+		timers.erase(it);
+	}
+}
+
+extern "C" void ScePafWidget_C7962202(Widget *widget, bool on, bool force)
+{
+	if (widget->m_timer_pending) {
+		if (!force)
+			return;
+		DropTimer(s_destroy_timers, widget);
+		widget->m_timer_pending = false;
+	}
+	if (force || widget->m_transition_in != on) {
+		widget->m_transition_in = on;
+		for (list<Widget *>::iterator it = widget->m_children.begin();
+		     it != widget->m_children.end(); it++)
+			ScePafWidget_C7962202(*it, on, force);
+	}
+}
+
+extern "C" void ScePafWidget_83214DB9(Widget *widget, bool on, bool force)
+{
+	if (widget->m_timer_pending) {
+		if (!force)
+			return;
+
+		bool was_set = widget->m_destroy_protected;
+
+		DropTimer(s_destroy_timers, widget);
+		widget->m_timer_pending = false;
+		if (was_set)
+			Widget::s_destroying_count--;
+	}
+	if (force || widget->m_destroy_protected != on) {
+		if (on) {
+			if (widget->m_focused)
+				widget->ReleaseFocus();
+
+			Widget *owner = widget;
+
+			while (owner != NULL) {
+				FocusRoot *root = owner->m_focus_root;
+
+				if (root != NULL) {
+					if (root->m_init_focus == widget)
+						ScePafWidget_EC6175D6(widget, false);
+					break;
+				}
+				if (widget->m_scene == owner)
+					break;
+				owner = owner->m_parent;
+			}
+		}
+		widget->m_destroy_protected = on;
+		for (list<Widget *>::iterator it = widget->m_children.begin();
+		     it != widget->m_children.end(); it++)
+			ScePafWidget_83214DB9(*it, on, force);
+	}
+}
+
+extern "C" void ScePafWidget_78C4DBA4(Widget *widget)
+{
+	if (widget->m_hold_count > 0)
+		return;
+	if (widget->m_transition_out) {
+		if (widget->m_prepare_count != 0)
+			return;
+		widget->m_transition_out = false;
+	}
+	if (!widget->m_timer_pending)
+		return;
+
+	map<Widget *, Timer *>::iterator it = s_destroy_timers.find(widget);
+
+	if (it == s_destroy_timers.end()) {
+		widget->m_timer_pending = false;
+		return;
+	}
+
+	Timer *timer = it->second;
+
+	if (timer->m_state == Timer::State_Finished) {
+		delete timer;
+		s_destroy_timers.erase(it);
+		widget->m_timer_pending = false;
+		if (widget->m_transition_in) {
+			ScePafWidget_C7962202(widget, false, false);
+		} else if (widget->m_destroy_protected) {
+			ScePafWidget_83214DB9(widget, false, false);
+			Widget::s_destroying_count--;
+			widget->DestroyWidget();
+		}
+	} else if (!widget->m_transition_in && !widget->m_destroy_protected) {
+		delete timer;
+		s_destroy_timers.erase(it);
+		widget->m_timer_pending = false;
+	}
+}
+
+extern "C" int32_t ScePafWidget_8AF26B1F(Widget *widget, bool auto_delete, float time)
+{
+	if (widget->m_hold_count > 0)
+		return -1;
+	if (widget->m_destroy_protected)
+		return -1;
+	ScePafWidget_C7962202(widget, true, false);
+	widget->m_timer_pending = true;
+	widget->m_transition_out = auto_delete;
+	s_destroy_timers[widget] = new Timer(time);
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_5A9793B0(Widget *widget, float time)
+{
+	if (widget->m_hold_count > 0)
+		return -1;
+	if (widget->m_destroy_protected)
+		return -1;
+	if (widget->m_transition_in || widget->m_transition_out) {
+		widget->m_transition_out = false;
+		ScePafWidget_C7962202(widget, false, true);
+	}
+	ScePafWidget_83214DB9(widget, true, false);
+	widget->m_timer_pending = true;
+	s_destroy_timers[widget] = new Timer(time);
+	Widget::s_destroying_count++;
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_AC0C81D5(Widget *widget, float time)
+{
+	Timer *timer = new Timer(time);
+
+	if (widget->m_show_timer_pending) {
+		map<Widget *, Timer *>::iterator it = s_show_timers.find(widget);
+
+		if (it != s_show_timers.end()) {
+			delete it->second;
+			it->second = timer;
+			return 0;
+		}
+	}
+	s_show_timers[widget] = timer;
+	widget->m_show_timer_pending = true;
+	if (widget->m_show_hold == 0)
+		widget->ReleaseShowHolds(true);
+	widget->m_show_hold = widget->m_show_hold + 1;
+	return 0;
+}
+
+extern "C" void ScePafWidget_CEA2BE4E(void)
+{
+	map<Widget *, Timer *>::iterator it = s_destroy_timers.begin();
+
+	while (it != s_destroy_timers.end()) {
+		it->second->DoTick();
+		it++;
+	}
+}
+
+void Widget::UpdateShowTimer()
+{
+	Widget *widget = this;
+
+	if (!widget->m_show_timer_pending || widget->m_hold_count > 0)
+		return;
+	if (widget->m_transition_in || widget->m_transition_out)
+		return;
+
+	map<Widget *, Timer *>::iterator it = s_show_timers.find(widget);
+
+	if (it == s_show_timers.end()) {
+		widget->m_show_timer_pending = false;
+		return;
+	}
+
+	Timer *timer = it->second;
+
+	timer->DoTick();
+	if (timer->m_state == Timer::State_Finished) {
+		delete timer;
+		s_show_timers.erase(it);
+		widget->m_show_timer_pending = false;
+		if (widget->m_show_hold != 0)
+			widget->m_show_hold = widget->m_show_hold - 1;
+	}
 }
 
 /* a move set by hand is dropped while a drag is under way (inline in Sony's callers; name
@@ -1058,7 +1267,7 @@ void Widget::ApplyParentState(bool input_target, bool surface_draw, bool transit
 {
 	m_input_target = input_target;
 	UpdateSurfaceDraw(surface_draw);
-	if (!reserved3d) {
+	if (!m_timer_pending) {
 		m_transition_in = transition_in;
 		m_destroy_protected = destroy_protected;
 	}
@@ -2997,6 +3206,7 @@ Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
 	m_layer_old = 0;
 	m_modal_mode = 2;
 	m_modal_option = 0;
+	m_show_hold = 0;
 	reserved3x1 = 0;
 	m_clip_mode = 0;
 	reserved3x3 = 0;
