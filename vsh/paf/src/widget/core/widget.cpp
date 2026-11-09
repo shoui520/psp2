@@ -34,6 +34,14 @@ inline __attribute__((noinline)) int vector<ui::Widget::DrawObjEntry>::push_back
 	return result;
 }
 
+/* Sony has the lookup in the touch capture map inline. */
+template<>
+inline __attribute__((always_inline)) _Tree<_Tmap_traits<uint32_t, ui::TouchCapture *, less<uint32_t> > >::iterator
+_Tree<_Tmap_traits<uint32_t, ui::TouchCapture *, less<uint32_t> > >::find(const uint32_t &key)
+{
+	return iterator(_Find(key));
+}
+
 /* Sony's SetAnimListener has the lookup in the animation map inline. */
 template<>
 inline __attribute__((always_inline)) _Tree<_Tmap_traits<int32_t, ui::AnimQueue *, less<int32_t> > >::iterator
@@ -1084,6 +1092,101 @@ extern "C" int32_t ScePafWidget_2B1A1493(Widget *widget, int32_t index)
 	return 0;
 }
 
+extern "C" int32_t ScePafWidget_D3D0A7C3(Widget *widget, uint32_t port, uint32_t id, bool apply,
+					 bool reset_pad)
+{
+	Environment *env = widget->m_env;
+
+	if (env == NULL)
+		return -1;
+
+	uint32_t key = id | (port << 8);
+	map<uint32_t, TouchCapture *>::iterator it = widget->m_touch_captures.find(key);
+
+	if (reset_pad) {
+		for (int32_t i = 0; i < 5; i++) {
+			env->ReleasePadCaptureLow(i);
+			widget->m_env->ReleasePadCaptureHigh(i);
+			env = widget->m_env;
+		}
+		if (ScePafWidget_A6B659BB(widget->m_env, 0)) {
+			inputdevice::pad::Lock();
+			inputdevice::pad::Unlock();
+		}
+	}
+	if (apply) {
+		if (it == widget->m_touch_captures.end()) {
+			ScePafWidget_364E6985(widget->m_env, port, id, false);
+		}
+		ScePafWidget_ABF05727(widget->m_env, port, true, widget);
+	}
+
+	bool added = false;
+
+	if (it == widget->m_touch_captures.end()) {
+		TouchCapture *capture = ScePafWidget_451DE355(widget->m_env, port, id, widget);
+
+		if (capture == NULL)
+			return -1;
+		widget->m_touch_captures[key] = capture;
+		added = true;
+	}
+	if (widget->m_touch_captures.size() == 1) {
+		if (widget->m_touch_gesture_mask != 0 && port == 0) {
+			widget->apply_touch_gesture_mask(0, id, widget->m_touch_gesture_mask);
+			if ((widget->m_event_enable & 0x400) != 0 && widget->IsTextEventEnabled() &&
+			    widget->m_touch_gesture_mask != 0 && !widget->m_env->m_focus_auto_off) {
+				widget->m_env->ReleaseFocusBeyond(widget);
+				widget->SetFocus(NULL);
+			}
+		}
+	} else if (widget->m_touch_captures.size() > 1) {
+		uint32_t mask = widget->m_touch_gesture_mask;
+
+		if ((mask & 0x10) != 0 && port == 0) {
+			widget->apply_touch_gesture_mask(0, id, 0x10);
+			mask = widget->m_touch_gesture_mask;
+		}
+		if ((mask & 0x20) != 0 && port == 0)
+			widget->apply_touch_gesture_mask(0, id, 0x20);
+	}
+	if (added) {
+		widget->OnTouchCaptureChanged(port, id, 0);
+
+		Event e(0x801, 0x100000, 0x10000, 0, 0, 0, 0, 0);
+
+		widget->DoEvent(537133066, &e);
+		e.SetTarget(widget);
+		e.Term();
+		widget->m_env->m_ev_queue.PushBack(e);
+	}
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_5ABB3393(Widget *widget, uint32_t port, uint32_t id, bool apply)
+{
+	uint32_t key = id | (port << 8);
+	map<uint32_t, TouchCapture *>::iterator it = widget->m_touch_captures.find(key);
+
+	if (it == widget->m_touch_captures.end())
+		return -1;
+	return widget->ReleaseTouchCapture(it, it->second, apply);
+}
+
+extern "C" int32_t ScePafWidget_931AD41E(Widget *widget, bool apply)
+{
+	if (widget->m_touch_captures.size() == 0)
+		return -1;
+
+	map<uint32_t, TouchCapture *>::iterator it = widget->m_touch_captures.begin();
+
+	while (it != widget->m_touch_captures.end()) {
+		widget->ReleaseTouchCapture(it, it->second, apply);
+		it = widget->m_touch_captures.begin();
+	}
+	return 0;
+}
+
 extern "C" int32_t ScePafWidget_54DFB062(Widget *widget, int32_t port)
 {
 	int32_t count = 0;
@@ -1669,6 +1772,50 @@ void Widget::detach_environment()
 		ScePafWidget_929C3278(this);
 	if (m_touch_region_registered)
 		m_env->RemoveTouchDeviceRegion(this);
+}
+
+int32_t Widget::ReleaseTouchCapture(map<uint32_t, TouchCapture *>::iterator it, TouchCapture *capture,
+				    bool apply)
+{
+	if (it == m_touch_captures.end())
+		return -1;
+	if (m_env == NULL || capture == NULL)
+		return -1;
+
+	uint32_t port = capture->m_port;
+	uint32_t id = capture->m_id;
+
+	if (m_drag_state[0] != NULL) {
+		if (m_drag_state[0]->m_capture == capture)
+			ClearDragState(m_drag_state[0]);
+		else if (m_drag_state[1] != NULL && m_drag_state[1]->m_capture == capture)
+			ClearDragState(m_drag_state[1]);
+	}
+
+	int32_t result = m_env->ReleaseTouchCapture(capture);
+
+	if (result < 0)
+		return result;
+	m_touch_captures.erase(it);
+	if (apply) {
+		inputdevice::touchscreen::SetMask(port, 1 << id);
+
+		inputdevice::InputGestureListener *listener = NULL;
+
+		if (port == 0 || port == 1)
+			listener = m_env->GetTouchGestureListener(port).get();
+		if (listener != NULL)
+			ScePafMisc_CB4DB658(listener, id, NULL);
+	}
+	OnTouchCaptureChanged(port, id, apply);
+
+	Event e(0x802, 0x100000, 0x10000, 0, 0, 0, 0, 0);
+
+	DoEvent(537133067, &e);
+	e.SetTarget(this);
+	e.Term();
+	m_env->m_ev_queue.PushBack(e);
+	return result;
 }
 
 int32_t Widget::ClearDragState(DragState *state)

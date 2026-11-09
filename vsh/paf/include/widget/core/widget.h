@@ -1081,6 +1081,11 @@ public:
 	/* a drag state let go of: the second becomes the first, the layout of it and its parent
 	   marked dirty, the drag mode put back (0x8114e258; name ours) */
 	int32_t ClearDragState(DragState *state);
+	/* the touch the capture holds let go of: its drag cleared, the capture freed and taken out
+	   of the map, the touch mask and gesture state reset where apply, the widget told
+	   (0x8114e458; name ours) */
+	int32_t ReleaseTouchCapture(map<uint32_t, TouchCapture *>::iterator it, TouchCapture *capture,
+				    bool apply);
 	void SetPinchMode(uint32_t mode);
 	/* sets the steps its drag moves it in (name ours) */
 	void SetDragQuant(uint8_t x, uint8_t y, uint8_t z)

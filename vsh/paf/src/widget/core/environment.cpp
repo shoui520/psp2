@@ -5,6 +5,7 @@
 #include <widget/core/environment.h>
 #include <std/algorithm>
 #include <inputdevice/touchscreen/touchscreen.h>
+#include <inputdevice/inputlistener.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <graphics/surface/surface_display.h>
 #include <graphics/gutil.h>
@@ -102,6 +103,32 @@ extern "C" DragState *ScePafWidget_DE6905E2(Environment *env, TouchCapture *capt
 	state->m_widget = capture->m_widget;
 	state->m_capture = capture;
 	return state;
+}
+
+void Environment::ReleaseFocusBeyond(Widget *widget)
+{
+	if (!reserved4_345)
+		return;
+
+	uint32_t group = 0xffffffff;
+
+	if (widget != NULL)
+		group = widget->m_scene->m_entry;
+
+	OrderEntry *it = m_focus_candidates.m_entries.ptr;
+
+	while (it != m_focus_candidates.m_entries.ptr + m_focus_candidates.m_entries.count) {
+		if (it->m_widget != NULL) {
+			if ((uint32_t)it->m_group >= group)
+				return;
+
+			Widget *root = ScePafWidget_CFA1EB7A(it->m_widget);
+
+			if (root != NULL && root->m_focus_root != NULL && root->m_focus_root->m_state != 0)
+				((Widget *)root->m_focus_root->m_state)->ReleaseFocus();
+		}
+		it++;
+	}
 }
 
 void Environment::UpdateOrderedTop()
@@ -894,6 +921,75 @@ void ScePafWidget_9D4A5A0E(Environment *env)
 	env->m_draw_frame = state == 1;
 	if (suspended && !env->m_draw_when_suspended)
 		env->m_draw_frame = false;
+}
+
+static inline inputdevice::InputGestureListener *GestureListenerOf(Environment *env, uint32_t port)
+{
+	if (port == 0 || port == 1)
+		return env->GetTouchGestureListener(port).get();
+	return NULL;
+}
+
+int32_t ScePafWidget_ABF05727(Environment *env, uint32_t port, bool release, Widget *keep)
+{
+	if (port >= 2)
+		return -1;
+	for (uint32_t id = 0; id < 8; id++) {
+		Widget *holder = env->m_touch_capture[port][id].m_widget;
+
+		if (holder != NULL && holder != keep) {
+			inputdevice::InputGestureListener *listener = GestureListenerOf(env, port);
+
+			if (listener != NULL)
+				ScePafMisc_CB4DB658(listener, id, holder);
+			ScePafWidget_5ABB3393(holder, port, id, release);
+		}
+	}
+	return 0;
+}
+
+int32_t ScePafWidget_364E6985(Environment *env, uint32_t port, uint32_t id, bool apply)
+{
+	if (port >= 2 || id >= 8)
+		return -1;
+
+	Widget *holder = env->m_touch_capture[port][id].m_widget;
+
+	if (holder == NULL)
+		return -1;
+
+	inputdevice::InputGestureListener *listener = GestureListenerOf(env, port);
+
+	if (listener != NULL)
+		ScePafMisc_CB4DB658(listener, id, holder);
+	return ScePafWidget_5ABB3393(holder, port, id, apply);
+}
+
+TouchCapture *ScePafWidget_451DE355(Environment *env, uint32_t port, uint32_t id, Widget *widget)
+{
+	if (widget == NULL)
+		return NULL;
+	if (port >= 2 || id >= 8)
+		return NULL;
+
+	TouchCapture *capture = &env->m_touch_capture[port][id];
+	Widget *old = capture->m_widget;
+
+	if (old != NULL && old != widget) {
+		inputdevice::InputGestureListener *listener = GestureListenerOf(env, port);
+
+		if (listener != NULL)
+			ScePafMisc_CB4DB658(listener, id, old);
+		ScePafWidget_5ABB3393(old, port, id, false);
+	}
+	capture->m_port = -1;
+	capture->m_id = -1;
+	capture->m_widget = NULL;
+	capture->m_touch = &env->m_touch_state[port][id];
+	capture->m_port = capture->m_touch->m_port;
+	capture->m_id = capture->m_touch->m_id;
+	capture->m_widget = widget;
+	return capture;
 }
 
 Widget *ScePafWidget_0775F78F(Environment *env, uint32_t id)

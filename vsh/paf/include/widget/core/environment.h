@@ -433,6 +433,9 @@ public:
 	/* the ordered lists made again where the layer weights changed, or whatever (0x8113bdba; name
 	   ours) */
 	int32_t RefreshOrderLists(bool force);
+	/* the focus released from the focus candidates in front of the widget's scene entry (0x8113f842;
+	   name ours) */
+	void ReleaseFocusBeyond(Widget *widget);
 	/* the capture let go of: -1 and 0 again, -1 where it held nothing (0x8113fd14; name ours) */
 	int32_t ReleaseTouchCapture(TouchCapture *capture);
 	/* the ordered widgets sorted, the first one in front of its siblings and fully shown becomes
@@ -700,6 +703,12 @@ int32_t ScePafWidget_ABF05727(paf::ui::Environment *env, uint32_t port, bool rel
 			      paf::ui::Widget *keep);
 /* updates the input devices */
 int32_t ScePafWidget_909850C4(void);
+/* the touch of the port and ID let go of by the widget that holds it, its release handled where apply
+   (no name found) */
+int32_t ScePafWidget_364E6985(paf::ui::Environment *env, uint32_t port, uint32_t id, bool apply);
+/* the touch of the port and ID given to the widget: its capture, 0 where it has none (no name found) */
+paf::ui::TouchCapture *ScePafWidget_451DE355(paf::ui::Environment *env, uint32_t port, uint32_t id,
+					     paf::ui::Widget *widget);
 /* a drag state made free for the capture's touch, NULL where it is in use (no name found) */
 paf::ui::DragState *ScePafWidget_DE6905E2(paf::ui::Environment *env, paf::ui::TouchCapture *capture);
 /* the widget the list with the ID is for, 0 for none (no name found) */
