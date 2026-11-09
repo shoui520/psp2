@@ -280,7 +280,9 @@ public:
 	}
 	/* the hit taken through the widget's local matrix (CalcHitLineToPlane; name ours) */
 	math::v4 m_local_hit;
-	uint8_t reserved2[0x10];
+	/* the normal of the hit box's face the line went through, in the widget's space
+	   (CalcHitBoxToLine; name ours) */
+	math::v4 m_normal;
 	/* the widget's world position, world rotation, size and align offset when the hit was
 	   found (names ours) */
 	math::v4 m_widget_pos;

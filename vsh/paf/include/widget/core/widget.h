@@ -56,6 +56,7 @@ class Widget;
 class Scene;
 class TouchCapture;
 class HitInfo;
+class TouchInfo;
 class DragState;
 class TouchState;
 class Camera;
@@ -1095,6 +1096,12 @@ public:
 	   filled in where the mode asks for it (0x811576d0; argument names ours) */
 	int32_t HitDetect_core(uint32_t mode, Event *e, uint32_t mask, const math::v4 &line_b,
 			       const math::v4 &line_a, HitInfo *hit);
+	/* the widget the event's touch line hits, its children first (by depth from the camera
+	   where it sorts by depth, else from the last), then itself: 2 with the hit filled in, 0 for
+	   no hit, -1 without an environment or while held (export FECECAD1; argument names
+	   ours) */
+	int32_t HitDetectRouting(Event *e, const math::v4 &line_b, const math::v4 &line_a,
+				 TouchInfo *touch, HitInfo *hit);
 	/* exports 7A3A7304, 0FCCC833, B94694E3 */
 	void SetDragMode(uint32_t mode);
 	/* a drag state let go of: the second becomes the first, the layout of it and its parent

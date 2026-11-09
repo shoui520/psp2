@@ -3,6 +3,7 @@
  * still ScePafWidget's.
  */
 #include <stddef.h>
+#include <std/algorithm>
 #include <common/common_internal.h>
 #include <inputdevice/inputdevice.h>
 #include <inputdevice/pad/pad.h>
@@ -3520,6 +3521,176 @@ math::v4 Widget::GetSizeBound(int32_t opt, Widget *ref)
 	return CalcBound(size, quat);
 }
 
+/* the world rotation, made again first where m_update_flag asks for it (Sony's copy out of line,
+   0x81242738; name ours) */
+static __attribute__((noinline)) const math::quaternion &WorldRot(Widget *w)
+{
+	if ((w->m_update_flag & 7) != 0)
+		w->UpdateMatrix();
+	return w->m_world_rot;
+}
+
+/* the world position (Sony's copy out of line, 0x81242754; name ours) */
+static __attribute__((noinline)) math::v4 WorldPos(Widget *w)
+{
+	if ((w->m_update_flag & 7) != 0)
+		w->UpdateMatrix();
+	return w->m_world_matrix.w();
+}
+
+/* the vector taken through the matrix (Sony's copy out of line, 0x81242778; name ours) */
+static __attribute__((noinline)) math::v4 Transform(const math::matrix &m, const math::v4 &v)
+{
+	return math::v4(m.getImpl() * v.getImpl());
+}
+
+/* the hit box's center offset, zero without a hit box (Sony's copy out of line, 0x812427a0;
+   name ours) */
+static __attribute__((noinline)) math::v4 HitBoxOffset(Widget *w)
+{
+	if (w->m_hit_box != NULL)
+		return w->m_hit_box[0];
+	return math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+}
+
+/* the world and the local matrix (Sony's copies out of line, 0x812427bc and 0x812427d8; names
+   ours) */
+static __attribute__((noinline)) const math::matrix &WorldMatrix(Widget *w)
+{
+	if ((w->m_update_flag & 7) != 0)
+		w->UpdateMatrix();
+	return w->m_world_matrix;
+}
+
+static __attribute__((noinline)) const math::matrix &LocalMatrix(Widget *w)
+{
+	if ((w->m_update_flag & 7) != 0)
+		w->UpdateMatrix();
+	return w->m_local_matrix;
+}
+
+/* the hit at the point of the widget's space filled in, with the normal of the face it is on, as
+   CalcHitBoxToLine has it inline at each of its hits (name ours) */
+static __attribute__((always_inline)) void FillBoxHit(Widget *w, HitInfo *info, const math::v4 &local,
+						     const math::v4 &normal)
+{
+	info->LocalPos() = math::v4(sce::Vectormath::Simd::Aos::Vector4(local.getImpl().getXYZ(), 1.0f));
+	info->m_pos = Transform(WorldMatrix(w), info->LocalPos());
+	info->m_local_hit = Transform(LocalMatrix(w), info->LocalPos());
+	info->m_widget_pos = WorldPos(w);
+	info->m_widget_rot = math::v4(sce::Vectormath::Simd::Aos::Vector4(WorldRot(w).getImpl()));
+	info->m_widget_size = *w->GetSize(0);
+	info->m_widget_scale = w->m_align_offs;
+	info->m_hit_valid = 1;
+	info->m_normal = normal;
+}
+
+int32_t Widget::CalcHitBoxToLine(const math::v4 &size, const math::v4 &start, const math::v4 &end,
+				 HitInfo *info)
+{
+	math::v4 from = start;
+	math::matrix inverse = WorldRot(this).toMatrix(0.0001f).transpose();
+	math::v4 dir = end - from;
+	math::v4 local = Transform(inverse, from - WorldPos(this));
+	math::v4 pos = local - HitBoxOffset(this);
+	math::v4 local_dir = Transform(inverse, dir);
+	math::v4 half = size * 0.5f;
+	float hx = half.extract_x();
+	float hy = half.extract_y();
+	float hz = half.extract_z();
+	float hw = half.extract_w();
+
+	if (__builtin_fabsf(local_dir.extract_x()) <= 0.001f &&
+	    __builtin_fabsf(local_dir.extract_y()) <= 0.001f) {
+		/* the line runs along z: it hits where the point is inside the box's face */
+		if (__builtin_fabsf(pos.extract_x()) <= hx && __builtin_fabsf(pos.extract_y()) <= hy) {
+			if (info == NULL)
+				return 1;
+			FillBoxHit(this, info, math::v4(pos.extract_x(), pos.extract_y(), hz, pos.extract_w()),
+				   math::v4(0.0f, 0.0f, hz < 0.0f ? -1.0f : 1.0f, 0.0f));
+			return 1;
+		}
+		return 0;
+	}
+
+	/* the line taken across each corner of the box */
+	math::v4 a = CrossKeepW(local_dir, math::v4(hx, hy, hz, hw) - pos);
+	math::v4 b = CrossKeepW(local_dir, math::v4(-hx, hy, hz, hw) - pos);
+	math::v4 c = CrossKeepW(local_dir, math::v4(-hx, -hy, hz, hw) - pos);
+	math::v4 d = CrossKeepW(local_dir, math::v4(hx, -hy, hz, hw) - pos);
+	math::v4 e = CrossKeepW(local_dir, math::v4(hx, -hy, -hz, hw) - pos);
+	math::v4 f = CrossKeepW(local_dir, math::v4(-hx, -hy, -hz, hw) - pos);
+	math::v4 g = CrossKeepW(local_dir, math::v4(-hx, hy, -hz, hw) - pos);
+
+	CrossKeepW(local_dir, math::v4(hx, hy, -hz, hw) - pos);
+
+	/* the line passes outside the box where it goes round one of three faces' corners the
+	   same way */
+	if ((a.extract_z() * b.extract_z() > 0.0f && b.extract_z() * c.extract_z() > 0.0f &&
+	     c.extract_z() * d.extract_z() > 0.0f && d.extract_z() * a.extract_z() > 0.0f) ||
+	    (c.extract_y() * d.extract_y() > 0.0f && d.extract_y() * e.extract_y() > 0.0f &&
+	     e.extract_y() * f.extract_y() > 0.0f && f.extract_y() * c.extract_y() > 0.0f) ||
+	    (b.extract_x() * c.extract_x() > 0.0f && c.extract_x() * f.extract_x() > 0.0f &&
+	     f.extract_x() * g.extract_x() > 0.0f && g.extract_x() * b.extract_x() > 0.0f))
+		return 0;
+	if (info == NULL)
+		return 1;
+
+	/* the faces toward the point: where the line crosses each within reach */
+	float bx = hx;
+	float by = hy;
+	float bz = hz;
+
+	if (pos.extract_x() < 0.0f)
+		bx = -bx;
+	if (pos.extract_y() < 0.0f)
+		by = -by;
+	if (pos.extract_z() < 0.0f)
+		bz = -bz;
+
+	float t;
+	math::v4 hit;
+
+	if (!(__builtin_fabsf(local_dir.extract_z()) < 0.001f)) {
+		t = (bz - pos.extract_z()) / local_dir.extract_z();
+		if (t > 0.2f && t < 5.0f) {
+			hit = pos + local_dir * t;
+			if (__builtin_fabsf(hit.extract_x()) <= __builtin_fabsf(bx) &&
+			    __builtin_fabsf(hit.extract_y()) <= __builtin_fabsf(by)) {
+				FillBoxHit(this, info, hit + HitBoxOffset(this),
+					   math::v4(0.0f, 0.0f, bz < 0.0f ? -1.0f : 1.0f, 0.0f));
+				return 1;
+			}
+		}
+	}
+	if (!(__builtin_fabsf(local_dir.extract_y()) < 0.001f)) {
+		t = (by - pos.extract_y()) / local_dir.extract_y();
+		if (t > 0.2f && t < 5.0f) {
+			hit = pos + local_dir * t;
+			if (__builtin_fabsf(hit.extract_x()) <= __builtin_fabsf(bx) &&
+			    __builtin_fabsf(hit.extract_z()) <= __builtin_fabsf(bz)) {
+				FillBoxHit(this, info, hit + HitBoxOffset(this),
+					   math::v4(0.0f, by < 0.0f ? -1.0f : 1.0f, 0.0f, 0.0f));
+				return 1;
+			}
+		}
+	}
+	if (!(__builtin_fabsf(local_dir.extract_x()) < 0.001f)) {
+		t = (bx - pos.extract_x()) / local_dir.extract_x();
+		if (t > 0.2f && t < 5.0f) {
+			hit = pos + local_dir * t;
+			if (__builtin_fabsf(hit.extract_z()) <= __builtin_fabsf(bz) &&
+			    __builtin_fabsf(hit.extract_y()) <= __builtin_fabsf(by)) {
+				FillBoxHit(this, info, hit + HitBoxOffset(this),
+					   math::v4(bx < 0.0f ? -1.0f : 1.0f, 0.0f, 0.0f, 0.0f));
+				return 1;
+			}
+		}
+	}
+	sce_paf_printf_dummy();
+	return -1;
+}
+
 float32x2_t Widget::CalcDistPointToPlane(const math::v4 &point, const math::v4 &plane_point,
 					 const math::v4 &normal, int32_t is_unit)
 {
@@ -3697,6 +3868,104 @@ int32_t Widget::HitDetect_core(uint32_t mode, Event *e, uint32_t mask, const mat
 		return result;
 	}
 	return 0;
+}
+
+/* the nearest hit HitDetectRouting found outside a hit box of mode 4, and its distance squared
+   from the box's center and the box's area, which ScePafWidget_EB1D1CBC resets (names ours) */
+static HitInfo s_nearest_hit;
+static float s_nearest_dist = 100000000.0f;
+static float s_nearest_area = 100000000.0f;
+
+/* the children's order by depth from the camera (0x81162ea8) */
+static bool DepthLess(Widget *a, Widget *b);
+
+int32_t Widget::HitDetectRouting(Event *e, const math::v4 &line_b, const math::v4 &line_a,
+				 TouchInfo *touch, HitInfo *hit)
+{
+	if (m_env == NULL)
+		return -1;
+	if (m_hold_count > 0)
+		return -1;
+
+	uint32_t mask = m_event_enable;
+	uint32_t child_mode = m_hit_detect_mode;
+	uint32_t self_mode = m_hit_detect_b_mode;
+	uint32_t find_mode = m_hit_find_mode;
+
+	if (m_debug_events) {
+		uint32_t debug = m_scene->m_debug_mode;
+
+		if (debug == 2 || debug == 3) {
+			find_mode = 0;
+			self_mode = 0;
+			child_mode = 0;
+			mask = 0xFFF0;
+		}
+	}
+
+	bool clip_hit = false;
+	uint32_t port = (e->m_detail >> 20) & 0xF;
+
+	if (m_clip_children) {
+		if (child_mode == 2)
+			child_mode = 0;
+		clip_hit = HitDetect_core(child_mode, e, mask, line_b, line_a, NULL) > 0;
+	}
+	hit->m_hit_valid = 0;
+	hit->m_widget = NULL;
+	if (m_children.size() != 0 && find_mode == 0 && (!m_clip_children || clip_hit) &&
+	    (port != 1 || m_touch_rear_children != 0) && !IsShowHeld(this)) {
+		if (m_scene->m_camera->m_draw_order == Camera::DRAW_ORDER_ZSORT) {
+			if (m_children.size() != 0) {
+				vector<Widget *> children;
+
+				for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
+					children.push_back(*it);
+				sort(children.begin(), children.end(), DepthLess);
+				for (uint32_t i = 0; i < children.size(); i++) {
+					if (children[i]->HitDetectRouting(e, line_b, line_a, touch, hit) > 0 &&
+					    hit->m_widget != NULL)
+						return 2;
+				}
+			}
+		} else {
+			list<Widget *>::iterator it = m_children.end();
+
+			do {
+				--it;
+				if ((*it)->HitDetectRouting(e, line_b, line_a, touch, hit) > 0 && hit->m_widget != NULL)
+					return 2;
+			} while (it != m_children.begin());
+		}
+	}
+	if (HitDetect_core(self_mode, e, mask, line_b, line_a, hit) <= 0) {
+		hit->m_widget = NULL;
+		hit->m_hit_valid = 0;
+		return 0;
+	}
+
+	/* a hit box of mode 4 takes the touch only inside its size; outside it the nearest such
+	   hit is kept for when nothing takes the touch */
+	math::v4 size = m_size;
+	float dx = __builtin_fabsf(hit->LocalPos().extract_x());
+	float dy = __builtin_fabsf(hit->LocalPos().extract_y());
+	float dist = dx * dx + dy * dy;
+	float area = size.extract_x() * size.extract_y();
+
+	if (m_hit_box_mode != 4 ||
+	    (size.extract_x() * 0.5f >= dx && size.extract_y() * 0.5f >= dy)) {
+		if (s_nearest_hit.m_widget != NULL && s_nearest_dist + s_nearest_area <= dist + area)
+			*hit = s_nearest_hit;
+		return 2;
+	}
+	if (s_nearest_hit.m_widget == NULL || s_nearest_dist + s_nearest_area > dist + area) {
+		s_nearest_hit = *hit;
+		s_nearest_area = area;
+		s_nearest_dist = dist;
+	}
+	hit->m_widget = NULL;
+	hit->m_hit_valid = 0;
+	return 2;
 }
 
 float Widget::CalcDistLineToLine(const math::v4 &point_a, const math::v4 &dir_a,
@@ -6516,6 +6785,22 @@ list<RestructInfo> Widget::s_list_restruct;
 int32_t Widget::GetBaseDestroyCount()
 {
 	return s_base_destroy_count;
+}
+
+/* the depth of the widget's position in its camera's view (name ours) */
+static float CameraDepth(Widget *widget)
+{
+	const math::matrix &view = widget->m_scene->m_camera->GetWorldMatrix();
+	math::v4 pos = widget->GetWorldMatrix().w();
+	math::v4 depth = view.x() * pos.extract_x() + view.y() * pos.extract_y() +
+			 view.z() * pos.extract_z() + view.w() * pos.extract_w();
+
+	return depth.extract_z();
+}
+
+static bool DepthLess(Widget *a, Widget *b)
+{
+	return CameraDepth(a) < CameraDepth(b);
 }
 }
 }
