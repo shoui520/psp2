@@ -5,6 +5,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include <common/resource_hooks.h>
 #include <widget/core/environment.h>
 #include <widget/core/widget.h>
 #include <widget/w_button_base.h>
@@ -216,6 +217,42 @@ bool FocusInfo::IsMoveImmediate()
 }
 
 intrusive_ptr<graph::Surface> FocusInfo::s_textures[9];
+
+/* the textures the common resource gives the cursor frames: the table's index and the ID (inline
+   in Sony's B6C64486, a copy of the load for each) */
+struct FocusTextureName {
+	int32_t m_index;
+	const char *m_name;
+};
+
+static const FocusTextureName s_focus_texture_names[] = {
+	{ 0, "_common_texture_keyfocus_rounded_rectangle_frame" },
+	{ 1, "_common_texture_keyfocus_rectangle_frame" },
+	{ 2, "_common_texture_keyfocus_top_and_bottom_line_frame" },
+	{ 3, "_common_texture_keyfocus_circle_frame" },
+	{ 5, "_common_texture_keyfocus_oneside_rounded_rectangle_frame" },
+	{ 6, "_common_texture_keyfocus_textlink_rectangle_frame" },
+	{ 7, "_common_texture_keyfocus_textlink_noside_frame" },
+	{ 8, "_common_texture_keyfocus_textlink_oneside_rectangle_frame" }
+};
+
+extern "C" void ScePafWidget_B6C64486(const intrusive_ptr<graph::Surface> &texture, int32_t no)
+{
+	if (texture.get() != NULL) {
+		if (no < 9)
+			FocusInfo::s_textures[no] = texture;
+		return;
+	}
+	for (uint32_t i = 0; i < sizeof(s_focus_texture_names) / sizeof(s_focus_texture_names[0]); i++) {
+		int32_t index = s_focus_texture_names[i].m_index;
+
+		if (FocusInfo::s_textures[index].get() == NULL) {
+			IDParam id(s_focus_texture_names[i].m_name);
+
+			FocusInfo::s_textures[index] = ScePafCommon_F820A54B(id);
+		}
+	}
+}
 
 void FocusInfo::GetMoveTexture(intrusive_ptr<graph::Surface> &texture, int32_t mode)
 {
