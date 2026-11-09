@@ -278,6 +278,11 @@ public:
 	{
 		return *reinterpret_cast<math::v4 *>(&m_touch_pos);
 	}
+
+	const math::v4 &LocalPos() const
+	{
+		return *reinterpret_cast<const math::v4 *>(&m_touch_pos);
+	}
 	/* the hit taken through the widget's local matrix (CalcHitLineToPlane; name ours) */
 	math::v4 m_local_hit;
 	/* the normal of the hit box's face the line went through, in the widget's space
@@ -388,26 +393,38 @@ public:
 	math::v4 m_threshold;
 };
 
-/* two blocks the Environment makes for the front and rear ports and clears again in its
-   destructor; nothing else in libpaf reads or writes them (name ours) */
-class PortReserved {
+/* the state of a widget's pinch, two touches dragging it: the Environment makes two and gives
+   out the first (0x80 bytes; names ours) */
+class PinchState {
 public:
-	__attribute__((always_inline)) PortReserved() : reserved0(0), reserved1(0), reserved2(0), reserved4(0.0f, 0.0f, 0.0f, 1.0f)
+	__attribute__((always_inline)) PinchState() : m_state_a(0), m_state_b(0), m_state_c(0), m_quat(0.0f, 0.0f, 0.0f, 1.0f)
 	{
 	}
 
-	__attribute__((always_inline)) ~PortReserved()
+	__attribute__((always_inline)) ~PinchState()
 	{
-		reserved0 = 0;
-		reserved2 = 0;
-		reserved1 = 0;
+		m_state_a = 0;
+		m_state_c = 0;
+		m_state_b = 0;
 	}
 
-	uint32_t reserved0;
-	uint32_t reserved1;
-	uint32_t reserved2;
-	uint8_t reserved3[100];
-	math::v4 reserved4;
+	/* three words a pinch's start and end set to 0; nothing in libpaf reads them (names ours) */
+	uint32_t m_state_a;
+	uint32_t m_state_b;
+	uint32_t m_state_c;
+	uint8_t reserved0[4];
+	/* from the first touch's hit to the second's when the pinch began */
+	math::v4 m_dir;
+	/* the z and the y axis of the widget's rotation when the pinch began */
+	math::v4 m_axis_z;
+	math::v4 m_axis_y;
+	/* the widget's Euler angles when the pinch began, and those of the frame the two touches
+	   made then */
+	math::v4 m_rot;
+	math::v4 m_rot_touch;
+	/* the widget's size and rotation (a quaternion) when the pinch began */
+	math::v4 m_size;
+	math::v4 m_quat;
 };
 
 /* the focus: the widget drawn as the focus cursor and the widget it is on (Sony's class name,
@@ -891,7 +908,8 @@ public:
 	TouchCapture m_touch_capture[2][8];
 	/* the drags given out, by the touch's port and ID (names ours) */
 	DragState m_drag_state[2][8];
-	PortReserved m_port_reserved[2];
+	/* the pinch states given out (name ours) */
+	PinchState m_pinch_state[2];
 	/* the widgets the touches are on (TouchScrollSupplier's checks; name ours) */
 	list<HitInfo> m_touch_hits;
 	/* the widgets IsHitStackParent takes as the hit stack's parents, cleared with

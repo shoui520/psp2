@@ -4,6 +4,7 @@
  */
 #include <stddef.h>
 #include <std/algorithm>
+#include <std/math.h>
 #include <common/common_internal.h>
 #include <inputdevice/inputdevice.h>
 #include <inputdevice/pad/pad.h>
@@ -1283,6 +1284,979 @@ extern "C" int32_t ScePafWidget_093F1C89(Widget *widget, uint32_t port, uint32_t
 	return -1;
 }
 
+int32_t Widget::CapturePadButton(uint32_t port, uint32_t key, bool reset)
+{
+	if (port >= 5)
+		return -1;
+	if (m_env == NULL)
+		return -1;
+
+	Widget *holder = ScePafWidget_0775F78F(m_env, key);
+
+	if (holder != this) {
+		if (holder != NULL && reset)
+			holder->ReleasePadCaptureButton(255, true);
+		return 0;
+	}
+
+	bool added = false;
+	Environment *env = m_env;
+	Widget *current;
+
+	if (port < 5 && (current = env->m_pad_capture_button[port]) != NULL && current == this) {
+		if (reset)
+			remove_pad_gesture_mask(port, m_touch_gesture_mask);
+	} else {
+		if (env->SetPadCaptureHigh(port, this) < 0)
+			return -1;
+		m_pad_button_port = port;
+		added = true;
+	}
+	apply_pad_gesture_mask(port, m_touch_gesture_mask);
+	if (added) {
+		OnPadCaptureChanged(true, 0, port, key);
+
+		Event e(0x801, 0x100000, 0x10000, 0, 0, 0, 0, 0);
+
+		DoEvent(537133066, &e);
+		e.SetTarget(this);
+		e.Term();
+		m_env->m_ev_queue.PushBack(e);
+	}
+	return 0;
+}
+
+int32_t Widget::CapturePadDir(uint32_t port, uint32_t key, bool reset)
+{
+	if (port >= 5)
+		return -1;
+
+	Environment *env = m_env;
+
+	if (env == NULL)
+		return -1;
+	if (env->m_focus_cursor.m_target != this) {
+		if (reset)
+			env->m_focus_cursor.m_target->ReleasePadCaptureDir(27, true);
+		return 0;
+	}
+
+	bool added = false;
+	Widget *current = env->m_pad_capture_dir[port];
+
+	if (current != NULL && current == this) {
+		if (reset)
+			remove_pad_gesture_mask(port, m_touch_gesture_mask);
+	} else {
+		if (env->SetPadCaptureLow(port, this) < 0)
+			return -1;
+		m_pad_dir_port = port;
+		added = true;
+	}
+	apply_pad_gesture_mask(port, m_touch_gesture_mask);
+	if (added) {
+		OnPadCaptureChanged(true, 1, port, key);
+
+		Event e(0x801, 0x100000, 0x10000, 0, 0, 0, 0, 0);
+
+		DoEvent(537133066, &e);
+		e.SetTarget(this);
+		e.Term();
+		m_env->m_ev_queue.PushBack(e);
+	}
+	return 0;
+}
+
+/* a direction key that m_keycode does not bind (inline in Sony's CapturePad; name ours) */
+static __attribute__((always_inline)) bool IsPadDirKey(Widget *widget, uint32_t key)
+{
+	if (key == 1 || key == 2 || key == 3 || key == 4 || key == 27) {
+		uint32_t mask = KeycodeToMask(key);
+
+		if (!widget->m_bound_keycode || (mask & widget->m_keycode) == 0)
+			return true;
+	}
+	return false;
+}
+
+int32_t Widget::CapturePad(uint32_t port, uint32_t key, bool reset, bool reset_touch)
+{
+	if (m_env == NULL)
+		return -1;
+	if (reset_touch) {
+		ScePafWidget_ABF05727(m_env, 0, true, NULL);
+		ScePafWidget_ABF05727(m_env, 1, true, NULL);
+	}
+	if (IsPadDirKey(this, key)) {
+		if (reset && m_pad_dir_port < 0)
+			m_env->ReleasePadCaptureHigh(port);
+		return CapturePadDir(port, key, reset);
+	} else if (!IsPadDirKey(this, key)) {
+		if (reset && m_pad_button_port < 0)
+			m_env->ReleasePadCaptureLow(port);
+		return CapturePadButton(port, key, reset);
+	}
+	return -1;
+}
+
+extern "C" int32_t ScePafWidget_4E47E55A(Widget *widget, uint32_t mode, DragState *drag)
+{
+	if (widget->m_parent == NULL || widget->m_scene == NULL)
+		return -1;
+	if (drag == NULL)
+		return -1;
+
+	if (mode == 274) {
+		Camera *camera = widget->m_scene->m_camera;
+
+		drag->m_origin = drag->m_hit.m_pos;
+		drag->m_axis = math::v4(camera->GetWorldMatrix().getImpl() *
+					sce::Vectormath::Simd::Aos::Vector4(0.0f, 0.0f, 1.0f, 0.0f));
+	} else if (mode == 272) {
+		math::v4 offs = widget->GetAlignOffsetToCenter(0);
+		math::v4 local = drag->m_hit.LocalPos();
+		math::matrix rotation = widget->GetQuat(0, NULL, math::quaternion()).toMatrix(0.0001f);
+		math::v4 pos(rotation.getImpl() * (local + offs).getImpl());
+		math::matrix origin = widget->m_parent->GetOriginWorldMatrix();
+
+		drag->m_origin = math::v4(origin.getImpl() *
+					  sce::Vectormath::Simd::Aos::Vector4(0.0f, 0.0f, pos.extract_z(), 1.0f));
+		drag->m_axis = math::v4(origin.getImpl() *
+					sce::Vectormath::Simd::Aos::Vector4(0.0f, 0.0f, 1.0f, 0.0f));
+	} else if (mode == 273) {
+		drag->m_axis = math::v4(0.0f, 0.0f, 1.0f, 0.0f);
+		drag->m_origin = math::v4(0.0f, 0.0f, drag->m_hit.m_pos.extract_z(), 1.0f);
+	}
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_E322D1F6(Widget *widget, uint32_t mode, DragState *drag)
+{
+	Widget *parent = widget->m_parent;
+
+	if (parent == NULL || widget->m_scene == NULL)
+		return -1;
+	if (drag == NULL)
+		return -1;
+
+	math::v4 origin;
+
+	switch (mode) {
+	case 289:
+		drag->m_axis = math::v4(parent->GetWorldRot().toMatrix(0.0001f).getImpl() *
+					sce::Vectormath::Simd::Aos::Vector4(0.0f, 1.0f, 0.0f, 0.0f));
+		break;
+	case 290:
+		drag->m_axis = math::v4(parent->GetWorldRot().toMatrix(0.0001f).getImpl() *
+					sce::Vectormath::Simd::Aos::Vector4(0.0f, 0.0f, 1.0f, 0.0f));
+		break;
+	case 291:
+		drag->m_axis = math::v4(1.0f, 0.0f, 0.0f, 0.0f);
+		origin = drag->m_hit.m_pos;
+		goto set;
+	case 292:
+		drag->m_axis = math::v4(0.0f, 1.0f, 0.0f, 0.0f);
+		origin = drag->m_hit.m_pos;
+		goto set;
+	case 293:
+		drag->m_axis = math::v4(0.0f, 0.0f, 1.0f, 0.0f);
+		origin = drag->m_hit.m_pos;
+		goto set;
+	default:
+		drag->m_axis = math::v4(parent->GetWorldRot().toMatrix(0.0001f).getImpl() *
+					sce::Vectormath::Simd::Aos::Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+		break;
+	}
+	origin = math::v4(widget->m_parent->GetOriginWorldMatrix().getImpl() *
+			  drag->m_hit.m_local_hit.getImpl());
+set:
+	drag->m_origin = origin;
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_BF92FEF0(Widget *widget, uint32_t mode, DragState *drag,
+					 DragState *second)
+{
+	if (widget->m_parent == NULL || widget->m_scene == NULL)
+		return -1;
+	if (drag == NULL || second == NULL)
+		return -1;
+
+	math::v4 offs = widget->GetAlignOffsetToCenter(0);
+	math::v4 local = second->m_hit.LocalPos();
+	math::matrix rotation = widget->GetQuat(0, NULL, math::quaternion()).toMatrix(0.0001f);
+	math::v4 pos(rotation.getImpl() * (local + offs).getImpl());
+	math::matrix origin = widget->m_parent->GetOriginWorldMatrix();
+
+	drag->m_origin = math::v4(origin.getImpl() *
+				  sce::Vectormath::Simd::Aos::Vector4(0.0f, 0.0f, pos.extract_z(), 1.0f));
+	drag->m_axis = math::v4(origin.getImpl() *
+				sce::Vectormath::Simd::Aos::Vector4(0.0f, 0.0f, 1.0f, 0.0f));
+	return 0;
+}
+
+/* the touch's line through the scene taken again through the camera (inline in Sony's callers;
+   name ours) */
+static __attribute__((always_inline)) void UpdateTouchLine(TouchInfo *touch, Camera *camera)
+{
+	const math::matrix &camera_world = camera->GetWorldMatrix();
+
+	ScePafWidget_72F479CA(camera);
+
+	math::matrix world = camera_world;
+
+	touch->m_depth = camera->m_distance;
+	touch->m_has_line = true;
+	touch->m_camera_matrix = world;
+	touch->m_line_start = world.w();
+	touch->m_line_end = math::v4(world.getImpl() *
+				     sce::Vectormath::Simd::Aos::Vector4(-touch->m_pos.extract_x(),
+									 touch->m_pos.extract_y(),
+									 touch->m_depth, 1.0f));
+}
+
+extern "C" int32_t ScePafWidget_1E0A2904(Widget *widget, DragState *drag)
+{
+	using sce::Vectormath::Simd::Aos::Vector4;
+
+	if (drag == NULL)
+		return -1;
+
+	TouchCapture *capture = drag->m_capture;
+	TouchInfo *touch;
+
+	if (capture == NULL || (touch = capture->m_touch) == NULL)
+		return -1;
+
+	Scene *scene = widget->m_scene;
+	Camera *camera;
+
+	if (scene == NULL || (camera = scene->m_camera) == NULL)
+		return -1;
+	UpdateTouchLine(touch, camera);
+
+	HitInfo hit;
+	math::v4 normal(widget->GetWorldMatrix().getImpl() * drag->m_hit.m_normal.getImpl());
+	math::v4 pos(widget->GetWorldMatrix().getImpl() * drag->m_hit.LocalPos().getImpl());
+	int32_t result = widget->CalcHitLineToPlane(touch->m_line_start, touch->m_line_end, pos,
+						    normal, &hit);
+
+	if (result < 0)
+		return result;
+
+	math::v4 offs = widget->GetAlignOffsetToCenter(0);
+	math::v4 start_offs = drag->m_hit.m_widget_scale;
+	math::v4 grown = drag->m_axis;
+	math::v4 now = hit.LocalPos() + offs;
+
+	drag->m_origin = now;
+
+	math::v4 size = drag->m_hit.m_widget_size;
+	math::v4 start = drag->m_hit.LocalPos() + start_offs;
+	uint8_t quant_x = widget->m_drag_quant_x;
+	uint8_t quant_y = widget->m_drag_quant_y;
+	uint8_t quant_z = widget->m_drag_quant_z;
+	SceFVector3 *limit = widget->m_drag_limit;
+	math::v4 factor;
+
+	factor.set_x(widget->m_align_x != 0 ? 1.0f : 2.0f);
+	factor.set_y(widget->m_align_y != 0 ? 1.0f : 2.0f);
+	factor.set_z(widget->m_align_z != 0 ? 1.0f : 2.0f);
+	if (start.extract_x() * now.extract_x() < 0.0f)
+		factor.set_x(factor.extract_x() * -1.0f);
+	if (start.extract_y() * now.extract_y() < 0.0f)
+		factor.set_y(factor.extract_y() * -1.0f);
+	if (start.extract_z() * now.extract_z() < 0.0f)
+		factor.set_z(factor.extract_z() * -1.0f);
+	grown.set_x(grown.extract_x() + factor.extract_x() * __builtin_fabsf(now.extract_x()));
+	grown.set_y(grown.extract_y() + factor.extract_y() * __builtin_fabsf(now.extract_y()));
+	grown.set_z(grown.extract_z() + factor.extract_z() * __builtin_fabsf(now.extract_z()));
+
+	math::v4 next;
+
+	switch (widget->m_drag_mode) {
+	case 513:
+		next = grown;
+		next.set_y(size.extract_y());
+		next.set_z(size.extract_z());
+		break;
+	case 514:
+		next = grown;
+		next.set_x(size.extract_x());
+		next.set_z(size.extract_z());
+		break;
+	case 515:
+		next = grown;
+		next.set_x(size.extract_x());
+		next.set_y(size.extract_y());
+		break;
+	case 516:
+		next = grown;
+		next.set_z(size.extract_z());
+		break;
+	case 518: {
+		float scale_x = 0.0f;
+		float scale_y = 0.0f;
+		float scale_z = 0.0f;
+
+		if (size.extract_x() > 0.01f)
+			scale_x = grown.extract_x() / size.extract_x();
+		if (size.extract_y() > 0.01f)
+			scale_y = grown.extract_y() / size.extract_y();
+		if (size.extract_z() > 0.01f)
+			scale_z = grown.extract_z() / size.extract_z();
+
+		float scale = scale_x > scale_y ? scale_x : scale_y;
+
+		if (scale > scale_z)
+			scale_z = scale;
+		next = size * scale_z;
+		break;
+	}
+	default:
+		next = grown;
+		break;
+	}
+	if (quant_x != 0 || quant_y != 0 || quant_z != 0) {
+		Vector4 quant(quant_x != 0 ? (float)quant_x : 1.0f, quant_y != 0 ? (float)quant_y : 1.0f,
+			      quant_z != 0 ? (float)quant_z : 1.0f, 1.0f);
+		Vector4 steps = divPerElem(next.getImpl() + quant * 0.5f, quant);
+
+		next = math::v4(mulPerElem(Vector4(sce_vectormath_floorf4(steps.get128())), quant));
+	}
+
+	Vector4 lower(0.0f);
+
+	if (limit != NULL)
+		lower = Vector4(limit[0].x, limit[0].y, limit[0].z, 0.0f);
+
+	Vector4 upper(0.0f);
+
+	if (limit != NULL)
+		upper = Vector4(limit[1].x, limit[1].y, limit[1].z, 0.0f);
+
+	math::v4 clamped(maxPerElem(minPerElem(next.getImpl(), upper), lower));
+	bool changed = !(next.extract_x() == clamped.extract_x() &&
+			 next.extract_y() == clamped.extract_y() &&
+			 next.extract_z() == clamped.extract_z());
+	bool debug = false;
+
+	if (scene != NULL)
+		debug = scene->m_debug_mode == 2;
+	widget->SetSize_core(clamped, 1026, debug);
+	return changed;
+}
+
+/* the touch state of the port and ID, its port and ID set again; NULL outside the ports and IDs
+   (inline in Sony's callers; name ours) */
+static __attribute__((always_inline)) TouchInfo *GetTouchState(Environment *env, uint32_t port,
+							       uint32_t id)
+{
+	if (id < 8 && port < 2) {
+		TouchInfo *touch = &env->m_touch_state[port][id];
+
+		touch->m_port = port;
+		touch->m_id = id;
+		return touch;
+	}
+	return NULL;
+}
+
+/* the frame with its z axis along the first vector and its x axis across the second, the w of both
+   cleared first (0x8115c386; name ours) */
+static __attribute__((noinline)) math::matrix MakeAxisMatrix(math::v4 &axis, math::v4 &dir)
+{
+	axis.set_w(0.0f);
+	dir.set_w(0.0f);
+
+	math::v4 z = axis.unit();
+
+	z.set_w(axis.extract_w());
+
+	math::v4 x = CrossKeepW(dir, z);
+	math::v4 x_unit = x.unit();
+
+	x_unit.set_w(x.extract_w());
+
+	math::v4 y = CrossKeepW(z, x_unit);
+
+	return math::matrix(x_unit, y, z, math::v4(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+extern "C" DragState *ScePafWidget_9697762E(Widget *widget, TouchCapture *capture,
+					    const HitInfo *start)
+{
+	if (capture == NULL)
+		return NULL;
+
+	TouchInfo *touch = capture->m_touch;
+	HitInfo hit;
+
+	if (start == NULL) {
+		int32_t found = widget->m_env->GetHitStack(&hit, widget);
+		Scene *scene = widget->m_scene;
+		Camera *camera = NULL;
+
+		if (scene != NULL)
+			camera = scene->m_camera;
+		if ((found < 0 || hit.m_touch_id != touch->m_id) && camera != NULL) {
+			UpdateTouchLine(touch, camera);
+			if (widget->CalcHitBoxToLine(widget->GetHitBoxSize(0), touch->m_line_start,
+						     touch->m_line_end, &hit) < 0) {
+				math::v4 size = widget->GetHitBoxSize(0);
+				math::v4 center = widget->GetWorldMatrix().w();
+
+				widget->CalcHitBoxToLine(size, touch->m_line_start, center, &hit);
+			}
+		}
+		if (widget->m_drag_state[0] == NULL && (widget->m_drag_mode & 0x200) != 0) {
+			math::v4 normal(widget->GetWorldMatrix().getImpl() * hit.m_normal.getImpl());
+			math::v4 pos(widget->GetWorldMatrix().getImpl() * hit.LocalPos().getImpl());
+
+			widget->CalcHitLineToPlane(touch->m_line_start, touch->m_line_end, pos, normal,
+						   &hit);
+
+			math::v4 lower = widget->GetHitBoxSize(0) * -0.5f * 0.95f;
+			math::v4 upper = widget->GetHitBoxSize(0) * 0.5f * 0.95f;
+			math::v4 local(sce::Vectormath::Simd::Aos::maxPerElem(
+				sce::Vectormath::Simd::Aos::minPerElem(hit.LocalPos().getImpl(),
+								       upper.getImpl()),
+				lower.getImpl()));
+
+			local.set_w(1.0f);
+			hit.LocalPos() = local;
+			hit.m_pos = math::v4(widget->GetWorldMatrix().getImpl() * local.getImpl());
+			if ((widget->m_update_flag & 7) != 0)
+				widget->UpdateMatrix();
+			hit.m_local_hit = math::v4(widget->m_local_matrix.getImpl() * local.getImpl());
+		}
+		start = &hit;
+	}
+
+	DragState *drag = widget->m_drag_state[1];
+
+	if (drag != NULL) {
+		if (drag->m_capture == capture) {
+			if (start != NULL)
+				drag->m_hit = *start;
+			return drag;
+		}
+		drag = widget->m_drag_state[0];
+		if (drag->m_capture == capture) {
+			if (start != NULL)
+				drag->m_hit = *start;
+			return drag;
+		}
+		return NULL;
+	}
+
+	DragState *first = widget->m_drag_state[0];
+
+	if (first == NULL && widget->m_drag_mode != 0) {
+		first = ScePafWidget_DE6905E2(widget->m_env, capture);
+		widget->m_drag_state[0] = first;
+		if (first == NULL)
+			return NULL;
+		first->m_hit = *start;
+		widget->KillAnimType(0x10000);
+		first = widget->m_drag_state[0];
+		if ((widget->m_drag_mode & 0x200) != 0) {
+			math::v4 offs = widget->GetAlignOffsetToCenter(0);
+			math::v4 from = start->LocalPos() + offs;
+			math::v4 extent(sce::Vectormath::Simd::Aos::absPerElem(from.getImpl()));
+			math::v4 align = widget->m_align_offs;
+
+			first->m_origin = from;
+			if ((widget->m_align_x | widget->m_align_y | widget->m_align_z) == 0 &&
+			    align == math::v4(0.0f, 0.0f, 0.0f, 0.0f)) {
+				extent = extent * 2.0f;
+			} else {
+				if (align.extract_x() == 0.0f)
+					extent.set_x(2.0f * extent.extract_x());
+				if (align.extract_y() == 0.0f)
+					extent.set_y(2.0f * extent.extract_y());
+				if (align.extract_z() == 0.0f)
+					extent.set_z(2.0f * extent.extract_z());
+			}
+			first->m_axis = *widget->GetSize(0) - extent;
+			first = widget->m_drag_state[0];
+		}
+		return first;
+	}
+	if (first != NULL && widget->m_pinch_state == NULL && widget->m_pinch_mode != 0) {
+		Environment *env = widget->m_env;
+
+		if (env != NULL) {
+			ScePafWidget_0E453608(widget, first, GetTouchState(env, first->m_port, first->m_id));
+			env = widget->m_env;
+		}
+
+		DragState *second = ScePafWidget_DE6905E2(env, capture);
+
+		widget->m_drag_state[1] = second;
+		if (second == NULL)
+			return NULL;
+		second->m_hit = *start;
+		widget->KillAnimType(0x10000);
+		widget->KillAnimType(0x10004);
+
+		PinchState *pinch = &widget->m_env->m_pinch_state[0];
+
+		widget->m_pinch_state = pinch;
+		pinch->m_state_a = 0;
+		pinch->m_state_b = 0;
+		pinch->m_state_c = 0;
+		pinch->m_dir = widget->m_drag_state[1]->m_hit.m_local_hit -
+			       widget->m_drag_state[0]->m_hit.m_local_hit;
+		pinch->m_axis_z = math::v4(
+			widget->GetQuat(0, NULL, math::quaternion()).toMatrix(0.0001f).getImpl() *
+			sce::Vectormath::Simd::Aos::Vector4(0.0f, 0.0f, 1.0f, 0.0f));
+		pinch->m_axis_y = math::v4(
+			widget->GetQuat(0, NULL, math::quaternion()).toMatrix(0.0001f).getImpl() *
+			sce::Vectormath::Simd::Aos::Vector4(0.0f, 1.0f, 0.0f, 0.0f));
+		pinch->m_quat = math::v4(sce::Vectormath::Simd::Aos::Vector4(
+			widget->GetQuat(0, NULL, math::quaternion()).getImpl()));
+		pinch->m_size = *widget->GetSize(0);
+		pinch->m_rot_touch = math::v4(
+			MakeAxisMatrix(pinch->m_axis_z, pinch->m_dir).extractEulerAnglesYXZ(), 0.0f);
+		pinch->m_rot = widget->GetRot(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f), 0);
+		return widget->m_drag_state[1];
+	}
+	return NULL;
+}
+
+/* the rotation of the Euler angles, z, then x, then y (inline in Sony's callers; names ours) */
+static __attribute__((always_inline)) math::matrix RotationZ(float angle)
+{
+	float s = sce_paf_sinf(angle);
+	float c = sce_paf_cosf(angle);
+
+	return math::matrix(math::v4(c, s, 0.0f, 0.0f), math::v4(-s, c, 0.0f, 0.0f),
+			    math::v4(0.0f, 0.0f, 1.0f, 0.0f), math::v4(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+static __attribute__((always_inline)) math::matrix RotationX(float angle)
+{
+	float s = sce_paf_sinf(angle);
+	float c = sce_paf_cosf(angle);
+
+	return math::matrix(math::v4(1.0f, 0.0f, 0.0f, 0.0f), math::v4(0.0f, c, s, 0.0f),
+			    math::v4(0.0f, -s, c, 0.0f), math::v4(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+static __attribute__((always_inline)) math::matrix RotationY(float angle)
+{
+	float s = sce_paf_sinf(angle);
+	float c = sce_paf_cosf(angle);
+
+	return math::matrix(math::v4(c, 0.0f, -s, 0.0f), math::v4(0.0f, 1.0f, 0.0f, 0.0f),
+			    math::v4(s, 0.0f, c, 0.0f), math::v4(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+extern "C" int32_t ScePafWidget_8BDEB047(Widget *widget, DragState *first, DragState *second,
+					 math::v4 *overflow)
+{
+	using sce::Vectormath::Simd::Aos::Vector4;
+
+	if (first == NULL || second == NULL)
+		return -1;
+
+	PinchState *pinch = widget->m_pinch_state;
+	Vector4 one(1.0f);
+
+	if (pinch == NULL)
+		return -1;
+
+	Environment *env = widget->m_env;
+	TouchInfo *touch_a = GetTouchState(env, first->m_port, first->m_id);
+	TouchInfo *touch_b = GetTouchState(env, second->m_port, second->m_id);
+	math::v4 normal = second->m_axis;
+	math::v4 point = second->m_origin;
+	HitInfo hit;
+
+	widget->CalcHitLineToPlane(touch_a->m_line_start, touch_a->m_line_end, point, normal, &hit);
+
+	math::v4 hit_a = hit.m_local_hit;
+
+	widget->CalcHitLineToPlane(touch_a->m_line_start, touch_b->m_line_end, point, normal, &hit);
+
+	math::v4 hit_b = hit.m_local_hit;
+	math::v4 dir = hit_b - hit_a;
+	math::v4 rot;
+
+	if ((widget->m_pinch_mode & 0x400) != 0 || (widget->m_pinch_mode & 0x800) != 0) {
+		math::v4 angles(MakeAxisMatrix(pinch->m_axis_z, dir).extractEulerAnglesYXZ(), 0.0f);
+
+		rot = pinch->m_rot + (angles - pinch->m_rot_touch);
+	} else {
+		rot = pinch->m_rot;
+	}
+
+	SceFVector3 *limit = widget->m_pinch_limit;
+	Vector4 scale;
+
+	if ((widget->m_pinch_mode & 0x200) != 0 || (widget->m_pinch_mode & 0x400) != 0 ||
+	    (widget->m_pinch_mode & 0x800) != 0) {
+		scale = Vector4(dir.len() / pinch->m_dir.len());
+	} else {
+		Vector4 from = maxPerElem(minPerElem(absPerElem(pinch->m_dir.getImpl()), Vector4(100000.0f)),
+					  Vector4(50.0f));
+		Vector4 to = maxPerElem(Vector4(50.0f), absPerElem(dir.getImpl()));
+
+		scale = maxPerElem(Vector4(0.1f), absPerElem(divPerElem(to, from)));
+	}
+
+	Vector4 size = mulPerElem(pinch->m_size.getImpl(), scale);
+	Vector4 lower(0.0f);
+
+	if (limit != NULL)
+		lower = Vector4(limit[0].x, limit[0].y, limit[0].z, 0.0f);
+
+	Vector4 upper(0.0f);
+
+	if (limit != NULL)
+		upper = Vector4(limit[1].x, limit[1].y, limit[1].z, 0.0f);
+
+	Vector4 over = divPerElem(size, maxPerElem(one, upper));
+	float over_x = over.getX();
+	float over_y = over.getY();
+	float over_z = over.getZ();
+
+	if (over_x > 1.0f || over_y > 1.0f || over_z > 1.0f) {
+		if (!(over_x < over_y || over_x < over_z)) {
+			size = size / over.getX();
+			scale = scale / over.getX();
+		} else if (!(over_x > over_y || over_y < over_z)) {
+			size = size / over.getY();
+			scale = scale / over.getY();
+		} else if (over_x <= over_z && over_y <= over_z) {
+			size = size / over.getZ();
+			scale = scale / over.getZ();
+		}
+	}
+
+	Vector4 under = divPerElem(maxPerElem(one, size), maxPerElem(one, lower));
+	float under_x = under.getX();
+	float under_y = under.getY();
+	float under_z = under.getZ();
+
+	if (under_x < 1.0f || under_y < 1.0f || under_z < 1.0f) {
+		if (!(under_x > under_y || under_x > under_z)) {
+			size = size / under.getX();
+			scale = scale / under.getX();
+		} else if (!(under_x < under_y || under_y > under_z)) {
+			size = size / under.getY();
+			scale = scale / under.getY();
+		} else if (under_x >= under_z && under_y >= under_z) {
+			size = size / under.getZ();
+			scale = scale / under.getZ();
+		}
+	}
+
+	math::v4 new_size(size);
+
+	widget->SetSize_core(new_size, 1026, false);
+
+	int32_t result = 0;
+	math::matrix rotation = RotationZ(rot.extract_z()) * RotationX(rot.extract_x()) *
+				RotationY(rot.extract_y());
+	math::v4 turned_b(rotation.getImpl() * second->m_hit.LocalPos().getImpl());
+	math::v4 turned_a(rotation.getImpl() * first->m_hit.LocalPos().getImpl());
+	SceFVector3 *pos_limit = widget->m_drag_limit;
+	Vector4 pos = ((hit_b.getImpl() - mulPerElem(turned_b.getImpl(), scale)) +
+		       (hit_a.getImpl() - mulPerElem(turned_a.getImpl(), scale))) * 0.5f;
+	Vector4 pos_lower(0.0f);
+
+	if (pos_limit != NULL)
+		pos_lower = Vector4(pos_limit[0].x, pos_limit[0].y, pos_limit[0].z, 0.0f);
+
+	Vector4 pos_upper(0.0f);
+
+	if (pos_limit != NULL)
+		pos_upper = Vector4(pos_limit[1].x, pos_limit[1].y, pos_limit[1].z, 0.0f);
+
+	math::v4 clamped(maxPerElem(minPerElem(pos, pos_upper), pos_lower));
+
+	if (!(pos.getX() == clamped.extract_x() && pos.getY() == clamped.extract_y() &&
+	      pos.getZ() == clamped.extract_z())) {
+		result = 1;
+		if (overflow != NULL)
+			*overflow = math::v4(clamped.getImpl() - pos);
+	}
+	widget->SetPos_core(clamped, 1025, false);
+	if ((widget->m_pinch_mode & 0x400) != 0 || (widget->m_pinch_mode & 0x800) != 0)
+		widget->SetRot_core(rot, 0, 1032);
+	return result;
+}
+
+/* the position the drag's touch moves the widget to, from where it holds the widget, in its
+   parent's space (inline in Sony's ScePafWidget_E17C2B53; name ours) */
+static __attribute__((always_inline)) math::v4 DragPos(Widget *widget, const math::v4 &at)
+{
+	math::v4 center = widget->m_scene->GetPosCenter(0, widget->m_parent, at);
+
+	if ((widget->m_update_flag & 7) != 0)
+		widget->UpdateMatrix();
+
+	math::v4 offs = widget->GetAlignOffsetToCenter(0);
+
+	return center - math::v4(widget->m_local_matrix.getImpl() * offs.getImpl());
+}
+
+extern "C" int32_t ScePafWidget_E17C2B53(Widget *widget, DragState *drag, math::v4 *overflow,
+					 float rate)
+{
+	using sce::Vectormath::Simd::Aos::Vector4;
+
+	if (drag == NULL)
+		return -1;
+
+	TouchCapture *capture = drag->m_capture;
+	TouchInfo *touch;
+
+	if (capture == NULL || (touch = capture->m_touch) == NULL)
+		return -1;
+
+	Scene *scene = widget->m_scene;
+	Camera *camera;
+
+	if (scene == NULL || (camera = scene->m_camera) == NULL)
+		return -1;
+	UpdateTouchLine(touch, camera);
+
+	math::v4 pos(0.0f, 0.0f, 0.0f, 0.0f);
+
+	switch (widget->m_drag_mode) {
+	case 272:
+	case 273:
+	case 274: {
+		math::v4 normal = drag->m_axis;
+		math::v4 point = drag->m_origin;
+		HitInfo hit;
+		int32_t found = widget->CalcHitLineToPlane(touch->m_line_start, touch->m_line_end, point,
+							   normal, &hit);
+		math::v4 held(widget->GetWorldRot().toMatrix(0.0001f).getImpl() *
+			      drag->m_hit.LocalPos().getImpl());
+
+		if (found < 0 || widget->m_scene == NULL || widget->m_parent == NULL)
+			return -1;
+		pos = DragPos(widget, hit.m_pos - held);
+		break;
+	}
+	case 288:
+	case 289:
+	case 290:
+	case 291:
+	case 292:
+	case 293: {
+		math::v4 point = drag->m_origin;
+		math::v4 axis = drag->m_axis;
+		math::v4 end = touch->m_line_end;
+		math::v4 dir = end - touch->m_line_start;
+		math::v4 closest;
+
+		widget->CalcDistLineToLine(point, axis, end, dir, &closest, NULL);
+
+		math::v4 held(widget->GetWorldRot().toMatrix(0.0001f).getImpl() *
+			      drag->m_hit.LocalPos().getImpl());
+
+		if (widget->m_scene == NULL || widget->m_parent == NULL)
+			return -1;
+		pos = DragPos(widget, closest - held);
+		break;
+	}
+	default:
+		return -1;
+	}
+
+	SceFVector3 *limit = widget->m_drag_limit;
+
+	if (widget->m_drag_quant_x != 0 || widget->m_drag_quant_y != 0 ||
+	    widget->m_drag_quant_z != 0) {
+		Vector4 quant(widget->m_drag_quant_x != 0 ? (float)widget->m_drag_quant_x : 1.0f,
+			      widget->m_drag_quant_y != 0 ? (float)widget->m_drag_quant_y : 1.0f,
+			      widget->m_drag_quant_z != 0 ? (float)widget->m_drag_quant_z : 1.0f, 1.0f);
+		Vector4 steps = divPerElem(pos.getImpl() + quant * 0.5f, quant);
+
+		pos = math::v4(mulPerElem(Vector4(sce_vectormath_floorf4(steps.get128())), quant));
+	}
+
+	Vector4 lower(0.0f);
+
+	if (limit != NULL)
+		lower = Vector4(limit[0].x, limit[0].y, limit[0].z, 0.0f);
+
+	Vector4 upper(0.0f);
+
+	if (limit != NULL)
+		upper = Vector4(limit[1].x, limit[1].y, limit[1].z, 0.0f);
+
+	math::v4 clamped(maxPerElem(minPerElem(pos.getImpl(), upper), lower));
+	int32_t result = 0;
+
+	if (!(pos.extract_x() == clamped.extract_x() && pos.extract_y() == clamped.extract_y() &&
+	      pos.extract_z() == clamped.extract_z())) {
+		result = 1;
+		if (overflow != NULL)
+			*overflow = clamped - pos;
+	}
+
+	bool debug = false;
+
+	if (widget->m_scene != NULL)
+		debug = widget->m_scene->m_debug_mode == 2;
+	if (rate == 1.0f) {
+		widget->SetPos_core(clamped, 1025, debug);
+	} else {
+		math::v4 now = widget->GetPosCenter(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		math::v4 next = (clamped - now) * rate + now;
+
+		widget->SetPos_core(next, 1025, debug);
+	}
+	return result;
+}
+
+/* the drag's event (0x80, its detail's bits 8 to 14 the kind: 0x10 a drag, 0x16 a pinch, its data
+   what the limits held back) sent to each of the widget's ancestors up to its scene (inline in
+   Sony's HandleGestureEvent; name ours) */
+static __attribute__((always_inline)) void SendDragEvent(Widget *widget, uint32_t kind,
+							 const math::v4 &overflow)
+{
+	Widget *w = widget->m_parent;
+	Event ev(0x80, w, Event::ROUTE_TERM, 0);
+	const int32_t *data = reinterpret_cast<const int32_t *>(&overflow);
+
+	ev.m_detail = (ev.m_detail & 0xFFFF80FF) | (kind << 8);
+	ev.m_data[0] = data[0];
+	ev.m_data[1] = data[1];
+	ev.m_data[2] = data[2];
+	for (; w != NULL; w = w->m_parent) {
+		ev.SetTarget(w);
+		ev.Term();
+		widget->m_env->m_ev_subrouting.push_back(ev);
+		if (w == widget->m_scene)
+			break;
+	}
+}
+
+/* the capture of the touch of the port and ID, NULL where it holds none (inline in Sony's
+   HandleGestureEvent; name ours) */
+static __attribute__((always_inline)) TouchCapture *FindTouchCapture(Widget *widget, uint32_t key)
+{
+	map<uint32_t, TouchCapture *>::iterator it = widget->m_touch_captures.find(key);
+
+	if (it != widget->m_touch_captures.end())
+		return it->second;
+	return NULL;
+}
+
+int32_t Widget::HandleGestureEvent(Event *e)
+{
+	uint32_t detail = e->m_detail;
+	int32_t result = 0;
+	uint32_t id = e->m_data[0];
+	uint32_t type = (detail >> 8) & 0x7F;
+	uint32_t id_b = e->m_data[1];
+	TouchCapture *capture;
+
+	switch (type) {
+	case 17:
+		if (m_pinch_state != NULL)
+			break;
+		if (m_drag_state[0] != NULL)
+			ClearDragState(m_drag_state[0]);
+		/* fall through */
+	case 13:
+		capture = FindTouchCapture(this, id | (((detail >> 20) & 0xF) << 8));
+		if (m_drag_mode != 0)
+			ScePafWidget_9697762E(this, capture, NULL);
+		break;
+	case 15:
+	case 21:
+		if (m_drag_state[1] != NULL)
+			ClearDragState(m_drag_state[1]);
+		if (m_drag_state[0] != NULL)
+			ClearDragState(m_drag_state[0]);
+		break;
+	case 18:
+		if (m_pinch_state == NULL && m_drag_state[0] != NULL)
+			ClearDragState(m_drag_state[0]);
+		break;
+	case 14: {
+		DragState *drag = m_drag_state[0];
+		math::v4 overflow(0.0f, 0.0f, 0.0f, 0.0f);
+
+		if (drag != NULL && m_drag_mode != 0 && id == drag->m_id) {
+			uint32_t mode = m_drag_mode;
+
+			if ((mode & 0x100) != 0) {
+				if ((mode & 0x110) == 0x110) {
+					ScePafWidget_4E47E55A(this, mode, drag);
+					drag = m_drag_state[0];
+				} else if ((mode & 0x120) == 0x120) {
+					ScePafWidget_E322D1F6(this, mode, drag);
+					drag = m_drag_state[0];
+				}
+				result = ScePafWidget_E17C2B53(this, drag, &overflow, 1.0f);
+				mode = m_drag_mode;
+			} else if ((mode & 0x200) != 0) {
+				result = ScePafWidget_1E0A2904(this, drag);
+				mode = m_drag_mode;
+			}
+			if ((mode & 0x1000) != 0 || result == 1)
+				SendDragEvent(this, 0x10, overflow);
+		}
+		break;
+	}
+	case 19:
+	case 23: {
+		uint32_t port = ((detail >> 20) & 0xF) << 8;
+
+		if (m_drag_state[1] != NULL)
+			ClearDragState(m_drag_state[1]);
+		if (m_drag_state[0] != NULL)
+			ClearDragState(m_drag_state[0]);
+		capture = FindTouchCapture(this, id | port);
+		if (m_drag_mode != 0)
+			ScePafWidget_9697762E(this, capture, NULL);
+		capture = FindTouchCapture(this, id_b | port);
+		if (m_pinch_mode != 0)
+			ScePafWidget_9697762E(this, capture, NULL);
+		break;
+	}
+	case 20:
+		if (m_pinch_state != NULL) {
+			math::v4 overflow(0.0f, 0.0f, 0.0f, 0.0f);
+
+			ScePafWidget_BF92FEF0(this, m_pinch_mode, m_drag_state[0], m_drag_state[1]);
+			if ((m_pinch_mode & 0x1000) == 0)
+				result = ScePafWidget_8BDEB047(this, m_drag_state[0], m_drag_state[1],
+							       &overflow);
+			if ((m_pinch_mode & 0x1000) != 0 || result == 1)
+				SendDragEvent(this, 0x16, overflow);
+		}
+		break;
+	}
+
+	int32_t ret = Handler::HandleGestureEvent(e);
+
+	switch (type) {
+	case 7:
+		if ((e->m_type & Event::STATE_CONSUME) != 0)
+			ScePafWidget_8A132DF7(e, this, false);
+		break;
+	case 10:
+		if ((e->m_type & Event::STATE_CONSUME) != 0)
+			ScePafWidget_8A132DF7(e, this, true);
+		break;
+	case 9:
+	case 12:
+		ScePafWidget_727885B3(e);
+		break;
+	}
+	return ret;
+}
+
 extern "C" int32_t ScePafWidget_DE592034(Widget *widget, uint32_t port, uint32_t id, uint32_t drag_mode)
 {
 	widget->m_saved_drag_mode = widget->m_drag_mode;
@@ -1990,7 +2964,7 @@ int32_t Widget::ClearDragState(DragState *state)
 		return -1;
 
 	DragState *first = m_drag_state[0];
-	int32_t *pinch = m_pinch_state;
+	PinchState *pinch = m_pinch_state;
 
 	if (pinch != NULL) {
 		DragState *second = m_drag_state[1];
@@ -2011,9 +2985,9 @@ int32_t Widget::ClearDragState(DragState *state)
 		}
 		m_drag_state[1] = NULL;
 		m_pinch_state = NULL;
-		pinch[0] = 0;
-		pinch[1] = 0;
-		pinch[2] = 0;
+		pinch->m_state_a = 0;
+		pinch->m_state_b = 0;
+		pinch->m_state_c = 0;
 		if ((uint8_t)m_layout_notify_mask != 0 && (m_layout_notify_mask & 0x800) != 0) {
 			if (m_parent != NULL && m_parent->m_layouter != NULL)
 				m_parent->m_layouter->SetDirty(1);

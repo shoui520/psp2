@@ -58,6 +58,7 @@ class TouchCapture;
 class HitInfo;
 class TouchInfo;
 class DragState;
+class PinchState;
 class Camera;
 class AnimListener;
 class AnimQueue;
@@ -1065,8 +1066,16 @@ public:
 	/* makes it its widget group's current widget or not; a widget that stops being it lets go
 	   of its pad button capture (0x811608f2, name ours) */
 	void SetGroupCurrent(bool current);
-	/* captures the pad port's key, its gestures applied (0x8115d4de, name ours) */
-	int32_t CapturePad(uint32_t port, uint32_t key, bool apply, bool reset_touch);
+	/* captures the pad port's key: a direction key (one m_keycode does not bind) as its pad
+	   capture 0x17c, any other as 0x17d; with reset the holder of the other group is let go
+	   first and a capture it already holds has its gestures reset, with reset_touch the
+	   touches of both ports are let go (0x8115d4de, names ours) */
+	int32_t CapturePad(uint32_t port, uint32_t key, bool reset, bool reset_touch);
+	/* takes the port's pad keys of 0x17d where it is the widget of the key, or of 0x17c where
+	   it has the focus; another widget that is lets go of them with reset (0x8115d29a,
+	   0x8115d3be; names ours) */
+	int32_t CapturePadButton(uint32_t port, uint32_t key, bool reset);
+	int32_t CapturePadDir(uint32_t port, uint32_t key, bool reset);
 	/* its depth among its scene's layers, from its parents' down (0x81162db2, name ours) */
 	uint64_t GetLayerDepth();
 	/* the draw object added, the surface drawn as the widget's, and the size updated with
@@ -1237,6 +1246,15 @@ public:
 		if ((m_update_flag & 7) != 0)
 			UpdateMatrix();
 		return m_world_matrix;
+	}
+
+	/* the world rotation, made again first where m_update_flag asks for it (inline in Sony's
+	   callers, name ours) */
+	const math::quaternion &GetWorldRot()
+	{
+		if ((m_update_flag & 7) != 0)
+			UpdateMatrix();
+		return m_world_rot;
 	}
 
 	/* the world matrix moved back to its origin, where it has one (Sony's copy out of line,
@@ -1779,9 +1797,9 @@ public:
 	/* the drag states of the touches dragging it, the first and the second; the second
 	   becomes the first when the first is released (0x8114e258; names ours) */
 	DragState *m_drag_state[2];
-	/* three words (the pinch of two touches: cleared when the second drag ends; no more found;
-	   name ours) */
-	int32_t *m_pinch_state;
+	/* its pinch by the two touches dragging it, the Environment's (cleared when the second drag
+	   ends; name ours) */
+	PinchState *m_pinch_state;
 	/* the hit box GetHitBoxSize and GetHitBoxCenter give (names ours): its center offset and
 	   its size, the size an addition to the widget's (mode 1), a scale of it (2) or itself (3);
 	   mode 0 is the widget's own size */
@@ -1936,10 +1954,11 @@ int32_t ScePafWidget_DE592034(paf::ui::Widget *widget, uint32_t port, uint32_t i
 /* the widget lets go of the touch of the port and ID it holds, its release handled when
    release is set: -1 if it does not hold it */
 int32_t ScePafWidget_093F1C89(paf::ui::Widget *widget, uint32_t port, uint32_t id, bool release);
-/* the drag state of the touch the capture holds begun, the capture's touch taken from the third
-   argument where given: NULL if none (no name found) */
+/* the drag of the touch the capture holds: begun where the widget has none and drags, made its
+   second (a pinch) where it has one and pinches, or found again, its hit taken from start or
+   (NULL) found again on the touch's line; NULL where none is given (no name found) */
 paf::ui::DragState *ScePafWidget_9697762E(paf::ui::Widget *widget, paf::ui::TouchCapture *capture,
-					  const void *start);
+					  const paf::ui::HitInfo *start);
 /* captures the touch of the port, its gestures applied (names ours) */
 int32_t ScePafWidget_D3D0A7C3(paf::ui::Widget *widget, uint32_t port, uint32_t id, bool apply,
 			      bool reset_pad);
@@ -1990,7 +2009,36 @@ void ScePafWidget_EC6175D6(paf::ui::Widget *widget, bool on);
 /* the drag state's touch state filled from the hit line of the touch (no name found) */
 int32_t ScePafWidget_0E453608(paf::ui::Widget *widget, paf::ui::DragState *drag,
 			      paf::ui::TouchInfo *touch);
-void ScePafWidget_E17C2B53(paf::ui::Widget *widget, void *drag, const void *pos, float time);
+/* the plane the drag moves the widget on, for drag modes 272 (its parent's xy plane through the
+   hit), 273 (the screen's, at the hit's depth) and 274 (facing the camera through the hit) (no
+   name found) */
+int32_t ScePafWidget_4E47E55A(paf::ui::Widget *widget, uint32_t mode, paf::ui::DragState *drag);
+/* the axis the drag moves the widget along, for drag modes 288 to 293: its parent's x, y or z
+   axis through the hit, or the world's (no name found) */
+int32_t ScePafWidget_E322D1F6(paf::ui::Widget *widget, uint32_t mode, paf::ui::DragState *drag);
+/* the drag's plane made its parent's xy plane through the second drag's hit (no name found) */
+int32_t ScePafWidget_BF92FEF0(paf::ui::Widget *widget, uint32_t mode, paf::ui::DragState *drag,
+			      paf::ui::DragState *second);
+/* the widget sized by the drag of its edge (drag modes 513 to 518): the touch's line taken again
+   through the camera and hit on the drag's plane, the size grown by the way the touch moved,
+   stepped by the drag quanta and kept within the drag limits; 1 where the limits held it (no
+   name found) */
+int32_t ScePafWidget_1E0A2904(paf::ui::Widget *widget, paf::ui::DragState *drag);
+/* nothing to do (focuser.cpp; no name found) */
+void ScePafWidget_8A132DF7(paf::ui::Event *e, paf::ui::Widget *widget, bool on);
+void ScePafWidget_727885B3(paf::ui::Event *e);
+/* the widget pinched by its two drags: its size scaled by how far apart the touches are and kept
+   within the pinch limits, turned with them where the pinch mode has 0x400 or 0x800, and moved
+   to keep the touches on the same points within the drag limits; 1 where the drag limits held
+   it, what they held back put in overflow (no name found) */
+int32_t ScePafWidget_8BDEB047(paf::ui::Widget *widget, paf::ui::DragState *first,
+			      paf::ui::DragState *second, paf::math::v4 *overflow);
+/* the widget moved by its drag's touch, on the drag's plane (drag modes 272 to 274) or along its
+   axis (288 to 293), stepped by the drag quanta and kept within the drag limits, rate of the way
+   there at once: 1 where the limits held it, what they held back put in overflow, -1 for no
+   touch, camera or hit (no name found) */
+int32_t ScePafWidget_E17C2B53(paf::ui::Widget *widget, paf::ui::DragState *drag,
+			      paf::math::v4 *overflow, float rate);
 /* the layout of the resolution taken over the timer's time, at once without one, its
    children's too where children */
 int32_t ScePafWidget_11D537AF(paf::ui::Widget *widget, uint32_t id, paf::Timer *t,
