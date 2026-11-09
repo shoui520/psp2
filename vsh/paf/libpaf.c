@@ -6,10 +6,8 @@
 
 #include <skeleton.h>
 
-STUB(ScePafWidget_00AA6519)
 STUB(_ZN3paf2ui6Widget16ReleaseShowHoldsEb)
 STUB(_ZN3paf2ui9FocusInfo6UpdateEf)
-STUB(ScePafWidget_0253DC9C)
 STUB(ScePafWidget_026C9E8C)
 STUB(ScePafWidget_038B47A4)
 STUB(ScePafWidget_0775F78F)
@@ -82,7 +80,6 @@ STUB(ScePafWidget_8A132DF7)
 STUB(_ZN3paf2ui6Widget8OnUpdateEv)
 STUB(ScePafWidget_8AD528C7)
 STUB(ScePafWidget_8BDEB047)
-STUB(ScePafWidget_929C3278)
 STUB(ScePafWidget_931AD41E)
 STUB(ScePafWidget_9697762E)
 STUB(ScePafWidget_96E26237)

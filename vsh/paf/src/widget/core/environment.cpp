@@ -3,6 +3,7 @@
  * root surface shows at. The rest of its functions are still ScePafWidget's.
  */
 #include <widget/core/environment.h>
+#include <std/algorithm>
 #include <inputdevice/touchscreen/touchscreen.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <graphics/surface/surface_display.h>
@@ -367,6 +368,74 @@ void Environment::ShowFocus(int32_t port)
 		e.m_data[0] = 0;
 		m_ev_queue.PushBack(e);
 	}
+}
+
+int32_t OrderEntry::Init(Widget *widget, int32_t mark)
+{
+	if (widget == NULL) {
+		m_order = -1;
+		m_group = -1;
+		m_depth = -1;
+		return -1;
+	}
+
+	Scene *scene = widget->m_scene;
+	uint64_t depth = -1;
+
+	m_widget = widget;
+	m_mark = mark;
+	m_order = (255 - scene->m_priority) | (scene->m_scene_priority << 8);
+	if (scene != NULL && widget->m_parent != NULL)
+		depth = -1 - widget->GetLayerDepth();
+	m_depth = depth;
+	m_group = widget->m_scene->m_entry;
+	return m_order;
+}
+
+int32_t ModalWidgetList::Remove(Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+	if (m_entries.count == 0)
+		return -1;
+
+	vector<OrderEntry>::iterator it = m_entries.begin();
+	vector<OrderEntry>::iterator end = m_entries.end();
+
+	for (; it != end; ++it) {
+		if (it->m_widget == widget) {
+			vector<OrderEntry>::iterator next = it;
+
+			if (next.m_ptr != NULL)
+				next = it + 1;
+			m_entries.erase(it, next);
+			m_unsorted = true;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+OrderEntry *ModalWidgetList::Add(Widget *widget, int32_t mark)
+{
+	OrderEntry entry;
+
+	if (widget != NULL) {
+		entry.m_mark = mark;
+		if (entry.Init(widget, mark) >= 0) {
+			m_entries.push_back(entry);
+			m_unsorted = true;
+			return &m_entries[m_entries.count - 1];
+		}
+	}
+	return NULL;
+}
+
+void ModalWidgetList::Sort()
+{
+	if (m_unsorted && m_entries.count != 0)
+		sort(m_entries.begin(), m_entries.end());
+	m_unsorted = false;
 }
 
 extern "C" bool ScePafWidget_A6B659BB(Environment *env, int32_t port)

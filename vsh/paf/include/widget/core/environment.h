@@ -146,16 +146,48 @@ public:
 	uint8_t reserved[0xc];
 };
 
-/* the modal widgets, 32 bytes each, sorted after one is added when one was removed (names ours) */
+/* a widget in an ordered list of the environment's (32 bytes; names ours) */
+class OrderEntry {
+public:
+	OrderEntry() : m_widget(NULL), m_mark(0), m_order(-1), m_depth(-1), m_group(-1)
+	{
+	}
+
+	/* the entry for the widget with the mark: its scene's priorities and its depth in the scene
+	   (0x8113bcd4); -1 for no widget (the entry then has none of them) */
+	int32_t Init(Widget *widget, int32_t mark);
+
+	/* the scene's priority first, then the widget's depth: the entries are sorted by it */
+	bool operator<(const OrderEntry &rhs) const
+	{
+		return m_order == rhs.m_order ? m_depth < rhs.m_depth : m_order < rhs.m_order;
+	}
+
+	Widget *m_widget;
+	/* the mark the list's user gave it: UpdateFocus leaves 0x0f0f0f0f on the entry it chose */
+	int32_t m_mark;
+	/* 255 less the scene's widget priority, over the scene's priority shifted up a byte */
+	uint32_t m_order;
+	/* 64 bits: all ones less the widget's depth (GetLayerDepth), or all ones */
+	uint64_t m_depth;
+	/* the scene's entry */
+	uint32_t m_group;
+};
+
+/* the environment keeps three of these: the modal widgets, the widgets of m_ordered and the
+   focus candidates; entries sorted after one is added (names ours) */
 class ModalWidgetList {
 public:
 	/* takes the widget out: -1 when it is not in the list (0x8113f74c) */
 	int32_t Remove(Widget *widget);
+	/* adds the widget with the mark, 0 where it has no order (0x8113f4e4) */
+	OrderEntry *Add(Widget *widget, int32_t mark);
+	/* sorts the entries where one was added or taken out (0x8113bbba) */
+	void Sort();
 
 	uint8_t reserved[4];
 	bool m_unsorted;
-	void *m_entries;
-	uint32_t m_count;
+	vector<OrderEntry> m_entries;
 };
 
 /* where a touch hit a widget (0x90 bytes, filled by Environment::GetHitStack; Sony's class
@@ -467,13 +499,16 @@ public:
 	Widget *m_top_modal_widget;
 	/* RegisterModalWidget's widgets (name ours) */
 	ModalWidgetList m_modal_widgets;
-	uint8_t reserved3b[8];
 	/* the scene the display area scale is applied to (Camera's DrawScene; name ours) */
 	Widget *m_display_area_scene;
-	uint8_t reserved3c[0x28];
+	uint8_t reserved3c0[4];
+	/* the widgets that have m_ordered (ScePafWidget 0253DC9C; name ours) */
+	ModalWidgetList m_ordered_widgets;
+	uint8_t reserved3c[0xc];
 	/* the widget that has the focus (UpdateFocus; name ours) */
 	Widget *m_focus_widget;
-	uint8_t reserved3d[0x18];
+	/* the widgets that can take the focus, ordered for UpdateFocus (name ours) */
+	ModalWidgetList m_focus_candidates;
 	/* set before the focus is first shown */
 	int32_t m_focus_mode;
 	/* set: a scroll view does not take the focus by itself (name ours, meaning open) */

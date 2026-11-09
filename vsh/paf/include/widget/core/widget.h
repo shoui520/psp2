@@ -508,6 +508,17 @@ public:
 	uint32_t m_focus_moved;
 	/* nonzero: a scroll view under it does not take the focus (name ours, meaning open) */
 	uint32_t m_focus_hold;
+	uint32_t reserved16;
+	/* a vector of something (its array, count and limit; the allocator after them), which
+	   nothing found here uses; it is given back and the three set to -1 as a vector's
+	   destructor does (names ours; no constructor or destructor here, as one in this class
+	   moves SNC's stack slots in PlaneObj::Draw) */
+	void *m_array;
+	int32_t m_array_count;
+	int32_t m_array_limit;
+	uint32_t m_array_alloc;
+	/* cleared by UpdateFocus where it is set (name ours, meaning open) */
+	bool m_pending;
 };
 
 /*
@@ -1633,7 +1644,8 @@ public:
 	bool m_fit_to_scene : 1;
 	/* drawn by the camera also when it is culled (name ours) */
 	bool m_draw_always : 1;
-	bool reserved3k : 1;
+	/* it is in its environment's list of ordered widgets (ScePafWidget 0253DC9C; name ours) */
+	bool m_ordered : 1;
 	/* a timer for it is waiting in the show timers' map (name ours) */
 	bool m_show_timer_pending : 1;
 	bool m_bound_keycode : 1;
@@ -1890,6 +1902,14 @@ int32_t ScePafWidget_5A9793B0(paf::ui::Widget *widget, float time);
 void ScePafWidget_C7962202(paf::ui::Widget *widget, bool on, bool force);
 /* the same for the destroy protection (no name found) */
 void ScePafWidget_83214DB9(paf::ui::Widget *widget, bool on, bool force);
+/* the widget made a focus root for its children, the focus of the root above moving to it
+   (no name found) */
+int32_t ScePafWidget_00AA6519(paf::ui::Widget *widget);
+/* its focus root taken away again, the focus released (no name found) */
+int32_t ScePafWidget_929C3278(paf::ui::Widget *widget);
+/* it put in or taken out of its environment's list of ordered widgets, made a focus root first
+   (no name found) */
+int32_t ScePafWidget_0253DC9C(paf::ui::Widget *widget, bool on);
 /* the timer waiting for the widget run out: the transition ended, or the widget destroyed (no
    name found) */
 void ScePafWidget_78C4DBA4(paf::ui::Widget *widget);

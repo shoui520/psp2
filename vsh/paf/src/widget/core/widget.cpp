@@ -1007,6 +1007,146 @@ extern "C" paf::ui::Widget *ScePafWidget_CFA1EB7A(Widget *widget)
 	return FindFocusRoot(widget);
 }
 
+/* a focus root with nothing in it, and one given back (Sony has both inline) */
+static inline FocusRoot *NewFocusRoot()
+{
+	FocusRoot *root = (FocusRoot *)operator new(sizeof(FocusRoot));
+
+	if (root != NULL) {
+		root->m_state = 0;
+		root->m_init_focus = NULL;
+		root->m_focus_moved = 0;
+		root->m_focus_hold = 0;
+		root->reserved16 = 0;
+		root->m_array = NULL;
+		root->m_array_count = 0;
+		root->m_array_limit = 0;
+		root->m_pending = false;
+	}
+	return root;
+}
+
+static inline void DeleteFocusRoot(FocusRoot *root)
+{
+	if (root != NULL) {
+		if (root->m_array != NULL)
+			operator delete(root->m_array);
+		root->m_array = (void *)-1;
+		root->m_array_count = -1;
+		root->m_array_limit = -1;
+		operator delete(root);
+	}
+}
+
+extern "C" int32_t ScePafWidget_00AA6519(Widget *widget)
+{
+	if (widget->m_focus_root != NULL)
+		return 0;
+
+	Environment *env = widget->m_env;
+
+	if (env == NULL)
+		return -1;
+
+	Widget *parent_root = NULL;
+	Widget *focused = NULL;
+	Widget *init = NULL;
+
+	if (widget->m_parent != NULL)
+		parent_root = FindFocusRoot(widget->m_parent);
+
+	Widget *above = FindFocusRoot(widget);
+
+	if (above != NULL) {
+		focused = (Widget *)above->m_focus_root->m_state;
+		if (focused != NULL && focused->m_hold_count <= 0) {
+			for (Widget *node = focused; node != widget; node = node->m_parent) {
+				if (node == NULL) {
+					focused = NULL;
+					break;
+				}
+			}
+		} else {
+			focused = NULL;
+		}
+	}
+	if (parent_root != NULL)
+		init = parent_root->m_focus_root->m_init_focus;
+
+	bool auto_off = env->m_focus_auto_off;
+
+	if (auto_off && focused != env->m_focus_cursor.m_target)
+		env->m_focus_auto_off = false;
+	if (parent_root != NULL) {
+		parent_root->SetFocusRootState(0);
+		env = widget->m_env;
+	}
+	if (focused != NULL && parent_root != NULL) {
+		focused->ReleaseFocus();
+		env = widget->m_env;
+		if (widget != NULL) {
+			env->m_focus_candidates.Sort();
+			env->m_focus_candidates.Add(widget, -1);
+		}
+		DeleteFocusRoot(widget->m_focus_root);
+		widget->m_focus_root = NewFocusRoot();
+		if (init != NULL)
+			ScePafWidget_EC6175D6(init, true);
+		focused->SetFocus(NULL);
+	} else {
+		if (widget != NULL) {
+			env->m_focus_candidates.Sort();
+			env->m_focus_candidates.Add(widget, -1);
+		}
+		DeleteFocusRoot(widget->m_focus_root);
+		widget->m_focus_root = NewFocusRoot();
+		if (init != NULL)
+			ScePafWidget_EC6175D6(init, true);
+		widget->m_env->UpdateFocus(NULL, NULL);
+	}
+	if (auto_off)
+		widget->m_env->m_focus_auto_off = auto_off;
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_929C3278(Widget *widget)
+{
+	FocusRoot *root = widget->m_focus_root;
+
+	if (root == NULL)
+		return 0;
+	if (widget->m_env == NULL)
+		return -1;
+	if (root->m_state != 0) {
+		((Widget *)root->m_state)->ReleaseFocus();
+		root = widget->m_focus_root;
+	}
+	DeleteFocusRoot(root);
+	widget->m_focus_root = NULL;
+	widget->SetFocusRootState(0);
+	widget->m_env->m_focus_candidates.Remove(widget);
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_0253DC9C(Widget *widget, bool on)
+{
+	Environment *env = widget->m_env;
+
+	if (env == NULL)
+		return -1;
+	if (widget->m_ordered == on)
+		return 0;
+	widget->m_ordered = on;
+	ScePafWidget_00AA6519(widget);
+	env = widget->m_env;
+	if (!on)
+		return env->m_ordered_widgets.Remove(widget);
+	if (widget == NULL)
+		return -1;
+	env->m_ordered_widgets.Sort();
+	return env->m_ordered_widgets.Add(widget, -1) != NULL ? 0 : -1;
+}
+
 extern "C" void ScePafWidget_EC6175D6(Widget *widget, bool on)
 {
 	Widget *root = FindFocusRoot(widget);
