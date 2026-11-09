@@ -1207,7 +1207,7 @@ extern "C" int32_t ScePafWidget_D3D0A7C3(Widget *widget, uint32_t port, uint32_t
 	return 0;
 }
 
-extern "C" int32_t ScePafWidget_0E453608(Widget *widget, DragState *drag, TouchState *touch)
+extern "C" int32_t ScePafWidget_0E453608(Widget *widget, DragState *drag, TouchInfo *touch)
 {
 	if (drag == NULL || touch == NULL)
 		return -1;
@@ -1998,7 +1998,7 @@ int32_t Widget::ClearDragState(DragState *state)
 		uint32_t id = first->m_id;
 
 		if (env != NULL) {
-			TouchState *touch = NULL;
+			TouchInfo *touch = NULL;
 
 			if (id < 8 && port < 2) {
 				touch = &env->m_touch_state[port][id];
@@ -3966,6 +3966,408 @@ int32_t Widget::HitDetectRouting(Event *e, const math::v4 &line_b, const math::v
 	hit->m_widget = NULL;
 	hit->m_hit_valid = 0;
 	return 2;
+}
+
+/* the event sent back to an ancestor, converted to a press where asked */
+static __attribute__((always_inline)) void RouteBack(Widget *widget, Event *e, Event &ev, bool convert)
+{
+	ev.m_type = (ev.m_type & 0xFFF0FFFF) | Event::ROUTE_BACK;
+
+	Environment *env = widget->m_env;
+
+	if (convert && (widget->m_touch_gesture_mask & 0x30) == 0) {
+		uint32_t type = e->m_type;
+
+		if ((type & 0x40) != 0)
+			ev.m_type = (ev.m_type & 0xFFFF0000) | 0x46;
+		if ((type & 0x20) != 0)
+			ev.m_type = (ev.m_type & 0xFFFF0000) | 0x27;
+	}
+	env->m_ev_subrouting.push_back(ev);
+}
+
+/* the event sent on to the widget's ancestors up to its scene, each one the touch line hits:
+   one hit by its first mode gets it forward at the front of the routed events and, where its
+   two modes are the same, back at the end; one hit by its second mode only gets it back; with
+   convert (and no touch gestures 0x30 on the widget) the event goes back as a press (0x46
+   rear, 0x27 front) (name ours) */
+static __attribute__((noinline)) int32_t RouteToParents(Widget *widget, Event *e, const math::v4 &touch_p,
+			      const math::v4 &cam_p, HitInfo *hit, bool convert)
+{
+	if (widget != widget->m_scene) {
+		uint32_t port = (e->m_detail >> 20) & 0xF;
+		uint32_t id = (uint8_t)e->m_detail;
+		Event ev(*e);
+		Widget *w = widget->m_parent;
+
+		while (w != NULL) {
+			uint32_t mode = w->m_hit_detect_mode;
+			uint32_t mode_b = w->m_hit_detect_b_mode;
+
+			ev.m_type = (ev.m_type & 0xFF0FFFFF) | Event::MODE_DIRECT;
+			ev.m_target = w;
+
+			int32_t result = w->HitDetect_core(mode, &ev, w->m_event_enable, touch_p, cam_p, hit);
+
+			if (result > 0) {
+				widget->m_env->AddHitStack(port, id, hit, true);
+				if (result == 1) {
+					ev.m_type = (ev.m_type & 0xFFF0FFFF) | Event::ROUTE_FORWARD;
+					widget->m_env->m_ev_subrouting.push_front(ev);
+					if (mode_b == mode)
+						RouteBack(widget, e, ev, convert);
+				}
+			} else {
+				int32_t result_b = w->HitDetect_core(mode_b, &ev, w->m_event_enable, touch_p, cam_p,
+								     hit);
+
+				if (result_b > 0) {
+					widget->m_env->AddHitStack(port, id, hit, false);
+					if (result_b == 1)
+						RouteBack(widget, e, ev, convert);
+				}
+			}
+			if (w == widget->m_scene)
+				break;
+			w = w->m_parent;
+		}
+	}
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_08CE1C4B(Widget *widget, Event *e, uint32_t port, uint32_t id,
+					 HitInfo *hit)
+{
+	if (widget->m_env == NULL)
+		return -1;
+
+	uint32_t type = e->m_type;
+	HitInfo *last = NULL;
+	Widget *now = hit->m_widget;
+	Widget *old;
+	int32_t result;
+
+	if (id < 8)
+		last = &widget->m_env->m_touch_hit_last[port][id];
+	if ((uint16_t)type == 0x41 || (uint16_t)type == 0x21 || (old = last->m_widget) == now) {
+		result = 0;
+		if (now == NULL)
+			result = 2;
+	} else {
+		Event ev(*e);
+
+		result = 1;
+		switch ((uint16_t)type) {
+		case 0x43:
+		case 0x23:
+			/* a move: the old widget left, the new one entered */
+			if (old != NULL) {
+				ev.m_target = old;
+				ev.m_type = (ev.m_type & 0xFF00FFFF) | Event::MODE_DIRECT | Event::ROUTE_TERM;
+				if ((type & 0x20) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x26;
+				if ((type & 0x40) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x45;
+				widget->m_env->m_ev_subrouting.push_back(ev);
+				now = hit->m_widget;
+				type = e->m_type;
+			}
+			if (now != NULL) {
+				ev.m_target = now;
+				ev.m_type = (ev.m_type & 0xFF00FFFF) | Event::MODE_BROADCAST | Event::ROUTE_TERM;
+				if ((type & 0x20) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x25;
+				if ((type & 0x40) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x44;
+				widget->m_env->m_ev_queue.PushFront(ev);
+			}
+			break;
+		case 0x42:
+		case 0x22:
+			/* a release: the old widget left, the release and the enter sent to the new one */
+			if (old != NULL) {
+				ev.m_target = old;
+				ev.m_type = (ev.m_type & 0xFF00FFFF) | Event::MODE_DIRECT | Event::ROUTE_TERM;
+				if ((type & 0x20) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x26;
+				if ((type & 0x40) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x45;
+				widget->m_env->m_ev_subrouting.push_back(ev);
+				now = hit->m_widget;
+				type = e->m_type;
+			}
+			if ((type & 0x20) != 0)
+				ev.m_type = (ev.m_type & 0xFFFF0000) | 0x22;
+			if ((type & 0x40) != 0)
+				ev.m_type = (ev.m_type & 0xFFFF0000) | 0x42;
+			ev.SetTarget(now);
+			ev.m_type = (ev.m_type & 0xFF00FFFF) | Event::MODE_BROADCAST | Event::ROUTE_TERM;
+			widget->m_env->m_ev_queue.PushFront(ev);
+			type = e->m_type;
+			if (hit->m_widget != NULL) {
+				ev.m_target = hit->m_widget;
+				ev.m_type = (ev.m_type & 0xFF00FFFF) | Event::MODE_BROADCAST | Event::ROUTE_TERM;
+				if ((type & 0x20) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x25;
+				if ((type & 0x40) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x44;
+				widget->m_env->m_ev_queue.PushFront(ev);
+			}
+			break;
+		case 0x47:
+		case 0x28:
+			/* a cancel: sent to the old widget and the new one */
+			if (old != NULL) {
+				ev.m_target = old;
+				ev.m_type = (ev.m_type & 0xFF00FFFF) | Event::MODE_DIRECT | Event::ROUTE_TERM;
+				if ((type & 0x20) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x28;
+				if ((type & 0x40) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x47;
+				widget->m_env->m_ev_subrouting.push_back(ev);
+				now = hit->m_widget;
+				type = e->m_type;
+			}
+			if (now != NULL) {
+				ev.m_target = now;
+				ev.m_type = (ev.m_type & 0xFF00FFFF) | Event::MODE_DIRECT | Event::ROUTE_TERM;
+				if ((type & 0x20) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x28;
+				if ((type & 0x40) != 0)
+					ev.m_type = (ev.m_type & 0xFFFF0000) | 0x47;
+				widget->m_env->m_ev_queue.PushFront(ev);
+			}
+			break;
+		}
+	}
+	if (id < 8 && hit != NULL) {
+		HitInfo *kept = &widget->m_env->m_touch_hit[port][id];
+
+		*kept = *hit;
+		kept->m_touch_id = id;
+		kept->m_port = port;
+	}
+	return result;
+}
+
+/* the touch's hit kept and the event sent to the widget: back through the hit change
+   (ScePafWidget_08CE1C4B) unless grabbed, and where that sends nothing, forward and back to the
+   widget itself and on to its ancestors (name ours) */
+static __attribute__((noinline)) int32_t RouteHitEvent(Widget *widget, Event *e, const math::v4 &touch_p,
+			     const math::v4 &cam_p, TouchInfo *touch, HitInfo *hit)
+{
+	uint32_t detail = e->m_detail;
+
+	widget->m_env->AddHitStack((detail >> 20) & 0xF, (uint8_t)detail, hit, false);
+
+	uint32_t kind = (uint16_t)e->m_type;
+
+	if ((kind == 0x41 || kind == 0x21) && widget->m_debug_events)
+		widget->m_scene->SetDebugFocus(widget);
+	if ((e->m_type & Event::DETAIL_GRABBED) == 0) {
+		e->m_type = (e->m_type & 0xFFF0FFFF) | Event::ROUTE_BACK;
+		if (ScePafWidget_08CE1C4B(widget, e, (detail >> 20) & 0xF, (uint8_t)detail, hit) != 0)
+			return 0;
+	}
+
+	Event ev(*e);
+
+	ev.SetTarget(widget);
+	ev.m_type = (ev.m_type & 0xFFF0FFFF) | Event::ROUTE_FORWARD;
+	widget->m_env->m_ev_subrouting.push_back(ev);
+	ev.m_type = (ev.m_type & 0xFFF0FFFF) | Event::ROUTE_BACK;
+	widget->m_env->m_ev_subrouting.push_back(ev);
+	RouteToParents(widget, e, touch_p, cam_p, hit, false);
+	return 0;
+}
+
+
+/* a touch sent to the widget holding it (Environment::m_touch_capture): taken by its second
+   hit-detect mode as grabbed, then on through the hit change (ScePafWidget_08CE1C4B) and, where
+   that sends nothing, to the widget itself and on to its ancestors as a press */
+int32_t Widget::GrabEventRouting(Event *e, const math::v4 &touch_p, const math::v4 &cam_p,
+				 TouchInfo *t_info, HitInfo *h_info)
+{
+	uint32_t detail = e->m_detail;
+	uint32_t port = (detail >> 20) & 0xF;
+	uint32_t mask = m_event_enable;
+
+	if (m_debug_events) {
+		uint32_t debug = m_scene->m_debug_mode;
+
+		if (debug == 2 || debug == 3)
+			mask = 0xFFF0;
+	}
+	e->m_type = (e->m_type & 0x0FFFFFFF) | Event::DETAIL_GRABBED;
+
+	bool taken = false;
+	int32_t result = HitDetect_core(m_hit_detect_b_mode, e, mask, touch_p, cam_p, h_info);
+
+	if (result > 0) {
+		m_env->AddHitStack(port, (uint8_t)detail, h_info, false);
+		taken = result == 1;
+	}
+	e->m_type = (e->m_type & 0xFFF0FFFF) | Event::ROUTE_TERM;
+
+	int32_t moved = ScePafWidget_08CE1C4B(this, e, port, (uint8_t)detail, h_info);
+
+	if (moved == 0 || moved == 2) {
+		Event ev(*e);
+
+		ev.SetTarget(this);
+		ev.m_type = (ev.m_type & 0xFFF0FFFF) | Event::ROUTE_FORWARD;
+		m_env->m_ev_subrouting.push_back(ev);
+		ev.m_type = (ev.m_type & 0xFFF0FFFF) | Event::ROUTE_TERM;
+		m_env->m_ev_subrouting.push_back(ev);
+		if (moved == 0)
+			RouteToParents(this, e, touch_p, cam_p, h_info, true);
+	}
+	return taken;
+}
+
+/* a touch event broadcast from the widget: the line under the touch taken through the scene's
+   camera and kept for the touch; a touch held by the widget or a descendant goes to it
+   (GrabEventRouting, or ScePafWidget_38CDFD1D while it drags), any other to the widget it hits
+   (HitDetectRouting, else the nearest hit outside a hit box of mode 4) */
+extern "C" int32_t ScePafWidget_EB1D1CBC(Widget *widget, Event *e)
+{
+	Environment *env = widget->m_env;
+
+	if (env == NULL || widget->m_scene == NULL)
+		return -1;
+	env->m_touch_hits.clear();
+	env->m_hit_stack.clear();
+
+	uint32_t detail = e->m_detail;
+	uint32_t port = (detail >> 20) & 0xF;
+	uint32_t id = (uint8_t)detail;
+	Camera *camera = widget->m_scene->m_camera;
+
+	if (camera == NULL)
+		return -1;
+
+	TouchInfo touch;
+
+	touch.m_pos = math::v2((float)e->m_data[0], (float)e->m_data[1]);
+	touch.reserved_b = (float)e->m_data[2];
+
+	const math::matrix &camera_world = camera->GetWorldMatrix();
+
+	ScePafWidget_72F479CA(camera);
+
+	math::matrix world = camera_world;
+
+	touch.m_has_line = true;
+	touch.m_depth = camera->m_distance;
+	touch.m_type = (uint16_t)e->m_type;
+	touch.m_line_start = world.w();
+	touch.m_line_end = math::v4(world.getImpl() *
+				    sce::Vectormath::Simd::Aos::Vector4(-touch.m_pos.extract_x(),
+									touch.m_pos.extract_y(),
+									touch.m_depth, 1.0f));
+	touch.m_camera_matrix = world;
+	if (id < 8 && port < 2) {
+		TouchInfo *state = &widget->m_env->m_touch_state[port][id];
+
+		*state = touch;
+		state->m_port = port;
+		state->m_id = id;
+	}
+
+	HitInfo hit;
+	Widget *grab;
+	int32_t result;
+
+	if (port >= 2 || id >= 8 || (grab = widget->m_env->m_touch_capture[port][id].m_widget) == NULL ||
+	    (e->m_type & Event::DETAIL_GRABBED) != 0) {
+		result = widget->HitDetectRouting(e, touch.m_line_end, touch.m_line_start, &touch, &hit);
+
+		Widget *target = hit.m_widget;
+
+		if (target == NULL && s_nearest_hit.m_widget != NULL) {
+			hit = s_nearest_hit;
+			result = 1;
+			target = s_nearest_hit.m_widget;
+		}
+		s_nearest_hit.m_widget = NULL;
+		s_nearest_hit.m_hit_valid = 0;
+		s_nearest_dist = 100000000.0f;
+		s_nearest_area = 100000000.0f;
+		if (target != NULL)
+			RouteHitEvent(target, e, touch.m_line_end, touch.m_line_start, &touch, &hit);
+		else
+			result = 0;
+	} else {
+		Widget *held = NULL;
+
+		if (grab->m_hold_count <= 0) {
+			Widget *w = grab;
+
+			do {
+				if (w == widget) {
+					held = grab;
+					break;
+				}
+				w = w->m_parent;
+			} while (w != NULL);
+		}
+		result = 0;
+		if (held == grab) {
+			Event ev(*e);
+
+			e->m_type = (e->m_type & 0x0FFFFFFF) | Event::DETAIL_GRABBED;
+			if (grab->m_drag_state[0] == NULL || grab->m_drag_mode == 0 || grab->m_drag_mode == 0x1000) {
+				grab->GrabEventRouting(e, touch.m_line_end, touch.m_line_start, &touch, &hit);
+				if (hit.m_widget == NULL) {
+					/* nothing took it: a cancel (0x46 rear, 0x27 front) goes out */
+					if ((ev.m_type & 0x40) != 0)
+						ev.m_type = (ev.m_type & 0xFFFF0000) | 0x46;
+					if ((ev.m_type & 0x20) != 0)
+						ev.m_type = (ev.m_type & 0xFFFF0000) | 0x27;
+					ev.m_type = (ev.m_type & 0x0F0FFFFF) | Event::DETAIL_GRABBED |
+						    Event::MODE_BROADCAST;
+					widget->m_env->m_ev_queue.PushFront(ev);
+				}
+			} else {
+				ScePafWidget_38CDFD1D(grab, e);
+			}
+			result = 1;
+		}
+	}
+	return result;
+}
+
+/* a touch event ended at the widget and sent back to its ancestors along the touch's line
+   (Environment::EventLoop; name ours) */
+int32_t Widget::RouteTouchEvent(Event *e)
+{
+	if (m_env == NULL || m_scene == NULL)
+		return -1;
+
+	Event ev(*e);
+
+	ev.SetTarget(this);
+	ev.m_type = (ev.m_type & 0xFFF0FFFF) | Event::ROUTE_TERM;
+	m_env->m_ev_subrouting.push_back(ev);
+
+	uint32_t detail = e->m_detail;
+	uint32_t port = (detail >> 20) & 0xF;
+	uint32_t id = (uint8_t)detail;
+	Environment *env = m_env;
+	TouchInfo *touch;
+
+	if (id < 8 && port < 2) {
+		touch = &env->m_touch_state[port][id];
+		touch->m_port = port;
+		touch->m_id = id;
+	} else {
+		touch = NULL;
+	}
+
+	HitInfo hit;
+
+	RouteToParents(this, e, touch->m_line_end, touch->m_line_start, &hit, false);
+	return 0;
 }
 
 float Widget::CalcDistLineToLine(const math::v4 &point_a, const math::v4 &dir_a,

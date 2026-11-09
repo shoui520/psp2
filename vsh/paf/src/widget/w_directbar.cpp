@@ -1091,7 +1091,7 @@ void DirectBar::OrientDragOutState(Event *e)
 	if (m_touch_id != id)
 		return;
 
-	TouchState *touch = NULL;
+	TouchInfo *touch = NULL;
 
 	if (id < 8) {
 		m_env->m_touch_state[0][id].m_port = 0;

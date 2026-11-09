@@ -925,7 +925,7 @@ void SlideBar::OnDragBeginSlider(Event *e)
 			env->m_touch_state[0][id].m_port = 0;
 			env->m_touch_state[0][id].m_id = id;
 
-			TouchState *touch = &env->m_touch_state[0][id];
+			TouchInfo *touch = &env->m_touch_state[0][id];
 
 			if (touch != NULL) {
 				HitInfo info;

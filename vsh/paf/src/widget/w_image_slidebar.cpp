@@ -481,7 +481,7 @@ void ImageSlideBar::OnTouchUpdateValue()
 	if (hit != NULL && hit->m_widget == this) {
 		x = hit->m_touch_pos.extract_x();
 	} else {
-		TouchState *touch = NULL;
+		TouchInfo *touch = NULL;
 
 		if (id >= 8)
 			return;

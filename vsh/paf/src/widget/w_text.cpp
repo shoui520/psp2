@@ -368,7 +368,7 @@ int32_t Text::GetTouchTextPos(uint32_t port, uint32_t id, math::v2 &pos)
 
 		if (hit != NULL) {
 			if (hit->m_hit_valid == 0 && id < 8 && port < 2) {
-				TouchState *touch = &env->m_touch_state[port][id];
+				TouchInfo *touch = &env->m_touch_state[port][id];
 
 				touch->m_port = port;
 				touch->m_id = id;

@@ -299,10 +299,11 @@ public:
 	Widget *m_widget;
 };
 
-/* 0x80 bytes, at 0x330 of the Environment (names ours) */
-class TouchState {
+/* 0x80 bytes, at 0x330 of the Environment (Sony's name from Widget::GrabEventRouting's mangled
+   name; the field names ours) */
+class TouchInfo {
 public:
-	__attribute__((always_inline)) TouchState() : m_port(-1), m_id(-1), m_has_line(false)
+	__attribute__((always_inline)) TouchInfo() : m_port(-1), m_id(-1), m_has_line(false)
 	{
 	}
 
@@ -339,7 +340,7 @@ public:
 	Widget *m_widget;
 	/* the touch's state (the Environment's m_touch_state for the port and ID; the drum of
 	   SpinBase reads its line end) */
-	TouchState *m_touch;
+	TouchInfo *m_touch;
 
 };
 
@@ -655,6 +656,10 @@ public:
 	int32_t RemoveTouchDeviceRegion(Widget *widget);
 	/* the widget forgotten as the hit of any touch (0x8113fecc) */
 	void ClearHitInfo(Widget *widget);
+	/* the hit kept as a touch's, first or last of m_touch_hits, with its port and touch ID, and
+	   the hit widget's ancestors moved to the end of the hit stack, nearest first (0x8113ff0e;
+	   name ours) */
+	int32_t AddHitStack(uint32_t port, uint32_t id, HitInfo *hit, bool front);
 	/* the number of widgets in the scene of the entry, or the iterators at the start and the
 	   end of its children (0x8113ef94, 0x8113efda, 0x8113f032); the entry shown or hidden
 	   (0x8113ec20, 0x8113eca4) */
@@ -888,7 +893,7 @@ public:
 	Screen *m_screen;
 	/* a state per port (the front panel's and the rear's) and touch ID: the widget taking a
 	   touch sets its port and ID (names ours) */
-	TouchState m_touch_state[2][8];
+	TouchInfo m_touch_state[2][8];
 	/* where each touch ID last hit (name ours) */
 	HitInfo m_touch_hit[2][8];
 	/* the last hit of each touch of the front and rear panels (ClearHitInfo; name ours) */

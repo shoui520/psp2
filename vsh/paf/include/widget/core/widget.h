@@ -58,7 +58,6 @@ class TouchCapture;
 class HitInfo;
 class TouchInfo;
 class DragState;
-class TouchState;
 class Camera;
 class AnimListener;
 class AnimQueue;
@@ -1102,6 +1101,11 @@ public:
 	   ours) */
 	int32_t HitDetectRouting(Event *e, const math::v4 &line_b, const math::v4 &line_a,
 				 TouchInfo *touch, HitInfo *hit);
+	int32_t GrabEventRouting(Event *e, const math::v4 &touch_p, const math::v4 &cam_p,
+				 TouchInfo *t_info, HitInfo *h_info);
+	/* a touch event ended at the widget and sent back to its ancestors (0x81161d70, name
+	   ours) */
+	int32_t RouteTouchEvent(Event *e);
 	/* exports 7A3A7304, 0FCCC833, B94694E3 */
 	void SetDragMode(uint32_t mode);
 	/* a drag state let go of: the second becomes the first, the layout of it and its parent
@@ -1981,7 +1985,7 @@ void ScePafWidget_EC6175D6(paf::ui::Widget *widget, bool on);
 /* the drag state of the widget made again for the position (name ours) */
 /* the drag state's touch state filled from the hit line of the touch (no name found) */
 int32_t ScePafWidget_0E453608(paf::ui::Widget *widget, paf::ui::DragState *drag,
-			      paf::ui::TouchState *touch);
+			      paf::ui::TouchInfo *touch);
 void ScePafWidget_E17C2B53(paf::ui::Widget *widget, void *drag, const void *pos, float time);
 /* the layout of the resolution taken over the timer's time, at once without one, its
    children's too where children */
@@ -2038,6 +2042,12 @@ float ScePafWidget_F1176ACC(paf::ui::Widget *widget, paf::common::transition::Ty
 int32_t ScePafWidget_0253DC9C(paf::ui::Widget *widget, bool on);
 /* the widget or the nearest of its parents below its scene that has a focus root, or NULL */
 paf::ui::Widget *ScePafWidget_CFA1EB7A(paf::ui::Widget *widget);
+/* the touch's hit kept as port and ID's, and where it moved off one widget onto another (or
+   onto none), the leave event put in the routed events for the old widget and the enter
+   event, or the press, at the front of the queue for the new one: 1 where it moved, 0 where it
+   did not, 2 where there is none, -1 without an environment (0x81158040; no name found) */
+int32_t ScePafWidget_08CE1C4B(paf::ui::Widget *widget, paf::ui::Event *e, uint32_t port,
+			      uint32_t id, paf::ui::HitInfo *hit);
 /* the event sent to the widget and on, in the widget's routing (0x8116158e; no name found) */
 int32_t ScePafWidget_EB1D1CBC(paf::ui::Widget *widget, paf::ui::Event *e);
 /* the touch event taken by the widget's gestures (0x8116132e; no name found) */

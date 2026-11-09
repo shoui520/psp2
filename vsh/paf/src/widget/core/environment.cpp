@@ -982,6 +982,36 @@ void Environment::ClearHitInfo(Widget *widget)
 	}
 }
 
+int32_t Environment::AddHitStack(uint32_t port, uint32_t id, HitInfo *hit, bool front)
+{
+	if (hit == NULL)
+		return -1;
+
+	hit->m_port = port;
+	hit->m_touch_id = id;
+	if (front)
+		m_touch_hits.push_front(*hit);
+	else
+		m_touch_hits.push_back(*hit);
+
+	Widget *widget = hit->m_widget;
+
+	if (widget != NULL) {
+		Widget *w = widget;
+
+		do {
+			Widget *parent = w->m_parent;
+
+			if (parent == NULL)
+				break;
+			w = parent;
+			m_hit_stack.remove(w);
+			m_hit_stack.push_back(w);
+		} while (w != widget);
+	}
+	return 0;
+}
+
 int32_t Environment::AddScene(Widget *scene, int32_t entry, Widget *before)
 {
 	if (scene == NULL)

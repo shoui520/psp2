@@ -2065,7 +2065,7 @@ void ScrollViewBase::UpdateAfterChildren()
 math::v2 ScrollViewBase::GetTrackPos()
 {
 	uint32_t id = m_track_port;
-	TouchState *state = NULL;
+	TouchInfo *state = NULL;
 
 	if (id != (uint32_t)-1 && id < 8) {
 		m_env->m_touch_state[0][id].m_port = 0;
@@ -2076,7 +2076,7 @@ math::v2 ScrollViewBase::GetTrackPos()
 		Camera *camera = m_scene->m_camera;
 
 		if (camera != NULL) {
-			TouchState touch = *state;
+			TouchInfo touch = *state;
 			const math::matrix &camera_world = camera->GetWorldMatrix();
 
 			ScePafWidget_72F479CA(camera);
@@ -3555,7 +3555,7 @@ bool ScrollViewBase::UpdateRearTouches()
 		Environment *env = m_env;
 
 		for (uint32_t i = 0; i < 8; i++) {
-			TouchState *state = NULL;
+			TouchInfo *state = NULL;
 
 			/* the rear panel's states, indexed on from the front's as Sony's code does */
 			if (i < 8) {
@@ -4995,7 +4995,7 @@ void ScrollViewBase::ScePafWidget_22EF63CE()
 
 	if (id != (uint32_t)-1) {
 		Environment *env = m_env;
-		TouchState *state = NULL;
+		TouchInfo *state = NULL;
 
 		if (id < 8) {
 			env->m_touch_state[0][id].m_port = 0;

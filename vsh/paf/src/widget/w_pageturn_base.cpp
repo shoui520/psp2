@@ -77,7 +77,7 @@ PageTurnBase::~PageTurnBase()
 int32_t PageTurnBase::ScePafWidget_85CB1F24(uint32_t id, math::v4 *pos)
 {
 	Environment *env = m_env;
-	TouchState *touch = NULL;
+	TouchInfo *touch = NULL;
 
 	if (id < 8) {
 		env->m_touch_state[0][id].m_id = id;
