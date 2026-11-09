@@ -159,6 +159,60 @@ void Environment::UpdateOrderedTop()
 	}
 }
 
+void Environment::UpdateModalWidgets()
+{
+	OrderEntry *begin = m_modal_widgets.m_entries.ptr;
+	int32_t count = m_modal_widgets.m_entries.count;
+
+	if (m_modal_widgets.m_unsorted && count != 0)
+		sort(m_modal_widgets.m_entries.begin(), m_modal_widgets.m_entries.end());
+	begin = m_modal_widgets.m_entries.ptr;
+	m_modal_widgets.m_unsorted = false;
+
+	bool cancel_found = false;
+
+	for (vector<OrderEntry>::iterator it = begin; it != m_modal_widgets.m_entries.end(); ++it) {
+		Widget *widget = it->m_widget;
+
+		if (widget->IsInputTarget() || widget->m_show_a_sum >= 0.02f || widget->m_transition_in ||
+		    widget->m_transition_out) {
+			int32_t mark = it->m_mark;
+
+			if (mark == 0) {
+				Widget *top = m_top_modal_widget;
+
+				if (top == NULL) {
+					inputdevice::touchscreen::Lock(1);
+					widget = it->m_widget;
+					top = m_top_modal_widget;
+				}
+				if (top != widget) {
+					ReleaseTouchesBehind(widget);
+					widget = it->m_widget;
+				}
+				m_top_modal_widget = widget;
+				m_modal_widgets.m_widget = widget;
+				goto done;
+			}
+			if (mark == 1 && !cancel_found) {
+				m_cancel_widget = widget;
+				cancel_found = true;
+				m_modal_widgets.m_widget = widget;
+			}
+		}
+	}
+	if (m_top_modal_widget != NULL) {
+		inputdevice::touchscreen::Unlock(1);
+		m_top_modal_widget = NULL;
+		m_modal_widgets.m_widget = NULL;
+	}
+done:
+	if (!cancel_found && m_cancel_widget != NULL) {
+		m_cancel_widget = NULL;
+		m_modal_widgets.m_widget = NULL;
+	}
+}
+
 void Environment::Init()
 {
 	for (int32_t port = 0; port < 2; port++) {

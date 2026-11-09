@@ -493,6 +493,9 @@ public:
 	/* the ordered widgets sorted, the first one in front of its siblings and fully shown becomes
 	   the second modal widget and its scene the display area scene (0x8113bbfe; name ours) */
 	void UpdateOrderedTop();
+	/* the modal widgets sorted, the touch panel locked while the first one that is shown (mark 0)
+	   is on, and the first one with mark 1 taken as the cancel widget (0x8113d722; name ours) */
+	void UpdateModalWidgets();
 	/* the touch states numbered, the lists and queues emptied (0x81139cc4) */
 	void Init();
 	/* the touches of the front panel held by widgets behind the widget let go of (0x8113d64e;
