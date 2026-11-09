@@ -1061,6 +1061,9 @@ public:
 	   reset with reset; key 255 for all of them (0x811513f0, 0x811510ce, names ours) */
 	int32_t ReleasePadCaptureDir(uint32_t key, bool reset);
 	int32_t ReleasePadCaptureButton(uint32_t key, bool reset);
+	/* makes it its widget group's current widget or not; a widget that stops being it lets go
+	   of its pad button capture (0x811608f2, name ours) */
+	void SetGroupCurrent(bool current);
 	/* captures the pad port's key, its gestures applied (0x8115d4de, name ours) */
 	int32_t CapturePad(uint32_t port, uint32_t key, bool apply, bool reset_touch);
 	/* its depth among its scene's layers, from its parents' down (0x81162db2, name ours) */
@@ -1713,7 +1716,8 @@ public:
 	/* a timer for it is waiting in the show timers' map (name ours) */
 	bool m_show_timer_pending : 1;
 	bool m_bound_keycode : 1;
-	bool reserved3n : 1;
+	/* the current widget of its widget group (Environment::UpdateWidgetGroups; name ours) */
+	bool m_group_current : 1;
 	/* it takes the keys its m_keycode binds as pad captures (HandleKeycodeEvent; name ours, meaning open) */
 	bool m_keycode_capture : 1;
 	/* cleared before a reverse transition (name after ScePaf-RE) */
@@ -2009,6 +2013,9 @@ int32_t ScePafWidget_0253DC9C(paf::ui::Widget *widget, bool on);
 void ScePafWidget_78C4DBA4(paf::ui::Widget *widget);
 /* every destroy timer run (no name found) */
 void ScePafWidget_CEA2BE4E(void);
+/* the frame's end: the panel's edge correction read, and the draw objects SwapDrawObj took out
+   let go (no name found) */
+void ScePafWidget_D2E7815D(void);
 /* adds to the count kept in bits 24 to 27 of the widget's flags (the first hold lets go of the
    show holds first) */
 void ScePafWidget_A96A0B4A(paf::ui::Widget *widget, int32_t add);

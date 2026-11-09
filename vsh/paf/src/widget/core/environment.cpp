@@ -21,6 +21,7 @@
 #include <timer/timer.h>
 #include <widget/core/widget.h>
 #include <widget/core/uiinputlistener.h>
+#include <widget/core/show_held.h>
 #include <widget/w_camera.h>
 #include <widget/w_scene.h>
 
@@ -263,6 +264,41 @@ done:
 	}
 }
 
+void Environment::OnUpdatePre()
+{
+	sce_paf_memcpy(m_touch_hit_last, m_touch_hit, sizeof(m_touch_hit));
+	for (list<EntryRequest>::iterator it = m_pending.begin(); it != m_pending.end(); it++) {
+		Scene *scene = static_cast<Scene *>(it->m_scene);
+
+		scene->SetEnvironment(this);
+		scene->SetEntry(it->m_entry);
+	}
+	m_pending.clear();
+	Widget::UpdateRestruct();
+	ScePafWidget_D2E7815D();
+	ScePafWidget_CEA2BE4E();
+	for (map<int32_t, Widget *>::iterator it = m_scene_entries.begin();
+	     it != m_scene_entries.end();) {
+		Widget *root = it->second;
+		int32_t destroyed = root->UpdateDestroy();
+
+		if (destroyed == 0 && root->m_children.size() == 0) {
+			delete root;
+			destroyed = 1;
+		}
+		if (destroyed != 0)
+			m_scene_entries.erase(it++);
+		else
+			++it;
+	}
+	UpdateRestructScene();
+	UpdateModalWidgets();
+	UpdateWidgetGroups();
+	UpdateFocus(NULL, NULL);
+	UpdateScreenOrientation();
+	UpdateTextureRequests();
+}
+
 int32_t Environment::AddTextureRequest(Widget *widget, const intrusive_ptr<TextureSource> *source,
 				       uint8_t obj, uint8_t bit)
 {
@@ -471,9 +507,9 @@ Environment::Environment(Resolution *env_param, int32_t screen_orientation_mode)
 	: m_focus_history_on(true), m_callbacks_busy(false), m_scene_restruct(false),
 	  m_layer_weight_changed(false), m_display_area_scale(1.0f), m_display_area_applied(false),
 	  m_display_area_changed(false), m_texture_requests_busy(false),
-	  m_reserved_word_e(0), m_screen_orientation_mode(screen_orientation_mode), m_orientation(4),
+	  m_orientation_timer(NULL), m_screen_orientation_mode(screen_orientation_mode), m_orientation(4),
 	  m_env_param(env_param), m_reserved_flag7(false), m_root_widget(NULL),
-	  m_root_camera(NULL), m_camera_roll_mode(0), m_orientation_dirty(false), m_frame_state(0),
+	  m_root_camera(NULL), m_camera_roll_mode(0), m_next_camera_roll_mode(0), m_frame_state(0),
 	  m_draw_frame(false), m_term_requested(false), m_suspended(false),
 	  m_draw_when_suspended(false), m_env_option(true), m_sound_callback(NULL),
 	  m_sound_callback_data(NULL), m_create_widget_callback(NULL), m_cancel_widget(NULL),
@@ -818,7 +854,7 @@ void Environment::UpdateOrientation()
 			if ((*child)->m_scene->IsOrientationAvailable(orientation)) {
 				sceAppMgrSetShellScreenOrientation(recommended);
 				m_orientation = orientation;
-				m_orientation_dirty = false;
+				m_next_camera_roll_mode = 0;
 				return;
 			}
 		}
@@ -1497,6 +1533,60 @@ void Environment::UpdateFocus(Widget *prefer, Widget *drop)
 	}
 }
 
+void Environment::UpdateWidgetGroups()
+{
+	if (m_widget_groups.size() == 0)
+		return;
+
+	OrderEntry limit;
+
+	if (m_top_modal_widget != NULL)
+		limit.Init(m_top_modal_widget, 0);
+	if (m_second_modal_widget != NULL) {
+		OrderEntry second;
+
+		second.Init(m_second_modal_widget, 0);
+		if (second < limit)
+			limit = second;
+	}
+
+	for (map<uint32_t, ModalWidgetList>::iterator it = m_widget_groups.begin();
+	     it != m_widget_groups.end();) {
+		ModalWidgetList &group = it->second;
+		Widget *current = group.m_widget;
+
+		if (group.m_unsorted && group.m_entries.count != 0)
+			sort(group.m_entries.begin(), group.m_entries.end());
+		group.m_unsorted = false;
+		group.m_widget = NULL;
+		for (vector<OrderEntry>::iterator e = group.m_entries.begin(); e != group.m_entries.end();
+		     ++e) {
+			if (!e->m_widget->m_keycode_capture && !ScePafWidget_DB0FFD33(e->m_widget))
+				continue;
+
+			Widget *widget = e->m_widget;
+
+			if (widget->m_transition_in || widget->m_transition_out ||
+			    widget->m_destroy_protected || widget->m_hold_count > 0 || IsShowHeld(widget))
+				continue;
+			if (!(limit < *e)) {
+				group.m_widget = e->m_widget;
+				break;
+			}
+		}
+		if (group.m_widget != current) {
+			if (current != NULL)
+				current->SetGroupCurrent(false);
+			if (group.m_widget != NULL)
+				group.m_widget->SetGroupCurrent(true);
+		}
+		if (group.m_entries.count != 0)
+			++it;
+		else
+			m_widget_groups.erase(it++);
+	}
+}
+
 #undef End
 
 /* the restructures of the widgets done; where scenes were taken out of the entries, the scenes
@@ -1644,6 +1734,87 @@ void Environment::OnDraw()
 	ScePafWidget_9D4A5A0E(this);
 	ScePafWidget_DC1B19DB(this);
 	ScePafWidget_851911CB(this);
+}
+
+void Environment::UpdateScreenOrientation()
+{
+	if (m_orientation_timer != NULL) {
+		if (m_orientation_timer->IsFinished()) {
+			delete m_orientation_timer;
+			m_orientation_timer = NULL;
+
+			Event e(0x2001, 0x200000, 0x40000, 0, 0, 0, 0, 0);
+
+			e.m_data[0] = 1;
+			e.m_data[1] = m_screen_orientation_mode;
+			m_ev_queue.PushBack(e);
+		}
+		if (m_orientation_timer != NULL) {
+			m_orientation_timer->DoTick();
+			return;
+		}
+	}
+
+	int32_t orientation = m_orientation;
+
+	if (orientation == 4)
+		return;
+
+	int32_t old = m_screen_orientation_mode;
+
+	m_orientation = 4;
+	if (old == orientation)
+		return;
+
+	uint8_t roll_mode = m_camera_roll_mode;
+	Camera *camera = m_root_camera;
+	float roll = GetOrientationRoll(orientation);
+
+	m_screen_orientation_mode = orientation;
+	m_camera_roll_mode = m_next_camera_roll_mode;
+	if (camera != NULL) {
+		if (m_camera_roll_mode == 1)
+			camera->SetRollScreen(roll, new Timer(500.0f, Timer::FUNC_ANGULAR));
+		else if (m_camera_roll_mode == 0 && roll_mode != 0)
+			camera->SetRollScreen(0.0f, new Timer(500.0f, Timer::FUNC_ANGULAR));
+	}
+
+	graph::Surface *surface = m_screen->m_surface.get();
+	uint32_t id = static_cast<Scene *>(m_root_widget)
+			      ->m_env_param->GetResolutionIdHD(surface->GetWidth(), surface->GetHeight(),
+							       orientation);
+
+	if (id != 255)
+		m_root_widget->ChangeResolution_core(id, true, true);
+
+	bool turning = false;
+
+	for (map<int32_t, Widget *>::iterator entry = m_scene_entries.end();
+	     entry != m_scene_entries.begin();) {
+		--entry;
+
+		Widget *root = entry->second;
+
+		for (list<Widget *>::iterator it = root->m_children.begin(); it != root->m_children.end();
+		     it++) {
+			Scene *scene = static_cast<Scene *>(*it);
+
+			if (scene->m_camera != m_root_camera && !scene->ChangeOrientation(orientation, 500.0f))
+				turning = true;
+		}
+	}
+	if (turning) {
+		m_orientation_timer = new Timer(500.0f);
+		ScePafGraphics_4E038C05()->m_ptr->SetRoll(roll);
+
+		Event e(0x2001, 0x200000, 0x40000, 0, 0, 0, 0, 0);
+
+		e.m_data[0] = 0;
+		e.m_data[1] = m_screen_orientation_mode;
+		e.m_data[2] = old;
+		e.m_data[3] = 500;
+		m_ev_queue.PushBack(e);
+	}
 }
 
 extern "C" bool ScePafWidget_A6B659BB(Environment *env, int32_t port)

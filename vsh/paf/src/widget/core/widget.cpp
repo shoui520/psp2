@@ -16,6 +16,7 @@
 #include <widget/core/focus.h>
 #include <widget/core/uiinputlistener.h>
 #include <widget/core/widget_gesture.h>
+#include <widget/core/show_held.h>
 #include <widget/w_camera.h>
 #include <widget/w_scene.h>
 
@@ -1125,6 +1126,15 @@ extern "C" int32_t ScePafWidget_2B1A1493(Widget *widget, int32_t index)
 	return 0;
 }
 
+void Widget::SetGroupCurrent(bool current)
+{
+	if (m_group_current != current) {
+		m_group_current = current;
+		if (!current && m_pad_button_port >= 0)
+			ReleasePadCaptureButton(255, true);
+	}
+}
+
 extern "C" int32_t ScePafWidget_D3D0A7C3(Widget *widget, uint32_t port, uint32_t id, bool apply,
 					 bool reset_pad)
 {
@@ -1469,21 +1479,6 @@ bool Widget::IsInitFocus()
 	if (root != NULL && root->m_focus_root != NULL && root->m_focus_root->m_init_focus == this)
 		init = true;
 	return init;
-}
-
-/* whether the widget or a widget above it up to its scene holds its show (the copy Sony's
-   EventExecDispatch has; name ours) */
-static int32_t IsShowHeld(Widget *widget)
-{
-	if (widget->m_show_hold > 0)
-		return 1;
-	if (static_cast<Widget *>(widget->m_scene) != widget) {
-		Widget *parent = widget->m_parent;
-
-		if (parent != NULL)
-			return IsShowHeld(parent);
-	}
-	return 0;
 }
 
 int32_t Widget::EventExecDispatch(Event *e)

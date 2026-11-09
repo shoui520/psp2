@@ -25,6 +25,7 @@
 #include <std/vector>
 
 namespace paf {
+class Timer;
 namespace graph {
 class EffectRenderer;
 }
@@ -725,6 +726,14 @@ public:
 	/* the orientation chosen from the system's recommended one, the first a scene of the entries
 	   can be shown in (0x8113dbb2; name ours) */
 	void UpdateOrientation();
+	/* turns the screen and its scenes to the orientation asked for, with the root camera's
+	   roll, after the last turn's timer ran out (0x8113ca84, called by OnUpdatePre;
+	   name ours) */
+	void UpdateScreenOrientation();
+	/* each widget group's current widget made again: its first entry that can take input, is not
+	   held and is not behind the modal widgets; the groups left without entries erased
+	   (0x8113d266, called by OnUpdatePre; name ours) */
+	void UpdateWidgetGroups();
 
 	/* the gesture listener of the touch port, NULL for another port (inline in Sony's callers,
 	   name ours) */
@@ -785,8 +794,9 @@ public:
 	common::SharedPtr<inputdevice::InputListener> m_btrm_gesture_listener;
 	common::SharedPtr<inputdevice::InputListener> m_hidrm_gesture_listener;
 	common::SharedPtr<inputdevice::InputListener> m_keyboard_listener;
-	/* set to 0 by the constructor; no reader found (name ours) */
-	uint32_t m_reserved_word_e;
+	/* the timer of the scenes' turn to a new orientation, NULL while none turns
+	   (UpdateScreenOrientation; name ours) */
+	Timer *m_orientation_timer;
 	/* the Framework's InitParam::screen_orientation_mode and env_param */
 	int32_t m_screen_orientation_mode;
 	/* the orientation UpdateOrientation chose from the system's recommended one (name ours) */
@@ -803,8 +813,9 @@ public:
 	/* the scenes' cameras turn with the screen orientation in modes 0 and 1
 	   (Scene::ResetCameraRoll; name ours) */
 	uint8_t m_camera_roll_mode;
-	/* cleared once UpdateOrientation chose an orientation (name ours, meaning open) */
-	bool m_orientation_dirty;
+	/* the camera roll mode the next orientation change takes (UpdateScreenOrientation),
+	   cleared once UpdateOrientation chose an orientation (name ours) */
+	uint8_t m_next_camera_roll_mode;
 	uint8_t reserved7g[2];
 	/* the state the root surface was in after the frame began (DisplaySurface's m_frame_state;
 	   name ours), and whether the frame is drawn: it was 1 (name ours) */
