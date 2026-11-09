@@ -28,6 +28,7 @@ namespace paf {
 namespace graph {
 class Surface;
 class DisplaySurface;
+class Renderer;
 }
 
 namespace gutil {
@@ -720,10 +721,13 @@ public:
 	/* the slots used when OnUpdateTouchDeviceRegion last set the regions (name ours) */
 	uint32_t m_touch_region_mask_pre;
 	Widget *m_touch_region[6];
-	uint8_t reserved5c[6];
+	uint8_t reserved5c[2];
 	/* each frame waits for the GPU once it is drawn (Framework::Option_4) */
 	bool m_finish_after_draw;
-	uint8_t reserved6[0x35];
+	uint8_t reserved6[41];
+	/* the two words ScePafWidget_1955B85D takes (name ours, meaning open) */
+	uint32_t m_renderer_param[2];
+	uint8_t reserved6b[4];
 };
 
 }
@@ -780,6 +784,11 @@ int32_t ScePafWidget_F5842A6B(paf::ui::Environment *env, uint32_t priority,
 			      const paf::ui::EntryRange **range);
 /* sets the focus frame texture no (below 9); with none, reads all of them from the common resource */
 void ScePafWidget_B6C64486(const paf::intrusive_ptr<paf::graph::Surface> &texture, int32_t no);
+/* the effect renderer's factory set to the third word, and the first two kept (no name found);
+   the renderer */
+paf::graph::Renderer *ScePafWidget_1955B85D(paf::ui::Environment *env, const uint32_t *info);
+/* the custom renderer's factory set to the word; the renderer (no name found) */
+paf::graph::Renderer *ScePafWidget_CE744F88(paf::ui::Environment *env, const uint32_t *factory);
 /* begins a frame on the root surface */
 void ScePafWidget_9D4A5A0E(paf::ui::Environment *env);
 void ScePafWidget_DC1B19DB(paf::ui::Environment *env);

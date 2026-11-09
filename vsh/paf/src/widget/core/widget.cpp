@@ -578,6 +578,15 @@ extern "C" int32_t ScePafWidget_5A9793B0(Widget *widget, float time)
 	return 0;
 }
 
+extern "C" int32_t ScePafWidget_026C9E8C(Widget *widget, const math::v4 &pos, const math::v4 *start,
+					 const math::v4 *target, Timer *t, int32_t id, int32_t opt,
+					 float delay, AnimCB cb_fin, void *usrdata)
+{
+	const math::v4 *tangents[2] = { start, target };
+
+	return widget->SetPosHermite(pos, tangents, t, id, opt, delay, cb_fin, usrdata);
+}
+
 extern "C" int32_t ScePafWidget_AC0C81D5(Widget *widget, float time)
 {
 	Timer *timer = new Timer(time);

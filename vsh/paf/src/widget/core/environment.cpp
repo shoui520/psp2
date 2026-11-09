@@ -7,6 +7,7 @@
 #include <inputdevice/touchscreen/touchscreen.h>
 #include <inputdevice/inputlistener.h>
 #include <graphics/drawobj/draw_obj.h>
+#include <graphics/drawobj/draw_env.h>
 #include <graphics/surface/surface_display.h>
 #include <graphics/gutil.h>
 #include <system/system.h>
@@ -1065,6 +1066,27 @@ int32_t ScePafWidget_66960CBF(Environment *env, uint32_t id, Widget *widget)
 	}
 	it->second.Sort();
 	return it->second.Add(widget, -1) != NULL ? 0 : -1;
+}
+
+graph::Renderer *ScePafWidget_1955B85D(Environment *env, const uint32_t *info)
+{
+	env->m_renderer_param[0] = info[0];
+	env->m_renderer_param[1] = info[1];
+
+	graph::Renderer *renderer = ScePafGraphics_4E038C05()->m_ptr;
+
+	if (renderer != NULL)
+		renderer->m_effect_renderer_factory = (graph::EffectRenderer *(*)())info[2];
+	return renderer;
+}
+
+graph::Renderer *ScePafWidget_CE744F88(Environment *env, const uint32_t *factory)
+{
+	graph::Renderer *renderer = ScePafGraphics_4E038C05()->m_ptr;
+
+	if (renderer != NULL)
+		renderer->m_custom_renderer_factory = (graph::CustomRenderer *(*)())factory[0];
+	return renderer;
 }
 
 void ScePafWidget_75FB31F1(Environment *env, bool enable)

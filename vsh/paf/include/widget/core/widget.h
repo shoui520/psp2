@@ -1972,6 +1972,11 @@ int32_t ScePafWidget_4588699E(paf::ui::Widget *widget, paf::Timer *t, int32_t op
 /* Show(Timer *, int32_t opt, float delay, AnimCB): shows the widget, over the timer's time */
 int32_t ScePafWidget_FF5BC957(paf::ui::Widget *widget, paf::Timer *t, int32_t opt, float delay,
 			      paf::ui::AnimCB cb_fin);
+/* SetPosHermite with the start's and the target's tangents given apart (no name found) */
+int32_t ScePafWidget_026C9E8C(paf::ui::Widget *widget, const paf::math::v4 &pos,
+			      const paf::math::v4 *start, const paf::math::v4 *target,
+			      paf::Timer *t, int32_t id, int32_t opt, float delay,
+			      paf::ui::AnimCB cb_fin, void *usrdata);
 /* the widget's transition ends after the time */
 int32_t ScePafWidget_AC0C81D5(paf::ui::Widget *widget, float time);
 /* the widget's transition ends after the time, and the widget is deleted */
