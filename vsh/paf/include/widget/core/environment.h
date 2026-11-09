@@ -663,7 +663,9 @@ public:
 	/* what the environment runs at its end, each ended with a call of its first word (name ours,
 	   use not found) */
 	list<EnvCallback> m_callbacks;
-	uint8_t reserved_36[4];
+	/* (meaning open; name ours) */
+	bool m_callbacks_busy;
+	uint8_t reserved_37[3];
 	/* the scenes by their entry (ShowSceneEntry, GetSceneNum; name ours) */
 	map<int32_t, Widget *> m_scene_entries;
 	/* the scenes asked to be added, with their entries (IsTermAvailable counts them; name ours) */
@@ -695,13 +697,21 @@ public:
 	/* the gesture listeners of the front (0) and rear (1) touch ports (names ours) */
 	common::SharedPtr<inputdevice::InputGestureListener> m_touch_gesture_listener_front;
 	common::SharedPtr<inputdevice::InputGestureListener> m_touch_gesture_listener_rear;
-	uint8_t reserved8b[0x24];
+	/* the gesture listeners of the motion sensor, the Bluetooth remote, the HID remote and the
+	   keyboard (names ours) */
+	common::SharedPtr<inputdevice::InputGestureListener> m_motion_gesture_listener;
+	common::SharedPtr<inputdevice::InputGestureListener> m_btrm_gesture_listener;
+	common::SharedPtr<inputdevice::InputGestureListener> m_hidrm_gesture_listener;
+	common::SharedPtr<inputdevice::InputListener> m_keyboard_listener;
+	uint8_t reserved8d[4];
 	/* the Framework's InitParam::screen_orientation_mode and env_param */
 	int32_t m_screen_orientation_mode;
 	/* the orientation UpdateOrientation chose from the system's recommended one (name ours) */
 	int32_t m_orientation;
 	Resolution *m_env_param;
-	uint8_t reserved7[4];
+	/* cleared by the constructor (meaning open; name ours) */
+	bool m_reserved_flag7;
+	uint8_t reserved7[3];
 	/* the widget whose hit rect is the screen a rear touch scrolls within (TouchScrollSupplier's
 	   rear mochi gesture; name ours) */
 	Widget *m_root_widget;
@@ -800,10 +810,22 @@ public:
 	/* the slots used when OnUpdateTouchDeviceRegion last set the regions (name ours) */
 	uint32_t m_touch_region_mask_pre;
 	Widget *m_touch_region[6];
-	uint8_t reserved5c[2];
+	/* two flags set by the constructor, the second on (meaning open; names ours) */
+	bool m_reserved_flag_a;
+	bool m_reserved_flag_b;
 	/* each frame waits for the GPU once it is drawn (Framework::Option_4) */
 	bool m_finish_after_draw;
-	uint8_t reserved6[41];
+	/* set by the constructor (meaning open; names ours) */
+	bool m_reserved_flag_c[4];
+	uint8_t reserved6e[1];
+	uint32_t m_reserved_word_a;
+	uint32_t m_reserved_word_b;
+	uint32_t m_reserved_word_c;
+	uint32_t m_reserved_word_d;
+	uint8_t reserved6j[16];
+	/* the motion noise filter is available (vshMotionNoiseFilterIsAvailable; name ours) */
+	bool m_motion_noise_filter;
+	uint8_t reserved6k[3];
 	/* the two words ScePafWidget_1955B85D takes (name ours, meaning open) */
 	uint32_t m_renderer_param[2];
 	uint8_t reserved6b[4];
