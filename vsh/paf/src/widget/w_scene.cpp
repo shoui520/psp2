@@ -449,7 +449,7 @@ int32_t Scene::SetEntry(int32_t entry)
 	return 0;
 }
 
-Scene::Scene(Environment *env, int32_t priority, CreateParam *param, EnvironmentParam *env_param,
+Scene::Scene(Environment *env, int32_t priority, CreateParam *param, Resolution *env_param,
 	     int32_t graphics_flag)
 	: Widget(NULL, param), m_screen(NULL), m_camera(NULL), m_scene_priority(-1), m_entry(-1),
 	  m_plugin_id(0), m_layer_range(), m_layer_weight(), m_hidden(false),
@@ -512,7 +512,7 @@ Scene::~Scene()
 	m_scene_priority = -1;
 	if (m_env_param_owned && m_env_param != NULL)
 		delete m_env_param;
-	m_env_param = (EnvironmentParam *)-1;
+	m_env_param = (Resolution *)-1;
 }
 
 void Scene::DestroyWidget()

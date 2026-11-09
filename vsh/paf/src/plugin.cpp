@@ -1757,7 +1757,7 @@ ui::Scene *Plugin::PageOpen(const cxml::Element &node, const PageOpenParam &para
 
 	ScePafToplevel_3B003F16(this, &id.m_id, idhash, false);
 
-	ui::EnvironmentParam *env_param = m_env_param;
+	ui::Resolution *env_param = m_env_param;
 	int32_t graphics_flag = m_graphics_flag;
 
 	if (param.env_param != NULL)
@@ -1915,7 +1915,7 @@ ui::Scene *Plugin::PageOpen(const IDParam &id, const PageOpenParam &param)
 		if (GetNodeEntity_Widget(id) != NULL)
 			return NULL;
 
-		ui::EnvironmentParam *env_param = m_env_param;
+		ui::Resolution *env_param = m_env_param;
 		int32_t graphics_flag = m_graphics_flag;
 
 		if (param.env_param != NULL)

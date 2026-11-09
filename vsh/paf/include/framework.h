@@ -64,7 +64,7 @@ class Output;
 }
 
 namespace ui {
-class EnvironmentParam;
+class Resolution;
 class Screen;
 }
 
@@ -138,7 +138,7 @@ public:
 		bool show_focus;
 		bool ext_control;
 		bool reserved;
-		ui::EnvironmentParam *env_param;
+		ui::Resolution *env_param;
 		int32_t screen_orientation_mode;
 		/* the text style SystemParam keeps, TEXT_STYLE_UNSET for its own */
 		int32_t text_style;
@@ -324,7 +324,7 @@ private:
 	sound::Output *m_sound_output;
 	bool m_shutdown_requested;
 	SceUID m_power_cb_id;
-	ui::EnvironmentParam *m_env_param;
+	ui::Resolution *m_env_param;
 };
 
 }

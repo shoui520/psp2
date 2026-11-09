@@ -3266,7 +3266,7 @@ ScePaf:
         - _ZN3paf2ui6Widget11RemoveChildEPS1_: 0x2228232B
         - _ZNK3paf2ui9TextParam12GetParamNameEv: 0x2229E0D7
         - ScePafWidget_222D55C7: 0x222D55C7
-        - ScePafWidget_22303A4C: 0x22303A4C
+        - _ZN3paf2ui10ResolutionC2Ej: 0x22303A4C
         - _ZN3paf2ui9ScrollBar15AdjustParameterEb: 0x2232020D
         - _ZN3paf2ui8ListView10UpdateSizeEv: 0x22660F39
         - _ZN3paf2ui19ScrollViewSnapPointC1ERKNS_4math2v2E: 0x2266A675
@@ -3578,7 +3578,7 @@ ScePaf:
         - _ZN3paf2ui8ListView21ScePafWidget_433FAAD4ERKNS_4math2v2E: 0x433FAAD4
         - _ZN3paf2ui6Widget12KillAnimTypeEi: 0x434263C7
         - _ZN3paf2ui8ListView9BlockSyncEv: 0x434B1CB8
-        - ScePafWidget_435191CC: 0x435191CC
+        - _ZN3paf2ui10ResolutionC2ERKS1_: 0x435191CC
         - _ZN3paf2ui8listview11SegmentList13InsertSegmentEij: 0x4383E505
         - _ZN3paf2ui11ProgressBar17AttachLabelWidgetEPNS0_6WidgetE: 0x439A6529
         - ScePafWidget_439FFB75: 0x439FFB75
@@ -3729,7 +3729,7 @@ ScePaf:
         - _ZN3paf2ui8SlideBar14GetPartsWidgetEiPi: 0x53B2C127
         - _ZN3paf2ui4Text17GetStyleAttributeENS_5graph18TextStyleAttributeEjRb: 0x53C0710D
         - _ZN3paf2ui11ScrollBar2d12OnDragSliderEv: 0x53DBC2B5
-        - ScePafWidget_53EAC4C1: 0x53EAC4C1
+        - _ZN3paf2ui10ResolutionC1ERKS1_: 0x53EAC4C1
         - _ZN3paf2ui14ScrollViewBase9MochiMoveEPNS0_5EventE: 0x53F9F421
         - _ZN3paf2ui21ProgressBarTouchParam9ParamNameEv: 0x53FBFE72
         - _ZN3paf2ui10ScrollView12SetAutoBoundEb: 0x540D6ABD
@@ -4020,7 +4020,7 @@ ScePaf:
         - _ZN3paf2ui21PlaneButtonStyleParam7GetEachEPNS0_6WidgetE: 0x752033A8
         - ScePafWidget_7524969B: 0x7524969B
         - ScePafWidget_7524D3BB: 0x7524D3BB
-        - ScePafWidget_7525AE08: 0x7525AE08
+        - _ZN3paf2ui10ResolutionC1EPNS_6vectorINS0_15SceneResolutionENS_9allocatorIS3_EEEEPNS2_IjNS4_IjEEEE: 0x7525AE08
         - _ZN3paf2ui14ScrollViewBase14TrackLongPressEPNS0_5EventE: 0x7530A167
         - ScePafWidget_753302E3: 0x753302E3
         - _ZNK3paf2ui8RichText11GetItemTypeEi: 0x75420B80
@@ -4116,7 +4116,7 @@ ScePaf:
         - _ZN3paf2ui8ListItemC2EPNS0_6WidgetEPNS2_11CreateParamE: 0x7DFC7EE6
         - _ZN3paf2ui13SlideBarParam3SetEv: 0x7DFE2959
         - _ZN3paf2ui8listview7Segment14UpdateViewSizeEv: 0x7E1D8DF6
-        - ScePafWidget_7E3CFE67: 0x7E3CFE67
+        - _ZN3paf2ui10ResolutionD2Ev: 0x7E3CFE67
         - _ZN3paf2ui26ProgressBarTouchSoundParamC1Ev: 0x7E4EC249
         - _ZNK3paf2ui26ProgressBarTouchStyleParam12GetParamNameEv: 0x7E529FEC
         - _ZN3paf2ui5Scene13DestroyWidgetEv: 0x7E609DA4
@@ -4434,7 +4434,7 @@ ScePaf:
         - _ZN3paf2ui8ListView21ScePafWidget_9D82904CEb: 0x9D82904C
         - _ZN3paf2ui6Dialog14GetPartsWidgetEi: 0x9D831973
         - _ZN3paf2ui8SlideBar13SetSliderAnimEfi: 0x9E13A7C2
-        - ScePafWidget_9E3EF4E4: 0x9E3EF4E4
+        - _ZN3paf2ui10ResolutionC2EPNS_6vectorINS0_15SceneResolutionENS_9allocatorIS3_EEEEPNS2_IjNS4_IjEEEE: 0x9E3EF4E4
         - _ZN3paf2ui16ProgressBarTouch20UpdateLabelSliderPosEv: 0x9E9D1B85
         - _ZN3paf2ui8filelist13SegmentSource8TypeNameEv: 0x9E9F7578
         - ScePafWidget_9EA15F9C: 0x9EA15F9C
@@ -4762,7 +4762,7 @@ ScePaf:
         - _ZNK3paf2ui10ScrollView11GetTypeNameEv: 0xC1680F39
         - _ZN3paf2ui9DirectBar9GetBtnNumEv: 0xC1B2AEC8
         - _ZN3paf2ui14ScrollViewBase18UpdateScrollLayoutEv: 0xC1D3E2D8
-        - ScePafWidget_C230312B: 0xC230312B
+        - _ZN3paf2ui10ResolutionD0Ev: 0xC230312B
         - _ZN3paf2ui8filelist16CellListAccessor6GetNumEv: 0xC2468DE2
         - _ZN3paf2ui6Widget21apply_pad_gesture_tapEjj: 0xC2D02FF1
         - _ZN3paf2ui11ImageButton14UpdateObjsSizeEv: 0xC2D288C4
@@ -4895,7 +4895,7 @@ ScePaf:
         - _ZN3paf2ui16ProgressBarTouchD0Ev: 0xD13E0F08
         - _ZN3paf2ui10ButtonBase9SetStringERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEi: 0xD149484A
         - _ZN3paf2ui9DirectBar15OrientDragStateEPNS0_5EventE: 0xD14BF002
-        - _ZN3paf2ui5SceneC2EPNS0_11EnvironmentEiPNS0_6Widget11CreateParamEPNS0_16EnvironmentParamEi: 0xD150D035
+        - _ZN3paf2ui5SceneC2EPNS0_11EnvironmentEiPNS0_6Widget11CreateParamEPNS0_10ResolutionEi: 0xD150D035
         - _ZN3paf2ui16ProgressBarTouch20GetLabelSliderWidgetEv: 0xD16FDC5B
         - _ZN3paf2ui8filelist19SegmentListAccessor6DeleteEij: 0xD1719229
         - _ZN3paf2ui8listview12CellSizeList4FindEf: 0xD174C604
@@ -5138,7 +5138,7 @@ ScePaf:
         - _ZN3paf2ui6Button23SetTextAutoScrollOriginERKNS_4math2v2E: 0xEC9CD401
         - _ZN3paf2ui14ScrollViewBaseC2EPNS0_6WidgetEPNS2_11CreateParamE: 0xECABF3B8
         - _ZN3paf2ui5wutil9InitParamC1Ev: 0xECB0651E
-        - _ZN3paf2ui5SceneC1EPNS0_11EnvironmentEiPNS0_6Widget11CreateParamEPNS0_16EnvironmentParamEi: 0xECB1A10D
+        - _ZN3paf2ui5SceneC1EPNS0_11EnvironmentEiPNS0_6Widget11CreateParamEPNS0_10ResolutionEi: 0xECB1A10D
         - _ZN3paf2ui8SlideBar14GetLabelMarginERfNS1_7LabelIdE: 0xECC76080
         - _ZN3paf2ui18ListItemSoundParamC1Ev: 0xED0EF157
         - _ZN3paf2ui23ImageSlideBarStyleParam7SetEachEPNS0_6WidgetE: 0xED22ECA7
@@ -5253,7 +5253,7 @@ ScePaf:
         - _ZN3paf2ui10PlaneParam3GetEv: 0xF9BDDCE4
         - _ZNK3paf2ui8Supplier9IsInheritEPKc: 0xFA0BFE83
         - _ZNK3paf2ui5Scene9IsInheritEPKc: 0xFA17CA06
-        - ScePafWidget_FA21D400: 0xFA21D400
+        - _ZN3paf2ui10ResolutionD1Ev: 0xFA21D400
         - _ZN3paf2ui10ScrollView15AddIgnoredChildEPNS0_6WidgetE: 0xFA6A3B67
         - _ZN3paf2ui8filelist10Visualizer5StartEv: 0xFA7E8F59
         - _ZN3paf2ui8listview7CellMap4SortEv: 0xFA966781
@@ -5294,7 +5294,7 @@ ScePaf:
         - _ZN3paf2ui7Handler16HandleTimerEventEPNS0_5EventE: 0xFDB59013
         - _ZN3paf2ui8FileListC1EPNS0_6WidgetEPNS2_11CreateParamE: 0xFDBD3FCE
         - _ZN3paf2ui13ImageSlideBarD2Ev: 0xFE05C9F5
-        - ScePafWidget_FE22E2B3: 0xFE22E2B3
+        - _ZN3paf2ui10ResolutionC1Ej: 0xFE22E2B3
         - _ZN3paf2ui21PlaneButtonStyleParam7SetEachEPNS0_6WidgetE: 0xFE65E87E
         - _ZN3paf2ui14ScrollViewBase16SetMovableDirOffEj: 0xFE7FE5A0
         - _ZNK3paf2ui11RadioButton9IsInheritEPKc: 0xFE7FF370

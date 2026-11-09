@@ -26,6 +26,10 @@ class Camera;
 /* one screen resolution a scene lays out for */
 class SceneResolution {
 public:
+	SceneResolution()
+	{
+	}
+
 	uint32_t m_id;
 	uint32_t m_base_id;
 	/* the resource variants of m_id and of m_base_id */
@@ -39,12 +43,6 @@ public:
 	int32_t m_scissor_height;
 	int32_t m_width;
 	int32_t m_height;
-};
-
-class SceneResolutionList {
-public:
-	SceneResolution *m_data;
-	uint32_t m_num;
 };
 
 class Scene : public Widget {
@@ -92,7 +90,7 @@ public:
 	typedef void (*DrawFunc)(const DrawArg &arg);
 
 	/* a page in the environment, drawn at the priority (export 0xECB1A10D) */
-	Scene(Environment *env, int32_t priority, CreateParam *param, EnvironmentParam *env_param,
+	Scene(Environment *env, int32_t priority, CreateParam *param, Resolution *env_param,
 	      int32_t graphics_flag);
 	virtual ~Scene();
 
@@ -180,7 +178,7 @@ public:
 	/* m_layer_range changed since UpdateLayerWeight (name ours) */
 	bool m_layer_weight_dirty;
 	/* the resolutions it lays out for, and whether it is its own copy (names ours) */
-	EnvironmentParam *m_env_param;
+	Resolution *m_env_param;
 	bool m_env_param_owned;
 	/* the font flags its widgets' draw objects take (name after SurfaceDrawParam's) */
 	int8_t m_font_flags;
@@ -218,15 +216,6 @@ public:
 
 }
 }
-
-/* the ID of the resolution whose resource variant, or its base's, has the ID's hash; -1 without
-   one */
-extern "C" int32_t ScePafWidget_36505C86(const paf::ui::EnvironmentParam *param,
-					 const paf::IDParam &id);
-
-/* the resolution of the list with the ID, or NULL */
-extern "C" paf::ui::SceneResolution *ScePafWidget_CDC90BA2(const paf::ui::EnvironmentParam *param,
-							   uint32_t id);
 
 /* the resolution's size, -1 without it or the environment (no name found) */
 extern "C" int32_t ScePafWidget_29BCC252(paf::ui::Scene *scene, int32_t *width, int32_t *height);

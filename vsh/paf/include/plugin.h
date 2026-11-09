@@ -43,7 +43,7 @@ class ResourceObj;
 
 namespace ui {
 class Scene;
-class EnvironmentParam;
+class Resolution;
 }
 
 class WidgetResourceInfo;
@@ -265,7 +265,7 @@ public:
 		NotifyCallback notify_callback;
 		UnloadCallback unload_callback;
 		void *param;
-		ui::EnvironmentParam *env_param;
+		ui::Resolution *env_param;
 		int32_t graphics_flag;
 	};
 
@@ -288,7 +288,7 @@ public:
 		float fade_time_ms;
 		TransitionType transition_type;
 		Timer *timer;
-		ui::EnvironmentParam *env_param;
+		ui::Resolution *env_param;
 		int32_t graphics_flag;
 	};
 
@@ -542,7 +542,7 @@ public:
 	/* a ResolutionDebugMode: the debug focus adds resolutions to widgets without them */
 	uint32_t m_resolution_debug_mode;
 	int32_t m_page_debug_mode;
-	ui::EnvironmentParam *m_env_param;
+	ui::Resolution *m_env_param;
 	bool m_env_param_created;
 	/* the text style (SystemParam's, the InitParam's or the InitParam2's) */
 	char m_graphics_flag;

@@ -164,7 +164,7 @@ Framework::Framework(const InitParam &init_param)
 		m_option |= Option_OneFrameMode;
 
 	if (init_param.env_param == NULL)
-		m_env_param = new ui::EnvironmentParam();
+		m_env_param = new ui::Resolution();
 	else
 		m_env_param = init_param.env_param->Clone();
 

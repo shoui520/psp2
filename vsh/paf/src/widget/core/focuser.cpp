@@ -387,3 +387,12 @@ extern "C" void ScePafWidget_EA117CF8(Widget::FocusSearchInfo *info, Widget *wid
 
 }
 }
+
+/* two exports with nothing to do (no name found) */
+extern "C" void ScePafWidget_8A132DF7(void)
+{
+}
+
+extern "C" void ScePafWidget_727885B3(void)
+{
+}

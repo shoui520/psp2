@@ -112,7 +112,7 @@ public:
 
 class Widget;
 class Camera;
-class SceneResolutionList;
+class SceneResolution;
 
 /*
  * What the resource of a resolution is read with: the name of its strings' and
@@ -128,23 +128,66 @@ public:
 	uint32_t m_value;
 };
 
-/* the screen resolutions the layouts are made for, and the one to use */
-class EnvironmentParam {
+/*
+ * The screen resolutions the layouts are made for and the ones to use (Sony's class name, by the
+ * NID hash of its constructors and of Scene's; names of the rest ours): a table of resolutions
+ * and the ids of the ones in use, each shared with the default or owned.
+ */
+class Resolution {
 public:
-	EnvironmentParam(SceneResolutionList *resolution_table = NULL);
-	virtual ~EnvironmentParam();
+	/* the ids in use made from a mask: bits 0 to 2 the sizes (qHD, HD, full HD), bits 24 to 27
+	   the orientations (normal, left, right and the pad key sides) */
+	Resolution(uint32_t mask);
+	Resolution(const Resolution &obj);
+	/* the table and the ids copied unless they are the defaults */
+	Resolution(vector<SceneResolution> *table, vector<uint32_t> *ids);
+	/* the default table, the ids copied unless they are the default */
+	Resolution(vector<uint32_t> *ids = NULL);
+	virtual ~Resolution();
 	/* the layout resolution for a screen of 1920x1088 or more */
 	virtual uint32_t GetResolutionIdHD(uint32_t width, uint32_t height, int32_t orientation);
 	/* the layout resolution for a screen type below 4 */
-	virtual uint32_t GetResolutionId(uint32_t type, int32_t orientation);
-	virtual EnvironmentParam *Clone() const;
+	virtual uint32_t GetResolutionId(int32_t type, int32_t orientation);
+	virtual Resolution *Clone() const
+	{
+		return new Resolution(*this);
+	}
 
 	/* the largest resolution the display fits */
 	void GetScreenSize(uint32_t *width, uint32_t *height);
 
-	SceneResolutionList *m_resolution_list;
-	uint8_t reserved[0xc];
+	/* the table and ids the defaults are made of, once (0x81146b20; name ours) */
+	void Init(vector<SceneResolution> *table, vector<uint32_t> *ids);
+
+	vector<SceneResolution> *m_resolutions;
+	bool m_own_resolutions;
+	vector<uint32_t> *m_ids;
+	bool m_own_ids;
+
+	/* the table of resolutions it is made with, and the ids it uses, until others are given
+	   (names ours) */
+	static vector<SceneResolution> s_default_table;
+	static vector<uint32_t> s_default_ids;
 };
+
+/* whether the resolution is one in use (no name found) */
+extern "C" __attribute__((noinline)) bool ScePafWidget_9F450B64(const Resolution *param, uint32_t id);
+/* the resolution if it is in use, else 255 (no name found) */
+extern "C" uint32_t ScePafWidget_730C0464(const Resolution *param, uint32_t id);
+/* the resolution of the table with the ID, or NULL (no name found) */
+extern "C" SceneResolution *ScePafWidget_CDC90BA2(const Resolution *param, uint32_t id);
+/* the resolution whose resource variant, or its base's, has the ID's hash, or NULL (no name
+   found) */
+extern "C" SceneResolution *ScePafWidget_615501F0(const Resolution *param, const IDParam &id);
+/* the ID of the resolution whose resource variant, or its base's, has the ID's hash; -1
+   without one (no name found) */
+extern "C" int32_t ScePafWidget_36505C86(const Resolution *param, const IDParam &id);
+/* the resource variant of the resolution with the ID or whose base has it; an empty one without
+   (no name found) */
+extern "C" ResolutionResource ScePafWidget_E963EAEE(const Resolution *param, uint32_t id);
+/* the display's largest frame buffer size (DisplaySurface::GetMaximumResolution; no name found
+   for this export) */
+extern "C" __attribute__((noinline)) void ScePafWidget_608BC317(int32_t *width, int32_t *height);
 
 /* a widget in an ordered list of the environment's (32 bytes; names ours) */
 class OrderEntry {
@@ -565,7 +608,7 @@ public:
 	/* the Framework's InitParam::screen_orientation_mode and env_param */
 	int32_t m_screen_orientation_mode;
 	uint8_t reserved0[4];
-	EnvironmentParam *m_env_param;
+	Resolution *m_env_param;
 	uint8_t reserved7[4];
 	/* the widget whose hit rect is the screen a rear touch scrolls within (TouchScrollSupplier's
 	   rear mochi gesture; name ours) */
@@ -674,7 +717,7 @@ public:
 
 /* Exports with no name found for their NIDs. */
 extern "C" {
-/* the screen size of each resolution, qHD, HD and full HD (EnvironmentParam's rodata, defined with
+/* the screen size of each resolution, qHD, HD and full HD (Resolution's rodata, defined with
    the stand-ins in state.c until its file is C; names ours) */
 extern const uint32_t g_screen_width_qhd;
 extern const uint32_t g_screen_height_qhd;
@@ -683,11 +726,8 @@ extern const uint32_t g_screen_height_hd;
 extern const uint32_t g_screen_width_full_hd;
 extern const uint32_t g_screen_height_full_hd;
 
-/* the resource variant of the parameter's resolution with the ID, or the empty one */
-paf::ui::ResolutionResource ScePafWidget_E963EAEE(const paf::ui::EnvironmentParam *param,
-						  uint32_t id);
 /* constructs the Environment at mem */
-paf::ui::Environment *ScePafWidget_393F0EF0(void *mem, paf::ui::EnvironmentParam *param,
+paf::ui::Environment *ScePafWidget_393F0EF0(void *mem, paf::ui::Resolution *param,
 					    int32_t screen_orientation_mode);
 /* whether the buttons move the focus */
 void ScePafWidget_75FB31F1(paf::ui::Environment *env, bool enable);

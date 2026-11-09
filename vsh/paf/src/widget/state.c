@@ -4,7 +4,7 @@
 #include "../std/new.h"
 #include "../std/string.h"
 
-/* the screen size of each resolution, qHD, HD and full HD (EnvironmentParam's rodata; declared in
+/* the screen size of each resolution, qHD, HD and full HD (Resolution's rodata; declared in
    widget/core/environment.h; until its file is C) */
 const uint32_t g_screen_width_qhd = 960;
 const uint32_t g_screen_height_qhd = 544;
@@ -183,31 +183,6 @@ void *ScePafWidget_1D7D7860(uint8_t *self)
 	return self;
 }
 
-
-/* Test membership in the indexed widget selector table. */
-__attribute__((noinline))
-int ScePafWidget_9F450B64(const uint8_t *self, uint32_t value)
-{
-	const uint32_t *list = *(const uint32_t *const *)(self + 12);
-	const uint32_t *cursor = *(const uint32_t *const *)list;
-	const uint32_t *previous = cursor;
-	const uint32_t *end = cursor + list[1];
-
-	for (; cursor != end; previous = cursor) {
-		if (*cursor == value)
-			break;
-		if (cursor)
-			++cursor;
-	}
-	return previous != end;
-}
-
-int ScePafWidget_730C0464(const uint8_t *self, uint32_t index)
-{
-	if (ScePafWidget_9F450B64(self, index))
-		return index;
-	return 255;
-}
 
 int _ZN3paf2ui6Widget17SetDrawObjMaskBitEPKvi(void *self, int first, int second)
 {
