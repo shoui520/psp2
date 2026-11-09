@@ -1353,6 +1353,95 @@ static inline Widget *ChildOfParent(Widget *parent, Widget *widget)
 	return widget;
 }
 
+int32_t Widget::SetParent_core(Widget *parent, Widget *sibling)
+{
+	if (m_hold_count > 0)
+		return -1;
+
+	Widget *old_parent = m_parent;
+
+	if (old_parent == parent) {
+		LayoutDirty(this, 0xFFFF);
+		old_parent->ReorderChild(this, sibling);
+		return 0;
+	}
+
+	bool focus_auto_off = false;
+	Environment *env = m_env;
+
+	if (env != NULL) {
+		focus_auto_off = env->m_focus_auto_off;
+		if (env->m_focus_auto_off && this != env->m_focus_cursor.m_target)
+			env->m_focus_auto_off = false;
+	}
+
+	Widget *root = FindFocusRoot(this);
+	bool focused = false;
+	bool is_init_focus = false;
+
+	if (root != NULL) {
+		FocusRoot *focus = root->m_focus_root;
+
+		if (focus != NULL)
+			is_init_focus = focus->m_init_focus == this;
+	}
+	if (old_parent != NULL) {
+		LayoutDirty(this, 0xFFFF);
+		root = FindFocusRoot(this);
+
+		bool release = false;
+
+		if (root != NULL && root->m_focus_root != NULL) {
+			Widget *holder = (Widget *)root->m_focus_root->m_state;
+
+			if (holder != NULL && holder->m_hold_count <= 0) {
+				for (Widget *w = holder; w != NULL; w = w->m_parent) {
+					if (w == this) {
+						release = true;
+						break;
+					}
+				}
+			}
+		}
+		if (!release && root == this) {
+			root = FindFocusRoot(old_parent);
+			if (root != NULL && (Widget *)root->m_focus_root->m_state == this)
+				release = true;
+		}
+		if (release)
+			root->SetFocusRootState(0);
+		focused = m_focused;
+		if (is_init_focus)
+			ScePafWidget_EC6175D6(this, false);
+		m_parent->RemoveChild(this);
+		m_parent = NULL;
+	}
+	if (parent == NULL) {
+		SetScene_core(NULL);
+		m_parent = parent;
+		return 0;
+	}
+	m_parent = parent;
+	parent->RegisterChild(this, sibling);
+	SetScene_core(m_parent->m_scene);
+	SetEnvironment(m_parent->m_env);
+	SetUpdateParam(2);
+	if (focused)
+		SetFocus(NULL);
+	if (is_init_focus)
+		ScePafWidget_EC6175D6(this, true);
+
+	Widget *new_parent = m_parent;
+
+	if (focus_auto_off)
+		m_env->m_focus_auto_off = true;
+	ChangeResolution_core(new_parent->m_resolution_id, true, true);
+	if (m_drag_state[0] != NULL)
+		ScePafWidget_E17C2B53(this, m_drag_state[0], NULL, 1.0f);
+	LayoutDirty(this, 0xFFFF);
+	return 0;
+}
+
 int32_t Widget::SetBehind_core(Widget *w)
 {
 	Widget *parent = m_parent;

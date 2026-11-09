@@ -1807,6 +1807,8 @@ void ScePafWidget_13B246E0(paf::ui::Widget *widget, paf::ui::FocusShape *shape);
 /* makes the widget (on) the default focus of the nearest ancestor with a focus root at 0x234, or
    stops it being that (off) (0x8114fcfa TOOL; no name found) */
 void ScePafWidget_EC6175D6(paf::ui::Widget *widget, bool on);
+/* the drag state of the widget made again for the position (name ours) */
+void ScePafWidget_E17C2B53(paf::ui::Widget *widget, void *drag, const void *pos, float time);
 /* the layout of the resolution taken over the timer's time, at once without one, its
    children's too where children */
 int32_t ScePafWidget_11D537AF(paf::ui::Widget *widget, uint32_t id, paf::Timer *t,
