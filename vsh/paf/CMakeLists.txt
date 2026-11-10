@@ -111,6 +111,7 @@ set(paf_sas_SOURCES
 	${paf_sas}/as/as_util.c
 	${paf_sas}/as/as_math.c
 	${paf_sas}/as/as_task.c
+	${paf_sas}/as/as_master.c
 )
 # Sony built libsas with GCC 4.8 at -O3 (its copies vectorized, with prefetches), keeping no NULL
 # check after a dereference, with the hard-float calling convention (floats in s0) and

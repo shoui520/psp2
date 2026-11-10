@@ -131,8 +131,3 @@ int sceSasAsTaskListRun(SceSasAsTaskList *list, const SceSasAsRenderInfo *render
 	sceSasAsMemZero(render->output, render->outputSampleSize * render->outputChannels * numSamples);
 	return 0;
 }
-
-int sceSasAsTaskListWait(SceSasAsTaskList *list)
-{
-	return 0;
-}

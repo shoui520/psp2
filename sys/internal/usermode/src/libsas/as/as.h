@@ -212,6 +212,58 @@ static inline int sceSasAsSpinTryUnlock(volatile SceUInt32 *lock)
 	}
 }
 
+/* the bits of mask in *lock, waiting longer the longer they are held */
+static inline void sceSasAsSpinLockMask(volatile SceUInt32 *lock, SceUInt32 mask)
+{
+	volatile SceUInt32 value;
+	volatile SceUInt32 locked;
+	volatile SceUInt32 spins;
+
+	spins = 0;
+	do {
+		while ((value = *lock) & mask) {
+			if (spins > 0x80)
+				sceKernelDelayThread(1000);
+			else if (spins > 0x40)
+				sceKernelDelayThread(500);
+			else if (spins > 0x20)
+				sceKernelDelayThread(199);
+			else if (spins > 0x10)
+				sceKernelDelayThread(100);
+			spins++;
+		}
+		locked = value | mask;
+	} while (sceSasAsCompareAndSwap(lock, value, locked) != value);
+}
+
+/* clears the bits of mask in a held *lock: SCE_SAS_AS_ERROR_NOT_LOCKED when none was set */
+static inline int sceSasAsSpinTryUnlockMask(volatile SceUInt32 *lock, SceUInt32 mask)
+{
+	volatile SceUInt32 value;
+	volatile SceUInt32 unlocked;
+
+	do {
+		value = *lock;
+		if ((value & mask) == 0)
+			return SCE_SAS_AS_ERROR_NOT_LOCKED;
+		unlocked = value & ~mask;
+	} while (sceSasAsCompareAndSwap(lock, value, unlocked) != value);
+	return 0;
+}
+
+/* keeps the bits of mask in *address; the value before */
+static inline SceUInt32 sceSasAsAtomicAnd(volatile SceUInt32 *address, SceUInt32 mask)
+{
+	volatile SceUInt32 value;
+	volatile SceUInt32 masked;
+
+	do {
+		value = *address;
+		masked = value & mask;
+	} while (sceSasAsCompareAndSwap(address, value, masked) != value);
+	return value;
+}
+
 /* a lightweight mutex that may have failed to be created */
 typedef struct SceSasAsMutex {
 	SceUInt8 created;

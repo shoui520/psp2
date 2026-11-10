@@ -53,12 +53,12 @@ typedef struct SceSasAsRackIoTable {
 	SceUInt8 *outputBuss;
 	SceUInt8 *outputMute;
 	SceInt16 *outputLevel;
-	SceInt16 inputBussOffset;
-	SceInt16 inputMuteOffset;
-	SceInt16 inputLevelOffset;
-	SceInt16 outputBussOffset;
-	SceInt16 outputMuteOffset;
-	SceInt16 outputLevelOffset;
+	SceUInt16 inputBussOffset;
+	SceUInt16 inputMuteOffset;
+	SceUInt16 inputLevelOffset;
+	SceUInt16 outputBussOffset;
+	SceUInt16 outputMuteOffset;
+	SceUInt16 outputLevelOffset;
 } SceSasAsRackIoTable;
 
 /* the same arrays by offset only */
@@ -66,13 +66,19 @@ typedef struct SceSasAsRackIoTask {
 	SceUInt8 numChannels;
 	SceUInt8 numInputs;
 	SceUInt8 numOutputs;
-	SceInt16 inputBussOffset;
-	SceInt16 inputMuteOffset;
-	SceInt16 inputLevelOffset;
-	SceInt16 outputBussOffset;
-	SceInt16 outputMuteOffset;
-	SceInt16 outputLevelOffset;
+	SceUInt16 inputBussOffset;
+	SceUInt16 inputMuteOffset;
+	SceUInt16 inputLevelOffset;
+	SceUInt16 outputBussOffset;
+	SceUInt16 outputMuteOffset;
+	SceUInt16 outputLevelOffset;
 } SceSasAsRackIoTask;
+
+/* the offset from where it is kept to what it points to, and back */
+#define SCE_SAS_AS_RELATIVE(field, pointer) \
+	((SceUInt16)((SceUIntPtr)(pointer) - (SceUIntPtr)&(field)))
+#define SCE_SAS_AS_AT(field) \
+	((void *)((SceUIntPtr)&(field) + (field)))
 
 int sceSasAsRackIoParamCreate(SceSasAsAllocator *allocator, SceSasAsConfigEntry **config,
 			      SceSasAsHandle *handle, SceSize offset);

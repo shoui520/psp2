@@ -8,10 +8,6 @@
 #include "as_ssp.h"
 #include "as_rack.h"
 
-/* the offset from where it is kept to what it points to */
-#define SCE_SAS_AS_RELATIVE(field, pointer) \
-	((SceInt16)((SceUIntPtr)(pointer) - (SceUIntPtr)&(field)))
-
 int sceSasAsRackIoParamCreate(SceSasAsAllocator *allocator, SceSasAsConfigEntry **config,
 			      SceSasAsHandle *handle, SceSize offset)
 {

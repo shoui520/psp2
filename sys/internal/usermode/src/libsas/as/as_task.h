@@ -20,8 +20,8 @@ typedef struct SceSasAsTaskBuffer {
 
 typedef struct SceSasAsTask {
 	SceUInt32 type;
-	void (*run)(const SceSasAsRenderInfo *render, SceSasAsTaskBuffer *buffers,
-		    SceUInt32 numBuffers);
+	int (*run)(const SceSasAsRenderInfo *render, SceSasAsTaskBuffer *buffers,
+		   SceUInt32 numBuffers);
 	SceUInt32 reserved;
 	SceSasAsTaskBuffer buffers[SCE_SAS_AS_TASK_MAX_BUFFERS];
 	SceUInt32 numBuffers;
@@ -40,6 +40,5 @@ int sceSasAsTaskListBegin(SceSasAsTaskList *list, int phase);
 int sceSasAsTaskListEnd(SceSasAsTaskList *list);
 int sceSasAsTaskListAdd(SceSasAsTaskList *list, SceSasAsTask *task);
 int sceSasAsTaskListRun(SceSasAsTaskList *list, const SceSasAsRenderInfo *render, SceUInt32 numSamples);
-int sceSasAsTaskListWait(SceSasAsTaskList *list);
 
 #endif
