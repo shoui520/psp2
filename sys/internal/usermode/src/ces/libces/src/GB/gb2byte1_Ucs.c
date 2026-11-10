@@ -1,0 +1,201 @@
+/*
+ * libSceCes's gb2byte1_Ucs.c (Sony's internal/usermode/src/ces/libces/src/GB): GB area 1 (first
+ * bytes 0xA1-0xA9, second bytes 0xA1-0xFE), the GB2312 symbols, to UCS-4; with the codes
+ * GB18030-2000 maps into the PUA and the user-defined area 1 (0xAAA1-0xAFFE).
+ */
+#include <stdint.h>
+#include <ces/error.h>
+#include "ces_gb_profile.h"
+
+/* rows 0xA1-0xA2 by index from 0xA1A1, 94 a row */
+static const uint16_t cesGBK1_Hikanji_Ucs_Table[2 * 94] = {
+	/* 0xA1A1 */
+	0x3000, 0x3001, 0x3002, 0x00b7, 0x02c9, 0x02c7, 0x00a8, 0x3003,
+	0x3005, 0x2014, 0xff5e, 0x2016, 0x2026, 0x2018, 0x2019, 0x201c,
+	0x201d, 0x3014, 0x3015, 0x3008, 0x3009, 0x300a, 0x300b, 0x300c,
+	0x300d, 0x300e, 0x300f, 0x3016, 0x3017, 0x3010, 0x3011, 0x00b1,
+	0x00d7, 0x00f7, 0x2236, 0x2227, 0x2228, 0x2211, 0x220f, 0x222a,
+	0x2229, 0x2208, 0x2237, 0x221a, 0x22a5, 0x2225, 0x2220, 0x2312,
+	0x2299, 0x222b, 0x222e, 0x2261, 0x224c, 0x2248, 0x223d, 0x221d,
+	0x2260, 0x226e, 0x226f, 0x2264, 0x2265, 0x221e, 0x2235, 0x2234,
+	0x2642, 0x2640, 0x00b0, 0x2032, 0x2033, 0x2103, 0xff04, 0x00a4,
+	0xffe0, 0xffe1, 0x2030, 0x00a7, 0x2116, 0x2606, 0x2605, 0x25cb,
+	0x25cf, 0x25ce, 0x25c7, 0x25c6, 0x25a1, 0x25a0, 0x25b3, 0x25b2,
+	0x203b, 0x2192, 0x2190, 0x2191, 0x2193, 0x3013,
+	/* 0xA2A1 */
+	0x2170, 0x2171, 0x2172, 0x2173, 0x2174, 0x2175, 0x2176, 0x2177,
+	0x2178, 0x2179, 0xe766, 0xe767, 0xe768, 0xe769, 0xe76a, 0xe76b,
+	0x2488, 0x2489, 0x248a, 0x248b, 0x248c, 0x248d, 0x248e, 0x248f,
+	0x2490, 0x2491, 0x2492, 0x2493, 0x2494, 0x2495, 0x2496, 0x2497,
+	0x2498, 0x2499, 0x249a, 0x249b, 0x2474, 0x2475, 0x2476, 0x2477,
+	0x2478, 0x2479, 0x247a, 0x247b, 0x247c, 0x247d, 0x247e, 0x247f,
+	0x2480, 0x2481, 0x2482, 0x2483, 0x2484, 0x2485, 0x2486, 0x2487,
+	0x2460, 0x2461, 0x2462, 0x2463, 0x2464, 0x2465, 0x2466, 0x2467,
+	0x2468, 0x2469, 0x20ac, 0xe76d, 0x3220, 0x3221, 0x3222, 0x3223,
+	0x3224, 0x3225, 0x3226, 0x3227, 0x3228, 0x3229, 0xe76e, 0xe76f,
+	0x2160, 0x2161, 0x2162, 0x2163, 0x2164, 0x2165, 0x2166, 0x2167,
+	0x2168, 0x2169, 0x216a, 0x216b, 0xe770, 0xe771,
+};
+
+/* row 0xA3 (_sceCesGBGetIndex runs) to the fullwidth forms */
+static const CesIndexUcsDB_t cesGBK1_FullHalfWidth_UcsRowFF_DB[] = {
+	{ 0x00bc, 0xff01 }, { 0x00c0, 0xff05 }, { 0x0119, 0xffe3 }, { 0x011a, 0x0000 },
+};
+
+/* rows 0xA4-0xA5 to the kana */
+static const CesIndexUcsDB_t cesGBK1_Kana_UcsRow30_DB[] = {
+	{ 0x011a, 0x3041 }, { 0x016d, 0x0000 }, { 0x0178, 0x30a1 }, { 0x01ce, 0x0000 },
+};
+
+/* row 0xA6 to 0xA6DF to Greek */
+static const CesIndexUcsDB_t cesGBK1_Greek_UcsRow03_DB[] = {
+	{ 0x01d6, 0x0391 }, { 0x01e7, 0x03a3 }, { 0x01ee, 0x0000 }, { 0x01f6, 0x03b1 },
+	{ 0x0207, 0x03c3 }, { 0x020e, 0x0000 },
+};
+
+/* 0xA6E0-0xA6FE, the vertical forms */
+static const uint16_t cesGBK1_CJK_Vertical_UcsRowFE_Table[31] = {
+	0xfe35, 0xfe36, 0xfe39, 0xfe3a, 0xfe3f, 0xfe40, 0xfe3d, 0xfe3e,
+	0xfe41, 0xfe42, 0xfe43, 0xfe44, 0xe794, 0xe795, 0xfe3b, 0xfe3c,
+	0xfe37, 0xfe38, 0xfe31, 0xe796, 0xfe33, 0xfe34, 0xe797, 0xe798,
+	0xe799, 0xe79a, 0xe79b, 0xe79c, 0xe79d, 0xe79e, 0xe79f,
+};
+
+/* row 0xA7 to Cyrillic */
+static const CesIndexUcsDB_t cesGBK1_Cyrillic_UcsRow04_DB[] = {
+	{ 0x0234, 0x0410 }, { 0x023b, 0x0416 }, { 0x0255, 0x0000 }, { 0x0264, 0x0430 },
+	{ 0x026b, 0x0436 }, { 0x0285, 0x0000 },
+};
+
+/* 0xA8A1-0xA8C4, the pinyin letters, by index */
+static const uint16_t cesGBK1_LatinEx_Ucs_Table[36] = {
+	0x0101, 0x00e1, 0x01ce, 0x00e0, 0x0113, 0x00e9, 0x011b, 0x00e8,
+	0x012b, 0x00ed, 0x01d0, 0x00ec, 0x014d, 0x00f3, 0x01d2, 0x00f2,
+	0x016b, 0x00fa, 0x01d4, 0x00f9, 0x01d6, 0x01d8, 0x01da, 0x01dc,
+	0x00fc, 0x00ea, 0x0251, 0xe7c7, 0x0144, 0x0148, 0xe7c8, 0x0261,
+	0xe7c9, 0xe7ca, 0xe7cb, 0xe7cc,
+};
+
+/* 0xA8C5-0xA8FE to Bopomofo */
+static const CesIndexUcsDB_t cesGBK1_Bopomofo_UcsRow31_DB[] = {
+	{ 0x02b6, 0x3105 }, { 0x02db, 0x0000 },
+};
+
+/* row 0xA9 to the box drawing */
+static const CesIndexUcsDB_t cesGBK1_Keisen_UcsRow25_DB[] = {
+	{ 0x02f0, 0x0000 }, { 0x02f3, 0x2500 }, { 0x033f, 0x0000 },
+};
+
+#define CES_GB_ROW_INDEX(gbc)	(((gbc) >> 8) * 94 + ((gbc) & 0xff))
+
+int _sceCesGB2byte1_ToUcs4(const SceCesGbUcsProfile *gbProf, uint32_t gbc, uint32_t *ucs4)
+{
+	uint32_t index;
+	uint32_t ucs = 0;
+
+	if (gbc <= 0xa2fe) {
+		index = CES_GB_ROW_INDEX(gbc) - CES_GB_ROW_INDEX(0xa1a1);
+		/* GB2312 has no 0xA2A1-0xA2AA */
+		if ((gbProf->types != CES_GB_TYPES_EDITION_GB2312 || gbc < 0xa2a1 || gbc > 0xa2aa) &&
+		    index < 2 * 94) {
+			ucs = cesGBK1_Hikanji_Ucs_Table[index];
+			/* GBK's euro sign is 0x80 */
+			if (ucs == CES_UCS_EURO_SIGN && gbProf->types < CES_GB_TYPES_EDITION_2000)
+				ucs = 0;
+		}
+	} else if (gbc <= 0xa5fe) {
+		if (gbc == 0xa3a4) {
+			ucs = 0xffe5;
+		} else if (gbc <= 0xa3fe) {
+			index = _sceCesGBGetIndex(gbc);
+			ucs = _sceCesIndexUcsDB_getUcs4(cesGBK1_FullHalfWidth_UcsRowFF_DB,
+							CES_INDEX_DB_LAST(cesGBK1_FullHalfWidth_UcsRowFF_DB),
+							index);
+		} else {
+			index = _sceCesGBGetIndex(gbc);
+			ucs = _sceCesIndexUcsDB_getUcs4(cesGBK1_Kana_UcsRow30_DB,
+							CES_INDEX_DB_LAST(cesGBK1_Kana_UcsRow30_DB),
+							index);
+			if (ucs == 0 && (gbProf->types & CES_GB_TYPES_PUA) != 0) {
+				if (gbc >= 0xa4f4 && gbc <= 0xa4fe)
+					ucs = gbc + (0xe772 - 0xa4f4);
+				else if (gbc >= 0xa5f7 && gbc <= 0xa5fe)
+					ucs = gbc + (0xe77d - 0xa5f7);
+			}
+		}
+	} else if (gbc <= 0xa6fe) {
+		if (gbc < 0xa6e0) {
+			index = _sceCesGBGetIndex(gbc);
+			ucs = _sceCesIndexUcsDB_getUcs4(cesGBK1_Greek_UcsRow03_DB,
+							CES_INDEX_DB_LAST(cesGBK1_Greek_UcsRow03_DB),
+							index);
+			if (ucs == 0 && (gbProf->types & CES_GB_TYPES_PUA) != 0) {
+				if (gbc >= 0xa6b9 && gbc <= 0xa6c0)
+					ucs = gbc + (0xe785 - 0xa6b9);
+				else if (gbc >= 0xa6d9 && gbc <= 0xa6df)
+					ucs = gbc + (0xe78d - 0xa6d9);
+			}
+		} else if (gbProf->types != CES_GB_TYPES_EDITION_GB2312) {
+			index = CES_GB_ROW_INDEX(gbc) - CES_GB_ROW_INDEX(0xa6e0);
+			if (index < 31)
+				ucs = cesGBK1_CJK_Vertical_UcsRowFE_Table[index];
+		}
+	} else if (gbc <= 0xa7fe) {
+		if (gbc == 0xa7a7) {
+			ucs = 0x0401;
+		} else if (gbc == 0xa7d7) {
+			ucs = 0x0451;
+		} else {
+			index = _sceCesGBGetIndex(gbc);
+			ucs = _sceCesIndexUcsDB_getUcs4(cesGBK1_Cyrillic_UcsRow04_DB,
+							CES_INDEX_DB_LAST(cesGBK1_Cyrillic_UcsRow04_DB),
+							index);
+			if (ucs == 0 && (gbProf->types & CES_GB_TYPES_PUA) != 0) {
+				if (gbc >= 0xa7c2 && gbc <= 0xa7d0)
+					ucs = gbc + (0xe7a0 - 0xa7c2);
+				else if (gbc >= 0xa7f2 && gbc <= 0xa7fe)
+					ucs = gbc + (0xe7af - 0xa7f2);
+			}
+		}
+	} else if (gbc <= 0xa8fe) {
+		if (gbc < 0xa8c5) {
+			index = CES_GB_ROW_INDEX(gbc) - CES_GB_ROW_INDEX(0xa8a1);
+			/* GB18030-2005 maps 0xA8BC to U+1E3F, GB18030-2000 0xA8BF to U+01F9 */
+			if (gbc == 0xa8bc && gbProf->types >= CES_GB_TYPES_EDITION_2005)
+				ucs = 0x1e3f;
+			else if (gbc == 0xa8bf && gbProf->types >= CES_GB_TYPES_EDITION_2000)
+				ucs = 0x01f9;
+			else if ((gbc < 0xa8bb || gbProf->types != CES_GB_TYPES_EDITION_GB2312) &&
+				 index < 36)
+				ucs = cesGBK1_LatinEx_Ucs_Table[index];
+		} else {
+			index = _sceCesGBGetIndex(gbc);
+			ucs = _sceCesIndexUcsDB_getUcs4(cesGBK1_Bopomofo_UcsRow31_DB,
+							CES_INDEX_DB_LAST(cesGBK1_Bopomofo_UcsRow31_DB),
+							index);
+			if (ucs == 0 && (gbProf->types & CES_GB_TYPES_PUA) != 0 && gbc >= 0xa8ea &&
+			    gbc <= 0xa8fe)
+				ucs = gbc + (0xe7cd - 0xa8ea);
+		}
+	} else if (gbc <= 0xa9fe) {
+		index = _sceCesGBGetIndex(gbc);
+		ucs = _sceCesIndexUcsDB_getUcs4(cesGBK1_Keisen_UcsRow25_DB,
+						CES_INDEX_DB_LAST(cesGBK1_Keisen_UcsRow25_DB), index);
+		if (ucs == 0 && (gbProf->types & CES_GB_TYPES_PUA) != 0) {
+			if (gbc >= 0xa9a1 && gbc <= 0xa9a3)
+				ucs = gbc + (0xe7fe - 0xa9a1);
+			else if (gbc >= 0xa9f0 && gbc <= 0xa9fe)
+				ucs = gbc + (0xe801 - 0xa9f0);
+		}
+	} else if (gbc <= 0xaffe && (gbProf->types & CES_GB_TYPES_UDA_UCS_PUA) != 0) {
+		/* the user-defined area 0xAAA1-0xAFFE from U+E000 */
+		ucs = CES_GB_ROW_INDEX(gbc) - CES_GB_ROW_INDEX(0xaaa1) + 0xe000;
+	}
+	/* the codes GB18030-2000 maps into the PUA */
+	if (ucs >= 0xe000 && ucs <= 0xf8ff && (gbProf->types & CES_GB_TYPES_PUA) == 0)
+		ucs = 0;
+	*ucs4 = ucs;
+	if (ucs != 0)
+		return SCE_CES_OK;
+	return SCE_CES_ERROR_UNASSIGNED_CODE;
+}

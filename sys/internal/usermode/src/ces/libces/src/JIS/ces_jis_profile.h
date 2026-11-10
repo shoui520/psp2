@@ -74,6 +74,9 @@ int sceCesSJisToUcs4(const SceCesJisUcsProfile *prof, const uint8_t *sjisBuf, ui
 		     uint32_t *sjisSize, uint32_t *ucs4);
 int sceCesUcs4ToSJis(uint32_t ucs4, const SceCesJisUcsProfile *prof, uint8_t *sjisBuf,
 		     uint32_t sjisMax, uint32_t *sjisSize);
+int sceCesUtf16ToSJis(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16Len,
+		      const SceCesJisUcsProfile *prof, uint8_t *sjisBuf, uint32_t sjisMax,
+		      uint32_t *sjisSize);
 SceCesSJisUcsProfile *sceCesUcsProfileInitSJis1997Cp932(SceCesJisUcsProfile *prof);
 
 /* the rows, JIS X 0208/0213 to UCS */

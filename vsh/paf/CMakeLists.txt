@@ -46,22 +46,59 @@ set(paf_ces_SOURCES
 	${paf_ces}/UCS/UTF16BE_UTF8.c
 	${paf_ces}/UCS/UTF8.c
 	${paf_ces}/MBCS/MbcsCtx_Ucs.c
+	${paf_ces}/JIS/JisProfile_SJis1997_CP932.c
+	${paf_ces}/JIS/SJis_FromUCS.c
+	${paf_ces}/JIS/SJis_FromUTF16.c
+	${paf_ces}/JIS/SJis_ToUCS.c
 	${paf_ces}/MBCS/ces_mbcs_context.c
 	${paf_ces}/MBCS/Mbcs_FromUTF32.c
 	${paf_ces}/MBCS/MbcsStr_FromUTF16.c
 	${paf_ces}/MBCS/MbcsStr_ToUTF16.c
+	${paf_ces}/GB/ces_gb_profile.c
+	${paf_ces}/GB/GB_FromUTF16.c
+	${paf_ces}/GB/GBProfile_GB18030_2000.c
 	${paf_ces}/ces_context.c
 	${paf_ces}/UCS/ces_ucs_callback.c
 	${paf_ces}/UCS/UTF16.c
 	${paf_ces}/UCS/UTF16BE.c
 	${paf_ces}/UCS/UTF16LE.c
+	${paf_ces}/SBCS/Sbc_UCS.c
+	${paf_ces}/SBCS/ISO_646/ASCII.c
+	${paf_ces}/JIS/jis1990_Ext_FromUcs.c
+	${paf_ces}/JIS/jis1990_Ext_row85_94.c
+	${paf_ces}/JIS/jis2004_row01_08.c
+	${paf_ces}/JIS/jis2004_row13.c
+	${paf_ces}/JIS/jis2004_row16_84.c
+	${paf_ces}/JIS/jis2004_UcsCJKExB.c
+	${paf_ces}/JIS/Jis_FromUCS.c
+	${paf_ces}/JIS/JIS_X_0201_Katakana.c
+	${paf_ces}/JIS/JisMenKuTen.c
+	${paf_ces}/JIS/ShiftJIS.c
 	${paf_ces}/MBCS/ces_mbcs_callback.c
 	${paf_ces}/MBCS/Mbcs_FromUCS4.c
 	${paf_ces}/MBCS/Mbcs_ToUTF16.c
+	${paf_ces}/GB/gb18030_FromUcs.c
+	${paf_ces}/GB/gb2byte1_Ucs.c
+	${paf_ces}/GB/gb2byte2_Ucs.c
+	${paf_ces}/GB/gb2byte3_Ucs.c
+	${paf_ces}/GB/gb2byte4_Ucs.c
+	${paf_ces}/GB/gb2byte5_Ucs.c
+	${paf_ces}/GB/gb4byte_UcsBMP.c
+	${paf_ces}/GB/GB_FromUCS.c
+	${paf_ces}/GB/GB_ToUCS.c
+	${paf_ces}/GB/gbc_FromUcsPrivate.c
+	${paf_ces}/GB/gbk_FromUcs.c
+	${paf_ces}/SBCS/ces_sbcs_profile.c
+	${paf_ces}/JIS/jis2004_FromUcs.c
 	${paf_ces}/MBCS/Mbcs_ToUCS4.c
+	${paf_ces}/DBCS/DBCS.c
+	${paf_ces}/GB/GB.c
+	${paf_ces}/GB/gb2byte1_FromUcs.c
+	${paf_ces}/GB/gb2byte2_FromUcs.c
+	${paf_ces}/GB/gb2byte5_FromUcs.c
 )
-# the SDK's libces, built with SNC's own inlining, not libpaf's
-set_source_files_properties(${paf_ces_SOURCES} PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+# the SDK's libces, built with SNC's own inlining (36..56 reproduce it), not libpaf's
+set_source_files_properties(${paf_ces_SOURCES} PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=40)
 
 psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/module.c

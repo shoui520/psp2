@@ -912,23 +912,28 @@ int _sceCesSJis2004Row_16_84_ToUcs4(const SceCesJisUcsProfile *prof, uint8_t ku,
 				    uint32_t *ucs4)
 {
 	uint32_t ucs;
-	int i;
+	int ret;
 
-	i = (ku - 16) * 94 + ten - 1;
-	ucs = cesJIS2004Row16To84_UcsTable[i];
+	ucs = cesJIS2004Row16To84_UcsTable[(ku - 16) * 94 + ten - 1];
 	if (ucs >= 0xd800 && ucs <= 0xdfff)
 		ucs = _sceCesJisUcsExBIndexToUcs4(ucs - 0xd800);
+	ret = SCE_CES_ERROR_UNASSIGNED_CODE;
 	*ucs4 = ucs;
-	if (ucs == 0)
-		return SCE_CES_ERROR_UNASSIGNED_CODE;
-	return SCE_CES_OK;
+	if (ucs != 0)
+		ret = SCE_CES_OK;
+	return ret;
 }
 
 /* rows 16-84 of JIS X 0208: the level 1 and 2 kanji, without JIS X 0213's ends of rows 47 and 84 */
 int _sceCesSJisRow_16_84_ToUcs4(const SceCesJisUcsProfile *prof, uint8_t ku, uint8_t ten,
 				uint32_t *ucs4)
 {
-	if ((ku == 47 && ten >= 52) || (ku == 84 && ten >= 7)) {
+	if (ku == 47) {
+		if (ten >= 52) {
+			*ucs4 = 0;
+			return SCE_CES_ERROR_UNASSIGNED_CODE;
+		}
+	} else if (ku == 84 && ten >= 7) {
 		*ucs4 = 0;
 		return SCE_CES_ERROR_UNASSIGNED_CODE;
 	}
