@@ -1,0 +1,60 @@
+/*
+ * An opaque bubble: the bubble image's disc and lighting, plus a reflection into a spherical
+ * environment map, a rim term and a fade to the back colour along the bubble's height.
+ */
+struct ColorArgs {
+	float4 MaterialPack[4];
+	float4 DiffuseColor;
+	float3 LightPos;
+	float4x4 View;
+	float4 EyePos;
+};
+
+struct VertexInput {
+	float4 pos : POSITION;
+	float4 tex : TEXCOORD0;
+};
+
+void main(VertexInput vin,
+	  uniform float4x4 MVP,
+	  uniform float2 Height,
+	  uniform float4x4 TransformInverseTranspose,
+	  uniform float4x4 Transform,
+	  uniform float2 BackColorZRange,
+	  uniform ColorArgs cargs,
+	  out float4 oPosition : POSITION,
+	  out half4 oColor : TEXCOORD0,
+	  out half4 oEnvCoord : TEXCOORD1,
+	  out half4 oTexcoord : TEXCOORD2)
+{
+	float4 model = vin.pos.xxzz * vin.tex.zwzw;
+	float4 world = mul(float4(model.xy, vin.pos.y, 1), Transform);
+	float3 normal = normalize(mul(float3(model.zw, vin.pos.w),
+				      (float3x3)TransformInverseTranspose));
+	float2 offset = model.xy * (cargs.MaterialPack[3].x * 0.5);
+	float3 eye = normalize(cargs.EyePos.xyz - world.xyz);
+	float facing = dot(normal, eye);
+	float3 reflected = normal * (abs(facing * 2) * 0.95 + 0.05) - eye;
+	float3 light = normalize(cargs.LightPos - world.xyz);
+	float diffuse = dot(normal, light) * 0.5 + 0.5;
+	float distance = sqrt(dot(reflected.xy, reflected.xy));
+	float angle = atan2(distance, reflected.z);
+	float rim = saturate((facing - cargs.MaterialPack[2].y) / (1 - cargs.MaterialPack[2].y));
+	float exponent = cargs.MaterialPack[1].z;
+	float specular = pow(max(dot(normal, normalize(light + eye)), 0), exponent) *
+			 ((exponent + 2) * 0.125);
+	float shadow = 1 - diffuse * diffuse;
+	float2 uv = mul(normal, (float3x2)cargs.View) * cargs.MaterialPack[3].z + offset + 0.5;
+
+	oPosition = mul(world, MVP);
+	oColor = cargs.MaterialPack[0] *
+		 (cargs.DiffuseColor * cargs.MaterialPack[1].x * (diffuse * diffuse));
+	oEnvCoord.xy = reflected.xy * (angle / distance) * 0.15915494 + 0.5;
+	oEnvCoord.z = 0;
+	oEnvCoord.w = saturate((Height.y * (vin.pos.y - Height.x) - BackColorZRange.x) *
+			       BackColorZRange.y);
+	uv.y = 1 - uv.y;
+	oTexcoord.xy = uv;
+	oTexcoord.z = specular * (1 - shadow * shadow * shadow);
+	oTexcoord.w = cargs.MaterialPack[2].z * (1 - rim * rim * (3 - 2 * rim));
+}
