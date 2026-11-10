@@ -80,6 +80,57 @@ typedef struct SceSasAsRackIoTask {
 #define SCE_SAS_AS_AT(field) \
 	((void *)((SceUIntPtr)&(field) + (field)))
 
+/*
+ * One channel into a buffer at a level (4.12), replacing what the buffer held or adding to it;
+ * a level that changed since the last render (delta: their difference, 16.16) ramps over the
+ * render. The racks' tasks mix their inputs, matrices and outputs with it.
+ */
+static inline void sceSasAsRackMix(SceInt32 *buffer, const SceInt32 *input, SceUInt32 granularity,
+				   SceUInt32 add, SceInt32 from, SceInt32 to, SceInt32 delta)
+{
+	SceInt32 level, step;
+	SceUInt32 i;
+
+	if (add) {
+		if (to != from) {
+			step = delta / (SceInt32)granularity;
+			level = from << 16;
+			for (i = 0; i < granularity; i++) {
+				buffer[i] += (input[i] * (level >> 16)) >> 12;
+				level += step;
+			}
+		} else if (to != 0) {
+			if (to == 0x1000) {
+				for (i = 0; i < granularity; i++)
+					buffer[i] += input[i];
+			} else {
+				for (i = 0; i < granularity; i++)
+					buffer[i] += (SceInt32)(((SceInt64)input[i] * to) >> 12);
+			}
+		}
+	} else {
+		if (to != from) {
+			step = delta / (SceInt32)granularity;
+			level = from << 16;
+			for (i = 0; i < granularity; i++) {
+				buffer[i] = (SceInt32)(((SceInt64)input[i] * (level >> 16)) >> 12);
+				level += step;
+			}
+		} else if (to == 0) {
+			for (i = 0; i < granularity; i++)
+				buffer[i] = 0;
+		} else if (to == 0x1000) {
+			if (buffer != input) {
+				for (i = 0; i < granularity; i++)
+					buffer[i] = input[i];
+			}
+		} else {
+			for (i = 0; i < granularity; i++)
+				buffer[i] = (SceInt32)(((SceInt64)input[i] * to) >> 12);
+		}
+	}
+}
+
 int sceSasAsRackIoParamCreate(SceSasAsAllocator *allocator, SceSasAsConfigEntry **config,
 			      SceSasAsHandle *handle, SceSize offset);
 int sceSasAsRackIoTableCreate(SceSasAsAllocator *allocator, SceSasAsConfigEntry **config,

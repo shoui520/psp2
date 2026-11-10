@@ -230,58 +230,6 @@ static inline SceInt32 sceSasAsMasterRackSaturate(SceInt32 sample)
 }
 
 /*
- * One channel of an input into its buffer at a level (4.12), the first input of a buffer
- * replacing what it held, the others adding to it; a level that changed since the last
- * render ramps over the render.
- */
-static inline void sceSasAsMasterRackMix(SceInt32 *buffer, const SceInt32 *input,
-					 SceUInt32 granularity, SceUInt32 add, SceInt32 from,
-					 SceInt32 to, SceInt32 delta)
-{
-	SceInt32 level, step;
-	SceUInt32 i;
-
-	if (add) {
-		if (to != from) {
-			step = delta / (SceInt32)granularity;
-			level = from << 16;
-			for (i = 0; i < granularity; i++) {
-				buffer[i] += (input[i] * (level >> 16)) >> 12;
-				level += step;
-			}
-		} else if (to != 0) {
-			if (to == 0x1000) {
-				for (i = 0; i < granularity; i++)
-					buffer[i] += input[i];
-			} else {
-				for (i = 0; i < granularity; i++)
-					buffer[i] += (SceInt32)(((SceInt64)input[i] * to) >> 12);
-			}
-		}
-	} else {
-		if (to != from) {
-			step = delta / (SceInt32)granularity;
-			level = from << 16;
-			for (i = 0; i < granularity; i++) {
-				buffer[i] = (SceInt32)(((SceInt64)input[i] * (level >> 16)) >> 12);
-				level += step;
-			}
-		} else if (to == 0) {
-			for (i = 0; i < granularity; i++)
-				buffer[i] = 0;
-		} else if (to == 0x1000) {
-			if (buffer != input) {
-				for (i = 0; i < granularity; i++)
-					buffer[i] = input[i];
-			}
-		} else {
-			for (i = 0; i < granularity; i++)
-				buffer[i] = (SceInt32)(((SceInt64)input[i] * to) >> 12);
-		}
-	}
-}
-
-/*
  * The task: each input into the buffer it names, the compressor over the first buffer in
  * blocks of 32 samples (its level the peak or the RMS of the block), the volume over every
  * buffer, and the buffers in use into the output, interleaved and saturated to 16 bits.
@@ -322,10 +270,10 @@ static int sceSasAsMasterRackRun(const SceSasAsRenderInfo *render, SceSasAsTaskB
 				SceInt32 from = lastLevel[input];
 				SceInt32 *const *busses = (SceInt32 **)render->bussBuffers;
 
-				sceSasAsMasterRackMix(buffer[ch],
-						      busses[inputBuss[input] * render->numChannels + ch],
-						      render->granularity, used & bit, from, to,
-						      (to << 16) - (from << 16));
+				sceSasAsRackMix(buffer[ch],
+						busses[inputBuss[input] * render->numChannels + ch],
+						render->granularity, used & bit, from, to,
+						(to << 16) - (from << 16));
 			}
 			used |= bit;
 		}
