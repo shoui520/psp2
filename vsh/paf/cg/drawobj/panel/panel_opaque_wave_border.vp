@@ -1,0 +1,66 @@
+/*
+ * The border of an opaque wave panel: the rounded rim around the inset top face, a
+ * superellipse whose roundness is set per axis, lit and coloured as the wave panel's top.
+ */
+struct ColorArgs {
+	float4 MaterialPack[4];
+	float4 PointLightPack2[4];
+	float4 PointLightPack1[4];
+	float4 WaveCenterColor;
+	float4 WaveFogPack[4];
+	float4 WaveEdgeColor;
+	float4 EyePos;
+};
+
+struct VertexInput {
+	float4 pos : POSITION;
+	float4 tex : TEXCOORD0;
+};
+
+float2 SuperEllipse(float2 v, float exponent)
+{
+	return sign(v) * pow(abs(v), exponent);
+}
+
+void main(VertexInput vin,
+	  uniform float4x4 MVP,
+	  uniform float4 Size,
+	  uniform float4x4 Transform,
+	  uniform float WorldScaleHack,
+	  uniform float3 BorderSize,
+	  uniform float2 Roundness,
+	  uniform ColorArgs cargs,
+	  out float4 oPosition : POSITION,
+	  out half4 oColor : TEXCOORD0)
+{
+	float2 edgeXY = SuperEllipse(vin.tex.xy, Roundness.x);
+	float2 normalXY = SuperEllipse(vin.tex.xy, 2 - Roundness.x);
+	float2 normalZW = SuperEllipse(vin.tex.zw, 2 - Roundness.y);
+	float3 normal = normalize(float3(normalZW * normalXY.x, normalXY.y) / BorderSize);
+	float2 edgeZW = SuperEllipse(vin.tex.zw, Roundness.y);
+	float3 local = float3(vin.pos.zw * (Size.xy * 0.5 - BorderSize.xy), 0) +
+		       BorderSize * float3(edgeZW * edgeXY.x, edgeXY.y);
+	float fog = Size.w * (0.5 * Size.y + local.y);
+	float3 world;
+	float facing;
+	float4 edge;
+	float3 fogColor;
+	float4 center;
+	float3 light;
+	float diffuse;
+	float4 color;
+
+	normal = normalize(mul(normal, (float3x3)Transform));
+	world = mul(float4(local, 1), Transform).xyz;
+	facing = saturate(dot(normalize(cargs.EyePos.xyz - world), normal));
+	edge = cargs.WaveEdgeColor * pow(abs(1 - facing), cargs.WaveEdgeColor.w);
+	fogColor = cargs.WaveFogPack[0].xyz;
+	center = cargs.WaveCenterColor * pow(facing, cargs.WaveCenterColor.w);
+	light = normalize(cargs.PointLightPack1[0].xyz - world);
+	diffuse = dot(normal, light) * 0.5 + 0.5;
+	oPosition = mul(float4(world * WorldScaleHack, 1), MVP);
+	color = cargs.MaterialPack[0] * (cargs.PointLightPack2[2] *
+		(diffuse * (cargs.MaterialPack[1].x * diffuse)) + cargs.PointLightPack2[0]) +
+		(center + edge);
+	oColor = float4(lerp(fogColor, color.rgb, fog), color.a);
+}

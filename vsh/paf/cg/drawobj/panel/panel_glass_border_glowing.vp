@@ -1,0 +1,94 @@
+/*
+ * The glowing border of a glass panel: the glass border, with a glow that runs around the rim
+ * from the direction BorderGlow gives, falling off on each side with its own power.
+ */
+struct ColorArgs {
+	float2 BackgroundRatio;
+	float4 MaterialPack[4];
+	float4 PointLightPack2[4];
+	float4 PointLightPack1[4];
+	float4x4 View;
+	float4 EyePos;
+};
+
+struct VertexInput {
+	float4 pos : POSITION;
+	float4 tex : TEXCOORD0;
+};
+
+float2 SuperEllipse(float2 v, float exponent)
+{
+	return sign(v) * pow(abs(v), exponent);
+}
+
+void main(VertexInput vin,
+	  uniform float4x4 MVP,
+	  uniform float4 Size,
+	  uniform float4x4 Transform,
+	  uniform float WorldScaleHack,
+	  uniform float3 BorderSize,
+	  uniform float2 Roundness,
+	  uniform float4 BorderGlow,
+	  uniform float2 BorderPow,
+	  uniform ColorArgs cargs,
+	  out float4 oPosition : POSITION,
+	  out half4 oColor : TEXCOORD0,
+	  out half4 oFactor : TEXCOORD1,
+	  out half4 oTexcoord : TEXCOORD2)
+{
+	float2 edgeXY = SuperEllipse(vin.tex.xy, Roundness.x);
+	float2 normalXY = SuperEllipse(vin.tex.xy, 2 - Roundness.x);
+	float2 normalZW = SuperEllipse(vin.tex.zw, 2 - Roundness.y);
+	float3 normal = normalize(float3(normalZW * normalXY.x, normalXY.y) / BorderSize);
+	float2 edgeZW = SuperEllipse(vin.tex.zw, Roundness.y);
+	float3 local = float3(vin.pos.zw * (Size.xy * 0.5 - BorderSize.xy), 0) +
+		       BorderSize * float3(edgeZW * edgeXY.x, edgeXY.y);
+	float2 around = normalize(local.xy);
+	float side = acos(dot(BorderGlow.xy, around)) *
+		     sign(BorderGlow.x * around.y - BorderGlow.y * around.x) * 0.31830987;
+	float glow = BorderGlow.z * vin.tex.x * vin.tex.x *
+		     pow(abs(1 - (side < 0 ? -side : side)), lerp(BorderPow.x, BorderPow.y, step(0, side)));
+	float3 world;
+	float3 eye;
+	float3 reflected;
+	float3 toLight;
+	float lightDistance;
+	float3 light;
+	float diffuse;
+	float shadow;
+	float rim;
+	float exponent = cargs.MaterialPack[1].z;
+	float specular;
+	float attenuation;
+	float distance;
+	float angle;
+	float2 screen;
+
+	normal = normalize(mul(normal, (float3x3)Transform));
+	world = mul(float4(local, 1), Transform).xyz;
+	eye = normalize(cargs.EyePos.xyz - world);
+	reflected = reflect(-eye, normal);
+	toLight = cargs.PointLightPack1[0].xyz - world;
+	lightDistance = length(toLight);
+	light = toLight / lightDistance;
+	diffuse = dot(normal, light) * 0.5 + 0.5;
+	shadow = 1 - diffuse * diffuse;
+	rim = saturate((dot(eye, normal) - cargs.MaterialPack[2].y) /
+		       (1 - cargs.MaterialPack[2].y));
+	oPosition = mul(float4(world * WorldScaleHack, 1), MVP);
+	attenuation = 1 / (cargs.PointLightPack1[1].x + lightDistance *
+			   (cargs.PointLightPack1[1].y + lightDistance * cargs.PointLightPack1[1].z));
+	oColor = cargs.MaterialPack[0] *
+		 (cargs.PointLightPack2[2] * cargs.MaterialPack[1].x * (diffuse * diffuse)) *
+		 (cargs.MaterialPack[3].x * attenuation);
+	distance = sqrt(dot(reflected.zx, reflected.zx));
+	angle = atan2(distance, reflected.y);
+	screen = oPosition.xy / oPosition.w * 0.5 + 0.5;
+	oTexcoord.xy = mul(normal, (float3x2)cargs.View) *
+		       (cargs.BackgroundRatio * cargs.MaterialPack[3].z) + screen;
+	oTexcoord.zw = reflected.zx * (angle / distance) * 0.15915494 + 0.5;
+	specular = pow(max(dot(normal, normalize(light + eye)), 0), exponent) *
+		   ((exponent + 2) * 0.125);
+	oFactor = float4(specular * (1 - shadow * shadow * shadow) * attenuation,
+			 cargs.MaterialPack[2].z * (1 - rim * rim * (3 - 2 * rim)), 0, glow);
+}

@@ -1,0 +1,63 @@
+/*
+ * The top face of an opaque panel: a quad inset by the border, lit by the point light
+ * (half-Lambert with distance attenuation), with a reflection into a spherical environment
+ * map, a specular and a rim term, and the face's texture coordinates.
+ */
+struct ColorArgs {
+	float4 MaterialPack[4];
+	float4 PointLightPack2[4];
+	float4 PointLightPack1[4];
+	float4 EyePos;
+};
+
+struct VertexInput {
+	float4 pos : POSITION;
+};
+
+void main(VertexInput vin,
+	  uniform float4x4 MVP,
+	  uniform float4 Size,
+	  uniform float4x4 Transform,
+	  uniform float WorldScaleHack,
+	  uniform float3 BorderSize,
+	  uniform ColorArgs cargs,
+	  out float4 oPosition : POSITION,
+	  out half4 oColor : TEXCOORD0,
+	  out half2 oEnvCoord : TEXCOORD1,
+	  out half4 oTexcoord : TEXCOORD2)
+{
+	float2 local = (Size.xy * 0.5 - BorderSize.xy) * (vin.pos.xy * 2 - 1);
+	float3 world = mul(float4(local, BorderSize.z, 1), Transform).xyz;
+	float3 normal = normalize(Transform[2].xyz);
+	float3 eye = normalize(cargs.EyePos.xyz - world);
+	float3 reflected = reflect(-eye, normal);
+	float3 toLight = cargs.PointLightPack1[0].xyz - world;
+	float lightDistance = length(toLight);
+	float3 light = toLight / lightDistance;
+	float diffuse = dot(normal, light) * 0.5 + 0.5;
+	float2 uv = Size.zw * (Size.xy * 0.5 + local);
+	float shadow = 1 - diffuse * diffuse;
+	float rim = saturate((dot(eye, normal) - cargs.MaterialPack[2].y) /
+			     (1 - cargs.MaterialPack[2].y));
+	float exponent = cargs.MaterialPack[1].z;
+	float specular;
+	float attenuation;
+	float distance;
+	float angle;
+
+	oPosition = mul(float4(world * WorldScaleHack, 1), MVP);
+	attenuation = 1 / (cargs.PointLightPack1[1].x + lightDistance *
+			   (cargs.PointLightPack1[1].y + lightDistance * cargs.PointLightPack1[1].z));
+	oColor = cargs.MaterialPack[0] *
+		 (cargs.PointLightPack2[2] * cargs.MaterialPack[1].x * (diffuse * diffuse)) *
+		 attenuation;
+	distance = sqrt(dot(reflected.zx, reflected.zx));
+	angle = atan2(distance, reflected.y);
+	oEnvCoord = reflected.zx * (angle / distance) * 0.15915494 + 0.5;
+	specular = pow(max(dot(normal, normalize(light + eye)), 0), exponent) *
+		   ((exponent + 2) * 0.125);
+	uv.y = 1 - uv.y;
+	oTexcoord.xy = uv;
+	oTexcoord.z = specular * (1 - shadow * shadow * shadow) * attenuation;
+	oTexcoord.w = cargs.MaterialPack[2].z * (1 - rim * rim * (3 - 2 * rim));
+}
