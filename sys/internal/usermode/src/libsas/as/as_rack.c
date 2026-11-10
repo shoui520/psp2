@@ -122,18 +122,6 @@ int sceSasAsRackIoTaskCreate(SceSasAsAllocator *allocator, SceSasAsConfigEntry *
 	return 0;
 }
 
-/* a level as 4.12 fixed point, saturated */
-static inline SceInt16 sceSasAsLevelToFixed(float level)
-{
-	float value = level * 4096.0f;
-
-	if (value < -32768.0f)
-		return -32768;
-	if (value > 32767.0f)
-		return 32767;
-	return (SceInt16)value;
-}
-
 int sceSasAsRackIoTableSetInputs(const SceSasAsRackIoParam *param, SceSasAsRackIoTable *table)
 {
 	const SceSasAsRackPort *port = param->inputs.ports;

@@ -126,18 +126,6 @@ static int sceSasAsMixerRackCreate(SceSasAsAllocator *allocator, SceSasAsConfigE
 	return 0;
 }
 
-/* a matrix level to 4.12 */
-static inline SceInt16 sceSasAsMixerRackLevel(float level)
-{
-	float value = level * 4096.0f;
-
-	if (value < -32768.0f)
-		return -32768;
-	if (value > 32767.0f)
-		return 32767;
-	return (SceInt16)value;
-}
-
 static int sceSasAsMixerRackUpdate(SceSasAsHandle *handle, const SceSasAsRenderInfo *render)
 {
 	SceSasAsMixerRack *rack = (SceSasAsMixerRack *)handle;
@@ -161,7 +149,7 @@ static int sceSasAsMixerRackUpdate(SceSasAsHandle *handle, const SceSasAsRenderI
 			SceInt16 *fixed = state->levels;
 
 			for (count = rack->numChannels * rack->numChannels; count != 0; count--)
-				*fixed++ = sceSasAsMixerRackLevel(*level++);
+				*fixed++ = sceSasAsLevelToFixed(*level++);
 		}
 		state->enable = enable;
 	}

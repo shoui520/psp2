@@ -80,6 +80,18 @@ typedef struct SceSasAsRackIoTask {
 #define SCE_SAS_AS_AT(field) \
 	((void *)((SceUIntPtr)&(field) + (field)))
 
+/* a level as 4.12 fixed point, saturated */
+static inline SceInt16 sceSasAsLevelToFixed(float level)
+{
+	float value = level * 4096.0f;
+
+	if (value < -32768.0f)
+		return -32768;
+	if (value > 32767.0f)
+		return 32767;
+	return (SceInt16)value;
+}
+
 /*
  * One channel into a buffer at a level (4.12), replacing what the buffer held or adding to it;
  * a level that changed since the last render (delta: their difference, 16.16) ramps over the
