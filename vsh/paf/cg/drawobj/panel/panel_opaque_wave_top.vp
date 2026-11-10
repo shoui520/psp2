@@ -1,0 +1,47 @@
+/*
+ * The top face of an opaque wave panel: a quad inset by the border, lit by the point light
+ * (half-Lambert), coloured from the centre to the edge by how squarely it faces the eye, and
+ * fogged towards the panel's bottom.
+ */
+struct ColorArgs {
+	float4 MaterialPack[4];
+	float4 PointLightPack2[4];
+	float4 PointLightPack1[4];
+	float4 WaveCenterColor;
+	float4 WaveFogPack[4];
+	float4 WaveEdgeColor;
+	float4 EyePos;
+};
+
+struct VertexInput {
+	float4 pos : POSITION;
+};
+
+void main(VertexInput vin,
+	  uniform float4x4 MVP,
+	  uniform float4 Size,
+	  uniform float4x4 Transform,
+	  uniform float WorldScaleHack,
+	  uniform float3 BorderSize,
+	  uniform ColorArgs cargs,
+	  out float4 oPosition : POSITION,
+	  out half4 oColor : TEXCOORD0)
+{
+	float2 local = (Size.xy * 0.5 - BorderSize.xy) * (vin.pos.xy * 2 - 1);
+	float fog = Size.w * (0.5 * Size.y + local.y);
+	float3 world = mul(float4(local, BorderSize.z, 1), Transform).xyz;
+	float3 normal = normalize(Transform[2].xyz);
+	float facing = saturate(dot(normalize(cargs.EyePos.xyz - world), normal));
+	float4 edge = cargs.WaveEdgeColor * pow(abs(1 - facing), cargs.WaveEdgeColor.w);
+	float3 fogColor = cargs.WaveFogPack[0].xyz;
+	float4 center = cargs.WaveCenterColor * pow(facing, cargs.WaveCenterColor.w);
+	float3 light = normalize(cargs.PointLightPack1[0].xyz - world);
+	float diffuse = dot(normal, light) * 0.5 + 0.5;
+	float4 color;
+
+	oPosition = mul(float4(world * WorldScaleHack, 1), MVP);
+	color = cargs.MaterialPack[0] * (cargs.PointLightPack2[2] *
+		(diffuse * (cargs.MaterialPack[1].x * diffuse)) + cargs.PointLightPack2[0]) +
+		(center + edge);
+	oColor = float4(lerp(fogColor, color.rgb, fog), color.a);
+}

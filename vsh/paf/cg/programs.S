@@ -99,3 +99,4 @@
 	PROGRAM _ZN3paf5graph28BubbleOpaqueFolderFragShader8s_binaryE, "drawobj/panel/bubble_opaque_folder.fp.gxp"
 	PROGRAM _ZN3paf5graph21BubbleImageVertShader8s_binaryE, "drawobj/panel/bubble_image.vp.gxp"
 	PROGRAM _ZN3paf5graph22BubbleOpaqueVertShader8s_binaryE, "drawobj/panel/bubble_opaque.vp.gxp"
+	PROGRAM _ZN3paf5graph28PanelOpaqueWaveTopVertShader8s_binaryE, "drawobj/panel/panel_opaque_wave_top.vp.gxp"
