@@ -77,3 +77,8 @@
 	PROGRAM _ZN3paf5graph14WaveFragShader8s_binaryE, "drawobj/wave/wave.fp.gxp"
 	PROGRAM _ZN3paf5graph17WavePosVertShader8s_binaryE, "drawobj/wave/wave_pos.vp.gxp"
 	PROGRAM _ZN3paf5graph14WaveVertShader8s_binaryE, "drawobj/wave/wave.vp.gxp"
+	PROGRAM _ZN3paf5graph26PageTurnPureCopyFragShader8s_binaryE, "drawobj/page_turn/pure_copy.fp.gxp"
+	PROGRAM _ZN3paf5graph24PageTurnBottomFragShader8s_binaryE, "drawobj/page_turn/page_turn_bottom.fp.gxp"
+	PROGRAM _ZN3paf5graph22PageTurnQuadVertShader8s_binaryE, "drawobj/page_turn/quad.vp.gxp"
+	PROGRAM _ZN3paf5graph24PageTurnShadowFragShader8s_binaryE, "drawobj/page_turn/page_turn_shadow.fp.gxp"
+	PROGRAM _ZN3paf5graph21PageTurnTopFragShader8s_binaryE, "drawobj/page_turn/page_turn_top.fp.gxp"
