@@ -93,3 +93,6 @@
 	PROGRAM _ZN3paf5graph25PanelOpaqueWaveFragShader8s_binaryE, "drawobj/panel/panel_opaque_wave.fp.gxp"
 	PROGRAM _ZN3paf5graph21BubbleImageFragShader8s_binaryE, "drawobj/panel/bubble_image.fp.gxp"
 	PROGRAM _ZN3paf5graph21PanelOpaqueFragShader8s_binaryE, "drawobj/panel/panel_opaque.fp.gxp"
+	PROGRAM _ZN3paf5graph22BubbleOpaqueFragShader8s_binaryE, "drawobj/panel/bubble_opaque.fp.gxp"
+	PROGRAM _ZN3paf5graph20PanelGlassFragShader8s_binaryE, "drawobj/panel/panel_glass.fp.gxp"
+	PROGRAM _ZN3paf5graph27PanelGlassGlowingFragShader8s_binaryE, "drawobj/panel/panel_glass_glowing.fp.gxp"
