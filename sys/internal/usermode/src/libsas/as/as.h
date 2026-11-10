@@ -26,7 +26,7 @@ struct SceSasAsTaskList;
 
 /* the AS runtime's errors (with as_util.h's) */
 #define SCE_SAS_AS_ERROR_BUSY		(-1)
-#define SCE_SAS_AS_ERROR_NO_LOG_HANDLER	(-2)
+#define SCE_SAS_AS_ERROR_FULL		(-2)	/* no room left: log handlers, tasks */
 #define SCE_SAS_AS_ERROR_INVALID_HANDLE	(-6)
 #define SCE_SAS_AS_ERROR_NOT_LOCKED	(-7)
 #define SCE_SAS_AS_ERROR_NOT_FOUND	(-9)

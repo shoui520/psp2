@@ -189,7 +189,7 @@ int sceSasAsRegisterLogHandler(SceSasAsLogHandler handler)
 		if (sceSasAsCompareAndSwap(slot, 0, (SceUInt32)handler) == 0)
 			return 0;
 	}
-	return SCE_SAS_AS_ERROR_NO_LOG_HANDLER;
+	return SCE_SAS_AS_ERROR_FULL;
 }
 
 int sceSasAsUnregisterLogHandler(SceSasAsLogHandler handler)
