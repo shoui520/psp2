@@ -562,7 +562,16 @@ void UIPadListener::OnUpdate(const inputdevice::Data *data)
 			float delay = m_repeat_delay;
 			float tick = PadTick();
 
-			if (delay <= 0.0f) {
+			if (delay > 0.0f) {
+				float remain = delay - tick * 1000.0f;
+
+				m_repeat_delay = remain;
+				if (remain <= 0.0f) {
+					PostPadEvent(19, s_pad_port, held, false, mode);
+					held = m_hold_key;
+					m_repeat_count++;
+				}
+			} else {
 				float interval = m_repeat_interval - tick * 1000.0f;
 
 				m_repeat_interval = interval;
@@ -574,15 +583,6 @@ void UIPadListener::OnUpdate(const inputdevice::Data *data)
 						m_repeat_interval = 80.0f;
 					else
 						m_repeat_interval = 40.0f;
-				}
-			} else {
-				float remain = delay - tick * 1000.0f;
-
-				m_repeat_delay = remain;
-				if (remain <= 0.0f) {
-					PostPadEvent(19, s_pad_port, held, false, mode);
-					held = m_hold_key;
-					m_repeat_count++;
 				}
 			}
 		}
@@ -644,7 +644,16 @@ void UIPadHoldListener::OnUpdate(const inputdevice::Data *data)
 			float delay = m_repeat_delay;
 			float tick = PadTick();
 
-			if (delay <= 0.0f) {
+			if (delay > 0.0f) {
+				float remain = delay - tick * 1000.0f;
+
+				m_repeat_delay = remain;
+				if (remain <= 0.0f) {
+					PostPadEvent(19, s_pad_port, held, false, mode);
+					held = m_hold_key;
+					m_repeat_count++;
+				}
+			} else {
 				float interval = m_repeat_interval - tick * 1000.0f;
 
 				m_repeat_interval = interval;
@@ -656,15 +665,6 @@ void UIPadHoldListener::OnUpdate(const inputdevice::Data *data)
 						m_repeat_interval = 80.0f;
 					else
 						m_repeat_interval = 40.0f;
-				}
-			} else {
-				float remain = delay - tick * 1000.0f;
-
-				m_repeat_delay = remain;
-				if (remain <= 0.0f) {
-					PostPadEvent(19, s_pad_port, held, false, mode);
-					held = m_hold_key;
-					m_repeat_count++;
 				}
 			}
 		}

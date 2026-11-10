@@ -2124,10 +2124,10 @@ extern "C" int32_t ScePafWidget_8BDEB047(Widget *widget, DragState *first, DragS
 	float over_z = over.getZ();
 
 	if (over_x > 1.0f || over_y > 1.0f || over_z > 1.0f) {
-		if (!(over_x < over_y || over_x < over_z)) {
+		if (over_x >= over_y && over_x >= over_z) {
 			size = size / over.getX();
 			scale = scale / over.getX();
-		} else if (!(over_x > over_y || over_y < over_z)) {
+		} else if (over_x <= over_y && over_y >= over_z) {
 			size = size / over.getY();
 			scale = scale / over.getY();
 		} else if (over_x <= over_z && over_y <= over_z) {
@@ -2142,10 +2142,10 @@ extern "C" int32_t ScePafWidget_8BDEB047(Widget *widget, DragState *first, DragS
 	float under_z = under.getZ();
 
 	if (under_x < 1.0f || under_y < 1.0f || under_z < 1.0f) {
-		if (!(under_x > under_y || under_x > under_z)) {
+		if (under_x <= under_y && under_x <= under_z) {
 			size = size / under.getX();
 			scale = scale / under.getX();
-		} else if (!(under_x < under_y || under_y > under_z)) {
+		} else if (under_x >= under_y && under_y <= under_z) {
 			size = size / under.getY();
 			scale = scale / under.getY();
 		} else if (under_x >= under_z && under_y >= under_z) {
@@ -4843,7 +4843,9 @@ math::v4 Widget::CalcBound(const math::v4 &size, const math::quaternion &quat)
 	float32x4_t bound_b = vabsq_f32(MulMatrixVec(m, corner_b));
 	float32x4_t bound;
 
-	if (size.extract_z() > 1.0f) {
+	if (size.extract_z() <= 1.0f) {
+		bound = vmaxq_f32(bound_b, bound_a);
+	} else {
 		float32x4_t corner_c = vmulq_f32(math::v4(1.0f, -1.0f, 1.0f, 0.0f).getImpl().get128(),
 						 extent);
 		float32x4_t corner_d = vmulq_f32(math::v4(-1.0f, -1.0f, 1.0f, 0.0f).getImpl().get128(),
@@ -4853,8 +4855,6 @@ math::v4 Widget::CalcBound(const math::v4 &size, const math::quaternion &quat)
 						      vabsq_f32(MulMatrixVec(m, corner_c))),
 					    bound_b),
 				  bound_a);
-	} else {
-		bound = vmaxq_f32(bound_b, bound_a);
 	}
 	return math::v4(sce::Vectormath::Simd::Aos::Vector4(bound));
 }
@@ -5733,7 +5733,7 @@ float Widget::CalcDistLineToLine(const math::v4 &point_a, const math::v4 &dir_a,
 	float t;
 	float s;
 
-	if (__builtin_fabsf(denom) >= 0.0001f)
+	if (!(__builtin_fabsf(denom) < 0.0001f))
 		inverse = 1.0f / denom;
 	t = (a_diff * bb - b_diff * ab) * inverse;
 	s = (-(b_diff * aa) - -(a_diff * ab)) * inverse;

@@ -34,6 +34,17 @@ public:
 	virtual int32_t GetTexture(intrusive_ptr<graph::Surface> &surf, int32_t obj,
 				   uint32_t index);
 
+	/* the widget's mask, else one way when something listens for 0x10000001 and up and down
+	   without */
+	virtual int32_t GetFocusDirectionMask()
+	{
+		int32_t mask = Widget::GetFocusDirectionMask();
+
+		if (mask != 0)
+			return mask;
+		return m_map_e_listener.find(0x10000001) != m_map_e_listener.end() ? 2 : 3;
+	}
+
 	/* taps make it shrink and spring back (Sony's name from the export) */
 	int32_t EnableTap(bool on_off);
 	/* 0, 2 or 3: the icon drops draw object 1; 2 shows it unmasked, 0 framed (Sony's name

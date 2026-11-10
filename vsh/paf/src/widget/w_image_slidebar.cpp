@@ -503,7 +503,7 @@ void ImageSlideBar::OnTouchUpdateValue()
 	float width = m_size.extract_x();
 	float rate = 0.0f;
 
-	if (width >= 1.0f)
+	if (!(width < 1.0f))
 		rate = x / width + 0.5f;
 
 	float value = sce_paf_ceilf(rate * (float)max);

@@ -843,7 +843,7 @@ const listview::CoordinateEffector *ListView::GetCoordinateEffector()
 
 					if (length == 0.0f)
 						length = segment->GetCellSize(0).extract_y();
-					if (!(m_effector_offset <= -length)) {
+					if (m_effector_offset > -length) {
 						m_effector_offset = -m_size.extract_y();
 						goto pulled;
 					}
@@ -925,7 +925,7 @@ pulled:
 
 					if (length == 0.0f)
 						length = segment->GetCellSize(0).extract_x();
-					if (!(m_effector_offset >= length)) {
+					if (m_effector_offset < length) {
 						m_effector_offset = m_size.extract_x();
 						goto pulled_x;
 					}
@@ -1501,7 +1501,7 @@ void ListView::ScePafWidget_96B46364(listview::SyncAnchor &anchor)
 
 			float header_length = header.getY();
 
-			if (header_length != 0.0f && pos - header_length <= head) {
+			if (header_length != 0.0f && !(pos - header_length > head)) {
 				if (anchor.m_segment == NULL ||
 				    segment->m_index <= anchor.m_segment->m_index) {
 					anchor.m_segment = segment;
@@ -1555,7 +1555,7 @@ void ListView::ScePafWidget_96B46364(listview::SyncAnchor &anchor)
 
 			float header_length = header.getX();
 
-			if (header_length != 0.0f && header_length + pos >= head) {
+			if (header_length != 0.0f && !(header_length + pos < head)) {
 				if (anchor.m_segment == NULL ||
 				    segment->m_index <= anchor.m_segment->m_index) {
 					anchor.m_segment = segment;
@@ -2003,8 +2003,8 @@ static int32_t FindVisibleCells(listview::CellMap *map, const math::v4 &rect, bo
 			float cell_top = (*cur)->GetRect(false).getImpl().getY();
 			math::v4 cell = (*it)->GetRect(false);
 
-			if (top < cell_top) {
-				if (!(cell.getImpl().getW() >= bottom)) {
+			if (!(top >= cell_top)) {
+				if (cell.getImpl().getW() < bottom) {
 					if (!found) {
 						found = true;
 						*first = it;
@@ -2013,7 +2013,7 @@ static int32_t FindVisibleCells(listview::CellMap *map, const math::v4 &rect, bo
 				} else if (num > 0) {
 					break;
 				}
-			} else if (!(bottom > cell_top) && !(cell.getImpl().getW() < bottom)) {
+			} else if (bottom <= cell_top && cell.getImpl().getW() >= bottom) {
 				if (!found) {
 					found = true;
 					*first = it;
@@ -2033,8 +2033,8 @@ static int32_t FindVisibleCells(listview::CellMap *map, const math::v4 &rect, bo
 			float cell_left = (*cur)->GetRect(false).getImpl().getX();
 			math::v4 cell = (*it)->GetRect(false);
 
-			if (cell_left < left) {
-				if (!(right >= cell.getImpl().getZ())) {
+			if (!(cell_left >= left)) {
+				if (right < cell.getImpl().getZ()) {
 					if (!found) {
 						found = true;
 						*first = it;
@@ -2043,7 +2043,7 @@ static int32_t FindVisibleCells(listview::CellMap *map, const math::v4 &rect, bo
 				} else if (num > 0) {
 					break;
 				}
-			} else if (!(cell_left > right) && !(right < cell.getImpl().getZ())) {
+			} else if (cell_left <= right && right >= cell.getImpl().getZ()) {
 				if (!found) {
 					found = true;
 					*first = it;
@@ -2088,7 +2088,7 @@ __attribute__((noinline)) listview::ListPos ListView::FindFocusCell(const math::
 	Widget *found = NULL;
 	Widget *focus = FindRootFocus(this);
 
-	if (d > 0.0f) {
+	if (!(d <= 0.0f)) {
 		for (int32_t j = 0; j < num; j++)
 			++it;
 		for (; i < num; i++) {
@@ -2216,7 +2216,7 @@ bool ListView::IsCellVisible(listview::Cell *cell, bool whole)
 		float cell_left = cell->GetRect(false).getImpl().getX();
 		float cell_right = cell->GetRect(false).getImpl().getZ();
 
-		if (left < cell_left) {
+		if (!(left >= cell_left)) {
 			if (cell_right < right)
 				return true;
 		} else if (left <= cell_right && cell_right >= right) {
@@ -2234,7 +2234,7 @@ bool ListView::IsCellVisible(listview::Cell *cell, bool whole)
 		float cell_top = cell->GetRect(false).getImpl().getY();
 		float cell_bottom = cell->GetRect(false).getImpl().getW();
 
-		if (cell_top < top) {
+		if (!(cell_top >= top)) {
 			if (bottom < cell_bottom)
 				return true;
 		} else if (cell_bottom <= top && bottom >= cell_bottom) {
@@ -3507,7 +3507,7 @@ int32_t ListView::ScePafWidget_B3B40B75(math::v2 *pos, int32_t segment, int32_t 
 				float head = center - size * 0.5f;
 				float to;
 
-				if (tail <= margin - parent.getImpl().getY()) {
+				if (!(tail > margin - parent.getImpl().getY())) {
 					to = now;
 					if (head < -parent.getImpl().getY() - margin)
 						to = head + margin;
@@ -3565,7 +3565,7 @@ int32_t ListView::ScePafWidget_B3B40B75(math::v2 *pos, int32_t segment, int32_t 
 				float tail = center + size * 0.5f;
 				float to;
 
-				if (head >= -parent.getImpl().getX() - margin) {
+				if (!(head < -parent.getImpl().getX() - margin)) {
 					to = now;
 					if (tail > margin - parent.getImpl().getX())
 						to = tail - margin;
@@ -3867,7 +3867,7 @@ listview::ListPos ListView::ScePafWidget_FD8DE7ED(const math::v2 &pos)
 			listview::Segment *seg = it->get();
 
 			if (seg->m_pos <= x && x < seg->m_pos + seg->m_view_size.getImpl().getX()) {
-				if (seg->m_pos + seg->GetHeaderSize().getImpl().getX() <= x) {
+				if (!(seg->m_pos + seg->GetHeaderSize().getImpl().getX() > x)) {
 					found.m_segment = seg->m_index;
 					found.m_cell = seg->GetCellIndex(pos);
 					return found;
@@ -3885,7 +3885,7 @@ listview::ListPos ListView::ScePafWidget_FD8DE7ED(const math::v2 &pos)
 			listview::Segment *seg = it->get();
 
 			if (seg->m_pos >= y && y > seg->m_pos - seg->m_view_size.getImpl().getY()) {
-				if (seg->m_pos - seg->GetHeaderSize().getImpl().getY() >= y) {
+				if (!(seg->m_pos - seg->GetHeaderSize().getImpl().getY() < y)) {
 					found.m_segment = seg->m_index;
 					found.m_cell = seg->GetCellIndex(pos);
 					return found;
@@ -4297,7 +4297,7 @@ void ListView::ScePafWidget_697CD413()
 					if (seg != NULL) {
 						math::v2 range = seg->ScePafWidget_D33B4AF3();
 
-						if (shown.getImpl().getX() >= range.getImpl().getX()) {
+						if (!(shown.getImpl().getX() < range.getImpl().getX())) {
 							if (shown.getImpl().getX() > range.getImpl().getY() &&
 							    m_velocity.getImpl().getX() < 0.0f) {
 								listview::ListPos next =
@@ -4333,9 +4333,9 @@ void ListView::ScePafWidget_697CD413()
 					math::v2 range = seg->ScePafWidget_D33B4AF3();
 
 					snap = range.getImpl().getX();
-					if (target.getImpl().getX() >= range.getImpl().getX()) {
+					if (!(target.getImpl().getX() < range.getImpl().getX())) {
 						snap = range.getImpl().getY();
-						if (target.getImpl().getX() <= range.getImpl().getY())
+						if (!(target.getImpl().getX() > range.getImpl().getY()))
 							return;
 					}
 				}
@@ -4375,7 +4375,7 @@ void ListView::ScePafWidget_697CD413()
 							       .getX();
 				}
 			}
-			if (head <= snap && tail >= snap) {
+			if (!(head > snap) && !(tail < snap)) {
 				float time = CalcScrollTime(
 					__builtin_fabsf(snap - target.getImpl().getX()),
 					m_snap_mode == SNAP_MODE_PAGE || m_snap_mode == SNAP_MODE_SEGMENT);
@@ -4427,7 +4427,7 @@ void ListView::ScePafWidget_697CD413()
 				if (seg != NULL) {
 					math::v2 range = seg->ScePafWidget_D33B4AF3();
 
-					if (shown.getImpl().getY() <= range.getImpl().getX()) {
+					if (!(shown.getImpl().getY() > range.getImpl().getX())) {
 						if (shown.getImpl().getY() < range.getImpl().getY() &&
 						    m_velocity.getImpl().getY() > 0.0f) {
 							listview::ListPos next =
@@ -4461,9 +4461,9 @@ void ListView::ScePafWidget_697CD413()
 				math::v2 range = seg->ScePafWidget_D33B4AF3();
 
 				snap = range.getImpl().getX();
-				if (target.getImpl().getY() <= range.getImpl().getX()) {
+				if (!(target.getImpl().getY() > range.getImpl().getX())) {
 					snap = range.getImpl().getY();
-					if (target.getImpl().getY() >= range.getImpl().getY())
+					if (!(target.getImpl().getY() < range.getImpl().getY()))
 						return;
 				}
 			}
@@ -4500,7 +4500,7 @@ void ListView::ScePafWidget_697CD413()
 						       .getY();
 			}
 		}
-		if (head <= snap && tail >= snap) {
+		if (!(head > snap) && !(tail < snap)) {
 			float time = CalcScrollTime(
 				__builtin_fabsf(snap - target.getImpl().getY()),
 				m_snap_mode == SNAP_MODE_PAGE || m_snap_mode == SNAP_MODE_SEGMENT);
@@ -4544,7 +4544,7 @@ void ListView::ScePafWidget_697CD413()
 		if (room.getX() > 0.0f && room.getX() < 272.0f) {
 			limit = m_view_limit.getImpl().getX();
 		} else {
-			if (room.getZ() >= 0.0f || room.getZ() >= -272.0f)
+			if (!(room.getZ() < 0.0f) || !(room.getZ() < -272.0f))
 				return;
 			limit = m_view_limit.getImpl().getZ();
 		}
@@ -4581,7 +4581,7 @@ void ListView::ScePafWidget_697CD413()
 		if (room.getY() < 0.0f && room.getY() > -272.0f) {
 			limit = m_view_limit.getImpl().getY();
 		} else {
-			if (room.getW() <= 0.0f || room.getW() >= 272.0f)
+			if (!(room.getW() > 0.0f) || !(room.getW() < 272.0f))
 				return;
 			limit = m_view_limit.getImpl().getW();
 		}

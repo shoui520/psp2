@@ -676,7 +676,7 @@ static inline float FitAspect(uint32_t axis, math::v2 box_size, math::v2 tex_siz
 	float width = box_size.getImpl().getX();
 	float height = box_size.getImpl().getY();
 
-	if (!(width > 0.0f && height > 0.0f))
+	if (width <= 0.0f || height <= 0.0f)
 		return 0.0f;
 
 	math::v2 inside = tex_size - margins;
@@ -684,10 +684,10 @@ static inline float FitAspect(uint32_t axis, math::v2 box_size, math::v2 tex_siz
 	math::v2 ratio(divPerElem(inside.getImpl(), box_size.getImpl()));
 	float size;
 
-	if (ratio.extract_x() <= ratio.extract_y())
-		size = axis == 1 ? height : height * aspect;
-	else
+	if (ratio.extract_x() > ratio.extract_y())
 		size = axis == 0 ? width : width / aspect;
+	else
+		size = axis == 1 ? height : height * aspect;
 
 	*extent = size / (inside.getImpl().getElem(axis) / tex_size.getImpl().getElem(axis));
 	return size;
@@ -711,7 +711,7 @@ void PlaneObj::UpdateLayoutAxis(uint32_t axis, math::v2 tex_size, math::v4 margi
 		float box = m_size.extract(axis);
 		float inside = tex - margin_sum;
 
-		if (inside > 0.0f) {
+		if (!(inside <= 0.0f)) {
 			size = box * scale;
 			extent = scale * (box / (inside / tex));
 		}
@@ -722,7 +722,7 @@ void PlaneObj::UpdateLayoutAxis(uint32_t axis, math::v2 tex_size, math::v4 margi
 		float scale = m_scale_value.extract(axis);
 		float inside = tex - margins.extract(axis);
 
-		if (inside > 0.0f) {
+		if (!(inside <= 0.0f)) {
 			extent = scale * tex;
 			size = scale * inside;
 		}
@@ -733,7 +733,7 @@ void PlaneObj::UpdateLayoutAxis(uint32_t axis, math::v2 tex_size, math::v4 margi
 		float value = m_scale_value.extract(axis);
 		float inside = tex - margins.extract(axis);
 
-		if (inside > 0.0f) {
+		if (!(inside <= 0.0f)) {
 			size = value;
 			extent = value / (inside / tex);
 		}
@@ -756,7 +756,7 @@ void PlaneObj::UpdateLayoutAxis(uint32_t axis, math::v2 tex_size, math::v4 margi
 		float scale = m_scale_value.extract(axis);
 		float inside = tex - margins.extract(axis);
 
-		if (inside > 0.0f) {
+		if (!(inside <= 0.0f)) {
 			extent = scale * tex;
 			size = scale * inside;
 		}

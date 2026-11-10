@@ -198,7 +198,7 @@ void SpinDrum::UpdateDigits(float offset)
 
 			text->SetString(str);
 		}
-		if (half < place || place < -half)
+		if (!(place <= half && -half <= place))
 			text->SetColor(math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 		else
 			text->SetColor(math::v4(1.0f, 1.0f, 1.0f,
@@ -335,7 +335,7 @@ int32_t SpinBase::SetFloatValue(float value)
 
 	int32_t whole = -1;
 
-	if (value >= (float)m_min)
+	if (!(value < (float)m_min))
 		whole = (int32_t)sce_paf_floorf(value);
 	m_value = whole;
 	m_value_changed = false;
@@ -697,7 +697,7 @@ void SpinDrum::Flick()
 
 		if (num >= 2)
 			speed += m_samples[num - 2].m_distance * 1000000.0f / m_samples[num - 2].m_time;
-		if (__builtin_fabsf(speed) >= 89.4f) {
+		if (!(__builtin_fabsf(speed) < 89.4f)) {
 			float sum = 0.0f;
 			float dir = 0.0f;
 			float weights = 0.0f;
@@ -944,7 +944,7 @@ bool SpinDrum::Animate()
 				offset += Timer::s_tick_unit * step * velocity;
 				m_velocity = velocity;
 				m_offset = offset;
-				if (Sign(accel) <= 0.0f) {
+				if (!(Sign(accel) > 0.0f)) {
 					if (offset <= target)
 						done = true;
 				} else if (offset >= target) {
@@ -952,7 +952,7 @@ bool SpinDrum::Animate()
 				}
 				if (done)
 					break;
-				if (t <= 0.0f)
+				if (!(t > 0.0f))
 					goto clamp;
 			}
 			m_offset = target;

@@ -127,7 +127,7 @@ extern "C" int32_t ScePafWidget_5D4941E8(const FocusCandidate *candidate,
 			left = from_left;
 		if (from_right > left && from_right < right)
 			right = from_right;
-		if (__builtin_fabsf(from_pos.extract_y() - to_pos.extract_y()) > 5.0f)
+		if (!(__builtin_fabsf(from_pos.extract_y() - to_pos.extract_y()) <= 5.0f))
 			to_pos.set_x((left + right) * 0.5f);
 	} else if (dir == 3 || dir == 4) {
 		float from_top = from_pos.extract_y() - from_size.extract_y() * 0.5f;
@@ -137,7 +137,7 @@ extern "C" int32_t ScePafWidget_5D4941E8(const FocusCandidate *candidate,
 			top = from_top;
 		if (from_bottom > top && from_bottom < bottom)
 			bottom = from_bottom;
-		if (__builtin_fabsf(from_pos.extract_x() - to_pos.extract_x()) > 5.0f)
+		if (!(__builtin_fabsf(from_pos.extract_x() - to_pos.extract_x()) <= 5.0f))
 			to_pos.set_y((top + bottom) * 0.5f);
 	}
 

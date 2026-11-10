@@ -644,13 +644,13 @@ int32_t HoldGestureListener::OnUpdateTouch(uint32_t id)
 		float limit = (m_param.m_move_tolerance * s_pixel_per_mm) * (m_param.m_move_tolerance * s_pixel_per_mm);
 		const inputdevice::touchscreen::Data *last = m_touch;
 
-		if (top - bottom > 0.0f) {
-			if (dy * dy + dx * dx > limit &&
-			    ((float)y > top || (float)y < bottom || (float)x < left || (float)x > right)) {
+		if (top - bottom <= 0.0f) {
+			if (dy * dy + dx * dx > limit) {
 				m_state = 0;
 				return GestureListener::UPDATE_DETACH_SELF;
 			}
-		} else if (dy * dy + dx * dx > limit) {
+		} else if (dy * dy + dx * dx > limit &&
+			   ((float)y > top || (float)y < bottom || (float)x < left || (float)x > right)) {
 			m_state = 0;
 			return GestureListener::UPDATE_DETACH_SELF;
 		}
@@ -690,11 +690,11 @@ int32_t HoldGestureListener::OnUpdateTouch(uint32_t id)
 		const inputdevice::touchscreen::Data *last = m_touch;
 		bool left_region;
 
-		if (top - bottom > 0.0f)
+		if (top - bottom <= 0.0f)
+			left_region = dy * dy + dx * dx > limit;
+		else
 			left_region = dy * dy + dx * dx > limit &&
 				      ((float)y > top || (float)y < bottom || (float)x < left || (float)x > right);
-		else
-			left_region = dy * dy + dx * dx > limit;
 		if (left_region) {
 			ScePafWidget_C5939A92(this, 6, m_x, m_y, 0, 0, 0, 0);
 			m_state = 0;

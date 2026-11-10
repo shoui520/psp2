@@ -521,7 +521,7 @@ void WaveRenderer::UpdateInstances()
 			       m_transition.m_set.m_values.m_uv_rotate_distort_curve.m_value);
 		float damp = 0.0f;
 
-		if (turn >= -100.0f)
+		if (!(turn < -100.0f))
 			damp = sce_paf_expf(turn);
 
 		float chase = instance->m_uv_rotate_damp;

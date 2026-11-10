@@ -324,7 +324,7 @@ inline void Trackball::Update(const math::v3 &center, const math::v3 &origin,
 		sce::Vectormath::Simd::fmaxf(dot(b, a), floatInVec(-1.0f)), floatInVec(1.0f))
 					     .getAsFloat());
 
-	if (__builtin_fabsf(angle) <= 0.001f)
+	if (!(__builtin_fabsf(angle) > 0.001f))
 		return;
 
 	math::matrix turn;

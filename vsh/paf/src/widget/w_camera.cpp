@@ -127,7 +127,7 @@ using namespace paf::ui;
 void ScePafWidget_72F479CA(Camera *camera)
 {
 	if (camera->m_screen == NULL || !camera->m_projection_dirty ||
-	    !(camera->m_screen_height > 0.0001f) || !(camera->m_distance > 0.0001f))
+	    camera->m_screen_height <= 0.0001f || camera->m_distance <= 0.0001f)
 		return;
 
 	float fov = sce_paf_atanf(camera->m_view_height * 0.5f / camera->m_distance) * 2.0f;
@@ -781,7 +781,7 @@ int32_t Camera::add_obj(Widget *root, graph::DrawInfo &info)
 			       s_scissor_size * 0.6f;
 		int32_t ret = 0;
 
-		if (out.extract_x() >= 0.0f || out.extract_y() >= 0.0f) {
+		if (!(out.extract_x() < 0.0f) || !(out.extract_y() < 0.0f)) {
 			root->m_culled = true;
 			root->SetFitToScene(true);
 		} else {
@@ -791,7 +791,7 @@ int32_t Camera::add_obj(Widget *root, graph::DrawInfo &info)
 
 			math::v2 inner = offs - s_scissor_size * 0.5f;
 
-			if (inner.extract_x() >= 0.0f || inner.extract_y() >= 0.0f)
+			if (!(inner.extract_x() < 0.0f) || !(inner.extract_y() < 0.0f))
 				root->SetFitToScene(true);
 			else
 				root->SetFitToScene(false);

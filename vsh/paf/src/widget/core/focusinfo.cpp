@@ -671,7 +671,7 @@ void FocusInfo::Update(float time)
 
 	Widget *cursor = m_cursor;
 
-	if (cursor->m_show_a_sum < 0.02f && !cursor->IsAnimRunning(Widget::ANIM_SHOW_ALPHA) &&
+	if (!(cursor->m_show_a_sum >= 0.02f) && !cursor->IsAnimRunning(Widget::ANIM_SHOW_ALPHA) &&
 	    m_shown == m_was_shown) {
 		cursor = m_cursor;
 		if (!cursor->m_transition_complete) {

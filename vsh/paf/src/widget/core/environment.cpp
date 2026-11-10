@@ -210,7 +210,7 @@ void Environment::UpdateOrderedTop()
 		Widget *widget = it->m_widget;
 
 		if (widget->IsInputTarget() &&
-		    (widget->m_color_alpha * widget->m_meta_a_sum) * widget->m_show_a_sum >= 0.95f) {
+		    !((widget->m_color_alpha * widget->m_meta_a_sum) * widget->m_show_a_sum < 0.95f)) {
 			m_display_area_scene = widget->m_scene;
 			m_second_modal_widget = widget;
 			m_ordered_widgets.m_widget = widget;
@@ -677,7 +677,7 @@ extern "C" int32_t ScePafWidget_E8F38C84(Environment *env, uint16_t width, uint1
 		return 0x80AF0001;
 	if (root->m_frame_buffer_mode == 4 || root->m_frame_buffer_mode == 2)
 		return 0x80AF0004;
-	if ((float)width > (float)root->m_max_width || (float)height > (float)root->m_max_height)
+	if (!((float)width <= (float)root->m_max_width) || !((float)height <= (float)root->m_max_height))
 		return 0x80AF008F;
 	env->m_resize_width = width;
 	env->m_resize_height = height;

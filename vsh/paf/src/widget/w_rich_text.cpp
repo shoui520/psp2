@@ -1589,7 +1589,7 @@ void RichText::LineBuilder::Center(list<Item *>::iterator first, list<Item *>::i
 {
 	float offset = (width - x) * 0.5f;
 
-	if (offset > 0.0f)
+	if (!(offset <= 0.0f))
 		for (list<Item *>::iterator it = first; it != last; ++it)
 			(*it)->m_pos = (*it)->m_pos + math::v2(offset, 0.0f);
 }

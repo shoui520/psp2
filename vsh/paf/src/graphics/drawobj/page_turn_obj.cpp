@@ -134,7 +134,7 @@ void PageTurnObj::OnDraw(const math::matrix &parent, uint32_t color, float alpha
 	m_param->m_scale = math::v4(sce::Vectormath::Simd::Aos::Vector4(parent.x().len(),
 		parent.y().len(), parent.z().len(), sce::Vectormath::Simd::floatInVec(0.0f)));
 
-	if (alpha > 0.0f) {
+	if (!(alpha <= 0.0f)) {
 		uint32_t key = (info.m_layer << 16) + (info.m_sub_layer << 8) + info.m_order;
 		DrawCallbackArg arg;
 

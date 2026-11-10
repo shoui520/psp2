@@ -1022,13 +1022,13 @@ int32_t TextBox::UpdateTouch(const math::v2 &pos)
 
 		m_text->GetLayoutAttribute(graph::TextLayoutAttribute_VisiblePos, visible);
 		visible = visible + (m_touch_pos - pos);
-		if (visible.extract_x() >= 0.0f) {
+		if (!(visible.extract_x() < 0.0f)) {
 			if (visible.extract_x() > m_scroll_max.extract_x())
 				visible.set_x(m_scroll_max.extract_x());
 		} else {
 			visible.set_x(0.0f);
 		}
-		if (visible.extract_y() >= 0.0f) {
+		if (!(visible.extract_y() < 0.0f)) {
 			if (visible.extract_y() > m_scroll_max.extract_y())
 				visible.set_y(m_scroll_max.extract_y());
 		} else {

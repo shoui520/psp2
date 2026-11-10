@@ -906,7 +906,7 @@ public:
 			}
 			if (w->IsRotated(true, true, true, 0.15707964f))
 				continue;
-			if (ScePafMisc_B2795FE2(area, w->CalcHitRect()).get_area() > 16.0f) {
+			if (!(ScePafMisc_B2795FE2(area, w->CalcHitRect()).get_area() <= 16.0f)) {
 				if (target == NULL || GetUpper(w, target, area) != target)
 					target = w;
 			}

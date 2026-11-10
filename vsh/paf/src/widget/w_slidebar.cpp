@@ -1009,7 +1009,7 @@ void SlideBar::OnDragSlider()
 
 	float rate = 0.0f;
 
-	if (size.extract_x() >= 1.0f)
+	if (!(size.extract_x() < 1.0f))
 		rate = pos.extract_x() / size.extract_x() + 0.5f;
 
 	int32_t old = m_value;

@@ -1050,8 +1050,8 @@ void ScrollViewParent::SetTransform(const math::v4 &offset, const math::v4 &scal
 	m_transform_offset = offset;
 	m_transform_scale = scale;
 	/* only x, y and z count */
-	if (math::v3(offset.getImpl().getXYZ()) == math::v3(0.0f) &&
-	    math::v3(scale.getImpl().getXYZ()) == math::v3(1.0f))
+	if (math::v3(m_transform_offset.getImpl().getXYZ()) == math::v3(0.0f) &&
+	    math::v3(m_transform_scale.getImpl().getXYZ()) == math::v3(1.0f))
 		m_transform = false;
 	else
 		m_transform = true;
@@ -1540,12 +1540,10 @@ void TouchScrollSupplier::StopFlick()
 	if (m_drag_locked) {
 		for (vector<TouchView>::iterator it = m_touch_views.begin();
 		     it != m_touch_views.end(); ++it) {
-			it->m_view->m_velocity = math::v2(0.0f, 0.0f);
-
-			ScrollViewBase *view = it->m_view;
-			if (view->m_bar_controller != NULL) {
-				view->m_bar_controller->ShowJetTail(view->m_horizontal_bar, false);
-				view->m_bar_controller->ShowJetTail(view->m_vertical_bar, false);
+			it->m_view->m_velocity = view_velocity;
+			if (it->m_view->m_bar_controller != NULL) {
+				it->m_view->m_bar_controller->ShowJetTail(it->m_view->m_horizontal_bar, false);
+				it->m_view->m_bar_controller->ShowJetTail(it->m_view->m_vertical_bar, false);
 			}
 		}
 	}
@@ -2802,19 +2800,19 @@ bool TouchScrollSupplier::TakeTouch(ScrollViewBase *view, uint32_t touch_id)
 
 					if (t < 1.0f)
 						scale = t;
-					if (param.m_start_distance[0] >= 12.0f)
+					if (!(param.m_start_distance[0] < 12.0f))
 						param.m_start_distance[0] =
 							(param.m_start_distance[0] - 12.0f) * scale + 12.0f;
-					if (param.m_start_distance[2] >= 12.0f)
+					if (!(param.m_start_distance[2] < 12.0f))
 						param.m_start_distance[2] =
 							(param.m_start_distance[2] - 12.0f) * scale + 12.0f;
-					if (param.m_end_speed[0] >= 150.0f)
+					if (!(param.m_end_speed[0] < 150.0f))
 						param.m_end_speed[0] =
 							(param.m_end_speed[0] - 150.0f) * scale + 150.0f;
-					if (param.m_end_distance[0] >= 30.0f)
+					if (!(param.m_end_distance[0] < 30.0f))
 						param.m_end_distance[0] =
 							(param.m_end_distance[0] - 30.0f) * scale + 30.0f;
-					if (param.m_end_distance[1] >= 30.0f)
+					if (!(param.m_end_distance[1] < 30.0f))
 						param.m_end_distance[1] =
 							(param.m_end_distance[1] - 30.0f) * scale + 30.0f;
 				}
@@ -3559,10 +3557,10 @@ void TouchScrollSupplier::BeginMochi(uint32_t dir, const math::v2 &velocity, flo
 		}
 	}
 	m_touch_state = 2;
+	m_mochi_velocity = velocity;
 	m_mochi_duration = duration;
 	m_drag_dir = dir;
 	m_drag_locked = true;
-	m_mochi_velocity = velocity;
 	m_time = get_time_internal();
 }
 
@@ -3578,10 +3576,17 @@ bool ScrollViewBase::MochiBegin(Event *e)
 		ScePafWidget_D3D0A7C3(this, 0, m_track_port, true, true);
 
 	uint32_t dir = MoveDir_XY;
-	inputdevice::InputGestureListener *input =
-		static_cast<inputdevice::InputGestureListener *>(m_env->GetTouchGestureListener(0).get());
+	inputdevice::InputGestureListener *input;
+	int32_t port;
+
+	{
+		common::SharedPtr<inputdevice::InputListener> touch = m_env->GetTouchGestureListener(0);
+
+		input = static_cast<inputdevice::InputGestureListener *>(touch.get());
+		port = m_track_port;
+	}
 	common::SharedPtr<inputdevice::GestureListener> listener =
-		input != NULL ? input->GetGestureListener(m_track_port, 50, this)
+		input != NULL ? input->GetGestureListener(port, 50, this)
 			      : common::SharedPtr<inputdevice::GestureListener>();
 
 	if (listener.get() != NULL) {
@@ -3785,18 +3790,18 @@ static inline void SetRearDragParam(DragGestureListener *drag, ScrollViewBase *f
 
 			if (t < 1.0f)
 				scale = t;
-			if (param.m_start_distance[0] >= 12.0f)
+			if (!(param.m_start_distance[0] < 12.0f))
 				param.m_start_distance[0] =
 					(param.m_start_distance[0] - 12.0f) * scale + 12.0f;
-			if (param.m_start_distance[2] >= 12.0f)
+			if (!(param.m_start_distance[2] < 12.0f))
 				param.m_start_distance[2] =
 					(param.m_start_distance[2] - 12.0f) * scale + 12.0f;
-			if (param.m_end_speed[0] >= 150.0f)
+			if (!(param.m_end_speed[0] < 150.0f))
 				param.m_end_speed[0] = (param.m_end_speed[0] - 150.0f) * scale + 150.0f;
-			if (param.m_end_distance[0] >= 30.0f)
+			if (!(param.m_end_distance[0] < 30.0f))
 				param.m_end_distance[0] =
 					(param.m_end_distance[0] - 30.0f) * scale + 30.0f;
-			if (param.m_end_distance[1] >= 30.0f)
+			if (!(param.m_end_distance[1] < 30.0f))
 				param.m_end_distance[1] =
 					(param.m_end_distance[1] - 30.0f) * scale + 30.0f;
 		}
@@ -3870,15 +3875,16 @@ void TouchScrollSupplier::BeginRearMochi(uint32_t dir, ScrollViewBase *view,
 
 			float a = ScePafMisc_B2795FE2(area, v->CalcHitRect()).get_area();
 
-			if (a >= 1.0f) {
-				Widget *upper;
+			if (a < 1.0f)
+				break;
+			if (top != NULL) {
+				Widget *upper = m_views.GetUpper(top, v, view);
 
-				if (top == NULL || ((upper = m_views.GetUpper(top, v, view)) != top &&
-						    (upper != NULL || a >= top_area))) {
-					top = v;
-					top_area = a;
-				}
+				if (upper == top || (upper == NULL && a < top_area))
+					break;
 			}
+			top = v;
+			top_area = a;
 			break;
 		}
 	}
@@ -4018,15 +4024,16 @@ void TouchScrollSupplier::BeginRearPinch(ScrollViewBase *view)
 
 			float a = ScePafMisc_B2795FE2(area, v->CalcHitRect()).get_area();
 
-			if (a >= 1.0f) {
-				Widget *upper;
+			if (a < 1.0f)
+				break;
+			if (top != NULL) {
+				Widget *upper = m_views.GetUpper(top, v, view);
 
-				if (top == NULL || ((upper = m_views.GetUpper(top, v, view)) != top &&
-						    (upper != NULL || a >= top_area))) {
-					top = v;
-					top_area = a;
-				}
+				if (upper == top || (upper == NULL && a < top_area))
+					break;
 			}
+			top = v;
+			top_area = a;
 			break;
 		}
 	}
@@ -4125,7 +4132,10 @@ list<ScrollViewBase::Snap>::iterator ScrollViewBase::FindSnapPointToward(const m
 
 	if (!(dir.getImpl().getX() == floatInVec(0.0f) && dir.getImpl().getY() == floatInVec(0.0f))) {
 		math::v2 size(sce::Vectormath::Simd::Aos::absPerElem(dir.getImpl()));
-		int32_t axis = size.extract_x() <= size.extract_y();
+		int32_t axis = 1;
+
+		if (size.extract_x() > size.extract_y())
+			axis = 0;
 		/* the vectors' elements by the axis */
 		const float *dirs = (const float *)&dir;
 		const float *at_pos = (const float *)&pos;

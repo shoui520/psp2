@@ -1107,7 +1107,7 @@ void DirectBar::OrientDragOutState(Event *e)
 
 	if (dx < 0.0f)
 		dx = -dx;
-	if (dx >= m_hit_margin || y <= 0.0f || y >= height) {
+	if (!(dx < m_hit_margin) || !(y > 0.0f) || !(y < height)) {
 		ScePafWidget_0E46CEE0(this);
 		m_select = -1;
 		in = false;

@@ -2795,8 +2795,8 @@ int32_t Text::HandleFocusEvent(Event *e)
 
 void Text::SetFitToScene(bool on_off)
 {
-	if (m_size.extract_x() >= m_scene->GetSize(0)->extract_x() ||
-	    m_size.extract_y() >= m_scene->GetSize(0)->extract_y())
+	if (!(m_size.extract_x() < m_scene->GetSize(0)->extract_x()) ||
+	    !(m_size.extract_y() < m_scene->GetSize(0)->extract_y()))
 		m_fit_to_scene = false;
 	else
 		m_fit_to_scene = on_off;

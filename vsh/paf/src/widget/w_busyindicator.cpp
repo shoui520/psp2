@@ -256,7 +256,7 @@ void BusyIndicator::Update()
 			case ANIM_STOPPING:
 				m_anim_time += dt;
 				s = 0.0f;
-				if (m_anim_time * 2.0f < 1.0f)
+				if (!(m_anim_time * 2.0f >= 1.0f))
 					s = sce_paf_cosf(m_anim_time * 2.0f * 1.5707964f);
 				scale = s;
 				radius = (m_size.extract_x() - m_ball_size) * 0.5f * (2.0f - s);

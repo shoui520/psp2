@@ -445,26 +445,22 @@ int32_t paf::inputdevice::touchscreen::Update(float diff_time, const Data **fron
 
 						/* less of the correction towards the screen's edges */
 						if (correction_x != 0.0f) {
-							if (x < s_screen_width - EDGE_SIZE) {
-								if (x <= EDGE_SIZE)
-									x += x / EDGE_SIZE * correction_x;
-								else
-									x += correction_x;
-							} else {
+							if (x >= s_screen_width - EDGE_SIZE)
 								x += (1.0f - (x - (s_screen_width - EDGE_SIZE)) /
 									      EDGE_SIZE) * correction_x;
-							}
+							else if (x <= EDGE_SIZE)
+								x += x / EDGE_SIZE * correction_x;
+							else
+								x += correction_x;
 						}
 						if (correction_y != 0.0f) {
-							if (y < s_screen_height - EDGE_SIZE) {
-								if (y <= EDGE_SIZE)
-									y += y / EDGE_SIZE * correction_y;
-								else
-									y += correction_y;
-							} else {
+							if (y >= s_screen_height - EDGE_SIZE)
 								y += (1.0f - (y - (s_screen_height - EDGE_SIZE)) /
 									      EDGE_SIZE) * correction_y;
-							}
+							else if (y <= EDGE_SIZE)
+								y += y / EDGE_SIZE * correction_y;
+							else
+								y += correction_y;
 						}
 
 						float center_x;

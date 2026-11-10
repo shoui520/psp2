@@ -384,9 +384,9 @@ void ScrollBar2d::OnDragSlider()
 	math::v2 old = m_value;
 	Vector2 rate(0.0f);
 
-	if (size.getX() >= 1.0f)
+	if (!(size.getX() < 1.0f))
 		rate.setX(sce::Vectormath::Simd::floatInVec(pos.extract_x()) / size.getX());
-	if (size.getY() >= 1.0f)
+	if (!(size.getY() < 1.0f))
 		rate.setY(sce::Vectormath::Simd::floatInVec(pos.extract_y()) / size.getY());
 
 	math::v2 value = (m_offset_rate - math::v2(rate) * math::v2(-1.0f, 1.0f)) * m_max_value;

@@ -225,7 +225,7 @@ int32_t DragGestureListener::OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap
 			float tolerance = m_param.m_move_tolerance * m_pixel_per_mm;
 
 			if (sy * sy + sx * sx <= tolerance * tolerance) {
-				if (ElapsedMs(m_press_time.m_start) >= m_param.m_hold_time)
+				if (!(ElapsedMs(m_press_time.m_start) < m_param.m_hold_time))
 					ret = GestureListener::UPDATE_DETACH_SELF;
 			} else {
 				float vx;
@@ -235,8 +235,8 @@ int32_t DragGestureListener::OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap
 
 				float speed = m_param.m_flick_speed * m_pixel_per_mm;
 
-				if ((vy * 1000.0f) * (vy * 1000.0f) + (vx * 1000.0f) * (vx * 1000.0f) <=
-				    speed * speed) {
+				if (!((vy * 1000.0f) * (vy * 1000.0f) + (vx * 1000.0f) * (vx * 1000.0f) >
+				    speed * speed)) {
 					ret = GestureListener::UPDATE_DETACH_SELF;
 				} else {
 					vy = vy * 1000.0f;
@@ -245,7 +245,7 @@ int32_t DragGestureListener::OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap
 					float width = m_param.m_rect.width();
 					float height = m_param.m_rect.height();
 
-					if (width <= 0.0f || height <= 0.0f) {
+					if (!(width > 0.0f) || !(height > 0.0f)) {
 						ret = GestureListener::UPDATE_DETACH_SELF;
 					} else {
 						m_drag = new GestureDragRatio(m_param.m_dir,
@@ -421,7 +421,7 @@ int32_t DragGestureListener::GetDragState(float *start_x, float *start_y, float 
 
 				float ease;
 
-				if (m_flick->m_value[4] >= m_flick->m_value[2]) {
+				if (!(m_flick->m_value[4] < m_flick->m_value[2])) {
 					float ms = ElapsedMs(m_drag_time.m_start);
 
 					ease = 1.0f;
@@ -454,7 +454,7 @@ bool DragGestureListener::ScaleFlick(float *x, float *y)
 		float t = ElapsedMs(m_flick_time.m_start) / m_flick->m_value[3];
 
 		scale = t * t;
-		if (t >= 1.0f)
+		if (!(t < 1.0f))
 			scale = 1.0f;
 	}
 	*x = *x * scale;
@@ -632,7 +632,7 @@ int32_t MotionGestureListener::OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitm
 		float ms = ElapsedMs(m_start_time.m_start);
 		bool sampling = m_sampling;
 
-		if (ms >= 1000.0f) {
+		if (!(ms < 1000.0f)) {
 			if (m_sampling) {
 stop:
 				sceMotionStopSampling();
@@ -1345,7 +1345,7 @@ int32_t RearDragGestureListener::GetDragState(float *start_x, float *start_y, fl
 		float from_x;
 		float to_x;
 
-		if (m_flick->m_value[4] >= m_flick->m_value[2]) {
+		if (!(m_flick->m_value[4] < m_flick->m_value[2])) {
 			float ms = ElapsedMs(m_drag_time.m_start);
 
 			ease = 1.0f;
@@ -1363,7 +1363,7 @@ int32_t RearDragGestureListener::GetDragState(float *start_x, float *start_y, fl
 				ease = 0.0f;
 			} else if (ease < 1.0f) {
 				ease = ease * ease;
-			} else if (ease >= 1.25f) {
+			} else if (!(ease < 1.25f)) {
 				float e = 0.8f;
 
 				if (ease < 4.0f)
@@ -1473,7 +1473,7 @@ int32_t RearDragGestureListener::GetFastMove(uint32_t bitmap, float *x, float *y
 				float limit = m_pixel_per_mm * 6.0f;
 
 				if (s > limit * limit) {
-					if ((ty * fy + tx * fx) / (speed * __builtin_sqrtf(s)) <= 0.5f) {
+					if (!((ty * fy + tx * fx) / (speed * __builtin_sqrtf(s)) > 0.5f)) {
 						m_fast_touches = 0;
 						fast = 0;
 						ret = 2;
