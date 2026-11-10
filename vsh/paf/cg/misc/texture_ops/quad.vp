@@ -1,0 +1,9 @@
+void main(float4 data : POSITION,
+	  uniform float4x4 MVP,
+	  uniform float4 UVtransform,
+	  out float4 oPos : POSITION,
+	  out half2 oTex : TEXCOORD0)
+{
+	oPos = mul(float4(data.xy, 0, 1), MVP);
+	oTex = data.zw * UVtransform.zw + UVtransform.xy;
+}
