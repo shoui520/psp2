@@ -5,6 +5,7 @@
 
 #include <string.h>
 
+#include "as_ssp.h"
 #include "as_math.h"
 #include "as_synth.h"
 #include "as_util.h"
