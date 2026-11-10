@@ -109,3 +109,4 @@
 	PROGRAM _ZN3paf5graph17SkydomeVertShader8s_binaryE, "drawobj/wave/skydome.vp.gxp"
 	PROGRAM _ZN3paf5graph17WavePosFragShader8s_binaryE, "drawobj/wave/wave_pos.fp.gxp"
 	PROGRAM _ZN3paf5graph20WaveLitTexFragShader8s_binaryE, "drawobj/wave/wave_lit_tex.fp.gxp"
+	PROGRAM _ZN3paf5graph17BicubicSlowShader8s_binaryE, "misc/texture_ops/bicubic_slow.fp.gxp"
