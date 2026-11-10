@@ -1,0 +1,8 @@
+void main(float4 pos : POSITION,
+	  uniform float4 ClearColor,
+	  out float4 oPos : POSITION,
+	  out float4 oColor : TEXCOORD0)
+{
+	oPos = float4(pos.xy, 1, 1);
+	oColor = ClearColor;
+}

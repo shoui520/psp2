@@ -1,0 +1,4 @@
+float4 main(float4 aPosition) : POSITION
+{
+	return float4(aPosition.xy, 1, 1);
+}

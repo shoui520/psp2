@@ -463,7 +463,11 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	${paf_sas_SOURCES}
 	../../sys/sdk/target/src/libSceVshBridge_stub/vshbridge_stub.c
 	libpaf.c
+	cg/programs.S
 )
+# The GPU programs, compiled from Cg (cg/).
+include("${CMAKE_CURRENT_SOURCE_DIR}/cg/cg.cmake")
+psp2_paf_cg(vs0_sys_external_libpaf)
 # libpaf's own build of its headers (shared_string.h inlines what other modules import)
 target_compile_definitions(vs0_sys_external_libpaf PRIVATE PAF_LIBRARY_BUILD)
 # Sony linked with psp2ld --strip-unused, which drops functions nothing calls (giflib's
