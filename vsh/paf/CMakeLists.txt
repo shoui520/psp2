@@ -107,6 +107,7 @@ set(paf_sas_SOURCES
 	${paf_sas}/as/as.c
 	${paf_sas}/as/as_buss.c
 	${paf_sas}/as/as_core.c
+	${paf_sas}/as/as_rack.c
 	${paf_sas}/as/as_util.c
 )
 # Sony built libsas with GCC 4.8 at -O3 (its copies vectorized, with prefetches), keeping no NULL
