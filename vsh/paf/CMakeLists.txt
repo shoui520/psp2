@@ -422,7 +422,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc SOURCES
 	src/widget/gesture_drag_ratio.cpp
 	src/widget/gesture_drag_ratio_touch.cpp
 	src/widget/gesture_drag.cpp
-	src/toplevel/state.c
 	src/graphics/state.c
 	src/widget/core/environment.cpp
 	src/widget/core/widget.cpp
@@ -464,19 +463,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc SOURCES
 	src/std/wformat.c
 	src/std/wformat_abi.S
 	src/std/string_vector.c
-	src/misc/constant.c
-	src/misc/fields.c
-	src/misc/nested.c
-	src/misc/ops.c
-	src/misc/short.c
-	src/misc/bounds.c
-	src/misc/bitmask.c
-	src/misc/string_variant.c
-	src/misc/lock.c
-	src/misc/rect_contains.c
-	src/misc/search.c
-	src/misc/containment.c
-	src/misc/global_state.c
 	../../sys/sdk/target/src/libsnc/i32ops.c
 	../../sys/sdk/target/src/libsnc/i64ops.c
 	../../sys/sdk/target/src/libsnc/unwind_pr0.c

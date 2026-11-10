@@ -222,7 +222,7 @@ ScePaf:
         - _ZN3paf8HttpFile5CloseEv: 0x0286E577
         - _ZN3paf5Timer22DoFuncCustomElasticOutEfPKf: 0x028CC1E2
         - _ZN3paf8datetime8DateTime13SetDateFormatEPKw: 0x0375FCBA
-        - ScePafMisc_038A631F: 0x038A631F
+        - _ZN3paf14BufferedReader5WriteEPKvj: 0x038A631F
         - _ZN3paf5image5Image12ToCLUTBufferEb: 0x039C7B5D
         - _ZN3paf6memory13HeapAllocator13sce_paf_mtrimEv: 0x039D7846
         - _ZN3paf5cache16CacheManagerImplC1EPKNS0_12CacheManager6ParamsE: 0x04015364
@@ -999,7 +999,7 @@ ScePaf:
         - ScePafMisc_BDFDD0D9: 0xBDFDD0D9
         - ScePafMisc_BE023998: 0xBE023998
         - ScePafMisc_BE18253B: 0xBE18253B
-        - ScePafMisc_BE315CCB: 0xBE315CCB
+        - _ZN3paf14BufferedReader5FlushEv: 0xBE315CCB
         - _ZN3paf7OpenUrlC2Ev: 0xBEA27D34
         - _ZN3paf11inputdevice12motionsensor16SetDeviceHandlerEPFvPNS1_4DataEE: 0xBEA9803E
         - _ZN3paf9LocalFileC1EPNS_6memory13HeapAllocatorE: 0xBEDFC256
