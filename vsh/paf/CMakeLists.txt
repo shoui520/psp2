@@ -100,6 +100,17 @@ set(paf_ces_SOURCES
 # the SDK's libces, built with SNC's own inlining (36..56 reproduce it), not libpaf's
 set_source_files_properties(${paf_ces_SOURCES} PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=40)
 
+# libsas, the SAS sound library (SceSasUser's code, on its AS audio system), linked statically
+# (sys/internal/usermode/src/libsas).
+set(paf_sas ../../sys/internal/usermode/src/libsas)
+set(paf_sas_SOURCES
+	${paf_sas}/as/as_util.c
+)
+# Sony built libsas with GCC 4.8, with the hard-float calling convention (floats in s0) and
+# signed chars
+set_source_files_properties(${paf_sas_SOURCES} PROPERTIES
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_SAS_STATIC_RUNTIME" COMPILE_OPTIONS "-mfloat-abi=hard;-fsigned-char")
+
 psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/module.c
 	src/avout/sound.cpp
@@ -435,6 +446,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	../../sys/sdk/target/src/deflt/zlibhdr.c
 	../../sys/sdk/target/src/deflt/deflate.c
 	../../sys/sdk/target/src/deflt/deflate_common.c
+	${paf_sas_SOURCES}
 	../../sys/sdk/target/src/libSceVshBridge_stub/vshbridge_stub.c
 	libpaf.c
 )

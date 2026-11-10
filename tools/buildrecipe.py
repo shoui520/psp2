@@ -6,9 +6,9 @@ import re
 DEFAULT_F = ('-fstack-protector-strong', '-ffreestanding', '-fno-builtin', '-fno-short-enums',
              '-fno-optimize-sibling-calls', '-fno-delete-null-pointer-checks',
              '-fno-section-anchors', '-fno-shrink-wrap')
-# FPU options a source sets over the target's -mfpu=neon (half floats: neon-fp16, ieee)
-FPU_OPTIONS = ('-mfpu=', '-mfp16-format=')
-DEFAULT_FPU = ('-mfpu=neon',)
+# FPU options a source sets over the target's -mfpu=neon -mfloat-abi=softfp (half floats: neon-fp16, ieee; libsas: -mfloat-abi=hard)
+FPU_OPTIONS = ('-mfpu=', '-mfp16-format=', '-mfloat-abi=')
+DEFAULT_FPU = ('-mfpu=neon', '-mfloat-abi=softfp')
 
 
 def read_flags(path):
