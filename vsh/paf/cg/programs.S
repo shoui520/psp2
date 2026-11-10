@@ -82,3 +82,5 @@
 	PROGRAM _ZN3paf5graph22PageTurnQuadVertShader8s_binaryE, "drawobj/page_turn/quad.vp.gxp"
 	PROGRAM _ZN3paf5graph24PageTurnShadowFragShader8s_binaryE, "drawobj/page_turn/page_turn_shadow.fp.gxp"
 	PROGRAM _ZN3paf5graph21PageTurnTopFragShader8s_binaryE, "drawobj/page_turn/page_turn_top.fp.gxp"
+	PROGRAM _ZN3paf5graph29PageTurnBottomRoundFragShader8s_binaryE, "drawobj/page_turn/page_turn_bottom_round.fp.gxp"
+	PROGRAM _ZN3paf5graph34PageTurnBottomRoundEmptyFragShader8s_binaryE, "drawobj/page_turn/page_turn_bottom_round_empty.fp.gxp"
