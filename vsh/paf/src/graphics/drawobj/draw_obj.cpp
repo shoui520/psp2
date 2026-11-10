@@ -18,6 +18,22 @@ namespace graph {
 
 using namespace arl;
 
+inline DrawEnv::~DrawEnv()
+{
+	for (DrawCallList *node = m_lists[1].m_next; node != &m_lists[1];) {
+		DrawLayer *layer = static_cast<DrawLayer *>(static_cast<DrawListNode<1> *>(node));
+
+		node = node->m_next;
+		layer->m_drawn = false;
+	}
+	while (m_lists[0].m_next != &m_lists[0])
+		delete static_cast<DrawLayer *>(static_cast<DrawListNode<0> *>(m_lists[0].m_next));
+	m_lists[3].Release();
+	m_lists[2].Release();
+	m_lists[1].Release();
+	m_lists[0].Release();
+}
+
 const char DrawObj::m_drawobj_type[] = "DrawObj";
 extern "C" const uint32_t ScePafGraphics_560A9546 = 0x11;
 bool DrawObj::s_safety;

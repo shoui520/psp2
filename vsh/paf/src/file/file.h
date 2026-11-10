@@ -6,6 +6,7 @@
 #include <sce_atomic.h>
 #include "../std/string.h"
 #include <datetime/datetime.h>
+#include "../std/new.h"
 
 typedef struct File File;
 typedef struct FileOpenArg FileOpenArg;
@@ -109,7 +110,7 @@ void FileSharedPtrRelease(const FileSharedPtr *self)
 	    sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_counter) == 1) {
 		self->m_ref_counter->m_deleter(self->m_ptr);
 		if (sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_weak_counter) == 1)
-			ScePafStdc_1B77082E(self->m_ref_counter);
+			PafDelete(self->m_ref_counter);
 	}
 }
 

@@ -62,9 +62,9 @@ public:
 
 	/* itself (no reader found) */
 	UIInputGestureListener *m_listener;
-	/* the view it moves, and the axis it moves it along */
+	/* the view it moves, and the axis it moves it along (ScrollViewBase::MoveDir) */
 	ScrollViewBase *m_view;
-	uint32_t m_dir;
+	int32_t m_dir;
 	/* set while it moves the view */
 	bool m_moved;
 };
@@ -106,6 +106,18 @@ public:
 			m_views.erase(it);
 		if (m_views.size() == 0)
 			inputdevice::DelInputListener(m_listener);
+	}
+
+	/* whether the view is still one of its views */
+	bool FindViewBase(ScrollViewBase *view)
+	{
+		string func(__func__);
+		string scope = "AnalogScrollSupplier::" + func;
+
+		for (vector<ScrollViewBase *>::iterator it = m_views.begin(); it != m_views.end(); ++it)
+			if (*it == view)
+				return true;
+		return false;
 	}
 
 	vector<ScrollViewBase *> m_views;
@@ -178,7 +190,6 @@ static inline math::v2 MaskMoveDir(const math::v2 &v, int32_t dir)
 	}
 }
 
-/* -1, 0 or 1 */
 /* whether the two are equal, compared lane by lane */
 static inline bool IsSame(const math::v2 &a, const math::v2 &b)
 {
@@ -187,6 +198,7 @@ static inline bool IsSame(const math::v2 &a, const math::v2 &b)
 		.getAsBool();
 }
 
+/* -1, 0 or 1 */
 static inline float Sign(float x)
 {
 	if (x == 0.0f)
@@ -610,6 +622,146 @@ static const sce::Vectormath::Simd::floatInVec s_zero(0.0f);
 
 static AnalogScrollSupplier s_analog_scroll_supplier;
 static TouchScrollSupplier s_touch_scroll_supplier;
+
+/* the widget as a ScrollBarTouch, NULL where it is none */
+static inline ScrollBarTouch *ToScrollBarTouch(Widget *widget)
+{
+	if (widget != NULL && widget->IsInherit(ScrollBarTouch::TypeName()))
+		return static_cast<ScrollBarTouch *>(widget);
+	return NULL;
+}
+
+/* how far from the centre a stick must be pushed to move a view (name ours) */
+#define ANALOG_DEAD_ZONE	37
+
+/* how far a stick moves a view this frame: nothing within the dead zone around the centre, the
+   most at either end, the axis turned so that pushing moves the content (name ours) */
+static inline float AnalogStep(uint16_t value)
+{
+	int16_t dist = (int16_t)sce_paf_abs(value - inputdevice::pad::Data::STICK_CENTER);
+	float step = 0.0f;
+
+	if (value == 0 || value >= 255)
+		step = 124.0f;
+	else if (dist >= ANALOG_DEAD_ZONE)
+		step = (float)(dist - ANALOG_DEAD_ZONE) * 0.5f;
+	if (value > inputdevice::pad::Data::STICK_CENTER)
+		step = -step;
+	return step;
+}
+
+/* whether the stick may scroll the view: it allows it, and neither of its bars is a touch bar */
+static inline bool IsAnalogScrollable(ScrollViewBase *view)
+{
+	return view->m_scroll_analog && ToScrollBarTouch(view->m_horizontal_bar) == NULL &&
+	       ToScrollBarTouch(view->m_vertical_bar) == NULL;
+}
+
+/* the view moved by the stick: stopped for no move, else its velocity takes the move while it
+   can still scroll that way; false while a touch or a snap holds the view (name ours) */
+static inline bool MoveViewByAnalog(ScrollViewBase *view, const math::v2 &move)
+{
+	if (view->m_track_port != -1 || view->m_snap_list.size() != 0)
+		return false;
+	if (IsSame(move, math::v2(0.0f, 0.0f))) {
+		view->m_velocity = math::v2(0.0f, 0.0f);
+		return true;
+	}
+
+	math::v4 pos = view->m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v2 dir(Sign(move.extract_x()), Sign(move.extract_y()));
+
+	if (view->LimitFocus(math::v2(pos.getImpl().getXY()) - dir, false).m_dir == 0 &&
+	    ((move.extract_x() != 0.0f && (view->m_movable_dir & ScrollViewBase::MoveDir_X) != 0) ||
+	     (move.extract_y() != 0.0f && (view->m_movable_dir & ScrollViewBase::MoveDir_Y) != 0)))
+		view->m_velocity = view->m_velocity - move;
+	return true;
+}
+
+void AnalogScrollListener::OnUpdate(const inputdevice::Data *data)
+{
+	if (!m_env->m_analog_scroll)
+		return;
+
+	string func(__func__);
+	string scope = "AnalogScrollListener::" + func;
+	const inputdevice::pad::Data *pad_data = data->m_pad_data;
+
+	if (pad_data->buttons != 0 || inputdevice::pad::IsLocked()) {
+		/* a key or a lock stops the move */
+		if (m_dir != ScrollViewBase::MoveDir_None) {
+			m_moved = true;
+			if (s_analog_scroll_supplier.FindViewBase(m_view) && m_view != NULL)
+				MoveViewByAnalog(m_view, math::v2(0.0f, 0.0f));
+		}
+		return;
+	}
+
+	math::v2 stick(0.0f, 0.0f);
+
+	if (sce_paf_abs(pad_data->lx - inputdevice::pad::Data::STICK_CENTER) >= ANALOG_DEAD_ZONE)
+		stick.set_x(AnalogStep(pad_data->lx));
+	if (sce_paf_abs(pad_data->ly - inputdevice::pad::Data::STICK_CENTER) >= ANALOG_DEAD_ZONE)
+		stick.set_y(AnalogStep(pad_data->ly));
+
+	float x = stick.extract_x();
+	float y = stick.extract_y();
+
+	if (x == 0.0f && y == 0.0f) {
+		/* the stick is back in the centre: the view stops */
+		if (m_dir != ScrollViewBase::MoveDir_None) {
+			m_dir = ScrollViewBase::MoveDir_None;
+			if (s_analog_scroll_supplier.FindViewBase(m_view) && m_view != NULL)
+				MoveViewByAnalog(m_view, math::v2(0.0f, 0.0f));
+		}
+		m_moved = false;
+	}
+	if (m_moved)
+		return;
+
+	vector<ScrollViewBase *> &views = s_analog_scroll_supplier.m_views;
+	vector<ScrollViewBase *>::iterator it;
+	ScrollViewBase *view_x = NULL;
+	ScrollViewBase *view_y = NULL;
+
+	for (it = views.begin(); it != views.end(); ++it) {
+		ScrollViewBase *view = *it;
+
+		if (IsAnalogScrollable(view) && !view->m_fit_to_scene &&
+		    (view->m_movable_dir & ScrollViewBase::MoveDir_X) != 0)
+			view_x = view;
+	}
+	for (it = views.begin(); it != views.end(); ++it) {
+		ScrollViewBase *view = *it;
+
+		if (IsAnalogScrollable(view) && !view->m_fit_to_scene &&
+		    (view->m_movable_dir & ScrollViewBase::MoveDir_Y) != 0)
+			view_y = view;
+	}
+
+	switch (m_dir) {
+	case ScrollViewBase::MoveDir_None:
+		/* the first push picks the axis, and the view that moves along it */
+		if (__builtin_fabsf(y) > __builtin_fabsf(x)) {
+			m_view = view_y;
+			m_dir = ScrollViewBase::MoveDir_Y;
+		} else if (__builtin_fabsf(x) > __builtin_fabsf(y)) {
+			m_view = view_x;
+			m_dir = ScrollViewBase::MoveDir_X;
+		}
+		break;
+	case ScrollViewBase::MoveDir_X:
+		if (x != 0.0f && m_view != NULL && m_view == view_x &&
+		    !MoveViewByAnalog(m_view, math::v2(-x, 0.0f)))
+			m_moved = true;
+		break;
+	case ScrollViewBase::MoveDir_Y:
+		if (y != 0.0f && m_view != NULL && m_view == view_y &&
+		    !MoveViewByAnalog(m_view, math::v2(0.0f, y)))
+			m_moved = true;
+		break;
+	}
+}
 
 /* the view parent's layouter: the view laid out again with it (names ours) */
 class ScrollViewParentLayouter : public Layouter {
@@ -1040,14 +1192,6 @@ void ScrollViewScrollBarController::UpdateLayout(const ScrollViewBarLayout &layo
 					       v_margin.extract_z(),
 				       y, 0.0f, 0.0f));
 	}
-}
-
-/* the widget as a ScrollBarTouch, NULL where it is none */
-static inline ScrollBarTouch *ToScrollBarTouch(Widget *widget)
-{
-	if (widget != NULL && widget->IsInherit(ScrollBarTouch::TypeName()))
-		return static_cast<ScrollBarTouch *>(widget);
-	return NULL;
 }
 
 /* the widget hidden at once, its transition reversed */
@@ -5063,7 +5207,7 @@ void ScrollViewBase::ScePafWidget_B6CECFDF()
 	} else if (root->m_focus_hold == 0 && env != NULL && ScePafWidget_A6B659BB(env, 0) &&
 		   !m_env->m_focus_auto_off && ScePafWidget_DB0FFD33(this) &&
 		   Widget::m_focus_target && ((m_event_enable & 0x400) != 0 || m_focus_count != 0) &&
-		   m_env->IsOverModal(this) && m_hold_count <= 0 && m_focus_in_group) {
+		   m_env->IsInFrontOfModal(this) && m_hold_count <= 0 && m_focus_in_group) {
 		if (IsSame(m_focus_target, math::v2(0.0f, 0.0f))) {
 			Widget::UpdateAfterChildren();
 

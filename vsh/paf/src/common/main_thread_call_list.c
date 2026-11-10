@@ -1,6 +1,7 @@
 /* The timer-backed paf::common::MainThreadCallList singleton. */
 #include "call_list.h"
 #include "../timer/timer.h"
+#include "../std/new.h"
 
 typedef struct CallListListener {
 	TimerListener base;
@@ -10,8 +11,6 @@ typedef struct CallListListener {
 
 typedef char CallListListenerSizeCheck[sizeof(CallListListener) == 80 ? 1 : -1];
 
-extern void *ScePafStdc_FC5CD359(size_t size);
-extern void ScePafStdc_1B77082E(void *ptr);
 extern int __aeabi_atexit(void *object, void (*destroy)(void *), void *dso);
 extern void *__dso_handle;
 
@@ -36,7 +35,7 @@ static const struct {
 
 CallListListener *CallListListenerConstruct(CallListListener *self)
 {
-	Timer *timer = ScePafStdc_FC5CD359(sizeof(*timer));
+	Timer *timer = PafNew(sizeof(*timer));
 	if (timer) {
 		timer->vtable = &timerClass.methods;
 		timer->m_is_2d = 0;
@@ -66,7 +65,7 @@ void MainThreadCallListRegister(Function entry, void *userdata)
 	_ZN3paf6thread5Mutex4LockEv(&s_giant_lock);
 	CallListListener *listener = s_instance;
 	if (!listener) {
-		listener = ScePafStdc_FC5CD359(sizeof(*listener));
+		listener = PafNew(sizeof(*listener));
 		if (listener)
 			listener = CallListListenerConstruct(listener);
 		s_instance = listener;
@@ -106,11 +105,11 @@ TimerListener *CallListListenerDestroy(TimerListener *base)
 		CallItemNode *item = root->next;
 		while (item != root) {
 			CallItemNode *next = item->next;
-			ScePafStdc_1B77082E(item);
+			PafDelete(item);
 			root = self->m_list.m_list.root_node;
 			item = next;
 		}
-		ScePafStdc_1B77082E(root);
+		PafDelete(root);
 	}
 	self->m_list.m_list.root_node = (CallItemNode *)~0U;
 	self->m_list.m_list.count = ~0U;
@@ -121,7 +120,7 @@ TimerListener *CallListListenerDestroy(TimerListener *base)
 void CallListListenerDelete(TimerListener *base)
 {
 	CallListListenerDestroy(base);
-	ScePafStdc_1B77082E(base);
+	PafDelete(base);
 }
 
 void CallListListenerOnFinish(TimerListener *base, void *data1, void *data2)

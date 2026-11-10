@@ -7,7 +7,7 @@ int PafStringVectorReallocate(PafStringVector *self, size_t capacity)
 	size_t i;
 
 	if (self->_data) {
-		data = ScePafStdc_FC5CD359(sizeof(*data) * capacity);
+		data = PafNew(sizeof(*data) * capacity);
 		if (!data) {
 			ScePafStdc_D608246A();
 			return 0;
@@ -22,12 +22,12 @@ int PafStringVectorReallocate(PafStringVector *self, size_t capacity)
 		}
 		for (i = 0; i < self->_size; ++i)
 			PafStringDestroy(&self->_data[i]);
-		ScePafStdc_1B77082E(self->_data);
+		PafDelete(self->_data);
 		self->_data = data;
 		self->_capacity = capacity;
 		return 1;
 	}
-	data = ScePafStdc_FC5CD359(sizeof(*data) * capacity);
+	data = PafNew(sizeof(*data) * capacity);
 	if (!data)
 		ScePafStdc_D608246A();
 	self->_data = data;
@@ -45,7 +45,7 @@ PafStringVector *PafStringVectorConstructCopy(PafStringVector *self,
 
 	self->_size = 0;
 	self->_capacity = 0;
-	data = ScePafStdc_FC5CD359(sizeof(*data) * src->_capacity);
+	data = PafNew(sizeof(*data) * src->_capacity);
 	if (!data)
 		ScePafStdc_D608246A();
 	self->_data = data;

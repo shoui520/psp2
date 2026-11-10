@@ -132,7 +132,7 @@ static inline __attribute__((always_inline)) void PafStringInitialize(PafString 
 static inline __attribute__((always_inline)) void PafStringDestroy(PafString *self)
 {
 	if (self->ptr != &PafStringEmpty)
-		ScePafStdc_1B77082E(self->ptr);
+		PafDelete(self->ptr);
 	self->ptr = (char *)-1;
 	self->count = (size_t)-1;
 }
@@ -146,7 +146,7 @@ static inline __attribute__((always_inline)) void PafWStringInitialize(PafWStrin
 static inline __attribute__((always_inline)) void PafWStringDestroy(PafWString *self)
 {
 	if (self->ptr != &PafWStringEmpty)
-		ScePafStdc_1B77082E(self->ptr);
+		PafDelete(self->ptr);
 	self->ptr = (uint16_t *)-1;
 	self->count = (size_t)-1;
 }
@@ -155,7 +155,7 @@ static inline __attribute__((always_inline)) void PafWStringDestroy(PafWString *
 static inline __attribute__((always_inline))
 void PafStringAppendBytes(PafString *self, const char *src, size_t len)
 {
-	char *dest = ScePafStdc_FC5CD359(self->count + len + 1);
+	char *dest = PafNew(self->count + len + 1);
 
 	if (dest) {
 		size_t total = self->count + len;
@@ -164,7 +164,7 @@ void PafStringAppendBytes(PafString *self, const char *src, size_t len)
 		sce_paf_memcpy(dest + self->count, src, len);
 		dest[self->count + len] = 0;
 		if (self->ptr != &PafStringEmpty)
-			ScePafStdc_1B77082E(self->ptr);
+			PafDelete(self->ptr);
 		self->ptr = dest;
 		self->count = total;
 	} else {

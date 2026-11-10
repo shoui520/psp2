@@ -50,6 +50,26 @@ public:
 		m_next = NULL;
 	}
 
+	/* a list head going away: its nodes left unlinked, then the head unlinked as a node is
+	   (DrawEnv's destructor; name ours) */
+	void Release()
+	{
+		DrawCallList *node = m_next;
+
+		if (node != this) {
+			node->m_prev->m_next = this;
+			m_prev = node->m_prev;
+			do {
+				DrawCallList *next = node->m_next;
+
+				node->m_prev = NULL;
+				node->m_next = NULL;
+				node = next;
+			} while (node != this);
+		}
+		Unlink();
+	}
+
 	/* the node linked in front of another, taken out of any list it was in */
 	void InsertBefore(DrawCallList *node)
 	{
@@ -91,6 +111,8 @@ public:
 	{
 	}
 
+	/* inline in SharedPtr<DrawEnv>'s deleter (0x811f24b4, draw_obj.cpp): the layers of list 1
+	   marked not drawn, those of list 0 deleted, then the four lists let go, the last first */
 	~DrawEnv();
 
 	/* a layer named for a debug view, drawn in the order of its priority, which builds its
@@ -548,8 +570,9 @@ public:
 	   (draw_env_flush.h; name ours) */
 	void Draw(int32_t index, bool log);
 
-	/* set by Draw once it has drawn */
-	bool m_drawn;
+	/* set by Draw once it has drawn; a byte, which may alias the draw lists (Sony's DrawEnv
+	   deleter reads list 0 again after clearing it in list 1's layers) */
+	uint8_t m_drawn;
 	string m_name;
 	/* m_priority as the frame began, which the draw order is sorted by (BeginFrame; name
 	   ours) */

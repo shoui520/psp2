@@ -1,10 +1,9 @@
 #include "path.h"
+#include "../std/new.h"
 
 extern size_t sce_paf_strlen(const char *str);
 extern char *sce_paf_strchr(const char *str, int ch);
 extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
-extern void *ScePafStdc_D8CC1AFE(size_t size);
-extern void ScePafStdc_5C468294(void *ptr);
 #define PafPlacementNew _ZnwjPv
 extern void *PafPlacementNew(size_t size, void *where);
 
@@ -219,7 +218,7 @@ void PathNormalize(PafString *result, const PafString *path)
 			++part;
 		end = parts._data + parts._size;
 	}
-	text = ScePafStdc_D8CC1AFE(path->count + 1);
+	text = PafNewArray(path->count + 1);
 	cursor = text;
 	part = normalized._data;
 	while (part != normalized._data + normalized._size) {
@@ -234,13 +233,13 @@ void PathNormalize(PafString *result, const PafString *path)
 	*cursor = 0;
 	PafStringInitialize(result);
 	PafStringAssign(result, text, text ? sce_paf_strlen(text) : 0);
-	ScePafStdc_5C468294(text);
+	PafDeleteArray(text);
 	if (normalized._data)
-		ScePafStdc_1B77082E(normalized._data);
+		PafDelete(normalized._data);
 	if (parts._data) {
 		normalized._data = (PathSegment *)-1;
 		normalized._size = normalized._capacity = (size_t)-1;
-		ScePafStdc_1B77082E(parts._data);
+		PafDelete(parts._data);
 	}
 }
 
@@ -250,7 +249,7 @@ int PathSegmentVectorReallocate(PathSegmentVector *self, size_t capacity)
 	size_t index;
 
 	if (!self->_data) {
-		data = ScePafStdc_FC5CD359(sizeof(*data) * capacity);
+		data = PafNew(sizeof(*data) * capacity);
 		if (!data)
 			ScePafStdc_D608246A();
 		self->_data = data;
@@ -259,7 +258,7 @@ int PathSegmentVectorReallocate(PathSegmentVector *self, size_t capacity)
 		self->_capacity = capacity;
 		return 1;
 	}
-	data = ScePafStdc_FC5CD359(sizeof(*data) * capacity);
+	data = PafNew(sizeof(*data) * capacity);
 	if (!data) {
 		ScePafStdc_D608246A();
 		return 0;
@@ -273,7 +272,7 @@ int PathSegmentVectorReallocate(PathSegmentVector *self, size_t capacity)
 			dest->len = source->len;
 		}
 	}
-	ScePafStdc_1B77082E(self->_data);
+	PafDelete(self->_data);
 	self->_data = data;
 	self->_capacity = capacity;
 	return 1;

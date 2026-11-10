@@ -3,6 +3,7 @@
 #include "../std/string.h"
 #include <kernel/iofilemgr.h>
 #include <sce_atomic.h>
+#include "../std/new.h"
 
 int32_t CxmlFileLoad(const CxmlFile *self, const FileSharedPtr *fp,
 		      void *buf, size_t bufsize)
@@ -39,7 +40,7 @@ int32_t CxmlFileLoad(const CxmlFile *self, const FileSharedPtr *fp,
 	if (file && sceAtomicDecrement32AcqRel(&counter->m_counter) == 1) {
 		counter->m_deleter(file);
 		if (sceAtomicDecrement32AcqRel(&counter->m_weak_counter) == 1)
-			ScePafStdc_1B77082E(counter);
+			PafDelete(counter);
 	}
 	return ret;
 }

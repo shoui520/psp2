@@ -4,6 +4,7 @@
 #include "../memory/heap_allocator.h"
 #include "../std/string.h"
 #include <sce_atomic.h>
+#include "../std/new.h"
 
 typedef struct Buffer Buffer;
 
@@ -117,7 +118,7 @@ void BufferSharedPtrRelease(const BufferSharedPtr *self)
 	    sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_counter) == 1) {
 		self->m_ref_counter->m_deleter(self->m_ptr);
 		if (sceAtomicDecrement32AcqRel(&self->m_ref_counter->m_weak_counter) == 1)
-			ScePafStdc_1B77082E(self->m_ref_counter);
+			PafDelete(self->m_ref_counter);
 	}
 }
 

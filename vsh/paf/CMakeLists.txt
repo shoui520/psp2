@@ -1,4 +1,5 @@
-# ScePaf was built with SNC. Unconverted exports remain in libpaf.c.
+# ScePaf was built with SNC. Every function is in C; it is PARTIAL until the libraries it links
+# statically (libsas, libces) and its GXP shaders are built from source.
 # PAF's heap is dlmalloc 2.8.4: pristine upstream from contrib plus Sony's changes
 # (src/memory/dlmalloc_sce.patch), applied at configure time into the build directory.
 set(paf_dlmalloc_source "${CMAKE_CURRENT_BINARY_DIR}/src/memory/dlmalloc.c")
@@ -374,6 +375,11 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 )
 # libpaf's own build of its headers (shared_string.h inlines what other modules import)
 target_compile_definitions(vs0_sys_external_libpaf PRIVATE PAF_LIBRARY_BUILD)
+# Sony linked with psp2ld --strip-unused, which drops functions nothing calls (giflib's
+# AddExtensionBlock, ApplyTranslation, MakeExtension ...): each SNC function in its own section,
+# and the link collects the unreferenced ones.
+target_compile_definitions(vs0_sys_external_libpaf PRIVATE PSP2_STRIP_UNUSED)
+target_link_options(vs0_sys_external_libpaf PRIVATE -Wl,--gc-sections)
 
 # the SceVshBridge stub library's wrapper, which Sony built with GCC 4.8 and without a stack
 # guard, like the SDK's libraries in libhttp (2026-11-02)

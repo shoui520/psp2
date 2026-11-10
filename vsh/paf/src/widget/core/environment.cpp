@@ -524,7 +524,7 @@ Environment::Environment(Resolution *env_param, int32_t screen_orientation_mode)
 	  m_sound_callback_data(NULL), m_create_widget_callback(NULL), m_cancel_widget(NULL),
 	  m_top_modal_widget(NULL), m_display_area_scene(NULL), m_second_modal_widget(NULL),
 	  m_focus_widget(NULL), m_focus_mode(0), m_focus_auto_off(false), m_release_focus_beyond(true),
-	  m_focus_enabled(true), m_ev_queue(32), m_screen(NULL), m_reserved_flag_a(false),
+	  m_focus_enabled(true), m_ev_queue(32), m_screen(NULL), m_analog_scroll(false),
 	  m_reserved_flag_b(true), m_finish_after_draw(false), m_reserved_word_a(1),
 	  m_motion_noise_filter(false)
 {
@@ -2663,7 +2663,7 @@ void ScePafWidget_B4A4660B(Environment *env, bool enable, int32_t port, bool rel
 
 	if (enable) {
 		inputdevice::AddInputListener(pad);
-		if (!env->m_reserved_flag_a && env->m_reserved_flag_b == true)
+		if (!env->m_analog_scroll && env->m_reserved_flag_b == true)
 			pad->SetMode(0, 0);
 		inputdevice::AddInputListener(keyboard);
 	} else {
@@ -2816,6 +2816,12 @@ int32_t Environment::ReleasePadCaptureLow(uint32_t port)
 	if (widget != NULL)
 		return widget->ReleasePadCaptureDir(255, true);
 	return -1;
+}
+
+bool Environment::IsDrawSkipped()
+{
+	return m_orientation_timer != NULL &&
+	       m_orientation_timer->m_state != Timer::State_Finished;
 }
 
 float Environment::GetRollScreen()

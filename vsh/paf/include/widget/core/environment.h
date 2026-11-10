@@ -737,10 +737,9 @@ public:
 	/* the display area settings read while the surface uses them, the screen size of the scenes
 	   made again where the area changed (0x8113c616; name ours) */
 	void UpdateDisplayArea();
-	/* nothing is drawn now (0x8113dcca; name ours) */
+	/* nothing is drawn while the screen turns: its orientation timer has not finished
+	   (0x8113dcca; name ours) */
 	bool IsDrawSkipped();
-	/* the widget is not below the modal widgets in depth (0x8113fa84; name ours) */
-	bool IsOverModal(Widget *widget);
 	/* its camera's roll, 0 without one (0x8113dce2; name ours) */
 	float GetRollScreen();
 	/* the scene added to the scenes of the entry, before the widget (NULL: at the end), and
@@ -938,8 +937,9 @@ public:
 	/* the slots used when OnUpdateTouchDeviceRegion last set the regions (name ours) */
 	uint32_t m_touch_region_mask_pre;
 	Widget *m_touch_region[6];
-	/* two flags set by the constructor, the second on (meaning open; names ours) */
-	bool m_reserved_flag_a;
+	/* the analog sticks scroll the views (AnalogScrollListener; name ours) */
+	bool m_analog_scroll;
+	/* set by the constructor (meaning open; name ours) */
 	bool m_reserved_flag_b;
 	/* each frame waits for the GPU once it is drawn (Framework::Option_4) */
 	bool m_finish_after_draw;

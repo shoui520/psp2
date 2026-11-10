@@ -2603,6 +2603,19 @@ extern "C" int32_t ScePafWidget_929C3278(Widget *widget)
 	return 0;
 }
 
+/* the first widget of the nearest focus root at or above the widget, up to its scene (0x81150cac;
+   name ours) */
+extern "C" Widget *FindRootFocus(Widget *widget)
+{
+	for (Widget *w = widget; w != NULL; w = w->m_parent) {
+		if (w->m_focus_root != NULL)
+			return w->m_focus_root->m_init_focus;
+		if ((Widget *)widget->m_scene == w)
+			break;
+	}
+	return NULL;
+}
+
 extern "C" int32_t ScePafWidget_0253DC9C(Widget *widget, bool on)
 {
 	Environment *env = widget->m_env;
@@ -3034,7 +3047,7 @@ next:
 	}
 }
 
-math::v4 ScePafWidget_301AA80F(Widget *widget, const math::v4 &size)
+extern "C" math::v4 ScePafWidget_301AA80F(Widget *widget, const math::v4 &size)
 {
 	math::v4 adjusted = size + s_size_adjust;
 
@@ -4366,6 +4379,59 @@ Widget *Widget::GetChild(int32_t index) const
 	for (; index < 0; ++index)
 		--it;
 	return *it;
+}
+
+Widget *Widget::FindChild(const char *type, int32_t mode, bool (*check)(Widget *))
+{
+	if (type == NULL)
+		return NULL;
+
+	/* its children only */
+	if (mode == 2) {
+		for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); it++) {
+			if ((*it)->IsInherit(type) && (*it)->m_hold_count <= 0) {
+				if (check == NULL || check(*it))
+					return *it;
+			}
+		}
+		return NULL;
+	}
+	for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); it++) {
+		Widget *child = *it;
+
+		if (child->m_hold_count > 0)
+			continue;
+		if (child->IsInherit(type) && (check == NULL || check(*it)))
+			return *it;
+
+		Widget *found = (*it)->FindChild(type, mode, check);
+
+		if (found != NULL)
+			return mode != 0 ? *it : found;
+	}
+	return NULL;
+}
+
+int32_t Widget::FindChildrenByType(const char *type, vector<Widget *> *out)
+{
+	int32_t num = 0;
+
+	for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); it++) {
+		Widget *child = *it;
+
+		if (child->m_hold_count > 0)
+			continue;
+		if (child->IsInherit(type)) {
+			out->push_back(*it);
+			num++;
+		}
+
+		int32_t found = (*it)->FindChildrenByType(type, out);
+
+		if (found >= 0)
+			num += found;
+	}
+	return num;
 }
 
 extern "C" int32_t ScePafWidget_D4759650(Widget *widget, int32_t delta)
@@ -8428,6 +8494,35 @@ void Widget::AddDrawObj(const DrawObjEntry &entry, bool update)
 		SetDrawObjSurfaceDraw(this, entry.m_obj.get());
 	if (update)
 		UpdateSize();
+}
+
+uint64_t Widget::GetLayerDepth()
+{
+	if ((Widget *)m_scene == this)
+		return 0;
+	return m_parent->GetLayerDepth() + (uint64_t)m_priority * m_scene->m_layer_weight[m_layer];
+}
+
+void Widget::InsertDrawObj(vector<DrawObjEntry>::iterator it, const DrawObjEntry &entry,
+			   bool update)
+{
+	m_drawobjs.insert(it, entry);
+	if (entry.m_obj.get() != NULL)
+		SetDrawObjSurfaceDraw(this, entry.m_obj.get());
+	if (update)
+		UpdateSize();
+}
+
+vector<Widget::DrawObjEntry>::iterator Widget::LowerBoundDrawObj(int32_t id)
+{
+	vector<DrawObjEntry>::iterator it = m_drawobjs.begin();
+	vector<DrawObjEntry>::iterator end = m_drawobjs.end();
+
+	for (; it != end; ++it) {
+		if (it->m_attr.m_id >= (uint32_t)id)
+			break;
+	}
+	return it;
 }
 
 void Widget::ReplaceDrawObj(const DrawObjEntry &entry, bool update)

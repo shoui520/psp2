@@ -19646,7 +19646,7 @@ modules:
           SceIpmi_4A389FF9: 0x4A389FF9
           SceIpmi_4AA4166D: 0x4AA4166D
           SceIpmi_4DEDA4F2: 0x4DEDA4F2
-          SceIpmi_4E255C31: 0x4E255C31
+          _ZN4IPMI6Client13getBufferSizeEPKNS0_6ConfigE: 0x4E255C31
           SceIpmi_4E5E2881: 0x4E5E2881
           SceIpmi_5000D63E: 0x5000D63E
           SceIpmi_5ECD40E9: 0x5ECD40E9
@@ -19678,7 +19678,7 @@ modules:
           SceIpmi_A68863F9: 0xA68863F9
           SceIpmi_AC75DB57: 0xAC75DB57
           SceIpmi_B0304313: 0xB0304313
-          SceIpmi_B282B430: 0xB282B430
+          _ZN4IPMI6Client6createEPPS0_PKNS0_6ConfigEPvS6_: 0xB282B430
           SceIpmi_B50625FA: 0xB50625FA
           SceIpmi_B509D16D: 0xB509D16D
           SceIpmi_B56BAC7F: 0xB56BAC7F

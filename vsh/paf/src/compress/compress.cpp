@@ -17,7 +17,7 @@ extern "C" {
 #include <libdeflt.h>
 
 /* GetGlobalHeapAllocator, exported by its C name. */
-extern "C" paf::memory::HeapAllocator *ScePafStdc_261CAF72(void);
+extern "C" paf::memory::HeapAllocator *GetGlobalHeapAllocator(void);
 
 namespace paf {
 namespace compress {
@@ -34,7 +34,7 @@ int32_t Compress(common::SharedPtr<File> file, const void *src, size_t srcsize, 
 	int32_t ret;
 
 	if (heap == NULL)
-		heap = ScePafStdc_261CAF72();
+		heap = GetGlobalHeapAllocator();
 	if (type == CompressType_Zlib) {
 		common::SharedPtr<File> out(file);
 		z_stream stream;

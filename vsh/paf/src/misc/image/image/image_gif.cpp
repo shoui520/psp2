@@ -17,6 +17,9 @@ using namespace paf;
 using namespace paf::image;
 using paf::memory::HeapAllocator;
 
+/* the global heap's calloc, exported by its C name (src/std/global_heap.c) */
+extern "C" void *sce_paf_calloc(size_t nitems, size_t size);
+
 /* The rows of each pass of an interlaced image: the first row and the step. */
 static int InterlacedOffset[] = { 0, 4, 2, 1 };
 static int InterlacedJumps[] = { 8, 8, 4, 2 };
@@ -590,5 +593,5 @@ static void *GifCalloc(void *heap, size_t nitems, size_t size)
 {
 	if (heap != NULL)
 		return ((HeapAllocator *)heap)->sce_paf_calloc(nitems, size);
-	return ScePafStdc_C9532982(nitems, size);
+	return sce_paf_calloc(nitems, size);
 }

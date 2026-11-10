@@ -1,6 +1,7 @@
 /* Pending calls are handed to the job queue as one reference-counted job. */
 #include "job_call_queue.h"
 #include <sce_atomic.h>
+#include "../std/new.h"
 
 extern size_t sce_paf_strlen(const char *str);
 extern void _ZN3paf6thread5SleepEi(unsigned int milliseconds);
@@ -47,7 +48,7 @@ void JobCallQueueCheck(JobCallQueue *self)
 
 	_ZN3paf6thread5Mutex4LockEv(mutex);
 	if (self->m_call_queue) {
-		CallQueueJobItem *job = ScePafStdc_FC5CD359(sizeof(*job));
+		CallQueueJobItem *job = PafNew(sizeof(*job));
 		JobItemSharedPtr item;
 
 		if (job) {
@@ -67,7 +68,7 @@ void JobCallQueueCheck(JobCallQueue *self)
 		item.m_ptr = job ? &job->base : NULL;
 		item.m_ref_counter = NULL;
 		if (job) {
-			JobItemRefCounter *counter = ScePafStdc_FC5CD359(sizeof(*counter));
+			JobItemRefCounter *counter = PafNew(sizeof(*counter));
 
 			item.m_ref_counter = counter;
 			if (counter) {
@@ -85,7 +86,7 @@ void JobCallQueueCheck(JobCallQueue *self)
 		    sceAtomicDecrement32AcqRel(&item.m_ref_counter->m_counter) == 1) {
 			item.m_ref_counter->m_deleter(item.m_ptr);
 			if (sceAtomicDecrement32AcqRel(&item.m_ref_counter->m_weak_counter) == 1)
-				ScePafStdc_1B77082E(item.m_ref_counter);
+				PafDelete(item.m_ref_counter);
 		}
 	}
 	_ZN3paf6thread5Mutex6UnlockEv(mutex);
@@ -98,7 +99,7 @@ void JobCallQueueEnqueue(JobCallQueue *self, const char *name,
 
 	_ZN3paf6thread5Mutex4LockEv(mutex);
 	if (!self->m_call_queue) {
-		CallQueue *body = ScePafStdc_FC5CD359(sizeof(*body));
+		CallQueue *body = PafNew(sizeof(*body));
 
 		if (body) {
 			PafString prefix, joined, queue_name;
@@ -172,7 +173,7 @@ JobCallQueue *JobCallQueueConstructBase(JobCallQueue *self, const PafString *nam
 JobCallQueue *JobCallQueueDestroy(JobCallQueue *self)
 {
 	if (self->m_call_queue)
-		ScePafStdc_1B77082E(CallQueueDestroy(self->m_call_queue));
+		PafDelete(CallQueueDestroy(self->m_call_queue));
 	_ZN3paf6thread5MutexD1Ev(&self->m_mutex);
 	PafStringDestroy(&self->m_name);
 	return self;
@@ -181,7 +182,7 @@ JobCallQueue *JobCallQueueDestroy(JobCallQueue *self)
 JobCallQueue *JobCallQueueDestroyBase(JobCallQueue *self)
 {
 	if (self->m_call_queue)
-		ScePafStdc_1B77082E(CallQueueDestroy(self->m_call_queue));
+		PafDelete(CallQueueDestroy(self->m_call_queue));
 	_ZN3paf6thread5MutexD1Ev(&self->m_mutex);
 	PafStringDestroy(&self->m_name);
 	return self;
@@ -206,7 +207,7 @@ int CallQueueJobItemRun(JobItem *base)
 
 	CallQueueCheck(self->m_call_queue);
 	if (self->m_call_queue)
-		ScePafStdc_1B77082E(CallQueueDestroy(self->m_call_queue));
+		PafDelete(CallQueueDestroy(self->m_call_queue));
 	return 0;
 }
 
@@ -218,5 +219,5 @@ void CallQueueJobItemDelete(JobItem *base)
 {
 	base->vtable = &callQueueJobItemClass.methods;
 	JobItemDestroyBase(base);
-	ScePafStdc_1B77082E(base);
+	PafDelete(base);
 }

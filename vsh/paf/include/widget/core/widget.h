@@ -2131,7 +2131,8 @@ int32_t ScePafWidget_08CE1C4B(paf::ui::Widget *widget, paf::ui::Event *e, uint32
 int32_t ScePafWidget_EB1D1CBC(paf::ui::Widget *widget, paf::ui::Event *e);
 /* the touch event taken by the widget's gestures (0x8116132e; no name found) */
 int32_t ScePafWidget_38CDFD1D(paf::ui::Widget *widget, paf::ui::Event *e);
-/* the widget that has the focus under the widget's focus root, NULL for none (name ours) */
+/* the first widget of the nearest focus root at or above the widget, up to its scene, NULL for
+   none (0x81150cac; name ours) */
 paf::ui::Widget *FindRootFocus(paf::ui::Widget *widget);
 /* the widget is shown, so the focus may go to it (no name found) */
 bool ScePafWidget_DB0FFD33(paf::ui::Widget *widget);

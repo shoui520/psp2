@@ -4,6 +4,7 @@
 #include "ctype.h"
 #include "stdlib.h"
 #include <libkernel/libkernel.h>
+#include "new.h"
 
 char *sce_paf_strchr(const char *str, int ch)
 {
@@ -1013,8 +1014,6 @@ size_t sce_paf_strlen(const char *str)
 	return sceClibStrnlen(str, (size_t)-1);
 }
 
-extern void *ScePafStdc_FC5CD359(size_t size);
-extern void ScePafStdc_1B77082E(void *ptr);
 extern int ScePafStdc_D608246A(void);
 
 char PafStringEmpty;
@@ -1031,7 +1030,7 @@ PafWString *PafWStringErase(PafWString *self, size_t pos, size_t len)
 	}
 	if (len > count - pos)
 		len = count - pos;
-	dest = ScePafStdc_FC5CD359(2 * (count - len + 1));
+	dest = PafNew(2 * (count - len + 1));
 	if (dest) {
 		count = self->count;
 		sce_paf_memcpy(dest, self->ptr, 2 * pos);
@@ -1039,7 +1038,7 @@ PafWString *PafWStringErase(PafWString *self, size_t pos, size_t len)
 			       2 * (count - pos - len));
 		dest[count - len] = 0;
 		if (self->ptr != &PafWStringEmpty)
-			ScePafStdc_1B77082E(self->ptr);
+			PafDelete(self->ptr);
 		self->ptr = dest;
 		self->count = count - len;
 	} else {
@@ -1050,7 +1049,7 @@ PafWString *PafWStringErase(PafWString *self, size_t pos, size_t len)
 
 PafWString *PafWStringAppend(PafWString *self, size_t len, uint16_t value)
 {
-	uint16_t *dest = ScePafStdc_FC5CD359(2 * (self->count + len + 1));
+	uint16_t *dest = PafNew(2 * (self->count + len + 1));
 
 	if (dest) {
 		size_t count = self->count;
@@ -1063,7 +1062,7 @@ PafWString *PafWStringAppend(PafWString *self, size_t len, uint16_t value)
 			dest[count + i++] = value;
 		dest[count + len] = 0;
 		if (self->ptr != &PafWStringEmpty)
-			ScePafStdc_1B77082E(self->ptr);
+			PafDelete(self->ptr);
 		self->ptr = dest;
 		self->count = total;
 	} else {
@@ -1079,9 +1078,9 @@ PafWString *PafWStringAssign(PafWString *self, const uint16_t *src, size_t len)
 	if (old == src)
 		return self;
 	if (old != &PafWStringEmpty)
-		ScePafStdc_1B77082E(old);
+		PafDelete(old);
 	if (len && src && *src) {
-		uint16_t *dest = ScePafStdc_FC5CD359(2 * (len + 1));
+		uint16_t *dest = PafNew(2 * (len + 1));
 
 		if (dest) {
 			self->ptr = dest;
@@ -1108,7 +1107,7 @@ PafString *PafStringErase(PafString *self, size_t pos, size_t len)
 	}
 	if (len > count - pos)
 		len = count - pos;
-	dest = ScePafStdc_FC5CD359(count - len + 1);
+	dest = PafNew(count - len + 1);
 	if (dest) {
 		count = self->count;
 		sce_paf_memcpy(dest, self->ptr, pos);
@@ -1116,7 +1115,7 @@ PafString *PafStringErase(PafString *self, size_t pos, size_t len)
 			       count - pos - len);
 		dest[count - len] = 0;
 		if (self->ptr != &PafStringEmpty)
-			ScePafStdc_1B77082E(self->ptr);
+			PafDelete(self->ptr);
 		self->ptr = dest;
 		self->count = count - len;
 	} else {
@@ -1127,7 +1126,7 @@ PafString *PafStringErase(PafString *self, size_t pos, size_t len)
 
 PafString *PafStringAppend(PafString *self, size_t len, char value)
 {
-	char *dest = ScePafStdc_FC5CD359(self->count + len + 1);
+	char *dest = PafNew(self->count + len + 1);
 
 	if (dest) {
 		size_t count = self->count;
@@ -1140,7 +1139,7 @@ PafString *PafStringAppend(PafString *self, size_t len, char value)
 			dest[count + i++] = value;
 		dest[count + len] = 0;
 		if (self->ptr != &PafStringEmpty)
-			ScePafStdc_1B77082E(self->ptr);
+			PafDelete(self->ptr);
 		self->ptr = dest;
 		self->count = total;
 	} else {
@@ -1156,9 +1155,9 @@ PafString *PafStringAssign(PafString *self, const char *src, size_t len)
 	if (old == src)
 		return self;
 	if (old != &PafStringEmpty)
-		ScePafStdc_1B77082E(old);
+		PafDelete(old);
 	if (len && src && *src) {
-		char *dest = ScePafStdc_FC5CD359(len + 1);
+		char *dest = PafNew(len + 1);
 
 		if (dest) {
 			self->ptr = dest;
@@ -1179,9 +1178,9 @@ PafString *PafStringCopy(PafString *self, const PafString *src)
 	if (self == src)
 		return self;
 	if (self->ptr != &PafStringEmpty)
-		ScePafStdc_1B77082E(self->ptr);
+		PafDelete(self->ptr);
 	if (src->count) {
-		char *dest = ScePafStdc_FC5CD359(src->count + 1);
+		char *dest = PafNew(src->count + 1);
 
 		if (dest) {
 			self->ptr = dest;
@@ -1199,9 +1198,9 @@ PafString *PafStringCopy(PafString *self, const PafString *src)
 PafString *PafStringAssignChar(PafString *self, char value)
 {
 	if (self->ptr != &PafStringEmpty)
-		ScePafStdc_1B77082E(self->ptr);
+		PafDelete(self->ptr);
 	if (value) {
-		char *dest = ScePafStdc_FC5CD359(2);
+		char *dest = PafNew(2);
 
 		if (dest) {
 			self->ptr = dest;
@@ -1271,9 +1270,9 @@ PafWString *PafWStringCopy(PafWString *self, const PafWString *src)
 {
 	if (src != self) {
 		if (self->ptr != &PafWStringEmpty)
-			ScePafStdc_1B77082E(self->ptr);
+			PafDelete(self->ptr);
 		if (src->count) {
-			uint16_t *dest = ScePafStdc_FC5CD359(2 * (src->count + 1));
+			uint16_t *dest = PafNew(2 * (src->count + 1));
 
 			if (dest) {
 				size_t count = src->count;

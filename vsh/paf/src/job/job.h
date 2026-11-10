@@ -3,6 +3,7 @@
 
 #include "../std/string.h"
 #include <sce_atomic.h>
+#include "../std/new.h"
 
 typedef struct JobItem JobItem;
 typedef struct JobQueue JobQueue;
@@ -89,7 +90,7 @@ void JobItemSharedPtrRelease(JobItemSharedPtr *item)
 	    sceAtomicDecrement32AcqRel(&item->m_ref_counter->m_counter) == 1) {
 		item->m_ref_counter->m_deleter(item->m_ptr);
 		if (sceAtomicDecrement32AcqRel(&item->m_ref_counter->m_weak_counter) == 1)
-			ScePafStdc_1B77082E(item->m_ref_counter);
+			PafDelete(item->m_ref_counter);
 	}
 }
 

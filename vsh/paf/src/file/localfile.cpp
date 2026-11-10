@@ -4,7 +4,7 @@
 #include "localfile_platform.h"
 
 /* GetGlobalHeapAllocator, exported by its C name. */
-extern "C" paf::memory::HeapAllocator *ScePafStdc_261CAF72(void);
+extern "C" paf::memory::HeapAllocator *GetGlobalHeapAllocator(void);
 
 namespace paf {
 
@@ -26,7 +26,7 @@ void LocalFile::CreateImpl()
 LocalFile::LocalFile() : m_lock_mutex("ScePafLocalFileCsLock", 0)
 {
 	m_pimpl = NULL;
-	m_allocator = ScePafStdc_261CAF72();
+	m_allocator = GetGlobalHeapAllocator();
 	CreateImpl();
 }
 

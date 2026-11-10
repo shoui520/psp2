@@ -4939,7 +4939,7 @@ void ListView::ScePafWidget_B6CECFDF()
 	}
 	if (root->m_focus_hold == 0 && env != NULL && ScePafWidget_A6B659BB(env, 0) &&
 	    !m_env->m_focus_auto_off && ScePafWidget_DB0FFD33(this) && Widget::m_focus_target &&
-	    ((m_event_enable & 0x400) != 0 || m_focus_count != 0) && m_env->IsOverModal(this) &&
+	    ((m_event_enable & 0x400) != 0 || m_focus_count != 0) && m_env->IsInFrontOfModal(this) &&
 	    m_hold_count <= 0 && m_focus_in_group) {
 		if (m_track_port == -1 && IsSame(m_velocity, math::v2(0.0f, 0.0f))) {
 			Widget *focus = GetRootFocus(this);

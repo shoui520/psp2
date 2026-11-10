@@ -1,9 +1,8 @@
 /* Callback dispatch, including removal of the callback being dispatched. */
 #include "call_list.h"
+#include "../std/new.h"
 
 /* operator new/delete and the allocation-failure handler in ScePafStdc. */
-extern void *ScePafStdc_FC5CD359(size_t size);
-extern void ScePafStdc_1B77082E(void *ptr);
 extern int ScePafStdc_D608246A(void);
 
 /* SNC's placement-new overload: the size is ignored, the address is returned. */
@@ -39,7 +38,7 @@ void CallListUnregister(CallList *self, Function entry, void *userdata)
 		CallItemNode *next = item->next;
 		next->prev = item->prev;
 		item->prev->next = item->next;
-		ScePafStdc_1B77082E(item);
+		PafDelete(item);
 		--self->m_list.count;
 		self->m_iterator = next;
 		if (!self->m_iterator_updated) {
@@ -49,7 +48,7 @@ void CallListUnregister(CallList *self, Function entry, void *userdata)
 	} else {
 		item->next->prev = item->prev;
 		item->prev->next = item->next;
-		ScePafStdc_1B77082E(item);
+		PafDelete(item);
 		--self->m_list.count;
 	}
 }
@@ -87,7 +86,7 @@ void CallListUpdate(CallList *self, Mutex *extMtx)
 static inline __attribute__((always_inline)) CallList *CallListInitialize(CallList *self)
 {
 	self->m_list.count = 0;
-	CallItemNode *root = ScePafStdc_FC5CD359(sizeof(*root));
+	CallItemNode *root = PafNew(sizeof(*root));
 	if (!root)
 		ScePafStdc_D608246A();
 	self->m_list.root_node = root;
@@ -117,7 +116,7 @@ void CallListPushBack(CallItemList *list, const CallItem *item)
 	if (!list->root_node)
 		return;
 
-	CallItemNode *node = ScePafStdc_FC5CD359(sizeof(*node));
+	CallItemNode *node = PafNew(sizeof(*node));
 	if (!node)
 		ScePafStdc_D608246A();
 	if (node) {
