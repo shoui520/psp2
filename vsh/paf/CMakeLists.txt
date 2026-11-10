@@ -104,12 +104,13 @@ set_source_files_properties(${paf_ces_SOURCES} PROPERTIES COMPILE_OPTIONS -Xauto
 # (sys/internal/usermode/src/libsas).
 set(paf_sas ../../sys/internal/usermode/src/libsas)
 set(paf_sas_SOURCES
+	${paf_sas}/as/as.c
 	${paf_sas}/as/as_util.c
 )
 # Sony built libsas with GCC 4.8, with the hard-float calling convention (floats in s0) and
 # signed chars
 set_source_files_properties(${paf_sas_SOURCES} PROPERTIES
-	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_SAS_STATIC_RUNTIME" COMPILE_OPTIONS "-mfloat-abi=hard;-fsigned-char")
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_SAS_STATIC_RUNTIME" COMPILE_OPTIONS "-O3;-mfloat-abi=hard;-fsigned-char")
 
 psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/module.c
