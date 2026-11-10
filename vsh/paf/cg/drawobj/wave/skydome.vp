@@ -1,0 +1,53 @@
+#pragma argument (fastprecision)
+/*
+ * The sky dome over the wave: the dome's grid (IN.pos.xy across and up) is bent into a
+ * sphere between the horizon angles, pushed by the wave's normal texture, and coloured from
+ * the horizon (fogged) to the zenith, with the sun's highlight and a fade at the horizon.
+ */
+struct VertexInput {
+	float4 pos : POSITION;
+};
+
+void main(VertexInput IN,
+	  uniform float4x4 VP,
+	  uniform float4x4 M,
+	  uniform float WorldScaleHack,
+	  uniform float4 HorizonAngle,
+	  uniform float3 EyePos,
+	  uniform float3 SunPos,
+	  uniform float4 WaveFogColor,
+	  uniform float3 SunColor,
+	  uniform float SunPower,
+	  uniform float SunControl,
+	  uniform float3 ZenithColor,
+	  uniform float3 HorizonColor,
+	  uniform float2 ColorBlendRange,
+	  uniform float3 DistortionScale,
+	  uniform float4x4 WaveModelMatrix,
+	  uniform sampler2D WaveNorTex : TEXUNIT0,
+	  out float4 oPosition : POSITION,
+	  out float4 oColor : TEXCOORD0)
+{
+	float3 wave = tex2Dlod(WaveNorTex, float4(float2(IN.pos.x, IN.pos.y * 2), 0, 0)).xyz;
+	float h = saturate(IN.pos.y / HorizonAngle.z);
+	float fade = 1 - h * h * (3 - 2 * h);
+	float phi = lerp(3.14159265 - HorizonAngle.y, HorizonAngle.y, IN.pos.x);
+	float bulge = sqrt(0.25 - (IN.pos.x - 0.5) * (IN.pos.x - 0.5));
+	float theta = lerp(HorizonAngle.x, 1.57079633, IN.pos.y) -
+		      HorizonAngle.w * bulge * (1 - IN.pos.y);
+	float3 dir = float3(cos(phi), sin(phi) * sin(theta), -sin(phi) * cos(theta));
+	float3 distortion = mul(wave, (float3x3)WaveModelMatrix) * (1 - IN.pos.y);
+	float3 world = mul(float4(dir, 1), M).xyz + DistortionScale.x * distortion;
+	float3 toSun = SunPos - world;
+	float3 eye = normalize(EyePos - world);
+	float t = saturate((distortion.z * DistortionScale.y + IN.pos.y - ColorBlendRange.x) /
+			   (ColorBlendRange.y - ColorBlendRange.x));
+	float3 horizon = lerp(HorizonColor, WaveFogColor.rgb, WaveFogColor.w);
+	float sky = 1 - fade;
+	float haze = lerp(saturate(abs(distortion.z) * DistortionScale.z), 0, sky * sky);
+	float sun = SunControl * pow(max(dot(eye, normalize(toSun)), 0), SunPower);
+
+	oPosition = mul(float4(world * WorldScaleHack, 1), VP);
+	oColor.rgb = SunColor * sun + horizon + t * t * (3 - 2 * t) * (ZenithColor - horizon);
+	oColor.a = lerp(sky, 0, haze);
+}

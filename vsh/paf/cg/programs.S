@@ -106,3 +106,6 @@
 	PROGRAM _ZN3paf5graph23PanelGlassTopVertShader8s_binaryE, "drawobj/panel/panel_glass_top.vp.gxp"
 	PROGRAM _ZN3paf5graph26PanelGlassBorderVertShader8s_binaryE, "drawobj/panel/panel_glass_border.vp.gxp"
 	PROGRAM _ZN3paf5graph33PanelGlassBorderGlowingVertShader8s_binaryE, "drawobj/panel/panel_glass_border_glowing.vp.gxp"
+	PROGRAM _ZN3paf5graph17SkydomeVertShader8s_binaryE, "drawobj/wave/skydome.vp.gxp"
+	PROGRAM _ZN3paf5graph17WavePosFragShader8s_binaryE, "drawobj/wave/wave_pos.fp.gxp"
+	PROGRAM _ZN3paf5graph20WaveLitTexFragShader8s_binaryE, "drawobj/wave/wave_lit_tex.fp.gxp"
