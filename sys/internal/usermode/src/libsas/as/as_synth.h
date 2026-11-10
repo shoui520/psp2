@@ -54,13 +54,57 @@
 #define SCE_SAS_AS_SYNTH_PAUSE			0x10
 #define SCE_SAS_AS_SYNTH_RELOAD			0x100
 
+/* a source's types: silence, the oscillators and noises, PCM, and ADPCM */
+#define SCE_SAS_AS_SYNTH_SOURCE_SILENCE		0x00
+#define SCE_SAS_AS_SYNTH_SOURCE_SINE		0x10
+#define SCE_SAS_AS_SYNTH_SOURCE_SAW		0x11
+#define SCE_SAS_AS_SYNTH_SOURCE_SAW_DOWN	0x12
+#define SCE_SAS_AS_SYNTH_SOURCE_TRIANGLE	0x13
+#define SCE_SAS_AS_SYNTH_SOURCE_SQUARE		0x14
+#define SCE_SAS_AS_SYNTH_SOURCE_WHITE_NOISE	0x15	/* linear congruential */
+#define SCE_SAS_AS_SYNTH_SOURCE_NOISE		0x16	/* a shift register, clocked by a pattern */
+#define SCE_SAS_AS_SYNTH_SOURCE_PCM8		0x20	/* unsigned */
+#define SCE_SAS_AS_SYNTH_SOURCE_PCM8_SIGNED	0x21
+#define SCE_SAS_AS_SYNTH_SOURCE_PCM16		0x22
+#define SCE_SAS_AS_SYNTH_SOURCE_PCM16_SWAPPED	0x23
+#define SCE_SAS_AS_SYNTH_SOURCE_PCM24		0x24
+#define SCE_SAS_AS_SYNTH_SOURCE_PCM24_SWAPPED	0x25
+#define SCE_SAS_AS_SYNTH_SOURCE_PCM32		0x26
+#define SCE_SAS_AS_SYNTH_SOURCE_PCM32_SWAPPED	0x27
+#define SCE_SAS_AS_SYNTH_SOURCE_FLOAT		0x28
+#define SCE_SAS_AS_SYNTH_SOURCE_FLOAT_SWAPPED	0x29
+#define SCE_SAS_AS_SYNTH_SOURCE_ADPCM		0x30	/* 16-byte blocks of 28 samples, 4 taps */
+#define SCE_SAS_AS_SYNTH_SOURCE_ADPCM_SHORT	0x31	/* 4-byte blocks of 6 samples, 2 taps */
+
+/* a source's flags: the ADPCM blocks' loop marks are taken */
+#define SCE_SAS_AS_SYNTH_SOURCE_LOOP		0x1
+
+/* a source's next: none, stop the voice; or wait */
+#define SCE_SAS_AS_SYNTH_SOURCE_NEXT_STOP	(-1)
+#define SCE_SAS_AS_SYNTH_SOURCE_NEXT_WAIT	(-2)
+#define SCE_SAS_AS_SYNTH_SOURCE_LOOP_FOREVER	0xff
+
 /* a voice's source: what it plays */
 typedef struct SceSasAsSynthSource {
+	SceUInt8 flags;
 	SceUInt8 type;
-	SceUInt8 reserved0;
-	SceUInt8 next;				/* 0xff: none */
-	SceUInt8 reserved1;
-	SceUInt32 data[4];
+	SceInt8 next;				/* the source after this one */
+	SceUInt8 loopCount;			/* the times it plays again */
+	SceUInt32 length;			/* samples */
+	union {
+		struct {
+			SceUIntPtr address;	/* the samples */
+			SceUInt32 start;	/* the first sample played */
+		} pcm;
+		struct {
+			SceUInt32 phase;	/* degrees */
+			SceUInt32 frequency;	/* Hz */
+		} oscillator;
+		SceUInt32 noise;		/* the clock's divider (bits 2..) and pattern (bits 0..1) */
+	};
+	SceUInt8 channel;			/* the channel played */
+	SceUInt8 numChannels;
+	SceUInt8 reserved[2];
 } SceSasAsSynthSource;
 
 /* the ADSR envelope: the four phases' rates and curves, and the sustain level */
@@ -207,38 +251,93 @@ typedef struct SceSasAsSynthVoiceParam {
 
 /* what a voice reports after a render */
 typedef struct SceSasAsSynthVoiceStatus {
-	SceUInt16 state;			/* 0: nothing to report */
-	SceUInt16 events;
+	SceUInt16 state;			/* the voice's flags; 0: nothing to report */
+	SceInt16 error;
 	SceUInt32 position;
 	SceUInt8 source;
 	SceUInt16 keyOnCount;
-	SceUInt16 envelopeLeft;			/* 1.15 */
-	SceUInt16 envelopeRight;
+	SceUInt16 envelope;			/* 1.15 */
+	SceUInt16 peak;
 	SceUInt64 time;
 } SceSasAsSynthVoiceStatus;
 
-/* what getState gives for SCE_SAS_AS_SYNTH_STATE_VOICE (state and events) and _POSITION */
+/* what getState gives for SCE_SAS_AS_SYNTH_STATE_VOICE (state and error) and _POSITION */
 typedef struct SceSasAsSynthVoiceState {
 	SceUInt16 state;
-	SceUInt16 events;
+	SceInt16 error;
 	SceUInt32 source;
 	SceUInt32 position;
 	SceUInt64 time;
 } SceSasAsSynthVoiceState;
 
-/* the voices' work areas (the task's, between renders): a fixed part, then its arrays */
+/* a voice's flags (its work's, reported as its state) */
+#define SCE_SAS_AS_SYNTH_VOICE_ACTIVE		0x1
+#define SCE_SAS_AS_SYNTH_VOICE_PLAYING		0x2	/* its source gave samples */
+#define SCE_SAS_AS_SYNTH_VOICE_PAUSED		0x4
+#define SCE_SAS_AS_SYNTH_VOICE_KEY_OFF		0x8
+#define SCE_SAS_AS_SYNTH_VOICE_STOPPED		0x10	/* a stop is not faded */
+#define SCE_SAS_AS_SYNTH_VOICE_WAITING		0x20	/* for a source after the last one */
+#define SCE_SAS_AS_SYNTH_VOICE_ERROR		0x40
+
+/* the envelope's stages */
+#define SCE_SAS_AS_SYNTH_ENVELOPE_ATTACK	0
+#define SCE_SAS_AS_SYNTH_ENVELOPE_DECAY		1
+#define SCE_SAS_AS_SYNTH_ENVELOPE_SUSTAIN	2
+#define SCE_SAS_AS_SYNTH_ENVELOPE_HOLD		3
+#define SCE_SAS_AS_SYNTH_ENVELOPE_RELEASE	4
+#define SCE_SAS_AS_SYNTH_ENVELOPE_END		5
+
+/* an envelope stage's curves */
+#define SCE_SAS_AS_SYNTH_CURVE_LINEAR_DOWN	0
+#define SCE_SAS_AS_SYNTH_CURVE_LINEAR_UP	1
+#define SCE_SAS_AS_SYNTH_CURVE_BENT_UP		2
+#define SCE_SAS_AS_SYNTH_CURVE_EXPONENTIAL_DOWN	3
+#define SCE_SAS_AS_SYNTH_CURVE_EXPONENTIAL_UP	4
+#define SCE_SAS_AS_SYNTH_CURVE_DIRECT		5
+
+/* the envelope at full level (2.30) */
+#define SCE_SAS_AS_SYNTH_ENVELOPE_ONE		0x40000000
+
+/* the samples of an ADPCM block */
+#define SCE_SAS_AS_SYNTH_ADPCM_SAMPLES		28
+#define SCE_SAS_AS_SYNTH_ADPCM_SHORT_SAMPLES	6
+
+/* a voice's work area (the task's, between renders): a fixed part, then its arrays */
 typedef struct SceSasAsSynthVoiceWork {
-	SceUInt8 state[0xac];
-	SceUInt16 sourceStateOffset;		/* 10 bytes */
-	SceUInt16 envelopeStateOffset;		/* 8 bytes */
+	SceSasAsSynthSource source;		/* the source playing, as it plays */
+	SceInt16 decoded[SCE_SAS_AS_SYNTH_ADPCM_SAMPLES];	/* decoded, not played yet */
+	SceUInt8 numDecoded;			/* at the end of decoded */
+	SceInt8 sourceIndex;			/* -1: none yet */
+	SceInt16 error;
+	SceUInt32 position;			/* in the source */
+	SceInt32 loopStart;			/* -1: none */
+	SceInt32 loopEnd;			/* -1: none */
+	SceInt16 history[4];			/* the ADPCM predictor's, the newest first */
+	SceUInt32 phase;			/* the oscillators' (the noise's clock pattern) */
+	SceUInt32 phaseStep;			/* a sample (the noise's clock divider) */
+	SceUInt32 noise;			/* the noise's register */
+	SceInt32 noiseCount;			/* the noise's clock */
+	SceUInt32 reserved0;
+	SceUInt64 time;				/* samples played */
+	SceUInt16 keyOnCount;
+	SceUInt16 flags;
+	SceUInt16 keyOnReserved;		/* cleared at a key on, nothing reads it */
+	SceUInt16 fraction;			/* the resampler's position between samples (.14) */
+	SceInt16 resampleHistory[8];		/* the resampler's last samples */
+	SceInt32 level;				/* the envelope's (2.30) */
+	SceUInt8 stage;				/* the envelope's */
+	SceUInt8 reserved1[11];
+	SceUInt32 filterReady;			/* a bit a filter designed */
+	SceUInt16 filterDesignOffset;		/* five coefficients a filter */
+	SceUInt16 filterStateOffset;		/* four samples a filter */
 	SceUInt16 volumesOffset;		/* the volumes it last ramped to */
 	SceUInt16 sendLevelsOffset;		/* the send levels it last ramped to */
-	SceUInt8 reserved[4];
+	SceUInt8 reserved2[4];
 } SceSasAsSynthVoiceWork;
 
 /* the task's first buffer: where the voices are */
 typedef struct SceSasAsSynthTaskInfo {
-	SceUInt32 numVoices;
+	SceInt32 numVoices;
 	SceUInt32 numSends;
 	SceUInt32 numFilters;
 	SceUInt32 numVolumes;
@@ -288,10 +387,60 @@ _Static_assert(offsetof(SceSasAsSynthVoiceParam, maxSources) == 0x34, "synth voi
 _Static_assert(offsetof(SceSasAsSynthVoiceParam, sources) == 0x38, "synth voice param arrays");
 _Static_assert(sizeof(SceSasAsSynthVoiceState) == 0x18, "synth voice state size");
 _Static_assert(sizeof(SceSasAsSynthVoiceStatus) == 0x18, "synth voice status size");
+_Static_assert(sizeof(SceSasAsSynthSource) == 0x14, "synth source size");
+_Static_assert(offsetof(SceSasAsSynthVoiceWork, numDecoded) == 0x4c, "synth voice work decoded");
+_Static_assert(offsetof(SceSasAsSynthVoiceWork, time) == 0x78, "synth voice work time");
+_Static_assert(offsetof(SceSasAsSynthVoiceWork, level) == 0x98, "synth voice work level");
+_Static_assert(offsetof(SceSasAsSynthVoiceWork, filterReady) == 0xa8, "synth voice work filters");
 _Static_assert(sizeof(SceSasAsSynthVoiceWork) == 0xb8, "synth voice work size");
+_Static_assert(offsetof(SceSasAsSynthVoiceStatus, time) == 0x10, "synth voice status time");
 _Static_assert(offsetof(SceSasAsSynthRack, numProcessors) == 0x58, "synth rack counts");
 _Static_assert(offsetof(SceSasAsSynthRack, statusIndex) == 0x94, "synth rack status index");
 _Static_assert(offsetof(SceSasAsSynthRack, task) == 0xa0, "synth rack task");
 _Static_assert(sizeof(SceSasAsSynthRack) == 0x510, "synth rack size");
+
+/* walks the voices with work to do, and the busses they mix into (as_synth_voice.c) */
+typedef struct SceSasAsSynthVoiceIterator {
+	SceSasAsSynthTaskInfo *info;
+	const SceSasAsRenderInfo *render;
+	SceInt32 index;
+	SceUInt32 *usedBusses;			/* a bit a buss mixed into */
+	SceUInt32 bitmap[];
+} SceSasAsSynthVoiceIterator;
+
+SceSize sceSasAsSynthVoiceIteratorGetSize(const SceSasAsRenderInfo *render);
+SceSasAsSynthVoiceIterator *sceSasAsSynthVoiceIteratorBegin(const SceSasAsRenderInfo *render,
+							   SceSasAsSynthTaskInfo *info,
+							   void *buffer);
+void sceSasAsSynthVoiceIteratorEnd(SceSasAsSynthVoiceIterator *iterator);
+int sceSasAsSynthVoiceIteratorNext(SceSasAsSynthVoiceIterator *iterator);
+SceSasAsSynthVoiceParam *sceSasAsSynthVoiceIteratorGetParam(SceSasAsSynthVoiceIterator *iterator);
+SceSasAsSynthVoiceWork *sceSasAsSynthVoiceIteratorGetWork(SceSasAsSynthVoiceIterator *iterator);
+SceSasAsSynthVoiceStatus *sceSasAsSynthVoiceIteratorGetStatus(SceSasAsSynthVoiceIterator *iterator);
+const void *sceSasAsSynthVoiceMapSource(SceSasAsSynthVoiceIterator *iterator, SceUIntPtr address,
+					SceSize size, SceSize stride, SceSize *mapped);
+SceInt32 **sceSasAsSynthVoiceIteratorGetBuss(SceSasAsSynthVoiceIterator *iterator, SceUInt32 buss,
+					     SceUInt8 *used);
+void sceSasAsSynthVoiceGenerate(SceSasAsSynthVoiceIterator *iterator,
+				const SceSasAsSynthVoiceParam *param, SceSasAsSynthVoiceWork *work,
+				SceInt16 *buffer, SceInt16 *samples, SceUInt32 count);
+void sceSasAsSynthVoiceDistort(const SceSasAsSynthVoiceParam *param, SceSasAsSynthVoiceWork *work,
+			       SceInt16 *samples, SceUInt32 count);
+void sceSasAsSynthVoiceEnvelope(const SceSasAsSynthVoiceParam *param, SceSasAsSynthVoiceWork *work,
+				SceInt16 *samples, SceInt32 count);
+void sceSasAsSynthVoiceUnused(void);
+void sceSasAsSynthFilterDesign(SceUInt32 type, SceUInt32 sampleRate, const SceInt16 *coefficients,
+			       SceInt16 *design);
+int sceSasAsSynthVoiceFilter(const SceSasAsSynthVoiceParam *param, SceSasAsSynthVoiceWork *work,
+			     SceUInt8 send, SceUInt32 sampleRate, const SceInt16 *input,
+			     SceInt16 *output, SceUInt32 count);
+void sceSasAsSynthVoicePeak(SceSasAsSynthVoiceStatus *status, const SceInt16 *samples,
+			    SceUInt32 count);
+void sceSasAsSynthGain(SceInt16 *output, const SceInt16 *input, SceUInt32 count, SceInt32 from,
+		       SceInt32 to);
+void sceSasAsSynthMixReplace(SceInt32 *buss, const SceInt16 *samples, SceUInt32 count,
+			     SceInt32 from, SceInt32 to);
+void sceSasAsSynthMixAdd(SceInt32 *buss, const SceInt16 *samples, SceUInt32 count, SceInt32 from,
+			 SceInt32 to);
 
 #endif

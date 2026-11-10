@@ -52,7 +52,7 @@ static int sceSasAsSynthRackCreate(SceSasAsAllocator *allocator, SceSasAsConfigE
 	SceInt16 *envelopeLevels, *paramVolumes, *filterCoefficients, *sendLevels, *workVolumes;
 	SceInt16 *workSendLevels;
 	SceUInt32 *envelopeTimes;
-	SceUInt8 *filterTypes, *sendBusses, *sourceState, *envelopeState;
+	SceUInt8 *filterTypes, *sendBusses, *filterDesign, *filterState;
 	SceSasAsSynthVoiceWork *work;
 	SceSasAsSynthVoiceStatus *status0, *status1;
 	SceSasAsSynthTaskInfo *info;
@@ -98,10 +98,10 @@ static int sceSasAsSynthRackCreate(SceSasAsAllocator *allocator, SceSasAsConfigE
 			voice->sources.numSources = numVoiceSources;
 			voice->sources.sources = sources;
 			for (i = 0; i < numVoiceSources; i++) {
-				voice->sources.sources[i].type = 0;
-				voice->sources.sources[i].next = 0xff;
-				voice->sources.sources[i].reserved1 = 0;
-				voice->sources.sources[i].data[0] = 0;
+				voice->sources.sources[i].flags = 0;
+				voice->sources.sources[i].next = SCE_SAS_AS_SYNTH_SOURCE_NEXT_STOP;
+				voice->sources.sources[i].loopCount = 0;
+				voice->sources.sources[i].length = 0;
 			}
 			voice->pitchLocked.handle = &rack->handle;
 			voice->pitchLocked.block = index | (SCE_SAS_AS_SYNTH_BLOCK_PITCH << 16);
@@ -228,17 +228,17 @@ static int sceSasAsSynthRackCreate(SceSasAsAllocator *allocator, SceSasAsConfigE
 	/* the voices' work areas */
 	for (index = 0; index < numVoices; index++) {
 		work = sceSasAsAllocatorAlloc(allocator, sizeof(*work), 1);
-		sourceState = sceSasAsAllocatorAlloc(allocator, 10, 1);
-		envelopeState = sceSasAsAllocatorAlloc(allocator, 8, 1);
+		filterDesign = sceSasAsAllocatorAlloc(allocator, 10, 1);
+		filterState = sceSasAsAllocatorAlloc(allocator, 8, 1);
 		workVolumes = sceSasAsAllocatorAlloc(allocator, numChannels * numVoiceVolumes *
 							    sizeof(*workVolumes), 1);
 		workSendLevels = sceSasAsAllocatorAlloc(allocator,
 							numVoiceSends * sizeof(*workSendLevels), 1);
 		if (work != NULL) {
-			work->sourceStateOffset = (SceUIntPtr)sourceState -
-						  (SceUIntPtr)&work->sourceStateOffset;
-			work->envelopeStateOffset = (SceUIntPtr)envelopeState -
-						    (SceUIntPtr)&work->envelopeStateOffset;
+			work->filterDesignOffset = (SceUIntPtr)filterDesign -
+						   (SceUIntPtr)&work->filterDesignOffset;
+			work->filterStateOffset = (SceUIntPtr)filterState -
+						  (SceUIntPtr)&work->filterStateOffset;
 			work->volumesOffset = (SceUIntPtr)workVolumes - (SceUIntPtr)&work->volumesOffset;
 			work->sendLevelsOffset = (SceUIntPtr)workSendLevels -
 						 (SceUIntPtr)&work->sendLevelsOffset;
@@ -645,18 +645,18 @@ static int sceSasAsSynthRackGetState(SceSasAsHandle *handle, SceUInt32 state, vo
 	switch (state >> 16) {
 	case SCE_SAS_AS_SYNTH_STATE_POSITION:
 		voiceState->state = voiceStatus;
-		voiceState->events = status->events;
+		voiceState->error = status->error;
 		voiceState->source = status->source;
 		voiceState->position = status->position;
 		voiceState->time = status->time;
 		break;
 	case SCE_SAS_AS_SYNTH_STATE_ENVELOPE:
-		envelope[0] = status->envelopeLeft * (1.0f / 32768.0f);
-		envelope[1] = status->envelopeRight * (1.0f / 32768.0f);
+		envelope[0] = status->envelope * (1.0f / 32768.0f);
+		envelope[1] = status->peak * (1.0f / 32768.0f);
 		break;
 	default:
 		voiceState->state = voiceStatus;
-		voiceState->events = status->events;
+		voiceState->error = status->error;
 		break;
 	}
 	sceSasAsSpinUnlock(&rack->lock);
@@ -702,6 +702,184 @@ static int sceSasAsSynthRackSetEvent(SceSasAsHandle *handle, SceUInt32 event, Sc
 	sceSasAsAtomicOr(&voice->updated, SCE_SAS_AS_SYNTH_UPDATED_EVENTS);
 	sceSasAsAtomicOr(&rack->updatedVoices[index >> 5], 1u << (index & 31));
 	sceSasAsSpinUnlock(&voice->lock);
+	return 0;
+}
+
+/* the voices' task: each voice with work to do played, shaped and mixed into its sends */
+static int sceSasAsSynthRackRun(const SceSasAsRenderInfo *render, SceSasAsTaskBuffer *buffers,
+				SceUInt32 numBuffers)
+{
+	SceSasAsSynthTaskInfo *info = buffers[0].pointer;
+	SceSasAsSynthVoiceIterator *iterator = sceSasAsSynthVoiceIteratorBegin(render, info,
+		__builtin_alloca(sceSasAsSynthVoiceIteratorGetSize(render)));
+	/* the voice's samples; the resampler's input, up to four times as many, and its eight */
+	SceInt16 *samples = __builtin_alloca(render->granularity * sizeof(SceInt16));
+	SceInt16 *buffer = __builtin_alloca((render->granularity * 4 + 144) * sizeof(SceInt16));
+	SceSasAsSynthVoiceParam *param;
+	SceSasAsSynthVoiceWork *work;
+	SceSasAsSynthVoiceStatus *status;
+	const SceInt16 *volumes, *sendLevels, *fromVolumes, *fromSendLevels, *input;
+	const SceUInt8 *busses;
+	SceInt16 *workVolumes, *workSendLevels;
+	SceInt32 **bussBuffers;
+	SceUInt32 send, channel, index, i;
+	SceInt32 from, to;
+	SceUInt16 events, flags;
+	SceUInt8 used;
+	int keyOn, snap, fadeOut, fadeIn, stop;
+
+	while (sceSasAsSynthVoiceIteratorNext(iterator)) {
+		param = sceSasAsSynthVoiceIteratorGetParam(iterator);
+		work = sceSasAsSynthVoiceIteratorGetWork(iterator);
+		status = sceSasAsSynthVoiceIteratorGetStatus(iterator);
+
+		/* a key on starts the voice over */
+		keyOn = 0;
+		if (work->keyOnCount != param->keyOnCount) {
+			work->keyOnCount = param->keyOnCount;
+			work->flags = SCE_SAS_AS_SYNTH_VOICE_ACTIVE;
+			work->sourceIndex = -1;
+			work->position = 0;
+			work->numDecoded = 0;
+			work->history[0] = 0;
+			work->history[1] = 0;
+			work->history[2] = 0;
+			work->history[3] = 0;
+			work->phase = 0;
+			work->phaseStep = 0;
+			sceSasAsMemZero(work->resampleHistory, sizeof(work->resampleHistory));
+			work->stage = SCE_SAS_AS_SYNTH_ENVELOPE_ATTACK;
+			work->level = 0;
+			work->keyOnReserved = 0;
+			work->fraction = 0;
+			work->filterReady = 0;
+			work->time = 0;
+			keyOn = 1;
+		}
+
+		/* a pause fades out, a resume fades in; at a key on neither fades */
+		events = param->events;
+		flags = work->flags;
+		fadeOut = 0;
+		fadeIn = 0;
+		if (events & SCE_SAS_AS_SYNTH_PAUSE) {
+			if (!(flags & SCE_SAS_AS_SYNTH_VOICE_PAUSED)) {
+				if (keyOn) {
+					flags |= SCE_SAS_AS_SYNTH_VOICE_PAUSED;
+					work->flags = flags;
+				} else {
+					fadeOut = 1;
+				}
+			}
+		} else if (flags & SCE_SAS_AS_SYNTH_VOICE_PAUSED) {
+			flags &= ~SCE_SAS_AS_SYNTH_VOICE_PAUSED;
+			work->flags = flags;
+			fadeIn = 1;
+		}
+		/* the volumes jump to the new ones instead of ramping */
+		snap = keyOn || fadeIn;
+
+		/* a key off without an envelope stops the voice, faded, as a stop does */
+		stop = 0;
+		if ((events & SCE_SAS_AS_SYNTH_KEY_OFF) && !(flags & SCE_SAS_AS_SYNTH_VOICE_KEY_OFF)) {
+			flags |= SCE_SAS_AS_SYNTH_VOICE_KEY_OFF;
+			work->flags = flags;
+			if (param->adsrEnable == 0 && param->numEnvelopePoints == 0)
+				stop = 1;
+		}
+		if ((events & SCE_SAS_AS_SYNTH_STOP) && !(flags & SCE_SAS_AS_SYNTH_VOICE_STOPPED))
+			stop = 1;
+		if (!(flags & SCE_SAS_AS_SYNTH_VOICE_ACTIVE))
+			continue;
+
+		if (flags & SCE_SAS_AS_SYNTH_VOICE_PAUSED)
+			sceSasAsSynthGain(samples, samples, render->granularity, 0, 0);
+		else
+			sceSasAsSynthVoiceGenerate(iterator, param, work, buffer, samples,
+						   render->granularity);
+		if (!(work->flags & SCE_SAS_AS_SYNTH_VOICE_PAUSED)) {
+			if (param->adsrEnable)
+				sceSasAsSynthVoiceEnvelope(param, work, samples, render->granularity);
+			else
+				work->level = SCE_SAS_AS_SYNTH_ENVELOPE_ONE;
+		}
+		if (param->filterMask != 0)
+			sceSasAsSynthVoiceFilter(param, work, 0, render->sampleRate, samples, samples,
+						 render->granularity);
+		if (param->distortionEnable & 1)
+			sceSasAsSynthVoiceDistort(param, work, samples, render->granularity);
+		if (stop) {
+			sceSasAsSynthGain(samples, samples, 32, 0x1000, 0);
+			sceSasAsSynthGain(samples + 32, samples + 32, render->granularity - 32, 0, 0);
+		}
+		if (fadeOut)
+			sceSasAsSynthGain(samples + render->granularity - 32,
+					  samples + render->granularity - 32, 32, 0x1000, 0);
+		if (fadeIn)
+			sceSasAsSynthGain(samples, samples, 32, 0, 0x1000);
+		sceSasAsSynthVoicePeak(status, samples, render->granularity);
+
+		/* the sends: each through its filters, at its level and its volumes */
+		volumes = SCE_SAS_AS_AT(param->volumesOffset);
+		busses = SCE_SAS_AS_AT(param->sendBussesOffset);
+		sendLevels = SCE_SAS_AS_AT(param->sendLevelsOffset);
+		workVolumes = SCE_SAS_AS_AT(work->volumesOffset);
+		workSendLevels = SCE_SAS_AS_AT(work->sendLevelsOffset);
+		if (snap) {
+			fromVolumes = volumes;
+			fromSendLevels = sendLevels;
+		} else {
+			fromVolumes = workVolumes;
+			fromSendLevels = workSendLevels;
+		}
+		for (send = 0; send < info->numSends; send++) {
+			input = samples;
+			if (param->filterMask != 0 &&
+			    sceSasAsSynthVoiceFilter(param, work, send + 1, render->sampleRate, samples,
+						     buffer, render->granularity))
+				input = buffer;
+			if (((param->sendMask >> send) & 1) && busses[send * 2] < render->numBusses &&
+			    busses[send * 2 + 1] < info->numVolumes) {
+				bussBuffers = sceSasAsSynthVoiceIteratorGetBuss(iterator, busses[send * 2],
+										&used);
+				if (bussBuffers != NULL) {
+					for (channel = 0; channel < render->numChannels; channel++) {
+						index = channel +
+							busses[send * 2 + 1] * render->numChannels;
+						to = (sendLevels[send] * volumes[index]) >> 12;
+						from = (fromSendLevels[send] * fromVolumes[index]) >> 12;
+						if (used)
+							sceSasAsSynthMixAdd(bussBuffers[channel], input,
+									    render->granularity,
+									    from, to);
+						else
+							sceSasAsSynthMixReplace(bussBuffers[channel],
+										input,
+										render->granularity,
+										from, to);
+					}
+				}
+			}
+			workSendLevels[send] = sendLevels[send];
+		}
+		for (i = 0; i < render->numChannels * info->numVolumes; i++)
+			workVolumes[i] = volumes[i];
+
+		if (fadeOut)
+			work->flags = (work->flags & ~(SCE_SAS_AS_SYNTH_VOICE_PLAYING |
+						       SCE_SAS_AS_SYNTH_VOICE_PAUSED)) |
+				      SCE_SAS_AS_SYNTH_VOICE_PAUSED;
+		if (stop)
+			work->flags = 0;
+		status->state = work->flags;
+		status->keyOnCount = param->keyOnCount;
+		status->error = work->error;
+		status->source = work->sourceIndex;
+		status->position = work->position;
+		status->time = work->time;
+		status->envelope = work->level >> 15;
+	}
+	sceSasAsSynthVoiceIteratorEnd(iterator);
 	return 0;
 }
 
