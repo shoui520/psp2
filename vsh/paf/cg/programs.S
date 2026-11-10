@@ -90,3 +90,6 @@
 	PROGRAM _ZN3paf5graph21PageTurnTopVertShader8s_binaryE, "drawobj/page_turn/page_turn_top.vp.gxp"
 	PROGRAM _ZN3paf5graph26PageTurnTopRoundVertShader8s_binaryE, "drawobj/page_turn/page_turn_top_round.vp.gxp"
 	PROGRAM _ZN3paf5graph26PageTurnTopRoundFragShader8s_binaryE, "drawobj/page_turn/page_turn_top_round.fp.gxp"
+	PROGRAM _ZN3paf5graph25PanelOpaqueWaveFragShader8s_binaryE, "drawobj/panel/panel_opaque_wave.fp.gxp"
+	PROGRAM _ZN3paf5graph21BubbleImageFragShader8s_binaryE, "drawobj/panel/bubble_image.fp.gxp"
+	PROGRAM _ZN3paf5graph21PanelOpaqueFragShader8s_binaryE, "drawobj/panel/panel_opaque.fp.gxp"
