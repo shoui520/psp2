@@ -33,6 +33,10 @@ typedef struct SceCesMbcsUcsProfile {
 	((ucs4) > 0x7fffffff ? SCE_CES_ERROR_INVALID_ENCODE : \
 	 (ucs4) >= 0xd800 && (ucs4) <= 0xdfff ? SCE_CES_ERROR_ILLEGAL_CODE : SCE_CES_OK)
 
+int sceCesMbcToUcs4(const SceCesMbcsUcsProfile *prof, const uint8_t *mbcsBuf, uint32_t mbcsMax,
+		    uint32_t *mbcsSize, uint32_t *ucs4);
+int sceCesMbcToUtf16(const SceCesMbcsUcsProfile *prof, const uint8_t *mbcsBuf, uint32_t mbcsMax,
+		     uint32_t *mbcsSize, uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16Len);
 int sceCesUcs4ToMbc(uint32_t ucs4, const SceCesMbcsUcsProfile *prof, uint8_t *mbcsBuf,
 		    uint32_t mbcsMax, uint32_t *mbcsSize);
 int sceCesUtf32ToMbc(uint32_t utf32code, const SceCesMbcsUcsProfile *prof, uint8_t *mbcsBuf,

@@ -34,7 +34,7 @@ SceCesSJisUcsProfile *sceCesUcsProfileInitSJis1997Cp932(SceCesUcsProfileSheet *s
 int sceCesUtf16ToSJis(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16Len,
 		      const SceCesSJisUcsProfile *p, uint8_t *sjisBuf, uint32_t sjisMax,
 		      uint32_t *sjisSize);
-SceCesGbUcsProfile *sceCesUcsProfileInitGbkCp936(SceCesUcsProfileSheet *sheet);
+SceCesGbUcsProfile *sceCesUcsProfileInitGb18030_2000(SceCesUcsProfileSheet *sheet);
 int sceCesGbUcsProfileSetUdaMapping(SceCesGbUcsProfile *p, int udaMapping);
 int sceCesGbUcsProfileSet4ByteCharRange(SceCesGbUcsProfile *p, int gb4byteRange);
 int sceCesUtf16ToGb(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16Len,
@@ -409,7 +409,7 @@ int32_t sceImeFilterText(wchar_t *out, uint32_t *outLength, uint32_t outMax,
 										  SCE_IME_LANGUAGE_TRADITIONAL_CHINESE)) == 0)
 									continue;
 
-								gbProfile = sceCesUcsProfileInitGbkCp936(&gbSheet);
+								gbProfile = sceCesUcsProfileInitGb18030_2000(&gbSheet);
 								sceCesGbUcsProfileSetUdaMapping(gbProfile, 0);
 								sceCesGbUcsProfileSet4ByteCharRange(gbProfile, 0);
 								utf16[0] = c;

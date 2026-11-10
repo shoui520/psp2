@@ -36,6 +36,33 @@ psp2_libtiff_sce(paf_tiff)
 include("${CMAKE_CURRENT_SOURCE_DIR}/src/misc/image/squish/squish.cmake")
 psp2_paf_squish(paf_squish)
 enable_language(CXX)
+# libces, Sony's character-encoding library, linked statically (sys/internal/usermode/src/ces).
+set(paf_ces ../../sys/internal/usermode/src/ces/libces/src)
+set(paf_ces_SOURCES
+	${paf_ces}/UCS/ces_ucs_context.c
+	${paf_ces}/UCS/Str_UTF16_UTF8.c
+	${paf_ces}/UCS/Str_UTF8_UTF16.c
+	${paf_ces}/UCS/UTF16_UTF8.c
+	${paf_ces}/UCS/UTF16BE_UTF8.c
+	${paf_ces}/UCS/UTF8.c
+	${paf_ces}/MBCS/MbcsCtx_Ucs.c
+	${paf_ces}/MBCS/ces_mbcs_context.c
+	${paf_ces}/MBCS/Mbcs_FromUTF32.c
+	${paf_ces}/MBCS/MbcsStr_FromUTF16.c
+	${paf_ces}/MBCS/MbcsStr_ToUTF16.c
+	${paf_ces}/ces_context.c
+	${paf_ces}/UCS/ces_ucs_callback.c
+	${paf_ces}/UCS/UTF16.c
+	${paf_ces}/UCS/UTF16BE.c
+	${paf_ces}/UCS/UTF16LE.c
+	${paf_ces}/MBCS/ces_mbcs_callback.c
+	${paf_ces}/MBCS/Mbcs_FromUCS4.c
+	${paf_ces}/MBCS/Mbcs_ToUTF16.c
+	${paf_ces}/MBCS/Mbcs_ToUCS4.c
+)
+# the SDK's libces, built with SNC's own inlining, not libpaf's
+set_source_files_properties(${paf_ces_SOURCES} PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=30)
+
 psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/module.c
 	src/avout/sound.cpp
@@ -85,6 +112,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	src/ime/ime.cpp
 	${paf_png_NEON}
 	${paf_zlib_SOURCES}
+	${paf_ces_SOURCES}
 	${paf_zlib_CHECKSUM}
 	${paf_zlib_INFFAST}
 	${paf_squish_SOURCES}

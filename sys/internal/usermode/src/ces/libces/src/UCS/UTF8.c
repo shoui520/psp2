@@ -167,3 +167,155 @@ int sceCesUtf8CheckCode(const uint8_t *utf8buf, uint32_t bufsize, uint32_t *code
 {
 	return cesUtf8ToUcs4(utf8buf, bufsize, codeSize, NULL);
 }
+
+int sceCesUtf8ToUcs4(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *convSize, uint32_t *ucs4)
+{
+	int ret;
+
+	ret = cesUtf8ToUcs4(utf8buf, utf8max, convSize, ucs4);
+	if (ucs4 == NULL) {
+		if (ret == SCE_CES_OK)
+			ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
+	}
+	return ret;
+}
+
+/* one character of n bytes: the lead byte, then six bits in each trailing byte */
+void sceCesUcs4ToUtf8_1byte(uint32_t ucs4, uint8_t *utf8)
+{
+	if (utf8 != NULL)
+		utf8[0] = ucs4 & 0x7f;
+}
+
+void sceCesUcs4ToUtf8_2byte(uint32_t ucs4, uint8_t *utf8)
+{
+	if (utf8 != NULL) {
+		utf8[1] = 0x80 | (ucs4 & 0x3f);
+		utf8[0] = 0xc0 | ((ucs4 >> 6) & 0x1f);
+	}
+}
+
+void sceCesUcs4ToUtf8_3byte(uint32_t ucs4, uint8_t *utf8)
+{
+	if (utf8 != NULL) {
+		utf8[2] = 0x80 | (ucs4 & 0x3f);
+		utf8[1] = 0x80 | ((ucs4 >> 6) & 0x3f);
+		utf8[0] = 0xe0 | ((ucs4 >> 12) & 0x0f);
+	}
+}
+
+void sceCesUcs4ToUtf8_4byte(uint32_t ucs4, uint8_t *utf8)
+{
+	if (utf8 != NULL) {
+		utf8[3] = 0x80 | (ucs4 & 0x3f);
+		utf8[2] = 0x80 | ((ucs4 >> 6) & 0x3f);
+		utf8[1] = 0x80 | ((ucs4 >> 12) & 0x3f);
+		utf8[0] = 0xf0 | ((ucs4 >> 18) & 0x07);
+	}
+}
+
+void sceCesUcs4ToUtf8_5byte(uint32_t ucs4, uint8_t *utf8)
+{
+	if (utf8 != NULL) {
+		utf8[4] = 0x80 | (ucs4 & 0x3f);
+		utf8[3] = 0x80 | ((ucs4 >> 6) & 0x3f);
+		utf8[2] = 0x80 | ((ucs4 >> 12) & 0x3f);
+		utf8[1] = 0x80 | ((ucs4 >> 18) & 0x3f);
+		utf8[0] = 0xf8 | ((ucs4 >> 24) & 0x03);
+	}
+}
+
+void sceCesUcs4ToUtf8_6byte(uint32_t ucs4, uint8_t *utf8)
+{
+	if (utf8 != NULL) {
+		utf8[5] = 0x80 | (ucs4 & 0x3f);
+		utf8[4] = 0x80 | ((ucs4 >> 6) & 0x3f);
+		utf8[3] = 0x80 | ((ucs4 >> 12) & 0x3f);
+		utf8[2] = 0x80 | ((ucs4 >> 18) & 0x3f);
+		utf8[1] = 0x80 | ((ucs4 >> 24) & 0x3f);
+		utf8[0] = 0xfc | ((ucs4 >> 30) & 0x01);
+	}
+}
+
+/* the bytes a character takes, or 0 for a code no UTF-8 sequence holds */
+#define UTF8_CODE_LEN(ucs4) \
+	((ucs4) <= 0x7f ? 1 : (ucs4) <= 0x7ff ? 2 : (ucs4) <= 0xffff ? 3 : \
+	 (ucs4) <= 0x1fffff ? 4 : (ucs4) <= 0x3ffffff ? 5 : (ucs4) <= 0x7fffffff ? 6 : 0)
+
+#define UCS4_IS_SURROGATE(c)	((c) >= 0xd800 && (c) <= 0xdfff)
+
+/* one character into UTF-8; a buffer too short gets nothing, and n says what it needed */
+int sceCesUcs4ToUtf8(uint32_t ucs4, uint8_t *utf8buf, uint32_t bufSize, uint32_t *utf8Size)
+{
+	int n;
+
+	if (utf8buf != NULL && bufSize != 0) {
+		if (ucs4 <= 0x7f) {
+			utf8buf[0] = ucs4;
+			n = 1;
+		} else if (ucs4 <= 0x7ff) {
+			if (bufSize >= 2) {
+				sceCesUcs4ToUtf8_2byte(ucs4, utf8buf);
+				n = 2;
+			} else {
+				n = -2;
+			}
+		} else if (ucs4 <= 0xffff) {
+			if (bufSize >= 3) {
+				sceCesUcs4ToUtf8_3byte(ucs4, utf8buf);
+				n = 3;
+			} else {
+				n = -3;
+			}
+		} else if (ucs4 <= 0x1fffff) {
+			if (bufSize >= 4) {
+				sceCesUcs4ToUtf8_4byte(ucs4, utf8buf);
+				n = 4;
+			} else {
+				n = -4;
+			}
+		} else if (ucs4 <= 0x3ffffff) {
+			if (bufSize >= 5) {
+				sceCesUcs4ToUtf8_5byte(ucs4, utf8buf);
+				n = 5;
+			} else {
+				n = -5;
+			}
+		} else if (ucs4 <= 0x7fffffff) {
+			if (bufSize >= 6) {
+				sceCesUcs4ToUtf8_6byte(ucs4, utf8buf);
+				n = 6;
+			} else {
+				n = -6;
+			}
+		} else {
+			n = 0;
+		}
+	} else {
+		n = UTF8_CODE_LEN(ucs4);
+		if (n != 0) {
+			if (utf8Size != NULL)
+				*utf8Size = n;
+			if (utf8buf != NULL)
+				return SCE_CES_ERROR_DST_BUFFER_END;
+			if (UCS4_IS_SURROGATE(ucs4))
+				return SCE_CES_ERROR_ILLEGAL_CODE;
+			return SCE_CES_ERROR_INVALID_DST_BUFFER;
+		}
+	}
+	if (n > 0) {
+		if (utf8Size != NULL)
+			*utf8Size = n;
+		if (UCS4_IS_SURROGATE(ucs4))
+			return SCE_CES_ERROR_ILLEGAL_CODE;
+		return SCE_CES_OK;
+	}
+	if (n < 0) {
+		if (utf8Size != NULL)
+			*utf8Size = -n;
+		return SCE_CES_ERROR_DST_BUFFER_END;
+	}
+	if (utf8Size != NULL)
+		*utf8Size = 0;
+	return SCE_CES_ERROR_INVALID_ENCODE;
+}
