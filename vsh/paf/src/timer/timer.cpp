@@ -452,7 +452,7 @@ static float DoFuncCustomBackIn(float rate, const float *param)
 	float strength = (param[0] * 10.0f - 1.0f) * 2.0f;
 	float overshoot = strength * (0.47f - strength * 0.01f) + 2.70158f;
 
-	return rate * rate * (rate * overshoot - (overshoot - 1.0f));
+	return rate * rate * (overshoot * rate - (overshoot - 1.0f));
 }
 
 float DoFuncCustomBackOutIn(float rate, const float *param)
@@ -758,9 +758,9 @@ static float DoFuncPolyIn(float rate, const float *param)
 		return 0.0f;
 
 	float rate2 = rate * rate;
+	float rate4 = rate2 * rate2;
 
-	return param[1] * (rate2 * rate2) + param[0] * rate2 + param[2] * (rate2 * rate2) * rate2 +
-	       param[3] * (rate2 * rate2) * (rate2 * rate2);
+	return param[0] * rate2 + param[1] * rate4 + param[2] * rate4 * rate2 + param[3] * rate4 * rate4;
 }
 
 float DoFuncPolyInOut(float rate, const float *param)
@@ -1279,7 +1279,7 @@ float Timer::DoFuncBezier3d(float rate, const float *param)
 	float t = roots - shift;
 	float t3 = sce_paf_powf(t, 3.0f);
 
-	return (y1 * -6.0f + y2 * 3.0f) * sce_paf_powf(t, 2.0f) + ((y1 * 3.0f - y2 * 3.0f) + 1.0f) * t3 +
+	return ((y1 * 3.0f - y2 * 3.0f) + 1.0f) * t3 + (y1 * -6.0f + y2 * 3.0f) * sce_paf_powf(t, 2.0f) +
 	       y1 * 3.0f * t;
 }
 

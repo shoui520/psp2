@@ -1431,7 +1431,7 @@ int32_t DirectBar::Hide(float time)
 
 void ScePafWidget_7C2ABBCB(DirectBar *bar)
 {
-	bar->SetDBarIdleState();
+	bar->SetDBarIdleState(4.0f);
 	if (bar->GetDrawObj(DirectBar::OBJ_BALLOON_LABEL) != NULL &&
 	    bar->GetDrawObj(DirectBar::OBJ_BALLOON_LABEL)->IsInherit(graph::TextObj::DrawObjType())) {
 		graph::TextObj *label = (graph::TextObj *)bar->GetDrawObj(DirectBar::OBJ_BALLOON_LABEL);

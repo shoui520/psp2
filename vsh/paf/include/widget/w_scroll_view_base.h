@@ -231,6 +231,22 @@ public:
 		return Widget::SetFocus(info);
 	}
 
+	/* every direction but up, or none while its focus directions are off */
+	virtual int32_t GetFocusDirectionMask()
+	{
+		int32_t mask = Widget::GetFocusDirectionMask();
+
+		if (mask != 0)
+			return mask;
+		return 6;
+	}
+
+	/* it takes the text events while it can move or a scroll view takes the focus */
+	virtual bool IsTextEventEnabled()
+	{
+		return m_movable_dir != 0 || m_focus_count > 0;
+	}
+
 	/* the slots after Widget's, from 0x170 (index 92) */
 	virtual void SetVerticalScrollBar(ScrollBar *scroll_bar);
 	virtual void SetHorizontalScrollBar(ScrollBar *scroll_bar);

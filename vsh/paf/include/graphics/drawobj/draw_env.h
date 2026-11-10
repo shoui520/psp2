@@ -662,7 +662,7 @@ public:
 		Surface *m_surface;
 	};
 
-	TextureCache() : m_dir("/budge_texture/")
+	__attribute__((noinline)) TextureCache() : m_dir("/budge_texture/")
 	{
 	}
 

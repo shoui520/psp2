@@ -2348,10 +2348,10 @@ int32_t ScePafWidget_4608F7EF(Text *text, math::v2 *origin)
 	return 0;
 }
 
-void ScePafWidget_40F2A311(Text *text)
+void Text::OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg)
 {
-	if (text->m_touch_captures.size() == 0)
-		text->HandleTouchRelease();
+	if (m_touch_captures.size() == 0)
+		HandleTouchRelease();
 }
 
 namespace paf {

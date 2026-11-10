@@ -45,6 +45,11 @@ public:
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	virtual void UpdateAdjustSize();
+	using ButtonBase::SetTexture;
+	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf)
+	{
+		return SetTexture(surf, 0, 0);
+	}
 	/* the image or the glow made where it is missing */
 	virtual graph::DrawObj *CreateDrawObj(int32_t obj);
 	virtual uint32_t ChangeButtonState(ButtonState state);

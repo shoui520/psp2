@@ -60,6 +60,10 @@ public:
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	virtual uint32_t CheckState();
+	virtual int32_t GetFocusDirectionMask()
+	{
+		return m_focus_direction_off ? 2 : 7;
+	}
 	virtual void UpdateSize();
 	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,
 				   uint32_t index);

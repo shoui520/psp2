@@ -108,6 +108,20 @@ public:
 	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,
 				   uint32_t index);
 	virtual void UpdateTouchMode();
+	/* where the focus moves: down only once tapping or editing takes it (name ours) */
+	virtual int32_t GetFocusDirectionMask()
+	{
+		int32_t mask = Widget::GetFocusDirectionMask();
+
+		if (mask == 0) {
+			if (m_map_e_listener.find(CB_TEXT_BOX_TAPPED) != m_map_e_listener.end())
+				return 4;
+			mask = 5;
+			if (m_edit_mode)
+				return 4;
+		}
+		return mask;
+	}
 	virtual int32_t ReplaceString(uint32_t index, uint32_t len, const wstring &str);
 	virtual int32_t MoveCaretUp();
 	virtual int32_t MoveCaretDown();
@@ -223,7 +237,6 @@ public:
 	virtual int32_t Commit(TextBox *text_box) = 0;
 	/* the text box's password mode changed */
 	virtual int32_t NotifyPasswordMode(TextBox *text_box) = 0;
-	virtual int32_t HandleImeEvent(const SceImeVshEvent *e) = 0;
 };
 
 /* what a text box tells the edit menu about its editing: the object wutil::Init makes and export

@@ -14,6 +14,7 @@
 #include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
 #include <std/vector>
+#include <widget/core/environment.h>
 #include <widget/w_list_item.h>
 #include <widget/w_scroll_view_base.h>
 
@@ -393,6 +394,22 @@ public:
 	virtual void OnCellMoved(int32_t segment, int32_t from, int32_t to);
 	virtual void OnCellDragStart(int32_t segment, int32_t cell);
 	virtual void OnCellDragStop(int32_t segment, int32_t cell);
+	virtual void EnableFocusEvent(bool on_off)
+	{
+		if (!on_off && !(m_focus_pos == math::v2(-1.0f, -1.0f))) {
+			m_focus_pos = math::v2(-1.0f, -1.0f);
+			m_focus_start = math::v2(0.0f, 0.0f);
+			m_focus_target = math::v2(0.0f, 0.0f);
+			Environment *env = m_env;
+			if (env != NULL) {
+				env->m_focus_cursor.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+				env->m_focus_cursor.m_moving_only = true;
+				env->m_focus_cursor_rear.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+				env->m_focus_cursor_rear.m_moving_only = true;
+			}
+		}
+		Widget::EnableFocusEvent(on_off);
+	}
 
 	/* the range of the view along its axis (name ours) */
 	math::v2 GetVisibleRange(int32_t opt);

@@ -59,19 +59,6 @@ typedef struct PafWString {
 	unsigned char alloc;
 } PafWString;
 
-typedef struct PafStringVector {
-	PafString *_data;
-	size_t _size;
-	size_t _capacity;
-	unsigned char _allocator;
-} PafStringVector;
-
-typedef char PafStringVectorSizeCheck[sizeof(PafStringVector) == 16 ? 1 : -1];
-
-int PafStringVectorReallocate(PafStringVector *self, size_t capacity);
-PafStringVector *PafStringVectorConstructCopy(PafStringVector *self,
-					   const PafStringVector *src);
-
 typedef char PafStringSizeCheck[sizeof(PafString) == 12 ? 1 : -1];
 typedef char PafWStringSizeCheck[sizeof(PafWString) == 12 ? 1 : -1];
 
@@ -102,22 +89,37 @@ uint16_t *sce_paf_wmemchr(const uint16_t *ptr, uint16_t ch, size_t count);
 int sce_paf_swprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format, ...);
 int sce_paf_vswprintf(uint16_t *buffer, size_t bufsz, const uint16_t *format,
 		     va_list args);
+/* Sony's basic_string members (their C++ definitions are in vsh/paf/include/std/string), called
+   from C by their symbols, which these macros give C names */
+#define PafStringConstruct _ZN3paf12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC1ERKS4_
 PafString *PafStringConstruct(PafString *self, const void *allocator);
+#define PafStringDestruct _ZN3paf12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED1Ev
 PafString *PafStringDestruct(PafString *self);
+#define PafWStringConstruct _ZN3paf12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEC1ERKS4_
 PafWString *PafWStringConstruct(PafWString *self, const void *allocator);
+#define PafWStringDestruct _ZN3paf12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEED1Ev
 PafWString *PafWStringDestruct(PafWString *self);
 
+#define PafWStringErase _ZN3paf12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE5eraseEjj
 PafWString *PafWStringErase(PafWString *self, size_t pos, size_t len);
+#define PafWStringAppend _ZN3paf12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6appendEjw
 PafWString *PafWStringAppend(PafWString *self, size_t len, uint16_t value);
+#define PafWStringAssign _ZN3paf12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6assignEPKwj
 PafWString *PafWStringAssign(PafWString *self, const uint16_t *src, size_t len);
+#define PafWStringCopy _ZN3paf12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6assignERKS5_
 PafWString *PafWStringCopy(PafWString *self, const PafWString *src);
+#define PafStringErase _ZN3paf12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5eraseEjj
 PafString *PafStringErase(PafString *self, size_t pos, size_t len);
+#define PafStringAppend _ZN3paf12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendEjc
 PafString *PafStringAppend(PafString *self, size_t len, char value);
+#define PafStringAssign _ZN3paf12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6assignEPKcj
 PafString *PafStringAssign(PafString *self, const char *src, size_t len);
+#define PafStringCopy _ZN3paf12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6assignERKS5_
 PafString *PafStringCopy(PafString *self, const PafString *src);
-PafString *PafStringAssignChar(PafString *self, char value);
+#define PafStringSubstring _ZNK3paf12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6substrEjj
 PafString *PafStringSubstring(PafString *result, const PafString *src,
 			      size_t pos, size_t len);
+#define PafStringRfind _ZNK3paf12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5rfindEPKcjj
 size_t PafStringRfind(const PafString *self, const char *str,
 		      size_t pos, size_t len);
 

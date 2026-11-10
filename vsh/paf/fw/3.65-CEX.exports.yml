@@ -3550,7 +3550,7 @@ ScePaf:
         - _ZN3paf2ui3Box18SetChildrenAdjustYENS1_14ChildrenAdjustEf: 0x40826B8A
         - _ZN3paf2ui8ListView16HandleTouchEventEPNS0_5EventE: 0x40E55E4E
         - _ZN3paf2ui22TouchLongPressListenerD0Ev: 0x40ED9CC3
-        - ScePafWidget_40F2A311: 0x40F2A311
+        - _ZN3paf2ui4Text21OnTouchCaptureChangedEjji: 0x40F2A311
         - _ZN3paf2ui11ScrollBar2d10UpdateSizeEv: 0x41110AAB
         - _ZN3paf2ui12AnimListener12PropScaleGetEPS1_: 0x412F5DE1
         - _ZN3paf2ui6Camera7add_objEPNS0_6WidgetERNS_5graph8DrawInfoE: 0x4150AF95
@@ -4544,7 +4544,7 @@ ScePaf:
         - _ZN3paf2ui6Widget15GetOriginOffsetEi: 0xAA7BE7E4
         - _ZN3paf2ui15CompositeButton13InsertDrawObjERNS_6common9SharedPtrINS_5graph7DrawObjEEEib: 0xAA96687B
         - _ZN3paf2ui8RichTextD1Ev: 0xAAAB3D3A
-        - _ZN3paf2ui8Supplier21ScePafWidget_AAE71C36Ev: 0xAAE71C36
+        - _ZN3paf2ui8Supplier16UpdateAdjustSizeEv: 0xAAE71C36
         - _ZNK3paf2ui13AppIconSimple11GetTypeNameEv: 0xAAECAF31
         - _ZN3paf2ui11ProgressBar10UpdateSizeEv: 0xAAF8E214
         - _ZN3paf2ui5wutil9InitParamC2Ev: 0xAB05B0A4

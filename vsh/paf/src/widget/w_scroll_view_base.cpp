@@ -1653,7 +1653,7 @@ ScrollViewDebug::ScrollViewDebug(ScrollViewBase *view)
 	m_root = new Widget(m_view->m_view_parent, &param);
 	/* to the front of its siblings */
 	m_root->SetParent(m_root->m_parent, NULL, 5);
-	for (int32_t i = 0; i < 4; i++) {
+	for (uint32_t i = 0; i < 4; i++) {
 		m_marker[i].m_widget = new Widget(m_root, &param);
 		m_marker[i].m_index = i;
 		m_marker[i].m_pos = math::v2(0.0f, 0.0f);
@@ -3900,7 +3900,7 @@ common::SharedPtr<inputdevice::GestureListener> ScePafWidget_0F9F14D4(Widget *wi
 				      : common::SharedPtr<inputdevice::GestureListener>();
 
 		if (listener.get() != NULL)
-			return listener;
+			return common::SharedPtr<inputdevice::GestureListener>(listener);
 	}
 	return common::SharedPtr<inputdevice::GestureListener>();
 }
@@ -4933,7 +4933,7 @@ bool ScrollViewBase::ScrollByKey(const math::v2 &dir)
 			/* at its end: it bounces back where it turned */
 			if (moves && turned && m_enable_analog) {
 				MoveViewParent(ScePafWidget_7F653E08(focus, -1).m_pos, NULL);
-				m_velocity = (dir * -1.0f) * math::v2(1200.0f, 800.0f);
+				m_velocity = math::v2(-dir.getImpl()) * math::v2(1200.0f, 800.0f);
 				return true;
 			}
 			return false;

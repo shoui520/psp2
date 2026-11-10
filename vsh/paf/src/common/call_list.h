@@ -2,6 +2,7 @@
 #ifndef PAF_COMMON_CALL_LIST_H
 #define PAF_COMMON_CALL_LIST_H
 
+#include "../std/new.h"
 #include "../thread/mutex.h"
 #include <stddef.h>
 
@@ -53,5 +54,28 @@ CallList *CallListConstruct(CallList *self);
 CallList *CallListConstructBase(CallList *self);
 
 void CallListPushBack(CallItemList *list, const CallItem *item);
+
+/* the allocation-failure handler in ScePafStdc */
+extern int ScePafStdc_D608246A(void);
+
+/* CallList's constructor, inline in Sony's header: MainThreadCallList's listener builds its
+   list with it too */
+static inline __attribute__((always_inline)) CallList *CallListInitialize(CallList *self)
+{
+	self->m_list.count = 0;
+	CallItemNode *root = (CallItemNode *)PafNew(sizeof(*root));
+	if (!root)
+		ScePafStdc_D608246A();
+	self->m_list.root_node = root;
+	if (root) {
+		root->prev = root;
+		root->next = root;
+		root = self->m_list.root_node;
+	}
+	self->m_iterator = root;
+	self->m_iterator_updated = 0;
+	_ZN3paf6thread6RMutexC1EPKci(&self->m_item_mtx, "ScePafCallListItem", 0);
+	return self;
+}
 
 #endif

@@ -23,39 +23,38 @@ void *_stdinit_stdio(void)
 	return sce_paf_memset(streamTable, 0, sizeof(*streamTable));
 }
 
-static int ParseStreamMode(const char *mode)
+/* inlined into each opener in Sony's code */
+static __attribute__((always_inline)) int ParseStreamMode(const char *mode)
 {
-	const char *previous;
 	int ch, type;
 
 	if (!mode || !*mode)
 		return -1;
-	do {
-		previous = mode;
-		ch = sce_paf_tolower((signed char)*mode);
-		if (ch == 'b')
-			mode++;
-	} while (ch == 'b');
-	ch = sce_paf_tolower((signed char)*mode);
-	if (ch == 'r') {
+	ch = *mode;
+	while (sce_paf_tolower(ch) == 'b')
+		ch = *++mode;
+	switch (sce_paf_tolower(*mode)) {
+	case 'r':
 		type = 0x8000;
-	} else if (ch == 'w') {
+		break;
+	case 'w':
 		type = 0x4000;
-	} else if (ch == 'a') {
+		break;
+	case 'a':
 		type = 0x6000;
-	} else {
+		break;
+	default:
 		return -1;
 	}
-	ch = (signed char)previous[1];
-	mode++;
+	ch = *++mode;
 	while (sce_paf_tolower(ch) == 'b')
-		ch = (signed char)*++mode;
+		ch = *++mode;
 	if (*mode == '+')
 		type |= 0xc000;
 	return type;
 }
 
-static sce_paf_FILE *AllocateStream(const char *mode)
+static __attribute__((always_inline)) sce_paf_FILE *AllocateStream(const char *mode)
 {
 	sce_paf_FILE *stream;
 	int i, type;
@@ -75,11 +74,12 @@ static sce_paf_FILE *AllocateStream(const char *mode)
 	return stream;
 }
 
-static void SetStreamPosition(sce_paf_FILE *stream, int type, int fd)
+static __attribute__((always_inline)) void SetStreamPosition(sce_paf_FILE *stream, int type,
+							  int fd)
 {
 	int32_t position;
 
-	if (!type || fd < 0)
+	if (!stream || !type || fd < 0)
 		return;
 	stream->unget_char = -1;
 	position = (int32_t)sceIoLseek(fd, 0,
@@ -93,7 +93,6 @@ static void SetStreamPosition(sce_paf_FILE *stream, int type, int fd)
 sce_paf_FILE *sce_paf_fopen(const char *filename, const char *mode)
 {
 	sce_paf_FILE *stream;
-	const char *previous;
 	int ch, access, flags, type, fd, i;
 
 	if (!filename || !mode)
@@ -103,37 +102,36 @@ sce_paf_FILE *sce_paf_fopen(const char *filename, const char *mode)
 		if (!(uint8_t)streamTable[i].type)
 			break;
 	}
-	if (i == 20 || !*mode) {
+	if (i == 20 || !mode || !*mode) {
 		MutexUnlock(&stdioMutex);
 		return NULL;
 	}
-	do {
-		previous = mode;
-		ch = sce_paf_tolower((signed char)*mode);
-		if (ch == 'b')
-			mode++;
-	} while (ch == 'b');
-	ch = sce_paf_tolower((signed char)*mode);
+	ch = *mode;
+	while (sce_paf_tolower(ch) == 'b')
+		ch = *++mode;
 	flags = 0;
-	if (ch == 'r') {
+	switch (sce_paf_tolower(*mode)) {
+	case 'r':
 		access = SCE_O_RDONLY;
 		type = 0x8000;
-	} else if (ch == 'w') {
+		break;
+	case 'w':
 		access = SCE_O_WRONLY;
 		flags = SCE_O_CREAT | SCE_O_TRUNC;
 		type = 0x4000;
-	} else if (ch == 'a') {
+		break;
+	case 'a':
 		access = SCE_O_WRONLY;
 		flags = SCE_O_CREAT | SCE_O_APPEND;
 		type = 0x6000;
-	} else {
+		break;
+	default:
 		MutexUnlock(&stdioMutex);
 		return NULL;
 	}
-	ch = (signed char)previous[1];
-	mode++;
+	ch = *++mode;
 	while (sce_paf_tolower(ch) == 'b')
-		ch = (signed char)*++mode;
+		ch = *++mode;
 	if (*mode == '+') {
 		access |= SCE_O_RDWR;
 		type |= 0xc000;
@@ -244,8 +242,9 @@ size_t sce_paf_fread(void *ptr, size_t size, size_t count, sce_paf_FILE *stream)
 size_t sce_paf_fwrite(const void *ptr, size_t size, size_t count, sce_paf_FILE *stream)
 {
 	const unsigned char *src = ptr;
-	uint32_t remaining, total = 0;
+	int32_t remaining, total;
 	int result;
+	uint32_t status;
 
 	if (!stream || !stream->type)
 		return 0;
@@ -258,19 +257,21 @@ size_t sce_paf_fwrite(const void *ptr, size_t size, size_t count, sce_paf_FILE *
 	remaining = size * count;
 	if (!remaining)
 		return 0;
-	while ((int32_t)remaining > 0) {
+	total = 0;
+	do {
+		if (remaining <= 0)
+			break;
 		result = sceIoWrite(stream->fd, src, remaining);
+		status = stream->status;
 		if (result < 0) {
-			stream->status |= PAF_FILE_STATUS_ERROR;
+			stream->status = status | PAF_FILE_STATUS_ERROR;
 			return 0;
 		}
 		remaining -= result;
 		total += result;
 		src += result;
-		if (stream->status)
-			break;
-	}
-	return (int32_t)total / (int32_t)size;
+	} while (status == 0);
+	return total / (int32_t)size;
 }
 
 int sce_paf_fgetc(sce_paf_FILE *stream)

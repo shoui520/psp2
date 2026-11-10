@@ -16,6 +16,7 @@
 #include <graphics/text/text_style.h>
 #include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
+#include <std/algorithm>
 #include <std/string>
 #include <std/vector>
 #include <versatileparam/idparam.h>
@@ -157,6 +158,31 @@ public:
 		return m_link_event && on;
 	}
 
+	/* where the focus moves: its links take it along each direction, and from the one it
+	   is on only down (name ours) */
+	virtual int32_t GetFocusDirectionMask()
+	{
+		int32_t mask = Widget::GetFocusDirectionMask();
+
+		if (mask == 0 && IsTextEventEnabled()) {
+			mask = 7;
+			if (m_focus_link != NULL)
+				return 4;
+		}
+		return mask;
+	}
+
+	/* the focus event on or off; on, its links sorted and the first one focused */
+	virtual void EnableFocusEvent(bool on_off)
+	{
+		Widget::EnableFocusEvent(on_off);
+		if (on_off && m_links.size() != 0) {
+			sort(m_links.begin(), m_links.end());
+			m_focus_link = m_links.begin().m_ptr;
+			UpdateSize();
+		}
+	}
+
 	/* sets the touch modes from its touch modes and its focused link (0x8123aa94, name
 	   ours) */
 	virtual void UpdateTouchMode()
@@ -186,6 +212,8 @@ public:
 	virtual int32_t SetCaretVisible(bool visible);
 	virtual int32_t HandleTouchPress(Event *e);
 	virtual int32_t HandleTouchRelease();
+	/* its touch release handled once no touch holds it (export 40F2A311) */
+	virtual void OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg);
 	/* a tap */
 	virtual int32_t ScePafWidget_695200BA(Event *e);
 	virtual int32_t UpdateTouch(const math::v2 &pos);
@@ -467,8 +495,6 @@ int32_t ScePafWidget_55EC0090(paf::ui::Text *text, const paf::math::v2 &pos);
 /* whether the animation of the ID, or any of its queues, still runs */
 int32_t ScePafWidget_56384DA3(paf::ui::Widget *widget, int32_t id);
 int32_t ScePafWidget_4608F7EF(paf::ui::Text *text, paf::math::v2 *origin);
-/* its touch release handled where no touch holds it */
-void ScePafWidget_40F2A311(paf::ui::Text *text);
 /* its auto scroll's and its friends' speed (Text::SetAutoScrollSpeed(float), kept by its link
    name for store_browser's import) */
 int32_t ScePafWidget_7C976DF2(paf::ui::Text *text, float speed);

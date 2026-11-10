@@ -8,7 +8,7 @@
 
 char *sce_paf_strchr(const char *str, int ch)
 {
-	const volatile signed char *cursor = (const volatile signed char *)str;
+	const signed char *cursor = (const signed char *)str;
 
 	for (;;) {
 		if (*cursor == ch)
@@ -25,10 +25,10 @@ char *sce_paf_strrchr(const char *str, int ch)
 	if (!str)
 		return NULL;
 	cursor = str;
-	while (*(const volatile signed char *)cursor)
+	while (*(const signed char *)cursor)
 		cursor++;
 	for (;;) {
-		if (*(const volatile signed char *)cursor == (signed char)ch)
+		if (*(const signed char *)cursor == (signed char)ch)
 			return (char *)cursor;
 		if (cursor == str)
 			return NULL;
@@ -38,7 +38,7 @@ char *sce_paf_strrchr(const char *str, int ch)
 
 uint16_t *sce_paf_wcschr(const uint16_t *str, int ch)
 {
-	const volatile uint16_t *cursor = (const volatile uint16_t *)str;
+	const uint16_t *cursor = (const uint16_t *)str;
 
 	if (!str)
 		return NULL;
@@ -52,8 +52,8 @@ uint16_t *sce_paf_wcschr(const uint16_t *str, int ch)
 
 uint16_t *sce_paf_wcsrchr(const uint16_t *str, int ch)
 {
-	const volatile uint16_t *cursor;
-	const volatile uint16_t *start = (const volatile uint16_t *)str;
+	const uint16_t *cursor;
+	const uint16_t *start = (const uint16_t *)str;
 
 	if (!str)
 		return NULL;
@@ -71,8 +71,8 @@ uint16_t *sce_paf_wcsrchr(const uint16_t *str, int ch)
 
 int sce_paf_wcscmp(const uint16_t *left, const uint16_t *right)
 {
-	const volatile uint16_t *leftByte;
-	const volatile uint16_t *rightByte;
+	const uint16_t *leftByte;
+	const uint16_t *rightByte;
 	int leftCh;
 	int rightCh;
 
@@ -81,8 +81,8 @@ int sce_paf_wcscmp(const uint16_t *left, const uint16_t *right)
 			return 0;
 		return left ? 1 : -1;
 	}
-	leftByte = (const volatile uint16_t *)left;
-	rightByte = (const volatile uint16_t *)right;
+	leftByte = (const uint16_t *)left;
+	rightByte = (const uint16_t *)right;
 	rightCh = *rightByte++;
 	leftCh = *leftByte;
 	for (;;) {
@@ -98,8 +98,8 @@ int sce_paf_wcscmp(const uint16_t *left, const uint16_t *right)
 
 uint16_t *sce_paf_wcscpy(uint16_t *destination, const uint16_t *source)
 {
-	volatile uint16_t *dest = (volatile uint16_t *)destination;
-	const volatile uint16_t *src = (const volatile uint16_t *)source;
+	uint16_t *dest = (uint16_t *)destination;
+	const uint16_t *src = (const uint16_t *)source;
 
 	if (!destination || !source)
 		return NULL;
@@ -114,14 +114,14 @@ uint16_t *sce_paf_wcscpy(uint16_t *destination, const uint16_t *source)
 
 uint16_t *sce_paf_wcscat(uint16_t *destination, const uint16_t *source)
 {
-	const volatile uint16_t *src = (const volatile uint16_t *)source;
-	const volatile uint16_t *sourceEnd;
-	const volatile uint16_t *destinationEnd;
-	volatile uint16_t *dest;
+	const uint16_t *src = (const uint16_t *)source;
+	const uint16_t *sourceEnd;
+	const uint16_t *destinationEnd;
+	uint16_t *dest;
 
 	if (!destination || !source)
 		return NULL;
-	destinationEnd = (const volatile uint16_t *)destination;
+	destinationEnd = (const uint16_t *)destination;
 	while (*destinationEnd)
 		destinationEnd++;
 	sourceEnd = src;
@@ -131,7 +131,7 @@ uint16_t *sce_paf_wcscat(uint16_t *destination, const uint16_t *source)
 	if (destinationEnd == sourceEnd)
 		return NULL;
 	/* Sony scans the destination a second time before writing anything. */
-	dest = (volatile uint16_t *)destination;
+	dest = (uint16_t *)destination;
 	while (*dest)
 		dest++;
 	for (;;) {
@@ -146,8 +146,8 @@ uint16_t *sce_paf_wcscat(uint16_t *destination, const uint16_t *source)
 uint16_t *sce_paf_wcsncpy(uint16_t *destination, const uint16_t *source,
 			  size_t num)
 {
-	volatile uint16_t *dest = (volatile uint16_t *)destination;
-	const volatile uint16_t *src = (const volatile uint16_t *)source;
+	uint16_t *dest = (uint16_t *)destination;
+	const uint16_t *src = (const uint16_t *)source;
 	int32_t remaining = (int32_t)num;
 	uint16_t ch;
 
@@ -171,10 +171,10 @@ uint16_t *sce_paf_wcsncpy(uint16_t *destination, const uint16_t *source,
 uint16_t *sce_paf_wcsncat(uint16_t *destination, const uint16_t *source,
 			  size_t num)
 {
-	volatile uint16_t *dest = (volatile uint16_t *)destination;
-	const volatile uint16_t *src = (const volatile uint16_t *)source;
+	uint16_t *dest = (uint16_t *)destination;
+	const uint16_t *src = (const uint16_t *)source;
 	uint32_t remaining = num;
-	volatile uint16_t first;
+	uint16_t first;
 	uint16_t ch;
 
 	if (!destination || !source)
@@ -203,8 +203,8 @@ uint16_t *sce_paf_wcsncat(uint16_t *destination, const uint16_t *source,
 
 int sce_paf_wcsncmp(const uint16_t *left, const uint16_t *right, size_t num)
 {
-	const volatile uint16_t *leftByte = (const volatile uint16_t *)left;
-	const volatile uint16_t *rightByte = (const volatile uint16_t *)right;
+	const uint16_t *leftByte = (const uint16_t *)left;
+	const uint16_t *rightByte = (const uint16_t *)right;
 	uint32_t remaining = num;
 
 	if (!left || !right) {
@@ -229,8 +229,8 @@ int sce_paf_wcsncmp(const uint16_t *left, const uint16_t *right, size_t num)
 
 int sce_paf_wcscasecmp(const uint16_t *left, const uint16_t *right)
 {
-	const volatile uint16_t *leftByte = (const volatile uint16_t *)left;
-	const volatile uint16_t *rightByte = (const volatile uint16_t *)right;
+	const uint16_t *leftByte = (const uint16_t *)left;
+	const uint16_t *rightByte = (const uint16_t *)right;
 
 	if (!left || !right) {
 		if (left == right)
@@ -264,8 +264,8 @@ int sce_paf_wcscasecmp(const uint16_t *left, const uint16_t *right)
 int sce_paf_wcsncasecmp(const uint16_t *left, const uint16_t *right,
 			 size_t num)
 {
-	const volatile uint16_t *leftByte = (const volatile uint16_t *)left;
-	const volatile uint16_t *rightByte = (const volatile uint16_t *)right;
+	const uint16_t *leftByte = (const uint16_t *)left;
+	const uint16_t *rightByte = (const uint16_t *)right;
 	uint32_t remaining = num;
 
 	if (!left || !right) {
@@ -302,16 +302,16 @@ int sce_paf_wcsncasecmp(const uint16_t *left, const uint16_t *right,
 
 size_t sce_paf_wcsspn(const uint16_t *str, const uint16_t *accept)
 {
-	const volatile uint16_t *cursor = (const volatile uint16_t *)str;
-	const volatile uint16_t *start = cursor;
-	const volatile uint16_t *member;
+	const uint16_t *cursor = (const uint16_t *)str;
+	const uint16_t *start = cursor;
+	const uint16_t *member;
 	uint16_t ch;
 
 	for (;;) {
 		ch = *cursor;
 		if (!ch)
 			return cursor - start;
-		member = (const volatile uint16_t *)accept;
+		member = (const uint16_t *)accept;
 		for (;;) {
 			uint16_t candidate = *member;
 
@@ -327,16 +327,16 @@ size_t sce_paf_wcsspn(const uint16_t *str, const uint16_t *accept)
 
 size_t sce_paf_wcscspn(const uint16_t *str, const uint16_t *reject)
 {
-	const volatile uint16_t *cursor = (const volatile uint16_t *)str;
-	const volatile uint16_t *start = cursor;
-	const volatile uint16_t *member;
+	const uint16_t *cursor = (const uint16_t *)str;
+	const uint16_t *start = cursor;
+	const uint16_t *member;
 	uint16_t ch;
 
 	for (;;) {
 		ch = *cursor;
 		if (!ch)
 			return cursor - start;
-		member = (const volatile uint16_t *)reject;
+		member = (const uint16_t *)reject;
 		for (;;) {
 			uint16_t candidate = *member;
 
@@ -352,7 +352,7 @@ size_t sce_paf_wcscspn(const uint16_t *str, const uint16_t *reject)
 
 size_t sce_paf_wcsnlen(const uint16_t *str, size_t limit)
 {
-	const volatile uint16_t *cursor = (const volatile uint16_t *)str;
+	const uint16_t *cursor = (const uint16_t *)str;
 	uint32_t length = 0;
 
 	if (!str)
@@ -371,15 +371,15 @@ size_t sce_paf_wcsnlen(const uint16_t *str, size_t limit)
 
 uint16_t *sce_paf_wcspbrk(const uint16_t *str, const uint16_t *accept)
 {
-	const volatile uint16_t *cursor = (const volatile uint16_t *)str;
-	const volatile uint16_t *member;
+	const uint16_t *cursor = (const uint16_t *)str;
+	const uint16_t *member;
 	uint16_t ch;
 
 	for (;;) {
 		ch = *cursor;
 		if (!ch)
 			return NULL;
-		member = (const volatile uint16_t *)accept;
+		member = (const uint16_t *)accept;
 		for (;;) {
 			uint16_t candidate = *member;
 
@@ -399,18 +399,18 @@ uint16_t *sce_paf_wcspbrk(const uint16_t *str, const uint16_t *accept)
  */
 char *sce_paf_private_strtok(const char *haystack, const char *needle)
 {
-	const volatile signed char *pattern =
-		(const volatile signed char *)needle;
-	const volatile signed char *candidate =
-		(const volatile signed char *)haystack;
+	const signed char *pattern =
+		(const signed char *)needle;
+	const signed char *candidate =
+		(const signed char *)haystack;
 
 	if (!*pattern)
 		return (char *)candidate;
 	if (!*candidate)
 		return NULL;
 	for (;;) {
-		const volatile signed char *part = pattern;
-		const volatile signed char *cursor = candidate;
+		const signed char *part = pattern;
+		const signed char *cursor = candidate;
 		int ch = *part;
 
 		for (;;) {
@@ -435,16 +435,16 @@ char *sce_paf_private_strtok(const char *haystack, const char *needle)
 uint16_t *sce_paf_wcsstr(const uint16_t *haystack,
 			      const uint16_t *needle)
 {
-	const volatile uint16_t *pattern = (const volatile uint16_t *)needle;
-	const volatile uint16_t *candidate = (const volatile uint16_t *)haystack;
+	const uint16_t *pattern = (const uint16_t *)needle;
+	const uint16_t *candidate = (const uint16_t *)haystack;
 
 	if (!*pattern)
 		return (uint16_t *)candidate;
 	if (!*candidate)
 		return NULL;
 	for (;;) {
-		const volatile uint16_t *part = pattern;
-		const volatile uint16_t *cursor = candidate;
+		const uint16_t *part = pattern;
+		const uint16_t *cursor = candidate;
 		uint16_t ch = *part;
 
 		for (;;) {
@@ -469,19 +469,19 @@ uint16_t *sce_paf_wcsstr(const uint16_t *haystack,
 uint16_t *sce_paf_wcstok(uint16_t *str, const uint16_t *delimiters,
 			       uint16_t **save)
 {
-	volatile uint16_t *cursor = (volatile uint16_t *)str;
-	const volatile uint16_t *separator =
-		(const volatile uint16_t *)delimiters;
+	uint16_t *cursor = (uint16_t *)str;
+	const uint16_t *separator =
+		(const uint16_t *)delimiters;
 	uint16_t *token;
 	uint16_t ch;
 
 	if (!cursor) {
-		cursor = (volatile uint16_t *)*save;
+		cursor = (uint16_t *)*save;
 		if (!cursor)
 			return NULL;
 	}
 	for (;;) {
-		const volatile uint16_t *member;
+		const uint16_t *member;
 		uint16_t sep;
 
 		ch = *cursor++;
@@ -502,7 +502,7 @@ uint16_t *sce_paf_wcstok(uint16_t *str, const uint16_t *delimiters,
 	}
 	token = (uint16_t *)(cursor - 1);
 	for (;;) {
-		const volatile uint16_t *member;
+		const uint16_t *member;
 		uint16_t sep;
 
 		ch = *cursor++;
@@ -518,7 +518,7 @@ uint16_t *sce_paf_wcstok(uint16_t *str, const uint16_t *delimiters,
 		}
 		if (sep) {
 			/* Unlike the byte tokenizer, Sony stores save first. */
-			*(uint16_t *volatile *)save = (uint16_t *)cursor;
+			*(uint16_t **)save = (uint16_t *)cursor;
 			cursor[-1] = 0;
 			return token;
 		}
@@ -529,21 +529,21 @@ uint16_t *sce_paf_wcstok(uint16_t *str, const uint16_t *delimiters,
 __attribute__((noinline))
 char *sce_paf_strtok_r(char *str, const char *delimiters, char **save)
 {
-	volatile signed char *cursor = (volatile signed char *)str;
-	const volatile signed char *separator =
-		(const volatile signed char *)delimiters;
+	signed char *cursor = (signed char *)str;
+	const signed char *separator =
+		(const signed char *)delimiters;
 	char *token;
 	int ch;
 
 	if (!cursor) {
-		cursor = (volatile signed char *)*save;
+		cursor = (signed char *)*save;
 		if (!cursor)
 			return NULL;
 	}
 
 	/* Skip leading separators. Sony reads the input byte before the set. */
 	for (;;) {
-		const volatile signed char *member;
+		const signed char *member;
 		int sep;
 
 		ch = *cursor++;
@@ -566,7 +566,7 @@ char *sce_paf_strtok_r(char *str, const char *delimiters, char **save)
 	token = (char *)(cursor - 1);
 	/* The first token character was consumed by the separator skip loop. */
 	for (;;) {
-		const volatile signed char *member;
+		const signed char *member;
 		int sep;
 
 		ch = *cursor++;
@@ -597,8 +597,8 @@ char *sce_paf_strtok(char *str, const char *delimiters)
 
 int sce_paf_strcmp(const char *left, const char *right)
 {
-	const volatile signed char *leftByte;
-	const volatile signed char *rightByte;
+	const signed char *leftByte;
+	const signed char *rightByte;
 	int leftCh;
 	int rightCh;
 
@@ -607,8 +607,8 @@ int sce_paf_strcmp(const char *left, const char *right)
 			return 0;
 		return left ? 1 : -1;
 	}
-	leftByte = (const volatile signed char *)left;
-	rightByte = (const volatile signed char *)right;
+	leftByte = (const signed char *)left;
+	rightByte = (const signed char *)right;
 	rightCh = *rightByte++;
 	leftCh = *leftByte;
 	for (;;) {
@@ -627,8 +627,8 @@ int sce_paf_strcmp(const char *left, const char *right)
 __attribute__((noinline))
 int sce_paf_strncmp(const char *left, const char *right, size_t num)
 {
-	const volatile signed char *leftByte = (const volatile signed char *)left;
-	const volatile signed char *rightByte = (const volatile signed char *)right;
+	const signed char *leftByte = (const signed char *)left;
+	const signed char *rightByte = (const signed char *)right;
 	uint32_t remaining = num;
 
 	if (!left || !right) {
@@ -658,8 +658,8 @@ int sce_paf_strncmp(const char *left, const char *right, size_t num)
 
 int sce_paf_strcasecmp(const char *left, const char *right)
 {
-	const volatile signed char *leftByte = (const volatile signed char *)left;
-	const volatile signed char *rightByte = (const volatile signed char *)right;
+	const signed char *leftByte = (const signed char *)left;
+	const signed char *rightByte = (const signed char *)right;
 
 	if (!left || !right) {
 		if (left == right)
@@ -684,8 +684,8 @@ int sce_paf_strcasecmp(const char *left, const char *right)
 
 int sce_paf_strncasecmp(const char *left, const char *right, size_t num)
 {
-	const volatile signed char *leftByte = (const volatile signed char *)left;
-	const volatile signed char *rightByte = (const volatile signed char *)right;
+	const signed char *leftByte = (const signed char *)left;
+	const signed char *rightByte = (const signed char *)right;
 	uint32_t remaining = num;
 
 	if (!left || !right) {
@@ -727,14 +727,14 @@ char *sce_paf_strcpy(char *destination, const char *source)
 char *sce_paf_strcat(char *destination, const char *source)
 {
 	char *cursor = destination;
-	const volatile signed char *src = (const volatile signed char *)source;
+	const signed char *src = (const signed char *)source;
 
-	while (*(const volatile signed char *)cursor)
+	while (*(const signed char *)cursor)
 		cursor++;
 	for (;;) {
 		signed char ch = *src++;
 
-		*(volatile char *)cursor = ch;
+		*(char *)cursor = ch;
 		cursor++;
 		if (!ch)
 			return destination;
@@ -744,19 +744,19 @@ char *sce_paf_strcat(char *destination, const char *source)
 char *sce_paf_strncat(char *destination, const char *source, size_t num)
 {
 	char *cursor = destination;
-	const volatile signed char *src = (const volatile signed char *)source;
+	const signed char *src = (const signed char *)source;
 	uint32_t remaining = num;
-	volatile signed char first;
+	signed char first;
 	signed char ch;
 
 	if (!destination || !source)
 		return NULL;
 	/* The first source read precedes the destination scan in Sony's code. */
 	first = *src++;
-	while (*(const volatile signed char *)cursor)
+	while (*(const signed char *)cursor)
 		cursor++;
 	ch = first;
-	*(volatile char *)cursor = ch;
+	*(char *)cursor = ch;
 	if (!ch)
 		return destination;
 	cursor++;
@@ -764,11 +764,11 @@ char *sce_paf_strncat(char *destination, const char *source, size_t num)
 		/* Sony tests the count only after writing the preceding byte. */
 		remaining--;
 		if (remaining & 0x80000000U) {
-			*(volatile char *)(cursor - 1) = '\0';
+			*(char *)(cursor - 1) = '\0';
 			return destination;
 		}
 		ch = *src++;
-		*(volatile char *)cursor = ch;
+		*(char *)cursor = ch;
 		cursor++;
 		if (!ch)
 			return destination;
@@ -777,16 +777,16 @@ char *sce_paf_strncat(char *destination, const char *source, size_t num)
 
 size_t sce_paf_strspn(const char *str, const char *accept)
 {
-	const volatile signed char *cursor = (const volatile signed char *)str;
-	const volatile signed char *start = cursor;
-	const volatile signed char *member;
+	const signed char *cursor = (const signed char *)str;
+	const signed char *start = cursor;
+	const signed char *member;
 	int ch;
 
 	for (;;) {
 		ch = *cursor;
 		if (!ch)
 			return cursor - start;
-		member = (const volatile signed char *)accept;
+		member = (const signed char *)accept;
 		for (;;) {
 			int candidate = *member;
 
@@ -802,16 +802,16 @@ size_t sce_paf_strspn(const char *str, const char *accept)
 
 size_t sce_paf_strcspn(const char *str, const char *reject)
 {
-	const volatile signed char *cursor = (const volatile signed char *)str;
-	const volatile signed char *start = cursor;
-	const volatile signed char *member;
+	const signed char *cursor = (const signed char *)str;
+	const signed char *start = cursor;
+	const signed char *member;
 	int ch;
 
 	for (;;) {
 		ch = *cursor;
 		if (!ch)
 			return cursor - start;
-		member = (const volatile signed char *)reject;
+		member = (const signed char *)reject;
 		for (;;) {
 			int candidate = *member;
 
@@ -827,15 +827,15 @@ size_t sce_paf_strcspn(const char *str, const char *reject)
 
 char *sce_paf_strpbrk(const char *str, const char *accept)
 {
-	const volatile signed char *cursor = (const volatile signed char *)str;
-	const volatile signed char *member;
+	const signed char *cursor = (const signed char *)str;
+	const signed char *member;
 	int ch;
 
 	for (;;) {
 		ch = *cursor;
 		if (!ch)
 			return NULL;
-		member = (const volatile signed char *)accept;
+		member = (const signed char *)accept;
 		for (;;) {
 			int candidate = *member;
 
@@ -851,18 +851,18 @@ char *sce_paf_strpbrk(const char *str, const char *accept)
 
 size_t sce_paf_strlcpy(char *destination, const char *source, size_t size)
 {
-	const volatile signed char *cursor = (const volatile signed char *)source;
-	const volatile signed char *begin = cursor;
+	const signed char *cursor = (const signed char *)source;
+	const signed char *begin = cursor;
 	char *dest = destination;
 
 	if (!destination || !source)
 		return 0;
 	while (size > 1) {
-		const volatile signed char *current = cursor;
+		const signed char *current = cursor;
 		int ch = *cursor++;
 
 		size--;
-		*(volatile char *)dest++ = ch;
+		*(char *)dest++ = ch;
 		if (!ch) {
 			/* Sony rereads the just-copied terminating byte. */
 			cursor = current;
@@ -870,7 +870,7 @@ size_t sce_paf_strlcpy(char *destination, const char *source, size_t size)
 		}
 	}
 	if (size == 1)
-		*(volatile char *)dest = 0;
+		*(char *)dest = 0;
 measure:
 	while (*cursor++)
 		;
@@ -880,32 +880,32 @@ measure:
 size_t sce_paf_strlcat(char *destination, const char *source, size_t size)
 {
 	char *dest = destination;
-	const volatile signed char *cursor = (const volatile signed char *)source;
-	const volatile signed char *begin = cursor;
+	const signed char *cursor = (const signed char *)source;
+	const signed char *begin = cursor;
 	size_t prefix;
 
 	if (!destination || !source)
 		return 0;
 	while (size) {
-		if (!*(const volatile signed char *)dest)
+		if (!*(const signed char *)dest)
 			break;
 		size--;
 		dest++;
 	}
 	prefix = (size_t)(dest - destination);
 	while (size > 1) {
-		const volatile signed char *current = cursor;
+		const signed char *current = cursor;
 		int ch = *cursor++;
 
 		size--;
-		*(volatile char *)dest++ = ch;
+		*(char *)dest++ = ch;
 		if (!ch) {
 			cursor = current;
 			goto measure;
 		}
 	}
 	if (size == 1)
-		*(volatile char *)dest = 0;
+		*(char *)dest = 0;
 measure:
 	while (*cursor++)
 		;
@@ -983,30 +983,6 @@ size_t sce_paf_wcslen(const uint16_t *str)
 	return length;
 }
 
-PafString *PafStringConstruct(PafString *self, const void *allocator)
-{
-	PafStringInitialize(self);
-	return self;
-}
-
-PafString *PafStringDestruct(PafString *self)
-{
-	PafStringDestroy(self);
-	return self;
-}
-
-PafWString *PafWStringConstruct(PafWString *self, const void *allocator)
-{
-	PafWStringInitialize(self);
-	return self;
-}
-
-PafWString *PafWStringDestruct(PafWString *self)
-{
-	PafWStringDestroy(self);
-	return self;
-}
-
 size_t sce_paf_strlen(const char *str)
 {
 	if (!str)
@@ -1019,273 +995,3 @@ extern int ScePafStdc_D608246A(void);
 char PafStringEmpty;
 uint16_t PafWStringEmpty;
 
-PafWString *PafWStringErase(PafWString *self, size_t pos, size_t len)
-{
-	size_t count = self->count;
-	uint16_t *dest;
-
-	if (pos > count) {
-		ScePafStdc_D608246A();
-		count = self->count;
-	}
-	if (len > count - pos)
-		len = count - pos;
-	dest = PafNew(2 * (count - len + 1));
-	if (dest) {
-		count = self->count;
-		sce_paf_memcpy(dest, self->ptr, 2 * pos);
-		sce_paf_memcpy(dest + pos, self->ptr + pos + len,
-			       2 * (count - pos - len));
-		dest[count - len] = 0;
-		if (self->ptr != &PafWStringEmpty)
-			PafDelete(self->ptr);
-		self->ptr = dest;
-		self->count = count - len;
-	} else {
-		ScePafStdc_D608246A();
-	}
-	return self;
-}
-
-PafWString *PafWStringAppend(PafWString *self, size_t len, uint16_t value)
-{
-	uint16_t *dest = PafNew(2 * (self->count + len + 1));
-
-	if (dest) {
-		size_t count = self->count;
-		size_t total = count + len;
-		size_t i;
-
-		sce_paf_memcpy(dest, self->ptr, 2 * count);
-		count = self->count;
-		for (i = 0; i < len; count = self->count)
-			dest[count + i++] = value;
-		dest[count + len] = 0;
-		if (self->ptr != &PafWStringEmpty)
-			PafDelete(self->ptr);
-		self->ptr = dest;
-		self->count = total;
-	} else {
-		ScePafStdc_D608246A();
-	}
-	return self;
-}
-
-PafWString *PafWStringAssign(PafWString *self, const uint16_t *src, size_t len)
-{
-	uint16_t *old = self->ptr;
-
-	if (old == src)
-		return self;
-	if (old != &PafWStringEmpty)
-		PafDelete(old);
-	if (len && src && *src) {
-		uint16_t *dest = PafNew(2 * (len + 1));
-
-		if (dest) {
-			self->ptr = dest;
-			self->count = len;
-			sce_paf_memcpy(dest, src, 2 * len);
-			self->ptr[len] = 0;
-			return self;
-		}
-		ScePafStdc_D608246A();
-	}
-	self->ptr = &PafWStringEmpty;
-	self->count = 0;
-	return self;
-}
-
-PafString *PafStringErase(PafString *self, size_t pos, size_t len)
-{
-	size_t count = self->count;
-	char *dest;
-
-	if (pos > count) {
-		ScePafStdc_D608246A();
-		count = self->count;
-	}
-	if (len > count - pos)
-		len = count - pos;
-	dest = PafNew(count - len + 1);
-	if (dest) {
-		count = self->count;
-		sce_paf_memcpy(dest, self->ptr, pos);
-		sce_paf_memcpy(dest + pos, self->ptr + pos + len,
-			       count - pos - len);
-		dest[count - len] = 0;
-		if (self->ptr != &PafStringEmpty)
-			PafDelete(self->ptr);
-		self->ptr = dest;
-		self->count = count - len;
-	} else {
-		ScePafStdc_D608246A();
-	}
-	return self;
-}
-
-PafString *PafStringAppend(PafString *self, size_t len, char value)
-{
-	char *dest = PafNew(self->count + len + 1);
-
-	if (dest) {
-		size_t count = self->count;
-		size_t total = count + len;
-		size_t i;
-
-		sce_paf_memcpy(dest, self->ptr, count);
-		count = self->count;
-		for (i = 0; i < len; count = self->count)
-			dest[count + i++] = value;
-		dest[count + len] = 0;
-		if (self->ptr != &PafStringEmpty)
-			PafDelete(self->ptr);
-		self->ptr = dest;
-		self->count = total;
-	} else {
-		ScePafStdc_D608246A();
-	}
-	return self;
-}
-
-PafString *PafStringAssign(PafString *self, const char *src, size_t len)
-{
-	char *old = self->ptr;
-
-	if (old == src)
-		return self;
-	if (old != &PafStringEmpty)
-		PafDelete(old);
-	if (len && src && *src) {
-		char *dest = PafNew(len + 1);
-
-		if (dest) {
-			self->ptr = dest;
-			self->count = len;
-			sce_paf_memcpy(dest, src, len);
-			self->ptr[len] = 0;
-			return self;
-		}
-		ScePafStdc_D608246A();
-	}
-	self->ptr = &PafStringEmpty;
-	self->count = 0;
-	return self;
-}
-
-PafString *PafStringCopy(PafString *self, const PafString *src)
-{
-	if (self == src)
-		return self;
-	if (self->ptr != &PafStringEmpty)
-		PafDelete(self->ptr);
-	if (src->count) {
-		char *dest = PafNew(src->count + 1);
-
-		if (dest) {
-			self->ptr = dest;
-			self->count = src->count;
-			sce_paf_memcpy(dest, src->ptr, src->count + 1);
-			return self;
-		}
-		ScePafStdc_D608246A();
-	}
-	self->ptr = &PafStringEmpty;
-	self->count = 0;
-	return self;
-}
-
-PafString *PafStringAssignChar(PafString *self, char value)
-{
-	if (self->ptr != &PafStringEmpty)
-		PafDelete(self->ptr);
-	if (value) {
-		char *dest = PafNew(2);
-
-		if (dest) {
-			self->ptr = dest;
-			self->count = 1;
-			*dest = value;
-			self->ptr[1] = 0;
-			return self;
-		}
-		ScePafStdc_D608246A();
-	}
-	self->ptr = &PafStringEmpty;
-	self->count = 0;
-	return self;
-}
-
-PafString *PafStringSubstring(PafString *result, const PafString *src,
-			      size_t pos, size_t len)
-{
-	size_t count = src->count;
-	const char *text;
-
-	if (pos > count) {
-		ScePafStdc_D608246A();
-		count = src->count;
-	}
-	if (pos >= count) {
-		PafStringInitialize(result);
-		return NULL;
-	}
-	if (len == (size_t)-1 || pos + len > count)
-		len = count - pos;
-	text = src->ptr + pos;
-	PafStringInitialize(result);
-	return PafStringAssign(result, text, len);
-}
-
-size_t PafStringRfind(const PafString *self, const char *str,
-		      size_t pos, size_t len)
-{
-	extern int sce_paf_strncmp(const char *left, const char *right, size_t len);
-	size_t count = self->count;
-	const char *begin, *current;
-
-	if (!len)
-		return pos < count ? pos : count;
-	if (len > count)
-		return (size_t)-1;
-	begin = self->ptr;
-	if (pos >= count - len)
-		pos = count - len;
-	current = begin + pos;
-	for (;;) {
-		if (*str == *current) {
-			int comparison = sce_paf_strncmp(current, str, len);
-
-			begin = self->ptr;
-			if (!comparison)
-				return current - begin;
-		}
-		if (current == begin)
-			return (size_t)-1;
-		--current;
-	}
-}
-
-PafWString *PafWStringCopy(PafWString *self, const PafWString *src)
-{
-	if (src != self) {
-		if (self->ptr != &PafWStringEmpty)
-			PafDelete(self->ptr);
-		if (src->count) {
-			uint16_t *dest = PafNew(2 * (src->count + 1));
-
-			if (dest) {
-				size_t count = src->count;
-
-				self->ptr = dest;
-				self->count = count;
-				sce_paf_memcpy(dest, src->ptr, 2 * count + 2);
-				return self;
-			}
-			ScePafStdc_D608246A();
-		}
-		self->ptr = &PafWStringEmpty;
-		self->count = 0;
-	}
-	return self;
-}

@@ -112,6 +112,16 @@ public:
 		       m_map_e_listener.find(CB_BTN_PRESS) != m_map_e_listener.end();
 	}
 
+	/* the widget's mask, else 2 with a text event handler and 3 without */
+	virtual int32_t GetFocusDirectionMask()
+	{
+		int32_t mask = Widget::GetFocusDirectionMask();
+
+		if (mask != 0)
+			return mask;
+		return IsTextEventEnabled() ? 2 : 3;
+	}
+
 	/* the event sent, as a command dispatched forward without one */
 	virtual int32_t DoButtonEvent(int32_t type, Event *e)
 	{

@@ -78,14 +78,6 @@ typedef struct FileClass {
 	FileVTable methods;
 } FileClass;
 
-extern const FileClass fileClass;
-
-int32_t FileGetstat(File *self, FileStat *stat);
-int32_t FileSetPriority(File *self, int32_t priority);
-File *FileDestroy(File *self);
-void FileDelete(File *self);
-void FileDefaultDelete(File *file);
-
 typedef char FileSizeCheck[sizeof(File) == 4 ? 1 : -1];
 typedef char FileVTableSizeCheck[sizeof(FileVTable) == 96 ? 1 : -1];
 typedef char FileReadOffsetCheck[offsetof(FileVTable, Read) == 40 ? 1 : -1];

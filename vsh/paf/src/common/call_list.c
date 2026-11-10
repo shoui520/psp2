@@ -2,9 +2,6 @@
 #include "call_list.h"
 #include "../std/new.h"
 
-/* operator new/delete and the allocation-failure handler in ScePafStdc. */
-extern int ScePafStdc_D608246A(void);
-
 /* SNC's placement-new overload: the size is ignored, the address is returned. */
 #define PafPlacementNew _ZnwjPv
 extern void *PafPlacementNew(size_t size, void *where);
@@ -81,24 +78,6 @@ void CallListUpdate(CallList *self, Mutex *extMtx)
 			self->m_iterator = item;
 		}
 	}
-}
-
-static inline __attribute__((always_inline)) CallList *CallListInitialize(CallList *self)
-{
-	self->m_list.count = 0;
-	CallItemNode *root = PafNew(sizeof(*root));
-	if (!root)
-		ScePafStdc_D608246A();
-	self->m_list.root_node = root;
-	if (root) {
-		root->prev = root;
-		root->next = root;
-		root = self->m_list.root_node;
-	}
-	self->m_iterator = root;
-	self->m_iterator_updated = 0;
-	_ZN3paf6thread6RMutexC1EPKci(&self->m_item_mtx, "ScePafCallListItem", 0);
-	return self;
 }
 
 CallList *CallListConstruct(CallList *self)

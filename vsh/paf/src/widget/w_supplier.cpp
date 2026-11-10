@@ -90,7 +90,7 @@ int32_t Supplier::EventExecDirect(Event *e)
 	return ret;
 }
 
-void Supplier::ScePafWidget_AAE71C36()
+void Supplier::UpdateAdjustSize()
 {
 	Widget *target = m_target;
 

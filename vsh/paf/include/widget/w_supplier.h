@@ -50,7 +50,7 @@ public:
 	   EventExecDirect) */
 	virtual int32_t EventExecDirect(Event *e);
 	/* its position and size made the target's, with its offsets */
-	void ScePafWidget_AAE71C36();
+	virtual void UpdateAdjustSize();
 	/* the target's delete callback: the target let go */
 	static void ScePafWidget_C79983DE(Widget *widget, void *data);
 

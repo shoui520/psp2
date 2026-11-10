@@ -18,7 +18,7 @@ static Mutex s_giant_lock;
 static CallListListener *s_instance;
 
 CallListListener *CallListListenerConstruct(CallListListener *self);
-TimerListener *CallListListenerDestroy(TimerListener *base);
+__attribute__((always_inline)) TimerListener *CallListListenerDestroy(TimerListener *base);
 void CallListListenerDelete(TimerListener *base);
 void CallListListenerOnFinish(TimerListener *base, void *data1, void *data2);
 
@@ -48,7 +48,7 @@ CallListListener *CallListListenerConstruct(CallListListener *self)
 	self->base.m_data = NULL;
 	self->base.m_timer = timer;
 	self->base.vtable = &callListListenerClass.methods;
-	CallListConstruct(&self->m_list);
+	CallListInitialize(&self->m_list);
 	self->m_is_calling = 0;
 	TimerListenerList *list = s_default_list;
 	ListenerParam param;

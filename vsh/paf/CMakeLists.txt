@@ -155,7 +155,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc SOURCES
 	src/avout/sound.cpp
 	src/avout/wave.c
 	src/buffer/buffer.cpp
-	src/file/file.c
 	src/file/bufferedfile.cpp
 	src/file/localfile.cpp
 	src/file/localfile_platform.cpp
@@ -244,9 +243,9 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc SOURCES
 	src/common/halt_assert.c
 	src/common/error_callback.cpp
 	src/common/sequence.c
-	src/common/job_call_queue.c
+	src/common/job_call_queue.cpp
 	src/common/job_slots.cpp
-	src/common/path.c
+	src/common/path.cpp
 	src/common/property_list.cpp
 	src/common/ref_obj.cpp
 	src/common/shared_string.cpp
@@ -462,7 +461,6 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc SOURCES
 	src/std/wprintf.c
 	src/std/wformat.c
 	src/std/wformat_abi.S
-	src/std/string_vector.c
 	../../sys/sdk/target/src/libsnc/i32ops.c
 	../../sys/sdk/target/src/libsnc/i64ops.c
 	../../sys/sdk/target/src/libsnc/unwind_pr0.c

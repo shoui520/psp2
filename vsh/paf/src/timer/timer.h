@@ -32,10 +32,10 @@ struct Timer {
 	unsigned int m_repeat_count : 8;
 	unsigned int m_repeat : 4;
 	unsigned int m_state : 4;
-	unsigned int m_first_tick : 1;
-	unsigned int m_nonpositive_total : 1;
-	unsigned int m_is_2d : 1;
-	unsigned int m_is_3d : 1;
+	_Bool m_first_tick : 1;
+	_Bool m_nonpositive_total : 1;
+	_Bool m_is_2d : 1;
+	_Bool m_is_3d : 1;
 	unsigned int m_func_x : 8;
 	unsigned int m_param_x_num : 4;
 	float *m_param_x;
