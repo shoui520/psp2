@@ -1,0 +1,44 @@
+/*
+ * A bubble: a disc of rings (pos.x the ring's radius, tex.zw the direction around it), lit by
+ * the point light with a half-Lambert diffuse term and a normalised Blinn-Phong highlight.
+ */
+struct ColorArgs {
+	float4 MaterialPack[4];
+	float4 AmbientColor;
+	float4 DiffuseColor;
+	float3 LightPos;
+	float4 EyePos;
+};
+
+struct VertexInput {
+	float4 pos : POSITION;
+	float4 tex : TEXCOORD0;
+};
+
+void main(VertexInput vin,
+	  uniform float4x4 MVP,
+	  uniform float4x4 TransformInverseTranspose,
+	  uniform float4x4 Transform,
+	  uniform ColorArgs cargs,
+	  out float4 oPosition : POSITION,
+	  out half4 oColor : TEXCOORD0,
+	  out half3 oTexcoord : TEXCOORD1)
+{
+	float4 model = vin.pos.xxzz * vin.tex.zwzw;
+	float4 world = mul(float4(model.xy, vin.pos.y, 1), Transform);
+	float3 normal = normalize(mul(float3(model.zw, vin.pos.w),
+				      (float3x3)TransformInverseTranspose));
+	float3 eye = normalize(cargs.EyePos.xyz - world.xyz);
+	float3 light = normalize(cargs.LightPos - world.xyz);
+	float diffuse = dot(normal, light) * 0.5 + 0.5;
+	float rim = 1 - diffuse * diffuse;
+	float exponent = cargs.MaterialPack[1].z;
+	float specular = pow(max(dot(normal, normalize(eye + light)), 0), exponent) *
+			 ((exponent + 2) * 0.125);
+
+	oPosition = mul(world, MVP);
+	oColor = cargs.MaterialPack[0] *
+		 (cargs.AmbientColor + cargs.DiffuseColor * (cargs.MaterialPack[1].x * (diffuse * diffuse)));
+	oTexcoord.xy = model.xy * 0.5 + 0.5;
+	oTexcoord.z = specular * (1 - rim * rim * rim);
+}
