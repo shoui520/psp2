@@ -1,0 +1,46 @@
+/*
+ * The page under the turning one: lifted along the fold into a half cylinder whose radius grows
+ * with the distance the page has been dragged, and shadowed by the height it reaches.
+ */
+struct Shape {
+	float4 Deepest;
+	float2 Grep;
+	float4 Params;
+	float4 FoldPlane;
+	float4 Aspect;
+};
+
+struct VertexInput {
+	float4 pos : POSITION;
+};
+
+float DragLength(Shape shape)
+{
+	return distance(shape.Deepest.zw, shape.Grep);
+}
+
+void main(VertexInput vin,
+	  uniform float4x4 MVP,
+	  uniform float4 Shadow,
+	  uniform float4 UVTransform,
+	  uniform float4 SqueezeZ,
+	  uniform float2 ExpMinusRange,
+	  uniform Shape shape,
+	  uniform sampler2D ExpMinusTexture,
+	  out float4 oPosition : POSITION,
+	  out half3 oTexcoord : TEXCOORD0)
+{
+	float2 uv = shape.Aspect.zw * vin.pos.xy;
+	float fold = min(dot(shape.FoldPlane.zw, vin.pos.xy - shape.FoldPlane.xy), 0.5);
+	float across = 0.5 - fold;
+	float radius = shape.Params.x * (saturate(DragLength(shape)) * 0.8 + 0.2);
+	float height = radius * 0.5 - radius * sqrt(max(0.25 - across * across, 0));
+	float4 position = float4(SqueezeZ.xy * vin.pos.xy, SqueezeZ.zw * float2(height, 1));
+	float shade = tex2Dlod(ExpMinusTexture,
+			       float4(ExpMinusRange.y * Shadow.x * height, 0.5, 0, 0)).x;
+
+	uv.y = 1 - uv.y;
+	oTexcoord.xy = uv * UVTransform.xy + UVTransform.zw;
+	oTexcoord.z = lerp(shade, 1, Shadow.y);
+	oPosition = mul(position, MVP);
+}
