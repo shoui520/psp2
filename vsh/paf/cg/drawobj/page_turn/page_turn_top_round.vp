@@ -1,0 +1,80 @@
+/*
+ * The turning page, with a rounded corner: each point is mirrored across the fold line and
+ * lifted along an arc that curls the page over, then lit by the point light and the eye (a
+ * half-Lambert diffuse term and a rim term the fragment program adds); the corner coordinates
+ * run from -1 to 1 across the page.
+ */
+struct Shape {
+	float4 Deepest;
+	float2 Grep;
+	float NormalScaleZ;
+	float4 Params;
+	float4 FoldPlane;
+	float4 Aspect;
+};
+
+struct LitParams {
+	float4 MaterialPack[4];
+	float4 PointLightPack1[4];
+	float4 PointLightPack2[4];
+	float4 Eye;
+};
+
+struct VertexInput {
+	float4 pos : POSITION;
+};
+
+float DragLength(Shape shape)
+{
+	return distance(shape.Deepest.zw, shape.Grep);
+}
+
+/* the arc's height at x across the curl, folded back past its top by Params.y */
+float Arc(Shape shape, float x)
+{
+	float across = x - 0.5;
+	float height = sqrt(max(0.25 - across * across, 0));
+
+	if (x > 0.5)
+		height = lerp(height, 1 - height, shape.Params.y);
+	return height;
+}
+
+void main(VertexInput vin,
+	  uniform float4x4 MVP,
+	  uniform float4x4 ModelMatrix,
+	  uniform float4 UVTransform,
+	  uniform float4 SqueezeZ,
+	  uniform Shape shape,
+	  uniform LitParams lit_params,
+	  out float4 oPosition : POSITION,
+	  out half2 oTexcoord : TEXCOORD0,
+	  out half2 oCorner : TEXCOORD1,
+	  out half4 oLight : TEXCOORD2)
+{
+	float2 rel = vin.pos.xy - shape.FoldPlane.xy;
+	float2 tangent = float2(-shape.FoldPlane.w, shape.FoldPlane.z);
+	float t = dot(shape.FoldPlane.zw, rel) / shape.Deepest.x * 0.98;
+	float2 foot = shape.FoldPlane.xy + tangent * dot(rel, tangent) / dot(tangent, tangent);
+	float scale = saturate(DragLength(shape)) * 0.8 + 0.2;
+	float z = Arc(shape, t) * shape.Params.z * scale + 0.5 * shape.Params.x * scale;
+	float dz = Arc(shape, t + 0.01) * shape.Params.z * scale + 0.5 * shape.Params.x * scale - z;
+	float3 pos = float3(foot + foot - vin.pos.xy, z);
+	float3 normal = normalize(float3(dz * -shape.NormalScaleZ * shape.FoldPlane.zw, 0.01));
+	float3 world = mul(float4(pos, 1), ModelMatrix).xyz;
+	float3 n = normalize(mul(float4(normal, 0), ModelMatrix)).xyz;
+	float3 eye = normalize(lit_params.Eye.xyz - world);
+	float3 light = normalize(lit_params.PointLightPack1[0].xyz - world);
+	float rim = saturate((dot(n, eye) - lit_params.MaterialPack[2].y) /
+			     (1 - lit_params.MaterialPack[2].y));
+	float diffuse = dot(n, light) * 0.5 + 0.5;
+	float2 uv = shape.Aspect.zw * vin.pos.xy;
+
+	oLight.xyz = lit_params.PointLightPack2[2].xyz * lit_params.MaterialPack[1].x *
+		     (diffuse * diffuse);
+	oLight.w = lit_params.MaterialPack[2].x * (1 - rim * rim * (3 - 2 * rim));
+	oPosition = mul(float4(SqueezeZ.xy * pos.xy, SqueezeZ.zw * float2(z, 1)), MVP);
+	oCorner = uv * 2 - 1;
+	uv.y = 1 - uv.y;
+	oTexcoord = uv * UVTransform.xy + UVTransform.zw;
+}

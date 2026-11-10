@@ -87,3 +87,5 @@
 	PROGRAM _ZN3paf5graph24PageTurnBottomVertShader8s_binaryE, "drawobj/page_turn/page_turn_bottom.vp.gxp"
 	PROGRAM _ZN3paf5graph29PageTurnBottomRoundVertShader8s_binaryE, "drawobj/page_turn/page_turn_bottom_round.vp.gxp"
 	PROGRAM _ZN3paf5graph34PageTurnBottomRoundEmptyVertShader8s_binaryE, "drawobj/page_turn/page_turn_bottom_round_empty.vp.gxp"
+	PROGRAM _ZN3paf5graph21PageTurnTopVertShader8s_binaryE, "drawobj/page_turn/page_turn_top.vp.gxp"
+	PROGRAM _ZN3paf5graph26PageTurnTopRoundVertShader8s_binaryE, "drawobj/page_turn/page_turn_top_round.vp.gxp"
