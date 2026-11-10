@@ -74,3 +74,6 @@
 	PROGRAM _ZN3paf2ui24ProgressSignalFragShader8s_binaryE, "drawobj/progress_signal.fp.gxp"
 	PROGRAM _ZN3paf5graph15FocusFragShader8s_binaryE, "drawobj/focus/focus.fp.gxp"
 	PROGRAM _ZN3paf2ui24ProgressSignalVertShader8s_binaryE, "drawobj/progress_signal.vp.gxp"
+	PROGRAM _ZN3paf5graph14WaveFragShader8s_binaryE, "drawobj/wave/wave.fp.gxp"
+	PROGRAM _ZN3paf5graph17WavePosVertShader8s_binaryE, "drawobj/wave/wave_pos.vp.gxp"
+	PROGRAM _ZN3paf5graph14WaveVertShader8s_binaryE, "drawobj/wave/wave.vp.gxp"

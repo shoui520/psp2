@@ -1,0 +1,24 @@
+/*
+ * The wave's surface: each vertex takes its position from the position texture (wave_pos.fp's
+ * output), at its uv, and the fragment program its colour from the same place.
+ */
+struct VertexInput {
+	float4 uv : TEXCOORD0;
+};
+
+void main(VertexInput vin,
+	  uniform float4x4 VP,
+	  uniform float4x4 ModelMatrix,
+	  uniform float2 HalfPixel,
+	  uniform float WorldScaleHack,
+	  uniform sampler2D PosTex : TEXUNIT6,
+	  out float4 oPosition : POSITION,
+	  out half2 oTexcoord : TEXCOORD0)
+{
+	float2 uv = float2(vin.uv.x, 1 - vin.uv.y) - HalfPixel;
+	float3 pos = tex2Dlod(PosTex, float4(uv, 0, 0)).xyz;
+	float3 world = mul(float4(pos, 1), ModelMatrix).xyz * WorldScaleHack;
+
+	oPosition = mul(float4(world, 1), VP);
+	oTexcoord = uv;
+}
