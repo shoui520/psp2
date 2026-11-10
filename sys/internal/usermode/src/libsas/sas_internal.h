@@ -7,7 +7,8 @@
 #define SCE_SAS_INTERNAL_H
 
 #include <sas.h>
-#include "as/as.h"
+
+struct SceSasAsHandle;			/* as/as.h, which only libsas reads */
 
 #define SCE_SAS_MAX_REVERBS		4
 
@@ -22,12 +23,12 @@ typedef struct SceSasSystem {
 	volatile SceUInt32 lock;		/* 1 while a call changes or renders it */
 	void *buffer;				/* the buffer it was set up in */
 	SceSize size;
-	SceSasAsHandle *core;
-	SceSasAsHandle *buss;
-	SceSasAsHandle *synth;
-	SceSasAsHandle *reverbs[SCE_SAS_MAX_REVERBS];
-	SceSasAsHandle *mixer;
-	SceSasAsHandle *master;
+	struct SceSasAsHandle *core;
+	struct SceSasAsHandle *buss;
+	struct SceSasAsHandle *synth;
+	struct SceSasAsHandle *reverbs[SCE_SAS_MAX_REVERBS];
+	struct SceSasAsHandle *mixer;
+	struct SceSasAsHandle *master;
 	SceSasVoice *voices;
 	SceUInt16 numVoices;
 	SceUInt16 grain;

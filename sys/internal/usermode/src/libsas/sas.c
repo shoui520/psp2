@@ -2,6 +2,7 @@
  * libsas's API: the one SAS system the library holds, set up by sceSasInit and taken down by
  * sceSasExit, and each call passed to it (sas_internal.c).
  */
+#include "as/as.h"
 #include "sas_internal.h"
 
 /* the system's state: none, being set up, set up, being taken down */

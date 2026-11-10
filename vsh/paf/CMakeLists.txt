@@ -125,7 +125,32 @@ set(paf_sas_SOURCES
 set_source_files_properties(${paf_sas_SOURCES} PROPERTIES
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_SAS_STATIC_RUNTIME" COMPILE_OPTIONS "-O3;-fdelete-null-pointer-checks;-mfloat-abi=hard;-fsigned-char")
 
-psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
+# The GCC runtime libsas's code calls, which Sony's link took from GCC's libgcc: the float
+# conversions and 32- and 64-bit divisions (lib1funcs.S, bpabi.c, libgcc2.c from contrib; the names SNC's runtime
+# also defines are weak or relabelled, toolchains/libgcc/*_weak.S, *_gnu.c), and the
+# stack guard GCC's frames check (as_ssp.S)
+set(paf_libgcc ../../toolchains/libgcc)
+set(paf_libgcc_SOURCES
+	${paf_libgcc}/addsubsf3.S
+	${paf_libgcc}/addsubdf3.S
+	${paf_libgcc}/ldivmod.S
+	${paf_libgcc}/uldivmod.S
+	${paf_libgcc}/idiv_weak.S
+	${paf_libgcc}/udiv_weak.S
+	${paf_libgcc}/div64_gnu.c
+	${paf_libgcc}/udiv64_gnu.c
+	${paf_libgcc}/d2lz.c
+	${paf_libgcc}/d2ulz.c
+	${paf_libgcc}/bpabi_gnu.c
+	${paf_sas}/as/as_ssp.S
+)
+set_source_files_properties(${paf_libgcc}/div64_gnu.c ${paf_libgcc}/udiv64_gnu.c ${paf_libgcc}/d2lz.c
+	${paf_libgcc}/d2ulz.c ${paf_libgcc}/bpabi_gnu.c PROPERTIES
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;IN_LIBGCC2"
+	COMPILE_OPTIONS "-fno-stack-protector;-fbuilding-libgcc"
+	INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/${paf_libgcc};${CMAKE_CURRENT_SOURCE_DIR}/${paf_libgcc}/target;${PSP2_SRC}/contrib/gcc-4.8-2014.05/gcc;${PSP2_SRC}/contrib/gcc-4.8-2014.05/gcc/ginclude;${PSP2_SRC}/contrib/gcc-4.8-2014.05/libgcc;${PSP2_SRC}/contrib/gcc-4.8-2014.05/include")
+
+psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc SOURCES
 	src/module.c
 	src/avout/sound.cpp
 	src/avout/wave.c
@@ -461,6 +486,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 	../../sys/sdk/target/src/deflt/deflate.c
 	../../sys/sdk/target/src/deflt/deflate_common.c
 	${paf_sas_SOURCES}
+	${paf_libgcc_SOURCES}
 	../../sys/sdk/target/src/libSceVshBridge_stub/vshbridge_stub.c
 	libpaf.c
 	cg/programs.S
@@ -468,6 +494,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc PARTIAL SOURCES
 # The GPU programs, compiled from Cg (cg/).
 include("${CMAKE_CURRENT_SOURCE_DIR}/cg/cg.cmake")
 psp2_paf_cg(vs0_sys_external_libpaf)
+include(../../toolchains/libgcc/lib1funcs.cmake)
+gcc48_use_lib1funcs(vs0_sys_external_libpaf)
 # libpaf's own build of its headers (shared_string.h inlines what other modules import)
 target_compile_definitions(vs0_sys_external_libpaf PRIVATE PAF_LIBRARY_BUILD)
 # Sony linked with psp2ld --strip-unused, which drops functions nothing calls (giflib's
@@ -475,6 +503,9 @@ target_compile_definitions(vs0_sys_external_libpaf PRIVATE PAF_LIBRARY_BUILD)
 # and the link collects the unreferenced ones.
 target_compile_definitions(vs0_sys_external_libpaf PRIVATE PSP2_STRIP_UNUSED)
 target_link_options(vs0_sys_external_libpaf PRIVATE -Wl,--gc-sections)
+# libsas passes floats in VFP registers (-mfloat-abi=hard) and the rest of libpaf does not;
+# psp2ld does not compare the objects' float ABI attributes, GNU ld does unless told not to
+target_link_options(vs0_sys_external_libpaf PRIVATE -Wl,--no-warn-mismatch)
 
 # the SceVshBridge stub library's wrapper, which Sony built with GCC 4.8 and without a stack
 # guard, like the SDK's libraries in libhttp (2026-11-02)

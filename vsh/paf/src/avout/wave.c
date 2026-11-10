@@ -10,7 +10,7 @@
 #include <threadmgr/threadmgr.h>
 #undef PSP2_KERNEL
 #include "wave.h"
-#include "sas.h"
+#include "../../../../sys/internal/usermode/src/libsas/sas_internal.h"
 #include <audioout.h>
 #include <kernel/threadmgr.h>
 #include <kernel/error.h>
@@ -43,7 +43,7 @@ static int waveState;
 static int waveExitRequested;
 static SceUID waveEventFlag = -1;
 struct WaveThreadArgs waveThreadArgs;
-static SasContext *waveSas;
+static SceSasSystem *waveSas;
 static unsigned char waveSasBuffer[0x8000] __attribute__((aligned(16)));
 static int waveVolume[2];
 static int waveExtVolume[2];
@@ -69,13 +69,13 @@ int WaveInit(void)
 	sceAudioOutSetVolume(waveThreadArgs.port,
 			SCE_AUDIO_VOLUME_FLAG_L_CH | SCE_AUDIO_VOLUME_FLAG_R_CH,
 			waveVolume);
-	result = SasGetNeededMemorySize("numVoices=8 numReverbs=0", &size);
+	result = sceSasGetNeededMemorySizeInternal("numVoices=8 numReverbs=0", &size);
 	if (result < 0)
 		return result;
-	result = SasInit("numVoices=8 numReverbs=0", waveSasBuffer, size, &waveSas);
+	result = sceSasInitInternal("numVoices=8 numReverbs=0", waveSasBuffer, size, &waveSas);
 	if (result < 0)
 		return result;
-	result = SasSetGrain(waveSas, 1024);
+	result = sceSasSetGrainInternal(waveSas, 1024);
 	if (result < 0)
 		return result;
 	waveState = WAVE_INITIALIZED;
@@ -98,13 +98,13 @@ int WaveInitExt(void)
 	sceAudioOutSetVolume(waveThreadArgs.port,
 			SCE_AUDIO_VOLUME_FLAG_L_CH | SCE_AUDIO_VOLUME_FLAG_R_CH,
 			waveExtVolume);
-	result = SasGetNeededMemorySize("numVoices=8 numReverbs=0", &size);
+	result = sceSasGetNeededMemorySizeInternal("numVoices=8 numReverbs=0", &size);
 	if (result < 0)
 		return result;
-	result = SasInit("numVoices=8 numReverbs=0", waveSasBuffer, size, &waveSas);
+	result = sceSasInitInternal("numVoices=8 numReverbs=0", waveSasBuffer, size, &waveSas);
 	if (result < 0)
 		return result;
-	result = SasSetGrain(waveSas, 1024);
+	result = sceSasSetGrainInternal(waveSas, 1024);
 	if (result < 0)
 		return result;
 	waveState = WAVE_INITIALIZED;
@@ -154,7 +154,7 @@ int WaveStart(int priority, SceUInt attr, int affinity, int memblockType)
 
 int WaveKeyOff(int voice)
 {
-	int result = SasSetKeyOff(waveSas, voice);
+	int result = sceSasSetKeyOffInternal(waveSas, voice);
 
 	sceKernelSetEventFlag(waveEventFlag, 1);
 	return result;
@@ -165,7 +165,7 @@ int WaveStop(void)
 	if (waveState != WAVE_STARTED)
 		return WAVE_ERROR_STOP;
 	for (int voice = 0; voice < 8; ++voice) {
-		SasSetKeyOff(waveSas, voice);
+		sceSasSetKeyOffInternal(waveSas, voice);
 		sceKernelSetEventFlag(waveEventFlag, 1);
 	}
 	waveExitRequested = 1;
@@ -188,7 +188,7 @@ int WaveExit(void)
 	if (waveState != WAVE_INITIALIZED)
 		return WAVE_ERROR_EXIT;
 	sceAudioOutReleasePort(waveThreadArgs.port);
-	result = SasExit(waveSas, &buffer, &size);
+	result = sceSasExitInternal(waveSas, &buffer, &size);
 	waveState = WAVE_UNINITIALIZED;
 	return result;
 }
@@ -196,29 +196,29 @@ int WaveExit(void)
 int WaveSetVoice(int voice, const char *buffer, unsigned int size,
 		 int samplerate, int loop)
 {
-	SasSetSimpleADSR(waveSas, voice, 0, 0);
-	SasSetPitch(waveSas, voice, (int)((unsigned int)samplerate << 12) / 48000);
+	sceSasSetSimpleADSRInternal(waveSas, voice, 0, 0);
+	sceSasSetPitchInternal(waveSas, voice, (int)((unsigned int)samplerate << 12) / 48000);
 	if (buffer[0] == 'V' && buffer[1] == 'A' &&
 	    buffer[2] == 'G' && buffer[3] == 'p') {
 		buffer += 48;
 		size -= 48;
 	}
-	return SasSetVoice(waveSas, voice, buffer, size, loop == 2);
+	return sceSasSetVoiceInternal(waveSas, voice, buffer, size, loop == 2);
 }
 
 int WaveIsPlaying(int voice)
 {
-	return SasGetEndState(waveSas, voice) == 0;
+	return sceSasGetEndStateInternal(waveSas, voice) == 0;
 }
 
 int WaveKeyOn(int voice, int left, int right)
 {
 	int result;
 
-	SasSetKeyOff(waveSas, voice);
-	SasSetVolume(waveSas, voice, (int)((unsigned int)left << 12) / 127,
+	sceSasSetKeyOffInternal(waveSas, voice);
+	sceSasSetVolumeInternal(waveSas, voice, (int)((unsigned int)left << 12) / 127,
 		     (int)((unsigned int)right << 12) / 127, 0, 0);
-	result = SasSetKeyOn(waveSas, voice);
+	result = sceSasSetKeyOnInternal(waveSas, voice);
 	sceKernelSetEventFlag(waveEventFlag, 1);
 	return result;
 }
@@ -228,7 +228,7 @@ int WaveKeyOffAll(void)
 	int result;
 
 	for (int voice = 0; voice < 8; ++voice) {
-		SasSetKeyOff(waveSas, voice);
+		sceSasSetKeyOffInternal(waveSas, voice);
 		result = sceKernelSetEventFlag(waveEventFlag, 1);
 	}
 	return result;
@@ -239,17 +239,17 @@ int WaveMain(SceSize argSize, void *argp)
 	struct WaveThreadArgs *args = argp;
 	int buffer = 0;
 
-	SasCoreWithMix(waveSas, waveOutputBuffer[0], 0, 0);
+	sceSasCoreInternal(waveSas, waveOutputBuffer[0], 0, 0);
 	while (!waveExitRequested) {
 		int voice = 0;
-		while (SasGetEndState(waveSas, voice)) {
+		while (sceSasGetEndStateInternal(waveSas, voice)) {
 			if (++voice >= 8) {
 				sceKernelWaitEventFlag(waveEventFlag, 1,
 					SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 				break;
 			}
 		}
-		SasCoreWithMix(waveSas, waveOutputBuffer[buffer], 0, 0);
+		sceSasCoreInternal(waveSas, waveOutputBuffer[buffer], 0, 0);
 		sceAudioOutOutput(args->port, waveOutputBuffer[buffer]);
 		buffer ^= 1;
 	}
