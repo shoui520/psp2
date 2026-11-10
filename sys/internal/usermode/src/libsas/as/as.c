@@ -40,17 +40,18 @@ static int sceSasAsDefaultGetState(SceSasAsHandle *handle, SceUInt32 state, void
 	return SCE_SAS_AS_ERROR_INVALID_ARGUMENT;
 }
 
-static int sceSasAsDefaultUpdate(SceSasAsHandle *handle, const void *render)
+static int sceSasAsDefaultUpdate(SceSasAsHandle *handle, const SceSasAsRenderInfo *render)
 {
 	return 0;
 }
 
-static int sceSasAsDefaultRender(SceSasAsHandle *handle, const void *render, void *jobs)
+static int sceSasAsDefaultRender(SceSasAsHandle *handle, const SceSasAsRenderInfo *render,
+				 struct SceSasAsTaskList *tasks)
 {
 	return 0;
 }
 
-static int sceSasAsDefaultRenderEnd(SceSasAsHandle *handle)
+static int sceSasAsDefaultRenderEnd(SceSasAsHandle *handle, const SceSasAsRenderInfo *render)
 {
 	return 0;
 }
@@ -492,11 +493,11 @@ int sceSasAsCoreGetGranularity(SceSasAsHandle *core, SceUInt32 *granularity)
 	return 0;
 }
 
-int sceSasAsCoreRender(SceSasAsHandle *core, void *output, void *jobs)
+int sceSasAsCoreRender(SceSasAsHandle *core, void *output, SceUInt32 numSamples)
 {
 	if (!sceSasAsIsCore(core))
 		return SCE_SAS_AS_ERROR_INVALID_ARGUMENT;
-	sceSasAsCoreClassRender((SceSasAsCore *)core, output, jobs);
+	sceSasAsCoreClassRender((SceSasAsCore *)core, output, numSamples);
 	return 0;
 }
 

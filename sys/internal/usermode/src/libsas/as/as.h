@@ -11,6 +11,8 @@
 
 #include "as_util.h"
 
+struct SceSasAsTaskList;
+
 /* the magic of a live handle ('ASHS') and of its subsystem word ('ASFT') */
 #define SCE_SAS_AS_HANDLE_MAGIC		0x41534853
 #define SCE_SAS_AS_SUBSYSTEM_MAGIC	0x41534654
@@ -42,6 +44,22 @@ typedef struct SceSasAsHandle SceSasAsHandle;
 
 typedef int (*SceSasAsLogHandler)(int level, int code, const char *message);
 
+/* what a render gives each rack */
+typedef struct SceSasAsRenderInfo {
+	SceUInt32 sampleRate;
+	SceUInt32 granularity;
+	SceUInt8 numChannels;
+	SceUInt8 numBusses;
+	SceUInt8 processor;
+	SceUInt8 numProcessors;
+	void **bussBuffers;
+	void *output;
+	SceUInt8 outputSampleSize;
+	SceUInt8 outputChannels;
+} SceSasAsRenderInfo;
+
+#define SCE_SAS_AS_SAMPLE_RATE		48000
+
 /*
  * What a handle can do, from its class (or the defaults): lock one of its parameter
  * blocks for writing and unlock it, take a synth event and report a state, and the three
@@ -54,9 +72,10 @@ typedef struct SceSasAsHandleOps {
 	int (*reserved)(SceSasAsHandle *handle);	/* no class has one, none calls it */
 	int (*setEvent)(SceSasAsHandle *handle, SceUInt32 event, SceUInt32 value);
 	int (*getState)(SceSasAsHandle *handle, SceUInt32 state, void *value);
-	int (*update)(SceSasAsHandle *handle, const void *render);
-	int (*render)(SceSasAsHandle *handle, const void *render, void *jobs);
-	int (*renderEnd)(SceSasAsHandle *handle);
+	int (*update)(SceSasAsHandle *handle, const SceSasAsRenderInfo *render);
+	int (*render)(SceSasAsHandle *handle, const SceSasAsRenderInfo *render,
+		      struct SceSasAsTaskList *tasks);
+	int (*renderEnd)(SceSasAsHandle *handle, const SceSasAsRenderInfo *render);
 } SceSasAsHandleOps;
 
 typedef struct SceSasAsClass {
@@ -162,6 +181,68 @@ static inline void sceSasAsSpinUnlock(volatile SceUInt32 *lock)
 			break;
 		unlocked = value & ~1u;
 	} while (sceSasAsCompareAndSwap(lock, value, unlocked) != value);
+}
+
+/* sets bits in *address; the value before */
+static inline SceUInt32 sceSasAsAtomicOr(volatile SceUInt32 *address, SceUInt32 bits)
+{
+	volatile SceUInt32 value;
+	volatile SceUInt32 set;
+
+	do {
+		value = *address;
+		set = value | bits;
+	} while (sceSasAsCompareAndSwap(address, value, set) != value);
+	return value;
+}
+
+/* clears bit 0 of a held *lock: SCE_SAS_AS_ERROR_NOT_LOCKED when it was not set */
+static inline int sceSasAsSpinTryUnlock(volatile SceUInt32 *lock)
+{
+	volatile SceUInt32 value;
+	volatile SceUInt32 unlocked;
+
+	for (;;) {
+		value = *lock;
+		if ((value & 1) == 0)
+			return SCE_SAS_AS_ERROR_NOT_LOCKED;
+		unlocked = value & ~1u;
+		if (sceSasAsCompareAndSwap(lock, value, unlocked) == value)
+			return 0;
+	}
+}
+
+/* a lightweight mutex that may have failed to be created */
+typedef struct SceSasAsMutex {
+	SceUInt8 created;
+	SceKernelLwMutexWork work;
+} SceSasAsMutex;
+
+static inline void sceSasAsMutexCreate(SceSasAsMutex *mutex, const char *name)
+{
+	if (sceKernelCreateLwMutex(&mutex->work, name, SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE, 0,
+				   NULL) >= 0)
+		mutex->created = 1;
+}
+
+static inline void sceSasAsMutexDelete(SceSasAsMutex *mutex)
+{
+	if (mutex != NULL && mutex->created) {
+		sceKernelDeleteLwMutex(&mutex->work);
+		mutex->created = 0;
+	}
+}
+
+static inline void sceSasAsMutexLock(SceSasAsMutex *mutex)
+{
+	if (mutex != NULL && mutex->created)
+		sceKernelLockLwMutex(&mutex->work, 1, NULL);
+}
+
+static inline void sceSasAsMutexUnlock(SceSasAsMutex *mutex)
+{
+	if (mutex != NULL && mutex->created)
+		sceKernelUnlockLwMutex(&mutex->work, 1);
 }
 
 /* a reference on a handle not destroyed yet: 1, else 0 */
