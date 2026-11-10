@@ -6531,6 +6531,136 @@ void Widget::detach_scene()
 	}
 }
 
+/* the widget taken out of the list, where it is in it (Sony's copy inline at each use; name
+   ours) */
+static inline void RemoveFromList(vector<Widget *> &list, Widget *widget)
+{
+	vector<Widget *>::iterator it;
+
+	for (it = list.begin(); it != list.end(); ++it) {
+		if (*it == widget)
+			break;
+	}
+	if (it == list.end())
+		return;
+	for (it = list.begin(); it != list.end(); ++it) {
+		if (*it == widget) {
+			list.erase(it);
+			return;
+		}
+	}
+}
+
+void Widget::DestroyWidget()
+{
+	if (m_hold_count > 0 || m_hold_count < 0)
+		return;
+
+	/* kept: moved under the widget its keep callback names instead */
+	if (m_keep_cb != NULL) {
+		Widget *keep = m_keep_cb(this, m_keep_arg);
+
+		if (keep != NULL && keep->m_hold_count <= 0 && m_parent != keep) {
+			SetParent(keep, NULL, 0);
+			return;
+		}
+	}
+
+	m_hold_count = -1;
+	for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); it++)
+		(*it)->DestroyWidget();
+	for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it)
+		it->m_obj->ReleaseAll();
+
+	FocusReferrers *referrers = m_focus_referrers;
+
+	if (referrers != NULL) {
+		vector<Widget *> roots(referrers->m_roots);
+		vector<Widget *> users(referrers->m_referrers);
+
+		/* out of the focus roots that search it */
+		for (vector<Widget *>::iterator it = roots.begin(); it != roots.end(); ++it) {
+			Widget *owner = *it;
+
+			if (owner == NULL)
+				continue;
+
+			FocusRoot *root = owner->m_focus_root;
+
+			if (root == NULL)
+				continue;
+			for (vector<Widget *>::iterator member = root->Members().begin();
+			     member != root->Members().end(); ++member) {
+				if (*member == this) {
+					FocusReferrers *own = (*member)->m_focus_referrers;
+
+					if (own != NULL)
+						RemoveFromList(own->m_roots, owner);
+					owner->m_focus_root->Members().erase(member);
+					break;
+				}
+			}
+		}
+
+		/* out of the focus directions that name it */
+		for (vector<Widget *>::iterator it = users.begin(); it != users.end(); ++it) {
+			Widget *user = *it;
+
+			if (user == NULL)
+				continue;
+			for (int32_t dir = 0; dir < 4; dir++) {
+				Widget *target = NULL;
+
+				if (user->m_focuser != NULL)
+					target = ScePafWidget_71349B04(user->m_focuser, dir);
+				if (target == this)
+					user->SetFocusDirectionWidget(dir, NULL);
+			}
+		}
+	}
+
+	/* out of the referrers of the widgets its focus directions name */
+	for (int32_t dir = 0; dir < 4; dir++) {
+		if (m_focuser == NULL)
+			continue;
+
+		Widget *target = ScePafWidget_71349B04(m_focuser, dir);
+
+		if (target != NULL && target->m_focus_referrers != NULL)
+			RemoveFromList(target->m_focus_referrers->m_referrers, this);
+	}
+
+	/* out of the roots of the widgets its focus root searches */
+	if (m_focus_root != NULL) {
+		for (vector<Widget *>::iterator it = m_focus_root->Members().begin();
+		     it != m_focus_root->Members().end(); ++it) {
+			Widget *member = *it;
+
+			if (member != NULL && member->m_focus_referrers != NULL)
+				RemoveFromList(member->m_focus_referrers->m_roots, this);
+		}
+	}
+
+	if (m_timer_pending) {
+		DropTimer(s_destroy_timers, this);
+		if (m_destroy_protected) {
+			m_destroy_protected = false;
+			s_destroying_count--;
+		}
+	}
+	LayoutDirty(this, 0xFFFF);
+	detach_scene();
+	ChangeState(2, -1);
+	if ((m_event_enable & 0x80) != 0)
+		inputdevice::GestureListener::DelUserDataList(this);
+	detach_environment();
+	for (vector<DeleteCBInfo>::iterator it = m_list_delete_cb.begin();
+	     it != m_list_delete_cb.end(); ++it)
+		it->func(this, it->data);
+	m_hold_count = s_base_destroy_count;
+	s_destroying_count++;
+}
+
 int32_t Widget::SetScene_core(Scene *scene)
 {
 	if ((m_scene != scene || m_layer != m_layer_old) && m_hold_count <= 0) {

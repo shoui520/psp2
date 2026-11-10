@@ -511,7 +511,9 @@ public:
 	{
 	}
 
-	vector<Widget *> reserved;
+	/* the widgets whose focus roots search this one (FocusRoot's Members; DestroyWidget takes it
+	   out of them; name ours) */
+	vector<Widget *> m_roots;
 	vector<Widget *> m_referrers;
 };
 
@@ -529,16 +531,22 @@ public:
 	/* nonzero: a scroll view under it does not take the focus (name ours, meaning open) */
 	uint32_t m_focus_hold;
 	uint32_t reserved16;
-	/* a vector of something (its array, count and limit; the allocator after them), which
-	   nothing found here uses; it is given back and the three set to -1 as a vector's
-	   destructor does (names ours; no constructor or destructor here, as one in this class
-	   moves SNC's stack slots in PlaneObj::Draw) */
+	/* the widgets SearchFocus searches with its children, as a vector's array, count, limit
+	   and allocator; given back and the three set to -1 as a vector's destructor does (names
+	   ours; no constructor or destructor here, as one in this class moves SNC's stack slots
+	   in PlaneObj::Draw) */
 	void *m_array;
 	int32_t m_array_count;
 	int32_t m_array_limit;
 	uint32_t m_array_alloc;
 	/* cleared by UpdateFocus where it is set (name ours, meaning open) */
 	bool m_pending;
+
+	/* m_array and its count as the vector they are (DestroyWidget; name ours) */
+	vector<Widget *> &Members()
+	{
+		return *reinterpret_cast<vector<Widget *> *>(&m_array);
+	}
 };
 
 /*

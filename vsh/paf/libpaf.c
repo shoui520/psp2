@@ -6,5 +6,4 @@
 
 #include <skeleton.h>
 
-STUB(_ZN3paf2ui6Widget13DestroyWidgetEv)
 
