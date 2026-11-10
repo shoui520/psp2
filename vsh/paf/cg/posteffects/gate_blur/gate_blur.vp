@@ -1,0 +1,16 @@
+struct InputData {
+	float4 pos : POSITION;
+	float4 uv : TEXCOORD0;
+	float4 color : COLOR0;
+};
+
+void main(InputData inputData,
+	  uniform float4x4 uMat,
+	  out float4 oPos : POSITION,
+	  out float4 oColor : COLOR0,
+	  out half2 oTex : TEXCOORD0)
+{
+	oPos = mul(float4(inputData.pos.xyz, 1), uMat);
+	oColor = inputData.color;
+	oTex = inputData.uv.xy;
+}

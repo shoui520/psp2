@@ -1,0 +1,15 @@
+#pragma argument (fastprecision)
+
+void main(float4 inPosition : POSITION,
+	  float4 inTexCoord : TEXCOORD0,
+	  uniform half4x4 MVP,
+	  uniform half2 UVOffset,
+	  uniform half2 UVScale,
+	  out float4 oPosition : POSITION,
+	  out half2 oTexCoord : TEXCOORD0,
+	  out half oSignal : TEXCOORD1)
+{
+	oTexCoord = inTexCoord.xy * UVScale + UVOffset;
+	oPosition = mul(half4(inPosition.xyz, 1), MVP);
+	oSignal = inPosition.x + 0.5h;
+}

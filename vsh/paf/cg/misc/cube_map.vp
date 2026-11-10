@@ -1,0 +1,12 @@
+void main(float4 in_pos : POSITION,
+	  float4 in_tex0 : TEXCOORD0,
+	  uniform float4 Color,
+	  uniform float4x4 MVP,
+	  out float4 oPos : POSITION,
+	  out float4 oColor : COLOR0,
+	  out half2 oTex : TEXCOORD0)
+{
+	oPos = mul(in_pos, MVP);
+	oColor = Color;
+	oTex = in_tex0.xy;
+}
