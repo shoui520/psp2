@@ -6,6 +6,7 @@
 #ifndef SCE_SAS_AS_H
 #define SCE_SAS_AS_H
 
+#include <stddef.h>
 #include <scetypes.h>
 #include <kernel/threadmgr.h>
 

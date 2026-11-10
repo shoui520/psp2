@@ -116,6 +116,8 @@ set(paf_sas_SOURCES
 	${paf_sas}/as/as_reverb.c
 	${paf_sas}/as/as_synth.c
 	${paf_sas}/as/as_synth_voice.c
+	${paf_sas}/sas.c
+	${paf_sas}/sas_internal.c
 )
 # Sony built libsas with GCC 4.8 at -O3 (its copies vectorized, with prefetches), keeping no NULL
 # check after a dereference, with the hard-float calling convention (floats in s0) and
