@@ -245,6 +245,27 @@ int sslAsn1DecodeSchema(SslAsn1Navigator *navigator, const SceUInt32 *schema,
 	return status == 5 ? 10005 : status;
 }
 
+SslAsn1Callback sslAsn1GetPropertyCallback(void)
+{
+	return sslAsn1PropertyCallback;
+}
+
+int sslAsn1SetCallback(SslAsn1Navigator *navigator, SslAsn1Callback callback)
+{
+	navigator->callback = callback;
+	return 0;
+}
+
+const SslAsn1Operation *sslAsn1GetDecodeOperations(void)
+{
+	return sslAsn1DecodeOperations;
+}
+
+const SslAsn1TreeMethods *sslAsn1GetDecodeMethods(void)
+{
+	return &sslAsn1DecodeMethods;
+}
+
 int sslAsn1InitDecoder(SslAsn1Navigator *navigator)
 {
 	return sslAsn1InitNavigator(navigator, &sslAsn1DecodeMethods, sslAsn1DecodeOperations);
@@ -266,6 +287,16 @@ int sslAsn1DecodeProperties(const SceUInt32 *schema, SslPropertyList *list,
 	status = sslAsn1DecodeSchema(&navigator, schema, list, data, size, consumed);
 	sslAsn1DestroyNavigator(&navigator);
 	return status;
+}
+
+const SslAsn1Operation *sslAsn1GetEncodeOperations(void)
+{
+	return sslAsn1EncodeOperations;
+}
+
+const SslAsn1TreeMethods *sslAsn1GetEncodeMethods(void)
+{
+	return &sslAsn1EncodeMethods;
 }
 
 int sslAsn1InitEncoder(SslAsn1Navigator *navigator)
@@ -830,6 +861,12 @@ int sslAsn1EncodeProperties(const SceUInt32 *schema, SslPropertyList *list,
 	status = sslAsn1EncodeSchema(&navigator, schema, list, data, length, capacity);
 	sslAsn1DestroyNavigator(&navigator);
 	return status;
+}
+
+void sslAsn1Free(void *data)
+{
+	if (data != NULL)
+		sslFree(data);
 }
 
 int sslAsn1PropertyCallback(SslAsn1Navigator *navigator, void *arg,

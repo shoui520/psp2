@@ -24,8 +24,8 @@ extern const SslCryptoImplementationMethods *sslGetRsaSignBackendMethods(void);
 extern const SslCryptoImplementationMethods *sslGetDigestSignBackendMethods(void);
 extern const SslCryptoImplementationMethods *sslGetHmacBackendMethods(void);
 extern const SslCryptoImplementationMethods *sslGetPrngBackendMethods(void);
+extern const SslCryptoImplementationMethods *sslGetBasePrngBackendMethods(void);
 extern const SslCryptoImplementationMethods *sslGetFips186PrngBackendMethods(void);
-extern const SslCryptoImplementationMethods *sslGetX931PrngBackendMethods(void);
 
 extern int sslDesEde3CbcBackendData[];
 extern int sslRc4BackendData[];
@@ -91,8 +91,8 @@ static SslCryptoAlgorithmDescriptor sslDefaultCryptoAlgorithms[] = {
 	{ 7, 0x1002, 0x84, sslGetHmacBackendMethods, sslSha1BackendData },
 	{ 7, 0x1001, 0x84, sslGetHmacBackendMethods, sslMd5BackendData },
 	{ 4, 0x1000, 0, sslGetPrngBackendMethods, NULL },
-	{ 4, 0x1055, 0, sslGetFips186PrngBackendMethods, NULL },
-	{ 4, 0x1026, 0, sslGetX931PrngBackendMethods, NULL },
+	{ 4, 0x1055, 0, sslGetBasePrngBackendMethods, NULL },
+	{ 4, 0x1026, 0, sslGetFips186PrngBackendMethods, NULL },
 	{ 4, 0x1060, 0, sslGetPrngBackendMethods, NULL },
 	{ 0, -1, 0xffffffffu, NULL, NULL }
 };

@@ -8,7 +8,7 @@ in OpenSSL's historical repository.
 Kept, unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.h`,
 `crypto/stack/stack.c`, `crypto/stack/stack.h`, `crypto/ex_data.c`,
 `crypto/bio/bio_lib.c`, `crypto/bio/bss_sock.c`, `crypto/bio/b_print.c`,
-`crypto/bio/b_dump.c`, `crypto/bio/bss_mem.c`, `crypto/bio/bio.h`,
+`crypto/bio/b_dump.c`, `crypto/bio/bss_mem.c`, `crypto/bio/bf_buff.c`, `crypto/bio/bio.h`,
 `crypto/buffer/buffer.c`, `crypto/buffer/buffer.h`, `crypto/cryptlib.c`,
 `crypto/evp/encode.c`, `crypto/evp/evp.h`, `crypto/pem/pem_lib.c`,
 `crypto/pem/pem.h`, `crypto/asn1/asn1.h`, `crypto/objects/objects.h`,

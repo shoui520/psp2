@@ -31,6 +31,9 @@ libssl_prepare_patched(${libssl_ssleay}/crypto/bio/bss_sock.c
 libssl_prepare_patched(${libssl_ssleay}/crypto/bio/bss_mem.c
 	${CMAKE_CURRENT_SOURCE_DIR}/bio/bss_mem_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/bss_mem_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/crypto/bio/bf_buff.c
+	${CMAKE_CURRENT_SOURCE_DIR}/bio/bf_buff_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/bf_buff_sce.inc)
 libssl_prepare_patched(${libssl_ssleay}/crypto/bio/b_print.c
 	${CMAKE_CURRENT_SOURCE_DIR}/bio/b_print_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/b_print_sce.inc)
@@ -143,6 +146,7 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	bio/bio_lib.c
 	bio/bss_sock.c
 	bio/bss_mem.c
+	bio/bf_buff.c
 	bio/b_print.c
 	bio/b_dump.c
 	MES/common/cert/src/cert_api.c
@@ -206,6 +210,12 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	CRYPTOCME/common/module/crypto/cry_info.c
 	CRYPTOCME/common/module/crypto/ctx_info.c
 	CRYPTOCME/common/module/crypto/ctx_init.c
+	CRYPTOCME/common/module/crypto/cry_dgst.c
+	CRYPTOCME/common/module/crypto/cry_dsgn.c
+	CRYPTOCME/common/module/crypto/cry_ciph.c
+	CRYPTOCME/common/module/crypto/cry_prng.c
+	CRYPTOCME/common/module/crypto/cry_rsa.c
+	CRYPTOCME/common/module/crypto/cry_hmac.c
 	runtime.c
 	memory.c
 	time.c

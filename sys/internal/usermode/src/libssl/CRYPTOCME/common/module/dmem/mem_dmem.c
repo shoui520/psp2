@@ -7,7 +7,7 @@
 #define SSL_DMEM_SOURCE_FILE "S:\\work\\CRYPTOCME\\common\\module/dmem/mem_dmem.c"
 #define SSL_LOCK_DMEM 24
 
-static SslDirectMemoryContext *sslDefaultDirectMemoryContext = NULL;
+SslDirectMemoryContext *sslDefaultDirectMemoryContext = NULL;
 static int sslDirectMemoryRefCount = 0;
 
 static int sslLockDirectMemory(int mode, int type, const char *file, int line)

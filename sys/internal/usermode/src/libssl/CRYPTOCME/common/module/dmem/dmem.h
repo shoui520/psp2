@@ -56,5 +56,17 @@ int sslReallocateDirectMemory(void **ptr, SceUInt32 size,
 			      SceUInt32 flags);
 
 const SslDirectMemoryMethod *sslGetDefaultDirectMemoryMethod(void);
+extern SslDirectMemoryContext *sslDefaultDirectMemoryContext;
+
+static __inline SslDirectMemoryContext *
+sslGetDefaultDirectMemoryContextInline(void)
+{
+	if (sslDefaultDirectMemoryContext == NULL) {
+		sslNewDirectMemoryContext(&sslDefaultDirectMemoryContext,
+					  sslGetDefaultDirectMemoryMethod(),
+					  NULL, NULL);
+	}
+	return sslDefaultDirectMemoryContext;
+}
 
 #endif

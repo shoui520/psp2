@@ -388,6 +388,21 @@ int sslEncodeDateValue(void *date, int format, void *data,
 	return 0;
 }
 
+int sslDateIsLeapYear(const SceInt64 *year)
+{
+	SceInt64 value = *year;
+
+	/* SSL-C tests the remainders as int */
+	if ((int)(value % 400) == 0)
+		return 1;
+	return (int)(value % 4) == 0 && (int)(value % 100) != 0;
+}
+
+const int *sslGetDateMonthDays(int leap)
+{
+	return sslDateMonthDays[leap];
+}
+
 int sslDecodeDateValue(void *date, int format, const void *data, SceUInt32 length)
 {
 	SslDateObject *object = date;

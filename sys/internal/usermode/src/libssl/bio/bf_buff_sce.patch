@@ -1,0 +1,22 @@
+--- a/bf_buff.c
++++ b/bf_buff.c
+@@ -57,10 +57,7 @@
+  */
+ 
+ #include <stdio.h>
+-#include <errno.h>
+-#include "cryptlib.h"
+-#include "bio.h"
+-#include "evp.h"
++/* SCE: the consuming wrapper supplies BIO and memory operations. */
+ 
+ #ifndef NOPROTO
+ static int buffer_write(BIO *h,char *buf,int num);
+@@ -445,7 +442,6 @@
+ 		}
+ 	return(ret);
+ malloc_error:
+-	BIOerr(BIO_F_BUFFER_CTRL,ERR_R_MALLOC_FAILURE);
+ 	return(0);
+ 	}
+ 

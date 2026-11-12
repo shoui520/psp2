@@ -658,3 +658,8 @@ int sslDecodeAuthorityKeyIdentifier(SslPropertyList *list, const unsigned char *
 {
 	return sslAsn1DecodeProperties(sslAuthorityKeyIdentifierSchema, list, data, size, consumed);
 }
+
+const SceUInt32 *sslGetAuthorityKeyIdentifierSchema(void)
+{
+	return sslAuthorityKeyIdentifierSchema;
+}

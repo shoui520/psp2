@@ -57,6 +57,24 @@ static const unsigned char sslRsaEncryptionOidBytes[] = {
 	0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01
 };
 
+int sslGetRsaPrivateKeyPemHeader(int algorithm, SceUInt32 capacity, char *header)
+{
+	int status = 0;
+
+	if (header == NULL)
+		return SSL_CRYPTO_ERROR_NULL_ARGUMENT;
+	if (capacity == 0)
+		return 10016;
+	if (algorithm != 6)
+		return 10018;
+	sslCopyString(header, "RSA PRIVATE KEY", capacity);
+	if (sslStringLengthInline("RSA PRIVATE KEY") + 1 > capacity) {
+		header[capacity - 1] = '\0';
+		return 10016;
+	}
+	return status;
+}
+
 int sslGetPublicKeyInfo(void *key, int selector, void *result)
 {
 	SslPublicKeyHeader *object = key;

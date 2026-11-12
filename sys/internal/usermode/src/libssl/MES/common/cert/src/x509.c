@@ -1119,3 +1119,23 @@ int sslStoreCertificateExtension(SslPropertyList *list, int mode,
 		return 10005;
 	return 0;
 }
+
+const SceUInt32 *sslGetX509CertificateDecodingSchema(void)
+{
+	return sslX509CertificateDecodingSchema;
+}
+
+const SceUInt32 *sslGetX509CertificateEncodingSchema(void)
+{
+	return sslX509CertificateEncodingSchema;
+}
+
+const SceUInt32 *sslGetX509BodyEncodingSchema(void)
+{
+	return sslX509BodyEncodingSchema;
+}
+
+const SceUInt32 *sslGetX509ExtensionDecodingSchema(void)
+{
+	return sslX509ExtensionDecodingSchema;
+}

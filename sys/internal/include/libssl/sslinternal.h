@@ -45,6 +45,7 @@ int sceSslInternalIsInitalized(void);
 int sceSslInternalGetCertificateAuthority(int store, int index, const char ***pem, void *buf,
 					  SceSize size, SceSize *outSize);
 struct ssl_st;
+struct SslLibraryModule;
 int sceSslInternalWrite(struct ssl_st *ssl, const void *buf, int len);
 
 /* the library, its client method, contexts and their settings */
@@ -64,7 +65,7 @@ int SceSslInternal_33737FDC(void);
 unsigned int SceSslInternal_422DFE70(void);
 void SceSslInternal_56FE376A(void);
 void SceSslInternal_C0B135F0(void);
-void *SceSslInternal_FB51AE89(void);
+struct SslLibraryModule *SceSslInternal_FB51AE89(void);
 void SceSslInternal_DEC6DD27(void);
 
 /* connections */

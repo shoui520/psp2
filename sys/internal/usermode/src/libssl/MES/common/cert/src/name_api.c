@@ -409,3 +409,13 @@ int sslEncodeCertificateNameProperties(SslPropertyList *properties, SceUInt8 *da
 	return sslAsn1EncodeProperties(sslCertificateNameEncodingSchema, properties, data,
 				       length, capacity);
 }
+
+const SceUInt32 *sslGetCertificateNameEncodingSchema(void)
+{
+	return sslCertificateNameEncodingSchema;
+}
+
+const SceUInt32 *sslGetCertificateNameSchema(void)
+{
+	return sslCertificateNameSchema;
+}

@@ -119,3 +119,8 @@ SceUInt32 sslPeekError(void)
 {
 	return sslReadError(0);
 }
+
+/* SSL-C's error trace hook; this build discards its message. */
+void sslErrorTrace(const char *format, ...)
+{
+}

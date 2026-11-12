@@ -283,6 +283,160 @@ int sslDigestMethodFinal(SslCryptoAlgorithm *algorithm, void *digest,
 			 SceUInt32 *length);
 void *sslGetDefaultCryptoAlgorithms(void *data);
 const void *sslGetDefaultCryptoMethods(void *data);
+int sslMapCryptoBackendError(int error);
+
+typedef struct SslDesKeyBuffer {
+	SceUInt32 length;
+	const unsigned char *data;
+} SslDesKeyBuffer;
+
+typedef struct SslLowLevelBuffer {
+	void *data;
+	SceUInt32 length;
+} SslLowLevelBuffer;
+
+typedef struct SslCryptoPropertyHandler {
+	int selector;
+	int (*get)(SslCryptoAlgorithm *algorithm, void *backend, int type,
+		   int id, int cached, void *result);
+	int (*set)();
+	SceUInt32 flags;
+	int id;
+	int type;
+} SslCryptoPropertyHandler;
+
+typedef struct SslCryptoKeyPropertyHandler SslCryptoKeyPropertyHandler;
+struct SslCryptoKeyPropertyHandler {
+	int id;
+	int type;
+	SceUInt32 flags;
+	int (*exportKey)(SslCryptoAlgorithm *algorithm, void *backend,
+			 SslProperty *property);
+	int (*postExport)(SslCryptoAlgorithm *algorithm, void *backend,
+			  const SslCryptoKeyPropertyHandler *handler);
+};
+
+typedef struct SslCryptoPropertyNode SslCryptoPropertyNode;
+struct SslCryptoPropertyNode {
+	const void *handler;
+	SslCryptoPropertyNode *next;
+};
+
+_Static_assert(sizeof(SslCryptoPropertyHandler) == 24,
+	       "SslCryptoPropertyHandler");
+_Static_assert(sizeof(SslCryptoKeyPropertyHandler) == 20,
+	       "SslCryptoKeyPropertyHandler");
+_Static_assert(sizeof(SslCryptoPropertyNode) == 8, "SslCryptoPropertyNode");
+
+extern const unsigned char sslDesWeakKeys[64][8];
+
+static __inline int sslCheckDesWeakKeyInline(const SslDesKeyBuffer *key)
+{
+	int blockCount = (int)(key->length >> 3);
+	int block;
+	int i;
+	int j;
+	int offset;
+	const unsigned char *data;
+
+	block = 0;
+	if (blockCount > 0) {
+		offset = 0;
+		data = key->data;
+		do {
+			for (i = 0; i < 64; i++) {
+				for (j = 0; j < 8; j++) {
+					if ((data[offset + j] >> 1) !=
+					    (sslDesWeakKeys[i][j] >> 1))
+						break;
+				}
+				if (j == 8)
+					return 1;
+			}
+			block++;
+			offset += 8;
+		} while (block < blockCount);
+	}
+	return 0;
+}
+
+int sslCheckDesWeakKey(const SslDesKeyBuffer *key);
+extern SslCryptoPropertyHandler sslBasePropertyHandlers[3];
+int sslPrependPropertyHandlerNode(SslCryptoPropertyNode **head,
+				  const void *handler);
+int sslPrependBasePropertyHandlerTable(SslCryptoPropertyNode **head,
+				       const SslCryptoPropertyHandler *table,
+				       int count);
+int sslRegisterBasePropertyHandlers(SslCryptoPropertyNode **head, int type);
+int sslPrependPropertyHandlerTable(SslCryptoPropertyNode **head,
+				   const SslCryptoPropertyHandler *table,
+				   int count);
+int sslPrependKeyPropertyHandlerTable(SslCryptoPropertyNode **head,
+				      const SslCryptoKeyPropertyHandler *table,
+				      int count);
+int sslRegisterRsaPrivateKeyPropertyHandlers(SslCryptoPropertyNode **head,
+					     int type);
+int sslRegisterRsaPublicKeyPropertyHandlers(SslCryptoPropertyNode **head,
+					    int type);
+int sslGetRsaKeyModulusByteLength(SslCryptoAlgorithm *algorithm, void *backend,
+				  int type, int id, int cached, void *result);
+int sslGetLowLevelOrCachedPointerProperty(SslCryptoAlgorithm *algorithm,
+					  void *backend, int type, int id,
+					  int cached, void *result);
+int sslGetRsaPrivateKeyRepresentationType(SslCryptoAlgorithm *algorithm,
+					  void *backend, int type, int id,
+					  int cached, void *result);
+int sslSetRsaKeyBufferProperty(SslCryptoAlgorithm *algorithm, int type, int id,
+			       const SslDesKeyBuffer *buffer);
+int sslSetRsaPrivateKeyRepresentationType(SslCryptoAlgorithm *algorithm,
+					  int type, int id,
+					  const SceUInt32 *value);
+int sslCopyPublicKeyComponentToAlgorithmProperty(
+	SslCryptoAlgorithm *algorithm,
+	const SslCryptoPropertyHandler *handler, void *key);
+int sslCopyRsaMultiPrimeComponentsToAlgorithmProperties(
+	SslCryptoAlgorithm *algorithm, void *key);
+int sslExportBooleanPropertyToBackend(SslCryptoAlgorithm *algorithm,
+				      void *backend, SslProperty *property);
+int sslClearBackendProperty(SslCryptoAlgorithm *algorithm, void *backend,
+			    SslProperty *property);
+int sslExportBufferPropertyToBackend(SslCryptoAlgorithm *algorithm,
+				     void *backend, SslProperty *property);
+int sslExportRsaMultiPrimePropertiesToBackend(SslCryptoAlgorithm *algorithm,
+					      void *backend);
+const void *sslGetRsaPrivateKeyMethodList(void);
+const void *sslGetRsaPublicKeyMethodList(void);
+int sslGetLowLevelOrCachedIntProperty(SslCryptoAlgorithm *algorithm,
+				      void *backend, int type, int id,
+				      int cached, void *result);
+int sslGetLowLevelStringProperty(SslCryptoAlgorithm *algorithm, void *backend,
+				 int type, int id, int cached, void *result);
+int sslStorePublicKeyPointerProperty(SslCryptoAlgorithm *algorithm,
+				     const SslCryptoPropertyHandler *handler,
+				     void *key);
+int sslExportPointerPropertyToBackend(SslCryptoAlgorithm *algorithm,
+				      void *backend, SslProperty *property);
+int sslStoreAlgorithmObjectProperty(SslCryptoAlgorithm *algorithm, int type,
+				    int id, const void *object);
+int sslCreateAndStoreRandomAlgorithmProperty(SslCryptoAlgorithm *algorithm,
+					     int type, int id,
+					     SceUIntPtr value);
+int sslStoreDigestDescriptorProperty(SslCryptoAlgorithm *algorithm, int type,
+				     int id,
+				     SslCryptoAlgorithm *digestAlgorithm);
+int sslExportAlgorithmBackendToLowLevel(SslCryptoAlgorithm *algorithm,
+					void *backend, SslProperty *property);
+int sslExportDigestDescriptorToLowLevel(SslCryptoAlgorithm *algorithm,
+					void *backend, SslProperty *property);
+
+int sslSetLowLevelObjectInfo(void *object, int type, int id, const void *value);
+int sslGetLowLevelObjectInfo(void *object, int type, int id, void *result);
+int sslExportRsaBlindingRandomToLowLevel(
+	SslCryptoAlgorithm *algorithm, void *backend,
+	const SslCryptoKeyPropertyHandler *handler);
+int sslLoadRsaPublicKeyModulus(SslCryptoAlgorithm *algorithm, void *backend);
+int sslGetPrngBackendLowLevelInfo(SslCryptoAlgorithm *algorithm, int selector,
+				  void *result);
 
 /* Descriptive selector names are ours, established by the native field accesses. */
 #define SSL_CRYPTO_INFO_APPLICATION_DATA 16

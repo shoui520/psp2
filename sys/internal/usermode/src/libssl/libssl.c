@@ -628,7 +628,7 @@ int sceSslInit(SceSize poolSize)
 		goto err_mspace;
 	}
 	SceSslInternal_C1299FB6(_sceSslMalloc, _sceSslRealloc, _sceSslFree);
-	modules = (SslLibraryModule *)SceSslInternal_FB51AE89();
+	modules = SceSslInternal_FB51AE89();
 	if (SceSslInternal_09657E15(modules, 0, &s_sslLibrary) != 0 ||
 	    (sslSetTimeCurrentCallback(_sceSslGetCurrentTime),
 	     sslGetTimeCurrentCallback() == NULL)) {

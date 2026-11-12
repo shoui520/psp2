@@ -6,6 +6,15 @@
 static const char contextSource[] =
 	"S:\\work\\CRYPTOCME\\common\\module/crypto/ctx_init.c";
 
+static const int sslCryptoBackendErrorMap[42] = {
+	10001, 10004, 10005, 10001, 10002, 10008, 10037, 10010,
+	10022, 10013, 10016, 10017, 10023, 10037, 10009, 10037,
+	10018, 10022, 10010, 10037, 10037, 10001, 10001, 10001,
+	10001, 10001, 10001, 10001, 10001, 10001, 10001, 10022,
+	10022, 10022, 10001, 10037, 10037, 10011, 10021, 10037,
+	10037, 10022
+};
+
 int sslFreeCryptoContext(void *object)
 {
 	SslCryptoContext *context = object;
@@ -328,5 +337,18 @@ int sslDigestMethodFinal(SslCryptoAlgorithm *algorithm, void *digest,
 			status = callStatus;
 		}
 	}
+	return status;
+}
+
+int sslMapCryptoBackendError(int error)
+{
+	int status;
+
+	if (error > 10000 && error <= 10042)
+		status = sslCryptoBackendErrorMap[error - 10001];
+	else if (error == 0)
+		status = 0;
+	else
+		status = 10001;
 	return status;
 }
