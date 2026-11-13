@@ -706,3 +706,262 @@ done:
 		result[1] = quotientHigh;
 	}
 }
+
+/*
+ * The 64-bit integer helpers: values by address, as two words, the low word
+ * first; results through the first argument, comparisons as truth values.
+ */
+typedef struct Words64 {
+	uint32_t low;
+	uint32_t high;
+} Words64;
+
+void subtract64(Words64 *result, const Words64 *a, const Words64 *b);
+
+/* 0x926930: -a */
+void negate64(Words64 *result, const Words64 *a)
+{
+	Words64 zero = { 0, 0 };
+
+	subtract64(result, &zero, a);
+}
+
+/* 0x926950: a <= b, signed */
+int lessEqual64(const Words64 *a, const Words64 *b)
+{
+	if (a->high == b->high)
+		return !(b->low < a->low);
+	return (int32_t)a->high < (int32_t)b->high;
+}
+
+/* 0x92696a: a < b, signed */
+int less64(const Words64 *a, const Words64 *b)
+{
+	if (a->high == b->high)
+		return a->low < b->low;
+	return (int32_t)a->high < (int32_t)b->high;
+}
+
+/* 0x926982: a >= b, signed */
+int greaterEqual64(const Words64 *a, const Words64 *b)
+{
+	if (a->high == b->high)
+		return !(a->low < b->low);
+	return !((int32_t)a->high < (int32_t)b->high);
+}
+
+/* 0x92699e: a > b, signed */
+int greater64(const Words64 *a, const Words64 *b)
+{
+	if (a->high == b->high)
+		return b->low < a->low;
+	return !((int32_t)a->high < (int32_t)b->high);
+}
+
+/* 0x9269b8: a <= b, unsigned */
+int lessEqualUnsigned64(const Words64 *a, const Words64 *b)
+{
+	if (a->high == b->high)
+		return !(b->low < a->low);
+	return a->high < b->high;
+}
+
+/* 0x9269d2: a < b, unsigned */
+int lessUnsigned64(const Words64 *a, const Words64 *b)
+{
+	if (a->high == b->high)
+		return a->low < b->low;
+	return a->high < b->high;
+}
+
+/* 0x9269ea: a >= b, unsigned */
+int greaterEqualUnsigned64(const Words64 *a, const Words64 *b)
+{
+	if (a->high == b->high)
+		return !(a->low < b->low);
+	return !(a->high < b->high);
+}
+
+/* 0x926a06: a > b, unsigned */
+int greaterUnsigned64(const Words64 *a, const Words64 *b)
+{
+	if (a->high == b->high)
+		return b->low < a->low;
+	return !(a->high < b->high);
+}
+
+/* 0x926a20: a == b */
+int equal64(const Words64 *a, const Words64 *b)
+{
+	if (a->high != b->high)
+		return 0;
+	return a->low == b->low;
+}
+
+/* 0x926a3a: a == b, b an int */
+int equalInt64(const Words64 *a, int32_t b)
+{
+	if (a->high != (uint32_t)(b < 0 ? -1 : 0))
+		return 0;
+	return a->low == (uint32_t)b;
+}
+
+/* 0x926a56: a != b */
+int notEqual64(const Words64 *a, const Words64 *b)
+{
+	if (a->high != b->high)
+		return 1;
+	return a->low != b->low;
+}
+
+/* 0x926a72: a != b, b an int */
+int notEqualInt64(const Words64 *a, int32_t b)
+{
+	if (a->high != (uint32_t)(b < 0 ? -1 : 0))
+		return 1;
+	return a->low != (uint32_t)b;
+}
+
+/* 0x926a92: a <= 0 */
+int isNotPositive64(const Words64 *a)
+{
+	if (a->high == 0)
+		return a->low == 0;
+	return (int32_t)a->high < 0;
+}
+
+/* 0x926aa2: a < 0 */
+int isNegative64(const Words64 *a)
+{
+	return (int32_t)a->high < 0;
+}
+
+/* 0x926aaa: a >= 0 */
+int isNotNegative64(const Words64 *a)
+{
+	return !((int32_t)a->high < 0);
+}
+
+/* 0x926ab4: a > 0 */
+int isPositive64(const Words64 *a)
+{
+	if (a->high == 0)
+		return a->low != 0;
+	return !((int32_t)a->high < 0);
+}
+
+/* 0x926ac8: a == 0 */
+int isZero64(const Words64 *a)
+{
+	return (a->high | a->low) == 0;
+}
+
+/* 0x926ad4: a != 0 */
+int isNotZero64(const Words64 *a)
+{
+	return (a->high | a->low) != 0;
+}
+
+/* 0x926ae4: a - b */
+void subtract64(Words64 *result, const Words64 *a, const Words64 *b)
+{
+	result->high = a->high - b->high - (a->low < b->low);
+	result->low = a->low - b->low;
+}
+
+/* 0x926b04: the most negative value, for the signed division */
+const Words64 g_minimum64 = { 0, 0x80000000 };
+
+/* the break instruction: C has no trap */
+static inline void trap(void)
+{
+	__asm__ volatile ("break");
+}
+
+static void shiftRightUnsigned64(Words64 *value, uint32_t shift)
+{
+	if (shift >= 32) {
+		value->low = value->high >> (shift - 32);
+		value->high = 0;
+	} else if (shift != 0) {
+		value->low = (value->low >> shift) | (value->high << (32 - shift));
+		value->high >>= shift;
+	}
+}
+
+/*
+ * 0x92599c: a / b, signed, toward zero. A zero divisor traps (break). The
+ * magnitudes are divided: by a shift when the divisor's is a power of two
+ * (its top bit found by shifting it right, arithmetically, until something
+ * is left), else by divideUnsigned64.
+ */
+void divide64(Words64 *result, const Words64 *a, const Words64 *b)
+{
+	Words64 magnitudeA, magnitudeB, negated, below, shifted, quotient;
+	uint32_t negative, bNegative, aNegative, zeros, shift;
+
+	if ((b->low | b->high) == 0)
+		trap();
+	if ((a->high | a->low) == 0)
+		goto zero;
+	if ((b->low & b->high) == 0xffffffff) {
+		if (a->high == 0x80000000 && a->low == 0)
+			*result = g_minimum64;
+		else
+			negate64(result, a);
+		return;
+	}
+
+	negate64(&negated, b);
+	bNegative = (int32_t)b->high >> 31;
+	aNegative = (int32_t)a->high >> 31;
+	if (aNegative) {
+		negative = !bNegative;
+		magnitudeB = bNegative ? negated : *b;
+		negate64(&magnitudeA, a);
+	} else {
+		negative = bNegative != 0;
+		magnitudeB = bNegative ? negated : *b;
+		magnitudeA = *a;
+	}
+	if (lessUnsigned64(&magnitudeA, &magnitudeB))
+		goto zero;
+	if (magnitudeA.high == magnitudeB.high && magnitudeA.low == magnitudeB.low) {
+		quotient.low = negative ? 0xffffffff : 1;
+		quotient.high = negative ? 0xffffffff : 0;
+		*result = quotient;
+		return;
+	}
+
+	subtract64(&below, &magnitudeB, &(const Words64){ 1, 0 });
+	if ((below.low & magnitudeB.low) | (below.high & magnitudeB.high)) {
+		divideUnsigned64(&quotient.low, magnitudeA.high, magnitudeA.low, magnitudeB.high,
+			magnitudeB.low, 0);
+	} else {
+		zeros = 0;
+		for (shift = 63; ; ) {
+			if (shift >= 32) {
+				shifted.low = (int32_t)magnitudeB.high >> (shift - 32);
+				shifted.high = (int32_t)magnitudeB.high >> 31;
+			} else {
+				shifted.low = (magnitudeB.low >> shift) | (magnitudeB.high << (32 - shift));
+				shifted.high = (int32_t)magnitudeB.high >> shift;
+			}
+			if ((shifted.low | shifted.high) != 0)
+				break;
+			zeros++;
+			if (--shift == 0)
+				break;
+		}
+		quotient = magnitudeA;
+		shiftRightUnsigned64(&quotient, 63 - zeros);
+	}
+	if (negative)
+		negate64(&quotient, &quotient);
+	*result = quotient;
+	return;
+
+zero:
+	result->low = 0;
+	result->high = 0;
+}
