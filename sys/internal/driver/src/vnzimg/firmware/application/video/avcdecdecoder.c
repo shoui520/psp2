@@ -1603,8 +1603,8 @@ static void mvPredictB(AvcdecMotion *motion, uint32_t onlyA);
 static void mvPredictC(AvcdecMotion *motion, uint32_t onlyA);
 static void mvPredictSkip(AvcdecMotion *motion);
 static void intraDone(AvcdecStripe *stripe);
-static void interDoneP(AvcdecStripe *stripe);
-static void interDoneB(AvcdecStripe *stripe);
+static void interDoneP(AvcdecStripe *stripe, AvcdecMotion *motion);
+static void interDoneB(AvcdecStripe *stripe, AvcdecMotion *motion);
 static void strengthIntra(AvcdecStripe *stripe, uint32_t left, uint32_t top);
 static void strengthCoded(AvcdecStripe *stripe, AvcdecLanes strengths[4]);
 static void intraPredict(AvcdecStripe *stripe);
@@ -1638,10 +1638,10 @@ void avcdecStripePredict(uint32_t infoAddress, uint32_t rowAddress, uint32_t unu
 				intraDone(stripe);
 			} else if (isP) {
 				predictP(stripe, &motion);
-				interDoneP(stripe);
+				interDoneP(stripe, &motion);
 			} else {
 				predictB(stripe, &motion);
-				interDoneB(stripe);
+				interDoneB(stripe, &motion);
 			}
 			mbStore(stripe);
 		}
@@ -2552,7 +2552,7 @@ static void intraDone(AvcdecStripe *stripe)
 }
 
 /* 0x830b2e: a P macroblock's: the strengths of its coefficients, then of its vectors */
-static void interDoneP(AvcdecStripe *stripe)
+static void interDoneP(AvcdecStripe *stripe, AvcdecMotion *motion)
 {
 	AvcdecLanes strengths[4];
 	uint32_t left, top, idc;
@@ -2563,12 +2563,12 @@ static void interDoneP(AvcdecStripe *stripe)
 	if (idc != 1) {
 		strengthCoded(stripe, strengths);
 		filterEdges(stripe, &left, &top);
-		avcdecStrengthsP(stripe, left, top, strengths);
+		avcdecStrengthsP(stripe, motion, left, top);
 	}
 }
 
 /* 0x830b7e: a B macroblock's */
-static void interDoneB(AvcdecStripe *stripe)
+static void interDoneB(AvcdecStripe *stripe, AvcdecMotion *motion)
 {
 	AvcdecLanes strengths[4];
 	uint32_t left, top, idc;
@@ -2579,7 +2579,7 @@ static void interDoneB(AvcdecStripe *stripe)
 	if (idc != 1) {
 		strengthCoded(stripe, strengths);
 		filterEdges(stripe, &left, &top);
-		avcdecStrengthsB(stripe, left, top, strengths);
+		avcdecStrengthsB(stripe, motion, left, top);
 	}
 }
 

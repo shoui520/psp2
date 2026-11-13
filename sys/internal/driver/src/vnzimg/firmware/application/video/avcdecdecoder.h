@@ -475,10 +475,10 @@ void avcdecMvPredict8x8Block2(AvcdecStripe *stripe, AvcdecMotion *motion);
 void avcdecMvPredict8x8Block3(AvcdecStripe *stripe, AvcdecMotion *motion);
 void avcdecStrengthsCoded(uint32_t vertical, uint32_t horizontal, uint32_t leftIntra,
 	uint32_t topIntra, AvcdecLanes strengths[4]);
-void avcdecStrengthsP(AvcdecStripe *stripe, uint32_t left, uint32_t top,
-	AvcdecLanes strengths[4]);
-void avcdecStrengthsB(AvcdecStripe *stripe, uint32_t left, uint32_t top,
-	AvcdecLanes strengths[4]);
+void avcdecStrengthsP(AvcdecStripe *stripe, const AvcdecMotion *motion, uint32_t left,
+	uint32_t top);
+void avcdecStrengthsB(AvcdecStripe *stripe, const AvcdecMotion *motion, uint32_t left,
+	uint32_t top);
 void avcdecFilterIndexes(AvcdecStripe *stripe);
 
 /* the stripes' jobs */

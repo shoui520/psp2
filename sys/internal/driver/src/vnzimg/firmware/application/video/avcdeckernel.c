@@ -627,6 +627,299 @@ void avcdecStrengthsCoded(uint32_t vertical, uint32_t horizontal, uint32_t leftI
 	}
 }
 
+/* a 4x4 block's list 0 vector, by row and column */
+static inline uint32_t vectorAt(const AvcdecLanes (*mv)[4], uint32_t row, uint32_t column)
+{
+	return mv[(row >> 1) * 2 + (column >> 1)][(row & 1) * 2 + (column & 1)].w[0];
+}
+
+/* a component four quarter samples apart or more, the difference in 16 bits */
+static inline uint32_t componentFar(int16_t a, int16_t b)
+{
+	int32_t difference = a - b;
+
+	return (int16_t)(difference < 0 ? -difference : difference) >= 4;
+}
+
+/* 0x894450, by edge: two vectors four quarter samples apart or more (8.7.2.1) */
+static inline uint32_t vectorsFar(uint32_t a, uint32_t b)
+{
+	return componentFar((int16_t)a, (int16_t)b) ||
+		componentFar((int16_t)(a >> 16), (int16_t)(b >> 16));
+}
+
+/*
+ * 0x8943b0 and 0x894ca0, by edge: how two 8x8 blocks' pictures pair, list
+ * by list (bit 0) and crossed (bit 1); none, they differ
+ */
+#define PICTURES_SAME		1
+#define PICTURES_CROSSED	2
+
+static inline uint32_t picturePairing(AvcdecLanes pictures, uint32_t block,
+	AvcdecLanes others, uint32_t other)
+{
+	uint32_t pairing = 0;
+
+	if (pictures.b[block] == others.b[other] &&
+	    pictures.b[4 + block] == others.b[4 + other])
+		pairing |= PICTURES_SAME;
+	if (pictures.b[block] == others.b[4 + other] &&
+	    pictures.b[4 + block] == others.b[other])
+		pairing |= PICTURES_CROSSED;
+	return pairing;
+}
+
+/*
+ * 0x894010: a P macroblock's bS 1 (8.7.2.1) where it is 0: the edges between
+ * blocks of different pictures or with vectors apart, on the left and top
+ * against the neighbour's vector of the same picture. The edges of the
+ * picture (and of the slice, under idc 2) none.
+ */
+void avcdecStrengthsP(AvcdecStripe *stripe, const AvcdecMotion *motion, uint32_t left,
+	uint32_t top)
+{
+	static const uint8_t leftBlocks[4] = { 5, 7, 13, 15 };
+	const AvcdecMbVectors *leftVectors = stripe->leftVectors;
+	const AvcdecTop *above = stripe->top;
+	AvcdecLanes pictures = stripe->mb->refPicture;
+	uint8_t *vertical = stripe->filter->strength.edges[1];
+	uint8_t *horizontal = stripe->filter->strength.edges[0];
+	uint32_t i, half, pairing, differ[2], inner[2], neighbour;
+
+	/* the vertical edges, by row */
+	for (half = 0; half < 2; half++) {
+		pairing = picturePairing(pictures, 2 * half, stripe->left->refPicture,
+			2 * half + 1);
+		differ[half] = !pairing;
+		inner[half] = pictures.b[2 * half] != pictures.b[2 * half + 1];
+		for (i = 2 * half; i < 2 * half + 2; i++) {
+			neighbour = leftVectors->mv[leftBlocks[i]][pairing & PICTURES_SAME ? 0 : 1];
+			if (!vertical[i])
+				vertical[i] = differ[half] ||
+					vectorsFar(neighbour, vectorAt(motion->mv, i, 0));
+			if (!vertical[4 + i])
+				vertical[4 + i] = vectorsFar(vectorAt(motion->mv, i, 0),
+					vectorAt(motion->mv, i, 1));
+			if (!vertical[8 + i])
+				vertical[8 + i] = inner[half] ||
+					vectorsFar(vectorAt(motion->mv, i, 1),
+						vectorAt(motion->mv, i, 2));
+			if (!vertical[12 + i])
+				vertical[12 + i] = vectorsFar(vectorAt(motion->mv, i, 2),
+					vectorAt(motion->mv, i, 3));
+		}
+	}
+	if (!left)
+		for (i = 0; i < 4; i++)
+			vertical[i] = 0;
+	/* the horizontal ones, by column */
+	for (half = 0; half < 2; half++) {
+		pairing = picturePairing(pictures, half, above->refPicture, 2 + half);
+		differ[half] = !pairing;
+		inner[half] = pictures.b[half] != pictures.b[2 + half];
+		for (i = 2 * half; i < 2 * half + 2; i++) {
+			neighbour = above->mv[i][pairing & PICTURES_SAME ? 0 : 1];
+			if (!horizontal[i])
+				horizontal[i] = differ[half] ||
+					vectorsFar(neighbour, vectorAt(motion->mv, 0, i));
+			if (!horizontal[4 + i])
+				horizontal[4 + i] = vectorsFar(vectorAt(motion->mv, 0, i),
+					vectorAt(motion->mv, 1, i));
+			if (!horizontal[8 + i])
+				horizontal[8 + i] = inner[half] ||
+					vectorsFar(vectorAt(motion->mv, 1, i),
+						vectorAt(motion->mv, 2, i));
+			if (!horizontal[12 + i])
+				horizontal[12 + i] = vectorsFar(vectorAt(motion->mv, 2, i),
+					vectorAt(motion->mv, 3, i));
+		}
+	}
+	if (!top)
+		for (i = 0; i < 4; i++)
+			horizontal[i] = 0;
+}
+
+/* any component of either list four quarter samples apart or more */
+static inline uint32_t lanesFar(AvcdecLanes a, AvcdecLanes b)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		if (componentFar(a.h[i], b.h[i]))
+			return 1;
+	return 0;
+}
+
+static inline AvcdecLanes lanesCrossed(AvcdecLanes lanes)
+{
+	AvcdecLanes crossed;
+
+	crossed.w[0] = lanes.w[1];
+	crossed.w[1] = lanes.w[0];
+	return crossed;
+}
+
+/*
+ * A B macroblock's 8x8 block's vectors on its edges in one direction, two
+ * 4x4 blocks each: its outer edge against the neighbour's (near, the left's,
+ * the above's or the 8x8 block's beside it) paired as the pictures pair, its
+ * inner edge between its first and second lines. Bits 0 and 1 the outer
+ * edge's, 4 and 5 the inner's.
+ */
+static uint32_t edgesFarB(AvcdecLanes near[2], const AvcdecLanes first[2],
+	const AvcdecLanes second[2], uint32_t unused, uint32_t block, uint32_t pairing,
+	uint32_t samePictures)
+{
+	AvcdecLanes crossed, crossedSecond;
+	uint32_t far = 0, other = 0, i, neighbour;
+
+	/* 0x894d78: the lists the block uses against the neighbour's */
+	for (i = 0; i < 2; i++) {
+		if (unused & (block << 4)) {			/* list 0 only */
+			neighbour = pairing == PICTURES_SAME ? near[i].w[0] : near[i].w[1];
+			near[i].w[0] = neighbour;
+			near[i].w[1] = first[i].w[1];
+		} else if (unused & block) {			/* list 1 only */
+			neighbour = pairing == PICTURES_SAME ? near[i].w[1] : near[i].w[0];
+			near[i].w[0] = first[i].w[0];
+			near[i].w[1] = neighbour;
+		} else if (pairing == PICTURES_CROSSED) {
+			near[i] = lanesCrossed(near[i]);
+		}
+		far |= lanesFar(near[i], first[i]) << i | lanesFar(first[i], second[i]) << (4 + i);
+	}
+	if (pairing == (PICTURES_SAME | PICTURES_CROSSED)) {
+		/* 0x894ea0: either way: 1 only where both are apart */
+		for (i = 0; i < 2; i++) {
+			crossed = lanesCrossed(first[i]);
+			crossedSecond = samePictures ? second[i] : crossed;
+			other |= lanesFar(near[i], crossed) << i |
+				lanesFar(crossed, crossedSecond) << (4 + i);
+		}
+		far &= other;
+	} else if (samePictures) {
+		/* 0x894f40: both lists one picture: the inner edge either way */
+		for (i = 0; i < 2; i++)
+			other |= lanesFar(lanesCrossed(first[i]), second[i]) << (4 + i);
+		far &= other;
+	}
+	return far;
+}
+
+/* the edges' bS 1 from edgesFarB, where some is 0 */
+static inline void strengthsFarB(uint8_t *strengths, uint32_t line, AvcdecLanes near[2],
+	const AvcdecLanes first[2], const AvcdecLanes second[2], uint32_t unused,
+	uint32_t block, uint32_t pairing, uint32_t samePictures)
+{
+	uint32_t far, i;
+
+	if (strengths[line] && strengths[line + 1] && strengths[4 + line] &&
+	    strengths[5 + line])
+		return;
+	far = edgesFarB(near, first, second, unused, block, pairing, samePictures);
+	for (i = 0; i < 2; i++) {
+		if (far & (1 << i) && !strengths[line + i])
+			strengths[line + i] = 1;
+		if (far & (16 << i) && !strengths[4 + line + i])
+			strengths[4 + line + i] = 1;
+	}
+}
+
+/*
+ * 0x8944a0: a B macroblock's bS 1 where it is 0 (8.7.2.1): the edges between
+ * blocks of different pictures, or of the same ones with vectors apart
+ */
+void avcdecStrengthsB(AvcdecStripe *stripe, const AvcdecMotion *motion, uint32_t left,
+	uint32_t top)
+{
+	const AvcdecMbVectors *leftVectors = stripe->leftVectors;
+	const AvcdecTop *above = stripe->top;
+	const AvcdecLanes (*mv)[4] = motion->mv;
+	AvcdecLanes pictures = stripe->mb->refPicture, near[2], first[2], second[2];
+	uint8_t *vertical = stripe->filter->strength.edges[1];
+	uint8_t *horizontal = stripe->filter->strength.edges[0];
+	uint32_t unused = 0, outer[2], inner[2], half, block, i;
+
+	for (i = 0; i < 8; i++)
+		if (pictures.b[i] < 0)
+			unused |= 1 << i;
+
+	/* the vertical edges: by half, the left's and between the 8x8 blocks */
+	for (half = 0; half < 2; half++) {
+		outer[half] = picturePairing(pictures, 2 * half, stripe->left->refPicture,
+			2 * half + 1);
+		inner[half] = picturePairing(pictures, 2 * half + 1, pictures, 2 * half);
+		for (i = 2 * half; i < 2 * half + 2; i++) {
+			if (!outer[half] && !vertical[i])
+				vertical[i] = 1;
+			if (!inner[half] && !vertical[8 + i])
+				vertical[8 + i] = 1;
+		}
+	}
+	for (half = 0; half < 2; half++) {
+		block = 2 * half;
+		near[0] = vectorOf(leftVectors->mv[half ? 13 : 5]);
+		near[1] = vectorOf(leftVectors->mv[half ? 15 : 7]);
+		first[0] = mv[block][0];
+		first[1] = mv[block][2];
+		second[0] = mv[block][1];
+		second[1] = mv[block][3];
+		strengthsFarB(vertical, 2 * half, near, first, second, unused, 1 << block,
+			outer[half], pictures.b[block] == pictures.b[4 + block]);
+	}
+	for (half = 0; half < 2; half++) {
+		block = 2 * half + 1;
+		near[0] = mv[block - 1][1];
+		near[1] = mv[block - 1][3];
+		first[0] = mv[block][0];
+		first[1] = mv[block][2];
+		second[0] = mv[block][1];
+		second[1] = mv[block][3];
+		strengthsFarB(vertical + 8, 2 * half, near, first, second, unused, 1 << block,
+			inner[half], pictures.b[block] == pictures.b[4 + block]);
+	}
+	if (!left)
+		for (i = 0; i < 4; i++)
+			vertical[i] = 0;
+
+	/* the horizontal ones: by half, the above's and between the 8x8 blocks */
+	for (half = 0; half < 2; half++) {
+		outer[half] = picturePairing(pictures, half, above->refPicture, 2 + half);
+		inner[half] = picturePairing(pictures, 2 + half, pictures, half);
+		for (i = 2 * half; i < 2 * half + 2; i++) {
+			if (!outer[half] && !horizontal[i])
+				horizontal[i] = 1;
+			if (!inner[half] && !horizontal[8 + i])
+				horizontal[8 + i] = 1;
+		}
+	}
+	for (half = 0; half < 2; half++) {
+		block = half;
+		near[0] = vectorOf(above->mv[2 * half]);
+		near[1] = vectorOf(above->mv[2 * half + 1]);
+		first[0] = mv[block][0];
+		first[1] = mv[block][1];
+		second[0] = mv[block][2];
+		second[1] = mv[block][3];
+		strengthsFarB(horizontal, 2 * half, near, first, second, unused, 1 << block,
+			outer[half], pictures.b[block] == pictures.b[4 + block]);
+	}
+	for (half = 0; half < 2; half++) {
+		block = 2 + half;
+		near[0] = mv[half][2];
+		near[1] = mv[half][3];
+		first[0] = mv[block][0];
+		first[1] = mv[block][1];
+		second[0] = mv[block][2];
+		second[1] = mv[block][3];
+		strengthsFarB(horizontal + 8, 2 * half, near, first, second, unused, 1 << block,
+			inner[half], pictures.b[block] == pictures.b[4 + block]);
+	}
+	if (!top)
+		for (i = 0; i < 4; i++)
+			horizontal[i] = 0;
+}
+
 /*
  * 0x894fd8: the macroblock's QPc, and the filter's indexA and indexB
  * (8.7.2.2) on its left edge, inside it and on its top edge, for luma and
