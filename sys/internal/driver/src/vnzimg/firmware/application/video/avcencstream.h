@@ -124,8 +124,8 @@ typedef struct AvcencPicture {
 	uint8_t cropLeft;
 	uint8_t cropTop;
 	uint8_t reserved3;
-	uint32_t rowsAbove;
-	uint32_t rowsLeft;
+	uint32_t interRecords;		/* the inter decision's, 64 bytes a macroblock */
+	uint32_t macroblockRecords;		/* the macroblocks', 64 bytes each */
 	uint32_t rowsMotion;
 	uint32_t reserved4[2];
 	uint32_t searchResults;		/* the coarse search's, 64 bytes a group of rows */
@@ -291,8 +291,8 @@ typedef struct AvcencBuffers {
 	uint32_t motion[2];		/* a quarter of a byte per pixel */
 	uint32_t reference;		/* the reference frame's lines, after the frames */
 	uint32_t searchResults;
-	uint32_t rowsAbove;
-	uint32_t rowsLeft;
+	uint32_t interRecords;
+	uint32_t macroblockRecords;
 	uint32_t rowsMotion;
 	uint8_t reserved[8];
 	uint32_t frameSize;		/* the three planes */
@@ -460,9 +460,72 @@ typedef struct AvcencSearchInfo {
 	uint8_t reserved4[42];
 } AvcencSearchInfo;
 
+/*
+ * the decide job's per core info (1344 bytes): each macroblock of a group,
+ * a row at a time, the inter decision (around the coarse search's vector)
+ * then the intra one and the final choice. The kernels' and the decisions'
+ * own state takes the rest
+ */
+#define DECIDE_INFO_SIZE	1344
+typedef struct AvcencDecideInfo {
+	uint8_t reserved[240];
+	/* the intra decision's */
+	uint8_t columns;		/* of macroblocks in the group, up to four */
+	uint8_t rows;
+	uint8_t column;			/* the group's first macroblock */
+	uint8_t row;
+	uint16_t mbX;			/* the macroblock's */
+	uint16_t mbY;
+	uint32_t sliceType;
+	uint16_t widthInMbs;
+	uint16_t heightInMbs;
+	int16_t pitch;			/* the source's */
+	int16_t chromaPitch;
+	uint32_t sourceLuma;
+	uint32_t sourceChroma;
+	uint32_t luma;			/* the macroblock's, in the source */
+	uint32_t chroma;
+	uint32_t interRecord;		/* the inter decision's, of the macroblock */
+	uint32_t record;		/* the macroblock's, the decisions' result */
+	int8_t sliceStart;		/* the row starts a slice */
+	uint8_t reserved2;
+	uint16_t intraWeight;		/* by QP */
+	uint8_t reserved3[984];
+	/* the inter decision's */
+	uint32_t reference;		/* the reference picture's luma */
+	uint32_t referenceChroma;
+	uint32_t interLuma;		/* the macroblock's, in the source */
+	uint32_t interChroma;
+	const int8_t *vector;		/* the coarse search's, of the group's block */
+	uint32_t results;		/* the coarse search's, of the group's row */
+	uint8_t interColumns;
+	uint8_t interRows;
+	uint8_t interColumn;
+	uint8_t interRow;
+	uint16_t interX;
+	uint16_t interY;
+	uint16_t referencePitch;
+	uint16_t referenceChromaPitch;
+	uint16_t width;			/* in pixels */
+	uint16_t height;
+	uint32_t interOutput;		/* where the inter decision's record goes */
+	const int16_t *lumaThreshold;	/* the slices', by QP */
+	int8_t lumaShift;
+	uint8_t interWeight;		/* by QP */
+	uint8_t reserved4[2];
+	uint32_t prefetchLuma;		/* the reference's next lines to bring in */
+	uint32_t prefetchChroma;
+	uint16_t prefetchLumaSize;
+	uint16_t prefetchChromaSize;
+	uint8_t prefetchLine;		/* their first line, its low eight bits */
+	int8_t scaled;			/* the slices' */
+	uint8_t reserved5[6];
+} AvcencDecideInfo;
+
 
 typedef char jobInfoSizeCheck[sizeof(AvcencJobInfo) == 64 ? 1 : -1];
 typedef char loadSizeCheck[sizeof(AvcencLoad) == 64 ? 1 : -1];
+typedef char decideInfoSizeCheck[sizeof(AvcencDecideInfo) == DECIDE_INFO_SIZE ? 1 : -1];
 typedef char searchInfoSizeCheck[sizeof(AvcencSearchInfo) == CORE_INFO_SIZE ? 1 : -1];
 typedef char buffersSizeCheck[sizeof(AvcencBuffers) == BUFFERS_SIZE ? 1 : -1];
 typedef char slicesSizeCheck[sizeof(AvcencSlices) == SLICES_SIZE ? 1 : -1];

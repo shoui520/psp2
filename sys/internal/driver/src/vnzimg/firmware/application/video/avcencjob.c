@@ -544,3 +544,324 @@ void avcencJobLoadReference(uint32_t pictureAddress, uint32_t slicesAddress,
 	vnzPublicClosePrivate((uint32_t)info, CORE_INFO_SIZE);
 	vnzPublicCloseProtected((uint32_t)slices, 64);
 }
+
+/* 0x839852: the groups' SAD per group, from each row's sum */
+static uint32_t sceneSad(const AvcencPicture *picture, const uint8_t *results)
+{
+	uint32_t groups = picture->widthInGroups * picture->heightInGroups, sum = 0, row;
+
+	for (row = 0; row < picture->heightInGroups; row++)
+		sum += *(const uint32_t *)(results + row * 64 + 60);
+	return sum / groups;
+}
+
+/* 0x839894: the spread of the groups' vectors, x and y's variances added */
+static int32_t sceneSpread(const AvcencPicture *picture, const uint8_t *results)
+{
+	int32_t width = picture->widthInGroups, height = picture->heightInGroups;
+	int32_t groups = width * height, sumX = 0, sumY = 0, squaresX = 0, squaresY = 0;
+	int32_t row, column, x, y;
+
+	for (row = 0; row < height; row++) {
+		for (column = 0; column < width; column++) {
+			x = (int8_t)results[column * 2];
+			y = (int8_t)results[column * 2 + 1];
+			sumX += x;
+			sumY += y;
+			squaresX += x * x;
+			squaresY += y * y;
+		}
+		results += 64;
+	}
+	return (squaresX / groups - sumX * sumX / (groups * groups)) +
+		(squaresY / groups - sumY * sumY / (groups * groups));
+}
+
+/* 0x839948: the limits past which both mean a new scene, by the picture's size */
+static void sceneLimits(const AvcencPicture *picture, int32_t *sad, int32_t *spread)
+{
+	if (picture->widthInMbs * picture->heightInMbs < 301) {
+		*sad = 3000;
+		*spread = 60;
+	} else {
+		*sad = 2000;
+		*spread = 120;
+	}
+}
+
+/*
+ * 0x8397b0: a new scene, from the coarse search of a predicted picture's
+ * previous one: its SADs and the spread of its vectors both over their limits
+ * make the next picture an IDR. Not after an IDR, nor with the option off
+ */
+void avcencJobScene(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t rateAddress,
+	uint32_t unused)
+{
+	AvcencPicture *picture = (AvcencPicture *)pictureAddress;
+	AvcencRate *rate = (AvcencRate *)rateAddress;
+	int32_t sadLimit, spreadLimit, sad, spread;
+	AvcencSlices *slices;
+	uint32_t results;
+	int8_t change;
+
+	if (picture->predicted) {
+		rate->forceIdr = 0;
+		return;
+	}
+	slices = (AvcencSlices *)vnzPublicOpenProtected(slicesAddress, 64);
+	results = vnzPublicOpenProtected(picture->searchResults, picture->heightInGroups * 64);
+	change = 0;
+	if (!slices->idr && !picture->option2) {
+		sad = sceneSad(picture, (const uint8_t *)results);
+		spread = sceneSpread(picture, (const uint8_t *)results);
+		sceneLimits(picture, &sadLimit, &spreadLimit);
+		if (sadLimit < sad && spreadLimit < spread)
+			change = 1;
+	}
+	vnzPublicCloseProtected(results, picture->heightInGroups * 64);
+	vnzPublicCloseProtected((uint32_t)slices, 64);
+	rate->forceIdr = change;
+}
+
+/* the weights, by QP, of a vector's bits in the inter decision and of the intra one's */
+static const uint32_t interWeights[52] = {
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4,
+	5, 6, 6, 7, 8, 9, 10, 11, 13, 14, 16, 18, 20, 23, 25, 29, 32, 36, 40, 45, 51, 57,
+	64, 72, 81, 91,
+};
+static const uint32_t intraWeights[52] = {
+	80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 80,
+	80, 80, 80, 80, 80, 80, 80, 80, 80, 80, 160, 180, 240, 280, 300, 360, 400, 400,
+	400, 430, 540, 590, 620, 660, 700, 750, 810, 870, 940, 1020, 1100, 1200,
+};
+
+/* the decisions of a macroblock (avcencdecide.c, and below) */
+void avcencDecideInter(AvcencDecideInfo *info);
+void avcencDecideLuma(AvcencDecideInfo *info);
+void avcencDecideChroma(AvcencDecideInfo *info);
+
+/* a group's macroblocks: up to four, fewer at the picture's edge */
+static inline uint8_t groupSize(uint32_t first, uint32_t size)
+{
+	return size < first + 4 ? size - first : 4;
+}
+
+/*
+ * the inter decision's rows: the reference around the coarse search's
+ * vector (the group's, or the group to the left or above when it is not
+ * whole) brought into the L2 cache ahead, a row of tiles at a time; each
+ * macroblock decided on the source's
+ */
+static void decideInterRows(AvcencPicture *picture, AvcencSlices *slices,
+	AvcencDecideInfo *info, uint32_t column, uint32_t row)
+{
+	int32_t group = column >> 2, groupRow = row >> 2, r, m, x, y, lines, tiles, size;
+	uint32_t luma, chroma, records;
+
+	info->interColumns = groupSize(column, picture->widthInMbs);
+	info->interRows = groupSize(row, picture->heightInMbs);
+	info->interRow = row;
+	info->interColumn = column;
+	info->width = picture->widthInMbs * 16;
+	info->height = picture->heightInMbs * 16;
+	info->referencePitch = picture->width;
+	info->referenceChromaPitch = picture->chromaWidth;
+	info->interWeight = interWeights[picture->rateQp];
+	info->reference = picture->luma;
+	info->referenceChroma = picture->chroma;
+	if ((int8_t)info->interColumns != 4)
+		group--;
+	if ((int8_t)info->interRows != 4)
+		groupRow--;
+	info->results = vnzPublicOpenProtected(picture->searchResults + groupRow * 64, 64);
+	info->vector = (const int8_t *)(info->results + group * 2);
+	info->lumaThreshold = slices->lumaThreshold;
+	info->lumaShift = slices->lumaShift;
+	info->scaled = slices->scaled;
+	for (r = 0; r < info->interRows; r++) {
+		if (r == 0) {
+			/* the window: 80x32 of the reference, at least, from the vector */
+			x = column * 16 + info->vector[0] * 4 - 4;
+			if (x > info->width - 80)
+				x = info->width - 80;
+			if (x < 0)
+				x = 0;
+			tiles = 4;
+			if (info->width != 64)
+				tiles = (x & 15) < 12 ? 5 : 6;
+			y = (int32_t)(row + r) * 16 + info->vector[1] * 4 - 4;
+			if (y > info->height - 32)
+				y = info->height - 32;
+			if (y < 0)
+				y = 0;
+			lines = (y & 15) < 12 ? 2 : 3;
+			y = y >> 4 << 4;
+			luma = info->reference + y * info->referencePitch + (x >> 4) * 256;
+			size = tiles * 256;
+			chroma = info->referenceChroma + (y >> 1) * info->referenceChromaPitch +
+				((x + 1) >> 5) * 256;
+			tiles = (tiles + 1) >> 1 << 8;
+			while (lines-- > 0) {
+				vnzL2Sync(luma, size);
+				vnzL2Sync(chroma, tiles);
+				y += 16;
+				luma += info->referencePitch * 16;
+				chroma += info->referenceChromaPitch * 8;
+			}
+			info->prefetchLuma = luma;
+			info->prefetchLine = y;
+			info->prefetchLumaSize = size;
+			info->prefetchChroma = chroma;
+			info->prefetchChromaSize = tiles;
+		} else if (info->prefetchLine < info->height) {
+			vnzL2Sync(info->prefetchLuma, info->prefetchLumaSize);
+			vnzL2Sync(info->prefetchChroma, info->prefetchChromaSize);
+			info->prefetchLine += 16;
+			info->prefetchLuma += info->referencePitch * 16;
+			info->prefetchChroma += info->referenceChromaPitch * 8;
+		}
+		info->interY = row + r;
+		info->interX = column;
+		info->interLuma = picture->nextLuma + (uint16_t)picture->nextPitch * (row + r) * 16 +
+			column * 256;
+		info->interChroma = picture->nextChroma +
+			(uint16_t)picture->nextChromaPitch * (row + r) * 8 + column * 128;
+		info->interOutput = picture->interRecords + picture->widthInMbs * (row + r) * 64 +
+			column * 64;
+		size = info->interColumns * 64;
+		records = vnzPublicOpenPrivate(info->interOutput, size);
+		vnzCacheInvalidateInside(records, size);
+		info->interOutput = records;
+		for (m = 0; m < info->interColumns; m++) {
+			vnzL2Sync(info->interLuma, 256);
+			if (!(m & 1))
+				vnzL2Sync(info->interChroma, 256);
+			avcencDecideInter(info);
+			info->interX++;
+			info->interLuma += 256;
+			info->interChroma += 128;
+			info->interOutput += 64;
+		}
+		vnzPublicClosePrivate(records, size);
+	}
+	vnzPublicCloseProtected(info->results, 64);
+}
+
+/*
+ * the final decision's rows: each macroblock's intra decision, and the
+ * choice against the inter one. In a predicted picture a macroblock the
+ * inter decision skipped is left so
+ */
+static void decideRows(AvcencPicture *picture, AvcencSlices *slices, AvcencDecideInfo *info,
+	int8_t idr)
+{
+	int32_t r, m, i, size;
+	uint32_t interRecords, records;
+	int32_t y;
+
+	for (r = 0; r < info->rows; r++) {
+		info->mbX = info->column;
+		info->mbY = y = info->row + r;
+		info->sliceStart = 0;
+		for (i = 0; i < slices->count; i++) {
+			if (slices->firstRow[i] == y) {
+				info->sliceStart = 1;
+				break;
+			}
+		}
+		info->luma = picture->nextLuma + (uint16_t)picture->nextPitch * y * 16 +
+			info->column * 256;
+		info->chroma = picture->nextChroma + (uint16_t)picture->nextChromaPitch * y * 8 +
+			info->column * 128;
+		info->record = picture->macroblockRecords + picture->widthInMbs * y * 64 +
+			info->column * 64;
+		info->interRecord = picture->interRecords + picture->widthInMbs * y * 64 +
+			info->column * 64;
+		size = info->columns * 64;
+		interRecords = vnzPublicOpenProtected(info->interRecord, size);
+		info->interRecord = interRecords;
+		records = vnzPublicOpenPrivate(info->record, size);
+		vnzCacheInvalidateInside(records, size);
+		info->record = records;
+		for (m = 0; m < info->columns; m++) {
+			if (idr) {
+				vnzL2Sync(info->luma, 256);
+				if (!(m & 1))
+					vnzL2Sync(info->chroma, 256);
+				avcencDecideLuma(info);
+				avcencDecideChroma(info);
+			} else if (((int8_t *)info->interRecord)[57] == 0) {
+				avcencDecideLuma(info);
+				avcencDecideChroma(info);
+			} else {
+				*(uint16_t *)(info->record + 48) = 0xffff;
+			}
+			info->luma += 256;
+			info->chroma += 128;
+			info->mbX++;
+			info->record += 64;
+			info->interRecord += 64;
+		}
+		vnzPublicClosePrivate(records, size);
+		vnzPublicCloseProtected(interRecords, size);
+	}
+}
+
+/*
+ * 0x839970: the decisions of a group's macroblocks: the inter one (not in an
+ * IDR picture), then the intra one and the choice; the group's job in the
+ * wavefront is signalled
+ */
+void avcencJobDecide(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t position,
+	uint32_t unused)
+{
+	AvcencPicture *picture = (AvcencPicture *)pictureAddress;
+	uint32_t core = ((int32_t)vnzReadControl(VNZ_CR_ID) >> 16) & 7;
+	AvcencSlices *slices = (AvcencSlices *)vnzPublicOpenProtected(slicesAddress, 64);
+	uint32_t column = position & 0xff, row = (position >> 8) & 0xff, job, step;
+	VkVThreadContext *context;
+	AvcencDecideInfo *info;
+	int8_t idr;
+
+	info = (AvcencDecideInfo *)vnzPublicOpenPrivate(slices->streamInfo +
+		core * DECIDE_INFO_SIZE, DECIDE_INFO_SIZE);
+	vnzCacheInvalidateInside((uint32_t)info, DECIDE_INFO_SIZE);
+	idr = slices->idr;
+	if (!idr)
+		decideInterRows(picture, slices, info, column, row);
+
+	info->columns = groupSize(column, picture->widthInMbs);
+	info->rows = groupSize(row, picture->heightInMbs);
+	info->column = column;
+	info->row = row;
+	info->heightInMbs = picture->heightInMbs;
+	info->widthInMbs = picture->widthInMbs;
+	info->sliceType = slices->sliceType;
+	info->pitch = picture->nextPitch;
+	info->chromaPitch = picture->nextChromaPitch;
+	info->sourceLuma = picture->nextLuma;
+	info->sourceChroma = picture->nextChroma;
+	info->intraWeight = intraWeights[picture->rateQp];
+	decideRows(picture, slices, info, idr);
+
+	/* the group's job: by the wavefront's order, the IDR picture's in pairs of groups */
+	column = info->column >> 2;
+	row = info->row >> 2;
+	if (slices->idr) {
+		step = row * 2;
+		if (picture->widthInMbs < 9)
+			job = picture->index * 8 + picture->jobArgument +
+				picture->jobGroups * (step & 7) + ((step & 3) >> 2);
+		else
+			job = picture->index * 8 + picture->jobArgument +
+				picture->jobGroups * (step & 7) + ((column * 2 + (step & 3)) >> 2);
+	} else {
+		job = picture->index * 8 + picture->jobs * 4 + (row & 3) * picture->jobs + column;
+	}
+	context = vkVThreadContextLock((VkVThreadContext *)picture->context);
+	vkVThreadJobSignal(context, job + 8);
+	vkVThreadContextUnlock(context);
+	vnzCachePurge((uint32_t)info, DECIDE_INFO_SIZE);
+	vnzPublicClosePrivate((uint32_t)info, DECIDE_INFO_SIZE);
+	vnzPublicCloseProtected((uint32_t)slices, 64);
+}

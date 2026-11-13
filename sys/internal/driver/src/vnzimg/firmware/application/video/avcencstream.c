@@ -165,9 +165,9 @@ static void buffersLayout(AvcencStream *stream)
 	}
 	buffers->reference = address;
 	address += motionWidth * 6;
-	buffers->rowsAbove = address;
+	buffers->interRecords = address;
 	address += macroblocks * 64;
-	buffers->rowsLeft = address;
+	buffers->macroblockRecords = address;
 	address += macroblocks * 64;
 	buffers->rowsMotion = address;
 	buffers->searchResults = address + 1024;
@@ -204,8 +204,8 @@ static void pictureSetup(AvcencStream *stream, AvcencPicture *picture)
 	picture->chroma = buffers->chroma[stream->source];
 	picture->motion = vnzPublicCloseRaw(picture->motion, buffers->motionSize);
 	picture->searchResults = buffers->searchResults;
-	picture->rowsAbove = buffers->rowsAbove;
-	picture->rowsLeft = buffers->rowsLeft;
+	picture->interRecords = buffers->interRecords;
+	picture->macroblockRecords = buffers->macroblockRecords;
 	picture->rowsMotion = buffers->rowsMotion;
 	picture->maxBitRate = settings->maxBitRate;
 	picture->bitRate = settings->bitRate;
@@ -1760,7 +1760,7 @@ void avcencStreamParsed(uint32_t memory, uint32_t job)
 			picture->commandBuffer2 = client->commandBuffer2;
 			stream->record = client->record;
 			stream->record = vnzPublicOpenPrivate(client->record, RECORD_SIZE);
-			picture->macroblocks = buffers->rowsLeft;
+			picture->macroblocks = buffers->macroblockRecords;
 			picture->widthInMbs = buffers->width >> 4;
 			picture->heightInMbs = buffers->height >> 4;
 			stream->sliceType = buffers->idrNext ? 2 : 0;
