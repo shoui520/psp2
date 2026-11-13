@@ -467,9 +467,9 @@ done:
 	vnzThreadSetFlags(param->caller, flag);
 }
 
-/* RPC 453: the encoder, with its context in the ARM's memory */
-int32_t rpcJpegEncoder(VkVThreadResource *resource, uint32_t contextAddress, uint32_t argument,
-	uint32_t argument2)
+/* 0x81f9a2: a job on the encoder's context (in the ARM's memory) on a VThread of its own */
+static int32_t encoderExecute(VkVThreadResource *resource, VkJobFunction job,
+	uint32_t contextAddress, uint32_t argument, uint32_t argument2)
 {
 	VkVThreadContext *context = NULL;
 	JpegEncoderContext *encoder;
@@ -487,8 +487,7 @@ int32_t rpcJpegEncoder(VkVThreadResource *resource, uint32_t contextAddress, uin
 		result = ERROR_MEMORY;
 		goto close;
 	}
-	result = vnzVThreadExecute(context, 0, jpegEncoderJob, (uint32_t)encoder, argument,
-		argument2, 0);
+	result = vnzVThreadExecute(context, 0, job, (uint32_t)encoder, argument, argument2, 0);
 	if (result == 0)
 		result = encoder->result;
 close:
@@ -497,6 +496,13 @@ close:
 	if (encoderMemory.vaddrVnz && vnzMemoryClosePublic(&encoderMemory) == 0 && result >= 0)
 		result = ERROR_MEMORY;
 	return result;
+}
+
+/* RPC 453 (0x81f988): the encoder, with its context in the ARM's memory */
+int32_t rpcJpegEncoder(VkVThreadResource *resource, uint32_t contextAddress, uint32_t argument,
+	uint32_t argument2)
+{
+	return encoderExecute(resource, jpegEncoderJob, contextAddress, argument, argument2);
 }
 
 /* RPC 454: sceJpegMJpegCsc, on one or two VThreads */
