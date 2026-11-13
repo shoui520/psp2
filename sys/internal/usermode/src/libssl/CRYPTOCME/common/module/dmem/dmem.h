@@ -2,6 +2,9 @@
 #ifndef LIBSSL_CRYPTOCME_COMMON_MODULE_DMEM_DMEM_H
 #define LIBSSL_CRYPTOCME_COMMON_MODULE_DMEM_DMEM_H
 
+/* Allocate flags: clear the new memory */
+#define SSL_DMEM_ALLOCATE_ZERO 0x100
+
 #include <stddef.h>
 #include <scetypes.h>
 

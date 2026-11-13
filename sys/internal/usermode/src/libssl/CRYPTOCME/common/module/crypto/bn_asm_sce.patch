@@ -1,0 +1,65 @@
+--- a/bn_asm.c
++++ b/bn_asm.c
+@@ -57,7 +57,7 @@
+  */
+ 
+ #include <stdio.h>
+-#include "cryptlib.h"
++/* SCE: SSL-C builds each group of word routines where its users are. */
+ #include "bn_lcl.h"
+ 
+ #ifdef BN_LLONG 
+@@ -147,6 +147,7 @@
+ 	}
+ 
+ #else
++#ifdef SCE_BN_MUL_WORDS
+ 
+ BN_ULONG bn_mul_add_words(rp,ap,num,w)
+ BN_ULONG *rp,*ap;
+@@ -233,8 +234,10 @@
+ 		}
+ 	}
+ 
++#endif /* SCE_BN_MUL_WORDS */
+ #endif
+ 
++#ifdef SCE_BN_DIV_WORDS
+ #if defined(BN_LLONG) && defined(BN_DIV2W)
+ 
+ BN_ULONG bn_div_words(h,l,d)
+@@ -316,7 +319,9 @@
+ 	return(ret);
+ 	}
+ #endif
++#endif /* SCE_BN_DIV_WORDS */
+ 
++#ifdef SCE_BN_ADD_WORDS
+ #ifdef BN_LLONG
+ BN_ULONG bn_add_words(r,a,b,n)
+ BN_ULONG *r,*a,*b;
+@@ -407,7 +412,9 @@
+ 	return((BN_ULONG)c);
+ 	}
+ #endif
++#endif /* SCE_BN_ADD_WORDS */
+ 
++#ifdef SCE_BN_SUB_WORDS
+ BN_ULONG bn_sub_words(r,a,b,n)
+ BN_ULONG *r,*a,*b;
+ int n;
+@@ -446,7 +453,9 @@
+ 		}
+ 	return(c);
+ 	}
++#endif /* SCE_BN_SUB_WORDS */
+ 
++#ifdef SCE_BN_COMBA_WORDS
+ #ifdef BN_COMBA
+ 
+ #undef bn_mul_comba8
+@@ -827,3 +836,4 @@
+ 	}
+ 
+ #endif /* BN_COMBA */
++#endif /* SCE_BN_COMBA_WORDS */

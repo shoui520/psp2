@@ -14,7 +14,8 @@ Kept, unchanged: `crypto/lhash/lhash.c`, `crypto/lhash/lhash.h`, `crypto/crypto.
 `crypto/pem/pem.h`, `crypto/asn1/asn1.h`, `crypto/objects/objects.h`,
 `crypto/objects/obj_dat.h`, `crypto/mem.c`, `ssl/ssl_stat.c`, `ssl/ssl3.h`,
 `ssl/ssl.h`, `ssl/ssl23.h`, `ssl/ssl_lib.c`, `ssl/s3_lib.c`, `ssl/s3_both.c`,
-`ssl/ssl_sess.c`, `ssl/ssl_cert.c`, `ssl/ssl_locl.h` and `COPYRIGHT`.
+`ssl/ssl_sess.c`, `ssl/ssl_cert.c`, `ssl/ssl_locl.h`, `crypto/bn/bn.h`,
+`crypto/bn/bn_lcl.h`, `crypto/bn/bn_asm.c` and `COPYRIGHT`.
 Everything else in the distribution is left out. The copyright notice and
 source-file licenses are preserved. This product includes cryptographic
 software written by Eric Young (eay@cryptsoft.com).

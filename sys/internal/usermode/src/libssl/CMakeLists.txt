@@ -140,6 +140,13 @@ libssl_prepare_patched(${libssl_ssleay}/crypto/evp/encode.c
 libssl_prepare_patched(${libssl_ssleay}/crypto/pem/pem_lib.c
 	${CMAKE_CURRENT_SOURCE_DIR}/pem/pem_lib_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/pem_lib_sce.inc)
+libssl_prepare_patched(${libssl_ssleay}/crypto/bn/bn_asm.c
+	${CMAKE_CURRENT_SOURCE_DIR}/CRYPTOCME/common/module/crypto/bn_asm_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/bn_asm_sce.inc)
+configure_file(${libssl_ssleay}/crypto/bn/bn.h
+	${CMAKE_CURRENT_BINARY_DIR}/bn.h COPYONLY)
+configure_file(${libssl_ssleay}/crypto/bn/bn_lcl.h
+	${CMAKE_CURRENT_BINARY_DIR}/bn_lcl.h COPYONLY)
 psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	asn1.c
 	objects/obj_dat.c
@@ -216,6 +223,9 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	CRYPTOCME/common/module/crypto/cry_prng.c
 	CRYPTOCME/common/module/crypto/cry_rsa.c
 	CRYPTOCME/common/module/crypto/cry_hmac.c
+	CRYPTOCME/common/module/crypto/ll_obj.c
+	CRYPTOCME/common/module/crypto/ll_bn.c
+	CRYPTOCME/common/module/crypto/ll_bnrecp.c
 	runtime.c
 	memory.c
 	time.c
