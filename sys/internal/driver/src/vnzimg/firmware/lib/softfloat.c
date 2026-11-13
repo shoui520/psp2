@@ -569,3 +569,140 @@ float __negsf2(float a)
 {
 	return floatOf(bitsOf(a) + SIGN);
 }
+
+/*
+ * 0x925774: a 64-bit unsigned quotient (or, with remainder set, the
+ * remainder) into result[0] (low word) and result[1]. Long division a hex
+ * digit at a time: the dividend is aligned on the divisor's leading digit,
+ * then each step takes 8, 4, 2 and 1 times the divisor. A divisor with its
+ * top digit set takes one step. Shifts take the shifter's five bits, which
+ * decides what a zero divisor gives.
+ */
+void divideUnsigned64(uint32_t *result, uint32_t dividendHigh, uint32_t dividendLow,
+	uint32_t divisorHigh, uint32_t divisorLow, uint32_t remainder)
+{
+	uint32_t twiceHigh = (divisorHigh << 1) | (divisorLow >> 31), twiceLow = divisorLow << 1;
+	uint32_t fourHigh = (divisorHigh << 2) | (divisorLow >> 30), fourLow = divisorLow << 2;
+	uint32_t eightHigh = (divisorHigh << 3) | (divisorLow >> 29), eightLow = divisorLow << 3;
+	uint32_t remHigh, remLow, nextHigh, nextLow, digit = 0, quotientHigh = 0;
+	uint32_t lead, topDividend, topDivisor;
+	int32_t zerosDividend, zerosDivisor, count;
+
+	if (divisorHigh & 0xf0000000) {
+		remHigh = dividendHigh;
+		remLow = dividendLow;
+		nextHigh = nextLow = 0;
+		count = 60;
+		if (divisorHigh & 0x80000000)
+			goto once;
+		if (divisorHigh & 0x40000000)
+			goto twice;
+		if (divisorHigh & 0x20000000)
+			goto four;
+		goto eight;
+	}
+
+	lead = dividendHigh ? dividendHigh : dividendLow;
+	zerosDividend = 32;
+	if (lead) {
+		do {
+			zerosDividend -= 4;
+			lead >>= 4;
+		} while (lead);
+	}
+	if (dividendHigh == 0) {
+		topDividend = dividendLow >> ((28 - zerosDividend) & 31);
+		zerosDividend += 32;
+	} else {
+		topDividend = dividendHigh >> ((28 - zerosDividend) & 31);
+	}
+	lead = divisorHigh ? divisorHigh : divisorLow;
+	zerosDivisor = 32;
+	if (lead) {
+		do {
+			zerosDivisor -= 4;
+			lead >>= 4;
+		} while (lead);
+	}
+	if (divisorHigh == 0) {
+		topDivisor = divisorLow >> ((28 - zerosDivisor) & 31);
+		zerosDivisor += 32;
+	} else {
+		topDivisor = divisorHigh >> ((28 - zerosDivisor) & 31);
+	}
+	if (topDividend >= topDivisor)
+		zerosDivisor += 4;
+	count = zerosDividend - zerosDivisor + 64;
+	if (count >= 64) {
+		remHigh = dividendHigh;
+		remLow = dividendLow;
+		goto done;
+	}
+
+	if (count >= 32) {
+		remHigh = 0;
+		if (count >= 33)
+			remHigh = dividendHigh >> ((64 - count) & 31);
+		remLow = dividendHigh << ((count - 32) & 31);
+		if (count >= 33)
+			remLow |= dividendLow >> ((64 - count) & 31);
+		nextHigh = dividendLow << ((count - 32) & 31);
+		nextLow = 0;
+	} else {
+		remLow = 0;
+		if (count != 0)
+			remLow = dividendHigh >> ((32 - count) & 31);
+		nextHigh = dividendHigh << (count & 31);
+		if (count != 0)
+			nextHigh |= dividendLow >> ((32 - count) & 31);
+		remHigh = 0;
+		nextLow = dividendLow << (count & 31);
+	}
+	for (;;) {
+		/* the next digit of the dividend into the remainder */
+		remHigh = (remHigh << 4) | (remLow >> 28);
+		remLow = (remLow << 4) | (nextHigh >> 28);
+		nextHigh = (nextHigh << 4) | (nextLow >> 28);
+		nextLow <<= 4;
+eight:
+		if (remHigh > eightHigh || (remHigh == eightHigh && remLow >= eightLow)) {
+			remHigh -= eightHigh + (remLow < eightLow);
+			remLow -= eightLow;
+			digit |= 8;
+		}
+four:
+		if (remHigh > fourHigh || (remHigh == fourHigh && remLow >= fourLow)) {
+			remHigh -= fourHigh + (remLow < fourLow);
+			remLow -= fourLow;
+			digit |= 4;
+		}
+twice:
+		if (remHigh > twiceHigh || (remHigh == twiceHigh && remLow >= twiceLow)) {
+			remHigh -= twiceHigh + (remLow < twiceLow);
+			remLow -= twiceLow;
+			digit |= 2;
+		}
+once:
+		if (remHigh > divisorHigh || (remHigh == divisorHigh && remLow >= divisorLow)) {
+			remHigh -= divisorHigh + (remLow < divisorLow);
+			remLow -= divisorLow;
+			digit |= 1;
+		}
+		count += 4;
+		if (count == 32) {
+			quotientHigh = digit;
+			digit = 0;
+		}
+		if (count == 64)
+			break;
+		digit <<= 4;
+	}
+done:
+	if (remainder) {
+		result[0] = remLow;
+		result[1] = remHigh;
+	} else {
+		result[0] = digit;
+		result[1] = quotientHigh;
+	}
+}
