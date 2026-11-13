@@ -100,6 +100,115 @@ void avcdecStoreColocated(AvcdecStripe *stripe, AvcdecMotion *motion)
 	}
 }
 
+/*
+ * The colocated 8x8 block's four vectors (8.4.1.2.1), by 4x4 block: under
+ * direct_8x8_inference its corner's for all four
+ */
+static inline void colocatedVectors(const AvcdecColocated *colocated, uint32_t inferred,
+	uint32_t block, AvcdecLanes col[2])
+{
+	if (inferred) {
+		col[0].w[0] = colocated->corners.mv[block];
+		col[0].w[1] = colocated->corners.mv[block];
+		col[1] = col[0];
+		return;
+	}
+	col[0].w[0] = colocated->blocks[block][0];
+	col[0].w[1] = colocated->blocks[block][1];
+	col[1].w[0] = (int32_t)colocated->blocks[block][2] >> COLOCATED_SHIFT;
+	col[1].w[1] = (int32_t)colocated->blocks[block][3] >> COLOCATED_SHIFT;
+}
+
+/*
+ * 0x892e10: an 8x8 block's temporal direct prediction (8.4.1.2.3): list 0's
+ * reference the colocated block's picture, list 1's index 0, the vectors
+ * the colocated ones scaled by the pictures' distances
+ */
+void avcdecDirectTemporal(AvcdecStripe *stripe, AvcdecMotion *motion, uint32_t inferred,
+	uint32_t block)
+{
+	const VideoHelperSlice *slice = stripe->slice;
+	const AvcdecColocated *colocated = stripe->colocated;
+	AvcdecMbState *mb = stripe->mb;
+	AvcdecLanes col[2], l0, l1;
+	int32_t picture, refIdx, scale;
+	uint32_t i, j;
+
+	if (inferred)
+		picture = colocated->corners.pictures[block];
+	else
+		picture = colocated->blocks[block][2] & 31;
+	if (inferred ? picture < 0 : picture == 31) {
+		/* intra: no vector, list 0's index 0 */
+		refIdx = 0;
+		col[0] = lanesZero();
+		col[1] = lanesZero();
+	} else {
+		colocatedVectors(colocated, inferred, block, col);
+		refIdx = slice->refIdxOfPicture[picture];
+	}
+	mb->refIdx.b[4 + block] = 0;
+	mb->refIdx.b[block] = refIdx;
+	motion->refIdx = mb->refIdx;
+	scale = slice->distScaleFactor[refIdx];
+	for (i = 0; i < 2; i++) {
+		for (j = 0; j < 4; j++) {
+			l0.h[j] = (scale * col[i].h[j] + 128) >> 8;
+			l1.h[j] = l0.h[j] - col[i].h[j];
+		}
+		motion->mv[block][2 * i].w[0] = l0.w[0];
+		motion->mv[block][2 * i].w[1] = l1.w[0];
+		motion->mv[block][2 * i + 1].w[0] = l0.w[1];
+		motion->mv[block][2 * i + 1].w[1] = l1.w[1];
+	}
+}
+
+/*
+ * 0x892fb0: an 8x8 block's spatial direct prediction (8.4.1.2.2): the
+ * neighbours' vector (the caller's predictor, for the references in current),
+ * 0 where the reference is none, or index 0 and the colocated block's vector
+ * is within one sample (colZeroFlag). Without direct_8x8_inference current
+ * is left with 2 where the vector is 0.
+ */
+void avcdecDirectSpatial(AvcdecStripe *stripe, AvcdecMotion *motion, uint32_t inferred,
+	uint32_t block)
+{
+	const AvcdecColocated *colocated = stripe->colocated;
+	AvcdecLanes col[2], sub;
+	uint32_t refIdxZero, i, j;
+	uint8_t colZero[4] = { 0, 0, 0, 0 }, zero[8];
+	int32_t x, y;
+
+	if (inferred)
+		refIdxZero = colocated->corners.refIdxZero;
+	else
+		refIdxZero = colocated->blocks[0][3];
+	if ((refIdxZero & 31) >> block & 1 && stripe->slice->colocatedShortTerm) {
+		colocatedVectors(colocated, inferred, block, col);
+		for (j = 0; j < 4; j++) {
+			x = col[j >> 1].h[(j & 1) * 2];
+			y = col[j >> 1].h[(j & 1) * 2 + 1];
+			colZero[j] = (x < 0 ? -x : x) < 2 && (y < 0 ? -y : y) < 2;
+		}
+	}
+	for (i = 0; i < 8; i++)
+		zero[i] = motion->current.b[i] < 0 ||
+			(colZero[i & 3] && motion->current.b[i] == 0);
+	if (inferred) {
+		for (i = 0; i < 8; i++)
+			sub.b[i] = zero[i] ? 0 : motion->predictor.b[i];
+		for (j = 0; j < 4; j++)
+			motion->mv[block][j] = sub;
+		return;
+	}
+	for (i = 0; i < 8; i++)
+		motion->current.b[i] = zero[i] ? 2 : 0;
+	for (j = 0; j < 4; j++) {
+		motion->mv[block][j].w[0] = zero[j] ? 0 : motion->predictor.w[0];
+		motion->mv[block][j].w[1] = zero[4 + j] ? 0 : motion->predictor.w[1];
+	}
+}
+
 /* the median of three vectors, by component */
 static inline AvcdecLanes lanesMedian(AvcdecLanes a, AvcdecLanes b, AvcdecLanes c)
 {

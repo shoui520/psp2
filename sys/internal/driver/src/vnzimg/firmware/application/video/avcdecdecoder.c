@@ -1702,7 +1702,8 @@ static void stripeOpen(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
 	stripe->vectors = vectors + (mode - count);
 	stripe->filter = filters + (mode - count);
 	if ((stripe->sliceHeader & AVC_SLICE_TYPE) == AVC_SLICE_B)
-		stripe->colocated = stripe->slice->colocated + (x + row * width) * 64;
+		stripe->colocated = (const AvcdecColocated *)stripe->slice->colocated +
+			x + row * width;
 	stripe->top = (AvcdecTop *)vnzPublicOpenPrivate((uint32_t)stripe->top,
 		count * sizeof(AvcdecTop) + sizeof(AvcdecTop));
 	stripe->topRight = stripe->top + 1;
@@ -1886,7 +1887,7 @@ static void mbStore(AvcdecStripe *stripe)
 	stripe->topRight++;
 	if (stripe->colocatedOut)
 		stripe->colocatedOut++;
-	stripe->colocated += sizeof(AvcdecColocated);
+	stripe->colocated++;
 }
 
 /* an 8x8 block's sub-macroblock partitions predicted: a kernel each */

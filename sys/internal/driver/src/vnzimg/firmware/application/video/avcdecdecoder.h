@@ -302,7 +302,7 @@ typedef struct AvcdecStripe {
 	AvcdecRowState *rowState;
 	uint32_t reserved3[2];
 	AvcdecColocated *colocatedOut;	/* the picture's motion, for its B pictures; 0 none */
-	uint32_t colocated;		/* a B slice's: RefPicList1[0]'s motion */
+	const AvcdecColocated *colocated;	/* a B slice's: RefPicList1[0]'s motion */
 	uint8_t leftAvailable;
 	uint8_t topAvailable;
 	uint8_t topRightAvailable;
