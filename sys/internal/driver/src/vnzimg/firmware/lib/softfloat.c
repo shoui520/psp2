@@ -1689,3 +1689,21 @@ sign:
 		mantissa |= D_SIGN;
 	result->high = mantissa;
 }
+
+/*
+ * The compiler's names for these routines. The core's ABI passes a 64-bit
+ * value by address and returns one through an address in $1, so each routine
+ * above is the helper the compiler calls for the C's 64-bit and double
+ * operators, under the helper's name too.
+ */
+long long __divdi3(long long a, long long b) __attribute__((alias("divide64")));
+unsigned long long __udivdi3(unsigned long long a, unsigned long long b)
+	__attribute__((alias("divideUnsignedWords64")));
+long long __moddi3(long long a, long long b) __attribute__((alias("remainder64")));
+unsigned long long __umoddi3(unsigned long long a, unsigned long long b)
+	__attribute__((alias("remainderUnsigned64")));
+double __adddf3(double a, double b) __attribute__((alias("addDouble")));
+double __muldf3(double a, double b) __attribute__((alias("multiplyDouble")));
+double __divdf3(double a, double b) __attribute__((alias("divideDouble")));
+int __fixdfsi(double a) __attribute__((alias("doubleToInt")));
+double __floatsidf(int a) __attribute__((alias("intToDouble")));
