@@ -154,4 +154,4 @@ bootClearRegions:
 	.section .boot.crash, "aw"
 	.global	bootCrashRecords
 bootCrashRecords:
-	.space	16 * 4
+	.space	BOOT_CRASH_RECORD_SIZE * 4

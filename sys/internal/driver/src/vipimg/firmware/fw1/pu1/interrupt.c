@@ -17,15 +17,13 @@ const VipOverlayCopy g_vectorCopy = {
 static uint32_t g_mailboxValue;
 
 /* The ARM side wrote the mailbox: writing the word back acknowledges it. */
-void acknowledgeMailbox(uint32_t argument)
+void acknowledgeMailbox(void)
 {
-	(void)argument;
 	VIP_MAILBOX->debugSend[0] = VIP_MAILBOX->debugSend[0];
 	g_mailboxValue |= VIP_MAILBOX->debugSend[0];
 }
 
-void (*g_interruptHandlers[INTERRUPT_SLOTS])(uint32_t argument) VIP_LRAM_DATA = {
-	[INTERRUPT_SLOT_DMA] = dmaComplete,
-	[INTERRUPT_SLOT_READ_STREAM] = readStreamInterrupt,
-	[INTERRUPT_SLOT_MAILBOX] = acknowledgeMailbox,
-};
+/* what dmaComplete calls after a request's callback: nothing */
+void dmaCallbackReturned(void)
+{
+}

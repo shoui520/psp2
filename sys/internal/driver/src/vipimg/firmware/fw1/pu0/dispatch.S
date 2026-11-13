@@ -1,33 +1,32 @@
 /*
- * fw1 runtime: the common path of every interrupt, from local RAM.
+ * PU0: the common path of its interrupts but DMA completion, from local RAM.
  */
 #include "interrupt.h"
 
 	.section .lram.text, "ax"
 
 /* the frame: the stub's $1 above it */
-#define FRAME		84
+#define FRAME		76
 #define SAVED_LP	0
 #define SAVED_SAR	4
 #define SAVED_RPB	8
 #define SAVED_RPE	12
 #define SAVED_RPC	16
-#define SAVED_HI	20
-#define SAVED_LO	24
-#define SAVED_GP	28
-#define SAVED_TP	32
-#define SAVED_R(n)	(80 - 4 * (n))	/* $0, $2 to $12 */
+#define SAVED_GP	20
+#define SAVED_TP	24
+#define SAVED_R0	72
+#define SAVED_R(n)	(76 - 4 * (n))	/* $2 to $12 */
 #define SAVED_R1	FRAME
 
 /*
- * Save the interrupted context, acknowledge the interrupt if the code says so,
- * call the handler of the code's slot, if any, with the code's argument, and
- * return to the interrupted code.
+ * Save the interrupted context ($hi and $lo excepted), acknowledge the
+ * interrupt if the code says so, call the handler of the code's slot, if any,
+ * with the code's argument, and return to the interrupted code.
  */
 	.global	interruptDispatch
 interruptDispatch:
 	add3	$sp, $sp, -FRAME
-	sw	$0, SAVED_R(0)($sp)
+	sw	$0, SAVED_R0($sp)
 	sw	$2, SAVED_R(2)($sp)
 	sw	$3, SAVED_R(3)($sp)
 	sw	$4, SAVED_R(4)($sp)
@@ -51,10 +50,6 @@ interruptDispatch:
 	sw	$0, SAVED_RPE($sp)
 	ldc	$0, $rpc
 	sw	$0, SAVED_RPC($sp)
-	ldc	$0, $hi
-	sw	$0, SAVED_HI($sp)
-	ldc	$0, $lo
-	sw	$0, SAVED_LO($sp)
 
 	and3	$2, $1, 0x7f
 	and3	$0, $1, INTERRUPT_ACKNOWLEDGE
@@ -82,11 +77,7 @@ interruptDispatch:
 	stc	$0, $rpe
 	lw	$0, SAVED_RPC($sp)
 	stc	$0, $rpc
-	lw	$0, SAVED_HI($sp)
-	stc	$0, $hi
-	lw	$0, SAVED_LO($sp)
-	stc	$0, $lo
-	lw	$0, SAVED_R(0)($sp)
+	lw	$0, SAVED_R0($sp)
 	lw	$1, SAVED_R1($sp)
 	lw	$2, SAVED_R(2)($sp)
 	lw	$3, SAVED_R(3)($sp)

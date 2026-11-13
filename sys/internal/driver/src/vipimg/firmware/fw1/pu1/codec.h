@@ -445,6 +445,8 @@ void clearMemoryQuery(void);
 void enableDecoderClocks(void);
 void gateDecoderClocks(void);
 void setupInterrupt(uint32_t interrupt);
+void interrupt5(void) __attribute__((interrupt));
+void interrupt8(void) __attribute__((interrupt));
 
 /* decoder.c */
 void decoderTask(uint32_t point);

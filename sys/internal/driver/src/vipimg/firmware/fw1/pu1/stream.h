@@ -28,4 +28,4 @@ typedef struct VipReadStream {
 
 extern VipReadStream g_readStream;
 
-void readStreamInterrupt(uint32_t argument);
+void readStreamInterrupt(void);

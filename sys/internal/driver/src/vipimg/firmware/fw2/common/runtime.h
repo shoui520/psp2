@@ -42,58 +42,7 @@
 /* the interrupts FW2 uses */
 #define VIP_INTERRUPT_TIMER	4
 
-#ifdef __ASSEMBLER__
-
-/*
- * An interrupt whose handler is C: save what C may change, call it, restore.
- * The handler acknowledges the interrupt itself.
- */
-	.macro	interruptEntry name, handler
-	.global	\name
-\name:
-	add3	$sp, $sp, -56
-	sw	$tp, 48($sp)
-	sw	$12, 44($sp)
-	sw	$11, 40($sp)
-	sw	$10, 36($sp)
-	sw	$9, 32($sp)
-	sw	$4, 28($sp)
-	sw	$3, 24($sp)
-	sw	$2, 20($sp)
-	sw	$1, 16($sp)
-	ldc	$1, $lp
-	sw	$0, 12($sp)
-	sw	$1, 52($sp)
-	ldc	$2, $rpb
-	ldc	$3, $rpe
-	sw	$2, 8($sp)
-	sw	$3, 4($sp)
-	ldc	$4, $rpc
-	sw	$4, 0($sp)
-	bsr	\handler
-	lw	$1, 52($sp)
-	lw	$2, 8($sp)
-	lw	$3, 4($sp)
-	stc	$2, $rpb
-	lw	$4, 0($sp)
-	lw	$0, 12($sp)
-	lw	$2, 20($sp)
-	stc	$3, $rpe
-	lw	$3, 24($sp)
-	lw	$9, 32($sp)
-	lw	$10, 36($sp)
-	lw	$11, 40($sp)
-	lw	$12, 44($sp)
-	lw	$tp, 48($sp)
-	stc	$4, $rpc
-	lw	$4, 28($sp)
-	stc	$1, $lp
-	lw	$1, 16($sp)
-	add3	$sp, $sp, 56
-	reti
-	.endm
-
-#else /* !__ASSEMBLER__ */
+#ifndef __ASSEMBLER__
 
 /*
  * A command block, one per core, in the image. The ARM side writes a command and

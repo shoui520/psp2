@@ -36,7 +36,7 @@
  * the task code at 0x570 and 0x170)
  */
 #if defined(VIP_PROGRAM_fw1_pu0)
-#define VIP_TASK_CODE		(VIP_LOCAL_RAM + 0x600)
+#define VIP_TASK_CODE		(VIP_LOCAL_RAM + 0x640)
 #else
 #define VIP_TASK_CODE		(VIP_LOCAL_RAM + 0x230)
 #endif

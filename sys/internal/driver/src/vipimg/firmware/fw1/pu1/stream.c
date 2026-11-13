@@ -143,7 +143,7 @@ STREAM_TEXT void readStreamInterrupt(void)
  * from its segments (whole 8-byte units) and queue it. Past the end of the stream
  * the half is only marked ready.
  */
-STREAM_TEXT void readStreamInterrupt(uint32_t argument)
+STREAM_TEXT void readStreamInterrupt(void)
 {
 	VipReadStream *stream = &g_readStream;
 	const VipRingSegment *segment = stream->segments;
@@ -151,7 +151,6 @@ STREAM_TEXT void readStreamInterrupt(uint32_t argument)
 	uint32_t enable = vipReadControlBus(VIP_CB_INTERRUPT_ENABLE);
 	uint32_t filled = 0, count = 0, i;
 
-	(void)argument;
 	for (i = 0; i < stream->segmentCount; i++, segment++) {
 		uint32_t end = segment->start + segment->size;
 		uint32_t cursor = stream->cursor;

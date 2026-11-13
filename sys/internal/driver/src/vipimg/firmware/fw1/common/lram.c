@@ -19,17 +19,25 @@ VIP_LRAM_TEXT void waitForDebugger(uint32_t result, uint32_t state)
 #endif
 
 /*
- * A request completed (the interrupt, acknowledged on entry): start the one the
- * engine holds, retire the completed one, give the engine the next one waiting,
- * and run the completed one's callback.
+ * A request completed: acknowledge the interrupt (FW2's entry does), start the one
+ * the engine holds, retire the completed one, give the engine the next one
+ * waiting, and run the completed one's callback (on PU1, then the hook after it).
  */
+#ifdef VIP_FW2
 VIP_LRAM_TEXT void dmaComplete(uint32_t argument)
+#else
+VIP_LRAM_TEXT void dmaComplete(void)
+#endif
 {
 	const VipDmaRequest *request;
 	void (*callback)(void);
 	uint32_t count, head;
 
+#ifdef VIP_FW2
 	(void)argument;
+#else
+	vipAcknowledgeInterrupt(VIP_INTERRUPT_DMA);
+#endif
 	count = g_dmaQueue.count;
 	if (count >= 2)
 		vipWriteControlBus(VIP_CB_DMA_BUSY, 1);
@@ -49,6 +57,10 @@ VIP_LRAM_TEXT void dmaComplete(uint32_t argument)
 		vipWriteControlBus(VIP_CB_DMA_PARAMETER0, request->parameters[0]);
 		vipWriteControlBus(VIP_CB_DMA_PARAMETER1, request->parameters[1]);
 	}
-	if (callback)
+	if (callback) {
 		callback();
+#if defined(VIP_PROGRAM_fw1_pu1)
+		dmaCallbackReturned();
+#endif
+	}
 }

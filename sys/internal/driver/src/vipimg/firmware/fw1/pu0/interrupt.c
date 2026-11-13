@@ -33,7 +33,6 @@ void acknowledgeMailbox(uint32_t argument)
 }
 
 void (*g_interruptHandlers[INTERRUPT_SLOTS])(uint32_t argument) VIP_LRAM_DATA = {
-	[INTERRUPT_SLOT_DMA] = dmaComplete,
 	[INTERRUPT_SLOT_DECODER] = decoderInterrupt,
 	[INTERRUPT_SLOT_READ_STREAM] = readStreamInterrupt,
 	[INTERRUPT_SLOT_8] = ignoreInterrupt8,

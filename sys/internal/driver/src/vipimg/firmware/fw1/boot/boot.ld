@@ -10,7 +10,8 @@ SECTIONS
 	.boot.text : AT(0x800000 + ADDR(.boot.text)) { *(.boot.text) }
 	ASSERT(. <= 0x200, "fw1's boot code overruns the entry table")
 	.boot.entries 0x200 : AT(0x800200) { *(.boot.entries) }
-	.boot.crash ALIGN(8) : AT(0x800000 + ADDR(.boot.crash)) { *(.boot.crash) }
+	/* at BOOT_CRASH_RECORDS (boot.h) */
+	.boot.crash 0x380 : AT(0x800380) { *(.boot.crash) }
 	ASSERT(. <= 0x1000, "fw1's boot block overruns PU0")
 
 	/DISCARD/ : { *(.comment) }

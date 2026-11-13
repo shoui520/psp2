@@ -142,3 +142,14 @@ void setupInterrupt(uint32_t interrupt)
 		vipReadControlBus(VIP_CB_INTERRUPT_ENABLE) | bit);
 	mep_ei();
 }
+
+/* interrupts 5 and 8, the units': only acknowledged */
+void interrupt5(void)
+{
+	vipAcknowledgeInterrupt(VIP_INTERRUPT_DECODER);
+}
+
+void interrupt8(void)
+{
+	vipAcknowledgeInterrupt(VIP_INTERRUPT_8);
+}

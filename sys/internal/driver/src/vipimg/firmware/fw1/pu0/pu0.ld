@@ -3,14 +3,14 @@
  * task 1's overlays, whose images follow it in DRAM.
  *
  * Local RAM: interrupt vectors to 0x90, the runtime's code from 0x90, task 1's
- * code at VIP_TASK_CODE (0x600); the task stacks from 0x2000, task 1's data
+ * code at VIP_TASK_CODE (0x640); the task stacks from 0x2000, task 1's data
  * from 0x2400, the runtime's data from 0x2c50 (TASK_DEMUX_DATA_SIZE).
  */
 MEMORY
 {
 	image (rwx) : ORIGIN = 0x801000, LENGTH = 0x1f000
-	code (rwx) : ORIGIN = 0x200090, LENGTH = 0x600 - 0x90
-	overlay (rwx) : ORIGIN = 0x200600, LENGTH = 0x1000 - 0x600
+	code (rwx) : ORIGIN = 0x200090, LENGTH = 0x640 - 0x90
+	overlay (rwx) : ORIGIN = 0x200640, LENGTH = 0x1000 - 0x640
 	data (rw) : ORIGIN = 0x202400, LENGTH = 0x850
 	runtime (rw) : ORIGIN = 0x202c50, LENGTH = 0x3b0
 }
