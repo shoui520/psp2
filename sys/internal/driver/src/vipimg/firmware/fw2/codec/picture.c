@@ -152,9 +152,9 @@ static const uint8_t *scalingList8x8(const VipSps *sps, const VipPps *pps, uint3
 
 /*
  * List the scaling lists the units take in g_codecDma.scaling: the PPS's (pps not
- * NULL) or the SPS's. The firmware has the two as two functions.
+ * NULL) or the SPS's. Built into the two below, one for each.
  */
-static uint32_t listScalingLists(const VipSps *sps, const VipPps *pps)
+static inline uint32_t listScalingLists(const VipSps *sps, const VipPps *pps)
 {
 	VipCodecDma *dma = &g_codecDma;
 	uint32_t kind, local, i, n = 0;
@@ -170,6 +170,19 @@ static uint32_t listScalingLists(const VipSps *sps, const VipPps *pps)
 		dma->scaling[n++].localLength = (local + 3 * SCALING_4X4) << 16 | SCALING_8X8;
 	}
 	return (uint32_t)dma->scaling << 16 | sizeof(dma->scaling);
+}
+
+/* the PPS's scaling lists, falling back to the SPS's */
+static __attribute__((noinline)) uint32_t listPpsScalingLists(const VipPps *pps,
+	const VipSps *sps)
+{
+	return listScalingLists(sps, pps);
+}
+
+/* the SPS's scaling lists */
+static __attribute__((noinline)) uint32_t listSpsScalingLists(const VipSps *sps)
+{
+	return listScalingLists(sps, NULL);
 }
 
 /* List a fill of the first count of g_codecDma.fill's targets, size bytes each. */
@@ -213,11 +226,11 @@ static void loadScalingLists(void)
 		return;
 	}
 	if (pps->scalingMatrixPresent) {
-		list = listScalingLists(sps, pps);
+		list = listPpsScalingLists(pps, sps);
 		vipWriteControlBus(VIP_CB_SCALING_MATRIX, 1);
 		runList(SCALING_DMA, list, 0);
 	} else if (sps->scalingMatrixPresent) {
-		list = listScalingLists(sps, NULL);
+		list = listSpsScalingLists(sps);
 		vipWriteControlBus(VIP_CB_SCALING_MATRIX, 1);
 		runList(SCALING_DMA, list, 0);
 	} else {

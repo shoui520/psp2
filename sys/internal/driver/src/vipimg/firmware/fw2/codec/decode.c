@@ -1,8 +1,8 @@
 /*
  * FW2: the decode's start, and the concealment of a field whose pair did not
  * come, PU1's (fw1/pu1/decode.c) changed. A restart drops what is unread of both
- * rings PU0 writes. FW2 keeps after takeMotionData a function nothing calls (it
- * counts a drop and skips both rings to their writers); it is not written.
+ * rings PU0 writes. FW2 keeps PU1's dropOverflowedInput (fw1/pu1/lookahead.c)
+ * here, where nothing calls it.
  */
 #include "codec.h"
 
@@ -12,6 +12,25 @@
 #define CONCEAL_TOP_FIELD	0x3fffb8	/* setupChannels' PICTURE_FIELD */
 #define CONCEAL_BOTTOM_FIELD	(CONCEAL_TOP_FIELD + VIP_BOTTOM_FIELD_OFFSET)
 #define CONCEAL_COLOUR		0x808080	/* grey: Y << 16 | Cb << 8 | Cr */
+
+/*
+ * PU1's: the records ran out before the picture's end. When PU0 overflowed a
+ * ring (its writer state), what is unread is dropped: -1; otherwise 0. Uncalled.
+ */
+VIP_UNCALLED static int dropOverflowedInput(void)
+{
+	if (g_pictureCount)
+		g_underrunCount++;
+	if (!getRingWriterState(g_ringHandles[VIP_RING_RECORDS]) &&
+	    !getRingWriterState(g_ringHandles[VIP_RING_SLICES]))
+		return 0;
+	while (ringSkipToWriter(g_ringHandles[VIP_RING_RECORDS]))
+		;
+	while (ringSkipToWriter(g_ringHandles[VIP_RING_SLICES]))
+		;
+	g_currentBuffer = NULL;
+	return -1;
+}
 
 /*
  * A decode begins: take the decoder's rings, work memory and frame stores. When

@@ -47,7 +47,7 @@ fw2-parser1 := $(wildcard fw2/parser1/*.c) $(fw2-parser)
 
 # FW2's codec, fw1's PU1 decoder made to serve contexts, and the PU1 code they share
 fw2-codec := $(wildcard fw2/codec/*.c fw2/codec/*.S) \
-	fw1/common/memory.c fw1/pu1/parameters.c fw1/pu1/scaling.c fw1/pu1/order.c \
+	fw1/common/memory.c fw1/common/divide.c fw1/pu1/parameters.c fw1/pu1/scaling.c fw1/pu1/order.c \
 	fw1/pu1/lists.c fw1/pu1/dpb.c fw1/pu1/direct.c fw1/pu1/loop.c fw1/pu1/sei.c fw1/pu1/timing.c fw1/pu1/stream.c
 
 PROGRAMS := fw1-boot fw1-pu0 fw1-pu1 fw2-boot fw2-runtime fw2-parser0 \
@@ -92,7 +92,7 @@ fw2-parser1-script := fw2/parser1/parser1.ld
 fw2-parser1-uses := $(O)/fw2-base.elf
 fw2-codec-link := $(call objs,fw2-codec)
 fw2-codec-script := fw2/codec/codec.ld
-fw2-codec-uses := $(O)/fw2-base.elf
+fw2-codec-uses := $(O)/fw2-base-codec.elf
 fw2-records-link := $(call objs,fw2-records)
 fw2-records-script := fw2/boot/programs.ld
 fw2-records-uses := $(O)/fw2-parser0.sym $(O)/fw2-parser1.sym $(O)/fw2-codec.sym
@@ -119,6 +119,13 @@ $(O)/$(1).sym: $(O)/$(1).elf
 	$$(OBJCOPY) -S $(addprefix -K ,$($(1)-gives)) $$< $$@
 endef
 $(foreach l,$(LINKS),$(eval $(call link,$(l))))
+
+# The codec links its own copy of the compiler's runtime routines (divide.c), as
+# the original does: it takes the runtime's addresses without the runtime's copy.
+RUNTIME_ROUTINES := __udivsi3 __umodsi3 __divsi3 __modsi3 __udivdi3 __umoddi3 \
+	__divdi3 __moddi3 __mulsi3 __muldi3
+$(O)/fw2-base-codec.elf: $(O)/fw2-base.elf
+	$(OBJCOPY) $(addprefix -N ,$(RUNTIME_ROUTINES)) $< $@
 
 $(O)/vipimg.bin: pack.py $(foreach l,$(LINKS),$(O)/$(l).elf)
 	python3 pack.py $@ --fw1 $(O)/fw1-boot.elf $(O)/fw1-pu0.elf $(O)/fw1-pu1.elf \

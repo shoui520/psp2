@@ -177,6 +177,12 @@ void clearUnitState(void)
 	clearUnitRam(VIP_UNIT_SLICE_STATE, VIP_UNIT_SLICE_STATE_SIZE);
 }
 
+/* the units' RAM below the implicit weights; uncalled */
+VIP_UNCALLED static void clearUnusedState(void)
+{
+	clearUnitRam(VIP_UNIT_UNUSED_STATE, VIP_UNIT_UNUSED_STATE_SIZE);
+}
+
 static void clearOpenState(void)
 {
 	clearUnitRam(VIP_UNIT_OPEN_STATE, VIP_UNIT_OPEN_STATE_SIZE);

@@ -5,8 +5,8 @@
  * than the standard's in places noted where they are, the output of the decoded
  * pictures to the output ring, and the picture numbers (8.2.4.1). FW2 hands its
  * pictures out through command.c (handOutPicture, bumpPictures, outputAllPictures);
- * it keeps PU1's bumpPictures and outputAllPictures, unreachable, and they are not
- * written for it. Its concealment fills macroblocks as PU1 does.
+ * it keeps PU1's bumpPictures and outputAllPictures, uncalled (pu1BumpPictures,
+ * pu1OutputAllPictures). Its concealment fills macroblocks as PU1 does.
  */
 #ifdef VIP_FW2
 #include "../../fw2/codec/codec.h"
@@ -409,10 +409,15 @@ void outputPicture(VipPictureBuffer *buffer)
 #endif
 }
 
-#ifndef VIP_FW2
-
-/* Give every picture not yet shown to the output ring, in output order. */
+/*
+ * Give every picture not yet shown to the output ring, in output order. FW2 has
+ * command.c's; it carries this one uncalled.
+ */
+#ifdef VIP_FW2
+VIP_UNCALLED static void pu1OutputAllPictures(void)
+#else
 void outputAllPictures(void)
+#endif
 {
 	VipPictureBuffer *buffer;
 	int32_t i;
@@ -424,7 +429,6 @@ void outputAllPictures(void)
 	}
 	g_dpbCount = 0;
 }
-#endif
 
 /*
  * 8.2.5.1: mark the current picture. -1 when there are more reference frames
@@ -495,12 +499,15 @@ int markReference(void)
 	return 0;
 }
 
-#ifndef VIP_FW2
 /*
  * C.4.5.3: with the buffer full, output the pictures up to the first one that is
- * no reference, in output order.
+ * no reference, in output order. FW2 has command.c's; it carries this one uncalled.
  */
+#ifdef VIP_FW2
+VIP_UNCALLED static void pu1BumpPictures(void)
+#else
 void bumpPictures(void)
+#endif
 {
 	VipPictureBuffer *buffer;
 	uint32_t i;
@@ -520,7 +527,6 @@ void bumpPictures(void)
 		return;
 	}
 }
-#endif
 
 /*
  * The current picture joins the buffer: in output order by its PicOrderCnt among

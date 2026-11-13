@@ -154,6 +154,8 @@
 #define VIP_UNIT_OPEN_STATE_SIZE	0xc0
 #define VIP_UNIT_CODEC_STATE		0x3100	/* FW2: cleared at the codec's open */
 #define VIP_UNIT_CODEC_STATE_SIZE	0x120
+#define VIP_UNIT_UNUSED_STATE		0x4e00	/* FW2: only an uncalled function clears it */
+#define VIP_UNIT_UNUSED_STATE_SIZE	0x80
 #define VIP_UNIT_MACROBLOCK_SLOTS	0x3a00	/* by VIP_CB_MACROBLOCK_SLOT */
 #define VIP_UNIT_MACROBLOCK_SLOT_SIZE	0x500
 #define VIP_UNIT_SLOT_FILL		0x140	/* in a slot: fillMacroblocks' colour */
