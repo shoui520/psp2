@@ -1,5 +1,5 @@
 /*
- * The AVC decoder's motion, deblocking and prediction kernels (0x892a60-0x898f80): VLIW
+ * The AVC decoder's motion, deblocking, prediction and residual kernels (0x892a60-0x89cfe0): VLIW
  * code the stripes' jobs call, handing them their state in the IVC2
  * coprocessor's registers (here an AvcdecMotion, AvcdecLanes). Each IVC2
  * operation is written as what it does to its lanes.
@@ -2172,22 +2172,12 @@ void avcdecIntra16Plane(const uint8_t *left, const AvcdecEdges *edges, uint32_t 
  * beta.
  */
 
-/* alpha' (Table 8-16) by indexA */
-static const uint8_t deblockAlpha[52] = {			/* 0x8f7478 */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 5, 6, 7, 8, 9, 10, 12, 13,
-	15, 17, 20, 22, 25, 28, 32, 36, 40, 45, 50, 56, 63, 71, 80, 90, 101, 113, 127, 144,
-	162, 182, 203, 226, 255, 255,
-};
-
-/* beta' by indexB */
-static const uint8_t deblockBeta[52] = {			/* 0x8f74ac */
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4,
-	6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17,
-	18, 18,
-};
-
-/* tC0' (Table 8-17) by bS and indexA */
-static const uint8_t deblockTc0[4][52] = {			/* 0x8f73a8 */
+/*
+ * The deblocking's tables (0x8f73a8): tC0' by bS (Table 8-17), then alpha'
+ * (Table 8-16) and beta' by indexA and indexB. A bS of 4 read as a tC0 row
+ * is alpha's.
+ */
+static const uint8_t deblockTables[6][52] = {
 	{ 0 },
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
 	  1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6, 6, 7, 8, 9, 10, 11, 13 },
@@ -2195,7 +2185,16 @@ static const uint8_t deblockTc0[4][52] = {			/* 0x8f73a8 */
 	  1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 7, 8, 8, 10, 11, 12, 13, 15, 17 },
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	  1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6, 6, 7, 8, 9, 10, 11, 13, 14, 16, 18, 20, 23, 25 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 5, 6, 7, 8, 9, 10, 12, 13,
+	  15, 17, 20, 22, 25, 28, 32, 36, 40, 45, 50, 56, 63, 71, 80, 90, 101, 113, 127, 144,
+	  162, 182, 203, 226, 255, 255 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4,
+	  6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17,
+	  18, 18 },
 };
+
+#define DEBLOCK_ALPHA	4
+#define DEBLOCK_BETA	5
 
 static inline int32_t absolute(int32_t value)
 {
@@ -2216,7 +2215,7 @@ static uint32_t filterLine(uint8_t *const p[4], uint8_t *const q[4], uint32_t of
 {
 	int32_t p3 = p[0][offset], p2 = p[1][offset], p1 = p[2][offset], p0 = p[3][offset];
 	int32_t q0 = q[0][offset], q1 = q[1][offset], q2 = q[2][offset], q3 = q[3][offset];
-	int32_t alpha = deblockAlpha[indexA], beta = deblockBeta[indexB], tc0, tc, delta;
+	int32_t alpha = deblockTables[DEBLOCK_ALPHA][indexA], beta = deblockTables[DEBLOCK_BETA][indexB], tc0, tc, delta;
 	uint32_t ap, aq;
 
 	if (!bS || absolute(p0 - q0) >= alpha || absolute(p1 - p0) >= beta ||
@@ -2225,7 +2224,7 @@ static uint32_t filterLine(uint8_t *const p[4], uint8_t *const q[4], uint32_t of
 	ap = absolute(p2 - p0) < beta;
 	aq = absolute(q2 - q0) < beta;
 	if (bS < 4) {
-		tc0 = deblockTc0[bS][indexA];
+		tc0 = deblockTables[bS][indexA];
 		tc = tc0 + ap + aq;
 		delta = clip3(-tc, tc, (((q0 - p0) << 2) + (p1 - q1) + 4) >> 3);
 		p[3][offset] = clipSample(p0 + delta);
@@ -2406,4 +2405,927 @@ void avcdecDeblockInnerLast(AvcdecDeblock *deblock, uint32_t indexA, uint32_t in
 	edgeRows(deblock, p, 0, 8);
 	edgeRows(deblock, q, 4, 8);
 	filterEdge(p, q, indexA, indexB, strengths);
+}
+
+/*
+ * The chroma job's kernels (0x89a760-0x89cfe0). The chroma frame is tiled
+ * by 8x8 blocks, a block's Cb then its Cr (128 bytes); a fetch reads its
+ * rows from two streams like the luma's (funnel()), the next tile's when
+ * the window crosses it, and its edge kernels repeat the picture's edge
+ * samples over what lies outside it.
+ */
+
+/* the bilinear weights by the vector's fraction (x * 8 + y): A, B, C, D (8.4.2.2.2) */
+static const uint8_t chromaWeights[64][4] = {			/* 0x91b368 */
+	{ 64, 0, 0, 0 }, { 56, 0, 8, 0 }, { 48, 0, 16, 0 }, { 40, 0, 24, 0 },
+	{ 32, 0, 32, 0 }, { 24, 0, 40, 0 }, { 16, 0, 48, 0 }, { 8, 0, 56, 0 },
+	{ 56, 8, 0, 0 }, { 49, 7, 7, 1 }, { 42, 6, 14, 2 }, { 35, 5, 21, 3 },
+	{ 28, 4, 28, 4 }, { 21, 3, 35, 5 }, { 14, 2, 42, 6 }, { 7, 1, 49, 7 },
+	{ 48, 16, 0, 0 }, { 42, 14, 6, 2 }, { 36, 12, 12, 4 }, { 30, 10, 18, 6 },
+	{ 24, 8, 24, 8 }, { 18, 6, 30, 10 }, { 12, 4, 36, 12 }, { 6, 2, 42, 14 },
+	{ 40, 24, 0, 0 }, { 35, 21, 5, 3 }, { 30, 18, 10, 6 }, { 25, 15, 15, 9 },
+	{ 20, 12, 20, 12 }, { 15, 9, 25, 15 }, { 10, 6, 30, 18 }, { 5, 3, 35, 21 },
+	{ 32, 32, 0, 0 }, { 28, 28, 4, 4 }, { 24, 24, 8, 8 }, { 20, 20, 12, 12 },
+	{ 16, 16, 16, 16 }, { 12, 12, 20, 20 }, { 8, 8, 24, 24 }, { 4, 4, 28, 28 },
+	{ 24, 40, 0, 0 }, { 21, 35, 3, 5 }, { 18, 30, 6, 10 }, { 15, 25, 9, 15 },
+	{ 12, 20, 12, 20 }, { 9, 15, 15, 25 }, { 6, 10, 18, 30 }, { 3, 5, 21, 35 },
+	{ 16, 48, 0, 0 }, { 14, 42, 2, 6 }, { 12, 36, 4, 12 }, { 10, 30, 6, 18 },
+	{ 8, 24, 8, 24 }, { 6, 18, 10, 30 }, { 4, 12, 12, 36 }, { 2, 6, 14, 42 },
+	{ 8, 56, 0, 0 }, { 7, 49, 1, 7 }, { 6, 42, 2, 14 }, { 5, 35, 3, 21 },
+	{ 4, 28, 4, 28 }, { 3, 21, 5, 35 }, { 2, 14, 6, 42 }, { 1, 7, 7, 49 },
+};
+
+/* rows of eight samples of both components (Cr 64 on) from two streams */
+static void chromaRows(AvcdecChromaInter *inter, uint32_t count, const uint8_t *address,
+	const uint8_t *next, uint32_t y, uint32_t step, uint32_t shift)
+{
+	uint32_t row, advance;
+
+	for (row = 0; row < count; row++) {
+		funnel(inter->window[0][row], address, next, shift);
+		funnel(inter->window[1][row], address + 64, next + 64, shift);
+		advance = ((y + row + 1) & 7) ? 8 : 8 + step;
+		address += advance;
+		next += advance;
+	}
+}
+
+/* the picture's left edge `shift` columns in: its first column repeated before it */
+static void chromaEdgeLeft(AvcdecChromaInter *inter, uint32_t count, int32_t shift)
+{
+	uint32_t component, row;
+	int32_t column;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < count; row++)
+			for (column = 7; column >= 0; column--)
+				inter->window[component][row][column] =
+					inter->window[component][row][column >= shift ?
+						column - shift : 0];
+}
+
+/* the right edge, the picture's last column the window's eighth: repeated past it */
+static void chromaEdgeRight(AvcdecChromaInter *inter, uint32_t count, int32_t shift)
+{
+	uint32_t component, row;
+	int32_t column;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < count; row++)
+			for (column = 0; column < 8; column++)
+				inter->window[component][row][column] =
+					inter->window[component][row][column + shift < 7 ?
+						column + shift : 7];
+}
+
+static void chromaEdgeTop(AvcdecChromaInter *inter, int32_t count, int32_t shift)
+{
+	uint32_t component, column;
+	int32_t row;
+
+	for (component = 0; component < 2; component++)
+		for (row = count - 1; row >= 0; row--)
+			for (column = 0; column < 8; column++)
+				inter->window[component][row][column] =
+					inter->window[component][row >= shift ? row - shift : 0][column];
+}
+
+static void chromaEdgeBottom(AvcdecChromaInter *inter, int32_t count, int32_t shift)
+{
+	uint32_t component, column;
+	int32_t row, last = count - 1;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < count; row++)
+			for (column = 0; column < 8; column++)
+				inter->window[component][row][column] =
+					inter->window[component][row + shift < last ?
+						row + shift : last][column];
+}
+
+/* 0x89a760: an 8x8 luma block's: five rows */
+void avcdecChromaLoad(AvcdecChromaInter *inter, const uint8_t *address, const uint8_t *next,
+	uint32_t y, uint32_t step, uint32_t shift)
+{
+	chromaRows(inter, 5, address, next, y, step, shift);
+}
+
+/* 0x89a998 */
+void avcdecChromaEdgeLeft(AvcdecChromaInter *inter, int32_t shift)
+{
+	chromaEdgeLeft(inter, 5, shift);
+}
+
+/* 0x89a9e8 */
+void avcdecChromaEdgeRight(AvcdecChromaInter *inter, int32_t shift)
+{
+	chromaEdgeRight(inter, 5, shift);
+}
+
+/* 0x89aa38: the window's first row `-y` rows above the picture's */
+void avcdecChromaEdgeTop(AvcdecChromaInter *inter, int32_t y)
+{
+	chromaEdgeTop(inter, 5, -y);
+}
+
+/* 0x89aae8 */
+void avcdecChromaEdgeBottom(AvcdecChromaInter *inter, int32_t below)
+{
+	chromaEdgeBottom(inter, 5, below);
+}
+
+/* 0x89ab80: a 4x4 luma block's: three rows */
+void avcdecChromaLoadSmall(AvcdecChromaInter *inter, const uint8_t *address,
+	const uint8_t *next, uint32_t y, uint32_t step, uint32_t shift)
+{
+	chromaRows(inter, 3, address, next, y, step, shift);
+}
+
+/* 0x89ac78 */
+void avcdecChromaEdgeLeftSmall(AvcdecChromaInter *inter, int32_t shift)
+{
+	chromaEdgeLeft(inter, 3, shift);
+}
+
+/* 0x89aca8 */
+void avcdecChromaEdgeRightSmall(AvcdecChromaInter *inter, int32_t shift)
+{
+	chromaEdgeRight(inter, 3, shift);
+}
+
+/* 0x89acd8 */
+void avcdecChromaEdgeTopSmall(AvcdecChromaInter *inter, int32_t y)
+{
+	chromaEdgeTop(inter, 3, -y);
+}
+
+/* 0x89ad10 */
+void avcdecChromaEdgeBottomSmall(AvcdecChromaInter *inter, int32_t below)
+{
+	chromaEdgeBottom(inter, 3, below);
+}
+
+/* a 2x2 block's window put by itself */
+static void chromaQuarter(AvcdecChromaInter *inter, uint32_t quarter)
+{
+	uint32_t row, component, column;
+
+	for (row = 0; row < 3; row++)
+		for (component = 0; component < 2; component++)
+			for (column = 0; column < 4; column++)
+				inter->quarter[quarter][row][component][column] =
+					inter->window[component][row][column];
+}
+
+/* 0x89ad40 */
+void avcdecChromaQuarter0(AvcdecChromaInter *inter)
+{
+	chromaQuarter(inter, 0);
+}
+
+/* 0x89ad50 */
+void avcdecChromaQuarter1(AvcdecChromaInter *inter)
+{
+	chromaQuarter(inter, 1);
+}
+
+/* 0x89ad60 */
+void avcdecChromaQuarter2(AvcdecChromaInter *inter)
+{
+	chromaQuarter(inter, 2);
+}
+
+/* 0x89ad70 */
+void avcdecChromaQuarter3(AvcdecChromaInter *inter)
+{
+	chromaQuarter(inter, 3);
+}
+
+/* a sample's prediction from its four neighbours: (A a + B b + C c + D d + 32) >> 6 */
+static inline uint8_t bilinear(const uint8_t *weights, const uint8_t *top,
+	const uint8_t *bottom)
+{
+	return (weights[0] * top[0] + weights[1] * top[1] + weights[2] * bottom[0] +
+		weights[3] * bottom[1] + 32) >> 6;
+}
+
+/* a 4x4 block of both components from the window */
+static void chromaPredict(AvcdecChromaInter *inter, uint32_t list, uint32_t fraction)
+{
+	const uint8_t *weights = chromaWeights[fraction];
+	uint32_t row, component, column;
+
+	for (row = 0; row < 4; row++)
+		for (component = 0; component < 2; component++)
+			for (column = 0; column < 4; column++)
+				inter->block[list][row][component][column] = bilinear(weights,
+					&inter->window[component][row][column],
+					&inter->window[component][row + 1][column]);
+}
+
+/* 0x89ad80: list 0's */
+void avcdecChromaPredict(AvcdecChromaInter *inter, uint32_t fraction)
+{
+	chromaPredict(inter, 0, fraction);
+}
+
+/* 0x89ae58: list 1's */
+void avcdecChromaPredictList1(AvcdecChromaInter *inter, uint32_t fraction)
+{
+	chromaPredict(inter, 1, fraction);
+}
+
+/* a 4x4 block by its 2x2 blocks, each by its own vector */
+static void chromaPredictQuarters(AvcdecChromaInter *inter, uint32_t list,
+	const uint32_t fractions[4])
+{
+	const uint8_t *weights;
+	uint32_t quarter, row, component, column;
+
+	for (quarter = 0; quarter < 4; quarter++) {
+		weights = chromaWeights[fractions[quarter]];
+		for (row = 0; row < 2; row++)
+			for (component = 0; component < 2; component++)
+				for (column = 0; column < 2; column++)
+					inter->block[list][(quarter & 2) + row][component]
+						[(quarter & 1) * 2 + column] = bilinear(weights,
+						&inter->quarter[quarter][row][component][column],
+						&inter->quarter[quarter][row + 1][component][column]);
+	}
+}
+
+/* 0x89af30 */
+void avcdecChromaPredictQuarters(AvcdecChromaInter *inter, uint32_t fraction0,
+	uint32_t fraction1, uint32_t fraction2, uint32_t fraction3)
+{
+	const uint32_t fractions[4] = { fraction0, fraction1, fraction2, fraction3 };
+
+	chromaPredictQuarters(inter, 0, fractions);
+}
+
+/* 0x89b0a8 */
+void avcdecChromaPredictQuartersList1(AvcdecChromaInter *inter, uint32_t fraction0,
+	uint32_t fraction1, uint32_t fraction2, uint32_t fraction3)
+{
+	const uint32_t fractions[4] = { fraction0, fraction1, fraction2, fraction3 };
+
+	chromaPredictQuarters(inter, 1, fractions);
+}
+
+/* a 4x4 block of each component into the macroblock's (8 apart) */
+static void chromaStore(const AvcdecChromaInter *inter, uint32_t list, uint8_t *cb,
+	uint8_t *cr)
+{
+	uint32_t row, column;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 4; column++) {
+			cb[row * 8 + column] = inter->block[list][row][0][column];
+			cr[row * 8 + column] = inter->block[list][row][1][column];
+		}
+}
+
+/* 0x89b220 */
+void avcdecChromaStore(const AvcdecChromaInter *inter, uint8_t *cb, uint8_t *cr)
+{
+	chromaStore(inter, 0, cb, cr);
+}
+
+/* 0x89b268 */
+void avcdecChromaStoreList1(const AvcdecChromaInter *inter, uint8_t *cb, uint8_t *cr)
+{
+	chromaStore(inter, 1, cb, cr);
+}
+
+/* 0x89b2b0: the default (8.4.2.3.1): the lists' blocks averaged */
+void avcdecChromaStoreAverage(AvcdecChromaInter *inter, uint8_t *cb, uint8_t *cr)
+{
+	uint32_t row, component, column;
+
+	for (row = 0; row < 4; row++)
+		for (component = 0; component < 2; component++)
+			for (column = 0; column < 4; column++)
+				inter->block[0][row][component][column] = averageSamples(
+					inter->block[1][row][component][column],
+					inter->block[0][row][component][column]);
+	chromaStore(inter, 0, cb, cr);
+}
+
+/* explicit weighting (8.4.2.3.2) of one list's block: ((p w + round) >> shift) + o */
+static void chromaWeight(AvcdecChromaInter *inter, uint32_t list,
+	const AvcdecChromaWeights *weights, uint8_t *cb, uint8_t *cr)
+{
+	uint32_t row, component, column;
+	uint8_t *sample;
+	int32_t value;
+
+	for (row = 0; row < 4; row++)
+		for (component = 0; component < 2; component++)
+			for (column = 0; column < 4; column++) {
+				sample = &inter->block[list][row][component][column];
+				value = *sample * weights->weight[list][component] + weights->round;
+				*sample = clipSample((value >> weights->shift) +
+					weights->offset[component]);
+			}
+	chromaStore(inter, list, cb, cr);
+}
+
+/* 0x89b300 */
+void avcdecChromaWeight(AvcdecChromaInter *inter, const AvcdecChromaWeights *weights,
+	uint8_t *cb, uint8_t *cr)
+{
+	chromaWeight(inter, 0, weights, cb, cr);
+}
+
+/* 0x89b3f8 */
+void avcdecChromaWeightList1(AvcdecChromaInter *inter, const AvcdecChromaWeights *weights,
+	uint8_t *cb, uint8_t *cr)
+{
+	chromaWeight(inter, 1, weights, cb, cr);
+}
+
+/* 0x89b4f0: both lists': ((p0 w0 + p1 w1 + round) >> shift) + o */
+void avcdecChromaWeightBi(AvcdecChromaInter *inter, const AvcdecChromaWeights *weights,
+	uint8_t *cb, uint8_t *cr)
+{
+	uint32_t row, component, column;
+	int32_t value;
+
+	for (row = 0; row < 4; row++)
+		for (component = 0; component < 2; component++)
+			for (column = 0; column < 4; column++) {
+				value = inter->block[0][row][component][column] *
+					weights->weight[0][component] +
+					inter->block[1][row][component][column] *
+					weights->weight[1][component] + weights->round;
+				inter->block[0][row][component][column] = clipSample(
+					(value >> weights->shift) + weights->offset[component]);
+			}
+	chromaStore(inter, 0, cb, cr);
+}
+
+/* 0x89b650: the macroblock's samples */
+void avcdecChromaDeblockLoad(AvcdecChromaDeblock *deblock, const uint8_t *samples)
+{
+	uint32_t component, row, column;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < 8; row++)
+			for (column = 0; column < 8; column++)
+				deblock->rows[component][row][column] =
+					samples[component * 64 + row * 8 + column];
+}
+
+/* 0x89b6d8 */
+void avcdecChromaDeblockStore(const AvcdecChromaDeblock *deblock, uint8_t *samples)
+{
+	uint32_t component, row, column;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < 8; row++)
+			for (column = 0; column < 8; column++)
+				samples[component * 64 + row * 8 + column] =
+					deblock->rows[component][row][column];
+}
+
+/* 0x89b768: the left macroblock's last columns' p0 filtered, back in its rows */
+void avcdecChromaDeblockStoreLeft(const AvcdecChromaDeblock *deblock, uint8_t *samples)
+{
+	uint32_t component, row;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < 8; row++)
+			samples[component * 64 + row * 8] = deblock->p[component][1][row];
+}
+
+/* 0x89b7f8: the macroblock's columns 6 and 7, turned, for the next one's left edge */
+void avcdecChromaDeblockKeepLeft(const AvcdecChromaDeblock *deblock, uint8_t (*columns)[2][8])
+{
+	uint32_t component, row;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < 8; row++) {
+			columns[component][0][row] = deblock->rows[component][row][6];
+			columns[component][1][row] = deblock->rows[component][row][7];
+		}
+}
+
+/* 0x89b858: each component turned over its diagonal; 1 */
+uint32_t avcdecChromaDeblockTurn(AvcdecChromaDeblock *deblock)
+{
+	uint32_t component, row, column;
+	uint8_t sample;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < 8; row++)
+			for (column = row + 1; column < 8; column++) {
+				sample = deblock->rows[component][row][column];
+				deblock->rows[component][row][column] =
+					deblock->rows[component][column][row];
+				deblock->rows[component][column][row] = sample;
+			}
+	return 1;
+}
+
+/* an edge's four lines of samples, by component: p1, p0, q0, q1 */
+static inline void chromaEdgeLines(AvcdecChromaDeblock *deblock, uint32_t component,
+	uint32_t inner, uint8_t *lines[4])
+{
+	if (inner) {
+		lines[0] = deblock->rows[component][2];
+		lines[1] = deblock->rows[component][3];
+		lines[2] = deblock->rows[component][4];
+		lines[3] = deblock->rows[component][5];
+	} else {
+		lines[0] = deblock->p[component][0];
+		lines[1] = deblock->p[component][1];
+		lines[2] = deblock->rows[component][0];
+		lines[3] = deblock->rows[component][1];
+	}
+}
+
+/*
+ * 0x89b918: the lanes an edge filters (8.7.2.2): bS (one a pair of lanes)
+ * not 0, |p0 - q0| < alpha, |p1 - p0| and |q1 - q0| < beta; Cb's by bit,
+ * Cr's eight bits up.
+ */
+uint32_t avcdecChromaDeblockMask(const AvcdecChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths, uint32_t inner)
+{
+	int32_t alpha = deblockTables[DEBLOCK_ALPHA][indexA];
+	int32_t beta = deblockTables[DEBLOCK_BETA][indexB];
+	uint32_t component, lane, mask = 0;
+	uint8_t *lines[4];
+
+	for (component = 0; component < 2; component++) {
+		chromaEdgeLines((AvcdecChromaDeblock *)deblock, component, inner, lines);
+		for (lane = 0; lane < 8; lane++)
+			if (((strengths >> (lane >> 1) * 8) & 0xff) &&
+			    absolute(lines[1][lane] - lines[2][lane]) < alpha &&
+			    absolute(lines[1][lane] - lines[0][lane]) < beta &&
+			    absolute(lines[2][lane] - lines[3][lane]) < beta)
+				mask |= 1 << (component * 8 + lane);
+	}
+	return mask;
+}
+
+/* the edge's p0 and q0 filtered where the mask says, bS below 4 (8.7.2.3) */
+static void chromaFilterNormal(AvcdecChromaDeblock *deblock, uint32_t indexA,
+	uint32_t strengths, uint32_t inner, uint32_t mask)
+{
+	uint32_t component, lane;
+	int32_t tc, delta, p0, q0;
+	uint8_t *lines[4];
+
+	for (component = 0; component < 2; component++) {
+		chromaEdgeLines(deblock, component, inner, lines);
+		for (lane = 0; lane < 8; lane++) {
+			if (!(mask & 1 << (component * 8 + lane)))
+				continue;
+			tc = deblockTables[(strengths >> (lane >> 1) * 8) & 0xff][indexA] + 1;
+			p0 = lines[1][lane];
+			q0 = lines[2][lane];
+			delta = clip3(-128, 127, (((q0 - p0) << 2) + (lines[0][lane] -
+				lines[3][lane]) + 4) >> 3);
+			delta = clip3(-tc, tc, delta);
+			lines[1][lane] = clipSample(p0 + delta);
+			lines[2][lane] = clipSample(q0 - delta);
+		}
+	}
+}
+
+/*
+ * 0x89ba18: a macroblock edge, p the neighbour's: bS 4 (by the first
+ * pair's) with the strong filter, p0' = (2 p1 + p0 + q1 + 2) >> 2; the
+ * lanes filtered
+ */
+uint32_t avcdecChromaDeblockEdge(AvcdecChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths)
+{
+	uint32_t mask = avcdecChromaDeblockMask(deblock, indexA, indexB, strengths, 0);
+	uint32_t component, lane;
+	uint8_t *lines[4], p0, q0;
+
+	if (!mask)
+		return 0;
+	if ((strengths & 0xff) != 4) {
+		chromaFilterNormal(deblock, indexA, strengths, 0, mask);
+		return mask;
+	}
+	for (component = 0; component < 2; component++) {
+		chromaEdgeLines(deblock, component, 0, lines);
+		for (lane = 0; lane < 8; lane++) {
+			if (!(mask & 1 << (component * 8 + lane)))
+				continue;
+			p0 = averageSamples((lines[1][lane] + lines[3][lane]) >> 1, lines[0][lane]);
+			q0 = averageSamples((lines[2][lane] + lines[0][lane]) >> 1, lines[3][lane]);
+			lines[1][lane] = p0;
+			lines[2][lane] = q0;
+		}
+	}
+	return mask;
+}
+
+/* 0x89bc98: the edge inside the macroblock (bS below 4) */
+uint32_t avcdecChromaDeblockInner(AvcdecChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths)
+{
+	uint32_t mask = avcdecChromaDeblockMask(deblock, indexA, indexB, strengths, 1);
+
+	if (mask)
+		chromaFilterNormal(deblock, indexA, strengths, 1, mask);
+	return mask;
+}
+
+/* 0x89bed8: the macroblock's prediction, or its samples */
+void avcdecChromaLoadRows(AvcdecChromaRecon *recon, const uint8_t *samples)
+{
+	uint32_t component, row, column;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < 8; row++)
+			for (column = 0; column < 8; column++)
+				recon->rows[component][row][column] =
+					samples[component * 64 + row * 8 + column];
+}
+
+/* 0x89bf68: their last rows only, for the macroblocks below */
+void avcdecChromaLoadBottom(AvcdecChromaRecon *recon, const uint8_t *samples)
+{
+	uint32_t component, column;
+
+	for (component = 0; component < 2; component++)
+		for (column = 0; column < 8; column++)
+			recon->rows[component][7][column] = samples[component * 64 + 56 + column];
+}
+
+/*
+ * 0x89bf88: a component's DC levels (8.5.11): the 2x2 transform, then
+ * dequantised, (f v) << (QP / 6 - 1), or >> 1 below QP 6; the first block's
+ * last.
+ */
+void avcdecChromaDc(AvcdecChromaRecon *recon, const int16_t *coef, uint32_t qp)
+{
+	int16_t c0 = coef[0], c1 = coef[1], c2 = coef[2], c3 = coef[3];
+	int16_t f[4];
+	int32_t value;
+	uint32_t i;
+
+	f[3] = (int16_t)((int16_t)(c0 + c1) + (int16_t)(c2 + c3));
+	f[2] = (int16_t)((int16_t)(c0 - c1) + (int16_t)(c2 - c3));
+	f[1] = (int16_t)((int16_t)(c0 + c1) - (int16_t)(c2 + c3));
+	f[0] = (int16_t)((int16_t)(c0 - c1) - (int16_t)(c2 - c3));
+	for (i = 0; i < 4; i++) {
+		value = f[i] * recon->scale[0];
+		if (qp < 6)
+			value >>= recon->dcShift;
+		else
+			value <<= recon->dcShift;
+		recon->dc[i] = (int16_t)value;
+	}
+}
+
+/* the next 4x4 block's DC level last, after the one used */
+static inline void chromaNextDc(AvcdecChromaRecon *recon)
+{
+	int16_t last = recon->dc[3];
+
+	recon->dc[3] = recon->dc[2];
+	recon->dc[2] = recon->dc[1];
+	recon->dc[1] = recon->dc[0];
+	recon->dc[0] = last;
+}
+
+/* 0x89bfe0: a 4x4 block of its DC level only */
+void avcdecChromaIdctDc(AvcdecChromaRecon *recon)
+{
+	int16_t value = (int16_t)(recon->dc[3] + 32) >> 6;
+	uint32_t row, column;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 4; column++)
+			recon->residual[row][column] = value;
+}
+
+/* 0x89c008: a 4x4 block's levels dequantised, its DC level put first, transformed */
+void avcdecChromaIdct(AvcdecChromaRecon *recon, const int16_t *coef)
+{
+	int16_t *x = recon->residual[0];
+	uint32_t i;
+
+	for (i = 0; i < 16; i++)
+		x[i] = (int16_t)((coef[i] * recon->scale[i & 7]) << recon->shift);
+	x[0] = recon->dc[3];
+	for (i = 0; i < 4; i++)
+		inverse4(&x[i * 4], 1);
+	for (i = 0; i < 4; i++)
+		inverse4(&x[i], 4);
+	for (i = 0; i < 16; i++)
+		x[i] = addSaturate(x[i], 32) >> 6;
+}
+
+/* a component's rows into the macroblock's */
+static void chromaStoreComponent(const AvcdecChromaRecon *recon, uint32_t component,
+	uint8_t *samples)
+{
+	uint32_t row, column;
+
+	for (row = 0; row < 8; row++)
+		for (column = 0; column < 8; column++)
+			samples[row * 8 + column] = recon->rows[component][row][column];
+}
+
+/* 0x89c118: Cb's prediction as it is */
+void avcdecChromaStoreCb(const AvcdecChromaRecon *recon, uint8_t *samples)
+{
+	chromaStoreComponent(recon, 0, samples);
+}
+
+/* 0x89c168 */
+void avcdecChromaStoreCr(const AvcdecChromaRecon *recon, uint8_t *samples)
+{
+	chromaStoreComponent(recon, 1, samples);
+}
+
+/* 0x89c1b8: both */
+void avcdecChromaStoreRows(const AvcdecChromaRecon *recon, uint8_t *samples)
+{
+	chromaStoreComponent(recon, 0, samples);
+	chromaStoreComponent(recon, 1, samples + 64);
+}
+
+/* a component's rows plus its 4x4 blocks' DC levels alone ((dc + 32) >> 6), stored */
+static void chromaAddDc(AvcdecChromaRecon *recon, uint32_t component, uint8_t *samples)
+{
+	int16_t dc[4];
+	uint32_t block, row, column;
+
+	for (block = 0; block < 4; block++)
+		dc[block] = (int16_t)(recon->dc[3 - block] + 32) >> 6;
+	for (row = 0; row < 8; row++)
+		for (column = 0; column < 8; column++)
+			recon->rows[component][row][column] = clipSample(
+				recon->rows[component][row][column] +
+				dc[(row & 4) / 2 + column / 4]);
+	chromaStoreComponent(recon, component, samples);
+}
+
+/* 0x89c248 */
+void avcdecChromaAddDcCb(AvcdecChromaRecon *recon, uint8_t *samples)
+{
+	chromaAddDc(recon, 0, samples);
+}
+
+/* 0x89c390 */
+void avcdecChromaAddDcCr(AvcdecChromaRecon *recon, uint8_t *samples)
+{
+	chromaAddDc(recon, 1, samples);
+}
+
+/*
+ * A component's rows as its 4x4 blocks: each pair of rows, their left
+ * halves then their right ones; a block's rows in two registers, two apart.
+ */
+static void chromaBlocks(AvcdecChromaRecon *recon, uint32_t component)
+{
+	uint8_t (*rows)[8] = recon->rows[component];
+	uint8_t pair[2][8];
+	uint32_t row, column;
+
+	for (row = 0; row < 8; row += 2) {
+		for (column = 0; column < 4; column++) {
+			pair[0][column] = rows[row][column];
+			pair[0][4 + column] = rows[row + 1][column];
+			pair[1][column] = rows[row][4 + column];
+			pair[1][4 + column] = rows[row + 1][4 + column];
+		}
+		for (column = 0; column < 8; column++) {
+			rows[row][column] = pair[0][column];
+			rows[row + 1][column] = pair[1][column];
+		}
+	}
+}
+
+/* 0x89c4d8 */
+void avcdecChromaBlocksCb(AvcdecChromaRecon *recon)
+{
+	chromaBlocks(recon, 0);
+}
+
+/* 0x89c508 */
+void avcdecChromaBlocksCr(AvcdecChromaRecon *recon)
+{
+	chromaBlocks(recon, 1);
+}
+
+/* a 4x4 block's residual added to its samples; the next block's DC level last */
+static void chromaAdd(AvcdecChromaRecon *recon, uint32_t component, uint32_t block,
+	uint32_t next)
+{
+	uint32_t first = (block & 2) * 2 + (block & 1), i;
+	uint8_t *top = recon->rows[component][first], *bottom = recon->rows[component][first + 2];
+
+	for (i = 0; i < 8; i++) {
+		top[i] = clipSample(top[i] + recon->residual[i / 4][i % 4]);
+		bottom[i] = clipSample(bottom[i] + recon->residual[2 + i / 4][i % 4]);
+	}
+	if (next)
+		chromaNextDc(recon);
+}
+
+/* 0x89c538 */
+void avcdecChromaAddCb0(AvcdecChromaRecon *recon)
+{
+	chromaAdd(recon, 0, 0, 1);
+}
+
+/* 0x89c560 */
+void avcdecChromaAddCb1(AvcdecChromaRecon *recon)
+{
+	chromaAdd(recon, 0, 1, 1);
+}
+
+/* 0x89c588 */
+void avcdecChromaAddCb2(AvcdecChromaRecon *recon)
+{
+	chromaAdd(recon, 0, 2, 1);
+}
+
+/* 0x89c5b0 */
+void avcdecChromaAddCb3(AvcdecChromaRecon *recon)
+{
+	chromaAdd(recon, 0, 3, 0);
+}
+
+/* 0x89c5d0 */
+void avcdecChromaAddCr0(AvcdecChromaRecon *recon)
+{
+	chromaAdd(recon, 1, 0, 1);
+}
+
+/* 0x89c5f8 */
+void avcdecChromaAddCr1(AvcdecChromaRecon *recon)
+{
+	chromaAdd(recon, 1, 1, 1);
+}
+
+/* 0x89c620 */
+void avcdecChromaAddCr2(AvcdecChromaRecon *recon)
+{
+	chromaAdd(recon, 1, 2, 1);
+}
+
+/* 0x89c648 */
+void avcdecChromaAddCr3(AvcdecChromaRecon *recon)
+{
+	chromaAdd(recon, 1, 3, 0);
+}
+
+/* the 4x4 blocks back into rows, stored */
+static void chromaRowsBack(AvcdecChromaRecon *recon, uint32_t component, uint8_t *samples)
+{
+	uint8_t (*rows)[8] = recon->rows[component];
+	uint8_t pair[2][8];
+	uint32_t row, column;
+
+	for (row = 0; row < 8; row += 2) {
+		for (column = 0; column < 4; column++) {
+			pair[0][column] = rows[row][column];
+			pair[0][4 + column] = rows[row + 1][column];
+			pair[1][column] = rows[row][4 + column];
+			pair[1][4 + column] = rows[row + 1][4 + column];
+		}
+		for (column = 0; column < 8; column++) {
+			rows[row][column] = pair[0][column];
+			rows[row + 1][column] = pair[1][column];
+		}
+	}
+	chromaStoreComponent(recon, component, samples);
+}
+
+/* 0x89c668 */
+void avcdecChromaRowsCb(AvcdecChromaRecon *recon, uint8_t *samples)
+{
+	chromaRowsBack(recon, 0, samples);
+}
+
+/* 0x89c6b8 */
+void avcdecChromaRowsCr(AvcdecChromaRecon *recon, uint8_t *samples)
+{
+	chromaRowsBack(recon, 1, samples);
+}
+
+/* 0x89c708: the macroblock's last rows, for the macroblock below */
+void avcdecChromaKeepBottom(const AvcdecChromaRecon *recon, AvcdecChromaEdges *edges)
+{
+	uint32_t component, column;
+
+	for (component = 0; component < 2; component++)
+		for (column = 0; column < 8; column++)
+			edges->above[component][column] = recon->rows[component][7][column];
+}
+
+/* 0x89c728: its last columns, for the macroblock right */
+void avcdecChromaKeepRight(const AvcdecChromaRecon *recon, uint8_t (*left)[8])
+{
+	uint32_t component, row;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < 8; row++)
+			left[component][row] = recon->rows[component][row][7];
+}
+
+/* four samples' sum */
+static inline uint32_t sum4(const uint8_t *samples)
+{
+	return samples[0] + samples[1] + samples[2] + samples[3];
+}
+
+/*
+ * 0x89c780: Intra chroma DC (8.3.4.1-3): by 4x4 block, the neighbours
+ * above and left averaged, the corner blocks' both, the others' the side
+ * nearest them when it is available; 128 without any.
+ */
+void avcdecChromaIntraDc(AvcdecChromaRecon *recon, const AvcdecChromaEdges *edges,
+	uint32_t leftAvailable, uint32_t aboveAvailable)
+{
+	uint32_t component, block, row, column, top, left, dc[4];
+
+	for (component = 0; component < 2; component++) {
+		for (block = 0; block < 4; block++) {
+			top = sum4(&edges->above[component][(block & 1) * 4]);
+			left = sum4(&edges->left[component][(block & 2) * 2]);
+			if (leftAvailable && aboveAvailable) {
+				if (block == 0 || block == 3)
+					dc[block] = (top + left + 4) >> 3;
+				else if (block == 1)
+					dc[block] = (top + 2) >> 2;
+				else
+					dc[block] = (left + 2) >> 2;
+			} else if (leftAvailable) {
+				dc[block] = (left + 2) >> 2;
+			} else if (aboveAvailable) {
+				dc[block] = (top + 2) >> 2;
+			} else {
+				dc[block] = 128;
+			}
+		}
+		for (row = 0; row < 8; row++)
+			for (column = 0; column < 8; column++)
+				recon->rows[component][row][column] = dc[(row & 4) / 2 + column / 4];
+	}
+}
+
+/* 0x89c9d0: Intra chroma horizontal */
+void avcdecChromaIntraHorizontal(AvcdecChromaRecon *recon, const AvcdecChromaEdges *edges)
+{
+	uint32_t component, row, column;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < 8; row++)
+			for (column = 0; column < 8; column++)
+				recon->rows[component][row][column] = edges->left[component][row];
+}
+
+/* 0x89ca58: Intra chroma vertical */
+void avcdecChromaIntraVertical(AvcdecChromaRecon *recon, const AvcdecChromaEdges *edges)
+{
+	uint32_t component, row, column;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < 8; row++)
+			for (column = 0; column < 8; column++)
+				recon->rows[component][row][column] = edges->above[component][column];
+}
+
+/*
+ * 0x89caa0: Intra chroma plane (8.3.4.4): a = 16 (p[-1, 7] + p[7, -1]),
+ * b and c (34 H + 32) >> 6 and (34 V + 32) >> 6, the samples
+ * (a + b (x - 3) + c (y - 3) + 16) >> 5.
+ */
+void avcdecChromaIntraPlane(AvcdecChromaRecon *recon, const AvcdecChromaEdges *edges)
+{
+	static const int16_t fromCentre[8] = { -3, -2, -1, 0, 1, 2, 3, 4 };	/* 0x91b468 */
+	const uint8_t *above, *left;
+	uint32_t component, row, column;
+	int32_t corner, h, v, a, b, c, i;
+
+	for (component = 0; component < 2; component++) {
+		above = edges->above[component];
+		left = edges->left[component];
+		corner = component ? edges->aboveLeftCr : edges->aboveLeftCb;
+		h = 4 * (above[7] - corner);
+		v = 4 * (left[7] - corner);
+		for (i = 0; i < 3; i++) {
+			h += (i + 1) * (above[4 + i] - above[2 - i]);
+			v += (i + 1) * (left[4 + i] - left[2 - i]);
+		}
+		a = 16 * (left[7] + above[7]);
+		b = (34 * h + 32) >> 6;
+		c = (34 * v + 32) >> 6;
+		for (row = 0; row < 8; row++)
+			for (column = 0; column < 8; column++)
+				recon->rows[component][row][column] = clipSample((a +
+					b * fromCentre[column] + c * fromCentre[row] + 16) >> 5);
+	}
 }
