@@ -429,7 +429,9 @@ typedef struct VideoNal {
 	uint8_t refIdc;
 	uint8_t reserved3;
 	uint8_t pictures;		/* entries of the stream's picture tables */
-	uint8_t reserved9[5];
+	uint8_t numReorderFrames;	/* the sequence's */
+	uint8_t reserved9[3];
+	uint8_t spsId;			/* of the picture parameter set in use */
 	uint8_t contextOption;		/* the sequence's: answered as VIDEO_ENGINE_CONTEXT_OPTION */
 	uint8_t parameterSet;		/* the stream's 1088-byte table in use */
 	uint8_t parameterSet2;		/* and its 16-byte one */
@@ -479,7 +481,7 @@ typedef struct VideoNal {
 	VideoTime lastDts;
 	uint32_t outputMode;
 	uint32_t outputCount;
-	int32_t outputIndex;
+	int32_t frameDuration;		/* of a frame, in 180 kHz ticks; -1 unknown */
 	uint8_t outputFlush;
 	uint8_t reserved18[875];
 } VideoNal;

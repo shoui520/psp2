@@ -1,6 +1,7 @@
 /*
- * The AVC decoder's parser engine thread (0x824ca0-0x825dc8): its memory,
- * the access units it takes, and the VThread jobs it runs on them.
+ * The AVC decoder's parser engine thread (0x824ca0-0x82739c): its memory,
+ * the access units it takes, the VThread jobs it runs on them, and the
+ * parameter sets and SEI messages they parse.
  */
 #include "avcdecparser.h"
 
@@ -158,7 +159,7 @@ static AvcdecParser *parserBegin(uint32_t memory)
 	nal->lastPts = 0;
 	nal->lastDts = 0;
 	nal->outputFlush = 0;
-	nal->outputIndex = -1;
+	nal->frameDuration = -1;
 	nal->outputCount = 0;
 	nal->outputMode = 2;
 	nal->option5 = info->option5;
@@ -831,4 +832,887 @@ void avcdecParserJobOutput(uint32_t infoAddress, uint32_t streamAddress, uint32_
 	vnzCachePurge((uint32_t)job, PARSER_JOB_SIZE);
 	vnzPublicClosePrivate((uint32_t)job, PARSER_JOB_SIZE);
 	vnzPublicCloseProtected((uint32_t)stream, PARSER_STREAM_SIZE);
+}
+
+/* the parameter sets' and SEI's helpers */
+static void seiMessage(const VideoStream *stream, VideoSliceJob *job);
+static void trailingBits(const VideoStream *stream, VideoSliceJob *job, uint32_t stage, uint32_t code);
+static void spsProfile(const VideoStream *stream, VideoSliceJob *job, VideoAvcSps *sps);
+static void spsLevel(const AvcdecParserInfo *info, const VideoStream *stream, VideoSliceJob *job,
+	VideoAvcSps *sps);
+static void spsVui(const VideoStream *stream, VideoSliceJob *job, VideoAvcSps *sps);
+static void vuiHrd(VideoSliceJob *job, VideoAvcVui *vui, VideoAvcHrd *hrd);
+static void seiPayload(const VideoStream *stream, VideoSliceJob *job, uint32_t type, int32_t size);
+static void seiBufferingPeriod(const VideoStream *stream, VideoSliceJob *job);
+static void seiPicTiming(const VideoStream *stream, VideoSliceJob *job);
+static void seiPanScan(const VideoStream *stream, VideoSliceJob *job);
+static void seiRecoveryPoint(const VideoStream *stream, VideoSliceJob *job);
+
+/* NumClockTS by pic_struct */
+static const int8_t numClockTs[9] = { 1, 1, 1, 2, 2, 3, 3, 2, 3 };
+
+/* seq_parameter_set_rbsp(): into the stream's table, kept by id */
+void avcdecParseSps(const AvcdecParserInfo *info, const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoBitstream *bits = job->parser.bits;
+	VideoNal *nal = job->parser.nal;
+	uint32_t profile, set0, set1, set2, set3, level, id, value, type, cropping;
+	uint32_t alwaysZero, cropLeft, cropRight, cropTop, cropBottom;
+	int32_t index, nonRef, topToBottom, cycle, i, widthInMbs, heightInMbs;
+	int32_t width, height, rows, half;
+	VideoAvcSps *sps;
+
+	profile = videoBitsRead(bits, 8);
+	set0 = videoBitsRead(bits, 1);
+	set1 = videoBitsRead(bits, 1);
+	set2 = videoBitsRead(bits, 1);
+	set3 = videoBitsRead(bits, 1);
+	if (videoBitsRead(bits, 4))
+		videoParserError(stream, &job->parser, 0, 0x8006);
+	level = videoBitsRead(bits, 8);
+	id = videoBitsUe(bits);
+	if (id >= AVC_MAX_SPS)
+		videoParserError(stream, &job->parser, 0, 0x8006);
+	index = videoCacheAdd((VideoParameterCache *)stream->parameterCache, id);
+	if (index >= VIDEO_CACHE_EVICTED) {
+		index -= VIDEO_CACHE_EVICTED;
+		nal->error = 0x200a;
+	}
+	nal->parameterSet = index;
+	sps = (VideoAvcSps *)vnzPublicOpenPrivate(stream->parameterSets +
+		index * PARAMETER_SET_SIZE, PARAMETER_SET_SIZE);
+	job->parameterSet = (uint32_t)sps;
+	sps->profile = profile;
+	sps->constraintSet0 = set0;
+	sps->level = level;
+	sps->constraintSet1 = set1;
+	sps->constraintSet2 = set2;
+	sps->constraintSet3 = set3;
+	spsProfile(stream, job, sps);
+	sps->valid = 1;
+
+	value = videoBitsUe(bits);
+	if (value >= 13)
+		videoParserError(stream, &job->parser, 1, 0x8006);
+	sps->log2MaxFrameNum = value + 4;
+	sps->maxFrameNum = 1 << (value + 4);
+	type = videoBitsUe(bits);
+	if (type >= 3)
+		videoParserError(stream, &job->parser, 1, 0x8006);
+	sps->picOrderCntType = type;
+	value = 0;
+	alwaysZero = 0;
+	nonRef = 0;
+	topToBottom = 0;
+	cycle = 0;
+	if (type == 0) {
+		value = videoBitsUe(bits);
+		if (value >= 13)
+			videoParserError(stream, &job->parser, 1, 0x8006);
+	} else if (type == 1) {
+		alwaysZero = videoBitsRead(bits, 1);
+		nonRef = videoBitsSe(bits);
+		topToBottom = videoBitsSe(bits);
+		cycle = videoBitsUe(bits);
+		if (cycle >= 256)
+			videoParserError(stream, &job->parser, 1, 0x8006);
+		for (i = 0; i < cycle; i++)
+			sps->offsetForRefFrame[i] = videoBitsSe(bits);
+	}
+	sps->log2MaxPicOrderCntLsb = value + 4;
+	sps->maxPicOrderCntLsb = 1 << (value + 4);
+	sps->deltaPicOrderAlwaysZero = alwaysZero;
+	sps->offsetForNonRefPic = nonRef;
+	sps->offsetForTopToBottomField = topToBottom;
+	sps->numRefFramesInPicOrderCntCycle = cycle;
+	sps->numRefFrames = videoBitsUe(bits);
+	sps->gapsInFrameNumAllowed = videoBitsRead(bits, 1);
+	value = videoBitsUe(bits);
+	if (value >= 120)
+		videoParserError(stream, &job->parser, 1, 0x4013);
+	widthInMbs = value + 1;
+	heightInMbs = videoBitsUe(bits) + 1;
+	/* frame_mbs_only_flag: no field coding */
+	if (videoBitsRead(bits, 1) != 1)
+		videoParserError(stream, &job->parser, 1, 0x4012);
+	sps->direct8x8Inference = videoBitsRead(bits, 1);
+	cropping = videoBitsRead(bits, 1);
+	cropLeft = cropRight = cropTop = cropBottom = 0;
+	if (cropping) {
+		cropLeft = videoBitsUe(bits);
+		cropRight = videoBitsUe(bits);
+		cropTop = videoBitsUe(bits);
+		cropBottom = videoBitsUe(bits);
+	}
+	sps->cropLeft = cropLeft;
+	sps->frameCropping = cropping;
+	sps->cropRight = cropRight;
+	sps->cropBottom = cropBottom;
+	sps->cropTop = cropTop;
+
+	width = widthInMbs * 16;
+	height = heightInMbs * 16;
+	if (!stream->sequence) {
+		nal->vertical = height;
+		nal->horizontal = width;
+		if (info->contextSet) {
+			if (info->horizontal < nal->horizontal)
+				videoParserError(stream, &job->parser, 1, 0x4013);
+			if (info->contextHorizontal < nal->horizontal)
+				videoParserError(stream, &job->parser, 1, 0x4013);
+			if (info->contextVertical < nal->vertical)
+				videoParserError(stream, &job->parser, 1, 0x4014);
+		}
+		/* the rows of 136-byte commands the service's buffer holds, half the picture */
+		rows = (int32_t)ALIGN64(info->commandSize * 136) / (int32_t)ALIGN64(widthInMbs * 136);
+		half = (heightInMbs + 1) / 2;
+		if (rows >= half)
+			rows = half;
+		if (heightInMbs >= 33 && rows > 8)
+			rows = 8;
+	} else {
+		/* only the sequence: the largest of the stream's */
+		if (nal->horizontal < width)
+			nal->horizontal = width;
+		if (nal->vertical < height)
+			nal->vertical = height;
+		rows = 0;
+	}
+	sps->heightInMbs = heightInMbs;
+	sps->widthInMbs = widthInMbs;
+	sps->width = width;
+	sps->height = height;
+	sps->rowsPerRun = rows;
+	sps->id = id;
+	spsLevel(info, stream, job, sps);
+
+	sps->vuiPresent = videoBitsRead(bits, 1);
+	sps->frameRateCode = AVC_FRAME_RATE_UNKNOWN;
+	if (sps->vuiPresent) {
+		sps->vui = info->streamData + index * 256;
+		spsVui(stream, job, sps);
+		vnzL2Writeback(sps->vui, sizeof(VideoAvcVui));
+	} else {
+		sps->vui = 0;
+		sps->numReorderFrames = sps->maxDpbFrames;
+	}
+	trailingBits(stream, job, 1, 0x8006);
+
+	if (!stream->sequence) {
+		nal->numOfRefFrames = sps->maxDpbFrames;
+		nal->numReorderFrames = sps->numReorderFrames;
+		if (info->contextSet && info->contextRefFrames < nal->numOfRefFrames)
+			videoParserError(stream, &job->parser, 1, 0x2000);
+		/* the context's frames are the pictures kept */
+		sps->maxDpbFrames = info->contextRefFrames;
+		nal->numOfRefFrames = info->contextRefFrames;
+	} else if (nal->numOfRefFrames < sps->maxDpbFrames) {
+		nal->numOfRefFrames = sps->maxDpbFrames;
+	}
+	if (sps->maxDpbFrames < sps->numRefFrames)
+		videoParserError(stream, &job->parser, 1, 0x2000);
+	vnzPublicClosePrivate((uint32_t)sps, PARAMETER_SET_SIZE);
+}
+
+/* seq_parameter_set_extension_rbsp(): not used */
+void avcdecParseSpsExtension(const VideoStream *stream, VideoSliceJob *job)
+{
+}
+
+/* pic_parameter_set_rbsp(): the profiles' subset, by id beside its sequence */
+void avcdecParsePps(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoBitstream *bits = job->parser.bits;
+	VideoNal *nal = job->parser.nal;
+	VideoParameterCache *cache = (VideoParameterCache *)stream->parameterCache;
+	uint32_t id, spsId, entropy, code, l0, l1, transform8x8;
+	int32_t spsIndex, index, value;
+	const VideoAvcSps *sps;
+	VideoAvcPps *pps;
+	uint32_t block;
+
+	id = videoBitsUe(bits);
+	if (id >= 256)
+		videoParserError(stream, &job->parser, 0, 0x8007);
+	spsId = videoBitsUe(bits);
+	if (spsId >= AVC_MAX_SPS)
+		videoParserError(stream, &job->parser, 0, 0x8007);
+	nal->spsId = spsId;
+	spsIndex = videoCacheFind(cache, spsId);
+	if (spsIndex < 0)
+		videoParserError(stream, &job->parser, 0, 0x4017);
+	index = videoCacheAdd2(cache, id);
+	if (index >= VIDEO_CACHE_EVICTED) {
+		index -= VIDEO_CACHE_EVICTED;
+		nal->error = 0x200b;
+	}
+	sps = (const VideoAvcSps *)vnzPublicOpenProtected(stream->parameterSets +
+		spsIndex * PARAMETER_SET_SIZE, PARAMETER_SET_SIZE);
+	/* four sets to a line */
+	block = vnzPublicOpenPrivate((stream->parameterSets2 + index * PARAMETER_SET2_SIZE) & ~63,
+		PARAMETER_SET2_SIZE);
+	job->parameterSet = (uint32_t)sps;
+	job->parameterSet2 = block;
+	pps = (VideoAvcPps *)(block + (index & 3) * PARAMETER_SET2_SIZE);
+	if (sps->id != spsId)
+		videoParserError(stream, &job->parser, 3, 0x8007);
+	pps->id = id;
+	pps->spsId = spsId;
+
+	/* CABAC is not decoded */
+	entropy = videoBitsRead(bits, 1);
+	if (!stream->sequence) {
+		code = job->contextOption ? 0x2015 : 0x4015;
+		if (entropy)
+			videoParserError(stream, &job->parser, 3, code);
+	}
+	nal->contextOption = entropy;
+	pps->entropyCodingMode = entropy;
+	pps->bottomFieldPicOrderInFramePresent = videoBitsRead(bits, 1);
+	/* num_slice_groups_minus1: no slice groups */
+	if (videoBitsUe(bits))
+		videoParserError(stream, &job->parser, 3, 0x8007);
+	l0 = videoBitsUe(bits);
+	if ((int32_t)l0 >= 16)
+		videoParserError(stream, &job->parser, 3, 0x8007);
+	l1 = videoBitsUe(bits);
+	if ((int32_t)l1 >= 16)
+		videoParserError(stream, &job->parser, 3, 0x8007);
+	pps->numRefIdxL1Active = l1 + 1;
+	pps->numRefIdxL0Active = l0 + 1;
+	pps->weightedPred = videoBitsRead(bits, 1);
+	value = videoBitsRead(bits, 2);
+	if ((uint32_t)value >= 3)
+		videoParserError(stream, &job->parser, 3, 0x8007);
+	pps->weightedBipredIdc = value;
+	value = videoBitsSe(bits);
+	if (value < -26 || value >= 26)
+		videoParserError(stream, &job->parser, 3, 0x8007);
+	pps->picInitQp = value + 26;
+	value = videoBitsSe(bits);
+	if (value < -26 || value >= 26)
+		videoParserError(stream, &job->parser, 3, 0x8007);
+	value = videoBitsSe(bits);
+	if (value < -12 || value >= 13)
+		videoParserError(stream, &job->parser, 3, 0x8007);
+	pps->chromaQpIndexOffset = value;
+	pps->deblockingFilterControlPresent = videoBitsRead(bits, 1);
+	pps->constrainedIntraPred = videoBitsRead(bits, 1);
+	/* redundant_pic_cnt_present_flag */
+	if (videoBitsRead(bits, 1))
+		videoParserError(stream, &job->parser, 3, 0x8007);
+	transform8x8 = 0;
+	if (videoBitsMoreData(bits)) {
+		/* the High profile's: not decoded */
+		videoParserError(stream, &job->parser, 3, 0x2010);
+		transform8x8 = videoBitsRead(bits, 1);
+		if (transform8x8)
+			videoParserError(stream, &job->parser, 3, 0x8007);
+		/* pic_scaling_matrix_present_flag */
+		if (videoBitsRead(bits, 1))
+			videoParserError(stream, &job->parser, 3, 0x8007);
+		value = videoBitsSe(bits);
+		if (value < -12 || value >= 13)
+			videoParserError(stream, &job->parser, 3, 0x8007);
+	}
+	pps->secondChromaQpIndexOffset = value;
+	pps->transform8x8Mode = transform8x8;
+	trailingBits(stream, job, 3, 0x8007);
+	vnzPublicCloseProtected((uint32_t)sps, PARAMETER_SET_SIZE);
+	vnzPublicClosePrivate(block, PARAMETER_SET2_SIZE);
+}
+
+/* access_unit_delimiter_rbsp(): I and P pictures only */
+void avcdecParseAud(const VideoStream *stream, VideoSliceJob *job)
+{
+	if (videoBitsRead(job->parser.bits, 3) >= 3)
+		videoParserError(stream, &job->parser, 0, 0x2002);
+	trailingBits(stream, job, 0, 0x2002);
+}
+
+/* end_of_seq_rbsp(): nothing */
+void avcdecParseEndOfSequence(const VideoStream *stream, VideoSliceJob *job)
+{
+}
+
+/* end_of_stream_rbsp(): nothing */
+void avcdecParseEndOfStream(const VideoStream *stream, VideoSliceJob *job)
+{
+}
+
+/* filler_data_rbsp() */
+void avcdecParseFiller(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoBitstream *bits = job->parser.bits;
+
+	while (videoBitsPeek(bits, 8) == 0xff)
+		videoBitsRead(bits, 8);
+	trailingBits(stream, job, 0, 0x2004);
+}
+
+/* sei_rbsp(): into the picture's data */
+void avcdecParseSei(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoBitstream *bits;
+	VideoAvcSei *sei;
+
+	sei = (VideoAvcSei *)vnzPublicOpenPrivate(stream->pictureData +
+		nal->picture * PICTURE_DATA_SIZE, PICTURE_DATA_SIZE);
+	/* a new picture: its messages start empty */
+	if (!nal->pictureCount || nal->lastPictureCount != nal->pictureCount)
+		sei->flags = 0;
+	job->buffer = (uint32_t)sei;
+	bits = job->parser.bits;
+	do
+		seiMessage(stream, job);
+	while (videoBitsMoreData(bits));
+	trailingBits(stream, job, 2, 0x2003);
+	vnzCacheFlush((uint32_t)sei, PICTURE_DATA_SIZE);
+	__asm__ __volatile__("syncm" ::: "memory");
+	vnzL2Writeback(vnzPublicClosePrivate((uint32_t)sei, PICTURE_DATA_SIZE), PICTURE_DATA_SIZE);
+}
+
+/* sei_message(): its type and size, coded in bytes of 255 */
+static void seiMessage(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoBitstream *bits = job->parser.bits;
+	uint32_t type, size;
+
+	type = 0;
+	while (videoBitsPeek(bits, 8) == 0xff) {
+		videoBitsRead(bits, 8);
+		type += 255;
+	}
+	type += videoBitsRead(bits, 8);
+	size = 0;
+	while (videoBitsPeek(bits, 8) == 0xff) {
+		videoBitsRead(bits, 8);
+		size += 255;
+	}
+	size += videoBitsRead(bits, 8);
+	seiPayload(stream, job, type, size);
+}
+
+/* rbsp_trailing_bits(): the stop bit, then zeros to the byte */
+static void trailingBits(const VideoStream *stream, VideoSliceJob *job, uint32_t stage, uint32_t code)
+{
+	VideoBitstream *bits = job->parser.bits;
+
+	if (videoBitsRead(bits, 1) != 1)
+		videoParserError(stream, &job->parser, stage, code);
+	while (!videoBitsAligned(bits))
+		if (videoBitsRead(bits, 1))
+			videoParserError(stream, &job->parser, stage, code);
+}
+
+/*
+ * The profile: Baseline (or constrained to it) is decoded as frames, Main
+ * (or constrained to it) needs the field tools; Extended and High are not
+ * decoded.
+ */
+static void spsProfile(const VideoStream *stream, VideoSliceJob *job, VideoAvcSps *sps)
+{
+	VideoNal *nal = job->parser.nal;
+	uint32_t main, unsupported;
+
+	unsupported = 0;
+	if (sps->profile == AVC_PROFILE_BASELINE || sps->constraintSet0) {
+		main = 0;
+	} else if (sps->profile == AVC_PROFILE_MAIN || sps->constraintSet1) {
+		main = 1;
+	} else {
+		main = sps->profile != AVC_PROFILE_EXTENDED && !sps->constraintSet2;
+		unsupported = 1;
+	}
+	if (stream->sequence)
+		nal->fieldDecode |= main;
+	else
+		nal->fieldDecode = main;
+	if (unsupported)
+		videoParserError(stream, &job->parser, 1, 0x2010);
+}
+
+/*
+ * The level: its MaxDpbMbs (Table A-1) in KiB of 4:2:0 frames, and the
+ * frames that fit in it, at most 16. Levels above 3.1 are not decoded.
+ */
+static void spsLevel(const AvcdecParserInfo *info, const VideoStream *stream, VideoSliceJob *job,
+	VideoAvcSps *sps)
+{
+	uint32_t level = sps->level, unsupported;
+	int32_t limit, frame, frames;
+
+	unsupported = 1;
+	if (level > 50)
+		limit = 69120;
+	else if (level >= 50)
+		limit = 41400;
+	else if (level >= 42)
+		limit = 13056;
+	else if (level >= 40)
+		limit = 12288;
+	else if (level >= 32)
+		limit = 7680;
+	else {
+		unsupported = 0;
+		if (level >= 31)
+			limit = 6750;
+		else if (level >= 22)
+			limit = 3038;
+		else if (level >= 21)
+			limit = 1782;
+		else if (level >= 12)
+			limit = 891;
+		else if (level < 11)
+			limit = 149;
+		else
+			limit = 338;
+	}
+	sps->maxDpbKbytes = limit;
+	if (unsupported)
+		videoParserError(stream, &job->parser, 1, 0x2011);
+	frame = sps->width * sps->height;
+	frame = (frame / 2 + frame) / 1024;
+	if (frame < 1)
+		frame = 1;
+	frames = limit / frame;
+	sps->maxDpbFrames = frames < 16 ? frames : 16;
+}
+
+/* vui_parameters(): into the stream's data */
+static void spsVui(const VideoStream *stream, VideoSliceJob *job, VideoAvcSps *sps)
+{
+	VideoBitstream *bits = job->parser.bits;
+	VideoNal *nal = job->parser.nal;
+	uint32_t present, idc, sarWidth, sarHeight, flag, flag2, format, colour, primaries;
+	uint32_t transfer, matrix, top, bottom, units, scale, fps, code, nalHrd, vclHrd;
+	uint32_t overPic, bytesPerPic, bitsPerMb, mvHorizontal, mvVertical, reorder, buffering;
+	VideoAvcVui *vui;
+
+	vui = (VideoAvcVui *)vnzPublicOpenPrivate(sps->vui, sizeof(VideoAvcVui));
+	present = videoBitsRead(bits, 1);
+	idc = sarWidth = sarHeight = 0;
+	if (present) {
+		idc = videoBitsRead(bits, 8);
+		/* Extended_SAR */
+		if (idc == 255) {
+			sarWidth = videoBitsRead(bits, 16);
+			sarHeight = videoBitsRead(bits, 16);
+		}
+	}
+	vui->aspectRatioIdc = idc;
+	vui->sarWidth = sarWidth;
+	vui->sarHeight = sarHeight;
+	vui->aspectRatioInfoPresent = present;
+	flag = videoBitsRead(bits, 1);
+	flag2 = 0;
+	if (flag)
+		flag2 = videoBitsRead(bits, 1);
+	vui->overscanInfoPresent = flag;
+	vui->overscanAppropriate = flag2;
+
+	present = videoBitsRead(bits, 1);
+	format = 5;
+	primaries = transfer = matrix = 2;
+	flag = colour = 0;
+	if (present) {
+		format = videoBitsRead(bits, 3);
+		flag = videoBitsRead(bits, 1);
+		colour = videoBitsRead(bits, 1);
+		if (colour) {
+			primaries = videoBitsRead(bits, 8);
+			transfer = videoBitsRead(bits, 8);
+			matrix = videoBitsRead(bits, 8);
+		}
+	}
+	vui->colourDescriptionPresent = colour;
+	vui->videoFullRange = flag;
+	vui->videoSignalTypePresent = present;
+	vui->videoFormat = format;
+	vui->colourPrimaries = primaries;
+	vui->transferCharacteristics = transfer;
+	vui->matrixCoefficients = matrix;
+
+	present = videoBitsRead(bits, 1);
+	top = bottom = 0;
+	if (present) {
+		top = videoBitsUe(bits);
+		bottom = videoBitsUe(bits);
+	}
+	vui->chromaLocInfoPresent = present;
+	vui->chromaSampleLocTypeTopField = top;
+	vui->chromaSampleLocTypeBottomField = bottom;
+
+	/* the frame duration, in 180 kHz ticks, and its rate's code */
+	vui->timingInfoPresent = videoBitsRead(bits, 1);
+	if (vui->timingInfoPresent) {
+		units = videoBitsRead(bits, 32);
+		scale = videoBitsRead(bits, 32);
+		vui->numUnitsInTick = units;
+		vui->timeScale = scale;
+		vui->fixedFrameRate = videoBitsRead(bits, 1);
+		if (vui->fixedFrameRate) {
+			if (units % 1001 == 0) {
+				scale /= units / 1001;
+				units = 1001;
+			}
+			sps->frameRateCode = AVC_FRAME_RATE_UNKNOWN;
+			if (units == 1001) {
+				nal->frameDuration = (uint64_t)180180000 / (scale >> 1);
+				if (scale == 48000)
+					code = 1;		/* 23.976 */
+				else if (scale == 60000)
+					code = 4;		/* 29.97 */
+				else if (scale == 120000)
+					code = 7;		/* 59.94 */
+				else
+					goto rated;
+			} else {
+				fps = scale / units >> 1;
+				nal->frameDuration = (uint64_t)units * 360000 / scale;
+				if (fps == 24)
+					code = 2;
+				else if (fps == 25)
+					code = 3;
+				else if (fps == 30)
+					code = 5;
+				else if (fps == 50)
+					code = 6;
+				else if (fps == 60)
+					code = 8;
+				else
+					goto rated;
+			}
+			sps->frameRateCode = code;
+		} else {
+			sps->frameRateCode = 0;
+			nal->frameDuration = (uint64_t)units * 180000 / (scale >> 1);
+		}
+	}
+rated:
+	nalHrd = videoBitsRead(bits, 1);
+	vui->nalHrdPresent = nalHrd;
+	if (nalHrd)
+		vuiHrd(job, vui, &vui->nalHrd);
+	vclHrd = videoBitsRead(bits, 1);
+	vui->vclHrdPresent = vclHrd;
+	if (vclHrd)
+		vuiHrd(job, vui, &vui->vclHrd);
+	if (nalHrd || vclHrd) {
+		flag = videoBitsRead(bits, 1);
+	} else {
+		flag = 0;
+		vui->timeOffsetLength = 24;
+		vui->dpbOutputDelayLength = 23;
+		vui->cpbRemovalDelayLength = 23;
+		vui->initialCpbRemovalDelayLength = 23;
+	}
+	vui->lowDelayHrd = flag;
+	vui->picStructPresent = videoBitsRead(bits, 1);
+
+	present = videoBitsRead(bits, 1);
+	if (present) {
+		overPic = videoBitsRead(bits, 1);
+		bytesPerPic = videoBitsUe(bits);
+		bitsPerMb = videoBitsUe(bits);
+		mvHorizontal = videoBitsUe(bits);
+		mvVertical = videoBitsUe(bits);
+		reorder = videoBitsUe(bits);
+		buffering = videoBitsUe(bits);
+		sps->maxDpbFrames = buffering;
+	} else {
+		bytesPerPic = 2;
+		overPic = bitsPerMb = 1;
+		mvHorizontal = mvVertical = 16;
+		buffering = sps->maxDpbFrames;
+		reorder = buffering;
+	}
+	vui->log2MaxMvLengthHorizontal = mvHorizontal;
+	vui->motionVectorsOverPicBoundaries = overPic;
+	vui->bitstreamRestriction = present;
+	vui->maxBytesPerPicDenom = bytesPerPic;
+	vui->maxBitsPerMbDenom = bitsPerMb;
+	vui->log2MaxMvLengthVertical = mvVertical;
+	vui->numReorderFrames = reorder;
+	vui->maxDecFrameBuffering = buffering;
+	sps->nalHrdPresent = nalHrd;
+	sps->vclHrdPresent = vclHrd;
+	sps->numReorderFrames = reorder;
+	vnzCacheFlush((uint32_t)vui, sizeof(VideoAvcVui));
+	__asm__ __volatile__("syncm" ::: "memory");
+	vnzPublicClosePrivate((uint32_t)vui, sizeof(VideoAvcVui));
+}
+
+/* hrd_parameters(): the last CPB's values, and the delays' lengths */
+static void vuiHrd(VideoSliceJob *job, VideoAvcVui *vui, VideoAvcHrd *hrd)
+{
+	VideoBitstream *bits = job->parser.bits;
+	uint32_t rate, size, cbr, scale, sizeScale;
+	int32_t count, i;
+
+	count = videoBitsUe(bits);
+	scale = videoBitsRead(bits, 4);
+	sizeScale = videoBitsRead(bits, 4);
+	hrd->cpbSizeScale = sizeScale;
+	hrd->cpbCnt = count;
+	hrd->bitRateScale = scale;
+	rate = size = cbr = 0;
+	for (i = 0; i <= count; i++) {
+		rate = videoBitsUe(bits);
+		size = videoBitsUe(bits);
+		cbr = videoBitsRead(bits, 1);
+	}
+	hrd->cbrFlag = cbr;
+	hrd->bitRateValue = rate;
+	hrd->cpbSizeValue = size;
+	vui->initialCpbRemovalDelayLength = videoBitsRead(bits, 5);
+	vui->cpbRemovalDelayLength = videoBitsRead(bits, 5);
+	vui->dpbOutputDelayLength = videoBitsRead(bits, 5);
+	vui->timeOffsetLength = videoBitsRead(bits, 5);
+}
+
+/* sei_payload(): the messages kept, the others skipped */
+static void seiPayload(const VideoStream *stream, VideoSliceJob *job, uint32_t type, int32_t size)
+{
+	VideoBitstream *bits = job->parser.bits;
+	int32_t i;
+
+	if (type == 0)
+		seiBufferingPeriod(stream, job);
+	else if (type == 1)
+		seiPicTiming(stream, job);
+	else if (type == 2)
+		seiPanScan(stream, job);
+	else if (type == 6)
+		seiRecoveryPoint(stream, job);
+	else
+		for (i = 0; i < size; i++)
+			videoBitsRead(bits, 8);
+	/* the payload's bit_equal_to_one and zeros to the byte */
+	if (videoBitsAligned(bits))
+		return;
+	if (videoBitsRead(bits, 1) != 1)
+		videoParserError(stream, &job->parser, 2, 0x2003);
+	while (!videoBitsAligned(bits))
+		if (videoBitsRead(bits, 1))
+			videoParserError(stream, &job->parser, 2, 0x2003);
+}
+
+/* buffering_period(): its sequence's HRDs' initial delays */
+static void seiBufferingPeriod(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoBitstream *bits = job->parser.bits;
+	VideoAvcSei *sei = (VideoAvcSei *)job->buffer;
+	VideoParameterCache *cache = (VideoParameterCache *)stream->parameterCache;
+	uint32_t id, address, length, delay, offset;
+	int32_t index, count, i;
+	const VideoAvcSps *sps;
+	const VideoAvcVui *vui;
+
+	id = videoBitsUe(bits);
+	if (id >= AVC_MAX_SPS)
+		videoParserError(stream, &job->parser, 2, 0x2003);
+	sei->seqParameterSetId = id;
+	index = videoCacheFind(cache, id);
+	if (index < 0) {
+		videoParserError(stream, &job->parser, 2, 0x2003);
+		return;
+	}
+	nal->spsId = id;
+	address = stream->parameterSets + index * PARAMETER_SET_SIZE;
+	if (((const VideoAvcSps *)address)->id != id)
+		videoParserError(stream, &job->parser, 2, 0x2003);
+	if (((const VideoAvcSps *)address)->id != id)
+		return;
+	if (!((const VideoAvcSps *)address)->vui)
+		videoParserError(stream, &job->parser, 2, 0x2003);
+	if (!((const VideoAvcSps *)address)->vui)
+		return;
+	sps = (const VideoAvcSps *)vnzPublicOpenProtected(address, PARAMETER_SET_SIZE);
+	vui = (const VideoAvcVui *)vnzPublicOpenProtected(sps->vui, sizeof(VideoAvcVui));
+	delay = offset = 0;
+	if (sps->nalHrdPresent) {
+		length = vui->initialCpbRemovalDelayLength + 1;
+		count = vui->nalHrd.cpbCnt + 1;
+		for (i = 0; i < count; i++) {
+			delay = videoBitsRead(bits, length);
+			offset = videoBitsRead(bits, length);
+		}
+		sei->nalInitialCpbRemovalDelayOffset = offset;
+		sei->nalInitialCpbRemovalDelay = delay;
+	}
+	if (sps->vclHrdPresent) {
+		length = vui->initialCpbRemovalDelayLength + 1;
+		count = vui->vclHrd.cpbCnt + 1;
+		for (i = 0; i < count; i++) {
+			delay = videoBitsRead(bits, length);
+			offset = videoBitsRead(bits, length);
+		}
+		sei->vclInitialCpbRemovalDelayOffset = offset;
+		sei->vclInitialCpbRemovalDelay = delay;
+	}
+	sei->flags |= AVC_SEI_BUFFERING_PERIOD;
+	vnzPublicCloseProtected((uint32_t)vui, sizeof(VideoAvcVui));
+	vnzPublicCloseProtected((uint32_t)sps, PARAMETER_SET_SIZE);
+}
+
+/* pic_timing(): the delays and the clock timestamps */
+static void seiPicTiming(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoBitstream *bits = job->parser.bits;
+	VideoNal *nal = job->parser.nal;
+	VideoAvcSei *sei = (VideoAvcSei *)job->buffer;
+	uint32_t id = nal->spsId, address, cpb, dpb, structure, flag, ctType, nuit, counting;
+	uint32_t full, discontinuity, dropped, frames, seconds, minutes, hours;
+	uint32_t secondsFlag, minutesFlag, hoursFlag;
+	int32_t index, offset, i;
+	const VideoAvcSps *sps;
+	const VideoAvcVui *vui;
+	VideoAvcClockTimestamp *clock;
+
+	index = videoCacheFind((VideoParameterCache *)stream->parameterCache, id);
+	if (index < 0) {
+		videoParserError(stream, &job->parser, 2, 0x2003);
+		return;
+	}
+	address = stream->parameterSets + index * PARAMETER_SET_SIZE;
+	if (((const VideoAvcSps *)address)->id != id)
+		videoParserError(stream, &job->parser, 2, 0x2003);
+	if (((const VideoAvcSps *)address)->id != id)
+		return;
+	if (!((const VideoAvcSps *)address)->vui)
+		videoParserError(stream, &job->parser, 2, 0x2003);
+	if (!((const VideoAvcSps *)address)->vui)
+		return;
+	sps = (const VideoAvcSps *)vnzPublicOpenProtected(address, PARAMETER_SET_SIZE);
+	vui = (const VideoAvcVui *)vnzPublicOpenProtected(sps->vui, sizeof(VideoAvcVui));
+	if (sps->nalHrdPresent || sps->vclHrdPresent) {
+		cpb = videoBitsRead(bits, vui->cpbRemovalDelayLength + 1);
+		dpb = videoBitsRead(bits, vui->dpbOutputDelayLength + 1);
+		if (!nal->pictureCount) {
+			/* the stream's first picture: no removal delay yet */
+			sei->dpbOutputDelay = dpb;
+			sei->cpbRemovalDelay = 0;
+			nal->idrPending = 1;
+		} else {
+			sei->dpbOutputDelay = dpb;
+			sei->cpbRemovalDelay = cpb;
+		}
+	}
+	if (vui->picStructPresent) {
+		structure = videoBitsRead(bits, 4);
+		if (structure >= 9) {
+			videoParserError(stream, &job->parser, 2, 0x2003);
+			goto close;
+		}
+		ctType = nuit = counting = full = discontinuity = dropped = frames = 0;
+		seconds = minutes = hours = secondsFlag = minutesFlag = hoursFlag = 0;
+		offset = 0;
+		sei->picStruct = structure;
+		for (i = 0; i < numClockTs[structure]; i++) {
+			flag = videoBitsRead(bits, 1);
+			sei->clockTimestampFlag[i] = flag;
+			if (!flag)
+				continue;
+			ctType = videoBitsRead(bits, 2);
+			nuit = videoBitsRead(bits, 1);
+			counting = videoBitsRead(bits, 5);
+			full = videoBitsRead(bits, 1);
+			discontinuity = videoBitsRead(bits, 1);
+			dropped = videoBitsRead(bits, 1);
+			frames = videoBitsRead(bits, 8);
+			if (full) {
+				seconds = videoBitsRead(bits, 6);
+				minutes = videoBitsRead(bits, 6);
+				hours = videoBitsRead(bits, 5);
+			} else {
+				secondsFlag = videoBitsRead(bits, 1);
+				if (secondsFlag) {
+					seconds = videoBitsRead(bits, 6);
+					minutesFlag = videoBitsRead(bits, 1);
+					if (minutesFlag) {
+						minutes = videoBitsRead(bits, 6);
+						hoursFlag = videoBitsRead(bits, 1);
+						if (hoursFlag)
+							hours = videoBitsRead(bits, 5);
+					}
+				}
+			}
+			if (vui->timeOffsetLength >= 1)
+				offset = videoBitsReadSigned(bits, vui->timeOffsetLength);
+			clock = &sei->clockTimestamp[i];
+			clock->ctType = ctType;
+			clock->minutesValue = minutes;
+			clock->hoursFlag = hoursFlag;
+			clock->minutesFlag = minutesFlag;
+			clock->nuitFieldBased = nuit;
+			clock->countingType = counting;
+			clock->discontinuity = discontinuity;
+			clock->fullTimestamp = full;
+			clock->timeOffset = offset;
+			clock->cntDropped = dropped;
+			clock->nFrames = frames;
+			clock->secondsFlag = secondsFlag;
+			clock->hoursValue = hours;
+			clock->secondsValue = seconds;
+		}
+	} else {
+		sei->picStruct = 0;
+	}
+	sei->flags |= AVC_SEI_PIC_TIMING;
+close:
+	vnzPublicCloseProtected((uint32_t)vui, sizeof(VideoAvcVui));
+	vnzPublicCloseProtected((uint32_t)sps, PARAMETER_SET_SIZE);
+}
+
+/* pan_scan_rect() */
+static void seiPanScan(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoBitstream *bits = job->parser.bits;
+	VideoAvcSei *sei = (VideoAvcSei *)job->buffer;
+	VideoNal *nal = job->parser.nal;
+	int32_t count, i, left, right, top, bottom;
+	uint32_t id;
+
+	id = videoBitsUe(bits);
+	sei->panScanRectId = id;
+	sei->panScanRectCancel = videoBitsRead(bits, 1);
+	if (!sei->panScanRectCancel) {
+		count = videoBitsUe(bits);
+		if (count < 0 || count >= 3)
+			videoParserError(stream, &job->parser, 2, 0x2003);
+		if (nal->error)
+			return;
+		for (i = 0; i <= count; i++) {
+			left = videoBitsSe(bits);
+			right = videoBitsSe(bits);
+			top = videoBitsSe(bits);
+			bottom = videoBitsSe(bits);
+			sei->panScanRectTopOffset[i] = top;
+			sei->panScanRectBottomOffset[i] = bottom;
+			sei->panScanRectLeftOffset[i] = left;
+			sei->panScanRectRightOffset[i] = right;
+		}
+		sei->panScanRectRepetitionPeriod = videoBitsUe(bits);
+	}
+	sei->flags |= AVC_SEI_PAN_SCAN;
+}
+
+/* recovery_point() */
+static void seiRecoveryPoint(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoBitstream *bits = job->parser.bits;
+	VideoAvcSei *sei = (VideoAvcSei *)job->buffer;
+	uint32_t frames, exact, broken;
+
+	frames = videoBitsUe(bits);
+	exact = videoBitsRead(bits, 1);
+	broken = videoBitsRead(bits, 1);
+	sei->changingSliceGroupIdc = videoBitsRead(bits, 2);
+	sei->brokenLink = broken;
+	sei->exactMatch = exact;
+	sei->recoveryFrameCnt = frames;
+	sei->flags |= AVC_SEI_RECOVERY_POINT;
 }
