@@ -100,6 +100,29 @@ void avcdecStoreColocated(AvcdecStripe *stripe, AvcdecMotion *motion)
 	}
 }
 
+/* the median of three vectors, by component */
+static inline AvcdecLanes lanesMedian(AvcdecLanes a, AvcdecLanes b, AvcdecLanes c)
+{
+	AvcdecLanes low, high;
+	uint32_t i;
+
+	for (i = 0; i < 4; i++) {
+		low.h[i] = a.h[i] < b.h[i] ? a.h[i] : b.h[i];
+		high.h[i] = a.h[i] > b.h[i] ? a.h[i] : b.h[i];
+		if (c.h[i] < high.h[i])
+			high.h[i] = c.h[i];
+		if (low.h[i] > high.h[i])
+			high.h[i] = low.h[i];
+	}
+	return high;
+}
+
+/* a neighbour's vector where its reference is used, 0 where not */
+static inline AvcdecLanes vectorUsed(AvcdecLanes refs, AvcdecLanes mv)
+{
+	return lanesSelect(lanesNegative(refs), lanesZero(), mv);
+}
+
 /*
  * The median of the neighbours' vectors (8.4.1.3.1), or the one whose
  * reference is the partition's when only one is; the neighbours without
@@ -107,22 +130,14 @@ void avcdecStoreColocated(AvcdecStripe *stripe, AvcdecMotion *motion)
  */
 static inline AvcdecLanes median(AvcdecMotion *motion)
 {
-	AvcdecLanes result, low, high, match;
+	AvcdecLanes result, match;
 	uint32_t i, one;
 	int8_t count[8];
 
-	motion->mvA = lanesSelect(lanesNegative(motion->refA), lanesZero(), motion->mvA);
-	motion->mvB = lanesSelect(lanesNegative(motion->refB), lanesZero(), motion->mvB);
-	motion->mvC = lanesSelect(lanesNegative(motion->refC), lanesZero(), motion->mvC);
-	for (i = 0; i < 4; i++) {
-		low.h[i] = motion->mvA.h[i] < motion->mvB.h[i] ? motion->mvA.h[i] :
-			motion->mvB.h[i];
-		high.h[i] = motion->mvA.h[i] > motion->mvB.h[i] ? motion->mvA.h[i] :
-			motion->mvB.h[i];
-		if (motion->mvC.h[i] < high.h[i])
-			high.h[i] = motion->mvC.h[i];
-		result.h[i] = high.h[i] > low.h[i] ? high.h[i] : low.h[i];
-	}
+	motion->mvA = vectorUsed(motion->refA, motion->mvA);
+	motion->mvB = vectorUsed(motion->refB, motion->mvB);
+	motion->mvC = vectorUsed(motion->refC, motion->mvC);
+	result = lanesMedian(motion->mvA, motion->mvB, motion->mvC);
 	for (i = 0; i < 8; i++)
 		count[i] = 0;
 	for (i = 0; i < 8; i++) {
@@ -144,6 +159,35 @@ static inline AvcdecLanes median(AvcdecMotion *motion)
 	return lanesSelect(one, match, result);
 }
 
+/*
+ * Within an 8x8 block: the median, or the vector of the partition beside
+ * it (whose reference is the block's) when neither of the others has the
+ * reference. A, then B, the known one.
+ */
+static inline AvcdecLanes knownA(AvcdecMotion *motion)
+{
+	uint32_t neither;
+
+	motion->mvB = vectorUsed(motion->refB, motion->mvB);
+	motion->mvC = vectorUsed(motion->refC, motion->mvC);
+	neither = lanesDiffer(motion->current, motion->refB) &
+		lanesDiffer(motion->current, motion->refC);
+	return lanesSelect(neither, motion->mvA,
+		lanesMedian(motion->mvA, motion->mvB, motion->mvC));
+}
+
+static inline AvcdecLanes knownB(AvcdecMotion *motion)
+{
+	uint32_t neither;
+
+	motion->mvA = vectorUsed(motion->refA, motion->mvA);
+	motion->mvC = vectorUsed(motion->refC, motion->mvC);
+	neither = lanesDiffer(motion->current, motion->refA) &
+		lanesDiffer(motion->current, motion->refC);
+	return lanesSelect(neither, motion->mvB,
+		lanesMedian(motion->mvA, motion->mvB, motion->mvC));
+}
+
 /* 0x893198: the prediction in the lanes given, the others' kept */
 void avcdecMvPredictLanes(AvcdecMotion *motion, uint32_t lanes)
 {
@@ -156,8 +200,7 @@ void avcdecMvPredictLanes(AvcdecMotion *motion, uint32_t lanes)
 void avcdecMvPredict(AvcdecMotion *motion, uint32_t onlyA)
 {
 	if (onlyA) {
-		motion->predictor = lanesSelect(lanesNegative(motion->refA), lanesZero(),
-			motion->mvA);
+		motion->predictor = vectorUsed(motion->refA, motion->mvA);
 		return;
 	}
 	motion->predictor = median(motion);
@@ -170,33 +213,287 @@ void avcdecMvPredict(AvcdecMotion *motion, uint32_t onlyA)
  */
 void avcdecMvPredictUnlessA(AvcdecMotion *motion, uint32_t onlyA)
 {
-	AvcdecLanes low, high, result;
-	uint32_t neither, i;
-
 	if (onlyA) {
 		motion->predictor = motion->mvA;
 		return;
 	}
-	motion->mvB = lanesSelect(lanesNegative(motion->refB), lanesZero(), motion->mvB);
-	motion->mvC = lanesSelect(lanesNegative(motion->refC), lanesZero(), motion->mvC);
-	for (i = 0; i < 4; i++) {
-		low.h[i] = motion->mvA.h[i] < motion->mvB.h[i] ? motion->mvA.h[i] :
-			motion->mvB.h[i];
-		high.h[i] = motion->mvA.h[i] > motion->mvB.h[i] ? motion->mvA.h[i] :
-			motion->mvB.h[i];
-		if (motion->mvC.h[i] < high.h[i])
-			high.h[i] = motion->mvC.h[i];
-		result.h[i] = high.h[i] > low.h[i] ? high.h[i] : low.h[i];
-	}
-	neither = lanesDiffer(motion->current, motion->refB) &
-		lanesDiffer(motion->current, motion->refC);
-	motion->predictor = lanesSelect(neither, motion->mvA, result);
+	motion->predictor = knownA(motion);
 }
 
 /* 0x8932c0: the median */
 void avcdecMvMedian(AvcdecMotion *motion)
 {
 	motion->predictor = median(motion);
+}
+
+static inline AvcdecLanes vectorOf(const uint32_t mv[2])
+{
+	AvcdecLanes lanes;
+
+	lanes.w[0] = mv[0];
+	lanes.w[1] = mv[1];
+	return lanes;
+}
+
+/*
+ * 0x893320: 8x8 block 0's sub-macroblock partitions (8.4.1.3): the left's
+ * and the above's neighbours outside the macroblock
+ */
+void avcdecMvPredict8x8Block0(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	const AvcdecMbVectors *leftVectors = stripe->leftVectors;
+	const AvcdecTop *top = stripe->top;
+	uint32_t sub = (uint8_t)stripe->subKinds[0], onlyA;
+	AvcdecLanes (*mv)[4] = motion->mv;
+
+	motion->mvA = vectorOf(leftVectors->mv[5]);
+	motion->mvB = vectorOf(top->mv[0]);
+	onlyA = stripe->leftAvailable & !stripe->topAvailable;
+	motion->current = lanesOfBlock(motion->refIdx, 0);
+	motion->refA = lanesOfBlock(stripe->left->refIdx, 1);
+	motion->refB = lanesOfBlock(top->refIdx, 2);
+	if (!(sub & (3 << AVC_MB_PARTS_SHIFT))) {		/* 8x8 */
+		motion->mvC = vectorOf(top->mv[2]);
+		motion->refC = lanesOfBlock(top->refIdx, 3);
+		avcdecMvPredict(motion, onlyA);
+		mv[0][0] = lanesAdd(mv[0][0], motion->predictor);
+		mv[0][3] = mv[0][2] = mv[0][1] = mv[0][0];
+	} else if (sub & 2) {					/* 8x4 */
+		motion->mvC = vectorOf(top->mv[2]);
+		motion->refC = lanesOfBlock(top->refIdx, 3);
+		avcdecMvPredict(motion, onlyA);
+		mv[0][0] = lanesAdd(mv[0][0], motion->predictor);
+		motion->mvA = vectorOf(leftVectors->mv[7]);
+		motion->mvC = vectorOf(leftVectors->mv[5]);
+		motion->refC = motion->refA;
+		motion->mvB = mv[0][0];
+		motion->predictor = knownB(motion);
+		mv[0][2] = lanesAdd(mv[0][2], motion->predictor);
+		mv[0][3] = mv[0][2];
+		mv[0][1] = mv[0][0];
+	} else {
+		motion->mvC = vectorOf(top->mv[1]);
+		motion->refC = motion->refB;
+		avcdecMvPredict(motion, onlyA);
+		mv[0][0] = lanesAdd(mv[0][0], motion->predictor);
+		motion->mvB = vectorOf(top->mv[1]);
+		motion->mvC = vectorOf(top->mv[2]);
+		motion->refC = lanesOfBlock(top->refIdx, 3);
+		if (sub & 1) {					/* 4x8 */
+			mv[0][2] = mv[0][0];
+			motion->mvA = mv[0][0];
+			avcdecMvPredictUnlessA(motion, !stripe->topAvailable);
+			mv[0][1] = lanesAdd(mv[0][1], motion->predictor);
+			mv[0][3] = mv[0][1];
+		} else {					/* 4x4 */
+			motion->mvA = mv[0][0];
+			avcdecMvPredictUnlessA(motion, !stripe->topAvailable);
+			mv[0][1] = lanesAdd(mv[0][1], motion->predictor);
+			motion->mvA = vectorUsed(motion->refA, vectorOf(leftVectors->mv[7]));
+			motion->mvB = mv[0][0];
+			motion->mvC = mv[0][1];
+			motion->predictor = lanesMedian(motion->mvA, motion->mvB, motion->mvC);
+			mv[0][2] = lanesAdd(mv[0][2], motion->predictor);
+			motion->mvA = mv[0][2];
+			motion->mvB = mv[0][1];
+			motion->mvC = mv[0][0];
+			motion->predictor = lanesMedian(motion->mvA, motion->mvB, motion->mvC);
+			mv[0][3] = lanesAdd(mv[0][3], motion->predictor);
+		}
+	}
+}
+
+/* 0x893648: 8x8 block 1's: the above's and the above right's */
+void avcdecMvPredict8x8Block1(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	const AvcdecTop *top = stripe->top;
+	uint32_t sub = (uint8_t)stripe->subKinds[1], onlyA;
+	AvcdecLanes (*mv)[4] = motion->mv;
+
+	motion->refA = lanesOfBlock(motion->refIdx, 0);
+	motion->current = lanesOfBlock(motion->refIdx, 1);
+	motion->refB = lanesOfBlock(top->refIdx, 3);
+	motion->mvB = vectorOf(top->mv[2]);
+	motion->mvA = mv[0][1];
+	onlyA = !stripe->topAvailable;
+	if (!(sub & (3 << AVC_MB_PARTS_SHIFT)) || (sub & 2)) {
+		/* 8x8, 8x4: C above right, else above left */
+		if (stripe->topRightAvailable) {
+			motion->refC = lanesOfBlock(stripe->topRight->refIdx, 2);
+			motion->mvC = vectorOf(stripe->topRight->mv[0]);
+			onlyA &= !stripe->topRightAvailable;
+		} else {
+			motion->refC = lanesOfBlock(top->refIdx, 2);
+			motion->mvC = vectorOf(top->mv[1]);
+		}
+		avcdecMvPredict(motion, onlyA);
+		mv[1][0] = lanesAdd(mv[1][0], motion->predictor);
+		if (!(sub & (3 << AVC_MB_PARTS_SHIFT))) {
+			mv[1][3] = mv[1][2] = mv[1][1] = mv[1][0];
+			return;
+		}
+		motion->mvC = mv[0][1];
+		motion->refC = motion->refA;
+		motion->mvA = mv[0][3];
+		motion->mvB = mv[1][0];
+		motion->predictor = knownB(motion);
+		mv[1][2] = lanesAdd(mv[1][2], motion->predictor);
+		mv[1][3] = mv[1][2];
+		mv[1][1] = mv[1][0];
+		return;
+	}
+	motion->mvC = vectorOf(top->mv[3]);
+	motion->refC = motion->refB;
+	avcdecMvPredict(motion, onlyA);
+	mv[1][0] = lanesAdd(mv[1][0], motion->predictor);
+	if (sub & 1)						/* 4x8 */
+		mv[1][2] = mv[1][0];
+	if (stripe->topRightAvailable) {
+		motion->refC = lanesOfBlock(stripe->topRight->refIdx, 2);
+		motion->mvC = vectorOf(stripe->topRight->mv[0]);
+		onlyA &= !stripe->topRightAvailable;
+	} else {
+		motion->mvC = vectorOf(top->mv[2]);
+		motion->refC = motion->refB;
+	}
+	motion->mvB = vectorOf(top->mv[3]);
+	motion->mvA = mv[1][0];
+	avcdecMvPredictUnlessA(motion, onlyA);
+	mv[1][1] = lanesAdd(mv[1][1], motion->predictor);
+	if (sub & 1) {
+		mv[1][3] = mv[1][1];
+		return;
+	}
+	/* 4x4: the lower two from inside the macroblock */
+	motion->mvA = vectorUsed(motion->refA, mv[0][3]);
+	motion->mvB = mv[1][0];
+	motion->mvC = mv[1][1];
+	motion->predictor = lanesMedian(motion->mvA, motion->mvB, motion->mvC);
+	mv[1][2] = lanesAdd(mv[1][2], motion->predictor);
+	motion->mvA = mv[1][2];
+	motion->mvB = mv[1][1];
+	motion->mvC = mv[1][0];
+	motion->predictor = lanesMedian(motion->mvA, motion->mvB, motion->mvC);
+	mv[1][3] = lanesAdd(mv[1][3], motion->predictor);
+}
+
+/* 0x893a70: 8x8 block 2's: the left's */
+void avcdecMvPredict8x8Block2(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	const AvcdecMbVectors *leftVectors = stripe->leftVectors;
+	uint32_t sub = (uint8_t)stripe->subKinds[2];
+	AvcdecLanes (*mv)[4] = motion->mv;
+
+	motion->mvA = vectorOf(leftVectors->mv[13]);
+	motion->refB = lanesOfBlock(motion->refIdx, 0);
+	motion->refA = lanesOfBlock(stripe->left->refIdx, 3);
+	motion->current = lanesOfBlock(motion->refIdx, 2);
+	motion->mvB = mv[0][2];
+	if (!(sub & (3 << AVC_MB_PARTS_SHIFT)) || (sub & 2)) {	/* 8x8, 8x4 */
+		motion->mvC = mv[1][2];
+		motion->refC = lanesOfBlock(motion->refIdx, 1);
+		avcdecMvMedian(motion);
+		mv[2][0] = lanesAdd(mv[2][0], motion->predictor);
+		if (!(sub & (3 << AVC_MB_PARTS_SHIFT))) {
+			mv[2][3] = mv[2][2] = mv[2][1] = mv[2][0];
+			return;
+		}
+		motion->mvA = vectorOf(leftVectors->mv[15]);
+		motion->mvC = vectorOf(leftVectors->mv[13]);
+		motion->refC = motion->refA;
+		motion->mvB = mv[2][0];
+		motion->predictor = knownB(motion);
+		mv[2][2] = lanesAdd(mv[2][2], motion->predictor);
+		mv[2][3] = mv[2][2];
+		mv[2][1] = mv[2][0];
+		return;
+	}
+	motion->refC = motion->refB;
+	motion->mvC = mv[0][3];
+	avcdecMvMedian(motion);
+	mv[2][0] = lanesAdd(mv[2][0], motion->predictor);
+	motion->mvC = mv[1][2];
+	motion->mvA = mv[2][0];
+	motion->mvB = mv[0][3];
+	motion->refC = lanesOfBlock(motion->refIdx, 1);
+	if (sub & 1) {						/* 4x8 */
+		motion->predictor = knownA(motion);
+		mv[2][1] = lanesAdd(mv[2][1], motion->predictor);
+		mv[2][3] = mv[2][1];
+		mv[2][2] = mv[2][0];
+		return;
+	}
+	/* 4x4 */
+	motion->predictor = knownA(motion);
+	mv[2][1] = lanesAdd(mv[2][1], motion->predictor);
+	motion->mvA = vectorUsed(motion->refA, vectorOf(leftVectors->mv[15]));
+	motion->mvB = mv[2][0];
+	motion->mvC = mv[2][1];
+	motion->predictor = lanesMedian(motion->mvA, motion->mvB, motion->mvC);
+	mv[2][2] = lanesAdd(mv[2][2], motion->predictor);
+	motion->mvA = mv[2][2];
+	motion->mvB = mv[2][1];
+	motion->mvC = mv[2][0];
+	motion->predictor = lanesMedian(motion->mvA, motion->mvB, motion->mvC);
+	mv[2][3] = lanesAdd(mv[2][3], motion->predictor);
+}
+
+/* 0x893d18: 8x8 block 3's: all inside the macroblock */
+void avcdecMvPredict8x8Block3(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	uint32_t sub = (uint8_t)stripe->subKinds[3];
+	AvcdecLanes (*mv)[4] = motion->mv;
+
+	motion->mvA = mv[2][1];
+	motion->refA = lanesOfBlock(motion->refIdx, 2);
+	motion->refB = lanesOfBlock(motion->refIdx, 1);
+	motion->current = lanesOfBlock(motion->refIdx, 3);
+	motion->mvB = mv[1][2];
+	if (!(sub & (3 << AVC_MB_PARTS_SHIFT)) || (sub & 2)) {	/* 8x8, 8x4 */
+		motion->mvC = mv[0][3];
+		motion->refC = lanesOfBlock(motion->refIdx, 0);
+		avcdecMvMedian(motion);
+		mv[3][0] = lanesAdd(mv[3][0], motion->predictor);
+		if (!(sub & (3 << AVC_MB_PARTS_SHIFT))) {
+			mv[3][3] = mv[3][2] = mv[3][1] = mv[3][0];
+			return;
+		}
+		motion->mvC = mv[2][1];
+		motion->refC = motion->refA;
+		motion->mvA = mv[2][3];
+		motion->mvB = mv[3][0];
+		motion->predictor = knownB(motion);
+		mv[3][2] = lanesAdd(mv[3][2], motion->predictor);
+		mv[3][3] = mv[3][2];
+		mv[3][1] = mv[3][0];
+		return;
+	}
+	motion->refC = motion->refB;
+	motion->mvC = mv[1][3];
+	avcdecMvMedian(motion);
+	mv[3][0] = lanesAdd(mv[3][0], motion->predictor);
+	motion->mvC = mv[1][2];
+	motion->refC = motion->refB;
+	motion->mvB = mv[1][3];
+	motion->mvA = mv[3][0];
+	motion->predictor = knownA(motion);
+	mv[3][1] = lanesAdd(mv[3][1], motion->predictor);
+	if (sub & 1) {						/* 4x8 */
+		mv[3][3] = mv[3][1];
+		mv[3][2] = mv[3][0];
+		return;
+	}
+	/* 4x4 */
+	motion->mvB = mv[3][0];
+	motion->mvA = vectorUsed(motion->refA, mv[2][3]);
+	motion->mvC = mv[3][1];
+	motion->predictor = lanesMedian(motion->mvA, motion->mvB, motion->mvC);
+	mv[3][2] = lanesAdd(mv[3][2], motion->predictor);
+	motion->mvA = mv[3][2];
+	motion->mvB = mv[3][1];
+	motion->mvC = mv[3][0];
+	motion->predictor = lanesMedian(motion->mvA, motion->mvB, motion->mvC);
+	mv[3][3] = lanesAdd(mv[3][3], motion->predictor);
 }
 
 /*
