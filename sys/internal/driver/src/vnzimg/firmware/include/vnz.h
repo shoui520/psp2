@@ -131,6 +131,15 @@ static inline uint32_t vnzTestAndSet(volatile uint8_t *lock)
 	return value;
 }
 
+/* the leading zero bits of value, 32 for zero (MeP LDZ) */
+static inline uint32_t vnzLeadingZeros(uint32_t value)
+{
+	long zeros;
+
+	mep_ldz(&zeros, (long)value);
+	return zeros;
+}
+
 /* a data-cache operation on the line holding address (MeP CACHE) */
 #define VNZ_CACHE_FLUSH			0	/* before the cores share a line */
 #define VNZ_CACHE_WRITEBACK		2

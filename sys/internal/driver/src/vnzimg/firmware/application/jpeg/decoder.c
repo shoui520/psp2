@@ -623,7 +623,7 @@ int32_t jpegDecoderContinue(void *work, uint32_t *coefSize)
 
 	colorSpace = decoder->colorSpace;
 	decoder->frameColorSpace = colorSpace;
-	shift = 31 - __builtin_clz(decoder->downscale);
+	shift = 31 - vnzLeadingZeros(decoder->downscale);
 	sampling = colorSpace & JPEG_CS_SAMPLING_MASK;
 	if (decoder->flags & JPEG_DECODER_MJPEG_SAMPLING) {
 		if ((colorSpace & JPEG_CS_KIND_MASK) != JPEG_CS_YCBCR)

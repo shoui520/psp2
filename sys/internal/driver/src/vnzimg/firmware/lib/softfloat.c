@@ -175,7 +175,7 @@ float __divsf3(float a, float b)
 	uint32_t fieldA = x & EXPONENT, fieldB = y & EXPONENT;
 	uint32_t signA = x & SIGN, signB = y & SIGN;
 	int aMaximum = fieldA == EXPONENT, bMaximum = fieldB == EXPONENT;
-	uint32_t result, quotient, twice, four, eight, sticky, bits, shift, round;
+	uint32_t result, quotient, twice, four, eight, sticky, bits, scan, shift, round;
 	int32_t exponentA, exponentB, exponent, remaining;
 
 	if (aMaximum && mantissaA)
@@ -239,7 +239,13 @@ float __divsf3(float a, float b)
 			remaining -= 4;
 		} else {
 			/* the first digits: the exponent takes the leading zeros */
-			bits = quotient ? 32 - __builtin_clz(quotient) : 0;
+			bits = 32;
+			if (quotient) {
+				bits = 0;
+				for (scan = quotient; !(scan & 0x80000000); scan <<= 1)
+					bits++;
+			}
+			bits = 32 - bits;
 			if (bits == 0) {
 				exponent -= 4;
 			} else {

@@ -146,7 +146,7 @@ int32_t ngsDivideLong(int32_t a, int32_t b)
 /* log2(x): the exponent, then a bit of fraction from each squaring */
 int32_t ngsLog2(uint32_t x)
 {
-	uint32_t zeros = __builtin_clz(x);
+	uint32_t zeros = vnzLeadingZeros(x);
 	int32_t result = 7 - zeros;
 	int32_t mantissa, bit, i;
 

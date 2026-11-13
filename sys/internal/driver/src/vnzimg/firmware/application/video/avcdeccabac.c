@@ -541,7 +541,7 @@ static uint32_t decodeDecision(VideoAvcCabac *cabac, uint32_t ctxIdx)
 		*context = transIdxLps[pStateIdx] << 1 | valMps;
 	}
 	/* 9.3.3.2.2: renormalised to at least 256 */
-	shift = __builtin_clz(range << 23);
+	shift = vnzLeadingZeros(range << 23);
 	if (shift >= 1) {
 		range <<= shift;
 		cabac->range = range;
@@ -576,7 +576,7 @@ static uint32_t decodeTerminate(VideoAvcCabac *cabac)
 	cabac->range = range;
 	if (cabac->offset >= range)
 		return 1;
-	shift = __builtin_clz(range << 23);
+	shift = vnzLeadingZeros(range << 23);
 	if (shift >= 1) {
 		cabac->range = range << shift;
 		cabac->offset = cabac->offset << shift | videoBitsRead(cabac->bits, shift);
