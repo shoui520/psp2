@@ -1474,41 +1474,24 @@ typedef struct SslBigNumMethodEntry {
 #define SSL_BIGNUM_METHOD_IN_BITS 0x2
 #define SSL_BIGNUM_METHOD_CONTINUE 0x4
 
-const SslBigNumMethod *sslGetWordC4BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC6BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC8BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC11BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC12BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC16BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC22BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC24BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC32BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC44BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC48BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC64BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC88BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC96BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC128BigNumMethod(void);
-const SslBigNumMethod *sslGetWordC256BigNumMethod(void);
-
 static const SslBigNumMethodEntry sslBigNumMethodTable[17] = {
 	{ sslGetWordBigNumMethod, 1, -1, SSL_BIGNUM_METHOD_FALLBACK },
 	{ sslGetWordC4BigNumMethod, 4, 4, 0 },
 	{ sslGetWordC6BigNumMethod, 6, 6, 0 },
 	{ sslGetWordC8BigNumMethod, 8, 8, 0 },
 	{ sslGetWordC11BigNumMethod, 11, 11, 0 },
-	{ sslGetWordC12BigNumMethod, 12, 12, 0 },
+	{ sslGetWordR612BigNumMethod, 12, 12, 0 },
 	{ sslGetWordC16BigNumMethod, 16, 16, 0 },
-	{ sslGetWordC22BigNumMethod, 22, 22, 0 },
-	{ sslGetWordC24BigNumMethod, 24, 24, 0 },
-	{ sslGetWordC32BigNumMethod, 32, 32, 0 },
-	{ sslGetWordC44BigNumMethod, 44, 44, 0 },
-	{ sslGetWordC48BigNumMethod, 48, 48, 0 },
-	{ sslGetWordC64BigNumMethod, 64, 64, 0 },
-	{ sslGetWordC88BigNumMethod, 88, 88, 0 },
-	{ sslGetWordC96BigNumMethod, 96, 96, 0 },
-	{ sslGetWordC128BigNumMethod, 128, 128, 0 },
-	{ sslGetWordC256BigNumMethod, 256, 256, 0 }
+	{ sslGetWordR1122BigNumMethod, 22, 22, 0 },
+	{ sslGetWordR624BigNumMethod, 24, 24, 0 },
+	{ sslGetWordR1632BigNumMethod, 32, 32, 0 },
+	{ sslGetWordR1144BigNumMethod, 44, 44, 0 },
+	{ sslGetWordR648BigNumMethod, 48, 48, 0 },
+	{ sslGetWordR1664BigNumMethod, 64, 64, 0 },
+	{ sslGetWordR1188BigNumMethod, 88, 88, 0 },
+	{ sslGetWordR696BigNumMethod, 96, 96, 0 },
+	{ sslGetWordR16128BigNumMethod, 128, 128, 0 },
+	{ sslGetWordR16256BigNumMethod, 256, 256, 0 }
 };
 
 int sslSelectBigNumMethod(SslBigNumMethodContext *context, const void **method,
@@ -1640,31 +1623,6 @@ int sslWordBigNumMethodSetInfo(SslBigNumModulus *m, int type,
 	}
 	return SSL_BIGNUM_ERROR_BAD_INFO;
 }
-
-/* The working state of an exponentiation, kept in the words of a context
- * number
- */
-typedef struct SslBigNumModExpState {
-	SceUInt32 words;
-	SceUInt32 padWords;
-	SceUInt32 tableSize;
-	SceUInt32 index;
-	SceUInt32 reserved16;
-	SceUInt32 squarings;
-	SslBigNumMontgomery *mont;
-	const unsigned char *recoding;
-	SslBigNum *base;
-	SslBigNum *table;
-	SslBigNumWord *product;
-	SceUInt32 reserved44;
-	SslBigNumWord *square;
-	SslBigNumWord *accumulator;
-	SslBigNumSurrender *surrender;
-	int progress;
-	SslBigNumWord *powers[16];
-} SslBigNumModExpState;
-
-_Static_assert(sizeof(SslBigNumModExpState) == 128, "SslBigNumModExpState");
 
 int sslNewBigNumModExpState(SslBigNumModExpState **result,
 			    SslBigNumModulus *m, SslBigNum *r,

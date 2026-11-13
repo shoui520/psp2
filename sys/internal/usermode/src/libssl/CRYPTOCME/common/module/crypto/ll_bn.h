@@ -123,7 +123,7 @@ typedef struct SslBigNumMethod {
 	int (*Cleanup)(SslBigNumModulus *m);
 	int (*SetInfo)(SslBigNumModulus *m, int type, const SslBigNum *bn,
 		       int flags, SslBigNumContext *ctx);
-	void *reserved32;
+	SceUInt32 level;
 	const SslBigNumWordMethods *wordMethods;
 } SslBigNumMethod;
 
@@ -184,6 +184,31 @@ _Static_assert(sizeof(struct SslBigNumContext) == 340, "SslBigNumContext");
 #define sslIsBigNumZero(bn)						\
 	((bn)->top == 0 || ((bn)->top == 1 && (bn)->d[0] == 0))
 #define sslIsBigNumOne(bn) ((bn)->top == 1 && (bn)->d[0] == 1)
+
+/* The working state of an exponentiation, kept in the words of a context
+ * number
+ */
+typedef struct SslBigNumModExpState {
+	SceUInt32 words;
+	SceUInt32 padWords;
+	SceUInt32 tableSize;
+	SceUInt32 index;
+	SceUInt32 reserved16;
+	SceUInt32 squarings;
+	SslBigNumMontgomery *mont;
+	const unsigned char *recoding;
+	SslBigNum *base;
+	SslBigNum *table;
+	SslBigNumWord *product;
+	SslBigNumWord *temp;
+	SslBigNumWord *square;
+	SslBigNumWord *accumulator;
+	SslBigNumSurrender *surrender;
+	int progress;
+	SslBigNumWord *powers[16];
+} SslBigNumModExpState;
+
+_Static_assert(sizeof(SslBigNumModExpState) == 128, "SslBigNumModExpState");
 
 int sslExpandBigNum(SslBigNum *bn, SceUInt32 words, int keep,
 		    SslBigNumContext *ctx);
@@ -297,5 +322,52 @@ int sslModExpBigNumReciprocal(SslBigNum *r, const SslBigNum *a,
 			      SslBigNumContext *ctx);
 int sslRightShiftBigNum(SslBigNum *r, const SslBigNum *a, SceUInt32 n,
 			SslBigNumContext *ctx);
+
+int sslNewBigNumModExpState(SslBigNumModExpState **result,
+			    SslBigNumModulus *m, SslBigNum *r,
+			    const SslBigNum *a, const SslBigNum *p,
+			    SceUInt32 scratch, SslBigNumContext *ctx);
+int sslWordBigNumMethodInit(SslBigNumModulus *m);
+int sslWordBigNumMethodCleanup(SslBigNumModulus *m);
+int sslWordBigNumMethodSetInfo(SslBigNumModulus *m, int type,
+			       const SslBigNum *bn, int flags,
+			       SslBigNumContext *ctx);
+int sslFixedBigNumMethodModMultiply(SslBigNumModulus *m, SslBigNumWord *r,
+				    const SslBigNumWord *a,
+				    const SslBigNumWord *b, SslBigNumWord *t);
+
+#define SSL_BIGNUM_FIXED_WORDS(n)					\
+	void sslMultiplyBigNumWordsC##n(SslBigNumWord *r,		\
+					const SslBigNumWord *a,		\
+					const SslBigNumWord *b);	\
+	void sslSquareBigNumWordsC##n(SslBigNumWord *r, const SslBigNumWord *a)
+SSL_BIGNUM_FIXED_WORDS(4);
+SSL_BIGNUM_FIXED_WORDS(6);
+SSL_BIGNUM_FIXED_WORDS(8);
+SSL_BIGNUM_FIXED_WORDS(11);
+SSL_BIGNUM_FIXED_WORDS(16);
+
+/* SSLeay's word routines (bn_asm.c) */
+SslBigNumWord bn_add_words(SslBigNumWord *r, SslBigNumWord *a,
+			   SslBigNumWord *b, int n);
+SslBigNumWord bn_sub_words(SslBigNumWord *r, SslBigNumWord *a,
+			   SslBigNumWord *b, int n);
+
+const SslBigNumMethod *sslGetWordC4BigNumMethod(void);
+const SslBigNumMethod *sslGetWordC6BigNumMethod(void);
+const SslBigNumMethod *sslGetWordC8BigNumMethod(void);
+const SslBigNumMethod *sslGetWordC11BigNumMethod(void);
+const SslBigNumMethod *sslGetWordR612BigNumMethod(void);
+const SslBigNumMethod *sslGetWordC16BigNumMethod(void);
+const SslBigNumMethod *sslGetWordR1122BigNumMethod(void);
+const SslBigNumMethod *sslGetWordR624BigNumMethod(void);
+const SslBigNumMethod *sslGetWordR1632BigNumMethod(void);
+const SslBigNumMethod *sslGetWordR1144BigNumMethod(void);
+const SslBigNumMethod *sslGetWordR648BigNumMethod(void);
+const SslBigNumMethod *sslGetWordR1664BigNumMethod(void);
+const SslBigNumMethod *sslGetWordR1188BigNumMethod(void);
+const SslBigNumMethod *sslGetWordR696BigNumMethod(void);
+const SslBigNumMethod *sslGetWordR16128BigNumMethod(void);
+const SslBigNumMethod *sslGetWordR16256BigNumMethod(void);
 
 #endif
