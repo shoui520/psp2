@@ -121,7 +121,11 @@ const struct ConfigBank configDefault = {
 		0x00,	/* reserved16 */
 		0x0000,	/* hardwareInfoSelect */
 		{ 0x0000 },	/* state */
+#if FW_SINCE(0x01000109)
 		0x0258,	/* chargeTimer1fDelay */
+#else
+		0x0168,	/* chargeTimer1fDelay */
+#endif
 		0x60, 0x60,	/* batterySetting4x, batterySetting5x */
 #if FW_SINCE(0x01000306)
 		0x28, 0x08, 0x00,	/* touchDelaySelect, touchDelayByte, touchDelayDeselect */

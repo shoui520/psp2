@@ -20,7 +20,7 @@ void task3(VP_INT exinf)
 {
 	ER ercd;
 	FLGPTN ptn;
-#if BOARD_TOUCH_RESET
+#if BOARD_TOUCH_RESET && FW_SINCE(0x01000109)
 	unsigned char data[2];
 #endif
 
@@ -53,11 +53,19 @@ void task3(VP_INT exinf)
 			if (ptn & 0x0040) {
 				clr_flg(2, ~0x0040);
 				touchIdentify0();
+#if FW_SINCE(0x01000109)
 				touchReadConfigVersion0(data);
+#else
+				touchReadModes0();
+#endif
 			} else if (ptn & 0x0080) {
 				clr_flg(2, ~0x0080);
 				touchIdentify1();
+#if FW_SINCE(0x01000109)
 				touchReadConfigVersion1(data);
+#else
+				touchReadModes1();
+#endif
 			}
 #endif
 			if (ptn & 0x0100) {

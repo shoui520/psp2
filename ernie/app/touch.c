@@ -646,7 +646,7 @@ unsigned char touchSetPower1(unsigned char interval)
 }
 
 /* reads the user data's configuration version into data (2 bytes), and the modes when it
-   changed */
+   changed (before 0x01000109 task3 reads them after touchIdentify) */
 unsigned char touchReadConfigVersion0(unsigned char *data)
 {
 	unsigned char result;
@@ -660,7 +660,9 @@ unsigned char touchReadConfigVersion0(unsigned char *data)
 	version = (unsigned int)data[0] << 8 | data[1];
 	if (touch.panel[0].configVersion != version) {
 		touch.panel[0].configVersion = version;
+#if FW_SINCE(0x01000109)
 		touchReadModes0();
+#endif
 	}
 	return result;
 }
@@ -678,7 +680,9 @@ unsigned char touchReadConfigVersion1(unsigned char *data)
 	version = (unsigned int)data[0] << 8 | data[1];
 	if (touch.panel[1].configVersion != version) {
 		touch.panel[1].configVersion = version;
+#if FW_SINCE(0x01000109)
 		touchReadModes1();
+#endif
 	}
 	return result;
 }
@@ -810,9 +814,11 @@ void touchReadObjects(struct TouchObjects *objects, unsigned char count, unsigne
 			case 25:
 				objects->selfTest = TOUCH_OBJECT_ADDRESS(table[i]);
 				break;
+#if FW_SINCE(0x01000109)
 			case 28:
 				objects->cte = TOUCH_OBJECT_ADDRESS(table[i]);
 				break;
+#endif
 			case 34:
 				objects->report = TOUCH_OBJECT_ADDRESS(table[i]) + 0x0e;
 				objects->status = TOUCH_OBJECT_ADDRESS(table[i]) + 0x54;
@@ -847,6 +853,7 @@ void touchSetMode(unsigned char mode)
 		touchWriteVerified(address, &touch.panel[0].modes[mode].mergeThreshold, 1, 0);
 		address = touch.panel[0].objects.noise + 8;
 		touchWriteVerified(address, &touch.panel[0].modes[mode].noiseThreshold, 1, 0);
+#if FW_SINCE(0x01000109)
 		if ((touch.panel[0].configVersion & 0x7fff) >= 0x0d00) {
 			address = touch.panel[0].objects.noise + 0x0c;
 			touchWriteVerified(address, touch.panel[0].modes[mode].frequency, 4, 0);
@@ -855,9 +862,16 @@ void touchSetMode(unsigned char mode)
 			address = touch.panel[0].objects.cte + 4;
 			touchWriteVerified(address, &touch.panel[0].modes[mode].gcafDepth, 1, 0);
 		}
+#endif
 	}
+#if FW_SINCE(0x01000109)
 	if (touch.panel[1].version >= 0x24) {
 		address = touch.panel[1].objects.t51 + 3;
+#else
+	/* panel 0's version decides for panel 1 too, and panel 0's T51 is where panel 1's goes */
+	if (touch.panel[0].version >= 0x24) {
+		address = touch.panel[0].objects.t51 + 3;
+#endif
 		touchWriteVerified(address, &touch.panel[1].modes[mode].t51, 1, 1);
 		address = touch.panel[1].objects.touchScreen + 7;
 		touchWriteVerified(address, &touch.panel[1].modes[mode].threshold, 1, 1);
@@ -867,6 +881,7 @@ void touchSetMode(unsigned char mode)
 		touchWriteVerified(address, &touch.panel[1].modes[mode].mergeThreshold, 1, 1);
 		address = touch.panel[1].objects.noise + 8;
 		touchWriteVerified(address, &touch.panel[1].modes[mode].noiseThreshold, 1, 1);
+#if FW_SINCE(0x01000109)
 		if ((touch.panel[1].configVersion & 0x7fff) >= 0x0d00) {
 			address = touch.panel[1].objects.noise + 0x0c;
 			touchWriteVerified(address, touch.panel[1].modes[mode].frequency, 4, 1);
@@ -875,6 +890,7 @@ void touchSetMode(unsigned char mode)
 			address = touch.panel[1].objects.cte + 4;
 			touchWriteVerified(address, &touch.panel[1].modes[mode].gcafDepth, 1, 1);
 		}
+#endif
 	}
 }
 
@@ -883,14 +899,18 @@ void touchReadModes0(void)
 {
 	int result;
 	unsigned int address;
-	unsigned char data[sizeof(struct TouchMode)];
+	unsigned char data[TOUCH_MODE_SIZE];
 
 	if (touch.panel[0].version >= 0x24) {
 		address = touch.panel[0].objects.userData + 2;
 		result = touchRead(address, data, sizeof(data), 0);
 		if (result == 0) {
+#if FW_SINCE(0x01000109)
 			memcpy(&touch.panel[0].modes[2], data, sizeof(data));
 			memcpy(&touch.panel[0].modes[1], data, sizeof(data) - 1);
+#else
+			memcpy(&touch.panel[0].modes[1], data, sizeof(data));
+#endif
 		}
 		address = touch.panel[0].objects.t51 + 3;
 		result = touchRead(address, data, 1, 0);
@@ -912,6 +932,7 @@ void touchReadModes0(void)
 		result = touchRead(address, data, 1, 0);
 		if (result == 0)
 			touch.panel[0].modes[0].noiseThreshold = data[0];
+#if FW_SINCE(0x01000109)
 		address = touch.panel[0].objects.noise + 0x0c;
 		result = touchRead(address, data, 4, 0);
 		if (result == 0)
@@ -922,6 +943,7 @@ void touchReadModes0(void)
 			touch.panel[0].modes[0].gcafDepth = data[0];
 			touch.panel[0].modes[1].gcafDepth = data[0];
 		}
+#endif
 	}
 }
 
@@ -929,14 +951,18 @@ void touchReadModes1(void)
 {
 	int result;
 	unsigned int address;
-	unsigned char data[sizeof(struct TouchMode)];
+	unsigned char data[TOUCH_MODE_SIZE];
 
 	if (touch.panel[1].version >= 0x24) {
 		address = touch.panel[1].objects.userData + 2;
 		result = touchRead(address, data, sizeof(data), 1);
 		if (result == 0) {
+#if FW_SINCE(0x01000109)
 			memcpy(&touch.panel[1].modes[2], data, sizeof(data));
 			memcpy(&touch.panel[1].modes[1], data, sizeof(data) - 1);
+#else
+			memcpy(&touch.panel[1].modes[1], data, sizeof(data));
+#endif
 		}
 		address = touch.panel[1].objects.t51 + 3;
 		result = touchRead(address, data, 1, 1);
@@ -958,6 +984,7 @@ void touchReadModes1(void)
 		result = touchRead(address, data, 1, 1);
 		if (result == 0)
 			touch.panel[1].modes[0].noiseThreshold = data[0];
+#if FW_SINCE(0x01000109)
 		address = touch.panel[1].objects.noise + 0x0c;
 		result = touchRead(address, data, 4, 1);
 		if (result == 0)
@@ -968,13 +995,16 @@ void touchReadModes1(void)
 			touch.panel[1].modes[0].gcafDepth = data[0];
 			touch.panel[1].modes[1].gcafDepth = data[0];
 		}
+#endif
 	}
 }
 
 /* the state the frames carry; mode 1 from now on */
 void touchUpdateState(void)
 {
+#if BOARD_TOUCH_CHARGE || FW_SINCE(0x01000109)
 	unsigned char mode;
+#endif
 
 	if (touch.flags & (TOUCH_PANEL0 | TOUCH_PANEL1)) {
 #if BOARD_TOUCH_CHARGE
@@ -993,13 +1023,26 @@ void touchUpdateState(void)
 				mode = 1;
 		} else
 			mode = 0;
-#else
+#elif FW_SINCE(0x01000109)
 		mode = 1;
 #endif
+#if FW_SINCE(0x01000109)
 		if (touch.state.bits.mode != mode) {
 			touchSetMode(mode);
 			touch.state.bits.mode = mode;
 		}
+#else
+		/* mode 1 while any of the bits is set (power always is), else mode 0 */
+		if (touch.state.value & 0xf0) {
+			if (!touch.state.bits.mode) {
+				touchSetMode(1);
+				touch.state.bits.mode = 1;
+			}
+		} else if (touch.state.bits.mode) {
+			touchSetMode(0);
+			touch.state.bits.mode = 0;
+		}
+#endif
 	}
 }
 

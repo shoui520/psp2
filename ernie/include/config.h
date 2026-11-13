@@ -14,8 +14,10 @@
 #define CONFIG_SIZE		0x3f0	/* a bank's block */
 #if FW_SINCE(0x01000306)
 #define CONFIG_VERSION		0x31	/* this build's layout */
-#else
+#elif FW_SINCE(0x01000109)
 #define CONFIG_VERSION		0x29	/* (no touch delays, host link limits or off transition 0x18) */
+#else
+#define CONFIG_VERSION		0x28	/* (the charge timer's delay 0x168) */
 #endif
 #define CONFIG_WRITTEN		0x5a5a
 

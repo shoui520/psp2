@@ -225,6 +225,7 @@ unsigned char cookieReadStatus2(unsigned char *status)
 	return cookieRead(&reg, status);
 }
 
+#if FW_SINCE(0x01000109)
 /* register 3 read back: the Cookie cleared bit 7, so the USB's mode is new */
 void cookieReadReg3(void)
 {
@@ -239,6 +240,7 @@ void cookieReadReg3(void)
 		chargeUsbHold = 0;
 	}
 }
+#endif
 
 /* register 3's bit 6 clear while on and nothing holds it: 0x0892 (sceSysconCtrlChargeAC).
    Sony's compares the new value with the register's high byte, not the low one it sets. */

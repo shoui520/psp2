@@ -7,6 +7,7 @@
 #define ERNIE_COOKIE_H
 
 #include "board.h"
+#include "ernie.h"
 
 /* a register's number: from 0xa0 where the settings say so (the updater's always from 0) */
 #if defined(ERNIE_UPDATER) || !BOARD_COOKIE_REG_HIGH
@@ -43,7 +44,12 @@ extern unsigned char cookieCtrlSupplyCurrentAc(unsigned char current);
 extern unsigned char cookieCtrlReg7(unsigned char value);
 extern unsigned char cookieReadStatus1(unsigned char *status);
 extern unsigned char cookieReadStatus2(unsigned char *status);
+#if FW_SINCE(0x01000109)
 extern void cookieReadReg3(void);
+#else
+/* before 0x01000109 register 3 is not read back: what was last written to it stands */
+#define cookieReadReg3()
+#endif
 extern unsigned char cookieCtrlChargeAc(unsigned char on);
 extern unsigned char cookieCtrlReg3Mode(unsigned char mode);
 extern unsigned char cookieCtrlReg3Bit2(unsigned char on);

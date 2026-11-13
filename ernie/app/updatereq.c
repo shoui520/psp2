@@ -148,8 +148,10 @@ void updaterStartDownloader(void)
 	unsigned char snapshot;
 	unsigned long sleepFactor;
 	unsigned long version;
+#if FW_SINCE(0x01000109)
 	unsigned long hardware;
 	unsigned char board;
+#endif
 
 	serialClose1();
 	serialClose2();
@@ -162,8 +164,10 @@ void updaterStartDownloader(void)
 	version &= 0xffffff00;
 	version = ((version << 24) & 0xff000000) | ((version << 8) & 0x00ff0000) |
 		  ((version >> 8) & 0x0000ff00) | ((version >> 24) & 0x000000ff);
+#if FW_SINCE(0x01000109)
 	getHardwareInfo((unsigned char *)&hardware);
 	board = (unsigned char)((hardware >> 16) & 0xff);
+#endif
 	dis_dsp();
 	DI();
 	if (updaterFlashPrepare() == 0) {
@@ -176,6 +180,7 @@ void updaterStartDownloader(void)
 			DOWNLOADER_START->link.config = hostLink.config;
 		if (version >= 0x00002000 && version <= 0x00002600)
 			memset(DOWNLOADER_RAM_20, 0, DOWNLOADER_RAM_20_SIZE);
+#if FW_SINCE(0x01000109)
 		if (board == 0x40 && (version == 0x00010000 || version == 0x00010800)) {
 			memset(DOWNLOADER_RAM_40_BYTE, 0, 1);
 			memset(DOWNLOADER_RAM_40_WORD, 0, 2);
@@ -184,6 +189,7 @@ void updaterStartDownloader(void)
 			memset(DOWNLOADER_RAM_41_BYTE, 0, 1);
 			memset(DOWNLOADER_RAM_41_WORD, 0, 2);
 		}
+#endif
 		(*updaterDownloader)();
 	}
 	ena_dsp();

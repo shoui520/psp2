@@ -58,7 +58,9 @@ struct TouchObjects {
 	unsigned int	t51;
 	unsigned int	status;		/* T34's byte 0x54: read after a frame's report */
 	unsigned int	grip;		/* T20 (grip and face suppression) */
+#if FW_SINCE(0x01000109)
 	unsigned int	cte;		/* T28 (CTE configuration) */
+#endif
 };
 
 /* a set of the controller's settings (touchSetMode) */
@@ -68,9 +70,21 @@ struct TouchMode {
 	unsigned char	hysteresis;	/* T9's byte 31 */
 	unsigned char	noiseThreshold;	/* T22's NOISETHR (byte 8) */
 	unsigned char	mergeThreshold;	/* T9's MRGTHR (byte 16) */
+#if FW_SINCE(0x01000109)
 	unsigned char	frequency[4];	/* T22's bytes 12-15 */
 	unsigned char	gcafDepth;	/* T28's ACTVGCAFDEPTH (byte 4) */
+#endif
 };
+
+/* the modes a panel keeps (before 0x01000109 two, mode 1 from the user data), and the bytes of
+   a mode the user data holds */
+#if FW_SINCE(0x01000109)
+#define TOUCH_MODES		3
+#define TOUCH_MODE_SIZE		10
+#else
+#define TOUCH_MODES		2
+#define TOUCH_MODE_SIZE		5
+#endif
 
 /* a panel's controller: mode 0 is what the controller had, modes 1 and 2 come from its user
    data */
@@ -81,7 +95,7 @@ struct TouchPanel {
 	unsigned char	build;
 	unsigned int	configVersion;	/* T38's first two bytes, big-endian */
 	struct TouchObjects objects;
-	struct TouchMode modes[3];
+	struct TouchMode modes[TOUCH_MODES];
 };
 
 /* Touch.flags: which panels a frame reads, and its end */
@@ -96,8 +110,13 @@ struct TouchPanel {
 union TouchState {
 	unsigned char	value;
 	struct {
+#if FW_SINCE(0x01000109)
 		unsigned char	mode:2;		/* the panels' settings (touchSetMode) */
 		unsigned char	reserved:2;
+#else
+		unsigned char	mode:1;
+		unsigned char	reserved:3;
+#endif
 		unsigned char	input0:1;	/* input1Bit0Active() */
 		unsigned char	input5:1;	/* input1Bit5Active() */
 		unsigned char	input3:1;	/* input1Bit3Active() */

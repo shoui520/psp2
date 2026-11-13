@@ -100,7 +100,7 @@ void chargeInit(void)
 		if (deviceVersions.battery.version[2] != 0)
 			chargeSetBattery();
 	}
-#if BOARD_CHARGE_TIMER1F
+#if BOARD_CHARGE_TIMER1F || !FW_SINCE(0x01000109)
 	charge.timer1fPending = 0;
 #endif
 	handler.handler = chargeTimer;
@@ -136,22 +136,36 @@ void chargeUpdate(void)
 	if (status1.word != cookieStatus1.word || status2.word != cookieStatus2.word) {
 		chargeSetPowerStatus();
 		if ((status1.bits.ac ^ cookieStatus1.bits.ac) ||
+#if FW_SINCE(0x01000109)
 		    (status1.bits.charging ^ cookieStatus1.bits.charging) ||
 		    (status2.bits.vbus ^ cookieStatus2.bits.vbus))
+#else
+		    (status1.bits.charging ^ cookieStatus1.bits.charging))
+#endif
 			inputChanged();
 		if (cookieStatus1.bits.level)
 			;
 	}
 	if (cookieStatus2.bits.vbusCharge) {
+#if FW_SINCE(0x01000109)
 		if (chargeUsbMode == 0)
 			chargeUsbMode = 1;
 		chargeSetCurrent();
+#else
+		/* before 0x01000109 only with the USB status's bit 1 */
+		if (cookieStatus2.bits.usb & 2) {
+			if (chargeUsbMode == 0)
+				chargeUsbMode = 1;
+			chargeSetCurrent();
+		}
+#endif
 	} else {
 		chargeUsbMode = 0;
 		chargeUsbHold = 0;
 		if (deviceVersions.cookie[1] < 0x31)
 			cookieCtrlSupplyCurrentUsb(0x10);
 	}
+#if FW_SINCE(0x01000109)
 	if (powerStatus.bits.cookieLock0 || powerStatus.bits.cookieLock1 || !chargeControl.1) {
 		if (cookieStatus1.bits.status2)
 			cookieCtrlChargeAc(0);
@@ -165,6 +179,17 @@ void chargeUpdate(void)
 	} else if (chargeCurrent != 0xff && (cookieRegs[0].byte[0] & 0x80)) {
 		powerCookieClear();
 	}
+#else
+	/* before 0x01000109 nothing turns the AC's charge back on or clears register 3's bit 7
+	   here */
+	if (cookieStatus1.bits.status2 &&
+	    (powerStatus.bits.cookieLock0 || powerStatus.bits.cookieLock1 || !chargeControl.1))
+		cookieCtrlChargeAc(0);
+	if (cookieStatus1.bits.status3 &&
+	    (powerStatus.bits.cookieLock0 || powerStatus.bits.cookieLock1 ||
+	     (powerStatus.bits.usb == 1 && !chargeVbus.1) || !chargeVbus.0))
+		powerCookieSet();
+#endif
 	if (deviceVersions.battery.id == 0) {
 		if (batteryReadInfo(&deviceVersions.battery.id) == 0) {
 			chargeSetBattery();
@@ -686,7 +711,9 @@ void chargeReadTempVolt(unsigned int *value)
 	*value = charge.batteryTemp + charge.batteryVolt;
 }
 
-/* timer 0x1f (chargeTimer1f), on PCH-1000 only: the others have no caller */
+#if FW_SINCE(0x01000109)
+/* timer 0x1f (chargeTimer1f), on PCH-1000 only: the others have no caller (before 0x01000109
+   neither function exists, nor chargeUsbIs1 and chargeUsbIs2) */
 void chargeTimer1fStart(void)
 {
 #if BOARD_CHARGE_TIMER1F
@@ -702,6 +729,7 @@ void chargeTimer1fStop(void)
 	timerStop(TIMER_RTC(0x1f));
 #endif
 }
+#endif
 
 #if FW_SINCE(0x01000306)
 /* the update's period while the power status's AC is set, or in system states 4, 8 and 0x20 */
@@ -727,6 +755,7 @@ void chargeSetAcDelay(void)
 }
 #endif
 
+#if FW_SINCE(0x01000109)
 int chargeUsbIs1(void)
 {
 	return powerStatus.bits.usb == 1;
@@ -736,3 +765,4 @@ int chargeUsbIs2(void)
 {
 	return cookieStatus2.bits.vbus && powerStatus.bits.usb == 2;
 }
+#endif
