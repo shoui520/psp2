@@ -170,7 +170,7 @@ static void buffersLayout(AvcencStream *stream)
 	buffers->rowsLeft = address;
 	address += macroblocks * 64;
 	buffers->rowsMotion = address;
-	buffers->lines = address + 1024;
+	buffers->searchResults = address + 1024;
 }
 
 /* a Main profile level 3.0 stream's slices: a slice of at least 22 macroblocks */
@@ -203,7 +203,7 @@ static void pictureSetup(AvcencStream *stream, AvcencPicture *picture)
 	picture->luma = buffers->luma[stream->source];
 	picture->chroma = buffers->chroma[stream->source];
 	picture->motion = vnzPublicCloseRaw(picture->motion, buffers->motionSize);
-	picture->lines = buffers->lines;
+	picture->searchResults = buffers->searchResults;
 	picture->rowsAbove = buffers->rowsAbove;
 	picture->rowsLeft = buffers->rowsLeft;
 	picture->rowsMotion = buffers->rowsMotion;

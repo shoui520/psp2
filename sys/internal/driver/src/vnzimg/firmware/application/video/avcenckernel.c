@@ -194,3 +194,273 @@ void avcencDownscaleVerticalTail(AvcencDownscale *downscale, uint8_t *lines, uin
 	}
 	vertical(downscale, columns, lines, y);
 }
+
+/* 0x89d780: the picture's top: its first line for all eight */
+const uint8_t *avcencSearchTop(AvcencSearch *search, const uint8_t *window)
+{
+	uint32_t line;
+
+	for (line = 0; line < 8; line++)
+		avcencSearchLine(search, line, window);
+	return window;
+}
+
+/* 0x89d7d0: and its left edge */
+const uint8_t *avcencSearchTopLeft(AvcencSearch *search, const uint8_t *window)
+{
+	uint32_t line;
+
+	for (line = 0; line < 8; line++)
+		avcencSearchLineLeft(search, line, window);
+	return window;
+}
+
+/* 0x89d820: and its right edge */
+const uint8_t *avcencSearchTopRight(AvcencSearch *search, const uint8_t *window)
+{
+	uint32_t line;
+
+	for (line = 0; line < 8; line++)
+		avcencSearchLineRight(search, line, window);
+	return window;
+}
+
+/* the block of the current plane, read four samples at a time */
+static inline void searchBlock(AvcencSearch *search, const uint8_t *block, uint32_t pitch)
+{
+	uint32_t line, i;
+
+	for (line = 0; line < 8; line++)
+		for (i = 0; i < 8; i++)
+			search->block[line][i] = block[line * pitch + i];
+}
+
+/* 0x89d870: the plane 64 samples wide */
+void avcencSearchBlock64(AvcencSearch *search, const uint8_t *block)
+{
+	searchBlock(search, block, 64);
+}
+
+/* 0x89d900 */
+void avcencSearchBlock128(AvcencSearch *search, const uint8_t *block)
+{
+	searchBlock(search, block, 128);
+}
+
+/* 0x89d990 */
+void avcencSearchBlock192(AvcencSearch *search, const uint8_t *block)
+{
+	searchBlock(search, block, 192);
+}
+
+/* 0x89da20: and the widest, 256 */
+void avcencSearchBlock256(AvcencSearch *search, const uint8_t *block)
+{
+	searchBlock(search, block, 256);
+}
+
+/*
+ * 0x89dab0: two lines down: the eighth line comes up to the seventh place
+ * and the eighth stays, for the next ones to replace
+ */
+void avcencSearchShift(AvcencSearch *search)
+{
+	uint32_t line, i;
+
+	for (line = 0; line < 6; line++)
+		for (i = 0; i < 16; i++)
+			search->window[line][i] = search->window[line + 2][i];
+	for (i = 0; i < 16; i++)
+		search->window[6][i] = search->window[8][i];
+}
+
+/* the window's first eight lines, of the plane or with an edge */
+static inline void searchWindow(AvcencSearch *search, const uint8_t *window, uint32_t pitch)
+{
+	uint32_t line;
+
+	for (line = 0; line < 8; line++)
+		avcencSearchLine(search, line, window + line * pitch);
+}
+
+static inline void searchWindowLeft(AvcencSearch *search, const uint8_t *window,
+	uint32_t pitch)
+{
+	uint32_t line;
+
+	for (line = 0; line < 8; line++)
+		avcencSearchLineLeft(search, line, window + line * pitch);
+}
+
+static inline void searchWindowRight(AvcencSearch *search, const uint8_t *window,
+	uint32_t pitch)
+{
+	uint32_t line;
+
+	for (line = 0; line < 8; line++)
+		avcencSearchLineRight(search, line, window + line * pitch);
+}
+
+/* 0x89dae8 */
+void avcencSearchWindow64(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindow(search, window, 64);
+}
+
+/* 0x89db70 */
+void avcencSearchWindowLeft64(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindowLeft(search, window, 64);
+}
+
+/* 0x89dbc8 */
+void avcencSearchWindowRight64(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindowRight(search, window, 64);
+}
+
+/* 0x89dc20 */
+void avcencSearchWindow128(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindow(search, window, 128);
+}
+
+/* 0x89dca8 */
+void avcencSearchWindowLeft128(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindowLeft(search, window, 128);
+}
+
+/* 0x89dd00 */
+void avcencSearchWindowRight128(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindowRight(search, window, 128);
+}
+
+/* 0x89dd58 */
+void avcencSearchWindow192(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindow(search, window, 192);
+}
+
+/* 0x89dde0 */
+void avcencSearchWindowLeft192(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindowLeft(search, window, 192);
+}
+
+/* 0x89de38 */
+void avcencSearchWindowRight192(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindowRight(search, window, 192);
+}
+
+/* 0x89de90 */
+void avcencSearchWindow256(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindow(search, window, 256);
+}
+
+/* 0x89df18 */
+void avcencSearchWindowLeft256(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindowLeft(search, window, 256);
+}
+
+/* 0x89df70 */
+void avcencSearchWindowRight256(AvcencSearch *search, const uint8_t *window)
+{
+	searchWindowRight(search, window, 256);
+}
+
+/*
+ * the block's SAD at a place of the window: its lines against the window's
+ * from the first, the even ones that many samples in, the odd ones the other
+ */
+static uint16_t searchSad(const AvcencSearch *search, uint32_t first, uint32_t even,
+	uint32_t odd)
+{
+	uint32_t line, i, offset;
+	uint16_t sad = 0;
+
+	for (line = 0; line < 8; line++) {
+		offset = line & 1 ? odd : even;
+		for (i = 0; i < 8; i++) {
+			int32_t difference = search->block[line][i] -
+				search->window[first + line][offset + i];
+			sad += difference < 0 ? -difference : difference;
+		}
+	}
+	return sad;
+}
+
+/*
+ * 0x89dfc8: the SADs at the window's first line, from no sample in to the
+ * offsets', one row of the map (20 apart) each
+ */
+void avcencSearchLast(AvcencSearch *search, uint16_t *sads, int32_t offsets)
+{
+	int32_t offset;
+
+	for (offset = 0; offset <= offsets; offset++)
+		sads[offset * 20] = searchSad(search, 0, offset, offset);
+}
+
+/*
+ * 0x89e0b8: and at the first two lines, the second's four places on. A line
+ * down puts the odd lines a sample further in; the shift takes the low three
+ * bits of the count, so past the eighth sample they start again at the first
+ */
+void avcencSearchPair(AvcencSearch *search, uint16_t *sads, int32_t offsets)
+{
+	int32_t offset;
+
+	for (offset = 0; offset <= offsets; offset++) {
+		sads[offset * 20] = searchSad(search, 0, offset, offset);
+		sads[offset * 20 + 4] = searchSad(search, 1, offset, offset % 8 + 1);
+	}
+}
+
+static inline int16_t saturate16(int32_t value)
+{
+	if (value > 32767)
+		return 32767;
+	if (value < -32768)
+		return -32768;
+	return value;
+}
+
+/*
+ * 0x89e238: a candidate a lane: its cost is the vector's length and its
+ * change from the last block's, weighted, plus the SAD of the block's two
+ * halves; the lowest is kept, of equal ones the later. The next candidates
+ * are two samples to the right
+ */
+void avcencSearchChoose(AvcencChoice *choice, const int16_t *top, const int16_t *bottom)
+{
+	int32_t lane, x, y;
+	int16_t length, change, cost, sad;
+
+	for (lane = 0; lane < 4; lane++) {
+		x = choice->candidates[lane][0];
+		y = choice->candidates[lane][1];
+		length = (int8_t)(x < 0 ? -x : x) + (int8_t)(y < 0 ? -y : y);
+		x -= choice->last[0];
+		y -= choice->last[1];
+		change = (int8_t)(x < 0 ? -x : x) + (int8_t)(y < 0 ? -y : y);
+		cost = length * choice->lengthWeight + change * choice->changeWeight;
+		sad = saturate16(top[lane] + bottom[lane]);
+		cost = saturate16(cost + sad);
+		if (choice->cost[lane] >= cost) {
+			choice->cost[lane] = cost;
+			choice->sad[lane] = sad;
+			choice->vector[lane] = (uint8_t)choice->candidates[lane][0] |
+				(uint8_t)choice->candidates[lane][1] << 8;
+		}
+	}
+	choice->x += 2;
+	for (lane = 0; lane < 4; lane++) {
+		choice->candidates[lane][0] = choice->x;
+		choice->candidates[lane][1] = choice->y[lane];
+	}
+}

@@ -128,7 +128,7 @@ typedef struct AvcencPicture {
 	uint32_t rowsLeft;
 	uint32_t rowsMotion;
 	uint32_t reserved4[2];
-	uint32_t lines;
+	uint32_t searchResults;		/* the coarse search's, 64 bytes a group of rows */
 	uint32_t records;		/* the sixteen picture records */
 	uint32_t command[6];		/* the job record's */
 	uint32_t reserved5[2];
@@ -290,7 +290,7 @@ typedef struct AvcencBuffers {
 	uint32_t chroma[2];
 	uint32_t motion[2];		/* a quarter of a byte per pixel */
 	uint32_t reference;		/* the reference frame's lines, after the frames */
-	uint32_t lines;
+	uint32_t searchResults;
 	uint32_t rowsAbove;
 	uint32_t rowsLeft;
 	uint32_t rowsMotion;
@@ -426,9 +426,44 @@ typedef struct AvcencLoad {
 	uint8_t reserved[32];
 } AvcencLoad;
 
+/*
+ * the reference job's per core info (CORE_INFO_SIZE): a coarse search of each
+ * 64x64 block of four rows of macroblocks in the previous motion plane. The
+ * SAD maps hold a row for each place across the window (25, two samples
+ * apart) and a column for each line down (17): the halfword (line & 3) * 4 +
+ * line / 4, the seventeenth at 16
+ */
+#define SEARCH_PLACES	25
+typedef struct AvcencSearchInfo {
+	uint16_t top[SEARCH_PLACES][20];	/* the block's top 32 lines' */
+	uint16_t bottom[SEARCH_PLACES][20];	/* its bottom 32 lines' */
+	uint8_t reserved[24];
+	uint8_t columns;		/* of macroblocks in the block, up to four */
+	uint8_t rows;
+	uint8_t reserved2;		/* cleared */
+	uint8_t firstRow;
+	uint16_t x;			/* the block's, in pixels */
+	uint16_t y;
+	uint16_t width;
+	uint16_t height;
+	uint16_t motionWidth;
+	uint16_t lastVector;		/* the last block's, x in the low byte */
+	uint16_t *cursor;		/* the next block's vector in the results */
+	uint32_t results;		/* the group's 64 bytes of them */
+	uint32_t *sumPointer;		/* where the SADs' sum goes, the results' last word */
+	uint32_t sum;
+	const uint8_t *previous;	/* the previous plane's first sample */
+	uint32_t reserved3;
+	const uint8_t *current;		/* the group's first line's of the current plane */
+	int8_t lengthWeight;		/* of a vector's length, in its cost */
+	int8_t changeWeight;		/* of its change from the last block's */
+	uint8_t reserved4[42];
+} AvcencSearchInfo;
+
 
 typedef char jobInfoSizeCheck[sizeof(AvcencJobInfo) == 64 ? 1 : -1];
 typedef char loadSizeCheck[sizeof(AvcencLoad) == 64 ? 1 : -1];
+typedef char searchInfoSizeCheck[sizeof(AvcencSearchInfo) == CORE_INFO_SIZE ? 1 : -1];
 typedef char buffersSizeCheck[sizeof(AvcencBuffers) == BUFFERS_SIZE ? 1 : -1];
 typedef char slicesSizeCheck[sizeof(AvcencSlices) == SLICES_SIZE ? 1 : -1];
 typedef char rateSizeCheck[sizeof(AvcencRate) == RATE_STATE_SIZE ? 1 : -1];
