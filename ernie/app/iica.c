@@ -23,8 +23,9 @@
 
 static struct IicaRequest iicaRequest;
 
-#ifdef ERNIE_UPDATER
-/* the updater's: enables the IICA and sends a stop; 1 when it did not go out */
+#if defined(ERNIE_UPDATER) || !FW_SINCE(0x0100010A)
+/* the updater's (and the application's before 0x0100010A): enables the IICA and sends a stop; 1
+   when it did not go out */
 unsigned char iicaInit(void)
 {
 	unsigned char i;
@@ -56,6 +57,9 @@ unsigned char iicaInit(void)
 	}
 	IICAIF = 0;
 	SPIE = 0;
+#ifndef ERNIE_UPDATER
+	IICAMK = 0;
+#endif
 	return 0;
 }
 #else
