@@ -889,7 +889,7 @@ void avcdecParseSps(const AvcdecParserInfo *info, const VideoStream *stream, Vid
 	sps->constraintSet2 = set2;
 	sps->constraintSet3 = set3;
 	spsProfile(stream, job, sps);
-	sps->valid = 1;
+	sps->frameMbsOnly = 1;
 
 	value = videoBitsUe(bits);
 	if (value >= 13)
@@ -1715,4 +1715,351 @@ static void seiRecoveryPoint(const VideoStream *stream, VideoSliceJob *job)
 	sei->exactMatch = exact;
 	sei->recoveryFrameCnt = frames;
 	sei->flags |= AVC_SEI_RECOVERY_POINT;
+}
+
+static void refPicListReordering(const VideoStream *stream, VideoSliceJob *job, uint32_t header);
+static void decRefPicMarking(const VideoStream *stream, VideoSliceJob *job, uint32_t firstMb);
+static void predWeightTable(const VideoStream *stream, VideoSliceJob *job);
+
+/* slice_header(): into the unit's word and the slice's fields */
+void avcdecSliceHeader(const VideoStream *stream, VideoSliceJob *job)
+{
+	static const int32_t noDelta[2] = { 0, 0 };
+	VideoParameterCache *cache = (VideoParameterCache *)stream->parameterCache;
+	VideoBitstream *bits = job->parser.bits;
+	VideoNal *nal = job->parser.nal;
+	uint32_t firstMb, type, id, header, frameNum, lsb, bottomField, alwaysZero, pocType;
+	uint32_t block, idc, l0, l1, width, height, flags;
+	int32_t index, spsIndex, qp, alpha, beta, delta[2];
+	const VideoAvcSps *sps;
+	const VideoAvcPps *pps;
+	const VideoAvcSei *sei;
+
+	delta[0] = noDelta[0];
+	delta[1] = noDelta[1];
+	firstMb = videoBitsUe(bits);
+	if (nal->startPending ? firstMb != 0 : !((int32_t)firstMb < nal->macroblocks))
+		videoParserError(stream, &job->parser, 0, 0x8008);
+	type = videoBitsUe(bits);
+	if (type >= 10)
+		videoParserError(stream, &job->parser, 0, 0x8008);
+	/* B slices need the Main profile's tools */
+	if (!job->fieldDecode && (type == 1 || type == 6))
+		videoParserError(stream, &job->parser, 0, 0x4016);
+	id = videoBitsUe(bits);
+	if (id >= 256)
+		videoParserError(stream, &job->parser, 0, 0x8008);
+	index = videoCacheFind2(cache, id);
+	if (index < 0)
+		videoParserError(stream, &job->parser, 0, 0x4018);
+	block = vnzPublicOpenProtected((stream->parameterSets2 + index * PARAMETER_SET2_SIZE) & ~63,
+		PARAMETER_SET2_SIZE);
+	job->parameterSet2 = block;
+	pps = (const VideoAvcPps *)(block + (index & 3) * PARAMETER_SET2_SIZE);
+	job->pps = (uint32_t)pps;
+	if (pps->id != id)
+		videoParserError(stream, &job->parser, 4, 0x8008);
+	spsIndex = videoCacheFind(cache, pps->spsId);
+	if (spsIndex < 0)
+		videoParserError(stream, &job->parser, 4, 0x4017);
+	sps = (const VideoAvcSps *)vnzPublicOpenProtected(stream->parameterSets +
+		spsIndex * PARAMETER_SET_SIZE, PARAMETER_SET_SIZE);
+	job->parameterSet = (uint32_t)sps;
+	if (sps->id != pps->spsId)
+		videoParserError(stream, &job->parser, 5, 0x8008);
+	nal->parameterSet = spsIndex;
+	nal->parameterSet2 = index;
+
+	header = sps->frameMbsOnly << 24 | sps->direct8x8Inference << 27 |
+		pps->entropyCodingMode << 21 | pps->weightedPred << 18 |
+		pps->weightedBipredIdc << AVC_SLICE_BIPRED_SHIFT |
+		pps->constrainedIntraPred << 19 | pps->transform8x8Mode << 20;
+	if (type >= 5) {
+		header |= AVC_SLICE_TYPE_ALL;
+		type -= 5;
+	}
+	header |= type | (nal->refIdc > 0) << 11;
+	bottomField = pps->bottomFieldPicOrderInFramePresent;
+	alwaysZero = sps->deltaPicOrderAlwaysZero;
+	lsb = sps->log2MaxPicOrderCntLsb;
+	pocType = sps->picOrderCntType;
+	frameNum = videoBitsRead(bits, sps->log2MaxFrameNum);
+	if (nal->type == NAL_IDR && videoBitsUe(bits) >= 0x10000)
+		videoParserError(stream, &job->parser, 5, 0x8008);
+	if (pocType == 0) {
+		lsb = videoBitsRead(bits, lsb);
+		if (bottomField)
+			delta[0] = videoBitsSe(bits);
+	} else {
+		lsb = 0;
+		if (pocType == 1 && !alwaysZero) {
+			delta[0] = videoBitsSe(bits);
+			if (bottomField)
+				delta[1] = videoBitsSe(bits);
+		}
+	}
+	nal->picOrderCntLsb = lsb;
+	nal->deltaPicOrderCnt[0] = delta[0];
+	nal->deltaPicOrderCnt[1] = delta[1];
+	if ((header & AVC_SLICE_TYPE) == AVC_SLICE_B)
+		header |= videoBitsRead(bits, 1) << 5;
+
+	/* num_ref_idx_active_override_flag */
+	type = header & AVC_SLICE_TYPE;
+	l1 = 0;
+	if (type == AVC_SLICE_P || type == AVC_SLICE_B) {
+		if (videoBitsRead(bits, 1)) {
+			l0 = videoBitsUe(bits);
+			if (l0 >= 16)
+				videoParserError(stream, &job->parser, 5, 0x8008);
+			l0++;
+			if (type == AVC_SLICE_B) {
+				l1 = videoBitsUe(bits);
+				if (l1 >= 16)
+					videoParserError(stream, &job->parser, 5, 0x8008);
+				l1++;
+			}
+		} else {
+			l0 = pps->numRefIdxL0Active;
+			if (type == AVC_SLICE_B)
+				l1 = pps->numRefIdxL1Active;
+		}
+	} else {
+		l0 = 0;
+	}
+	nal->numRefIdxActive[0] = l0;
+	nal->numRefIdxActive[1] = l1;
+	refPicListReordering(stream, job, header);
+	if (((header & AVC_SLICE_WEIGHTED) && type == AVC_SLICE_P) ||
+	    (((int32_t)header >> AVC_SLICE_BIPRED_SHIFT & 3) == 1 && type == AVC_SLICE_B))
+		predWeightTable(stream, job);
+	nal->mmco5 = 0;
+	if (nal->refIdc)
+		decRefPicMarking(stream, job, firstMb);
+	if ((header & AVC_SLICE_CABAC) && type != AVC_SLICE_I) {
+		idc = videoBitsUe(bits);
+		if (idc >= 3)
+			videoParserError(stream, &job->parser, 6, 0x8008);
+		nal->cabacInitIdc = idc;
+	}
+	delta[0] = videoBitsSe(bits);
+	qp = pps->picInitQp + delta[0];
+	if (qp < 0 || qp >= 52)
+		videoParserError(stream, &job->parser, 6, 0x8008);
+	nal->sliceQpDelta = delta[0];
+	nal->sliceQp = pps->picInitQp + delta[0];
+	idc = 0;
+	alpha = beta = 0;
+	if (pps->deblockingFilterControlPresent) {
+		idc = videoBitsUe(bits);
+		if (idc >= 3)
+			videoParserError(stream, &job->parser, 6, 0x8008);
+		if (idc != 1) {
+			alpha = videoBitsSe(bits);
+			if (alpha < -6 || alpha >= 7)
+				videoParserError(stream, &job->parser, 6, 0x8008);
+			beta = videoBitsSe(bits);
+			if (beta < -6 || beta >= 7)
+				videoParserError(stream, &job->parser, 6, 0x8008);
+		}
+	}
+	nal->sliceDone = 0;
+	nal->sliceBetaOffset = beta;
+	nal->sliceAlphaC0Offset = alpha;
+	nal->sliceHeader = header | idc << AVC_SLICE_DEBLOCKING_SHIFT;
+	nal->firstMacroblock = firstMb;
+	nal->sliceParsed = 1;
+
+	/* the picture's first slice: the sequence's sizes */
+	if (nal->startPending) {
+		width = sps->widthInMbs;
+		height = sps->heightInMbs;
+		nal->widthInMbs = width;
+		nal->widthInMacroblocks = width;
+		nal->rowsPerRun = sps->rowsPerRun;
+		nal->heightInMacroblocks = height;
+		nal->macroblocks = width * height;
+		nal->lumaWidth = width * 16;
+		nal->lumaPitch = width * 16;
+		nal->chromaWidth = width * 8;
+		nal->chromaRowSize = width * 128;
+		nal->commandRowSize = ALIGN64(width * 544);
+		nal->sliceRowSize = ALIGN64(width * 136);
+		nal->lumaRowSize = width * 256;
+		nal->motionRowSize = width * 64;
+		nal->numRefFrames = sps->numRefFrames;
+		nal->maxFrameNum = sps->maxFrameNum;
+		nal->gapsInFrameNumAllowed = sps->gapsInFrameNumAllowed;
+		nal->frameNum = frameNum;
+		nal->idr = nal->type == NAL_IDR;
+		nal->frameCropping = sps->frameCropping;
+		if (nal->seiFound) {
+			sei = (const VideoAvcSei *)vnzPublicOpenProtected(stream->pictureData +
+				nal->picture * PICTURE_DATA_SIZE, PICTURE_DATA_SIZE);
+			flags = sei->flags;
+			nal->picStruct = (flags & AVC_SEI_PIC_TIMING) ? (int8_t)sei->picStruct : 0;
+			/* a recovery point starts the stream as an IDR does */
+			if (sei->flags & AVC_SEI_RECOVERY_POINT)
+				nal->idr = 1;
+			vnzPublicCloseProtected((uint32_t)sei, PICTURE_DATA_SIZE);
+		} else {
+			nal->picStruct = 0;
+		}
+	}
+	nal->state.bitOffset = videoBitsSeek(stream, nal);
+	videoBitsSave(&nal->state);
+	vnzPublicCloseProtected((uint32_t)sps, PARAMETER_SET_SIZE);
+	vnzPublicCloseProtected(block, PARAMETER_SET2_SIZE);
+}
+
+/* the next unit: another slice of the picture, or where the picture ends */
+void avcdecSliceStart(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoBitstream bits;
+	uint32_t words[2], start;
+	int32_t size, type, first;
+
+	size = nal->size;
+	start = nal->start;
+	bits = nal->bits;
+	words[0] = nal->reserved[0];
+	words[1] = nal->reserved[1];
+	type = videoNalNext(stream, &job->parser, 0);
+	if (type == NAL_SLICE || type == NAL_IDR) {
+		videoBitsBegin(stream, &job->parser);
+		first = videoBitsUe(&nal->bits);
+		if (!(nal->firstMacroblock < first && first < nal->macroblocks))
+			videoParserError(stream, &job->parser, 0, 0x8008);
+		nal->nextFirstMacroblock = first;
+	} else {
+		nal->nextFirstMacroblock = nal->macroblocks;
+	}
+	nal->nextType = type;
+	nal->bits = bits;
+	nal->reserved[0] = words[0];
+	nal->reserved[1] = words[1];
+	nal->start = start;
+	nal->size = size;
+}
+
+/* ref_pic_list_reordering(): each list's operations, up to 3 */
+static void refPicListReordering(const VideoStream *stream, VideoSliceJob *job, uint32_t header)
+{
+	VideoBitstream *bits = job->parser.bits;
+	VideoNal *nal = job->parser.nal;
+	uint32_t type = header & AVC_SLICE_TYPE, idc, list;
+	int32_t count, i;
+
+	for (list = 0; list < 2; list++) {
+		if (list == 0 ? type == AVC_SLICE_I : type != AVC_SLICE_B) {
+			nal->refPicListReordering[list] = 0;
+			continue;
+		}
+		nal->refPicListReordering[list] = videoBitsRead(bits, 1);
+		if (!nal->refPicListReordering[list])
+			continue;
+		count = nal->numRefIdxActive[list];
+		idc = videoBitsUe(bits);
+		if (idc >= 4)
+			videoParserError(stream, &job->parser, 6, 0x8008);
+		for (i = 0; idc != 3; i++) {
+			if (!(i < count))
+				videoParserError(stream, &job->parser, 6, 0x8008);
+			nal->reorderingIdc[list][i] = idc;
+			nal->reorderingValue[list][i] = videoBitsUe(bits);
+			idc = videoBitsUe(bits);
+		}
+		nal->reorderingIdc[list][i] = idc;
+	}
+}
+
+/* dec_ref_pic_marking() */
+static void decRefPicMarking(const VideoStream *stream, VideoSliceJob *job, uint32_t firstMb)
+{
+	VideoBitstream *bits = job->parser.bits;
+	VideoNal *nal = job->parser.nal;
+	uint8_t *operation = nal->mmcoOperation;
+	uint16_t *argument = nal->mmcoArgument;
+	uint32_t op, flag;
+
+	if (nal->type == NAL_IDR) {
+		/* no_output_of_prior_pics_flag, long_term_reference_flag */
+		videoBitsRead(bits, 1);
+		flag = videoBitsRead(bits, 1);
+		if (!firstMb)
+			nal->longTermReference = flag;
+		return;
+	}
+	nal->adaptiveRefPicMarking = videoBitsRead(bits, 1);
+	if (!nal->adaptiveRefPicMarking)
+		return;
+	do {
+		op = videoBitsUe(bits);
+		if (op >= 7)
+			videoParserError(stream, &job->parser, 6, 0x8008);
+		*operation++ = op;
+		switch (op) {
+		case 3:		/* difference_of_pic_nums_minus1, long_term_frame_idx */
+			*argument++ = videoBitsUe(bits);
+			/* fall through */
+		case 1:		/* difference_of_pic_nums_minus1 */
+		case 2:		/* long_term_pic_num */
+		case 4:		/* max_long_term_frame_idx_plus1 */
+		case 6:		/* long_term_frame_idx */
+			*argument++ = videoBitsUe(bits);
+			break;
+		case 5:
+			nal->mmco5 = 1;
+			break;
+		}
+	} while (op);
+}
+
+/* pred_weight_table(): unsent weights are the denominators' */
+static void predWeightTable(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoBitstream *bits = job->parser.bits;
+	VideoNal *nal = job->parser.nal;
+	int32_t count[2], i, list, lumaWeight, lumaOffset, weight[2], offset[2];
+	uint32_t lumaDenom, chromaDenom;
+	VideoAvcWeights *weights;
+
+	count[1] = nal->numRefIdxActive[1];
+	count[0] = nal->numRefIdxActive[0];
+	lumaDenom = videoBitsUe(bits);
+	if (lumaDenom >= 8)
+		videoParserError(stream, &job->parser, 5, 0x8008);
+	chromaDenom = videoBitsUe(bits);
+	if (chromaDenom >= 8)
+		videoParserError(stream, &job->parser, 5, 0x8008);
+	nal->lumaLog2WeightDenom = lumaDenom;
+	nal->chromaLog2WeightDenom = chromaDenom;
+	for (list = 0; list < 2; list++) {
+		weights = &nal->weights[list];
+		for (i = 0; i < count[list]; i++) {
+			if (videoBitsRead(bits, 1)) {
+				lumaWeight = videoBitsSe(bits);
+				lumaOffset = videoBitsSe(bits);
+			} else {
+				lumaOffset = 0;
+				lumaWeight = 1 << lumaDenom;
+			}
+			if (videoBitsRead(bits, 1)) {
+				weight[0] = videoBitsSe(bits);
+				offset[0] = videoBitsSe(bits);
+				weight[1] = videoBitsSe(bits);
+				offset[1] = videoBitsSe(bits);
+			} else {
+				offset[0] = offset[1] = 0;
+				weight[0] = weight[1] = 1 << chromaDenom;
+			}
+			weights->lumaWeight[i] = lumaWeight;
+			weights->lumaOffset[i] = lumaOffset;
+			weights->chromaWeight[0][i] = weight[0];
+			weights->chromaOffset[0][i] = offset[0];
+			weights->chromaWeight[1][i] = weight[1];
+			weights->chromaOffset[1][i] = offset[1];
+		}
+	}
 }

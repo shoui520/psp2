@@ -14,7 +14,6 @@
 #define SLICE_JOB_SIZE		192
 #define PARAMETER_SET_SIZE	1088
 
-#define NAL_IDLE		0x200000	/* nal->flags: nothing for the unit */
 #define RUN_SLICE_ENDED		3
 
 #define ALIGN64(size)		(((size) + 63) & ~63)
@@ -175,7 +174,7 @@ void avcdecHelperFinish(VideoHelper *helper)
 	thread = shared->thread;
 	if (!nal->skip)
 		load = nal->load;
-	if (nal->skip || (nal->flags & 0x200000)) {
+	if (nal->skip || (nal->sliceHeader & AVC_SLICE_CABAC)) {
 		vnzThreadSetFlags(thread, HELPER_FLAG_UNIT);
 	} else {
 		if (load)
@@ -433,7 +432,7 @@ void avcdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 	job->pictureExtras = extras;
 	job->fieldDecode = shared->first;
 
-	if (nal->flags & NAL_IDLE) {
+	if (nal->sliceHeader & AVC_SLICE_CABAC) {
 		status = nal->doneStatus;
 		done = nal->doneMacroblocks;
 	} else {

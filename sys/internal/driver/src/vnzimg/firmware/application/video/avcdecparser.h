@@ -116,7 +116,7 @@ typedef struct VideoAvcSps {
 	uint8_t constraintSet1;
 	uint8_t constraintSet2;
 	uint8_t constraintSet3;
-	uint8_t valid;
+	uint8_t frameMbsOnly;		/* frame_mbs_only_flag: always 1 */
 	uint8_t direct8x8Inference;
 	uint8_t gapsInFrameNumAllowed;
 	uint8_t log2MaxFrameNum;

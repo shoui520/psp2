@@ -399,6 +399,33 @@ typedef struct VideoAvcPicture {
 } VideoAvcPicture;
 
 /* a unit of the stream (a NAL unit) found in the ring, read through the unit */
+/* pred_weight_table(): one list's weights and offsets */
+typedef struct VideoAvcWeights {
+	uint16_t lumaWeight[16];
+	int8_t lumaOffset[16];
+	uint16_t chromaWeight[2][16];
+	int8_t chromaOffset[2][16];
+} VideoAvcWeights;
+
+/* the slice header's word for the unit (nal->sliceHeader) */
+#define AVC_SLICE_TYPE			0x00000007	/* slice_type % 5 */
+#define AVC_SLICE_TYPE_ALL		0x00000008	/* slice_type >= 5 */
+#define AVC_SLICE_DIRECT_SPATIAL	0x00000020
+#define AVC_SLICE_DEBLOCKING_SHIFT	6		/* disable_deblocking_filter_idc */
+#define AVC_SLICE_REFERENCE		0x00000800	/* nal_ref_idc != 0 */
+#define AVC_SLICE_BIPRED_SHIFT		16		/* weighted_bipred_idc */
+#define AVC_SLICE_WEIGHTED		0x00040000	/* weighted_pred_flag */
+#define AVC_SLICE_CONSTRAINED_INTRA	0x00080000
+#define AVC_SLICE_TRANSFORM_8X8		0x00100000
+#define AVC_SLICE_CABAC			0x00200000	/* not run on the unit */
+#define AVC_SLICE_FRAME_MBS_ONLY	0x01000000
+#define AVC_SLICE_DIRECT_8X8		0x08000000
+
+/* slice_type % 5 */
+#define AVC_SLICE_P			0
+#define AVC_SLICE_B			1
+#define AVC_SLICE_I			2
+
 typedef struct VideoNal {
 	VideoBitstream bits;
 	uint32_t reserved[2];
@@ -406,20 +433,21 @@ typedef struct VideoNal {
 	int32_t searchLeft;
 	uint32_t start;			/* its first byte */
 	int32_t size;
-	uint32_t flags;			/* 0x200000: nothing for the unit to do */
+	uint32_t sliceHeader;		/* AVC_SLICE_*: the slice's header for the unit */
 	uint32_t pictureCount;
 	uint32_t lastPictureCount;
 	int32_t error;
 	int16_t firstMacroblock;	/* of the run */
 	int16_t macroblocks;		/* in the picture */
 	uint8_t widthInMacroblocks;
-	uint8_t reserved2;
+	uint8_t heightInMacroblocks;
 	int16_t rowsPerRun;		/* a run that starts a row takes at most these */
 	uint16_t reserved6;
 	int16_t runMacroblocks;		/* the unit's word 8: the run's length */
 	int16_t doneMacroblocks;	/* the unit's words 11 and 10, when it is not run */
 	int16_t doneStatus;
-	uint8_t reserved7[3];
+	uint16_t sliceDone;		/* the slice header clears it */
+	uint8_t sliceParsed;		/* a slice header was parsed */
 	uint8_t load;			/* the slice's data goes to the unit */
 	uint32_t context;		/* the helper's context, command and slice for the run */
 	uint32_t slice;
@@ -427,17 +455,36 @@ typedef struct VideoNal {
 	uint32_t reserved8;
 	uint8_t type;
 	uint8_t refIdc;
-	uint8_t reserved3;
+	uint8_t numRefFrames;		/* the sequence's num_ref_frames */
 	uint8_t pictures;		/* entries of the stream's picture tables */
 	uint8_t numReorderFrames;	/* the sequence's */
-	uint8_t reserved9[3];
+	int8_t picStruct;		/* the picture timing SEI's, 0 none */
+	uint8_t gapsInFrameNumAllowed;
+	uint8_t frameCropping;
 	uint8_t spsId;			/* of the picture parameter set in use */
 	uint8_t contextOption;		/* the sequence's: answered as VIDEO_ENGINE_CONTEXT_OPTION */
 	uint8_t parameterSet;		/* the stream's 1088-byte table in use */
 	uint8_t parameterSet2;		/* and its 16-byte one */
-	uint8_t reserved4[24];
+	uint16_t frameNum;
+	uint8_t reserved4[10];
+	uint32_t maxFrameNum;
+	uint8_t reserved19[8];
 	uint32_t outputPictures;
-	uint8_t reserved15[44];
+	uint8_t reserved15[20];
+	int32_t deltaPicOrderCnt[2];
+	uint16_t picOrderCntLsb;
+	uint8_t mmco5;			/* memory_management_control_operation 5 was seen */
+	uint8_t cabacInitIdc;
+	int8_t numRefIdxActive[2];
+	uint8_t adaptiveRefPicMarking;
+	uint8_t longTermReference;
+	uint8_t refPicListReordering[2];
+	int8_t sliceQpDelta;
+	int8_t sliceAlphaC0Offset;
+	int8_t sliceBetaOffset;
+	uint8_t lumaLog2WeightDenom;
+	uint8_t chromaLog2WeightDenom;
+	uint8_t idr;			/* an IDR picture, or a recovery point */
 	uint16_t width;			/* the pictures': luma width, pitch, sizes */
 	uint16_t pitch;
 	uint32_t frameSize;
@@ -473,7 +520,15 @@ typedef struct VideoNal {
 	uint8_t startPending;		/* the unit's first slice is still to be read */
 	int8_t nextType;		/* of the unit after the slice, -1 none */
 	VideoBitsState state;
-	uint8_t reserved14[18];
+	uint16_t lumaWidth;		/* the sequence's sizes of a macroblock row */
+	uint16_t lumaPitch;
+	uint16_t widthInMbs;
+	uint16_t chromaWidth;
+	uint16_t chromaRowSize;		/* 128 bytes a macroblock */
+	uint16_t commandRowSize;		/* 544 bytes a macroblock, aligned */
+	uint16_t sliceRowSize;		/* 136 bytes a macroblock, aligned */
+	uint16_t lumaRowSize;		/* 256 bytes a macroblock */
+	uint16_t motionRowSize;		/* 64 bytes a macroblock */
 	uint16_t nextFirstMacroblock;	/* of the slice after this one */
 	VideoTime option5;		/* the decoder's options, doubled */
 	VideoTime option4;
@@ -483,7 +538,14 @@ typedef struct VideoNal {
 	uint32_t outputCount;
 	int32_t frameDuration;		/* of a frame, in 180 kHz ticks; -1 unknown */
 	uint8_t outputFlush;
-	uint8_t reserved18[875];
+	uint8_t reserved18[415];
+	uint8_t sliceQp;			/* pic_init_qp plus slice_qp_delta */
+	uint8_t reserved20[27];
+	VideoAvcWeights weights[2];	/* pred_weight_table(), by list */
+	uint8_t mmcoOperation[16];	/* dec_ref_pic_marking(), up to 0 */
+	uint16_t mmcoArgument[16];	/* each operation's arguments, in order */
+	uint8_t reorderingIdc[2][16];	/* ref_pic_list_reordering(), up to 3 */
+	uint16_t reorderingValue[2][16];
 } VideoNal;
 
 /* a parser's view: its bit reader and the unit it reads */
@@ -852,9 +914,9 @@ typedef struct VideoHelperJob {
 /* a VThread job's state on a slice (192 bytes): the parser and the tables */
 typedef struct VideoSliceJob {
 	VideoParser parser;
-	uint32_t parameterSet;
-	uint32_t reserved;
-	uint32_t parameterSet2;		/* 16 bytes */
+	uint32_t parameterSet;		/* the sequence's, 1088 bytes */
+	uint32_t pps;			/* the picture's, in parameterSet2 */
+	uint32_t parameterSet2;		/* the line of 16-byte sets holding it */
 	uint32_t reserved5;
 	uint32_t buffer;		/* 256 bytes */
 	uint32_t reserved6;
