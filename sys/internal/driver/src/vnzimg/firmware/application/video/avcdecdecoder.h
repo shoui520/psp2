@@ -150,7 +150,8 @@ typedef struct AvcdecRun {
 	uint8_t firstX;
 	uint8_t firstY;
 	int8_t qp;
-	int8_t lastQp;
+	int8_t lastQp;			/* the run's last macroblock's */
+	VideoAvcMbInfo *lastRow;	/* the start of the last row it read, 0 after */
 	int16_t count;
 	uint16_t reserved;
 	uint32_t sliceHeader;
@@ -208,10 +209,32 @@ typedef struct AvcdecDecoder {
 	uint32_t reserved[12];
 } AvcdecDecoder;
 
+/*
+ * A macroblock's kind, the word the decoder engine writes over the first
+ * of its VideoAvcMbInfo: from its mb_type, the slice's, and its flags.
+ */
+#define AVC_MB_PARTITION		0x00000003	/* 3 16x16, 2 16x8, 1 8x16, 0 8x8 */
+#define AVC_MB_PARTS_SHIFT		2		/* log2 of the partitions */
+#define AVC_MB_INTRA			0x00000200
+#define AVC_MB_REF0			0x00000400	/* P_8x8ref0 */
+#define AVC_MB_SKIP			0x00000800
+#define AVC_MB_SKIP_SHIFT		11
+#define AVC_MB_INTRA16_MODE_SHIFT	12		/* Intra16x16PredMode */
+#define AVC_MB_CHROMA_MODE_SHIFT	14		/* intra_chroma_pred_mode */
+#define AVC_MB_CBP_SHIFT		16		/* coded_block_pattern */
+#define AVC_MB_KEEP_RIGHT		0x01000000	/* the macroblock right is intra */
+#define AVC_MB_KEEP_BOTTOM		0x02000000	/* a macroblock below is intra */
+#define AVC_MB_INVALID			0x0000800c	/* an mb_type out of range */
+
+/* the kind's class: bits 6, 7 and 9 */
+#define AVC_MB_CLASS(kind)		(((int32_t)(kind) >> 6) & 0xb)
+#define AVC_MB_CLASS_INTRA4X4		8
+#define AVC_MB_CLASS_INTRA16X16		9
+#define AVC_MB_CLASS_PCM		10
+
 /* the stripes' jobs */
 void avcdecStripePredict(uint32_t info, uint32_t row, uint32_t unused, uint32_t unused2);
 void avcdecStripeResidual(uint32_t info, uint32_t row, uint32_t unused, uint32_t unused2);
 void avcdecStripeFilter(uint32_t info, uint32_t row, uint32_t unused, uint32_t unused2);
-void avcdecRunRead(const AvcdecDecoderInfo *info, const AvcdecRun *run, AvcdecWork *work);
 
 #endif

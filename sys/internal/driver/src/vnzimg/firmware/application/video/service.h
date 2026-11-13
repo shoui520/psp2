@@ -548,14 +548,22 @@ typedef struct VideoAvcCabacMb {
 
 /* a macroblock of the run's first buffer, as the unit reads it (16 bytes) */
 typedef struct VideoAvcMbInfo {
-	uint8_t skipped;
-	uint8_t mbType;			/* of the slice type, I types after the P or B ones */
-	uint8_t cbp;			/* coded_block_pattern */
-	uint8_t reserved;		/* written 0 */
-	uint8_t subMbType[4];
-	int8_t qpDelta;			/* mb_qp_delta */
+	union {
+		struct {
+			uint8_t skipped;
+			uint8_t mbType;	/* of the slice type, I types after the P or B ones */
+			uint8_t cbp;	/* coded_block_pattern */
+			uint8_t reserved;	/* written 0 */
+		};
+		uint32_t kind;		/* the decoder engine's, once read: AVC_MB_* */
+	};
+	uint8_t subMbType[4];		/* the decoder engine's AVC_MB_* of each, once read */
+	union {
+		int8_t qpDelta;		/* mb_qp_delta */
+		int8_t qp;		/* the decoder engine's, once read */
+	};
 	uint8_t reserved2;		/* written 0 */
-	uint8_t qp;			/* the run's first: its QP */
+	uint8_t qpPrevious;		/* the decoder engine's: the QP before it */
 	uint8_t reserved3;
 	uint32_t cbf;			/* coded_block_flag: luma 4x4 by bit, Cb and Cr AC
 					   by 4 bits from bit 16, luma, Cb and Cr DC at 24 */

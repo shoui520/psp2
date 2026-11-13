@@ -37,6 +37,7 @@ static void jobOutput(uint32_t info, uint32_t word, uint32_t unused, uint32_t un
 static void jobFlush(uint32_t info, uint32_t word, uint32_t unused, uint32_t unused2);
 static void jobRun(uint32_t info, uint32_t run, uint32_t unused, uint32_t unused2);
 static void runOpen(const AvcdecDecoderInfo *info, const AvcdecRun *run, AvcdecWork *work);
+static void runMacroblocks(const AvcdecDecoderInfo *info, AvcdecRun *run, AvcdecWork *work);
 static void runClose(const AvcdecDecoderInfo *info, const AvcdecRun *run, AvcdecWork *work);
 static void rowsClear(const AvcdecDecoderInfo *info);
 
@@ -1189,15 +1190,15 @@ static void jobRun(uint32_t infoAddress, uint32_t runAddress, uint32_t unused, u
 {
 	const AvcdecDecoderInfo *info = (const AvcdecDecoderInfo *)infoAddress;
 	uint32_t slot = workSlot();
-	const AvcdecRun *run;
+	AvcdecRun *run;
 	AvcdecWork *work;
 
-	run = (const AvcdecRun *)vnzPublicOpenPrivate(runAddress, DECODER_RUN_SIZE);
+	run = (AvcdecRun *)vnzPublicOpenPrivate(runAddress, DECODER_RUN_SIZE);
 	work = (AvcdecWork *)vnzPublicOpenPrivate(run->common + slot * DECODER_WORK_STRIDE,
 		DECODER_WORK_SIZE);
 	vnzCacheInvalidateInside((uint32_t)work, DECODER_WORK_SIZE);
 	runOpen(info, run, work);
-	avcdecRunRead(info, run, work);
+	runMacroblocks(info, run, work);
 	runClose(info, run, work);
 	vnzCachePurge((uint32_t)work, DECODER_WORK_SIZE);
 	vnzPublicClosePrivate((uint32_t)work, DECODER_WORK_SIZE);
@@ -1223,11 +1224,11 @@ static void runOpen(const AvcdecDecoderInfo *info, const AvcdecRun *run, AvcdecW
 	work->sliceHeader = run->sliceHeader;
 	work->ended = job->ended;
 	if (job->load) {
-		mbInfo->qp = run->qp;
+		mbInfo->qpPrevious = run->qp;
 		if (!job->first)
 			rowsClear(info);
 	} else {
-		mbInfo->qp = run->lastQp;
+		mbInfo->qpPrevious = run->lastQp;
 	}
 }
 
@@ -1255,4 +1256,321 @@ static void rowsClear(const AvcdecDecoderInfo *info)
 		*(int32_t *)(row + i * 64 + 12) = -1;
 	}
 	vnzPublicClosePrivate((uint32_t)row, size);
+}
+
+/*
+ * The macroblocks' kinds by mb_type (AVC_MB_*): the partitions, their
+ * lists, intra, Intra16x16PredMode and the luma and chroma CBP of the
+ * Intra16x16 types; the sub-macroblocks' by sub_mb_type.
+ */
+static const uint32_t mbKindsI[26] = {			/* 0x8f70ec */
+	0x00000203, 0x00000243, 0x00001243, 0x00002243, 0x00003243, 0x00100243,
+	0x00101243, 0x00102243, 0x00103243, 0x00200243, 0x00201243, 0x00202243,
+	0x00203243, 0x000f0243, 0x000f1243, 0x000f2243, 0x000f3243, 0x001f0243,
+	0x001f1243, 0x001f2243, 0x001f3243, 0x002f0243, 0x002f1243, 0x002f2243,
+	0x002f3243, 0x00000283,
+};
+
+static const uint32_t mbKindsP[31] = {			/* 0x8f7154 */
+	0x00000053, 0x00000056, 0x00000055, 0x00000058, 0x00000458, 0x00000203,
+	0x00000243, 0x00001243, 0x00002243, 0x00003243, 0x00100243, 0x00101243,
+	0x00102243, 0x00103243, 0x00200243, 0x00201243, 0x00202243, 0x00203243,
+	0x000f0243, 0x000f1243, 0x000f2243, 0x000f3243, 0x001f0243, 0x001f1243,
+	0x001f2243, 0x001f3243, 0x002f0243, 0x002f1243, 0x002f2243, 0x002f3243,
+	0x00000283,
+};
+
+static const uint32_t mbKindsB[49] = {			/* 0x8f71d0 */
+	0x00000108, 0x00000153, 0x000001a3, 0x000001f3, 0x00000156, 0x00000155,
+	0x000001a6, 0x000001a5, 0x00000166, 0x00000165, 0x00000196, 0x00000195,
+	0x00000176, 0x00000175, 0x000001b6, 0x000001b5, 0x000001d6, 0x000001d5,
+	0x000001e6, 0x000001e5, 0x000001f6, 0x000001f5, 0x000001f8, 0x00000203,
+	0x00000243, 0x00001243, 0x00002243, 0x00003243, 0x00100243, 0x00101243,
+	0x00102243, 0x00103243, 0x00200243, 0x00201243, 0x00202243, 0x00203243,
+	0x000f0243, 0x000f1243, 0x000f2243, 0x000f3243, 0x001f0243, 0x001f1243,
+	0x001f2243, 0x001f3243, 0x002f0243, 0x002f1243, 0x002f2243, 0x002f3243,
+	0x00000283,
+};
+
+static const int8_t subMbKindsP[4] = { 19, 22, 21, 24 };	/* 0x8f7294 */
+
+/* B_Direct_8x8 as four 4x4 blocks, then as one 8x8 block (direct_8x8_inference) */
+static const int8_t subMbKindsB[2][13] = {			/* 0x8f7298 */
+	{ 72, 83, 99, 115, 86, 85, 102, 101, 118, 117, 88, 104, 120 },
+	{ 67, 83, 99, 115, 86, 85, 102, 101, 118, 117, 88, 104, 120 },
+};
+
+#define SKIP_KIND_P		0x00000843	/* P_Skip: P_L0_16x16, skipped */
+#define SKIP_KIND_B		0x00000908	/* B_Skip: B_Direct_16x16, skipped */
+#define SKIP_SUB_KIND_B		72		/* its B_Direct_8x8 */
+#define SKIP_SUB_KIND_B_8X8	67
+#define FILL_KIND_I		0x03002203	/* concealed: intra DC, kept for its neighbours */
+
+static uint32_t kindI(VideoAvcMbInfo *mb);
+static uint32_t kindP(VideoAvcMbInfo *mb);
+static uint32_t skipP(VideoAvcMbInfo *mb);
+static uint32_t kindB(uint32_t sliceHeader, VideoAvcMbInfo *mb);
+static uint32_t skipB(uint32_t sliceHeader, VideoAvcMbInfo *mb);
+static VideoAvcMbInfo *runParse(uint32_t width, uint32_t height, AvcdecRun *run,
+	AvcdecWork *work);
+static VideoAvcMbInfo *runFill(uint32_t width, uint32_t height, AvcdecRun *run,
+	AvcdecWork *work, int32_t index);
+static void mbQp(VideoAvcMbInfo *mb, AvcdecWork *work, int32_t count, int32_t index);
+static void mbFill(VideoAvcMbInfo *mb, uint32_t sliceHeader);
+static const uint8_t *mbRead(VideoAvcMbInfo *mb, const uint8_t *chromaModes,
+	uint32_t sliceHeader);
+static void mbIntraNeighbours(VideoAvcMbInfo *mb, VideoAvcMbInfo *above, int32_t width,
+	int32_t x, int32_t y);
+
+/* 0x82f0b8: a macroblock's kind, its sub-macroblocks' converted; AVC_MB_INVALID */
+static uint32_t mbKind(uint32_t sliceHeader, VideoAvcMbInfo *mb)
+{
+	uint32_t type = sliceHeader & AVC_SLICE_TYPE;
+
+	if (type == AVC_SLICE_I)
+		return kindI(mb);
+	if (type == AVC_SLICE_B)
+		return mb->skipped ? skipB(sliceHeader, mb) : kindB(sliceHeader, mb);
+	return mb->skipped ? skipP(mb) : kindP(mb);
+}
+
+/* 0x82f0e4 */
+static uint32_t kindI(VideoAvcMbInfo *mb)
+{
+	int32_t type = mb->mbType & 0x3f;
+
+	if (type < 26)
+		return mbKindsI[type];
+	return AVC_MB_INVALID;
+}
+
+/* 0x82f100 */
+static uint32_t kindP(VideoAvcMbInfo *mb)
+{
+	int32_t type = mb->mbType & 0x3f, class, i;
+	uint32_t kind;
+
+	if (!(type < 31))
+		return AVC_MB_INVALID;
+	kind = mbKindsP[type];
+	class = (kind >> 6) & 0xb;
+	if (class != AVC_MB_CLASS_PCM && (class < 8 || !(type & 3)))
+		for (i = 0; i < 4; i++)
+			mb->subMbType[i] = subMbKindsP[mb->subMbType[i]];
+	return kind;
+}
+
+/* 0x82f14a */
+static uint32_t skipP(VideoAvcMbInfo *mb)
+{
+	return SKIP_KIND_P;
+}
+
+/* 0x82f150 */
+static uint32_t kindB(uint32_t sliceHeader, VideoAvcMbInfo *mb)
+{
+	int32_t type = mb->mbType & 0x3f, class, i, base;
+	uint32_t kind;
+
+	if (!(type < 49))
+		return AVC_MB_INVALID;
+	kind = mbKindsB[type];
+	class = (kind >> 6) & 0xb;
+	if (!(sliceHeader & AVC_SLICE_DIRECT_8X8) && (1 << ((kind >> 2) & 3)) >= 4)
+		base = 0;
+	else
+		base = 13;
+	if (class != AVC_MB_CLASS_PCM && (class < 8 || !(kind & 3)))
+		for (i = 0; i < 4; i++)
+			mb->subMbType[i] = subMbKindsB[0][mb->subMbType[i] + base];
+	return kind;
+}
+
+/* 0x82f1ba */
+static uint32_t skipB(uint32_t sliceHeader, VideoAvcMbInfo *mb)
+{
+	uint32_t sub = SKIP_SUB_KIND_B, i;
+
+	if (sliceHeader & AVC_SLICE_DIRECT_8X8)
+		sub = SKIP_SUB_KIND_B_8X8;
+	for (i = 0; i < 4; i++)
+		mb->subMbType[i] = sub;
+	return SKIP_KIND_B;
+}
+
+/*
+ * 0x82f1da: the run's macroblocks from `index` on concealed, up to its
+ * count; the position it stopped at kept. Returns the macroblock after the
+ * last, 0 at the picture's end.
+ */
+static VideoAvcMbInfo *runFill(uint32_t width, uint32_t height, AvcdecRun *run,
+	AvcdecWork *work, int32_t index)
+{
+	int32_t x = work->firstX, y = work->firstY, count = run->count;
+	VideoAvcMbInfo *above = run->lastRow, *rowStart;
+	uint32_t sliceHeader = work->sliceHeader;
+	VideoAvcMbInfo *mb = work->mbInfo + index;
+
+	for (; y < (int32_t)height + 1; y++) {
+		rowStart = mb;
+		for (; x < (int32_t)width; x++) {
+			if (!(index < count)) {
+				run->lastRow = x ? rowStart : above;
+				work->firstY = y;
+				work->firstX = x;
+				return mb;
+			}
+			mbFill(mb, sliceHeader);
+			mb++;
+			index++;
+		}
+		x = 0;
+		above = rowStart;
+	}
+	return 0;
+}
+
+/*
+ * 0x82f26e: the run's macroblocks read: each one's QP, kind and flags; an
+ * invalid one conceals the rest. Returns the macroblock after the last, 0
+ * at the picture's end.
+ */
+static VideoAvcMbInfo *runParse(uint32_t width, uint32_t height, AvcdecRun *run,
+	AvcdecWork *work)
+{
+	VideoAvcMbInfo *mb = work->mbInfo, *above = run->lastRow, *rowStart;
+	int32_t count = run->count, x = 0, y, index;
+	const uint8_t *chromaModes = work->chromaModes, *rowModes, *next;
+	uint32_t sliceHeader = work->sliceHeader;
+
+	rowModes = chromaModes;
+	if (!(count < (int32_t)width))
+		x = work->firstX;
+	index = 0;
+	for (y = work->firstY; y < (int32_t)height + 1; y++) {
+		rowStart = mb;
+		for (; x < (int32_t)width; x++) {
+			if (!(index < count)) {
+				run->lastRow = x ? rowStart : above;
+				work->firstY = y;
+				work->firstX = x;
+				return mb;
+			}
+			mbQp(mb, work, count, index);
+			next = mbRead(mb, chromaModes, sliceHeader);
+			chromaModes = next;
+			if (!next) {
+				work->firstX = x;
+				work->firstY = y;
+				work->ended = 1;
+				return runFill(width, height, run, work, index);
+			}
+			if ((sliceHeader & AVC_SLICE_TYPE) == AVC_SLICE_I)
+				mb->kind |= AVC_MB_KEEP_RIGHT | AVC_MB_KEEP_BOTTOM;
+			else if (mb->kind & AVC_MB_INTRA)
+				mbIntraNeighbours(mb, above, width, x, y);
+			mb++;
+			index++;
+		}
+		x = 0;
+		chromaModes = rowModes = rowModes + width;
+		above = rowStart;
+	}
+	return 0;
+}
+
+/*
+ * 0x82f38a: the run's macroblocks read (or concealed after an error); a
+ * run that ends above the picture's last row keeps its last row's bottoms
+ * for the next.
+ */
+static void runMacroblocks(const AvcdecDecoderInfo *info, AvcdecRun *run, AvcdecWork *work)
+{
+	uint32_t width = info->widthInMbs, height = info->heightInMbs;
+	VideoAvcMbInfo *last, *row;
+	int32_t i;
+
+	if (!work->ended)
+		last = runParse(width, height, run, work);
+	else
+		last = runFill(width, height, run, work, 0);
+	if (work->firstY != height) {
+		row = run->lastRow;
+		for (i = 0; i < (int32_t)width; i++)
+			row[i].kind |= AVC_MB_KEEP_BOTTOM;
+	}
+	run->lastRow = 0;
+	run->lastQp = last[-1].qp;
+}
+
+/* 0x82f404: a macroblock's QP from the one before and its mb_qp_delta, given on */
+static void mbQp(VideoAvcMbInfo *mb, AvcdecWork *work, int32_t count, int32_t index)
+{
+	int32_t delta = mb->qpDelta, qp = mb->qpPrevious;
+
+	if (delta) {
+		qp += delta;
+		while (qp >= 52)
+			qp -= 52;
+		while (qp < 0)
+			qp += 52;
+	}
+	mb->qp = qp;
+	if (index + 1 < count)
+		mb[1].qpPrevious = qp;
+}
+
+/* 0x82f43c: a macroblock concealed: intra DC in an I slice, else skipped */
+static void mbFill(VideoAvcMbInfo *mb, uint32_t sliceHeader)
+{
+	uint32_t type = sliceHeader & AVC_SLICE_TYPE, kind;
+
+	if (type == AVC_SLICE_I)
+		kind = FILL_KIND_I;
+	else if (type == AVC_SLICE_B)
+		kind = SKIP_KIND_B;
+	else
+		kind = SKIP_KIND_P;
+	mb->kind = kind;
+	mb->cbf = 0;
+	mb->reserved2 = 0;
+	mb->qp = 0;
+}
+
+/*
+ * 0x82f46c: a macroblock's kind written over its type: an intra one's
+ * chroma mode taken from the row's modes, its CBP. Returns the modes after
+ * it, 0 for an invalid type.
+ */
+static const uint8_t *mbRead(VideoAvcMbInfo *mb, const uint8_t *chromaModes,
+	uint32_t sliceHeader)
+{
+	uint32_t kind = mbKind(sliceHeader, mb), class;
+
+	if (kind == AVC_MB_INVALID)
+		return 0;
+	class = AVC_MB_CLASS(kind);
+	if (class == AVC_MB_CLASS_INTRA4X4 || class == AVC_MB_CLASS_INTRA16X16)
+		kind |= (*chromaModes++ & 3) << AVC_MB_CHROMA_MODE_SHIFT;
+	else
+		kind |= (mb->skipped & 1) << AVC_MB_SKIP_SHIFT;
+	kind |= (mb->cbp & 0x3f) << AVC_MB_CBP_SHIFT;
+	mb->kind = kind;
+	return chromaModes;
+}
+
+/* 0x82f4d4: an intra macroblock: the neighbours it predicts from keep their edges */
+static void mbIntraNeighbours(VideoAvcMbInfo *mb, VideoAvcMbInfo *above, int32_t width,
+	int32_t x, int32_t y)
+{
+	if (x)
+		mb[-1].kind |= AVC_MB_KEEP_RIGHT;
+	if (y && above) {
+		above += x;
+		if (x - 1 >= 0)
+			above[-1].kind |= AVC_MB_KEEP_BOTTOM;
+		above[0].kind |= AVC_MB_KEEP_BOTTOM;
+		if (!(width < x + 1))
+			above[1].kind |= AVC_MB_KEEP_BOTTOM;
+	}
 }
