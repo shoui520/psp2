@@ -1091,7 +1091,13 @@ static int32_t workerCreate(VkVThreadSystem *system, uint32_t coreId)
 	return 0;
 }
 
-static void workerHookNothing(VkVThreadSystem *system)
+/* the system's default hooks around a worker: nothing */
+static void workerStartNothing(VkVThreadSystem *system)
+{
+	(void)system;
+}
+
+static void workerEndNothing(VkVThreadSystem *system)
 {
 	(void)system;
 }
@@ -1118,8 +1124,8 @@ void vkVThreadInitialize(void)
 	system->previousCores = 0;
 	system->runningCores = 0;
 	system->fetch = fetchJob;
-	system->workerEnd = workerHookNothing;
-	system->workerStart = workerHookNothing;
+	system->workerEnd = workerEndNothing;
+	system->workerStart = workerStartNothing;
 	system->tail = NULL;
 	system->head = NULL;
 
@@ -1239,6 +1245,40 @@ VkCoreEvent *vkVThreadCoreEventCreate(VkThread *thread, uint32_t flags)
 	return (VkCoreEvent *)vkPhysicalToPublic((uint32_t)event);
 }
 
+static void coreEventAppend(VkCoreEventList *list, VkCoreEvent *event)
+{
+	if (list->head) {
+		list->tail->next = event;
+		event->previous = list->tail;
+	} else {
+		list->head = event;
+	}
+	list->tail = event;
+}
+
+static void coreEventRemove(VkCoreEventList *list, VkCoreEvent *event)
+{
+	VkCoreEvent *previous = event->previous, *next = event->next;
+
+	if (previous == NULL && next == NULL) {
+		if (list->head == event) {
+			list->tail = NULL;
+			list->head = NULL;
+		}
+	} else if (previous == NULL) {
+		next->previous = NULL;
+		list->head = next;
+	} else if (next == NULL) {
+		previous->next = NULL;
+		list->tail = previous;
+	} else {
+		previous->next = next;
+		next->previous = previous;
+	}
+	event->next = NULL;
+	event->previous = NULL;
+}
+
 static uint32_t coreEventListed(VkCoreEventList *list, VkCoreEvent *event)
 {
 	return event->previous || event->next || list->head == event;
@@ -1252,15 +1292,8 @@ void vkVThreadCoreEventRegister(VkCoreEvent *event)
 
 	vkDisableDispatch();
 	vnzSpinLock(lock);
-	if (!coreEventListed(list, event)) {
-		if (list->head) {
-			list->tail->next = event;
-			event->previous = list->tail;
-		} else {
-			list->head = event;
-		}
-		list->tail = event;
-	}
+	if (!coreEventListed(list, event))
+		coreEventAppend(list, event);
 	vnzSpinUnlock(lock);
 	vkEnableDispatch();
 }
@@ -1273,18 +1306,8 @@ void vkVThreadCoreEventUnregister(VkCoreEvent *event)
 
 	vkDisableDispatch();
 	vnzSpinLock(lock);
-	if (coreEventListed(list, event)) {
-		if (event->previous)
-			event->previous->next = event->next;
-		else
-			list->head = event->next;
-		if (event->next)
-			event->next->previous = event->previous;
-		else
-			list->tail = event->previous;
-		event->next = NULL;
-		event->previous = NULL;
-	}
+	if (coreEventListed(list, event))
+		coreEventRemove(list, event);
 	vnzSpinUnlock(lock);
 	vkEnableDispatch();
 }

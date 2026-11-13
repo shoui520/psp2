@@ -200,6 +200,27 @@ void vkUnmanagedFreeUncached(VkHeap *heap, uint32_t address, uint32_t size)
 	vnzHeapFree(heap, (void *)address, size, L2_LINE);
 }
 
+/* four more functions in Sony's driver that keep the address; nothing calls them */
+uint32_t vkUnmanagedSameAddress1(uint32_t address, uint32_t size)
+{
+	return address;
+}
+
+uint32_t vkUnmanagedSameAddress2(uint32_t address, uint32_t size)
+{
+	return address;
+}
+
+uint32_t vkUnmanagedSameAddress3(uint32_t address, uint32_t size)
+{
+	return address;
+}
+
+uint32_t vkUnmanagedSameAddress4(uint32_t address, uint32_t size)
+{
+	return address;
+}
+
 /* the cache lines wholly inside a range of at most 0x2000 bytes */
 void vkUnmanagedInvalidateInside(uint32_t address, uint32_t size)
 {
@@ -225,5 +246,41 @@ void vkUnmanagedL2FlushInside(uint32_t address, uint32_t size)
 }
 
 void vkUnmanagedL2SyncInside(uint32_t address, uint32_t size)
+{
+}
+
+/* three more copies of vkUnmanagedPrefetchInside and two empty functions in Sony's driver; nothing calls them */
+void vkUnmanagedPrefetchInsideCopy1(uint32_t address, uint32_t size)
+{
+	uint32_t start = (address + LINE - 1) & ~(LINE - 1);
+	uint32_t end = (address + size) & ~(LINE - 1);
+
+	if (size <= 0x2000 && start < end)
+		vnzCachePrefetch(start, end - start);
+}
+
+void vkUnmanagedPrefetchInsideCopy2(uint32_t address, uint32_t size)
+{
+	uint32_t start = (address + LINE - 1) & ~(LINE - 1);
+	uint32_t end = (address + size) & ~(LINE - 1);
+
+	if (size <= 0x2000 && start < end)
+		vnzCachePrefetch(start, end - start);
+}
+
+void vkUnmanagedPrefetchInsideCopy3(uint32_t address, uint32_t size)
+{
+	uint32_t start = (address + LINE - 1) & ~(LINE - 1);
+	uint32_t end = (address + size) & ~(LINE - 1);
+
+	if (size <= 0x2000 && start < end)
+		vnzCachePrefetch(start, end - start);
+}
+
+void vkUnmanagedNothing1(void)
+{
+}
+
+void vkUnmanagedNothing2(void)
 {
 }
