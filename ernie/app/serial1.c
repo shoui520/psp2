@@ -192,7 +192,11 @@ static unsigned char serial1Command0101(struct SerialBuffer *request, struct Ser
 	getHardwareInfo(serial1Data.version.hardwareInfo);
 	getErnieVersion(serial1Data.version.version);
 	getErnieDlVersion(serial1Data.version.dlVersion);
+#if FW_SINCE(0x01000107)
 	serial1Data.version.flags = getResetFlags();
+#else
+	serial1Data.version.flags = resetFlags;
+#endif
 	memset(serial1Data.version.reserved, 0, sizeof(serial1Data.version.reserved));
 	response->data = serial1Data.byte;
 	response->length = sizeof(serial1Data.version);

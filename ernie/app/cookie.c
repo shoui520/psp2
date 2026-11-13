@@ -251,8 +251,13 @@ unsigned char cookieCtrlChargeAc(unsigned char on)
 
 	cookieReadReg3();
 	if (on) {
+#if FW_SINCE(0x01000107)
 		if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 &&
 		    !chargeCookieHeld && chargeControl.1)
+#else
+		if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 &&
+		    chargeControl.1)
+#endif
 			value = cookieRegs[0].byte[0] & 0xbf;
 		else {
 			result = 0;

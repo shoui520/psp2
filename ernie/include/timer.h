@@ -37,7 +37,9 @@ struct Timer {
 
 extern __near struct Timer timers[TIMER_COUNT];
 extern __sreg unsigned int timerTicks;
+#if FW_SINCE(0x01000107)
 extern __sreg unsigned int timerRtcTicks;
+#endif
 
 extern int timerInit(void);
 extern int timerSetHandler(unsigned char id, struct TimerHandler *handler);

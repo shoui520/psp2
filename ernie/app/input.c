@@ -167,8 +167,14 @@ __sreg unsigned char inputState1;
 __sreg unsigned char inputState2;
 __sreg unsigned char inputState3;
 
-__near struct ButtonPress buttonPress1;		/* pin monitor 0 (P11.5) */
-__near struct ButtonPress buttonPress2;		/* pin monitor 1 (P4.6) */
+/* the buttons' presses: near data since 0x01000107 */
+#if FW_SINCE(0x01000107)
+#define BUTTON_NEAR	__near
+#else
+#define BUTTON_NEAR
+#endif
+BUTTON_NEAR struct ButtonPress buttonPress1;	/* pin monitor 0 (P11.5) */
+BUTTON_NEAR struct ButtonPress buttonPress2;	/* pin monitor 1 (P4.6) */
 #if FW_SINCE(0x01000306)
 __near unsigned char holdTicks;			/* RTC ticks P4.6 held with P11.5 */
 __near unsigned char holdReached;		/* holdTicks reached buttonPress2.time2 + 1 */
@@ -847,6 +853,49 @@ void pinMonitor1Enable(unsigned char enable)
 }
 
 /* pin monitor 1's handler (P4.6 held): its presses counted with the key read at the second */
+#if !FW_SINCE(0x01000107)
+/* before 0x01000107 the system state is checked first, and pressAnyState does not exist */
+void button2Held(void)
+{
+	unsigned char value;
+
+	buttonPress2.count++;
+	if (stateGet() != button2State()) {
+		button2SetState(0);
+	} else if (buttonPress2.count < 2) {
+		pinMonitor1Enable(1);
+	} else if (buttonPress2.count == 2) {
+		inputKeysOpen();
+		dly_tsk(3);
+		buttonPress2.keys = button2Keys();
+		pinMonitor1Enable(1);
+		paramRead(0x2e, 1, &value);
+		buttonPress2.time1 = value >= 4 ? value : 3;
+		paramRead(0x2f, 1, &value);
+		buttonPress2.time2 = value >= 4 ? value : 3;
+	} else if (buttonPress2.keys == button2Keys()) {
+		switch (buttonPress2.keys) {
+		case 1:
+		case 2:
+			if (buttonPress2.count == buttonPress2.time1) {
+				buttonPress2.result = buttonPress2.keys;
+				stateTransition(0x14);
+				pinMonitor1Enable(1);
+			} else if (buttonPress2.count == buttonPress2.time2) {
+				buttonPress2.result = 2;
+				stateTransition(0x31);
+			} else {
+				pinMonitor1Enable(1);
+			}
+			break;
+		}
+	} else if (buttonPress2.count >= buttonPress2.time1) {
+		buttonPress1.keys = 1;
+		buttonPress2.result = buttonPress2.keys;
+		stateTransition(0x14);
+	}
+}
+#else
 void button2Held(void)
 {
 	unsigned int state;
@@ -916,6 +965,7 @@ void button2Held(void)
 		stateTransition(0x14);
 	}
 }
+#endif
 
 void intp13Enable(unsigned char enable)
 {
@@ -1070,7 +1120,11 @@ void button1Held(void)
 	unsigned char value;
 
 	buttonPress1.count++;
+#if FW_SINCE(0x01000107)
 	if (stateGet() != button1State() && !configGet()->pressAnyState) {
+#else
+	if (stateGet() != button1State()) {
+#endif
 		button1SetState(0);
 	} else if (buttonPress1.count < 2) {
 		pinMonitor0Enable(1);

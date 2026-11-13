@@ -455,7 +455,11 @@ unsigned char powerCookieClear(void)
 	unsigned char result;
 
 	result = 0;
+#if FW_SINCE(0x01000107)
 	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 && !chargeCookieHeld) {
+#else
+	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1) {
+#endif
 		cookieReadReg3();
 #if BOARD_COOKIE_REG_HIGH
 		elmoCommand[0] = configGet()->cookieRegHigh ? 0xa3 : 0x03;
@@ -629,17 +633,25 @@ void powerCookieHold(void)
 	cookieReadReg3();
 	if ((cookieStatus1.byte[0] & 0xe0) == 0x80 && !(cookieRegs[0].byte[0] & 0x80)) {
 		cookieCtrlCharge(0);
+#if FW_SINCE(0x01000107)
 		chargeCookieHeld = 1;
+#endif
 		timerStart(TIMER_RTC(0x1e), 2);
+#if FW_SINCE(0x01000107)
 		return;
+#endif
 	}
+#if FW_SINCE(0x01000107)
 	chargeCookieHeld = 0;
+#endif
 }
 
 /* task 5's, after timer 0x1e (powerCookieHold) */
 void powerCookieRelease(void)
 {
+#if FW_SINCE(0x01000107)
 	chargeCookieHeld = 0;
+#endif
 	chargeLedSetReleased(1);
 	cookieCtrlCharge(1);
 }

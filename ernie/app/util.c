@@ -2,19 +2,23 @@
  * Helpers: bytes as hex text, two digits each, most significant first, and back; the random
  * generator the handshakes' nonces come from.
  */
+#define ERNIE_RANDOM_DEFINE
 #include "charge.h"
 #include "aes.h"
 #include "authkeys.h"
 #include "config.h"
 #include "kernel.h"
+#include "rtc.h"
 #include "sysinfo.h"
 #include "util.h"
 #include <string.h>
 
 static const char hexDigits[] = "0123456789ABCDEF";
 
+#if !RANDOM_SEEDED
 __near unsigned long randomCounter;		/* counts the generator's blocks */
 __near unsigned char randomBlock[16];		/* the generator's last block */
+#endif
 
 /* the byte as two digits (never called) */
 void hexEncodeByte(char *out, unsigned char byte)
@@ -63,6 +67,26 @@ unsigned char hexDecode(unsigned char *out, const char *in, unsigned int length)
 	return 0;
 }
 
+#if RANDOM_SEEDED
+/* The seed and two clock bytes, encrypted in place with the factory key: the nonce (as the
+   updater's). */
+void randomGenerate(const unsigned char __near *seed, unsigned char *nonce)
+{
+	struct AesKey key;
+
+	((unsigned char __near *)nonce)[0] = seed[0];
+	((unsigned char __near *)nonce)[1] = seed[1];
+	((unsigned char __near *)nonce)[2] = seed[2];
+	((unsigned char __near *)nonce)[3] = seed[3];
+	((unsigned char __near *)nonce)[4] = getClock().byte[0];
+	((unsigned char __near *)nonce)[5] = getClock().byte[1];
+	key.w = (unsigned long *)factoryRoundKeys;
+	key.nk = 4;
+	key.nb = 4;
+	aesEncrypt((unsigned char __near *)nonce, (unsigned char __near *)nonce,
+		   (struct AesKey __near *)&key);
+}
+#else
 /* Generate successive nonce blocks from the device state and the preceding block. */
 void randomGenerate(unsigned long seed, unsigned char *out, unsigned char length)
 {
@@ -105,3 +129,4 @@ void randomGenerate(unsigned long seed, unsigned char *out, unsigned char length
 		length -= 16;
 	}
 }
+#endif

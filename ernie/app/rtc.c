@@ -16,6 +16,7 @@
 #include "state.h"
 #include "sysinfo.h"
 #include "task.h"
+#include "tau.h"
 #include "timer.h"
 
 /* the alarm's mode, the fifth byte of commands 0x0012 and 0x0082 */
@@ -147,7 +148,9 @@ void rtcInterrupt(void)
 	state = stateGet();
 	DI();
 	keepRam.clock++;
+#if FW_SINCE(0x01000107)
 	timerRtcTicks++;
+#endif
 	EI();
 	rtcClockLow = keepRam.clock;
 	if (state == 0x0010) {
@@ -157,6 +160,7 @@ void rtcInterrupt(void)
 		levelMonitor1Poll();
 	if (rtcClockLow & 0x0001) {
 		task2SetFlag(3, 0x8000);
+#if FW_SINCE(0x01000107)
 		if (hangDetected() != 0) {
 			hangCount++;
 			hangState = HANG_COUNTING;
@@ -170,6 +174,7 @@ void rtcInterrupt(void)
 			hangCount = 0;
 			hangState = HANG_NONE;
 		}
+#endif
 	}
 #if FW_SINCE(0x01000306)
 	if (!P4.6) {
@@ -184,9 +189,23 @@ void rtcInterrupt(void)
 	}
 #endif
 	for (i = TIMER_RTC_FIRST; i < TIMER_COUNT; i++) {
+#if FW_SINCE(0x01000107)
 		if (timers[i].state == 1 && timers[i].time == timerRtcTicks) {
+#else
+		if (timers[i].state == 1 && timers[i].time == rtcClockLow) {
+#endif
 			timers[i].state = 0;
 			timers[i].handler();
 		}
 	}
+#if !FW_SINCE(0x01000107)
+	/* before 0x01000107 a hang starts timer 11, whose interrupt counts it (tm11Interrupt) */
+	if (hangDetected() != 0 && (hangState != HANG_COUNTING || !hangTimerRunning())) {
+		hangState = HANG_COUNTING;
+		hangCount = 0;
+		tau1PowerOn();
+		tm11Stop();
+		tm11Start();
+	}
+#endif
 }

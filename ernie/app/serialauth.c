@@ -128,7 +128,13 @@ unsigned char serialAuthSetMode(unsigned char state, unsigned char mode)
 unsigned char serialAuthCommand(unsigned char *data)
 {
 	struct AesKey key;
+#if RANDOM_SEEDED
+	/* The original passes these stack bytes without initializing them first. */
+	unsigned char nonce[16];
+	unsigned char seed[4];
+#else
 	unsigned long seed;
+#endif
 	VP block;
 	int poolResult;
 	unsigned char index;
@@ -147,9 +153,14 @@ unsigned char serialAuthCommand(unsigned char *data)
 		}
 		/* fall through */
 	case 1:
+#if RANDOM_SEEDED
+		randomGenerate(seed, nonce);
+		memcpy(serialAuth.nonce, nonce, 8);
+#else
 		getIdRecordsLength();
 		seed = TCR10;
 		randomGenerate(seed, serialAuth.nonce, 8);
+#endif
 		serialAuthPacket.magic = 0x30;
 		serialAuthPacket.step = 0;
 		serialAuthPacket.mode = serialAuth.mode;

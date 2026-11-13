@@ -44,8 +44,15 @@ __sreg unsigned char chargeUsbHold;
 __sreg unsigned char chargeVbus;
 __sreg unsigned char chargeBbmcVersion;
 static __sreg unsigned char chargeReserved;
+#if !FW_SINCE(0x01000107)
+static __sreg unsigned char chargeBlinkInhibit;	/* chargeUpdate's: no alarm blink while set (nothing
+						   sets it) */
+static __sreg unsigned char chargeReserved2;
+#endif
 __sreg unsigned char chargeCookieSetting;
+#if FW_SINCE(0x01000107)
 __sreg unsigned char chargeCookieHeld;
+#endif
 
 static struct ChargeLevel chargeLevels[10];
 struct Charge charge;
@@ -72,7 +79,9 @@ void chargeInit(void)
 	chargeControl.1 = 1;
 	chargeFactors.0 = 0;
 	chargeCookieSetting = 0xc0;
+#if FW_SINCE(0x01000107)
 	chargeCookieHeld = 0;
+#endif
 	chargeAlarmInit();
 	if (deviceVersions.cookie[0] != 0x80) {
 		charge.batteryVolt = configGet()->batteryVolt;
@@ -237,6 +246,7 @@ void chargeUpdate(void)
 			sleepFactorSet17(chargeFactors.3);
 			chargeFactors.4 = (charge.flags & 0x0100) ? 1 : 0;
 			sleepFactorSet18(chargeFactors.4);
+#if FW_SINCE(0x01000107)
 			if (chargeFactors.5) {
 				if (input1Bit7Active())
 					chargeLedSetBlink(1);
@@ -245,6 +255,15 @@ void chargeUpdate(void)
 				chargeLedSetBlink(0);
 				powerLedSetAlarm(0);
 			}
+#else
+			if (chargeFactors.5) {
+				if (!chargeBlinkInhibit && input1Bit7Active())
+					chargeLedSetBlink(1);
+			} else {
+				chargeLedSetBlink2(0);
+				chargeLedSetBlink(0);
+			}
+#endif
 			if (charge.flags & 0x0020) {
 				if (!(stateGetWakeMask() & 0x40) && !(state & 0x8000) && (state & 0x0008))
 					chargeTransition(0x06);
@@ -706,10 +725,13 @@ unsigned char chargeGetCharging(void)
 	return powerStatus.bits.charging;
 }
 
+#if FW_SINCE(0x01000107)
+/* randomGenerate's (before 0x01000107 the generator does not read the battery) */
 void chargeReadTempVolt(unsigned int *value)
 {
 	*value = charge.batteryTemp + charge.batteryVolt;
 }
+#endif
 
 #if FW_SINCE(0x01000109)
 /* timer 0x1f (chargeTimer1f), on PCH-1000 only: the others have no caller (before 0x01000109

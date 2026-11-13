@@ -10,11 +10,13 @@
 #include "config.h"
 #include "sysinfo.h"
 
-__near unsigned char hangState;		/* HANG_* */
-__near unsigned char hangCount;
-__near unsigned char resetFlags;	/* RESF at the start */
-__near unsigned int idRecordsLength;	/* the lengths of id records 0x0f, 0x10, 0x12 and 0x16 */
-__near unsigned long idRecord1;		/* id record 1 */
+SYSINFO_NEAR unsigned char hangState;		/* HANG_* */
+SYSINFO_NEAR unsigned char hangCount;
+SYSINFO_NEAR unsigned char resetFlags;	/* RESF at the start */
+#if FW_SINCE(0x01000107)
+SYSINFO_NEAR unsigned int idRecordsLength;	/* the lengths of id records 0x0f, 0x10, 0x12 and 0x16 */
+SYSINFO_NEAR unsigned long idRecord1;		/* id record 1 */
+#endif
 
 int hangLimitReached(void)
 {
@@ -50,6 +52,7 @@ unsigned char getResetFlags(void)
 	return resetFlags;
 }
 
+#if FW_SINCE(0x01000107)
 unsigned long getIdRecord1(void)
 {
 	return idRecord1;
@@ -59,3 +62,4 @@ unsigned int getIdRecordsLength(void)
 {
 	return idRecordsLength;
 }
+#endif

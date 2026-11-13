@@ -106,7 +106,7 @@ OBJECT	../lib/fslsecurity.asm
 OBJECT	../lib/fslflags.asm
 OBJECT	../lib/fslswap.asm
 OBJECT	../lib/memcpy.asm
-OBJECT	../lib/memcpy_n.asm
+OBJECT	../lib/memcpy_n.asm	IF ERNIE_FW>=0x01000107
 OBJECT	../lib/memmove.asm
 OBJECT	../lib/memcmp.asm
 OBJECT	../lib/memset.asm
@@ -222,12 +222,14 @@ SEG	@@INIS
 # the kernel's own RAM (kernel.asm's @@KRAM): its state, its tables, the fixed-size pools'
 # blocks
 AT	0xfdd46		IF ERNIE_FW>=0x01000306
-AT	0xfdd3c		IF ERNIE_FW<0x01000306
+AT	0xfdd3c		IF ERNIE_FW<0x01000306&&ERNIE_FW>=0x01000107
+AT	0xfdd0e		IF ERNIE_FW<0x01000107
 SEG	@@KRAM
 # after the kernel's: the flash library's buffer, the initialised data, then what cstart
 # clears, from its start label to cstartend's
 AT	0xfe06c		IF ERNIE_FW>=0x01000306
-AT	0xfe062		IF ERNIE_FW<0x01000306
+AT	0xfe062		IF ERNIE_FW<0x01000306&&ERNIE_FW>=0x01000107
+AT	0xfe034		IF ERNIE_FW<0x01000107
 SEG	@@DATA		main.c
 SEG	@@INITL
 SEG	@@DATAL		cstart.asm

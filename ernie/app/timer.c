@@ -9,11 +9,14 @@
 
 #include "ernie.h"
 #include "kernel.h"
+#include "rtc.h"
 #include "timer.h"
 
 __near struct Timer timers[TIMER_COUNT];
 __sreg unsigned int timerTicks;
+#if FW_SINCE(0x01000107)
 __sreg unsigned int timerRtcTicks;
+#endif
 
 int timerInit(void)
 {
@@ -27,7 +30,9 @@ int timerInit(void)
 	}
 	ticks = 0;
 	timerSetTicks(&ticks);
+#if FW_SINCE(0x01000107)
 	timerSetRtcTicks(&ticks);
+#endif
 	sta_cyc(7);
 	return 0;
 }
@@ -53,7 +58,12 @@ int timerStart(unsigned char id, unsigned int ticks)
 	}
 	if (id < TIMER_COUNT) {
 		DI();
+#if FW_SINCE(0x01000107)
 		timers[id].time = ticks + timerRtcTicks + 1;
+#else
+		/* before 0x01000107 the RTC timers count the clock's low word */
+		timers[id].time = (unsigned int)getClock().value + ticks + 1;
+#endif
 		timers[id].state = 1;
 		EI();
 		return 0;
@@ -105,6 +115,7 @@ int timerArmed(void)
 	return result;
 }
 
+#if FW_SINCE(0x01000107)
 int timerSetRtcTicks(unsigned int *ticks)
 {
 	DI();
@@ -120,6 +131,15 @@ int timerGetRtcTicks(unsigned int *ticks)
 	EI();
 	return 0;
 }
+#else
+int timerGetRtcTicks(unsigned int *ticks)
+{
+	DI();
+	*ticks = (unsigned int)getClock().value;
+	EI();
+	return 0;
+}
+#endif
 
 /* cyclic handler 7: a tick */
 void timerTick(void)

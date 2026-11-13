@@ -114,7 +114,9 @@ static void powerJobOn(void)
 
 static void powerJobResume(void)
 {
+#if FW_SINCE(0x01000107)
 	union PowerRequest *mode;
+#endif
 
 	batteryBLLineOff();
 	powerResumed = 1;
@@ -133,9 +135,11 @@ static void powerJobResume(void)
 	powerRequestInit();
 	POWER_JOB_AC_DELAY();
 	task5SetFlag(4, 0x20);
+#if FW_SINCE(0x01000107)
 	mode = stateGetWakeupFactor();
 	if (mode->bits.mode == 0x0f && !mode->bits.notify)
 		chargeLedSetCharging(1);
+#endif
 	powerReady(POWER_JOB_PART);
 }
 
@@ -187,7 +191,9 @@ static void powerJobOff(void)
 #endif
 	chargeLedSetHost(0);
 	chargeLedSetHostOff(0);
+#if FW_SINCE(0x01000107)
 	chargeLedSetCharging(0);
+#endif
 #if BOARD_CHARGE_TIMER1F
 	chargeTimer1fStop();
 #endif
@@ -205,7 +211,9 @@ static void powerJobShutdown(void)
 #endif
 	chargeLedSetHost(0);
 	chargeLedSetHostOff(0);
+#if FW_SINCE(0x01000107)
 	chargeLedSetCharging(0);
+#endif
 	powerReady(POWER_JOB_PART);
 }
 
@@ -225,7 +233,9 @@ static void powerJobSuspend(void)
 	chargeVbus.0 = 1;
 	chargeControl.1 = 1;
 	powerCookieHold();
+#if FW_SINCE(0x01000107)
 	chargeLedSetCharging(0);
+#endif
 #if FW_SINCE(0x01000306)
 	ledSetOff(0);
 #endif
@@ -271,7 +281,9 @@ static void powerJobUpdate(void)
 #if FW_SINCE(0x01000306)
 static void powerJobReset(void)
 {
+#if FW_SINCE(0x01000107)
 	chargeLedSetCharging(0);
+#endif
 	powerReady(POWER_JOB_PART);
 }
 #endif

@@ -60,7 +60,9 @@ void task5(VP_INT exinf)
 			if (ptn & 0x0020) {
 				clr_flg(4, ~0x0020);
 				chargeUpdate();
+#if FW_SINCE(0x01000107)
 				ledUpdate();
+#endif
 			}
 			if (ptn & 0x0400) {
 				clr_flg(4, ~0x0400);
@@ -148,7 +150,9 @@ void powerJobPostOffEnd(void)
 	return;
 }
 
-/* before 0x01000306 the reset job is not posted: powerReset puts the charge LED off itself */
+/* before 0x01000306 the reset job is not posted: powerReset puts the charge LED off itself
+   (before 0x01000107 there is no charging request to clear) */
+#if FW_SINCE(0x01000107)
 void powerJobPostReset(void)
 {
 #if FW_SINCE(0x01000306)
@@ -159,6 +163,7 @@ void powerJobPostReset(void)
 	chargeLedSetCharging(0);
 #endif
 }
+#endif
 
 void powerJobPostUpdate(void)
 {

@@ -108,7 +108,8 @@ const struct ConfigBank configDefault = {
 		},
 		0, 1, 0,	/* startCheckOff, testDisarm, reserved4 */
 		0x14,	/* startClockLimit */
-		{ 0x01, 0x01, 0x05, 0x03 },	/* reserved5 */
+		0x01, 0x01, 0x05,	/* chargeLedBlink1On, chargeLedBlink1Off, chargeLedBlink1Count */
+		0x03,	/* chargeLedBlink2Count */
 		0x0f3c,	/* batteryLowVolt */
 		0x00, 0x00,	/* chargeLedHost, reserved8 */
 		{	/* chargeCurrents */

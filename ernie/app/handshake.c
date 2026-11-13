@@ -175,15 +175,26 @@ unsigned char handshakeCommand(unsigned char *data)
 	VP block;
 	int poolResult;
 	unsigned char modeIndex;
+#if RANDOM_SEEDED
+	/* The original passes these stack bytes without initializing them first. */
+	unsigned char nonce[16];
+	unsigned char seed[4];
+#else
 	unsigned long seed;
+#endif
 
 	memcpy(&handshakePacket, data, sizeof(handshakePacket));
 	switch (handshake.state) {
 	case 0:
 		handshake.mode = handshakePacket.mode;
+#if RANDOM_SEEDED
+		randomGenerate(seed, nonce);
+		memcpy(handshake.challenge, nonce, 8);
+#else
 		getIdRecordsLength();
 		seed = TCR10;
 		randomGenerate(seed, (unsigned char *)handshake.challenge, 8);
+#endif
 		if (handshake.mode == 0x0f) {
 			handshakeLock15();
 			snvsReset();

@@ -16,8 +16,10 @@
 #define CONFIG_VERSION		0x31	/* this build's layout */
 #elif FW_SINCE(0x01000109)
 #define CONFIG_VERSION		0x29	/* (no touch delays, host link limits or off transition 0x18) */
-#else
+#elif FW_SINCE(0x01000107)
 #define CONFIG_VERSION		0x28	/* (the charge timer's delay 0x168) */
+#else
+#define CONFIG_VERSION		0x26	/* (the charge LED's counted blinks) */
 #endif
 #define CONFIG_WRITTEN		0x5a5a
 
@@ -140,7 +142,13 @@ struct ConfigBlock {
 	unsigned char	reserved4:6;
 	unsigned char	startClockLimit;	/* the clock's low byte up to which serial2InTime
 						   holds */
-	unsigned char	reserved5[0x18a - 0x186];
+	unsigned char	chargeLedBlink1On;	/* before 0x01000107 the charge LED's first counted
+						   blink (CHARGE_LED_BLINK1): its on and off ticks
+						   and its blinks */
+	unsigned char	chargeLedBlink1Off;
+	unsigned char	chargeLedBlink1Count;
+	unsigned char	chargeLedBlink2Count;	/* the second's (CHARGE_LED_BLINK2; its ticks are
+						   paramSetting1 and 2) */
 	unsigned int	batteryLowVolt;		/* below it, chargeUpdate calls chargeLedSetReleased(0) */
 	unsigned char	chargeLedHost;		/* the host may hand the charge LED over (0x089e
 						   mode 2) */

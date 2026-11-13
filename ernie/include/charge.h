@@ -5,6 +5,8 @@
 #ifndef ERNIE_CHARGE_H
 #define ERNIE_CHARGE_H
 
+#include "ernie.h"
+
 /* the Cookie's status register 1 (cookieReadStatus1), which the power status copies
    (chargeSetPowerStatus) */
 union CookieStatus1 {
@@ -176,7 +178,9 @@ extern __sreg unsigned char chargeUsbHold;	/* 0xff: mode 5 while charging; no tr
 extern __sreg unsigned char chargeVbus;		/* the VBUS charge's bits (0x0893) */
 extern __sreg unsigned char chargeBbmcVersion;	/* the 3G modem's version at the last update */
 extern __sreg unsigned char chargeCookieSetting;	/* cookieCtrlSupplyCurrentAc's (alarm 2) */
+#if FW_SINCE(0x01000107)
 extern __sreg unsigned char chargeCookieHeld;	/* powerCookieHold's */
+#endif
 extern struct Charge charge;
 
 extern void chargeInit(void);
@@ -212,7 +216,9 @@ extern void chargeTimerStart(unsigned int ticks);
 extern void chargeTimerStop(void);
 extern unsigned char chargeGetAc(void);
 extern unsigned char chargeGetCharging(void);
+#if FW_SINCE(0x01000107)
 extern void chargeReadTempVolt(unsigned int *value);
+#endif
 extern void chargeTimer1fStart(void);
 extern void chargeTimer1fStop(void);
 extern void chargeSetAcDelay(void);

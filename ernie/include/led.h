@@ -19,7 +19,16 @@
 #define CHARGE_LED_AUTO		0	/* the Cookie lights it while charging */
 #define CHARGE_LED_OFF		1
 #define CHARGE_LED_HOST		2	/* the Cookie's register 3 bit 0: the host's setting */
+#if FW_SINCE(0x01000107)
 #define CHARGE_LED_BLINK	3
+#else
+/* before 0x01000107 two counted blinks, which put the power LED's alarm on (their requests are
+   only ever cleared), and the battery alarm's */
+#define CHARGE_LED_BLINK1	3	/* the config's chargeLedBlink1* */
+#define CHARGE_LED_BLINK2	4	/* paramSetting1 and 2, chargeLedBlink2Count */
+#define CHARGE_LED_BLINK	5
+#define CHARGE_LED_NONE		0xff	/* not set yet */
+#endif
 
 /* the charge LED's requests that put it off (before 0x01000306 there is no ledSetOff) */
 #if FW_SINCE(0x01000306)
@@ -91,9 +100,14 @@ union ChargeLedRequest {
 	unsigned char	value;
 	struct {
 		unsigned char	off:1;		/* config's chargeLedOff at a reset */
+#if FW_SINCE(0x01000107)
 		unsigned char	charging:1;	/* lit as charging while the Cookie powers the
 						   battery */
 		unsigned char	allOff:1;	/* ledSetOff's */
+#else
+		unsigned char	blink1:1;	/* CHARGE_LED_BLINK1 */
+		unsigned char	blink2:1;	/* CHARGE_LED_BLINK2 */
+#endif
 		unsigned char	blink:1;	/* a battery alarm */
 		unsigned char	hostOff:1;	/* the host's (0x089e mode 0) */
 		unsigned char	host:1;		/* the host's (0x089e mode 2) */
@@ -121,8 +135,13 @@ union PowerLedRequest {
 
 /* the requests' bits, as masks */
 #define CHARGE_LED_REQUEST_OFF		0x01
+#if FW_SINCE(0x01000107)
 #define CHARGE_LED_REQUEST_CHARGING	0x02
 #define CHARGE_LED_REQUEST_ALL_OFF	0x04
+#else
+#define CHARGE_LED_REQUEST_BLINK1	0x02
+#define CHARGE_LED_REQUEST_BLINK2	0x04
+#endif
 #define CHARGE_LED_REQUEST_BLINK	0x08
 #define CHARGE_LED_REQUEST_HOST_OFF	0x10
 #define CHARGE_LED_REQUEST_HOST		0x20
@@ -161,6 +180,10 @@ struct Leds {
 extern void chargeLedBlinkUpdate(void);
 extern void chargeLedInit(void);
 extern void chargeLedSetOff(unsigned char on);
+#if !FW_SINCE(0x01000107)
+extern void chargeLedSetBlink1(unsigned char on);
+extern void chargeLedSetBlink2(unsigned char on);
+#endif
 #if FW_SINCE(0x01000306)
 extern void chargeLedSetStateOff(unsigned char on);
 #endif
@@ -168,7 +191,9 @@ extern void chargeLedSetBlink(unsigned char on);
 extern void chargeLedSetHost(unsigned char on);
 extern void chargeLedSetHostOff(unsigned char on);
 extern void chargeLedSetReleased(unsigned char on);
+#if FW_SINCE(0x01000107)
 extern void chargeLedSetCharging(unsigned char on);
+#endif
 extern void powerLedSetAlarm(unsigned char on);
 extern void powerLedFadeOff(void);
 extern void powerLedFadeOn(void);

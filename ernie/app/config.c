@@ -422,8 +422,10 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 	}
 	copy->block.hardwareInfoSelect = kept->block.hardwareInfoSelect;
 	copy->block.state.value = kept->block.state.value;
+#if FW_SINCE(0x01000107)
 	if (kept->block.start.bits.chargeLedOff)
 		copy->block.state.bits.chargeLedOff = kept->block.start.bits.chargeLedOff;
+#endif
 #if FW_SINCE(0x01000306)
 	copy->block.offTransitionBlock = kept->block.offTransitionBlock;
 #endif

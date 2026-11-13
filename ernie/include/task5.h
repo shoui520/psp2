@@ -6,6 +6,7 @@
 #ifndef ERNIE_TASK5_H
 #define ERNIE_TASK5_H
 
+#include "ernie.h"
 #include "kernel.h"
 
 extern unsigned int powerDevicePending;
@@ -18,7 +19,9 @@ extern void powerJobPostSuspend(void);
 extern void powerJobPostShutdown(void);
 extern void powerJobPostCut(void);
 extern void powerJobPostOffEnd(void);
+#if FW_SINCE(0x01000107)
 extern void powerJobPostReset(void);
+#endif
 extern void powerJobPostUpdate(void);
 extern unsigned char elmoVersion0(void);
 extern void powerDeviceSetPending(unsigned int bits);

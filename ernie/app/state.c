@@ -273,8 +273,10 @@ static int stateOnEnter(void)
 static int stateOffEnter(void)
 {
 	unsigned char cause;
+#if FW_SINCE(0x01000107)
 	unsigned char length;
 	unsigned char size;
+#endif
 
 	inputStateOff();
 	serial4Answer0205();
@@ -309,6 +311,7 @@ static int stateOffEnter(void)
 	} else if (stateCause == 0x5b)
 		stateTransition(0x19);
 #endif
+#if FW_SINCE(0x01000107)
 	logReadData(1, (unsigned char *)&idRecord1, &length);
 	logReadData(0x0f, &size, &length);
 	idRecordsLength = size;
@@ -318,6 +321,7 @@ static int stateOffEnter(void)
 	idRecordsLength += size;
 	logReadData(0x16, &size, &length);
 	idRecordsLength += size;
+#endif
 	return 0;
 }
 

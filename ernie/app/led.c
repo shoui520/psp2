@@ -53,10 +53,15 @@ static struct Leds leds;
 static void chargeLedBlinkExpire(void)
 {
 	switch (leds.charge.mode) {
+#if FW_SINCE(0x01000107)
 	case CHARGE_LED_AUTO:
 	case CHARGE_LED_OFF:
 	case CHARGE_LED_HOST:
 		break;
+#else
+	case CHARGE_LED_BLINK1:
+	case CHARGE_LED_BLINK2:
+#endif
 	case CHARGE_LED_BLINK:
 		if (chargeLedBlink.on == 1) {
 			chargeLedBlink.on = 0;
@@ -64,8 +69,16 @@ static void chargeLedBlinkExpire(void)
 		} else {
 			if (chargeLedBlink.count != 0) {
 				chargeLedBlink.count--;
-				if (chargeLedBlink.count == 0)
+				if (chargeLedBlink.count == 0) {
+#if !FW_SINCE(0x01000107)
+					/* a counted blink's end ends its request */
+					if (leds.charge.mode == CHARGE_LED_BLINK1)
+						chargeLedSetBlink1(0);
+					else if (leds.charge.mode == CHARGE_LED_BLINK2)
+						chargeLedSetBlink2(0);
+#endif
 					break;
+				}
 			}
 			chargeLedBlink.on = 1;
 			timerStart(CHARGE_LED_TIMER, chargeLedBlink.onTime - 1);
@@ -83,6 +96,10 @@ void chargeLedBlinkUpdate(void)
 	case CHARGE_LED_OFF:
 	case CHARGE_LED_HOST:
 		break;
+#if !FW_SINCE(0x01000107)
+	case CHARGE_LED_BLINK1:
+	case CHARGE_LED_BLINK2:
+#endif
 	case CHARGE_LED_BLINK:
 		cookieCtrlReg3Bit2(chargeLedBlink.on);
 		break;
@@ -99,7 +116,11 @@ void chargeLedInit(void)
 	timerSetHandler(CHARGE_LED_TIMER, &handler);
 	leds.charge.request.value = 0;
 	leds.charge.shown.value = 0;
+#if FW_SINCE(0x01000107)
 	leds.charge.mode = CHARGE_LED_AUTO;
+#else
+	leds.charge.mode = CHARGE_LED_NONE;
+#endif
 	if (configGet()->state.bits.chargeLedOff)
 		chargeLedSetOff(1);
 #if FW_SINCE(0x01000306)
@@ -117,6 +138,26 @@ void chargeLedSetOff(unsigned char on)
 		leds.charge.request.bits.off = 0;
 	task5SetFlag(4, 0x0800);
 }
+
+#if !FW_SINCE(0x01000107)
+void chargeLedSetBlink1(unsigned char on)
+{
+	if (on == 1)
+		leds.charge.request.bits.blink1 = 1;
+	else
+		leds.charge.request.bits.blink1 = 0;
+	task5SetFlag(4, 0x0800);
+}
+
+void chargeLedSetBlink2(unsigned char on)
+{
+	if (on == 1)
+		leds.charge.request.bits.blink2 = 1;
+	else
+		leds.charge.request.bits.blink2 = 0;
+	task5SetFlag(4, 0x0800);
+}
+#endif
 
 #if FW_SINCE(0x01000306)
 void chargeLedSetStateOff(unsigned char on)
@@ -165,6 +206,7 @@ void chargeLedSetReleased(unsigned char on)
 	task5SetFlag(4, 0x0800);
 }
 
+#if FW_SINCE(0x01000107)
 void chargeLedSetCharging(unsigned char on)
 {
 	if (on == 1)
@@ -173,6 +215,7 @@ void chargeLedSetCharging(unsigned char on)
 		leds.charge.request.bits.charging = 0;
 	task5SetFlag(4, 0x0800);
 }
+#endif
 
 void powerLedSetAlarm(unsigned char on)
 {
@@ -277,6 +320,69 @@ static void chargeLedBlinkStart(unsigned char onTime, unsigned char offTime,
 	timerStart(CHARGE_LED_TIMER, chargeLedBlink.onTime);
 }
 
+#if !FW_SINCE(0x01000107)
+/* before 0x01000107 the requests are taken in turn, the counted blinks and the host's mode put
+   the power LED's alarm on, and the charge does not decide */
+void chargeLedUpdate(void)
+{
+	unsigned char mode;
+	unsigned char onTime;
+	unsigned char offTime;
+
+	mode = leds.charge.mode;
+	if (leds.charge.request.value & CHARGE_LED_REQUEST_OFF)
+		mode = CHARGE_LED_OFF;
+	else if (leds.charge.request.value & CHARGE_LED_REQUEST_BLINK1)
+		mode = CHARGE_LED_BLINK1;
+	else if (leds.charge.request.value & CHARGE_LED_REQUEST_BLINK)
+		mode = CHARGE_LED_BLINK;
+	else if (leds.charge.request.value & CHARGE_LED_REQUEST_HOST_OFF)
+		mode = CHARGE_LED_OFF;
+	else if (leds.charge.request.value & CHARGE_LED_REQUEST_HOST)
+		mode = CHARGE_LED_HOST;
+	else if (leds.charge.request.value & CHARGE_LED_REQUEST_RELEASED)
+		mode = CHARGE_LED_OFF;
+	else
+		mode = CHARGE_LED_AUTO;
+	/* CHARGE_LED_HOST and the blinks */
+	if (mode & 0x0e)
+		leds.power.request.bits.alarm = 1;
+	else
+		leds.power.request.bits.alarm = 0;
+	if (mode != leds.charge.mode) {
+		switch (mode) {
+		case CHARGE_LED_AUTO:
+			chargeLedBlinkStop();
+			cookieCtrlReg3Mode(0);
+			break;
+		case CHARGE_LED_HOST:
+			chargeLedBlinkStop();
+			cookieCtrlReg3Bit0();
+			break;
+		case CHARGE_LED_OFF:
+			chargeLedBlinkStop();
+			cookieCtrlReg3Bit2(0);
+			break;
+		case CHARGE_LED_BLINK1:
+			chargeLedBlinkStart(configGet()->chargeLedBlink1On,
+					    configGet()->chargeLedBlink1Off,
+					    configGet()->chargeLedBlink1Count);
+			break;
+		case CHARGE_LED_BLINK2:
+			chargeLedBlinkStart(configGet()->paramSetting1, configGet()->paramSetting2,
+					    configGet()->chargeLedBlink2Count);
+			break;
+		case CHARGE_LED_BLINK:
+			paramRead(0x54, 1, &onTime);
+			paramRead(0x55, 1, &offTime);
+			chargeLedBlinkStart(onTime, offTime, 0);
+			break;
+		}
+		leds.charge.mode = mode;
+	}
+	leds.charge.shown = leds.charge.request;
+}
+#else
 void chargeLedUpdate(void)
 {
 	unsigned char mode;
@@ -378,6 +484,7 @@ void chargeLedUpdate(void)
 	}
 	leds.charge.shown = leds.charge.request;
 }
+#endif
 
 void powerLedUpdate(void)
 {

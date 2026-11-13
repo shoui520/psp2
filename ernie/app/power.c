@@ -481,7 +481,9 @@ unsigned char powerReset(void)
 	P5.7 = 0;
 	powerPendingClear(4);
 	powerPendingClear(1);
+#if FW_SINCE(0x01000107)
 	powerJobPostReset();
+#endif
 #if FW_SINCE(0x01000306)
 	powerWait(0x19);
 #endif
