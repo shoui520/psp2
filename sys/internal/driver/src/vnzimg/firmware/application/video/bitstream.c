@@ -83,7 +83,7 @@ int32_t videoBitsSeek(const VideoStream *stream, VideoNal *nal)
 	if (bits & 7)
 		videoBitsRead(&nal->bits, bits & 7);
 	for (tries = 3; VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_WORD)) != word && tries >= 1; tries--) {
-		if (!nal->escaped)
+		if (!nal->contextOption)
 			nal->bits.remaining++;
 		videoBitsRead(&nal->bits, 8);
 		bits += 8;
@@ -402,7 +402,7 @@ uint32_t videoNalScan(const VideoStream *stream, VideoParser *parser)
 		types |= videoNalSliceTypes(stream, parser);
 		if (types == 7)
 			break;
-		if (types == 3 && !nal->waitFrame)
+		if (types == 3 && !nal->fieldDecode)
 			break;
 	} while (videoNalNext(stream, parser, 1) >= 1);
 	return types;

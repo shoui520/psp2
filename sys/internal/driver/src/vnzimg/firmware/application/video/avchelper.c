@@ -431,7 +431,7 @@ void avcdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 	job->pictures = pictures;
 	job->picture = &pictures[nal->picture];
 	job->pictureExtras = extras;
-	job->first = shared->first;
+	job->fieldDecode = shared->first;
 
 	if (nal->flags & NAL_IDLE) {
 		status = nal->doneStatus;

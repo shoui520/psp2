@@ -122,7 +122,10 @@ typedef struct VideoEngineRequest {
 	uint16_t horizontal;
 	uint16_t vertical;
 	int32_t status;
-	uint32_t reserved2[4];
+	VkThread *thread;		/* asked: the parser engine's thread, its stream, */
+	uint32_t stream;		/* its job and its queue to the decoder engine */
+	uint32_t job;
+	VkMessageQueue *queue;
 	uint32_t user;
 	uint32_t sequenceInfo;
 	uint32_t dts[2];
@@ -340,29 +343,59 @@ void videoCacheDrop2(VideoParameterCache *cache, uint32_t index);		/* 0x862ef2 *
 #define NAL_AUD				9
 #define NAL_FILLER			12
 
-/* the stream's ring, as the parser sees it */
+/* a 33-bit time stamp, doubled; -1 none (word aligned in the MPEG-4 structures) */
+typedef int64_t VideoTime __attribute__((aligned(4)));
+
+#define VIDEO_TIME_NONE		(-1LL)
+#define VIDEO_TIME_WRAP		0x3ffffffffLL
+
+/*
+ * The access unit's stream as the parser engine and its jobs see it (128
+ * bytes): the unit's bytes mapped from the client's ring (in two pieces when
+ * it wraps), and the engine's tables.
+ */
 typedef struct VideoStream {
-	uint32_t reserved;
-	uint32_t base;			/* the lowest address in use */
-	uint32_t reserved2;
-	uint32_t ringStart;
-	uint32_t ringEnd;		/* its last byte */
-	uint32_t reserved3[5];
+	uint32_t id;			/* the decoder's */
+	uint32_t base;			/* the unit's first byte, mapped */
+	uint32_t esSize;
+	uint32_t ringStart;		/* the ring's start, mapped when the unit wraps; 0 */
+	uint32_t ringEnd;		/* the last byte mapped */
+	uint32_t mapped;		/* the piece mapped from the unit's line */
+	uint32_t bufferSize;		/* the ring's */
+	uint32_t esOffset;		/* the unit's place in the ring */
+	int8_t auMode;			/* the request's, | 8 when it restarts */
+	uint8_t sequence;		/* only the sequence is asked */
+	uint16_t cacheSize;		/* the parameter cache's */
+	uint8_t option;			/* the request's */
+	uint8_t reserved[3];
 	uint32_t parameterCache;	/* a VideoParameterCache */
 	uint32_t parameterSets;		/* 1088 bytes each */
-	uint32_t reserved4[2];
+	uint32_t parameterSets2;	/* 16 bytes each */
+	uint32_t pictureData;		/* 256 bytes a picture */
 	uint32_t nal;			/* the unit being parsed (a VideoNal, 1216 bytes) */
 	uint32_t pictures;		/* VideoAvcPicture, nal->pictures of them */
 	uint32_t pictureExtras;		/* 16 bytes each */
+	VideoTime option5;		/* the decoder's options, doubled */
+	VideoTime option4;
+	uint32_t reserved2[11];
 } VideoStream;
 
 /* a picture of the stream's (128 bytes) */
 typedef struct VideoAvcPicture {
-	uint8_t reserved[27];
+	uint32_t address;		/* its luma, its chroma and field data after */
+	uint8_t reserved[16];
+	uint32_t state;
+	uint8_t reserved2[2];
+	uint8_t outputState;
 	uint8_t referenceInfo;
-	uint8_t reserved2[3];
+	uint8_t reserved3[4];
 	uint8_t incomplete;		/* its slices ended before its last macroblock */
-	uint8_t reserved3[96];
+	uint8_t free;			/* the picture may be taken */
+	uint8_t reserved4[6];
+	uint32_t data;			/* its 256 bytes of the stream's picture data */
+	uint8_t reserved5[36];
+	uint32_t user;
+	uint8_t reserved6[44];
 } VideoAvcPicture;
 
 /* a unit of the stream (a NAL unit) found in the ring, read through the unit */
@@ -397,25 +430,58 @@ typedef struct VideoNal {
 	uint8_t reserved3;
 	uint8_t pictures;		/* entries of the stream's picture tables */
 	uint8_t reserved9[5];
-	uint8_t escaped;		/* emulation prevention bytes are not removed */
+	uint8_t contextOption;		/* the sequence's: answered as VIDEO_ENGINE_CONTEXT_OPTION */
 	uint8_t parameterSet;		/* the stream's 1088-byte table in use */
 	uint8_t parameterSet2;		/* and its 16-byte one */
-	uint8_t reserved4[88];
+	uint8_t reserved4[24];
+	uint32_t outputPictures;
+	uint8_t reserved15[44];
+	uint16_t width;			/* the pictures': luma width, pitch, sizes */
+	uint16_t pitch;
+	uint32_t frameSize;
+	uint32_t lumaSize;
+	uint32_t chromaSize;
 	int8_t picture;			/* the picture decoded */
-	uint8_t reserved10[2];
-	uint8_t waitFrame;
-	uint8_t reserved5[17];
+	uint8_t seiFound;
+	uint8_t idrPending;
+	uint8_t fieldDecode;		/* the sequence's: answered as VIDEO_ENGINE_CONTEXT_FIELD */
+	uint8_t numOfRefFrames;		/* the sequence's */
+	uint8_t reserved10;
+	uint16_t horizontal;
+	uint16_t vertical;
+	uint8_t reserved5[2];
+	uint32_t decoderData;		/* the engine info's */
+	uint32_t frameCount;
+	uint8_t reorder;
 	uint8_t pictureInfo[2];		/* given to the engine with the job */
-	uint8_t reserved11[25];
+	uint8_t outputReady;
+	uint8_t outputFlag;
+	uint8_t reserved16;
+	uint8_t scanned;		/* the slice types were scanned */
+	uint8_t outputPending;
+	uint8_t sliceInfo[2];
+	uint8_t reserved11[16];
+	uint8_t restart;		/* the access unit restarts */
+	uint8_t reserved17;
 	uint8_t referenceInfo;
-	uint8_t reserved12[7];
+	uint8_t reserved12[3];
+	int32_t outputTime;
 	uint8_t failed;
 	uint8_t skip;			/* the unit is not run */
-	uint8_t reserved13;
+	uint8_t startPending;		/* the unit's first slice is still to be read */
 	int8_t nextType;		/* of the unit after the slice, -1 none */
 	VideoBitsState state;
 	uint8_t reserved14[18];
 	uint16_t nextFirstMacroblock;	/* of the slice after this one */
+	VideoTime option5;		/* the decoder's options, doubled */
+	VideoTime option4;
+	VideoTime lastPts;
+	VideoTime lastDts;
+	uint32_t outputMode;
+	uint32_t outputCount;
+	int32_t outputIndex;
+	uint8_t outputFlush;
+	uint8_t reserved18[875];
 } VideoNal;
 
 /* a parser's view: its bit reader and the unit it reads */
@@ -424,11 +490,6 @@ typedef struct VideoParser {
 	VideoNal *nal;
 } VideoParser;
 
-/* a 33-bit time stamp, doubled; -1 none (word aligned in the MPEG-4 structures) */
-typedef int64_t VideoTime __attribute__((aligned(4)));
-
-#define VIDEO_TIME_NONE		(-1LL)
-#define VIDEO_TIME_WRAP		0x3ffffffffLL
 
 /* the MPEG-4 decoder's stream as the helper's jobs get it (64 bytes) */
 typedef struct VideoM4vStream {
@@ -800,8 +861,9 @@ typedef struct VideoSliceJob {
 	VideoAvcPicture *picture;
 	uint32_t pictureExtras;
 	uint32_t reserved2;
-	uint8_t first;
-	uint8_t reserved3[35];
+	uint8_t fieldDecode;		/* the context's (the helper's first) */
+	uint8_t contextOption;
+	uint8_t reserved3[34];
 	uint32_t jump[8];		/* videoSetJump's, for the parser's errors */
 	uint32_t reserved4[18];
 } VideoSliceJob;
