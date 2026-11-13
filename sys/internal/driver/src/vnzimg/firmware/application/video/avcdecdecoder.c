@@ -1246,16 +1246,16 @@ static void runClose(const AvcdecDecoderInfo *info, const AvcdecRun *run, Avcdec
 /* 0x82f05e: a picture's first run: the row above its first row cleared */
 static void rowsClear(const AvcdecDecoderInfo *info)
 {
-	uint32_t width = info->widthInMbs, size = ALIGN64((width + 1) * 64), i;
-	uint8_t *row;
+	uint32_t width = info->widthInMbs, size = ALIGN64((width + 1) * sizeof(AvcdecTop)), i;
+	AvcdecTop *top;
 
-	row = (uint8_t *)vnzPublicOpenPrivate(info->row0, size);
+	top = (AvcdecTop *)vnzPublicOpenPrivate(info->row0, size);
 	for (i = 0; i <= width; i++) {
-		row[i * 64 + 0x3e] = 0;
-		*(int32_t *)(row + i * 64 + 8) = -1;
-		*(int32_t *)(row + i * 64 + 12) = -1;
+		top[i].available = 0;
+		top[i].refIdx.w[0] = -1;
+		top[i].refIdx.w[1] = -1;
 	}
-	vnzPublicClosePrivate((uint32_t)row, size);
+	vnzPublicClosePrivate((uint32_t)top, size);
 }
 
 /*
@@ -1573,4 +1573,1163 @@ static void mbIntraNeighbours(VideoAvcMbInfo *mb, VideoAvcMbInfo *above, int32_t
 		if (!(width < x + 1))
 			above[1].kind |= AVC_MB_KEEP_BOTTOM;
 	}
+}
+
+/*
+ * The stripe's prediction job (0x82f524-0x831064): each macroblock's
+ * references and vectors predicted and stored for the macroblocks after it,
+ * the colocated motion kept for the B pictures, the intra modes and the
+ * deblocking's strengths and thresholds worked out.
+ */
+static void stripeOpen(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe);
+static void stripeClose(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe);
+static void mbLoad(AvcdecStripe *stripe);
+static void mbStore(AvcdecStripe *stripe);
+static void predictP(AvcdecStripe *stripe, AvcdecMotion *motion);
+static void predictB(AvcdecStripe *stripe, AvcdecMotion *motion);
+static void refIdxP(AvcdecStripe *stripe, AvcdecMotion *motion);
+static void refIdxB(AvcdecStripe *stripe, AvcdecMotion *motion);
+static void refPicturesB(AvcdecStripe *stripe, AvcdecMotion *motion);
+static void mvdP(AvcdecStripe *stripe, AvcdecMotion *motion);
+static void mvdL0(AvcdecStripe *stripe, AvcdecMotion *motion);
+static void mvdL1(AvcdecStripe *stripe, AvcdecMotion *motion);
+static void mvPredictPartitions(AvcdecStripe *stripe, AvcdecMotion *motion);
+static uint32_t directSpatialRefs(AvcdecStripe *stripe, AvcdecMotion *motion,
+	uint32_t direct);
+static void mvPredictA(AvcdecMotion *motion, uint32_t onlyA);
+static void mvPredictB(AvcdecMotion *motion, uint32_t onlyA);
+static void mvPredictC(AvcdecMotion *motion, uint32_t onlyA);
+static void mvPredictSkip(AvcdecMotion *motion);
+static void intraDone(AvcdecStripe *stripe);
+static void interDoneP(AvcdecStripe *stripe);
+static void interDoneB(AvcdecStripe *stripe);
+static void strengthIntra(AvcdecStripe *stripe, uint32_t left, uint32_t top);
+static void strengthCoded(AvcdecStripe *stripe, AvcdecLanes strengths[4]);
+static void intraPredict(AvcdecStripe *stripe);
+static void intraModes(AvcdecStripe *stripe);
+static void intraNeighbours(AvcdecStripe *stripe, uint32_t class);
+
+/* 0x82f524, a job: a stripe's macroblocks predicted, then its residual and filter jobs let go */
+void avcdecStripePredict(uint32_t infoAddress, uint32_t rowAddress, uint32_t unused,
+	uint32_t unused2)
+{
+	const AvcdecDecoderInfo *info = (const AvcdecDecoderInfo *)infoAddress;
+	uint32_t slot = workSlot(), isP, index;
+	VkVThreadContext *locked;
+	AvcdecStripe *stripe;
+	AvcdecMotion motion;
+	AvcdecRow *entry;
+	int32_t count, i;
+
+	entry = (AvcdecRow *)vnzPublicOpenProtected(rowAddress, DECODER_ROW_SIZE);
+	stripe = (AvcdecStripe *)vnzPublicOpenPrivate(entry->common + slot * DECODER_STRIPE_SIZE,
+		DECODER_STRIPE_SIZE);
+	vnzCacheInvalidateInside((uint32_t)stripe, DECODER_STRIPE_SIZE);
+	if (!entry->failed) {
+		count = entry->count;
+		stripeOpen(info, entry, stripe);
+		isP = (stripe->sliceHeader & AVC_SLICE_TYPE) == AVC_SLICE_P;
+		for (i = 0; i < count; i++) {
+			mbLoad(stripe);
+			if (AVC_MB_CLASS(stripe->kind) >= AVC_MB_CLASS_INTRA4X4) {
+				intraPredict(stripe);
+				intraDone(stripe);
+			} else if (isP) {
+				predictP(stripe, &motion);
+				interDoneP(stripe);
+			} else {
+				predictB(stripe, &motion);
+				interDoneB(stripe);
+			}
+			mbStore(stripe);
+		}
+		stripeClose(info, entry, stripe);
+	}
+	locked = vkVThreadContextLock(info->context);
+	index = info->jobsPerKind + entry->jobIndex;
+	vkVThreadJobSignal(locked, index);
+	vkVThreadJobSignal(locked, info->jobsPerKind * 2 + entry->jobIndex);
+	vkVThreadContextUnlock(locked);
+	vnzCachePurge((uint32_t)stripe, DECODER_STRIPE_SIZE);
+	vnzPublicClosePrivate((uint32_t)stripe, DECODER_STRIPE_SIZE);
+	vnzPublicCloseProtected((uint32_t)entry, DECODER_ROW_SIZE);
+}
+
+/*
+ * 0x82f62a: the stripe's rows opened: its macroblocks at the end of the
+ * row's ring entries, the one before them (the last stripe's last) on the
+ * left; at the run's start the row's buffers found, and what is outside
+ * the run made unavailable.
+ */
+static void stripeOpen(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe)
+{
+	const VideoAvcDecodeCommand *command = (const VideoAvcDecodeCommand *)info->command;
+	uint32_t x = entry->x, row = entry->row, mode = info->mode, count = entry->count;
+	uint32_t ring = row % info->mbSize, rows, width = info->widthInMbs;
+	const VideoHelperJob *job = (const VideoHelperJob *)entry->job;
+	AvcdecRowState *rowState;
+	AvcdecMbVectors *vectors;
+	AvcdecMbFilter *filters;
+	AvcdecMbState *states;
+	AvcdecTop *top;
+
+	stripe->x = x;
+	stripe->row = row;
+	rowState = (AvcdecRowState *)(info->table1024 + ring * sizeof(AvcdecRowState));
+	top = (AvcdecTop *)(info->row0 + x * sizeof(AvcdecTop));
+	stripe->rowState = rowState;
+	stripe->top = top;
+	stripe->topRight = top + 1;
+	stripe->slice = (const VideoHelperSlice *)vnzPublicOpenProtected(entry->slice,
+		sizeof(VideoHelperSlice));
+	stripe->sliceHeader = stripe->slice->sliceHeader;
+	if (info->motion)
+		stripe->colocatedOut = (AvcdecColocated *)vnzPublicOpenPrivate(x * 64 +
+			(row * width * 64 + info->motion), count * sizeof(AvcdecColocated));
+	else
+		stripe->colocatedOut = 0;
+	ring *= mode;
+	states = (AvcdecMbState *)vnzPublicOpenPrivate(info->table4096 +
+		ring * sizeof(AvcdecMbState), mode * sizeof(AvcdecMbState));
+	vectors = (AvcdecMbVectors *)vnzPublicOpenPrivate(info->table16384 +
+		ring * sizeof(AvcdecMbVectors), mode * sizeof(AvcdecMbVectors));
+	filters = (AvcdecMbFilter *)vnzPublicOpenPrivate(info->table8192 +
+		ring * sizeof(AvcdecMbFilter), mode * sizeof(AvcdecMbFilter));
+	stripe->mb = states + (mode - count);
+	stripe->vectors = vectors + (mode - count);
+	stripe->filter = filters + (mode - count);
+	if ((stripe->sliceHeader & AVC_SLICE_TYPE) == AVC_SLICE_B)
+		stripe->colocated = stripe->slice->colocated + (x + row * width) * 64;
+	stripe->top = (AvcdecTop *)vnzPublicOpenPrivate((uint32_t)stripe->top,
+		count * sizeof(AvcdecTop) + sizeof(AvcdecTop));
+	stripe->topRight = stripe->top + 1;
+	stripe->rowState = (AvcdecRowState *)vnzPublicOpenPrivate((uint32_t)stripe->rowState,
+		sizeof(AvcdecRowState));
+	if (count != 1) {
+		stripe->left = stripe->mb + count - 1;
+		stripe->leftVectors = stripe->vectors + count - 1;
+		stripe->leftFilter = stripe->filter + count - 1;
+	} else {
+		/* the stripe's one macroblock takes the last one's place: keep it */
+		stripe->left = stripe->mb - 1;
+		stripe->leftVectors = stripe->vectors - 1;
+		stripe->leftFilter = stripe->filter - 1;
+		*stripe->left = *stripe->mb;
+		*stripe->leftVectors = *stripe->vectors;
+		*stripe->leftFilter = *stripe->filter;
+	}
+	rowState = stripe->rowState;
+	if (!x || (job->firstX == x && job->firstY == row)) {
+		rows = row - job->firstY;
+		rowState->mbInfo = (VideoAvcMbInfo *)(job->buffers[0] + command->mbRowSize * rows);
+		rowState->intra = job->buffers[1] + command->intraRowSize * rows;
+		rowState->refIdx = (const AvcdecLanes *)(job->buffers[3] +
+			command->refIdxRowSize * rows);
+		rowState->mvd = (const uint32_t *)(job->buffers[4] + command->mvdRowSize * rows);
+		rowState->topLeftAvailable = 0;
+		rowState->topLeftRefIdx.w[0] = -1;
+		rowState->topLeftRefIdx.w[1] = -1;
+		stripe->left->refIdx.w[0] = -1;
+		stripe->left->refIdx.w[1] = -1;
+		stripe->left->available = 0;
+	}
+	if (job->load && job->firstX == x && job->firstY == row) {
+		/* a slice starts here: the row above is another's */
+		stripe->top->refIdx.w[0] = -1;
+		stripe->top->refIdx.w[1] = -1;
+		stripe->top->available = 0;
+	}
+	if (job->nextY == row)
+		stripe->belowEnd = 0;
+	else if (job->nextY == row + 1)
+		stripe->belowEnd = job->nextX;
+	else
+		stripe->belowEnd = info->widthInMbs;
+}
+
+/* 0x82fb94 */
+static void stripeClose(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe)
+{
+	uint32_t count = entry->count, mode = info->mode;
+
+	vnzPublicCloseProtected((uint32_t)stripe->slice, sizeof(VideoHelperSlice));
+	vnzPublicClosePrivate((uint32_t)(stripe->mb - mode), mode * sizeof(AvcdecMbState));
+	vnzPublicClosePrivate((uint32_t)(stripe->vectors - mode),
+		mode * sizeof(AvcdecMbVectors));
+	vnzPublicClosePrivate((uint32_t)(stripe->filter - mode), mode * sizeof(AvcdecMbFilter));
+	vnzPublicClosePrivate((uint32_t)(stripe->top - count),
+		count * sizeof(AvcdecTop) + sizeof(AvcdecTop));
+	vnzPublicClosePrivate((uint32_t)stripe->rowState, sizeof(AvcdecRowState));
+	if (stripe->colocatedOut)
+		vnzPublicClosePrivate((uint32_t)(stripe->colocatedOut - count),
+			count * sizeof(AvcdecColocated));
+}
+
+/* 0x82f8e6: the next macroblock read from the run's buffer, its neighbours' availability */
+static void mbLoad(AvcdecStripe *stripe)
+{
+	AvcdecRowState *rowState = stripe->rowState;
+	const VideoAvcMbInfo *mbInfo = rowState->mbInfo;
+	AvcdecMbState *mb = stripe->mb;
+	uint32_t i;
+
+	mb->kind = mbInfo->kind;
+	mb->qp = mbInfo->qp;
+	mb->qpChroma = mbInfo->reserved2;
+	mb->cbf = mbInfo->cbf;
+	for (i = 0; i < 4; i++)
+		mb->subKinds[i] = mbInfo->subMbType[i];
+	stripe->kind = mb->kind;
+	for (i = 0; i < 4; i++)
+		stripe->subKinds[i] = mb->subKinds[i];
+	stripe->cbf = mb->cbf;
+	stripe->qp = mb->qp;
+	if (AVC_MB_CLASS(stripe->kind) == AVC_MB_CLASS_PCM) {
+		stripe->qp = 0;
+		mb->qp = 0;
+	}
+	/* B_Direct_8x8 predicts by 4x4 blocks */
+	for (i = 0; i < 4; i++)
+		if (stripe->subKinds[i] == SKIP_SUB_KIND_B_8X8)
+			stripe->subKinds[i] = SKIP_SUB_KIND_B;
+	rowState->mbInfo++;
+	stripe->leftAvailable = stripe->left->available;
+	stripe->topAvailable = stripe->top->available;
+	stripe->topRightAvailable = stripe->topRight->available;
+	stripe->topLeftAvailable = rowState->topLeftAvailable;
+}
+
+/*
+ * 0x82f9a4: the macroblock kept for the ones after it: the row's above-left,
+ * the column's bottom (for the row below, if it is in the run), the
+ * colocated motion of an intra one; then on to the next.
+ */
+static void mbStore(AvcdecStripe *stripe)
+{
+	AvcdecRowState *rowState = stripe->rowState;
+	AvcdecMbState *mb = stripe->mb;
+	AvcdecTop *top = stripe->top;
+	AvcdecColocated *colocated;
+	uint32_t kind = stripe->kind;
+	uint32_t intra = (kind & (AVC_MB_INTRA | AVC_MB_B)) == AVC_MB_INTRA, i;
+
+	mb->available = 1;
+	if (intra) {
+		mb->refIdx.w[0] = -1;
+		mb->refIdx.w[1] = -1;
+		mb->refPicture.w[0] = -1;
+		mb->refPicture.w[1] = -1;
+	}
+	rowState->topLeftKind = top->kind;
+	rowState->topLeftRefIdx.w[0] = top->refIdx.w[0];
+	rowState->topLeftRefIdx.w[1] = top->refIdx.w[1];
+	rowState->topLeftMv[0] = top->mv[3][0];
+	rowState->topLeftMv[1] = top->mv[3][1];
+	rowState->topLeftAvailable = top->available;
+	top->kind = stripe->kind;
+	top->cbf = mb->cbf;
+	top->qp = mb->qp;
+	top->available = 1;
+	top->qpChroma = mb->qpChroma;
+	if (!intra) {
+		top->refPicture.w[0] = mb->refPicture.w[0];
+		top->refPicture.w[1] = mb->refPicture.w[1];
+		top->mv[0][0] = stripe->vectors->mv[10][0];
+		top->mv[0][1] = stripe->vectors->mv[10][1];
+		top->mv[1][0] = stripe->vectors->mv[11][0];
+		top->mv[1][1] = stripe->vectors->mv[11][1];
+		top->mv[2][0] = stripe->vectors->mv[14][0];
+		top->mv[2][1] = stripe->vectors->mv[14][1];
+		top->mv[3][0] = stripe->vectors->mv[15][0];
+		top->mv[3][1] = stripe->vectors->mv[15][1];
+	} else {
+		top->modes[0] = stripe->filter->modes[10];
+		top->modes[1] = stripe->filter->modes[11];
+		top->modes[2] = stripe->filter->modes[14];
+		top->modes[3] = stripe->filter->modes[15];
+		colocated = stripe->colocatedOut;
+		if (colocated) {
+			if (stripe->sliceHeader & AVC_SLICE_DIRECT_8X8) {
+				colocated->corners.refIdxZero = 0;
+				for (i = 0; i < 4; i++)
+					colocated->corners.pictures[i] = -1;
+			} else {
+				colocated->blocks[0][3] = 0;
+				colocated->blocks[3][2] = -1;
+				colocated->blocks[2][2] = -1;
+				colocated->blocks[1][2] = -1;
+				colocated->blocks[0][2] = -1;
+			}
+		}
+	}
+	if (stripe->belowEnd < stripe->x || !stripe->belowEnd) {
+		top->available = 0;
+		top->refIdx.w[0] = -1;
+		top->refIdx.w[1] = -1;
+	} else {
+		top->available = 1;
+		top->refIdx.w[0] = mb->refIdx.w[0];
+		top->refIdx.w[1] = mb->refIdx.w[1];
+	}
+	stripe->x++;
+	stripe->leftFilter = stripe->filter;
+	stripe->left = stripe->mb;
+	stripe->leftVectors = stripe->vectors;
+	stripe->mb++;
+	stripe->vectors++;
+	stripe->filter++;
+	stripe->top++;
+	stripe->topRight++;
+	if (stripe->colocatedOut)
+		stripe->colocatedOut++;
+	stripe->colocated += sizeof(AvcdecColocated);
+}
+
+/* an 8x8 block's sub-macroblock partitions predicted: a kernel each */
+static inline void mvPredict8x8(AvcdecStripe *stripe, AvcdecMotion *motion, uint32_t block)
+{
+	if (block == 0)
+		avcdecMvPredict8x8Block0(stripe, motion);
+	else if (block == 1)
+		avcdecMvPredict8x8Block1(stripe, motion);
+	else if (block == 2)
+		avcdecMvPredict8x8Block2(stripe, motion);
+	else
+		avcdecMvPredict8x8Block3(stripe, motion);
+}
+
+/* 0x82fc0c: a P macroblock's references and vectors */
+static void predictP(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	refIdxP(stripe, motion);
+	mvdP(stripe, motion);
+	if (!(stripe->kind & AVC_MB_8X8)) {
+		mvPredictPartitions(stripe, motion);
+	} else {
+		avcdecMvPredict8x8Block0(stripe, motion);
+		avcdecMvPredict8x8Block1(stripe, motion);
+		avcdecMvPredict8x8Block2(stripe, motion);
+		avcdecMvPredict8x8Block3(stripe, motion);
+	}
+	avcdecStoreVectors(stripe, motion);
+	if (stripe->colocatedOut)
+		avcdecStoreColocated(stripe, motion);
+}
+
+/*
+ * 0x82fc5a: a B macroblock's: its direct 8x8 blocks (all four for
+ * B_Skip and B_Direct_16x16) predicted spatially or temporally, the others
+ * from their neighbours.
+ */
+static void predictB(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	AvcdecLanes predictor, current;
+	uint32_t direct, i, inferred;
+
+	refIdxB(stripe, motion);
+	mvdL0(stripe, motion);
+	mvdL1(stripe, motion);
+	if (stripe->kind & AVC_MB_8X8) {
+		if (!AVC_MB_CLASS(stripe->kind)) {
+			/* B_Skip, B_Direct_16x16 */
+			for (i = 0; i < 4; i++)
+				stripe->subKinds[i] = SKIP_SUB_KIND_B;
+			direct = 0xff;
+		} else {
+			direct = 0;
+			for (i = 0; i < 4; i++)
+				if (stripe->subKinds[i] == SKIP_SUB_KIND_B)
+					direct |= 0x11 << i;
+		}
+		if (!direct) {
+			for (i = 0; i < 4; i++)
+				mvPredict8x8(stripe, motion, i);
+		} else {
+			inferred = 0 < (stripe->sliceHeader & AVC_SLICE_DIRECT_8X8);
+			if (!(stripe->sliceHeader & AVC_SLICE_DIRECT_SPATIAL)) {
+				for (i = 0; i < 4; i++) {
+					if (direct & (1 << i))
+						avcdecDirectTemporal(stripe, motion, inferred, i);
+					else
+						mvPredict8x8(stripe, motion, i);
+				}
+			} else if (directSpatialRefs(stripe, motion, direct)) {
+				/* no neighbour has a reference: zero vectors on ref_idx 0 */
+				for (i = 0; i < 4; i++)
+					if (!(direct & (1 << i)))
+						mvPredict8x8(stripe, motion, i);
+			} else {
+				predictor = motion->predictor;
+				current = motion->current;
+				for (i = 0; i < 4; i++) {
+					if (direct & (1 << i)) {
+						motion->predictor = predictor;
+						motion->current = current;
+						avcdecDirectSpatial(stripe, motion, inferred, i);
+					} else {
+						mvPredict8x8(stripe, motion, i);
+					}
+				}
+			}
+		}
+	} else {
+		mvPredictPartitions(stripe, motion);
+	}
+	refPicturesB(stripe, motion);
+	avcdecStoreVectorsB(stripe, motion);
+	if (stripe->colocatedOut)
+		avcdecStoreColocated(stripe, motion);
+}
+
+/*
+ * 0x82fdfa: a P macroblock's ref_idx_l0, read when there is more than one
+ * reference (clipped to them), by partition; list 1 a copy of list 0.
+ */
+static void refIdxP(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	const VideoHelperSlice *slice = stripe->slice;
+	int32_t count = slice->numRefIdxActive[0];
+	AvcdecRowState *rowState;
+	uint32_t kind = stripe->kind, i;
+	AvcdecLanes refs, limit;
+	int8_t pictures[4];
+
+	if (count >= 2 && !(kind & AVC_MB_REF0) && !(kind & AVC_MB_SKIP)) {
+		rowState = stripe->rowState;
+		for (i = 0; i < 8; i++)
+			limit.b[i] = count - 1;
+		refs = lanesMinUnsigned(*rowState->refIdx, limit);
+		rowState->refIdx++;
+		if (!(kind & AVC_MB_8X8)) {
+			if (!(kind & 2)) {			/* 8x16: left, right */
+				refs.b[2] = refs.b[0];
+				refs.b[3] = refs.b[1];
+			} else if (!(kind & 1)) {		/* 16x8: top, bottom */
+				refs.b[2] = refs.b[1];
+				refs.b[3] = refs.b[1];
+				refs.b[1] = refs.b[0];
+			} else {				/* 16x16 */
+				refs.b[1] = refs.b[0];
+				refs.b[2] = refs.b[0];
+				refs.b[3] = refs.b[0];
+			}
+		}
+	} else {
+		refs.all = 0;
+	}
+	for (i = 0; i < 4; i++)
+		pictures[i] = slice->refList[0][refs.b[i] + 1];
+	refs.w[1] = refs.w[0];
+	motion->refIdx = refs;
+	stripe->mb->refIdx.w[0] = refs.w[0];
+	stripe->mb->refIdx.w[1] = refs.w[0];
+	for (i = 0; i < 4; i++)
+		stripe->mb->refPicture.b[i] = pictures[i];
+	stripe->mb->refPicture.w[1] = -1;
+}
+
+/*
+ * 0x82fed2: a B macroblock's ref_idx_l0 and _l1 for the partitions using
+ * each list (-1 for the others), read when the list has more than one
+ * reference.
+ */
+static void refIdxB(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	const VideoHelperSlice *slice = stripe->slice;
+	int32_t count0 = slice->numRefIdxActive[0], count1 = slice->numRefIdxActive[1];
+	AvcdecRowState *rowState = stripe->rowState;
+	uint32_t kind = stripe->kind, first = kind >> AVC_MB_LISTS0_SHIFT;
+	uint32_t second = kind >> AVC_MB_LISTS1_SHIFT, used = 0, read, i;
+	AvcdecLanes refs, read8, limit, none;
+
+	if (!(kind & AVC_MB_8X8)) {
+		read8 = *rowState->refIdx;
+		if (!(kind & 2)) {			/* 8x16: left, right */
+			for (i = 0; i < 2; i++) {
+				refs.b[i] = read8.b[i];
+				refs.b[2 + i] = read8.b[i];
+				refs.b[4 + i] = read8.b[4 + i];
+				refs.b[6 + i] = read8.b[4 + i];
+			}
+			if (first & 1)
+				used = 0x05;
+			if (second & 1)
+				used |= 0x0a;
+			if (first & 2)
+				used |= 0x50;
+			if (second & 2)
+				used |= 0xa0;
+		} else if (!(kind & 1)) {		/* 16x8: top, bottom */
+			for (i = 0; i < 2; i++) {
+				refs.b[2 * i] = read8.b[i];
+				refs.b[2 * i + 1] = read8.b[i];
+				refs.b[4 + 2 * i] = read8.b[4 + i];
+				refs.b[4 + 2 * i + 1] = read8.b[4 + i];
+			}
+			if (first & 1)
+				used = 0x03;
+			if (second & 1)
+				used |= 0x0c;
+			if (first & 2)
+				used |= 0x30;
+			if (second & 2)
+				used |= 0xc0;
+		} else {				/* 16x16 */
+			for (i = 0; i < 4; i++) {
+				refs.b[i] = read8.b[0];
+				refs.b[4 + i] = read8.b[4];
+			}
+			if (first & 1)
+				used = 0x0f;
+			if (first & 2)
+				used |= 0xf0;
+		}
+	} else {
+		for (i = 0; i < 4; i++) {
+			if (stripe->subKinds[i] & AVC_SUB_L0)
+				used |= 1 << i;
+			if (stripe->subKinds[i] & AVC_SUB_L1)
+				used |= 0x10 << i;
+		}
+		refs = *rowState->refIdx;
+	}
+	read = 0;
+	if (count0 >= 2)
+		read |= used & 0x0f;
+	if (count1 >= 2)
+		read |= used & 0xf0;
+	if (read)
+		rowState->refIdx++;
+	for (i = 0; i < 4; i++) {
+		limit.b[i] = count0 - 1;
+		limit.b[4 + i] = count1 - 1;
+	}
+	none.all = ~0ULL;
+	refs = lanesSelect(used, lanesMinUnsigned(refs, limit), none);
+	motion->refIdx = refs;
+	stripe->mb->refIdx.w[0] = refs.w[0];
+	stripe->mb->refIdx.w[1] = refs.w[1];
+}
+
+/* 0x830024: a B macroblock's references and the pictures they name */
+static void refPicturesB(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	const VideoHelperSlice *slice = stripe->slice;
+	AvcdecLanes refs = motion->refIdx, pictures;
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		pictures.b[i] = slice->refList[0][refs.b[i] + 1];
+	for (i = 0; i < 4; i++)
+		pictures.b[4 + i] = slice->refList[1][refs.b[4 + i] + 1];
+	stripe->mb->refIdx.w[0] = refs.w[0];
+	stripe->mb->refIdx.w[1] = refs.w[1];
+	stripe->mb->refPicture.w[0] = pictures.w[0];
+	stripe->mb->refPicture.w[1] = pictures.w[1];
+}
+
+/*
+ * A sub-macroblock's mvds by 4x4 block, from its partition (8x8, 8x4, 4x8,
+ * 4x4): the words read in order.
+ */
+static inline const uint32_t *mvdSub(uint32_t sub, const uint32_t *mvd, uint32_t blocks[4])
+{
+	blocks[0] = *mvd++;
+	if (sub & 2) {
+		blocks[1] = blocks[0];
+		if (sub & 1) {			/* 8x8 */
+			blocks[2] = blocks[0];
+			blocks[3] = blocks[0];
+		} else {			/* 8x4 */
+			blocks[2] = *mvd++;
+			blocks[3] = blocks[2];
+		}
+	} else {
+		blocks[1] = *mvd++;
+		if (sub & 1) {			/* 4x8 */
+			blocks[2] = blocks[0];
+			blocks[3] = blocks[1];
+		} else {			/* 4x4 */
+			blocks[2] = *mvd++;
+			blocks[3] = *mvd++;
+		}
+	}
+	return mvd;
+}
+
+/* 0x8300c6: a P macroblock's mvd_l0, by partition (P_Skip's none) */
+static void mvdP(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	const uint32_t *mvd = stripe->rowState->mvd;
+	uint32_t kind = stripe->kind, blocks[4], i, j;
+
+	if (kind & AVC_MB_8X8) {
+		for (i = 0; i < 4; i++) {
+			mvd = mvdSub(stripe->subKinds[i], mvd, blocks);
+			for (j = 0; j < 4; j++)
+				motion->mv[i][j].all = blocks[j];
+		}
+	} else if ((kind >> AVC_MB_SKIP_SHIFT) & 1) {
+		for (i = 0; i < 4; i++)
+			motion->mv[i][0].all = 0;
+	} else if (!(kind & 2)) {		/* 8x16 */
+		motion->mv[0][0].all = mvd[0];
+		motion->mv[1][0].all = mvd[1];
+		motion->mv[2][0].all = mvd[0];
+		motion->mv[3][0].all = mvd[1];
+		mvd += 2;
+	} else if (!(kind & 1)) {		/* 16x8 */
+		motion->mv[0][0].all = mvd[0];
+		motion->mv[1][0].all = mvd[0];
+		motion->mv[2][0].all = mvd[1];
+		motion->mv[3][0].all = mvd[1];
+		mvd += 2;
+	} else {
+		for (i = 0; i < 4; i++)
+			motion->mv[i][0].all = mvd[0];
+		mvd++;
+	}
+	stripe->rowState->mvd = mvd;
+}
+
+/* 0x8302b2: a B macroblock's mvd_l0, 0 where list 0 is not used */
+static void mvdL0(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	const uint32_t *mvd = stripe->rowState->mvd;
+	uint32_t kind = stripe->kind, blocks[4], sub, i, j;
+
+	if (kind & AVC_MB_8X8) {
+		for (i = 0; i < 4; i++) {
+			sub = stripe->subKinds[i];
+			for (j = 0; j < 4; j++)
+				motion->mv[i][j].all = 0;
+			if ((sub >> AVC_SUB_LISTS_SHIFT) & 1) {
+				mvd = mvdSub(sub, mvd, blocks);
+				for (j = 0; j < 4; j++)
+					motion->mv[i][j].all = blocks[j];
+			}
+		}
+	} else {
+		for (i = 0; i < 4; i++)
+			motion->mv[i][0].all = 0;
+		if (!(kind & 2)) {			/* 8x16 */
+			if ((kind >> AVC_MB_LISTS0_SHIFT) & 1)
+				motion->mv[0][0].all = *mvd++;
+			if ((kind >> AVC_MB_LISTS1_SHIFT) & 1)
+				motion->mv[1][0].all = *mvd++;
+			motion->mv[2][0] = motion->mv[0][0];
+			motion->mv[3][0] = motion->mv[1][0];
+		} else if (!(kind & 1)) {		/* 16x8 */
+			if ((kind >> AVC_MB_LISTS0_SHIFT) & 1)
+				motion->mv[0][0].all = *mvd++;
+			if ((kind >> AVC_MB_LISTS1_SHIFT) & 1)
+				motion->mv[2][0].all = *mvd++;
+			motion->mv[1][0] = motion->mv[0][0];
+			motion->mv[3][0] = motion->mv[2][0];
+		} else {
+			if ((kind >> AVC_MB_LISTS0_SHIFT) & 1)
+				motion->mv[0][0].all = *mvd++;
+			motion->mv[3][0] = motion->mv[0][0];
+			motion->mv[2][0] = motion->mv[0][0];
+			motion->mv[1][0] = motion->mv[0][0];
+		}
+	}
+	stripe->rowState->mvd = mvd;
+}
+
+/* 0x8304cc: then its mvd_l1, in the vectors' high words */
+static void mvdL1(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	const uint32_t *mvd = stripe->rowState->mvd;
+	uint32_t kind = stripe->kind, blocks[4], sub, i, j;
+
+	if (kind & AVC_MB_8X8) {
+		for (i = 0; i < 4; i++) {
+			sub = stripe->subKinds[i];
+			if ((sub >> AVC_SUB_LISTS_SHIFT) & 2) {
+				mvd = mvdSub(sub, mvd, blocks);
+				for (j = 0; j < 4; j++)
+					motion->mv[i][j].w[1] = blocks[j];
+			}
+		}
+	} else {
+		blocks[0] = blocks[1] = blocks[2] = blocks[3] = 0;
+		if (!(kind & 2)) {			/* 8x16 */
+			if ((kind >> AVC_MB_LISTS0_SHIFT) & 2)
+				blocks[0] = *mvd++;
+			if ((kind >> AVC_MB_LISTS1_SHIFT) & 2)
+				blocks[1] = *mvd++;
+			blocks[2] = blocks[0];
+			blocks[3] = blocks[1];
+		} else if (!(kind & 1)) {		/* 16x8 */
+			if ((kind >> AVC_MB_LISTS0_SHIFT) & 2)
+				blocks[0] = *mvd++;
+			if ((kind >> AVC_MB_LISTS1_SHIFT) & 2)
+				blocks[2] = *mvd++;
+			blocks[1] = blocks[0];
+			blocks[3] = blocks[2];
+		} else {
+			if ((kind >> AVC_MB_LISTS0_SHIFT) & 2)
+				blocks[0] = *mvd++;
+			blocks[3] = blocks[2] = blocks[1] = blocks[0];
+		}
+		for (i = 0; i < 4; i++)
+			motion->mv[i][0].w[1] = blocks[i];
+	}
+	stripe->rowState->mvd = mvd;
+}
+
+static inline AvcdecLanes vectorOf(const uint32_t mv[2])
+{
+	AvcdecLanes lanes;
+
+	lanes.w[0] = mv[0];
+	lanes.w[1] = mv[1];
+	return lanes;
+}
+
+/* left's vector where its reference is used, 0 where not */
+static inline AvcdecLanes vectorA(const AvcdecMotion *motion)
+{
+	AvcdecLanes zero;
+
+	zero.all = 0;
+	return lanesSelect(lanesNegative(motion->refA), zero, motion->mvA);
+}
+
+/*
+ * 0x8306f2: the vectors of a 16x16, 16x8 or 8x16 macroblock: their mvds
+ * plus the predictions from the neighbours (8.4.1.3), the 16x8 and 8x16
+ * partitions' directional ones first; P_Skip's (8.4.1.1).
+ */
+static void mvPredictPartitions(AvcdecStripe *stripe, AvcdecMotion *motion)
+{
+	const AvcdecMbVectors *leftVectors = stripe->leftVectors;
+	const AvcdecRowState *rowState = stripe->rowState;
+	const AvcdecMbState *left = stripe->left;
+	const AvcdecTop *top = stripe->top;
+	AvcdecLanes leftRefs, topRefs, cRefs;
+	uint32_t kind = stripe->kind, onlyA, available, i;
+
+	leftRefs = left->refIdx;
+	topRefs = top->refIdx;
+	motion->refA = lanesOfBlock(leftRefs, 1);
+	motion->mvA = vectorOf(leftVectors->mv[5]);
+	motion->refB = lanesOfBlock(topRefs, 2);
+	motion->mvB = vectorOf(top->mv[0]);
+	motion->current = lanesOfBlock(motion->refIdx, 0);
+	onlyA = stripe->leftAvailable & !stripe->topAvailable;
+	if (!(kind & (3 << AVC_MB_PARTS_SHIFT))) {
+		/* 16x16: C above right, else above left */
+		if (stripe->topRightAvailable) {
+			cRefs = stripe->topRight->refIdx;
+			motion->mvC = vectorOf(stripe->topRight->mv[0]);
+			motion->refC = lanesOfBlock(cRefs, 2);
+			available = stripe->topRightAvailable;
+		} else {
+			cRefs = rowState->topLeftRefIdx;
+			motion->mvC = vectorOf(rowState->topLeftMv);
+			motion->refC = lanesOfBlock(cRefs, 3);
+			available = stripe->topLeftAvailable;
+		}
+		onlyA &= !available;
+		if ((kind >> AVC_MB_SKIP_SHIFT) & 1) {
+			if (!stripe->leftAvailable || !stripe->topAvailable) {
+				motion->mv[0][0].all = 0;
+			} else {
+				mvPredictSkip(motion);
+				motion->mv[0][0] = lanesAdd(motion->mv[0][0], motion->predictor);
+			}
+		} else {
+			if (onlyA)
+				motion->predictor = vectorA(motion);
+			else
+				avcdecMvPredictLanes(motion, 0xff);
+			motion->mv[0][0] = lanesAdd(motion->mv[0][0], motion->predictor);
+		}
+		motion->mv[3][0] = motion->mv[0][0];
+		motion->mv[2][0] = motion->mv[0][0];
+		motion->mv[1][0] = motion->mv[0][0];
+	} else if (kind & 2) {
+		/* 16x8: the top one from above, the bottom one from the left */
+		if (stripe->topRightAvailable) {
+			cRefs = stripe->topRight->refIdx;
+			motion->mvC = vectorOf(stripe->topRight->mv[0]);
+			motion->refC = lanesOfBlock(cRefs, 2);
+			available = stripe->topRightAvailable;
+		} else {
+			cRefs = rowState->topLeftRefIdx;
+			motion->mvC = vectorOf(rowState->topLeftMv);
+			motion->refC = lanesOfBlock(cRefs, 3);
+			available = stripe->topLeftAvailable;
+		}
+		onlyA &= !available;
+		mvPredictB(motion, onlyA);
+		motion->refB = motion->current;
+		motion->mv[0][0] = lanesAdd(motion->mv[0][0], motion->predictor);
+		motion->mvB = motion->mv[0][0];
+		motion->refA = lanesOfBlock(leftRefs, 3);
+		motion->mvA = vectorOf(leftVectors->mv[13]);
+		motion->mvC = vectorOf(leftVectors->mv[7]);
+		motion->refC = lanesOfBlock(leftRefs, 1);
+		motion->current = lanesOfBlock(motion->refIdx, 2);
+		mvPredictA(motion, 0);
+		motion->mv[1][0] = motion->mv[0][0];
+		motion->mv[2][0] = lanesAdd(motion->mv[2][0], motion->predictor);
+		motion->mv[3][0] = motion->mv[2][0];
+	} else {
+		/* 8x16: the left one from the left, the right one from above right */
+		motion->mvC = vectorOf(top->mv[2]);
+		motion->refC = lanesOfBlock(topRefs, 3);
+		mvPredictA(motion, onlyA);
+		motion->refA = motion->current;
+		motion->mv[0][0] = lanesAdd(motion->mv[0][0], motion->predictor);
+		motion->mvB = vectorOf(top->mv[2]);
+		motion->mvA = motion->mv[0][0];
+		motion->refB = lanesOfBlock(topRefs, 3);
+		if (stripe->topRightAvailable) {
+			cRefs = stripe->topRight->refIdx;
+			motion->mvC = vectorOf(stripe->topRight->mv[0]);
+			onlyA = !stripe->topRightAvailable & !stripe->topAvailable;
+		} else {
+			cRefs = topRefs;
+			motion->mvC = vectorOf(top->mv[1]);
+			onlyA = !stripe->topAvailable;
+		}
+		motion->current = lanesOfBlock(motion->refIdx, 1);
+		motion->refC = lanesOfBlock(cRefs, 2);
+		mvPredictC(motion, onlyA);
+		motion->mv[2][0] = motion->mv[0][0];
+		motion->mv[1][0] = lanesAdd(motion->mv[1][0], motion->predictor);
+		motion->mv[3][0] = motion->mv[1][0];
+	}
+	for (i = 0; i < 4; i++)
+		motion->mv[i][3] = motion->mv[i][2] = motion->mv[i][1] = motion->mv[i][0];
+}
+
+/*
+ * 0x830956: spatial direct's references (8.4.1.2.2): by list the smallest
+ * of the neighbours', the direct blocks given them. Returns all lanes set
+ * when no neighbour has either list (the blocks take ref_idx 0 and no
+ * vector), else 0 with the predictor worked out.
+ */
+static uint32_t directSpatialRefs(AvcdecStripe *stripe, AvcdecMotion *motion,
+	uint32_t direct)
+{
+	const AvcdecMbVectors *leftVectors = stripe->leftVectors;
+	const AvcdecRowState *rowState = stripe->rowState;
+	const AvcdecTop *top = stripe->top;
+	AvcdecLanes leftRefs, topRefs, cRefs, swapped, zero;
+	uint32_t none, onlyA;
+
+	leftRefs = stripe->left->refIdx;
+	topRefs = top->refIdx;
+	if (stripe->topRightAvailable) {
+		cRefs = lanesOfBlock(stripe->topRight->refIdx, 2);
+	} else {
+		cRefs = lanesOfBlock(rowState->topLeftRefIdx, 3);
+	}
+	zero.all = 0;
+	motion->predictor = zero;
+	motion->refA = lanesOfBlock(leftRefs, 1);
+	motion->refB = lanesOfBlock(topRefs, 2);
+	motion->refC = cRefs;
+	motion->current = lanesMinUnsigned(lanesMinUnsigned(motion->refB, motion->refC),
+		motion->refA);
+	swapped.w[0] = motion->current.w[1];
+	swapped.w[1] = motion->current.w[0];
+	none = lanesNegative(motion->current) & lanesNegative(swapped);
+	motion->current = lanesSelect(none, zero, motion->current);
+	if (!none) {
+		motion->mvA = vectorOf(leftVectors->mv[5]);
+		motion->mvB = vectorOf(top->mv[0]);
+		onlyA = stripe->leftAvailable & !stripe->topAvailable;
+		if (stripe->topRightAvailable) {
+			motion->mvC = vectorOf(stripe->topRight->mv[0]);
+			onlyA &= !stripe->topRightAvailable;
+		} else {
+			motion->mvC = vectorOf(rowState->topLeftMv);
+			onlyA &= !stripe->topLeftAvailable;
+		}
+		if (onlyA)
+			motion->predictor = vectorA(motion);
+		else
+			avcdecMvPredictLanes(motion, 0xff);
+	}
+	motion->refIdx = lanesSelect(direct, motion->current, motion->refIdx);
+	stripe->mb->refIdx = motion->refIdx;
+	return none;
+}
+
+/*
+ * 0x830a34: the left's vector where its reference is the partition's,
+ * else the median there (only the left's, when it alone is available)
+ */
+static void mvPredictA(AvcdecMotion *motion, uint32_t onlyA)
+{
+	uint32_t lanes;
+
+	if (onlyA) {
+		motion->predictor = vectorA(motion);
+		return;
+	}
+	lanes = lanesDiffer(motion->current, motion->refA);
+	motion->predictor = motion->mvA;
+	if (lanes)
+		avcdecMvPredictLanes(motion, lanes);
+}
+
+/* 0x830a5e: the one above's */
+static void mvPredictB(AvcdecMotion *motion, uint32_t onlyA)
+{
+	uint32_t lanes;
+
+	if (onlyA) {
+		motion->predictor = vectorA(motion);
+		return;
+	}
+	lanes = lanesDiffer(motion->current, motion->refB);
+	motion->predictor = motion->mvB;
+	if (lanes)
+		avcdecMvPredictLanes(motion, lanes);
+}
+
+/* 0x830a88: the one above right's */
+static void mvPredictC(AvcdecMotion *motion, uint32_t onlyA)
+{
+	uint32_t lanes;
+
+	if (onlyA) {
+		motion->predictor = vectorA(motion);
+		return;
+	}
+	lanes = lanesDiffer(motion->current, motion->refC);
+	motion->predictor = motion->mvC;
+	if (lanes)
+		avcdecMvPredictLanes(motion, lanes);
+}
+
+/* 0x830ab2: P_Skip's: 0 when the left or the one above has ref_idx 0 and no vector */
+static void mvPredictSkip(AvcdecMotion *motion)
+{
+	uint32_t a, b;
+
+	a = motion->refA.all != 0 || motion->mvA.all != 0;
+	b = motion->refB.all != 0 || motion->mvB.all != 0;
+	if (!a || !b)
+		motion->predictor.all = 0;
+	else
+		avcdecMvPredictLanes(motion, 0xff);
+}
+
+/* the edges the deblocking filters: none at the picture's, nor at the slice's under idc 2 */
+static inline uint32_t filterEdges(const AvcdecStripe *stripe, uint32_t *left, uint32_t *top)
+{
+	uint32_t idc = (stripe->sliceHeader >> AVC_SLICE_DEBLOCKING_SHIFT) & 3;
+
+	*left = 0 < stripe->x;
+	*top = 0 < stripe->row;
+	if (idc == 2) {
+		*top &= stripe->topAvailable;
+		*left &= stripe->leftAvailable;
+	}
+	return idc;
+}
+
+/* 0x830aec: an intra macroblock's deblocking: its thresholds, its strengths */
+static void intraDone(AvcdecStripe *stripe)
+{
+	uint32_t left, top;
+
+	avcdecFilterIndexes(stripe);
+	if (filterEdges(stripe, &left, &top) != 1)
+		strengthIntra(stripe, left, top);
+}
+
+/* 0x830b2e: a P macroblock's: the strengths of its coefficients, then of its vectors */
+static void interDoneP(AvcdecStripe *stripe)
+{
+	AvcdecLanes strengths[4];
+	uint32_t left, top, idc;
+
+	vnzCacheLine(VNZ_CACHE_INVALIDATE, stripe->filter);
+	avcdecFilterIndexes(stripe);
+	idc = (stripe->sliceHeader >> AVC_SLICE_DEBLOCKING_SHIFT) & 3;
+	if (idc != 1) {
+		strengthCoded(stripe, strengths);
+		filterEdges(stripe, &left, &top);
+		avcdecStrengthsP(stripe, left, top, strengths);
+	}
+}
+
+/* 0x830b7e: a B macroblock's */
+static void interDoneB(AvcdecStripe *stripe)
+{
+	AvcdecLanes strengths[4];
+	uint32_t left, top, idc;
+
+	vnzCacheLine(VNZ_CACHE_INVALIDATE, stripe->filter);
+	avcdecFilterIndexes(stripe);
+	idc = (stripe->sliceHeader >> AVC_SLICE_DEBLOCKING_SHIFT) & 3;
+	if (idc != 1) {
+		strengthCoded(stripe, strengths);
+		filterEdges(stripe, &left, &top);
+		avcdecStrengthsB(stripe, left, top, strengths);
+	}
+}
+
+/* 0x830bce: an intra macroblock's bS: 4 on the edges filtered, 3 inside */
+static void strengthIntra(AvcdecStripe *stripe, uint32_t left, uint32_t top)
+{
+	AvcdecMbFilter *filter = stripe->filter;
+	uint32_t i;
+
+	for (i = 0; i < 4; i++) {
+		filter->strength.edges[1][i] = left ? 4 : 0;
+		filter->strength.edges[0][i] = top ? 4 : 0;
+	}
+	for (i = 4; i < 16; i++) {
+		filter->strength.edges[1][i] = 3;
+		filter->strength.edges[0][i] = 3;
+	}
+}
+
+/*
+ * 0x830c04: an inter macroblock's bS where coefficients are: 2 on the
+ * edges of the 4x4 blocks either side of which has some, 4 next to an
+ * intra macroblock
+ */
+static void strengthCoded(AvcdecStripe *stripe, AvcdecLanes strengths[4])
+{
+	const AvcdecMbState *left = stripe->left;
+	const AvcdecTop *top = stripe->top;
+	uint32_t cbf = stripe->cbf, vertical, horizontal, leftIntra, topIntra;
+	AvcdecMbFilter *filter = stripe->filter;
+
+	leftIntra = left->kind & AVC_MB_INTRA ? 15 : 0;
+	topIntra = top->kind & AVC_MB_INTRA ? 15 : 0;
+	/* by 4x4 block (z order): it or the one on its left, or above it, has coefficients */
+	vertical = (((int32_t)left->cbf >> 5) & 0x505) | ((cbf << 3) & 0x5050) |
+		((cbf << 1) & 0xaaaa) | cbf;
+	horizontal = (((int32_t)top->cbf >> 10) & 0x33) | ((cbf << 6) & 0x3300) |
+		((cbf << 2) & 0xcccc) | cbf;
+	avcdecStrengthsCoded(vertical, horizontal, leftIntra, topIntra, strengths);
+	filter->strength.lanes[2] = strengths[0];
+	filter->strength.lanes[3] = strengths[1];
+	filter->strength.lanes[0] = strengths[2];
+	filter->strength.lanes[1] = strengths[3];
+}
+
+/* 0x830c84: an intra macroblock's modes and the neighbours it may predict from (not I_PCM) */
+static void intraPredict(AvcdecStripe *stripe)
+{
+	uint32_t class = AVC_MB_CLASS(stripe->kind);
+
+	vnzCacheLine(VNZ_CACHE_INVALIDATE, stripe->filter);
+	if (class == AVC_MB_CLASS_PCM)
+		return;
+	if (class == AVC_MB_CLASS_INTRA4X4)
+		intraModes(stripe);
+	intraNeighbours(stripe, class);
+}
+
+/*
+ * 0x830fe8: the neighbours an intra macroblock may predict from: the
+ * available ones, under constrained_intra_pred only the intra ones; above
+ * right and above left for Intra4x4 only (both read from the one above
+ * right).
+ */
+static void intraNeighbours(AvcdecStripe *stripe, uint32_t class)
+{
+	uint32_t constrained = 0 < (stripe->sliceHeader & AVC_SLICE_CONSTRAINED_INTRA);
+	uint32_t neighbours = 0;
+
+	if (stripe->leftAvailable && ((stripe->left->kind & AVC_MB_INTRA) || !constrained))
+		neighbours = 1;
+	if (stripe->topAvailable && ((stripe->top->kind & AVC_MB_INTRA) || !constrained))
+		neighbours |= 2;
+	if (class == AVC_MB_CLASS_INTRA4X4) {
+		if (stripe->topRightAvailable &&
+		    ((stripe->topRight->kind & AVC_MB_INTRA) || !constrained))
+			neighbours |= 4;
+		if (stripe->topLeftAvailable &&
+		    ((stripe->topRight->kind & AVC_MB_INTRA) || !constrained))
+			neighbours |= 8;
+	}
+	stripe->filter->intraNeighbours = neighbours;
+}
+
+/* Intra_4x4_DC: what a neighbour gives that is not an Intra4x4 macroblock */
+static const int8_t dcModes[16] = {				/* 0x8f72e8 */
+	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+};
+
+/*
+ * An Intra4x4PredMode from its prediction and the run's
+ * prev_intra4x4_pred_mode_flag / rem_intra4x4_pred_mode (negative for the
+ * flag)
+ */
+static inline int32_t intraMode(int32_t predicted, int32_t rem)
+{
+	if (rem < 0)
+		return predicted;
+	if (rem < predicted)
+		return rem;
+	return rem + 1;
+}
+
+static inline int32_t minimum(int32_t a, int32_t b)
+{
+	return a < b ? a : b;
+}
+
+/*
+ * 0x830cb8: an Intra4x4 macroblock's modes (8.3.1.1): each predicted from
+ * the smaller of the left and the upper block's, DC where either is not
+ * available (or is not intra under constrained_intra_pred).
+ */
+static void intraModes(AvcdecStripe *stripe)
+{
+	uint32_t constrained = 0 < (stripe->sliceHeader & AVC_SLICE_CONSTRAINED_INTRA);
+	const int8_t *rem = (const int8_t *)stripe->rowState->intra;
+	uint32_t leftKind = stripe->left->kind, topKind = stripe->top->kind;
+	int8_t *modes = stripe->filter->modes;
+	const int8_t *left, *top;
+	uint32_t dcLeft, dcTop;
+
+	if (!stripe->leftAvailable || (!(leftKind & AVC_MB_INTRA) && constrained))
+		dcLeft = 1;
+	else
+		dcLeft = 0;
+	if (!stripe->topAvailable || (!(topKind & AVC_MB_INTRA) && constrained))
+		dcTop = 1;
+	else
+		dcTop = 0;
+	left = dcModes;
+	if (!dcLeft && AVC_MB_CLASS(leftKind) == AVC_MB_CLASS_INTRA4X4)
+		left = stripe->leftFilter->modes;
+	top = dcModes;
+	if (!dcTop && AVC_MB_CLASS(topKind) == AVC_MB_CLASS_INTRA4X4)
+		top = stripe->top->modes;
+	modes[0] = intraMode(dcLeft || dcTop ? 2 : minimum(left[5], top[0]), rem[0]);
+	modes[2] = intraMode(dcLeft ? 2 : minimum(left[7], modes[0]), rem[2]);
+	modes[8] = intraMode(dcLeft ? 2 : minimum(left[13], modes[2]), rem[8]);
+	modes[10] = intraMode(dcLeft ? 2 : minimum(left[15], modes[8]), rem[10]);
+	modes[1] = intraMode(dcTop ? 2 : minimum(modes[0], top[1]), rem[1]);
+	modes[4] = intraMode(dcTop ? 2 : minimum(modes[1], top[2]), rem[4]);
+	modes[5] = intraMode(dcTop ? 2 : minimum(modes[4], top[3]), rem[5]);
+	modes[3] = intraMode(minimum(modes[2], modes[1]), rem[3]);
+	modes[6] = intraMode(minimum(modes[3], modes[4]), rem[6]);
+	modes[7] = intraMode(minimum(modes[6], modes[5]), rem[7]);
+	modes[9] = intraMode(minimum(modes[8], modes[3]), rem[9]);
+	modes[11] = intraMode(minimum(modes[10], modes[9]), rem[11]);
+	modes[12] = intraMode(minimum(modes[9], modes[6]), rem[12]);
+	modes[13] = intraMode(minimum(modes[12], modes[7]), rem[13]);
+	modes[14] = intraMode(minimum(modes[11], modes[12]), rem[14]);
+	modes[15] = intraMode(minimum(modes[14], modes[13]), rem[15]);
+	stripe->rowState->intra += 16;
 }

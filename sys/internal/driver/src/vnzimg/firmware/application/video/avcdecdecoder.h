@@ -172,6 +172,151 @@ typedef struct AvcdecWork {
 	uint32_t reserved2[11];
 } AvcdecWork;
 
+/* the stripes' memory, in the helper's context: a ring of 16 rows */
+#define DECODER_STRIPE_ROWS		16
+#define DECODER_STRIPE_SIZE		192	/* a core's AvcdecStripe */
+
+/* an IVC2 register's lanes: what the stripes' helpers hand on in the coprocessor */
+typedef union AvcdecLanes {
+	uint64_t all;
+	uint32_t w[2];			/* a vector by list: list 0's, list 1's */
+	int16_t h[4];			/* x and y */
+	int8_t b[8];			/* a reference by 8x8 block: list 0's, list 1's */
+} AvcdecLanes;
+
+/*
+ * A macroblock's motion while it is predicted: the coprocessor registers
+ * the prediction's helpers and kernels hand on to each other.
+ */
+typedef struct AvcdecMotion {
+	AvcdecLanes mv[4][4];		/* by 8x8 block and 4x4 block in it (c12-c15, c20-c31) */
+	AvcdecLanes refIdx;		/* the 8x8 blocks' ref_idx (c2) */
+	AvcdecLanes current;		/* the partition's references, by list (c3) */
+	AvcdecLanes predictor;		/* (c4) */
+	AvcdecLanes mvA;		/* the neighbours': left (c8) */
+	AvcdecLanes mvB;		/* above (c9) */
+	AvcdecLanes mvC;		/* above right, or above left (c10) */
+	AvcdecLanes refA;		/* (c16) */
+	AvcdecLanes refB;		/* (c17) */
+	AvcdecLanes refC;		/* (c18) */
+} AvcdecMotion;
+
+/* a macroblock's state, in the row's ring (32 bytes) */
+typedef struct AvcdecMbState {
+	uint32_t kind;			/* AVC_MB_* */
+	int8_t subKinds[4];
+	AvcdecLanes refIdx;		/* by list and 8x8 block, -1 none */
+	AvcdecLanes refPicture;		/* the pictures they name */
+	uint32_t cbf;			/* the VideoAvcMbInfo's */
+	int8_t qp;
+	uint8_t qpChroma;		/* QPc, of the slice's chroma_qp_index_offset */
+	uint8_t available;
+	uint8_t reserved;
+} AvcdecMbState;
+
+/* a macroblock's vectors, in the row's ring (128 bytes) */
+typedef struct AvcdecMbVectors {
+	uint32_t mv[16][2];		/* by 4x4 block (z order) and list: x, y */
+} AvcdecMbVectors;
+
+/* a macroblock's deblocking and intra prediction, in the row's ring (64 bytes) */
+typedef struct AvcdecMbFilter {
+	union {
+		uint8_t edges[2][16];	/* bS: the horizontal edges' (the top first), the
+					   vertical ones' (the left first), 4 an edge */
+		AvcdecLanes lanes[4];
+	} strength;
+	uint8_t indexA[3];		/* luma: the left edge's, the inner ones', the top's */
+	uint8_t indexB[3];
+	uint8_t indexAChroma[3];
+	uint8_t indexBChroma[3];
+	uint8_t reserved[2];
+	uint8_t intraNeighbours;	/* constrained intra: the neighbours it may predict from */
+	uint8_t reserved2;
+	int8_t modes[16];		/* Intra4x4PredMode, by 4x4 block (z order) */
+} AvcdecMbFilter;
+
+/* the bottom of the macroblock above, by column, in info->row0 (64 bytes) */
+typedef struct AvcdecTop {
+	uint32_t kind;
+	int8_t modes[4];		/* the bottom 4x4 blocks' Intra4x4PredMode */
+	AvcdecLanes refIdx;
+	uint32_t mv[4][2];		/* the bottom 4x4 blocks' (10, 11, 14, 15) */
+	AvcdecLanes refPicture;
+	uint32_t cbf;
+	int8_t qp;
+	uint8_t qpChroma;
+	uint8_t available;
+	uint8_t reserved;
+} AvcdecTop;
+
+/*
+ * A macroblock's motion as a B picture takes it for its colocated one, in
+ * the picture's motion (info->motion, 64 bytes): each 4x4 block's vector,
+ * list 0's or, without a list 0 reference, list 1's; the third and fourth
+ * vectors of an 8x8 block shifted up over its reference's picture and over
+ * the 8x8 blocks whose reference is ref_idx 0. Under direct_8x8_inference
+ * only the 8x8 blocks' corners.
+ */
+#define COLOCATED_SHIFT			5
+
+typedef union AvcdecColocated {
+	uint32_t blocks[4][4];		/* by 8x8 block and 4x4 block in it */
+	struct {
+		uint32_t mv[4];		/* the 8x8 blocks' corner vectors */
+		int8_t pictures[4];
+		uint8_t refIdxZero;	/* by bit, the 8x8 blocks with ref_idx 0 */
+		uint8_t reserved[43];
+	} corners;
+} AvcdecColocated;
+
+/* a row's state, in the ring of 16 (64 bytes) */
+typedef struct AvcdecRowState {
+	uint32_t topLeftKind;		/* the macroblock above left of the next */
+	uint8_t topLeftAvailable;
+	uint8_t reserved[3];
+	AvcdecLanes topLeftRefIdx;
+	uint32_t topLeftMv[2];		/* its 4x4 block 15's */
+	VideoAvcMbInfo *mbInfo;		/* the run's buffers, at the row's next macroblock */
+	uint32_t intra;
+	const AvcdecLanes *refIdx;	/* ref_idx_l0 and _l1, by 8x8 block */
+	const uint32_t *mvd;
+	uint32_t reserved2[6];
+} AvcdecRowState;
+
+/* a core's work area for a stripe's jobs (192 bytes, 192 apart) */
+typedef struct AvcdecStripe {
+	uint8_t x;			/* the macroblock's */
+	uint8_t row;
+	int8_t qp;
+	uint8_t reserved;
+	uint32_t kind;			/* AVC_MB_* */
+	int8_t subKinds[4];
+	uint32_t sliceHeader;		/* AVC_SLICE_* */
+	const VideoHelperSlice *slice;
+	AvcdecMbState *mb;		/* the macroblock's, in the rows' rings */
+	AvcdecMbVectors *vectors;
+	AvcdecMbFilter *filter;
+	AvcdecTop *top;
+	uint32_t reserved2[2];
+	AvcdecRowState *rowState;
+	uint32_t reserved3[2];
+	AvcdecColocated *colocatedOut;	/* the picture's motion, for its B pictures; 0 none */
+	uint32_t colocated;		/* a B slice's: RefPicList1[0]'s motion */
+	uint8_t leftAvailable;
+	uint8_t topAvailable;
+	uint8_t topRightAvailable;
+	uint8_t topLeftAvailable;
+	AvcdecMbVectors *leftVectors;	/* the macroblock before's */
+	AvcdecMbState *left;
+	AvcdecMbFilter *leftFilter;
+	AvcdecTop *topRight;
+	uint32_t cbf;
+	uint32_t reserved4[13];
+	uint8_t belowEnd;		/* the macroblocks of the row below in the run */
+	uint8_t reserved5[51];
+} AvcdecStripe;
+
 /* the engine's header (128 bytes) */
 typedef struct AvcdecDecoder {
 	int32_t state;			/* DECODER_* */
@@ -215,6 +360,10 @@ typedef struct AvcdecDecoder {
  */
 #define AVC_MB_PARTITION		0x00000003	/* 3 16x16, 2 16x8, 1 8x16, 0 8x8 */
 #define AVC_MB_PARTS_SHIFT		2		/* log2 of the partitions */
+#define AVC_MB_8X8			0x00000008	/* four: the sub-macroblocks' kinds */
+#define AVC_MB_LISTS1_SHIFT		4		/* the second partition's lists */
+#define AVC_MB_LISTS0_SHIFT		6		/* the first's: 1 list 0, 2 list 1 */
+#define AVC_MB_B			0x00000100	/* an inter macroblock of a B slice */
 #define AVC_MB_INTRA			0x00000200
 #define AVC_MB_REF0			0x00000400	/* P_8x8ref0 */
 #define AVC_MB_SKIP			0x00000800
@@ -226,11 +375,111 @@ typedef struct AvcdecDecoder {
 #define AVC_MB_KEEP_BOTTOM		0x02000000	/* a macroblock below is intra */
 #define AVC_MB_INVALID			0x0000800c	/* an mb_type out of range */
 
+/* a sub-macroblock's kind: its partition (AVC_MB_PARTITION) and lists */
+#define AVC_SUB_L0			0x10
+#define AVC_SUB_L1			0x20
+#define AVC_SUB_LISTS_SHIFT		4
+
 /* the kind's class: bits 6, 7 and 9 */
 #define AVC_MB_CLASS(kind)		(((int32_t)(kind) >> 6) & 0xb)
 #define AVC_MB_CLASS_INTRA4X4		8
 #define AVC_MB_CLASS_INTRA16X16		9
 #define AVC_MB_CLASS_PCM		10
+
+/* an IVC2 lane operation, byte by byte: the lanes' condition (CC) bits */
+static inline uint32_t lanesNegative(AvcdecLanes lanes)		/* cpcmpgt.b zero, lanes */
+{
+	uint32_t cc = 0, i;
+
+	for (i = 0; i < 8; i++)
+		if (lanes.b[i] < 0)
+			cc |= 1 << i;
+	return cc;
+}
+
+static inline uint32_t lanesEqual(AvcdecLanes a, AvcdecLanes b)		/* cpcmpeq.b */
+{
+	uint32_t cc = 0, i;
+
+	for (i = 0; i < 8; i++)
+		if (a.b[i] == b.b[i])
+			cc |= 1 << i;
+	return cc;
+}
+
+static inline uint32_t lanesDiffer(AvcdecLanes a, AvcdecLanes b)	/* cpcmpne.b */
+{
+	return ~lanesEqual(a, b) & 0xff;
+}
+
+/* cpsel: `yes` in the lanes whose bit is set */
+static inline AvcdecLanes lanesSelect(uint32_t cc, AvcdecLanes yes, AvcdecLanes no)
+{
+	uint32_t i;
+
+	for (i = 0; i < 8; i++)
+		if (cc & (1 << i))
+			no.b[i] = yes.b[i];
+	return no;
+}
+
+/* cpperm with 0xBBBBAAAA (A = block, B = block + 4): an 8x8 block's references, by list */
+static inline AvcdecLanes lanesOfBlock(AvcdecLanes refs, uint32_t block)
+{
+	AvcdecLanes lanes;
+	uint32_t i;
+
+	for (i = 0; i < 4; i++) {
+		lanes.b[i] = refs.b[block];
+		lanes.b[4 + i] = refs.b[4 + block];
+	}
+	return lanes;
+}
+
+/* cpminu3.b */
+static inline AvcdecLanes lanesMinUnsigned(AvcdecLanes a, AvcdecLanes b)
+{
+	uint32_t i;
+
+	for (i = 0; i < 8; i++)
+		if ((uint8_t)b.b[i] < (uint8_t)a.b[i])
+			a.b[i] = b.b[i];
+	return a;
+}
+
+/* cpadd3.h */
+static inline AvcdecLanes lanesAdd(AvcdecLanes a, AvcdecLanes b)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		a.h[i] = (int16_t)(a.h[i] + b.h[i]);
+	return a;
+}
+
+/* the motion kernels (0x892a60-0x893320) */
+void avcdecStoreVectors(AvcdecStripe *stripe, AvcdecMotion *motion);
+void avcdecStoreVectorsB(AvcdecStripe *stripe, AvcdecMotion *motion);
+void avcdecStoreColocated(AvcdecStripe *stripe, AvcdecMotion *motion);
+void avcdecMvPredictLanes(AvcdecMotion *motion, uint32_t lanes);
+void avcdecMvPredict(AvcdecMotion *motion, uint32_t onlyA);
+void avcdecMvPredictUnlessA(AvcdecMotion *motion, uint32_t onlyA);
+void avcdecMvMedian(AvcdecMotion *motion);
+void avcdecDirectTemporal(AvcdecStripe *stripe, AvcdecMotion *motion, uint32_t inferred,
+	uint32_t block);
+void avcdecDirectSpatial(AvcdecStripe *stripe, AvcdecMotion *motion, uint32_t inferred,
+	uint32_t block);
+void avcdecMvPredict8x8Block0(AvcdecStripe *stripe, AvcdecMotion *motion);
+void avcdecMvPredict8x8Block1(AvcdecStripe *stripe, AvcdecMotion *motion);
+void avcdecMvPredict8x8Block2(AvcdecStripe *stripe, AvcdecMotion *motion);
+void avcdecMvPredict8x8Block3(AvcdecStripe *stripe, AvcdecMotion *motion);
+void avcdecStrengthsCoded(uint32_t vertical, uint32_t horizontal, uint32_t leftIntra,
+	uint32_t topIntra, AvcdecLanes strengths[4]);
+void avcdecStrengthsP(AvcdecStripe *stripe, uint32_t left, uint32_t top,
+	AvcdecLanes strengths[4]);
+void avcdecStrengthsB(AvcdecStripe *stripe, uint32_t left, uint32_t top,
+	AvcdecLanes strengths[4]);
+void avcdecFilterIndexes(AvcdecStripe *stripe);
 
 /* the stripes' jobs */
 void avcdecStripePredict(uint32_t info, uint32_t row, uint32_t unused, uint32_t unused2);
