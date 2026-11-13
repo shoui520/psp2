@@ -5,7 +5,7 @@
  * downscale's kernels pass sums from one to the next in the accumulators,
  * which here is each kernel's columns computed whole.
  */
-#include "avcencstream.h"
+#include "avcenckernel.h"
 
 /* the horizontal filter's taps (2048 is one): a low pass for every fourth pixel */
 static const int16_t horizontalTaps[15] = {
