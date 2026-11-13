@@ -81,9 +81,9 @@ typedef struct AvcencPicture {
 	int16_t chromaWidth;
 	int16_t motionWidth;
 	int16_t clientWidth;
-	uint16_t frameWidth;
-	uint16_t frameHeight;
-	uint16_t framePitch;
+	uint16_t clientHeight;
+	uint16_t clientPitch;
+	uint16_t clientChromaPitch;
 	int16_t nextWidth;
 	int16_t nextHeight;
 	int16_t nextPitch;
@@ -130,15 +130,83 @@ typedef struct AvcencPicture {
 } AvcencPicture;
 
 /* the picture's slices: the first row of each */
-#define MAX_SLICES		24
+#define MAX_SLICES		8
 typedef struct AvcencSlices {
 	uint8_t reserved[7];
 	uint8_t count;
 	uint8_t firstRow[MAX_SLICES];
+	uint32_t sliceType;		/* 2 I, 0 P */
+	uint8_t reserved2[12];
 	uint32_t streamInfo;
-	int8_t reset;
-	uint8_t reserved2[27];
+	int8_t idr;			/* the picture is an IDR (the last one's, until it is set) */
+	uint8_t reserved3;
+	uint8_t lumaShift;		/* 7 - QP / 6, 0 from QP 42 */
+	uint8_t lumaShift2;
+	uint8_t chromaShift;
+	uint8_t reserved4[3];
+	const int16_t *lumaThreshold;	/* by QP % 6, or QP - 42 from 42 */
+	const int16_t *lumaThreshold2;
+	const int16_t *chromaThreshold;	/* by QPc % 6 */
+	uint8_t reserved5[3];
+	int8_t scaled;			/* QP below 42 */
+	uint8_t reserved6[4];
 } AvcencSlices;
+
+/* the rate control's state, as the stream thread reads it (576 bytes) */
+typedef struct AvcencRate {
+	uint8_t reserved[164];
+	int8_t sceneChange;
+	int8_t idrRequested;
+	int8_t intraRequested;
+	int8_t idrTaken;
+	uint8_t reserved2[2];
+	int8_t idrCounted;
+	uint8_t reserved3[5];
+	int8_t idr;
+	int8_t intra;
+	uint8_t reserved4[116];
+	int8_t forceIdr;
+	uint8_t reserved5[5];
+	uint32_t vclInitialDelay;
+	uint32_t vclInitialDelayOffset;
+	uint32_t initialDelay;
+	uint32_t initialDelayOffset;
+	uint8_t reserved6[52];
+	int8_t sceneIdr;
+	uint8_t reserved7;
+	int16_t qpLimit;
+	uint8_t reserved8[204];
+} AvcencRate;
+
+/* a picture record, as the helper's jobs and the engine read it (128 bytes) */
+typedef struct AvcencRecord {
+	uint32_t luma;
+	uint32_t chroma;
+	uint16_t width;
+	uint16_t height;
+	uint8_t reserved[4];
+	int16_t lumaPitch;
+	int16_t chromaPitch;
+	uint32_t reserved2;
+	int8_t cropped;
+	uint8_t reserved3[7];
+	int16_t reserved4;
+	int16_t cropTop;
+	int16_t reserved5;
+	int16_t cropLeft;
+	uint8_t reserved6[88];
+} AvcencRecord;
+
+/* a client's output: the record of its picture */
+typedef struct AvcencOutput {
+	uint8_t reserved[11];
+	int8_t next;			/* the output after it */
+	uint8_t reserved2[2];
+	int8_t hasPicture;
+	uint8_t reserved3;
+	uint32_t holder;		/* where the picture record goes, at its +44 */
+	uint8_t reserved4[108];
+} AvcencOutput;
 
 /* the frames' buffers: the source frames and the reconstructed ones, two of each */
 typedef struct AvcencBuffers {
@@ -172,7 +240,9 @@ typedef struct AvcencBuffers {
 	int8_t idrNext;			/* the next picture is an IDR */
 	int8_t idrPending;
 	int8_t flushing;
-	uint8_t reserved2[21];
+	uint8_t frameNum;
+	int8_t refFrames[4];		/* the reference list's frames, -4 to -1 before any */
+	uint8_t reserved2[16];
 } AvcencBuffers;
 
 /* the stream thread's header */
@@ -222,6 +292,8 @@ typedef struct AvcencStream {
 typedef char pictureSizeCheck[sizeof(AvcencPicture) == PICTURE_SIZE ? 1 : -1];
 typedef char buffersSizeCheck[sizeof(AvcencBuffers) == BUFFERS_SIZE ? 1 : -1];
 typedef char slicesSizeCheck[sizeof(AvcencSlices) == SLICES_SIZE ? 1 : -1];
+typedef char rateSizeCheck[sizeof(AvcencRate) == RATE_STATE_SIZE ? 1 : -1];
+typedef char recordSizeCheck[sizeof(AvcencRecord) == RECORD_SIZE ? 1 : -1];
 typedef char streamSizeCheck[sizeof(AvcencStream) == STREAM_HEADER_SIZE ? 1 : -1];
 
 /* 0x8364ba: the stream thread's memory */
@@ -510,4 +582,322 @@ static void pictureFrame(AvcencStream *stream, AvcencPicture *picture)
 		buffers->motion[next] = 0;
 		stream->reconstructed = next;
 	}
+}
+
+/* the picture's kind, to the encoder engine */
+#define ENGINE_FLAG_IDR		0x00080000
+#define ENGINE_FLAG_KIND	0x00100000
+#define ENGINE_FLAG_SKIP	0x00200000
+
+/*
+ * 0x83608e: the next of the client's outputs; one that has a picture gets
+ * the picture's record (its source frame and crop), and the client's frame
+ * is given back
+ */
+static AvcencOutput *outputNext(AvcencStream *stream)
+{
+	AvcencPicture *picture = stream->picture;
+	AvcencBuffers *buffers;
+	AvcencOutput *output;
+	AvcencRecord *record;
+	uint32_t holder;
+	int8_t index;
+
+	output = (AvcencOutput *)vnzPublicCloseRaw(
+		*(uint32_t *)(stream->outputs + (stream->output % 32) * 64), RECORD_SIZE);
+	if (output->hasPicture) {
+		buffers = stream->buffers;
+		index = stream->recordIndex;
+		holder = *(uint32_t *)(output->holder + 4);
+		record = (AvcencRecord *)vnzPublicOpenPrivate(picture->records + index * RECORD_SIZE,
+			RECORD_SIZE);
+		record->width = picture->widthInMbs << 4;
+		record->height = picture->heightInMbs << 4;
+		record->lumaPitch = picture->width;
+		record->chromaPitch = picture->chromaWidth;
+		record->luma = picture->luma;
+		record->reserved2 = 0;
+		record->chroma = picture->chroma;
+		record->cropped = picture->cropped;
+		record->cropTop = picture->cropTop;
+		record->reserved4 = 0;
+		record->reserved5 = 0;
+		record->cropLeft = picture->cropLeft;
+		*(uint32_t *)(holder + 44) = vnzPublicClosePrivate((uint32_t)record, RECORD_SIZE);
+		stream->recordIndex = (index + 1) & 15;
+		vnzPublicCloseRaw(picture->clientLuma, picture->clientHeight * picture->clientPitch);
+		vnzPublicCloseRaw(picture->clientChroma,
+			(picture->clientHeight >> 1) * picture->clientChromaPitch);
+		stream->record = vnzPublicClosePrivate(stream->record, RECORD_SIZE);
+		buffers->released++;
+	}
+	stream->output = output->next;
+	return output;
+}
+
+/* 0x8361b2: the client's frame given back */
+static void clientRelease(AvcencStream *stream)
+{
+	AvcencPicture *picture = stream->picture;
+	AvcencBuffers *buffers = stream->buffers;
+
+	vnzPublicCloseRaw(picture->clientLuma, picture->clientHeight * picture->clientPitch);
+	vnzPublicCloseRaw(picture->clientChroma,
+		(picture->clientHeight >> 1) * picture->clientChromaPitch);
+	buffers->released++;
+}
+
+/*
+ * 0x8361f4: the picture's kind told to the engine: skipped, an IDR (the
+ * rate control's or the slices' reset), or not
+ */
+static void pictureKind(AvcencStream *stream)
+{
+	AvcencSlices *slices = (AvcencSlices *)stream->slices;
+	AvcencPicture *picture = stream->picture;
+	AvcencBuffers *buffers = stream->buffers;
+	AvcencRate *rate = (AvcencRate *)stream->rate;
+
+	if (picture->predicted)
+		vnzThreadSetFlags(picture->engine, ENGINE_FLAG_SKIP);
+	else if (rate->forceIdr || slices->idr)
+		vnzThreadSetFlags(picture->engine, ENGINE_FLAG_IDR);
+	else
+		vnzThreadSetFlags(picture->engine, ENGINE_FLAG_KIND);
+	if (!buffers->idrNext && rate->forceIdr) {
+		buffers->idrNext = 1;
+		buffers->idrCountdown = picture->idrInterval;
+	}
+	rate->idrTaken = buffers->idrNext;
+	rate->idrCounted = buffers->idrPending;
+}
+
+/* 0x836278: the next frame becomes the picture's, with the rate control's decisions */
+static void pictureNext(AvcencStream *stream)
+{
+	AvcencRate *rate = (AvcencRate *)stream->rate;
+	AvcencPicture *picture;
+
+	picture = (AvcencPicture *)vnzPublicOpenPrivate(
+		vnzPublicCloseRaw((uint32_t)stream->picture, PICTURE_SIZE), PICTURE_SIZE);
+	picture->clientLuma = picture->nextLuma;
+	picture->clientChroma = picture->nextChroma;
+	picture->clientWidth = picture->nextWidth;
+	picture->clientChromaPitch = picture->nextChromaPitch;
+	picture->clientPitch = picture->nextPitch;
+	picture->clientHeight = picture->nextHeight;
+	picture->settings = stream->settings;
+	picture->rateIdr = rate->idr;
+	picture->rateIntra = rate->intra;
+	picture->qpLimit = rate->qpLimit;
+	stream->picture = (AvcencPicture *)vnzPublicOpenRaw(
+		vnzPublicClosePrivate((uint32_t)picture, PICTURE_SIZE), PICTURE_SIZE);
+}
+
+/*
+ * 0x836308: whether the picture is an IDR: the rate control asks for one,
+ * or a scene change (or a periodic intra) does while the stream allows it;
+ * an IDR starts the countdown to the next
+ */
+static int32_t pictureIdr(AvcencStream *stream)
+{
+	AvcencRate *rate = (AvcencRate *)stream->rate;
+	AvcencPicture *picture = stream->picture;
+	AvcencBuffers *buffers = stream->buffers;
+
+	if (rate->intraRequested)
+		goto idr;
+	if ((picture->option || rate->sceneIdr) && (!buffers->idrNext || rate->idrTaken) &&
+	    (rate->sceneChange || rate->idrRequested || rate->intraRequested) &&
+	    picture->option2 != 1)
+		goto idr;
+	if (picture->option2 && rate->idrCounted)
+		buffers->idrCountdown = picture->idrInterval - 1;
+	return 0;
+idr:
+	buffers->idrNext = 1;
+	buffers->idrCountdown = picture->idrInterval;
+	return 1;
+}
+
+/* 0x836376: the picture's source frame kept, the next picture takes the other */
+static void sourceSwap(AvcencStream *stream)
+{
+	AvcencBuffers *buffers = stream->buffers;
+	AvcencPicture *picture;
+	uint8_t source = stream->source;
+
+	picture = (AvcencPicture *)vnzPublicOpenPrivate(
+		vnzPublicCloseRaw((uint32_t)stream->picture, PICTURE_SIZE), PICTURE_SIZE);
+	picture->luma = vnzPublicOpenRaw(picture->luma, buffers->lumaSize);
+	buffers->luma[source] = picture->luma;
+	picture->chroma = vnzPublicOpenRaw(picture->chroma, buffers->chromaSize);
+	buffers->chroma[source] = picture->chroma;
+	stream->source = 1 - source;
+	picture->macroblocks = vnzPublicCloseRaw(picture->macroblocks,
+		((buffers->width * buffers->height) >> 8) << 6);
+	stream->picture = (AvcencPicture *)vnzPublicOpenRaw(
+		vnzPublicClosePrivate((uint32_t)picture, PICTURE_SIZE), PICTURE_SIZE);
+}
+
+/*
+ * The quantizer's thresholds (0x91b478, 0x91b518): eight per QP % 6 (and,
+ * for luma, per QP - 42 from QP 42), by the position's class in a 4x4 block
+ */
+const int16_t avcencLumaThreshold[10][8] = {			/* 0x91b478 */
+	{ 267, 434, 267, 434, 434, 667, 434, 667 },
+	{ 294, 467, 294, 467, 467, 750, 467, 750 },
+	{ 347, 534, 347, 534, 534, 834, 534, 834 },
+	{ 374, 600, 374, 600, 600, 959, 600, 959 },
+	{ 427, 667, 427, 667, 667, 1042, 667, 1042 },
+	{ 480, 767, 480, 767, 767, 1208, 767, 1208 },
+	{ 534, 867, 534, 867, 867, 1333, 867, 1333 },
+	{ 587, 933, 587, 933, 933, 1500, 933, 1500 },
+	{ 694, 1067, 694, 1067, 1067, 1667, 1067, 1667 },
+	{ 747, 1200, 747, 1200, 1200, 1917, 1200, 1917 },
+};
+
+const int16_t avcencChromaThreshold[10][8] = {			/* 0x91b518 */
+	{ 587, 954, 587, 954, 954, 1467, 954, 1467 },
+	{ 646, 1027, 646, 1027, 1027, 1650, 1027, 1650 },
+	{ 763, 1174, 763, 1174, 1174, 1834, 1174, 1834 },
+	{ 822, 1320, 822, 1320, 1320, 2109, 1320, 2109 },
+	{ 939, 1467, 939, 1467, 1467, 2292, 1467, 2292 },
+	{ 1056, 1687, 1056, 1687, 1687, 2658, 1687, 2658 },
+	{ 1174, 1907, 1174, 1907, 1907, 2933, 1907, 2933 },
+	{ 1291, 2053, 1291, 2053, 2053, 3300, 2053, 3300 },
+	{ 1526, 2347, 1526, 2347, 2347, 3667, 2347, 3667 },
+	{ 1643, 2640, 1643, 2640, 2640, 4217, 2640, 4217 },
+};
+
+/* the preparing jobs, on the other cores (avcencjob.c) */
+void avcencJobScene(uint32_t picture, uint32_t slices, uint32_t rate, uint32_t unused);
+void avcencJobLoad(uint32_t picture, uint32_t slices, uint32_t unused, uint32_t unused2);
+
+#define JOB_SCENE(index)	((index) * 8 + 24)
+#define JOB_LOAD(index)		((index) * 8 + 8)
+#define JOB_FLAG_SCENE		0x01000000
+#define JOB_FLAG_LOAD		0x08000000
+
+/* a job set on the encoders' context, the context let go and taken again while it is busy */
+static VkVThreadContext *jobSet(VkVThreadContext *context, const AvcencPicture *picture,
+	uint32_t index, uint32_t count, VkJobFunction function, uint32_t argument,
+	uint32_t argument2, uint32_t argument3, uint32_t flags)
+{
+	while (vkVThreadJobSetNotify(context, index, count, function, (uint32_t)picture, argument,
+	    argument2, argument3, picture->thread, flags)) {
+		vkVThreadContextUnlock(context);
+		context = vkVThreadContextLock(picture->context);
+	}
+	return context;
+}
+
+/*
+ * 0x836986: the first picture's jobs: whether it is an IDR (the settings' or
+ * the countdown's, or a scene change the stream allows), its quantizer's
+ * shifts and thresholds from the rate control's QP, then the scene job and
+ * (unless the picture is skipped) the load job
+ */
+static void picturesStart(AvcencStream *stream, AvcencPicture *picture)
+{
+	AvcencRate *rate = (AvcencRate *)stream->rate;
+	AvcencBuffers *buffers = stream->buffers;
+	uint8_t *frameRecord = (uint8_t *)picture->frameRecord;
+	int32_t index = picture->index, idr, last, countdown, qp, chroma, quotient, i;
+	uint32_t previousIdr, request, scene, load;
+	VkVThreadContext *context;
+	AvcencSlices *slices;
+
+	countdown = buffers->idrCountdown;
+	if (picture->predicted) {
+		countdown = countdown == 1 ? 1 : countdown - 1;
+		idr = 0;
+		last = 0;
+	} else {
+		last = (countdown ^ 1) < 1;
+		request = (rate->idrRequested || rate->sceneChange) ? 1 : 0;
+		if (picture->option2) {
+			idr = (request & ((0 < (uint8_t)picture->option) & buffers->flushing)) |
+				((uint8_t)picture->intra | ((buffers->released < 1) & last));
+			if (idr | last)
+				countdown = picture->idrInterval;
+			else
+				countdown--;
+		} else {
+			idr = (request & ((0 < (uint8_t)picture->option) & buffers->flushing)) |
+				((uint8_t)picture->intra | last);
+			if (idr)
+				countdown = picture->idrInterval;
+			else
+				countdown--;
+			last = 0;
+		}
+	}
+	if (picture->idr || last) {
+		buffers->idrPending = 1;
+		countdown = picture->idrInterval;
+	} else {
+		buffers->idrPending = 0;
+	}
+	buffers->idrNext = idr;
+	buffers->idrCountdown = countdown;
+	buffers->frameNum = 0;
+	frameRecord[24] = -1;
+	for (i = 0; i < 4; i++) {
+		buffers->refFrames[i] = i - 4;
+		frameRecord[20 + i] = i - 4;
+	}
+
+	previousIdr = 0;
+	slices = (AvcencSlices *)stream->slices;
+	scene = JOB_SCENE(index);
+	load = JOB_LOAD(index);
+	if (!idr)
+		previousIdr = (uint8_t)slices->idr;
+	slices->idr = idr;
+	slices->sliceType = (0 < (uint32_t)idr) << 1;
+	if (!idr) {
+		qp = (uint8_t)picture->rateIdr - (previousIdr ? 2 : 1);
+		if ((int32_t)rate->vclInitialDelay >= 1)
+			qp = (uint8_t)picture->rateIdr;
+		chroma = avcChromaQp[qp];
+		if (qp < 42) {
+			for (quotient = 0, i = qp; i >= 6; i -= 6)
+				quotient++;
+			slices->lumaThreshold = avcencLumaThreshold[i];
+			slices->lumaShift = 7 - quotient;
+			for (quotient = 0, i = qp; i >= 6; i -= 6)
+				quotient++;
+			slices->lumaThreshold2 = avcencLumaThreshold[i];
+			slices->lumaShift2 = 7 - quotient;
+			slices->scaled = 1;
+		} else {
+			slices->lumaShift2 = 0;
+			slices->lumaShift = 0;
+			slices->lumaThreshold2 = avcencLumaThreshold[qp - 42];
+			slices->lumaThreshold = avcencLumaThreshold[qp - 42];
+			slices->scaled = 0;
+		}
+		for (quotient = 0; chroma >= 6; chroma -= 6)
+			quotient++;
+		slices->chromaThreshold = avcencChromaThreshold[chroma];
+		slices->chromaShift = 7 - quotient;
+	}
+
+	context = vkVThreadContextLock(picture->context);
+	if (idr) {
+		context = jobSet(context, picture, scene, 1, avcencJobScene, (uint32_t)slices,
+			(uint32_t)rate, 0, JOB_FLAG_SCENE);
+		context = jobSet(context, picture, load, 0, avcencJobLoad, (uint32_t)slices, 0, 0,
+			JOB_FLAG_LOAD);
+	} else if (picture->predicted) {
+		context = jobSet(context, picture, scene, 0, avcencJobScene, (uint32_t)slices,
+			(uint32_t)rate, 0, JOB_FLAG_SCENE);
+	} else {
+		context = jobSet(context, picture, scene, picture->heightInGroups + 1, avcencJobScene,
+			(uint32_t)slices, (uint32_t)rate, 0, JOB_FLAG_SCENE);
+		context = jobSet(context, picture, load, 0, avcencJobLoad, (uint32_t)slices, 0, 0,
+			JOB_FLAG_LOAD);
+	}
+	vkVThreadContextUnlock(context);
 }

@@ -1468,6 +1468,9 @@ void avcencEncoderThread(uint32_t memory, uint32_t codec);		/* 0x834588 */
 void avcencEncoderEncode(uint32_t memory, uint32_t request);		/* 0x834904 */
 void avcencEncoderInitialize(uint32_t memory, VideoService *service, int32_t index);
 void avcencEncoderSequence(uint32_t memory, uint32_t settings);		/* 0x83482a */
+/* QPc by qPI (Table 8-15), the decoder's and the encoder's (avcdeckernel.c) */
+extern const uint8_t avcChromaQp[52];
+
 void avcencStreamThread(uint32_t memory, uint32_t codec);		/* 0x8356b0 */
 void avcencStreamAu(uint32_t memory, uint32_t request);		/* 0x835b8c */
 void avcencStreamInitialize(uint32_t memory, VideoService *service, int32_t index);
