@@ -47,6 +47,31 @@
 #define VIDEO_UNIT_RUN			16	/* run the slice */
 #define VIDEO_UNIT_ENDED		129	/* the stream ended */
 
+/* the macroblock unit's registers (VIDEO_UNIT words), the AVC codecs' */
+#define UNIT_RESET		0x00
+#define UNIT_VERSION		0x03
+#define UNIT_MODE		0x04
+#define UNIT_RUN		7	/* the command: 16 runs the slice */
+#define UNIT_COUNT		8
+#define UNIT_RUN_STATUS		10	/* 16 overflow, 129 the stream ended */
+#define UNIT_RUN_DONE		11
+#define UNIT_WIDTH		0x40	/* the run's macroblocks to the row's end */
+#define UNIT_BUFFER(i)		(0x42 + (i) * 2)
+#define UNIT_PARAMETER(i)	(0x43 + (i) * 2)
+#define UNIT_ENABLE		0x80
+#define UNIT_PICTURE		0x83
+#define UNIT_PICTURE2		0x84
+#define UNIT_SLICE		0x85
+#define UNIT_SLICE2		0x86
+#define UNIT_BUFFERS		8	/* the encoder's; the decoder sets 11 */
+
+#define UNIT_MODE_DECODE	0x000f0000
+#define UNIT_MODE_ENCODE	0x000f0100
+#define UNIT_PICTURE_DIRECT_8X8	0x00000001
+#define UNIT_PICTURE_FRAME_MBS_ONLY 0x01000000
+#define UNIT_PICTURE2_TRANSFORM_8X8 0x00000100
+#define UNIT_STATUS_OVERFLOW	16
+
 /* the AVC profiles (profile_idc) */
 #define PROFILE_BASELINE		66
 #define PROFILE_MAIN			77

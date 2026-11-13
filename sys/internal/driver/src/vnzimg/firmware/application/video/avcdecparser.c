@@ -2063,3 +2063,798 @@ static void predWeightTable(const VideoStream *stream, VideoSliceJob *job)
 		}
 	}
 }
+
+/* a slice for the unit: the picture's command on its first, the slice's own */
+void avcdecSliceLoad(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	const VideoAvcSps *sps;
+	const VideoAvcPps *pps;
+	VideoAvcDecodeCommand *command;
+	VideoHelperSlice *slice;
+	const VideoAvcWeights *from;
+	VideoAvcSliceWeight *to;
+	uint32_t block, header, type;
+	int32_t l0, l1, list, count, i;
+
+	block = vnzPublicOpenProtected((stream->parameterSets2 +
+		nal->parameterSet2 * PARAMETER_SET2_SIZE) & ~63, PARAMETER_SET2_SIZE);
+	sps = (const VideoAvcSps *)job->parameterSet;
+	pps = (const VideoAvcPps *)(block + (nal->parameterSet2 & 3) * PARAMETER_SET2_SIZE);
+	if (!nal->firstMacroblock) {
+		command = (VideoAvcDecodeCommand *)vnzPublicOpenPrivate(nal->command,
+			sizeof(VideoAvcDecodeCommand));
+		command->widthInMacroblocks = sps->widthInMbs;
+		command->heightInMacroblocks = sps->heightInMbs;
+		command->mode = sps->widthInMbs < 40 ? 6 : 8;
+		command->lumaWidth = nal->lumaWidth;
+		command->lumaPitch = nal->lumaPitch;
+		command->widthInMbs = nal->widthInMbs;
+		command->chromaWidth = nal->chromaWidth;
+		command->chromaRowSize = nal->chromaRowSize;
+		command->commandRowSize = nal->commandRowSize;
+		command->sliceRowSize = nal->sliceRowSize;
+		command->lumaRowSize = nal->lumaRowSize;
+		command->motionRowSize = nal->motionRowSize;
+		command->type = nal->type;
+		command->refIdc = nal->refIdc;
+		vnzPublicClosePrivate((uint32_t)command, sizeof(VideoAvcDecodeCommand));
+	}
+	slice = (VideoHelperSlice *)vnzPublicOpenPrivate(nal->slice, VIDEO_HELPER_SLICE_SIZE);
+	slice->context = nal->context;
+	slice->command = nal->command;
+	header = nal->sliceHeader;
+	slice->sliceHeader = header;
+	slice->qp = pps->picInitQp + nal->sliceQpDelta;
+	slice->chromaQpIndexOffset = pps->chromaQpIndexOffset;
+	slice->alphaOffset = nal->sliceAlphaC0Offset << 1;
+	slice->betaOffset = nal->sliceBetaOffset << 1;
+	type = header & AVC_SLICE_TYPE;
+	l0 = nal->numRefIdxActive[0];
+	l1 = nal->numRefIdxActive[1];
+	slice->numRefIdxActive[0] = l0;
+	slice->numRefIdxActive[1] = l1;
+	if (((header & AVC_SLICE_WEIGHTED) && type == AVC_SLICE_P) ||
+	    (((int32_t)header >> AVC_SLICE_BIPRED_SHIFT & 3) == 1 && type == AVC_SLICE_B)) {
+		slice->lumaLog2WeightDenom = nal->lumaLog2WeightDenom;
+		slice->chromaLog2WeightDenom = nal->chromaLog2WeightDenom;
+		for (list = 0; list < 2; list++) {
+			count = list ? l1 : l0;
+			from = &nal->weights[list];
+			to = slice->weights[list];
+			for (i = 0; i < count; i++, to++) {
+				to->lumaWeight = (int16_t)from->lumaWeight[i];
+				to->lumaOffset = from->lumaOffset[i];
+				to->chromaWeight = (int16_t)from->chromaWeight[0][i];
+				to->chromaOffset = from->chromaOffset[0][i];
+				to->chromaWeight2 = (int16_t)from->chromaWeight[1][i];
+				to->chromaOffset2 = from->chromaOffset[1][i];
+			}
+		}
+	}
+	vnzPublicClosePrivate((uint32_t)slice, VIDEO_HELPER_SLICE_SIZE);
+	vnzPublicCloseProtected(block, PARAMETER_SET2_SIZE);
+}
+
+/* the CABAC slices: decoded here, not on the unit */
+static void cabacStart(const VideoHelperShared *shared, VideoSliceJob *job, VideoHelperJob *run);
+static int32_t cabacSliceI(VideoSliceJob *job, VideoHelperJob *run);
+static int32_t cabacSliceP(VideoSliceJob *job, VideoHelperJob *run);
+static int32_t cabacSliceB(VideoSliceJob *job, VideoHelperJob *run);
+static void cabacFinish(const VideoHelperShared *shared, VideoSliceJob *job, VideoHelperJob *run);
+
+/*
+ * A run of the slice: up to the row's end, or whole rows from a row's start,
+ * never past the next slice. The unit is set up for the picture on its
+ * first run (or after the slices ended early), then for the run's buffers.
+ */
+void avcdecSlicePrepare(const VideoHelperShared *shared, const VideoStream *stream,
+	VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	int32_t width = nal->widthInMacroblocks, first = nal->firstMacroblock;
+	int32_t row = first / width, column = first % width, count, rows, l0, l1;
+	uint32_t header, picture, picture2, slice, i;
+	VideoHelperJob *run;
+
+	if (column == 0) {
+		rows = nal->rowsPerRun;
+		if (nal->heightInMacroblocks < rows + row)
+			rows = nal->heightInMacroblocks - row;
+		count = rows * width;
+	} else {
+		count = width - column;
+	}
+	if (nal->nextFirstMacroblock < first + count)
+		count = nal->nextFirstMacroblock - first;
+	nal->runRow = row;
+	nal->runMacroblocks = count;
+	header = nal->sliceHeader;
+	nal->runColumn = column;
+	run = (VideoHelperJob *)vnzPublicOpenPrivate(shared->request, sizeof(VideoHelperJob));
+	if (header & AVC_SLICE_CABAC) {
+		cabacStart(shared, job, run);
+		if ((header & AVC_SLICE_TYPE) == AVC_SLICE_I) {
+			count = cabacSliceI(job, run);
+		} else {
+			job->numRefIdxActive[0] = nal->numRefIdxActive[0];
+			if ((header & AVC_SLICE_TYPE) == AVC_SLICE_B) {
+				job->numRefIdxActive[1] = nal->numRefIdxActive[1];
+				count = cabacSliceB(job, run);
+			} else {
+				count = cabacSliceP(job, run);
+			}
+		}
+		nal->doneMacroblocks = count;
+		cabacFinish(shared, job, run);
+		goto close;
+	}
+	if (first == 0 || nal->state.ended) {
+		VIDEO_UNIT[UNIT_RESET] = 1;
+		VIDEO_UNIT[UNIT_VERSION] = shared->version;
+		VIDEO_UNIT[UNIT_MODE] = UNIT_MODE_DECODE;
+		VIDEO_UNIT[UNIT_ENABLE] = 1;
+		picture = (header & AVC_SLICE_DIRECT_8X8) ? UNIT_PICTURE_DIRECT_8X8 : 0;
+		picture = (picture & ~0x7f00) | ((width - 1) & 0x7f) << 8;
+		picture = (picture & ~UNIT_PICTURE_FRAME_MBS_ONLY) |
+			((int32_t)header >> 24 & 1) << 24;
+		VIDEO_UNIT[UNIT_PICTURE] = picture;
+		picture2 = (header & AVC_SLICE_TRANSFORM_8X8) ? UNIT_PICTURE2_TRANSFORM_8X8 : 0;
+		VIDEO_UNIT[UNIT_PICTURE2] = picture2;
+		VIDEO_UNIT[UNIT_PARAMETER(0)] = nal->lumaWidth;
+		VIDEO_UNIT[UNIT_PARAMETER(1)] = nal->lumaPitch;
+		VIDEO_UNIT[UNIT_PARAMETER(2)] = nal->widthInMbs;
+		VIDEO_UNIT[UNIT_PARAMETER(3)] = nal->chromaWidth;
+		VIDEO_UNIT[UNIT_PARAMETER(4)] = nal->chromaRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(5)] = nal->commandRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(6)] = nal->sliceRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(7)] = nal->sliceRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(8)] = nal->lumaRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(9)] = nal->motionRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(10)] = nal->motionRowSize;
+		nal->state.ended = 0;
+	}
+	VIDEO_UNIT[UNIT_WIDTH] = width - column;
+	for (i = 0; i < VIDEO_HELPER_JOB_BUFFERS; i++)
+		VIDEO_UNIT[UNIT_BUFFER(i)] = vnzToPublic(run->buffers[i]);
+	if (nal->load) {
+		/* the lists' sizes, at most 3 for the unit */
+		l0 = l1 = 0;
+		if ((header & AVC_SLICE_TYPE) != AVC_SLICE_I) {
+			l0 = nal->numRefIdxActive[0] - 1;
+			if ((header & AVC_SLICE_TYPE) == AVC_SLICE_B)
+				l1 = nal->numRefIdxActive[1] - 1;
+		}
+		l0 = l0 < 2 ? l0 : 2;
+		l1 = l1 < 2 ? l1 : 2;
+		slice = (header & 3) << 24 | (l0 & 3) << 8 | (l1 & 3);
+		VIDEO_UNIT[UNIT_SLICE] = slice;
+		VIDEO_UNIT[UNIT_SLICE2] = (column & 0x7f) << 16;
+	}
+close:
+	vnzPublicClosePrivate((uint32_t)run, sizeof(VideoHelperJob));
+}
+
+/* a slice that is not run: its run's size only */
+void avcdecSliceSkip(const VideoHelperShared *shared, const VideoStream *stream,
+	VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	int32_t width = nal->widthInMacroblocks, first = nal->firstMacroblock;
+	int32_t row = first / width, column = first % width, count, rows;
+
+	if (column == 0) {
+		rows = nal->rowsPerRun;
+		if (nal->heightInMacroblocks < rows + row)
+			rows = nal->heightInMacroblocks - row;
+		count = width * rows;
+	} else {
+		count = width - column;
+	}
+	if (nal->nextFirstMacroblock < first + count)
+		count = nal->nextFirstMacroblock - first;
+	nal->runMacroblocks = count;
+	nal->runRow = row;
+	nal->runColumn = column;
+}
+
+static void picOrderCnt(VideoSliceJob *job);
+static void picturePrepare(const VideoStream *stream, VideoSliceJob *job);
+static void frameNumWrap(VideoSliceJob *job);
+static void refLists(VideoSliceJob *job);
+static void directTemporal(VideoSliceJob *job);
+static void implicitWeights(VideoSliceJob *job);
+
+/* the slice's run: on its picture's first slice, the picture's set up */
+void avcdecSliceRun(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoAvcPicture *picture, *previous;
+	VideoHelperSlice *slice;
+	uint32_t header, type, missing;
+
+	nal->pictureMaxFrameNum = nal->maxFrameNum;
+	nal->pictureFrameNum = nal->frameNum;
+	picture = job->picture;
+	if (!nal->firstMacroblock) {
+		picOrderCnt(job);
+		picturePrepare(stream, job);
+		frameNumWrap(job);
+		picture = job->picture;
+		picture->missingReference = 0;
+		picture->free = 0;
+		picture->incomplete = 0;
+		picture->damaged = 0;
+		picture->outputState = 2;
+		picture->picOrderCnt = nal->picOrderCnt;
+		if (!nal->restart) {
+			nal->restartPicture = nal->picture;
+			if (nal->scanned)
+				nal->outputTime = nal->picOrderCnt;
+			else if (nal->picOrderCnt < nal->outputTime)
+				picture->outputState = 4;
+			else
+				nal->outputTime = 0x80000000;
+		} else {
+			/* the unit restarts: the picture taken over keeps its reference */
+			previous = &job->pictures[nal->restartPicture];
+			previous->referenceInfo = nal->referenceInfo;
+			picture->referenceInfo = 0;
+			if (nal->picOrderCnt < nal->outputTime)
+				picture->outputState = 4;
+		}
+	}
+	slice = (VideoHelperSlice *)vnzPublicOpenPrivate(nal->slice, VIDEO_HELPER_SLICE_SIZE);
+	header = nal->sliceHeader;
+	type = header & AVC_SLICE_TYPE;
+	if (type != AVC_SLICE_I) {
+		job->slice = (uint32_t)slice;
+		refLists(job);
+		missing = picture->missingReference;
+		if (missing) {
+			if (nal->gapsInFrameNumAllowed != 1) {
+				slice->missingReference = 1;
+				picture->outputState = 4;
+				goto close;
+			}
+			missing = 0;
+		}
+		slice->missingReference = missing;
+		if (type == AVC_SLICE_B) {
+			if (!(header & AVC_SLICE_DIRECT_SPATIAL))
+				directTemporal(job);
+			if (((int32_t)header >> AVC_SLICE_BIPRED_SHIFT & 3) == 2)
+				implicitWeights(job);
+		}
+	} else {
+		slice->missingReference = 0;
+	}
+close:
+	vnzPublicClosePrivate((uint32_t)slice, VIDEO_HELPER_SLICE_SIZE);
+}
+
+static void pictureFinish(VideoSliceJob *job);
+static void pictureMark(VideoSliceJob *job);
+
+/* a picture not decoded: its references kept as if it was */
+void avcdecPictureSkip(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoAvcPicture *picture;
+	uint32_t sps, extras, size;
+	int32_t error;
+
+	sps = vnzPublicOpenProtected(stream->parameterSets + nal->parameterSet * PARAMETER_SET_SIZE,
+		PARAMETER_SET_SIZE);
+	size = ALIGN64(nal->pictures * PICTURE_EXTRA_SIZE);
+	extras = vnzPublicOpenPrivate(stream->pictureExtras, size);
+	job->parameterSet = sps;
+	job->pictureExtras = extras;
+	nal->pictureMaxFrameNum = nal->maxFrameNum;
+	nal->pictureFrameNum = nal->frameNum;
+	picOrderCnt(job);
+	frameNumWrap(job);
+	picture = job->picture;
+	picture->picOrderCnt = nal->picOrderCnt;
+	picture->outputState = 0;
+	picture->damaged = 0;
+	picture->incomplete = 0;
+	picture->free = 1;
+	picture->missingReference = 1;
+	error = videoSetJump(job->jump);
+	if (!error) {
+		pictureFinish(job);
+		if (nal->refIdc)
+			pictureMark(job);
+	} else {
+		nal->error = error;
+	}
+	vnzPublicCloseProtected(sps, PARAMETER_SET_SIZE);
+	vnzPublicClosePrivate(extras, size);
+}
+
+/* 8.2.1: the picture's order counts, by the sequence's type */
+static void picOrderCnt(VideoSliceJob *job)
+{
+	const VideoAvcSps *sps = (const VideoAvcSps *)job->parameterSet;
+	VideoNal *nal = job->parser.nal;
+	int32_t prevMsb, prevLsb, msb, lsb, half, max, top, bottom, offset, absFrameNum;
+	int32_t cycle, count, inCycle, expectedDelta, expected, i;
+
+	switch (sps->picOrderCntType) {
+	case 0:
+		if (nal->type == NAL_IDR) {
+			prevMsb = 0;
+			prevLsb = 0;
+		} else {
+			prevMsb = nal->prevPicOrderCntMsb;
+			prevLsb = nal->prevPicOrderCntLsb;
+		}
+		max = sps->maxPicOrderCntLsb;
+		lsb = nal->picOrderCntLsb;
+		half = max / 2;
+		msb = prevMsb;
+		if (lsb < prevLsb && !(prevLsb - lsb < half))
+			msb = prevMsb + max;
+		else if (prevLsb < lsb && half < lsb - prevLsb)
+			msb = prevMsb - max;
+		top = msb + lsb;
+		nal->topFieldOrderCnt = top;
+		bottom = nal->deltaPicOrderCnt[0] + top;
+		nal->bottomFieldOrderCnt = bottom;
+		nal->picOrderCnt = top < bottom ? top : bottom;
+		if (nal->refIdc) {
+			if (nal->mmco5) {
+				nal->prevPicOrderCntMsb = 0;
+				nal->prevPicOrderCntLsb = 0;
+			} else {
+				nal->prevPicOrderCntLsb = lsb;
+				nal->prevPicOrderCntMsb = msb;
+			}
+		}
+		if (nal->type == NAL_IDR)
+			nal->frameNumOffset = 0;
+		break;
+	case 1:
+		cycle = sps->numRefFramesInPicOrderCntCycle;
+		if (nal->type == NAL_IDR) {
+			offset = 0;
+		} else {
+			offset = nal->frameNumOffset;
+			if (nal->frameNum < nal->prevFrameNum)
+				offset = nal->maxFrameNum + offset;
+		}
+		absFrameNum = cycle ? nal->frameNum + offset : 0;
+		if (!nal->refIdc && absFrameNum > 0)
+			absFrameNum--;
+		expected = 0;
+		if (absFrameNum > 0) {
+			count = (absFrameNum - 1) / cycle;
+			inCycle = (absFrameNum - 1) % cycle;
+			expectedDelta = 0;
+			for (i = 0; i < cycle; i++)
+				expectedDelta += sps->offsetForRefFrame[i];
+			expected = count * expectedDelta;
+			for (i = 0; i <= inCycle; i++)
+				expected += sps->offsetForRefFrame[i];
+		}
+		if (!nal->refIdc)
+			expected = sps->offsetForNonRefPic + expected;
+		top = nal->deltaPicOrderCnt[0] + expected;
+		nal->topFieldOrderCnt = top;
+		bottom = sps->offsetForTopToBottomField + top + nal->deltaPicOrderCnt[1];
+		nal->bottomFieldOrderCnt = bottom;
+		nal->picOrderCnt = top < bottom ? top : bottom;
+		if (nal->mmco5)
+			offset = 0;
+		nal->frameNumOffset = offset;
+		if (nal->type == NAL_IDR) {
+			nal->prevPicOrderCntLsb = 0;
+			nal->prevPicOrderCntMsb = 0;
+		}
+		break;
+	default:
+		offset = 0;
+		if (nal->type != NAL_IDR) {
+			offset = nal->frameNumOffset;
+			if (nal->frameNum < nal->prevFrameNum)
+				offset = sps->maxFrameNum + offset;
+		}
+		top = 0;
+		if (nal->type != NAL_IDR) {
+			top = (nal->frameNum + offset) * 2;
+			if (!nal->refIdc)
+				top--;
+		}
+		nal->picOrderCnt = top;
+		nal->topFieldOrderCnt = top;
+		nal->bottomFieldOrderCnt = top;
+		if (nal->mmco5)
+			offset = 0;
+		nal->frameNumOffset = offset;
+		if (nal->type == NAL_IDR) {
+			nal->prevPicOrderCntLsb = 0;
+			nal->prevPicOrderCntMsb = 0;
+		}
+		break;
+	}
+}
+
+/* 8.2.4.1: the references' FrameNumWrap and PicNum, LongTermPicNum */
+static void frameNumWrap(VideoSliceJob *job)
+{
+	VideoAvcPicture *picture = job->pictures;
+	VideoNal *nal = job->parser.nal;
+	VideoAvcPictureExtra *extra = (VideoAvcPictureExtra *)job->pictureExtras;
+	uint32_t max = nal->maxFrameNum, current = job->picture->frameNum;
+	int32_t count = nal->pictures, i, wrap;
+
+	for (i = 0; i < count; i++, picture++) {
+		if (!picture->referenceInfo)
+			continue;
+		wrap = picture->frameNum;
+		if ((int32_t)current < wrap)
+			wrap -= max;
+		picture->picNum = wrap;
+		picture->frameNumWrap = wrap;
+		picture->longTermPicNum = picture->longTermFrameIdx;
+	}
+	for (i = 0; i < count; i++, extra++) {
+		if (extra->reference != 1)
+			continue;
+		wrap = extra->frameNum;
+		if ((int32_t)current < wrap)
+			wrap -= max;
+		extra->frameNumWrap = wrap;
+	}
+}
+
+static void refListInit(VideoSliceJob *job, const VideoNal *nal);
+static int32_t refListInitP(VideoSliceJob *job, const VideoNal *nal);
+static int32_t refListInitB(VideoSliceJob *job, const VideoNal *nal);
+static void refListReorder(VideoSliceJob *job, VideoNal *nal);
+
+/* the slice's reference lists, and what the picture inherits of them */
+static void refLists(VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoAvcPicture *picture = job->picture, *pictures, *reference;
+	VideoHelperSlice *slice = (VideoHelperSlice *)job->slice;
+	int32_t i, index;
+
+	refListInit(job, nal);
+	refListReorder(job, nal);
+	pictures = job->pictures;
+	slice->refListSize[0] = job->refListSize[0];
+	slice->refList[1][0] = -1;
+	slice->refList[0][0] = -1;
+	slice->refListSize[1] = job->refListSize[1];
+	for (i = 0; i < nal->numRefIdxActive[0]; i++) {
+		index = slice->refList[0][1 + i];
+		if (index < 0)
+			continue;
+		reference = &pictures[index];
+		picture->incomplete |= reference->damaged;
+		picture->incomplete |= reference->incomplete;
+		picture->missingReference |= reference->free;
+		picture->missingReference |= reference->missingReference;
+	}
+	if ((nal->sliceHeader & AVC_SLICE_TYPE) != AVC_SLICE_B)
+		return;
+	slice->colocatedShortTerm = pictures[slice->refList[1][1]].referenceInfo == 1;
+	for (i = 0; i < nal->numRefIdxActive[1]; i++) {
+		index = slice->refList[1][1 + i];
+		if (index < 0)
+			continue;
+		reference = &pictures[index];
+		picture->incomplete |= reference->damaged;
+		picture->incomplete |= reference->incomplete;
+		picture->missingReference |= reference->free;
+		picture->missingReference |= reference->missingReference;
+	}
+}
+
+/* 8.2.4.2: the initial lists, sized to the slice's active references */
+static void refListInit(VideoSliceJob *job, const VideoNal *nal)
+{
+	int32_t count, l0, l1;
+
+	if ((nal->sliceHeader & AVC_SLICE_TYPE) == AVC_SLICE_P)
+		count = refListInitP(job, nal);
+	else
+		count = refListInitB(job, nal);
+	if (!count)
+		videoParserError(0, &job->parser, 7, nal->pictureCount ? 0x2024 : 0x4024);
+	l0 = nal->numRefIdxActive[0];
+	if (!nal->refPicListReordering[0])
+		job->refListSize[0] = count < l0 ? count : l0;
+	else
+		job->refListSize[0] = count > l0 ? count : l0;
+	l1 = nal->numRefIdxActive[1];
+	if (!nal->refPicListReordering[1])
+		job->refListSize[1] = count < l1 ? count : l1;
+	else
+		job->refListSize[1] = count > l1 ? count : l1;
+}
+
+/* P: short-term by PicNum descending, then long-term by LongTermPicNum */
+static int32_t refListInitP(VideoSliceJob *job, const VideoNal *nal)
+{
+	VideoHelperSlice *slice = (VideoHelperSlice *)job->slice;
+	const VideoAvcPicture *pictures = job->pictures;
+	int8_t *list = &slice->refList[0][1];
+	int32_t count = nal->pictures, shortTerm, total, i, j, a, b;
+
+	shortTerm = 0;
+	for (i = 0; i < count; i++)
+		if (pictures[i].referenceInfo == 1)
+			list[shortTerm++] = i;
+	total = shortTerm;
+	for (i = 0; i < count; i++)
+		if (pictures[i].referenceInfo == 2)
+			list[total++] = i;
+	for (i = 0; i < shortTerm - 1; i++)
+		for (j = i + 1; j < shortTerm; j++) {
+			a = list[i];
+			b = list[j];
+			if (pictures[a].picNum < pictures[b].picNum) {
+				list[i] = b;
+				list[j] = a;
+			}
+		}
+	for (i = shortTerm; i < total - 1; i++)
+		for (j = i + 1; j < total; j++) {
+			a = list[i];
+			b = list[j];
+			if (pictures[b].longTermPicNum < pictures[a].longTermPicNum) {
+				list[i] = b;
+				list[j] = a;
+			}
+		}
+	for (i = total; i <= 16; i++)
+		list[i] = -1;
+	return total;
+}
+
+/*
+ * B: short-term before the picture by POC descending, then after it
+ * ascending (list 1 the other way round), then long-term; list 1 not to
+ * equal list 0.
+ */
+static int32_t refListInitB(VideoSliceJob *job, const VideoNal *nal)
+{
+	VideoHelperSlice *slice = (VideoHelperSlice *)job->slice;
+	const VideoAvcPicture *pictures = job->pictures;
+	int8_t *list0 = &slice->refList[0][1], *list1 = &slice->refList[1][1];
+	int32_t poc = nal->picOrderCnt, count = nal->pictures, before, after, total, longTerm;
+	int32_t i, j, a, b;
+
+	before = after = 0;
+	for (i = 0; i < count; i++) {
+		if (pictures[i].referenceInfo != 1)
+			continue;
+		if (pictures[i].picOrderCnt < poc)
+			list0[before++] = i;
+		else
+			list1[after++] = i;
+	}
+	for (i = 0; i < before - 1; i++)
+		for (j = i + 1; j < before; j++) {
+			a = list0[i];
+			b = list0[j];
+			if (pictures[a].picOrderCnt < pictures[b].picOrderCnt) {
+				list0[i] = b;
+				list0[j] = a;
+			}
+		}
+	for (i = 0; i < after - 1; i++)
+		for (j = i + 1; j < after; j++) {
+			a = list1[i];
+			b = list1[j];
+			if (pictures[b].picOrderCnt < pictures[a].picOrderCnt) {
+				list1[i] = b;
+				list1[j] = a;
+			}
+		}
+	for (i = 0; i < after; i++)
+		list0[before + i] = list1[i];
+	for (i = 0; i < before; i++)
+		list1[after + i] = list0[i];
+	total = before + after;
+	longTerm = 0;
+	for (i = 0; i < count; i++)
+		if (pictures[i].referenceInfo == 2)
+			list0[total + longTerm++] = i;
+	for (i = total; i < total + longTerm - 1; i++)
+		for (j = i + 1; j < total + longTerm; j++) {
+			a = list0[i];
+			b = list0[j];
+			if (pictures[b].longTermPicNum < pictures[a].longTermPicNum) {
+				list0[i] = b;
+				list0[j] = a;
+			}
+		}
+	for (i = 0; i < longTerm; i++)
+		list1[total + i] = list0[total + i];
+	total += longTerm;
+	if (total >= 2) {
+		for (i = 0; i < total; i++)
+			if (list1[i] != list0[i])
+				break;
+		if (i >= total) {
+			a = list1[0];
+			list1[0] = list1[1];
+			list1[1] = a;
+		}
+	}
+	for (i = total; i <= 16; i++) {
+		list0[i] = -1;
+		list1[i] = -1;
+	}
+	return total;
+}
+
+static int32_t reorderShortTerm(VideoSliceJob *job, const VideoNal *nal, int32_t refIdx,
+	uint32_t absDiffPicNum, uint32_t idc, int32_t picNumPred, uint32_t list);
+static void reorderLongTerm(VideoSliceJob *job, const VideoNal *nal, int32_t refIdx,
+	int32_t longTermPicNum, uint32_t list);
+
+/* 8.2.4.3: each list's reordering, on a working copy, then its active part */
+static void refListReorder(VideoSliceJob *job, VideoNal *nal)
+{
+	VideoHelperSlice *slice = (VideoHelperSlice *)job->slice;
+	int32_t pred, i, size;
+	uint32_t list, idc;
+
+	for (list = 0; list < 2; list++) {
+		pred = nal->pictureFrameNum;
+		if (nal->refPicListReordering[list]) {
+			for (i = 0; i < (uint8_t)job->refListSize[list]; i++)
+				job->refListWork[i] = slice->refList[list][1 + i];
+			for (i = 0; ; i++) {
+				idc = nal->reorderingIdc[list][i];
+				if (idc < 2)
+					pred = reorderShortTerm(job, nal, i, nal->reorderingValue[list][i],
+						idc, pred, list);
+				else if (idc == 2)
+					reorderLongTerm(job, nal, i, nal->reorderingValue[list][i], list);
+				else
+					break;
+				job->refListSize[list] = (uint8_t)job->refListSize[list] + 1;
+			}
+			for (i = 0; i < nal->numRefIdxActive[list]; i++)
+				slice->refList[list][1 + i] = job->refListWork[i];
+		}
+		size = (uint8_t)job->refListSize[list];
+		job->refListSize[list] = size < nal->numRefIdxActive[list] ?
+			size : nal->numRefIdxActive[list];
+	}
+}
+
+/* a short-term reference's PicNum, MaxPicNum for anything else */
+static inline int32_t shortTermPicNum(const VideoSliceJob *job, const VideoNal *nal, int32_t index)
+{
+	const VideoAvcPicture *picture;
+
+	if (index >= 0 && index < 18) {
+		picture = &job->pictures[index];
+		if (picture->referenceInfo == 1)
+			return picture->picNum;
+	}
+	return nal->pictureMaxFrameNum;
+}
+
+/* a long-term reference's LongTermPicNum, -1 for anything else */
+static inline int32_t longTermPicNum(const VideoSliceJob *job, int32_t index)
+{
+	const VideoAvcPicture *picture;
+
+	if (index >= 0 && index < 18) {
+		picture = &job->pictures[index];
+		if (picture->referenceInfo == 2)
+			return picture->longTermPicNum;
+	}
+	return -1;
+}
+
+/* 8.2.4.3.1: a short-term picture moved to refIdx; returns picNumLXNoWrap */
+static int32_t reorderShortTerm(VideoSliceJob *job, const VideoNal *nal, int32_t refIdx,
+	uint32_t absDiffPicNum, uint32_t idc, int32_t picNumPred, uint32_t list)
+{
+	int32_t current = nal->pictureFrameNum, max = nal->pictureMaxFrameNum;
+	int32_t noWrap, picNum, size, c, t, n, index;
+	int8_t *work = job->refListWork;
+
+	if (idc == 0) {
+		noWrap = picNumPred - (int32_t)absDiffPicNum - 1;
+		if (noWrap < 0)
+			noWrap += max;
+	} else {
+		noWrap = (int32_t)absDiffPicNum + picNumPred + 1;
+		if (!(noWrap < max))
+			noWrap -= max;
+	}
+	picNum = noWrap;
+	if (current < noWrap)
+		picNum -= max;
+	size = (uint8_t)job->refListSize[list != 0];
+	for (c = size; refIdx < c; c--)
+		work[c] = work[c - 1];
+	for (t = 0; t < size + 1; t++)
+		if (shortTermPicNum(job, nal, work[t]) == picNum)
+			break;
+	if (!(t < size + 1))
+		videoParserError(0, &job->parser, 7, 0x2024);
+	work[refIdx++] = work[t];
+	n = refIdx;
+	for (c = refIdx; c <= size; c++) {
+		index = work[c];
+		if (shortTermPicNum(job, nal, index) != picNum)
+			work[n++] = index;
+	}
+	return noWrap;
+}
+
+/* 8.2.4.3.2: a long-term picture moved to refIdx */
+static void reorderLongTerm(VideoSliceJob *job, const VideoNal *nal, int32_t refIdx,
+	int32_t picNum, uint32_t list)
+{
+	int32_t size, c, t, n, index;
+	int8_t *work = job->refListWork;
+
+	size = (uint8_t)job->refListSize[list != 0];
+	for (c = size; refIdx < c; c--)
+		work[c] = work[c - 1];
+	for (t = 0; t < size + 1; t++)
+		if (longTermPicNum(job, work[t]) == picNum)
+			break;
+	if (!(t < size + 1))
+		videoParserError(0, &job->parser, 7, 0x2024);
+	work[refIdx++] = work[t];
+	n = refIdx;
+	for (c = refIdx; c <= size; c++) {
+		index = work[c];
+		if (longTermPicNum(job, index) != picNum)
+			work[n++] = index;
+	}
+}
+
+static inline int32_t clip3(int32_t low, int32_t high, int32_t value)
+{
+	if (value < high)
+		return value < -high ? low : value;
+	return high;
+}
+
+/* 8.4.1.2.3: temporal direct's DistScaleFactor, and list 0's index of each picture */
+static void directTemporal(VideoSliceJob *job)
+{
+	const VideoAvcPicture *pictures = job->pictures, *ref0, *ref1, *current;
+	const VideoNal *nal = job->parser.nal;
+	VideoHelperSlice *slice = (VideoHelperSlice *)job->slice;
+	int32_t count = nal->numRefIdxActive[0], i, index, tb, td, tx, scale;
+
+	current = &pictures[nal->picture];
+	ref1 = &pictures[slice->refList[1][1]];
+	for (i = 0; i < count; i++) {
+		index = slice->refList[0][1 + i];
+		scale = 256;
+		if (index >= 0) {
+			ref0 = &pictures[index];
+			if (ref0->referenceInfo != 2 && ref1->picOrderCnt - ref0->picOrderCnt) {
+				tb = clip3(-128, 127, current->picOrderCnt - ref0->picOrderCnt);
+				td = clip3(-128, 127, ref1->picOrderCnt - ref0->picOrderCnt);
+				tx = (16384 + abs(td / 2)) / td;
+				scale = clip3(-1024, 1023, (tb * tx + 32) >> 6);
+			}
+		}
+		slice->distScaleFactor[i] = scale;
+	}
+	for (i = 0; i < 18; i++)
+		slice->refIdxOfPicture[i] = 0;
+	for (i = count - 1; i >= 0; i--) {
+		index = slice->refList[0][1 + i];
+		if (index >= 0)
+			slice->refIdxOfPicture[index] = i;
+	}
+}

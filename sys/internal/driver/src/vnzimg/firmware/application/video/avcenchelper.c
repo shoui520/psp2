@@ -14,28 +14,6 @@
 #define JOB_INDEX_ENCODE(slot)	((slot) * 8 + 2)
 #define JOB_INDEX_STEP(slot)	((slot) * 8 + 3)
 
-/* the unit's registers for the encoder */
-#define UNIT_RESET		0x00
-#define UNIT_VERSION		0x03
-#define UNIT_MODE		0x04
-#define UNIT_RUN		7	/* the command: 16 runs the slice */
-#define UNIT_COUNT		8
-#define UNIT_RUN_STATUS		10	/* 16 overflow, 129 the stream ended */
-#define UNIT_RUN_DONE		11
-#define UNIT_WIDTH		0x40
-#define UNIT_BUFFER(i)		(0x42 + (i) * 2)
-#define UNIT_PARAMETER(i)	(0x43 + (i) * 2)
-#define UNIT_ENCODER		0x80
-#define UNIT_PICTURE		0x83
-#define UNIT_PICTURE2		0x84
-#define UNIT_SLICE		0x85
-#define UNIT_SLICE2		0x86
-#define UNIT_BUFFERS		8
-
-#define UNIT_MODE_ENCODE	0x000f0100
-#define UNIT_PICTURE_ENABLE	0x01000000
-#define UNIT_STATUS_OVERFLOW	16
-
 void avcencJobPrepare(uint32_t shared, uint32_t info, uint32_t job, uint32_t unused);
 void avcencJobEncode(uint32_t shared, uint32_t info, uint32_t job, uint32_t request);
 void avcencJobStep(uint32_t shared, uint32_t info, uint32_t job, uint32_t unused);
@@ -339,9 +317,9 @@ static void unitSetup(const VideoHelperShared *shared, const VideoAvcWriter *wri
 		VIDEO_UNIT[UNIT_RESET] = 1;
 		VIDEO_UNIT[UNIT_VERSION] = shared->version;
 		VIDEO_UNIT[UNIT_MODE] = UNIT_MODE_ENCODE;
-		VIDEO_UNIT[UNIT_ENCODER] = 1;
+		VIDEO_UNIT[UNIT_ENABLE] = 1;
 		VIDEO_UNIT[UNIT_PICTURE] = (((writer->widthInMacroblocks - 1) & 0x7f) << 8) |
-			UNIT_PICTURE_ENABLE;
+			UNIT_PICTURE_FRAME_MBS_ONLY;
 		VIDEO_UNIT[UNIT_PICTURE2] = 0;
 		for (i = 0; i < VIDEO_AVC_UNIT_PARAMETERS; i++)
 			VIDEO_UNIT[UNIT_PARAMETER(i)] = (uint16_t)writer->unitParameters[i];
