@@ -2734,3 +2734,1277 @@ static void intraModes(AvcdecStripe *stripe)
 	modes[15] = intraMode(minimum(modes[14], modes[13]), rem[15]);
 	stripe->rowState->intra += 16;
 }
+
+/*
+ * The stripe's residual job (0x831064-0x832be0): the luma of its
+ * macroblocks. First each inter macroblock's prediction, 8x8 block by
+ * block, into the frame; then each macroblock's residual added to it (an
+ * intra one predicted first), the samples kept that the intra macroblocks
+ * after it predict from, and the luma's edges deblocked.
+ */
+static void lumaOpen(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe);
+static void lumaLoad(AvcdecStripe *stripe);
+static void lumaAdvance(AvcdecStripe *stripe);
+static void lumaClose(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe);
+static void lumaPredict(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe);
+static void residualOpen(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe);
+static void residualLoad(AvcdecStripe *stripe);
+static void residualAdvance(AvcdecStripe *stripe);
+static void residualClose(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe);
+static void residualIntra(AvcdecStripe *stripe);
+static void residualInter(AvcdecStripe *stripe);
+static void lumaDeblock(AvcdecStripe *stripe);
+static void lumaDeblockNone(AvcdecStripe *stripe);
+
+/* 0x831064, a job: a stripe's luma decoded, then its row marked done once its chroma is too */
+void avcdecStripeResidual(uint32_t infoAddress, uint32_t rowAddress, uint32_t unused,
+	uint32_t unused2)
+{
+	const AvcdecDecoderInfo *info = (const AvcdecDecoderInfo *)infoAddress;
+	uint32_t slot = workSlot(), bit;
+	AvcdecLockArea *lockArea;
+	AvcdecStripe *stripe;
+	AvcdecRow *entry;
+	int32_t count, i;
+
+	entry = (AvcdecRow *)vnzPublicOpenProtected(rowAddress, DECODER_ROW_SIZE);
+	stripe = (AvcdecStripe *)vnzPublicOpenPrivate(entry->common + slot * DECODER_STRIPE_SIZE,
+		DECODER_STRIPE_SIZE);
+	vnzCacheInvalidateInside((uint32_t)stripe, DECODER_STRIPE_SIZE);
+	if (!entry->failed) {
+		count = entry->count;
+		lumaOpen(info, entry, stripe);
+		for (i = 0; i < count; i++) {
+			lumaLoad(stripe);
+			if ((stripe->kind & (AVC_MB_INTRA | AVC_MB_B)) != AVC_MB_INTRA)
+				lumaPredict(info, entry, stripe);
+			lumaAdvance(stripe);
+		}
+		lumaClose(info, entry, stripe);
+		residualOpen(info, entry, stripe);
+		for (i = 0; i < count; i++) {
+			residualLoad(stripe);
+			if ((stripe->kind & (AVC_MB_INTRA | AVC_MB_B)) == AVC_MB_INTRA)
+				residualIntra(stripe);
+			else
+				residualInter(stripe);
+			if (((stripe->sliceHeader >> AVC_SLICE_DEBLOCKING_SHIFT) & 3) != 1)
+				lumaDeblock(stripe);
+			else
+				lumaDeblockNone(stripe);
+			residualAdvance(stripe);
+		}
+		residualClose(info, entry, stripe);
+	}
+	lockArea = info->lockArea;
+	bit = 1 << (entry->row & 31);
+	vnzCachePurge((uint32_t)stripe, DECODER_STRIPE_SIZE);
+	vnzPublicClosePrivate((uint32_t)stripe, DECODER_STRIPE_SIZE);
+	vnzPublicCloseProtected((uint32_t)entry, DECODER_ROW_SIZE);
+	vnzSpinLock(lockArea->lock);
+	if (lockArea->pending & bit) {
+		lockArea->pending &= ~bit;
+		lockArea->doneRows |= bit;
+	} else {
+		lockArea->pending |= bit;
+	}
+	vnzSpinUnlock(lockArea->lock);
+}
+
+/* 0x8311b6: the prediction's pass opened: the stripe's luma, states, vectors and slice */
+static void lumaOpen(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe)
+{
+	uint32_t x = entry->x, row = entry->row, mode = info->mode, count = entry->count;
+	uint32_t ring = row % info->mbSize * mode, luma, size;
+	AvcdecMbVectors *vectors;
+	AvcdecMbState *states;
+
+	stripe->x = x;
+	stripe->row = row;
+	luma = info->luma + x * 256 + row * info->width * 16;
+	size = count * 256;
+	vnzL2Flush(luma, size);
+	if (x)
+		stripe->luma = (uint8_t *)vnzPublicOpenPrivate(luma - 256, size + 256) + 256;
+	else
+		stripe->luma = (uint8_t *)vnzPublicOpenPrivate(luma, size);
+	states = (AvcdecMbState *)vnzPublicOpenProtected(info->table4096 +
+		ring * sizeof(AvcdecMbState), mode * sizeof(AvcdecMbState));
+	vectors = (AvcdecMbVectors *)vnzPublicOpenProtected(info->table16384 +
+		ring * sizeof(AvcdecMbVectors), mode * sizeof(AvcdecMbVectors));
+	stripe->mb = states + (mode - count);
+	stripe->vectors = vectors + (mode - count);
+	stripe->slice = (const VideoHelperSlice *)vnzPublicOpenProtected(entry->slice,
+		sizeof(VideoHelperSlice));
+	stripe->sliceHeader = entry->sliceHeader;
+	stripe->width = info->widthInMbs * 16;
+	stripe->height = info->heightInMbs * 16;
+	stripe->pitch = info->width;
+}
+
+/* 0x8312bc */
+static void lumaLoad(AvcdecStripe *stripe)
+{
+	const AvcdecMbState *mb = stripe->mb;
+
+	uint32_t i;
+
+	stripe->kind = mb->kind;
+	for (i = 0; i < 4; i++)
+		stripe->subKinds[i] = mb->subKinds[i];
+}
+
+/* 0x8312d0 */
+static void lumaAdvance(AvcdecStripe *stripe)
+{
+	stripe->luma += 256;
+	stripe->vectors++;
+	stripe->mb++;
+	stripe->x++;
+}
+
+/* 0x8312fe: the slice and the vectors given back, the states and luma back at the stripe's start */
+static void lumaClose(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe)
+{
+	uint32_t count = entry->count, mode = info->mode;
+
+	vnzPublicCloseProtected((uint32_t)stripe->slice, sizeof(VideoHelperSlice));
+	vnzPublicCloseProtected((uint32_t)(stripe->vectors - mode), mode * sizeof(AvcdecMbVectors));
+	stripe->mb -= count;
+	stripe->luma -= count * 256;
+}
+
+static void lumaPredictP(AvcdecStripe *stripe, uint32_t weighted);
+static void lumaPredictB(AvcdecStripe *stripe, uint32_t weighted);
+static void lumaPredict8x8(AvcdecStripe *stripe, AvcdecInter *inter, int32_t x, int32_t y,
+	const int16_t *mv);
+static void lumaPredict4x4(AvcdecStripe *stripe, AvcdecInter *inter, int32_t x, int32_t y,
+	const int16_t *mv);
+static void lumaFetch8(const AvcdecStripe *stripe, AvcdecInter *inter, const uint8_t *reference,
+	int32_t x, int32_t y);
+static void lumaFetch8Vertical(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y);
+static void lumaFetch8Horizontal(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y);
+static void lumaFetch8Both(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y);
+static void lumaFetch4(const AvcdecStripe *stripe, AvcdecInter *inter, const uint8_t *reference,
+	int32_t x, int32_t y);
+static void lumaFetch4Vertical(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y);
+static void lumaFetch4Horizontal(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y);
+static void lumaFetch4Both(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y);
+static void lumaStore(const AvcdecInter *inter, uint8_t *luma);
+static void lumaWeightP(const AvcdecStripe *weighting, AvcdecInter *inter, uint8_t *luma,
+	int32_t refIdx);
+static void lumaWeightB(const AvcdecStripe *weighting, AvcdecInter *inter, uint8_t *luma,
+	int32_t refIdx0, int32_t refIdx1);
+
+/* 0x831538: by the slice's kind, weighted or not */
+static void lumaPredict(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe)
+{
+	if ((stripe->mb->kind & (AVC_MB_INTRA | AVC_MB_B)) == AVC_MB_B)
+		lumaPredictB(stripe, (stripe->sliceHeader & (3 << AVC_SLICE_BIPRED_SHIFT)) != 0);
+	else
+		lumaPredictP(stripe, (stripe->sliceHeader & AVC_SLICE_WEIGHTED) != 0);
+}
+
+/* the macroblock's lines in the frame, invalidated before they are written whole */
+static inline void lumaInvalidate(const AvcdecStripe *stripe)
+{
+	vnzCacheLine(VNZ_CACHE_INVALIDATE, stripe->luma);
+	vnzCacheLine(VNZ_CACHE_INVALIDATE, stripe->luma + 64);
+	vnzCacheLine(VNZ_CACHE_INVALIDATE, stripe->luma + 128);
+	vnzCacheLine(VNZ_CACHE_INVALIDATE, stripe->luma + 192);
+}
+
+/* an 8x8 block's prediction from one list's reference: whole, or by its 4x4 blocks */
+static inline void lumaPredictBlock(AvcdecStripe *stripe, AvcdecInter *inter, uint32_t block,
+	int32_t x, int32_t y, uint32_t list)
+{
+	const AvcdecMbVectors *vectors = stripe->vectors;
+	uint32_t i;
+
+	if (stripe->subKinds[block] & (3 << AVC_MB_PARTS_SHIFT)) {
+		for (i = 0; i < 4; i++) {
+			lumaPredict4x4(stripe, inter, x + (i & 1) * 4, y + (i & 2) * 2,
+				(const int16_t *)&vectors->mv[block * 4 + i][list]);
+			avcdecPlace4(inter, i);
+		}
+	} else {
+		lumaPredict8x8(stripe, inter, x, y,
+			(const int16_t *)&vectors->mv[block * 4][list]);
+	}
+}
+
+/* 0x831572: a P macroblock's */
+static void lumaPredictP(AvcdecStripe *stripe, uint32_t weighted)
+{
+	const AvcdecStripe *weighting = weighted ? stripe : 0;
+	const VideoHelperSlice *slice = stripe->slice;
+	const int8_t *refIdx = stripe->mb->refIdx.b;
+	int32_t mbX = stripe->x * 16, mbY = stripe->row * 16, x, y, ref;
+	AvcdecInter inter;
+	uint32_t block;
+	uint8_t *luma;
+
+	lumaInvalidate(stripe);
+	for (block = 0; block < 4; block++) {
+		x = mbX + (block & 1) * 8;
+		y = mbY + (block & 2) * 4;
+		luma = stripe->luma + (block & 1) * 8 + (block & 2) * 64;
+		ref = refIdx[block];
+		stripe->reference = (const uint8_t *)slice->refLuma[0][ref];
+		lumaPredictBlock(stripe, &inter, block, x, y, 0);
+		lumaWeightP(weighting, &inter, luma, ref);
+	}
+}
+
+/* 0x831678: a B macroblock's: list 0's stored, list 1's then put with it */
+static void lumaPredictB(AvcdecStripe *stripe, uint32_t weighted)
+{
+	const AvcdecStripe *weighting = weighted ? stripe : 0;
+	const VideoHelperSlice *slice = stripe->slice;
+	const int8_t *refIdx = stripe->mb->refIdx.b;
+	int32_t mbX = stripe->x * 16, mbY = stripe->row * 16, x, y, ref0, ref1;
+	AvcdecInter inter;
+	uint32_t block;
+	uint8_t *luma;
+
+	lumaInvalidate(stripe);
+	for (block = 0; block < 4; block++) {
+		x = mbX + (block & 1) * 8;
+		y = mbY + (block & 2) * 4;
+		luma = stripe->luma + (block & 1) * 8 + (block & 2) * 64;
+		ref0 = refIdx[block];
+		if (ref0 >= 0) {
+			stripe->reference = (const uint8_t *)slice->refLuma[0][ref0];
+			lumaPredictBlock(stripe, &inter, block, x, y, 0);
+			lumaWeightP(0, &inter, luma, ref0);
+		}
+		ref1 = refIdx[4 + block];
+		if (ref1 >= 0) {
+			stripe->reference = (const uint8_t *)slice->refLuma[1][ref1];
+			lumaPredictBlock(stripe, &inter, block, x, y, 1);
+		}
+		lumaWeightB(weighting, &inter, luma, ref0, ref1);
+	}
+}
+
+/* the kernels' modes by the vector's fraction (y * 4 + x), as the jump tables give them */
+#define LUMA_HALF		0x02
+#define LUMA_QUARTER		0x12
+#define LUMA_QUARTER_RIGHT	0x13
+#define LUMA_QUARTER_BELOW	0x16
+#define LUMA_QUARTER_BOTH	0x17
+#define LUMA_QUARTER_COLUMNS	0x1a
+#define LUMA_QUARTER_COLUMNS_RIGHT 0x1e
+
+/* 0x83180c: an 8x8 block at (x, y) plus its vector, by the vector's fraction (0x8f72f8) */
+static void lumaPredict8x8(AvcdecStripe *stripe, AvcdecInter *inter, int32_t x, int32_t y,
+	const int16_t *mv)
+{
+	const uint8_t *reference = stripe->reference;
+	int32_t px = (mv[0] >> 2) + x, py = (mv[1] >> 2) + y;
+
+	switch ((mv[1] & 3) << 2 | (mv[0] & 3)) {
+	case 0:
+		lumaFetch8(stripe, inter, reference, px, py);
+		break;
+	case 1:
+		lumaFetch8Horizontal(stripe, inter, reference, px, py);
+		avcdecLumaHorizontal8(inter, LUMA_QUARTER);
+		break;
+	case 2:
+		lumaFetch8Horizontal(stripe, inter, reference, px, py);
+		avcdecLumaHorizontal8(inter, LUMA_HALF);
+		break;
+	case 3:
+		lumaFetch8Horizontal(stripe, inter, reference, px, py);
+		avcdecLumaHorizontal8(inter, LUMA_QUARTER_RIGHT);
+		break;
+	case 4:
+		lumaFetch8Vertical(stripe, inter, reference, px, py);
+		avcdecLumaVertical8(inter, LUMA_QUARTER);
+		break;
+	case 5:
+		lumaFetch8Both(stripe, inter, reference, px, py);
+		avcdecLumaDiagonal8(inter, LUMA_QUARTER);
+		break;
+	case 6:
+		lumaFetch8Both(stripe, inter, reference, px, py);
+		avcdecLumaCentre8(inter, LUMA_QUARTER);
+		break;
+	case 7:
+		lumaFetch8Both(stripe, inter, reference, px, py);
+		avcdecLumaDiagonal8(inter, LUMA_QUARTER_RIGHT);
+		break;
+	case 8:
+		lumaFetch8Vertical(stripe, inter, reference, px, py);
+		avcdecLumaVertical8(inter, LUMA_HALF);
+		break;
+	case 9:
+		lumaFetch8Both(stripe, inter, reference, px, py);
+		avcdecLumaCentre8(inter, LUMA_QUARTER_COLUMNS);
+		break;
+	case 10:
+		lumaFetch8Both(stripe, inter, reference, px, py);
+		avcdecLumaCentre8(inter, LUMA_HALF);
+		break;
+	case 11:
+		lumaFetch8Both(stripe, inter, reference, px, py);
+		avcdecLumaCentre8(inter, LUMA_QUARTER_COLUMNS_RIGHT);
+		break;
+	case 12:
+		lumaFetch8Vertical(stripe, inter, reference, px, py);
+		avcdecLumaVertical8(inter, LUMA_QUARTER_BELOW);
+		break;
+	case 13:
+		lumaFetch8Both(stripe, inter, reference, px, py);
+		avcdecLumaDiagonal8(inter, LUMA_QUARTER_BELOW);
+		break;
+	case 14:
+		lumaFetch8Both(stripe, inter, reference, px, py);
+		avcdecLumaCentre8(inter, LUMA_QUARTER_BELOW);
+		break;
+	default:
+		lumaFetch8Both(stripe, inter, reference, px, py);
+		avcdecLumaDiagonal8(inter, LUMA_QUARTER_BOTH);
+		break;
+	}
+}
+
+/* 0x8318d8: a 4x4 block's (0x8f7334) */
+static void lumaPredict4x4(AvcdecStripe *stripe, AvcdecInter *inter, int32_t x, int32_t y,
+	const int16_t *mv)
+{
+	const uint8_t *reference = stripe->reference;
+	int32_t px = (mv[0] >> 2) + x, py = (mv[1] >> 2) + y;
+
+	switch ((mv[1] & 3) << 2 | (mv[0] & 3)) {
+	case 0:
+		lumaFetch4(stripe, inter, reference, px, py);
+		break;
+	case 1:
+		lumaFetch4Horizontal(stripe, inter, reference, px, py);
+		avcdecLumaHorizontal4(inter, LUMA_QUARTER);
+		break;
+	case 2:
+		lumaFetch4Horizontal(stripe, inter, reference, px, py);
+		avcdecLumaHorizontal4(inter, LUMA_HALF);
+		break;
+	case 3:
+		lumaFetch4Horizontal(stripe, inter, reference, px, py);
+		avcdecLumaHorizontal4(inter, LUMA_QUARTER_RIGHT);
+		break;
+	case 4:
+		lumaFetch4Vertical(stripe, inter, reference, px, py);
+		avcdecLumaVertical4(inter, LUMA_QUARTER);
+		break;
+	case 5:
+		lumaFetch4Both(stripe, inter, reference, px, py);
+		avcdecLumaDiagonal4(inter, LUMA_QUARTER);
+		break;
+	case 6:
+		lumaFetch4Both(stripe, inter, reference, px, py);
+		avcdecLumaCentre4(inter, LUMA_QUARTER);
+		break;
+	case 7:
+		lumaFetch4Both(stripe, inter, reference, px, py);
+		avcdecLumaDiagonal4(inter, LUMA_QUARTER_RIGHT);
+		break;
+	case 8:
+		lumaFetch4Vertical(stripe, inter, reference, px, py);
+		avcdecLumaVertical4(inter, LUMA_HALF);
+		break;
+	case 9:
+		lumaFetch4Both(stripe, inter, reference, px, py);
+		avcdecLumaCentre4(inter, LUMA_QUARTER_COLUMNS);
+		break;
+	case 10:
+		lumaFetch4Both(stripe, inter, reference, px, py);
+		avcdecLumaCentre4(inter, LUMA_HALF);
+		break;
+	case 11:
+		lumaFetch4Both(stripe, inter, reference, px, py);
+		avcdecLumaCentre4(inter, LUMA_QUARTER_COLUMNS_RIGHT);
+		break;
+	case 12:
+		lumaFetch4Vertical(stripe, inter, reference, px, py);
+		avcdecLumaVertical4(inter, LUMA_QUARTER_BELOW);
+		break;
+	case 13:
+		lumaFetch4Both(stripe, inter, reference, px, py);
+		avcdecLumaDiagonal4(inter, LUMA_QUARTER_BELOW);
+		break;
+	case 14:
+		lumaFetch4Both(stripe, inter, reference, px, py);
+		avcdecLumaCentre4(inter, LUMA_QUARTER_BELOW);
+		break;
+	default:
+		lumaFetch4Both(stripe, inter, reference, px, py);
+		avcdecLumaDiagonal4(inter, LUMA_QUARTER_BOTH);
+		break;
+	}
+}
+
+static inline int32_t clampTo(int32_t value, int32_t low, int32_t high)
+{
+	if (value < low)
+		value = low;
+	if (value > high)
+		value = high;
+	return value;
+}
+
+/* a sample's address in the tiled frame: by tile row, by tile, by row and column in it */
+static inline const uint8_t *tiledAddress(const uint8_t *reference, uint32_t pitch, int32_t x,
+	int32_t y)
+{
+	return reference + (y & ~15) * pitch + (x & ~15) * 16 + (x & 8) + (y & 15) * 16;
+}
+
+/* the 8 bytes after an aligned 8: the tile's second half, or the next tile's first */
+static inline const uint8_t *tiledNext(const uint8_t *address, int32_t x)
+{
+	return (x & 8) ? address + 248 : address + 8;
+}
+
+/* 0x831df2: an 8x8 block of whole samples */
+static void lumaFetch8(const AvcdecStripe *stripe, AvcdecInter *inter, const uint8_t *reference,
+	int32_t x, int32_t y)
+{
+	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
+	int32_t cx = clampTo(x, 0, width - 8), cy = clampTo(y, 0, height - 8);
+	const uint8_t *address = tiledAddress(reference, pitch, cx, cy), *next;
+	uint32_t row, column;
+
+	next = (cx & 7) ? tiledNext(address, cx) : address;
+	avcdecLoad8(inter, address, next, cy, pitch * 16 - 256, -cx & 7);
+	if (x < 0)
+		avcdecEdgeLeft8(inter, -(x > -7 ? x : -7));
+	else if (x > width - 8)
+		avcdecEdgeRight8(inter, (x < width - 1 ? x : width - 1) - (width - 8));
+	if (y < 0)
+		avcdecEdgeTop8(inter, y);
+	else if (y > height - 8)
+		avcdecEdgeBottom8(inter, y - height + 8);
+	/* the registers loaded are the block's */
+	for (row = 0; row < 8; row++)
+		for (column = 0; column < 8; column++)
+			inter->block[row][column] = inter->window[row][column];
+}
+
+/* 0x831ed6: from two rows above to three below, for a vertical filter */
+static void lumaFetch8Vertical(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y)
+{
+	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
+	int32_t cx = clampTo(x, 0, width - 8), cy, step = pitch * 16 - 256;
+	const uint8_t *address, *next;
+
+	cy = y >= 2 ? y - 2 : 0;
+	if (cy > height - 13)
+		cy = height - 13;
+	address = tiledAddress(reference, pitch, cx, cy);
+	next = (cx & 7) ? tiledNext(address, cx) : address;
+	avcdecLoad8(inter, address, next, cy, step, -cx & 7);
+	if (cy & 8) {
+		next += step;
+		address += step;
+	}
+	avcdecLoad8Tall(inter, address + 128, next + 128, cy, step, -cx & 7);
+	if (x < 0) {
+		x = x > -7 ? x : -7;
+		avcdecEdgeLeft8(inter, -x);
+		avcdecEdgeLeft8Tall(inter, -x);
+	} else if (x > width - 8) {
+		x = (x < width - 1 ? x : width - 1) - (width - 8);
+		avcdecEdgeRight8(inter, x);
+		avcdecEdgeRight8Tall(inter, x);
+	}
+	if (y < 2)
+		avcdecEdgeTop8Tall(inter, y - 2);
+	else if (y > height - 11)
+		avcdecEdgeBottom8Tall(inter, y - height + 11);
+}
+
+/* the 8 bytes of the three streams of a sixteen-sample row */
+static inline void tiledStreams(const uint8_t *address, int32_t x, const uint8_t **next,
+	const uint8_t **third)
+{
+	*next = tiledNext(address, x);
+	*third = address + 256;
+	if (!(x & 7)) {
+		*third = *next;
+		*next = address;
+	} else if ((x & 7) < 4) {
+		*third = *next;
+	}
+}
+
+/* 0x831ffc: from two columns left to three right, for a horizontal filter */
+static void lumaFetch8Horizontal(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y)
+{
+	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
+	int32_t cx = x >= 2 ? x - 2 : 0, cy = clampTo(y, 0, height - 8);
+	const uint8_t *address, *next, *third;
+
+	if (cx > width - 16)
+		cx = width - 16;
+	address = tiledAddress(reference, pitch, cx, cy);
+	tiledStreams(address, cx, &next, &third);
+	avcdecLoad8Wide(inter, address, next, third, cy, pitch * 16 - 256, -cx & 7);
+	if (x < 2) {
+		x = x > -11 ? x : -11;
+		if (x < -5)
+			avcdecEdgeLeft8WideFar(inter, 2 - x);
+		else
+			avcdecEdgeLeft8Wide(inter, 2 - x);
+	} else if (x > width - 14) {
+		if (x > width + 1)
+			x = width + 1;
+		if (x < width - 5)
+			avcdecEdgeRight8Wide(inter, x - width + 14);
+		else
+			avcdecEdgeRight8WideFar(inter, x - width + 14);
+	}
+	if (y < 0)
+		avcdecEdgeTop8(inter, y);
+	else if (y > height - 8)
+		avcdecEdgeBottom8(inter, y - height + 8);
+}
+
+/* 0x832122: both, for the centre and the diagonals */
+static void lumaFetch8Both(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y)
+{
+	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
+	int32_t cx = x >= 2 ? x - 2 : 0, cy = y >= 2 ? y - 2 : 0, step = pitch * 16 - 256;
+	const uint8_t *address, *next, *third;
+
+	if (cx > width - 16)
+		cx = width - 16;
+	if (cy > height - 13)
+		cy = height - 13;
+	address = tiledAddress(reference, pitch, cx, cy);
+	tiledStreams(address, cx, &next, &third);
+	avcdecLoad8Wide(inter, address, next, third, cy, step, -cx & 7);
+	if (cy & 8) {
+		third += step;
+		next += step;
+		address += step;
+	}
+	avcdecLoad8WideTall(inter, address + 128, next + 128, third + 128, cy, step, -cx & 7);
+	if (x < 2) {
+		x = x > -11 ? x : -11;
+		if (x < -5) {
+			avcdecEdgeLeft8WideFar(inter, 2 - x);
+			avcdecEdgeLeft8WideFarTall(inter, 2 - x);
+		} else {
+			avcdecEdgeLeft8Wide(inter, 2 - x);
+			avcdecEdgeLeft8WideTall(inter, 2 - x);
+		}
+	} else if (x > width - 14) {
+		if (x > width + 1)
+			x = width + 1;
+		if (x < width - 5) {
+			avcdecEdgeRight8Wide(inter, x - width + 14);
+			avcdecEdgeRight8WideTall(inter, x - width + 14);
+		} else {
+			avcdecEdgeRight8WideFar(inter, x - width + 14);
+			avcdecEdgeRight8WideFarTall(inter, x - width + 14);
+		}
+	}
+	if (y < 2)
+		avcdecEdgeTop8Tall(inter, y - 2);
+	else if (y > height - 11)
+		avcdecEdgeBottom8Tall(inter, y - height + 11);
+}
+
+/* a 4x4 block's: the second 8 bytes only where its four reach them */
+static inline const uint8_t *tiledNext4(const uint8_t *address, int32_t x)
+{
+	return (x & 7) >= 5 ? tiledNext(address, x) : address;
+}
+
+/* 0x8319a4: a 4x4 block of whole samples */
+static void lumaFetch4(const AvcdecStripe *stripe, AvcdecInter *inter, const uint8_t *reference,
+	int32_t x, int32_t y)
+{
+	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
+	int32_t cx = clampTo(x, 0, width - 8), cy = clampTo(y, 0, height - 4);
+	const uint8_t *address = tiledAddress(reference, pitch, cx, cy);
+
+	avcdecLoad4(inter, address, tiledNext4(address, cx), cy, pitch * 16 - 256, -cx & 7);
+	if (x < 0)
+		avcdecEdgeLeft4(inter, -(x > -3 ? x : -3));
+	else if (x > width - 8)
+		avcdecEdgeRight4(inter, (x < width - 1 ? x : width - 1) - (width - 8));
+	if (y < 0)
+		avcdecEdgeTop4(inter, y);
+	else if (y > height - 4)
+		avcdecEdgeBottom4(inter, y - height + 4);
+	avcdecFull4(inter);
+}
+
+/* 0x831a8e */
+static void lumaFetch4Vertical(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y)
+{
+	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
+	int32_t cx = clampTo(x, 0, width - 8), cy = y >= 2 ? y - 2 : 0, step = pitch * 16 - 256;
+	const uint8_t *address, *next;
+
+	if (cy > height - 9)
+		cy = height - 9;
+	address = tiledAddress(reference, pitch, cx, cy);
+	next = tiledNext4(address, cx);
+	avcdecLoad4(inter, address, next, cy, step, -cx & 7);
+	if ((cy & 12) == 12) {
+		next += step;
+		address += step;
+	}
+	avcdecLoad4Tall(inter, address + 64, next + 64, cy, step, -cx & 7);
+	if (x < 0) {
+		x = x > -3 ? x : -3;
+		avcdecEdgeLeft4(inter, -x);
+		avcdecEdgeLeft4Tall(inter, -x);
+	} else if (x > width - 8) {
+		x = (x < width - 1 ? x : width - 1) - (width - 8);
+		avcdecEdgeRight4(inter, x);
+		avcdecEdgeRight4Tall(inter, x);
+	}
+	if (y < 2)
+		avcdecEdgeTop4Tall(inter, y - 2);
+	else if (y > height - 7)
+		avcdecEdgeBottom4Tall(inter, y - height + 7);
+	avcdecTapsVertical4(inter);
+}
+
+/* 0x831bbc */
+static void lumaFetch4Horizontal(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y)
+{
+	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
+	int32_t cx = x >= 2 ? x - 2 : 0, cy = clampTo(y, 0, height - 4);
+	const uint8_t *address;
+
+	if (cx > width - 9)
+		cx = width - 9;
+	address = tiledAddress(reference, pitch, cx, cy);
+	avcdecLoad4Wide(inter, address, tiledNext(address, cx), cy, pitch * 16 - 256, -cx & 7);
+	if (x < 2) {
+		if (x < -5)
+			avcdecEdgeLeft4WideFar(inter);
+		else
+			avcdecEdgeLeft4Wide(inter, 2 - x);
+	} else if (x > width - 7) {
+		if (x < width + 1)
+			avcdecEdgeRight4Wide(inter, x - width + 7);
+		else
+			avcdecEdgeRight4WideFar(inter);
+	}
+	if (y < 0)
+		avcdecEdgeTop4(inter, y);
+	else if (y > height - 4)
+		avcdecEdgeBottom4(inter, y - height + 4);
+	avcdecTapsHorizontal4(inter);
+}
+
+/* 0x831cb4 */
+static void lumaFetch4Both(const AvcdecStripe *stripe, AvcdecInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y)
+{
+	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
+	int32_t cx = x >= 2 ? x - 2 : 0, cy = y >= 2 ? y - 2 : 0, step = pitch * 16 - 256;
+	const uint8_t *address, *next;
+
+	if (cx > width - 9)
+		cx = width - 9;
+	if (cy > height - 9)
+		cy = height - 9;
+	address = tiledAddress(reference, pitch, cx, cy);
+	next = tiledNext(address, cx);
+	avcdecLoad4Wide(inter, address, next, cy, step, -cx & 7);
+	if ((cy & 12) == 12) {
+		next += step;
+		address += step;
+	}
+	avcdecLoad4WideTall(inter, address + 64, next + 64, cy, step, -cx & 7);
+	if (x < 2) {
+		if (x < -5) {
+			avcdecEdgeLeft4WideFar(inter);
+			avcdecEdgeLeft4WideFarTall(inter);
+		} else {
+			avcdecEdgeLeft4Wide(inter, 2 - x);
+			avcdecEdgeLeft4WideTall(inter, 2 - x);
+		}
+	} else if (x > width - 7) {
+		if (x < width + 1) {
+			avcdecEdgeRight4Wide(inter, x - width + 7);
+			avcdecEdgeRight4WideTall(inter, x - width + 7);
+		} else {
+			avcdecEdgeRight4WideFar(inter);
+			avcdecEdgeRight4WideFarTall(inter);
+		}
+	}
+	if (y < 2)
+		avcdecEdgeTop4Tall(inter, y - 2);
+	else if (y > height - 7)
+		avcdecEdgeBottom4Tall(inter, y - height + 7);
+}
+
+/* 0x8322a0: the 8x8 block into the macroblock's samples (16 apart) */
+static void lumaStore(const AvcdecInter *inter, uint8_t *luma)
+{
+	uint32_t row, column;
+
+	for (row = 0; row < 8; row++)
+		for (column = 0; column < 8; column++)
+			luma[row * 16 + column] = inter->block[row][column];
+}
+
+/* 0x8322c2: a P block's explicit weighting, then the block stored */
+static void lumaWeightP(const AvcdecStripe *weighting, AvcdecInter *inter, uint8_t *luma,
+	int32_t refIdx)
+{
+	const VideoHelperSlice *slice;
+	uint32_t shift;
+
+	if (weighting) {
+		slice = weighting->slice;
+		shift = slice->lumaLog2WeightDenom;
+		avcdecWeight(inter, slice->weights[0][refIdx].lumaWeight,
+			slice->weights[0][refIdx].lumaOffset, shift ? 1 << (shift - 1) : 0, shift);
+	}
+	lumaStore(inter, luma);
+}
+
+/*
+ * 0x832318: a B block's: list 1's put with list 0's stored (averaged, or by
+ * weighted_bipred_idc's explicit or implicit weights), or alone.
+ */
+static void lumaWeightB(const AvcdecStripe *weighting, AvcdecInter *inter, uint8_t *luma,
+	int32_t refIdx0, int32_t refIdx1)
+{
+	const VideoHelperSlice *slice;
+	const VideoAvcSliceWeight *weight0, *weight1;
+	uint32_t shift;
+	int32_t weight;
+
+	if (!weighting) {
+		if (refIdx1 < 0)
+			return;
+		if (refIdx0 >= 0) {
+			avcdecLoadList0(inter, luma);
+			avcdecAverage(inter);
+		}
+		lumaStore(inter, luma);
+		return;
+	}
+	slice = weighting->slice;
+	if (((weighting->sliceHeader >> AVC_SLICE_BIPRED_SHIFT) & 3) == 1) {
+		shift = slice->lumaLog2WeightDenom;
+		if (refIdx1 < 0) {
+			weight0 = &slice->weights[0][refIdx0];
+			avcdecWeight(inter, weight0->lumaWeight, weight0->lumaOffset,
+				shift ? 1 << (shift - 1) : 0, shift);
+		} else if (refIdx0 < 0) {
+			weight1 = &slice->weights[1][refIdx1];
+			avcdecWeight(inter, weight1->lumaWeight, weight1->lumaOffset,
+				shift ? 1 << (shift - 1) : 0, shift);
+		} else {
+			weight0 = &slice->weights[0][refIdx0];
+			weight1 = &slice->weights[1][refIdx1];
+			avcdecLoadList0(inter, luma);
+			avcdecWeightBi(inter, weight0->lumaWeight, weight1->lumaWeight,
+				(weight0->lumaOffset + weight1->lumaOffset + 1) >> 1, 1 << shift,
+				shift + 1);
+		}
+	} else if (refIdx0 >= 0 && refIdx1 >= 0) {
+		weight = slice->implicitWeight[(uint8_t)slice->numRefIdxActive[1] * refIdx0 + refIdx1];
+		avcdecLoadList0(inter, luma);
+		avcdecWeightBi(inter, weight, 64 - weight, 0, 32, 6);
+	}
+	lumaStore(inter, luma);
+}
+
+/* 0x831348: the residual's pass opened: the row above, the filters, the edges, the coefficients */
+static void residualOpen(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe)
+{
+	const VideoAvcDecodeCommand *command;
+	const VideoHelperJob *job = (const VideoHelperJob *)entry->job;
+	uint32_t x = entry->x, row = entry->row, count = entry->count, mode = info->mode;
+	uint32_t ring, rows;
+	AvcdecMbFilter *filters;
+	AvcdecRowData *rowData;
+
+	stripe->x = x;
+	stripe->row = row;
+	stripe->sliceHeader = entry->sliceHeader;
+	stripe->pitch = info->width;
+	if (row)
+		stripe->above = (const uint8_t *)vnzPublicOpenPrivate(info->luma + x * 256 +
+			(row - 1) * info->width * 16, count * 256);
+	ring = row % info->mbSize;
+	rowData = (AvcdecRowData *)(info->table2048b + ring * sizeof(AvcdecRowData));
+	stripe->rowData = rowData;
+	ring *= mode;
+	filters = (AvcdecMbFilter *)vnzPublicOpenProtected(info->table8192 +
+		ring * sizeof(AvcdecMbFilter), mode * sizeof(AvcdecMbFilter));
+	stripe->filter = filters + (mode - count);
+	if (count != 1)
+		stripe->left = stripe->mb + count - 1;
+	else
+		stripe->left = stripe->mb - 1;
+	stripe->edges = (AvcdecEdges *)vnzPublicOpenPrivate(info->row1 + x * sizeof(AvcdecEdges),
+		count * sizeof(AvcdecEdges) + sizeof(AvcdecEdges));
+	if (x && (!job->load || job->firstX != x || job->firstY != row))
+		return;
+	rows = row - job->firstY;
+	command = (const VideoAvcDecodeCommand *)info->command;
+	rowData->coef = (const int16_t *)(job->buffers[5] + command->coefRowSize * rows);
+	rowData->pcm = (const uint8_t *)(job->buffers[8] + command->pcmRowSize * rows);
+}
+
+/* 0x831456 */
+static void residualLoad(AvcdecStripe *stripe)
+{
+	const AvcdecMbState *mb = stripe->mb;
+
+	stripe->kind = mb->kind;
+	stripe->cbf = mb->cbf;
+	stripe->qp = mb->qp;
+}
+
+/* 0x831472 */
+static void residualAdvance(AvcdecStripe *stripe)
+{
+	stripe->filter++;
+	stripe->x++;
+	stripe->mb++;
+	stripe->edges++;
+	stripe->luma += 256;
+	stripe->above += 256;
+}
+
+/* 0x8314b8: everything the two passes opened given back */
+static void residualClose(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
+	AvcdecStripe *stripe)
+{
+	uint32_t mode = info->mode, count = entry->count;
+
+	vnzPublicCloseProtected((uint32_t)(stripe->mb - mode), mode * sizeof(AvcdecMbState));
+	vnzPublicCloseProtected((uint32_t)(stripe->filter - mode), mode * sizeof(AvcdecMbFilter));
+	vnzPublicClosePrivate((uint32_t)(stripe->edges - count),
+		count * sizeof(AvcdecEdges) + sizeof(AvcdecEdges));
+	if ((int8_t)entry->row)
+		vnzPublicClosePrivate((uint32_t)(stripe->above - count * 256), count * 256);
+	if ((int8_t)entry->x)
+		vnzPublicClosePrivate((uint32_t)(stripe->luma - count * 256 - 256), count * 256 + 256);
+	else
+		vnzPublicClosePrivate((uint32_t)(stripe->luma - count * 256), count * 256);
+}
+
+/* 0x83279c: the dequantisation of the macroblock's QP */
+static void residualScale(AvcdecRecon *recon, uint32_t qp)
+{
+	uint32_t i;
+
+	for (i = 0; i < 16; i++)
+		recon->scale[i] = avcdecLevelScale[avcdecQpRemainder[qp]][i];
+	recon->shift = avcdecQpShift[qp + 36];
+}
+
+/* the 8x8 block's place in the macroblock's samples */
+static inline uint8_t *blockSamples(uint8_t *luma, uint32_t block)
+{
+	return luma + (block & 1) * 8 + (block & 2) * 64;
+}
+
+/*
+ * 0x832634: an inter macroblock's residual, by 8x8 block where its
+ * coded_block_pattern says, by 4x4 block where its coded_block_flag does;
+ * the samples an intra macroblock right or below predicts from kept.
+ */
+static void residualInter(AvcdecStripe *stripe)
+{
+	const int16_t *coef = stripe->rowData->coef;
+	uint32_t kind = stripe->kind, cbf = stripe->cbf & 0xffff;
+	uint32_t cbp = (kind >> AVC_MB_CBP_SHIFT) & 0xf, block;
+	uint32_t keepRight = (kind & AVC_MB_KEEP_RIGHT) != 0;
+	uint32_t keepBottom = (kind & AVC_MB_KEEP_BOTTOM) != 0;
+	AvcdecEdges *edges = stripe->edges;
+	uint8_t *right = edges[1].left, *bottom = edges->above, *samples;
+	AvcdecRecon recon;
+
+	residualScale(&recon, (uint8_t)stripe->qp);
+	edges[1].aboveLeft = edges->above[15];
+	for (block = 0; block < 4; block++) {
+		samples = blockSamples(stripe->luma, block);
+		if (cbp & 1) {
+			avcdecLoadBlock(&recon, samples);
+			if (cbf & 1) {
+				avcdecIdct(&recon, coef);
+				coef += 16;
+				avcdecAddResidual0(&recon);
+			}
+			if (cbf & 2) {
+				avcdecIdct(&recon, coef);
+				coef += 16;
+				avcdecAddResidual1(&recon);
+			}
+			if (cbf & 4) {
+				avcdecIdct(&recon, coef);
+				coef += 16;
+				avcdecAddResidual2(&recon);
+			}
+			if (cbf & 8) {
+				avcdecIdct(&recon, coef);
+				coef += 16;
+				avcdecAddResidual3(&recon);
+			}
+			avcdecStoreBlock(&recon, samples);
+			if (keepRight && (block & 1)) {
+				avcdecKeepRight(&recon, right);
+				right += 8;
+			}
+			if (keepBottom && (block & 2)) {
+				memcpy(bottom, recon.block[7], 8);
+				bottom += 8;
+			}
+		} else {
+			if (keepRight && (block & 1)) {
+				avcdecKeepRightOf(samples, right);
+				right += 8;
+			}
+			if (keepBottom && (block & 2)) {
+				memcpy(bottom, stripe->luma + 240 + (block & 1) * 8, 8);
+				bottom += 8;
+			}
+		}
+		cbf >>= 4;
+		cbp >>= 1;
+	}
+	stripe->rowData->coef = coef;
+}
+
+static void intraPcm(AvcdecStripe *stripe);
+static void intra4x4(AvcdecStripe *stripe);
+static void intra16Predict(AvcdecStripe *stripe);
+static void intra16Residual(AvcdecStripe *stripe);
+
+/* 0x8327c0: an intra macroblock's: its samples predicted and reconstructed, by its class */
+static void residualIntra(AvcdecStripe *stripe)
+{
+	uint32_t class;
+
+	lumaInvalidate(stripe);
+	class = AVC_MB_CLASS(stripe->kind);
+	if (class == AVC_MB_CLASS_PCM) {
+		intraPcm(stripe);
+	} else if (class == AVC_MB_CLASS_INTRA16X16) {
+		intra16Predict(stripe);
+		intra16Residual(stripe);
+	} else {
+		intra4x4(stripe);
+	}
+}
+
+/* 0x832806: an I_PCM macroblock's samples, as they came; kept where they are wanted */
+static void intraPcm(AvcdecStripe *stripe)
+{
+	const uint8_t *pcm = stripe->rowData->pcm;
+	AvcdecEdges *edges = stripe->edges;
+	uint8_t *luma = stripe->luma;
+	uint32_t i;
+
+	memcpy(luma, pcm, 256);
+	stripe->rowData->pcm = pcm + 256;
+	if (stripe->kind & AVC_MB_KEEP_RIGHT)
+		for (i = 0; i < 16; i++)
+			edges[1].left[i] = luma[i * 16 + 15];
+	edges[1].aboveLeft = edges->above[15];
+	if (stripe->kind & AVC_MB_KEEP_BOTTOM)
+		memcpy(edges->above, luma + 240, 16);
+}
+
+/*
+ * 0x83288a: an Intra4x4 macroblock's, by 8x8 block and 4x4 block in it:
+ * each predicted by its mode from the neighbours its constrained intra
+ * prediction lets it, its residual added.
+ */
+static void intra4x4(AvcdecStripe *stripe)
+{
+	const int16_t *coef = stripe->rowData->coef;
+	const int8_t *modes = stripe->filter->modes;
+	uint32_t neighbours = stripe->filter->intraNeighbours, cbf = stripe->cbf & 0xffff;
+	uint32_t lefts = neighbours & 1 ? 15 : 10, aboves = neighbours & 2 ? 15 : 12, block;
+	AvcdecEdges *edges = stripe->edges;
+	AvcdecRecon recon;
+
+	residualScale(&recon, (uint8_t)stripe->qp);
+	avcdecIntraNeighbours(&recon, edges, (neighbours & 4) != 0);
+	for (block = 0; block < 4; block++) {
+		avcdecIntra4x4Block0(&recon, *modes++, lefts & 1, aboves & 1);
+		if (cbf & 1) {
+			avcdecIdct(&recon, coef);
+			coef += 16;
+			avcdecAddIntra0(&recon);
+		}
+		avcdecIntra4x4Block1(&recon, *modes++, aboves & 1);
+		if (cbf & 2) {
+			avcdecIdct(&recon, coef);
+			coef += 16;
+			avcdecAddIntra1(&recon);
+		}
+		avcdecIntra4x4Block2(&recon, *modes++, lefts & 1);
+		if (cbf & 4) {
+			avcdecIdct(&recon, coef);
+			coef += 16;
+			avcdecAddIntra2(&recon);
+		}
+		avcdecIntra4x4Block3(&recon, *modes++);
+		if (cbf & 8) {
+			avcdecIdct(&recon, coef);
+			coef += 16;
+			avcdecAddIntra3(&recon);
+		}
+		avcdecStoreIntra(&recon, blockSamples(stripe->luma, block));
+		avcdecIntraNext(&recon, block, edges);
+		cbf >>= 4;
+		lefts >>= 1;
+		aboves >>= 1;
+	}
+	stripe->rowData->coef = coef;
+	avcdecIntraKeep(&recon, stripe->luma, edges);
+}
+
+/* 0x8329e4: an Intra16x16 macroblock's prediction, by Intra16x16PredMode */
+static void intra16Predict(AvcdecStripe *stripe)
+{
+	const AvcdecEdges *edges = stripe->edges;
+	uint32_t neighbours;
+	uint8_t *luma = stripe->luma;
+
+	switch ((stripe->kind >> AVC_MB_INTRA16_MODE_SHIFT) & 3) {
+	case 0:
+		avcdecIntra16Vertical(edges, luma);
+		break;
+	case 1:
+		avcdecIntra16Horizontal(edges->left, luma);
+		break;
+	case 2:
+		neighbours = stripe->filter->intraNeighbours;
+		avcdecIntra16Dc(edges->left, edges, (neighbours & 1) != 0, (neighbours & 2) != 0,
+			luma);
+		break;
+	default:
+		avcdecIntra16Plane(edges->left, edges, edges->aboveLeft, luma);
+		break;
+	}
+}
+
+/* 0x832a5a: the 8x8 block's DC levels */
+static void intra16Dc(AvcdecRecon *recon, uint32_t block)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		recon->blockDc[i] = recon->dc[block][i];
+}
+
+/*
+ * 0x832a7c: and its residual: the DC levels (Intra16x16DCLevel, its 16x16
+ * block's first) and each 4x4 block's AC levels where coded.
+ */
+static void intra16Residual(AvcdecStripe *stripe)
+{
+	const int16_t *coef = stripe->rowData->coef;
+	uint32_t kind = stripe->kind, cbf = stripe->cbf & 0xffff, block;
+	uint32_t keepRight = (kind & AVC_MB_KEEP_RIGHT) != 0;
+	uint32_t keepBottom = (kind & AVC_MB_KEEP_BOTTOM) != 0;
+	AvcdecEdges *edges = stripe->edges;
+	uint8_t *right = edges[1].left, *bottom = edges->above, *samples;
+	AvcdecRecon recon;
+
+	edges[1].aboveLeft = edges->above[15];
+	if ((stripe->cbf >> 24) & 1) {
+		avcdecDcIntra16(&recon, coef, (uint8_t)stripe->qp);
+		coef += 16;
+	} else {
+		if ((kind >> AVC_MB_CBP_SHIFT) & 0xf)
+			coef += 16;
+		memset(recon.dc, 0, sizeof(recon.dc));
+	}
+	residualScale(&recon, (uint8_t)stripe->qp);
+	for (block = 0; block < 4; block++) {
+		samples = blockSamples(stripe->luma, block);
+		intra16Dc(&recon, block);
+		avcdecLoadIntra16(&recon, samples);
+		if (cbf & 1) {
+			avcdecIdctAc(&recon, coef);
+			coef += 16;
+		} else {
+			avcdecIdctDc(&recon);
+		}
+		avcdecAddIntra16Block0(&recon);
+		if (cbf & 2) {
+			avcdecIdctAc(&recon, coef);
+			coef += 16;
+		} else {
+			avcdecIdctDc(&recon);
+		}
+		avcdecAddIntra16Block1(&recon);
+		if (cbf & 4) {
+			avcdecIdctAc(&recon, coef);
+			coef += 16;
+		} else {
+			avcdecIdctDc(&recon);
+		}
+		avcdecAddIntra16Block2(&recon);
+		if (cbf & 8) {
+			avcdecIdctAc(&recon, coef);
+			coef += 16;
+		} else {
+			avcdecIdctDc(&recon);
+		}
+		avcdecAddIntra16Block3(&recon);
+		avcdecStoreIntra16(&recon, samples);
+		if (keepRight && (block & 1))
+			avcdecKeepRightIntra16(&recon, &right);
+		if (keepBottom && (block & 2)) {
+			memcpy(bottom, recon.block[7], 8);
+			bottom += 8;
+		}
+		cbf >>= 4;
+	}
+	stripe->rowData->coef = coef;
+}
+
+/* a 4x4 edge segment pair's bS, as the deblocking reads them (a halfword) */
+static inline uint32_t strengthPair(const uint8_t *strengths)
+{
+	return strengths[0] | strengths[1] << 8;
+}
+
+/* the neighbour's four rows of eight above an edge, and back after it is filtered */
+static inline void deblockAbove(AvcdecDeblock *deblock, const uint8_t *samples)
+{
+	uint32_t row, column;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 8; column++)
+			deblock->p[row][column] = samples[row * 16 + column];
+}
+
+static inline void deblockAboveBack(const AvcdecDeblock *deblock, uint8_t *samples)
+{
+	uint32_t row, column;
+
+	for (row = 1; row < 4; row++)
+		for (column = 0; column < 8; column++)
+			samples[row * 16 + column] = deblock->p[row][column];
+}
+
+/*
+ * 0x832450: half the macroblock (rows 0-7 or 8-15): its vertical edges,
+ * the left macroblock's edge first; then the horizontal edges whose q rows
+ * it holds, the top macroblock's edge in the first half.
+ */
+static void deblockHalf(AvcdecStripe *stripe, uint32_t half)
+{
+	const AvcdecMbFilter *filter = stripe->filter;
+	const uint8_t *vertical = filter->strength.edges[1] + half * 2;
+	const uint8_t *horizontal = filter->strength.edges[0];
+	uint8_t *samples = stripe->luma + half * 128, *above;
+	AvcdecDeblock deblock;
+	uint32_t strengths;
+
+	avcdecDeblockLoad(&deblock, samples);
+	avcdecDeblockTurnLeft(&deblock);
+	avcdecDeblockTurnRight(&deblock);
+	strengths = strengthPair(vertical);
+	if (strengths) {
+		memcpy(deblock.p, stripe->rowData->leftColumns[half], sizeof(deblock.p));
+		if (avcdecDeblockEdge(&deblock, filter->indexA[0], filter->indexB[0], strengths))
+			avcdecDeblockStoreLeft(&deblock, samples - 256 + 12);
+	}
+	strengths = strengthPair(vertical + 4);
+	if (strengths)
+		avcdecDeblockInner(&deblock, filter->indexA[1], filter->indexB[1], strengths);
+	strengths = strengthPair(vertical + 8);
+	if (strengths)
+		avcdecDeblockMiddle(&deblock, filter->indexA[1], filter->indexB[1], strengths);
+	strengths = strengthPair(vertical + 12);
+	if (strengths)
+		avcdecDeblockInnerLast(&deblock, filter->indexA[1], filter->indexB[1], strengths);
+	avcdecDeblockTurnLeft(&deblock);
+	avcdecDeblockTurnRight(&deblock);
+	if (!half) {
+		above = (uint8_t *)stripe->above + 192;
+		strengths = strengthPair(horizontal);
+		if (strengths) {
+			deblockAbove(&deblock, above);
+			avcdecDeblockEdge(&deblock, filter->indexA[2], filter->indexB[2], strengths);
+			deblockAboveBack(&deblock, above);
+		}
+		strengths = strengthPair(horizontal + 2);
+		if (strengths) {
+			deblockAbove(&deblock, above + 8);
+			avcdecDeblockEdgeRight(&deblock, filter->indexA[2], filter->indexB[2],
+				strengths);
+			deblockAboveBack(&deblock, above + 8);
+		}
+		horizontal += 4;
+	} else {
+		above = samples - 64;
+		strengths = strengthPair(horizontal + 8);
+		if (strengths) {
+			deblockAbove(&deblock, above);
+			avcdecDeblockEdge(&deblock, filter->indexA[1], filter->indexB[1], strengths);
+			deblockAboveBack(&deblock, above);
+		}
+		strengths = strengthPair(horizontal + 10);
+		if (strengths) {
+			deblockAbove(&deblock, above + 8);
+			avcdecDeblockEdgeRight(&deblock, filter->indexA[1], filter->indexB[1],
+				strengths);
+			deblockAboveBack(&deblock, above + 8);
+		}
+		horizontal += 12;
+	}
+	strengths = strengthPair(horizontal);
+	if (strengths)
+		avcdecDeblockInner(&deblock, filter->indexA[1], filter->indexB[1], strengths);
+	strengths = strengthPair(horizontal + 2);
+	if (strengths)
+		avcdecDeblockInnerRight(&deblock, filter->indexA[1], filter->indexB[1], strengths);
+	avcdecDeblockStore(&deblock, samples);
+}
+
+/* 0x832610: the macroblock's luma deblocked; its right columns kept for the next */
+static void lumaDeblock(AvcdecStripe *stripe)
+{
+	deblockHalf(stripe, 0);
+	deblockHalf(stripe, 1);
+	avcdecDeblockKeepLeft(stripe);
+}
+
+/* 0x832632: disable_deblocking_filter_idc 1: nothing */
+static void lumaDeblockNone(AvcdecStripe *stripe)
+{
+}
