@@ -20,7 +20,6 @@
 #define TABLES			2	/* the tables alternate */
 #define TABLE_DECODING		1
 #define TABLE_DECODED		4
-#define FIELDS_FRAME		2
 
 #define RUN_ENDED		3
 #define ERROR_RESYNC		8192	/* the parser lost its place: on to a resync marker */
@@ -714,7 +713,7 @@ void m4vdecPictureBegin(const VideoM4vStream *stream, VideoM4vJob *job)
 			table->time = VIDEO_TIME_NONE;
 		else
 			table->time = timeNext(unit, unit->lastTime);
-		fields = unit->tableFields + FIELDS_FRAME;
+		fields = unit->tableFields + VIDEO_FIELDS_FRAME;
 	}
 	table->fieldCount = fields;
 	unit->lastTime = table->time;
@@ -771,7 +770,7 @@ int32_t m4vdecFrameOut(const VideoM4vStream *stream, VideoM4vJob *job, VideoM4vU
 			unit->wrapped = 1;
 		}
 	}
-	fields = unit->frameCount == 0 ? FIELDS_FRAME : unit->frameFields + FIELDS_FRAME;
+	fields = unit->frameCount == 0 ? VIDEO_FIELDS_FRAME : unit->frameFields + VIDEO_FIELDS_FRAME;
 	unit->frameFields = fields;
 	frame->fields = fields;
 	unit->lastPts = frame->pts;

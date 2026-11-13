@@ -348,6 +348,7 @@ typedef int64_t VideoTime __attribute__((aligned(4)));
 
 #define VIDEO_TIME_NONE		(-1LL)
 #define VIDEO_TIME_WRAP		0x3ffffffffLL
+#define VIDEO_FIELDS_FRAME	2
 
 /*
  * The access unit's stream as the parser engine and its jobs see it (128
@@ -375,8 +376,14 @@ typedef struct VideoStream {
 	uint32_t nal;			/* the unit being parsed (a VideoNal, 1216 bytes) */
 	uint32_t pictures;		/* VideoAvcPicture, nal->pictures of them */
 	uint32_t pictureExtras;		/* 16 bytes each */
-	VideoTime option5;		/* the decoder's options, doubled */
-	VideoTime option4;
+	/*
+	 * The access unit's times, -1 none. They come in as the request's
+	 * "dts" and "pts" words, in that order, but the decoder takes the first
+	 * as the PTS: it warns when it is before the second, and it carries the
+	 * second on by a frame when it is missing, as the DTS.
+	 */
+	VideoTime pts;
+	VideoTime dts;
 	uint32_t reserved2[11];
 } VideoStream;
 
@@ -387,25 +394,85 @@ typedef struct VideoAvcPicture {
 	uint32_t frameNum;
 	int32_t frameNumWrap;
 	int32_t picNum;
-	uint32_t state;
+	uint32_t pocPeriod;		/* the IDR pictures and operations 5 before it */
 	int8_t longTermPicNum;
 	int8_t longTermFrameIdx;
-	uint8_t outputState;
+	uint8_t outputState;		/* AVC_OUTPUT_* */
 	uint8_t referenceInfo;		/* 1 short-term, 2 long-term */
-	uint8_t reserved3[3];
+	int8_t picStruct;		/* the picture timing SEI's */
+	uint8_t reserved3;
+	uint8_t idr;
 	uint8_t damaged;		/* a reference it uses was incomplete */
 	uint8_t incomplete;		/* its slices ended before its last macroblock */
 	uint8_t free;			/* the picture may be taken */
 	uint8_t missingReference;	/* a reference it uses was missing */
-	uint8_t reserved4[5];
+	uint8_t frameCropping;
+	uint32_t sps;			/* its sequence's parameter set (1088 bytes) */
 	uint32_t data;			/* its 256 bytes of the stream's picture data */
-	uint8_t reserved5[36];
-	uint32_t user;
-	uint8_t reserved6[44];
+	int8_t topFieldOffset;		/* TopFieldOrderCnt less PicOrderCnt */
+	int8_t bottomFieldOffset;
+	uint16_t width;			/* the luma's width and pitch, in bytes */
+	uint16_t pitch;
+	uint16_t pixelWidth;		/* its macroblocks', in pixels */
+	uint16_t pixelHeight;
+	uint8_t reserved4[2];
+	VideoTime pts;			/* the access unit's, doubled */
+	VideoTime dts;
+	VideoTime time;			/* the DTS, or the last picture's plus a frame */
+	int32_t fieldCount;		/* fields before it, 0 at the stream's first */
+	uint32_t cpbRemovalDelay;	/* its picture timing SEI's, when the stream asks */
+	uint32_t dpbOutputDelay;
+	uint8_t reserved6[36];
 } VideoAvcPicture;
 
 /* a unit of the stream (a NAL unit) found in the ring, read through the unit */
 /* pred_weight_table(): one list's weights and offsets */
+/* a picture's output state */
+#define AVC_OUTPUT_DECODING	1
+#define AVC_OUTPUT_WAITING	2		/* decoded, in output order still to come */
+#define AVC_OUTPUT_GIVEN	4		/* its record given out */
+#define AVC_OUTPUT_RELEASED	8		/* to be freed once it is no reference */
+
+/*
+ * A picture given out (128 bytes): a record of the decoder's data (16 of
+ * them, a ring), the next one's address in it.
+ */
+typedef struct VideoAvcFrame {
+	uint32_t luma;
+	uint32_t chroma;
+	uint16_t width;			/* its macroblocks', in pixels */
+	uint16_t height;
+	uint16_t chromaWidth;
+	uint16_t chromaHeight;
+	uint16_t bufferWidth;		/* the frames' luma width and pitch */
+	uint16_t pitch;
+	int32_t picOrderCnt;
+	uint8_t frameCropping;
+	uint8_t reserved;
+	int8_t picStruct;
+	uint8_t errors;			/* 1 damaged, 2 incomplete */
+	uint8_t idr;
+	uint8_t reserved2[3];
+	int16_t cropTop;		/* the sequence's, when it crops */
+	int16_t cropBottom;
+	int16_t cropLeft;
+	int16_t cropRight;
+	VideoTime dts;			/* the picture's time */
+	VideoTime pts;
+	int32_t fieldCount;
+	uint32_t fields;
+	uint32_t next;			/* the next record */
+	uint32_t number;		/* the pictures given out before it */
+	uint32_t vui;
+	uint32_t sei;			/* the picture's SEI data */
+	uint8_t cropUnitX;		/* 2 and 2, when it crops */
+	uint8_t cropUnitY;
+	int8_t topFieldOffset;
+	int8_t bottomFieldOffset;
+	uint32_t frameRateCode;
+	uint8_t reserved3[40];
+} VideoAvcFrame;
+
 /* a picture's 16 bytes beside it: its frame as a reference */
 typedef struct VideoAvcPictureExtra {
 	uint32_t frameNum;
@@ -467,7 +534,7 @@ typedef struct VideoNal {
 	uint32_t context;		/* the helper's context, command and slice for the run */
 	uint32_t slice;
 	uint32_t command;
-	uint32_t reserved8;
+	uint32_t outputFrame;		/* the record the next output picture gets */
 	uint8_t type;
 	uint8_t refIdc;
 	uint8_t numRefFrames;		/* the sequence's num_ref_frames */
@@ -487,7 +554,7 @@ typedef struct VideoNal {
 	uint32_t maxFrameNum;
 	uint32_t pictureFrameNum;		/* the picture's, for the reference lists */
 	uint32_t pictureMaxFrameNum;
-	uint32_t outputPictures;
+	uint32_t pocPeriod;		/* IDR pictures and operations 5 seen */
 	int32_t prevPicOrderCntMsb;
 	int32_t prevPicOrderCntLsb;
 	int32_t picOrderCnt;
@@ -523,15 +590,16 @@ typedef struct VideoNal {
 	uint8_t reserved5[2];
 	uint32_t decoderData;		/* the engine info's */
 	uint32_t frameCount;
-	uint8_t reorder;
-	uint8_t pictureInfo[2];		/* given to the engine with the job */
-	uint8_t outputReady;
-	uint8_t outputFlag;
+	uint8_t outputSlot;		/* of outputCounts, toggled each picture */
+	uint8_t outputStart;		/* the picture's records in outputRing: given to */
+	int8_t outputCount;		/* the engine with the job */
+	uint8_t outputEnd;		/* where the next record goes */
+	uint8_t outputDone;		/* the first record not yet released */
 	uint8_t reserved16;
 	uint8_t scanned;		/* the slice types were scanned */
 	uint8_t outputPending;
-	uint8_t sliceInfo[2];
-	uint8_t reserved11[16];
+	uint8_t outputCounts[2];	/* the records of the last two pictures */
+	uint8_t outputRing[16];		/* the pictures given out, by record */
 	uint8_t restart;		/* the access unit restarts */
 	int8_t restartPicture;		/* the picture the restarted unit decodes */
 	uint8_t referenceInfo;
@@ -552,14 +620,14 @@ typedef struct VideoNal {
 	uint16_t lumaRowSize;		/* 256 bytes a macroblock */
 	uint16_t motionRowSize;		/* 64 bytes a macroblock */
 	uint16_t nextFirstMacroblock;	/* of the slice after this one */
-	VideoTime option5;		/* the decoder's options, doubled */
-	VideoTime option4;
+	VideoTime firstPts;		/* the decoder's, doubled: the first picture's */
+	VideoTime firstDts;
 	VideoTime lastPts;
-	VideoTime lastDts;
-	uint32_t outputMode;
-	uint32_t outputCount;
+	VideoTime lastTime;		/* the last picture's decode time */
+	uint32_t frameFields;		/* the last record's fields */
+	int32_t fieldCount;		/* the last picture's */
 	int32_t frameDuration;		/* of a frame, in 180 kHz ticks; -1 unknown */
-	uint8_t outputFlush;
+	uint8_t timeWrap;		/* toggled when the decode time wraps */
 	uint8_t reserved18[415];
 	uint8_t sliceQp;			/* pic_init_qp plus slice_qp_delta */
 	uint8_t reserved20[27];
@@ -1228,7 +1296,16 @@ typedef struct VideoAvcDecodeCommand {
 	uint8_t widthInMacroblocks;
 	uint8_t heightInMacroblocks;
 	uint8_t mode;			/* 6 below 40 macroblocks across, else 8 */
-	uint8_t reserved[31];
+	int8_t picture;			/* the picture decoded, and its frame */
+	uint8_t reserved[2];
+	uint32_t address;
+	uint16_t width;
+	uint16_t pitch;
+	uint32_t frameSize;
+	uint32_t lumaSize;
+	uint32_t chromaSize;
+	uint32_t decoderData;
+	int32_t picOrderCnt;
 	uint8_t type;			/* the NAL's */
 	uint8_t refIdc;
 	uint8_t reserved2[10];

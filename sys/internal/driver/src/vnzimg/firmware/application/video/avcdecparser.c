@@ -157,13 +157,13 @@ static AvcdecParser *parserBegin(uint32_t memory)
 	nal->lastPictureCount = 0;
 	nal->pictureCount = 0;
 	nal->lastPts = 0;
-	nal->lastDts = 0;
-	nal->outputFlush = 0;
+	nal->lastTime = 0;
+	nal->timeWrap = 0;
 	nal->frameDuration = -1;
-	nal->outputCount = 0;
-	nal->outputMode = 2;
-	nal->option5 = info->option5;
-	nal->option4 = info->option4;
+	nal->fieldCount = 0;
+	nal->frameFields = 2;
+	nal->firstPts = info->option5;
+	nal->firstDts = info->option4;
 	nal->idrPending = 0;
 	parser->info = (AvcdecParserInfo *)vnzPublicOpenRaw((uint32_t)info, PARSER_INFO_SIZE);
 	parser->state = PARSER_IDLE;
@@ -224,8 +224,8 @@ void avcdecParserAu(uint32_t memory, uint32_t requestAddress)
 		context->fieldDecode = (request->contextFlags & VIDEO_ENGINE_CONTEXT_FIELD) != 0;
 		context->contextSet = 1;
 		context->contextOption = (request->contextFlags & VIDEO_ENGINE_CONTEXT_OPTION) != 0;
-		stream->option5 = timeOf(request->dts);
-		stream->option4 = timeOf(request->pts);
+		stream->pts = timeOf(request->dts);
+		stream->dts = timeOf(request->pts);
 		stream->option = request->option;
 		request->status = 0;
 		vnzPublicClosePrivate((uint32_t)request, REQUEST_SIZE);
@@ -296,8 +296,8 @@ void avcdecParserAu(uint32_t memory, uint32_t requestAddress)
 	request->stream = parser->stream;
 	request->contextFlags = 0;
 	request->job = parser->job;
-	stream->option5 = timeOf(request->dts);
-	stream->option4 = timeOf(request->pts);
+	stream->pts = timeOf(request->dts);
+	stream->dts = timeOf(request->pts);
 	stream->option = request->option;
 	if (info->fieldDecode)
 		request->contextFlags |= VIDEO_ENGINE_CONTEXT_FIELD;
@@ -377,8 +377,8 @@ static void parsedSet(AvcdecParser *parser)
 
 	parser->parsed.valid = 1;
 	parser->parsed.flush = parser->flush;
-	parser->parsed.pictureInfo[0] = nal->pictureInfo[1];
-	parser->parsed.pictureInfo[1] = nal->pictureInfo[0];
+	parser->parsed.pictureInfo[0] = nal->outputCount;
+	parser->parsed.pictureInfo[1] = nal->outputStart;
 	vnzPublicCloseProtected((uint32_t)nal, PARSER_NAL_SIZE);
 }
 
@@ -418,13 +418,13 @@ static void picturesPrepare(AvcdecParser *parser, AvcdecParserInfo *info)
 	nal->pictures = count;
 	nal->decoderData = info->decoderData;
 	nal->frameCount = 0;
-	nal->outputPictures = 0;
-	nal->outputReady = 0;
-	nal->outputFlag = 0;
-	nal->reorder = 0;
-	nal->pictureInfo[1] = 0;
-	nal->sliceInfo[0] = 0;
-	nal->sliceInfo[1] = 0;
+	nal->pocPeriod = 0;
+	nal->outputEnd = 0;
+	nal->outputDone = 0;
+	nal->outputSlot = 0;
+	nal->outputCount = 0;
+	nal->outputCounts[0] = 0;
+	nal->outputCounts[1] = 0;
 	pictures = (VideoAvcPicture *)vnzPublicOpenPrivate(info->pictures, count * PICTURE_SIZE);
 	extra = (uint8_t *)info->pictureExtras;
 	data = info->pictureData;
@@ -436,9 +436,9 @@ static void picturesPrepare(AvcdecParser *parser, AvcdecParserInfo *info)
 		pictures[i].referenceInfo = 0;
 		pictures[i].free = 1;
 		pictures[i].outputState = 0;
-		pictures[i].state = 0;
+		pictures[i].pocPeriod = 0;
 		extra[i * PICTURE_EXTRA_SIZE + 8] = 0;
-		pictures[i].user = 0;
+		pictures[i].fieldCount = 0;
 	}
 	vnzPublicClosePrivate((uint32_t)pictures, count * PICTURE_SIZE);
 	vnzPublicClosePrivate((uint32_t)nal, PARSER_NAL_SIZE);
@@ -792,7 +792,7 @@ void avcdecParserJobFlush(uint32_t infoAddress, uint32_t streamAddress, uint32_t
 	pictures = (VideoAvcPicture *)vnzPublicOpenPrivate(info->pictures,
 		nal->pictures * PICTURE_SIZE);
 	if (nal->pictures == 1) {
-		nal->pictureInfo[1] = 0;
+		nal->outputCount = 0;
 	} else {
 		job->parser.nal = nal;
 		job->pictures = pictures;
@@ -2285,14 +2285,14 @@ void avcdecSliceRun(const VideoStream *stream, VideoSliceJob *job)
 		picture->free = 0;
 		picture->incomplete = 0;
 		picture->damaged = 0;
-		picture->outputState = 2;
+		picture->outputState = AVC_OUTPUT_WAITING;
 		picture->picOrderCnt = nal->picOrderCnt;
 		if (!nal->restart) {
 			nal->restartPicture = nal->picture;
 			if (nal->scanned)
 				nal->outputTime = nal->picOrderCnt;
 			else if (nal->picOrderCnt < nal->outputTime)
-				picture->outputState = 4;
+				picture->outputState = AVC_OUTPUT_GIVEN;
 			else
 				nal->outputTime = 0x80000000;
 		} else {
@@ -2301,7 +2301,7 @@ void avcdecSliceRun(const VideoStream *stream, VideoSliceJob *job)
 			previous->referenceInfo = nal->referenceInfo;
 			picture->referenceInfo = 0;
 			if (nal->picOrderCnt < nal->outputTime)
-				picture->outputState = 4;
+				picture->outputState = AVC_OUTPUT_GIVEN;
 		}
 	}
 	slice = (VideoHelperSlice *)vnzPublicOpenPrivate(nal->slice, VIDEO_HELPER_SLICE_SIZE);
@@ -2314,7 +2314,7 @@ void avcdecSliceRun(const VideoStream *stream, VideoSliceJob *job)
 		if (missing) {
 			if (nal->gapsInFrameNumAllowed != 1) {
 				slice->missingReference = 1;
-				picture->outputState = 4;
+				picture->outputState = AVC_OUTPUT_GIVEN;
 				goto close;
 			}
 			missing = 0;
@@ -2333,8 +2333,9 @@ close:
 	vnzPublicClosePrivate((uint32_t)slice, VIDEO_HELPER_SLICE_SIZE);
 }
 
-static void pictureFinish(VideoSliceJob *job);
-static void pictureMark(VideoSliceJob *job);
+
+void avcdecPictureFinish(VideoSliceJob *job);
+void avcdecPictureMark(VideoSliceJob *job);
 
 /* a picture not decoded: its references kept as if it was */
 void avcdecPictureSkip(const VideoStream *stream, VideoSliceJob *job)
@@ -2363,14 +2364,390 @@ void avcdecPictureSkip(const VideoStream *stream, VideoSliceJob *job)
 	picture->missingReference = 1;
 	error = videoSetJump(job->jump);
 	if (!error) {
-		pictureFinish(job);
+		avcdecPictureFinish(job);
 		if (nal->refIdc)
-			pictureMark(job);
+			avcdecPictureMark(job);
 	} else {
 		nal->error = error;
 	}
 	vnzPublicCloseProtected(sps, PARAMETER_SET_SIZE);
 	vnzPublicClosePrivate(extras, size);
+}
+
+/*
+ * The picture about to be decoded: the unit's command gets its frame, the
+ * picture its sizes, order counts and times. The first picture takes the
+ * decoder's first times where the unit has none; a later one without a DTS
+ * is a frame after the last.
+ */
+static void picturePrepare(const VideoStream *stream, VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoAvcPicture *picture;
+	VideoAvcDecodeCommand *command;
+	VideoAvcSei *sei;
+	uint32_t seiAddress = stream->pictureData + nal->picture * PICTURE_DATA_SIZE;
+	uint32_t chromaSize, lumaSize, pitch, width;
+	VideoTime time;
+	int32_t fields;
+
+	if (nal->type == 5)
+		nal->pocPeriod++;
+	chromaSize = nal->chromaSize;
+	pitch = nal->pitch;
+	lumaSize = nal->lumaSize;
+	width = nal->width;
+	picture = job->picture;
+	command = (VideoAvcDecodeCommand *)vnzPublicOpenPrivate(nal->command,
+		sizeof(VideoAvcDecodeCommand));
+	sei = (VideoAvcSei *)vnzPublicOpenPrivate(seiAddress, PICTURE_DATA_SIZE);
+	command->picture = nal->picture;
+	command->width = width;
+	command->pitch = pitch;
+	command->frameSize = nal->frameSize;
+	command->lumaSize = lumaSize;
+	command->chromaSize = chromaSize;
+	command->address = picture->address;
+	command->decoderData = nal->decoderData;
+	command->picOrderCnt = nal->picOrderCnt;
+	vnzPublicClosePrivate((uint32_t)command, sizeof(VideoAvcDecodeCommand));
+
+	picture->outputState = AVC_OUTPUT_DECODING;
+	picture->pocPeriod = nal->pocPeriod;
+	picture->pixelWidth = nal->widthInMacroblocks << 4;
+	picture->width = width;
+	picture->pixelHeight = nal->heightInMacroblocks << 4;
+	picture->pitch = pitch;
+	picture->frameCropping = nal->frameCropping;
+	picture->sps = stream->parameterSets + nal->parameterSet * PARAMETER_SET_SIZE;
+	picture->data = stream->pictureData + nal->picture * PICTURE_DATA_SIZE;
+	picture->picStruct = nal->picStruct;
+	picture->picOrderCnt = nal->picOrderCnt;
+	picture->topFieldOffset = nal->topFieldOrderCnt - nal->picOrderCnt;
+	picture->bottomFieldOffset = nal->bottomFieldOrderCnt - nal->picOrderCnt;
+	picture->frameNum = nal->frameNum;
+	picture->picNum = nal->pictureFrameNum;
+	picture->idr = nal->idr;
+	picture->missingReference = 0;
+	picture->free = 0;
+	picture->incomplete = 0;
+	picture->damaged = 0;
+	if (stream->pts < stream->dts)
+		videoParserError(0, &job->parser, 7, 0x2026);
+
+	if (nal->picOrderCnt == 0 && nal->pictureCount == 0) {
+		if (nal->firstPts < 0 || nal->firstDts < 0) {
+			nal->firstPts = 0;
+			nal->firstDts = 0;
+			videoParserError(0, &job->parser, 7, 0x2025);
+		}
+		if (stream->dts == VIDEO_TIME_NONE || stream->pts == VIDEO_TIME_NONE) {
+			picture->dts = nal->firstDts;
+			picture->pts = stream->pts << 1;
+			if (nal->frameDuration == -1)
+				picture->time = VIDEO_TIME_NONE;
+			else
+				picture->time = picture->dts;
+		} else {
+			picture->dts = stream->dts << 1;
+			picture->pts = stream->pts << 1;
+			picture->time = picture->dts;
+		}
+		fields = 0;
+	} else {
+		picture->dts = stream->dts << 1;
+		picture->pts = stream->pts << 1;
+		if (stream->dts != VIDEO_TIME_NONE) {
+			picture->time = picture->dts;
+		} else if (nal->frameDuration == -1) {
+			picture->time = VIDEO_TIME_NONE;
+		} else {
+			time = nal->lastTime + nal->frameDuration;
+			picture->time = time;
+			if (time >= VIDEO_TIME_WRAP) {
+				picture->time -= VIDEO_TIME_WRAP;
+				nal->timeWrap = 1 - nal->timeWrap;
+			}
+		}
+		fields = nal->fieldCount + VIDEO_FIELDS_FRAME;
+	}
+	picture->fieldCount = fields;
+	if (stream->option) {
+		picture->cpbRemovalDelay = sei->cpbRemovalDelay;
+		picture->dpbOutputDelay = sei->dpbOutputDelay;
+	} else {
+		picture->cpbRemovalDelay = -1;
+		picture->dpbOutputDelay = -1;
+	}
+	nal->lastTime = picture->time;
+	nal->fieldCount = picture->fieldCount;
+	vnzPublicClosePrivate((uint32_t)sei, PICTURE_DATA_SIZE);
+}
+
+static void frameOut(const VideoStream *stream, VideoSliceJob *job, VideoNal *nal, int32_t index);
+
+/*
+ * The next picture in output order: of those waiting, the smallest
+ * PicOrderCnt in the oldest POC period (the period count may have wrapped).
+ * Its record is written and it goes into the ring; returns it, or -1.
+ */
+static int32_t outputNext(const VideoStream *stream, VideoSliceJob *job, VideoNal *nal)
+{
+	VideoAvcPicture *pictures = job->pictures;
+	int32_t count = nal->pictures, index = -1, min, i;
+	uint32_t first = 0xffffffff, last = 0;
+
+	for (i = 0; i < count; i++) {
+		if (pictures[i].outputState != AVC_OUTPUT_WAITING)
+			continue;
+		if (pictures[i].pocPeriod < first)
+			first = pictures[i].pocPeriod;
+		if (last < pictures[i].pocPeriod)
+			last = pictures[i].pocPeriod;
+	}
+	if (first < 18 && !(last < 0xffffffee)) {
+		first = 0xffffffff;
+		for (i = 0; i < count; i++)
+			if (pictures[i].outputState == AVC_OUTPUT_WAITING &&
+			    pictures[i].pocPeriod < first && !(pictures[i].pocPeriod < 0xffffffee))
+				first = pictures[i].pocPeriod;
+	}
+	min = 0x7fffffff;
+	for (i = 0; i < count; i++)
+		if (pictures[i].outputState == AVC_OUTPUT_WAITING && pictures[i].pocPeriod == first &&
+		    pictures[i].picOrderCnt < min) {
+			min = pictures[i].picOrderCnt;
+			index = i;
+		}
+	if (index == -1)
+		return index;
+	frameOut(stream, job, nal, index);
+	nal->frameCount++;
+	nal->outputCount++;
+	nal->outputRing[nal->outputEnd] = index;
+	nal->outputEnd = (nal->outputEnd + 1) % 16;
+	pictures[index].outputState = AVC_OUTPUT_GIVEN;
+	return index;
+}
+
+static void outputAtOnce(const VideoStream *stream, VideoSliceJob *job, uint32_t flush);
+static void outputInOrder(const VideoStream *stream, VideoSliceJob *job, uint32_t flush);
+
+/* the pictures given out after one is decoded (all that wait, to flush) */
+void avcdecPictureOutput(const VideoStream *stream, VideoSliceJob *job, uint32_t flush)
+{
+	if (stream->option == 1 || stream->option == 2)
+		outputAtOnce(stream, job, flush);
+	else
+		outputInOrder(stream, job, flush);
+}
+
+static void outputRelease(VideoSliceJob *job);
+
+/* the stream's options 1 and 2: the picture given out as soon as it is decoded */
+static void outputAtOnce(const VideoStream *stream, VideoSliceJob *job, uint32_t flush)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoAvcPicture *pictures = job->pictures, *picture;
+	int32_t records = 1, index, i;
+
+	nal->outputCount = 0;
+	nal->outputStart = nal->outputEnd;
+	picture = &pictures[nal->picture];
+	nal->outputFrame = nal->decoderData + nal->outputEnd * sizeof(VideoAvcFrame);
+	if (flush || nal->scanned) {
+		for (i = 0; i < 8; i++) {
+			index = outputNext(stream, job, nal);
+			if (index < 0)
+				break;
+			if (flush)
+				pictures[index].free = 1;
+			records++;
+		}
+		nal->outputPending = 0;
+	} else {
+		index = -1;
+		if (picture->outputState == AVC_OUTPUT_GIVEN)
+			picture->outputState = AVC_OUTPUT_RELEASED;
+		if (stream->option == 1 && !(nal->fieldCount < 2))
+			index = outputNext(stream, job, nal);
+		if (stream->option == 2)
+			index = outputNext(stream, job, nal);
+	}
+	nal->outputCounts[nal->outputSlot] = records;
+	nal->outputSlot = (nal->outputSlot + 1) & 1;
+	if (picture->missingReference && !nal->gapsInFrameNumAllowed)
+		picture->outputState = AVC_OUTPUT_RELEASED;
+	if (index >= 0)
+		outputRelease(job);
+}
+
+/*
+ * Output order: a picture goes once num_reorder_frames are waiting, or, for
+ * a stream that reorders as far as it keeps references, once the pictures
+ * held (references and waiting) pass the frames it keeps.
+ */
+static void outputInOrder(const VideoStream *stream, VideoSliceJob *job, uint32_t flush)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoAvcPicture *pictures = job->pictures, *picture;
+	uint32_t limit = nal->numOfRefFrames, reorder = nal->numReorderFrames;
+	int32_t count = nal->pictures, records = 0, held, index, i;
+
+	nal->outputStart = nal->outputEnd;
+	nal->outputCount = 0;
+	picture = &pictures[nal->picture];
+	nal->outputFrame = nal->decoderData + nal->outputEnd * sizeof(VideoAvcFrame);
+	if (flush || nal->scanned) {
+		for (i = 0; i < 8; i++) {
+			index = outputNext(stream, job, nal);
+			if (index < 0)
+				break;
+			if (flush)
+				pictures[index].free = 1;
+			records++;
+		}
+		nal->outputPending = 0;
+	} else {
+		if (picture->outputState == AVC_OUTPUT_GIVEN)
+			picture->outputState = AVC_OUTPUT_RELEASED;
+		held = 0;
+		for (i = 0; i < count; i++)
+			if (pictures[i].referenceInfo || pictures[i].outputState == AVC_OUTPUT_WAITING)
+				held++;
+		if (reorder < limit) {
+			if (!(nal->outputPending < reorder)) {
+				if (outputNext(stream, job, nal) >= 0)
+					records = 1;
+			} else if (picture->outputState != AVC_OUTPUT_RELEASED) {
+				nal->outputPending++;
+			}
+		} else {
+			if (nal->type == 5)
+				limit = nal->pictures < 5 ? 1 : 4;
+			while ((int32_t)limit < held) {
+				index = outputNext(stream, job, nal);
+				if (index < 0)
+					break;
+				if (++records >= 15)
+					break;
+				if (!pictures[index].referenceInfo)
+					held--;
+			}
+		}
+	}
+	nal->outputCounts[nal->outputSlot] = records;
+	nal->outputSlot = (nal->outputSlot + 1) & 1;
+	if (picture->missingReference && !nal->gapsInFrameNumAllowed)
+		picture->outputState = AVC_OUTPUT_RELEASED;
+	outputRelease(job);
+}
+
+/* the pictures released and no longer references: free again */
+static void picturesFree(VideoSliceJob *job, const VideoNal *nal)
+{
+	VideoAvcPicture *picture = job->pictures;
+	int32_t count = nal->pictures, i;
+
+	for (i = 0; i < count; i++, picture++) {
+		if (picture->referenceInfo || picture->outputState != AVC_OUTPUT_RELEASED)
+			continue;
+		picture->pocPeriod = 0;
+		picture->outputState = 0;
+		picture->free = 1;
+	}
+}
+
+/* the records of the picture two back are done with: their pictures released */
+static void outputRelease(VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoAvcPicture *pictures = job->pictures;
+	uint8_t *slot = &nal->outputCounts[nal->outputSlot];
+	int32_t records = *slot;
+
+	if (records >= 1)
+		*slot = 0;
+	while (records-- >= 1) {
+		pictures[nal->outputRing[nal->outputDone]].outputState = AVC_OUTPUT_RELEASED;
+		nal->outputDone = (nal->outputDone + 1) % 16;
+	}
+	picturesFree(job, nal);
+}
+
+/* the picture's record: its frame, sizes, cropping and times */
+static void frameOut(const VideoStream *stream, VideoSliceJob *job, VideoNal *nal, int32_t index)
+{
+	const VideoAvcPicture *picture;
+	const VideoAvcSps *sps;
+	uint32_t lumaSize = nal->lumaSize, fields;
+	VideoAvcFrame *frame;
+	VideoTime pts, base;
+
+	if (index < 0)
+		return;
+	frame = (VideoAvcFrame *)vnzPublicOpenPrivate(nal->decoderData +
+		nal->outputEnd * sizeof(VideoAvcFrame), sizeof(VideoAvcFrame));
+	vnzCacheInvalidateInside((uint32_t)frame, sizeof(VideoAvcFrame));
+	picture = &job->pictures[index];
+	frame->next = nal->decoderData + (nal->outputEnd + 1) % 16 * sizeof(VideoAvcFrame);
+	sps = (const VideoAvcSps *)picture->sps;
+	frame->frameRateCode = sps->frameRateCode;
+	frame->vui = sps->vui;
+	frame->sei = picture->data;
+	frame->picOrderCnt = picture->picOrderCnt;
+	frame->luma = picture->address;
+	frame->chroma = picture->address + lumaSize;
+	frame->width = picture->pixelWidth;
+	frame->height = picture->pixelHeight;
+	frame->chromaWidth = frame->width / 2;
+	frame->chromaHeight = frame->height / 2;
+	frame->bufferWidth = picture->width;
+	frame->pitch = picture->pitch;
+	frame->number = nal->frameCount;
+	if (picture->frameCropping) {
+		frame->frameCropping = 1;
+		frame->cropUnitY = 2;
+		frame->cropUnitX = 2;
+		frame->cropLeft = sps->cropLeft;
+		frame->cropRight = sps->cropRight;
+		frame->cropTop = sps->cropTop;
+		frame->cropBottom = sps->cropBottom;
+	} else {
+		frame->frameCropping = 0;
+	}
+	frame->errors = 0;
+	if (picture->damaged)
+		frame->errors |= 1;
+	if (picture->incomplete)
+		frame->errors |= 2;
+	frame->picStruct = picture->picStruct;
+	frame->idr = picture->idr;
+	frame->topFieldOffset = picture->topFieldOffset;
+	frame->bottomFieldOffset = picture->bottomFieldOffset;
+
+	/* the PTS given, or one a frame on from the last (the decoder's first for the first) */
+	pts = picture->pts >> 1;
+	base = nal->frameCount == 0 ? nal->firstPts : nal->lastPts;
+	if (pts != VIDEO_TIME_NONE) {
+		frame->pts = picture->pts;
+	} else if (nal->frameDuration == -1) {
+		frame->pts = VIDEO_TIME_NONE;
+	} else {
+		frame->pts = base + nal->frameDuration;
+		if (frame->pts > VIDEO_TIME_WRAP) {
+			frame->pts -= VIDEO_TIME_WRAP;
+			nal->timeWrap = 1;
+		}
+	}
+	fields = nal->frameCount == 0 ? VIDEO_FIELDS_FRAME : nal->frameFields + VIDEO_FIELDS_FRAME;
+	nal->frameFields = fields;
+	frame->fields = fields;
+	nal->lastPts = frame->pts;
+	frame->pts >>= 1;
+	frame->dts = picture->time >> 1;
+	frame->fieldCount = picture->fieldCount;
+	vnzPublicClosePrivate((uint32_t)frame, sizeof(VideoAvcFrame));
 }
 
 /* 8.2.1: the picture's order counts, by the sequence's type */
@@ -2857,4 +3234,273 @@ static void directTemporal(VideoSliceJob *job)
 		if (index >= 0)
 			slice->refIdxOfPicture[index] = i;
 	}
+}
+
+static void slidingWindow(VideoSliceJob *job, VideoNal *nal, uint32_t current);
+static void adaptiveMarking(VideoSliceJob *job, VideoNal *nal);
+static void unmarkReference(VideoSliceJob *job, const VideoNal *nal, int32_t index);
+
+/* 8.2.5.1: the decoded picture marked as a reference */
+void avcdecPictureMark(VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoAvcPicture *picture = job->picture;
+
+	if (nal->type == 5) {
+		unmarkReference(job, nal, -1);
+		picture->referenceInfo = (nal->longTermReference != 0) + 1;
+	} else if (!nal->adaptiveRefPicMarking) {
+		slidingWindow(job, nal, 1);
+	} else {
+		adaptiveMarking(job, nal);
+	}
+}
+
+/* 8.2.5.2: the frames a gap in frame_num skips, as short-term references */
+void avcdecPictureFinish(VideoSliceJob *job)
+{
+	VideoNal *nal = job->parser.nal;
+	VideoAvcPictureExtra *extras = (VideoAvcPictureExtra *)job->pictureExtras, *extra;
+	int32_t count = nal->pictures, i;
+	uint32_t prev = nal->prevFrameNum, frameNum = nal->frameNum, mask, unused;
+
+	nal->prevFrameNum = frameNum;
+	if (nal->type == 5 || !nal->refIdc)
+		return;
+	mask = nal->maxFrameNum - 1;
+	unused = (prev + 1) & mask;
+	if (!nal->gapsInFrameNumAllowed || frameNum == prev || frameNum == unused)
+		return;
+	do {
+		for (i = 0, extra = extras; i < count; i++, extra++)
+			if (!extra->reference)
+				break;
+		if (i < count) {
+			extra->reference = 1;
+			extra->frameNum = unused;
+		} else {
+			videoParserError(0, &job->parser, 0, 0x2021);
+		}
+		frameNumWrap(job);
+		slidingWindow(job, nal, 0);
+		unused = (unused + 1) & mask;
+	} while (frameNum != unused);
+}
+
+/*
+ * 8.2.5.3: the sliding window. The short-term reference with the smallest
+ * FrameNumWrap goes once the references fill num_ref_frames (one more for a
+ * gap's frame, which is not yet counted); the current picture is then marked.
+ */
+static void slidingWindow(VideoSliceJob *job, VideoNal *nal, uint32_t current)
+{
+	VideoAvcPicture *pictures = job->pictures;
+	VideoAvcPictureExtra *extras = (VideoAvcPictureExtra *)job->pictureExtras;
+	int32_t count = nal->pictures, shortTerm = 0, longTerm = 0, limit, min, index, i;
+	uint32_t extra = 1;
+
+	for (i = 0; i < count; i++) {
+		if (pictures[i].referenceInfo == 1)
+			shortTerm++;
+		else if (pictures[i].referenceInfo == 2)
+			longTerm++;
+	}
+	for (i = 0; i < count; i++)
+		if (extras[i].reference == 1)
+			shortTerm++;
+	limit = nal->numOfRefFrames < nal->numRefFrames ? nal->numOfRefFrames : nal->numRefFrames;
+	if (!current)
+		limit++;
+	if (limit < 1)
+		limit = 1;
+	if (shortTerm + longTerm >= limit && shortTerm >= 1) {
+		min = 0xffff;
+		index = -1;
+		for (i = 0; i < count; i++)
+			if (extras[i].reference == 1 && extras[i].frameNumWrap < min) {
+				index = i;
+				min = extras[i].frameNumWrap;
+			}
+		for (i = 0; i < count; i++)
+			if (pictures[i].referenceInfo == 1 && pictures[i].frameNumWrap < min) {
+				extra = 0;
+				index = i;
+				min = pictures[i].frameNumWrap;
+			}
+		if (index >= 0) {
+			if (extra) {
+				extras[index].reference = 0;
+			} else {
+				pictures[index].referenceInfo = 0;
+				unmarkReference(job, nal, index);
+			}
+		}
+	}
+	if (current)
+		job->picture->referenceInfo = 1;
+}
+
+static void mmcoShortTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_t difference);
+static void mmcoLongTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermPicNum);
+static void mmcoLongTermIdxFree(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermFrameIdx);
+static void mmcoShortTermToLongTerm(VideoSliceJob *job, const VideoNal *nal, uint32_t difference,
+	uint32_t longTermFrameIdx);
+static void mmcoMaxLongTermIdx(VideoSliceJob *job, const VideoNal *nal, uint32_t maxPlus1);
+static void mmcoAllUnused(VideoSliceJob *job, VideoNal *nal);
+static void mmcoCurrentLongTerm(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermFrameIdx);
+
+/* 8.2.5.4: the slice's memory_management_control_operations, in order */
+static void adaptiveMarking(VideoSliceJob *job, VideoNal *nal)
+{
+	const uint8_t *operation = nal->mmcoOperation;
+	const uint16_t *argument = nal->mmcoArgument;
+	VideoAvcPicture *picture = job->picture;
+	uint32_t difference;
+
+	for (;;) {
+		switch (*operation++) {
+		case 1:
+			mmcoShortTermUnused(job, nal, *argument++);
+			break;
+		case 2:
+			mmcoLongTermUnused(job, nal, *argument++);
+			break;
+		case 3:
+			difference = argument[0];
+			mmcoLongTermIdxFree(job, nal, argument[1]);
+			mmcoShortTermToLongTerm(job, nal, difference, argument[1]);
+			argument += 2;
+			break;
+		case 4:
+			mmcoMaxLongTermIdx(job, nal, *argument++);
+			break;
+		case 5:
+			mmcoAllUnused(job, nal);
+			break;
+		case 6:
+			mmcoCurrentLongTerm(job, nal, *argument++);
+			break;
+		default:
+			if (picture->referenceInfo != 2)
+				picture->referenceInfo = 1;
+			return;
+		}
+	}
+}
+
+/* a picture (all of them for -1) no longer a reference */
+static void unmarkReference(VideoSliceJob *job, const VideoNal *nal, int32_t index)
+{
+	VideoAvcPicture *picture = job->pictures;
+	int32_t count, i;
+
+	if (index >= 0) {
+		picture[index].referenceInfo = 0;
+		picture[index].longTermFrameIdx = 0;
+		return;
+	}
+	count = nal->pictures;
+	for (i = 0; i < count; i++, picture++) {
+		picture->referenceInfo = 0;
+		picture->longTermFrameIdx = 0;
+	}
+}
+
+/* operation 1: a short-term picture (or a gap's frame) unused */
+static void mmcoShortTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_t difference)
+{
+	const VideoAvcPicture *picture = job->pictures;
+	VideoAvcPictureExtra *extra = (VideoAvcPictureExtra *)job->pictureExtras;
+	int32_t picNum = nal->pictureFrameNum - difference - 1, count = nal->pictures, i;
+
+	for (i = 0; i < count; i++, picture++)
+		if (picture->picNum == picNum && picture->referenceInfo == 1) {
+			unmarkReference(job, nal, i);
+			return;
+		}
+	for (i = 0; i < count; i++, extra++)
+		if (extra->frameNumWrap == picNum && extra->reference == 1) {
+			extra->reference = 0;
+			return;
+		}
+	videoParserError(0, &job->parser, 0, 0x2021);
+}
+
+/* operation 2: a long-term picture unused */
+static void mmcoLongTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermPicNum)
+{
+	const VideoAvcPicture *picture = job->pictures;
+	int32_t count = nal->pictures, i;
+
+	for (i = 0; i < count; i++, picture++)
+		if (picture->longTermPicNum == (int32_t)longTermPicNum && picture->referenceInfo == 2) {
+			unmarkReference(job, nal, i);
+			return;
+		}
+	videoParserError(0, &job->parser, 0, 0x2021);
+}
+
+/* operation 3's first part: the long-term picture holding the index goes */
+static void mmcoLongTermIdxFree(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermFrameIdx)
+{
+	const VideoAvcPicture *picture = job->pictures;
+	int32_t count = nal->pictures, i;
+
+	for (i = 0; i < count; i++, picture++)
+		if (picture->longTermFrameIdx == (int32_t)longTermFrameIdx && picture->referenceInfo == 2) {
+			unmarkReference(job, nal, i);
+			return;
+		}
+}
+
+/* operation 3: a short-term picture made long-term */
+static void mmcoShortTermToLongTerm(VideoSliceJob *job, const VideoNal *nal, uint32_t difference,
+	uint32_t longTermFrameIdx)
+{
+	VideoAvcPicture *picture = job->pictures;
+	int32_t picNum = nal->pictureFrameNum - difference - 1, count = nal->pictures, i;
+
+	for (i = 0; i < count; i++, picture++)
+		if (picture->picNum == picNum && picture->referenceInfo == 1) {
+			picture->longTermFrameIdx = longTermFrameIdx;
+			picture->referenceInfo = 2;
+			return;
+		}
+	videoParserError(0, &job->parser, 0, 0x2021);
+}
+
+/* operation 4: the long-term pictures above the new maximum index go */
+static void mmcoMaxLongTermIdx(VideoSliceJob *job, const VideoNal *nal, uint32_t maxPlus1)
+{
+	int32_t max = -1, count = nal->pictures, i;
+
+	if (maxPlus1)
+		max = maxPlus1 - 1;
+	for (i = 0; i < count; i++)
+		if (max < job->pictures[i].longTermFrameIdx && job->pictures[i].referenceInfo == 2)
+			unmarkReference(job, nal, i);
+}
+
+/* operation 5: every reference goes, and the picture's frame_num becomes 0 */
+static void mmcoAllUnused(VideoSliceJob *job, VideoNal *nal)
+{
+	VideoAvcPictureExtra *extra = (VideoAvcPictureExtra *)job->pictureExtras;
+	VideoAvcPicture *picture = job->picture;
+	int32_t count = nal->pictures, i;
+
+	unmarkReference(job, nal, -1);
+	picture->frameNum = 0;
+	nal->prevFrameNum = 0;
+	for (i = 0; i < count; i++, extra++)
+		extra->reference = 0;
+	nal->pocPeriod++;
+}
+
+/* operation 6: the current picture long-term */
+static void mmcoCurrentLongTerm(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermFrameIdx)
+{
+	VideoAvcPicture *picture = job->picture;
+
+	picture->longTermFrameIdx = longTermFrameIdx;
+	picture->referenceInfo = 2;
 }

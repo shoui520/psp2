@@ -510,8 +510,8 @@ void avcdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 		if (nal->refIdc)
 			nal->referenceInfo = job->picture->referenceInfo;
 		avcdecPictureOutput(stream, job, 0);
-		run->pictureInfo[0] = nal->pictureInfo[1];
-		run->pictureInfo[1] = nal->pictureInfo[0];
+		run->pictureInfo[0] = nal->outputCount;
+		run->pictureInfo[1] = nal->outputStart;
 		nal->lastPictureCount = nal->pictureCount;
 		nal->pictureCount++;
 	}
