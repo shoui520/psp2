@@ -1,7 +1,7 @@
 /*
- * PU1: the picture output (output.h). PU0 carries the same code, unused.
+ * The picture output (output.h): PU1 runs it, PU0 carries the same code unused.
  */
-#include "../common/debug.h"
+#include "debug.h"
 #include "output.h"
 
 #define CLOCK_SEMAPHORE_TRIES	10
@@ -423,6 +423,20 @@ static int checkCadence(VipOutputState *state, uint32_t mode, uint32_t field,
 		state->topFieldFirst = topFieldFirst;
 	}
 	return 0;
+}
+
+/* checkCadence for a picture's own flags and the displayed field; uncalled */
+VIP_UNCALLED static int checkPictureCadence(VipOutputState *state, uint32_t unused,
+	uint32_t mode, VipFrameHandle *frame)
+{
+	uint32_t field = vipReadControlBus(VIP_CB_DISPLAY_FIELD);
+	uint8_t rate, topFieldFirst, repeat;
+
+	(void)unused;
+	getFrameRate(frame, &rate);
+	getFrameTopFieldFirst(frame, &topFieldFirst);
+	getFrameRepeatFirstField(frame, &repeat);
+	return checkCadence(state, mode, field, rate, topFieldFirst, repeat);
 }
 
 static uint64_t unpackDrift(void)

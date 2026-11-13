@@ -47,7 +47,7 @@ fw2-parser1 := $(wildcard fw2/parser1/*.c) $(fw2-parser)
 
 # FW2's codec, fw1's PU1 decoder made to serve contexts, and the PU1 code they share
 fw2-codec := $(wildcard fw2/codec/*.c fw2/codec/*.S) \
-	fw1/pu1/memory.c fw1/pu1/parameters.c fw1/pu1/scaling.c fw1/pu1/order.c \
+	fw1/common/memory.c fw1/pu1/parameters.c fw1/pu1/scaling.c fw1/pu1/order.c \
 	fw1/pu1/lists.c fw1/pu1/dpb.c fw1/pu1/direct.c fw1/pu1/loop.c fw1/pu1/sei.c fw1/pu1/timing.c fw1/pu1/stream.c
 
 PROGRAMS := fw1-boot fw1-pu0 fw1-pu1 fw2-boot fw2-runtime fw2-parser0 \

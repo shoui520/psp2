@@ -1,5 +1,6 @@
 /*
- * The C library's memory copy and fill, a byte at a time (PU1's, FW2's codec's).
+ * The C library's memory copy and fill, a byte at a time (both cores', and FW2's
+ * codec's).
  */
 #include <vip.h>
 

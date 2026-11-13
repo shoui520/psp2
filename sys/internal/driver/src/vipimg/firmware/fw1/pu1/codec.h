@@ -8,7 +8,7 @@
 
 #include "../common/frame.h"
 #include "h264.h"
-#include "output.h"
+#include "../common/output.h"
 #include "stream.h"
 #include "units.h"
 

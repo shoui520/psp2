@@ -1,10 +1,11 @@
 /*
- * PU1: the picture output. Each decoded picture goes out at its presentation time:
- * the output compares the picture's PTS with the system time clock (the STC, plus
- * the offset the ARM side sets) and tells the decoder whether to show it, hold the
- * previous one, skip a field or drop it. Trick-play commands from the ARM side
- * (VipDecoderArea.command) change the speed of the clock; how far it has moved from
- * the STC is kept as an adjustment, which the ARM side reads in VipOutputClock.
+ * The picture output, PU1's (PU0 builds it too, unused). Each decoded picture goes
+ * out at its presentation time: the output compares the picture's PTS with the
+ * system time clock (the STC, plus the offset the ARM side sets) and tells the
+ * decoder whether to show it, hold the previous one, skip a field or drop it.
+ * Trick-play commands from the ARM side (VipDecoderArea.command) change the speed
+ * of the clock; how far it has moved from the STC is kept as an adjustment, which
+ * the ARM side reads in VipOutputClock.
  *
  * Times are 33-bit PTS values (VIP_PTS_MASK) in 90 kHz units. VipOutputState.nextPts
  * counts in 180 kHz units, frame durations in 720 kHz units. Adjustments are in
@@ -12,7 +13,7 @@
  */
 #pragma once
 
-#include "../common/frame.h"
+#include "frame.h"
 
 #define VIP_PTS_SIGN		0x100000000ull		/* a difference of two PTS */
 #define VIP_PTS_EXTEND		0xffffffff00000000ull	/* sign-extends one */

@@ -284,6 +284,167 @@ static void takeDelimiterTime(uint32_t flags, uint32_t dtsLow, uint32_t ptsLow)
 }
 
 /*
+ * The firmware's earlier form of decode(), uncalled: one decoding round of the
+ * records alone, without the output, the commands or the error handling. -1
+ * after DECODE_READS reads without an end, 0 when the records ran out, a picture
+ * found no buffer or its last slice was decoded, else lookAhead's result or 1 at
+ * a restart or an unknown record.
+ */
+VIP_UNCALLED static int decodeRecords(VipDecoder *decoder)
+{
+	VipUserDataRings *rings = &g_userData;
+	const VipRecord *record;
+	VipTime fallback;
+	uint32_t flags, ptsLow, dtsLow, position, padding, next = 0, bits = 0;
+	uint32_t offset = 0, segment = 0, read, index, type, i;
+	int16_t last, firstFieldLast;
+	uint32_t end;
+	int result;
+
+	beginDecode(decoder);
+	result = lookAhead(&last, &firstFieldLast, &end);
+	if (result != 1)
+		return result;
+	for (read = 0; read < DECODE_READS; read++) {
+		if (readRecords(&offset, &segment) < 0)
+			return 0;
+		for (i = 0; i < RECORDS_TAKEN; i++) {
+			index = read * RECORDS_TAKEN + i;
+			record = &g_recordBuffer[i];
+			type = record->header >> VIP_RECORD_TYPE_SHIFT;
+			if (type == VIP_PARSED_PADDING)
+				continue;
+			position = record->position;
+			g_readStream.cursor = position;
+			padding = 0;
+			if (record[1].header >> VIP_RECORD_TYPE_SHIFT == VIP_PARSED_PADDING)
+				padding = record[1].header >> VIP_PADDING_BITS_SHIFT & 7;
+			ptsLow = record->pts;
+			dtsLow = record->dts;
+			flags = record->header >> VIP_RECORD_FLAGS_SHIFT & VIP_TIME_FLAGS;
+			if (type != VIP_PARSED_START) {
+				next = record[1].position;
+				if (next >= position)
+					bits = (next - position) * 8 + padding;
+				else
+					bits = getRingDistance(g_ringHandles[VIP_RING_SLICES],
+						position, next) * 8 + padding;
+			}
+
+			switch (type) {
+			case VIP_PARSED_PICTURE_END:
+			case VIP_PARSED_SEI:
+			case VIP_PARSED_SEI_OTHER:
+			case VIP_PARSED_RESERVED:
+			case VIP_PARSED_END_SEQUENCE:
+			case VIP_PARSED_END_STREAM:
+			case VIP_PARSED_OTHER:
+				break;
+
+			case VIP_PARSED_START:
+				consumeRecords(index + 1, position);
+				if (rings->recordCursor != rings->records[0].start) {
+					while (setRingWriter(g_ringHandles[VIP_RING_USER_DATA],
+					    rings->dataCursor))
+						;
+					while (setRingWriter(g_ringHandles[VIP_RING_USER_RECORDS],
+					    rings->recordCursor))
+						;
+				}
+				outputAllPictures();
+				g_pictureCount++;
+				return 1;
+
+			case VIP_PARSED_SPS:
+				takeSps();
+				break;
+			case VIP_PARSED_PPS:
+				takePps();
+				break;
+
+			case VIP_PARSED_PICTURE_HEADER:
+				takePictureHeader(decoder->memoryMode, 0, 0);
+				if (allocatePictureBuffer() < 0) {
+					bumpPictures();
+					return 0;
+				}
+				setPictureInfo();
+				/* (the firmware passes the record's times too, unused) */
+				startPicture(decoder->memoryMode);
+				fallback = dtsLow;
+				takePictureTime(0, flags, ptsLow, dtsLow, &fallback);
+				break;
+
+			case VIP_PARSED_SLICE_HEADER:
+				takeSliceHeader();
+				break;
+
+			case VIP_PARSED_CABAC_DATA:
+			case VIP_PARSED_CAVLC_DATA:
+				decodeSlice(bits);
+				if ((int32_t)index == last + 1) {
+					/* the picture's last slice */
+					consumeRecords(index + 1, next);
+					if (rings->recordCursor != rings->records[0].start) {
+						while (setRingWriter(g_ringHandles[VIP_RING_USER_DATA],
+						    rings->dataCursor))
+							;
+						while (setRingWriter(
+						    g_ringHandles[VIP_RING_USER_RECORDS],
+						    rings->recordCursor))
+							;
+					}
+					markReference();
+					bumpPictures();
+					if (g_sliceHeader.fieldPic)
+						g_secondFieldPending = !g_secondFieldPending;
+					resetUnits();
+					g_pictureCount++;
+					return 0;
+				}
+				if ((int32_t)index == firstFieldLast + 1) {
+					/* the first field's last slice */
+					markReference();
+					resetUnit0();
+					g_secondFieldPending = !g_secondFieldPending;
+				}
+				while (setRingReader(g_ringHandles[VIP_RING_SLICES], next))
+					;
+				break;
+
+			case VIP_PARSED_VUI:
+				takeVui();
+				break;
+			case VIP_PARSED_BUFFERING_PERIOD:
+				takeBufferingPeriod();
+				break;
+			case VIP_PARSED_PICTURE_TIMING:
+				takePictureTiming();
+				break;
+			case VIP_PARSED_PAN_SCAN:
+				takePanScan();
+				break;
+			case VIP_PARSED_USER_DATA:
+			case VIP_PARSED_USER_DATA_UUID:
+				if (takeUserData(type, bits, flags, ptsLow) < 0)
+					return 0;
+				break;
+			case VIP_PARSED_RECOVERY_POINT:
+				takeRecoveryPoint(0);
+				break;
+			case VIP_PARSED_DELIMITER:
+				takeDelimiterTime(flags, dtsLow, ptsLow);
+				break;
+
+			default:
+				return 1;
+			}
+		}
+	}
+	return -1;
+}
+
+/*
  * No picture buffer comes free though every frame is back: the DPB's pictures go
  * unshown, the frames are given back, and the decoding waits for a random access
  * point again.

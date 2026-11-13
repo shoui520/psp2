@@ -11,6 +11,7 @@ int32_t __modsi3(int32_t dividend, int32_t divisor);
 uint64_t __udivdi3(uint64_t dividend, uint64_t divisor);
 uint64_t __umoddi3(uint64_t dividend, uint64_t divisor);
 int64_t __divdi3(int64_t dividend, int64_t divisor);
+int64_t __moddi3(int64_t dividend, int64_t divisor);
 uint32_t __mulsi3(uint32_t a, uint32_t b);
 uint64_t __muldi3(uint64_t a, uint64_t b);
 
@@ -75,7 +76,10 @@ int32_t __modsi3(int32_t dividend, int32_t divisor)
 	return dividend < 0 ? -remainder : remainder;
 }
 
-/* 64-bit, for PU1's clock (its own copy works on pointers to the values) */
+/*
+ * 64-bit. The firmware's copies take pointers to the values and share one
+ * quotient and remainder loop, a subtraction and a negation.
+ */
 uint64_t __udivdi3(uint64_t dividend, uint64_t divisor)
 {
 	uint64_t quotient = 0, bit = 1;
@@ -109,6 +113,17 @@ int64_t __divdi3(int64_t dividend, int64_t divisor)
 	quotient = __udivdi3(dividend < 0 ? -(uint64_t)dividend : (uint64_t)dividend,
 		divisor < 0 ? -(uint64_t)divisor : (uint64_t)divisor);
 	return (dividend < 0) != (divisor < 0) ? -quotient : quotient;
+}
+
+/* the remainder takes the dividend's sign */
+int64_t __moddi3(int64_t dividend, int64_t divisor)
+{
+	uint64_t magnitude, remainder;
+
+	magnitude = dividend < 0 ? -(uint64_t)dividend : (uint64_t)dividend;
+	remainder = __umoddi3(magnitude,
+		divisor < 0 ? -(uint64_t)divisor : (uint64_t)divisor);
+	return dividend < 0 ? -remainder : remainder;
 }
 
 /* shift and add, by the bits of the smaller factor */

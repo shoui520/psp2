@@ -801,11 +801,14 @@ LOOP_TEXT(motion_all) void saveAllMotion(void)
 		&g_listsDone);
 }
 
-#ifdef VIP_FW2
 /*
- * FW2: the frame loops' write of the macroblock at g_mbX, y, or the MBAFF loop's
- * of the pair at g_mbX, y, as one resident function.
+ * The frame loops' write of the macroblock at g_mbX, y, or the MBAFF loop's of
+ * the pair at g_mbX, y, as one resident function: FW2's runSmallLoop's, and in
+ * fw1 uncalled.
  */
+#ifndef VIP_FW2
+VIP_UNCALLED
+#endif
 static void writeMacroblock(uint32_t y, uint32_t mbaff, uint32_t field)
 {
 	if (!mbaff)
@@ -813,6 +816,8 @@ static void writeMacroblock(uint32_t y, uint32_t mbaff, uint32_t field)
 	else
 		writeMbaffPair(y, field);
 }
+
+#ifdef VIP_FW2
 
 /*
  * FW2's loop for pictures narrower than 8 macroblocks or one map unit high
