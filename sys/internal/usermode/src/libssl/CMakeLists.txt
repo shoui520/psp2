@@ -225,6 +225,10 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	CRYPTOCME/common/module/crypto/cry_hmac.c
 	CRYPTOCME/common/module/crypto/ll_bnfixed.c
 	CRYPTOCME/common/module/crypto/ll_obj.c
+	CRYPTOCME/common/module/crypto/ll_rsamont.c
+	CRYPTOCME/common/module/crypto/ll_rsarecp.c
+	CRYPTOCME/common/module/crypto/ll_rsablind.c
+	CRYPTOCME/common/module/crypto/ll_rsapkcs1.c
 	CRYPTOCME/common/module/crypto/ll_bn.c
 	CRYPTOCME/common/module/crypto/ll_bnrecp.c
 	CRYPTOCME/common/module/crypto/ll_bnkara.c
@@ -293,6 +297,12 @@ set_source_files_properties(
 set_source_files_properties(
 	ssl/ssl_algs.c
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=0)
+# CRYPTOCME's ll_rsamont.c inlines sslFreeRsaKeyState (96 B, with
+# sslClearRsaKeyState) into the key's Control and keeps its ModExp calls out
+# of line.
+set_source_files_properties(
+	CRYPTOCME/common/module/crypto/ll_rsamont.c
+	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=48)
 set_source_files_properties(
 	../../../../sdk/target/src/sha224/libsha224.c
 	../../../../sdk/target/src/sha256/libsha256.c

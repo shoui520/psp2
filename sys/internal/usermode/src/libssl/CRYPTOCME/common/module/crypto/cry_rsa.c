@@ -924,7 +924,7 @@ int sslRsaCipherPublicOperation(SslCryptoAlgorithm *algorithm,
 	if (status != 0)
 		return status;
 	status = sslLowLevelCipherOperate(state->object, output, outputLength,
-					  outputMax, input, inputLength, NULL,
+					  outputMax, input, inputLength, 0,
 					  encrypt);
 	if (status != 0)
 		return sslMapCryptoBackendError(status);
@@ -1001,7 +1001,7 @@ int sslRsaCipherPrivateOperation(SslCryptoAlgorithm *algorithm,
 	if (status != 0)
 		return status;
 	status = sslLowLevelCipherOperate(state->object, output, outputLength,
-					  outputMax, input, inputLength, NULL,
+					  outputMax, input, inputLength, 0,
 					  encrypt);
 	if (status != 0)
 		return sslMapCryptoBackendError(status);

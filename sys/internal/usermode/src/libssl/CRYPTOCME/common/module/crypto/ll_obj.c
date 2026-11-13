@@ -14,9 +14,6 @@ int sslLowLevelNullControl(SslLowLevelObject *object, int command, int arg,
 			   void *value);
 int sslPkcs1SetInfo(SslLowLevelObject *object, int type, int id,
 		    const void *value);
-int sslForwardLowLevelGetInfo(SslLowLevelObject *object, int type, int id,
-			      void *result);
-
 static SslLowLevelMethod sslPkcs1SignMethod = {
 	(int (*)(SslLowLevelObject *, void *, int))sslPkcs1SignOperate,
 	sslLowLevelNullControl,
@@ -257,7 +254,7 @@ int sslPkcs1VerifyOperate(SslLowLevelObject *object,
 		decrypt.outputLength = &decryptedLength;
 		decrypt.input = params->signature;
 		decrypt.inputLength = params->signatureLength;
-		decrypt.random = params->random;
+		decrypt.options = params->options;
 		decrypt.reserved24 = 0;
 		status = object->next->method->Operate(
 			object->next, &decrypt,
@@ -373,7 +370,7 @@ int sslForwardLowLevelGetInfo(SslLowLevelObject *object, int type, int id,
 int sslLowLevelCipherOperate(SslLowLevelObject *object, void *output,
 			     SceUInt32 *outputLength, SceUInt32 outputMax,
 			     const void *input, SceUInt32 inputLength,
-			     void *random, int encrypt)
+			     SceUInt32 options, int encrypt)
 {
 	SslLowLevelCipherParams params;
 	SceUInt32 length;
@@ -390,7 +387,7 @@ int sslLowLevelCipherOperate(SslLowLevelObject *object, void *output,
 	params.outputLength = &length;
 	params.input = input;
 	params.inputLength = inputLength;
-	params.random = random;
+	params.options = options;
 	params.reserved24 = 0;
 	status = operate(object, &params,
 			 SSL_LL_OPERATE_CIPHER |
@@ -405,13 +402,14 @@ int sslAllocateLowLevelObject(SslLowLevelObject **result,
 			      SslDirectMemoryContext *dmem)
 {
 	SslLowLevelObject *object;
+	void *memory;
 	int status;
 
 	if (result == NULL)
 		return SSL_CRYPTO_ERROR_INVALID_STATE;
-	status = sslAllocateDirectMemory((void **)&object, sizeof(*object),
-					 dmem, 256);
+	status = sslAllocateDirectMemory(&memory, sizeof(*object), dmem, 256);
 	if (status == 0) {
+		object = memory;
 		object->dmem = dmem;
 		object->flags |= SSL_LL_OBJECT_OWNED;
 		*result = object;
@@ -469,4 +467,143 @@ int sslGetLowLevelObjectInfo(void *object, int type, int id, void *result)
 	if (self->next != NULL)
 		return sslGetLowLevelObjectInfo(self->next, type, id, result);
 	return SSL_CRYPTO_ERROR_UNHANDLED;
+}
+
+/* Replaces the method, freeing the old one's state and initialising the new */
+int sslSetLowLevelObjectMethod(SslLowLevelObject *object,
+			       const SslLowLevelMethod *method)
+{
+	int (*control)(SslLowLevelObject *, int, int, void *);
+
+	if (object == NULL)
+		return SSL_CRYPTO_ERROR_INVALID_STATE;
+	if (object->method != NULL)
+		object->method->Control(object, SSL_LL_CONTROL_FREE, 0, NULL);
+	object->method = method;
+	if (method != NULL && (control = method->Control) != NULL)
+		return control(object, SSL_LL_CONTROL_INIT, 0, NULL);
+	return SSL_CRYPTO_ERROR_UNHANDLED;
+}
+
+/* Replaces the rest of the chain */
+__attribute__((noinline))
+int sslSetLowLevelObjectNext(SslLowLevelObject *object,
+			     SslLowLevelObject *next)
+{
+	sslFreeLowLevelObject(object->next);
+	object->next = next;
+	return 0;
+}
+
+/* Builds a chain with one object per method, first method first */
+int sslCreateLowLevelObject(SslLowLevelObject **result,
+			    const SslLowLevelMethodGetter *methods,
+			    SslDirectMemoryContext *dmem)
+{
+	SslLowLevelObject *head = NULL;
+	SslLowLevelObject *last = NULL;
+	SslLowLevelObject *object = NULL;
+	SslLowLevelObject *added;
+	int status = 0;
+
+	for (; *methods != NULL; methods++) {
+		status = sslAllocateLowLevelObject(&object, dmem);
+		added = object;
+		if (status != 0)
+			break;
+		status = sslSetLowLevelObjectMethod(object, (*methods)());
+		if (status != 0)
+			break;
+		if (head != NULL) {
+			status = sslSetLowLevelObjectNext(last, object);
+			if (status != 0)
+				break;
+			object = NULL;
+		} else {
+			head = object;
+		}
+		last = added;
+	}
+	if (status == 0) {
+		*result = head;
+		return 0;
+	}
+	if (head != NULL)
+		sslFreeLowLevelObject(head);
+	if (last != object && object != NULL)
+		sslDestroyLowLevelObject(object);
+	return status;
+}
+
+/* The input of a big number operation as the first of two context numbers */
+int sslInitLowLevelBigNumParams(SslLowLevelBigNumParams *params,
+				const unsigned char *data, SceUInt32 length,
+				SslBigNumContext *ctx, SceUInt32 options)
+{
+	SslBigNum *bns = &ctx->bn[ctx->tos];
+
+	params->ctx = ctx;
+	params->input = &bns[0];
+	ctx->tos += 2;
+	params->options = options;
+	params->output = &bns[1];
+	return sslSetBigNumData(&bns[0], data, length, ctx);
+}
+
+int sslLowLevelSign(SslLowLevelObject *object, void *signature,
+		    SceUInt32 *signatureLength, SceUInt32 signatureMax,
+		    const void *digest, SceUInt32 digestLength,
+		    SceUInt32 options)
+{
+	SslLowLevelCipherParams params;
+	SceUInt32 length;
+	int (*operate)(SslLowLevelObject *, void *, int);
+	int status;
+
+	if (object == NULL)
+		return SSL_CRYPTO_ERROR_INVALID_STATE;
+	if (object->method == NULL ||
+	    (operate = object->method->Operate) == NULL)
+		return SSL_CRYPTO_ERROR_UNHANDLED;
+	params.output = signature;
+	params.outputMax = signatureMax;
+	params.outputLength = &length;
+	params.input = digest;
+	params.inputLength = digestLength;
+	params.options = options;
+	params.reserved24 = 0;
+	status = operate(object, &params, SSL_LL_OPERATE_SIGN);
+	if (status == 0)
+		*signatureLength = length;
+	return status;
+}
+
+/* A signature that does not decode or match verifies as false */
+int sslLowLevelVerify(SslLowLevelObject *object, int *result,
+		      const void *signature, SceUInt32 signatureLength,
+		      const void *digest, SceUInt32 digestLength,
+		      SceUInt32 options)
+{
+	SslLowLevelVerifyParams params;
+	int (*operate)(SslLowLevelObject *, void *, int);
+	int status;
+
+	if (object == NULL)
+		return SSL_CRYPTO_ERROR_INVALID_STATE;
+	if (object->method == NULL ||
+	    (operate = object->method->Operate) == NULL)
+		return SSL_CRYPTO_ERROR_UNHANDLED;
+	params.signature = signature;
+	params.signatureLength = signatureLength;
+	params.digest = digest;
+	params.digestLength = digestLength;
+	params.result = result;
+	params.options = options;
+	status = operate(object, &params, SSL_LL_OPERATE_VERIFY);
+	if (status == SSL_CRYPTO_ERROR_UNSUPPORTED_METHOD ||
+	    status == SSL_CRYPTO_ERROR_NOT_INITIALIZED) {
+		status = 0;
+		*result = 0;
+	}
+	return status;
 }

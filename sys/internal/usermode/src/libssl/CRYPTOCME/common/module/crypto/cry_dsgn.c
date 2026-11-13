@@ -10,11 +10,11 @@ int sslNewBigNum(void **bn, SslDirectMemoryContext *dmem);
 void sslFreeBigNum(void *bn, int flag);
 int sslSetBigNumData(void *bn, const void *data, SceUInt32 length, void *ctx);
 int sslGetBigNumBitLength(void *bn);
-const void *sslGetRsaPrivateCrtKeyMethod(void);
-const void *sslGetRsaPrivatePrimeKeyMethod(void);
-const void *sslGetRsaPrivateExpKeyMethod(void);
-const void *sslGetRsaPublicModExpKeyMethod(void);
-const void *sslGetRsaPublicKeyMethod(void);
+const void *sslGetRsaPkcs1Type1EncodeMethod(void);
+const void *sslGetRsaBlindingMethod(void);
+const void *sslGetRsaPrivateReciprocalMethod(void);
+const void *sslGetRsaPkcs1Type1DecodeMethod(void);
+const void *sslGetRsaPublicReciprocalMethod(void);
 
 static void sslFreeInline(void *ptr)
 {
@@ -471,15 +471,15 @@ static SslCryptoKeyPropertyHandler sslRsaPublicKeyExportHandlers[2] = {
 };
 
 static const void *(*sslRsaPrivateKeyMethods[4])(void) = {
-	sslGetRsaPrivateCrtKeyMethod,
-	sslGetRsaPrivatePrimeKeyMethod,
-	sslGetRsaPrivateExpKeyMethod,
+	sslGetRsaPkcs1Type1EncodeMethod,
+	sslGetRsaBlindingMethod,
+	sslGetRsaPrivateReciprocalMethod,
 	NULL
 };
 
 static const void *(*sslRsaPublicKeyMethods[3])(void) = {
-	sslGetRsaPublicModExpKeyMethod,
-	sslGetRsaPublicKeyMethod,
+	sslGetRsaPkcs1Type1DecodeMethod,
+	sslGetRsaPublicReciprocalMethod,
 	NULL
 };
 
