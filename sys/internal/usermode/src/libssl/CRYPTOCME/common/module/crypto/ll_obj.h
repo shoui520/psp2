@@ -112,10 +112,48 @@ typedef struct SslDerBuffer {
 
 /* A low-level digest algorithm */
 typedef struct SslDigestDescriptor SslDigestDescriptor;
+struct SslDigestContext;
+
+/* The functions a digest context runs; Transfer saves the state (save != 0)
+ * or restores it and returns the bytes used, or -1
+ */
 typedef struct SslDigestImplementation {
-	SceUInt32 reserved[5];
+	int (*Init)(struct SslDigestContext *context);
+	int (*Update)(struct SslDigestContext *context, const void *data,
+		      int length);
+	int (*Final)(struct SslDigestContext *context, unsigned char *digest);
+	int (*Free)(struct SslDigestContext *context);
+	int (*Transfer)(struct SslDigestContext *context, unsigned char *buffer,
+			SceUInt32 length, int save);
 	SceUInt32 stateSize;
+	SceUInt32 reserved;
 } SslDigestImplementation;
+
+_Static_assert(sizeof(SslDigestImplementation) == 28,
+	       "SslDigestImplementation");
+
+/* A hash's compression function on its chaining values: init, compress
+ * whole blocks, output. The chaining values are valueCount words of
+ * valueSize bytes at valueOffset in its state, saved big-endian unless
+ * TransferValues says otherwise.
+ */
+typedef struct SslDigestCore {
+	int (*Init)(void *state);
+	void (*Compress)(void *state, const void *data, SceUInt32 length);
+	void (*Output)(void *state, unsigned char *digest);
+	int (*Free)(struct SslDigestContext *context);
+	SceUInt32 reserved;
+	SceUInt32 stateSize;
+	unsigned char valueOffset;
+	unsigned char valueCount;
+	unsigned char valueSize;
+	unsigned char reserved2;
+	SceUInt32 (*TransferValues)(struct SslDigestContext *context,
+				    unsigned char *buffer, int save);
+	SceUInt32 reserved3;
+} SslDigestCore;
+
+_Static_assert(sizeof(SslDigestCore) == 36, "SslDigestCore");
 
 struct SslDigestDescriptor {
 	const char *name;
@@ -124,12 +162,16 @@ struct SslDigestDescriptor {
 	unsigned char flags;
 	unsigned short blockLength;
 	const SslDigestImplementation *implementation;
-	const SslDigestImplementation *innerImplementation;
+	const SslDigestCore *innerImplementation;
 	int (*GetInfo)(const SslDigestDescriptor *descriptor,
 		       struct SslDigestContext *context, int selector,
 		       SceUInt32 *value, const void **pointer);
 	SceUInt32 type;
+	SceUInt32 attributes;
+	SceUInt32 reserved;
 };
+
+_Static_assert(sizeof(SslDigestDescriptor) == 40, "SslDigestDescriptor");
 
 /* A low-level digest context: this header, then the digest's state and the
  * inner digest's state, each 8-byte aligned.
@@ -197,21 +239,51 @@ int sslInitLowLevelBigNumParams(SslLowLevelBigNumParams *params,
 				SslBigNumContext *ctx, SceUInt32 options);
 
 /* The low-level digest layer below the digest and HMAC backends */
-int sslCreateDigestBackendContext(void **context, const void *descriptor,
-				  void *directMemory);
-int sslDestroyDigestBackendContext(void *context);
-int sslInitDigestBackendContext(void *context);
-int sslUpdateDigestBackendContext(void *context, const void *data,
-				  SceUInt32 length);
-int sslFinalizeDigestBackendContext(void *context, void *digest);
-int sslSetDigestBackendContextKey(void *context, const void *key,
-				  SceUInt32 length);
-int sslDuplicateDigestBackendContext(void **result, void *context);
-int sslGetDigestBackendContextInfo(void *context, int selector, void *result,
-				   SceUInt32 length);
+/* SslDigestContext.flags */
+#define SSL_DIGEST_CONTEXT_ALLOCATED 0x1
+#define SSL_DIGEST_CONTEXT_INNER_STATE_ALLOCATED 0x10000
+#define SSL_DIGEST_CONTEXT_STATE_ALLOCATED 0x20000
+
+/* Digest GetInfo selectors of the state */
+#define SSL_LL_DIGEST_INFO_SAVE_STATE 6
+#define SSL_LL_DIGEST_INFO_RESTORE_STATE 7
+#define SSL_LL_DIGEST_INFO_COPY 8
+#define SSL_LL_DIGEST_INFO_SET_DIGEST 16
+#define SSL_LL_DIGEST_INFO_SET_KEY 17
+#define SSL_LL_DIGEST_INFO_FLAGS 19
+
+int sslSaveDigestBackendContext(SslDigestContext *context,
+				unsigned char *buffer, SceUInt32 *length,
+				SceUInt32 max);
+int sslRestoreDigestBackendContext(SslDigestContext *context,
+				   const unsigned char *buffer,
+				   SceUInt32 *length, SceUInt32 max);
+SceUInt32 sslTransferDigestValues(SslDigestContext *context,
+				  unsigned char *buffer, int save);
+int sslLayOutDigestContext(SslDigestContext **result,
+			   const SslDigestDescriptor *descriptor,
+			   void *memory, SceUInt32 *size,
+			   SslDirectMemoryContext *dmem);
+int sslDestroyDigestBackendContext(SslDigestContext *context);
+int sslCreateDigestBackendContext(SslDigestContext **context,
+				  const SslDigestDescriptor *descriptor,
+				  SslDirectMemoryContext *dmem);
+int sslInitDigestBackendContext(SslDigestContext *context);
+int sslUpdateDigestBackendContext(SslDigestContext *context,
+				  const void *data, int length);
+int sslFinalizeDigestBackendContext(SslDigestContext *context,
+				    unsigned char *digest);
+int sslSetDigestBackendContextKey(SslDigestContext *context,
+				  const void *key, SceUInt32 length);
+int sslQueryDigestBackendContextInfo(SslDigestContext *context, int selector,
+				     SceUInt32 *value, const void **pointer);
+int sslDuplicateDigestBackendContext(SslDigestContext **result,
+				     SslDigestContext *context);
+int sslGetDigestBackendContextInfo(SslDigestContext *context, int selector,
+				   SceUInt32 *value, const void **pointer);
 int sslGetLowLevelDigestInfo(const SslDigestDescriptor *descriptor,
 			     struct SslDigestContext *context, int selector,
 			     SceUInt32 *value, const void **pointer);
-const void *sslGetHmacDigestDescriptor(void);
+const SslDigestDescriptor *sslGetHmacDigestDescriptor(void);
 
 #endif

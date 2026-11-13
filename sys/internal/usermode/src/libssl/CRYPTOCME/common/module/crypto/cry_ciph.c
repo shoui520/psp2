@@ -40,7 +40,7 @@ extern int sslRestoreLowLevelCipherState(void *cipher, const void *buf,
 extern int sslGetLowLevelPrngInfo(void *prng, int selector, int arg,
 				  void *result);
 extern int sslPkcs5Pad(void);
-extern int sslIso10126Pad(void);
+extern int sslCbcCtsPad(void);
 
 extern const void *sslGetDesEde3CbcCipherDescriptor(void);
 extern const void *sslGetRc4CipherDescriptor(void);
@@ -155,7 +155,7 @@ int sslSetCipherPaddingMode(SslCryptoAlgorithm *algorithm, int padFlag,
 		if (mode == 0)
 			padFunc = sslPkcs5Pad;
 		else if (mode == 1)
-			padFunc = sslIso10126Pad;
+			padFunc = sslCbcCtsPad;
 		else
 			return SSL_CRYPTO_ERROR_NO_OPERATION;
 		return sslMapCryptoBackendError(

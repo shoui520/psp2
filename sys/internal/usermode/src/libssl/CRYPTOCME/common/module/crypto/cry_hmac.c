@@ -34,7 +34,7 @@ typedef struct SslHmacBackendData {
 } SslHmacBackendData;
 
 typedef struct SslHmacBackendState {
-	void *context;
+	SslDigestContext *context;
 	void *key;
 } SslHmacBackendState;
 
@@ -43,9 +43,9 @@ _Static_assert(sizeof(SslHmacBackendState) == 8, "SslHmacBackendState");
 int sslHmacBackendInitialize(SslCryptoAlgorithm *algorithm)
 {
 	const SslHmacBackendData *data = algorithm->implementationData;
-	void *context = NULL;
+	SslDigestContext *context = NULL;
 	SslHmacBackendState *state = NULL;
-	const void *hmac = sslGetHmacDigestDescriptor();
+	const SslDigestDescriptor *hmac = sslGetHmacDigestDescriptor();
 	SslDirectMemoryContext *dmem = sslGetDefaultDirectMemoryContextInline();
 	int status;
 
@@ -53,7 +53,7 @@ int sslHmacBackendInitialize(SslCryptoAlgorithm *algorithm)
 	if (status == 0) {
 		status = sslGetDigestBackendContextInfo(
 			context, 16, NULL,
-			(SceUInt32)data->GetDigestDescriptor());
+			(const void **)data->GetDigestDescriptor());
 		if (status == 0) {
 			state = sslAllocate(sizeof(*state));
 			if (state == NULL) {
@@ -81,7 +81,7 @@ int sslHmacBackendInit(SslCryptoAlgorithm *algorithm, void *key)
 	SslHmacBackendState *state = algorithm->backendState;
 	SslCryptoContextHeader *context;
 	SslDesKeyBuffer keyData;
-	void *digest;
+	SslDigestContext *digest;
 	int status;
 
 	if (state == NULL)
@@ -138,7 +138,7 @@ int sslHmacBackendCopy(SslCryptoAlgorithm *source,
 	SslHmacBackendState *src;
 	SslCryptoContextHeader *context;
 	SslDesKeyBuffer keyData;
-	void *digest;
+	SslDigestContext *digest;
 	int status;
 
 	if (dst == NULL || (src = source->backendState) == NULL)
