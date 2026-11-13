@@ -1278,3 +1278,414 @@ infinity:
 	result->high = D_EXPONENT | (sign ? D_SIGN : 0);
 	result->low = 0;
 }
+
+/*
+ * 0x926298: a * b. Each mantissa as two words, multiplied bit-serially into
+ * four 64-bit partial products, summed into 128 bits, normalized (left
+ * twelve, then one either way) and rounded to nearest, ties to even. A
+ * rounding carry out of a denormal leaves its exponent at zero.
+ */
+void multiplyDouble(Words64 *result, const Words64 *a, const Words64 *b)
+{
+	uint32_t aLow = a->low, bLow = b->low;
+	uint32_t aHigh = a->high & D_MANTISSA, bHigh = b->high & D_MANTISSA;
+	int32_t exponentA = (a->high << 1) >> 21, exponentB = (b->high << 1) >> 21, exponent;
+	uint32_t sign = (b->high ^ a->high) >> 31;
+	uint64_t low = 0, high = 0, lowByHigh = 0, highByHigh = 0, multiplicandLow, multiplicandHigh;
+	uint32_t multiplierLow, multiplierHigh, w0, w1, w2, w3, carry, round, sticky;
+	uint32_t top, upper, lower, bottom;
+	Words64 value = { 0, 0 };
+
+	if (exponentA == 2047) {
+		if (aHigh || aLow)
+			goto nan;
+		if (exponentB == 2047 && (bHigh || bLow))
+			goto nan;
+		if (exponentB == 0 && bHigh == 0 && bLow == 0)
+			goto nan;
+		goto infinity;
+	}
+	if (exponentA == 0) {
+		if (aHigh == 0 && aLow == 0) {
+			if (exponentB != 2047)
+				goto sign;
+			goto nan;
+		}
+		exponentA++;
+	} else {
+		aHigh |= D_HIDDEN;
+	}
+	if (exponentB == 2047) {
+		if (bHigh || bLow)
+			goto nan;
+		goto infinity;
+	}
+	if (exponentB == 0) {
+		if (bHigh == 0 && bLow == 0)
+			goto sign;
+		exponentB++;
+	} else {
+		bHigh |= D_HIDDEN;
+	}
+
+	exponent = exponentA + exponentB - 1023;
+	multiplicandLow = aLow;
+	multiplicandHigh = aHigh;
+	multiplierLow = bLow;
+	multiplierHigh = bHigh;
+	while (multiplierLow != 0 || multiplierHigh != 0) {
+		if (multiplierLow & 1) {
+			low += multiplicandLow;
+			high += multiplicandHigh;
+		}
+		if (multiplierHigh & 1) {
+			lowByHigh += multiplicandLow;
+			highByHigh += multiplicandHigh;
+		}
+		multiplierLow >>= 1;
+		multiplierHigh >>= 1;
+		multiplicandLow <<= 1;
+		multiplicandHigh <<= 1;
+	}
+	/* the partial products summed into four words */
+	w0 = (uint32_t)low;
+	w1 = (uint32_t)high + (uint32_t)lowByHigh;
+	carry = w1 < (uint32_t)lowByHigh;
+	w1 += (uint32_t)(low >> 32);
+	if (w1 < (uint32_t)(low >> 32))
+		carry++;
+	w2 = (uint32_t)highByHigh + carry;
+	carry = w2 < carry;
+	w2 += (uint32_t)(high >> 32);
+	if (w2 < (uint32_t)(high >> 32))
+		carry++;
+	w2 += (uint32_t)(lowByHigh >> 32);
+	if (w2 < (uint32_t)(lowByHigh >> 32))
+		carry++;
+	w3 = (uint32_t)(highByHigh >> 32) + carry;
+
+	top = (w3 << 12) | (w2 >> 20);
+	upper = (w2 << 12) | (w1 >> 20);
+	lower = (w1 << 12) | (w0 >> 20);
+	bottom = w0 << 12;
+	if (top >= 0x200000) {
+		exponent++;
+		bottom = (lower << 31) | (bottom >> 1);
+		lower = (upper << 31) | (lower >> 1);
+		upper = (top << 31) | (upper >> 1);
+		top >>= 1;
+	} else {
+		while (!(top & D_HIDDEN)) {
+			if (exponent < 2)
+				break;
+			exponent--;
+			top = (top << 1) | (upper >> 31);
+			upper = (upper << 1) | (lower >> 31);
+			lower = (lower << 1) | (bottom >> 31);
+			bottom <<= 1;
+		}
+	}
+	if (exponent == 1 && !(top & D_HIDDEN)) {
+		exponent = 0;
+	} else if (exponent < 1) {
+		do {
+			exponent++;
+			bottom = (lower << 31) | (bottom >> 1);
+			lower = (upper << 31) | (lower >> 1);
+			upper = (top << 31) | (upper >> 1);
+			top >>= 1;
+		} while (exponent < 1);
+		exponent = 0;
+	}
+
+	round = lower >> 31;
+	sticky = (lower & 0x7fffffff) != 0 || bottom != 0;
+	if (round && (sticky || (upper & 1))) {
+		if (upper == 0xffffffff) {
+			upper = 0;
+			if (top == 0x1fffff) {
+				top = D_HIDDEN;
+				exponent++;
+			} else {
+				top++;
+			}
+		} else {
+			upper++;
+		}
+	}
+	if (exponent >= 2047)
+		goto infinity;
+	if (exponent != 0 && (exponent < 0 || top == 0))
+		goto sign;
+	value.high |= (exponent << 20) | (top & D_MANTISSA);
+	value.low |= upper;
+	goto sign;
+
+nan:
+	value.low = 0xffffffff;
+	value.high = 0x7fffffff;
+	goto sign;
+infinity:
+	value.high = D_EXPONENT;
+sign:
+	if (sign)
+		value.high |= D_SIGN;
+	result->high = value.high;
+	result->low = value.low;
+}
+
+/* a register shift amount: the core takes its low five bits */
+static inline uint32_t shiftLeft(uint32_t value, int32_t count)
+{
+	return value << (count & 31);
+}
+
+static inline uint32_t shiftRight(uint32_t value, int32_t count)
+{
+	return value >> (count & 31);
+}
+
+/*
+ * 0x926550: a / b. Restoring division four quotient bits at a time against
+ * the divisor's multiples by one, two, four and eight: 23 bits into the high
+ * word, counted from the first nonzero bit, then 32 into the low word, then
+ * the bits the high word took too many shifted back down. Two guard bits
+ * round to nearest; a normal result rounds up on any set low word (the
+ * remainder is only sticky for a denormal one). The dividend is not
+ * normalized, the divisor is.
+ */
+void divideDouble(Words64 *result, const Words64 *a, const Words64 *b)
+{
+	uint32_t aHigh = a->high & D_MANTISSA, aLow = a->low;
+	uint32_t bHigh = b->high & D_MANTISSA, bLow = b->low;
+	uint32_t signA = a->high & D_SIGN, signB = b->high & D_SIGN;
+	uint32_t fieldA = a->high & D_EXPONENT, fieldB = b->high & D_EXPONENT;
+	int aMaximum = fieldA == D_EXPONENT, bMaximum = fieldB == D_EXPONENT;
+	int32_t exponent, exponentB, free, excess = 0, shift, bits, phase;
+	uint64_t remainder, divisor;
+	uint32_t quotient, word, scan, high = 0, low = 0, sticky, nonzero, round;
+
+	if ((aMaximum && (aHigh || aLow)) || (bMaximum && (bHigh || bLow)))
+		goto nan;
+	if (aMaximum && bMaximum)
+		goto nan;
+	if (!fieldA && !fieldB && !aHigh && !aLow && !bHigh && !bLow)
+		goto nan;
+	if (aMaximum || (!fieldB && !bHigh && !bLow))
+		goto infinity;
+	if (!fieldA && !aHigh && !aLow)
+		goto sign;
+	if (bMaximum && !bHigh && !bLow)
+		goto sign;
+
+	exponent = fieldA >> 20;
+	exponentB = fieldB >> 20;
+	if (exponent)
+		aHigh |= D_HIDDEN;
+	else
+		exponent++;
+	if (exponentB)
+		bHigh |= D_HIDDEN;
+	else
+		exponentB++;
+	divisor = ((uint64_t)bHigh << 32) | bLow;
+	while (!((uint32_t)(divisor >> 32) & D_HIDDEN)) {
+		divisor <<= 1;
+		exponentB--;
+	}
+	exponent -= exponentB;
+	if (exponent < -1076)
+		goto sign;
+
+	remainder = (((uint64_t)aHigh << 32) | aLow) << 3;
+	phase = 0;
+	free = 23;
+	quotient = 0;
+	for (;;) {
+		if (remainder >= divisor << 3) {
+			quotient |= 8;
+			remainder -= divisor << 3;
+		}
+		if (remainder >= divisor << 2) {
+			quotient |= 4;
+			remainder -= divisor << 2;
+		}
+		if (remainder >= divisor << 1) {
+			quotient |= 2;
+			remainder -= divisor << 1;
+		}
+		if (remainder >= divisor) {
+			quotient |= 1;
+			remainder -= divisor;
+		}
+		if (phase) {
+			free -= 4;
+		} else {
+			bits = 32;
+			if (quotient) {
+				bits = 0;
+				for (scan = quotient; !(scan & 0x80000000); scan <<= 1)
+					bits++;
+			}
+			bits = 32 - bits;
+			if (bits == 0) {
+				exponent -= 4;
+			} else {
+				free -= bits;
+				exponent -= 4 - bits;
+				phase = 1;
+			}
+		}
+		if (remainder == 0) {
+			nonzero = 0;
+			word = free < 0 ? shiftRight(quotient, -free) : shiftLeft(quotient, free);
+			if (phase == 1) {
+				high = word;
+				goto done;
+			}
+			low = word;
+			if (excess)
+				goto shiftDown;
+			goto done;
+		}
+		if (free < 1) {
+			if (phase != 1) {
+				nonzero = 1;
+				low = quotient;
+				if (excess)
+					goto shiftDown;
+				goto done;
+			}
+			excess = -free;
+			high = quotient;
+			quotient = 0;
+			free = 32;
+			phase = 2;
+		}
+		remainder <<= 4;
+		quotient <<= 4;
+	}
+
+shiftDown:
+	low = shiftRight(low, excess) | shiftLeft(high, 32 - excess);
+	high = shiftRight(high, excess);
+done:
+	if (!(high | low))
+		goto sign;
+	sticky = low;
+	exponent += 1023;
+	if (exponent < 1) {
+		shift = 1 - exponent;
+		exponent = 0;
+		sticky = (low & 1) | nonzero;
+		if (shift < 32) {
+			sticky |= shiftLeft(low, 32 - shift);
+			low = (low >> shift) | shiftLeft(high, 32 - shift);
+			high >>= shift;
+			sticky |= low & 1;
+		} else if (shift < 54) {
+			shift -= 32;
+			sticky |= shiftLeft(high, 32 - shift);
+			low = high >> shift;
+			high = 0;
+			sticky |= low & 1;
+		} else {
+			sticky = 1;
+			low = 0;
+			high = 0;
+		}
+		if (!(high | low))
+			goto sign;
+	}
+	round = (low & 2) >> 1;
+	low = (low >> 2) | (high << 30);
+	high >>= 2;
+	if (round && (sticky || (low & 1))) {
+		low++;
+		if (low == 0) {
+			high++;
+			if (high == 0x200000) {
+				high >>= 1;
+				exponent++;
+			} else if (exponent == 0 && high == D_HIDDEN) {
+				exponent++;
+			}
+		}
+	}
+	if (exponent >= 2047)
+		goto infinity;
+	high = (high & (D_SIGN | D_MANTISSA)) | (exponent << 20);
+	goto sign;
+
+nan:
+	low = 0xffffffff;
+	high = 0x7fffffff;
+	goto sign;
+infinity:
+	high = D_EXPONENT;
+	low = 0;
+sign:
+	if (signA ^ signB)
+		high |= D_SIGN;
+	result->low = low;
+	result->high = high;
+}
+
+/*
+ * 0x926858: a double truncated to an int. Magnitudes from 2^31 up, and
+ * infinities and NaNs, give +-0x7fffffff; the low word's bits below the top
+ * ten never count.
+ */
+int32_t doubleToInt(const Words64 *value)
+{
+	int32_t exponent = ((value->high & D_EXPONENT) >> 20) - 1053;
+	int32_t integer;
+
+	if (exponent >= 1)
+		integer = 0x7fffffff;
+	else if (exponent < -31)
+		integer = 0;
+	else
+		integer = ((((value->high & D_MANTISSA) | D_HIDDEN) << 10) |
+			   (value->low >> 22)) >> -exponent;
+	if (value->high >> 31)
+		integer = ~integer + 1;
+	return integer;
+}
+
+/* 0x9268a8: an int as a double, exactly */
+void intToDouble(Words64 *result, int32_t value)
+{
+	uint32_t negative = 0, magnitude, mantissa;
+	int32_t shift;
+
+	if ((uint32_t)value >> 31) {
+		negative = 1;
+		value = ~value + 1;
+	}
+	magnitude = mantissa = value;
+	result->low = 0;
+	if (mantissa == 0) {
+		result->high = 0;
+		goto sign;
+	}
+	shift = 0;
+	if (mantissa >= 0x200000) {
+		while (mantissa & 0xffe00000) {
+			shift++;
+			mantissa >>= 1;
+		}
+	} else {
+		while (!(mantissa & D_HIDDEN)) {
+			shift--;
+			mantissa <<= 1;
+		}
+	}
+	if (shift >= 1)
+		result->low = magnitude << (32 - shift);
+	mantissa = (mantissa & D_MANTISSA) | ((shift + 1043) << 20);
+sign:
+	if (negative)
+		mantissa |= D_SIGN;
+	result->high = mantissa;
+}
