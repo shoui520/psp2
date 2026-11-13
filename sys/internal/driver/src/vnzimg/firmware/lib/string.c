@@ -1,6 +1,6 @@
 /*
  * The C library's pieces (0x924f28-0x924f8e), byte at a time. The
- * soft-float and 64-bit helpers after them are libgcc's.
+ * floating-point and 64-bit runtime after them is lib/softfloat.c.
  */
 #include "vnz.h"
 
