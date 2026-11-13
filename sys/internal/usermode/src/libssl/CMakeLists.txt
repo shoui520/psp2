@@ -228,6 +228,7 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	CRYPTOCME/common/module/crypto/ll_bn.c
 	CRYPTOCME/common/module/crypto/ll_bnrecp.c
 	CRYPTOCME/common/module/crypto/ll_bnkara.c
+	CRYPTOCME/common/module/crypto/ll_bnarith.c
 	CRYPTOCME/common/module/crypto/ll_bncomba.c
 	runtime.c
 	memory.c

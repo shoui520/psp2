@@ -21,6 +21,7 @@
 #define SSL_BIGNUM_ERROR_NO_EXPONENT 10010
 #define SSL_BIGNUM_ERROR_BAD_INFO 10018
 #define SSL_BIGNUM_ERROR_NOT_REDUCED 10021
+#define SSL_BIGNUM_ERROR_NO_PRNG 10016
 
 /* SslBigNum.flags */
 #define SSL_BIGNUM_FLAG_ALLOCATED 0x1
@@ -70,13 +71,14 @@ typedef struct SslBigNumSurrender {
 } SslBigNumSurrender;
 
 /* The big number method context: chooses the arithmetic implementation for an
- * operand size; every context bound to it inherits its surrender callback.
+ * operand size; every context bound to it inherits its surrender callback
+ * and its random number generator.
  */
 struct SslBigNumMethodContext {
 	SslDirectMemoryContext *dmem;
 	SslBigNumMethodSelector selector;
 	SslBigNumSurrender *surrender;
-	SceUInt32 reserved12;
+	void *prng;
 	SceUInt32 flags;
 };
 
@@ -94,7 +96,7 @@ struct SslBigNumContext {
 	SceUInt32 flags;
 	int error;
 	SslBigNumSurrender *surrender;
-	SceUInt32 reserved336;
+	void *prng;
 };
 
 /* SslBigNumContext.flags: stop a long exponentiation */
@@ -322,6 +324,22 @@ int sslModExpBigNumReciprocal(SslBigNum *r, const SslBigNum *a,
 			      SslBigNumContext *ctx);
 int sslRightShiftBigNum(SslBigNum *r, const SslBigNum *a, SceUInt32 n,
 			SslBigNumContext *ctx);
+int sslModMultiplyBigNum(SslBigNum *r, const SslBigNum *a, const SslBigNum *b,
+			 const SslBigNum *m, SslBigNumContext *ctx);
+int sslModExpBigNumReciprocalSimple(SslBigNum *r, const SslBigNum *a,
+				    const SslBigNum *p,
+				    SslBigNumReciprocal *recp,
+				    SslBigNumContext *ctx);
+int sslRandomBigNum(SslBigNum *rnd, void *prng, SceUInt32 bits, int top,
+		    int bottom, SslBigNumContext *ctx);
+int sslSubtractBigNumWordsAbsolute(SslBigNumWord *r, SslBigNumWord *a,
+				   SslBigNumWord *b, int n);
+SslBigNumWord sslDivideBigNumWord(SslBigNumWord h, SslBigNumWord l,
+				  SslBigNumWord d);
+
+/* The low-level random number generator (cry_prng.c's backend) */
+int sslGenerateLowLevelPrng(void *prng, void *buffer,
+			    SceUInt32 *generatedLength, SceUInt32 length);
 
 int sslNewBigNumModExpState(SslBigNumModExpState **result,
 			    SslBigNumModulus *m, SslBigNum *r,
@@ -335,6 +353,9 @@ int sslWordBigNumMethodSetInfo(SslBigNumModulus *m, int type,
 int sslFixedBigNumMethodModMultiply(SslBigNumModulus *m, SslBigNumWord *r,
 				    const SslBigNumWord *a,
 				    const SslBigNumWord *b, SslBigNumWord *t);
+int sslFixedBigNumMethodModExp(SslBigNumModulus *m, SslBigNum *r,
+			       const SslBigNum *a, const SslBigNum *p,
+			       int flags, SslBigNumContext *ctx);
 
 #define SSL_BIGNUM_FIXED_WORDS(n)					\
 	void sslMultiplyBigNumWordsC##n(SslBigNumWord *r,		\
@@ -348,6 +369,12 @@ SSL_BIGNUM_FIXED_WORDS(11);
 SSL_BIGNUM_FIXED_WORDS(16);
 
 /* SSLeay's word routines (bn_asm.c) */
+SslBigNumWord bn_mul_add_words(SslBigNumWord *rp, SslBigNumWord *ap, int num,
+			       SslBigNumWord w);
+SslBigNumWord bn_mul_words(SslBigNumWord *rp, SslBigNumWord *ap, int num,
+			   SslBigNumWord w);
+void bn_sqr_words(SslBigNumWord *r, SslBigNumWord *a, int n);
+SslBigNumWord bn_div_words(SslBigNumWord h, SslBigNumWord l, SslBigNumWord d);
 SslBigNumWord bn_add_words(SslBigNumWord *r, SslBigNumWord *a,
 			   SslBigNumWord *b, int n);
 SslBigNumWord bn_sub_words(SslBigNumWord *r, SslBigNumWord *a,

@@ -375,3 +375,82 @@ int sslFixedBigNumMethodModMultiply(SslBigNumModulus *m, SslBigNumWord *r,
 	wm->Reduce(r, product, mont->N.d, mont->words, mont->n0);
 	return 0;
 }
+
+/* The ModExp of the fixed-size methods, through their word routines */
+int sslFixedBigNumMethodModExp(SslBigNumModulus *m, SslBigNum *r,
+			       const SslBigNum *a, const SslBigNum *p,
+			       int flags, SslBigNumContext *ctx)
+{
+	SslBigNumModExpState *s = NULL;
+	const SslBigNumWordMethods *wm;
+	void (*multiply)(SslBigNumWord *r, const SslBigNumWord *a,
+			 const SslBigNumWord *b);
+	void (*square)(SslBigNumWord *r, const SslBigNumWord *a);
+	void (*reduce)(SslBigNumWord *r, SslBigNumWord *t,
+		       const SslBigNumWord *n, int words, SslBigNumWord n0);
+	SceUInt32 i, k;
+	int status, top, tos;
+
+	if (ctx->error != 0)
+		return ctx->error;
+	tos = ctx->tos;
+	if (sslNewBigNumModExpState(&s, m, r, a, p, 8, ctx) != 0)
+		goto out;
+	wm = m->method->wordMethods;
+	multiply = wm->Multiply;
+	square = wm->Square;
+	reduce = wm->Reduce;
+	s->accumulator = s->table->d + s->padWords * 4;
+	multiply(s->product, s->base->d, s->mont->RR.d);
+	reduce(s->powers[0], s->product, s->mont->N.d, s->words, s->mont->n0);
+	SSL_BIGNUM_PAD(s->powers[0], s);
+	if (s->tableSize > 1) {
+		square(s->product, s->powers[0]);
+		reduce(s->square, s->product, s->mont->N.d, s->words,
+		       s->mont->n0);
+		SSL_BIGNUM_PAD(s->square, s);
+		for (k = 1; k < s->tableSize; k++) {
+			multiply(s->product, s->powers[k - 1], s->square);
+			reduce(s->powers[k], s->product, s->mont->N.d,
+			       s->words, s->mont->n0);
+			SSL_BIGNUM_PAD(s->powers[k], s);
+		}
+	}
+	sslCopyMemory(s->accumulator, s->powers[s->index >> 1],
+		      s->padWords * 4);
+	while (s->squarings != 0) {
+		for (i = 0; i < s->squarings; i++) {
+			square(s->product, s->accumulator);
+			reduce(s->accumulator, s->product, s->mont->N.d,
+			       s->words, s->mont->n0);
+		}
+		s->index = *s->recoding++;
+		s->squarings = *s->recoding++;
+		if (s->index + s->squarings == 0)
+			break;
+		if (s->index == 0)
+			continue;
+		if (s->squarings == 0 && s->index == 1) {
+			multiply(s->product, s->accumulator, s->base->d);
+			reduce(r->d, s->product, s->mont->N.d, s->words,
+			       s->mont->n0);
+			top = s->words;
+			goto fix;
+		}
+		multiply(s->product, s->accumulator, s->powers[s->index >> 1]);
+		reduce(s->accumulator, s->product, s->mont->N.d, s->words,
+		       s->mont->n0);
+	}
+	sslFillMemory(s->accumulator + s->words, 0, s->words * 4);
+	reduce(r->d, s->accumulator, s->mont->N.d, s->words, s->mont->n0);
+	top = s->words;
+fix:
+	for (top--; top >= 0; top--)
+		if (r->d[top] != 0)
+			break;
+	r->top = top + 1;
+out:
+	status = ctx->error;
+	ctx->tos = tos;
+	return status;
+}

@@ -28,7 +28,25 @@
  #if defined(BN_LLONG) && defined(BN_DIV2W)
  
  BN_ULONG bn_div_words(h,l,d)
-@@ -316,7 +319,9 @@
+@@ -255,14 +258,10 @@
+ 
+ 	if (d == 0) return(BN_MASK2);
+ 
+-	i=BN_num_bits_word(d);
++	/* SCE: BSAFE's bit length, and no abort on overflow */
++	i=sslGetWordBitLength(d);
+ 	if ((i != BN_BITS2) && (h > (BN_ULONG)1<<i))
+-		{
+-#if !defined(NO_STDIO) && !defined(WIN16)
+-		fprintf(stderr,"Division would overflow (%d)\n",i);
+-#endif
+-		abort();
+-		}
++		return(0);
+ 	i=BN_BITS2-i;
+ 	if (h >= d) h-=d;
+ 
+@@ -316,7 +315,9 @@
  	return(ret);
  	}
  #endif
@@ -38,7 +56,7 @@
  #ifdef BN_LLONG
  BN_ULONG bn_add_words(r,a,b,n)
  BN_ULONG *r,*a,*b;
-@@ -407,7 +412,9 @@
+@@ -407,7 +408,9 @@
  	return((BN_ULONG)c);
  	}
  #endif
@@ -48,7 +66,7 @@
  BN_ULONG bn_sub_words(r,a,b,n)
  BN_ULONG *r,*a,*b;
  int n;
-@@ -446,7 +453,9 @@
+@@ -446,7 +449,9 @@
  		}
  	return(c);
  	}
@@ -58,7 +76,7 @@
  #ifdef BN_COMBA
  
  #undef bn_mul_comba8
-@@ -827,3 +836,4 @@
+@@ -827,3 +832,4 @@
  	}
  
  #endif /* BN_COMBA */

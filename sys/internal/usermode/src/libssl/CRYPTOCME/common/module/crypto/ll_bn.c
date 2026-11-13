@@ -1276,7 +1276,7 @@ int sslSetBigNumContextMethods(SslBigNumContext *ctx,
 	ctx->methods = methods;
 	if (methods != NULL) {
 		ctx->surrender = methods->surrender;
-		ctx->reserved336 = methods->reserved12;
+		ctx->prng = methods->prng;
 	}
 	return 0;
 }
