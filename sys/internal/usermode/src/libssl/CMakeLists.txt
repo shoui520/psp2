@@ -147,6 +147,10 @@ configure_file(${libssl_ssleay}/crypto/bn/bn.h
 	${CMAKE_CURRENT_BINARY_DIR}/bn.h COPYONLY)
 configure_file(${libssl_ssleay}/crypto/bn/bn_lcl.h
 	${CMAKE_CURRENT_BINARY_DIR}/bn_lcl.h COPYONLY)
+configure_file(${libssl_ssleay}/crypto/des/sk.h
+	${CMAKE_CURRENT_BINARY_DIR}/sk.h COPYONLY)
+configure_file(${libssl_ssleay}/crypto/des/spr.h
+	${CMAKE_CURRENT_BINARY_DIR}/spr.h COPYONLY)
 psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	asn1.c
 	objects/obj_dat.c
@@ -229,6 +233,10 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	CRYPTOCME/common/module/crypto/ll_rsarecp.c
 	CRYPTOCME/common/module/crypto/ll_rsablind.c
 	CRYPTOCME/common/module/crypto/ll_rsapkcs1.c
+	CRYPTOCME/common/module/crypto/ll_cmode.c
+	CRYPTOCME/common/module/crypto/ll_ciph.c
+	CRYPTOCME/common/module/crypto/ll_des.c
+	CRYPTOCME/common/module/crypto/ll_aes.c
 	CRYPTOCME/common/module/crypto/ll_bn.c
 	CRYPTOCME/common/module/crypto/ll_bnrecp.c
 	CRYPTOCME/common/module/crypto/ll_bnkara.c
