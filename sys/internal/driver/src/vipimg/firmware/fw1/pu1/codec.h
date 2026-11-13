@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include "frame.h"
+#include "../common/frame.h"
 #include "h264.h"
 #include "output.h"
 #include "stream.h"

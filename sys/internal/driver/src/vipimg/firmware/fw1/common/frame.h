@@ -1,14 +1,15 @@
 /*
- * PU1: the frame stores. Each decoded picture lives in a frame store, a VipFrame
- * in DRAM the ARM side shares, with its display information (VipFrameInfo) and an
+ * The frame stores. Each decoded picture lives in a frame store, a VipFrame in
+ * DRAM the ARM side shares, with its display information (VipFrameInfo) and an
  * extension (VipFrameExtension) for what the decoder keeps of it as a reference.
  * The decoder reaches a frame store through a VipFrameHandle and the accessors
- * below; each returns -1 if the handle has no frame store.
+ * below; each returns -1 if the handle has no frame store. Both of fw1's programs
+ * carry the whole library (frame.c); PU0 calls none of it, PU1 part of it.
  */
 #pragma once
 
-#include "../common/runtime.h"
-#include "../common/parsed.h"
+#include "runtime.h"
+#include "parsed.h"
 
 /* a pan-scan rectangle (pan-scan SEI) */
 typedef struct VipDisplaySize {
@@ -86,6 +87,17 @@ typedef struct VipFrameInfo {
 #define VIP_EXTENSION_CHROMA_TOP_SHIFT		29
 #define VIP_EXTENSION_CHROMA_BOTTOM_SHIFT	26
 
+/*
+ * The same word read another way by fw1's accessors (frame.c), whose fields
+ * overlap the chroma locations: the video signal type of a VUI (the names follow
+ * the H.264 VUI; nothing in fw1 writes or reads them but these accessors).
+ */
+#define VIP_EXTENSION_SIGNAL_TYPE_PRESENT	31
+#define VIP_EXTENSION_COLOUR_DESCRIPTION_PRESENT 30
+#define VIP_EXTENSION_VIDEO_FORMAT_SHIFT	27	/* 3 bits */
+#define VIP_EXTENSION_FULL_RANGE_SHIFT		24	/* 3 bits */
+#define VIP_EXTENSION_COLOUR_DESCRIPTION	0xffffffu	/* primaries, transfer, matrix */
+
 #ifndef VIP_FW2	/* FW2 has its own extension (fw2/common/frame.h) */
 /*
  * What the decoder keeps of a picture beyond its display information: its place
@@ -98,7 +110,8 @@ typedef struct VipFrameExtension {
 	uint16_t profileIdc;		/* the SPS's, from VipOutputPicture.key */
 	uint16_t levelIdc;
 	uint32_t chromaSampleLoc;	/* VIP_EXTENSION_CHROMA_*: the VUI's chroma_sample_loc_type */
-	uint32_t reserved2[2];
+	uint32_t numUnitsInTick;	/* the VUI's timing information */
+	uint32_t timeScale;
 	uint8_t rateKind;		/* VIP_RATE_*, from VipOutputPicture.aspectRate */
 	uint8_t matrix;			/* VipOutputPicture.matrix */
 	uint8_t reserved0[2];
@@ -165,33 +178,109 @@ static inline VipFrameExtension *frameExtension(VipFrameHandle *handle)
 
 int lockFrame(VipFrameHandle *handle);
 int unlockFrame(VipFrameHandle *handle);
-int setFrameStore(VipFrameHandle *handle, VipFrame *frame);
 int getFrameStore(VipFrameHandle *handle, VipFrame **frame);
 int getFrameAvailable(VipFrameHandle *handle, uint32_t *available);
+int getFramePicture(VipFrameHandle *handle, uint32_t *picture);
+int getFrameTimestampIndex(VipFrameHandle *handle, uint32_t *index);
+int setFrameStore(VipFrameHandle *handle, VipFrame *frame);
 int setFrameAvailable(VipFrameHandle *handle, uint32_t available);
 int setFramePicture(VipFrameHandle *handle, uint32_t picture);
+int setFrameTimestampIndex(VipFrameHandle *handle, uint32_t index);
 int setFrameExtension(VipFrameHandle *handle, VipFrameExtension *extension);
+int clearFrameInfo(VipFrameHandle *handle);
+int getFrameWidth(VipFrameHandle *handle, uint16_t *width);
+int getFrameHeight(VipFrameHandle *handle, uint16_t *height);
+int getFrameCropLeft(VipFrameHandle *handle, uint16_t *crop);
+int getFrameCropRight(VipFrameHandle *handle, uint16_t *crop);
+int getFrameCropTop(VipFrameHandle *handle, uint16_t *crop);
+int getFrameCropBottom(VipFrameHandle *handle, uint16_t *crop);
+int getFrameDisplayWidth0(VipFrameHandle *handle, uint16_t *width);
+int getFrameDisplayHeight0(VipFrameHandle *handle, uint16_t *height);
+int getFrameDisplayWidth1(VipFrameHandle *handle, uint16_t *width);
+int getFrameDisplayHeight1(VipFrameHandle *handle, uint16_t *height);
+int getFrameDisplayWidth2(VipFrameHandle *handle, uint16_t *width);
+int getFrameDisplayHeight2(VipFrameHandle *handle, uint16_t *height);
+int getFrameOffsetX0(VipFrameHandle *handle, int16_t *x);
+int getFrameOffsetY0(VipFrameHandle *handle, int16_t *y);
+int getFrameOffsetX1(VipFrameHandle *handle, int16_t *x);
+int getFrameOffsetY1(VipFrameHandle *handle, int16_t *y);
+int getFrameOffsetX2(VipFrameHandle *handle, int16_t *x);
+int getFrameOffsetY2(VipFrameHandle *handle, int16_t *y);
+int getFrameAspect(VipFrameHandle *handle, uint8_t *aspect);
 int getFrameRate(VipFrameHandle *handle, uint8_t *rate);
 int getFrameProgressiveSequence(VipFrameHandle *handle, uint8_t *progressive);
 int getFrameProgressiveFrame(VipFrameHandle *handle, uint8_t *progressive);
 int getFrameTopFieldFirst(VipFrameHandle *handle, uint8_t *topFieldFirst);
 int getFrameRepeatFirstField(VipFrameHandle *handle, uint8_t *repeat);
 int getFrameType(VipFrameHandle *handle, uint8_t *type);
+int getFrameFormat(VipFrameHandle *handle, uint8_t *format);
 int getFrameRandomAccess(VipFrameHandle *handle, uint8_t *randomAccess);
 int getFrameNalReference(VipFrameHandle *handle, uint8_t *reference);
+int getFrameDamaged(VipFrameHandle *handle, uint8_t *damaged);
+int getFrameColourPrimaries(VipFrameHandle *handle, uint8_t *primaries);
+int getFrameTransferCharacteristics(VipFrameHandle *handle, uint8_t *transfer);
+int getFrameMatrixCoefficients(VipFrameHandle *handle, uint8_t *matrix);
 int setFrameWidth(VipFrameHandle *handle, uint16_t width);
 int setFrameHeight(VipFrameHandle *handle, uint16_t height);
+int setFrameCropLeft(VipFrameHandle *handle, uint16_t crop);
+int setFrameCropRight(VipFrameHandle *handle, uint16_t crop);
+int setFrameCropTop(VipFrameHandle *handle, uint16_t crop);
+int setFrameCropBottom(VipFrameHandle *handle, uint16_t crop);
+int setFrameDisplayWidth0(VipFrameHandle *handle, uint16_t width);
+int setFrameDisplayHeight0(VipFrameHandle *handle, uint16_t height);
+int setFrameDisplayWidth1(VipFrameHandle *handle, uint16_t width);
+int setFrameDisplayHeight1(VipFrameHandle *handle, uint16_t height);
+int setFrameDisplayWidth2(VipFrameHandle *handle, uint16_t width);
+int setFrameDisplayHeight2(VipFrameHandle *handle, uint16_t height);
+int setFrameOffsetX0(VipFrameHandle *handle, int16_t x);
+int setFrameOffsetY0(VipFrameHandle *handle, int16_t y);
+int setFrameOffsetX1(VipFrameHandle *handle, int16_t x);
+int setFrameOffsetY1(VipFrameHandle *handle, int16_t y);
+int setFrameOffsetX2(VipFrameHandle *handle, int16_t x);
+int setFrameOffsetY2(VipFrameHandle *handle, int16_t y);
+int setFrameAspect(VipFrameHandle *handle, uint32_t aspect);
 int setFrameRate(VipFrameHandle *handle, uint32_t rate);
 int setFrameProgressiveSequence(VipFrameHandle *handle, uint32_t progressive);
+int setFrameProgressiveFrame(VipFrameHandle *handle, uint32_t progressive);
 int setFrameTopFieldFirst(VipFrameHandle *handle, uint32_t topFieldFirst);
+int setFrameRepeatFirstField(VipFrameHandle *handle, uint32_t repeat);
+int setFrameType(VipFrameHandle *handle, uint32_t type);
 int setFrameFormat(VipFrameHandle *handle, uint32_t format);
+int setFrameRandomAccess(VipFrameHandle *handle, uint32_t randomAccess);
+int setFrameNalReference(VipFrameHandle *handle, uint32_t reference);
 int setFrameDamaged(VipFrameHandle *handle, uint32_t damaged);
+int setFrameColourPrimaries(VipFrameHandle *handle, uint8_t primaries);
+int setFrameTransferCharacteristics(VipFrameHandle *handle, uint8_t transfer);
+int setFrameMatrixCoefficients(VipFrameHandle *handle, uint8_t matrix);
 int getFrameInfo(VipFrameHandle *handle, VipFrameInfo *info);
 int setFrameInfo(VipFrameHandle *handle, const VipFrameInfo *info);
+int getFrameVuiFields(VipFrameHandle *handle, VipFrameExtension *fields);
+int setFrameVuiFields(VipFrameHandle *handle, const VipFrameExtension *fields);
+int getFrameProfile(VipFrameHandle *handle, uint16_t *profileIdc);
+int getFrameLevel(VipFrameHandle *handle, uint16_t *levelIdc);
+int getFrameExtensionState(VipFrameHandle *handle, uint8_t *state);
 int setFrameProfile(VipFrameHandle *handle, uint16_t profileIdc);
 int setFrameLevel(VipFrameHandle *handle, uint16_t levelIdc);
+int setFrameExtensionState(VipFrameHandle *handle, uint32_t state);
+int getFrameChromaLocTop(VipFrameHandle *handle, uint8_t *type);
+int getFrameChromaLocBottom(VipFrameHandle *handle, uint8_t *type);
+int getFrameNumUnitsInTick(VipFrameHandle *handle, uint32_t *numUnitsInTick);
+int getFrameTimeScale(VipFrameHandle *handle, uint32_t *timeScale);
 int setFrameChromaLocTop(VipFrameHandle *handle, uint32_t type);
 int setFrameChromaLocBottom(VipFrameHandle *handle, uint32_t type);
 int setFrameMatrix(VipFrameHandle *handle, uint8_t matrix);
+int setFrameNumUnitsInTick(VipFrameHandle *handle, uint32_t numUnitsInTick);
+int setFrameTimeScale(VipFrameHandle *handle, uint32_t timeScale);
 int setFrameRateKind(VipFrameHandle *handle, uint8_t kind);
+int getFrameSignalTypePresent(VipFrameHandle *handle, uint8_t *present);
+int getFrameColourDescriptionPresent(VipFrameHandle *handle, uint8_t *present);
+int getFrameVideoFormat(VipFrameHandle *handle, uint8_t *format);
+int getFrameFullRange(VipFrameHandle *handle, uint8_t *fullRange);
+int getFrameColourDescription(VipFrameHandle *handle, uint32_t *description);
+int setFrameSignalTypePresent(VipFrameHandle *handle, uint32_t present);
+int setFrameColourDescriptionPresent(VipFrameHandle *handle, uint32_t present);
+int setFrameVideoFormat(VipFrameHandle *handle, uint32_t format);
+int setFrameFullRange(VipFrameHandle *handle, uint32_t fullRange);
+int setFrameColourDescription(VipFrameHandle *handle, uint32_t description);
+int compareFrameInfo(const VipFrameInfo *info, const VipFrameInfo *other, uint32_t signalOnly);
 #endif /* !VIP_FW2 */

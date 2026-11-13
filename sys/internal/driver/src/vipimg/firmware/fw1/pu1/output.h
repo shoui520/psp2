@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include "frame.h"
+#include "../common/frame.h"
 
 #define VIP_PTS_SIGN		0x100000000ull		/* a difference of two PTS */
 #define VIP_PTS_EXTEND		0xffffffff00000000ull	/* sign-extends one */

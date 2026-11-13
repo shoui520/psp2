@@ -7,7 +7,7 @@
  */
 #pragma once
 
-#include "../../fw1/pu1/frame.h"
+#include "../../fw1/common/frame.h"
 
 #define VIP_EXTENSION_VUI_SIZE		0x238
 #define VIP_EXTENSION_SEI_SIZE		0x2d0

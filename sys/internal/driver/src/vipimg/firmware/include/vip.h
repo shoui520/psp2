@@ -142,7 +142,7 @@
 #define VIP_CAT2(a, b) a##b
 #define VIP_CAT(a, b) VIP_CAT2(a, b)
 #define _Static_assert(condition, message) \
-	typedef char VIP_CAT(vipStaticAssert, __LINE__)[(condition) ? 1 : -1]
+	typedef char VIP_CAT(vipStaticAssert, __COUNTER__)[(condition) ? 1 : -1]
 #endif
 #endif
 

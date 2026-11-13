@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include "frame.h"
+#include "../common/frame.h"
 
 /*
  * the decoder's rings (fw1's VipDecoder.rings, FW2's VipCodecDecoder.rings); fw1's
