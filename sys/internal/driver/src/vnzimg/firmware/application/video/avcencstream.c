@@ -49,7 +49,7 @@ typedef struct AvcencPicture {
 	VkThread *thread;		/* the stream thread's */
 	VkThread *engine;		/* the encoder engine's */
 	int32_t id;			/* the codec's */
-	uint32_t pictureCount;
+	VkVThreadContext *outputContext; /* the client's, for the output's jobs */
 	VkVThreadContext *context;
 	uint16_t chunkSteps;		/* four per chunk of the rows, one more for the row's end */
 	int8_t index;			/* the slot's */
@@ -210,6 +210,25 @@ typedef struct AvcencOutput {
 	uint8_t reserved4[108];
 } AvcencOutput;
 
+/* a row's slot in the client's outputs, 32 in turn */
+typedef struct AvcencOutputSlot {
+	uint32_t output;		/* the AvcencOutput the row goes to */
+	uint8_t firstMb;		/* of the chunk being encoded */
+	uint8_t row;
+	uint8_t mbs;			/* the chunk's */
+	uint8_t reserved[9];
+	uint32_t sliceType;
+	uint32_t reserved2;
+	uint32_t chunk;
+	uint32_t outputInfo;
+	uint8_t reserved3[5];
+	uint8_t parity;			/* flips with each chunk */
+	uint8_t reserved4[18];
+	uint8_t rowFlags[8];		/* the flags of eight rows, by the row's high bits */
+} AvcencOutputSlot;
+
+typedef char outputSlotSizeCheck[sizeof(AvcencOutputSlot) == 64 ? 1 : -1];
+
 /* the frames' buffers: the source frames and the reconstructed ones, two of each */
 typedef struct AvcencBuffers {
 	int32_t frames;			/* taken since the stream's start, -1 before */
@@ -285,8 +304,9 @@ typedef struct AvcencStream {
 	uint8_t source;			/* the source frame of the next picture, 0 or 1 */
 	uint8_t reconstructed;		/* its reconstructed frame */
 	int8_t option;			/* the frame's */
-	uint8_t chunkPending;
-	uint8_t reserved4[3];
+	uint8_t chunkPending;		/* the last row whose chunks are set */
+	uint8_t chunkLast;		/* the output's last row */
+	uint8_t reserved4[2];
 	uint32_t work;			/* the slot's frame memory */
 	AvcencSequence *settings;	/* the sequence's, from the client */
 	uint32_t chunkBits;
@@ -295,6 +315,25 @@ typedef struct AvcencStream {
 
 /* the layouts' sizes */
 typedef char pictureSizeCheck[sizeof(AvcencPicture) == PICTURE_SIZE ? 1 : -1];
+/* the picture's job record, for the output's jobs */
+typedef struct AvcencJobInfo {
+	uint32_t request;		/* the parsed request it answers */
+	int8_t requestFlags[2];		/* the request's */
+	uint8_t requestIndex;
+	uint8_t reserved;
+	uint32_t reserved2;
+	uint32_t sliceType;
+	int8_t skipLevel;
+	uint8_t reserved3;
+	int8_t chunks;
+	int8_t sliceMode;
+	uint32_t reserved4;
+	uint32_t outputs;
+	uint32_t outputInfo;
+	uint8_t reserved5[32];
+} AvcencJobInfo;
+
+typedef char jobInfoSizeCheck[sizeof(AvcencJobInfo) == 64 ? 1 : -1];
 typedef char buffersSizeCheck[sizeof(AvcencBuffers) == BUFFERS_SIZE ? 1 : -1];
 typedef char slicesSizeCheck[sizeof(AvcencSlices) == SLICES_SIZE ? 1 : -1];
 typedef char rateSizeCheck[sizeof(AvcencRate) == RATE_STATE_SIZE ? 1 : -1];
@@ -589,7 +628,9 @@ static void pictureFrame(AvcencStream *stream, AvcencPicture *picture)
 	}
 }
 
-/* the picture's kind, to the encoder engine */
+/* the flags the stream thread and the encoder engine wait on */
+#define ENGINE_FLAG_OUTPUT_DONE	0x00020000	/* the output's last row is encoded */
+#define ENGINE_FLAG_PICTURE_DONE 0x00040000	/* the picture's */
 #define ENGINE_FLAG_IDR		0x00080000
 #define ENGINE_FLAG_KIND	0x00100000
 #define ENGINE_FLAG_SKIP	0x00200000
@@ -784,6 +825,13 @@ void avcencJobIntra(uint32_t picture, uint32_t slices, uint32_t position, uint32
 void avcencJobDecide(uint32_t picture, uint32_t slices, uint32_t position, uint32_t unused);
 void avcencJobRate(uint32_t picture, uint32_t rate, uint32_t unused, uint32_t unused2);
 void avcencJobRateUpdate(uint32_t picture, uint32_t rate, uint32_t unused, uint32_t unused2);
+/* a chunk's three stages, by the output's jobs (avcencchunk.c) */
+void avcencJobChunkStage1(uint32_t picture, uint32_t outputs, uint32_t unused,
+	uint32_t unused2);
+void avcencJobChunkStage2(uint32_t picture, uint32_t outputs, uint32_t unused,
+	uint32_t unused2);
+void avcencJobChunkStage3(uint32_t picture, uint32_t outputs, uint32_t unused,
+	uint32_t unused2);
 void avcencJobLoadReference(uint32_t picture, uint32_t slices, uint32_t position,
 	uint32_t unused);
 
@@ -794,6 +842,7 @@ void avcencJobLoadReference(uint32_t picture, uint32_t slices, uint32_t position
 #define JOB_FLAG_ROWS		0x08000000
 #define JOB_FLAG_RATE		0x02000000
 #define JOB_FLAG_UPDATE		0x04000000
+#define JOB_FLAG_CHUNK		0x00100000
 
 /* a job set on the encoders' context, the context let go and taken again while it is busy */
 static VkVThreadContext *jobSet(VkVThreadContext *context, const AvcencPicture *picture,
@@ -1197,7 +1246,8 @@ static void picturesStep(AvcencStream *stream, AvcencPicture *picture)
 
 #define ROW_FIRST	0x20		/* the row's flags in the outputs: its first chunk */
 #define ROW_LAST	0x40
-#define ROW_SPLIT	0xa0
+#define ROW_SPLIT	0xa0		/* the chunk before the split: its own end and the split's */
+#define ROW_SPLIT_END	0x80
 #define ROW_CHUNK	0x10
 #define ROW_MIDDLE	0x08
 #define ROW_WRAP	0x01
@@ -1213,7 +1263,8 @@ static void streamRowsLayout(AvcencStream *stream, AvcencPicture *picture)
 {
 	uint32_t heightInMbs = picture->heightInMbs, widthInMbs = picture->widthInMbs;
 	uint32_t width = widthInMbs < 40 ? 6 : 8, remainder, chunks, row, chunk;
-	uint8_t flags[8], *outputs, *end, *split, value;
+	uint8_t flags[8], *end, *split, value;
+	AvcencOutputSlot *slots;
 	uint32_t *progress;
 
 	remainder = widthInMbs % width;
@@ -1232,7 +1283,7 @@ static void streamRowsLayout(AvcencStream *stream, AvcencPicture *picture)
 	stream->output = 0;
 	stream->chunksSent = 0;
 	stream->chunkPending = 1;
-	outputs = (uint8_t *)vnzPublicOpenPrivate(stream->outputs, OUTPUTS_SIZE);
+	slots = (AvcencOutputSlot *)vnzPublicOpenPrivate(stream->outputs, OUTPUTS_SIZE);
 
 	for (chunk = 0; chunk < width - 1; chunk++)
 		flags[chunk] = ROW_CHUNK;
@@ -1274,15 +1325,436 @@ static void streamRowsLayout(AvcencStream *stream, AvcencPicture *picture)
 		} else {
 			chunk++;
 		}
-		outputs[(row & 31) * 64 + 56 + (row >> 5)] = value;
+		slots[row & 31].rowFlags[row >> 5] = value;
 	}
 	stream->chunksDone = 0;
 	stream->chunkBits = 0;
-	vnzPublicClosePrivate((uint32_t)outputs, OUTPUTS_SIZE);
+	vnzPublicClosePrivate((uint32_t)slots, OUTPUTS_SIZE);
 
 	progress = (uint32_t *)picture->frameRecord;
 	progress[4] = 0;
 	progress[1] = 0;
 	progress[3] = 0;
 	progress[2] = 0;
+}
+
+static void chunkRowsSingle(AvcencPicture *picture, uint32_t jobInfo);
+
+/* a chunk job set on the client's context, let go and taken again while it is busy */
+static VkVThreadContext *chunkJobSet(VkVThreadContext *context, AvcencPicture *picture,
+	uint32_t index, uint32_t count, VkJobFunction function, uint32_t outputs)
+{
+	while (vkVThreadJobSetNotify(context, index, count, function, (uint32_t)picture, outputs,
+	    0, 0, picture->thread, JOB_FLAG_CHUNK)) {
+		vkVThreadContextUnlock(context);
+		context = vkVThreadContextLock(picture->outputContext);
+	}
+	return context;
+}
+
+/* a chunk's three stages, each a row of chunk steps after the last */
+static void chunkJobsSet(VkVThreadContext *context, AvcencPicture *picture, uint32_t index,
+	uint32_t count, uint32_t outputs)
+{
+	uint32_t steps = picture->chunkSteps;
+
+	context = chunkJobSet(context, picture, index, count, avcencJobChunkStage1, outputs);
+	context = chunkJobSet(context, picture, index + steps, count, avcencJobChunkStage2,
+		outputs);
+	chunkJobSet(context, picture, index + steps * 2, count, avcencJobChunkStage3, outputs);
+}
+
+/*
+ * 0x83761c: the job that sets a picture's chunk jobs (on the client's
+ * context): the first row's chunks, each waiting for one job, then the next
+ * rows' chunks, waiting for two (the one to the left and the one above), the
+ * row's end waiting for one when its remainder is the slice mode's. A row of
+ * one chunk goes the other way.
+ */
+void avcencJobChunks(uint32_t pictureAddress, uint32_t jobInfo, uint32_t unused,
+	uint32_t unused2)
+{
+	AvcencPicture *picture = (AvcencPicture *)pictureAddress;
+	AvcencJobInfo *info = (AvcencJobInfo *)jobInfo;
+	uint32_t width = picture->chunkWidth, widthInMbs = picture->widthInMbs;
+	uint32_t sliceMode = (uint8_t)info->sliceMode, outputs, index, x;
+	VkVThreadContext *context;
+
+	if (width >= widthInMbs) {
+		chunkRowsSingle(picture, jobInfo);
+		return;
+	}
+	context = vkVThreadContextLock(picture->outputContext);
+	outputs = info->outputs;
+	index = 0;
+	for (x = 0; x < widthInMbs; x += width)
+		chunkJobsSet(context, picture, index++, 1, outputs);
+
+	outputs += 64;
+	index = (uint8_t)info->chunks;
+	chunkJobsSet(context, picture, index, 2, outputs);
+	for (index++, x = width - 1; x < widthInMbs - width; x += width)
+		chunkJobsSet(context, picture, index++, 2, outputs);
+	chunkJobsSet(context, picture, index, widthInMbs - x == sliceMode ? 1 : 2, outputs);
+	vkVThreadContextUnlock(context);
+}
+
+/*
+ * 0x838350: the chunk jobs of a picture one chunk wide: the first row's
+ * (its last stage waiting for two) and the second row's
+ */
+static void chunkRowsSingle(AvcencPicture *picture, uint32_t jobInfo)
+{
+	uint32_t outputs = ((AvcencJobInfo *)jobInfo)->outputs, steps;
+	VkVThreadContext *context, *current;
+
+	context = vkVThreadContextLock(picture->outputContext);
+	steps = picture->chunkSteps;
+	current = chunkJobSet(context, picture, 0, 1, avcencJobChunkStage1, outputs);
+	chunkJobSet(current, picture, steps, 1, avcencJobChunkStage2, outputs);
+	chunkJobSet(context, picture, picture->chunkSteps * 2, 2, avcencJobChunkStage3, outputs);
+
+	outputs += 64;
+	steps = picture->chunkSteps;
+	current = chunkJobSet(context, picture, 1, 2, avcencJobChunkStage1, outputs);
+	current = chunkJobSet(current, picture, steps + 1, 2, avcencJobChunkStage2, outputs);
+	chunkJobSet(current, picture, steps * 2 + 1, 2, avcencJobChunkStage3, outputs);
+	vkVThreadContextUnlock(context);
+}
+
+/*
+ * 0x8384d6: the slots of the output's rows not yet started: each row's
+ * output, chunk and kind; rows up to the last set have their first jobs
+ * signalled
+ */
+static void streamChunksStart(AvcencStream *stream)
+{
+	AvcencPicture *picture = stream->picture;
+	uint32_t outputs = stream->outputs, row = stream->chunksDone, end, phase, request;
+	uint32_t widthInMbs = picture->widthInMbs, second;
+	AvcencOutputSlot *slot;
+	VkVThreadContext *context;
+
+	request = vnzPublicOpenRaw(((AvcencJobInfo *)stream->jobInfo)->request, RECORD_SIZE);
+	end = (uint8_t)((AvcencOutput *)request)->next;
+	for (; row < end; row++) {
+		phase = row & 3;
+		second = picture->chunkSteps + phase;
+		slot = (AvcencOutputSlot *)vnzPublicOpenPrivate(outputs + (row & 31) * 64, 64);
+		slot->row = row;
+		slot->firstMb = 0;
+		slot->output = request;
+		slot->mbs = widthInMbs;
+		slot->sliceType = stream->sliceType;
+		slot->parity = 0;
+		slot->chunk = phase;
+		slot->outputInfo = stream->outputInfo;
+		vnzPublicClosePrivate((uint32_t)slot, 64);
+		if (row <= stream->chunkPending) {
+			context = vkVThreadContextLock(picture->outputContext);
+			vkVThreadJobSignal(context, phase);
+			vkVThreadJobSignal(context, second);
+			vkVThreadContextUnlock(context);
+		}
+	}
+	stream->chunksDone = end;
+	stream->waitWake = 1;
+	stream->chunkLast = end - 1;
+}
+
+/*
+ * 0x8385b0: a row's chunks are done (its bit in the frame record's
+ * progress): the row is counted, the jobs of the row two below are set (and
+ * signalled when it is started) and the row below's first jobs signalled;
+ * the engine is told when the output's or the picture's last row is done
+ */
+static void streamChunkDone(AvcencStream *stream)
+{
+	AvcencPicture *picture = stream->picture;
+	uint32_t row = stream->chunksSent, outputs = stream->outputs, heightInMbs, bit;
+	uint32_t *progress = (uint32_t *)picture->frameRecord, end, next, phase, slot;
+	VkVThreadContext *context, *current;
+
+	heightInMbs = picture->heightInMbs;
+	if (row >= heightInMbs)
+		return;
+	bit = 1 << (row & 31);
+	if (!(bit & progress[4]))
+		return;
+	end = (uint8_t)((AvcencOutput *)((AvcencOutputSlot *)(outputs + (row & 31) * 64))->output)->next;
+	vnzSpinLock(picture->lock);
+	progress[4] &= ~bit;
+	vnzSpinUnlock(picture->lock);
+	stream->chunksSent++;
+	((int8_t *)stream->record)[row]++;
+	if (row == heightInMbs - 1) {
+		vnzThreadSetFlags(picture->thread, ENGINE_FLAG_PICTURE_DONE);
+		return;
+	}
+	if (row < heightInMbs - 2) {
+		next = row + 2;
+		context = vkVThreadContextLock(picture->outputContext);
+		phase = next & 3;
+		slot = outputs + (next & 31) * 64;
+		current = chunkJobSet(context, picture, phase, 2, avcencJobChunkStage1, slot);
+		current = chunkJobSet(current, picture, phase + picture->chunkSteps, 2,
+			avcencJobChunkStage2, slot);
+		chunkJobSet(current, picture, phase + picture->chunkSteps * 2, 2,
+			avcencJobChunkStage3, slot);
+		stream->chunkPending = next;
+		if (next <= stream->chunkLast) {
+			vkVThreadJobSignal(context, phase);
+			vkVThreadJobSignal(context, picture->chunkSteps + phase);
+		}
+		vkVThreadContextUnlock(context);
+	}
+	context = vkVThreadContextLock(picture->outputContext);
+	phase = (row + 1) & 3;
+	vkVThreadJobSignal(context, phase);
+	vkVThreadJobSignal(context, picture->chunkSteps + phase);
+	vkVThreadContextUnlock(context);
+	if (end - 1 == row)
+		vnzThreadSetFlags(picture->thread, ENGINE_FLAG_OUTPUT_DONE);
+}
+
+/* 0x838312: a slot's next chunk: its first macroblock, width (to the row's end) and parity */
+static void slotChunkNext(AvcencOutputSlot *slot, uint32_t chunk, uint32_t mbs, uint32_t width,
+	uint32_t widthInMbs)
+{
+	uint8_t first;
+
+	slot->parity = 1 - slot->parity;
+	slot->chunk = chunk + 1;
+	first = slot->firstMb + mbs;
+	slot->firstMb = first;
+	if (first + width >= widthInMbs)
+		width = widthInMbs - first;
+	slot->mbs = width;
+}
+
+/*
+ * 0x837c10: a chunk of a row is done. Its slot moves to the row's next
+ * chunk (the row's last chunk ends the output or the picture), the next
+ * chunk's jobs of this row and the row below are signalled, and the row two
+ * below gets its chunk jobs, by the row's flags. Returns whether the output
+ * or the picture is done.
+ */
+static int32_t streamChunkNext(AvcencStream *stream, uint32_t chunk, uint32_t row)
+{
+	AvcencPicture *picture = stream->picture;
+	uint32_t outputs = stream->outputs, widthInMbs = picture->widthInMbs, chunks;
+	uint32_t first, end, outputEnd, flags, bit, slot2, steps, count, count2, base;
+	int32_t done = 0, signal, signal2, limit, previous;
+	int8_t *rowChunks = (int8_t *)stream->record, current;
+	AvcencOutputSlot *slot;
+	VkVThreadContext *context, *job;
+
+	slot = (AvcencOutputSlot *)vnzPublicOpenPrivate(outputs + (row & 31) * 64, 64);
+	first = slot->firstMb;
+	outputEnd = (uint8_t)((AvcencOutput *)slot->output)->next;
+	flags = slot->rowFlags[row >> 5];
+	chunks = (uint8_t)stream->chunks;
+	end = first + slot->mbs;
+	if (end >= widthInMbs) {
+		if (flags & ROW_END) {
+			vnzThreadSetFlags(picture->thread, ENGINE_FLAG_PICTURE_DONE);
+			done = 1;
+		} else if (outputEnd - 1 == row) {
+			vnzThreadSetFlags(picture->thread, ENGINE_FLAG_KIND | ENGINE_FLAG_OUTPUT_DONE);
+			done = 1;
+		}
+		stream->chunksSent++;
+		signal = -1;
+	} else {
+		slotChunkNext(slot, chunk, slot->mbs, picture->chunkWidth, widthInMbs);
+		signal = chunk + 1;
+		if (row < 2 || (previous = rowChunks[row - 2]) == (int32_t)chunks)
+			limit = chunk + 2;
+		else
+			limit = previous + (row & 3) * chunks;
+		bit = 1 << (row & 31);
+		if (signal < limit) {
+			stream->chunkBits &= ~bit;
+		} else {
+			stream->chunkBits |= bit;
+			signal = -1;
+		}
+	}
+	vnzPublicClosePrivate((uint32_t)slot, 64);
+
+	steps = picture->chunkSteps;
+	current = rowChunks[row];
+	if (flags & ROW_END) {
+		signal2 = -1;
+	} else {
+		signal2 = ((row + 1) & 3) * chunks + current;
+		if (flags & ROW_WRAP) {
+			if (!first)
+				signal2 = -1;
+			else
+				signal2--;
+		}
+	}
+
+	/* the row two below */
+	if (flags & ROW_MIDDLE) {
+		slot2 = outputs + ((row + 2) & 31) * 64;
+		bit = 1 << ((row + 2) & 31);
+		count = (stream->chunkBits & bit) ? 1 : 2;
+		stream->chunkBits &= ~bit;
+		base = ((row + 2) & 3) * chunks + current;
+		context = vkVThreadContextLock(picture->outputContext);
+		if (end >= widthInMbs) {
+			if (flags & ROW_FIRST) {
+				chunkJobSet(context, picture, picture->chunkSteps * 2 + base - 1, count,
+					avcencJobChunkStage3, slot2);
+				job = chunkJobSet(context, picture, base, count, avcencJobChunkStage1,
+					slot2);
+				chunkJobSet(job, picture, base + picture->chunkSteps, count,
+					avcencJobChunkStage2, slot2);
+				count2 = (flags & ROW_SPLIT_END) ? 1 : 2;
+				chunkJobSet(context, picture, picture->chunkSteps * 2 + base, 2,
+					avcencJobChunkStage3, slot2);
+				job = chunkJobSet(context, picture, base + 1, count2,
+					avcencJobChunkStage1, slot2);
+				chunkJobSet(job, picture, base + 1 + picture->chunkSteps, count2,
+					avcencJobChunkStage2, slot2);
+				chunkJobSet(context, picture, picture->chunkSteps * 2 + base + 1,
+					(flags & ROW_SPLIT_END) ? 1 : 2, avcencJobChunkStage3, slot2);
+			} else if (flags & ROW_CHUNK) {
+				count2 = (flags & ROW_LAST) ? count - 1 : count;
+				chunkJobSet(context, picture, picture->chunkSteps * 2 + base - 1, count,
+					avcencJobChunkStage3, slot2);
+				job = chunkJobSet(context, picture, base, count2, avcencJobChunkStage1,
+					slot2);
+				chunkJobSet(job, picture, base + picture->chunkSteps, count2,
+					avcencJobChunkStage2, slot2);
+				chunkJobSet(context, picture, picture->chunkSteps * 2 + base,
+					(flags & ROW_LAST) ? 1 : 2, avcencJobChunkStage3, slot2);
+			} else {
+				chunkJobSet(context, picture, picture->chunkSteps * 2 + base - 1, 2,
+					avcencJobChunkStage3, slot2);
+			}
+		} else {
+			if (first)
+				chunkJobSet(context, picture, picture->chunkSteps * 2 + base - 1, count,
+					avcencJobChunkStage3, slot2);
+			job = chunkJobSet(context, picture, base, count, avcencJobChunkStage1, slot2);
+			chunkJobSet(job, picture, base + picture->chunkSteps, count,
+				avcencJobChunkStage2, slot2);
+		}
+		if (!first) {
+			stream->chunkPending = row + 2;
+			if (row + 2 <= stream->chunkLast) {
+				vkVThreadJobSignal(context, base);
+				vkVThreadJobSignal(context, steps + base);
+			}
+		}
+		vkVThreadContextUnlock(context);
+	}
+
+	/* the next chunk's jobs of this row and of the row below */
+	context = vkVThreadContextLock(picture->outputContext);
+	if (signal >= 0) {
+		vkVThreadJobSignal(context, signal);
+		vkVThreadJobSignal(context, steps + signal);
+		vkVThreadJobSignal(context, steps * 2 + chunk);
+	}
+	if (signal2 >= 0) {
+		vkVThreadJobSignal(context, signal2);
+		vkVThreadJobSignal(context, steps + signal2);
+		if (first && first != 2)
+			vkVThreadJobSignal(context, steps * 2 + signal2 - 1);
+		if (end >= widthInMbs)
+			vkVThreadJobSignal(context, steps * 2 + signal2);
+	}
+	vkVThreadContextUnlock(context);
+	if (end < widthInMbs)
+		rowChunks[row]++;
+	else
+		rowChunks[row] = chunks;
+	return done;
+}
+
+/*
+ * 0x837a50: the slots of the output's rows not yet started, for rows of
+ * several chunks: each row's first chunk (narrower by the row's place) and
+ * its first jobs signalled when the row is set
+ */
+static void streamOutputsStart(AvcencStream *stream)
+{
+	AvcencPicture *picture = stream->picture;
+	uint32_t chunks = (uint8_t)stream->chunks, outputs = stream->outputs;
+	uint32_t row = stream->chunksDone, end, chunk, second, request;
+	AvcencOutputSlot *slot;
+	VkVThreadContext *context;
+
+	if (picture->chunkWidth >= picture->widthInMbs) {
+		streamChunksStart(stream);
+		return;
+	}
+	request = vnzPublicOpenRaw(((AvcencJobInfo *)stream->jobInfo)->request, RECORD_SIZE);
+	end = (uint8_t)((AvcencOutput *)request)->next;
+	for (; row < end; row++) {
+		chunk = (row & 3) * chunks;
+		second = picture->chunkSteps + chunk;
+		slot = (AvcencOutputSlot *)vnzPublicOpenPrivate(outputs + (row & 31) * 64, 64);
+		slot->row = row;
+		slot->firstMb = 0;
+		slot->output = request;
+		slot->mbs = picture->chunkWidth - row % (picture->chunkWidth - 1);
+		slot->sliceType = stream->sliceType;
+		slot->parity = 0;
+		slot->chunk = chunk;
+		slot->outputInfo = stream->outputInfo;
+		vnzPublicClosePrivate((uint32_t)slot, 64);
+		if (row <= stream->chunkPending) {
+			context = vkVThreadContextLock(picture->outputContext);
+			vkVThreadJobSignal(context, chunk);
+			vkVThreadJobSignal(context, second);
+			vkVThreadContextUnlock(context);
+		}
+	}
+	stream->waitWake = 1;
+	stream->chunksDone = end;
+	stream->chunkLast = end - 1;
+}
+
+/*
+ * 0x837b50: the rows whose chunks are done (their bits in the frame
+ * record's progress), up to fifteen past the last row sent, while their
+ * counts move; rows of one chunk go the other way
+ */
+static void streamChunksDone(AvcencStream *stream)
+{
+	AvcencPicture *picture = stream->picture;
+	uint32_t chunks = (uint8_t)stream->chunks, row, end, bit, progress;
+	uint32_t *frameProgress = (uint32_t *)picture->frameRecord;
+	int32_t last, count;
+
+	if (picture->chunkWidth >= picture->widthInMbs) {
+		streamChunkDone(stream);
+		return;
+	}
+	row = stream->chunksSent;
+	progress = frameProgress[4];
+	end = row + 15;
+	if (end > picture->heightInMbs)
+		end = picture->heightInMbs;
+	for (last = chunks; row < end; row++) {
+		count = ((int8_t *)stream->record)[row];
+		if (!last && !count)
+			return;
+		if (last == count)
+			continue;
+		bit = 1 << (row & 31);
+		if (bit & progress) {
+			vnzSpinLock(picture->lock);
+			frameProgress[4] &= ~bit;
+			vnzSpinUnlock(picture->lock);
+			if (streamChunkNext(stream, (row & 3) * chunks + count, row))
+				return;
+		}
+		last = count;
+	}
 }
