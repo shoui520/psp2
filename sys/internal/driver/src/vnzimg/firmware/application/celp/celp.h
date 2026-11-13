@@ -175,6 +175,18 @@ extern const int16_t celpEncLspThird[64][5];
 extern const int16_t celpEncLspFourth[32][5];
 extern const int16_t celpEncLspThirdPredicted[64][5];
 extern const int16_t celpEncLspFourthPredicted[32][5];
+extern const int16_t celpEncLagInteger[768];
+extern const int32_t celpEncLevelScale[4];
+extern const int32_t celpEncGainScale[4];
+extern const int32_t celpEncGainExponent[4];
+extern const int32_t celpEncLevelFactor[4];
+extern const int32_t celpEncLimits[4];
+extern const int16_t celpEncInterpolation[37];
+extern const int16_t celpEncLagFraction[768];
+extern const int16_t celpEncSharpening[4];
+extern const int16_t celpEncGainBookLong[64][4][2];
+extern const int16_t celpEncGainBookShort[64][4][2];
+extern const int32_t celpEncImpulse[80];
 
 /* the rate of celpEncoderSetRate: the mode index (-1: the bit rate's) and the bit rate */
 typedef struct CelpEncoderRate {

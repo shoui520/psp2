@@ -224,22 +224,22 @@ static void setupFrames(CelpEncoderState *state, int32_t bitRate)
 	state->frameLength = celpEncFrameLengths[state->modeIndex];
 	state->subframes = celpEncSubframeCounts[state->modeIndex];
 	state->subframeLength = celpEncSubframeLengths[state->modeIndex];
-	state->field8244 = state->frameLength + 120;
-	state->field9080 = celpEncPitchBlocks[state->modeIndex];
-	state->field2244 = 5;
-	state->field8236 = 40;
+	state->bufferLength = state->frameLength + 120;
+	state->pitchBlockLength = celpEncPitchBlocks[state->modeIndex];
+	state->interpolationTaps = 5;
+	state->shortSubframeLength = 40;
 	state->frameLengthCopy = state->frameLength;
 	state->order = CELP_ORDER;
 	state->pulseCount = celpEncSignBits[state->modeIndex];
 	state->analysisOffset[1] = 80;
 	state->analysisOffset[0] = 0;
 	state->analysisLength = 200;
-	state->field9076 = 6;
+	state->lagResolution = 6;
 	state->analysisOffset[2] = 160;
-	state->analysisBlocks = state->field8248 = state->frameLength / state->field9080;
+	state->analysisBlocks = state->pitchBlocks = state->frameLength / state->pitchBlockLength;
 	state->analysisOffset[3] = 240;
 	if (state->modeIndex == 27) {
-		state->field8248 = 2;
+		state->pitchBlocks = 2;
 		state->analysisOffset[0] = 80;
 		state->analysisLength = 160;
 	}
@@ -249,9 +249,9 @@ static void setupFrames(CelpEncoderState *state, int32_t bitRate)
 		state->angle[i] = 0;
 		state->previousLsp[i] = celpEncInitialLsp[i];
 	}
-	state->field2792 = 0;
+	state->previousGainLevel = 0;
 	memset(state->history, 0, 193 * 8);
-	memset(state->field9088, 0, sizeof(state->field9088));
+	memset(&state->memory, 0, sizeof(state->memory));
 	for (i = 0; i < state->order; i++) {
 		state->perceptualInput[i] = 0;
 		state->perceptualOutput[i] = 0;
@@ -259,7 +259,7 @@ static void setupFrames(CelpEncoderState *state, int32_t bitRate)
 	memset(state->weightedHistory, 0, 295 * sizeof(int16_t));
 	buildPulses(state, state->subframeLength, state->pulseCount, state->pulseWidth,
 		state->pulsePosition);
-	state->field14800 = 100;
+	state->filterMemoryLength = 100;
 	state->frameBits = frameBitsOf(state);
 }
 
